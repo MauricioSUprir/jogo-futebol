@@ -690,6 +690,22 @@ html, body {
 .cal-teams.tbd { color: var(--text-dim); font-weight: 500; display: flex; flex-direction: column; }
 .cal-vs { font-size: 11.5px; }
 .cal-me { color: var(--gold); font-weight: 800; }
+
+/* seleção */
+.nation-switch { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 620px; margin-bottom: 14px;
+  background: linear-gradient(120deg, rgba(120,80,220,.18), rgba(120,80,220,.05)); border: 1px solid rgba(120,80,220,.4);
+  border-radius: 14px; padding: 12px 14px; cursor: pointer; color: var(--text); transition: all .15s ease; }
+.nation-switch:hover { border-color: #b79cff; }
+.nation-switch.alert { border-color: #e8a13c; background: linear-gradient(120deg, rgba(232,161,60,.2), rgba(232,161,60,.05)); animation: pulseAlert 2s ease-in-out infinite; }
+@keyframes pulseAlert { 0%,100% { box-shadow: 0 0 0 0 rgba(232,161,60,.3); } 50% { box-shadow: 0 0 0 4px rgba(232,161,60,.15); } }
+.ns-flag { width: 34px; height: 24px; object-fit: cover; border-radius: 4px; }
+.ns-info { flex: 1; min-width: 0; }
+.ns-name { font-weight: 700; font-size: 14.5px; }
+.ns-sub { font-size: 12.5px; color: var(--text-dim); }
+.nation-switch.alert .ns-sub { color: #e8a13c; font-weight: 600; }
+.ns-arrow { font-size: 18px; }
+.convoked-row { border-color: rgba(34,197,94,.4) !important; }
+.buy-btn.ghost-btn { background: transparent; border: 1px solid rgba(255,255,255,.2); color: var(--text-dim); }
 .group-title { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin: 14px 0 6px; }
 .league-table tr.qualify td { border-left: 0; }
 .league-table tr.qualify td:first-child { box-shadow: inset 3px 0 0 var(--green); }

@@ -109,6 +109,20 @@
       el("div", { class: "setting-hint", text: "Uma injeção de dinheiro no seu orçamento, até 700 milhões. A moeda afeta os valores dos jogadores nas contratações." })
     ]));
 
+    // comandar também uma seleção
+    var natWrap = el("div", { class: "setting" });
+    var natToggle = el("button", { class: "switch" + (opts.nationId ? " on" : ""), on: { click: function () {
+      if (opts.nationId) { opts.nationId = null; } else { opts.nationId = natSel.value; }
+      natToggle.classList.toggle("on", !!opts.nationId); natSel.style.display = opts.nationId ? "block" : "none";
+    } } }, [ el("span", { class: "switch-knob" }) ]);
+    var natSel = el("select", { class: "select", style: "display:none;margin-top:8px" });
+    TM.data.world().nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (n) { natSel.appendChild(el("option", { value: n.id, text: n.name })); });
+    natSel.addEventListener("change", function () { if (opts.nationId) opts.nationId = natSel.value; });
+    natWrap.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "🌍 Comandar também uma seleção" }), natToggle ]));
+    natWrap.appendChild(natSel);
+    natWrap.appendChild(el("div", { class: "setting-hint", text: "Você comanda o clube E a seleção ao mesmo tempo, alternando entre eles. Precisa fazer a convocação dentro do prazo, ou é demitido da seleção." }));
+    body.appendChild(natWrap);
+
     var summary = el("div", { class: "market-budget" });
     body.appendChild(summary);
     function updateInfo() {
@@ -161,6 +175,21 @@
       ]),
       el("div", { class: "coach-tag" }, [ coachFace, el("div", { class: "coach-tag-name", text: c.coachName || "Treinador" }) ])
     ]));
+
+    // seleção: verifica prazo e mostra botão de trocar
+    C().checkNationDeadlines(c); TM.storage.saveCoachCareer(c);
+    if (c.nation) {
+      var w = C().nationNextWindow(c);
+      var needConvoke = w && !w.convoked && c.currentDay >= w.openDay;
+      var readyFriendly = w && w.convoked && !w.played && c.currentDay >= w.friendlyDay;
+      var natNat = TM.data.nation(c.nation.id);
+      screen.appendChild(el("button", { class: "nation-switch" + (needConvoke || readyFriendly ? " alert" : ""), on: { click: function () { TM.ui.go("coach-nation"); } } }, [
+        TM.img.nationImg(natNat, "ns-flag"),
+        el("div", { class: "ns-info" }, [ el("div", { class: "ns-name", text: "Seleção de " + c.nation.name }),
+          el("div", { class: "ns-sub", text: needConvoke ? "⚠ Convocação pendente!" : readyFriendly ? "⚽ Amistoso disponível!" : "Comandar seleção →" }) ]),
+        el("span", { class: "ns-arrow", text: "🔄" })
+      ]));
+    }
 
     // meta da diretoria
     var pos = C().currentPosition(c);
@@ -273,6 +302,168 @@
         el("div", { class: "cal-date" }, [ el("div", { class: "cal-d", text: date.d }), el("div", { class: "cal-m", text: MES_PT[date.m - 1] }) ]),
         el("div", { class: "cal-body" }, [ confronto, el("span", { class: "comp-badge " + badge, text: item.name }) ])
       ]));
+    });
+  });
+
+  /* ================= SELEÇÃO (junto com o clube) ================= */
+  TM.ui.register("coach-nation", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation) { TM.ui.go("coach-hub"); return; }
+    C().checkNationDeadlines(c); TM.storage.saveCoachCareer(c);
+    if (!c.nation) { TM.ui.toast("Você foi demitido da seleção."); TM.ui.go("coach-hub"); return; }
+    var nat = TM.data.nation(c.nation.id);
+    screen.appendChild(TM.ui.topbar("🌍 Seleção", function () { TM.ui.go("coach-hub"); }));
+
+    screen.appendChild(el("div", { class: "club-header" }, [
+      TM.img.nationImg(nat, "ch-crest"),
+      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nation.name }), el("div", { class: "ch-sub", text: "Convocados: " + c.nation.squad.length + " · Amistosos internacionais" }) ]),
+      el("button", { class: "date-cal-btn", text: "🔄 Voltar ao clube", on: { click: function () { TM.ui.go("coach-hub"); } } })
+    ]));
+    screen.appendChild(el("div", { class: "date-bar" }, [ el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ]) ]));
+
+    var w = C().nationNextWindow(c);
+    if (!w) {
+      screen.appendChild(el("div", { class: "next-match" }, [ el("div", { class: "nm-label", text: "Sem amistosos restantes nesta temporada." }) ]));
+    } else {
+      var opp = TM.data.nation(w.oppId), open = c.currentDay >= w.openDay;
+      var fdate = C().dateOf(c, w.friendlyDay), ddate = C().dateOf(c, w.deadlineDay);
+      if (!open) {
+        screen.appendChild(el("div", { class: "next-match" }, [
+          el("div", { class: "nm-label", text: "🔒 Janela de seleção fechada" }),
+          el("div", { class: "nm-date", text: "A convocação abre em " + (w.openDay - c.currentDay) + " dia(s) (" + C().dateOf(c, w.openDay).full + ")." }),
+          el("p", { class: "intro-text", style: "text-align:center", text: "Volte perto do amistoso para convocar e escalar." })
+        ]));
+      } else {
+        var kids = [
+          el("div", { class: "nm-label", text: "🤝 Amistoso Internacional" }),
+          el("div", { class: "nm-teams" }, [ el("span", { text: c.nation.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: opp.name }) ]),
+          el("div", { class: "nm-date", text: "🗓️ " + fdate.full })
+        ];
+        if (!w.convoked) {
+          kids.push(el("div", { class: "nm-date", style: "color:#e8a13c", text: "⚠ Convoque até " + ddate.full + " · faltam " + (w.deadlineDay - c.currentDay) + " dia(s), ou é demitido!" }));
+          kids.push(el("div", { class: "skip-row" }, [
+            TM.ui.button("🔍 Convocar/Scout", function () { TM.ui.go("coach-nation-scout"); }, "btn small"),
+            TM.ui.button("✔ Confirmar convocação", function () {
+              if (c.nation.squad.length < 11) { TM.ui.toast("Convoque pelo menos 11 jogadores"); return; }
+              w.convoked = true; TM.storage.saveCoachCareer(c);
+              TM.notify.push(c, { icon: "📋", title: "Convocação enviada", text: "Convocação de " + c.nation.name + " confirmada para o amistoso contra " + opp.name + "." });
+              TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation");
+            }, "btn primary small")
+          ]));
+        } else if (c.currentDay >= w.friendlyDay) {
+          kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada — é dia de jogo!" }));
+          kids.push(TM.ui.button("▶ Jogar amistoso", function () { TM.ui.go("coach-nation-play"); }, "btn primary"));
+        } else {
+          kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada. Amistoso em " + (w.friendlyDay - c.currentDay) + " dia(s)." }));
+          kids.push(el("p", { class: "intro-text", style: "text-align:center", text: "Avance os dias no clube até a data do amistoso." }));
+        }
+        screen.appendChild(el("div", { class: "next-match" }, kids));
+      }
+    }
+
+    screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-scout"); } } }, [ el("span", { class: "hub-ic", text: "🔍" }), el("span", { text: "Scout / Convocar" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-lineup"); } } }, [ el("span", { class: "hub-ic", text: "📋" }), el("span", { text: "Escalação" }) ])
+    ]));
+  });
+
+  /* ---------- scout / convocação ---------- */
+  TM.ui.register("coach-nation-scout", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation) { TM.ui.go("coach-hub"); return; }
+    var nat = TM.data.nation(c.nation.id);
+    screen.appendChild(TM.ui.topbar("🔍 Scout · " + c.nation.name, function () { TM.ui.go("coach-nation"); }));
+    screen.appendChild(el("div", { class: "market-budget", text: "Convocados: " + c.nation.squad.length + " / 23" }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("p", { class: "intro-text", text: "Jogadores de " + c.nation.name + ". Toque para convocar/remover (máx. 23)." }));
+
+    var squadSet = {}; c.nation.squad.forEach(function (id) { squadSet[id] = true; });
+    var pool = nat.players.map(TM.data.player).filter(Boolean).sort(function (a, b) { return b.overall - a.overall; });
+    pool.forEach(function (p) {
+      var inSquad = squadSet[p.id];
+      var row = TM.ui.playerRow(p, {});
+      row.classList.add("clickable");
+      if (inSquad) row.classList.add("convoked-row");
+      row.appendChild(el("button", { class: "buy-btn" + (inSquad ? " ghost-btn" : ""), text: inSquad ? "Remover" : "Convocar", on: { click: function (e) {
+        e.stopPropagation();
+        if (inSquad) { c.nation.squad = c.nation.squad.filter(function (id) { return id !== p.id; }); }
+        else { if (c.nation.squad.length >= 23) { TM.ui.toast("Máximo de 23 convocados"); return; } c.nation.squad.push(p.id); }
+        c.nation.lineup = C().buildLineup(c.nation.squad.map(TM.data.player), c.nation.lineup.formation);
+        TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-scout");
+      } } }));
+      body.appendChild(row);
+    });
+  });
+
+  /* ---------- campinho da seleção ---------- */
+  var natPick = null;
+  TM.ui.register("coach-nation-lineup", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation) { TM.ui.go("coach-hub"); return; }
+    var lu = c.nation.lineup;
+    screen.appendChild(TM.ui.topbar("📋 Escalação · " + c.nation.name, function () { natPick = null; TM.ui.go("coach-nation"); }));
+
+    var formRow = el("div", { class: "segmented full" });
+    Object.keys(C().FORMATIONS).forEach(function (f) {
+      formRow.appendChild(el("button", { class: "seg-btn" + (lu.formation === f ? " active" : ""), text: f, on: { click: function () {
+        c.nation.lineup = C().buildLineup(c.nation.squad.map(TM.data.player), f); natPick = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup");
+      } } }));
+    });
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
+
+    var tacRow = el("div", { class: "segmented full" });
+    [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra"]].forEach(function (o) {
+      tacRow.appendChild(el("button", { class: "seg-btn" + (c.nation.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.nation.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); } } }));
+    });
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
+
+    var slots = C().FORMATIONS[lu.formation];
+    var pitch = el("div", { class: "pitch" });
+    pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+    pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+    lu.starters.forEach(function (id, i) {
+      var p = TM.data.player(id); if (!p) return;
+      var slot = slots[i] || [null, 50, 50];
+      pitch.appendChild(el("button", { class: "pl-chip" + (natPick === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", on: { click: function () { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); } } }, [
+        el("span", { class: "chip-ov", text: p.overall }), el("span", { class: "chip-name", text: shortName(p.name) })
+      ]));
+    });
+    screen.appendChild(pitch);
+    screen.appendChild(el("div", { class: "lineup-hint", text: natPick != null ? "Toque num reserva para colocar no lugar do titular." : "Toque num titular e depois num reserva." }));
+
+    var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas convocados" }) ]);
+    lu.bench.forEach(function (id) {
+      var p = TM.data.player(id); if (!p) return;
+      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable");
+      row.addEventListener("click", function () {
+        if (natPick == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
+        var si = lu.starters[natPick], bi = lu.bench.indexOf(id);
+        lu.starters[natPick] = id; lu.bench[bi] = si; natPick = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup");
+      });
+      benchWrap.appendChild(row);
+    });
+    screen.appendChild(benchWrap);
+  });
+
+  /* ---------- amistoso da seleção ---------- */
+  TM.ui.register("coach-nation-play", function (screen) {
+    var c = TM.storage.coachCareer();
+    var w = C().nationNextWindow(c);
+    if (!c.nation || !w || !w.convoked || c.currentDay < w.friendlyDay) { TM.ui.go("coach-nation"); return; }
+    var teamA = C().nationTeam(c), teamB = C().oppNationTeam(w.oppId);
+    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: 0, tactic: c.nation.tactic };
+    var result = TM.engine.simulate(teamA, teamB, simOpts);
+    TM.matchview.play(screen, {
+      teamA: teamA, teamB: teamB, result: result, title: "Amistoso · " + c.nation.name, pauseSide: 0, simOpts: simOpts,
+      onBack: function () { TM.ui.go("coach-nation"); },
+      onDone: function () {
+        w.played = true; w.hs = result.score[0]; w.as = result.score[1];
+        var res = result.score[0] > result.score[1] ? "Vitória" : result.score[0] < result.score[1] ? "Derrota" : "Empate";
+        TM.notify.push(c, { icon: "🌍", title: "Amistoso da seleção", text: res + " " + result.score[0] + "x" + result.score[1] + " contra " + teamB.name + "." });
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result });
+      }
     });
   });
 
@@ -699,6 +890,15 @@
       if (n.offer) {
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("Analisar proposta", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary small")
+        ]));
+      } else if (n.nationInvite) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("Aceitar", function () {
+            c.nation = C().buildNation(n.nationInvite); TM.notify.remove(c, n.id);
+            TM.notify.push(c, { icon: "🌍", title: "Seleção assumida", text: "Você agora comanda a seleção de " + c.nation.name + "! Faça a convocação a tempo." });
+            TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
+          }, "btn primary small"),
+          TM.ui.button("Recusar", function () { TM.notify.remove(c, n.id); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn ghost small")
         ]));
       }
       body.appendChild(card);

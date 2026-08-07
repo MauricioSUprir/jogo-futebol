@@ -331,8 +331,10 @@
       youth: generateYouth(clubId)
     };
     career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    career.nation = opts.nationId ? buildNation(opts.nationId) : null;
     seasonSetup(career);
     TM.notify.push(career, { icon: "🎉", title: "Bem-vindo!", text: "Você assumiu o comando do " + club.name + ". Boa sorte na temporada!" });
+    if (career.nation) TM.notify.push(career, { icon: "🌍", title: "Seleção", text: "Você também comandará a seleção de " + career.nation.name + ". Faça a convocação a tempo!" });
     return career;
   }
 
@@ -442,10 +444,63 @@
     return { met: pos <= career.objective.maxPos, pos: pos, target: career.objective.maxPos, desc: career.objective.desc };
   }
 
+  /* ---------- comando de seleção (junto com o clube) ---------- */
+  function genNationWindows(natId) {
+    var others = TM.data.world().nations.filter(function (n) { return n.id !== natId; });
+    return [28, 66, 104, 142].map(function (fd) {
+      var opp = others[Math.floor(Math.random() * others.length)];
+      return { friendlyDay: fd, openDay: fd - 14, deadlineDay: fd - 5, oppId: opp.id, convoked: false, played: false, hs: 0, as: 0 };
+    });
+  }
+  function buildNation(natId) {
+    var nat = TM.data.nation(natId);
+    var squad = TM.data.nationSquad(natId).map(function (p) { return p.id; }); // 23 melhores
+    var players = squad.map(TM.data.player);
+    return { id: natId, name: nat.name, squad: squad, lineup: buildLineup(players, "4-4-2"), tactic: "equilibrado", windows: genNationWindows(natId), fired: false };
+  }
+  function nationNextWindow(career) {
+    if (!career.nation) return null;
+    for (var i = 0; i < career.nation.windows.length; i++) if (!career.nation.windows[i].played) return career.nation.windows[i];
+    return null;
+  }
+  function checkNationDeadlines(career) {
+    if (!career.nation || career.nation.fired) return;
+    var w = nationNextWindow(career);
+    if (w && !w.convoked && career.currentDay > w.deadlineDay) {
+      var nm = career.nation.name;
+      career.nation = null;
+      TM.notify.push(career, { icon: "🚫", title: "Demitido da seleção", text: "Você não enviou a convocação de " + nm + " a tempo. Perdeu o cargo na seleção e segue apenas no clube." });
+    }
+  }
+  function nationSquadPlayers(career) { return career.nation.squad.map(TM.data.player).filter(Boolean); }
+  function nationTeam(career) {
+    var nat = TM.data.nation(career.nation.id), lu = career.nation.lineup;
+    var xi = lu.starters.map(TM.data.player).filter(Boolean);
+    var inxi = {}; xi.forEach(function (p) { inxi[p.id] = 1; });
+    var rest = career.nation.squad.map(TM.data.player).filter(function (p) { return p && !inxi[p.id]; });
+    return { id: nat.id, name: nat.name, players: xi.concat(rest), nation: nat };
+  }
+  function oppNationTeam(natId) { var n = TM.data.nation(natId); return { id: n.id, name: n.name, players: TM.data.nationSquad(natId), nation: n }; }
+
+  // convite de seleção (se foi bem e ainda não comanda nenhuma)
+  function maybeNationInvite(career) {
+    if (career.nation) return;
+    var last = career.honours[career.honours.length - 1];
+    if (!last) return;
+    var good = last.leagueChampion || last.cupChampion || last.contChampion || last.leaguePos <= 3;
+    if (!good || Math.random() > 0.6) return;
+    var nat = TM.data.nationByName(TM.data.league(career.leagueId).nation);
+    if (!nat) return;
+    TM.notify.push(career, { icon: "🌍", title: "Convite de seleção", text: "A seleção de " + nat.name + " quer você como treinador! Responda em Avisos.", nationInvite: nat.id });
+  }
+
   function newSeason(career) {
     career.season++;
     seasonSetup(career);
     career.objective = generateObjective(career.teamId);
+    maybeNationInvite(career);
+    // renova as janelas da seleção (se ainda comanda)
+    if (career.nation && !career.nation.fired) career.nation.windows = genNationWindows(career.nation.id);
   }
 
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
@@ -573,6 +628,8 @@
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule,
+    buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
+    nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
