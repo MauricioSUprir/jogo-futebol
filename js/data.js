@@ -139,7 +139,7 @@
         var strength = R.int(rng, 58, 84); // força média do clube
         var club = {
           id: clubId, name: city + " " + suffix, short: city.slice(0, 3).toUpperCase(),
-          leagueId: ld.id,
+          leagueId: ld.id, coach: fullName(rng, ld.culture),
           colors: { primary: "hsl(" + hue + ",65%,42%)", secondary: "hsl(" + ((hue + 40) % 360) + ",60%,55%)" },
           strength: strength, playerIds: []
         };
@@ -153,9 +153,13 @@
           var base = Math.max(45, Math.min(92, R.gaussian(rng, strength, 7)));
           var attrs = makeAttrs(rng, base, pos);
           var ov = overallFrom(attrs, pos);
+          var age = R.int(rng, 16, 36);
+          // potencial: quanto mais jovem e melhor, maior o teto; veteranos ~ overall atual
+          var growth = age >= 30 ? 0 : Math.max(0, Math.round((26 - age) * 0.8) + R.int(rng, -1, 4));
+          var potential = Math.min(99, ov + growth);
           var player = {
             id: "p" + (pid++), name: fullName(rng, nation.culture), clubId: clubId,
-            pos: pos, age: R.int(rng, 17, 36), overall: ov, attrs: attrs,
+            pos: pos, age: age, overall: ov, potential: potential, attrs: attrs,
             nationId: nation.id, nationName: nation.name,
             height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
             form: 0, goals: 0
@@ -169,6 +173,9 @@
       }
       leagues.push(league);
     });
+
+    // técnico de cada seleção
+    NATIONS.forEach(function (n) { n.coach = fullName(rng, n.culture); });
 
     return {
       seed: WORLD_SEED,
@@ -202,6 +209,22 @@
     clubRating: function (clubId) {
       var ps = TM.data.clubPlayers(clubId).slice(0, 11);
       return Math.round(ps.reduce(function (s, p) { return s + p.overall; }, 0) / ps.length);
+    },
+    // valor de mercado base (em milhões, referência em euro)
+    marketValue: function (p) {
+      var base = Math.pow(Math.max(1, p.overall - 50), 1.8) / 7;
+      var ageF = p.age < 24 ? 1.3 : p.age > 31 ? 0.55 : 1;
+      var potF = 1 + Math.max(0, (p.potential || p.overall) - p.overall) * 0.03;
+      return Math.max(1, Math.round(base * ageF * potF));
+    },
+    // taxa de desenvolvimento (rótulo) pela idade e margem de potencial
+    devRate: function (p) {
+      var room = (p.potential || p.overall) - p.overall;
+      if (p.age <= 20 && room >= 4) return "Muito alta";
+      if (p.age <= 23 && room >= 2) return "Alta";
+      if (p.age <= 27) return "Média";
+      if (p.age <= 31) return "Baixa";
+      return "Declínio";
     }
   };
 })(window);

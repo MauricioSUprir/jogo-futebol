@@ -23,11 +23,18 @@
     var scoreEl = el("div", { class: "live-score", text: "0 - 0" });
     var clockEl = el("div", { class: "live-min", text: "0'" });
     var progressFill = el("div", { class: "bc-progress-fill" });
+    function coachOf(t) { return (t.club && t.club.coach) || (t.nation && t.nation.coach) || null; }
+    function teamCol(t) {
+      var kids = [ el("div", { class: "bc-team-name", text: t.name }) ];
+      var co = coachOf(t);
+      if (co) kids.push(el("div", { class: "bc-coach", text: "Téc. " + co }));
+      return el("div", { class: "bc-team" }, kids);
+    }
     screen.appendChild(el("div", { class: "broadcast" }, [
       el("div", { class: "bc-top" }, [
-        el("div", { class: "bc-team", text: a.name }),
+        teamCol(a),
         el("div", { class: "bc-center" }, [ scoreEl, clockEl ]),
-        el("div", { class: "bc-team", text: b.name })
+        teamCol(b)
       ]),
       el("div", { class: "bc-progress" }, [ progressFill ])
     ]));

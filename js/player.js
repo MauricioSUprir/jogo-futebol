@@ -243,7 +243,13 @@
     var club = TM.data.club(c.clubId);
 
     var right = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
-      if (confirm("Encerrar esta carreira?")) { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }
+      TM.ui.optionsMenu("Opções da carreira", [
+        { label: "💾 Salvar carreira", fn: function () { TM.storage.savePlayerCareer(c); TM.ui.toast("✔ Carreira salva"); } },
+        { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
+        { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
+          if (confirm("Finalizar esta carreira? O progresso será apagado.")) { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }
+        } }
+      ]);
     } } });
     screen.appendChild(TM.ui.topbar("Minha Carreira", function () { TM.ui.go("modes"); }, right));
 

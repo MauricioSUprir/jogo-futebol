@@ -83,10 +83,69 @@
     setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.remove(); }, 300); }, 2200);
   }
 
+  // modal de detalhes do jogador (qualidades, potencial, valor, desenvolvimento)
+  function showPlayer(p, opts) {
+    opts = opts || {};
+    var sym = opts.moneySym || "€";
+    var mult = opts.moneyMult || 1;
+    var overlay = el("div", { class: "modal-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var a = p.attrs || {};
+    function bar(label, v) {
+      return el("div", { class: "attr" }, [
+        el("span", { class: "attr-label", text: label }),
+        el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%" }) ]),
+        el("span", { class: "attr-val", text: v })
+      ]);
+    }
+    function info(label, val, cls) { return el("div", { class: "pd-item" }, [ el("div", { class: "pd-val " + (cls || ""), text: val }), el("div", { class: "pd-lbl", text: label }) ]); }
+
+    var potential = p.potential || p.overall;
+    var value = TM.data.marketValue ? TM.data.marketValue(p) : p.overall;
+    var dev = TM.data.devRate ? TM.data.devRate(p) : "—";
+
+    overlay.appendChild(el("div", { class: "modal" }, [
+      el("button", { class: "modal-close", text: "×", on: { click: function () { overlay.remove(); } } }),
+      el("div", { class: "modal-head" }, [
+        (p.photo ? el("img", { src: p.photo, class: "modal-face" }) : TM.img.playerImg(p, "modal-face")),
+        el("div", {}, [
+          el("div", { class: "modal-name", text: p.name }),
+          el("div", { class: "modal-sub", text: p.pos + " · " + p.age + " anos · " + p.nationName }),
+          el("div", { class: "modal-sub", text: (p.height || "?") + " cm · " + (p.weight || "?") + " kg" })
+        ]),
+        ovBadge(p.overall)
+      ]),
+      el("div", { class: "player-detail-grid" }, [
+        info("Overall", p.overall),
+        info("Potencial", potential, potential > p.overall ? "up" : ""),
+        info("Valor", sym + " " + Math.round(value * mult) + "M"),
+        info("Desenvolvimento", dev)
+      ]),
+      el("h4", { class: "pd-section", text: "Qualidades" }),
+      el("div", { class: "attrs" }, [
+        bar("Velocidade", a.pac || 50), bar("Finalização", a.sho || 50), bar("Passe", a.pas || 50),
+        bar("Drible", a.dri || 50), bar("Defesa", a.def || 50), bar("Físico", a.phy || 50)
+      ])
+    ]));
+    document.body.appendChild(overlay);
+  }
+
+  // menu de opções (bottom sheet) — usado nos três-pontinhos das carreiras
+  function optionsMenu(title, items) {
+    var overlay = el("div", { class: "sheet-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var sheet = el("div", { class: "sheet" }, [ el("div", { class: "sheet-title", text: title }) ]);
+    items.forEach(function (it) {
+      sheet.appendChild(el("button", { class: "sheet-item" + (it.danger ? " danger" : ""), text: it.label, on: { click: function () { overlay.remove(); it.fn(); } } }));
+    });
+    sheet.appendChild(el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } }));
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
+    showPlayer: showPlayer, optionsMenu: optionsMenu,
     current: function () { return current; }
   };
 
@@ -94,7 +153,7 @@
   var EMBLEM =
     '<svg viewBox="0 0 200 210" role="img" aria-label="Total Match">' +
     '<defs>' +
-    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8e08a"/><stop offset="0.5" stop-color="#d4af37"/><stop offset="1" stop-color="#a9781a"/></linearGradient>' +
+    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ef0a0"/><stop offset="0.5" stop-color="#22c55e"/><stop offset="1" stop-color="#118a44"/></linearGradient>' +
     '<radialGradient id="inner" cx="0.5" cy="0.4" r="0.7"><stop offset="0" stop-color="#1c1c1c"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient>' +
     '</defs>' +
     // estrela no topo
@@ -163,15 +222,28 @@
     screen.appendChild(content);
   });
 
-  /* =================== TELA: MENU DE MODOS (menu lateral) =================== */
+  /* curiosidades de futebol + dicas do jogo (rotativas no menu) */
+  var FACTS = [
+    { t: "⚽ Total Match", d: "Um simulador de futebol com foco em gestão e carreira — do banco de reservas ao título continental." },
+    { t: "🏆 Champions League", d: "O Real Madrid é o maior campeão da história, com 15 títulos." },
+    { t: "🌎 Copa do Mundo", d: "O Brasil é o único país pentacampeão mundial (1958, 62, 70, 94 e 2002)." },
+    { t: "🥇 Bola de Ouro", d: "Lionel Messi é o maior vencedor da história, com 8 troféus." },
+    { t: "🇧🇷 Libertadores", d: "O Flamengo é tricampeão da Libertadores: 1981, 2019 e 2022." },
+    { t: "👑 Rei Pelé", d: "Pelé é o único jogador tricampeão do mundo por uma seleção." },
+    { t: "🔥 Artilharia", d: "Cristiano Ronaldo é o maior goleador da história do futebol." },
+    { t: "💡 Dica do jogo", d: "No Realismo baixo, rolam mais gols e zebras. No alto, os melhores vencem mais." },
+    { t: "💡 Dica de mercado", d: "Na carreira, negocie primeiro com o clube e depois acerte com o jogador." },
+    { t: "🇮🇹 Milan & Liverpool", d: "Milan (7) e Liverpool (6) estão entre os maiores campeões europeus." },
+    { t: "⭐ Seleções", d: "A cada 4 anos rola a Copa do Mundo — fique de olho na convocação!" }
+  ];
+
   register("modes", function (screen) {
     var MODES = [
-      { icon: "⚡", name: "Partida Rápida", route: "quick", tagline: "Jogue já", desc: "Escolha dois times — clubes ou seleções — e assista à simulação da partida ao vivo, com narração minuto a minuto, gols, pênaltis e cartões.", cta: "Simular partida" },
-      { icon: "🎯", name: "Carreira de Treinador", route: "coach", tagline: "Comande um clube", desc: "Assuma um clube e dispute a Liga, a Copa nacional e a competição continental (Libertadores/Champions). Gerencie o elenco e contrate reforços negociando com clubes e jogadores.", cta: "Iniciar carreira" },
-      { icon: "⭐", name: "Carreira de Jogador", route: "player", tagline: "Seja o craque", desc: "Crie seu jogador (com foto, país e físico) ou assuma um existente. Ganhe notas, marque gols, cumpra metas, receba propostas e seja convocado para a seleção.", cta: "Criar jogador" },
-      { icon: "⚙️", name: "Configurações", route: "settings", tagline: "Ajustes", desc: "Defina dificuldade, nível de realismo, velocidade das partidas e narração. Suas preferências ficam salvas no navegador.", cta: "Abrir ajustes" }
+      { icon: "⚡", name: "Partida Rápida", route: "quick", desc: "Simule uma partida na hora" },
+      { icon: "🎯", name: "Carreira de Treinador", route: "coach", desc: "Comande um clube ou seleção" },
+      { icon: "⭐", name: "Carreira de Jogador", route: "player", desc: "Viva a carreira do seu craque" },
+      { icon: "⚙️", name: "Configurações", route: "settings", desc: "Dificuldade, realismo e mais" }
     ];
-    var selected = 0;
 
     screen.appendChild(el("header", { class: "modes-topbar" }, [
       el("div", { class: "modes-emblem", html: EMBLEM }),
@@ -181,33 +253,38 @@
 
     var layout = el("div", { class: "modes-layout" });
     var sidebar = el("nav", { class: "modes-sidebar" });
-    var preview = el("div", { class: "mode-preview" });
-    layout.appendChild(sidebar);
-    layout.appendChild(preview);
-    screen.appendChild(layout);
-
-    function renderPreview() {
-      var m = MODES[selected];
-      TM.ui.clear(preview);
-      preview.appendChild(el("div", { class: "mp-icon", text: m.icon }));
-      preview.appendChild(el("div", { class: "mp-tagline", text: m.tagline }));
-      preview.appendChild(el("h3", { class: "mp-name", text: m.name }));
-      preview.appendChild(el("p", { class: "mp-desc", text: m.desc }));
-      preview.appendChild(el("button", { class: "btn primary big mp-cta", text: m.cta + " →", on: { click: function () { go(m.route); } } }));
-    }
-
-    MODES.forEach(function (m, i) {
-      var item = el("button", { class: "side-item" + (i === selected ? " active" : ""), on: { click: function () {
-        selected = i;
-        sidebar.querySelectorAll(".side-item").forEach(function (x) { x.classList.remove("active"); });
-        item.classList.add("active");
-        renderPreview();
-      } } }, [
+    MODES.forEach(function (m) {
+      sidebar.appendChild(el("button", { class: "side-item", on: { click: function () { go(m.route); } } }, [
         el("span", { class: "side-ic", text: m.icon }),
-        el("span", { class: "side-name", text: m.name })
-      ]);
-      sidebar.appendChild(item);
+        el("span", { class: "side-info" }, [ el("span", { class: "side-name", text: m.name }), el("span", { class: "side-desc", text: m.desc }) ]),
+        el("span", { class: "side-arrow", text: "→" })
+      ]));
     });
-    renderPreview();
+
+    // painel de curiosidades rotativas
+    var factCard = el("div", { class: "fact-card" });
+    var factTitle = el("div", { class: "fact-title" });
+    var factText = el("div", { class: "fact-text" });
+    factCard.appendChild(el("div", { class: "fact-eyebrow", text: "VOCÊ SABIA?" }));
+    factCard.appendChild(factTitle);
+    factCard.appendChild(factText);
+    var dots = el("div", { class: "fact-dots" });
+    factCard.appendChild(dots);
+
+    var idx = 0;
+    function showFact(i) {
+      var f = FACTS[i];
+      factCard.classList.remove("fade"); void factCard.offsetWidth; factCard.classList.add("fade");
+      factTitle.textContent = f.t; factText.textContent = f.d;
+    }
+    showFact(0);
+    var timer = setInterval(function () {
+      if (!screen.isConnected) { clearInterval(timer); return; }
+      idx = (idx + 1) % FACTS.length; showFact(idx);
+    }, 4500);
+
+    layout.appendChild(sidebar);
+    layout.appendChild(factCard);
+    screen.appendChild(layout);
   });
 })(window);

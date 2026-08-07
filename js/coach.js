@@ -5,6 +5,11 @@
   var el = TM.ui.el;
   var C = function () { return TM.comp; };
 
+  function sym(c) { return c.money ? c.money.sym : "€"; }
+  function mult(c) { return c.money ? c.money.mult : 1; }
+  function curVal(c, eur) { return Math.round(eur * mult(c)); }          // euro -> moeda da carreira
+  function money(c, cur) { return sym(c) + " " + cur + "M"; }            // valor já na moeda da carreira
+
   function roundTitle(nTies) { return ({ 8: "Oitavas de final", 4: "Quartas de final", 2: "Semifinal", 1: "Final" })[nTies] || (nTies * 2 + " times"); }
 
   /* ---------- entrada ---------- */
@@ -38,9 +43,63 @@
     }
     renderClubs();
     screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("Começar carreira", function () {
+      TM.ui.button("Continuar →", function () {
         if (!pickClub) { TM.ui.toast("Escolha um clube"); return; }
-        TM.storage.saveCoachCareer(C().newClubCareer(pickClub));
+        TM.ui.go("coach-setup", { clubId: pickClub });
+      }, "btn primary big")
+    ]));
+  });
+
+  /* ---------- opções pré-carreira: moeda + aporte ---------- */
+  TM.ui.register("coach-setup", function (screen, params) {
+    var clubId = params.clubId;
+    var club = TM.data.club(clubId);
+    var opts = { currency: "eur", injection: 0 };
+
+    screen.appendChild(TM.ui.topbar("Opções da carreira", function () { TM.ui.go("coach"); }));
+    screen.appendChild(el("div", { class: "club-header" }, [
+      TM.img.clubImg(club, "ch-crest"),
+      el("div", {}, [ el("div", { class: "ch-name", text: club.name }), el("div", { class: "ch-sub", text: TM.data.league(club.leagueId).name } ) ])
+    ]));
+
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // moeda
+    var curWrap = el("div", { class: "segmented full" });
+    var CUR = C().CURRENCIES;
+    [["eur", "Euro €"], ["brl", "Real R$"], ["usd", "Dólar US$"], ["jpy", "Iene ¥"]].forEach(function (o) {
+      var b = el("button", { class: "seg-btn" + (opts.currency === o[0] ? " active" : ""), text: o[1], on: { click: function () {
+        opts.currency = o[0]; curWrap.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active"); updateInfo();
+      } } });
+      curWrap.appendChild(b);
+    });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Moeda do jogo" }), curWrap ]));
+
+    // aporte financeiro
+    var injVal = el("span", { class: "range-val" });
+    var injSlider = el("input", { type: "range", min: 0, max: 700, step: 10, value: 0, class: "slider" });
+    injSlider.addEventListener("input", function () { opts.injection = parseInt(injSlider.value, 10); updateInfo(); });
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting-label" }, [ document.createTextNode("Aporte financeiro (opcional)"), injVal ]),
+      injSlider,
+      el("div", { class: "setting-hint", text: "Uma injeção de dinheiro no seu orçamento, até 700 milhões. A moeda afeta os valores dos jogadores nas contratações." })
+    ]));
+
+    var summary = el("div", { class: "market-budget" });
+    body.appendChild(summary);
+    function updateInfo() {
+      var m = CUR[opts.currency];
+      injVal.textContent = m.sym + " " + opts.injection + "M";
+      var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
+      var total = Math.round(baseEur * m.mult) + opts.injection;
+      summary.textContent = "💰 Orçamento inicial: " + m.sym + " " + total + "M";
+    }
+    updateInfo();
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Começar carreira", function () {
+        TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
         TM.ui.go("coach-hub");
       }, "btn primary big")
     ]));
@@ -52,7 +111,13 @@
     if (!c) { TM.ui.go("coach"); return; }
     var club = TM.data.club(c.teamId);
     var right = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
-      if (confirm("Encerrar esta carreira? O progresso será apagado.")) { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }
+      TM.ui.optionsMenu("Opções da carreira", [
+        { label: "💾 Salvar carreira", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
+        { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
+        { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
+          if (confirm("Finalizar esta carreira? O progresso será apagado.")) { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }
+        } }
+      ]);
     } } });
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
 
@@ -61,7 +126,7 @@
       el("div", {}, [
         el("div", { class: "ch-name", text: club.name }),
         el("div", { class: "ch-sub", text: TM.data.league(c.leagueId).name + " · Temporada " + c.season }),
-        el("div", { class: "ch-budget", text: "💰 Orçamento: € " + c.budget + "M" })
+        el("div", { class: "ch-budget", text: "💰 Orçamento: " + money(c, c.budget) })
       ])
     ]));
 
@@ -233,7 +298,7 @@
     var lastPos = null;
     players.forEach(function (p) {
       if (p.pos !== lastPos) { list.appendChild(el("div", { class: "pos-header", text: ({ GK: "Goleiros", DF: "Defensores", MF: "Meio-campistas", FW: "Atacantes" })[p.pos] })); lastPos = p.pos; }
-      list.appendChild(TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl); } }));
+      list.appendChild(TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } }));
     });
     screen.appendChild(list);
   });
@@ -242,7 +307,7 @@
   TM.ui.register("coach-market", function (screen, params) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
-    screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: € " + c.budget + "M" }));
+    screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
 
     var query = (params && params.q) || "";
     var input = el("input", { class: "text-input", type: "text", placeholder: "Pesquisar jogador pelo nome...", value: query });
@@ -262,7 +327,7 @@
       results = all.filter(function (p) { return !rosterSet[p.id] && p.name.toLowerCase().indexOf(q) >= 0; });
     } else {
       // sem busca: jogadores que cabem no orçamento (melhores primeiro)
-      results = all.filter(function (p) { return !rosterSet[p.id] && askingPrice(p) <= c.budget; });
+      results = all.filter(function (p) { return !rosterSet[p.id] && curVal(c, askingPrice(p)) <= c.budget; });
     }
     results.sort(function (a, b) { return b.overall - a.overall; });
     results = results.slice(0, 40);
@@ -285,8 +350,8 @@
     var c = TM.storage.coachCareer();
     var p = TM.data.player(params.pid);
     var sellClub = TM.data.club(p.clubId);
-    var asking = askingPrice(p);
-    var state = { bid: Math.round(asking * 0.8), rounds: 0, agreed: false };
+    var asking = curVal(c, askingPrice(p));
+    var state = { bid: Math.min(Math.round(asking * 0.8), c.budget), rounds: 0, agreed: false };
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
     screen.appendChild(el("div", { class: "nego-step" }, [
@@ -302,23 +367,23 @@
 
     var panel = el("div", { class: "nego-panel" });
     screen.appendChild(panel);
-    var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “Pedimos € " + asking + "M por " + p.name + ".”" });
-    var bidVal = el("span", { class: "range-val", text: "€ " + state.bid + "M" });
+    var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “Pedimos " + money(c, asking) + " por " + p.name + ".”" });
+    var bidVal = el("span", { class: "range-val", text: money(c, state.bid) });
     var slider = el("input", { type: "range", min: 1, max: c.budget, value: Math.min(state.bid, c.budget), class: "slider" });
-    slider.addEventListener("input", function () { state.bid = parseInt(slider.value, 10); bidVal.textContent = "€ " + state.bid + "M"; });
+    slider.addEventListener("input", function () { state.bid = parseInt(slider.value, 10); bidVal.textContent = money(c, state.bid); });
 
     var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
     var offerBtn = TM.ui.button("Fazer proposta", function () {
       state.rounds++;
-      if (state.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas € " + c.budget + "M."; return; }
+      if (state.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas " + money(c, c.budget) + "."; return; }
       if (state.bid >= asking * 0.95) {
-        quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Aceito! " + p.name + " é seu por € " + state.bid + "M. Agora acerte com o jogador.”";
+        quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Aceito! " + p.name + " é seu por " + money(c, state.bid) + ". Agora acerte com o jogador.”";
         state.agreed = true;
         actionWrap.querySelector(".next-step").style.display = "block";
         offerBtn.disabled = true;
       } else if (state.bid >= asking * 0.78) {
         asking = Math.round(asking * 0.93);
-        quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Está perto... aceitamos por € " + asking + "M.”";
+        quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Está perto... aceitamos por " + money(c, asking) + ".”";
       } else {
         quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Muito baixo. Nem pensar.”";
         if (state.rounds >= 4) { quote.textContent = sellClub.name + " encerrou a conversa. Tente outro valor mais alto."; }
@@ -344,7 +409,7 @@
     var c = TM.storage.coachCareer();
     if (!NEGO) { TM.ui.go("coach-market"); return; }
     var p = TM.data.player(NEGO.pid);
-    var demand = wageDemand(p);
+    var demand = curVal(c, wageDemand(p));
     var terms = { wage: demand, years: 3, role: "titular", release: false };
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
@@ -355,13 +420,13 @@
 
     var panel = el("div", { class: "nego-panel" });
     screen.appendChild(panel);
-    var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de € " + demand + "M por ano e um papel de destaque.”" });
+    var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de " + money(c, demand) + " por ano e um papel de destaque.”" });
     panel.appendChild(quote);
 
     // salário
-    var wageVal = el("span", { class: "range-val", text: "€ " + terms.wage + "M/ano" });
+    var wageVal = el("span", { class: "range-val", text: money(c, terms.wage) + "/ano" });
     var wageSlider = el("input", { type: "range", min: 1, max: demand * 3, value: terms.wage, class: "slider" });
-    wageSlider.addEventListener("input", function () { terms.wage = parseInt(wageSlider.value, 10); wageVal.textContent = "€ " + terms.wage + "M/ano"; });
+    wageSlider.addEventListener("input", function () { terms.wage = parseInt(wageSlider.value, 10); wageVal.textContent = money(c, terms.wage) + "/ano"; });
     panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Salário anual" }), el("div", { class: "range-wrap" }, [ wageSlider, wageVal ]) ]));
 
     // tempo de contrato
@@ -394,7 +459,7 @@
       } else if (!roleOk) {
         quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Sou titular indiscutível. Não aceito função de reserva.”";
       } else {
-        quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Salário insuficiente. Quero pelo menos € " + demand + "M/ano.”";
+        quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Salário insuficiente. Quero pelo menos " + money(c, demand) + "/ano.”";
       }
     }, "btn primary");
     actionWrap.appendChild(proposeBtn);

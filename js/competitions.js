@@ -140,11 +140,22 @@
     career.pending = null;
   }
 
-  function newClubCareer(clubId) {
+  var CURRENCIES = {
+    eur: { key: "eur", code: "EUR", sym: "€",   mult: 1 },
+    brl: { key: "brl", code: "BRL", sym: "R$",  mult: 5.5 },
+    usd: { key: "usd", code: "USD", sym: "US$", mult: 1.1 },
+    jpy: { key: "jpy", code: "JPY", sym: "¥",   mult: 165 }
+  };
+
+  function newClubCareer(clubId, opts) {
+    opts = opts || {};
+    var money = CURRENCIES[opts.currency] || CURRENCIES.eur;
     var club = TM.data.club(clubId);
+    var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
     var career = {
       type: "club", teamId: clubId, teamName: club.name, leagueId: club.leagueId, season: 1,
-      budget: 30 + Math.round(TM.data.clubRating(clubId) / 3),
+      money: money,
+      budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
       signedFrom: {}, honours: []
     };
@@ -246,7 +257,7 @@
     newClubCareer: newClubCareer, newSeason: newSeason,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
-    userSquad: userSquad, simMatch: simMatch,
+    userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION
   };
 })(window);
