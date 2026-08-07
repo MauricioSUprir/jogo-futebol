@@ -207,12 +207,6 @@
       ])
     ]);
 
-    // acesso rápido a carreiras salvas
-    var quick = el("div", { class: "quick-continue" });
-    if (TM.storage.coachCareer()) quick.appendChild(el("button", { class: "continue-btn", html: "🎯 Continuar como treinador", on: { click: function () { go("coach-hub"); } } }));
-    if (TM.storage.playerCareer()) quick.appendChild(el("button", { class: "continue-btn", html: "⭐ Continuar como jogador", on: { click: function () { go("player-hub"); } } }));
-    if (quick.children.length) content.appendChild(quick);
-
     content.appendChild(el("button", { class: "btn-start", text: "TOQUE PARA COMEÇAR", on: { click: function () { go("modes"); } } }));
     content.appendChild(el("p", { class: "version", text: "v0.3 — protótipo jogável" }));
     screen.appendChild(content);

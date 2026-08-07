@@ -142,8 +142,9 @@
     } else {
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
       var badge = pending.key === "cup" ? "cup" : pending.key === "cont" ? "cont" : "league";
+      var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
       screen.appendChild(el("div", { class: "next-match" }, [
-        el("div", { class: "nm-label" }, [ document.createTextNode(pending.name), el("span", { class: "comp-badge " + badge, text: pending.ko ? "Mata-mata" : "Liga" }) ]),
+        el("div", { class: "nm-label" }, [ document.createTextNode(pending.name + "  "), el("span", { class: "comp-badge " + badge, text: badgeText }) ]),
         el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ]),
         TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-play"); }, "btn primary")
       ]));
@@ -166,7 +167,7 @@
     var titles = [];
     if (st[0].id === c.teamId) titles.push("🏆 Campeão da " + c.comps.league.name);
     if (c.comps.cup && c.comps.cup.championId === c.teamId) titles.push("🏆 Campeão da " + c.comps.cup.name);
-    if (c.comps.cont && c.comps.cont.championId === c.teamId) titles.push("🏆 Campeão da " + c.comps.cont.name);
+    if (c.comps.cont && c.comps.cont.tour && c.comps.cont.tour.championId === c.teamId) titles.push("🏆 Campeão da " + c.comps.cont.name);
     var box = el("div", { class: "next-match season-end" }, [
       el("div", { class: "nm-label", text: "🏁 Fim da temporada " + c.season }),
       el("div", { class: "nm-teams", text: pos + "º na liga" })
@@ -236,8 +237,33 @@
     screen.appendChild(tabRow);
 
     if (active === "league") renderLeague(screen, c);
+    else if (c.comps[active].type === "tournament") renderTournament(screen, c, c.comps[active]);
     else renderBracket(screen, c, c.comps[active]);
   });
+
+  // continental (grupos + mata-mata)
+  function renderTournament(screen, c, comp) {
+    var t = comp.tour;
+    if (t.championId) screen.appendChild(el("div", { class: "champion-banner", text: "🏆 Campeão: " + TM.data.club(t.championId).name }));
+    if (t.phase === "group") {
+      var wrap = el("div", { class: "panel-narrow" });
+      t.groups.forEach(function (g, gi) {
+        wrap.appendChild(el("div", { class: "group-title", text: "Grupo " + String.fromCharCode(65 + gi) }));
+        var st = C().standings(g.table), tb = el("tbody");
+        st.forEach(function (row, i) {
+          var club = TM.data.club(row.id);
+          tb.appendChild(el("tr", { class: (row.id === c.teamId ? "me " : "") + (i < 2 ? "qualify" : "") }, [
+            el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.clubImg(club, "lt-crest"), el("span", { text: club.name }) ]),
+            el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
+          ]));
+        });
+        wrap.appendChild(el("div", { class: "table-wrap" }, [ el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]), tb ]) ]));
+      });
+      screen.appendChild(wrap);
+    } else {
+      renderBracket(screen, c, t.ko);
+    }
+  }
 
   function renderLeague(screen, c) {
     var st = C().standings(c.comps.league.table);

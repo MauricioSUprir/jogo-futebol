@@ -109,6 +109,10 @@
     else if (awayId === career.teamId) { opts.tacticSide = 1; opts.tactic = career.tactic; }
     return TM.engine.simulate(anyTeam(career, homeId), anyTeam(career, awayId), opts);
   }
+  // contexto para o motor de torneio (continental)
+  function contCtx(career) {
+    return { sim: function (a, b) { return simMatch(career, a, b, true); }, rating: function (id) { return TM.data.clubRating(id); } };
+  }
 
   /* ---------- mata-mata ---------- */
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
@@ -161,37 +165,62 @@
     if (pool.indexOf(teamId) < 0) { pool[pool.length - 1] = teamId; } // garante o usuário
     return buildKO(pool, CUP_NAME[leagueId] || "Copa Nacional", "cup");
   }
-  function buildContinental(teamId, leagueId) {
-    var region = REGION[leagueId] || "eu";
-    var leagues = REGION_LEAGUES[region] || [leagueId];
-    var pool = [];
-    leagues.forEach(function (lg) { pool = pool.concat(topClubs(lg, 4)); });
-    pool = pool.filter(function (id, i) { return pool.indexOf(id) === i; });
-    pool.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
-    var size = Math.min(16, pow2Floor(pool.length));
-    pool = pool.slice(0, size);
-    if (pool.indexOf(teamId) < 0 && pool.length) pool[pool.length - 1] = teamId; // usuário sempre entra (temp. 1)
-    if (pool.length < 2) return null;
-    return buildKO(pool, CONT_NAME[region] || "Continental", "cont");
+  // ranking de uma liga: pela posição final da temporada passada (só a liga do
+  // usuário é simulada); as demais ligas usam o overall como critério
+  function rankLeague(career, lg) {
+    if (lg === career.leagueId && career.lastStanding && career.lastStanding.length) return career.lastStanding.slice();
+    return TM.data.league(lg).clubIds.slice().sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+  }
+
+  // Continental com fase de grupos. Só clubes bem colocados na liga se classificam
+  // (top 4 de cada liga da região). Retorna null se o usuário não se classificar.
+  function buildContinental(career) {
+    var region = REGION[career.leagueId] || "eu";
+    var leagues = REGION_LEAGUES[region] || [career.leagueId];
+    var size = leagues.length >= 4 ? 32 : 16;          // Europa: 32; Am. do Sul / outros: 16
+    var perLeague = Math.ceil(size / leagues.length);   // vagas por liga (top-N da tabela)
+    // classificados: melhores colocados de cada liga
+    var initial = [];
+    leagues.forEach(function (lg) { initial = initial.concat(rankLeague(career, lg).slice(0, perLeague)); });
+    initial = initial.filter(function (id, i) { return initial.indexOf(id) === i; });
+    if (initial.indexOf(career.teamId) < 0) return null; // usuário não se classificou
+    var field = initial.slice();
+    if (field.length > size) {
+      field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      field = field.slice(0, size);
+      if (field.indexOf(career.teamId) < 0) field[field.length - 1] = career.teamId; // garante o usuário
+    }
+    while (field.length < size) { // completa com próximos melhores da região
+      var pad = null, best = -1;
+      leagues.forEach(function (lg) {
+        TM.data.league(lg).clubIds.forEach(function (id) { if (field.indexOf(id) < 0 && TM.data.clubRating(id) > best) { best = TM.data.clubRating(id); pad = id; } });
+      });
+      if (!pad) break; field.push(pad);
+    }
+    var groups = size === 32 ? 8 : 4;
+    return { type: "tournament", key: "cont", name: CONT_NAME[region] || "Continental",
+      tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, userId: career.teamId }) };
   }
 
   function buildOrder(hasCont) {
-    // 17 rodadas de liga, com copa e continental intercaladas
-    var order = [], cupAt = [2, 6, 10, 14], contAt = [4, 8, 12, 16], cupN = 0, contN = 0;
+    // 17 rodadas de liga; copa nacional (4 jogos) e continental (até 7: 3 de
+    // grupos + 4 de mata-mata) intercaladas ao longo da temporada
+    var order = [], cupAt = [3, 7, 11, 15], contAt = [2, 4, 6, 8, 10, 12, 14], cupN = 0, contN = 0;
+    var contMax = hasCont ? 7 : 0;
     for (var lr = 1; lr <= 17; lr++) {
       order.push("league");
       if (cupAt.indexOf(lr) >= 0 && cupN < 4) { order.push("cup"); cupN++; }
-      if (hasCont && contAt.indexOf(lr) >= 0 && contN < 4) { order.push("cont"); contN++; }
+      if (contAt.indexOf(lr) >= 0 && contN < contMax) { order.push("cont"); contN++; }
     }
     while (cupN < 4) { order.push("cup"); cupN++; }
-    while (hasCont && contN < 4) { order.push("cont"); contN++; }
+    while (contN < contMax) { order.push("cont"); contN++; }
     return order;
   }
 
   function seasonSetup(career) {
     var leagueId = career.leagueId;
     var league = TM.data.league(leagueId);
-    var cont = buildContinental(career.teamId, leagueId);
+    var cont = buildContinental(career);
     career.comps = {
       league: { type: "league", name: league.name, fixtures: roundRobin(league.clubIds.slice()), round: 0, table: emptyTable(league.clubIds) },
       cup: buildDomesticCup(career.teamId, leagueId),
@@ -384,8 +413,17 @@
         TM.storage.saveCoachCareer(career);
         return career.pending;
       }
-      var ko = career.comps[key];
-      if (!ko) { career.orderIndex++; continue; }
+      var comp = career.comps[key];
+      if (!comp) { career.orderIndex++; continue; }
+      if (comp.type === "tournament") {
+        var nx = TM.tournament.nextUserMatch(comp.tour, contCtx(career));
+        if (nx.end) { career.orderIndex++; continue; }
+        career.pending = { key: key, name: comp.name, homeId: nx.homeId, awayId: nx.awayId, ko: nx.ko, tour: true,
+          label: nx.phase === "group" ? "Grupos · Rodada " + (nx.groupRound + 1) : TM.tournament.koTitle(nx.round) };
+        TM.storage.saveCoachCareer(career);
+        return career.pending;
+      }
+      var ko = comp;
       if (ko.championId) { career.orderIndex++; continue; }
       ensureKORound(ko);
       var tie = userTieIn(ko, career.teamId);
@@ -415,6 +453,8 @@
         applyResult(lg.table, fix[0], fix[1], res.score[0], res.score[1]);
       });
       lg.round++;
+    } else if (p.tour) {
+      TM.tournament.applyUserMatch(career.comps[p.key].tour, homeScore, awayScore, contCtx(career));
     } else {
       var ko = career.comps[p.key];
       var round = ko.rounds[ko.roundIndex];
@@ -437,15 +477,18 @@
     if (career.orderIndex < career.order.length) return;
     var c = career.comps;
     var st = standings(c.league.table);
+    // guarda a classificação final da liga (usada para classificar à continental)
+    career.lastStanding = st.map(function (r) { return r.id; });
     var already = career.honours.some(function (h) { return h.season === career.season; });
     if (already) return;
     var champ = st[0];
+    var contChamp = c.cont && c.cont.tour && c.cont.tour.championId === career.teamId;
     career.honours.push({
       season: career.season,
       leaguePos: st.findIndex(function (r) { return r.id === career.teamId; }) + 1,
       leagueChampion: champ.id === career.teamId,
       cupChampion: c.cup && c.cup.championId === career.teamId,
-      contChampion: c.cont && c.cont.championId === career.teamId
+      contChampion: contChamp
     });
   }
 

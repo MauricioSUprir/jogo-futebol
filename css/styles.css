@@ -629,6 +629,9 @@ html, body {
 .comp-list-item:hover { border-color: var(--gold); transform: translateX(2px); }
 .cli-name { font-weight: 700; font-size: 15px; }
 .cli-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.group-title { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin: 14px 0 6px; }
+.league-table tr.qualify td { border-left: 0; }
+.league-table tr.qualify td:first-child { box-shadow: inset 3px 0 0 var(--green); }
 
 /* evolução / pontos de habilidade */
 .sp-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: 620px;
