@@ -93,56 +93,17 @@
     ]));
   });
 
-  /* ---------- Tela 2: partida ao vivo ---------- */
+  /* ---------- Tela 2: partida ao vivo (imersiva) ---------- */
   TM.ui.register("quick-match", function (screen, params) {
     var settings = TM.storage.settings();
     var result = TM.engine.simulate(params.a, params.b, {
       realism: settings.realism, neutral: setup.source === "nation"
     });
-
-    var score = [0, 0];
-    var scoreEl, feed, clockEl;
-
-    screen.appendChild(TM.ui.topbar("Ao vivo", function () { TM.ui.go("quick"); }));
-
-    var head = el("div", { class: "live-scoreboard" }, [
-      el("div", { class: "live-team", text: params.a.name }),
-      (scoreEl = el("div", { class: "live-score", text: "0 - 0" })),
-      el("div", { class: "live-team", text: params.b.name })
-    ]);
-    clockEl = el("div", { class: "live-clock", text: "0'" });
-    screen.appendChild(head);
-    screen.appendChild(clockEl);
-    feed = el("div", { class: "commentary-feed" });
-    screen.appendChild(feed);
-
-    var skipBtn = TM.ui.button("Pular para o resultado", finish, "btn ghost");
-    screen.appendChild(el("div", { class: "actions" }, [ skipBtn ]));
-
-    var speeds = { instantaneo: 0, rapido: 12, normal: 45 };
-    var delay = settings.commentary ? (speeds[settings.matchSpeed] != null ? speeds[settings.matchSpeed] : 45) : 0;
-
-    var idx = 0, done = false;
-    function step() {
-      if (done) return;
-      if (idx >= result.events.length) { finish(); return; }
-      var ev = result.events[idx++];
-      if (ev.type === "goal" && ev.team != null) { score[ev.team]++; scoreEl.textContent = score[0] + " - " + score[1]; }
-      clockEl.textContent = ev.minute + "'";
-      if (settings.commentary || ev.type === "goal" || ev.type === "full" || ev.type === "kickoff") {
-        var line = el("div", { class: "cm-line cm-" + ev.type, text: ev.text });
-        feed.insertBefore(line, feed.firstChild);
-      }
-      if (delay === 0) { step(); } else { setTimeout(step, ev.type === "goal" ? delay * 8 : delay); }
-    }
-
-    function finish() {
-      if (done) return; done = true;
-      TM.ui.go("quick-result", { a: params.a, b: params.b, result: result });
-    }
-
-    // dispara a simulação visual
-    if (delay === 0) { finish(); } else { setTimeout(step, 300); }
+    TM.matchview.play(screen, {
+      teamA: params.a, teamB: params.b, result: result, settings: settings,
+      onBack: function () { TM.ui.go("quick"); },
+      onDone: function () { TM.ui.go("quick-result", { a: params.a, b: params.b, result: result }); }
+    });
   });
 
   /* ---------- Tela 3: resultado ---------- */
