@@ -55,15 +55,24 @@
     return el("span", { class: "ov " + cls, text: overall });
   }
 
-  // linha de jogador reutilizável
+  // linha de jogador reutilizável (com bandeira placeholder da nacionalidade)
   function playerRow(player, opts) {
     opts = opts || {};
-    var club = TM.data.club(player.clubId);
+    var nation = player.nationId ? TM.data.nation(player.nationId) : null;
+    var subKids = [
+      el("span", { class: "prow-pos", text: player.pos }),
+      document.createTextNode(" · " + player.age + " anos")
+    ];
+    var natEl = el("span", { class: "prow-nat" }, [
+      nation ? TM.img.nationImg(nation, "prow-flag") : null,
+      el("span", { text: player.nationName || (nation && nation.name) || "" })
+    ]);
     var row = el("div", { class: "player-row" + (opts.compact ? " compact" : "") }, [
       TM.img.playerImg(player, "prow-face"),
       el("div", { class: "prow-info" }, [
         el("div", { class: "prow-name", text: player.name }),
-        el("div", { class: "prow-sub", text: player.pos + " · " + player.age + " anos · " + player.nationName })
+        el("div", { class: "prow-sub" }, subKids),
+        natEl
       ]),
       ovBadge(player.overall)
     ]);
@@ -149,46 +158,33 @@
     current: function () { return current; }
   };
 
-  /* emblema/logo reutilizável (badge dourado com bola, prancheta, louros e estrela) */
+  /* emblema/logo — escudo moderno com bola e estrela */
   var EMBLEM =
     '<svg viewBox="0 0 200 210" role="img" aria-label="Total Match">' +
     '<defs>' +
-    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ef0a0"/><stop offset="0.5" stop-color="#22c55e"/><stop offset="1" stop-color="#118a44"/></linearGradient>' +
-    '<radialGradient id="inner" cx="0.5" cy="0.4" r="0.7"><stop offset="0" stop-color="#1c1c1c"/><stop offset="1" stop-color="#0a0a0a"/></radialGradient>' +
+    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ef0a0"/><stop offset="0.5" stop-color="#22c55e"/><stop offset="1" stop-color="#0f8a42"/></linearGradient>' +
+    '<linearGradient id="inner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1a1a"/><stop offset="1" stop-color="#0a0a0a"/></linearGradient>' +
+    '<radialGradient id="glow" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="rgba(34,197,94,0.35)"/><stop offset="1" stop-color="rgba(34,197,94,0)"/></radialGradient>' +
     '</defs>' +
+    '<ellipse cx="100" cy="112" rx="86" ry="92" fill="url(#glow)"/>' +
     // estrela no topo
-    '<path d="M100 6 l6 12 13 2 -9.5 9 2.3 13 -11.8-6.2 -11.8 6.2 2.3-13 -9.5-9 13-2 z" fill="url(#gold)"/>' +
-    // louros
-    '<g fill="url(#gold)" opacity="0.95">' +
-    laurel(-1) + laurel(1) +
-    '</g>' +
-    // badge externo
-    '<circle cx="100" cy="112" r="66" fill="url(#gold)"/>' +
-    '<circle cx="100" cy="112" r="60" fill="url(#inner)"/>' +
-    '<circle cx="100" cy="112" r="60" fill="none" stroke="#2e7d46" stroke-width="1.5" opacity="0.5"/>' +
-    // prancheta atrás
-    '<g transform="translate(100 112) rotate(-10)">' +
-    '<rect x="-30" y="-34" width="60" height="74" rx="6" fill="#181818" stroke="url(#gold)" stroke-width="2"/>' +
-    '<line x1="0" y1="-34" x2="0" y2="40" stroke="#2e7d46" stroke-width="1.4" opacity="0.7"/>' +
-    '<circle cx="0" cy="3" r="10" fill="none" stroke="#2e7d46" stroke-width="1.4" opacity="0.7"/></g>' +
-    // bola por cima
-    '<g transform="translate(108 122)"><circle r="26" fill="#0a0a0a" stroke="url(#gold)" stroke-width="2.5"/>' +
-    '<path d="M0,-18 L11,-5.5 L6.8,10 L-6.8,10 L-11,-5.5 Z" fill="url(#gold)"/>' +
-    '<path d="M0,-26 L0,-18 M11,-5.5 L21,-12 M6.8,10 L16,18 M-6.8,10 L-16,18 M-11,-5.5 L-21,-12" stroke="url(#gold)" stroke-width="1.8" fill="none"/></g>' +
+    '<path d="M100 8 l5 11 12 1.6 -8.8 8.4 2.2 12 -10.6-5.8 -10.6 5.8 2.2-12 -8.8-8.4 12-1.6 z" fill="url(#gold)"/>' +
+    // escudo externo (borda verde)
+    '<path d="M100 26 L170 46 V106 C170 152 138 180 100 194 C62 180 30 152 30 106 V46 Z" fill="url(#gold)"/>' +
+    // escudo interno (fundo escuro)
+    '<path d="M100 37 L159 54 V106 C159 145 132 169 100 181 C68 169 41 145 41 106 V54 Z" fill="url(#inner)"/>' +
+    // faixa superior
+    '<path d="M100 37 L159 54 V70 H41 V54 Z" fill="#22c55e" opacity="0.22"/>' +
+    // arco de gramado sutil
+    '<path d="M55 150 A 55 44 0 0 1 145 150" fill="none" stroke="#22c55e" stroke-width="1.5" opacity="0.25"/>' +
+    // bola
+    '<g transform="translate(100 108)"><circle r="30" fill="#0a0a0a" stroke="url(#gold)" stroke-width="3"/>' +
+    '<path d="M0,-20 L13,-6.2 L7.6,11 L-7.6,11 L-13,-6.2 Z" fill="url(#gold)"/>' +
+    '<path d="M0,-30 L0,-20 M13,-6.2 L24,-14 M7.6,11 L18,20 M-7.6,11 L-18,20 M-13,-6.2 L-24,-14" stroke="url(#gold)" stroke-width="2" fill="none"/>' +
+    '<circle cx="0" cy="-25" r="2.2" fill="url(#gold)"/><circle cx="22" cy="-8" r="2.2" fill="url(#gold)"/><circle cx="14" cy="17" r="2.2" fill="url(#gold)"/><circle cx="-14" cy="17" r="2.2" fill="url(#gold)"/><circle cx="-22" cy="-8" r="2.2" fill="url(#gold)"/></g>' +
+    // sigla
+    '<text x="100" y="168" font-family="Arial" font-size="15" font-weight="800" fill="#22c55e" text-anchor="middle" letter-spacing="1">TM</text>' +
     '</svg>';
-
-  function laurel(dir) {
-    // ramo de louros de um lado (dir = -1 esquerda, 1 direita)
-    var cx = 100 + dir * 58, out = "";
-    var leaves = [[ -2, 168, 18 ], [ -10, 150, 40 ], [ -14, 132, 55 ], [ -14, 114, 68 ], [ -10, 96, 78 ]];
-    leaves.forEach(function (lf) {
-      var x = 100 + dir * lf[1] * 0 + dir * (66 + lf[0]); // aproximação ao longo do arco
-      var px = 100 + dir * (58 + lf[0]);
-      var py = lf[1] - 40;
-      out += '<ellipse cx="' + px + '" cy="' + py + '" rx="4.5" ry="9" transform="rotate(' + (dir * (60 - lf[2] * 0.6)) + ' ' + px + ' ' + py + ')"/>';
-    });
-    return out;
-  }
 
   function statChip(icon, text) {
     return el("div", { class: "stat-chip" }, [ el("span", { class: "chip-ic", text: icon }), el("span", { text: text }) ]);
@@ -239,10 +235,11 @@
 
   register("modes", function (screen) {
     var MODES = [
-      { icon: "⚡", name: "Partida Rápida", route: "quick", desc: "Simule uma partida na hora" },
-      { icon: "🎯", name: "Carreira de Treinador", route: "coach", desc: "Comande um clube ou seleção" },
-      { icon: "⭐", name: "Carreira de Jogador", route: "player", desc: "Viva a carreira do seu craque" },
-      { icon: "⚙️", name: "Configurações", route: "settings", desc: "Dificuldade, realismo e mais" }
+      { icon: "⚡", name: "Partida Rápida", route: "quick" },
+      { icon: "🎯", name: "Carreira de Treinador", route: "coach" },
+      { icon: "⭐", name: "Carreira de Jogador", route: "player" },
+      { icon: "🏆", name: "Jogar Competição", route: "compmode" },
+      { icon: "⚙️", name: "Configurações", route: "settings" }
     ];
 
     screen.appendChild(el("header", { class: "modes-topbar" }, [
@@ -256,7 +253,7 @@
     MODES.forEach(function (m) {
       sidebar.appendChild(el("button", { class: "side-item", on: { click: function () { go(m.route); } } }, [
         el("span", { class: "side-ic", text: m.icon }),
-        el("span", { class: "side-info" }, [ el("span", { class: "side-name", text: m.name }), el("span", { class: "side-desc", text: m.desc }) ]),
+        el("span", { class: "side-info" }, [ el("span", { class: "side-name", text: m.name }) ]),
         el("span", { class: "side-arrow", text: "→" })
       ]));
     });

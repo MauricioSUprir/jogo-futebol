@@ -34,18 +34,80 @@
   }
   function standings(t) { return Object.keys(t).map(function (k) { return t[k]; }).sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf; }); }
 
-  /* ---------- elencos com transferências da carreira ---------- */
-  function idsToPlayers(ids) { return ids.map(TM.data.player).filter(Boolean).sort(function (a, b) { return b.overall - a.overall; }); }
-  function userSquad(career) { return idsToPlayers(career.roster); }
+  /* ---------- formações (campinho) ---------- */
+  var FORMATIONS = {
+    "4-4-2":   [["GK",50,88],["DF",16,68],["DF",39,72],["DF",61,72],["DF",84,68],["MF",16,44],["MF",39,48],["MF",61,48],["MF",84,44],["FW",38,20],["FW",62,20]],
+    "4-3-3":   [["GK",50,88],["DF",16,68],["DF",39,72],["DF",61,72],["DF",84,68],["MF",30,48],["MF",50,52],["MF",70,48],["FW",20,22],["FW",50,16],["FW",80,22]],
+    "3-5-2":   [["GK",50,88],["DF",30,70],["DF",50,73],["DF",70,70],["MF",12,46],["MF",34,50],["MF",50,42],["MF",66,50],["MF",88,46],["FW",38,18],["FW",62,18]],
+    "4-2-3-1": [["GK",50,88],["DF",16,68],["DF",39,72],["DF",61,72],["DF",84,68],["MF",38,56],["MF",62,56],["MF",24,36],["MF",50,32],["MF",76,36],["FW",50,16]],
+    "5-3-2":   [["GK",50,88],["DF",10,64],["DF",30,72],["DF",50,74],["DF",70,72],["DF",90,64],["MF",30,46],["MF",50,50],["MF",70,46],["FW",38,18],["FW",62,18]]
+  };
+
+  /* ---------- resolução de jogadores (mundo + base) ---------- */
+  function youthMapOf(career) { var m = {}; (career.youth || []).forEach(function (y) { m[y.id] = y; }); return m; }
+  function resolvePlayer(career, id) {
+    if (!id) return null;
+    if (id[0] === "y") {
+      if (career.customPlayers && career.customPlayers[id]) return career.customPlayers[id];
+      return youthMapOf(career)[id] || null;
+    }
+    return TM.data.player(id);
+  }
+  function rosterPlayers(career) { return career.roster.map(function (id) { return resolvePlayer(career, id); }).filter(Boolean); }
+
+  /* ---------- elencos com transferências, lesões e escalação ---------- */
+  function available(career, id) { return !(career.injuries && career.injuries[id] > 0) && !(career.suspensions && career.suspensions[id] > 0); }
+  function userSquad(career) { return rosterPlayers(career).sort(function (a, b) { return b.overall - a.overall; }); }
   function oppPlayers(career, clubId) {
     return TM.data.clubPlayers(clubId).filter(function (p) { return !(career.signedFrom[p.id] === clubId); });
   }
-  function userTeam(career) { var c = TM.data.club(career.teamId); return { id: c.id, name: c.name, players: userSquad(career), club: c }; }
+
+  function buildLineup(playerObjs, formation) {
+    var slots = FORMATIONS[formation] || FORMATIONS["4-4-2"];
+    var used = {}, starters = [];
+    slots.forEach(function (slot) {
+      var role = slot[0];
+      var cand = playerObjs.filter(function (p) { return !used[p.id] && p.pos === role; });
+      if (!cand.length) cand = playerObjs.filter(function (p) { return !used[p.id]; });
+      cand.sort(function (a, b) { return b.overall - a.overall; });
+      var pk = cand[0]; if (pk) { used[pk.id] = true; starters.push(pk.id); }
+    });
+    var bench = playerObjs.filter(function (p) { return !used[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).map(function (p) { return p.id; });
+    return { formation: formation, starters: starters, bench: bench };
+  }
+
+  // escalação efetiva: substitui lesionados/suspensos por reservas disponíveis
+  function effectiveXI(career) {
+    var lu = career.lineup;
+    if (!lu) return userSquad(career).slice(0, 11).map(function (p) { return p.id; });
+    var benchAvail = lu.bench.filter(function (id) { return available(career, id); });
+    return lu.starters.map(function (id) {
+      if (available(career, id)) return id;
+      var out = resolvePlayer(career, id);
+      var repl = null;
+      for (var i = 0; i < benchAvail.length; i++) { if (resolvePlayer(career, benchAvail[i]).pos === (out && out.pos)) { repl = benchAvail[i]; break; } }
+      if (!repl && benchAvail.length) repl = benchAvail[0];
+      if (repl) { benchAvail = benchAvail.filter(function (x) { return x !== repl; }); return repl; }
+      return id;
+    });
+  }
+
+  function userTeam(career) {
+    var club = TM.data.club(career.teamId);
+    var xiIds = effectiveXI(career);
+    var xi = xiIds.map(function (id) { return resolvePlayer(career, id); }).filter(Boolean);
+    var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
+    var rest = rosterPlayers(career).filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
+    return { id: club.id, name: club.name, players: xi.concat(rest), club: club };
+  }
   function oppTeam(career, clubId) { var c = TM.data.club(clubId); return { id: c.id, name: c.name, players: oppPlayers(career, clubId), club: c }; }
   function anyTeam(career, clubId) { return clubId === career.teamId ? userTeam(career) : oppTeam(career, clubId); }
 
   function simMatch(career, homeId, awayId, neutral) {
-    return TM.engine.simulate(anyTeam(career, homeId), anyTeam(career, awayId), { realism: realism(), neutral: neutral });
+    var opts = { realism: realism(), neutral: neutral };
+    if (homeId === career.teamId) { opts.tacticSide = 0; opts.tactic = career.tactic; }
+    else if (awayId === career.teamId) { opts.tacticSide = 1; opts.tactic = career.tactic; }
+    return TM.engine.simulate(anyTeam(career, homeId), anyTeam(career, awayId), opts);
   }
 
   /* ---------- mata-mata ---------- */
@@ -147,6 +209,37 @@
     jpy: { key: "jpy", code: "JPY", sym: "¥",   mult: 165 }
   };
 
+  /* ---------- categorias de base ---------- */
+  function youthAttrs(base, pos) {
+    var a = { pac: base, sho: base, pas: base, dri: base, def: base, phy: base - 4 };
+    if (pos === "GK") { a.def = base + 5; a.sho = base - 22; }
+    if (pos === "DF") { a.def += 5; a.sho -= 8; }
+    if (pos === "FW") { a.sho += 6; a.def -= 10; a.pac += 3; }
+    if (pos === "MF") { a.pas += 5; }
+    Object.keys(a).forEach(function (k) { a[k] = Math.max(20, Math.min(85, a[k] + Math.floor(Math.random() * 7 - 3))); });
+    return a;
+  }
+  function generateYouth(clubId) {
+    var club = TM.data.club(clubId);
+    var culture = TM.data.cultureOfLeague(club.leagueId);
+    var natName = TM.data.league(club.leagueId).nation;
+    var nat = TM.data.nationByName(natName) || TM.data.world().nations[0];
+    var roles = ["GK", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "FW", "FW", "GK", "DF", "MF", "FW"];
+    var youth = [];
+    roles.forEach(function (pos, i) {
+      var age = 14 + Math.floor(Math.random() * 5); // 14 a 18
+      var ov = 47 + Math.floor(Math.random() * 15);  // 47 a 61
+      var pot = Math.min(91, ov + 8 + Math.floor(Math.random() * 22));
+      youth.push({
+        id: "y" + clubId + "-" + i, name: TM.data.randomName(culture), clubId: clubId, pos: pos,
+        age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos),
+        nationId: nat.id, nationName: nat.name, height: 165 + Math.floor(Math.random() * 28),
+        weight: 58 + Math.floor(Math.random() * 26), youth: true
+      });
+    });
+    return youth;
+  }
+
   function newClubCareer(clubId, opts) {
     opts = opts || {};
     var money = CURRENCIES[opts.currency] || CURRENCIES.eur;
@@ -157,10 +250,99 @@
       money: money,
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
-      signedFrom: {}, honours: []
+      signedFrom: {}, honours: [],
+      tactic: "equilibrado",
+      injuries: {}, suspensions: {}, notifications: [],
+      youth: generateYouth(clubId)
     };
+    career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     seasonSetup(career);
+    TM.notify.push(career, { icon: "🎉", title: "Bem-vindo!", text: "Você assumiu o comando do " + club.name + ". Boa sorte na temporada!" });
     return career;
+  }
+
+  /* ---------- processa o pós-jogo do usuário: lesões, suspensões, avisos ---------- */
+  function processUserMatch(career, result, userSide) {
+    // um jogo passou: reduz contadores
+    ["injuries", "suspensions"].forEach(function (k) {
+      Object.keys(career[k]).forEach(function (id) { career[k][id]--; if (career[k][id] <= 0) delete career[k][id]; });
+    });
+    // novas lesões do meu time
+    (result.injuries || []).forEach(function (inj) {
+      if (inj.side !== userSide) return;
+      if (!inRoster(career, inj.id)) return;
+      career.injuries[inj.id] = inj.weeks;
+      TM.notify.push(career, { icon: "🚑", title: "Lesão", text: inj.name + " se lesionou e ficará fora por ~" + inj.weeks + " jogo(s)." });
+    });
+    // suspensões (cartão vermelho)
+    (result.sentOff || []).forEach(function (so) {
+      if (so.side !== userSide) return;
+      if (!inRoster(career, so.id)) return;
+      career.suspensions[so.id] = 1;
+      TM.notify.push(career, { icon: "🟥", title: "Suspensão", text: so.name + " foi expulso e está suspenso do próximo jogo." });
+    });
+    // interesse de outro clube em um jogador seu (ocasional)
+    maybeIncomingOffer(career);
+  }
+  function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
+
+  function maybeIncomingOffer(career) {
+    if (Math.random() > 0.28) return;
+    var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 70; }).sort(function (a, b) { return b.overall - a.overall; });
+    if (!mine.length) return;
+    var target = mine[Math.floor(Math.random() * Math.min(6, mine.length))];
+    // um clube forte de fora
+    var buyers = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= target.overall - 2; });
+    if (!buyers.length) return;
+    var buyer = buyers[Math.floor(Math.random() * buyers.length)];
+    var fee = Math.round(TM.data.marketValue(target) * (0.8 + Math.random() * 0.6) * (career.money ? career.money.mult : 1));
+    TM.notify.push(career, {
+      icon: "📨", title: "Proposta recebida",
+      text: buyer.name + " ofereceu " + (career.money ? career.money.sym : "€") + " " + fee + "M por " + target.name + ".",
+      offer: { playerId: target.id, buyerId: buyer.id, fee: fee }
+    });
+  }
+
+  // resolve uma proposta recebida (aceitar = vende; jogador pode ou não topar)
+  function resolveIncomingOffer(career, note, accept) {
+    var off = note.offer;
+    var player = resolvePlayer(career, off.playerId);
+    if (!accept) {
+      TM.notify.remove(career, note.id);
+      TM.notify.push(career, { icon: "🚫", title: "Proposta recusada", text: "Você recusou a proposta por " + player.name + "." });
+      return "recusada";
+    }
+    // o jogador decide se topa sair (clubes maiores atraem mais)
+    var buyerRating = TM.data.clubRating(off.buyerId), myRating = TM.data.clubRating(career.teamId);
+    var playerWants = Math.random() < 0.4 + Math.max(0, (buyerRating - myRating)) * 0.05;
+    TM.notify.remove(career, note.id);
+    if (playerWants) {
+      career.budget += off.fee;
+      career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
+      if (career.lineup) {
+        career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });
+        career.lineup.bench = career.lineup.bench.filter(function (id) { return id !== off.playerId; });
+      }
+      TM.notify.push(career, { icon: "✅", title: "Negócio fechado", text: "Clube e jogador aceitaram: " + player.name + " foi vendido por " + (career.money ? career.money.sym : "€") + " " + off.fee + "M." });
+      return "vendido";
+    } else {
+      TM.notify.push(career, { icon: "🙅", title: "Jogador recusou", text: "Você aceitou, mas " + player.name + " não quis deixar o clube. Negócio cancelado." });
+      return "jogador_recusou";
+    }
+  }
+
+  function promoteYouth(career, youthId) {
+    var yp = resolvePlayer(career, youthId);
+    if (!yp || yp.age < 15) return false;
+    career.youth = career.youth.filter(function (y) { return y.id !== youthId; });
+    career.youthMap = null;
+    // vira parte do elenco (mantém como objeto customizado, id 'y' resolve nele)
+    if (!career.customPlayers) career.customPlayers = {};
+    yp.youth = false;
+    career.customPlayers[youthId] = yp;
+    career.roster.push(youthId);
+    if (career.lineup) career.lineup.bench.push(youthId);
+    return true;
   }
 
   function newSeason(career) {
@@ -258,6 +440,10 @@
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
-    CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION
+    CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
+    FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
+    available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers,
+    processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
+    promoteYouth: promoteYouth, generateYouth: generateYouth
   };
 })(window);

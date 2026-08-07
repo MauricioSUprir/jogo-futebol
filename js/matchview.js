@@ -8,7 +8,7 @@
   var el = null;
   function E() { el = TM.ui.el; }
 
-  var SPEED = { instantaneo: 0, rapido: 22, normal: 62 };
+  var SPEED = { instantaneo: 0, rapido: 30, normal: 80, lento: 170 };
 
   function play(screen, cfg) {
     E();
@@ -43,9 +43,16 @@
     screen.appendChild(feed);
 
     var actions = el("div", { class: "actions" });
-    var skipBtn = TM.ui.button("Pular ⏭", function () { finishNow(); }, "btn ghost");
+    // um único handler: durante o jogo "Pular" encerra; depois "Ver resultado" avança (uma vez só)
+    var skipBtn = TM.ui.button("Pular ⏭", function () { onSkip(); }, "btn ghost");
     actions.appendChild(skipBtn);
     screen.appendChild(actions);
+    var proceeded = false;
+    function onSkip() {
+      if (!done) { finishNow(); return; }   // ainda rolando -> encerra a animação
+      if (proceeded) return;                 // já avançou -> ignora cliques repetidos
+      proceeded = true; onDone();
+    }
 
     // indexa eventos por minuto
     var byMin = {};
@@ -70,6 +77,8 @@
         node = lineWith("❌ PERDEU", ev.text, "miss");
       } else if (ev.type === "red") {
         node = lineWith("🟥 VERMELHO", ev.text.replace("🟥 ", ""), "red");
+      } else if (ev.type === "injury") {
+        node = lineWith("🚑 LESÃO", ev.text.replace("🚑 ", ""), "injury");
       } else if (ev.type === "yellow") {
         node = lineWith("🟨", ev.text, "yellow");
       } else if (ev.type === "half") {
@@ -117,14 +126,9 @@
       if (done) return; done = true;
       skipBtn.textContent = "Ver resultado ▶";
       skipBtn.className = "btn primary";
-      skipBtn.onclick = function () { onDone(); };
     }
     function finishNow() {
-      if (done) { onDone(); return; }
-      // renderiza tudo instantaneamente
-      done = true;
-      for (var mm = minute; mm <= 90; mm++) renderMinute(mm);
-      end();
+      if (!done) { for (var mm = minute; mm <= 90; mm++) renderMinute(mm); end(); }
     }
 
     if (delay === 0) { for (var mm = 0; mm <= 90; mm++) renderMinute(mm); end(); }

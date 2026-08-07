@@ -55,7 +55,7 @@
       ]),
       slider("Realismo", "realism", 1, 5, ["Arcade", "Casual", "Equilibrado", "Realista", "Simulação"]),
       segmented("Tempo de jogo (velocidade)", "matchSpeed", [
-        { label: "Instantâneo", value: "instantaneo" }, { label: "Rápido", value: "rapido" }, { label: "Normal", value: "normal" }
+        { label: "Instantâneo", value: "instantaneo" }, { label: "Rápido", value: "rapido" }, { label: "Normal", value: "normal" }, { label: "Lento", value: "lento" }
       ]),
       toggle("Narração dos lances", "commentary"),
       el("div", { class: "setting-hint", text:

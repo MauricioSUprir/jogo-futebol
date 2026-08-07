@@ -217,6 +217,14 @@
       var potF = 1 + Math.max(0, (p.potential || p.overall) - p.overall) * 0.03;
       return Math.max(1, Math.round(base * ageF * potF));
     },
+    // nome aleatório por cultura (para jogadores da base, etc.)
+    randomName: function (culture) {
+      var c = NAMES[culture] || NAMES.br;
+      function r(a) { return a[Math.floor(Math.random() * a.length)]; }
+      return r(c.first) + " " + r(c.last);
+    },
+    cultureOfLeague: function (leagueId) { var l = TM.data.league(leagueId); return l ? l.culture : "br"; },
+    nationByName: function (name) { return TM.data.world().nations.filter(function (n) { return n.name === name; })[0] || null; },
     // taxa de desenvolvimento (rótulo) pela idade e margem de potencial
     devRate: function (p) {
       var room = (p.potential || p.overall) - p.overall;

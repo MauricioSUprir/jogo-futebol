@@ -110,7 +110,11 @@
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     var club = TM.data.club(c.teamId);
-    var right = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
+    var unread = TM.notify.unread(c);
+    var bell = el("button", { class: "tb-bell", on: { click: function () { TM.ui.go("coach-notifications"); } } }, [
+      el("span", { text: "🔔" }), unread ? el("span", { class: "bell-badge", text: unread > 9 ? "9+" : unread }) : null
+    ]);
+    var dots = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções da carreira", [
         { label: "💾 Salvar carreira", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
         { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
@@ -119,6 +123,7 @@
         } }
       ]);
     } } });
+    var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
 
     screen.appendChild(el("div", { class: "club-header" }, [
@@ -143,8 +148,10 @@
       ]));
     }
 
-    screen.appendChild(el("div", { class: "hub-actions" }, [
+    screen.appendChild(el("div", { class: "hub-actions six" }, [
       hubBtn("👥", "Elenco", function () { TM.ui.go("coach-squad"); }),
+      hubBtn("📋", "Escalação", function () { TM.ui.go("coach-lineup"); }),
+      hubBtn("🌱", "Base", function () { TM.ui.go("coach-youth"); }),
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
@@ -174,11 +181,16 @@
     var p = c.pending && !c.pending.seasonEnd ? c.pending : C().advanceToUserMatch(c);
     if (p.seasonEnd) { TM.ui.go("coach-hub"); return; }
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
-    var result = TM.engine.simulate(teamA, teamB, { realism: TM.storage.settings().realism, neutral: p.ko });
+    var userSide = p.homeId === c.teamId ? 0 : 1;
+    var result = TM.engine.simulate(teamA, teamB, {
+      realism: TM.storage.settings().realism, neutral: p.ko,
+      tacticSide: userSide, tactic: c.tactic
+    });
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
       onBack: function () { TM.ui.go("coach-hub"); },
       onDone: function () {
+        C().processUserMatch(c, result, userSide);
         C().applyUserResult(c, result.score[0], result.score[1]);
         TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko });
       }
@@ -324,19 +336,35 @@
     var results;
     if (query.trim()) {
       var q = query.trim().toLowerCase();
-      results = all.filter(function (p) { return !rosterSet[p.id] && p.name.toLowerCase().indexOf(q) >= 0; });
+      results = all.filter(function (p) { return !rosterSet[p.id] && p.name.toLowerCase().indexOf(q) >= 0; })
+        .sort(function (a, b) { return b.overall - a.overall; }).slice(0, 50);
     } else {
-      // sem busca: jogadores que cabem no orçamento (melhores primeiro)
-      results = all.filter(function (p) { return !rosterSet[p.id] && curVal(c, askingPrice(p)) <= c.budget; });
+      // sem busca: VITRINE variada — jovens promessas, estrelas e veteranos (todos os níveis)
+      var pool = all.filter(function (p) { return !rosterSet[p.id]; });
+      var buckets = { u20: [], p24: [], p29: [], vet: [] };
+      pool.forEach(function (p) {
+        var k = p.age <= 20 ? "u20" : p.age <= 24 ? "p24" : p.age <= 29 ? "p29" : "vet";
+        buckets[k].push(p);
+      });
+      results = [];
+      Object.keys(buckets).forEach(function (k) {
+        buckets[k].sort(function (a, b) { return b.overall - a.overall; });
+        results = results.concat(buckets[k].slice(0, 16));
+      });
+      results.sort(function (a, b) { return b.overall - a.overall; });
     }
-    results.sort(function (a, b) { return b.overall - a.overall; });
-    results = results.slice(0, 40);
 
-    if (!query.trim()) body.appendChild(el("p", { class: "intro-text", text: "Jogadores dentro do seu orçamento. Use a busca para procurar qualquer jogador pelo nome." }));
+    if (!query.trim()) body.appendChild(el("p", { class: "intro-text", text: "Vitrine de reforços — jovens promessas, estrelas e veteranos. Nem todos cabem no orçamento; a checagem é na negociação. Use a busca para achar qualquer jogador." }));
     if (!results.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador encontrado." }));
     results.forEach(function (p) {
+      var price = curVal(c, askingPrice(p));
+      var afford = price <= c.budget;
       var row = TM.ui.playerRow(p, {});
       row.classList.add("clickable");
+      row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [
+        el("span", { text: money(c, price) }),
+        el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" })
+      ]));
       row.addEventListener("click", function () { TM.ui.go("coach-nego-club", { pid: p.id }); });
       body.appendChild(row);
     });
@@ -474,5 +502,182 @@
       });
       return wrap;
     }
+  });
+
+  /* ---------- central de notificações ---------- */
+  TM.ui.register("coach-notifications", function (screen) {
+    var c = TM.storage.coachCareer();
+    screen.appendChild(TM.ui.topbar("🔔 Avisos", function () { TM.notify.markAllRead(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var notes = c.notifications || [];
+    if (!notes.length) { body.appendChild(el("p", { class: "intro-text", text: "Nenhum aviso no momento." })); }
+    notes.forEach(function (n) {
+      var card = el("div", { class: "note" + (n.read ? "" : " unread") }, [
+        el("div", { class: "note-ic", text: n.icon || "•" }),
+        el("div", { class: "note-body" }, [ el("div", { class: "note-title", text: n.title }), el("div", { class: "note-text", text: n.text }) ])
+      ]);
+      if (n.offer) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("Analisar proposta", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary small")
+        ]));
+      }
+      body.appendChild(card);
+    });
+    // marca como lido ao visualizar
+    TM.notify.markAllRead(c); TM.storage.saveCoachCareer(c);
+  });
+
+  /* ---------- analisar proposta recebida ---------- */
+  TM.ui.register("coach-offer", function (screen, params) {
+    var c = TM.storage.coachCareer();
+    var note = TM.notify.get(c, params.noteId);
+    if (!note || !note.offer) { TM.ui.go("coach-notifications"); return; }
+    var off = note.offer;
+    var player = C().resolvePlayer(c, off.playerId);
+    var buyer = TM.data.club(off.buyerId);
+
+    screen.appendChild(TM.ui.topbar("Analisar proposta", function () { TM.ui.go("coach-notifications"); }));
+    screen.appendChild(el("div", { class: "player-card" }, [
+      TM.img.playerImg(player, "pc-face"),
+      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: player.name }), el("div", { class: "pc-sub", text: player.pos + " · " + player.age + " anos · " + player.nationName }) ]),
+      TM.ui.ovBadge(player.overall)
+    ]));
+
+    function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
+    var value = curVal(c, TM.data.marketValue(player));
+    screen.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "🏟️ " + buyer.name + " quer contratar " + player.name + "." }),
+      line("Clube interessado", buyer.name),
+      line("Overall do clube", TM.data.clubRating(off.buyerId)),
+      line("Valor de mercado", money(c, value)),
+      line("Proposta oferecida", money(c, off.fee), off.fee >= value ? "good" : "bad"),
+      line("Diferença", (off.fee - value >= 0 ? "+" : "") + money(c, off.fee - value), off.fee >= value ? "good" : "bad"),
+      el("div", { class: "setting-hint", text: off.fee >= value ? "A proposta está acima do valor de mercado — bom negócio." : "A proposta está abaixo do valor de mercado." })
+    ]));
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("✅ Aceitar proposta", function () {
+        var r = C().resolveIncomingOffer(c, note, true); TM.storage.saveCoachCareer(c);
+        TM.ui.toast(r === "vendido" ? "Jogador vendido!" : "O jogador recusou sair."); TM.ui.go("coach-notifications");
+      }, "btn primary"),
+      TM.ui.button("❌ Recusar", function () { C().resolveIncomingOffer(c, note, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn ghost")
+    ]));
+  });
+
+  /* ---------- escalação (campinho) ---------- */
+  var pickSlot = null; // índice de titular selecionado para troca
+  TM.ui.register("coach-lineup", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.lineup) c.lineup = C().buildLineup(C().rosterPlayers(c), "4-4-2");
+    screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("coach-hub"); }));
+
+    // formação
+    var formRow = el("div", { class: "segmented full" });
+    Object.keys(C().FORMATIONS).forEach(function (f) {
+      formRow.appendChild(el("button", { class: "seg-btn" + (c.lineup.formation === f ? " active" : ""), text: f, on: { click: function () {
+        c.lineup = C().buildLineup(C().rosterPlayers(c), f); pickSlot = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup");
+      } } }));
+    });
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
+
+    // tática
+    var tacRow = el("div", { class: "segmented full" });
+    [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra-ataque"]].forEach(function (o) {
+      tacRow.appendChild(el("button", { class: "seg-btn" + (c.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); } } }));
+    });
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
+
+    // campinho
+    var slots = C().FORMATIONS[c.lineup.formation];
+    var pitch = el("div", { class: "pitch" });
+    pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+    pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+    c.lineup.starters.forEach(function (id, i) {
+      var p = C().resolvePlayer(c, id); if (!p) return;
+      var slot = slots[i] || [null, 50, 50];
+      var unavail = !C().available(c, id);
+      var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
+        style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+        on: { click: function () { onStarterClick(i); } } }, [
+        el("span", { class: "chip-ov", text: p.overall }),
+        el("span", { class: "chip-name", text: shortName(p.name) }),
+        unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null
+      ]);
+      pitch.appendChild(chip);
+    });
+    screen.appendChild(pitch);
+
+    screen.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Toque num reserva para colocar no lugar do titular selecionado." : "Toque num titular e depois num reserva para trocar." }));
+
+    // reservas
+    var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
+    c.lineup.bench.forEach(function (id) {
+      var p = C().resolvePlayer(c, id); if (!p) return;
+      var unavail = !C().available(c, id);
+      var row = TM.ui.playerRow(p, {});
+      row.classList.add("clickable");
+      if (unavail) row.classList.add("row-unavail");
+      row.addEventListener("click", function () { onBenchClick(id); });
+      benchWrap.appendChild(row);
+    });
+    screen.appendChild(benchWrap);
+
+    function onStarterClick(i) { pickSlot = (pickSlot === i ? null : i); TM.ui.go("coach-lineup"); }
+    function onBenchClick(benchId) {
+      if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
+      var starterId = c.lineup.starters[pickSlot];
+      var bi = c.lineup.bench.indexOf(benchId);
+      c.lineup.starters[pickSlot] = benchId;
+      c.lineup.bench[bi] = starterId;
+      pickSlot = null;
+      TM.storage.saveCoachCareer(c);
+      TM.ui.go("coach-lineup");
+    }
+  });
+  function shortName(name) { var parts = name.split(" "); return parts.length > 1 ? parts[0][0] + ". " + parts[parts.length - 1] : name; }
+
+  /* ---------- categorias de base ---------- */
+  TM.ui.register("coach-youth", function (screen) {
+    var c = TM.storage.coachCareer();
+    screen.appendChild(TM.ui.topbar("🌱 Categorias de Base", function () { TM.ui.go("coach-hub"); }));
+    screen.appendChild(el("div", { class: "panel-narrow" }, [
+      el("p", { class: "intro-text", text: "Elenco da base do seu clube. Promova jogadores de 15 anos ou mais para o profissional, ou dispute uma partida de base." }),
+      TM.ui.button("⚽ Disputar partida de base", function () { TM.ui.go("coach-youth-match"); }, "btn primary")
+    ]));
+
+    var list = el("div", { class: "panel-narrow squad-list" });
+    var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
+    (c.youth || []).slice().sort(function (a, b) { return order[a.pos] - order[b.pos] || b.potential - a.potential; }).forEach(function (p) {
+      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } });
+      var canPromote = p.age >= 15;
+      row.appendChild(el("button", { class: "buy-btn" + (canPromote ? "" : " disabled"), text: canPromote ? "Subir ↑" : p.age + " anos", on: { click: function (e) {
+        e.stopPropagation();
+        if (!canPromote) { TM.ui.toast("Mínimo de 15 anos para promover"); return; }
+        if (C().promoteYouth(c, p.id)) { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ " + p.name + " promovido ao profissional!"); TM.ui.go("coach-youth"); }
+      } } }));
+      list.appendChild(row);
+    });
+    if (!(c.youth || []).length) list.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador na base (todos promovidos)." }));
+    screen.appendChild(list);
+  });
+
+  TM.ui.register("coach-youth-match", function (screen) {
+    var c = TM.storage.coachCareer();
+    var club = TM.data.club(c.teamId);
+    var myYouth = (c.youth || []).slice().sort(function (a, b) { return b.overall - a.overall; });
+    if (myYouth.length < 7) { TM.ui.toast("Base insuficiente para jogar"); TM.ui.go("coach-youth"); return; }
+    // adversário: base gerada de outro clube da liga
+    var others = TM.data.league(c.leagueId).clubIds.filter(function (id) { return id !== c.teamId; });
+    var oppId = others[Math.floor(Math.random() * others.length)];
+    var oppYouth = C().generateYouth(oppId).sort(function (a, b) { return b.overall - a.overall; });
+    var teamA = { id: "myb", name: club.name + " Sub-19", players: myYouth, club: club };
+    var teamB = { id: "opb", name: TM.data.club(oppId).name + " Sub-19", players: oppYouth, club: TM.data.club(oppId) };
+    var result = TM.engine.simulate(teamA, teamB, { realism: TM.storage.settings().realism });
+    TM.matchview.play(screen, {
+      teamA: teamA, teamB: teamB, result: result, title: "Partida de Base",
+      onBack: function () { TM.ui.go("coach-youth"); },
+      onDone: function () { TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result }); }
+    });
   });
 })(window);

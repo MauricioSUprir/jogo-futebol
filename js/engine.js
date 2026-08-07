@@ -64,6 +64,15 @@
     var homeBoost = opts.neutral ? 0 : 3;
     var redPenalty = [0, 0]; // redução de força por expulsão
 
+    // modificadores de tática do time do usuário
+    var atkMod = [1, 1], defMod = [1, 1];
+    if (opts.tacticSide != null) {
+      var t = opts.tactic, s = opts.tacticSide;
+      if (t === "ofensivo") { atkMod[s] = 1.14; defMod[s] = 0.88; }
+      else if (t === "defensivo") { atkMod[s] = 0.88; defMod[s] = 1.14; }
+      else if (t === "contra-ataque") { atkMod[s] = 1.06; defMod[s] = 1.04; }
+    }
+
     function chanceProb(atk, opDef, redsMine) {
       var edge = (atk - opDef);
       var base = Math.max(0.02, 0.09 + edge * 0.0022) * variance / 1.9;
@@ -73,7 +82,8 @@
     var events = [{ minute: 0, type: "kickoff", text: teamA.name + " x " + teamB.name }];
     var score = [0, 0];
     var shots = [0, 0], onTarget = [0, 0];
-    var focusGoals = 0, focusInvolved = 0;
+    var focusGoals = 0, focusInvolved = 0, focusInjured = false;
+    var injuries = [], sentOff = [];
 
     function tryScore(side, prof, opp, team, minute, isPen) {
       shots[side]++;
@@ -96,8 +106,8 @@
     for (var m = 1; m <= 90; m++) {
       if (m === 45) events.push({ minute: 45, type: "half", score: score.slice(), text: "Fim do 1º tempo" });
 
-      var pA = chanceProb(A.attack + homeBoost, B.defense, redPenalty[0]);
-      var pB = chanceProb(B.attack, A.defense, redPenalty[1]);
+      var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0]);
+      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1]);
 
       [[0, pA, A, B, teamA], [1, pB, B, A, teamB]].forEach(function (row) {
         var side = row[0], prob = row[1], prof = row[2], opp = row[3], team = row[4];
@@ -120,9 +130,20 @@
         if (Math.random() < 0.14) {
           events.push({ minute: m, type: "red", team: s, text: "🟥 " + pl.name + " (" + team2.name + ") está EXPULSO!" });
           redPenalty[s]++;
+          sentOff.push({ id: pl.id, name: pl.name, side: s });
         } else {
           events.push({ minute: m, type: "yellow", team: s, text: "Amarelo para " + pl.name + " (" + team2.name + ")" });
         }
+      }
+      // lesões
+      if (Math.random() < 0.006) {
+        var si = Math.random() < 0.5 ? 0 : 1;
+        var prof3 = si === 0 ? A : B, team3 = si === 0 ? teamA : teamB;
+        var inj = pick(prof3.xi);
+        var weeks = 1 + Math.floor(Math.random() * 6);
+        events.push({ minute: m, type: "injury", team: si, text: "🚑 " + inj.name + " (" + team3.name + ") se lesionou e deixa o campo." });
+        injuries.push({ id: inj.id, name: inj.name, side: si, weeks: weeks });
+        if (inj.id === focusId) focusInjured = weeks;
       }
     }
 
@@ -140,7 +161,8 @@
     return {
       score: score, events: events,
       stats: { possession: [possA, 100 - possA], shots: shots, onTarget: onTarget },
-      focus: focusId ? { goals: focusGoals, rating: focusRating } : null
+      injuries: injuries, sentOff: sentOff,
+      focus: focusId ? { goals: focusGoals, rating: focusRating, injured: focusInjured } : null
     };
   }
 
