@@ -50,11 +50,11 @@
     ]));
   });
 
-  /* ---------- opções pré-carreira: moeda + aporte ---------- */
+  /* ---------- opções pré-carreira: técnico + moeda + aporte ---------- */
   TM.ui.register("coach-setup", function (screen, params) {
     var clubId = params.clubId;
     var club = TM.data.club(clubId);
-    var opts = { currency: "eur", injection: 0 };
+    var opts = { currency: "eur", injection: 0, coachName: "", coachPhoto: null };
 
     screen.appendChild(TM.ui.topbar("Opções da carreira", function () { TM.ui.go("coach"); }));
     screen.appendChild(el("div", { class: "club-header" }, [
@@ -64,6 +64,29 @@
 
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
+
+    // personalização do técnico (nome + foto)
+    var photoBox = el("div", { class: "photo-drop small" }, [ el("span", { text: "📷 Foto" }) ]);
+    var fileInput = el("input", { type: "file", accept: "image/*", style: "display:none" });
+    photoBox.addEventListener("click", function () { fileInput.click(); });
+    fileInput.addEventListener("change", function () {
+      var file = fileInput.files[0]; if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var cv = document.createElement("canvas"), sc = Math.min(1, 256 / Math.max(img.width, img.height));
+          cv.width = img.width * sc; cv.height = img.height * sc; cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+          opts.coachPhoto = cv.toDataURL("image/jpeg", 0.82);
+          TM.ui.clear(photoBox); photoBox.appendChild(el("img", { src: opts.coachPhoto, class: "photo-img" }));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    var nameInput = el("input", { class: "text-input", type: "text", placeholder: "Nome do treinador", maxlength: "24" });
+    nameInput.addEventListener("input", function () { opts.coachName = nameInput.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Seu treinador" }), el("div", { class: "coach-perso" }, [ photoBox, fileInput, nameInput ]) ]));
 
     // moeda
     var curWrap = el("div", { class: "segmented full" });
@@ -127,13 +150,15 @@
     var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
 
+    var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" }) : el("div", { class: "coach-mini placeholder", text: "👔" });
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.clubImg(club, "ch-crest"),
       el("div", {}, [
         el("div", { class: "ch-name", text: club.name }),
         el("div", { class: "ch-sub", text: TM.data.league(c.leagueId).name + " · Temporada " + c.season }),
         el("div", { class: "ch-budget", text: "💰 Orçamento: " + money(c, c.budget) })
-      ])
+      ]),
+      el("div", { class: "coach-tag" }, [ coachFace, el("div", { class: "coach-tag-name", text: c.coachName || "Treinador" }) ])
     ]));
 
     var pending = C().advanceToUserMatch(c);
@@ -184,12 +209,11 @@
     if (p.seasonEnd) { TM.ui.go("coach-hub"); return; }
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
     var userSide = p.homeId === c.teamId ? 0 : 1;
-    var result = TM.engine.simulate(teamA, teamB, {
-      realism: TM.storage.settings().realism, neutral: p.ko,
-      tacticSide: userSide, tactic: c.tactic
-    });
+    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic };
+    var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
+      pauseSide: userSide, simOpts: simOpts,
       onBack: function () { TM.ui.go("coach-hub"); },
       onDone: function () {
         C().processUserMatch(c, result, userSide);
@@ -342,59 +366,107 @@
     screen.appendChild(list);
   });
 
-  /* ---------- mercado: busca ---------- */
-  TM.ui.register("coach-market", function (screen, params) {
+  /* ---------- mercado: busca + filtros + passe livre ---------- */
+  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false };
+  TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
     screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
 
-    var query = (params && params.q) || "";
-    var input = el("input", { class: "text-input", type: "text", placeholder: "Pesquisar jogador pelo nome...", value: query });
-    var searchBtn = TM.ui.button("Buscar", function () { TM.ui.go("coach-market", { q: input.value }); }, "btn");
-    input.addEventListener("keydown", function (e) { if (e.key === "Enter") TM.ui.go("coach-market", { q: input.value }); });
-    screen.appendChild(el("div", { class: "search-bar" }, [ input, searchBtn ]));
-
-    var body = el("div", { class: "panel-narrow" });
-    screen.appendChild(body);
-
     var world = TM.data.world();
     var rosterSet = {}; c.roster.forEach(function (id) { rosterSet[id] = true; });
-    var all = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; });
-    var results;
-    if (query.trim()) {
-      var q = query.trim().toLowerCase();
-      results = all.filter(function (p) { return !rosterSet[p.id] && p.name.toLowerCase().indexOf(q) >= 0; })
-        .sort(function (a, b) { return b.overall - a.overall; }).slice(0, 50);
-    } else {
-      // sem busca: VITRINE variada — jovens promessas, estrelas e veteranos (todos os níveis)
-      var pool = all.filter(function (p) { return !rosterSet[p.id]; });
-      var buckets = { u20: [], p24: [], p29: [], vet: [] };
-      pool.forEach(function (p) {
-        var k = p.age <= 20 ? "u20" : p.age <= 24 ? "p24" : p.age <= 29 ? "p29" : "vet";
-        buckets[k].push(p);
-      });
-      results = [];
-      Object.keys(buckets).forEach(function (k) {
-        buckets[k].sort(function (a, b) { return b.overall - a.overall; });
-        results = results.concat(buckets[k].slice(0, 16));
-      });
-      results.sort(function (a, b) { return b.overall - a.overall; });
-    }
 
-    if (!query.trim()) body.appendChild(el("p", { class: "intro-text", text: "Vitrine de reforços — jovens promessas, estrelas e veteranos. Nem todos cabem no orçamento; a checagem é na negociação. Use a busca para achar qualquer jogador." }));
-    if (!results.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador encontrado." }));
-    results.forEach(function (p) {
-      var price = curVal(c, askingPrice(p));
-      var afford = price <= c.budget;
-      var row = TM.ui.playerRow(p, {});
-      row.classList.add("clickable");
-      row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [
-        el("span", { text: money(c, price) }),
-        el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" })
-      ]));
-      row.addEventListener("click", function () { TM.ui.go("coach-nego-club", { pid: p.id }); });
-      body.appendChild(row);
+    // busca
+    var input = el("input", { class: "text-input", type: "text", placeholder: "Pesquisar pelo nome...", value: MKT.q });
+    input.addEventListener("input", function () { MKT.q = input.value; renderResults(); });
+    screen.appendChild(el("div", { class: "search-bar" }, [ input ]));
+
+    // painel de filtros
+    var panel = el("div", { class: "panel-narrow filter-panel" });
+    screen.appendChild(panel);
+
+    // passe livre
+    var freeToggle = el("button", { class: "switch" + (MKT.free ? " on" : ""), on: { click: function () { MKT.free = !MKT.free; freeToggle.classList.toggle("on", MKT.free); renderResults(); } } }, [ el("span", { class: "switch-knob" }) ]);
+    panel.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "🆓 Só passes livres (sem clube)" }), freeToggle ]));
+
+    // posição
+    var posRow = el("div", { class: "segmented full" });
+    [["", "Todas"], ["GK", "GOL"], ["DF", "DEF"], ["MF", "MEI"], ["FW", "ATA"]].forEach(function (o) {
+      posRow.appendChild(el("button", { class: "seg-btn" + (MKT.pos === o[0] ? " active" : ""), text: o[1], on: { click: function () { MKT.pos = o[0]; posRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); renderResults(); } } }));
     });
+    panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Posição" }), posRow ]));
+
+    // país
+    var natSel = el("select", { class: "select" });
+    natSel.appendChild(el("option", { value: "", text: "Todos os países" }));
+    world.nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (n) { var o = el("option", { value: n.id, text: n.name }); if (MKT.nat === n.id) o.selected = true; natSel.appendChild(o); });
+    natSel.addEventListener("change", function () { MKT.nat = natSel.value; renderResults(); });
+
+    // liga + clube
+    var leagueSel = el("select", { class: "select" });
+    leagueSel.appendChild(el("option", { value: "", text: "Todas as ligas" }));
+    world.leagues.forEach(function (lg) { var o = el("option", { value: lg.id, text: lg.name }); if (MKT.league === lg.id) o.selected = true; leagueSel.appendChild(o); });
+    var clubSel = el("select", { class: "select" });
+    function fillClubs() {
+      TM.ui.clear(clubSel); clubSel.appendChild(el("option", { value: "", text: "Todos os clubes" }));
+      if (MKT.league) TM.data.league(MKT.league).clubIds.map(TM.data.club).sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (cl) { var o = el("option", { value: cl.id, text: cl.name }); if (MKT.club === cl.id) o.selected = true; clubSel.appendChild(o); });
+    }
+    leagueSel.addEventListener("change", function () { MKT.league = leagueSel.value; MKT.club = ""; fillClubs(); renderResults(); });
+    clubSel.addEventListener("change", function () { MKT.club = clubSel.value; renderResults(); });
+    fillClubs();
+    panel.appendChild(el("div", { class: "filter-grid" }, [ natSel, leagueSel, clubSel ]));
+
+    // sliders
+    function slider(label, key, min, max, suffix) {
+      var val = el("span", { class: "range-val", text: MKT[key] + (suffix || "") });
+      var inp = el("input", { type: "range", min: min, max: max, value: MKT[key], class: "slider" });
+      inp.addEventListener("input", function () { MKT[key] = parseInt(inp.value, 10); val.textContent = MKT[key] + (suffix || ""); renderResults(); });
+      return el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode(label), val ]), inp ]);
+    }
+    panel.appendChild(slider("Idade máxima", "age", 17, 40, " anos"));
+    panel.appendChild(slider("Overall mínimo", "ovMin", 0, 95, ""));
+    panel.appendChild(slider("Potencial mínimo", "potMin", 0, 95, ""));
+
+    panel.appendChild(el("button", { class: "btn ghost", text: "Limpar filtros", on: { click: function () { MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false }; TM.ui.go("coach-market"); } } }));
+
+    var results = el("div", { class: "panel-narrow" });
+    screen.appendChild(results);
+
+    function renderResults() {
+      TM.ui.clear(results);
+      var pool;
+      if (MKT.free) pool = world.freeAgents.map(TM.data.player);
+      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return !p.freeAgent && !rosterSet[p.id]; });
+      var q = MKT.q.trim().toLowerCase();
+      var list = pool.filter(function (p) {
+        if (q && p.name.toLowerCase().indexOf(q) < 0) return false;
+        if (MKT.pos && p.pos !== MKT.pos) return false;
+        if (MKT.nat && p.nationId !== MKT.nat) return false;
+        if (MKT.league && (p.clubId === "free" || TM.data.club(p.clubId).leagueId !== MKT.league)) return false;
+        if (MKT.club && p.clubId !== MKT.club) return false;
+        if (p.age > MKT.age) return false;
+        if (p.overall < MKT.ovMin) return false;
+        if ((p.potential || p.overall) < MKT.potMin) return false;
+        return true;
+      }).sort(function (a, b) { return b.overall - a.overall; }).slice(0, 60);
+
+      results.appendChild(el("div", { class: "results-count", text: list.length + " jogador(es)" + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
+      if (!list.length) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
+      list.forEach(function (p) {
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("clickable");
+        if (p.freeAgent) {
+          row.appendChild(el("div", { class: "price-tag" }, [ el("span", { text: "Livre" }), el("span", { class: "price-note", text: "grátis" }) ]));
+          row.addEventListener("click", function () { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); });
+        } else {
+          var price = curVal(c, askingPrice(p)), afford = price <= c.budget;
+          row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [ el("span", { text: money(c, price) }), el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" }) ]));
+          row.addEventListener("click", function () { TM.ui.go("coach-nego-club", { pid: p.id }); });
+        }
+        results.appendChild(row);
+      });
+    }
+    renderResults();
   });
 
   /* ---------- negociação: com o clube ---------- */
@@ -467,11 +539,16 @@
     var demand = curVal(c, wageDemand(p));
     var terms = { wage: demand, years: 3, role: "titular", release: false };
 
+    var isFree = !NEGO.oldClubId;
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
-    screen.appendChild(el("div", { class: "nego-step" }, [
-      el("div", { class: "nego-dot done", text: "1. Com o clube ✓" }),
-      el("div", { class: "nego-dot active", text: "2. Com o jogador" })
-    ]));
+    if (isFree) {
+      screen.appendChild(el("div", { class: "nego-step" }, [ el("div", { class: "nego-dot active", text: "🆓 Passe livre — acerto direto com o jogador" }) ]));
+    } else {
+      screen.appendChild(el("div", { class: "nego-step" }, [
+        el("div", { class: "nego-dot done", text: "1. Com o clube ✓" }),
+        el("div", { class: "nego-dot active", text: "2. Com o jogador" })
+      ]));
+    }
 
     var panel = el("div", { class: "nego-panel" });
     screen.appendChild(panel);

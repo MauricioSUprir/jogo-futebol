@@ -231,9 +231,12 @@
     var s = load(); var nx = advance(s);
     if (nx.end) { TM.ui.go("compmode-hub"); return; }
     var teamA = teamFor(s, nx.homeId), teamB = teamFor(s, nx.awayId);
-    var result = TM.engine.simulate(teamA, teamB, { realism: realism(), neutral: true });
+    var userSide = nx.homeId === s.userId ? 0 : 1;
+    var simOpts = { realism: realism(), neutral: true };
+    var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: s.name,
+      pauseSide: userSide, simOpts: simOpts,
       onBack: function () { TM.ui.go("compmode-hub"); },
       onDone: function () { applyUser(s, result.score[0], result.score[1]); save(s); TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: result.score[0], as: result.score[1], ko: nx.ko }); }
     });

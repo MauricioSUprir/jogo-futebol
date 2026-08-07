@@ -8,7 +8,7 @@
   var el = null;
   function E() { el = TM.ui.el; }
 
-  var SPEED = { instantaneo: 0, rapido: 30, normal: 80, lento: 170 };
+  var SPEED = { instantaneo: 0, rapido: 35, normal: 110, lento: 300 };
 
   function play(screen, cfg) {
     E();
@@ -43,15 +43,96 @@
     screen.appendChild(feed);
 
     var actions = el("div", { class: "actions" });
+    // botão de pausa (só quando há um lado controlável e a partida está animada)
+    var canPause = cfg.pauseSide != null && delay > 0;
+    var userTactic = (cfg.simOpts && cfg.simOpts.tactic) || "equilibrado";
+    var subsUsed = 0;
+    if (canPause) actions.appendChild(TM.ui.button("⏸ Pausar", function () { openPause(); }, "btn"));
     // um único handler: durante o jogo "Pular" encerra; depois "Ver resultado" avança (uma vez só)
     var skipBtn = TM.ui.button("Pular ⏭", function () { onSkip(); }, "btn ghost");
     actions.appendChild(skipBtn);
     screen.appendChild(actions);
-    var proceeded = false;
+    var proceeded = false, paused = false;
     function onSkip() {
       if (!done) { finishNow(); return; }   // ainda rolando -> encerra a animação
       if (proceeded) return;                 // já avançou -> ignora cliques repetidos
       proceeded = true; onDone();
+    }
+
+    /* ---- pausa: táticas + substituições, re-simula o restante ---- */
+    function myTeam() { return cfg.pauseSide === 0 ? a : b; }
+    function openPause() {
+      if (done || paused) return;
+      paused = true;
+      var team = myTeam();
+      var overlay = el("div", { class: "pause-overlay" });
+      var box = el("div", { class: "pause-box" });
+      overlay.appendChild(box);
+      box.appendChild(el("div", { class: "pause-head", text: "⏸ " + minute + "'  ·  " + a.name + " " + score[0] + " x " + score[1] + " " + b.name }));
+      box.appendChild(el("div", { class: "pause-sub-team", text: "Ajustes de " + team.name }));
+
+      // tática
+      var tacRow = el("div", { class: "segmented full" });
+      [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra"]].forEach(function (o) {
+        tacRow.appendChild(el("button", { class: "seg-btn" + (userTactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { userTactic = o[0]; tacRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); } } }));
+      });
+      box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Tática" }), tacRow ]));
+
+      // substituições
+      box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Substituições (" + subsUsed + "/3)" }) ]));
+      var subArea = el("div", { class: "sub-area" });
+      box.appendChild(subArea);
+      var selOut = { idx: null };
+      function renderSubs() {
+        TM.ui.clear(subArea);
+        var xiCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Em campo" }) ]);
+        team.players.slice(0, 11).forEach(function (pl, i) {
+          xiCol.appendChild(el("button", { class: "sub-chip" + (selOut.idx === i ? " sel" : ""), on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } }, [
+            el("span", { class: "sc-pos", text: pl.pos }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
+          ]));
+        });
+        var beCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Reservas" }) ]);
+        team.players.slice(11, 24).forEach(function (pl, bi) {
+          beCol.appendChild(el("button", { class: "sub-chip bench", on: { click: function () {
+            if (selOut.idx == null) { return; }
+            if (subsUsed >= 3) { return; }
+            var oi = selOut.idx, bidx = 11 + bi;
+            var tmp = team.players[oi]; team.players[oi] = team.players[bidx]; team.players[bidx] = tmp;
+            subsUsed++; selOut.idx = null;
+            box.querySelector(".pause-field label").textContent; // noop
+            renderSubs();
+            box.querySelectorAll(".pause-field label")[1].textContent = "Substituições (" + subsUsed + "/3)";
+          } } }, [
+            el("span", { class: "sc-pos", text: pl.pos }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
+          ]));
+        });
+        subArea.appendChild(xiCol); subArea.appendChild(beCol);
+      }
+      renderSubs();
+
+      box.appendChild(el("div", { class: "pause-hint", text: "Toque num titular e depois num reserva para trocar." }));
+      box.appendChild(TM.ui.button("▶ Retomar partida", function () {
+        overlay.remove();
+        resimRest();
+        paused = false; step();
+      }, "btn primary"));
+      document.body.appendChild(overlay);
+    }
+    function shortP(n) { var p = n.split(" "); return p.length > 1 ? p[0][0] + ". " + p[p.length - 1] : n; }
+
+    function resimRest() {
+      var o = {};
+      if (cfg.simOpts) Object.keys(cfg.simOpts).forEach(function (k) { o[k] = cfg.simOpts[k]; });
+      o.startMinute = minute; o.startScore = score.slice();
+      o.tacticSide = cfg.pauseSide; o.tactic = userTactic;
+      var partial = TM.engine.simulate(a, b, o);
+      Object.keys(byMin).forEach(function (k) { if (+k >= minute) delete byMin[k]; });
+      partial.events.forEach(function (ev) { if (ev.minute >= minute) (byMin[ev.minute] = byMin[ev.minute] || []).push(ev); });
+      var before = result.events.filter(function (e) { return e.minute < minute; });
+      result.events = before.concat(partial.events);
+      result.score = partial.score; result.stats = partial.stats;
+      result.injuries = partial.injuries; result.sentOff = partial.sentOff;
+      if (result.focus && partial.focus) result.focus = partial.focus;
     }
 
     // indexa eventos por minuto
@@ -114,6 +195,7 @@
 
     function step() {
       if (done) return;
+      if (paused) return; // retoma via openPause -> step()
       if (!screen.isConnected) { done = true; return; } // usuário saiu da tela
       if (minute > 90) { end(); return; }
       var hasGoal = (byMin[minute] || []).some(function (e) { return e.type === "goal" || e.type === "pengoal" || e.type === "penalty"; });

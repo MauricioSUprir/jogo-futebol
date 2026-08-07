@@ -276,6 +276,7 @@
     var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
     var career = {
       type: "club", teamId: clubId, teamName: club.name, leagueId: club.leagueId, season: 1,
+      coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null,
       money: money,
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
@@ -388,6 +389,7 @@
     if (!career.notifications) career.notifications = [];
     if (!career.honours) career.honours = [];
     if (!career.tactic) career.tactic = "equilibrado";
+    if (!career.coachName) career.coachName = "Treinador";
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     return career;

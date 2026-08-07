@@ -96,11 +96,11 @@
   /* ---------- Tela 2: partida ao vivo (imersiva) ---------- */
   TM.ui.register("quick-match", function (screen, params) {
     var settings = TM.storage.settings();
-    var result = TM.engine.simulate(params.a, params.b, {
-      realism: settings.realism, neutral: setup.source === "nation"
-    });
+    var simOpts = { realism: settings.realism, neutral: setup.source === "nation" };
+    var result = TM.engine.simulate(params.a, params.b, simOpts);
     TM.matchview.play(screen, {
       teamA: params.a, teamB: params.b, result: result, settings: settings,
+      pauseSide: 0, simOpts: simOpts,
       onBack: function () { TM.ui.go("quick"); },
       onDone: function () { TM.ui.go("quick-result", { a: params.a, b: params.b, result: result }); }
     });

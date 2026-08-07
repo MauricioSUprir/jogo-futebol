@@ -177,9 +177,31 @@
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = fullName(rng, n.culture); });
 
+    // agentes livres (sem clube) — variados
+    var freeAgents = [];
+    for (var fa = 0; fa < 44; fa++) {
+      var fpos = POS_POOL[fa % POS_POOL.length];
+      var fnat = R.pick(rng, NATIONS);
+      var fbase = R.int(rng, 52, 82);
+      var fattrs = makeAttrs(rng, fbase, fpos);
+      var fov = overallFrom(fattrs, fpos);
+      var fage = R.int(rng, 17, 37);
+      var fgrowth = fage >= 30 ? 0 : Math.max(0, Math.round((26 - fage) * 0.7) + R.int(rng, -1, 3));
+      var fid = "fa" + (fa + 1);
+      var fp = {
+        id: fid, name: fullName(rng, fnat.culture), clubId: "free", pos: fpos, age: fage,
+        overall: fov, potential: Math.min(99, fov + fgrowth), attrs: fattrs,
+        nationId: fnat.id, nationName: fnat.name, height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
+        form: 0, goals: 0, freeAgent: true
+      };
+      playersById[fid] = fp;
+      freeAgents.push(fid);
+    }
+
     return {
       seed: WORLD_SEED,
       leagues: leagues,
+      freeAgents: freeAgents,
       clubs: clubs,
       clubsById: clubs.reduce(function (m, c) { m[c.id] = c; return m; }, {}),
       leaguesById: leagues.reduce(function (m, l) { m[l.id] = l; return m; }, {}),

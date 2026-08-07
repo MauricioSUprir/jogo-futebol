@@ -79,8 +79,9 @@
       return base * (1 - redsMine * 0.16);
     }
 
-    var events = [{ minute: 0, type: "kickoff", text: teamA.name + " x " + teamB.name }];
-    var score = [0, 0];
+    var startMinute = opts.startMinute || 1;
+    var events = startMinute <= 1 ? [{ minute: 0, type: "kickoff", text: teamA.name + " x " + teamB.name }] : [];
+    var score = opts.startScore ? opts.startScore.slice() : [0, 0];
     var shots = [0, 0], onTarget = [0, 0];
     var focusGoals = 0, focusInvolved = 0, focusInjured = false;
     var injuries = [], sentOff = [];
@@ -103,7 +104,7 @@
       }
     }
 
-    for (var m = 1; m <= 90; m++) {
+    for (var m = startMinute; m <= 90; m++) {
       if (m === 45) events.push({ minute: 45, type: "half", score: score.slice(), text: "Fim do 1º tempo" });
 
       var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0]);
