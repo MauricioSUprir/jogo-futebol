@@ -21,18 +21,42 @@ Abra o `index.html` no navegador. Não precisa instalar nada.
 ## 📁 Estrutura
 
 ```
-index.html        tela de entrada + menu de modos
-css/styles.css    identidade visual (preto/dourado/verde)
-js/app.js         navegação entre telas
-assets/           imagens (escudos, ligas, seleções, jogadores) — veja assets/README.md
-data/             dados do jogo em JSON — veja data/README.md
+index.html          carrega os scripts e a tela inicial
+css/styles.css      identidade visual (preto/dourado/verde)
+js/
+├── rng.js          gerador aleatório determinístico (mundo estável)
+├── data.js         geração do mundo: 10 ligas, ~3.600 jogadores, 48 seleções
+├── placeholders.js escudos/fotos/bandeiras gerados por código (SVG)
+├── storage.js      salvamento local (configurações e carreiras)
+├── engine.js       motor de simulação de partida (com narração)
+├── ui.js           interface, roteador de telas, splash e menu
+├── settings.js     modo Configurações
+├── quick.js        modo Partida Rápida
+├── coach.js        modo Carreira de Treinador
+├── player.js       modo Carreira de Jogador
+└── app.js          inicialização
+assets/             imagens reais (opcionais) — veja assets/README.md
+data/               dados extras — veja data/README.md
+```
+
+## 🖼️ Adicionando imagens ("licenciamento")
+
+O jogo funciona 100% sem imagens (usa placeholders gerados). Para colocar uma imagem
+real, basta soltar o arquivo na pasta certa com o **id** do item:
+
+```
+assets/clubes/<id-do-clube>.png     ex: assets/clubes/br-0.png
+assets/jogadores/<id-do-jogador>.png ex: assets/jogadores/p123.png
+assets/selecoes/<id-da-selecao>.png  ex: assets/selecoes/nat0.png
 ```
 
 ## 🗺️ Roadmap
 
 - [x] **Etapa 1** — Tela de entrada (splash) + menu de modos
-- [ ] **Etapa 2** — Tela de Configurações funcional (dificuldade, realismo, tempo)
-- [ ] **Etapa 3** — Estrutura de dados (ligas, clubes, seleções, jogadores fictícios)
-- [ ] **Etapa 4** — Partida Rápida (motor de simulação de partida)
-- [ ] **Etapa 5** — Carreira de Treinador
-- [ ] **Etapa 6** — Carreira de Jogador
+- [x] **Etapa 2** — Base: geração do mundo, placeholders, salvamento, motor de simulação
+- [x] **Etapa 3** — ⚡ Partida Rápida (com narração ao vivo e estatísticas)
+- [x] **Etapa 4** — 🎯 Carreira de Treinador (liga, tabela, elenco, mercado)
+- [x] **Etapa 5** — ⭐ Carreira de Jogador (criação, notas, propostas, metas, convocações)
+- [x] **Etapa 6** — ⚙️ Configurações (dificuldade, realismo, tempo de jogo)
+- [ ] **Próximo** — Fase de imagens ("licenciar"): adicionar fotos de clubes, seleções e jogadores
+- [ ] **Futuro** — Copas (Champions, Copa do Mundo), táticas avançadas, evolução de jogadores

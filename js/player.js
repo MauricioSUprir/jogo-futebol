@@ -1,0 +1,457 @@
+/* ================= TOTAL MATCH — Carreira de Jogador ================= */
+(function (global) {
+  "use strict";
+  var TM = global.TM;
+  var el = TM.ui.el;
+
+  var CUR_YEAR = 2026;
+
+  /* helpers de liga (locais para o modo) */
+  function roundRobin(ids) {
+    var n = ids.length, arr = ids.slice(), rounds = [];
+    for (var r = 0; r < n - 1; r++) {
+      var round = [];
+      for (var i = 0; i < n / 2; i++) round.push(r % 2 === 0 ? [arr[i], arr[n - 1 - i]] : [arr[n - 1 - i], arr[i]]);
+      rounds.push(round); arr.splice(1, 0, arr.pop());
+    }
+    return rounds;
+  }
+  function emptyTable(ids) { var t = {}; ids.forEach(function (id) { t[id] = { id: id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }); return t; }
+  function applyResult(t, h, a, hs, as) {
+    var H = t[h], A = t[a]; H.p++; A.p++; H.gf += hs; H.ga += as; A.gf += as; A.ga += hs;
+    if (hs > as) { H.w++; A.l++; H.pts += 3; } else if (hs < as) { A.w++; H.l++; A.pts += 3; } else { H.d++; A.d++; H.pts++; A.pts++; }
+  }
+  function standings(t) { return Object.keys(t).map(function (k) { return t[k]; }).sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga); }); }
+
+  function makeAttrs(base, pos) {
+    var a = { pac: base, sho: base, pas: base, dri: base, def: base, phy: base };
+    if (pos === "GK") { a.def = base + 6; a.sho = base - 25; }
+    if (pos === "DF") { a.def += 6; a.sho -= 8; }
+    if (pos === "FW") { a.sho += 8; a.def -= 12; a.pac += 4; }
+    if (pos === "MF") { a.pas += 6; }
+    Object.keys(a).forEach(function (k) { a[k] = Math.max(20, Math.min(99, a[k])); });
+    return a;
+  }
+  function overallFrom(attrs, pos) {
+    var w = pos === "GK" ? { def: .7, phy: .2, pas: .1 } : pos === "DF" ? { def: .5, phy: .25, pac: .15, pas: .1 }
+      : pos === "FW" ? { sho: .4, pac: .2, dri: .25, phy: .1, pas: .05 } : { pas: .3, dri: .25, phy: .15, def: .15, sho: .1, pac: .05 };
+    var s = 0; Object.keys(w).forEach(function (k) { s += (attrs[k] || 0) * w[k]; });
+    return Math.round(s);
+  }
+
+  function startSeasonFixtures(career) {
+    var league = TM.data.league(TM.data.club(career.clubId).leagueId);
+    career.leagueId = league.id;
+    career.fixtures = roundRobin(league.clubIds.slice());
+    career.round = 0;
+    career.table = emptyTable(league.clubIds);
+    // meta da temporada
+    if (career.pos === "FW") career.objective = { desc: "Marcar 12 gols na temporada", type: "goals", target: 12 };
+    else if (career.pos === "GK" || career.pos === "DF") career.objective = { desc: "Nota média 7.0+ na temporada", type: "rating", target: 7.0 };
+    else career.objective = { desc: "Dar 8 assistências (participações) e nota 7.0+", type: "rating", target: 7.0 };
+    career.seasonGoals = 0; career.seasonApps = 0; career.seasonRatingSum = 0;
+  }
+
+  /* ---------- entrada ---------- */
+  TM.ui.register("player", function (screen) {
+    var saved = TM.storage.playerCareer();
+    if (saved) { TM.ui.go("player-hub"); return; }
+    screen.appendChild(TM.ui.topbar("⭐ Carreira de Jogador", function () { TM.ui.go("modes"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("p", { class: "intro-text", text: "Crie o seu jogador do zero ou assuma a carreira de um jogador já existente." }));
+    body.appendChild(el("div", { class: "big-choice" }, [
+      el("button", { class: "choice-card", on: { click: function () { TM.ui.go("player-create"); } } }, [
+        el("span", { class: "cc-ic", text: "🧑‍🎨" }), el("span", { class: "cc-t", text: "Criar meu jogador" }),
+        el("span", { class: "cc-d", text: "Foto, país, físico e clube inicial" })
+      ]),
+      el("button", { class: "choice-card", on: { click: function () { TM.ui.go("player-existing"); } } }, [
+        el("span", { class: "cc-ic", text: "🔎" }), el("span", { class: "cc-t", text: "Assumir jogador existente" }),
+        el("span", { class: "cc-d", text: "Escolha alguém do mundo do jogo" })
+      ])
+    ]));
+  });
+
+  /* ---------- criação ---------- */
+  TM.ui.register("player-create", function (screen) {
+    screen.appendChild(TM.ui.topbar("Criar jogador", function () { TM.ui.go("player"); }));
+    var form = { name: "", photo: null, nationId: "nat0", year: 2004, month: 6, day: 15, height: 180, weight: 75, pos: "FW", clubId: null };
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // foto
+    var photoPreview = el("div", { class: "photo-drop" }, [ el("span", { text: "📷 Adicionar foto" }) ]);
+    var fileInput = el("input", { type: "file", accept: "image/*", style: "display:none" });
+    photoPreview.addEventListener("click", function () { fileInput.click(); });
+    fileInput.addEventListener("change", function () {
+      var file = fileInput.files[0]; if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function (ev) {
+        // redimensiona para no máx 256px para caber no armazenamento
+        var img = new Image();
+        img.onload = function () {
+          var canvas = document.createElement("canvas");
+          var scale = Math.min(1, 256 / Math.max(img.width, img.height));
+          canvas.width = img.width * scale; canvas.height = img.height * scale;
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          form.photo = canvas.toDataURL("image/jpeg", 0.82);
+          TM.ui.clear(photoPreview);
+          photoPreview.appendChild(el("img", { src: form.photo, class: "photo-img" }));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    body.appendChild(el("div", { class: "setting center" }, [ photoPreview, fileInput ]));
+
+    function field(label, input) { return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: label }), input ]); }
+
+    var nameInput = el("input", { class: "text-input", type: "text", placeholder: "Nome do jogador", maxlength: "24" });
+    nameInput.addEventListener("input", function () { form.name = nameInput.value; });
+    body.appendChild(field("Nome", nameInput));
+
+    // país
+    var natSel = el("select", { class: "select" });
+    TM.data.world().nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); })
+      .forEach(function (n) { natSel.appendChild(el("option", { value: n.id, text: n.name })); });
+    natSel.value = form.nationId;
+    natSel.addEventListener("change", function () { form.nationId = natSel.value; });
+    body.appendChild(field("País de nascimento", natSel));
+
+    // data de nascimento
+    var dob = el("div", { class: "dob-row" });
+    var daySel = numberSelect(1, 28, form.day), monthSel = numberSelect(1, 12, form.month), yearSel = numberSelect(1988, 2010, form.year);
+    daySel.addEventListener("change", function () { form.day = +daySel.value; });
+    monthSel.addEventListener("change", function () { form.month = +monthSel.value; });
+    yearSel.addEventListener("change", function () { form.year = +yearSel.value; refreshAge(); });
+    dob.appendChild(daySel); dob.appendChild(monthSel); dob.appendChild(yearSel);
+    var ageLabel = el("span", { class: "age-label" });
+    body.appendChild(field("Data de nascimento", el("div", {}, [ dob, ageLabel ])));
+    function refreshAge() { ageLabel.textContent = "Idade: " + (CUR_YEAR - form.year) + " anos"; }
+    refreshAge();
+
+    // altura / peso
+    var hInput = rangeInput(160, 205, form.height, "cm", function (v) { form.height = v; });
+    var wInput = rangeInput(55, 100, form.weight, "kg", function (v) { form.weight = v; });
+    body.appendChild(field("Altura", hInput.node));
+    body.appendChild(field("Peso", wInput.node));
+
+    // posição
+    var posSeg = el("div", { class: "segmented full" });
+    [["GK", "Goleiro"], ["DF", "Defensor"], ["MF", "Meia"], ["FW", "Atacante"]].forEach(function (o) {
+      var b = el("button", { class: "seg-btn" + (form.pos === o[0] ? " active" : ""), text: o[1], on: { click: function () {
+        form.pos = o[0]; posSeg.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active");
+      } } });
+      posSeg.appendChild(b);
+    });
+    body.appendChild(field("Posição", posSeg));
+
+    // clube inicial
+    var leagueSel = el("select", { class: "select" });
+    TM.data.world().leagues.forEach(function (lg) { leagueSel.appendChild(el("option", { value: lg.id, text: lg.name })); });
+    var clubSel = el("select", { class: "select" });
+    function fillClubs() {
+      TM.ui.clear(clubSel);
+      TM.data.league(leagueSel.value).clubIds.map(TM.data.club).sort(function (a, b) { return a.name.localeCompare(b.name); })
+        .forEach(function (c) { clubSel.appendChild(el("option", { value: c.id, text: c.name })); });
+      form.clubId = clubSel.value;
+    }
+    leagueSel.addEventListener("change", fillClubs);
+    clubSel.addEventListener("change", function () { form.clubId = clubSel.value; });
+    fillClubs();
+    body.appendChild(field("Liga inicial", leagueSel));
+    body.appendChild(field("Clube inicial", clubSel));
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Começar carreira", function () {
+        if (!form.name.trim()) { TM.ui.toast("Digite um nome"); return; }
+        var age = CUR_YEAR - form.year;
+        var base = age <= 20 ? 66 : age <= 26 ? 72 : 70; // talento inicial
+        var attrs = makeAttrs(base, form.pos);
+        var player = {
+          id: "me", name: form.name.trim(), photo: form.photo, clubId: form.clubId,
+          pos: form.pos, age: age, birth: { d: form.day, m: form.month, y: form.year },
+          height: form.height, weight: form.weight, nationId: form.nationId,
+          nationName: TM.data.nation(form.nationId).name, attrs: attrs, overall: overallFrom(attrs, form.pos)
+        };
+        var career = Object.assign({}, player, {
+          created: true, season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: []
+        });
+        startSeasonFixtures(career);
+        TM.storage.savePlayerCareer(career);
+        TM.ui.go("player-hub");
+      }, "btn primary big")
+    ]));
+
+    function numberSelect(min, max, val) {
+      var s = el("select", { class: "select mini" });
+      for (var i = min; i <= max; i++) { var o = el("option", { value: i, text: i }); if (i === val) o.selected = true; s.appendChild(o); }
+      return s;
+    }
+    function rangeInput(min, max, val, unit, cb) {
+      var out = el("span", { class: "range-val", text: val + " " + unit });
+      var inp = el("input", { type: "range", min: min, max: max, value: val, class: "slider" });
+      inp.addEventListener("input", function () { out.textContent = inp.value + " " + unit; cb(+inp.value); });
+      return { node: el("div", { class: "range-wrap" }, [ inp, out ]) };
+    }
+  });
+
+  /* ---------- assumir existente ---------- */
+  TM.ui.register("player-existing", function (screen) {
+    screen.appendChild(TM.ui.topbar("Assumir jogador", function () { TM.ui.go("player"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var leagueSel = el("select", { class: "select" });
+    TM.data.world().leagues.forEach(function (lg) { leagueSel.appendChild(el("option", { value: lg.id, text: lg.name })); });
+    var clubSel = el("select", { class: "select" });
+    var listWrap = el("div", { class: "squad-list" });
+    function fillClubs() { TM.ui.clear(clubSel); TM.data.league(leagueSel.value).clubIds.map(TM.data.club).forEach(function (c) { clubSel.appendChild(el("option", { value: c.id, text: c.name })); }); fillPlayers(); }
+    function fillPlayers() {
+      TM.ui.clear(listWrap);
+      TM.data.clubPlayers(clubSel.value).forEach(function (p) {
+        listWrap.appendChild(TM.ui.playerRow(p, { onClick: function (pl) { takeover(pl); } }));
+      });
+    }
+    leagueSel.addEventListener("change", fillClubs);
+    clubSel.addEventListener("change", fillPlayers);
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga" }), leagueSel ]));
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Clube" }), clubSel ]));
+    body.appendChild(listWrap);
+    fillClubs();
+
+    function takeover(p) {
+      var career = Object.assign({}, p, {
+        created: false, photo: null, birth: { d: 1, m: 1, y: CUR_YEAR - p.age },
+        season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: []
+      });
+      startSeasonFixtures(career);
+      TM.storage.savePlayerCareer(career);
+      TM.ui.go("player-hub");
+    }
+  });
+
+  /* ---------- foto do jogador (usa upload se houver) ---------- */
+  function myFace(career, cls) {
+    if (career.photo) return el("img", { src: career.photo, class: cls });
+    return TM.img.playerImg(career, cls);
+  }
+
+  /* ---------- central do jogador ---------- */
+  TM.ui.register("player-hub", function (screen) {
+    var c = TM.storage.playerCareer();
+    if (!c) { TM.ui.go("player"); return; }
+    var club = TM.data.club(c.clubId);
+
+    var right = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
+      if (confirm("Encerrar esta carreira?")) { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }
+    } } });
+    screen.appendChild(TM.ui.topbar("Minha Carreira", function () { TM.ui.go("modes"); }, right));
+
+    // cartão do jogador
+    screen.appendChild(el("div", { class: "player-card" }, [
+      myFace(c, "pc-face"),
+      el("div", { class: "pc-info" }, [
+        el("div", { class: "pc-name", text: c.name }),
+        el("div", { class: "pc-sub", text: c.pos + " · " + c.age + " anos · " + c.nationName }),
+        el("div", { class: "pc-club" }, [ TM.img.clubImg(club, "pc-crest"), el("span", { text: club.name }) ])
+      ]),
+      TM.ui.ovBadge(c.overall)
+    ]));
+
+    if (c.calledUp) screen.appendChild(el("div", { class: "callup-banner", text: "🌍 Você foi convocado pela seleção de " + c.nationName + "!" }));
+
+    // estatísticas da temporada
+    var avg = c.seasonApps ? (c.seasonRatingSum / c.seasonApps).toFixed(1) : "—";
+    screen.appendChild(el("div", { class: "stat-tiles" }, [
+      tile("Temporada", c.season), tile("Jogos", c.seasonApps), tile("Gols", c.seasonGoals), tile("Nota média", avg)
+    ]));
+
+    // meta
+    var prog = c.objective.type === "goals" ? c.seasonGoals + "/" + c.objective.target
+      : (c.seasonApps ? (c.seasonRatingSum / c.seasonApps).toFixed(1) : "0.0") + " / " + c.objective.target.toFixed(1);
+    screen.appendChild(el("div", { class: "objective" }, [
+      el("span", { class: "obj-ic", text: "🎯" }),
+      el("div", {}, [ el("div", { class: "obj-desc", text: c.objective.desc }), el("div", { class: "obj-prog", text: "Progresso: " + prog }) ])
+    ]));
+
+    // próximo jogo
+    var nextFix = null;
+    if (c.round < c.fixtures.length) c.fixtures[c.round].forEach(function (m) { if (m[0] === c.clubId || m[1] === c.clubId) nextFix = m; });
+    if (nextFix) {
+      var isHome = nextFix[0] === c.clubId, opp = TM.data.club(isHome ? nextFix[1] : nextFix[0]);
+      screen.appendChild(el("div", { class: "next-match" }, [
+        el("div", { class: "nm-label", text: "Rodada " + (c.round + 1) + "/" + c.fixtures.length + (isHome ? " · Em casa" : " · Fora") }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: isHome ? club.name : opp.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: isHome ? opp.name : club.name }) ]),
+        TM.ui.button("▶ Jogar", function () { playMatch(c); }, "btn primary")
+      ]));
+    } else {
+      screen.appendChild(el("div", { class: "next-match season-end" }, [
+        el("div", { class: "nm-label", text: "🏁 Fim da temporada " + c.season },),
+        TM.ui.button("Nova temporada", function () {
+          c.history.push({ season: c.season, clubId: c.clubId, apps: c.seasonApps, goals: c.seasonGoals });
+          c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false;
+          // leve evolução
+          if (c.age < 30) { c.overall = Math.min(94, c.overall + 1); }
+          startSeasonFixtures(c); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub");
+        }, "btn primary")
+      ]));
+    }
+
+    // propostas
+    if (c.offers && c.offers.length) {
+      var offBox = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "📨 Propostas" }) ]);
+      c.offers.forEach(function (off, i) {
+        var oc = TM.data.club(off.clubId);
+        offBox.appendChild(el("div", { class: "offer" }, [
+          TM.img.clubImg(oc, "offer-crest"),
+          el("div", { class: "offer-info" }, [ el("div", { text: oc.name }), el("div", { class: "offer-sub", text: "Overall do clube: " + TM.data.clubRating(off.clubId) }) ]),
+          TM.ui.button("Aceitar", function () {
+            c.clubId = off.clubId; c.offers = []; TM.storage.savePlayerCareer(c);
+            TM.ui.toast("✔ Você assinou com " + oc.name); TM.ui.go("player-hub");
+          }, "btn primary small"),
+          TM.ui.button("Recusar", function () { c.offers.splice(i, 1); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub"); }, "btn ghost small")
+        ]));
+      });
+      screen.appendChild(offBox);
+    }
+
+    // atalhos
+    screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.showPlayer(realPlayerObj(c)); } } }, [ el("span", { class: "hub-ic", text: "📈" }), el("span", { text: "Atributos" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-table"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Tabela" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-history"); } } }, [ el("span", { class: "hub-ic", text: "🗂️" }), el("span", { text: "Histórico" }) ])
+    ]));
+
+    function tile(label, val) { return el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: val }), el("div", { class: "tile-lbl", text: label }) ]); }
+  });
+
+  function realPlayerObj(c) {
+    return { name: c.name, pos: c.pos, age: c.age, nationName: c.nationName, height: c.height, weight: c.weight, overall: c.overall, attrs: c.attrs, clubId: c.clubId, id: c.id };
+  }
+
+  // constrói o time com o jogador garantido no XI
+  function buildTeam(clubId, me) {
+    var club = TM.data.club(clubId);
+    var others = TM.data.clubPlayers(clubId).filter(function (p) { return p.id !== me.id; });
+    return { id: clubId, name: club.name, players: [me].concat(others), club: club };
+  }
+
+  function playMatch(c) {
+    var settings = TM.storage.settings();
+    var me = realPlayerObj(c);
+    var round = c.fixtures[c.round];
+    var myFix = null;
+    round.forEach(function (m) { if (m[0] === c.clubId || m[1] === c.clubId) myFix = m; });
+    var iAmHome = myFix[0] === c.clubId;
+    var oppId = iAmHome ? myFix[1] : myFix[0];
+
+    var myTeam = buildTeam(c.clubId, me);
+    var oppTeam = TM.engine.teamFromClub(oppId);
+    var teamA = iAmHome ? myTeam : oppTeam, teamB = iAmHome ? oppTeam : myTeam;
+
+    var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, focusPlayerId: "me" });
+
+    // simula o restante da rodada para a tabela
+    round.forEach(function (m) {
+      if (m[0] === c.clubId || m[1] === c.clubId) {
+        applyResult(c.table, teamA.id, teamB.id, result.score[0], result.score[1]);
+      } else {
+        var rr = TM.engine.simulate(TM.engine.teamFromClub(m[0]), TM.engine.teamFromClub(m[1]), { realism: settings.realism });
+        applyResult(c.table, m[0], m[1], rr.score[0], rr.score[1]);
+      }
+    });
+
+    // atualiza estatísticas do jogador
+    var f = result.focus;
+    c.seasonApps++; c.seasonGoals += f.goals; c.seasonRatingSum += f.rating;
+    c.round++;
+
+    // eventos: proposta e convocação
+    maybeOffer(c, f);
+    maybeCallup(c);
+
+    TM.storage.savePlayerCareer(c);
+    TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome });
+  }
+
+  function maybeOffer(c, f) {
+    var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
+    if (avg >= 7.0 && Math.random() < 0.25 && c.offers.length < 2) {
+      // clube mais forte de alguma liga
+      var world = TM.data.world();
+      var candidates = world.clubs.filter(function (cl) { return TM.data.clubRating(cl.id) > c.overall + 2 && cl.id !== c.clubId; });
+      if (candidates.length) {
+        var pick = candidates[Math.floor(Math.random() * candidates.length)];
+        if (!c.offers.some(function (o) { return o.clubId === pick.id; })) c.offers.push({ clubId: pick.id });
+      }
+    }
+  }
+  function maybeCallup(c) {
+    if (c.calledUp) return;
+    var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 0;
+    if (c.seasonApps >= 4 && avg >= 7.2) c.calledUp = true;
+  }
+
+  /* ---------- resultado da minha partida ---------- */
+  TM.ui.register("player-match", function (screen, params) {
+    var r = params.result, a = params.teamA, b = params.teamB, f = r.focus;
+    screen.appendChild(TM.ui.topbar("Partida", function () { TM.ui.go("player-hub"); }));
+    var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
+    screen.appendChild(el("div", { class: "result-hero" }, [
+      el("div", { class: "result-score" }, [
+        el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }), el("span", { class: "rs-team", text: b.name })
+      ]),
+      el("div", { class: "result-tag", text: win ? "🏆 " + win : "🤝 Empate" })
+    ]));
+
+    // seu desempenho
+    screen.appendChild(el("div", { class: "my-perf" }, [
+      el("div", { class: "perf-item" }, [ el("div", { class: "perf-val", text: f.goals }), el("div", { class: "perf-lbl", text: "Seus gols" }) ]),
+      el("div", { class: "perf-item big" }, [ el("div", { class: "perf-val rating-" + ratingClass(f.rating), text: f.rating.toFixed(1) }), el("div", { class: "perf-lbl", text: "Sua nota" }) ])
+    ]));
+
+    var feed = el("div", { class: "commentary-feed static" });
+    r.events.filter(function (e) { return e.type === "goal"; }).forEach(function (e) { feed.appendChild(el("div", { class: "cm-line cm-goal", text: e.text })); });
+    if (feed.children.length) screen.appendChild(el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Gols da partida" }), feed ]));
+
+    screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("player-hub"); }, "btn primary") ]));
+  });
+  function ratingClass(r) { return r >= 8 ? "great" : r >= 7 ? "good" : r >= 6 ? "ok" : "bad"; }
+
+  /* ---------- tabela da liga do jogador ---------- */
+  TM.ui.register("player-table", function (screen) {
+    var c = TM.storage.playerCareer();
+    screen.appendChild(TM.ui.topbar("📊 Classificação", function () { TM.ui.go("player-hub"); }));
+    var st = standings(c.table);
+    var table = el("table", { class: "league-table" }, [
+      el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ])
+    ]);
+    var tb = el("tbody");
+    st.forEach(function (row, i) {
+      var club = TM.data.club(row.id);
+      tb.appendChild(el("tr", { class: row.id === c.clubId ? "me" : "" }, [
+        el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.clubImg(club, "lt-crest"), el("span", { text: club.name }) ]),
+        el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
+      ]));
+    });
+    table.appendChild(tb);
+    screen.appendChild(el("div", { class: "table-wrap" }, [ table ]));
+  });
+
+  /* ---------- histórico ---------- */
+  TM.ui.register("player-history", function (screen) {
+    var c = TM.storage.playerCareer();
+    screen.appendChild(TM.ui.topbar("🗂️ Histórico", function () { TM.ui.go("player-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    body.appendChild(el("div", { class: "career-totals", text: "Total na carreira: " + (c.careerApps + c.seasonApps) + " jogos · " + (c.careerGoals + c.seasonGoals) + " gols" }));
+    if (!c.history.length) body.appendChild(el("p", { class: "intro-text", text: "Complete uma temporada para ver seu histórico." }));
+    c.history.slice().reverse().forEach(function (h) {
+      body.appendChild(el("div", { class: "hist-line" }, [
+        el("span", { text: "Temp. " + h.season }),
+        el("span", { text: TM.data.club(h.clubId).name }),
+        el("span", { text: h.apps + "J · " + h.goals + "G" })
+      ]));
+    });
+    screen.appendChild(body);
+  });
+})(window);

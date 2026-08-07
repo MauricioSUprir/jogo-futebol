@@ -4,102 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Total Match</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- ===================== TELA DE ENTRADA (SPLASH) ===================== -->
-  <section id="screen-splash" class="screen is-active">
-    <div class="pitch-lines" aria-hidden="true"></div>
+  <div id="app"><!-- as telas são renderizadas aqui pelo JS --></div>
 
-    <div class="splash-content">
-      <!-- Logo: bola + prancheta tática -->
-      <div class="logo" aria-hidden="true">
-        <svg viewBox="0 0 240 240" width="150" height="150" role="img" aria-label="Total Match">
-          <!-- Prancheta tática atrás -->
-          <g transform="rotate(-8 120 120)">
-            <rect x="58" y="42" width="124" height="156" rx="10"
-                  fill="#141414" stroke="url(#gold)" stroke-width="3"/>
-            <rect x="96" y="34" width="48" height="16" rx="5"
-                  fill="#141414" stroke="url(#gold)" stroke-width="3"/>
-            <!-- linhas de campo na prancheta -->
-            <line x1="120" y1="52" x2="120" y2="188" stroke="#2e7d46" stroke-width="2" opacity="0.7"/>
-            <circle cx="120" cy="120" r="20" fill="none" stroke="#2e7d46" stroke-width="2" opacity="0.7"/>
-            <rect x="88" y="52" width="64" height="22" fill="none" stroke="#2e7d46" stroke-width="2" opacity="0.55"/>
-            <rect x="88" y="166" width="64" height="22" fill="none" stroke="#2e7d46" stroke-width="2" opacity="0.55"/>
-          </g>
-          <!-- Bola por cima -->
-          <g transform="translate(150 150)">
-            <circle r="42" fill="#0a0a0a" stroke="url(#gold)" stroke-width="3"/>
-            <path d="M0,-30 L18,-9 L11,17 L-11,17 L-18,-9 Z" fill="url(#gold)"/>
-            <path d="M0,-42 L0,-30 M18,-9 L34,-20 M11,17 L26,30 M-11,17 L-26,30 M-18,-9 L-34,-20"
-                  stroke="url(#gold)" stroke-width="2.5" fill="none"/>
-          </g>
-          <defs>
-            <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#f6d879"/>
-              <stop offset="0.5" stop-color="#d4af37"/>
-              <stop offset="1" stop-color="#b8860b"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-
-      <h1 class="game-title">
-        <span class="title-total">TOTAL</span><span class="title-match">MATCH</span>
-      </h1>
-      <p class="tagline">Simulação &amp; Gestão de Futebol</p>
-
-      <button id="btn-start" class="btn-start">TOQUE PARA COMEÇAR</button>
-      <p class="version">v0.1 — protótipo</p>
-    </div>
-  </section>
-
-  <!-- ===================== TELA DE MODOS ===================== -->
-  <section id="screen-modes" class="screen">
-    <header class="modes-header">
-      <div class="mini-logo">TOTAL<span>MATCH</span></div>
-      <h2>Escolha um modo</h2>
-    </header>
-
-    <div class="modes-grid">
-      <button class="mode-card" data-mode="quick">
-        <span class="mode-icon">⚡</span>
-        <span class="mode-name">Partida Rápida</span>
-        <span class="mode-desc">Simule uma partida na hora</span>
-      </button>
-
-      <button class="mode-card" data-mode="coach">
-        <span class="mode-icon">🎯</span>
-        <span class="mode-name">Carreira de Treinador</span>
-        <span class="mode-desc">Comande um clube ou seleção</span>
-      </button>
-
-      <button class="mode-card" data-mode="player">
-        <span class="mode-icon">⭐</span>
-        <span class="mode-name">Carreira de Jogador</span>
-        <span class="mode-desc">Crie e viva a carreira do seu craque</span>
-      </button>
-
-      <button class="mode-card" data-mode="settings">
-        <span class="mode-icon">⚙️</span>
-        <span class="mode-name">Configurações</span>
-        <span class="mode-desc">Dificuldade, realismo e mais</span>
-      </button>
-    </div>
-
-    <button class="btn-back" data-target="screen-splash">← Voltar</button>
-  </section>
-
-  <!-- ===================== PLACEHOLDER DE MODO ===================== -->
-  <section id="screen-placeholder" class="screen">
-    <div class="placeholder-box">
-      <h2 id="placeholder-title">Em construção</h2>
-      <p id="placeholder-text">Este modo ainda será desenvolvido nas próximas etapas.</p>
-      <button class="btn-back" data-target="screen-modes">← Voltar aos modos</button>
-    </div>
-  </section>
-
+  <!-- Núcleo -->
+  <script src="js/rng.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/placeholders.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/engine.js"></script>
+  <!-- Interface / roteador -->
+  <script src="js/ui.js"></script>
+  <!-- Modos -->
+  <script src="js/settings.js"></script>
+  <script src="js/quick.js"></script>
+  <script src="js/coach.js"></script>
+  <script src="js/player.js"></script>
+  <!-- Início -->
   <script src="js/app.js"></script>
 </body>
 </html>
