@@ -630,6 +630,24 @@ html, body {
 .cli-name { font-weight: 700; font-size: 15px; }
 .cli-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 
+/* evolução / pontos de habilidade */
+.sp-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: 620px;
+  background: linear-gradient(120deg, rgba(34,197,94,.22), rgba(34,197,94,.06)); border: 1px solid var(--gold);
+  border-radius: 12px; padding: 13px 16px; margin-bottom: 14px; cursor: pointer; font-weight: 700; font-size: 14px; }
+.sp-go { color: var(--gold); font-size: 13px; }
+.sp-badge { position: static; margin-left: 6px; background: var(--gold); color: #05230f; }
+.callup-banner.injured { background: linear-gradient(120deg, rgba(217,131,36,.25), rgba(217,131,36,.08)); border-color: #d98324; }
+.evo-head { display: flex; gap: 10px; width: 100%; max-width: 620px; margin-bottom: 14px; }
+.evo-head > div { flex: 1; background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 14px 8px; text-align: center; }
+.evo-ov { font-size: 28px; font-weight: 900; color: var(--gold); }
+.evo-sp { font-size: 28px; font-weight: 900; color: #4ade80; }
+.evo-pot { font-size: 28px; font-weight: 900; color: var(--text); }
+.evo-ov-lbl { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+.evo-attr { padding: 4px 0; }
+.attr-plus { width: 34px; height: 34px; border-radius: 9px; border: none; background: linear-gradient(120deg, var(--gold-light), var(--gold));
+  color: #05230f; font-size: 20px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+.attr-plus.disabled { background: #2a2a2a; color: #555; cursor: default; }
+
 /* ================= RESPONSIVO ================= */
 @media (max-width: 520px) {
   .modes-grid { grid-template-columns: 1fr; max-width: 340px; }

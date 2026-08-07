@@ -109,6 +109,7 @@
   TM.ui.register("coach-hub", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
+    C().migrateCareer(c); TM.storage.saveCoachCareer(c);
     var club = TM.data.club(c.teamId);
     var unread = TM.notify.unread(c);
     var bell = el("button", { class: "tb-bell", on: { click: function () { TM.ui.go("coach-notifications"); } } }, [

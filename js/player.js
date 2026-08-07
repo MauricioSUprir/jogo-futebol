@@ -175,7 +175,8 @@
           nationName: TM.data.nation(form.nationId).name, attrs: attrs, overall: overallFrom(attrs, form.pos)
         };
         var career = Object.assign({}, player, {
-          created: true, season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: []
+          created: true, season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: [],
+          notifications: [], skillPoints: 0, injured: 0
         });
         startSeasonFixtures(career);
         TM.storage.savePlayerCareer(career);
@@ -222,7 +223,8 @@
     function takeover(p) {
       var career = Object.assign({}, p, {
         created: false, photo: null, birth: { d: 1, m: 1, y: CUR_YEAR - p.age },
-        season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: []
+        season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: [],
+        notifications: [], skillPoints: 0, injured: 0
       });
       startSeasonFixtures(career);
       TM.storage.savePlayerCareer(career);
@@ -240,9 +242,18 @@
   TM.ui.register("player-hub", function (screen) {
     var c = TM.storage.playerCareer();
     if (!c) { TM.ui.go("player"); return; }
+    // migração de carreiras antigas
+    if (!c.notifications) c.notifications = [];
+    if (c.skillPoints == null) c.skillPoints = 0;
+    if (c.injured == null) c.injured = 0;
+    TM.storage.savePlayerCareer(c);
     var club = TM.data.club(c.clubId);
 
-    var right = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
+    var unread = TM.notify.unread(c);
+    var bell = el("button", { class: "tb-bell", on: { click: function () { TM.ui.go("player-notifications"); } } }, [
+      el("span", { text: "🔔" }), unread ? el("span", { class: "bell-badge", text: unread > 9 ? "9+" : unread }) : null
+    ]);
+    var dots = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções da carreira", [
         { label: "💾 Salvar carreira", fn: function () { TM.storage.savePlayerCareer(c); TM.ui.toast("✔ Carreira salva"); } },
         { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
@@ -251,7 +262,7 @@
         } }
       ]);
     } } });
-    screen.appendChild(TM.ui.topbar("Minha Carreira", function () { TM.ui.go("modes"); }, right));
+    screen.appendChild(TM.ui.topbar("Minha Carreira", function () { TM.ui.go("modes"); }, el("div", { class: "tb-actions" }, [ bell, dots ])));
 
     // cartão do jogador
     screen.appendChild(el("div", { class: "player-card" }, [
@@ -280,6 +291,15 @@
       el("div", {}, [ el("div", { class: "obj-desc", text: c.objective.desc }), el("div", { class: "obj-prog", text: "Progresso: " + prog }) ])
     ]));
 
+    // pontos de habilidade
+    if (c.skillPoints > 0) {
+      screen.appendChild(el("div", { class: "sp-banner", on: { click: function () { TM.ui.go("player-attrs"); } } }, [
+        el("span", { text: "⭐ Você tem " + c.skillPoints + " ponto(s) de habilidade para gastar!" }),
+        el("span", { class: "sp-go", text: "Evoluir →" })
+      ]));
+    }
+    if (c.injured > 0) screen.appendChild(el("div", { class: "callup-banner injured", text: "🚑 Você está lesionado — fora por " + c.injured + " jogo(s)." }));
+
     // próximo jogo
     var nextFix = null;
     if (c.round < c.fixtures.length) c.fixtures[c.round].forEach(function (m) { if (m[0] === c.clubId || m[1] === c.clubId) nextFix = m; });
@@ -288,16 +308,23 @@
       screen.appendChild(el("div", { class: "next-match" }, [
         el("div", { class: "nm-label", text: "Rodada " + (c.round + 1) + "/" + c.fixtures.length + (isHome ? " · Em casa" : " · Fora") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: isHome ? club.name : opp.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: isHome ? opp.name : club.name }) ]),
-        TM.ui.button("▶ Jogar", function () { playMatch(c); }, "btn primary")
+        TM.ui.button(c.injured > 0 ? "▶ Avançar (lesionado)" : "▶ Jogar", function () { playMatch(c); }, "btn primary")
       ]));
     } else {
       screen.appendChild(el("div", { class: "next-match season-end" }, [
         el("div", { class: "nm-label", text: "🏁 Fim da temporada " + c.season },),
         TM.ui.button("Nova temporada", function () {
+          var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
           c.history.push({ season: c.season, clubId: c.clubId, apps: c.seasonApps, goals: c.seasonGoals });
-          c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false;
-          // leve evolução
-          if (c.age < 30) { c.overall = Math.min(94, c.overall + 1); }
+          c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false; c.injured = 0;
+          // pontos de habilidade de fim de temporada
+          var spGain = 2 + (avg >= 7.5 ? 1 : 0);
+          c.skillPoints += spGain;
+          // evolução do overall conforme a fase e a idade
+          var before = c.overall;
+          if (avg >= 7.2 && c.age <= 29) c.overall = Math.min(97, c.overall + 1);
+          else if (avg < 6.0 || c.age >= 32) c.overall = Math.max(50, c.overall - 1);
+          TM.notify.push(c, { icon: "📅", title: "Nova temporada", text: "Temporada encerrada (média " + avg.toFixed(1) + "). +" + spGain + " pontos de habilidade." + (c.overall !== before ? " Seu overall foi para " + c.overall + "." : "") });
           startSeasonFixtures(c); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub");
         }, "btn primary")
       ]));
@@ -322,8 +349,12 @@
     }
 
     // atalhos
+    var evoBtn = el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-attrs"); } } }, [
+      el("span", { class: "hub-ic", text: "📈" }), el("span", { text: "Evolução" }),
+      c.skillPoints > 0 ? el("span", { class: "bell-badge sp-badge", text: c.skillPoints }) : null
+    ]);
     screen.appendChild(el("div", { class: "hub-actions" }, [
-      el("button", { class: "hub-btn", on: { click: function () { TM.ui.showPlayer(realPlayerObj(c)); } } }, [ el("span", { class: "hub-ic", text: "📈" }), el("span", { text: "Atributos" }) ]),
+      evoBtn,
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-table"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Tabela" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-history"); } } }, [ el("span", { class: "hub-ic", text: "🗂️" }), el("span", { text: "Histórico" }) ])
     ]));
@@ -344,6 +375,7 @@
 
   function playMatch(c) {
     var settings = TM.storage.settings();
+    var injuredThisGame = c.injured > 0;
     var me = realPlayerObj(c);
     var round = c.fixtures[c.round];
     var myFix = null;
@@ -351,13 +383,13 @@
     var iAmHome = myFix[0] === c.clubId;
     var oppId = iAmHome ? myFix[1] : myFix[0];
 
-    var myTeam = buildTeam(c.clubId, me);
+    // se lesionado, o jogador não entra em campo (não é foco)
+    var myTeam = injuredThisGame ? TM.engine.teamFromClub(c.clubId) : buildTeam(c.clubId, me);
     var oppTeam = TM.engine.teamFromClub(oppId);
     var teamA = iAmHome ? myTeam : oppTeam, teamB = iAmHome ? oppTeam : myTeam;
 
-    var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, focusPlayerId: "me" });
+    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me" });
 
-    // simula o restante da rodada para a tabela
     round.forEach(function (m) {
       if (m[0] === c.clubId || m[1] === c.clubId) {
         applyResult(c.table, teamA.id, teamB.id, result.score[0], result.score[1]);
@@ -366,13 +398,34 @@
         applyResult(c.table, m[0], m[1], rr.score[0], rr.score[1]);
       }
     });
-
-    // atualiza estatísticas do jogador
-    var f = result.focus;
-    c.seasonApps++; c.seasonGoals += f.goals; c.seasonRatingSum += f.rating;
     c.round++;
 
-    // eventos: proposta e convocação
+    if (injuredThisGame) {
+      c.injured--;
+      if (c.injured <= 0) TM.notify.push(c, { icon: "💪", title: "Recuperado", text: "Você se recuperou da lesão e está à disposição." });
+      TM.storage.savePlayerCareer(c);
+      TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: true });
+      return;
+    }
+
+    // desempenho
+    var f = result.focus;
+    c.seasonApps++; c.seasonGoals += f.goals; c.seasonRatingSum += f.rating;
+
+    // lesão do jogador
+    if (f.injured) {
+      c.injured = f.injured;
+      TM.notify.push(c, { icon: "🚑", title: "Você se lesionou", text: "Ficará fora por cerca de " + f.injured + " jogo(s)." });
+    }
+    // pontos de habilidade por boa atuação
+    var gained = 0;
+    if (f.rating >= 8.5) gained = 2; else if (f.rating >= 7.3) gained = 1;
+    if (f.goals >= 2) gained += 1;
+    if (gained > 0) { c.skillPoints += gained; TM.notify.push(c, { icon: "⭐", title: "Pontos de habilidade", text: "Ótima atuação (nota " + f.rating.toFixed(1) + ")! +" + gained + " ponto(s) para gastar em atributos." }); }
+    // feedback do técnico
+    if (f.rating < 5.6 && Math.random() < 0.5) TM.notify.push(c, { icon: "😬", title: "Cobrança do técnico", text: "O técnico não gostou da sua atuação. Melhore nos próximos jogos." });
+    else if (f.rating >= 8.5 && Math.random() < 0.5) TM.notify.push(c, { icon: "🤝", title: "Elogio do técnico", text: "O técnico está muito satisfeito e conta com você como titular." });
+
     maybeOffer(c, f);
     maybeCallup(c);
 
@@ -383,19 +436,24 @@
   function maybeOffer(c, f) {
     var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
     if (avg >= 7.0 && Math.random() < 0.25 && c.offers.length < 2) {
-      // clube mais forte de alguma liga
       var world = TM.data.world();
       var candidates = world.clubs.filter(function (cl) { return TM.data.clubRating(cl.id) > c.overall + 2 && cl.id !== c.clubId; });
       if (candidates.length) {
         var pick = candidates[Math.floor(Math.random() * candidates.length)];
-        if (!c.offers.some(function (o) { return o.clubId === pick.id; })) c.offers.push({ clubId: pick.id });
+        if (!c.offers.some(function (o) { return o.clubId === pick.id; })) {
+          c.offers.push({ clubId: pick.id });
+          TM.notify.push(c, { icon: "📨", title: "Interesse de clube", text: pick.name + " demonstrou interesse em te contratar. Veja em Propostas." });
+        }
       }
     }
   }
   function maybeCallup(c) {
     if (c.calledUp) return;
     var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 0;
-    if (c.seasonApps >= 4 && avg >= 7.2) c.calledUp = true;
+    if (c.seasonApps >= 4 && avg >= 7.2) {
+      c.calledUp = true;
+      TM.notify.push(c, { icon: "🌍", title: "Convocação!", text: "Você foi convocado para a seleção de " + c.nationName + "! Fique de olho nos jogos da seleção." });
+    }
   }
 
   /* ---------- resultado da minha partida ---------- */
@@ -410,11 +468,15 @@
       el("div", { class: "result-tag", text: win ? "🏆 " + win : "🤝 Empate" })
     ]));
 
-    // seu desempenho
-    screen.appendChild(el("div", { class: "my-perf" }, [
-      el("div", { class: "perf-item" }, [ el("div", { class: "perf-val", text: f.goals }), el("div", { class: "perf-lbl", text: "Seus gols" }) ]),
-      el("div", { class: "perf-item big" }, [ el("div", { class: "perf-val rating-" + ratingClass(f.rating), text: f.rating.toFixed(1) }), el("div", { class: "perf-lbl", text: "Sua nota" }) ])
-    ]));
+    // seu desempenho (ou aviso de lesão)
+    if (params.sat || !f) {
+      screen.appendChild(el("div", { class: "callup-banner injured", text: "🚑 Você ficou de fora por lesão nesta partida." }));
+    } else {
+      screen.appendChild(el("div", { class: "my-perf" }, [
+        el("div", { class: "perf-item" }, [ el("div", { class: "perf-val", text: f.goals }), el("div", { class: "perf-lbl", text: "Seus gols" }) ]),
+        el("div", { class: "perf-item big" }, [ el("div", { class: "perf-val rating-" + ratingClass(f.rating), text: f.rating.toFixed(1) }), el("div", { class: "perf-lbl", text: "Sua nota" }) ])
+      ]));
+    }
 
     var feed = el("div", { class: "commentary-feed static" });
     r.events.filter(function (e) { return e.type === "goal"; }).forEach(function (e) { feed.appendChild(el("div", { class: "cm-line cm-goal", text: e.text })); });
@@ -459,5 +521,61 @@
       ]));
     });
     screen.appendChild(body);
+  });
+
+  /* ---------- central de notificações do jogador ---------- */
+  TM.ui.register("player-notifications", function (screen) {
+    var c = TM.storage.playerCareer();
+    screen.appendChild(TM.ui.topbar("🔔 Avisos", function () { TM.notify.markAllRead(c); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var notes = c.notifications || [];
+    if (!notes.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhum aviso no momento. Jogue partidas para receber avisos." }));
+    notes.forEach(function (n) {
+      body.appendChild(el("div", { class: "note" + (n.read ? "" : " unread") }, [
+        el("div", { class: "note-ic", text: n.icon || "•" }),
+        el("div", { class: "note-body" }, [ el("div", { class: "note-title", text: n.title }), el("div", { class: "note-text", text: n.text }) ])
+      ]));
+    });
+    TM.notify.markAllRead(c); TM.storage.savePlayerCareer(c);
+  });
+
+  /* ---------- evolução: atributos + pontos de habilidade ---------- */
+  TM.ui.register("player-attrs", function (screen) {
+    var c = TM.storage.playerCareer();
+    screen.appendChild(TM.ui.topbar("📈 Evolução", function () { TM.ui.go("player-hub"); }));
+
+    var head = el("div", { class: "evo-head" }, [
+      el("div", {}, [ el("div", { class: "evo-ov", text: c.overall }), el("div", { class: "evo-ov-lbl", text: "Overall" }) ]),
+      el("div", {}, [ el("div", { class: "evo-sp", text: c.skillPoints }), el("div", { class: "evo-ov-lbl", text: "Pontos disponíveis" }) ]),
+      el("div", {}, [ el("div", { class: "evo-pot", text: c.potential || c.overall }), el("div", { class: "evo-ov-lbl", text: "Potencial" }) ])
+    ]);
+    screen.appendChild(head);
+    screen.appendChild(el("p", { class: "intro-text", style: "max-width:620px", text: "Gaste seus pontos de habilidade nos atributos. Cada ponto sobe +1 no atributo — e, dependendo do peso na sua posição, o overall pode ou não subir." }));
+
+    var cap = Math.min(99, (c.potential || 99) + 2);
+    var ATTRS = [["pac", "Velocidade"], ["sho", "Finalização"], ["pas", "Passe"], ["dri", "Drible"], ["def", "Defesa"], ["phy", "Físico"]];
+    var list = el("div", { class: "panel-narrow" });
+    ATTRS.forEach(function (at) {
+      var key = at[0];
+      var valEl = el("span", { class: "attr-val", text: c.attrs[key] });
+      var plus = el("button", { class: "attr-plus", text: "+", on: { click: function () {
+        if (c.skillPoints <= 0) { TM.ui.toast("Sem pontos disponíveis"); return; }
+        if (c.attrs[key] >= cap) { TM.ui.toast("Atributo no limite (" + cap + ")"); return; }
+        c.attrs[key]++; c.skillPoints--;
+        var before = c.overall;
+        c.overall = overallFrom(c.attrs, c.pos);
+        TM.storage.savePlayerCareer(c);
+        if (c.overall > before) TM.ui.toast("⬆ Overall subiu para " + c.overall + "!");
+        TM.ui.go("player-attrs");
+      } } });
+      list.appendChild(el("div", { class: "attr evo-attr" }, [
+        el("span", { class: "attr-label", text: at[1] }),
+        el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + c.attrs[key] + "%" }) ]),
+        valEl,
+        c.skillPoints > 0 && c.attrs[key] < cap ? plus : el("span", { class: "attr-plus disabled", text: "+" })
+      ]));
+    });
+    screen.appendChild(list);
   });
 })(window);

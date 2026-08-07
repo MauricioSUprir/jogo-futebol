@@ -350,6 +350,20 @@
     seasonSetup(career);
   }
 
+  // preenche campos novos em carreiras antigas (salvas antes destes recursos)
+  function migrateCareer(career) {
+    if (!career) return career;
+    if (!career.money) career.money = CURRENCIES.eur;
+    if (!career.injuries) career.injuries = {};
+    if (!career.suspensions) career.suspensions = {};
+    if (!career.notifications) career.notifications = [];
+    if (!career.honours) career.honours = [];
+    if (!career.tactic) career.tactic = "equilibrado";
+    if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
+    if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    return career;
+  }
+
   /* ---------- scheduler ---------- */
   function findUserFixture(league, teamId) {
     var round = league.fixtures[league.round];
@@ -436,7 +450,7 @@
   }
 
   TM.comp = {
-    newClubCareer: newClubCareer, newSeason: newSeason,
+    newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
