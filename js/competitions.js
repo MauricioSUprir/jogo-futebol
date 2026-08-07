@@ -281,6 +281,7 @@
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
       signedFrom: {}, honours: [],
+      objective: generateObjective(clubId),
       tactic: "equilibrado",
       injuries: {}, suspensions: {}, notifications: [],
       youth: generateYouth(clubId)
@@ -375,9 +376,32 @@
     return true;
   }
 
+  /* ---------- metas da diretoria (clube) ---------- */
+  function clubRankInLeague(clubId) {
+    var lg = TM.data.club(clubId).leagueId;
+    var ranked = TM.data.league(lg).clubIds.slice().sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+    return ranked.indexOf(clubId) + 1;
+  }
+  function generateObjective(clubId) {
+    var rank = clubRankInLeague(clubId);
+    if (rank <= 2) return { desc: "Ser campeão ou vice da liga", maxPos: 2 };
+    if (rank <= 6) return { desc: "Terminar entre os 6 primeiros", maxPos: 6 };
+    if (rank <= 12) return { desc: "Terminar na primeira metade (top 9)", maxPos: 9 };
+    return { desc: "Não ser rebaixado (fora dos 4 últimos)", maxPos: 14 };
+  }
+  function currentPosition(career) {
+    var st = standings(career.comps.league.table);
+    return st.findIndex(function (r) { return r.id === career.teamId; }) + 1;
+  }
+  function evaluateObjective(career) {
+    var pos = currentPosition(career);
+    return { met: pos <= career.objective.maxPos, pos: pos, target: career.objective.maxPos, desc: career.objective.desc };
+  }
+
   function newSeason(career) {
     career.season++;
     seasonSetup(career);
+    career.objective = generateObjective(career.teamId);
   }
 
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
@@ -389,6 +413,7 @@
     if (!career.notifications) career.notifications = [];
     if (!career.honours) career.honours = [];
     if (!career.tactic) career.tactic = "equilibrado";
+    if (!career.objective) career.objective = generateObjective(career.teamId);
     if (!career.coachName) career.coachName = "Treinador";
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
@@ -496,6 +521,7 @@
 
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
+    evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,

@@ -161,6 +161,16 @@
       el("div", { class: "coach-tag" }, [ coachFace, el("div", { class: "coach-tag-name", text: c.coachName || "Treinador" }) ])
     ]));
 
+    // meta da diretoria
+    var pos = C().currentPosition(c);
+    screen.appendChild(el("div", { class: "objective" }, [
+      el("span", { class: "obj-ic", text: "🎯" }),
+      el("div", {}, [
+        el("div", { class: "obj-desc", text: "Meta: " + c.objective.desc }),
+        el("div", { class: "obj-prog", text: "Posição atual: " + pos + "º" + (pos <= c.objective.maxPos ? " ✓ (dentro da meta)" : " ⚠ (abaixo da meta)") })
+      ])
+    ]));
+
     var pending = C().advanceToUserMatch(c);
     if (pending.seasonEnd) {
       renderSeasonEnd(screen, c);
@@ -189,17 +199,29 @@
   function renderSeasonEnd(screen, c) {
     var st = C().standings(c.comps.league.table);
     var pos = st.findIndex(function (r) { return r.id === c.teamId; }) + 1;
+    var ev = C().evaluateObjective(c);
     var titles = [];
     if (st[0].id === c.teamId) titles.push("🏆 Campeão da " + c.comps.league.name);
     if (c.comps.cup && c.comps.cup.championId === c.teamId) titles.push("🏆 Campeão da " + c.comps.cup.name);
     if (c.comps.cont && c.comps.cont.tour && c.comps.cont.tour.championId === c.teamId) titles.push("🏆 Campeão da " + c.comps.cont.name);
+
     var box = el("div", { class: "next-match season-end" }, [
       el("div", { class: "nm-label", text: "🏁 Fim da temporada " + c.season }),
       el("div", { class: "nm-teams", text: pos + "º na liga" })
     ]);
     titles.forEach(function (t) { box.appendChild(el("div", { class: "obj-desc", text: t })); });
-    box.appendChild(TM.ui.button("Iniciar próxima temporada", function () { C().newSeason(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn primary"));
-    screen.appendChild(box);
+
+    if (ev.met) {
+      box.appendChild(el("div", { class: "obj-result good", text: "✔ Meta cumprida: " + c.objective.desc }));
+      box.appendChild(TM.ui.button("Iniciar próxima temporada", function () { C().newSeason(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn primary"));
+      screen.appendChild(box);
+    } else {
+      box.appendChild(el("div", { class: "obj-result bad", text: "✖ Meta NÃO cumprida (" + c.objective.desc + ")" }));
+      box.classList.add("fired");
+      box.appendChild(el("div", { class: "fired-msg", text: "🚪 A diretoria decidiu te demitir por não atingir os objetivos da temporada." }));
+      box.appendChild(TM.ui.button("Encerrar carreira", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, "btn primary"));
+      screen.appendChild(box);
+    }
   }
 
   /* ---------- jogar a partida pendente ---------- */
@@ -470,8 +492,9 @@
   });
 
   /* ---------- negociação: com o clube ---------- */
-  function askingPrice(p) { return Math.max(1, Math.round(Math.pow(Math.max(1, p.overall - 50), 1.8) / 7 * (p.age < 24 ? 1.3 : p.age > 31 ? 0.6 : 1))); }
-  function wageDemand(p) { return Math.max(5, Math.round(Math.pow(Math.max(1, p.overall - 55), 1.5) / 3)); }
+  // taxa de transferência ~30% acima do valor de mercado; salário ~15% do valor/ano
+  function askingPrice(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 1.3)); }
+  function wageDemand(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 0.15)); }
 
   TM.ui.register("coach-nego-club", function (screen, params) {
     var c = TM.storage.coachCareer();

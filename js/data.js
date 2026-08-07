@@ -232,12 +232,18 @@
       var ps = TM.data.clubPlayers(clubId).slice(0, 11);
       return Math.round(ps.reduce(function (s, p) { return s + p.overall; }, 0) / ps.length);
     },
-    // valor de mercado base (em milhões, referência em euro)
+    // valor de mercado base (em milhões de euro) — curva realista:
+    // ~60=4M, 70=18M, 80=55M, 85=85M, 90=125M, 95=175M
     marketValue: function (p) {
-      var base = Math.pow(Math.max(1, p.overall - 50), 1.8) / 7;
-      var ageF = p.age < 24 ? 1.3 : p.age > 31 ? 0.55 : 1;
-      var potF = 1 + Math.max(0, (p.potential || p.overall) - p.overall) * 0.03;
-      return Math.max(1, Math.round(base * ageF * potF));
+      var base = Math.pow(Math.max(0.6, (p.overall - 45) / 10), 3.2);
+      var ageF = p.age <= 21 ? 1.35 : p.age <= 25 ? 1.15 : p.age <= 29 ? 1.0 : p.age <= 32 ? 0.55 : 0.28;
+      var potF = 1 + Math.max(0, (p.potential || p.overall) - p.overall) * 0.04;
+      var gkF = p.pos === "GK" ? 0.7 : 1; // goleiros valem um pouco menos
+      var v = base * ageF * potF * gkF;
+      // arredonda de forma "bonita" (passos maiores em valores altos)
+      if (v >= 100) return Math.round(v / 5) * 5;
+      if (v >= 30) return Math.round(v);
+      return Math.max(1, Math.round(v));
     },
     // nome aleatório por cultura (para jogadores da base, etc.)
     randomName: function (culture) {
