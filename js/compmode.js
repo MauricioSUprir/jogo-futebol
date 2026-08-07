@@ -39,7 +39,7 @@
       var def = CONT_CLUB[id], pool = [];
       def.leagues.forEach(function (l) { pool = pool.concat(topClubs(l, Math.ceil(def.size / def.leagues.length) + 2)); });
       pool = pool.filter(function (x, i) { return pool.indexOf(x) === i; }).sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, def.size);
-      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4 };
+      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4, dbl: true };
     }
     if (catKey === "nation") {
       var def2 = NAT_GROUPS[id], ids;
@@ -63,6 +63,10 @@
     for (var r = 0; r < n - 1; r++) { var rd = []; for (var i = 0; i < n / 2; i++) rd.push(r % 2 === 0 ? [arr[i], arr[n - 1 - i]] : [arr[n - 1 - i], arr[i]]); rounds.push(rd); arr.splice(1, 0, arr.pop()); }
     return rounds;
   }
+  function doubleRoundRobin(ids) {
+    var first = roundRobin(ids);
+    return first.concat(first.map(function (rd) { return rd.map(function (m) { return [m[1], m[0]]; }); }));
+  }
   function emptyTable(ids) { var t = {}; ids.forEach(function (id) { t[id] = { id: id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }); return t; }
   function applyRes(t, h, a, hs, as) { var H = t[h], A = t[a]; H.p++; A.p++; H.gf += hs; H.ga += as; A.gf += as; A.ga += hs; if (hs > as) { H.w++; A.l++; H.pts += 3; } else if (hs < as) { A.w++; H.l++; A.pts += 3; } else { H.d++; A.d++; H.pts++; A.pts++; } }
   function standings(t) { return Object.keys(t).map(function (k) { return t[k]; }).sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf; }); }
@@ -75,9 +79,9 @@
   function newComp(catKey, id, userId) {
     var built = buildCompetition(catKey, id);
     var s = { name: built.name, isNation: built.isNation, kind: built.kind, userId: userId };
-    if (built.kind === "league") { s.teamIds = built.teamIds; s.fixtures = roundRobin(built.teamIds); s.round = 0; s.table = emptyTable(built.teamIds); }
+    if (built.kind === "league") { s.teamIds = built.teamIds; s.fixtures = doubleRoundRobin(built.teamIds); s.round = 0; s.table = emptyTable(built.teamIds); }
     else if (built.kind === "ko") { s.teamIds = shuffle(built.teamIds); s.rounds = []; s.roundIndex = 0; s.aliveUser = true; s.championId = null; }
-    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, userId: userId }); }
+    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, userId: userId }); }
     return s;
   }
 
@@ -197,8 +201,9 @@
     var s = load(); if (!s) { TM.ui.go("compmode"); return; }
     var right = E("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções", [
-        { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
-        { label: "🗑️ Sair da competição", danger: true, fn: function () { if (confirm("Sair e apagar o progresso?")) { clear(); TM.ui.go("modes"); } } }
+        { label: "📤 Salvar e sair", fn: function () { TM.saves.park("comp"); TM.ui.toast("Competição guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
+        { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
+        { label: "🗑️ Encerrar competição", danger: true, fn: function () { TM.ui.confirm("Encerrar esta competição?", "O progresso será apagado.", "Encerrar", function () { clear(); TM.ui.go("modes"); }, true); } }
       ]);
     } } });
     screen.appendChild(TM.ui.topbar(s.name, function () { TM.ui.go("modes"); }, right));

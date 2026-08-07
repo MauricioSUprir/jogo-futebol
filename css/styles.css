@@ -427,6 +427,7 @@ html, body {
   padding: 14px; display: flex; flex-direction: column; gap: 8px; animation: sheetUp .25s ease; }
 @keyframes sheetUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .sheet-title { text-align: center; color: var(--text-dim); font-size: 13px; padding: 6px 0 10px; }
+.sheet-msg { text-align: center; color: var(--text); font-size: 14px; line-height: 1.5; padding: 0 6px 12px; }
 .sheet-item { padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,.08); background: var(--black-soft);
   color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s ease; }
 .sheet-item:hover { border-color: var(--gold); }
@@ -663,6 +664,13 @@ html, body {
 .obj-result.bad { color: #e8734a; }
 .next-match.season-end.fired { border-color: #d0342c; }
 .fired-msg { color: #ff8a70; font-size: 13.5px; line-height: 1.5; margin: 4px 0; }
+
+.save-card { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; padding: 12px 14px; }
+.save-ic { font-size: 24px; }
+.save-info { flex: 1; min-width: 0; }
+.save-name { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.save-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .group-title { color: var(--gold); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin: 14px 0 6px; }
 .league-table tr.qualify td { border-left: 0; }
 .league-table tr.qualify td:first-child { box-shadow: inset 3px 0 0 var(--green); }

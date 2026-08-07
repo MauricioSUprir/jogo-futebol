@@ -42,6 +42,19 @@
 
     playerCareer: function () { return read("player", null); },
     savePlayerCareer: function (c) { write("player", c); },
-    clearPlayerCareer: function () { remove("player"); }
+    clearPlayerCareer: function () { remove("player"); },
+
+    // ---- biblioteca de jogos salvos (várias carreiras/competições) ----
+    listSaves: function () { return read("saves", []); },
+    saveGame: function (rec) {
+      var s = read("saves", []);
+      rec.id = "sv" + Date.now() + Math.floor(Math.random() * 1000);
+      rec.ts = Date.now();
+      s.unshift(rec);
+      write("saves", s);
+      return rec.id;
+    },
+    getSave: function (id) { return read("saves", []).filter(function (r) { return r.id === id; })[0]; },
+    removeSave: function (id) { write("saves", read("saves", []).filter(function (r) { return r.id !== id; })); }
   };
 })(window);

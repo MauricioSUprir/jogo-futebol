@@ -255,10 +255,12 @@
     ]);
     var dots = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções da carreira", [
-        { label: "💾 Salvar carreira", fn: function () { TM.storage.savePlayerCareer(c); TM.ui.toast("✔ Carreira salva"); } },
-        { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
+        { label: "💾 Salvar (continuar jogando)", fn: function () { TM.storage.savePlayerCareer(c); TM.ui.toast("✔ Carreira salva"); } },
+        { label: "📤 Salvar e sair", fn: function () { TM.saves.park("player"); TM.ui.toast("Carreira guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
+        { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
+        { label: "🎽 Aposentar-se", fn: function () { TM.ui.confirm("Se aposentar agora?", "Encerra sua carreira como jogador.", "Aposentar", function () { TM.ui.go("player-retire", { manual: true }); }, true); } },
         { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
-          if (confirm("Finalizar esta carreira? O progresso será apagado.")) { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }
+          TM.ui.confirm("Finalizar esta carreira?", "O progresso será apagado permanentemente.", "Finalizar", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, true);
         } }
       ]);
     } } });
@@ -317,6 +319,9 @@
           var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
           c.history.push({ season: c.season, clubId: c.clubId, apps: c.seasonApps, goals: c.seasonGoals });
           c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false; c.injured = 0;
+          // aposentadoria: idade avançada (ou veterano em queda)
+          var retire = c.age >= 39 || (c.age >= 35 && c.overall < 70 && Math.random() < 0.5) || (c.age >= 37 && Math.random() < 0.5);
+          if (retire) { TM.storage.savePlayerCareer(c); TM.ui.go("player-retire", {}); return; }
           // pontos de habilidade de fim de temporada
           var spGain = 2 + (avg >= 7.5 ? 1 : 0);
           c.skillPoints += spGain;
@@ -324,6 +329,7 @@
           var before = c.overall;
           if (avg >= 7.2 && c.age <= 29) c.overall = Math.min(97, c.overall + 1);
           else if (avg < 6.0 || c.age >= 32) c.overall = Math.max(50, c.overall - 1);
+          if (c.age >= 35) TM.notify.push(c, { icon: "🎽", title: "Reta final", text: "Aos " + c.age + " anos, a aposentadoria se aproxima." });
           TM.notify.push(c, { icon: "📅", title: "Nova temporada", text: "Temporada encerrada (média " + avg.toFixed(1) + "). +" + spGain + " pontos de habilidade." + (c.overall !== before ? " Seu overall foi para " + c.overall + "." : "") });
           startSeasonFixtures(c); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub");
         }, "btn primary")
@@ -580,5 +586,31 @@
       ]));
     });
     screen.appendChild(list);
+  });
+
+  /* ---------- aposentadoria ---------- */
+  TM.ui.register("player-retire", function (screen) {
+    var c = TM.storage.playerCareer();
+    if (!c) { TM.ui.go("player"); return; }
+    screen.appendChild(TM.ui.topbar("🎽 Aposentadoria", null));
+    var totalApps = c.careerApps + (c.seasonApps || 0);
+    var totalGoals = c.careerGoals + (c.seasonGoals || 0);
+    var clubsPlayed = {};
+    (c.history || []).forEach(function (h) { clubsPlayed[h.clubId] = 1; }); clubsPlayed[c.clubId] = 1;
+    screen.appendChild(el("div", { class: "result-hero" }, [
+      myFace(c, "pc-face"),
+      el("div", { class: "result-tag", text: c.name + " pendura as chuteiras" }),
+      el("div", { class: "obj-prog", text: c.age + " anos · fim de uma bela carreira" })
+    ]));
+    screen.appendChild(el("div", { class: "stat-tiles" }, [
+      el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: c.season }), el("div", { class: "tile-lbl", text: "Temporadas" }) ]),
+      el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: totalApps }), el("div", { class: "tile-lbl", text: "Jogos" }) ]),
+      el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: totalGoals }), el("div", { class: "tile-lbl", text: "Gols" }) ]),
+      el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: Object.keys(clubsPlayed).length }), el("div", { class: "tile-lbl", text: "Clubes" }) ])
+    ]));
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("p", { class: "intro-text", style: "text-align:center", text: "Que carreira! Obrigado por tudo, craque. 👏" }) ]));
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Encerrar carreira", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, "btn primary")
+    ]));
   });
 })(window);

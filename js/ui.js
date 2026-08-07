@@ -150,11 +150,24 @@
     document.body.appendChild(overlay);
   }
 
+  // confirmação própria (window.confirm costuma ser bloqueado em páginas publicadas)
+  function confirmSheet(title, message, confirmLabel, onYes, danger) {
+    var overlay = el("div", { class: "sheet-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var sheet = el("div", { class: "sheet" }, [
+      el("div", { class: "sheet-title", text: title }),
+      message ? el("div", { class: "sheet-msg", text: message }) : null,
+      el("button", { class: "sheet-item" + (danger ? " danger" : ""), text: confirmLabel, on: { click: function () { overlay.remove(); onYes(); } } }),
+      el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } })
+    ]);
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
-    showPlayer: showPlayer, optionsMenu: optionsMenu,
+    showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     current: function () { return current; }
   };
 
@@ -233,6 +246,7 @@
       { icon: "🎯", name: "Carreira de Treinador", route: "coach" },
       { icon: "⭐", name: "Carreira de Jogador", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
+      { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
     ];
 

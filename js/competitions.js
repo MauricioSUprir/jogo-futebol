@@ -27,6 +27,14 @@
     }
     return rounds;
   }
+  // turno e returno (pontos corridos completo) — cada dupla joga 2x, mandos invertidos
+  function doubleRoundRobin(ids) {
+    var first = roundRobin(ids);
+    var second = first.map(function (round) { return round.map(function (m) { return [m[1], m[0]]; }); });
+    return first.concat(second);
+  }
+  // distribui `count` slots ao longo de `total` rodadas
+  function spread(count, total) { var a = []; for (var i = 1; i <= count; i++) a.push(Math.round(i * total / (count + 1))); return a; }
   function emptyTable(ids) { var t = {}; ids.forEach(function (id) { t[id] = { id: id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }); return t; }
   function applyResult(t, h, a, hs, as) {
     var H = t[h], A = t[a]; H.p++; A.p++; H.gf += hs; H.ga += as; A.gf += as; A.ga += hs;
@@ -199,21 +207,21 @@
     }
     var groups = size === 32 ? 8 : 4;
     return { type: "tournament", key: "cont", name: CONT_NAME[region] || "Continental",
-      tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, userId: career.teamId }) };
+      tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, userId: career.teamId }) };
   }
 
-  function buildOrder(hasCont) {
-    // 17 rodadas de liga; copa nacional (4 jogos) e continental (até 7: 3 de
-    // grupos + 4 de mata-mata) intercaladas ao longo da temporada
-    var order = [], cupAt = [3, 7, 11, 15], contAt = [2, 4, 6, 8, 10, 12, 14], cupN = 0, contN = 0;
-    var contMax = hasCont ? 7 : 0;
-    for (var lr = 1; lr <= 17; lr++) {
+  function buildOrder(leagueRounds, contSlots) {
+    // liga em turno e returno; copa nacional (4 jogos) e continental
+    // (grupos de ida/volta + mata-mata) intercaladas ao longo da temporada
+    var cupAt = spread(4, leagueRounds), contAt = spread(contSlots, leagueRounds);
+    var order = [], cupI = 0, contI = 0;
+    for (var lr = 1; lr <= leagueRounds; lr++) {
       order.push("league");
-      if (cupAt.indexOf(lr) >= 0 && cupN < 4) { order.push("cup"); cupN++; }
-      if (contAt.indexOf(lr) >= 0 && contN < contMax) { order.push("cont"); contN++; }
+      while (cupI < cupAt.length && cupAt[cupI] === lr) { order.push("cup"); cupI++; }
+      while (contI < contAt.length && contAt[contI] === lr) { order.push("cont"); contI++; }
     }
-    while (cupN < 4) { order.push("cup"); cupN++; }
-    while (contN < contMax) { order.push("cont"); contN++; }
+    while (cupI < cupAt.length) { order.push("cup"); cupI++; }
+    while (contI < contAt.length) { order.push("cont"); contI++; }
     return order;
   }
 
@@ -221,12 +229,14 @@
     var leagueId = career.leagueId;
     var league = TM.data.league(leagueId);
     var cont = buildContinental(career);
+    var fixtures = doubleRoundRobin(league.clubIds.slice()); // turno e returno (34 rodadas p/ 18 clubes)
     career.comps = {
-      league: { type: "league", name: league.name, fixtures: roundRobin(league.clubIds.slice()), round: 0, table: emptyTable(league.clubIds) },
+      league: { type: "league", name: league.name, fixtures: fixtures, round: 0, table: emptyTable(league.clubIds) },
       cup: buildDomesticCup(career.teamId, leagueId),
       cont: cont
     };
-    career.order = buildOrder(!!cont);
+    // continental: até 6 rodadas de grupo (ida/volta) + 4 de mata-mata = 10 slots (folga p/ 12)
+    career.order = buildOrder(fixtures.length, cont ? 12 : 0);
     career.orderIndex = 0;
     career.pending = null;
   }

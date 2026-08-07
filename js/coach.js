@@ -140,10 +140,11 @@
     ]);
     var dots = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções da carreira", [
-        { label: "💾 Salvar carreira", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
-        { label: "🏠 Voltar ao menu", fn: function () { TM.ui.go("modes"); } },
+        { label: "💾 Salvar (continuar jogando)", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
+        { label: "📤 Salvar e sair", fn: function () { TM.saves.park("coach"); TM.ui.toast("Carreira guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
+        { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
         { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
-          if (confirm("Finalizar esta carreira? O progresso será apagado.")) { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }
+          TM.ui.confirm("Finalizar esta carreira?", "O progresso será apagado permanentemente.", "Finalizar", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, true);
         } }
       ]);
     } } });

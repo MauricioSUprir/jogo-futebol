@@ -15,18 +15,24 @@
     for (var r = 0; r < n - 1; r++) { var rd = []; for (var i = 0; i < n / 2; i++) rd.push(r % 2 === 0 ? [arr[i], arr[n - 1 - i]] : [arr[n - 1 - i], arr[i]]); rounds.push(rd); arr.splice(1, 0, arr.pop()); }
     return rounds;
   }
+  function doubleRoundRobin(ids) {
+    var first = roundRobin(ids);
+    var second = first.map(function (round) { return round.map(function (m) { return [m[1], m[0]]; }); });
+    return first.concat(second);
+  }
 
   function create(teamIds, opts) {
     var perGroup = opts.perGroup || 4;
     var nGroups = opts.groups || (teamIds.length / perGroup);
+    var dbl = !!opts.doubleGroups;   // grupos com turno e returno (copas de clubes)
     var ids = shuffle(teamIds);
     var groups = [];
     for (var g = 0; g < nGroups; g++) {
       var gt = ids.slice(g * perGroup, g * perGroup + perGroup);
-      groups.push({ teamIds: gt, table: emptyTable(gt), fixtures: roundRobin(gt), round: 0 });
+      groups.push({ teamIds: gt, table: emptyTable(gt), fixtures: dbl ? doubleRoundRobin(gt) : roundRobin(gt), round: 0 });
     }
     return {
-      phase: "group", groups: groups, groupRound: 0, groupRounds: perGroup - 1, advance: opts.advance || 2,
+      phase: "group", groups: groups, groupRound: 0, groupRounds: (perGroup - 1) * (dbl ? 2 : 1), advance: opts.advance || 2,
       userId: opts.userId, ko: null, championId: null, aliveUser: true, userQualified: null
     };
   }
