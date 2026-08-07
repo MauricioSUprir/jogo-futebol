@@ -277,7 +277,15 @@
       TM.ui.ovBadge(c.overall)
     ]));
 
-    if (c.calledUp) screen.appendChild(el("div", { class: "callup-banner", text: "🌍 Você foi convocado pela seleção de " + c.nationName + "!" }));
+    if (c.calledUp && c.natSeason) {
+      var isWCn = c.natSeason.type === "wc";
+      screen.appendChild(el("div", { class: "callup-banner clickable", on: { click: function () { TM.ui.go("player-nation"); } } }, [
+        el("span", { text: (isWCn ? "🏆 Convocado para a Copa do Mundo por " : "🌍 Convocado pela seleção de ") + c.nationName + "! " }),
+        el("span", { class: "sp-go", text: "Entrar em campo →" })
+      ]));
+    } else if (c.calledUp) {
+      screen.appendChild(el("div", { class: "callup-banner", text: "🌍 Você foi convocado pela seleção de " + c.nationName + "!" }));
+    }
 
     // estatísticas da temporada
     var avg = c.seasonApps ? (c.seasonRatingSum / c.seasonApps).toFixed(1) : "—";
@@ -318,7 +326,7 @@
         TM.ui.button("Nova temporada", function () {
           var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
           c.history.push({ season: c.season, clubId: c.clubId, apps: c.seasonApps, goals: c.seasonGoals });
-          c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false; c.injured = 0;
+          c.careerGoals += c.seasonGoals; c.careerApps += c.seasonApps; c.season++; c.age++; c.calledUp = false; c.natSeason = null; c.injured = 0;
           // aposentadoria: idade avançada (ou veterano em queda)
           var retire = c.age >= 39 || (c.age >= 35 && c.overall < 70 && Math.random() < 0.5) || (c.age >= 37 && Math.random() < 0.5);
           if (retire) { TM.storage.savePlayerCareer(c); TM.ui.go("player-retire", {}); return; }
@@ -461,14 +469,198 @@
     var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 0;
     if (c.seasonApps >= 4 && avg >= 7.2) {
       c.calledUp = true;
-      TM.notify.push(c, { icon: "🌍", title: "Convocação!", text: "Você foi convocado para a seleção de " + c.nationName + "! Fique de olho nos jogos da seleção." });
+      setupPlayerNatSeason(c);
+      var isWC = c.natSeason && c.natSeason.type === "wc";
+      TM.notify.push(c, { icon: "🌍", title: "Convocação!", text: "Você foi convocado para a seleção de " + c.nationName + "!" + (isWC ? " É ano de Copa do Mundo — vá em Seleção e entre em campo!" : " Os jogos da seleção estão liberados no seu hub.") });
     }
+  }
+
+  /* ================= SELEÇÃO NACIONAL (carreira de jogador) ================= */
+  // monta a seleção do jogador com ele garantido no XI
+  function myNationTeam(c) {
+    var nat = TM.data.nation(c.nationId);
+    var squad = TM.data.nationSquad(c.nationId).filter(function (p) { return p.id !== c.id; });
+    return { id: nat.id, name: nat.name, players: [realPlayerObj(c)].concat(squad), nation: nat };
+  }
+  function natCtx(c) {
+    return {
+      sim: function (aId, bId) {
+        var A = aId === c.nationId ? myNationTeam(c) : TM.engine.teamFromNation(aId);
+        var B = bId === c.nationId ? myNationTeam(c) : TM.engine.teamFromNation(bId);
+        return TM.engine.simulate(A, B, { realism: TM.storage.settings().realism, neutral: true });
+      },
+      rating: function (id) { return TM.comp.natRating(id); }
+    };
+  }
+  // Copa do Mundo (a cada 4 temporadas, igual ao treinador) ou amistosos
+  function setupPlayerNatSeason(c) {
+    if (c.season % 4 === 1) {
+      var teams = TM.data.world().nations.map(function (n) { return n.id; })
+        .filter(function (id) { return id !== c.nationId; })
+        .sort(function (a, b) { return TM.comp.natRating(b) - TM.comp.natRating(a); }).slice(0, 31);
+      teams.push(c.nationId);
+      c.natSeason = { type: "wc", tour: TM.tournament.create(teams, { groups: 8, perGroup: 4, advance: 2, userId: c.nationId }), matchNo: 0 };
+    } else {
+      var others = TM.data.world().nations.filter(function (n) { return n.id !== c.nationId; });
+      var games = [];
+      for (var i = 0; i < 3; i++) { var o = others[Math.floor(Math.random() * others.length)]; games.push({ oppId: o.id, played: false, hs: 0, as: 0 }); }
+      c.natSeason = { type: "friendly", games: games };
+    }
+  }
+  // aplica a atuação do jogador em jogo da seleção (estatísticas, lesão, pontos)
+  function applyNatPerf(c, f) {
+    if (!f) return;
+    c.natApps = (c.natApps || 0) + 1;
+    c.natGoals = (c.natGoals || 0) + f.goals;
+    if (f.injured) { c.injured = f.injured; TM.notify.push(c, { icon: "🚑", title: "Lesão na seleção", text: "Você se lesionou servindo a seleção. Fora por ~" + f.injured + " jogo(s)." }); }
+    var gained = 0; if (f.rating >= 8.5) gained = 2; else if (f.rating >= 7.3) gained = 1; if (f.goals >= 2) gained += 1;
+    if (gained > 0) { c.skillPoints += gained; TM.notify.push(c, { icon: "⭐", title: "Pontos de habilidade", text: "Boa atuação pela seleção (nota " + f.rating.toFixed(1) + ")! +" + gained + " ponto(s)." }); }
+  }
+  function playNationMatch(c) {
+    var settings = TM.storage.settings();
+    var ns = c.natSeason;
+    if (ns.type === "wc") {
+      var ctx = natCtx(c);
+      var m = TM.tournament.nextUserMatch(ns.tour, ctx);
+      if (m.end) { TM.storage.savePlayerCareer(c); TM.ui.go("player-nation"); return; }
+      var userHome = m.homeId === c.nationId;
+      var mine = myNationTeam(c), opp = TM.engine.teamFromNation(userHome ? m.awayId : m.homeId);
+      var teamA = userHome ? mine : opp, teamB = userHome ? opp : mine;
+      var label = TM.comp.wcRoundLabel(null, m);
+      var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
+      TM.tournament.applyUserMatch(ns.tour, result.score[0], result.score[1], ctx);
+      ns.matchNo++;
+      applyNatPerf(c, result.focus);
+      TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? result.score[0] + "x" + result.score[1] : result.score[1] + "x" + result.score[0]) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
+      TM.storage.savePlayerCareer(c);
+      TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label });
+      return;
+    }
+    var g = null; for (var i = 0; i < ns.games.length; i++) { if (!ns.games[i].played) { g = ns.games[i]; break; } }
+    if (!g) { TM.ui.go("player-nation"); return; }
+    var mine2 = myNationTeam(c), opp2 = TM.engine.teamFromNation(g.oppId);
+    var result2 = TM.engine.simulate(mine2, opp2, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
+    g.played = true; g.hs = result2.score[0]; g.as = result2.score[1];
+    applyNatPerf(c, result2.focus);
+    TM.notify.push(c, { icon: "🌍", title: "Amistoso da seleção", text: c.nationName + " " + result2.score[0] + "x" + result2.score[1] + " " + TM.data.nation(g.oppId).name + " · você fez " + (result2.focus ? result2.focus.goals : 0) + " gol(s)." });
+    TM.storage.savePlayerCareer(c);
+    TM.ui.go("player-match", { teamA: mine2, teamB: opp2, result: result2, iAmHome: true, nat: true, back: "player-nation", title: "Amistoso da seleção" });
+  }
+
+  /* ---------- central da seleção (jogador) ---------- */
+  TM.ui.register("player-nation", function (screen) {
+    var c = TM.storage.playerCareer();
+    if (!c) { TM.ui.go("player"); return; }
+    if (!c.calledUp || !c.natSeason) { TM.ui.go("player-hub"); return; }
+    var nat = TM.data.nation(c.nationId);
+    var ns = c.natSeason, isWC = ns.type === "wc";
+    screen.appendChild(TM.ui.topbar(isWC ? "🏆 Seleção · Copa do Mundo" : "🌍 Seleção", function () { TM.ui.go("player-hub"); }));
+    screen.appendChild(el("div", { class: "club-header" }, [
+      TM.img.nationImg(nat, "ch-crest"),
+      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nationName }),
+        el("div", { class: "ch-sub", text: (isWC ? "Copa do Mundo" : "Amistosos internacionais") + " · " + (c.natApps || 0) + " jogos · " + (c.natGoals || 0) + " gols pela seleção" }) ]),
+      el("button", { class: "date-cal-btn", text: "🔄 Voltar ao clube", on: { click: function () { TM.ui.go("player-hub"); } } })
+    ]));
+    if (isWC) renderPlayerWC(screen, c); else renderPlayerFriendlies(screen, c);
+  });
+
+  function renderPlayerWC(screen, c) {
+    var ns = c.natSeason, t = ns.tour;
+    var m = TM.tournament.nextUserMatch(t, natCtx(c));
+    TM.storage.savePlayerCareer(c);
+    if (m.end) {
+      var champ = m.championId || t.championId, won = champ === c.nationId;
+      screen.appendChild(el("div", { class: "next-match" }, [
+        el("div", { class: "nm-label", text: won ? "🏆 CAMPEÃO DO MUNDO!" : "Copa do Mundo encerrada" }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: "Campeão: " + (champ ? TM.data.nation(champ).name : "—") }) ]),
+        el("p", { class: "intro-text", style: "text-align:center", text: won ? "Você foi campeão do mundo com " + c.nationName + "! Que feito." : "Sua seleção caiu nesta Copa. A próxima é daqui a 4 temporadas." })
+      ]));
+    } else {
+      var label = TM.comp.wcRoundLabel(null, m);
+      var hN = TM.data.nation(m.homeId), aN = TM.data.nation(m.awayId);
+      screen.appendChild(el("div", { class: "next-match" }, [
+        el("div", { class: "nm-label", text: "🏆 " + label }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: hN.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: aN.name }) ]),
+        TM.ui.button("▶ Jogar", function () { playNationMatch(c); }, "btn primary")
+      ]));
+    }
+    screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-nation-view"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Grupos & Chaveamento" }) ])
+    ]));
+  }
+
+  function renderPlayerFriendlies(screen, c) {
+    var ns = c.natSeason, next = null;
+    ns.games.forEach(function (g) { if (!next && !g.played) next = g; });
+    if (!next) {
+      screen.appendChild(el("div", { class: "next-match" }, [ el("div", { class: "nm-label", text: "Sem amistosos restantes nesta temporada." }) ]));
+    } else {
+      var opp = TM.data.nation(next.oppId);
+      screen.appendChild(el("div", { class: "next-match" }, [
+        el("div", { class: "nm-label", text: "🤝 Amistoso Internacional" }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: c.nationName }), el("span", { class: "nm-x", text: "×" }), el("span", { text: opp.name }) ]),
+        TM.ui.button("▶ Jogar amistoso", function () { playNationMatch(c); }, "btn primary")
+      ]));
+    }
+    var done = ns.games.filter(function (g) { return g.played; });
+    if (done.length) {
+      var box = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Amistosos disputados" }) ]);
+      done.forEach(function (g) { var o = TM.data.nation(g.oppId); box.appendChild(el("div", { class: "hist-line" }, [ el("span", { text: c.nationName + "  " + g.hs + " × " + g.as + "  " + o.name }) ])); });
+      screen.appendChild(box);
+    }
+  }
+
+  /* ---------- grupos & chaveamento da Copa (jogador) ---------- */
+  TM.ui.register("player-nation-view", function (screen) {
+    var c = TM.storage.playerCareer();
+    if (!c || !c.natSeason || c.natSeason.type !== "wc") { TM.ui.go("player-nation"); return; }
+    var t = c.natSeason.tour;
+    screen.appendChild(TM.ui.topbar("🏆 Copa do Mundo", function () { TM.ui.go("player-nation"); }));
+    if (t.championId) screen.appendChild(el("div", { class: "champion-banner", text: "🏆 Campeão: " + TM.data.nation(t.championId).name }));
+    renderNatGroups(screen, c, t);
+    if (t.phase !== "group") renderNatBracket(screen, c, t.ko);
+  });
+
+  function renderNatGroups(screen, c, t) {
+    var wrap = el("div", { class: "panel-narrow" });
+    t.groups.forEach(function (g, gi) {
+      wrap.appendChild(el("div", { class: "group-title", text: "Grupo " + String.fromCharCode(65 + gi) }));
+      var st = TM.tournament.standings(g.table), tb = el("tbody");
+      st.forEach(function (row, i) {
+        var n = TM.data.nation(row.id);
+        tb.appendChild(el("tr", { class: (row.id === c.nationId ? "me " : "") + (i < 2 ? "qualify" : "") }, [
+          el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.nationImg(n, "lt-crest"), el("span", { text: n.name }) ]),
+          el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
+        ]));
+      });
+      wrap.appendChild(el("div", { class: "table-wrap" }, [ el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Seleção", "P", "J", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]), tb ]) ]));
+    });
+    screen.appendChild(wrap);
+  }
+  function renderNatBracket(screen, c, ko) {
+    var wrap = el("div", { class: "bracket" });
+    ko.rounds.forEach(function (round) {
+      if (!round) return;
+      var rd = el("div", { class: "bracket-round" }, [ el("div", { class: "br-round-title", text: TM.tournament.koTitle(round.length * 2) }) ]);
+      round.forEach(function (tie) {
+        var mine = tie[0] === c.nationId || tie[1] === c.nationId, played = tie[4] != null;
+        var hN = TM.data.nation(tie[0]), aN = TM.data.nation(tie[1]);
+        rd.appendChild(el("div", { class: "tie" + (mine ? " mine" : "") }, [
+          el("div", { class: "tie-team" + (played && tie[4] === tie[0] ? " win" : played ? " lose" : "") }, [ TM.img.nationImg(hN, "tie-crest"), el("span", { text: hN.name }) ]),
+          el("div", { class: "tie-score", text: played ? tie[2] + " - " + tie[3] : "vs" }),
+          el("div", { class: "tie-team away" + (played && tie[4] === tie[1] ? " win" : played ? " lose" : "") }, [ el("span", { text: aN.name }), TM.img.nationImg(aN, "tie-crest") ])
+        ]));
+      });
+      wrap.appendChild(rd);
+    });
+    screen.appendChild(wrap);
   }
 
   /* ---------- resultado da minha partida ---------- */
   TM.ui.register("player-match", function (screen, params) {
     var r = params.result, a = params.teamA, b = params.teamB, f = r.focus;
-    screen.appendChild(TM.ui.topbar("Partida", function () { TM.ui.go("player-hub"); }));
+    var back = params.back || "player-hub";
+    screen.appendChild(TM.ui.topbar(params.title || "Partida", function () { TM.ui.go(back); }));
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     screen.appendChild(el("div", { class: "result-hero" }, [
       el("div", { class: "result-score" }, [
@@ -491,7 +683,7 @@
     r.events.filter(function (e) { return e.type === "goal"; }).forEach(function (e) { feed.appendChild(el("div", { class: "cm-line cm-goal", text: e.text })); });
     if (feed.children.length) screen.appendChild(el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Gols da partida" }), feed ]));
 
-    screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("player-hub"); }, "btn primary") ]));
+    screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go(back); }, "btn primary") ]));
   });
   function ratingClass(r) { return r >= 8 ? "great" : r >= 7 ? "good" : r >= 6 ? "ok" : "bad"; }
 
@@ -608,6 +800,9 @@
       el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: totalGoals }), el("div", { class: "tile-lbl", text: "Gols" }) ]),
       el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: Object.keys(clubsPlayed).length }), el("div", { class: "tile-lbl", text: "Clubes" }) ])
     ]));
+    if (c.natApps) {
+      screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "career-totals", text: "🌍 Pela seleção de " + c.nationName + ": " + c.natApps + " jogos · " + (c.natGoals || 0) + " gols" }) ]));
+    }
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("p", { class: "intro-text", style: "text-align:center", text: "Que carreira! Obrigado por tudo, craque. 👏" }) ]));
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Encerrar carreira", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, "btn primary")
