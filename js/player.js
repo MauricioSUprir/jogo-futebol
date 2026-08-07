@@ -170,7 +170,7 @@
         var attrs = makeAttrs(base, form.pos);
         var player = {
           id: "me", name: form.name.trim(), photo: form.photo, clubId: form.clubId,
-          pos: form.pos, age: age, birth: { d: form.day, m: form.month, y: form.year },
+          pos: form.pos, pos2: ({ GK: "GOL", DF: "ZAG", MF: "MEI", FW: "CA" })[form.pos] || form.pos, age: age, birth: { d: form.day, m: form.month, y: form.year },
           height: form.height, weight: form.weight, nationId: form.nationId,
           nationName: TM.data.nation(form.nationId).name, attrs: attrs, overall: overallFrom(attrs, form.pos)
         };
@@ -269,7 +269,7 @@
       myFace(c, "pc-face"),
       el("div", { class: "pc-info" }, [
         el("div", { class: "pc-name", text: c.name }),
-        el("div", { class: "pc-sub", text: c.pos + " · " + c.age + " anos · " + c.nationName }),
+        el("div", { class: "pc-sub", text: TM.data.posLabel(c) + " · " + c.age + " anos · " + c.nationName }),
         el("div", { class: "pc-club" }, [ TM.img.clubImg(club, "pc-crest"), el("span", { text: club.name }) ])
       ]),
       TM.ui.ovBadge(c.overall)
@@ -434,17 +434,20 @@
   }
 
   function maybeOffer(c, f) {
+    if (c.offers.length >= 2) return;
     var avg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
-    if (avg >= 7.0 && Math.random() < 0.25 && c.offers.length < 2) {
-      var world = TM.data.world();
-      var candidates = world.clubs.filter(function (cl) { return TM.data.clubRating(cl.id) > c.overall + 2 && cl.id !== c.clubId; });
-      if (candidates.length) {
-        var pick = candidates[Math.floor(Math.random() * candidates.length)];
-        if (!c.offers.some(function (o) { return o.clubId === pick.id; })) {
-          c.offers.push({ clubId: pick.id });
-          TM.notify.push(c, { icon: "📨", title: "Interesse de clube", text: pick.name + " demonstrou interesse em te contratar. Veja em Propostas." });
-        }
-      }
+    // ocasional: mais chance jogando bem, mas às vezes rola mesmo sem grande fase
+    var chance = avg >= 7.2 ? 0.30 : avg >= 6.6 ? 0.16 : 0.06;
+    if (Math.random() >= chance) return;
+    var world = TM.data.world();
+    // jogando bem -> clubes maiores; regular -> clubes de nível parecido
+    var minRating = avg >= 7.0 ? c.overall : c.overall - 5;
+    var candidates = world.clubs.filter(function (cl) { return cl.id !== c.clubId && TM.data.clubRating(cl.id) >= minRating; });
+    if (!candidates.length) return;
+    var pick = candidates[Math.floor(Math.random() * candidates.length)];
+    if (!c.offers.some(function (o) { return o.clubId === pick.id; })) {
+      c.offers.push({ clubId: pick.id });
+      TM.notify.push(c, { icon: "📨", title: "Proposta de clube", text: pick.name + " está interessado em você! Veja em Propostas no seu hub." });
     }
   }
   function maybeCallup(c) {

@@ -60,7 +60,7 @@
     opts = opts || {};
     var nation = player.nationId ? TM.data.nation(player.nationId) : null;
     var subKids = [
-      el("span", { class: "prow-pos", text: player.pos }),
+      el("span", { class: "prow-pos", text: TM.data.posLabel(player) }),
       document.createTextNode(" · " + player.age + " anos")
     ];
     var natEl = el("span", { class: "prow-nat" }, [
@@ -118,7 +118,7 @@
         (p.photo ? el("img", { src: p.photo, class: "modal-face" }) : TM.img.playerImg(p, "modal-face")),
         el("div", {}, [
           el("div", { class: "modal-name", text: p.name }),
-          el("div", { class: "modal-sub", text: p.pos + " · " + p.age + " anos · " + p.nationName }),
+          el("div", { class: "modal-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + p.nationName }),
           el("div", { class: "modal-sub", text: (p.height || "?") + " cm · " + (p.weight || "?") + " kg" })
         ]),
         ovBadge(p.overall)

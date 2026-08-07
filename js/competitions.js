@@ -260,7 +260,7 @@
       var ov = 47 + Math.floor(Math.random() * 15);  // 47 a 61
       var pot = Math.min(91, ov + 8 + Math.floor(Math.random() * 22));
       youth.push({
-        id: "y" + clubId + "-" + i, name: TM.data.randomName(culture), clubId: clubId, pos: pos,
+        id: "y" + clubId + "-" + i, name: TM.data.randomName(culture), clubId: clubId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
         age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos),
         nationId: nat.id, nationName: nat.name, height: 165 + Math.floor(Math.random() * 28),
         weight: 58 + Math.floor(Math.random() * 26), youth: true

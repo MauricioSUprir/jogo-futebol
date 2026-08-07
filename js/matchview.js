@@ -88,7 +88,7 @@
         var xiCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Em campo" }) ]);
         team.players.slice(0, 11).forEach(function (pl, i) {
           xiCol.appendChild(el("button", { class: "sub-chip" + (selOut.idx === i ? " sel" : ""), on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } }, [
-            el("span", { class: "sc-pos", text: pl.pos }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
+            el("span", { class: "sc-pos", text: TM.data.posLabel(pl) }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
           ]));
         });
         var beCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Reservas" }) ]);
@@ -103,7 +103,7 @@
             renderSubs();
             box.querySelectorAll(".pause-field label")[1].textContent = "Substituições (" + subsUsed + "/3)";
           } } }, [
-            el("span", { class: "sc-pos", text: pl.pos }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
+            el("span", { class: "sc-pos", text: TM.data.posLabel(pl) }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
           ]));
         });
         subArea.appendChild(xiCol); subArea.appendChild(beCol);

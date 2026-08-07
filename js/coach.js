@@ -511,7 +511,7 @@
 
     screen.appendChild(el("div", { class: "player-card" }, [
       TM.img.playerImg(p, "pc-face"),
-      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: p.name }), el("div", { class: "pc-sub", text: p.pos + " · " + p.age + " anos · " + sellClub.name }) ]),
+      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: p.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + sellClub.name }) ]),
       TM.ui.ovBadge(p.overall)
     ]));
 
@@ -667,7 +667,7 @@
     screen.appendChild(TM.ui.topbar("Analisar proposta", function () { TM.ui.go("coach-notifications"); }));
     screen.appendChild(el("div", { class: "player-card" }, [
       TM.img.playerImg(player, "pc-face"),
-      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: player.name }), el("div", { class: "pc-sub", text: player.pos + " · " + player.age + " anos · " + player.nationName }) ]),
+      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: player.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(player) + " · " + player.age + " anos · " + player.nationName }) ]),
       TM.ui.ovBadge(player.overall)
     ]));
 

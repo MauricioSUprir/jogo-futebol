@@ -94,6 +94,16 @@
   // Distribuição de posições no elenco de 20 jogadores (2 GK, 7 DF, 7 MF, 4 FW)
   var POS_POOL = ["GK","GK","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
 
+  // posições específicas em português (sigla) por categoria — para exibição
+  var POS_PT = {
+    GK: ["GOL"],
+    DF: ["ZAG", "ZAG", "ZAG", "LD", "LE"],           // zagueiro, lateral direito/esquerdo
+    MF: ["VOL", "VOL", "MC", "MC", "MEI", "MD", "ME"], // volante, meia central, meia, meia dir/esq
+    FW: ["CA", "CA", "PD", "PE", "SA"]                 // centroavante, ponta dir/esq, segundo atacante
+  };
+  function specificPos(rng, pos) { var a = POS_PT[pos] || [pos]; return a[Math.floor(rng() * a.length)]; }
+  var POS_FALLBACK = { GK: "GOL", DF: "ZAG", MF: "MC", FW: "CA" };
+
   function fullName(rng, culture) {
     var c = NAMES[culture] || NAMES.br;
     return R.pick(rng, c.first) + " " + R.pick(rng, c.last);
@@ -159,7 +169,7 @@
           var potential = Math.min(99, ov + growth);
           var player = {
             id: "p" + (pid++), name: fullName(rng, nation.culture), clubId: clubId,
-            pos: pos, age: age, overall: ov, potential: potential, attrs: attrs,
+            pos: pos, pos2: specificPos(rng, pos), age: age, overall: ov, potential: potential, attrs: attrs,
             nationId: nation.id, nationName: nation.name,
             height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
             form: 0, goals: 0
@@ -189,7 +199,7 @@
       var fgrowth = fage >= 30 ? 0 : Math.max(0, Math.round((26 - fage) * 0.7) + R.int(rng, -1, 3));
       var fid = "fa" + (fa + 1);
       var fp = {
-        id: fid, name: fullName(rng, fnat.culture), clubId: "free", pos: fpos, age: fage,
+        id: fid, name: fullName(rng, fnat.culture), clubId: "free", pos: fpos, pos2: specificPos(rng, fpos), age: fage,
         overall: fov, potential: Math.min(99, fov + fgrowth), attrs: fattrs,
         nationId: fnat.id, nationName: fnat.name, height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
         form: 0, goals: 0, freeAgent: true
@@ -245,6 +255,9 @@
       if (v >= 30) return Math.round(v);
       return Math.max(1, Math.round(v));
     },
+    // rótulo de posição específica em PT (sigla)
+    posLabel: function (p) { return (p && p.pos2) || (p && POS_FALLBACK[p.pos]) || (p && p.pos) || "?"; },
+    randomSpecificPos: function (pos) { var a = POS_PT[pos] || [pos]; return a[Math.floor(Math.random() * a.length)]; },
     // nome aleatório por cultura (para jogadores da base, etc.)
     randomName: function (culture) {
       var c = NAMES[culture] || NAMES.br;
