@@ -332,6 +332,7 @@
     };
     career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     career.nation = opts.nationId ? buildNation(opts.nationId) : null;
+    setupNationSeason(career);
     seasonSetup(career);
     TM.notify.push(career, { icon: "🎉", title: "Bem-vindo!", text: "Você assumiu o comando do " + club.name + ". Boa sorte na temporada!" });
     if (career.nation) TM.notify.push(career, { icon: "🌍", title: "Seleção", text: "Você também comandará a seleção de " + career.nation.name + ". Faça a convocação a tempo!" });
@@ -452,11 +453,27 @@
       return { friendlyDay: fd, openDay: fd - 14, deadlineDay: fd - 5, oppId: opp.id, convoked: false, played: false, hs: 0, as: 0 };
     });
   }
+  function natRating(natId) { var sq = TM.data.nationSquad(natId).slice(0, 11); return Math.round(sq.reduce(function (s, p) { return s + p.overall; }, 0) / (sq.length || 1)); }
+
   function buildNation(natId) {
     var nat = TM.data.nation(natId);
     var squad = TM.data.nationSquad(natId).map(function (p) { return p.id; }); // 23 melhores
     var players = squad.map(TM.data.player);
-    return { id: natId, name: nat.name, squad: squad, lineup: buildLineup(players, "4-4-2"), tactic: "equilibrado", windows: genNationWindows(natId), fired: false };
+    return { id: natId, name: nat.name, squad: squad, lineup: buildLineup(players, "4-4-2"), tactic: "equilibrado", windows: [], wc: null, fired: false };
+  }
+  // Copa do Mundo: 32 seleções (a do treinador + 31 melhores), grupos + mata-mata
+  function buildWorldCup(natId) {
+    var teams = TM.data.world().nations.map(function (n) { return n.id; }).filter(function (id) { return id !== natId; })
+      .sort(function (a, b) { return natRating(b) - natRating(a); }).slice(0, 31);
+    teams.push(natId);
+    return { tour: TM.tournament.create(teams, { groups: 8, perGroup: 4, advance: 2, userId: natId }),
+      openDay: 100, deadlineDay: 112, matchDays: [118, 123, 128, 135, 142, 149, 156], wcMatchNo: 0, convoked: false };
+  }
+  // define o "calendário" da seleção na temporada: Copa do Mundo (de 4 em 4 anos) ou amistosos
+  function setupNationSeason(career) {
+    if (!career.nation) return;
+    if (career.season % 4 === 1) { career.nation.wc = buildWorldCup(career.nation.id); career.nation.windows = []; }
+    else { career.nation.wc = null; career.nation.windows = genNationWindows(career.nation.id); }
   }
   function nationNextWindow(career) {
     if (!career.nation) return null;
@@ -465,12 +482,62 @@
   }
   function checkNationDeadlines(career) {
     if (!career.nation || career.nation.fired) return;
+    var wc = career.nation.wc;
+    if (wc) {
+      if (!wc.convoked && career.currentDay > wc.deadlineDay) {
+        var nmc = career.nation.name;
+        career.nation = null;
+        TM.notify.push(career, { icon: "🚫", title: "Demitido da seleção", text: "Você não convocou " + nmc + " para a Copa do Mundo a tempo. Perdeu o cargo na seleção e segue apenas no clube." });
+      }
+      return;
+    }
     var w = nationNextWindow(career);
     if (w && !w.convoked && career.currentDay > w.deadlineDay) {
       var nm = career.nation.name;
       career.nation = null;
       TM.notify.push(career, { icon: "🚫", title: "Demitido da seleção", text: "Você não enviou a convocação de " + nm + " a tempo. Perdeu o cargo na seleção e segue apenas no clube." });
     }
+  }
+  // contexto do torneio da Copa do Mundo: sim entre duas seleções + rating
+  function wcTeam(career, natId) {
+    return natId === career.nation.id ? nationTeam(career) : oppNationTeam(natId);
+  }
+  function wcContext(career) {
+    return {
+      sim: function (aId, bId) { return TM.engine.simulate(wcTeam(career, aId), wcTeam(career, bId), { realism: realism(), neutral: true }); },
+      rating: function (id) { return natRating(id); }
+    };
+  }
+  // avança a Copa do Mundo simulando todos os jogos até o próximo da seleção do usuário (ou fim)
+  function advanceWorldCup(career) {
+    var wc = career.nation.wc;
+    return TM.tournament.nextUserMatch(wc.tour, wcContext(career));
+  }
+  function applyWorldCupResult(career, hs, as) {
+    var wc = career.nation.wc;
+    TM.tournament.applyUserMatch(wc.tour, hs, as, wcContext(career));
+    wc.wcMatchNo++;
+  }
+  // rótulo da próxima partida da Copa (grupo/mata-mata) sem mutar o torneio
+  function wcRoundLabel(career, m) {
+    if (!m || m.end) return "";
+    if (m.phase === "group") return "Fase de Grupos · Rodada " + (m.groupRound + 1);
+    return TM.tournament.koTitle(m.round);
+  }
+  // status resumido da seleção para o botão de troca no hub (não muta estado)
+  function nationPending(career) {
+    if (!career.nation) return null;
+    var n = career.nation;
+    if (n.wc) {
+      var wc = n.wc;
+      if (!wc.convoked) return { wc: true, needConvoke: career.currentDay >= wc.openDay, readyMatch: false };
+      var done = TM.tournament.isDone(wc.tour), alive = wc.tour.aliveUser, md = wc.matchDays[wc.wcMatchNo];
+      return { wc: true, needConvoke: false, readyMatch: !done && alive && md != null && career.currentDay >= md };
+    }
+    var w = nationNextWindow(career);
+    return { wc: false,
+      needConvoke: !!(w && !w.convoked && career.currentDay >= w.openDay),
+      readyMatch: !!(w && w.convoked && !w.played && career.currentDay >= w.friendlyDay) };
   }
   function nationSquadPlayers(career) { return career.nation.squad.map(TM.data.player).filter(Boolean); }
   function nationTeam(career) {
@@ -499,8 +566,8 @@
     seasonSetup(career);
     career.objective = generateObjective(career.teamId);
     maybeNationInvite(career);
-    // renova as janelas da seleção (se ainda comanda)
-    if (career.nation && !career.nation.fired) career.nation.windows = genNationWindows(career.nation.id);
+    // renova o calendário da seleção (Copa do Mundo de 4 em 4 anos, senão amistosos)
+    if (career.nation && !career.nation.fired) setupNationSeason(career);
   }
 
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
@@ -630,6 +697,8 @@
     matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
+    setupNationSeason: setupNationSeason, natRating: natRating, nationPending: nationPending,
+    advanceWorldCup: advanceWorldCup, applyWorldCupResult: applyWorldCupResult, wcRoundLabel: wcRoundLabel,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,

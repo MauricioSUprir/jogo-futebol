@@ -179,14 +179,15 @@
     // seleção: verifica prazo e mostra botão de trocar
     C().checkNationDeadlines(c); TM.storage.saveCoachCareer(c);
     if (c.nation) {
-      var w = C().nationNextWindow(c);
-      var needConvoke = w && !w.convoked && c.currentDay >= w.openDay;
-      var readyFriendly = w && w.convoked && !w.played && c.currentDay >= w.friendlyDay;
+      var np = C().nationPending(c);
       var natNat = TM.data.nation(c.nation.id);
-      screen.appendChild(el("button", { class: "nation-switch" + (needConvoke || readyFriendly ? " alert" : ""), on: { click: function () { TM.ui.go("coach-nation"); } } }, [
+      var nsSub = np.needConvoke ? (np.wc ? "⚠ Convocação da Copa pendente!" : "⚠ Convocação pendente!")
+        : np.readyMatch ? (np.wc ? "🏆 Jogo da Copa do Mundo!" : "⚽ Amistoso disponível!")
+        : (c.nation.wc ? "🏆 Copa do Mundo →" : "Comandar seleção →");
+      screen.appendChild(el("button", { class: "nation-switch" + (np.needConvoke || np.readyMatch ? " alert" : ""), on: { click: function () { TM.ui.go("coach-nation"); } } }, [
         TM.img.nationImg(natNat, "ns-flag"),
         el("div", { class: "ns-info" }, [ el("div", { class: "ns-name", text: "Seleção de " + c.nation.name }),
-          el("div", { class: "ns-sub", text: needConvoke ? "⚠ Convocação pendente!" : readyFriendly ? "⚽ Amistoso disponível!" : "Comandar seleção →" }) ]),
+          el("div", { class: "ns-sub", text: nsSub }) ]),
         el("span", { class: "ns-arrow", text: "🔄" })
       ]));
     }
@@ -312,14 +313,17 @@
     C().checkNationDeadlines(c); TM.storage.saveCoachCareer(c);
     if (!c.nation) { TM.ui.toast("Você foi demitido da seleção."); TM.ui.go("coach-hub"); return; }
     var nat = TM.data.nation(c.nation.id);
-    screen.appendChild(TM.ui.topbar("🌍 Seleção", function () { TM.ui.go("coach-hub"); }));
+    var isWC = !!c.nation.wc;
+    screen.appendChild(TM.ui.topbar(isWC ? "🏆 Seleção · Copa do Mundo" : "🌍 Seleção", function () { TM.ui.go("coach-hub"); }));
 
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.nationImg(nat, "ch-crest"),
-      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nation.name }), el("div", { class: "ch-sub", text: "Convocados: " + c.nation.squad.length + " · Amistosos internacionais" }) ]),
+      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nation.name }), el("div", { class: "ch-sub", text: "Convocados: " + c.nation.squad.length + (isWC ? " · Copa do Mundo " + c.seasonYear : " · Amistosos internacionais") }) ]),
       el("button", { class: "date-cal-btn", text: "🔄 Voltar ao clube", on: { click: function () { TM.ui.go("coach-hub"); } } })
     ]));
     screen.appendChild(el("div", { class: "date-bar" }, [ el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ]) ]));
+
+    if (isWC) { renderWorldCupPanel(screen, c); return; }
 
     var w = C().nationNextWindow(c);
     if (!w) {
@@ -366,6 +370,154 @@
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-lineup"); } } }, [ el("span", { class: "hub-ic", text: "📋" }), el("span", { text: "Escalação" }) ])
     ]));
   });
+
+  /* ---------- painel da Copa do Mundo ---------- */
+  function renderWorldCupPanel(screen, c) {
+    var wc = c.nation.wc;
+    var m = C().advanceWorldCup(c); // próxima partida do usuário (auto-sima jogos alheios)
+    TM.storage.saveCoachCareer(c);
+
+    if (!wc.convoked) {
+      var kids;
+      if (c.currentDay < wc.openDay) {
+        kids = [
+          el("div", { class: "nm-label", text: "🔒 Convocação da Copa fechada" }),
+          el("div", { class: "nm-date", text: "Abre em " + (wc.openDay - c.currentDay) + " dia(s) (" + C().dateOf(c, wc.openDay).full + ")." }),
+          el("p", { class: "intro-text", style: "text-align:center", text: "Volte perto da abertura para convocar seus 23 e escalar o time." })
+        ];
+      } else {
+        kids = [
+          el("div", { class: "nm-label", text: "🏆 Copa do Mundo " + c.seasonYear },),
+          el("div", { class: "nm-date", style: "color:#e8a13c", text: "⚠ Convoque até " + C().dateOf(c, wc.deadlineDay).full + " · faltam " + (wc.deadlineDay - c.currentDay) + " dia(s), ou é demitido!" }),
+          el("div", { class: "skip-row" }, [
+            TM.ui.button("🔍 Convocar/Scout", function () { TM.ui.go("coach-nation-scout"); }, "btn small"),
+            TM.ui.button("✔ Confirmar convocação", function () {
+              if (c.nation.squad.length < 11) { TM.ui.toast("Convoque pelo menos 11 jogadores"); return; }
+              wc.convoked = true;
+              TM.notify.push(c, { icon: "🏆", title: "Convocação da Copa", text: "Convocação de " + c.nation.name + " confirmada para a Copa do Mundo!" });
+              TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation");
+            }, "btn primary small")
+          ])
+        ];
+      }
+      screen.appendChild(el("div", { class: "next-match" }, kids));
+    } else if (m.end) {
+      // Copa encerrada para a seleção
+      var champId = m.championId || wc.tour.championId;
+      var champName = champId ? TM.data.nation(champId).name : "—";
+      var won = champId === c.nation.id;
+      screen.appendChild(el("div", { class: "next-match" }, [
+        el("div", { class: "nm-label", text: won ? "🏆 CAMPEÃO DO MUNDO!" : "Copa do Mundo encerrada" }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: "Campeão: " + champName }) ]),
+        el("p", { class: "intro-text", style: "text-align:center", text: won ? "Você levantou a taça com " + c.nation.name + "! Que campanha." : "Sua seleção não foi campeã desta vez. Próxima Copa em 4 anos." })
+      ]));
+    } else {
+      // há uma partida do usuário na Copa
+      var md = wc.matchDays[wc.wcMatchNo];
+      var homeNat = TM.data.nation(m.homeId), awayNat = TM.data.nation(m.awayId);
+      var label = C().wcRoundLabel(c, m);
+      var wkids = [
+        el("div", { class: "nm-label", text: "🏆 " + label },),
+        el("div", { class: "nm-teams" }, [ el("span", { text: homeNat.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayNat.name }) ]),
+        el("div", { class: "nm-date", text: "🗓️ " + C().dateOf(c, md).full })
+      ];
+      if (c.currentDay >= md) {
+        wkids.push(TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-nation-wc-play"); }, "btn primary"));
+      } else {
+        wkids.push(el("div", { class: "nm-date", text: "Faltam " + (md - c.currentDay) + " dia(s)." }));
+        wkids.push(el("p", { class: "intro-text", style: "text-align:center", text: "Avance os dias no clube até a data do jogo." }));
+      }
+      screen.appendChild(el("div", { class: "next-match" }, wkids));
+    }
+
+    screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-wc-view"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Grupos & Chaveamento" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-scout"); } } }, [ el("span", { class: "hub-ic", text: "🔍" }), el("span", { text: "Convocar" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-lineup"); } } }, [ el("span", { class: "hub-ic", text: "📋" }), el("span", { text: "Escalação" }) ])
+    ]));
+  }
+
+  /* ---------- jogo da Copa do Mundo ---------- */
+  TM.ui.register("coach-nation-wc-play", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation || !c.nation.wc || !c.nation.wc.convoked) { TM.ui.go("coach-nation"); return; }
+    var wc = c.nation.wc;
+    var m = C().advanceWorldCup(c);
+    if (m.end) { TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation"); return; }
+    var md = wc.matchDays[wc.wcMatchNo];
+    if (c.currentDay < md) { TM.ui.go("coach-nation"); return; }
+    var userHome = m.homeId === c.nation.id;
+    var teamA = userHome ? C().nationTeam(c) : C().oppNationTeam(m.homeId);
+    var teamB = userHome ? C().oppNationTeam(m.awayId) : C().nationTeam(c);
+    var userSide = userHome ? 0 : 1;
+    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: userSide, tactic: c.nation.tactic };
+    var result = TM.engine.simulate(teamA, teamB, simOpts);
+    var label = C().wcRoundLabel(c, m);
+    TM.matchview.play(screen, {
+      teamA: teamA, teamB: teamB, result: result, title: "Copa do Mundo · " + label, pauseSide: userSide, simOpts: simOpts,
+      onBack: function () { TM.ui.go("coach-nation"); },
+      onDone: function () {
+        C().applyWorldCupResult(c, result.score[0], result.score[1]);
+        var us = userHome ? result.score[0] : result.score[1], them = userHome ? result.score[1] : result.score[0];
+        var res = us > them ? "Vitória" : us < them ? "Derrota" : "Empate";
+        TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: res + " " + us + "x" + them + " de " + c.nation.name + "." });
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: m.phase === "ko", back: "coach-nation" });
+      }
+    });
+  });
+
+  /* ---------- grupos & chaveamento da Copa ---------- */
+  TM.ui.register("coach-nation-wc-view", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation || !c.nation.wc) { TM.ui.go("coach-nation"); return; }
+    var t = c.nation.wc.tour;
+    screen.appendChild(TM.ui.topbar("🏆 Copa do Mundo " + c.seasonYear, function () { TM.ui.go("coach-nation"); }));
+    if (t.championId) screen.appendChild(el("div", { class: "champion-banner", text: "🏆 Campeão: " + TM.data.nation(t.championId).name }));
+    if (t.phase === "group") {
+      renderWCGroups(screen, c, t);
+    } else {
+      renderWCGroups(screen, c, t);
+      renderWCBracket(screen, c, t.ko);
+    }
+  });
+
+  function renderWCGroups(screen, c, t) {
+    var wrap = el("div", { class: "panel-narrow" });
+    t.groups.forEach(function (g, gi) {
+      wrap.appendChild(el("div", { class: "group-title", text: "Grupo " + String.fromCharCode(65 + gi) }));
+      var st = C().standings(g.table), tb = el("tbody");
+      st.forEach(function (row, i) {
+        var n = TM.data.nation(row.id);
+        tb.appendChild(el("tr", { class: (row.id === c.nation.id ? "me " : "") + (i < 2 ? "qualify" : "") }, [
+          el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.nationImg(n, "lt-crest"), el("span", { text: n.name }) ]),
+          el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
+        ]));
+      });
+      wrap.appendChild(el("div", { class: "table-wrap" }, [ el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Seleção", "P", "J", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]), tb ]) ]));
+    });
+    screen.appendChild(wrap);
+  }
+
+  function renderWCBracket(screen, c, ko) {
+    var wrap = el("div", { class: "bracket" });
+    ko.rounds.forEach(function (round) {
+      if (!round) return;
+      var rd = el("div", { class: "bracket-round" }, [ el("div", { class: "br-round-title", text: TM.tournament.koTitle(round.length * 2) }) ]);
+      round.forEach(function (tie) {
+        var mine = tie[0] === c.nation.id || tie[1] === c.nation.id;
+        var played = tie[4] != null;
+        var hN = TM.data.nation(tie[0]), aN = TM.data.nation(tie[1]);
+        rd.appendChild(el("div", { class: "tie" + (mine ? " mine" : "") }, [
+          el("div", { class: "tie-team" + (played && tie[4] === tie[0] ? " win" : played ? " lose" : "") }, [ TM.img.nationImg(hN, "tie-crest"), el("span", { text: hN.name }) ]),
+          el("div", { class: "tie-score", text: played ? tie[2] + " - " + tie[3] : "vs" }),
+          el("div", { class: "tie-team away" + (played && tie[4] === tie[1] ? " win" : played ? " lose" : "") }, [ el("span", { text: aN.name }), TM.img.nationImg(aN, "tie-crest") ])
+        ]));
+      });
+      wrap.appendChild(rd);
+    });
+    screen.appendChild(wrap);
+  }
 
   /* ---------- scout / convocação ---------- */
   TM.ui.register("coach-nation-scout", function (screen) {
@@ -490,7 +642,8 @@
 
   TM.ui.register("coach-match", function (screen, params) {
     var r = params.result, a = params.teamA, b = params.teamB;
-    screen.appendChild(TM.ui.topbar("Sua partida", function () { TM.ui.go("coach-hub"); }));
+    var back = params.back || "coach-hub";
+    screen.appendChild(TM.ui.topbar("Sua partida", function () { TM.ui.go(back); }));
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     var tag = win ? "🏆 " + win + " venceu" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
     screen.appendChild(el("div", { class: "result-hero" }, [
@@ -505,7 +658,7 @@
     });
     if (!feed.children.length) feed.appendChild(el("div", { class: "cm-line", text: "Partida sem gols." }));
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Lances" }), feed ]));
-    screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("coach-hub"); }, "btn primary") ]));
+    screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go(back); }, "btn primary") ]));
   });
 
   /* ---------- competições ---------- */
@@ -894,7 +1047,7 @@
       } else if (n.nationInvite) {
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("Aceitar", function () {
-            c.nation = C().buildNation(n.nationInvite); TM.notify.remove(c, n.id);
+            c.nation = C().buildNation(n.nationInvite); C().setupNationSeason(c); TM.notify.remove(c, n.id);
             TM.notify.push(c, { icon: "🌍", title: "Seleção assumida", text: "Você agora comanda a seleção de " + c.nation.name + "! Faça a convocação a tempo." });
             TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
           }, "btn primary small"),
