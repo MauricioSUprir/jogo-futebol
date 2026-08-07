@@ -35,6 +35,36 @@
   }
   // distribui `count` slots ao longo de `total` rodadas
   function spread(count, total) { var a = []; for (var i = 1; i <= count; i++) a.push(Math.round(i * total / (count + 1))); return a; }
+
+  /* ---------- calendário (datas reais) ---------- */
+  var MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function matchDay(i) { return 3 + i * 4; }            // dia (offset) do i-ésimo jogo do usuário
+  function dateOf(career, offset) {                      // converte offset de dias -> data (início: 10/ago)
+    var y = career.seasonYear || 2026, m = 7, d = 10 + offset;
+    while (true) { var dim = MONTHS[m]; if (d <= dim) break; d -= dim; m++; if (m > 11) { m = 0; y++; } }
+    return { d: d, m: m + 1, y: y, short: pad(d) + "/" + pad(m + 1), full: pad(d) + "/" + pad(m + 1) + "/" + y };
+  }
+  // próximos jogos do usuário (somente leitura) para a aba Calendário
+  function peekSchedule(career, n) {
+    var out = [], mi = career.matchNo || 0, oi = career.orderIndex, guard = 0;
+    var leagueCursor = career.comps.league.round;
+    while (out.length < n && oi < career.order.length && guard++ < 400) {
+      var key = career.order[oi]; oi++;
+      if (key === "league") {
+        if (leagueCursor >= career.comps.league.fixtures.length) continue;
+        var rd = career.comps.league.fixtures[leagueCursor]; leagueCursor++;
+        var fix = null; rd.forEach(function (m) { if (m[0] === career.teamId || m[1] === career.teamId) fix = m; });
+        if (fix) { out.push({ key: "league", name: career.comps.league.name, homeId: fix[0], awayId: fix[1], day: matchDay(mi) }); mi++; }
+      } else {
+        var comp = career.comps[key]; if (!comp) continue;
+        var done = comp.type === "tournament" ? (comp.tour.championId || !comp.tour.aliveUser) : (comp.championId || !comp.aliveUser);
+        if (done) continue;
+        out.push({ key: key, name: comp.name, homeId: null, awayId: null, day: matchDay(mi), tbd: true }); mi++;
+      }
+    }
+    return out;
+  }
   function emptyTable(ids) { var t = {}; ids.forEach(function (id) { t[id] = { id: id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }); return t; }
   function applyResult(t, h, a, hs, as) {
     var H = t[h], A = t[a]; H.p++; A.p++; H.gf += hs; H.ga += as; A.gf += as; A.ga += hs;
@@ -239,6 +269,10 @@
     career.order = buildOrder(fixtures.length, cont ? 12 : 0);
     career.orderIndex = 0;
     career.pending = null;
+    // calendário
+    career.seasonYear = 2025 + career.season;
+    career.currentDay = 0;
+    career.matchNo = 0;
   }
 
   var CURRENCIES = {
@@ -425,6 +459,9 @@
     if (!career.tactic) career.tactic = "equilibrado";
     if (!career.objective) career.objective = generateObjective(career.teamId);
     if (!career.coachName) career.coachName = "Treinador";
+    if (career.currentDay == null) career.currentDay = 0;
+    if (career.matchNo == null) career.matchNo = 0;
+    if (!career.seasonYear) career.seasonYear = 2025 + (career.season || 1);
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     return career;
@@ -505,6 +542,9 @@
     }
     career.orderIndex++;
     career.pending = null;
+    // avança o calendário (o jogo aconteceu na sua data)
+    career.currentDay = Math.max(career.currentDay || 0, matchDay(career.matchNo || 0));
+    career.matchNo = (career.matchNo || 0) + 1;
     // registra títulos ao fim da temporada
     checkHonours(career);
     TM.storage.saveCoachCareer(career);
@@ -532,6 +572,7 @@
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
+    matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,

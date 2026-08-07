@@ -176,14 +176,31 @@
     if (pending.seasonEnd) {
       renderSeasonEnd(screen, c);
     } else {
+      var nextDay = C().matchDay(c.matchNo), daysLeft = nextDay - c.currentDay;
+      // barra de data / calendário
+      screen.appendChild(el("div", { class: "date-bar" }, [
+        el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: C().dateOf(c, c.currentDay).full }) ]),
+        el("button", { class: "date-cal-btn", text: "Calendário →", on: { click: function () { TM.ui.go("coach-calendar"); } } })
+      ]));
+
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
       var badge = pending.key === "cup" ? "cup" : pending.key === "cont" ? "cont" : "league";
       var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
-      screen.appendChild(el("div", { class: "next-match" }, [
+      var matchDate = C().dateOf(c, nextDay);
+      var kids = [
         el("div", { class: "nm-label" }, [ document.createTextNode(pending.name + "  "), el("span", { class: "comp-badge " + badge, text: badgeText }) ]),
-        el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ]),
-        TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-play"); }, "btn primary")
-      ]));
+        el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
+        el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ])
+      ];
+      if (daysLeft > 0) {
+        kids.push(el("div", { class: "skip-row" }, [
+          TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
+          TM.ui.button("⏩ Avançar até o jogo", function () { c.currentDay = nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn small")
+        ]));
+      } else {
+        kids.push(TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-play"); }, "btn primary"));
+      }
+      screen.appendChild(el("div", { class: "next-match" }, kids));
     }
 
     screen.appendChild(el("div", { class: "hub-actions six" }, [
@@ -192,6 +209,7 @@
       hubBtn("🌱", "Base", function () { TM.ui.go("coach-youth"); }),
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
+      hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
@@ -224,6 +242,39 @@
       screen.appendChild(box);
     }
   }
+
+  /* ---------- aba Calendário ---------- */
+  var MES_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  TM.ui.register("coach-calendar", function (screen) {
+    var c = TM.storage.coachCareer();
+    screen.appendChild(TM.ui.topbar("📅 Calendário", function () { TM.ui.go("coach-hub"); }));
+    screen.appendChild(el("div", { class: "date-bar" }, [
+      el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ])
+    ]));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var sched = C().peekSchedule(c, 14);
+    if (!sched.length) body.appendChild(el("p", { class: "intro-text", text: "Sem jogos futuros nesta temporada." }));
+    sched.forEach(function (item) {
+      var date = C().dateOf(c, item.day);
+      var badge = item.key === "cup" ? "cup" : item.key === "cont" ? "cont" : "league";
+      var confronto;
+      if (item.tbd) {
+        confronto = el("div", { class: "cal-teams tbd" }, [ el("span", { text: item.name }), el("span", { class: "cal-vs", text: "adversário a definir" }) ]);
+      } else {
+        var h = TM.data.club(item.homeId), a = TM.data.club(item.awayId);
+        confronto = el("div", { class: "cal-teams" }, [
+          el("span", { class: item.homeId === c.teamId ? "cal-me" : "", text: h.name }),
+          el("span", { class: "nm-x", text: " × " }),
+          el("span", { class: item.awayId === c.teamId ? "cal-me" : "", text: a.name })
+        ]);
+      }
+      body.appendChild(el("div", { class: "cal-item" }, [
+        el("div", { class: "cal-date" }, [ el("div", { class: "cal-d", text: date.d }), el("div", { class: "cal-m", text: MES_PT[date.m - 1] }) ]),
+        el("div", { class: "cal-body" }, [ confronto, el("span", { class: "comp-badge " + badge, text: item.name }) ])
+      ]));
+    });
+  });
 
   /* ---------- jogar a partida pendente ---------- */
   TM.ui.register("coach-play", function (screen) {
