@@ -213,7 +213,7 @@
     ["Saudi Arabia","#006c35","#ffffff","af"],["Qatar","#8a1538","#ffffff","af"],["Iran","#239f40","#da0000","asia"],
     ["Norway","#ba0c2f","#00205b","nl"],["Scotland","#0065bf","#ffffff","en"],["Turkey","#e30a17","#ffffff","it"],
     ["Ukraine","#005bbb","#ffd500","de"],["Wales","#c8102e","#00ab39","en"],["Bosnia","#002395","#fecb00","it"],
-    ["Costa Rica","#002b7f","#ce1126","es"],["Tunisia","#e70013","#ffffff","af"],["Algeria","#006233","#ffffff","af"]
+    ["Cape Verde","#003893","#f7d116","af"],["Tunisia","#e70013","#ffffff","af"],["Algeria","#006233","#ffffff","af"]
   ].map(function (n, i) {
     return { id: "nat" + i, name: n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
