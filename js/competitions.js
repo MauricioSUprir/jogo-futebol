@@ -154,8 +154,8 @@
 
   /* ---------- mata-mata ---------- */
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-  function buildKO(teamIds, name, key) {
-    return { type: "ko", key: key, name: name, teamIds: shuffle(teamIds), rounds: [], roundIndex: 0, aliveUser: true, championId: null };
+  function buildKO(teamIds, name, key, twoLeg) {
+    return { type: "ko", key: key, name: name, teamIds: shuffle(teamIds), rounds: [], roundIndex: 0, aliveUser: true, championId: null, twoLeg: !!twoLeg };
   }
   function ensureKORound(ko) {
     if (ko.rounds[ko.roundIndex]) return;
@@ -163,7 +163,10 @@
     if (ko.roundIndex === 0) teams = ko.teamIds;
     else teams = ko.rounds[ko.roundIndex - 1].map(function (t) { return t[4]; }); // vencedores
     var ties = [];
-    for (var i = 0; i < teams.length; i += 2) ties.push([teams[i], teams[i + 1], null, null, null]);
+    for (var i = 0; i < teams.length; i += 2) {
+      ties.push(ko.twoLeg ? [teams[i], teams[i + 1], null, null, null, null, null, null, null, 0]
+                          : [teams[i], teams[i + 1], null, null, null]);
+    }
     ko.rounds[ko.roundIndex] = ties;
   }
   function penaltyWinner(a, b) {
@@ -177,6 +180,17 @@
     tie[2] = hs; tie[3] = as; tie[4] = winner;
     return res;
   }
+  function decideTwoLeg(tie) {
+    var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7]; tie[2] = aggA; tie[3] = aggB;
+    if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
+    var awayA = tie[8], awayB = tie[6];
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penaltyWinner(tie[0], tie[1]);
+  }
+  function resolveTieTwoLeg(career, tie) {
+    var l1 = simMatch(career, tie[0], tie[1], true); tie[5] = l1.score[0]; tie[6] = l1.score[1];
+    var l2 = simMatch(career, tie[1], tie[0], true); tie[7] = l2.score[0]; tie[8] = l2.score[1];
+    tie[9] = 2; decideTwoLeg(tie);
+  }
   function userTieIn(ko, teamId) {
     var round = ko.rounds[ko.roundIndex];
     if (!round) return null;
@@ -186,7 +200,7 @@
   function resolveKORoundAuto(career, ko) {
     ensureKORound(ko);
     var round = ko.rounds[ko.roundIndex];
-    round.forEach(function (tie) { if (tie[4] == null) resolveTie(career, tie, true); });
+    round.forEach(function (tie) { if (tie[4] == null) (ko.twoLeg ? resolveTieTwoLeg : resolveTie)(career, tie, true); });
     if (round.length === 1) ko.championId = round[0][4];
     ko.roundIndex++;
   }
@@ -201,7 +215,7 @@
   function buildDomesticCup(teamId, leagueId) {
     var pool = topClubs(leagueId, 16);
     if (pool.indexOf(teamId) < 0) { pool[pool.length - 1] = teamId; } // garante o usuário
-    return buildKO(pool, CUP_NAME[leagueId] || "Copa Nacional", "cup");
+    return buildKO(pool, CUP_NAME[leagueId] || "Copa Nacional", "cup", true); // copa nacional: ida e volta
   }
   // ranking de uma liga: pela posição final da temporada passada (só a liga do
   // usuário é simulada); as demais ligas usam o overall como critério
@@ -237,13 +251,13 @@
     }
     var groups = size === 32 ? 8 : 4;
     return { type: "tournament", key: "cont", name: CONT_NAME[region] || "Continental",
-      tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, userId: career.teamId }) };
+      tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
   }
 
   function buildOrder(leagueRounds, contSlots) {
     // liga em turno e returno; copa nacional (4 jogos) e continental
     // (grupos de ida/volta + mata-mata) intercaladas ao longo da temporada
-    var cupAt = spread(4, leagueRounds), contAt = spread(contSlots, leagueRounds);
+    var cupAt = spread(8, leagueRounds), contAt = spread(contSlots, leagueRounds);   // copa: até 4 fases em ida e volta
     var order = [], cupI = 0, contI = 0;
     for (var lr = 1; lr <= leagueRounds; lr++) {
       order.push("league");
@@ -265,8 +279,8 @@
       cup: buildDomesticCup(career.teamId, leagueId),
       cont: cont
     };
-    // continental: até 6 rodadas de grupo (ida/volta) + 4 de mata-mata = 10 slots (folga p/ 12)
-    career.order = buildOrder(fixtures.length, cont ? 12 : 0);
+    // continental: 6 rodadas de grupo (ida/volta) + até 8 de mata-mata (ida e volta) = ~14 (folga p/ 20)
+    career.order = buildOrder(fixtures.length, cont ? 20 : 0);
     career.orderIndex = 0;
     career.pending = null;
     // calendário
@@ -637,8 +651,8 @@
       if (comp.type === "tournament") {
         var nx = TM.tournament.nextUserMatch(comp.tour, contCtx(career));
         if (nx.end) { career.orderIndex++; continue; }
-        career.pending = { key: key, name: comp.name, homeId: nx.homeId, awayId: nx.awayId, ko: nx.ko, tour: true,
-          label: nx.phase === "group" ? "Grupos · Rodada " + (nx.groupRound + 1) : TM.tournament.koTitle(nx.round) };
+        career.pending = { key: key, name: comp.name, homeId: nx.homeId, awayId: nx.awayId, ko: nx.ko, tour: true, leg: nx.leg,
+          label: nx.phase === "group" ? "Grupos · Rodada " + (nx.groupRound + 1) : (TM.tournament.koTitle(nx.round) + (nx.leg ? (nx.leg === 1 ? " · Ida" : " · Volta") : "")) };
         TM.storage.saveCoachCareer(career);
         return career.pending;
       }
@@ -647,7 +661,13 @@
       ensureKORound(ko);
       var tie = userTieIn(ko, career.teamId);
       if (ko.aliveUser && tie) {
-        career.pending = { key: key, name: ko.name, homeId: tie[0], awayId: tie[1], ko: true };
+        var koLabel = TM.tournament.koTitle(ko.rounds[ko.roundIndex].length * 2);
+        if (ko.twoLeg) {
+          if (tie[9] === 0) career.pending = { key: key, name: ko.name, homeId: tie[0], awayId: tie[1], ko: true, leg: 1, label: koLabel + " · Ida" };
+          else career.pending = { key: key, name: ko.name, homeId: tie[1], awayId: tie[0], ko: true, leg: 2, label: koLabel + " · Volta" };
+        } else {
+          career.pending = { key: key, name: ko.name, homeId: tie[0], awayId: tie[1], ko: true, label: koLabel };
+        }
         TM.storage.saveCoachCareer(career);
         return career.pending;
       }
@@ -678,10 +698,24 @@
       var ko = career.comps[p.key];
       var round = ko.rounds[ko.roundIndex];
       var tie = userTieIn(ko, career.teamId);
-      var winner = homeScore > awayScore ? tie[0] : awayScore > homeScore ? tie[1] : penaltyWinner(tie[0], tie[1]);
-      tie[2] = homeScore; tie[3] = awayScore; tie[4] = winner;
-      if (winner !== career.teamId) ko.aliveUser = false;
-      round.forEach(function (t) { if (t[4] == null) resolveTie(career, t, true); });
+      if (ko.twoLeg) {
+        if (tie[9] === 0) {                       // ida — registra e aguarda a volta (só consome o slot do calendário)
+          tie[5] = homeScore; tie[6] = awayScore; tie[9] = 1;
+          career.orderIndex++; career.pending = null;
+          career.currentDay = Math.max(career.currentDay || 0, matchDay(career.matchNo || 0));
+          career.matchNo = (career.matchNo || 0) + 1;
+          TM.storage.saveCoachCareer(career);
+          return;
+        }
+        tie[7] = homeScore; tie[8] = awayScore; tie[9] = 2; decideTwoLeg(tie);
+        if (tie[4] !== career.teamId) ko.aliveUser = false;
+        round.forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(career, t); });
+      } else {
+        var winner = homeScore > awayScore ? tie[0] : awayScore > homeScore ? tie[1] : penaltyWinner(tie[0], tie[1]);
+        tie[2] = homeScore; tie[3] = awayScore; tie[4] = winner;
+        if (winner !== career.teamId) ko.aliveUser = false;
+        round.forEach(function (t) { if (t[4] == null) resolveTie(career, t, true); });
+      }
       if (round.length === 1) ko.championId = round[0][4];
       ko.roundIndex++;
     }

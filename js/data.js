@@ -362,7 +362,7 @@
       var W = TM.data.world();
       // ligas e copas nacionais: clubes da liga correspondente
       if (compId.indexOf("lg-") === 0 || compId.indexOf("cup-") === 0) {
-        var lg = W.leaguesById[compId.slice(3)];
+        var lg = W.leaguesById[compId.slice(compId.indexOf("-") + 1)];
         return { isNation: false, teamIds: lg ? lg.clubIds.slice() : [] };
       }
       // continentais de clubes: melhores clubes das ligas da região

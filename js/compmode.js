@@ -48,7 +48,7 @@
       var def = CONT_CLUB[id], pool = [];
       def.leagues.forEach(function (l) { pool = pool.concat(topClubs(l, Math.ceil(def.size / def.leagues.length) + 2)); });
       pool = pool.filter(function (x, i) { return pool.indexOf(x) === i; }).sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, def.size);
-      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4, dbl: true };
+      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4, dbl: true, twoLeg: true };
     }
     if (catKey === "nation") {
       var def2 = NAT_GROUPS[id], ids;
@@ -89,15 +89,35 @@
     var built = buildCompetition(catKey, id);
     var s = { name: built.name, isNation: built.isNation, kind: built.kind, userId: userId };
     if (built.kind === "league") { s.teamIds = built.teamIds; s.fixtures = doubleRoundRobin(built.teamIds); s.round = 0; s.table = emptyTable(built.teamIds); }
-    else if (built.kind === "ko") { s.teamIds = shuffle(built.teamIds); s.rounds = []; s.roundIndex = 0; s.aliveUser = true; s.championId = null; }
-    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, bestThirds: built.bestThirds || 0, userId: userId }); }
+    else if (built.kind === "ko") { s.teamIds = shuffle(built.teamIds); s.rounds = []; s.roundIndex = 0; s.aliveUser = true; s.championId = null; s.twoLeg = true; } // copas nacionais: ida e volta
+    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, bestThirds: built.bestThirds || 0, twoLeg: !!built.twoLeg, userId: userId }); }
     return s;
   }
 
-  /* ---- mata-mata puro (copas nacionais) ---- */
-  function ensureKO(s) { if (s.rounds[s.roundIndex]) return; var teams = s.roundIndex === 0 ? s.teamIds : s.rounds[s.roundIndex - 1].map(function (t) { return t[4]; }); var ties = []; for (var i = 0; i < teams.length; i += 2) ties.push([teams[i], teams[i + 1], null, null, null]); s.rounds[s.roundIndex] = ties; }
+  /* ---- mata-mata puro (copas nacionais) — ida e volta ---- */
+  function ensureKO(s) {
+    if (s.rounds[s.roundIndex]) return;
+    var teams = s.roundIndex === 0 ? s.teamIds : s.rounds[s.roundIndex - 1].map(function (t) { return t[4]; });
+    var ties = [];
+    for (var i = 0; i < teams.length; i += 2) {
+      ties.push(s.twoLeg ? [teams[i], teams[i + 1], null, null, null, null, null, null, null, 0]
+                         : [teams[i], teams[i + 1], null, null, null]);
+    }
+    s.rounds[s.roundIndex] = ties;
+  }
   function penWin(s, a, b) { var ra = ratingFor(s, a), rb = ratingFor(s, b); return Math.random() < ra / (ra + rb) ? a : b; }
   function resolveTie(s, tie) { var r = simTeams(s, tie[0], tie[1]); var hs = r.score[0], as = r.score[1]; tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]); return r; }
+  function decideTwoLeg(s, tie) {
+    var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7]; tie[2] = aggA; tie[3] = aggB;
+    if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
+    var awayA = tie[8], awayB = tie[6];
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penWin(s, tie[0], tie[1]);
+  }
+  function resolveTieTwoLeg(s, tie) {
+    var l1 = simTeams(s, tie[0], tie[1]); tie[5] = l1.score[0]; tie[6] = l1.score[1];
+    var l2 = simTeams(s, tie[1], tie[0]); tie[7] = l2.score[0]; tie[8] = l2.score[1];
+    tie[9] = 2; decideTwoLeg(s, tie);
+  }
   function userTieKO(s) { var rd = s.rounds[s.roundIndex]; if (!rd) return null; for (var i = 0; i < rd.length; i++) if (rd[i][0] === s.userId || rd[i][1] === s.userId) return rd[i]; return null; }
 
   // devolve a próxima partida do usuário (avança auto-sims)
@@ -114,8 +134,16 @@
         if (s.championId) return { end: true };
         ensureKO(s);
         var tie = userTieKO(s);
-        if (s.aliveUser && tie) return { homeId: tie[0], awayId: tie[1], ko: true, label: TM.tournament.koTitle(s.rounds[s.roundIndex].length * 2) };
-        s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(s, t); });
+        var base = TM.tournament.koTitle(s.rounds[s.roundIndex].length * 2);
+        if (s.aliveUser && tie) {
+          if (s.twoLeg) {
+            if (tie[9] === 0) return { homeId: tie[0], awayId: tie[1], ko: true, label: base + " · Ida" };
+            if (tie[9] === 1) return { homeId: tie[1], awayId: tie[0], ko: true, label: base + " · Volta" };
+          } else {
+            return { homeId: tie[0], awayId: tie[1], ko: true, label: base };
+          }
+        }
+        s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) (s.twoLeg ? resolveTieTwoLeg : resolveTie)(s, t); });
         if (s.rounds[s.roundIndex].length === 1) s.championId = s.rounds[s.roundIndex][0][4];
         s.roundIndex++;
       }
@@ -135,9 +163,16 @@
       s.round++;
     } else if (s.kind === "ko") {
       var tie = userTieKO(s);
-      tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]);
-      if (tie[4] !== s.userId) s.aliveUser = false;
-      s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(s, t); });
+      if (s.twoLeg) {
+        if (tie[9] === 0) { tie[5] = hs; tie[6] = as; tie[9] = 1; return; }   // ida; aguarda a volta
+        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(s, tie);
+        if (tie[4] !== s.userId) s.aliveUser = false;
+        s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(s, t); });
+      } else {
+        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]);
+        if (tie[4] !== s.userId) s.aliveUser = false;
+        s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(s, t); });
+      }
       if (s.rounds[s.roundIndex].length === 1) s.championId = s.rounds[s.roundIndex][0][4];
       s.roundIndex++;
     } else {

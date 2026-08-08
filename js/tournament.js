@@ -34,6 +34,7 @@
     return {
       phase: "group", groups: groups, groupRound: 0, groupRounds: (perGroup - 1) * (dbl ? 2 : 1), advance: opts.advance || 2,
       bestThirds: opts.bestThirds || 0,   // Copa do Mundo 48: melhores 3os colocados também avançam
+      twoLeg: !!opts.twoLeg,              // mata-mata em ida e volta (copas de clubes)
       userId: opts.userId, ko: null, championId: null, aliveUser: true, userQualified: null
     };
   }
@@ -54,11 +55,29 @@
     var ko = state.ko;
     if (ko.rounds[ko.roundIndex]) return;
     var teams = ko.roundIndex === 0 ? ko.teamIds : ko.rounds[ko.roundIndex - 1].map(function (t) { return t[4]; });
-    var ties = []; for (var i = 0; i < teams.length; i += 2) ties.push([teams[i], teams[i + 1], null, null, null]);
+    var ties = [];
+    for (var i = 0; i < teams.length; i += 2) {
+      // ida e volta: [a, b, dispA, dispB, winner, ga1, gb1, ga2, gb2, legs]
+      ties.push(state.twoLeg ? [teams[i], teams[i + 1], null, null, null, null, null, null, null, 0]
+                             : [teams[i], teams[i + 1], null, null, null]);
+    }
     ko.rounds[ko.roundIndex] = ties;
   }
   function penWin(ctx, a, b) { var ra = ctx.rating(a), rb = ctx.rating(b); return Math.random() < ra / (ra + rb) ? a : b; }
   function resolveTie(ctx, tie) { var r = ctx.sim(tie[0], tie[1]); var hs = r.score[0], as = r.score[1]; tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(ctx, tie[0], tie[1]); return r; }
+  // decide vencedor de um confronto ida e volta (agregado; gol fora; pênaltis)
+  function decideTwoLeg(ctx, tie) {
+    var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7];   // a: ga1+ga2 · b: gb1+gb2
+    tie[2] = aggA; tie[3] = aggB;
+    if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
+    var awayA = tie[8], awayB = tie[6];                   // gols fora: a marcou na volta; b marcou na ida
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penWin(ctx, tie[0], tie[1]);
+  }
+  function resolveTieTwoLeg(ctx, tie) {
+    var l1 = ctx.sim(tie[0], tie[1]); tie[5] = l1.score[0]; tie[6] = l1.score[1];   // a em casa
+    var l2 = ctx.sim(tie[1], tie[0]); tie[7] = l2.score[0]; tie[8] = l2.score[1];   // b em casa
+    tie[9] = 2; decideTwoLeg(ctx, tie);
+  }
   function userTie(state) { var ko = state.ko, rd = ko.rounds[ko.roundIndex]; if (!rd) return null; for (var i = 0; i < rd.length; i++) if (rd[i][0] === state.userId || rd[i][1] === state.userId) return rd[i]; return null; }
 
   // constrói o chaveamento a partir dos classificados (cruzando 1º x 2º de grupos vizinhos)
@@ -98,9 +117,17 @@
         if (state.championId) { state.phase = "done"; return { end: true, championId: state.championId }; }
         ensureKO(state);
         var tie = userTie(state);
-        if (state.aliveUser && tie) return { phase: "ko", ko: true, homeId: tie[0], awayId: tie[1], round: state.ko.rounds[state.ko.roundIndex].length * 2 };
+        var nteams = state.ko.rounds[state.ko.roundIndex].length * 2;
+        if (state.aliveUser && tie) {
+          if (state.twoLeg) {
+            if (tie[9] === 0) return { phase: "ko", ko: true, homeId: tie[0], awayId: tie[1], round: nteams, leg: 1 };
+            if (tie[9] === 1) return { phase: "ko", ko: true, homeId: tie[1], awayId: tie[0], round: nteams, leg: 2 };
+          } else {
+            return { phase: "ko", ko: true, homeId: tie[0], awayId: tie[1], round: nteams };
+          }
+        }
         // usuário fora: auto-sim a rodada
-        state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(ctx, t); });
+        state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) (state.twoLeg ? resolveTieTwoLeg : resolveTie)(ctx, t); });
         if (state.ko.rounds[state.ko.roundIndex].length === 1) state.championId = state.ko.rounds[state.ko.roundIndex][0][4];
         state.ko.roundIndex++;
       }
@@ -122,9 +149,20 @@
       if (state.groupRound >= state.groupRounds) buildKO(state);
     } else if (state.phase === "ko") {
       var tie = userTie(state);
-      tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(ctx, tie[0], tie[1]);
-      if (tie[4] !== state.userId) state.aliveUser = false;
-      state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(ctx, t); });
+      if (state.twoLeg) {
+        if (tie[9] === 0) {          // ida (usuário mandante): a=tie[0]
+          tie[5] = hs; tie[6] = as; tie[9] = 1;
+          return;                    // aguarda a volta (não avança a rodada)
+        }
+        // volta (usuário visitante): mandante é tie[1]
+        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(ctx, tie);
+        if (tie[4] !== state.userId) state.aliveUser = false;
+        state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(ctx, t); });
+      } else {
+        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(ctx, tie[0], tie[1]);
+        if (tie[4] !== state.userId) state.aliveUser = false;
+        state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(ctx, t); });
+      }
       if (state.ko.rounds[state.ko.roundIndex].length === 1) state.championId = state.ko.rounds[state.ko.roundIndex][0][4];
       state.ko.roundIndex++;
     }
