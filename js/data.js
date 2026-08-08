@@ -243,8 +243,8 @@
     ["Ole Werner","de",37,"RB Leipzig"],["Albert Riera","es",43,"Eintracht Frankfurt"],["Sebastian Hoeneß","de",43,"VfB Stuttgart"],
     ["Julian Schuster","de",40,"SC Freiburg"],
     // Ligue 1
-    ["Luis Enrique","es",55,"Paris Saint-Germain"],["Bruno Génésio","fr",59,"Olympique de Marseille"],["Sébastien Pocognoli","fr",38,"Monaco"],
-    ["Paulo Fonseca","pt",52,"Olympique de Lyon"],["Claude Puel","fr",64,"Nice"],
+    ["Luis Enrique","es",55,"Paris Saint-Germain"],["Bruno Génésio","fr",59,"Olympique de Marseille"],["Filipe Luís","br",40,"Monaco"],
+    ["Paulo Fonseca","pt",52,"Olympique de Lyon"],["Claude Puel","fr",64,"Nice"],["Davide Ancelotti","it",36,"Lille"],
     // Liga Portugal
     ["Marco Silva","pt",48,"Benfica"],["Francesco Farioli","it",37,"Porto"],["Rui Borges","pt",44,"Sporting CP"],["Carlos Vicens","es",38,"Braga"],
     // Eredivisie
@@ -268,7 +268,7 @@
     ["Julian Nagelsmann","de",38,null],["Mauricio Pochettino","ar",53,null],["Ange Postecoglou","en",60,null],
     ["Thiago Motta","it",43,null],["Sérgio Conceição","pt",50,null],["Nuno Espírito Santo","pt",52,null],
     ["Rúben Amorim","pt",41,null],["Enzo Maresca","it",45,null],["Renato Gaúcho","br",63,null],
-    ["Mano Menezes","br",63,null],["Stefano Pioli","it",60,null],["Filipe Luís","br",40,null],
+    ["Mano Menezes","br",63,null],["Stefano Pioli","it",60,null],["Sébastien Pocognoli","fr",38,null],
     ["Tite","br",64,null],["Dorival Júnior","br",63,null],["Jorge Sampaoli","ar",65,null],
     ["Thomas Frank","de",52,null],["Liam Rosenior","en",41,null],["Martín Anselmi","ar",40,null],
     ["Juan Pablo Vojvoda","ar",50,null]
