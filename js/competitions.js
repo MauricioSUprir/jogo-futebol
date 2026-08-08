@@ -630,6 +630,10 @@
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
   function migrateCareer(career) {
     if (!career) return career;
+    // save de versão antiga sem a estrutura de competições atual → reconstrói a temporada
+    if (!career.comps || !career.comps.league || !career.comps.league.fixtures || !career.order || career.orderIndex == null) {
+      try { seasonSetup(career); } catch (e) { /* deixa o roteador tratar */ }
+    }
     if (!career.money) career.money = CURRENCIES.eur;
     if (!career.injuries) career.injuries = {};
     if (!career.suspensions) career.suspensions = {};

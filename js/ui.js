@@ -36,7 +36,23 @@
     clear(app);
     var screen = el("section", { class: "screen is-active" });
     app.appendChild(screen);
-    routes[name](screen, params || {});
+    try {
+      routes[name](screen, params || {});
+    } catch (err) {
+      // evita "tela preta": qualquer erro ao renderizar vira uma tela de recuperação
+      console.error("Erro ao abrir a tela '" + name + "':", err);
+      clear(screen);
+      var isCoach = name.indexOf("coach") === 0, isPlayer = name.indexOf("player") === 0;
+      screen.appendChild(el("div", { class: "route-error" }, [
+        el("div", { class: "re-emoji", text: "⚠️" }),
+        el("h2", { text: "Não foi possível abrir esta tela" }),
+        el("p", { text: "Isso costuma acontecer com um jogo salvo de uma versão anterior. Você pode voltar ao menu ou reiniciar esta carreira." }),
+        el("p", { class: "re-detail", text: (err && err.message) ? String(err.message) : "" }),
+        el("button", { class: "btn primary big", text: "🏠 Voltar ao menu", on: { click: function () { go("modes"); } } }),
+        (isCoach ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de treinador", on: { click: function () { try { TM.storage.clearCoachCareer(); } catch (e) {} go("modes"); } } }) : null),
+        (isPlayer ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de jogador", on: { click: function () { try { TM.storage.clearPlayerCareer && TM.storage.clearPlayerCareer(); } catch (e) {} go("modes"); } } }) : null)
+      ]));
+    }
     window.scrollTo(0, 0);
   }
 

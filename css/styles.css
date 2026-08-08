@@ -779,3 +779,11 @@ html, body {
   .tb-title { font-size: 17px; }
   .pitch { aspect-ratio: 2/3; }
 }
+
+/* tela de recuperação quando uma rota falha (evita tela preta) */
+.route-error { max-width: 460px; margin: 40px auto; padding: 0 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.route-error .re-emoji { font-size: 52px; }
+.route-error h2 { font-size: 20px; margin: 0; }
+.route-error p { color: var(--text-dim); font-size: 14px; margin: 0; }
+.route-error .re-detail { font-family: monospace; font-size: 12px; color: #c0554f; background: rgba(192,85,79,.12); padding: 6px 10px; border-radius: 8px; word-break: break-word; }
+.route-error .btn { margin-top: 8px; min-width: 240px; }
