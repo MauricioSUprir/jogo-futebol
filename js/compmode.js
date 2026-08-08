@@ -60,7 +60,25 @@
 
   /* ---------- helpers ---------- */
   function realism() { return TM.storage.settings().realism; }
-  function teamFor(s, cid) { return s.isNation ? TM.engine.teamFromNation(cid) : TM.engine.teamFromClub(cid); }
+  // elenco do time do usuário (para o campinho)
+  function userPlayerList(s) { return s.isNation ? TM.data.nationSquad(s.userId) : TM.data.clubPlayers(s.userId); }
+  function ensureLineup(s) { if (!s.lineup) s.lineup = TM.comp.buildLineup(userPlayerList(s), "4-4-2"); return s.lineup; }
+  // ordem escolhida pelo usuário (titulares primeiro), como objetos de jogador
+  function userRoster(s) {
+    if (!s.lineup) return null;
+    var ids = s.lineup.starters.concat(s.lineup.bench);
+    var seen = {}; var ordered = ids.map(function (id) { seen[id] = 1; return TM.data.player(id); }).filter(Boolean);
+    // completa com quem ficou de fora da escalação (segurança)
+    userPlayerList(s).forEach(function (p) { if (!seen[p.id]) ordered.push(p); });
+    return ordered;
+  }
+  function teamFor(s, cid) {
+    if (cid === s.userId && s.lineup) {
+      var roster = userRoster(s);
+      return s.isNation ? TM.engine.teamFromNation(cid, roster) : TM.engine.teamFromClub(cid, roster);
+    }
+    return s.isNation ? TM.engine.teamFromNation(cid) : TM.engine.teamFromClub(cid);
+  }
   function nameFor(s, cid) { return s.isNation ? TM.data.nation(cid).name : TM.data.club(cid).name; }
   function ratingFor(s, cid) { return s.isNation ? natRating(cid) : TM.data.clubRating(cid); }
   function imgFor(s, cid, cls) { return s.isNation ? TM.img.nationImg(TM.data.nation(cid), cls) : TM.img.clubImg(TM.data.club(cid), cls); }
@@ -276,9 +294,62 @@
       ]));
     }
     screen.appendChild(E("div", { class: "hub-actions" }, [
-      E("button", { class: "hub-btn", on: { click: function () { TM.ui.go("compmode-view"); } } }, [ E("span", { class: "hub-ic", text: s.kind === "league" ? "📊" : "🏆" }), E("span", { text: s.kind === "league" ? "Tabela" : (s.kind === "tournament" ? "Grupos / Chave" : "Chaveamento") }) ])
+      E("button", { class: "hub-btn", on: { click: function () { TM.ui.go("compmode-view"); } } }, [ E("span", { class: "hub-ic", text: s.kind === "league" ? "📊" : "🏆" }), E("span", { text: s.kind === "league" ? "Tabela" : (s.kind === "tournament" ? "Grupos / Chave" : "Chaveamento") }) ]),
+      E("button", { class: "hub-btn", on: { click: function () { TM.ui.go("compmode-lineup"); } } }, [ E("span", { class: "hub-ic", text: "📋" }), E("span", { text: "Escalação" }) ])
     ]));
   });
+
+  // ---- gerenciar elenco (campinho) no modo competição ----
+  TM.ui.register("compmode-lineup", function (screen) {
+    var E = el();
+    var s = load(); if (!s) { TM.ui.go("compmode"); return; }
+    ensureLineup(s); save(s);
+    screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("compmode-hub"); }));
+
+    // formação
+    var formRow = E("div", { class: "segmented full" });
+    Object.keys(TM.comp.FORMATIONS).forEach(function (f) {
+      formRow.appendChild(E("button", { class: "seg-btn" + (s.lineup.formation === f ? " active" : ""), text: f, on: { click: function () {
+        s.lineup = TM.comp.buildLineup(userPlayerList(s), f); pickSlot = null; save(s); TM.ui.go("compmode-lineup");
+      } } }));
+    });
+    screen.appendChild(E("div", { class: "panel-narrow" }, [ E("div", { class: "setting" }, [ E("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
+
+    // campinho
+    var slots = TM.comp.FORMATIONS[s.lineup.formation];
+    var pitch = E("div", { class: "pitch" });
+    pitch.appendChild(E("div", { class: "pitch-mark center-circle" }));
+    pitch.appendChild(E("div", { class: "pitch-mark mid-line" }));
+    s.lineup.starters.forEach(function (id, i) {
+      var p = TM.data.player(id); if (!p) return;
+      var slot = slots[i] || [null, 50, 50];
+      pitch.appendChild(E("button", { class: "pl-chip" + (pickSlot === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+        on: { click: function () { pickSlot = (pickSlot === i ? null : i); TM.ui.go("compmode-lineup"); } } }, [
+        E("span", { class: "chip-ov", text: p.overall }),
+        E("span", { class: "chip-name", text: shortNm(p.name) })
+      ]));
+    });
+    screen.appendChild(pitch);
+    screen.appendChild(E("div", { class: "lineup-hint", text: pickSlot != null ? "Toque num reserva para colocar no lugar do titular selecionado." : "Toque num titular e depois num reserva para trocar." }));
+
+    // reservas
+    var benchWrap = E("div", { class: "panel-narrow" }, [ E("h3", { class: "block-title", text: "Reservas" }) ]);
+    s.lineup.bench.forEach(function (id) {
+      var p = TM.data.player(id); if (!p) return;
+      var row = TM.ui.playerRow(p, {});
+      row.classList.add("clickable");
+      row.addEventListener("click", function () {
+        if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
+        var starterId = s.lineup.starters[pickSlot], bi = s.lineup.bench.indexOf(id);
+        s.lineup.starters[pickSlot] = id; s.lineup.bench[bi] = starterId;
+        pickSlot = null; save(s); TM.ui.go("compmode-lineup");
+      });
+      benchWrap.appendChild(row);
+    });
+    screen.appendChild(benchWrap);
+  });
+  var pickSlot = null;
+  function shortNm(name) { var parts = name.split(" "); return parts.length > 1 ? parts[0][0] + ". " + parts[parts.length - 1] : name; }
 
   TM.ui.register("compmode-play", function (screen) {
     var s = load(); var nx = advance(s);
@@ -289,7 +360,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: s.name,
-      pauseSide: userSide, simOpts: simOpts,
+      pauseSide: userSide, simOpts: simOpts, formation: s.lineup ? s.lineup.formation : "4-4-2",
       onBack: function () { TM.ui.go("compmode-hub"); },
       onDone: function () { applyUser(s, result.score[0], result.score[1]); save(s); TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: result.score[0], as: result.score[1], ko: nx.ko }); }
     });

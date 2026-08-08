@@ -218,6 +218,29 @@
     return { id: "nat" + i, name: n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
 
+  // ~70 treinadores reais — [nome, cultura]. Os mais fortes vão para os clubes
+  // mais fortes; o jogador também pode escolher um deles na carreira de treinador.
+  var COACHES = [
+    ["Pep Guardiola","es"],["Carlo Ancelotti","it"],["Diego Simeone","ar"],["Jürgen Klopp","de"],
+    ["José Mourinho","pt"],["Antonio Conte","it"],["Xabi Alonso","es"],["Hansi Flick","de"],
+    ["Mikel Arteta","es"],["Arne Slot","nl"],["Luis Enrique","es"],["Simone Inzaghi","it"],
+    ["Unai Emery","es"],["Rúben Amorim","pt"],["Erik ten Hag","nl"],["Roberto De Zerbi","it"],
+    ["Thiago Motta","it"],["Gian Piero Gasperini","it"],["Massimiliano Allegri","it"],["Maurizio Sarri","it"],
+    ["Stefano Pioli","it"],["Vincenzo Italiano","it"],["Ange Postecoglou","en"],["Eddie Howe","en"],
+    ["Enzo Maresca","it"],["Nuno Espírito Santo","pt"],["Marco Silva","pt"],["Andoni Iraola","es"],
+    ["Oliver Glasner","de"],["Thomas Frank","nl"],["Vincent Kompany","fr"],["Julian Nagelsmann","de"],
+    ["Sebastian Hoeneß","de"],["Paulo Fonseca","pt"],["Bruno Génésio","fr"],["Adi Hütter","de"],
+    ["Roger Schmidt","de"],["Peter Bosz","nl"],["Francesco Farioli","it"],["Sérgio Conceição","pt"],
+    ["Ernesto Valverde","es"],["Manuel Pellegrini","es"],["Marcelino","es"],["Zinedine Zidane","fr"],
+    ["Didier Deschamps","fr"],["Gareth Southgate","en"],["Roberto Martínez","es"],["Ronald Koeman","nl"],
+    ["Lionel Scaloni","ar"],["Marcelo Gallardo","ar"],["Ramón Díaz","ar"],["Gabriel Milito","ar"],
+    ["Martín Demichelis","ar"],["Abel Ferreira","pt"],["Tite","br"],["Dorival Júnior","br"],
+    ["Fernando Diniz","br"],["Renato Gaúcho","br"],["Cuca","br"],["Mano Menezes","br"],
+    ["Rogério Ceni","br"],["Odair Hellmann","br"],["Luis Zubeldía","ar"],["Artur Jorge","pt"],
+    ["Pedro Caixinha","pt"],["Filipe Luís","br"],["Gerardo Martino","ar"],["Gregg Berhalter","us"],
+    ["Mauricio Pochettino","ar"],["Vítor Pereira","pt"]
+  ].map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1] }; });
+
   // Distribuição de posições no elenco de 20 jogadores (2 GK, 7 DF, 7 MF, 4 FW)
   var POS_POOL = ["GK","GK","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
 
@@ -310,6 +333,10 @@
       leagues.push(league);
     });
 
+    // técnicos reais nos clubes mais fortes (os demais mantêm nome gerado)
+    clubs.slice().sort(function (a, b) { return b.strength - a.strength || (a.id < b.id ? -1 : 1); })
+      .forEach(function (c, i) { if (i < COACHES.length) { c.coach = COACHES[i].name; c.coachId = COACHES[i].id; } });
+
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = fullName(rng, n.culture); });
 
@@ -357,6 +384,7 @@
     nation: function (id) { return TM.data.world().nationsById[id]; },
     competitions: function () { return COMPETITIONS; },
     competition: function (id) { return COMPETITIONS_BY_ID[id] || null; },
+    coaches: function () { return COACHES; },
     // times que disputam uma competição -> { isNation, teamIds }
     competitionTeams: function (compId) {
       var W = TM.data.world();

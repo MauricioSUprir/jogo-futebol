@@ -174,9 +174,9 @@
       var players = rosterOverride || TM.data.clubPlayers(clubId);
       return { id: club.id, name: club.name, players: players, club: club };
     },
-    teamFromNation: function (natId) {
+    teamFromNation: function (natId, rosterOverride) {
       var nat = TM.data.nation(natId);
-      return { id: nat.id, name: nat.name, players: TM.data.nationSquad(natId), nation: nat };
+      return { id: nat.id, name: nat.name, players: rosterOverride || TM.data.nationSquad(natId), nation: nat };
     }
   };
 })(window);

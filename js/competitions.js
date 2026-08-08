@@ -334,7 +334,7 @@
     var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
     var career = {
       type: "club", teamId: clubId, teamName: club.name, leagueId: club.leagueId, season: 1,
-      coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null,
+      coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null, coachId: opts.coachId || null,
       money: money,
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),

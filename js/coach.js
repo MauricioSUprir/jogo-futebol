@@ -65,7 +65,10 @@
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
 
-    // personalização do técnico (nome + foto)
+    // ---- seu treinador: criar o seu OU escolher um existente ----
+    opts.coachMode = "create";
+    var coachArea = el("div", {});
+    // criar o seu (nome + foto)
     var photoBox = el("div", { class: "photo-drop small" }, [ el("span", { text: "📷 Foto" }) ]);
     var fileInput = el("input", { type: "file", accept: "image/*", style: "display:none" });
     photoBox.addEventListener("click", function () { fileInput.click(); });
@@ -85,8 +88,35 @@
       reader.readAsDataURL(file);
     });
     var nameInput = el("input", { class: "text-input", type: "text", placeholder: "Nome do treinador", maxlength: "24" });
-    nameInput.addEventListener("input", function () { opts.coachName = nameInput.value; });
-    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Seu treinador" }), el("div", { class: "coach-perso" }, [ photoBox, fileInput, nameInput ]) ]));
+    nameInput.addEventListener("input", function () { if (opts.coachMode === "create") opts.coachName = nameInput.value; });
+    var createBox = el("div", { class: "coach-perso" }, [ photoBox, fileInput, nameInput ]);
+    // escolher existente (lista dos ~70)
+    var coaches = TM.data.coaches().slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var existSel = el("select", { class: "select" });
+    existSel.appendChild(el("option", { value: "", text: "— escolha um treinador —" }));
+    coaches.forEach(function (co) { existSel.appendChild(el("option", { value: co.id, text: co.name })); });
+    existSel.addEventListener("change", function () {
+      var co = coaches.filter(function (c) { return c.id === existSel.value; })[0];
+      opts.coachName = co ? co.name : ""; opts.coachId = co ? co.id : null; opts.coachPhoto = null;
+    });
+    var existBox = el("div", { style: "display:none" }, [ existSel, el("div", { class: "setting-hint", text: "São cerca de 70 treinadores. Você pode comandar qualquer clube com o técnico escolhido." }) ]);
+
+    var modeSeg = el("div", { class: "segmented full" });
+    [["create", "Criar o meu"], ["existing", "Escolher existente"]].forEach(function (o) {
+      var b = el("button", { class: "seg-btn" + (opts.coachMode === o[0] ? " active" : ""), text: o[1], on: { click: function () {
+        opts.coachMode = o[0];
+        modeSeg.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active");
+        createBox.style.display = o[0] === "create" ? "" : "none";
+        existBox.style.display = o[0] === "existing" ? "" : "none";
+        if (o[0] === "create") { opts.coachName = nameInput.value; opts.coachId = null; }
+        else { var co = coaches.filter(function (c) { return c.id === existSel.value; })[0]; opts.coachName = co ? co.name : ""; opts.coachId = co ? co.id : null; }
+      } } });
+      modeSeg.appendChild(b);
+    });
+    coachArea.appendChild(modeSeg);
+    coachArea.appendChild(createBox);
+    coachArea.appendChild(existBox);
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Seu treinador" }), coachArea ]));
 
     // moeda
     var curWrap = el("div", { class: "segmented full" });
@@ -136,6 +166,7 @@
 
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Começar carreira", function () {
+        if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
         TM.ui.go("coach-hub");
       }, "btn primary big")
