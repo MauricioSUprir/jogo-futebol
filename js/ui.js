@@ -310,12 +310,38 @@
       screen.appendChild(el("h3", { class: "block-title comp-group", text: g[1] }));
       var grid = el("div", { class: "comp-grid" });
       list.forEach(function (c) {
-        grid.appendChild(el("div", { class: "comp-card" }, [
+        grid.appendChild(el("div", { class: "comp-card", on: { click: function () { go("competicao-times", { id: c.id }); } } }, [
           TM.img.compImg(c, "comp-logo"),
           el("div", { class: "comp-name", text: c.name })
         ]));
       });
       screen.appendChild(grid);
     });
+  });
+
+  // times que disputam uma competição
+  register("competicao-times", function (screen, params) {
+    var comp = TM.data.competition(params.id);
+    if (!comp) { go("competicoes"); return; }
+    screen.appendChild(topbar(comp.name, function () { go("competicoes"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("div", { class: "comp-head", style: "justify-content:center" }, [ TM.img.compImg(comp, "comp-head-logo") ]));
+    var info = TM.data.competitionTeams(comp.id);
+    var teams = info.teamIds.map(function (id) {
+      return info.isNation
+        ? { id: id, name: TM.data.nation(id).name, img: TM.img.nationImg(TM.data.nation(id), "cp-crest"), rating: null }
+        : { id: id, name: TM.data.club(id).name, img: TM.img.clubImg(TM.data.club(id), "cp-crest"), rating: TM.data.clubRating(id) };
+    });
+    if (!info.isNation) teams.sort(function (a, b) { return b.rating - a.rating; });
+    else teams.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    body.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: teams.length + (info.isNation ? " seleções" : " clubes") + " nesta competição." }));
+    var grid = el("div", { class: "club-grid" });
+    teams.forEach(function (t) {
+      var kids = [ t.img, el("div", { class: "cp-name", text: t.name }) ];
+      if (t.rating != null) kids.push(TM.ui.ovBadge(t.rating));
+      grid.appendChild(el("div", { class: "club-pick" }, kids));
+    });
+    body.appendChild(grid);
   });
 })(window);

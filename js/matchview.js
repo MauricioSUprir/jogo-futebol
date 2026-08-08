@@ -24,8 +24,16 @@
     var clockEl = el("div", { class: "live-min", text: "0'" });
     var progressFill = el("div", { class: "bc-progress-fill" });
     function coachOf(t) { return (t.club && t.club.coach) || (t.nation && t.nation.coach) || null; }
+    function crestOf(t) {
+      if (t.club) return TM.img.clubImg(t.club, "bc-crest");
+      if (t.nation) return TM.img.nationImg(t.nation, "bc-crest");
+      return null;
+    }
     function teamCol(t) {
-      var kids = [ el("div", { class: "bc-team-name", text: t.name }) ];
+      var kids = [];
+      var cr = crestOf(t);
+      if (cr) kids.push(cr);
+      kids.push(el("div", { class: "bc-team-name", text: t.name }));
       var co = coachOf(t);
       if (co) kids.push(el("div", { class: "bc-coach", text: "Téc. " + co }));
       return el("div", { class: "bc-team" }, kids);

@@ -504,7 +504,8 @@ html, body {
 .broadcast { width: 100%; max-width: 620px; background: linear-gradient(160deg, var(--panel), var(--black-soft));
   border: 1px solid rgba(34,197,94,.25); border-radius: 16px; padding: 16px; margin-bottom: 12px; }
 .bc-top { display: flex; align-items: center; gap: 10px; }
-.bc-team { flex: 1; text-align: center; }
+.bc-team { flex: 1; text-align: center; display: flex; flex-direction: column; align-items: center; }
+.bc-crest { width: 46px; height: 46px; object-fit: contain; margin-bottom: 5px; }
 .bc-team-name { font-weight: 700; font-size: 14px; }
 .bc-coach { font-size: 10.5px; color: var(--text-dim); margin-top: 3px; }
 .bc-center { display: flex; flex-direction: column; align-items: center; min-width: 96px; }
@@ -629,6 +630,9 @@ html, body {
   padding: 16px 18px; border-radius: 12px; background: var(--panel); border: 1px solid rgba(255,255,255,.07);
   color: var(--text); cursor: pointer; transition: all .15s ease; }
 .comp-list-item:hover { border-color: var(--gold); transform: translateX(2px); }
+.cli-left { display: flex; align-items: center; gap: 12px; text-align: left; }
+.cli-logo { width: 42px; height: 42px; object-fit: contain; background: #fff; border-radius: 9px; padding: 4px; box-sizing: border-box; flex-shrink: 0; }
+.cli-logo.comp-onblack { background: transparent !important; padding: 0 !important; }
 .cli-name { font-weight: 700; font-size: 15px; }
 .cli-sub { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
 .filter-panel { gap: 10px; margin-bottom: 8px; }

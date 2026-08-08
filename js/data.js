@@ -357,6 +357,39 @@
     nation: function (id) { return TM.data.world().nationsById[id]; },
     competitions: function () { return COMPETITIONS; },
     competition: function (id) { return COMPETITIONS_BY_ID[id] || null; },
+    // times que disputam uma competição -> { isNation, teamIds }
+    competitionTeams: function (compId) {
+      var W = TM.data.world();
+      // ligas e copas nacionais: clubes da liga correspondente
+      if (compId.indexOf("lg-") === 0 || compId.indexOf("cup-") === 0) {
+        var lg = W.leaguesById[compId.slice(3)];
+        return { isNation: false, teamIds: lg ? lg.clubIds.slice() : [] };
+      }
+      // continentais de clubes: melhores clubes das ligas da região
+      var CONT = {
+        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32 },
+        "cont-sa": { leagues: ["br", "ar"], size: 32 },
+        "cont-na": { leagues: ["us"], size: 16 }
+      };
+      if (CONT[compId]) {
+        var def = CONT[compId], pool = [];
+        def.leagues.forEach(function (l) { var L = W.leaguesById[l]; if (L) pool = pool.concat(L.clubIds); });
+        pool.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+        return { isNation: false, teamIds: pool.slice(0, def.size) };
+      }
+      // copas de seleções
+      if (compId === "nat-world") return { isNation: true, teamIds: NATIONS.map(function (n) { return n.id; }) };
+      var NAT = {
+        "nat-america": ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay"],
+        "nat-euro": ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine"],
+        "nat-africa": ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"]
+      };
+      if (NAT[compId]) {
+        var ids = NAT[compId].map(function (nm) { var n = TM.data.nationByName(nm); return n ? n.id : null; }).filter(Boolean);
+        return { isNation: true, teamIds: ids };
+      }
+      return { isNation: false, teamIds: [] };
+    },
     clubPlayers: function (clubId) {
       return TM.data.club(clubId).playerIds.map(TM.data.player)
         .sort(function (a, b) { return b.overall - a.overall; });

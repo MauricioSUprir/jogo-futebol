@@ -20,6 +20,15 @@
     champions:    { name: "Champions League", leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32, groups: 8 }
   };
 
+  // mapeia a competição do modo-jogar para o id do logo (registro de COMPETITIONS)
+  function compImgId(catKey, id) {
+    if (catKey === "league") return "lg-" + id;
+    if (catKey === "domestic") return "cup-" + id;
+    if (catKey === "continental") return id === "champions" ? "cont-eu" : id === "libertadores" ? "cont-sa" : null;
+    if (catKey === "nation") return "nat-" + id; // world/america/euro/africa
+    return null;
+  }
+
   function topClubs(leagueId, n) {
     return TM.data.league(leagueId).clubIds.slice().sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, n);
   }
@@ -169,8 +178,12 @@
       Object.keys(NAT_GROUPS).forEach(function (k) { items.push({ catKey: "nation", id: k, name: NAT_GROUPS[k].name, sub: NAT_GROUPS[k].size + " seleções · grupos + mata-mata" }); });
     }
     items.forEach(function (it) {
+      var cid = compImgId(it.catKey, it.id);
+      var kids = [];
+      if (cid) kids.push(TM.img.compImg(cid, "cli-logo"));
+      kids.push(E("div", { class: "cli-text" }, [ E("div", { class: "cli-name", text: it.name }), E("div", { class: "cli-sub", text: it.sub }) ]));
       body.appendChild(E("button", { class: "comp-list-item", on: { click: function () { TM.ui.go("compmode-team", it); } } }, [
-        E("div", {}, [ E("div", { class: "cli-name", text: it.name }), E("div", { class: "cli-sub", text: it.sub }) ]),
+        E("div", { class: "cli-left" }, kids),
         E("span", { class: "side-arrow", text: "→", style: "opacity:1" })
       ]));
     });
