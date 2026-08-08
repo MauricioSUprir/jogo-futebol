@@ -192,6 +192,7 @@ html, body {
 /* ================= SPLASH: EMBLEMA + INFO ================= */
 .emblem { width: 170px; margin: 0 auto; filter: drop-shadow(0 8px 24px rgba(34,197,94,.3)); animation: float 4s ease-in-out infinite; }
 .emblem svg { width: 100%; height: auto; display: block; }
+.splash-logo { width: clamp(200px, 56vw, 300px); height: auto; display: block; margin: 0 auto; filter: drop-shadow(0 8px 28px rgba(34,197,94,.35)); animation: float 4s ease-in-out infinite; }
 .stat-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 20px; }
 .stat-chip { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.04); border: 1px solid rgba(34,197,94,.22);
   padding: 7px 13px; border-radius: 20px; font-size: 12.5px; color: var(--text); }

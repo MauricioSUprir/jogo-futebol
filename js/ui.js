@@ -209,9 +209,8 @@
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
 
     var content = el("div", { class: "splash-content" }, [
-      el("div", { class: "emblem", "aria-hidden": "true", html: EMBLEM }),
+      el("img", { class: "splash-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
       el("h1", { class: "game-title", html: '<span class="title-total">TOTAL</span><span class="title-match">MATCH</span>' }),
-      el("p", { class: "tagline", text: "Simulação & Gestão de Futebol" }),
       el("div", { class: "stat-chips" }, [
         statChip("🎮", "4 modos de jogo"),
         statChip("🏆", "10 ligas + copas"),
