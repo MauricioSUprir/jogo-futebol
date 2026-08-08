@@ -107,7 +107,7 @@
     var chosen = opts.coachId ? TM.data.coaches().filter(function (c) { return c.id === opts.coachId; })[0] : null;
     var existBox = el("div", { style: opts.coachMode === "existing" ? "" : "display:none" }, [
       el("button", { class: "coach-pick-btn", on: { click: function () { TM.ui.go("coach-pick", { clubId: clubId }); } } },
-        chosen ? [ coachAvatar(chosen, "cpb-ava"), el("div", { class: "cpb-info" }, [ el("div", { class: "cpb-name", text: chosen.name }), el("div", { class: "cpb-sub", text: chosen.age + " anos · tocar para trocar" }) ]), el("span", { class: "cpb-arrow", text: "›" }) ]
+        chosen ? [ coachAvatar(chosen, "cpb-ava"), el("div", { class: "cpb-info" }, [ el("div", { class: "cpb-name", text: chosen.name }), el("div", { class: "cpb-sub", text: (TM.data.coachClub(chosen.id) ? TM.data.club(TM.data.coachClub(chosen.id)).name + " · " : "") + chosen.age + " anos · tocar para trocar" }) ]), TM.data.coachClub(chosen.id) ? TM.img.clubImg(TM.data.club(TM.data.coachClub(chosen.id)), "cpb-crest") : el("span", { class: "cpb-arrow", text: "›" }) ]
                : [ el("div", { class: "cpb-info" }, [ el("div", { class: "cpb-name", text: "Ver todos os treinadores" }), el("div", { class: "cpb-sub", text: "São ~70 — escolha o seu" }) ]), el("span", { class: "cpb-arrow", text: "›" }) ])
     ]);
 
@@ -199,13 +199,16 @@
     function render(q) {
       TM.ui.clear(grid);
       coaches.filter(function (co) { return !q || co.name.toLowerCase().indexOf(q) >= 0; }).forEach(function (co) {
+        var coClubId = TM.data.coachClub(co.id);
+        var avaWrap = el("div", { class: "cc-ava-wrap" }, [ coachAvatar(co, "cc-ava") ]);
+        if (coClubId) avaWrap.appendChild(TM.img.clubImg(TM.data.club(coClubId), "cc-club-crest"));
         var card = el("div", { class: "coach-card" + (pendingSetup.coachId === co.id ? " selected" : ""), on: { click: function () {
           pendingSetup.coachId = co.id; pendingSetup.coachName = co.name; pendingSetup.coachMode = "existing"; pendingSetup.coachPhoto = null;
           TM.ui.go("coach-setup", { clubId: clubId });
         } } }, [
-          coachAvatar(co, "cc-ava"),
+          avaWrap,
           el("div", { class: "cc-name", text: co.name }),
-          el("div", { class: "cc-age", text: co.age + " anos" })
+          el("div", { class: "cc-age", text: (coClubId ? TM.data.club(coClubId).name + " · " : "") + co.age + " anos" })
         ]);
         grid.appendChild(card);
       });

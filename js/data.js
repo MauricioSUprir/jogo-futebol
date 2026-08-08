@@ -416,6 +416,12 @@
     competitions: function () { return COMPETITIONS; },
     competition: function (id) { return COMPETITIONS_BY_ID[id] || null; },
     coaches: function () { return COACHES; },
+    // clubId do time que o treinador comanda (ou null se for livre)
+    coachClub: function (coachId) {
+      var W = TM.data.world();
+      if (!W._coachClub) { W._coachClub = {}; W.clubs.forEach(function (c) { if (c.coachId) W._coachClub[c.coachId] = c.id; }); }
+      return W._coachClub[coachId] || null;
+    },
     // times que disputam uma competição -> { isNation, teamIds }
     competitionTeams: function (compId) {
       var W = TM.data.world();
