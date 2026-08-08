@@ -10,7 +10,7 @@
   /* ---------- catálogo de competições ---------- */
   // seleções por confederação (nomes reais existentes no jogo)
   var NAT_GROUPS = {
-    world:   { name: "Copa do Mundo",           size: 32, groups: 8, all: true },
+    world:   { name: "Copa do Mundo",           size: 48, groups: 12, all: true, bestThirds: 8 },
     america: { name: "Copa América",            size: 8,  groups: 2, list: ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay"] },
     euro:    { name: "Eurocopa",                size: 16, groups: 4, list: ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine"] },
     africa:  { name: "Copa Africana de Nações",  size: 8,  groups: 2, list: ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"] }
@@ -45,7 +45,7 @@
       var def2 = NAT_GROUPS[id], ids;
       if (def2.all) ids = TM.data.world().nations.map(function (n) { return n.id; }).sort(function (a, b) { return natRating(b) - natRating(a); }).slice(0, def2.size);
       else ids = def2.list.map(natIdByName).filter(Boolean).slice(0, def2.size);
-      return { name: def2.name, isNation: true, kind: "tournament", teamIds: ids, groups: def2.groups, perGroup: 4 };
+      return { name: def2.name, isNation: true, kind: "tournament", teamIds: ids, groups: def2.groups, perGroup: 4, bestThirds: def2.bestThirds || 0 };
     }
   }
 
@@ -81,7 +81,7 @@
     var s = { name: built.name, isNation: built.isNation, kind: built.kind, userId: userId };
     if (built.kind === "league") { s.teamIds = built.teamIds; s.fixtures = doubleRoundRobin(built.teamIds); s.round = 0; s.table = emptyTable(built.teamIds); }
     else if (built.kind === "ko") { s.teamIds = shuffle(built.teamIds); s.rounds = []; s.roundIndex = 0; s.aliveUser = true; s.championId = null; }
-    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, userId: userId }); }
+    else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, bestThirds: built.bestThirds || 0, userId: userId }); }
     return s;
   }
 

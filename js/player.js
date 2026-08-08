@@ -516,11 +516,9 @@
   // Copa do Mundo (a cada 4 temporadas, igual ao treinador) ou amistosos
   function setupPlayerNatSeason(c) {
     if (c.season % 4 === 1) {
-      var teams = TM.data.world().nations.map(function (n) { return n.id; })
-        .filter(function (id) { return id !== c.nationId; })
-        .sort(function (a, b) { return TM.comp.natRating(b) - TM.comp.natRating(a); }).slice(0, 31);
-      teams.push(c.nationId);
-      c.natSeason = { type: "wc", tour: TM.tournament.create(teams, { groups: 8, perGroup: 4, advance: 2, userId: c.nationId }), matchNo: 0 };
+      // formato 2026: 48 seleções, 12 grupos, 2 por grupo + 8 melhores 3os
+      var teams = TM.data.world().nations.map(function (n) { return n.id; });
+      c.natSeason = { type: "wc", tour: TM.tournament.create(teams, { groups: 12, perGroup: 4, advance: 2, bestThirds: 8, userId: c.nationId }), matchNo: 0 };
     } else {
       var others = TM.data.world().nations.filter(function (n) { return n.id !== c.nationId; });
       var games = [];

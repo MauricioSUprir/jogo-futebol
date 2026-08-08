@@ -33,6 +33,7 @@
     }
     return {
       phase: "group", groups: groups, groupRound: 0, groupRounds: (perGroup - 1) * (dbl ? 2 : 1), advance: opts.advance || 2,
+      bestThirds: opts.bestThirds || 0,   // Copa do Mundo 48: melhores 3os colocados também avançam
       userId: opts.userId, ko: null, championId: null, aliveUser: true, userQualified: null
     };
   }
@@ -62,10 +63,23 @@
 
   // constrói o chaveamento a partir dos classificados (cruzando 1º x 2º de grupos vizinhos)
   function buildKO(state) {
-    var winners = state.groups.map(function (g) { return standings(g.table)[0].id; });
-    var runners = state.groups.map(function (g) { return standings(g.table)[1].id; });
+    var winners = state.groups.map(function (g) { return standings(g.table)[0]; });
+    var runners = state.groups.map(function (g) { return standings(g.table)[1]; });
     var ids = [];
-    for (var i = 0; i < winners.length; i++) { ids.push(winners[i]); ids.push(runners[(i + 1) % runners.length]); }
+    if (state.bestThirds) {
+      // formato Copa do Mundo 48: 2 por grupo + melhores 3os colocados
+      var thirds = state.groups.map(function (g) { return standings(g.table)[2]; }).filter(Boolean);
+      thirds.sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf; });
+      var qual = thirds.slice(0, state.bestThirds).map(function (t) { return t.id; });
+      var run = runners.map(function (r) { return r.id; });
+      var half = Math.floor(run.length / 2);
+      var lowers = run.slice(half).concat(run.slice(0, half)).concat(qual); // rotaciona vices p/ não repetir grupo
+      var win = winners.map(function (w) { return w.id; });
+      for (var i = 0; i < win.length; i++) { ids.push(win[i]); ids.push(lowers[i]); }        // vencedor x (vice/3o)
+      for (var j = win.length; j + 1 < lowers.length; j += 2) { ids.push(lowers[j]); ids.push(lowers[j + 1]); } // resto entre si
+    } else {
+      for (var k = 0; k < winners.length; k++) { ids.push(winners[k].id); ids.push(runners[(k + 1) % runners.length].id); }
+    }
     state.ko = { teamIds: ids, rounds: [], roundIndex: 0 };
     state.userQualified = ids.indexOf(state.userId) >= 0;
     if (!state.userQualified) state.aliveUser = false;
@@ -116,7 +130,7 @@
     }
   }
 
-  function koTitle(n) { return ({ 16: "Oitavas", 8: "Quartas", 4: "Semifinal", 2: "Final", 1: "Final" })[n] || (n + " times"); }
+  function koTitle(n) { return ({ 32: "16 avos de final", 16: "Oitavas", 8: "Quartas", 4: "Semifinal", 2: "Final", 1: "Final" })[n] || (n + " times"); }
   function isDone(state) { return state.phase === "done" || !!state.championId; }
 
   TM.tournament = {

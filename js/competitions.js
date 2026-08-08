@@ -486,11 +486,10 @@
   }
   // Copa do Mundo: 32 seleções (a do treinador + 31 melhores), grupos + mata-mata
   function buildWorldCup(natId) {
-    var teams = TM.data.world().nations.map(function (n) { return n.id; }).filter(function (id) { return id !== natId; })
-      .sort(function (a, b) { return natRating(b) - natRating(a); }).slice(0, 31);
-    teams.push(natId);
-    return { tour: TM.tournament.create(teams, { groups: 8, perGroup: 4, advance: 2, userId: natId }),
-      openDay: 100, deadlineDay: 112, matchDays: [118, 123, 128, 135, 142, 149, 156], wcMatchNo: 0, convoked: false };
+    // formato 2026: 48 seleções, 12 grupos de 4; passam os 2 primeiros + 8 melhores 3os = 32 (16 avos)
+    var teams = TM.data.world().nations.map(function (n) { return n.id; });
+    return { tour: TM.tournament.create(teams, { groups: 12, perGroup: 4, advance: 2, bestThirds: 8, userId: natId }),
+      openDay: 100, deadlineDay: 112, matchDays: [116, 121, 126, 132, 138, 144, 150, 156], wcMatchNo: 0, convoked: false };
   }
   // define o "calendário" da seleção na temporada: Copa do Mundo (de 4 em 4 anos) ou amistosos
   function setupNationSeason(career) {
