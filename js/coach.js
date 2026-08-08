@@ -235,7 +235,10 @@
     var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
 
-    var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" }) : el("div", { class: "coach-mini placeholder", text: "👔" });
+    var myCoach = c.coachId ? TM.data.coaches().filter(function (x) { return x.id === c.coachId; })[0] : null;
+    var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" })
+      : myCoach ? TM.img.coachImg(myCoach, "coach-mini")
+      : el("div", { class: "coach-mini placeholder", text: "👔" });
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.clubImg(club, "ch-crest"),
       el("div", {}, [
