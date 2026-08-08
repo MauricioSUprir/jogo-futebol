@@ -78,39 +78,48 @@
       });
       box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Tática" }), tacRow ]));
 
-      // substituições
-      box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Substituições (" + subsUsed + "/3)" }) ]));
-      var subArea = el("div", { class: "sub-area" });
+      // substituições — campinho (igual à tela de elenco)
+      var counterLabel = el("label", { text: "Substituições (" + subsUsed + "/3)" });
+      box.appendChild(el("div", { class: "pause-field" }, [ counterLabel ]));
+      var subArea = el("div", { class: "pause-lineup" });
       box.appendChild(subArea);
       var selOut = { idx: null };
+      var FORMS = (TM.comp && TM.comp.FORMATIONS) || {};
+      var formation = cfg.formation || "4-4-2";
       function renderSubs() {
         TM.ui.clear(subArea);
-        var xiCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Em campo" }) ]);
+        var slots = FORMS[formation] || FORMS["4-4-2"] || [];
+        var pitch = el("div", { class: "pitch" });
+        pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+        pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
         team.players.slice(0, 11).forEach(function (pl, i) {
-          xiCol.appendChild(el("button", { class: "sub-chip" + (selOut.idx === i ? " sel" : ""), on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } }, [
-            el("span", { class: "sc-pos", text: TM.data.posLabel(pl) }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
+          var slot = slots[i] || [null, 50, 50];
+          pitch.appendChild(el("button", { class: "pl-chip" + (selOut.idx === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+            on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } }, [
+            el("span", { class: "chip-ov", text: pl.overall }),
+            el("span", { class: "chip-name", text: shortP(pl.name) })
           ]));
         });
-        var beCol = el("div", { class: "sub-col" }, [ el("div", { class: "sub-col-h", text: "Reservas" }) ]);
+        subArea.appendChild(pitch);
+        subArea.appendChild(el("div", { class: "lineup-hint", text: selOut.idx != null ? "Toque num reserva para colocá-lo no lugar do titular." : "Toque num titular e depois num reserva para trocar." }));
+        var benchWrap = el("div", { class: "pause-bench" }, [ el("div", { class: "sub-col-h", text: "Reservas" }) ]);
         team.players.slice(11, 24).forEach(function (pl, bi) {
-          beCol.appendChild(el("button", { class: "sub-chip bench", on: { click: function () {
-            if (selOut.idx == null) { return; }
-            if (subsUsed >= 3) { return; }
+          var row = TM.ui.playerRow(pl, {});
+          row.classList.add("clickable");
+          row.addEventListener("click", function () {
+            if (selOut.idx == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
+            if (subsUsed >= 3) { TM.ui.toast("Você já fez 3 substituições"); return; }
             var oi = selOut.idx, bidx = 11 + bi;
             var tmp = team.players[oi]; team.players[oi] = team.players[bidx]; team.players[bidx] = tmp;
             subsUsed++; selOut.idx = null;
-            box.querySelector(".pause-field label").textContent; // noop
+            counterLabel.textContent = "Substituições (" + subsUsed + "/3)";
             renderSubs();
-            box.querySelectorAll(".pause-field label")[1].textContent = "Substituições (" + subsUsed + "/3)";
-          } } }, [
-            el("span", { class: "sc-pos", text: TM.data.posLabel(pl) }), el("span", { class: "sc-name", text: shortP(pl.name) }), el("span", { class: "sc-ov", text: pl.overall })
-          ]));
+          });
+          benchWrap.appendChild(row);
         });
-        subArea.appendChild(xiCol); subArea.appendChild(beCol);
+        subArea.appendChild(benchWrap);
       }
       renderSubs();
-
-      box.appendChild(el("div", { class: "pause-hint", text: "Toque num titular e depois num reserva para trocar." }));
       box.appendChild(TM.ui.button("▶ Retomar partida", function () {
         overlay.remove();
         resimRest();

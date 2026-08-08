@@ -454,7 +454,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     var label = C().wcRoundLabel(c, m);
     TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, title: "Copa do Mundo · " + label, pauseSide: userSide, simOpts: simOpts,
+      teamA: teamA, teamB: teamB, result: result, title: "Copa do Mundo · " + label, pauseSide: userSide, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
       onBack: function () { TM.ui.go("coach-nation"); },
       onDone: function () {
         C().applyWorldCupResult(c, result.score[0], result.score[1]);
@@ -607,7 +607,7 @@
     var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: 0, tactic: c.nation.tactic };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, title: "Amistoso · " + c.nation.name, pauseSide: 0, simOpts: simOpts,
+      teamA: teamA, teamB: teamB, result: result, title: "Amistoso · " + c.nation.name, pauseSide: 0, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
       onBack: function () { TM.ui.go("coach-nation"); },
       onDone: function () {
         w.played = true; w.hs = result.score[0]; w.as = result.score[1];
@@ -630,7 +630,7 @@
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
-      pauseSide: userSide, simOpts: simOpts,
+      pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation,
       onBack: function () { TM.ui.go("coach-hub"); },
       onDone: function () {
         C().processUserMatch(c, result, userSide);
