@@ -221,28 +221,28 @@
     return { id: "nat" + i, name: n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
 
-  // ~70 treinadores reais — [nome, cultura]. Os mais fortes vão para os clubes
-  // mais fortes; o jogador também pode escolher um deles na carreira de treinador.
+  // ~70 treinadores reais — [nome, cultura, idade]. Os mais fortes vão para os
+  // clubes mais fortes; o jogador também pode escolher um deles na carreira.
   var COACHES = [
-    ["Pep Guardiola","es"],["Carlo Ancelotti","it"],["Diego Simeone","ar"],["Jürgen Klopp","de"],
-    ["José Mourinho","pt"],["Antonio Conte","it"],["Xabi Alonso","es"],["Hansi Flick","de"],
-    ["Mikel Arteta","es"],["Arne Slot","nl"],["Luis Enrique","es"],["Simone Inzaghi","it"],
-    ["Unai Emery","es"],["Rúben Amorim","pt"],["Erik ten Hag","nl"],["Roberto De Zerbi","it"],
-    ["Thiago Motta","it"],["Gian Piero Gasperini","it"],["Massimiliano Allegri","it"],["Maurizio Sarri","it"],
-    ["Stefano Pioli","it"],["Vincenzo Italiano","it"],["Ange Postecoglou","en"],["Eddie Howe","en"],
-    ["Enzo Maresca","it"],["Nuno Espírito Santo","pt"],["Marco Silva","pt"],["Andoni Iraola","es"],
-    ["Oliver Glasner","de"],["Thomas Frank","nl"],["Vincent Kompany","fr"],["Julian Nagelsmann","de"],
-    ["Sebastian Hoeneß","de"],["Paulo Fonseca","pt"],["Bruno Génésio","fr"],["Adi Hütter","de"],
-    ["Roger Schmidt","de"],["Peter Bosz","nl"],["Francesco Farioli","it"],["Sérgio Conceição","pt"],
-    ["Ernesto Valverde","es"],["Manuel Pellegrini","es"],["Marcelino","es"],["Zinedine Zidane","fr"],
-    ["Didier Deschamps","fr"],["Gareth Southgate","en"],["Roberto Martínez","es"],["Ronald Koeman","nl"],
-    ["Lionel Scaloni","ar"],["Marcelo Gallardo","ar"],["Ramón Díaz","ar"],["Gabriel Milito","ar"],
-    ["Martín Demichelis","ar"],["Abel Ferreira","pt"],["Tite","br"],["Dorival Júnior","br"],
-    ["Fernando Diniz","br"],["Renato Gaúcho","br"],["Cuca","br"],["Mano Menezes","br"],
-    ["Rogério Ceni","br"],["Odair Hellmann","br"],["Luis Zubeldía","ar"],["Artur Jorge","pt"],
-    ["Pedro Caixinha","pt"],["Filipe Luís","br"],["Gerardo Martino","ar"],["Gregg Berhalter","us"],
-    ["Mauricio Pochettino","ar"],["Vítor Pereira","pt"]
-  ].map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1] }; });
+    ["Pep Guardiola","es",54],["Carlo Ancelotti","it",66],["Diego Simeone","ar",55],["Jürgen Klopp","de",58],
+    ["José Mourinho","pt",62],["Antonio Conte","it",56],["Xabi Alonso","es",44],["Hansi Flick","de",60],
+    ["Mikel Arteta","es",43],["Arne Slot","nl",47],["Luis Enrique","es",55],["Simone Inzaghi","it",49],
+    ["Unai Emery","es",54],["Rúben Amorim","pt",41],["Erik ten Hag","nl",55],["Roberto De Zerbi","it",46],
+    ["Thiago Motta","it",43],["Gian Piero Gasperini","it",67],["Massimiliano Allegri","it",58],["Maurizio Sarri","it",66],
+    ["Stefano Pioli","it",60],["Vincenzo Italiano","it",48],["Ange Postecoglou","en",60],["Eddie Howe","en",48],
+    ["Enzo Maresca","it",45],["Nuno Espírito Santo","pt",51],["Marco Silva","pt",48],["Andoni Iraola","es",43],
+    ["Oliver Glasner","de",51],["Thomas Frank","nl",52],["Vincent Kompany","fr",39],["Julian Nagelsmann","de",38],
+    ["Sebastian Hoeneß","de",43],["Paulo Fonseca","pt",52],["Bruno Génésio","fr",59],["Adi Hütter","de",55],
+    ["Roger Schmidt","de",58],["Peter Bosz","nl",61],["Francesco Farioli","it",36],["Sérgio Conceição","pt",50],
+    ["Ernesto Valverde","es",61],["Manuel Pellegrini","es",72],["Marcelino","es",60],["Zinedine Zidane","fr",53],
+    ["Didier Deschamps","fr",57],["Gareth Southgate","en",55],["Roberto Martínez","es",52],["Ronald Koeman","nl",62],
+    ["Lionel Scaloni","ar",47],["Marcelo Gallardo","ar",49],["Ramón Díaz","ar",66],["Gabriel Milito","ar",44],
+    ["Martín Demichelis","ar",44],["Abel Ferreira","pt",46],["Tite","br",64],["Dorival Júnior","br",63],
+    ["Fernando Diniz","br",51],["Renato Gaúcho","br",63],["Cuca","br",62],["Mano Menezes","br",63],
+    ["Rogério Ceni","br",52],["Odair Hellmann","br",53],["Luis Zubeldía","ar",44],["Artur Jorge","pt",53],
+    ["Pedro Caixinha","pt",54],["Filipe Luís","br",40],["Gerardo Martino","ar",63],["Gregg Berhalter","us",52],
+    ["Mauricio Pochettino","ar",53],["Vítor Pereira","pt",57]
+  ].map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2] }; });
 
   // Distribuição de posições no elenco de 20 jogadores (2 GK, 7 DF, 7 MF, 4 FW)
   var POS_POOL = ["GK","GK","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];

@@ -12,6 +12,16 @@
 
   function roundTitle(nTies) { return ({ 8: "Oitavas de final", 4: "Quartas de final", 2: "Semifinal", 1: "Final" })[nTies] || (nTies * 2 + " times"); }
 
+  // rascunho da configuração de carreira (persiste ao abrir a lista de treinadores e voltar)
+  var pendingSetup = null;
+  // avatar simples do treinador (iniciais em círculo colorido) enquanto não há foto real
+  function coachAvatar(co, cls) {
+    if (co.photo) return el("img", { src: co.photo, class: cls });
+    var parts = co.name.split(" "), ini = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
+    var h = 0; for (var i = 0; i < co.name.length; i++) h = (h * 31 + co.name.charCodeAt(i)) % 360;
+    return el("div", { class: cls + " coach-ava", style: "background:hsl(" + h + ",42%,32%)" }, [ el("span", { text: ini }) ]);
+  }
+
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
     if (TM.storage.coachCareer()) { TM.ui.go("coach-hub"); return; }
@@ -54,9 +64,13 @@
   TM.ui.register("coach-setup", function (screen, params) {
     var clubId = params.clubId;
     var club = TM.data.club(clubId);
-    var opts = { currency: "eur", injection: 0, coachName: "", coachPhoto: null };
+    // reusa o rascunho ao voltar da lista de treinadores; senão começa novo
+    if (!pendingSetup || pendingSetup.clubId !== clubId) {
+      pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "create", nationId: null };
+    }
+    var opts = pendingSetup;
 
-    screen.appendChild(TM.ui.topbar("Opções da carreira", function () { TM.ui.go("coach"); }));
+    screen.appendChild(TM.ui.topbar("Opções da carreira", function () { pendingSetup = null; TM.ui.go("coach"); }));
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.clubImg(club, "ch-crest"),
       el("div", {}, [ el("div", { class: "ch-name", text: club.name }), el("div", { class: "ch-sub", text: TM.data.league(club.leagueId).name } ) ])
@@ -66,10 +80,9 @@
     screen.appendChild(body);
 
     // ---- seu treinador: criar o seu OU escolher um existente ----
-    opts.coachMode = "create";
     var coachArea = el("div", {});
     // criar o seu (nome + foto)
-    var photoBox = el("div", { class: "photo-drop small" }, [ el("span", { text: "📷 Foto" }) ]);
+    var photoBox = el("div", { class: "photo-drop small" }, [ opts.coachPhoto ? el("img", { src: opts.coachPhoto, class: "photo-img" }) : el("span", { text: "📷 Foto" }) ]);
     var fileInput = el("input", { type: "file", accept: "image/*", style: "display:none" });
     photoBox.addEventListener("click", function () { fileInput.click(); });
     fileInput.addEventListener("change", function () {
@@ -87,19 +100,16 @@
       };
       reader.readAsDataURL(file);
     });
-    var nameInput = el("input", { class: "text-input", type: "text", placeholder: "Nome do treinador", maxlength: "24" });
-    nameInput.addEventListener("input", function () { if (opts.coachMode === "create") opts.coachName = nameInput.value; });
-    var createBox = el("div", { class: "coach-perso" }, [ photoBox, fileInput, nameInput ]);
-    // escolher existente (lista dos ~70)
-    var coaches = TM.data.coaches().slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
-    var existSel = el("select", { class: "select" });
-    existSel.appendChild(el("option", { value: "", text: "— escolha um treinador —" }));
-    coaches.forEach(function (co) { existSel.appendChild(el("option", { value: co.id, text: co.name })); });
-    existSel.addEventListener("change", function () {
-      var co = coaches.filter(function (c) { return c.id === existSel.value; })[0];
-      opts.coachName = co ? co.name : ""; opts.coachId = co ? co.id : null; opts.coachPhoto = null;
-    });
-    var existBox = el("div", { style: "display:none" }, [ existSel, el("div", { class: "setting-hint", text: "São cerca de 70 treinadores. Você pode comandar qualquer clube com o técnico escolhido." }) ]);
+    var nameInput = el("input", { class: "text-input", type: "text", placeholder: "Nome do treinador", maxlength: "24", value: opts.coachMode === "create" ? (opts.coachName || "") : "" });
+    nameInput.addEventListener("input", function () { if (opts.coachMode === "create") { opts.coachName = nameInput.value; opts.coachId = null; } });
+    var createBox = el("div", { class: "coach-perso", style: opts.coachMode === "create" ? "" : "display:none" }, [ photoBox, fileInput, nameInput ]);
+    // escolher existente → abre a tela com todos os treinadores
+    var chosen = opts.coachId ? TM.data.coaches().filter(function (c) { return c.id === opts.coachId; })[0] : null;
+    var existBox = el("div", { style: opts.coachMode === "existing" ? "" : "display:none" }, [
+      el("button", { class: "coach-pick-btn", on: { click: function () { TM.ui.go("coach-pick", { clubId: clubId }); } } },
+        chosen ? [ coachAvatar(chosen, "cpb-ava"), el("div", { class: "cpb-info" }, [ el("div", { class: "cpb-name", text: chosen.name }), el("div", { class: "cpb-sub", text: chosen.age + " anos · tocar para trocar" }) ]), el("span", { class: "cpb-arrow", text: "›" }) ]
+               : [ el("div", { class: "cpb-info" }, [ el("div", { class: "cpb-name", text: "Ver todos os treinadores" }), el("div", { class: "cpb-sub", text: "São ~70 — escolha o seu" }) ]), el("span", { class: "cpb-arrow", text: "›" }) ])
+    ]);
 
     var modeSeg = el("div", { class: "segmented full" });
     [["create", "Criar o meu"], ["existing", "Escolher existente"]].forEach(function (o) {
@@ -109,7 +119,7 @@
         createBox.style.display = o[0] === "create" ? "" : "none";
         existBox.style.display = o[0] === "existing" ? "" : "none";
         if (o[0] === "create") { opts.coachName = nameInput.value; opts.coachId = null; }
-        else { var co = coaches.filter(function (c) { return c.id === existSel.value; })[0]; opts.coachName = co ? co.name : ""; opts.coachId = co ? co.id : null; }
+        else { opts.coachName = chosen ? chosen.name : ""; opts.coachId = chosen ? chosen.id : null; }
       } } });
       modeSeg.appendChild(b);
     });
@@ -131,7 +141,7 @@
 
     // aporte financeiro
     var injVal = el("span", { class: "range-val" });
-    var injSlider = el("input", { type: "range", min: 0, max: 700, step: 10, value: 0, class: "slider" });
+    var injSlider = el("input", { type: "range", min: 0, max: 700, step: 10, value: opts.injection || 0, class: "slider" });
     injSlider.addEventListener("input", function () { opts.injection = parseInt(injSlider.value, 10); updateInfo(); });
     body.appendChild(el("div", { class: "setting" }, [
       el("div", { class: "setting-label" }, [ document.createTextNode("Aporte financeiro (opcional)"), injVal ]),
@@ -145,8 +155,8 @@
       if (opts.nationId) { opts.nationId = null; } else { opts.nationId = natSel.value; }
       natToggle.classList.toggle("on", !!opts.nationId); natSel.style.display = opts.nationId ? "block" : "none";
     } } }, [ el("span", { class: "switch-knob" }) ]);
-    var natSel = el("select", { class: "select", style: "display:none;margin-top:8px" });
-    TM.data.world().nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (n) { natSel.appendChild(el("option", { value: n.id, text: n.name })); });
+    var natSel = el("select", { class: "select", style: (opts.nationId ? "" : "display:none;") + "margin-top:8px" });
+    TM.data.world().nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (n) { natSel.appendChild(el("option", { value: n.id, text: n.name, selected: n.id === opts.nationId })); });
     natSel.addEventListener("change", function () { if (opts.nationId) opts.nationId = natSel.value; });
     natWrap.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "🌍 Comandar também uma seleção" }), natToggle ]));
     natWrap.appendChild(natSel);
@@ -168,9 +178,40 @@
       TM.ui.button("Começar carreira", function () {
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
+        pendingSetup = null;
         TM.ui.go("coach-hub");
       }, "btn primary big")
     ]));
+  });
+
+  /* ---------- lista de treinadores (escolher existente) ---------- */
+  TM.ui.register("coach-pick", function (screen, params) {
+    var clubId = params.clubId;
+    if (!pendingSetup || pendingSetup.clubId !== clubId) pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "existing", nationId: null };
+    screen.appendChild(TM.ui.topbar("Escolha o treinador", function () { TM.ui.go("coach-setup", { clubId: clubId }); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var search = el("input", { class: "text-input", type: "text", placeholder: "🔎 Buscar treinador…" });
+    body.appendChild(search);
+    var grid = el("div", { class: "coach-grid" });
+    body.appendChild(grid);
+    var coaches = TM.data.coaches().slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    function render(q) {
+      TM.ui.clear(grid);
+      coaches.filter(function (co) { return !q || co.name.toLowerCase().indexOf(q) >= 0; }).forEach(function (co) {
+        var card = el("div", { class: "coach-card" + (pendingSetup.coachId === co.id ? " selected" : ""), on: { click: function () {
+          pendingSetup.coachId = co.id; pendingSetup.coachName = co.name; pendingSetup.coachMode = "existing"; pendingSetup.coachPhoto = null;
+          TM.ui.go("coach-setup", { clubId: clubId });
+        } } }, [
+          coachAvatar(co, "cc-ava"),
+          el("div", { class: "cc-name", text: co.name }),
+          el("div", { class: "cc-age", text: co.age + " anos" })
+        ]);
+        grid.appendChild(card);
+      });
+    }
+    search.addEventListener("input", function () { render(search.value.trim().toLowerCase()); });
+    render("");
   });
 
   /* ---------- hub ---------- */
