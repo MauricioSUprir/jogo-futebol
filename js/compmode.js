@@ -16,15 +16,16 @@
     africa:  { name: "Copa Africana de Nações",  size: 8,  groups: 2, list: ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"] }
   };
   var CONT_CLUB = {
-    libertadores: { name: "Libertadores",     leagues: ["br", "ar"],                         size: 32, groups: 8 },
-    champions:    { name: "Champions League", leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32, groups: 8 }
+    libertadores: { name: "Libertadores",     leagues: ["br", "ar"],                         size: 32, groups: 8, dbl: true, twoLeg: true },
+    champions:    { name: "Champions League", leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32, groups: 8, dbl: true, twoLeg: true },
+    mundial:      { name: "Mundial de Clubes", allLeagues: true,                              size: 32, groups: 8, dbl: false, twoLeg: false } // formato Copa do Mundo (jogo único)
   };
 
   // mapeia a competição do modo-jogar para o id do logo (registro de COMPETITIONS)
   function compImgId(catKey, id) {
     if (catKey === "league") return "lg-" + id;
     if (catKey === "domestic") return "cup-" + id;
-    if (catKey === "continental") return id === "champions" ? "cont-eu" : id === "libertadores" ? "cont-sa" : null;
+    if (catKey === "continental") return id === "champions" ? "cont-eu" : id === "libertadores" ? "cont-sa" : id === "mundial" ? "cwc-world" : null;
     if (catKey === "nation") return "nat-" + id; // world/america/euro/africa
     return null;
   }
@@ -46,9 +47,10 @@
     }
     if (catKey === "continental") {
       var def = CONT_CLUB[id], pool = [];
-      def.leagues.forEach(function (l) { pool = pool.concat(topClubs(l, Math.ceil(def.size / def.leagues.length) + 2)); });
+      if (def.allLeagues) { TM.data.world().leagues.forEach(function (L) { pool = pool.concat(topClubs(L.id, 6)); }); }
+      else { def.leagues.forEach(function (l) { pool = pool.concat(topClubs(l, Math.ceil(def.size / def.leagues.length) + 2)); }); }
       pool = pool.filter(function (x, i) { return pool.indexOf(x) === i; }).sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, def.size);
-      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4, dbl: true, twoLeg: true };
+      return { name: def.name, isNation: false, kind: "tournament", teamIds: pool, groups: def.groups, perGroup: 4, dbl: !!def.dbl, twoLeg: !!def.twoLeg };
     }
     if (catKey === "nation") {
       var def2 = NAT_GROUPS[id], ids;

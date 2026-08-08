@@ -184,6 +184,9 @@
     ["cont-eu", "Champions League", "continental", "#03063d", "#0f9bd7"],
     ["cont-sa", "Libertadores", "continental", "#0a6b3b", "#f2b100"],
     ["cont-na", "Copa dos Campeões (América do Norte)", "continental", "#1a1a1a", "#00b2a9"],
+    // Mundiais de clubes
+    ["cwc-world", "Mundial de Clubes", "mundial", "#c8a24a", "#0a2240"],
+    ["cwc-inter", "Intercontinental", "mundial", "#1a1a1a", "#c39e6d"],
     // Copas de seleções
     ["nat-world", "Copa do Mundo", "selecao", "#c8a24a", "#0a2240"],
     ["nat-america", "Copa América", "selecao", "#0a6b3b", "#ffd200"],
@@ -405,6 +408,15 @@
         pool.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
         return { isNation: false, teamIds: pool.slice(0, def.size) };
       }
+      // Mundial de Clubes: 32 melhores clubes de todas as ligas
+      if (compId === "cwc-world") {
+        var all = [];
+        W.leagues.forEach(function (L) { all = all.concat(L.clubIds); });
+        all.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+        return { isNation: false, teamIds: all.slice(0, 32) };
+      }
+      // Intercontinental: sem clubes fixos (campeão da Liberta x campeão da Champions, definido na carreira)
+      if (compId === "cwc-inter") return { isNation: false, teamIds: [], dynamic: true };
       // copas de seleções
       if (compId === "nat-world") return { isNation: true, teamIds: NATIONS.map(function (n) { return n.id; }) };
       var NAT = {

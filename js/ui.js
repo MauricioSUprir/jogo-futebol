@@ -301,6 +301,7 @@
       ["liga", "🏟️ Ligas Nacionais"],
       ["copa", "🏆 Copas Nacionais"],
       ["continental", "🌍 Continentais de Clubes"],
+      ["mundial", "🌎 Mundiais de Clubes"],
       ["selecao", "🏳️ Copas de Seleções"]
     ];
     var comps = TM.data.competitions();
@@ -328,6 +329,12 @@
     screen.appendChild(body);
     body.appendChild(el("div", { class: "comp-head", style: "justify-content:center" }, [ TM.img.compImg(comp, "comp-head-logo") ]));
     var info = TM.data.competitionTeams(comp.id);
+    if (info.dynamic || (!info.teamIds.length)) {
+      body.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: comp.id === "cwc-inter"
+        ? "Sem clubes fixos. É disputado no fim da temporada, em jogo único, entre o campeão da Libertadores e o campeão da Champions League — jogável nos modos Carreira."
+        : "Nenhum clube nesta competição ainda." }));
+      return;
+    }
     var teams = info.teamIds.map(function (id) {
       return info.isNation
         ? { id: id, name: TM.data.nation(id).name, img: TM.img.nationImg(TM.data.nation(id), "cp-crest"), rating: null }
