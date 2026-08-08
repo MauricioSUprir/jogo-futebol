@@ -57,17 +57,93 @@
     ar: ["FC","CA","Racing","Club","Atlético","Unión"], us: ["FC","City","SC","United","Rovers","Athletic"]
   };
   var LEAGUE_DEFS = [
-    { id: "br", name: "Liga do Brasil",     nation: "Brazil",      culture: "br" },
-    { id: "en", name: "Liga da Inglaterra", nation: "England",     culture: "en" },
-    { id: "es", name: "Liga da Espanha",    nation: "Spain",       culture: "es" },
-    { id: "it", name: "Liga da Itália",     nation: "Italy",       culture: "it" },
-    { id: "de", name: "Liga da Alemanha",   nation: "Germany",     culture: "de" },
-    { id: "fr", name: "Liga da França",     nation: "France",      culture: "fr" },
-    { id: "pt", name: "Liga de Portugal",   nation: "Portugal",    culture: "pt" },
-    { id: "nl", name: "Liga da Holanda",    nation: "Netherlands", culture: "nl" },
-    { id: "ar", name: "Liga da Argentina",  nation: "Argentina",   culture: "ar" },
-    { id: "us", name: "Liga dos EUA",       nation: "USA",         culture: "us" }
+    { id: "br", name: "Brasileirão Série A",  nation: "Brazil",      culture: "br" },
+    { id: "en", name: "Premier League",       nation: "England",     culture: "en" },
+    { id: "es", name: "LaLiga",               nation: "Spain",       culture: "es" },
+    { id: "it", name: "Serie A",              nation: "Italy",       culture: "it" },
+    { id: "de", name: "Bundesliga",           nation: "Germany",     culture: "de" },
+    { id: "fr", name: "Ligue 1",              nation: "France",      culture: "fr" },
+    { id: "pt", name: "Liga Portugal",        nation: "Portugal",    culture: "pt" },
+    { id: "nl", name: "Eredivisie",           nation: "Netherlands", culture: "nl" },
+    { id: "ar", name: "Liga Profesional",     nation: "Argentina",   culture: "ar" },
+    { id: "us", name: "Major League Soccer",  nation: "USA",         culture: "us" }
   ];
+
+  /* ---------- Clubes reais por liga: [nome, sigla, força] ----------
+     A força define o nível médio do elenco gerado (grandes = mais fortes).
+     Quantidade por liga = tamanho real (par, para o mata-mata de pontos-corridos). */
+  var REAL_CLUBS = {
+    br: [
+      ["Flamengo","FLA",84],["Palmeiras","PAL",84],["Botafogo","BOT",82],["São Paulo","SAO",81],
+      ["Fluminense","FLU",80],["Atlético Mineiro","CAM",80],["Corinthians","COR",79],["Grêmio","GRE",79],
+      ["Internacional","INT",79],["Cruzeiro","CRU",78],["Athletico Paranaense","CAP",77],["Fortaleza","FOR",77],
+      ["Bahia","BAH",76],["Red Bull Bragantino","RBB",76],["Vasco da Gama","VAS",76],["Cuiabá","CUI",71],
+      ["Vitória","VIT",71],["Juventude","JUV",70],["Criciúma","CRI",70],["Atlético Goianiense","ACG",69]
+    ],
+    en: [
+      ["Manchester City","MCI",88],["Arsenal","ARS",86],["Liverpool","LIV",86],["Manchester United","MUN",82],
+      ["Chelsea","CHE",82],["Tottenham Hotspur","TOT",82],["Newcastle United","NEW",82],["Aston Villa","AVL",81],
+      ["Brighton & Hove Albion","BHA",79],["West Ham United","WHU",78],["Everton","EVE",76],["Wolverhampton","WOL",76],
+      ["Crystal Palace","CRY",76],["Fulham","FUL",76],["Brentford","BRE",76],["Nottingham Forest","NFO",75],
+      ["AFC Bournemouth","BOU",75],["Leicester City","LEI",73],["Ipswich Town","IPS",71],["Southampton","SOU",71]
+    ],
+    es: [
+      ["Real Madrid","RMA",89],["Barcelona","BAR",86],["Atlético de Madrid","ATM",84],["Athletic Club","ATH",80],
+      ["Real Sociedad","RSO",80],["Real Betis","BET",79],["Villarreal","VIL",79],["Sevilla","SEV",78],
+      ["Girona","GIR",78],["Valencia","VAL",77],["Osasuna","OSA",75],["Celta de Vigo","CEL",75],
+      ["Rayo Vallecano","RAY",74],["Getafe","GET",74],["Mallorca","MLL",74],["Las Palmas","LPA",73],
+      ["Deportivo Alavés","ALA",73],["Espanyol","ESP",72],["Leganés","LEG",71],["Real Valladolid","VLL",70]
+    ],
+    it: [
+      ["Inter de Milão","INT",85],["Napoli","NAP",83],["Juventus","JUV",83],["Milan","MIL",83],
+      ["Atalanta","ATA",82],["Roma","ROM",81],["Lazio","LAZ",80],["Fiorentina","FIO",79],
+      ["Bologna","BOL",78],["Torino","TOR",76],["Udinese","UDI",75],["Genoa","GEN",74],
+      ["Como","COM",73],["Monza","MON",73],["Cagliari","CAG",72],["Hellas Verona","VER",72],
+      ["Parma","PAR",72],["Lecce","LEC",72],["Empoli","EMP",71],["Venezia","VEN",70]
+    ],
+    de: [
+      ["Bayern de Munique","BAY",87],["Bayer Leverkusen","B04",84],["Borussia Dortmund","BVB",82],["RB Leipzig","RBL",82],
+      ["VfB Stuttgart","VfB",79],["Eintracht Frankfurt","SGE",78],["SC Freiburg","SCF",76],["VfL Wolfsburg","WOB",76],
+      ["Borussia M'gladbach","BMG",75],["TSG Hoffenheim","HOF",75],["Werder Bremen","SVW",74],["Union Berlin","FCU",74],
+      ["Mainz 05","M05",74],["FC Augsburg","FCA",73],["VfL Bochum","BOC",71],["St. Pauli","STP",71],
+      ["1. FC Heidenheim","HDH",71],["Holstein Kiel","KIE",70]
+    ],
+    fr: [
+      ["Paris Saint-Germain","PSG",86],["Monaco","ASM",80],["Olympique de Marseille","OM",79],["Lille","LIL",78],
+      ["Olympique de Lyon","OL",78],["Nice","NIC",77],["Lens","RCL",77],["Rennes","REN",77],
+      ["Brest","SB29",74],["Strasbourg","RCS",74],["Toulouse","TFC",73],["Reims","SDR",73],
+      ["Nantes","FCN",72],["Montpellier","MHS",72],["Auxerre","AJA",71],["Angers","SCO",70],
+      ["Le Havre","HAC",70],["Saint-Étienne","ASSE",70]
+    ],
+    pt: [
+      ["Benfica","SLB",83],["Sporting CP","SCP",83],["Porto","POR",82],["Braga","SCB",78],
+      ["Vitória de Guimarães","VSC",74],["Moreirense","MOR",71],["Famalicão","FAM",71],["Gil Vicente","GIL",71],
+      ["Estoril","EST",71],["Rio Ave","RAV",71],["Arouca","ARO",71],["Boavista","BOA",71],
+      ["Casa Pia","CAS",70],["Farense","FAR",70],["Santa Clara","SCL",70],["Nacional","NAC",69],
+      ["Estrela da Amadora","EAM",69],["AVS","AVS",69]
+    ],
+    nl: [
+      ["PSV","PSV",82],["Feyenoord","FEY",81],["Ajax","AJA",80],["AZ Alkmaar","AZ",77],
+      ["Twente","TWE",76],["Utrecht","UTR",74],["NEC Nijmegen","NEC",72],["Sparta Rotterdam","SPA",72],
+      ["Heerenveen","HEE",72],["Go Ahead Eagles","GAE",71],["Fortuna Sittard","FOR",71],["Groningen","GRO",71],
+      ["Heracles","HER",70],["PEC Zwolle","ZWO",70],["NAC Breda","NAC",70],["Willem II","WIL",69],
+      ["Almere City","ALM",69],["RKC Waalwijk","RKC",69]
+    ],
+    ar: [
+      ["River Plate","RIV",81],["Boca Juniors","BOC",80],["Racing Club","RAC",78],["Estudiantes","EST",76],
+      ["Vélez Sarsfield","VEL",76],["Talleres","TAL",76],["Independiente","IND",76],["San Lorenzo","SLO",74],
+      ["Argentinos Juniors","ARG",74],["Lanús","LAN",74],["Defensa y Justicia","DYJ",74],["Newell's Old Boys","NOB",73],
+      ["Rosario Central","ROS",73],["Huracán","HUR",72],["Godoy Cruz","GOD",72],["Gimnasia La Plata","GIM",71],
+      ["Banfield","BAN",71],["Belgrano","BEL",71],["Instituto","INS",70],["Tigre","TIG",70]
+    ],
+    us: [
+      ["Inter Miami","MIA",78],["LAFC","LAFC",77],["Los Angeles Galaxy","LAG",76],["Columbus Crew","CLB",76],
+      ["Cincinnati","CIN",75],["Seattle Sounders","SEA",75],["Philadelphia Union","PHI",74],["New York City FC","NYC",74],
+      ["Atlanta United","ATL",74],["Real Salt Lake","RSL",73],["New York Red Bulls","RBNY",73],["Portland Timbers","POR",73],
+      ["Nashville SC","NSH",73],["Orlando City","ORL",73],["Minnesota United","MIN",72],["Sporting Kansas City","SKC",72],
+      ["FC Dallas","DAL",72],["Austin FC","ATX",72],["St. Louis City","STL",72],["Houston Dynamo","HOU",71]
+    ]
+  };
 
   /* ---------- 48 seleções (nomes reais + cores para bandeira placeholder + cultura) ---------- */
   var NATIONS = [
@@ -140,15 +216,14 @@
 
     LEAGUE_DEFS.forEach(function (ld) {
       var league = { id: ld.id, name: ld.name, nation: ld.nation, culture: ld.culture, clubIds: [] };
-      var cities = CITY[ld.culture].slice();
-      for (var ci = 0; ci < 18; ci++) {
-        var city = cities[ci % cities.length];
-        var suffix = R.pick(rng, SUFFIX[ld.culture]);
+      var realList = REAL_CLUBS[ld.id];
+      for (var ci = 0; ci < realList.length; ci++) {
+        var rc = realList[ci];               // [nome, sigla, força]
         var clubId = ld.id + "-" + ci;
         var hue = R.int(rng, 0, 360);
-        var strength = R.int(rng, 58, 84); // força média do clube
+        var strength = rc[2];                // força real do clube
         var club = {
-          id: clubId, name: city + " " + suffix, short: city.slice(0, 3).toUpperCase(),
+          id: clubId, name: rc[0], short: rc[1],
           leagueId: ld.id, coach: fullName(rng, ld.culture),
           colors: { primary: "hsl(" + hue + ",65%,42%)", secondary: "hsl(" + ((hue + 40) % 360) + ",60%,55%)" },
           strength: strength, playerIds: []
