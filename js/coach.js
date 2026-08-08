@@ -245,7 +245,7 @@
       ]));
 
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
-      var badge = pending.key === "cup" ? "cup" : (pending.key === "cont" || pending.key === "mundial") ? "cont" : "league";
+      var badge = pending.key === "cup" ? "cup" : (pending.key === "cont" || pending.key === "mundial" || pending.key === "inter") ? "cont" : "league";
       var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
       var matchDate = C().dateOf(c, nextDay);
       var kids = [
@@ -807,6 +807,7 @@
       if (h.cupChampion) wins.push("🏆 Copa");
       if (h.contChampion) wins.push("🏆 Continental");
       if (h.mundialChampion) wins.push("🌎 Mundial");
+      if (h.interChampion) wins.push("🌍 Intercontinental");
       body.appendChild(el("div", { class: "hist-line" }, [
         el("span", { text: "Temporada " + h.season }),
         el("span", { text: h.leaguePos + "º na liga" }),

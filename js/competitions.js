@@ -299,6 +299,9 @@
     // continental: 6 rodadas de grupo (ida/volta) + até 8 de mata-mata (ida e volta) = ~14 (folga p/ 20)
     // Mundial: 3 rodadas de grupo + 4 de mata-mata = 7 (folga p/ 10)
     career.order = buildOrder(fixtures.length, cont ? 20 : 0, mundial ? 10 : 0);
+    // Intercontinental: jogo único no fim da temporada (campeão da Liberta x campeão da Champions)
+    career.order.push("inter");
+    career.interChampion = null; career.interMatch = null;
     career.orderIndex = 0;
     career.pending = null;
     // calendário
@@ -655,8 +658,21 @@
   function advanceToUserMatch(career) {
     var guard = 0;
     while (guard++ < 200) {
-      if (career.orderIndex >= career.order.length) { career.pending = { seasonEnd: true }; TM.storage.saveCoachCareer(career); return career.pending; }
+      if (career.orderIndex >= career.order.length) { checkHonours(career); career.pending = { seasonEnd: true }; TM.storage.saveCoachCareer(career); return career.pending; }
       var key = career.order[career.orderIndex];
+      if (key === "inter") {
+        var reg = REGION[career.leagueId];
+        var contWon = career.comps.cont && career.comps.cont.tour && career.comps.cont.tour.championId === career.teamId;
+        if ((reg !== "sa" && reg !== "eu") || !contWon || (career.interMatch && career.interMatch.done)) { career.orderIndex++; continue; }
+        if (!career.interMatch) {
+          var otherLeagues = reg === "sa" ? REGION_LEAGUES.eu : REGION_LEAGUES.sa, best = null, bestR = -1;
+          otherLeagues.forEach(function (lg2) { TM.data.league(lg2).clubIds.forEach(function (id) { var r = TM.data.clubRating(id); if (r > bestR) { bestR = r; best = id; } }); });
+          career.interMatch = { oppId: best, done: false };
+        }
+        career.pending = { key: "inter", name: "Intercontinental", homeId: career.teamId, awayId: career.interMatch.oppId, ko: true, label: "Final · jogo único" };
+        TM.storage.saveCoachCareer(career);
+        return career.pending;
+      }
       if (key === "league") {
         var lg = career.comps.league;
         var fix = findUserFixture(lg, career.teamId);
@@ -701,7 +717,11 @@
   function applyUserResult(career, homeScore, awayScore) {
     var p = career.pending;
     if (!p || p.seasonEnd) return;
-    if (p.key === "league") {
+    if (p.key === "inter") {
+      var iw = homeScore > awayScore ? p.homeId : awayScore > homeScore ? p.awayId : penaltyWinner(p.homeId, p.awayId);
+      career.interChampion = iw;
+      if (career.interMatch) career.interMatch.done = true;
+    } else if (p.key === "league") {
       var lg = career.comps.league;
       applyResult(lg.table, p.homeId, p.awayId, homeScore, awayScore);
       lg.fixtures[lg.round].forEach(function (fix) {
@@ -764,7 +784,8 @@
       leagueChampion: champ.id === career.teamId,
       cupChampion: c.cup && c.cup.championId === career.teamId,
       contChampion: contChamp,
-      mundialChampion: mundialChamp
+      mundialChampion: mundialChamp,
+      interChampion: career.interChampion === career.teamId
     });
   }
 
