@@ -69,6 +69,13 @@
     return img;
   }
 
+  // imagem embutida (data URI) quando o jogo roda como arquivo único (artifact),
+  // onde não há pasta assets/. Se ausente, cai no caminho de arquivo normal.
+  function embedded(kind, id) {
+    var E = global.TM_EMBED;
+    return (E && E[kind] && E[kind][id]) || null;
+  }
+
   TM.img = {
     crest: crest,
     avatar: avatar,
@@ -76,14 +83,14 @@
     initials: initials,
     // devolve <img> para clube, jogador ou seleção, já com tentativa de imagem real
     clubImg: function (club, cls) {
-      return imgWithFallback("assets/clubes/" + club.id + ".png", crest(club), club.name, cls);
+      return imgWithFallback(embedded("clubes", club.id) || ("assets/clubes/" + club.id + ".png"), crest(club), club.name, cls);
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
-      return imgWithFallback("assets/jogadores/" + player.id + ".png", avatar(player, club), player.name, cls);
+      return imgWithFallback(embedded("jogadores", player.id) || ("assets/jogadores/" + player.id + ".png"), avatar(player, club), player.name, cls);
     },
     nationImg: function (nation, cls) {
-      return imgWithFallback("assets/selecoes/" + nation.id + ".png", flag(nation), nation.name, cls);
+      return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
     }
   };
 })(window);
