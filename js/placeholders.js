@@ -55,6 +55,22 @@
     return svgURI(svg);
   }
 
+  // Emblema placeholder de competição: medalhão com iniciais + cor da competição
+  function compBadge(comp) {
+    var c = comp.colors, ico = ({ liga: "", copa: "🏆", continental: "★", selecao: "🌍" })[comp.type] || "";
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">' +
+      '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="' + c.primary + '"/><stop offset="1" stop-color="#0c0c0c"/></linearGradient></defs>' +
+      '<circle cx="40" cy="40" r="37" fill="url(#cg)" stroke="' + c.secondary + '" stroke-width="3"/>' +
+      '<circle cx="40" cy="40" r="30" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>' +
+      '<text x="40" y="47" font-family="Arial" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">' +
+      initials(comp.name, 2) + '</text>' +
+      (ico ? '<text x="40" y="20" font-size="11" text-anchor="middle">' + ico + '</text>' : '') +
+      '</svg>';
+    return svgURI(svg);
+  }
+
   // Tenta uma imagem real em assets/ (por convenção); se falhar, usa fallback.
   // Uso: <img src="fallback" data-try="assets/clubes/xxx.png" onerror=...>
   function imgWithFallback(realPath, fallbackURI, alt, cls) {
@@ -91,6 +107,13 @@
     },
     nationImg: function (nation, cls) {
       return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
+    },
+    compBadge: compBadge,
+    // comp pode ser o id (string) ou o objeto de competição
+    compImg: function (comp, cls) {
+      if (typeof comp === "string") comp = TM.data.competition(comp);
+      if (!comp) return imgWithFallback("", "", "", cls);
+      return imgWithFallback(embedded("competicoes", comp.id) || ("assets/competicoes/" + comp.id + ".png"), compBadge(comp), comp.name, cls);
     }
   };
 })(window);

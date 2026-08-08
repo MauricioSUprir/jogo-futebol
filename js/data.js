@@ -155,6 +155,45 @@
     ]
   };
 
+  /* ---------- Competições do jogo (id estável para casar imagem em assets/competicoes/<id>.png) ---------- */
+  // [id, nome, tipo, corPrimária, corSecundária]
+  var COMPETITIONS = [
+    // Ligas nacionais
+    ["lg-br", "Brasileirão Série A", "liga", "#0a7d34", "#ffd200"],
+    ["lg-en", "Premier League", "liga", "#37003c", "#00ff85"],
+    ["lg-es", "LaLiga", "liga", "#ee1c25", "#ff8200"],
+    ["lg-it", "Serie A", "liga", "#0a2f6e", "#00a3e0"],
+    ["lg-de", "Bundesliga", "liga", "#d20515", "#000000"],
+    ["lg-fr", "Ligue 1", "liga", "#091c3e", "#dcff00"],
+    ["lg-pt", "Liga Portugal", "liga", "#006847", "#c8102e"],
+    ["lg-nl", "Eredivisie", "liga", "#e2001a", "#000000"],
+    ["lg-ar", "Liga Profesional", "liga", "#6cace4", "#ffffff"],
+    ["lg-us", "Major League Soccer", "liga", "#001838", "#c39e6d"],
+    // Copas nacionais
+    ["cup-br", "Copa do Brasil", "copa", "#1b8a3a", "#f2c200"],
+    ["cup-en", "Copa da Inglaterra", "copa", "#c8102e", "#0a2240"],
+    ["cup-es", "Copa da Espanha", "copa", "#c60b1e", "#ffc400"],
+    ["cup-it", "Copa da Itália", "copa", "#0b3d91", "#57b4e5"],
+    ["cup-de", "Copa da Alemanha", "copa", "#111111", "#d20515"],
+    ["cup-fr", "Copa da França", "copa", "#1c2b57", "#e30613"],
+    ["cup-pt", "Copa de Portugal", "copa", "#046a38", "#da291c"],
+    ["cup-nl", "Copa da Holanda", "copa", "#ff6a00", "#0a2240"],
+    ["cup-ar", "Copa da Argentina", "copa", "#75aadb", "#0a3a6b"],
+    ["cup-us", "Copa dos EUA", "copa", "#0a2240", "#c8102e"],
+    // Continentais de clubes
+    ["cont-eu", "Champions League", "continental", "#03063d", "#0f9bd7"],
+    ["cont-sa", "Libertadores", "continental", "#0a6b3b", "#f2b100"],
+    ["cont-na", "Copa dos Campeões (América do Norte)", "continental", "#1a1a1a", "#00b2a9"],
+    // Copas de seleções
+    ["nat-world", "Copa do Mundo", "selecao", "#c8a24a", "#0a2240"],
+    ["nat-america", "Copa América", "selecao", "#0a6b3b", "#ffd200"],
+    ["nat-euro", "Eurocopa", "selecao", "#0b1a3a", "#00a0e0"],
+    ["nat-africa", "Copa Africana de Nações", "selecao", "#0a7d34", "#e30613"]
+  ].map(function (c) {
+    return { id: c[0], name: c[1], type: c[2], colors: { primary: c[3], secondary: c[4] } };
+  });
+  var COMPETITIONS_BY_ID = COMPETITIONS.reduce(function (m, c) { m[c.id] = c; return m; }, {});
+
   /* ---------- 48 seleções (nomes reais + cores para bandeira placeholder + cultura) ---------- */
   var NATIONS = [
     ["Brazil","#009c3b","#ffdf00","br"],["Argentina","#75aadb","#ffffff","ar"],["France","#0055a4","#ffffff","fr"],
@@ -314,6 +353,8 @@
     league: function (id) { return TM.data.world().leaguesById[id]; },
     player: function (id) { return TM.data.world().playersById[id]; },
     nation: function (id) { return TM.data.world().nationsById[id]; },
+    competitions: function () { return COMPETITIONS; },
+    competition: function (id) { return COMPETITIONS_BY_ID[id] || null; },
     clubPlayers: function (clubId) {
       return TM.data.club(clubId).playerIds.map(TM.data.player)
         .sort(function (a, b) { return b.overall - a.overall; });

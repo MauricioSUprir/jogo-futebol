@@ -662,6 +662,12 @@
   });
 
   /* ---------- competições ---------- */
+  // id da imagem da competição conforme a aba
+  function compIdFor(c, key) {
+    if (key === "cup") return "cup-" + c.leagueId;
+    if (key === "cont") return "cont-" + (C().REGION[c.leagueId] || "eu");
+    return "lg-" + c.leagueId;
+  }
   TM.ui.register("coach-comps", function (screen, params) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🏆 Competições", function () { TM.ui.go("coach-hub"); }));
@@ -673,10 +679,18 @@
     var tabRow = el("div", { class: "comp-tabs" });
     tabs.forEach(function (t) {
       tabRow.appendChild(el("button", { class: "comp-tab" + (active === t.key ? " active" : ""), on: { click: function () { TM.ui.go("coach-comps", { tab: t.key }); } } }, [
+        TM.img.compImg(compIdFor(c, t.key), "comp-tab-logo"),
         el("span", { class: "ct-name", text: t.label })
       ]));
     });
     screen.appendChild(tabRow);
+
+    // cabeçalho com o logo grande da competição ativa
+    var activeTab = tabs.filter(function (t) { return t.key === active; })[0] || tabs[0];
+    screen.appendChild(el("div", { class: "comp-head" }, [
+      TM.img.compImg(compIdFor(c, active), ""),
+      el("div", { class: "ch-name", text: activeTab.label })
+    ]));
 
     if (active === "league") renderLeague(screen, c);
     else if (c.comps[active].type === "tournament") renderTournament(screen, c, c.comps[active]);

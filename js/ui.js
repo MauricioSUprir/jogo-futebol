@@ -246,6 +246,7 @@
       { icon: "🎯", name: "Carreira de Treinador", route: "coach" },
       { icon: "⭐", name: "Carreira de Jogador", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
+      { icon: "🎖️", name: "Competições", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
     ];
@@ -291,5 +292,31 @@
     layout.appendChild(sidebar);
     layout.appendChild(factCard);
     screen.appendChild(layout);
+  });
+
+  /* ---------- Galeria de Competições (espaço para os logos) ---------- */
+  register("competicoes", function (screen) {
+    screen.appendChild(topbar("🎖️ Competições", function () { go("modes"); }));
+    screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Todas as competições do jogo. Coloque o logo real em assets/competicoes/<id>.png para substituir o emblema." }));
+    var groups = [
+      ["liga", "🏟️ Ligas Nacionais"],
+      ["copa", "🏆 Copas Nacionais"],
+      ["continental", "🌍 Continentais de Clubes"],
+      ["selecao", "🏳️ Copas de Seleções"]
+    ];
+    var comps = TM.data.competitions();
+    groups.forEach(function (g) {
+      var list = comps.filter(function (c) { return c.type === g[0]; });
+      if (!list.length) return;
+      screen.appendChild(el("h3", { class: "block-title comp-group", text: g[1] }));
+      var grid = el("div", { class: "comp-grid" });
+      list.forEach(function (c) {
+        grid.appendChild(el("div", { class: "comp-card" }, [
+          TM.img.compImg(c, "comp-logo"),
+          el("div", { class: "comp-name", text: c.name })
+        ]));
+      });
+      screen.appendChild(grid);
+    });
   });
 })(window);
