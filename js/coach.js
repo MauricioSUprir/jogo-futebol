@@ -245,7 +245,7 @@
       ]));
 
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
-      var badge = pending.key === "cup" ? "cup" : pending.key === "cont" ? "cont" : "league";
+      var badge = pending.key === "cup" ? "cup" : (pending.key === "cont" || pending.key === "mundial") ? "cont" : "league";
       var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
       var matchDate = C().dateOf(c, nextDay);
       var kids = [
@@ -697,6 +697,7 @@
   function compIdFor(c, key) {
     if (key === "cup") return "cup-" + c.leagueId;
     if (key === "cont") return "cont-" + (C().REGION[c.leagueId] || "eu");
+    if (key === "mundial") return "cwc-world";
     return "lg-" + c.leagueId;
   }
   TM.ui.register("coach-comps", function (screen, params) {
@@ -705,6 +706,7 @@
     var tabs = [ { key: "league", label: c.comps.league.name } ];
     if (c.comps.cup) tabs.push({ key: "cup", label: c.comps.cup.name });
     if (c.comps.cont) tabs.push({ key: "cont", label: c.comps.cont.name });
+    if (c.comps.mundial) tabs.push({ key: "mundial", label: c.comps.mundial.name });
     var active = (params && params.tab) || "league";
 
     var tabRow = el("div", { class: "comp-tabs" });
@@ -804,6 +806,7 @@
       if (h.leagueChampion) wins.push("🏆 Liga");
       if (h.cupChampion) wins.push("🏆 Copa");
       if (h.contChampion) wins.push("🏆 Continental");
+      if (h.mundialChampion) wins.push("🌎 Mundial");
       body.appendChild(el("div", { class: "hist-line" }, [
         el("span", { text: "Temporada " + h.season }),
         el("span", { text: h.leaguePos + "º na liga" }),

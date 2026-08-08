@@ -254,18 +254,32 @@
       tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
   }
 
-  function buildOrder(leagueRounds, contSlots) {
-    // liga em turno e returno; copa nacional (4 jogos) e continental
-    // (grupos de ida/volta + mata-mata) intercaladas ao longo da temporada
-    var cupAt = spread(8, leagueRounds), contAt = spread(contSlots, leagueRounds);   // copa: até 4 fases em ida e volta
-    var order = [], cupI = 0, contI = 0;
+  // Mundial de Clubes (carreira): 32 melhores clubes de todas as ligas, formato Copa
+  // do Mundo (grupos + mata-mata em jogo único). Acontece 1 ano antes da Copa (season % 4 === 0).
+  function buildMundial(career) {
+    var all = [];
+    TM.data.world().leagues.forEach(function (L) { all = all.concat(L.clubIds); });
+    all.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+    var field = all.slice(0, 32);
+    if (field.indexOf(career.teamId) < 0) field[field.length - 1] = career.teamId; // garante o clube do usuário
+    return { type: "tournament", key: "mundial", name: "Mundial de Clubes",
+      tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: false, twoLeg: false, userId: career.teamId }) };
+  }
+
+  function buildOrder(leagueRounds, contSlots, mundialSlots) {
+    // liga em turno e returno; copa nacional (ida e volta), continental
+    // (grupos de ida/volta + mata-mata) e Mundial de Clubes intercalados na temporada
+    var cupAt = spread(8, leagueRounds), contAt = spread(contSlots, leagueRounds), mundAt = spread(mundialSlots || 0, leagueRounds);
+    var order = [], cupI = 0, contI = 0, mundI = 0;
     for (var lr = 1; lr <= leagueRounds; lr++) {
       order.push("league");
       while (cupI < cupAt.length && cupAt[cupI] === lr) { order.push("cup"); cupI++; }
       while (contI < contAt.length && contAt[contI] === lr) { order.push("cont"); contI++; }
+      while (mundI < mundAt.length && mundAt[mundI] === lr) { order.push("mundial"); mundI++; }
     }
     while (cupI < cupAt.length) { order.push("cup"); cupI++; }
     while (contI < contAt.length) { order.push("cont"); contI++; }
+    while (mundI < mundAt.length) { order.push("mundial"); mundI++; }
     return order;
   }
 
@@ -274,13 +288,17 @@
     var league = TM.data.league(leagueId);
     var cont = buildContinental(career);
     var fixtures = doubleRoundRobin(league.clubIds.slice()); // turno e returno (34 rodadas p/ 18 clubes)
+    // Mundial de Clubes: 1 ano antes da Copa do Mundo (temporadas 4, 8, 12, ... — a Copa é em 1, 5, 9, ...)
+    var mundial = (career.season % 4 === 0) ? buildMundial(career) : null;
     career.comps = {
       league: { type: "league", name: league.name, fixtures: fixtures, round: 0, table: emptyTable(league.clubIds) },
       cup: buildDomesticCup(career.teamId, leagueId),
-      cont: cont
+      cont: cont,
+      mundial: mundial
     };
     // continental: 6 rodadas de grupo (ida/volta) + até 8 de mata-mata (ida e volta) = ~14 (folga p/ 20)
-    career.order = buildOrder(fixtures.length, cont ? 20 : 0);
+    // Mundial: 3 rodadas de grupo + 4 de mata-mata = 7 (folga p/ 10)
+    career.order = buildOrder(fixtures.length, cont ? 20 : 0, mundial ? 10 : 0);
     career.orderIndex = 0;
     career.pending = null;
     // calendário
@@ -739,12 +757,14 @@
     if (already) return;
     var champ = st[0];
     var contChamp = c.cont && c.cont.tour && c.cont.tour.championId === career.teamId;
+    var mundialChamp = c.mundial && c.mundial.tour && c.mundial.tour.championId === career.teamId;
     career.honours.push({
       season: career.season,
       leaguePos: st.findIndex(function (r) { return r.id === career.teamId; }) + 1,
       leagueChampion: champ.id === career.teamId,
       cupChampion: c.cup && c.cup.championId === career.teamId,
-      contChampion: contChamp
+      contChampion: contChamp,
+      mundialChampion: mundialChamp
     });
   }
 
