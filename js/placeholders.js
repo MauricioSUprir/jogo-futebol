@@ -113,7 +113,8 @@
     compImg: function (comp, cls) {
       if (typeof comp === "string") comp = TM.data.competition(comp);
       if (!comp) return imgWithFallback("", "", "", cls);
-      return imgWithFallback(embedded("competicoes", comp.id) || ("assets/competicoes/" + comp.id + ".png"), compBadge(comp), comp.name, cls);
+      var klass = (cls || "") + (comp.darkBg ? " comp-onblack" : "");
+      return imgWithFallback(embedded("competicoes", comp.id) || ("assets/competicoes/" + comp.id + ".png"), compBadge(comp), comp.name, klass);
     }
   };
 })(window);

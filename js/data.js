@@ -193,6 +193,8 @@
     return { id: c[0], name: c[1], type: c[2], colors: { primary: c[3], secondary: c[4] } };
   });
   var COMPETITIONS_BY_ID = COMPETITIONS.reduce(function (m, c) { m[c.id] = c; return m; }, {});
+  // logos com fundo escuro nativo (não usam a plaquinha branca)
+  if (COMPETITIONS_BY_ID["nat-world"]) COMPETITIONS_BY_ID["nat-world"].darkBg = true;
 
   /* ---------- 48 seleções (nomes reais + cores para bandeira placeholder + cultura) ---------- */
   var NATIONS = [
