@@ -221,28 +221,57 @@
     return { id: "nat" + i, name: n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
 
-  // ~70 treinadores reais — [nome, cultura, idade]. Os mais fortes vão para os
-  // clubes mais fortes; o jogador também pode escolher um deles na carreira.
-  var COACHES = [
-    ["Pep Guardiola","es",54],["Carlo Ancelotti","it",66],["Diego Simeone","ar",55],["Jürgen Klopp","de",58],
-    ["José Mourinho","pt",62],["Antonio Conte","it",56],["Xabi Alonso","es",44],["Hansi Flick","de",60],
-    ["Mikel Arteta","es",43],["Arne Slot","nl",47],["Luis Enrique","es",55],["Simone Inzaghi","it",49],
-    ["Unai Emery","es",54],["Rúben Amorim","pt",41],["Erik ten Hag","nl",55],["Roberto De Zerbi","it",46],
-    ["Thiago Motta","it",43],["Gian Piero Gasperini","it",67],["Massimiliano Allegri","it",58],["Maurizio Sarri","it",66],
-    ["Stefano Pioli","it",60],["Vincenzo Italiano","it",48],["Ange Postecoglou","en",60],["Eddie Howe","en",48],
-    ["Enzo Maresca","it",45],["Nuno Espírito Santo","pt",51],["Marco Silva","pt",48],["Andoni Iraola","es",43],
-    ["Oliver Glasner","de",51],["Thomas Frank","nl",52],["Vincent Kompany","fr",39],["Julian Nagelsmann","de",38],
-    ["Sebastian Hoeneß","de",43],["Paulo Fonseca","pt",52],["Bruno Génésio","fr",59],["Adi Hütter","de",55],
-    ["Roger Schmidt","de",58],["Peter Bosz","nl",61],["Francesco Farioli","it",36],["Sérgio Conceição","pt",50],
-    ["Ernesto Valverde","es",61],["Manuel Pellegrini","es",72],["Marcelino","es",60],["Zinedine Zidane","fr",53],
-    ["Didier Deschamps","fr",57],["Gareth Southgate","en",55],["Roberto Martínez","es",52],["Ronald Koeman","nl",62],
-    ["Lionel Scaloni","ar",47],["Marcelo Gallardo","ar",49],["Ramón Díaz","ar",66],["Gabriel Milito","ar",44],
-    ["Martín Demichelis","ar",44],["Abel Ferreira","pt",46],["Tite","br",64],["Dorival Júnior","br",63],
-    ["Fernando Diniz","br",51],["Renato Gaúcho","br",63],["Cuca","br",62],["Mano Menezes","br",63],
-    ["Rogério Ceni","br",52],["Odair Hellmann","br",53],["Luis Zubeldía","ar",44],["Artur Jorge","pt",53],
-    ["Pedro Caixinha","pt",54],["Filipe Luís","br",40],["Gerardo Martino","ar",63],["Gregg Berhalter","us",52],
-    ["Mauricio Pochettino","ar",53],["Vítor Pereira","pt",57]
-  ].map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2] }; });
+  // Treinadores reais 2025/26 — [nome, cultura, idade, clube(real) ou null=livre].
+  // Cada técnico é alocado ao seu clube real; os "livres" (null) ficam só disponíveis
+  // para o jogador escolher na carreira.
+  var COACH_DATA = [
+    // Premier League
+    ["Pep Guardiola","es",54,"Manchester City"],["Mikel Arteta","es",43,"Arsenal"],["Arne Slot","nl",47,"Liverpool"],
+    ["Enzo Maresca","it",45,"Chelsea"],["Eddie Howe","en",48,"Newcastle United"],["Rúben Amorim","pt",41,"Manchester United"],
+    ["Unai Emery","es",54,"Aston Villa"],["Thomas Frank","de",52,"Tottenham Hotspur"],["Fabian Hürzeler","de",32,"Brighton & Hove Albion"],
+    ["Andoni Iraola","es",43,"AFC Bournemouth"],["Oliver Glasner","de",51,"Crystal Palace"],["Marco Silva","pt",48,"Fulham"],
+    // LaLiga
+    ["Xabi Alonso","es",44,"Real Madrid"],["Hansi Flick","de",60,"Barcelona"],["Diego Simeone","ar",55,"Atlético de Madrid"],
+    ["Ernesto Valverde","es",61,"Athletic Club"],["Marcelino","es",60,"Villarreal"],["Manuel Pellegrini","es",72,"Real Betis"],
+    ["Matías Almeyda","ar",52,"Sevilla"],["Sergio Francisco","es",44,"Real Sociedad"],
+    // Serie A
+    ["Antonio Conte","it",56,"Napoli"],["Cristian Chivu","it",45,"Inter de Milão"],["Massimiliano Allegri","it",58,"Milan"],
+    ["Luciano Spalletti","it",66,"Juventus"],["Ivan Jurić","it",50,"Atalanta"],["Gian Piero Gasperini","it",67,"Roma"],
+    ["Maurizio Sarri","it",66,"Lazio"],["Stefano Pioli","it",60,"Fiorentina"],["Vincenzo Italiano","it",48,"Bologna"],
+    // Bundesliga
+    ["Vincent Kompany","fr",39,"Bayern de Munique"],["Niko Kovač","de",54,"Borussia Dortmund"],["Kasper Hjulmand","de",53,"Bayer Leverkusen"],
+    ["Ole Werner","de",37,"RB Leipzig"],["Dino Toppmöller","de",45,"Eintracht Frankfurt"],["Sebastian Hoeneß","de",43,"VfB Stuttgart"],
+    ["Julian Schuster","de",40,"SC Freiburg"],
+    // Ligue 1
+    ["Luis Enrique","es",55,"Paris Saint-Germain"],["Roberto De Zerbi","it",46,"Olympique de Marseille"],["Sébastien Pocognoli","fr",38,"Monaco"],
+    ["Paulo Fonseca","pt",52,"Olympique de Lyon"],["Bruno Génésio","fr",59,"Lille"],["Franck Haise","fr",54,"Nice"],
+    // Liga Portugal
+    ["José Mourinho","pt",62,"Benfica"],["Francesco Farioli","it",36,"Porto"],["Rui Borges","pt",44,"Sporting CP"],["Carlos Vicens","es",39,"Braga"],
+    // Eredivisie
+    ["Peter Bosz","nl",61,"PSV"],["John Heitinga","nl",42,"Ajax"],["Robin van Persie","nl",42,"Feyenoord"],
+    // Brasileirão (todos os 20)
+    ["Filipe Luís","br",40,"Flamengo"],["Abel Ferreira","pt",46,"Palmeiras"],["Leonardo Jardim","pt",51,"Cruzeiro"],
+    ["Davide Ancelotti","it",36,"Botafogo"],["Hernán Crespo","ar",50,"São Paulo"],["Rogério Ceni","br",52,"Bahia"],
+    ["Renato Gaúcho","br",63,"Fluminense"],["Jorge Sampaoli","ar",65,"Atlético Mineiro"],["Roger Machado","br",51,"Internacional"],
+    ["Dorival Júnior","br",63,"Corinthians"],["Fernando Seabra","br",45,"Red Bull Bragantino"],["Mano Menezes","br",63,"Grêmio"],
+    ["Fernando Diniz","br",51,"Vasco da Gama"],["Juan Pablo Vojvoda","ar",50,"Santos"],["Rafael Guanaes","br",46,"Mirassol"],
+    ["Jair Ventura","br",47,"Vitória"],["Odair Hellmann","br",53,"Athletico Paranaense"],["Mozart","br",46,"Coritiba"],
+    ["Guto Ferreira","br",59,"Remo"],["Gilmar Dal Pozzo","br",56,"Chapecoense"],
+    // Argentina
+    ["Marcelo Gallardo","ar",49,"River Plate"],["Claudio Úbeda","ar",54,"Boca Juniors"],["Gustavo Costas","ar",62,"Racing Club"],
+    ["Eduardo Domínguez","ar",47,"Estudiantes"],["Guillermo Barros Schelotto","ar",52,"Vélez Sarsfield"],
+    // MLS
+    ["Javier Mascherano","ar",41,"Inter Miami"],["Greg Vanney","us",51,"Los Angeles Galaxy"],["Steve Cherundolo","us",46,"LAFC"],
+    ["Wilfried Nancy","fr",48,"Columbus Crew"],["Brian Schmetzer","us",63,"Seattle Sounders"],
+    // Livres / lendas (selecionáveis, sem clube fixo)
+    ["Carlo Ancelotti","it",66,null],["Jürgen Klopp","de",58,null],["Zinedine Zidane","fr",53,null],
+    ["Julian Nagelsmann","de",38,null],["Mauricio Pochettino","ar",53,null],["Ange Postecoglou","en",60,null],
+    ["Tite","br",64,null],["Thiago Motta","it",43,null],["Sérgio Conceição","pt",50,null],["Nuno Espírito Santo","pt",51,null]
+  ];
+  var COACHES = COACH_DATA.map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2] }; });
+  // mapa clube(real) -> treinador
+  var COACH_CLUB = {};
+  COACH_DATA.forEach(function (c, i) { if (c[3]) COACH_CLUB[c[3]] = COACHES[i]; });
 
   // Distribuição de posições no elenco de 20 jogadores (2 GK, 7 DF, 7 MF, 4 FW)
   var POS_POOL = ["GK","GK","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
@@ -336,9 +365,8 @@
       leagues.push(league);
     });
 
-    // técnicos reais nos clubes mais fortes (os demais mantêm nome gerado)
-    clubs.slice().sort(function (a, b) { return b.strength - a.strength || (a.id < b.id ? -1 : 1); })
-      .forEach(function (c, i) { if (i < COACHES.length) { c.coach = COACHES[i].name; c.coachId = COACHES[i].id; } });
+    // técnicos reais alocados ao seu clube real (os demais mantêm nome gerado)
+    clubs.forEach(function (c) { var co = COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; } });
 
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = fullName(rng, n.culture); });
