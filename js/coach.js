@@ -14,13 +14,8 @@
 
   // rascunho da configuração de carreira (persiste ao abrir a lista de treinadores e voltar)
   var pendingSetup = null;
-  // avatar simples do treinador (iniciais em círculo colorido) enquanto não há foto real
-  function coachAvatar(co, cls) {
-    if (co.photo) return el("img", { src: co.photo, class: cls });
-    var parts = co.name.split(" "), ini = (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : "")).toUpperCase();
-    var h = 0; for (var i = 0; i < co.name.length; i++) h = (h * 31 + co.name.charCodeAt(i)) % 360;
-    return el("div", { class: cls + " coach-ava", style: "background:hsl(" + h + ",42%,32%)" }, [ el("span", { text: ini }) ]);
-  }
+  // avatar do treinador: foto real se existir, senão iniciais em círculo colorido
+  function coachAvatar(co, cls) { return TM.img.coachImg(co, cls); }
 
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {

@@ -273,7 +273,8 @@
     ["Thomas Frank","de",52,null],["Liam Rosenior","en",41,null],["Martín Anselmi","ar",40,null],
     ["Juan Pablo Vojvoda","ar",50,null]
   ];
-  var COACHES = COACH_DATA.map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2] }; });
+  function coachSlug(name) { return name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  var COACHES = COACH_DATA.map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2], photoKey: coachSlug(c[0]) }; });
   // mapa clube(real) -> treinador
   var COACH_CLUB = {};
   COACH_DATA.forEach(function (c, i) { if (c[3]) COACH_CLUB[c[3]] = COACHES[i]; });

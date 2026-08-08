@@ -92,11 +92,31 @@
     return (E && E[kind] && E[kind][id]) || null;
   }
 
+  // avatar placeholder do treinador: círculo colorido (cor derivada do nome) + iniciais
+  function coachAvatarSVG(coach) {
+    var h = 0; for (var i = 0; i < coach.name.length; i++) h = (h * 31 + coach.name.charCodeAt(i)) % 360;
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">' +
+      '<rect width="80" height="80" rx="40" fill="hsl(' + h + ',42%,32%)"/>' +
+      '<text x="40" y="50" font-family="Arial" font-size="28" font-weight="800" fill="#fff" text-anchor="middle">' +
+      initials(coach.name, 2) + '</text></svg>';
+    return svgURI(svg);
+  }
+
   TM.img = {
     crest: crest,
     avatar: avatar,
     flag: flag,
     initials: initials,
+    coachAvatarSVG: coachAvatarSVG,
+    // <img> do treinador: foto real (assets/treinadores/<chave>.png) se existir, senão avatar de iniciais
+    coachImg: function (coach, cls) {
+      var key = coach.photoKey, E = global.TM_EMBED, emb = embedded("treinadores", key);
+      var fb = coachAvatarSVG(coach);
+      // no artefato embutido, só usa foto se ela estiver embutida (evita 404); fora dele, tenta o arquivo
+      var real = emb || ((E && E.treinadores) ? null : ("assets/treinadores/" + key + ".png"));
+      return imgWithFallback(real || fb, fb, coach.name, cls);
+    },
     // devolve <img> para clube, jogador ou seleção, já com tentativa de imagem real
     clubImg: function (club, cls) {
       return imgWithFallback(embedded("clubes", club.id) || ("assets/clubes/" + club.id + ".png"), crest(club), club.name, cls);
