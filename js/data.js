@@ -227,11 +227,11 @@
   var COACH_DATA = [
     // Premier League
     ["Pep Guardiola","es",55,"Manchester City"],["Mikel Arteta","es",43,"Arsenal"],["Arne Slot","nl",47,"Liverpool"],
-    ["Liam Rosenior","en",41,"Chelsea"],["Eddie Howe","en",48,"Newcastle United"],["Michael Carrick","en",44,"Manchester United"],
-    ["Unai Emery","es",54,"Aston Villa"],["Thomas Frank","de",52,"Tottenham Hotspur"],["Fabian Hürzeler","de",32,"Brighton & Hove Albion"],
-    ["Andoni Iraola","es",43,"AFC Bournemouth"],["Oliver Glasner","de",51,"Crystal Palace"],["Marco Silva","pt",48,"Fulham"],
+    ["Xabi Alonso","es",44,"Chelsea"],["Eddie Howe","en",48,"Newcastle United"],["Michael Carrick","en",44,"Manchester United"],
+    ["Unai Emery","es",54,"Aston Villa"],["Roberto De Zerbi","it",46,"Tottenham Hotspur"],["Fabian Hürzeler","de",32,"Brighton & Hove Albion"],
+    ["Andoni Iraola","es",43,"AFC Bournemouth"],["Oliver Glasner","de",51,"Crystal Palace"],["Álvaro Arbeloa","es",42,"Fulham"],
     // LaLiga
-    ["Xabi Alonso","es",44,"Real Madrid"],["Hansi Flick","de",60,"Barcelona"],["Diego Simeone","ar",55,"Atlético de Madrid"],
+    ["José Mourinho","pt",63,"Real Madrid"],["Hansi Flick","de",60,"Barcelona"],["Diego Simeone","ar",55,"Atlético de Madrid"],
     ["Ernesto Valverde","es",61,"Athletic Club"],["Marcelino","es",60,"Villarreal"],["Manuel Pellegrini","es",72,"Real Betis"],
     ["Matías Almeyda","ar",52,"Sevilla"],["Pellegrino Matarazzo","de",48,"Real Sociedad"],
     // Serie A
@@ -243,23 +243,23 @@
     ["Ole Werner","de",37,"RB Leipzig"],["Albert Riera","es",43,"Eintracht Frankfurt"],["Sebastian Hoeneß","de",43,"VfB Stuttgart"],
     ["Julian Schuster","de",40,"SC Freiburg"],
     // Ligue 1
-    ["Luis Enrique","es",55,"Paris Saint-Germain"],["Roberto De Zerbi","it",46,"Olympique de Marseille"],["Sébastien Pocognoli","fr",38,"Monaco"],
-    ["Paulo Fonseca","pt",52,"Olympique de Lyon"],["Bruno Génésio","fr",59,"Lille"],["Claude Puel","fr",64,"Nice"],
+    ["Luis Enrique","es",55,"Paris Saint-Germain"],["Bruno Génésio","fr",59,"Olympique de Marseille"],["Sébastien Pocognoli","fr",38,"Monaco"],
+    ["Paulo Fonseca","pt",52,"Olympique de Lyon"],["Claude Puel","fr",64,"Nice"],
     // Liga Portugal
-    ["José Mourinho","pt",63,"Benfica"],["Francesco Farioli","it",37,"Porto"],["Rui Borges","pt",44,"Sporting CP"],["Carlos Vicens","es",38,"Braga"],
+    ["Marco Silva","pt",48,"Benfica"],["Francesco Farioli","it",37,"Porto"],["Rui Borges","pt",44,"Sporting CP"],["Carlos Vicens","es",38,"Braga"],
     // Eredivisie
     ["Peter Bosz","nl",62,"PSV"],["Fred Grim","nl",60,"Ajax"],["Robin van Persie","nl",42,"Feyenoord"],
     // Brasileirão (todos os 20)
-    ["Filipe Luís","br",40,"Flamengo"],["Abel Ferreira","pt",47,"Palmeiras"],["Tite","br",64,"Cruzeiro"],
-    ["Martín Anselmi","ar",40,"Botafogo"],["Hernán Crespo","ar",50,"São Paulo"],["Rogério Ceni","br",52,"Bahia"],
-    ["Luís Zubeldía","ar",44,"Fluminense"],["Jorge Sampaoli","ar",65,"Atlético Mineiro"],["Paulo Pezzolano","ar",42,"Internacional"],
-    ["Dorival Júnior","br",63,"Corinthians"],["Vagner Mancini","br",59,"Red Bull Bragantino"],["Luís Castro","pt",64,"Grêmio"],
-    ["Fernando Diniz","br",51,"Vasco da Gama"],["Juan Pablo Vojvoda","ar",50,"Santos"],["Rafael Guanaes","br",44,"Mirassol"],
+    ["Leonardo Jardim","pt",51,"Flamengo"],["Abel Ferreira","pt",47,"Palmeiras"],["Artur Jorge","pt",53,"Cruzeiro"],
+    ["Franclim Carvalho","pt",45,"Botafogo"],["Hernán Crespo","ar",50,"São Paulo"],["Rogério Ceni","br",52,"Bahia"],
+    ["Luís Zubeldía","ar",44,"Fluminense"],["Eduardo Domínguez","ar",47,"Atlético Mineiro"],["Paulo Pezzolano","ar",42,"Internacional"],
+    ["Fernando Diniz","br",51,"Corinthians"],["Vagner Mancini","br",59,"Red Bull Bragantino"],["Luís Castro","pt",64,"Grêmio"],
+    ["Pedro Emanuel","pt",49,"Vasco da Gama"],["Cuca","br",62,"Santos"],["Rafael Guanaes","br",44,"Mirassol"],
     ["Jair Ventura","br",47,"Vitória"],["Odair Hellmann","br",53,"Athletico Paranaense"],["Fernando Seabra","br",44,"Coritiba"],
-    ["Juan Carlos Osório","es",64,"Remo"],["Gilmar Dal Pozzo","br",55,"Chapecoense"],
+    ["Léo Condé","br",51,"Remo"],["Rafael Lacerda","br",43,"Chapecoense"],
     // Argentina
     ["Marcelo Gallardo","ar",49,"River Plate"],["Claudio Úbeda","ar",54,"Boca Juniors"],["Gustavo Costas","ar",62,"Racing Club"],
-    ["Eduardo Domínguez","ar",47,"Estudiantes"],["Guillermo Barros Schelotto","ar",52,"Vélez Sarsfield"],
+    ["Alexander Medina","ar",47,"Estudiantes"],["Guillermo Barros Schelotto","ar",52,"Vélez Sarsfield"],
     // MLS
     ["Javier Mascherano","ar",41,"Inter Miami"],["Greg Vanney","us",51,"Los Angeles Galaxy"],["Marc Dos Santos","us",48,"LAFC"],
     ["Henrik Rydström","nl",49,"Columbus Crew"],["Brian Schmetzer","us",63,"Seattle Sounders"],
@@ -268,7 +268,10 @@
     ["Julian Nagelsmann","de",38,null],["Mauricio Pochettino","ar",53,null],["Ange Postecoglou","en",60,null],
     ["Thiago Motta","it",43,null],["Sérgio Conceição","pt",50,null],["Nuno Espírito Santo","pt",52,null],
     ["Rúben Amorim","pt",41,null],["Enzo Maresca","it",45,null],["Renato Gaúcho","br",63,null],
-    ["Mano Menezes","br",63,null],["Stefano Pioli","it",60,null]
+    ["Mano Menezes","br",63,null],["Stefano Pioli","it",60,null],["Filipe Luís","br",40,null],
+    ["Tite","br",64,null],["Dorival Júnior","br",63,null],["Jorge Sampaoli","ar",65,null],
+    ["Thomas Frank","de",52,null],["Liam Rosenior","en",41,null],["Martín Anselmi","ar",40,null],
+    ["Juan Pablo Vojvoda","ar",50,null]
   ];
   var COACHES = COACH_DATA.map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2] }; });
   // mapa clube(real) -> treinador
