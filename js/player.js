@@ -397,13 +397,23 @@
     var iAmHome = myFix[0] === c.clubId;
     var oppId = iAmHome ? myFix[1] : myFix[0];
 
-    // se lesionado, o jogador não entra em campo (não é foco)
+    // se lesionado, o jogador não entra em campo (não é foco), mas o clube joga
     var myTeam = injuredThisGame ? TM.engine.teamFromClub(c.clubId) : buildTeam(c.clubId, me);
     var oppTeam = TM.engine.teamFromClub(oppId);
     var teamA = iAmHome ? myTeam : oppTeam, teamB = iAmHome ? oppTeam : myTeam;
 
     var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me" });
 
+    // transmissão ao vivo; o pós-jogo só é aplicado ao final (onComplete)
+    TM.ui.go("player-live", {
+      teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: injuredThisGame,
+      title: TM.data.club(c.clubId).name + " · Rodada " + (c.round + 1), back: "player-hub",
+      onComplete: function () { finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round); }
+    });
+  }
+
+  function finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round) {
+    var settings = TM.storage.settings();
     round.forEach(function (m) {
       if (m[0] === c.clubId || m[1] === c.clubId) {
         applyResult(c.table, teamA.id, teamB.id, result.score[0], result.score[1]);
@@ -446,6 +456,17 @@
     TM.storage.savePlayerCareer(c);
     TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome });
   }
+
+  /* ---------- transmissão ao vivo (carreira de jogador — sem modo pausa) ---------- */
+  TM.ui.register("player-live", function (screen, params) {
+    if (!params || !params.result) { TM.ui.go("player-hub"); return; }
+    TM.matchview.play(screen, {
+      teamA: params.teamA, teamB: params.teamB, result: params.result,
+      title: params.title || "Ao vivo",
+      onBack: function () { TM.ui.go(params.back || "player-hub"); },
+      onDone: function () { if (params.onComplete) params.onComplete(); }
+    });
+  });
 
   function maybeOffer(c, f) {
     if (c.offers.length >= 2) return;
@@ -528,23 +549,33 @@
       var teamA = userHome ? mine : opp, teamB = userHome ? opp : mine;
       var label = TM.comp.wcRoundLabel(null, m);
       var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
-      TM.tournament.applyUserMatch(ns.tour, result.score[0], result.score[1], ctx);
-      ns.matchNo++;
-      applyNatPerf(c, result.focus);
-      TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? result.score[0] + "x" + result.score[1] : result.score[1] + "x" + result.score[0]) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
-      TM.storage.savePlayerCareer(c);
-      TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label });
+      TM.ui.go("player-live", {
+        teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, title: "Copa do Mundo · " + label, back: "player-nation",
+        onComplete: function () {
+          TM.tournament.applyUserMatch(ns.tour, result.score[0], result.score[1], ctx);
+          ns.matchNo++;
+          applyNatPerf(c, result.focus);
+          TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? result.score[0] + "x" + result.score[1] : result.score[1] + "x" + result.score[0]) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
+          TM.storage.savePlayerCareer(c);
+          TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label });
+        }
+      });
       return;
     }
     var g = null; for (var i = 0; i < ns.games.length; i++) { if (!ns.games[i].played) { g = ns.games[i]; break; } }
     if (!g) { TM.ui.go("player-nation"); return; }
     var mine2 = myNationTeam(c), opp2 = TM.engine.teamFromNation(g.oppId);
     var result2 = TM.engine.simulate(mine2, opp2, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
-    g.played = true; g.hs = result2.score[0]; g.as = result2.score[1];
-    applyNatPerf(c, result2.focus);
-    TM.notify.push(c, { icon: "🌍", title: "Amistoso da seleção", text: c.nationName + " " + result2.score[0] + "x" + result2.score[1] + " " + TM.data.nation(g.oppId).name + " · você fez " + (result2.focus ? result2.focus.goals : 0) + " gol(s)." });
-    TM.storage.savePlayerCareer(c);
-    TM.ui.go("player-match", { teamA: mine2, teamB: opp2, result: result2, iAmHome: true, nat: true, back: "player-nation", title: "Amistoso da seleção" });
+    TM.ui.go("player-live", {
+      teamA: mine2, teamB: opp2, result: result2, iAmHome: true, title: "Amistoso da seleção", back: "player-nation",
+      onComplete: function () {
+        g.played = true; g.hs = result2.score[0]; g.as = result2.score[1];
+        applyNatPerf(c, result2.focus);
+        TM.notify.push(c, { icon: "🌍", title: "Amistoso da seleção", text: c.nationName + " " + result2.score[0] + "x" + result2.score[1] + " " + TM.data.nation(g.oppId).name + " · você fez " + (result2.focus ? result2.focus.goals : 0) + " gol(s)." });
+        TM.storage.savePlayerCareer(c);
+        TM.ui.go("player-match", { teamA: mine2, teamB: opp2, result: result2, iAmHome: true, nat: true, back: "player-nation", title: "Amistoso da seleção" });
+      }
+    });
   }
 
   /* ---------- central da seleção (jogador) ---------- */

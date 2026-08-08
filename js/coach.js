@@ -1003,6 +1003,7 @@
         c.budget -= NEGO.fee;
         c.roster.push(p.id);
         c.signedFrom[p.id] = NEGO.oldClubId;
+        C().syncLineup(c); // já entra no banco de reservas
         TM.storage.saveCoachCareer(c);
         quote.className = "nego-quote happy"; quote.textContent = "✔ " + p.name + " assinou com o " + TM.data.club(c.teamId).name + "!";
         actionWrap.innerHTML = "";
@@ -1102,6 +1103,7 @@
   TM.ui.register("coach-lineup", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c.lineup) c.lineup = C().buildLineup(C().rosterPlayers(c), "4-4-2");
+    C().syncLineup(c); TM.storage.saveCoachCareer(c); // garante contratados no banco
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("coach-hub"); }));
 
     // formação

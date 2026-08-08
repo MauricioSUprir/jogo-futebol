@@ -420,7 +420,30 @@
     career.customPlayers[youthId] = yp;
     career.roster.push(youthId);
     if (career.lineup) career.lineup.bench.push(youthId);
+    syncLineup(career);
     return true;
+  }
+
+  // garante que TODO jogador do elenco apareça na escalação (titular ou reserva)
+  // e remove da escalação quem não está mais no elenco. Corrige contratados sumidos.
+  function syncLineup(career) {
+    if (!career.roster) return career.lineup;
+    if (!career.lineup) { career.lineup = buildLineup(rosterPlayers(career), "4-4-2"); return career.lineup; }
+    var lu = career.lineup;
+    if (!lu.starters) lu.starters = [];
+    if (!lu.bench) lu.bench = [];
+    var inRoster = {}; career.roster.forEach(function (id) { inRoster[id] = true; });
+    // remove da escalação quem saiu do elenco
+    lu.starters = lu.starters.filter(function (id) { return inRoster[id]; });
+    lu.bench = lu.bench.filter(function (id) { return inRoster[id]; });
+    var placed = {}; lu.starters.forEach(function (id) { placed[id] = true; }); lu.bench.forEach(function (id) { placed[id] = true; });
+    // completa os 11 titulares puxando do banco, se algum saiu
+    while (lu.starters.length < 11 && lu.bench.length) { lu.starters.push(lu.bench.shift()); }
+    // adiciona ao banco qualquer jogador do elenco que ainda não esteja escalado (ex.: contratados)
+    career.roster.forEach(function (id) { if (!placed[id]) { lu.bench.push(id); placed[id] = true; } });
+    // ordena o banco por overall (melhores primeiro)
+    lu.bench.sort(function (a, b) { var pa = resolvePlayer(career, a), pb = resolvePlayer(career, b); return (pb ? pb.overall : 0) - (pa ? pa.overall : 0); });
+    return lu;
   }
 
   /* ---------- metas da diretoria (clube) ---------- */
@@ -586,6 +609,7 @@
     if (!career.seasonYear) career.seasonYear = 2025 + (career.season || 1);
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    syncLineup(career); // reincorpora contratados que faltavam no banco
     return career;
   }
 
@@ -704,7 +728,7 @@
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
-    available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers,
+    available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth
   };
