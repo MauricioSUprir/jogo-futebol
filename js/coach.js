@@ -1588,7 +1588,7 @@
         var unavail = !C().available(c, id);
         var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
           style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-          on: { click: function () { pickSlot = (pickSlot === i ? null : i); renderBoard(); } } }, [
+          on: { click: function () { onStarterClick(i); } } }, [
           el("div", { class: "chip-face-wrap" }, [
             TM.img.playerImg(p, "chip-face"),
             el("span", { class: "chip-ov", text: p.overall }),
@@ -1601,7 +1601,7 @@
       });
       board.appendChild(pitch);
 
-      board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Agora toque num reserva para colocá-lo no lugar, ou toque no titular de novo para cancelar." : "Toque num titular e depois num reserva para trocar." }));
+      board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Toque em OUTRO titular para trocar as posições, ou num reserva para substituir. Toque no mesmo para cancelar." : "Toque num titular e depois em outro titular (troca de posição) ou num reserva (substituição)." }));
 
       var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
       (c.lineup.bench || []).forEach(function (id) {
@@ -1634,6 +1634,18 @@
       board.appendChild(exWrap);
     }
 
+    function onStarterClick(i) {
+      if (pickSlot == null) { pickSlot = i; }            // seleciona o 1º titular
+      else if (pickSlot === i) { pickSlot = null; }       // toque no mesmo cancela
+      else {                                              // troca os dois titulares de posição
+        var tmp = c.lineup.starters[pickSlot];
+        c.lineup.starters[pickSlot] = c.lineup.starters[i];
+        c.lineup.starters[i] = tmp;
+        pickSlot = null;
+        TM.storage.saveCoachCareer(c);
+      }
+      renderBoard();
+    }
     function onBenchClick(benchId) {
       if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
       var starterId = c.lineup.starters[pickSlot];
