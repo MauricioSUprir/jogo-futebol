@@ -261,7 +261,7 @@
       { icon: "🎯", name: "Carreira de Treinador", route: "coach" },
       { icon: "⭐", name: "Carreira de Jogador", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
-      { icon: "🎖️", name: "Competições", route: "competicoes" },
+      { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
     ];
@@ -311,8 +311,8 @@
 
   /* ---------- Galeria de Competições (espaço para os logos) ---------- */
   register("competicoes", function (screen) {
-    screen.appendChild(topbar("🎖️ Competições", function () { go("modes"); }));
-    screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Todas as competições do jogo. Coloque o logo real em assets/competicoes/<id>.png para substituir o emblema." }));
+    screen.appendChild(topbar("🎖️ Informações", function () { go("modes"); }));
+    screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Todas as competições do jogo. Clique numa competição e depois num time para ver o elenco." }));
     var groups = [
       ["liga", "🏟️ Ligas Nacionais"],
       ["copa", "🏆 Copas Nacionais"],
@@ -363,8 +363,32 @@
     teams.forEach(function (t) {
       var kids = [ t.img, el("div", { class: "cp-name", text: t.name }) ];
       if (t.rating != null) kids.push(TM.ui.ovBadge(t.rating));
-      grid.appendChild(el("div", { class: "club-pick" }, kids));
+      grid.appendChild(el("div", { class: "club-pick clickable", on: { click: function () { go("competicao-elenco", { comp: params.id, teamId: t.id, isNation: info.isNation }); } } }, kids));
     });
     body.appendChild(grid);
+  });
+
+  // elenco de um time dentro da competição (clube ou seleção)
+  register("competicao-elenco", function (screen, params) {
+    var isNation = params.isNation;
+    var team = isNation ? TM.data.nation(params.teamId) : TM.data.club(params.teamId);
+    if (!team) { go("competicao-times", { id: params.comp }); return; }
+    screen.appendChild(topbar(team.name, function () { go("competicao-times", { id: params.comp }); }));
+    screen.appendChild(el("div", { class: "club-header" }, [
+      isNation ? TM.img.nationImg(team, "ch-crest") : TM.img.clubImg(team, "ch-crest"),
+      el("div", {}, [ el("div", { class: "ch-name", text: team.name }) ])
+    ]));
+    var ids = isNation ? (team.players || []) : team.playerIds;
+    var players = ids.map(function (id) { return TM.data.player(id); }).filter(Boolean);
+    if (!players.length) { screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Elenco não disponível." })); return; }
+    var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
+    players.sort(function (a, b) { return (order[a.pos] - order[b.pos]) || (b.overall - a.overall); });
+    var list = el("div", { class: "panel-narrow squad-list" });
+    var lastPos = null;
+    players.forEach(function (p) {
+      if (p.pos !== lastPos) { list.appendChild(el("div", { class: "pos-header", text: ({ GK: "Goleiros", DF: "Defensores", MF: "Meio-campistas", FW: "Atacantes" })[p.pos] })); lastPos = p.pos; }
+      list.appendChild(playerRow(p, { onClick: function (pl) { showPlayer(pl, { moneySym: "€", moneyMult: 1 }); } }));
+    });
+    screen.appendChild(list);
   });
 })(window);
