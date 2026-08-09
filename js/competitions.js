@@ -605,13 +605,16 @@
     var lu = career.lineup;
     if (!lu.starters) lu.starters = [];
     if (!lu.bench) lu.bench = [];
+    if (!lu.excluded) lu.excluded = [];   // "não relacionados": no elenco, mas fora da partida
     var inRoster = {}; career.roster.forEach(function (id) { inRoster[id] = true; });
     // remove da escalação quem saiu do elenco
     lu.starters = lu.starters.filter(function (id) { return inRoster[id]; });
     lu.bench = lu.bench.filter(function (id) { return inRoster[id]; });
-    var placed = {}; lu.starters.forEach(function (id) { placed[id] = true; }); lu.bench.forEach(function (id) { placed[id] = true; });
-    // completa os 11 titulares puxando do banco, se algum saiu
+    lu.excluded = lu.excluded.filter(function (id) { return inRoster[id] && lu.starters.indexOf(id) < 0; });
+    var placed = {}; lu.starters.forEach(function (id) { placed[id] = true; }); lu.bench.forEach(function (id) { placed[id] = true; }); lu.excluded.forEach(function (id) { placed[id] = true; });
+    // completa os 11 titulares puxando do banco, se algum saiu (e, em último caso, dos não relacionados)
     while (lu.starters.length < 11 && lu.bench.length) { lu.starters.push(lu.bench.shift()); }
+    while (lu.starters.length < 11 && lu.excluded.length) { lu.starters.push(lu.excluded.shift()); }
     // adiciona ao banco qualquer jogador do elenco que ainda não esteja escalado (ex.: contratados)
     career.roster.forEach(function (id) { if (!placed[id]) { lu.bench.push(id); placed[id] = true; } });
     // ordena o banco por overall (melhores primeiro)
