@@ -80,8 +80,8 @@
       box.appendChild(el("div", { class: "pause-sub-team", text: "Ajustes de " + team.name }));
 
       // tática
-      var tacRow = el("div", { class: "segmented full" });
-      [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra"]].forEach(function (o) {
+      var tacRow = el("div", { class: "segmented full wrap" });
+      TM.engine.TACTICS.forEach(function (o) {
         tacRow.appendChild(el("button", { class: "seg-btn" + (userTactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { userTactic = o[0]; tacRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); } } }));
       });
       box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Tática" }), tacRow ]));

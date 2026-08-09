@@ -184,12 +184,57 @@
     document.body.classList.toggle("theme-light", theme === "light");
   }
 
+  /* ---------- tema por competição (cor de destaque + logo) ---------- */
+  var COMP_ACCENT = {
+    "lg-br": "#2fe86b", "lg-en": "#b14bff", "lg-es": "#ff5a3c", "lg-it": "#3aa0ff", "lg-de": "#ff3b3b", "lg-fr": "#dfe600",
+    "lg-pt": "#2ee6a0", "lg-nl": "#ff7a1a", "lg-ar": "#7ec8ff", "lg-us": "#d6b24a", "lg-mx": "#2ee66b", "lg-sa": "#20c98a",
+    "lg-tr": "#ff4d4d", "lg-ec": "#ffd21a", "lg-uy": "#7ec8ff", "lg-ru": "#5a86ff",
+    "cont-sa": "#f2c21a", "cont-eu": "#2f8bff", "cont-na": "#00c2b8", "cont-as": "#00d4c2",
+    "cwc-world": "#e8c65a", "cwc-inter": "#c9a24a",
+    "nat-world": "#e8c65a", "nat-america": "#2fe86b", "nat-euro": "#2f8bff", "nat-africa": "#2ee66b"
+  };
+  function compAccent(compId) {
+    if (!compId) return null;
+    if (COMP_ACCENT[compId]) return COMP_ACCENT[compId];
+    if (compId.indexOf("cup-") === 0 && COMP_ACCENT["lg-" + compId.slice(4)]) return COMP_ACCENT["lg-" + compId.slice(4)];
+    var comp = TM.data.competition(compId);
+    return comp && comp.colors ? comp.colors.primary : null;
+  }
+  function shade(hex, p) { // p<0 escurece, p>0 clareia
+    hex = String(hex).replace("#", "");
+    if (hex.length === 3) hex = hex.split("").map(function (x) { return x + x; }).join("");
+    var n = parseInt(hex, 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    function f(v) { return Math.max(0, Math.min(255, Math.round(p < 0 ? v * (1 + p) : v + (255 - v) * p))); }
+    return "#" + [f(r), f(g), f(b)].map(function (v) { return ("0" + v.toString(16)).slice(-2); }).join("");
+  }
+  function applyCompTheme(elm, compId) {
+    var col = compAccent(compId);
+    if (!col || !elm) return null;
+    elm.style.setProperty("--gold", col);
+    elm.style.setProperty("--gold-light", shade(col, 0.22));
+    elm.style.setProperty("--gold-dark", shade(col, -0.28));
+    return col;
+  }
+  function compBanner(compId, subtitle) {
+    var comp = TM.data.competition(compId);
+    if (!comp) return null;
+    var banner = el("div", { class: "comp-banner" }, [
+      TM.img.compImg(comp, "comp-banner-logo"),
+      el("div", { class: "comp-banner-txt" }, [
+        el("div", { class: "comp-banner-name", text: comp.name }),
+        subtitle ? el("div", { class: "comp-banner-sub", text: subtitle }) : null
+      ])
+    ]);
+    applyCompTheme(banner, compId);
+    return banner;
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
-    applyTheme: applyTheme,
+    applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
     current: function () { return current; }
   };
 

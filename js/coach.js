@@ -286,12 +286,11 @@
         el("button", { class: "date-cal-btn", text: "Calendário →", on: { click: function () { TM.ui.go("coach-calendar"); } } })
       ]));
 
+      var compId = compIdFor(c, pending.key);
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
-      var badge = pending.key === "cup" ? "cup" : (pending.key === "cont" || pending.key === "mundial" || pending.key === "inter") ? "cont" : "league";
       var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
       var matchDate = C().dateOf(c, nextDay);
       var kids = [
-        el("div", { class: "nm-label" }, [ document.createTextNode(pending.name + "  "), el("span", { class: "comp-badge " + badge, text: badgeText }) ]),
         el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ])
       ];
@@ -301,9 +300,18 @@
           TM.ui.button("⏩ Avançar até o jogo", function () { c.currentDay = nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn small")
         ]));
       } else {
+        if (c.pressDoneFor !== c.matchNo) {
+          kids.push(TM.ui.button("🎤 Coletiva de imprensa", function () { TM.ui.go("coach-press"); }, "btn ghost"));
+        } else {
+          kids.push(el("div", { class: "press-done", text: "🎤 Coletiva realizada" + (c.pressEdge > 0 ? " — elenco confiante" : c.pressEdge < 0 ? " — clima tenso" : "") }));
+        }
         kids.push(TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-play"); }, "btn primary"));
       }
-      screen.appendChild(el("div", { class: "next-match" }, kids));
+      var card = el("div", { class: "next-match" }, kids);
+      TM.ui.applyCompTheme(card, compId);
+      var banner = TM.ui.compBanner(compId, badgeText);
+      if (banner) card.insertBefore(banner, card.firstChild);
+      screen.appendChild(card);
     }
 
     screen.appendChild(el("div", { class: "hub-actions six" }, [
@@ -637,8 +645,8 @@
     });
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
 
-    var tacRow = el("div", { class: "segmented full" });
-    [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra"]].forEach(function (o) {
+    var tacRow = el("div", { class: "segmented full wrap" });
+    TM.engine.TACTICS.forEach(function (o) {
       tacRow.appendChild(el("button", { class: "seg-btn" + (c.nation.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.nation.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); } } }));
     });
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
@@ -697,9 +705,11 @@
     var c = TM.storage.coachCareer();
     var p = c.pending && !c.pending.seasonEnd ? c.pending : C().advanceToUserMatch(c);
     if (p.seasonEnd) { TM.ui.go("coach-hub"); return; }
+    var compId = compIdFor(c, p.key);
+    TM.ui.applyCompTheme(screen, compId); // botões/detalhes na cor da competição
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
     var userSide = p.homeId === c.teamId ? 0 : 1;
-    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic };
+    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0), moraleSide: userSide };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
@@ -708,7 +718,9 @@
       onDone: function () {
         C().processUserMatch(c, result, userSide);
         C().applyUserResult(c, result.score[0], result.score[1]);
-        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko });
+        c.pressEdge = 0; // consome o efeito da coletiva
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId });
       }
     });
   });
@@ -716,7 +728,9 @@
   TM.ui.register("coach-match", function (screen, params) {
     var r = params.result, a = params.teamA, b = params.teamB;
     var back = params.back || "coach-hub";
+    if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
     screen.appendChild(TM.ui.topbar("Sua partida", function () { TM.ui.go(back); }));
+    if (params.compId) { var bn = TM.ui.compBanner(params.compId); if (bn) screen.appendChild(bn); }
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     var tag = win ? "🏆 " + win + " venceu" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
     screen.appendChild(el("div", { class: "result-hero" }, [
@@ -734,14 +748,197 @@
     screen.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go(back); }, "btn primary") ]));
   });
 
+  /* ---------- coletiva de imprensa (pré-jogo) ---------- */
+  // Pool de perguntas. {opp}=adversário · {comp}=competição · {team}=seu clube.
+  // Cada resposta tem "e" (efeito na moral: +1/0/-1) e "r" (reação da imprensa/vestiário).
+  var PRESS_Q = [
+    { id: "q1", q: "Como o senhor enxerga o duelo contra o {opp}?", a: [
+      { t: "É um rival forte, teremos que jogar muito.", e: 0, r: "A imprensa aprova o respeito ao adversário." },
+      { t: "Estamos prontos para vencer em qualquer campo.", e: 1, r: "O elenco vibra com a confiança do treinador." },
+      { t: "Sinceramente, o {opp} não me preocupa.", e: -1, r: "A fala vira manchete e serve de combustível ao adversário." } ] },
+    { id: "q2", q: "O elenco está preparado fisicamente para esta sequência?", a: [
+      { t: "Trabalhamos duro, estão a 100%.", e: 1, r: "Os jogadores gostam do voto de confiança." },
+      { t: "Temos alguns desgastes, vamos administrar.", e: 0, r: "Resposta cautelosa, bem recebida." },
+      { t: "Sinceramente, estamos exaustos.", e: -1, r: "A declaração passa insegurança ao grupo." } ] },
+    { id: "q3", q: "Qual a importância dos três pontos hoje na {comp}?", a: [
+      { t: "Cada ponto conta, mas com calma.", e: 0, r: "Discurso equilibrado." },
+      { t: "Vencer aqui muda a nossa temporada.", e: 1, r: "A torcida se anima com a ambição." },
+      { t: "É só mais um jogo, não muda nada.", e: -1, r: "Torcedores reclamam da falta de ambição." } ] },
+    { id: "q4", q: "O que o senhor espera da sua defesa contra o ataque do {opp}?", a: [
+      { t: "Confio muito no nosso sistema defensivo.", e: 1, r: "Zagueiros se sentem prestigiados." },
+      { t: "Sabemos onde eles são perigosos e vamos anular.", e: 0, r: "Análise tática elogiada." },
+      { t: "Nossa defesa tem falhado, é uma preocupação.", e: -1, r: "A exposição pública incomoda a zaga." } ] },
+    { id: "q5", q: "Há rumores de propostas por um dos seus titulares. Comentário?", a: [
+      { t: "Ele está focado e é peça fundamental.", e: 1, r: "O jogador agradece o apoio nas redes." },
+      { t: "Não comento mercado em dia de jogo.", e: 0, r: "Resposta profissional." },
+      { t: "Se aparecer proposta boa, cada um cuida da sua vida.", e: -1, r: "O vestiário estranha a frieza." } ] },
+    { id: "q6", q: "A arbitragem tem sido tema. O senhor confia no árbitro de hoje?", a: [
+      { t: "Confio, é um bom profissional.", e: 0, r: "Postura serena aprovada." },
+      { t: "Só peço que apitem igual para os dois lados.", e: 1, r: "A torcida abraça o discurso." },
+      { t: "Sempre saímos prejudicados, veremos.", e: -1, r: "A súmula pode 'pesar' após a provocação." } ] },
+    { id: "q7", q: "A torcida lotou o estádio. Uma mensagem para ela?", a: [
+      { t: "Vamos honrar essa camisa até o fim!", e: 1, r: "A arquibancada promete empurrar o time." },
+      { t: "Precisamos deles do primeiro ao último minuto.", e: 1, r: "Clima de festa nas redes." },
+      { t: "Espero que não vaiem se as coisas apertarem.", e: -1, r: "A cobrança soa como desconfiança." } ] },
+    { id: "q8", q: "Seu time vem de um resultado ruim. Como está a cabeça do grupo?", a: [
+      { t: "Viramos a página, o grupo está firme.", e: 1, r: "Mensagem de liderança bem vista." },
+      { t: "Foi um tropeço, corrigimos os erros.", e: 0, r: "Autocrítica equilibrada." },
+      { t: "Confesso que abalou bastante.", e: -1, r: "A fala expõe a fragilidade emocional." } ] },
+    { id: "q9", q: "O {opp} tem um artilheiro em grande fase. Preocupa?", a: [
+      { t: "Todo craque para quando marcamos em conjunto.", e: 1, r: "Defensores compram a ideia." },
+      { t: "Preparamos a marcação especialmente para ele.", e: 0, r: "Boa leitura tática." },
+      { t: "Se ele jogar, estamos perdidos.", e: -1, r: "Declaração derrotista repercute mal." } ] },
+    { id: "q10", q: "Qual será a postura do time: pressão alta ou recuado?", a: [
+      { t: "Vamos impor nosso jogo lá na frente.", e: 1, r: "Proposta ousada agrada a torcida." },
+      { t: "Depende do andamento, seremos inteligentes.", e: 0, r: "Pragmatismo aprovado." },
+      { t: "Vamos nos segurar e ver o que dá.", e: -1, r: "A cautela excessiva é criticada." } ] },
+    { id: "q11", q: "Um garoto da base pode ganhar chance hoje. Confia nele?", a: [
+      { t: "Confio totalmente, é o futuro do clube.", e: 1, r: "A base inteira se inspira." },
+      { t: "Ele está pronto quando for preciso.", e: 0, r: "Aposta ponderada." },
+      { t: "Só entra se não tiver outro jeito.", e: -1, r: "O jovem se sente desprestigiado." } ] },
+    { id: "q12", q: "Este jogo pode valer a liderança. Sente o peso?", a: [
+      { t: "Pressão é privilégio de quem briga por títulos.", e: 1, r: "Frase de efeito cai nas graças da imprensa." },
+      { t: "Tratamos como uma final, com os pés no chão.", e: 0, r: "Concentração elogiada." },
+      { t: "Prefiro nem pensar nisso.", e: -1, r: "A fuga do assunto soa como medo." } ] },
+    { id: "q13", q: "O técnico rival provocou nesta semana. Vai responder?", a: [
+      { t: "Respondo dentro de campo.", e: 1, r: "A postura firme agrada o vestiário." },
+      { t: "Não entro nesse jogo, respeito o colega.", e: 0, r: "Elegância reconhecida." },
+      { t: "Ele que se cuide, vou dar o troco.", e: -1, r: "A treta rouba o foco do time." } ] },
+    { id: "q14", q: "Como está o clima no vestiário para o clássico contra o {opp}?", a: [
+      { t: "Fervendo, todos querem esse jogo.", e: 1, r: "Energia contagia a comissão." },
+      { t: "Concentrados, sabemos o que representa.", e: 0, r: "Seriedade aprovada." },
+      { t: "Alguns estão nervosos demais.", e: -1, r: "A insegurança vaza para a imprensa." } ] },
+    { id: "q15", q: "A diretoria cobrou uma reação. Isso pesa no seu trabalho?", a: [
+      { t: "Cobrança faz parte, trabalho tranquilo.", e: 1, r: "Demonstração de segurança." },
+      { t: "Estamos todos no mesmo barco.", e: 0, r: "Discurso de união." },
+      { t: "Confesso que a pressão está pesada.", e: -1, r: "A fala alimenta rumores de demissão." } ] },
+    { id: "q16", q: "Você mexeu na escalação. É uma aposta arriscada?", a: [
+      { t: "É a escalação certa para vencer hoje.", e: 1, r: "Convicção transmite confiança." },
+      { t: "São ajustes pensados para este adversário.", e: 0, r: "Justificativa tática aceita." },
+      { t: "Sinceramente, estou no escuro.", e: -1, r: "A dúvida do treinador assusta o grupo." } ] },
+    { id: "q17", q: "O gramado e o clima podem atrapalhar. Preocupado?", a: [
+      { t: "Jogamos em qualquer condição.", e: 1, r: "Mentalidade vencedora." },
+      { t: "Vamos nos adaptar ao longo do jogo.", e: 0, r: "Flexibilidade elogiada." },
+      { t: "Essas condições nos prejudicam muito.", e: -1, r: "Soa como desculpa antecipada." } ] },
+    { id: "q18", q: "Um líder do elenco está pendurado. Vai poupá-lo?", a: [
+      { t: "Ele joga, precisamos dele agora.", e: 1, r: "O capitão veste a braçadeira orgulhoso." },
+      { t: "Vamos avaliar com cuidado.", e: 0, r: "Gestão equilibrada." },
+      { t: "Melhor deixá-lo fora, não quero risco.", e: -1, r: "O jogador fica contrariado no banco." } ] },
+    { id: "q19", q: "O que a vitória de hoje representaria para a temporada?", a: [
+      { t: "Seria um divisor de águas.", e: 1, r: "A torcida sonha alto." },
+      { t: "Mais um passo no nosso planejamento.", e: 0, r: "Pé no chão aprovado." },
+      { t: "Nada muda muito, honestamente.", e: -1, r: "Desânimo repercute nas arquibancadas." } ] },
+    { id: "q20", q: "Sobre o {comp}: até onde este time pode chegar?", a: [
+      { t: "Viemos para brigar pelo título.", e: 1, r: "Ambição empolga o torcedor." },
+      { t: "Vamos jogo a jogo, sem promessas.", e: 0, r: "Prudência bem recebida." },
+      { t: "Sejamos realistas, é difícil.", e: -1, r: "O discurso murcha o ambiente." } ] },
+    { id: "q21", q: "Você trocou o esquema tático. Por quê agora?", a: [
+      { t: "É o modelo que mais nos favorece.", e: 1, r: "Clareza de ideias elogiada." },
+      { t: "Buscamos mais equilíbrio.", e: 0, r: "Ajuste sensato." },
+      { t: "Estou tentando qualquer coisa, sinceramente.", e: -1, r: "A falta de rumo preocupa." } ] },
+    { id: "q22", q: "A imprensa aponta você como favorito. Concorda?", a: [
+      { t: "Favoritismo se confirma em campo.", e: 1, r: "Humildade competitiva aprovada." },
+      { t: "Não existe favorito em jogo decisivo.", e: 0, r: "Cautela elogiada." },
+      { t: "Claro, vamos passear no jogo.", e: -1, r: "A arrogância pode custar caro." } ] },
+    { id: "q23", q: "Um reforço recente estreia hoje. Expectativa?", a: [
+      { t: "Ele vai fazer a diferença, confio muito.", e: 1, r: "O reforço se sente abraçado." },
+      { t: "Vamos com calma na adaptação dele.", e: 0, r: "Paciência sensata." },
+      { t: "Ainda não sei se ele serve.", e: -1, r: "A dúvida pública o abala." } ] },
+    { id: "q24", q: "A sequência de jogos fora de casa incomoda?", a: [
+      { t: "Fazemos da estrada a nossa força.", e: 1, r: "Mentalidade resiliente." },
+      { t: "É difícil, mas estamos preparados.", e: 0, r: "Realismo equilibrado." },
+      { t: "Jogar fora sempre nos atrapalha.", e: -1, r: "Desculpa antecipada mal vista." } ] },
+    { id: "q25", q: "O que você diria para os torcedores desconfiados?", a: [
+      { t: "Peço que confiem, vamos honrá-los.", e: 1, r: "Aproximação com a torcida." },
+      { t: "Entendo a cobrança, vamos responder jogando.", e: 0, r: "Diálogo maduro." },
+      { t: "Quem não acredita, que fique em casa.", e: -1, r: "O bate-boca esfria o apoio." } ] },
+    { id: "q26", q: "Seu adversário está desfalcado. Isso facilita?", a: [
+      { t: "Respeitamos qualquer time que entrar.", e: 1, r: "Concentração exemplar." },
+      { t: "Aproveitaremos nossas chances.", e: 0, r: "Pragmatismo aceito." },
+      { t: "Sem os craques deles, é moleza.", e: -1, r: "O excesso de confiança preocupa." } ] },
+    { id: "q27", q: "Como está a sua relação com o grupo neste momento?", a: [
+      { t: "Excelente, somos uma família.", e: 1, r: "União transparece nas entrelinhas." },
+      { t: "Profissional e de muito respeito.", e: 0, r: "Ambiente saudável." },
+      { t: "Tem tido alguns atritos, admito.", e: -1, r: "Rumores de racha ganham força." } ] },
+    { id: "q28", q: "Uma palavra sobre o que espera do jogo de hoje?", a: [
+      { t: "Entrega — vamos deixar tudo em campo.", e: 1, r: "Palavra de ordem motiva o elenco." },
+      { t: "Equilíbrio — jogo inteligente do início ao fim.", e: 0, r: "Mensagem tática clara." },
+      { t: "Sorte — vamos precisar dela.", e: -1, r: "Depender de sorte desanima o grupo." } ] }
+  ];
+  function pressShuffle(arr) { arr = arr.slice(); for (var i = arr.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
+
+  TM.ui.register("coach-press", function (screen) {
+    var c = TM.storage.coachCareer();
+    var p = c.pending && !c.pending.seasonEnd ? c.pending : C().advanceToUserMatch(c);
+    if (p.seasonEnd) { TM.ui.go("coach-hub"); return; }
+    if (c.pressDoneFor === c.matchNo) { TM.ui.go("coach-hub"); return; } // já feita
+    var compId = compIdFor(c, p.key);
+    TM.ui.applyCompTheme(screen, compId);
+    var oppId = p.homeId === c.teamId ? p.awayId : p.homeId;
+    var oppName = TM.data.club(oppId).name;
+    var compName = (TM.data.competition(compId) || {}).name || "";
+    var myName = TM.data.club(c.teamId).name;
+    function fill(t) { return t.replace(/{opp}/g, oppName).replace(/{comp}/g, compName).replace(/{team}/g, myName); }
+
+    screen.appendChild(TM.ui.topbar("🎤 Coletiva de imprensa", function () { TM.ui.go("coach-hub"); }));
+    var bn = TM.ui.compBanner(compId, "Entrevista pré-jogo"); if (bn) screen.appendChild(bn);
+
+    // escolhe 4 perguntas ainda não usadas (cicla quando esgota, evitando repetição enquanto houver material)
+    c.pressUsed = c.pressUsed || [];
+    var pool = PRESS_Q.filter(function (q) { return c.pressUsed.indexOf(q.id) < 0; });
+    if (pool.length < 4) { c.pressUsed = []; pool = PRESS_Q.slice(); }
+    var picked = pressShuffle(pool).slice(0, 4);
+
+    var panel = el("div", { class: "panel-narrow press-panel" });
+    screen.appendChild(panel);
+    var idx = 0, edge = 0;
+
+    function render() {
+      panel.innerHTML = "";
+      if (idx >= 4) { done(); return; }
+      panel.appendChild(el("div", { class: "press-progress" }, [ el("span", { text: "Pergunta " + (idx + 1) + " de 4" }), el("span", { class: "press-vs", text: "vs " + oppName }) ]));
+      var q = picked[idx];
+      panel.appendChild(el("div", { class: "press-reporter" }, [ el("span", { class: "press-mic", text: "🎙️" }), el("div", { class: "press-q", text: fill(q.q) }) ]));
+      var opts = el("div", { class: "press-opts" });
+      q.a.forEach(function (opt) {
+        opts.appendChild(el("button", { class: "press-opt", on: { click: function () {
+          edge += opt.e;
+          if (c.pressUsed.indexOf(q.id) < 0) c.pressUsed.push(q.id);
+          panel.innerHTML = "";
+          panel.appendChild(el("div", { class: "press-answer" }, [ el("span", { class: "press-you", text: "Você:" }), el("span", { text: " " + fill(opt.t) }) ]));
+          panel.appendChild(el("div", { class: "press-react " + (opt.e > 0 ? "good" : opt.e < 0 ? "bad" : "") , text: opt.r }));
+          panel.appendChild(el("div", { class: "actions" }, [ TM.ui.button(idx < 3 ? "Próxima pergunta →" : "Encerrar coletiva", function () { idx++; render(); }, "btn primary") ]));
+        } } }, [ el("span", { text: fill(opt.t) }) ]));
+      });
+      panel.appendChild(opts);
+    }
+    function done() {
+      c.pressEdge = Math.max(-3, Math.min(3, edge));
+      c.pressDoneFor = c.matchNo;
+      TM.storage.saveCoachCareer(c);
+      var good = c.pressEdge > 0, bad = c.pressEdge < 0;
+      panel.appendChild(el("div", { class: "press-summary" + (good ? " good" : bad ? " bad" : "") }, [
+        el("div", { class: "press-sum-emoji", text: good ? "😎" : bad ? "😬" : "😐" }),
+        el("div", { class: "press-sum-txt", text: good ? "O elenco saiu confiante da coletiva — pequeno empurrão para o jogo." : bad ? "A coletiva gerou clima tenso no vestiário — o time entra pressionado." : "Coletiva tranquila, sem grandes repercussões." })
+      ]));
+      panel.appendChild(el("div", { class: "actions" }, [
+        TM.ui.button("▶ Ir para o jogo", function () { TM.ui.go("coach-play"); }, "btn primary"),
+        TM.ui.button("Voltar ao hub", function () { TM.ui.go("coach-hub"); }, "btn ghost")
+      ]));
+    }
+    render();
+  });
+
   /* ---------- competições ---------- */
   // id da imagem da competição conforme a aba
   function compIdFor(c, key) {
     if (key === "cup") return "cup-" + c.leagueId;
     if (key === "cont") return "cont-" + (C().REGION[c.leagueId] || "eu");
     if (key === "mundial") return "cwc-world";
+    if (key === "inter") return "cwc-inter";
     return "lg-" + c.leagueId;
   }
+  TM.coachCompId = compIdFor;
   TM.ui.register("coach-comps", function (screen, params) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🏆 Competições", function () { TM.ui.go("coach-hub"); }));
@@ -1357,8 +1554,8 @@
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
 
     // tática
-    var tacRow = el("div", { class: "segmented full" });
-    [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra-ataque"]].forEach(function (o) {
+    var tacRow = el("div", { class: "segmented full wrap" });
+    TM.engine.TACTICS.forEach(function (o) {
       tacRow.appendChild(el("button", { class: "seg-btn" + (c.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); } } }));
     });
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));

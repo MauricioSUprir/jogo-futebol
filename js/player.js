@@ -359,11 +359,15 @@
     if (c.round < c.fixtures.length) c.fixtures[c.round].forEach(function (m) { if (m[0] === c.clubId || m[1] === c.clubId) nextFix = m; });
     if (nextFix) {
       var isHome = nextFix[0] === c.clubId, opp = TM.data.club(isHome ? nextFix[1] : nextFix[0]);
-      screen.appendChild(el("div", { class: "next-match" }, [
+      var compId = "lg-" + (club.leagueId || "br");
+      var card = el("div", { class: "next-match" }, [
         el("div", { class: "nm-label", text: "Rodada " + (c.round + 1) + "/" + c.fixtures.length + (isHome ? " · Em casa" : " · Fora") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: isHome ? club.name : opp.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: isHome ? opp.name : club.name }) ]),
         TM.ui.button(c.injured > 0 ? "▶ Avançar (lesionado)" : "▶ Jogar", function () { playMatch(c); }, "btn primary")
-      ]));
+      ]);
+      TM.ui.applyCompTheme(card, compId);
+      var pbn = TM.ui.compBanner(compId, isHome ? "Em casa" : "Fora"); if (pbn) card.insertBefore(pbn, card.firstChild);
+      screen.appendChild(card);
     } else {
       screen.appendChild(el("div", { class: "next-match season-end" }, [
         el("div", { class: "nm-label", text: "🏁 Fim da temporada " + c.season },),
@@ -457,8 +461,9 @@
     var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult });
 
     // transmissão ao vivo; o pós-jogo só é aplicado ao final (onComplete)
+    var compId = "lg-" + (TM.data.club(c.clubId).leagueId || "br");
     TM.ui.go("player-live", {
-      teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: injuredThisGame,
+      teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: injuredThisGame, compId: compId,
       title: TM.data.club(c.clubId).name + " · Rodada " + (c.round + 1), back: "player-hub",
       onComplete: function () { finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round); }
     });
@@ -507,12 +512,13 @@
     maybeCallup(c);
 
     TM.storage.savePlayerCareer(c);
-    TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome });
+    TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, compId: "lg-" + (TM.data.club(c.clubId).leagueId || "br") });
   }
 
   /* ---------- transmissão ao vivo (carreira de jogador — sem modo pausa) ---------- */
   TM.ui.register("player-live", function (screen, params) {
     if (!params || !params.result) { TM.ui.go("player-hub"); return; }
+    if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
     TM.matchview.play(screen, {
       teamA: params.teamA, teamB: params.teamB, result: params.result,
       title: params.title || "Ao vivo",
@@ -603,14 +609,14 @@
       var miN = momentumInfo(c);
       var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, neutral: true, focusPlayerId: "me", focusForm: miN.mod, focusFormMult: miN.mult });
       TM.ui.go("player-live", {
-        teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, title: "Copa do Mundo · " + label, back: "player-nation",
+        teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, title: "Copa do Mundo · " + label, back: "player-nation", compId: "nat-world",
         onComplete: function () {
           TM.tournament.applyUserMatch(ns.tour, result.score[0], result.score[1], ctx);
           ns.matchNo++;
           applyNatPerf(c, result.focus);
           TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? result.score[0] + "x" + result.score[1] : result.score[1] + "x" + result.score[0]) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
           TM.storage.savePlayerCareer(c);
-          TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label });
+          TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label, compId: "nat-world" });
         }
       });
       return;
@@ -745,6 +751,7 @@
   TM.ui.register("player-match", function (screen, params) {
     var r = params.result, a = params.teamA, b = params.teamB, f = r.focus;
     var back = params.back || "player-hub";
+    if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
     screen.appendChild(TM.ui.topbar(params.title || "Partida", function () { TM.ui.go(back); }));
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     screen.appendChild(el("div", { class: "result-hero" }, [
