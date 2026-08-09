@@ -790,10 +790,46 @@
   function ratingClass(r) { return r >= 8 ? "great" : r >= 7 ? "good" : r >= 6 ? "ok" : "bad"; }
 
   /* ---------- tabela da liga do jogador ---------- */
-  TM.ui.register("player-table", function (screen) {
+  var _leagueTblCache = {};
+  // tabela de uma liga: a do jogador vem ao vivo (c.table); as outras são simuladas até a mesma rodada (cacheadas)
+  function tableForLeague(c, leagueId) {
+    var myLeague = TM.data.club(c.clubId).leagueId;
+    if (leagueId === myLeague) return standings(c.table);
+    var key = leagueId + "@" + c.season + "@" + (c.round || 0);
+    if (_leagueTblCache[key]) return _leagueTblCache[key];
+    var lg = TM.data.league(leagueId), ids = lg.clubIds.slice();
+    var single = roundRobin(ids);
+    var full = single.concat(single.map(function (rd) { return rd.map(function (m) { return [m[1], m[0]]; }); }));
+    var table = emptyTable(ids), settings = TM.storage.settings();
+    var upto = Math.min(c.round || 0, full.length);
+    for (var r = 0; r < upto; r++) full[r].forEach(function (m) {
+      var res = TM.engine.simulate(TM.engine.teamFromClub(m[0]), TM.engine.teamFromClub(m[1]), { realism: settings.realism });
+      applyResult(table, m[0], m[1], res.score[0], res.score[1]);
+    });
+    var st = standings(table);
+    _leagueTblCache[key] = st;
+    return st;
+  }
+
+  TM.ui.register("player-table", function (screen, params) {
     var c = TM.storage.playerCareer();
+    var myLeague = TM.data.club(c.clubId).leagueId;
+    var sel = (params && params.leagueId) || myLeague;
     screen.appendChild(TM.ui.topbar("📊 Classificação", function () { TM.ui.go("player-hub"); }));
-    var st = standings(c.table);
+
+    // seletor de campeonato
+    var leagueSel = el("select", { class: "select" });
+    TM.data.world().leagues.forEach(function (lg) {
+      var o = el("option", { value: lg.id, text: lg.name + (lg.id === myLeague ? " (seu campeonato)" : "") });
+      if (lg.id === sel) o.selected = true;
+      leagueSel.appendChild(o);
+    });
+    leagueSel.addEventListener("change", function () { TM.ui.go("player-table", { leagueId: leagueSel.value }); });
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Campeonato" }), leagueSel ]) ]));
+
+    if (sel !== myLeague) screen.appendChild(el("div", { class: "setting-hint", style: "max-width:620px", text: "Classificação simulada dos outros campeonatos (na mesma rodada do seu)." }));
+
+    var st = tableForLeague(c, sel);
     var table = el("table", { class: "league-table" }, [
       el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ])
     ]);
