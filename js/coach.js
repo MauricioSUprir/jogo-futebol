@@ -1041,8 +1041,8 @@
     /* --- compra definitiva (mais rígida) --- */
     function renderBuy() {
       // preço-pedido reflete importância e disposição de vender
-      var asking = Math.round(mval * stance.priceMult * (stance.willSell ? 1 : 1.25));
-      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: stance.isKey ? 2 : 4 };
+      var asking = Math.round(mval * stance.priceMult * (stance.willSell ? 1 : 1.12));
+      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: stance.isKey ? 4 : 6 };
       var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (stance.willSell ? "Pedimos " + money(c, asking) + " por " + p.name + "." : p.name + " não está à venda. Só saímos por " + money(c, asking) + ".") + "”" });
       var bidVal = el("span", { class: "range-val", text: money(c, st.bid) });
       var slider = el("input", { type: "range", min: 1, max: Math.max(1, c.budget), value: Math.min(st.bid, c.budget), class: "slider" });
@@ -1051,17 +1051,18 @@
       var offerBtn = TM.ui.button("Fazer proposta", function () {
         st.rounds++;
         if (st.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas " + money(c, c.budget) + "."; return; }
-        if (st.bid >= asking * 0.98) {
+        if (st.bid >= asking * 0.93) {
           quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Fechado! " + p.name + " é seu por " + money(c, st.bid) + ". Agora acerte com o jogador.”";
           offerBtn.disabled = true; slider.disabled = true; nextBtn.style.display = "block";
-        } else if (st.bid >= asking * 0.88 && st.patience > 0) {
-          st.patience--; asking = Math.round(asking * 0.96);
+        } else if (st.bid >= asking * 0.78 && st.patience > 0) {
+          // contraproposta: encontra o jogador no meio do caminho
+          st.patience--; asking = Math.round((asking + st.bid) / 2);
           quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Chegue a " + money(c, asking) + " e temos acordo.”";
-        } else if (st.rounds >= 4 || st.patience <= 0) {
-          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + " encerrou a conversa. Volte com uma proposta séria.";
+        } else if (st.rounds >= 7 || st.patience <= 0) {
+          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + " encerrou a conversa por ora. Tente novamente com uma proposta melhor.";
           offerBtn.disabled = true; slider.disabled = true;
         } else {
-          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Muito abaixo do que vale. Nem pensar.”";
+          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Ainda está abaixo do que pedimos (" + money(c, asking) + ").”";
           st.patience--;
         }
       }, "btn primary");

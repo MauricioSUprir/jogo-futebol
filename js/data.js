@@ -184,6 +184,12 @@
     ["lg-nl", "Eredivisie", "liga", "#e2001a", "#000000"],
     ["lg-ar", "Liga Profesional", "liga", "#6cace4", "#ffffff"],
     ["lg-us", "Major League Soccer", "liga", "#001838", "#c39e6d"],
+    ["lg-mx", "Liga MX", "liga", "#006341", "#ce1126"],
+    ["lg-sa", "Saudi Pro League", "liga", "#006c35", "#ffffff"],
+    ["lg-tr", "Süper Lig", "liga", "#e30a17", "#ffffff"],
+    ["lg-ec", "LigaPro Serie A", "liga", "#ffdd00", "#034ea2"],
+    ["lg-uy", "Primera División (UY)", "liga", "#7bafd4", "#001b69"],
+    ["lg-ru", "Premier Liga Russa", "liga", "#0039a6", "#d52b1e"],
     // Copas nacionais
     ["cup-br", "Copa do Brasil", "copa", "#1b8a3a", "#f2c200"],
     ["cup-en", "Copa da Inglaterra", "copa", "#c8102e", "#0a2240"],
@@ -195,10 +201,17 @@
     ["cup-nl", "Copa da Holanda", "copa", "#ff6a00", "#0a2240"],
     ["cup-ar", "Copa da Argentina", "copa", "#75aadb", "#0a3a6b"],
     ["cup-us", "Copa dos EUA", "copa", "#0a2240", "#c8102e"],
+    ["cup-mx", "Copa do México", "copa", "#006341", "#ce1126"],
+    ["cup-sa", "Copa da Arábia Saudita", "copa", "#006c35", "#ffffff"],
+    ["cup-tr", "Copa da Turquia", "copa", "#e30a17", "#ffffff"],
+    ["cup-ec", "Copa do Equador", "copa", "#ffdd00", "#034ea2"],
+    ["cup-uy", "Copa do Uruguai", "copa", "#7bafd4", "#001b69"],
+    ["cup-ru", "Copa da Rússia", "copa", "#0039a6", "#d52b1e"],
     // Continentais de clubes
     ["cont-eu", "Champions League", "continental", "#03063d", "#0f9bd7"],
     ["cont-sa", "Libertadores", "continental", "#0a6b3b", "#f2b100"],
     ["cont-na", "Copa dos Campeões (América do Norte)", "continental", "#1a1a1a", "#00b2a9"],
+    ["cont-as", "Champions League da Ásia", "continental", "#0a1a3a", "#00b2a9"],
     // Mundiais de clubes
     ["cwc-world", "Mundial de Clubes", "mundial", "#c8a24a", "#0a2240"],
     ["cwc-inter", "Intercontinental", "mundial", "#1a1a1a", "#c39e6d"],
@@ -670,9 +683,10 @@
       }
       // continentais de clubes: melhores clubes das ligas da região
       var CONT = {
-        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32 },
-        "cont-sa": { leagues: ["br", "ar"], size: 32 },
-        "cont-na": { leagues: ["us"], size: 16 }
+        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], size: 32 },
+        "cont-sa": { leagues: ["br", "ar", "ec", "uy"], size: 32 },
+        "cont-na": { leagues: ["us", "mx"], size: 16 },
+        "cont-as": { leagues: ["sa"], size: 16 }
       };
       if (CONT[compId]) {
         var def = CONT[compId], pool = [];

@@ -9,11 +9,13 @@
   var CUP_NAME = {
     br: "Copa do Brasil", en: "Copa da Inglaterra", es: "Copa da Espanha", it: "Copa da Itália",
     de: "Copa da Alemanha", fr: "Copa da França", pt: "Copa de Portugal", nl: "Copa da Holanda",
-    ar: "Copa da Argentina", us: "Copa dos EUA"
+    ar: "Copa da Argentina", us: "Copa dos EUA",
+    mx: "Copa do México", sa: "Copa da Arábia Saudita", tr: "Copa da Turquia",
+    ec: "Copa do Equador", uy: "Copa do Uruguai", ru: "Copa da Rússia"
   };
-  var REGION = { br: "sa", ar: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", us: "na" };
-  var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)" };
-  var REGION_LEAGUES = { sa: ["br", "ar"], eu: ["en", "es", "it", "de", "fr", "pt", "nl"], na: ["us"] };
+  var REGION = { br: "sa", ar: "sa", ec: "sa", uy: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", us: "na", mx: "na", sa: "as" };
+  var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)", as: "Champions League da Ásia" };
+  var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
 
   function realism() { return TM.storage.settings().realism; }
 
@@ -486,7 +488,7 @@
     var willLoan = r1 < loanBase;
     var willBuyOption = willLoan && !isKey && (young ? r2 < 0.55 : r2 < 0.32);
     var willSell = r3 < (isKey ? 0.3 : isFringe ? 0.9 : 0.68);
-    var priceMult = isKey ? 1.8 : rank < 9 ? 1.35 : 1.15;
+    var priceMult = isKey ? 1.5 : rank < 9 ? 1.22 : 1.08;
     return { willLoan: willLoan, willBuyOption: willBuyOption, willSell: willSell, isKey: isKey, isFringe: isFringe, rank: rank, priceMult: priceMult };
   }
 
