@@ -1604,7 +1604,7 @@
       board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Agora toque num reserva para colocá-lo no lugar, ou toque no titular de novo para cancelar." : "Toque num titular e depois num reserva para trocar." }));
 
       var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
-      c.lineup.bench.forEach(function (id) {
+      (c.lineup.bench || []).forEach(function (id) {
         var p = C().resolvePlayer(c, id); if (!p) return;
         var unavail = !C().available(c, id);
         var row = TM.ui.playerRow(p, {});
@@ -1612,9 +1612,26 @@
         if (unavail) row.classList.add("row-unavail");
         if (pickSlot != null) row.classList.add("row-target");
         row.addEventListener("click", function () { onBenchClick(id); });
+        row.appendChild(el("button", { class: "squad-move-btn cut", text: "Cortar", on: { click: function (e) { e.stopPropagation(); toExcluded(id); } } }));
         benchWrap.appendChild(row);
       });
       board.appendChild(benchWrap);
+
+      // não relacionados (fora da partida)
+      var exWrap = el("div", { class: "panel-narrow" }, [
+        el("h3", { class: "block-title", text: "Não relacionados" }),
+        el("div", { class: "setting-hint", text: "Ficam fora da partida — nem titulares, nem reservas." })
+      ]);
+      var ex = c.lineup.excluded || [];
+      if (!ex.length) exWrap.appendChild(el("p", { class: "intro-text", text: "Ninguém cortado. Toque em “Cortar” num reserva para deixá-lo de fora." }));
+      ex.forEach(function (id) {
+        var p = C().resolvePlayer(c, id); if (!p) return;
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("row-excluded");
+        row.appendChild(el("button", { class: "squad-move-btn add", text: "Relacionar", on: { click: function (e) { e.stopPropagation(); toBench(id); } } }));
+        exWrap.appendChild(row);
+      });
+      board.appendChild(exWrap);
     }
 
     function onBenchClick(benchId) {
@@ -1626,6 +1643,18 @@
       pickSlot = null;
       TM.storage.saveCoachCareer(c);
       renderBoard();
+    }
+    function toExcluded(id) {
+      c.lineup.bench = (c.lineup.bench || []).filter(function (x) { return x !== id; });
+      c.lineup.excluded = c.lineup.excluded || [];
+      if (c.lineup.excluded.indexOf(id) < 0) c.lineup.excluded.push(id);
+      TM.storage.saveCoachCareer(c); renderBoard();
+    }
+    function toBench(id) {
+      c.lineup.excluded = (c.lineup.excluded || []).filter(function (x) { return x !== id; });
+      if (c.lineup.bench.indexOf(id) < 0) c.lineup.bench.push(id);
+      c.lineup.bench.sort(function (a, b) { var pa = C().resolvePlayer(c, a), pb = C().resolvePlayer(c, b); return (pb ? pb.overall : 0) - (pa ? pa.overall : 0); });
+      TM.storage.saveCoachCareer(c); renderBoard();
     }
 
     renderBoard();
