@@ -1040,40 +1040,73 @@
 
     /* --- compra definitiva (mais rígida) --- */
     function renderBuy() {
-      // preço-pedido reflete importância e disposição de vender
       var asking = Math.round(mval * stance.priceMult * (stance.willSell ? 1 : 1.12));
-      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: stance.isKey ? 4 : 6 };
-      var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (stance.willSell ? "Pedimos " + money(c, asking) + " por " + p.name + "." : p.name + " não está à venda. Só saímos por " + money(c, asking) + ".") + "”" });
+      var maxPat = stance.isKey ? 4 : 6;
+      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: maxPat, agreed: false };
+
+      panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
+
+      // paciência do clube (some conforme você insiste com propostas baixas)
+      var moodBar = el("div", { class: "nego-mood" });
+      panel.appendChild(moodBar);
+      function updateMood() {
+        moodBar.innerHTML = "";
+        moodBar.appendChild(el("span", { class: "mood-lbl", text: "Paciência:" }));
+        for (var i = 0; i < maxPat; i++) moodBar.appendChild(el("span", { class: "mood-dot" + (i < st.patience ? " on" : "") }));
+      }
+
+      // conversa (vai e volta, estilo chat)
+      var thread = el("div", { class: "nego-thread" });
+      panel.appendChild(thread);
+      function bubble(side, text, tone) {
+        thread.appendChild(el("div", { class: "nego-bubble " + side + (tone ? " " + tone : "") }, [ el("span", { text: text }) ]));
+        thread.scrollTop = thread.scrollHeight;
+      }
+      bubble("them", sellClub.name + ": " + (stance.willSell ? "Pedimos " + money(c, asking) + " por " + p.name + "." : p.name + " não está à venda. Só sai por " + money(c, asking) + "."));
+
+      // controles: slider + botões rápidos
       var bidVal = el("span", { class: "range-val", text: money(c, st.bid) });
       var slider = el("input", { type: "range", min: 1, max: Math.max(1, c.budget), value: Math.min(st.bid, c.budget), class: "slider" });
       slider.addEventListener("input", function () { st.bid = parseInt(slider.value, 10); bidVal.textContent = money(c, st.bid); });
+      function setBid(v) { st.bid = Math.max(1, Math.min(c.budget, Math.round(v))); slider.value = Math.min(st.bid, c.budget); bidVal.textContent = money(c, st.bid); }
+      var quick = el("div", { class: "nego-quick" }, [
+        el("button", { class: "chip-btn", text: "−5%", on: { click: function () { setBid(st.bid * 0.95); } } }),
+        el("button", { class: "chip-btn", text: "+5%", on: { click: function () { setBid(st.bid * 1.05); } } }),
+        el("button", { class: "chip-btn", text: "Igualar pedido", on: { click: function () { setBid(asking); } } })
+      ]);
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]), quick ]));
+
       var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
-      var offerBtn = TM.ui.button("Fazer proposta", function () {
-        st.rounds++;
-        if (st.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas " + money(c, c.budget) + "."; return; }
-        if (st.bid >= asking * 0.93) {
-          quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Fechado! " + p.name + " é seu por " + money(c, st.bid) + ". Agora acerte com o jogador.”";
-          offerBtn.disabled = true; slider.disabled = true; nextBtn.style.display = "block";
-        } else if (st.bid >= asking * 0.78 && st.patience > 0) {
-          // contraproposta: encontra o jogador no meio do caminho
-          st.patience--; asking = Math.round((asking + st.bid) / 2);
-          quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Chegue a " + money(c, asking) + " e temos acordo.”";
-        } else if (st.rounds >= 7 || st.patience <= 0) {
-          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + " encerrou a conversa por ora. Tente novamente com uma proposta melhor.";
-          offerBtn.disabled = true; slider.disabled = true;
-        } else {
-          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Ainda está abaixo do que pedimos (" + money(c, asking) + ").”";
-          st.patience--;
-        }
-      }, "btn primary");
-      var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
-        goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid });
-      }, "btn primary next-step");
+      var offerBtn = TM.ui.button("💬 Fazer proposta", doOffer, "btn primary");
+      var acceptBtn = TM.ui.button("✅ Aceitar contraproposta", function () { setBid(asking); doOffer(); }, "btn primary");
+      acceptBtn.style.display = "none";
+      var nextBtn = TM.ui.button("Negociar com o jogador →", function () { goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid }); }, "btn primary next-step");
       nextBtn.style.display = "none";
-      panel.appendChild(quote);
-      panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
-      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta pela transferência" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]) ]));
-      actionWrap.appendChild(offerBtn); actionWrap.appendChild(nextBtn);
+
+      function lockControls() { offerBtn.disabled = true; slider.disabled = true; acceptBtn.style.display = "none"; quick.querySelectorAll("button").forEach(function (b) { b.disabled = true; }); }
+      function doOffer() {
+        if (st.agreed || offerBtn.disabled) return;
+        st.rounds++;
+        bubble("me", "Ofereço " + money(c, st.bid) + ".");
+        acceptBtn.style.display = "none";
+        if (st.bid > c.budget) { bubble("them", "Seu orçamento é de apenas " + money(c, c.budget) + ".", "angry"); return; }
+        if (st.bid >= asking * 0.93) {
+          bubble("them", "Fechado! " + p.name + " é seu por " + money(c, st.bid) + ". Agora acerte com o jogador.", "happy");
+          st.agreed = true; lockControls(); nextBtn.style.display = "block";
+        } else if (st.bid >= asking * 0.78 && st.patience > 0) {
+          st.patience--; asking = Math.round((asking + st.bid) / 2);
+          bubble("them", "Estamos perto... chegue a " + money(c, asking) + " e fechamos.");
+          acceptBtn.textContent = "✅ Aceitar " + money(c, asking); acceptBtn.style.display = "block";
+        } else if (st.rounds >= 7 || st.patience <= 0) {
+          bubble("them", "Encerramos a conversa por ora. Volte com uma proposta melhor.", "angry"); lockControls();
+        } else {
+          st.patience--; bubble("them", "Ainda está bem abaixo do que pedimos (" + money(c, asking) + ").", "angry");
+        }
+        updateMood();
+      }
+
+      updateMood();
+      actionWrap.appendChild(offerBtn); actionWrap.appendChild(acceptBtn); actionWrap.appendChild(nextBtn);
       panel.appendChild(actionWrap);
     }
 
@@ -1330,42 +1363,51 @@
     });
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
 
-    // campinho
-    var slots = C().FORMATIONS[c.lineup.formation];
-    var pitch = el("div", { class: "pitch" });
-    pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
-    pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
-    c.lineup.starters.forEach(function (id, i) {
-      var p = C().resolvePlayer(c, id); if (!p) return;
-      var slot = slots[i] || [null, 50, 50];
-      var unavail = !C().available(c, id);
-      var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
-        style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-        on: { click: function () { onStarterClick(i); } } }, [
-        el("span", { class: "chip-ov", text: p.overall }),
-        el("span", { class: "chip-name", text: shortName(p.name) }),
-        unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null
-      ]);
-      pitch.appendChild(chip);
-    });
-    screen.appendChild(pitch);
+    // campinho + reservas (área interativa atualizada EM LUGAR — não recarrega a tela nem reseta o scroll)
+    var board = el("div", { class: "lineup-board" });
+    screen.appendChild(board);
 
-    screen.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Toque num reserva para colocar no lugar do titular selecionado." : "Toque num titular e depois num reserva para trocar." }));
+    function renderBoard() {
+      board.innerHTML = "";
+      var slots = C().FORMATIONS[c.lineup.formation];
+      var pitch = el("div", { class: "pitch" });
+      pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+      pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+      c.lineup.starters.forEach(function (id, i) {
+        var p = C().resolvePlayer(c, id); if (!p) return;
+        var slot = slots[i] || [null, 50, 50];
+        var unavail = !C().available(c, id);
+        var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
+          style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+          on: { click: function () { pickSlot = (pickSlot === i ? null : i); renderBoard(); } } }, [
+          el("div", { class: "chip-face-wrap" }, [
+            TM.img.playerImg(p, "chip-face"),
+            el("span", { class: "chip-ov", text: p.overall }),
+            unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null
+          ]),
+          el("span", { class: "chip-name", text: shortName(p.name) }),
+          el("span", { class: "chip-age", text: p.age + " anos" })
+        ]);
+        pitch.appendChild(chip);
+      });
+      board.appendChild(pitch);
 
-    // reservas
-    var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
-    c.lineup.bench.forEach(function (id) {
-      var p = C().resolvePlayer(c, id); if (!p) return;
-      var unavail = !C().available(c, id);
-      var row = TM.ui.playerRow(p, {});
-      row.classList.add("clickable");
-      if (unavail) row.classList.add("row-unavail");
-      row.addEventListener("click", function () { onBenchClick(id); });
-      benchWrap.appendChild(row);
-    });
-    screen.appendChild(benchWrap);
+      board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Agora toque num reserva para colocá-lo no lugar, ou toque no titular de novo para cancelar." : "Toque num titular e depois num reserva para trocar." }));
 
-    function onStarterClick(i) { pickSlot = (pickSlot === i ? null : i); TM.ui.go("coach-lineup"); }
+      var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
+      c.lineup.bench.forEach(function (id) {
+        var p = C().resolvePlayer(c, id); if (!p) return;
+        var unavail = !C().available(c, id);
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("clickable");
+        if (unavail) row.classList.add("row-unavail");
+        if (pickSlot != null) row.classList.add("row-target");
+        row.addEventListener("click", function () { onBenchClick(id); });
+        benchWrap.appendChild(row);
+      });
+      board.appendChild(benchWrap);
+    }
+
     function onBenchClick(benchId) {
       if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
       var starterId = c.lineup.starters[pickSlot];
@@ -1374,8 +1416,10 @@
       c.lineup.bench[bi] = starterId;
       pickSlot = null;
       TM.storage.saveCoachCareer(c);
-      TM.ui.go("coach-lineup");
+      renderBoard();
     }
+
+    renderBoard();
   });
   function shortName(name) { var parts = name.split(" "); return parts.length > 1 ? parts[0][0] + ". " + parts[parts.length - 1] : name; }
 

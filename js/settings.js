@@ -48,7 +48,26 @@
 
     screen.appendChild(TM.ui.topbar("⚙️ Configurações", function () { TM.ui.go("modes"); }));
 
+    // tema com pré-visualização ao vivo
+    function themeControl() {
+      var wrap = el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tema" }) ]);
+      var seg = el("div", { class: "segmented" });
+      [{ label: "🌙 Escuro", value: "dark" }, { label: "☀️ Claro", value: "light" }].forEach(function (opt) {
+        var b = el("button", { class: "seg-btn" + (s.theme === opt.value ? " active" : ""), text: opt.label, on: { click: function () {
+          s.theme = opt.value;
+          seg.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active");
+          TM.ui.applyTheme(s.theme); // aplica na hora
+          var cur = TM.storage.settings(); cur.theme = s.theme; TM.storage.saveSettings(cur); // persiste só o tema
+        } } });
+        seg.appendChild(b);
+      });
+      wrap.appendChild(seg);
+      wrap.appendChild(el("div", { class: "setting-hint", text: "Escuro = preto e verde · Claro = branco e verde." }));
+      return wrap;
+    }
+
     var panel = el("div", { class: "panel-narrow" }, [
+      themeControl(),
       segmented("Dificuldade", "difficulty", [
         { label: "Fácil", value: "facil" }, { label: "Normal", value: "normal" },
         { label: "Difícil", value: "dificil" }, { label: "Lenda", value: "lenda" }
@@ -67,11 +86,13 @@
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Restaurar padrão", function () {
         TM.storage.saveSettings(TM.storage.defaultSettings());
+        TM.ui.applyTheme("dark");
         TM.ui.toast("Configurações restauradas");
         TM.ui.go("settings");
       }, "btn ghost"),
       TM.ui.button("Salvar", function () {
         TM.storage.saveSettings(s);
+        TM.ui.applyTheme(s.theme);
         TM.ui.toast("✔ Configurações salvas");
       }, "btn primary")
     ]));

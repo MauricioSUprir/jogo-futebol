@@ -179,11 +179,17 @@
     document.body.appendChild(overlay);
   }
 
+  function applyTheme(theme) {
+    if (!theme) { try { theme = TM.storage.settings().theme; } catch (e) { theme = "dark"; } }
+    document.body.classList.toggle("theme-light", theme === "light");
+  }
+
   TM.ui = {
-    init: function () { app = document.getElementById("app"); },
+    init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
+    applyTheme: applyTheme,
     current: function () { return current; }
   };
 
