@@ -497,6 +497,24 @@ html, body {
 .perf-val { font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .perf-lbl { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
 .rating-great { color: #4ade80; } .rating-good { color: var(--gold); } .rating-ok { color: var(--text); } .rating-bad { color: #e8734a; }
+/* momento / opinião do jogador */
+.moment-card { display: flex; gap: 12px; align-items: flex-start; width: 100%; max-width: 620px; margin-bottom: 14px;
+  background: var(--panel); border: 1px solid rgba(255,255,255,.08); border-left-width: 4px; border-radius: 12px; padding: 12px 14px; }
+.moment-emoji { font-size: 26px; line-height: 1.1; }
+.moment-body { flex: 1; min-width: 0; }
+.moment-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.moment-label { font-weight: 800; }
+.moment-eff { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.moment-text { font-size: 13px; color: var(--text-dim); margin-top: 3px; }
+.moment-recent { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.mr-lbl { font-size: 11px; color: var(--text-dim); }
+.mr-dot { font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums;
+  background: rgba(255,255,255,.06); border-radius: 6px; padding: 2px 6px; }
+.moment-card.mom-hot { border-left-color: #f97316; } .moment-card.mom-hot .moment-label { color: #fb923c; }
+.moment-card.mom-up { border-left-color: #4ade80; } .moment-card.mom-up .moment-label { color: #4ade80; }
+.moment-card.mom-neutral { border-left-color: #64748b; }
+.moment-card.mom-down { border-left-color: #eab308; } .moment-card.mom-down .moment-label { color: #eab308; }
+.moment-card.mom-cold { border-left-color: #38bdf8; } .moment-card.mom-cold .moment-label { color: #38bdf8; }
 .career-totals { background: var(--panel); border-radius: 12px; padding: 14px; text-align: center; font-weight: 700; color: var(--gold); }
 .hist-line { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; background: var(--panel); border-radius: 8px; font-size: 13px; }
 
@@ -576,6 +594,12 @@ html, body {
 .nego-quote.angry { border-left-color: #d0342c; }
 .nego-field { display: flex; flex-direction: column; gap: 6px; }
 .nego-field label { font-size: 12.5px; color: var(--text-dim); }
+.stance-box { width: 100%; max-width: 620px; background: var(--panel); border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.stance-title { font-weight: 800; font-size: 13.5px; margin-bottom: 6px; }
+.stance-line { font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+.loan-badge { display: inline-block; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .4px;
+  background: rgba(56,189,248,.16); color: #38bdf8; border: 1px solid rgba(56,189,248,.4); border-radius: 6px; padding: 1px 6px; margin-left: 6px; }
 .search-bar { width: 100%; max-width: 620px; display: flex; gap: 8px; margin-bottom: 12px; }
 .search-bar .text-input { flex: 1; }
 

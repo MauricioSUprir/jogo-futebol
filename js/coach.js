@@ -983,60 +983,144 @@
   function askingPrice(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 1.3)); }
   function wageDemand(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 0.15)); }
 
+  function segCtl(options, def, cb) {
+    var wrap = el("div", { class: "segmented full" });
+    options.forEach(function (o) {
+      var val = Array.isArray(o) ? o[0] : o, lab = Array.isArray(o) ? o[1] : o;
+      var b = el("button", { class: "seg-btn" + (val === def ? " active" : ""), text: lab, on: { click: function () { cb(val); wrap.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active"); } } });
+      wrap.appendChild(b);
+    });
+    return wrap;
+  }
+
   TM.ui.register("coach-nego-club", function (screen, params) {
     var c = TM.storage.coachCareer();
     var p = TM.data.player(params.pid);
     var sellClub = TM.data.club(p.clubId);
-    var asking = curVal(c, askingPrice(p));
-    var state = { bid: Math.min(Math.round(asking * 0.8), c.budget), rounds: 0, agreed: false };
+    var stance = C().clubStance(p);
+    var mval = curVal(c, TM.data.marketValue(p));
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
     screen.appendChild(el("div", { class: "nego-step" }, [
       el("div", { class: "nego-dot active", text: "1. Com o clube" }),
       el("div", { class: "nego-dot", text: "2. Com o jogador" })
     ]));
-
     screen.appendChild(el("div", { class: "player-card" }, [
       TM.img.playerImg(p, "pc-face"),
       el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: p.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + sellClub.name }) ]),
       TM.ui.ovBadge(p.overall)
     ]));
 
+    // postura do clube dono
+    var stanceLines = [];
+    stanceLines.push(stance.willSell ? "• Aberto a vender por um bom valor." : "• Reluta em vender — quer segurar o jogador.");
+    stanceLines.push(stance.willLoan ? (stance.willBuyOption ? "• Aceita empréstimo (com ou sem opção de compra)." : "• Aceita apenas empréstimo simples.") : "• Não quer emprestar este jogador.");
+    screen.appendChild(el("div", { class: "stance-box" }, [
+      el("div", { class: "stance-title", text: "📋 Postura do " + sellClub.name }),
+      el("div", { class: "stance-line", text: stanceLines[0] }),
+      el("div", { class: "stance-line", text: stanceLines[1] })
+    ]));
+
+    // seletor de tipo de negócio
+    var types = [["buy", "Comprar"]];
+    if (stance.willLoan) types.push(["loan", "Empréstimo"]);
+    if (stance.willBuyOption) types.push(["loanBuy", "Empr. c/ opção"]);
+    var deal = { type: "buy" };
     var panel = el("div", { class: "nego-panel" });
+    screen.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tipo de negócio" }), segCtl(types, "buy", function (v) { deal.type = v; render(); }) ]));
     screen.appendChild(panel);
-    var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “Pedimos " + money(c, asking) + " por " + p.name + ".”" });
-    var bidVal = el("span", { class: "range-val", text: money(c, state.bid) });
-    var slider = el("input", { type: "range", min: 1, max: c.budget, value: Math.min(state.bid, c.budget), class: "slider" });
-    slider.addEventListener("input", function () { state.bid = parseInt(slider.value, 10); bidVal.textContent = money(c, state.bid); });
 
-    var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
-    var offerBtn = TM.ui.button("Fazer proposta", function () {
-      state.rounds++;
-      if (state.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas " + money(c, c.budget) + "."; return; }
-      if (state.bid >= asking * 0.95) {
-        quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Aceito! " + p.name + " é seu por " + money(c, state.bid) + ". Agora acerte com o jogador.”";
-        state.agreed = true;
-        actionWrap.querySelector(".next-step").style.display = "block";
-        offerBtn.disabled = true;
-      } else if (state.bid >= asking * 0.78) {
-        asking = Math.round(asking * 0.93);
-        quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Está perto... aceitamos por " + money(c, asking) + ".”";
-      } else {
-        quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Muito baixo. Nem pensar.”";
-        if (state.rounds >= 4) { quote.textContent = sellClub.name + " encerrou a conversa. Tente outro valor mais alto."; }
+    function goPlayer(nego) { NEGO = nego; TM.ui.go("coach-nego-player"); }
+
+    function render() {
+      panel.innerHTML = "";
+      if (deal.type === "buy") renderBuy();
+      else renderLoan(deal.type === "loanBuy");
+    }
+
+    /* --- compra definitiva (mais rígida) --- */
+    function renderBuy() {
+      // preço-pedido reflete importância e disposição de vender
+      var asking = Math.round(mval * stance.priceMult * (stance.willSell ? 1 : 1.25));
+      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: stance.isKey ? 2 : 4 };
+      var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (stance.willSell ? "Pedimos " + money(c, asking) + " por " + p.name + "." : p.name + " não está à venda. Só saímos por " + money(c, asking) + ".") + "”" });
+      var bidVal = el("span", { class: "range-val", text: money(c, st.bid) });
+      var slider = el("input", { type: "range", min: 1, max: Math.max(1, c.budget), value: Math.min(st.bid, c.budget), class: "slider" });
+      slider.addEventListener("input", function () { st.bid = parseInt(slider.value, 10); bidVal.textContent = money(c, st.bid); });
+      var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
+      var offerBtn = TM.ui.button("Fazer proposta", function () {
+        st.rounds++;
+        if (st.bid > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Seu orçamento é de apenas " + money(c, c.budget) + "."; return; }
+        if (st.bid >= asking * 0.98) {
+          quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Fechado! " + p.name + " é seu por " + money(c, st.bid) + ". Agora acerte com o jogador.”";
+          offerBtn.disabled = true; slider.disabled = true; nextBtn.style.display = "block";
+        } else if (st.bid >= asking * 0.88 && st.patience > 0) {
+          st.patience--; asking = Math.round(asking * 0.96);
+          quote.className = "nego-quote"; quote.textContent = sellClub.name + ": “Chegue a " + money(c, asking) + " e temos acordo.”";
+        } else if (st.rounds >= 4 || st.patience <= 0) {
+          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + " encerrou a conversa. Volte com uma proposta séria.";
+          offerBtn.disabled = true; slider.disabled = true;
+        } else {
+          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Muito abaixo do que vale. Nem pensar.”";
+          st.patience--;
+        }
+      }, "btn primary");
+      var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
+        goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid });
+      }, "btn primary next-step");
+      nextBtn.style.display = "none";
+      panel.appendChild(quote);
+      panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta pela transferência" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]) ]));
+      actionWrap.appendChild(offerBtn); actionWrap.appendChild(nextBtn);
+      panel.appendChild(actionWrap);
+    }
+
+    /* --- empréstimo (simples ou com opção de compra) --- */
+    function renderLoan(withOption) {
+      var d = { termYears: 1, loanFee: Math.max(1, Math.round(mval * 0.08)), buyPrice: Math.round(mval * stance.priceMult * 1.15) };
+      var minBuy = Math.round(mval * stance.priceMult); // o clube dono exige no mínimo isso
+      var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (withOption ? "Topamos emprestar " + p.name + " com opção — mas a opção não sai por menos de " + money(c, minBuy) + "." : "Podemos emprestar " + p.name + ". Combine a taxa e o tempo.") + "”" });
+      panel.appendChild(quote);
+
+      // duração
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tempo de empréstimo" }),
+        segCtl([[0.5, "6 meses"], [1, "1 ano"], [1.5, "1 ano e meio"]], 1, function (v) { d.termYears = parseFloat(v); }) ]));
+
+      // taxa de empréstimo
+      var feeVal = el("span", { class: "range-val", text: money(c, d.loanFee) });
+      var feeMax = Math.max(2, Math.round(mval * 0.25));
+      var feeSlider = el("input", { type: "range", min: 1, max: feeMax, value: Math.min(d.loanFee, feeMax), class: "slider" });
+      feeSlider.addEventListener("input", function () { d.loanFee = parseInt(feeSlider.value, 10); feeVal.textContent = money(c, d.loanFee); });
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Taxa de empréstimo" }), el("div", { class: "range-wrap" }, [ feeSlider, feeVal ]) ]));
+
+      // preço da opção de compra
+      if (withOption) {
+        var bpVal = el("span", { class: "range-val", text: money(c, d.buyPrice) });
+        var bpMax = Math.max(minBuy + 1, Math.round(minBuy * 2));
+        var bpSlider = el("input", { type: "range", min: 1, max: bpMax, value: Math.min(d.buyPrice, bpMax), class: "slider" });
+        bpSlider.addEventListener("input", function () { d.buyPrice = parseInt(bpSlider.value, 10); bpVal.textContent = money(c, d.buyPrice); });
+        panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Preço da opção de compra (mín. " + money(c, minBuy) + ")" }), el("div", { class: "range-wrap" }, [ bpSlider, bpVal ]) ]));
       }
-    }, "btn primary");
-    var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
-      NEGO = { pid: p.id, oldClubId: p.clubId, fee: state.bid };
-      TM.ui.go("coach-nego-player");
-    }, "btn primary next-step");
-    nextBtn.style.display = "none";
 
-    panel.appendChild(quote);
-    panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta pela transferência" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]) ]));
-    actionWrap.appendChild(offerBtn);
-    actionWrap.appendChild(nextBtn);
-    screen.appendChild(actionWrap);
+      var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
+      var offerBtn = TM.ui.button("Propor empréstimo", function () {
+        if (d.loanFee > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Você não tem orçamento nem para a taxa (" + money(c, c.budget) + ")."; return; }
+        if (withOption && d.buyPrice < minBuy) {
+          quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “A opção de compra é baixa demais. No mínimo " + money(c, minBuy) + ".”"; return;
+        }
+        quote.className = "nego-quote happy"; quote.textContent = sellClub.name + ": “Acordo de empréstimo encaminhado. Agora convença o jogador.”";
+        offerBtn.disabled = true; nextBtn.style.display = "block";
+      }, "btn primary");
+      var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
+        goPlayer({ pid: p.id, oldClubId: p.clubId, type: withOption ? "loanBuy" : "loan", loanFee: d.loanFee, termYears: d.termYears, buyPrice: withOption ? d.buyPrice : 0 });
+      }, "btn primary next-step");
+      nextBtn.style.display = "none";
+      actionWrap.appendChild(offerBtn); actionWrap.appendChild(nextBtn);
+      panel.appendChild(actionWrap);
+    }
+
+    render();
   });
 
   var NEGO = null;
@@ -1091,12 +1175,23 @@
       var roleOk = !((p.overall >= 80 && (terms.role === "rodizio" || terms.role === "promessa")));
       if (wageOk && roleOk) {
         // fechado!
-        c.budget -= NEGO.fee;
-        c.roster.push(p.id);
-        c.signedFrom[p.id] = NEGO.oldClubId;
-        C().syncLineup(c); // já entra no banco de reservas
+        var isLoan = NEGO.type === "loan" || NEGO.type === "loanBuy";
+        if (isLoan) {
+          C().signLoan(c, p, {
+            parentClubId: NEGO.oldClubId, buyOption: NEGO.type === "loanBuy",
+            buyPrice: NEGO.buyPrice || 0, termYears: NEGO.termYears || 1, loanFee: NEGO.loanFee || 0, wage: terms.wage
+          });
+        } else {
+          c.budget -= (NEGO.fee || 0);
+          c.roster.push(p.id);
+          c.signedFrom[p.id] = NEGO.oldClubId;
+          C().syncLineup(c); // já entra no banco de reservas
+        }
         TM.storage.saveCoachCareer(c);
-        quote.className = "nego-quote happy"; quote.textContent = "✔ " + p.name + " assinou com o " + TM.data.club(c.teamId).name + "!";
+        quote.className = "nego-quote happy";
+        quote.textContent = isLoan
+          ? "✔ " + p.name + " chega por empréstimo (" + C().loanTermLabel(NEGO.termYears) + ")" + (NEGO.type === "loanBuy" ? " com opção de compra!" : "!")
+          : "✔ " + p.name + " assinou com o " + TM.data.club(c.teamId).name + "!";
         actionWrap.innerHTML = "";
         actionWrap.appendChild(TM.ui.button("Voltar ao mercado", function () { NEGO = null; TM.ui.go("coach-market"); }, "btn primary"));
       } else if (!roleOk) {
@@ -1135,6 +1230,27 @@
       if (n.offer) {
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("Analisar proposta", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary small")
+        ]));
+      } else if (n.loanOffer) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("🤝 Emprestar", function () {
+            C().resolveLoanOffer(c, n, true); TM.storage.saveCoachCareer(c);
+            TM.ui.toast("Jogador emprestado."); TM.ui.go("coach-notifications");
+          }, "btn primary small"),
+          TM.ui.button("Recusar", function () {
+            C().resolveLoanOffer(c, n, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
+          }, "btn ghost small")
+        ]));
+      } else if (n.buyOption) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("💳 Comprar", function () {
+            C().exerciseLoanBuy(c, n.buyOption.pid, n.buyOption.price); TM.notify.remove(c, n.id);
+            TM.storage.saveCoachCareer(c); TM.ui.toast("Opção de compra exercida!"); TM.ui.go("coach-notifications");
+          }, "btn primary small"),
+          TM.ui.button("Devolver", function () {
+            C().returnLoanIn(c, n.buyOption.pid); TM.notify.remove(c, n.id);
+            TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
+          }, "btn ghost small")
         ]));
       } else if (n.nationInvite) {
         card.appendChild(el("div", { class: "note-actions" }, [

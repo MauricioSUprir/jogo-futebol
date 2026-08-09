@@ -400,20 +400,42 @@
   function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
 
   function maybeIncomingOffer(career) {
-    if (Math.random() > 0.28) return;
-    var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 70; }).sort(function (a, b) { return b.overall - a.overall; });
+    if (Math.random() > 0.30) return;
+    // não recebe propostas por jogadores que eu mesmo peguei emprestado
+    var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 66 && !(career.loanedIn && career.loanedIn[p.id]); }).sort(function (a, b) { return b.overall - a.overall; });
     if (!mine.length) return;
-    var target = mine[Math.floor(Math.random() * Math.min(6, mine.length))];
-    // um clube forte de fora
-    var buyers = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= target.overall - 2; });
-    if (!buyers.length) return;
-    var buyer = buyers[Math.floor(Math.random() * buyers.length)];
-    var fee = Math.round(TM.data.marketValue(target) * (0.8 + Math.random() * 0.6) * (career.money ? career.money.mult : 1));
-    TM.notify.push(career, {
-      icon: "📨", title: "Proposta recebida",
-      text: buyer.name + " ofereceu " + (career.money ? career.money.sym : "€") + " " + fee + "M por " + target.name + ".",
-      offer: { playerId: target.id, buyerId: buyer.id, fee: fee }
-    });
+    var target = mine[Math.floor(Math.random() * Math.min(8, mine.length))];
+    var val = TM.data.marketValue(target), mult = career.money ? career.money.mult : 1;
+    var kind = Math.random(); // 0.55 compra · 0.28 empréstimo · 0.17 empréstimo c/ opção
+    if (kind < 0.55) {
+      var buyers = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= target.overall - 2; });
+      if (!buyers.length) return;
+      var buyer = buyers[Math.floor(Math.random() * buyers.length)];
+      var fee = Math.round(val * (0.8 + Math.random() * 0.6) * mult);
+      TM.notify.push(career, {
+        icon: "📨", title: "Proposta recebida",
+        text: buyer.name + " ofereceu " + fmtMoney(career, fee) + " por " + target.name + ".",
+        offer: { playerId: target.id, buyerId: buyer.id, fee: fee }
+      });
+    } else {
+      // clubes de porte parecido ou menor pedem por empréstimo
+      var lbuyers = TM.data.world().clubs.filter(function (cl) {
+        var r = TM.data.clubRating(cl.id);
+        return cl.id !== career.teamId && r >= target.overall - 12 && r <= target.overall + 4;
+      });
+      if (!lbuyers.length) return;
+      var lb = lbuyers[Math.floor(Math.random() * lbuyers.length)];
+      var loanFee = Math.round(Math.max(1, val * 0.08) * mult);
+      var withOption = kind >= 0.83;
+      var termYears = [0.5, 1, 1, 1.5][Math.floor(Math.random() * 4)];
+      var buyPrice = withOption ? Math.round(val * (1.1 + Math.random() * 0.4) * mult) : 0;
+      TM.notify.push(career, {
+        icon: withOption ? "🔁" : "🔄",
+        title: withOption ? "Empréstimo c/ opção" : "Pedido de empréstimo",
+        text: lb.name + " quer " + target.name + " por empréstimo" + (withOption ? " com opção de compra de " + fmtMoney(career, buyPrice) : "") + " (" + loanTermLabel(termYears) + ", taxa " + fmtMoney(career, loanFee) + ").",
+        loanOffer: { playerId: target.id, buyerId: lb.id, loanFee: loanFee, buyOption: withOption, buyPrice: buyPrice, termYears: termYears }
+      });
+    }
   }
 
   // resolve uma proposta recebida (aceitar = vende; jogador pode ou não topar)
@@ -442,6 +464,120 @@
       TM.notify.push(career, { icon: "🙅", title: "Jogador recusou", text: "Você aceitou, mas " + player.name + " não quis deixar o clube. Negócio cancelado." });
       return "jogador_recusou";
     }
+  }
+
+  /* ---------- empréstimos ---------- */
+  function fmtMoney(career, v) {
+    var sym = (career.money && career.money.sym) || "€";
+    return sym + " " + Math.round(v) + "M";
+  }
+  function loanTermLabel(y) { return y === 0.5 ? "6 meses" : y === 1 ? "1 ano" : y === 1.5 ? "1 ano e meio" : "2 anos"; }
+
+  // postura do clube dono quanto a emprestar/vender — estável por jogador (hash do id)
+  function clubStance(p) {
+    var squad = TM.data.clubPlayers(p.clubId).slice().sort(function (a, b) { return b.overall - a.overall; });
+    var rank = 0; for (var i = 0; i < squad.length; i++) { if (squad[i].id === p.id) { rank = i; break; } }
+    var isKey = rank < 5, isFringe = rank >= 13;
+    var young = p.age <= 21, prime = p.age >= 23 && p.age <= 31;
+    var h = 2166136261, s = String(p.id);
+    for (var j = 0; j < s.length; j++) { h ^= s.charCodeAt(j); h = (h * 16777619) >>> 0; }
+    var r1 = (h & 1023) / 1023, r2 = ((h >>> 10) & 1023) / 1023, r3 = ((h >>> 20) & 1023) / 1023;
+    var loanBase = isKey ? 0.06 : young ? 0.55 : isFringe ? 0.62 : prime ? 0.16 : 0.34;
+    var willLoan = r1 < loanBase;
+    var willBuyOption = willLoan && !isKey && (young ? r2 < 0.55 : r2 < 0.32);
+    var willSell = r3 < (isKey ? 0.3 : isFringe ? 0.9 : 0.68);
+    var priceMult = isKey ? 1.8 : rank < 9 ? 1.35 : 1.15;
+    return { willLoan: willLoan, willBuyOption: willBuyOption, willSell: willSell, isKey: isKey, isFringe: isFringe, rank: rank, priceMult: priceMult };
+  }
+
+  // empréstimo de entrada (jogador que EU pego emprestado)
+  function signLoan(career, p, opts) {
+    career.loanedIn = career.loanedIn || {};
+    if (career.roster.indexOf(p.id) < 0) career.roster.push(p.id);
+    career.signedFrom[p.id] = opts.parentClubId;
+    career.loanedIn[p.id] = {
+      parentClubId: opts.parentClubId, buyOption: !!opts.buyOption, buyPrice: opts.buyPrice || 0,
+      termYears: opts.termYears || 1, seasonsLeft: Math.max(1, Math.round(opts.termYears || 1)), wage: opts.wage || 0
+    };
+    career.budget -= (opts.loanFee || 0);
+    syncLineup(career);
+  }
+  function returnLoanIn(career, pid) {
+    career.roster = (career.roster || []).filter(function (id) { return id !== pid; });
+    delete career.signedFrom[pid];
+    if (career.loanedIn) delete career.loanedIn[pid];
+    if (career.lineup) {
+      career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== pid; });
+      career.lineup.bench = career.lineup.bench.filter(function (id) { return id !== pid; });
+    }
+    syncLineup(career);
+  }
+  function exerciseLoanBuy(career, pid, price) {
+    career.budget -= price;
+    if (career.loanedIn) delete career.loanedIn[pid]; // deixa de ser empréstimo, vira contratação
+    syncLineup(career);
+  }
+
+  // empréstimo de saída (jogador MEU que eu cedo a outro clube)
+  function loanOutPlayer(career, off) {
+    career.loanedOut = career.loanedOut || {};
+    career.budget += (off.loanFee || 0);
+    career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
+    if (career.lineup) {
+      career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });
+      career.lineup.bench = career.lineup.bench.filter(function (id) { return id !== off.playerId; });
+    }
+    career.loanedOut[off.playerId] = {
+      toClubId: off.buyerId, buyOption: !!off.buyOption, buyPrice: off.buyPrice || 0,
+      seasonsLeft: Math.max(1, Math.round(off.termYears || 1))
+    };
+    syncLineup(career);
+  }
+  function resolveLoanOffer(career, note, accept) {
+    var lo = note.loanOffer;
+    var player = resolvePlayer(career, lo.playerId);
+    TM.notify.remove(career, note.id);
+    if (!accept) {
+      TM.notify.push(career, { icon: "🚫", title: "Empréstimo recusado", text: "Você recusou emprestar " + (player ? player.name : "o jogador") + "." });
+      return "recusada";
+    }
+    loanOutPlayer(career, lo);
+    var club = TM.data.club(lo.buyerId);
+    TM.notify.push(career, { icon: "🤝", title: "Empréstimo fechado", text: (player ? player.name : "Jogador") + " foi emprestado ao " + (club ? club.name : "clube") + (lo.buyOption ? " com opção de compra" : "") + "." });
+    return "emprestado";
+  }
+
+  // processa expiração de empréstimos ao virar a temporada
+  function processLoans(career) {
+    if (career.loanedIn) Object.keys(career.loanedIn).forEach(function (pid) {
+      var ln = career.loanedIn[pid]; ln.seasonsLeft--;
+      if (ln.seasonsLeft > 0) return;
+      var p = TM.data.player(pid), nm = p ? p.name : "Jogador";
+      if (ln.buyOption) {
+        TM.notify.push(career, { icon: "🔁", title: "Opção de compra",
+          text: "O empréstimo de " + nm + " terminou. Exercer a opção de compra por " + fmtMoney(career, ln.buyPrice) + "?",
+          buyOption: { pid: pid, price: ln.buyPrice } });
+      } else {
+        var parent = TM.data.club(ln.parentClubId);
+        returnLoanIn(career, pid);
+        TM.notify.push(career, { icon: "↩️", title: "Fim de empréstimo", text: nm + " retornou ao " + (parent ? parent.name : "clube de origem") + "." });
+      }
+    });
+    if (career.loanedOut) Object.keys(career.loanedOut).forEach(function (pid) {
+      var lo = career.loanedOut[pid]; lo.seasonsLeft--;
+      if (lo.seasonsLeft > 0) return;
+      var p = TM.data.player(pid), nm = p ? p.name : "Jogador", club = TM.data.club(lo.toClubId);
+      if (lo.buyOption && Math.random() < 0.55) {
+        career.budget += lo.buyPrice;
+        TM.notify.push(career, { icon: "💰", title: "Opção exercida", text: (club ? club.name : "O clube") + " exerceu a opção de compra de " + nm + " por " + fmtMoney(career, lo.buyPrice) + "." });
+        delete career.loanedOut[pid];
+      } else {
+        if (career.roster.indexOf(pid) < 0) career.roster.push(pid);
+        delete career.loanedOut[pid];
+        syncLineup(career);
+        TM.notify.push(career, { icon: "↩️", title: "Retorno de empréstimo", text: nm + " retornou do empréstimo ao " + (club ? club.name : "clube") + "." });
+      }
+    });
   }
 
   function promoteYouth(career, youthId) {
@@ -656,6 +792,7 @@
   function newSeason(career) {
     career.season++;
     ageWorld(career);
+    processLoans(career);
     seasonSetup(career);
     career.objective = generateObjective(career.teamId);
     maybeNationInvite(career);
@@ -671,6 +808,8 @@
       try { seasonSetup(career); } catch (e) { /* deixa o roteador tratar */ }
     }
     if (!career.money) career.money = CURRENCIES.eur;
+    if (!career.loanedIn) career.loanedIn = {};
+    if (!career.loanedOut) career.loanedOut = {};
     if (!career.injuries) career.injuries = {};
     if (!career.suspensions) career.suspensions = {};
     if (!career.notifications) career.notifications = [];
@@ -845,6 +984,8 @@
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
-    promoteYouth: promoteYouth, generateYouth: generateYouth
+    promoteYouth: promoteYouth, generateYouth: generateYouth,
+    clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
+    resolveLoanOffer: resolveLoanOffer, loanTermLabel: loanTermLabel, fmtMoney: fmtMoney
   };
 })(window);

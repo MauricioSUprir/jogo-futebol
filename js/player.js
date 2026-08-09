@@ -6,6 +6,28 @@
 
   var CUR_YEAR = 2026;
 
+  /* ---------- momento / opinião sobre o jogador ---------- */
+  // momentum vive em [-5, 5]; sobe com boas notas, cai com ruins, com decaimento suave.
+  function updateMomentum(c, rating) {
+    if (c.momentum == null) c.momentum = 0;
+    var d;
+    if (rating >= 8.0) d = 1.6; else if (rating >= 7.2) d = 1.0; else if (rating >= 6.4) d = 0.4;
+    else if (rating >= 5.6) d = -0.2; else if (rating >= 5.0) d = -1.0; else d = -1.7;
+    c.momentum = Math.max(-5, Math.min(5, c.momentum * 0.82 + d));
+    c.recentRatings = (c.recentRatings || []).concat(+rating.toFixed(1)).slice(-5);
+  }
+  // opinião pública + modificadores aplicados em campo
+  function momentumInfo(c) {
+    var m = c.momentum || 0;
+    var mod = +(m * 0.06).toFixed(2);   // ± até 0.30 na sua nota
+    var mult = 1 + m * 0.05;            // ± até 25% no peso de finalização
+    if (m >= 3)  return { emoji: "🔥", label: "Em grande fase",  css: "mom-hot",     text: "Imprensa e torcida rasgam elogios — você entra em campo com confiança total.", mod: mod, mult: mult };
+    if (m >= 1)  return { emoji: "📈", label: "Em alta",         css: "mom-up",      text: "Boas atuações recentes mantêm o ambiente a seu favor.", mod: mod, mult: mult };
+    if (m > -1)  return { emoji: "➖", label: "Momento neutro",  css: "mom-neutral", text: "Fase regular. Uma boa atuação muda o clima rapidamente.", mod: mod, mult: mult };
+    if (m > -3)  return { emoji: "📉", label: "Sob pressão",     css: "mom-down",    text: "A cobrança aumentou — precisa reagir logo para virar o jogo.", mod: mod, mult: mult };
+    return       { emoji: "❄️", label: "Fase ruim",        css: "mom-cold",    text: "Muita crítica por fora. A insegurança pesa dentro de campo.", mod: mod, mult: mult };
+  }
+
   /* helpers de liga (locais para o modo) */
   function roundRobin(ids) {
     var n = ids.length, arr = ids.slice(), rounds = [];
@@ -176,7 +198,7 @@
         };
         var career = Object.assign({}, player, {
           created: true, season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: [],
-          notifications: [], skillPoints: 0, injured: 0
+          notifications: [], skillPoints: 0, injured: 0, momentum: 0, recentRatings: []
         });
         startSeasonFixtures(career);
         TM.storage.savePlayerCareer(career);
@@ -246,6 +268,8 @@
     if (!c.notifications) c.notifications = [];
     if (c.skillPoints == null) c.skillPoints = 0;
     if (c.injured == null) c.injured = 0;
+    if (c.momentum == null) c.momentum = 0;
+    if (!c.recentRatings) c.recentRatings = [];
     TM.storage.savePlayerCareer(c);
     var club = TM.data.club(c.clubId);
 
@@ -292,6 +316,26 @@
     screen.appendChild(el("div", { class: "stat-tiles" }, [
       tile("Temporada", c.season), tile("Jogos", c.seasonApps), tile("Gols", c.seasonGoals), tile("Nota média", avg)
     ]));
+
+    // opinião / momento do jogador
+    var mi = momentumInfo(c);
+    var recent = (c.recentRatings || []);
+    var momCard = el("div", { class: "moment-card " + mi.css }, [
+      el("div", { class: "moment-emoji", text: mi.emoji }),
+      el("div", { class: "moment-body" }, [
+        el("div", { class: "moment-head" }, [
+          el("span", { class: "moment-label", text: mi.label }),
+          el("span", { class: "moment-eff", text: (mi.mod >= 0 ? "+" : "") + mi.mod.toFixed(2) + " em campo" })
+        ]),
+        el("div", { class: "moment-text", text: mi.text }),
+        recent.length ? el("div", { class: "moment-recent" }, [
+          el("span", { class: "mr-lbl", text: "Últimas notas:" })
+        ].concat(recent.map(function (r) {
+          return el("span", { class: "mr-dot rating-" + ratingClass(r), text: r.toFixed(1) });
+        }))) : null
+      ])
+    ]);
+    screen.appendChild(momCard);
 
     // meta
     var prog = c.objective.type === "goals" ? c.seasonGoals + "/" + c.objective.target
@@ -409,7 +453,8 @@
     var oppTeam = TM.engine.teamFromClub(oppId);
     var teamA = iAmHome ? myTeam : oppTeam, teamB = iAmHome ? oppTeam : myTeam;
 
-    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me" });
+    var mi = momentumInfo(c);
+    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult });
 
     // transmissão ao vivo; o pós-jogo só é aplicado ao final (onComplete)
     TM.ui.go("player-live", {
@@ -442,6 +487,7 @@
     // desempenho
     var f = result.focus;
     c.seasonApps++; c.seasonGoals += f.goals; c.seasonRatingSum += f.rating;
+    updateMomentum(c, f.rating);
 
     // lesão do jogador
     if (f.injured) {
@@ -538,6 +584,7 @@
     if (!f) return;
     c.natApps = (c.natApps || 0) + 1;
     c.natGoals = (c.natGoals || 0) + f.goals;
+    updateMomentum(c, f.rating);
     if (f.injured) { c.injured = f.injured; TM.notify.push(c, { icon: "🚑", title: "Lesão na seleção", text: "Você se lesionou servindo a seleção. Fora por ~" + f.injured + " jogo(s)." }); }
     var gained = 0; if (f.rating >= 8.5) gained = 2; else if (f.rating >= 7.3) gained = 1; if (f.goals >= 2) gained += 1;
     if (gained > 0) { c.skillPoints += gained; TM.notify.push(c, { icon: "⭐", title: "Pontos de habilidade", text: "Boa atuação pela seleção (nota " + f.rating.toFixed(1) + ")! +" + gained + " ponto(s)." }); }
@@ -553,7 +600,8 @@
       var mine = myNationTeam(c), opp = TM.engine.teamFromNation(userHome ? m.awayId : m.homeId);
       var teamA = userHome ? mine : opp, teamB = userHome ? opp : mine;
       var label = TM.comp.wcRoundLabel(null, m);
-      var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
+      var miN = momentumInfo(c);
+      var result = TM.engine.simulate(teamA, teamB, { realism: settings.realism, neutral: true, focusPlayerId: "me", focusForm: miN.mod, focusFormMult: miN.mult });
       TM.ui.go("player-live", {
         teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, title: "Copa do Mundo · " + label, back: "player-nation",
         onComplete: function () {
@@ -570,7 +618,8 @@
     var g = null; for (var i = 0; i < ns.games.length; i++) { if (!ns.games[i].played) { g = ns.games[i]; break; } }
     if (!g) { TM.ui.go("player-nation"); return; }
     var mine2 = myNationTeam(c), opp2 = TM.engine.teamFromNation(g.oppId);
-    var result2 = TM.engine.simulate(mine2, opp2, { realism: settings.realism, neutral: true, focusPlayerId: "me" });
+    var miN2 = momentumInfo(c);
+    var result2 = TM.engine.simulate(mine2, opp2, { realism: settings.realism, neutral: true, focusPlayerId: "me", focusForm: miN2.mod, focusFormMult: miN2.mult });
     TM.ui.go("player-live", {
       teamA: mine2, teamB: opp2, result: result2, iAmHome: true, title: "Amistoso da seleção", back: "player-nation",
       onComplete: function () {

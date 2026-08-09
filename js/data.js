@@ -75,7 +75,13 @@
     "Manchester City": 88,
     "Liverpool": 89,
     "Arsenal": 87,
-    "Real Madrid": 91
+    "Real Madrid": 91,
+    "Barcelona": 89,
+    "Atlético de Madrid": 85,
+    "Inter de Milão": 86,
+    "Napoli": 84,
+    "Milan": 84,
+    "Juventus": 84
   };
 
   /* ---------- Clubes reais por liga: [nome, sigla, força] ----------

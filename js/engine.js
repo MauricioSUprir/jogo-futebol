@@ -40,12 +40,12 @@
       scorers: (fw.concat(mf)).length ? fw.concat(mf) : xi };
   }
 
-  function chooseScorer(profile, focusId) {
+  function chooseScorer(profile, focusId, focusMult) {
     var pool = profile.scorers;
     var weights = pool.map(function (p) {
       var w = (p.attrs.sho + p.attrs.dri) / 2;
       if (p.pos === "FW") w *= 1.6; else if (p.pos === "MF") w *= 1.0; else w *= 0.4;
-      if (p.id === focusId) w *= 1.35;
+      if (p.id === focusId) w *= 1.35 * (focusMult || 1);
       return w;
     });
     var total = weights.reduce(function (s, w) { return s + w; }, 0);
@@ -88,7 +88,7 @@
 
     function tryScore(side, prof, opp, team, minute, isPen) {
       shots[side]++;
-      var scorer = isPen ? chooseScorer(prof, focusId) : chooseScorer(prof, focusId);
+      var scorer = chooseScorer(prof, focusId, opts.focusFormMult);
       if (scorer.id === focusId) focusInvolved++;
       var gk = opp.gk;
       var goalP = isPen ? 0.76 : Math.max(0.08, Math.min(0.62, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.006)) * (variance / 1.9);
@@ -155,7 +155,7 @@
     if (focusId) {
       var teamSide = teamA.players.some(function (p) { return p.id === focusId; }) ? 0 : 1;
       var won = score[teamSide] > score[1 - teamSide], draw = score[0] === score[1];
-      focusRating = 6.0 + focusGoals * 1.1 + focusInvolved * 0.15 + (won ? 0.6 : draw ? 0.1 : -0.4) + (Math.random() - 0.5) * 0.6;
+      focusRating = 6.0 + focusGoals * 1.1 + focusInvolved * 0.15 + (won ? 0.6 : draw ? 0.1 : -0.4) + (opts.focusForm || 0) + (Math.random() - 0.5) * 0.6;
       focusRating = Math.max(4.5, Math.min(10, Math.round(focusRating * 10) / 10));
     }
 
