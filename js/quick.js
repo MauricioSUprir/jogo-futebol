@@ -5,7 +5,7 @@
   var el = TM.ui.el;
 
   // Estado local da configuração de partida
-  var setup = { source: "club", leagueId: "br", teamA: null, teamB: null };
+  var setup = { source: "club", leagueA: "br", leagueB: "es", teamA: null, teamB: null };
 
   /* ---------- Tela 1: escolha dos times ---------- */
   TM.ui.register("quick", function (screen) {
@@ -24,46 +24,45 @@
     });
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tipo de time" }), srcSeg ]));
 
-    // opções de time conforme a fonte
-    function teamOptions() {
+    // opções de time conforme a fonte (clubes: da liga escolhida naquele lado; seleções: todas)
+    function teamOptions(leagueId) {
       if (setup.source === "nation") {
         return TM.data.world().nations.map(function (n) { return { id: n.id, name: n.name }; })
           .sort(function (a, b) { return a.name.localeCompare(b.name); });
       }
-      var league = TM.data.league(setup.leagueId);
+      var league = TM.data.league(leagueId);
       return league.clubIds.map(function (id) { var c = TM.data.club(id); return { id: id, name: c.name }; })
         .sort(function (a, b) { return a.name.localeCompare(b.name); });
     }
 
-    // seletor de liga (só para clubes)
-    if (setup.source === "club") {
-      var leagueSel = el("select", { class: "select" });
-      TM.data.world().leagues.forEach(function (lg) {
-        var o = el("option", { value: lg.id, text: lg.name });
-        if (lg.id === setup.leagueId) o.selected = true;
-        leagueSel.appendChild(o);
-      });
-      leagueSel.addEventListener("change", function () {
-        setup.leagueId = leagueSel.value; setup.teamA = setup.teamB = null; TM.ui.go("quick");
-      });
-      body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga" }), leagueSel ]));
-    }
-
-    function teamPicker(label, key) {
+    // cada lado escolhe a PRÓPRIA liga e depois o time (permite clubes de ligas diferentes se enfrentarem)
+    function sidePicker(label, leagueKey, teamKey) {
+      var kids = [ el("div", { class: "setting-label", text: label }) ];
+      if (setup.source === "club") {
+        var leagueSel = el("select", { class: "select" });
+        TM.data.world().leagues.forEach(function (lg) {
+          var o = el("option", { value: lg.id, text: lg.name });
+          if (lg.id === setup[leagueKey]) o.selected = true;
+          leagueSel.appendChild(o);
+        });
+        leagueSel.addEventListener("change", function () { setup[leagueKey] = leagueSel.value; setup[teamKey] = null; TM.ui.go("quick"); });
+        kids.push(leagueSel);
+      }
       var sel = el("select", { class: "select" });
-      sel.appendChild(el("option", { value: "", text: "— escolha —" }));
-      teamOptions().forEach(function (t) {
+      sel.appendChild(el("option", { value: "", text: "— escolha o time —" }));
+      teamOptions(setup[leagueKey]).forEach(function (t) {
         var o = el("option", { value: t.id, text: t.name });
-        if (setup[key] === t.id) o.selected = true;
+        if (setup[teamKey] === t.id) o.selected = true;
         sel.appendChild(o);
       });
-      sel.addEventListener("change", function () { setup[key] = sel.value || null; updatePreview(); });
-      return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: label }), sel ]);
+      sel.addEventListener("change", function () { setup[teamKey] = sel.value || null; updatePreview(); });
+      kids.push(sel);
+      return el("div", { class: "setting side-picker" }, kids);
     }
 
-    body.appendChild(teamPicker("Time da casa", "teamA"));
+    body.appendChild(sidePicker("🏠 Time da casa", "leagueA", "teamA"));
     body.appendChild(el("div", { class: "vs-divider", text: "VS" }));
-    body.appendChild(teamPicker("Time visitante", "teamB"));
+    body.appendChild(sidePicker("✈️ Time visitante", "leagueB", "teamB"));
 
     var preview = el("div", { class: "match-preview" });
     body.appendChild(preview);
@@ -118,7 +117,8 @@
         el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }),
         el("span", { class: "rs-team", text: b.name })
       ]),
-      el("div", { class: "result-tag", text: winner ? "🏆 Vitória do " + winner : "🤝 Empate" })
+      el("div", { class: "result-tag", text: winner ? "🏆 Vitória do " + winner : "🤝 Empate" }),
+      params.penWinner != null ? el("div", { class: "result-tag pen", text: "🎯 " + (params.penWinner === 0 ? a.name : b.name) + " venceu nos pênaltis" }) : null
     ]));
 
     function statRow(label, va, vb) {
@@ -150,11 +150,19 @@
       screen.appendChild(list);
     }
 
-    screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("↻ Jogar de novo", function () {
-        TM.ui.go("quick-match", { a: TM.engine[a.club ? "teamFromClub" : "teamFromNation"](a.id), b: TM.engine[b.club ? "teamFromClub" : "teamFromNation"](b.id) });
-      }, "btn primary"),
-      TM.ui.button("Trocar times", function () { TM.ui.go("quick"); }, "btn ghost")
-    ]));
+    var acts = el("div", { class: "actions" });
+    // no empate, o jogador pode decidir nos pênaltis
+    if (!winner && params.penWinner == null) {
+      acts.appendChild(TM.ui.button("🎯 Disputar pênaltis", function () {
+        var shoot = TM.engine.shootout(a, b);
+        TM.ui.go("pen-shootout", { teamA: a, teamB: b, shoot: shoot, title: "Disputa de pênaltis",
+          onDone: function () { TM.ui.go("quick-result", { a: a, b: b, result: r, penWinner: shoot.winner }); } });
+      }, "btn primary"));
+    }
+    acts.appendChild(TM.ui.button("↻ Jogar de novo", function () {
+      TM.ui.go("quick-match", { a: TM.engine[a.club ? "teamFromClub" : "teamFromNation"](a.id), b: TM.engine[b.club ? "teamFromClub" : "teamFromNation"](b.id) });
+    }, winner || params.penWinner != null ? "btn primary" : "btn ghost"));
+    acts.appendChild(TM.ui.button("Trocar times", function () { TM.ui.go("quick"); }, "btn ghost"));
+    screen.appendChild(acts);
   });
 })(window);

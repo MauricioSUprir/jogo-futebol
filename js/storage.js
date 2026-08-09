@@ -23,7 +23,8 @@
     difficulty: "normal",   // facil | normal | dificil | lenda
     realism: 3,             // 1 (arcade) .. 5 (realista) — controla imprevisibilidade
     matchSpeed: "normal",   // instantaneo | rapido | normal
-    commentary: true
+    commentary: true,
+    theme: "dark"           // dark (preto+verde) | light (branco+verde)
   };
 
   TM.storage = {

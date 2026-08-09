@@ -7,6 +7,18 @@
   "use strict";
   var TM = (global.TM = global.TM || {});
 
+  /* Táticas: [chave, rótulo] + modificadores [ataque, defesa] do lado do usuário */
+  var TACTICS = [
+    ["retranca", "Retranca"], ["defensivo", "Defensivo"], ["contra-ataque", "Contra-ataque"],
+    ["equilibrado", "Equilibrado"], ["posse", "Posse de bola"], ["pontas", "Pelas pontas"],
+    ["direto", "Jogo direto"], ["ofensivo", "Ofensivo"], ["pressao", "Pressão total"]
+  ];
+  var TACTIC_MODS = {
+    retranca: [0.74, 1.26], defensivo: [0.88, 1.14], "contra-ataque": [1.07, 1.05],
+    equilibrado: [1, 1], posse: [1.09, 1.05], pontas: [1.12, 0.97],
+    direto: [1.11, 0.93], ofensivo: [1.15, 0.87], pressao: [1.20, 0.80]
+  };
+
   var GOAL_LINES = [
     "GOLAÇO! {p} não perdoa!", "{p} balança as redes!",
     "É GOL! {p} apareceu na hora certa!", "{p} manda pra dentro!",
@@ -68,9 +80,13 @@
     var atkMod = [1, 1], defMod = [1, 1];
     if (opts.tacticSide != null) {
       var t = opts.tactic, s = opts.tacticSide;
-      if (t === "ofensivo") { atkMod[s] = 1.14; defMod[s] = 0.88; }
-      else if (t === "defensivo") { atkMod[s] = 0.88; defMod[s] = 1.14; }
-      else if (t === "contra-ataque") { atkMod[s] = 1.06; defMod[s] = 1.04; }
+      var tm = TACTIC_MODS[t];
+      if (tm) { atkMod[s] = tm[0]; defMod[s] = tm[1]; }
+    }
+    // moral (ex.: coletiva de imprensa): pequeno empurrão no ataque e defesa do lado
+    if (opts.moraleBoost && opts.moraleSide != null) {
+      var mb = Math.max(-3, Math.min(3, opts.moraleBoost)) * 0.02; // ±6%
+      atkMod[opts.moraleSide] *= (1 + mb); defMod[opts.moraleSide] *= (1 + mb);
     }
 
     function chanceProb(atk, opDef, redsMine) {
@@ -168,7 +184,7 @@
   }
 
   TM.engine = {
-    simulate: simulate,
+    simulate: simulate, TACTICS: TACTICS,
     teamFromClub: function (clubId, rosterOverride) {
       var club = TM.data.club(clubId);
       var players = rosterOverride || TM.data.clubPlayers(clubId);
@@ -177,6 +193,50 @@
     teamFromNation: function (natId, rosterOverride) {
       var nat = TM.data.nation(natId);
       return { id: nat.id, name: nat.name, players: rosterOverride || TM.data.nationSquad(natId), nation: nat };
-    }
+    },
+    shootout: shootout
   };
+
+  /* ---------- disputa de pênaltis ----------
+     Retorna { winner:0|1, score:[a,b], kicks:[{side, name, scored}] }.
+     Melhor-de-5 com parada antecipada + morte súbita. */
+  function shootout(teamA, teamB) {
+    var teams = [teamA, teamB];
+    function takers(t) {
+      return (t.players || []).slice().filter(function (p) { return p.pos !== "GK"; })
+        .sort(function (a, b) { return ((b.attrs.sho || 0) + (b.attrs.dri || 0)) - ((a.attrs.sho || 0) + (a.attrs.dri || 0)); });
+    }
+    var tk = [takers(teamA), takers(teamB)];
+    if (!tk[0].length) tk[0] = teamA.players.slice();
+    if (!tk[1].length) tk[1] = teamB.players.slice();
+    function gkDefOf(t) {
+      var g = t.gk;
+      if (!g || !g.attrs) g = (t.players || []).filter(function (p) { return p.pos === "GK"; }).sort(function (a, b) { return (b.attrs.def || 0) - (a.attrs.def || 0); })[0];
+      return g && g.attrs ? g.attrs.def : 72;
+    }
+    var gkDef = [ gkDefOf(teamB), gkDefOf(teamA) ]; // goleiro adversário de cada lado
+    var idx = [0, 0], score = [0, 0], taken = [0, 0], kicks = [];
+    function doKick(side) {
+      var pool = tk[side], p = pool[idx[side] % pool.length]; idx[side]++;
+      var sho = (p.attrs && p.attrs.sho) || 70;
+      var prob = Math.max(0.5, Math.min(0.94, 0.66 + (sho - 70) * 0.006 - (gkDef[side] - 72) * 0.004));
+      var scored = Math.random() < prob;
+      taken[side]++; if (scored) score[side]++;
+      kicks.push({ side: side, name: p.name, scored: scored, player: p });
+    }
+    function firstFiveDecided() {
+      var remA = Math.max(0, 5 - taken[0]), remB = Math.max(0, 5 - taken[1]);
+      return score[0] > score[1] + remB || score[1] > score[0] + remA;
+    }
+    var order = 0;
+    while (taken[0] < 5 || taken[1] < 5) {
+      var side = order % 2; order++;
+      if (taken[side] >= 5) continue;
+      doKick(side);
+      if (firstFiveDecided()) break;
+    }
+    var guard = 0;
+    while (score[0] === score[1] && guard < 40) { doKick(0); doKick(1); guard++; }
+    return { winner: score[0] > score[1] ? 0 : 1, score: score, kicks: kicks };
+  }
 })(window);

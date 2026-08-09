@@ -127,11 +127,26 @@
   }
   function penWin(s, a, b) { var ra = ratingFor(s, a), rb = ratingFor(s, b); return Math.random() < ra / (ra + rb) ? a : b; }
   function resolveTie(s, tie) { var r = simTeams(s, tie[0], tie[1]); var hs = r.score[0], as = r.score[1]; tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]); return r; }
-  function decideTwoLeg(s, tie) {
+  function decideTwoLeg(s, tie, forced) {
     var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7]; tie[2] = aggA; tie[3] = aggB;
     if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
     var awayA = tie[8], awayB = tie[6];
-    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penWin(s, tie[0], tie[1]);
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : (forced || penWin(s, tie[0], tie[1]));
+  }
+  // pênaltis na competição avulsa? { aId, bId } ou null
+  function userPenContextComp(s, hs, as) {
+    if (s.kind === "ko") {
+      var tie = userTieKO(s); if (!tie) return null;
+      if (s.twoLeg) {
+        if (tie[9] !== 1) return null;
+        var aggA = tie[5] + as, aggB = tie[6] + hs;
+        if (aggA !== aggB) return null;
+        return as === tie[6] ? { aId: tie[0], bId: tie[1] } : null;
+      }
+      return hs === as ? { aId: tie[0], bId: tie[1] } : null;
+    }
+    if (s.tour) return TM.tournament.userPenContext ? TM.tournament.userPenContext(s.tour, hs, as, ctxFor(s)) : null;
+    return null;
   }
   function resolveTieTwoLeg(s, tie) {
     var l1 = simTeams(s, tie[0], tie[1]); tie[5] = l1.score[0]; tie[6] = l1.score[1];
@@ -176,7 +191,7 @@
     return { homeId: nx.homeId, awayId: nx.awayId, ko: nx.phase === "ko", label: label };
   }
 
-  function applyUser(s, hs, as) {
+  function applyUser(s, hs, as, penWinnerId) {
     if (s.kind === "league") {
       var rd = s.fixtures[s.round];
       rd.forEach(function (m) { if (m[0] === s.userId || m[1] === s.userId) applyRes(s.table, m[0], m[1], hs, as); else { var r = simTeams(s, m[0], m[1]); applyRes(s.table, m[0], m[1], r.score[0], r.score[1]); } });
@@ -185,18 +200,18 @@
       var tie = userTieKO(s);
       if (s.twoLeg) {
         if (tie[9] === 0) { tie[5] = hs; tie[6] = as; tie[9] = 1; return; }   // ida; aguarda a volta
-        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(s, tie);
+        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(s, tie, penWinnerId);
         if (tie[4] !== s.userId) s.aliveUser = false;
         s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(s, t); });
       } else {
-        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]);
+        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : (penWinnerId || penWin(s, tie[0], tie[1]));
         if (tie[4] !== s.userId) s.aliveUser = false;
         s.rounds[s.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(s, t); });
       }
       if (s.rounds[s.roundIndex].length === 1) s.championId = s.rounds[s.roundIndex][0][4];
       s.roundIndex++;
     } else {
-      TM.tournament.applyUserMatch(s.tour, hs, as, ctxFor(s));
+      TM.tournament.applyUserMatch(s.tour, hs, as, ctxFor(s), penWinnerId);
     }
   }
   function champId(s) { return s.kind === "league" ? standings(s.table)[0].id : s.kind === "ko" ? s.championId : s.tour.championId; }
@@ -364,7 +379,20 @@
       teamA: teamA, teamB: teamB, result: result, title: s.name,
       pauseSide: userSide, simOpts: simOpts, formation: s.lineup ? s.lineup.formation : "4-4-2",
       onBack: function () { TM.ui.go("compmode-hub"); },
-      onDone: function () { applyUser(s, result.score[0], result.score[1]); save(s); TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: result.score[0], as: result.score[1], ko: nx.ko }); }
+      onDone: function () {
+        var hs = result.score[0], as = result.score[1];
+        var penCtx = hs === as ? userPenContextComp(s, hs, as) : null;
+        function finish(penWinnerId) {
+          applyUser(s, hs, as, penWinnerId); save(s);
+          TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: hs, as: as, ko: nx.ko, penWinName: penWinnerId ? (penWinnerId === nx.homeId ? teamA.name : teamB.name) : null });
+        }
+        if (penCtx) {
+          var tA = teamFor(s, penCtx.aId), tB = teamFor(s, penCtx.bId);
+          var shoot = TM.engine.shootout(tA, tB);
+          var winId = shoot.winner === 0 ? penCtx.aId : penCtx.bId;
+          TM.ui.go("pen-shootout", { teamA: tA, teamB: tB, shoot: shoot, title: "Pênaltis · " + s.name, onDone: function () { finish(winId); } });
+        } else { finish(null); }
+      }
     });
   });
 
@@ -374,7 +402,7 @@
     var win = p.hs > p.as ? p.a : p.as > p.hs ? p.b : null;
     screen.appendChild(E("div", { class: "result-hero" }, [
       E("div", { class: "result-score" }, [ E("span", { class: "rs-team", text: p.a }), E("span", { class: "rs-num", text: p.hs + " × " + p.as }), E("span", { class: "rs-team", text: p.b }) ]),
-      E("div", { class: "result-tag", text: win ? "🏆 " + win + " venceu" : (p.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate") })
+      E("div", { class: "result-tag", text: win ? "🏆 " + win + " venceu" : p.penWinName ? "🎯 " + p.penWinName + " venceu nos pênaltis" : (p.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate") })
     ]));
     screen.appendChild(E("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("compmode-hub"); }, "btn primary") ]));
   });

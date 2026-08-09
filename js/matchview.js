@@ -80,8 +80,8 @@
       box.appendChild(el("div", { class: "pause-sub-team", text: "Ajustes de " + team.name }));
 
       // tática
-      var tacRow = el("div", { class: "segmented full" });
-      [["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"], ["ofensivo", "Ofensivo"], ["contra-ataque", "Contra"]].forEach(function (o) {
+      var tacRow = el("div", { class: "segmented full wrap" });
+      TM.engine.TACTICS.forEach(function (o) {
         tacRow.appendChild(el("button", { class: "seg-btn" + (userTactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { userTactic = o[0]; tacRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); } } }));
       });
       box.appendChild(el("div", { class: "pause-field" }, [ el("label", { text: "Tática" }), tacRow ]));
@@ -234,5 +234,64 @@
     else { setTimeout(step, 400); }
   }
 
-  TM.matchview = { play: play };
+  /* ---------- disputa de pênaltis (visual) ----------
+     cfg: { teamA, teamB, shoot (resultado de TM.engine.shootout), title, onDone(winnerSide) } */
+  function crestOf(t, cls) { return t.club ? TM.img.clubImg(t.club, cls) : (t.nation ? TM.img.nationImg(t.nation, cls) : el("span", { class: cls })); }
+  function playShootout(screen, cfg) {
+    E();
+    var a = cfg.teamA, b = cfg.teamB, shoot = cfg.shoot;
+    var onDone = cfg.onDone || function () {};
+    screen.appendChild(TM.ui.topbar(cfg.title || "Disputa de pênaltis", null));
+
+    var scoreA = el("span", { class: "pk-score-num", text: "0" });
+    var scoreB = el("span", { class: "pk-score-num", text: "0" });
+    screen.appendChild(el("div", { class: "pk-head" }, [
+      el("div", { class: "pk-team" }, [ crestOf(a, "pk-crest"), el("div", { class: "pk-team-name", text: a.name }) ]),
+      el("div", { class: "pk-score" }, [ scoreA, el("span", { class: "pk-score-x", text: "×" }), scoreB ]),
+      el("div", { class: "pk-team" }, [ crestOf(b, "pk-crest"), el("div", { class: "pk-team-name", text: b.name }) ])
+    ]));
+
+    var colA = el("div", { class: "pk-col" }), colB = el("div", { class: "pk-col" });
+    screen.appendChild(el("div", { class: "pk-grid" }, [ colA, colB ]));
+    var statusLine = el("div", { class: "pk-status", text: "Batendo..." });
+    screen.appendChild(statusLine);
+    var actions = el("div", { class: "actions" });
+    screen.appendChild(actions);
+
+    var run = [0, 0]; // placar corrente
+    var i = 0;
+    function step() {
+      if (i >= shoot.kicks.length) { finish(); return; }
+      var k = shoot.kicks[i]; i++;
+      var col = k.side === 0 ? colA : colB;
+      if (k.scored) run[k.side]++;
+      scoreA.textContent = run[0]; scoreB.textContent = run[1];
+      var row = el("div", { class: "pk-kick" }, [
+        (k.player ? TM.img.playerImg(k.player, "pk-face") : el("span", { class: "pk-face" })),
+        el("span", { class: "pk-dot " + (k.scored ? "ok" : "miss") }),
+        el("span", { class: "pk-kicker", text: k.name }),
+        el("span", { class: "pk-mark", text: k.scored ? "⚽" : "✖" })
+      ]);
+      col.appendChild(row);
+      // efeito de entrada
+      row.style.opacity = "0"; row.style.transform = "translateY(6px)";
+      requestAnimationFrame(function () { row.style.transition = "all .25s ease"; row.style.opacity = "1"; row.style.transform = "none"; });
+      setTimeout(step, 780);
+    }
+    function finish() {
+      var winner = shoot.winner === 0 ? a : b;
+      statusLine.className = "pk-status done";
+      statusLine.textContent = "🏆 " + winner.name + " venceu nos pênaltis (" + shoot.score[0] + "–" + shoot.score[1] + ")";
+      actions.appendChild(TM.ui.button("Continuar", function () { onDone(shoot.winner); }, "btn primary"));
+    }
+    setTimeout(step, 500);
+  }
+
+  TM.ui.register("pen-shootout", function (screen, params) {
+    if (!params || !params.shoot) { TM.ui.go((params && params.back) || "modes"); return; }
+    if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
+    playShootout(screen, params);
+  });
+
+  TM.matchview = { play: play, playShootout: playShootout };
 })(window);

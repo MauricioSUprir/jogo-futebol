@@ -182,11 +182,11 @@
     tie[2] = hs; tie[3] = as; tie[4] = winner;
     return res;
   }
-  function decideTwoLeg(tie) {
+  function decideTwoLeg(tie, forcedPenWinner) {
     var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7]; tie[2] = aggA; tie[3] = aggB;
     if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
     var awayA = tie[8], awayB = tie[6];
-    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penaltyWinner(tie[0], tie[1]);
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : (forcedPenWinner || penaltyWinner(tie[0], tie[1]));
   }
   function resolveTieTwoLeg(career, tie) {
     var l1 = simMatch(career, tie[0], tie[1], true); tie[5] = l1.score[0]; tie[6] = l1.score[1];
@@ -895,12 +895,33 @@
     return career.pending;
   }
 
+  // detecta se a partida do usuário recém-jogada vai para os pênaltis (empate em mata-mata).
+  // Retorna { aId, bId } dos dois times, ou null. Não altera estado.
+  function userPenContext(career, homeScore, awayScore) {
+    var p = career.pending;
+    if (!p || p.seasonEnd) return null;
+    if (p.key === "inter") return homeScore === awayScore ? { aId: p.homeId, bId: p.awayId } : null;
+    if (p.key === "league") return null;
+    if (p.tour) return TM.tournament.userPenContext ? TM.tournament.userPenContext(career.comps[p.key].tour, homeScore, awayScore, contCtx(career)) : null;
+    var ko = career.comps[p.key];
+    var tie = userTieIn(ko, career.teamId);
+    if (!tie) return null;
+    if (ko.twoLeg) {
+      if (tie[9] !== 1) return null; // só decide na volta
+      var aggA = tie[5] + awayScore, aggB = tie[6] + homeScore; // volta: mandante é tie[1]
+      if (aggA !== aggB) return null;
+      var awayA = awayScore, awayB = tie[6];
+      return awayA === awayB ? { aId: tie[0], bId: tie[1] } : null;
+    }
+    return homeScore === awayScore ? { aId: tie[0], bId: tie[1] } : null;
+  }
+
   // aplica o resultado da partida do usuário (placar do ponto de vista real das equipes)
-  function applyUserResult(career, homeScore, awayScore) {
+  function applyUserResult(career, homeScore, awayScore, penWinnerId) {
     var p = career.pending;
     if (!p || p.seasonEnd) return;
     if (p.key === "inter") {
-      var iw = homeScore > awayScore ? p.homeId : awayScore > homeScore ? p.awayId : penaltyWinner(p.homeId, p.awayId);
+      var iw = homeScore > awayScore ? p.homeId : awayScore > homeScore ? p.awayId : (penWinnerId || penaltyWinner(p.homeId, p.awayId));
       career.interChampion = iw;
       if (career.interMatch) career.interMatch.done = true;
     } else if (p.key === "league") {
@@ -913,7 +934,7 @@
       });
       lg.round++;
     } else if (p.tour) {
-      TM.tournament.applyUserMatch(career.comps[p.key].tour, homeScore, awayScore, contCtx(career));
+      TM.tournament.applyUserMatch(career.comps[p.key].tour, homeScore, awayScore, contCtx(career), penWinnerId);
     } else {
       var ko = career.comps[p.key];
       var round = ko.rounds[ko.roundIndex];
@@ -927,11 +948,11 @@
           TM.storage.saveCoachCareer(career);
           return;
         }
-        tie[7] = homeScore; tie[8] = awayScore; tie[9] = 2; decideTwoLeg(tie);
+        tie[7] = homeScore; tie[8] = awayScore; tie[9] = 2; decideTwoLeg(tie, penWinnerId);
         if (tie[4] !== career.teamId) ko.aliveUser = false;
         round.forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(career, t); });
       } else {
-        var winner = homeScore > awayScore ? tie[0] : awayScore > homeScore ? tie[1] : penaltyWinner(tie[0], tie[1]);
+        var winner = homeScore > awayScore ? tie[0] : awayScore > homeScore ? tie[1] : (penWinnerId || penaltyWinner(tie[0], tie[1]));
         tie[2] = homeScore; tie[3] = awayScore; tie[4] = winner;
         if (winner !== career.teamId) ko.aliveUser = false;
         round.forEach(function (t) { if (t[4] == null) resolveTie(career, t, true); });
@@ -979,7 +1000,7 @@
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
     setupNationSeason: setupNationSeason, natRating: natRating, nationPending: nationPending,
     advanceWorldCup: advanceWorldCup, applyWorldCupResult: applyWorldCupResult, wcRoundLabel: wcRoundLabel,
-    advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult,
+    advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult, userPenContext: userPenContext,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,

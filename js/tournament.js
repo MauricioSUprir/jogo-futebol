@@ -66,12 +66,12 @@
   function penWin(ctx, a, b) { var ra = ctx.rating(a), rb = ctx.rating(b); return Math.random() < ra / (ra + rb) ? a : b; }
   function resolveTie(ctx, tie) { var r = ctx.sim(tie[0], tie[1]); var hs = r.score[0], as = r.score[1]; tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(ctx, tie[0], tie[1]); return r; }
   // decide vencedor de um confronto ida e volta (agregado; gol fora; pênaltis)
-  function decideTwoLeg(ctx, tie) {
+  function decideTwoLeg(ctx, tie, forcedPenWinner) {
     var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7];   // a: ga1+ga2 · b: gb1+gb2
     tie[2] = aggA; tie[3] = aggB;
     if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
     var awayA = tie[8], awayB = tie[6];                   // gols fora: a marcou na volta; b marcou na ida
-    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : penWin(ctx, tie[0], tie[1]);
+    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : (forcedPenWinner || penWin(ctx, tie[0], tie[1]));
   }
   function resolveTieTwoLeg(ctx, tie) {
     var l1 = ctx.sim(tie[0], tie[1]); tie[5] = l1.score[0]; tie[6] = l1.score[1];   // a em casa
@@ -135,7 +135,21 @@
     return { end: true, championId: state.championId };
   }
 
-  function applyUserMatch(state, hs, as, ctx) {
+  // peek: a partida do usuário vai para pênaltis? { aId, bId } ou null
+  function userPenContext(state, hs, as, ctx) {
+    if (state.phase !== "ko") return null;
+    var tie = userTie(state);
+    if (!tie) return null;
+    if (state.twoLeg) {
+      if (tie[9] !== 1) return null;
+      var aggA = tie[5] + as, aggB = tie[6] + hs;
+      if (aggA !== aggB) return null;
+      return as === tie[6] ? { aId: tie[0], bId: tie[1] } : null;
+    }
+    return hs === as ? { aId: tie[0], bId: tie[1] } : null;
+  }
+
+  function applyUserMatch(state, hs, as, ctx, penWinnerId) {
     if (state.phase === "group") {
       state.groups.forEach(function (g) {
         var rd = g.fixtures[state.groupRound];
@@ -155,11 +169,11 @@
           return;                    // aguarda a volta (não avança a rodada)
         }
         // volta (usuário visitante): mandante é tie[1]
-        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(ctx, tie);
+        tie[7] = hs; tie[8] = as; tie[9] = 2; decideTwoLeg(ctx, tie, penWinnerId);
         if (tie[4] !== state.userId) state.aliveUser = false;
         state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTieTwoLeg(ctx, t); });
       } else {
-        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(ctx, tie[0], tie[1]);
+        tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : (penWinnerId || penWin(ctx, tie[0], tie[1]));
         if (tie[4] !== state.userId) state.aliveUser = false;
         state.ko.rounds[state.ko.roundIndex].forEach(function (t) { if (t[4] == null) resolveTie(ctx, t); });
       }
@@ -172,7 +186,7 @@
   function isDone(state) { return state.phase === "done" || !!state.championId; }
 
   TM.tournament = {
-    create: create, nextUserMatch: nextUserMatch, applyUserMatch: applyUserMatch,
+    create: create, nextUserMatch: nextUserMatch, applyUserMatch: applyUserMatch, userPenContext: userPenContext,
     standings: standings, koTitle: koTitle, isDone: isDone, userGroup: userGroup
   };
 })(window);
