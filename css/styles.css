@@ -668,6 +668,25 @@ html, body {
 .press-summary.good { border-color: rgba(74,222,128,.5); } .press-summary.bad { border-color: rgba(232,115,74,.5); }
 .press-sum-emoji { font-size: 40px; }
 .press-sum-txt { font-size: 14px; line-height: 1.5; }
+/* disputa de pênaltis */
+.pk-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: 620px; margin-bottom: 14px;
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: 14px; padding: 14px; }
+.pk-team { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.pk-crest { width: 46px; height: 50px; object-fit: contain; }
+.pk-team-name { font-size: 12.5px; font-weight: 700; text-align: center; }
+.pk-score { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.pk-score-num { font-size: 34px; font-weight: 900; color: var(--gold); min-width: 28px; text-align: center; }
+.pk-score-x { font-size: 18px; color: var(--text-dim); }
+.pk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 620px; }
+.pk-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pk-kick { display: flex; align-items: center; gap: 8px; min-width: 0; background: var(--black-soft); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.pk-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
+.pk-dot.ok { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.6); }
+.pk-dot.miss { background: #e0472c; box-shadow: 0 0 6px rgba(224,71,44,.5); }
+.pk-kicker { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pk-mark { font-size: 12px; }
+.pk-status { width: 100%; max-width: 620px; text-align: center; margin-top: 14px; font-size: 14px; color: var(--text-dim); }
+.pk-status.done { font-size: 16px; font-weight: 800; color: var(--gold); }
 
 @media (max-width: 520px) {
   .bc-team { font-size: 12px; }
