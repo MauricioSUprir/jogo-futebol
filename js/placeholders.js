@@ -122,8 +122,11 @@
       return imgWithFallback(embedded("clubes", club.id) || ("assets/clubes/" + club.id + ".png"), crest(club), club.name, cls);
     },
     playerImg: function (player, cls) {
+      var key = player.ph || player.id, E = global.TM_EMBED;
       var club = TM.data.club(player.clubId);
-      return imgWithFallback(embedded("jogadores", player.id) || ("assets/jogadores/" + player.id + ".png"), avatar(player, club), player.name, cls);
+      var fb = avatar(player, club);
+      var real = embedded("jogadores", key) || ((E && E.jogadores) ? null : ("assets/jogadores/" + key + ".jpg"));
+      return imgWithFallback(real || fb, fb, player.name, cls);
     },
     nationImg: function (nation, cls) {
       return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
