@@ -334,9 +334,16 @@
           var spGain = 2 + (avg >= 7.5 ? 1 : 0);
           c.skillPoints += spGain;
           // evolução do overall conforme a fase e a idade
+          // 14-29: ainda sobe (com boa fase) | 30-33: quase não mexe, só cai bem devagar | 34+: só cai
           var before = c.overall;
-          if (avg >= 7.2 && c.age <= 29) c.overall = Math.min(97, c.overall + 1);
-          else if (avg < 6.0 || c.age >= 32) c.overall = Math.max(50, c.overall - 1);
+          if (c.age <= 29) {
+            if (avg >= 7.2) c.overall = Math.min(97, c.overall + 1);
+            else if (avg < 5.5) c.overall = Math.max(50, c.overall - 1);
+          } else if (c.age <= 33) {
+            if (avg < 6.5 && Math.random() < 0.5) c.overall = Math.max(50, c.overall - 1);
+          } else {
+            c.overall = Math.max(50, c.overall - 1);
+          }
           if (c.age >= 35) TM.notify.push(c, { icon: "🎽", title: "Reta final", text: "Aos " + c.age + " anos, a aposentadoria se aproxima." });
           TM.notify.push(c, { icon: "📅", title: "Nova temporada", text: "Temporada encerrada (média " + avg.toFixed(1) + "). +" + spGain + " pontos de habilidade." + (c.overall !== before ? " Seu overall foi para " + c.overall + "." : "") });
           startSeasonFixtures(c); TM.storage.savePlayerCareer(c); TM.ui.go("player-hub");

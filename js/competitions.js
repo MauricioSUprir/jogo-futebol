@@ -618,8 +618,44 @@
     TM.notify.push(career, { icon: "🌍", title: "Convite de seleção", text: "A seleção de " + nat.name + " quer você como treinador! Responda em Avisos.", nationInvite: nat.id });
   }
 
+  // evolução de 1 jogador por temporada, conforme a idade:
+  // 14-29 ainda sobe rumo ao potencial | 30-33 quase não mexe (só cai devagar) | 34+ só cai
+  function ageWorldPlayer(p) {
+    p.age = (p.age || 25) + 1;
+    var pot = p.potential || p.overall, a = p.age;
+    if (a <= 29) {
+      if (p.overall < pot) {
+        var ch = a <= 20 ? 0.85 : a <= 23 ? 0.65 : a <= 26 ? 0.45 : 0.28;
+        if (Math.random() < ch) p.overall = Math.min(pot, p.overall + 1);
+      }
+    } else if (a <= 33) {
+      if (Math.random() < 0.25) p.overall = Math.max(45, p.overall - 1);
+    } else {
+      p.overall = Math.max(45, p.overall - (a >= 37 ? 2 : 1));
+    }
+  }
+  // envelhece TODO o mundo uma temporada e guarda o estado na carreira (persiste no save)
+  function ageWorld(career) {
+    var pb = TM.data.world().playersById;
+    career.worldEvo = career.worldEvo || {};
+    Object.keys(pb).forEach(function (id) {
+      ageWorldPlayer(pb[id]);
+      career.worldEvo[id] = { age: pb[id].age, overall: pb[id].overall };
+    });
+  }
+  // reaplica o envelhecimento guardado (ao recarregar a carreira, o mundo é regerado do zero)
+  function applyWorldEvo(career) {
+    if (!career || !career.worldEvo) return;
+    var pb = TM.data.world().playersById;
+    Object.keys(career.worldEvo).forEach(function (id) {
+      var p = pb[id], e = career.worldEvo[id];
+      if (p) { p.age = e.age; p.overall = e.overall; }
+    });
+  }
+
   function newSeason(career) {
     career.season++;
+    ageWorld(career);
     seasonSetup(career);
     career.objective = generateObjective(career.teamId);
     maybeNationInvite(career);
@@ -648,6 +684,7 @@
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     syncLineup(career); // reincorpora contratados que faltavam no banco
+    applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
     return career;
   }
 
