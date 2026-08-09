@@ -209,7 +209,12 @@
     var tk = [takers(teamA), takers(teamB)];
     if (!tk[0].length) tk[0] = teamA.players.slice();
     if (!tk[1].length) tk[1] = teamB.players.slice();
-    var gkDef = [ (teamB.gk && teamB.gk.attrs ? teamB.gk.attrs.def : 72), (teamA.gk && teamA.gk.attrs ? teamA.gk.attrs.def : 72) ];
+    function gkDefOf(t) {
+      var g = t.gk;
+      if (!g || !g.attrs) g = (t.players || []).filter(function (p) { return p.pos === "GK"; }).sort(function (a, b) { return (b.attrs.def || 0) - (a.attrs.def || 0); })[0];
+      return g && g.attrs ? g.attrs.def : 72;
+    }
+    var gkDef = [ gkDefOf(teamB), gkDefOf(teamA) ]; // goleiro adversário de cada lado
     var idx = [0, 0], score = [0, 0], taken = [0, 0], kicks = [];
     function doKick(side) {
       var pool = tk[side], p = pool[idx[side] % pool.length]; idx[side]++;

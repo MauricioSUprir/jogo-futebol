@@ -611,12 +611,22 @@
       TM.ui.go("player-live", {
         teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, title: "Copa do Mundo · " + label, back: "player-nation", compId: "nat-world",
         onComplete: function () {
-          TM.tournament.applyUserMatch(ns.tour, result.score[0], result.score[1], ctx);
-          ns.matchNo++;
-          applyNatPerf(c, result.focus);
-          TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? result.score[0] + "x" + result.score[1] : result.score[1] + "x" + result.score[0]) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
-          TM.storage.savePlayerCareer(c);
-          TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label, compId: "nat-world" });
+          var hs = result.score[0], as = result.score[1];
+          var penCtx = hs === as && TM.tournament.userPenContext ? TM.tournament.userPenContext(ns.tour, hs, as, ctx) : null;
+          function finish(penWinnerId) {
+            TM.tournament.applyUserMatch(ns.tour, hs, as, ctx, penWinnerId);
+            ns.matchNo++;
+            applyNatPerf(c, result.focus);
+            TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: c.nationName + " " + (userHome ? hs + "x" + as : as + "x" + hs) + " · você fez " + (result.focus ? result.focus.goals : 0) + " gol(s), nota " + (result.focus ? result.focus.rating.toFixed(1) : "-") + "." });
+            TM.storage.savePlayerCareer(c);
+            TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: userHome, nat: true, back: "player-nation", title: "Copa do Mundo · " + label, compId: "nat-world", penWinnerId: penWinnerId });
+          }
+          if (penCtx) {
+            var tA = TM.engine.teamFromNation(penCtx.aId), tB = TM.engine.teamFromNation(penCtx.bId);
+            var shoot = TM.engine.shootout(tA, tB);
+            var winId = shoot.winner === 0 ? penCtx.aId : penCtx.bId;
+            TM.ui.go("pen-shootout", { teamA: tA, teamB: tB, shoot: shoot, compId: "nat-world", title: "Pênaltis · Copa do Mundo", onDone: function () { finish(winId); } });
+          } else { finish(null); }
         }
       });
       return;

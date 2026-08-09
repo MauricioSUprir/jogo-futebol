@@ -717,10 +717,21 @@
       onBack: function () { TM.ui.go("coach-hub"); },
       onDone: function () {
         C().processUserMatch(c, result, userSide);
-        C().applyUserResult(c, result.score[0], result.score[1]);
-        c.pressEdge = 0; // consome o efeito da coletiva
-        TM.storage.saveCoachCareer(c);
-        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId });
+        var hs = result.score[0], as = result.score[1];
+        var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
+        function finish(penWinnerId) {
+          C().applyUserResult(c, hs, as, penWinnerId);
+          c.pressEdge = 0; // consome o efeito da coletiva
+          TM.storage.saveCoachCareer(c);
+          TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId });
+        }
+        if (penCtx) {
+          var tA = C().anyTeam(c, penCtx.aId), tB = C().anyTeam(c, penCtx.bId);
+          var shoot = TM.engine.shootout(tA, tB);
+          var winId = shoot.winner === 0 ? penCtx.aId : penCtx.bId;
+          TM.ui.go("pen-shootout", { teamA: tA, teamB: tB, shoot: shoot, compId: compId, title: "Pênaltis · " + p.name,
+            onDone: function () { finish(winId); } });
+        } else { finish(null); }
       }
     });
   });
@@ -732,7 +743,8 @@
     screen.appendChild(TM.ui.topbar("Sua partida", function () { TM.ui.go(back); }));
     if (params.compId) { var bn = TM.ui.compBanner(params.compId); if (bn) screen.appendChild(bn); }
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
-    var tag = win ? "🏆 " + win + " venceu" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
+    var penName = params.penWinnerId ? (params.penWinnerId === a.id ? a.name : b.name) : null;
+    var tag = win ? "🏆 " + win + " venceu" : penName ? "🎯 " + penName + " venceu nos pênaltis" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
     screen.appendChild(el("div", { class: "result-hero" }, [
       el("div", { class: "result-score" }, [
         el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }), el("span", { class: "rs-team", text: b.name })

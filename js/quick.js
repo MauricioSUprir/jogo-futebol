@@ -117,7 +117,8 @@
         el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }),
         el("span", { class: "rs-team", text: b.name })
       ]),
-      el("div", { class: "result-tag", text: winner ? "🏆 Vitória do " + winner : "🤝 Empate" })
+      el("div", { class: "result-tag", text: winner ? "🏆 Vitória do " + winner : "🤝 Empate" }),
+      params.penWinner != null ? el("div", { class: "result-tag pen", text: "🎯 " + (params.penWinner === 0 ? a.name : b.name) + " venceu nos pênaltis" }) : null
     ]));
 
     function statRow(label, va, vb) {
@@ -149,11 +150,19 @@
       screen.appendChild(list);
     }
 
-    screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("↻ Jogar de novo", function () {
-        TM.ui.go("quick-match", { a: TM.engine[a.club ? "teamFromClub" : "teamFromNation"](a.id), b: TM.engine[b.club ? "teamFromClub" : "teamFromNation"](b.id) });
-      }, "btn primary"),
-      TM.ui.button("Trocar times", function () { TM.ui.go("quick"); }, "btn ghost")
-    ]));
+    var acts = el("div", { class: "actions" });
+    // no empate, o jogador pode decidir nos pênaltis
+    if (!winner && params.penWinner == null) {
+      acts.appendChild(TM.ui.button("🎯 Disputar pênaltis", function () {
+        var shoot = TM.engine.shootout(a, b);
+        TM.ui.go("pen-shootout", { teamA: a, teamB: b, shoot: shoot, title: "Disputa de pênaltis",
+          onDone: function () { TM.ui.go("quick-result", { a: a, b: b, result: r, penWinner: shoot.winner }); } });
+      }, "btn primary"));
+    }
+    acts.appendChild(TM.ui.button("↻ Jogar de novo", function () {
+      TM.ui.go("quick-match", { a: TM.engine[a.club ? "teamFromClub" : "teamFromNation"](a.id), b: TM.engine[b.club ? "teamFromClub" : "teamFromNation"](b.id) });
+    }, winner || params.penWinner != null ? "btn primary" : "btn ghost"));
+    acts.appendChild(TM.ui.button("Trocar times", function () { TM.ui.go("quick"); }, "btn ghost"));
+    screen.appendChild(acts);
   });
 })(window);
