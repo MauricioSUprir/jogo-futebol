@@ -680,6 +680,7 @@ html, body {
 .pk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 620px; }
 .pk-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .pk-kick { display: flex; align-items: center; gap: 8px; min-width: 0; background: var(--black-soft); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.pk-face { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; background: #17171a; border: 1.5px solid var(--line-2); flex-shrink: 0; }
 .pk-dot { width: 13px; height: 13px; border-radius: 50%; flex-shrink: 0; }
 .pk-dot.ok { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.6); }
 .pk-dot.miss { background: #e0472c; box-shadow: 0 0 6px rgba(224,71,44,.5); }

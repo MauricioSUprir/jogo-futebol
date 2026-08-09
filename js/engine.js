@@ -217,7 +217,7 @@
       var prob = Math.max(0.5, Math.min(0.94, 0.66 + (sho - 70) * 0.006 - (gkDef[side] - 72) * 0.004));
       var scored = Math.random() < prob;
       taken[side]++; if (scored) score[side]++;
-      kicks.push({ side: side, name: p.name, scored: scored });
+      kicks.push({ side: side, name: p.name, scored: scored, player: p });
     }
     function firstFiveDecided() {
       var remA = Math.max(0, 5 - taken[0]), remB = Math.max(0, 5 - taken[1]);

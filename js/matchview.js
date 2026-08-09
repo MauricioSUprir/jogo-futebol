@@ -267,6 +267,7 @@
       if (k.scored) run[k.side]++;
       scoreA.textContent = run[0]; scoreB.textContent = run[1];
       var row = el("div", { class: "pk-kick" }, [
+        (k.player ? TM.img.playerImg(k.player, "pk-face") : el("span", { class: "pk-face" })),
         el("span", { class: "pk-dot " + (k.scored ? "ok" : "miss") }),
         el("span", { class: "pk-kicker", text: k.name }),
         el("span", { class: "pk-mark", text: k.scored ? "⚽" : "✖" })
