@@ -458,6 +458,17 @@
     var offMap = {}; // "y-m-d" -> offset (temporada começa em 10/ago)
     for (var o = 0; o <= endOff; o++) { var dt = C().dateOf(c, o); offMap[dt.y + "-" + dt.m + "-" + dt.d] = o; }
 
+    // legenda (uma vez, no topo)
+    body.appendChild(el("div", { class: "cal-legend" }, [
+      el("span", { class: "leg league", text: "● Liga" }),
+      el("span", { class: "leg cup", text: "● Copa" }),
+      el("span", { class: "leg cont", text: "● Continental" }),
+      el("span", { text: "🟢 janela abre" }),
+      el("span", { text: "🔴 janela fecha" }),
+      el("span", { class: "leg today", text: "▢ hoje" })
+    ]));
+
+    function compClass(key) { return key === "cup" ? "cup" : key === "cont" ? "cont" : "league"; }
     var start = C().dateOf(c, c.currentDay), last = C().dateOf(c, endOff);
     var todayOff = c.currentDay;
     var ym = start.y * 12 + (start.m - 1), ymEnd = last.y * 12 + (last.m - 1), guard = 0;
@@ -467,6 +478,8 @@
       var firstWd = new Date(year, month - 1, 1).getDay();
       var monthCard = el("div", { class: "cal-month" });
       monthCard.appendChild(el("div", { class: "cal-mtitle", text: MES_FULL[month - 1] + " " + year }));
+
+      // --- mini-grade do mês (visão geral: pontos nos dias com jogo/janela) ---
       var grid = el("div", { class: "cal-grid" });
       WD_PT.forEach(function (w) { grid.appendChild(el("div", { class: "cal-wd", text: w })); });
       for (var b = 0; b < firstWd; b++) grid.appendChild(el("div", { class: "cal-cell empty" }));
@@ -474,40 +487,67 @@
         var off = offMap[year + "-" + month + "-" + d];
         var cellCls = "cal-cell";
         var kids = [ el("div", { class: "cal-cell-d", text: d }) ];
-        var titleAttr = d + "/" + month;
         if (off === todayOff) cellCls += " today";
         var mt = off != null ? matchByOff[off] : null;
         if (mt) {
-          if (mt.tbd) {
-            cellCls += " has-match cup";
-            kids.push(el("div", { class: "cal-cell-ev", text: "🏆" }));
-            titleAttr += " · " + mt.name;
-          } else {
-            var meHome = mt.homeId === c.teamId;
-            var opp = TM.data.club(meHome ? mt.awayId : mt.homeId);
-            cellCls += " has-match " + (mt.key === "cup" ? "cup" : mt.key === "cont" ? "cont" : "league");
-            kids.push(el("div", { class: "cal-cell-ev", text: abbr3(opp.name) }));
-            kids.push(el("div", { class: "cal-cell-loc", text: meHome ? "casa" : "fora" }));
-            titleAttr += " · " + (meHome ? "vs " : "@ ") + opp.name + " (" + mt.name + ")";
-          }
+          cellCls += " has-match " + (mt.tbd ? "cup" : compClass(mt.key));
+          kids.push(el("div", { class: "cal-dot" }));
         }
-        if (off != null && winOpenOff[off] != null) { cellCls += " win-open"; kids.push(el("div", { class: "cal-cell-win open", text: "🟢 abre" })); titleAttr += " · " + winOpenOff[off] + " abre"; }
-        if (off != null && winCloseOff[off] != null) { cellCls += " win-close"; kids.push(el("div", { class: "cal-cell-win close", text: "🔴 fecha" })); titleAttr += " · " + winCloseOff[off] + " fecha"; }
-        grid.appendChild(el("div", { class: cellCls, title: titleAttr }, kids));
+        if (off != null && winOpenOff[off] != null) { cellCls += " win-open"; kids.push(el("div", { class: "cal-cell-win open", text: "🟢" })); }
+        if (off != null && winCloseOff[off] != null) { cellCls += " win-close"; kids.push(el("div", { class: "cal-cell-win close", text: "🔴" })); }
+        grid.appendChild(el("div", { class: cellCls }, kids));
       }
       monthCard.appendChild(grid);
+
+      // --- lista detalhada do mês: escudo + nome + mando + competição ---
+      var list = el("div", { class: "cal-list" });
+      var events = [];
+      (c.windows || []).forEach(function (w) {
+        var od = C().dateOf(c, w.openDay), cd = C().dateOf(c, w.closeDay);
+        if (od.y === year && od.m === month) events.push({ day: w.openDay, type: "win-open", name: w.name });
+        if (cd.y === year && cd.m === month) events.push({ day: w.closeDay, type: "win-close", name: w.name });
+      });
+      upcoming.forEach(function (it) { var dt = C().dateOf(c, it.day); if (dt.y === year && dt.m === month) events.push({ day: it.day, type: "match", it: it }); });
+      events.sort(function (a, b) { return a.day - b.day; });
+
+      events.forEach(function (evt) {
+        var dt = C().dateOf(c, evt.day);
+        var dateChip = el("div", { class: "cl-date" + (evt.day === todayOff ? " today" : "") }, [ el("div", { class: "cl-dnum", text: dt.d }), el("div", { class: "cl-dm", text: MES_PT[dt.m - 1] }) ]);
+        if (evt.type === "win-open" || evt.type === "win-close") {
+          var isOpen = evt.type === "win-open";
+          list.appendChild(el("div", { class: "cal-row window " + (isOpen ? "open" : "close") }, [
+            dateChip,
+            el("div", { class: "cl-win-ic", text: isOpen ? "🟢" : "🔴" }),
+            el("div", { class: "cl-main" }, [ el("div", { class: "cl-team", text: evt.name + (isOpen ? " abre" : " fecha") }), el("div", { class: "cl-sub", text: "Janela de transferências" }) ])
+          ]));
+          return;
+        }
+        var it = evt.it;
+        if (it.tbd) {
+          list.appendChild(el("div", { class: "cal-row" }, [
+            dateChip,
+            el("div", { class: "cl-crest placeholder", text: "🏆" }),
+            el("div", { class: "cl-main" }, [ el("div", { class: "cl-team", text: "A definir" }), el("div", { class: "cl-sub", text: it.name } ) ]),
+            el("span", { class: "cl-badge " + compClass(it.key), text: it.name })
+          ]));
+          return;
+        }
+        var meHome = it.homeId === c.teamId;
+        var opp = TM.data.club(meHome ? it.awayId : it.homeId);
+        list.appendChild(el("div", { class: "cal-row" + (evt.day === todayOff ? " today" : "") }, [
+          dateChip,
+          TM.img.clubImg(opp, "cl-crest"),
+          el("div", { class: "cl-main" }, [
+            el("div", { class: "cl-team", text: opp.name }),
+            el("div", { class: "cl-sub" }, [ el("span", { class: "cl-loc " + (meHome ? "home" : "away"), text: meHome ? "🏠 Em casa" : "✈️ Fora" }) ])
+          ]),
+          el("span", { class: "cl-badge " + compClass(it.key), text: it.name })
+        ]));
+      });
+
+      if (events.length) monthCard.appendChild(list);
       body.appendChild(monthCard);
     }
-
-    // legenda
-    body.appendChild(el("div", { class: "cal-legend" }, [
-      el("span", { class: "leg league", text: "● Liga" }),
-      el("span", { class: "leg cup", text: "● Copa" }),
-      el("span", { class: "leg cont", text: "● Continental" }),
-      el("span", { text: "🟢 janela abre" }),
-      el("span", { text: "🔴 janela fecha" }),
-      el("span", { class: "leg today", text: "▢ hoje" })
-    ]));
   });
 
   /* ================= SELEÇÃO (junto com o clube) ================= */

@@ -895,29 +895,45 @@ html, body {
 .twin-bar.open { background: rgba(34,197,94,.14); color: var(--green); border-color: rgba(34,197,94,.4); }
 .twin-bar.closed { background: rgba(208,52,44,.12); color: #e6675f; border-color: rgba(208,52,44,.35); }
 .twin-sub { font-size: 11.5px; font-weight: 600; opacity: .85; }
-.cal-month { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
-.cal-mtitle { font-size: 14px; font-weight: 900; margin-bottom: 8px; text-align: center; letter-spacing: .3px; }
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-month { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.cal-mtitle { font-size: 15px; font-weight: 900; margin-bottom: 12px; text-align: center; letter-spacing: .4px; text-transform: uppercase; }
+/* mini-grade (visão geral) */
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-bottom: 14px; }
 .cal-wd { text-align: center; font-size: 10.5px; font-weight: 800; color: var(--text-dim); padding: 2px 0; }
-.cal-cell { position: relative; min-height: 46px; border-radius: 8px; background: var(--black-soft); border: 1px solid var(--line); padding: 3px 4px; display: flex; flex-direction: column; gap: 1px; overflow: hidden; }
+.cal-cell { position: relative; aspect-ratio: 1 / 1; border-radius: 9px; background: var(--black-soft); border: 1px solid var(--line); padding: 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
 .cal-cell.empty { background: transparent; border: none; }
-.cal-cell-d { font-size: 11px; font-weight: 700; color: var(--text-dim); line-height: 1; }
-.cal-cell.today { border-color: var(--green); box-shadow: 0 0 0 1px var(--green) inset; }
+.cal-cell-d { font-size: 11px; font-weight: 700; color: var(--text-dim); line-height: 1; align-self: flex-start; }
+.cal-cell.today { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green) inset; }
 .cal-cell.today .cal-cell-d { color: var(--green); }
-.cal-cell.has-match { background: rgba(46,125,70,.16); }
-.cal-cell.has-match.cup { background: rgba(34,197,94,.14); }
-.cal-cell.has-match.cont { background: rgba(120,80,220,.18); }
-.cal-cell-ev { font-size: 10.5px; font-weight: 900; color: var(--text); line-height: 1.05; letter-spacing: .2px; }
-.cal-cell.has-match.league .cal-cell-ev { color: var(--green); }
-.cal-cell.has-match.cont .cal-cell-ev { color: #b79cff; }
-.cal-cell.has-match.cup .cal-cell-ev { color: var(--gold); }
-.cal-cell-loc { font-size: 8.5px; color: var(--text-dim); text-transform: uppercase; line-height: 1; }
-.cal-cell-win { font-size: 8px; font-weight: 800; line-height: 1; margin-top: auto; }
-.cal-cell-win.open { color: var(--green); }
-.cal-cell-win.close { color: #e6675f; }
+.cal-dot { width: 9px; height: 9px; border-radius: 50%; margin: auto; background: var(--green); }
+.cal-cell.has-match.cont .cal-dot { background: #b79cff; }
+.cal-cell.has-match.cup .cal-dot { background: var(--gold); }
+.cal-cell-win { position: absolute; bottom: 2px; right: 3px; font-size: 8px; line-height: 1; }
 .cal-cell.win-open { border-color: rgba(34,197,94,.5); }
 .cal-cell.win-close { border-color: rgba(208,52,44,.45); }
-.cal-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center; font-size: 11px; color: var(--text-dim); padding: 4px 0 8px; }
+/* lista detalhada do mês */
+.cal-list { display: flex; flex-direction: column; gap: 8px; }
+.cal-row { display: flex; align-items: center; gap: 12px; background: var(--black-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.cal-row.today { border-color: var(--green); box-shadow: 0 0 0 1px rgba(34,197,94,.4) inset; }
+.cl-date { flex-shrink: 0; width: 44px; text-align: center; }
+.cl-dnum { font-size: 22px; font-weight: 900; color: var(--text); line-height: 1; }
+.cl-date.today .cl-dnum { color: var(--green); }
+.cl-dm { font-size: 10px; color: var(--text-dim); text-transform: uppercase; margin-top: 2px; }
+.cl-crest { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; }
+.cl-crest.placeholder { display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.cl-main { flex: 1; min-width: 0; }
+.cl-team { font-size: 14.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+.cl-loc.home { color: var(--green); }
+.cl-badge { flex-shrink: 0; font-size: 9.5px; font-weight: 800; padding: 4px 9px; border-radius: 20px; max-width: 118px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cl-badge.league { background: rgba(46,125,70,.22); color: var(--green); }
+.cl-badge.cup { background: rgba(214,178,52,.2); color: var(--gold); }
+.cl-badge.cont { background: rgba(120,80,220,.22); color: #b79cff; }
+.cal-row.window { border-style: dashed; }
+.cal-row.window.open { border-color: rgba(34,197,94,.5); }
+.cal-row.window.close { border-color: rgba(208,52,44,.45); }
+.cl-win-ic { font-size: 20px; flex-shrink: 0; width: 34px; text-align: center; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center; font-size: 11px; color: var(--text-dim); padding: 2px 0 4px; }
 .cal-legend .leg.league { color: var(--green); }
 .cal-legend .leg.cup { color: var(--gold); }
 .cal-legend .leg.cont { color: #b79cff; }
