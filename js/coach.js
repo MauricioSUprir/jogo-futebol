@@ -469,38 +469,21 @@
     ]));
 
     function compClass(key) { return key === "cup" ? "cup" : key === "cont" ? "cont" : "league"; }
+    function sideNode(club, isMe) {
+      return el("div", { class: "sq-side" + (isMe ? " me" : "") }, [
+        TM.img.clubImg(club, "sq-crest"),
+        el("div", { class: "sq-abbr", text: abbr3(club.name) })
+      ]);
+    }
     var start = C().dateOf(c, c.currentDay), last = C().dateOf(c, endOff);
     var todayOff = c.currentDay;
     var ym = start.y * 12 + (start.m - 1), ymEnd = last.y * 12 + (last.m - 1), guard = 0;
     while (ym <= ymEnd && guard++ < 14) {
       var year = Math.floor(ym / 12), month = (ym % 12) + 1; ym++;
-      var daysIn = new Date(year, month, 0).getDate();
-      var firstWd = new Date(year, month - 1, 1).getDay();
       var monthCard = el("div", { class: "cal-month" });
       monthCard.appendChild(el("div", { class: "cal-mtitle", text: MES_FULL[month - 1] + " " + year }));
 
-      // --- mini-grade do mês (visão geral: pontos nos dias com jogo/janela) ---
-      var grid = el("div", { class: "cal-grid" });
-      WD_PT.forEach(function (w) { grid.appendChild(el("div", { class: "cal-wd", text: w })); });
-      for (var b = 0; b < firstWd; b++) grid.appendChild(el("div", { class: "cal-cell empty" }));
-      for (var d = 1; d <= daysIn; d++) {
-        var off = offMap[year + "-" + month + "-" + d];
-        var cellCls = "cal-cell";
-        var kids = [ el("div", { class: "cal-cell-d", text: d }) ];
-        if (off === todayOff) cellCls += " today";
-        var mt = off != null ? matchByOff[off] : null;
-        if (mt) {
-          cellCls += " has-match " + (mt.tbd ? "cup" : compClass(mt.key));
-          kids.push(el("div", { class: "cal-dot" }));
-        }
-        if (off != null && winOpenOff[off] != null) { cellCls += " win-open"; kids.push(el("div", { class: "cal-cell-win open", text: "🟢" })); }
-        if (off != null && winCloseOff[off] != null) { cellCls += " win-close"; kids.push(el("div", { class: "cal-cell-win close", text: "🔴" })); }
-        grid.appendChild(el("div", { class: cellCls }, kids));
-      }
-      monthCard.appendChild(grid);
-
-      // --- lista detalhada do mês: escudo + nome + mando + competição ---
-      var list = el("div", { class: "cal-list" });
+      // eventos do mês (jogos + janelas), em ordem de data
       var events = [];
       (c.windows || []).forEach(function (w) {
         var od = C().dateOf(c, w.openDay), cd = C().dateOf(c, w.closeDay);
@@ -509,46 +492,44 @@
       });
       upcoming.forEach(function (it) { var dt = C().dateOf(c, it.day); if (dt.y === year && dt.m === month) events.push({ day: it.day, type: "match", it: it }); });
       events.sort(function (a, b) { return a.day - b.day; });
+      if (!events.length) continue;
 
+      // grade de quadrados: cada confronto dentro do seu quadrado, colorido pela competição
+      var sqgrid = el("div", { class: "cal-sqgrid" });
       events.forEach(function (evt) {
         var dt = C().dateOf(c, evt.day);
-        var dateChip = el("div", { class: "cl-date" + (evt.day === todayOff ? " today" : "") }, [ el("div", { class: "cl-dnum", text: dt.d }), el("div", { class: "cl-dm", text: MES_PT[dt.m - 1] }) ]);
+        var dateLbl = pad2(dt.d) + "/" + pad2(dt.m);
+        var isToday = evt.day === todayOff;
+
         if (evt.type === "win-open" || evt.type === "win-close") {
           var isOpen = evt.type === "win-open";
-          list.appendChild(el("div", { class: "cal-row window " + (isOpen ? "open" : "close") }, [
-            dateChip,
-            el("div", { class: "cl-win-ic", text: isOpen ? "🟢" : "🔴" }),
-            el("div", { class: "cl-main" }, [ el("div", { class: "cl-team", text: evt.name + (isOpen ? " abre" : " fecha") }), el("div", { class: "cl-sub", text: "Janela de transferências" }) ])
+          sqgrid.appendChild(el("div", { class: "cal-sq window " + (isOpen ? "open" : "close") + (isToday ? " today" : "") }, [
+            el("div", { class: "sq-head" }, [ el("span", { class: "sq-date", text: dateLbl }), el("span", { class: "sq-comp", text: "Janela" }) ]),
+            el("div", { class: "sq-win" }, [ el("span", { class: "sq-win-ic", text: isOpen ? "🟢" : "🔴" }), el("span", { text: evt.name + (isOpen ? " abre" : " fecha") }) ])
           ]));
           return;
         }
-        var it = evt.it;
+
+        var it = evt.it, cc = compClass(it.key);
+        var head = el("div", { class: "sq-head" }, [ el("span", { class: "sq-date", text: dateLbl }), el("span", { class: "sq-comp", text: it.name }) ]);
+        var matchNode, footText;
         if (it.tbd) {
-          list.appendChild(el("div", { class: "cal-row" }, [
-            dateChip,
-            el("div", { class: "cl-crest placeholder", text: "🏆" }),
-            el("div", { class: "cl-main" }, [ el("div", { class: "cl-team", text: "A definir" }), el("div", { class: "cl-sub", text: it.name } ) ]),
-            el("span", { class: "cl-badge " + compClass(it.key), text: it.name })
-          ]));
-          return;
+          matchNode = el("div", { class: "sq-match tbd" }, [ el("div", { class: "sq-crest placeholder", text: "🏆" }), el("div", { class: "sq-tbd-t", text: "Adversário a definir" }) ]);
+          footText = it.name;
+        } else {
+          var home = TM.data.club(it.homeId), away = TM.data.club(it.awayId), meHome = it.homeId === c.teamId;
+          matchNode = el("div", { class: "sq-match" }, [ sideNode(home, meHome), el("div", { class: "sq-x", text: "×" }), sideNode(away, !meHome) ]);
+          footText = meHome ? "🏠 Em casa" : "✈️ Fora";
         }
-        var meHome = it.homeId === c.teamId;
-        var opp = TM.data.club(meHome ? it.awayId : it.homeId);
-        list.appendChild(el("div", { class: "cal-row" + (evt.day === todayOff ? " today" : "") }, [
-          dateChip,
-          TM.img.clubImg(opp, "cl-crest"),
-          el("div", { class: "cl-main" }, [
-            el("div", { class: "cl-team", text: opp.name }),
-            el("div", { class: "cl-sub" }, [ el("span", { class: "cl-loc " + (meHome ? "home" : "away"), text: meHome ? "🏠 Em casa" : "✈️ Fora" }) ])
-          ]),
-          el("span", { class: "cl-badge " + compClass(it.key), text: it.name })
+        sqgrid.appendChild(el("div", { class: "cal-sq " + cc + (isToday ? " today" : ""), title: dateLbl + " · " + it.name }, [
+          head, matchNode, el("div", { class: "sq-foot", text: footText })
         ]));
       });
-
-      if (events.length) monthCard.appendChild(list);
+      monthCard.appendChild(sqgrid);
       body.appendChild(monthCard);
     }
   });
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
 
   /* ================= SELEÇÃO (junto com o clube) ================= */
   TM.ui.register("coach-nation", function (screen) {
