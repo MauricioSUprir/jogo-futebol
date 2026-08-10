@@ -310,6 +310,8 @@
     career.seasonYear = 2025 + career.season;
     career.currentDay = 0;
     career.matchNo = 0;
+    career.pendingWorldDeals = [];
+    buildWindows(career);
   }
 
   var CURRENCIES = {
@@ -945,15 +947,171 @@
     });
   }
 
+  /* ---------- janelas de transferências ---------- */
+  // offset (em dias a partir de 10/ago) para uma data (mês 1-12, dia) dentro da temporada
+  function offsetOfDate(career, month1, day) {
+    for (var o = 0; o < 330; o++) { var dt = dateOf(career, o); if (dt.m === month1 && dt.d === day) return o; }
+    return -1;
+  }
+  function buildWindows(career) {
+    // verão: aberta desde o início (10/ago) até 01/out · inverno: 04/jan a 28/fev
+    career.windows = [
+      { name: "Janela de Verão", openDay: 0, closeDay: offsetOfDate(career, 10, 1), openedNotified: true, closedNotified: false },
+      { name: "Janela de Inverno", openDay: offsetOfDate(career, 1, 4), closeDay: offsetOfDate(career, 2, 28), openedNotified: false, closedNotified: false }
+    ];
+  }
+  function windowOpenNow(career) {
+    var d = career.currentDay || 0;
+    return (career.windows || []).some(function (w) { return d >= w.openDay && d < w.closeDay; });
+  }
+  function currentWindow(career) {
+    var d = career.currentDay || 0;
+    return (career.windows || []).filter(function (w) { return d >= w.openDay && d < w.closeDay; })[0] || null;
+  }
+  function nextWindowOpenDay(career) {
+    var d = career.currentDay || 0, best = null;
+    (career.windows || []).forEach(function (w) { if (w.openDay > d && (best == null || w.openDay < best)) best = w.openDay; });
+    return best;
+  }
+
+  /* ---------- mover jogadores no mundo (transferências da IA) ---------- */
+  function moveWorldPlayer(pid, toClubId) {
+    var W = TM.data.world(); var p = W.playersById[pid]; if (!p) return false;
+    var fromId = p.clubId; if (fromId === toClubId) return false;
+    var oc = TM.data.club(fromId), nc = TM.data.club(toClubId);
+    if (!nc) return false;
+    if (oc && oc.playerIds) oc.playerIds = oc.playerIds.filter(function (x) { return x !== pid; });
+    if (nc.playerIds.indexOf(pid) < 0) nc.playerIds.push(pid);
+    p.clubId = toClubId;
+    return true;
+  }
+  function executeWorldTransfer(career, pid, toClubId) {
+    if (moveWorldPlayer(pid, toClubId)) { career.worldTransfers = career.worldTransfers || {}; career.worldTransfers[pid] = toClubId; return true; }
+    return false;
+  }
+  function applyWorldTransfers(career) {
+    if (!career || !career.worldTransfers) return;
+    Object.keys(career.worldTransfers).forEach(function (pid) { moveWorldPlayer(pid, career.worldTransfers[pid]); });
+  }
+  // encontra um negócio plausível: comprador que pode pagar, vendedor que topa liberar (raramente um craque)
+  function findAiDeal(career) {
+    var clubs = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId; });
+    if (clubs.length < 4) return null;
+    var buyer = clubs[Math.floor(Math.random() * clubs.length)];
+    var buyerRating = TM.data.clubRating(buyer.id), buyerBudget = baseBudgetEur(buyerRating);
+    for (var t = 0; t < 24; t++) {
+      var sc = clubs[Math.floor(Math.random() * clubs.length)];
+      if (sc.id === buyer.id) continue;
+      var squad = TM.data.clubPlayers(sc.id);
+      if (squad.length < 15) continue;
+      var startIdx = Math.random() < 0.88 ? 2 : 0;         // na maioria das vezes preserva as 2 estrelas do clube
+      var pool = squad.slice(startIdx).filter(function (p) {
+        return career.roster.indexOf(p.id) < 0
+          && !(career.loanedIn && career.loanedIn[p.id]) && !(career.loanedOut && career.loanedOut[p.id])
+          && !(career.worldTransfers && career.worldTransfers[p.id]);
+      });
+      if (!pool.length) continue;
+      var target = pool[Math.floor(Math.random() * pool.length)];
+      var val = TM.data.marketValue(target), sellRating = TM.data.clubRating(sc.id);
+      if (val > buyerBudget) continue;                      // comprador precisa ter caixa
+      if (buyerRating < target.overall - 5) continue;       // clube fraco não atrai jogador melhor
+      if (target.overall >= 80 && buyerRating < sellRating - 4) continue; // estrela não desce para clube bem pior
+      return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val) };
+    }
+    return null;
+  }
+  function dealNews(career, deal, arrived) {
+    var onShort = (career.shortlist || []).indexOf(deal.pid) >= 0;
+    if (onShort) {
+      TM.notify.push(career, { icon: "⭐", title: "Alvo da Central contratado",
+        text: "Atenção: o " + deal.toName + " " + (arrived ? "fechou" : "acertou") + " a contratação de " + deal.name + " (" + deal.ov + "), um dos seus alvos na Central de Transferências." });
+    } else {
+      TM.notify.push(career, { icon: "🔁", title: "Mercado da bola", news: true,
+        text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
+    }
+  }
+  // roda a cada visita ao hub: transições de janela, negócios pendentes e atividade de mercado da IA
+  function processCalendar(career) {
+    if (!career.windows) buildWindows(career);
+    career.pendingWorldDeals = career.pendingWorldDeals || [];
+    var d = career.currentDay || 0;
+    // transições de abertura/fechamento das janelas
+    (career.windows || []).forEach(function (w) {
+      if (d >= w.openDay && !w.openedNotified) {
+        w.openedNotified = true;
+        TM.notify.push(career, { icon: "🟢", title: w.name + " aberta", text: "A " + w.name.toLowerCase() + " está aberta até " + dateOf(career, w.closeDay).full + ". Reforce o elenco!" });
+        // conclui os acordos que estavam pendentes aguardando a janela
+        var still = [];
+        career.pendingWorldDeals.forEach(function (dl) {
+          if (executeWorldTransfer(career, dl.pid, dl.toId)) dealNews(career, dl, true);
+          else still.push(dl);
+        });
+        career.pendingWorldDeals = still;
+      }
+      if (d >= w.closeDay && !w.closedNotified) {
+        w.closedNotified = true;
+        TM.notify.push(career, { icon: "🔴", title: w.name + " fechada", text: "A " + w.name.toLowerCase() + " fechou. Novas transferências só na próxima janela." });
+      }
+    });
+    // atividade de mercado da IA — só quando o dia avança (evita repetir a cada re-render do hub)
+    if (career._lastCalDay === d) return;
+    career._lastCalDay = d;
+    var open = windowOpenNow(career);
+    if (open) {
+      if (Math.random() < 0.45) {
+        var deal = findAiDeal(career);
+        if (deal) { if (executeWorldTransfer(career, deal.pid, deal.toId)) dealNews(career, deal, true); }
+      }
+    } else {
+      if (Math.random() < 0.14) {
+        var deal2 = findAiDeal(career);
+        if (deal2) { career.pendingWorldDeals.push(deal2); dealNews(career, deal2, false); }
+      }
+    }
+  }
+
   function newSeason(career) {
+    // fotografa o elenco antes do envelhecimento para narrar a evolução
+    var before = {};
+    rosterPlayers(career).forEach(function (p) { before[p.id] = { ov: p.overall, age: p.age, name: p.name }; });
     career.season++;
     ageWorld(career);
+    ageYouth(career);
     processLoans(career);
+    // verba de fim de temporada (independente de títulos)
+    var mult = career.money ? career.money.mult : 1;
+    var bonus = Math.round(20 * mult);
+    career.budget += bonus;
+    TM.notify.push(career, { icon: "💰", title: "Verba da diretoria", text: "A diretoria liberou +" + fmtMoney(career, bonus) + " de verba para a nova temporada." });
+    // resumo da evolução do elenco
+    seasonEvoSummary(career, before);
     seasonSetup(career);
     career.objective = generateObjective(career.teamId);
     maybeNationInvite(career);
     // renova o calendário da seleção (Copa do Mundo de 4 em 4 anos, senão amistosos)
     if (career.nation && !career.nation.fired) setupNationSeason(career);
+  }
+  // envelhece e evolui os jogadores da base (não estão no mundo global)
+  function ageYouth(career) {
+    (career.youth || []).forEach(function (y) { ageWorldPlayer(y); });
+    Object.keys(career.customPlayers || {}).forEach(function (id) { ageWorldPlayer(career.customPlayers[id]); });
+  }
+  function seasonEvoSummary(career, before) {
+    var risers = [], aged = [];
+    rosterPlayers(career).forEach(function (p) {
+      var b = before[p.id]; if (!b) return;
+      if (p.overall > b.ov) risers.push({ name: p.name, from: b.ov, to: p.overall, d: p.overall - b.ov });
+      else if (p.overall < b.ov && p.age >= 32) aged.push({ name: p.name, to: p.overall, age: p.age });
+    });
+    risers.sort(function (a, b) { return b.d - a.d; });
+    if (risers.length) {
+      var top = risers.slice(0, 3).map(function (r) { return r.name + " " + r.from + "→" + r.to; }).join(", ");
+      TM.notify.push(career, { icon: "📈", title: "Evolução do elenco", text: "Destaques que evoluíram: " + top + (risers.length > 3 ? " e mais " + (risers.length - 3) + "." : ".") });
+    }
+    if (aged.length) {
+      var old = aged.slice(0, 3).map(function (r) { return r.name + " (" + r.age + " anos, " + r.to + ")"; }).join(", ");
+      TM.notify.push(career, { icon: "📉", title: "Veteranos em queda", text: "Perderam rendimento com a idade: " + old + "." });
+    }
   }
 
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
@@ -982,8 +1140,11 @@
     if (!career.seasonYear) career.seasonYear = 2025 + (career.season || 1);
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    if (!career.windows) buildWindows(career);
+    if (!career.pendingWorldDeals) career.pendingWorldDeals = [];
     syncLineup(career); // reincorpora contratados que faltavam no banco
     applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
+    applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
     return career;
   }
 
@@ -1153,7 +1314,8 @@
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule,
+    matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
+    processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
     setupNationSeason: setupNationSeason, natRating: natRating, nationPending: nationPending,
