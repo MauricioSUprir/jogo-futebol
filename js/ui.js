@@ -315,8 +315,8 @@
   register("modes", function (screen) {
     var MODES = [
       { icon: "⚡", name: "Partida Rápida", route: "quick" },
-      { icon: "🎯", name: "Carreira de Treinador", route: "coach" },
-      { icon: "⭐", name: "Carreira de Jogador", route: "player" },
+      { icon: "🎯", name: "Master Liga", route: "coach" },
+      { icon: "⭐", name: "Rumo ao Estrelato", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },

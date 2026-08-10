@@ -20,7 +20,7 @@
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
     if (TM.storage.coachCareer()) { TM.ui.go("coach-hub"); return; }
-    screen.appendChild(TM.ui.topbar("🎯 Carreira de Treinador", function () { TM.ui.go("modes"); }));
+    screen.appendChild(TM.ui.topbar("🎯 Master Liga", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Escolha um clube. Você disputa a liga, a copa nacional e (se classificado) a competição continental." }));
@@ -61,7 +61,7 @@
     var club = TM.data.club(clubId);
     // reusa o rascunho ao voltar da lista de treinadores; senão começa novo
     if (!pendingSetup || pendingSetup.clubId !== clubId) {
-      pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "create", nationId: null };
+      pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "create", nationId: null, board: "intermediaria", role: "treinador" };
     }
     var opts = pendingSetup;
 
@@ -144,6 +144,34 @@
       el("div", { class: "setting-hint", text: "Uma injeção de dinheiro no seu orçamento, até 700 milhões. A moeda afeta os valores dos jogadores nas contratações." })
     ]));
 
+    // exigência da diretoria
+    var boardWrap = el("div", { class: "segmented full" });
+    var BOARD_HINTS = {
+      aceitavel: "Diretoria tranquila: dá tempo para o projeto e cobra pouco. Demissão é rara.",
+      intermediaria: "Diretoria equilibrada: cobra resultados, mas com bom senso.",
+      rigorosa: "Diretoria rigorosa: exige vitórias e títulos. Sequências ruins geram pressão e risco de demissão."
+    };
+    var boardHint = el("div", { class: "setting-hint", text: BOARD_HINTS[opts.board] });
+    [["aceitavel", "Aceitável"], ["intermediaria", "Intermediária"], ["rigorosa", "Rigorosa"]].forEach(function (o) {
+      var b = el("button", { class: "seg-btn" + (opts.board === o[0] ? " active" : ""), text: o[1], on: { click: function () {
+        opts.board = o[0]; boardWrap.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active");
+        boardHint.textContent = BOARD_HINTS[o[0]];
+      } } });
+      boardWrap.appendChild(b);
+    });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🏛️ Diretoria" }), boardWrap, boardHint ]));
+
+    // seu cargo no clube
+    var roleSel = el("select", { class: "select" });
+    [["treinador", "Treinador"], ["principal", "Treinador Principal"], ["diretor", "Treinador-Diretor"], ["manager", "Manager"]].forEach(function (o) {
+      roleSel.appendChild(el("option", { value: o[0], text: o[1], selected: opts.role === o[0] }));
+    });
+    roleSel.addEventListener("change", function () { opts.role = roleSel.value; });
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting-label", text: "🧷 Seu cargo no clube" }), roleSel,
+      el("div", { class: "setting-hint", text: "Define como você é tratado pela diretoria e como assina os comunicados do clube." })
+    ]));
+
     // comandar também uma seleção
     var natWrap = el("div", { class: "setting" });
     var natToggle = el("button", { class: "switch" + (opts.nationId ? " on" : ""), on: { click: function () {
@@ -182,7 +210,7 @@
   /* ---------- lista de treinadores (escolher existente) ---------- */
   TM.ui.register("coach-pick", function (screen, params) {
     var clubId = params.clubId;
-    if (!pendingSetup || pendingSetup.clubId !== clubId) pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "existing", nationId: null };
+    if (!pendingSetup || pendingSetup.clubId !== clubId) pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "existing", nationId: null, board: "intermediaria", role: "treinador" };
     screen.appendChild(TM.ui.topbar("Escolha o treinador", function () { TM.ui.go("coach-setup", { clubId: clubId }); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
@@ -1587,13 +1615,7 @@
         ]));
       } else if (n.loanOffer) {
         card.appendChild(el("div", { class: "note-actions" }, [
-          TM.ui.button("🤝 Emprestar", function () {
-            C().resolveLoanOffer(c, n, true); TM.storage.saveCoachCareer(c);
-            TM.ui.toast("Jogador emprestado."); TM.ui.go("coach-notifications");
-          }, "btn primary small"),
-          TM.ui.button("Recusar", function () {
-            C().resolveLoanOffer(c, n, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
-          }, "btn ghost small")
+          TM.ui.button("Analisar / negociar", function () { TM.ui.go("coach-loan-offer", { noteId: n.id }); }, "btn primary small")
         ]));
       } else if (n.buyOption) {
         card.appendChild(el("div", { class: "note-actions" }, [
@@ -1650,12 +1672,88 @@
       el("div", { class: "setting-hint", text: off.fee >= value ? "A proposta está acima do valor de mercado — bom negócio." : "A proposta está abaixo do valor de mercado." })
     ]));
 
+    // ---- contraproposta (negociar por mais) ----
+    if (!off.finalOffer) {
+      var negWrap = el("div", { class: "nego-panel" });
+      negWrap.appendChild(el("div", { class: "nego-quote", text: "💬 Faça uma contraproposta — peça um valor maior." }));
+      var demandInput = el("input", { class: "text-input", type: "number", min: off.fee + 1, step: 1, value: Math.round(off.fee * 1.2), placeholder: "Valor pedido (milhões)" });
+      negWrap.appendChild(el("div", { class: "nego-row" }, [
+        el("span", { class: "deal-lbl", text: "Pedir " + sym(c) }), demandInput, el("span", { class: "deal-lbl", text: "M" })
+      ]));
+      negWrap.appendChild(TM.ui.button("📤 Enviar contraproposta", function () {
+        var d = parseInt(demandInput.value, 10);
+        if (!d || d <= 0) { TM.ui.toast("Informe um valor válido"); return; }
+        var r = C().counterIncomingOffer(c, note, d); TM.storage.saveCoachCareer(c);
+        TM.ui.toast(r.text || "");
+        if (r.status === "retirada") { TM.ui.go("coach-notifications"); }
+        else { TM.ui.go("coach-offer", { noteId: note.id }); }
+      }, "btn primary small"));
+      screen.appendChild(negWrap);
+    } else {
+      screen.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "🔒 Proposta final — não é possível negociar mais." }));
+    }
+
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("✅ Aceitar proposta", function () {
         var r = C().resolveIncomingOffer(c, note, true); TM.storage.saveCoachCareer(c);
         TM.ui.toast(r === "vendido" ? "Jogador vendido!" : "O jogador recusou sair."); TM.ui.go("coach-notifications");
       }, "btn primary"),
       TM.ui.button("❌ Recusar", function () { C().resolveIncomingOffer(c, note, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn ghost")
+    ]));
+  });
+
+  /* ---------- analisar/negociar pedido de empréstimo recebido ---------- */
+  TM.ui.register("coach-loan-offer", function (screen, params) {
+    var c = TM.storage.coachCareer();
+    var note = TM.notify.get(c, params.noteId);
+    if (!note || !note.loanOffer) { TM.ui.go("coach-notifications"); return; }
+    var lo = note.loanOffer;
+    var player = C().resolvePlayer(c, lo.playerId);
+    var buyer = TM.data.club(lo.buyerId);
+
+    screen.appendChild(TM.ui.topbar("Pedido de empréstimo", function () { TM.ui.go("coach-notifications"); }));
+    screen.appendChild(el("div", { class: "player-card" }, [
+      TM.img.playerImg(player, "pc-face"),
+      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: player.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(player) + " · " + player.age + " anos · " + player.nationName }) ]),
+      TM.ui.ovBadge(player.overall)
+    ]));
+
+    function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
+    screen.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "🔄 " + buyer.name + " quer " + player.name + " por empréstimo." }),
+      line("Clube interessado", buyer.name),
+      line("Overall do clube", TM.data.clubRating(lo.buyerId)),
+      line("Duração", C().loanTermLabel(lo.termYears)),
+      line("Taxa de empréstimo", C().fmtMoney(c, lo.loanFee)),
+      line("Opção de compra", lo.buyOption ? C().fmtMoney(c, lo.buyPrice) : "não incluída", lo.buyOption ? "good" : "")
+    ]));
+
+    if (!lo.finalOffer) {
+      var negWrap = el("div", { class: "nego-panel" });
+      negWrap.appendChild(el("div", { class: "nego-quote", text: "💬 Negocie melhores termos com o " + buyer.name + "." }));
+      var feeInput = el("input", { class: "text-input", type: "number", min: lo.loanFee, step: 1, value: Math.round(lo.loanFee * 1.5) || 1, placeholder: "Taxa (milhões)" });
+      negWrap.appendChild(el("div", { class: "nego-row" }, [ el("span", { class: "deal-lbl", text: "Taxa " + sym(c) }), feeInput, el("span", { class: "deal-lbl", text: "M" }) ]));
+      var askOpt = el("button", { class: "switch" + (lo.buyOption ? " on" : ""), on: { click: function () { askOpt.classList.toggle("on"); priceRow.style.display = askOpt.classList.contains("on") ? "" : "none"; } } }, [ el("span", { class: "switch-knob" }) ]);
+      negWrap.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "deal-lbl", text: "Exigir opção de compra" }), askOpt ]));
+      var priceInput = el("input", { class: "text-input", type: "number", min: 1, step: 1, value: lo.buyPrice || Math.round(curVal(c, TM.data.marketValue(player)) * 1.2), placeholder: "Preço da opção (milhões)" });
+      var priceRow = el("div", { class: "nego-row", style: lo.buyOption ? "" : "display:none" }, [ el("span", { class: "deal-lbl", text: "Compra " + sym(c) }), priceInput, el("span", { class: "deal-lbl", text: "M" }) ]);
+      negWrap.appendChild(priceRow);
+      negWrap.appendChild(TM.ui.button("📤 Enviar contraproposta", function () {
+        var want = { loanFee: parseInt(feeInput.value, 10) || lo.loanFee, askOption: askOpt.classList.contains("on"), buyPrice: parseInt(priceInput.value, 10) || 0 };
+        var r = C().counterLoanOffer(c, note, want); TM.storage.saveCoachCareer(c);
+        TM.ui.toast(r.text || ""); TM.ui.go("coach-loan-offer", { noteId: note.id });
+      }, "btn primary small"));
+      screen.appendChild(negWrap);
+    } else {
+      screen.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "🔒 Proposta final — não é possível negociar mais." }));
+    }
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("🤝 Aceitar e emprestar", function () {
+        C().resolveLoanOffer(c, note, true); TM.storage.saveCoachCareer(c);
+        TM.ui.toast("Jogador emprestado."); TM.ui.go("coach-notifications");
+      }, "btn primary"),
+      TM.ui.button("❌ Recusar", function () { C().resolveLoanOffer(c, note, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn ghost")
     ]));
   });
 

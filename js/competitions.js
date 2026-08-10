@@ -372,6 +372,8 @@
     var career = {
       type: "club", teamId: clubId, teamName: club.name, leagueId: club.leagueId, season: 1,
       coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null, coachId: opts.coachId || null,
+      board: opts.board || "intermediaria", role: opts.role || "treinador",
+      recentForm: [], lastBoardCall: 0,
       money: money,
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
@@ -412,8 +414,61 @@
     });
     // interesse de outro clube em um jogador seu (ocasional)
     maybeIncomingOffer(career);
+    // registra o resultado e avalia uma possível chamada da diretoria
+    if (result && result.score) {
+      var gf = result.score[userSide], ga = result.score[1 - userSide];
+      var res = gf > ga ? "V" : (gf < ga ? "D" : "E");
+      if (!career.recentForm) career.recentForm = [];
+      career.recentForm.push(res);
+      if (career.recentForm.length > 8) career.recentForm = career.recentForm.slice(-8);
+      maybeBoardCall(career);
+    }
   }
   function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
+
+  /* ---------- chamadas da diretoria ---------- */
+  // exigência: quantas derrotas seguidas até a diretoria cobrar / quantas vitórias para elogiar
+  var BOARD_CFG = {
+    aceitavel:     { badStreak: 4, goodStreak: 4, cooldown: 4, sackStreak: 7, tone: "tranquila" },
+    intermediaria: { badStreak: 3, goodStreak: 3, cooldown: 3, sackStreak: 6, tone: "equilibrada" },
+    rigorosa:      { badStreak: 2, goodStreak: 3, cooldown: 2, sackStreak: 4, tone: "rigorosa" }
+  };
+  function boardLabel(career) {
+    var club = TM.data.club(career.teamId);
+    return "A diretoria do " + (club ? club.name : "clube");
+  }
+  function maybeBoardCall(career) {
+    var cfg = BOARD_CFG[career.board] || BOARD_CFG.intermediaria;
+    var matchNo = career.matchNo || 0;
+    if (matchNo - (career.lastBoardCall || 0) < cfg.cooldown) return; // respeita o intervalo entre chamadas
+    var f = career.recentForm || [];
+    // conta a sequência atual de vitórias e de derrotas
+    var winStreak = 0, lossStreak = 0;
+    for (var i = f.length - 1; i >= 0; i--) { if (f[i] === "V") winStreak++; else break; }
+    for (var j = f.length - 1; j >= 0; j--) { if (f[j] === "D") lossStreak++; else break; }
+
+    // fase ruim → cobrança (e, se muito ruim numa diretoria rigorosa, ameaça de demissão)
+    if (lossStreak >= cfg.sackStreak) {
+      career.lastBoardCall = matchNo;
+      TM.notify.push(career, { icon: "☎️", title: "Chamada da diretoria", boardCall: true,
+        text: boardLabel(career) + " está muito insatisfeita: " + lossStreak + " derrotas seguidas. O seu cargo está por um fio — vença os próximos jogos ou será demitido." });
+      return;
+    }
+    if (lossStreak >= cfg.badStreak) {
+      career.lastBoardCall = matchNo;
+      var press = career.board === "rigorosa" ? "Precisamos de uma reação imediata." : "Confiamos no seu trabalho, mas queremos ver evolução.";
+      TM.notify.push(career, { icon: "☎️", title: "Chamada da diretoria", boardCall: true,
+        text: boardLabel(career) + " chamou para conversar após " + lossStreak + " derrotas seguidas. " + press });
+      return;
+    }
+    // boa fase → elogio / meta de bônus
+    if (winStreak >= cfg.goodStreak) {
+      career.lastBoardCall = matchNo;
+      TM.notify.push(career, { icon: "🤝", title: "Chamada da diretoria", boardCall: true,
+        text: boardLabel(career) + " parabeniza pela sequência de " + winStreak + " vitórias. Mantenha o ritmo e o clube fará novos investimentos." });
+      return;
+    }
+  }
 
   function maybeIncomingOffer(career) {
     // jogadores na lista de transferências recebem MUITO mais propostas
@@ -491,7 +546,80 @@
     }
   }
 
+  // teto que o clube comprador está disposto a pagar (quanto mais forte/rico, mais paga)
+  function buyerCeiling(career, note) {
+    var off = note.offer;
+    var target = resolvePlayer(career, off.playerId);
+    var mult = career.money ? career.money.mult : 1;
+    var val = Math.round(TM.data.marketValue(target) * mult);
+    var rating = TM.data.clubRating(off.buyerId);
+    var richness = 1.12 + Math.max(0, rating - 70) * 0.02; // 70→1.12, 90→1.52
+    return Math.round(Math.max(off.fee, val) * richness);
+  }
+  // contraproposta numa proposta de compra recebida. demand em milhões (moeda da carreira)
+  function counterIncomingOffer(career, note, demand) {
+    var off = note.offer;
+    var target = resolvePlayer(career, off.playerId);
+    var buyer = TM.data.club(off.buyerId);
+    if (off.finalOffer) return { status: "final", fee: off.fee, text: buyer.name + " já fez a proposta final." };
+    if (demand <= off.fee) return { status: "aceita", fee: off.fee, text: "Valor já coberto pela proposta atual." };
+    var ceil = buyerCeiling(career, note);
+    if (demand <= ceil) {
+      off.fee = demand;
+      note.text = buyer.name + " aceitou pagar " + fmtMoney(career, demand) + " por " + target.name + ".";
+      return { status: "aceita", fee: demand, text: buyer.name + " topou " + fmtMoney(career, demand) + "!" };
+    }
+    if (demand <= ceil * 1.15) {
+      var meet = Math.round((demand + ceil) / 2);
+      off.fee = meet; off.finalOffer = true;
+      note.text = buyer.name + " subiu para " + fmtMoney(career, meet) + " por " + target.name + " (proposta final).";
+      return { status: "final", fee: meet, text: buyer.name + " chegou até " + fmtMoney(career, meet) + " — é a proposta final." };
+    }
+    // exagero: pode fazer o clube desistir
+    if (Math.random() < 0.5) {
+      TM.notify.remove(career, note.id);
+      return { status: "retirada", text: buyer.name + " achou o pedido abusivo e retirou o interesse." };
+    }
+    return { status: "recusada", fee: off.fee, text: buyer.name + " recusou e manteve a proposta de " + fmtMoney(career, off.fee) + "." };
+  }
+
   /* ---------- empréstimos ---------- */
+  // contraproposta num pedido de empréstimo recebido
+  function counterLoanOffer(career, note, want) {
+    // want: { loanFee, askOption (bool), buyPrice }
+    var lo = note.loanOffer;
+    var target = resolvePlayer(career, lo.playerId);
+    var buyer = TM.data.club(lo.buyerId);
+    var mult = career.money ? career.money.mult : 1;
+    var val = Math.round(TM.data.marketValue(target) * mult);
+    var rating = TM.data.clubRating(lo.buyerId);
+    if (lo.finalOffer) return { status: "final", text: buyer.name + " já fez a proposta final." };
+    var maxLoanFee = Math.round(Math.max(lo.loanFee, val * 0.15) * (1 + Math.max(0, rating - 70) * 0.015));
+    var changed = false, refused = false;
+    // taxa de empréstimo
+    if (want.loanFee != null && want.loanFee > lo.loanFee) {
+      if (want.loanFee <= maxLoanFee) { lo.loanFee = want.loanFee; changed = true; }
+      else { refused = true; }
+    }
+    // exigir opção de compra
+    if (!refused && want.askOption && !lo.buyOption) {
+      if (Math.random() < 0.6) {
+        lo.buyOption = true;
+        lo.buyPrice = Math.max(want.buyPrice || 0, Math.round(val * 1.15));
+        changed = true;
+      } else { refused = true; }
+    } else if (!refused && want.askOption && lo.buyOption && want.buyPrice && want.buyPrice > lo.buyPrice) {
+      // pedir um preço de compra maior
+      if (want.buyPrice <= Math.round(val * 1.6)) { lo.buyPrice = want.buyPrice; changed = true; }
+      else { refused = true; }
+    }
+    // atualiza o texto do aviso
+    lo && (note.text = buyer.name + " quer " + target.name + " por empréstimo" + (lo.buyOption ? " com opção de compra de " + fmtMoney(career, lo.buyPrice) : "") + " (" + loanTermLabel(lo.termYears) + ", taxa " + fmtMoney(career, lo.loanFee) + ").");
+    if (refused) { lo.finalOffer = true; return { status: "final", text: buyer.name + " não aceitou melhorar mais e fez a proposta final." }; }
+    if (changed) return { status: "aceita", text: buyer.name + " aceitou os novos termos." };
+    return { status: "aceita", text: "Termos mantidos." };
+  }
+
   function fmtMoney(career, v) {
     var sym = (career.money && career.money.sym) || "€";
     return sym + " " + Math.round(v) + "M";
@@ -845,6 +973,10 @@
     if (!career.tactic) career.tactic = "equilibrado";
     if (!career.objective) career.objective = generateObjective(career.teamId);
     if (!career.coachName) career.coachName = "Treinador";
+    if (!career.board) career.board = "intermediaria";
+    if (!career.role) career.role = "treinador";
+    if (!career.recentForm) career.recentForm = [];
+    if (career.lastBoardCall == null) career.lastBoardCall = 0;
     if (career.currentDay == null) career.currentDay = 0;
     if (career.matchNo == null) career.matchNo = 0;
     if (!career.seasonYear) career.seasonYear = 2025 + (career.season || 1);
@@ -1033,6 +1165,7 @@
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
+    counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
     resolveLoanOffer: resolveLoanOffer, loanTermLabel: loanTermLabel, fmtMoney: fmtMoney
