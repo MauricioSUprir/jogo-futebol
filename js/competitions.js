@@ -1030,6 +1030,37 @@
         text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
     }
   }
+  // notificação de INTERESSE de um clube num jogador (antes/independente de uma proposta concreta)
+  function maybeInterest(career) {
+    // escolhe entre um alvo da Central e um jogador do seu elenco
+    var shortlist = (career.shortlist || []).filter(function (id) { return career.roster.indexOf(id) < 0; });
+    var useShort = shortlist.length > 0 && Math.random() < 0.5;
+    var player, headline, icon, title;
+    if (useShort) {
+      player = resolvePlayer(career, shortlist[Math.floor(Math.random() * shortlist.length)]);
+      if (!player) return;
+      var suitors = TM.data.world().clubs.filter(function (cl) {
+        return cl.id !== career.teamId && cl.id !== player.clubId && TM.data.clubRating(cl.id) >= player.overall - 3 && baseBudgetEur(TM.data.clubRating(cl.id)) >= TM.data.marketValue(player);
+      });
+      if (!suitors.length) return;
+      var s1 = suitors[Math.floor(Math.random() * suitors.length)];
+      icon = "👀"; title = "Interesse no seu alvo";
+      headline = "O " + s1.name + " está de olho em " + player.name + " (" + player.overall + "), um dos seus alvos na Central. Feche antes que ele saia do mercado.";
+    } else {
+      // um jogador de destaque do seu elenco desperta interesse
+      var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 70 && !(career.loanedIn && career.loanedIn[p.id]); });
+      if (!mine.length) return;
+      player = mine[Math.floor(Math.random() * mine.length)];
+      var buyers = TM.data.world().clubs.filter(function (cl) {
+        return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= player.overall - 2;
+      });
+      if (!buyers.length) return;
+      var b1 = buyers[Math.floor(Math.random() * buyers.length)];
+      icon = "👀"; title = "Interesse no seu jogador";
+      headline = "O " + b1.name + " monitora " + player.name + " (" + player.overall + "). Uma proposta pode chegar a qualquer momento.";
+    }
+    TM.notify.push(career, { icon: icon, title: title, news: true, text: headline });
+  }
   // roda a cada visita ao hub: transições de janela, negócios pendentes e atividade de mercado da IA
   function processCalendar(career) {
     if (!career.windows) buildWindows(career);
@@ -1068,6 +1099,8 @@
         if (deal2) { career.pendingWorldDeals.push(deal2); dealNews(career, deal2, false); }
       }
     }
+    // sondagens de interesse (independem de proposta concreta)
+    if (Math.random() < 0.28) maybeInterest(career);
   }
 
   function newSeason(career) {
