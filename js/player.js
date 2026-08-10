@@ -461,14 +461,17 @@
 
     var mi = momentumInfo(c);
     var mySide = iAmHome ? 0 : 1;
-    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult, userSide: mySide, penTakerId: c.penDuty ? "me" : null });
+    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, difficulty: settings.difficulty, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult, userSide: mySide, penTakerId: c.penDuty ? "me" : null });
 
     // transmissão ao vivo; o pós-jogo só é aplicado ao final (onComplete)
     var compId = "lg-" + (TM.data.club(c.clubId).leagueId || "br");
     TM.ui.go("player-live", {
       teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: injuredThisGame, compId: compId,
       title: TM.data.club(c.clubId).name + " · Rodada " + (c.round + 1), back: "player-hub",
-      onComplete: function () { finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round); }
+      onComplete: function () {
+        if (injuredThisGame) { finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round); return; }
+        TM.ui.go("player-moments", { c: c, teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, round: round, compId: compId });
+      }
     });
   }
 
@@ -529,6 +532,69 @@
     TM.storage.savePlayerCareer(c);
     TM.ui.go("player-match", { teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, compId: "lg-" + (TM.data.club(c.clubId).leagueId || "br") });
   }
+
+  /* ---------- decisões no meio do jogo (carreira de jogador) ---------- */
+  var MOMENTS = [
+    { q: "Você recebe livre na entrada da área. O que faz?", opts: ["Finalizar no ângulo", "Tocar pro melhor posicionado", "Dominar e driblar"] },
+    { q: "Pênalti a seu favor! Onde bate?", opts: ["No canto esquerdo", "No meio do gol", "No canto direito"] },
+    { q: "Contra-ataque 2 contra 1. Qual a decisão?", opts: ["Passar pro companheiro livre", "Finalizar você mesmo", "Segurar e esperar apoio"] },
+    { q: "Falta perigosa na entrada da área. O que faz?", opts: ["Chutar direto no gol", "Cruzar na cabeça do atacante", "Bater rápido pro lado"] },
+    { q: "A bola sobra na área após escanteio. Como resolve?", opts: ["Finalizar de primeira", "Ajeitar e depois chutar", "Cabecear no canto"] },
+    { q: "Marcado de perto, sem espaço. Como sai da marcação?", opts: ["Drible curto", "Passe de primeira", "Proteger e girar"] },
+    { q: "O goleiro adversário saiu mal do gol. O que faz?", opts: ["Cavar por cima", "Chutar rasteiro no canto", "Cortar pra dentro"] },
+    { q: "Você tem espaço para conduzir. Qual escolha?", opts: ["Acelerar em velocidade", "Passe vertical no meio", "Abrir na ponta"] },
+    { q: "Cruzamento vindo da direita. Como ataca a bola?", opts: ["Antecipar no primeiro pau", "Esperar no segundo pau", "Recuar para a entrada"] },
+    { q: "Jogo truncado, time precisa de inspiração. O que tenta?", opts: ["Jogada individual ousada", "Tabela rápida com o meia", "Chute de fora da área"] }
+  ];
+  function momShuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+
+  TM.ui.register("player-moments", function (screen, params) {
+    if (!params || !params.result) { TM.ui.go("player-hub"); return; }
+    var c = params.c, result = params.result;
+    if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
+    screen.appendChild(TM.ui.topbar("⚡ Momentos decisivos", null));
+    var picks = momShuffle(MOMENTS).slice(0, 3);
+    // rola qual opção é a "certa" de cada momento (o técnico avalia sua leitura de jogo)
+    var correct = picks.map(function (m) { return Math.floor(Math.random() * m.opts.length); });
+    var panel = el("div", { class: "panel-narrow moment-play" });
+    screen.appendChild(panel);
+    var idx = 0, hits = 0, ratingDelta = 0;
+
+    function render() {
+      panel.innerHTML = "";
+      if (idx >= picks.length) { finish(); return; }
+      panel.appendChild(el("div", { class: "press-progress" }, [ el("span", { text: "Lance " + (idx + 1) + " de 3" }), el("span", { class: "press-vs", text: hits + " acerto(s)" }) ]));
+      var m = picks[idx];
+      panel.appendChild(el("div", { class: "press-reporter" }, [ el("span", { class: "press-mic", text: "⚽" }), el("div", { class: "press-q", text: m.q }) ]));
+      var opts = el("div", { class: "press-opts" });
+      m.opts.forEach(function (txt, i) {
+        opts.appendChild(el("button", { class: "press-opt", on: { click: function () {
+          var ok = i === correct[idx];
+          if (ok) { hits++; ratingDelta += 0.45; } else { ratingDelta -= 0.25; }
+          panel.innerHTML = "";
+          panel.appendChild(el("div", { class: "press-answer" }, [ el("span", { class: "press-you", text: "Você:" }), el("span", { text: " " + txt } ) ]));
+          panel.appendChild(el("div", { class: "press-react " + (ok ? "good" : "bad"), text: ok ? "✅ Boa decisão! Jogada certa." : "❌ Não era a melhor escolha (o ideal era: " + m.opts[correct[idx]] + ")." }));
+          panel.appendChild(el("div", { class: "actions" }, [ TM.ui.button(idx < 2 ? "Próximo lance →" : "Ver resultado", function () { idx++; render(); }, "btn primary") ]));
+        } } }, [ el("span", { text: txt }) ]));
+      });
+      panel.appendChild(opts);
+    }
+    function finish() {
+      if (result.focus) result.focus.rating = Math.max(4.5, Math.min(10, Math.round((result.focus.rating + ratingDelta) * 10) / 10));
+      if (hits === 3) { c.skillPoints = (c.skillPoints || 0) + 1; TM.notify.push(c, { icon: "🧠", title: "Leitura de jogo", text: "O técnico elogiou suas decisões em campo! +1 ponto de habilidade." }); }
+      else if (hits === 0) TM.notify.push(c, { icon: "😕", title: "Decisões", text: "O técnico achou que você errou as escolhas nos momentos decisivos." });
+      var emoji = hits >= 2 ? "😎" : hits === 1 ? "😐" : "😬";
+      panel.innerHTML = "";
+      panel.appendChild(el("div", { class: "press-summary " + (hits >= 2 ? "good" : hits === 0 ? "bad" : "") }, [
+        el("div", { class: "press-sum-emoji", text: emoji }),
+        el("div", { class: "press-sum-txt", text: hits + "/3 decisões certas · " + (ratingDelta >= 0 ? "+" : "") + ratingDelta.toFixed(2) + " na sua nota" })
+      ]));
+      panel.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Continuar", function () {
+        finishClubMatch(c, params.teamA, params.teamB, result, params.iAmHome, false, params.round);
+      }, "btn primary big") ]));
+    }
+    render();
+  });
 
   /* ---------- transmissão ao vivo (carreira de jogador — sem modo pausa) ---------- */
   TM.ui.register("player-live", function (screen, params) {

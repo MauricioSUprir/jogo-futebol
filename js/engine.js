@@ -9,14 +9,14 @@
 
   /* Táticas: [chave, rótulo] + modificadores [ataque, defesa] do lado do usuário */
   var TACTICS = [
-    ["retranca", "Retranca"], ["defensivo", "Defensivo"], ["contra-ataque", "Contra-ataque"],
-    ["equilibrado", "Equilibrado"], ["posse", "Posse de bola"], ["pontas", "Pelas pontas"],
-    ["direto", "Jogo direto"], ["ofensivo", "Ofensivo"], ["pressao", "Pressão total"]
+    ["muralha", "Muralha"], ["retranca", "Retranca"], ["defensivo", "Defensivo"], ["contra-ataque", "Contra-ataque"],
+    ["cadenciado", "Cadenciado"], ["equilibrado", "Equilibrado"], ["posse", "Posse de bola"], ["tiki-taka", "Tiki-taka"],
+    ["pontas", "Pelas pontas"], ["direto", "Jogo direto"], ["ofensivo", "Ofensivo"], ["linha-alta", "Linha alta"], ["pressao", "Pressão total"]
   ];
   var TACTIC_MODS = {
-    retranca: [0.74, 1.26], defensivo: [0.88, 1.14], "contra-ataque": [1.07, 1.05],
-    equilibrado: [1, 1], posse: [1.09, 1.05], pontas: [1.12, 0.97],
-    direto: [1.11, 0.93], ofensivo: [1.15, 0.87], pressao: [1.20, 0.80]
+    muralha: [0.66, 1.32], retranca: [0.74, 1.26], defensivo: [0.88, 1.14], "contra-ataque": [1.07, 1.05],
+    cadenciado: [1.02, 1.08], equilibrado: [1, 1], posse: [1.09, 1.05], "tiki-taka": [1.13, 1.02],
+    pontas: [1.12, 0.97], direto: [1.11, 0.93], ofensivo: [1.15, 0.87], "linha-alta": [1.17, 0.83], pressao: [1.20, 0.80]
   };
 
   var GOAL_LINES = [
@@ -87,6 +87,12 @@
     if (opts.moraleBoost && opts.moraleSide != null) {
       var mb = Math.max(-3, Math.min(3, opts.moraleBoost)) * 0.02; // ±6%
       atkMod[opts.moraleSide] *= (1 + mb); defMod[opts.moraleSide] *= (1 + mb);
+    }
+    // dificuldade: ajusta a força do time do usuário (fácil ajuda, lenda dificulta)
+    var DIFF = { facil: 1.4, normal: 0, dificil: -1.4, lenda: -2.8 };
+    if (opts.difficulty && opts.userSide != null && DIFF[opts.difficulty]) {
+      var de = DIFF[opts.difficulty] * 0.02;
+      atkMod[opts.userSide] *= (1 + de); defMod[opts.userSide] *= (1 + de);
     }
 
     function chanceProb(atk, opDef, redsMine) {
