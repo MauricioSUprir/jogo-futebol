@@ -21,7 +21,7 @@
     if (exPlayerHandoff) { s.coachName = exPlayerHandoff.name || ""; s.coachPhoto = exPlayerHandoff.photo || null; s.coachMode = "create"; }
     return s;
   }
-  // chamado pela tela de aposentadoria do jogador: inicia a Master Liga já com o nome/foto do ex-jogador
+  // chamado pela tela de aposentadoria do jogador: inicia a Master League já com o nome/foto do ex-jogador
   TM.coach = TM.coach || {};
   TM.coach.startFromPlayer = function (info) { exPlayerHandoff = info || null; pendingSetup = null; TM.ui.go("coach"); };
   // avatar do treinador: foto real se existir, senão iniciais em círculo colorido
@@ -30,7 +30,7 @@
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
     if (TM.storage.coachCareer() && !exPlayerHandoff) { TM.ui.go("coach-hub"); return; }
-    screen.appendChild(TM.ui.topbar("🎯 Master Liga", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
+    screen.appendChild(TM.ui.topbar("🎯 Master League", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
     if (exPlayerHandoff) screen.appendChild(el("div", { class: "twin-bar open", style: "max-width:620px;margin:0 auto 4px" }, [ el("span", { text: "🎽➡️🎯 " + exPlayerHandoff.name + " começa a carreira de treinador" }), el("span", { class: "twin-sub", text: "escolha o clube para comandar" }) ]));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
@@ -174,13 +174,13 @@
 
     // seu cargo no clube
     var roleSel = el("select", { class: "select" });
-    [["treinador", "Treinador"], ["principal", "Treinador Principal"], ["diretor", "Treinador-Diretor"], ["manager", "Manager"]].forEach(function (o) {
+    [["treinador", "Treinador"], ["dirigente", "Dirigente"]].forEach(function (o) {
       roleSel.appendChild(el("option", { value: o[0], text: o[1], selected: opts.role === o[0] }));
     });
     roleSel.addEventListener("change", function () { opts.role = roleSel.value; });
     body.appendChild(el("div", { class: "setting" }, [
       el("div", { class: "setting-label", text: "🧷 Seu cargo no clube" }), roleSel,
-      el("div", { class: "setting-hint", text: "Define como você é tratado pela diretoria e como assina os comunicados do clube." })
+      el("div", { class: "setting-hint", text: "Treinador comanda o time em campo. Dirigente cuida mais da gestão do clube — em breve com novos recursos." })
     ]));
 
     // comandar também uma seleção

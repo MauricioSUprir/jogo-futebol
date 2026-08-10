@@ -315,7 +315,7 @@
   register("modes", function (screen) {
     var MODES = [
       { icon: "⚡", name: "Partida Rápida", route: "quick" },
-      { icon: "🎯", name: "Master Liga", route: "coach" },
+      { icon: "🎯", name: "Master League", route: "coach" },
       { icon: "⭐", name: "Rumo ao Estrelato", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },

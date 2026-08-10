@@ -1032,11 +1032,11 @@
     };
     var startCoach = function () {
       if (TM.storage.coachCareer()) {
-        TM.ui.confirm("Você já tem uma Master Liga em andamento.", "Começar como treinador vai substituí-la. Deseja continuar?", "Substituir", function () { TM.storage.clearCoachCareer(); goCoach(); }, true);
+        TM.ui.confirm("Você já tem uma Master League em andamento.", "Começar como treinador vai substituí-la. Deseja continuar?", "Substituir", function () { TM.storage.clearCoachCareer(); goCoach(); }, true);
       } else { goCoach(); }
     };
     screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("🎯 Virar treinador (Master Liga)", startCoach, "btn primary big"),
+      TM.ui.button("🎯 Virar treinador (Master League)", startCoach, "btn primary big"),
       TM.ui.button("Encerrar carreira", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, "btn ghost")
     ]));
   });
