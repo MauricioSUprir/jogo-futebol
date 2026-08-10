@@ -244,7 +244,9 @@
   TM.ui.register("coach-hub", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
-    C().migrateCareer(c); TM.storage.saveCoachCareer(c);
+    C().migrateCareer(c);
+    C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
+    TM.storage.saveCoachCareer(c);
     // se a temporada acabou e há título não comemorado, mostra a tela de parabéns primeiro
     var pnd = C().advanceToUserMatch(c);
     if (pnd.seasonEnd && pendingTitles(c).length) { TM.ui.go("coach-title"); return; }
@@ -419,37 +421,93 @@
     }
   }
 
-  /* ---------- aba Calendário ---------- */
+  /* ---------- aba Calendário (grade estilo mês) ---------- */
   var MES_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  var MES_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  var WD_PT = ["D", "S", "T", "Q", "Q", "S", "S"];
+  function abbr3(name) { return (name || "").replace(/[^A-Za-zÀ-ÿ ]/g, "").trim().slice(0, 3).toUpperCase(); }
   TM.ui.register("coach-calendar", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("📅 Calendário", function () { TM.ui.go("coach-hub"); }));
-    screen.appendChild(el("div", { class: "date-bar" }, [
-      el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ])
-    ]));
-    var body = el("div", { class: "panel-narrow" });
+    var body = el("div", { class: "panel-narrow cal-wrap" });
     screen.appendChild(body);
-    var sched = C().peekSchedule(c, 14);
-    if (!sched.length) body.appendChild(el("p", { class: "intro-text", text: "Sem jogos futuros nesta temporada." }));
-    sched.forEach(function (item) {
-      var date = C().dateOf(c, item.day);
-      var badge = item.key === "cup" ? "cup" : item.key === "cont" ? "cont" : "league";
-      var confronto;
-      if (item.tbd) {
-        confronto = el("div", { class: "cal-teams tbd" }, [ el("span", { text: item.name }), el("span", { class: "cal-vs", text: "adversário a definir" }) ]);
-      } else {
-        var h = TM.data.club(item.homeId), a = TM.data.club(item.awayId);
-        confronto = el("div", { class: "cal-teams" }, [
-          el("span", { class: item.homeId === c.teamId ? "cal-me" : "", text: h.name }),
-          el("span", { class: "nm-x", text: " × " }),
-          el("span", { class: item.awayId === c.teamId ? "cal-me" : "", text: a.name })
-        ]);
+
+    // barra de status da janela de transferências
+    var win = C().currentWindow(c);
+    var statusBar;
+    if (win) {
+      statusBar = el("div", { class: "twin-bar open" }, [ el("span", { text: "🟢 " + win.name + " ABERTA" }), el("span", { class: "twin-sub", text: "fecha em " + C().dateOf(c, win.closeDay).full }) ]);
+    } else {
+      var nxt = C().nextWindowOpenDay(c);
+      statusBar = el("div", { class: "twin-bar closed" }, [ el("span", { text: "🔴 Janela fechada" }), el("span", { class: "twin-sub", text: nxt != null ? "próxima abre em " + C().dateOf(c, nxt).full : "sem janelas restantes" }) ]);
+    }
+    body.appendChild(statusBar);
+    body.appendChild(el("div", { class: "date-now", style: "margin:2px 0 6px" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ]));
+
+    // dados: jogos futuros + marcadores de janela
+    var upcoming = C().peekSchedule(c, 60);
+    var matchByOff = {}; upcoming.forEach(function (it) { matchByOff[it.day] = it; });
+    var winOpenOff = {}, winCloseOff = {};
+    (c.windows || []).forEach(function (w) { winOpenOff[w.openDay] = w.name; winCloseOff[w.closeDay] = w.name; });
+
+    // alcance de meses a exibir: do mês atual até o último evento
+    var endOff = c.currentDay;
+    upcoming.forEach(function (it) { endOff = Math.max(endOff, it.day); });
+    (c.windows || []).forEach(function (w) { endOff = Math.max(endOff, w.closeDay); });
+    endOff += 2;
+    var offMap = {}; // "y-m-d" -> offset (temporada começa em 10/ago)
+    for (var o = 0; o <= endOff; o++) { var dt = C().dateOf(c, o); offMap[dt.y + "-" + dt.m + "-" + dt.d] = o; }
+
+    var start = C().dateOf(c, c.currentDay), last = C().dateOf(c, endOff);
+    var todayOff = c.currentDay;
+    var ym = start.y * 12 + (start.m - 1), ymEnd = last.y * 12 + (last.m - 1), guard = 0;
+    while (ym <= ymEnd && guard++ < 14) {
+      var year = Math.floor(ym / 12), month = (ym % 12) + 1; ym++;
+      var daysIn = new Date(year, month, 0).getDate();
+      var firstWd = new Date(year, month - 1, 1).getDay();
+      var monthCard = el("div", { class: "cal-month" });
+      monthCard.appendChild(el("div", { class: "cal-mtitle", text: MES_FULL[month - 1] + " " + year }));
+      var grid = el("div", { class: "cal-grid" });
+      WD_PT.forEach(function (w) { grid.appendChild(el("div", { class: "cal-wd", text: w })); });
+      for (var b = 0; b < firstWd; b++) grid.appendChild(el("div", { class: "cal-cell empty" }));
+      for (var d = 1; d <= daysIn; d++) {
+        var off = offMap[year + "-" + month + "-" + d];
+        var cellCls = "cal-cell";
+        var kids = [ el("div", { class: "cal-cell-d", text: d }) ];
+        var titleAttr = d + "/" + month;
+        if (off === todayOff) cellCls += " today";
+        var mt = off != null ? matchByOff[off] : null;
+        if (mt) {
+          if (mt.tbd) {
+            cellCls += " has-match cup";
+            kids.push(el("div", { class: "cal-cell-ev", text: "🏆" }));
+            titleAttr += " · " + mt.name;
+          } else {
+            var meHome = mt.homeId === c.teamId;
+            var opp = TM.data.club(meHome ? mt.awayId : mt.homeId);
+            cellCls += " has-match " + (mt.key === "cup" ? "cup" : mt.key === "cont" ? "cont" : "league");
+            kids.push(el("div", { class: "cal-cell-ev", text: abbr3(opp.name) }));
+            kids.push(el("div", { class: "cal-cell-loc", text: meHome ? "casa" : "fora" }));
+            titleAttr += " · " + (meHome ? "vs " : "@ ") + opp.name + " (" + mt.name + ")";
+          }
+        }
+        if (off != null && winOpenOff[off] != null) { cellCls += " win-open"; kids.push(el("div", { class: "cal-cell-win open", text: "🟢 abre" })); titleAttr += " · " + winOpenOff[off] + " abre"; }
+        if (off != null && winCloseOff[off] != null) { cellCls += " win-close"; kids.push(el("div", { class: "cal-cell-win close", text: "🔴 fecha" })); titleAttr += " · " + winCloseOff[off] + " fecha"; }
+        grid.appendChild(el("div", { class: cellCls, title: titleAttr }, kids));
       }
-      body.appendChild(el("div", { class: "cal-item" }, [
-        el("div", { class: "cal-date" }, [ el("div", { class: "cal-d", text: date.d }), el("div", { class: "cal-m", text: MES_PT[date.m - 1] }) ]),
-        el("div", { class: "cal-body" }, [ confronto, el("span", { class: "comp-badge " + badge, text: item.name }) ])
-      ]));
-    });
+      monthCard.appendChild(grid);
+      body.appendChild(monthCard);
+    }
+
+    // legenda
+    body.appendChild(el("div", { class: "cal-legend" }, [
+      el("span", { class: "leg league", text: "● Liga" }),
+      el("span", { class: "leg cup", text: "● Copa" }),
+      el("span", { class: "leg cont", text: "● Continental" }),
+      el("span", { text: "🟢 janela abre" }),
+      el("span", { text: "🔴 janela fecha" }),
+      el("span", { class: "leg today", text: "▢ hoje" })
+    ]));
   });
 
   /* ================= SELEÇÃO (junto com o clube) ================= */
