@@ -350,11 +350,25 @@
     return youth;
   }
 
+  // orçamento inicial realista (milhões de euro) conforme o porte do clube (overall)
+  function baseBudgetEur(rating) {
+    if (rating >= 89) return 200;
+    if (rating >= 87) return 150;
+    if (rating >= 85) return 110;
+    if (rating >= 83) return 75;
+    if (rating >= 81) return 50;
+    if (rating >= 79) return 33;
+    if (rating >= 77) return 20;
+    if (rating >= 75) return 12;
+    if (rating >= 73) return 7;
+    if (rating >= 70) return 4;
+    return 2;
+  }
   function newClubCareer(clubId, opts) {
     opts = opts || {};
     var money = CURRENCIES[opts.currency] || CURRENCIES.eur;
     var club = TM.data.club(clubId);
-    var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
+    var baseEur = baseBudgetEur(TM.data.clubRating(clubId));
     var career = {
       type: "club", teamId: clubId, teamName: club.name, leagueId: club.leagueId, season: 1,
       coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null, coachId: opts.coachId || null,

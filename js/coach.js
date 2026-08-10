@@ -217,6 +217,9 @@
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     C().migrateCareer(c); TM.storage.saveCoachCareer(c);
+    // se a temporada acabou e há título não comemorado, mostra a tela de parabéns primeiro
+    var pnd = C().advanceToUserMatch(c);
+    if (pnd.seasonEnd && pendingTitles(c).length) { TM.ui.go("coach-title"); return; }
     var club = TM.data.club(c.teamId);
     var unread = TM.notify.unread(c);
     var bell = el("button", { class: "tb-bell", on: { click: function () { TM.ui.go("coach-notifications"); } } }, [
@@ -325,6 +328,39 @@
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
+  });
+
+  /* ---------- títulos: prêmio em dinheiro + tela de parabéns ---------- */
+  var TITLE_PRIZE_EUR = { league: 30, cup: 15, mundial: 60, inter: 25, "cont-sa": 50, "cont-eu": 70, "cont-na": 20, "cont-as": 25 };
+  function pendingTitles(c) {
+    var shown = c.titlesShown || {}, out = [];
+    function add(id, name, prize, compId) { if (!shown[c.season + "-" + id]) out.push({ id: id, name: name, prize: prize, compId: compId }); }
+    var st = C().standings(c.comps.league.table);
+    if (st[0] && st[0].id === c.teamId) add("league", c.comps.league.name, TITLE_PRIZE_EUR.league, "lg-" + c.leagueId);
+    if (c.comps.cup && c.comps.cup.championId === c.teamId) add("cup", c.comps.cup.name, TITLE_PRIZE_EUR.cup, "cup-" + c.leagueId);
+    if (c.comps.cont && c.comps.cont.tour && c.comps.cont.tour.championId === c.teamId) { var reg = C().REGION[c.leagueId] || "eu"; add("cont", c.comps.cont.name, TITLE_PRIZE_EUR["cont-" + reg] || 40, "cont-" + reg); }
+    if (c.comps.mundial && c.comps.mundial.championId === c.teamId) add("mundial", "Mundial de Clubes", TITLE_PRIZE_EUR.mundial, "cwc-world");
+    if (c.interChampion && c.interChampion === c.teamId) add("inter", "Copa Intercontinental", TITLE_PRIZE_EUR.inter, "cwc-inter");
+    return out;
+  }
+  TM.ui.register("coach-title", function (screen) {
+    var c = TM.storage.coachCareer();
+    var pend = pendingTitles(c);
+    if (!pend.length) { TM.ui.go("coach-hub"); return; }
+    var t = pend[0];
+    c.titlesShown = c.titlesShown || {}; c.titlesShown[c.season + "-" + t.id] = true;
+    var prizeCur = Math.round(t.prize * (c.money ? c.money.mult : 1));
+    c.budget += prizeCur;
+    TM.storage.saveCoachCareer(c);
+    TM.ui.applyCompTheme(screen, t.compId);
+    screen.appendChild(el("div", { class: "title-celebrate" }, [
+      el("div", { class: "tc-trophy", text: "🏆" }),
+      TM.img.compImg(t.compId, "tc-logo"),
+      el("div", { class: "tc-congrats", text: "PARABÉNS!" }),
+      el("div", { class: "tc-name", text: "Campeão da " + t.name + "!" }),
+      el("div", { class: "tc-prize", text: "💰 Prêmio: +" + money(c, prizeCur) + " no orçamento" }),
+      TM.ui.button(pend.length > 1 ? "Próximo título →" : "Continuar", function () { TM.ui.go("coach-title"); }, "btn primary big")
+    ]));
   });
 
   function renderSeasonEnd(screen, c) {
@@ -710,7 +746,7 @@
     TM.ui.applyCompTheme(screen, compId); // botões/detalhes na cor da competição
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
     var userSide = p.homeId === c.teamId ? 0 : 1;
-    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
+    var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
@@ -1106,7 +1142,7 @@
   }
 
   /* ---------- mercado: busca + filtros + passe livre ---------- */
-  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false };
+  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false, sort: "ov" };
   TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
@@ -1134,6 +1170,13 @@
       posRow.appendChild(el("button", { class: "seg-btn" + (MKT.pos === o[0] ? " active" : ""), text: o[1], on: { click: function () { MKT.pos = o[0]; posRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); renderResults(); } } }));
     });
     panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Posição" }), posRow ]));
+
+    // ordenação
+    var sortRow = el("div", { class: "segmented full" });
+    [["ov", "Overall"], ["pot", "Potencial"], ["val", "Valor"], ["age", "Mais jovens"]].forEach(function (o) {
+      sortRow.appendChild(el("button", { class: "seg-btn" + (MKT.sort === o[0] ? " active" : ""), text: o[1], on: { click: function () { MKT.sort = o[0]; sortRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); renderResults(); } } }));
+    });
+    panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Ordenar por" }), sortRow ]));
 
     // país
     var natSel = el("select", { class: "select" });
@@ -1187,7 +1230,12 @@
         if (p.overall < MKT.ovMin) return false;
         if ((p.potential || p.overall) < MKT.potMin) return false;
         return true;
-      }).sort(function (a, b) { return b.overall - a.overall; }).slice(0, 60);
+      }).sort(function (a, b) {
+        if (MKT.sort === "pot") return (b.potential || b.overall) - (a.potential || a.overall);
+        if (MKT.sort === "val") return TM.data.marketValue(b) - TM.data.marketValue(a);
+        if (MKT.sort === "age") return a.age - b.age || b.overall - a.overall;
+        return b.overall - a.overall;
+      }).slice(0, 120);
 
       results.appendChild(el("div", { class: "results-count", text: list.length + " jogador(es)" + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
       if (!list.length) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
