@@ -755,6 +755,8 @@ html, body {
   border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text-dim); transition: all .12s ease; white-space: nowrap; }
 .list-toggle:hover { border-color: var(--gold); color: var(--text); }
 .list-toggle.on { background: rgba(234,179,8,.18); border-color: #eab308; color: #eab308; }
+.pen-duty-tag { width: 100%; max-width: 620px; margin-bottom: 14px; text-align: center; font-weight: 700; font-size: 13.5px;
+  background: rgba(234,179,8,.14); border: 1px solid rgba(234,179,8,.4); color: #eab308; border-radius: 12px; padding: 10px 14px; }
 .lineup-hint { width: 100%; max-width: 620px; text-align: center; color: var(--text-dim); font-size: 12.5px; margin-bottom: 12px; }
 .row-unavail { opacity: .6; }
 .buy-btn.disabled { background: #333; color: var(--text-dim); }

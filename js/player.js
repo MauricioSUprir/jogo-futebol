@@ -270,6 +270,7 @@
     if (c.injured == null) c.injured = 0;
     if (c.momentum == null) c.momentum = 0;
     if (!c.recentRatings) c.recentRatings = [];
+    if (c.penDuty == null) c.penDuty = false;
     TM.storage.savePlayerCareer(c);
     var club = TM.data.club(c.clubId);
 
@@ -336,6 +337,7 @@
       ])
     ]);
     screen.appendChild(momCard);
+    if (c.penDuty) screen.appendChild(el("div", { class: "pen-duty-tag", text: "🎯 Você é o batedor de pênaltis do time" }));
 
     // meta
     var prog = c.objective.type === "goals" ? c.seasonGoals + "/" + c.objective.target
@@ -458,7 +460,8 @@
     var teamA = iAmHome ? myTeam : oppTeam, teamB = iAmHome ? oppTeam : myTeam;
 
     var mi = momentumInfo(c);
-    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult });
+    var mySide = iAmHome ? 0 : 1;
+    var result = TM.engine.simulate(teamA, teamB, injuredThisGame ? { realism: settings.realism } : { realism: settings.realism, focusPlayerId: "me", focusForm: mi.mod, focusFormMult: mi.mult, userSide: mySide, penTakerId: c.penDuty ? "me" : null });
 
     // transmissão ao vivo; o pós-jogo só é aplicado ao final (onComplete)
     var compId = "lg-" + (TM.data.club(c.clubId).leagueId || "br");
@@ -507,6 +510,18 @@
     // feedback do técnico
     if (f.rating < 5.6 && Math.random() < 0.5) TM.notify.push(c, { icon: "😬", title: "Cobrança do técnico", text: "O técnico não gostou da sua atuação. Melhore nos próximos jogos." });
     else if (f.rating >= 8.5 && Math.random() < 0.5) TM.notify.push(c, { icon: "🤝", title: "Elogio do técnico", text: "O técnico está muito satisfeito e conta com você como titular." });
+
+    // designação de batedor de pênaltis pelo técnico
+    var seasonAvg = c.seasonApps ? c.seasonRatingSum / c.seasonApps : 6;
+    if (!c.penDuty) {
+      if (((c.attrs && c.attrs.sho >= 78) || seasonAvg >= 7.3) && Math.random() < 0.14) {
+        c.penDuty = true;
+        TM.notify.push(c, { icon: "🎯", title: "Você é o batedor de pênaltis!", text: "O técnico te escolheu como cobrador oficial de pênaltis do time. Aproveite pra fazer mais gols!" });
+      }
+    } else if (seasonAvg < 6.0 && Math.random() < 0.09) {
+      c.penDuty = false;
+      TM.notify.push(c, { icon: "🎯", title: "Cobrança de pênaltis", text: "O técnico passou a cobrança de pênaltis para outro jogador por ora." });
+    }
 
     maybeOffer(c, f);
     maybeCallup(c);

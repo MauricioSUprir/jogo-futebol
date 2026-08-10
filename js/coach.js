@@ -710,7 +710,7 @@
     TM.ui.applyCompTheme(screen, compId); // botões/detalhes na cor da competição
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
     var userSide = p.homeId === c.teamId ? 0 : 1;
-    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0), moraleSide: userSide };
+    var simOpts = { realism: TM.storage.settings().realism, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
@@ -1634,6 +1634,26 @@
       tacRow.appendChild(el("button", { class: "seg-btn" + (c.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); } } }));
     });
     screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
+
+    // cobradores de bola parada (pênalti e falta)
+    var takerPool = C().rosterPlayers(c).slice().sort(function (a, b) { return (b.attrs.sho || 0) - (a.attrs.sho || 0); });
+    function takerSelect(key, label) {
+      var selEl = el("select", { class: "select" });
+      selEl.appendChild(el("option", { value: "", text: "Automático (melhor em campo)" }));
+      takerPool.forEach(function (pl) {
+        var o = el("option", { value: pl.id, text: pl.name + " (" + TM.data.posLabel(pl) + " · fin " + (pl.attrs.sho || "-") + ")" });
+        if (c[key] === pl.id) o.selected = true;
+        selEl.appendChild(o);
+      });
+      selEl.addEventListener("change", function () { c[key] = selEl.value || null; TM.storage.saveCoachCareer(c); });
+      return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: label }), selEl ]);
+    }
+    screen.appendChild(el("div", { class: "panel-narrow" }, [
+      el("h3", { class: "block-title", text: "⚽ Cobradores de bola parada" }),
+      takerSelect("penTakerId", "Batedor de pênalti"),
+      takerSelect("fkTakerId", "Batedor de falta"),
+      el("div", { class: "setting-hint", text: "Só valem se o jogador estiver em campo; senão, o melhor finalizador cobra." })
+    ]));
 
     // campinho + reservas (área interativa atualizada EM LUGAR — não recarrega a tela nem reseta o scroll)
     var board = el("div", { class: "lineup-board" });

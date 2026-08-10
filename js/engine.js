@@ -91,7 +91,8 @@
 
     function chanceProb(atk, opDef, redsMine) {
       var edge = (atk - opDef);
-      var base = Math.max(0.02, 0.09 + edge * 0.0022) * variance / 1.9;
+      // coeficiente maior = resultado mais fiel à qualidade dos elencos (sem impedir zebras)
+      var base = Math.max(0.018, 0.09 + edge * 0.0038) * variance / 1.9;
       return base * (1 - redsMine * 0.16);
     }
 
@@ -102,17 +103,26 @@
     var focusGoals = 0, focusInvolved = 0, focusInjured = false;
     var injuries = [], sentOff = [];
 
+    function findIn(xi, id) { for (var i = 0; i < xi.length; i++) if (xi[i].id === id) return xi[i]; return null; }
     function tryScore(side, prof, opp, team, minute, isPen) {
       shots[side]++;
-      var scorer = chooseScorer(prof, focusId, opts.focusFormMult);
+      var isUser = (opts.userSide === side);
+      var scorer = null;
+      // batedor de pênalti designado (time do usuário)
+      if (isPen && isUser && opts.penTakerId) scorer = findIn(prof.xi, opts.penTakerId);
+      // gol de falta do batedor designado (fração dos gols normais do usuário)
+      var isFK = false;
+      if (!scorer && !isPen && isUser && opts.fkTakerId && Math.random() < 0.16) { scorer = findIn(prof.xi, opts.fkTakerId); if (scorer) isFK = true; }
+      if (!scorer) scorer = chooseScorer(prof, focusId, opts.focusFormMult);
       if (scorer.id === focusId) focusInvolved++;
       var gk = opp.gk;
-      var goalP = isPen ? 0.76 : Math.max(0.08, Math.min(0.62, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.006)) * (variance / 1.9);
+      var goalP = isPen ? Math.max(0.68, Math.min(0.9, 0.72 + (scorer.attrs.sho - gk.attrs.def) * 0.004))
+        : Math.max(0.08, Math.min(0.64, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.0078)) * (variance / 1.9);
       if (Math.random() < goalP) {
         onTarget[side]++; score[side]++;
         if (scorer.id === focusId) focusGoals++;
         events.push({ minute: minute, type: isPen ? "pengoal" : "goal", team: side, player: scorer.name,
-          score: score.slice(), text: (isPen ? "PÊNALTI CONVERTIDO! " : "") + fmt(pick(GOAL_LINES), scorer.name, team.name) });
+          score: score.slice(), text: (isPen ? "PÊNALTI CONVERTIDO! " : isFK ? "GOL DE FALTA! " : "") + fmt(pick(GOAL_LINES), scorer.name, team.name) });
       } else {
         if (Math.random() < 0.5) onTarget[side]++;
         events.push({ minute: minute, type: isPen ? "penmiss" : "chance", team: side, player: scorer.name,
