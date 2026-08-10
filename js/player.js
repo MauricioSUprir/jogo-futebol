@@ -1022,9 +1022,22 @@
     if (c.natApps) {
       screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "career-totals", text: "🌍 Pela seleção de " + c.nationName + ": " + c.natApps + " jogos · " + (c.natGoals || 0) + " gols" }) ]));
     }
-    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("p", { class: "intro-text", style: "text-align:center", text: "Que carreira! Obrigado por tudo, craque. 👏" }) ]));
+    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("p", { class: "intro-text", style: "text-align:center", text: "Que carreira! Obrigado por tudo, craque. 👏 E agora, qual o próximo passo?" }) ]));
+
+    var goCoach = function () {
+      var info = { name: c.name, photo: c.photo || null };
+      TM.storage.clearPlayerCareer();
+      if (TM.coach && TM.coach.startFromPlayer) { TM.coach.startFromPlayer(info); }
+      else { TM.ui.go("coach"); }
+    };
+    var startCoach = function () {
+      if (TM.storage.coachCareer()) {
+        TM.ui.confirm("Você já tem uma Master Liga em andamento.", "Começar como treinador vai substituí-la. Deseja continuar?", "Substituir", function () { TM.storage.clearCoachCareer(); goCoach(); }, true);
+      } else { goCoach(); }
+    };
     screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("Encerrar carreira", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, "btn primary")
+      TM.ui.button("🎯 Virar treinador (Master Liga)", startCoach, "btn primary big"),
+      TM.ui.button("Encerrar carreira", function () { TM.storage.clearPlayerCareer(); TM.ui.go("modes"); }, "btn ghost")
     ]));
   });
 })(window);

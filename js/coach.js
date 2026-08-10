@@ -14,13 +14,24 @@
 
   // rascunho da configuração de carreira (persiste ao abrir a lista de treinadores e voltar)
   var pendingSetup = null;
+  // repasse do jogador aposentado (Rumo ao Estrelato) que virou treinador
+  var exPlayerHandoff = null;
+  function freshSetup(clubId, mode) {
+    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador" };
+    if (exPlayerHandoff) { s.coachName = exPlayerHandoff.name || ""; s.coachPhoto = exPlayerHandoff.photo || null; s.coachMode = "create"; }
+    return s;
+  }
+  // chamado pela tela de aposentadoria do jogador: inicia a Master Liga já com o nome/foto do ex-jogador
+  TM.coach = TM.coach || {};
+  TM.coach.startFromPlayer = function (info) { exPlayerHandoff = info || null; pendingSetup = null; TM.ui.go("coach"); };
   // avatar do treinador: foto real se existir, senão iniciais em círculo colorido
   function coachAvatar(co, cls) { return TM.img.coachImg(co, cls); }
 
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
-    if (TM.storage.coachCareer()) { TM.ui.go("coach-hub"); return; }
-    screen.appendChild(TM.ui.topbar("🎯 Master Liga", function () { TM.ui.go("modes"); }));
+    if (TM.storage.coachCareer() && !exPlayerHandoff) { TM.ui.go("coach-hub"); return; }
+    screen.appendChild(TM.ui.topbar("🎯 Master Liga", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
+    if (exPlayerHandoff) screen.appendChild(el("div", { class: "twin-bar open", style: "max-width:620px;margin:0 auto 4px" }, [ el("span", { text: "🎽➡️🎯 " + exPlayerHandoff.name + " começa a carreira de treinador" }), el("span", { class: "twin-sub", text: "escolha o clube para comandar" }) ]));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Escolha um clube. Você disputa a liga, a copa nacional e (se classificado) a competição continental." }));
@@ -61,7 +72,7 @@
     var club = TM.data.club(clubId);
     // reusa o rascunho ao voltar da lista de treinadores; senão começa novo
     if (!pendingSetup || pendingSetup.clubId !== clubId) {
-      pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "create", nationId: null, board: "intermediaria", role: "treinador" };
+      pendingSetup = freshSetup(clubId);
     }
     var opts = pendingSetup;
 
@@ -201,7 +212,7 @@
       TM.ui.button("Começar carreira", function () {
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
-        pendingSetup = null;
+        pendingSetup = null; exPlayerHandoff = null;
         TM.ui.go("coach-hub");
       }, "btn primary big")
     ]));
@@ -210,7 +221,7 @@
   /* ---------- lista de treinadores (escolher existente) ---------- */
   TM.ui.register("coach-pick", function (screen, params) {
     var clubId = params.clubId;
-    if (!pendingSetup || pendingSetup.clubId !== clubId) pendingSetup = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: "existing", nationId: null, board: "intermediaria", role: "treinador" };
+    if (!pendingSetup || pendingSetup.clubId !== clubId) { pendingSetup = freshSetup(clubId, "existing"); }
     screen.appendChild(TM.ui.topbar("Escolha o treinador", function () { TM.ui.go("coach-setup", { clubId: clubId }); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
