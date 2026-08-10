@@ -320,6 +320,7 @@
       hubBtn("🌱", "Base", function () { TM.ui.go("coach-youth"); }),
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
+      hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
     ]));
@@ -1075,14 +1076,34 @@
     var players = C().userSquad(c);
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     players.sort(function (a, b) { return order[a.pos] - order[b.pos] || b.overall - a.overall; });
+    screen.appendChild(el("div", { class: "setting-hint", style: "max-width:620px", text: "Toque num jogador para ver detalhes. Use “Listar” para colocá-lo na lista de transferências (recebe mais propostas)." }));
     var list = el("div", { class: "panel-narrow squad-list" });
     var lastPos = null;
+    c.transferList = c.transferList || [];
     players.forEach(function (p) {
       if (p.pos !== lastPos) { list.appendChild(el("div", { class: "pos-header", text: ({ GK: "Goleiros", DF: "Defensores", MF: "Meio-campistas", FW: "Atacantes" })[p.pos] })); lastPos = p.pos; }
-      list.appendChild(TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } }));
+      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } });
+      var listed = c.transferList.indexOf(p.id) >= 0;
+      var isLoan = c.loanedIn && c.loanedIn[p.id];
+      if (!isLoan) {
+        var btn = el("button", { class: "list-toggle" + (listed ? " on" : ""), text: listed ? "🏷️ Listado" : "Listar", title: "Lista de transferências",
+          on: { click: function (e) {
+            e.stopPropagation(); toggleTransferList(c, p.id);
+            var l = c.transferList.indexOf(p.id) >= 0; btn.classList.toggle("on", l); btn.textContent = l ? "🏷️ Listado" : "Listar";
+            TM.ui.toast(l ? "🏷️ Na lista de transferências" : "Retirado da lista");
+          } } });
+        row.appendChild(btn);
+      }
+      list.appendChild(row);
     });
     screen.appendChild(list);
   });
+  function toggleTransferList(c, pid) {
+    c.transferList = c.transferList || [];
+    var i = c.transferList.indexOf(pid);
+    if (i >= 0) c.transferList.splice(i, 1); else c.transferList.push(pid);
+    TM.storage.saveCoachCareer(c);
+  }
 
   /* ---------- mercado: busca + filtros + passe livre ---------- */
   var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false };
@@ -1170,9 +1191,18 @@
 
       results.appendChild(el("div", { class: "results-count", text: list.length + " jogador(es)" + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
       if (!list.length) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
+      c.shortlist = c.shortlist || [];
       list.forEach(function (p) {
-        var row = TM.ui.playerRow(p, {});
+        var row = TM.ui.playerRow(p, { showClub: true });
         row.classList.add("clickable");
+        // estrela: adiciona/remove da Central de transferências
+        var star = el("button", { class: "shortlist-star" + (c.shortlist.indexOf(p.id) >= 0 ? " on" : ""), text: c.shortlist.indexOf(p.id) >= 0 ? "★" : "☆",
+          title: "Central de transferências", on: { click: function (e) {
+            e.stopPropagation(); toggleShortlist(c, p.id);
+            var inl = c.shortlist.indexOf(p.id) >= 0; star.classList.toggle("on", inl); star.textContent = inl ? "★" : "☆";
+            TM.ui.toast(inl ? "⭐ Adicionado à Central de transferências" : "Removido da Central");
+          } } });
+        row.appendChild(star);
         if (p.freeAgent) {
           row.appendChild(el("div", { class: "price-tag" }, [ el("span", { text: "Livre" }), el("span", { class: "price-note", text: "grátis" }) ]));
           row.addEventListener("click", function () { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); });
@@ -1185,6 +1215,39 @@
       });
     }
     renderResults();
+  });
+
+  /* ---------- central de transferências (alvos / shortlist) ---------- */
+  function toggleShortlist(c, pid) {
+    c.shortlist = c.shortlist || [];
+    var i = c.shortlist.indexOf(pid);
+    if (i >= 0) c.shortlist.splice(i, 1); else c.shortlist.push(pid);
+    TM.storage.saveCoachCareer(c);
+  }
+  TM.ui.register("coach-shortlist", function (screen) {
+    var c = TM.storage.coachCareer();
+    c.shortlist = (c.shortlist || []).filter(function (id) { var p = TM.data.player(id); return p && c.roster.indexOf(id) < 0; });
+    TM.storage.saveCoachCareer(c);
+    screen.appendChild(TM.ui.topbar("⭐ Central de transferências", function () { TM.ui.go("coach-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    if (!c.shortlist.length) {
+      body.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador na sua central. Vá ao Mercado, toque na ⭐ de um jogador e ele aparece aqui." }));
+      body.appendChild(TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn primary"));
+      return;
+    }
+    body.appendChild(el("p", { class: "intro-text", text: c.shortlist.length + " alvo(s). Toque num jogador para negociar." }));
+    c.shortlist.forEach(function (id) {
+      var p = TM.data.player(id); if (!p) return;
+      var row = TM.ui.playerRow(p, { showClub: true });
+      row.classList.add("clickable");
+      row.addEventListener("click", function () {
+        if (p.freeAgent) { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); }
+        else TM.ui.go("coach-nego-club", { pid: p.id });
+      });
+      row.appendChild(el("button", { class: "shortlist-star on", text: "★", title: "Remover da central", on: { click: function (e) { e.stopPropagation(); toggleShortlist(c, id); TM.ui.go("coach-shortlist"); } } }));
+      body.appendChild(row);
+    });
   });
 
   /* ---------- negociação: com o clube ---------- */

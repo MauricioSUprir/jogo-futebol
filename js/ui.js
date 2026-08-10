@@ -76,22 +76,28 @@
     opts = opts || {};
     var nation = player.nationId ? TM.data.nation(player.nationId) : null;
     var subKids = [
-      el("span", { class: "prow-pos", text: TM.data.posLabel(player) }),
+      el("span", { class: "prow-pos pos-" + (player.pos || "MF"), text: TM.data.posLabel(player) }),
       document.createTextNode(" · " + player.age + " anos")
     ];
     var natEl = el("span", { class: "prow-nat" }, [
       nation ? TM.img.nationImg(nation, "prow-flag") : null,
       el("span", { text: player.nationName || (nation && nation.name) || "" })
     ]);
-    var row = el("div", { class: "player-row" + (opts.compact ? " compact" : "") }, [
+    var kids = [
       TM.img.playerImg(player, "prow-face"),
       el("div", { class: "prow-info" }, [
         el("div", { class: "prow-name", text: player.name }),
         el("div", { class: "prow-sub" }, subKids),
         natEl
-      ]),
-      ovBadge(player.overall)
-    ]);
+      ])
+    ];
+    // escudo do clube atual (mercado, central de transferências, etc.)
+    if (opts.showClub && player.clubId) {
+      var club = TM.data.club(player.clubId);
+      if (club) kids.push(el("div", { class: "prow-club" }, [ TM.img.clubImg(club, "prow-club-crest") ]));
+    }
+    kids.push(ovBadge(player.overall));
+    var row = el("div", { class: "player-row" + (opts.compact ? " compact" : "") }, kids);
     if (opts.onClick) { row.classList.add("clickable"); row.addEventListener("click", function () { opts.onClick(player); }); }
     return row;
   }

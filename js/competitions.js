@@ -402,11 +402,20 @@
   function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
 
   function maybeIncomingOffer(career) {
-    if (Math.random() > 0.30) return;
-    // não recebe propostas por jogadores que eu mesmo peguei emprestado
-    var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 66 && !(career.loanedIn && career.loanedIn[p.id]); }).sort(function (a, b) { return b.overall - a.overall; });
-    if (!mine.length) return;
-    var target = mine[Math.floor(Math.random() * Math.min(8, mine.length))];
+    // jogadores na lista de transferências recebem MUITO mais propostas
+    var listed = (career.transferList || []).filter(function (id) { return career.roster.indexOf(id) >= 0 && !(career.loanedIn && career.loanedIn[id]); });
+    var wantListed = listed.length > 0 && Math.random() < 0.6;
+    if (!wantListed && Math.random() > 0.30) return;
+    var target;
+    if (wantListed) {
+      target = resolvePlayer(career, listed[Math.floor(Math.random() * listed.length)]);
+    } else {
+      // não recebe propostas por jogadores que eu mesmo peguei emprestado
+      var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 66 && !(career.loanedIn && career.loanedIn[p.id]); }).sort(function (a, b) { return b.overall - a.overall; });
+      if (!mine.length) return;
+      target = mine[Math.floor(Math.random() * Math.min(8, mine.length))];
+    }
+    if (!target) return;
     var val = TM.data.marketValue(target), mult = career.money ? career.money.mult : 1;
     var kind = Math.random(); // 0.55 compra · 0.28 empréstimo · 0.17 empréstimo c/ opção
     if (kind < 0.55) {
