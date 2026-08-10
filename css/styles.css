@@ -895,39 +895,26 @@ html, body {
 .twin-bar.open { background: rgba(34,197,94,.14); color: var(--green); border-color: rgba(34,197,94,.4); }
 .twin-bar.closed { background: rgba(208,52,44,.12); color: #e6675f; border-color: rgba(208,52,44,.35); }
 .twin-sub { font-size: 11.5px; font-weight: 600; opacity: .85; }
-.cal-month { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
-.cal-mtitle { font-size: 15px; font-weight: 900; margin-bottom: 12px; text-align: center; letter-spacing: .4px; text-transform: uppercase; }
-/* grade de quadrados: um confronto por quadrado, colorido pela competição */
-.cal-sqgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.cal-sq { position: relative; border-radius: 14px; padding: 10px; border: 1.5px solid var(--line); background: var(--black-soft); display: flex; flex-direction: column; gap: 8px; min-height: 118px; }
-.cal-sq.league { background: rgba(46,125,70,.14); border-color: rgba(46,125,70,.55); }
-.cal-sq.cup { background: rgba(214,178,52,.13); border-color: rgba(214,178,52,.5); }
-.cal-sq.cont { background: rgba(120,80,220,.15); border-color: rgba(120,80,220,.55); }
-.cal-sq.today { box-shadow: 0 0 0 2px var(--green) inset; }
-.sq-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.sq-date { font-size: 13px; font-weight: 900; color: var(--text); }
-.sq-comp { font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .3px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 62%; }
-.cal-sq.league .sq-comp { color: var(--green); }
-.cal-sq.cup .sq-comp { color: var(--gold); }
-.cal-sq.cont .sq-comp { color: #b79cff; }
-.sq-match { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.sq-side { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
-.sq-crest { width: 40px; height: 40px; object-fit: contain; }
-.sq-abbr { font-size: 11px; font-weight: 800; color: var(--text-dim); }
-.sq-side.me .sq-abbr { color: var(--green); }
-.sq-side.me .sq-crest { filter: drop-shadow(0 0 4px rgba(34,197,94,.55)); }
-.sq-x { font-size: 15px; font-weight: 900; color: var(--text-dim); flex-shrink: 0; }
-.sq-match.tbd { flex-direction: column; gap: 4px; }
-.sq-crest.placeholder { display: flex; align-items: center; justify-content: center; font-size: 30px; width: auto; height: auto; }
-.sq-tbd-t { font-size: 10.5px; color: var(--text-dim); }
-.sq-foot { text-align: center; font-size: 11px; font-weight: 700; color: var(--text-dim); }
-/* quadrado de janela de transferências (largura total) */
-.cal-sq.window { grid-column: 1 / -1; min-height: 0; border-style: dashed; }
-.cal-sq.window.open { background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.55); }
-.cal-sq.window.close { background: rgba(208,52,44,.1); border-color: rgba(208,52,44,.45); }
-.sq-win { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 800; }
-.sq-win-ic { font-size: 15px; }
-.cal-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; justify-content: center; font-size: 11px; color: var(--text-dim); padding: 2px 0 4px; }
+/* calendário estilo FIFA: grade do mês com o escudo/ícone dentro do dia */
+.cal-fmonth { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 12px; }
+.cal-mtitle { font-size: 15px; font-weight: 900; margin-bottom: 10px; text-align: center; letter-spacing: .4px; text-transform: uppercase; }
+.fc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.fc-wd { text-align: center; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; padding-bottom: 2px; }
+.fc-cell { position: relative; aspect-ratio: 1 / 1; border-radius: 8px; background: var(--black-soft); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.fc-cell.other { background: transparent; border-color: transparent; }
+.fc-num { position: absolute; top: 3px; left: 4px; font-size: 10px; font-weight: 700; color: var(--text-dim); line-height: 1; z-index: 2; }
+.fc-cell.other .fc-num { opacity: .35; }
+.fc-cell.today { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green) inset; }
+.fc-cell.today .fc-num { color: var(--green); }
+/* fundo tênue por competição */
+.fc-cell.league { background: rgba(46,125,70,.16); border-color: rgba(46,125,70,.4); }
+.fc-cell.cup { background: rgba(214,178,52,.15); border-color: rgba(214,178,52,.4); }
+.fc-cell.cont { background: rgba(120,80,220,.18); border-color: rgba(120,80,220,.45); }
+.fc-crest { width: 62%; height: 62%; object-fit: contain; }
+.fc-ev-glyph { font-size: 20px; line-height: 1; }
+.fc-badge { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1; z-index: 2; }
+.fc-win { position: absolute; bottom: 2px; right: 3px; font-size: 9px; line-height: 1; z-index: 2; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: center; font-size: 11px; color: var(--text-dim); padding: 2px 0 4px; }
 .cal-legend .leg.league { color: var(--green); }
 .cal-legend .leg.cup { color: var(--gold); }
 .cal-legend .leg.cont { color: #b79cff; }
