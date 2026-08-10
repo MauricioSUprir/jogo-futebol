@@ -78,7 +78,7 @@
   TM.ui.register("player", function (screen) {
     var saved = TM.storage.playerCareer();
     if (saved) { TM.ui.go("player-hub"); return; }
-    screen.appendChild(TM.ui.topbar("⭐ Carreira de Jogador", function () { TM.ui.go("modes"); }));
+    screen.appendChild(TM.ui.topbar("⭐ Rumo ao Estrelato", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Crie o seu jogador do zero ou assuma a carreira de um jogador já existente." }));

@@ -169,7 +169,7 @@
         }
       }
       // lesões
-      if (Math.random() < 0.006) {
+      if (Math.random() < 0.0038) {
         var si = Math.random() < 0.5 ? 0 : 1;
         var prof3 = si === 0 ? A : B, team3 = si === 0 ? teamA : teamB;
         var inj = pick(prof3.xi);
