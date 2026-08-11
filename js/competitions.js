@@ -223,7 +223,9 @@
   function buildDomesticCup(teamId, leagueId) {
     var divs = CUP_DIVS[leagueId] || [leagueId];
     var pool = [];
-    if (divs.length > 1) { divs.forEach(function (d) { pool = pool.concat(topClubs(d, 16)); }); } // 16 de cada divisão -> 32
+    // mantém o chaveamento em potência de 2 (32) incluindo todas as divisões
+    if (divs.length >= 3) { pool = topClubs(divs[0], 16).concat(topClubs(divs[1], 8)).concat(topClubs(divs[2], 8)); } // 16+8+8 = 32
+    else if (divs.length === 2) { pool = topClubs(divs[0], 16).concat(topClubs(divs[1], 16)); } // 32
     else { pool = topClubs(leagueId, 16); }
     if (pool.indexOf(teamId) < 0) { pool[pool.length - 1] = teamId; } // garante o usuário
     return buildKO(pool, CUP_NAME[divs[0]] || "Copa Nacional", "cup", true); // nome pela 1ª divisão; ida e volta

@@ -1150,10 +1150,19 @@
     // times que disputam uma competição -> { isNation, teamIds }
     competitionTeams: function (compId) {
       var W = TM.data.world();
-      // ligas e copas nacionais: clubes da liga correspondente
-      if (compId.indexOf("lg-") === 0 || compId.indexOf("cup-") === 0) {
-        var lg = W.leaguesById[compId.slice(compId.indexOf("-") + 1)];
+      // ligas: só os clubes daquela divisão
+      if (compId.indexOf("lg-") === 0) {
+        var lg = W.leaguesById[compId.slice(3)];
         return { isNation: false, teamIds: lg ? lg.clubIds.slice() : [] };
+      }
+      // copas nacionais: TODOS os clubes do país (1ª + 2ª + 3ª divisões)
+      if (compId.indexOf("cup-") === 0) {
+        var baseLg = W.leaguesById[compId.slice(4)];
+        if (!baseLg) return { isNation: false, teamIds: [] };
+        var cupIds = [];
+        W.leagues.forEach(function (L) { if (L.nation === baseLg.nation) cupIds = cupIds.concat(L.clubIds); });
+        cupIds.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+        return { isNation: false, teamIds: cupIds };
       }
       // continentais de clubes: melhores clubes das ligas da região
       var CONT = {
