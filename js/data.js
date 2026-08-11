@@ -790,8 +790,44 @@
 
   /* ---------- API pública ---------- */
   var _world = null;
+  // estádios reais dos grandes clubes; os demais recebem um nome gerado de forma estável
+  var STADIUMS = {
+    "Flamengo": "Maracanã", "Fluminense": "Maracanã", "Palmeiras": "Allianz Parque", "Corinthians": "Neo Química Arena",
+    "São Paulo": "MorumBIS", "Santos": "Vila Belmiro", "Grêmio": "Arena do Grêmio", "Internacional": "Beira-Rio",
+    "Atlético Mineiro": "Arena MRV", "Cruzeiro": "Mineirão", "Botafogo": "Nilton Santos", "Vasco da Gama": "São Januário",
+    "Bahia": "Arena Fonte Nova", "Athletico Paranaense": "Ligga Arena", "Coritiba": "Couto Pereira", "Vitória": "Barradão",
+    "Real Madrid": "Santiago Bernabéu", "Barcelona": "Spotify Camp Nou", "Atlético de Madrid": "Riyadh Air Metropolitano",
+    "Athletic Club": "San Mamés", "Real Sociedad": "Reale Arena", "Real Betis": "Benito Villamarín", "Sevilla": "Ramón Sánchez-Pizjuán",
+    "Villarreal": "Estadio de la Cerámica", "Manchester City": "Etihad Stadium", "Manchester United": "Old Trafford",
+    "Liverpool": "Anfield", "Arsenal": "Emirates Stadium", "Chelsea": "Stamford Bridge", "Tottenham Hotspur": "Tottenham Hotspur Stadium",
+    "Newcastle United": "St James' Park", "Aston Villa": "Villa Park", "Bayern de Munique": "Allianz Arena",
+    "Borussia Dortmund": "Signal Iduna Park", "Bayer Leverkusen": "BayArena", "RB Leipzig": "Red Bull Arena",
+    "Eintracht Frankfurt": "Deutsche Bank Park", "Milan": "San Siro", "Inter de Milão": "San Siro", "Juventus": "Allianz Stadium",
+    "Napoli": "Diego Armando Maradona", "Roma": "Olímpico de Roma", "Lazio": "Olímpico de Roma", "Atalanta": "Gewiss Stadium",
+    "Fiorentina": "Artemio Franchi", "Paris Saint-Germain": "Parc des Princes", "Olympique de Marseille": "Orange Vélodrome",
+    "Olympique de Lyon": "Groupama Stadium", "Monaco": "Louis II", "Benfica": "Estádio da Luz", "Porto": "Estádio do Dragão",
+    "Sporting CP": "José Alvalade", "Braga": "Estádio Municipal de Braga", "PSV": "Philips Stadion", "Ajax": "Johan Cruijff ArenA",
+    "Feyenoord": "De Kuip", "River Plate": "Monumental", "Boca Juniors": "La Bombonera", "Racing Club": "El Cilindro",
+    "Estudiantes": "UNO", "Inter Miami": "Chase Stadium", "Los Angeles Galaxy": "Dignity Health Sports Park",
+    "LAFC": "BMO Stadium", "Seattle Sounders": "Lumen Field"
+  };
+  var STAD_PATTERNS = ["Estádio %", "Arena %", "% Arena", "Estádio Municipal"];
+  function stableHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  function stadiumInfo(club) {
+    if (!club) return { name: "Estádio", capacity: 30000 };
+    var name = STADIUMS[club.name];
+    if (!name) {
+      var pat = STAD_PATTERNS[stableHash(club.name) % STAD_PATTERNS.length];
+      name = pat.indexOf("%") >= 0 ? pat.replace("%", club.name) : pat;
+    }
+    var r = TM.data.clubRating(club.id);
+    var cap = 18000 + Math.round(Math.max(0, r - 60) * 1500) + (stableHash(club.name) % 8000); // ~18k..85k
+    return { name: name, capacity: cap };
+  }
+
   TM.data = {
     world: function () { return _world || (_world = generateWorld()); },
+    stadium: function (club) { return stadiumInfo(club); },
     club: function (id) { return TM.data.world().clubsById[id]; },
     league: function (id) { return TM.data.world().leaguesById[id]; },
     player: function (id) { return TM.data.world().playersById[id]; },

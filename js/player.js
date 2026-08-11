@@ -362,9 +362,11 @@
     if (nextFix) {
       var isHome = nextFix[0] === c.clubId, opp = TM.data.club(isHome ? nextFix[1] : nextFix[0]);
       var compId = "lg-" + (club.leagueId || "br");
+      var homeClubP = isHome ? club : opp;
       var card = el("div", { class: "next-match" }, [
         el("div", { class: "nm-label", text: "Rodada " + (c.round + 1) + "/" + c.fixtures.length + (isHome ? " · Em casa" : " · Fora") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: isHome ? club.name : opp.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: isHome ? opp.name : club.name }) ]),
+        TM.ui.stadiumBanner(homeClubP, { compact: true, label: "Mandante: " + homeClubP.name }),
         TM.ui.button(c.injured > 0 ? "▶ Avançar (lesionado)" : "▶ Jogar", function () { playMatch(c); }, "btn primary")
       ]);
       TM.ui.applyCompTheme(card, compId);
