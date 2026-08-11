@@ -78,6 +78,63 @@
     ];
   }
 
+  /* ---------- estádio (capacidade / receita) ---------- */
+  var STAD_UP_EUR = { 1: 20, 2: 45, 3: 85 };
+  function stadUpgradeCost(c, to) { return Math.round((STAD_UP_EUR[to] || 0) * mult(c)); }
+  function stadIncomeMult(c) { return 1 + 0.14 * (c.stadiumUp || 0); }
+
+  /* ---------- o técnico usa a verba de transferências para reforçar o elenco ---------- */
+  function autoSign(career, capM) {
+    var m = mult(career), rosterSet = {};
+    career.roster.forEach(function (id) { rosterSet[id] = 1; });
+    var POS = ["GK", "DF", "MF", "FW"], TARGET = { GK: 3, DF: 8, MF: 8, FW: 6 };
+    // candidatos por posição (fora do clube, não no elenco), do melhor para o pior
+    var poolByPos = { GK: [], DF: [], MF: [], FW: [] };
+    var pb = TM.data.world().playersById;
+    Object.keys(pb).forEach(function (id) {
+      if (rosterSet[id]) return;
+      var p = pb[id];
+      if (!p || p.overall < 66 || p.clubId === career.teamId || !poolByPos[p.pos]) return;
+      var cost = Math.round(TM.data.marketValue(p) * m);
+      if (cost < 1 || cost > capM) return;
+      poolByPos[p.pos].push({ p: p, cost: cost });
+    });
+    POS.forEach(function (k) { poolByPos[k].sort(function (a, b) { return b.p.overall - a.p.overall; }); });
+    // situação do elenco por posição: melhor titular + quantidade
+    var squad = {};
+    POS.forEach(function (pos) {
+      var ovs = C().rosterPlayers(career).filter(function (p) { return p.pos === pos; }).map(function (p) { return p.overall; }).sort(function (a, b) { return b - a; });
+      squad[pos] = { best: ovs[0] || 0, count: ovs.length };
+    });
+    var spent = 0, signed = [], perPos = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    for (var iter = 0; iter < 6; iter++) {
+      // ataca sempre a posição com o titular mais fraco que ainda tenha reforço viável
+      var order = POS.slice().sort(function (a, b) { return squad[a].best - squad[b].best; });
+      var made = false;
+      for (var oi = 0; oi < order.length && !made; oi++) {
+        var pos = order[oi];
+        if (perPos[pos] >= 2) continue;
+        var cands = poolByPos[pos];
+        for (var i = 0; i < cands.length; i++) {
+          var cd = cands[i];
+          if (rosterSet[cd.p.id] || spent + cd.cost > capM) continue;
+          var upgrade = cd.p.overall > squad[pos].best + 2;                       // melhora o titular
+          var depth = squad[pos].count < TARGET[pos] && cd.p.overall >= squad[pos].best - 3; // completa o elenco
+          if (!upgrade && !depth) continue;
+          career.roster.push(cd.p.id); career.signedFrom[cd.p.id] = cd.p.clubId; rosterSet[cd.p.id] = 1;
+          spent += cd.cost; perPos[pos]++; squad[pos].count++;
+          if (cd.p.overall > squad[pos].best) squad[pos].best = cd.p.overall;
+          signed.push({ name: cd.p.name, ov: cd.p.overall, cost: cd.cost, pos: pos });
+          made = true; break;
+        }
+      }
+      if (!made) break;
+    }
+    C().syncLineup(career);
+    career.budget -= spent; career.fin.expenseM += spent;
+    return { signed: signed, spent: spent };
+  }
+
   /* ---------- edge do técnico + CT nos resultados ---------- */
   function teamEdge(career) {
     var co = career.coach || interino(career);
@@ -112,6 +169,7 @@
     if (!career.fin) career.fin = { incomeM: 0, expenseM: 0 };
     if (career.wagesM == null) career.wagesM = seasonWageBill(career);
     if (career.aporteUsedSeason == null) career.aporteUsedSeason = false;
+    if (career.stadiumUp == null) career.stadiumUp = 0;
     return career;
   }
 
@@ -131,8 +189,9 @@
     }
     // finanças do jogo
     var mps = matchesPerSeason(career);
-    var incomeMatch = Math.round(seasonBaseIncomeEur(career.teamId) / mps * mult(career));
-    var homeBonus = userSide === 0 ? Math.round(seasonBaseIncomeEur(career.teamId) / mps * 0.4 * mult(career)) : 0;
+    var stadM = stadIncomeMult(career);
+    var incomeMatch = Math.round(seasonBaseIncomeEur(career.teamId) / mps * mult(career) * stadM);
+    var homeBonus = userSide === 0 ? Math.round(seasonBaseIncomeEur(career.teamId) / mps * 0.4 * mult(career) * stadM) : 0;
     var sponsorMatch = career.sponsor ? Math.round(career.sponsor.seasonM / mps) : 0;
     var income = incomeMatch + homeBonus + sponsorMatch;
     var expense = Math.round((career.wagesM + career.coach.salaryM + ctUpkeep(career, career.ctLevel)) / mps);
@@ -261,17 +320,17 @@
       screen.appendChild(card);
     }
 
-    // lembrete: o dirigente não comanda o time em campo (quem faz isso é o técnico)
-    screen.appendChild(el("div", { class: "dir-note", text: "🎬 Você é o dirigente: o técnico comanda o time em campo (escalação e tática). Você cuida da gestão, das finanças, das contratações e do comando técnico." }));
+    // lembrete: o dirigente é o diretor — não escala, não faz tática e não contrata jogadores (o técnico faz isso)
+    screen.appendChild(el("div", { class: "dir-note", text: "🎬 Você é o diretor do clube. O técnico comanda o time em campo e monta o elenco (contrata os jogadores). Você adiciona dinheiro, libera a verba de transferências, escolhe o técnico, patrocínios e a estrutura." }));
 
-    // ações do dirigente (sem escalação/tática/jogar)
+    // ações do diretor (gestão — sem elenco/escalação/contratações manuais)
     screen.appendChild(el("div", { class: "hub-actions six" }, [
       dbtn("🧑‍💼", "Técnico", "director-coach"),
       dbtn("💰", "Finanças", "director-finance"),
+      dbtn("💸", "Verba p/ reforços", "director-transfer"),
       dbtn("🤝", "Patrocínios", "director-sponsors"),
-      dbtn("🏟️", "CT", "director-ct"),
-      dbtn("🔁", "Contratações", "coach-market"),
-      dbtn("👥", "Elenco", "coach-squad"),
+      dbtn("🏟️", "Estádio", "director-stadium"),
+      dbtn("🏋️", "CT", "director-ct"),
       dbtn("🏆", "Competições", "coach-comps"),
       dbtn("📅", "Calendário", "coach-calendar"),
       dbtn("🗂️", "Títulos", "coach-honours")
@@ -484,6 +543,75 @@
         }, "btn " + (c.sponsor && c.sponsor.id === s.id ? "ghost" : "primary") + " small")
       ]));
     });
+  });
+
+  /* ================= VERBA DE TRANSFERÊNCIAS (o técnico contrata) ================= */
+  TM.ui.register("director-transfer", function (screen) {
+    var c = TM.storage.coachCareer(); ensureDirector(c);
+    screen.appendChild(TM.ui.topbar("💸 Verba p/ reforços", function () { TM.ui.go("director-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("div", { class: "market-budget" + (c.budget < 0 ? " debt" : ""), text: "💰 Caixa disponível: " + money(c, c.budget) }));
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "Libere uma verba e o técnico " + c.coach.name + " reforça o elenco com ela — ele escolhe e contrata os jogadores que melhoram o time, gastando até o valor liberado." })
+    ]));
+
+    function release(cap) {
+      cap = Math.min(cap, c.budget);
+      if (cap < 3) { TM.ui.toast("Caixa insuficiente para liberar verba."); return; }
+      var r = autoSign(c, cap);
+      if (!r.signed.length) {
+        TM.notify.push(c, { icon: "🤷", title: "Sem reforços", text: "O técnico não encontrou reforços que melhorassem o elenco dentro da verba de " + money(c, cap) + "." });
+      } else {
+        r.signed.forEach(function (s) {
+          TM.notify.push(c, { icon: "✍️", title: "Reforço contratado", text: "O técnico contratou " + s.name + " (" + s.ov + ", " + s.pos + ") por " + money(c, s.cost) + "." });
+        });
+        TM.notify.push(c, { icon: "💸", title: "Verba aplicada", text: c.coach.name + " gastou " + money(c, r.spent) + " em " + r.signed.length + " reforço(s)." });
+      }
+      TM.storage.saveCoachCareer(c);
+      TM.ui.toast(r.signed.length ? (r.signed.length + " reforço(s) contratado(s)!") : "Nenhum reforço encontrado.");
+      TM.ui.go("director-hub");
+    }
+
+    var row = el("div", { class: "inv-row" });
+    [50, 100, 250].forEach(function (eur) {
+      var amt = Math.round(eur * mult(c));
+      row.appendChild(TM.ui.button(money(c, amt), function () { release(amt); }, "btn primary small"));
+    });
+    body.appendChild(el("div", { class: "nego-panel" }, [ el("div", { class: "nego-quote", text: "Escolha quanto liberar:" }), row,
+      TM.ui.button("Liberar TODO o caixa (" + money(c, Math.max(0, c.budget)) + ")", function () { release(c.budget); }, "btn ghost")
+    ]));
+  });
+
+  /* ================= ESTÁDIO (capacidade / receita) ================= */
+  TM.ui.register("director-stadium", function (screen) {
+    var c = TM.storage.coachCareer(); ensureDirector(c);
+    var club = TM.data.club(c.teamId), st = TM.data.stadium(club);
+    screen.appendChild(TM.ui.topbar("🏟️ Estádio", function () { TM.ui.go("director-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var sb = TM.ui.stadiumBanner(club, { label: st.name + " · +" + Math.round((stadIncomeMult(c) - 1) * 100) + "% de receita" });
+    if (sb) body.appendChild(sb);
+    var bar = el("div", { class: "ct-bar" });
+    for (var i = 1; i <= 3; i++) bar.appendChild(el("div", { class: "ct-seg" + (i <= (c.stadiumUp || 0) ? " on" : "") }));
+    body.appendChild(bar);
+    body.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "Ampliar o estádio aumenta a capacidade e a receita de bilheteria (mais dinheiro por jogo)." }));
+    if ((c.stadiumUp || 0) >= 3) {
+      body.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "🏟️ Estádio no tamanho máximo." }));
+    } else {
+      var next = (c.stadiumUp || 0) + 1, cost = stadUpgradeCost(c, next), afford = c.budget >= cost;
+      body.appendChild(el("div", { class: "nego-panel" }, [
+        el("div", { class: "nego-quote", text: "Ampliação nível " + next + ": custa " + money(c, cost) + " e eleva a receita para +" + Math.round((1 + 0.14 * next - 1) * 100) + "%." }),
+        TM.ui.button("🏗️ Ampliar estádio (" + money(c, cost) + ")", function () {
+          if (!afford) { TM.ui.toast("Caixa insuficiente."); return; }
+          TM.ui.confirm("Ampliar o estádio?", "Custo de " + money(c, cost) + ".", "Ampliar", function () {
+            c.budget -= cost; c.fin.expenseM += cost; c.stadiumUp = next;
+            TM.notify.push(c, { icon: "🏟️", title: "Estádio ampliado", text: "A capacidade do " + st.name + " aumentou — mais receita de bilheteria por jogo." });
+            TM.storage.saveCoachCareer(c); TM.ui.go("director-stadium");
+          });
+        }, "btn " + (afford ? "primary" : "ghost"))
+      ]));
+    }
   });
 
   /* ================= CT (centro de treinamento) ================= */
