@@ -214,6 +214,31 @@
     return opener + " " + topic.charAt(0).toUpperCase() + topic.slice(1) + ".";
   }
 
+  // mensagens prontas: cada uma já carrega o humor e uma resposta certeira do técnico
+  var PRESET_MSGS = [
+    { icon: "👏", text: "Parabéns pelo último resultado, trabalho excelente!", mood: "feliz", reply: "Muito obrigado, diretor! Fico feliz com o reconhecimento e vamos manter o nível." },
+    { icon: "💪", text: "Vamos com tudo — o clube inteiro confia em você!", mood: "empolgado", reply: "Isso me anima demais! O time vai sentir essa energia dentro de campo." },
+    { icon: "🤝", text: "Fique tranquilo, você tem meu apoio e todo o tempo necessário.", mood: "feliz", reply: "Obrigado pela confiança, diretor. Isso faz toda a diferença no meu trabalho." },
+    { icon: "🎯", text: "Precisamos vencer o próximo jogo a todo custo.", mood: "angustiado", reply: "Sinto o peso da cobrança... mas o foco total é buscar a vitória no próximo jogo." },
+    { icon: "🛡️", text: "Estamos tomando gols demais. Aperte a defesa.", mood: "angustiado", reply: "Entendido. Vou apertar a marcação e organizar melhor a defesa." },
+    { icon: "⚡", text: "O ataque está apagado, precisamos criar mais chances.", mood: "triste", reply: "Reconheço a falha no ataque. Vamos ser mais agressivos e criar mais oportunidades." },
+    { icon: "🏆", text: "Nosso objetivo é o título nesta temporada.", mood: "motivado", reply: "Pode confiar, diretor. O título é o nosso objetivo e vou brigar por ele até o fim." },
+    { icon: "🌱", text: "Dê mais chances aos garotos da base.", mood: "motivado", reply: "Combinado! Vou dar espaço à base e revelar as joias do clube." },
+    { icon: "😤", text: "Esse desempenho foi um vexame. Precisa melhorar já.", mood: "triste", reply: "Fiquei abatido com a crítica, mas prometo reagir e dar a volta por cima." },
+    { icon: "⛔", text: "Se não melhorar, vou ter que te demitir.", mood: "raiva", reply: "Não aceito ser cobrado com ameaças, diretor. Vamos ver quem tem razão no gramado." }
+  ];
+  // envia um recado (usado por presets e pelo texto livre) e registra a resposta
+  function sendCoachMsg(c, text, mood, replyOverride) {
+    c.coach.mood = mood;
+    var reply = replyOverride || composeReply(c, text, mood);
+    c.coachChat = c.coachChat || [];
+    c.coachChat.push({ who: "dir", text: text });
+    c.coachChat.push({ who: "coach", text: reply, mood: mood });
+    if (c.coachChat.length > 16) c.coachChat = c.coachChat.slice(-16);
+    TM.notify.push(c, { icon: MOOD[mood].emoji, title: "Recado ao técnico", text: c.coach.name + " agora está " + MOOD[mood].label.toLowerCase() + "." });
+    TM.storage.saveCoachCareer(c);
+  }
+
   /* ---------- edge do técnico + CT + humor nos resultados ---------- */
   function teamEdge(career) {
     var co = career.coach || interino(career);
@@ -613,8 +638,24 @@
       body.appendChild(chat);
     }
 
-    // escrever recado
-    body.appendChild(el("div", { class: "list-head", text: "Mandar um recado ao técnico" }));
+    // mensagens prontas (o técnico sempre entende e responde no tom certo)
+    body.appendChild(el("div", { class: "list-head", text: "Mensagens rápidas" }));
+    body.appendChild(el("div", { class: "setting-hint", text: "Toque numa mensagem pronta — o técnico entende na hora e responde de acordo." }));
+    var presetWrap = el("div", { class: "preset-msgs" });
+    PRESET_MSGS.forEach(function (pm) {
+      presetWrap.appendChild(el("button", { class: "preset-msg mood-tone-" + pm.mood, on: { click: function () {
+        sendCoachMsg(c, pm.text, pm.mood, pm.reply);
+        TM.ui.go("director-messages");
+      } } }, [
+        el("span", { class: "preset-ic", text: pm.icon }),
+        el("span", { class: "preset-tx", text: pm.text }),
+        el("span", { class: "preset-mood", text: MOOD[pm.mood].emoji })
+      ]));
+    });
+    body.appendChild(presetWrap);
+
+    // escrever recado livre
+    body.appendChild(el("div", { class: "list-head", text: "Ou escreva um recado" }));
     var input = el("textarea", { class: "text-input", rows: "3", maxlength: "240", placeholder: "Escreva sua mensagem… (elogie, motive, cobre, pressione — o humor dele muda conforme o tom)" });
     body.appendChild(input);
     body.appendChild(el("div", { class: "setting-hint", text: "Dica: elogios e incentivo animam; críticas e ameaças irritam ou entristecem. O humor do técnico influencia o rendimento do time." }));
@@ -622,15 +663,7 @@
       TM.ui.button("📨 Enviar recado", function () {
         var txt = (input.value || "").trim();
         if (txt.length < 2) { TM.ui.toast("Escreva uma mensagem."); return; }
-        var mood = classifyMessage(txt);
-        c.coach.mood = mood;
-        var reply = composeReply(c, txt, mood);
-        c.coachChat = c.coachChat || [];
-        c.coachChat.push({ who: "dir", text: txt });
-        c.coachChat.push({ who: "coach", text: reply, mood: mood });
-        if (c.coachChat.length > 16) c.coachChat = c.coachChat.slice(-16);
-        TM.notify.push(c, { icon: MOOD[mood].emoji, title: "Recado ao técnico", text: c.coach.name + " agora está " + MOOD[mood].label.toLowerCase() + "." });
-        TM.storage.saveCoachCareer(c);
+        sendCoachMsg(c, txt, classifyMessage(txt), null);
         TM.ui.go("director-messages");
       }, "btn primary")
     ]));
