@@ -1276,3 +1276,6 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   background: var(--black-soft); border: 1px solid var(--line); }
 .gc-counter.full { border-color: #22c55e; }
 .gc-counter b { color: var(--gold); }
+
+/* logo (imagem) no topo da tela de modos */
+.modes-emblem-img { width: 52px; height: 52px; object-fit: contain; flex-shrink: 0; display: block; }
