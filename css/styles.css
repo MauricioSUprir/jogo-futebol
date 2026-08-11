@@ -1126,3 +1126,56 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .preset-msg.mood-tone-angustiado { border-left: 3px solid #e8a13c; }
 .preset-msg.mood-tone-triste { border-left: 3px solid #6f8fb0; }
 .preset-msg.mood-tone-raiva { border-left: 3px solid #e0472c; }
+
+/* ---------- Modos de construção (Time dos Sonhos / Draft) ---------- */
+.build-list { display: flex; flex-direction: column; gap: 7px; }
+.build-card { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: 12px;
+  background: var(--black-soft); border: 1px solid var(--line); position: relative; }
+.build-card.clickable { cursor: pointer; }
+.build-card.clickable:hover { border-color: var(--gold); }
+.build-card.disabled { opacity: .5; }
+.build-card.draft-opt { border-left: 3px solid var(--gold); }
+.bc-face-wrap { position: relative; flex: 0 0 auto; }
+.bc-face { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; }
+.bc-pos { position: absolute; bottom: -3px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: 800;
+  background: var(--gold); color: #04120a; padding: 1px 5px; border-radius: 6px; }
+.bc-info { flex: 1; min-width: 0; }
+.bc-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bc-meta { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-x { position: absolute; top: 6px; right: 8px; font-size: 12px; color: #e0472c; }
+.slot-empty { display: flex; align-items: center; gap: 10px; padding: 11px; border-radius: 12px; width: 100%;
+  background: transparent; border: 1px dashed var(--line-2); color: var(--text-dim); cursor: pointer; font-family: inherit; }
+.slot-empty:hover { border-color: var(--gold); color: var(--gold); }
+.slot-pos { font-size: 11px; font-weight: 800; background: var(--black-soft); padding: 3px 8px; border-radius: 6px; }
+.slot-add { font-size: 13px; }
+/* barra de orçamento */
+.budget-bar { padding: 10px 12px; border-radius: 12px; background: var(--black-soft); border: 1px solid var(--line); margin-bottom: 10px; }
+.budget-line { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 7px; }
+.budget-line .over { color: #e0472c; }
+.budget-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+.budget-fill { height: 100%; background: var(--gold); transition: width .2s; }
+.budget-fill.over { background: #e0472c; }
+/* escada de adversários */
+.ladder { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 10px; }
+.ladder-row { display: flex; align-items: center; gap: 10px; padding: 8px 11px; border-radius: 11px;
+  background: var(--black-soft); border: 1px solid var(--line); border-left: 4px solid var(--line-2); }
+.ladder-row.next { border-left-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.ladder-row.win { border-left-color: #22c55e; }
+.ladder-row.loss { border-left-color: #e0472c; opacity: .85; }
+.ladder-row.draw { border-left-color: #e8a13c; }
+.ladder-row.lock { opacity: .5; }
+.ladder-n { font-size: 12px; font-weight: 800; color: var(--text-dim); width: 16px; }
+.ladder-crest { width: 34px; height: 34px; object-fit: contain; }
+.ladder-info { flex: 1; }
+.ladder-name { font-size: 14px; font-weight: 700; }
+.ladder-sub { font-size: 11px; color: var(--text-dim); }
+.ladder-tag { font-size: 16px; }
+.myteam-badge { width: 46px; height: 46px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #04120a; }
+/* draft */
+.draft-progress { margin-bottom: 12px; }
+.draft-step-label { font-size: 14px; font-weight: 700; margin-bottom: 8px; text-align: center; }
+.draft-dots { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.ddot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.14); }
+.ddot.done { background: var(--gold); }
+.ddot.cur { background: #fff; box-shadow: 0 0 0 2px var(--gold); }
