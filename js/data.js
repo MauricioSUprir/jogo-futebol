@@ -279,6 +279,34 @@
   if (COMPETITIONS_BY_ID["nat-world"]) COMPETITIONS_BY_ID["nat-world"].darkBg = true;
 
   /* ---------- 48 seleções (nomes reais + cores para bandeira placeholder + cultura) ---------- */
+  // técnicos reais das seleções (por key em inglês)
+  var NAT_COACH = {
+    "Brazil": "Carlo Ancelotti", "Argentina": "Lionel Scaloni", "France": "Didier Deschamps", "England": "Thomas Tuchel",
+    "Spain": "Luis de la Fuente", "Germany": "Julian Nagelsmann", "Portugal": "Roberto Martínez", "Netherlands": "Ronald Koeman",
+    "Italy": "Gennaro Gattuso", "Belgium": "Rudi Garcia", "Croatia": "Zlatko Dalić", "Uruguay": "Marcelo Bielsa",
+    "Mexico": "Javier Aguirre", "USA": "Mauricio Pochettino", "Colombia": "Néstor Lorenzo", "Japan": "Hajime Moriyasu",
+    "South Korea": "Hong Myung-bo", "Senegal": "Pape Thiaw", "Morocco": "Walid Regragui", "Nigeria": "Éric Chelle",
+    "Ghana": "Otto Addo", "Cameroon": "Marc Brys", "Ivory Coast": "Emerse Faé", "Egypt": "Hossam Hassan",
+    "Switzerland": "Murat Yakin", "Denmark": "Brian Riemer", "Poland": "Jan Urban", "Sweden": "Graham Potter",
+    "Austria": "Ralf Rangnick", "Serbia": "Dragan Stojković", "Ecuador": "Sebastián Beccacece", "Peru": "Óscar Ibáñez",
+    "Chile": "Nicolás Córdova", "Paraguay": "Gustavo Alfaro", "Canada": "Jesse Marsch", "Australia": "Tony Popovic",
+    "Saudi Arabia": "Hervé Renard", "Qatar": "Julen Lopetegui", "Iran": "Amir Ghalenoei", "Norway": "Ståle Solbakken",
+    "Scotland": "Steve Clarke", "Turkey": "Vincenzo Montella", "Ukraine": "Serhiy Rebrov", "Wales": "Craig Bellamy",
+    "Bosnia": "Sergej Barbarez", "Cape Verde": "Bubista", "Tunisia": "Sami Trabelsi", "Algeria": "Vladimir Petković"
+  };
+  // nomes das seleções em português (exibição); o inglês continua como "key" para os vínculos de dados
+  var NATION_PT = {
+    "Brazil": "Brasil", "Argentina": "Argentina", "France": "França", "England": "Inglaterra", "Spain": "Espanha",
+    "Germany": "Alemanha", "Portugal": "Portugal", "Netherlands": "Holanda", "Italy": "Itália", "Belgium": "Bélgica",
+    "Croatia": "Croácia", "Uruguay": "Uruguai", "Mexico": "México", "USA": "Estados Unidos", "Colombia": "Colômbia",
+    "Japan": "Japão", "South Korea": "Coreia do Sul", "Senegal": "Senegal", "Morocco": "Marrocos", "Nigeria": "Nigéria",
+    "Ghana": "Gana", "Cameroon": "Camarões", "Ivory Coast": "Costa do Marfim", "Egypt": "Egito", "Switzerland": "Suíça",
+    "Denmark": "Dinamarca", "Poland": "Polônia", "Sweden": "Suécia", "Austria": "Áustria", "Serbia": "Sérvia",
+    "Ecuador": "Equador", "Peru": "Peru", "Chile": "Chile", "Paraguay": "Paraguai", "Canada": "Canadá",
+    "Australia": "Austrália", "Saudi Arabia": "Arábia Saudita", "Qatar": "Catar", "Iran": "Irã", "Norway": "Noruega",
+    "Scotland": "Escócia", "Turkey": "Turquia", "Ukraine": "Ucrânia", "Wales": "País de Gales", "Bosnia": "Bósnia",
+    "Cape Verde": "Cabo Verde", "Tunisia": "Tunísia", "Algeria": "Argélia"
+  };
   var NATIONS = [
     ["Brazil","#009c3b","#ffdf00","br"],["Argentina","#75aadb","#ffffff","ar"],["France","#0055a4","#ffffff","fr"],
     ["England","#ffffff","#ce1124","en"],["Spain","#aa151b","#f1bf00","es"],["Germany","#000000","#dd0000","de"],
@@ -297,7 +325,7 @@
     ["Ukraine","#005bbb","#ffd500","de"],["Wales","#c8102e","#00ab39","en"],["Bosnia","#002395","#fecb00","it"],
     ["Cape Verde","#003893","#f7d116","af"],["Tunisia","#e70013","#ffffff","af"],["Algeria","#006233","#ffffff","af"]
   ].map(function (n, i) {
-    return { id: "nat" + i, name: n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
+    return { id: "nat" + i, key: n[0], name: NATION_PT[n[0]] || n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
 
   // Treinadores reais 2025/26 — [nome, cultura, idade, clube(real) ou null=livre].
@@ -782,7 +810,7 @@
   "CD Leonesa":[{n:"Edgar Badia",p:"GK",q:"GOL",a:34,o:72,t:72,v:400000,nat:"Spain",ph:"102146"},{n:"Lucas Ribeiro",p:"FW",q:"PD",a:27,o:71,t:72,v:1500000,nat:"Brazil",ph:"612880"},{n:"Miguel Bañuz",p:"GK",q:"GOL",a:33,o:70,t:70,v:200000,nat:"Spain",ph:"193073"},{n:"Iván Calero",p:"DF",q:"LD",a:31,o:70,t:70,v:700000,nat:"Spain",ph:"212849"},{n:"Luis Chacón",p:"FW",q:"PE",a:26,o:70,t:71,v:1000000,nat:"Spain",ph:"473402"},{n:"Matia Barzic",p:"DF",q:"ZAG",a:22,o:69,t:75,v:1000000,nat:"Croatia",ph:"1060456"},{n:"Juan Larios",p:"DF",q:"LE",a:22,o:69,t:75,v:1200000,nat:"Spain",ph:"646738"},{n:"Nemanja Radoja",p:"MF",q:"VOL",a:33,o:69,t:69,v:300000,nat:"Serbia",ph:"168959"},{n:"Daniel Paraschiv",p:"FW",q:"CA",a:27,o:69,t:70,v:800000,nat:"Serbia",ph:"605543"},{n:"Manu Justo",p:"FW",q:"CA",a:30,o:69,t:69,v:500000,nat:"Spain",ph:"593357"},{n:"Rubén Sobrino",p:"FW",q:"CA",a:34,o:69,t:69,v:300000,nat:"Spain",ph:"85383"},{n:"Tomás Ribeiro",p:"DF",q:"ZAG",a:27,o:68,t:69,v:400000,nat:"Portugal",ph:"433358"},{n:"Roger Hinojo",p:"DF",q:"LE",a:21,o:68,t:75,v:1000000,nat:"Spain",ph:"1204959"},{n:"Homam Al-Amin",p:"DF",q:"LE",a:26,o:68,t:69,v:500000,nat:"Spain",ph:"556713"},{n:"Víctor García",p:"DF",q:"LD",a:32,o:68,t:68,v:200000,nat:"Colombia",ph:"195762"},{n:"Thiago Ojeda",p:"MF",q:"MC",a:23,o:68,t:72,v:600000,nat:"Argentina",ph:"1030425"},{n:"Bicho",p:"MF",q:"MEI",a:30,o:68,t:68,v:300000,nat:"Spain",ph:"217145"},{n:"Agustín Pastoriza",p:"FW",q:"PE",a:30,o:68,t:68,v:300000,nat:"Argentina",ph:"336103"},{n:"Jordi Mboula",p:"FW",q:"PD",a:27,o:68,t:69,v:500000,nat:"Spain",ph:"331498"},{n:"Arnau Rafús",p:"GK",q:"GOL",a:23,o:67,t:71,v:200000,nat:"Spain",ph:"636686"},{n:"Rodri Suárez",p:"DF",q:"ZAG",a:23,o:67,t:71,v:500000,nat:"Spain",ph:"852913"},{n:"Peru Rodríguez",p:"DF",q:"ZAG",a:24,o:67,t:69,v:400000,nat:"Spain",ph:"711381"},{n:"Quique Fornos",p:"DF",q:"ZAG",a:29,o:67,t:68,v:300000,nat:"Spain",ph:"291039"},{n:"Selu Diallo",p:"MF",q:"MC",a:22,o:67,t:73,v:400000,nat:"Senegal",ph:"1054931"},{n:"Paco Cortés",p:"FW",q:"PE",a:18,o:67,t:79,v:1500000,nat:"Spain",ph:"1232057"},{n:"Diego Collado",p:"FW",q:"PE",a:25,o:67,t:69,v:400000,nat:"Spain",ph:"566965"},{n:"Eneko Satrústegui",p:"DF",q:"ZAG",a:35,o:66,t:66,v:100000,nat:"Spain",ph:"158792"},{n:"Carlos Luengo",p:"DF",q:"LD",a:22,o:66,t:72,v:300000,nat:"Spain"},{n:"Sergi Maestre",p:"MF",q:"MC",a:35,o:66,t:66,v:100000,nat:"Spain",ph:"127838"},{n:"Rafa Tresaco",p:"FW",q:"PE",a:25,o:66,t:68,v:300000,nat:"Spain",ph:"632904"},{n:"Juan Sánchez",p:"FW",q:"PE",a:22,o:66,t:72,v:300000,nat:"Spain"},{n:"Marcos de la Riva",p:"MF",q:"MC",a:20,o:65,t:73,v:300000,nat:"Spain"},{n:"Yayo González",p:"MF",q:"MC",a:21,o:65,t:72,v:300000,nat:"Spain",ph:"942988"},{n:"Alejandro Morante",p:"FW",q:"PE",a:20,o:65,t:73,v:300000,nat:"Spain"},{n:"Víctor Moreno",p:"FW",q:"PD",a:20,o:65,t:73,v:300000,nat:"Spain"},{n:"Álvaro Choco",p:"FW",q:"CA",a:21,o:65,t:72,v:300000,nat:"Spain"},{n:"Guzmán Ortega",p:"DF",q:"LD",a:22,o:64,t:70,v:150000,nat:"Spain",ph:"1157610"},{n:"Sergio Cuello",p:"MF",q:"MC",a:19,o:63,t:73,v:300000,nat:"USA"},{n:"Nico Toca",p:"MF",q:"MC",a:23,o:63,t:67,v:50000,nat:"Spain",ph:"720021"}],
   "AD Ceuta FC":[{n:"Guillermo Vallejo",p:"GK",q:"GOL",a:31,o:71,t:71,v:400000,nat:"Spain"},{n:"José Matos",p:"DF",q:"LE",a:31,o:70,t:70,v:600000,nat:"Spain",ph:"268957"},{n:"Anuar",p:"FW",q:"PD",a:31,o:70,t:70,v:700000,nat:"Morocco",ph:"327126"},{n:"Marcos Fernández",p:"FW",q:"CA",a:23,o:70,t:74,v:1500000,nat:"Spain",ph:"961948"},{n:"Pedro López",p:"GK",q:"GOL",a:31,o:69,t:69,v:200000,nat:"Spain"},{n:"Diego González",p:"DF",q:"ZAG",a:27,o:69,t:70,v:600000,nat:"Spain",ph:"513441"},{n:"Youness Lachhab",p:"MF",q:"MC",a:27,o:69,t:70,v:700000,nat:"Morocco"},{n:"Yann Bodiger",p:"MF",q:"MC",a:31,o:69,t:69,v:500000,nat:"France",ph:"290533"},{n:"Cristian Rodríguez",p:"MF",q:"MC",a:30,o:69,t:69,v:400000,nat:"Spain",ph:"442802"},{n:"José Campaña",p:"MF",q:"MC",a:33,o:69,t:69,v:300000,nat:"Spain",ph:"120095"},{n:"Kuki Zalazar",p:"MF",q:"MEI",a:28,o:69,t:70,v:700000,nat:"Spain",ph:"311696"},{n:"Kialy Abdoul Kone",p:"FW",q:"PE",a:29,o:69,t:70,v:800000,nat:"Ivory Coast",ph:"534377"},{n:"Pery",p:"GK",q:"GOL",a:23,o:68,t:72,v:300000,nat:"Spain"},{n:"Aisar Ahmed",p:"MF",q:"MEI",a:24,o:68,t:70,v:700000,nat:"Spain"},{n:"Andy Escudero",p:"MF",q:"MEI",a:26,o:68,t:69,v:400000,nat:"Spain"},{n:"Rubén Díez",p:"MF",q:"MEI",a:32,o:68,t:68,v:250000,nat:"Spain",ph:"311266"},{n:"Konrad de la Fuente",p:"FW",q:"PE",a:24,o:68,t:70,v:700000,nat:"USA",ph:"466809"},{n:"Efe Aghama",p:"FW",q:"PE",a:22,o:68,t:74,v:600000,nat:"Nigeria",ph:"1180386"},{n:"Ignacio Schor",p:"FW",q:"PD",a:25,o:68,t:70,v:600000,nat:"Argentina"},{n:"Samuel Obeng",p:"FW",q:"CA",a:29,o:68,t:69,v:500000,nat:"Ghana",ph:"522719"},{n:"Yago Cantero",p:"DF",q:"ZAG",a:26,o:67,t:68,v:300000,nat:"Spain"},{n:"Carlos Redru",p:"DF",q:"LE",a:29,o:67,t:68,v:300000,nat:"Spain"},{n:"Gonzalo Almenara",p:"DF",q:"LD",a:29,o:67,t:68,v:300000,nat:"Spain",ph:"396160"},{n:"Manu Sánchez",p:"DF",q:"LD",a:30,o:67,t:67,v:200000,nat:"Spain",ph:"374142"},{n:"Salvi Sánchez",p:"FW",q:"PD",a:35,o:67,t:67,v:150000,nat:"Spain",ph:"246204"},{n:"Albert Caparrós",p:"DF",q:"ZAG",a:27,o:66,t:67,v:200000,nat:"Spain",ph:"664420"},{n:"Carlos Hernández",p:"DF",q:"ZAG",a:35,o:66,t:66,v:100000,nat:"Spain"},{n:"Curro Domínguez",p:"DF",q:"ZAG",a:22,o:66,t:72,v:300000,nat:"Spain"},{n:"Jorge Bote",p:"DF",q:"LD",a:22,o:66,t:72,v:300000,nat:"Spain"},{n:"Josema López",p:"MF",q:"MC",a:23,o:66,t:70,v:300000,nat:"Spain"},{n:"Arick Betancourt",p:"MF",q:"MC",a:22,o:66,t:72,v:300000,nat:"Spain",ph:"1045533"},{n:"Marino Illescas",p:"MF",q:"MEI",a:25,o:66,t:68,v:300000,nat:"Spain"},{n:"Adri Rueda",p:"FW",q:"PD",a:22,o:66,t:72,v:300000,nat:"Spain"},{n:"Manu Vallejo",p:"FW",q:"SA",a:29,o:66,t:67,v:250000,nat:"Spain",ph:"527350"},{n:"Marc Domènech",p:"FW",q:"CA",a:19,o:66,t:76,v:1000000,nat:"Spain",ph:"1296876"},{n:"Juanto Ortuño",p:"FW",q:"CA",a:34,o:66,t:66,v:100000,nat:"Spain",ph:"213875"},{n:"Aboubacar Bassinga",p:"MF",q:"MC",a:20,o:65,t:73,v:300000,nat:"Ivory Coast",ph:"1210422"},{n:"Adrián Romero",p:"MF",q:"MC",a:20,o:65,t:73,v:300000,nat:"Spain"},{n:"Paco Fernández",p:"FW",q:"PE",a:20,o:65,t:73,v:300000,nat:"Spain"},{n:"Yeyo",p:"FW",q:"CA",a:18,o:63,t:75,v:300000,nat:"Spain"}]
 };
-  function natByName(nm) { for (var i = 0; i < NATIONS.length; i++) if (NATIONS[i].name === nm) return NATIONS[i]; return null; }
+  function natByName(nm) { for (var i = 0; i < NATIONS.length; i++) if (NATIONS[i].key === nm || NATIONS[i].name === nm) return NATIONS[i]; return null; }
 
   function generateWorld() {
     var rng = R.make(WORLD_SEED);
@@ -826,7 +854,7 @@
           var pos = POS_POOL[p];
           // ~45% jogadores da nação da liga, resto espalhado entre as 48 seleções
           var nation = R.chance(rng, 0.45)
-            ? NATIONS.filter(function (n) { return n.name === ld.nation; })[0] || R.pick(rng, NATIONS)
+            ? NATIONS.filter(function (n) { return n.key === ld.nation; })[0] || R.pick(rng, NATIONS)
             : R.pick(rng, NATIONS);
           var base = Math.max(45, Math.min(92, R.gaussian(rng, strength, 7)));
           var attrs = makeAttrs(rng, base, pos);
@@ -857,7 +885,7 @@
     clubs.forEach(function (c) { var co = COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; } });
 
     // técnico de cada seleção
-    NATIONS.forEach(function (n) { n.coach = fullName(rng, n.culture); });
+    NATIONS.forEach(function (n) { n.coach = NAT_COACH[n.key] || fullName(rng, n.culture); n.coachPhotoKey = coachSlug(n.coach); });
 
     // agentes livres (sem clube) — variados
     var freeAgents = [];
@@ -1168,7 +1196,7 @@
       return r(c.first) + " " + r(c.last);
     },
     cultureOfLeague: function (leagueId) { var l = TM.data.league(leagueId); return l ? l.culture : "br"; },
-    nationByName: function (name) { return TM.data.world().nations.filter(function (n) { return n.name === name; })[0] || null; },
+    nationByName: function (name) { return TM.data.world().nations.filter(function (n) { return n.name === name || n.key === name; })[0] || null; },
     // taxa de desenvolvimento (rótulo) pela idade e margem de potencial
     devRate: function (p) {
       var room = (p.potential || p.overall) - p.overall;
