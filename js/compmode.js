@@ -321,49 +321,71 @@
     var E = el();
     var s = load(); if (!s) { TM.ui.go("compmode"); return; }
     ensureLineup(s); save(s);
+    pickSlot = null;
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("compmode-hub"); }));
 
     // formação
     var formRow = E("div", { class: "segmented full" });
     Object.keys(TM.comp.FORMATIONS).forEach(function (f) {
       formRow.appendChild(E("button", { class: "seg-btn" + (s.lineup.formation === f ? " active" : ""), text: f, on: { click: function () {
-        s.lineup = TM.comp.buildLineup(userPlayerList(s), f); pickSlot = null; save(s); TM.ui.go("compmode-lineup");
+        s.lineup = TM.comp.buildLineup(userPlayerList(s), f); pickSlot = null; save(s); renderBoard();
       } } }));
     });
     screen.appendChild(E("div", { class: "panel-narrow" }, [ E("div", { class: "setting" }, [ E("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
 
-    // campinho
-    var slots = TM.comp.FORMATIONS[s.lineup.formation];
-    var pitch = E("div", { class: "pitch" });
-    pitch.appendChild(E("div", { class: "pitch-mark center-circle" }));
-    pitch.appendChild(E("div", { class: "pitch-mark mid-line" }));
-    s.lineup.starters.forEach(function (id, i) {
-      var p = TM.data.player(id); if (!p) return;
-      var slot = slots[i] || [null, 50, 50];
-      pitch.appendChild(E("button", { class: "pl-chip" + (pickSlot === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-        on: { click: function () { pickSlot = (pickSlot === i ? null : i); TM.ui.go("compmode-lineup"); } } }, [
-        E("span", { class: "chip-ov", text: p.overall }),
-        E("span", { class: "chip-name", text: shortNm(p.name) })
-      ]));
-    });
-    screen.appendChild(pitch);
-    screen.appendChild(E("div", { class: "lineup-hint", text: pickSlot != null ? "Toque num reserva para colocar no lugar do titular selecionado." : "Toque num titular e depois num reserva para trocar." }));
+    // atualiza EM LUGAR (não recarrega a tela nem reseta o scroll)
+    var board = E("div", { class: "lineup-board" });
+    screen.appendChild(board);
 
-    // reservas
-    var benchWrap = E("div", { class: "panel-narrow" }, [ E("h3", { class: "block-title", text: "Reservas" }) ]);
-    s.lineup.bench.forEach(function (id) {
-      var p = TM.data.player(id); if (!p) return;
-      var row = TM.ui.playerRow(p, {});
-      row.classList.add("clickable");
-      row.addEventListener("click", function () {
-        if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
-        var starterId = s.lineup.starters[pickSlot], bi = s.lineup.bench.indexOf(id);
-        s.lineup.starters[pickSlot] = id; s.lineup.bench[bi] = starterId;
-        pickSlot = null; save(s); TM.ui.go("compmode-lineup");
+    function renderBoard() {
+      board.innerHTML = "";
+      var slots = TM.comp.FORMATIONS[s.lineup.formation];
+      var pitch = E("div", { class: "pitch" });
+      pitch.appendChild(E("div", { class: "pitch-mark center-circle" }));
+      pitch.appendChild(E("div", { class: "pitch-mark mid-line" }));
+      s.lineup.starters.forEach(function (id, i) {
+        var p = TM.data.player(id); if (!p) return;
+        var slot = slots[i] || [null, 50, 50];
+        var chip = E("button", { class: "pl-chip" + (pickSlot === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+          on: { click: function () { onStarterClick(i); } } }, [
+          E("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(p, "chip-face"), E("span", { class: "chip-ov", text: p.overall }) ]),
+          E("span", { class: "chip-name", text: shortNm(p.name) }),
+          E("span", { class: "chip-age", text: p.age + " anos" })
+        ]);
+        pitch.appendChild(chip);
       });
-      benchWrap.appendChild(row);
-    });
-    screen.appendChild(benchWrap);
+      board.appendChild(pitch);
+      board.appendChild(E("div", { class: "lineup-hint", text: pickSlot != null ? "Toque em OUTRO titular para trocar as posições, ou num reserva para substituir. Toque no mesmo para cancelar." : "Toque num titular e depois em outro titular (troca de posição) ou num reserva (substituição)." }));
+
+      var benchWrap = E("div", { class: "panel-narrow" }, [ E("h3", { class: "block-title", text: "Reservas" }) ]);
+      (s.lineup.bench || []).forEach(function (id) {
+        var p = TM.data.player(id); if (!p) return;
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("clickable");
+        if (pickSlot != null) row.classList.add("row-target");
+        row.addEventListener("click", function () { onBenchClick(id); });
+        benchWrap.appendChild(row);
+      });
+      board.appendChild(benchWrap);
+    }
+    function onStarterClick(i) {
+      if (pickSlot == null) { pickSlot = i; }
+      else if (pickSlot === i) { pickSlot = null; }
+      else {
+        var tmp = s.lineup.starters[pickSlot];
+        s.lineup.starters[pickSlot] = s.lineup.starters[i];
+        s.lineup.starters[i] = tmp;
+        pickSlot = null; save(s);
+      }
+      renderBoard();
+    }
+    function onBenchClick(benchId) {
+      if (pickSlot == null) { TM.ui.toast("Selecione um titular primeiro"); return; }
+      var starterId = s.lineup.starters[pickSlot], bi = s.lineup.bench.indexOf(benchId);
+      s.lineup.starters[pickSlot] = benchId; s.lineup.bench[bi] = starterId;
+      pickSlot = null; save(s); renderBoard();
+    }
+    renderBoard();
   });
   var pickSlot = null;
   function shortNm(name) { var parts = name.split(" "); return parts.length > 1 ? parts[0][0] + ". " + parts[parts.length - 1] : name; }
