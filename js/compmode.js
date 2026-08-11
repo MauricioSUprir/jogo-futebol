@@ -29,6 +29,8 @@
     if (catKey === "nation") return "nat-" + id; // world/america/euro/africa
     return null;
   }
+  // id de tema/logo da competição a partir do estado salvo
+  function themeId(s) { return s && s.catKey ? compImgId(s.catKey, s.compId) : null; }
 
   function topClubs(leagueId, n) {
     return TM.data.league(leagueId).clubIds.slice().sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, n);
@@ -107,7 +109,7 @@
 
   function newComp(catKey, id, userId) {
     var built = buildCompetition(catKey, id);
-    var s = { name: built.name, isNation: built.isNation, kind: built.kind, userId: userId };
+    var s = { name: built.name, isNation: built.isNation, kind: built.kind, userId: userId, catKey: catKey, compId: id };
     if (built.kind === "league") { s.teamIds = built.teamIds; s.fixtures = doubleRoundRobin(built.teamIds); s.round = 0; s.table = emptyTable(built.teamIds); }
     else if (built.kind === "ko") { s.teamIds = shuffle(built.teamIds); s.rounds = []; s.roundIndex = 0; s.aliveUser = true; s.championId = null; s.twoLeg = true; } // copas nacionais: ida e volta
     else { s.tour = TM.tournament.create(built.teamIds, { groups: built.groups, perGroup: built.perGroup, advance: 2, doubleGroups: !!built.dbl, bestThirds: built.bestThirds || 0, twoLeg: !!built.twoLeg, userId: userId }); }
@@ -282,6 +284,7 @@
   TM.ui.register("compmode-hub", function (screen) {
     var E = el();
     var s = load(); if (!s) { TM.ui.go("compmode"); return; }
+    TM.ui.applyCompTheme(screen, themeId(s));
     var right = E("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções", [
         { label: "📤 Salvar e sair", fn: function () { TM.saves.park("comp"); TM.ui.toast("Competição guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
@@ -312,11 +315,16 @@
         TM.ui.button("Nova competição", function () { clear(); TM.ui.go("compmode"); }, "btn primary")
       ]));
     } else {
-      screen.appendChild(E("div", { class: "next-match" }, [
+      var oppId = nx.homeId === s.userId ? nx.awayId : nx.homeId;
+      var nmCard = E("div", { class: "next-match" }, [
         E("div", { class: "nm-label", text: nx.label || (s.kind === "league" ? "Rodada " + (s.round + 1) + "/" + s.fixtures.length : "") }),
         E("div", { class: "nm-teams" }, [ E("span", { text: nameFor(s, nx.homeId) }), E("span", { class: "nm-x", text: "×" }), E("span", { text: nameFor(s, nx.awayId) }) ]),
+        TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: oppId, isNation: s.isNation, compId: themeId(s), back: function () { TM.ui.go("compmode-hub"); } }); }, "btn ghost"),
         TM.ui.button("▶ Jogar", function () { TM.ui.go("compmode-play"); }, "btn primary")
-      ]));
+      ]);
+      TM.ui.applyCompTheme(nmCard, themeId(s));
+      var cbn = TM.ui.compBanner(themeId(s), s.name); if (cbn) nmCard.insertBefore(cbn, nmCard.firstChild);
+      screen.appendChild(nmCard);
     }
     screen.appendChild(E("div", { class: "hub-actions" }, [
       E("button", { class: "hub-btn", on: { click: function () { TM.ui.go("compmode-view"); } } }, [ E("span", { class: "hub-ic", text: s.kind === "league" ? "📊" : "🏆" }), E("span", { text: s.kind === "league" ? "Tabela" : (s.kind === "tournament" ? "Grupos / Chave" : "Chaveamento") }) ]),
@@ -328,6 +336,7 @@
   TM.ui.register("compmode-lineup", function (screen) {
     var E = el();
     var s = load(); if (!s) { TM.ui.go("compmode"); return; }
+    TM.ui.applyCompTheme(screen, themeId(s));
     ensureLineup(s); save(s);
     pickSlot = null;
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("compmode-hub"); }));
@@ -401,6 +410,7 @@
   TM.ui.register("compmode-play", function (screen) {
     var s = load(); var nx = advance(s);
     if (nx.end) { TM.ui.go("compmode-hub"); return; }
+    TM.ui.applyCompTheme(screen, themeId(s));
     var teamA = teamFor(s, nx.homeId), teamB = teamFor(s, nx.awayId);
     var userSide = nx.homeId === s.userId ? 0 : 1;
     var simOpts = { realism: realism(), neutral: true };
@@ -428,6 +438,7 @@
 
   TM.ui.register("compmode-result", function (screen, p) {
     var E = el();
+    var sT = load(); if (sT) TM.ui.applyCompTheme(screen, themeId(sT));
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("compmode-hub"); }));
     var win = p.hs > p.as ? p.a : p.as > p.hs ? p.b : null;
     screen.appendChild(E("div", { class: "result-hero" }, [
@@ -440,6 +451,7 @@
   TM.ui.register("compmode-view", function (screen) {
     var E = el();
     var s = load();
+    if (s) TM.ui.applyCompTheme(screen, themeId(s));
     screen.appendChild(TM.ui.topbar(s.kind === "league" ? "📊 Classificação" : "🏆 Chaveamento", function () { TM.ui.go("compmode-hub"); }));
     if (s.kind === "league") { renderLeagueTable(screen, s, s.table); return; }
     if (s.kind === "ko") { renderBracketKO(screen, s, s); return; }

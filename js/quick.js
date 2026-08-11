@@ -81,6 +81,11 @@
         return el("div", { class: "prev-team" }, [ img, el("div", { class: "prev-name", text: t.name }), TM.ui.ovBadge(rating) ]);
       }
       preview.appendChild(el("div", { class: "prev-row" }, [ badge(a), el("div", { class: "prev-x", text: "×" }), badge(b) ]));
+      var isNat = setup.source === "nation";
+      preview.appendChild(el("div", { class: "scout-btn-row actions two" }, [
+        TM.ui.button("🔍 Analisar " + a.name, function () { TM.ui.go("scout", { teamId: setup.teamA, isNation: isNat, back: function () { TM.ui.go("quick"); } }); }, "btn ghost small"),
+        TM.ui.button("🔍 Analisar " + b.name, function () { TM.ui.go("scout", { teamId: setup.teamB, isNation: isNat, back: function () { TM.ui.go("quick"); } }); }, "btn ghost small")
+      ]));
     }
     updatePreview();
 

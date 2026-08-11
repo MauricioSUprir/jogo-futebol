@@ -367,6 +367,7 @@
         el("div", { class: "nm-label", text: "Rodada " + (c.round + 1) + "/" + c.fixtures.length + (isHome ? " · Em casa" : " · Fora") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: isHome ? club.name : opp.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: isHome ? opp.name : club.name }) ]),
         TM.ui.stadiumBanner(homeClubP, { compact: true, label: "Mandante: " + homeClubP.name }),
+        TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: opp.id, isNation: false, compId: compId, back: function () { TM.ui.go("player-hub"); } }); }, "btn ghost"),
         TM.ui.button(c.injured > 0 ? "▶ Avançar (lesionado)" : "▶ Jogar", function () { playMatch(c); }, "btn primary")
       ]);
       TM.ui.applyCompTheme(card, compId);
@@ -765,6 +766,7 @@
       screen.appendChild(el("div", { class: "next-match" }, [
         el("div", { class: "nm-label", text: "🏆 " + label }),
         el("div", { class: "nm-teams" }, [ el("span", { text: hN.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: aN.name }) ]),
+        TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: m.homeId === c.nationId ? m.awayId : m.homeId, isNation: true, compId: "nat-world", back: function () { TM.ui.go("player-nation"); } }); }, "btn ghost"),
         TM.ui.button("▶ Jogar", function () { playNationMatch(c); }, "btn primary")
       ]));
     }

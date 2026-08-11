@@ -347,6 +347,10 @@
         el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ])
       ];
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
+      var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
+      kids.push(TM.ui.button("🔍 Analisar adversário", function () {
+        TM.ui.go("scout", { teamId: oppId, isNation: false, compId: compId, back: function () { TM.ui.go("coach-hub"); } });
+      }, "btn ghost"));
       if (daysLeft > 0) {
         kids.push(el("div", { class: "skip-row" }, [
           TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
@@ -591,6 +595,7 @@
           ]));
         } else if (c.currentDay >= w.friendlyDay) {
           kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada — é dia de jogo!" }));
+          kids.push(TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: w.oppId, isNation: true, compId: "nat-world", back: function () { TM.ui.go("coach-nation"); } }); }, "btn ghost"));
           kids.push(TM.ui.button("▶ Jogar amistoso", function () { TM.ui.go("coach-nation-play"); }, "btn primary"));
         } else {
           kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada. Amistoso em " + (w.friendlyDay - c.currentDay) + " dia(s)." }));
@@ -657,6 +662,8 @@
         el("div", { class: "nm-date", text: "🗓️ " + C().dateOf(c, md).full })
       ];
       if (c.currentDay >= md) {
+        var wcOpp = m.homeId === c.nation.id ? m.awayId : m.homeId;
+        wkids.push(TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: wcOpp, isNation: true, compId: "nat-world", back: function () { TM.ui.go("coach-nation"); } }); }, "btn ghost"));
         wkids.push(TM.ui.button("▶ Jogar", function () { TM.ui.go("coach-nation-wc-play"); }, "btn primary"));
       } else {
         wkids.push(el("div", { class: "nm-date", text: "Faltam " + (md - c.currentDay) + " dia(s)." }));
