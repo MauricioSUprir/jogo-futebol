@@ -1179,3 +1179,11 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .ddot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.14); }
 .ddot.done { background: var(--gold); }
 .ddot.cur { background: #fff; box-shadow: 0 0 0 2px var(--gold); }
+
+/* ---------- 2 Jogadores (mesmo aparelho) ---------- */
+.seat { display: flex; flex-direction: column; gap: 7px; padding: 11px; border-radius: 12px;
+  background: var(--black-soft); border: 1px solid var(--line); }
+.seat-head { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 14px; }
+.seat-emoji { font-size: 16px; }
+.seat-owner { font-size: 12px; font-weight: 800; margin-top: 2px; }
+.vs-names { text-align: center; font-weight: 800; font-size: 14px; margin: 8px 0; }
