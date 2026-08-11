@@ -215,10 +215,18 @@
   }
   function pow2Floor(n) { var p = 1; while (p * 2 <= n) p *= 2; return p; }
 
+  // copas nacionais que reúnem 1ª e 2ª divisão do país
+  var CUP_DIVS = {
+    br: ["br", "br2"], br2: ["br", "br2"], en: ["en", "en2"], en2: ["en", "en2"],
+    it: ["it", "it2"], it2: ["it", "it2"], es: ["es", "es2"], es2: ["es", "es2"]
+  };
   function buildDomesticCup(teamId, leagueId) {
-    var pool = topClubs(leagueId, 16);
+    var divs = CUP_DIVS[leagueId] || [leagueId];
+    var pool = [];
+    if (divs.length > 1) { divs.forEach(function (d) { pool = pool.concat(topClubs(d, 16)); }); } // 16 de cada divisão -> 32
+    else { pool = topClubs(leagueId, 16); }
     if (pool.indexOf(teamId) < 0) { pool[pool.length - 1] = teamId; } // garante o usuário
-    return buildKO(pool, CUP_NAME[leagueId] || "Copa Nacional", "cup", true); // copa nacional: ida e volta
+    return buildKO(pool, CUP_NAME[divs[0]] || "Copa Nacional", "cup", true); // nome pela 1ª divisão; ida e volta
   }
   // ranking de uma liga: pela posição final da temporada passada (só a liga do
   // usuário é simulada); as demais ligas usam o overall como critério
@@ -260,10 +268,21 @@
   // Mundial de Clubes (carreira): 32 melhores clubes de todas as ligas, formato Copa
   // do Mundo (grupos + mata-mata em jogo único). Acontece 1 ano antes da Copa (season % 4 === 0).
   function buildMundial(career) {
-    var all = [];
-    TM.data.world().leagues.forEach(function (L) { all = all.concat(L.clubIds); });
-    all.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
-    var field = all.slice(0, 32);
+    // representa TODAS as 1ª divisões (inclui as ligas novas); exclui as 2ª divisões
+    var firstDivs = TM.data.world().leagues.map(function (L) { return L.id; }).filter(function (id) { return !DIV_UP[id]; });
+    var field = [];
+    firstDivs.forEach(function (lg) { field = field.concat(topClubs(lg, 2)); }); // top 2 de cada liga
+    field = field.filter(function (id, i) { return field.indexOf(id) === i; });
+    if (field.length > 32) {
+      // mantém pelo menos o melhor de cada liga; corta os excedentes mais fracos
+      field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      field = field.slice(0, 32);
+    } else if (field.length < 32) {
+      var extra = [];
+      firstDivs.forEach(function (lg) { extra = extra.concat(topClubs(lg, 6)); });
+      extra.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      for (var i = 0; i < extra.length && field.length < 32; i++) { if (field.indexOf(extra[i]) < 0) field.push(extra[i]); }
+    }
     if (field.indexOf(career.teamId) < 0) field[field.length - 1] = career.teamId; // garante o clube do usuário
     return { type: "tournament", key: "mundial", name: "Mundial de Clubes",
       tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: false, twoLeg: false, userId: career.teamId }) };
