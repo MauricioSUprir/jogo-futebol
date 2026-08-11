@@ -335,6 +335,8 @@
       { icon: "🎯", name: "Master League", route: "coach" },
       { icon: "⭐", name: "Rumo ao Estrelato", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
+      { icon: "💎", name: "Time dos Sonhos", route: "dream" },
+      { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
