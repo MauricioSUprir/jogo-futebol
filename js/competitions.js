@@ -11,7 +11,8 @@
     de: "Copa da Alemanha", fr: "Copa da França", pt: "Copa de Portugal", nl: "Copa da Holanda",
     ar: "Copa da Argentina", us: "Copa dos EUA",
     mx: "Copa do México", sa: "Copa da Arábia Saudita", tr: "Copa da Turquia",
-    ec: "Copa do Equador", uy: "Copa do Uruguai", ru: "Copa da Rússia"
+    ec: "Copa do Equador", uy: "Copa do Uruguai", ru: "Copa da Rússia",
+    br2: "Copa do Brasil", en2: "Copa da Inglaterra", it2: "Copa da Itália", es2: "Copa da Espanha"
   };
   var REGION = { br: "sa", ar: "sa", ec: "sa", uy: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", us: "na", mx: "na", sa: "as" };
   var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)", as: "Champions League da Ásia" };
@@ -1103,6 +1104,47 @@
     if (Math.random() < 0.28) maybeInterest(career);
   }
 
+  /* ---------- rebaixamento / acesso (1ª <-> 2ª divisão) ---------- */
+  var DIV_DOWN = { br: "br2", en: "en2", it: "it2", es: "es2" };  // rebaixa para
+  var DIV_UP = { br2: "br", en2: "en", it2: "it", es2: "es" };    // sobe para
+  var RELEG_N = 4, PROMO_N = 4;
+  function moveClubToLeague(fromLg, toLg, clubId) {
+    var from = TM.data.league(fromLg), to = TM.data.league(toLg);
+    if (!from || !to) return;
+    from.clubIds = from.clubIds.filter(function (id) { return id !== clubId; });
+    if (to.clubIds.indexOf(clubId) < 0) to.clubIds.push(clubId);
+    var club = TM.data.club(clubId); if (club) club.leagueId = toLg;
+  }
+  function swapDivisions(career, userLg, targetLg) {
+    var cands = TM.data.league(targetLg).clubIds.filter(function (id) { return id !== career.teamId; });
+    cands.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+    var counterpart = cands[0];
+    moveClubToLeague(userLg, targetLg, career.teamId);
+    if (counterpart) moveClubToLeague(targetLg, userLg, counterpart);
+    career.divSwaps = career.divSwaps || [];
+    career.divSwaps.push({ user: career.teamId, counterpart: counterpart, userLg: userLg, targetLg: targetLg });
+    career.leagueId = targetLg;
+  }
+  function applyDivSwaps(career) {
+    (career.divSwaps || []).forEach(function (s) {
+      moveClubToLeague(s.userLg, s.targetLg, s.user);
+      if (s.counterpart) moveClubToLeague(s.targetLg, s.userLg, s.counterpart);
+    });
+  }
+  function applyPromRel(career) {
+    var lg = career.leagueId, st = career.lastStanding || [];
+    if (!st.length) return;
+    var pos = st.indexOf(career.teamId) + 1, N = st.length;
+    if (pos <= 0) return;
+    if (DIV_DOWN[lg] && pos > N - RELEG_N) {
+      var toL = DIV_DOWN[lg]; swapDivisions(career, lg, toL);
+      TM.notify.push(career, { icon: "⬇️", title: "Rebaixamento", text: career.teamName + " terminou em " + pos + "º e foi rebaixado para a " + TM.data.league(toL).name + "." });
+    } else if (DIV_UP[lg] && pos <= PROMO_N) {
+      var toU = DIV_UP[lg]; swapDivisions(career, lg, toU);
+      TM.notify.push(career, { icon: "⬆️", title: "Acesso!", text: career.teamName + " terminou em " + pos + "º e conquistou o acesso à " + TM.data.league(toU).name + "!" });
+    }
+  }
+
   function newSeason(career) {
     // fotografa o elenco antes do envelhecimento para narrar a evolução
     var before = {};
@@ -1111,6 +1153,7 @@
     ageWorld(career);
     ageYouth(career);
     processLoans(career);
+    applyPromRel(career); // rebaixa/promove antes de montar a nova temporada
     // verba de fim de temporada (independente de títulos)
     var mult = career.money ? career.money.mult : 1;
     var bonus = Math.round(20 * mult);
@@ -1119,6 +1162,10 @@
     // resumo da evolução do elenco
     seasonEvoSummary(career, before);
     seasonSetup(career);
+    // classificação continental (pelas primeiras posições da liga)
+    if (career.comps.cont && career.comps.cont.name) {
+      TM.notify.push(career, { icon: "🌍", title: "Classificado!", text: "Pela campanha na liga, " + career.teamName + " disputará a " + career.comps.cont.name + " nesta temporada." });
+    }
     career.objective = generateObjective(career.teamId);
     maybeNationInvite(career);
     // renova o calendário da seleção (Copa do Mundo de 4 em 4 anos, senão amistosos)
@@ -1178,6 +1225,7 @@
     syncLineup(career); // reincorpora contratados que faltavam no banco
     applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
     applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
+    applyDivSwaps(career); // reaplica rebaixamentos/acessos (mundo regenera determinístico)
     return career;
   }
 
