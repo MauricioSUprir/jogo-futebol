@@ -217,7 +217,7 @@
 
   // copas nacionais que reúnem 1ª e 2ª divisão do país
   var CUP_DIVS = {
-    br: ["br", "br2"], br2: ["br", "br2"], en: ["en", "en2"], en2: ["en", "en2"],
+    br: ["br", "br2", "br3"], br2: ["br", "br2", "br3"], br3: ["br", "br2", "br3"], en: ["en", "en2"], en2: ["en", "en2"],
     it: ["it", "it2"], it2: ["it", "it2"], es: ["es", "es2"], es2: ["es", "es2"]
   };
   function buildDomesticCup(teamId, leagueId) {
@@ -1124,8 +1124,8 @@
   }
 
   /* ---------- rebaixamento / acesso (1ª <-> 2ª divisão) ---------- */
-  var DIV_DOWN = { br: "br2", en: "en2", it: "it2", es: "es2" };  // rebaixa para
-  var DIV_UP = { br2: "br", en2: "en", it2: "it", es2: "es" };    // sobe para
+  var DIV_DOWN = { br: "br2", br2: "br3", en: "en2", it: "it2", es: "es2", fr: "fr2", de: "de2" };  // rebaixa para
+  var DIV_UP = { br2: "br", br3: "br2", en2: "en", it2: "it", es2: "es", fr2: "fr", de2: "de" };    // sobe para
   var RELEG_N = 4, PROMO_N = 4;
   function moveClubToLeague(fromLg, toLg, clubId) {
     var from = TM.data.league(fromLg), to = TM.data.league(toLg);
