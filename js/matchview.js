@@ -47,6 +47,14 @@
       el("div", { class: "bc-progress" }, [ progressFill ])
     ]));
 
+    // estádio do jogo (foto + nome) — mandante = time A; em jogo neutro, mostra como sede
+    var homeClub = a.club || null;
+    if (homeClub && TM.ui.stadiumBanner) {
+      var neutral = cfg.simOpts && cfg.simOpts.neutral;
+      var sb = TM.ui.stadiumBanner(homeClub, { compact: true, label: neutral ? "Sede da partida" : (TM.data.stadium(homeClub).capacity ? Math.round(TM.data.stadium(homeClub).capacity / 1000) + " mil lugares · casa do " + a.name : "casa do " + a.name) });
+      if (sb) screen.appendChild(sb);
+    }
+
     var feed = el("div", { class: "broadcast-feed" });
     screen.appendChild(feed);
 

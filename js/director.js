@@ -236,6 +236,7 @@
           el("span", { class: "nm-x", text: "×" }),
           el("span", { text: awayClub.name }), TM.img.clubImg(awayClub, "nm-crest")
         ]),
+        TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }),
         el("div", { class: "setting-hint", style: "text-align:center", text: "🎥 O técnico " + co.name + " comanda a equipe." }),
         TM.ui.button("▶ Avançar jogo", function () {
           var r = advance(c);

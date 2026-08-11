@@ -92,6 +92,36 @@
     return (E && E[kind] && E[kind][id]) || null;
   }
 
+  // ilustração do estádio (SVG gerado, tintado com as cores do clube) — funciona offline
+  function stadiumArt(club) {
+    var col = (club && club.colors) || { primary: "#2f8f4e", secondary: "#eeeeee" };
+    var p = col.primary, s = col.secondary;
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="400" height="220">' +
+      '<defs>' +
+      '<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e1c2b"/><stop offset="1" stop-color="#173651"/></linearGradient>' +
+      '<radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff8d0" stop-opacity="0.85"/><stop offset="1" stop-color="#fff8d0" stop-opacity="0"/></radialGradient>' +
+      '<linearGradient id="pitch" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#33a457"/><stop offset="1" stop-color="#1f7a3c"/></linearGradient>' +
+      '<clipPath id="pc"><ellipse cx="200" cy="152" rx="128" ry="44"/></clipPath>' +
+      '</defs>' +
+      '<rect width="400" height="220" fill="url(#sky)"/>' +
+      '<circle cx="44" cy="28" r="36" fill="url(#glow)"/><circle cx="356" cy="28" r="36" fill="url(#glow)"/>' +
+      '<ellipse cx="200" cy="150" rx="188" ry="74" fill="' + p + '"/>' +
+      '<ellipse cx="200" cy="150" rx="188" ry="74" fill="#000" opacity="0.18"/>' +
+      '<ellipse cx="200" cy="140" rx="188" ry="70" fill="none" stroke="' + s + '" stroke-width="4" opacity="0.45"/>' +
+      '<ellipse cx="200" cy="151" rx="152" ry="57" fill="#0c0c0c" opacity="0.55"/>' +
+      '<ellipse cx="200" cy="152" rx="128" ry="44" fill="url(#pitch)"/>' +
+      '<g clip-path="url(#pc)">' +
+      '<g opacity="0.12"><rect x="150" y="104" width="20" height="96" fill="#000"/><rect x="190" y="104" width="20" height="96" fill="#000"/><rect x="230" y="104" width="20" height="96" fill="#000"/></g>' +
+      '<line x1="200" y1="106" x2="200" y2="198" stroke="#fff" stroke-width="1.5" opacity="0.5"/>' +
+      '<ellipse cx="200" cy="152" rx="18" ry="9" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.5"/>' +
+      '</g>' +
+      '<g stroke="#0a0a0a" stroke-width="3"><line x1="44" y1="30" x2="44" y2="118"/><line x1="356" y1="30" x2="356" y2="118"/></g>' +
+      '<rect x="30" y="20" width="28" height="14" rx="3" fill="#fdf6c9"/><rect x="342" y="20" width="28" height="14" rx="3" fill="#fdf6c9"/>' +
+      '</svg>';
+    return svgURI(svg);
+  }
+
   // avatar placeholder do treinador: círculo colorido (cor derivada do nome) + iniciais
   function coachAvatarSVG(coach) {
     var h = 0; for (var i = 0; i < coach.name.length; i++) h = (h * 31 + coach.name.charCodeAt(i)) % 360;
@@ -130,6 +160,12 @@
     },
     nationImg: function (nation, cls) {
       return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
+    },
+    // "foto" do estádio: foto real (assets/estadios/<id>.jpg) se existir, senão ilustração gerada
+    stadiumImg: function (club, cls) {
+      var art = stadiumArt(club);
+      var real = embedded("estadios", club.id) || ((global.TM_EMBED && global.TM_EMBED.estadios) ? null : ("assets/estadios/" + club.id + ".jpg"));
+      return imgWithFallback(real || art, art, (club.name + " — estádio"), cls);
     },
     compBadge: compBadge,
     // comp pode ser o id (string) ou o objeto de competição

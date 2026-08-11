@@ -235,12 +235,29 @@
     return banner;
   }
 
+  // banner do estádio (foto + nome + capacidade). opts.label sobrescreve o subtítulo.
+  function stadiumBanner(club, opts) {
+    if (!club) return null;
+    opts = opts || {};
+    var st = TM.data.stadium(club);
+    var cap = st.capacity ? (Math.round(st.capacity / 1000) + " mil lugares") : "";
+    var sub = opts.label || (club.name + (cap ? " · " + cap : ""));
+    return el("div", { class: "stadium-banner" + (opts.compact ? " compact" : "") }, [
+      TM.img.stadiumImg(club, "stadium-photo"),
+      el("div", { class: "stadium-cap" }, [
+        el("div", { class: "stadium-name", text: "🏟️ " + st.name }),
+        el("div", { class: "stadium-sub", text: sub })
+      ])
+    ]);
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
+    stadiumBanner: stadiumBanner,
     current: function () { return current; }
   };
 
@@ -435,6 +452,10 @@
       isNation ? TM.img.nationImg(team, "ch-crest") : TM.img.clubImg(team, "ch-crest"),
       el("div", {}, [ el("div", { class: "ch-name", text: team.name }) ])
     ]));
+    if (!isNation) {
+      var sb = stadiumBanner(team);
+      if (sb) screen.appendChild(el("div", { class: "panel-narrow", style: "padding-top:0" }, [ sb ]));
+    }
     var ids = isNation ? (team.players || []) : team.playerIds;
     var players = ids.map(function (id) { return TM.data.player(id); }).filter(Boolean);
     if (!players.length) { screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Elenco não disponível." })); return; }
