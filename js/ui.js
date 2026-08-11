@@ -251,13 +251,70 @@
     ]);
   }
 
+  /* ---------- seletor de time visual (escudos + nome + overall, por liga) ---------- */
+  function teamPickerEl(opts) {
+    // opts: { source:"club"|"nation", onPick(id), current, leagues? (lista de ids p/ filtrar) }
+    var source = opts.source || "club";
+    var wrap = el("div", { class: "team-picker" });
+    var search = el("input", { class: "select tp-search", type: "text", placeholder: "🔎 buscar time…" });
+    var listWrap = el("div", { class: "tp-list" });
+    wrap.appendChild(search); wrap.appendChild(listWrap);
+    function row(imgEl, name, rating, id) {
+      var r = el("button", { class: "tp-row" + (opts.current === id ? " sel" : ""), on: { click: function () { opts.onPick(id); } } }, [
+        imgEl, el("span", { class: "tp-name", text: name }), ovBadge(rating)
+      ]);
+      return r;
+    }
+    function render() {
+      listWrap.innerHTML = "";
+      var q = (search.value || "").trim().toLowerCase();
+      if (source === "nation") {
+        var nats = TM.data.world().nations.slice().filter(function (n) { return !q || n.name.toLowerCase().indexOf(q) >= 0; })
+          .sort(function (a, b) { return TM.comp.natRating(b.id) - TM.comp.natRating(a.id); });
+        nats.forEach(function (n) { listWrap.appendChild(row(TM.img.nationImg(n, "tp-crest"), n.name, TM.comp.natRating(n.id), n.id)); });
+        if (!nats.length) listWrap.appendChild(el("p", { class: "intro-text", text: "Nenhuma seleção encontrada." }));
+        return;
+      }
+      var leagues = TM.data.world().leagues;
+      if (opts.leagues) leagues = leagues.filter(function (lg) { return opts.leagues.indexOf(lg.id) >= 0; });
+      var any = false;
+      leagues.forEach(function (lg) {
+        var clubs = lg.clubIds.map(function (id) { return TM.data.club(id); })
+          .filter(function (c) { return c && (!q || c.name.toLowerCase().indexOf(q) >= 0); })
+          .sort(function (a, b) { return TM.data.clubRating(b.id) - TM.data.clubRating(a.id); });
+        if (!clubs.length) return;
+        any = true;
+        var comp = TM.data.competition("lg-" + lg.id);
+        listWrap.appendChild(el("div", { class: "tp-league" }, [
+          comp ? TM.img.compImg(comp, "tp-lg-logo") : el("span", {}),
+          el("span", { class: "tp-lg-name", text: lg.name })
+        ]));
+        clubs.forEach(function (c) { listWrap.appendChild(row(TM.img.clubImg(c, "tp-crest"), c.name, TM.data.clubRating(c.id), c.id)); });
+      });
+      if (!any) listWrap.appendChild(el("p", { class: "intro-text", text: "Nenhum time encontrado." }));
+    }
+    search.addEventListener("input", render);
+    render();
+    return wrap;
+  }
+  // rota de tela cheia para escolher um time (usa um callback guardado)
+  var _pickCb = null;
+  function pickTeam(o) { _pickCb = o.onPick; go("pick-team", { source: o.source, title: o.title, current: o.current, back: o.back, leagues: o.leagues }); }
+  register("pick-team", function (screen, params) {
+    screen.appendChild(topbar(params.title || "Escolha o time", function () { if (params.back) params.back(); else go("modes"); }));
+    screen.appendChild(teamPickerEl({
+      source: params.source, current: params.current, leagues: params.leagues,
+      onPick: function (id) { var cb = _pickCb; _pickCb = null; if (cb) cb(id); }
+    }));
+  });
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner,
+    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam,
     current: function () { return current; }
   };
 
@@ -337,7 +394,6 @@
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
       { icon: "💎", name: "Time dos Sonhos", route: "dream" },
       { icon: "🎲", name: "Draft", route: "draft" },
-      { icon: "📱", name: "2 Jogadores", route: "versus" },
       { icon: "🌐", name: "Online (amigos)", route: "online" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },

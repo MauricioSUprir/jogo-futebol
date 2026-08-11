@@ -24,52 +24,35 @@
     });
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tipo de time" }), srcSeg ]));
 
-    // opções de time conforme a fonte (clubes: da liga escolhida naquele lado; seleções: todas)
-    function teamOptions(leagueId) {
-      if (setup.source === "nation") {
-        return TM.data.world().nations.map(function (n) { return { id: n.id, name: n.name }; })
-          .sort(function (a, b) { return a.name.localeCompare(b.name); });
-      }
-      var league = TM.data.league(leagueId);
-      return league.clubIds.map(function (id) { var c = TM.data.club(id); return { id: id, name: c.name }; })
-        .sort(function (a, b) { return a.name.localeCompare(b.name); });
-    }
-
-    // cada lado escolhe a PRÓPRIA liga e depois o time (permite clubes de ligas diferentes se enfrentarem)
-    function sidePicker(label, leagueKey, teamKey) {
-      var kids = [ el("div", { class: "setting-label", text: label }) ];
-      if (setup.source === "club") {
-        var leagueSel = el("select", { class: "select" });
-        TM.data.world().leagues.forEach(function (lg) {
-          var o = el("option", { value: lg.id, text: lg.name });
-          if (lg.id === setup[leagueKey]) o.selected = true;
-          leagueSel.appendChild(o);
-        });
-        leagueSel.addEventListener("change", function () { setup[leagueKey] = leagueSel.value; setup[teamKey] = null; TM.ui.go("quick"); });
-        kids.push(leagueSel);
-      }
-      var sel = el("select", { class: "select" });
-      sel.appendChild(el("option", { value: "", text: "— escolha o time —" }));
-      teamOptions(setup[leagueKey]).forEach(function (t) {
-        var o = el("option", { value: t.id, text: t.name });
-        if (setup[teamKey] === t.id) o.selected = true;
-        sel.appendChild(o);
-      });
-      sel.addEventListener("change", function () { setup[teamKey] = sel.value || null; updatePreview(); });
-      kids.push(sel);
-      return el("div", { class: "setting side-picker" }, kids);
-    }
-
-    body.appendChild(sidePicker("🏠 Time da casa", "leagueA", "teamA"));
-    body.appendChild(el("div", { class: "vs-divider", text: "VS" }));
-    body.appendChild(sidePicker("✈️ Time visitante", "leagueB", "teamB"));
-
-    var preview = el("div", { class: "match-preview" });
-    body.appendChild(preview);
-
     function teamObj(id) {
       return setup.source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id);
     }
+    function crestFor(id, cls) { return setup.source === "nation" ? TM.img.nationImg(TM.data.nation(id), cls) : TM.img.clubImg(TM.data.club(id), cls); }
+    function nameFor(id) { return setup.source === "nation" ? TM.data.nation(id).name : TM.data.club(id).name; }
+    function ratingFor(id) { return setup.source === "nation" ? TM.comp.natRating(id) : TM.data.clubRating(id); }
+
+    // cartão de escolha visual (abre o seletor com escudos/overall)
+    function chosenCard(label, teamKey) {
+      var id = setup[teamKey];
+      var open = function () {
+        TM.ui.pickTeam({ source: setup.source, title: label, current: id, back: function () { TM.ui.go("quick"); },
+          onPick: function (pid) { setup[teamKey] = pid; TM.ui.go("quick"); } });
+      };
+      if (!id) return el("button", { class: "chosen-team empty", on: { click: open } }, [ el("span", { text: "➕ " + label } ) ]);
+      return el("div", { class: "chosen-team", on: { click: open } }, [
+        crestFor(id, "chosen-crest"),
+        el("div", { class: "chosen-info" }, [ el("div", { class: "chosen-name", text: nameFor(id) }), el("div", { class: "chosen-sub", text: label + " · toque para trocar" }) ]),
+        TM.ui.ovBadge(ratingFor(id))
+      ]);
+    }
+    body.appendChild(el("div", { class: "setting-label", text: "🏠 Time da casa" }));
+    body.appendChild(chosenCard("Time da casa", "teamA"));
+    body.appendChild(el("div", { class: "vs-divider", text: "VS" }));
+    body.appendChild(el("div", { class: "setting-label", text: "✈️ Time visitante" }));
+    body.appendChild(chosenCard("Time visitante", "teamB"));
+
+    var preview = el("div", { class: "match-preview" });
+    body.appendChild(preview);
     function updatePreview() {
       TM.ui.clear(preview);
       if (!setup.teamA || !setup.teamB) return;

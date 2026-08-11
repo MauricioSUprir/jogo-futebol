@@ -171,14 +171,14 @@
 
   // ---- chat ----
   function chatId(a, b) { return [a, b].sort().join("_"); }
-  net.sendMessage = function (fuid, text) {
+  net.sendMessage = function (fuid, text, kind) {
     text = (text || "").trim().slice(0, 300);
     if (!text) return;
-    net._db.ref("chats/" + chatId(net.me.uid, fuid) + "/messages").push({ from: net.me.uid, text: text, ts: firebaseNow() });
+    net._db.ref("chats/" + chatId(net.me.uid, fuid) + "/messages").push({ from: net.me.uid, text: text, kind: kind || "text", ts: firebaseNow() });
   };
   net.listenChat = function (fuid, cb) {
-    var ref = net._db.ref("chats/" + chatId(net.me.uid, fuid) + "/messages").limitToLast(60);
-    var handler = ref.on("child_added", function (snap) { var v = snap.val(); cb({ from: v.from, text: v.text, ts: v.ts, mine: v.from === net.me.uid }); });
+    var ref = net._db.ref("chats/" + chatId(net.me.uid, fuid) + "/messages").limitToLast(80);
+    var handler = ref.on("child_added", function (snap) { var v = snap.val(); cb({ from: v.from, text: v.text, kind: v.kind || "text", ts: v.ts, mine: v.from === net.me.uid }); });
     return function stop() { ref.off("child_added", handler); };
   };
 

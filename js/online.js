@@ -129,19 +129,40 @@
 
   /* ---------- CHAT ---------- */
   var chatStop = null;
+  var EMOJIS = "😀 😁 😂 🤣 😅 😊 😍 😎 😉 😜 🤔 😏 😐 😴 😢 😭 😡 🤬 😱 🥳 🤯 🥶 🤩 😇 🙃 😬 🤗 🙏 👍 👎 👏 🙌 💪 🤝 👊 ✌️ 🤞 🔥 💥 ⭐ ✨ 💯 ⚽ 🏆 🥇 🎯 🧤 🥅 🚀 ❤️ 💔 😤 🤦 🤷 😅 🐐 🤡 👀 🎉".split(" ");
+  var STICKERS = ["⚽🔥", "🏆🎉", "🐐", "😂😂😂", "👏👏", "😱", "💪😎", "😭😭", "🥳🎊", "⚽🥅 GOOOL!", "🤡", "💯🔥", "😤⚽", "🙏", "🚀", "👑"];
   TM.ui.register("online-chat", function (screen, params) {
     if (!params || !params.fuid) { TM.ui.go("online-friends"); return; }
     screen.appendChild(TM.ui.topbar("💬 " + params.name, function () { if (chatStop) { chatStop(); chatStop = null; } TM.ui.go("online-friends"); }));
-    var thread = el("div", { class: "chat-thread" });
+    var thread = el("div", { class: "chat-thread big" });
     screen.appendChild(thread);
-    var barIn = el("input", { class: "select chat-in", type: "text", maxlength: "300", placeholder: "Escreva uma mensagem…" });
-    function send() { var t = barIn.value.trim(); if (!t) return; N().sendMessage(params.fuid, t); barIn.value = ""; }
+
+    // painéis de emoji / figurinhas (escondidos até tocar)
+    var emojiPanel = el("div", { class: "emoji-panel hidden" });
+    EMOJIS.forEach(function (e) { emojiPanel.appendChild(el("button", { class: "emoji-btn", text: e, on: { click: function () { barIn.value += e; barIn.focus(); } } })); });
+    var stickerPanel = el("div", { class: "sticker-panel hidden" });
+    STICKERS.forEach(function (s) { stickerPanel.appendChild(el("button", { class: "sticker-btn", text: s, on: { click: function () { N().sendMessage(params.fuid, s, "sticker"); hidePanels(); } } })); });
+
+    var barIn = el("input", { class: "select chat-in", type: "text", maxlength: "300", placeholder: "Mensagem…" });
+    function send() { var t = barIn.value.trim(); if (!t) return; N().sendMessage(params.fuid, t, "text"); barIn.value = ""; hidePanels(); }
     barIn.addEventListener("keydown", function (e) { if (e.key === "Enter") send(); });
-    screen.appendChild(el("div", { class: "chat-bar" }, [ barIn, TM.ui.button("Enviar", send, "btn primary small") ]));
+    function hidePanels() { emojiPanel.classList.add("hidden"); stickerPanel.classList.add("hidden"); }
+    function toggle(panel) { var wasHidden = panel.classList.contains("hidden"); hidePanels(); if (wasHidden) panel.classList.remove("hidden"); }
+
+    screen.appendChild(emojiPanel);
+    screen.appendChild(stickerPanel);
+    screen.appendChild(el("div", { class: "chat-bar" }, [
+      el("button", { class: "chat-ic-btn", text: "😀", on: { click: function () { toggle(emojiPanel); } } }),
+      el("button", { class: "chat-ic-btn", text: "🎉", on: { click: function () { toggle(stickerPanel); } } }),
+      barIn,
+      TM.ui.button("➤", send, "btn primary small")
+    ]));
+
     if (chatStop) { chatStop(); }
     chatStop = N().listenChat(params.fuid, function (m) {
       if (!thread.isConnected) { if (chatStop) { chatStop(); chatStop = null; } return; }
-      thread.appendChild(el("div", { class: "chat-bubble " + (m.mine ? "me" : "coach") }, [ el("div", { class: "chat-text", text: m.text }) ]));
+      var isSticker = m.kind === "sticker";
+      thread.appendChild(el("div", { class: "chat-bubble " + (m.mine ? "me" : "coach") + (isSticker ? " sticker-msg" : "") }, [ el("div", { class: isSticker ? "chat-sticker" : "chat-text", text: m.text }) ]));
       thread.scrollTop = thread.scrollHeight;
     });
   });
@@ -221,6 +242,8 @@
         var a = teamObj(m.source, m.hostTeam), b = teamObj(m.source, m.guestTeam);
         var settings = TM.storage.settings();
         var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true });
+        // empate → pênaltis direto (host calcula e compartilha para os dois verem igual)
+        if (result.score[0] === result.score[1]) { result.shootout = TM.engine.shootout(a, b); }
         N().setMatchResult(code, result);
       }
     });
@@ -257,22 +280,18 @@
 
     if (!m.guest) { wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Aguardando o adversário…" })); }
 
-    // meu seletor de time
+    // meu seletor de time (visual, com escudos e overall)
     wrap.appendChild(el("div", { class: "list-head", text: "Escolha seu time (" + (m.source === "nation" ? "seleção" : "clube") + ")" }));
-    if (m.source === "club") {
-      var lgSel = el("select", { class: "select" });
-      TM.data.world().leagues.forEach(function (lg) { var o = el("option", { value: lg.id, text: lg.name }); if (lg.id === roomLeague) o.selected = true; lgSel.appendChild(o); });
-      lgSel.addEventListener("change", function () { roomLeague = lgSel.value; renderRoom(wrap, code, side, m); });
-      wrap.appendChild(lgSel);
+    var openPicker = function () {
+      TM.ui.pickTeam({ source: m.source, title: "Escolha seu time", current: myTeam, back: function () { TM.ui.go("online-room", { code: code, side: side }); },
+        onPick: function (pid) { N().setMatchTeam(code, mySide, pid); TM.ui.go("online-room", { code: code, side: side }); } });
+    };
+    if (myTeam) {
+      var mc = teamPreview(m.source, myTeam, "Você (toque p/ trocar)"); mc.classList.add("clickable"); mc.addEventListener("click", openPicker);
+      wrap.appendChild(mc);
+    } else {
+      wrap.appendChild(el("button", { class: "chosen-team empty", on: { click: openPicker } }, [ el("span", { text: "➕ Escolher meu time" }) ]));
     }
-    var tSel = el("select", { class: "select" });
-    tSel.appendChild(el("option", { value: "", text: "— escolha —" }));
-    teamOptions(m.source, roomLeague).forEach(function (t) { var o = el("option", { value: t.id, text: t.name }); if (myTeam === t.id) o.selected = true; tSel.appendChild(o); });
-    tSel.addEventListener("change", function () { if (tSel.value) N().setMatchTeam(code, mySide, tSel.value); });
-    wrap.appendChild(tSel);
-
-    // prévia do meu + adversário
-    if (myTeam) wrap.appendChild(teamPreview(m.source, myTeam, "Você"));
     if (oppTeam) wrap.appendChild(teamPreview(m.source, oppTeam, oppName || "Adversário"));
     else if (m.guest) wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Adversário escolhendo o time…" }));
 
@@ -300,12 +319,21 @@
     var a = teamObj(m.source, m.hostTeam), b = teamObj(m.source, m.guestTeam);
     var result = sanitize(m.result);
     var settings = TM.storage.settings();
+    function toResult(penWinnerSide) {
+      TM.ui.go("online-result", { a: a, b: b, result: result, hostName: m.hostName, guestName: m.guestName, penWinnerSide: penWinnerSide });
+    }
     TM.matchview.play(screen, {
       teamA: a, teamB: b, result: result, settings: settings,
       title: (m.hostName || "Anfitrião") + " × " + (m.guestName || "Convidado"),
       pauseSide: null, simOpts: { realism: settings.realism, neutral: true },
       onBack: function () { TM.ui.go("online"); },
-      onDone: function () { TM.ui.go("online-result", { a: a, b: b, result: result, hostName: m.hostName, guestName: m.guestName }); }
+      onDone: function () {
+        // empate → cai direto na disputa de pênaltis (mesmo resultado nos dois celulares)
+        if (result.shootout) {
+          TM.ui.go("pen-shootout", { teamA: a, teamB: b, shoot: result.shootout, title: "Pênaltis · Online",
+            onDone: function () { toResult(result.shootout.winner); } });
+        } else { toResult(null); }
+      }
     });
   });
   function sanitize(r) {
@@ -319,11 +347,13 @@
 
   TM.ui.register("online-result", function (screen, params) {
     var r = params.result, a = params.a, b = params.b, hs = r.score[0], as = r.score[1];
-    var winner = hs > as ? (params.hostName || a.name) : as > hs ? (params.guestName || b.name) : null;
+    var pen = params.penWinnerSide != null;
+    var winner = pen ? (params.penWinnerSide === 0 ? (params.hostName || a.name) : (params.guestName || b.name))
+                     : hs > as ? (params.hostName || a.name) : as > hs ? (params.guestName || b.name) : null;
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("online"); }));
     screen.appendChild(el("div", { class: "result-hero" }, [
       el("div", { class: "result-score" }, [ el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: hs + " × " + as }), el("span", { class: "rs-team", text: b.name }) ]),
-      el("div", { class: "result-tag", text: winner ? "🏆 " + winner + " venceu!" : "🤝 Empate!" })
+      el("div", { class: "result-tag", text: winner ? (pen ? "🎯 " + winner + " venceu nos pênaltis!" : "🏆 " + winner + " venceu!") : "🤝 Empate!" })
     ]));
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Voltar ao online", function () { TM.ui.go("online"); }, "btn primary"),
