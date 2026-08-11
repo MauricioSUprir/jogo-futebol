@@ -422,6 +422,10 @@
         ]),
         TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }),
         el("div", { class: "setting-hint", style: "text-align:center", text: "🎥 O técnico " + co.name + " comanda a equipe." }),
+        TM.ui.button("🔍 Analisar adversário", function () {
+          var oppId = pend.homeId === c.teamId ? pend.awayId : pend.homeId;
+          TM.ui.go("scout", { teamId: oppId, isNation: false, compId: (TM.coachCompId ? TM.coachCompId(c, pend.key) : null), back: function () { TM.ui.go("director-hub"); } });
+        }, "btn ghost"),
         TM.ui.button("▶ Avançar jogo", function () {
           var r = advance(c);
           if (r.seasonEnd) { TM.storage.saveCoachCareer(c); }
