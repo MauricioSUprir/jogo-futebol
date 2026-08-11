@@ -198,18 +198,42 @@
 
   // ---- sala de partida online ----
   function genCode() { var s = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789", c = ""; for (var i = 0; i < 5; i++) c += s[Math.floor(Math.random() * s.length)]; return c; }
-  net.createMatch = function (source, cb, tries) {
+  net.createMatch = function (opts, cb, tries) {
+    if (typeof opts === "string") opts = { source: opts };
+    opts = opts || {};
     tries = tries || 0;
     var code = genCode();
     var ref = net._db.ref("matches/" + code);
     ref.transaction(function (cur) {
-      if (cur === null) return { host: net.me.uid, hostName: net.me.name, source: source || "club", createdAt: firebaseNow(), status: "waiting" };
+      if (cur === null) {
+        var base = { host: net.me.uid, hostName: net.me.name, source: opts.source || "club", createdAt: firebaseNow(), status: "waiting" };
+        if (opts.mode) base.mode = opts.mode;
+        if (opts.league) base.league = opts.league;
+        return base;
+      }
       return;
     }, function (err, committed) {
       if (!err && committed) { ref.onDisconnect().remove(); cb(code); }
-      else if (tries < 6) net.createMatch(source, cb, tries + 1);
+      else if (tries < 6) net.createMatch(opts, cb, tries + 1);
       else cb(null);
     });
+  };
+  net.setMatchDraft = function (code, side, ids) {
+    var patch = {}; patch[side === "host" ? "hostDraft" : "guestDraft"] = ids;
+    net._db.ref("matches/" + code).update(patch);
+  };
+  // retrospecto entre dois jogadores (placar histórico) — só o host grava
+  function pairKey(a, b) { return [a, b].sort().join("_"); }
+  net.recordResult = function (hostUid, guestUid, winnerUid) {
+    var ref = net._db.ref("h2h/" + pairKey(hostUid, guestUid));
+    var field = winnerUid ? ("wins/" + winnerUid) : "draws";
+    ref.child(field).transaction(function (c) { return (c || 0) + 1; });
+  };
+  net.getH2H = function (fuid, cb) {
+    net._db.ref("h2h/" + pairKey(net.me.uid, fuid)).once("value").then(function (snap) {
+      var v = snap.val() || {}; var wins = v.wins || {};
+      cb({ me: wins[net.me.uid] || 0, them: wins[fuid] || 0, draws: v.draws || 0 });
+    }).catch(function () { cb({ me: 0, them: 0, draws: 0 }); });
   };
   net.joinMatch = function (code, cb) {
     code = (code || "").trim().toUpperCase();

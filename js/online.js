@@ -134,6 +134,13 @@
   TM.ui.register("online-chat", function (screen, params) {
     if (!params || !params.fuid) { TM.ui.go("online-friends"); return; }
     screen.appendChild(TM.ui.topbar("💬 " + params.name, function () { if (chatStop) { chatStop(); chatStop = null; } TM.ui.go("online-friends"); }));
+    // retrospecto (placar histórico entre vocês)
+    var h2h = el("div", { class: "h2h-bar", text: "Retrospecto: carregando…" });
+    screen.appendChild(h2h);
+    N().getH2H(params.fuid, function (r) {
+      if (!h2h.isConnected) return;
+      h2h.textContent = "🏆 Retrospecto — Você " + r.me + " · " + r.draws + " empate(s) · " + r.them + " " + params.name;
+    });
     var thread = el("div", { class: "chat-thread big" });
     screen.appendChild(thread);
 
@@ -175,19 +182,24 @@
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Crie uma sala e mostre o QR code (ou o código) para o amigo entrar, ou entre numa sala com o código." }));
     var seg = el("div", { class: "preset-msgs" });
-    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickSourceThenCreate(); } } }, [ el("span", { class: "preset-ic", text: "➕" }), el("span", { class: "preset-tx", text: "Criar sala (você convida)" }), el("span", { class: "preset-mood", text: "→" }) ]));
+    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickSourceThenCreate(); } } }, [ el("span", { class: "preset-ic", text: "⚽" }), el("span", { class: "preset-tx", text: "Partida normal (escolher time)" }), el("span", { class: "preset-mood", text: "→" }) ]));
+    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickLeagueThenDraft(); } } }, [ el("span", { class: "preset-ic", text: "🎲" }), el("span", { class: "preset-tx", text: "Draft online (montar time por sorteio)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { TM.ui.go("online-join", {}); } } }, [ el("span", { class: "preset-ic", text: "🔑" }), el("span", { class: "preset-tx", text: "Entrar com código" }), el("span", { class: "preset-mood", text: "→" }) ]));
     body.appendChild(seg);
   });
 
   function pickSourceThenCreate() {
     TM.ui.optionsMenu("Tipo de time", [
-      { label: "⚽ Clubes", fn: function () { doCreate("club"); } },
-      { label: "🌍 Seleções", fn: function () { doCreate("nation"); } }
+      { label: "⚽ Clubes", fn: function () { doCreate({ source: "club" }); } },
+      { label: "🌍 Seleções", fn: function () { doCreate({ source: "nation" }); } }
     ]);
   }
-  function doCreate(source) {
-    N().createMatch(source, function (code) {
+  function pickLeagueThenDraft() {
+    var opts = TM.data.world().leagues.map(function (lg) { return { label: lg.name, fn: function () { doCreate({ source: "club", mode: "draft", league: lg.id }); } }; });
+    TM.ui.optionsMenu("Draft de qual liga?", opts);
+  }
+  function doCreate(opts) {
+    N().createMatch(opts, function (code) {
       if (!code) { TM.ui.toast("Erro ao criar sala"); return; }
       TM.ui.go("online-room", { code: code, side: "host" });
     });
@@ -236,10 +248,11 @@
       // resultado pronto → todos vão para a partida
       if (m.result) { if (roomStop) { roomStop(); roomStop = null; } TM.ui.go("online-match", { code: code, side: side, match: m }); return; }
       renderRoom(wrap, code, side, m);
-      // host calcula o resultado quando os dois times estão definidos
-      if (side === "host" && m.hostTeam && m.guestTeam && !m.result && !roomComputed) {
+      // host calcula o resultado quando os dois lados estão prontos
+      var ready = m.mode === "draft" ? (m.hostDraft && m.guestDraft) : (m.hostTeam && m.guestTeam);
+      if (side === "host" && ready && !m.result && !roomComputed) {
         roomComputed = true;
-        var a = teamObj(m.source, m.hostTeam), b = teamObj(m.source, m.guestTeam);
+        var teams = buildMatchTeams(m), a = teams[0], b = teams[1];
         var settings = TM.storage.settings();
         var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true });
         // empate → pênaltis direto (host calcula e compartilha para os dois verem igual)
@@ -248,6 +261,15 @@
       }
     });
   });
+
+  // monta os dois times da partida (normal = escudos; draft = lista de ids sorteados)
+  function buildMatchTeams(m) {
+    if (m.mode === "draft") {
+      var mk = function (ids, name) { return { id: "d", name: name, players: (ids || []).map(function (id) { return TM.data.player(id); }).filter(Boolean) }; };
+      return [ mk(m.hostDraft, (m.hostName || "Anfitrião") + " (Draft)"), mk(m.guestDraft, (m.guestName || "Convidado") + " (Draft)") ];
+    }
+    return [ teamObj(m.source, m.hostTeam), teamObj(m.source, m.guestTeam) ];
+  }
 
   function renderRoom(wrap, code, side, m) {
     TM.ui.clear(wrap);
@@ -271,14 +293,31 @@
       return;
     }
 
+    var isDraft = m.mode === "draft";
+    var myReady = isDraft ? (side === "host" ? !!m.hostDraft : !!m.guestDraft) : !!myTeam;
+    var oppReady = isDraft ? (side === "host" ? !!m.guestDraft : !!m.hostDraft) : !!oppTeam;
+
     // status dos dois jogadores
     wrap.appendChild(el("div", { class: "room-status" }, [
-      seatChip("🔵", m.hostName || "Anfitrião", !!m.hostTeam),
+      seatChip("🔵", m.hostName || "Anfitrião", isDraft ? !!m.hostDraft : !!m.hostTeam),
       el("span", { class: "vs-mini", text: "×" }),
-      seatChip("🔴", m.guestName || "Convidado…", !!m.guestTeam)
+      seatChip("🔴", m.guestName || "Convidado…", isDraft ? !!m.guestDraft : !!m.guestTeam)
     ]));
 
     if (!m.guest) { wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Aguardando o adversário…" })); }
+
+    // ---- modo DRAFT: cada um monta o time por sorteio ----
+    if (isDraft) {
+      wrap.appendChild(el("div", { class: "list-head", text: "🎲 Draft — " + TM.data.league(m.league).name }));
+      if (myReady) {
+        wrap.appendChild(el("div", { class: "team-preview-row" }, [ el("span", { class: "prev-crest-sm", text: "✅" }), el("div", {}, [ el("div", { class: "tp-owner", text: "Você" }), el("div", { class: "tp-name", text: "Time draftado — pronto!" }) ]) ]));
+      } else if (m.guest || side === "host") {
+        wrap.appendChild(TM.ui.button("🎲 Fazer meu draft", function () { startOnlineDraft(code, side, m.league); }, "btn primary big"));
+      }
+      wrap.appendChild(el("div", { class: "waiting-line", text: oppReady ? "Adversário: pronto ✔" : (m.guest ? "Adversário: draftando…" : "Aguardando adversário entrar…") }));
+      if (myReady && oppReady) wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Tudo pronto! Iniciando a partida…" }));
+      return;
+    }
 
     // meu seletor de time (visual, com escudos e overall)
     wrap.appendChild(el("div", { class: "list-head", text: "Escolha seu time (" + (m.source === "nation" ? "seleção" : "clube") + ")" }));
@@ -312,15 +351,71 @@
   function qrSvg(text) { var qr = global.qrcode(0, "M"); qr.addData(text); qr.make(); return qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true }); }
   function leaveRoom(code, side) { if (roomStop) { roomStop(); roomStop = null; } if (side === "host") N().leaveMatch(code); }
 
+  /* ---------- DRAFT ONLINE (cada jogador monta 11 por sorteio 1-de-5) ---------- */
+  var odraft = null; // { code, side, league, pool, plan, step, picks, picked, options }
+  var OD_PLAN = ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "FW", "FW", "FW"];
+  var OD_ABBR = { GK: "GOL", DF: "ZAG", MF: "MEI", FW: "ATA" };
+  var OD_ORDER = { GK: 0, DF: 1, MF: 2, FW: 3 };
+  function odShuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function startOnlineDraft(code, side, league) {
+    var pool = [];
+    TM.data.league(league).clubIds.forEach(function (cid) { pool = pool.concat(TM.data.clubPlayers(cid)); });
+    odraft = { code: code, side: side, league: league, pool: pool, step: 0, picks: [], picked: {}, options: null };
+    TM.ui.go("online-draft");
+  }
+  function odRoll() {
+    var pos = OD_PLAN[odraft.step];
+    var avail = odraft.pool.filter(function (p) { return !odraft.picked[p.id] && p.pos === pos; });
+    odraft.options = odShuffle(avail).slice(0, 5);
+  }
+  TM.ui.register("online-draft", function (screen) {
+    if (!odraft) { TM.ui.go("online"); return; }
+    var total = OD_PLAN.length;
+    if (odraft.step >= total) { finishOnlineDraft(); return; }
+    if (!odraft.options) odRoll();
+    var pos = OD_PLAN[odraft.step];
+    screen.appendChild(TM.ui.topbar("🎲 Draft " + (odraft.step + 1) + "/" + total, function () {
+      TM.ui.confirm("Sair do draft?", "As escolhas serão perdidas.", "Sair", function () { var c = odraft.code, s = odraft.side; odraft = null; TM.ui.go("online-room", { code: c, side: s }); }, true);
+    }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("div", { class: "draft-progress" }, [
+      el("div", { class: "draft-step-label", text: "Escolha seu " + OD_ABBR[pos] + " — 1 de 5" }),
+      el("div", { class: "draft-dots" }, OD_PLAN.map(function (_, i) { return el("span", { class: "ddot " + (i < odraft.step ? "done" : i === odraft.step ? "cur" : "") }); }))
+    ]));
+    var list = el("div", { class: "build-list draft-opts" });
+    odraft.options.forEach(function (p) {
+      var club = TM.data.club(p.clubId);
+      var card = el("div", { class: "build-card clickable draft-opt", on: { click: function () {
+        odraft.picks.push(p); odraft.picked[p.id] = 1; odraft.step++; odraft.options = null; TM.ui.go("online-draft");
+      } } }, [
+        el("div", { class: "bc-face-wrap" }, [ TM.img.playerImg(p, "bc-face"), el("span", { class: "bc-pos", text: OD_ABBR[p.pos] || p.pos }) ]),
+        el("div", { class: "bc-info" }, [ el("div", { class: "bc-name", text: p.name }), el("div", { class: "bc-meta", text: p.age + " anos · " + (club ? club.name : "") }) ]),
+        TM.ui.ovBadge(p.overall)
+      ]);
+      list.appendChild(card);
+    });
+    body.appendChild(list);
+  });
+  function finishOnlineDraft() {
+    var ids = odraft.picks.slice().sort(function (a, b) { return (OD_ORDER[a.pos] || 9) - (OD_ORDER[b.pos] || 9); }).map(function (p) { return p.id; });
+    var code = odraft.code, side = odraft.side;
+    N().setMatchDraft(code, side, ids);
+    odraft = null;
+    TM.ui.toast("Draft enviado! Aguardando o adversário…");
+    TM.ui.go("online-room", { code: code, side: side });
+  }
+
   /* ---------- PARTIDA ONLINE (replay do resultado compartilhado) ---------- */
   TM.ui.register("online-match", function (screen, params) {
     if (!params || !params.match || !params.match.result) { TM.ui.go("online"); return; }
     var m = params.match, side = params.side;
-    var a = teamObj(m.source, m.hostTeam), b = teamObj(m.source, m.guestTeam);
+    var teams = buildMatchTeams(m), a = teams[0], b = teams[1];
     var result = sanitize(m.result);
     var settings = TM.storage.settings();
     function toResult(penWinnerSide) {
-      TM.ui.go("online-result", { a: a, b: b, result: result, hostName: m.hostName, guestName: m.guestName, penWinnerSide: penWinnerSide });
+      TM.ui.go("online-result", { a: a, b: b, result: result, hostName: m.hostName, guestName: m.guestName, penWinnerSide: penWinnerSide,
+        side: side, hostUid: m.host, guestUid: m.guest });
     }
     TM.matchview.play(screen, {
       teamA: a, teamB: b, result: result, settings: settings,
@@ -350,6 +445,12 @@
     var pen = params.penWinnerSide != null;
     var winner = pen ? (params.penWinnerSide === 0 ? (params.hostName || a.name) : (params.guestName || b.name))
                      : hs > as ? (params.hostName || a.name) : as > hs ? (params.guestName || b.name) : null;
+    // retrospecto entre amigos: só o host grava (evita contar duas vezes)
+    if (params.side === "host" && params.hostUid && params.guestUid) {
+      var winUid = pen ? (params.penWinnerSide === 0 ? params.hostUid : params.guestUid)
+                       : hs > as ? params.hostUid : as > hs ? params.guestUid : null;
+      try { N().recordResult(params.hostUid, params.guestUid, winUid); } catch (e) {}
+    }
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("online"); }));
     screen.appendChild(el("div", { class: "result-hero" }, [
       el("div", { class: "result-score" }, [ el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: hs + " × " + as }), el("span", { class: "rs-team", text: b.name }) ]),
