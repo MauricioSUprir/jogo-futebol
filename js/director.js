@@ -191,6 +191,28 @@
     feliz: ["Obrigado, diretor! Fico muito feliz com o reconhecimento.", "Que bom ouvir isso! Vou retribuir dentro de campo.", "Fico honrado com a confiança. Muito obrigado!"],
     neutro: ["Entendido, diretor. Seguimos trabalhando.", "Recebido. Foco total no próximo jogo.", "Certo. Vamos manter o trabalho firme."]
   };
+  // detecta o assunto da mensagem para a resposta ter a ver com o que foi dito
+  var REPLY_TOPICS = [
+    { re: /defes|defensiv|zaga|gol sofrid|tomand[o]? gol|segurar atr|marca[çc]/, say: "vou apertar a marcação e segurar melhor a defesa" },
+    { re: /ataqu|marcar gol|finaliza|pontaria|criar chance|no gol advers/, say: "vamos ser mais agressivos no ataque e criar mais chances" },
+    { re: /vit[oó]ria|ganhar|vencer|3 pontos|tr[eê]s pontos|pr[oó]ximo jogo|resultado/, say: "o foco é buscar a vitória no próximo jogo" },
+    { re: /t[ií]tulo|campe[aã]|ta[çc]a|trof[eé]u|copa/, say: "o título é o nosso objetivo, pode confiar" },
+    { re: /torcida|torcedor|arquibancad|torcedores/, say: "vou entregar um time à altura da torcida" },
+    { re: /esfor[çc]o|entrega|ra[çc]a|garra|luta[r]?|correr|dedica/, say: "o time vai deixar tudo em campo" },
+    { re: /refor[çc]o|contrata|elenco|jogador|verba/, say: "com os reforços certos o elenco fica mais forte" },
+    { re: /t[aá]tica|esquema|forma[çc][aã]o|posi[çc]/, say: "vou ajustar a tática para o time render mais" },
+    { re: /base|jovem|garot|revela|categoria/, say: "vou dar chance à base e revelar as joias do clube" },
+    { re: /calm|tranquil|paci[eê]ncia|tempo|confia|acredit/, say: "obrigado pela confiança, isso faz diferença" }
+  ];
+  function composeReply(c, msg, mood) {
+    var t = " " + (msg || "").toLowerCase() + " ";
+    var pool = COACH_REPLY[mood] || COACH_REPLY.neutro;
+    var opener = pool[Math.floor(Math.random() * pool.length)];
+    var topic = null;
+    for (var i = 0; i < REPLY_TOPICS.length; i++) { if (REPLY_TOPICS[i].re.test(t)) { topic = REPLY_TOPICS[i].say; break; } }
+    if (!topic) return opener;
+    return opener + " " + topic.charAt(0).toUpperCase() + topic.slice(1) + ".";
+  }
 
   /* ---------- edge do técnico + CT + humor nos resultados ---------- */
   function teamEdge(career) {
@@ -598,8 +620,7 @@
         if (txt.length < 2) { TM.ui.toast("Escreva uma mensagem."); return; }
         var mood = classifyMessage(txt);
         c.coach.mood = mood;
-        var pool = COACH_REPLY[mood] || COACH_REPLY.neutro;
-        var reply = pool[Math.floor(Math.random() * pool.length)];
+        var reply = composeReply(c, txt, mood);
         c.coachChat = c.coachChat || [];
         c.coachChat.push({ who: "dir", text: txt });
         c.coachChat.push({ who: "coach", text: reply, mood: mood });
