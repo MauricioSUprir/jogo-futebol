@@ -9,9 +9,8 @@
 
   /* Táticas: [chave, rótulo] + modificadores [ataque, defesa] do lado do usuário */
   var TACTICS = [
-    ["muralha", "Muralha"], ["retranca", "Retranca"], ["defensivo", "Defensivo"], ["contra-ataque", "Contra-ataque"],
-    ["cadenciado", "Cadenciado"], ["equilibrado", "Equilibrado"], ["posse", "Posse de bola"], ["tiki-taka", "Tiki-taka"],
-    ["pontas", "Pelas pontas"], ["direto", "Jogo direto"], ["ofensivo", "Ofensivo"], ["linha-alta", "Linha alta"], ["pressao", "Pressão total"]
+    ["retranca", "Retranca"], ["defensivo", "Defensivo"], ["equilibrado", "Equilibrado"],
+    ["contra-ataque", "Contra-ataque"], ["ofensivo", "Ofensivo"], ["pressao", "Pressão total"]
   ];
   var TACTIC_MODS = {
     muralha: [0.66, 1.32], retranca: [0.74, 1.26], defensivo: [0.88, 1.14], "contra-ataque": [1.07, 1.05],

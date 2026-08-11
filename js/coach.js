@@ -820,7 +820,9 @@
       var p = TM.data.player(id); if (!p) return;
       var slot = slots[i] || [null, 50, 50];
       pitch.appendChild(el("button", { class: "pl-chip" + (natPick === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", on: { click: function () { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); } } }, [
-        el("span", { class: "chip-ov", text: p.overall }), el("span", { class: "chip-name", text: shortName(p.name) })
+        el("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(p, "chip-face"), el("span", { class: "chip-ov", text: p.overall }) ]),
+        el("span", { class: "chip-name", text: shortName(p.name) }),
+        el("span", { class: "chip-age", text: p.age + " anos" })
       ]));
     });
     screen.appendChild(pitch);
