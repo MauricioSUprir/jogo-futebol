@@ -92,6 +92,14 @@
     return (E && E[kind] && E[kind][id]) || null;
   }
 
+  // slug do nome do clube (casa com os arquivos em assets/estadios/<slug>.jpg)
+  function stadSlug(name) {
+    return name.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase();
+  }
+  // clubes que têm foto real de estádio disponível (evita 404 nos demais)
+  var STADIUM_PHOTOS = {};
+  ("ajax,arsenal,aston-villa,atalanta,athletic-club,athletico-paranaense,atletico-de-madrid,atletico-mineiro,bahia,barcelona,bayer-leverkusen,bayern-de-munique,benfica,boca-juniors,borussia-dortmund,botafogo,braga,chelsea,corinthians,coritiba,cruzeiro,eintracht-frankfurt,estudiantes,feyenoord,fiorentina,flamengo,fluminense,gremio,inter-de-milao,inter-miami,internacional,juventus,lafc,lazio,liverpool,los-angeles-galaxy,manchester-city,manchester-united,milan,monaco,napoli,newcastle-united,olympique-de-lyon,olympique-de-marseille,palmeiras,paris-saint-germain,porto,psv,racing-club,rb-leipzig,real-betis,real-madrid,real-sociedad,river-plate,roma,santos,sao-paulo,seattle-sounders,sevilla,sporting-cp,tottenham-hotspur,vasco-da-gama,villarreal,vitoria").split(",").forEach(function (s) { STADIUM_PHOTOS[s] = 1; });
+
   // ilustração do estádio (SVG gerado, tintado com as cores do clube) — funciona offline
   function stadiumArt(club) {
     var col = (club && club.colors) || { primary: "#2f8f4e", secondary: "#eeeeee" };
@@ -161,10 +169,12 @@
     nationImg: function (nation, cls) {
       return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
     },
-    // "foto" do estádio: foto real (assets/estadios/<id>.jpg) se existir, senão ilustração gerada
+    // "foto" do estádio: foto real (assets/estadios/<slug>.jpg) para clubes com foto; senão ilustração gerada
     stadiumImg: function (club, cls) {
       var art = stadiumArt(club);
-      var real = embedded("estadios", club.id) || ((global.TM_EMBED && global.TM_EMBED.estadios) ? null : ("assets/estadios/" + club.id + ".jpg"));
+      var sl = stadSlug(club.name);
+      var emb = embedded("estadios", sl);
+      var real = emb || (STADIUM_PHOTOS[sl] && !(global.TM_EMBED && global.TM_EMBED.estadios) ? ("assets/estadios/" + sl + ".jpg") : null);
       return imgWithFallback(real || art, art, (club.name + " — estádio"), cls);
     },
     compBadge: compBadge,
