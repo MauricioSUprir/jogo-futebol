@@ -1270,3 +1270,9 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 /* ---------- retrospecto (h2h) ---------- */
 .h2h-bar { text-align: center; font-size: 12px; font-weight: 700; color: var(--gold); padding: 8px 12px;
   background: var(--black-soft); border-bottom: 1px solid var(--line); }
+
+/* ---------- Competição em Grupo ---------- */
+.gc-counter { text-align: center; font-size: 14px; font-weight: 700; padding: 9px; border-radius: 10px; margin: 8px 0;
+  background: var(--black-soft); border: 1px solid var(--line); }
+.gc-counter.full { border-color: #22c55e; }
+.gc-counter b { color: var(--gold); }

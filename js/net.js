@@ -263,5 +263,49 @@
     ref.once("value").then(function (snap) { var v = snap.val(); if (v && v.host === net.me.uid) ref.remove(); });
   };
 
+  // ---- Competição em Grupo (lobby: amigos entram e escolhem um time) ----
+  net.createGroupComp = function (size, myTeamId, cb, tries) {
+    tries = tries || 0;
+    var code = genCode();
+    var ref = net._db.ref("groupcomps/" + code);
+    ref.transaction(function (cur) {
+      if (cur === null) return { host: net.me.uid, hostName: net.me.name, size: size, status: "lobby", createdAt: firebaseNow(),
+        players: { } };
+      return;
+    }, function (err, committed) {
+      if (!err && committed) {
+        var pref = ref.child("players/" + net.me.uid);
+        pref.set({ name: net.me.name, teamId: myTeamId || null });
+        ref.onDisconnect().remove();
+        cb(code);
+      } else if (tries < 6) net.createGroupComp(size, myTeamId, cb, tries + 1);
+      else cb(null);
+    });
+  };
+  net.joinGroupComp = function (code, cb) {
+    code = (code || "").trim().toUpperCase();
+    var ref = net._db.ref("groupcomps/" + code);
+    ref.once("value").then(function (snap) {
+      var v = snap.val();
+      if (!v) { cb(null, "Competição não encontrada."); return; }
+      if (v.status !== "lobby") { cb(null, "A competição já começou."); return; }
+      var n = v.players ? Object.keys(v.players).length : 0;
+      if (n >= v.size && !(v.players && v.players[net.me.uid])) { cb(null, "Sala cheia."); return; }
+      ref.child("players/" + net.me.uid).update({ name: net.me.name }).then(function () { cb(code, null); });
+    }).catch(function (e) { cb(null, e.message); });
+  };
+  net.setGroupTeam = function (code, teamId) { net._db.ref("groupcomps/" + code + "/players/" + net.me.uid + "/teamId").set(teamId); };
+  net.listenGroupComp = function (code, cb) {
+    var ref = net._db.ref("groupcomps/" + code);
+    var h = ref.on("value", function (s) { cb(s.val()); });
+    return function stop() { ref.off("value", h); };
+  };
+  net.startGroupComp = function (code, teamIds) { net._db.ref("groupcomps/" + code).update({ status: "started", teamIds: teamIds }); };
+  net.leaveGroupComp = function (code) {
+    if (!net.me || !code) return;
+    var ref = net._db.ref("groupcomps/" + code);
+    ref.once("value").then(function (s) { var v = s.val(); if (v && v.host === net.me.uid) ref.remove(); else ref.child("players/" + net.me.uid).remove(); });
+  };
+
   TM.net = net;
 })(window);
