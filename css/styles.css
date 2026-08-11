@@ -1266,3 +1266,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .emoji-btn:hover { background: rgba(255,255,255,.08); }
 .sticker-btn { background: var(--black); border: 1px solid var(--line); border-radius: 10px; font-size: 22px; padding: 10px 6px; cursor: pointer; }
 .sticker-btn:hover { border-color: var(--gold); }
+
+/* ---------- retrospecto (h2h) ---------- */
+.h2h-bar { text-align: center; font-size: 12px; font-weight: 700; color: var(--gold); padding: 8px 12px;
+  background: var(--black-soft); border-bottom: 1px solid var(--line); }
