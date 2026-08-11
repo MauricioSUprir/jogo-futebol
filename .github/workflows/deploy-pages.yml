@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: ["claude/football-game-design-q2tr7a", "main"]
+    branches: ["main"]
   workflow_dispatch:
 permissions:
   contents: read
