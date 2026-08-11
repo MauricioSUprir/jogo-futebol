@@ -402,7 +402,7 @@
     ];
 
     screen.appendChild(el("header", { class: "modes-topbar" }, [
-      el("div", { class: "modes-emblem", html: EMBLEM }),
+      el("img", { class: "modes-emblem-img", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
       el("div", {}, [ el("div", { class: "mini-logo", html: 'TOTAL<span>MATCH</span>' }), el("div", { class: "modes-sub", text: "Escolha um modo" }) ]),
       el("button", { class: "btn-back small-back", text: "←", on: { click: function () { go("splash"); } } })
     ]));
