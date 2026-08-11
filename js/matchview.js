@@ -113,7 +113,8 @@
           pitch.appendChild(el("button", { class: "pl-chip" + (selOut.idx === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
             on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } }, [
             el("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(pl, "chip-face"), el("span", { class: "chip-ov", text: pl.overall }) ]),
-            el("span", { class: "chip-name", text: shortP(pl.name) })
+            el("span", { class: "chip-name", text: shortP(pl.name) }),
+            pl.age ? el("span", { class: "chip-age", text: pl.age + " anos" }) : null
           ]));
         });
         subArea.appendChild(pitch);
