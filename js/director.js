@@ -78,6 +78,26 @@
     ];
   }
 
+  /* ---------- investidor / SAF (raro, a cada janela de transferências) ---------- */
+  function maybeSafOffer(c) {
+    if (!c.windows) return;
+    var d = c.currentDay || 0;
+    if (c.safOffer && d >= c.safOffer.closeDay) c.safOffer = null; // proposta expirou (janela fechou)
+    c.windows.forEach(function (w) {
+      var open = d >= w.openDay && d < w.closeDay;
+      if (!open || w.safRolled) return;
+      w.safRolled = true;
+      if (c.safOffer || Math.random() >= 0.12) return;              // muito raro
+      var r = TM.data.clubRating(c.teamId), m = mult(c);
+      var base = Math.round((40 + Math.max(0, r - 60) * 6) * m);     // porte do clube
+      var fromCash = Math.round(Math.max(0, c.budget) * 0.25);       // quanto maior o caixa do diretor, maior o aporte
+      var amount = base + fromCash;
+      c.safOffer = { amountM: amount, closeDay: w.closeDay, windowName: w.name };
+      TM.notify.push(c, { icon: "💼", title: "Interesse de investidor (SAF)", saf: true,
+        text: "Um grupo quer investir no clube (SAF) e injetar " + money(c, amount) + " no caixa nesta " + w.name + ". Decida no seu painel de diretor." });
+    });
+  }
+
   /* ---------- estádio (capacidade / receita) ---------- */
   var STAD_UP_EUR = { 1: 20, 2: 45, 3: 85 };
   function stadUpgradeCost(c, to) { return Math.round((STAD_UP_EUR[to] || 0) * mult(c)); }
@@ -221,7 +241,7 @@
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     if (c.type !== "director") { TM.ui.go("coach-hub"); return; }
-    C().migrateCareer(c); ensureDirector(c); C().processCalendar(c); TM.storage.saveCoachCareer(c);
+    C().migrateCareer(c); ensureDirector(c); C().processCalendar(c); maybeSafOffer(c); TM.storage.saveCoachCareer(c);
     var club = TM.data.club(c.teamId);
 
     var unread = TM.notify.unread(c);
@@ -280,6 +300,25 @@
         el("div", { class: "obj-prog", text: "Posição atual: " + pos + "º" + (pos <= c.objective.maxPos ? " ✓" : " ⚠") })
       ])
     ]));
+
+    // proposta de investidor / SAF (rara)
+    if (c.safOffer) {
+      screen.appendChild(el("div", { class: "saf-card" }, [
+        el("div", { class: "saf-title", text: "💼 Interesse de investidor (SAF)" }),
+        el("div", { class: "saf-text", text: "Um grupo quer investir no clube (SAF) e injetar " + money(c, c.safOffer.amountM) + " no caixa nesta " + (c.safOffer.windowName || "janela") + ". Você pode usar essa verba para liberar reforços." }),
+        el("div", { class: "note-actions" }, [
+          TM.ui.button("✅ Aceitar " + money(c, c.safOffer.amountM), function () {
+            c.budget += c.safOffer.amountM; c.fin.incomeM += c.safOffer.amountM;
+            TM.notify.push(c, { icon: "💼", title: "SAF fechada", text: "O investidor injetou " + money(c, c.safOffer.amountM) + " no clube. Libere a verba para o técnico reforçar o elenco." });
+            c.safOffer = null; TM.storage.saveCoachCareer(c); TM.ui.toast("Investimento aceito!"); TM.ui.go("director-hub");
+          }, "btn primary small"),
+          TM.ui.button("Recusar", function () {
+            TM.notify.push(c, { icon: "🚫", title: "Proposta recusada", text: "Você recusou a proposta de investimento (SAF)." });
+            c.safOffer = null; TM.storage.saveCoachCareer(c); TM.ui.go("director-hub");
+          }, "btn ghost small")
+        ])
+      ]));
+    }
 
     // último resultado + próximo jogo (auto-simulado pelo técnico)
     var pend = C().advanceToUserMatch(c);

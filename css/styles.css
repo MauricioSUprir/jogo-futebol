@@ -1036,3 +1036,8 @@ html, body {
 .sp-vals { display: flex; flex-wrap: wrap; gap: 8px; }
 .sp-tag { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; background: var(--black-soft); border: 1px solid var(--line); color: var(--text-dim); }
 .sp-tag.good { color: var(--green); border-color: rgba(34,197,94,.4); }
+
+/* Dirigente — proposta de investidor / SAF */
+.saf-card { width: 100%; max-width: 620px; margin: 0 auto 12px; background: linear-gradient(135deg, rgba(46,125,70,.18), rgba(214,178,52,.12)); border: 1px solid rgba(214,178,52,.45); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.saf-title { font-size: 15px; font-weight: 900; color: var(--gold); }
+.saf-text { font-size: 12.5px; color: var(--text); line-height: 1.5; }
