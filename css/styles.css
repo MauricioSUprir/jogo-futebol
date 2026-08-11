@@ -1228,3 +1228,41 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .tp-owner { font-size: 11px; color: var(--text-dim); }
 .tp-name { font-size: 15px; font-weight: 700; }
 .big-code { text-align: center; font-size: 26px; font-weight: 900; letter-spacing: 8px; text-transform: uppercase; }
+
+/* ---------- seletor de time visual ---------- */
+.team-picker { display: flex; flex-direction: column; gap: 8px; }
+.tp-search { position: sticky; top: 0; z-index: 2; }
+.tp-list { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; }
+.tp-league { display: flex; align-items: center; gap: 8px; padding: 8px 6px 4px; margin-top: 6px; position: sticky; top: 46px; background: var(--black); z-index: 1; }
+.tp-lg-logo { width: 22px; height: 22px; object-fit: contain; }
+.tp-lg-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); }
+.tp-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 8px 11px; border-radius: 11px;
+  background: var(--black-soft); border: 1px solid var(--line); color: var(--text); cursor: pointer; font-family: inherit; }
+.tp-row:hover { border-color: var(--gold); }
+.tp-row.sel { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold) inset; }
+.tp-crest { width: 36px; height: 36px; object-fit: contain; flex: 0 0 auto; }
+.tp-name { flex: 1; font-size: 14px; font-weight: 600; }
+/* time escolhido (cartão) */
+.chosen-team { display: flex; align-items: center; gap: 11px; padding: 10px 12px; border-radius: 12px; background: var(--black-soft); border: 1px solid var(--line); }
+.chosen-team.empty { border-style: dashed; color: var(--text-dim); justify-content: center; cursor: pointer; }
+.chosen-crest { width: 40px; height: 40px; object-fit: contain; }
+.chosen-info { flex: 1; }
+.chosen-name { font-size: 15px; font-weight: 700; }
+.chosen-sub { font-size: 11px; color: var(--text-dim); }
+
+/* ---------- chat maior + emojis + figurinhas ---------- */
+.chat-thread.big { max-height: 72vh; min-height: 50vh; padding: 12px; gap: 8px; }
+.chat-bubble.sticker-msg { background: transparent !important; border: none !important; padding: 2px 6px; }
+.chat-sticker { font-size: 40px; line-height: 1.1; }
+.chat-ic-btn { background: var(--black-soft); border: 1px solid var(--line); border-radius: 10px; font-size: 20px;
+  width: 40px; height: 40px; flex: 0 0 auto; cursor: pointer; }
+.chat-ic-btn:hover { border-color: var(--gold); }
+.emoji-panel, .sticker-panel { display: grid; gap: 4px; padding: 8px 10px; background: var(--black-soft);
+  border-top: 1px solid var(--line); max-height: 34vh; overflow-y: auto; }
+.emoji-panel { grid-template-columns: repeat(8, 1fr); }
+.sticker-panel { grid-template-columns: repeat(4, 1fr); }
+.emoji-panel.hidden, .sticker-panel.hidden { display: none; }
+.emoji-btn { background: transparent; border: none; font-size: 24px; padding: 4px; cursor: pointer; border-radius: 8px; }
+.emoji-btn:hover { background: rgba(255,255,255,.08); }
+.sticker-btn { background: var(--black); border: 1px solid var(--line); border-radius: 10px; font-size: 22px; padding: 10px 6px; cursor: pointer; }
+.sticker-btn:hover { border-color: var(--gold); }
