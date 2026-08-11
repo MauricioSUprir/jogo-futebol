@@ -338,6 +338,7 @@
       { icon: "💎", name: "Time dos Sonhos", route: "dream" },
       { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "📱", name: "2 Jogadores", route: "versus" },
+      { icon: "🌐", name: "Online (amigos)", route: "online" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
