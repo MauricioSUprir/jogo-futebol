@@ -67,6 +67,17 @@
   }
   function matchesPerSeason(career) { return Math.max(30, (career.order || []).length); }
 
+  /* ---------- patrocínios ---------- */
+  function sponsorOffers(c) {
+    var r = TM.data.clubRating(c.teamId), m = mult(c);
+    var base = 6 + Math.max(0, (r - 60)) * 0.7; // euros M
+    return [
+      { id: "master", name: "Patrocínio Master", bonusM: Math.round(base * 1.4 * m), seasonM: Math.round(base * 1.9 * m), desc: "Maior receita por temporada." },
+      { id: "padrao", name: "Patrocínio Padrão", bonusM: Math.round(base * 1.3 * m), seasonM: Math.round(base * 1.2 * m), desc: "Equilibrado: bônus e receita." },
+      { id: "cash", name: "Patrocínio Bônus", bonusM: Math.round(base * 3.2 * m), seasonM: Math.round(base * 0.5 * m), desc: "Grande bônus imediato para contratar já." }
+    ];
+  }
+
   /* ---------- edge do técnico + CT nos resultados ---------- */
   function teamEdge(career) {
     var co = career.coach || interino(career);
@@ -122,7 +133,8 @@
     var mps = matchesPerSeason(career);
     var incomeMatch = Math.round(seasonBaseIncomeEur(career.teamId) / mps * mult(career));
     var homeBonus = userSide === 0 ? Math.round(seasonBaseIncomeEur(career.teamId) / mps * 0.4 * mult(career)) : 0;
-    var income = incomeMatch + homeBonus;
+    var sponsorMatch = career.sponsor ? Math.round(career.sponsor.seasonM / mps) : 0;
+    var income = incomeMatch + homeBonus + sponsorMatch;
     var expense = Math.round((career.wagesM + career.coach.salaryM + ctUpkeep(career, career.ctLevel)) / mps);
     career.budget += income - expense;
     career.fin.incomeM += income; career.fin.expenseM += expense;
@@ -249,12 +261,16 @@
       screen.appendChild(card);
     }
 
+    // lembrete: o dirigente não comanda o time em campo (quem faz isso é o técnico)
+    screen.appendChild(el("div", { class: "dir-note", text: "🎬 Você é o dirigente: o técnico comanda o time em campo (escalação e tática). Você cuida da gestão, das finanças, das contratações e do comando técnico." }));
+
     // ações do dirigente (sem escalação/tática/jogar)
     screen.appendChild(el("div", { class: "hub-actions six" }, [
       dbtn("🧑‍💼", "Técnico", "director-coach"),
       dbtn("💰", "Finanças", "director-finance"),
+      dbtn("🤝", "Patrocínios", "director-sponsors"),
       dbtn("🏟️", "CT", "director-ct"),
-      dbtn("🔁", "Mercado", "coach-market"),
+      dbtn("🔁", "Contratações", "coach-market"),
       dbtn("👥", "Elenco", "coach-squad"),
       dbtn("🏆", "Competições", "coach-comps"),
       dbtn("📅", "Calendário", "coach-calendar"),
@@ -390,8 +406,24 @@
       line("Saldo da temporada", (saldo >= 0 ? "+" : "") + money(c, saldo), saldo >= 0 ? "good" : "bad"),
       line("Folha salarial do elenco (temp.)", money(c, c.wagesM)),
       line("Salário do técnico (temp.)", money(c, c.coach.salaryM)),
-      line("Manutenção do CT (temp.)", money(c, ctUpkeep(c, c.ctLevel)))
+      line("Manutenção do CT (temp.)", money(c, ctUpkeep(c, c.ctLevel))),
+      line("Patrocínio (temp.)", c.sponsor ? "+" + money(c, c.sponsor.seasonM) + " · " + c.sponsor.name : "sem patrocínio", c.sponsor ? "good" : "")
     ]));
+
+    // aporte de investidor — adiciona verba ao caixa para gastar em contratações
+    var invPanel = el("div", { class: "nego-panel" });
+    invPanel.appendChild(el("div", { class: "nego-quote", text: "💵 Capte um aporte de investidor: adiciona verba direta ao caixa para você gastar em contratações." }));
+    var invRow = el("div", { class: "inv-row" });
+    [50, 100, 250].forEach(function (eur) {
+      var amt = Math.round(eur * mult(c));
+      invRow.appendChild(TM.ui.button("+ " + money(c, amt), function () {
+        c.budget += amt; c.fin.incomeM += amt;
+        TM.notify.push(c, { icon: "💵", title: "Aporte de investidor", text: "Um investidor injetou " + money(c, amt) + " no clube para reforços." });
+        TM.storage.saveCoachCareer(c); TM.ui.toast("Caixa reforçado: +" + money(c, amt)); TM.ui.go("director-finance");
+      }, "btn primary small"));
+    });
+    invPanel.appendChild(invRow);
+    body.appendChild(invPanel);
 
     // pedir aporte à diretoria
     var aporte = el("div", { class: "nego-panel" });
@@ -418,6 +450,40 @@
       }, "btn primary"));
     }
     body.appendChild(aporte);
+  });
+
+  /* ================= PATROCÍNIOS ================= */
+  TM.ui.register("director-sponsors", function (screen) {
+    var c = TM.storage.coachCareer(); ensureDirector(c);
+    screen.appendChild(TM.ui.topbar("🤝 Patrocínios", function () { TM.ui.go("director-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    if (c.sponsor) {
+      body.appendChild(el("div", { class: "nego-panel" }, [
+        el("div", { class: "nego-quote happy", text: "✅ Patrocinador atual: " + c.sponsor.name + " — " + money(c, c.sponsor.seasonM) + "/temporada." }),
+        el("div", { class: "setting-hint", text: "A receita do patrocínio entra a cada jogo, ao longo da temporada. Você pode trocar por outra proposta abaixo." })
+      ]));
+    } else {
+      body.appendChild(el("p", { class: "intro-text", text: "Feche um patrocínio para gerar receita e reforçar o caixa. Escolha a proposta que combina com o seu projeto." }));
+    }
+
+    sponsorOffers(c).forEach(function (s) {
+      body.appendChild(el("div", { class: "sponsor-card" }, [
+        el("div", { class: "sp-head" }, [ el("div", { class: "sp-name", text: "🤝 " + s.name }), el("div", { class: "sp-desc", text: s.desc }) ]),
+        el("div", { class: "sp-vals" }, [
+          el("span", { class: "sp-tag good", text: "Bônus imediato: " + money(c, s.bonusM) }),
+          el("span", { class: "sp-tag", text: "Receita: " + money(c, s.seasonM) + "/temp" })
+        ]),
+        TM.ui.button(c.sponsor && c.sponsor.id === s.id ? "Patrocinador atual" : "Fechar patrocínio", function () {
+          if (c.sponsor && c.sponsor.id === s.id) { TM.ui.toast("Já é o seu patrocinador."); return; }
+          c.budget += s.bonusM; c.fin.incomeM += s.bonusM;
+          c.sponsor = { id: s.id, name: s.name, seasonM: s.seasonM };
+          TM.notify.push(c, { icon: "🤝", title: "Patrocínio fechado", text: s.name + " — bônus de " + money(c, s.bonusM) + " e " + money(c, s.seasonM) + "/temporada." });
+          TM.storage.saveCoachCareer(c); TM.ui.toast("Patrocínio fechado! +" + money(c, s.bonusM)); TM.ui.go("director-hub");
+        }, "btn " + (c.sponsor && c.sponsor.id === s.id ? "ghost" : "primary") + " small")
+      ]));
+    });
   });
 
   /* ================= CT (centro de treinamento) ================= */
