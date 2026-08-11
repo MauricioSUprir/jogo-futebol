@@ -395,6 +395,7 @@
       { icon: "💎", name: "Time dos Sonhos", route: "dream" },
       { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🌐", name: "Online (amigos)", route: "online" },
+      { icon: "🏆", name: "Competição em Grupo", route: "groupcomp" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
       { icon: "⚙️", name: "Configurações", route: "settings" }
