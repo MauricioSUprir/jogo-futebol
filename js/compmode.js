@@ -290,10 +290,18 @@
       ]);
     } } });
     screen.appendChild(TM.ui.topbar(s.name, function () { TM.ui.go("modes"); }, right));
-    screen.appendChild(E("div", { class: "club-header" }, [
+    var headKids = [
       imgFor(s, s.userId, "ch-crest"),
       E("div", {}, [ E("div", { class: "ch-name", text: nameFor(s, s.userId) }), E("div", { class: "ch-sub", text: s.name + (s.isNation ? " · Seleção" : "") }) ])
-    ]));
+    ];
+    if (s.isNation) {
+      var nat = TM.data.nation(s.userId);
+      if (nat && nat.coach) headKids.push(E("div", { class: "coach-tag" }, [
+        TM.img.coachImg({ name: nat.coach, photoKey: nat.coachPhotoKey }, "coach-mini"),
+        E("div", { class: "coach-tag-name", text: nat.coach })
+      ]));
+    }
+    screen.appendChild(E("div", { class: "club-header" }, headKids));
 
     var nx = advance(s); save(s);
     if (nx.end) {
