@@ -29,7 +29,8 @@
 
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
-    if (TM.storage.coachCareer() && !exPlayerHandoff) { TM.ui.go("coach-hub"); return; }
+    var _exist = TM.storage.coachCareer();
+    if (_exist && !exPlayerHandoff) { TM.ui.go(_exist.type === "director" ? "director-hub" : "coach-hub"); return; }
     screen.appendChild(TM.ui.topbar("🎯 Master League", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
     if (exPlayerHandoff) screen.appendChild(el("div", { class: "twin-bar open", style: "max-width:620px;margin:0 auto 4px" }, [ el("span", { text: "🎽➡️🎯 " + exPlayerHandoff.name + " começa a carreira de treinador" }), el("span", { class: "twin-sub", text: "escolha o clube para comandar" }) ]));
     var body = el("div", { class: "panel-narrow" });
@@ -210,6 +211,12 @@
 
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Começar carreira", function () {
+        if (opts.role === "dirigente") {
+          TM.director.start(clubId, opts);
+          pendingSetup = null; exPlayerHandoff = null;
+          TM.ui.go("director-hub");
+          return;
+        }
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
         pendingSetup = null; exPlayerHandoff = null;
@@ -255,6 +262,7 @@
   TM.ui.register("coach-hub", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
+    if (c.type === "director") { TM.ui.go("director-hub"); return; }
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     TM.storage.saveCoachCareer(c);
