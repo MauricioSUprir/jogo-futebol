@@ -1041,3 +1041,33 @@ html, body {
 .saf-card { width: 100%; max-width: 620px; margin: 0 auto 12px; background: linear-gradient(135deg, rgba(46,125,70,.18), rgba(214,178,52,.12)); border: 1px solid rgba(214,178,52,.45); border-radius: 14px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
 .saf-title { font-size: 15px; font-weight: 900; color: var(--gold); }
 .saf-text { font-size: 12.5px; color: var(--text); line-height: 1.5; }
+
+/* Dirigente — vestiário (resultados + recado ao técnico) */
+.res-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.res-row { display: flex; align-items: center; gap: 10px; background: var(--black-soft); border: 1px solid var(--line); border-left: 3px solid var(--line-2); border-radius: 10px; padding: 8px 10px; }
+.res-row.win { border-left-color: var(--green); }
+.res-row.loss { border-left-color: #d0342c; }
+.res-row.draw { border-left-color: #b0b0b0; }
+.res-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; color: #fff; flex-shrink: 0; }
+.res-row.win .res-badge { background: var(--green); }
+.res-row.loss .res-badge { background: #d0342c; }
+.res-row.draw .res-badge { background: #8a8a8a; }
+.res-crest { width: 26px; height: 26px; object-fit: contain; flex-shrink: 0; }
+.res-main { flex: 1; min-width: 0; }
+.res-teams { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.res-comp { font-size: 10.5px; color: var(--text-dim); }
+.res-score { font-size: 15px; font-weight: 900; flex-shrink: 0; }
+.mood-banner { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+.mood-emoji { font-size: 30px; }
+.mood-title { font-size: 14px; font-weight: 800; }
+.mood-sub { font-size: 12px; color: var(--text-dim); }
+.mood-banner.mood-raiva { border-color: rgba(208,52,44,.5); }
+.mood-banner.mood-triste, .mood-banner.mood-angustiado { border-color: rgba(120,120,120,.5); }
+.mood-banner.mood-feliz, .mood-banner.mood-animado, .mood-banner.mood-empolgado, .mood-banner.mood-motivado { border-color: rgba(34,197,94,.5); }
+.coach-chat { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.chat-bubble { max-width: 85%; border-radius: 12px; padding: 8px 12px; }
+.chat-bubble.me { align-self: flex-end; background: rgba(46,125,70,.2); border: 1px solid rgba(34,197,94,.35); }
+.chat-bubble.coach { align-self: flex-start; background: var(--black-soft); border: 1px solid var(--line); }
+.chat-who { font-size: 10px; color: var(--text-dim); margin-bottom: 2px; font-weight: 700; }
+.chat-text { font-size: 13px; line-height: 1.45; }
+textarea.text-input { resize: vertical; font-family: inherit; }

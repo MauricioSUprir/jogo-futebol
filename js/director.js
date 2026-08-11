@@ -155,10 +155,47 @@
     return { signed: signed, spent: spent };
   }
 
-  /* ---------- edge do técnico + CT nos resultados ---------- */
+  /* ---------- humor do técnico (muda com os recados do diretor) ---------- */
+  var MOOD = {
+    empolgado: { mod: 0.8, emoji: "🤩", label: "Empolgado" },
+    animado: { mod: 0.6, emoji: "😃", label: "Animado" },
+    feliz: { mod: 0.5, emoji: "🙂", label: "Feliz" },
+    motivado: { mod: 0.6, emoji: "💪", label: "Motivado" },
+    neutro: { mod: 0, emoji: "😐", label: "Neutro" },
+    angustiado: { mod: -0.4, emoji: "😰", label: "Angustiado" },
+    triste: { mod: -0.7, emoji: "😔", label: "Triste" },
+    raiva: { mod: -0.9, emoji: "😠", label: "Com raiva" }
+  };
+  function moodOf(c) { return (c.coach && MOOD[c.coach.mood]) ? c.coach.mood : "neutro"; }
+  function classifyMessage(msg) {
+    var t = (" " + msg + " ").toLowerCase();
+    function has(ws) { return ws.some(function (w) { return t.indexOf(w) >= 0; }); }
+    var insult = has(["vergonha", "péssimo", "pessimo", "horrível", "horrivel", "incompetente", "fraco", "ridículo", "ridiculo", "lixo", "burro", "inútil", "inutil", "nojo", "medíocre", "mediocre"]);
+    var threat = has(["demitir", "demissão", "demissao", "rua", "última chance", "ultima chance", "ou você", "ou voce", "se não", "se nao", "acabou", "não aceito", "nao aceito", "tá fora", "ta fora"]);
+    var criticize = has(["ruim", "precisa melhorar", "abaixo", "decepção", "decepcao", "decepcionou", "cobrar", "errado", "fraca", "vexame"]);
+    var pressure = has(["pressão", "pressao", "tem que ganhar", "precisa ganhar", "não pode perder", "nao pode perder", "resultado já", "resultado ja", "é obrigado", "e obrigado", "responsabilidade"]);
+    var energize = has(["vamos", "força", "forca", "bora", "pra cima", "juntos", "garra", "raça", "raca", "foco", "luta", "determinação", "determinacao", "acredita", "com tudo"]);
+    var praise = has(["parabéns", "parabens", "ótimo", "otimo", "excelente", "orgulho", "obrigado", "confio", "acredito em você", "acredito em voce", "feliz", "incrível", "incrivel", "fantástico", "fantastico", "brilhante", "mandou bem", "muito bom", "gênio", "genio", "melhor"]);
+    if (insult || threat) return "raiva";
+    if (criticize) return "triste";
+    if (pressure) return "angustiado";
+    if (energize) return "empolgado";
+    if (praise) return "feliz";
+    return "neutro";
+  }
+  var COACH_REPLY = {
+    raiva: ["Não concordo com essa cobrança, diretor. Isso me irrita — mas vou responder em campo.", "Do jeito que veio, me deixou com raiva. Me cobre trabalho, não com ameaças.", "Fico revoltado com esse tom. Vamos ver quem tem razão no gramado."],
+    triste: ["Confesso que fiquei abatido com isso, diretor.", "Essa mensagem me desanimou, mas prometo reagir.", "Fiquei triste com a crítica — esperava outro tom."],
+    angustiado: ["Sinto o peso dessa pressão... espero corresponder.", "A responsabilidade é grande. Vou fazer o possível.", "Entendi o recado. A cobrança aperta, mas seguimos."],
+    empolgado: ["Pode deixar, diretor! Estou empolgado, vamos com tudo!", "Isso me anima demais — o time vai sentir essa energia!", "Bora! Recebi a mensagem e estou fervendo pra jogar."],
+    feliz: ["Obrigado, diretor! Fico muito feliz com o reconhecimento.", "Que bom ouvir isso! Vou retribuir dentro de campo.", "Fico honrado com a confiança. Muito obrigado!"],
+    neutro: ["Entendido, diretor. Seguimos trabalhando.", "Recebido. Foco total no próximo jogo.", "Certo. Vamos manter o trabalho firme."]
+  };
+
+  /* ---------- edge do técnico + CT + humor nos resultados ---------- */
   function teamEdge(career) {
     var co = career.coach || interino(career);
-    var e = (co.rating - 72) / 6 + (career.ctLevel - 2) * 0.4;
+    var e = (co.rating - 72) / 6 + (career.ctLevel - 2) * 0.4 + (MOOD[co.mood] ? MOOD[co.mood].mod : 0);
     return Math.max(-3, Math.min(3, e));
   }
 
@@ -232,6 +269,9 @@
       res: meScore > opScore ? "V" : meScore < opScore ? "D" : "E",
       penWin: penWinnerId ? (penWinnerId === career.teamId) : null
     };
+    career.results = career.results || [];
+    career.results.push(career._lastSim);
+    if (career.results.length > 15) career.results = career.results.slice(-15);
     TM.storage.saveCoachCareer(career);
     return { ok: true };
   }
@@ -285,8 +325,8 @@
     screen.appendChild(el("button", { class: "dir-coach-card", on: { click: function () { TM.ui.go("director-coach"); } } }, [
       coachFace(co, "dc-face"),
       el("div", { class: "dc-info" }, [
-        el("div", { class: "dc-name", text: "👔 " + co.name + (co.isInterino ? " (interino)" : "") }),
-        el("div", { class: "dc-sub", text: "Overall " + co.rating + " · salário " + money(c, co.salaryM) + "/temp · contrato " + months + " mês(es)" })
+        el("div", { class: "dc-name", text: "👔 " + co.name + (co.isInterino ? " (interino)" : "") + "  " + MOOD[moodOf(c)].emoji }),
+        el("div", { class: "dc-sub", text: "Humor: " + MOOD[moodOf(c)].label + " · overall " + co.rating + " · contrato " + months + " mês(es)" })
       ]),
       TM.ui.ovBadge(co.rating)
     ]));
@@ -377,6 +417,7 @@
     // ações do diretor (gestão — sem elenco/escalação/contratações manuais)
     screen.appendChild(el("div", { class: "hub-actions six" }, [
       dbtn("🧑‍💼", "Técnico", "director-coach"),
+      dbtn("💬", "Vestiário", "director-messages"),
       dbtn("💰", "Finanças", "director-finance"),
       dbtn("💸", "Verba p/ reforços", "director-transfer"),
       dbtn("🤝", "Patrocínios", "director-sponsors"),
@@ -496,6 +537,78 @@
     }
     search.addEventListener("input", function () { render(search.value.trim().toLowerCase()); });
     render("");
+  });
+
+  /* ================= VESTIÁRIO: resultados + recado ao técnico ================= */
+  TM.ui.register("director-messages", function (screen) {
+    var c = TM.storage.coachCareer(); ensureDirector(c);
+    screen.appendChild(TM.ui.topbar("💬 Vestiário", function () { TM.ui.go("director-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // últimos resultados
+    body.appendChild(el("div", { class: "list-head", text: "Últimos resultados" }));
+    var results = (c.results || []).slice(-8).reverse();
+    if (!results.length) {
+      body.appendChild(el("p", { class: "intro-text", text: "Ainda não há jogos disputados nesta temporada." }));
+    } else {
+      var rl = el("div", { class: "res-list" });
+      results.forEach(function (r) {
+        var opp = TM.data.club(r.oppId);
+        rl.appendChild(el("div", { class: "res-row " + (r.res === "V" ? "win" : r.res === "D" ? "loss" : "draw") }, [
+          el("span", { class: "res-badge", text: r.res }),
+          opp ? TM.img.clubImg(opp, "res-crest") : el("span", {}),
+          el("div", { class: "res-main" }, [
+            el("div", { class: "res-teams", text: (r.home ? "🏠 " : "✈️ ") + r.oppName }),
+            el("div", { class: "res-comp", text: r.compName })
+          ]),
+          el("span", { class: "res-score", text: r.home ? (r.me + " × " + r.op) : (r.op + " × " + r.me) })
+        ]));
+      });
+      body.appendChild(rl);
+    }
+
+    // humor atual do técnico
+    var mo = MOOD[moodOf(c)];
+    body.appendChild(el("div", { class: "mood-banner mood-" + moodOf(c) }, [
+      el("span", { class: "mood-emoji", text: mo.emoji }),
+      el("div", {}, [ el("div", { class: "mood-title", text: c.coach.name }), el("div", { class: "mood-sub", text: "Humor: " + mo.label } ) ])
+    ]));
+
+    // conversa
+    if ((c.coachChat || []).length) {
+      var chat = el("div", { class: "coach-chat" });
+      c.coachChat.slice(-8).forEach(function (m) {
+        chat.appendChild(el("div", { class: "chat-bubble " + (m.who === "dir" ? "me" : "coach") }, [
+          el("div", { class: "chat-who", text: m.who === "dir" ? "Você (diretor)" : "👔 " + c.coach.name }),
+          el("div", { class: "chat-text", text: m.text })
+        ]));
+      });
+      body.appendChild(chat);
+    }
+
+    // escrever recado
+    body.appendChild(el("div", { class: "list-head", text: "Mandar um recado ao técnico" }));
+    var input = el("textarea", { class: "text-input", rows: "3", maxlength: "240", placeholder: "Escreva sua mensagem… (elogie, motive, cobre, pressione — o humor dele muda conforme o tom)" });
+    body.appendChild(input);
+    body.appendChild(el("div", { class: "setting-hint", text: "Dica: elogios e incentivo animam; críticas e ameaças irritam ou entristecem. O humor do técnico influencia o rendimento do time." }));
+    body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("📨 Enviar recado", function () {
+        var txt = (input.value || "").trim();
+        if (txt.length < 2) { TM.ui.toast("Escreva uma mensagem."); return; }
+        var mood = classifyMessage(txt);
+        c.coach.mood = mood;
+        var pool = COACH_REPLY[mood] || COACH_REPLY.neutro;
+        var reply = pool[Math.floor(Math.random() * pool.length)];
+        c.coachChat = c.coachChat || [];
+        c.coachChat.push({ who: "dir", text: txt });
+        c.coachChat.push({ who: "coach", text: reply, mood: mood });
+        if (c.coachChat.length > 16) c.coachChat = c.coachChat.slice(-16);
+        TM.notify.push(c, { icon: MOOD[mood].emoji, title: "Recado ao técnico", text: c.coach.name + " agora está " + MOOD[mood].label.toLowerCase() + "." });
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("director-messages");
+      }, "btn primary")
+    ]));
   });
 
   /* ================= FINANÇAS ================= */
