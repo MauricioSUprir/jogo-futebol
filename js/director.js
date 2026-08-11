@@ -325,6 +325,18 @@
     if (pend.seasonEnd) {
       directorSeasonEnd(screen, c);
     } else {
+      // barra de data + pular dias (avança o calendário: janelas, SAF, mercado)
+      var nextDay = C().matchDay(c.matchNo), daysLeft = nextDay - c.currentDay;
+      screen.appendChild(el("div", { class: "date-bar" }, [
+        el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: C().dateOf(c, c.currentDay).full }) ]),
+        el("button", { class: "date-cal-btn", text: "Calendário →", on: { click: function () { TM.ui.go("coach-calendar"); } } })
+      ]));
+      if (daysLeft > 0) {
+        screen.appendChild(el("div", { class: "skip-row" }, [
+          TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; TM.storage.saveCoachCareer(c); TM.ui.go("director-hub"); }, "btn ghost small"),
+          TM.ui.button("⏩ Avançar até o jogo", function () { c.currentDay = nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("director-hub"); }, "btn small")
+        ]));
+      }
       if (c._lastSim) {
         var ls = c._lastSim;
         var cls = ls.res === "V" ? "good" : ls.res === "D" ? "bad" : "";
