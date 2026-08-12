@@ -48,6 +48,15 @@
     while (true) { var dim = MONTHS[m]; if (d <= dim) break; d -= dim; m++; if (m > 11) { m = 0; y++; } }
     return { d: d, m: m + 1, y: y, short: pad(d) + "/" + pad(m + 1), full: pad(d) + "/" + pad(m + 1) + "/" + y };
   }
+  // registra uma movimentação (contratação/venda/empréstimo) com a data atual da carreira
+  function logDeal(career, rec) {
+    career.deals = career.deals || [];
+    var dt = dateOf(career, career.currentDay || 0);
+    rec.season = career.season; rec.day = career.currentDay || 0;
+    rec.date = dt.full; rec.dateShort = dt.short;
+    career.deals.unshift(rec);                 // mais recentes primeiro
+    if (career.deals.length > 300) career.deals.length = 300;
+  }
   // próximos jogos do usuário (somente leitura) para a aba Calendário
   function peekSchedule(career, n) {
     var out = [], mi = career.matchNo || 0, oi = career.orderIndex, guard = 0;
@@ -569,6 +578,7 @@
     if (playerWants) {
       career.budget += off.fee;
       career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += off.fee;
+      logDeal(career, { type: "out", kind: "sale", pid: off.playerId, name: player.name, pos: player.pos, ov: player.overall, fee: off.fee, other: TM.data.club(off.buyerId).name });
       career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
       if (career.lineup) {
         career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });
@@ -691,6 +701,8 @@
       termYears: opts.termYears || 1, seasonsLeft: Math.max(1, Math.round(opts.termYears || 1)), wage: opts.wage || 0
     };
     career.budget -= (opts.loanFee || 0);
+    career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.spentM += (opts.loanFee || 0);
+    logDeal(career, { type: "in", kind: opts.buyOption ? "loanBuy" : "loan", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: opts.loanFee || 0, other: TM.data.club(opts.parentClubId) ? TM.data.club(opts.parentClubId).name : "" });
     syncLineup(career);
   }
   function returnLoanIn(career, pid) {
@@ -705,6 +717,9 @@
   }
   function exerciseLoanBuy(career, pid, price) {
     career.budget -= price;
+    career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.spentM += (price || 0);
+    var bp = resolvePlayer(career, pid);
+    if (bp) logDeal(career, { type: "in", kind: "buy", pid: pid, name: bp.name, pos: bp.pos, ov: bp.overall, fee: price || 0, other: "opção de compra" });
     if (career.loanedIn) delete career.loanedIn[pid]; // deixa de ser empréstimo, vira contratação
     syncLineup(career);
   }
@@ -1431,7 +1446,7 @@
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    matchDay: matchDay, dateOf: dateOf, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
+    matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,

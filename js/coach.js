@@ -389,6 +389,7 @@
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
+      hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
     ]));
@@ -476,9 +477,76 @@
     ]));
 
     body.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn"),
-      TM.ui.button("👥 Ver elenco", function () { TM.ui.go("coach-squad"); }, "btn ghost")
+      TM.ui.button("🔄 Ver movimentações", function () { TM.ui.go("coach-transfers"); }, "btn"),
+      TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn ghost")
     ]));
+  });
+
+  /* ---------- movimentações: contratações e vendas por data ---------- */
+  function dealKindLabel(k) {
+    return { buy: "Compra", free: "Contratação livre", loan: "Empréstimo", loanBuy: "Empréstimo c/ opção", sale: "Venda" }[k] || (k || "");
+  }
+  TM.ui.register("coach-transfers", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("coach"); return; }
+    screen.appendChild(TM.ui.topbar("🔄 Movimentações", function () { TM.ui.go("coach-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var deals = c.deals || [];
+
+    // balanço geral
+    var gasto = 0, arrec = 0;
+    deals.forEach(function (d) { if (d.type === "out") arrec += d.fee || 0; else gasto += d.fee || 0; });
+    gasto = r2(gasto); arrec = r2(arrec); var saldo = r2(arrec - gasto);
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "📊 Balanço de transferências (carreira)" }),
+      el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Contratações" }), el("span", { class: "deal-val bad", text: "-" + money(c, gasto) }) ]),
+      el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Vendas" }), el("span", { class: "deal-val good", text: money(c, arrec) }) ]),
+      el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Saldo" }), el("span", { class: "deal-val " + (saldo >= 0 ? "good" : "bad"), text: (saldo >= 0 ? "+" : "") + money(c, saldo) }) ])
+    ]));
+
+    // filtro entradas/saídas
+    var filter = "all";
+    var seg = el("div", { class: "segmented full" });
+    [["all", "Todas"], ["in", "Contratações"], ["out", "Vendas"]].forEach(function (o) {
+      var b = el("button", { class: "seg-btn" + (o[0] === filter ? " active" : ""), text: o[1], on: { click: function () {
+        filter = o[0]; seg.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active"); render();
+      } } });
+      seg.appendChild(b);
+    });
+    body.appendChild(seg);
+
+    var listWrap = el("div", { class: "deal-log" });
+    body.appendChild(listWrap);
+
+    function dealRow(d) {
+      var isIn = d.type === "in";
+      var side = isIn ? "de " + (d.other || "") : "para " + (d.other || "");
+      var feeTxt = (d.fee ? (isIn ? "-" : "+") + money(c, d.fee) : "grátis");
+      return el("div", { class: "mv-row" }, [
+        el("div", { class: "mv-ic " + (isIn ? "in" : "out"), text: isIn ? "⬇" : "⬆" }),
+        el("div", { class: "mv-main" }, [
+          el("div", { class: "mv-name", text: d.name + "  ·  " + (TM.data.posLabel({ pos: d.pos, pos2: null }) || d.pos) + " · " + (d.ov || "?") + " OVR" }),
+          el("div", { class: "mv-sub", text: dealKindLabel(d.kind) + " · " + side + " · 📅 " + (d.date || d.dateShort || "") })
+        ]),
+        el("div", { class: "mv-fee " + (isIn ? "out" : "in"), text: feeTxt })
+      ]);
+    }
+
+    function render() {
+      listWrap.innerHTML = "";
+      var rows = deals.filter(function (d) { return filter === "all" || d.type === filter; });
+      if (!rows.length) {
+        listWrap.appendChild(el("p", { class: "intro-text", text: deals.length ? "Nenhuma movimentação neste filtro." : "Nenhuma contratação ou venda ainda. Vá ao Mercado para reforçar o elenco — cada negócio aparece aqui com a data." }));
+        return;
+      }
+      var curSeason = null;
+      rows.forEach(function (d) {
+        if (d.season !== curSeason) { curSeason = d.season; listWrap.appendChild(el("div", { class: "list-head", text: "Temporada " + curSeason })); }
+        listWrap.appendChild(dealRow(d));
+      });
+    }
+    render();
   });
 
   /* ---------- títulos: prêmio em dinheiro + tela de parabéns ---------- */
@@ -1764,6 +1832,7 @@
         } else {
           c.budget -= (NEGO.fee || 0);
           c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += (NEGO.fee || 0);
+          C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: NEGO.fee || 0, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
           c.roster.push(p.id);
           c.signedFrom[p.id] = NEGO.oldClubId;
           C().syncLineup(c); // já entra no banco de reservas
