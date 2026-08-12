@@ -351,6 +351,44 @@
     return el("div", { class: "stat-chip" }, [ el("span", { class: "chip-ic", text: icon }), el("span", { text: text }) ]);
   }
 
+  // anima um número de 0 até o alvo (easeOutCubic), com separador de milhar pt-BR
+  function animateCount(node, target, dur) {
+    var start = null;
+    function fmt(v) { return Math.round(v).toLocaleString("pt-BR"); }
+    function step(ts) {
+      if (start == null) start = ts;
+      var t = Math.min(1, (ts - start) / dur), e = 1 - Math.pow(1 - t, 3);
+      node.textContent = fmt(target * e);
+      if (t < 1) requestAnimationFrame(step); else node.textContent = fmt(target);
+    }
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(step);
+    else node.textContent = fmt(target);
+  }
+
+  // grade de contadores com os números reais do jogo
+  function splashCounters() {
+    var W = TM.data.world();
+    var real = 0; for (var k in W.playersById) { if (W.playersById[k].ph) real++; }
+    var comps = 49; try { if (TM.data.competitions) comps = TM.data.competitions().length; } catch (e) {}
+    var items = [
+      { ic: "🛡️", n: W.clubs.length, lab: "Clubes" },
+      { ic: "👥", n: real, lab: "Jogadores reais" },
+      { ic: "🏟️", n: 361, lab: "Estádios" },
+      { ic: "🏆", n: W.leagues.length, lab: "Ligas e divisões" },
+      { ic: "🌍", n: W.nations.length, lab: "Seleções" },
+      { ic: "🎖️", n: comps, lab: "Competições" }
+    ];
+    var grid = el("div", { class: "splash-counters" });
+    items.forEach(function (it, i) {
+      var num = el("div", { class: "sc-num", text: "0" });
+      grid.appendChild(el("div", { class: "sc-item" }, [
+        el("div", { class: "sc-ic", text: it.ic }), num, el("div", { class: "sc-lab", text: it.lab })
+      ]));
+      animateCount(num, it.n, 1300 + i * 90);
+    });
+    return grid;
+  }
+
   /* =================== TELA: SPLASH =================== */
   register("splash", function (screen) {
     screen.id = "screen-splash";
@@ -358,14 +396,11 @@
 
     var content = el("div", { class: "splash-content" }, [
       el("img", { class: "splash-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-      el("h1", { class: "game-title", html: '<span class="title-total">TOTAL</span><span class="title-match">MATCH</span>' }),
-      el("div", { class: "stat-chips" }, [
-        statChip("🎮", "4 modos de jogo"),
-        statChip("🏆", "10 ligas + copas"),
-        statChip("🌍", "48 seleções"),
-        statChip("🎥", "Partidas ao vivo")
-      ])
+      el("h1", { class: "game-title", html: '<span class="title-total">TOTAL</span><span class="title-match">MATCH</span>' })
     ]);
+
+    // contadores animados com os números reais do jogo (sobem de 0 até o total)
+    content.appendChild(splashCounters());
 
     content.appendChild(el("button", { class: "btn-start", text: "TOQUE PARA COMEÇAR", on: { click: function () { go("modes"); } } }));
     content.appendChild(el("p", { class: "version", text: "v0.3 — protótipo jogável" }));
