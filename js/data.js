@@ -1226,7 +1226,9 @@
       // arredonda de forma "bonita" (passos maiores em valores altos)
       if (v >= 100) return Math.round(v / 5) * 5;
       if (v >= 30) return Math.round(v);
-      return Math.max(1, Math.round(v));
+      if (v >= 1) return Math.round(v);
+      // abaixo de 1M: mostra o valor real em passos de 50 mil (mín. 50 mil)
+      return Math.max(0.05, Math.round(v * 20) / 20);
     },
     // rótulo de posição específica em PT (sigla)
     posLabel: function (p) { return (p && p.pos2) || (p && POS_FALLBACK[p.pos]) || (p && p.pos) || "?"; },

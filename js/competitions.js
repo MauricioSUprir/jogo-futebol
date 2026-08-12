@@ -568,6 +568,7 @@
     TM.notify.remove(career, note.id);
     if (playerWants) {
       career.budget += off.fee;
+      career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += off.fee;
       career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
       if (career.lineup) {
         career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });
@@ -656,8 +657,10 @@
   }
 
   function fmtMoney(career, v) {
-    var sym = (career.money && career.money.sym) || "€";
-    return sym + " " + Math.round(v) + "M";
+    var sym = (career.money && career.money.sym) || "€", sign = v < 0 ? "-" : "", n = Math.abs(v);
+    if (n >= 1) { var m = n < 10 ? Math.round(n * 10) / 10 : Math.round(n); return sign + sym + " " + m + "M"; }
+    var k = Math.round(n * 1000);
+    return k <= 0 ? sym + " 0" : sign + sym + " " + k + " mil";
   }
   function loanTermLabel(y) { return y === 0.5 ? "6 meses" : y === 1 ? "1 ano" : y === 1.5 ? "1 ano e meio" : "2 anos"; }
 
@@ -1190,6 +1193,7 @@
     var mult = career.money ? career.money.mult : 1;
     var bonus = Math.round(20 * mult);
     career.budget += bonus;
+    career.finc = { prizeM: bonus, spentM: 0, soldM: 0 }; // zera o balanço da temporada; a verba entra como receita
     TM.notify.push(career, { icon: "💰", title: "Verba da diretoria", text: "A diretoria liberou +" + fmtMoney(career, bonus) + " de verba para a nova temporada." });
     // resumo da evolução do elenco
     seasonEvoSummary(career, before);

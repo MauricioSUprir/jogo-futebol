@@ -7,8 +7,17 @@
 
   function sym(c) { return c.money ? c.money.sym : "€"; }
   function mult(c) { return c.money ? c.money.mult : 1; }
-  function curVal(c, eur) { return Math.round(eur * mult(c)); }          // euro -> moeda da carreira
-  function money(c, cur) { return sym(c) + " " + cur + "M"; }            // valor já na moeda da carreira
+  function r2(n) { return Math.round(n * 100) / 100; }                   // 2 casas (mantém sub-1M)
+  function curVal(c, eur) { return r2(eur * mult(c)); }                  // euro -> moeda da carreira (mantém frações)
+  // valor já na moeda da carreira: >=1M mostra "M", <1M mostra em mil
+  function money(c, cur) {
+    var s = sym(c), sign = cur < 0 ? "-" : "", n = Math.abs(cur);
+    if (n >= 1) { var m = n < 10 ? Math.round(n * 10) / 10 : Math.round(n); return sign + s + " " + m + "M"; }
+    var k = Math.round(n * 1000);
+    return k <= 0 ? s + " 0" : sign + s + " " + k + " mil";
+  }
+  // passo do slider conforme a grandeza do valor (permite frações abaixo de 1M)
+  function moneyStep(maxv) { return maxv >= 50 ? 1 : maxv >= 10 ? 0.5 : maxv >= 3 ? 0.1 : 0.05; }
 
   function roundTitle(nTies) { return ({ 8: "Oitavas de final", 4: "Quartas de final", 2: "Semifinal", 1: "Final" })[nTies] || (nTies * 2 + " times"); }
 
@@ -379,10 +388,97 @@
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
+      hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
+  });
+
+  /* ---------- finanças do clube (receitas / despesas / lucro) ---------- */
+  // folha salarial estimada do elenco (na moeda da carreira)
+  function seasonWageBillCur(c) {
+    var sum = 0;
+    C().rosterPlayers(c).forEach(function (p) { sum += TM.data.marketValue(p) * 0.075; });
+    return r2(sum * mult(c));
+  }
+  // balanço financeiro estimado da temporada — receitas fixas (TV, bilheteria, patrocínio)
+  // estimadas pelo porte do clube + movimentações reais (prêmios, compras e vendas) já registradas
+  function coachFinances(c) {
+    var m = mult(c), r = TM.data.clubRating(c.teamId);
+    var fc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 };
+    var over = Math.max(0, r - 55);
+    var tv = r2((10 + over * 2.0) * m);          // cotas de TV
+    var gate = r2((5 + over * 1.3) * m);         // bilheteria + sócios
+    var sponsor = r2((4 + over * 1.0) * m);      // patrocínios + publicidade
+    var sold = fc.soldM || 0, prize = fc.prizeM || 0;
+    var income = r2(tv + gate + sponsor + sold + prize);
+    var wages = seasonWageBillCur(c);
+    var ops = r2((3 + over * 0.6) * m);           // estrutura, CT, comissão técnica
+    var spent = fc.spentM || 0;
+    var expense = r2(wages + ops + spent);
+    var profit = r2(income - expense);
+    return { r: r, tv: tv, gate: gate, sponsor: sponsor, sold: sold, prize: prize, income: income, wages: wages, ops: ops, spent: spent, expense: expense, profit: profit };
+  }
+
+  TM.ui.register("coach-finance", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("coach"); return; }
+    if (c.type === "director") { TM.ui.go("director-finance"); return; }
+    screen.appendChild(TM.ui.topbar("💰 Finanças", function () { TM.ui.go("coach-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var club = TM.data.club(c.teamId);
+    var f = coachFinances(c);
+
+    body.appendChild(el("div", { class: "market-budget" + (c.budget < 0 ? " debt" : ""), text: (c.budget < 0 ? "🔴 Caixa em dívida: " : "💰 Caixa disponível (orçamento): ") + money(c, c.budget) }));
+    body.appendChild(el("div", { class: "setting-hint", text: club.name + " · Temporada " + c.season + " · Porte do clube (overall): " + f.r }));
+
+    function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
+
+    // receitas
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "📈 Receitas da temporada" }),
+      line("Cotas de TV", money(c, f.tv), "good"),
+      line("Bilheteria e sócios", money(c, f.gate), "good"),
+      line("Patrocínios e publicidade", money(c, f.sponsor), "good"),
+      line("Vendas de jogadores", money(c, f.sold), "good"),
+      line("Prêmios de competições", money(c, f.prize), "good"),
+      line("Total de receitas", money(c, f.income), "good")
+    ]));
+
+    // despesas
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "📉 Despesas da temporada" }),
+      line("Folha salarial do elenco", "-" + money(c, f.wages), "bad"),
+      line("Estrutura, CT e comissão", "-" + money(c, f.ops), "bad"),
+      line("Contratações", "-" + money(c, f.spent), "bad"),
+      line("Total de despesas", "-" + money(c, f.expense), "bad")
+    ]));
+
+    // lucro / prejuízo
+    var pos = f.profit >= 0;
+    var total = Math.max(1, f.income + f.expense);
+    var incPct = Math.round((f.income / total) * 100);
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote " + (pos ? "happy" : "angry"), text: (pos ? "🟢 Lucro da temporada: +" : "🔴 Prejuízo da temporada: ") + money(c, f.profit) }),
+      el("div", { class: "fin-bar" }, [
+        el("div", { class: "fin-bar-in", style: "width:" + incPct + "%" }),
+        el("div", { class: "fin-bar-out", style: "width:" + (100 - incPct) + "%" })
+      ]),
+      el("div", { class: "fin-bar-legend" }, [
+        el("span", { class: "good", text: "▮ Receitas " + money(c, f.income) }),
+        el("span", { class: "bad", text: "▮ Despesas " + money(c, f.expense) })
+      ]),
+      el("div", { class: "setting-hint", text: pos
+        ? "As contas estão no azul. Você pode reinvestir o lucro em reforços pelo Mercado."
+        : "As contas estão no vermelho. Venda jogadores, ganhe títulos (prêmios) ou reduza a folha salarial para equilibrar." })
+    ]));
+
+    body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn"),
+      TM.ui.button("👥 Ver elenco", function () { TM.ui.go("coach-squad"); }, "btn ghost")
+    ]));
   });
 
   /* ---------- títulos: prêmio em dinheiro + tela de parabéns ---------- */
@@ -406,6 +502,7 @@
     c.titlesShown = c.titlesShown || {}; c.titlesShown[c.season + "-" + t.id] = true;
     var prizeCur = Math.round(t.prize * (c.money ? c.money.mult : 1));
     c.budget += prizeCur;
+    c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.prizeM += prizeCur;
     TM.storage.saveCoachCareer(c);
     TM.ui.applyCompTheme(screen, t.compId);
     screen.appendChild(el("div", { class: "title-celebrate" }, [
@@ -1427,8 +1524,8 @@
 
   /* ---------- negociação: com o clube ---------- */
   // taxa de transferência ~30% acima do valor de mercado; salário ~15% do valor/ano
-  function askingPrice(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 1.3)); }
-  function wageDemand(p) { return Math.max(1, Math.round(TM.data.marketValue(p) * 0.15)); }
+  function askingPrice(p) { return Math.max(0.1, r2(TM.data.marketValue(p) * 1.3)); }
+  function wageDemand(p) { return Math.max(0.05, r2(TM.data.marketValue(p) * 0.15)); }
 
   function segCtl(options, def, cb) {
     var wrap = el("div", { class: "segmented full" });
@@ -1487,9 +1584,9 @@
 
     /* --- compra definitiva (mais rígida) --- */
     function renderBuy() {
-      var asking = Math.round(mval * stance.priceMult * (stance.willSell ? 1 : 1.12));
+      var asking = r2(mval * stance.priceMult * (stance.willSell ? 1 : 1.12));
       var maxPat = stance.isKey ? 4 : 6;
-      var st = { bid: Math.min(Math.round(asking * 0.75), c.budget), rounds: 0, patience: maxPat, agreed: false };
+      var st = { bid: Math.min(r2(asking * 0.75), c.budget), rounds: 0, patience: maxPat, agreed: false };
 
       panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
 
@@ -1513,9 +1610,10 @@
 
       // controles: slider + botões rápidos
       var bidVal = el("span", { class: "range-val", text: money(c, st.bid) });
-      var slider = el("input", { type: "range", min: 1, max: Math.max(1, c.budget), value: Math.min(st.bid, c.budget), class: "slider" });
-      slider.addEventListener("input", function () { st.bid = parseInt(slider.value, 10); bidVal.textContent = money(c, st.bid); });
-      function setBid(v) { st.bid = Math.max(1, Math.min(c.budget, Math.round(v))); slider.value = Math.min(st.bid, c.budget); bidVal.textContent = money(c, st.bid); }
+      var bidMax = Math.max(0.05, c.budget), bStep = moneyStep(bidMax);
+      var slider = el("input", { type: "range", min: bStep, max: bidMax, step: bStep, value: Math.min(st.bid, bidMax), class: "slider" });
+      slider.addEventListener("input", function () { st.bid = r2(parseFloat(slider.value)); bidVal.textContent = money(c, st.bid); });
+      function setBid(v) { st.bid = r2(Math.max(bStep, Math.min(c.budget, v))); slider.value = Math.min(st.bid, bidMax); bidVal.textContent = money(c, st.bid); }
       var quick = el("div", { class: "nego-quick" }, [
         el("button", { class: "chip-btn", text: "−5%", on: { click: function () { setBid(st.bid * 0.95); } } }),
         el("button", { class: "chip-btn", text: "+5%", on: { click: function () { setBid(st.bid * 1.05); } } }),
@@ -1559,8 +1657,8 @@
 
     /* --- empréstimo (simples ou com opção de compra) --- */
     function renderLoan(withOption) {
-      var d = { termYears: 1, loanFee: Math.max(1, Math.round(mval * 0.08)), buyPrice: Math.round(mval * stance.priceMult * 1.15) };
-      var minBuy = Math.round(mval * stance.priceMult); // o clube dono exige no mínimo isso
+      var d = { termYears: 1, loanFee: Math.max(0.05, r2(mval * 0.08)), buyPrice: r2(mval * stance.priceMult * 1.15) };
+      var minBuy = r2(mval * stance.priceMult); // o clube dono exige no mínimo isso
       var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (withOption ? "Topamos emprestar " + p.name + " com opção — mas a opção não sai por menos de " + money(c, minBuy) + "." : "Podemos emprestar " + p.name + ". Combine a taxa e o tempo.") + "”" });
       panel.appendChild(quote);
 
@@ -1570,17 +1668,17 @@
 
       // taxa de empréstimo
       var feeVal = el("span", { class: "range-val", text: money(c, d.loanFee) });
-      var feeMax = Math.max(2, Math.round(mval * 0.25));
-      var feeSlider = el("input", { type: "range", min: 1, max: feeMax, value: Math.min(d.loanFee, feeMax), class: "slider" });
-      feeSlider.addEventListener("input", function () { d.loanFee = parseInt(feeSlider.value, 10); feeVal.textContent = money(c, d.loanFee); });
+      var feeMax = Math.max(0.2, r2(mval * 0.25)), feeStep = moneyStep(feeMax);
+      var feeSlider = el("input", { type: "range", min: feeStep, max: feeMax, step: feeStep, value: Math.min(d.loanFee, feeMax), class: "slider" });
+      feeSlider.addEventListener("input", function () { d.loanFee = r2(parseFloat(feeSlider.value)); feeVal.textContent = money(c, d.loanFee); });
       panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Taxa de empréstimo" }), el("div", { class: "range-wrap" }, [ feeSlider, feeVal ]) ]));
 
       // preço da opção de compra
       if (withOption) {
         var bpVal = el("span", { class: "range-val", text: money(c, d.buyPrice) });
-        var bpMax = Math.max(minBuy + 1, Math.round(minBuy * 2));
-        var bpSlider = el("input", { type: "range", min: 1, max: bpMax, value: Math.min(d.buyPrice, bpMax), class: "slider" });
-        bpSlider.addEventListener("input", function () { d.buyPrice = parseInt(bpSlider.value, 10); bpVal.textContent = money(c, d.buyPrice); });
+        var bpMax = Math.max(minBuy + 0.2, r2(minBuy * 2)), bpStep = moneyStep(bpMax);
+        var bpSlider = el("input", { type: "range", min: bpStep, max: bpMax, step: bpStep, value: Math.min(d.buyPrice, bpMax), class: "slider" });
+        bpSlider.addEventListener("input", function () { d.buyPrice = r2(parseFloat(bpSlider.value)); bpVal.textContent = money(c, d.buyPrice); });
         panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Preço da opção de compra (mín. " + money(c, minBuy) + ")" }), el("div", { class: "range-wrap" }, [ bpSlider, bpVal ]) ]));
       }
 
@@ -1632,8 +1730,9 @@
 
     // salário
     var wageVal = el("span", { class: "range-val", text: money(c, terms.wage) + "/ano" });
-    var wageSlider = el("input", { type: "range", min: 1, max: demand * 3, value: terms.wage, class: "slider" });
-    wageSlider.addEventListener("input", function () { terms.wage = parseInt(wageSlider.value, 10); wageVal.textContent = money(c, terms.wage) + "/ano"; });
+    var wageMax = Math.max(0.15, r2(demand * 3)), wStep = moneyStep(wageMax);
+    var wageSlider = el("input", { type: "range", min: wStep, max: wageMax, step: wStep, value: Math.min(terms.wage, wageMax), class: "slider" });
+    wageSlider.addEventListener("input", function () { terms.wage = r2(parseFloat(wageSlider.value)); wageVal.textContent = money(c, terms.wage) + "/ano"; });
     panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Salário anual" }), el("div", { class: "range-wrap" }, [ wageSlider, wageVal ]) ]));
 
     // tempo de contrato
@@ -1664,6 +1763,7 @@
           });
         } else {
           c.budget -= (NEGO.fee || 0);
+          c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += (NEGO.fee || 0);
           c.roster.push(p.id);
           c.signedFrom[p.id] = NEGO.oldClubId;
           C().syncLineup(c); // já entra no banco de reservas
@@ -1775,12 +1875,12 @@
     if (!off.finalOffer) {
       var negWrap = el("div", { class: "nego-panel" });
       negWrap.appendChild(el("div", { class: "nego-quote", text: "💬 Faça uma contraproposta — peça um valor maior." }));
-      var demandInput = el("input", { class: "text-input", type: "number", min: off.fee + 1, step: 1, value: Math.round(off.fee * 1.2), placeholder: "Valor pedido (milhões)" });
+      var demandInput = el("input", { class: "text-input", type: "number", min: off.fee, step: 0.05, value: r2(off.fee * 1.2), placeholder: "Valor pedido (milhões)" });
       negWrap.appendChild(el("div", { class: "nego-row" }, [
         el("span", { class: "deal-lbl", text: "Pedir " + sym(c) }), demandInput, el("span", { class: "deal-lbl", text: "M" })
       ]));
       negWrap.appendChild(TM.ui.button("📤 Enviar contraproposta", function () {
-        var d = parseInt(demandInput.value, 10);
+        var d = r2(parseFloat(demandInput.value));
         if (!d || d <= 0) { TM.ui.toast("Informe um valor válido"); return; }
         var r = C().counterIncomingOffer(c, note, d); TM.storage.saveCoachCareer(c);
         TM.ui.toast(r.text || "");
@@ -1830,15 +1930,15 @@
     if (!lo.finalOffer) {
       var negWrap = el("div", { class: "nego-panel" });
       negWrap.appendChild(el("div", { class: "nego-quote", text: "💬 Negocie melhores termos com o " + buyer.name + "." }));
-      var feeInput = el("input", { class: "text-input", type: "number", min: lo.loanFee, step: 1, value: Math.round(lo.loanFee * 1.5) || 1, placeholder: "Taxa (milhões)" });
+      var feeInput = el("input", { class: "text-input", type: "number", min: lo.loanFee, step: 0.05, value: r2(lo.loanFee * 1.5) || 0.05, placeholder: "Taxa (milhões)" });
       negWrap.appendChild(el("div", { class: "nego-row" }, [ el("span", { class: "deal-lbl", text: "Taxa " + sym(c) }), feeInput, el("span", { class: "deal-lbl", text: "M" }) ]));
       var askOpt = el("button", { class: "switch" + (lo.buyOption ? " on" : ""), on: { click: function () { askOpt.classList.toggle("on"); priceRow.style.display = askOpt.classList.contains("on") ? "" : "none"; } } }, [ el("span", { class: "switch-knob" }) ]);
       negWrap.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "deal-lbl", text: "Exigir opção de compra" }), askOpt ]));
-      var priceInput = el("input", { class: "text-input", type: "number", min: 1, step: 1, value: lo.buyPrice || Math.round(curVal(c, TM.data.marketValue(player)) * 1.2), placeholder: "Preço da opção (milhões)" });
+      var priceInput = el("input", { class: "text-input", type: "number", min: 0.05, step: 0.05, value: lo.buyPrice || r2(curVal(c, TM.data.marketValue(player)) * 1.2), placeholder: "Preço da opção (milhões)" });
       var priceRow = el("div", { class: "nego-row", style: lo.buyOption ? "" : "display:none" }, [ el("span", { class: "deal-lbl", text: "Compra " + sym(c) }), priceInput, el("span", { class: "deal-lbl", text: "M" }) ]);
       negWrap.appendChild(priceRow);
       negWrap.appendChild(TM.ui.button("📤 Enviar contraproposta", function () {
-        var want = { loanFee: parseInt(feeInput.value, 10) || lo.loanFee, askOption: askOpt.classList.contains("on"), buyPrice: parseInt(priceInput.value, 10) || 0 };
+        var want = { loanFee: r2(parseFloat(feeInput.value)) || lo.loanFee, askOption: askOpt.classList.contains("on"), buyPrice: r2(parseFloat(priceInput.value)) || 0 };
         var r = C().counterLoanOffer(c, note, want); TM.storage.saveCoachCareer(c);
         TM.ui.toast(r.text || ""); TM.ui.go("coach-loan-offer", { noteId: note.id });
       }, "btn primary small"));
