@@ -1,5 +1,5 @@
 /* ================= TOTAL MATCH — Modos de Construção ================= */
-/* 💎 Time dos Sonhos (Fantasy, todas as ligas, com orçamento)
+/* 💎 Dream Team (Fantasy, todas as ligas, com orçamento)
    🎲 Draft (escolhe uma liga, monta o time por sorteio 1-de-5, encara 6 times) */
 (function (global) {
   "use strict";
@@ -212,7 +212,7 @@
   function dreamFilled() { return dreamSlotKeys().filter(function (k) { return dream.squad[k]; }).length; }
 
   TM.ui.register("dream", function (screen) {
-    screen.appendChild(TM.ui.topbar("💎 Time dos Sonhos", function () { TM.ui.go("modes"); }));
+    screen.appendChild(TM.ui.topbar("💎 Dream Team", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Monte o elenco dos seus sonhos com jogadores de TODAS as ligas, dentro de um orçamento. Depois encare os 6 maiores clubes do mundo." }));
@@ -265,12 +265,12 @@
     var filled = dreamFilled();
     var ready = filled === 11 && spent <= dream.budget;
     screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button(ready ? "⚔️ Iniciar Copa dos Sonhos" : (filled + "/11 escolhidos" + (spent > dream.budget ? " · acima do orçamento!" : "")), function () {
+      TM.ui.button(ready ? "⚔️ Iniciar Copa Dream Team" : (filled + "/11 escolhidos" + (spent > dream.budget ? " · acima do orçamento!" : "")), function () {
         if (!ready) { TM.ui.toast(filled < 11 ? "Escolha os 11 jogadores" : "Você estourou o orçamento"); return; }
         var players = orderByPos(keys.map(function (k) { return dream.squad[k]; }));
         var strongest = TM.data.world().clubs.map(function (c) { return c.id; }).sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); }).slice(0, 6);
         var oppIds = strongest.slice().reverse(); // do mais fraco (6º) ao mais forte (1º)
-        var st = { title: "💎 Copa dos Sonhos", accent: "#39d98a", myName: "Time dos Sonhos", myPlayers: players, oppIds: oppIds, idx: 0, results: [], mode: "dream" };
+        var st = { title: "💎 Copa Dream Team", accent: "#39d98a", myName: "Dream Team", myPlayers: players, oppIds: oppIds, idx: 0, results: [], mode: "dream" };
         saveCh(st); TM.ui.go("build-hub");
       }, ready ? "btn primary big" : "btn big")
     ]));

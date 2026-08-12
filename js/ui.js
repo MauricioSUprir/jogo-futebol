@@ -392,7 +392,7 @@
       { icon: "🎯", name: "Master League", route: "coach" },
       { icon: "⭐", name: "Rumo ao Estrelato", route: "player" },
       { icon: "🏆", name: "Jogar Competição", route: "compmode" },
-      { icon: "💎", name: "Time dos Sonhos", route: "dream" },
+      { icon: "💎", name: "Dream Team", route: "dream" },
       { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🌐", name: "Online (amigos)", route: "online" },
       { icon: "🏆", name: "Competição em Grupo", route: "groupcomp" },
