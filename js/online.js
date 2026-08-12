@@ -54,7 +54,8 @@
       // ações
       body.appendChild(el("div", { class: "hub-actions" }, [
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "hub-ic", text: "👥" }), el("span", { text: "Central de amigos" }) ]),
-        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-play"); } } }, [ el("span", { class: "hub-ic", text: "⚔️" }), el("span", { text: "Partida online" }) ])
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-play"); } } }, [ el("span", { class: "hub-ic", text: "⚔️" }), el("span", { text: "Partida online" }) ]),
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-ranking"); } } }, [ el("span", { class: "hub-ic", text: "🏅" }), el("span", { text: "Ranking global" }) ])
       ]));
     });
   });
@@ -174,6 +175,32 @@
     });
   });
 
+  /* ---------- RANKING GLOBAL (vitórias online) ---------- */
+  TM.ui.register("online-ranking", function (screen) {
+    screen.appendChild(TM.ui.topbar("🏅 Ranking global", function () { TM.ui.go("online"); }));
+    if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("p", { class: "intro-text", text: "Os que mais venceram partidas online. Jogue partidas online para pontuar!" }));
+    var list = el("div", { class: "friend-list" });
+    body.appendChild(list);
+    list.appendChild(el("p", { class: "intro-text", text: "Carregando…" }));
+    N().getRanking(function (arr) {
+      if (!list.isConnected) return;
+      list.innerHTML = "";
+      if (!arr.length) { list.appendChild(el("p", { class: "intro-text", text: "Ainda ninguém no ranking. Seja o primeiro!" })); return; }
+      var me = N().me ? N().me.uid : null;
+      arr.forEach(function (r, i) {
+        var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1) + "º";
+        list.appendChild(el("div", { class: "friend-row" + (r.uid === me ? " rank-me" : "") }, [
+          el("span", { class: "rank-pos", text: medal }),
+          el("div", { class: "friend-info" }, [ el("div", { class: "friend-name", text: r.name + (r.uid === me ? " (você)" : "") }), el("div", { class: "friend-sub", text: r.played + " jogo(s)" }) ]),
+          el("div", { class: "rank-wins" }, [ el("b", { text: r.wins }), el("span", { text: " vit." }) ])
+        ]));
+      });
+    });
+  });
+
   /* ---------- PARTIDA ONLINE: criar/entrar ---------- */
   TM.ui.register("online-play", function (screen) {
     screen.appendChild(TM.ui.topbar("⚔️ Partida online", function () { TM.ui.go("online"); }));
@@ -184,6 +211,8 @@
     var seg = el("div", { class: "preset-msgs" });
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickSourceThenCreate(); } } }, [ el("span", { class: "preset-ic", text: "⚽" }), el("span", { class: "preset-tx", text: "Partida normal (escolher time)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickLeagueThenDraft(); } } }, [ el("span", { class: "preset-ic", text: "🎲" }), el("span", { class: "preset-tx", text: "Draft online (montar time por sorteio)" }), el("span", { class: "preset-mood", text: "→" }) ]));
+    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { doCreate({ source: "club", mode: "penalty" }); } } }, [ el("span", { class: "preset-ic", text: "🥅" }), el("span", { class: "preset-tx", text: "Disputa de pênaltis (direto)" }), el("span", { class: "preset-mood", text: "→" }) ]));
+    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { doCreate({ source: "club", mode: "surprise" }); } } }, [ el("span", { class: "preset-ic", text: "🎰" }), el("span", { class: "preset-tx", text: "Time surpresa (sorteio pra cada um)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { TM.ui.go("online-join", {}); } } }, [ el("span", { class: "preset-ic", text: "🔑" }), el("span", { class: "preset-tx", text: "Entrar com código" }), el("span", { class: "preset-mood", text: "→" }) ]));
     body.appendChild(seg);
   });
@@ -227,6 +256,7 @@
   /* ---------- SALA DA PARTIDA ---------- */
   var roomStop = null, roomComputed = false;
   function teamObj(source, id) { return source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id); }
+  function randomClubId() { var cs = TM.data.world().clubs; return cs[Math.floor(Math.random() * cs.length)].id; }
   function teamOptions(source, leagueId) {
     if (source === "nation") return TM.data.world().nations.map(function (n) { return { id: n.id, name: n.name }; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
     return TM.data.league(leagueId).clubIds.map(function (id) { return { id: id, name: TM.data.club(id).name }; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
@@ -247,6 +277,12 @@
       if (!m) { TM.ui.clear(wrap); wrap.appendChild(el("p", { class: "intro-text", text: "A sala foi encerrada." })); return; }
       // resultado pronto → todos vão para a partida
       if (m.result) { if (roomStop) { roomStop(); roomStop = null; } TM.ui.go("online-match", { code: code, side: side, match: m }); return; }
+      // "time surpresa": sorteia um time aleatório para cada lado automaticamente
+      if (m.mode === "surprise" && m.guest) {
+        var mySide2 = side === "host" ? "host" : "guest";
+        var myT = side === "host" ? m.hostTeam : m.guestTeam;
+        if (!myT) { N().setMatchTeam(code, mySide2, randomClubId()); }
+      }
       renderRoom(wrap, code, side, m);
       // host calcula o resultado quando os dois lados estão prontos
       var ready = m.mode === "draft" ? (m.hostDraft && m.guestDraft) : (m.hostTeam && m.guestTeam);
@@ -254,10 +290,14 @@
         roomComputed = true;
         var teams = buildMatchTeams(m), a = teams[0], b = teams[1];
         var settings = TM.storage.settings();
-        var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true });
-        // empate → pênaltis direto (host calcula e compartilha para os dois verem igual)
-        if (result.score[0] === result.score[1]) { result.shootout = TM.engine.shootout(a, b); }
-        N().setMatchResult(code, result);
+        if (m.mode === "penalty") {
+          // disputa de pênaltis direto (sem partida)
+          N().setMatchResult(code, { penaltyOnly: true, score: [0, 0], events: [], shootout: TM.engine.shootout(a, b) });
+        } else {
+          var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true });
+          if (result.score[0] === result.score[1]) { result.shootout = TM.engine.shootout(a, b); }
+          N().setMatchResult(code, result);
+        }
       }
     });
   });
@@ -319,8 +359,19 @@
       return;
     }
 
+    // modo "time surpresa": times sorteados, sem escolha
+    if (m.mode === "surprise") {
+      wrap.appendChild(el("div", { class: "list-head", text: "🎰 Time surpresa — sorteado pra cada um" }));
+      if (myTeam) wrap.appendChild(teamPreview(m.source, myTeam, "Você (sorteado)"));
+      else wrap.appendChild(el("div", { class: "waiting-line", text: "🎰 Sorteando seu time…" }));
+      if (oppTeam) wrap.appendChild(teamPreview(m.source, oppTeam, oppName || "Adversário (sorteado)"));
+      else if (m.guest) wrap.appendChild(el("div", { class: "waiting-line", text: "🎰 Sorteando o adversário…" }));
+      if (myTeam && oppTeam) wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Iniciando…" }));
+      return;
+    }
+
     // meu seletor de time (visual, com escudos e overall)
-    wrap.appendChild(el("div", { class: "list-head", text: "Escolha seu time (" + (m.source === "nation" ? "seleção" : "clube") + ")" }));
+    wrap.appendChild(el("div", { class: "list-head", text: m.mode === "penalty" ? "🥅 Escolha seu time (vai direto pros pênaltis)" : "Escolha seu time (" + (m.source === "nation" ? "seleção" : "clube") + ")" }));
     var openPicker = function () {
       TM.ui.pickTeam({ source: m.source, title: "Escolha seu time", current: myTeam, back: function () { TM.ui.go("online-room", { code: code, side: side }); },
         onPick: function (pid) { N().setMatchTeam(code, mySide, pid); TM.ui.go("online-room", { code: code, side: side }); } });
@@ -398,7 +449,7 @@
     body.appendChild(list);
   });
   function finishOnlineDraft() {
-    var ids = odraft.picks.slice().sort(function (a, b) { return (OD_ORDER[a.pos] || 9) - (OD_ORDER[b.pos] || 9); }).map(function (p) { return p.id; });
+    var ids = odraft.picks.slice().sort(function (a, b) { var ra = OD_ORDER[a.pos], rb = OD_ORDER[b.pos]; return (ra == null ? 9 : ra) - (rb == null ? 9 : rb); }).map(function (p) { return p.id; });
     var code = odraft.code, side = odraft.side;
     N().setMatchDraft(code, side, ids);
     odraft = null;
@@ -416,6 +467,12 @@
     function toResult(penWinnerSide) {
       TM.ui.go("online-result", { a: a, b: b, result: result, hostName: m.hostName, guestName: m.guestName, penWinnerSide: penWinnerSide,
         side: side, hostUid: m.host, guestUid: m.guest });
+    }
+    // disputa de pênaltis direto: pula a partida
+    if (result.penaltyOnly && result.shootout) {
+      TM.ui.go("pen-shootout", { teamA: a, teamB: b, shoot: result.shootout, title: "Pênaltis · Online",
+        onDone: function () { toResult(result.shootout.winner); } });
+      return;
     }
     TM.matchview.play(screen, {
       teamA: a, teamB: b, result: result, settings: settings,
@@ -445,11 +502,14 @@
     var pen = params.penWinnerSide != null;
     var winner = pen ? (params.penWinnerSide === 0 ? (params.hostName || a.name) : (params.guestName || b.name))
                      : hs > as ? (params.hostName || a.name) : as > hs ? (params.guestName || b.name) : null;
-    // retrospecto entre amigos: só o host grava (evita contar duas vezes)
+    // retrospecto entre amigos + ranking global: só o host grava (evita contar 2x)
     if (params.side === "host" && params.hostUid && params.guestUid) {
       var winUid = pen ? (params.penWinnerSide === 0 ? params.hostUid : params.guestUid)
                        : hs > as ? params.hostUid : as > hs ? params.guestUid : null;
-      try { N().recordResult(params.hostUid, params.guestUid, winUid); } catch (e) {}
+      try {
+        N().recordResult(params.hostUid, params.guestUid, winUid);
+        if (winUid) { var wName = winUid === params.hostUid ? params.hostName : params.guestName; var lUid = winUid === params.hostUid ? params.guestUid : params.hostUid; var lName = winUid === params.hostUid ? params.guestName : params.hostName; N().recordWin(winUid, wName, lUid, lName); }
+      } catch (e) {}
     }
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("online"); }));
     screen.appendChild(el("div", { class: "result-hero" }, [

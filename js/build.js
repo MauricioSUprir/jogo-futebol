@@ -15,7 +15,8 @@
   function sum(a) { return a.reduce(function (s, x) { return s + x; }, 0); }
   function teamOverall(players) { var xi = players.slice(0, 11); return Math.round(sum(xi.map(function (p) { return p.overall; })) / (xi.length || 1)); }
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
-  function orderByPos(list) { return list.slice().sort(function (a, b) { return (POS_ORDER[a.pos] || 9) - (POS_ORDER[b.pos] || 9); }); }
+  function posRank(pos) { var r = POS_ORDER[pos]; return r == null ? 9 : r; } // cuidado: GK=0 é falsy
+  function orderByPos(list) { return list.slice().sort(function (a, b) { return posRank(a.pos) - posRank(b.pos); }); }
   function cost(p) { return TM.data.marketValue(p); }
   function money(m) { return m >= 1 ? "€" + (m >= 100 ? Math.round(m) : m.toFixed(m < 10 ? 1 : 0)) + "M" : "€" + Math.round(m * 1000) + "k"; }
 
@@ -77,6 +78,9 @@
       el("div", {}, [ el("div", { class: "ch-name", text: s.myName }), el("div", { class: "ch-sub", text: "Força geral " + teamOverall(s.myPlayers) + " · " + s.myPlayers.length + " jogadores" }) ])
     ]));
 
+    // campinho do meu time (na central)
+    screen.appendChild(xiPitch(s.myPlayers));
+
     var done = s.results.length, total = s.oppIds.length;
     if (done >= total) { renderChDone(screen, s); return; }
 
@@ -111,12 +115,9 @@
     ]));
   });
 
-  // ver meu elenco (campinho + reservas) — só leitura
-  TM.ui.register("build-squad", function (screen) {
-    var s = loadCh(); if (!s) { TM.ui.go("modes"); return; }
-    if (s.accent) screen.style.setProperty("--gold", s.accent);
-    screen.appendChild(TM.ui.topbar("📋 Meu elenco", function () { TM.ui.go("build-hub"); }));
-    var starters = s.myPlayers.slice(0, 11), bench = s.myPlayers.slice(11);
+  // campinho (XI) só-leitura — reutilizado no hub e no "Meu elenco"
+  function xiPitch(players) {
+    var starters = players.slice(0, 11);
     var pitch = el("div", { class: "pitch scout-pitch" });
     pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
     pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
@@ -128,7 +129,16 @@
         el("span", { class: "chip-age", text: p.age + " anos" })
       ]));
     });
-    screen.appendChild(el("div", { class: "lineup-board" }, [pitch]));
+    return el("div", { class: "lineup-board" }, [pitch]);
+  }
+
+  // ver meu elenco (campinho + reservas) — só leitura
+  TM.ui.register("build-squad", function (screen) {
+    var s = loadCh(); if (!s) { TM.ui.go("modes"); return; }
+    if (s.accent) screen.style.setProperty("--gold", s.accent);
+    screen.appendChild(TM.ui.topbar("📋 Meu elenco", function () { TM.ui.go("build-hub"); }));
+    var bench = s.myPlayers.slice(11);
+    screen.appendChild(xiPitch(s.myPlayers));
     if (bench.length) {
       screen.appendChild(el("h3", { class: "block-title", text: "Reservas" }));
       var bl = el("div", { class: "build-list" });
