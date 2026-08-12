@@ -360,5 +360,52 @@
     db.ref("matchmaking/waiting").onDisconnect().cancel();
   };
 
+  // ---- Contas (login em qualquer aparelho para sincronizar as carreiras) ----
+  function sha256hex(str) {
+    try {
+      var enc = new global.TextEncoder().encode(str);
+      return global.crypto.subtle.digest("SHA-256", enc).then(function (buf) {
+        return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+      });
+    } catch (e) {
+      // fallback simples (não-ideal, mas evita quebrar se subtle indisponível)
+      var h = 0; for (var i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0; }
+      return global.Promise.resolve("f" + (h >>> 0).toString(16));
+    }
+  }
+  function normUser(u) { return String(u || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, ""); }
+  net.normUser = normUser;
+  net.createAccount = function (user, pass, cb) {
+    var u = normUser(user);
+    if (u.length < 3) { cb(null, "Usuário: use ao menos 3 letras/números (sem espaços)."); return; }
+    if ((pass || "").length < 4) { cb(null, "Senha: use ao menos 4 caracteres."); return; }
+    sha256hex(u + ":" + pass + ":totalmatch").then(function (hash) {
+      var ref = net._db.ref("accounts/" + u);
+      ref.transaction(function (cur) { if (cur) return; return { pass: hash, createdAt: firebaseNow() }; },
+        function (err, committed) {
+          if (err) { cb(null, err.message); return; }
+          if (!committed) { cb(null, "Esse usuário já existe. Escolha outro."); return; }
+          cb({ user: u }, null);
+        });
+    });
+  };
+  net.login = function (user, pass, cb) {
+    var u = normUser(user);
+    sha256hex(u + ":" + pass + ":totalmatch").then(function (hash) {
+      net._db.ref("accounts/" + u).once("value").then(function (s) {
+        var v = s.val();
+        if (!v) { cb(null, "Conta não encontrada."); return; }
+        if (v.pass !== hash) { cb(null, "Senha incorreta."); return; }
+        cb({ user: u, saves: v.saves || null }, null);
+      }).catch(function (e) { cb(null, e.message); });
+    });
+  };
+  net.cloudSave = function (user, data, cb) {
+    net._db.ref("accounts/" + normUser(user) + "/saves").set(data).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
+  net.cloudLoad = function (user, cb) {
+    net._db.ref("accounts/" + normUser(user) + "/saves").once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
+  };
+
   TM.net = net;
 })(window);
