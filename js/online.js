@@ -175,6 +175,33 @@
     });
   });
 
+  /* ---------- PARTIDA ALEATÓRIA (matchmaking) ---------- */
+  var mmActive = false;
+  TM.ui.register("online-random", function (screen) {
+    screen.appendChild(TM.ui.topbar("🔀 Partida aleatória", function () { if (mmActive) { N().cancelFind(); mmActive = false; } TM.ui.go("online-play"); }));
+    if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    var body = el("div", { class: "panel-narrow", style: "text-align:center" });
+    screen.appendChild(body);
+    body.appendChild(el("div", { class: "mm-spinner" }));
+    var status = el("div", { class: "mm-status", text: "🔎 Procurando um oponente…" });
+    body.appendChild(status);
+    body.appendChild(el("p", { class: "intro-text", text: "Você vai ser pareado com outro jogador que também está procurando. Assim que achar, vocês escolhem os times e jogam." }));
+    body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Cancelar", function () { if (mmActive) { N().cancelFind(); mmActive = false; } TM.ui.go("online-play"); }, "btn ghost")
+    ]));
+    mmActive = true;
+    N().findMatch(function (code, side, err) {
+      if (!screen.isConnected) return;
+      mmActive = false;
+      if (err || !code) { status.textContent = "❌ " + (err || "Não foi possível parear."); return; }
+      if (side === "guest") {
+        N().joinMatch(code, function (c, e2) { if (c) TM.ui.go("online-room", { code: c, side: "guest" }); else { status.textContent = "❌ " + (e2 || "Sala sumiu."); } });
+      } else {
+        TM.ui.go("online-room", { code: code, side: "host" });
+      }
+    }, function () { if (screen.isConnected) status.textContent = "🔎 Procurando um oponente… (aguarde)"; });
+  });
+
   /* ---------- RANKING GLOBAL (vitórias online) ---------- */
   TM.ui.register("online-ranking", function (screen) {
     screen.appendChild(TM.ui.topbar("🏅 Ranking global", function () { TM.ui.go("online"); }));
@@ -213,6 +240,7 @@
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickLeagueThenDraft(); } } }, [ el("span", { class: "preset-ic", text: "🎲" }), el("span", { class: "preset-tx", text: "Draft online (montar time por sorteio)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { doCreate({ source: "club", mode: "penalty" }); } } }, [ el("span", { class: "preset-ic", text: "🥅" }), el("span", { class: "preset-tx", text: "Disputa de pênaltis (direto)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { doCreate({ source: "club", mode: "surprise" }); } } }, [ el("span", { class: "preset-ic", text: "🎰" }), el("span", { class: "preset-tx", text: "Time surpresa (sorteio pra cada um)" }), el("span", { class: "preset-mood", text: "→" }) ]));
+    seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { TM.ui.go("online-random"); } } }, [ el("span", { class: "preset-ic", text: "🔀" }), el("span", { class: "preset-tx", text: "Partida aleatória (achar oponente)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { TM.ui.go("online-join", {}); } } }, [ el("span", { class: "preset-ic", text: "🔑" }), el("span", { class: "preset-tx", text: "Entrar com código" }), el("span", { class: "preset-mood", text: "→" }) ]));
     body.appendChild(seg);
   });

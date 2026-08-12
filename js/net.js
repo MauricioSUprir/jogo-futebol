@@ -322,5 +322,43 @@
     ref.once("value").then(function (s) { var v = s.val(); if (v && v.host === net.me.uid) ref.remove(); else ref.child("players/" + net.me.uid).remove(); });
   };
 
+  // ---- Partida Aleatória (matchmaking): acha um oponente na fila ----
+  // fila de 1 vaga: quem chega e acha alguém esperando, "pega" e cria a sala;
+  // quem chega e a vaga está vazia, espera até ser pego.
+  net.findMatch = function (cbMatched, cbWaiting) {
+    var db = net._db, wref = db.ref("matchmaking/waiting"), taken = null;
+    wref.transaction(function (cur) {
+      if (cur === null || cur.uid === net.me.uid) return { uid: net.me.uid, name: net.me.name, ts: firebaseNow() };
+      taken = cur; return null; // pega o oponente e esvazia a vaga
+    }, function (err, committed) {
+      if (err) { cbMatched(null, null, err.message); return; }
+      if (taken && taken.uid !== net.me.uid) {
+        // peguei alguém -> crio a sala e aviso ele pela "assign"
+        net.createMatch({ source: "club", mode: "random" }, function (code) {
+          if (!code) { cbMatched(null, null, "erro ao criar sala"); return; }
+          db.ref("matchmaking/assign/" + taken.uid).set({ code: code, ts: firebaseNow() });
+          cbMatched(code, "host", null);
+        });
+      } else {
+        // fiquei esperando -> escuto minha atribuição
+        wref.onDisconnect().remove();
+        var aref = db.ref("matchmaking/assign/" + net.me.uid);
+        cbWaiting && cbWaiting();
+        var h = aref.on("value", function (s) {
+          var v = s.val();
+          if (v && v.code) { aref.off("value", h); aref.remove(); wref.onDisconnect().cancel(); net._mmA = null; cbMatched(v.code, "guest", null); }
+        });
+        net._mmA = { ref: aref, h: h };
+      }
+    });
+  };
+  net.cancelFind = function () {
+    var db = net._db;
+    db.ref("matchmaking/waiting").transaction(function (cur) { if (cur && cur.uid === net.me.uid) return null; return cur; });
+    if (net._mmA) { net._mmA.ref.off("value", net._mmA.h); net._mmA = null; }
+    if (net.me) db.ref("matchmaking/assign/" + net.me.uid).remove();
+    db.ref("matchmaking/waiting").onDisconnect().cancel();
+  };
+
   TM.net = net;
 })(window);
