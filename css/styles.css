@@ -1291,3 +1291,21 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   border: 5px solid rgba(255,255,255,.12); border-top-color: var(--gold); animation: mm-spin 0.9s linear infinite; }
 @keyframes mm-spin { to { transform: rotate(360deg); } }
 .mm-status { font-size: 16px; font-weight: 800; color: var(--gold); margin-bottom: 8px; }
+
+/* ---------- Perfil ---------- */
+.prof-card { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 14px;
+  background: var(--black-soft); border: 1px solid var(--line); border-left: 4px solid var(--gold); margin-bottom: 8px; }
+.prof-photo-lg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.prof-hi { font-size: 18px; font-weight: 800; }
+.prof-email { font-size: 12px; color: var(--text-dim); }
+.prof-initials { display: flex; align-items: center; justify-content: center; font-weight: 800; color: #04120a;
+  background: linear-gradient(135deg, var(--gold), var(--gold-dark)); }
+.prof-photo-lg.prof-initials { font-size: 28px; }
+.prof-edit { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.prof-edit .photo-drop { flex: 0 0 auto; }
+.prof-edit .select { flex: 1; }
+/* chip do perfil na topbar de modos */
+.modes-profile { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; min-width: 0; }
+.modes-prof-ava { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.modes-prof-ava.prof-initials { font-size: 18px; }
+.modes-prof-name { font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

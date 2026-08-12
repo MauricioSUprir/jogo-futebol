@@ -395,16 +395,23 @@
       { icon: "💎", name: "Time dos Sonhos", route: "dream" },
       { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🌐", name: "Online (amigos)", route: "online" },
-      { icon: "👤", name: "Conta (sincronizar)", route: "account" },
       { icon: "🏆", name: "Competição em Grupo", route: "groupcomp" },
       { icon: "🎖️", name: "Informações", route: "competicoes" },
       { icon: "💾", name: "Minhas Carreiras", route: "saves" },
-      { icon: "⚙️", name: "Configurações", route: "settings" }
+      { icon: "⚙️", name: "Configurações", route: "settings" },
+      { icon: "👤", name: "Perfil", route: "profile" }
     ];
 
+    var prof = (TM.account && TM.account.profile) ? TM.account.profile() : null;
+    var titleBlock = prof
+      ? el("div", { class: "modes-profile", on: { click: function () { go("profile"); } } }, [
+          (TM.account.avatar ? TM.account.avatar(prof, "modes-prof-ava") : el("span")),
+          el("div", {}, [ el("div", { class: "modes-prof-name", text: prof.name }), el("div", { class: "modes-sub", text: "Bem-vindo de volta!" }) ])
+        ])
+      : el("div", {}, [ el("div", { class: "mini-logo", html: 'TOTAL<span>MATCH</span>' }), el("div", { class: "modes-sub", text: "Escolha um modo" }) ]);
     screen.appendChild(el("header", { class: "modes-topbar" }, [
       el("img", { class: "modes-emblem-img", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-      el("div", {}, [ el("div", { class: "mini-logo", html: 'TOTAL<span>MATCH</span>' }), el("div", { class: "modes-sub", text: "Escolha um modo" }) ]),
+      titleBlock,
       el("button", { class: "btn-back small-back", text: "←", on: { click: function () { go("splash"); } } })
     ]));
 
