@@ -12,11 +12,11 @@
     } catch (e) { return fallback; }
   }
   function write(key, value) {
-    try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); return true; }
+    try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } return true; }
     catch (e) { return false; }
   }
   function remove(key) {
-    try { localStorage.removeItem(PREFIX + key); } catch (e) {}
+    try { localStorage.removeItem(PREFIX + key); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } } catch (e) {}
   }
 
   var DEFAULT_SETTINGS = {
