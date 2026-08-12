@@ -412,6 +412,20 @@
     FW: ["CA", "CA", "PD", "PE", "SA"]                 // centroavante, ponta dir/esq, segundo atacante
   };
   function specificPos(rng, pos) { var a = POS_PT[pos] || [pos]; return a[Math.floor(rng() * a.length)]; }
+
+  // jogadores reais atualmente SEM CLUBE (agentes livres) — dados e fotos via Transfermarkt
+  var REAL_FREE_AGENTS = [
+    {n:"Fabinho",p:"MF",q:"VOL",a:32,o:80,t:81,v:12000000,nat:"Brazil",ph:"225693"},
+    {n:"Ismaël Bennacer",p:"MF",q:"VOL",a:28,o:77,t:79,v:8000000,nat:"Algeria",ph:"351816"},
+    {n:"Ryotaro Ito",p:"MF",q:"MEI",a:28,o:77,t:79,v:6000000,nat:"Japan",ph:"415522"},
+    {n:"Wilfried Zaha",p:"FW",q:"PE",a:33,o:77,t:77,v:3500000,nat:"Ivory Coast",ph:"145988"},
+    {n:"Joselu",p:"FW",q:"CA",a:36,o:77,t:77,v:2800000,nat:"Spain",ph:"81999"},
+    {n:"Axel Tuanzebe",p:"DF",q:"ZAG",a:28,o:76,t:78,v:5000000,nat:"Cameroon",ph:"342046"},
+    {n:"André Amaro",p:"DF",q:"ZAG",a:23,o:75,t:80,v:5000000,nat:"Portugal",ph:"637782"},
+    {n:"Felipe Carballo",p:"MF",q:"MC",a:29,o:75,t:76,v:3500000,nat:"Uruguay",ph:"394930"},
+    {n:"Oleksiy Gutsulyak",p:"FW",q:"PD",a:28,o:75,t:76,v:3500000,nat:"Ukraine",ph:"296366"},
+    {n:"Yari Verschaeren",p:"MF",q:"MEI",a:25,o:74,t:76,v:3000000,nat:"Belgium",ph:"502302"}
+  ];
   var POS_FALLBACK = { GK: "GOL", DF: "ZAG", MF: "MC", FW: "CA" };
 
   function fullName(rng, culture) {
@@ -958,12 +972,26 @@
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = NAT_COACH[n.key] || fullName(rng, n.culture); n.coachPhotoKey = coachSlug(n.coach); });
 
-    // agentes livres (sem clube) — variados
+    // agentes livres (sem clube): jogadores REAIS sem clube (foto + dados de verdade)
+    // seguidos de alguns genéricos p/ profundidade e cobertura de posições (ex.: goleiros)
     var freeAgents = [];
-    for (var fa = 0; fa < 44; fa++) {
+    REAL_FREE_AGENTS.forEach(function (fpl, i) {
+      var rfnat = natByName(fpl.nat) || NATIONS[0];
+      var rfid = "far" + (i + 1);
+      var rfp = {
+        id: rfid, name: fpl.n, clubId: "free", pos: fpl.p, pos2: fpl.q, age: fpl.a,
+        overall: fpl.o, potential: fpl.t, attrs: makeAttrs(rng, fpl.o, fpl.p),
+        nationId: rfnat.id, nationName: rfnat.name, height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
+        valueEur: fpl.v, ph: fpl.ph, form: 0, goals: 0, freeAgent: true
+      };
+      playersById[rfid] = rfp;
+      rfnat.players.push(rfid);
+      freeAgents.push(rfid);
+    });
+    for (var fa = 0; fa < 20; fa++) {
       var fpos = POS_POOL[fa % POS_POOL.length];
       var fnat = R.pick(rng, NATIONS);
-      var fbase = R.int(rng, 52, 82);
+      var fbase = R.int(rng, 52, 80);
       var fattrs = makeAttrs(rng, fbase, fpos);
       var fov = overallFrom(fattrs, fpos);
       var fage = R.int(rng, 17, 37);
