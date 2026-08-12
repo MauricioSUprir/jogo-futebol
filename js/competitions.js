@@ -137,6 +137,56 @@
     return { formation: formation, starters: starters, bench: bench };
   }
 
+  /* ---------- posições: variabilidade + penalidade por jogar fora de posição ---------- */
+  var POS_ORDER = { GK: 0, DF: 1, MF: 2, FW: 3 };
+  // posição secundária "confortável" sugerida pela posição específica (pos2)
+  var VERSA_CAND = {
+    ZAG: ["MF"], LD: ["MF"], LE: ["MF"],
+    VOL: ["DF"], MC: ["DF", "FW"], MEI: ["FW"], MD: ["FW"], ME: ["FW"],
+    PD: ["MF"], PE: ["MF"], SA: ["MF"], CA: ["MF"], GOL: []
+  };
+  function hashStr(s) { s = String(s || ""); var h = 0; for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) | 0; } return Math.abs(h); }
+  // grupos onde o jogador também atua sem perder overall — ~a maioria (mas nem todos; goleiros não)
+  function playerVersa(p) {
+    if (!p) return [];
+    if (p._versa) return p._versa;
+    var cands = VERSA_CAND[p.pos2] || [], h = hashStr(p.id), out = [];
+    if (cands.length && (h % 100) < 66) { out.push(cands[0]); if (cands.length > 1 && (h % 100) < 20) out.push(cands[1]); }
+    try { p._versa = out; } catch (e) {}
+    return out;
+  }
+  // quanto o jogador perde de overall ao atuar no grupo `slotGroup`
+  function posPenalty(playerPos, slotGroup, p) {
+    if (playerPos === slotGroup) return 0;
+    if (playerVersa(p).indexOf(slotGroup) >= 0) return 0;         // posição secundária confortável
+    if (playerPos === "GK" || slotGroup === "GK") return 16;      // goleiro é único
+    var d = Math.abs((POS_ORDER[playerPos] == null ? 2 : POS_ORDER[playerPos]) - (POS_ORDER[slotGroup] == null ? 2 : POS_ORDER[slotGroup]));
+    return d >= 2 ? 9 : 4;                                        // 2 grupos (DEF<->ATA): -9 ; adjacente: -4
+  }
+  // overall efetivo do jogador num slot: { ov, off (fora de posição), drop }
+  function effOverall(p, slotGroup) {
+    var pen = p ? posPenalty(p.pos, slotGroup, p) : 0;
+    return { ov: Math.max(40, (p ? p.overall : 60) - pen), off: pen > 0, drop: pen };
+  }
+  // rótulo específico da posição do slot (a partir das coordenadas da formação)
+  function slotPos(slot) {
+    if (!slot) return "?";
+    var g = slot[0], x = slot[1], y = slot[2];
+    if (g === "GK") return "GOL";
+    if (g === "DF") { if (x <= 22) return "LE"; if (x >= 78) return "LD"; return "ZAG"; }
+    if (g === "MF") { if (x <= 20) return "ME"; if (x >= 80) return "MD"; if (y >= 53) return "VOL"; if (y <= 37) return "MEI"; return "MC"; }
+    if (x <= 30) return "PE"; if (x >= 70) return "PD"; return "CA";
+  }
+  // devolve o jogador ajustado ao slot: se estiver fora de posição, vira o grupo do slot com atributos reduzidos
+  function adjustForSlot(p, slot) {
+    if (!p || !slot) return p;
+    var pen = posPenalty(p.pos, slot[0], p);
+    if (pen <= 0) return p;
+    var a = p.attrs || {}, na = {};
+    Object.keys(a).forEach(function (k) { na[k] = Math.max(20, (a[k] || 50) - pen); });
+    return Object.assign({}, p, { pos: slot[0], attrs: na, overall: Math.max(40, (p.overall || 60) - pen), _off: true });
+  }
+
   // escalação efetiva: substitui lesionados/suspensos por reservas disponíveis
   function effectiveXI(career) {
     var lu = career.lineup;
@@ -156,7 +206,9 @@
   function userTeam(career) {
     var club = TM.data.club(career.teamId);
     var xiIds = effectiveXI(career);
-    var xi = xiIds.map(function (id) { return resolvePlayer(career, id); }).filter(Boolean);
+    var formation = (career.lineup && career.lineup.formation) || "4-4-2";
+    var slots = FORMATIONS[formation] || FORMATIONS["4-4-2"];
+    var xi = xiIds.map(function (id, i) { var p = resolvePlayer(career, id); return p ? adjustForSlot(p, slots[i]) : null; }).filter(Boolean);
     var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
     var rest = rosterPlayers(career).filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
     return { id: club.id, name: club.name, players: xi.concat(rest), club: club };
@@ -1496,6 +1548,7 @@
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
+    playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,

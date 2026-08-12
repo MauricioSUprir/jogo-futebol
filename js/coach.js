@@ -985,14 +985,13 @@
     lu.starters.forEach(function (id, i) {
       var p = TM.data.player(id); if (!p) return;
       var slot = slots[i] || [null, 50, 50];
-      pitch.appendChild(el("button", { class: "pl-chip" + (natPick === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", on: { click: function () { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); } } }, [
-        el("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(p, "chip-face"), el("span", { class: "chip-ov", text: p.overall }) ]),
-        el("span", { class: "chip-name", text: shortName(p.name) }),
-        el("span", { class: "chip-age", text: p.age + " anos" })
-      ]));
+      pitch.appendChild(el("button", { class: "pl-chip" + (natPick === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", on: { click: function () { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); } } },
+        TM.ui.chipKids(p, slot, { name: shortName(p.name) })
+      ));
     });
     screen.appendChild(pitch);
     screen.appendChild(el("div", { class: "lineup-hint", text: natPick != null ? "Toque num reserva para colocar no lugar do titular." : "Toque num titular e depois num reserva." }));
+    screen.appendChild(TM.ui.posPanel(lu.starters.map(function (id, i) { return { player: TM.data.player(id), slot: slots[i] }; })));
 
     var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas convocados" }) ]);
     lu.bench.forEach(function (id) {
@@ -2085,20 +2084,15 @@
         var unavail = !C().available(c, id);
         var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
           style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-          on: { click: function () { onStarterClick(i); } } }, [
-          el("div", { class: "chip-face-wrap" }, [
-            TM.img.playerImg(p, "chip-face"),
-            el("span", { class: "chip-ov", text: p.overall }),
-            unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null
-          ]),
-          el("span", { class: "chip-name", text: shortName(p.name) }),
-          el("span", { class: "chip-age", text: p.age + " anos" })
-        ]);
+          on: { click: function () { onStarterClick(i); } } },
+          TM.ui.chipKids(p, slot, { name: shortName(p.name), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
+        );
         pitch.appendChild(chip);
       });
       board.appendChild(pitch);
 
       board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Toque em OUTRO titular para trocar as posições, ou num reserva para substituir. Toque no mesmo para cancelar." : "Toque num titular e depois em outro titular (troca de posição) ou num reserva (substituição)." }));
+      board.appendChild(TM.ui.posPanel(c.lineup.starters.map(function (id, i) { return { player: C().resolvePlayer(c, id), slot: slots[i] }; })));
 
       var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
       (c.lineup.bench || []).forEach(function (id) {

@@ -70,8 +70,12 @@
   // ordem escolhida pelo usuário (titulares primeiro), como objetos de jogador
   function userRoster(s) {
     if (!s.lineup) return null;
-    var ids = s.lineup.starters.concat(s.lineup.bench);
-    var seen = {}; var ordered = ids.map(function (id) { seen[id] = 1; return TM.data.player(id); }).filter(Boolean);
+    var slots = TM.comp.FORMATIONS[s.lineup.formation] || TM.comp.FORMATIONS["4-4-2"];
+    var seen = {};
+    // titulares ajustados ao slot (fora de posição perde atributos)
+    var starters = s.lineup.starters.map(function (id, i) { var p = TM.data.player(id); if (!p) return null; seen[id] = 1; return TM.comp.adjustForSlot(p, slots[i]); }).filter(Boolean);
+    var bench = s.lineup.bench.map(function (id) { seen[id] = 1; return TM.data.player(id); }).filter(Boolean);
+    var ordered = starters.concat(bench);
     // completa com quem ficou de fora da escalação (segurança)
     userPlayerList(s).forEach(function (p) { if (!seen[p.id]) ordered.push(p); });
     return ordered;
@@ -364,15 +368,14 @@
         var p = TM.data.player(id); if (!p) return;
         var slot = slots[i] || [null, 50, 50];
         var chip = E("button", { class: "pl-chip" + (pickSlot === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-          on: { click: function () { onStarterClick(i); } } }, [
-          E("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(p, "chip-face"), E("span", { class: "chip-ov", text: p.overall }) ]),
-          E("span", { class: "chip-name", text: shortNm(p.name) }),
-          E("span", { class: "chip-age", text: p.age + " anos" })
-        ]);
+          on: { click: function () { onStarterClick(i); } } },
+          TM.ui.chipKids(p, slot, { name: shortNm(p.name) })
+        );
         pitch.appendChild(chip);
       });
       board.appendChild(pitch);
       board.appendChild(E("div", { class: "lineup-hint", text: pickSlot != null ? "Toque em OUTRO titular para trocar as posições, ou num reserva para substituir. Toque no mesmo para cancelar." : "Toque num titular e depois em outro titular (troca de posição) ou num reserva (substituição)." }));
+      board.appendChild(TM.ui.posPanel(s.lineup.starters.map(function (id, i) { return { player: TM.data.player(id), slot: slots[i] }; })));
 
       var benchWrap = E("div", { class: "panel-narrow" }, [ E("h3", { class: "block-title", text: "Reservas" }) ]);
       (s.lineup.bench || []).forEach(function (id) {
