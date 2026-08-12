@@ -16,7 +16,7 @@
   };
   var REGION = { co: "sa", br: "sa", ar: "sa", ec: "sa", uy: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", us: "na", mx: "na", sa: "as" };
   var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)", as: "Champions League da Ásia" };
-  var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
+  var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
 
   function realism() { return TM.storage.settings().realism; }
 
