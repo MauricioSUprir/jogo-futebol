@@ -278,6 +278,7 @@
     ["cup-ec", "Copa do Equador", "copa", "#ffdd00", "#034ea2"],
     ["cup-uy", "Copa do Uruguai", "copa", "#7bafd4", "#001b69"],
     ["cup-ru", "Copa da Rússia", "copa", "#0039a6", "#d52b1e"],
+    ["cup-co", "Copa Colômbia", "copa", "#fcd116", "#003893"],
     // Continentais de clubes
     ["cont-eu", "Champions League", "continental", "#03063d", "#0f9bd7"],
     ["cont-sa", "Libertadores", "continental", "#0a6b3b", "#f2b100"],
@@ -1220,7 +1221,7 @@
       // continentais de clubes: melhores clubes das ligas da região
       var CONT = {
         "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], size: 32 },
-        "cont-sa": { leagues: ["br", "ar", "ec", "uy"], size: 32 },
+        "cont-sa": { leagues: ["br", "ar", "ec", "uy", "co"], size: 32 },
         "cont-na": { leagues: ["us", "mx"], size: 16 },
         "cont-as": { leagues: ["sa"], size: 16 }
       };
