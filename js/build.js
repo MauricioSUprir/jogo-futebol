@@ -123,11 +123,9 @@
     pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
     starters.forEach(function (p, i) {
       var slot = PITCH_SLOTS[i] || [null, 50, 50];
-      pitch.appendChild(el("div", { class: "pl-chip scout-chip", style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
-        el("div", { class: "chip-face-wrap" }, [ TM.img.playerImg(p, "chip-face"), el("span", { class: "chip-ov", text: p.overall }) ]),
-        el("span", { class: "chip-name", text: shortNm(p.name) }),
-        el("span", { class: "chip-age", text: p.age + " anos" })
-      ]));
+      pitch.appendChild(el("div", { class: "pl-chip scout-chip", style: "left:" + slot[1] + "%;top:" + slot[2] + "%" },
+        TM.ui.chipKids(p, slot, { name: shortNm(p.name) })
+      ));
     });
     return el("div", { class: "lineup-board" }, [pitch]);
   }

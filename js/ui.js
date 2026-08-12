@@ -315,7 +315,7 @@
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam,
+    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel,
     current: function () { return current; }
   };
 
@@ -349,6 +349,49 @@
 
   function statChip(icon, text) {
     return el("div", { class: "stat-chip" }, [ el("span", { class: "chip-ic", text: icon }), el("span", { text: text }) ]);
+  }
+
+  // conteúdo padrão de um chip do campinho: rosto + overall (efetivo) + posição do slot + alerta se fora de posição
+  // opts: { flag: elemento extra (lesão/susp), name: nome custom, age: false p/ ocultar idade }
+  function chipKids(player, slot, opts) {
+    opts = opts || {};
+    var C = window.TM.comp;
+    var eff = (slot && C && C.effOverall) ? C.effOverall(player, slot[0]) : { ov: player.overall, off: false };
+    var posTxt = (slot && C && C.slotPos) ? C.slotPos(slot) : window.TM.data.posLabel(player);
+    var faceKids = [
+      window.TM.img.playerImg(player, "chip-face"),
+      el("span", { class: "chip-ov" + (eff.off ? " low" : ""), text: eff.ov })
+    ];
+    if (eff.off) faceKids.push(el("span", { class: "chip-warn", title: "Fora de posição (−" + eff.drop + ")", text: "!" }));
+    if (opts.flag) faceKids.push(opts.flag);
+    return [
+      el("div", { class: "chip-face-wrap" + (eff.off ? " off" : "") }, faceKids),
+      el("span", { class: "chip-pos" + (eff.off ? " off" : ""), text: posTxt }),
+      el("span", { class: "chip-name", text: opts.name || player.name }),
+      (opts.age !== false && player.age) ? el("span", { class: "chip-age", text: player.age + " anos" }) : null
+    ];
+  }
+
+  // painel compacto "🧭 Posições" (estilo do bloco de cobradores) — lista quem está fora de posição
+  // entries: [{ player, slot }]
+  function posPanel(entries) {
+    var C = window.TM.comp;
+    var off = (entries || []).filter(function (e) { return e.player && e.slot && C.posPenalty(e.player.pos, e.slot[0], e.player) > 0; });
+    var body = el("div", { class: "panel-narrow pos-panel" }, [ el("h3", { class: "block-title", text: "🧭 Posições" }) ]);
+    if (!off.length) { body.appendChild(el("div", { class: "setting-hint", text: "✅ Todos os titulares estão na posição." })); return body; }
+    off.forEach(function (e) {
+      var eff = C.effOverall(e.player, e.slot[0]);
+      body.appendChild(el("div", { class: "pos-row" }, [
+        window.TM.img.playerImg(e.player, "pos-face"),
+        el("div", { class: "pos-info" }, [
+          el("div", { class: "pos-name", text: e.player.name }),
+          el("div", { class: "pos-sub", text: window.TM.data.posLabel(e.player) + " jogando de " + C.slotPos(e.slot) })
+        ]),
+        el("div", { class: "pos-drop", text: "−" + eff.drop })
+      ]));
+    });
+    body.appendChild(el("div", { class: "setting-hint", text: "Fora de posição o overall cai (mais quanto mais distante). Reposicione ou use quem tem versatilidade." }));
+    return body;
   }
 
   // anima um número de 0 até o alvo (easeOutCubic), com separador de milhar pt-BR
