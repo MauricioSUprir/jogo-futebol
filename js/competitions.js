@@ -1032,6 +1032,11 @@
     var oc = TM.data.club(fromId), nc = TM.data.club(toClubId);
     if (!nc) return false;
     if (oc && oc.playerIds) oc.playerIds = oc.playerIds.filter(function (x) { return x !== pid; });
+    // se era agente livre, sai do mercado de livres (também ao reaplicar no recarregamento)
+    if (p.freeAgent || fromId === "free") {
+      if (W.freeAgents) W.freeAgents = W.freeAgents.filter(function (x) { return x !== pid; });
+      p.freeAgent = false;
+    }
     if (nc.playerIds.indexOf(pid) < 0) nc.playerIds.push(pid);
     p.clubId = toClubId;
     return true;
@@ -1070,6 +1075,30 @@
       return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val) };
     }
     return null;
+  }
+  // um clube da IA contrata um jogador que está livre no mercado (sem clube)
+  function findAiFreeAgentDeal(career) {
+    var W = TM.data.world();
+    var fas = (W.freeAgents || []).map(function (id) { return W.playersById[id]; }).filter(function (p) {
+      return p && p.freeAgent && career.roster.indexOf(p.id) < 0 && !(career.worldTransfers && career.worldTransfers[p.id]);
+    });
+    if (!fas.length) return null;
+    var target = fas[Math.floor(Math.random() * fas.length)];
+    // clubes que fazem sentido para o nível do jogador (não o do usuário)
+    var clubs = W.clubs.filter(function (cl) { return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= target.overall - 4; });
+    if (!clubs.length) return null;
+    var buyer = clubs[Math.floor(Math.random() * clubs.length)];
+    return { pid: target.id, name: target.name, ov: target.overall, fromId: "free", fromName: "sem clube", toId: buyer.id, toName: buyer.name, val: 0, free: true };
+  }
+  function freeAgentNews(career, deal) {
+    var onShort = (career.shortlist || []).indexOf(deal.pid) >= 0;
+    if (onShort) {
+      TM.notify.push(career, { icon: "⭐", title: "Alvo da Central assinou", news: true,
+        text: "Perdeu a corrida: o " + deal.toName + " contratou " + deal.name + " (" + deal.ov + "), que estava livre e era um dos seus alvos na Central." });
+    } else {
+      TM.notify.push(career, { icon: "✍️", title: "Livre no mercado assinou", news: true,
+        text: deal.toName + " acertou com " + deal.name + " (" + deal.ov + "), que estava sem clube. Contratação a custo zero." });
+    }
   }
   function dealNews(career, deal, arrived) {
     var onShort = (career.shortlist || []).indexOf(deal.pid) >= 0;
@@ -1144,10 +1173,20 @@
         var deal = findAiDeal(career);
         if (deal) { if (executeWorldTransfer(career, deal.pid, deal.toId)) dealNews(career, deal, true); }
       }
+      // clubes também assinam quem está livre no mercado (custo zero) — aos poucos
+      if (Math.random() < 0.06) {
+        var fdeal = findAiFreeAgentDeal(career);
+        if (fdeal && executeWorldTransfer(career, fdeal.pid, fdeal.toId)) freeAgentNews(career, fdeal);
+      }
     } else {
       if (Math.random() < 0.14) {
         var deal2 = findAiDeal(career);
         if (deal2) { career.pendingWorldDeals.push(deal2); dealNews(career, deal2, false); }
+      }
+      // passe livre pode ser fechado a qualquer momento, mesmo fora da janela (raro)
+      if (Math.random() < 0.02) {
+        var fdeal2 = findAiFreeAgentDeal(career);
+        if (fdeal2 && executeWorldTransfer(career, fdeal2.pid, fdeal2.toId)) freeAgentNews(career, fdeal2);
       }
     }
     // sondagens de interesse (independem de proposta concreta)
