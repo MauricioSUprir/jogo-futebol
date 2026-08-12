@@ -373,38 +373,42 @@
       return global.Promise.resolve("f" + (h >>> 0).toString(16));
     }
   }
-  function normUser(u) { return String(u || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, ""); }
-  net.normUser = normUser;
-  net.createAccount = function (user, pass, cb) {
-    var u = normUser(user);
-    if (u.length < 3) { cb(null, "Usuário: use ao menos 3 letras/números (sem espaços)."); return; }
+  function acctKey(email) { return String(email || "").trim().toLowerCase().replace(/[.#$\[\]\/]/g, ","); }
+  function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim()); }
+  net.createAccount = function (email, pass, name, cb) {
+    var e = String(email || "").trim().toLowerCase();
+    if (!validEmail(e)) { cb(null, "Digite um e-mail válido."); return; }
     if ((pass || "").length < 4) { cb(null, "Senha: use ao menos 4 caracteres."); return; }
-    sha256hex(u + ":" + pass + ":totalmatch").then(function (hash) {
-      var ref = net._db.ref("accounts/" + u);
-      ref.transaction(function (cur) { if (cur) return; return { pass: hash, createdAt: firebaseNow() }; },
+    var dn = (name || "").trim() || e.split("@")[0];
+    sha256hex(e + ":" + pass + ":totalmatch").then(function (hash) {
+      var ref = net._db.ref("accounts/" + acctKey(e));
+      ref.transaction(function (cur) { if (cur) return; return { pass: hash, email: e, name: dn, photo: null, createdAt: firebaseNow() }; },
         function (err, committed) {
           if (err) { cb(null, err.message); return; }
-          if (!committed) { cb(null, "Esse usuário já existe. Escolha outro."); return; }
-          cb({ user: u }, null);
+          if (!committed) { cb(null, "Já existe uma conta com esse e-mail."); return; }
+          cb({ email: e, name: dn, photo: null }, null);
         });
     });
   };
-  net.login = function (user, pass, cb) {
-    var u = normUser(user);
-    sha256hex(u + ":" + pass + ":totalmatch").then(function (hash) {
-      net._db.ref("accounts/" + u).once("value").then(function (s) {
+  net.login = function (email, pass, cb) {
+    var e = String(email || "").trim().toLowerCase();
+    sha256hex(e + ":" + pass + ":totalmatch").then(function (hash) {
+      net._db.ref("accounts/" + acctKey(e)).once("value").then(function (s) {
         var v = s.val();
         if (!v) { cb(null, "Conta não encontrada."); return; }
         if (v.pass !== hash) { cb(null, "Senha incorreta."); return; }
-        cb({ user: u, saves: v.saves || null }, null);
-      }).catch(function (e) { cb(null, e.message); });
+        cb({ email: e, name: v.name || e.split("@")[0], photo: v.photo || null, saves: v.saves || null }, null);
+      }).catch(function (er) { cb(null, er.message); });
     });
   };
-  net.cloudSave = function (user, data, cb) {
-    net._db.ref("accounts/" + normUser(user) + "/saves").set(data).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  net.cloudSaveProfile = function (email, prof, cb) {
+    net._db.ref("accounts/" + acctKey(email)).update({ name: prof.name || "", photo: prof.photo || null }).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
   };
-  net.cloudLoad = function (user, cb) {
-    net._db.ref("accounts/" + normUser(user) + "/saves").once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
+  net.cloudSave = function (email, data, cb) {
+    net._db.ref("accounts/" + acctKey(email) + "/saves").set(data).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
+  net.cloudLoad = function (email, cb) {
+    net._db.ref("accounts/" + acctKey(email) + "/saves").once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
   };
 
   TM.net = net;
