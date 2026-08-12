@@ -235,6 +235,21 @@
       cb({ me: wins[net.me.uid] || 0, them: wins[fuid] || 0, draws: v.draws || 0 });
     }).catch(function () { cb({ me: 0, them: 0, draws: 0 }); });
   };
+
+  // ---- ranking global (vitórias online) ----
+  net.recordWin = function (winnerUid, winnerName, loserUid, loserName) {
+    var db = net._db;
+    if (winnerUid) { db.ref("ranking/" + winnerUid + "/name").set(winnerName || "Jogador"); db.ref("ranking/" + winnerUid + "/wins").transaction(function (c) { return (c || 0) + 1; }); db.ref("ranking/" + winnerUid + "/played").transaction(function (c) { return (c || 0) + 1; }); }
+    if (loserUid) { db.ref("ranking/" + loserUid + "/name").set(loserName || "Jogador"); db.ref("ranking/" + loserUid + "/played").transaction(function (c) { return (c || 0) + 1; }); }
+  };
+  net.getRanking = function (cb) {
+    net._db.ref("ranking").orderByChild("wins").limitToLast(30).once("value").then(function (snap) {
+      var arr = [];
+      snap.forEach(function (ch) { var v = ch.val(); arr.push({ uid: ch.key, name: v.name || "Jogador", wins: v.wins || 0, played: v.played || 0 }); });
+      arr.sort(function (a, b) { return b.wins - a.wins || b.played - a.played; });
+      cb(arr);
+    }).catch(function () { cb([]); });
+  };
   net.joinMatch = function (code, cb) {
     code = (code || "").trim().toUpperCase();
     var ref = net._db.ref("matches/" + code);
