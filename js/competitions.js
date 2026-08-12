@@ -1443,6 +1443,7 @@
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
-    resolveLoanOffer: resolveLoanOffer, loanTermLabel: loanTermLabel, fmtMoney: fmtMoney
+    resolveLoanOffer: resolveLoanOffer, loanTermLabel: loanTermLabel, fmtMoney: fmtMoney,
+    baseBudgetEur: baseBudgetEur
   };
 })(window);

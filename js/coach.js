@@ -203,7 +203,8 @@
     function updateInfo() {
       var m = CUR[opts.currency];
       injVal.textContent = m.sym + " " + opts.injection + "M";
-      var baseEur = 30 + Math.round(TM.data.clubRating(clubId) / 3);
+      // usa a MESMA fórmula da carreira (baseBudgetEur) para não divergir
+      var baseEur = C().baseBudgetEur(TM.data.clubRating(clubId));
       var total = Math.round(baseEur * m.mult) + opts.injection;
       summary.textContent = "💰 Orçamento inicial: " + m.sym + " " + total + "M";
     }
