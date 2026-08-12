@@ -1259,8 +1259,8 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 /* ---------- seletor de time visual ---------- */
 .team-picker { display: flex; flex-direction: column; gap: 8px; }
 .tp-search { position: sticky; top: 0; z-index: 2; }
-.tp-list { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; }
-.tp-league { display: flex; align-items: center; gap: 8px; padding: 8px 6px 4px; margin-top: 6px; position: sticky; top: 46px; background: var(--black); z-index: 1; }
+.tp-list { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.tp-league { display: flex; align-items: center; gap: 8px; padding: 10px 6px 6px; margin-top: 6px; position: sticky; top: 0; background: var(--black); z-index: 1; }
 .tp-lg-logo { width: 22px; height: 22px; object-fit: contain; }
 .tp-lg-name { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); }
 .tp-row { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 8px 11px; border-radius: 11px;
