@@ -119,6 +119,7 @@
     opts = opts || {};
     var sym = opts.moneySym || "€";
     var mult = opts.moneyMult || 1;
+    function fmtVal(m) { var n = Math.abs(m); if (n >= 1) return sym + " " + (n < 10 ? Math.round(n * 10) / 10 : Math.round(n)) + "M"; var k = Math.round(n * 1000); return k <= 0 ? sym + " 0" : sym + " " + k + " mil"; }
     var overlay = el("div", { class: "modal-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
     var a = p.attrs || {};
     function bar(label, v) {
@@ -148,7 +149,7 @@
       el("div", { class: "player-detail-grid" }, [
         info("Overall", p.overall),
         info("Potencial", potential, potential > p.overall ? "up" : ""),
-        info("Valor", sym + " " + Math.round(value * mult) + "M"),
+        info("Valor", fmtVal(value * mult)),
         info("Desenvolvimento", dev)
       ]),
       el("h4", { class: "pd-section", text: "Qualidades" }),
