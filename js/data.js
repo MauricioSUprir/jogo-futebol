@@ -313,7 +313,10 @@
     "Chile": "Nicolás Córdova", "Paraguay": "Gustavo Alfaro", "Canada": "Jesse Marsch", "Australia": "Tony Popovic",
     "Saudi Arabia": "Hervé Renard", "Qatar": "Julen Lopetegui", "Iran": "Amir Ghalenoei", "Norway": "Ståle Solbakken",
     "Scotland": "Steve Clarke", "Turkey": "Vincenzo Montella", "Ukraine": "Serhiy Rebrov", "Wales": "Craig Bellamy",
-    "Bosnia": "Sergej Barbarez", "Cape Verde": "Bubista", "Tunisia": "Sami Trabelsi", "Algeria": "Vladimir Petković"
+    "Bosnia": "Sergej Barbarez", "Cape Verde": "Bubista", "Tunisia": "Sami Trabelsi", "Algeria": "Vladimir Petković",
+    "Greece": "Ivan Jovanović", "Czech Republic": "Ivan Hašek", "Hungary": "Marco Rossi", "Romania": "Mircea Lucescu",
+    "Ireland": "Heimir Hallgrímsson", "Venezuela": "Fernando Batista", "Costa Rica": "Miguel Herrera",
+    "South Africa": "Hugo Broos", "DR Congo": "Sébastien Desabre", "Jamaica": "Steve McClaren"
   };
   // nomes das seleções em português (exibição); o inglês continua como "key" para os vínculos de dados
   var NATION_PT = {
@@ -326,7 +329,9 @@
     "Ecuador": "Equador", "Peru": "Peru", "Chile": "Chile", "Paraguay": "Paraguai", "Canada": "Canadá",
     "Australia": "Austrália", "Saudi Arabia": "Arábia Saudita", "Qatar": "Catar", "Iran": "Irã", "Norway": "Noruega",
     "Scotland": "Escócia", "Turkey": "Turquia", "Ukraine": "Ucrânia", "Wales": "País de Gales", "Bosnia": "Bósnia",
-    "Cape Verde": "Cabo Verde", "Tunisia": "Tunísia", "Algeria": "Argélia"
+    "Cape Verde": "Cabo Verde", "Tunisia": "Tunísia", "Algeria": "Argélia",
+    "Greece": "Grécia", "Czech Republic": "Chéquia", "Hungary": "Hungria", "Romania": "Romênia", "Ireland": "Irlanda",
+    "Venezuela": "Venezuela", "Costa Rica": "Costa Rica", "South Africa": "África do Sul", "DR Congo": "RD Congo", "Jamaica": "Jamaica"
   };
   var NATIONS = [
     ["Brazil","#009c3b","#ffdf00","br"],["Argentina","#75aadb","#ffffff","ar"],["France","#0055a4","#ffffff","fr"],
@@ -344,7 +349,11 @@
     ["Saudi Arabia","#006c35","#ffffff","af"],["Qatar","#8a1538","#ffffff","af"],["Iran","#239f40","#da0000","asia"],
     ["Norway","#ba0c2f","#00205b","nl"],["Scotland","#0065bf","#ffffff","en"],["Turkey","#e30a17","#ffffff","it"],
     ["Ukraine","#005bbb","#ffd500","de"],["Wales","#c8102e","#00ab39","en"],["Bosnia","#002395","#fecb00","it"],
-    ["Cape Verde","#003893","#f7d116","af"],["Tunisia","#e70013","#ffffff","af"],["Algeria","#006233","#ffffff","af"]
+    ["Cape Verde","#003893","#f7d116","af"],["Tunisia","#e70013","#ffffff","af"],["Algeria","#006233","#ffffff","af"],
+    ["Greece","#0d5eaf","#ffffff","it"],["Czech Republic","#d7141a","#11457e","de"],["Hungary","#cd2a3e","#436f4d","de"],
+    ["Romania","#002b7f","#fcd116","it"],["Ireland","#169b62","#ff883e","en"],["Venezuela","#cf142b","#00247d","es"],
+    ["Costa Rica","#002b7f","#ce1126","es"],["South Africa","#007a4d","#ffb612","af"],["DR Congo","#007fff","#f7d618","af"],
+    ["Jamaica","#009b3a","#fed100","us"]
   ].map(function (n, i) {
     return { id: "nat" + i, key: n[0], name: NATION_PT[n[0]] || n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
@@ -998,6 +1007,26 @@
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = NAT_COACH[n.key] || fullName(rng, n.culture); n.coachPhotoKey = coachSlug(n.coach); });
 
+    // completa seleções com poucos jogadores (ex.: as recém-adicionadas) com um elenco sintético
+    NATIONS.forEach(function (n) {
+      var need = 23 - n.players.length;
+      for (var k = 0; k < need; k++) {
+        var pos = POS_POOL[k % POS_POOL.length];
+        var base = Math.max(56, Math.min(84, R.gaussian(rng, 70, 7)));
+        var attrs = makeAttrs(rng, base, pos);
+        var ov = overallFrom(attrs, pos);
+        var age = R.int(rng, 18, 34);
+        var growth = age >= 30 ? 0 : Math.max(0, Math.round((26 - age) * 0.7) + R.int(rng, -1, 3));
+        var np = {
+          id: "np" + (pid++), name: fullName(rng, n.culture), clubId: null, pos: pos, pos2: specificPos(rng, pos),
+          age: age, overall: ov, potential: Math.min(99, ov + growth), attrs: attrs,
+          nationId: n.id, nationName: n.name, height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92), form: 0, goals: 0
+        };
+        playersById[np.id] = np;
+        n.players.push(np.id);
+      }
+    });
+
     // agentes livres (sem clube): jogadores REAIS sem clube (foto + dados de verdade)
     // seguidos de alguns genéricos p/ profundidade e cobertura de posições (ex.: goleiros)
     var freeAgents = [];
@@ -1243,9 +1272,9 @@
       // copas de seleções
       if (compId === "nat-world") return { isNation: true, teamIds: NATIONS.map(function (n) { return n.id; }) };
       var NAT = {
-        "nat-america": ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay"],
-        "nat-euro": ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine"],
-        "nat-africa": ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"]
+        "nat-america": ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay", "Venezuela", "Costa Rica", "Jamaica"],
+        "nat-euro": ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine", "Greece", "Czech Republic", "Hungary", "Romania", "Ireland"],
+        "nat-africa": ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria", "South Africa", "DR Congo"]
       };
       if (NAT[compId]) {
         var ids = NAT[compId].map(function (nm) { var n = TM.data.nationByName(nm); return n ? n.id : null; }).filter(Boolean);
