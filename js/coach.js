@@ -316,9 +316,10 @@
     if (c.nation) {
       var np = C().nationPending(c);
       var natNat = TM.data.nation(c.nation.id);
-      var nsSub = np.needConvoke ? (np.wc ? "⚠ Convocação da Copa pendente!" : "⚠ Convocação pendente!")
-        : np.readyMatch ? (np.wc ? "🏆 Jogo da Copa do Mundo!" : "⚽ Amistoso disponível!")
-        : (c.nation.wc ? "🏆 Copa do Mundo →" : "Comandar seleção →");
+      var nsSub = c.nation.eliminated ? "😞 Fora da Copa (Eliminatórias) →"
+        : np.needConvoke ? (np.wc ? "⚠ Convocação da Copa pendente!" : "⚠ Convocação pendente!")
+        : np.readyMatch ? (np.wc ? "🏆 Jogo da Copa do Mundo!" : "🌍 Jogo das Eliminatórias!")
+        : (c.nation.wc ? "🏆 Copa do Mundo →" : "🌍 Eliminatórias da Copa →");
       screen.appendChild(el("button", { class: "nation-switch" + (np.needConvoke || np.readyMatch ? " alert" : ""), on: { click: function () { TM.ui.go("coach-nation"); } } }, [
         TM.img.nationImg(natNat, "ns-flag"),
         el("div", { class: "ns-info" }, [ el("div", { class: "ns-name", text: "Seleção de " + c.nation.name }),
@@ -723,16 +724,30 @@
 
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.nationImg(nat, "ch-crest"),
-      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nation.name }), el("div", { class: "ch-sub", text: "Convocados: " + c.nation.squad.length + (isWC ? " · Copa do Mundo " + c.seasonYear : " · Amistosos internacionais") }) ]),
+      el("div", {}, [ el("div", { class: "ch-name", text: "Seleção de " + c.nation.name }), el("div", { class: "ch-sub", text: "Convocados: " + c.nation.squad.length + (isWC ? " · Copa do Mundo " + c.seasonYear : " · Eliminatórias da Copa") }) ]),
       el("button", { class: "date-cal-btn", text: "🔄 Voltar ao clube", on: { click: function () { TM.ui.go("coach-hub"); } } })
     ]));
     screen.appendChild(el("div", { class: "date-bar" }, [ el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ]) ]));
 
     if (isWC) { renderWorldCupPanel(screen, c); return; }
 
+    // ano da Copa mas a seleção não se classificou
+    if (c.nation.eliminated) {
+      screen.appendChild(el("div", { class: "next-match season-end" }, [
+        el("div", { class: "nm-label", text: "😞 Fora da Copa do Mundo" }),
+        el("div", { class: "nm-teams", text: c.nation.name + " não se classificou nas Eliminatórias." }),
+        el("p", { class: "intro-text", style: "text-align:center", text: "Nesta temporada não há Copa para a seleção. Prepare o próximo ciclo de Eliminatórias." })
+      ]));
+      screen.appendChild(el("div", { class: "hub-actions" }, [
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-standings"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Tabela final" }) ]),
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-hub"); } } }, [ el("span", { class: "hub-ic", text: "🔄" }), el("span", { text: "Voltar ao clube" }) ])
+      ]));
+      return;
+    }
+
     var w = C().nationNextWindow(c);
     if (!w) {
-      screen.appendChild(el("div", { class: "next-match" }, [ el("div", { class: "nm-label", text: "Sem amistosos restantes nesta temporada." }) ]));
+      screen.appendChild(el("div", { class: "next-match" }, [ el("div", { class: "nm-label", text: "Rodada de Eliminatórias encerrada nesta temporada. Avance para a próxima." }) ]));
     } else {
       var opp = TM.data.nation(w.oppId), open = c.currentDay >= w.openDay;
       var fdate = C().dateOf(c, w.friendlyDay), ddate = C().dateOf(c, w.deadlineDay);
@@ -740,11 +755,12 @@
         screen.appendChild(el("div", { class: "next-match" }, [
           el("div", { class: "nm-label", text: "🔒 Janela de seleção fechada" }),
           el("div", { class: "nm-date", text: "A convocação abre em " + (w.openDay - c.currentDay) + " dia(s) (" + C().dateOf(c, w.openDay).full + ")." }),
-          el("p", { class: "intro-text", style: "text-align:center", text: "Volte perto do amistoso para convocar e escalar." })
+          el("p", { class: "intro-text", style: "text-align:center", text: "Volte perto do jogo para convocar e escalar." })
         ]));
       } else {
+        var confName = C().CONFED_NAME[C().confedOf(c.nation.id)] || "";
         var kids = [
-          el("div", { class: "nm-label", text: "🤝 Amistoso Internacional" }),
+          el("div", { class: "nm-label", text: "🌍 Eliminatórias · " + confName }),
           el("div", { class: "nm-teams" }, [ el("span", { text: c.nation.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: opp.name }) ]),
           el("div", { class: "nm-date", text: "🗓️ " + fdate.full })
         ];
@@ -755,14 +771,14 @@
             TM.ui.button("✔ Confirmar convocação", function () {
               if (c.nation.squad.length < 11) { TM.ui.toast("Convoque pelo menos 11 jogadores"); return; }
               w.convoked = true; TM.storage.saveCoachCareer(c);
-              TM.notify.push(c, { icon: "📋", title: "Convocação enviada", text: "Convocação de " + c.nation.name + " confirmada para o amistoso contra " + opp.name + "." });
+              TM.notify.push(c, { icon: "📋", title: "Convocação enviada", text: "Convocação de " + c.nation.name + " confirmada para as Eliminatórias contra " + opp.name + "." });
               TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation");
             }, "btn primary small")
           ]));
         } else if (c.currentDay >= w.friendlyDay) {
           kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada — é dia de jogo!" }));
           kids.push(TM.ui.button("🔍 Analisar adversário", function () { TM.ui.go("scout", { teamId: w.oppId, isNation: true, compId: "nat-world", back: function () { TM.ui.go("coach-nation"); } }); }, "btn ghost"));
-          kids.push(TM.ui.button("▶ Jogar amistoso", function () { TM.ui.go("coach-nation-play"); }, "btn primary"));
+          kids.push(TM.ui.button("▶ Jogar Eliminatórias", function () { TM.ui.go("coach-nation-play"); }, "btn primary"));
         } else {
           kids.push(el("div", { class: "nm-date", text: "✔ Convocação confirmada. Amistoso em " + (w.friendlyDay - c.currentDay) + " dia(s)." }));
           kids.push(el("p", { class: "intro-text", style: "text-align:center", text: "Avance os dias no clube até a data do amistoso." }));
@@ -772,9 +788,43 @@
     }
 
     screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-standings"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Tabela das Eliminatórias" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-scout"); } } }, [ el("span", { class: "hub-ic", text: "🔍" }), el("span", { text: "Scout / Convocar" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-lineup"); } } }, [ el("span", { class: "hub-ic", text: "📋" }), el("span", { text: "Escalação" }) ])
     ]));
+  });
+
+  /* ---------- tabela das Eliminatórias (confederação do usuário) ---------- */
+  TM.ui.register("coach-nation-standings", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c.nation) { TM.ui.go("coach-hub"); return; }
+    C().ensureQuali(c); TM.storage.saveCoachCareer(c);
+    var q = c.quali;
+    var confName = C().CONFED_NAME[q.confed] || q.confed;
+    var slots = C().CONFED_SLOTS[q.confed] || 4;
+    screen.appendChild(TM.ui.topbar("📊 Eliminatórias · " + confName, function () { TM.ui.go("coach-nation"); }));
+    screen.appendChild(el("p", { class: "intro-text", style: "text-align:center", text: "Classificam-se as " + slots + " primeiras seleções para a Copa do Mundo." }));
+    var rows = C().qualiStandings(q.table);
+    var table = el("div", { class: "quali-table" });
+    table.appendChild(el("div", { class: "quali-row quali-head" }, [
+      el("span", { class: "qr-pos", text: "#" }), el("span", { class: "qr-name", text: "Seleção" }),
+      el("span", { class: "qr-n", text: "P" }), el("span", { class: "qr-n", text: "J" }),
+      el("span", { class: "qr-n", text: "SG" }), el("span", { class: "qr-n qr-pts", text: "Pts" })
+    ]));
+    rows.forEach(function (r, i) {
+      var nn = TM.data.nation(r.id);
+      var cls = "quali-row" + (i < slots ? " quali-in" : "") + (r.id === c.nation.id ? " quali-me" : "");
+      table.appendChild(el("div", { class: cls }, [
+        el("span", { class: "qr-pos", text: (i + 1) }),
+        el("span", { class: "qr-name" }, [ TM.img.nationImg(nn, "qr-flag"), el("span", { text: nn.name }) ]),
+        el("span", { class: "qr-n", text: r.p }),
+        el("span", { class: "qr-n", text: r.w + "-" + r.d + "-" + r.l }),
+        el("span", { class: "qr-n", text: (r.gf - r.ga > 0 ? "+" : "") + (r.gf - r.ga) }),
+        el("span", { class: "qr-n qr-pts", text: r.pts })
+      ]));
+    });
+    screen.appendChild(table);
+    screen.appendChild(el("p", { class: "intro-text", style: "text-align:center;margin-top:10px", text: "🟩 Zona de classificação (top " + slots + ")" }));
   });
 
   /* ---------- painel da Copa do Mundo ---------- */
@@ -1010,12 +1060,13 @@
     var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: 0, tactic: c.nation.tactic };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, title: "Amistoso · " + c.nation.name, pauseSide: 0, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
+      teamA: teamA, teamB: teamB, result: result, title: "Eliminatórias · " + c.nation.name, pauseSide: 0, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
       onBack: function () { TM.ui.go("coach-nation"); },
       onDone: function () {
         w.played = true; w.hs = result.score[0]; w.as = result.score[1];
+        C().applyQualiResult(c, w); // pontua na tabela + simula os outros jogos da rodada
         var res = result.score[0] > result.score[1] ? "Vitória" : result.score[0] < result.score[1] ? "Derrota" : "Empate";
-        TM.notify.push(c, { icon: "🌍", title: "Amistoso da seleção", text: res + " " + result.score[0] + "x" + result.score[1] + " contra " + teamB.name + "." });
+        TM.notify.push(c, { icon: "🌍", title: "Eliminatórias da Copa", text: res + " " + result.score[0] + "x" + result.score[1] + " contra " + teamB.name + "." });
         TM.storage.saveCoachCareer(c);
         TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result });
       }
