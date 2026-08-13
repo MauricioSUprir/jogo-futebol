@@ -65,7 +65,17 @@
   /* ---------- helpers ---------- */
   function realism() { return TM.storage.settings().realism; }
   // elenco do time do usuário (para o campinho)
-  function userPlayerList(s) { return s.isNation ? TM.data.nationSquad(s.userId) : TM.data.clubPlayers(s.userId); }
+  function userPlayerList(s) {
+    if (s.isNation) {
+      // usa a convocação feita pelo usuário quando existir
+      if (s.squad && s.squad.length) {
+        return s.squad.map(TM.data.player).filter(Boolean)
+          .sort(function (a, b) { return b.overall - a.overall; });
+      }
+      return TM.data.nationSquad(s.userId);
+    }
+    return TM.data.clubPlayers(s.userId);
+  }
   function ensureLineup(s) { if (!s.lineup) s.lineup = TM.comp.buildLineup(userPlayerList(s), "4-4-2"); return s.lineup; }
   // ordem escolhida pelo usuário (titulares primeiro), como objetos de jogador
   function userRoster(s) {
@@ -281,7 +291,96 @@
       grid.appendChild(card);
     });
     screen.appendChild(E("div", { class: "actions" }, [
-      TM.ui.button("Começar", function () { if (!pick) { TM.ui.toast("Escolha um time"); return; } save(newComp(params.catKey, params.id, pick)); TM.ui.go("compmode-hub"); }, "btn primary big")
+      TM.ui.button("Começar", function () {
+        if (!pick) { TM.ui.toast("Escolha um time"); return; }
+        if (built.isNation) {
+          // seleção: passa pela convocação antes de começar
+          TM.ui.go("compmode-convoke", { catKey: params.catKey, id: params.id, userId: pick });
+          return;
+        }
+        save(newComp(params.catKey, params.id, pick));
+        TM.ui.go("compmode-hub");
+      }, "btn primary big")
+    ]));
+  });
+
+  // ---- Convocação da seleção (obrigatória antes de jogar) ----
+  TM.ui.register("compmode-convoke", function (screen, params) {
+    var E = el();
+    var natId = params.userId;
+    var nat = TM.data.nation(natId);
+    var pool = TM.data.nationPool(natId);       // 26 convocáveis reais
+    var MAX = 23, MINGK = 2, MIN = 18;
+    // pré-seleciona os 23 melhores (respeitando ao menos 2 goleiros)
+    var chosen = {};
+    (function () {
+      var gks = pool.filter(function (p) { return p.pos === "GK"; });
+      var line = pool.filter(function (p) { return p.pos !== "GK"; });
+      gks.slice(0, 3).forEach(function (p) { chosen[p.id] = 1; });
+      var need = MAX - Object.keys(chosen).length;
+      line.slice(0, need).forEach(function (p) { chosen[p.id] = 1; });
+    })();
+    function count() { return Object.keys(chosen).length; }
+    function gkCount() { return pool.filter(function (p) { return p.pos === "GK" && chosen[p.id]; }).length; }
+
+    screen.appendChild(TM.ui.topbar("Convocação — " + nat.name, function () {
+      TM.ui.go("compmode-team", { catKey: params.catKey, id: params.id });
+    }));
+
+    var body = E("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var head = E("div", { class: "convoke-head" }, [
+      TM.img.nationImg(nat, "ch-crest"),
+      E("div", {}, [
+        E("div", { class: "ch-name", text: nat.name }),
+        E("div", { class: "ch-sub", text: "Escolha até " + MAX + " convocados (mín. " + MIN + ", ao menos " + MINGK + " goleiros)" })
+      ])
+    ]);
+    body.appendChild(head);
+    var counter = E("div", { class: "convoke-count" });
+    body.appendChild(counter);
+
+    var list = E("div", { class: "convoke-list" });
+    body.appendChild(list);
+    function updateCounter() {
+      counter.textContent = "Convocados: " + count() + "/" + MAX + "  ·  Goleiros: " + gkCount();
+      counter.classList.toggle("warn", count() < MIN || gkCount() < MINGK);
+    }
+    pool.forEach(function (p) {
+      var row = E("button", { class: "convoke-row" + (chosen[p.id] ? " on" : "") }, [
+        TM.img.playerImg(p, "cv-face"),
+        E("div", { class: "cv-info" }, [
+          E("div", { class: "cv-name", text: p.name }),
+          E("div", { class: "cv-meta", text: TM.data.posLabel(p) + " · " + p.age + " anos" })
+        ]),
+        TM.ui.ovBadge(p.overall),
+        E("span", { class: "cv-check", text: chosen[p.id] ? "✓" : "+" })
+      ]);
+      row.addEventListener("click", function () {
+        if (chosen[p.id]) {
+          delete chosen[p.id];
+        } else {
+          if (count() >= MAX) { TM.ui.toast("Máximo de " + MAX + " convocados"); return; }
+          chosen[p.id] = 1;
+        }
+        row.classList.toggle("on", !!chosen[p.id]);
+        row.querySelector(".cv-check").textContent = chosen[p.id] ? "✓" : "+";
+        updateCounter();
+      });
+      list.appendChild(row);
+    });
+    updateCounter();
+
+    screen.appendChild(E("div", { class: "actions" }, [
+      TM.ui.button("✅ Confirmar convocação", function () {
+        if (count() < MIN) { TM.ui.toast("Convoque ao menos " + MIN + " jogadores"); return; }
+        if (gkCount() < MINGK) { TM.ui.toast("Convoque ao menos " + MINGK + " goleiros"); return; }
+        var s = newComp(params.catKey, params.id, natId);
+        // squad na ordem do overall (melhores primeiro)
+        s.squad = pool.filter(function (p) { return chosen[p.id]; }).map(function (p) { return p.id; });
+        save(s);
+        TM.ui.go("compmode-hub");
+      }, "btn primary big")
     ]));
   });
 
