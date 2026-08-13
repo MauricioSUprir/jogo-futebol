@@ -345,14 +345,13 @@
     pickSlot = null;
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("compmode-hub"); }));
 
-    // formação
-    var formRow = E("div", { class: "segmented full" });
-    Object.keys(TM.comp.FORMATIONS).forEach(function (f) {
-      formRow.appendChild(E("button", { class: "seg-btn" + (s.lineup.formation === f ? " active" : ""), text: f, on: { click: function () {
+    // formação (dropdown compacto)
+    screen.appendChild(E("div", { class: "panel-narrow" }, [
+      E("h3", { class: "block-title", text: "📐 Esquema tático" }),
+      TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), s.lineup.formation, function (f) {
         s.lineup = TM.comp.buildLineup(userPlayerList(s), f); pickSlot = null; save(s); renderBoard();
-      } } }));
-    });
-    screen.appendChild(E("div", { class: "panel-narrow" }, [ E("div", { class: "setting" }, [ E("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
+      })
+    ]));
 
     // atualiza EM LUGAR (não recarrega a tela nem reseta o scroll)
     var board = E("div", { class: "lineup-board" });

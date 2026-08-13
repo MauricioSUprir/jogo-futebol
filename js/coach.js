@@ -964,19 +964,13 @@
     var lu = c.nation.lineup;
     screen.appendChild(TM.ui.topbar("📋 Escalação · " + c.nation.name, function () { natPick = null; TM.ui.go("coach-nation"); }));
 
-    var formRow = el("div", { class: "segmented full" });
-    Object.keys(C().FORMATIONS).forEach(function (f) {
-      formRow.appendChild(el("button", { class: "seg-btn" + (lu.formation === f ? " active" : ""), text: f, on: { click: function () {
+    screen.appendChild(el("div", { class: "panel-narrow" }, [
+      el("h3", { class: "block-title", text: "📐 Esquema tático" }),
+      TM.ui.dropdown("Formação", Object.keys(C().FORMATIONS), lu.formation, function (f) {
         c.nation.lineup = C().buildLineup(c.nation.squad.map(TM.data.player), f); natPick = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup");
-      } } }));
-    });
-    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
-
-    var tacRow = el("div", { class: "segmented full wrap" });
-    TM.engine.TACTICS.forEach(function (o) {
-      tacRow.appendChild(el("button", { class: "seg-btn" + (c.nation.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.nation.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); } } }));
-    });
-    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
+      }),
+      TM.ui.dropdown("Tática", TM.engine.TACTICS, c.nation.tactic, function (v) { c.nation.tactic = v; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); })
+    ]));
 
     var slots = C().FORMATIONS[lu.formation];
     var pitch = el("div", { class: "pitch" });
@@ -2032,21 +2026,14 @@
     C().syncLineup(c); TM.storage.saveCoachCareer(c); // garante contratados no banco
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("coach-hub"); }));
 
-    // formação
-    var formRow = el("div", { class: "segmented full" });
-    Object.keys(C().FORMATIONS).forEach(function (f) {
-      formRow.appendChild(el("button", { class: "seg-btn" + (c.lineup.formation === f ? " active" : ""), text: f, on: { click: function () {
+    // formação + tática (dropdowns compactos)
+    screen.appendChild(el("div", { class: "panel-narrow" }, [
+      el("h3", { class: "block-title", text: "📐 Esquema tático" }),
+      TM.ui.dropdown("Formação", Object.keys(C().FORMATIONS), c.lineup.formation, function (f) {
         c.lineup = C().buildLineup(C().rosterPlayers(c), f); pickSlot = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup");
-      } } }));
-    });
-    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Formação" }), formRow ]) ]));
-
-    // tática
-    var tacRow = el("div", { class: "segmented full wrap" });
-    TM.engine.TACTICS.forEach(function (o) {
-      tacRow.appendChild(el("button", { class: "seg-btn" + (c.tactic === o[0] ? " active" : ""), text: o[1], on: { click: function () { c.tactic = o[0]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); } } }));
-    });
-    screen.appendChild(el("div", { class: "panel-narrow" }, [ el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Tática" }), tacRow ]) ]));
+      }),
+      TM.ui.dropdown("Tática", TM.engine.TACTICS, c.tactic, function (v) { c.tactic = v; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); })
+    ]));
 
     // cobradores de bola parada (pênalti e falta)
     var takerPool = C().rosterPlayers(c).slice().sort(function (a, b) { return (b.attrs.sho || 0) - (a.attrs.sho || 0); });
