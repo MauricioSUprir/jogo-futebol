@@ -70,9 +70,9 @@
     screen.appendChild(actions);
     var proceeded = false, paused = false;
     function onSkip() {
-      if (!done) { finishNow(); return; }   // ainda rolando -> encerra a animação
-      if (proceeded) return;                 // já avançou -> ignora cliques repetidos
-      proceeded = true; onDone();
+      if (proceeded) return;                 // ignora cliques repetidos
+      if (!done) finishNow();                // ainda rolando -> encerra a animação na hora
+      proceeded = true; onDone();            // e já avança para o resultado (um clique só)
     }
 
     /* ---- pausa: táticas + substituições, re-simula o restante ---- */
