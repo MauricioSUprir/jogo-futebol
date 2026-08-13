@@ -18,7 +18,42 @@
   var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)", as: "Champions League da Ásia" };
   var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
 
+  /* ---------- Confederações + Eliminatórias da Copa ---------- */
+  // Copa do Mundo com 32 seleções. Cada confederação classifica um número de vagas.
+  var WC_TEAMS = 32;
+  var CONFED = {
+    // Europa (UEFA)
+    France: "UEFA", England: "UEFA", Spain: "UEFA", Germany: "UEFA", Portugal: "UEFA",
+    Netherlands: "UEFA", Italy: "UEFA", Belgium: "UEFA", Croatia: "UEFA", Switzerland: "UEFA",
+    Denmark: "UEFA", Poland: "UEFA", Sweden: "UEFA", Austria: "UEFA", Serbia: "UEFA",
+    Norway: "UEFA", Scotland: "UEFA", Turkey: "UEFA", Ukraine: "UEFA", Wales: "UEFA",
+    Bosnia: "UEFA", Greece: "UEFA", "Czech Republic": "UEFA", Hungary: "UEFA", Romania: "UEFA", Ireland: "UEFA",
+    // América do Sul (CONMEBOL)
+    Brazil: "CONMEBOL", Argentina: "CONMEBOL", Uruguay: "CONMEBOL", Colombia: "CONMEBOL",
+    Ecuador: "CONMEBOL", Peru: "CONMEBOL", Chile: "CONMEBOL", Paraguay: "CONMEBOL", Venezuela: "CONMEBOL",
+    // América do Norte/Central (CONCACAF)
+    Mexico: "CONCACAF", USA: "CONCACAF", Canada: "CONCACAF", "Costa Rica": "CONCACAF", Jamaica: "CONCACAF",
+    // África (CAF)
+    Senegal: "CAF", Morocco: "CAF", Nigeria: "CAF", Ghana: "CAF", Cameroon: "CAF",
+    "Ivory Coast": "CAF", Egypt: "CAF", "Cape Verde": "CAF", Tunisia: "CAF", Algeria: "CAF",
+    "South Africa": "CAF", "DR Congo": "CAF",
+    // Ásia + Oceania (AFC)
+    Japan: "AFC", "South Korea": "AFC", "Saudi Arabia": "AFC", Qatar: "AFC", Iran: "AFC", Australia: "AFC"
+  };
+  var CONFED_NAME = { UEFA: "Europa (UEFA)", CONMEBOL: "América do Sul (CONMEBOL)", CONCACAF: "Am. do Norte (CONCACAF)", CAF: "África (CAF)", AFC: "Ásia/Oceania (AFC)" };
+  // vagas por confederação (soma = 32)
+  var CONFED_SLOTS = { UEFA: 13, CONMEBOL: 6, CAF: 5, AFC: 4, CONCACAF: 4 };
+
   function realism() { return TM.storage.settings().realism; }
+
+  function confedOf(natId) { var n = TM.data.nation(natId); return n ? (CONFED[n.key] || "UEFA") : "UEFA"; }
+  function natsInConfed(code) {
+    return TM.data.world().nations.filter(function (n) { return (CONFED[n.key] || "UEFA") === code; }).map(function (n) { return n.id; });
+  }
+  // temporada-alvo da Copa a partir de uma temporada de eliminatórias
+  function targetCopaSeason(season) {
+    var r = season % 4, d = (1 - r + 4) % 4; if (d === 0) d = 4; return season + d;
+  }
 
   /* ---------- tabela de liga ---------- */
   function roundRobin(ids) {
@@ -901,14 +936,90 @@
   }
 
   /* ---------- comando de seleção (junto com o clube) ---------- */
-  function genNationWindows(natId) {
-    var others = TM.data.world().nations.filter(function (n) { return n.id !== natId; });
-    return [28, 66, 104, 142].map(function (fd) {
-      var opp = others[Math.floor(Math.random() * others.length)];
-      return { friendlyDay: fd, openDay: fd - 14, deadlineDay: fd - 5, oppId: opp.id, convoked: false, played: false, hs: 0, as: 0 };
+  function natRating(natId) { var sq = TM.data.nationSquad(natId).slice(0, 11); return Math.round(sq.reduce(function (s, p) { return s + p.overall; }, 0) / (sq.length || 1)); }
+
+  /* ===== Eliminatórias: tabela de pontos por confederação ===== */
+  // round-robin (método do círculo); devolve lista de rodadas [[a,b],...] (bye = null)
+  function confedSchedule(ids) {
+    var arr = ids.slice();
+    if (arr.length % 2 === 1) arr.push(null); // folga
+    var n = arr.length, rounds = [];
+    for (var r = 0; r < n - 1; r++) {
+      var rd = [];
+      for (var i = 0; i < n / 2; i++) {
+        var a = arr[i], b = arr[n - 1 - i];
+        if (a != null && b != null) rd.push([a, b]);
+      }
+      rounds.push(rd);
+      arr.splice(1, 0, arr.pop()); // rotaciona mantendo o 1º fixo
+    }
+    return rounds;
+  }
+  function emptyQualiRow(id) { return { id: id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }; }
+  // resultado leve (sem simular partida cheia) p/ os jogos entre seleções da IA
+  function simQuali(aId, bId) {
+    var ra = natRating(aId), rb = natRating(bId), diff = (ra - rb) / 6;
+    var ea = Math.max(0.2, 1.35 + diff), eb = Math.max(0.2, 1.35 - diff);
+    function pois(l) { var L = Math.exp(-l), k = 0, p = 1; do { k++; p *= Math.random(); } while (p > L); return k - 1; }
+    return [Math.min(6, pois(ea)), Math.min(6, pois(eb))];
+  }
+  function applyQualiRow(table, a, b, ga, gb) {
+    var A = table[a], B = table[b]; if (!A || !B) return;
+    A.p++; B.p++; A.gf += ga; A.ga += gb; B.gf += gb; B.ga += ga;
+    if (ga > gb) { A.w++; B.l++; A.pts += 3; } else if (ga < gb) { B.w++; A.l++; B.pts += 3; } else { A.d++; B.d++; A.pts++; B.pts++; }
+  }
+  function qualiStandings(table) {
+    return Object.keys(table).map(function (k) { return table[k]; })
+      .sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf || natRating(b.id) - natRating(a.id); });
+  }
+  // garante a estrutura das eliminatórias p/ o ciclo atual (reinicia a cada nova Copa)
+  function ensureQuali(career) {
+    if (!career.nation) return null;
+    var copa = targetCopaSeason(career.season);
+    var confed = confedOf(career.nation.id);
+    if (career.quali && career.quali.copa === copa && career.quali.confed === confed) return career.quali;
+    var ids = natsInConfed(confed);
+    var table = {}; ids.forEach(function (id) { table[id] = emptyQualiRow(id); });
+    career.quali = { copa: copa, confed: confed, table: table, sched: confedSchedule(ids), ptr: 0 };
+    return career.quali;
+  }
+  // gera as 4 janelas de eliminatórias da temporada (cada janela = 1 rodada)
+  function genNationWindows(natId, career) {
+    var q = ensureQuali(career);
+    var days = [28, 66, 104, 142];
+    var windows = [];
+    for (var i = 0; i < days.length; i++) {
+      if (!q.sched.length) break;
+      var round = q.sched[q.ptr % q.sched.length]; q.ptr++;
+      // acha o adversário do usuário nesta rodada (se estiver de folga, escolhe outro par)
+      var oppId = null, userPair = null;
+      for (var j = 0; j < round.length; j++) {
+        if (round[j][0] === natId) { oppId = round[j][1]; userPair = j; break; }
+        if (round[j][1] === natId) { oppId = round[j][0]; userPair = j; break; }
+      }
+      if (oppId == null) {
+        // usuário de folga nesta rodada: joga um amistoso-eliminatório contra o líder livre
+        var others = natsInConfed(q.confed).filter(function (x) { return x !== natId; });
+        oppId = others[Math.floor(Math.random() * others.length)];
+      }
+      var fd = days[i];
+      windows.push({ friendlyDay: fd, openDay: fd - 14, deadlineDay: fd - 5, oppId: oppId, convoked: false, played: false, hs: 0, as: 0, round: round, userPair: userPair });
+    }
+    return windows;
+  }
+  // aplica o resultado do usuário + simula o resto da rodada na tabela
+  function applyQualiResult(career, w) {
+    var q = career.quali; if (!q || !w) return;
+    var natId = career.nation.id;
+    // jogo do usuário
+    if (q.table[natId] && q.table[w.oppId]) applyQualiRow(q.table, natId, w.oppId, w.hs, w.as);
+    // demais jogos da rodada (IA)
+    (w.round || []).forEach(function (pair) {
+      if (pair[0] === natId || pair[1] === natId) return;
+      var r = simQuali(pair[0], pair[1]);
+      applyQualiRow(q.table, pair[0], pair[1], r[0], r[1]);
     });
   }
-  function natRating(natId) { var sq = TM.data.nationSquad(natId).slice(0, 11); return Math.round(sq.reduce(function (s, p) { return s + p.overall; }, 0) / (sq.length || 1)); }
 
   function buildNation(natId) {
     var nat = TM.data.nation(natId);
@@ -916,18 +1027,51 @@
     var players = squad.map(TM.data.player);
     return { id: natId, name: nat.name, squad: squad, lineup: buildLineup(players, "4-4-2"), tactic: "equilibrado", windows: [], wc: null, fired: false };
   }
-  // Copa do Mundo: 32 seleções (a do treinador + 31 melhores), grupos + mata-mata
-  function buildWorldCup(natId) {
-    // formato 2026: 48 seleções, 12 grupos de 4; passam os 2 primeiros + 8 melhores 3os = 32 (16 avos)
-    var teams = TM.data.world().nations.map(function (n) { return n.id; });
-    return { tour: TM.tournament.create(teams, { groups: 12, perGroup: 4, advance: 2, bestThirds: 8, userId: natId }),
-      openDay: 100, deadlineDay: 112, matchDays: [116, 121, 126, 132, 138, 144, 150, 156], wcMatchNo: 0, convoked: false };
+  // seleções classificadas para a Copa (32): usa a tabela das eliminatórias da confederação
+  // do usuário (real, acumulada) e o rating para as demais confederações.
+  function qualifiedTeams(career) {
+    var userConfed = career.quali && career.quali.copa === career.season ? career.quali.confed : confedOf(career.nation.id);
+    var out = [];
+    Object.keys(CONFED_SLOTS).forEach(function (code) {
+      var slots = CONFED_SLOTS[code], ranked;
+      if (code === userConfed && career.quali && career.quali.copa === career.season) {
+        ranked = qualiStandings(career.quali.table).map(function (r) { return r.id; });
+      } else {
+        ranked = natsInConfed(code).sort(function (a, b) { return natRating(b) - natRating(a); });
+      }
+      out = out.concat(ranked.slice(0, slots));
+    });
+    return out;
   }
-  // define o "calendário" da seleção na temporada: Copa do Mundo (de 4 em 4 anos) ou amistosos
+  function userQualified(career) {
+    if (!career.quali || career.quali.copa !== career.season) return true; // 1ª Copa sem eliminatórias: entra
+    var ranked = qualiStandings(career.quali.table).map(function (r) { return r.id; });
+    var slots = CONFED_SLOTS[career.quali.confed] || 4;
+    return ranked.slice(0, slots).indexOf(career.nation.id) >= 0;
+  }
+  // Copa do Mundo: 32 seleções classificadas, 8 grupos de 4, passam 2 → oitavas
+  function buildWorldCup(natId, teams) {
+    var field = (teams && teams.length ? teams.slice() : TM.data.world().nations.map(function (n) { return n.id; })).slice(0, WC_TEAMS);
+    if (field.indexOf(natId) < 0) { field[field.length - 1] = natId; } // garante a seleção do usuário
+    return { tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, bestThirds: 0, userId: natId }),
+      openDay: 100, deadlineDay: 112, matchDays: [116, 121, 126, 132, 138, 144, 150], wcMatchNo: 0, convoked: false };
+  }
+  // define o "calendário" da seleção na temporada: Copa do Mundo (ano da Copa) ou eliminatórias
   function setupNationSeason(career) {
     if (!career.nation) return;
-    if (career.season % 4 === 1) { career.nation.wc = buildWorldCup(career.nation.id); career.nation.windows = []; }
-    else { career.nation.wc = null; career.nation.windows = genNationWindows(career.nation.id); }
+    career.nation.eliminated = false;
+    if (career.season % 4 === 1) {
+      // ano da Copa: só disputa se tiver se classificado nas eliminatórias
+      if (userQualified(career)) {
+        career.nation.wc = buildWorldCup(career.nation.id, qualifiedTeams(career));
+        career.nation.windows = [];
+      } else {
+        career.nation.wc = null; career.nation.windows = []; career.nation.eliminated = true;
+        TM.notify.push(career, { icon: "😞", title: "Fora da Copa do Mundo", text: career.nation.name + " não se classificou nas Eliminatórias. Nesta temporada não há Copa para a seleção — foco nas próximas Eliminatórias." });
+      }
+    } else {
+      career.nation.wc = null; career.nation.windows = genNationWindows(career.nation.id, career);
+    }
   }
   function nationNextWindow(career) {
     if (!career.nation) return null;
@@ -1542,6 +1686,9 @@
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
     setupNationSeason: setupNationSeason, natRating: natRating, nationPending: nationPending,
+    applyQualiResult: applyQualiResult, qualiStandings: qualiStandings, ensureQuali: ensureQuali,
+    userQualified: userQualified, qualifiedTeams: qualifiedTeams, confedOf: confedOf,
+    CONFED: CONFED, CONFED_NAME: CONFED_NAME, CONFED_SLOTS: CONFED_SLOTS,
     advanceWorldCup: advanceWorldCup, applyWorldCupResult: applyWorldCupResult, wcRoundLabel: wcRoundLabel,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult, userPenContext: userPenContext,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
