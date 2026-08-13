@@ -23,6 +23,33 @@
     _db: null, _auth: null, _cbReady: [], _invite: null, _onInvite: null
   };
 
+  // === E-mail de segurança (EmailJS) — avisa a pessoa quando cadastra/entra ===
+  // Preencha os 3 códigos abaixo com os da sua conta EmailJS (emailjs.com):
+  //  1) crie conta grátis  2) conecte um serviço de e-mail (ex.: Gmail)
+  //  3) crie um Template com as variáveis {{to_email}} {{to_name}} {{action}} {{when}}
+  // Depois cole: Service ID, Template ID e Public Key. Vazio = desligado (não envia nada).
+  var EMAILJS = { serviceId: "", templateId: "", publicKey: "" };
+  net.emailConfigured = function () { return !!(EMAILJS.serviceId && EMAILJS.templateId && EMAILJS.publicKey); };
+  // envia um aviso "foi você?" para o e-mail informado (silencioso; nunca quebra o fluxo)
+  net.sendAuthEmail = function (email, name, action) {
+    if (!net.emailConfigured() || !email) return;
+    try {
+      var when = new Date().toLocaleString("pt-BR");
+      global.fetch("https://api.emailjs.com/api/v1.0/email/send", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: EMAILJS.serviceId, template_id: EMAILJS.templateId, user_id: EMAILJS.publicKey,
+          template_params: {
+            to_email: email, to_name: name || email,
+            action: action === "signup" ? "criou uma conta" : "entrou na conta",
+            action_short: action === "signup" ? "cadastro" : "login",
+            when: when, app_name: "Total Match"
+          }
+        })
+      }).catch(function () {});
+    } catch (e) {}
+  };
+
   function hasSDK() { return typeof global.firebase !== "undefined" && global.firebase.initializeApp; }
 
   function genNumber() {
@@ -420,6 +447,7 @@
           if (!committed) { cb(null, "Já existe uma conta com esse e-mail."); return; }
           // este aparelho passa a ser a identidade online da conta
           if (onUid) net.linkAccount({ uid: onUid, number: onNum, name: dn });
+          net.sendAuthEmail(e, dn, "signup"); // aviso de segurança por e-mail
           cb({ email: e, name: dn, photo: null, onlineUid: onUid, onlineNumber: onNum }, null);
         });
     });
@@ -439,6 +467,7 @@
           net.linkAccount({ uid: net.me.uid, number: net.me.number, name: name });
           net._db.ref("accounts/" + acctKey(e)).update({ onlineUid: net.me.uid, onlineNumber: net.me.number });
         }
+        net.sendAuthEmail(e, name, "login"); // aviso de segurança por e-mail
         cb({ email: e, name: name, photo: v.photo || null, saves: v.saves || null, onlineUid: v.onlineUid || null }, null);
       }).catch(function (er) { cb(null, er.message); });
     });
