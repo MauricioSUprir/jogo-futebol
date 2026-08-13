@@ -90,8 +90,8 @@
     ]));
 
     // carreiras (nuvem)
-    body.appendChild(el("div", { class: "list-head", text: "Carreiras (nuvem)" }));
-    body.appendChild(el("p", { class: "intro-text", text: "Suas carreiras sobem automaticamente. Em outro aparelho, entre com esta conta e toque em Baixar." }));
+    body.appendChild(el("div", { class: "list-head", text: "Sincronização (nuvem)" }));
+    body.appendChild(el("p", { class: "intro-text", text: "Sua conta guarda tudo: carreiras (treinador, jogador, dirigente e competições) sobem sozinhas, e seu perfil online — número, amigos e conversas — segue com a conta em qualquer aparelho. Ao entrar em outro celular, o progresso é restaurado automaticamente." }));
     body.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("☁️ Salvar carreiras na nuvem agora", function () { N().cloudSave(p.email, snapshot(), function (ok) { TM.ui.toast(ok ? "Carreiras salvas! ✅" : "Erro ao salvar"); }); }, "btn"),
       TM.ui.button("⬇️ Baixar carreiras da nuvem", function () {
@@ -99,7 +99,7 @@
           N().cloudLoad(p.email, function (data) { if (!data) { TM.ui.toast("Nenhuma carreira na nuvem ainda."); return; } restore(data); TM.ui.toast("Carreiras baixadas! ✅"); TM.ui.go("modes"); });
         }, true);
       }, "btn"),
-      TM.ui.button("Sair da conta", function () { setProfile(null); TM.ui.toast("Você saiu da conta."); TM.ui.go("profile"); }, "btn ghost")
+      TM.ui.button("Sair da conta", function () { setProfile(null); if (N().unlinkAccount) N().unlinkAccount(); TM.ui.toast("Você saiu da conta."); TM.ui.go("profile"); }, "btn ghost")
     ]));
   }
 
@@ -116,8 +116,10 @@
         N().login(mailIn.value, passIn.value, function (acc, err) {
           if (err) { TM.ui.toast(err); return; }
           setProfile({ email: acc.email, name: acc.name, photo: acc.photo || null });
-          TM.ui.toast("Bem-vindo, " + acc.name + "! Toque em Baixar para trazer as carreiras.");
-          TM.ui.go("profile");
+          // traz tudo automaticamente: carreiras (offline) já baixam; online segue pela conta
+          if (acc.saves) { restore(acc.saves); TM.ui.toast("Bem-vindo, " + acc.name + "! Progresso restaurado ✅"); }
+          else { TM.ui.toast("Bem-vindo, " + acc.name + "! ✅"); }
+          TM.ui.go("modes");
         });
       }, "btn primary"),
       TM.ui.button("Criar conta nova", function () {

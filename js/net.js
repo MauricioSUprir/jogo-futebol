@@ -32,6 +32,9 @@
   }
   function localName() { try { return localStorage.getItem("tm_online_name") || ""; } catch (e) { return ""; } }
   function saveLocalName(n) { try { localStorage.setItem("tm_online_name", n); } catch (e) {} }
+  // identidade online vinculada a uma conta (mesmo nº/amigos em qualquer aparelho)
+  function linkedIdentity() { try { var s = localStorage.getItem("tm_link"); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function saveLink(obj) { try { if (obj) localStorage.setItem("tm_link", JSON.stringify(obj)); else localStorage.removeItem("tm_link"); } catch (e) {} }
 
   // ---- inicialização ----
   net.init = function () {
@@ -52,6 +55,14 @@
 
   function onSignedIn(uid) {
     var db = net._db;
+    // se há uma conta vinculada, adota a identidade dela (número/amigos portáteis)
+    var link = linkedIdentity();
+    if (link && link.uid) {
+      var lname = link.name || localName() || "Jogador";
+      db.ref("users/" + link.uid).update({ name: lname, number: link.number || null });
+      finishReady(link.uid, link.number, lname);
+      return;
+    }
     var uref = db.ref("users/" + uid);
     uref.once("value").then(function (snap) {
       var v = snap.val() || {};
@@ -119,6 +130,26 @@
     saveLocalName(name);
     if (net.me) { net.me.name = name; net._db.ref("users/" + net.me.uid + "/name").set(name); }
   };
+
+  // ---- vínculo de conta <-> identidade online ----
+  // adota a identidade online da conta neste aparelho (mesmo número + amigos + chats)
+  net.linkAccount = function (link) {
+    if (!link || !link.uid) return;
+    saveLink(link);
+    if (!net._db) return;
+    var name = link.name || localName() || "Jogador";
+    net._db.ref("users/" + link.uid).update({ name: name, number: link.number || null });
+    net.me = { uid: link.uid, number: link.number, name: name };
+    net.ready = true;
+    setupPresence(link.uid);
+    listenInvites(link.uid);
+  };
+  // desvincula (logout) e volta à identidade anônima deste aparelho
+  net.unlinkAccount = function () {
+    saveLink(null);
+    if (net._auth && net._auth.currentUser) onSignedIn(net._auth.currentUser.uid);
+  };
+  net.currentOnline = function () { return net.me ? { uid: net.me.uid, number: net.me.number, name: net.me.name } : null; };
 
   // ---- amigos ----
   net.findByNumber = function (number, cb) {
@@ -380,13 +411,16 @@
     if (!validEmail(e)) { cb(null, "Digite um e-mail válido."); return; }
     if ((pass || "").length < 4) { cb(null, "Senha: use ao menos 4 caracteres."); return; }
     var dn = (name || "").trim() || e.split("@")[0];
+    var onUid = net.me ? net.me.uid : null, onNum = net.me ? net.me.number : null;
     sha256hex(e + ":" + pass + ":totalmatch").then(function (hash) {
       var ref = net._db.ref("accounts/" + acctKey(e));
-      ref.transaction(function (cur) { if (cur) return; return { pass: hash, email: e, name: dn, photo: null, createdAt: firebaseNow() }; },
+      ref.transaction(function (cur) { if (cur) return; return { pass: hash, email: e, name: dn, photo: null, onlineUid: onUid, onlineNumber: onNum, createdAt: firebaseNow() }; },
         function (err, committed) {
           if (err) { cb(null, err.message); return; }
           if (!committed) { cb(null, "Já existe uma conta com esse e-mail."); return; }
-          cb({ email: e, name: dn, photo: null }, null);
+          // este aparelho passa a ser a identidade online da conta
+          if (onUid) net.linkAccount({ uid: onUid, number: onNum, name: dn });
+          cb({ email: e, name: dn, photo: null, onlineUid: onUid, onlineNumber: onNum }, null);
         });
     });
   };
@@ -397,7 +431,15 @@
         var v = s.val();
         if (!v) { cb(null, "Conta não encontrada."); return; }
         if (v.pass !== hash) { cb(null, "Senha incorreta."); return; }
-        cb({ email: e, name: v.name || e.split("@")[0], photo: v.photo || null, saves: v.saves || null }, null);
+        var name = v.name || e.split("@")[0];
+        // vincula a identidade online: se a conta já tem, adota-a; senão, adota a atual e grava
+        if (v.onlineUid) {
+          net.linkAccount({ uid: v.onlineUid, number: v.onlineNumber, name: name });
+        } else if (net.me) {
+          net.linkAccount({ uid: net.me.uid, number: net.me.number, name: name });
+          net._db.ref("accounts/" + acctKey(e)).update({ onlineUid: net.me.uid, onlineNumber: net.me.number });
+        }
+        cb({ email: e, name: name, photo: v.photo || null, saves: v.saves || null, onlineUid: v.onlineUid || null }, null);
       }).catch(function (er) { cb(null, er.message); });
     });
   };
