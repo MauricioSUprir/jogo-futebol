@@ -43,7 +43,11 @@
             to_email: email, to_name: name || email,
             action: action === "signup" ? "criou uma conta" : "entrou na conta",
             action_short: action === "signup" ? "cadastro" : "login",
-            when: when, app_name: "Total Match"
+            when: when, app_name: "Total Match",
+            // imagens da marca (hospedadas no GitHub Pages) p/ usar no template do e-mail
+            logo_url: "https://mauriciosuprir.github.io/jogo-futebol/assets/logo.png",
+            banner_url: "https://mauriciosuprir.github.io/jogo-futebol/assets/og-image.png",
+            game_url: "https://mauriciosuprir.github.io/jogo-futebol/"
           }
         })
       }).catch(function () {});
