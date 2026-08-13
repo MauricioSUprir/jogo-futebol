@@ -315,7 +315,7 @@
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel,
+    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown,
     current: function () { return current; }
   };
 
@@ -370,6 +370,19 @@
       el("span", { class: "chip-name", text: opts.name || player.name }),
       (opts.age !== false && player.age) ? el("span", { class: "chip-age", text: player.age + " anos" }) : null
     ];
+  }
+
+  // seletor compacto (dropdown) no estilo dos cobradores. options: [[valor, texto], ...] ou [valor, ...]
+  function dropdown(label, options, current, onChange) {
+    var sel = el("select", { class: "select" });
+    (options || []).forEach(function (o) {
+      var val = Array.isArray(o) ? o[0] : o, txt = Array.isArray(o) ? o[1] : o;
+      var op = el("option", { value: val, text: txt });
+      if (val === current) op.selected = true;
+      sel.appendChild(op);
+    });
+    sel.addEventListener("change", function () { onChange(sel.value); });
+    return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: label }), sel ]);
   }
 
   // painel compacto "🧭 Posições" (estilo do bloco de cobradores) — lista quem está fora de posição
