@@ -455,16 +455,17 @@
       <section class="screen" id="scr-roteiro">
         <div class="note info" style="margin-bottom:14px">
           <span style="font-size:20px">✍️</span>
-          <div>O <b>roteiro</b> não são as falas exatas — é um <b>guia</b> do que o vídeo vai falar e o que fazer em cada parte. Você escreve ou pede pra <b>IA criar pra você</b>.</div>
+          <div>O <b>roteiro</b> é um <b>guia</b> do que o vídeo vai falar (não as falas exatas). Escreva o tema e toque em <b>📋 Copiar prompt</b> pra colar numa <b>IA grátis</b> (ChatGPT, Gemini) — ou use a IA embutida.</div>
         </div>
         <div class="card panel" style="margin-bottom:18px">
           <div class="eyebrow" style="margin-bottom:8px">Criar um roteiro novo</div>
           <div class="field"><label>Sobre o que é o vídeo?</label><input id="rtTema" placeholder="Ex.: 3 erros que travam quem começa no YouTube"/></div>
           <div class="field" style="margin-top:10px"><label>Formato</label><select id="rtFmt"></select></div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;align-items:center">
-            <button class="btn" id="btnGerarIA" onclick="gerarRoteiroIA()">✨ Deixar a IA criar</button>
+            <button class="btn" id="btnCopyRt" onclick="copiarPromptRoteiro()">📋 Copiar prompt pra uma IA grátis</button>
             <button class="btn ghost" onclick="criarRoteiroVazio()">✍️ Escrever eu mesma</button>
-            <button class="btn ghost sm" style="margin-left:auto" onclick="conectarIA()">⚙️ Conectar IA de verdade</button>
+            <button class="btn ghost" id="btnGerarIA" onclick="gerarRoteiroIA()">✨ IA embutida</button>
+            <button class="btn ghost sm" style="margin-left:auto" onclick="conectarIA()">⚙️ Conectar IA</button>
           </div>
           <div id="iaStatus" style="margin-top:11px;font-size:12px;color:var(--muted)"></div>
         </div>
@@ -944,6 +945,25 @@ function criarRoteiroVazio(){
   document.getElementById("rtTema").value="";
   renderRoteiros(); renderThumbs(); toast("Roteiro em branco criado ✍️");
 }
+// Prompt pronto pra colar numa IA grátis (ChatGPT, Gemini…) — sem chave, sem pagar.
+function promptRoteiro(tema, longo){
+  return [
+    `Você é um estrategista de conteúdo para redes sociais.`,
+    `Quero fazer um ${longo?"vídeo longo (YouTube, com começo, capítulos e fechamento)":"vídeo curto (Short/Reels/TikTok, direto ao ponto, uma ideia só)"} sobre: "${tema}".`,
+    `Me ajude a ESTRUTURAR a ideia — não escreva as falas exatas, e sim o que fazer e falar em cada parte.`,
+    `Divida em partes, por exemplo: 🎯 Ideia central, 🪝 Gancho (começo que prende), ⚡ Desenvolvimento (o que falar), 🎬 O que aparece na tela, 📣 Pedido final.`,
+    `Use linguagem simples, em português do Brasil, com 1 a 3 frases por parte.`,
+  ].join(" ");
+}
+function copiarPromptRoteiro(){
+  const tema=(document.getElementById("rtTema").value||"").trim();
+  if(!tema){ toast("Escreva o tema primeiro"); return; }
+  const txt=promptRoteiro(tema, FORMATOS[document.getElementById("rtFmt").value].ar==="16:9");
+  const btn=document.getElementById("btnCopyRt"), o=btn?btn.innerHTML:"";
+  const done=()=>{ if(btn){ btn.innerHTML="✓ Copiado!"; setTimeout(()=>btn.innerHTML=o,1500); } toast("Prompt copiado — cole numa IA grátis ✓"); };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done)); }
+  else fallbackCopy(txt,done);
+}
 function renderRoteiros(){
   const el=document.getElementById("roteirosList");
   if(ROTEIROS.length===0){
@@ -1278,7 +1298,7 @@ const TIPS = {
 const STEPS = {
   pipeline: ["Cada cartãozinho é um vídeo 🎬","Segure e arraste pra coluna do lado ➡️","Toque no cartão pra ver os detalhes"],
   ideias: ["Toque em <b>+ Nova ideia</b>","Escolha o formato (Short ou Vídeo longo)","Toque em <b>✨ Criar roteiro</b> ou mande pra produção"],
-  roteiro: ["Escreva o tema do vídeo","Toque em <b>✨ Deixar a IA criar</b>","Ajuste o texto e toque em <b>▶ Ler enquanto grava</b>"],
+  roteiro: ["Escreva o tema do vídeo","Toque em <b>📋 Copiar prompt</b> e cole numa IA grátis","Cole a resposta e toque em <b>▶ Ler enquanto grava</b>"],
   thumbs: ["Ache o vídeo que você quer","Toque em <b>📋 Copiar prompt da capa</b>","Cole numa IA de imagem e pronto! ✨"],
   calendario: ["Bolinha no dia = tem vídeo 🎬","Toque num dia pra planejar","Tente não deixar muitos dias vazios"],
   metricas: ["Conecte seus apps 🔌","Os números reais aparecem aqui","Atualizam sozinhos todo dia"],
