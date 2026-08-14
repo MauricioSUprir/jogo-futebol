@@ -233,6 +233,10 @@
   /* ---- Barra de ajuda (didática) ---- */
   .helpbar { display: flex; gap: 11px; align-items: center; margin-bottom: 14px; padding: 12px 15px; border-radius: 14px; font-size: 14.5px; line-height: 1.4; background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft)); color: var(--ink); border: 1px solid var(--border); }
   .helpbar .big { font-size: 24px; flex: none; line-height: 1; }
+  /* Passo a passo dentro de cada aba */
+  .guia { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 16px; }
+  .gstep { display: flex; align-items: center; gap: 9px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 13px 8px 9px; font-size: 13px; font-weight: 550; box-shadow: var(--shadow); }
+  .gstep .gn { width: 23px; height: 23px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12.5px; font-weight: 800; display: grid; place-items: center; flex: none; }
 
   /* ---- Plataformas / dashboard ---- */
   .pswitch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -417,6 +421,7 @@
 
     <div class="content">
       <div id="helpbar" class="helpbar"></div>
+      <div id="guia" class="guia"></div>
       <!-- PIPELINE -->
       <section class="screen on" id="scr-pipeline">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
@@ -445,6 +450,10 @@
             <button class="btn sm" onclick="toast('Roteiro salvo ✓')">Salvar</button>
           </div>
         </div>
+        <div class="note info" style="margin-bottom:14px">
+          <span style="font-size:20px">✍️</span>
+          <div>O <b>roteiro</b> é o que você vai falar no vídeo, escrito antes pra não esquecer. Ele é dividido em <b>partes</b>: comece prendendo a atenção e termine pedindo algo (curtir, seguir…).</div>
+        </div>
         <div id="rtDiff" style="display:none;margin-bottom:8px"></div>
         <div class="rt-grid" id="rtEditor">
           <div style="display:flex;flex-direction:column;gap:11px" id="blocos"></div>
@@ -464,15 +473,20 @@
 
       <!-- CALENDARIO -->
       <section class="screen" id="scr-calendario">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
           <strong style="font-size:15px">Outubro de 2024</strong>
-          <span class="chip">filtro: todas plataformas</span>
+          <span class="chip"><span class="dot" style="background:var(--primary)"></span>bolinha = tem vídeo</span>
+          <span class="chip" style="background:var(--warn-soft);color:var(--warn);border-color:var(--warn-soft)">“sem post” = dia vazio</span>
         </div>
         <div class="card" style="overflow:hidden"><div id="cal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)"></div></div>
       </section>
 
       <!-- METRICAS -->
       <section class="screen" id="scr-metricas">
+        <div class="note info" style="margin-bottom:14px">
+          <span style="font-size:20px">👆</span>
+          <div>Toque num <b>aplicativo</b> pra ver só os vídeos dele, ou em <b>Geral</b> pra ver todos juntos. Quanto maior o número, melhor o vídeo foi!</div>
+        </div>
         <!-- aba: trocar os dados por aplicativo (+ Geral) -->
         <div class="pswitch" id="pswitch"></div>
         <div class="kpis" id="kpis"></div>
@@ -508,6 +522,11 @@
 
       <!-- THUMBNAILS -->
       <section class="screen" id="scr-thumbs">
+        <div class="note info" style="margin-bottom:16px">
+          <span style="font-size:20px">🖼️</span>
+          <div>A <b>capa</b> é a imagem que aparece antes de tocar no vídeo — é ela que faz a pessoa querer assistir!
+          Cada vídeo já tem um <b>textinho pronto</b>. É só copiar e colar numa <b>IA de imagem</b> (ChatGPT, Gemini, Copilot…) pra ela desenhar a capa pra você.</div>
+        </div>
         <div id="thumbsList" class="grid"></div>
       </section>
 
@@ -1180,9 +1199,21 @@ const TIPS = {
   metricas:["📊","Veja como seus vídeos foram. Escolha um <b>aplicativo</b> lá em cima pra ver só dele, ou <b>Geral</b> pra ver tudo junto."],
   ia:["✨","Escreva um <b>tema</b> e a robô te dá ganchos e títulos prontos. Cada um vira uma ideia com um toque!"],
 };
+// Passo a passo curtinho (1, 2, 3) que aparece dentro de cada aba
+const STEPS = {
+  pipeline: ["Cada cartãozinho é um vídeo 🎬","Segure e arraste pra coluna do lado ➡️","Toque no cartão pra ver os detalhes"],
+  ideias: ["Toque em <b>+ Nova ideia</b>","Escreva só o nome do vídeo","Depois toque em <b>→ Mandar pra produção</b>"],
+  roteiro: ["Escreva o que vai falar, por partes","Toque em <b>▶ Ler enquanto grava</b>","Toque em <b>Salvar</b> quando terminar"],
+  thumbs: ["Ache o vídeo que você quer","Toque em <b>📋 Copiar prompt da capa</b>","Cole numa IA de imagem e pronto! ✨"],
+  calendario: ["Bolinha no dia = tem vídeo 🎬","<b>“sem post”</b> = dia sem nada","Tente não deixar muitos dias vazios"],
+  metricas: ["Escolha um app lá em cima (ou <b>Geral</b>)","Número maior = o vídeo foi melhor","Veja os 5 que as pessoas mais assistiram"],
+  ia: ["Escreva um <b>tema</b>","Toque em <b>✦ Pedir ideias</b>","Toque em <b>+ Ideia</b> pra guardar a que gostou"],
+};
 function setHelp(scr){
   const t = TIPS[scr];
   document.getElementById("helpbar").innerHTML = t ? `<span class="big">${t[0]}</span><span>${t[1]}</span>` : "";
+  const s = STEPS[scr];
+  document.getElementById("guia").innerHTML = s ? s.map((x,i)=>`<div class="gstep"><span class="gn">${i+1}</span><span>${x}</span></div>`).join("") : "";
 }
 function go(scr){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id==="scr-"+scr));
