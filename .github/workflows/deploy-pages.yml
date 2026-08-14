@@ -30,6 +30,9 @@ jobs:
           # App de Finanças de Casa fica em /financas-casa/
           mkdir -p _site/financas-casa
           cp -r financas-casa/. _site/financas-casa/
+          # Hub da Família fica em /hub-familiar/
+          mkdir -p _site/hub-familiar
+          cp -r hub-familiar/. _site/hub-familiar/
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match. Subpasta /financas-casa/ = app de finanças.
