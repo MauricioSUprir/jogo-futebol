@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"/>
+<title>CreateFlow</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #fff5f9;
+    --ink: #2a1e26;
+    --muted: #8a7b84;
+    --faint: #b9a9b3;
+    --border: #f4e6ee;
+    --border-strong: #ecd4e1;
+    --primary: #f5348b;          /* rosa principal */
+    --primary-soft: #ffe4f0;
+    --primary-ink: #cf1d6e;
+    --yellow: #ffc21f;           /* amarelo — detalhe secundário */
+    --yellow-soft: #fff3cd;
+    --yellow-ink: #a9760a;
+    --good: #12a150;
+    --good-soft: #e0f5e9;
+    --warn: #e07d10;
+    --warn-soft: #ffe9d1;
+    --crit: #e11d48;
+    --yt: #ff0033;
+    --ig: #e1306c;
+    --tt: #3a2b33;
+    --shadow: 0 1px 2px rgba(214,60,140,.06), 0 6px 20px rgba(214,60,140,.07);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1a1218;
+      --surface: #221822;
+      --surface-2: #2a1d28;
+      --ink: #f6e9f0;
+      --muted: #b79faa;
+      --faint: #7d6572;
+      --border: #34242f;
+      --border-strong: #45303c;
+      --primary: #ff5ca6;
+      --primary-soft: #3a1c2c;
+      --primary-ink: #ff9ac8;
+      --yellow: #ffd24d;
+      --yellow-soft: #382b12;
+      --yellow-ink: #ffcf4d;
+      --good: #34d17f;
+      --good-soft: #14291d;
+      --warn: #e8a34a;
+      --warn-soft: #33240f;
+      --crit: #f5566f;
+      --tt: #e6d3de;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1a1218;
+    --surface: #221822;
+    --surface-2: #2a1d28;
+    --ink: #f6e9f0;
+    --muted: #b79faa;
+    --faint: #7d6572;
+    --border: #34242f;
+    --border-strong: #45303c;
+    --primary: #ff5ca6;
+    --primary-soft: #3a1c2c;
+    --primary-ink: #ff9ac8;
+    --yellow: #ffd24d;
+    --yellow-soft: #382b12;
+    --yellow-ink: #ffcf4d;
+    --good: #34d17f;
+    --good-soft: #14291d;
+    --warn: #e8a34a;
+    --warn-soft: #33240f;
+    --crit: #f5566f;
+    --tt: #e6d3de;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 20px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { margin: 0; letter-spacing: -0.02em; text-wrap: balance; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ---- App shell ---- */
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+  .side {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 16px 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; padding: 8px 10px 14px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft));
+    box-shadow: 0 3px 10px rgba(245,52,139,.18);
+  }
+  .logo svg { width: 26px; height: 26px; }
+  .brand b { font-size: 17px; letter-spacing: -0.03em; }
+  .brand small { display: block; color: var(--muted); font-size: 11px; letter-spacing: .02em; }
+  .nav { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+  .nav button {
+    display: flex; align-items: center; gap: 11px; width: 100%;
+    padding: 9px 11px; border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-weight: 550; text-align: left; border-radius: 9px; cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .nav button:hover { background: var(--surface-2); color: var(--ink); }
+  .nav button.on { background: var(--primary-soft); color: var(--primary-ink); }
+  .nav .ic { width: 18px; height: 18px; flex: none; }
+  .nav .lock { margin-left: auto; font-size: 10px; color: var(--faint); }
+  .side-foot { margin-top: auto; padding: 10px; border-top: 1px solid var(--border); }
+  .who { display: flex; align-items: center; gap: 9px; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+  .who small { color: var(--muted); font-size: 11px; }
+
+  .main { min-width: 0; display: flex; flex-direction: column; }
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 14px 22px; background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
+  }
+  .topbar h1 { font-size: 19px; }
+  .topbar p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+  .content { padding: 20px 22px 80px; }
+
+  /* ---- Bits ---- */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px;
+    border-radius: 9px; border: 1px solid transparent; background: var(--primary); color: #fff;
+    font: inherit; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: filter .12s, background .12s;
+  }
+  .btn:hover { filter: brightness(1.06); }
+  .btn.ghost { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+  .btn.ghost:hover { background: var(--surface-2); filter: none; }
+  .btn.sm { padding: 6px 10px; font-size: 12.5px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px;
+    font-size: 11.5px; font-weight: 600; border: 1px solid var(--border-strong); color: var(--muted); background: var(--surface-2);
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .plat { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; color: #fff; font-weight: 700; letter-spacing: .01em; }
+  .eyebrow { text-transform: uppercase; letter-spacing: .09em; font-size: 11px; font-weight: 700; color: var(--faint); }
+
+  /* ---- Pipeline ---- */
+  .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+  .col { width: 250px; flex: none; display: flex; flex-direction: column; }
+  .col-h { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 8px; }
+  .col-h b { font-size: 13px; }
+  .count { font-size: 11px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; }
+  .drop { display: flex; flex-direction: column; gap: 9px; min-height: 380px; padding: 10px; border-radius: 12px; border: 1px dashed var(--border-strong); background: color-mix(in srgb, var(--surface-2) 60%, transparent); transition: background .12s, border-color .12s; }
+  .drop.over { border-color: var(--primary); background: var(--primary-soft); }
+  .kcard { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px; box-shadow: var(--shadow); cursor: grab; }
+  .kcard:active { cursor: grabbing; }
+  .kcard.dragging { opacity: .45; }
+  .kcard .kt { font-weight: 600; font-size: 13.5px; line-height: 1.35; }
+  .kmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 9px; }
+  .kfoot { display: flex; align-items: center; gap: 10px; margin-top: 9px; font-size: 11px; color: var(--muted); }
+  .check { margin-left: auto; }
+
+  /* ---- Ideias ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .idea { padding: 15px; display: flex; flex-direction: column; gap: 9px; }
+  .idea .hook { font-style: italic; color: var(--muted); font-size: 13px; }
+  .status { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .st-ideia { background: var(--surface-2); color: var(--muted); border: 1px solid var(--border-strong); }
+  .st-aprovada { background: var(--good-soft); color: var(--good); }
+  .tag { font-size: 11px; color: var(--faint); }
+
+  /* ---- Roteiro ---- */
+  .rt-grid { display: grid; grid-template-columns: 1fr 300px; gap: 16px; }
+  .bloco { padding: 13px; }
+  .bloco .bh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+  .bloco .bh b { font-size: 13.5px; }
+  .bloco .bh span { font-size: 11px; color: var(--faint); }
+  .bloco textarea, .side-card textarea {
+    width: 100%; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2);
+    color: var(--ink); font: inherit; font-size: 13.5px; padding: 9px; resize: vertical; min-height: 62px;
+  }
+  .bloco textarea:focus, .side-card textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  .hint { color: var(--faint); font-weight: 400; }
+  .side-card { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .stat-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+  .stat-row span { color: var(--muted); }
+
+  /* ---- Métricas ---- */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 13px; }
+  .kpi { padding: 15px; display: flex; align-items: center; gap: 13px; }
+  .kpi .ib { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--primary-soft); color: var(--primary-ink); }
+  .kpi .v { font-size: 23px; font-weight: 750; letter-spacing: -0.02em; line-height: 1; }
+  .kpi .l { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .panels { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; margin-top: 16px; }
+  .panel { padding: 16px; }
+  .panel h3 { font-size: 15px; margin-bottom: 12px; }
+  .rank { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+  .rank:first-of-type { border-top: 0; }
+  .rank .n { width: 22px; text-align: center; font-weight: 800; color: var(--faint); }
+  .rank .info { min-width: 0; flex: 1; }
+  .rank .info b { font-size: 13.5px; font-weight: 600; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rank .info small { color: var(--muted); font-size: 11.5px; display: flex; gap: 7px; align-items: center; }
+  .rank .val { font-weight: 750; font-size: 15px; }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin: 9px 0; font-size: 13px; }
+  .bar-row .lab { width: 84px; display: flex; align-items: center; gap: 7px; color: var(--muted); }
+  .bar-track { flex: 1; height: 22px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 6px; }
+  .bar-row .num { width: 66px; text-align: right; font-weight: 650; }
+  svg .grid-line { stroke: var(--border); stroke-width: 1; }
+  svg .axis { fill: var(--faint); font-size: 10px; }
+
+  /* ---- Plataformas / dashboard ---- */
+  .pswitch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .pswitch button { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: filter .12s; box-shadow: var(--shadow); }
+  .pswitch button.on { border-color: transparent; color: #fff; }
+  .pswitch button .cnt { font-size: 11px; opacity: .8; }
+  .plat-ic { width: 18px; height: 18px; border-radius: 5px; flex: none; }
+  .plat-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .plat-chip .plat-ic { width: 15px; height: 15px; }
+  .seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--border); border-radius: 9px; padding: 2px; }
+  .seg button { border: 0; background: transparent; padding: 4px 11px; border-radius: 7px; font: inherit; font-size: 12px; font-weight: 600; color: var(--muted); cursor: pointer; }
+  .seg button.on { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+  .mtable-wrap { overflow-x: auto; }
+  .mtable { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+  .mtable th, .mtable td { text-align: right; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .mtable th:first-child, .mtable td:first-child { text-align: left; }
+  .mtable th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .04em; color: var(--faint); font-weight: 700; }
+  .mtable tbody tr:hover { background: var(--surface-2); }
+  .vcards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 10px; }
+  .vcard { border: 1px solid var(--border); border-radius: 10px; padding: 11px; }
+  .vcard b { font-size: 13px; display: block; line-height: 1.3; }
+  .vcard .m { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  /* ---- Teleprompter ---- */
+  .tele { position: fixed; inset: 0; z-index: 100; background: #05060a; color: #fff; display: none; flex-direction: column; }
+  .tele.on { display: flex; }
+  .tele-guide { position: absolute; left: 0; right: 0; top: 33%; height: 2px; background: var(--yellow); opacity: .7; pointer-events: none; }
+  .tele-scroll { flex: 1; overflow-y: auto; padding: 33vh 8vw; text-align: center; }
+  .tele-scroll p { font-size: 42px; font-weight: 650; line-height: 1.5; white-space: pre-wrap; max-width: 900px; margin: 0 auto; }
+  .tele-ctl { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; padding: 14px; border-top: 1px solid rgba(255,255,255,.1); background: rgba(0,0,0,.7); }
+  .tele-ctl button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 9px; padding: 9px 13px; font: inherit; font-weight: 600; cursor: pointer; }
+  .tele-ctl button:hover { background: rgba(255,255,255,.22); }
+  .tele-ctl .grp { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.08); border-radius: 9px; padding: 4px 8px; font-size: 12px; }
+  .tele-ctl .close { background: var(--crit); }
+
+  /* ---- Toast ---- */
+  .toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 200; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .screen { display: none; animation: fade .25s ease; }
+  .screen.on { display: block; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .note { display: flex; gap: 9px; align-items: flex-start; padding: 11px 13px; border-radius: 10px; font-size: 12.5px; border: 1px solid; }
+  .note.info { background: var(--primary-soft); border-color: color-mix(in srgb, var(--primary) 30%, transparent); color: var(--primary-ink); }
+
+  /* ---- Modal / drawer ---- */
+  .ov { position: fixed; inset: 0; z-index: 90; background: rgba(20,10,16,.45); backdrop-filter: blur(3px); display: none; }
+  .ov.on { display: block; animation: fade .18s ease; }
+  .sheet { position: absolute; background: var(--surface); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 14px; padding: 18px; overflow-y: auto; }
+  .sheet.bottom { left: 0; right: 0; bottom: 0; border-radius: 18px 18px 0 0; max-height: 92vh; animation: up .22s cubic-bezier(.2,.8,.2,1); }
+  .sheet.right { top: 0; right: 0; height: 100%; width: min(440px, 100%); border-left: 1px solid var(--border); animation: rin .22s ease; }
+  @keyframes up { from { transform: translateY(30px); } to { transform: none; } }
+  @keyframes rin { from { transform: translateX(30px); opacity: .6; } to { transform: none; opacity: 1; } }
+  .sheet h3 { font-size: 17px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+  .field input, .field textarea, .field select { border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 14px; padding: 9px 11px; }
+  .field input:focus, .field textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+  .chk { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 9px; font-size: 13.5px; cursor: pointer; user-select: none; }
+  .chk input { width: 16px; height: 16px; accent-color: var(--primary); }
+  .chk.done { background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
+  .close-x { position: absolute; top: 14px; right: 14px; background: var(--surface-2); border: 1px solid var(--border); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; color: var(--muted); font-size: 15px; }
+
+  /* ---- Diff ---- */
+  .diff { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .diff-h { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface-2); font-size: 12px; font-weight: 700; }
+  .diff-h div { padding: 8px 12px; }
+  .diff-h div:first-child { border-right: 1px solid var(--border); }
+  .diff-b { border-top: 1px solid var(--border); }
+  .diff-b .lab { padding: 6px 12px; font-size: 11px; font-weight: 700; color: var(--muted); background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+  .diff-cols { display: grid; grid-template-columns: 1fr 1fr; }
+  .diff-cols div { padding: 9px 12px; font-size: 13px; line-height: 1.5; }
+  .diff-cols div:first-child { border-right: 1px solid var(--border); }
+  .ins { background: var(--good-soft); color: var(--good); border-radius: 3px; }
+  .del { background: color-mix(in srgb, var(--crit) 14%, transparent); color: var(--crit); text-decoration: line-through; border-radius: 3px; }
+
+  /* ---- Login ---- */
+  .login { position: fixed; inset: 0; z-index: 120; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .login.off { display: none; }
+  .login-bg { position: absolute; inset: 0; background:
+      radial-gradient(60% 50% at 82% 12%, color-mix(in srgb, var(--primary) 22%, transparent), transparent),
+      radial-gradient(50% 45% at 12% 88%, color-mix(in srgb, var(--yellow) 24%, transparent), transparent); }
+  .login-card { position: relative; width: 100%; max-width: 360px; text-align: center; }
+  .login-logo { width: 68px; height: 68px; border-radius: 20px; margin: 0 auto 14px; display: grid; place-items: center; background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft)); box-shadow: 0 10px 26px rgba(245,52,139,.20); }
+  .login-logo svg { width: 52px; height: 52px; }
+  .login-card form { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; text-align: left; }
+
+  /* ---- Mobile ---- */
+  .mnav { display: none; }
+  @media (max-width: 860px) {
+    .app { grid-template-columns: 1fr; }
+    .side { display: none; }
+    .rt-grid { grid-template-columns: 1fr; }
+    .panels { grid-template-columns: 1fr; }
+    .content { padding: 16px 14px 90px; }
+    .topbar { padding: 12px 14px; }
+    .mnav {
+      display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
+      background: var(--surface); border-top: 1px solid var(--border);
+    }
+    .mnav button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 10px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+    .mnav button.on { color: var(--primary-ink); }
+    .mnav .ic { width: 20px; height: 20px; }
+  }
+</style>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="brand">
+      <div class="logo"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="CreateFlow">
+        <defs>
+          <linearGradient id="pkS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5348b"/><stop offset="1" stop-color="#ff86bd"/></linearGradient>
+          <linearGradient id="lensS" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd3e6"/><stop offset="1" stop-color="#ff9dcb"/></linearGradient>
+        </defs>
+        <path d="M40 30 A34 32 0 0 1 86 33" fill="none" stroke="#ffc21f" stroke-width="4" stroke-linecap="round"/><circle cx="88" cy="34" r="4" fill="#ffc21f"/>
+        <path d="M34 90 A34 32 0 0 0 80 94" fill="none" stroke="#f5348b" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="89" r="4" fill="#f5348b"/>
+        <rect x="26" y="42" width="56" height="40" rx="13" fill="#ffffff" stroke="#efe1ea" stroke-width="2"/>
+        <path d="M84 51 L99 44 L99 80 L84 73 Z" fill="url(#lensS)"/>
+        <path d="M37 53 L52 62 L37 71 Z" fill="url(#pkS)"/>
+        <circle cx="63" cy="52" r="3.8" fill="#ffc21f"/><rect x="59.5" y="58.5" width="7" height="7" rx="1.6" fill="url(#pkS)"/><path d="M59.5 73 L66.5 73 L63 67 Z" fill="#ffc21f"/>
+        <rect x="70" y="50.5" width="8" height="3" rx="1.5" fill="#ece0e8"/><rect x="70" y="60.5" width="8" height="3" rx="1.5" fill="#ece0e8"/><rect x="70" y="70" width="8" height="3" rx="1.5" fill="#ece0e8"/>
+      </svg></div>
+      <div><b>CreateFlow</b><small>Produção de conteúdo</small></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button data-scr="ideias">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.5.5 1 1.2 1 2.5h6c0-1.3.5-2 1-2.5A6 6 0 0 0 12 3z"/></svg>
+        Ideias
+      </button>
+      <button data-scr="pipeline" class="on">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="10" y="3" width="6" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
+        Pipeline
+      </button>
+      <button data-scr="roteiro">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        Roteiro
+      </button>
+      <button data-scr="calendario">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
+        Calendário
+      </button>
+      <button data-scr="metricas">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        Métricas <span class="lock">admin</span>
+      </button>
+      <button data-scr="ia">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+        Sugestões IA <span class="lock">admin</span>
+      </button>
+    </nav>
+    <div class="side-foot">
+      <div class="who">
+        <div class="avatar">C</div>
+        <div><div style="font-weight:600;font-size:13px">Criadora</div><small>admin · acesso total</small></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <header class="topbar">
+      <div>
+        <h1 id="pgTitle">Pipeline de produção</h1>
+        <p id="pgDesc">8 conteúdos · arraste os cards entre as colunas</p>
+      </div>
+      <button class="btn ghost sm" id="themeBtn" title="Alternar tema">
+        <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6L4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/><circle cx="12" cy="12" r="4"/></svg>
+        Tema
+      </button>
+    </header>
+
+    <div class="content">
+      <!-- PIPELINE -->
+      <section class="screen on" id="scr-pipeline">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="btn sm" onclick="novoCard()">+ Novo card</button>
+        </div>
+        <div class="board" id="board"></div>
+      </section>
+
+      <!-- IDEIAS -->
+      <section class="screen" id="scr-ideias">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
+          <input id="buscaIdeia" oninput="renderIdeas()" placeholder="Buscar ideia, gancho ou tag..." style="flex:1;min-width:180px;max-width:320px;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
+          <div id="filtroIdeia" style="display:flex;gap:6px"></div>
+          <button class="btn sm" style="margin-left:auto" onclick="novaIdeia()">+ Nova ideia</button>
+        </div>
+        <div class="grid" id="ideasGrid"></div>
+      </section>
+
+      <!-- ROTEIRO -->
+      <section class="screen" id="scr-roteiro">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div><div class="eyebrow">Editor de roteiro · v3</div><h2 style="font-size:18px;margin-top:4px">Por que shorts de 7s estão bombando</h2></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost sm" id="cmpBtn" onclick="toggleDiff()">⇄ Comparar v2×v3</button>
+            <button class="btn ghost sm" onclick="openTele()">▶ Teleprompter</button>
+            <button class="btn sm" onclick="toast('Nova versão v4 salva')">Salvar versão</button>
+          </div>
+        </div>
+        <div id="rtDiff" style="display:none;margin-bottom:8px"></div>
+        <div class="rt-grid" id="rtEditor">
+          <div style="display:flex;flex-direction:column;gap:11px" id="blocos"></div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div class="card side-card">
+              <div><div class="eyebrow" style="margin-bottom:6px">Descrição / legenda</div><textarea>Os shorts curtíssimos estão dominando o feed — e os números provam. Salva esse vídeo pra não esquecer.</textarea></div>
+              <div><div class="eyebrow" style="margin-bottom:6px">Hashtags</div><div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">#shorts</span><span class="chip">#retenção</span><span class="chip">#criador</span></div></div>
+            </div>
+            <div class="card side-card">
+              <div class="stat-row"><span>Total</span><b class="tnum" id="rtWords">— palavras</b></div>
+              <div class="stat-row"><span>Duração falada (~150 ppm)</span><b class="tnum" id="rtDur">—</b></div>
+              <div class="stat-row"><span>Versões salvas</span><b>3</b></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CALENDARIO -->
+      <section class="screen" id="scr-calendario">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <strong style="font-size:15px">Outubro de 2024</strong>
+          <span class="chip">filtro: todas plataformas</span>
+        </div>
+        <div class="card" style="overflow:hidden"><div id="cal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)"></div></div>
+      </section>
+
+      <!-- METRICAS -->
+      <section class="screen" id="scr-metricas">
+        <!-- aba: trocar os dados por aplicativo (+ Geral) -->
+        <div class="pswitch" id="pswitch"></div>
+        <div class="kpis" id="kpis"></div>
+        <div class="panels">
+          <div class="card panel">
+            <h3>5 vídeos com melhor retenção <span class="hint" style="font-weight:500;font-size:12px">· últimos 90 dias</span></h3>
+            <div id="rankRet"></div>
+          </div>
+          <div class="card panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
+              <h3 style="margin:0">Performance por pilar</h3>
+              <div class="seg" id="segPilar"></div>
+            </div>
+            <div id="barPilar"></div>
+          </div>
+        </div>
+        <div class="panels" style="margin-top:16px">
+          <div class="card panel"><h3>Mais compartilhados</h3><div id="rankComp"></div></div>
+          <div class="card panel"><h3>Mais seguidores ganhos</h3><div id="rankSeg"></div></div>
+        </div>
+        <div class="card panel" style="margin-top:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
+            <h3 style="margin:0">Todos os vídeos</h3>
+            <div class="seg" id="segVideos"></div>
+          </div>
+          <div id="videosView"></div>
+        </div>
+        <div class="card panel" style="margin-top:16px">
+          <h3>Evolução mês a mês</h3>
+          <div id="lineChart"></div>
+        </div>
+      </section>
+
+      <!-- IA -->
+      <section class="screen" id="scr-ia">
+        <div class="card panel" style="max-width:720px;margin:0 auto">
+          <div class="eyebrow" style="margin-bottom:8px">Sugestões de roteiro (IA)</div>
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="temaInput" value="retenção em shorts curtos" style="flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
+            <button class="btn" onclick="gerarIA()">✦ Gerar sugestões</button>
+          </div>
+          <div class="note info" style="margin-bottom:14px">Baseado nos seus 8 vídeos com métricas + o tema. A IA nunca inventa números — cada justificativa é ancorada nos dados reais. <span class="hint">(prévia com resposta de exemplo)</span></div>
+          <div id="iaOut"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Mobile nav -->
+<nav class="mnav" id="mnav"></nav>
+
+<!-- Teleprompter -->
+<div class="tele" id="tele">
+  <div class="tele-guide"></div>
+  <div class="tele-scroll" id="teleScroll" onclick="toggleRun()"><p id="teleText"></p></div>
+  <div class="tele-ctl">
+    <button onclick="toggleRun()" id="runBtn">▶ Play</button>
+    <button onclick="teleReset()">↺ Reiniciar</button>
+    <span class="grp">vel <button onclick="teleSpeed(-10)">–</button><span id="spd" class="tnum">40</span><button onclick="teleSpeed(10)">+</button></span>
+    <span class="grp">fonte <button onclick="teleFont(-4)">–</button><span id="fnt" class="tnum">42</span><button onclick="teleFont(4)">+</button></span>
+    <button class="close" onclick="closeTele()">✕ Fechar</button>
+  </div>
+</div>
+
+<!-- Modal / drawer -->
+<div class="ov" id="ov" onclick="if(event.target===this)closeModal()"><div class="sheet bottom" id="sheet"></div></div>
+
+<!-- Login (entrada da demo) -->
+<div class="login" id="login">
+  <div class="login-bg"></div>
+  <div class="login-card">
+    <div class="login-logo"><svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-label="CreateFlow">
+      <defs>
+        <linearGradient id="pkL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f5348b"/><stop offset="1" stop-color="#ff86bd"/></linearGradient>
+        <linearGradient id="lensL" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd3e6"/><stop offset="1" stop-color="#ff9dcb"/></linearGradient>
+      </defs>
+      <path d="M40 30 A34 32 0 0 1 86 33" fill="none" stroke="#ffc21f" stroke-width="4" stroke-linecap="round"/><circle cx="88" cy="34" r="4" fill="#ffc21f"/>
+      <path d="M34 90 A34 32 0 0 0 80 94" fill="none" stroke="#f5348b" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="89" r="4" fill="#f5348b"/>
+      <rect x="26" y="42" width="56" height="40" rx="13" fill="#ffffff" stroke="#efe1ea" stroke-width="2"/>
+      <path d="M84 51 L99 44 L99 80 L84 73 Z" fill="url(#lensL)"/>
+      <path d="M37 53 L52 62 L37 71 Z" fill="url(#pkL)"/>
+      <circle cx="63" cy="52" r="3.8" fill="#ffc21f"/><rect x="59.5" y="58.5" width="7" height="7" rx="1.6" fill="url(#pkL)"/><path d="M59.5 73 L66.5 73 L63 67 Z" fill="#ffc21f"/>
+      <rect x="70" y="50.5" width="8" height="3" rx="1.5" fill="#ece0e8"/><rect x="70" y="60.5" width="8" height="3" rx="1.5" fill="#ece0e8"/><rect x="70" y="70" width="8" height="3" rx="1.5" fill="#ece0e8"/>
+    </svg></div>
+    <h1 style="font-size:24px">CreateFlow</h1>
+    <p style="color:var(--muted);font-size:13.5px;margin:4px 0 0">Entre para gerenciar sua produção.</p>
+    <form onsubmit="entrar(event)">
+      <div class="field"><label>Email</label><input type="email" value="criadora@createflow.app" required/></div>
+      <div class="field"><label>Senha</label><input type="password" value="demo1234" required/></div>
+      <button class="btn" type="submit" style="justify-content:center;margin-top:4px">Entrar</button>
+      <p style="text-align:center;color:var(--faint);font-size:11.5px;margin:2px 0 0">prévia de demonstração · qualquer credencial entra</p>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- Dados de exemplo (do seed) ----------
+const PILARES = {
+  Bastidores: "#f59e0b", Tutorial: "#6366f1", Opiniao: "#ef4444",
+};
+const PLAT = { youtube: {l:"YouTube", c:"var(--yt)"}, instagram: {l:"Instagram", c:"var(--ig)"}, tiktok: {l:"TikTok", c:"var(--tt)"} };
+
+const VIDEOS = [
+  {t:"Por que shorts de 7s estão bombando", pilar:"Opiniao", plat:"youtube", fmt:"short", ret:82.1, views:320000, comp:9200, seg:3400, dia:"2024-10-08"},
+  {t:"Opinião impopular sobre trends", pilar:"Opiniao", plat:"tiktok", fmt:"short", ret:79.3, views:210000, comp:7100, seg:2100, dia:"2024-09-15"},
+  {t:"Roteirizando um vídeo em 10 minutos", pilar:"Tutorial", plat:"tiktok", fmt:"reel", ret:74.5, views:96000, comp:2400, seg:980, dia:"2024-10-01"},
+  {t:"3 erros que eu cometia editando reels", pilar:"Tutorial", plat:"instagram", fmt:"reel", ret:68.4, views:148000, comp:3100, seg:1200, dia:"2024-10-22"},
+  {t:"Reagindo aos meus primeiros vídeos", pilar:"Bastidores", plat:"instagram", fmt:"reel", ret:62.0, views:74000, comp:1500, seg:730, dia:"2024-07-21"},
+  {t:"Um dia comigo gravando 5 vídeos", pilar:"Bastidores", plat:"instagram", fmt:"reel", ret:55.0, views:61000, comp:810, seg:420, dia:"2024-09-25"},
+  {t:"Meu setup de gravação em 2024", pilar:"Bastidores", plat:"youtube", fmt:"video_longo", ret:41.2, views:42000, comp:290, seg:640, dia:"2024-10-15"},
+  {t:"Como eu escolho o que gravar", pilar:"Tutorial", plat:"youtube", fmt:"video_longo", ret:38.7, views:38000, comp:210, seg:510, dia:"2024-08-30"},
+];
+
+const IDEIAS = [
+  {t:"Série: refazendo vídeos que floparam", hook:"O que eu mudaria hoje", res:"Pegar 3 vídeos antigos e regravar com o que aprendi.", pilar:"Bastidores", plats:["youtube","instagram"], tags:["serie","flop"], st:"aprovada"},
+  {t:"Tutorial de gancho em 30s", hook:"A fórmula que eu uso", res:"Ensinar a estrutura de gancho que mais reteve.", pilar:"Tutorial", plats:["tiktok"], tags:["gancho","retencao"], st:"ideia"},
+  {t:"Hot take: thumbnail não importa em shorts", hook:"Prove que estou errada", res:"Discutir o peso da thumbnail por formato.", pilar:"Opiniao", plats:["youtube"], tags:["opiniao","thumbnail"], st:"ideia"},
+];
+
+// Cards do kanban por coluna
+const COLS = ["Ideia","Roteiro","Gravar","Editar","Agendado","Publicado"];
+let KANBAN = {
+  Ideia: [{t:"Hot take: thumbnail não importa", pilar:"Opiniao", plats:["youtube"], fmt:"short", resp:"Criadora", data:"—", check:[false,false,false,false]}],
+  Roteiro: [{t:"Tutorial de gancho em 30s", pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"28/10", check:[false,true,false,false]}],
+  Gravar: [{t:"Série: refazendo vídeos que floparam", pilar:"Bastidores", plats:["youtube","instagram"], fmt:"video_longo", resp:"Criadora", data:"30/10", check:[true,true,false,false]}],
+  Editar: [{t:"Bastidores da minha semana", pilar:"Bastidores", plats:["instagram"], fmt:"reel", resp:"Editor", data:"29/10", check:[true,true,true,false]}],
+  Agendado: [{t:"Reagindo aos comentários polêmicos", pilar:"Opiniao", plats:["tiktok"], fmt:"short", resp:"Criadora", data:"31/10", check:[true,true,true,true]}],
+  Publicado: [
+    {t:"Por que shorts de 7s estão bombando", pilar:"Opiniao", plats:["youtube"], fmt:"short", resp:"Criadora", data:"08/10", check:[true,true,true,true]},
+    {t:"Opinião impopular sobre trends", pilar:"Opiniao", plats:["tiktok"], fmt:"short", resp:"Criadora", data:"15/09", check:[true,true,true,true]},
+  ],
+};
+
+const fmtN = n => new Intl.NumberFormat("pt-BR").format(n);
+const platLabel = p => PLAT[p]?.l ?? p;
+const fmtLabel = f => ({short:"Short", reel:"Reel", video_longo:"Vídeo longo"}[f] ?? f);
+
+// ---------- Pipeline ----------
+// Ícones "certinhos" das plataformas (marcas reconhecíveis, em SVG).
+function platIcon(p, cls){
+  const c = cls || "plat-ic";
+  if(p==="youtube") return `<svg class="${c}" viewBox="0 0 24 24"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#FF0000"/><path d="M10 8.6 L16 12 L10 15.4 Z" fill="#fff"/></svg>`;
+  if(p==="instagram") return `<svg class="${c}" viewBox="0 0 24 24"><defs><radialGradient id="ig" cx="30%" cy="107%" r="130%"><stop offset="0" stop-color="#ffd776"/><stop offset=".25" stop-color="#f3a145"/><stop offset=".5" stop-color="#ef4e56"/><stop offset=".75" stop-color="#d62a90"/><stop offset="1" stop-color="#8a3ab9"/></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig)"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="17.2" cy="6.9" r="1.25" fill="#fff"/></svg>`;
+  // tiktok — nota com duotone ciano/rosa em fundo escuro
+  return `<svg class="${c}" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#010101"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#25F4EE" transform="translate(1.1,.4)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#FE2C55" transform="translate(-.3,-.3)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#fff"/></svg>`;
+}
+function platPills(plats){ return plats.map(p=>`<span class="plat-chip">${platIcon(p)}${platLabel(p)}</span>`).join(""); }
+function renderBoard(){
+  const board = document.getElementById("board");
+  board.innerHTML = COLS.map(col => `
+    <div class="col">
+      <div class="col-h"><b>${col}</b><span class="count">${KANBAN[col].length}</span></div>
+      <div class="drop" data-col="${col}">
+        ${KANBAN[col].map((c,i)=>kcard(c,col,i)).join("")}
+      </div>
+    </div>`).join("");
+  wireDrag();
+}
+function kcard(c,col,i){
+  const done = c.check.filter(Boolean).length;
+  return `<div class="kcard" draggable="true" data-col="${col}" data-i="${i}" onclick="abrirCard('${col}',${i})">
+    <div class="kt">${c.t}</div>
+    <div class="kmeta"><span class="dot" style="background:${PILARES[c.pilar]}"></span>
+      <span class="chip">${fmtLabel(c.fmt)}</span>${platPills(c.plats)}</div>
+    <div class="kfoot"><span>📅 ${c.data}</span><span>👤 ${c.resp}</span><span class="check">${done}/4 assets</span></div>
+  </div>`;
+}
+let dragData = null;
+function wireDrag(){
+  document.querySelectorAll(".kcard").forEach(el=>{
+    el.addEventListener("dragstart", e=>{ dragData={col:el.dataset.col, i:+el.dataset.i}; el.classList.add("dragging"); });
+    el.addEventListener("dragend", e=> el.classList.remove("dragging"));
+  });
+  document.querySelectorAll(".drop").forEach(zone=>{
+    zone.addEventListener("dragover", e=>{ e.preventDefault(); zone.classList.add("over"); });
+    zone.addEventListener("dragleave", ()=> zone.classList.remove("over"));
+    zone.addEventListener("drop", e=>{
+      e.preventDefault(); zone.classList.remove("over");
+      if(!dragData) return;
+      const to = zone.dataset.col;
+      const card = KANBAN[dragData.col].splice(dragData.i,1)[0];
+      KANBAN[to].unshift(card);
+      dragData=null; renderBoard();
+      toast(`Movido para “${to}”`);
+    });
+  });
+}
+
+// ---------- Ideias ----------
+let ideaStatus = "todos";
+function setIdeaStatus(s){ ideaStatus=s; renderIdeas(); }
+function renderIdeas(){
+  // chips de filtro
+  const chips = [["todos","Todos"],["ideia","Ideia"],["aprovada","Aprovada"],["descartada","Descartada"]];
+  document.getElementById("filtroIdeia").innerHTML = chips.map(([v,l])=>
+    `<button onclick="setIdeaStatus('${v}')" style="padding:6px 11px;border:0;border-radius:999px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${ideaStatus===v?'var(--primary)':'var(--surface-2)'};color:${ideaStatus===v?'#fff':'var(--muted)'}">${l}</button>`).join("");
+
+  const q = (document.getElementById("buscaIdeia")?.value || "").toLowerCase();
+  const lista = IDEIAS.filter(i=>{
+    if(ideaStatus!=="todos" && i.st!==ideaStatus) return false;
+    if(q && !`${i.t} ${i.hook} ${i.tags.join(" ")}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const grid = document.getElementById("ideasGrid");
+  if(lista.length===0){ grid.innerHTML = `<p style="color:var(--muted);font-size:14px;padding:30px 0">Nenhuma ideia encontrada.</p>`; return; }
+  grid.innerHTML = lista.map(i=>`
+    <div class="card idea">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
+        <b style="font-size:14.5px;line-height:1.3">${i.t}</b>
+        <span class="status st-${i.st}">${i.st}</span>
+      </div>
+      ${i.hook?`<div class="hook">“${i.hook}”</div>`:""}
+      <div style="font-size:13px">${i.res}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span class="chip"><span class="dot" style="background:${PILARES[i.pilar]}"></span>${i.pilar}</span>
+        ${platPills(i.plats)}
+        ${i.tags.map(t=>`<span class="tag">#${t}</span>`).join("")}
+      </div>
+      ${i.st==="ideia"?`<button class="btn ghost sm" style="align-self:flex-start" onclick="proIdeia('${i.t.replace(/'/g,"")}')">→ Pipeline</button>`:""}
+    </div>`).join("");
+}
+function proIdeia(t){
+  KANBAN.Roteiro.unshift({t, pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"—", check:[false,false,false,false]});
+  renderBoard(); toast("Ideia promovida ao pipeline ✓");
+}
+
+// ---------- Modal ----------
+function openModal(html, side){
+  const ov=document.getElementById("ov"), sh=document.getElementById("sheet");
+  sh.className = "sheet "+(side||"bottom");
+  sh.innerHTML = `<button class="close-x" onclick="closeModal()">✕</button>`+html;
+  ov.classList.add("on");
+  setTimeout(()=>sh.querySelector("input,textarea")?.focus(), 60);
+}
+function closeModal(){ document.getElementById("ov").classList.remove("on"); }
+
+// ---------- Nova ideia / novo card ----------
+const PIL_OPTS = Object.keys(PILARES).map(p=>`<option value="${p}">${p}</option>`).join("");
+function novaIdeia(){
+  openModal(`
+    <h3>Captura rápida</h3>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Só o título já basta.</p>
+    <div class="field"><label>Título</label><input id="niT" autofocus placeholder="Ex.: 3 erros que eu cometia editando"/></div>
+    <div class="field"><label>Gancho (0–3s)</label><input id="niH" placeholder="A primeira frase que prende"/></div>
+    <div class="field"><label>Resumo</label><textarea id="niR" rows="2"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Pilar</label><select id="niP">${PIL_OPTS}</select></div>
+      <div class="field"><label>Tags (vírgula)</label><input id="niTag" placeholder="gancho, retenção"/></div>
+    </div>
+    <button class="btn" style="justify-content:center" onclick="salvarIdeia()">Salvar ideia</button>
+  `,"bottom");
+}
+function salvarIdeia(){
+  const t=document.getElementById("niT").value.trim(); if(!t) return;
+  IDEIAS.unshift({
+    t, hook:document.getElementById("niH").value.trim(),
+    res:document.getElementById("niR").value.trim()||"—",
+    pilar:document.getElementById("niP").value, plats:["instagram"],
+    tags:document.getElementById("niTag").value.split(",").map(x=>x.trim()).filter(Boolean),
+    st:"ideia",
+  });
+  closeModal(); ideaStatus="todos"; renderIdeas(); toast("Ideia salva ✓");
+}
+function novoCard(){
+  openModal(`
+    <h3>Novo card no pipeline</h3>
+    <div class="field"><label>Título</label><input id="ncT" autofocus/></div>
+    <div class="field"><label>Pilar</label><select id="ncP">${PIL_OPTS}</select></div>
+    <div class="field"><label>Data prevista</label><input id="ncD" type="date"/></div>
+    <button class="btn" style="justify-content:center" onclick="salvarCard()">Criar card</button>
+  `,"bottom");
+}
+function salvarCard(){
+  const t=document.getElementById("ncT").value.trim(); if(!t) return;
+  const d=document.getElementById("ncD").value;
+  KANBAN.Ideia.unshift({t, pilar:document.getElementById("ncP").value, plats:["instagram"], fmt:"reel", resp:"Criadora",
+    data: d?d.slice(8,10)+"/"+d.slice(5,7):"—", check:[false,false,false,false]});
+  closeModal(); renderBoard(); toast("Card criado ✓");
+}
+
+// ---------- Detalhe do card (drawer) ----------
+const ASSETS = ["Thumbnail","Legenda","Trilha","CTA"];
+let curCard = null;
+function abrirCard(col,i){
+  curCard = {col,i};
+  const c = KANBAN[col][i];
+  openModal(`
+    <h3 style="padding-right:30px">${c.t}</h3>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <span class="chip"><span class="dot" style="background:${PILARES[c.pilar]}"></span>${c.pilar}</span>
+      <span class="chip">${fmtLabel(c.fmt)}</span>${platPills(c.plats)}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Coluna</label><input value="${col}" disabled/></div>
+      <div class="field"><label>Responsável</label><input value="${c.resp}"/></div>
+    </div>
+    <div class="field"><label>Checklist de assets</label>
+      <div id="ckList" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        ${ASSETS.map((a,ai)=>`<label class="chk ${c.check[ai]?'done':''}"><input type="checkbox" ${c.check[ai]?'checked':''} onchange="toggleAsset(${ai},this.checked)"/>${a}</label>`).join("")}
+      </div>
+    </div>
+    <button class="btn" style="justify-content:center" onclick="closeModal();toast('Alterações salvas ✓')">Salvar</button>
+  `,"right");
+}
+function toggleAsset(ai,val){
+  const c = KANBAN[curCard.col][curCard.i];
+  c.check[ai]=val; renderBoard();
+  // atualiza o visual do item no drawer
+  const labels = document.querySelectorAll("#ckList .chk");
+  if(labels[ai]) labels[ai].classList.toggle("done", val);
+}
+
+// ---------- Diff de versões ----------
+const V2 = {
+  Gancho:"Shorts curtos estão bombando — vou te mostrar o porquê.",
+  Contexto:"Achavam que vídeo mais longo retinha mais. Não é o que vejo.",
+  Desenvolvimento:"No vídeo curtíssimo, a pessoa assiste de novo e o algoritmo lê como retenção alta.",
+  Climax:"O vídeo de 7s foi o meu melhor do trimestre.",
+  CTA:"Salva esse vídeo e testa.",
+};
+const V3 = {
+  Gancho:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê.",
+  Contexto:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário.",
+  Desenvolvimento:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima.",
+  Climax:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre.",
+  CTA:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários.",
+};
+function diffWords(a,b){
+  const A=a.split(/(\s+)/), B=b.split(/(\s+)/);
+  // LCS simples por palavra
+  const n=A.length,m=B.length, dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) dp[i][j]=A[i]===B[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  const left=[],right=[]; let i=0,j=0;
+  while(i<n&&j<m){ if(A[i]===B[j]){left.push({t:A[i]});right.push({t:B[j]});i++;j++;}
+    else if(dp[i+1][j]>=dp[i][j+1]){left.push({t:A[i],d:1});i++;} else {right.push({t:B[j],a:1});j++;} }
+  while(i<n){left.push({t:A[i++],d:1});} while(j<m){right.push({t:B[j++],a:1});}
+  const esc=s=>s.replace(/</g,"&lt;");
+  return [
+    left.map(p=>p.d?`<span class="del">${esc(p.t)}</span>`:esc(p.t)).join(""),
+    right.map(p=>p.a?`<span class="ins">${esc(p.t)}</span>`:esc(p.t)).join(""),
+  ];
+}
+let diffOn=false;
+function toggleDiff(){
+  diffOn=!diffOn;
+  document.getElementById("rtEditor").style.display = diffOn?"none":"grid";
+  document.getElementById("rtDiff").style.display = diffOn?"block":"none";
+  document.getElementById("cmpBtn").textContent = diffOn?"✎ Voltar a editar":"⇄ Comparar v2×v3";
+  if(diffOn) renderDiff();
+}
+function renderDiff(){
+  const blocos=["Gancho","Contexto","Desenvolvimento","Climax","CTA"];
+  document.getElementById("rtDiff").innerHTML = `<div class="diff">
+    <div class="diff-h"><div>v2 (antes)</div><div>v3 (depois)</div></div>
+    ${blocos.map(b=>{ const [l,r]=diffWords(V2[b],V3[b]); return `<div class="diff-b"><div class="lab">${b}</div><div class="diff-cols"><div>${l}</div><div>${r}</div></div></div>`;}).join("")}
+  </div>`;
+}
+
+// ---------- Login ----------
+function entrar(e){ e.preventDefault(); document.getElementById("login").classList.add("off"); toast("Bem-vinda ao CreateFlow ✨"); }
+
+// ---------- Roteiro ----------
+const BLOCOS = [
+  {k:"Gancho", hint:"0–3s: prende a atenção", txt:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê."},
+  {k:"Contexto", hint:"situa o espectador", txt:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário."},
+  {k:"Desenvolvimento", hint:"conteúdo principal", txt:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima."},
+  {k:"Climax", hint:"o ponto alto / payoff", txt:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre."},
+  {k:"CTA", hint:"chamada para ação", txt:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários."},
+];
+function renderBlocos(){
+  document.getElementById("blocos").innerHTML = BLOCOS.map((b,i)=>`
+    <div class="card bloco">
+      <div class="bh"><b>${b.k} <span class="hint">· ${b.hint}</span></b><span id="c${i}"></span></div>
+      <textarea data-i="${i}" oninput="updRt()">${b.txt}</textarea>
+    </div>`).join("");
+  updRt();
+}
+function words(s){ return (s.trim().match(/\S+/g)||[]).length; }
+function updRt(){
+  let total=0;
+  document.querySelectorAll("#blocos textarea").forEach(ta=>{
+    const i=ta.dataset.i, w=words(ta.value); total+=w;
+    const seg=Math.round(w/150*60);
+    document.getElementById("c"+i).textContent = `${ta.value.length} car · ~${seg}s`;
+  });
+  const dur = Math.round(total/150*60);
+  document.getElementById("rtWords").textContent = total+" palavras";
+  document.getElementById("rtDur").textContent = `${Math.floor(dur/60)}m ${String(dur%60).padStart(2,"0")}s`;
+}
+
+// ---------- Calendário ----------
+function renderCal(){
+  const cal = document.getElementById("cal");
+  const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  const posts = {8:["Opiniao"],15:["Bastidores"],22:["Tutorial"],28:["Tutorial"],31:["Opiniao"]};
+  const semPost = new Set([24,25,26,29]);
+  let html = dias.map(d=>`<div style="background:var(--surface-2);padding:6px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">${d}</div>`).join("");
+  // outubro 2024 começa numa terça (índice 2)
+  for(let b=0;b<2;b++) html += `<div style="background:var(--surface);min-height:74px;opacity:.4"></div>`;
+  for(let d=1;d<=31;d++){
+    const p = posts[d];
+    const vazio = semPost.has(d);
+    html += `<div style="background:var(--surface);min-height:74px;padding:6px">
+      <div style="display:flex;justify-content:space-between;font-size:11px">
+        <span${d===22?' style="font-weight:800;color:var(--primary-ink)"':''}>${d}</span>
+        ${vazio?'<span style="font-size:8.5px;background:var(--warn-soft);color:var(--warn);padding:0 5px;border-radius:999px">sem post</span>':''}
+      </div>
+      ${p?p.map(pi=>`<div style="margin-top:4px;font-size:10px;background:var(--primary-soft);color:var(--primary-ink);border-radius:5px;padding:2px 5px;display:flex;align-items:center;gap:4px"><span class="dot" style="width:6px;height:6px;background:${PILARES[pi]}"></span>publicação</div>`).join(''):''}
+    </div>`;
+  }
+  cal.innerHTML = html;
+}
+
+// ---------- Métricas ----------
+let platFilter="todos", pilarView="barras", videosView="cartoes";
+function setPlat(p){ platFilter=p; renderMetrics(); }
+function setPilarView(v){ pilarView=v; renderMetrics(); }
+function setVideosView(v){ videosView=v; renderMetrics(); }
+
+function renderMetrics(){
+  const VS = platFilter==="todos" ? VIDEOS : VIDEOS.filter(v=>v.plat===platFilter);
+
+  // aba: trocar dados por aplicativo (+ Geral)
+  const abas = [["todos","Geral"],["youtube","YouTube"],["instagram","Instagram"],["tiktok","TikTok"]];
+  document.getElementById("pswitch").innerHTML = abas.map(([v,l])=>{
+    const on = platFilter===v;
+    const cnt = v==="todos"?VIDEOS.length:VIDEOS.filter(x=>x.plat===v).length;
+    const ic = v==="todos" ? `<span style="font-size:15px">📊</span>` : platIcon(v);
+    const bg = v==="todos" ? "var(--primary)" : PLAT[v].c;
+    return `<button class="${on?'on':''}" style="${on?`background:${bg}`:''}" onclick="setPlat('${v}')">${ic}${l}<span class="cnt">${cnt}</span></button>`;
+  }).join("");
+
+  if(VS.length===0){
+    document.getElementById("kpis").innerHTML=`<p style="color:var(--muted);padding:16px 0">Nenhum vídeo nessa plataforma ainda.</p>`;
+    ["rankRet","barPilar","rankComp","rankSeg","videosView","lineChart","segPilar","segVideos"].forEach(id=>document.getElementById(id).innerHTML="");
+    return;
+  }
+
+  const views=VS.reduce((a,v)=>a+v.views,0), seg=VS.reduce((a,v)=>a+v.seg,0), comp=VS.reduce((a,v)=>a+v.comp,0);
+  document.getElementById("kpis").innerHTML=[
+    ["🎬","Vídeos",VS.length],["👁","Views (total)",fmtN(views)],
+    ["👥","Seguidores ganhos",fmtN(seg)],["🔁","Compartilhamentos",fmtN(comp)],
+  ].map((k,i)=>{ const y=i%2===1; const tile=y?"background:var(--yellow-soft);color:var(--yellow-ink)":"background:var(--primary-soft);color:var(--primary-ink)";
+    return `<div class="card kpi"><div class="ib" style="font-size:19px;${tile}">${k[0]}</div><div><div class="v tnum">${k[2]}</div><div class="l">${k[1]}</div></div></div>`; }).join("");
+
+  document.getElementById("rankRet").innerHTML=[...VS].sort((a,b)=>b.ret-a.ret).slice(0,5).map((v,i)=>rankItem(v,i,v.ret.toFixed(1)+"%","var(--good)")).join("");
+
+  // por pilar — barras ou rosca
+  const byP={}; VS.forEach(v=>{ byP[v.pilar]=(byP[v.pilar]||0)+v.views; });
+  const ents=Object.entries(byP).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("segPilar").innerHTML=[["barras","Barras"],["rosca","Rosca"]].map(([v,l])=>`<button class="${pilarView===v?'on':''}" onclick="setPilarView('${v}')">${l}</button>`).join("");
+  document.getElementById("barPilar").innerHTML = pilarView==="rosca" ? renderDonut(ents) : renderBars(ents);
+
+  document.getElementById("rankComp").innerHTML=[...VS].sort((a,b)=>b.comp-a.comp).slice(0,5).map((v,i)=>rankItem(v,i,fmtN(v.comp),"var(--primary-ink)")).join("");
+  document.getElementById("rankSeg").innerHTML=[...VS].sort((a,b)=>b.seg-a.seg).slice(0,5).map((v,i)=>rankItem(v,i,"+"+fmtN(v.seg),"var(--yellow-ink)")).join("");
+
+  // todos os vídeos — cartões ou tabela
+  document.getElementById("segVideos").innerHTML=[["cartoes","Cartões"],["tabela","Tabela"]].map(([v,l])=>`<button class="${videosView===v?'on':''}" onclick="setVideosView('${v}')">${l}</button>`).join("");
+  document.getElementById("videosView").innerHTML = videosView==="tabela" ? renderTable(VS) : renderCards(VS);
+
+  renderLine(VS);
+}
+
+function rankItem(v,i,val,cor){
+  return `<div class="rank"><div class="n tnum">${i+1}</div>
+    <div class="info"><b>${v.t}</b><small><span class="dot" style="background:${PILARES[v.pilar]}"></span>${v.pilar} · <span class="plat-chip">${platIcon(v.plat)}${platLabel(v.plat)}</span></small></div>
+    <div class="val tnum" style="color:${cor}">${val}</div></div>`;
+}
+function renderBars(ents){
+  const max=Math.max(...ents.map(e=>e[1]),1);
+  return ents.map(([p,val])=>`<div class="bar-row"><div class="lab"><span class="dot" style="background:${PILARES[p]}"></span>${p}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${val/max*100}%;background:${PILARES[p]}"></div></div>
+    <div class="num tnum">${fmtN(val)}</div></div>`).join("");
+}
+function renderDonut(ents){
+  const total=ents.reduce((a,e)=>a+e[1],0)||1, R=52, C=2*Math.PI*R; let off=0;
+  const segs=ents.map(([p,val])=>{ const frac=val/total; const dash=`${(frac*C).toFixed(1)} ${(C-frac*C).toFixed(1)}`;
+    const el=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${PILARES[p]}" stroke-width="16" stroke-dasharray="${dash}" stroke-dashoffset="${(-off*C).toFixed(1)}" transform="rotate(-90 70 70)"/>`; off+=frac; return el; }).join("");
+  const leg=ents.map(([p,val])=>`<div style="display:flex;align-items:center;gap:7px;font-size:12.5px"><span class="dot" style="background:${PILARES[p]}"></span>${p}<span style="margin-left:auto;color:var(--muted)" class="tnum">${Math.round(val/total*100)}%</span></div>`).join("");
+  return `<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><svg width="140" height="140" viewBox="0 0 140 140">${segs}<text x="70" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">total</text><text x="70" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">${fmtN(total)}</text></svg><div style="flex:1;min-width:130px;display:flex;flex-direction:column;gap:8px">${leg}</div></div>`;
+}
+function renderCards(VS){
+  return `<div class="vcards">${[...VS].sort((a,b)=>b.views-a.views).map(v=>`<div class="vcard">
+    <span class="plat-chip">${platIcon(v.plat)}${platLabel(v.plat)}</span>
+    <b style="margin-top:5px">${v.t}</b>
+    <div class="m"><span>👁 ${fmtN(v.views)}</span><span style="color:var(--good)">ret ${v.ret.toFixed(0)}%</span></div>
+    <div class="m"><span>🔁 ${fmtN(v.comp)}</span><span>👥 +${fmtN(v.seg)}</span></div>
+  </div>`).join("")}</div>`;
+}
+function renderTable(VS){
+  const rows=[...VS].sort((a,b)=>b.views-a.views).map(v=>`<tr>
+    <td>${platIcon(v.plat)} ${v.t}</td>
+    <td class="tnum">${fmtN(v.views)}</td><td class="tnum" style="color:var(--good)">${v.ret.toFixed(1)}%</td>
+    <td class="tnum">${fmtN(v.comp)}</td><td class="tnum">+${fmtN(v.seg)}</td></tr>`).join("");
+  return `<div class="mtable-wrap"><table class="mtable"><thead><tr><th>Vídeo</th><th>Views</th><th>Retenção</th><th>Compart.</th><th>Seguidores</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function renderLine(VS){
+  const mesNome=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const byM={};
+  (VS||VIDEOS).forEach(v=>{ const k=v.dia.slice(0,7); (byM[k]=byM[k]||{v:0,rs:0,n:0}); byM[k].v+=v.views; byM[k].rs+=v.ret; byM[k].n++; });
+  const data=Object.keys(byM).sort().map(k=>({m:mesNome[+k.slice(5,7)-1], v:byM[k].v, r:byM[k].rs/byM[k].n}));
+  if(data.length<2){ document.getElementById("lineChart").innerHTML=`<p style="color:var(--muted);font-size:13px">Poucos meses de dados nesta visão para desenhar a curva.</p>`; return; }
+  const W=680,H=200,pad=34;
+  const maxV=Math.max(...data.map(d=>d.v));
+  const x=i=>pad+i*((W-pad*2)/(data.length-1));
+  const y=v=>H-pad-(v/maxV)*(H-pad*2);
+  const yr=r=>H-pad-(r/100)*(H-pad*2);
+  const line = data.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(0)},${y(d.v).toFixed(0)}`).join(" ");
+  const lineR = data.map((d,i)=>`${i?'L':'M'}${x(i).toFixed(0)},${yr(d.r).toFixed(0)}`).join(" ");
+  const area = `M${pad},${H-pad} `+data.map((d,i)=>`L${x(i).toFixed(0)},${y(d.v).toFixed(0)}`).join(" ")+` L${(W-pad).toFixed(0)},${H-pad} Z`;
+  document.getElementById("lineChart").innerHTML = `
+  <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:520px">
+    ${[0,.5,1].map(f=>`<line class="grid-line" x1="${pad}" x2="${W-pad}" y1="${(H-pad-f*(H-pad*2)).toFixed(0)}" y2="${(H-pad-f*(H-pad*2)).toFixed(0)}"/>`).join("")}
+    <path d="${area}" fill="var(--primary)" opacity=".10"/>
+    <path d="${line}" fill="none" stroke="var(--primary)" stroke-width="2.5"/>
+    <path d="${lineR}" fill="none" stroke="var(--yellow-ink)" stroke-width="2.5" stroke-dasharray="5 4"/>
+    ${data.map((d,i)=>`<circle cx="${x(i).toFixed(0)}" cy="${y(d.v).toFixed(0)}" r="4" fill="var(--primary)"/><text class="axis" x="${x(i).toFixed(0)}" y="${H-12}" text-anchor="middle">${d.m}</text>`).join("")}
+  </svg></div>
+  <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:4px">
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:3px;background:var(--primary);border-radius:2px"></span>Views</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:2px dashed var(--yellow-ink)"></span>Retenção média %</span>
+  </div>`;
+}
+
+// ---------- IA (prévia estática) ----------
+const IA = {
+  ganchos: [
+    ["Testei shorts de 7s por 30 dias — o resultado me assustou", "Seu vídeo de 7s teve 82% de retenção, o maior do canal; um gancho de desafio pessoal ancora esse número."],
+    ["Por que o algoritmo AMA vídeos de 7 segundos", "Ganchos com 'por que' + a palavra algoritmo repetem o padrão do seu vídeo de melhor performance."],
+    ["Ninguém te contou isso sobre shorts curtos", "Curiosidade + tom de segredo casa com 'Opinião impopular sobre trends' (79% de retenção)."],
+    ["3.400 seguidores com UM vídeo de 7 segundos", "Prova social com número real do seu próprio vídeo — sem inventar métrica."],
+    ["O formato que trouxe mais seguidores que tudo em 2024", "Superlativo ancorado no dado de seguidores ganhos do vídeo campeão."],
+  ],
+  titulos: [
+    ["Shorts de 7s: o formato de maior retenção do meu canal", "Espelha o título que já performou; retenção como promessa concreta."],
+    ["Por que vídeos curtíssimos retêm 82%", "Número real no título aumenta clique honesto."],
+    ["O experimento de 7 segundos que mudou meu canal", "Narrativa de experimento sustenta a curiosidade sem exagero."],
+  ],
+  cta: ["Salva esse vídeo e testa o formato de 7s no seu próximo post.", "CTA de salvar performou bem nos seus reels de tutorial; alinha ação e formato."],
+};
+function gerarIA(){
+  const el = document.getElementById("iaOut");
+  el.innerHTML = `
+    <div class="eyebrow" style="margin:2px 0 8px">5 ganchos alternativos</div>
+    ${IA.ganchos.map(g=>iaItem(g[0],g[1])).join("")}
+    <div class="eyebrow" style="margin:16px 0 8px">3 títulos</div>
+    ${IA.titulos.map(t=>iaItem(t[0],t[1])).join("")}
+    <div class="eyebrow" style="margin:16px 0 8px">Sugestão de CTA</div>
+    <div class="card" style="padding:12px"><b style="font-size:13.5px">${IA.cta[0]}</b><div style="font-size:12px;font-style:italic;color:var(--muted);margin-top:4px">↳ ${IA.cta[1]}</div></div>`;
+  toast("Sugestões geradas");
+}
+function iaItem(t,j){
+  return `<div class="card" style="padding:11px 13px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:start">
+    <div><b style="font-size:13.5px">${t}</b><div style="font-size:12px;font-style:italic;color:var(--muted);margin-top:3px">↳ ${j}</div></div>
+    <button class="btn ghost sm" onclick="toast('Virou card de ideia ✓')">+ Ideia</button></div>`;
+}
+
+// ---------- Navegação ----------
+const TITLES = {
+  pipeline:["Pipeline de produção","8 conteúdos · arraste os cards entre as colunas"],
+  ideias:["Banco de ideias","3 ideias · captura rápida no topo"],
+  roteiro:["Editor de roteiro","Blocos, duração, versões e teleprompter"],
+  calendario:["Calendário editorial","Datas previstas e realizadas"],
+  metricas:["Dashboard de performance","8 vídeos com métricas"],
+  ia:["Sugestões de roteiro (IA)","Baseadas nos seus melhores vídeos + o tema"],
+};
+function go(scr){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id==="scr-"+scr));
+  document.querySelectorAll("#nav button, #mnav button").forEach(b=>b.classList.toggle("on", b.dataset.scr===scr));
+  document.getElementById("pgTitle").textContent = TITLES[scr][0];
+  document.getElementById("pgDesc").textContent = TITLES[scr][1];
+  window.scrollTo(0,0);
+}
+document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
+
+// mobile nav
+document.getElementById("mnav").innerHTML = Object.keys(TITLES).slice(0,5).map(k=>{
+  const ic = {pipeline:"▦",ideias:"◔",roteiro:"▤",calendario:"▣",metricas:"▨"}[k];
+  return `<button data-scr="${k}" ${k==="pipeline"?"class=on":""}>${ic}<span>${TITLES[k][0].split(" ")[0]}</span></button>`;
+}).join("");
+document.getElementById("mnav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
+
+// ---------- Tema ----------
+document.getElementById("themeBtn").addEventListener("click", ()=>{
+  const r=document.documentElement;
+  const cur = r.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+  r.setAttribute("data-theme", cur==="dark"?"light":"dark");
+});
+
+// ---------- Teleprompter ----------
+let running=false, raf=null, last=0, spd=40, fnt=42;
+function openTele(){
+  document.getElementById("teleText").textContent = BLOCOS.map(b=>b.txt).join("\n\n");
+  document.getElementById("tele").classList.add("on");
+  document.getElementById("teleScroll").scrollTop=0;
+}
+function closeTele(){ running=false; if(raf)cancelAnimationFrame(raf); document.getElementById("tele").classList.remove("on"); document.getElementById("runBtn").textContent="▶ Play"; }
+function toggleRun(){ running=!running; document.getElementById("runBtn").textContent = running?"❚❚ Pausar":"▶ Play"; if(running){ last=0; raf=requestAnimationFrame(step); } else if(raf) cancelAnimationFrame(raf); }
+function step(ts){
+  const el=document.getElementById("teleScroll");
+  if(last){ el.scrollTop += spd*(ts-last)/1000; if(el.scrollTop+el.clientHeight>=el.scrollHeight-1){ running=false; document.getElementById("runBtn").textContent="▶ Play"; return; } }
+  last=ts; raf=requestAnimationFrame(step);
+}
+function teleReset(){ document.getElementById("teleScroll").scrollTop=0; running=false; if(raf)cancelAnimationFrame(raf); document.getElementById("runBtn").textContent="▶ Play"; }
+function teleSpeed(d){ spd=Math.max(10,Math.min(200,spd+d)); document.getElementById("spd").textContent=spd; }
+function teleFont(d){ fnt=Math.max(24,Math.min(84,fnt+d)); document.getElementById("teleText").style.fontSize=fnt+"px"; document.getElementById("fnt").textContent=fnt; }
+
+// ---------- Toast ----------
+let toastT=null;
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
+
+// ---------- Init ----------
+renderBoard(); renderIdeas(); renderBlocos(); renderCal(); renderMetrics(); gerarIA();
+</script>
+</head></html>
