@@ -21,10 +21,19 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      - name: Montar site do Pages
+        run: |
+          # Total Match continua na raiz do site.
+          rm -rf _site
+          mkdir -p _site
+          cp -r legacy-total-match/. _site/
+          # App de Finanças de Casa fica em /financas-casa/
+          mkdir -p _site/financas-casa
+          cp -r financas-casa/. _site/financas-casa/
       - uses: actions/upload-pages-artifact@v3
         with:
-          # Publica o jogo Total Match (movido para esta pasta) como site do GitHub Pages.
+          # Raiz = jogo Total Match. Subpasta /financas-casa/ = app de finanças.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
-          path: 'legacy-total-match'
+          path: '_site'
       - id: deployment
         uses: actions/deploy-pages@v4
