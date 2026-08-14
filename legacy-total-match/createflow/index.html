@@ -874,7 +874,7 @@ function montarRoteiro(tema, fmt, comIA){
   return { id:ROTEIRO_ID++, tema, fmt, comIA, secoes: comIA ? secoes : secoes.map(s=>({t:s.t, txt:""})) };
 }
 // ---- IA de verdade: usa a SUA chave da Anthropic (Claude), guardada só no seu aparelho ----
-const IA_MODEL = "claude-sonnet-4-6";
+const IA_MODEL = "claude-haiku-4-5"; // barato: cada roteiro custa fração de centavo
 function getIAKey(){ try{ return localStorage.getItem("cf_ia_key")||""; }catch(e){ return ""; } }
 function atualizaIAStatus(){
   const el=document.getElementById("iaStatus"); if(!el) return;
@@ -887,7 +887,7 @@ function conectarIA(){
   openModal(`
     <h3>Conectar IA de verdade 🤖</h3>
     <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Cole a sua chave da Anthropic (Claude). Aí a robô lê o tema e <b>estrutura a ideia de verdade</b>.</p>
-    <div class="note info" style="margin:2px 0"><span style="font-size:18px">🔒</span><div>A chave fica guardada <b>só no seu aparelho</b> e só é usada pra falar com a Anthropic. Pegue a sua em <b>console.anthropic.com → API Keys</b>.</div></div>
+    <div class="note info" style="margin:2px 0"><span style="font-size:18px">🔒</span><div>A chave fica guardada <b>só no seu aparelho</b> e só é usada pra falar com a Anthropic. Cada roteiro custa <b>menos de 1 centavo</b>. Pegue a sua em <b>console.anthropic.com → API Keys</b>.</div></div>
     <div class="field"><label>Sua chave (começa com sk-ant-)</label><input id="iaKey" placeholder="sk-ant-..."/></div>
     <div style="display:flex;gap:8px">
       <button class="btn" style="flex:1;justify-content:center" onclick="salvarIAKey()">Salvar</button>
