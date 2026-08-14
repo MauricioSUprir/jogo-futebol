@@ -1,4 +1,4 @@
-# Conteúdo Studio
+# CreateFlow
 
 Sistema de gestão de produção de conteúdo em vídeo para criadoras que publicam em
 **YouTube, Instagram (Reels) e TikTok**. Fecha o ciclo:

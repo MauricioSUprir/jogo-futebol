@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Conteúdo Studio",
+  title: "CreateFlow",
   description: "Pipeline de produção, roteiros e performance de conteúdo em vídeo.",
 };
 

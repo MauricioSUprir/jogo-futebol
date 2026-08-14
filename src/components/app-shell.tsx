@@ -45,7 +45,7 @@ export function AppShell({
       {/* Sidebar desktop */}
       <aside className="hidden w-56 shrink-0 flex-col border-r bg-card p-3 md:flex">
         <div className="px-2 py-3">
-          <div className="text-lg font-bold">Conteúdo Studio</div>
+          <div className="text-lg font-bold">CreateFlow</div>
           <div className="text-xs text-muted-foreground">{nome} · {papel}</div>
         </div>
         <nav className="mt-2 flex flex-1 flex-col gap-1">
