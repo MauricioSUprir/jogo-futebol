@@ -461,10 +461,12 @@
           <div class="eyebrow" style="margin-bottom:8px">Criar um roteiro novo</div>
           <div class="field"><label>Sobre o que é o vídeo?</label><input id="rtTema" placeholder="Ex.: 3 erros que travam quem começa no YouTube"/></div>
           <div class="field" style="margin-top:10px"><label>Formato</label><select id="rtFmt"></select></div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px">
-            <button class="btn" onclick="gerarRoteiroIA()">✨ Deixar a IA criar</button>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;align-items:center">
+            <button class="btn" id="btnGerarIA" onclick="gerarRoteiroIA()">✨ Deixar a IA criar</button>
             <button class="btn ghost" onclick="criarRoteiroVazio()">✍️ Escrever eu mesma</button>
+            <button class="btn ghost sm" style="margin-left:auto" onclick="conectarIA()">⚙️ Conectar IA de verdade</button>
           </div>
+          <div id="iaStatus" style="margin-top:11px;font-size:12px;color:var(--muted)"></div>
         </div>
         <div id="roteirosList" style="display:flex;flex-direction:column;gap:16px"></div>
       </section>
@@ -871,12 +873,69 @@ function montarRoteiro(tema, fmt, comIA){
   const secoes = secoesRoteiro(tema, fmt);
   return { id:ROTEIRO_ID++, tema, fmt, comIA, secoes: comIA ? secoes : secoes.map(s=>({t:s.t, txt:""})) };
 }
-function gerarRoteiroIA(){
+// ---- IA de verdade: usa a SUA chave da Anthropic (Claude), guardada só no seu aparelho ----
+const IA_MODEL = "claude-sonnet-4-6";
+function getIAKey(){ try{ return localStorage.getItem("cf_ia_key")||""; }catch(e){ return ""; } }
+function atualizaIAStatus(){
+  const el=document.getElementById("iaStatus"); if(!el) return;
+  el.innerHTML = getIAKey()
+    ? `🟢 IA de verdade <b>conectada</b> — a robô lê o tema e estrutura a ideia. <a href="#" onclick="conectarIA();return false" style="color:var(--primary-ink)">trocar/remover</a>`
+    : `⚪ Sem IA conectada (usando exemplo pronto). <a href="#" onclick="conectarIA();return false" style="color:var(--primary-ink)"><b>conectar IA de verdade</b></a> pra ela pensar de verdade.`;
+}
+function conectarIA(){
+  const tem=!!getIAKey();
+  openModal(`
+    <h3>Conectar IA de verdade 🤖</h3>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Cole a sua chave da Anthropic (Claude). Aí a robô lê o tema e <b>estrutura a ideia de verdade</b>.</p>
+    <div class="note info" style="margin:2px 0"><span style="font-size:18px">🔒</span><div>A chave fica guardada <b>só no seu aparelho</b> e só é usada pra falar com a Anthropic. Pegue a sua em <b>console.anthropic.com → API Keys</b>.</div></div>
+    <div class="field"><label>Sua chave (começa com sk-ant-)</label><input id="iaKey" placeholder="sk-ant-..."/></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" style="flex:1;justify-content:center" onclick="salvarIAKey()">Salvar</button>
+      ${tem?`<button class="btn ghost" onclick="removerIAKey()">Remover</button>`:""}
+    </div>
+  `,"bottom");
+}
+function salvarIAKey(){
+  const v=(document.getElementById("iaKey").value||"").trim();
+  if(!v){ toast("Cole a sua chave"); return; }
+  try{ localStorage.setItem("cf_ia_key", v); }catch(e){}
+  closeModal(); atualizaIAStatus(); toast("IA de verdade conectada 🟢");
+}
+function removerIAKey(){ try{ localStorage.removeItem("cf_ia_key"); }catch(e){} closeModal(); atualizaIAStatus(); toast("IA desconectada"); }
+async function chamarIA(tema, longo){
+  const key=getIAKey(); if(!key) return null;
+  const sys="Você é um estrategista de conteúdo para redes sociais no Brasil. Ajude uma criadora a ESTRUTURAR a ideia de um vídeo — não escreva as falas exatas, e sim o que fazer/falar em cada parte. Linguagem simples e direta, português do Brasil. Responda SOMENTE com um JSON no formato {\"secoes\":[{\"t\":\"título curto da parte com um emoji\",\"txt\":\"o que fazer nessa parte, 1 a 3 frases\"}]}. De 4 a 6 seções. Nada de texto fora do JSON.";
+  const user=`Tema do vídeo: "${tema}". Formato: ${longo?"vídeo longo (YouTube, com começo, capítulos e fechamento)":"vídeo curto (Short/Reels/TikTok, direto ao ponto, uma ideia só)"}. Estruture a ideia.`;
+  const res=await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:IA_MODEL,max_tokens:1024,system:sys,messages:[{role:"user",content:user}]}),
+  });
+  if(!res.ok){ const t=await res.text().catch(()=> ""); throw new Error("HTTP "+res.status+" "+t.slice(0,120)); }
+  const data=await res.json();
+  const texto=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+  const m=texto.match(/\{[\s\S]*\}/); if(!m) throw new Error("resposta sem JSON");
+  const obj=JSON.parse(m[0]);
+  if(!obj.secoes || !obj.secoes.length) throw new Error("sem seções");
+  return obj.secoes.slice(0,6).map(s=>({t:String(s.t||"Parte"), txt:String(s.txt||"")}));
+}
+async function gerarRoteiroIA(){
   const tema=(document.getElementById("rtTema").value||"").trim();
   if(!tema){ toast("Escreva sobre o que é o vídeo"); return; }
-  ROTEIROS.unshift(montarRoteiro(tema, document.getElementById("rtFmt").value, true));
+  const fmt=document.getElementById("rtFmt").value, longo=FORMATOS[fmt].ar==="16:9";
+  const btn=document.getElementById("btnGerarIA"), orig=btn?btn.innerHTML:"";
+  let secoes=null, real=false;
+  if(getIAKey()){
+    if(btn){ btn.innerHTML="⏳ A IA está pensando…"; btn.disabled=true; }
+    try{ secoes=await chamarIA(tema, longo); real=true; }
+    catch(e){ toast("A IA falhou: "+String(e.message).slice(0,50)); secoes=null; }
+    if(btn){ btn.innerHTML=orig; btn.disabled=false; }
+  }
+  if(!secoes) secoes=secoesRoteiro(tema, fmt);
+  ROTEIROS.unshift({ id:ROTEIRO_ID++, tema, fmt, comIA:true, real, secoes });
   document.getElementById("rtTema").value="";
-  renderRoteiros(); renderThumbs(); toast("Roteiro criado pela IA ✨");
+  renderRoteiros(); renderThumbs();
+  toast(real?"Roteiro criado pela IA de verdade ✨":"Roteiro criado (exemplo) — conecte a IA pra ela pensar");
 }
 function criarRoteiroVazio(){
   const tema=(document.getElementById("rtTema").value||"").trim();
@@ -897,7 +956,7 @@ function renderRoteiros(){
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <b style="font-size:15px">${r.tema}</b>
           ${fmtChip(r.fmt)}
-          ${r.comIA?`<span class="chip" style="background:var(--primary-soft);color:var(--primary-ink);border-color:transparent">✨ feito pela IA</span>`:""}
+          ${r.real?`<span class="chip" style="background:var(--primary-soft);color:var(--primary-ink);border-color:transparent">✨ IA de verdade</span>`:r.comIA?`<span class="chip">exemplo da IA</span>`:""}
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn ghost sm" onclick="abrirTeleRoteiro(${r.id})">▶ Ler enquanto grava</button>
@@ -942,22 +1001,39 @@ function comoFunciona(){
 }
 
 // ---------- Calendário ----------
+// Zerado: a criadora vai marcando os vídeos nos dias (clicando em cada dia).
+let CALPOSTS = {};
 function renderCal(){
   const cal = document.getElementById("cal");
   const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  // Zerado: nenhum vídeo marcado ainda. A criadora vai preenchendo.
-  const posts = {};
   let html = dias.map(d=>`<div style="background:var(--surface-2);padding:6px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">${d}</div>`).join("");
   for(let b=0;b<2;b++) html += `<div style="background:var(--surface);min-height:74px;opacity:.4"></div>`;
   for(let d=1;d<=30;d++){
-    const p = posts[d];
-    html += `<div style="background:var(--surface);min-height:74px;padding:6px">
-      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${d}</span></div>
-      ${p?p.map(pi=>`<div style="margin-top:4px;font-size:10px;background:var(--primary-soft);color:var(--primary-ink);border-radius:5px;padding:2px 5px;display:flex;align-items:center;gap:4px"><span class="dot" style="width:6px;height:6px;background:${PILARES[pi]}"></span>publicação</div>`).join(''):''}
+    const p = CALPOSTS[d];
+    html += `<div onclick="marcarDia(${d})" style="background:var(--surface);min-height:74px;padding:6px;cursor:pointer" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${d}</span>${p?'':'<span style="color:var(--faint);font-size:14px">+</span>'}</div>
+      ${p?p.map((v,vi)=>`<div style="margin-top:4px;font-size:10px;background:var(--primary-soft);color:var(--primary-ink);border-radius:5px;padding:2px 5px;line-height:1.25">${fmtChip(v.fmt)} ${v.t}</div>`).join(''):''}
     </div>`;
   }
   cal.innerHTML = html;
 }
+function marcarDia(d){
+  const jaTem = (CALPOSTS[d]||[]).map((v,i)=>`<div class="chk" style="justify-content:space-between"><span>${fmtChip(v.fmt)} ${v.t}</span><button class="btn ghost sm" onclick="removerDiaVideo(${d},${i})">🗑</button></div>`).join("");
+  openModal(`
+    <h3>Dia ${d} 📅</h3>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Marque um vídeo pra postar neste dia.</p>
+    ${jaTem?`<div style="display:flex;flex-direction:column;gap:6px">${jaTem}</div>`:""}
+    <div class="field"><label>Nome do vídeo</label><input id="cdT" autofocus placeholder="Ex.: Bastidores da semana"/></div>
+    <div class="field"><label>Formato</label><select id="cdF">${FMT_OPTS}</select></div>
+    <button class="btn" style="justify-content:center" onclick="salvarDiaVideo(${d})">Marcar neste dia</button>
+  `,"bottom");
+}
+function salvarDiaVideo(d){
+  const t=document.getElementById("cdT").value.trim(); if(!t) return;
+  (CALPOSTS[d]=CALPOSTS[d]||[]).push({t, fmt:document.getElementById("cdF").value});
+  closeModal(); renderCal(); toast(`Marcado no dia ${d} ✓`);
+}
+function removerDiaVideo(d,i){ CALPOSTS[d].splice(i,1); if(!CALPOSTS[d].length) delete CALPOSTS[d]; renderCal(); marcarDia(d); }
 
 // ---------- Métricas ----------
 let platFilter="todos", pilarView="barras", videosView="cartoes";
@@ -1221,6 +1297,7 @@ function go(scr){
   document.getElementById("pgTitle").textContent = TITLES[scr][0];
   document.getElementById("pgDesc").textContent = TITLES[scr][1];
   setHelp(scr);
+  if(scr==="roteiro") atualizaIAStatus();
   window.scrollTo(0,0);
 }
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
@@ -1261,34 +1338,94 @@ function teleFont(d){ fnt=Math.max(24,Math.min(84,fnt+d)); document.getElementBy
 let toastT=null;
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
 
-// ---------- Aprender (vídeos reais do YouTube) ----------
-// Cada card abre o YouTube já buscando o assunto — sempre com vídeos atualizados.
-const LEARN = [
-  ["🚀","Começar um canal do zero","O primeiro passo pra quem tá começando agora.","como começar um canal no youtube do zero"],
-  ["💡","Nunca ficar sem ideias","Jeitos de ter ideias de vídeo toda semana.","como ter ideias de conteudo para videos"],
-  ["🪝","Prender nos primeiros segundos","Como fazer um bom gancho pra ninguém pular.","como fazer gancho retenção nos primeiros segundos do video"],
-  ["📱","Gravar bem com o celular","Luz, áudio e enquadramento sem gastar muito.","como gravar video com o celular luz e audio"],
-  ["✂️","Editar Reels e Shorts","Edição rápida pra vídeo curto.","como editar reels e shorts para iniciantes"],
-  ["🖼️","Capas que dão vontade de clicar","Thumbnails que chamam atenção.","como fazer thumbnail que da vontade de clicar"],
-  ["📈","Crescer no Instagram e TikTok","Estratégias pra alcançar mais gente.","como crescer no instagram e tiktok como criador de conteudo"],
-  ["🤖","Entender o algoritmo","Como o app decide mostrar o seu vídeo.","como funciona o algoritmo do youtube e a retenção"],
-  ["🎬","Aparecer bem na câmera","Perder a vergonha e falar com naturalidade.","como perder a vergonha da camera e falar bem em video"],
+// ---------- Aprender (vídeos do YouTube) ----------
+// ~50 aulas. Cada card abre o YouTube já buscando o assunto — vídeos reais e sempre atualizados.
+const LEARN_CATS = [
+  {cat:"🚀 Começar do zero", items:[
+    ["🚀","Como começar um canal do zero","como começar um canal no youtube do zero passo a passo"],
+    ["🎯","Escolher o seu nicho","como escolher o nicho do meu canal no youtube"],
+    ["🧰","O que precisa pra gravar","o que preciso para começar a gravar videos com pouco dinheiro"],
+    ["🔧","Configurar o canal certinho","como configurar meu canal do youtube corretamente"],
+    ["🧠","Mentalidade de criador","mentalidade de criador de conteudo iniciante motivação"],
+    ["📆","Ter constância nos vídeos","como ter constancia e postar videos toda semana"],
+  ]},
+  {cat:"💡 Ideias & Roteiro", items:[
+    ["💡","Nunca ficar sem ideias","como ter ideias de conteudo para videos toda semana"],
+    ["🗒️","Como estruturar a ideia do vídeo","como estruturar a ideia de um video antes de gravar"],
+    ["✍️","Escrever um bom roteiro","como fazer roteiro de video para youtube"],
+    ["🪝","Gancho nos primeiros segundos","como fazer gancho retenção nos primeiros segundos do video"],
+    ["📚","Storytelling pra prender","como usar storytelling em videos para prender a atenção"],
+    ["🔁","Roteiro pra Shorts e Reels","como fazer roteiro de short e reels que retem"],
+    ["🎣","Títulos que dão clique (sem clickbait)","como fazer titulos que dao clique sem clickbait"],
+    ["🧩","Copiar formatos que funcionam","como usar formatos de video que ja funcionam"],
+  ]},
+  {cat:"🎥 Gravar & Editar", items:[
+    ["📱","Gravar bem com o celular","como gravar video com o celular qualidade profissional"],
+    ["💡","Iluminação barata","como iluminar video em casa barato"],
+    ["🎙️","Áudio bom (o mais importante)","como ter audio bom nos videos com celular"],
+    ["🎬","Aparecer bem e perder a vergonha","como perder a vergonha da camera e falar bem em video"],
+    ["✂️","Editar no celular (CapCut)","como editar video no capcut para iniciantes"],
+    ["💻","Editar no PC pra iniciantes","como editar video no pc para iniciantes completo"],
+    ["⚡","Cortes e ritmo que seguram","como fazer cortes e ritmo de edição que prende"],
+    ["🎞️","Editar Reels e Shorts rápido","como editar reels e shorts rapido"],
+  ]},
+  {cat:"🖼️ Capas & Apresentação", items:[
+    ["🖼️","Capas que dão vontade de clicar","como fazer thumbnail que da vontade de clicar"],
+    ["🎨","Thumbnail no Canva grátis","como fazer thumbnail no canva gratis passo a passo"],
+    ["🅰️","Texto e cores na capa","como escolher texto e cores da thumbnail"],
+    ["😲","Expressões e rosto na capa","como usar rosto e expressão na thumbnail"],
+    ["🤖","Criar capa com IA de imagem","como criar thumbnail com inteligencia artificial"],
+  ]},
+  {cat:"📈 Crescer & Algoritmo", items:[
+    ["🤖","Como funciona o algoritmo","como funciona o algoritmo do youtube 2025"],
+    ["⏱️","Retenção: segurar até o fim","como aumentar a retenção dos meus videos"],
+    ["👆","CTR: aumentar os cliques","como aumentar a taxa de cliques ctr no youtube"],
+    ["🔎","SEO e palavras-chave","como usar seo e palavras chave no youtube"],
+    ["🧲","Fazer vídeo viralizar","o que faz um video viralizar dicas"],
+    ["📊","Ler suas métricas","como analisar as metricas do youtube studio"],
+    ["🔗","Playlists e fim de vídeo","como usar playlists e telas finais para reter"],
+    ["💬","Engajar com comentários","como engajar com a audiencia nos comentarios"],
+    ["🧪","Testar e melhorar","como testar titulo e thumbnail para melhorar"],
+    ["🏷️","Descrição e hashtags","como escrever descrição e hashtags no youtube"],
+  ]},
+  {cat:"📸 Instagram, TikTok & Shorts", items:[
+    ["📈","Crescer no Instagram","como crescer no instagram como criador de conteudo"],
+    ["🎵","Crescer no TikTok","como crescer no tiktok do zero 2025"],
+    ["⚡","Bombar nos Shorts","como fazer shorts que bombam no youtube"],
+    ["🔥","Reels que alcançam mais","como fazer reels que alcançam mais pessoas"],
+    ["🎶","Usar áudios em alta","como usar audios em alta no reels e tiktok"],
+    ["♻️","Repostar em várias redes","como reaproveitar video em varias redes sociais"],
+    ["#️⃣","Hashtags que ajudam","quais hashtags usar para crescer nas redes"],
+  ]},
+  {cat:"💰 Ganhar dinheiro & Carreira", items:[
+    ["💵","Como ganhar dinheiro na internet","como ganhar dinheiro como criador de conteudo"],
+    ["🤝","Fechar publi com marcas","como fechar publi com marcas sendo pequeno"],
+    ["🛒","Vender produto ou serviço","como vender pela internet sendo criador de conteudo"],
+    ["📅","Se organizar e não travar","como se organizar como criador de conteudo"],
+    ["🧯","Não desanimar (burnout)","como nao desanimar criando conteudo burnout criador"],
+    ["📊","Planejar seus conteúdos","como planejar conteudo com calendario editorial"],
+  ]},
 ];
+function learnCard(emoji, titulo, q){
+  const url = "https://www.youtube.com/results?search_query="+encodeURIComponent(q);
+  return `<a class="card learn-card" href="${url}" target="_blank" rel="noopener">
+    <div class="learn-thumb"><span style="font-size:30px">${emoji}</span><span class="learn-play">${platIcon("youtube")}</span></div>
+    <div style="padding:11px 12px">
+      <b style="font-size:13.5px;line-height:1.3">${titulo}</b>
+      <div style="margin-top:8px;font-size:12px;font-weight:700;color:var(--primary-ink)">▶ Ver no YouTube</div>
+    </div>
+  </a>`;
+}
 function renderLearn(){
-  document.getElementById("learnList").innerHTML = LEARN.map(([emoji,titulo,desc,q])=>{
-    const url = "https://www.youtube.com/results?search_query="+encodeURIComponent(q);
-    return `<a class="card learn-card" href="${url}" target="_blank" rel="noopener">
-      <div class="learn-thumb"><span style="font-size:30px">${emoji}</span><span class="learn-play">${platIcon("youtube")}</span></div>
-      <div style="padding:12px 13px">
-        <b style="font-size:14px;line-height:1.3">${titulo}</b>
-        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${desc}</div>
-        <div style="margin-top:10px;font-size:12.5px;font-weight:700;color:var(--primary-ink)">▶ Ver no YouTube</div>
-      </div>
-    </a>`;
-  }).join("");
+  const total = LEARN_CATS.reduce((a,c)=>a+c.items.length,0);
+  document.getElementById("learnList").style.display="block";
+  document.getElementById("learnList").innerHTML = LEARN_CATS.map(c=>`
+    <div class="eyebrow" style="margin:6px 0 10px;font-size:12px">${c.cat} <span class="hint" style="font-weight:500">· ${c.items.length} aulas</span></div>
+    <div class="grid" style="margin-bottom:20px">${c.items.map(it=>learnCard(it[0],it[1],it[2])).join("")}</div>
+  `).join("") + `<div style="text-align:center;color:var(--faint);font-size:12px;padding:6px 0">${total} aulas · toque numa pra abrir o YouTube 🎓</div>`;
 }
 
 // ---------- Init ----------
 document.getElementById("rtFmt").innerHTML = FMT_OPTS;
-renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); setHelp("pipeline");
+renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); atualizaIAStatus(); setHelp("pipeline");
 </script>
