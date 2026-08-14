@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-studio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-studio}
+      POSTGRES_DB: ${POSTGRES_DB:-studio}
+      TZ: America/Sao_Paulo
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studio} -d ${POSTGRES_DB:-studio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-studio}:${POSTGRES_PASSWORD:-studio}@db:5432/${POSTGRES_DB:-studio}
+      AUTH_SECRET: ${AUTH_SECRET:?defina AUTH_SECRET no .env}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      AUTH_TRUST_HOST: "true"
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?defina ANTHROPIC_API_KEY no .env}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-sonnet-4-6}
+      TZ: America/Sao_Paulo
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    # As migrations e o seed rodam manualmente (ver README):
+    #   docker compose exec app node dist-scripts/migrate.js
+    # ou pelo host apontando DATABASE_URL para localhost.
+
+volumes:
+  db_data:
