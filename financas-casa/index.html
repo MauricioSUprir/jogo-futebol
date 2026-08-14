@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0f766e" />
-<title>Finanças de Casa</title>
+<meta name="theme-color" content="#0b0b0b" />
+<title>NEXO — Finanças da sua casa</title>
+<link rel="icon" type="image/png" href="assets/nexo-emblem.png" />
+<link rel="apple-touch-icon" href="assets/icon-192.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-title" content="NEXO" />
 <style>
   :root{
     color-scheme: light;
@@ -36,10 +42,26 @@
   body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
   .wrap{max-width:1120px;margin:0 auto;padding:18px 16px 90px}
 
+  /* splash / tela de início */
+  #splash{position:fixed;inset:0;z-index:100;background:#000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;cursor:pointer;
+    transition:opacity .5s ease, visibility .5s ease}
+  #splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+  #splash img{width:min(74vw,340px);height:auto;filter:drop-shadow(0 10px 40px rgba(45,212,191,.18));
+    animation:pop .8s cubic-bezier(.2,.8,.2,1) both}
+  #splash .enter{color:#7de3d0;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+    display:flex;align-items:center;gap:9px;opacity:.9;animation:fade 1.4s ease .5s both}
+  #splash .enter .d{width:7px;height:7px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 12px #2dd4bf;animation:blink 1.3s infinite}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  @keyframes fade{from{opacity:0}to{opacity:.9}}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+  @media (prefers-reduced-motion: reduce){#splash img,#splash .enter{animation:none}}
+
   /* header */
   header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
   .brand{display:flex;align-items:center;gap:12px}
-  .brand .mark{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--brand);color:#fff;font-size:22px;box-shadow:var(--shadow)}
+  .brand .mark{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:#000;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line)}
+  .brand .mark img{width:100%;height:100%;object-fit:cover;display:block}
   .brand h1{font-size:20px;margin:0;font-weight:750;letter-spacing:-.02em}
   .brand p{margin:0;font-size:12.5px;color:var(--muted)}
   .spacer{flex:1}
@@ -115,13 +137,18 @@
 </style>
 </head>
 <body>
+<div id="splash">
+  <img src="assets/nexo-logo.png" alt="NEXO — Finanças da sua casa, conectadas" />
+  <div class="enter"><span class="d"></span>Toque para entrar</div>
+</div>
+
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <div class="mark">🏠</div>
+      <div class="mark"><img src="assets/nexo-emblem.png" alt="NEXO" /></div>
       <div>
-        <h1>Finanças de Casa</h1>
-        <p>Painel de renda, receitas e despesas</p>
+        <h1>NEXO</h1>
+        <p>Finanças da sua casa, conectadas</p>
       </div>
     </div>
     <div class="spacer"></div>
@@ -503,6 +530,15 @@
   document.getElementById("period").addEventListener("click",e=>{const b=e.target.closest("button[data-m]");if(!b)return;months=+b.dataset.m;[...e.currentTarget.children].forEach(c=>c.classList.toggle("active",c===b));render();});
   document.getElementById("reload").addEventListener("click",load);
   window.addEventListener("resize",()=>{tip.style.opacity="0";});
+
+  // splash / tela de início — some ao tocar ou automaticamente
+  (function(){
+    const sp=document.getElementById("splash");if(!sp)return;
+    let done=false;const go=()=>{if(done)return;done=true;sp.classList.add("gone");setTimeout(()=>sp.remove(),600);};
+    sp.addEventListener("click",go);
+    sp.addEventListener("touchstart",go,{passive:true});
+    setTimeout(go,2800);
+  })();
 
   load();
 })();

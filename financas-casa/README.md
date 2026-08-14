@@ -1,4 +1,4 @@
-# 🏠 Finanças de Casa
+# NEXO — Finanças da sua casa, conectadas
 
 Painel para acompanhar as finanças da casa — **renda, receitas e despesas** —
 com **abas** e **vários gráficos**. O foco é **visualizar** os dados: o app
