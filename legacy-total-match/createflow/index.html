@@ -127,7 +127,7 @@
   .main { min-width: 0; display: flex; flex-direction: column; }
   .topbar {
     position: sticky; top: 0; z-index: 20;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
     padding: 14px 22px; background: color-mix(in srgb, var(--bg) 85%, transparent);
     backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
   }
@@ -406,10 +406,13 @@
         <h1 id="pgTitle">Produção</h1>
         <p id="pgDesc">Cada cartão é um vídeo. Arraste conforme for ficando pronto.</p>
       </div>
-      <button class="btn ghost sm" id="themeBtn" title="Alternar tema">
-        <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6L4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/><circle cx="12" cy="12" r="4"/></svg>
-        Tema
-      </button>
+      <div style="display:flex;gap:8px;flex:none">
+        <button class="btn sm" id="helpBtn" onclick="comoFunciona()">❓ Como funciona</button>
+        <button class="btn ghost sm" id="themeBtn" title="Alternar tema">
+          <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6L4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/><circle cx="12" cy="12" r="4"/></svg>
+          Tema
+        </button>
+      </div>
     </header>
 
     <div class="content">
@@ -417,7 +420,7 @@
       <!-- PIPELINE -->
       <section class="screen on" id="scr-pipeline">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
-          <button class="btn sm" onclick="novoCard()">+ Novo card</button>
+          <button class="btn sm" onclick="novoCard()">+ Novo vídeo</button>
         </div>
         <div class="board" id="board"></div>
       </section>
@@ -435,11 +438,11 @@
       <!-- ROTEIRO -->
       <section class="screen" id="scr-roteiro">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div><div class="eyebrow">Editor de roteiro · v3</div><h2 style="font-size:18px;margin-top:4px">Por que shorts de 7s estão bombando</h2></div>
+          <div><div class="eyebrow">Roteiro do vídeo</div><h2 style="font-size:18px;margin-top:4px">Por que shorts de 7s estão bombando</h2></div>
           <div style="display:flex;gap:8px">
-            <button class="btn ghost sm" id="cmpBtn" onclick="toggleDiff()">⇄ Comparar v2×v3</button>
-            <button class="btn ghost sm" onclick="openTele()">▶ Teleprompter</button>
-            <button class="btn sm" onclick="toast('Nova versão v4 salva')">Salvar versão</button>
+            <button class="btn ghost sm" id="cmpBtn" onclick="toggleDiff()">⇄ Ver o que mudou</button>
+            <button class="btn ghost sm" onclick="openTele()">▶ Ler enquanto grava</button>
+            <button class="btn sm" onclick="toast('Roteiro salvo ✓')">Salvar</button>
           </div>
         </div>
         <div id="rtDiff" style="display:none;margin-bottom:8px"></div>
@@ -447,13 +450,13 @@
           <div style="display:flex;flex-direction:column;gap:11px" id="blocos"></div>
           <div style="display:flex;flex-direction:column;gap:12px">
             <div class="card side-card">
-              <div><div class="eyebrow" style="margin-bottom:6px">Descrição / legenda</div><textarea>Os shorts curtíssimos estão dominando o feed — e os números provam. Salva esse vídeo pra não esquecer.</textarea></div>
-              <div><div class="eyebrow" style="margin-bottom:6px">Hashtags</div><div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">#shorts</span><span class="chip">#retenção</span><span class="chip">#criador</span></div></div>
+              <div><div class="eyebrow" style="margin-bottom:6px">Textinho embaixo do vídeo</div><textarea>Os shorts curtíssimos estão dominando o feed — e os números provam. Salva esse vídeo pra não esquecer.</textarea></div>
+              <div><div class="eyebrow" style="margin-bottom:6px">Hashtags (#)</div><div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">#shorts</span><span class="chip">#retenção</span><span class="chip">#criador</span></div></div>
             </div>
             <div class="card side-card">
-              <div class="stat-row"><span>Total</span><b class="tnum" id="rtWords">— palavras</b></div>
-              <div class="stat-row"><span>Duração falada (~150 ppm)</span><b class="tnum" id="rtDur">—</b></div>
-              <div class="stat-row"><span>Versões salvas</span><b>3</b></div>
+              <div class="stat-row"><span>Palavras</span><b class="tnum" id="rtWords">— palavras</b></div>
+              <div class="stat-row"><span>Tempo falando (mais ou menos)</span><b class="tnum" id="rtDur">—</b></div>
+              <div class="stat-row"><span>Vezes que você salvou</span><b>3</b></div>
             </div>
           </div>
         </div>
@@ -475,20 +478,20 @@
         <div class="kpis" id="kpis"></div>
         <div class="panels">
           <div class="card panel">
-            <h3>5 vídeos com melhor retenção <span class="hint" style="font-weight:500;font-size:12px">· últimos 90 dias</span></h3>
+            <h3>5 vídeos que as pessoas mais assistiram até o fim <span class="hint" style="font-weight:500;font-size:12px">· nos últimos 90 dias</span></h3>
             <div id="rankRet"></div>
           </div>
           <div class="card panel">
             <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
-              <h3 style="margin:0">Performance por pilar</h3>
+              <h3 style="margin:0">Qual tipo de vídeo bombou mais</h3>
               <div class="seg" id="segPilar"></div>
             </div>
             <div id="barPilar"></div>
           </div>
         </div>
         <div class="panels" style="margin-top:16px">
-          <div class="card panel"><h3>Mais compartilhados</h3><div id="rankComp"></div></div>
-          <div class="card panel"><h3>Mais seguidores ganhos</h3><div id="rankSeg"></div></div>
+          <div class="card panel"><h3>Vídeos mais compartilhados</h3><div id="rankComp"></div></div>
+          <div class="card panel"><h3>Vídeos que trouxeram mais seguidores</h3><div id="rankSeg"></div></div>
         </div>
         <div class="card panel" style="margin-top:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">
@@ -498,7 +501,7 @@
           <div id="videosView"></div>
         </div>
         <div class="card panel" style="margin-top:16px">
-          <h3>Evolução mês a mês</h3>
+          <h3>Como foi crescendo, mês a mês</h3>
           <div id="lineChart"></div>
         </div>
       </section>
@@ -511,12 +514,12 @@
       <!-- IA -->
       <section class="screen" id="scr-ia">
         <div class="card panel" style="max-width:720px;margin:0 auto">
-          <div class="eyebrow" style="margin-bottom:8px">Sugestões de roteiro (IA)</div>
+          <div class="eyebrow" style="margin-bottom:8px">A robô te dá ideias prontas</div>
           <div style="display:flex;gap:8px;margin-bottom:12px">
-            <input id="temaInput" value="retenção em shorts curtos" style="flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
-            <button class="btn" onclick="gerarIA()">✦ Gerar sugestões</button>
+            <input id="temaInput" value="vídeos curtinhos que prendem" style="flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
+            <button class="btn" onclick="gerarIA()">✦ Pedir ideias</button>
           </div>
-          <div class="note info" style="margin-bottom:14px">Baseado nos seus 8 vídeos com métricas + o tema. A IA nunca inventa números — cada justificativa é ancorada nos dados reais. <span class="hint">(prévia com resposta de exemplo)</span></div>
+          <div class="note info" style="margin-bottom:14px">A robô olha os seus 8 vídeos e o tema que você escreveu. Ela nunca inventa números — sempre usa os de verdade. <span class="hint">(exemplo pronto pra você ver como fica)</span></div>
           <div id="iaOut"></div>
         </div>
       </section>
@@ -599,6 +602,15 @@ const IDEIAS = [
 
 // Cards do kanban por coluna
 const COLS = ["Ideia","Roteiro","Gravar","Editar","Agendado","Publicado"];
+// Nome e emoji fáceis (com passo numerado) pra cada coluna.
+const COL_META = {
+  Ideia:     {n:1, emoji:"💡", label:"Ideia"},
+  Roteiro:   {n:2, emoji:"✍️", label:"Escrever"},
+  Gravar:    {n:3, emoji:"🎥", label:"Gravar"},
+  Editar:    {n:4, emoji:"✂️", label:"Cortar"},
+  Agendado:  {n:5, emoji:"📅", label:"Marcar o dia"},
+  Publicado: {n:6, emoji:"🚀", label:"No ar!"},
+};
 let KANBAN = {
   Ideia: [{t:"Hot take: thumbnail não importa", pilar:"Opiniao", plats:["youtube"], fmt:"short", resp:"Criadora", data:"—", check:[false,false,false,false]}],
   Roteiro: [{t:"Tutorial de gancho em 30s", pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"28/10", check:[false,true,false,false]}],
@@ -613,7 +625,7 @@ let KANBAN = {
 
 const fmtN = n => new Intl.NumberFormat("pt-BR").format(n);
 const platLabel = p => PLAT[p]?.l ?? p;
-const fmtLabel = f => ({short:"Short", reel:"Reel", video_longo:"Vídeo longo"}[f] ?? f);
+const fmtLabel = f => ({short:"Curtinho", reel:"Curtinho", video_longo:"Longo"}[f] ?? f);
 
 // ---------- Pipeline ----------
 // Ícones "certinhos" das plataformas (marcas reconhecíveis, em SVG).
@@ -629,7 +641,7 @@ function renderBoard(){
   const board = document.getElementById("board");
   board.innerHTML = COLS.map(col => `
     <div class="col">
-      <div class="col-h"><b>${col}</b><span class="count">${KANBAN[col].length}</span></div>
+      <div class="col-h"><b>${COL_META[col].emoji} ${COL_META[col].n}. ${COL_META[col].label}</b><span class="count">${KANBAN[col].length}</span></div>
       <div class="drop" data-col="${col}">
         ${KANBAN[col].map((c,i)=>kcard(c,col,i)).join("")}
       </div>
@@ -642,7 +654,7 @@ function kcard(c,col,i){
     <div class="kt">${c.t}</div>
     <div class="kmeta"><span class="dot" style="background:${PILARES[c.pilar]}"></span>
       <span class="chip">${fmtLabel(c.fmt)}</span>${platPills(c.plats)}</div>
-    <div class="kfoot"><span>📅 ${c.data}</span><span>👤 ${c.resp}</span><span class="check">${done}/4 assets</span></div>
+    <div class="kfoot"><span>📅 ${c.data}</span><span>👤 ${c.resp}</span><span class="check">${done} de 4 prontos</span></div>
   </div>`;
 }
 let dragData = null;
@@ -661,7 +673,7 @@ function wireDrag(){
       const card = KANBAN[dragData.col].splice(dragData.i,1)[0];
       KANBAN[to].unshift(card);
       dragData=null; renderBoard();
-      toast(`Movido para “${to}”`);
+      toast(`Foi pra “${COL_META[to].emoji} ${COL_META[to].label}”`);
     });
   });
 }
@@ -696,12 +708,12 @@ function renderIdeas(){
         ${platPills(i.plats)}
         ${i.tags.map(t=>`<span class="tag">#${t}</span>`).join("")}
       </div>
-      ${i.st==="ideia"?`<button class="btn ghost sm" style="align-self:flex-start" onclick="proIdeia('${i.t.replace(/'/g,"")}')">→ Pipeline</button>`:""}
+      ${i.st==="ideia"?`<button class="btn ghost sm" style="align-self:flex-start" onclick="proIdeia('${i.t.replace(/'/g,"")}')">→ Mandar pra produção</button>`:""}
     </div>`).join("");
 }
 function proIdeia(t){
   KANBAN.Roteiro.unshift({t, pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"—", check:[false,false,false,false]});
-  renderBoard(); toast("Ideia promovida ao pipeline ✓");
+  renderBoard(); toast("Foi pra produção! ✓");
 }
 
 // ---------- Modal ----------
@@ -718,14 +730,14 @@ function closeModal(){ document.getElementById("ov").classList.remove("on"); }
 const PIL_OPTS = Object.keys(PILARES).map(p=>`<option value="${p}">${p}</option>`).join("");
 function novaIdeia(){
   openModal(`
-    <h3>Captura rápida</h3>
-    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Só o título já basta.</p>
-    <div class="field"><label>Título</label><input id="niT" autofocus placeholder="Ex.: 3 erros que eu cometia editando"/></div>
-    <div class="field"><label>Gancho (0–3s)</label><input id="niH" placeholder="A primeira frase que prende"/></div>
-    <div class="field"><label>Resumo</label><textarea id="niR" rows="2"></textarea></div>
+    <h3>Anotar uma ideia 💡</h3>
+    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Só o nome do vídeo já basta!</p>
+    <div class="field"><label>Nome do vídeo</label><input id="niT" autofocus placeholder="Ex.: 3 erros que eu fazia editando"/></div>
+    <div class="field"><label>Começo que prende</label><input id="niH" placeholder="A primeira frase, pra ninguém pular"/></div>
+    <div class="field"><label>Do que é o vídeo</label><textarea id="niR" rows="2"></textarea></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>Pilar</label><select id="niP">${PIL_OPTS}</select></div>
-      <div class="field"><label>Tags (vírgula)</label><input id="niTag" placeholder="gancho, retenção"/></div>
+      <div class="field"><label>Tipo do vídeo</label><select id="niP">${PIL_OPTS}</select></div>
+      <div class="field"><label>Etiquetas (com vírgula)</label><input id="niTag" placeholder="tutorial, engraçado"/></div>
     </div>
     <button class="btn" style="justify-content:center" onclick="salvarIdeia()">Salvar ideia</button>
   `,"bottom");
@@ -743,11 +755,11 @@ function salvarIdeia(){
 }
 function novoCard(){
   openModal(`
-    <h3>Novo card no pipeline</h3>
-    <div class="field"><label>Título</label><input id="ncT" autofocus/></div>
-    <div class="field"><label>Pilar</label><select id="ncP">${PIL_OPTS}</select></div>
-    <div class="field"><label>Data prevista</label><input id="ncD" type="date"/></div>
-    <button class="btn" style="justify-content:center" onclick="salvarCard()">Criar card</button>
+    <h3>Novo vídeo na produção 🎬</h3>
+    <div class="field"><label>Nome do vídeo</label><input id="ncT" autofocus/></div>
+    <div class="field"><label>Tipo do vídeo</label><select id="ncP">${PIL_OPTS}</select></div>
+    <div class="field"><label>Dia que quer postar</label><input id="ncD" type="date"/></div>
+    <button class="btn" style="justify-content:center" onclick="salvarCard()">Criar vídeo</button>
   `,"bottom");
 }
 function salvarCard(){
@@ -755,11 +767,11 @@ function salvarCard(){
   const d=document.getElementById("ncD").value;
   KANBAN.Ideia.unshift({t, pilar:document.getElementById("ncP").value, plats:["instagram"], fmt:"reel", resp:"Criadora",
     data: d?d.slice(8,10)+"/"+d.slice(5,7):"—", check:[false,false,false,false]});
-  closeModal(); renderBoard(); toast("Card criado ✓");
+  closeModal(); renderBoard(); toast("Vídeo criado ✓");
 }
 
 // ---------- Detalhe do card (drawer) ----------
-const ASSETS = ["Thumbnail","Legenda","Trilha","CTA"];
+const ASSETS = ["Capa","Textinho","Música","Chamada final"];
 let curCard = null;
 function abrirCard(col,i){
   curCard = {col,i};
@@ -774,7 +786,7 @@ function abrirCard(col,i){
       <div class="field"><label>Coluna</label><input value="${col}" disabled/></div>
       <div class="field"><label>Responsável</label><input value="${c.resp}"/></div>
     </div>
-    <div class="field"><label>Checklist de assets</label>
+    <div class="field"><label>O que o vídeo precisa</label>
       <div id="ckList" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         ${ASSETS.map((a,ai)=>`<label class="chk ${c.check[ai]?'done':''}"><input type="checkbox" ${c.check[ai]?'checked':''} onchange="toggleAsset(${ai},this.checked)"/>${a}</label>`).join("")}
       </div>
@@ -825,32 +837,63 @@ function toggleDiff(){
   diffOn=!diffOn;
   document.getElementById("rtEditor").style.display = diffOn?"none":"grid";
   document.getElementById("rtDiff").style.display = diffOn?"block":"none";
-  document.getElementById("cmpBtn").textContent = diffOn?"✎ Voltar a editar":"⇄ Comparar v2×v3";
+  document.getElementById("cmpBtn").textContent = diffOn?"✎ Voltar a escrever":"⇄ Ver o que mudou";
   if(diffOn) renderDiff();
 }
 function renderDiff(){
   const blocos=["Gancho","Contexto","Desenvolvimento","Climax","CTA"];
   document.getElementById("rtDiff").innerHTML = `<div class="diff">
-    <div class="diff-h"><div>v2 (antes)</div><div>v3 (depois)</div></div>
-    ${blocos.map(b=>{ const [l,r]=diffWords(V2[b],V3[b]); return `<div class="diff-b"><div class="lab">${b}</div><div class="diff-cols"><div>${l}</div><div>${r}</div></div></div>`;}).join("")}
+    <div class="diff-h"><div>Antes</div><div>Agora</div></div>
+    ${blocos.map(b=>{ const [l,r]=diffWords(V2[b],V3[b]); return `<div class="diff-b"><div class="lab">${BLOCO_NOME[b]}</div><div class="diff-cols"><div>${l}</div><div>${r}</div></div></div>`;}).join("")}
   </div>`;
 }
 
 // ---------- Login ----------
-function entrar(e){ e.preventDefault(); document.getElementById("login").classList.add("off"); toast("Bem-vinda ao CreateFlow ✨"); }
+function entrar(e){ e.preventDefault(); document.getElementById("login").classList.add("off"); toast("Bem-vinda ao CreateFlow ✨"); setTimeout(comoFunciona, 500); }
+
+// ---------- Guia "Como funciona" (bem simples) ----------
+const PASSOS = [
+  ["💡","1. Ideia","Pensou num vídeo? Anote na tela Ideias. É só o nome!"],
+  ["✍️","2. Escrever","Escreva o que você vai falar, por partes, na tela Roteiro."],
+  ["🖼️","3. Capa","Na tela Capas, copie o textinho e cole numa IA de imagem pra desenhar a capa."],
+  ["🎥","4. Gravar e cortar","Grave o vídeo e tire os pedaços que não precisam."],
+  ["📅","5. Marcar o dia","Escolha o dia de postar na tela Calendário."],
+  ["🚀","6. No ar!","Postou? Veja como foi na tela Resultados."],
+];
+function comoFunciona(){
+  openModal(`
+    <h3>Como funciona 🎬</h3>
+    <p style="color:var(--muted);font-size:13.5px;margin:-6px 0 4px">Fazer um vídeo em 6 passinhos:</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      ${PASSOS.map(s=>`<div style="display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:26px;line-height:1;flex:none">${s[0]}</span>
+        <div><b style="font-size:14.5px">${s[1]}</b><div style="font-size:13px;color:var(--muted);margin-top:2px">${s[2]}</div></div>
+      </div>`).join("")}
+    </div>
+    <button class="btn" style="justify-content:center;font-size:15px;padding:11px" onclick="closeModal()">Entendi! 👍</button>
+  `,"bottom");
+}
 
 // ---------- Roteiro ----------
+// Nome fácil de cada parte do roteiro (a chave k é a mesma usada no "ver o que mudou").
+const BLOCO_NOME = {
+  Gancho:"1. Começo (prende a atenção)",
+  Contexto:"2. A situação",
+  Desenvolvimento:"3. O conteúdo",
+  Climax:"4. A melhor parte",
+  CTA:"5. O pedido final",
+};
 const BLOCOS = [
-  {k:"Gancho", hint:"0–3s: prende a atenção", txt:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê."},
-  {k:"Contexto", hint:"situa o espectador", txt:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário."},
-  {k:"Desenvolvimento", hint:"conteúdo principal", txt:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima."},
-  {k:"Climax", hint:"o ponto alto / payoff", txt:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre."},
-  {k:"CTA", hint:"chamada para ação", txt:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários."},
+  {k:"Gancho", hint:"as primeiras palavras, pra ninguém pular", txt:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê."},
+  {k:"Contexto", hint:"conte do que se trata", txt:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário."},
+  {k:"Desenvolvimento", hint:"a parte principal do vídeo", txt:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima."},
+  {k:"Climax", hint:"o momento mais legal", txt:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre."},
+  {k:"CTA", hint:"peça algo (curtir, seguir, salvar)", txt:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários."},
 ];
 function renderBlocos(){
   document.getElementById("blocos").innerHTML = BLOCOS.map((b,i)=>`
     <div class="card bloco">
-      <div class="bh"><b>${b.k} <span class="hint">· ${b.hint}</span></b><span id="c${i}"></span></div>
+      <div class="bh"><b>${BLOCO_NOME[b.k]} <span class="hint">· ${b.hint}</span></b><span id="c${i}"></span></div>
       <textarea data-i="${i}" oninput="updRt()">${b.txt}</textarea>
     </div>`).join("");
   updRt();
@@ -918,8 +961,8 @@ function renderMetrics(){
 
   const views=VS.reduce((a,v)=>a+v.views,0), seg=VS.reduce((a,v)=>a+v.seg,0), comp=VS.reduce((a,v)=>a+v.comp,0);
   document.getElementById("kpis").innerHTML=[
-    ["🎬","Vídeos",VS.length],["👁","Views (total)",fmtN(views)],
-    ["👥","Seguidores ganhos",fmtN(seg)],["🔁","Compartilhamentos",fmtN(comp)],
+    ["🎬","Vídeos",VS.length],["👁","Visualizações",fmtN(views)],
+    ["👥","Novos seguidores",fmtN(seg)],["🔁","Compartilhamentos",fmtN(comp)],
   ].map((k,i)=>{ const y=i%2===1; const tile=y?"background:var(--yellow-soft);color:var(--yellow-ink)":"background:var(--primary-soft);color:var(--primary-ink)";
     return `<div class="card kpi"><div class="ib" style="font-size:19px;${tile}">${k[0]}</div><div><div class="v tnum">${k[2]}</div><div class="l">${k[1]}</div></div></div>`; }).join("");
 
@@ -972,7 +1015,7 @@ function renderTable(VS){
     <td>${platIcon(v.plat)} ${v.t}</td>
     <td class="tnum">${fmtN(v.views)}</td><td class="tnum" style="color:var(--good)">${v.ret.toFixed(1)}%</td>
     <td class="tnum">${fmtN(v.comp)}</td><td class="tnum">+${fmtN(v.seg)}</td></tr>`).join("");
-  return `<div class="mtable-wrap"><table class="mtable"><thead><tr><th>Vídeo</th><th>Views</th><th>Retenção</th><th>Compart.</th><th>Seguidores</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="mtable-wrap"><table class="mtable"><thead><tr><th>Vídeo</th><th>Visto</th><th>Assistiram</th><th>Compart.</th><th>Seguidores</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function renderLine(VS){
   const mesNome=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
@@ -997,8 +1040,8 @@ function renderLine(VS){
     ${data.map((d,i)=>`<circle cx="${x(i).toFixed(0)}" cy="${y(d.v).toFixed(0)}" r="4" fill="var(--primary)"/><text class="axis" x="${x(i).toFixed(0)}" y="${H-12}" text-anchor="middle">${d.m}</text>`).join("")}
   </svg></div>
   <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:4px">
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:3px;background:var(--primary);border-radius:2px"></span>Views</span>
-    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:2px dashed var(--yellow-ink)"></span>Retenção média %</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:3px;background:var(--primary);border-radius:2px"></span>Visualizações</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:0;border-top:2px dashed var(--yellow-ink)"></span>Quanto assistiram (%)</span>
   </div>`;
 }
 
@@ -1021,11 +1064,11 @@ const IA = {
 function gerarIA(){
   const el = document.getElementById("iaOut");
   el.innerHTML = `
-    <div class="eyebrow" style="margin:2px 0 8px">5 ganchos alternativos</div>
+    <div class="eyebrow" style="margin:2px 0 8px">5 começos que prendem</div>
     ${IA.ganchos.map(g=>iaItem(g[0],g[1])).join("")}
-    <div class="eyebrow" style="margin:16px 0 8px">3 títulos</div>
+    <div class="eyebrow" style="margin:16px 0 8px">3 nomes pro vídeo</div>
     ${IA.titulos.map(t=>iaItem(t[0],t[1])).join("")}
-    <div class="eyebrow" style="margin:16px 0 8px">Sugestão de CTA</div>
+    <div class="eyebrow" style="margin:16px 0 8px">Frase pra pedir no final</div>
     <div class="card" style="padding:12px"><b style="font-size:13.5px">${IA.cta[0]}</b><div style="font-size:12px;font-style:italic;color:var(--muted);margin-top:4px">↳ ${IA.cta[1]}</div></div>`;
   toast("Sugestões geradas");
 }
