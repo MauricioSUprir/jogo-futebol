@@ -15,7 +15,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 # Compila os scripts de migração/seed para JS standalone (tsx não vai na imagem final)
-RUN npx --yes esbuild src/db/migrate.ts src/db/seed.ts \
+RUN npx --yes esbuild src/db/migrate.ts src/db/seed.ts src/db/bootstrap.ts \
       --bundle --platform=node --format=esm --packages=external \
       --outdir=dist-scripts
 
