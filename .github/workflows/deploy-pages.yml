@@ -23,6 +23,8 @@ jobs:
           enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          # Publica o jogo Total Match (movido para esta pasta) como site do GitHub Pages.
+          # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
+          path: 'legacy-total-match'
       - id: deployment
         uses: actions/deploy-pages@v4
