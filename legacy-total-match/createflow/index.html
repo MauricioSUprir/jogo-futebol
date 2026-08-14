@@ -230,6 +230,13 @@
   .thumb-prompt { margin: 0 14px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.5; color: var(--muted); max-height: 118px; overflow-y: auto; white-space: pre-wrap; }
   .thumb-foot { display: flex; gap: 8px; padding: 0 14px 14px; }
 
+  /* ---- Aprender (vídeos do YouTube) ---- */
+  .learn-card { text-decoration: none; color: inherit; overflow: hidden; display: flex; flex-direction: column; transition: filter .12s, border-color .12s; }
+  .learn-card:hover { filter: brightness(1.02); border-color: var(--border-strong); }
+  .learn-thumb { height: 96px; background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft)); display: grid; place-items: center; position: relative; }
+  .learn-play { position: absolute; right: 8px; bottom: 8px; width: 22px; height: 22px; }
+  .learn-play .plat-ic { width: 22px; height: 22px; }
+
   /* ---- Barra de ajuda (didática) ---- */
   .helpbar { display: flex; gap: 11px; align-items: center; margin-bottom: 14px; padding: 12px 15px; border-radius: 14px; font-size: 14.5px; line-height: 1.4; background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft)); color: var(--ink); border: 1px solid var(--border); }
   .helpbar .big { font-size: 24px; flex: none; line-height: 1; }
@@ -394,6 +401,10 @@
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
         Robô de ideias
       </button>
+      <button data-scr="aprender">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12v5c0 1.5 3 3 6 3s6-1.5 6-3v-5"/></svg>
+        Aprender
+      </button>
     </nav>
     <div class="side-foot">
       <div class="who">
@@ -433,8 +444,8 @@
       <!-- IDEIAS -->
       <section class="screen" id="scr-ideias">
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px">
-          <input id="buscaIdeia" oninput="renderIdeas()" placeholder="Buscar ideia, gancho ou tag..." style="flex:1;min-width:180px;max-width:320px;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
-          <div id="filtroIdeia" style="display:flex;gap:6px"></div>
+          <div class="seg" id="ideaTabs"></div>
+          <input id="buscaIdeia" oninput="renderIdeas()" placeholder="Buscar ideia ou etiqueta..." style="flex:1;min-width:160px;max-width:300px;padding:8px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
           <button class="btn sm" style="margin-left:auto" onclick="novaIdeia()">+ Nova ideia</button>
         </div>
         <div class="grid" id="ideasGrid"></div>
@@ -442,41 +453,28 @@
 
       <!-- ROTEIRO -->
       <section class="screen" id="scr-roteiro">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div><div class="eyebrow">Roteiro do vídeo</div><h2 style="font-size:18px;margin-top:4px">Por que shorts de 7s estão bombando</h2></div>
-          <div style="display:flex;gap:8px">
-            <button class="btn ghost sm" id="cmpBtn" onclick="toggleDiff()">⇄ Ver o que mudou</button>
-            <button class="btn ghost sm" onclick="openTele()">▶ Ler enquanto grava</button>
-            <button class="btn sm" onclick="toast('Roteiro salvo ✓')">Salvar</button>
-          </div>
-        </div>
         <div class="note info" style="margin-bottom:14px">
           <span style="font-size:20px">✍️</span>
-          <div>O <b>roteiro</b> é o que você vai falar no vídeo, escrito antes pra não esquecer. Ele é dividido em <b>partes</b>: comece prendendo a atenção e termine pedindo algo (curtir, seguir…).</div>
+          <div>O <b>roteiro</b> não são as falas exatas — é um <b>guia</b> do que o vídeo vai falar e o que fazer em cada parte. Você escreve ou pede pra <b>IA criar pra você</b>.</div>
         </div>
-        <div id="rtDiff" style="display:none;margin-bottom:8px"></div>
-        <div class="rt-grid" id="rtEditor">
-          <div style="display:flex;flex-direction:column;gap:11px" id="blocos"></div>
-          <div style="display:flex;flex-direction:column;gap:12px">
-            <div class="card side-card">
-              <div><div class="eyebrow" style="margin-bottom:6px">Textinho embaixo do vídeo</div><textarea>Os shorts curtíssimos estão dominando o feed — e os números provam. Salva esse vídeo pra não esquecer.</textarea></div>
-              <div><div class="eyebrow" style="margin-bottom:6px">Hashtags (#)</div><div style="display:flex;flex-wrap:wrap;gap:6px"><span class="chip">#shorts</span><span class="chip">#retenção</span><span class="chip">#criador</span></div></div>
-            </div>
-            <div class="card side-card">
-              <div class="stat-row"><span>Palavras</span><b class="tnum" id="rtWords">— palavras</b></div>
-              <div class="stat-row"><span>Tempo falando (mais ou menos)</span><b class="tnum" id="rtDur">—</b></div>
-              <div class="stat-row"><span>Vezes que você salvou</span><b>3</b></div>
-            </div>
+        <div class="card panel" style="margin-bottom:18px">
+          <div class="eyebrow" style="margin-bottom:8px">Criar um roteiro novo</div>
+          <div class="field"><label>Sobre o que é o vídeo?</label><input id="rtTema" placeholder="Ex.: 3 erros que travam quem começa no YouTube"/></div>
+          <div class="field" style="margin-top:10px"><label>Formato</label><select id="rtFmt"></select></div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px">
+            <button class="btn" onclick="gerarRoteiroIA()">✨ Deixar a IA criar</button>
+            <button class="btn ghost" onclick="criarRoteiroVazio()">✍️ Escrever eu mesma</button>
           </div>
         </div>
+        <div id="roteirosList" style="display:flex;flex-direction:column;gap:16px"></div>
       </section>
 
       <!-- CALENDARIO -->
       <section class="screen" id="scr-calendario">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <strong style="font-size:15px">Outubro de 2024</strong>
+          <strong style="font-size:15px" id="calTitulo">Seu mês</strong>
           <span class="chip"><span class="dot" style="background:var(--primary)"></span>bolinha = tem vídeo</span>
-          <span class="chip" style="background:var(--warn-soft);color:var(--warn);border-color:var(--warn-soft)">“sem post” = dia vazio</span>
+          <span class="chip">toque num dia pra marcar um vídeo</span>
         </div>
         <div class="card" style="overflow:hidden"><div id="cal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)"></div></div>
       </section>
@@ -484,8 +482,8 @@
       <!-- METRICAS -->
       <section class="screen" id="scr-metricas">
         <div class="note info" style="margin-bottom:14px">
-          <span style="font-size:20px">👆</span>
-          <div>Toque num <b>aplicativo</b> pra ver só os vídeos dele, ou em <b>Geral</b> pra ver todos juntos. Quanto maior o número, melhor o vídeo foi!</div>
+          <span style="font-size:20px">🔌</span>
+          <div>Seus apps <b>ainda não estão conectados</b>, por isso está tudo zerado. Quando a gente conectar o <b>YouTube, Instagram e TikTok</b>, os números <b>de verdade</b> aparecem aqui e se atualizam <b>sozinhos todo dia</b>.</div>
         </div>
         <!-- aba: trocar os dados por aplicativo (+ Geral) -->
         <div class="pswitch" id="pswitch"></div>
@@ -538,9 +536,18 @@
             <input id="temaInput" value="vídeos curtinhos que prendem" style="flex:1;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit"/>
             <button class="btn" onclick="gerarIA()">✦ Pedir ideias</button>
           </div>
-          <div class="note info" style="margin-bottom:14px">A robô olha os seus 8 vídeos e o tema que você escreveu. Ela nunca inventa números — sempre usa os de verdade. <span class="hint">(exemplo pronto pra você ver como fica)</span></div>
+          <div class="note info" style="margin-bottom:14px">A robô olha o tema que você escreveu e te dá começos e nomes prontos. Ela <b>nunca inventa números</b>. Quando os apps estiverem conectados, ela também usa os seus vídeos de verdade.</div>
           <div id="iaOut"></div>
         </div>
+      </section>
+
+      <!-- APRENDER -->
+      <section class="screen" id="scr-aprender">
+        <div class="note info" style="margin-bottom:16px">
+          <span style="font-size:20px">🎓</span>
+          <div>Aqui tem <b>vídeos do YouTube</b> pra você aprender a fazer conteúdo, crescer e ter ideias. Toque num assunto e o YouTube abre com vários vídeos sobre ele.</div>
+        </div>
+        <div id="learnList" class="grid"></div>
       </section>
     </div>
   </div>
@@ -602,22 +609,20 @@ const PILARES = {
 };
 const PLAT = { youtube: {l:"YouTube", c:"var(--yt)"}, instagram: {l:"Instagram", c:"var(--ig)"}, tiktok: {l:"TikTok", c:"var(--tt)"} };
 
-const VIDEOS = [
-  {t:"Por que shorts de 7s estão bombando", pilar:"Opiniao", plat:"youtube", fmt:"short", ret:82.1, views:320000, comp:9200, seg:3400, dia:"2024-10-08"},
-  {t:"Opinião impopular sobre trends", pilar:"Opiniao", plat:"tiktok", fmt:"short", ret:79.3, views:210000, comp:7100, seg:2100, dia:"2024-09-15"},
-  {t:"Roteirizando um vídeo em 10 minutos", pilar:"Tutorial", plat:"tiktok", fmt:"reel", ret:74.5, views:96000, comp:2400, seg:980, dia:"2024-10-01"},
-  {t:"3 erros que eu cometia editando reels", pilar:"Tutorial", plat:"instagram", fmt:"reel", ret:68.4, views:148000, comp:3100, seg:1200, dia:"2024-10-22"},
-  {t:"Reagindo aos meus primeiros vídeos", pilar:"Bastidores", plat:"instagram", fmt:"reel", ret:62.0, views:74000, comp:1500, seg:730, dia:"2024-07-21"},
-  {t:"Um dia comigo gravando 5 vídeos", pilar:"Bastidores", plat:"instagram", fmt:"reel", ret:55.0, views:61000, comp:810, seg:420, dia:"2024-09-25"},
-  {t:"Meu setup de gravação em 2024", pilar:"Bastidores", plat:"youtube", fmt:"video_longo", ret:41.2, views:42000, comp:290, seg:640, dia:"2024-10-15"},
-  {t:"Como eu escolho o que gravar", pilar:"Tutorial", plat:"youtube", fmt:"video_longo", ret:38.7, views:38000, comp:210, seg:510, dia:"2024-08-30"},
-];
+// Tudo começa ZERADO — os apps ainda não foram conectados.
+const VIDEOS = [];   // vídeos publicados com números reais (vazio até conectar os apps)
+const IDEIAS = [];   // ideias da criadora
+const ROTEIROS = []; // roteiros criados (pela IA ou escritos à mão)
+let ROTEIRO_ID = 1;
 
-const IDEIAS = [
-  {t:"Série: refazendo vídeos que floparam", hook:"O que eu mudaria hoje", res:"Pegar 3 vídeos antigos e regravar com o que aprendi.", pilar:"Bastidores", plats:["youtube","instagram"], tags:["serie","flop"], st:"aprovada"},
-  {t:"Tutorial de gancho em 30s", hook:"A fórmula que eu uso", res:"Ensinar a estrutura de gancho que mais reteve.", pilar:"Tutorial", plats:["tiktok"], tags:["gancho","retencao"], st:"ideia"},
-  {t:"Hot take: thumbnail não importa em shorts", hook:"Prove que estou errada", res:"Discutir o peso da thumbnail por formato.", pilar:"Opiniao", plats:["youtube"], tags:["opiniao","thumbnail"], st:"ideia"},
-];
+// Formatos: separa vídeo longo do Short no YouTube, além de Reels e TikTok.
+const FORMATOS = {
+  yt_long:  {label:"Vídeo longo (YouTube)", curto:"Vídeo longo", app:"youtube", emoji:"▶️", ar:"16:9", arTxt:"deitado 16:9 (vídeo longo do YouTube)"},
+  yt_short: {label:"Short (YouTube)",       curto:"Short",       app:"youtube", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (YouTube Shorts)"},
+  reels:    {label:"Reels (Instagram)",     curto:"Reels",       app:"instagram", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (Reels do Instagram)"},
+  tiktok:   {label:"TikTok",                curto:"TikTok",      app:"tiktok", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (TikTok)"},
+};
+const FMT_OPTS = Object.entries(FORMATOS).map(([k,f])=>`<option value="${k}">${f.emoji} ${f.label}</option>`).join("");
 
 // Cards do kanban por coluna
 const COLS = ["Ideia","Roteiro","Gravar","Editar","Agendado","Publicado"];
@@ -630,21 +635,14 @@ const COL_META = {
   Agendado:  {n:5, emoji:"📅", label:"Marcar o dia"},
   Publicado: {n:6, emoji:"🚀", label:"No ar!"},
 };
-let KANBAN = {
-  Ideia: [{t:"Hot take: thumbnail não importa", pilar:"Opiniao", plats:["youtube"], fmt:"short", resp:"Criadora", data:"—", check:[false,false,false,false]}],
-  Roteiro: [{t:"Tutorial de gancho em 30s", pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"28/10", check:[false,true,false,false]}],
-  Gravar: [{t:"Série: refazendo vídeos que floparam", pilar:"Bastidores", plats:["youtube","instagram"], fmt:"video_longo", resp:"Criadora", data:"30/10", check:[true,true,false,false]}],
-  Editar: [{t:"Bastidores da minha semana", pilar:"Bastidores", plats:["instagram"], fmt:"reel", resp:"Editor", data:"29/10", check:[true,true,true,false]}],
-  Agendado: [{t:"Reagindo aos comentários polêmicos", pilar:"Opiniao", plats:["tiktok"], fmt:"short", resp:"Criadora", data:"31/10", check:[true,true,true,true]}],
-  Publicado: [
-    {t:"Por que shorts de 7s estão bombando", pilar:"Opiniao", plats:["youtube"], fmt:"short", resp:"Criadora", data:"08/10", check:[true,true,true,true]},
-    {t:"Opinião impopular sobre trends", pilar:"Opiniao", plats:["tiktok"], fmt:"short", resp:"Criadora", data:"15/09", check:[true,true,true,true]},
-  ],
-};
+let KANBAN = { Ideia:[], Roteiro:[], Gravar:[], Editar:[], Agendado:[], Publicado:[] };
 
 const fmtN = n => new Intl.NumberFormat("pt-BR").format(n);
 const platLabel = p => PLAT[p]?.l ?? p;
-const fmtLabel = f => ({short:"Curtinho", reel:"Curtinho", video_longo:"Longo"}[f] ?? f);
+const fmtLabel = f => FORMATOS[f]?.curto ?? f;
+// Chip do formato: mostra o app (logo real) + se é longo ou curto.
+function fmtChip(fmtKey){ const f=FORMATOS[fmtKey]||FORMATOS.reels; return `<span class="plat-chip">${platIcon(f.app)}${f.curto}</span>`; }
+function itemPlat(it){ return FORMATOS[it.fmt]?.app || (it.plats&&it.plats[0]) || "instagram"; }
 
 // ---------- Pipeline ----------
 // Ícones "certinhos" das plataformas (marcas reconhecíveis, em SVG).
@@ -672,7 +670,7 @@ function kcard(c,col,i){
   return `<div class="kcard" draggable="true" data-col="${col}" data-i="${i}" onclick="abrirCard('${col}',${i})">
     <div class="kt">${c.t}</div>
     <div class="kmeta"><span class="dot" style="background:${PILARES[c.pilar]}"></span>
-      <span class="chip">${fmtLabel(c.fmt)}</span>${platPills(c.plats)}</div>
+      ${fmtChip(c.fmt)}</div>
     <div class="kfoot"><span>📅 ${c.data}</span><span>👤 ${c.resp}</span><span class="check">${done} de 4 prontos</span></div>
   </div>`;
 }
@@ -698,41 +696,62 @@ function wireDrag(){
 }
 
 // ---------- Ideias ----------
-let ideaStatus = "todos";
-function setIdeaStatus(s){ ideaStatus=s; renderIdeas(); }
+// Dois tipos: "ideia" (só uma ideia) e "pronta" (já formada, só falta postar).
+let ideaTab = "ideia";
+function setIdeaTab(t){ ideaTab=t; renderIdeas(); }
 function renderIdeas(){
-  // chips de filtro
-  const chips = [["todos","Todos"],["ideia","Ideia"],["aprovada","Aprovada"],["descartada","Descartada"]];
-  document.getElementById("filtroIdeia").innerHTML = chips.map(([v,l])=>
-    `<button onclick="setIdeaStatus('${v}')" style="padding:6px 11px;border:0;border-radius:999px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;background:${ideaStatus===v?'var(--primary)':'var(--surface-2)'};color:${ideaStatus===v?'#fff':'var(--muted)'}">${l}</button>`).join("");
+  const nI = IDEIAS.filter(i=>i.tipo==="ideia").length;
+  const nP = IDEIAS.filter(i=>i.tipo==="pronta").length;
+  document.getElementById("ideaTabs").innerHTML =
+    `<button class="${ideaTab==='ideia'?'on':''}" onclick="setIdeaTab('ideia')">💡 Ideias (${nI})</button>`+
+    `<button class="${ideaTab==='pronta'?'on':''}" onclick="setIdeaTab('pronta')">✅ Prontas pra postar (${nP})</button>`;
 
   const q = (document.getElementById("buscaIdeia")?.value || "").toLowerCase();
-  const lista = IDEIAS.filter(i=>{
-    if(ideaStatus!=="todos" && i.st!==ideaStatus) return false;
-    if(q && !`${i.t} ${i.hook} ${i.tags.join(" ")}`.toLowerCase().includes(q)) return false;
+  const lista = IDEIAS.map((i,idx)=>({i,idx})).filter(({i})=>{
+    if(i.tipo!==ideaTab) return false;
+    if(q && !`${i.t} ${(i.tags||[]).join(" ")}`.toLowerCase().includes(q)) return false;
     return true;
   });
   const grid = document.getElementById("ideasGrid");
-  if(lista.length===0){ grid.innerHTML = `<p style="color:var(--muted);font-size:14px;padding:30px 0">Nenhuma ideia encontrada.</p>`; return; }
-  grid.innerHTML = lista.map(i=>`
+  if(lista.length===0){
+    const vazio = ideaTab==="ideia"
+      ? `Nenhuma ideia ainda. Toque em <b>+ Nova ideia</b> pra anotar a primeira! 💡`
+      : `Nenhuma ideia pronta ainda.<br>Quando uma ideia estiver <b>pronta pra postar</b>, é só marcar ela como pronta. ✅`;
+    grid.innerHTML = `<div class="card" style="padding:26px;text-align:center;color:var(--muted);grid-column:1/-1">${vazio}</div>`;
+    return;
+  }
+  grid.innerHTML = lista.map(({i,idx})=>`
     <div class="card idea">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:start">
         <b style="font-size:14.5px;line-height:1.3">${i.t}</b>
-        <span class="status st-${i.st}">${i.st}</span>
+        <span class="status ${i.tipo==='pronta'?'st-aprovada':'st-ideia'}">${i.tipo==='pronta'?'pronta':'ideia'}</span>
       </div>
-      ${i.hook?`<div class="hook">“${i.hook}”</div>`:""}
-      <div style="font-size:13px">${i.res}</div>
+      ${i.res&&i.res!=="—"?`<div style="font-size:13px">${i.res}</div>`:""}
       <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
         <span class="chip"><span class="dot" style="background:${PILARES[i.pilar]}"></span>${i.pilar}</span>
-        ${platPills(i.plats)}
-        ${i.tags.map(t=>`<span class="tag">#${t}</span>`).join("")}
+        ${fmtChip(i.fmt)}
+        ${(i.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join("")}
       </div>
-      ${i.st==="ideia"?`<button class="btn ghost sm" style="align-self:flex-start" onclick="proIdeia('${i.t.replace(/'/g,"")}')">→ Mandar pra produção</button>`:""}
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:2px">
+        <button class="btn ghost sm" onclick="mandarProRoteiro(${idx})">✨ Criar roteiro</button>
+        ${i.tipo==="ideia"
+          ? `<button class="btn ghost sm" onclick="marcarPronta(${idx})">✅ Está pronta</button>`
+          : `<button class="btn sm" onclick="proIdeia(${idx})">🚀 Mandar pra produção</button>`}
+      </div>
     </div>`).join("");
 }
-function proIdeia(t){
-  KANBAN.Roteiro.unshift({t, pilar:"Tutorial", plats:["tiktok"], fmt:"reel", resp:"Criadora", data:"—", check:[false,false,false,false]});
-  renderBoard(); toast("Foi pra produção! ✓");
+function marcarPronta(idx){ IDEIAS[idx].tipo="pronta"; ideaTab="pronta"; renderIdeas(); toast("Marcada como pronta ✅"); }
+function proIdeia(idx){
+  const i=IDEIAS[idx];
+  KANBAN.Agendado.unshift({t:i.t, pilar:i.pilar, plats:[FORMATOS[i.fmt].app], fmt:i.fmt, resp:"Criadora", data:"—", check:[false,false,false,false]});
+  renderBoard(); go("pipeline"); toast("Foi pra produção! 🚀");
+}
+function mandarProRoteiro(idx){
+  const i=IDEIAS[idx];
+  go("roteiro");
+  document.getElementById("rtTema").value=i.t;
+  document.getElementById("rtFmt").value=i.fmt;
+  gerarRoteiroIA();
 }
 
 // ---------- Modal ----------
@@ -752,39 +771,44 @@ function novaIdeia(){
     <h3>Anotar uma ideia 💡</h3>
     <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Só o nome do vídeo já basta!</p>
     <div class="field"><label>Nome do vídeo</label><input id="niT" autofocus placeholder="Ex.: 3 erros que eu fazia editando"/></div>
-    <div class="field"><label>Começo que prende</label><input id="niH" placeholder="A primeira frase, pra ninguém pular"/></div>
     <div class="field"><label>Do que é o vídeo</label><textarea id="niR" rows="2"></textarea></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Formato</label><select id="niF">${FMT_OPTS}</select></div>
       <div class="field"><label>Tipo do vídeo</label><select id="niP">${PIL_OPTS}</select></div>
-      <div class="field"><label>Etiquetas (com vírgula)</label><input id="niTag" placeholder="tutorial, engraçado"/></div>
     </div>
+    <div class="field"><label>Etiquetas (com vírgula)</label><input id="niTag" placeholder="tutorial, engraçado"/></div>
+    <div class="field"><label>Essa ideia já está…</label>
+      <select id="niTipo"><option value="ideia">💡 Só uma ideia</option><option value="pronta">✅ Pronta pra postar</option></select></div>
     <button class="btn" style="justify-content:center" onclick="salvarIdeia()">Salvar ideia</button>
   `,"bottom");
 }
 function salvarIdeia(){
   const t=document.getElementById("niT").value.trim(); if(!t) return;
+  const tipo=document.getElementById("niTipo").value;
   IDEIAS.unshift({
-    t, hook:document.getElementById("niH").value.trim(),
-    res:document.getElementById("niR").value.trim()||"—",
-    pilar:document.getElementById("niP").value, plats:["instagram"],
+    t, res:document.getElementById("niR").value.trim()||"—",
+    pilar:document.getElementById("niP").value, fmt:document.getElementById("niF").value,
     tags:document.getElementById("niTag").value.split(",").map(x=>x.trim()).filter(Boolean),
-    st:"ideia",
+    tipo,
   });
-  closeModal(); ideaStatus="todos"; renderIdeas(); toast("Ideia salva ✓");
+  closeModal(); ideaTab=tipo; renderIdeas(); toast("Ideia salva ✓");
 }
 function novoCard(){
   openModal(`
     <h3>Novo vídeo na produção 🎬</h3>
     <div class="field"><label>Nome do vídeo</label><input id="ncT" autofocus/></div>
-    <div class="field"><label>Tipo do vídeo</label><select id="ncP">${PIL_OPTS}</select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field"><label>Formato</label><select id="ncF">${FMT_OPTS}</select></div>
+      <div class="field"><label>Tipo do vídeo</label><select id="ncP">${PIL_OPTS}</select></div>
+    </div>
     <div class="field"><label>Dia que quer postar</label><input id="ncD" type="date"/></div>
     <button class="btn" style="justify-content:center" onclick="salvarCard()">Criar vídeo</button>
   `,"bottom");
 }
 function salvarCard(){
   const t=document.getElementById("ncT").value.trim(); if(!t) return;
-  const d=document.getElementById("ncD").value;
-  KANBAN.Ideia.unshift({t, pilar:document.getElementById("ncP").value, plats:["instagram"], fmt:"reel", resp:"Criadora",
+  const d=document.getElementById("ncD").value; const fmt=document.getElementById("ncF").value;
+  KANBAN.Ideia.unshift({t, pilar:document.getElementById("ncP").value, plats:[FORMATOS[fmt].app], fmt, resp:"Criadora",
     data: d?d.slice(8,10)+"/"+d.slice(5,7):"—", check:[false,false,false,false]});
   closeModal(); renderBoard(); toast("Vídeo criado ✓");
 }
@@ -799,7 +823,7 @@ function abrirCard(col,i){
     <h3 style="padding-right:30px">${c.t}</h3>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       <span class="chip"><span class="dot" style="background:${PILARES[c.pilar]}"></span>${c.pilar}</span>
-      <span class="chip">${fmtLabel(c.fmt)}</span>${platPills(c.plats)}
+      ${fmtChip(c.fmt)}
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="field"><label>Coluna</label><input value="${col}" disabled/></div>
@@ -821,51 +845,75 @@ function toggleAsset(ai,val){
   if(labels[ai]) labels[ai].classList.toggle("done", val);
 }
 
-// ---------- Diff de versões ----------
-const V2 = {
-  Gancho:"Shorts curtos estão bombando — vou te mostrar o porquê.",
-  Contexto:"Achavam que vídeo mais longo retinha mais. Não é o que vejo.",
-  Desenvolvimento:"No vídeo curtíssimo, a pessoa assiste de novo e o algoritmo lê como retenção alta.",
-  Climax:"O vídeo de 7s foi o meu melhor do trimestre.",
-  CTA:"Salva esse vídeo e testa.",
-};
-const V3 = {
-  Gancho:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê.",
-  Contexto:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário.",
-  Desenvolvimento:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima.",
-  Climax:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre.",
-  CTA:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários.",
-};
-function diffWords(a,b){
-  const A=a.split(/(\s+)/), B=b.split(/(\s+)/);
-  // LCS simples por palavra
-  const n=A.length,m=B.length, dp=Array.from({length:n+1},()=>new Array(m+1).fill(0));
-  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) dp[i][j]=A[i]===B[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
-  const left=[],right=[]; let i=0,j=0;
-  while(i<n&&j<m){ if(A[i]===B[j]){left.push({t:A[i]});right.push({t:B[j]});i++;j++;}
-    else if(dp[i+1][j]>=dp[i][j+1]){left.push({t:A[i],d:1});i++;} else {right.push({t:B[j],a:1});j++;} }
-  while(i<n){left.push({t:A[i++],d:1});} while(j<m){right.push({t:B[j++],a:1});}
-  const esc=s=>s.replace(/</g,"&lt;");
+// ---------- Criador de roteiro (com IA) ----------
+// O roteiro é um GUIA do que fazer/falar — não são as falas exatas.
+function secoesRoteiro(tema, fmt){
+  const longo = FORMATOS[fmt].ar==="16:9";
+  const t = tema;
+  if(longo){
+    return [
+      {t:"🎯 Ideia central", txt:`Este vídeo é sobre: ${t}.\nEscolha UMA mensagem principal e volte nela o vídeo todo.`},
+      {t:"🪝 Começo (0–15s)", txt:`Nos primeiros segundos, diga o que a pessoa vai aprender e por que vale ficar até o fim. Faça uma pergunta ou mostre o resultado final.`},
+      {t:"📚 Partes do vídeo", txt:`Divida "${t}" em 3 a 5 partes:\n1) …\n2) …\n3) …\nEm cada parte: explique e dê um exemplo real.`},
+      {t:"🎬 O que mostrar na tela", txt:`Anote o que aparece em cada parte (você falando, um print, um exemplo, imagens de apoio).`},
+      {t:"📣 Pedido final", txt:`Termine pedindo pra se inscrever e comentar. Deixe um gancho pro próximo vídeo.`},
+    ];
+  }
   return [
-    left.map(p=>p.d?`<span class="del">${esc(p.t)}</span>`:esc(p.t)).join(""),
-    right.map(p=>p.a?`<span class="ins">${esc(p.t)}</span>`:esc(p.t)).join(""),
+    {t:"🎯 Ideia central", txt:`Vídeo curto sobre: ${t}. UMA ideia só, direto ao ponto.`},
+    {t:"🪝 Gancho (0–2s)", txt:`Comece já com a parte mais forte: a pergunta, o resultado ou a frase que chama atenção. Nada de "oi gente".`},
+    {t:"⚡ Desenvolvimento", txt:`Em poucos segundos, entregue o conteúdo de "${t}": 2 ou 3 frases curtas, uma ideia por frase.`},
+    {t:"🎬 O que mostrar na tela", txt:`Anote o que aparece: você falando, texto na tela, um exemplo rápido. Corte a cada frase.`},
+    {t:"📣 Pedido final", txt:`Termine com um pedido curto: "salva", "segue" ou "comenta". Deixe gancho pra reassistir.`},
   ];
 }
-let diffOn=false;
-function toggleDiff(){
-  diffOn=!diffOn;
-  document.getElementById("rtEditor").style.display = diffOn?"none":"grid";
-  document.getElementById("rtDiff").style.display = diffOn?"block":"none";
-  document.getElementById("cmpBtn").textContent = diffOn?"✎ Voltar a escrever":"⇄ Ver o que mudou";
-  if(diffOn) renderDiff();
+function montarRoteiro(tema, fmt, comIA){
+  const secoes = secoesRoteiro(tema, fmt);
+  return { id:ROTEIRO_ID++, tema, fmt, comIA, secoes: comIA ? secoes : secoes.map(s=>({t:s.t, txt:""})) };
 }
-function renderDiff(){
-  const blocos=["Gancho","Contexto","Desenvolvimento","Climax","CTA"];
-  document.getElementById("rtDiff").innerHTML = `<div class="diff">
-    <div class="diff-h"><div>Antes</div><div>Agora</div></div>
-    ${blocos.map(b=>{ const [l,r]=diffWords(V2[b],V3[b]); return `<div class="diff-b"><div class="lab">${BLOCO_NOME[b]}</div><div class="diff-cols"><div>${l}</div><div>${r}</div></div></div>`;}).join("")}
-  </div>`;
+function gerarRoteiroIA(){
+  const tema=(document.getElementById("rtTema").value||"").trim();
+  if(!tema){ toast("Escreva sobre o que é o vídeo"); return; }
+  ROTEIROS.unshift(montarRoteiro(tema, document.getElementById("rtFmt").value, true));
+  document.getElementById("rtTema").value="";
+  renderRoteiros(); renderThumbs(); toast("Roteiro criado pela IA ✨");
 }
+function criarRoteiroVazio(){
+  const tema=(document.getElementById("rtTema").value||"").trim();
+  if(!tema){ toast("Escreva sobre o que é o vídeo"); return; }
+  ROTEIROS.unshift(montarRoteiro(tema, document.getElementById("rtFmt").value, false));
+  document.getElementById("rtTema").value="";
+  renderRoteiros(); renderThumbs(); toast("Roteiro em branco criado ✍️");
+}
+function renderRoteiros(){
+  const el=document.getElementById("roteirosList");
+  if(ROTEIROS.length===0){
+    el.innerHTML=`<div class="card" style="padding:26px;text-align:center;color:var(--muted)">Nenhum roteiro ainda.<br>Escreva o tema lá em cima e toque em <b>✨ Deixar a IA criar</b>. 🙂</div>`;
+    return;
+  }
+  el.innerHTML = ROTEIROS.map(r=>`
+    <div class="card panel">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <b style="font-size:15px">${r.tema}</b>
+          ${fmtChip(r.fmt)}
+          ${r.comIA?`<span class="chip" style="background:var(--primary-soft);color:var(--primary-ink);border-color:transparent">✨ feito pela IA</span>`:""}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost sm" onclick="abrirTeleRoteiro(${r.id})">▶ Ler enquanto grava</button>
+          <button class="btn ghost sm" onclick="apagarRoteiro(${r.id})">🗑</button>
+        </div>
+      </div>
+      ${r.secoes.map((s,si)=>`
+        <div style="margin-bottom:11px">
+          <div class="eyebrow" style="margin-bottom:5px">${s.t}</div>
+          <textarea oninput="updRoteiro(${r.id},${si},this.value)" style="width:100%;border:1px solid var(--border);border-radius:9px;background:var(--surface-2);color:var(--ink);font:inherit;font-size:13.5px;padding:9px;min-height:58px;resize:vertical">${s.txt}</textarea>
+        </div>`).join("")}
+    </div>`).join("");
+}
+function updRoteiro(id,si,val){ const r=ROTEIROS.find(x=>x.id===id); if(r) r.secoes[si].txt=val; }
+function apagarRoteiro(id){ const k=ROTEIROS.findIndex(x=>x.id===id); if(k>=0){ ROTEIROS.splice(k,1); renderRoteiros(); renderThumbs(); toast("Roteiro apagado"); } }
+function abrirTeleRoteiro(id){ const r=ROTEIROS.find(x=>x.id===id); if(!r) return; openTele(r.secoes.map(s=>s.t+"\n"+s.txt).join("\n\n")); }
 
 // ---------- Login ----------
 function entrar(e){ e.preventDefault(); document.getElementById("login").classList.add("off"); toast("Bem-vinda ao CreateFlow ✨"); setTimeout(comoFunciona, 500); }
@@ -873,8 +921,8 @@ function entrar(e){ e.preventDefault(); document.getElementById("login").classLi
 // ---------- Guia "Como funciona" (bem simples) ----------
 const PASSOS = [
   ["💡","1. Ideia","Pensou num vídeo? Anote na tela Ideias. É só o nome!"],
-  ["✍️","2. Escrever","Escreva o que você vai falar, por partes, na tela Roteiro."],
-  ["🖼️","3. Capa","Na tela Capas, copie o textinho e cole numa IA de imagem pra desenhar a capa."],
+  ["✍️","2. Roteiro","Peça pra IA criar o roteiro (o que falar) ou escreva você mesma."],
+  ["🖼️","3. Capa","Na tela Capas, copie o prompt e cole numa IA de imagem pra desenhar a capa."],
   ["🎥","4. Gravar e cortar","Grave o vídeo e tire os pedaços que não precisam."],
   ["📅","5. Marcar o dia","Escolha o dia de postar na tela Calendário."],
   ["🚀","6. No ar!","Postou? Veja como foi na tela Resultados."],
@@ -893,60 +941,18 @@ function comoFunciona(){
   `,"bottom");
 }
 
-// ---------- Roteiro ----------
-// Nome fácil de cada parte do roteiro (a chave k é a mesma usada no "ver o que mudou").
-const BLOCO_NOME = {
-  Gancho:"1. Começo (prende a atenção)",
-  Contexto:"2. A situação",
-  Desenvolvimento:"3. O conteúdo",
-  Climax:"4. A melhor parte",
-  CTA:"5. O pedido final",
-};
-const BLOCOS = [
-  {k:"Gancho", hint:"as primeiras palavras, pra ninguém pular", txt:"Shorts de 7 segundos estão com retenção de 82% — e eu vou te mostrar o porquê."},
-  {k:"Contexto", hint:"conte do que se trata", txt:"Todo mundo achava que vídeo mais longo retinha mais. Os dados do meu canal provam o contrário."},
-  {k:"Desenvolvimento", hint:"a parte principal do vídeo", txt:"Quando o vídeo é curtíssimo, o loop de replay dispara: a pessoa assiste 2, 3 vezes sem perceber, e o algoritmo lê isso como retenção altíssima."},
-  {k:"Climax", hint:"o momento mais legal", txt:"O vídeo de 7s bateu 320 mil views e trouxe 3.400 seguidores — mais que qualquer vídeo longo meu no trimestre."},
-  {k:"CTA", hint:"peça algo (curtir, seguir, salvar)", txt:"Salva esse vídeo pra testar o formato de 7s e me conta o resultado nos comentários."},
-];
-function renderBlocos(){
-  document.getElementById("blocos").innerHTML = BLOCOS.map((b,i)=>`
-    <div class="card bloco">
-      <div class="bh"><b>${BLOCO_NOME[b.k]} <span class="hint">· ${b.hint}</span></b><span id="c${i}"></span></div>
-      <textarea data-i="${i}" oninput="updRt()">${b.txt}</textarea>
-    </div>`).join("");
-  updRt();
-}
-function words(s){ return (s.trim().match(/\S+/g)||[]).length; }
-function updRt(){
-  let total=0;
-  document.querySelectorAll("#blocos textarea").forEach(ta=>{
-    const i=ta.dataset.i, w=words(ta.value); total+=w;
-    const seg=Math.round(w/150*60);
-    document.getElementById("c"+i).textContent = `${ta.value.length} car · ~${seg}s`;
-  });
-  const dur = Math.round(total/150*60);
-  document.getElementById("rtWords").textContent = total+" palavras";
-  document.getElementById("rtDur").textContent = `${Math.floor(dur/60)}m ${String(dur%60).padStart(2,"0")}s`;
-}
-
 // ---------- Calendário ----------
 function renderCal(){
   const cal = document.getElementById("cal");
   const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
-  const posts = {8:["Opiniao"],15:["Bastidores"],22:["Tutorial"],28:["Tutorial"],31:["Opiniao"]};
-  const semPost = new Set([24,25,26,29]);
+  // Zerado: nenhum vídeo marcado ainda. A criadora vai preenchendo.
+  const posts = {};
   let html = dias.map(d=>`<div style="background:var(--surface-2);padding:6px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">${d}</div>`).join("");
-  // outubro 2024 começa numa terça (índice 2)
   for(let b=0;b<2;b++) html += `<div style="background:var(--surface);min-height:74px;opacity:.4"></div>`;
-  for(let d=1;d<=31;d++){
+  for(let d=1;d<=30;d++){
     const p = posts[d];
-    const vazio = semPost.has(d);
     html += `<div style="background:var(--surface);min-height:74px;padding:6px">
-      <div style="display:flex;justify-content:space-between;font-size:11px">
-        <span${d===22?' style="font-weight:800;color:var(--primary-ink)"':''}>${d}</span>
-        ${vazio?'<span style="font-size:8.5px;background:var(--warn-soft);color:var(--warn);padding:0 5px;border-radius:999px">sem post</span>':''}
-      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${d}</span></div>
       ${p?p.map(pi=>`<div style="margin-top:4px;font-size:10px;background:var(--primary-soft);color:var(--primary-ink);border-radius:5px;padding:2px 5px;display:flex;align-items:center;gap:4px"><span class="dot" style="width:6px;height:6px;background:${PILARES[pi]}"></span>publicação</div>`).join(''):''}
     </div>`;
   }
@@ -973,8 +979,18 @@ function renderMetrics(){
   }).join("");
 
   if(VS.length===0){
-    document.getElementById("kpis").innerHTML=`<p style="color:var(--muted);padding:16px 0">Nenhum vídeo nessa plataforma ainda.</p>`;
-    ["rankRet","barPilar","rankComp","rankSeg","videosView","lineChart","segPilar","segVideos"].forEach(id=>document.getElementById(id).innerHTML="");
+    // Zerado: apps ainda não conectados.
+    document.getElementById("kpis").innerHTML=[
+      ["🎬","Vídeos","0"],["👁","Visualizações","0"],["👥","Novos seguidores","0"],["🔁","Compartilhamentos","0"],
+    ].map((k,i)=>{ const y=i%2===1; const tile=y?"background:var(--yellow-soft);color:var(--yellow-ink)":"background:var(--primary-soft);color:var(--primary-ink)";
+      return `<div class="card kpi"><div class="ib" style="font-size:19px;${tile}">${k[0]}</div><div><div class="v tnum">${k[2]}</div><div class="l">${k[1]}</div></div></div>`; }).join("");
+    document.getElementById("rankRet").innerHTML=`<div style="text-align:center;color:var(--muted);padding:20px 6px">
+      <div style="font-size:34px">🔌</div>
+      <b style="display:block;margin-top:6px">Nenhum app conectado ainda</b>
+      <div style="font-size:13px;margin-top:4px">Conecte o YouTube, Instagram e TikTok pra ver aqui os números <b>de verdade</b>, atualizados todo dia.</div>
+      <button class="btn" style="margin-top:12px" onclick="toast('Conexão dos apps: próximo passo 😉')">🔗 Conectar meus apps</button>
+    </div>`;
+    ["barPilar","rankComp","rankSeg","videosView","lineChart","segPilar","segVideos"].forEach(id=>document.getElementById(id).innerHTML="");
     return;
   }
 
@@ -1064,32 +1080,30 @@ function renderLine(VS){
   </div>`;
 }
 
-// ---------- IA (prévia estática) ----------
-const IA = {
-  ganchos: [
-    ["Testei shorts de 7s por 30 dias — o resultado me assustou", "Seu vídeo de 7s teve 82% de retenção, o maior do canal; um gancho de desafio pessoal ancora esse número."],
-    ["Por que o algoritmo AMA vídeos de 7 segundos", "Ganchos com 'por que' + a palavra algoritmo repetem o padrão do seu vídeo de melhor performance."],
-    ["Ninguém te contou isso sobre shorts curtos", "Curiosidade + tom de segredo casa com 'Opinião impopular sobre trends' (79% de retenção)."],
-    ["3.400 seguidores com UM vídeo de 7 segundos", "Prova social com número real do seu próprio vídeo — sem inventar métrica."],
-    ["O formato que trouxe mais seguidores que tudo em 2024", "Superlativo ancorado no dado de seguidores ganhos do vídeo campeão."],
-  ],
-  titulos: [
-    ["Shorts de 7s: o formato de maior retenção do meu canal", "Espelha o título que já performou; retenção como promessa concreta."],
-    ["Por que vídeos curtíssimos retêm 82%", "Número real no título aumenta clique honesto."],
-    ["O experimento de 7 segundos que mudou meu canal", "Narrativa de experimento sustenta a curiosidade sem exagero."],
-  ],
-  cta: ["Salva esse vídeo e testa o formato de 7s no seu próximo post.", "CTA de salvar performou bem nos seus reels de tutorial; alinha ação e formato."],
-};
+// ---------- Robô de ideias (prévia) ----------
 function gerarIA(){
-  const el = document.getElementById("iaOut");
-  el.innerHTML = `
+  const tema=((document.getElementById("temaInput")?.value)||"seu tema").trim()||"seu tema";
+  const ganchos=[
+    [`Testei "${tema}" por 30 dias — o que aconteceu`, "Desafio pessoal desperta curiosidade e promete um resultado."],
+    [`Ninguém te conta ISSO sobre ${tema}`, "Tom de segredo faz a pessoa querer descobrir o resto."],
+    [`3 erros com ${tema} (o 2º é o pior)`, "Lista + curiosidade seguram a atenção até o fim."],
+    [`Por que ${tema} funciona de verdade`, "Promete uma explicação clara e útil."],
+    [`Como eu faria ${tema} começando do zero hoje`, "Ponto de vista pessoal e prático, fácil de assistir."],
+  ];
+  const titulos=[
+    [`${tema}: o jeito simples de começar`, "Promessa clara e sem enrolação."],
+    [`O que eu aprendi sobre ${tema}`, "Tom de história, gera identificação."],
+    [`${tema} explicado em 1 minuto`, "Deixa claro que é rápido de assistir."],
+  ];
+  const cta=["Salva esse vídeo pra não esquecer e me segue pra mais.", "Pedir pra salvar + seguir costuma trazer mais seguidores."];
+  document.getElementById("iaOut").innerHTML = `
     <div class="eyebrow" style="margin:2px 0 8px">5 começos que prendem</div>
-    ${IA.ganchos.map(g=>iaItem(g[0],g[1])).join("")}
+    ${ganchos.map(g=>iaItem(g[0],g[1])).join("")}
     <div class="eyebrow" style="margin:16px 0 8px">3 nomes pro vídeo</div>
-    ${IA.titulos.map(t=>iaItem(t[0],t[1])).join("")}
+    ${titulos.map(t=>iaItem(t[0],t[1])).join("")}
     <div class="eyebrow" style="margin:16px 0 8px">Frase pra pedir no final</div>
-    <div class="card" style="padding:12px"><b style="font-size:13.5px">${IA.cta[0]}</b><div style="font-size:12px;font-style:italic;color:var(--muted);margin-top:4px">↳ ${IA.cta[1]}</div></div>`;
-  toast("Sugestões geradas");
+    <div class="card" style="padding:12px"><b style="font-size:13.5px">${cta[0]}</b><div style="font-size:12px;font-style:italic;color:var(--muted);margin-top:4px">↳ ${cta[1]}</div></div>`;
+  toast("Ideias geradas ✨");
 }
 function iaItem(t,j){
   return `<div class="card" style="padding:11px 13px;margin-bottom:8px;display:flex;justify-content:space-between;gap:12px;align-items:start">
@@ -1098,63 +1112,46 @@ function iaItem(t,j){
 }
 
 // ---------- Capas / thumbnails ----------
-// Ideias visuais + paleta por pilar, pra deixar cada prompt "certinho".
-const THUMB_STYLE = {
-  Bastidores: { paleta:"tons quentes de laranja e dourado, luz de fim de tarde", cena:"a criadora de conteúdo em um cenário real de gravação (câmera, ring light, bastidores)", mood:"acolhedor e espontâneo" },
-  Tutorial:   { paleta:"azul e roxo vibrantes com um destaque em branco", cena:"elementos de passo a passo, setas e ícones simples explicando algo", mood:"claro, organizado e didático" },
-  Opiniao:    { paleta:"vermelho e preto de alto contraste com um toque de amarelo", cena:"a criadora com expressão marcante, olhando para a câmera", mood:"provocativo e chamativo" },
-};
-const PLAT_THUMB = {
-  youtube:   { app:"YouTube",   fmt:"vertical 9:16 (YouTube Shorts)" },
-  instagram: { app:"Instagram", fmt:"vertical 9:16 (Reels do Instagram)" },
-  tiktok:    { app:"TikTok",    fmt:"vertical 9:16 (TikTok)" },
-};
-function thumbBG(pilar){
-  return ({
-    Bastidores:"linear-gradient(160deg,#f59e0b,#b45309)",
-    Tutorial:"linear-gradient(160deg,#6366f1,#4338ca)",
-    Opiniao:"linear-gradient(160deg,#ef4444,#7f1d1d)",
-  })[pilar] || "linear-gradient(160deg,#f5348b,#cf1d6e)";
+// As capas saem dos ROTEIROS prontos. O formato manda no tamanho (16:9 longo / 9:16 curto).
+function thumbBG(app){
+  return ({ youtube:"linear-gradient(160deg,#ff5b5b,#c1121f)", instagram:"linear-gradient(150deg,#f9a825,#bc3081 58%,#4c63d2)", tiktok:"linear-gradient(160deg,#25F4EE,#111 55%,#FE2C55)" })[app] || "linear-gradient(160deg,#f5348b,#cf1d6e)";
 }
-// Frase curta e forte pra estampar na capa (máx ~4 palavras).
 function thumbHeadline(t){
   const stop = new Set(["que","de","do","da","em","os","as","um","uma","por","pra","para","com","meu","minha","eu","é","no","na","e","o","a"]);
   const w = t.replace(/[?!.:]/g,"").split(/\s+/).filter(x=>x && !stop.has(x.toLowerCase()));
   return (w.slice(0,3).join(" ") || t).toUpperCase();
 }
-function thumbPrompt(item){
-  const p = PLAT_THUMB[item.plats?.[0]] || PLAT_THUMB.instagram;
-  const s = THUMB_STYLE[item.pilar] || THUMB_STYLE.Tutorial;
-  const frase = thumbHeadline(item.t);
+function thumbPrompt(r){
+  const f = FORMATOS[r.fmt]; const app = f.app; const frase = thumbHeadline(r.tema);
+  const nomeApp = {youtube:"YouTube",instagram:"Instagram",tiktok:"TikTok"}[app];
   return [
-    `Crie uma thumbnail (capa) de vídeo no formato ${p.fmt}, para o app ${p.app}.`,
-    `Tema do vídeo: "${item.t}".`,
-    `Estilo: ${s.mood}. Use ${s.paleta}.`,
-    `Cena: ${s.cena}.`,
-    `Escreva na imagem, em letras grandes e legíveis, o texto: "${frase}".`,
-    `O texto precisa ser bem grande, com contorno ou sombra para ler fácil no celular. Deixe o rosto/assunto principal em destaque e espaço livre embaixo para o texto.`,
-    `Sem marca d'água, sem logos de outros apps, imagem nítida e chamativa.`,
+    `Crie uma thumbnail (capa) ${f.arTxt}, para o ${nomeApp}.`,
+    `Tema do vídeo: "${r.tema}".`,
+    `Estilo chamativo e colorido, com a pessoa ou o assunto em destaque e boa iluminação.`,
+    `Escreva na imagem, em letras GRANDES e bem legíveis, o texto: "${frase}".`,
+    `O texto precisa ter contorno ou sombra pra ler fácil no celular. Deixe um espaço livre para o texto.`,
+    `Sem marca d'água e sem logos de outros apps. Imagem nítida.`,
   ].join(" ");
 }
 function renderThumbs(){
-  const itens = COLS.flatMap(col => KANBAN[col].map(c=>({ ...c, col })));
   const el = document.getElementById("thumbsList");
-  el.innerHTML = itens.map((c,i)=>{
-    const prompt = thumbPrompt(c);
-    const p = PLAT_THUMB[c.plats?.[0]] || PLAT_THUMB.instagram;
+  if(ROTEIROS.length===0){
+    el.innerHTML = `<div class="card" style="padding:26px;text-align:center;color:var(--muted);grid-column:1/-1">Nenhuma capa ainda.<br>Crie um <b>roteiro</b> primeiro (aba Roteiro) — aí a capa aparece aqui com o prompt pronto. 🖼️</div>`;
+    return;
+  }
+  el.innerHTML = ROTEIROS.map((r,i)=>{
+    const f = FORMATOS[r.fmt]; const app = f.app; const prompt = thumbPrompt(r);
+    const vert = f.ar==="9:16";
     return `<div class="card thumb">
       <div class="thumb-top">
-        <div class="thumb-mock" style="background:${thumbBG(c.pilar)}">
-          ${platIcon(c.plats?.[0]||"instagram","pl")}
-          <div class="tt">${thumbHeadline(c.t)}</div>
+        <div class="thumb-mock" style="background:${thumbBG(app)};${vert?'':'width:150px;height:85px'}">
+          ${platIcon(app,"pl")}
+          <div class="tt">${thumbHeadline(r.tema)}</div>
         </div>
         <div class="thumb-info">
-          <b>${c.t}</b>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
-            <span class="chip"><span class="dot" style="background:${PILARES[c.pilar]}"></span>${c.pilar}</span>
-            <span class="plat-chip">${platIcon(c.plats?.[0]||"instagram")}${p.app}</span>
-          </div>
-          <div style="font-size:11.5px;color:var(--faint)">📍 ${c.col} · capa em pé (9:16)</div>
+          <b>${r.tema}</b>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${fmtChip(r.fmt)}</div>
+          <div style="font-size:11.5px;color:var(--faint)">📐 capa ${f.ar} · ${vert?'em pé':'deitada'}</div>
         </div>
       </div>
       <div class="thumb-prompt" id="tp${i}">${prompt}</div>
@@ -1182,32 +1179,35 @@ function fallbackCopy(txt, done){
 // ---------- Navegação ----------
 const TITLES = {
   pipeline:["Produção","Cada cartão é um vídeo. Arraste conforme for ficando pronto."],
-  ideias:["Ideias","Anote suas ideias de vídeo aqui."],
-  roteiro:["Roteiro","O que você vai falar no vídeo, por partes."],
-  thumbs:["Capas","O textinho pra uma IA desenhar a capa de cada vídeo."],
+  ideias:["Ideias","Suas ideias: as normais e as que já estão prontas pra postar."],
+  roteiro:["Roteiro","Um guia do que falar/fazer. Escreva ou peça pra IA criar."],
+  thumbs:["Capas","O prompt pronto pra uma IA desenhar a capa de cada vídeo."],
   calendario:["Calendário","Os dias dos seus vídeos."],
-  metricas:["Resultados","Como seus vídeos foram indo."],
-  ia:["Robô de ideias","A robô te ajuda com títulos e ganchos."],
+  metricas:["Resultados","Seus números — aparecem quando os apps forem conectados."],
+  ia:["Robô de ideias","A robô te ajuda com começos e nomes de vídeo."],
+  aprender:["Aprender","Vídeos pra você aprender a fazer conteúdo."],
 };
 // Dicas simples (didáticas) por tela
 const TIPS = {
   pipeline:["🎬","Cada cartãozinho é um vídeo. <b>Arraste</b> ele pra direita conforme for ficando pronto: Ideia → Roteiro → Gravar → Editar → Agendado → Publicado."],
-  ideias:["💡","Teve uma ideia de vídeo? Toque em <b>+ Nova ideia</b> e anote. Depois é só mandar pra Produção!"],
-  roteiro:["✍️","Aqui você escreve o que vai falar, <b>por partes</b>. O botão <b>Teleprompter</b> mostra o texto grande pra você ler enquanto grava."],
-  thumbs:["🖼️","A <b>capa</b> é a imagem do vídeo. Copie o textinho e cole numa <b>IA de imagem</b> pra ela desenhar a capa pra você!"],
-  calendario:["📅","Aqui você vê em quais dias vai postar. Os dias sem vídeo aparecem marcados."],
-  metricas:["📊","Veja como seus vídeos foram. Escolha um <b>aplicativo</b> lá em cima pra ver só dele, ou <b>Geral</b> pra ver tudo junto."],
-  ia:["✨","Escreva um <b>tema</b> e a robô te dá ganchos e títulos prontos. Cada um vira uma ideia com um toque!"],
+  ideias:["💡","Guarde suas ideias aqui. As <b>normais</b> ficam numa aba e as <b>prontas pra postar</b> em outra. Cada ideia pode virar um roteiro num toque."],
+  roteiro:["✍️","O roteiro é um <b>guia</b> (não as falas exatas). Escreva o tema e peça pra <b>IA criar</b>, ou escreva você. Dá pra separar Short e Vídeo longo."],
+  thumbs:["🖼️","A <b>capa</b> é a imagem do vídeo. Copie o prompt e cole numa <b>IA de imagem</b>. O tamanho muda: vídeo longo é deitado, Short é em pé."],
+  calendario:["📅","Aqui você vê em quais dias vai postar."],
+  metricas:["📊","Seus números <b>de verdade</b> aparecem aqui quando a gente conectar o YouTube, Instagram e TikTok — e atualizam todo dia."],
+  ia:["✨","Escreva um <b>tema</b> e a robô te dá começos e nomes prontos. Cada um vira uma ideia com um toque!"],
+  aprender:["🎓","Toque num assunto e o <b>YouTube</b> abre com vídeos pra você aprender a criar conteúdo."],
 };
 // Passo a passo curtinho (1, 2, 3) que aparece dentro de cada aba
 const STEPS = {
   pipeline: ["Cada cartãozinho é um vídeo 🎬","Segure e arraste pra coluna do lado ➡️","Toque no cartão pra ver os detalhes"],
-  ideias: ["Toque em <b>+ Nova ideia</b>","Escreva só o nome do vídeo","Depois toque em <b>→ Mandar pra produção</b>"],
-  roteiro: ["Escreva o que vai falar, por partes","Toque em <b>▶ Ler enquanto grava</b>","Toque em <b>Salvar</b> quando terminar"],
+  ideias: ["Toque em <b>+ Nova ideia</b>","Escolha o formato (Short ou Vídeo longo)","Toque em <b>✨ Criar roteiro</b> ou mande pra produção"],
+  roteiro: ["Escreva o tema do vídeo","Toque em <b>✨ Deixar a IA criar</b>","Ajuste o texto e toque em <b>▶ Ler enquanto grava</b>"],
   thumbs: ["Ache o vídeo que você quer","Toque em <b>📋 Copiar prompt da capa</b>","Cole numa IA de imagem e pronto! ✨"],
-  calendario: ["Bolinha no dia = tem vídeo 🎬","<b>“sem post”</b> = dia sem nada","Tente não deixar muitos dias vazios"],
-  metricas: ["Escolha um app lá em cima (ou <b>Geral</b>)","Número maior = o vídeo foi melhor","Veja os 5 que as pessoas mais assistiram"],
+  calendario: ["Bolinha no dia = tem vídeo 🎬","Toque num dia pra planejar","Tente não deixar muitos dias vazios"],
+  metricas: ["Conecte seus apps 🔌","Os números reais aparecem aqui","Atualizam sozinhos todo dia"],
   ia: ["Escreva um <b>tema</b>","Toque em <b>✦ Pedir ideias</b>","Toque em <b>+ Ideia</b> pra guardar a que gostou"],
+  aprender: ["Escolha um assunto","Toque em <b>▶ Ver no YouTube</b>","Assista e aprenda! 🎓"],
 };
 function setHelp(scr){
   const t = TIPS[scr];
@@ -1226,7 +1226,7 @@ function go(scr){
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
 
 // menu do celular (rolável, com todas as telas)
-const MICON = {pipeline:"🎬",ideias:"💡",roteiro:"✍️",thumbs:"🖼️",calendario:"📅",metricas:"📊",ia:"✨"};
+const MICON = {pipeline:"🎬",ideias:"💡",roteiro:"✍️",thumbs:"🖼️",calendario:"📅",metricas:"📊",ia:"✨",aprender:"🎓"};
 document.getElementById("mnav").innerHTML = Object.keys(TITLES).map(k=>
   `<button data-scr="${k}" ${k==="pipeline"?"class=on":""}><span style="font-size:18px">${MICON[k]}</span><span>${TITLES[k][0]}</span></button>`
 ).join("");
@@ -1241,8 +1241,8 @@ document.getElementById("themeBtn").addEventListener("click", ()=>{
 
 // ---------- Teleprompter ----------
 let running=false, raf=null, last=0, spd=40, fnt=42;
-function openTele(){
-  document.getElementById("teleText").textContent = BLOCOS.map(b=>b.txt).join("\n\n");
+function openTele(texto){
+  document.getElementById("teleText").textContent = texto || "";
   document.getElementById("tele").classList.add("on");
   document.getElementById("teleScroll").scrollTop=0;
 }
@@ -1261,6 +1261,34 @@ function teleFont(d){ fnt=Math.max(24,Math.min(84,fnt+d)); document.getElementBy
 let toastT=null;
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
 
+// ---------- Aprender (vídeos reais do YouTube) ----------
+// Cada card abre o YouTube já buscando o assunto — sempre com vídeos atualizados.
+const LEARN = [
+  ["🚀","Começar um canal do zero","O primeiro passo pra quem tá começando agora.","como começar um canal no youtube do zero"],
+  ["💡","Nunca ficar sem ideias","Jeitos de ter ideias de vídeo toda semana.","como ter ideias de conteudo para videos"],
+  ["🪝","Prender nos primeiros segundos","Como fazer um bom gancho pra ninguém pular.","como fazer gancho retenção nos primeiros segundos do video"],
+  ["📱","Gravar bem com o celular","Luz, áudio e enquadramento sem gastar muito.","como gravar video com o celular luz e audio"],
+  ["✂️","Editar Reels e Shorts","Edição rápida pra vídeo curto.","como editar reels e shorts para iniciantes"],
+  ["🖼️","Capas que dão vontade de clicar","Thumbnails que chamam atenção.","como fazer thumbnail que da vontade de clicar"],
+  ["📈","Crescer no Instagram e TikTok","Estratégias pra alcançar mais gente.","como crescer no instagram e tiktok como criador de conteudo"],
+  ["🤖","Entender o algoritmo","Como o app decide mostrar o seu vídeo.","como funciona o algoritmo do youtube e a retenção"],
+  ["🎬","Aparecer bem na câmera","Perder a vergonha e falar com naturalidade.","como perder a vergonha da camera e falar bem em video"],
+];
+function renderLearn(){
+  document.getElementById("learnList").innerHTML = LEARN.map(([emoji,titulo,desc,q])=>{
+    const url = "https://www.youtube.com/results?search_query="+encodeURIComponent(q);
+    return `<a class="card learn-card" href="${url}" target="_blank" rel="noopener">
+      <div class="learn-thumb"><span style="font-size:30px">${emoji}</span><span class="learn-play">${platIcon("youtube")}</span></div>
+      <div style="padding:12px 13px">
+        <b style="font-size:14px;line-height:1.3">${titulo}</b>
+        <div style="font-size:12.5px;color:var(--muted);margin-top:4px">${desc}</div>
+        <div style="margin-top:10px;font-size:12.5px;font-weight:700;color:var(--primary-ink)">▶ Ver no YouTube</div>
+      </div>
+    </a>`;
+  }).join("");
+}
+
 // ---------- Init ----------
-renderBoard(); renderIdeas(); renderBlocos(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); setHelp("pipeline");
+document.getElementById("rtFmt").innerHTML = FMT_OPTS;
+renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); setHelp("pipeline");
 </script>
