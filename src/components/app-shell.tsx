@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 
 type Item = { href: string; label: string; icon: React.ElementType; admin?: boolean };
 
@@ -44,9 +45,17 @@ export function AppShell({
     <div className="min-h-screen md:flex">
       {/* Sidebar desktop */}
       <aside className="hidden w-56 shrink-0 flex-col border-r bg-card p-3 md:flex">
-        <div className="px-2 py-3">
-          <div className="text-lg font-bold">CreateFlow</div>
-          <div className="text-xs text-muted-foreground">{nome} · {papel}</div>
+        <div className="flex items-center gap-2.5 px-2 py-3">
+          <span
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px]"
+            style={{ background: "linear-gradient(135deg, hsl(var(--primary)/0.14), rgba(255,194,31,.18))" }}
+          >
+            <Logo size={28} />
+          </span>
+          <div className="min-w-0">
+            <div className="text-lg font-bold leading-none">CreateFlow</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">{nome} · {papel}</div>
+          </div>
         </div>
         <nav className="mt-2 flex flex-1 flex-col gap-1">
           {items.map((it) => {
