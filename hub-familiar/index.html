@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#0b0b0b" />
-<title>NEXO — Hub da Família</title>
-<link rel="icon" type="image/png" href="assets/nexo-emblem.png" />
-<link rel="apple-touch-icon" href="assets/icon-192.png" />
+<meta name="theme-color" content="#0f766e" />
+<title>Hub da Família</title>
+<link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
 <link rel="manifest" href="manifest.webmanifest" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
-<meta name="apple-mobile-web-app-title" content="NEXO" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Hub da Família" />
 <style>
   :root{
     color-scheme: light;
@@ -42,12 +42,13 @@
   .spacer{flex:1}
 
   /* splash */
-  #splash{position:fixed;inset:0;z-index:100;background:#000;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;cursor:pointer;
+  #splash{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 120% at 50% 0%, #12564f 0%, #0a0f0e 72%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;cursor:pointer;
     transition:opacity .5s ease, visibility .5s ease}
   #splash.gone{opacity:0;visibility:hidden;pointer-events:none}
-  #splash img{width:min(74vw,340px);height:auto;filter:drop-shadow(0 10px 40px rgba(45,212,191,.18));
+  #splash img{width:min(42vw,150px);height:auto;border-radius:34px;box-shadow:0 22px 60px rgba(45,212,191,.28);
     animation:pop .8s cubic-bezier(.2,.8,.2,1) both}
+  #splash .stitle{color:#eafffb;font-size:23px;font-weight:800;letter-spacing:-.02em;animation:fade 1.1s ease .25s both}
   #splash .enter{color:#7de3d0;font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
     display:flex;align-items:center;gap:9px;opacity:.9;animation:fade 1.4s ease .5s both}
   #splash .enter .d{width:7px;height:7px;border-radius:50%;background:#2dd4bf;box-shadow:0 0 12px #2dd4bf;animation:blink 1.3s infinite}
@@ -65,8 +66,8 @@
 
   /* ===== login / seleção de perfil ===== */
   .lock{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 18px;text-align:center}
-  .lock .logo{width:64px;height:64px;border-radius:18px;overflow:hidden;background:#000;box-shadow:var(--shadow);border:1px solid var(--line);margin-bottom:14px}
-  .lock .logo img{width:100%;height:100%;object-fit:cover}
+  .lock .logo{width:66px;height:66px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(135deg,#2dd4bf,#0f766e);box-shadow:0 10px 26px rgba(15,118,110,.32);margin-bottom:14px}
+  .lock .logo svg{width:60%;height:60%}
   .lock h1{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
   .lock .fam{margin:2px 0 4px;color:var(--brand);font-weight:700}
   .lock p.sub{margin:0 0 26px;color:var(--muted);font-size:13.5px}
@@ -95,8 +96,8 @@
   /* ===== app shell ===== */
   header.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
   .brand{display:flex;align-items:center;gap:12px;min-width:0}
-  .brand .mark{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:#000;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--line);flex:none}
-  .brand .mark img{width:100%;height:100%;object-fit:cover;display:block}
+  .brand .mark{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#2dd4bf,#0f766e);box-shadow:0 6px 16px rgba(15,118,110,.3);flex:none}
+  .brand .mark svg{width:62%;height:62%}
   .brand h1{font-size:19px;margin:0;font-weight:780;letter-spacing:-.02em;white-space:nowrap}
   .brand p{margin:0;font-size:12.5px;color:var(--muted)}
   .me{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 10px;box-shadow:var(--shadow);cursor:pointer}
@@ -209,7 +210,8 @@
 </head>
 <body>
 <div id="splash">
-  <img src="assets/nexo-logo.png" alt="NEXO — Hub da Família" />
+  <img src="assets/icon.svg" alt="Hub da Família" />
+  <div class="stitle">Hub da Família</div>
   <div class="enter"><span class="d"></span>Toque para entrar</div>
 </div>
 
@@ -228,7 +230,7 @@
    sincronizar entre celulares, basta trocar load()/save() por chamadas
    de API — o resto do app (telas, listas, contas) não muda.
    ===================================================================== */
-  const KEY = "nexo_hub_familiar_v1";
+  const KEY = "hub_familia_v1";
   const Store = {
     load(){
       try{ const raw = localStorage.getItem(KEY); if(raw) return JSON.parse(raw); }catch(e){}
@@ -268,6 +270,7 @@
     return fmtShort(iso.slice(0,10));
   }
 
+  const GLYPH = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11 12 4l8 7"/><path d="M6 10v9h12v-9"/><path d="M12 12.4c-.8-1-2.5-.5-2.5.8 0 1.2 1.7 2.2 2.5 2.9.8-.7 2.5-1.7 2.5-2.9 0-1.3-1.7-1.8-2.5-.8Z" fill="#fff" stroke="none"/></svg>';
   const COLORS = ["#0f766e","#e0592b","#7c3aed","#2563eb","#db2777","#ca8a04","#0891b2","#16a34a","#dc2626","#4f46e5"];
   const EMOJIS = ["😀","😎","🧒","👦","👧","👩","👨","👵","👴","🐱","🐶","⚽","🎸","🌸","🚀","🦄","🐢","🦊","🍀","⭐"];
 
@@ -326,14 +329,14 @@
     onbColor = COLORS[0]; onbEmoji = EMOJIS[3];
     $("root").innerHTML = `
       <div class="lock">
-        <div class="logo"><img src="assets/nexo-emblem.png" alt="NEXO"/></div>
+        <div class="logo">${GLYPH}</div>
         <h1>Hub da Família</h1>
         <p class="sub">Vamos começar criando a sua família e o seu perfil.</p>
         <div class="modal" style="box-shadow:var(--shadow)">
           <div class="stack">
             <div class="fld">
               <label>Nome da família</label>
-              <input id="ob-fam" class="add" type="text" placeholder="Ex.: Família Suprir" style="width:100%"/>
+              <input id="ob-fam" class="add" type="text" value="Família Rodrigues" placeholder="Ex.: Família Rodrigues" style="width:100%"/>
             </div>
             <div class="fld">
               <label>Seu nome</label>
@@ -372,7 +375,7 @@
   function renderLock(){
     $("root").innerHTML = `
       <div class="lock">
-        <div class="logo"><img src="assets/nexo-emblem.png" alt="NEXO"/></div>
+        <div class="logo">${GLYPH}</div>
         <h1>Quem está aí?</h1>
         <div class="fam">${esc(S.family)}</div>
         <p class="sub">Escolha seu perfil pra entrar.</p>
@@ -389,7 +392,7 @@
             <span class="rl">adicionar</span>
           </button>
         </div>
-        <div class="foot">NEXO — Hub da Família · dados guardados neste aparelho</div>
+        <div class="foot">Hub da Família · dados guardados neste aparelho</div>
       </div>`;
     $("root").querySelectorAll(".person[data-id]").forEach(b=>b.addEventListener("click",()=>{
       const m=member(b.dataset.id);
@@ -451,10 +454,10 @@
       <div class="wrap">
         <header class="top">
           <div class="brand">
-            <div class="mark"><img src="assets/nexo-emblem.png" alt="NEXO"/></div>
+            <div class="mark">${GLYPH}</div>
             <div>
               <h1>${esc(S.family)}</h1>
-              <p>NEXO · Hub da Família</p>
+              <p>Hub da Família</p>
             </div>
           </div>
           <div class="spacer"></div>
@@ -476,7 +479,7 @@
 
         <div id="view"></div>
 
-        <footer>NEXO — Hub da Família · ${esc(S.family)} · dados neste aparelho</footer>
+        <footer>Hub da Família · ${esc(S.family)} · dados neste aparelho</footer>
       </div>`;
 
     $("meBtn").addEventListener("click",()=>{ sessionMemberId=null; render(); });

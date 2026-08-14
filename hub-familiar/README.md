@@ -1,12 +1,11 @@
-# NEXO — Hub da Família
+# Hub da Família
 
 Um **hub** para toda a família, com as informações do dia num só lugar. Cada
 pessoa tem o **seu perfil (conta)** e entra para ver — e cuidar — das coisas da
 casa. Feito para abrir no celular (dá pra instalar como app pela tela de início).
 
-> Faz parte da família de apps **NEXO** deste repositório, no mesmo estilo do
-> [Finanças de Casa](../financas-casa/). É um app estático (um só `index.html`),
-> sem instalar nada.
+> App estático (um só `index.html`, sem instalar nada), no mesmo estilo do
+> [Finanças de Casa](../financas-casa/) deste repositório.
 
 ## O que tem
 
