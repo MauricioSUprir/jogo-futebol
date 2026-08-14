@@ -219,6 +219,21 @@
   svg .grid-line { stroke: var(--border); stroke-width: 1; }
   svg .axis { fill: var(--faint); font-size: 10px; }
 
+  /* ---- Capas / thumbnails ---- */
+  .thumb { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .thumb-top { display: flex; gap: 12px; padding: 13px 14px; }
+  .thumb-mock { width: 76px; height: 135px; flex: none; border-radius: 12px; position: relative; overflow: hidden; color: #fff; display: flex; flex-direction: column; justify-content: flex-end; padding: 9px; box-shadow: inset 0 -60px 40px -30px rgba(0,0,0,.55); }
+  .thumb-mock .pl { position: absolute; top: 7px; left: 7px; width: 18px; height: 18px; }
+  .thumb-mock .tt { font-size: 11px; font-weight: 800; line-height: 1.15; letter-spacing: -.02em; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
+  .thumb-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; }
+  .thumb-info b { font-size: 13.5px; line-height: 1.3; }
+  .thumb-prompt { margin: 0 14px 12px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font-size: 12px; line-height: 1.5; color: var(--muted); max-height: 118px; overflow-y: auto; white-space: pre-wrap; }
+  .thumb-foot { display: flex; gap: 8px; padding: 0 14px 14px; }
+
+  /* ---- Barra de ajuda (didática) ---- */
+  .helpbar { display: flex; gap: 11px; align-items: center; margin-bottom: 14px; padding: 12px 15px; border-radius: 14px; font-size: 14.5px; line-height: 1.4; background: linear-gradient(135deg, var(--primary-soft), var(--yellow-soft)); color: var(--ink); border: 1px solid var(--border); }
+  .helpbar .big { font-size: 24px; flex: none; line-height: 1; }
+
   /* ---- Plataformas / dashboard ---- */
   .pswitch { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
   .pswitch button { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--muted); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: filter .12s; box-shadow: var(--shadow); }
@@ -318,8 +333,10 @@
     .mnav {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
       background: var(--surface); border-top: 1px solid var(--border);
+      overflow-x: auto; scrollbar-width: none;
     }
-    .mnav button { flex: 1; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 10px; padding: 8px 0; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+    .mnav::-webkit-scrollbar { display: none; }
+    .mnav button { flex: 0 0 auto; min-width: 62px; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 10px; padding: 8px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
     .mnav button.on { color: var(--primary-ink); }
     .mnav .ic { width: 20px; height: 20px; }
   }
@@ -351,11 +368,15 @@
       </button>
       <button data-scr="pipeline" class="on">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="6" height="18" rx="1"/><rect x="10" y="3" width="6" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
-        Pipeline
+        Produção
       </button>
       <button data-scr="roteiro">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
         Roteiro
+      </button>
+      <button data-scr="thumbs">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M5 17l4-4 3 3 4-4 3 3"/></svg>
+        Capas
       </button>
       <button data-scr="calendario">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
@@ -363,11 +384,11 @@
       </button>
       <button data-scr="metricas">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-        Métricas <span class="lock">admin</span>
+        Resultados
       </button>
       <button data-scr="ia">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4zM19 15l.9 2.1 2.1.9-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
-        Sugestões IA <span class="lock">admin</span>
+        Robô de ideias
       </button>
     </nav>
     <div class="side-foot">
@@ -382,8 +403,8 @@
   <div class="main">
     <header class="topbar">
       <div>
-        <h1 id="pgTitle">Pipeline de produção</h1>
-        <p id="pgDesc">8 conteúdos · arraste os cards entre as colunas</p>
+        <h1 id="pgTitle">Produção</h1>
+        <p id="pgDesc">Cada cartão é um vídeo. Arraste conforme for ficando pronto.</p>
       </div>
       <button class="btn ghost sm" id="themeBtn" title="Alternar tema">
         <svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v2M12 19v2M5 12H3M21 12h-2M6 6L4.5 4.5M19.5 19.5 18 18M6 18l-1.5 1.5M19.5 4.5 18 6"/><circle cx="12" cy="12" r="4"/></svg>
@@ -392,6 +413,7 @@
     </header>
 
     <div class="content">
+      <div id="helpbar" class="helpbar"></div>
       <!-- PIPELINE -->
       <section class="screen on" id="scr-pipeline">
         <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
@@ -479,6 +501,11 @@
           <h3>Evolução mês a mês</h3>
           <div id="lineChart"></div>
         </div>
+      </section>
+
+      <!-- THUMBNAILS -->
+      <section class="screen" id="scr-thumbs">
+        <div id="thumbsList" class="grid"></div>
       </section>
 
       <!-- IA -->
@@ -592,8 +619,8 @@ const fmtLabel = f => ({short:"Short", reel:"Reel", video_longo:"Vídeo longo"}[
 // Ícones "certinhos" das plataformas (marcas reconhecíveis, em SVG).
 function platIcon(p, cls){
   const c = cls || "plat-ic";
-  if(p==="youtube") return `<svg class="${c}" viewBox="0 0 24 24"><rect x="1" y="4.5" width="22" height="15" rx="4.5" fill="#FF0000"/><path d="M10 8.6 L16 12 L10 15.4 Z" fill="#fff"/></svg>`;
-  if(p==="instagram") return `<svg class="${c}" viewBox="0 0 24 24"><defs><radialGradient id="ig" cx="30%" cy="107%" r="130%"><stop offset="0" stop-color="#ffd776"/><stop offset=".25" stop-color="#f3a145"/><stop offset=".5" stop-color="#ef4e56"/><stop offset=".75" stop-color="#d62a90"/><stop offset="1" stop-color="#8a3ab9"/></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig)"/><circle cx="12" cy="12" r="4.3" fill="none" stroke="#fff" stroke-width="1.9"/><circle cx="17.2" cy="6.9" r="1.25" fill="#fff"/></svg>`;
+  if(p==="youtube") return `<svg class="${c}" viewBox="0 0 24 24"><rect x="1.5" y="5" width="21" height="14" rx="4.6" fill="#FF0000"/><path d="M10 8.7 L15.8 12 L10 15.3 Z" fill="#fff"/></svg>`;
+  if(p==="instagram") return `<svg class="${c}" viewBox="0 0 24 24"><defs><radialGradient id="ig" cx="0.3" cy="1.02" r="1.1"><stop offset="0" stop-color="#fed576"/><stop offset=".26" stop-color="#f47133"/><stop offset=".61" stop-color="#bc3081"/><stop offset="1" stop-color="#4c63d2"/></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig)"/><rect x="6.3" y="6.3" width="11.4" height="11.4" rx="3.4" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.05" fill="none" stroke="#fff" stroke-width="1.7"/><circle cx="16.4" cy="7.6" r="1.15" fill="#fff"/></svg>`;
   // tiktok — nota com duotone ciano/rosa em fundo escuro
   return `<svg class="${c}" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#010101"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#25F4EE" transform="translate(1.1,.4)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#FE2C55" transform="translate(-.3,-.3)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#fff"/></svg>`;
 }
@@ -1008,29 +1035,127 @@ function iaItem(t,j){
     <button class="btn ghost sm" onclick="toast('Virou card de ideia ✓')">+ Ideia</button></div>`;
 }
 
+// ---------- Capas / thumbnails ----------
+// Ideias visuais + paleta por pilar, pra deixar cada prompt "certinho".
+const THUMB_STYLE = {
+  Bastidores: { paleta:"tons quentes de laranja e dourado, luz de fim de tarde", cena:"a criadora de conteúdo em um cenário real de gravação (câmera, ring light, bastidores)", mood:"acolhedor e espontâneo" },
+  Tutorial:   { paleta:"azul e roxo vibrantes com um destaque em branco", cena:"elementos de passo a passo, setas e ícones simples explicando algo", mood:"claro, organizado e didático" },
+  Opiniao:    { paleta:"vermelho e preto de alto contraste com um toque de amarelo", cena:"a criadora com expressão marcante, olhando para a câmera", mood:"provocativo e chamativo" },
+};
+const PLAT_THUMB = {
+  youtube:   { app:"YouTube",   fmt:"vertical 9:16 (YouTube Shorts)" },
+  instagram: { app:"Instagram", fmt:"vertical 9:16 (Reels do Instagram)" },
+  tiktok:    { app:"TikTok",    fmt:"vertical 9:16 (TikTok)" },
+};
+function thumbBG(pilar){
+  return ({
+    Bastidores:"linear-gradient(160deg,#f59e0b,#b45309)",
+    Tutorial:"linear-gradient(160deg,#6366f1,#4338ca)",
+    Opiniao:"linear-gradient(160deg,#ef4444,#7f1d1d)",
+  })[pilar] || "linear-gradient(160deg,#f5348b,#cf1d6e)";
+}
+// Frase curta e forte pra estampar na capa (máx ~4 palavras).
+function thumbHeadline(t){
+  const stop = new Set(["que","de","do","da","em","os","as","um","uma","por","pra","para","com","meu","minha","eu","é","no","na","e","o","a"]);
+  const w = t.replace(/[?!.:]/g,"").split(/\s+/).filter(x=>x && !stop.has(x.toLowerCase()));
+  return (w.slice(0,3).join(" ") || t).toUpperCase();
+}
+function thumbPrompt(item){
+  const p = PLAT_THUMB[item.plats?.[0]] || PLAT_THUMB.instagram;
+  const s = THUMB_STYLE[item.pilar] || THUMB_STYLE.Tutorial;
+  const frase = thumbHeadline(item.t);
+  return [
+    `Crie uma thumbnail (capa) de vídeo no formato ${p.fmt}, para o app ${p.app}.`,
+    `Tema do vídeo: "${item.t}".`,
+    `Estilo: ${s.mood}. Use ${s.paleta}.`,
+    `Cena: ${s.cena}.`,
+    `Escreva na imagem, em letras grandes e legíveis, o texto: "${frase}".`,
+    `O texto precisa ser bem grande, com contorno ou sombra para ler fácil no celular. Deixe o rosto/assunto principal em destaque e espaço livre embaixo para o texto.`,
+    `Sem marca d'água, sem logos de outros apps, imagem nítida e chamativa.`,
+  ].join(" ");
+}
+function renderThumbs(){
+  const itens = COLS.flatMap(col => KANBAN[col].map(c=>({ ...c, col })));
+  const el = document.getElementById("thumbsList");
+  el.innerHTML = itens.map((c,i)=>{
+    const prompt = thumbPrompt(c);
+    const p = PLAT_THUMB[c.plats?.[0]] || PLAT_THUMB.instagram;
+    return `<div class="card thumb">
+      <div class="thumb-top">
+        <div class="thumb-mock" style="background:${thumbBG(c.pilar)}">
+          ${platIcon(c.plats?.[0]||"instagram","pl")}
+          <div class="tt">${thumbHeadline(c.t)}</div>
+        </div>
+        <div class="thumb-info">
+          <b>${c.t}</b>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+            <span class="chip"><span class="dot" style="background:${PILARES[c.pilar]}"></span>${c.pilar}</span>
+            <span class="plat-chip">${platIcon(c.plats?.[0]||"instagram")}${p.app}</span>
+          </div>
+          <div style="font-size:11.5px;color:var(--faint)">📍 ${c.col} · capa em pé (9:16)</div>
+        </div>
+      </div>
+      <div class="thumb-prompt" id="tp${i}">${prompt}</div>
+      <div class="thumb-foot">
+        <button class="btn sm" style="flex:1;justify-content:center" onclick="copiarThumb(${i}, this)">📋 Copiar prompt da capa</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+function copiarThumb(i, btn){
+  const txt = document.getElementById("tp"+i).textContent;
+  const done = ()=>{ const o=btn.innerHTML; btn.innerHTML="✓ Copiado!"; toast("Prompt da capa copiado ✓"); setTimeout(()=>btn.innerHTML=o, 1500); };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt, done));
+  } else { fallbackCopy(txt, done); }
+}
+function fallbackCopy(txt, done){
+  const ta=document.createElement("textarea"); ta.value=txt;
+  ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta);
+  ta.focus(); ta.select();
+  try{ document.execCommand("copy"); done(); }catch(e){ toast("Copie manualmente o texto"); }
+  document.body.removeChild(ta);
+}
+
 // ---------- Navegação ----------
 const TITLES = {
-  pipeline:["Pipeline de produção","8 conteúdos · arraste os cards entre as colunas"],
-  ideias:["Banco de ideias","3 ideias · captura rápida no topo"],
-  roteiro:["Editor de roteiro","Blocos, duração, versões e teleprompter"],
-  calendario:["Calendário editorial","Datas previstas e realizadas"],
-  metricas:["Dashboard de performance","8 vídeos com métricas"],
-  ia:["Sugestões de roteiro (IA)","Baseadas nos seus melhores vídeos + o tema"],
+  pipeline:["Produção","Cada cartão é um vídeo. Arraste conforme for ficando pronto."],
+  ideias:["Ideias","Anote suas ideias de vídeo aqui."],
+  roteiro:["Roteiro","O que você vai falar no vídeo, por partes."],
+  thumbs:["Capas","O textinho pra uma IA desenhar a capa de cada vídeo."],
+  calendario:["Calendário","Os dias dos seus vídeos."],
+  metricas:["Resultados","Como seus vídeos foram indo."],
+  ia:["Robô de ideias","A robô te ajuda com títulos e ganchos."],
 };
+// Dicas simples (didáticas) por tela
+const TIPS = {
+  pipeline:["🎬","Cada cartãozinho é um vídeo. <b>Arraste</b> ele pra direita conforme for ficando pronto: Ideia → Roteiro → Gravar → Editar → Agendado → Publicado."],
+  ideias:["💡","Teve uma ideia de vídeo? Toque em <b>+ Nova ideia</b> e anote. Depois é só mandar pra Produção!"],
+  roteiro:["✍️","Aqui você escreve o que vai falar, <b>por partes</b>. O botão <b>Teleprompter</b> mostra o texto grande pra você ler enquanto grava."],
+  thumbs:["🖼️","A <b>capa</b> é a imagem do vídeo. Copie o textinho e cole numa <b>IA de imagem</b> pra ela desenhar a capa pra você!"],
+  calendario:["📅","Aqui você vê em quais dias vai postar. Os dias sem vídeo aparecem marcados."],
+  metricas:["📊","Veja como seus vídeos foram. Escolha um <b>aplicativo</b> lá em cima pra ver só dele, ou <b>Geral</b> pra ver tudo junto."],
+  ia:["✨","Escreva um <b>tema</b> e a robô te dá ganchos e títulos prontos. Cada um vira uma ideia com um toque!"],
+};
+function setHelp(scr){
+  const t = TIPS[scr];
+  document.getElementById("helpbar").innerHTML = t ? `<span class="big">${t[0]}</span><span>${t[1]}</span>` : "";
+}
 function go(scr){
   document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on", s.id==="scr-"+scr));
   document.querySelectorAll("#nav button, #mnav button").forEach(b=>b.classList.toggle("on", b.dataset.scr===scr));
   document.getElementById("pgTitle").textContent = TITLES[scr][0];
   document.getElementById("pgDesc").textContent = TITLES[scr][1];
+  setHelp(scr);
   window.scrollTo(0,0);
 }
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
 
-// mobile nav
-document.getElementById("mnav").innerHTML = Object.keys(TITLES).slice(0,5).map(k=>{
-  const ic = {pipeline:"▦",ideias:"◔",roteiro:"▤",calendario:"▣",metricas:"▨"}[k];
-  return `<button data-scr="${k}" ${k==="pipeline"?"class=on":""}>${ic}<span>${TITLES[k][0].split(" ")[0]}</span></button>`;
-}).join("");
+// menu do celular (rolável, com todas as telas)
+const MICON = {pipeline:"🎬",ideias:"💡",roteiro:"✍️",thumbs:"🖼️",calendario:"📅",metricas:"📊",ia:"✨"};
+document.getElementById("mnav").innerHTML = Object.keys(TITLES).map(k=>
+  `<button data-scr="${k}" ${k==="pipeline"?"class=on":""}><span style="font-size:18px">${MICON[k]}</span><span>${TITLES[k][0]}</span></button>`
+).join("");
 document.getElementById("mnav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
 
 // ---------- Tema ----------
@@ -1063,5 +1188,5 @@ let toastT=null;
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"),1800); }
 
 // ---------- Init ----------
-renderBoard(); renderIdeas(); renderBlocos(); renderCal(); renderMetrics(); gerarIA();
+renderBoard(); renderIdeas(); renderBlocos(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); setHelp("pipeline");
 </script>
