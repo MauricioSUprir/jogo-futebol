@@ -1060,7 +1060,7 @@ function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v6";
+const YT_APP_VER = "v7";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null;
@@ -1070,22 +1070,33 @@ function renderYtBar(){
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
   } else if(ytErro){
     const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
-    const noChannel=/canal não encontrado|no channel|channelNotFound|youtubeSignupRequired/i.test(ytErro);
-    const scopeErr=/scope_faltando|insufficient|insufficientPermissions|not properly authorized|Access forbidden|properly authorized/i.test(ytErro);
-    const net=/failed to fetch|networkerror|load failed|typeerror/i.test(ytErro);
     const apiOff=/not been used|SERVICE_DISABLED|has not been enabled|accessNotConfigured|it is disabled/i.test(ytErro);
+    const noChannel=/canal não encontrado|no channel|channelNotFound|youtubeSignupRequired/i.test(ytErro);
+    const scopeErr=/scope_faltando|insufficient/i.test(ytErro);
+    const net=/failed to fetch|networkerror|load failed|typeerror/i.test(ytErro);
+    const forbidden=!apiOff && !scopeErr && /forbidden|not properly authorized|properly authorized/i.test(ytErro);
     const e403=apiOff;
     const linkData=`https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=${proj}`;
     const linkAnalytics=`https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com?project=${proj}`;
-    let titulo="O login funcionou, mas não consegui puxar os dados.", dica="", extraBtn="";
+    const linkBox=`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:11px">
+        <div style="font-size:12.5px;color:var(--ink);font-weight:700">✅ Jeito que sempre funciona — pelo link do canal:</div>
+        <div style="font-size:11.5px;color:var(--muted);margin:5px 0 7px;line-height:1.5">Abra o YouTube, copie o <b>link do seu canal</b> (ex: <b>youtube.com/@seucanal</b>) e cole aqui:</div>
+        <input id="ytCanalLink" inputmode="url" placeholder="cole o link do seu canal aqui" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px" />
+        <button class="btn sm" style="margin-top:8px" onclick="usarCanalPorLink()">📥 Puxar meus vídeos pelo link</button></div>`;
+    let titulo="O login funcionou, mas não consegui puxar os dados.", dica="", extraBtn="", extraBox="";
     if(scopeErr && !apiOff){
       titulo="Faltou liberar a permissão do YouTube.";
-      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Na tela do Google aparecem <b>caixinhas de permissão</b> (“Ver sua conta do YouTube” e “Ver relatórios do YouTube”). É preciso <b>MARCAR as duas</b> antes de tocar em Continuar.<br><br>Toque em <b>🔁 Refazer permissões</b>, escolha a conta <b>dona do canal</b> e <b>marque as duas caixinhas</b> ✅✅.</div>`;
+      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Toque em <b>🔁 Refazer permissões</b>, escolha a conta <b>dona do canal</b> e, se aparecer alguma caixinha de permissão, deixe <b>tudo marcado</b> ✅.</div>`;
       extraBtn=`<button class="btn sm" onclick="ytToken=null;ytTokenClient=null;conectarYouTube()">🔁 Refazer permissões</button>`;
+      extraBox=linkBox;
+    } else if(forbidden){
+      titulo="Seu canal é uma “Conta de Marca” — mas dá pra resolver fácil. 👇";
+      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">O login deu certo, mas o Google não deixa achar o canal “automático” (isso é normal quando o canal é uma <b>Conta de Marca</b>). <b>Sem problema:</b> é só me dar o <b>link do canal</b> aqui embaixo que eu puxo os vídeos na hora.</div>`;
+      extraBox=linkBox;
     } else if(noChannel){
-      titulo="Entrei, mas essa conta do Google não tem o canal.";
-      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Isso acontece quando você escolhe a conta errada no login, <b>ou</b> quando o canal é uma <b>“Conta de Marca / Brand Account”</b>.<br><br><b>Faça assim:</b> toque em <b>Trocar de conta</b> abaixo e, na tela do Google, escolha a conta/canal <b>dono do YouTube</b>. Se aparecer uma lista com o <b>nome do canal</b>, escolha ele (não o seu nome pessoal).</div>`;
-      extraBtn=`<button class="btn sm" onclick="ytToken=null;ytTokenClient=null;conectarYouTube()">🔁 Trocar de conta</button>`;
+      titulo="Entrei, mas não achei o canal automático.";
+      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Sem problema — me dá o <b>link do canal</b> aqui embaixo que eu puxo os vídeos direto (funciona pra qualquer canal, inclusive Conta de Marca).</div>`;
+      extraBox=linkBox;
     } else if(e403){
       dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5"><b>O que resolve (99% dos casos):</b> as APIs foram ativadas em <b>outro projeto</b>. Toque nos 2 links abaixo — eles já abrem no projeto certo (nº <b>${proj}</b>) — e em cada um toque em <b>ATIVAR/ENABLE</b>. Espere 2 min e volte aqui em Tentar de novo.
           <div style="margin-top:8px"><a href="${linkData}" target="_blank" style="color:var(--primary-ink);font-weight:700">1) Ativar YouTube Data API v3 ↗</a></div>
@@ -1094,12 +1105,14 @@ function renderYtBar(){
       titulo="Não consegui falar com o YouTube agora.";
       dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px">Parece <b>internet</b> ou conexão instável. Confira o Wi-Fi/dados e toque em <b>Tentar de novo</b>.</div>`;
     } else {
-      dica=`<div style="font-size:11.5px;color:var(--muted);margin-top:7px">Me manda a linha de <b>Mensagem</b> abaixo (toque em 📋 Copiar erro) que eu acerto o que faltar.</div>`;
+      dica=`<div style="font-size:11.5px;color:var(--muted);margin-top:7px">Se preferir o jeito garantido, use o link do canal aqui embaixo. Ou toque em 📋 Copiar erro e me manda.</div>`;
+      extraBox=linkBox;
     }
     el.innerHTML=`<div class="note" style="margin:0;background:var(--warn-soft);border-color:var(--warn-soft)"><span style="font-size:20px">⚠️</span><div style="flex:1"><b>${titulo}</b>
       ${dica}
-      <div style="font-size:11.5px;color:var(--muted);margin-top:9px;word-break:break-word">Mensagem: <b id="ytErroMsg">${ytErro}</b></div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${extraBtn}<button class="btn sm" onclick="conectarYouTube()">↻ Tentar de novo</button><button class="btn ghost sm" onclick="copiarErroYt()">📋 Copiar erro</button></div></div></div>`;
+      ${extraBox}
+      <div style="font-size:11px;color:var(--muted);margin-top:11px;word-break:break-word;opacity:.8">Detalhe técnico: <b id="ytErroMsg">${ytErro}</b></div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${extraBtn}<button class="btn ghost sm" onclick="conectarYouTube()">↻ Tentar de novo</button><button class="btn ghost sm" onclick="copiarErroYt()">📋 Copiar erro</button></div></div></div>`;
   } else {
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div><div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">CreateFlow ${YT_APP_VER}</div></div></div>`;
   }
@@ -1144,10 +1157,44 @@ async function ytGet(url){
   return r.json();
 }
 function ytIsoSeg(iso){ const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso||"")||[]; return (+(m[1]||0))*3600+(+(m[2]||0))*60+(+(m[3]||0)); }
-async function carregarYouTube(){
+async function resolverCanal(q){
+  q=(q||"").trim();
+  const P="part=snippet,contentDetails,statistics";
+  let url;
+  const mCh=/channel\/(UC[\w-]+)/.exec(q);
+  const mHandle=/@([A-Za-z0-9_.\-]+)/.exec(q);
+  const mUser=/user\/([A-Za-z0-9_.\-]+)/.exec(q);
+  if(mCh) url=`https://www.googleapis.com/youtube/v3/channels?${P}&id=${mCh[1]}`;
+  else if(mHandle) url=`https://www.googleapis.com/youtube/v3/channels?${P}&forHandle=@${mHandle[1]}`;
+  else if(mUser) url=`https://www.googleapis.com/youtube/v3/channels?${P}&forUsername=${mUser[1]}`;
+  else if(/^UC[\w\-]{20,}$/.test(q)) url=`https://www.googleapis.com/youtube/v3/channels?${P}&id=${q}`;
+  else {
+    const s=await ytGet(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&maxResults=1&q=${encodeURIComponent(q)}`);
+    const id=s.items&&s.items[0]&&s.items[0].id&&s.items[0].id.channelId;
+    if(!id) throw new Error("Não achei esse canal. Cole o link certinho (ex: youtube.com/@seucanal).");
+    url=`https://www.googleapis.com/youtube/v3/channels?${P}&id=${id}`;
+  }
+  const ch=await ytGet(url);
+  const item=ch.items&&ch.items[0];
+  if(!item) throw new Error("Não achei esse canal. Cole o link certinho (ex: youtube.com/@seucanal).");
+  return item;
+}
+async function usarCanalPorLink(){
+  const inp=document.getElementById("ytCanalLink");
+  const q=(inp&&inp.value||"").trim();
+  if(!q){ toast("Cole o link do seu canal primeiro"); return; }
+  if(!ytToken){ conectarYouTube(); toast("Faça o login primeiro, depois cole o link"); return; }
+  ytErro=null; ytBusy=true; renderYtBar();
+  try{ const item=await resolverCanal(q); await carregarYouTube(item); }
+  catch(e){ ytBusy=false; ytErro=String(e.message||e).slice(0,180); renderYtBar(); console.error(e); }
+}
+async function carregarYouTube(itemDado){
   try{
-    const ch=await ytGet("https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true");
-    const item=ch.items&&ch.items[0]; if(!item) throw new Error("Canal não encontrado nessa conta");
+    let item=itemDado;
+    if(!item){
+      const ch=await ytGet("https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails,statistics&mine=true");
+      item=ch.items&&ch.items[0]; if(!item) throw new Error("Canal não encontrado nessa conta");
+    }
     const uploads=item.contentDetails.relatedPlaylists.uploads;
     const canal=item.snippet.title, inscritos=+((item.statistics||{}).subscriberCount||0);
     let ids=[], pg="";
@@ -1165,7 +1212,8 @@ async function carregarYouTube(){
     }
     try{
       const dd=new Date(), ss=new Date(Date.now()-365*864e5), fm=x=>x.toISOString().slice(0,10);
-      const an=await ytGet(`https://youtubeanalytics.googleapis.com/v2/reports?ids=channel%3D%3DMINE&startDate=${fm(ss)}&endDate=${fm(dd)}&dimensions=video&metrics=averageViewPercentage,subscribersGained,shares&maxResults=200&sort=-subscribersGained`);
+      const idsParam = itemDado ? ("channel%3D%3D"+item.id) : "channel%3D%3DMINE";
+      const an=await ytGet(`https://youtubeanalytics.googleapis.com/v2/reports?ids=${idsParam}&startDate=${fm(ss)}&endDate=${fm(dd)}&dimensions=video&metrics=averageViewPercentage,subscribersGained,shares&maxResults=200&sort=-subscribersGained`);
       const cols=(an.columnHeaders||[]).map(c=>c.name), iv=cols.indexOf("video"), ir=cols.indexOf("averageViewPercentage"), ig=cols.indexOf("subscribersGained"), ih=cols.indexOf("shares");
       (an.rows||[]).forEach(r=>{ const b=byId[r[iv]]; if(b){ b.ret=+r[ir]||0; b.seg=+r[ig]||0; b.comp=+r[ih]||0; } });
     }catch(e){ toast("Vídeos ok! Retenção falhou — confira se a YouTube Analytics API está ativada"); console.warn(e); }
