@@ -520,6 +520,7 @@
         <div id="ytBar" style="margin-bottom:14px"></div>
         <!-- aba: trocar os dados por aplicativo (+ Geral) -->
         <div class="pswitch" id="pswitch"></div>
+        <div id="ttBar" style="margin:12px 0"></div>
         <div class="kpis" id="kpis"></div>
         <div class="panels">
           <div class="card panel">
@@ -1054,12 +1055,84 @@ function removerDiaVideo(d,i){ CALPOSTS[d].splice(i,1); if(!CALPOSTS[d].length) 
 
 // ---------- Métricas ----------
 let platFilter="todos", pilarView="barras", videosView="cartoes";
-function setPlat(p){ platFilter=p; renderMetrics(); }
+function setPlat(p){ platFilter=p; renderMetrics(); renderTtBar(); }
+
+// ---------- TikTok manual (a criadora digita os números) ----------
+let TIKTOK=[], ttSeg=0, ttFormAberto=false, ttEdit=-1;
+try{ TIKTOK=JSON.parse(localStorage.getItem("cf_tiktok")||"[]")||[]; }catch(_){ TIKTOK=[]; }
+try{ ttSeg=+(localStorage.getItem("cf_tiktok_seg")||0)||0; }catch(_){}
+function salvarTikTok(){ try{ localStorage.setItem("cf_tiktok", JSON.stringify(TIKTOK)); localStorage.setItem("cf_tiktok_seg", String(ttSeg)); }catch(_){} }
+function syncTikTok(){
+  for(let i=VIDEOS.length-1;i>=0;i--) if(VIDEOS[i].plat==="tiktok") VIDEOS.splice(i,1);
+  TIKTOK.forEach(t=>VIDEOS.push({ t:t.t||"Vídeo do TikTok", plat:"tiktok", fmt:"tiktok", pilar:"TikTok", ret:0, views:+t.views||0, comp:+t.comp||0, seg:+t.seg||0, comments:+t.comments||0, likes:+t.likes||0, dia:t.dia||"", link:t.link||"" }));
+}
+function nTt(id){ const el=document.getElementById(id); return el?(+el.value||0):0; }
+function vTt(id){ const el=document.getElementById(id); return el?el.value.trim():""; }
+function abrirFormTikTok(i){ ttEdit=(i==null?-1:i); ttFormAberto=true; renderTtBar(); }
+function fecharFormTikTok(){ ttFormAberto=false; ttEdit=-1; renderTtBar(); }
+function salvarSegTikTok(){ ttSeg=nTt("ttSegInp"); salvarTikTok(); syncTikTok(); renderMetrics(); renderTtBar(); toast("Seguidores salvos ✓"); }
+function guardarTikTok(){
+  const t={ t:vTt("ttTitulo")||"Vídeo do TikTok", link:vTt("ttLink"), views:nTt("ttViews"), likes:nTt("ttLikes"), comments:nTt("ttComments"), comp:nTt("ttShares"), seg:nTt("ttSeg"), dia:vTt("ttData") };
+  if(ttEdit>=0) TIKTOK[ttEdit]=t; else TIKTOK.push(t);
+  salvarTikTok(); syncTikTok(); ttFormAberto=false; ttEdit=-1; renderMetrics(); renderTtBar();
+  toast("Vídeo do TikTok salvo ✓");
+}
+function removerTikTok(i){ TIKTOK.splice(i,1); salvarTikTok(); syncTikTok(); renderMetrics(); renderTtBar(); }
+function renderTtBar(){
+  const el=document.getElementById("ttBar"); if(!el) return;
+  if(platFilter!=="tiktok"){ el.innerHTML=""; return; }
+  const inS=`width:100%;box-sizing:border-box;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px`;
+  const lab=`display:block;font-size:11.5px;color:var(--muted);margin:8px 0 3px;font-weight:600`;
+  let form="";
+  if(ttFormAberto){
+    const e=ttEdit>=0?TIKTOK[ttEdit]:{};
+    form=`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px">
+      <b style="font-size:13px">${ttEdit>=0?"✏️ Editar vídeo":"➕ Novo vídeo do TikTok"}</b>
+      <label style="${lab}">Nome do vídeo</label><input id="ttTitulo" value="${(e.t||'').replace(/"/g,'&quot;')}" placeholder="ex: Receita de bolo fácil" style="${inS}"/>
+      <label style="${lab}">Link do vídeo (opcional)</label><input id="ttLink" value="${(e.link||'').replace(/"/g,'&quot;')}" placeholder="cole o link do TikTok" style="${inS}"/>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label style="${lab}">👁 Visualizações</label><input id="ttViews" type="number" inputmode="numeric" value="${e.views||''}" placeholder="0" style="${inS}"/></div>
+        <div><label style="${lab}">❤️ Curtidas</label><input id="ttLikes" type="number" inputmode="numeric" value="${e.likes||''}" placeholder="0" style="${inS}"/></div>
+        <div><label style="${lab}">💬 Comentários</label><input id="ttComments" type="number" inputmode="numeric" value="${e.comments||''}" placeholder="0" style="${inS}"/></div>
+        <div><label style="${lab}">🔁 Compartilham.</label><input id="ttShares" type="number" inputmode="numeric" value="${e.comp||''}" placeholder="0" style="${inS}"/></div>
+        <div><label style="${lab}">👥 Novos seguidores</label><input id="ttSeg" type="number" inputmode="numeric" value="${e.seg||''}" placeholder="0" style="${inS}"/></div>
+        <div><label style="${lab}">📅 Data (opcional)</label><input id="ttData" type="date" value="${e.dia||''}" style="${inS}"/></div>
+      </div>
+      <div style="margin-top:11px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" onclick="guardarTikTok()">💾 Salvar vídeo</button>
+        <button class="btn ghost sm" onclick="fecharFormTikTok()">Cancelar</button>
+      </div></div>`;
+  }
+  let lista="";
+  if(TIKTOK.length){
+    lista=`<div style="margin-top:12px">`+TIKTOK.map((t,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)">
+      <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(t.t||'Vídeo do TikTok').replace(/</g,'&lt;')}</div>
+        <div style="font-size:11.5px;color:var(--muted)">👁 ${fmtN(+t.views||0)} · ❤️ ${fmtN(+t.likes||0)} · 👥 ${fmtN(+t.seg||0)}</div></div>
+      <button class="btn ghost sm" onclick="abrirFormTikTok(${i})">✏️</button>
+      <button class="btn ghost sm" onclick="removerTikTok(${i})">🗑️</button></div>`).join("")+`</div>`;
+  } else if(!ttFormAberto){
+    lista=`<div style="font-size:12.5px;color:var(--muted);margin-top:10px">Ainda não tem vídeo do TikTok aqui. Toque em <b>➕ Adicionar vídeo</b> e digite os números (você vê eles no próprio app do TikTok, em cada vídeo).</div>`;
+  }
+  el.innerHTML=`<div class="note info" style="margin:0;display:block">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:18px">${platIcon('tiktok')}</span>
+        <b style="flex:1">TikTok — você digita os números aqui</b>
+        <button class="btn sm" onclick="abrirFormTikTok()">➕ Adicionar vídeo</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">Seguidores totais:</span>
+        <input id="ttSegInp" type="number" inputmode="numeric" value="${ttSeg||''}" placeholder="0" style="width:120px;box-sizing:border-box;padding:7px 10px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px"/>
+        <button class="btn ghost sm" onclick="salvarSegTikTok()">Salvar</button>
+      </div>
+      ${form}
+      ${lista}
+    </div>`;
+}
 function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v11";
+const YT_APP_VER = "v12";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null, ytLinkVal="", ytLoadMsg="";
@@ -1556,7 +1629,7 @@ function go(scr){
   document.getElementById("pgDesc").textContent = TITLES[scr][1];
   setHelp(scr);
   // Ao (re)entrar em Resultados: se não estiver conectado, garante o botão de conectar de volta.
-  if(scr==="metricas"){ if(!ytInfo) ytBusy=false; renderYtBar(); }
+  if(scr==="metricas"){ if(!ytInfo) ytBusy=false; renderYtBar(); renderTtBar(); }
   window.scrollTo(0,0);
 }
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
@@ -1685,5 +1758,5 @@ function renderLearn(){
 
 // ---------- Init ----------
 document.getElementById("rtFmt").innerHTML = FMT_OPTS;
-renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); renderYtBar(); setHelp("pipeline"); ytAutoConectar();
+syncTikTok(); renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); renderYtBar(); renderTtBar(); setHelp("pipeline"); ytAutoConectar();
 </script>
