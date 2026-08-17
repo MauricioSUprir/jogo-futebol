@@ -310,8 +310,8 @@
     const mk=(name,email,role,emoji,color)=>({ id:uid(), name, email:email.toLowerCase(), password:"1234", role, emoji, color });
     const mau=mk("Maurício","mauricio@familia","admin","👨","#2563eb");
     const tha=mk("Thaís","thais@familia","admin","👩","#db2777");
-    const f1=mk("Membro 1","membro1@familia","membro","🧒","#e0592b");
-    const f2=mk("Membro 2","membro2@familia","membro","👧","#7c3aed");
+    const f1=mk("Anna Luisa","anna@familia","membro","👧","#e0592b");
+    const f2=mk("Guilherme","guilherme@familia","membro","👦","#7c3aed");
     S = {
       version:2,
       family:"Família Rodrigues",
@@ -541,12 +541,12 @@
           <div class="ph"><span class="ic">➕</span><h3>Nova atividade</h3></div>
           <div class="add">
             <input id="ac-title" type="text" placeholder="Atividade (ex.: arrumar o quarto)" style="flex:2 1 200px"/>
-            <input id="ac-points" type="number" min="1" step="1" value="5" placeholder="Pontos" style="flex:0 1 100px"/>
+            <input id="ac-points" type="number" min="0" step="1" value="5" placeholder="Pontos" style="flex:0 1 110px"/>
             <select id="ac-who">${opts}</select>
             <input id="ac-date" type="date" value="${TODAY}"/>
             <button class="btn pri" id="ac-add">Adicionar</button>
           </div>
-          <p class="li-s" style="margin-top:10px">Só os membros fazem atividades e ganham pontos. Você define quanto cada uma vale.</p>
+          <p class="li-s" style="margin-top:10px">Só os membros fazem as atividades. Use <b>0 pontos</b> para uma tarefa do dia que não vale pontos.</p>
         </div>
         <div class="panel full">
           <div class="ph"><span class="ic">⭐</span><h3>Todas as atividades</h3><span class="cnt">${list.length}</span></div>
@@ -555,7 +555,7 @@
             return `<li>
               <span class="chk ${a.done?'on':''}" ${a.done?'':'style="cursor:default;opacity:.5"'}>${a.done?'✓':''}</span>
               <div class="li-main"><div class="li-t ${a.done?'done':''}">${esc(a.title)}</div>
-                <div class="li-s"><span class="pointbadge">★ ${a.points} pts</span><span class="tag">${who}</span><span class="tag">${fmtShort(a.date)}</span>${a.done?`<span class="tag mine">feito por ${esc(memberName(a.doneBy))}</span>`:''}</div></div>
+                <div class="li-s">${a.points>0?`<span class="pointbadge">★ ${a.points} pts</span>`:`<span class="tag">tarefa</span>`}<span class="tag">${who}</span><span class="tag">${fmtShort(a.date)}</span>${a.done?`<span class="tag mine">feito por ${esc(memberName(a.doneBy))}</span>`:''}</div></div>
               ${a.done?`<button class="btn sm" data-reopen="${a.id}" title="Reabrir e estornar pontos">↩</button>`:''}
               <button class="x" data-delact="${a.id}" title="Remover">✕</button>
             </li>`;}).join("")}</ul>`:`<div class="empty">Nenhuma atividade criada.</div>`}
@@ -570,7 +570,7 @@
       <div class="panel full">
         <div class="ph"><span class="ic">⭐</span><h3>Suas atividades</h3><span class="cnt">${open.length}</span></div>
         ${open.length?`<ul class="list">${open.map(a=>`<li>
-            <span class="pointbadge">★ ${a.points}</span>
+            ${a.points>0?`<span class="pointbadge">★ ${a.points}</span>`:`<span class="tag">tarefa</span>`}
             <div class="li-main"><div class="li-t">${esc(a.title)}</div><div class="li-s"><span class="tag">${fmtShort(a.date)}</span>${a.assignedTo===null?'<span class="tag">todos</span>':'<span class="tag mine">sua</span>'}</div></div>
             <button class="btn sm pri" data-done="${a.id}">Concluir</button>
           </li>`).join("")}</ul>`:`<div class="empty">Nenhuma atividade pendente. 🎉</div>`}
@@ -583,7 +583,7 @@
         <div class="ph"><span class="ic">✅</span><h3>Concluídas</h3><span class="cnt">${done.length}</span></div>
         ${done.length?`<ul class="list">${done.slice().sort((a,b)=>a.doneAt<b.doneAt?1:-1).map(a=>`<li>
             <span class="chk on">✓</span>
-            <div class="li-main"><div class="li-t done">${esc(a.title)}</div><div class="li-s"><span class="pointbadge">★ ${a.points} pts</span><span class="tag">${a.doneAt?timeAgo(a.doneAt):''}</span></div></div>
+            <div class="li-main"><div class="li-t done">${esc(a.title)}</div><div class="li-s">${a.points>0?`<span class="pointbadge">★ ${a.points} pts</span>`:`<span class="tag">tarefa</span>`}<span class="tag">${a.doneAt?timeAgo(a.doneAt):''}</span></div></div>
           </li>`).join("")}</ul>`:`<div class="empty">Você ainda não concluiu atividades.</div>`}
       </div>`;
   }
@@ -784,8 +784,8 @@
     if(tab==="atividades"){
       if(isAdmin()){
         const add=()=>{
-          const title=($("ac-title").value||"").trim(); const pts=parseInt($("ac-points").value,10);
-          if(!title || !(pts>0)) return;
+          const title=($("ac-title").value||"").trim(); const pts=Math.max(0,parseInt($("ac-points").value,10)||0);
+          if(!title) return;
           S.activities.push({ id:uid(), title, points:pts, assignedTo:$("ac-who").value||null, date:$("ac-date").value||TODAY, createdBy:sessionId, createdAt:new Date().toISOString(), done:false, doneBy:null, doneAt:null });
           persist(); renderView();
         };
@@ -797,7 +797,7 @@
         v.querySelectorAll("[data-done]").forEach(x=>x.addEventListener("click",()=>{
           const a=S.activities.find(z=>z.id===x.dataset.done); if(!a||a.done)return;
           a.done=true; a.doneBy=sessionId; a.doneAt=new Date().toISOString();
-          S.pointLog.push({ id:uid(), memberId:sessionId, delta:a.points, reason:"Atividade: "+a.title, byId:sessionId, activityId:a.id, createdAt:new Date().toISOString() });
+          if(a.points>0) S.pointLog.push({ id:uid(), memberId:sessionId, delta:a.points, reason:"Atividade: "+a.title, byId:sessionId, activityId:a.id, createdAt:new Date().toISOString() });
           persist(); renderApp();
         }));
       }

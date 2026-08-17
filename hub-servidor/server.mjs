@@ -136,8 +136,8 @@ async function handleApi(req, res, url) {
     if (method === "POST" && !seg[1]) {
       if (!requireAdmin()) return;
       const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
-      const title = String(b.title || "").trim(); const points = parseInt(b.points, 10);
-      if (!title || !(points > 0)) return sendJSON(res, 400, { error: "dados" });
+      const title = String(b.title || "").trim(); const points = Math.max(0, parseInt(b.points, 10) || 0);
+      if (!title) return sendJSON(res, 400, { error: "dados" });
       await sql`INSERT INTO activities (id, title, points, assigned_to, adate, created_by)
                 VALUES (${uid()}, ${title}, ${points}, ${b.assignedTo || null}, ${b.date || sql`CURRENT_DATE`}, ${me.id})`;
       return sendJSON(res, 200, { ok: true });
@@ -155,8 +155,10 @@ async function handleApi(req, res, url) {
       if (a.assigned_to && a.assigned_to !== me.id) return sendJSON(res, 403, { error: "não é sua" });
       if (a.done) return sendJSON(res, 409, { error: "já feita" });
       await sql`UPDATE activities SET done=true, done_by=${me.id}, done_at=now() WHERE id=${a.id}`;
-      await sql`INSERT INTO point_log (id, member_id, delta, reason, by_id, activity_id)
-                VALUES (${uid()}, ${me.id}, ${a.points}, ${"Atividade: " + a.title}, ${me.id}, ${a.id})`;
+      if (a.points > 0) {
+        await sql`INSERT INTO point_log (id, member_id, delta, reason, by_id, activity_id)
+                  VALUES (${uid()}, ${me.id}, ${a.points}, ${"Atividade: " + a.title}, ${me.id}, ${a.id})`;
+      }
       return sendJSON(res, 200, { ok: true });
     }
     if (method === "POST" && seg[1] && seg[2] === "reopen") {
