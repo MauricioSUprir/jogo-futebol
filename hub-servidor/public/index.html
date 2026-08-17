@@ -49,6 +49,8 @@
   .menucard .ml{font-size:13.5px;font-weight:750}
   .menucard .md{font-size:11px;color:var(--muted)}
   .sechead{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:6px 2px 12px}
+  .alertbar{display:block;width:100%;text-align:left;background:var(--accent-soft);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:14px;padding:14px 16px;font-weight:750;font-size:14px;cursor:pointer;margin-bottom:18px}
+  .alertbar:hover{filter:brightness(1.03)}
 
   /* splash */
   #splash{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 120% at 50% 0%, #12564f 0%, #0a0f0e 72%);
@@ -198,6 +200,14 @@
   .chkfield input{width:17px;height:17px;accent-color:var(--brand)}
   .filepick{display:flex;align-items:center;gap:12px;margin-top:4px}
   .thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
+
+  /* aprovação de atividades */
+  .approve{border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;background:var(--card)}
+  .ah2{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .proofimg{width:100%;max-height:360px;object-fit:cover;border-radius:12px;border:1px solid var(--line);cursor:zoom-in;display:block}
+  .proofthumb{width:48px;height:48px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;flex:none}
+  .zoombox{max-width:96vw;max-height:92vh}
+  .zoombox img{max-width:96vw;max-height:92vh;border-radius:12px;display:block;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 
   /* pontos / placar */
   .pointbadge{display:inline-flex;align-items:center;gap:5px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-weight:800;font-size:12.5px;white-space:nowrap}
@@ -459,7 +469,9 @@
     const nextMeet=(S.meetings||[]).filter(m=>m.date>=TODAY).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1)[0];
     const pts = admin?null:memberPoints(sessionId);
     const menu=[["avisos","📣","Avisos","recados e comunicados"],["atividades","⭐","Atividades","tarefas e pontos"],["compras","🛒","Compras","lista da casa"],["cardapio","🍽️","Cardápio","refeições da semana"],["placar","🏆","Placar","pontos e dinheiro"],["encontros","📅","Encontros","datas em família"]];
+    const pendAprov = admin ? (S.activities||[]).filter(a=>a.status==='pendente').length : 0;
     return `
+      ${pendAprov?`<button class="alertbar" data-go="atividades">🕵️ ${pendAprov} atividade(s) aguardando sua aprovação →</button>`:''}
       <div class="sechead">Menu principal</div>
       <div class="menugrid">
         ${menu.map(x=>`<button class="menucard" data-go="${x[0]}"><span class="mi">${x[1]}</span><span class="ml">${x[2]}</span><span class="md">${x[3]}</span></button>`).join("")}
@@ -593,8 +605,24 @@
     const admin=isAdmin();
     if(admin){
       const list=(S.activities||[]);
+      const pend=list.filter(a=>a.status==='pendente');
       const opts=`<option value="">Todos os membros</option>`+membros().map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join("");
       return `
+        ${pend.length?`<div class="panel full" style="border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 16%,transparent),var(--shadow)">
+          <div class="ph"><span class="ic">🕵️</span><h3>Aguardando sua aprovação</h3><span class="cnt">${pend.length}</span></div>
+          ${pend.map(a=>`<div class="approve">
+            <div class="ah2">
+              ${avatar(member(a.doneBy),'sm','width:30px;height:30px;font-size:15px')}
+              <div class="li-main"><div class="li-t">${esc(a.title)}</div>
+                <div class="li-s"><b>${esc(memberName(a.doneBy))}</b> enviou ${a.doneAt?timeAgo(a.doneAt):''} · ${a.points>0?`<span class="pointbadge">★ ${a.points} pts</span> ${BRL(money(a.points))}`:'sem pontos'}</div></div>
+            </div>
+            ${a.proof?`<img class="proofimg" src="${a.proof}" alt="foto da atividade" data-zoom="${a.proof}"/>`:`<div class="empty">Enviada sem foto.</div>`}
+            <div class="rowbtns">
+              <button class="btn pri" data-approve="${a.id}">✅ Aprovar e dar os pontos</button>
+              <button class="btn danger" data-reject="${a.id}">✕ Reprovar</button>
+            </div>
+          </div>`).join("")}
+        </div>`:''}
         <div class="panel full">
           <div class="ph"><span class="ic">➕</span><h3>Nova atividade</h3></div>
           <div class="add">
@@ -604,24 +632,28 @@
             <input id="ac-date" type="date" value="${TODAY}"/>
             <button class="btn pri" id="ac-add">Adicionar</button>
           </div>
-          <p class="li-s" style="margin-top:10px">Só os membros fazem as atividades. Use <b>0 pontos</b> para uma tarefa do dia que não vale pontos.</p>
+          <p class="li-s" style="margin-top:10px">O filho conclui enviando uma <b>foto</b>; você aprova e aí os pontos entram. Use <b>0 pontos</b> para uma tarefa sem pontuação.</p>
         </div>
         <div class="panel full">
           <div class="ph"><span class="ic">⭐</span><h3>Todas as atividades</h3><span class="cnt">${list.length}</span></div>
           ${list.length?`<ul class="list">${list.map(a=>{
             const who=a.assignedTo?esc(memberName(a.assignedTo)):"todos os membros";
+            const st = a.status==='aprovada'?`<span class="tag mine">✓ aprovada · ${esc(memberName(a.doneBy))}</span>`
+                      : a.status==='pendente'?`<span class="tag warn">⏳ aguardando</span>`
+                      : `<span class="tag">aberta</span>`;
             return `<li>
-              <span class="chk ${a.done?'on':''}" ${a.done?'':'style="cursor:default;opacity:.5"'}>${a.done?'✓':''}</span>
-              <div class="li-main"><div class="li-t ${a.done?'done':''}">${esc(a.title)}</div>
-                <div class="li-s">${a.points>0?`<span class="pointbadge">★ ${a.points} pts</span>`:`<span class="tag">tarefa</span>`}<span class="tag">${who}</span><span class="tag">${fmtShort(a.date)}</span>${a.done?`<span class="tag mine">feito por ${esc(memberName(a.doneBy))}</span>`:''}</div></div>
-              ${a.done?`<button class="btn sm" data-reopen="${a.id}" title="Reabrir e estornar pontos">↩</button>`:''}
+              <span style="font-size:18px;width:24px;text-align:center;flex:none">${a.status==='aprovada'?'✅':a.status==='pendente'?'🕒':'•'}</span>
+              <div class="li-main"><div class="li-t ${a.status==='aprovada'?'done':''}">${esc(a.title)}</div>
+                <div class="li-s">${a.points>0?`<span class="pointbadge">★ ${a.points} pts</span>`:`<span class="tag">tarefa</span>`}<span class="tag">${who}</span><span class="tag">${fmtShort(a.date)}</span>${st}</div></div>
+              ${a.status==='aprovada'?`<button class="btn sm" data-reopen="${a.id}" title="Reabrir e estornar pontos">↩</button>`:''}
               <button class="x" data-delact="${a.id}" title="Remover">✕</button>
             </li>`;}).join("")}</ul>`:`<div class="empty">Nenhuma atividade criada.</div>`}
         </div>`;
     }
     const mine=activitiesForMembro(sessionId);
-    const open=mine.filter(a=>!a.done);
-    const done=mine.filter(a=>a.done && a.doneBy===sessionId);
+    const open=mine.filter(a=>a.status==='aberta');
+    const pend=mine.filter(a=>a.status==='pendente' && a.doneBy===sessionId);
+    const done=mine.filter(a=>a.status==='aprovada' && a.doneBy===sessionId);
     const pts=memberPoints(sessionId);
     return `
       <div class="panel full">
@@ -629,13 +661,21 @@
         ${open.length?`<ul class="list">${open.map(a=>`<li>
             ${a.points>0?`<span class="pointbadge">★ ${a.points}</span>`:`<span class="tag">tarefa</span>`}
             <div class="li-main"><div class="li-t">${esc(a.title)}</div><div class="li-s"><span class="tag">${fmtShort(a.date)}</span>${a.assignedTo===null?'<span class="tag">todos</span>':'<span class="tag mine">sua</span>'}</div></div>
-            <button class="btn sm pri" data-done="${a.id}">Concluir</button>
+            <button class="btn sm pri" data-done="${a.id}">📷 Concluir</button>
           </li>`).join("")}</ul>`:`<div class="empty">Nenhuma atividade pendente. 🎉</div>`}
+        <p class="li-s" style="margin-top:8px">Pra concluir, envie uma <b>foto</b> da atividade feita — um adulto aprova e aí os pontos entram. 📷</p>
         <div class="totalbar">
           <div class="tb"><div class="k">Seus pontos</div><div class="v">${pts} <span style="font-size:14px;color:var(--muted)">pts</span></div></div>
           <div class="tb"><div class="k">Em dinheiro</div><div class="v money">${BRL(money(pts))}</div></div>
         </div>
       </div>
+      ${pend.length?`<div class="panel full">
+        <div class="ph"><span class="ic">🕒</span><h3>Aguardando aprovação</h3><span class="cnt">${pend.length}</span></div>
+        <ul class="list">${pend.map(a=>`<li>
+          ${a.proof?`<img class="proofthumb" src="${a.proof}" data-zoom="${a.proof}"/>`:'<span class="txicon">🕒</span>'}
+          <div class="li-main"><div class="li-t">${esc(a.title)}</div><div class="li-s"><span class="tag warn">aguardando um adulto aprovar</span>${a.points>0?`<span class="pointbadge">★ ${a.points}</span>`:''}</div></div>
+        </li>`).join("")}</ul>
+      </div>`:''}
       <div class="panel full">
         <div class="ph"><span class="ic">✅</span><h3>Concluídas</h3><span class="cnt">${done.length}</span></div>
         ${done.length?`<ul class="list">${done.slice().sort((a,b)=>a.doneAt<b.doneAt?1:-1).map(a=>`<li>
@@ -837,6 +877,8 @@
 
     // navegação (tela Início)
     v.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{ tab=b.dataset.go; renderApp(); reload(true).catch(()=>{}); }));
+    // ampliar imagens (fotos de prova, imagens de aviso)
+    v.querySelectorAll("[data-zoom]").forEach(el=>el.addEventListener("click",()=>openZoom(el.getAttribute("data-zoom"))));
 
     if(tab==="compras"){
       const add=async()=>{
@@ -891,14 +933,13 @@
         const b=$("ac-add"); if(b) b.addEventListener("click",add);
         $("ac-title") && $("ac-title").addEventListener("keydown",e=>{if(e.key==="Enter")add();});
         v.querySelectorAll("[data-delact]").forEach(x=>x.addEventListener("click",async()=>{ try{ await api("/activities/"+x.dataset.delact,{method:"DELETE"}); await reload(); }catch(e){ toast("Erro",true); } }));
-        v.querySelectorAll("[data-reopen]").forEach(x=>x.addEventListener("click",async()=>{ try{ await api("/activities/"+x.dataset.reopen+"/reopen",{method:"POST"}); await reload(); toast("Reaberta — pontos estornados"); }catch(e){ toast("Erro",true); } }));
+        v.querySelectorAll("[data-reopen]").forEach(x=>x.addEventListener("click",async()=>{ if(!confirm("Reabrir e estornar os pontos?"))return; try{ await api("/activities/"+x.dataset.reopen+"/reopen",{method:"POST"}); await reload(); toast("Reaberta — pontos estornados"); }catch(e){ toast("Erro",true); } }));
+        v.querySelectorAll("[data-approve]").forEach(x=>x.addEventListener("click",async()=>{ x.disabled=true; try{ await api("/activities/"+x.dataset.approve+"/approve",{method:"POST"}); await reload(); toast("Aprovada! Pontos enviados ⭐"); }catch(e){ toast("Erro ao aprovar",true); x.disabled=false; } }));
+        v.querySelectorAll("[data-reject]").forEach(x=>x.addEventListener("click",async()=>{ if(!confirm("Reprovar? A atividade é anulada (sem pontos) e volta a ficar disponível."))return; try{ await api("/activities/"+x.dataset.reject+"/reject",{method:"POST"}); await reload(); toast("Reprovada — sem pontos"); }catch(e){ toast("Erro",true); } }));
       } else {
-        v.querySelectorAll("[data-done]").forEach(x=>x.addEventListener("click",async()=>{
-          x.disabled=true;
+        v.querySelectorAll("[data-done]").forEach(x=>x.addEventListener("click",()=>{
           const act=(S.activities||[]).find(a=>a.id===x.dataset.done);
-          const hadPts=act && act.points>0;
-          try{ await api("/activities/"+x.dataset.done+"/done",{method:"POST"}); await reload(true); toast(hadPts?"Concluída! Pontos somados ⭐":"Tarefa concluída ✓"); }
-          catch(e){ toast("Não deu pra concluir",true); x.disabled=false; }
+          if(act) openProofModal(act);
         }));
       }
     }
@@ -1060,6 +1101,46 @@
         age:wrap.querySelector("#mm-age").value||null, birthday:wrap.querySelector("#mm-bday").value||null, bio:(wrap.querySelector("#mm-bio").value||"").trim()||null };
       try{ await api("/me/profile",{method:"PUT",body}); wrap.remove(); await reload(true); toast("Perfil atualizado ✓"); }
       catch(e){ toast("Erro ao salvar",true); }
+    });
+  }
+
+  // Ampliar uma imagem em tela cheia.
+  function openZoom(src){
+    if(!src) return;
+    const wrap=document.createElement("div"); wrap.className="ov";
+    wrap.innerHTML=`<div class="zoombox"><img src="${src}" alt="imagem"/></div>`;
+    wrap.addEventListener("click",()=>wrap.remove());
+    $("modal-root").appendChild(wrap);
+  }
+
+  // Filho conclui atividade: precisa enviar uma FOTO.
+  function openProofModal(act){
+    if(!act) return;
+    let proof=null;
+    const wrap=document.createElement("div"); wrap.className="ov";
+    wrap.innerHTML=`
+      <div class="modal">
+        <h3>Concluir: ${esc(act.title)}</h3>
+        <p class="msub">Envie uma <b>foto</b> da atividade feita. Um adulto vai aprovar pra você ${act.points>0?`ganhar os <b>${act.points} pontos</b> (${BRL(money(act.points))})`:'confirmar'}.</p>
+        <div class="stack">
+          <img class="proofimg hide" id="pr-thumb" alt="prévia da foto"/>
+          <div class="rowbtns" style="margin-top:0">
+            <button class="btn" id="pr-pick" type="button">📷 Tirar / escolher foto</button>
+            <input id="pr-file" type="file" accept="image/*" capture="environment" class="hide"/>
+          </div>
+          <div class="rowbtns"><button class="btn pri" id="pr-send" disabled>Enviar para aprovação</button><button class="btn" id="pr-cancel">Cancelar</button></div>
+        </div>
+      </div>`;
+    $("modal-root").appendChild(wrap);
+    const file=wrap.querySelector("#pr-file"), thumb=wrap.querySelector("#pr-thumb"), send=wrap.querySelector("#pr-send");
+    wrap.querySelector("#pr-pick").addEventListener("click",()=>file.click());
+    file.addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; if(!f)return; readImageResized(f,1400,url=>{ if(!url){toast("Não deu pra ler a foto",true);return;} proof=url; thumb.src=url; thumb.classList.remove("hide"); send.disabled=false; }); });
+    wrap.querySelector("#pr-cancel").addEventListener("click",()=>wrap.remove());
+    send.addEventListener("click",async()=>{
+      if(!proof){ toast("Escolha uma foto primeiro",true); return; }
+      send.disabled=true;
+      try{ await api("/activities/"+act.id+"/done",{method:"POST",body:{proof}}); wrap.remove(); await reload(true); toast("Enviado! Aguarde um adulto aprovar ✅"); }
+      catch(e){ toast(e.error==="imagem obrigatória"?"A foto é obrigatória":"Não deu pra enviar",true); send.disabled=false; }
     });
   }
 

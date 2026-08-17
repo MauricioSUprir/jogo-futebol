@@ -104,10 +104,14 @@ export async function ensureSchema() {
     );
 
     -- Migrações leves (rodam sempre; seguras em bancos já existentes) --
-    ALTER TABLE point_log ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'ajuste';
-    ALTER TABLE members   ADD COLUMN IF NOT EXISTS photo    text;
-    ALTER TABLE members   ADD COLUMN IF NOT EXISTS birthday date;
-    ALTER TABLE members   ADD COLUMN IF NOT EXISTS age      int;
-    ALTER TABLE members   ADD COLUMN IF NOT EXISTS bio      text;
+    ALTER TABLE point_log  ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'ajuste';
+    ALTER TABLE members    ADD COLUMN IF NOT EXISTS photo    text;
+    ALTER TABLE members    ADD COLUMN IF NOT EXISTS birthday date;
+    ALTER TABLE members    ADD COLUMN IF NOT EXISTS age      int;
+    ALTER TABLE members    ADD COLUMN IF NOT EXISTS bio      text;
+    -- Fluxo de aprovação de atividades (com foto) --
+    ALTER TABLE activities ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'aberta';
+    ALTER TABLE activities ADD COLUMN IF NOT EXISTS proof  text;
+    UPDATE activities SET status='aprovada' WHERE done=true AND status='aberta';
   `);
 }

@@ -55,7 +55,7 @@ async function buildData(me) {
   const members = await sql`SELECT id,name,email,role,emoji,color,photo,to_char(birthday,'YYYY-MM-DD') AS birthday,age,bio FROM members ORDER BY created_at`;
   const anns = await sql`SELECT id,author_id,body,image,targets,created_at FROM announcements ORDER BY created_at DESC`;
   const comments = await sql`SELECT id,announcement_id,author_id,body,created_at FROM comments ORDER BY created_at`;
-  const activities = await sql`SELECT id,title,points,assigned_to,adate,created_by,created_at,done,done_by,done_at FROM activities ORDER BY created_at DESC`;
+  const activities = await sql`SELECT id,title,points,assigned_to,adate,created_by,created_at,done,done_by,done_at,status,proof FROM activities ORDER BY created_at DESC`;
   const pointLog = await sql`SELECT id,member_id,delta,reason,kind,by_id,activity_id,created_at FROM point_log ORDER BY created_at DESC`;
   const menuRows = await sql`SELECT to_char(day,'YYYY-MM-DD') AS day, cafe, almoco, jantar FROM menu`;
   const meetings = await sql`SELECT id,title,to_char(mdate,'YYYY-MM-DD') AS mdate,mtime,place,note,created_by FROM meetings ORDER BY mdate, mtime`;
@@ -90,7 +90,7 @@ async function buildData(me) {
     members: members.map(pubMember),
     points,
     announcements: visibleAnns,
-    activities: activities.map((a) => ({ id: a.id, title: a.title, points: a.points, assignedTo: a.assigned_to, date: a.adate && a.adate.toISOString ? a.adate.toISOString().slice(0, 10) : a.adate, createdBy: a.created_by, createdAt: a.created_at, done: a.done, doneBy: a.done_by, doneAt: a.done_at })),
+    activities: activities.map((a) => ({ id: a.id, title: a.title, points: a.points, assignedTo: a.assigned_to, date: a.adate && a.adate.toISOString ? a.adate.toISOString().slice(0, 10) : a.adate, createdBy: a.created_by, createdAt: a.created_at, done: a.done, doneBy: a.done_by, doneAt: a.done_at, status: a.status || "aberta", proof: (admin || a.done_by === me.id) ? (a.proof || null) : null })),
     pointLog: logOut,
     menu,
     meetings: meetings.map((m) => ({ id: m.id, title: m.title, date: m.mdate, time: m.mtime, place: m.place, note: m.note, createdBy: m.created_by })),
@@ -182,23 +182,46 @@ async function handleApi(req, res, url) {
       await sql`DELETE FROM activities WHERE id=${seg[1]}`;
       return sendJSON(res, 200, { ok: true });
     }
+    // Filho conclui: envia com FOTO obrigatória -> fica pendente de aprovação.
     if (method === "POST" && seg[1] && seg[2] === "done") {
       const [a] = await sql`SELECT * FROM activities WHERE id=${seg[1]} LIMIT 1`;
       if (!a) return sendJSON(res, 404, { error: "atividade" });
       if (admin) return sendJSON(res, 403, { error: "admin não faz atividade" });
       if (a.assigned_to && a.assigned_to !== me.id) return sendJSON(res, 403, { error: "não é sua" });
-      if (a.done) return sendJSON(res, 409, { error: "já feita" });
-      await sql`UPDATE activities SET done=true, done_by=${me.id}, done_at=now() WHERE id=${a.id}`;
-      if (a.points > 0) {
+      if (a.status && a.status !== "aberta") return sendJSON(res, 409, { error: "já enviada" });
+      const b = await readBody(req);
+      const proof = b && b.proof ? String(b.proof).slice(0, 8 * 1024 * 1024) : null;
+      if (!proof) return sendJSON(res, 400, { error: "imagem obrigatória" });
+      await sql`UPDATE activities SET status='pendente', done=false, done_by=${me.id}, done_at=now(), proof=${proof} WHERE id=${a.id}`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    // Admin aprova: agora sim os pontos vão pro filho.
+    if (method === "POST" && seg[1] && seg[2] === "approve") {
+      if (!requireAdmin()) return;
+      const [a] = await sql`SELECT * FROM activities WHERE id=${seg[1]} LIMIT 1`;
+      if (!a) return sendJSON(res, 404, { error: "atividade" });
+      if (a.status !== "pendente") return sendJSON(res, 409, { error: "não está pendente" });
+      await sql`UPDATE activities SET status='aprovada', done=true WHERE id=${a.id}`;
+      if (a.points > 0 && a.done_by) {
         await sql`INSERT INTO point_log (id, member_id, delta, reason, kind, by_id, activity_id)
-                  VALUES (${uid()}, ${me.id}, ${a.points}, ${"Atividade: " + a.title}, ${"atividade"}, ${me.id}, ${a.id})`;
+                  VALUES (${uid()}, ${a.done_by}, ${a.points}, ${"Atividade: " + a.title}, ${"atividade"}, ${me.id}, ${a.id})`;
       }
       return sendJSON(res, 200, { ok: true });
     }
+    // Admin reprova: anula (sem pontos) e reabre a atividade.
+    if (method === "POST" && seg[1] && seg[2] === "reject") {
+      if (!requireAdmin()) return;
+      const [a] = await sql`SELECT status FROM activities WHERE id=${seg[1]} LIMIT 1`;
+      if (!a) return sendJSON(res, 404, { error: "atividade" });
+      if (a.status !== "pendente") return sendJSON(res, 409, { error: "não está pendente" });
+      await sql`UPDATE activities SET status='aberta', done=false, done_by=null, done_at=null, proof=null WHERE id=${seg[1]}`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    // Admin reabre uma já aprovada: estorna pontos e reabre.
     if (method === "POST" && seg[1] && seg[2] === "reopen") {
       if (!requireAdmin()) return;
       await sql`DELETE FROM point_log WHERE activity_id=${seg[1]}`;
-      await sql`UPDATE activities SET done=false, done_by=null, done_at=null WHERE id=${seg[1]}`;
+      await sql`UPDATE activities SET status='aberta', done=false, done_by=null, done_at=null, proof=null WHERE id=${seg[1]}`;
       return sendJSON(res, 200, { ok: true });
     }
   }
