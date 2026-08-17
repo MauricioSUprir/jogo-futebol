@@ -12,6 +12,15 @@ const PUBLIC = path.join(__dirname, "public");
 const PORT = process.env.PORT || 3000;
 const uid = () => crypto.randomUUID();
 
+// Normaliza os campos de perfil vindos do cliente.
+function normProfile(b) {
+  const photo = b.photo ? String(b.photo).slice(0, 3 * 1024 * 1024) : null;
+  const birthday = b.birthday ? String(b.birthday).slice(0, 10) : null;
+  const age = (b.age === 0 || b.age) && isFinite(Number(b.age)) ? Math.max(0, Math.min(150, parseInt(b.age, 10))) : null;
+  const bio = b.bio ? String(b.bio).slice(0, 500) : null;
+  return { photo, birthday, age, bio };
+}
+
 /* ---------------- helpers HTTP ---------------- */
 const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".png": "image/png", ".webmanifest": "application/manifest+json", ".json": "application/json", ".ico": "image/x-icon" };
 function sendJSON(res, code, obj, headers = {}) {
@@ -43,11 +52,11 @@ async function currentMember(req) {
 async function buildData(me) {
   const admin = me.role === "admin";
   const [settings] = await sql`SELECT family, point_value FROM settings WHERE id=1`;
-  const members = await sql`SELECT id,name,email,role,emoji,color FROM members ORDER BY created_at`;
+  const members = await sql`SELECT id,name,email,role,emoji,color,photo,to_char(birthday,'YYYY-MM-DD') AS birthday,age,bio FROM members ORDER BY created_at`;
   const anns = await sql`SELECT id,author_id,body,image,targets,created_at FROM announcements ORDER BY created_at DESC`;
   const comments = await sql`SELECT id,announcement_id,author_id,body,created_at FROM comments ORDER BY created_at`;
   const activities = await sql`SELECT id,title,points,assigned_to,adate,created_by,created_at,done,done_by,done_at FROM activities ORDER BY created_at DESC`;
-  const pointLog = await sql`SELECT id,member_id,delta,reason,by_id,activity_id,created_at FROM point_log ORDER BY created_at DESC`;
+  const pointLog = await sql`SELECT id,member_id,delta,reason,kind,by_id,activity_id,created_at FROM point_log ORDER BY created_at DESC`;
   const menuRows = await sql`SELECT to_char(day,'YYYY-MM-DD') AS day, cafe, almoco, jantar FROM menu`;
   const meetings = await sql`SELECT id,title,to_char(mdate,'YYYY-MM-DD') AS mdate,mtime,place,note,created_by FROM meetings ORDER BY mdate, mtime`;
   const shopping = await sql`SELECT id,name,qty,done,added_by,created_at FROM shopping ORDER BY created_at`;
@@ -62,14 +71,27 @@ async function buildData(me) {
   const menu = {};
   menuRows.forEach((r) => { menu[r.day] = { cafe: r.cafe, almoco: r.almoco, jantar: r.jantar }; });
 
+  // Totais de pontos por membro (visíveis a todos, p/ o placar).
+  const points = {};
+  pointLog.forEach((p) => { points[p.member_id] = (points[p.member_id] || 0) + p.delta; });
+
+  // Extrato detalhado: membro vê só o seu; admin vê de todos.
+  const logOut = pointLog
+    .filter((p) => admin || p.member_id === me.id)
+    .map((p) => ({ id: p.id, memberId: p.member_id, delta: p.delta, reason: p.reason, kind: p.kind, byId: p.by_id, activityId: p.activity_id, createdAt: p.created_at }));
+
+  const pubMember = (m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, emoji: m.emoji, color: m.color, photo: m.photo || null, birthday: m.birthday || null, age: m.age ?? null, bio: m.bio || null });
+
+  const meFull = members.find((m) => m.id === me.id) || me;
   return {
     family: settings?.family || "Família",
     pointValue: Number(settings?.point_value ?? 0.5),
-    me: { id: me.id, name: me.name, email: me.email, role: me.role, emoji: me.emoji, color: me.color },
-    members: members.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, emoji: m.emoji, color: m.color })),
+    me: pubMember(meFull),
+    members: members.map(pubMember),
+    points,
     announcements: visibleAnns,
     activities: activities.map((a) => ({ id: a.id, title: a.title, points: a.points, assignedTo: a.assigned_to, date: a.adate && a.adate.toISOString ? a.adate.toISOString().slice(0, 10) : a.adate, createdBy: a.created_by, createdAt: a.created_at, done: a.done, doneBy: a.done_by, doneAt: a.done_at })),
-    pointLog: pointLog.map((p) => ({ id: p.id, memberId: p.member_id, delta: p.delta, reason: p.reason, byId: p.by_id, activityId: p.activity_id, createdAt: p.created_at })),
+    pointLog: logOut,
     menu,
     meetings: meetings.map((m) => ({ id: m.id, title: m.title, date: m.mdate, time: m.mtime, place: m.place, note: m.note, createdBy: m.created_by })),
     shopping: shopping.map((s) => ({ id: s.id, name: s.name, qty: s.qty, done: s.done, addedBy: s.added_by, createdAt: s.created_at })),
@@ -168,8 +190,8 @@ async function handleApi(req, res, url) {
       if (a.done) return sendJSON(res, 409, { error: "já feita" });
       await sql`UPDATE activities SET done=true, done_by=${me.id}, done_at=now() WHERE id=${a.id}`;
       if (a.points > 0) {
-        await sql`INSERT INTO point_log (id, member_id, delta, reason, by_id, activity_id)
-                  VALUES (${uid()}, ${me.id}, ${a.points}, ${"Atividade: " + a.title}, ${me.id}, ${a.id})`;
+        await sql`INSERT INTO point_log (id, member_id, delta, reason, kind, by_id, activity_id)
+                  VALUES (${uid()}, ${me.id}, ${a.points}, ${"Atividade: " + a.title}, ${"atividade"}, ${me.id}, ${a.id})`;
       }
       return sendJSON(res, 200, { ok: true });
     }
@@ -253,7 +275,9 @@ async function handleApi(req, res, url) {
     const dup = await sql`SELECT id FROM members WHERE email=${email} AND id<>${seg[1]} LIMIT 1`;
     if (dup.length) return sendJSON(res, 409, { error: "e-mail já usado" });
     const role = b.role === "admin" ? "admin" : "membro";
-    await sql`UPDATE members SET name=${name}, email=${email}, role=${role}, emoji=${String(b.emoji || "🙂")}, color=${String(b.color || "#0f766e")} WHERE id=${seg[1]}`;
+    const pr = normProfile(b);
+    await sql`UPDATE members SET name=${name}, email=${email}, role=${role}, emoji=${String(b.emoji || "🙂")}, color=${String(b.color || "#0f766e")},
+              photo=${pr.photo}, birthday=${pr.birthday}, age=${pr.age}, bio=${pr.bio} WHERE id=${seg[1]}`;
     if (b.password) await sql`UPDATE members SET pass_hash=${await hashPassword(b.password)} WHERE id=${seg[1]}`;
     return sendJSON(res, 200, { ok: true });
   }
@@ -262,6 +286,34 @@ async function handleApi(req, res, url) {
     const b = await readBody(req); if (!b || !b.password) return sendJSON(res, 400, { error: "dados" });
     await sql`UPDATE members SET pass_hash=${await hashPassword(b.password)} WHERE id=${me.id}`;
     return sendJSON(res, 200, { ok: true });
+  }
+
+  // Cada pessoa edita o próprio perfil (nome, foto, idade, aniversário, sobre).
+  if (top === "me" && seg[1] === "profile" && method === "PUT") {
+    const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
+    const name = String(b.name || "").trim(); if (!name) return sendJSON(res, 400, { error: "nome" });
+    const pr = normProfile(b);
+    await sql`UPDATE members SET name=${name}, emoji=${String(b.emoji || me.emoji || "🙂")}, color=${String(b.color || me.color || "#0f766e")},
+              photo=${pr.photo}, birthday=${pr.birthday}, age=${pr.age}, bio=${pr.bio} WHERE id=${me.id}`;
+    return sendJSON(res, 200, { ok: true });
+  }
+
+  // Resgatar dinheiro: tira do saldo (só membros têm saldo).
+  if (top === "redeem" && method === "POST") {
+    if (admin) return sendJSON(res, 403, { error: "admin não tem saldo" });
+    const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
+    const [{ pv }] = await sql`SELECT point_value AS pv FROM settings WHERE id=1`;
+    const value = Number(pv) || 0.5;
+    const [{ total }] = await sql`SELECT COALESCE(SUM(delta),0)::int AS total FROM point_log WHERE member_id=${me.id}`;
+    const amount = Number(b.amount);
+    if (!(amount > 0)) return sendJSON(res, 400, { error: "valor inválido" });
+    const pts = Math.floor(amount / value + 1e-9);
+    if (pts < 1) return sendJSON(res, 400, { error: "valor abaixo de 1 ponto" });
+    if (pts > total) return sendJSON(res, 400, { error: "saldo insuficiente" });
+    const reais = pts * value;
+    await sql`INSERT INTO point_log (id, member_id, delta, reason, kind, by_id)
+              VALUES (${uid()}, ${me.id}, ${-pts}, ${"Resgate de R$ " + reais.toFixed(2).replace(".", ",")}, ${"resgate"}, ${me.id})`;
+    return sendJSON(res, 200, { ok: true, pts, reais });
   }
 
   if (top === "settings" && method === "PUT") {

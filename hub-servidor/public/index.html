@@ -180,7 +180,7 @@
   .ann{background:var(--bg);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:14px}
   .ann .ah{display:flex;align-items:center;gap:9px;margin-bottom:4px}
   .ann .an{font-weight:750;font-size:13.5px}
-  .ann .at{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .ann .at{font-size:11px;color:var(--text2);margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-weight:600;white-space:nowrap}
   .ann .abody{font-size:14.5px;white-space:pre-wrap;word-break:break-word;margin-top:6px}
   .ann img.ai{width:100%;max-height:420px;object-fit:cover;border-radius:12px;margin-top:10px;display:block;border:1px solid var(--line)}
   .tchips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
@@ -188,7 +188,7 @@
   .cmt{display:flex;gap:8px;align-items:flex-start}
   .cmt .cb{flex:1;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:7px 11px}
   .cmt .cn{font-size:12px;font-weight:750}
-  .cmt .ct{font-size:11px;color:var(--muted);margin-left:6px;font-weight:500}
+  .cmt .ct{font-size:10.5px;color:var(--text2);margin-left:8px;font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
   .cmt .cx{font-size:13.5px;white-space:pre-wrap;word-break:break-word;margin-top:1px}
   .cmtbox{display:flex;gap:8px;margin-top:4px}
   .cmtbox input{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:12px;padding:9px 12px;font-size:13.5px;outline:none}
@@ -200,8 +200,14 @@
   .thumb{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line)}
 
   /* pontos / placar */
-  .pointbadge{display:inline-flex;align-items:center;gap:5px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-weight:800;font-size:12.5px}
+  .pointbadge{display:inline-flex;align-items:center;gap:5px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:3px 10px;font-weight:800;font-size:12.5px;white-space:nowrap}
+  .pointbadge.neg{background:var(--bad-soft);color:var(--bad)}
   .money{color:var(--good);font-weight:800}
+  .txicon{font-size:20px;width:26px;text-align:center;flex:none}
+  .profhead{display:flex;gap:16px;align-items:center}
+  .profhead .av.lg{width:76px;height:76px;font-size:36px}
+  .profname{font-size:19px;font-weight:800;letter-spacing:-.01em}
+  .profbio{font-size:13.5px;color:var(--text2);margin-top:8px;white-space:pre-wrap}
   .placar-row{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid var(--line)}
   .placar-row:last-child{border-bottom:0}
   .rank{width:26px;text-align:center;font-weight:800;color:var(--muted);font-size:16px;flex:none}
@@ -310,8 +316,17 @@
   function isAdmin(){ return !!(S && S.me && S.me.role==="admin"); }
   function memberName(id){ const m=member(id); return m?m.name:"—"; }
   function membros(){ return (S.members||[]).filter(m=>m.role==="membro"); }
-  function memberPoints(id){ return (S.pointLog||[]).filter(p=>p.memberId===id).reduce((a,p)=>a+p.delta,0); }
+  function memberPoints(id){ return (S.points && S.points[id]) || 0; }
   function money(pts){ return pts*(S.pointValue||0); }
+  function myTx(id){ return (S.pointLog||[]).filter(p=>p.memberId===id); }
+  // Avatar com foto (se tiver) ou emoji+cor.
+  function avatar(m, cls, extra){
+    extra = extra||"";
+    if(m && m.photo) return `<span class="av ${cls||''}" style="background-image:url('${m.photo}');background-size:cover;background-position:center;${extra}"></span>`;
+    const c = m?m.color:'#888', g = m?(m.emoji||m.name.slice(0,1)):'?';
+    return `<span class="av ${cls||''}" style="background:${c};${extra}">${esc(g)}</span>`;
+  }
+  const KIND_ICON = { atividade:"⭐", ajuste:"⚖️", resgate:"💸" };
 
   async function reload(full){ const d = await api("/data"); if(!d || d.authenticated===false){ S=null; renderLogin(); throw { unauth:true }; } S=d; sessionId=S.me.id; full ? renderApp() : renderView(); }
 
@@ -388,7 +403,7 @@
           </div>
           <div class="spacer"></div>
           <div class="me">
-            <span class="av sm" style="background:${u.color}">${u.emoji||u.name.slice(0,1)}</span>
+            ${avatar(u,'sm')}
             <div style="display:flex;flex-direction:column;line-height:1.1">
               <span class="nm">${esc(u.name)}</span>
               <span class="role">${admin?"admin":`${pts} pts · ${BRL(money(pts))}`}</span>
@@ -475,7 +490,7 @@
       </div>
       <div class="panel">
         <div class="ph"><span class="ic">📣</span><h3>Avisos recentes</h3></div>
-        ${avisos.length?avisos.map(a=>{const au=member(a.authorId);return `<div class="note"><div class="nh"><span class="av sm" style="background:${au?au.color:'#888'};width:22px;height:22px;font-size:12px">${au?(au.emoji||au.name.slice(0,1)):'?'}</span><span class="na">${esc(au?au.name:'—')}</span><span class="nt">${timeAgo(a.createdAt)}</span></div><div class="nb">${a.text?esc(a.text):'(imagem)'}</div></div>`;}).join(""):`<div class="empty">Nenhum aviso.</div>`}
+        ${avisos.length?avisos.map(a=>{const au=member(a.authorId);return `<div class="note"><div class="nh">${avatar(au,'sm','width:22px;height:22px;font-size:12px')}<span class="na">${esc(au?au.name:'—')}</span><span class="nt">${timeAgo(a.createdAt)}</span></div><div class="nb">${a.text?esc(a.text):'(imagem)'}</div></div>`;}).join(""):`<div class="empty">Nenhum aviso.</div>`}
         <div class="rowbtns"><button class="btn sm" data-go="avisos">Ver avisos →</button></div>
       </div>
       <div class="panel">
@@ -522,7 +537,7 @@
     const au=member(a.authorId);
     return `<div class="ann" data-ann="${a.id}">
       <div class="ah">
-        <span class="av sm" style="background:${au?au.color:'#888'};width:26px;height:26px;font-size:13px">${au?(au.emoji||au.name.slice(0,1)):'?'}</span>
+        ${avatar(au,'sm','width:26px;height:26px;font-size:13px')}
         <span class="an">${esc(au?au.name:'—')}</span>
         <span class="at">${timeAgo(a.createdAt)}</span>
       </div>
@@ -532,7 +547,7 @@
       ${isAdmin()?`<div class="rowbtns"><button class="btn sm danger" data-delann="${a.id}">🗑 Apagar publicação</button></div>`:""}
       <div class="comments">
         ${(a.comments||[]).map(c=>{const cu=member(c.authorId);const mine=c.authorId===sessionId;return `<div class="cmt">
-          <span class="av sm" style="background:${cu?cu.color:'#888'};width:24px;height:24px;font-size:12px">${cu?(cu.emoji||cu.name.slice(0,1)):'?'}</span>
+          ${avatar(cu,'sm','width:24px;height:24px;font-size:12px')}
           <div class="cb"><div><span class="cn">${esc(cu?cu.name:'—')}</span><span class="ct">${timeAgo(c.createdAt)}</span>${mine||isAdmin()?`<button class="x" data-delcmt="${c.id}" title="Apagar comentário" style="float:right;font-size:14px;padding:0 4px">✕</button>`:''}</div><div class="cx">${esc(c.text)}</div></div>
         </div>`;}).join("")}
         <div class="cmtbox">
@@ -693,7 +708,7 @@
         <div class="ph"><span class="ic">🏆</span><h3>Placar da família</h3><span class="cnt">cada ponto = ${BRL(S.pointValue)}</span></div>
         ${rows.length?rows.map((r,i)=>`<div class="placar-row">
           <div class="rank ${i<3?'top':''}">${i<3?medals[i]:(i+1)}</div>
-          <span class="av md" style="background:${r.m.color}">${r.m.emoji||r.m.name.slice(0,1)}</span>
+          ${avatar(r.m,'md')}
           <div class="li-main"><div class="li-t">${esc(r.m.name)}</div><div class="pts-sub">${BRL(money(r.pts))}</div></div>
           <div style="text-align:right"><div class="pts-big">${r.pts}</div><div class="pts-sub">pontos</div></div>
         </div>`).join(""):`<div class="empty">Sem membros para pontuar.</div>`}
@@ -736,48 +751,84 @@
   }
 
 /* ---------- CONTA / CONTAS ---------- */
+  function txHtml(id){
+    const tx=myTx(id).slice().sort((a,b)=>a.createdAt<b.createdAt?1:-1);
+    if(!tx.length) return `<div class="empty">Nenhuma transação ainda.</div>`;
+    return `<ul class="list">${tx.map(t=>{
+      const pos=t.delta>=0;
+      return `<li>
+        <span class="txicon">${KIND_ICON[t.kind]||'•'}</span>
+        <div class="li-main"><div class="li-t">${esc(t.reason||'—')}</div><div class="li-s">${timeAgo(t.createdAt)} · ${BRL(money(Math.abs(t.delta)))}</div></div>
+        <span class="pointbadge ${pos?'':'neg'}">${pos?'+':''}${t.delta} pts</span>
+      </li>`;}).join("")}</ul>`;
+  }
+
   function viewConta(){
     const admin=isAdmin(), u=me();
     if(admin){
       return `
         <div class="panel full">
           <div class="ph"><span class="ic">👪</span><h3>Contas da família</h3><span class="cnt">${S.members.length}</span></div>
-          ${S.members.map(m=>`<div class="mrow">
-            <span class="av md" style="background:${m.color}">${m.emoji||m.name.slice(0,1)}</span>
+          ${S.members.map(m=>{const mp=memberPoints(m.id);return `<div class="mrow">
+            ${avatar(m,'md')}
             <div class="li-main"><div class="li-t">${esc(m.name)}${m.id===sessionId?' <span class="tag mine">você</span>':''}</div>
-              <div class="li-s">${m.role==="admin"?"admin":"membro"} · ${esc(m.email)}</div></div>
+              <div class="li-s">${m.role==="admin"?"admin":`membro · <b>${mp} pts</b> · ${BRL(money(mp))}`} · ${esc(m.email)}</div></div>
+            ${m.role==="membro"?`<button class="btn sm" data-extrato="${m.id}">Extrato</button>`:''}
             <button class="btn sm" data-editm="${m.id}">Editar</button>
-          </div>`).join("")}
-          <p class="li-s" style="margin-top:12px">São 4 contas. Você pode mudar nome, e-mail, senha, papel, avatar e cor de cada uma.</p>
+          </div>`;}).join("")}
+          <p class="li-s" style="margin-top:12px">Você vê os pontos e o extrato de cada membro, e pode editar nome, e-mail, senha, papel, avatar, foto e cor.</p>
         </div>
         <div class="panel full">
           <div class="ph"><span class="ic">⚙️</span><h3>Configurações</h3></div>
           <div class="grid">
             <div class="fld"><label>Nome da família</label>
               <div class="add" style="margin-top:0"><input id="cf-fam" type="text" value="${esc(S.family)}" style="flex:2 1 160px"/><button class="btn" id="cf-fam-save">Salvar</button></div></div>
-            <div class="fld"><label>Valor de cada ponto (R$)</label>
-              <div class="add" style="margin-top:0"><input id="cf-val" type="number" min="0" step="0.05" value="${S.pointValue}" style="flex:1 1 120px"/><button class="btn" id="cf-val-save">Salvar</button></div></div>
+            <div class="fld"><label>💰 Valor de cada ponto (R$)</label>
+              <div class="add" style="margin-top:0"><input id="cf-val" type="number" min="0" step="0.05" value="${S.pointValue}" style="flex:1 1 120px"/><button class="btn" id="cf-val-save">Salvar</button></div>
+              <p class="li-s" style="margin-top:6px">Hoje cada ponto vale <b>${BRL(S.pointValue)}</b>. Ao mudar, os saldos passam a valer o novo preço.</p></div>
           </div>
-          <div class="rowbtns"><button class="btn danger" id="me-logout">Sair da conta</button></div>
+          <div class="rowbtns"><button class="btn" id="pf-edit">🎨 Editar meu perfil</button><button class="btn danger" id="me-logout">Sair da conta</button></div>
           <p class="li-s" style="margin-top:12px">Os dados ficam no servidor e sincronizam entre os aparelhos. As senhas são guardadas com proteção (hash).</p>
         </div>`;
     }
     const pts=memberPoints(u.id);
-    return `<div class="panel full">
-      <div class="ph"><span class="ic">⚙️</span><h3>Sua conta</h3></div>
-      <div class="mrow">
-        <span class="av md" style="background:${u.color}">${u.emoji||u.name.slice(0,1)}</span>
-        <div class="li-main"><div class="li-t">${esc(u.name)}</div><div class="li-s">membro · ${esc(u.email)}</div></div>
+    return `
+      <div class="panel full">
+        <div class="ph"><span class="ic">🙂</span><h3>Seu perfil</h3><button class="btn sm" id="pf-edit" style="margin-left:auto">🎨 Editar perfil</button></div>
+        <div class="profhead">
+          ${avatar(u,'lg')}
+          <div style="min-width:0">
+            <div class="profname">${esc(u.name)}</div>
+            <div class="li-s" style="margin-top:4px">${u.age?`<span class="tag">${u.age} anos</span>`:''}${u.birthday?`<span class="tag">🎂 ${fmtShort(u.birthday)}</span>`:''}<span class="tag">membro</span></div>
+            ${u.bio?`<div class="profbio">${esc(u.bio)}</div>`:''}
+          </div>
+        </div>
       </div>
-      <div class="totalbar">
-        <div class="tb"><div class="k">Seus pontos</div><div class="v">${pts}</div></div>
-        <div class="tb"><div class="k">Em dinheiro</div><div class="v money">${BRL(money(pts))}</div></div>
+      <div class="panel full">
+        <div class="ph"><span class="ic">👛</span><h3>Sua carteira</h3></div>
+        <div class="totalbar" style="margin-top:0">
+          <div class="tb"><div class="k">Saldo em pontos</div><div class="v">${pts}</div></div>
+          <div class="tb"><div class="k">Vale em dinheiro</div><div class="v money">${BRL(money(pts))}</div></div>
+        </div>
+        <div class="fld" style="margin-top:16px"><label>💸 Resgatar dinheiro (tira do seu saldo)</label>
+          <div class="add" style="margin-top:0">
+            <span style="align-self:center;font-weight:800;font-size:15px">R$</span>
+            <input id="rd-amount" type="number" min="0" step="0.50" placeholder="0,00" style="flex:1 1 120px"/>
+            <button class="btn pri" id="rd-go">Resgatar</button>
+          </div>
+          <p class="li-s" style="margin-top:6px">Cada ponto vale ${BRL(S.pointValue)}. Você resgata até o valor do seu saldo (${BRL(money(pts))}).</p>
+        </div>
+        <div class="ph" style="margin:18px 0 12px"><span class="ic">🧾</span><h3>Suas transações</h3><span class="cnt">${myTx(u.id).length}</span></div>
+        ${txHtml(u.id)}
       </div>
-      <div class="fld" style="margin-top:16px"><label>Trocar sua senha</label>
-        <div class="add" style="margin-top:0"><input id="pw-new" type="password" placeholder="Nova senha" style="flex:2 1 160px"/><button class="btn pri" id="pw-save">Salvar</button></div>
-      </div>
-      <div class="rowbtns"><button class="btn danger" id="me-logout">Sair da conta</button></div>
-    </div>`;
+      <div class="panel full">
+        <div class="ph"><span class="ic">⚙️</span><h3>Conta</h3></div>
+        <div class="li-s" style="margin-bottom:12px">${esc(u.email)}</div>
+        <div class="fld"><label>Trocar sua senha</label>
+          <div class="add" style="margin-top:0"><input id="pw-new" type="password" placeholder="Nova senha" style="flex:2 1 160px"/><button class="btn pri" id="pw-save">Salvar</button></div>
+        </div>
+        <div class="rowbtns"><button class="btn danger" id="me-logout">Sair da conta</button></div>
+      </div>`;
   }
 
 /* ===================== wiring ===================== */
@@ -886,14 +937,22 @@
     }
 
     if(tab==="conta"){
+      const pfEdit=$("pf-edit"); if(pfEdit) pfEdit.addEventListener("click",()=>openProfileModal(me()));
+      const logout=$("me-logout"); if(logout) logout.addEventListener("click",async()=>{ try{ await api("/logout",{method:"POST"}); }catch(e){} S=null; renderLogin(); });
       if(isAdmin()){
         v.querySelectorAll("[data-editm]").forEach(b=>b.addEventListener("click",()=>openAccountModal(member(b.dataset.editm))));
+        v.querySelectorAll("[data-extrato]").forEach(b=>b.addEventListener("click",()=>openExtratoModal(member(b.dataset.extrato))));
         $("cf-fam-save") && $("cf-fam-save").addEventListener("click",async()=>{ const nv=($("cf-fam").value||"").trim(); if(!nv)return; try{ await api("/settings",{method:"PUT",body:{family:nv,pointValue:S.pointValue}}); await reload(true); toast("Salvo ✓"); }catch(e){ toast("Erro",true); } });
-        $("cf-val-save") && $("cf-val-save").addEventListener("click",async()=>{ const nv=parseFloat($("cf-val").value); if(!(nv>=0))return; try{ await api("/settings",{method:"PUT",body:{family:S.family,pointValue:nv}}); await reload(true); toast("Salvo ✓"); }catch(e){ toast("Erro",true); } });
-        $("me-logout").addEventListener("click",async()=>{ try{ await api("/logout",{method:"POST"}); }catch(e){} S=null; renderLogin(); });
+        $("cf-val-save") && $("cf-val-save").addEventListener("click",async()=>{ const nv=parseFloat($("cf-val").value); if(!(nv>=0))return; try{ await api("/settings",{method:"PUT",body:{family:S.family,pointValue:nv}}); await reload(true); toast("Valor do ponto atualizado ✓"); }catch(e){ toast("Erro",true); } });
       } else {
         $("pw-save").addEventListener("click",async()=>{ const nv=$("pw-new").value; if(!nv){ $("pw-new").focus(); return; } try{ await api("/me/password",{method:"PUT",body:{password:nv}}); $("pw-new").value=""; toast("Senha atualizada ✓"); }catch(e){ toast("Erro",true); } });
-        $("me-logout").addEventListener("click",async()=>{ try{ await api("/logout",{method:"POST"}); }catch(e){} S=null; renderLogin(); });
+        const rd=$("rd-go"); if(rd) rd.addEventListener("click",async()=>{
+          const amount=parseFloat(($("rd-amount").value||"").replace(",","."));
+          if(!(amount>0)){ $("rd-amount").focus(); return; }
+          rd.disabled=true;
+          try{ const r=await api("/redeem",{method:"POST",body:{amount}}); await reload(true); toast(`Resgatado ${BRL(r.reais)} (${r.pts} pts) ✓`); }
+          catch(e){ toast(e.error==="saldo insuficiente"?"Saldo insuficiente":(e.error==="valor abaixo de 1 ponto"?"Valor muito baixo":"Não deu pra resgatar"),true); rd.disabled=false; }
+        });
       }
     }
   }
@@ -907,14 +966,42 @@
   }
 
 /* ===================== modal de conta (admin) ===================== */
+  // Blocos reutilizados nos modais de perfil/conta.
+  function pickersHtml(em, col, photo){
+    return `
+      <div class="fld"><label>Foto (opcional)</label>
+        <div class="filepick">
+          <span class="av lg" id="mm-photoprev" style="width:56px;height:56px;font-size:26px;${photo?`background-image:url('${photo}');background-size:cover;background-position:center`:`background:${col}`}">${photo?'':esc(em)}</span>
+          <button class="btn sm" id="mm-photobtn" type="button">📷 Escolher foto</button>
+          <button class="btn sm danger ${photo?'':'hide'}" id="mm-photorm" type="button">Remover</button>
+          <input id="mm-photofile" type="file" accept="image/*" class="hide"/>
+        </div></div>
+      <div class="fld"><label>Emoji (quando não tem foto)</label><div class="emopick" id="mm-emo">${EMOJIS.map(e=>`<button type="button" data-e="${e}" class="${e===em?'on':''}">${e}</button>`).join("")}</div></div>
+      <div class="fld"><label>Cor</label><div class="swatches" id="mm-col">${COLORS.map(c=>`<span class="sw ${c===col?'on':''}" data-c="${c}" style="background:${c}"></span>`).join("")}</div></div>
+      <div class="grid">
+        <div class="fld"><label>Idade</label><input id="mm-age" type="number" min="0" max="120"/></div>
+        <div class="fld"><label>Data de aniversário</label><input id="mm-bday" type="date"/></div>
+      </div>
+      <div class="fld"><label>Sobre (opcional)</label><textarea id="mm-bio" rows="2" placeholder="uma frase sobre você..."></textarea></div>`;
+  }
+
+  function wirePickers(wrap, state){
+    wrap.querySelector("#mm-emo").addEventListener("click",e=>{const b=e.target.closest("button[data-e]");if(!b)return;state.em=b.dataset.e;[...e.currentTarget.children].forEach(c=>c.classList.toggle("on",c===b)); if(!state.photo){const p=wrap.querySelector("#mm-photoprev");p.textContent=state.em;p.style.background=state.col;}});
+    wrap.querySelector("#mm-col").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;state.col=b.dataset.c;[...e.currentTarget.children].forEach(c=>c.classList.toggle("on",c===b)); if(!state.photo){wrap.querySelector("#mm-photoprev").style.background=state.col;}});
+    const pf=wrap.querySelector("#mm-photofile"), prev=wrap.querySelector("#mm-photoprev"), rm=wrap.querySelector("#mm-photorm");
+    wrap.querySelector("#mm-photobtn").addEventListener("click",()=>pf.click());
+    pf.addEventListener("change",e=>{const f=e.target.files&&e.target.files[0];if(!f)return;readImageResized(f,256,url=>{if(!url)return;state.photo=url;prev.style.backgroundImage=`url('${url}')`;prev.style.backgroundSize="cover";prev.style.backgroundPosition="center";prev.textContent="";rm.classList.remove("hide");});});
+    rm.addEventListener("click",()=>{state.photo=null;prev.style.backgroundImage="";prev.style.background=state.col;prev.textContent=state.em;rm.classList.add("hide");pf.value="";});
+  }
+
   function openAccountModal(mem){
     if(!mem) return;
-    let em=mem.emoji, col=mem.color;
+    const state={ em:mem.emoji, col:mem.color, photo:mem.photo||null };
     const wrap=document.createElement("div"); wrap.className="ov";
     wrap.innerHTML=`
       <div class="modal">
         <h3>Editar conta</h3>
-        <p class="msub">Ajuste os dados de acesso e o perfil. Deixe a senha em branco pra não trocar.</p>
+        <p class="msub">Dados de acesso e perfil. Deixe a senha em branco pra não trocar.</p>
         <div class="stack">
           <div class="fld"><label>Nome</label><input id="mm-name" type="text" value="${esc(mem.name)}"/></div>
           <div class="fld"><label>E-mail (login)</label><input id="mm-email" type="email" value="${esc(mem.email)}"/></div>
@@ -924,25 +1011,71 @@
               <option value="membro" ${mem.role==="membro"?"selected":""}>Membro (faz atividades e pontua)</option>
               <option value="admin" ${mem.role==="admin"?"selected":""}>Admin (dita, não pontua)</option>
             </select></div>
-          <div class="fld"><label>Avatar</label><div class="emopick" id="mm-emo">${EMOJIS.map(e=>`<button type="button" data-e="${e}" class="${e===em?'on':''}">${e}</button>`).join("")}</div></div>
-          <div class="fld"><label>Cor</label><div class="swatches" id="mm-col">${COLORS.map(c=>`<span class="sw ${c===col?'on':''}" data-c="${c}" style="background:${c}"></span>`).join("")}</div></div>
+          ${pickersHtml(state.em, state.col, state.photo)}
           <div class="rowbtns"><button class="btn pri" id="mm-save">Salvar</button><button class="btn" id="mm-cancel">Cancelar</button></div>
         </div>
       </div>`;
     $("modal-root").appendChild(wrap);
-    wrap.querySelector("#mm-emo").addEventListener("click",e=>{const b=e.target.closest("button[data-e]");if(!b)return;em=b.dataset.e;[...e.currentTarget.children].forEach(c=>c.classList.toggle("on",c===b));});
-    wrap.querySelector("#mm-col").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;col=b.dataset.c;[...e.currentTarget.children].forEach(c=>c.classList.toggle("on",c===b));});
+    wrap.querySelector("#mm-age").value = (mem.age??"");
+    wrap.querySelector("#mm-bday").value = (mem.birthday||"");
+    wrap.querySelector("#mm-bio").value = (mem.bio||"");
+    wirePickers(wrap, state);
     wrap.querySelector("#mm-cancel").addEventListener("click",()=>wrap.remove());
     wrap.querySelector("#mm-save").addEventListener("click",async()=>{
       const name=(wrap.querySelector("#mm-name").value||"").trim();
       const email=(wrap.querySelector("#mm-email").value||"").trim().toLowerCase();
       const pass=wrap.querySelector("#mm-pass").value;
       if(!name||!email){ return; }
-      const body={ name, email, role:wrap.querySelector("#mm-role").value, emoji:em, color:col };
+      const body={ name, email, role:wrap.querySelector("#mm-role").value, emoji:state.em, color:state.col, photo:state.photo,
+        age:wrap.querySelector("#mm-age").value||null, birthday:wrap.querySelector("#mm-bday").value||null, bio:(wrap.querySelector("#mm-bio").value||"").trim()||null };
       if(pass) body.password=pass;
       try{ await api("/members/"+mem.id,{method:"PUT",body}); wrap.remove(); await reload(true); toast("Conta atualizada ✓"); }
       catch(e){ toast(e.error==="e-mail já usado"?"Esse e-mail já está em uso":"Erro ao salvar",true); }
     });
+  }
+
+  function openProfileModal(mem){
+    if(!mem) return;
+    const state={ em:mem.emoji, col:mem.color, photo:mem.photo||null };
+    const wrap=document.createElement("div"); wrap.className="ov";
+    wrap.innerHTML=`
+      <div class="modal">
+        <h3>Editar meu perfil</h3>
+        <p class="msub">Deixe do seu jeito. 🎨</p>
+        <div class="stack">
+          <div class="fld"><label>Nome</label><input id="mm-name" type="text" value="${esc(mem.name)}"/></div>
+          ${pickersHtml(state.em, state.col, state.photo)}
+          <div class="rowbtns"><button class="btn pri" id="mm-save">Salvar</button><button class="btn" id="mm-cancel">Cancelar</button></div>
+        </div>
+      </div>`;
+    $("modal-root").appendChild(wrap);
+    wrap.querySelector("#mm-age").value = (mem.age??"");
+    wrap.querySelector("#mm-bday").value = (mem.birthday||"");
+    wrap.querySelector("#mm-bio").value = (mem.bio||"");
+    wirePickers(wrap, state);
+    wrap.querySelector("#mm-cancel").addEventListener("click",()=>wrap.remove());
+    wrap.querySelector("#mm-save").addEventListener("click",async()=>{
+      const name=(wrap.querySelector("#mm-name").value||"").trim(); if(!name){ wrap.querySelector("#mm-name").focus(); return; }
+      const body={ name, emoji:state.em, color:state.col, photo:state.photo,
+        age:wrap.querySelector("#mm-age").value||null, birthday:wrap.querySelector("#mm-bday").value||null, bio:(wrap.querySelector("#mm-bio").value||"").trim()||null };
+      try{ await api("/me/profile",{method:"PUT",body}); wrap.remove(); await reload(true); toast("Perfil atualizado ✓"); }
+      catch(e){ toast("Erro ao salvar",true); }
+    });
+  }
+
+  function openExtratoModal(mem){
+    if(!mem) return;
+    const pts=memberPoints(mem.id);
+    const wrap=document.createElement("div"); wrap.className="ov";
+    wrap.innerHTML=`
+      <div class="modal">
+        <h3>Extrato de ${esc(mem.name)}</h3>
+        <p class="msub">Saldo: <b>${pts} pts</b> · <span class="money">${BRL(money(pts))}</span></p>
+        ${txHtml(mem.id)}
+        <div class="rowbtns"><button class="btn" id="mm-close">Fechar</button></div>
+      </div>`;
+    $("modal-root").appendChild(wrap);
+    wrap.querySelector("#mm-close").addEventListener("click",()=>wrap.remove());
   }
 
 /* ===================== splash + boot ===================== */

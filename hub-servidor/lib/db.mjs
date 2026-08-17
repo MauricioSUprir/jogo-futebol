@@ -102,5 +102,12 @@ export async function ensureSchema() {
       added_by   text,
       created_at timestamptz NOT NULL DEFAULT now()
     );
+
+    -- Migrações leves (rodam sempre; seguras em bancos já existentes) --
+    ALTER TABLE point_log ADD COLUMN IF NOT EXISTS kind text NOT NULL DEFAULT 'ajuste';
+    ALTER TABLE members   ADD COLUMN IF NOT EXISTS photo    text;
+    ALTER TABLE members   ADD COLUMN IF NOT EXISTS birthday date;
+    ALTER TABLE members   ADD COLUMN IF NOT EXISTS age      int;
+    ALTER TABLE members   ADD COLUMN IF NOT EXISTS bio      text;
   `);
 }
