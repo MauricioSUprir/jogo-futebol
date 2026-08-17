@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Hub da Família">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="116" fill="url(#bg)"/>
+  <g fill="none" stroke="#ffffff" stroke-width="30" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M112 248 256 122 400 248"/>
+    <path d="M150 230 V392 H362 V230"/>
+  </g>
+  <path d="M256 306c-20-24-64-16-64 22 0 30 40 54 64 72 24-18 64-42 64-72 0-38-44-46-64-22Z" fill="#ffffff"/>
+</svg>
