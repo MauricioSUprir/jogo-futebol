@@ -1,0 +1,19 @@
+# Blueprint do Render para publicar o Hub da Família (servidor).
+# No Render: New + → Blueprint → conecte este repositório e escolha o branch
+# claude/family-hub-accounts-5x3mk5. O Render lê este arquivo e cria o serviço.
+# Depois é só colar a DATABASE_URL do seu Postgres (ex.: Neon, grátis).
+services:
+  - type: web
+    name: hub-familia
+    runtime: node
+    rootDir: hub-servidor
+    branch: claude/family-hub-accounts-5x3mk5
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.mjs
+    healthCheckPath: /health
+    envVars:
+      - key: SESSION_SECRET
+        generateValue: true      # o Render gera um segredo forte sozinho
+      - key: DATABASE_URL
+        sync: false              # você cola a string do seu Postgres (Neon)
