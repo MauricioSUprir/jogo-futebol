@@ -507,10 +507,13 @@
 
       <!-- CALENDARIO -->
       <section class="screen" id="scr-calendario">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <strong style="font-size:15px" id="calTitulo">Seu mês</strong>
-          <span class="chip"><span class="dot" style="background:var(--primary)"></span>bolinha = tem vídeo</span>
-          <span class="chip">toque num dia pra marcar um vídeo</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <button class="btn ghost sm" onclick="mudarMes(-1)" aria-label="Mês anterior">◀</button>
+          <strong style="font-size:16px;min-width:160px;text-align:center" id="calTitulo">Seu mês</strong>
+          <button class="btn ghost sm" onclick="mudarMes(1)" aria-label="Próximo mês">▶</button>
+          <button class="btn ghost sm" onclick="irHoje()">Hoje</button>
+          <span class="chip" style="margin-left:auto"><span class="dot" style="background:var(--primary)"></span>tem vídeo</span>
+          <span class="chip">toque num dia pra marcar</span>
         </div>
         <div class="card" style="overflow:hidden"><div id="cal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border)"></div></div>
       </section>
@@ -553,6 +556,14 @@
         <div class="card panel" style="margin-top:16px">
           <h3>Como foi crescendo, mês a mês</h3>
           <div id="lineChart"></div>
+        </div>
+        <div class="panels" style="margin-top:16px">
+          <div class="card panel"><h3>De onde vêm as visualizações</h3><div id="chartPlat"></div></div>
+          <div class="card panel"><h3>Visualizações por vídeo <span class="hint" style="font-weight:500;font-size:12px">· top 8</span></h3><div id="chartTopViews"></div></div>
+        </div>
+        <div class="panels" style="margin-top:16px">
+          <div class="card panel"><h3>Curtidas × Comentários × Compartilhamentos</h3><div id="chartEngaj"></div></div>
+          <div class="card panel"><h3>Vídeos postados por mês</h3><div id="chartPorMes"></div></div>
         </div>
       </section>
 
@@ -1021,37 +1032,53 @@ function comoFunciona(){
 // ---------- Calendário ----------
 // Zerado: a criadora vai marcando os vídeos nos dias (clicando em cada dia).
 let CALPOSTS = {};
+try{ CALPOSTS=JSON.parse(localStorage.getItem("cf_cal")||"{}")||{}; }catch(_){ CALPOSTS={}; }
+const MESES=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const _hojeCal=new Date();
+let calY=_hojeCal.getFullYear(), calM=_hojeCal.getMonth();
+function salvarCal(){ try{ localStorage.setItem("cf_cal", JSON.stringify(CALPOSTS)); }catch(_){} }
+function calKey(y,m,d){ return `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`; }
+function mudarMes(delta){ calM+=delta; if(calM<0){calM=11;calY--;} if(calM>11){calM=0;calY++;} renderCal(); }
+function irHoje(){ const n=new Date(); calY=n.getFullYear(); calM=n.getMonth(); renderCal(); }
 function renderCal(){
   const cal = document.getElementById("cal");
+  const tit=document.getElementById("calTitulo"); if(tit) tit.textContent=`${MESES[calM]} ${calY}`;
   const dias = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   let html = dias.map(d=>`<div style="background:var(--surface-2);padding:6px;text-align:center;font-size:11px;font-weight:700;color:var(--muted)">${d}</div>`).join("");
-  for(let b=0;b<2;b++) html += `<div style="background:var(--surface);min-height:74px;opacity:.4"></div>`;
-  for(let d=1;d<=30;d++){
-    const p = CALPOSTS[d];
-    html += `<div onclick="marcarDia(${d})" style="background:var(--surface);min-height:74px;padding:6px;cursor:pointer" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
-      <div style="display:flex;justify-content:space-between;font-size:11px"><span>${d}</span>${p?'':'<span style="color:var(--faint);font-size:14px">+</span>'}</div>
+  const inicio = new Date(calY,calM,1).getDay();
+  const totalDias = new Date(calY,calM+1,0).getDate();
+  const hoje=new Date(), hojeKey=calKey(hoje.getFullYear(),hoje.getMonth(),hoje.getDate());
+  for(let b=0;b<inicio;b++) html += `<div style="background:var(--surface);min-height:74px;opacity:.35"></div>`;
+  for(let d=1;d<=totalDias;d++){
+    const key=calKey(calY,calM,d);
+    const p = CALPOSTS[key];
+    const ehHoje = key===hojeKey;
+    html += `<div onclick="marcarDia('${key}')" style="background:var(--surface);min-height:74px;padding:6px;cursor:pointer;${ehHoje?'outline:2px solid var(--primary);outline-offset:-2px;border-radius:4px':''}" onmouseover="this.style.background='var(--surface-2)'" onmouseout="this.style.background='var(--surface)'">
+      <div style="display:flex;justify-content:space-between;font-size:11px"><span style="${ehHoje?'font-weight:800;color:var(--primary-ink)':''}">${d}</span>${p?'':'<span style="color:var(--faint);font-size:14px">+</span>'}</div>
       ${p?p.map((v,vi)=>`<div style="margin-top:4px;font-size:10px;background:var(--primary-soft);color:var(--primary-ink);border-radius:5px;padding:2px 5px;line-height:1.25">${fmtChip(v.fmt)} ${v.t}</div>`).join(''):''}
     </div>`;
   }
   cal.innerHTML = html;
 }
-function marcarDia(d){
-  const jaTem = (CALPOSTS[d]||[]).map((v,i)=>`<div class="chk" style="justify-content:space-between"><span>${fmtChip(v.fmt)} ${v.t}</span><button class="btn ghost sm" onclick="removerDiaVideo(${d},${i})">🗑</button></div>`).join("");
+function marcarDia(key){
+  const [Y,M,D]=key.split("-").map(Number);
+  const titulo=`${D} de ${MESES[M-1]} de ${Y}`;
+  const jaTem = (CALPOSTS[key]||[]).map((v,i)=>`<div class="chk" style="justify-content:space-between"><span>${fmtChip(v.fmt)} ${v.t}</span><button class="btn ghost sm" onclick="removerDiaVideo('${key}',${i})">🗑</button></div>`).join("");
   openModal(`
-    <h3>Dia ${d} 📅</h3>
+    <h3>${titulo} 📅</h3>
     <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Marque um vídeo pra postar neste dia.</p>
     ${jaTem?`<div style="display:flex;flex-direction:column;gap:6px">${jaTem}</div>`:""}
     <div class="field"><label>Nome do vídeo</label><input id="cdT" autofocus placeholder="Ex.: Bastidores da semana"/></div>
     <div class="field"><label>Formato</label><select id="cdF">${FMT_OPTS}</select></div>
-    <button class="btn" style="justify-content:center" onclick="salvarDiaVideo(${d})">Marcar neste dia</button>
+    <button class="btn" style="justify-content:center" onclick="salvarDiaVideo('${key}')">Marcar neste dia</button>
   `,"bottom");
 }
-function salvarDiaVideo(d){
+function salvarDiaVideo(key){
   const t=document.getElementById("cdT").value.trim(); if(!t) return;
-  (CALPOSTS[d]=CALPOSTS[d]||[]).push({t, fmt:document.getElementById("cdF").value});
-  closeModal(); renderCal(); toast(`Marcado no dia ${d} ✓`);
+  (CALPOSTS[key]=CALPOSTS[key]||[]).push({t, fmt:document.getElementById("cdF").value});
+  salvarCal(); closeModal(); renderCal(); toast(`Marcado ✓`);
 }
-function removerDiaVideo(d,i){ CALPOSTS[d].splice(i,1); if(!CALPOSTS[d].length) delete CALPOSTS[d]; renderCal(); marcarDia(d); }
+function removerDiaVideo(key,i){ CALPOSTS[key].splice(i,1); if(!CALPOSTS[key].length) delete CALPOSTS[key]; salvarCal(); renderCal(); marcarDia(key); }
 
 // ---------- Métricas ----------
 let platFilter="todos", pilarView="barras", videosView="cartoes";
@@ -1132,7 +1159,7 @@ function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v12";
+const YT_APP_VER = "v13";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null, ytLinkVal="", ytLoadMsg="";
@@ -1369,7 +1396,7 @@ function renderMetrics(){
       <div style="font-size:13px;margin-top:4px">Conecte o YouTube e o TikTok pra ver aqui os números <b>de verdade</b>, atualizados todo dia.</div>
       <button class="btn" style="margin-top:12px" onclick="toast('Conexão dos apps: próximo passo 😉')">🔗 Conectar meus apps</button>
     </div>`;
-    ["barPilar","rankComp","rankSeg","rankComs","rankLikes","videosView","lineChart","segPilar","segVideos"].forEach(id=>document.getElementById(id).innerHTML="");
+    ["barPilar","rankComp","rankSeg","rankComs","rankLikes","videosView","lineChart","segPilar","segVideos","chartPlat","chartTopViews","chartEngaj","chartPorMes"].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML="";});
     return;
   }
 
@@ -1398,6 +1425,7 @@ function renderMetrics(){
   document.getElementById("videosView").innerHTML = videosView==="tabela" ? renderTable(VS) : renderCards(VS);
 
   renderLine(VS);
+  renderChartPlat(VS); renderChartTopViews(VS); renderChartEngaj(VS); renderChartPorMes(VS);
 }
 
 // Cores por categoria (formato ou pilar)
@@ -1408,6 +1436,52 @@ function rankItem(v,i,val,c){
   return `<div class="rank"><div class="n tnum">${i+1}</div>
     <div class="info"><b>${nome}</b><small><span class="plat-chip">${platIcon(v.plat)}${fmtLabel(v.fmt)}</span></small></div>
     <div class="val tnum" style="color:${c}">${val}</div></div>`;
+}
+const PCOR={youtube:"var(--yt)", tiktok:"var(--tt)"};
+function renderChartPlat(VS){
+  const el=document.getElementById("chartPlat"); if(!el) return;
+  const byP={}; VS.forEach(v=>{ byP[v.plat]=(byP[v.plat]||0)+(+v.views||0); });
+  const ents=Object.entries(byP).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
+  if(!ents.length){ el.innerHTML=`<p style="color:var(--muted);font-size:13px">Sem visualizações ainda.</p>`; return; }
+  const total=ents.reduce((a,e)=>a+e[1],0)||1, R=52, C=2*Math.PI*R; let off=0;
+  const segs=ents.map(([p,val])=>{ const frac=val/total, dash=`${(frac*C).toFixed(1)} ${(C-frac*C).toFixed(1)}`;
+    const s=`<circle cx="70" cy="70" r="${R}" fill="none" stroke="${PCOR[p]||'var(--primary)'}" stroke-width="16" stroke-dasharray="${dash}" stroke-dashoffset="${(-off*C).toFixed(1)}" transform="rotate(-90 70 70)"/>`; off+=frac; return s; }).join("");
+  const leg=ents.map(([p,val])=>`<div style="display:flex;align-items:center;gap:7px;font-size:12.5px">${platIcon(p)}${platLabel(p)}<span style="margin-left:auto;color:var(--muted)" class="tnum">${Math.round(val/total*100)}% · ${fmtN(val)}</span></div>`).join("");
+  el.innerHTML=`<div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap"><svg width="140" height="140" viewBox="0 0 140 140">${segs}<text x="70" y="66" text-anchor="middle" font-size="11" fill="var(--muted)">total</text><text x="70" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">${fmtN(total)}</text></svg><div style="flex:1;min-width:130px;display:flex;flex-direction:column;gap:8px">${leg}</div></div>`;
+}
+function renderChartTopViews(VS){
+  const el=document.getElementById("chartTopViews"); if(!el) return;
+  const top=[...VS].sort((a,b)=>b.views-a.views).slice(0,8);
+  if(!top.length){ el.innerHTML=`<p style="color:var(--muted);font-size:13px">Sem vídeos ainda.</p>`; return; }
+  const max=Math.max(...top.map(v=>v.views),1);
+  el.innerHTML=top.map(v=>{ const nome=(v.t||"").length>32?v.t.slice(0,31)+"…":(v.t||"Vídeo"); const c=PCOR[v.plat]||"var(--primary)";
+    return `<div class="bar-row"><div class="lab">${platIcon(v.plat)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nome}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${v.views/max*100}%;background:${c}"></div></div>
+      <div class="num tnum">${fmtN(v.views)}</div></div>`; }).join("");
+}
+function renderChartEngaj(VS){
+  const el=document.getElementById("chartEngaj"); if(!el) return;
+  const likes=VS.reduce((a,v)=>a+(+v.likes||0),0), coms=VS.reduce((a,v)=>a+(+v.comments||0),0), sh=VS.reduce((a,v)=>a+(+v.comp||0),0);
+  const ents=[["❤️ Curtidas",likes,"#f5348b"],["💬 Comentários",coms,"#6366f1"],["🔁 Compart.",sh,"#16a34a"]];
+  const max=Math.max(likes,coms,sh,1);
+  if(likes+coms+sh===0){ el.innerHTML=`<p style="color:var(--muted);font-size:13px">Sem curtidas/comentários ainda.</p>`; return; }
+  el.innerHTML=ents.map(([l,val,c])=>`<div class="bar-row"><div class="lab">${l}</div>
+    <div class="bar-track"><div class="bar-fill" style="width:${val/max*100}%;background:${c}"></div></div>
+    <div class="num tnum">${fmtN(val)}</div></div>`).join("");
+}
+function renderChartPorMes(VS){
+  const el=document.getElementById("chartPorMes"); if(!el) return;
+  const mesNome=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const byM={}; VS.forEach(v=>{ if(!v.dia) return; const k=v.dia.slice(0,7); byM[k]=(byM[k]||0)+1; });
+  const keys=Object.keys(byM).sort();
+  if(!keys.length){ el.innerHTML=`<p style="color:var(--muted);font-size:13px">Sem datas nos vídeos ainda.</p>`; return; }
+  const max=Math.max(...keys.map(k=>byM[k]),1);
+  el.innerHTML=`<div style="display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:6px;overflow-x:auto">`+keys.map(k=>{
+    const n=byM[k], h=Math.max(n/max*120,6), lab=mesNome[+k.slice(5,7)-1]+"/"+k.slice(2,4);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;min-width:34px">
+      <span class="tnum" style="font-size:12px;font-weight:700">${n}</span>
+      <div style="width:26px;height:${h}px;background:var(--primary);border-radius:6px 6px 3px 3px"></div>
+      <span style="font-size:10.5px;color:var(--muted)">${lab}</span></div>`; }).join("")+`</div>`;
 }
 function renderBars(ents){
   const max=Math.max(...ents.map(e=>e[1]),1);
