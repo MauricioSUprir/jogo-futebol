@@ -1060,11 +1060,29 @@ function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v9";
+const YT_APP_VER = "v10";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null, ytLinkVal="", ytLoadMsg="";
 let ytApiKey=""; try{ ytApiKey=localStorage.getItem("cf_yt_key")||""; }catch(_){}
+try{ ytLinkVal=localStorage.getItem("cf_yt_canal")||""; }catch(_){}
+let ytAutoFeito=false;
+async function atualizarYouTube(){
+  if(ytBusy) return;
+  if(!(ytApiKey&&ytLinkVal)){ toast("Cole a chave e o link do canal primeiro"); return; }
+  ytBusy=true; ytLoadMsg="Atualizando seus números…"; ytErro=null; renderYtBar();
+  try{ const item=await resolverCanal(ytLinkVal); await carregarYouTube(item); ytLoadMsg=""; }
+  catch(e){ ytBusy=false; ytLoadMsg=""; ytErro="[pelo link] "+String(e.message||e).slice(0,170); renderYtBar(); }
+}
+async function ytAutoConectar(){
+  if(ytAutoFeito || ytInfo || ytBusy) return;
+  if(ytApiKey && ytLinkVal){
+    ytAutoFeito=true;
+    ytBusy=true; ytLoadMsg="Atualizando seus números do YouTube…"; ytErro=null; renderYtBar();
+    try{ const item=await resolverCanal(ytLinkVal); await carregarYouTube(item); ytLoadMsg=""; }
+    catch(e){ ytBusy=false; ytLoadMsg=""; ytErro="[pelo link] "+String(e.message||e).slice(0,170); renderYtBar(); }
+  }
+}
 function salvarApiKey(v){ ytApiKey=(v||"").trim(); try{ localStorage.setItem("cf_yt_key", ytApiKey); }catch(_){} }
 function ytLinkBoxHTML(){
   const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
@@ -1087,7 +1105,7 @@ function renderYtBar(){
     return;
   }
   if(ytInfo){
-    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
+    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="atualizarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
   } else if(ytErro){
     const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
     const apiOff=/not been used|SERVICE_DISABLED|has not been enabled|accessNotConfigured|it is disabled/i.test(ytErro);
@@ -1211,6 +1229,7 @@ async function usarCanalPorLink(){
     const item=await resolverCanal(q);
     ytLoadMsg="Achei! Puxando seus vídeos…"; renderYtBar();
     await carregarYouTube(item);
+    try{ localStorage.setItem("cf_yt_canal", ytLinkVal); }catch(_){}
     ytLoadMsg="";
   }
   catch(e){ ytBusy=false; ytLoadMsg=""; ytErro="[pelo link] "+String(e.message||e).slice(0,170); renderYtBar(); console.error(e); }
@@ -1668,5 +1687,5 @@ function renderLearn(){
 
 // ---------- Init ----------
 document.getElementById("rtFmt").innerHTML = FMT_OPTS;
-renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); renderYtBar(); setHelp("pipeline");
+renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); renderYtBar(); setHelp("pipeline"); ytAutoConectar();
 </script>
