@@ -655,11 +655,10 @@ const IDEIAS = [];   // ideias da criadora
 const ROTEIROS = []; // roteiros criados (pela IA ou escritos à mão)
 let ROTEIRO_ID = 1;
 
-// Formatos: separa vídeo longo do Short no YouTube, além de Reels e TikTok.
+// Formatos: separa vídeo longo do Short no YouTube, além do TikTok.
 const FORMATOS = {
   yt_long:  {label:"Vídeo longo (YouTube)", curto:"Vídeo longo", app:"youtube", emoji:"▶️", ar:"16:9", arTxt:"deitado 16:9 (vídeo longo do YouTube)"},
   yt_short: {label:"Short (YouTube)",       curto:"Short",       app:"youtube", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (YouTube Shorts)"},
-  reels:    {label:"Reels (Instagram)",     curto:"Reels",       app:"instagram", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (Reels do Instagram)"},
   tiktok:   {label:"TikTok",                curto:"TikTok",      app:"tiktok", emoji:"⚡", ar:"9:16", arTxt:"em pé 9:16 (TikTok)"},
 };
 const FMT_OPTS = Object.entries(FORMATOS).map(([k,f])=>`<option value="${k}">${f.emoji} ${f.label}</option>`).join("");
@@ -681,8 +680,8 @@ const fmtN = n => new Intl.NumberFormat("pt-BR").format(n);
 const platLabel = p => PLAT[p]?.l ?? p;
 const fmtLabel = f => FORMATOS[f]?.curto ?? f;
 // Chip do formato: mostra o app (logo real) + se é longo ou curto.
-function fmtChip(fmtKey){ const f=FORMATOS[fmtKey]||FORMATOS.reels; return `<span class="plat-chip">${platIcon(f.app)}${f.curto}</span>`; }
-function itemPlat(it){ return FORMATOS[it.fmt]?.app || (it.plats&&it.plats[0]) || "instagram"; }
+function fmtChip(fmtKey){ const f=FORMATOS[fmtKey]||FORMATOS.tiktok; return `<span class="plat-chip">${platIcon(f.app)}${f.curto}</span>`; }
+function itemPlat(it){ return FORMATOS[it.fmt]?.app || (it.plats&&it.plats[0]) || "youtube"; }
 
 // ---------- Pipeline ----------
 // Ícones "certinhos" das plataformas (marcas reconhecíveis, em SVG).
@@ -930,7 +929,7 @@ function criarRoteiroVazio(){
 function promptRoteiro(tema, longo){
   const fmtTxt = longo
     ? "Vídeo longo do YouTube (uns 5 a 10 minutos, com começo, partes/capítulos e fechamento)"
-    : "Vídeo curto vertical (Short / Reels / TikTok, uns 30 a 60 segundos, direto ao ponto, uma ideia só)";
+    : "Vídeo curto vertical (Short do YouTube / TikTok, uns 30 a 60 segundos, direto ao ponto, uma ideia só)";
   return [
 `Aja como um roteirista e estrategista de conteúdo para redes sociais no Brasil.`,
 ``,
@@ -1060,7 +1059,7 @@ function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v10";
+const YT_APP_VER = "v11";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null, ytLinkVal="", ytLoadMsg="";
@@ -1276,7 +1275,7 @@ function renderMetrics(){
   const VS = platFilter==="todos" ? VIDEOS : VIDEOS.filter(v=>v.plat===platFilter);
 
   // aba: trocar dados por aplicativo (+ Geral)
-  const abas = [["todos","Geral"],["youtube","YouTube"],["instagram","Instagram"],["tiktok","TikTok"]];
+  const abas = [["todos","Geral"],["youtube","YouTube"],["tiktok","TikTok"]];
   document.getElementById("pswitch").innerHTML = abas.map(([v,l])=>{
     const on = platFilter===v;
     const cnt = v==="todos"?VIDEOS.length:VIDEOS.filter(x=>x.plat===v).length;
@@ -1294,7 +1293,7 @@ function renderMetrics(){
     document.getElementById("rankRet").innerHTML=`<div style="text-align:center;color:var(--muted);padding:20px 6px">
       <div style="font-size:34px">🔌</div>
       <b style="display:block;margin-top:6px">Nenhum app conectado ainda</b>
-      <div style="font-size:13px;margin-top:4px">Conecte o YouTube, Instagram e TikTok pra ver aqui os números <b>de verdade</b>, atualizados todo dia.</div>
+      <div style="font-size:13px;margin-top:4px">Conecte o YouTube e o TikTok pra ver aqui os números <b>de verdade</b>, atualizados todo dia.</div>
       <button class="btn" style="margin-top:12px" onclick="toast('Conexão dos apps: próximo passo 😉')">🔗 Conectar meus apps</button>
     </div>`;
     ["barPilar","rankComp","rankSeg","rankComs","rankLikes","videosView","lineChart","segPilar","segVideos"].forEach(id=>document.getElementById(id).innerHTML="");
@@ -1438,7 +1437,7 @@ function thumbHeadline(t){
 function thumbPrompt(r){
   const f=FORMATOS[r.fmt], app=f.app, frase=thumbHeadline(r.tema);
   const nomeApp={youtube:"YouTube",instagram:"Instagram",tiktok:"TikTok"}[app];
-  const prop = f.ar==="16:9" ? "proporção 16:9 (deitada), tamanho de capa de vídeo do YouTube" : "proporção 9:16 (em pé), tamanho de capa de Short/Reels/TikTok";
+  const prop = f.ar==="16:9" ? "proporção 16:9 (deitada), tamanho de capa de vídeo do YouTube" : "proporção 9:16 (em pé), tamanho de capa de Short do YouTube/TikTok";
   return [
 `Crie uma thumbnail (capa) de vídeo — imagem única, alta qualidade, ${prop}.`,
 `App onde vai ser usada: ${nomeApp}.`,
@@ -1529,7 +1528,7 @@ const TIPS = {
   roteiro:["✍️","O roteiro é um <b>guia</b> (não as falas exatas). Escreva o tema, toque em <b>📋 Copiar prompt</b> e cole numa IA grátis (ChatGPT, Gemini). Dá pra separar Short e Vídeo longo."],
   thumbs:["🖼️","A <b>capa</b> é a imagem do vídeo. Copie o prompt e cole numa <b>IA de imagem</b>. O tamanho muda: vídeo longo é deitado, Short é em pé."],
   calendario:["📅","Aqui você vê em quais dias vai postar."],
-  metricas:["📊","Seus números <b>de verdade</b> aparecem aqui quando a gente conectar o YouTube, Instagram e TikTok — e atualizam todo dia."],
+  metricas:["📊","Seus números <b>de verdade</b> aparecem aqui quando a gente conectar o YouTube e o TikTok — e atualizam todo dia."],
   ia:["✨","Escreva um <b>tema</b> e a robô te dá começos e nomes prontos. Cada um vira uma ideia com um toque!"],
   aprender:["🎓","Toque num assunto e o <b>YouTube</b> abre com vídeos pra você aprender a criar conteúdo."],
 };
@@ -1615,7 +1614,7 @@ const LEARN_CATS = [
     ["✍️","Escrever um bom roteiro","como fazer roteiro de video para youtube"],
     ["🪝","Gancho nos primeiros segundos","como fazer gancho retenção nos primeiros segundos do video"],
     ["📚","Storytelling pra prender","como usar storytelling em videos para prender a atenção"],
-    ["🔁","Roteiro pra Shorts e Reels","como fazer roteiro de short e reels que retem"],
+    ["🔁","Roteiro pra Shorts e TikTok","como fazer roteiro de short e tiktok que retem"],
     ["🎣","Títulos que dão clique (sem clickbait)","como fazer titulos que dao clique sem clickbait"],
     ["🧩","Copiar formatos que funcionam","como usar formatos de video que ja funcionam"],
   ]},
@@ -1627,7 +1626,7 @@ const LEARN_CATS = [
     ["✂️","Editar no celular (CapCut)","como editar video no capcut para iniciantes"],
     ["💻","Editar no PC pra iniciantes","como editar video no pc para iniciantes completo"],
     ["⚡","Cortes e ritmo que seguram","como fazer cortes e ritmo de edição que prende"],
-    ["🎞️","Editar Reels e Shorts rápido","como editar reels e shorts rapido"],
+    ["🎞️","Editar Shorts e TikTok rápido","como editar shorts e tiktok rapido"],
   ]},
   {cat:"🖼️ Capas & Apresentação", items:[
     ["🖼️","Capas que dão vontade de clicar","como fazer thumbnail que da vontade de clicar"],
@@ -1648,12 +1647,11 @@ const LEARN_CATS = [
     ["🧪","Testar e melhorar","como testar titulo e thumbnail para melhorar"],
     ["🏷️","Descrição e hashtags","como escrever descrição e hashtags no youtube"],
   ]},
-  {cat:"📸 Instagram, TikTok & Shorts", items:[
-    ["📈","Crescer no Instagram","como crescer no instagram como criador de conteudo"],
+  {cat:"📸 TikTok & Shorts", items:[
     ["🎵","Crescer no TikTok","como crescer no tiktok do zero 2025"],
     ["⚡","Bombar nos Shorts","como fazer shorts que bombam no youtube"],
-    ["🔥","Reels que alcançam mais","como fazer reels que alcançam mais pessoas"],
-    ["🎶","Usar áudios em alta","como usar audios em alta no reels e tiktok"],
+    ["🔥","Vídeos curtos que alcançam mais","como fazer video curto que alcança mais pessoas"],
+    ["🎶","Usar áudios em alta","como usar audios em alta no tiktok e shorts"],
     ["♻️","Repostar em várias redes","como reaproveitar video em varias redes sociais"],
     ["#️⃣","Hashtags que ajudam","quais hashtags usar para crescer nas redes"],
   ]},
