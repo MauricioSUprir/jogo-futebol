@@ -1062,11 +1062,16 @@ function setVideosView(v){ videosView=v; renderMetrics(); }
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
-let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false;
+let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null;
 function renderYtBar(){
   const el=document.getElementById("ytBar"); if(!el) return;
   if(ytInfo){
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
+  } else if(ytErro){
+    el.innerHTML=`<div class="note" style="margin:0;background:var(--warn-soft);border-color:var(--warn-soft)"><span style="font-size:20px">⚠️</span><div style="flex:1"><b>O login funcionou, mas não consegui puxar os dados.</b>
+      <div style="font-size:12px;color:var(--ink);margin-top:5px;word-break:break-word">Mensagem: <b>${ytErro}</b></div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:7px">Se aparecer <b>403</b> ou <b>API not enabled</b>: no <b>Google Cloud → APIs e Serviços → Biblioteca</b>, ative as duas: <b>YouTube Data API v3</b> e <b>YouTube Analytics API</b>. Depois volte e toque em Tentar de novo.</div>
+      <button class="btn sm" style="margin-top:9px" onclick="conectarYouTube()">↻ Tentar de novo</button></div></div>`;
   } else {
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div></div></div>`;
   }
@@ -1077,11 +1082,11 @@ function conectarYouTube(){
   if(!ytTokenClient){
     ytTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:YT_CLIENT_ID, scope:YT_SCOPES,
-      callback:(resp)=>{ if(resp&&resp.access_token){ ytToken=resp.access_token; carregarYouTube(); } else { ytBusy=false; renderYtBar(); toast("Login não concluído"); } },
-      error_callback:()=>{ ytBusy=false; renderYtBar(); toast("Login cancelado ou bloqueado"); },
+      callback:(resp)=>{ if(resp&&resp.access_token){ ytToken=resp.access_token; carregarYouTube(); } else { ytBusy=false; ytErro="O login não retornou a permissão. Toque em Permitir na tela do Google."; renderYtBar(); } },
+      error_callback:(err)=>{ ytBusy=false; ytErro="Login cancelado ou bloqueado"+(err&&err.type?(" ("+err.type+")"):"")+"."; renderYtBar(); },
     });
   }
-  ytBusy=true;
+  ytErro=null; ytBusy=true;
   const el=document.getElementById("ytBar");
   if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Se aparecer <b>“não é seguro / não verificado”</b>: toque em <b>Avançado → Acessar CreateFlow</b> (é normal).</div><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
   try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"consent" }); }
@@ -1122,9 +1127,9 @@ async function carregarYouTube(){
     for(let i=VIDEOS.length-1;i>=0;i--) if(VIDEOS[i].plat==="youtube") VIDEOS.splice(i,1);
     VIDEOS.push(...list);
     ytInfo={ canal, inscritos, videos:list.length };
-    ytBusy=false; platFilter="youtube"; renderYtBar(); renderMetrics();
-    toast(`YouTube conectado — ${list.length} vídeos ✓`);
-  }catch(e){ ytBusy=false; renderYtBar(); toast("Erro no YouTube: "+String(e.message).slice(0,70)); console.error(e); }
+    ytErro=null; ytBusy=false; platFilter="youtube"; renderYtBar(); renderMetrics();
+    toast(list.length?`YouTube conectado — ${list.length} vídeos ✓`:"Conectado! Mas não achei vídeos nesse canal");
+  }catch(e){ ytBusy=false; ytErro=String(e.message||e).slice(0,180); renderYtBar(); console.error(e); }
 }
 
 function renderMetrics(){
