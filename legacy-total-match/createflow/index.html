@@ -164,8 +164,34 @@
   .plat { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; color: #fff; font-weight: 700; letter-spacing: .01em; }
   .eyebrow { text-transform: uppercase; letter-spacing: .09em; font-size: 11px; font-weight: 700; color: var(--faint); }
 
-  /* ---- Pipeline ---- */
-  .board { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 8px; }
+  /* ---- Produção (etapas, de cima pra baixo) ---- */
+  .board2 { display: flex; flex-direction: column; gap: 12px; }
+  .trilha { display: flex; align-items: center; gap: 5px; overflow-x: auto; padding: 2px 2px 14px; scrollbar-width: none; }
+  .trilha::-webkit-scrollbar { display: none; }
+  .ts { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: none; }
+  .ts small { font-size: 9.5px; color: var(--muted); white-space: nowrap; }
+  .ta { color: var(--faint); flex: none; font-size: 13px; }
+  .stage { border: 1px solid var(--border); border-radius: 14px; background: var(--surface); overflow: hidden; box-shadow: var(--shadow); }
+  .stage-h { display: flex; align-items: center; gap: 9px; padding: 10px 14px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  .stage-h b { font-size: 14.5px; }
+  .stage-n { width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 12px; font-weight: 800; display: grid; place-items: center; flex: none; }
+  .stage-h .count { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 1px 9px; }
+  .stage-body { padding: 10px 12px; display: flex; flex-direction: column; gap: 9px; }
+  .stage-empty { color: var(--faint); font-size: 12.5px; text-align: center; padding: 6px 0; }
+  .pcard { display: flex; align-items: stretch; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); overflow: hidden; }
+  .pcard-main { flex: 1; min-width: 0; padding: 11px 12px; cursor: pointer; }
+  .pcard .kt { font-weight: 600; font-size: 14px; line-height: 1.35; }
+  .pcard .kmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 8px; }
+  .pcheck { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .pcard-moves { display: flex; flex-direction: column; flex: none; }
+  .pcard-moves button, .pcard-moves span { width: 46px; flex: 1; border: 0; border-left: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+  .pcard-moves span { cursor: default; }
+  .pcard-moves button + button, .pcard-moves span + button, .pcard-moves button + span { border-top: 1px solid var(--border); }
+  .pcard-moves button:hover { background: var(--primary-soft); color: var(--primary-ink); }
+  .pcard-moves .fwd { color: var(--primary-ink); font-weight: 800; }
+
+  /* ---- Pipeline (antigo, kanban horizontal — mantido por segurança) ---- */
+  .board { display: flex; flex-direction: column; gap: 12px; }
   .col { width: 250px; flex: none; display: flex; flex-direction: column; }
   .col-h { display: flex; align-items: center; justify-content: space-between; padding: 2px 6px 8px; }
   .col-h b { font-size: 13px; }
@@ -429,7 +455,7 @@
     <header class="topbar">
       <div>
         <h1 id="pgTitle">Produção</h1>
-        <p id="pgDesc">Cada cartão é um vídeo. Arraste conforme for ficando pronto.</p>
+        <p id="pgDesc">Cada vídeo passa por 6 etapas. Toque em ▶ pra avançar.</p>
       </div>
       <div style="display:flex;gap:8px;flex:none">
         <button class="btn sm" id="helpBtn" onclick="comoFunciona()">❓ Como funciona</button>
@@ -465,19 +491,16 @@
       <section class="screen" id="scr-roteiro">
         <div class="note info" style="margin-bottom:14px">
           <span style="font-size:20px">✍️</span>
-          <div>O <b>roteiro</b> é um <b>guia</b> do que o vídeo vai falar (não as falas exatas). Escreva o tema e toque em <b>📋 Copiar prompt</b> pra colar numa <b>IA grátis</b> (ChatGPT, Gemini) — ou use a IA embutida.</div>
+          <div>O <b>roteiro</b> é um <b>guia</b> do que o vídeo vai falar (não as falas exatas). Escreva o tema e toque em <b>📋 Copiar prompt</b> pra colar numa <b>IA grátis</b> (ChatGPT, Gemini). Ela te devolve a ideia estruturada.</div>
         </div>
         <div class="card panel" style="margin-bottom:18px">
           <div class="eyebrow" style="margin-bottom:8px">Criar um roteiro novo</div>
           <div class="field"><label>Sobre o que é o vídeo?</label><input id="rtTema" placeholder="Ex.: 3 erros que travam quem começa no YouTube"/></div>
           <div class="field" style="margin-top:10px"><label>Formato</label><select id="rtFmt"></select></div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px;align-items:center">
-            <button class="btn" id="btnCopyRt" onclick="copiarPromptRoteiro()">📋 Copiar prompt pra uma IA grátis</button>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:13px">
+            <button class="btn" id="btnCopyRt" onclick="copiarPromptRoteiro()">📋 Copiar prompt pra uma IA</button>
             <button class="btn ghost" onclick="criarRoteiroVazio()">✍️ Escrever eu mesma</button>
-            <button class="btn ghost" id="btnGerarIA" onclick="gerarRoteiroIA()">✨ IA embutida</button>
-            <button class="btn ghost sm" style="margin-left:auto" onclick="conectarIA()">⚙️ Conectar IA</button>
           </div>
-          <div id="iaStatus" style="margin-top:11px;font-size:12px;color:var(--muted)"></div>
         </div>
         <div id="roteirosList" style="display:flex;flex-direction:column;gap:16px"></div>
       </section>
@@ -667,45 +690,44 @@ function platIcon(p, cls){
   return `<svg class="${c}" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="6" fill="#010101"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#25F4EE" transform="translate(1.1,.4)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#FE2C55" transform="translate(-.3,-.3)"/><path d="M14.7 6c.35 1.7 1.45 2.85 3.1 3.05v2.3c-1.05.03-2.05-.25-2.95-.8v4.55a4.35 4.35 0 1 1-4.35-4.35c.22 0 .44.02.65.05v2.35a2.05 2.05 0 1 0 1.45 1.96V6z" fill="#fff"/></svg>`;
 }
 function platPills(plats){ return plats.map(p=>`<span class="plat-chip">${platIcon(p)}${platLabel(p)}</span>`).join(""); }
+// Produção em ETAPAS (de cima pra baixo), fácil de entender. Sem arrastar:
+// cada vídeo tem ◀ voltar e ▶ avançar pra próxima etapa.
 function renderBoard(){
   const board = document.getElementById("board");
-  board.innerHTML = COLS.map(col => `
-    <div class="col">
-      <div class="col-h"><b>${COL_META[col].emoji} ${COL_META[col].n}. ${COL_META[col].label}</b><span class="count">${KANBAN[col].length}</span></div>
-      <div class="drop" data-col="${col}">
-        ${KANBAN[col].map((c,i)=>kcard(c,col,i)).join("")}
+  const trilha = `<div class="trilha">${COLS.map((c,i)=>
+    `<span class="ts"><span style="font-size:18px">${COL_META[c].emoji}</span><small>${COL_META[c].n}. ${COL_META[c].label}</small></span>${i<COLS.length-1?'<span class="ta">→</span>':''}`).join("")}</div>`;
+  const total = COLS.reduce((a,c)=>a+KANBAN[c].length,0);
+  const vazio = total===0
+    ? `<div class="card" style="padding:26px;text-align:center;color:var(--muted)">Nenhum vídeo na produção ainda.<br>Toque em <b>+ Novo vídeo</b> pra começar o primeiro! 🎬</div>` : "";
+  board.innerHTML = trilha + vazio + COLS.map(col => {
+    const m = COL_META[col], items = KANBAN[col];
+    return `<div class="stage">
+      <div class="stage-h"><span class="stage-n">${m.n}</span><span style="font-size:18px">${m.emoji}</span><b>${m.label}</b><span class="count">${items.length}</span></div>
+      <div class="stage-body">
+        ${items.length ? items.map((c,i)=>pcard(c,col,i)).join("") : `<div class="stage-empty">— nada aqui —</div>`}
       </div>
-    </div>`).join("");
-  wireDrag();
+    </div>`;
+  }).join("");
 }
-function kcard(c,col,i){
-  const done = c.check.filter(Boolean).length;
-  return `<div class="kcard" draggable="true" data-col="${col}" data-i="${i}" onclick="abrirCard('${col}',${i})">
-    <div class="kt">${c.t}</div>
-    <div class="kmeta"><span class="dot" style="background:${PILARES[c.pilar]}"></span>
-      ${fmtChip(c.fmt)}</div>
-    <div class="kfoot"><span>📅 ${c.data}</span><span>👤 ${c.resp}</span><span class="check">${done} de 4 prontos</span></div>
+function pcard(c,col,i){
+  const done = c.check.filter(Boolean).length, ci = COLS.indexOf(col);
+  return `<div class="pcard">
+    <div class="pcard-main" onclick="abrirCard('${col}',${i})">
+      <div class="kt">${c.t}</div>
+      <div class="kmeta"><span class="dot" style="background:${PILARES[c.pilar]}"></span>${fmtChip(c.fmt)}<span class="pcheck">✅ ${done}/4 prontos</span></div>
+    </div>
+    <div class="pcard-moves">
+      ${ci>0 ? `<button title="Voltar uma etapa" onclick="moverCard('${col}',${i},-1)">◀</button>` : `<span style="opacity:.3">◀</span>`}
+      ${ci<COLS.length-1 ? `<button class="fwd" title="Avançar uma etapa" onclick="moverCard('${col}',${i},1)">▶</button>` : `<span title="No ar!">🚀</span>`}
+    </div>
   </div>`;
 }
-let dragData = null;
-function wireDrag(){
-  document.querySelectorAll(".kcard").forEach(el=>{
-    el.addEventListener("dragstart", e=>{ dragData={col:el.dataset.col, i:+el.dataset.i}; el.classList.add("dragging"); });
-    el.addEventListener("dragend", e=> el.classList.remove("dragging"));
-  });
-  document.querySelectorAll(".drop").forEach(zone=>{
-    zone.addEventListener("dragover", e=>{ e.preventDefault(); zone.classList.add("over"); });
-    zone.addEventListener("dragleave", ()=> zone.classList.remove("over"));
-    zone.addEventListener("drop", e=>{
-      e.preventDefault(); zone.classList.remove("over");
-      if(!dragData) return;
-      const to = zone.dataset.col;
-      const card = KANBAN[dragData.col].splice(dragData.i,1)[0];
-      KANBAN[to].unshift(card);
-      dragData=null; renderBoard();
-      toast(`Foi pra “${COL_META[to].emoji} ${COL_META[to].label}”`);
-    });
-  });
+function moverCard(col,i,dir){
+  const to = COLS[COLS.indexOf(col)+dir]; if(!to) return;
+  const card = KANBAN[col].splice(i,1)[0];
+  dir>0 ? KANBAN[to].unshift(card) : KANBAN[to].push(card);
+  renderBoard();
+  toast(`${dir>0?"Avançou pra":"Voltou pra"} “${COL_META[to].emoji} ${COL_META[to].label}”`);
 }
 
 // ---------- Ideias ----------
@@ -884,69 +906,14 @@ function montarRoteiro(tema, fmt, comIA){
   const secoes = secoesRoteiro(tema, fmt);
   return { id:ROTEIRO_ID++, tema, fmt, comIA, secoes: comIA ? secoes : secoes.map(s=>({t:s.t, txt:""})) };
 }
-// ---- IA de verdade: usa a SUA chave da Anthropic (Claude), guardada só no seu aparelho ----
-const IA_MODEL = "claude-haiku-4-5"; // barato: cada roteiro custa fração de centavo
-function getIAKey(){ try{ return localStorage.getItem("cf_ia_key")||""; }catch(e){ return ""; } }
-function atualizaIAStatus(){
-  const el=document.getElementById("iaStatus"); if(!el) return;
-  el.innerHTML = getIAKey()
-    ? `🟢 IA de verdade <b>conectada</b> — a robô lê o tema e estrutura a ideia. <a href="#" onclick="conectarIA();return false" style="color:var(--primary-ink)">trocar/remover</a>`
-    : `⚪ Sem IA conectada (usando exemplo pronto). <a href="#" onclick="conectarIA();return false" style="color:var(--primary-ink)"><b>conectar IA de verdade</b></a> pra ela pensar de verdade.`;
-}
-function conectarIA(){
-  const tem=!!getIAKey();
-  openModal(`
-    <h3>Conectar IA de verdade 🤖</h3>
-    <p style="color:var(--muted);font-size:13px;margin:-6px 0 2px">Cole a sua chave da Anthropic (Claude). Aí a robô lê o tema e <b>estrutura a ideia de verdade</b>.</p>
-    <div class="note info" style="margin:2px 0"><span style="font-size:18px">🔒</span><div>A chave fica guardada <b>só no seu aparelho</b> e só é usada pra falar com a Anthropic. Cada roteiro custa <b>menos de 1 centavo</b>. Pegue a sua em <b>console.anthropic.com → API Keys</b>.</div></div>
-    <div class="field"><label>Sua chave (começa com sk-ant-)</label><input id="iaKey" placeholder="sk-ant-..."/></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" style="flex:1;justify-content:center" onclick="salvarIAKey()">Salvar</button>
-      ${tem?`<button class="btn ghost" onclick="removerIAKey()">Remover</button>`:""}
-    </div>
-  `,"bottom");
-}
-function salvarIAKey(){
-  const v=(document.getElementById("iaKey").value||"").trim();
-  if(!v){ toast("Cole a sua chave"); return; }
-  try{ localStorage.setItem("cf_ia_key", v); }catch(e){}
-  closeModal(); atualizaIAStatus(); toast("IA de verdade conectada 🟢");
-}
-function removerIAKey(){ try{ localStorage.removeItem("cf_ia_key"); }catch(e){} closeModal(); atualizaIAStatus(); toast("IA desconectada"); }
-async function chamarIA(tema, longo){
-  const key=getIAKey(); if(!key) return null;
-  const sys="Você é um estrategista de conteúdo para redes sociais no Brasil. Ajude uma criadora a ESTRUTURAR a ideia de um vídeo — não escreva as falas exatas, e sim o que fazer/falar em cada parte. Linguagem simples e direta, português do Brasil. Responda SOMENTE com um JSON no formato {\"secoes\":[{\"t\":\"título curto da parte com um emoji\",\"txt\":\"o que fazer nessa parte, 1 a 3 frases\"}]}. De 4 a 6 seções. Nada de texto fora do JSON.";
-  const user=`Tema do vídeo: "${tema}". Formato: ${longo?"vídeo longo (YouTube, com começo, capítulos e fechamento)":"vídeo curto (Short/Reels/TikTok, direto ao ponto, uma ideia só)"}. Estruture a ideia.`;
-  const res=await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({model:IA_MODEL,max_tokens:1024,system:sys,messages:[{role:"user",content:user}]}),
-  });
-  if(!res.ok){ const t=await res.text().catch(()=> ""); throw new Error("HTTP "+res.status+" "+t.slice(0,120)); }
-  const data=await res.json();
-  const texto=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-  const m=texto.match(/\{[\s\S]*\}/); if(!m) throw new Error("resposta sem JSON");
-  const obj=JSON.parse(m[0]);
-  if(!obj.secoes || !obj.secoes.length) throw new Error("sem seções");
-  return obj.secoes.slice(0,6).map(s=>({t:String(s.t||"Parte"), txt:String(s.txt||"")}));
-}
-async function gerarRoteiroIA(){
+// Cria um roteiro-guia (modelo pronto) — usado quando você manda uma ideia virar roteiro.
+function gerarRoteiroIA(){
   const tema=(document.getElementById("rtTema").value||"").trim();
   if(!tema){ toast("Escreva sobre o que é o vídeo"); return; }
-  const fmt=document.getElementById("rtFmt").value, longo=FORMATOS[fmt].ar==="16:9";
-  const btn=document.getElementById("btnGerarIA"), orig=btn?btn.innerHTML:"";
-  let secoes=null, real=false;
-  if(getIAKey()){
-    if(btn){ btn.innerHTML="⏳ A IA está pensando…"; btn.disabled=true; }
-    try{ secoes=await chamarIA(tema, longo); real=true; }
-    catch(e){ toast("A IA falhou: "+String(e.message).slice(0,50)); secoes=null; }
-    if(btn){ btn.innerHTML=orig; btn.disabled=false; }
-  }
-  if(!secoes) secoes=secoesRoteiro(tema, fmt);
-  ROTEIROS.unshift({ id:ROTEIRO_ID++, tema, fmt, comIA:true, real, secoes });
+  const fmt=document.getElementById("rtFmt").value;
+  ROTEIROS.unshift({ id:ROTEIRO_ID++, tema, fmt, comIA:false, secoes: secoesRoteiro(tema, fmt) });
   document.getElementById("rtTema").value="";
-  renderRoteiros(); renderThumbs();
-  toast(real?"Roteiro criado pela IA de verdade ✨":"Roteiro criado (exemplo) — conecte a IA pra ela pensar");
+  renderRoteiros(); renderThumbs(); toast("Roteiro-guia criado ✓");
 }
 function criarRoteiroVazio(){
   const tema=(document.getElementById("rtTema").value||"").trim();
@@ -957,13 +924,29 @@ function criarRoteiroVazio(){
 }
 // Prompt pronto pra colar numa IA grátis (ChatGPT, Gemini…) — sem chave, sem pagar.
 function promptRoteiro(tema, longo){
+  const fmtTxt = longo
+    ? "Vídeo longo do YouTube (uns 5 a 10 minutos, com começo, partes/capítulos e fechamento)"
+    : "Vídeo curto vertical (Short / Reels / TikTok, uns 30 a 60 segundos, direto ao ponto, uma ideia só)";
   return [
-    `Você é um estrategista de conteúdo para redes sociais.`,
-    `Quero fazer um ${longo?"vídeo longo (YouTube, com começo, capítulos e fechamento)":"vídeo curto (Short/Reels/TikTok, direto ao ponto, uma ideia só)"} sobre: "${tema}".`,
-    `Me ajude a ESTRUTURAR a ideia — não escreva as falas exatas, e sim o que fazer e falar em cada parte.`,
-    `Divida em partes, por exemplo: 🎯 Ideia central, 🪝 Gancho (começo que prende), ⚡ Desenvolvimento (o que falar), 🎬 O que aparece na tela, 📣 Pedido final.`,
-    `Use linguagem simples, em português do Brasil, com 1 a 3 frases por parte.`,
-  ].join(" ");
+`Aja como um roteirista e estrategista de conteúdo para redes sociais no Brasil.`,
+``,
+`Quero a ESTRUTURA de um vídeo — não as falas exatas, e sim um guia do que fazer e falar em cada parte.`,
+``,
+`• Tema do vídeo: "${tema}"`,
+`• Formato: ${fmtTxt}`,
+`• Público: pessoas interessadas no tema, assistindo pelo celular`,
+`• Objetivo: prender a atenção até o fim e ganhar seguidores`,
+``,
+`Monte a estrutura assim, com um título e uma explicação curta em cada parte:`,
+`1) 🎯 Ideia central — a única mensagem principal do vídeo, em 1 frase`,
+`2) 🪝 Gancho (primeiros 3 segundos) — me dê 3 opções de começo pra ninguém pular`,
+`3) ⚡ Desenvolvimento — os pontos principais em tópicos, na melhor ordem`,
+`4) 🎬 O que mostrar na tela — em cada parte (você falando, texto, exemplo, corte)`,
+`5) 📣 Chamada final — o que pedir no fim (seguir, salvar ou comentar)`,
+`6) 🏷️ Extras — 3 sugestões de título e 3 hashtags`,
+``,
+`Escreva em português do Brasil, linguagem simples e objetiva, 1 a 3 frases por parte.`,
+  ].join("\n");
 }
 function copiarPromptRoteiro(){
   const tema=(document.getElementById("rtTema").value||"").trim();
@@ -1228,16 +1211,23 @@ function thumbHeadline(t){
   return (w.slice(0,3).join(" ") || t).toUpperCase();
 }
 function thumbPrompt(r){
-  const f = FORMATOS[r.fmt]; const app = f.app; const frase = thumbHeadline(r.tema);
-  const nomeApp = {youtube:"YouTube",instagram:"Instagram",tiktok:"TikTok"}[app];
+  const f=FORMATOS[r.fmt], app=f.app, frase=thumbHeadline(r.tema);
+  const nomeApp={youtube:"YouTube",instagram:"Instagram",tiktok:"TikTok"}[app];
+  const prop = f.ar==="16:9" ? "proporção 16:9 (deitada), tamanho de capa de vídeo do YouTube" : "proporção 9:16 (em pé), tamanho de capa de Short/Reels/TikTok";
   return [
-    `Crie uma thumbnail (capa) ${f.arTxt}, para o ${nomeApp}.`,
-    `Tema do vídeo: "${r.tema}".`,
-    `Estilo chamativo e colorido, com a pessoa ou o assunto em destaque e boa iluminação.`,
-    `Escreva na imagem, em letras GRANDES e bem legíveis, o texto: "${frase}".`,
-    `O texto precisa ter contorno ou sombra pra ler fácil no celular. Deixe um espaço livre para o texto.`,
-    `Sem marca d'água e sem logos de outros apps. Imagem nítida.`,
-  ].join(" ");
+`Crie uma thumbnail (capa) de vídeo — imagem única, alta qualidade, ${prop}.`,
+`App onde vai ser usada: ${nomeApp}.`,
+``,
+`Tema do vídeo: "${r.tema}".`,
+``,
+`Estilo: capa chamativa e profissional, que dá vontade de clicar. Cores vivas e alto contraste. Coloque a pessoa (ou o assunto principal) em destaque, com boa iluminação e expressão marcante.`,
+``,
+`Texto na imagem: escreva "${frase}" em letras GRANDES e bem legíveis, com fonte grossa e contorno ou sombra pra ler fácil no celular. O texto deve chamar atenção, sem cobrir o rosto.`,
+``,
+`Composição: deixe um espaço livre para o texto de um lado e o assunto principal do outro.`,
+``,
+`Evite: marca d'água, logos de outros apps, texto pequeno, imagem borrada ou poluída.`,
+  ].join("\n");
 }
 function renderThumbs(){
   const el = document.getElementById("thumbsList");
@@ -1284,7 +1274,7 @@ function fallbackCopy(txt, done){
 
 // ---------- Navegação ----------
 const TITLES = {
-  pipeline:["Produção","Cada cartão é um vídeo. Arraste conforme for ficando pronto."],
+  pipeline:["Produção","Cada vídeo passa por 6 etapas. Toque em ▶ pra avançar."],
   ideias:["Ideias","Suas ideias: as normais e as que já estão prontas pra postar."],
   roteiro:["Roteiro","Um guia do que falar/fazer. Escreva ou peça pra IA criar."],
   thumbs:["Capas","O prompt pronto pra uma IA desenhar a capa de cada vídeo."],
@@ -1295,9 +1285,9 @@ const TITLES = {
 };
 // Dicas simples (didáticas) por tela
 const TIPS = {
-  pipeline:["🎬","Cada cartãozinho é um vídeo. <b>Arraste</b> ele pra direita conforme for ficando pronto: Ideia → Roteiro → Gravar → Editar → Agendado → Publicado."],
+  pipeline:["🎬","Cada vídeo passa por <b>6 etapas</b>, uma embaixo da outra. Toque em <b>▶</b> pra avançar o vídeo pra próxima etapa (ou <b>◀</b> pra voltar). Toque no vídeo pra ver os detalhes."],
   ideias:["💡","Guarde suas ideias aqui. As <b>normais</b> ficam numa aba e as <b>prontas pra postar</b> em outra. Cada ideia pode virar um roteiro num toque."],
-  roteiro:["✍️","O roteiro é um <b>guia</b> (não as falas exatas). Escreva o tema e peça pra <b>IA criar</b>, ou escreva você. Dá pra separar Short e Vídeo longo."],
+  roteiro:["✍️","O roteiro é um <b>guia</b> (não as falas exatas). Escreva o tema, toque em <b>📋 Copiar prompt</b> e cole numa IA grátis (ChatGPT, Gemini). Dá pra separar Short e Vídeo longo."],
   thumbs:["🖼️","A <b>capa</b> é a imagem do vídeo. Copie o prompt e cole numa <b>IA de imagem</b>. O tamanho muda: vídeo longo é deitado, Short é em pé."],
   calendario:["📅","Aqui você vê em quais dias vai postar."],
   metricas:["📊","Seus números <b>de verdade</b> aparecem aqui quando a gente conectar o YouTube, Instagram e TikTok — e atualizam todo dia."],
@@ -1306,7 +1296,7 @@ const TIPS = {
 };
 // Passo a passo curtinho (1, 2, 3) que aparece dentro de cada aba
 const STEPS = {
-  pipeline: ["Cada cartãozinho é um vídeo 🎬","Segure e arraste pra coluna do lado ➡️","Toque no cartão pra ver os detalhes"],
+  pipeline: ["Cada vídeo é um cartão 🎬","Toque em <b>▶</b> pra avançar de etapa","Toque no vídeo pra ver os detalhes"],
   ideias: ["Toque em <b>+ Nova ideia</b>","Escolha o formato (Short ou Vídeo longo)","Toque em <b>✨ Criar roteiro</b> ou mande pra produção"],
   roteiro: ["Escreva o tema do vídeo","Toque em <b>📋 Copiar prompt</b> e cole numa IA grátis","Cole a resposta e toque em <b>▶ Ler enquanto grava</b>"],
   thumbs: ["Ache o vídeo que você quer","Toque em <b>📋 Copiar prompt da capa</b>","Cole numa IA de imagem e pronto! ✨"],
@@ -1327,7 +1317,6 @@ function go(scr){
   document.getElementById("pgTitle").textContent = TITLES[scr][0];
   document.getElementById("pgDesc").textContent = TITLES[scr][1];
   setHelp(scr);
-  if(scr==="roteiro") atualizaIAStatus();
   window.scrollTo(0,0);
 }
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
@@ -1457,5 +1446,5 @@ function renderLearn(){
 
 // ---------- Init ----------
 document.getElementById("rtFmt").innerHTML = FMT_OPTS;
-renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); atualizaIAStatus(); setHelp("pipeline");
+renderBoard(); renderIdeas(); renderRoteiros(); renderCal(); renderMetrics(); gerarIA(); renderThumbs(); renderLearn(); setHelp("pipeline");
 </script>
