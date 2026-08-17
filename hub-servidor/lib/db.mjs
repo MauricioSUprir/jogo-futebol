@@ -2,13 +2,26 @@ import postgres from "postgres";
 
 // Conexão com o Postgres. Em produção, defina DATABASE_URL (ex.: Neon, Railway,
 // Supabase). Localmente cai num padrão de desenvolvimento.
-const url =
+let url =
   process.env.DATABASE_URL ||
   "postgres://hub@127.0.0.1:5433/hub";
 
+// Compatibilidade com Postgres gerenciado (Neon/Supabase). O endereço com
+// "-pooler" usa PgBouncer, e o driver não faz channel binding — removemos esse
+// parâmetro pra evitar erro de conexão.
+try {
+  const u = new URL(url);
+  u.searchParams.delete("channel_binding");
+  url = u.toString();
+} catch {}
+
+const managed = /neon\.tech|supabase|railway|render|sslmode=require|amazonaws/i.test(url);
+
 export const sql = postgres(url, {
   onnotice: () => {},
-  ssl: /sslmode=require|neon\.tech|supabase|railway/i.test(url) ? "require" : undefined,
+  // Necessário com pooler/PgBouncer em transaction mode (ex.: Neon "-pooler").
+  prepare: false,
+  ssl: managed ? "require" : undefined,
 });
 
 // Cria as tabelas se ainda não existirem (idempotente).
