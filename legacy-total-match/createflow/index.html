@@ -1068,13 +1068,28 @@ function renderYtBar(){
   if(ytInfo){
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
   } else if(ytErro){
+    const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
+    const e403=/403|not been used|disabled|SERVICE_DISABLED|has not been enabled|PERMISSION_DENIED/i.test(ytErro);
+    const linkData=`https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=${proj}`;
+    const linkAnalytics=`https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com?project=${proj}`;
+    const dica = e403
+      ? `<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5"><b>O que resolve (99% dos casos):</b> as APIs foram ativadas em <b>outro projeto</b>. Toque nos 2 links abaixo — eles já abrem no projeto certo (nº <b>${proj}</b>) — e em cada um toque em <b>ATIVAR/ENABLE</b>. Espere 2 min e volte aqui em Tentar de novo.
+          <div style="margin-top:8px"><a href="${linkData}" target="_blank" style="color:var(--primary-ink);font-weight:700">1) Ativar YouTube Data API v3 ↗</a></div>
+          <div style="margin-top:5px"><a href="${linkAnalytics}" target="_blank" style="color:var(--primary-ink);font-weight:700">2) Ativar YouTube Analytics API ↗</a></div></div>`
+      : `<div style="font-size:11.5px;color:var(--muted);margin-top:7px">No <b>Google Cloud → APIs e Serviços → Biblioteca</b>, confira que as duas estão ativadas no projeto nº <b>${proj}</b>: <b>YouTube Data API v3</b> e <b>YouTube Analytics API</b>. Depois toque em Tentar de novo.</div>`;
     el.innerHTML=`<div class="note" style="margin:0;background:var(--warn-soft);border-color:var(--warn-soft)"><span style="font-size:20px">⚠️</span><div style="flex:1"><b>O login funcionou, mas não consegui puxar os dados.</b>
-      <div style="font-size:12px;color:var(--ink);margin-top:5px;word-break:break-word">Mensagem: <b>${ytErro}</b></div>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:7px">Se aparecer <b>403</b> ou <b>API not enabled</b>: no <b>Google Cloud → APIs e Serviços → Biblioteca</b>, ative as duas: <b>YouTube Data API v3</b> e <b>YouTube Analytics API</b>. Depois volte e toque em Tentar de novo.</div>
-      <button class="btn sm" style="margin-top:9px" onclick="conectarYouTube()">↻ Tentar de novo</button></div></div>`;
+      <div style="font-size:12px;color:var(--ink);margin-top:5px;word-break:break-word">Mensagem: <b id="ytErroMsg">${ytErro}</b></div>
+      ${dica}
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="conectarYouTube()">↻ Tentar de novo</button><button class="btn ghost sm" onclick="copiarErroYt()">📋 Copiar erro</button></div></div></div>`;
   } else {
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div></div></div>`;
   }
+}
+function copiarErroYt(){
+  const txt="CreateFlow · erro YouTube: "+(ytErro||"—");
+  const done=()=>toast("Erro copiado — cole aqui pra mim 👍");
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done).catch(()=>{prompt("Copie o erro:",txt);}); }
+  else { prompt("Copie o erro:",txt); }
 }
 function conectarYouTube(){
   if(ytBusy) return;
@@ -1089,7 +1104,7 @@ function conectarYouTube(){
   ytErro=null; ytBusy=true;
   const el=document.getElementById("ytBar");
   if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Se aparecer <b>“não é seguro / não verificado”</b>: toque em <b>Avançado → Acessar CreateFlow</b> (é normal).</div><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
-  try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"consent" }); }
+  try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"select_account consent" }); }
   catch(e){ ytBusy=false; renderYtBar(); toast("Não abriu o login — tente de novo"); }
 }
 async function ytGet(url){
