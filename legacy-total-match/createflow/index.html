@@ -1069,13 +1069,19 @@ function renderYtBar(){
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
   } else if(ytErro){
     const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
-    const noChannel=/canal não encontrado|no channel|channelNotFound/i.test(ytErro);
+    const noChannel=/canal não encontrado|no channel|channelNotFound|youtubeSignupRequired/i.test(ytErro);
+    const scopeErr=/scope_faltando|insufficient|insufficientPermissions|not properly authorized|Access forbidden|properly authorized/i.test(ytErro);
     const net=/failed to fetch|networkerror|load failed|typeerror/i.test(ytErro);
-    const e403=/403|not been used|disabled|SERVICE_DISABLED|has not been enabled|PERMISSION_DENIED/i.test(ytErro);
+    const apiOff=/not been used|SERVICE_DISABLED|has not been enabled|accessNotConfigured|it is disabled/i.test(ytErro);
+    const e403=apiOff;
     const linkData=`https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=${proj}`;
     const linkAnalytics=`https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com?project=${proj}`;
     let titulo="O login funcionou, mas não consegui puxar os dados.", dica="", extraBtn="";
-    if(noChannel){
+    if(scopeErr && !apiOff){
+      titulo="Faltou liberar a permissão do YouTube.";
+      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Na tela do Google aparecem <b>caixinhas de permissão</b> (“Ver sua conta do YouTube” e “Ver relatórios do YouTube”). É preciso <b>MARCAR as duas</b> antes de tocar em Continuar.<br><br>Toque em <b>🔁 Refazer permissões</b>, escolha a conta <b>dona do canal</b> e <b>marque as duas caixinhas</b> ✅✅.</div>`;
+      extraBtn=`<button class="btn sm" onclick="ytToken=null;ytTokenClient=null;conectarYouTube()">🔁 Refazer permissões</button>`;
+    } else if(noChannel){
       titulo="Entrei, mas essa conta do Google não tem o canal.";
       dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">Isso acontece quando você escolhe a conta errada no login, <b>ou</b> quando o canal é uma <b>“Conta de Marca / Brand Account”</b>.<br><br><b>Faça assim:</b> toque em <b>Trocar de conta</b> abaixo e, na tela do Google, escolha a conta/canal <b>dono do YouTube</b>. Se aparecer uma lista com o <b>nome do canal</b>, escolha ele (não o seu nome pessoal).</div>`;
       extraBtn=`<button class="btn sm" onclick="ytToken=null;ytTokenClient=null;conectarYouTube()">🔁 Trocar de conta</button>`;
@@ -1109,19 +1115,31 @@ function conectarYouTube(){
   if(!ytTokenClient){
     ytTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:YT_CLIENT_ID, scope:YT_SCOPES,
-      callback:(resp)=>{ if(resp&&resp.access_token){ ytToken=resp.access_token; carregarYouTube(); } else { ytBusy=false; ytErro="O login não retornou a permissão. Toque em Permitir na tela do Google."; renderYtBar(); } },
+      callback:(resp)=>{
+        if(resp&&resp.access_token){
+          ytToken=resp.access_token;
+          const okAll = google.accounts.oauth2.hasGrantedAllScopes ? google.accounts.oauth2.hasGrantedAllScopes(resp, "https://www.googleapis.com/auth/youtube.readonly") : true;
+          if(!okAll){ ytBusy=false; ytErro="scope_faltando · Você não marcou a permissão de ver o YouTube. Toque em Tentar de novo e MARQUE as duas caixinhas."; renderYtBar(); return; }
+          carregarYouTube();
+        } else { ytBusy=false; ytErro="O login não retornou a permissão. Toque em Permitir na tela do Google."; renderYtBar(); }
+      },
       error_callback:(err)=>{ ytBusy=false; ytErro="Login cancelado ou bloqueado"+(err&&err.type?(" ("+err.type+")"):"")+"."; renderYtBar(); },
     });
   }
   ytErro=null; ytBusy=true;
   const el=document.getElementById("ytBar");
   if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Se aparecer <b>“não é seguro / não verificado”</b>: toque em <b>Avançado → Acessar CreateFlow</b> (é normal).</div><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
-  try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"select_account consent" }); }
+  try{ ytTokenClient.requestAccessToken({ prompt: "select_account consent" }); }
   catch(e){ ytBusy=false; renderYtBar(); toast("Não abriu o login — tente de novo"); }
 }
 async function ytGet(url){
   const r=await fetch(url,{headers:{Authorization:"Bearer "+ytToken}});
-  if(!r.ok){ const t=await r.text().catch(()=> ""); throw new Error("HTTP "+r.status+" · "+t.slice(0,150)); }
+  if(!r.ok){
+    const t=await r.text().catch(()=> "");
+    let reason="", msg="";
+    try{ const j=JSON.parse(t); const e=j.error||{}; msg=e.message||""; reason=(e.errors&&e.errors[0]&&e.errors[0].reason)||e.status||""; }catch(_){}
+    throw new Error("HTTP "+r.status+(reason?(" · "+reason):"")+(msg?(" · "+msg):(" · "+t.slice(0,120))));
+  }
   return r.json();
 }
 function ytIsoSeg(iso){ const m=/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso||"")||[]; return (+(m[1]||0))*3600+(+(m[2]||0))*60+(+(m[3]||0)); }
