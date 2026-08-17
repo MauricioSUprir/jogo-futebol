@@ -1060,10 +1060,26 @@ function setPilarView(v){ pilarView=v; renderMetrics(); }
 function setVideosView(v){ videosView=v; renderMetrics(); }
 
 // ---------- Conectar YouTube (dados reais, direto no navegador) ----------
-const YT_APP_VER = "v8";
+const YT_APP_VER = "v9";
 const YT_CLIENT_ID = "500782475320-59aarsugep172asaohrvvvqpec0hpluj.apps.googleusercontent.com";
 const YT_SCOPES = "https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/yt-analytics.readonly";
 let ytToken=null, ytTokenClient=null, ytInfo=null, ytBusy=false, ytErro=null, ytLinkVal="", ytLoadMsg="";
+let ytApiKey=""; try{ ytApiKey=localStorage.getItem("cf_yt_key")||""; }catch(_){}
+function salvarApiKey(v){ ytApiKey=(v||"").trim(); try{ localStorage.setItem("cf_yt_key", ytApiKey); }catch(_){} }
+function ytLinkBoxHTML(){
+  const proj=(YT_CLIENT_ID.split("-")[0]||"").trim();
+  const keyLink=`https://console.cloud.google.com/apis/credentials?project=${proj}`;
+  const temKey=!!ytApiKey;
+  const inStyle=`width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px`;
+  return `<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:11px">
+      <div style="font-size:12.5px;color:var(--ink);font-weight:800">✅ Jeito que sempre funciona (sem login):</div>
+      <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:10px">1) Cole sua Chave de API ${temKey?'<span style="color:#16a34a">— já salva ✓</span>':'<span style="color:var(--muted);font-weight:500">(só na primeira vez, fica salva)</span>'}:</div>
+      <div style="font-size:11px;color:var(--muted);margin:3px 0 6px;line-height:1.5">Não tem ainda? <a href="${keyLink}" target="_blank" style="color:var(--primary-ink);font-weight:700">Abrir a página de Chaves ↗</a> → botão <b>“+ Criar credenciais” → “Chave de API”</b> → copie o código (começa com <b>AIza…</b>).</div>
+      <input id="ytApiKeyInp" value="${(ytApiKey||'').replace(/"/g,'&quot;')}" oninput="salvarApiKey(this.value)" placeholder="cole aqui a Chave de API (AIza…)" style="${inStyle}" />
+      <div style="font-size:12px;color:var(--ink);font-weight:700;margin-top:11px">2) Cole o link do seu canal:</div>
+      <input id="ytCanalLink" inputmode="url" value="${(ytLinkVal||'').replace(/"/g,'&quot;')}" oninput="ytLinkVal=this.value" placeholder="ex: youtube.com/@seucanal" style="${inStyle};margin-top:4px" />
+      <button class="btn sm" style="margin-top:10px" onclick="usarCanalPorLink()">📥 Puxar meus vídeos</button></div>`;
+}
 function renderYtBar(){
   const el=document.getElementById("ytBar"); if(!el) return;
   if(ytBusy && ytLoadMsg){
@@ -1082,11 +1098,7 @@ function renderYtBar(){
     const e403=apiOff;
     const linkData=`https://console.cloud.google.com/apis/library/youtube.googleapis.com?project=${proj}`;
     const linkAnalytics=`https://console.cloud.google.com/apis/library/youtubeanalytics.googleapis.com?project=${proj}`;
-    const linkBox=`<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:11px">
-        <div style="font-size:12.5px;color:var(--ink);font-weight:700">✅ Jeito que sempre funciona — pelo link do canal:</div>
-        <div style="font-size:11.5px;color:var(--muted);margin:5px 0 7px;line-height:1.5">Abra o YouTube, copie o <b>link do seu canal</b> (ex: <b>youtube.com/@seucanal</b>) e cole aqui:</div>
-        <input id="ytCanalLink" inputmode="url" value="${(ytLinkVal||'').replace(/"/g,'&quot;')}" oninput="ytLinkVal=this.value" placeholder="cole o link do seu canal aqui" style="width:100%;box-sizing:border-box;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px" />
-        <button class="btn sm" style="margin-top:8px" onclick="usarCanalPorLink()">📥 Puxar meus vídeos pelo link</button></div>`;
+    const linkBox=ytLinkBoxHTML();
     let titulo="O login funcionou, mas não consegui puxar os dados.", dica="", extraBtn="", extraBox="";
     if(scopeErr && !apiOff){
       titulo="Faltou liberar a permissão do YouTube.";
@@ -1094,8 +1106,8 @@ function renderYtBar(){
       extraBtn=`<button class="btn sm" onclick="ytToken=null;ytTokenClient=null;conectarYouTube()">🔁 Refazer permissões</button>`;
       extraBox=linkBox;
     } else if(forbidden){
-      titulo="Seu canal é uma “Conta de Marca” — mas dá pra resolver fácil. 👇";
-      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">O login deu certo, mas o Google não deixa achar o canal “automático” (isso é normal quando o canal é uma <b>Conta de Marca</b>). <b>Sem problema:</b> é só me dar o <b>link do canal</b> aqui embaixo que eu puxo os vídeos na hora.</div>`;
+      titulo="Vamos por um caminho mais simples — sem login. 👇";
+      dica=`<div style="font-size:12px;color:var(--ink);margin-top:9px;line-height:1.5">O login está complicando (o Google não libera a leitura por aqui). <b>Sem problema:</b> tem um jeito que <b>sempre funciona</b> e nem precisa de login — é só uma <b>Chave de API</b> (grátis, criada uma vez) + o <b>link do canal</b>. Siga os 2 passinhos abaixo. 🙏</div>`;
       extraBox=linkBox;
     } else if(noChannel){
       titulo="Entrei, mas não achei o canal automático.";
@@ -1118,7 +1130,7 @@ function renderYtBar(){
       <div style="font-size:11px;color:var(--muted);margin-top:11px;word-break:break-word;opacity:.8">Detalhe técnico: <b id="ytErroMsg">${ytErro}</b></div>
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">${extraBtn}<button class="btn ghost sm" onclick="conectarYouTube()">↻ Tentar de novo</button><button class="btn ghost sm" onclick="copiarErroYt()">📋 Copiar erro</button></div></div></div>`;
   } else {
-    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div><div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">CreateFlow ${YT_APP_VER}</div></div></div>`;
+    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div>${ytLinkBoxHTML()}<div style="font-size:10px;color:var(--muted);margin-top:8px;opacity:.7">CreateFlow ${YT_APP_VER}</div></div></div>`;
   }
 }
 function copiarErroYt(){
@@ -1151,7 +1163,11 @@ function conectarYouTube(){
   catch(e){ ytBusy=false; renderYtBar(); toast("Não abriu o login — tente de novo"); }
 }
 async function ytGet(url){
-  const r=await fetch(url,{headers:{Authorization:"Bearer "+ytToken}});
+  const podeKey = ytApiKey && !/[?&]mine=true/.test(url) && url.indexOf("youtubeanalytics")<0;
+  let u=url, headers={};
+  if(podeKey){ u=url+(url.indexOf("?")>=0?"&":"?")+"key="+encodeURIComponent(ytApiKey); }
+  else { headers={Authorization:"Bearer "+ytToken}; }
+  const r=await fetch(u,{headers});
   if(!r.ok){
     const t=await r.text().catch(()=> "");
     let reason="", msg="";
@@ -1187,8 +1203,9 @@ async function usarCanalPorLink(){
   const inp=document.getElementById("ytCanalLink");
   const q=((inp&&inp.value)||ytLinkVal||"").trim();
   ytLinkVal=q;
+  const kinp=document.getElementById("ytApiKeyInp"); if(kinp&&kinp.value.trim()) salvarApiKey(kinp.value);
   if(!q){ ytErro="Cole o link do seu canal no campo antes de tocar no botão."; ytBusy=false; renderYtBar(); return; }
-  if(!ytToken){ conectarYouTube(); return; }
+  if(!ytApiKey && !ytToken){ ytErro="Cole a Chave de API no primeiro campo (uma vez só) — ou faça o login. Veja o passo a passo acima."; ytBusy=false; renderYtBar(); return; }
   ytErro=null; ytBusy=true; ytLoadMsg="Procurando seu canal…"; renderYtBar();
   try{
     const item=await resolverCanal(q);
