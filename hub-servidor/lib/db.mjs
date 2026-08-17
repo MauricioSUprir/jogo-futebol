@@ -81,5 +81,13 @@ export async function ensureSchema() {
       created_by text,
       created_at timestamptz NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS shopping (
+      id         text PRIMARY KEY,
+      name       text NOT NULL,
+      qty        text NOT NULL DEFAULT '',
+      done       boolean NOT NULL DEFAULT false,
+      added_by   text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
   `);
 }

@@ -251,7 +251,9 @@
       headers: opts.body ? { "Content-Type":"application/json" } : undefined,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
-    if(res.status===401){ S=null; renderLogin(); throw { unauth:true }; }
+    // 401 numa rota normal = sessão expirou -> volta pro login. No próprio /login,
+    // 401 é "senha errada" e deve ser tratado por quem chamou (mostra a mensagem).
+    if(res.status===401 && path!=="/login"){ S=null; renderLogin(); throw { unauth:true }; }
     let j={}; try{ j=await res.json(); }catch(e){}
     if(!res.ok) throw (j || { error:"erro" });
     return j;
@@ -290,7 +292,7 @@
 /* ===================== estado ===================== */
   let S = null;                 // dados atuais vindos do servidor
   let sessionId = null;
-  let tab = "avisos";
+  let tab = "inicio";
   let menuWeekStart = mondayOf(TODAY);
   let composeImg = null;
 
@@ -353,12 +355,15 @@
 /* ===================== app (logado) ===================== */
   function tabsFor(){
     return [
+      { id:"inicio", label:"Início", ic:"🏠" },
       { id:"avisos", label:"Avisos", ic:"📣" },
       { id:"atividades", label:"Atividades", ic:"⭐" },
+      { id:"compras", label:"Compras", ic:"🛒" },
       { id:"cardapio", label:"Cardápio", ic:"🍽️" },
       { id:"placar", label:"Placar", ic:"🏆" },
       { id:"encontros", label:"Encontros", ic:"📅" },
       { id:"conta", label:isAdmin()?"Contas":"Conta", ic:"⚙️" },
+      { id:"sair", label:"Sair", ic:"🚪" },
     ];
   }
 
@@ -399,19 +404,94 @@
       </div>`;
 
     $("logout").addEventListener("click",async()=>{ try{ await api("/logout",{method:"POST"}); }catch(e){} S=null; renderLogin(); });
-    $("tabs").addEventListener("click",async e=>{ const b=e.target.closest("button[data-tab]"); if(!b)return; tab=b.dataset.tab; renderApp(); try{ await reload(true); }catch(err){} });
+    $("tabs").addEventListener("click",async e=>{ const b=e.target.closest("button[data-tab]"); if(!b)return; if(b.dataset.tab==="sair"){ try{ await api("/logout",{method:"POST"}); }catch(err){} S=null; renderLogin(); return; } tab=b.dataset.tab; renderApp(); try{ await reload(true); }catch(err){} });
     renderView();
   }
 
   function renderView(){
     const v=$("view"); if(!v) return;
-    if(tab==="avisos") v.innerHTML=viewAvisos();
+    if(tab==="inicio") v.innerHTML=viewInicio();
+    else if(tab==="avisos") v.innerHTML=viewAvisos();
     else if(tab==="atividades") v.innerHTML=viewAtividades();
+    else if(tab==="compras") v.innerHTML=viewCompras();
     else if(tab==="cardapio") v.innerHTML=viewCardapio();
     else if(tab==="placar") v.innerHTML=viewPlacar();
     else if(tab==="encontros") v.innerHTML=viewEncontros();
     else if(tab==="conta") v.innerHTML=viewConta();
+    else v.innerHTML=viewInicio();
     wireView();
+  }
+
+/* ---------- INÍCIO ---------- */
+  function viewInicio(){
+    const admin=isAdmin();
+    const avisos=(S.announcements||[]).slice(0,2);
+    const acts=(S.activities||[]).filter(a=>!a.done && a.date===TODAY && (admin || a.assignedTo===null || a.assignedTo===sessionId));
+    const meal=(S.menu&&S.menu[TODAY])||null;
+    const compras=(S.shopping||[]).filter(s=>!s.done);
+    const nextMeet=(S.meetings||[]).filter(m=>m.date>=TODAY).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1)[0];
+    const pts = admin?null:memberPoints(sessionId);
+    return `<div class="grid">
+      ${admin?"":`<div class="panel full">
+        <div class="ph"><span class="ic">🏆</span><h3>Seus pontos</h3></div>
+        <div class="totalbar" style="margin-top:0">
+          <div class="tb"><div class="k">Pontos</div><div class="v">${pts}</div></div>
+          <div class="tb"><div class="k">Em dinheiro</div><div class="v money">${BRL(money(pts))}</div></div>
+        </div>
+        <div class="rowbtns"><button class="btn sm" data-go="atividades">Fazer atividades →</button></div>
+      </div>`}
+      <div class="panel">
+        <div class="ph"><span class="ic">⭐</span><h3>${admin?"Atividades de hoje":"Suas atividades de hoje"}</h3><span class="cnt">${acts.length}</span></div>
+        ${acts.length?`<ul class="list">${acts.slice(0,4).map(a=>`<li>${a.points>0?`<span class="pointbadge">★ ${a.points}</span>`:`<span class="tag">tarefa</span>`}<div class="li-main"><div class="li-t">${esc(a.title)}</div></div></li>`).join("")}</ul>`:`<div class="empty">Nada pra hoje. 🎉</div>`}
+        <div class="rowbtns"><button class="btn sm" data-go="atividades">Ver atividades →</button></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ic">🍽️</span><h3>Cardápio de hoje</h3></div>
+        ${meal&&(meal.cafe||meal.almoco||meal.jantar)?`
+          <div class="meal" style="border:0;padding:5px 0"><span class="mi">☕</span><div class="mb"><div class="ml">Café</div><div class="mv ${meal.cafe?'':'ph'}">${meal.cafe?esc(meal.cafe):'a definir'}</div></div></div>
+          <div class="meal" style="border:0;padding:5px 0"><span class="mi">🍚</span><div class="mb"><div class="ml">Almoço</div><div class="mv ${meal.almoco?'':'ph'}">${meal.almoco?esc(meal.almoco):'a definir'}</div></div></div>
+          <div class="meal" style="border:0;padding:5px 0"><span class="mi">🌙</span><div class="mb"><div class="ml">Jantar</div><div class="mv ${meal.jantar?'':'ph'}">${meal.jantar?esc(meal.jantar):'a definir'}</div></div></div>
+        `:`<div class="empty">Cardápio de hoje ainda não definido.</div>`}
+        <div class="rowbtns"><button class="btn sm" data-go="cardapio">Ver cardápio →</button></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ic">📣</span><h3>Avisos recentes</h3></div>
+        ${avisos.length?avisos.map(a=>{const au=member(a.authorId);return `<div class="note"><div class="nh"><span class="av sm" style="background:${au?au.color:'#888'};width:22px;height:22px;font-size:12px">${au?(au.emoji||au.name.slice(0,1)):'?'}</span><span class="na">${esc(au?au.name:'—')}</span><span class="nt">${timeAgo(a.createdAt)}</span></div><div class="nb">${a.text?esc(a.text):'(imagem)'}</div></div>`;}).join(""):`<div class="empty">Nenhum aviso.</div>`}
+        <div class="rowbtns"><button class="btn sm" data-go="avisos">Ver avisos →</button></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ic">🛒</span><h3>Compras</h3><span class="cnt">${compras.length}</span></div>
+        ${compras.length?`<ul class="list">${compras.slice(0,5).map(s=>`<li><span style="font-size:16px">•</span><div class="li-main"><div class="li-t">${esc(s.name)}${s.qty?` <span style="color:var(--muted)">×${esc(s.qty)}</span>`:''}</div></div></li>`).join("")}</ul>`:`<div class="empty">Lista vazia.</div>`}
+        <div class="rowbtns"><button class="btn sm" data-go="compras">Abrir lista →</button></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><span class="ic">📅</span><h3>Próximo encontro</h3></div>
+        ${nextMeet?`<div class="li-t">${esc(nextMeet.title)}</div><div class="li-s"><span class="tag warn">${cap(DIASABREV[parseYmd(nextMeet.date).getDay()])} ${fmtShort(nextMeet.date)}${nextMeet.time?' · '+esc(nextMeet.time):''}</span>${nextMeet.place?`<span class="tag">📍 ${esc(nextMeet.place)}</span>`:''}</div>`:`<div class="empty">Nenhum encontro marcado.</div>`}
+        <div class="rowbtns"><button class="btn sm" data-go="encontros">Ver encontros →</button></div>
+      </div>
+    </div>`;
+  }
+
+/* ---------- COMPRAS ---------- */
+  function viewCompras(){
+    const list=(S.shopping||[]).slice().sort((a,b)=>{ if(a.done!==b.done)return a.done?1:-1; return a.createdAt<b.createdAt?-1:1; });
+    const doneCount=list.filter(s=>s.done).length;
+    return `<div class="panel full">
+      <div class="ph"><span class="ic">🛒</span><h3>Lista de compras</h3><span class="cnt">${list.filter(s=>!s.done).length} a comprar</span></div>
+      ${list.length?`<ul class="list">${list.map(s=>`
+        <li>
+          <span class="chk ${s.done?'on':''}" data-toggleshop="${s.id}">✓</span>
+          <div class="li-main"><div class="li-t ${s.done?'done':''}">${esc(s.name)}${s.qty?` <span style="color:var(--muted)">×${esc(s.qty)}</span>`:''}</div>
+            <div class="li-s"><span class="tag">${esc(memberName(s.addedBy))}</span></div></div>
+          <button class="x" data-delshop="${s.id}" title="Remover">✕</button>
+        </li>`).join("")}</ul>`:`<div class="empty">Lista vazia — adicione o que falta em casa.</div>`}
+      <div class="add">
+        <input id="sh-name" type="text" placeholder="Item (ex.: arroz)" style="flex:2 1 200px"/>
+        <input id="sh-qty" type="text" placeholder="Qtd" style="flex:0 1 90px" inputmode="numeric"/>
+        <button class="btn pri" id="sh-add">Adicionar</button>
+      </div>
+      ${doneCount?`<div class="rowbtns"><button class="btn sm danger" id="sh-clear">Limpar ${doneCount} comprado(s)</button></div>`:""}
+    </div>`;
   }
 
 /* ---------- AVISOS ---------- */
@@ -684,6 +764,22 @@
 /* ===================== wiring ===================== */
   function wireView(){
     const v=$("view"); if(!v) return;
+
+    // navegação (tela Início)
+    v.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>{ tab=b.dataset.go; renderApp(); reload(true).catch(()=>{}); }));
+
+    if(tab==="compras"){
+      const add=async()=>{
+        const name=($("sh-name").value||"").trim(); if(!name)return;
+        try{ await api("/shopping",{method:"POST",body:{name,qty:($("sh-qty").value||"").trim()}}); await reload(); }
+        catch(e){ toast("Erro ao adicionar",true); }
+      };
+      const b=$("sh-add"); if(b) b.addEventListener("click",add);
+      $("sh-name") && $("sh-name").addEventListener("keydown",e=>{if(e.key==="Enter")add();});
+      v.querySelectorAll("[data-toggleshop]").forEach(x=>x.addEventListener("click",async()=>{ try{ await api("/shopping/"+x.dataset.toggleshop+"/toggle",{method:"POST"}); await reload(); }catch(e){ toast("Erro",true); } }));
+      v.querySelectorAll("[data-delshop]").forEach(x=>x.addEventListener("click",async()=>{ try{ await api("/shopping/"+x.dataset.delshop,{method:"DELETE"}); await reload(); }catch(e){ toast("Erro",true); } }));
+      const clr=$("sh-clear"); if(clr) clr.addEventListener("click",async()=>{ try{ await api("/shopping/clear-done",{method:"POST"}); await reload(); }catch(e){ toast("Erro",true); } });
+    }
 
     if(tab==="avisos"){
       if(isAdmin()){

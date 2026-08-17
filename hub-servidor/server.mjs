@@ -50,6 +50,7 @@ async function buildData(me) {
   const pointLog = await sql`SELECT id,member_id,delta,reason,by_id,activity_id,created_at FROM point_log ORDER BY created_at DESC`;
   const menuRows = await sql`SELECT to_char(day,'YYYY-MM-DD') AS day, cafe, almoco, jantar FROM menu`;
   const meetings = await sql`SELECT id,title,to_char(mdate,'YYYY-MM-DD') AS mdate,mtime,place,note,created_by FROM meetings ORDER BY mdate, mtime`;
+  const shopping = await sql`SELECT id,name,qty,done,added_by,created_at FROM shopping ORDER BY created_at`;
 
   const cmtByAnn = {};
   comments.forEach((c) => { (cmtByAnn[c.announcement_id] ||= []).push({ id: c.id, authorId: c.author_id, text: c.body, createdAt: c.created_at }); });
@@ -71,6 +72,7 @@ async function buildData(me) {
     pointLog: pointLog.map((p) => ({ id: p.id, memberId: p.member_id, delta: p.delta, reason: p.reason, byId: p.by_id, activityId: p.activity_id, createdAt: p.created_at })),
     menu,
     meetings: meetings.map((m) => ({ id: m.id, title: m.title, date: m.mdate, time: m.mtime, place: m.place, note: m.note, createdBy: m.created_by })),
+    shopping: shopping.map((s) => ({ id: s.id, name: s.name, qty: s.qty, done: s.done, addedBy: s.added_by, createdAt: s.created_at })),
   };
 }
 
@@ -208,6 +210,27 @@ async function handleApi(req, res, url) {
     if (method === "DELETE" && seg[1]) {
       if (!requireAdmin()) return;
       await sql`DELETE FROM meetings WHERE id=${seg[1]}`;
+      return sendJSON(res, 200, { ok: true });
+    }
+  }
+
+  if (top === "shopping") {
+    if (method === "POST" && seg[1] === "clear-done") {
+      await sql`DELETE FROM shopping WHERE done=true`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    if (method === "POST" && !seg[1]) {
+      const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
+      const name = String(b.name || "").trim(); if (!name) return sendJSON(res, 400, { error: "dados" });
+      await sql`INSERT INTO shopping (id, name, qty, added_by) VALUES (${uid()}, ${name}, ${String(b.qty || "").trim()}, ${me.id})`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    if (method === "POST" && seg[1] && seg[2] === "toggle") {
+      await sql`UPDATE shopping SET done = NOT done WHERE id=${seg[1]}`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    if (method === "DELETE" && seg[1]) {
+      await sql`DELETE FROM shopping WHERE id=${seg[1]}`;
       return sendJSON(res, 200, { ok: true });
     }
   }

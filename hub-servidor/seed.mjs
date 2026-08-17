@@ -49,6 +49,10 @@ export async function seedIfEmpty() {
             VALUES (${TODAY}, ${"Café, pão e frutas"}, ${"Arroz, feijão, frango e salada"}, ${"Sopa"})
             ON CONFLICT (day) DO NOTHING`;
 
+  await sql`INSERT INTO shopping (id, name, qty, added_by) VALUES (${uid()}, ${"Leite"}, ${"2"}, ${tha})`;
+  await sql`INSERT INTO shopping (id, name, qty, added_by) VALUES (${uid()}, ${"Pão"}, ${""}, ${mau})`;
+  await sql`INSERT INTO shopping (id, name, qty, added_by) VALUES (${uid()}, ${"Frutas"}, ${""}, ${tha})`;
+
   const dow = new Date(TODAY).getDay();
   const toSunday = (7 - dow) % 7 || 7;
   await sql`INSERT INTO meetings (id, title, mdate, mtime, place, note, created_by)
