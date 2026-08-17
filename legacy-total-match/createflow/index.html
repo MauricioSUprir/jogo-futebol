@@ -1068,7 +1068,7 @@ function renderYtBar(){
   if(ytInfo){
     el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🟢</span><div style="flex:1">YouTube conectado — <b>${ytInfo.canal||"seu canal"}</b> · ${fmtN(ytInfo.inscritos||0)} inscritos · ${ytInfo.videos} vídeos. <a href="#" onclick="conectarYouTube();return false" style="color:var(--primary-ink);font-weight:700">Atualizar</a></div></div>`;
   } else {
-    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button></div></div>`;
+    el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">🔌</span><div style="flex:1">Conecte o <b>YouTube</b> pra puxar os números reais do canal (views, retenção, inscritos ganhos, links do vídeo).<br><button class="btn sm" style="margin-top:8px" onclick="conectarYouTube()">${platIcon('youtube')} Conectar YouTube</button><div style="font-size:11.5px;color:var(--muted);margin-top:9px">💡 O Google vai avisar que o app <b>“não é seguro / não verificado”</b> — é <b>normal</b>, o app é novo e é só de vocês. Toque em <b>Avançado</b> (ou "Mostrar detalhes") → <b>Acessar CreateFlow (não seguro)</b> → <b>Continuar / Permitir</b>.</div></div></div>`;
   }
 }
 function conectarYouTube(){
@@ -1083,7 +1083,7 @@ function conectarYouTube(){
   }
   ytBusy=true;
   const el=document.getElementById("ytBar");
-  if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<br><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
+  if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<div style="font-size:11.5px;color:var(--muted);margin-top:6px">Se aparecer <b>“não é seguro / não verificado”</b>: toque em <b>Avançado → Acessar CreateFlow</b> (é normal).</div><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
   try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"consent" }); }
   catch(e){ ytBusy=false; renderYtBar(); toast("Não abriu o login — tente de novo"); }
 }
