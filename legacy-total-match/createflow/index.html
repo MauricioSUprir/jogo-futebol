@@ -560,7 +560,7 @@
         <div class="note info" style="margin-bottom:16px">
           <span style="font-size:20px">🖼️</span>
           <div>A <b>capa</b> é a imagem que aparece antes de tocar no vídeo — é ela que faz a pessoa querer assistir!
-          Cada vídeo já tem um <b>textinho pronto</b>. É só copiar e colar numa <b>IA de imagem</b> (ChatGPT, Gemini, Copilot…) pra ela desenhar a capa pra você.</div>
+          Copie o <b>textinho pronto</b> e cole numa <b>IA de imagem</b> (ChatGPT, Gemini…) pra ela desenhar a capa. Depois, toque em <b>📷 Adicionar foto</b> pra guardar a imagem aqui, junto com o roteiro.</div>
         </div>
         <div id="thumbsList" class="grid"></div>
       </section>
@@ -980,6 +980,7 @@ function renderRoteiros(){
           <button class="btn ghost sm" onclick="apagarRoteiro(${r.id})">🗑</button>
         </div>
       </div>
+      ${r.capa?`<div style="margin-bottom:12px"><div class="eyebrow" style="margin-bottom:5px">🖼️ Capa</div><img src="${r.capa}" alt="capa do vídeo" style="max-width:150px;max-height:200px;border-radius:10px;border:1px solid var(--border)"/></div>`:''}
       ${r.secoes.map((s,si)=>`
         <div style="margin-bottom:11px">
           <div class="eyebrow" style="margin-bottom:5px">${s.t}</div>
@@ -1317,25 +1318,39 @@ function renderThumbs(){
   el.innerHTML = ROTEIROS.map((r,i)=>{
     const f = FORMATOS[r.fmt]; const app = f.app; const prompt = thumbPrompt(r);
     const vert = f.ar==="9:16";
+    const mock = r.capa
+      ? `<div class="thumb-mock" style="padding:0;box-shadow:none;${vert?'':'width:150px;height:85px'}"><img src="${r.capa}" alt="capa" style="width:100%;height:100%;object-fit:cover;border-radius:12px"/></div>`
+      : `<div class="thumb-mock" style="background:${thumbBG(app)};${vert?'':'width:150px;height:85px'}">${platIcon(app,"pl")}<div class="tt">${thumbHeadline(r.tema)}</div></div>`;
     return `<div class="card thumb">
       <div class="thumb-top">
-        <div class="thumb-mock" style="background:${thumbBG(app)};${vert?'':'width:150px;height:85px'}">
-          ${platIcon(app,"pl")}
-          <div class="tt">${thumbHeadline(r.tema)}</div>
-        </div>
+        ${mock}
         <div class="thumb-info">
           <b>${r.tema}</b>
           <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${fmtChip(r.fmt)}</div>
-          <div style="font-size:11.5px;color:var(--faint)">📐 capa ${f.ar} · ${vert?'em pé':'deitada'}</div>
+          <div style="font-size:11.5px;color:var(--faint)">📐 capa ${f.ar} · ${vert?'em pé':'deitada'}${r.capa?' · 🖼️ foto adicionada':''}</div>
         </div>
       </div>
       <div class="thumb-prompt" id="tp${i}">${prompt}</div>
       <div class="thumb-foot">
-        <button class="btn sm" style="flex:1;justify-content:center" onclick="copiarThumb(${i}, this)">📋 Copiar prompt da capa</button>
+        <button class="btn sm" style="flex:1;justify-content:center" onclick="copiarThumb(${i}, this)">📋 Copiar prompt</button>
+        <button class="btn ghost sm" onclick="escolherFotoCapa(${i})">${r.capa?'🔄 Trocar foto':'📷 Adicionar foto'}</button>
+        ${r.capa?`<button class="btn ghost sm" onclick="removerFotoCapa(${i})" title="Remover foto">🗑</button>`:''}
       </div>
     </div>`;
   }).join("");
 }
+function escolherFotoCapa(i){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept="image/*";
+  inp.onchange=()=>{ const file=inp.files&&inp.files[0]; if(!file) return;
+    if(file.size>8*1024*1024){ toast("Foto muito grande (máx 8MB)"); return; }
+    const rd=new FileReader();
+    rd.onload=()=>{ if(ROTEIROS[i]){ ROTEIROS[i].capa=rd.result; renderThumbs(); renderRoteiros(); toast("Foto da capa adicionada ✓"); } };
+    rd.readAsDataURL(file);
+  };
+  inp.click();
+}
+function removerFotoCapa(i){ if(ROTEIROS[i]){ delete ROTEIROS[i].capa; renderThumbs(); renderRoteiros(); toast("Foto removida"); } }
 function copiarThumb(i, btn){
   const txt = document.getElementById("tp"+i).textContent;
   const done = ()=>{ const o=btn.innerHTML; btn.innerHTML="✓ Copiado!"; toast("Prompt da capa copiado ✓"); setTimeout(()=>btn.innerHTML=o, 1500); };
@@ -1378,7 +1393,7 @@ const STEPS = {
   pipeline: ["Cada vídeo é um cartão 🎬","Toque em <b>▶</b> pra avançar de etapa","Toque no vídeo pra ver os detalhes"],
   ideias: ["Toque em <b>+ Nova ideia</b>","Escolha o formato (Short ou Vídeo longo)","Toque em <b>✨ Criar roteiro</b> ou mande pra produção"],
   roteiro: ["Escreva o tema do vídeo","Toque em <b>📋 Copiar prompt</b> e cole numa IA grátis","Cole a resposta e toque em <b>▶ Ler enquanto grava</b>"],
-  thumbs: ["Ache o vídeo que você quer","Toque em <b>📋 Copiar prompt da capa</b>","Cole numa IA de imagem e pronto! ✨"],
+  thumbs: ["Copie o prompt e cole numa IA de imagem","Baixe a imagem que ela gerou","Toque em <b>📷 Adicionar foto</b> pra guardar a capa"],
   calendario: ["Bolinha no dia = tem vídeo 🎬","Toque num dia pra planejar","Tente não deixar muitos dias vazios"],
   metricas: ["Conecte seus apps 🔌","Os números reais aparecem aqui","Atualizam sozinhos todo dia"],
   ia: ["Escreva um <b>tema</b>","Toque em <b>✦ Pedir ideias</b>","Toque em <b>+ Ideia</b> pra guardar a que gostou"],
