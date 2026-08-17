@@ -37,9 +37,18 @@
   html,body{margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
   button{font-family:inherit}
-  .wrap{max-width:1080px;margin:0 auto;padding:18px 16px 96px}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 18px 120px}
   .hide{display:none!important}
   .spacer{flex:1}
+  .backbtn{margin:0 0 18px}
+  .menugrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  @media(max-width:560px){.menugrid{grid-template-columns:repeat(2,1fr)}}
+  .menucard{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 12px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;text-align:center;color:var(--text)}
+  .menucard:hover{border-color:var(--brand);transform:translateY(-2px)}
+  .menucard .mi{font-size:27px;line-height:1}
+  .menucard .ml{font-size:13.5px;font-weight:750}
+  .menucard .md{font-size:11px;color:var(--muted)}
+  .sechead{font-size:13px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:6px 2px 12px}
 
   /* splash */
   #splash{position:fixed;inset:0;z-index:100;background:radial-gradient(120% 120% at 50% 0%, #12564f 0%, #0a0f0e 72%);
@@ -88,29 +97,29 @@
   .me .nm{font-size:13px;font-weight:700;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .me .role{font-size:11px;color:var(--muted)}
 
-  .hello{margin:2px 0 16px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .hello{margin:6px 0 20px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
   .hello h2{margin:0;font-size:22px;font-weight:800;letter-spacing:-.02em}
   .hello p{margin:2px 0 0;color:var(--muted);font-size:13px}
 
   /* tabs */
-  .tabs{display:flex;gap:6px;overflow-x:auto;padding:5px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:16px;scrollbar-width:none}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);margin-bottom:20px;scrollbar-width:none;position:sticky;top:8px;z-index:30}
   .tabs::-webkit-scrollbar{display:none}
-  .tabs button{border:0;background:transparent;color:var(--text2);cursor:pointer;padding:9px 15px;border-radius:10px;font-weight:650;font-size:13.5px;white-space:nowrap;display:flex;align-items:center;gap:7px}
+  .tabs button{border:0;background:transparent;color:var(--text2);cursor:pointer;padding:10px 16px;border-radius:10px;font-weight:650;font-size:13.5px;white-space:nowrap;display:flex;align-items:center;gap:7px}
   .tabs button.active{background:var(--brand);color:#fff}
 
   /* cards / panels */
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
   .grid .full{grid-column:1/-1}
   @media(max-width:760px){.grid{grid-template-columns:1fr}}
-  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;min-width:0}
-  .panel .ph{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;min-width:0}
+  .panel .ph{display:flex;align-items:center;gap:10px;margin-bottom:16px}
   .panel .ph .ic{font-size:18px}
   .panel h3{font-size:15px;margin:0;font-weight:750;letter-spacing:-.01em}
   .panel .cnt{font-size:12px;color:var(--muted);margin-left:auto;background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-weight:650}
 
   /* list rows */
   ul.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
-  ul.list li{display:flex;align-items:center;gap:11px;padding:11px 2px;border-bottom:1px solid var(--line)}
+  ul.list li{display:flex;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid var(--line)}
   ul.list li:last-child{border-bottom:0}
   .chk{width:24px;height:24px;border-radius:8px;border:2px solid var(--line);background:var(--bg);cursor:pointer;flex:none;display:grid;place-items:center;color:transparent;font-size:15px;transition:.12s}
   .chk.on{background:var(--good);border-color:var(--good);color:#fff}
@@ -410,15 +419,18 @@
 
   function renderView(){
     const v=$("view"); if(!v) return;
-    if(tab==="inicio") v.innerHTML=viewInicio();
-    else if(tab==="avisos") v.innerHTML=viewAvisos();
-    else if(tab==="atividades") v.innerHTML=viewAtividades();
-    else if(tab==="compras") v.innerHTML=viewCompras();
-    else if(tab==="cardapio") v.innerHTML=viewCardapio();
-    else if(tab==="placar") v.innerHTML=viewPlacar();
-    else if(tab==="encontros") v.innerHTML=viewEncontros();
-    else if(tab==="conta") v.innerHTML=viewConta();
-    else v.innerHTML=viewInicio();
+    let html;
+    if(tab==="inicio") html=viewInicio();
+    else if(tab==="avisos") html=viewAvisos();
+    else if(tab==="atividades") html=viewAtividades();
+    else if(tab==="compras") html=viewCompras();
+    else if(tab==="cardapio") html=viewCardapio();
+    else if(tab==="placar") html=viewPlacar();
+    else if(tab==="encontros") html=viewEncontros();
+    else if(tab==="conta") html=viewConta();
+    else html=viewInicio();
+    const back = (tab!=="inicio") ? `<button class="btn backbtn" data-go="inicio">← Menu principal</button>` : "";
+    v.innerHTML = back + html;
     wireView();
   }
 
@@ -431,7 +443,14 @@
     const compras=(S.shopping||[]).filter(s=>!s.done);
     const nextMeet=(S.meetings||[]).filter(m=>m.date>=TODAY).sort((a,b)=>(a.date+a.time)<(b.date+b.time)?-1:1)[0];
     const pts = admin?null:memberPoints(sessionId);
-    return `<div class="grid">
+    const menu=[["avisos","📣","Avisos","recados e comunicados"],["atividades","⭐","Atividades","tarefas e pontos"],["compras","🛒","Compras","lista da casa"],["cardapio","🍽️","Cardápio","refeições da semana"],["placar","🏆","Placar","pontos e dinheiro"],["encontros","📅","Encontros","datas em família"]];
+    return `
+      <div class="sechead">Menu principal</div>
+      <div class="menugrid">
+        ${menu.map(x=>`<button class="menucard" data-go="${x[0]}"><span class="mi">${x[1]}</span><span class="ml">${x[2]}</span><span class="md">${x[3]}</span></button>`).join("")}
+      </div>
+      <div class="sechead">Resumo de hoje</div>
+      <div class="grid">
       ${admin?"":`<div class="panel full">
         <div class="ph"><span class="ic">🏆</span><h3>Seus pontos</h3></div>
         <div class="totalbar" style="margin-top:0">
@@ -506,15 +525,15 @@
         <span class="av sm" style="background:${au?au.color:'#888'};width:26px;height:26px;font-size:13px">${au?(au.emoji||au.name.slice(0,1)):'?'}</span>
         <span class="an">${esc(au?au.name:'—')}</span>
         <span class="at">${timeAgo(a.createdAt)}</span>
-        ${isAdmin()?`<button class="x" data-delann="${a.id}" title="Apagar">✕</button>`:""}
       </div>
       <div class="tchips">${targetLabel(a)}</div>
       ${a.text?`<div class="abody">${esc(a.text)}</div>`:""}
       ${a.image?`<img class="ai" src="${a.image}" alt="imagem do aviso"/>`:""}
+      ${isAdmin()?`<div class="rowbtns"><button class="btn sm danger" data-delann="${a.id}">🗑 Apagar publicação</button></div>`:""}
       <div class="comments">
-        ${(a.comments||[]).map(c=>{const cu=member(c.authorId);return `<div class="cmt">
+        ${(a.comments||[]).map(c=>{const cu=member(c.authorId);const mine=c.authorId===sessionId;return `<div class="cmt">
           <span class="av sm" style="background:${cu?cu.color:'#888'};width:24px;height:24px;font-size:12px">${cu?(cu.emoji||cu.name.slice(0,1)):'?'}</span>
-          <div class="cb"><div><span class="cn">${esc(cu?cu.name:'—')}</span><span class="ct">${timeAgo(c.createdAt)}</span></div><div class="cx">${esc(c.text)}</div></div>
+          <div class="cb"><div><span class="cn">${esc(cu?cu.name:'—')}</span><span class="ct">${timeAgo(c.createdAt)}</span>${mine||isAdmin()?`<button class="x" data-delcmt="${c.id}" title="Apagar comentário" style="float:right;font-size:14px;padding:0 4px">✕</button>`:''}</div><div class="cx">${esc(c.text)}</div></div>
         </div>`;}).join("")}
         <div class="cmtbox">
           <input type="text" data-cmt="${a.id}" placeholder="Escreva um comentário..."/>
@@ -806,7 +825,8 @@
       }
       v.querySelectorAll("[data-cmtsend]").forEach(b=>b.addEventListener("click",()=>sendComment(b.dataset.cmtsend)));
       v.querySelectorAll("[data-cmt]").forEach(inp=>inp.addEventListener("keydown",e=>{ if(e.key==="Enter") sendComment(inp.dataset.cmt); }));
-      v.querySelectorAll("[data-delann]").forEach(b=>b.addEventListener("click",async()=>{ if(confirm("Apagar este aviso?")){ try{ await api("/announcements/"+b.dataset.delann,{method:"DELETE"}); await reload(); }catch(e){ toast("Erro ao apagar",true); } } }));
+      v.querySelectorAll("[data-delann]").forEach(b=>b.addEventListener("click",async()=>{ if(confirm("Apagar esta publicação?")){ try{ await api("/announcements/"+b.dataset.delann,{method:"DELETE"}); await reload(); }catch(e){ toast("Erro ao apagar",true); } } }));
+      v.querySelectorAll("[data-delcmt]").forEach(b=>b.addEventListener("click",async()=>{ try{ await api("/comments/"+b.dataset.delcmt,{method:"DELETE"}); await reload(); }catch(e){ toast("Erro",true); } }));
     }
 
     if(tab==="atividades"){

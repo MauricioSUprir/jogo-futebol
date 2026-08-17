@@ -124,14 +124,24 @@ async function handleApi(req, res, url) {
     }
   }
 
-  if (top === "comments" && method === "POST") {
-    const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
-    const text = String(b.text || "").trim(); if (!text) return sendJSON(res, 400, { error: "vazio" });
-    const [a] = await sql`SELECT targets FROM announcements WHERE id=${b.announcementId} LIMIT 1`;
-    if (!a) return sendJSON(res, 404, { error: "aviso" });
-    if (!(admin || a.targets.includes("all") || a.targets.includes(me.id))) return sendJSON(res, 403, { error: "sem acesso" });
-    await sql`INSERT INTO comments (id, announcement_id, author_id, body) VALUES (${uid()}, ${b.announcementId}, ${me.id}, ${text})`;
-    return sendJSON(res, 200, { ok: true });
+  if (top === "comments") {
+    if (method === "POST" && !seg[1]) {
+      const b = await readBody(req); if (!b) return sendJSON(res, 400, { error: "bad" });
+      const text = String(b.text || "").trim(); if (!text) return sendJSON(res, 400, { error: "vazio" });
+      const [a] = await sql`SELECT targets FROM announcements WHERE id=${b.announcementId} LIMIT 1`;
+      if (!a) return sendJSON(res, 404, { error: "aviso" });
+      if (!(admin || a.targets.includes("all") || a.targets.includes(me.id))) return sendJSON(res, 403, { error: "sem acesso" });
+      await sql`INSERT INTO comments (id, announcement_id, author_id, body) VALUES (${uid()}, ${b.announcementId}, ${me.id}, ${text})`;
+      return sendJSON(res, 200, { ok: true });
+    }
+    if (method === "DELETE" && seg[1]) {
+      // autor do comentário ou admin pode apagar
+      const [c] = await sql`SELECT author_id FROM comments WHERE id=${seg[1]} LIMIT 1`;
+      if (!c) return sendJSON(res, 404, { error: "comentário" });
+      if (!admin && c.author_id !== me.id) return sendJSON(res, 403, { error: "sem acesso" });
+      await sql`DELETE FROM comments WHERE id=${seg[1]}`;
+      return sendJSON(res, 200, { ok: true });
+    }
   }
 
   if (top === "activities") {
