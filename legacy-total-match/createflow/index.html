@@ -1081,8 +1081,10 @@ function conectarYouTube(){
     });
   }
   ytBusy=true;
-  const el=document.getElementById("ytBar"); if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div>Abrindo o login do Google… faça login e toque em <b>Permitir</b>.</div></div>`;
-  ytTokenClient.requestAccessToken({ prompt: ytToken?"":"consent" });
+  const el=document.getElementById("ytBar");
+  if(el) el.innerHTML=`<div class="note info" style="margin:0"><span style="font-size:20px">⏳</span><div style="flex:1">Abrindo o login do Google… faça login e toque em <b>Permitir</b>.<br><button class="btn ghost sm" style="margin-top:8px" onclick="ytBusy=false;conectarYouTube()">↻ Tentar de novo</button></div></div>`;
+  try{ ytTokenClient.requestAccessToken({ prompt: ytToken?"":"consent" }); }
+  catch(e){ ytBusy=false; renderYtBar(); toast("Não abriu o login — tente de novo"); }
 }
 async function ytGet(url){
   const r=await fetch(url,{headers:{Authorization:"Bearer "+ytToken}});
@@ -1394,6 +1396,8 @@ function go(scr){
   document.getElementById("pgTitle").textContent = TITLES[scr][0];
   document.getElementById("pgDesc").textContent = TITLES[scr][1];
   setHelp(scr);
+  // Ao (re)entrar em Resultados: se não estiver conectado, garante o botão de conectar de volta.
+  if(scr==="metricas"){ if(!ytInfo) ytBusy=false; renderYtBar(); }
   window.scrollTo(0,0);
 }
 document.getElementById("nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.scr); });
