@@ -11,6 +11,7 @@ process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 delete process.env.DATABASE_URL;
 
 const BASE = `http://localhost:${process.env.PORT}`;
+const { montarBRCode } = await import('./brcode.js');
 
 /* ---- dubla a Claude API (o resto passa direto) ---- */
 const fetchReal = globalThis.fetch;
@@ -35,7 +36,7 @@ globalThis.fetch = async (url, opcoes) => {
         id: 'PIX-QR-1', status: 'pending', external_reference: c.external_reference,
         transaction_amount: c.transaction_amount,
         point_of_interaction: { transaction_data: {
-          qr_code: '00020126580014BR.GOV.BCB.PIX-CODIGO-COPIA-E-COLA',
+          qr_code: montarBRCode(c.transaction_amount),
           qr_code_base64: 'iVBORw0KGgoAAAANSUhEUg==',
           ticket_url: 'https://www.mercadopago.com.br/payments/PIX-QR-1/ticket',
         } },
@@ -282,7 +283,8 @@ console.log('\n== Pix com QR dentro do app ==');
 
   const { status, dados } = await pedir('POST', '/pagar/pix', { token: t, corpo: { planoId: 'semanal' } });
   conferir(status === 200, 'cria a cobrança Pix');
-  conferir(dados.codigo.startsWith('00020126'), 'devolve o código copia-e-cola');
+  conferir(dados.codigo.startsWith('000201'), 'devolve o código copia-e-cola');
+  conferir(dados.valorNoCodigo === 5.99, 'o valor já vem dentro do código Pix (R$ 5,99)', String(dados.valorNoCodigo));
   conferir(dados.qrBase64.length > 10, 'devolve a imagem do QR Code');
   conferir(dados.status === 'pending', 'começa como pendente');
 

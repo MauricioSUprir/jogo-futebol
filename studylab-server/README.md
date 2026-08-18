@@ -93,6 +93,23 @@ Google, o aluno não recupera a assinatura em outro celular.
 
 Boleto fica de fora de propósito (demora dias para compensar e o aluno ficaria sem acesso).
 
+### O valor já vem dentro do código Pix
+
+O "copia e cola" é um **BR Code dinâmico**: o valor está gravado dentro dele (campo `54` do
+padrão EMV). O banco lê de lá e mostra o valor pronto — **o aluno não digita nada**, só
+confirma. Não existe a chance de ele pagar R$ 2,99 em vez de R$ 29,99.
+
+Para nunca exibir um código ruim, `src/brcode.js` **confere antes de mostrar**:
+
+- a soma de verificação (CRC16/CCITT-FALSE) bate → o código não veio corrompido nem cortado;
+- o campo `54` existe → não é um código "aberto", daqueles em que o pagador digita o valor;
+- o valor do campo `54` é **exatamente** o preço do plano;
+- a moeda é real (`986`).
+
+Se qualquer uma falhar, o servidor recusa e o aluno vê "tente de novo" — em vez de um Pix com
+valor errado. Os testes cobrem código válido, valor trocado, código adulterado, código
+truncado e código sem valor.
+
 **Como o Pro é liberado sem depender de sorte:** o webhook do Mercado Pago libera assim que o
 aviso chega, e o app **também** consulta `GET /pagamento/:id` a cada 4 segundos enquanto a tela
 do Pix está aberta. Os dois caminhos passam pela mesma trava de "já processado", então quem

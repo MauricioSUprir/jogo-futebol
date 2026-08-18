@@ -112,6 +112,10 @@ export function abrirPagamento(plano, aoLiberar) {
           : h('p', { class: 'small muted' }, 'Use o código abaixo no app do seu banco.')),
 
       h('p', { class: 'tiny muted center' }, 'Abra o app do banco → Pix → Ler QR Code'),
+      h('div', { class: 'card card--flat center', style: { marginTop: '10px' } },
+        h('div', { class: 'small' }, '✅ O valor já vem preenchido: ',
+          h('b', { style: { color: 'var(--ok)' } }, precoBR(pix.valorNoCodigo ?? plano.preco))),
+        h('div', { class: 'tiny muted' }, 'Você não digita nada — o banco mostra o valor e você só confirma.')),
       h('div', { class: 'hr' }),
       h('div', { class: 'tiny muted' }, 'Ou copie o código Pix:'),
       h('div', {

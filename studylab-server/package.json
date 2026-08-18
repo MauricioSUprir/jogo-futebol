@@ -8,7 +8,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "teste": "node testes/roda.js"
+    "teste": "node testes/brcode.js && node testes/roda.js"
   },
   "dependencies": {
     "jose": "^5.9.6",
