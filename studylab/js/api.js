@@ -64,6 +64,30 @@ export function aplicarConta(d) {
 export const entrarNoServidor = (idToken) =>
   chamar('/entrar', { metodo: 'POST', corpo: { idToken }, comToken: false }).then(aplicarConta);
 
+/** Identidade do aparelho: sorteada uma vez e guardada aqui mesmo. */
+function credenciaisDoAparelho() {
+  const c = st().conta;
+  if (c.aparelhoId && c.aparelhoSegredo) return { id: c.aparelhoId, segredo: c.aparelhoSegredo };
+  const aleatorio = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now().toString(36));
+  const novo = { id: `ap_${aleatorio()}`, segredo: `${aleatorio()}${aleatorio()}` };
+  set((s) => { s.conta.aparelhoId = novo.id; s.conta.aparelhoSegredo = novo.segredo; });
+  return novo;
+}
+
+/** Entra sem Google: o suficiente para usar o Study AI e assinar. */
+export function entrarPorAparelho(nome = 'Estudante') {
+  const d = credenciaisDoAparelho();
+  return chamar('/entrar', { metodo: 'POST', corpo: { dispositivo: { ...d, nome } }, comToken: false }).then(aplicarConta);
+}
+
+/** Garante que existe uma sessão válida no servidor antes de pedir algo pago. */
+export async function garantirSessao() {
+  if (!temServidor()) return null;
+  if (st().conta.token) return st().conta.token;
+  await entrarPorAparelho(st().perfil?.nome || 'Estudante');
+  return st().conta.token;
+}
+
 export const buscarEu = () => chamar('/eu').then(aplicarConta);
 
 export const ativarCodigoNoServidor = (codigo) =>

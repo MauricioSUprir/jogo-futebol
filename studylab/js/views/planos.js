@@ -6,13 +6,13 @@ import {
   RECURSOS_FREE, RECURSOS_PRO, selo,
 } from '../ui.js';
 import { PLANOS, precoBR, CODIGOS, SERVIDOR } from '../produto.js';
-import { temServidor, ativarCodigoNoServidor, cancelarNoServidor, pagarNoServidor, buscarEu, saudeDoServidor } from '../api.js';
+import { temServidor, ativarCodigoNoServidor, cancelarNoServidor, pagarNoServidor, buscarEu, garantirSessao } from '../api.js';
 
 export function render(el) {
   const pintar = () => { el.replaceChildren(); montar(el, pintar); };
   montar(el, pintar);
   // ao voltar do Mercado Pago o plano pode ter mudado — confere com o servidor
-  if (temServidor()) buscarEu().then(() => pintar()).catch(() => {});
+  if (temServidor()) garantirSessao().then(() => buscarEu()).then(() => pintar()).catch(() => {});
 }
 
 function montar(el, pintar) {
@@ -59,6 +59,7 @@ function montar(el, pintar) {
           if (temServidor()) {
             e.target.disabled = true; e.target.textContent = 'Conferindo…';
             try {
+              await garantirSessao();
               const d = await ativarCodigoNoServidor(c);
               toast(`Pro liberado até ${fmtData(d.proAte)}! 🎉`, 'good');
               pintar(); return;
@@ -133,6 +134,7 @@ function assinar(p, pintar) {
     class: 'btn btn--p', onclick: async () => {
       botao.disabled = true; botao.textContent = 'Abrindo o pagamento…';
       try {
+        await garantirSessao();
         const r = await pagarNoServidor(p.id);
         location.href = r.link;
       } catch (e) {

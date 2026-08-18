@@ -147,13 +147,32 @@ function montar(el, pintar) {
               const d = await saudeDoServidor();
               statusServidor.replaceChildren(
                 h('div', {}, `✅ servidor no ar · banco ${d.banco} · modelo ${d.modelo}`),
-                h('div', {}, `${d.chaveConfigurada ? '✅' : '❌'} chave da Claude · ${d.googleConfigurado ? '✅' : '❌'} Google · ${d.pagamentoConfigurado ? '✅' : '❌'} Mercado Pago`));
-              toast('Servidor respondendo!', 'good');
+                h('div', { style: { marginTop: '4px' } },
+                  `${d.studyAiPronto ? '✅' : '❌'} Study AI pronto · `,
+                  `${d.pagamentoPronto ? '✅' : '❌'} pagamento pronto · `,
+                  `${d.googleConfigurado ? '✅' : '○'} Google (opcional)`),
+                ...(d.falta?.length
+                  ? [h('div', { style: { marginTop: '6px' } }, 'Ainda falta configurar no servidor:'),
+                    h('ul', { style: { margin: '4px 0 0', paddingLeft: '18px' } }, ...d.falta.map((f) => h('li', {}, f)))]
+                  : [h('div', { style: { marginTop: '6px', color: 'var(--ok)' } }, 'Tudo configurado. 🎉')]));
+              toast(d.falta?.length ? 'Servidor no ar, mas falta configuração' : 'Tudo pronto! 🎉', d.falta?.length ? '' : 'good');
             } catch (err) { statusServidor.textContent = `❌ ${err.message}`; toast(err.message, 'bad'); }
             e.target.disabled = false; e.target.textContent = '🔌 Testar servidor';
           },
         }, '🔌 Testar servidor')),
       statusServidor,
+      h('div', { class: 'flexb mt' },
+        h('button', {
+          class: 'btn btn--sm', onclick: (e) => {
+            const bytes = new Uint8Array(32);
+            crypto.getRandomValues(bytes);
+            const segredo = [...bytes].map((b) => b.toString(36)).join('').slice(0, 48);
+            navigator.clipboard?.writeText(segredo);
+            e.target.parentElement.querySelector('code').textContent = segredo;
+            toast('SEGREDO copiado — cole no Railway', 'good');
+          },
+        }, '🎲 Gerar SEGREDO'),
+        h('code', { class: 'tiny muted', style: { wordBreak: 'break-all' } }, 'clique para gerar')),
       h('div', { class: 'hr' }),
       h('p', { class: 'tiny muted' },
         'Sem servidor, dá para testar a IA colando uma chave da Claude API aqui — funciona só neste aparelho '

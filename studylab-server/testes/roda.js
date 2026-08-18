@@ -93,11 +93,39 @@ let token;
   conferir(r2.status === 401, 'token falso é recusado');
 }
 
+console.log('\n== conta de aparelho (sem Google) ==');
+{
+  const cred = { id: 'ap_teste', segredo: 'segredo-do-aparelho', nome: 'Sem Conta' };
+  const a = await pedir('POST', '/entrar', { corpo: { dispositivo: cred } });
+  conferir(a.status === 200 && !!a.dados.token, 'entra sem Google, só com o aparelho');
+  conferir(a.dados.plano === 'free', 'conta de aparelho começa no grátis');
+
+  const devolta = await pedir('POST', '/entrar', { corpo: { dispositivo: cred } });
+  conferir(devolta.dados.usuario.id === 'ap_teste', 'volta na mesma conta ao reabrir o app');
+
+  const ladrao = await pedir('POST', '/entrar', { corpo: { dispositivo: { ...cred, segredo: 'chutei' } } });
+  conferir(ladrao.status === 401, 'quem sabe só o id do aparelho não entra');
+
+  const cod = await pedir('POST', '/codigo', { token: a.dados.token, corpo: { codigo: 'TESTE7' } });
+  conferir(cod.dados.plano === 'pro', 'conta de aparelho consegue virar Pro');
+  const ia = await pedir('POST', '/ia', { token: a.dados.token, corpo: { system: 'a', conteudo: 'b' } });
+  conferir(ia.status === 200, 'e usa o Study AI normalmente');
+}
+
+console.log('\n== o que falta configurar ==');
+{
+  const { dados } = await pedir('GET', '/saude');
+  conferir(Array.isArray(dados.falta), 'servidor diz o que ainda falta configurar');
+  conferir(dados.studyAiPronto === true, 'checklist: Study AI pronto');
+  conferir(dados.falta.some((f) => f.includes('DATABASE_URL')), 'checklist aponta o banco faltando no teste');
+}
+
 console.log('\n== paywall ==');
 {
+  const antes = chamadasClaude;
   const { status, dados } = await pedir('POST', '/ia', { token, corpo: { system: 'oi', conteudo: 'teste' } });
   conferir(status === 402, 'sem assinatura, o Study AI é bloqueado', `${status} ${dados.erro}`);
-  conferir(chamadasClaude === 0, 'nada é gasto na Claude API antes de pagar');
+  conferir(chamadasClaude === antes, 'nada é gasto na Claude API antes de pagar');
 }
 
 console.log('\n== código de acesso ==');
@@ -112,10 +140,11 @@ console.log('\n== código de acesso ==');
 
 console.log('\n== Study AI ==');
 {
+  const antes = chamadasClaude;
   const { status, dados } = await pedir('POST', '/ia', { token, corpo: { system: 'Você é o Study AI', conteudo: 'o que estudo agora?' } });
   conferir(status === 200, 'assinante consegue perguntar', `${status} ${dados.erro || ''}`);
   conferir(dados.texto?.includes('o que estudo agora?'), 'resposta chega no app');
-  conferir(chamadasClaude === 1, 'a chamada foi para a Claude API uma única vez');
+  conferir(chamadasClaude === antes + 1, 'a chamada foi para a Claude API uma única vez');
   const eu = await pedir('GET', '/eu', { token });
   conferir(eu.dados.uso.chamadasHoje === 1, 'uso do dia é contabilizado');
 }
@@ -194,7 +223,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 3, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+  conferir(r.status === 200 && d.usuarios === 4, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

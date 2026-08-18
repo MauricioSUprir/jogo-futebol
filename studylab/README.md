@@ -65,6 +65,10 @@ Pronto: as matérias são criadas e o app já funciona com a escola dele. Nada d
 Falta só criar o Client ID e colar em `js/produto.js` → `GOOGLE_CLIENT_ID`, autorizando a
 origem do Pages. Enquanto isso o botão explica o passo a passo e o aluno entra sem conta.
 
+**Sem Google também dá:** com o servidor ligado, quem escolhe "continuar sem conta" ganha uma
+**conta de aparelho** — id e senha sorteados na primeira abertura e guardados só no celular.
+Serve para usar o Study AI e assinar. O que se perde é a recuperação em outro aparelho.
+
 ---
 
 ## Study AI — exclusivo do plano Pro
