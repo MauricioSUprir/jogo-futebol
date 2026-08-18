@@ -83,7 +83,10 @@ function montar(el, pintar) {
       h('li', {}, h('code', {}, 'SEGREDO'), ' — gere abaixo (obrigatória)'),
       h('li', {}, h('code', {}, 'MP_ACCESS_TOKEN'), ' — Access token do Mercado Pago, para receber'),
       h('li', {}, h('code', {}, 'MP_WEBHOOK_SECRET'), ' — assinatura secreta do webhook'),
-      h('li', {}, h('code', {}, 'ORIGENS'), ' — https://mauriciosuprir.github.io')),
+      h('li', {}, h('code', {}, 'MP_PUBLIC_KEY'), ' — chave pública, para o cartão dentro do app'),
+      h('li', {}, h('code', {}, 'ORIGENS'), ' — https://mauriciosuprir.github.io'),
+      h('li', {}, h('code', {}, 'MODELO'), ' — opcional; padrão claude-haiku-4-5, o que dá lucro nos planos'),
+      h('li', {}, h('code', {}, 'MODELO_PLUS'), ' — opcional; um modelo melhor só para assinantes Plus')),
     h('div', { class: 'flexb mt' },
       h('button', {
         class: 'btn btn--sm', onclick: () => {

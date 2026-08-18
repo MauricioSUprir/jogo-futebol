@@ -116,9 +116,12 @@ export function contextoDoAluno({ curto = false } = {}) {
   L.push('MATÉRIAS E DOMÍNIO POR CONTEÚDO:');
   for (const m of s.materias) {
     const cs = s.conteudos.filter((c) => c.materiaId === m.id);
-    if (!cs.length) { L.push(`- ${m.nome}: (sem conteúdos cadastrados)`); continue; }
+    // o que o próprio aluno escreveu na Minha Escola sobre o momento da turma
+    const aprendendo = s.escola?.[m.id]?.texto
+      ? ` | o aluno contou que está aprendendo: "${s.escola[m.id].texto.slice(0, 240)}"` : '';
+    if (!cs.length) { L.push(`- ${m.nome}: (sem conteúdos cadastrados)${aprendendo}`); continue; }
     L.push(`- ${m.nome} (prof. ${m.professor || '—'}, domínio geral ${dominioMateria(m.id)}%): `
-      + cs.map((c) => `${c.nome} ${c.dominio || 0}%`).join('; '));
+      + cs.map((c) => `${c.nome} ${c.dominio || 0}%`).join('; ') + aprendendo);
   }
   const provas = s.provas.filter((p) => p.data >= iso()).slice(0, 6);
   if (provas.length) {
@@ -159,13 +162,52 @@ Regras invioláveis:
 /* ==========================================================
    CHAT / ME EXPLICA / SOCRÁTICO
    ========================================================== */
-export async function chat(historico, pergunta) {
+export async function chat(historico, pergunta, fotos = []) {
   const ctx = contextoDoAluno();
   const conversa = historico.slice(-10).map((m) => `${m.autor === 'me' ? 'ALUNO' : 'STUDY AI'}: ${m.txt}`).join('\n');
+  const texto = `${conversa ? `Conversa até agora:\n${conversa}\n\n` : ''}ALUNO: ${pergunta}`;
   return chamar({
-    system: `${REGRAS}\n\nCONTEXTO DO ALUNO (dados reais do app):\n${ctx}`,
-    conteudo: `${conversa ? `Conversa até agora:\n${conversa}\n\n` : ''}ALUNO: ${pergunta}`,
+    system: `${REGRAS}\n\nCONTEXTO DO ALUNO (dados reais do app):\n${ctx}`
+      + (fotos.length ? '\nO aluno anexou foto(s) — leia com atenção o que está nelas antes de responder.' : ''),
+    // com fotos, o conteúdo vira uma lista de blocos: as imagens + a pergunta
+    conteudo: fotos.length ? [...fotos, { type: 'text', text: texto }] : texto,
     esforco: 'medium', maxTokens: 3000,
+  });
+}
+
+/* ==========================================================
+   RECURSOS DO PLUS: redação e plano da semana
+   ========================================================== */
+export async function corrigirRedacao({ texto = '', fotos = [], tema = '', estilo = 'enem' }) {
+  const guia = estilo === 'enem'
+    ? 'Corrija como o ENEM: dê uma nota de 0 a 1000 e avalie as 5 competências (norma culta; compreensão do tema; argumentação; coesão; proposta de intervenção), cada uma de 0 a 200.'
+    : 'Corrija como um professor da escola: dê uma nota de 0 a 10 e avalie ortografia, estrutura, argumentação e adequação ao tema.';
+  const pedido = `${tema ? `Tema proposto: "${tema}"\n` : ''}${texto ? `Redação do aluno:\n"""\n${String(texto).slice(0, 20000)}\n"""` : 'A redação está na(s) foto(s) anexada(s) — transcreva mentalmente e corrija.'}`;
+  return chamar({
+    system: `${REGRAS}
+Você corrige redações de estudantes brasileiros. ${guia}
+Formato da resposta:
+1) NOTA no topo, bem visível.
+2) Nota por competência/critério, uma linha cada.
+3) "O que já está bom" — 2 a 4 pontos.
+4) "O que corrigir primeiro" — os 3 erros mais graves, citando o trecho e mostrando como reescrever.
+5) Uma frase final de incentivo honesta.`,
+    conteudo: fotos.length ? [...fotos, { type: 'text', text: pedido }] : pedido,
+    esforco: 'high', maxTokens: 4000,
+  });
+}
+
+export async function planoSemanaIA() {
+  return chamar({
+    system: `${REGRAS}
+Você monta o plano de estudos da SEMANA do aluno, dia a dia (segunda a domingo), usando os dados reais dele:
+provas marcadas (prioridade máxima ao que está perto e mal preparado), tarefas em aberto, revisões vencidas,
+pontos fracos e o tempo diário que ele costuma estudar. Regras:
+- Cada dia: 2 a 4 blocos, com matéria, o que fazer exatamente e a duração em minutos.
+- Respeite o tempo diário disponível do aluno; deixe domingo mais leve.
+- Termine com uma linha "Se só der para fazer UMA coisa na semana: ...".`,
+    conteudo: `Monte meu plano da semana.\n\nDADOS REAIS:\n${contextoDoAluno()}`,
+    esforco: 'high', maxTokens: 3500,
   });
 }
 

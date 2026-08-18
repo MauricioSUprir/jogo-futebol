@@ -9,12 +9,23 @@ const API = process.env.MP_API || 'https://api.mercadopago.com';
 const token = () => process.env.MP_ACCESS_TOKEN || '';
 export const pagamentoLigado = () => !!token();
 
-/** Os planos vendidos. Estes valores são a fonte da verdade — o app só mostra. */
+/** Os planos vendidos. Estes valores são a fonte da verdade — o app só mostra.
+ *  Dois níveis: Pro (o essencial do Study AI) e Plus (mais perguntas, mais
+ *  fotos e os recursos avançados). Os limites de uso ficam em index.js. */
 export const PLANOS = {
-  semanal: { nome: 'StudyLab Pro — Semanal', valor: 5.99, frequencia: 7, unidade: 'days', dias: 7 },
-  mensal: { nome: 'StudyLab Pro — Mensal', valor: 29.99, frequencia: 1, unidade: 'months', dias: 30 },
-  anual: { nome: 'StudyLab Pro — Anual', valor: 99.99, frequencia: 12, unidade: 'months', dias: 365 },
+  pro_semanal: { nome: 'StudyLab Pro — Semanal', nivel: 'pro', valor: 7.90, frequencia: 7, unidade: 'days', dias: 7 },
+  pro_mensal: { nome: 'StudyLab Pro — Mensal', nivel: 'pro', valor: 24.90, frequencia: 1, unidade: 'months', dias: 30 },
+  pro_anual: { nome: 'StudyLab Pro — Anual', nivel: 'pro', valor: 199.90, frequencia: 12, unidade: 'months', dias: 365 },
+  plus_mensal: { nome: 'StudyLab Plus — Mensal', nivel: 'plus', valor: 44.90, frequencia: 1, unidade: 'months', dias: 30 },
+  plus_anual: { nome: 'StudyLab Plus — Anual', nivel: 'plus', valor: 379.90, frequencia: 12, unidade: 'months', dias: 365 },
 };
+
+/** Ids antigos (apps que ainda não atualizaram) apontam para o plano Pro novo. */
+const IDS_ANTIGOS = { semanal: 'pro_semanal', mensal: 'pro_mensal', anual: 'pro_anual' };
+export const normalizarPlanoId = (id) => IDS_ANTIGOS[id] || id;
+
+/** O nível de um plano guardado no banco: 'plus' se o nome carregar plus. */
+export const nivelDoPlano = (planoId) => (String(planoId || '').includes('plus') ? 'plus' : 'pro');
 
 /** Para onde o Mercado Pago avisa. No Railway descobrimos sozinhos. */
 export function urlDoWebhook() {
@@ -44,6 +55,7 @@ async function mp(rota, { metodo = 'GET', corpo = null, idempotencia = null } = 
 
 /** Cria a assinatura e devolve o link de pagamento. */
 export async function criarAssinatura({ planoId, usuario }) {
+  planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
   const voltarPara = `${(process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/\/$/, '')}/#/planos`;
@@ -73,6 +85,7 @@ export async function criarAssinatura({ planoId, usuario }) {
  * automática, então quem paga por Pix compra de novo quando acabar.
  */
 export async function criarPagamentoUnico({ planoId, usuario }) {
+  planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
   const app = (process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/\/$/, '');
@@ -110,6 +123,7 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
  * para o aluno pagar SEM sair do StudyLab.
  */
 export async function criarPix({ planoId, usuario, email }) {
+  planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
   const destinatario = (email || usuario.email || '').trim();
@@ -165,6 +179,7 @@ export const chavePublica = () => process.env.MP_PUBLIC_KEY || '';
  * nosso servidor nem fica guardado em lugar nenhum.
  */
 export async function pagarComCartao({ planoId, usuario, cartao }) {
+  planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
   const { token, metodo, emissor, parcelas, email, documento } = cartao || {};
@@ -226,7 +241,8 @@ export async function interpretarAviso({ tipo, id }) {
   if (tipo === 'subscription_preapproval' || tipo === 'preapproval') {
     const a = await consultarAssinatura(id);
     if (a.status !== 'authorized') return null;
-    const [usuarioId, planoId] = String(a.external_reference || '').split('|');
+    const [usuarioId, planoBruto] = String(a.external_reference || '').split('|');
+    const planoId = normalizarPlanoId(planoBruto);
     const plano = PLANOS[planoId];
     if (!usuarioId || !plano) return null;
     return { usuarioId, planoId, dias: plano.dias, valor: plano.valor, referencia: `preapproval:${a.id}` };
@@ -236,7 +252,8 @@ export async function interpretarAviso({ tipo, id }) {
     const p = await consultarPagamento(id);
     if (p.status !== 'approved') return null;
     const ref = String(p.external_reference || p.metadata?.external_reference || '');
-    const [usuarioId, planoId] = ref.split('|');
+    const [usuarioId, planoBruto] = ref.split('|');
+    const planoId = normalizarPlanoId(planoBruto);
     const plano = PLANOS[planoId];
     if (!usuarioId || !plano) return null;
     return { usuarioId, planoId, dias: plano.dias, valor: p.transaction_amount ?? plano.valor, referencia: `payment:${p.id}` };

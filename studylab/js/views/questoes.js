@@ -9,7 +9,7 @@ import {
 } from '../engine.js';
 import {
   titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento,
-  confirmar, barra, gAnel, progresso, gBarrasH, paywall,
+  confirmar, barra, gAnel, progresso, gBarrasH, paywall, liberado,
 } from '../ui.js';
 import { opcoesMaterias, opcoesConteudos, selMateria, tagMateria } from './comum.js';
 import { temIA, gerarQuestoes, questoesLocais, TIPOS_QUESTAO, NIVEIS_QUESTAO, analisarSimulado } from '../ai.js';
@@ -425,6 +425,12 @@ function resultado({ detalhes, acertos, total, nota, minutosGastos, modo, g, nov
     temIA() && (modo === 'simulado' || modo === 'diagnostico')
       ? h('button', {
         class: 'btn btn--blk mb', onclick: async (e) => {
+          const porta = liberado('ia_analise');
+          if (!porta.ok) {
+            caixaIA.replaceChildren(paywall('Análise de simulado é do Plus',
+              'O Study AI lê o seu resultado, aponta os pontos fracos e monta um plano dos próximos dias. Faz parte do plano Plus.', 'plus'));
+            return;
+          }
           e.target.disabled = true; e.target.textContent = 'Analisando…';
           try {
             const txt = await analisarSimulado({

@@ -3,7 +3,7 @@ import { uid, iso, today, addDays } from './util.js';
 import { seedInicial } from './seed.js';
 
 const KEY = 'studylab.v1';
-const SCHEMA = 4;
+const SCHEMA = 5;
 
 /* ---------- estado padrão ---------- */
 export function estadoVazio() {
@@ -11,7 +11,7 @@ export function estadoVazio() {
     schema: SCHEMA,
     perfil: { nome: '', serie: '', ano: new Date().getFullYear(), avatar: '🎓', tema: 'escuro', onboarding: false },
     conta: {
-      plano: 'free',            // free | pro
+      plano: 'free',            // free | pro | plus
       desde: iso(), proAte: null, planoId: null, codigo: null,
       provedor: null,           // null (ainda não entrou) | 'google' | 'local'
       id: null, nome: '', email: '', foto: '', token: null,   // token = sessão no servidor
@@ -35,6 +35,9 @@ export function estadoVazio() {
     materias: [], conteudos: [], tarefas: [], provas: [], eventos: [], horario: {},
     flashcards: [], questoes: [], tentativas: [], sessoes: [], notas: [], metas: [],
     anotacoes: [], biblioteca: [], resumos: [], mapas: [], conversas: [],
+    // Minha Escola: o que o aluno está aprendendo em cada matéria, escrito por
+    // ele. As fotos ficam no IndexedDB (fotos.js) — aqui só o texto.
+    escola: {},                 // { [materiaId]: { texto, em } }
     lidas: [],  // notificações já lidas
   };
 }
@@ -105,8 +108,14 @@ export function importar(txt) {
 }
 /* ---------- conta e assinatura ---------- */
 export const entrou = () => !!S.conta.provedor;
-export const ehPro = () => S.conta.plano === 'pro'
+/** Assinante (Pro OU Plus) com a assinatura em dia. */
+export const ehPro = () => (S.conta.plano === 'pro' || S.conta.plano === 'plus')
   && (!S.conta.proAte || S.conta.proAte >= iso());
+/** Assinante do nível de cima. */
+export const ehPlus = () => S.conta.plano === 'plus'
+  && (!S.conta.proAte || S.conta.proAte >= iso());
+/** 'free' | 'pro' | 'plus' — já considerando o vencimento. */
+export const nivelPlano = () => (ehPlus() ? 'plus' : ehPro() ? 'pro' : 'free');
 
 export function entrarComo({ provedor, id = null, nome = '', email = '', foto = '', token = null }) {
   set((s) => {
@@ -117,9 +126,9 @@ export function entrarComo({ provedor, id = null, nome = '', email = '', foto = 
 export function sairDaConta() {
   set((s) => { s.conta = { ...estadoVazio().conta }; s.perfil.onboarding = false; });
 }
-export function ativarPro({ planoId, dias, codigo = null }) {
+export function ativarPro({ planoId, dias, codigo = null, nivel = 'pro' }) {
   set((s) => {
-    s.conta.plano = 'pro';
+    s.conta.plano = nivel === 'plus' ? 'plus' : 'pro';
     s.conta.planoId = planoId;
     s.conta.codigo = codigo;
     s.conta.proAte = iso(addDays(today(), dias));

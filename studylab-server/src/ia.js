@@ -6,26 +6,67 @@ const VERSAO = '2023-06-01';
 const ESFORCOS = new Set(['low', 'medium', 'high', 'xhigh', 'max']);
 const MODELOS_OK = new Set(['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5']);
 const TETO_TOKENS = 8000;
-const TETO_TEXTO = 60000;      // caracteres de system + conteúdo
+const TETO_TEXTO = 60000;      // caracteres de system + texto (fotos não contam aqui)
+const TETO_FOTO = 2500000;     // ~1,8 MB por foto depois do base64
+const MIMES_OK = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf']);
 
+/* O modelo padrão é o Haiku: é o que faz a conta dos planos fechar com lucro
+   (~R$0,03 por pergunta). Suba para sonnet/opus pelas variáveis MODELO (todos)
+   ou MODELO_PLUS (só assinantes Plus) quando a margem permitir. */
 export function modeloPadrao() {
-  const m = process.env.MODELO || 'claude-opus-5';
-  return MODELOS_OK.has(m) ? m : 'claude-opus-5';
+  const m = process.env.MODELO || 'claude-haiku-4-5';
+  return MODELOS_OK.has(m) ? m : 'claude-haiku-4-5';
+}
+export function modeloPara(nivel) {
+  const plus = process.env.MODELO_PLUS || '';
+  if (nivel === 'plus' && MODELOS_OK.has(plus)) return plus;
+  return modeloPadrao();
+}
+
+/** Quantas fotos (ou PDFs) vêm dentro do pedido. */
+export const contarFotos = (conteudo) => (Array.isArray(conteudo)
+  ? conteudo.filter((b) => b?.type === 'image' || b?.type === 'document').length
+  : 0);
+
+/** Só o texto conta para o teto de tamanho — a foto tem teto próprio. */
+function medirTexto(conteudo) {
+  if (!Array.isArray(conteudo)) return JSON.stringify(conteudo || '').length;
+  let n = 0;
+  for (const b of conteudo) if (b?.type === 'text') n += String(b.text || '').length;
+  return n;
+}
+
+function validarBlocos(conteudo) {
+  if (!Array.isArray(conteudo)) return;
+  for (const b of conteudo) {
+    if (b?.type === 'text') continue;
+    if (b?.type !== 'image' && b?.type !== 'document') {
+      throw Object.assign(new Error('Bloco de conteúdo desconhecido.'), { status: 400 });
+    }
+    const fonte = b.source || {};
+    if (fonte.type !== 'base64' || !MIMES_OK.has(fonte.media_type)) {
+      throw Object.assign(new Error('Formato de foto não aceito. Use JPG, PNG, WebP ou PDF.'), { status: 400 });
+    }
+    if (String(fonte.data || '').length > TETO_FOTO) {
+      throw Object.assign(new Error('Foto grande demais. Tire de novo ou diminua a qualidade.'), { status: 413 });
+    }
+  }
 }
 
 /**
  * Recebe o pedido já validado do app e chama a Claude API.
  * O app nunca escolhe o modelo nem vê a chave.
  */
-export async function perguntar({ system, conteudo, schema = null, maxTokens = 4000, esforco = 'medium' }) {
+export async function perguntar({ system, conteudo, schema = null, maxTokens = 4000, esforco = 'medium', nivel = 'pro' }) {
   const chave = process.env.ANTHROPIC_API_KEY;
   if (!chave) throw Object.assign(new Error('ANTHROPIC_API_KEY não configurada no servidor'), { status: 500 });
 
-  const tamanho = (system || '').length + JSON.stringify(conteudo || '').length;
+  validarBlocos(conteudo);
+  const tamanho = (system || '').length + medirTexto(conteudo);
   if (tamanho > TETO_TEXTO) throw Object.assign(new Error('Material grande demais. Divida em partes menores.'), { status: 413 });
 
   const corpo = {
-    model: modeloPadrao(),
+    model: modeloPara(nivel),
     max_tokens: Math.min(Number(maxTokens) || 4000, TETO_TOKENS),
     output_config: {
       effort: ESFORCOS.has(esforco) ? esforco : 'medium',

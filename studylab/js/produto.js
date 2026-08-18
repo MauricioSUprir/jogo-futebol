@@ -13,24 +13,44 @@ export const GOOGLE_CLIENT_ID = '';
  *  Vazio = o app funciona sozinho, com conta local e Pro só por código. */
 export const SERVIDOR = '';
 
-/** Planos e preços mostrados na tela de assinatura. */
+/** Planos e preços mostrados na tela de assinatura.
+ *  Dois níveis: Pro e Plus. Os PREÇOS DE VERDADE ficam no servidor
+ *  (studylab-server/src/pagamento.js) — aqui é só o que a tela mostra,
+ *  então mantenha os dois arquivos iguais. */
 export const PLANOS = [
   {
-    id: 'semanal', nome: 'Semanal', preco: 5.99, periodo: '/semana',
+    id: 'pro_semanal', nivel: 'pro', nome: 'Pro Semanal', preco: 7.90, periodo: '/semana',
     chamada: 'Para experimentar', dias: 7,
     detalhe: '7 dias de Pro. Pague com Pix ou cartão.',
   },
   {
-    id: 'mensal', nome: 'Mensal', preco: 29.99, periodo: '/mês',
+    id: 'pro_mensal', nivel: 'pro', nome: 'Pro Mensal', preco: 24.90, periodo: '/mês',
     chamada: 'O mais escolhido', dias: 30, destaque: true,
     detalhe: '30 dias de Pro. Pix, cartão ou cobrança automática.',
   },
   {
-    id: 'anual', nome: 'Anual', preco: 99.99, periodo: '/ano', dias: 365,
-    chamada: 'Melhor custo', economia: 'economiza 72%',
-    detalhe: '365 dias de Pro. Sai por R$ 8,33 por mês.',
+    id: 'pro_anual', nivel: 'pro', nome: 'Pro Anual', preco: 199.90, periodo: '/ano', dias: 365,
+    chamada: 'Melhor custo', economia: 'economiza 33%',
+    detalhe: '365 dias de Pro. Sai por R$ 16,66 por mês.',
+  },
+  {
+    id: 'plus_mensal', nivel: 'plus', nome: 'Plus Mensal', preco: 44.90, periodo: '/mês',
+    chamada: 'Tudo liberado', dias: 30,
+    detalhe: '30 dias de Plus: mais perguntas, mais fotos e os recursos avançados.',
+  },
+  {
+    id: 'plus_anual', nivel: 'plus', nome: 'Plus Anual', preco: 379.90, periodo: '/ano', dias: 365,
+    chamada: 'Melhor do Plus', economia: 'economiza 29%',
+    detalhe: '365 dias de Plus. Sai por R$ 31,66 por mês.',
   },
 ];
+
+/** O que cada nível permite no Study AI — espelho dos limites do servidor,
+ *  usado só para mostrar na tela (quem manda de verdade é o servidor). */
+export const LIMITES_PLANO = {
+  pro: { dia: 30, mes: 400, fotosDia: 5, fotosPergunta: 2 },
+  plus: { dia: 80, mes: 1000, fotosDia: 25, fotosPergunta: 4 },
+};
 
 /** Aparece nos Termos e na Política de Privacidade. TROQUE pelo seu e-mail. */
 export const EMAIL_CONTATO = 'contato@studylab.app';
@@ -45,7 +65,7 @@ export const precoBR = (v) => v.toLocaleString('pt-BR', { style: 'currency', cur
  *  Aviso honesto: isso é conferido no aparelho, então serve para uso controlado
  *  — quando o servidor existir, a validação passa a ser feita lá. */
 export const CODIGOS = {
-  STUDYLAB30: 30,
-  PROFESSOR: 365,
-  TESTE7: 7,
+  STUDYLAB30: { dias: 30, nivel: 'pro' },
+  PROFESSOR: { dias: 365, nivel: 'plus' },
+  TESTE7: { dias: 7, nivel: 'pro' },
 };

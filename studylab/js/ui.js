@@ -1,6 +1,6 @@
 /* ===== ui.js — peças de interface reutilizáveis + gráficos em SVG puro ===== */
 import { h, $, clamp, round, esc } from './util.js';
-import { ehPro } from './store.js';
+import { ehPro, ehPlus } from './store.js';
 
 /* ---------- toast ---------- */
 export function toast(txt, tipo = '') {
@@ -201,47 +201,57 @@ export function progresso(rot, v, { cls = '', sufixo = '%' } = {}) {
    ========================================================== */
 export const COBRANCA_ATIVA = true;
 
-/** O que cada plano entrega. `pro:true` = exclusivo de quem assina. */
+/** O que cada plano entrega. nivel: null = grátis · 'pro' = Pro e Plus · 'plus' = só Plus. */
 export const RECURSOS = [
-  { id: 'motor', nome: 'Prioridades, revisão espaçada, domínio e planos de prova', pro: false },
-  { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e questões', pro: false },
-  { id: 'desempenho', nome: 'Desempenho, notas, simulador de notas e metas', pro: false },
-  { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e StudyCoins', pro: false },
-  { id: 'local', nome: 'Resumo automático e questões a partir dos seus flashcards', pro: false },
+  { id: 'motor', nome: 'Prioridades, revisão espaçada, domínio e planos de prova', nivel: null },
+  { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e questões', nivel: null },
+  { id: 'desempenho', nome: 'Desempenho, notas, simulador de notas e metas', nivel: null },
+  { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e StudyCoins', nivel: null },
+  { id: 'local', nome: 'Resumo automático e questões a partir dos seus flashcards', nivel: null },
+  { id: 'escola', nome: 'Minha Escola: o que você está aprendendo, com fotos do caderno', nivel: null },
 
-  { id: 'ia_chat', nome: 'Study AI — o tutor que conhece suas matérias e notas', pro: true },
-  { id: 'ia_explica', nome: 'Me explica e professor socrático', pro: true },
-  { id: 'ia_questoes', nome: 'Gerar questões e simulados sobre qualquer conteúdo', pro: true },
-  { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', pro: true },
-  { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', pro: true },
-  { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', pro: true },
-  { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', pro: true },
+  { id: 'ia_chat', nome: 'Study AI — o tutor que conhece suas matérias e notas', nivel: 'pro' },
+  { id: 'ia_fotos', nome: 'Mandar foto da questão ou do caderno para o Study AI', nivel: 'pro' },
+  { id: 'ia_explica', nome: 'Me explica e professor socrático', nivel: 'pro' },
+  { id: 'ia_questoes', nome: 'Gerar questões e simulados sobre qualquer conteúdo', nivel: 'pro' },
+  { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', nivel: 'pro' },
+  { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', nivel: 'pro' },
+  { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', nivel: 'pro' },
+
+  { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', nivel: 'plus' },
+  { id: 'ia_redacao', nome: 'Correção de redação com nota e comentários', nivel: 'plus' },
+  { id: 'ia_plano', nome: 'Plano de estudos da semana montado pela IA', nivel: 'plus' },
 ];
 
-export const RECURSOS_PRO = RECURSOS.filter((r) => r.pro);
-export const RECURSOS_FREE = RECURSOS.filter((r) => !r.pro);
-export const ehRecursoPro = (id) => !!RECURSOS.find((r) => r.id === id)?.pro;
+export const RECURSOS_PRO = RECURSOS.filter((r) => r.nivel === 'pro');
+export const RECURSOS_PLUS = RECURSOS.filter((r) => r.nivel === 'plus');
+export const RECURSOS_FREE = RECURSOS.filter((r) => !r.nivel);
+export const ehRecursoPro = (id) => !!RECURSOS.find((r) => r.id === id)?.nivel;
 
 /**
  * Porteiro único do app.
- * @returns {{ok:boolean, motivo?:string}}
+ * @returns {{ok:boolean, motivo?:string, precisa?:string}}
  */
 export function liberado(recursoId) {
-  if (!COBRANCA_ATIVA || ehPro()) return { ok: true };
+  if (!COBRANCA_ATIVA || ehPlus()) return { ok: true };
   const r = RECURSOS.find((x) => x.id === recursoId);
-  if (!r || !r.pro) return { ok: true };
-  return { ok: false, motivo: r.nome };
+  if (!r || !r.nivel) return { ok: true };
+  if (r.nivel === 'pro' && ehPro()) return { ok: true };
+  return { ok: false, motivo: r.nome, precisa: r.nivel };
 }
 
-export const selo = () => h('span', { class: 'pro-tag' }, 'PRO');
+export const selo = (nivel = 'pro') => h('span', { class: 'pro-tag' }, nivel === 'plus' ? 'PLUS' : 'PRO');
 
-/** Cartão padrão de "isso é do Pro", usado em todas as telas com IA. */
-export function paywall(titulo = 'Isso é do StudyLab Pro', texto = '') {
+/** Cartão padrão de "isso é pago", usado em todas as telas com IA. */
+export function paywall(titulo = 'Isso é do StudyLab Pro', texto = '', nivel = 'pro') {
+  const nomePlano = nivel === 'plus' ? 'Plus' : 'Pro';
   return h('div', { class: 'card', style: { borderColor: '#f59e0b55', textAlign: 'center' } },
     h('div', { style: { fontSize: '30px' } }, '🔒'),
     h('div', { class: 'flexb', style: { justifyContent: 'center', margin: '4px 0 6px' } },
-      h('b', {}, titulo), selo()),
+      h('b', {}, titulo), selo(nivel)),
     h('p', { class: 'small muted', style: { maxWidth: '48ch', margin: '0 auto 12px' } },
-      texto || 'O Study AI é o tutor que conhece suas matérias, suas provas e seus erros. Ele faz parte do plano Pro.'),
+      texto || (nivel === 'plus'
+        ? `Este recurso faz parte do plano ${nomePlano} — o nível com mais perguntas, mais fotos e as ferramentas avançadas.`
+        : 'O Study AI é o tutor que conhece suas matérias, suas provas e seus erros. Ele faz parte dos planos Pro e Plus.')),
     h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos'));
 }

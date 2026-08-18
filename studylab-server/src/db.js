@@ -17,8 +17,12 @@ const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codig
 
 export async function migrar() {
   if (emMemoria) {
-    for (const [codigo, dias] of Object.entries({ STUDYLAB30: 30, PROFESSOR: 365, TESTE7: 7 })) {
-      mem.codigos.set(codigo, { codigo, dias, usosMax: 999, usos: 0 });
+    for (const [codigo, d] of Object.entries({
+      STUDYLAB30: { dias: 30, nivel: 'pro' },
+      PROFESSOR: { dias: 365, nivel: 'plus' },
+      TESTE7: { dias: 7, nivel: 'pro' },
+    })) {
+      mem.codigos.set(codigo, { codigo, dias: d.dias, nivel: d.nivel, usosMax: 999, usos: 0 });
     }
     return;
   }
@@ -54,10 +58,12 @@ export async function migrar() {
       usuario_id      text NOT NULL,
       dia             date NOT NULL,
       chamadas        int  NOT NULL DEFAULT 0,
+      fotos           int  NOT NULL DEFAULT 0,
       tokens_entrada  bigint NOT NULL DEFAULT 0,
       tokens_saida    bigint NOT NULL DEFAULT 0,
       PRIMARY KEY (usuario_id, dia)
     )`;
+  await sql`ALTER TABLE uso ADD COLUMN IF NOT EXISTS fotos int NOT NULL DEFAULT 0`;
   await sql`
     CREATE TABLE IF NOT EXISTS pagamentos (
       id            bigserial PRIMARY KEY,
@@ -75,17 +81,19 @@ export async function migrar() {
     CREATE TABLE IF NOT EXISTS codigos (
       codigo     text PRIMARY KEY,
       dias       int  NOT NULL,
+      nivel      text NOT NULL DEFAULT 'pro',    -- pro | plus
       usos_max   int  NOT NULL DEFAULT 1,
       usos       int  NOT NULL DEFAULT 0,
       criado_em  timestamptz NOT NULL DEFAULT now()
     )`;
+  await sql`ALTER TABLE codigos ADD COLUMN IF NOT EXISTS nivel text NOT NULL DEFAULT 'pro'`;
   // códigos iniciais, só se a tabela estiver vazia
   const [{ count }] = await sql`SELECT count(*)::int AS count FROM codigos`;
   if (count === 0) {
     await sql`INSERT INTO codigos ${sql([
-      { codigo: 'STUDYLAB30', dias: 30, usos_max: 50 },
-      { codigo: 'PROFESSOR', dias: 365, usos_max: 20 },
-      { codigo: 'TESTE7', dias: 7, usos_max: 200 },
+      { codigo: 'STUDYLAB30', dias: 30, nivel: 'pro', usos_max: 50 },
+      { codigo: 'PROFESSOR', dias: 365, nivel: 'plus', usos_max: 20 },
+      { codigo: 'TESTE7', dias: 7, nivel: 'pro', usos_max: 200 },
     ])}`;
   }
 }
@@ -179,30 +187,31 @@ export async function usarCodigo(codigo) {
     const d = mem.codigos.get(c);
     if (!d || d.usos >= d.usosMax) return null;
     d.usos++;
-    return { codigo: c, dias: d.dias };
+    return { codigo: c, dias: d.dias, nivel: d.nivel || 'pro' };
   }
   const [d] = await sql`
     UPDATE codigos SET usos = usos + 1
     WHERE codigo = ${c} AND usos < usos_max
-    RETURNING codigo, dias`;
+    RETURNING codigo, dias, nivel`;
   return d || null;
 }
 
-export async function criarCodigo({ codigo, dias, usosMax = 1 }) {
+export async function criarCodigo({ codigo, dias, usosMax = 1, nivel = 'pro' }) {
   const c = String(codigo).trim().toUpperCase();
-  if (emMemoria) { mem.codigos.set(c, { codigo: c, dias, usosMax, usos: 0 }); return { codigo: c, dias, usosMax }; }
+  const n = nivel === 'plus' ? 'plus' : 'pro';
+  if (emMemoria) { mem.codigos.set(c, { codigo: c, dias, nivel: n, usosMax, usos: 0 }); return { codigo: c, dias, nivel: n, usosMax }; }
   const [d] = await sql`
-    INSERT INTO codigos ${sql({ codigo: c, dias, usos_max: usosMax })}
-    ON CONFLICT (codigo) DO UPDATE SET dias = excluded.dias, usos_max = excluded.usos_max
+    INSERT INTO codigos ${sql({ codigo: c, dias, nivel: n, usos_max: usosMax })}
+    ON CONFLICT (codigo) DO UPDATE SET dias = excluded.dias, nivel = excluded.nivel, usos_max = excluded.usos_max
     RETURNING *`;
   return d;
 }
 
 /* ---------- uso (controle de custo) ---------- */
 export async function usoDoDia(usuarioId) {
-  if (emMemoria) return mem.uso.get(`${usuarioId}|${hoje()}`) || { chamadas: 0, tokens_entrada: 0, tokens_saida: 0 };
+  if (emMemoria) return mem.uso.get(`${usuarioId}|${hoje()}`) || { chamadas: 0, fotos: 0, tokens_entrada: 0, tokens_saida: 0 };
   const [u] = await sql`SELECT * FROM uso WHERE usuario_id = ${usuarioId} AND dia = current_date`;
-  return u || { chamadas: 0, tokens_entrada: 0, tokens_saida: 0 };
+  return u || { chamadas: 0, fotos: 0, tokens_entrada: 0, tokens_saida: 0 };
 }
 
 export async function usoDoMes(usuarioId) {
@@ -218,19 +227,20 @@ export async function usoDoMes(usuarioId) {
   return u?.n || 0;
 }
 
-export async function registrarUso(usuarioId, { entrada = 0, saida = 0 } = {}) {
+export async function registrarUso(usuarioId, { entrada = 0, saida = 0, fotos = 0 } = {}) {
   if (emMemoria) {
     const k = `${usuarioId}|${hoje()}`;
-    const u = mem.uso.get(k) || { chamadas: 0, tokens_entrada: 0, tokens_saida: 0 };
-    u.chamadas++; u.tokens_entrada += entrada; u.tokens_saida += saida;
+    const u = mem.uso.get(k) || { chamadas: 0, fotos: 0, tokens_entrada: 0, tokens_saida: 0 };
+    u.chamadas++; u.fotos = (u.fotos || 0) + fotos; u.tokens_entrada += entrada; u.tokens_saida += saida;
     mem.uso.set(k, u);
     return u;
   }
   const [u] = await sql`
-    INSERT INTO uso (usuario_id, dia, chamadas, tokens_entrada, tokens_saida)
-    VALUES (${usuarioId}, current_date, 1, ${entrada}, ${saida})
+    INSERT INTO uso (usuario_id, dia, chamadas, fotos, tokens_entrada, tokens_saida)
+    VALUES (${usuarioId}, current_date, 1, ${fotos}, ${entrada}, ${saida})
     ON CONFLICT (usuario_id, dia) DO UPDATE SET
       chamadas = uso.chamadas + 1,
+      fotos = uso.fotos + ${fotos},
       tokens_entrada = uso.tokens_entrada + ${entrada},
       tokens_saida = uso.tokens_saida + ${saida}
     RETURNING *`;
@@ -282,7 +292,7 @@ export async function numeros() {
       assinantes: [...mem.assinaturas.values()].filter((a) => !a.cancelada && a.fim >= hoje()).length,
       chamadasHoje: [...mem.uso.entries()].filter(([k]) => k.endsWith(hoje())).reduce((s, [, v]) => s + v.chamadas, 0),
       pagamentos: [...mem.pagamentos.values()].filter((p) => p.status === 'pago').length,
-      receita: [...mem.pagamentos.values()].filter((p) => p.status === 'pago').reduce((s, p) => s + Number(p.valor || 0), 0),
+      receita: Math.round([...mem.pagamentos.values()].filter((p) => p.status === 'pago').reduce((s, p) => s + Number(p.valor || 0), 0) * 100) / 100,
     };
   }
   const [[u], [a], [c], [p]] = await Promise.all([
@@ -291,5 +301,5 @@ export async function numeros() {
     sql`SELECT coalesce(sum(chamadas),0)::int AS n FROM uso WHERE dia = current_date`,
     sql`SELECT count(*)::int AS n, coalesce(sum(valor),0)::float AS receita FROM pagamentos WHERE status = 'pago'`,
   ]);
-  return { usuarios: u.n, assinantes: a.n, chamadasHoje: c.n, pagamentos: p.n, receita: p.receita };
+  return { usuarios: u.n, assinantes: a.n, chamadasHoje: c.n, pagamentos: p.n, receita: Math.round(p.receita * 100) / 100 };
 }

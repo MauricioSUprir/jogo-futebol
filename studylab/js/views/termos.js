@@ -3,7 +3,7 @@
    app realmente faz — o que estiver aqui tem que ser verdade no código.      */
 import { h } from '../util.js';
 import { titulo, cartao, segmento } from '../ui.js';
-import { PLANOS, precoBR, EMAIL_CONTATO, RESPONSAVEL } from '../produto.js';
+import { PLANOS, LIMITES_PLANO, precoBR, EMAIL_CONTATO, RESPONSAVEL } from '../produto.js';
 
 const ATUALIZADO = '18 de agosto de 2026';
 let aba = 'termos';
@@ -55,10 +55,14 @@ function termos() {
       LI('Você é responsável por manter o acesso à sua conta. Se perder o aparelho e estiver sem conta Google, '
         + 'não temos como recuperar os dados — eles estavam só ali.')),
 
-    T('4. Plano grátis e plano Pro'),
+    T('4. Plano grátis e planos pagos (Pro e Plus)'),
     P('Quase tudo é gratuito e sem limite. O ', h('b', {}, 'Study AI'), ' — o tutor que responde com base nas suas '
-      + 'matérias e no seu desempenho — faz parte do plano Pro. Os preços de hoje:'),
-    UL(...PLANOS.map((p) => LI(h('b', {}, p.nome), `: ${precoBR(p.preco)} — ${p.dias} dias de Pro.`))),
+      + 'matérias e no seu desempenho — faz parte dos planos pagos: o Pro (o essencial, com limites diários de perguntas e fotos) e o Plus (mais perguntas, mais fotos, correção de redação, plano da semana e análise de simulados). Os preços de hoje:'),
+    UL(...PLANOS.map((p) => LI(h('b', {}, p.nome), `: ${precoBR(p.preco)} — ${p.dias} dias.`))),
+    P(h('b', {}, 'Limites de uso justos: '),
+      `no Pro são ${LIMITES_PLANO.pro.dia} perguntas por dia (${LIMITES_PLANO.pro.mes} por mês) e ${LIMITES_PLANO.pro.fotosDia} fotos por dia; `
+      + `no Plus, ${LIMITES_PLANO.plus.dia} perguntas por dia (${LIMITES_PLANO.plus.mes} por mês) e ${LIMITES_PLANO.plus.fotosDia} fotos por dia. `
+      + 'Chegou ao limite, ele volta no dia seguinte — nada é cobrado a mais por isso.'),
     P('Podemos mudar os preços a qualquer momento, mas ', h('b', {}, 'nunca no período que você já pagou'),
       '. Quem tem cobrança automática é avisado antes de qualquer aumento.'),
 

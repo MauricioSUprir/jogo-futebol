@@ -15,15 +15,28 @@ import {
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
 } from './db.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
-import { perguntar, modeloPadrao } from './ia.js';
+import { perguntar, modeloPadrao, modeloPara, contarFotos } from './ia.js';
 import {
   PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico, criarPix,
   pagarComCartao, chavePublica, interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
+  normalizarPlanoId, nivelDoPlano,
 } from './pagamento.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
-const LIMITE_DIARIO = Number(process.env.LIMITE_DIARIO) || 40;
-const LIMITE_MENSAL = Number(process.env.LIMITE_MENSAL) || 400;
+/* Limites por nível de plano. Foram calculados para o dono ter lucro mesmo no
+   pior caso (aluno que usa TUDO), com o modelo padrão (Haiku). Dá para mexer
+   por variável de ambiente sem tocar no código. */
+const num = (k, padrao) => Number(process.env[k]) || padrao;
+const LIMITES = {
+  pro: {
+    dia: num('LIMITE_DIARIO', 30), mes: num('LIMITE_MENSAL', 400),
+    fotosDia: num('FOTOS_DIA', 5), fotosPergunta: 2,
+  },
+  plus: {
+    dia: num('LIMITE_DIARIO_PLUS', 80), mes: num('LIMITE_MENSAL_PLUS', 1000),
+    fotosDia: num('FOTOS_DIA_PLUS', 25), fotosPergunta: 4,
+  },
+};
 const MODO_TESTE = process.env.MODO_TESTE === '1';
 const ORIGENS = (process.env.ORIGENS || 'https://mauriciosuprir.github.io')
   .split(',').map((o) => o.trim()).filter(Boolean);
@@ -55,13 +68,16 @@ async function lerCorpo(req, limite = 300000) {
   try { return JSON.parse(Buffer.concat(partes).toString('utf8')); }
   catch { throw Object.assign(new Error('JSON inválido'), { status: 400 }); }
 }
+/* O nível da assinatura sai do nome do plano guardado:
+   'plus_mensal' e 'codigo_plus' são Plus; o resto é Pro. */
 const resumoAssinatura = (a) => (a
-  ? { plano: 'pro', planoId: a.plano, proAte: a.fim, origem: a.origem }
+  ? { plano: nivelDoPlano(a.plano), planoId: a.plano, proAte: a.fim, origem: a.origem }
   : { plano: 'free', planoId: null, proAte: null, origem: null });
+const limitesDe = (assinatura) => LIMITES[nivelDoPlano(assinatura?.plano)] || LIMITES.pro;
 
 /* ---------- freio simples por IP (evita abuso na porta de entrada) ---------- */
 const batidas = new Map();
-function muitasBatidas(ip, limite = 60, janela = 60000) {
+function muitasBatidas(ip, limite = num('FREIO_IP', 60), janela = 60000) {
   const agora = Date.now();
   const lista = (batidas.get(ip) || []).filter((t) => agora - t < janela);
   lista.push(agora); batidas.set(ip, lista);
@@ -95,7 +111,8 @@ const rotas = {
   'GET /planos': async () => ({
     pagamentoLigado: pagamentoLigado(),
     formas: pagamentoLigado() ? ['pix', 'cartao', 'recorrente'] : [],
-    planos: Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, valor: p.valor, dias: p.dias })),
+    planos: Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, nivel: p.nivel, valor: p.valor, dias: p.dias })),
+    limites: LIMITES,
   }),
 
   'POST /entrar': async (req) => {
@@ -128,10 +145,15 @@ const rotas = {
   'GET /eu': async (req) => {
     const aluno = await exigirAluno(req);
     const [assinatura, uso] = await Promise.all([assinaturaAtiva(aluno.id), usoDoDia(aluno.id)]);
+    const L = limitesDe(assinatura);
     return {
       usuario: { id: aluno.id, nome: aluno.nome, email: aluno.email },
       ...resumoAssinatura(assinatura),
-      uso: { chamadasHoje: uso.chamadas, limiteDiario: LIMITE_DIARIO, limiteMensal: LIMITE_MENSAL },
+      uso: {
+        chamadasHoje: uso.chamadas, fotosHoje: uso.fotos || 0,
+        limiteDiario: L.dia, limiteMensal: L.mes,
+        limiteFotosDia: L.fotosDia, limiteFotosPergunta: L.fotosPergunta,
+      },
     };
   },
 
@@ -141,7 +163,8 @@ const rotas = {
     const achado = await usarCodigo(codigo);
     if (!achado) throw Object.assign(new Error('Código inválido ou já esgotado'), { status: 404 });
     const a = await criarAssinatura({
-      usuarioId: aluno.id, plano: 'codigo', dias: achado.dias, origem: 'codigo', referencia: achado.codigo,
+      usuarioId: aluno.id, plano: achado.nivel === 'plus' ? 'codigo_plus' : 'codigo',
+      dias: achado.dias, origem: 'codigo', referencia: achado.codigo,
     });
     return { ...resumoAssinatura(a), dias: achado.dias };
   },
@@ -155,29 +178,49 @@ const rotas = {
   'POST /ia': async (req) => {
     const aluno = await exigirAluno(req);
     const assinatura = await assinaturaAtiva(aluno.id);
-    if (!assinatura) throw Object.assign(new Error('O Study AI faz parte do plano Pro.'), { status: 402 });
+    if (!assinatura) throw Object.assign(new Error('O Study AI faz parte dos planos Pro e Plus.'), { status: 402 });
+    const nivel = nivelDoPlano(assinatura.plano);
+    const L = limitesDe(assinatura);
 
     const [uso, doMes] = await Promise.all([usoDoDia(aluno.id), usoDoMes(aluno.id)]);
-    if (uso.chamadas >= LIMITE_DIARIO) {
-      throw Object.assign(new Error(`Você usou as ${LIMITE_DIARIO} perguntas de hoje. Volte amanhã.`), { status: 429 });
+    if (uso.chamadas >= L.dia) {
+      throw Object.assign(new Error(`Você usou as ${L.dia} perguntas de hoje. Volte amanhã.`
+        + (nivel === 'pro' ? ' (No Plus são mais perguntas por dia.)' : '')), { status: 429 });
     }
-    if (doMes >= LIMITE_MENSAL) {
-      throw Object.assign(new Error(`Você chegou ao limite de ${LIMITE_MENSAL} perguntas do mês.`), { status: 429 });
+    if (doMes >= L.mes) {
+      throw Object.assign(new Error(`Você chegou ao limite de ${L.mes} perguntas do mês.`), { status: 429 });
     }
 
-    const { system, conteudo, schema, maxTokens, esforco } = await lerCorpo(req);
+    // fotos são maiores: o corpo do /ia aceita até ~9 MB (as outras rotas seguem pequenas)
+    const { system, conteudo, schema, maxTokens, esforco } = await lerCorpo(req, 9000000);
     if (!system || !conteudo) throw Object.assign(new Error('Pedido incompleto'), { status: 400 });
 
-    const r = await perguntar({ system, conteudo, schema, maxTokens, esforco });
-    await registrarUso(aluno.id, r.uso);
-    return { texto: r.texto, restamHoje: Math.max(0, LIMITE_DIARIO - uso.chamadas - 1) };
+    const fotos = contarFotos(conteudo);
+    if (fotos > L.fotosPergunta) {
+      throw Object.assign(new Error(`Seu plano envia até ${L.fotosPergunta} foto(s) por pergunta.`
+        + (nivel === 'pro' ? ' No Plus vão até 4.' : '')), { status: 429 });
+    }
+    if (fotos && (uso.fotos || 0) + fotos > L.fotosDia) {
+      throw Object.assign(new Error(`Você chegou ao limite de ${L.fotosDia} foto(s) por dia.`
+        + (nivel === 'pro' ? ' No Plus são 25 por dia.' : '')), { status: 429 });
+    }
+
+    const r = await perguntar({ system, conteudo, schema, maxTokens, esforco, nivel });
+    await registrarUso(aluno.id, { ...r.uso, fotos });
+    return {
+      texto: r.texto,
+      restamHoje: Math.max(0, L.dia - uso.chamadas - 1),
+      fotosRestamHoje: Math.max(0, L.fotosDia - (uso.fotos || 0) - fotos),
+    };
   },
 
   /* ---------- pagamento ---------- */
   'POST /pagar': async (req) => {
     const aluno = await exigirAluno(req);
     if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
-    const { planoId, forma = 'unico' } = await lerCorpo(req);
+    const corpo = await lerCorpo(req);
+    const planoId = normalizarPlanoId(corpo.planoId);
+    const forma = corpo.forma || 'unico';
     const plano = PLANOS[planoId];
     if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
 
@@ -197,8 +240,9 @@ const rotas = {
   'POST /pagar/pix': async (req) => {
     const aluno = await exigirAluno(req);
     if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
-    const { planoId, email } = await lerCorpo(req);
-    const r = await criarPix({ planoId, usuario: aluno, email });
+    const corpo = await lerCorpo(req);
+    const planoId = normalizarPlanoId(corpo.planoId);
+    const r = await criarPix({ planoId, usuario: aluno, email: corpo.email });
     await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia: `payment:${r.id}`, valor: r.valor });
     return r;
   },
@@ -210,7 +254,9 @@ const rotas = {
   'POST /pagar/cartao': async (req) => {
     const aluno = await exigirAluno(req);
     if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível.'), { status: 503 });
-    const { planoId, cartao } = await lerCorpo(req);
+    const corpo = await lerCorpo(req);
+    const planoId = normalizarPlanoId(corpo.planoId);
+    const cartao = corpo.cartao;
     const plano = PLANOS[planoId];
     if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
 
@@ -270,9 +316,9 @@ const rotas = {
 
   'POST /admin/codigo': async (req, url) => {
     exigirAdmin(url);
-    const { codigo, dias, usosMax } = await lerCorpo(req);
+    const { codigo, dias, usosMax, nivel } = await lerCorpo(req);
     if (!codigo || !dias) throw Object.assign(new Error('Informe codigo e dias'), { status: 400 });
-    return criarCodigo({ codigo, dias: Number(dias), usosMax: Number(usosMax) || 1 });
+    return criarCodigo({ codigo, dias: Number(dias), usosMax: Number(usosMax) || 1, nivel });
   },
 };
 
@@ -285,7 +331,8 @@ const rotasDinamicas = [
     async executar(req, url, [id]) {
       const aluno = await exigirAluno(req);
       const p = await consultarPagamento(id);
-      const [usuarioId, planoId] = String(p.external_reference || '').split('|');
+      const [usuarioId, planoBruto] = String(p.external_reference || '').split('|');
+      const planoId = normalizarPlanoId(planoBruto);
       if (usuarioId !== aluno.id) throw Object.assign(new Error('Este pagamento não é seu'), { status: 403 });
 
       const plano = PLANOS[planoId];
@@ -346,7 +393,9 @@ migrar()
   .then(() => servidor.listen(PORTA, () => {
     console.log(`StudyLab no ar em :${PORTA}`);
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
-    console.log(`  modelo: ${modeloPadrao()} · limites: ${LIMITE_DIARIO}/dia, ${LIMITE_MENSAL}/mês`);
+    console.log(`  modelo: ${modeloPadrao()} (Plus: ${modeloPara('plus')})`);
+    console.log(`  limites Pro: ${LIMITES.pro.dia}/dia, ${LIMITES.pro.mes}/mês, ${LIMITES.pro.fotosDia} fotos/dia`);
+    console.log(`  limites Plus: ${LIMITES.plus.dia}/dia, ${LIMITES.plus.mes}/mês, ${LIMITES.plus.fotosDia} fotos/dia`);
     console.log(`  chave da Claude: ${process.env.ANTHROPIC_API_KEY ? 'ok' : 'FALTANDO'}`);
     console.log(`  pagamento: ${pagamentoLigado() ? 'Mercado Pago ligado (Pix + cartão)' : 'desligado (só código de acesso)'}`);
     if (pagamentoLigado()) console.log(`  webhook: ${urlDoWebhook() || 'defina URL_WEBHOOK ou configure no painel do Mercado Pago'}`);
