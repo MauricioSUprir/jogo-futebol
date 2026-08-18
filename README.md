@@ -11,6 +11,11 @@ Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 > O jogo _Total Match_ que existia neste repositório foi preservado em
 > [`legacy-total-match/`](./legacy-total-match/).
 
+> Outros apps deste repositório, publicados pelo GitHub Pages:
+> **[`financas-casa/`](./financas-casa/)** (NEXO — finanças da casa) e
+> **[`looklab/`](./looklab/)** (LookLab — guarda-roupa digital e criador de
+> looks para crianças e adolescentes).
+
 ---
 
 ## Funcionalidades (MVP)
