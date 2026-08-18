@@ -127,24 +127,40 @@ function assinar(p, pintar) {
     return;
   }
 
-  const aviso = h('p', { class: 'small' }, 'Você vai ser levado para o Mercado Pago para concluir o pagamento com segurança. '
-    + 'Assim que ele confirmar, o Pro é liberado sozinho.');
+  const aviso = h('p', { class: 'small' },
+    'Você vai ser levado para o Mercado Pago para pagar com segurança. Assim que o pagamento cair, '
+    + 'o Pro é liberado sozinho — não precisa mandar comprovante nem esperar ninguém aprovar.');
   corpo.insertBefore(aviso, acoes);
-  const botao = h('button', {
-    class: 'btn btn--p', onclick: async () => {
-      botao.disabled = true; botao.textContent = 'Abrindo o pagamento…';
-      try {
-        await garantirSessao();
-        const r = await pagarNoServidor(p.id);
-        location.href = r.link;
-      } catch (e) {
-        aviso.textContent = e.message;
-        aviso.style.color = 'var(--bad)';
-        botao.disabled = false; botao.textContent = '💳 Pagar com Mercado Pago';
-      }
-    },
-  }, '💳 Pagar com Mercado Pago');
-  acoes.append(botao);
+
+  const irPagar = async (forma, botao, rotulo) => {
+    botao.disabled = true; botao.textContent = 'Abrindo o pagamento…';
+    try {
+      await garantirSessao();
+      const r = await pagarNoServidor(p.id, forma);
+      location.href = r.link;
+    } catch (e) {
+      aviso.textContent = e.message;
+      aviso.style.color = 'var(--bad)';
+      botao.disabled = false; botao.textContent = rotulo;
+    }
+  };
+
+  const bPix = h('button', { class: 'btn btn--p btn--blk' },
+    '💠 Pagar com Pix ou cartão');
+  bPix.onclick = () => irPagar('unico', bPix, '💠 Pagar com Pix ou cartão');
+
+  const bRec = h('button', { class: 'btn btn--blk' }, '🔁 Cartão que renova sozinho');
+  bRec.onclick = () => irPagar('recorrente', bRec, '🔁 Cartão que renova sozinho');
+
+  const escolhas = h('div', { class: 'grid', style: { gap: '8px', marginBottom: '10px' } },
+    bPix,
+    h('p', { class: 'tiny muted center', style: { margin: 0 } },
+      `Pix cai na hora. Compra ${p.dias} dias e pronto — quando acabar, você compra de novo.`),
+    h('div', { class: 'hr', style: { margin: '6px 0' } }),
+    bRec,
+    h('p', { class: 'tiny muted center', style: { margin: 0 } },
+      'Cobra no cartão automaticamente a cada período, até você cancelar. (Pix não permite cobrança automática.)'));
+  corpo.insertBefore(escolhas, acoes);
 }
 
 function assinaturaAtiva(el, pintar) {

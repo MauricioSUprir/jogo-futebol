@@ -38,15 +38,8 @@ const MARCA = (tam = 84) => {
   return h('div', { style: { width: `${tam}px`, color: 'var(--txt)', margin: '0 auto' } }, copia);
 };
 
-/* Botão do Google quando o Client ID ainda não foi colado em produto.js. */
-function botaoGoogleFalso() {
-  return h('button', {
-    class: 'btn btn--blk', style: { height: '44px', borderRadius: '99px', fontWeight: 700 },
-    onclick: () => comoLigarGoogle(),
-  }, h('span', { style: { fontSize: '15px' } }, 'G'), 'Continuar com o Google');
-}
-
-function comoLigarGoogle() {
+/* Como ligar o login do Google — mora em Configurações, não na cara do aluno. */
+export function comoLigarGoogle() {
   modal('Ligar o login com o Google', h('div', {},
     h('p', { class: 'small', style: { marginTop: 0 } },
       'O botão do Google já está pronto no app — falta só criar o Client ID e colar em '
@@ -103,15 +96,18 @@ export function abrirEntrada(aoConcluir) {
         h('div', { class: 'tagline', style: { marginTop: '6px' } }, 'Estude', h('i', {}, '.'), ' Pratique', h('i', {}, '.'), ' Evolua', h('i', {}, '.'))),
       h('p', { class: 'muted center', style: { margin: '16px auto 20px', maxWidth: '38ch' } },
         'Sua vida escolar organizada: o que fazer agora, o que está atrasado, quando revisar e quanto falta para a prova.'),
-      googleConfigurado() ? google : botaoGoogleFalso(), erroG,
-      h('div', { class: 'flexb', style: { justifyContent: 'center', gap: '10px', margin: '14px 0 6px', color: 'var(--dim2)' } },
-        h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }),
-        h('span', { class: 'tiny' }, 'ou'),
-        h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } })),
+      googleConfigurado() ? google : null, erroG,
+      googleConfigurado()
+        ? h('div', { class: 'flexb', style: { justifyContent: 'center', gap: '10px', margin: '14px 0 6px', color: 'var(--dim2)' } },
+          h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }),
+          h('span', { class: 'tiny' }, 'ou'),
+          h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }))
+        : null,
       h('button', {
-        class: 'btn btn--blk', style: { height: '44px' },
+        class: googleConfigurado() ? 'btn btn--blk' : 'btn btn--p btn--blk btn--xl',
+        style: googleConfigurado() ? { height: '44px' } : {},
         onclick: () => { entrarComo({ provedor: 'local' }); passo = 1; pintar(); },
-      }, 'Continuar sem conta'),
+      }, googleConfigurado() ? 'Continuar sem conta' : '▶ Começar'),
       h('p', { class: 'tiny muted center mt' },
         'Seus dados ficam no seu aparelho. Sem conta, eles não passam para outro celular.'),
       h('div', { class: 'center mt2' },

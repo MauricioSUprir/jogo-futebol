@@ -5,6 +5,7 @@ import {
   ehPro, sairDaConta,
 } from '../store.js';
 import { botaoGoogle, googleConfigurado, sairDoGoogle } from '../auth.js';
+import { comoLigarGoogle } from './entrar.js';
 import { SERVIDOR } from '../produto.js';
 import { saudeDoServidor } from '../api.js';
 import {
@@ -93,8 +94,10 @@ function montar(el, pintar) {
       : h('div', {},
         h('p', { class: 'small' }, googleConfigurado()
           ? 'Você está usando o StudyLab sem conta. Entre com o Google para identificar sua assinatura.'
-          : 'Você está usando o StudyLab sem conta — tudo fica salvo só neste aparelho.'),
-        caixaGoogle))));
+          : 'Você está usando o StudyLab sem conta — tudo fica salvo só neste aparelho. Com o servidor ligado, '
+            + 'isso já basta para assinar e usar o Study AI.'),
+        caixaGoogle,
+        googleConfigurado() ? null : h('button', { class: 'btn btn--sm mt', onclick: comoLigarGoogle }, '🔑 Como ligar o login do Google')))));
   if (c.provedor !== 'google' && googleConfigurado()) {
     botaoGoogle(caixaGoogle, () => { toast('Conectado!', 'good'); pintar(); }, (e) => toast(e.message, 'bad'));
   }

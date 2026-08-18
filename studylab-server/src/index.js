@@ -17,7 +17,8 @@ import {
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
 import { perguntar, modeloPadrao } from './ia.js';
 import {
-  PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, interpretarAviso, webhookConfere,
+  PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico,
+  interpretarAviso, webhookConfere, urlDoWebhook,
 } from './pagamento.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -92,6 +93,7 @@ const rotas = {
 
   'GET /planos': async () => ({
     pagamentoLigado: pagamentoLigado(),
+    formas: pagamentoLigado() ? ['pix', 'cartao', 'recorrente'] : [],
     planos: Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, valor: p.valor, dias: p.dias })),
   }),
 
@@ -174,12 +176,20 @@ const rotas = {
   'POST /pagar': async (req) => {
     const aluno = await exigirAluno(req);
     if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
-    const { planoId } = await lerCorpo(req);
+    const { planoId, forma = 'unico' } = await lerCorpo(req);
     const plano = PLANOS[planoId];
     if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
-    const r = await criarAssinaturaMP({ planoId, usuario: aluno });
-    await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia: `preapproval:${r.id}`, valor: r.valor });
-    return { link: r.link, plano: planoId, valor: r.valor };
+
+    // 'unico' = Checkout Pro (Pix + cartão, compra N dias)
+    // 'recorrente' = assinatura no cartão, renova sozinha (Pix não permite)
+    const r = forma === 'recorrente'
+      ? await criarAssinaturaMP({ planoId, usuario: aluno })
+      : await criarPagamentoUnico({ planoId, usuario: aluno });
+    await registrarPagamento({
+      usuarioId: aluno.id, plano: planoId, valor: r.valor,
+      referencia: `${forma === 'recorrente' ? 'preapproval' : 'preferencia'}:${r.id}`,
+    });
+    return { link: r.link, plano: planoId, valor: r.valor, forma: r.forma };
   },
 
   'GET /meus-pagamentos': async (req) => {
@@ -270,7 +280,8 @@ migrar()
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
     console.log(`  modelo: ${modeloPadrao()} · limites: ${LIMITE_DIARIO}/dia, ${LIMITE_MENSAL}/mês`);
     console.log(`  chave da Claude: ${process.env.ANTHROPIC_API_KEY ? 'ok' : 'FALTANDO'}`);
-    console.log(`  pagamento: ${pagamentoLigado() ? 'Mercado Pago ligado' : 'desligado (só código de acesso)'}`);
+    console.log(`  pagamento: ${pagamentoLigado() ? 'Mercado Pago ligado (Pix + cartão)' : 'desligado (só código de acesso)'}`);
+    if (pagamentoLigado()) console.log(`  webhook: ${urlDoWebhook() || 'defina URL_WEBHOOK ou configure no painel do Mercado Pago'}`);
     if (pagamentoLigado() && !process.env.MP_WEBHOOK_SECRET) {
       console.warn('  ⚠️  MP_WEBHOOK_SECRET vazio — os avisos do Mercado Pago não serão verificados.');
     }

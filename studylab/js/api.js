@@ -97,7 +97,11 @@ export const cancelarNoServidor = () => chamar('/cancelar', { metodo: 'POST' }).
 
 export const perguntarAoServidor = (pedido) => chamar('/ia', { metodo: 'POST', corpo: pedido });
 
-/** Abre a assinatura no Mercado Pago e devolve o link do checkout. */
-export const pagarNoServidor = (planoId) => chamar('/pagar', { metodo: 'POST', corpo: { planoId } });
+/**
+ * Abre o pagamento no Mercado Pago e devolve o link do checkout.
+ * forma 'unico' = Pix ou cartão (compra os dias) · 'recorrente' = cartão que renova sozinho.
+ */
+export const pagarNoServidor = (planoId, forma = 'unico') =>
+  chamar('/pagar', { metodo: 'POST', corpo: { planoId, forma } });
 
 export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });

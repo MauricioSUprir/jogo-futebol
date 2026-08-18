@@ -15,6 +15,13 @@ export const PLANOS = {
   anual: { nome: 'StudyLab Pro — Anual', valor: 99.99, frequencia: 12, unidade: 'months', dias: 365 },
 };
 
+/** Para onde o Mercado Pago avisa. No Railway descobrimos sozinhos. */
+export function urlDoWebhook() {
+  if (process.env.URL_WEBHOOK) return process.env.URL_WEBHOOK;
+  const dominio = process.env.RAILWAY_PUBLIC_DOMAIN || process.env.PUBLIC_DOMAIN;
+  return dominio ? `https://${dominio.replace(/^https?:\/\//, '')}/webhook/mercadopago` : undefined;
+}
+
 async function mp(rota, { metodo = 'GET', corpo = null } = {}) {
   if (!token()) throw Object.assign(new Error('Pagamento não configurado no servidor.'), { status: 503 });
   const r = await fetch(`${API}${rota}`, {
@@ -52,7 +59,45 @@ export async function criarAssinatura({ planoId, usuario }) {
       },
     },
   });
-  return { id: d.id, link: d.init_point || d.sandbox_init_point, valor: plano.valor, plano: planoId };
+  return { id: d.id, link: d.init_point || d.sandbox_init_point, valor: plano.valor, plano: planoId, forma: 'recorrente' };
+}
+
+/**
+ * Pagamento único (Checkout Pro): abre a tela do Mercado Pago com **Pix e cartão**.
+ * Compra N dias de Pro. É o único jeito de aceitar Pix — Pix não tem cobrança
+ * automática, então quem paga por Pix compra de novo quando acabar.
+ */
+export async function criarPagamentoUnico({ planoId, usuario }) {
+  const plano = PLANOS[planoId];
+  if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
+  const app = (process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/\/$/, '');
+  const voltar = `${app}/#/planos`;
+
+  const d = await mp('/checkout/preferences', {
+    metodo: 'POST',
+    corpo: {
+      items: [{
+        id: planoId,
+        title: plano.nome,
+        description: `${plano.dias} dias de StudyLab Pro`,
+        quantity: 1,
+        currency_id: 'BRL',
+        unit_price: plano.valor,
+      }],
+      payer: { email: usuario.email || undefined, name: usuario.nome || undefined },
+      external_reference: `${usuario.id}|${planoId}`,
+      back_urls: { success: voltar, pending: voltar, failure: voltar },
+      auto_return: 'approved',
+      notification_url: urlDoWebhook(),
+      statement_descriptor: 'STUDYLAB',
+      payment_methods: {
+        // Pix + cartão. Boleto fica de fora porque demora dias para compensar.
+        excluded_payment_types: [{ id: 'ticket' }, { id: 'atm' }],
+        installments: 1,
+      },
+    },
+  });
+  return { id: d.id, link: d.init_point || d.sandbox_init_point, valor: plano.valor, plano: planoId, forma: 'unico' };
 }
 
 export const consultarAssinatura = (id) => mp(`/preapproval/${id}`);

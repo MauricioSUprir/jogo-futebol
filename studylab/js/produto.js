@@ -18,17 +18,17 @@ export const PLANOS = [
   {
     id: 'semanal', nome: 'Semanal', preco: 5.99, periodo: '/semana',
     chamada: 'Para experimentar', dias: 7,
-    detalhe: 'Cobrado toda semana. Cancela quando quiser.',
+    detalhe: '7 dias de Pro. Pague com Pix ou cartão.',
   },
   {
     id: 'mensal', nome: 'Mensal', preco: 29.99, periodo: '/mês',
     chamada: 'O mais escolhido', dias: 30, destaque: true,
-    detalhe: 'Cobrado todo mês. Cancela quando quiser.',
+    detalhe: '30 dias de Pro. Pix, cartão ou cobrança automática.',
   },
   {
     id: 'anual', nome: 'Anual', preco: 99.99, periodo: '/ano', dias: 365,
     chamada: 'Melhor custo', economia: 'economiza 72%',
-    detalhe: 'Um pagamento por ano. Sai por R$ 8,33 por mês.',
+    detalhe: '365 dias de Pro. Sai por R$ 8,33 por mês.',
   },
 ];
 

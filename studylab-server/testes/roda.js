@@ -21,6 +21,19 @@ globalThis.fetch = async (url, opcoes) => {
 
   // ---- Mercado Pago dublado ----
   if (alvo.includes('mercadopago.com')) {
+    if (alvo.endsWith('/checkout/preferences') && opcoes?.method === 'POST') {
+      const c = JSON.parse(opcoes.body);
+      return new Response(JSON.stringify({
+        id: 'PREF-1', init_point: 'https://www.mercadopago.com.br/checkout/PREF-1',
+        external_reference: c.external_reference,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (alvo.includes('/v1/payments/PG-PIX')) {
+      return new Response(JSON.stringify({
+        id: 'PG-PIX', status: 'approved', external_reference: 'aluno-pix|semanal',
+        transaction_amount: 5.99, payment_method_id: 'pix',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
     if (alvo.endsWith('/preapproval') && opcoes?.method === 'POST') {
       assinaturasMP++;
       const c = JSON.parse(opcoes.body);
@@ -184,9 +197,13 @@ console.log('\n== pagamento ==');
   const ruim = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'inventado' } });
   conferir(ruim.status === 400, 'plano inventado é recusado');
 
-  const { status, dados } = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'mensal' } });
-  conferir(status === 200 && String(dados.link).includes('mercadopago'), 'gera o link de pagamento', dados.link || dados.erro);
-  conferir(assinaturasMP === 1, 'assinatura criada no Mercado Pago');
+  const { status, dados } = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'mensal', forma: 'recorrente' } });
+  conferir(status === 200 && String(dados.link).includes('mercadopago'), 'gera o link da cobrança automática', dados.link || dados.erro);
+  conferir(assinaturasMP === 1, 'assinatura recorrente criada no Mercado Pago');
+
+  const pix = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'mensal', forma: 'unico' } });
+  conferir(pix.status === 200 && pix.dados.forma === 'unico', 'gera o checkout com Pix e cartão', pix.dados.link || pix.dados.erro);
+  conferir(planos.dados.formas.includes('pix'), 'servidor anuncia que aceita Pix');
 
   const antes = await pedir('GET', '/eu', { token: tokenPagante });
   conferir(antes.dados.plano === 'free', 'antes de pagar continua no grátis');
@@ -216,6 +233,24 @@ console.log('\n== pagamento ==');
   conferir(ia.status === 200, 'quem pagou consegue usar o Study AI');
 }
 
+console.log('\n== pagamento por Pix ==');
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-pix', email: 'pix@casa.com', nome: 'Pix' } } });
+  const t = e.dados.token;
+  const p = await pedir('POST', '/pagar', { token: t, corpo: { planoId: 'semanal', forma: 'unico' } });
+  conferir(p.status === 200, 'abre o checkout do plano semanal');
+
+  const aviso = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'payment', data: { id: 'PG-PIX' } } });
+  conferir(aviso.dados.acao === 'pro liberado', 'Pix aprovado libera o Pro na hora');
+
+  const eu = await pedir('GET', '/eu', { token: t });
+  const em7 = new Date(); em7.setDate(em7.getDate() + 7);
+  conferir(eu.dados.plano === 'pro' && eu.dados.proAte === em7.toISOString().slice(0, 10), `7 dias de Pro pelo Pix (${eu.dados.proAte})`);
+
+  const repetido = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'payment', data: { id: 'PG-PIX' } } });
+  conferir(repetido.dados.acao === 'já processado', 'aviso de Pix repetido é ignorado');
+}
+
 console.log('\n== admin ==');
 {
   const semToken = await pedir('GET', '/admin/numeros');
@@ -223,7 +258,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 4, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+  conferir(r.status === 200 && d.usuarios === 5, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

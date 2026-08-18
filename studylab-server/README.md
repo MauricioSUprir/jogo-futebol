@@ -24,7 +24,7 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | `GET /eu` | quem sou eu, meu plano e meu uso de hoje |
 | `POST /codigo` | `{ codigo }` → ativa o Pro |
 | `GET /planos` | os planos e preços (o servidor é a fonte da verdade do valor) |
-| `POST /pagar` | `{ planoId }` → link de pagamento no Mercado Pago |
+| `POST /pagar` | `{ planoId, forma }` → link de pagamento (`unico` = Pix/cartão · `recorrente` = cartão) |
 | `POST /webhook/mercadopago` | o Mercado Pago avisa aqui quando alguém paga → libera o Pro |
 | `GET /meus-pagamentos` | histórico do aluno |
 | `POST /ia` | o Study AI (**só para assinante**) |
@@ -70,28 +70,39 @@ Google, o aluno não recupera a assinatura em outro celular.
 
 ---
 
-## Ligar o pagamento (Mercado Pago)
+## Ligar o pagamento (Mercado Pago) — Pix e cartão
 
 1. Entre em [mercadopago.com.br/developers](https://www.mercadopago.com.br/developers) → **Suas
-   integrações** → crie uma aplicação (tipo: pagamentos online, modelo: assinaturas).
+   integrações** → crie uma aplicação (produto: **Checkout Pro**).
 2. Em **Credenciais de produção**, copie o **Access token** → variável `MP_ACCESS_TOKEN`.
-3. Em **Webhooks**, cadastre a URL `https://SEU-SERVIDOR/webhook/mercadopago` e marque os
-   eventos de **assinatura** (`preapproval` e `authorized payment`). Copie a
-   **assinatura secreta** → variável `MP_WEBHOOK_SECRET`.
-4. Coloque `URL_APP` com o endereço do app (para onde o aluno volta depois de pagar).
+3. Em **Webhooks**, cadastre `https://SEU-SERVIDOR/webhook/mercadopago`, marque os eventos de
+   **pagamento** e de **assinatura**, e copie a **assinatura secreta** → `MP_WEBHOOK_SECRET`.
+   (No Railway o servidor já descobre o próprio endereço, então o webhook das compras avulsas
+   funciona mesmo sem esse cadastro — mas cadastre para as renovações.)
+4. `URL_APP` com o endereço do app, para onde o aluno volta depois de pagar.
 
-Como funciona: o app chama `POST /pagar`, o servidor cria a assinatura no Mercado Pago e
-devolve o link do checkout. O aluno paga lá (o cartão nunca passa pelo seu código). Quando o
-Mercado Pago confirma, ele chama o seu `/webhook`, o servidor **confere o aviso na API deles**
-antes de liberar e soma os dias na assinatura. Avisos repetidos são ignorados, então ninguém
-ganha 60 dias por um pagamento de 30. As renovações mensais chegam pelo mesmo caminho e
-estendem a assinatura sozinhas.
+### As duas formas de pagar
 
-**Sem `MP_WEBHOOK_SECRET` a verificação é pulada** — o servidor avisa no start. Configure antes
-de vender de verdade: sem isso, qualquer um que descubra a URL poderia forjar um aviso.
+| Forma | Como funciona | Observação |
+| --- | --- | --- |
+| **Pix ou cartão** (`forma: 'unico'`) | Checkout Pro: o aluno paga uma vez e ganha os dias do plano | **É o único jeito de aceitar Pix.** Pix não tem cobrança automática — quando acabar, ele compra de novo |
+| **Cartão que renova** (`forma: 'recorrente'`) | Assinatura: cobra sozinho a cada período até cancelar | Só cartão |
 
-Os preços ficam em `src/pagamento.js` → `PLANOS`. **O valor cobrado é o do servidor**, não o
-que o app mostra — assim ninguém consegue pagar R$ 0,01 mexendo no navegador.
+O app mostra as duas opções na hora de assinar. Boleto fica de fora de propósito (demora dias
+para compensar e o aluno fica sem acesso esperando).
+
+### Como o dinheiro chega até você
+
+1. O aluno paga no site do Mercado Pago — **o cartão e a chave Pix nunca passam pelo StudyLab**.
+2. O valor cai na **conta Mercado Pago dona do `MP_ACCESS_TOKEN`**, já descontada a taxa deles
+   (Pix costuma ser a mais barata; cartão varia com o prazo de recebimento).
+3. No app ou site do Mercado Pago, em **Seu dinheiro → Transferir**, você manda para a sua
+   conta bancária. Dá para deixar **transferência automática** todo dia.
+4. Para receber de verdade a conta precisa estar **verificada** (documento e dados bancários) e
+   ser de alguém com 18 anos ou mais — sem isso o dinheiro entra mas fica preso.
+
+Enquanto testa, use as **credenciais de teste** do Mercado Pago: o fluxo é idêntico e nenhum
+dinheiro de verdade se move.
 
 ---
 
