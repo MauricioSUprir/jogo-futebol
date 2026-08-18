@@ -24,7 +24,9 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | `GET /eu` | quem sou eu, meu plano e meu uso de hoje |
 | `POST /codigo` | `{ codigo }` → ativa o Pro |
 | `GET /planos` | os planos e preços (o servidor é a fonte da verdade do valor) |
-| `POST /pagar` | `{ planoId, forma }` → link de pagamento (`unico` = Pix/cartão · `recorrente` = cartão) |
+| `POST /pagar` | `{ planoId, forma }` → link do Mercado Pago (`unico` · `recorrente`) |
+| `POST /pagar/pix` | `{ planoId, email }` → **QR Code e código copia-e-cola**, para pagar dentro do app |
+| `GET /pagamento/:id` | o app pergunta "já caiu?" — se caiu, libera o Pro na hora |
 | `POST /webhook/mercadopago` | o Mercado Pago avisa aqui quando alguém paga → libera o Pro |
 | `GET /meus-pagamentos` | histórico do aluno |
 | `POST /ia` | o Study AI (**só para assinante**) |
@@ -81,15 +83,20 @@ Google, o aluno não recupera a assinatura em outro celular.
    funciona mesmo sem esse cadastro — mas cadastre para as renovações.)
 4. `URL_APP` com o endereço do app, para onde o aluno volta depois de pagar.
 
-### As duas formas de pagar
+### As formas de pagar
 
 | Forma | Como funciona | Observação |
 | --- | --- | --- |
-| **Pix ou cartão** (`forma: 'unico'`) | Checkout Pro: o aluno paga uma vez e ganha os dias do plano | **É o único jeito de aceitar Pix.** Pix não tem cobrança automática — quando acabar, ele compra de novo |
+| **Pix dentro do app** (`POST /pagar/pix`) | O StudyLab mostra o **QR Code e o código copia-e-cola** na própria tela e fica consultando até o pagamento cair | O aluno não sai do app. Pix não tem cobrança automática: compra os dias e, quando acabar, compra de novo |
+| **Cartão** (`forma: 'unico'`) | Checkout Pro do Mercado Pago — é lá que o cartão é digitado | Compra os dias do plano |
 | **Cartão que renova** (`forma: 'recorrente'`) | Assinatura: cobra sozinho a cada período até cancelar | Só cartão |
 
-O app mostra as duas opções na hora de assinar. Boleto fica de fora de propósito (demora dias
-para compensar e o aluno fica sem acesso esperando).
+Boleto fica de fora de propósito (demora dias para compensar e o aluno ficaria sem acesso).
+
+**Como o Pro é liberado sem depender de sorte:** o webhook do Mercado Pago libera assim que o
+aviso chega, e o app **também** consulta `GET /pagamento/:id` a cada 4 segundos enquanto a tela
+do Pix está aberta. Os dois caminhos passam pela mesma trava de "já processado", então quem
+paga é liberado na hora — e ninguém ganha dias em dobro.
 
 ### Como o dinheiro chega até você
 

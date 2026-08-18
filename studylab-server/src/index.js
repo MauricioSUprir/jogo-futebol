@@ -17,8 +17,8 @@ import {
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
 import { perguntar, modeloPadrao } from './ia.js';
 import {
-  PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico,
-  interpretarAviso, webhookConfere, urlDoWebhook,
+  PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico, criarPix,
+  interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
 } from './pagamento.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -192,6 +192,16 @@ const rotas = {
     return { link: r.link, plano: planoId, valor: r.valor, forma: r.forma };
   },
 
+  /* Pix na própria tela do StudyLab: QR + código copia-e-cola. */
+  'POST /pagar/pix': async (req) => {
+    const aluno = await exigirAluno(req);
+    if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
+    const { planoId, email } = await lerCorpo(req);
+    const r = await criarPix({ planoId, usuario: aluno, email });
+    await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia: `payment:${r.id}`, valor: r.valor });
+    return r;
+  },
+
   'GET /meus-pagamentos': async (req) => {
     const aluno = await exigirAluno(req);
     return { pagamentos: await pagamentosDoUsuario(aluno.id) };
@@ -237,6 +247,34 @@ const rotas = {
   },
 };
 
+/* Rotas com id no caminho. */
+const rotasDinamicas = [
+  {
+    padrao: /^GET \/pagamento\/([\w-]+)$/,
+    /** O app pergunta de tempos em tempos: já caiu? Se caiu, libera na hora —
+        sem depender do webhook chegar primeiro. */
+    async executar(req, url, [id]) {
+      const aluno = await exigirAluno(req);
+      const p = await consultarPagamento(id);
+      const [usuarioId, planoId] = String(p.external_reference || '').split('|');
+      if (usuarioId !== aluno.id) throw Object.assign(new Error('Este pagamento não é seu'), { status: 403 });
+
+      const plano = PLANOS[planoId];
+      const referencia = `payment:${p.id}`;
+      let liberado = false;
+
+      if (p.status === 'approved' && plano && !(await jaProcessado(referencia))) {
+        await criarAssinatura({ usuarioId, plano: planoId, dias: plano.dias, origem: 'pagamento', referencia });
+        await marcarPago({ usuarioId, plano: planoId, referencia, valor: p.transaction_amount ?? plano.valor });
+        liberado = true;
+        console.log(`✅ Pro liberado para ${usuarioId} (${planoId}, ${plano.dias} dias) — confirmado pela consulta`);
+      }
+      const assinatura = await assinaturaAtiva(aluno.id);
+      return { status: p.status, detalhe: p.status_detail || null, liberadoAgora: liberado, ...resumoAssinatura(assinatura) };
+    },
+  },
+];
+
 async function exigirAluno(req) {
   const aluno = await alunoDaRequisicao(req);
   if (!aluno) throw Object.assign(new Error('Faça login de novo.'), { status: 401 });
@@ -262,10 +300,11 @@ const servidor = http.createServer(async (req, res) => {
   if (muitasBatidas(ip)) return json(res, 429, { erro: 'Calma aí — muitas chamadas seguidas.' });
 
   const rota = rotas[chave];
-  if (!rota) return json(res, 404, { erro: 'Rota não encontrada' });
+  const dinamica = rota ? null : rotasDinamicas.map((d) => ({ d, m: chave.match(d.padrao) })).find((x) => x.m);
+  if (!rota && !dinamica) return json(res, 404, { erro: 'Rota não encontrada' });
 
   try {
-    const saida = await rota(req, url);
+    const saida = rota ? await rota(req, url) : await dinamica.d.executar(req, url, dinamica.m.slice(1));
     json(res, 200, saida);
   } catch (e) {
     const status = e.status || 500;

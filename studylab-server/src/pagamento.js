@@ -22,11 +22,15 @@ export function urlDoWebhook() {
   return dominio ? `https://${dominio.replace(/^https?:\/\//, '')}/webhook/mercadopago` : undefined;
 }
 
-async function mp(rota, { metodo = 'GET', corpo = null } = {}) {
+async function mp(rota, { metodo = 'GET', corpo = null, idempotencia = null } = {}) {
   if (!token()) throw Object.assign(new Error('Pagamento não configurado no servidor.'), { status: 503 });
   const r = await fetch(`${API}${rota}`, {
     method: metodo,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${token()}` },
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${token()}`,
+      ...(idempotencia ? { 'X-Idempotency-Key': idempotencia } : {}),
+    },
     body: corpo ? JSON.stringify(corpo) : undefined,
   });
   const dados = await r.json().catch(() => ({}));
@@ -98,6 +102,44 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
     },
   });
   return { id: d.id, link: d.init_point || d.sandbox_init_point, valor: plano.valor, plano: planoId, forma: 'unico' };
+}
+
+/**
+ * Pix direto: cria a cobrança e devolve o QR Code e o código copia-e-cola,
+ * para o aluno pagar SEM sair do StudyLab.
+ */
+export async function criarPix({ planoId, usuario, email }) {
+  const plano = PLANOS[planoId];
+  if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
+  const destinatario = (email || usuario.email || '').trim();
+  if (!destinatario || !destinatario.includes('@')) {
+    throw Object.assign(new Error('Informe um e-mail para o Mercado Pago mandar o comprovante.'), { status: 400 });
+  }
+
+  const d = await mp('/v1/payments', {
+    metodo: 'POST',
+    idempotencia: `${usuario.id}-${planoId}-${Date.now()}`,
+    corpo: {
+      transaction_amount: plano.valor,
+      description: `${plano.nome} — ${plano.dias} dias`,
+      payment_method_id: 'pix',
+      external_reference: `${usuario.id}|${planoId}`,
+      notification_url: urlDoWebhook(),
+      payer: { email: destinatario, first_name: (usuario.nome || 'Estudante').split(' ')[0] },
+    },
+  });
+
+  const dados = d.point_of_interaction?.transaction_data || {};
+  return {
+    id: String(d.id),
+    status: d.status,
+    valor: plano.valor,
+    plano: planoId,
+    codigo: dados.qr_code || '',              // copia-e-cola
+    qrBase64: dados.qr_code_base64 || '',     // imagem PNG
+    link: dados.ticket_url || '',             // "ver no Mercado Pago"
+    expiraEm: d.date_of_expiration || null,
+  };
 }
 
 export const consultarAssinatura = (id) => mp(`/preapproval/${id}`);
