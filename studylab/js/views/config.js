@@ -6,6 +6,7 @@ import {
 } from '../store.js';
 import { botaoGoogle, googleConfigurado, sairDoGoogle } from '../auth.js';
 import { SERVIDOR } from '../produto.js';
+import { saudeDoServidor } from '../api.js';
 import {
   titulo, cartao, kpi, toast, campo, inp, sel, txtarea, segmento, confirmar, modal, fecharModal,
   RECURSOS_PRO, selo,
@@ -117,28 +118,58 @@ function montar(el, pintar) {
         h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos')))));
 
   /* ---------- área do criador ---------- */
-  const chaveCriador = inp({ type: 'password', value: s.ia.chaveCriador || '', placeholder: 'sk-ant-… (só para testes)' });
+  const endServidor = inp({ value: s.ia.servidor || '', placeholder: 'https://...up.railway.app' });
+  const chaveCriador = inp({ type: 'password', value: s.ia.chaveCriador || '', placeholder: 'sk-ant-… (plano B, só para testes)' });
   const modelo = sel(MODELOS.map((m) => ({ v: m.id, t: m.nome })), s.ia.modelo);
+  const statusServidor = h('div', { class: 'tiny muted mt' });
+
   el.append(h('div', { class: 'mt2' }, cartao(
     h('details', {},
       h('summary', { style: { cursor: 'pointer', fontWeight: 700, fontSize: '13.5px' } }, '🛠️ Área do criador'),
       h('p', { class: 'small mt' },
-        'Esta parte não é para o aluno. Enquanto o servidor do StudyLab não existe, o Study AI só funciona '
-        + 'com uma chave da Claude API colada aqui — e ainda assim apenas para quem está com o Pro ativo. '
-        + 'Quando o servidor entrar no ar (produto.js → SERVIDOR), esta chave deixa de ser usada.'),
-      h('div', { class: 'f-row' }, campo('Chave da Claude API', chaveCriador), campo('Modelo', modelo)),
+        'Esta parte não é para o aluno. Depois de publicar o ', h('b', {}, 'studylab-server'),
+        ' (Railway), cole aqui o endereço que ele gerar: o Study AI e o pagamento passam a funcionar '
+        + 'para todo mundo, sem precisar mexer no código.'),
+      campo('Endereço do servidor', endServidor),
       h('div', { class: 'flexb' },
         h('button', {
           class: 'btn btn--p', onclick: () => {
+            set((x) => { x.ia.servidor = endServidor.value.trim().replace(/\/$/, ''); });
+            toast('Endereço salvo', 'good'); pintar();
+          },
+        }, 'Salvar endereço'),
+        h('button', {
+          class: 'btn', onclick: async (e) => {
+            set((x) => { x.ia.servidor = endServidor.value.trim().replace(/\/$/, ''); });
+            if (!endServidor.value.trim()) return toast('Cole o endereço primeiro', 'bad');
+            e.target.disabled = true; e.target.textContent = 'Testando…';
+            try {
+              const d = await saudeDoServidor();
+              statusServidor.replaceChildren(
+                h('div', {}, `✅ servidor no ar · banco ${d.banco} · modelo ${d.modelo}`),
+                h('div', {}, `${d.chaveConfigurada ? '✅' : '❌'} chave da Claude · ${d.googleConfigurado ? '✅' : '❌'} Google · ${d.pagamentoConfigurado ? '✅' : '❌'} Mercado Pago`));
+              toast('Servidor respondendo!', 'good');
+            } catch (err) { statusServidor.textContent = `❌ ${err.message}`; toast(err.message, 'bad'); }
+            e.target.disabled = false; e.target.textContent = '🔌 Testar servidor';
+          },
+        }, '🔌 Testar servidor')),
+      statusServidor,
+      h('div', { class: 'hr' }),
+      h('p', { class: 'tiny muted' },
+        'Sem servidor, dá para testar a IA colando uma chave da Claude API aqui — funciona só neste aparelho '
+        + 'e só com o Pro ativo. Assim que houver servidor, esta chave deixa de ser usada.'),
+      h('div', { class: 'f-row' }, campo('Chave da Claude API', chaveCriador), campo('Modelo (sem servidor)', modelo)),
+      h('div', { class: 'flexb' },
+        h('button', {
+          class: 'btn', onclick: () => {
             set((x) => { x.ia.chaveCriador = chaveCriador.value.trim(); x.ia.modelo = modelo.value; });
             toast('Salvo', 'good'); pintar();
           },
-        }, 'Salvar'),
+        }, 'Salvar chave'),
         h('button', {
           class: 'btn', onclick: async (e) => {
             set((x) => { x.ia.chaveCriador = chaveCriador.value.trim(); x.ia.modelo = modelo.value; });
             if (!ehPro()) return toast('Ative o Pro primeiro (em Planos) para testar', 'bad');
-            if (!chaveCriador.value.trim() && !SERVIDOR) return toast('Cole a chave primeiro', 'bad');
             e.target.disabled = true; e.target.textContent = 'Testando…';
             try { await chamar({ system: 'Responda apenas: ok', conteudo: 'teste', maxTokens: 20, esforco: 'low' }); toast('Study AI funcionando! 🎉', 'good'); }
             catch (err) { toast(err.message, 'bad'); }
@@ -146,7 +177,7 @@ function montar(el, pintar) {
           },
         }, '🔌 Testar Study AI')),
       h('p', { class: 'tiny muted mt' },
-        `Servidor configurado: ${SERVIDOR || 'nenhum'} · chamadas hoje: ${s.ia.usoHoje || 0}`))))); 
+        `Servidor: ${s.ia.servidor || SERVIDOR || 'nenhum'} · chamadas hoje: ${s.ia.usoHoje || 0}`))))); 
 
   /* ---------- dados ---------- */
   el.append(h('div', { class: 'mt2' }, cartao(

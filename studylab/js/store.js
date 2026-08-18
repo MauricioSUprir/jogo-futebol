@@ -28,7 +28,9 @@ export function estadoVazio() {
     jogo: { xp: 0, moedas: 0, streak: 0, ultimoDia: null, recordeStreak: 0, conquistas: [], itens: [] },
     // A chave da Claude API NÃO fica mais com o aluno: o Study AI é do plano Pro
     // e passa pelo servidor. chaveCriador só existe para você testar (Área do criador).
-    ia: { modelo: 'claude-opus-5', memoria: [], usoHoje: 0, usoDia: null, chaveCriador: '' },
+    // servidor: preenchido nas Configurações depois de publicar o studylab-server.
+    // Assim dá para ligar o Study AI sem mexer no código.
+    ia: { modelo: 'claude-opus-5', memoria: [], usoHoje: 0, usoDia: null, chaveCriador: '', servidor: '' },
     materias: [], conteudos: [], tarefas: [], provas: [], eventos: [], horario: {},
     flashcards: [], questoes: [], tentativas: [], sessoes: [], notas: [], metas: [],
     anotacoes: [], biblioteca: [], resumos: [], mapas: [], conversas: [],

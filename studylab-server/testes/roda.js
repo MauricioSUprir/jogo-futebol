@@ -7,6 +7,7 @@ process.env.ANTHROPIC_API_KEY = 'sk-ant-falsa';
 process.env.PORT = process.env.PORT || '4711';
 process.env.ORIGENS = '*';
 process.env.LIMITE_DIARIO = '3';
+process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 delete process.env.DATABASE_URL;
 
 const BASE = `http://localhost:${process.env.PORT}`;
@@ -14,8 +15,34 @@ const BASE = `http://localhost:${process.env.PORT}`;
 /* ---- dubla a Claude API (o resto passa direto) ---- */
 const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
+let assinaturasMP = 0;
 globalThis.fetch = async (url, opcoes) => {
-  if (String(url).includes('api.anthropic.com')) {
+  const alvo = String(url);
+
+  // ---- Mercado Pago dublado ----
+  if (alvo.includes('mercadopago.com')) {
+    if (alvo.endsWith('/preapproval') && opcoes?.method === 'POST') {
+      assinaturasMP++;
+      const c = JSON.parse(opcoes.body);
+      return new Response(JSON.stringify({
+        id: 'PA-1', init_point: 'https://www.mercadopago.com.br/checkout/PA-1',
+        external_reference: c.external_reference, status: 'pending',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (alvo.includes('/preapproval/PA-1')) {
+      return new Response(JSON.stringify({
+        id: 'PA-1', status: 'authorized', external_reference: 'aluno-pagante|mensal',
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (alvo.includes('/v1/payments/PG-9')) {
+      return new Response(JSON.stringify({
+        id: 'PG-9', status: 'approved', external_reference: 'aluno-pagante|mensal', transaction_amount: 29.99,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return new Response('{}', { status: 404 });
+  }
+
+  if (alvo.includes('api.anthropic.com')) {
     chamadasClaude++;
     const corpo = JSON.parse(opcoes.body);
     return new Response(JSON.stringify({
@@ -116,6 +143,50 @@ console.log('\n== cancelar ==');
   conferir(dados.plano === 'free', 'cancelamento volta para o grátis');
 }
 
+console.log('\n== pagamento ==');
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-pagante', email: 'pai@casa.com', nome: 'Pai' } } });
+  const tokenPagante = e.dados.token;
+
+  const planos = await pedir('GET', '/planos');
+  conferir(planos.dados.planos.length === 3, 'servidor publica os 3 planos');
+  conferir(planos.dados.planos.find((p) => p.id === 'mensal').valor === 29.99, 'preço do mensal vem do servidor (R$ 29,99)');
+
+  const ruim = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'inventado' } });
+  conferir(ruim.status === 400, 'plano inventado é recusado');
+
+  const { status, dados } = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'mensal' } });
+  conferir(status === 200 && String(dados.link).includes('mercadopago'), 'gera o link de pagamento', dados.link || dados.erro);
+  conferir(assinaturasMP === 1, 'assinatura criada no Mercado Pago');
+
+  const antes = await pedir('GET', '/eu', { token: tokenPagante });
+  conferir(antes.dados.plano === 'free', 'antes de pagar continua no grátis');
+
+  const aviso = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'subscription_preapproval', data: { id: 'PA-1' } } });
+  conferir(aviso.dados.acao === 'pro liberado', 'webhook libera o Pro', JSON.stringify(aviso.dados));
+
+  const depois = await pedir('GET', '/eu', { token: tokenPagante });
+  const em30 = new Date(); em30.setDate(em30.getDate() + 30);
+  conferir(depois.dados.plano === 'pro', 'aluno vira assinante');
+  conferir(depois.dados.proAte === em30.toISOString().slice(0, 10), `assinatura de 30 dias (${depois.dados.proAte})`);
+
+  const repetido = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'subscription_preapproval', data: { id: 'PA-1' } } });
+  conferir(repetido.dados.acao === 'já processado', 'aviso repetido é ignorado');
+  const conferindo = await pedir('GET', '/eu', { token: tokenPagante });
+  conferir(conferindo.dados.proAte === depois.dados.proAte, 'a data não foi estendida duas vezes');
+
+  const renov = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'subscription_authorized_payment', data: { id: 'PG-9' } } });
+  conferir(renov.dados.acao === 'pro liberado', 'renovação estende a assinatura');
+  const renovado = await pedir('GET', '/eu', { token: tokenPagante });
+  conferir(renovado.dados.proAte > depois.dados.proAte, `renovação somou dias (${renovado.dados.proAte})`);
+
+  const ignorado = await pedir('POST', '/webhook/mercadopago', { corpo: { type: 'plan', data: { id: 'X' } } });
+  conferir(ignorado.status === 200, 'aviso desconhecido não quebra o servidor');
+
+  const ia = await pedir('POST', '/ia', { token: tokenPagante, corpo: { system: 'a', conteudo: 'b' } });
+  conferir(ia.status === 200, 'quem pagou consegue usar o Study AI');
+}
+
 console.log('\n== admin ==');
 {
   const semToken = await pedir('GET', '/admin/numeros');
@@ -123,7 +194,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 2, `painel mostra ${d.usuarios} usuários e ${d.assinantes} assinantes`);
+  conferir(r.status === 200 && d.usuarios === 3, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

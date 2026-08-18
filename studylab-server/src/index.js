@@ -12,9 +12,13 @@ import http from 'node:http';
 import {
   migrar, salvarUsuario, assinaturaAtiva, criarAssinatura, cancelarAssinatura,
   usarCodigo, criarCodigo, usoDoDia, usoDoMes, registrarUso, numeros, emMemoria,
+  registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
 } from './db.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
 import { perguntar, modeloPadrao } from './ia.js';
+import {
+  PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, interpretarAviso, webhookConfere,
+} from './pagamento.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
 const LIMITE_DIARIO = Number(process.env.LIMITE_DIARIO) || 40;
@@ -69,6 +73,12 @@ const rotas = {
   'GET /saude': async () => ({
     ok: true, banco: emMemoria ? 'memoria' : 'postgres', modelo: modeloPadrao(),
     chaveConfigurada: !!process.env.ANTHROPIC_API_KEY, googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,
+    pagamentoConfigurado: pagamentoLigado(),
+  }),
+
+  'GET /planos': async () => ({
+    pagamentoLigado: pagamentoLigado(),
+    planos: Object.entries(PLANOS).map(([id, p]) => ({ id, nome: p.nome, valor: p.valor, dias: p.dias })),
   }),
 
   'POST /entrar': async (req) => {
@@ -137,6 +147,50 @@ const rotas = {
     return { texto: r.texto, restamHoje: Math.max(0, LIMITE_DIARIO - uso.chamadas - 1) };
   },
 
+  /* ---------- pagamento ---------- */
+  'POST /pagar': async (req) => {
+    const aluno = await exigirAluno(req);
+    if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível. Use um código de acesso.'), { status: 503 });
+    const { planoId } = await lerCorpo(req);
+    const plano = PLANOS[planoId];
+    if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
+    const r = await criarAssinaturaMP({ planoId, usuario: aluno });
+    await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia: `preapproval:${r.id}`, valor: r.valor });
+    return { link: r.link, plano: planoId, valor: r.valor };
+  },
+
+  'GET /meus-pagamentos': async (req) => {
+    const aluno = await exigirAluno(req);
+    return { pagamentos: await pagamentosDoUsuario(aluno.id) };
+  },
+
+  /* O Mercado Pago chama aqui quando alguém paga. Sem login: a garantia é a
+     assinatura digital do aviso + a consulta na API deles antes de liberar. */
+  'POST /webhook/mercadopago': async (req, url) => {
+    if (!webhookConfere(req, url)) {
+      console.warn('Webhook do Mercado Pago com assinatura inválida — ignorado.');
+      return { recebido: true };
+    }
+    const corpo = await lerCorpo(req).catch(() => ({}));
+    const tipo = corpo.type || corpo.topic || url.searchParams.get('type') || url.searchParams.get('topic');
+    const id = corpo?.data?.id || corpo.id || url.searchParams.get('data.id') || url.searchParams.get('id');
+
+    let aviso = null;
+    try { aviso = await interpretarAviso({ tipo, id }); }
+    catch (e) { console.error('Falha ao consultar o Mercado Pago:', e.message); return { recebido: true }; }
+    if (!aviso) return { recebido: true, acao: 'nada a fazer' };
+
+    if (await jaProcessado(aviso.referencia)) return { recebido: true, acao: 'já processado' };
+
+    await criarAssinatura({
+      usuarioId: aviso.usuarioId, plano: aviso.planoId, dias: aviso.dias,
+      origem: 'pagamento', referencia: aviso.referencia,
+    });
+    await marcarPago({ usuarioId: aviso.usuarioId, plano: aviso.planoId, referencia: aviso.referencia, valor: aviso.valor });
+    console.log(`✅ Pro liberado para ${aviso.usuarioId} (${aviso.planoId}, ${aviso.dias} dias)`);
+    return { recebido: true, acao: 'pro liberado' };
+  },
+
   'GET /admin/numeros': async (req, url) => {
     exigirAdmin(url);
     return numeros();
@@ -193,6 +247,10 @@ migrar()
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
     console.log(`  modelo: ${modeloPadrao()} · limites: ${LIMITE_DIARIO}/dia, ${LIMITE_MENSAL}/mês`);
     console.log(`  chave da Claude: ${process.env.ANTHROPIC_API_KEY ? 'ok' : 'FALTANDO'}`);
+    console.log(`  pagamento: ${pagamentoLigado() ? 'Mercado Pago ligado' : 'desligado (só código de acesso)'}`);
+    if (pagamentoLigado() && !process.env.MP_WEBHOOK_SECRET) {
+      console.warn('  ⚠️  MP_WEBHOOK_SECRET vazio — os avisos do Mercado Pago não serão verificados.');
+    }
     console.log(`  origens liberadas: ${ORIGENS.join(', ')}`);
     if (MODO_TESTE) console.warn('  ⚠️  MODO_TESTE=1 — o login pode ser simulado. NUNCA use isso em produção.');
   }))

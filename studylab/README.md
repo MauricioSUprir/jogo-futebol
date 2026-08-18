@@ -87,12 +87,15 @@ Prioridades, revisão espaçada, domínio, planos de prova, simulados, foco, des
 notas, metas e gamificação **nunca** dependem de IA.
 
 **O servidor já existe:** [`studylab-server/`](../studylab-server/). Ele guarda a chave,
-confere o login do Google, valida a assinatura, chama a Claude API e conta o uso de cada
-aluno. Depois de publicar (o README de lá tem o passo a passo do Railway), cole a URL em
-`js/produto.js` → `SERVIDOR` e o Study AI passa a funcionar para os assinantes.
+confere o login do Google, valida a assinatura, cobra pelo Mercado Pago, chama a Claude API e
+conta o uso de cada aluno.
 
-Enquanto o servidor não estiver publicado, dá para testar pela *Área do criador* em
-Configurações — que só funciona com o Pro ativo.
+Depois de publicar (o README de lá tem o passo a passo do Railway), **não precisa mexer no
+código**: abra ⚙️ Configurações → *Área do criador* → cole o endereço do servidor → *Testar
+servidor*. A partir daí o Study AI e o pagamento funcionam para todo mundo.
+
+Enquanto não houver servidor, dá para testar a IA colando uma chave da Claude API na mesma
+Área do criador — só neste aparelho e só com o Pro ativo.
 
 ## Planos
 
@@ -110,10 +113,17 @@ liberado('ia_chat')   // { ok: false, motivo: 'Study AI — o tutor que…' }
 ehPro()               // assinatura ativa? (respeita a data de vencimento)
 ```
 
-**Como alguém vira Pro hoje:** o pagamento online ainda não está conectado. A tela de planos
-libera por **código de acesso**. Com o servidor publicado, o código é conferido **lá** (tabela
-`codigos`, com limite de usos) — não dá para burlar pelo navegador. Sem servidor, a checagem
-cai para `js/produto.js` → `CODIGOS`, no aparelho, o que serve só para testes.
+**Como alguém vira Pro:**
+
+- **Pagando** — a tela de planos abre o checkout do Mercado Pago. O cartão nunca passa pelo
+  StudyLab; quando o Mercado Pago confirma, o servidor libera os dias sozinho e as renovações
+  seguem pelo mesmo caminho. Precisa do servidor publicado com `MP_ACCESS_TOKEN`.
+- **Por código de acesso** — para testes, cortesia ou venda combinada. Com servidor, o código
+  é conferido no banco (com limite de usos); sem servidor, cai para `js/produto.js` →
+  `CODIGOS`, no aparelho, o que serve só para testes.
+
+O **valor cobrado é o do servidor** (`studylab-server/src/pagamento.js` → `PLANOS`), não o que
+o app mostra — mexer no navegador não muda o preço.
 
 ## Estrutura
 

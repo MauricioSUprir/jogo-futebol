@@ -4,11 +4,13 @@
 import { SERVIDOR } from './produto.js';
 import { st, set } from './store.js';
 
-export const temServidor = () => !!SERVIDOR;
-const url = (rota) => `${SERVIDOR.replace(/\/$/, '')}${rota}`;
+/** Endereço do servidor: o que o dono digitou nas Configurações vence o padrão do código. */
+export const enderecoServidor = () => (st().ia?.servidor || SERVIDOR || '').trim().replace(/\/$/, '');
+export const temServidor = () => !!enderecoServidor();
+const url = (rota) => `${enderecoServidor()}${rota}`;
 
 async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, timeout = 150000 } = {}) {
-  if (!SERVIDOR) throw new Error('Servidor do StudyLab não configurado.');
+  if (!temServidor()) throw new Error('Servidor do StudyLab não configurado.');
   const token = st().conta.token;
   if (comToken && !token) throw new Error('Entre com o Google para usar o Study AI.');
 
@@ -70,3 +72,8 @@ export const ativarCodigoNoServidor = (codigo) =>
 export const cancelarNoServidor = () => chamar('/cancelar', { metodo: 'POST' }).then(aplicarConta);
 
 export const perguntarAoServidor = (pedido) => chamar('/ia', { metodo: 'POST', corpo: pedido });
+
+/** Abre a assinatura no Mercado Pago e devolve o link do checkout. */
+export const pagarNoServidor = (planoId) => chamar('/pagar', { metodo: 'POST', corpo: { planoId } });
+
+export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });
