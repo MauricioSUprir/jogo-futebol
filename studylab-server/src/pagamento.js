@@ -3,6 +3,7 @@
    -> o aluno paga no site do Mercado Pago -> o MP avisa nosso /webhook
    -> liberamos o Pro. O app NUNCA vê o token do Mercado Pago.                 */
 import crypto from 'node:crypto';
+import { conferirBRCode } from './brcode.js';
 
 const API = process.env.MP_API || 'https://api.mercadopago.com';
 const token = () => process.env.MP_ACCESS_TOKEN || '';
@@ -130,12 +131,26 @@ export async function criarPix({ planoId, usuario, email }) {
   });
 
   const dados = d.point_of_interaction?.transaction_data || {};
+  const codigo = dados.qr_code || '';
+
+  // Trava de segurança: o banco lê o valor de dentro do código. Se ele vier
+  // errado ou corrompido, é melhor falhar aqui do que o aluno pagar errado.
+  const conferencia = conferirBRCode(codigo, plano.valor);
+  if (!conferencia.ok) {
+    console.error(`Pix recusado antes de mostrar: ${conferencia.motivo} (pagamento ${d.id})`);
+    throw Object.assign(
+      new Error('O código Pix veio com problema e não foi exibido, para você não pagar errado. Tente de novo.'),
+      { status: 502 },
+    );
+  }
+
   return {
     id: String(d.id),
     status: d.status,
     valor: plano.valor,
     plano: planoId,
-    codigo: dados.qr_code || '',              // copia-e-cola
+    codigo,                                   // copia-e-cola, com o valor já dentro
+    valorNoCodigo: conferencia.valor,         // o que o banco vai mostrar
     qrBase64: dados.qr_code_base64 || '',     // imagem PNG
     link: dados.ticket_url || '',             // "ver no Mercado Pago"
     expiraEm: d.date_of_expiration || null,
