@@ -12,6 +12,7 @@ import * as vAgenda from './views/agenda.js';
 import * as vTarefas from './views/tarefas.js';
 import * as vProvas from './views/provas.js';
 import * as vMaterias from './views/materias.js';
+import * as vEscola from './views/escola.js';
 import * as vAprender from './views/aprender.js';
 import * as vQuestoes from './views/questoes.js';
 import * as vFlash from './views/flashcards.js';
@@ -34,6 +35,7 @@ export const MENU = [
   { r: 'tarefas', i: '✅', t: 'Tarefas', v: vTarefas, tab: true },
   { r: 'provas', i: '🎯', t: 'Provas', v: vProvas },
   { r: 'materias', i: '📚', t: 'Matérias', v: vMaterias },
+  { r: 'escola', i: '🏫', t: 'Minha Escola', v: vEscola },
   { r: 'aprender', i: '🧠', t: 'Aprender', v: vAprender },
   { r: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
   { r: 'flashcards', i: '🃏', t: 'Flashcards', v: vFlash },

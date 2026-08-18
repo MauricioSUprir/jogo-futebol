@@ -52,7 +52,7 @@ export function abrirPagamento(plano, aoLiberar) {
     tela.replaceChildren(caixa(
       h('div', { class: 'card' },
         h('b', {}, 'Como você quer pagar?'),
-        h('p', { class: 'tiny muted' }, `${plano.dias} dias de StudyLab Pro.`),
+        h('p', { class: 'tiny muted' }, `${plano.dias} dias de StudyLab ${plano.nivel === 'plus' ? 'Plus' : 'Pro'}.`),
 
         h('button', {
           class: 'card card--flat mt', style: { display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer' },
@@ -124,7 +124,7 @@ export function abrirPagamento(plano, aoLiberar) {
     tela.replaceChildren(caixa(h('div', { class: 'card' },
       h('div', { class: 'center' },
         h('b', {}, '💠 Pague com Pix'),
-        h('p', { class: 'tiny muted' }, `${plano.dias} dias de Pro · ${precoBR(plano.preco)}`),
+        h('p', { class: 'tiny muted' }, `${plano.dias} dias de ${plano.nivel === 'plus' ? 'Plus' : 'Pro'} · ${precoBR(plano.preco)}`),
         pix.qrBase64
           ? h('img', {
             src: `data:image/png;base64,${pix.qrBase64}`, alt: 'QR Code do Pix',
@@ -179,7 +179,7 @@ export function abrirPagamento(plano, aoLiberar) {
     tela.replaceChildren(caixa(h('div', { class: 'card center' },
       h('div', { style: { fontSize: '52px' } }, '🎉'),
       h('h2', { style: { fontSize: '20px' } }, 'Pagamento confirmado!'),
-      h('p', { class: 'muted' }, r.proAte ? `Seu StudyLab Pro está ativo até ${fmtData(r.proAte)}.` : 'Seu StudyLab Pro está ativo.'),
+      h('p', { class: 'muted' }, r.proAte ? `Sua assinatura está ativa até ${fmtData(r.proAte)}.` : 'Sua assinatura está ativa.'),
       h('a', { class: 'btn btn--p btn--blk btn--xl mt2', href: '#/ai', onclick: fechar }, '🤖 Abrir o Study AI'),
       h('button', { class: 'btn btn--blk mt', onclick: fechar }, 'Voltar ao app'))));
   }
@@ -202,7 +202,7 @@ export function abrirPagamento(plano, aoLiberar) {
     const erroEl = h('p', { class: 'tiny', style: { color: 'var(--bad)' } });
     tela.replaceChildren(caixa(h('div', { class: 'card' },
       h('b', {}, '💳 Pagar com cartão'),
-      h('p', { class: 'tiny muted' }, `${plano.dias} dias de Pro · ${precoBR(plano.preco)}`),
+      h('p', { class: 'tiny muted' }, `${plano.dias} dias de ${plano.nivel === 'plus' ? 'Plus' : 'Pro'} · ${precoBR(plano.preco)}`),
       caixaForm, erroEl,
       h('p', { class: 'tiny muted' }, 'O formulário é do Mercado Pago. O número do cartão não passa pelo StudyLab.'),
       h('button', { class: 'btn btn--sm mt', onclick: escolherForma }, '‹ Escolher outra forma'))));

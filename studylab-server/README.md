@@ -135,24 +135,37 @@ dinheiro de verdade se move.
 
 ## Quanto custa (a conta que decide o preço)
 
+Os planos têm **dois níveis** — os preços de verdade ficam em `src/pagamento.js`:
+
+| Plano | Preço | Perguntas | Fotos |
+| --- | --- | --- | --- |
+| Pro semanal | R$ 7,90 | 30/dia · 400/mês | 5/dia (2 por pergunta) |
+| Pro mensal | R$ 24,90 | 30/dia · 400/mês | 5/dia |
+| Pro anual | R$ 199,90 | 30/dia · 400/mês | 5/dia |
+| Plus mensal | R$ 44,90 | 80/dia · 1000/mês | 25/dia (4 por pergunta) |
+| Plus anual | R$ 379,90 | 80/dia · 1000/mês | 25/dia |
+
 Uma pergunta típica do Study AI manda ~2.500 tokens (as matérias, provas e erros do aluno) e
-recebe ~500 de volta.
+recebe ~500 de volta. Por pergunta: Haiku 4.5 ~US$ 0,005 (~R$ 0,03) · Sonnet 5 ~US$ 0,014 ·
+Opus 5 ~US$ 0,025 (~R$ 0,13).
 
-| Modelo | Por pergunta | 10 perguntas/dia = 300/mês |
-| --- | --- | --- |
-| `claude-opus-5` (padrão) | ~US$ 0,025 | ~US$ 7,50 (**R$ 41**) |
-| `claude-sonnet-5` | ~US$ 0,014 | ~US$ 4,20 (**R$ 23**) |
-| `claude-haiku-4-5` | ~US$ 0,005 | ~US$ 1,50 (**R$ 8**) |
+**O modelo padrão é o `claude-haiku-4-5`** — é o que garante lucro mesmo no pior caso:
 
-Com a mensalidade de **R$ 29,99**, o Opus 5 só fecha a conta se o aluno perguntar pouco
-(até ~5 vezes por dia). O Haiku 4.5 dá folga confortável. Para trocar, é uma variável:
+- Pro: aluno que usa TUDO (400 perguntas/mês) custa ~R$ 12 → sobra ~R$ 13 dos R$ 24,90.
+- Plus: pior caso (1000/mês, com fotos) custa ~R$ 35 → sobra ~R$ 10 dos R$ 44,90.
+- O aluno comum (5–10 perguntas/dia) custa R$ 3–8/mês — o resto é margem.
+
+Com Opus 5 o pior caso dá prejuízo, então só suba de modelo quando tiver margem. Variáveis:
 
 ```
-MODELO=claude-haiku-4-5
+MODELO=claude-haiku-4-5        # modelo de todo mundo (padrão)
+MODELO_PLUS=claude-sonnet-5    # opcional: modelo melhor SÓ para o Plus
 ```
 
-Os limites `LIMITE_DIARIO` (padrão 40) e `LIMITE_MENSAL` (padrão 400) são a sua trava de
-segurança: mesmo que um aluno resolva usar o dia inteiro, o prejuízo tem teto.
+Os limites são a sua trava de segurança — mesmo o aluno mais intenso tem teto de custo:
+`LIMITE_DIARIO`/`LIMITE_MENSAL` (Pro, padrão 30/400), `LIMITE_DIARIO_PLUS`/`LIMITE_MENSAL_PLUS`
+(padrão 80/1000), `FOTOS_DIA`/`FOTOS_DIA_PLUS` (padrão 5/25). Se mudar os limites, atualize
+também `LIMITES_PLANO` em `studylab/js/produto.js` (o que as telas mostram).
 
 ---
 

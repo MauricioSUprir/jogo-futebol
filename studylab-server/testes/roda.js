@@ -6,7 +6,11 @@ process.env.SEGREDO = 'segredo-de-teste';
 process.env.ANTHROPIC_API_KEY = 'sk-ant-falsa';
 process.env.PORT = process.env.PORT || '4711';
 process.env.ORIGENS = '*';
-process.env.LIMITE_DIARIO = '3';
+process.env.LIMITE_DIARIO = '3';        // limite do Pro no teste
+process.env.LIMITE_DIARIO_PLUS = '8';   // limite do Plus no teste
+process.env.FOTOS_DIA = '2';            // fotos/dia do Pro no teste
+process.env.FOTOS_DIA_PLUS = '10';
+process.env.FREIO_IP = '5000';          // o freio por IP não atrapalha o teste
 process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 process.env.MP_PUBLIC_KEY = 'APP_USR-publica';
 delete process.env.DATABASE_URL;
@@ -17,6 +21,7 @@ const { montarBRCode } = await import('./brcode.js');
 /* ---- dubla a Claude API (o resto passa direto) ---- */
 const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
+let ultimoModelo = '';
 let assinaturasMP = 0;
 let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
@@ -89,6 +94,7 @@ globalThis.fetch = async (url, opcoes) => {
   if (alvo.includes('api.anthropic.com')) {
     chamadasClaude++;
     const corpo = JSON.parse(opcoes.body);
+    ultimoModelo = corpo.model;
     return new Response(JSON.stringify({
       content: [{ type: 'text', text: `resposta para: ${corpo.messages[0].content}` }],
       usage: { input_tokens: 120, output_tokens: 45 },
@@ -222,8 +228,12 @@ console.log('\n== pagamento ==');
   const tokenPagante = e.dados.token;
 
   const planos = await pedir('GET', '/planos');
-  conferir(planos.dados.planos.length === 3, 'servidor publica os 3 planos');
-  conferir(planos.dados.planos.find((p) => p.id === 'mensal').valor === 29.99, 'preço do mensal vem do servidor (R$ 29,99)');
+  conferir(planos.dados.planos.length === 5, 'servidor publica os 5 planos (Pro e Plus)');
+  conferir(planos.dados.planos.find((p) => p.id === 'pro_mensal')?.valor === 24.90, 'preço do Pro mensal vem do servidor (R$ 24,90)');
+  conferir(planos.dados.planos.find((p) => p.id === 'plus_mensal')?.valor === 44.90, 'Plus mensal custa R$ 20 a mais (R$ 44,90)');
+  conferir(planos.dados.planos.find((p) => p.id === 'plus_mensal')?.nivel === 'plus', 'plano Plus vem marcado com o nível');
+  conferir(planos.dados.limites?.pro?.dia > 0 && planos.dados.limites?.plus?.dia > planos.dados.limites?.pro?.dia,
+    'limites por nível são publicados e o Plus tem mais perguntas');
 
   const ruim = await pedir('POST', '/pagar', { token: tokenPagante, corpo: { planoId: 'inventado' } });
   conferir(ruim.status === 400, 'plano inventado é recusado');
@@ -293,7 +303,7 @@ console.log('\n== Pix com QR dentro do app ==');
   const { status, dados } = await pedir('POST', '/pagar/pix', { token: t, corpo: { planoId: 'semanal' } });
   conferir(status === 200, 'cria a cobrança Pix');
   conferir(dados.codigo.startsWith('000201'), 'devolve o código copia-e-cola');
-  conferir(dados.valorNoCodigo === 5.99, 'o valor já vem dentro do código Pix (R$ 5,99)', String(dados.valorNoCodigo));
+  conferir(dados.valorNoCodigo === 7.90, 'o valor já vem dentro do código Pix (R$ 7,90)', String(dados.valorNoCodigo));
   conferir(dados.qrBase64.length > 10, 'devolve a imagem do QR Code');
   conferir(dados.status === 'pending', 'começa como pendente');
 
@@ -345,6 +355,65 @@ console.log('\n== cartão dentro do app ==');
   conferir(eu.dados.proAte === em30.toISOString().slice(0, 10), `continua com os 30 dias do cartão aprovado (${eu.dados.proAte})`);
 }
 
+console.log('\n== plano Plus (código PROFESSOR) ==');
+let tokenPlus;
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-plus', email: 'plus@casa.com', nome: 'Plus' } } });
+  tokenPlus = e.dados.token;
+  const cod = await pedir('POST', '/codigo', { token: tokenPlus, corpo: { codigo: 'PROFESSOR' } });
+  conferir(cod.dados.plano === 'plus', 'código PROFESSOR libera o Plus', JSON.stringify(cod.dados));
+  const eu = await pedir('GET', '/eu', { token: tokenPlus });
+  conferir(eu.dados.uso.limiteDiario === 8, 'assinante Plus enxerga o limite maior do Plus', String(eu.dados.uso.limiteDiario));
+  conferir(eu.dados.uso.limiteFotosPergunta === 4, 'Plus manda até 4 fotos por pergunta');
+
+  // o Pro para nas 3 perguntas do teste; o Plus segue além
+  for (let i = 0; i < 4; i++) await pedir('POST', '/ia', { token: tokenPlus, corpo: { system: 'a', conteudo: `p${i}` } });
+  const quinta = await pedir('POST', '/ia', { token: tokenPlus, corpo: { system: 'a', conteudo: 'p5' } });
+  conferir(quinta.status === 200, 'Plus continua depois do limite do Pro (5ª pergunta ok)', quinta.dados.erro);
+}
+
+console.log('\n== fotos no Study AI ==');
+{
+  const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-foto', email: 'foto@casa.com', nome: 'Foto' } } });
+  const t = e.dados.token;
+  await pedir('POST', '/codigo', { token: t, corpo: { codigo: 'STUDYLAB30' } });
+
+  const demais = await pedir('POST', '/ia', {
+    token: t, corpo: { system: 'a', conteudo: [foto, foto, foto, { type: 'text', text: 'resolve' }] },
+  });
+  conferir(demais.status === 429, 'Pro com 3 fotos na mesma pergunta é barrado (limite 2)', demais.dados.erro);
+
+  const uma = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'resolve' }] } });
+  conferir(uma.status === 200, 'Pro manda 1 foto numa pergunta', uma.dados.erro);
+  conferir(uma.dados.fotosRestamHoje === 1, 'servidor conta as fotos que restam no dia', String(uma.dados.fotosRestamHoje));
+
+  const eu = await pedir('GET', '/eu', { token: t });
+  conferir(eu.dados.uso.fotosHoje === 1, 'fotos do dia aparecem no /eu');
+
+  const duas = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, foto, { type: 'text', text: 'e essa?' }] } });
+  conferir(duas.status === 429, 'estourar as fotos do dia é barrado (2/dia no teste)', duas.dados.erro);
+
+  const formatoRuim = await pedir('POST', '/ia', {
+    token: t, corpo: { system: 'a', conteudo: [{ type: 'image', source: { type: 'base64', media_type: 'image/bmp', data: 'x' } }, { type: 'text', text: 'oi' }] },
+  });
+  conferir(formatoRuim.status === 400, 'formato de imagem desconhecido é recusado');
+
+  const plusFotos = await pedir('POST', '/ia', {
+    token: tokenPlus, corpo: { system: 'a', conteudo: [foto, foto, foto, foto, { type: 'text', text: 'resolve tudo' }] },
+  });
+  conferir(plusFotos.status === 200, 'Plus manda 4 fotos de uma vez', plusFotos.dados.erro);
+}
+
+console.log('\n== modelo por nível ==');
+{
+  conferir(ultimoModelo === 'claude-haiku-4-5', 'sem configurar nada, o modelo é o Haiku (o que dá lucro)', ultimoModelo);
+  process.env.MODELO_PLUS = 'claude-sonnet-5';
+  await pedir('POST', '/ia', { token: tokenPlus, corpo: { system: 'a', conteudo: 'modelo?' } });
+  conferir(ultimoModelo === 'claude-sonnet-5', 'MODELO_PLUS troca o modelo só do Plus', ultimoModelo);
+  delete process.env.MODELO_PLUS;
+}
+
 console.log('\n== admin ==');
 {
   const semToken = await pedir('GET', '/admin/numeros');
@@ -352,7 +421,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 8, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+  conferir(r.status === 200 && d.usuarios === 10, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);
