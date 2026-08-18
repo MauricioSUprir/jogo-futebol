@@ -147,6 +147,18 @@ function rotinaDiaria() {
 
 /* ---------- boot ---------- */
 function iniciar() {
+  // Link de recomeço: abrir o app com ?zerar apaga TUDO deste aparelho e
+  // começa do zero (com confirmação, para ninguém perder dados sem querer).
+  if (new URLSearchParams(location.search).has('zerar')) {
+    const confirmou = confirm('Zerar o StudyLab neste aparelho? Todos os dados salvos aqui serão apagados.');
+    if (confirmou) {
+      try { localStorage.removeItem('studylab.v1'); } catch { /* segue */ }
+      try { indexedDB.deleteDatabase('studylab-fotos'); } catch { /* segue */ }
+    }
+    // tira o ?zerar do endereço para não perguntar de novo a cada recarga
+    location.replace(location.pathname + location.hash);
+    return;
+  }
   carregar();
   montarMenu();
   rotinaDiaria();
