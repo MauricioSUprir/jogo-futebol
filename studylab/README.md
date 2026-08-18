@@ -86,10 +86,13 @@ O que continua **grátis para todo mundo**, porque não depende de IA:
 Prioridades, revisão espaçada, domínio, planos de prova, simulados, foco, desempenho,
 notas, metas e gamificação **nunca** dependem de IA.
 
-> **Falta para o Study AI funcionar de verdade:** o servidor. É um proxy pequeno que recebe
-> a pergunta, confere se aquele aluno é assinante e chama a Claude API com a **sua** chave.
-> Enquanto ele não existe, dá para testar pela *Área do criador* em Configurações — que só
-> funciona com o Pro ativo.
+**O servidor já existe:** [`studylab-server/`](../studylab-server/). Ele guarda a chave,
+confere o login do Google, valida a assinatura, chama a Claude API e conta o uso de cada
+aluno. Depois de publicar (o README de lá tem o passo a passo do Railway), cole a URL em
+`js/produto.js` → `SERVIDOR` e o Study AI passa a funcionar para os assinantes.
+
+Enquanto o servidor não estiver publicado, dá para testar pela *Área do criador* em
+Configurações — que só funciona com o Pro ativo.
 
 ## Planos
 
@@ -108,9 +111,9 @@ ehPro()               // assinatura ativa? (respeita a data de vencimento)
 ```
 
 **Como alguém vira Pro hoje:** o pagamento online ainda não está conectado. A tela de planos
-libera por **código de acesso** (`js/produto.js` → `CODIGOS`), útil para testes, cortesia e
-para os primeiros clientes que pagarem por fora. A checagem acontece no aparelho — serve para
-uso controlado, não para escala; quando o servidor existir, a validação passa a ser feita lá.
+libera por **código de acesso**. Com o servidor publicado, o código é conferido **lá** (tabela
+`codigos`, com limite de usos) — não dá para burlar pelo navegador. Sem servidor, a checagem
+cai para `js/produto.js` → `CODIGOS`, no aparelho, o que serve só para testes.
 
 ## Estrutura
 

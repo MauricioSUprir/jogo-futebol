@@ -4,6 +4,7 @@
    entra sem conta — o app funciona igual, só não sincroniza nada.             */
 import { GOOGLE_CLIENT_ID } from './produto.js';
 import { entrarComo } from './store.js';
+import { temServidor, entrarNoServidor } from './api.js';
 
 const SCRIPT = 'https://accounts.google.com/gsi/client';
 export const googleConfigurado = () => !!GOOGLE_CLIENT_ID;
@@ -41,10 +42,12 @@ export async function botaoGoogle(caixa, aoEntrar, aoFalhar) {
     await carregarGoogle();
     window.google.accounts.id.initialize({
       client_id: GOOGLE_CLIENT_ID,
-      callback: (resp) => {
+      callback: async (resp) => {
         try {
           const d = dadosDoToken(resp.credential);
           entrarComo({ provedor: 'google', ...d });
+          // Com servidor, ele confere o token do Google e devolve a sessão + o plano.
+          if (temServidor()) await entrarNoServidor(resp.credential);
           aoEntrar?.(d);
         } catch (e) { aoFalhar?.(e); }
       },

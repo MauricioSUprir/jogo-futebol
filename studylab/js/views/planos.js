@@ -6,6 +6,7 @@ import {
   RECURSOS_FREE, RECURSOS_PRO, selo,
 } from '../ui.js';
 import { PLANOS, precoBR, CODIGOS, SERVIDOR } from '../produto.js';
+import { temServidor, ativarCodigoNoServidor, cancelarNoServidor } from '../api.js';
 
 export function render(el) {
   const pintar = () => { el.replaceChildren(); montar(el, pintar); };
@@ -50,8 +51,19 @@ function montar(el, pintar) {
     h('p', { class: 'tiny muted' }, 'Recebeu um código de teste, cortesia ou de uma compra combinada? Use aqui.'),
     h('div', { class: 'flexb' }, codigo,
       h('button', {
-        class: 'btn btn--p', onclick: () => {
+        class: 'btn btn--p', onclick: async (e) => {
           const c = codigo.value.trim().toUpperCase();
+          if (!c) return toast('Digite o código', 'bad');
+          if (temServidor()) {
+            e.target.disabled = true; e.target.textContent = 'Conferindo…';
+            try {
+              const d = await ativarCodigoNoServidor(c);
+              toast(`Pro liberado até ${fmtData(d.proAte)}! 🎉`, 'good');
+              pintar(); return;
+            } catch (err) { toast(err.message, 'bad'); }
+            finally { e.target.disabled = false; e.target.textContent = 'Ativar'; }
+            return;
+          }
           const dias = CODIGOS[c];
           if (!dias) return toast('Código inválido', 'bad');
           ativarPro({ planoId: 'codigo', dias, codigo: c });
@@ -133,8 +145,10 @@ function assinaturaAtiva(el, pintar) {
     h('b', { class: 'small' }, 'Gerenciar assinatura'),
     h('p', { class: 'tiny muted' }, s.conta.codigo ? `Liberado pelo código ${s.conta.codigo}.` : 'Ativado em modo teste.'),
     h('button', {
-      class: 'btn btn--d', onclick: () => confirmar('Cancelar o Pro?', 'Você volta para o plano grátis e perde o Study AI.', () => {
-        cancelarPro(); toast('Assinatura cancelada'); pintar();
+      class: 'btn btn--d', onclick: () => confirmar('Cancelar o Pro?', 'Você volta para o plano grátis e perde o Study AI.', async () => {
+        if (temServidor()) { try { await cancelarNoServidor(); } catch (e) { return toast(e.message, 'bad'); } }
+        else cancelarPro();
+        toast('Assinatura cancelada'); pintar();
       }),
     }, 'Cancelar assinatura'))));
 }

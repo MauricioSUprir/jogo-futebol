@@ -1,0 +1,17 @@
+{
+  "name": "studylab-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor do StudyLab: guarda a chave da Claude API, confere quem é assinante e responde ao Study AI.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "teste": "node testes/roda.js"
+  },
+  "dependencies": {
+    "jose": "^5.9.6",
+    "postgres": "^3.4.5"
+  }
+}

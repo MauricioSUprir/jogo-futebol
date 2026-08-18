@@ -6,6 +6,7 @@
    de tarefas) continuam livres para todo mundo.                               */
 import { st, set, ehPro } from './store.js';
 import { SERVIDOR } from './produto.js';
+import { perguntarAoServidor } from './api.js';
 import {
   frases, palavras, STOP, norm, iso, uid, clamp, round, sum,
 } from './util.js';
@@ -46,18 +47,19 @@ export async function chamar({
     throw new Error('O Study AI ainda não está no ar: falta configurar o servidor do StudyLab.');
   }
 
-  // Assinante: a chamada vai para o servidor do StudyLab, que guarda a chave e
-  // confere a assinatura. Sem servidor, cai na chave do criador (só para testes).
-  const url = SERVIDOR ? `${SERVIDOR.replace(/\/$/, '')}/ia` : URL_API;
-  const cabecalhos = SERVIDOR
-    ? { 'content-type': 'application/json', authorization: `Bearer ${s.conta.token || s.conta.id || ''}` }
-    : {
-      'content-type': 'application/json',
-      'x-api-key': chaveCriador,
-      'anthropic-version': VERSAO,
-      'anthropic-dangerous-direct-browser-access': 'true',
-    };
+  // Assinante com servidor: o servidor guarda a chave e confere a assinatura.
+  if (SERVIDOR) {
+    const d = await perguntarAoServidor({ system, conteudo, schema, maxTokens, esforco });
+    set((x) => {
+      if (x.ia.usoDia !== iso()) { x.ia.usoDia = iso(); x.ia.usoHoje = 0; }
+      x.ia.usoHoje++;
+    });
+    const txt = (d.texto || '').trim();
+    if (!schema) return txt;
+    try { return JSON.parse(txt); } catch { throw new Error('A resposta veio fora do formato esperado. Tente novamente.'); }
+  }
 
+  // Sem servidor: chave do criador, só para testes (Área do criador).
   const corpo = {
     model: modelo,
     max_tokens: maxTokens,
@@ -65,25 +67,30 @@ export async function chamar({
     system,
     messages: [{ role: 'user', content: conteudo }],
   };
+  const cabecalhos = {
+    'content-type': 'application/json',
+    'x-api-key': chaveCriador,
+    'anthropic-version': VERSAO,
+    'anthropic-dangerous-direct-browser-access': 'true',
+  };
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   let r;
   try {
-    r = await fetch(url, { method: 'POST', headers: cabecalhos, body: JSON.stringify(corpo), signal: ctrl.signal });
+    r = await fetch(URL_API, { method: 'POST', headers: cabecalhos, body: JSON.stringify(corpo), signal: ctrl.signal });
   } catch (e) {
     clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo (ou escolha um modelo mais leve).');
+    if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo.');
     throw new Error('Não consegui falar com o Study AI. Verifique sua internet — e, se você abriu o StudyLab dentro de '
-      + 'um preview (Artifact, sandbox, iframe), a política de segurança dessa página bloqueia chamadas externas: '
-      + 'use o link normal do app.');
+      + 'um preview (Artifact, sandbox, iframe), a política de segurança dessa página bloqueia chamadas externas.');
   }
   clearTimeout(timer);
 
   if (!r.ok) {
     let det = '';
     try { det = (await r.json())?.error?.message || ''; } catch { /* ignora */ }
-    if (r.status === 401 || r.status === 403) throw new Error('Sua assinatura não foi reconhecida. Confira o plano em Configurações.');
+    if (r.status === 401 || r.status === 403) throw new Error('A chave da Área do criador foi recusada.');
     if (r.status === 429) throw new Error('Muitas perguntas seguidas. Espere alguns segundos e tente de novo.');
     throw new Error(`Erro ${r.status} no Study AI${det ? ': ' + det : ''}`);
   }

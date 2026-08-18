@@ -1,10 +1,10 @@
 /* ===== sw.js — cache offline do StudyLab ===== */
-const CACHE = 'studylab-v2';
+const CACHE = 'studylab-v3';
 const ARQUIVOS = [
   './', './index.html', './manifest.webmanifest',
   './css/app.css', './assets/logo.svg', './assets/icon.svg', './assets/icon-maskable.svg',
   './js/app.js', './js/store.js', './js/seed.js', './js/engine.js', './js/ai.js', './js/ui.js', './js/util.js',
-  './js/produto.js', './js/auth.js',
+  './js/produto.js', './js/auth.js', './js/api.js',
   './js/views/comum.js', './js/views/inicio.js', './js/views/agenda.js', './js/views/tarefas.js',
   './js/views/provas.js', './js/views/materias.js', './js/views/aprender.js', './js/views/questoes.js',
   './js/views/flashcards.js', './js/views/revisao.js', './js/views/foco.js', './js/views/desempenho.js',

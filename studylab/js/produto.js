@@ -7,9 +7,10 @@
  *  Lembre de autorizar a origem: https://mauriciosuprir.github.io */
 export const GOOGLE_CLIENT_ID = '';
 
-/** Endereço do servidor do StudyLab (o que guarda a chave da Claude API e
- *  confere quem é assinante). Ex.: 'https://api.studylab.app'.
- *  Vazio = Study AI fica indisponível para todo mundo. */
+/** Endereço do servidor do StudyLab — o código dele está em `studylab-server/`.
+ *  Depois de publicar no Railway, cole aqui a URL que ele te der.
+ *  Ex.: 'https://studylab-server-production.up.railway.app'
+ *  Vazio = o app funciona sozinho, com conta local e Pro só por código. */
 export const SERVIDOR = '';
 
 /** Planos e preços mostrados na tela de assinatura. */

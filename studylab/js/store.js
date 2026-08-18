@@ -14,7 +14,7 @@ export function estadoVazio() {
       plano: 'free',            // free | pro
       desde: iso(), proAte: null, planoId: null, codigo: null,
       provedor: null,           // null (ainda não entrou) | 'google' | 'local'
-      id: null, nome: '', email: '', foto: '',
+      id: null, nome: '', email: '', foto: '', token: null,   // token = sessão no servidor
     },
     prefs: {
       minutosDia: 90,             // quanto pretende estudar por dia
@@ -105,9 +105,9 @@ export const entrou = () => !!S.conta.provedor;
 export const ehPro = () => S.conta.plano === 'pro'
   && (!S.conta.proAte || S.conta.proAte >= iso());
 
-export function entrarComo({ provedor, id = null, nome = '', email = '', foto = '' }) {
+export function entrarComo({ provedor, id = null, nome = '', email = '', foto = '', token = null }) {
   set((s) => {
-    s.conta = { ...s.conta, provedor, id, nome, email, foto };
+    s.conta = { ...s.conta, provedor, id, nome, email, foto, ...(token ? { token } : {}) };
     if (nome && !s.perfil.nome) s.perfil.nome = nome.split(' ')[0];
   });
 }
