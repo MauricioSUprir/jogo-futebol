@@ -23,6 +23,7 @@ import * as vBiblioteca from './views/biblioteca.js';
 import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
 import * as vPlanos from './views/planos.js';
+import * as vCriador from './views/criador.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
 import { temServidor, buscarEu, garantirSessao } from './api.js';
 
@@ -43,6 +44,8 @@ export const MENU = [
   { r: 'planos', i: '✨', t: 'StudyLab Pro', v: vPlanos },
   { r: 'ai', i: '🤖', t: 'Study AI', v: vAI, tab: true },
   { r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
+  // rota escondida: não entra no menu (ver views/criador.js)
+  { r: 'criador', i: '🛠️', t: 'Área do criador', v: vCriador, oculto: true },
 ];
 
 export function irPara(rota) { location.hash = rota.startsWith('#') ? rota : `#/${rota}`; }
@@ -50,7 +53,7 @@ export function irPara(rota) { location.hash = rota.startsWith('#') ? rota : `#/
 /* ---------- montagem do menu ---------- */
 function montarMenu() {
   const nav = $('#sideNav');
-  nav.replaceChildren(...MENU.map((m) =>
+  nav.replaceChildren(...MENU.filter((m) => !m.oculto).map((m) =>
     h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('span', { class: 'i' }, m.i), m.t)));
   const tab = $('#tabbar');
   const tabs = MENU.filter((m) => m.tab);

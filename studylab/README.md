@@ -94,12 +94,17 @@ notas, metas e gamificação **nunca** dependem de IA.
 confere o login do Google, valida a assinatura, cobra pelo Mercado Pago, chama a Claude API e
 conta o uso de cada aluno.
 
-Depois de publicar (o README de lá tem o passo a passo do Railway), **não precisa mexer no
-código**: abra ⚙️ Configurações → *Área do criador* → cole o endereço do servidor → *Testar
-servidor*. A partir daí o Study AI e o pagamento funcionam para todo mundo.
+**O aluno nunca coloca chave nenhuma.** O caminho é: ele paga o Pix → o Mercado Pago confirma
+→ o servidor libera o Pro → o Study AI já está pronto. Quando ele pergunta algo, o app fala
+com o servidor, e é o servidor que chama a Claude com a **sua** chave.
 
-Enquanto não houver servidor, dá para testar a IA colando uma chave da Claude API na mesma
-Área do criador — só neste aparelho e só com o Pro ativo.
+Depois de publicar (o README de lá tem o passo a passo do Railway), **não precisa mexer no
+código**: abra a **Área do criador** — uma rota escondida (`#/criador`), fora do menu, que abre
+tocando 5 vezes na linha da versão no rodapé das Configurações — cole o endereço do servidor e
+aperte *Testar servidor*.
+
+Essa é a **única** tela do StudyLab que fala em chave, e o aluno não chega nela. Lá também dá
+para testar a IA com uma chave sua antes do servidor existir — só naquele aparelho.
 
 ## Planos
 
