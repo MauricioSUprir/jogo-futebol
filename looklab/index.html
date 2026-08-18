@@ -1,0 +1,2935 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0b0d" />
+<title>LookLab — seu estilista digital</title>
+<meta name="description" content="Guarda-roupa digital e criador de looks para crianças e adolescentes." />
+<link rel="icon" type="image/png" href="assets/icon-192.png" />
+<link rel="apple-touch-icon" href="assets/icon-180.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="apple-mobile-web-app-title" content="LookLab" />
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#f6f6f8; --bg2:#eeeef2; --card:#ffffff; --card2:#fafafc;
+    --text:#0b0b0d; --text2:#4b4b55; --muted:#8a8a96;
+    --line:#e4e4ea; --line2:#d6d6de;
+    --acc:#7c3aed; --acc2:#a855f7; --acc-soft:#f1e9ff; --on-acc:#ffffff;
+    --good:#12a150; --warn:#e0a107; --bad:#dc3545;
+    --shadow:0 1px 2px rgba(11,11,13,.05), 0 12px 32px rgba(11,11,13,.06);
+    --shadow-lg:0 20px 60px rgba(11,11,13,.16);
+    --r:18px; --r-sm:12px;
+  }
+  :root[data-theme="dark"], :root:where(:not([data-theme="light"])){}
+  @media (prefers-color-scheme: dark){
+    :root:where(:not([data-theme="light"])){
+      color-scheme: dark;
+      --bg:#0b0b0d; --bg2:#141418; --card:#17171c; --card2:#1e1e24;
+      --text:#ffffff; --text2:#c6c6d0; --muted:#83838f;
+      --line:#28282f; --line2:#35353e;
+      --acc:#a855f7; --acc2:#7c3aed; --acc-soft:#241a3a; --on-acc:#ffffff;
+      --good:#2ecc71; --warn:#f5c542; --bad:#ff6b6b;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.45);
+      --shadow-lg:0 24px 70px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme: dark;
+    --bg:#0b0b0d; --bg2:#141418; --card:#17171c; --card2:#1e1e24;
+    --text:#ffffff; --text2:#c6c6d0; --muted:#83838f;
+    --line:#28282f; --line2:#35353e;
+    --acc:#a855f7; --acc2:#7c3aed; --acc-soft:#241a3a; --on-acc:#ffffff;
+    --good:#2ecc71; --warn:#f5c542; --bad:#ff6b6b;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 14px 36px rgba(0,0,0,.45);
+    --shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text); line-height:1.5;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    -webkit-font-smoothing:antialiased; -webkit-tap-highlight-color:transparent;
+  }
+  button,input,select,textarea{font:inherit;color:inherit}
+  button{cursor:pointer}
+  a{color:var(--acc)}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 16px 120px}
+
+  /* ---------- splash ---------- */
+  #splash{position:fixed;inset:0;z-index:200;background:#0b0b0d;display:grid;place-items:center;
+    gap:20px;grid-auto-flow:row;cursor:pointer;transition:opacity .45s ease,visibility .45s ease}
+  #splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+  #splash img{width:min(46vw,170px);height:auto;border-radius:34px;
+    filter:drop-shadow(0 18px 50px rgba(168,85,247,.35)); animation:pop .7s cubic-bezier(.2,.8,.2,1) both}
+  #splash .nm{color:#fff;font-size:30px;font-weight:800;letter-spacing:-.03em;margin:0;text-align:center}
+  #splash .nm span{color:#c084fc}
+  #splash .tag{color:#9b9baa;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:650;text-align:center}
+  @keyframes pop{from{transform:scale(.88);opacity:0}to{transform:scale(1);opacity:1}}
+  @media (prefers-reduced-motion: reduce){#splash img{animation:none}}
+
+  /* ---------- header ---------- */
+  header.top{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--line)}
+  .top .row{max-width:1160px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:12px}
+  .brand{display:flex;align-items:center;gap:10px;min-width:0}
+  .brand img{width:38px;height:38px;border-radius:11px;display:block;box-shadow:var(--shadow)}
+  .brand h1{margin:0;font-size:18px;font-weight:800;letter-spacing:-.03em;white-space:nowrap}
+  .brand h1 span{color:var(--acc)}
+  .spacer{flex:1}
+  .iconbtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--card);
+    display:grid;place-items:center;font-size:16px;box-shadow:var(--shadow)}
+  .iconbtn:hover{border-color:var(--line2)}
+  .who{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);
+    border-radius:999px;padding:4px 12px 4px 4px;box-shadow:var(--shadow);max-width:190px}
+  .who .av{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:15px;
+    background:var(--acc-soft);border:1px solid var(--line)}
+  .who .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .who .cx{font-size:10.5px;color:var(--muted);white-space:nowrap}
+  .who .txt{min-width:0;text-align:left;line-height:1.15}
+
+  /* ---------- nav ---------- */
+  nav.tabs{position:sticky;top:61px;z-index:39;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:saturate(160%) blur(14px);border-bottom:1px solid var(--line)}
+  nav.tabs .in{max-width:1160px;margin:0 auto;padding:8px 16px;display:flex;gap:6px;overflow-x:auto;
+    scrollbar-width:none}
+  nav.tabs .in::-webkit-scrollbar{display:none}
+  nav.tabs button{border:1px solid transparent;background:transparent;color:var(--text2);
+    padding:8px 14px;border-radius:11px;font-size:13.5px;font-weight:650;white-space:nowrap;
+    display:flex;align-items:center;gap:7px}
+  nav.tabs button:hover{background:var(--bg2);color:var(--text)}
+  nav.tabs button.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+  nav.tabs button.locked{opacity:.45}
+
+  /* ---------- blocos ---------- */
+  .hero{margin:22px 0 18px}
+  .hero h2{margin:0;font-size:clamp(24px,5.4vw,34px);font-weight:820;letter-spacing:-.035em}
+  .hero p{margin:5px 0 0;color:var(--muted);font-size:14px}
+  .sec{margin:26px 0 12px;display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap}
+  .sec h3{margin:0;font-size:17px;font-weight:780;letter-spacing:-.02em}
+  .sec p{margin:0;color:var(--muted);font-size:12.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+  .pad{padding:16px}
+  .grid{display:grid;gap:12px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .g5{grid-template-columns:repeat(5,1fr)}
+  @media(max-width:900px){.g4,.g5{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.g4,.g5,.g3{grid-template-columns:repeat(2,1fr)}}
+  .split{display:grid;grid-template-columns:1.35fr 1fr;gap:14px;align-items:start}
+  @media(max-width:880px){.split{grid-template-columns:1fr}}
+
+  /* stat tiles */
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 15px;box-shadow:var(--shadow)}
+  .stat .k{font-size:12px;color:var(--muted);font-weight:650;display:flex;align-items:center;gap:6px}
+  .stat .v{font-size:26px;font-weight:820;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
+  .stat .d{font-size:11.5px;color:var(--muted);margin-top:2px}
+
+  /* botoes */
+  .btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:9px 15px;
+    font-size:13.5px;font-weight:680;display:inline-flex;align-items:center;gap:7px;box-shadow:var(--shadow)}
+  .btn:hover{border-color:var(--line2)}
+  .btn.pri{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+  .btn.pri:hover{filter:brightness(1.07)}
+  .btn.dark{background:var(--text);border-color:var(--text);color:var(--bg)}
+  .btn.ghost{background:transparent;box-shadow:none}
+  .btn.sm{padding:6px 11px;font-size:12.5px;border-radius:10px}
+  .btn.big{padding:14px 22px;font-size:15px;border-radius:14px}
+  .btn.block{width:100%;justify-content:center}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+  .btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,var(--line))}
+
+  /* chips */
+  .chips{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 13px;
+    font-size:12.5px;font-weight:650;color:var(--text2);display:inline-flex;align-items:center;gap:6px}
+  .chip:hover{border-color:var(--line2);color:var(--text)}
+  .chip.on{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+  .chip.on.soft{background:var(--acc-soft);color:var(--acc);border-color:color-mix(in srgb,var(--acc) 32%,transparent)}
+  .tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:680;padding:3px 9px;
+    border-radius:999px;background:var(--bg2);color:var(--text2);border:1px solid var(--line)}
+  .tag.acc{background:var(--acc-soft);color:var(--acc);border-color:color-mix(in srgb,var(--acc) 28%,transparent)}
+  .tag.good{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good);border-color:color-mix(in srgb,var(--good) 30%,transparent)}
+  .tag.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 32%,transparent)}
+
+  /* form */
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;font-weight:680;color:var(--text2)}
+  .inp, select.inp, textarea.inp{background:var(--bg2);border:1px solid var(--line);border-radius:11px;
+    padding:10px 12px;font-size:14px;width:100%;outline:none}
+  .inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)}
+  textarea.inp{resize:vertical;min-height:76px}
+  .hint{font-size:11.5px;color:var(--muted)}
+
+  /* peca (card de roupa) */
+  .piece{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;text-align:left;padding:0}
+  .piece:hover{border-color:var(--line2);transform:translateY(-2px);transition:transform .15s ease}
+  .thumb{aspect-ratio:1/1;display:grid;place-items:center;font-size:44px;position:relative;overflow:hidden;
+    background:var(--bg2)}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb .swatch{position:absolute;left:9px;bottom:9px;width:16px;height:16px;border-radius:5px;
+    border:2px solid var(--card);box-shadow:0 1px 4px rgba(0,0,0,.28)}
+  .thumb .badge{position:absolute;right:8px;top:8px;font-size:10px;font-weight:750;padding:3px 8px;
+    border-radius:999px;background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid var(--line);
+    backdrop-filter:blur(6px)}
+  .piece .info{padding:10px 12px 12px}
+  .piece .nm{font-size:13.5px;font-weight:700;letter-spacing:-.01em;line-height:1.25;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .piece .mt{display:block;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .piece.mini .thumb{font-size:30px}
+  .piece.sel{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 22%,transparent)}
+
+  /* look card */
+  .look{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .look .strip{display:flex;gap:0;background:var(--bg2)}
+  .look .strip .sl{flex:1;aspect-ratio:1/1;display:grid;place-items:center;font-size:32px;
+    border-right:1px solid var(--line);position:relative;overflow:hidden}
+  .look .strip .sl:last-child{border-right:0}
+  .look .strip .sl img{width:100%;height:100%;object-fit:cover}
+  .look .bd{padding:13px 14px}
+  .look h4{margin:0 0 3px;font-size:15px;font-weight:760;letter-spacing:-.02em}
+  .look .why{font-size:12.5px;color:var(--text2);margin:8px 0 0;line-height:1.45}
+
+  /* barras de avaliacao */
+  .scores{display:flex;flex-direction:column;gap:9px}
+  .score .lb{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;gap:10px}
+  .score .lb b{font-weight:680}
+  .score .lb i{font-style:normal;color:var(--muted);font-variant-numeric:tabular-nums}
+  .bar{height:8px;border-radius:999px;background:var(--bg2);border:1px solid var(--line);overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:999px;background:var(--acc)}
+
+  /* paleta */
+  .pal{display:flex;height:16px;border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+  .pal span{display:block;height:100%}
+  .pal-legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:11px;font-size:12px;color:var(--text2)}
+  .pal-legend i{width:11px;height:11px;border-radius:4px;display:inline-block;margin-right:6px;
+    border:1px solid var(--line);vertical-align:-1px}
+
+  /* calendario */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+  .cal .dow{font-size:11px;color:var(--muted);text-align:center;font-weight:700;padding-bottom:2px}
+  .cal .day{aspect-ratio:.86;border:1px solid var(--line);background:var(--card2);border-radius:12px;
+    padding:6px;display:flex;flex-direction:column;gap:3px;align-items:stretch;text-align:left;font-size:11px}
+  .cal .day:hover{border-color:var(--acc)}
+  .cal .day.off{opacity:.32;pointer-events:none}
+  .cal .day.today{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 20%,transparent)}
+  .cal .day .n{font-weight:750;font-size:12px}
+  .cal .day .mini{font-size:15px;line-height:1.05;letter-spacing:-1px}
+  .cal .day .oc{font-size:9.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cal .day .dot{width:6px;height:6px;border-radius:50%;background:var(--acc)}
+
+  /* trend */
+  .trend{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .trend:last-child{border-bottom:0}
+  .trend .ic{width:40px;height:40px;border-radius:12px;background:var(--bg2);display:grid;place-items:center;font-size:19px;flex:none}
+  .trend .mid{flex:1;min-width:0}
+  .trend .nm{font-size:13.5px;font-weight:720}
+  .trend .sub{font-size:11.5px;color:var(--muted)}
+  .meter{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;letter-spacing:-.5px;color:var(--acc)}
+
+  /* mensagens do estilista */
+  .msgs{display:flex;flex-direction:column;gap:12px}
+  .msg{max-width:min(680px,92%);padding:12px 14px;border-radius:16px;font-size:14px;line-height:1.5}
+  .msg.me{align-self:flex-end;background:var(--acc);color:var(--on-acc);border-bottom-right-radius:5px}
+  .msg.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px;
+    box-shadow:var(--shadow);max-width:min(760px,100%);width:100%}
+  .msg.ai .hdr{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:750;color:var(--acc);margin-bottom:8px}
+
+  /* modal */
+  .ov{position:fixed;inset:0;z-index:150;background:rgba(6,6,10,.62);backdrop-filter:blur(4px);
+    display:flex;align-items:flex-end;justify-content:center;padding:0}
+  @media(min-width:700px){.ov{align-items:center;padding:24px}}
+  .modal{background:var(--card);border:1px solid var(--line);width:100%;max-width:620px;max-height:92vh;
+    overflow:auto;border-radius:22px 22px 0 0;box-shadow:var(--shadow-lg)}
+  @media(min-width:700px){.modal{border-radius:22px}}
+  .modal .mh{position:sticky;top:0;background:var(--card);border-bottom:1px solid var(--line);
+    padding:15px 18px;display:flex;align-items:center;gap:12px;z-index:2}
+  .modal .mh h3{margin:0;font-size:16px;font-weight:780;letter-spacing:-.02em;flex:1}
+  .modal .mb{padding:16px 18px}
+  .modal .mf{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);
+    padding:13px 18px;display:flex;gap:9px;justify-content:flex-end}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);z-index:300;opacity:0;
+    background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;font-size:13.5px;
+    font-weight:680;box-shadow:var(--shadow-lg);transition:.25s ease;pointer-events:none;max-width:90vw;text-align:center}
+  #toast.on{opacity:1;transform:translate(-50%,0)}
+
+  /* misc */
+  .empty{text-align:center;padding:38px 18px;color:var(--muted)}
+  .empty .em{font-size:38px;margin-bottom:8px}
+  .empty h4{margin:0 0 5px;font-size:15px;color:var(--text);font-weight:740}
+  .empty p{margin:0 auto;font-size:13px;max-width:380px}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .list{display:flex;flex-direction:column}
+  .li{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)}
+  .li:last-child{border-bottom:0}
+  .li .em{width:38px;height:38px;border-radius:11px;background:var(--bg2);display:grid;place-items:center;
+    font-size:19px;flex:none;overflow:hidden}
+  .li .em img{width:100%;height:100%;object-fit:cover}
+  .li .t{flex:1;min-width:0}
+  .li .t b{display:block;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .li .t span{font-size:11.5px;color:var(--muted)}
+  .li .v{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .note{background:var(--acc-soft);border:1px solid color-mix(in srgb,var(--acc) 22%,transparent);
+    border-radius:14px;padding:12px 14px;font-size:12.5px;color:var(--text2);line-height:1.5}
+  .note b{color:var(--text)}
+  .ach{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:14px;background:var(--card2)}
+  .ach.off{opacity:.5}
+  .ach .e{font-size:22px}
+  .ach .t b{display:block;font-size:13px;font-weight:730}
+  .ach .t span{font-size:11.5px;color:var(--muted)}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- login ---------- */
+  #auth{position:fixed;inset:0;z-index:150;background:var(--bg);display:none;overflow:auto;
+    padding:max(28px,env(safe-area-inset-top)) 18px 40px}
+  #auth.on{display:block}
+  .auth{max-width:420px;margin:0 auto}
+  .auth .mark{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;text-align:center}
+  .auth .mark img{width:72px;height:72px;border-radius:20px;box-shadow:var(--shadow)}
+  .auth .mark h1{margin:0;font-size:26px;font-weight:820;letter-spacing:-.035em}
+  .auth .mark h1 span{color:var(--acc)}
+  .auth .mark p{margin:0;font-size:13px;color:var(--muted)}
+  .auth .seg2{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:4px;margin-bottom:16px}
+  .auth .seg2 button{flex:1;border:0;background:transparent;color:var(--text2);padding:9px;border-radius:10px;font-size:13.5px;font-weight:700}
+  .auth .seg2 button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+  .auth form{display:flex;flex-direction:column;gap:12px}
+  .auth .erro{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 34%,transparent);
+    color:var(--bad);border-radius:12px;padding:10px 13px;font-size:12.5px;font-weight:600}
+  .auth .ok{background:color-mix(in srgb,var(--good) 12%,transparent);border:1px solid color-mix(in srgb,var(--good) 34%,transparent);
+    color:var(--good);border-radius:12px;padding:10px 13px;font-size:12.5px;font-weight:600}
+  .auth .linha{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2)}
+  .auth .linha input[type=checkbox]{width:17px;height:17px;accent-color:var(--acc)}
+  .auth .rodape{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.55;text-align:center}
+  .auth .link{background:none;border:0;color:var(--acc);font-size:12.5px;font-weight:650;padding:0;text-align:left}
+  .auth .topo{display:flex;justify-content:flex-end;margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <img src="assets/logo.png" alt="" />
+  <div>
+    <p class="nm">Look<span>Lab</span></p>
+    <p class="tag">seu estilista digital</p>
+  </div>
+</div>
+
+<div id="auth"></div>
+
+<header class="top">
+  <div class="row">
+    <div class="brand">
+      <img src="assets/icon-192.png" alt="LookLab" />
+      <h1>Look<span>Lab</span></h1>
+    </div>
+    <div class="spacer"></div>
+    <button class="who" id="whoBtn" title="Trocar de perfil">
+      <span class="av" id="whoAv">🙂</span>
+      <span class="txt"><span class="nm" id="whoNm">—</span><br /><span class="cx" id="whoCx">—</span></span>
+    </button>
+    <button class="iconbtn" id="themeBtn" title="Alternar tema" aria-label="Alternar tema">🌙</button>
+  </div>
+</header>
+
+<nav class="tabs"><div class="in" id="tabs"></div></nav>
+
+<main class="wrap" id="view"></main>
+
+<div id="modalRoot"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   LookLab — estilista digital de guarda-roupa infantojuvenil
+   App 100% local: os dados ficam no navegador (localStorage), sem servidor.
+   Regra de produto: o sistema avalia ROUPA (cor, contexto, clima, uso).
+   Nunca avalia corpo, peso, altura ou aparência de quem veste.
+   ===================================================================== */
+
+/* ===================== catálogo / vocabulário ===================== */
+const SLOTS = {
+  outer: { label: "Casaco",     emoji: "🧥", opt: true },
+  top:   { label: "Parte de cima", emoji: "👕" },
+  bottom:{ label: "Parte de baixo", emoji: "👖" },
+  shoes: { label: "Calçado",    emoji: "👟" },
+  acc:   { label: "Acessório",  emoji: "🧢", opt: true },
+};
+const SLOT_ORDER = ["outer", "top", "bottom", "shoes", "acc"];
+
+// warmth: 0 = bem leve … 3 = bem quente
+const CATS = {
+  camiseta:  { label: "Camiseta",   slot: "top",    emoji: "👕", warmth: 1 },
+  regata:    { label: "Regata",     slot: "top",    emoji: "🎽", warmth: 0 },
+  polo:      { label: "Polo",       slot: "top",    emoji: "👕", warmth: 1, dressy: 1 },
+  camisa:    { label: "Camisa",     slot: "top",    emoji: "👔", warmth: 1, dressy: 2 },
+  blusa:     { label: "Blusa",      slot: "top",    emoji: "👚", warmth: 1 },
+  moletom:   { label: "Moletom",    slot: "top",    emoji: "👚", warmth: 3 },
+  suéter:    { label: "Suéter",     slot: "top",    emoji: "👚", warmth: 3 },
+  vestido:   { label: "Vestido",    slot: "full",   emoji: "👗", warmth: 1, dressy: 2 },
+  macacão:   { label: "Macacão",    slot: "full",   emoji: "👗", warmth: 1 },
+  calça:     { label: "Calça",      slot: "bottom", emoji: "👖", warmth: 2 },
+  jeans:     { label: "Calça jeans",slot: "bottom", emoji: "👖", warmth: 2 },
+  legging:   { label: "Legging",    slot: "bottom", emoji: "👖", warmth: 1 },
+  bermuda:   { label: "Bermuda",    slot: "bottom", emoji: "🩳", warmth: 0 },
+  short:     { label: "Short",      slot: "bottom", emoji: "🩳", warmth: 0 },
+  saia:      { label: "Saia",       slot: "bottom", emoji: "👗", warmth: 0 },
+  jaqueta:   { label: "Jaqueta",    slot: "outer",  emoji: "🧥", warmth: 3 },
+  casaco:    { label: "Casaco",     slot: "outer",  emoji: "🧥", warmth: 3 },
+  "corta-vento": { label: "Corta-vento", slot: "outer", emoji: "🧥", warmth: 2, rain: true },
+  colete:    { label: "Colete",     slot: "outer",  emoji: "🦺", warmth: 2 },
+  blazer:    { label: "Blazer",     slot: "outer",  emoji: "🧥", warmth: 2, dressy: 3 },
+  tênis:     { label: "Tênis",      slot: "shoes",  emoji: "👟", warmth: 2 },
+  sapato:    { label: "Sapato",     slot: "shoes",  emoji: "👞", warmth: 2, dressy: 3 },
+  bota:      { label: "Bota",       slot: "shoes",  emoji: "🥾", warmth: 3, rain: true },
+  sandália:  { label: "Sandália",   slot: "shoes",  emoji: "👡", warmth: 0 },
+  chinelo:   { label: "Chinelo",    slot: "shoes",  emoji: "🩴", warmth: 0 },
+  boné:      { label: "Boné",       slot: "acc",    emoji: "🧢", warmth: 0 },
+  touca:     { label: "Touca",      slot: "acc",    emoji: "🧣", warmth: 3 },
+  óculos:    { label: "Óculos de sol", slot: "acc", emoji: "🕶️", warmth: 0 },
+  relógio:   { label: "Relógio",    slot: "acc",    emoji: "⌚", warmth: 0 },
+  mochila:   { label: "Mochila",    slot: "acc",    emoji: "🎒", warmth: 0 },
+  meia:      { label: "Meia",       slot: "acc",    emoji: "🧦", warmth: 1 },
+  colar:     { label: "Colar",      slot: "acc",    emoji: "📿", warmth: 0 },
+  cachecol:  { label: "Cachecol",   slot: "acc",    emoji: "🧣", warmth: 3 },
+};
+const CAT_KEYS = Object.keys(CATS);
+
+const COLORS = {
+  preto:        { label: "Preto",        hex: "#16161a", kind: "neutro" },
+  branco:       { label: "Branco",       hex: "#f4f4f0", kind: "neutro" },
+  cinza:        { label: "Cinza",        hex: "#8d8d97", kind: "neutro" },
+  bege:         { label: "Bege",         hex: "#d9c3a0", kind: "neutro" },
+  marrom:       { label: "Marrom",       hex: "#6f4b32", kind: "neutro" },
+  jeans:        { label: "Jeans",        hex: "#4a6ea5", kind: "neutro" },
+  azul:         { label: "Azul",         hex: "#2563eb", kind: "cor" },
+  "azul-claro": { label: "Azul claro",   hex: "#7dc4f2", kind: "cor" },
+  "verde":      { label: "Verde",        hex: "#1fa557", kind: "cor" },
+  "verde-militar": { label: "Verde militar", hex: "#5c6b45", kind: "neutro" },
+  vermelho:     { label: "Vermelho",     hex: "#dc2626", kind: "cor" },
+  vinho:        { label: "Vinho",        hex: "#7d1f38", kind: "cor" },
+  rosa:         { label: "Rosa",         hex: "#ec4899", kind: "cor" },
+  roxo:         { label: "Roxo",         hex: "#7c3aed", kind: "cor" },
+  amarelo:      { label: "Amarelo",      hex: "#eab308", kind: "cor" },
+  laranja:      { label: "Laranja",      hex: "#f97316", kind: "cor" },
+};
+const COLOR_KEYS = Object.keys(COLORS);
+
+const PATTERNS = ["liso", "listrado", "xadrez", "estampado", "florido", "camuflado", "tie-dye", "logo"];
+const MATERIALS = ["algodão", "jeans", "moletom", "poliéster", "linho", "malha", "couro sintético", "tricô"];
+const STYLES = {
+  casual:      { label: "Casual",      emoji: "🙂" },
+  streetwear:  { label: "Streetwear",  emoji: "🧢" },
+  esportivo:   { label: "Esportivo",   emoji: "🏃" },
+  arrumado:    { label: "Arrumado",    emoji: "✨" },
+  minimalista: { label: "Minimalista", emoji: "⬜" },
+  colorido:    { label: "Colorido",    emoji: "🎨" },
+  clássico:    { label: "Clássico",    emoji: "🎩" },
+};
+const STYLE_KEYS = Object.keys(STYLES);
+
+const OCCASIONS = {
+  escola:      { label: "Escola",      emoji: "🏫", dressy: 1 },
+  shopping:    { label: "Shopping",    emoji: "🛍", dressy: 1 },
+  passeio:     { label: "Passeio",     emoji: "🌳", dressy: 1 },
+  festa:       { label: "Festa",       emoji: "🎉", dressy: 3 },
+  aniversário: { label: "Aniversário", emoji: "🎂", dressy: 2 },
+  igreja:      { label: "Igreja",      emoji: "⛪", dressy: 3 },
+  restaurante: { label: "Restaurante", emoji: "🍽", dressy: 2 },
+  praia:       { label: "Praia",       emoji: "🏖", dressy: 0 },
+  viagem:      { label: "Viagem",      emoji: "✈️", dressy: 1 },
+  família:     { label: "Evento família", emoji: "👨‍👩‍👦", dressy: 2 },
+  esporte:     { label: "Esporte",     emoji: "⚽", dressy: 0 },
+};
+const OCC_KEYS = Object.keys(OCCASIONS);
+
+const CLIMAS = {
+  frio:            { label: "Frio",           emoji: "🥶", warmth: [2, 3] },
+  "meia-estação":  { label: "Meia-estação",   emoji: "🌤️", warmth: [1, 2] },
+  quente:          { label: "Quente",         emoji: "☀️", warmth: [0, 1] },
+  chuva:           { label: "Chuva",          emoji: "🌧️", warmth: [1, 2] },
+};
+const CLIMA_KEYS = Object.keys(CLIMAS);
+
+const SIZES = ["4", "6", "8", "10", "12", "14", "16", "PP", "P", "M", "G", "GG", "34", "35", "36", "37", "38", "39", "40"];
+
+/* ===================== tendências (curadoria) ===================== */
+/* Dados de exemplo. Para ligar numa fonte real (catálogos, lojas, pesquisas),
+   troque só o corpo de TrendSource.fetch() — o resto da tela não muda. */
+const TrendSource = {
+  async fetch() { return { updatedAt: "2026-08-01", trends: TRENDS_SAMPLE }; },
+};
+const TRENDS_SAMPLE = [
+  { id: "cargo", nome: "Bermuda e calça cargo", emoji: "🩳", nivel: 86, status: "crescendo", grupo: "Peças",
+    match: { cats: ["bermuda", "calça"], styles: ["streetwear"] },
+    dica: "Cargo pede parte de cima simples. Camiseta lisa deixa o conjunto equilibrado." },
+  { id: "oversized", nome: "Camiseta oversized", emoji: "👕", nivel: 78, status: "popular", grupo: "Peças",
+    match: { cats: ["camiseta"], styles: ["streetwear"] },
+    dica: "Com peça de cima mais solta, a de baixo mais ajustada equilibra o visual." },
+  { id: "retro", nome: "Tênis retrô", emoji: "👟", nivel: 91, status: "crescendo", grupo: "Calçados",
+    match: { cats: ["tênis"], colors: ["branco", "bege"] },
+    dica: "Tênis branco ou bege combina com quase tudo e vira coringa do guarda-roupa." },
+  { id: "neutros", nome: "Tons neutros", emoji: "🤎", nivel: 82, status: "popular", grupo: "Cores",
+    match: { colors: ["bege", "branco", "preto", "cinza", "marrom", "verde-militar"] },
+    dica: "Neutros combinam entre si — com poucas peças você monta muitos looks." },
+  { id: "verde", nome: "Verde militar", emoji: "🫒", nivel: 64, status: "crescendo", grupo: "Cores",
+    match: { colors: ["verde-militar", "verde"] },
+    dica: "Verde militar funciona como neutro: vai bem com bege, branco e preto." },
+  { id: "jaqueta-jeans", nome: "Jaqueta jeans", emoji: "🧥", nivel: 70, status: "estável", grupo: "Peças",
+    match: { cats: ["jaqueta"], colors: ["jeans"] },
+    dica: "Jaqueta jeans é a terceira peça mais fácil: fecha look de escola e de passeio." },
+  { id: "boné", nome: "Boné aba curva", emoji: "🧢", nivel: 68, status: "popular", grupo: "Acessórios",
+    match: { cats: ["boné"] },
+    dica: "Boné na cor de outra peça do look cria repetição de cor e amarra o conjunto." },
+  { id: "listras", nome: "Listras finas", emoji: "🦓", nivel: 55, status: "crescendo", grupo: "Estampas",
+    match: { patterns: ["listrado"] },
+    dica: "Se a estampa é o destaque, mantenha o resto liso." },
+  { id: "monocromatico", nome: "Look monocromático", emoji: "⬛", nivel: 61, status: "estável", grupo: "Estilos",
+    match: { styles: ["minimalista"] },
+    dica: "Duas peças da mesma família de cor deixam o visual mais alinhado." },
+  { id: "colorblock", nome: "Color block forte", emoji: "🟨", nivel: 38, status: "caindo", grupo: "Estilos",
+    match: { styles: ["colorido"] },
+    dica: "Se quiser cores fortes, use no máximo duas e deixe a terceira peça neutra." },
+  { id: "tie-dye", nome: "Tie-dye", emoji: "🌀", nivel: 24, status: "caindo", grupo: "Estampas",
+    match: { patterns: ["tie-dye"] },
+    dica: "Tie-dye pede o resto do look bem básico." },
+  { id: "esportivo", nome: "Esportivo no dia a dia", emoji: "🏃", nivel: 74, status: "popular", grupo: "Estilos",
+    match: { styles: ["esportivo"] },
+    dica: "Peça esportiva com uma peça mais arrumada dá um meio-termo interessante." },
+];
+const TREND_STATUS = {
+  crescendo: { label: "Crescendo", emoji: "🔥", cls: "acc" },
+  popular:   { label: "Popular",   emoji: "⭐", cls: "good" },
+  "estável": { label: "Estável",   emoji: "➡️", cls: "" },
+  caindo:    { label: "Caindo",    emoji: "📉", cls: "warn" },
+};
+
+/* ===================== inspirações ===================== */
+const INSPIRACOES = [
+  { id: "i1", titulo: "Básico bem feito", emoji: "🤍", grupo: "Looks básicos", estilo: "minimalista",
+    ocasiao: "passeio", clima: "meia-estação",
+    receita: { top: { cats: ["camiseta"], colors: ["branco"] }, bottom: { cats: ["jeans", "calça"], colors: ["jeans", "preto"] }, shoes: { cats: ["tênis"], colors: ["branco"] } },
+    desc: "Camiseta branca, calça escura e tênis branco. Simples e funciona quase sempre." },
+  { id: "i2", titulo: "Street de fim de tarde", emoji: "🧢", grupo: "Streetwear", estilo: "streetwear",
+    ocasiao: "shopping", clima: "meia-estação",
+    receita: { top: { cats: ["camiseta"], colors: ["preto"] }, bottom: { cats: ["bermuda"], colors: ["bege", "verde-militar"] }, shoes: { cats: ["tênis"], colors: ["preto"] }, acc: { cats: ["boné"], colors: ["preto"] } },
+    desc: "Bege e preto criam contraste sem exagero. O boné fecha o conjunto." },
+  { id: "i3", titulo: "Camadas de inverno", emoji: "🧥", grupo: "Looks de inverno", estilo: "casual",
+    ocasiao: "passeio", clima: "frio",
+    receita: { outer: { cats: ["jaqueta", "casaco"] }, top: { cats: ["moletom", "suéter"] }, bottom: { cats: ["jeans", "calça"] }, shoes: { cats: ["tênis", "bota"] } },
+    desc: "Três camadas: peça de baixo, peça quente e casaco por cima." },
+  { id: "i4", titulo: "Dia quente e leve", emoji: "☀️", grupo: "Looks de verão", estilo: "casual",
+    ocasiao: "praia", clima: "quente",
+    receita: { top: { cats: ["camiseta", "regata"], colors: ["branco", "azul-claro"] }, bottom: { cats: ["short", "bermuda"] }, shoes: { cats: ["chinelo", "sandália"] } },
+    desc: "Peças leves e cores claras para os dias de calor." },
+  { id: "i5", titulo: "Arrumado sem terno", emoji: "✨", grupo: "Looks arrumados", estilo: "arrumado",
+    ocasiao: "restaurante", clima: "meia-estação",
+    receita: { top: { cats: ["camisa", "polo"] }, bottom: { cats: ["calça", "jeans"], colors: ["preto", "bege", "jeans"] }, shoes: { cats: ["sapato", "tênis"] } },
+    desc: "Camisa com calça resolve aniversário, restaurante e evento de família." },
+  { id: "i6", titulo: "Uma cor só", emoji: "⬛", grupo: "Looks básicos", estilo: "minimalista",
+    ocasiao: "shopping", clima: "meia-estação",
+    receita: { top: { colors: ["preto", "cinza"] }, bottom: { colors: ["preto", "cinza"] }, shoes: { colors: ["preto", "branco"] } },
+    desc: "Peças da mesma família de cor deixam o visual alinhado e fácil de montar." },
+  { id: "i7", titulo: "Um ponto de cor", emoji: "🎨", grupo: "Looks coloridos", estilo: "colorido",
+    ocasiao: "aniversário", clima: "quente",
+    receita: { top: { colors: ["vermelho", "amarelo", "verde", "azul", "roxo", "laranja", "rosa"] }, bottom: { colors: ["preto", "branco", "bege", "jeans"] }, shoes: { colors: ["branco", "preto"] } },
+    desc: "Uma peça colorida e o resto neutro: a cor vira o destaque do look." },
+  { id: "i8", titulo: "Escola prática", emoji: "🏫", grupo: "Looks básicos", estilo: "casual",
+    ocasiao: "escola", clima: "meia-estação",
+    receita: { top: { cats: ["camiseta", "polo"] }, bottom: { cats: ["bermuda", "calça", "jeans"] }, shoes: { cats: ["tênis"] }, acc: { cats: ["mochila"] } },
+    desc: "Confortável para o dia todo e fácil de repetir com peças diferentes." },
+  { id: "i9", titulo: "Esportivo de verdade", emoji: "🏃", grupo: "Esportivo", estilo: "esportivo",
+    ocasiao: "esporte", clima: "quente",
+    receita: { top: { cats: ["regata", "camiseta"] }, bottom: { cats: ["short", "bermuda"] }, shoes: { cats: ["tênis"] } },
+    desc: "Peças leves que deixam se mexer à vontade." },
+];
+</script>
+
+<script>
+"use strict";
+/* ===================== utilidades ===================== */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const BRL = (n) => "R$ " + Number(n || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const BRL0 = (n) => "R$ " + Math.round(Number(n) || 0).toLocaleString("pt-BR");
+const MES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const MES3 = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const DOW = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const pad2 = (n) => String(n).padStart(2, "0");
+const iso = (d) => d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+const hoje = () => iso(new Date());
+const fromISO = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const diasEntre = (a, b) => Math.round((fromISO(b) - fromISO(a)) / 86400000);
+const plural = (n, s, p) => n + " " + (n === 1 ? s : (p || s + "s"));
+function dataCurta(s) { const d = fromISO(s); return d.getDate() + " " + MES3[d.getMonth()]; }
+function dataLonga(s) { const d = fromISO(s); return d.getDate() + " de " + MES[d.getMonth()] + " de " + d.getFullYear(); }
+function haQuanto(s) {
+  if (!s) return "nunca usada";
+  const d = diasEntre(s, hoje());
+  if (d <= 0) return "hoje";
+  if (d === 1) return "ontem";
+  if (d < 30) return "há " + d + " dias";
+  if (d < 60) return "há 1 mês";
+  return "há " + Math.round(d / 30) + " meses";
+}
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), 2400);
+}
+function rngFrom(seed) { let s = seed; return () => { s = (s * 1103515245 + 12345) % 2147483648; return s / 2147483648; }; }
+const pick = (arr, r) => arr[Math.floor((r ? r() : Math.random()) * arr.length) % arr.length];
+function shuffle(arr, r) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor((r ? r() : Math.random()) * (i + 1));[a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ===================== cores ===================== */
+function hex2rgb(h) { const n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function rgb2hsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+  let h = 0, s = 0;
+  if (mx !== mn) {
+    const d = mx - mn;
+    s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60;
+  }
+  return [h, s * 100, l * 100];
+}
+const COLOR_HSL = {};
+COLOR_KEYS.forEach((k) => { COLOR_HSL[k] = rgb2hsl(...hex2rgb(COLORS[k].hex)); });
+const isNeutro = (k) => COLORS[k] && COLORS[k].kind === "neutro";
+function hueDist(a, b) { const d = Math.abs(COLOR_HSL[a][0] - COLOR_HSL[b][0]) % 360; return d > 180 ? 360 - d : d; }
+
+/* Harmonia entre um conjunto de cores: 0..100 + explicação.
+   Regras: neutros combinam com tudo; cores próximas (análogas) ou opostas
+   (contraste) funcionam bem; três cores fortes juntas ficam mais difíceis. */
+function harmoniaCores(keys) {
+  const cores = keys.filter((k) => COLORS[k]);
+  if (cores.length < 2) return { nota: 80, txt: "Poucas peças para avaliar a combinação." };
+  const fortes = [...new Set(cores.filter((k) => !isNeutro(k)))];
+  const neutros = [...new Set(cores.filter(isNeutro))];
+  let nota = 70, txt = "";
+  if (fortes.length === 0) {
+    nota = 92;
+    txt = "Só tons neutros (" + neutros.map((k) => COLORS[k].label.toLowerCase()).join(", ") + "). É a combinação mais fácil de acertar.";
+    const claros = neutros.filter((k) => COLOR_HSL[k][2] > 60).length;
+    const escuros = neutros.filter((k) => COLOR_HSL[k][2] < 35).length;
+    if (claros && escuros) { nota = 96; txt += " O contraste entre claro e escuro dá definição ao look."; }
+  } else if (fortes.length === 1) {
+    nota = neutros.length ? 94 : 86;
+    txt = COLORS[fortes[0]].label + " como ponto de cor" + (neutros.length ? " e o resto em tons neutros" : "") + ". A cor vira o destaque sem competir com o resto.";
+  } else if (fortes.length === 2) {
+    const d = hueDist(fortes[0], fortes[1]);
+    const a = COLORS[fortes[0]].label.toLowerCase(), b = COLORS[fortes[1]].label.toLowerCase();
+    if (d <= 45) { nota = 88; txt = a[0].toUpperCase() + a.slice(1) + " e " + b + " são cores vizinhas — o conjunto fica harmônico e calmo."; }
+    else if (d >= 140) { nota = 84; txt = a[0].toUpperCase() + a.slice(1) + " e " + b + " ficam em lados opostos: é um contraste forte, funciona quando é proposital."; }
+    else { nota = 68; txt = a[0].toUpperCase() + a.slice(1) + " com " + b + " é uma mistura mais difícil. Trocar uma delas por um tom neutro deixa o look mais fácil."; }
+    if (neutros.length) { nota = Math.min(96, nota + 5); txt += " Os tons neutros ajudam a equilibrar."; }
+  } else {
+    nota = 52;
+    txt = "São " + fortes.length + " cores fortes ao mesmo tempo. Deixar uma delas e trocar as outras por neutros costuma equilibrar melhor.";
+  }
+  const repetida = cores.length - new Set(cores).size;
+  if (repetida > 0 && fortes.length <= 2) { nota = Math.min(98, nota + 4); txt += " A cor que se repete em duas peças amarra o conjunto."; }
+  return { nota: Math.round(nota), txt };
+}
+
+/* ===================== estado ===================== */
+const KEY = "looklab.v1";                       // formato antigo, sem login (migrado no 1º cadastro)
+const KEY_CONTAS = "looklab.contas";
+const KEY_DADOS = (id) => "looklab.dados." + id;
+let DB = null;
+
+function defaultClimas(cat) {
+  const c = CATS[cat]; const w = c ? c.warmth : 1; const out = [];
+  if (w <= 0) out.push("quente");
+  else if (w === 1) out.push("quente", "meia-estação");
+  else if (w === 2) out.push("meia-estação", "frio");
+  else out.push("frio");
+  if (c && c.rain) out.push("chuva");
+  if (w >= 2 && !out.includes("chuva") && c && c.slot === "shoes") out.push("chuva");
+  return out;
+}
+function defaultOcasioes(cat, estilo) {
+  const c = CATS[cat] || {};
+  let d = c.dressy || 0;
+  if (estilo === "arrumado" || estilo === "clássico") d = Math.max(d, 2);
+  if (d >= 3) return ["festa", "igreja", "restaurante", "família", "aniversário"];
+  if (d === 2) return ["festa", "aniversário", "restaurante", "família", "igreja", "shopping"];
+  if (cat === "chinelo") return ["praia", "passeio", "viagem"];
+  const base = ["escola", "shopping", "passeio", "viagem"];
+  if ((c.warmth || 0) === 0) base.push("praia");
+  if (estilo === "esportivo") base.push("esporte");
+  return base;
+}
+function novoItem(o) {
+  const cat = o.cat || "camiseta";
+  return Object.assign({
+    id: uid(), nome: "", cat, marca: "", cor: "preto", cor2: "", estampa: "liso",
+    material: "algodão", estilo: "casual", tamanho: "", climas: defaultClimas(cat),
+    ocasioes: defaultOcasioes(cat, o.estilo || "casual"), compra: "", preco: 0,
+    foto: "", status: "ativa", destino: "", usos: [], criado: hoje(),
+  }, o);
+}
+
+/* --------- dados de exemplo (guarda-roupa inicial) --------- */
+function seedItens(spec, seedNum) {
+  const r = rngFrom(seedNum);
+  return spec.map((s, i) => {
+    const [nome, cat, cor, estilo, marca, preco, extra] = s;
+    const it = novoItem(Object.assign({ nome, cat, cor, estilo, marca, preco }, extra || {}));
+    // as duas primeiras peças são compras deste mês (o painel dos responsáveis mostra o mês corrente)
+    const mesesAtras = i < 2 ? 0 : Math.floor(r() * 14) + 1;
+    const dc = new Date(); dc.setDate(1); dc.setMonth(dc.getMonth() - mesesAtras);
+    dc.setDate(mesesAtras === 0 ? Math.floor(r() * new Date().getDate()) + 1 : Math.floor(r() * 27) + 1);
+    it.compra = iso(dc);
+    // histórico de uso: peças coringa aparecem mais
+    const nUsos = Math.floor(r() * (extra && extra.raro ? 2 : 14));
+    const usos = [];
+    for (let u = 0; u < nUsos; u++) {
+      const d = new Date(); d.setDate(d.getDate() - Math.floor(r() * (extra && extra.raro ? 260 : 95)) - 1);
+      usos.push(iso(d));
+    }
+    it.usos = [...new Set(usos)].sort();
+    if (extra && extra.raro) it.status = "pouco-usada";
+    return it;
+  });
+}
+const GUARDA_LUCAS = [
+  ["Camiseta branca básica", "camiseta", "branco", "casual", "Hering", 49.9],
+  ["Camiseta preta oversized", "camiseta", "preto", "streetwear", "Youcom", 69.9],
+  ["Camiseta cinza mescla", "camiseta", "cinza", "casual", "Hering", 45],
+  ["Camiseta azul do time", "camiseta", "azul", "esportivo", "Nike", 129.9, { estampa: "logo" }],
+  ["Camiseta listrada azul e branca", "camiseta", "branco", "casual", "Zara Kids", 79.9, { estampa: "listrado", cor2: "azul" }],
+  ["Camiseta verde militar", "camiseta", "verde-militar", "streetwear", "C&A", 59.9],
+  ["Camiseta amarela estampada", "camiseta", "amarelo", "colorido", "Riachuelo", 55, { estampa: "estampado", raro: true }],
+  ["Polo azul marinho", "polo", "azul", "arrumado", "Lacoste", 199],
+  ["Camisa xadrez vermelha", "camisa", "vermelho", "casual", "C&A", 89.9, { estampa: "xadrez" }],
+  ["Camisa branca social", "camisa", "branco", "arrumado", "Zara Kids", 119, { raro: true }],
+  ["Regata preta", "regata", "preto", "esportivo", "Adidas", 59],
+  ["Moletom cinza com capuz", "moletom", "cinza", "streetwear", "Nike", 249],
+  ["Moletom preto", "moletom", "preto", "streetwear", "Adidas", 229],
+  ["Suéter bege de tricô", "suéter", "bege", "clássico", "Zara Kids", 159, { material: "tricô", raro: true }],
+  ["Bermuda cargo bege", "bermuda", "bege", "streetwear", "C&A", 99.9],
+  ["Bermuda jeans", "bermuda", "jeans", "casual", "Levi's", 139, { material: "jeans" }],
+  ["Bermuda preta de moletom", "bermuda", "preto", "esportivo", "Adidas", 89.9, { material: "moletom" }],
+  ["Short azul de praia", "short", "azul-claro", "casual", "Kenvelo", 69],
+  ["Calça jeans escura", "jeans", "jeans", "casual", "Levi's", 189, { material: "jeans" }],
+  ["Calça jeans clara", "jeans", "jeans", "streetwear", "C&A", 149, { material: "jeans" }],
+  ["Calça preta de sarja", "calça", "preto", "arrumado", "Zara Kids", 159],
+  ["Calça cargo verde militar", "calça", "verde-militar", "streetwear", "Youcom", 179],
+  ["Jaqueta jeans", "jaqueta", "jeans", "casual", "Levi's", 259, { material: "jeans" }],
+  ["Corta-vento preto", "corta-vento", "preto", "esportivo", "Nike", 299],
+  ["Casaco puffer verde", "casaco", "verde-militar", "streetwear", "C&A", 289, { raro: true }],
+  ["Colete jeans", "colete", "jeans", "streetwear", "Riachuelo", 129, { raro: true }],
+  ["Tênis branco", "tênis", "branco", "casual", "Adidas", 399],
+  ["Tênis preto", "tênis", "preto", "streetwear", "Nike", 499],
+  ["Tênis de corrida azul", "tênis", "azul", "esportivo", "Olympikus", 279],
+  ["Chinelo preto", "chinelo", "preto", "casual", "Havaianas", 39.9],
+  ["Sapato marrom", "sapato", "marrom", "arrumado", "Ferracini", 219, { raro: true }],
+  ["Bota bege", "bota", "bege", "casual", "Timberland", 459, { raro: true }],
+  ["Boné preto", "boné", "preto", "streetwear", "New Era", 149],
+  ["Boné bege", "boné", "bege", "streetwear", "Nike", 129],
+  ["Mochila preta", "mochila", "preto", "casual", "Jansport", 249],
+  ["Relógio digital preto", "relógio", "preto", "esportivo", "Casio", 199],
+  ["Óculos de sol", "óculos", "preto", "streetwear", "Chilli Beans", 179, { raro: true }],
+  ["Meia branca esportiva", "meia", "branco", "esportivo", "Nike", 39.9],
+  ["Touca cinza", "touca", "cinza", "streetwear", "C&A", 49, { raro: true }],
+];
+const GUARDA_MARINA = [
+  ["Camiseta branca", "camiseta", "branco", "minimalista", "Hering", 45],
+  ["Camiseta rosa", "camiseta", "rosa", "colorido", "C&A", 49],
+  ["Blusa lilás de malha", "blusa", "roxo", "casual", "Youcom", 79],
+  ["Blusa branca de manga", "blusa", "branco", "arrumado", "Zara Kids", 99],
+  ["Moletom rosa com capuz", "moletom", "rosa", "streetwear", "Adidas", 219],
+  ["Vestido florido", "vestido", "verde", "colorido", "Zara Kids", 179, { estampa: "florido" }],
+  ["Vestido preto simples", "vestido", "preto", "arrumado", "C&A", 149, { raro: true }],
+  ["Calça jeans clara", "jeans", "jeans", "casual", "Levi's", 179, { material: "jeans" }],
+  ["Legging preta", "legging", "preto", "esportivo", "Nike", 129],
+  ["Saia jeans", "saia", "jeans", "casual", "Riachuelo", 99, { material: "jeans" }],
+  ["Short branco", "short", "branco", "casual", "Youcom", 79],
+  ["Jaqueta jeans", "jaqueta", "jeans", "casual", "C&A", 199, { material: "jeans" }],
+  ["Casaco bege", "casaco", "bege", "clássico", "Zara Kids", 239, { raro: true }],
+  ["Tênis branco", "tênis", "branco", "casual", "Adidas", 349],
+  ["Tênis rosa", "tênis", "rosa", "esportivo", "Olympikus", 249],
+  ["Sandália bege", "sandália", "bege", "arrumado", "Melissa", 189, { raro: true }],
+  ["Mochila lilás", "mochila", "roxo", "casual", "Kipling", 279],
+  ["Colar prateado", "colar", "cinza", "arrumado", "Vivara", 89, { raro: true }],
+];
+const GUARDA_PEDRO = [
+  ["Camiseta azul do dinossauro", "camiseta", "azul", "colorido", "Kyly", 39.9, { estampa: "estampado" }],
+  ["Camiseta branca", "camiseta", "branco", "casual", "Hering", 35],
+  ["Camiseta vermelha", "camiseta", "vermelho", "colorido", "C&A", 35],
+  ["Camiseta cinza", "camiseta", "cinza", "casual", "Kyly", 32],
+  ["Moletom azul", "moletom", "azul", "casual", "C&A", 119],
+  ["Bermuda jeans", "bermuda", "jeans", "casual", "Kyly", 69, { material: "jeans" }],
+  ["Bermuda cinza de moletom", "bermuda", "cinza", "esportivo", "Nike", 79, { material: "moletom" }],
+  ["Short amarelo", "short", "amarelo", "colorido", "C&A", 45, { raro: true }],
+  ["Calça jeans", "jeans", "jeans", "casual", "Kyly", 99, { material: "jeans" }],
+  ["Jaqueta corta-vento azul", "corta-vento", "azul", "esportivo", "Adidas", 179],
+  ["Tênis branco com velcro", "tênis", "branco", "casual", "Bibi", 189],
+  ["Tênis azul", "tênis", "azul", "esportivo", "Olympikus", 159],
+  ["Chinelo azul", "chinelo", "azul", "casual", "Havaianas", 34.9],
+  ["Boné vermelho", "boné", "vermelho", "esportivo", "New Era", 89, { raro: true }],
+  ["Mochila do foguete", "mochila", "azul", "colorido", "Sestini", 149, { estampa: "estampado" }],
+];
+
+function seedDB() {
+  const perfis = [
+    { id: "p1", nome: "Lucas", idade: 10, avatar: "🧒", estilos: ["streetwear", "casual", "esportivo"], itens: seedItens(GUARDA_LUCAS, 7) },
+    { id: "p2", nome: "Marina", idade: 12, avatar: "👧", estilos: ["casual", "minimalista", "colorido"], itens: seedItens(GUARDA_MARINA, 21) },
+    { id: "p3", nome: "Pedro", idade: 8, avatar: "👦", estilos: ["colorido", "esportivo"], itens: seedItens(GUARDA_PEDRO, 33) },
+  ].map((p) => Object.assign({ looks: [], plano: {}, desejos: [], viagens: [], criado: hoje() }, p));
+
+  // alguns desejos de exemplo
+  perfis[0].desejos = [
+    { id: uid(), nome: "Jaqueta bomber preta", cat: "jaqueta", cor: "preto", preco: 299, nota: "vi na loja do shopping" },
+    { id: uid(), nome: "Tênis branco cano alto", cat: "tênis", cor: "branco", preco: 449, nota: "" },
+    { id: uid(), nome: "Bermuda cargo preta", cat: "bermuda", cor: "preto", preco: 119, nota: "" },
+  ];
+  return {
+    v: 1, perfis, ativo: "p1", modo: "kid",
+    resp: { pin: "", perms: { cadastrar: true, precos: false, desejos: true } },
+    ui: { theme: "auto" },
+  };
+}
+/* guarda-roupa vazio, com um único perfil (conta nova sem dados de exemplo) */
+function dbVazio(nome) {
+  return {
+    v: 1, ativo: "p1", modo: "kid",
+    perfis: [{ id: "p1", nome: nome || "Eu", idade: 0, avatar: "🙂", estilos: [], itens: [], looks: [], plano: {}, desejos: [], viagens: [], criado: hoje() }],
+    resp: { pin: "", perms: { cadastrar: true, precos: false, desejos: true } },
+    ui: { theme: "auto" },
+  };
+}
+/* Os dados ficam separados por conta: looklab.dados.<id da conta>.
+   KEY ("looklab.v1") é a versão anterior, sem login — ela é migrada para a
+   primeira conta criada no aparelho. */
+function carregaDados(contaId) {
+  try {
+    const raw = localStorage.getItem(KEY_DADOS(contaId));
+    if (raw) { DB = JSON.parse(raw); if (DB && DB.perfis && DB.perfis.length) return true; }
+  } catch (e) { /* dados corrompidos: recomeça */ }
+  return false;
+}
+let saveT = null;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    if (!DB || !CONTAS.sessao) return;
+    try { localStorage.setItem(KEY_DADOS(CONTAS.sessao), JSON.stringify(DB)); }
+    catch (e) { toast("Armazenamento cheio. Exporte um backup e remova fotos antigas."); }
+  }, 60);
+}
+const P = () => DB.perfis.find((p) => p.id === DB.ativo) || DB.perfis[0];
+const itens = () => P().itens.filter((i) => i.status !== "arquivada");
+const todosItens = () => P().itens;
+const item = (id) => P().itens.find((i) => i.id === id);
+const looks = () => P().looks;
+const look = (id) => P().looks.find((l) => l.id === id);
+const ehResp = () => DB.modo === "guardian";
+const podeVerPrecos = () => ehResp() || DB.resp.perms.precos;
+const podeCadastrar = () => ehResp() || DB.resp.perms.cadastrar;
+const podeDesejos = () => ehResp() || DB.resp.perms.desejos;
+const ultimoUso = (it) => (it.usos && it.usos.length ? it.usos[it.usos.length - 1] : "");
+function registraUso(ids, data) {
+  const d = data || hoje();
+  ids.forEach((id) => {
+    const it = item(id); if (!it) return;
+    it.usos = it.usos || []; if (!it.usos.includes(d)) { it.usos.push(d); it.usos.sort(); }
+    if (it.status === "pouco-usada") it.status = "ativa";
+  });
+  save();
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Motor de looks — combina as peças do próprio guarda-roupa.
+   Avalia cor, ocasião, clima, estilo e quanto tempo faz que a peça
+   não é usada. Nunca avalia o corpo de quem veste.
+   ===================================================================== */
+const catOf = (it) => CATS[it.cat] || CATS.camiseta;
+const slotOf = (it) => catOf(it).slot;
+const slotVisual = (it) => (slotOf(it) === "full" ? "top" : slotOf(it));
+const emojiOf = (it) => catOf(it).emoji;
+const corHex = (it) => (COLORS[it.cor] ? COLORS[it.cor].hex : "#888");
+const corLabel = (k) => (COLORS[k] ? COLORS[k].label : k || "—");
+
+function coresDoLook(its) {
+  const out = [];
+  its.forEach((it) => { if (it.cor) out.push(it.cor); if (it.cor2) out.push(it.cor2); });
+  return out;
+}
+function dressyDoItem(it) { return catOf(it).dressy || (it.estilo === "arrumado" || it.estilo === "clássico" ? 2 : 0); }
+
+function pontuaItem(it, ctx) {
+  let s = 50;
+  if (ctx.ocasiao) s += (it.ocasioes || []).includes(ctx.ocasiao) ? 22 : -24;
+  if (ctx.clima) s += (it.climas || []).includes(ctx.clima) ? 20 : -22;
+  if (ctx.estilo) s += it.estilo === ctx.estilo ? 20 : -6;
+  const pref = (P().estilos || []);
+  if (pref.includes(it.estilo)) s += 7;
+  const u = ultimoUso(it);
+  const d = u ? diasEntre(u, hoje()) : 999;
+  if (d <= 1) s -= 18; else if (d <= 4) s -= 8; else if (d >= 21) s += 10; else if (d >= 10) s += 5;
+  if (it.status === "pouco-usada") s += 9;
+  if (ctx.obrigatorios && ctx.obrigatorios.includes(it.id)) s += 500;
+  if (ctx.evitar && ctx.evitar.has(it.id)) s -= 40;
+  if (ctx.cores && ctx.cores.length && (ctx.cores.includes(it.cor) || ctx.cores.includes(it.cor2))) s += 22;
+  if (ctx.cats && ctx.cats.length && ctx.cats.includes(it.cat)) s += 26;
+  if (it.cat === "meia") s -= 25;                       // meia raramente define o look
+  return s;
+}
+
+function precisaCasaco(clima) { return clima === "frio"; }
+function proibeCasaco(clima) { return clima === "quente"; }
+
+/* Avaliação de um look pronto (0..100 por critério) */
+function avaliaLook(its, ctx) {
+  ctx = ctx || {};
+  const cores = coresDoLook(its);
+  const h = harmoniaCores(cores);
+
+  // harmonia entre peças: coerência de estilo + coerência de formalidade
+  const estilos = its.map((i) => i.estilo);
+  const uniq = [...new Set(estilos)];
+  let hp = uniq.length === 1 ? 96 : uniq.length === 2 ? 86 : uniq.length === 3 ? 72 : 60;
+  const dres = its.map(dressyDoItem);
+  const spread = Math.max(...dres) - Math.min(...dres);
+  if (spread >= 3) hp -= 18; else if (spread === 2) hp -= 7;
+  const temTop = its.some((i) => slotVisual(i) === "top"), temBottom = its.some((i) => slotOf(i) === "bottom" || slotOf(i) === "full");
+  const temShoes = its.some((i) => slotOf(i) === "shoes");
+  if (!temTop || !temBottom || !temShoes) hp -= 22;
+  if (ctx.estilo) {
+    const casam = its.filter((i) => i.estilo === ctx.estilo).length / its.length;
+    hp += Math.round((casam - 0.5) * 40);            // pedido de estilo pesa na harmonia
+  }
+  hp = Math.max(20, Math.min(99, hp));
+  const foraEstilo = ctx.estilo ? its.filter((i) => i.estilo !== ctx.estilo) : [];
+  let hpTxt = uniq.length === 1 ? "Todas as peças seguem o mesmo estilo (" + (STYLES[uniq[0]] ? STYLES[uniq[0]].label.toLowerCase() : uniq[0]) + ")."
+    : uniq.length === 2 ? "Duas linguagens de estilo convivendo bem no mesmo look."
+      : "Muitos estilos diferentes ao mesmo tempo — o look fica menos definido.";
+  if (spread >= 3) hpTxt += " Há peça bem esportiva junto de peça bem arrumada; isso deixa o conjunto desencontrado.";
+  if (foraEstilo.length) hpTxt += " Fora do estilo " + STYLES[ctx.estilo].label.toLowerCase() + ": " + foraEstilo.map((i) => i.nome).join(", ") + ".";
+
+  // ocasião
+  let oc = 100, ocTxt = "Escolha uma ocasião para avaliar.";
+  if (ctx.ocasiao) {
+    const ok = its.filter((i) => (i.ocasioes || []).includes(ctx.ocasiao));
+    oc = Math.round((ok.length / its.length) * 100);
+    const fora = its.filter((i) => !(i.ocasioes || []).includes(ctx.ocasiao));
+    ocTxt = oc >= 90 ? "Todas as peças estão marcadas para " + (OCCASIONS[ctx.ocasiao] || {}).label.toLowerCase() + "."
+      : oc >= 60 ? "Quase tudo serve. Fora do combinado: " + fora.map((i) => i.nome).join(", ") + "."
+        : "Várias peças não estão marcadas para essa ocasião: " + fora.map((i) => i.nome).join(", ") + ".";
+  }
+
+  // clima
+  let cl = 100, clTxt = "Escolha um clima para avaliar.";
+  if (!ctx.clima) {
+    // sem clima escolhido, avalia se as peças combinam entre si para o mesmo tipo de dia
+    let melhor = "", n = 0;
+    CLIMA_KEYS.forEach((k) => { const q = its.filter((i) => (i.climas || []).includes(k)).length; if (q > n) { n = q; melhor = k; } });
+    cl = Math.round((n / its.length) * 100);
+    const fora = its.filter((i) => !(i.climas || []).includes(melhor));
+    clTxt = cl >= 85 ? "As peças servem para o mesmo tipo de dia (" + (CLIMAS[melhor] || {}).label.toLowerCase() + ")."
+      : "As peças são de climas diferentes: " + fora.map((i) => i.nome).join(", ") + " destoa" + (fora.length > 1 ? "m" : "") + " do resto. Escolha um clima acima para eu ajustar.";
+  }
+  if (ctx.clima === "chuva") {
+    const sh = its.find((i) => slotOf(i) === "shoes");
+    const aberto = sh && (sh.cat === "chinelo" || sh.cat === "sandália");
+    const outer = its.some((i) => slotOf(i) === "outer");
+    cl = Math.max(15, Math.min(100, 66 + (sh ? (aberto ? -38 : 22) : -10) + (outer ? 12 : -6)));
+    clTxt = aberto ? "Em dia de chuva, calçado fechado protege mais que chinelo ou sandália."
+      : !outer ? "O calçado ajuda, mas falta uma peça por cima para a chuva."
+        : "Calçado fechado e peça por cima: dá para encarar a chuva.";
+  } else if (ctx.clima) {
+    const ok = its.filter((i) => (i.climas || []).includes(ctx.clima));
+    cl = Math.round((ok.length / its.length) * 100);
+    const temOuter = its.some((i) => slotOf(i) === "outer");
+    if (precisaCasaco(ctx.clima) && !temOuter) { cl = Math.max(15, cl - 30); }
+    if (proibeCasaco(ctx.clima) && temOuter) { cl = Math.max(15, cl - 25); }
+    clTxt = cl >= 85 ? "As peças combinam com o clima " + ctx.clima + "."
+      : precisaCasaco(ctx.clima) && !temOuter ? "Está frio e falta uma peça de agasalho por cima."
+        : proibeCasaco(ctx.clima) && temOuter ? "Está quente para usar casaco."
+          : "Algumas peças não são as ideais para esse clima.";
+  }
+  const geral = Math.round((h.nota + hp + oc + cl) / 4);
+  return {
+    geral,
+    itens: [
+      { k: "🎨 Combinação de cores", v: h.nota, txt: h.txt },
+      { k: "👕 Harmonia das peças", v: hp, txt: hpTxt },
+      { k: "🎯 Adequado à ocasião", v: oc, txt: ocTxt },
+      { k: "🌤️ Adequado ao clima", v: cl, txt: clTxt },
+    ],
+  };
+}
+const nivelTxt = (v) => (v >= 88 ? "ótima" : v >= 72 ? "boa" : v >= 55 ? "razoável" : "difícil");
+
+/* Explicação curta do look, em linguagem simples */
+function explicaLook(its, ctx) {
+  const cores = [...new Set(coresDoLook(its))];
+  const h = harmoniaCores(cores);
+  const partes = [h.txt];
+  if (ctx && ctx.ocasiao) partes.push("Para " + OCCASIONS[ctx.ocasiao].label.toLowerCase() + ", as peças escolhidas são confortáveis e fáceis de usar o dia todo.");
+  if (ctx && ctx.clima === "frio") partes.push("O casaco garante o agasalho para o frio.");
+  if (ctx && ctx.clima === "quente") partes.push("São peças leves, boas para o calor.");
+  if (ctx && ctx.clima === "chuva") partes.push("O calçado fechado ajuda em dia de chuva.");
+  const esquecida = its.find((i) => { const u = ultimoUso(i); return !u || diasEntre(u, hoje()) > 30; });
+  if (esquecida) partes.push("Aproveita para usar " + primeiraMinuscula(esquecida.nome) + ", que estava parada faz tempo.");
+  return partes.join(" ");
+}
+const primeiraMinuscula = (s) => (s ? s[0].toLowerCase() + s.slice(1) : s);
+
+/* Gera N looks distintos a partir do guarda-roupa */
+function geraLooks(ctx, n) {
+  ctx = ctx || {}; n = n || 3;
+  const disp = itens().filter((i) => i.status !== "arquivada");
+  const porSlot = { outer: [], top: [], bottom: [], shoes: [], acc: [], full: [] };
+  disp.forEach((i) => { const s = slotOf(i); if (porSlot[s]) porSlot[s].push(i); });
+  const ordena = (arr) => arr.map((i) => ({ i, s: pontuaItem(i, ctx) + Math.random() * 8 })).sort((a, b) => b.s - a.s);
+  const topN = (arr, k) => ordena(arr).slice(0, k).map((x) => x.i);
+
+  const tops = topN(porSlot.top, 7), bottoms = topN(porSlot.bottom, 7);
+  const fulls = topN(porSlot.full, 3), shoes = topN(porSlot.shoes, 5);
+  const outers = topN(porSlot.outer, 4), accs = topN(porSlot.acc, 5);
+
+  const bases = [];
+  tops.forEach((t) => bottoms.forEach((b) => bases.push([t, b])));
+  fulls.forEach((f) => bases.push([f]));
+  if (!bases.length) return [];
+
+  const cands = [];
+  bases.forEach((base) => {
+    (shoes.length ? shoes : [null]).forEach((sh) => {
+      const combos = [[]];
+      if (!proibeCasaco(ctx.clima)) outers.slice(0, precisaCasaco(ctx.clima) ? 3 : 2).forEach((o) => combos.push([o]));
+      if (precisaCasaco(ctx.clima) && outers.length) combos.shift();
+      combos.forEach((extra) => {
+        const semAcc = base.concat(sh ? [sh] : [], extra);
+        const opcoesAcc = [null].concat(accs.slice(0, 3));
+        opcoesAcc.forEach((ac) => {
+          const its = ac ? semAcc.concat([ac]) : semAcc;
+          if (its.length < 2) return;
+          const av = avaliaLook(its, ctx);
+          const base2 = its.reduce((a, i) => a + pontuaItem(i, ctx), 0) / its.length;
+          cands.push({ its, av, score: av.geral * 1.5 + base2 * 0.7 + (ac ? 3 : 0) + Math.random() * 4 });
+        });
+      });
+    });
+  });
+  cands.sort((a, b) => b.score - a.score);
+
+  const out = [];
+  for (const c of cands) {
+    if (out.length >= n) break;
+    const ids = new Set(c.its.map((i) => i.id));
+    const repetido = out.some((o) => {
+      const oi = new Set(o.its.map((i) => i.id));
+      let comum = 0; ids.forEach((x) => { if (oi.has(x)) comum++; });
+      return comum >= Math.min(ids.size, oi.size) - 1;
+    });
+    if (!repetido) out.push(c);
+  }
+  return out;
+}
+
+/* “Combina melhor com” — melhores parceiras de uma peça */
+function combinaCom(it, k) {
+  const alvo = itens().filter((o) => o.id !== it.id && slotVisual(o) !== slotVisual(it));
+  const scored = alvo.map((o) => {
+    const h = harmoniaCores([it.cor, it.cor2, o.cor, o.cor2].filter(Boolean));
+    let s = h.nota;
+    if (o.estilo === it.estilo) s += 14;
+    const oc = (it.ocasioes || []).filter((x) => (o.ocasioes || []).includes(x)).length;
+    s += Math.min(12, oc * 3);
+    const cl = (it.climas || []).filter((x) => (o.climas || []).includes(x)).length;
+    s += Math.min(8, cl * 3);
+    if (slotOf(o) === "acc") s -= 6;
+    return { o, s };
+  }).sort((a, b) => b.s - a.s);
+  const vistos = new Set(); const out = [];
+  for (const x of scored) {
+    const sl = slotVisual(x.o);
+    if (out.filter((y) => slotVisual(y.o) === sl).length >= 2) continue;
+    if (vistos.has(x.o.id)) continue;
+    vistos.add(x.o.id); out.push(x);
+    if (out.length >= (k || 4)) break;
+  }
+  return out.map((x) => x.o);
+}
+
+/* Quantas peças do guarda-roupa combinam com uma peça hipotética (lista de desejos) */
+function combinaComHipotetica(d) {
+  const fake = { id: "_", cor: d.cor, cor2: "", cat: d.cat, estilo: d.estilo || "casual", ocasioes: defaultOcasioes(d.cat, d.estilo), climas: defaultClimas(d.cat) };
+  const alvo = itens().filter((o) => slotVisual(o) !== slotVisual(fake));
+  return alvo.filter((o) => harmoniaCores([fake.cor, o.cor, o.cor2].filter(Boolean)).nota >= 80).length;
+}
+function parecidasCom(d) {
+  return itens().filter((o) => o.cat === d.cat && o.cor === d.cor);
+}
+
+/* Lacunas do guarda-roupa */
+function analisaLacunas() {
+  const its = itens();
+  const porSlot = {};
+  SLOT_ORDER.concat(["full"]).forEach((s) => (porSlot[s] = 0));
+  its.forEach((i) => { porSlot[slotOf(i)] = (porSlot[slotOf(i)] || 0) + 1; });
+  const out = [];
+  const nTop = porSlot.top + porSlot.full, nBot = porSlot.bottom + porSlot.full;
+  if (nTop && nBot && nTop > nBot * 2.5) out.push({ tipo: "equilíbrio", txt: "Você tem " + plural(nTop, "peça de cima", "peças de cima") + " para " + plural(nBot, "peça de baixo", "peças de baixo") + ". Mais uma peça de baixo neutra multiplicaria as combinações." });
+  if (!porSlot.outer) out.push({ tipo: "falta", txt: "Não há nenhuma peça de agasalho cadastrada. Uma jaqueta neutra fecha os looks de frio." });
+  else if (porSlot.outer === 1) out.push({ tipo: "falta", txt: "Só há um agasalho no guarda-roupa. Um segundo em cor neutra daria mais variedade nos dias frios." });
+  if (porSlot.shoes < 2) out.push({ tipo: "falta", txt: "Com só " + plural(porSlot.shoes, "calçado") + ", quase todo look repete o mesmo pé. Um tênis neutro resolveria." });
+  const neutros = its.filter((i) => isNeutro(i.cor)).length;
+  if (its.length >= 8 && neutros / its.length < 0.35) out.push({ tipo: "cor", txt: "A maior parte das peças é colorida. Peças em tom neutro (preto, branco, bege, jeans) combinam com o que você já tem e criam muitos looks novos." });
+  const arrumadas = its.filter((i) => dressyDoItem(i) >= 2).length;
+  if (arrumadas === 0) out.push({ tipo: "ocasião", txt: "Não há peça mais arrumada cadastrada. Uma camisa ou um sapato resolveria festa, igreja e restaurante." });
+  if (!out.length) out.push({ tipo: "ok", txt: "O guarda-roupa está equilibrado: dá para montar looks para todas as ocasiões cadastradas sem comprar nada agora." });
+  return out;
+}
+
+/* Paleta de cores do guarda-roupa */
+function paleta() {
+  const its = itens(); const m = {};
+  its.forEach((i) => { if (i.cor) m[i.cor] = (m[i.cor] || 0) + 1; });
+  const total = Object.values(m).reduce((a, b) => a + b, 0) || 1;
+  return Object.keys(m).map((k) => ({ k, n: m[k], pct: Math.round((m[k] / total) * 100) })).sort((a, b) => b.n - a.n);
+}
+function esquecidas(dias) {
+  const lim = dias || 30;
+  return itens().filter((i) => { const u = ultimoUso(i); return !u || diasEntre(u, hoje()) >= lim; })
+    .sort((a, b) => { const ua = ultimoUso(a) || "0000-00-00", ub = ultimoUso(b) || "0000-00-00"; return ua < ub ? -1 : 1; });
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== componentes de render ===================== */
+function thumbHTML(it, cls) {
+  const foto = it.foto ? '<img src="' + it.foto + '" alt="" loading="lazy" />' : '<span>' + emojiOf(it) + '</span>';
+  const badge = it.status === "arquivada" ? '<span class="badge">arquivada</span>'
+    : it.status === "pouco-usada" ? '<span class="badge">pouco usada</span>' : "";
+  const fundo = it.foto ? "" : ' style="background:color-mix(in srgb,' + corHex(it) + ' 15%, var(--bg2))"';
+  return '<div class="thumb ' + (cls || "") + '"' + fundo + ">" + foto + badge +
+    '<span class="swatch" style="background:' + corHex(it) + '"></span></div>';
+}
+function pecaCard(it, opts) {
+  opts = opts || {};
+  const u = ultimoUso(it);
+  const sub = opts.sub != null ? opts.sub : (CATS[it.cat] ? CATS[it.cat].label : it.cat) + " · " + corLabel(it.cor);
+  return '<button class="piece ' + (opts.mini ? "mini " : "") + (opts.sel ? "sel" : "") + '" data-peca="' + it.id + '"' +
+    (opts.act ? ' data-act="' + opts.act + '"' : "") + '>' + thumbHTML(it) +
+    '<span class="info"><span class="nm">' + esc(it.nome || CATS[it.cat].label) + '</span>' +
+    '<span class="mt">' + esc(sub) + '</span>' +
+    (opts.uso ? '<span class="mt">Último uso: ' + haQuanto(u) + "</span>" : "") + "</span></button>";
+}
+function stripHTML(its) {
+  const ord = its.slice().sort((a, b) => SLOT_ORDER.indexOf(slotVisual(a)) - SLOT_ORDER.indexOf(slotVisual(b)));
+  return '<div class="strip">' + ord.map((i) =>
+    '<div class="sl" title="' + esc(i.nome) + '" style="background:' + (i.foto ? "transparent" : "color-mix(in srgb," + corHex(i) + " 14%, var(--bg2))") + '">' +
+    (i.foto ? '<img src="' + i.foto + '" alt="" loading="lazy" />' : emojiOf(i)) + "</div>").join("") + "</div>";
+}
+function scoresHTML(av) {
+  return '<div class="scores">' + av.itens.map((s) =>
+    '<div class="score"><div class="lb"><b>' + s.k + "</b><i>" + nivelTxt(s.v) + " · " + s.v + "</i></div>" +
+    '<div class="bar"><span style="width:' + s.v + "%;background:" + (s.v >= 72 ? "var(--acc)" : s.v >= 55 ? "var(--warn)" : "var(--bad)") + '"></span></div>' +
+    '<div class="hint" style="margin-top:5px">' + esc(s.txt) + "</div></div>").join("") + "</div>";
+}
+function chipsHTML(dict, sel, name, soft) {
+  const keys = Array.isArray(dict) ? dict : Object.keys(dict);
+  return keys.map((k) => {
+    const o = Array.isArray(dict) ? { label: k } : dict[k];
+    const on = Array.isArray(sel) ? sel.includes(k) : sel === k;
+    return '<button class="chip ' + (on ? "on " + (soft ? "soft" : "") : "") + '" data-chip="' + name + '" data-val="' + k + '">' +
+      (o.emoji ? o.emoji + " " : "") + esc(o.label || k) + "</button>";
+  }).join("");
+}
+function vazio(em, titulo, txt, btn) {
+  return '<div class="card pad empty"><div class="em">' + em + "</div><h4>" + esc(titulo) + "</h4><p>" + esc(txt) + "</p>" +
+    (btn ? '<div style="margin-top:14px">' + btn + "</div>" : "") + "</div>";
+}
+
+/* ===================== navegação ===================== */
+const TABS = [
+  { id: "inicio", label: "Início", emoji: "🏠" },
+  { id: "guarda", label: "Guarda-roupa", emoji: "👕" },
+  { id: "criar", label: "Criar Look", emoji: "✨" },
+  { id: "ia", label: "Estilista", emoji: "🤖" },
+  { id: "calendario", label: "Calendário", emoji: "📅" },
+  { id: "tendencias", label: "Tendências", emoji: "🔥" },
+  { id: "inspiracoes", label: "Inspirações", emoji: "💡" },
+  { id: "desejos", label: "Desejos", emoji: "❤️" },
+  { id: "viagens", label: "Viagens", emoji: "🧳" },
+  { id: "perfil", label: "Perfil", emoji: "👤" },
+];
+let ROTA = { tab: "inicio", arg: "" };
+function ir(tab, arg) {
+  ROTA = { tab, arg: arg || "" };
+  location.hash = "#" + tab + (arg ? "/" + arg : "");
+  render();
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+function lerHash() {
+  const h = (location.hash || "").replace(/^#/, "");
+  if (!h) return { tab: "inicio", arg: "" };
+  const [tab, arg] = h.split("/");
+  return { tab: TABS.some((t) => t.id === tab) || tab === "peca" || tab === "look" ? tab : "inicio", arg: arg || "" };
+}
+function renderTabs() {
+  $("#tabs").innerHTML = TABS.map((t) =>
+    '<button data-tab="' + t.id + '" class="' + (ROTA.tab === t.id ? "on" : "") + '">' + t.emoji + " " + t.label + "</button>").join("");
+}
+
+/* ===================== INÍCIO ===================== */
+function saudacao() {
+  const h = new Date().getHours();
+  return h < 5 ? "Boa madrugada" : h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
+function viewInicio() {
+  const p = P(), its = itens();
+  const cont = (fn) => its.filter(fn).length;
+  const nRoupas = cont((i) => ["top", "bottom", "full", "outer"].includes(slotOf(i)));
+  const nCalc = cont((i) => slotOf(i) === "shoes");
+  const nAcc = cont((i) => slotOf(i) === "acc");
+  const favs = looks().filter((l) => l.fav).length;
+  const plan = Object.keys(p.plano || {}).filter((d) => d >= hoje()).length;
+  const esq = esquecidas(30);
+
+  // look de hoje: o planejado, senão uma sugestão
+  const planoHoje = (p.plano || {})[hoje()];
+  let hojeLook = null, hojeCtx = { clima: "meia-estação" }, sugerido = false;
+  if (planoHoje && look(planoHoje.lookId)) {
+    const l = look(planoHoje.lookId);
+    hojeLook = { its: l.itens.map(item).filter(Boolean), av: null, nome: l.nome, id: l.id };
+    hojeCtx = { ocasiao: l.ocasiao, clima: l.clima, estilo: l.estilo };
+  } else {
+    const g = geraLooks({ clima: "meia-estação" }, 1)[0];
+    if (g) { hojeLook = { its: g.its, av: g.av, nome: "Sugestão de hoje" }; sugerido = true; }
+  }
+  const pal = paleta().slice(0, 7);
+  const desafios = calculaDesafios();
+
+  return '' +
+    '<section class="hero"><h2>' + saudacao() + ", " + esc(p.nome) + " 👋</h2>" +
+    "<p>" + (its.length ? "Seu guarda-roupa tem " + plural(its.length, "peça") + " prontas para combinar." : "Cadastre as primeiras peças para o LookLab começar a montar looks.") + "</p></section>" +
+
+    '<div class="grid g5">' +
+    stat("👕", nRoupas, "roupas cadastradas") + stat("👟", nCalc, "calçados") + stat("🧢", nAcc, "acessórios") +
+    stat("⭐", favs, "looks favoritos") + stat("📅", plan, "looks planejados") + "</div>" +
+
+    '<div class="split" style="margin-top:14px">' +
+    '<div class="card pad">' +
+    '<div class="sec" style="margin:0 0 12px"><h3>' + (sugerido ? "Look sugerido para hoje" : "Seu look de hoje") + "</h3>" +
+    "<p>" + dataLonga(hoje()) + "</p><div class='spacer' style='flex:1'></div>" +
+    (hojeLook ? '<button class="btn sm" data-act="novaSugestao">🔄 Outra ideia</button>' : "") + "</div>" +
+    (hojeLook
+      ? '<div class="look">' + stripHTML(hojeLook.its) + '<div class="bd"><h4>' + esc(hojeLook.nome) + "</h4>" +
+      '<div class="chips" style="margin:8px 0 0">' + hojeLook.its.map((i) => '<span class="tag">' + emojiOf(i) + " " + esc(i.nome) + "</span>").join("") + "</div>" +
+      '<p class="why">' + esc(explicaLook(hojeLook.its, hojeCtx)) + "</p>" +
+      '<div class="row" style="margin-top:12px">' +
+      '<button class="btn pri sm" data-act="usarHoje" data-ids="' + hojeLook.its.map((i) => i.id).join(",") + '">✅ Vou usar hoje</button>' +
+      (sugerido ? '<button class="btn sm" data-act="salvarSugestao" data-ids="' + hojeLook.its.map((i) => i.id).join(",") + '">⭐ Salvar look</button>' : "") +
+      '<button class="btn sm ghost" data-act="abrirCriar" data-ids="' + hojeLook.its.map((i) => i.id).join(",") + '">✏️ Editar no criador</button>' +
+      "</div></div></div>"
+      : '<div class="empty"><div class="em">👕</div><h4>Sem peças suficientes</h4><p>Cadastre pelo menos uma peça de cima, uma de baixo e um calçado.</p></div>') +
+    "</div>" +
+
+    '<div class="card pad">' +
+    '<div class="sec" style="margin:0 0 10px"><h3>Peças esquecidas</h3><p>sem uso há 30 dias ou mais</p></div>' +
+    (esq.length
+      ? '<div class="list">' + esq.slice(0, 5).map((i) =>
+        '<div class="li"><span class="em">' + (i.foto ? '<img src="' + i.foto + '" alt="">' : emojiOf(i)) + '</span>' +
+        '<span class="t"><b>' + esc(i.nome) + "</b><span>" + haQuanto(ultimoUso(i)) + "</span></span>" +
+        '<button class="btn sm" data-act="lookCom" data-id="' + i.id + '">✨ Usar</button></div>').join("") + "</div>"
+      : '<p class="hint">Nenhuma peça esquecida — todas entraram em algum look no último mês. 👏</p>') +
+    (pal.length ? '<div class="sec" style="margin:20px 0 8px"><h3>Paleta do guarda-roupa</h3></div>' +
+      '<div class="pal">' + pal.map((c) => '<span style="width:' + c.pct + "%;background:" + COLORS[c.k].hex + '"></span>').join("") + "</div>" +
+      '<div class="pal-legend">' + pal.slice(0, 5).map((c) => '<span><i style="background:' + COLORS[c.k].hex + '"></i>' + c.pct + "% " + COLORS[c.k].label.toLowerCase() + "</span>").join("") + "</div>" : "") +
+    "</div></div>" +
+
+    '<div class="sec"><h3>Desafios do guarda-roupa</h3><p>para usar mais o que já é seu</p></div>' +
+    '<div class="grid g2">' + desafios.map((d) =>
+      '<div class="card pad"><div class="row" style="align-items:flex-start;gap:12px">' +
+      '<div style="font-size:26px">' + d.emoji + "</div><div style='flex:1;min-width:0'>" +
+      "<b style='font-size:14px'>" + esc(d.titulo) + "</b>" +
+      '<p class="hint" style="margin:3px 0 8px">' + esc(d.desc) + "</p>" +
+      '<div class="bar"><span style="width:' + Math.round(d.pct) + '%"></span></div>' +
+      '<div class="hint" style="margin-top:5px">' + esc(d.status) + "</div></div></div></div>").join("") + "</div>";
+}
+function stat(em, v, k) {
+  return '<div class="stat"><div class="k">' + em + " " + esc(k) + '</div><div class="v">' + v + "</div></div>";
+}
+function calculaDesafios() {
+  const ls = looks(), its = itens();
+  const ultimos7 = ls.filter((l) => (l.usos || []).some((d) => diasEntre(d, hoje()) < 7));
+  const esq = esquecidas(30);
+  const usadasRecent = new Set(); its.forEach((i) => { const u = ultimoUso(i); if (u && diasEntre(u, hoje()) < 30) usadasRecent.add(i.id); });
+  const calcados = its.filter((i) => slotOf(i) === "shoes");
+  let maxMesmoCalcado = 0;
+  calcados.forEach((c) => { const n = ls.filter((l) => l.itens.includes(c.id)).length; if (n > maxMesmoCalcado) maxMesmoCalcado = n; });
+  const looks3cores = ls.filter((l) => new Set(coresDoLook(l.itens.map(item).filter(Boolean))).size <= 3).length;
+  return [
+    { emoji: "🗓️", titulo: "7 dias, 7 looks diferentes", desc: "Monte um look diferente para cada dia da semana.", pct: Math.min(100, (ultimos7.length / 7) * 100), status: ultimos7.length + " de 7 looks usados nesta semana" },
+    { emoji: "🕵️", titulo: "Use uma peça esquecida", desc: "Coloque no look uma peça parada há mais de 30 dias.", pct: esq.length ? Math.max(6, 100 - Math.min(100, esq.length * 12)) : 100, status: esq.length ? plural(esq.length, "peça") + " esperando a vez" : "Nenhuma peça esquecida — desafio concluído!" },
+    { emoji: "👟", titulo: "3 looks com o mesmo tênis", desc: "Mostre que um calçado só rende vários visuais.", pct: Math.min(100, (maxMesmoCalcado / 3) * 100), status: maxMesmoCalcado + " de 3 looks com o mesmo calçado" },
+    { emoji: "🎨", titulo: "Um look com só 3 cores", desc: "Menos cores, mais alinhado.", pct: Math.min(100, looks3cores * 50), status: plural(looks3cores, "look") + " com até 3 cores" },
+  ];
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== GUARDA-ROUPA ===================== */
+let FILTRO = { q: "", slot: "", cor: "", estilo: "", ocasiao: "", status: "ativas", ordem: "recente" };
+function filtraItens() {
+  let arr = todosItens();
+  arr = arr.filter((i) => (FILTRO.status === "todas" ? true : FILTRO.status === "arquivadas" ? i.status === "arquivada" : i.status !== "arquivada"));
+  if (FILTRO.slot) arr = arr.filter((i) => (FILTRO.slot === "full" ? slotOf(i) === "full" : slotVisual(i) === FILTRO.slot));
+  if (FILTRO.cor) arr = arr.filter((i) => i.cor === FILTRO.cor || i.cor2 === FILTRO.cor);
+  if (FILTRO.estilo) arr = arr.filter((i) => i.estilo === FILTRO.estilo);
+  if (FILTRO.ocasiao) arr = arr.filter((i) => (i.ocasioes || []).includes(FILTRO.ocasiao));
+  if (FILTRO.q) {
+    const q = FILTRO.q.toLowerCase();
+    arr = arr.filter((i) => (i.nome + " " + i.marca + " " + i.cat + " " + corLabel(i.cor)).toLowerCase().includes(q));
+  }
+  const ord = {
+    recente: (a, b) => (b.criado || "").localeCompare(a.criado || ""),
+    uso: (a, b) => (ultimoUso(b) || "").localeCompare(ultimoUso(a) || ""),
+    esquecidas: (a, b) => (ultimoUso(a) || "0").localeCompare(ultimoUso(b) || "0"),
+    nome: (a, b) => a.nome.localeCompare(b.nome, "pt-BR"),
+  };
+  return arr.sort(ord[FILTRO.ordem] || ord.recente);
+}
+function viewGuarda() {
+  const arr = filtraItens();
+  const total = itens().length;
+  const slotChips = { "": { label: "Tudo", emoji: "🗂" }, top: { label: "Cima", emoji: "👕" }, bottom: { label: "Baixo", emoji: "👖" }, full: { label: "Peça única", emoji: "👗" }, outer: { label: "Casacos", emoji: "🧥" }, shoes: { label: "Calçados", emoji: "👟" }, acc: { label: "Acessórios", emoji: "🧢" } };
+  return '' +
+    '<section class="hero"><h2>Guarda-roupa</h2><p>' + plural(total, "peça") + " ativa" + (total === 1 ? "" : "s") +
+    (todosItens().length - total ? " · " + (todosItens().length - total) + " arquivada(s)" : "") + "</p></section>" +
+
+    '<div class="row" style="margin-bottom:12px">' +
+    (podeCadastrar() ? '<button class="btn pri" data-act="novaPeca">＋ Adicionar peça</button>' +
+      '<button class="btn" data-act="novaPecaFoto">📸 Adicionar por foto</button>' : '<span class="hint">O cadastro de peças está com o responsável.</span>') +
+    '<div class="spacer" style="flex:1"></div>' +
+    '<input class="inp" id="busca" placeholder="Buscar peça…" value="' + esc(FILTRO.q) + '" style="max-width:220px" />' +
+    "</div>" +
+
+    '<div class="chips" style="margin-bottom:8px">' + chipsHTML(slotChips, FILTRO.slot, "f-slot") + "</div>" +
+    '<div class="row" style="gap:8px;margin-bottom:14px">' +
+    '<select class="inp" data-sel="cor" style="max-width:150px"><option value="">Todas as cores</option>' +
+    COLOR_KEYS.map((k) => '<option value="' + k + '"' + (FILTRO.cor === k ? " selected" : "") + ">" + COLORS[k].label + "</option>").join("") + "</select>" +
+    '<select class="inp" data-sel="estilo" style="max-width:150px"><option value="">Todos os estilos</option>' +
+    STYLE_KEYS.map((k) => '<option value="' + k + '"' + (FILTRO.estilo === k ? " selected" : "") + ">" + STYLES[k].label + "</option>").join("") + "</select>" +
+    '<select class="inp" data-sel="ocasiao" style="max-width:160px"><option value="">Todas as ocasiões</option>' +
+    OCC_KEYS.map((k) => '<option value="' + k + '"' + (FILTRO.ocasiao === k ? " selected" : "") + ">" + OCCASIONS[k].label + "</option>").join("") + "</select>" +
+    '<select class="inp" data-sel="ordem" style="max-width:170px">' +
+    [["recente", "Cadastradas recentemente"], ["uso", "Usadas recentemente"], ["esquecidas", "Esquecidas primeiro"], ["nome", "Nome (A–Z)"]]
+      .map((o) => '<option value="' + o[0] + '"' + (FILTRO.ordem === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") + "</select>" +
+    '<select class="inp" data-sel="status" style="max-width:140px">' +
+    [["ativas", "No armário"], ["arquivadas", "Arquivadas"], ["todas", "Todas"]]
+      .map((o) => '<option value="' + o[0] + '"' + (FILTRO.status === o[0] ? " selected" : "") + ">" + o[1] + "</option>").join("") + "</select>" +
+    "</div>" +
+
+    (arr.length
+      ? '<div class="grid g5">' + arr.map((i) => pecaCard(i, { uso: true })).join("") + "</div>"
+      : vazio("🔍", "Nada por aqui", "Nenhuma peça com esses filtros. Tente limpar a busca ou trocar a categoria.",
+        '<button class="btn" data-act="limparFiltro">Limpar filtros</button>'));
+}
+
+/* ===================== PÁGINA DA PEÇA ===================== */
+function viewPeca(id) {
+  const it = item(id);
+  if (!it) return vazio("❓", "Peça não encontrada", "Ela pode ter sido removida.", '<button class="btn" data-tab="guarda">Voltar ao guarda-roupa</button>');
+  const usosLooks = looks().filter((l) => l.itens.includes(it.id));
+  const parceiras = combinaCom(it, 4);
+  const u = ultimoUso(it);
+  const cnt = (it.usos || []).length;
+  return '' +
+    '<div class="row" style="margin:18px 0 12px"><button class="btn sm ghost" data-tab="guarda">← Guarda-roupa</button></div>' +
+    '<div class="split">' +
+    '<div class="card" style="overflow:hidden">' +
+    '<div style="aspect-ratio:4/3;background:color-mix(in srgb,' + corHex(it) + ' 12%, var(--bg2));display:grid;place-items:center;font-size:88px;position:relative">' +
+    (it.foto ? '<img src="' + it.foto + '" alt="" style="width:100%;height:100%;object-fit:cover" />' : emojiOf(it)) + "</div>" +
+    '<div class="pad">' +
+    '<h2 style="margin:0;font-size:24px;font-weight:820;letter-spacing:-.03em">' + esc(it.nome || CATS[it.cat].label) + "</h2>" +
+    '<div class="chips" style="margin-top:10px">' +
+    '<span class="tag acc">' + emojiOf(it) + " " + CATS[it.cat].label + "</span>" +
+    '<span class="tag"><i style="width:9px;height:9px;border-radius:3px;background:' + corHex(it) + ';display:inline-block"></i> ' + corLabel(it.cor) + "</span>" +
+    (it.cor2 ? '<span class="tag"><i style="width:9px;height:9px;border-radius:3px;background:' + (COLORS[it.cor2] || {}).hex + ';display:inline-block"></i> ' + corLabel(it.cor2) + "</span>" : "") +
+    (it.marca ? '<span class="tag">🏷 ' + esc(it.marca) + "</span>" : "") +
+    (it.estampa && it.estampa !== "liso" ? '<span class="tag">' + esc(it.estampa) + "</span>" : "") +
+    (it.material ? '<span class="tag">' + esc(it.material) + "</span>" : "") +
+    (it.tamanho ? '<span class="tag">tam. ' + esc(it.tamanho) + "</span>" : "") +
+    '<span class="tag">' + (STYLES[it.estilo] ? STYLES[it.estilo].emoji + " " + STYLES[it.estilo].label : esc(it.estilo)) + "</span>" +
+    (it.climas || []).map((c) => '<span class="tag">' + CLIMAS[c].emoji + " " + CLIMAS[c].label + "</span>").join("") +
+    "</div>" +
+    '<div class="chips" style="margin-top:8px">' + (it.ocasioes || []).map((o) => '<span class="tag">' + (OCCASIONS[o] || {}).emoji + " " + (OCCASIONS[o] || { label: o }).label + "</span>").join("") + "</div>" +
+    '<div class="grid g3" style="margin-top:16px">' +
+    '<div class="stat"><div class="k">📊 Usada em</div><div class="v">' + usosLooks.length + '</div><div class="d">looks salvos</div></div>' +
+    '<div class="stat"><div class="k">🔁 Registros de uso</div><div class="v">' + cnt + '</div><div class="d">' + haQuanto(u) + "</div></div>" +
+    (podeVerPrecos() && it.preco ? '<div class="stat"><div class="k">💰 Preço</div><div class="v" style="font-size:20px">' + BRL0(it.preco) + '</div><div class="d">' + (it.compra ? "comprada em " + dataCurta(it.compra) : "") + "</div></div>"
+      : '<div class="stat"><div class="k">📅 Comprada</div><div class="v" style="font-size:20px">' + (it.compra ? dataCurta(it.compra) : "—") + '</div><div class="d">' + (it.compra ? fromISO(it.compra).getFullYear() : "sem data") + "</div></div>") +
+    "</div>" +
+    '<div class="row" style="margin-top:16px">' +
+    '<button class="btn pri" data-act="lookCom" data-id="' + it.id + '">✨ Criar look com esta peça</button>' +
+    '<button class="btn" data-act="usarHoje" data-ids="' + it.id + '">✅ Usei hoje</button>' +
+    (podeCadastrar() ? '<button class="btn" data-act="editarPeca" data-id="' + it.id + '">✏️ Editar</button>' : "") +
+    "</div></div></div>" +
+
+    "<div>" +
+    '<div class="card pad"><div class="sec" style="margin:0 0 10px"><h3>Combina melhor com</h3></div>' +
+    (parceiras.length ? '<div class="grid g2">' + parceiras.map((o) => pecaCard(o, { mini: true })).join("") + "</div>"
+      : '<p class="hint">Cadastre mais peças para ver combinações.</p>') + "</div>" +
+
+    '<div class="card pad" style="margin-top:14px"><div class="sec" style="margin:0 0 10px"><h3>Ciclo da peça</h3><p>ativa → pouco usada → arquivada</p></div>' +
+    '<div class="chips">' + chipsHTML({ ativa: { label: "Ativa", emoji: "✅" }, "pouco-usada": { label: "Pouco usada", emoji: "🕓" }, arquivada: { label: "Arquivada", emoji: "📦" } }, it.status, "status-peca") + "</div>" +
+    (it.status === "arquivada"
+      ? '<div style="margin-top:12px"><div class="hint" style="margin-bottom:6px">O que fazer com ela?</div>' +
+      '<div class="chips">' + chipsHTML({ doar: { label: "Doar", emoji: "🎁" }, guardar: { label: "Guardar", emoji: "📦" }, passar: { label: "Passar para irmão(ã)", emoji: "👦" }, vender: { label: "Vender", emoji: "🏷" } }, it.destino, "destino-peca", true) + "</div></div>"
+      : "") +
+    (usosLooks.length ? '<div class="sec" style="margin:18px 0 8px"><h3>Looks com esta peça</h3></div><div class="list">' +
+      usosLooks.slice(0, 6).map((l) => '<div class="li"><span class="em">' + (l.fav ? "⭐" : "🧩") + '</span><span class="t"><b>' + esc(l.nome) + "</b><span>" + (l.ocasiao ? OCCASIONS[l.ocasiao].label : "sem ocasião") + "</span></span>" +
+        '<button class="btn sm" data-act="abrirLook" data-id="' + l.id + '">Ver</button></div>').join("") + "</div>" : "") +
+    (podeCadastrar() ? '<div class="row" style="margin-top:16px"><button class="btn sm danger" data-act="excluirPeca" data-id="' + it.id + '">Excluir peça</button></div>' : "") +
+    "</div></div></div>";
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== CRIAR LOOK ===================== */
+let BUILDER = { slots: { outer: "", top: "", bottom: "", shoes: "", acc: "" }, ctx: { ocasiao: "", estilo: "", clima: "" }, nome: "", editId: null };
+const builderItens = () => SLOT_ORDER.map((s) => BUILDER.slots[s]).filter(Boolean).map(item).filter(Boolean);
+function setSlotComItem(it) {
+  const s = slotVisual(it);
+  BUILDER.slots[s] = it.id;
+  if (slotOf(it) === "full") BUILDER.slots.bottom = "";
+  const topIt = BUILDER.slots.top ? item(BUILDER.slots.top) : null;
+  if (s === "bottom" && topIt && slotOf(topIt) === "full") BUILDER.slots.top = "";
+}
+function carregaLookNoBuilder(l) {
+  BUILDER = { slots: { outer: "", top: "", bottom: "", shoes: "", acc: "" }, ctx: { ocasiao: l.ocasiao || "", estilo: l.estilo || "", clima: l.clima || "" }, nome: l.nome || "", editId: l.id };
+  l.itens.map(item).filter(Boolean).forEach(setSlotComItem);
+}
+function viewCriar() {
+  const its = builderItens();
+  const av = its.length >= 2 ? avaliaLook(its, BUILDER.ctx) : null;
+  const nomeAuto = its.length ? sugereNome(its, BUILDER.ctx) : "";
+  return '' +
+    '<section class="hero"><h2>Criar Look</h2><p>Escolha as peças ou peça para o LookLab montar em um toque.</p></section>' +
+
+    '<div class="card pad" style="margin-bottom:14px">' +
+    '<div class="sec" style="margin:0 0 10px"><h3>⚡ Monte meu look</h3><p>usa só o que já está no seu guarda-roupa</p></div>' +
+    '<div class="hint" style="margin-bottom:6px">Ocasião</div><div class="chips" style="margin-bottom:10px">' + chipsHTML(OCCASIONS, BUILDER.ctx.ocasiao, "b-ocasiao", true) + "</div>" +
+    '<div class="hint" style="margin-bottom:6px">Estilo</div><div class="chips" style="margin-bottom:10px">' + chipsHTML(STYLES, BUILDER.ctx.estilo, "b-estilo", true) + "</div>" +
+    '<div class="hint" style="margin-bottom:6px">Clima</div><div class="chips" style="margin-bottom:14px">' + chipsHTML(CLIMAS, BUILDER.ctx.clima, "b-clima", true) + "</div>" +
+    '<div class="row"><button class="btn pri big" data-act="gerarLook">✨ GERAR LOOK</button>' +
+    '<button class="btn ghost sm" data-act="limparBuilder">Limpar</button></div>' +
+    "</div>" +
+
+    '<div class="split">' +
+    "<div>" +
+    '<div class="card pad">' +
+    '<div class="sec" style="margin:0 0 12px"><h3>Montagem</h3><p>toque em cada espaço para escolher a peça</p></div>' +
+    '<div class="grid g5">' + SLOT_ORDER.map((s) => {
+      const id = BUILDER.slots[s], it = id ? item(id) : null;
+      if (it) return '<button class="piece" data-slot="' + s + '">' + thumbHTML(it) +
+        '<span class="info"><span class="nm">' + esc(it.nome) + '</span><span class="mt">' + SLOTS[s].label + "</span></span></button>";
+      return '<button class="piece" data-slot="' + s + '" style="border-style:dashed">' +
+        '<span class="thumb" style="background:transparent"><span style="opacity:.35">' + SLOTS[s].emoji + "</span></span>" +
+        '<span class="info"><span class="nm" style="color:var(--muted)">＋ ' + SLOTS[s].label + "</span>" +
+        '<span class="mt">' + (SLOTS[s].opt ? "opcional" : "obrigatório") + "</span></span></button>";
+    }).join("") + "</div>" +
+    (its.length ? '<div class="row" style="margin-top:14px">' +
+      '<input class="inp" id="nomeLook" placeholder="' + esc(nomeAuto) + '" value="' + esc(BUILDER.nome) + '" style="max-width:280px" />' +
+      '<button class="btn pri" data-act="salvarLook">💾 ' + (BUILDER.editId ? "Salvar alterações" : "Salvar look") + "</button>" +
+      '<button class="btn" data-act="usarHoje" data-ids="' + its.map((i) => i.id).join(",") + '">✅ Usar hoje</button>' +
+      '<button class="btn" data-act="planejarLook">📅 Planejar</button></div>' : "") +
+    "</div>" +
+
+    (av ? '<div class="card pad" style="margin-top:14px">' +
+      '<div class="sec" style="margin:0 0 12px"><h3>Avaliação do look</h3><p>nota geral ' + av.geral + "/100</p></div>" +
+      scoresHTML(av) +
+      '<div class="note" style="margin-top:14px">Avaliamos <b>as roupas</b> — cor, contexto, clima e equilíbrio entre as peças. ' +
+      "O LookLab nunca comenta corpo, peso, altura ou aparência de quem veste.</div></div>" : "") +
+    "</div>" +
+
+    "<div>" + (its.length
+      ? '<div class="look">' + stripHTML(its) + '<div class="bd"><h4>' + esc(BUILDER.nome || nomeAuto) + "</h4>" +
+      '<div class="chips" style="margin-top:8px">' +
+      (BUILDER.ctx.ocasiao ? '<span class="tag acc">' + OCCASIONS[BUILDER.ctx.ocasiao].emoji + " " + OCCASIONS[BUILDER.ctx.ocasiao].label + "</span>" : "") +
+      (BUILDER.ctx.estilo ? '<span class="tag">' + STYLES[BUILDER.ctx.estilo].emoji + " " + STYLES[BUILDER.ctx.estilo].label + "</span>" : "") +
+      (BUILDER.ctx.clima ? '<span class="tag">' + CLIMAS[BUILDER.ctx.clima].emoji + " " + CLIMAS[BUILDER.ctx.clima].label + "</span>" : "") + "</div>" +
+      '<p class="why">' + esc(explicaLook(its, BUILDER.ctx)) + "</p>" +
+      '<div class="list" style="margin-top:10px">' + its.map((i) =>
+        '<div class="li"><span class="em">' + (i.foto ? '<img src="' + i.foto + '" alt="">' : emojiOf(i)) + '</span>' +
+        '<span class="t"><b>' + esc(i.nome) + "</b><span>" + CATS[i.cat].label + " · " + corLabel(i.cor) + "</span></span>" +
+        '<button class="btn sm ghost" data-act="tirarSlot" data-slot="' + slotVisual(i) + '">✕</button></div>').join("") + "</div>" +
+      "</div></div>"
+      : '<div class="card pad empty"><div class="em">🧩</div><h4>Nenhuma peça escolhida</h4><p>Use o <b>Gerar look</b> ou toque nos espaços para montar do seu jeito.</p></div>') +
+
+    '<div class="card pad" style="margin-top:14px"><div class="sec" style="margin:0 0 10px"><h3>Looks salvos</h3><p>' + plural(looks().length, "look") + "</p></div>" +
+    (looks().length ? '<div class="list">' + looks().slice().sort((a, b) => (b.criado || "").localeCompare(a.criado || "")).slice(0, 8).map((l) =>
+      '<div class="li"><span class="em">' + (l.fav ? "⭐" : "🧩") + '</span><span class="t"><b>' + esc(l.nome) + "</b><span>" +
+      (l.ocasiao ? OCCASIONS[l.ocasiao].label + " · " : "") + plural(l.itens.length, "peça") + "</span></span>" +
+      '<button class="btn sm" data-act="abrirLook" data-id="' + l.id + '">Ver</button></div>').join("") + "</div>"
+      : '<p class="hint">Nenhum look salvo ainda.</p>') + "</div>" +
+    "</div></div>";
+}
+function sugereNome(its, ctx) {
+  if (ctx && ctx.ocasiao) return "Look " + OCCASIONS[ctx.ocasiao].label.toLowerCase();
+  const top = its.find((i) => slotVisual(i) === "top");
+  if (top) return "Look " + primeiraMinuscula(corLabel(top.cor));
+  return "Meu look";
+}
+function salvaLookAtual(extra) {
+  const its = builderItens();
+  if (its.length < 2) { toast("Escolha pelo menos duas peças."); return null; }
+  const nome = (BUILDER.nome || "").trim() || sugereNome(its, BUILDER.ctx);
+  if (BUILDER.editId) {
+    const l = look(BUILDER.editId);
+    if (l) {
+      Object.assign(l, { nome, itens: its.map((i) => i.id), ocasiao: BUILDER.ctx.ocasiao, estilo: BUILDER.ctx.estilo, clima: BUILDER.ctx.clima }, extra || {});
+      save(); toast("Look atualizado."); return l;
+    }
+  }
+  const l = Object.assign({
+    id: uid(), nome, itens: its.map((i) => i.id), ocasiao: BUILDER.ctx.ocasiao, estilo: BUILDER.ctx.estilo,
+    clima: BUILDER.ctx.clima, fav: false, criado: hoje(), usos: [], nota: null,
+  }, extra || {});
+  P().looks.push(l); BUILDER.editId = l.id; save(); toast("Look salvo.");
+  return l;
+}
+
+/* ===================== ESTILISTA (STYLE AI) ===================== */
+let CHAT = [];
+const PERGUNTAS_RAPIDAS = [
+  "Que roupa eu uso hoje?",
+  "Quero um look para ir ao shopping",
+  "Monte um look para a escola",
+  "Preciso de um look arrumado para aniversário",
+  "Crie 3 looks para dia frio",
+  "Quais peças estão paradas no armário?",
+  "O que está faltando no meu guarda-roupa?",
+];
+function viewIA() {
+  if (!CHAT.length) {
+    CHAT.push({ de: "ai", tipo: "texto", txt: "Oi, " + P().nome + "! Eu sou a <b>Style AI</b>. Eu olho só o que já está no seu guarda-roupa e monto combinações. Pode perguntar do seu jeito — por exemplo: “quero um look para o shopping”, “cria 3 looks com o tênis preto” ou “o que está faltando aqui?”." });
+  }
+  return '' +
+    '<section class="hero"><h2>🤖 Style AI</h2><p>Seu estilista dentro do app — trabalha só com as peças que você tem.</p></section>' +
+    '<div class="chips" style="margin-bottom:14px">' + PERGUNTAS_RAPIDAS.map((q) => '<button class="chip" data-pergunta="' + esc(q) + '">' + esc(q) + "</button>").join("") + "</div>" +
+    '<div class="msgs" id="msgs">' + CHAT.map(msgHTML).join("") + "</div>" +
+    '<div class="card pad" style="position:sticky;bottom:14px;margin-top:16px">' +
+    '<div class="row"><input class="inp" id="perg" placeholder="Escreva sua pergunta…" style="flex:1" />' +
+    '<button class="btn pri" data-act="perguntar">Enviar</button></div></div>';
+}
+function msgHTML(m) {
+  if (m.de === "me") return '<div class="msg me">' + esc(m.txt) + "</div>";
+  let corpo = '<div class="hdr">🤖 Style AI</div><div>' + m.txt + "</div>";
+  if (m.looks && m.looks.length) {
+    corpo += '<div class="grid ' + (m.looks.length > 1 ? "g3" : "g2") + '" style="margin-top:12px">' + m.looks.map((L, n) =>
+      '<div class="look" style="box-shadow:none">' + stripHTML(L.its) +
+      '<div class="bd"><h4>' + esc(L.titulo) + "</h4>" +
+      '<div class="chips" style="margin:6px 0 0">' + L.its.map((i) => '<span class="tag">' + emojiOf(i) + " " + esc(i.nome) + "</span>").join("") + "</div>" +
+      '<p class="why">' + esc(L.porque) + "</p>" +
+      '<div class="row" style="margin-top:10px">' +
+      '<button class="btn sm pri" data-act="salvarSugestao" data-ids="' + L.its.map((i) => i.id).join(",") + '" data-nome="' + esc(L.titulo) + '" data-ctx="' + esc(JSON.stringify(L.ctx || {})) + '">⭐ Salvar</button>' +
+      '<button class="btn sm" data-act="abrirCriar" data-ids="' + L.its.map((i) => i.id).join(",") + '" data-ctx="' + esc(JSON.stringify(L.ctx || {})) + '">✏️ Ajustar</button>' +
+      "</div></div></div>").join("") + "</div>";
+  }
+  if (m.pecas && m.pecas.length) {
+    corpo += '<div class="grid g4" style="margin-top:12px">' + m.pecas.map((i) => pecaCard(i, { mini: true, uso: true })).join("") + "</div>";
+  }
+  return '<div class="msg ai">' + corpo + "</div>";
+}
+/* Interpreta a pergunta e responde usando o guarda-roupa */
+function responde(q) {
+  const t = q.toLowerCase();
+  const acha = (dict, extra) => Object.keys(dict).find((k) => t.includes(k)) || (extra ? Object.keys(extra).find((k) => t.includes(k)) && extra[Object.keys(extra).find((k) => t.includes(k))] : null);
+  const ocasiao = acha(OCCASIONS, { colégio: "escola", aula: "escola", niver: "aniversário", missa: "igreja", culto: "igreja", praia: "praia", almoço: "restaurante", jantar: "restaurante", parque: "passeio" });
+  const clima = acha(CLIMAS, { calor: "quente", frio: "frio", chovendo: "chuva", chuvoso: "chuva", inverno: "frio", verão: "quente" });
+  const estilo = acha(STYLES, { esporte: "esportivo", social: "arrumado", básico: "minimalista", simples: "minimalista" });
+  const ctx = { ocasiao: ocasiao || "", clima: clima || "", estilo: estilo || "" };
+
+  // peças citadas pelo nome
+  const citadas = itens().filter((i) => {
+    const nm = i.nome.toLowerCase();
+    if (nm.length > 4 && t.includes(nm)) return true;
+    const catL = CATS[i.cat].label.toLowerCase(), corL = corLabel(i.cor).toLowerCase();
+    return t.includes(catL) && t.includes(corL);
+  });
+
+  if (/falta|faltando|comprar|preciso comprar|lacuna/.test(t)) {
+    const l = analisaLacunas();
+    return { txt: "Olhei o que você já tem:<br><br>" + l.map((x) => "• " + esc(x.txt)).join("<br>") + "<br><br>A ideia não é comprar mais, e sim comprar o que <b>abre mais combinações</b>." };
+  }
+  if (/parad|esquecid|não uso|nao uso|pouco usad/.test(t)) {
+    const e = esquecidas(30).slice(0, 8);
+    return e.length
+      ? { txt: "Estas peças estão paradas há um tempo. Que tal usar uma delas nesta semana?", pecas: e }
+      : { txt: "Nenhuma peça está parada há mais de 30 dias. Seu guarda-roupa está girando bem! 👏" };
+  }
+  if (/mala|viagem de|viajar/.test(t)) {
+    return { txt: "Posso montar a mala completa — abra a aba <b>🧳 Viagens</b>, diga o destino e quantos dias, e eu separo as peças e os looks de cada dia." };
+  }
+  if (/combina com|combina/.test(t) && citadas.length) {
+    const it0 = citadas[0], parc = combinaCom(it0, 4);
+    return { txt: "Estas são as peças que melhor combinam com <b>" + esc(it0.nome) + "</b>:", pecas: parc };
+  }
+  const quantos = (t.match(/(\d+)\s*looks?/) || [])[1];
+  const n = Math.max(1, Math.min(5, Number(quantos) || (ocasiao || clima || estilo ? 3 : 3)));
+  const gen = geraLooks(Object.assign({}, ctx, citadas.length ? { obrigatorios: citadas.map((i) => i.id) } : {}), n);
+  if (!gen.length) return { txt: "Ainda não consigo montar: falta peça de cima, de baixo ou calçado no guarda-roupa. Cadastre mais algumas e me chama de novo. 🙂" };
+  const rotulos = ["Casual", "Streetwear", "Mais arrumado", "Confortável", "Diferente"];
+  const looksOut = gen.map((g, i) => ({
+    its: g.its,
+    titulo: "LOOK " + (i + 1) + " — " + (ctx.estilo ? STYLES[ctx.estilo].label : rotulos[i] || "Opção " + (i + 1)),
+    porque: explicaLook(g.its, ctx) + " Nota geral: " + g.av.geral + "/100.",
+    ctx,
+  }));
+  const cab = ocasiao ? "Para <b>" + OCCASIONS[ocasiao].label.toLowerCase() + "</b>" : "Olhando seu guarda-roupa";
+  const compl = [clima ? "com clima " + clima : "", estilo ? "no estilo " + STYLES[estilo].label.toLowerCase() : "", citadas.length ? "usando " + citadas.map((c) => "<b>" + esc(c.nome) + "</b>").join(" e ") : ""].filter(Boolean).join(", ");
+  return { txt: cab + (compl ? " " + compl : "") + ", montei " + (looksOut.length === 1 ? "esta opção" : looksOut.length + " opções") + ":", looks: looksOut };
+}
+function perguntar(q) {
+  q = (q || "").trim(); if (!q) return;
+  CHAT.push({ de: "me", txt: q });
+  const r = responde(q);
+  CHAT.push(Object.assign({ de: "ai" }, r));
+  render();
+  setTimeout(() => { const m = $("#msgs"); if (m) m.lastElementChild.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 30);
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== CALENDÁRIO ===================== */
+let CAL = { y: new Date().getFullYear(), m: new Date().getMonth() };
+function viewCalendario() {
+  const p = P(), plano = p.plano || {};
+  const first = new Date(CAL.y, CAL.m, 1);
+  const ini = new Date(CAL.y, CAL.m, 1 - first.getDay());
+  const cells = [];
+  for (let i = 0; i < 42; i++) { const d = new Date(ini); d.setDate(ini.getDate() + i); cells.push(d); }
+  const noMes = Object.keys(plano).filter((k) => k.startsWith(CAL.y + "-" + pad2(CAL.m + 1)));
+  const proximos = Object.keys(plano).filter((d) => d >= hoje()).sort().slice(0, 6);
+
+  return '' +
+    '<section class="hero"><h2>Calendário de looks</h2><p>Planeje a semana e evite repetir a mesma combinação em poucos dias.</p></section>' +
+    '<div class="split">' +
+    '<div class="card pad">' +
+    '<div class="row" style="margin-bottom:12px"><button class="btn sm" data-act="calPrev">←</button>' +
+    '<b style="font-size:16px;letter-spacing:-.02em">' + MES[CAL.m][0].toUpperCase() + MES[CAL.m].slice(1) + " " + CAL.y + "</b>" +
+    '<button class="btn sm" data-act="calNext">→</button><div style="flex:1"></div>' +
+    '<span class="hint">' + plural(noMes.length, "dia") + " planejado</span></div>" +
+    '<div class="cal">' + DOW.map((d) => '<div class="dow">' + d + "</div>").join("") +
+    cells.map((d) => {
+      const k = iso(d), pl = plano[k], l = pl ? look(pl.lookId) : null;
+      const off = d.getMonth() !== CAL.m;
+      const its = l ? l.itens.map(item).filter(Boolean).slice(0, 4) : [];
+      return '<button class="day ' + (off ? "off " : "") + (k === hoje() ? "today" : "") + '" data-dia="' + k + '">' +
+        '<span class="n">' + d.getDate() + "</span>" +
+        (l ? '<span class="mini">' + its.map(emojiOf).join("") + '</span><span class="oc">' + esc(l.nome) + "</span>" : "") +
+        (pl && pl.ocasiao && !l ? '<span class="oc">' + OCCASIONS[pl.ocasiao].emoji + " " + OCCASIONS[pl.ocasiao].label + "</span>" : "") +
+        "</button>";
+    }).join("") + "</div>" +
+    '<p class="hint" style="margin-top:12px">Toque em um dia para escolher (ou gerar) o look daquela data.</p></div>' +
+
+    "<div>" +
+    '<div class="card pad"><div class="sec" style="margin:0 0 10px"><h3>Próximos dias</h3></div>' +
+    (proximos.length ? '<div class="list">' + proximos.map((d) => {
+      const pl = plano[d], l = look(pl.lookId);
+      return '<div class="li"><span class="em">' + (l ? emojiOf(item(l.itens[0]) || { cat: "camiseta" }) : "📅") + "</span>" +
+        '<span class="t"><b>' + DOW[fromISO(d).getDay()] + ", " + dataCurta(d) + "</b><span>" + (l ? esc(l.nome) : "sem look") +
+        (pl.ocasiao ? " · " + OCCASIONS[pl.ocasiao].label : "") + "</span></span>" +
+        '<button class="btn sm" data-dia="' + d + '">Editar</button></div>';
+    }).join("") + "</div>" : '<p class="hint">Nada planejado ainda. Toque em um dia do calendário para começar.</p>') + "</div>" +
+
+    '<div class="card pad" style="margin-top:14px"><div class="sec" style="margin:0 0 10px"><h3>Planejar a semana</h3><p>7 looks diferentes, um por dia</p></div>' +
+    '<p class="hint" style="margin-bottom:12px">O LookLab monta um look para cada dia dos próximos 7 dias, sem repetir combinação.</p>' +
+    '<button class="btn pri block" data-act="planejarSemana">📅 Planejar próximos 7 dias</button></div>' +
+    "</div></div>";
+}
+function planejaSemana() {
+  const p = P(); const usados = [];
+  let ok = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(); d.setDate(d.getDate() + i);
+    const k = iso(d);
+    if ((p.plano || {})[k]) continue;
+    const evitar = new Set(usados);
+    const g = geraLooks({ clima: "meia-estação", evitar }, 1)[0];
+    if (!g) break;
+    g.its.forEach((x) => usados.push(x.id));
+    const l = { id: uid(), nome: "Look de " + DOW[d.getDay()] + " " + d.getDate() + "/" + pad2(d.getMonth() + 1), itens: g.its.map((x) => x.id), ocasiao: "", estilo: "", clima: "meia-estação", fav: false, criado: hoje(), usos: [] };
+    p.looks.push(l);
+    p.plano = p.plano || {}; p.plano[k] = { lookId: l.id, ocasiao: "" };
+    ok++;
+  }
+  save();
+  toast(ok ? ok + " dia(s) planejados." : "Os próximos 7 dias já estavam planejados.");
+  render();
+}
+
+/* ===================== TENDÊNCIAS ===================== */
+let TRENDS = { updatedAt: "", trends: TRENDS_SAMPLE };
+function pecasDaTendencia(t) {
+  const m = t.match || {};
+  const tem = (k) => m[k] && m[k].length;
+  return itens().filter((i) => {
+    if (tem("cats")) {
+      if (!m.cats.includes(i.cat)) return false;
+      if (tem("colors") && !(m.colors.includes(i.cor) || m.colors.includes(i.cor2))) return false;
+      if (tem("styles") && !m.styles.includes(i.estilo)) return false;
+      return true;
+    }
+    if (tem("colors")) return m.colors.includes(i.cor) || m.colors.includes(i.cor2);
+    if (tem("patterns")) return m.patterns.includes(i.estampa);
+    if (tem("styles")) return m.styles.includes(i.estilo);
+    return false;
+  });
+}
+function viewTendencias() {
+  const grupos = {};
+  TRENDS.trends.forEach((t) => { (grupos[t.grupo] = grupos[t.grupo] || []).push(t); });
+  const comMinhas = TRENDS.trends.map((t) => ({ t, n: pecasDaTendencia(t).length })).sort((a, b) => b.n - a.n || b.t.nivel - a.t.nivel);
+  const meter = (n) => "█".repeat(Math.round(n / 10)) + "░".repeat(10 - Math.round(n / 10));
+
+  return '' +
+    '<section class="hero"><h2>Tendências</h2><p>O que está em alta na moda infantojuvenil — e como isso conversa com o que você já tem.</p></section>' +
+    '<div class="note" style="margin-bottom:16px">Estes são <b>dados de exemplo</b>, organizados por peça, cor e estilo. ' +
+    "A ideia é sempre a mesma: adaptar a tendência ao guarda-roupa que já existe, em vez de comprar de novo.</div>" +
+
+    '<div class="split">' +
+    "<div>" +
+    '<div class="card pad"><div class="sec" style="margin:0 0 6px"><h3>🔥 Radar de tendências</h3><p>força e direção de cada uma</p></div>' +
+    TRENDS.trends.slice().sort((a, b) => b.nivel - a.nivel).map((t) => {
+      const st = TREND_STATUS[t.status] || TREND_STATUS["estável"];
+      const n = pecasDaTendencia(t).length;
+      return '<div class="trend"><div class="ic">' + t.emoji + '</div><div class="mid">' +
+        '<div class="nm">' + esc(t.nome) + ' <span class="tag ' + st.cls + '" style="margin-left:4px">' + st.emoji + " " + st.label + "</span></div>" +
+        '<div class="sub">' + (n ? "você já tem " + plural(n, "peça") + " nessa linha" : "nada parecido no seu guarda-roupa ainda") + "</div>" +
+        "</div>" +
+        '<div style="text-align:right"><div class="meter">' + meter(t.nivel) + '</div><div class="sub" style="font-size:11px;text-align:right">' + t.nivel + "/100</div></div></div>";
+    }).join("") + "</div>" +
+
+    '<div class="sec"><h3>Como adaptar ao seu guarda-roupa</h3></div>' +
+    '<div class="grid g2">' + comMinhas.slice(0, 6).map(({ t, n }) => {
+      const pecas = pecasDaTendencia(t).slice(0, 3);
+      return '<div class="card pad"><div class="row" style="gap:10px;align-items:flex-start">' +
+        '<div style="font-size:24px">' + t.emoji + '</div><div style="flex:1;min-width:0">' +
+        "<b style='font-size:14px'>" + esc(t.nome) + "</b>" +
+        '<p class="hint" style="margin:4px 0 8px">' + esc(t.dica) + "</p>" +
+        (n ? '<div class="tag good">✓ ' + plural(n, "peça") + " sua entra nessa</div>" : '<div class="tag warn">Nada parecido ainda</div>') +
+        (pecas.length ? '<div class="grid g3" style="margin-top:10px">' + pecas.map((i) => pecaCard(i, { mini: true })).join("") + "</div>" : "") +
+        (n ? '<div style="margin-top:10px"><button class="btn sm pri" data-act="lookTendencia" data-id="' + t.id + '">✨ Montar look com essa tendência</button></div>' : "") +
+        "</div></div></div>";
+    }).join("") + "</div>" +
+    "</div>" +
+
+    "<div>" + Object.keys(grupos).map((g) =>
+      '<div class="card pad" style="margin-bottom:14px"><div class="sec" style="margin:0 0 8px"><h3>' + esc(g) + "</h3></div>" +
+      '<div class="list">' + grupos[g].sort((a, b) => b.nivel - a.nivel).map((t) => {
+        const st = TREND_STATUS[t.status] || TREND_STATUS["estável"];
+        return '<div class="li"><span class="em">' + t.emoji + '</span><span class="t"><b>' + esc(t.nome) + "</b><span>" + st.emoji + " " + st.label + '</span></span><span class="v">' + t.nivel + "</span></div>";
+      }).join("") + "</div></div>").join("") + "</div>" +
+    "</div>";
+}
+
+/* ===================== INSPIRAÇÕES ===================== */
+let INSP_FILTRO = "";
+function viewInspiracoes() {
+  const grupos = [...new Set(INSPIRACOES.map((i) => i.grupo))];
+  const arr = INSP_FILTRO ? INSPIRACOES.filter((i) => i.grupo === INSP_FILTRO) : INSPIRACOES;
+  return '' +
+    '<section class="hero"><h2>Inspirações</h2><p>Ideias de combinação. Toque para recriar com as suas próprias roupas.</p></section>' +
+    '<div class="chips" style="margin-bottom:14px">' +
+    '<button class="chip ' + (INSP_FILTRO ? "" : "on") + '" data-chip="insp" data-val="">Todas</button>' +
+    grupos.map((g) => '<button class="chip ' + (INSP_FILTRO === g ? "on" : "") + '" data-chip="insp" data-val="' + esc(g) + '">' + esc(g) + "</button>").join("") + "</div>" +
+    '<div class="grid g3">' + arr.map((i) => {
+      const achou = recriaInspiracao(i);
+      return '<div class="card" style="overflow:hidden">' +
+        '<div style="aspect-ratio:16/10;background:linear-gradient(135deg,var(--acc-soft),var(--bg2));display:grid;place-items:center;font-size:52px">' + i.emoji + "</div>" +
+        '<div class="pad"><b style="font-size:15px;letter-spacing:-.02em">' + esc(i.titulo) + "</b>" +
+        '<p class="hint" style="margin:5px 0 9px">' + esc(i.desc) + "</p>" +
+        '<div class="chips" style="margin-bottom:10px">' +
+        '<span class="tag">' + STYLES[i.estilo].emoji + " " + STYLES[i.estilo].label + "</span>" +
+        '<span class="tag">' + OCCASIONS[i.ocasiao].emoji + " " + OCCASIONS[i.ocasiao].label + "</span>" +
+        '<span class="tag">' + CLIMAS[i.clima].emoji + " " + CLIMAS[i.clima].label + "</span></div>" +
+        (achou ? '<div class="tag good" style="margin-bottom:8px">✓ dá para montar com o que você tem</div>'
+          : '<div class="tag warn" style="margin-bottom:8px">falta peça parecida no armário</div>') +
+        '<button class="btn ' + (achou ? "pri" : "") + ' block sm" data-act="recriar" data-id="' + i.id + '">✨ Criar algo parecido com minhas roupas</button>' +
+        "</div></div>";
+    }).join("") + "</div>";
+}
+/* procura no guarda-roupa peças parecidas com a receita da inspiração */
+function recriaInspiracao(insp) {
+  const ctx = { ocasiao: insp.ocasiao, estilo: insp.estilo, clima: insp.clima };
+  const escolhidas = {};
+  let faltou = false;
+  Object.keys(insp.receita).forEach((slot) => {
+    const req = insp.receita[slot];
+    const cands = itens().filter((i) => slotVisual(i) === slot && (slot !== "top" || slotOf(i) !== "full"));
+    if (!cands.length) { if (slot !== "acc") faltou = true; return; }
+    const scored = cands.map((i) => {
+      let s = pontuaItem(i, ctx);
+      if (req.cats && req.cats.includes(i.cat)) s += 40;
+      if (req.colors && (req.colors.includes(i.cor) || req.colors.includes(i.cor2))) s += 35;
+      return { i, s };
+    }).sort((a, b) => b.s - a.s);
+    escolhidas[slot] = scored[0].i;
+  });
+  const its = Object.values(escolhidas);
+  if (faltou || its.length < 3) return null;
+  return { its, ctx };
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== LISTA DE DESEJOS ===================== */
+function viewDesejos() {
+  const p = P(), ds = p.desejos || [];
+  const total = ds.reduce((a, d) => a + (Number(d.preco) || 0), 0);
+  return '' +
+    '<section class="hero"><h2>Lista de desejos</h2><p>Antes de comprar, veja se a peça realmente abre combinações novas.</p></section>' +
+    (podeDesejos() ? '<div class="card pad" style="margin-bottom:14px">' +
+      '<div class="grid g4" style="align-items:end">' +
+      '<div class="field"><label>Peça</label><input class="inp" id="d-nome" placeholder="ex.: jaqueta bomber preta" /></div>' +
+      '<div class="field"><label>Categoria</label><select class="inp" id="d-cat">' + CAT_KEYS.map((k) => '<option value="' + k + '">' + CATS[k].label + "</option>").join("") + "</select></div>" +
+      '<div class="field"><label>Cor</label><select class="inp" id="d-cor">' + COLOR_KEYS.map((k) => '<option value="' + k + '">' + COLORS[k].label + "</option>").join("") + "</select></div>" +
+      '<div class="field"><label>' + (podeVerPrecos() ? "Preço estimado" : "Observação") + "</label>" +
+      (podeVerPrecos() ? '<input class="inp" id="d-preco" type="number" min="0" step="0.01" placeholder="0,00" />' : '<input class="inp" id="d-nota" placeholder="onde viu, por quê…" />') + "</div>" +
+      "</div>" +
+      '<div class="row" style="margin-top:12px"><button class="btn pri" data-act="addDesejo">❤️ Adicionar à lista</button></div></div>' : "") +
+
+    (ds.length ? '<div class="grid g3">' + ds.map((d) => {
+      const combina = combinaComHipotetica(d);
+      const iguais = parecidasCom(d);
+      return '<div class="card pad"><div class="row" style="gap:12px;align-items:flex-start">' +
+        '<div style="width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:22px;background:color-mix(in srgb,' + (COLORS[d.cor] || {}).hex + ' 16%, var(--bg2))">' + (CATS[d.cat] || CATS.camiseta).emoji + "</div>" +
+        '<div style="flex:1;min-width:0"><b style="font-size:14.5px">' + esc(d.nome) + "</b>" +
+        '<div class="hint">' + (CATS[d.cat] || {}).label + " · " + corLabel(d.cor) + (podeVerPrecos() && d.preco ? " · " + BRL0(d.preco) : "") + "</div>" +
+        (d.nota ? '<div class="hint" style="margin-top:3px">“' + esc(d.nota) + "”</div>" : "") + "</div>" +
+        '<button class="btn sm ghost" data-act="delDesejo" data-id="' + d.id + '">✕</button></div>' +
+        '<div style="margin-top:12px">' +
+        '<div class="tag ' + (combina >= 5 ? "good" : combina >= 2 ? "" : "warn") + '">🔗 combina com ' + plural(combina, "peça") + " que você já tem</div>" +
+        (iguais.length ? '<div class="tag warn" style="margin-top:6px">⚠️ parecida com ' + plural(iguais.length, "peça") + " do seu armário: " + esc(iguais.map((i) => i.nome).join(", ")) + "</div>" : "") +
+        "</div></div>";
+    }).join("") + "</div>" +
+      (podeVerPrecos() ? '<div class="card pad" style="margin-top:14px"><div class="row"><b>Total da lista</b><div style="flex:1"></div><b>' + BRL(total) + "</b></div></div>" : "")
+      : vazio("❤️", "Lista vazia", "Salve aqui as peças que você quer. O LookLab mostra com quantas roupas suas cada uma combinaria."));
+}
+
+/* ===================== VIAGENS ===================== */
+function viewViagens() {
+  const p = P(), vs = p.viagens || [];
+  return '' +
+    '<section class="hero"><h2>Mala de viagem</h2><p>Diga para onde vai e o LookLab separa as peças e o look de cada dia.</p></section>' +
+    '<div class="card pad" style="margin-bottom:16px">' +
+    '<div class="grid g4" style="align-items:end">' +
+    '<div class="field"><label>Destino</label><input class="inp" id="v-destino" placeholder="ex.: São Paulo" /></div>' +
+    '<div class="field"><label>Duração (dias)</label><input class="inp" id="v-dias" type="number" min="1" max="21" value="5" /></div>' +
+    '<div class="field"><label>Tipo</label><select class="inp" id="v-tipo">' +
+    ["viagem familiar", "praia", "passeio", "visita a parentes", "acampamento", "escola"].map((t) => '<option>' + t + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Clima esperado</label><select class="inp" id="v-clima">' +
+    CLIMA_KEYS.map((k) => '<option value="' + k + '"' + (k === "meia-estação" ? " selected" : "") + ">" + CLIMAS[k].label + "</option>").join("") + "</select></div>" +
+    "</div>" +
+    '<div class="row" style="margin-top:12px"><button class="btn pri" data-act="gerarMala">🧳 Montar mala</button></div></div>' +
+
+    (vs.length ? vs.slice().reverse().map((v) => {
+      const contagem = {}; const pecas = [];
+      v.looks.forEach((L) => L.ids.forEach((id) => { if (!contagem[id]) { contagem[id] = 1; pecas.push(id); } else contagem[id]++; }));
+      const porSlot = {};
+      pecas.map(item).filter(Boolean).forEach((i) => { const s = slotVisual(i); (porSlot[s] = porSlot[s] || []).push(i); });
+      return '<div class="card pad" style="margin-bottom:14px">' +
+        '<div class="row"><div><b style="font-size:17px;letter-spacing:-.02em">' + esc(v.destino) + "</b>" +
+        '<div class="hint">' + plural(v.dias, "dia") + " · " + esc(v.tipo) + " · " + CLIMAS[v.clima].emoji + " " + CLIMAS[v.clima].label + "</div></div>" +
+        '<div style="flex:1"></div><button class="btn sm ghost" data-act="delViagem" data-id="' + v.id + '">✕</button></div>' +
+        '<div class="sec" style="margin:16px 0 8px"><h3>O que levar</h3><p>' + plural(pecas.length, "peça") + "</p></div>" +
+        '<div class="grid g2">' + SLOT_ORDER.filter((s) => porSlot[s]).map((s) =>
+          '<div><div class="hint" style="margin-bottom:6px">' + SLOTS[s].emoji + " " + SLOTS[s].label + " (" + porSlot[s].length + ")</div>" +
+          '<div class="chips">' + porSlot[s].map((i) => '<span class="tag">' + esc(i.nome) + "</span>").join("") + "</div></div>").join("") + "</div>" +
+        '<div class="sec" style="margin:18px 0 8px"><h3>Look de cada dia</h3></div>' +
+        '<div class="grid g3">' + v.looks.map((L, n) => {
+          const its = L.ids.map(item).filter(Boolean);
+          return '<div class="look" style="box-shadow:none">' + stripHTML(its) +
+            '<div class="bd"><h4>Dia ' + (n + 1) + "</h4>" +
+            '<div class="chips" style="margin-top:6px">' + its.map((i) => '<span class="tag">' + emojiOf(i) + " " + esc(i.nome) + "</span>").join("") + "</div>" +
+            '<div class="row" style="margin-top:9px"><button class="btn sm" data-act="abrirCriar" data-ids="' + L.ids.join(",") + '">Ajustar</button></div></div></div>';
+        }).join("") + "</div></div>";
+    }).join("") : vazio("🧳", "Nenhuma mala montada", "Preencha o destino e a duração acima para o LookLab separar as peças."));
+}
+function geraMala(destino, dias, tipo, clima) {
+  const usados = new Set(); const looksV = [];
+  const ocasioes = tipo === "praia" ? ["praia", "passeio", "restaurante"] : tipo === "escola" ? ["escola", "passeio"] : ["passeio", "shopping", "restaurante", "família"];
+  for (let d = 0; d < dias; d++) {
+    const oc = ocasioes[d % ocasioes.length];
+    const g = geraLooks({ ocasiao: oc, clima, evitar: usados }, 1)[0];
+    if (!g) break;
+    g.its.forEach((i) => { if (slotOf(i) !== "shoes" && slotOf(i) !== "outer") usados.add(i.id); });
+    looksV.push({ dia: d + 1, ids: g.its.map((i) => i.id), ocasiao: oc });
+  }
+  if (!looksV.length) { toast("Cadastre mais peças para montar a mala."); return; }
+  // uma peça mais arrumada para imprevistos
+  const arrumada = itens().filter((i) => dressyDoItem(i) >= 2 && !looksV.some((L) => L.ids.includes(i.id)))[0];
+  if (arrumada) looksV[looksV.length - 1].ids = [...new Set(looksV[looksV.length - 1].ids.concat([arrumada.id]))];
+  P().viagens = P().viagens || [];
+  P().viagens.push({ id: uid(), destino: destino || "Viagem", dias, tipo, clima, criado: hoje(), looks: looksV });
+  save(); toast("Mala montada!"); render();
+}
+
+/* ===================== LOOK (página) ===================== */
+function viewLook(id) {
+  const l = look(id);
+  if (!l) return vazio("❓", "Look não encontrado", "Ele pode ter sido removido.", '<button class="btn" data-tab="criar">Ir para Criar Look</button>');
+  const its = l.itens.map(item).filter(Boolean);
+  const av = avaliaLook(its, { ocasiao: l.ocasiao, clima: l.clima, estilo: l.estilo });
+  const usos = (l.usos || []).slice().sort().reverse();
+  return '' +
+    '<div class="row" style="margin:18px 0 12px"><button class="btn sm ghost" data-tab="criar">← Voltar</button></div>' +
+    '<div class="split"><div class="card">' + stripHTML(its) +
+    '<div class="pad"><div class="row"><h2 style="margin:0;font-size:23px;font-weight:820;letter-spacing:-.03em;flex:1">' + esc(l.nome) + "</h2>" +
+    '<button class="btn sm" data-act="favLook" data-id="' + l.id + '">' + (l.fav ? "⭐ Favorito" : "☆ Favoritar") + "</button></div>" +
+    '<div class="chips" style="margin-top:10px">' +
+    (l.ocasiao ? '<span class="tag acc">' + OCCASIONS[l.ocasiao].emoji + " " + OCCASIONS[l.ocasiao].label + "</span>" : "") +
+    (l.estilo ? '<span class="tag">' + STYLES[l.estilo].emoji + " " + STYLES[l.estilo].label + "</span>" : "") +
+    (l.clima ? '<span class="tag">' + CLIMAS[l.clima].emoji + " " + CLIMAS[l.clima].label + "</span>" : "") +
+    '<span class="tag">criado em ' + dataCurta(l.criado) + "</span>" +
+    (usos.length ? '<span class="tag">usado ' + plural(usos.length, "vez", "vezes") + "</span>" : "") + "</div>" +
+    '<p class="why" style="margin-top:12px">' + esc(explicaLook(its, { ocasiao: l.ocasiao, clima: l.clima })) + "</p>" +
+    '<div class="list" style="margin-top:10px">' + its.map((i) =>
+      '<div class="li"><span class="em">' + (i.foto ? '<img src="' + i.foto + '" alt="">' : emojiOf(i)) + '</span>' +
+      '<span class="t"><b>' + esc(i.nome) + "</b><span>" + CATS[i.cat].label + " · " + corLabel(i.cor) + "</span></span>" +
+      '<button class="btn sm ghost" data-peca="' + i.id + '">Ver</button></div>').join("") + "</div>" +
+    '<div class="row" style="margin-top:14px">' +
+    '<button class="btn pri" data-act="usarLook" data-id="' + l.id + '">✅ Usar hoje</button>' +
+    '<button class="btn" data-act="variacao" data-id="' + l.id + '">🔀 Criar variação</button>' +
+    '<button class="btn" data-act="editarLook" data-id="' + l.id + '">✏️ Editar</button>' +
+    '<button class="btn" data-act="planejarEsse" data-id="' + l.id + '">📅 Planejar</button>' +
+    '<button class="btn sm danger" data-act="delLook" data-id="' + l.id + '">Excluir</button></div>' +
+    "</div></div>" +
+    '<div class="card pad"><div class="sec" style="margin:0 0 12px"><h3>Avaliação</h3><p>nota geral ' + av.geral + "/100</p></div>" + scoresHTML(av) +
+    (usos.length ? '<div class="sec" style="margin:18px 0 8px"><h3>Histórico de uso</h3></div><div class="chips">' +
+      usos.slice(0, 12).map((d) => '<span class="tag">' + dataCurta(d) + "</span>").join("") + "</div>" : "") +
+    "</div></div>";
+}
+function variacaoDe(l) {
+  const its = l.itens.map(item).filter(Boolean);
+  const trocavel = its.filter((i) => slotOf(i) !== "shoes");
+  const alvo = trocavel[Math.floor(Math.random() * trocavel.length)] || its[0];
+  const ctx = { ocasiao: l.ocasiao, clima: l.clima, estilo: l.estilo };
+  const cands = itens().filter((i) => i.id !== alvo.id && slotVisual(i) === slotVisual(alvo));
+  if (!cands.length) { toast("Não há outra peça desse tipo para trocar."); return null; }
+  const outras = its.filter((i) => i.id !== alvo.id);
+  const melhor = cands.map((c) => ({ c, s: avaliaLook(outras.concat([c]), ctx).geral + pontuaItem(c, ctx) * 0.25 + Math.random() * 6 }))
+    .sort((a, b) => b.s - a.s)[0].c;
+  carregaLookNoBuilder({ id: null, nome: l.nome + " (variação)", ocasiao: l.ocasiao, estilo: l.estilo, clima: l.clima, itens: outras.map((i) => i.id).concat([melhor.id]) });
+  BUILDER.editId = null;
+  toast("Troquei " + primeiraMinuscula(alvo.nome) + " por " + primeiraMinuscula(melhor.nome) + ".");
+  ir("criar");
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== CONQUISTAS ===================== */
+function conquistas() {
+  const ls = looks(), its = itens();
+  const estilosUsados = new Set(ls.map((l) => l.estilo).filter(Boolean));
+  const cores = ls.filter((l) => harmoniaCores(coresDoLook(l.itens.map(item).filter(Boolean))).nota >= 88).length;
+  const usouEsquecida = its.some((i) => (i.usos || []).length >= 2 && ls.some((l) => l.itens.includes(i.id)));
+  return [
+    { e: "🏆", t: "Explorador de estilo", d: "Salvou looks de 3 estilos diferentes", ok: estilosUsados.size >= 3, prog: estilosUsados.size + "/3" },
+    { e: "🎨", t: "Mestre das cores", d: "5 looks com combinação de cores ótima", ok: cores >= 5, prog: cores + "/5" },
+    { e: "👕", t: "Guarda-roupa organizado", d: "20 peças cadastradas", ok: its.length >= 20, prog: its.length + "/20" },
+    { e: "⭐", t: "Criador de looks", d: "10 looks salvos", ok: ls.length >= 10, prog: ls.length + "/10" },
+    { e: "🕵️", t: "Caçador de esquecidas", d: "Trouxe de volta uma peça parada", ok: usouEsquecida, prog: usouEsquecida ? "feito" : "0/1" },
+    { e: "📅", t: "Semana planejada", d: "7 dias com look definido", ok: Object.keys(P().plano || {}).length >= 7, prog: Math.min(7, Object.keys(P().plano || {}).length) + "/7" },
+  ];
+}
+
+/* ===================== PERFIL ===================== */
+function viewPerfil() {
+  const p = P();
+  const learned = estilosAprendidos();
+  return '' +
+    '<section class="hero"><h2>Perfil</h2><p>Quem está usando o LookLab e como ele aprende com você.</p></section>' +
+
+    '<div class="sec" style="margin-top:0"><h3>Quem está usando</h3><p>cada pessoa tem seu próprio guarda-roupa</p></div>' +
+    '<div class="grid g4">' + DB.perfis.map((x) =>
+      '<div class="card pad" style="' + (x.id === DB.ativo ? "border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 18%,transparent)" : "") + '">' +
+      '<div class="row"><span style="font-size:30px">' + x.avatar + "</span><div style='flex:1;min-width:0'>" +
+      "<b style='font-size:15px'>" + esc(x.nome) + "</b><div class='hint'>" + (x.idade ? x.idade + " anos · " : "") + plural(x.itens.filter((i) => i.status !== "arquivada").length, "peça") + "</div></div></div>" +
+      '<div class="row" style="margin-top:12px">' +
+      (x.id === DB.ativo ? '<span class="tag acc">Ativo agora</span>' : '<button class="btn sm" data-act="trocarPerfil" data-id="' + x.id + '">Usar este</button>') +
+      (ehResp() && DB.perfis.length > 1 ? '<button class="btn sm ghost danger" data-act="delPerfil" data-id="' + x.id + '">✕</button>' : "") +
+      "</div></div>").join("") +
+    (ehResp() ? '<button class="card pad" data-act="novoPerfil" style="border-style:dashed;display:grid;place-items:center;text-align:center;color:var(--muted)"><div><div style="font-size:28px">＋</div><b style="font-size:13.5px">Adicionar perfil</b></div></button>' : "") +
+    "</div>" +
+
+    '<div class="split" style="margin-top:22px">' +
+    '<div class="card pad"><div class="sec" style="margin:0 0 10px"><h3>Meu estilo</h3><p>o que você mais gosta de usar</p></div>' +
+    '<div class="chips">' + chipsHTML(STYLES, p.estilos || [], "estilo-perfil", true) + "</div>" +
+    (learned.length ? '<p class="hint" style="margin-top:12px">Pelo que você vem salvando, o LookLab já percebeu preferência por <b>' +
+      learned.map((s) => STYLES[s].label.toLowerCase()).join("</b> e <b>") + "</b>. Isso entra nas próximas sugestões.</p>" : "") +
+
+    '<div class="sec" style="margin:22px 0 10px"><h3>Conta</h3><p>login deste aparelho</p></div>' +
+    (contaAtual()
+      ? '<div class="li" style="border-bottom:0;padding-top:0"><span class="em">🔑</span>' +
+      '<span class="t"><b>' + esc(contaAtual().email) + "</b><span>" +
+      (contaAtual().nome ? esc(contaAtual().nome) + " · " : "") + "conta criada em " + dataCurta(contaAtual().criado) + "</span></span></div>" +
+      '<div class="row" style="margin-top:8px"><button class="btn sm" data-act="trocarSenha">Trocar senha</button>' +
+      '<button class="btn sm" data-act="sairConta">Sair</button>' +
+      (ehResp() ? '<button class="btn sm danger" data-act="apagarConta">Excluir conta</button>' : "") + "</div>"
+      : '<p class="hint">Nenhuma conta ativa.</p>') +
+
+    '<div class="sec" style="margin:22px 0 10px"><h3>Aparência</h3></div>' +
+    '<div class="chips">' + chipsHTML({ auto: { label: "Automático", emoji: "🌗" }, light: { label: "Claro", emoji: "☀️" }, dark: { label: "Escuro", emoji: "🌙" } }, DB.ui.theme, "tema", true) + "</div>" +
+
+    '<div class="sec" style="margin:22px 0 10px"><h3>Conquistas</h3></div>' +
+    '<div class="grid g2">' + conquistas().map((c) =>
+      '<div class="ach ' + (c.ok ? "" : "off") + '"><span class="e">' + c.e + '</span><span class="t"><b>' + esc(c.t) + "</b><span>" + esc(c.d) + " · " + c.prog + "</span></span></div>").join("") + "</div>" +
+    "</div>" +
+
+    "<div>" + (ehResp() ? painelResponsavel() : painelBloqueado()) + "</div>" +
+    "</div>";
+}
+function estilosAprendidos() {
+  const m = {};
+  looks().forEach((l) => { if (l.fav && l.estilo) m[l.estilo] = (m[l.estilo] || 0) + 2; if (l.estilo) m[l.estilo] = (m[l.estilo] || 0) + 1; });
+  itens().forEach((i) => { const n = (i.usos || []).length; if (n) m[i.estilo] = (m[i.estilo] || 0) + n * 0.35; });
+  return Object.keys(m).sort((a, b) => m[b] - m[a]).slice(0, 2);
+}
+function painelBloqueado() {
+  return '<div class="card pad">' +
+    '<div class="sec" style="margin:0 0 10px"><h3>👨‍👩‍👧 Área dos responsáveis</h3><p>compras, gastos e permissões</p></div>' +
+    '<p class="hint" style="margin-bottom:12px">Aqui ficam o controle de gastos, o cadastro de peças e as permissões de cada perfil. ' +
+    (DB.resp.pin ? "Digite o PIN para entrar." : "Na primeira vez, crie um PIN de 4 dígitos.") + "</p>" +
+    '<div class="row"><input class="inp" id="pin" inputmode="numeric" maxlength="4" placeholder="••••" style="max-width:110px;letter-spacing:.4em;text-align:center" />' +
+    '<button class="btn pri" data-act="entrarResp">' + (DB.resp.pin ? "Entrar" : "Criar PIN") + "</button></div></div>";
+}
+function painelResponsavel() {
+  const p = P(), its = todosItens();
+  const mesAtual = hoje().slice(0, 7);
+  const compradasMes = its.filter((i) => (i.compra || "").startsWith(mesAtual));
+  const gastoMes = compradasMes.reduce((a, i) => a + (Number(i.preco) || 0), 0);
+  const gastoTotal = its.reduce((a, i) => a + (Number(i.preco) || 0), 0);
+  const maisUsadas = its.slice().sort((a, b) => (b.usos || []).length - (a.usos || []).length).slice(0, 5);
+  const poucoUsadas = its.filter((i) => i.status !== "arquivada").slice().sort((a, b) => (a.usos || []).length - (b.usos || []).length).slice(0, 5);
+  const arquivadas = its.filter((i) => i.status === "arquivada");
+  const desejoTotal = (p.desejos || []).reduce((a, d) => a + (Number(d.preco) || 0), 0);
+  const custoPorUso = (i) => { const n = (i.usos || []).length; return n ? Number(i.preco || 0) / n : null; };
+
+  return '<div class="card pad">' +
+    '<div class="row"><div class="sec" style="margin:0"><h3>👨‍👩‍👧 Painel dos responsáveis</h3><p>' + esc(p.nome) + "</p></div>" +
+    '<div style="flex:1"></div><button class="btn sm" data-act="sairResp">Sair do modo</button></div>' +
+
+    '<div class="grid g2" style="margin-top:14px">' +
+    '<div class="stat"><div class="k">💰 Gasto no mês</div><div class="v" style="font-size:21px">' + BRL0(gastoMes) + '</div><div class="d">' + plural(compradasMes.length, "peça comprada", "peças compradas") + "</div></div>" +
+    '<div class="stat"><div class="k">📦 Guarda-roupa</div><div class="v" style="font-size:21px">' + BRL0(gastoTotal) + '</div><div class="d">valor cadastrado em ' + plural(its.length, "peça") + "</div></div>" +
+    '<div class="stat"><div class="k">🕓 Pouco usadas</div><div class="v" style="font-size:21px">' + its.filter((i) => i.status === "pouco-usada").length + '</div><div class="d">marcadas como pouco usadas</div></div>' +
+    '<div class="stat"><div class="k">❤️ Lista de desejos</div><div class="v" style="font-size:21px">' + BRL0(desejoTotal) + '</div><div class="d">' + plural((p.desejos || []).length, "item", "itens") + "</div></div>" +
+    "</div>" +
+
+    '<div class="sec" style="margin:20px 0 8px"><h3>Mais usadas</h3><p>custo por uso</p></div><div class="list">' +
+    maisUsadas.map((i) => {
+      const c = custoPorUso(i);
+      return '<div class="li"><span class="em">' + emojiOf(i) + '</span><span class="t"><b>' + esc(i.nome) + "</b><span>" + plural((i.usos || []).length, "uso") + "</span></span>" +
+        '<span class="v">' + (c ? BRL0(c) + "/uso" : "—") + "</span></div>";
+    }).join("") + "</div>" +
+
+    '<div class="sec" style="margin:20px 0 8px"><h3>Quase sem uso</h3></div><div class="list">' +
+    poucoUsadas.map((i) => '<div class="li"><span class="em">' + emojiOf(i) + '</span><span class="t"><b>' + esc(i.nome) + "</b><span>" + haQuanto(ultimoUso(i)) + "</span></span>" +
+      '<span class="v">' + plural((i.usos || []).length, "uso") + "</span></div>").join("") + "</div>" +
+
+    '<div class="sec" style="margin:20px 0 8px"><h3>Ciclo das roupas</h3><p>' + plural(arquivadas.length, "peça arquivada", "peças arquivadas") + "</p></div>" +
+    (arquivadas.length ? '<div class="list">' + arquivadas.map((i) =>
+      '<div class="li"><span class="em">' + emojiOf(i) + '</span><span class="t"><b>' + esc(i.nome) + "</b><span>" + (i.destino ? "destino: " + i.destino : "sem destino definido") + "</span></span>" +
+      '<button class="btn sm" data-peca="' + i.id + '">Ver</button></div>').join("") + "</div>"
+      : '<p class="hint">Nenhuma peça arquivada. Quando uma roupa não servir mais, marque como arquivada na página da peça e escolha o destino (doar, guardar, passar ou vender).</p>') +
+
+    '<div class="sec" style="margin:20px 0 8px"><h3>Permissões do perfil</h3><p>o que ' + esc(p.nome) + " pode fazer sozinho(a)</p></div>" +
+    '<div class="chips">' +
+    chipsHTML({ cadastrar: { label: "Cadastrar peças", emoji: "➕" }, precos: { label: "Ver preços", emoji: "💰" }, desejos: { label: "Editar lista de desejos", emoji: "❤️" } },
+      Object.keys(DB.resp.perms).filter((k) => DB.resp.perms[k]), "perm", true) + "</div>" +
+
+    '<div class="sec" style="margin:20px 0 8px"><h3>Dados</h3><p>tudo fica só neste aparelho</p></div>' +
+    '<div class="row"><button class="btn sm" data-act="exportar">⬇️ Exportar backup</button>' +
+    '<button class="btn sm" data-act="importar">⬆️ Importar</button>' +
+    '<button class="btn sm danger" data-act="limparTudo">Esvaziar guarda-roupa</button>' +
+    '<button class="btn sm danger" data-act="resetar">Recomeçar do exemplo</button></div>' +
+    '<input type="file" id="fileImp" accept="application/json" class="sr" />' +
+    "</div>";
+}
+</script>
+
+<script>
+"use strict";
+/* ===================== MODAIS ===================== */
+let MODAL = null;
+function abreModal(titulo, corpo, rodape, onMount) {
+  MODAL = { titulo, corpo, rodape, onMount };
+  $("#modalRoot").innerHTML =
+    '<div class="ov" id="ov"><div class="modal" role="dialog" aria-modal="true">' +
+    '<div class="mh"><h3>' + esc(titulo) + '</h3><button class="iconbtn" data-act="fecharModal" aria-label="Fechar">✕</button></div>' +
+    '<div class="mb">' + corpo + "</div>" +
+    (rodape ? '<div class="mf">' + rodape + "</div>" : "") +
+    "</div></div>";
+  document.body.style.overflow = "hidden";
+  if (onMount) onMount();
+}
+function fechaModal() { MODAL = null; $("#modalRoot").innerHTML = ""; document.body.style.overflow = ""; }
+function refreshModal() { if (MODAL) abreModal(MODAL.titulo, MODAL.corpo, MODAL.rodape, MODAL.onMount); }
+
+/* --------- formulário de peça --------- */
+let FORM = null;
+function abreFormPeca(id, foto) {
+  FORM = id ? JSON.parse(JSON.stringify(item(id))) : novoItem({});
+  if (foto) FORM.foto = foto;
+  desenhaFormPeca();
+}
+function desenhaFormPeca() {
+  const it = FORM;
+  const corpo = '' +
+    '<div class="row" style="align-items:flex-start;gap:14px;margin-bottom:14px">' +
+    '<div style="width:96px;height:96px;border-radius:16px;overflow:hidden;flex:none;display:grid;place-items:center;font-size:38px;background:color-mix(in srgb,' + corHex(it) + ' 14%, var(--bg2));border:1px solid var(--line)">' +
+    (it.foto ? '<img src="' + it.foto + '" alt="" style="width:100%;height:100%;object-fit:cover" />' : emojiOf(it)) + "</div>" +
+    '<div style="flex:1"><div class="field"><label>Nome da peça</label>' +
+    '<input class="inp" data-f="nome" value="' + esc(it.nome) + '" placeholder="ex.: camiseta preta oversized" /></div>' +
+    '<div class="row" style="margin-top:8px"><button class="btn sm" data-act="escolherFoto">📸 ' + (it.foto ? "Trocar foto" : "Adicionar foto") + "</button>" +
+    (it.foto ? '<button class="btn sm ghost" data-act="tirarFoto">Remover</button>' : "") + "</div></div></div>" +
+    '<input type="file" id="fotoInp" accept="image/*" class="sr" />' +
+
+    '<div class="grid g2">' +
+    '<div class="field"><label>Categoria</label><select class="inp" data-f="cat">' +
+    CAT_KEYS.map((k) => '<option value="' + k + '"' + (it.cat === k ? " selected" : "") + ">" + CATS[k].emoji + " " + CATS[k].label + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Marca</label><input class="inp" data-f="marca" value="' + esc(it.marca) + '" placeholder="opcional" /></div>' +
+    '<div class="field"><label>Cor principal</label><select class="inp" data-f="cor">' +
+    COLOR_KEYS.map((k) => '<option value="' + k + '"' + (it.cor === k ? " selected" : "") + ">" + COLORS[k].label + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Cor secundária</label><select class="inp" data-f="cor2"><option value="">nenhuma</option>' +
+    COLOR_KEYS.map((k) => '<option value="' + k + '"' + (it.cor2 === k ? " selected" : "") + ">" + COLORS[k].label + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Estampa</label><select class="inp" data-f="estampa">' +
+    PATTERNS.map((k) => '<option value="' + k + '"' + (it.estampa === k ? " selected" : "") + ">" + k + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Material</label><select class="inp" data-f="material">' +
+    MATERIALS.map((k) => '<option value="' + k + '"' + (it.material === k ? " selected" : "") + ">" + k + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Estilo</label><select class="inp" data-f="estilo">' +
+    STYLE_KEYS.map((k) => '<option value="' + k + '"' + (it.estilo === k ? " selected" : "") + ">" + STYLES[k].label + "</option>").join("") + "</select></div>" +
+    '<div class="field"><label>Tamanho</label><input class="inp" data-f="tamanho" list="tams" value="' + esc(it.tamanho) + '" placeholder="ex.: 10" />' +
+    '<datalist id="tams">' + SIZES.map((s) => "<option>" + s + "</option>").join("") + "</datalist></div>" +
+    '<div class="field"><label>Data da compra</label><input class="inp" type="date" data-f="compra" value="' + esc(it.compra) + '" /></div>' +
+    (podeVerPrecos() ? '<div class="field"><label>Preço</label><input class="inp" type="number" min="0" step="0.01" data-f="preco" value="' + (it.preco || "") + '" placeholder="0,00" /></div>' : "") +
+    "</div>" +
+
+    '<div class="field" style="margin-top:14px"><label>Estações / clima</label>' +
+    '<div class="chips">' + chipsHTML(CLIMAS, it.climas, "m-clima", true) + "</div></div>" +
+    '<div class="field" style="margin-top:12px"><label>Ocasiões recomendadas</label>' +
+    '<div class="chips">' + chipsHTML(OCCASIONS, it.ocasioes, "m-ocasiao", true) + "</div></div>" +
+    '<p class="hint" style="margin-top:12px">Clima e ocasião são o que o LookLab usa para escolher a peça nas sugestões.</p>';
+
+  const rodape = (FORM.id && item(FORM.id) ? '<button class="btn danger" data-act="excluirPeca" data-id="' + FORM.id + '">Excluir</button><div style="flex:1"></div>' : "") +
+    '<button class="btn" data-act="fecharModal">Cancelar</button><button class="btn pri" data-act="salvarPeca">Salvar peça</button>';
+  abreModal(item(FORM.id) ? "Editar peça" : "Nova peça", corpo, rodape);
+}
+/* guarda o que já foi digitado antes de redesenhar o formulário */
+function colheFormPeca() {
+  if (!FORM) return;
+  $$("#modalRoot [data-f]").forEach((el) => {
+    const k = el.dataset.f;
+    const v = k === "preco" ? Number(el.value || 0) : el.value;
+    if (k === "nome" && v !== FORM.nome) FORM._auto = false;   // nome escrito à mão manda
+    FORM[k] = v;
+  });
+}
+function salvaPeca() {
+  colheFormPeca();
+  const it = FORM;
+  if (!it.nome.trim()) it.nome = (CATS[it.cat] || {}).label + " " + corLabel(it.cor).toLowerCase();
+  if (!it.climas.length) it.climas = defaultClimas(it.cat);
+  if (!it.ocasioes.length) it.ocasioes = defaultOcasioes(it.cat, it.estilo);
+  delete it._auto;
+  const ex = item(it.id);
+  if (ex) Object.assign(ex, it); else P().itens.push(it);
+  save(); fechaModal(); toast("Peça salva."); render();
+}
+/* foto: reduz para 420px e sugere a cor predominante */
+function processaFoto(file, cb) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const M = 360, sc = Math.min(1, M / Math.max(img.width, img.height));   // cabe no armazenamento do navegador
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+      const cx = c.getContext("2d");
+      cx.drawImage(img, 0, 0, c.width, c.height);
+      const dataUrl = c.toDataURL("image/jpeg", 0.7);
+      cb(dataUrl, corPredominante(cx, c.width, c.height));
+    };
+    img.onerror = () => cb(null, null);
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+function corPredominante(cx, w, h) {
+  // amostra o miolo da imagem (evita fundo nas bordas)
+  const x0 = Math.round(w * 0.2), y0 = Math.round(h * 0.2);
+  const d = cx.getImageData(x0, y0, Math.max(1, Math.round(w * 0.6)), Math.max(1, Math.round(h * 0.6))).data;
+  const votos = {};
+  for (let i = 0; i < d.length; i += 16) {
+    if (d[i + 3] < 128) continue;
+    const k = corMaisProxima(d[i], d[i + 1], d[i + 2]);
+    votos[k] = (votos[k] || 0) + 1;
+  }
+  return Object.keys(votos).sort((a, b) => votos[b] - votos[a])[0] || null;
+}
+function corMaisProxima(r, g, b) {
+  const [h, s, l] = rgb2hsl(r, g, b);
+  let best = "preto", bd = 1e9;
+  COLOR_KEYS.forEach((k) => {
+    const [H, S, L] = COLOR_HSL[k];
+    const dh = Math.min(Math.abs(h - H), 360 - Math.abs(h - H)) / 180;
+    const peso = Math.min(s, S) / 100;               // matiz importa pouco em cor lavada
+    const d = (dh * dh) * (2.2 * peso) + Math.pow((s - S) / 100, 2) * 0.8 + Math.pow((l - L) / 100, 2) * 1.5;
+    if (d < bd) { bd = d; best = k; }
+  });
+  return best;
+}
+
+/* --------- seletor de peça por espaço --------- */
+let PICKER = { slot: "", q: "" };
+function abrePicker(slot) {
+  PICKER.slot = slot; PICKER.q = "";
+  desenhaPicker();
+}
+function desenhaPicker() {
+  const slot = PICKER.slot;
+  let arr = itens().filter((i) => slotVisual(i) === slot || (slot === "top" && slotOf(i) === "full"));
+  if (PICKER.q) { const q = PICKER.q.toLowerCase(); arr = arr.filter((i) => (i.nome + " " + i.marca + " " + corLabel(i.cor)).toLowerCase().includes(q)); }
+  const atual = BUILDER.slots[slot];
+  const ctx = BUILDER.ctx;
+  arr = arr.map((i) => ({ i, s: pontuaItem(i, ctx) })).sort((a, b) => b.s - a.s).map((x) => x.i);
+  const corpo = '<input class="inp" id="pq" placeholder="Buscar…" value="' + esc(PICKER.q) + '" style="margin-bottom:12px" />' +
+    (arr.length ? '<div class="grid g3">' + arr.map((i) => pecaCard(i, { mini: true, sel: i.id === atual, act: "escolhePeca" })).join("") + "</div>"
+      : '<p class="hint">Nenhuma peça desse tipo no guarda-roupa' + (PICKER.q ? " com esse texto" : "") + ".</p>");
+  const rodape = (atual ? '<button class="btn" data-act="tirarSlot" data-slot="' + slot + '">Tirar do look</button>' : "") +
+    '<div style="flex:1"></div><button class="btn" data-act="fecharModal">Fechar</button>';
+  abreModal("Escolher " + SLOTS[slot].label.toLowerCase(), corpo, rodape, () => {
+    const el = $("#pq");
+    if (el) el.oninput = () => { PICKER.q = el.value; desenhaPicker(); setTimeout(() => { const e2 = $("#pq"); if (e2) { e2.focus(); e2.setSelectionRange(e2.value.length, e2.value.length); } }, 0); };
+  });
+}
+
+/* --------- planejar dia --------- */
+let PLAN = { dia: hoje(), lookId: "" };
+function abrePlanejar(dia, lookId) {
+  PLAN = { dia: dia || hoje(), lookId: lookId || "" };
+  desenhaPlanejar();
+}
+function desenhaPlanejar() {
+  const p = P(), atual = (p.plano || {})[PLAN.dia];
+  const ls = looks().slice().sort((a, b) => (b.criado || "").localeCompare(a.criado || ""));
+  const repetido = (l) => {
+    const usos = Object.keys(p.plano || {}).filter((d) => p.plano[d].lookId === l.id && Math.abs(diasEntre(d, PLAN.dia)) <= 7 && d !== PLAN.dia);
+    return usos.length > 0;
+  };
+  const corpo = '<div class="field" style="margin-bottom:14px"><label>Dia</label>' +
+    '<input class="inp" type="date" id="planDia" value="' + PLAN.dia + '" /></div>' +
+    '<div class="row" style="margin-bottom:12px"><button class="btn sm pri" data-act="gerarParaDia">✨ Gerar look para este dia</button>' +
+    (builderItens().length ? '<button class="btn sm" data-act="usarBuilderNoDia">Usar o look que estou montando</button>' : "") +
+    (atual ? '<button class="btn sm danger" data-act="limparDia">Limpar dia</button>' : "") + "</div>" +
+    (ls.length ? '<div class="list">' + ls.map((l) =>
+      '<div class="li"><span class="em">' + (l.fav ? "⭐" : "🧩") + '</span><span class="t"><b>' + esc(l.nome) + "</b><span>" +
+      (l.ocasiao ? OCCASIONS[l.ocasiao].label + " · " : "") + plural(l.itens.length, "peça") +
+      (repetido(l) ? " · ⚠️ usado em outro dia desta semana" : "") + "</span></span>" +
+      '<button class="btn sm ' + (atual && atual.lookId === l.id ? "pri" : "") + '" data-act="escolheLookDia" data-id="' + l.id + '">' +
+      (atual && atual.lookId === l.id ? "No dia" : "Usar") + "</button></div>").join("") + "</div>"
+      : '<p class="hint">Nenhum look salvo ainda. Use o botão acima para gerar um.</p>');
+  abreModal("Planejar " + dataLonga(PLAN.dia), corpo, '<button class="btn" data-act="fecharModal">Fechar</button>', () => {
+    const el = $("#planDia");
+    if (el) el.onchange = () => { PLAN.dia = el.value || hoje(); desenhaPlanejar(); };
+  });
+}
+
+/* --------- perfis --------- */
+function abreFormPerfil(id) {
+  const p = id ? DB.perfis.find((x) => x.id === id) : { nome: "", idade: "", avatar: "🙂", estilos: [] };
+  const avatares = ["🙂", "🧒", "👦", "👧", "🧑", "😎", "🐼", "🦊", "🦁", "🐨", "⚽", "🎸"];
+  const corpo = '<div class="grid g2">' +
+    '<div class="field"><label>Nome</label><input class="inp" id="pf-nome" value="' + esc(p.nome) + '" placeholder="ex.: Lucas" /></div>' +
+    '<div class="field"><label>Idade</label><input class="inp" id="pf-idade" type="number" min="1" max="19" value="' + (p.idade || "") + '" /></div></div>' +
+    '<div class="field" style="margin-top:12px"><label>Avatar</label><div class="chips" id="pf-av">' +
+    avatares.map((a) => '<button class="chip ' + (p.avatar === a ? "on" : "") + '" data-av="' + a + '">' + a + "</button>").join("") + "</div></div>";
+  abreModal(id ? "Editar perfil" : "Novo perfil", corpo,
+    '<button class="btn" data-act="fecharModal">Cancelar</button><button class="btn pri" data-act="salvarPerfil" data-id="' + (id || "") + '">Salvar</button>',
+    () => {
+      $$("#pf-av .chip").forEach((b) => b.onclick = () => { $$("#pf-av .chip").forEach((x) => x.classList.remove("on")); b.classList.add("on"); });
+    });
+}
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Contas — login local com e-mail e senha.
+   Tudo fica NESTE aparelho: a senha nunca é guardada, só a derivação
+   PBKDF2-SHA256 (210 mil rodadas) com sal aleatório por conta.
+   Isso tranca o app no aparelho; não é login de servidor, não sincroniza
+   entre aparelhos e não há recuperação de senha por e-mail.
+   ===================================================================== */
+const ITER = 210000;
+let CONTAS = { contas: [], sessao: "", ui: { theme: "auto" } };
+let AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+
+function carregaContas() {
+  try {
+    const raw = localStorage.getItem(KEY_CONTAS);
+    if (raw) CONTAS = JSON.parse(raw);
+  } catch (e) { /* ignora e recomeça */ }
+  CONTAS = CONTAS || {};
+  CONTAS.contas = CONTAS.contas || [];
+  CONTAS.ui = CONTAS.ui || { theme: "auto" };
+  CONTAS.sessao = CONTAS.sessao || "";
+}
+function salvaContas() {
+  try { localStorage.setItem(KEY_CONTAS, JSON.stringify(CONTAS)); }
+  catch (e) { toast("Não foi possível salvar a conta (armazenamento cheio)."); }
+}
+const contaAtual = () => CONTAS.contas.find((c) => c.id === CONTAS.sessao) || null;
+const normEmail = (e) => String(e || "").trim().toLowerCase();
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normEmail(e));
+const achaConta = (e) => CONTAS.contas.find((c) => c.email === normEmail(e));
+
+const b64 = (buf) => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+const deB64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+const temCripto = () => !!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues);
+async function derivaSenha(senha, saltB64, iter) {
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: deB64(saltB64), iterations: iter || ITER, hash: "SHA-256" }, chave, 256);
+  return b64(bits);
+}
+function novoSalt() { return b64(crypto.getRandomValues(new Uint8Array(16))); }
+/* comparação em tempo constante, para o tempo de resposta não vazar o quanto acertou */
+function igual(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+async function criarConta(nome, email, senha, comExemplo) {
+  const conta = { id: uid(), nome: (nome || "").trim(), email: normEmail(email), salt: novoSalt(), iter: ITER, criado: hoje() };
+  conta.hash = await derivaSenha(senha, conta.salt, conta.iter);
+  // a primeira conta do aparelho herda os dados que já existiam antes do login
+  let herdado = null;
+  if (!CONTAS.contas.length) {
+    try {
+      const antigo = localStorage.getItem(KEY);
+      if (antigo) { const d = JSON.parse(antigo); if (d && d.perfis && d.perfis.length) herdado = d; }
+    } catch (e) { /* ignora */ }
+  }
+  DB = herdado || (comExemplo ? seedDB() : dbVazio(conta.nome || "Eu"));
+  DB.ui = DB.ui || { theme: "auto" };
+  DB.ui.theme = CONTAS.ui.theme || "auto";
+  CONTAS.contas.push(conta);
+  CONTAS.sessao = conta.id;
+  salvaContas();
+  try { localStorage.setItem(KEY_DADOS(conta.id), JSON.stringify(DB)); } catch (e) { /* avisa no save seguinte */ }
+  if (herdado) { try { localStorage.removeItem(KEY); } catch (e) { } }
+  return { conta, herdado: !!herdado };
+}
+async function entrar(email, senha) {
+  const c = achaConta(email);
+  if (!c) return false;
+  const h = await derivaSenha(senha, c.salt, c.iter || ITER);
+  if (!igual(h, c.hash)) return false;
+  CONTAS.sessao = c.id; salvaContas();
+  if (!carregaDados(c.id)) { DB = dbVazio(c.nome || "Eu"); save(); }
+  DB.ui = DB.ui || { theme: "auto" };
+  return true;
+}
+function sair() {
+  CONTAS.sessao = ""; salvaContas();
+  DB = null; CHAT = [];
+  AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+  desenhaAuth();
+}
+async function trocarSenha(atual, nova) {
+  const c = contaAtual(); if (!c) return "Nenhuma conta ativa.";
+  const h = await derivaSenha(atual, c.salt, c.iter || ITER);
+  if (!igual(h, c.hash)) return "A senha atual não confere.";
+  if (String(nova).length < 6) return "A senha nova precisa ter pelo menos 6 caracteres.";
+  c.salt = novoSalt(); c.iter = ITER;
+  c.hash = await derivaSenha(nova, c.salt, c.iter);
+  salvaContas();
+  return "";
+}
+function excluirConta(id) {
+  CONTAS.contas = CONTAS.contas.filter((c) => c.id !== id);
+  try { localStorage.removeItem(KEY_DADOS(id)); } catch (e) { }
+  if (CONTAS.sessao === id) { CONTAS.sessao = ""; DB = null; }
+  salvaContas();
+}
+
+/* ---------- tela de login ---------- */
+function avisoHTML() {
+  return AUTH.erro ? '<div class="erro">' + esc(AUTH.erro) + "</div>"
+    : AUTH.ok ? '<div class="ok">' + esc(AUTH.ok) + "</div>" : "";
+}
+/* mostra o recado sem redesenhar a tela — o que já foi digitado continua lá */
+function avisaAuth(erro, ok) {
+  AUTH.erro = erro || ""; AUTH.ok = ok || "";
+  const box = $("#au-aviso");
+  if (box) box.innerHTML = avisoHTML(); else desenhaAuth();
+}
+function ocupaAuth(ocupado) {
+  AUTH.ocupado = ocupado;
+  const b = $("#au-enviar");
+  if (!b) return;
+  b.disabled = ocupado;
+  b.textContent = ocupado ? "Aguarde…" : AUTH.modo === "criar" ? "Criar conta" : "Entrar";
+}
+function desenhaAuth() {
+  const el = $("#auth");
+  const nContas = CONTAS.contas.length;
+  el.classList.add("on");
+  document.body.style.overflow = "hidden";
+
+  if (!temCripto()) {
+    el.innerHTML = '<div class="auth"><div class="mark"><img src="assets/logo.png" alt="" />' +
+      "<h1>Look<span>Lab</span></h1></div>" +
+      '<div class="erro">Este navegador não oferece as funções de segurança necessárias para guardar a senha ' +
+      "(WebCrypto). Abra o LookLab por <b>https://</b> ou em um navegador mais novo.</div></div>";
+    return;
+  }
+
+  const cab = '<div class="topo"><button class="iconbtn" id="authTema" title="Alternar tema">' +
+    (temaAtual() === "light" ? "☀️" : temaAtual() === "dark" ? "🌙" : "🌗") + "</button></div>" +
+    '<div class="mark"><img src="assets/logo.png" alt="" /><h1>Look<span>Lab</span></h1>' +
+    "<p>seu estilista digital</p></div>";
+  const aviso = '<div id="au-aviso">' + avisoHTML() + "</div>";
+  const rodape = '<p class="rodape">A conta e o guarda-roupa ficam <b>neste aparelho</b>. Nada é enviado para servidor nenhum — ' +
+    "por isso não dá para entrar do celular e do computador com os mesmos dados, e não existe recuperação de senha por e-mail. " +
+    "Faça um backup em <b>Perfil → área dos responsáveis</b>.</p>";
+
+  if (AUTH.modo === "esqueci") {
+    el.innerHTML = '<div class="auth">' + cab +
+      '<div class="card pad"><b style="font-size:15px">Esqueci minha senha</b>' +
+      '<p class="hint" style="margin:8px 0 0;line-height:1.55">Como tudo fica só neste aparelho, o LookLab não tem como enviar ' +
+      "um e-mail de recuperação: a senha não está guardada em lugar nenhum, nem aqui. Restam dois caminhos:</p>" +
+      '<p class="hint" style="margin:10px 0 0;line-height:1.55"><b>1.</b> Se você exportou um backup, crie uma conta nova e ' +
+      "importe o arquivo em <b>Perfil → área dos responsáveis → Importar</b>. Você recupera todo o guarda-roupa.</p>" +
+      '<p class="hint" style="margin:8px 0 14px;line-height:1.55"><b>2.</b> Sem backup, o jeito é apagar a conta e começar de novo — ' +
+      "o guarda-roupa dela se perde.</p>" +
+      (nContas ? '<div class="field"><label>Apagar qual conta?</label><select class="inp" id="au-apagar">' +
+        CONTAS.contas.map((c) => '<option value="' + c.id + '">' + esc(c.email) + "</option>").join("") + "</select></div>" +
+        '<button class="btn danger block" id="au-apagarBtn" style="margin-top:12px">Apagar conta e recomeçar</button>' : "") +
+      '<button class="link" id="au-voltar" style="margin-top:14px">← Voltar para o login</button>' +
+      "</div>" + rodape + "</div>";
+    $("#authTema").onclick = giraTema;
+    $("#au-voltar").onclick = () => { AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+    const b = $("#au-apagarBtn");
+    if (b) b.onclick = () => {
+      const id = $("#au-apagar").value;
+      const c = CONTAS.contas.find((x) => x.id === id);
+      if (!c || !confirm("Apagar a conta " + c.email + " e todo o guarda-roupa dela? Isso não tem volta.")) return;
+      excluirConta(id);
+      AUTH = { modo: CONTAS.contas.length ? "entrar" : "criar", erro: "", ok: "Conta apagada. Você pode criar outra agora.", ocupado: false };
+      desenhaAuth();
+    };
+    return;
+  }
+
+  const criando = AUTH.modo === "criar";
+  el.innerHTML = '<div class="auth">' + cab +
+    '<div class="seg2"><button id="au-tab-entrar" class="' + (criando ? "" : "on") + '">Entrar</button>' +
+    '<button id="au-tab-criar" class="' + (criando ? "on" : "") + '">Criar conta</button></div>' +
+    aviso +
+    '<form id="au-form" autocomplete="on" novalidate>' +
+    (criando ? '<div class="field"><label>Seu nome</label><input class="inp" id="au-nome" placeholder="como quer ser chamado(a)" autocomplete="name" /></div>' : "") +
+    '<div class="field"><label>E-mail</label><input class="inp" id="au-email" type="email" inputmode="email" autocomplete="' + (criando ? "username" : "username") + '" placeholder="voce@exemplo.com" /></div>' +
+    '<div class="field"><label>Senha</label><input class="inp" id="au-senha" type="password" autocomplete="' + (criando ? "new-password" : "current-password") + '" placeholder="' + (criando ? "mínimo de 6 caracteres" : "sua senha") + '" /></div>' +
+    (criando ? '<div class="field"><label>Repita a senha</label><input class="inp" id="au-senha2" type="password" autocomplete="new-password" /></div>' +
+      '<label class="linha"><input type="checkbox" id="au-exemplo" /> Começar com o guarda-roupa de exemplo (para experimentar)</label>' : "") +
+    '<button class="btn pri big block" id="au-enviar" type="submit"' + (AUTH.ocupado ? " disabled" : "") + ">" +
+    (AUTH.ocupado ? "Aguarde…" : criando ? "Criar conta" : "Entrar") + "</button>" +
+    "</form>" +
+    (criando ? "" : '<button class="link" id="au-esqueci" style="margin-top:12px">Esqueci minha senha</button>') +
+    rodape + "</div>";
+
+  $("#authTema").onclick = giraTema;
+  $("#au-tab-entrar").onclick = () => { AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  $("#au-tab-criar").onclick = () => { AUTH = { modo: "criar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  const esq = $("#au-esqueci");
+  if (esq) esq.onclick = () => { AUTH = { modo: "esqueci", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  $("#au-form").onsubmit = (e) => { e.preventDefault(); enviaAuth(); };
+  setTimeout(() => { const f = $(criando ? "#au-nome" : "#au-email"); if (f) f.focus(); }, 40);
+}
+async function enviaAuth() {
+  if (AUTH.ocupado) return;
+  const criando = AUTH.modo === "criar";
+  const email = ($("#au-email") || {}).value || "";
+  const senha = ($("#au-senha") || {}).value || "";
+  const falha = (m) => { ocupaAuth(false); avisaAuth(m); };
+
+  if (!emailValido(email)) return falha("Escreva um e-mail válido.");
+  if (criando) {
+    const nome = ($("#au-nome") || {}).value || "";
+    const senha2 = ($("#au-senha2") || {}).value || "";
+    if (senha.length < 6) return falha("A senha precisa ter pelo menos 6 caracteres.");
+    if (senha !== senha2) return falha("As duas senhas não são iguais.");
+    if (achaConta(email)) return falha("Já existe uma conta com esse e-mail neste aparelho.");
+    avisaAuth(""); ocupaAuth(true);
+    try {
+      const r = await criarConta(nome, email, senha, !!($("#au-exemplo") || {}).checked);
+      abreApp(r.herdado ? "Conta criada. O guarda-roupa que já estava aqui foi mantido." : "Conta criada. Bem-vindo(a) ao LookLab!");
+    } catch (e) { falha("Não consegui criar a conta neste navegador."); }
+    return;
+  }
+  avisaAuth(""); ocupaAuth(true);
+  try {
+    const ok = await entrar(email, senha);
+    if (!ok) return falha("E-mail ou senha não conferem.");
+    abreApp("Bem-vindo(a) de volta!");
+  } catch (e) { falha("Não consegui verificar a senha neste navegador."); }
+}
+function abreApp(msg) {
+  AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+  $("#auth").classList.remove("on");
+  $("#auth").innerHTML = "";
+  document.body.style.overflow = "";
+  aplicaTema();
+  ROTA = lerHash();
+  render();
+  if (msg) toast(msg);
+}
+function giraTema() {
+  const ordem = ["auto", "light", "dark"];
+  const t = ordem[(ordem.indexOf(temaAtual()) + 1) % 3];
+  CONTAS.ui.theme = t; salvaContas();
+  if (DB) { DB.ui.theme = t; save(); }
+  aplicaTema();
+  if ($("#auth").classList.contains("on")) desenhaAuth();
+  else if (ROTA.tab === "perfil") render();
+}
+const temaAtual = () => (DB && DB.ui && DB.ui.theme) || (CONTAS.ui && CONTAS.ui.theme) || "auto";
+</script>
+
+<script>
+"use strict";
+/* ===================== RENDER ===================== */
+function aplicaTema() {
+  const t = temaAtual();
+  if (t === "auto") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", t);
+  $("#themeBtn").textContent = t === "light" ? "☀️" : t === "dark" ? "🌙" : "🌗";
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === "light" ? "#f6f6f8" : "#0b0b0d";
+}
+function render() {
+  const foco = document.activeElement;
+  const fid = foco && foco.id ? foco.id : null;
+  const pos = foco && foco.selectionStart != null ? foco.selectionStart : null;
+
+  const p = P();
+  $("#whoAv").textContent = p.avatar || "🙂";
+  $("#whoNm").textContent = p.nome;
+  $("#whoCx").textContent = ehResp() ? "modo responsável" : (p.idade ? p.idade + " anos" : "perfil");
+  renderTabs();
+
+  const v = $("#view");
+  const t = ROTA.tab;
+  v.innerHTML =
+    t === "guarda" ? viewGuarda() :
+      t === "criar" ? viewCriar() :
+        t === "ia" ? viewIA() :
+          t === "calendario" ? viewCalendario() :
+            t === "tendencias" ? viewTendencias() :
+              t === "inspiracoes" ? viewInspiracoes() :
+                t === "desejos" ? viewDesejos() :
+                  t === "viagens" ? viewViagens() :
+                    t === "perfil" ? viewPerfil() :
+                      t === "peca" ? viewPeca(ROTA.arg) :
+                        t === "look" ? viewLook(ROTA.arg) :
+                          viewInicio();
+
+  if (fid) { const el = document.getElementById(fid); if (el) { el.focus(); if (pos != null && el.setSelectionRange) { try { el.setSelectionRange(pos, pos); } catch (e) { } } } }
+}
+
+/* ===================== AÇÕES ===================== */
+function idsDe(el) { return (el.dataset.ids || "").split(",").filter(Boolean); }
+function ctxDe(el) { try { return JSON.parse(el.dataset.ctx || "{}"); } catch (e) { return {}; } }
+
+const ACOES = {
+  fecharModal: () => fechaModal(),
+
+  /* dashboard / sugestões */
+  novaSugestao: () => render(),
+  usarHoje: (el) => { const ids = idsDe(el); registraUso(ids); toast("Uso registrado. 👍"); render(); },
+  salvarSugestao: (el) => {
+    const ids = idsDe(el), c = ctxDe(el);
+    const its = ids.map(item).filter(Boolean);
+    if (its.length < 2) return;
+    const l = { id: uid(), nome: el.dataset.nome || sugereNome(its, c), itens: ids, ocasiao: c.ocasiao || "", estilo: c.estilo || "", clima: c.clima || "", fav: true, criado: hoje(), usos: [] };
+    P().looks.push(l); save(); toast("Look salvo nos favoritos ⭐"); render();
+  },
+  abrirCriar: (el) => {
+    const ids = idsDe(el), c = ctxDe(el);
+    carregaLookNoBuilder({ id: null, nome: "", ocasiao: c.ocasiao, estilo: c.estilo, clima: c.clima, itens: ids });
+    BUILDER.editId = null; ir("criar");
+  },
+  lookCom: (el) => {
+    const it = item(el.dataset.id); if (!it) return;
+    const g = geraLooks({ obrigatorios: [it.id] }, 1)[0];
+    carregaLookNoBuilder({ id: null, nome: "", ocasiao: "", estilo: "", clima: "", itens: g ? g.its.map((i) => i.id) : [it.id] });
+    BUILDER.editId = null; ir("criar");
+  },
+
+  /* guarda-roupa */
+  limparFiltro: () => { FILTRO = { q: "", slot: "", cor: "", estilo: "", ocasiao: "", status: "ativas", ordem: "recente" }; render(); },
+  novaPeca: () => abreFormPeca(null),
+  novaPecaFoto: () => {
+    abreFormPeca(null);
+    setTimeout(() => { const f = $("#fotoInp"); if (f) f.click(); }, 60);
+  },
+  editarPeca: (el) => abreFormPeca(el.dataset.id),
+  salvarPeca: () => salvaPeca(),
+  escolherFoto: () => { colheFormPeca(); const f = $("#fotoInp"); if (f) f.click(); },
+  tirarFoto: () => { colheFormPeca(); FORM.foto = ""; desenhaFormPeca(); },
+  excluirPeca: (el) => {
+    const id = el.dataset.id, it = item(id); if (!it) return;
+    if (!confirm("Excluir “" + it.nome + "” do guarda-roupa?")) return;
+    P().itens = P().itens.filter((x) => x.id !== id);
+    P().looks = P().looks.filter((l) => { l.itens = l.itens.filter((x) => x !== id); return l.itens.length >= 2; });
+    Object.keys(P().plano || {}).forEach((d) => { if (!look(P().plano[d].lookId)) delete P().plano[d]; });
+    save(); fechaModal(); toast("Peça excluída."); ir("guarda");
+  },
+
+  /* criador */
+  gerarLook: () => {
+    const g = geraLooks(BUILDER.ctx, 1)[0];
+    if (!g) { toast("Faltam peças para montar. Cadastre mais roupas."); return; }
+    const ctx = BUILDER.ctx;
+    BUILDER.slots = { outer: "", top: "", bottom: "", shoes: "", acc: "" };
+    g.its.forEach(setSlotComItem);
+    BUILDER.ctx = ctx; BUILDER.nome = ""; BUILDER.editId = null;
+    render(); toast("Look gerado com as suas peças ✨");
+  },
+  limparBuilder: () => { BUILDER = { slots: { outer: "", top: "", bottom: "", shoes: "", acc: "" }, ctx: { ocasiao: "", estilo: "", clima: "" }, nome: "", editId: null }; render(); },
+  salvarLook: () => { const n = $("#nomeLook"); if (n) BUILDER.nome = n.value; const l = salvaLookAtual(); if (l) render(); },
+  planejarLook: () => { const n = $("#nomeLook"); if (n) BUILDER.nome = n.value; abrePlanejar(hoje()); },
+  tirarSlot: (el) => { BUILDER.slots[el.dataset.slot] = ""; if (MODAL) fechaModal(); render(); },
+  escolhePeca: (el) => { const it = item(el.dataset.peca); if (!it) return; setSlotComItem(it); fechaModal(); render(); },
+
+  /* estilista */
+  perguntar: () => { const el = $("#perg"); if (!el) return; const q = el.value; el.value = ""; perguntar(q); },
+
+  /* calendário */
+  calPrev: () => { CAL.m--; if (CAL.m < 0) { CAL.m = 11; CAL.y--; } render(); },
+  calNext: () => { CAL.m++; if (CAL.m > 11) { CAL.m = 0; CAL.y++; } render(); },
+  planejarSemana: () => planejaSemana(),
+  gerarParaDia: () => {
+    const g = geraLooks({ clima: "meia-estação" }, 1)[0];
+    if (!g) { toast("Faltam peças para montar."); return; }
+    const d = fromISO(PLAN.dia);
+    const l = { id: uid(), nome: "Look de " + DOW[d.getDay()] + " " + d.getDate() + "/" + pad2(d.getMonth() + 1), itens: g.its.map((i) => i.id), ocasiao: "", estilo: "", clima: "meia-estação", fav: false, criado: hoje(), usos: [] };
+    P().looks.push(l);
+    P().plano = P().plano || {}; P().plano[PLAN.dia] = { lookId: l.id, ocasiao: "" };
+    save(); desenhaPlanejar(); render(); toast("Look definido para " + dataCurta(PLAN.dia) + ".");
+  },
+  usarBuilderNoDia: () => {
+    const l = salvaLookAtual(); if (!l) return;
+    P().plano = P().plano || {}; P().plano[PLAN.dia] = { lookId: l.id, ocasiao: BUILDER.ctx.ocasiao || "" };
+    save(); fechaModal(); render(); toast("Planejado para " + dataCurta(PLAN.dia) + ".");
+  },
+  limparDia: () => { delete P().plano[PLAN.dia]; save(); desenhaPlanejar(); render(); },
+  escolheLookDia: (el) => {
+    P().plano = P().plano || {};
+    P().plano[PLAN.dia] = { lookId: el.dataset.id, ocasiao: (look(el.dataset.id) || {}).ocasiao || "" };
+    save(); desenhaPlanejar(); render(); toast("Planejado para " + dataCurta(PLAN.dia) + ".");
+  },
+
+  /* tendências e inspirações */
+  lookTendencia: (el) => {
+    const t = TRENDS.trends.find((x) => x.id === el.dataset.id); if (!t) return;
+    const m = t.match || {};
+    const g = geraLooks({ cats: m.cats || [], cores: m.colors || [], estilo: (m.styles || [])[0] || "" }, 1)[0];
+    if (!g) { toast("Faltam peças para montar."); return; }
+    carregaLookNoBuilder({ id: null, nome: t.nome, ocasiao: "", estilo: (m.styles || [])[0] || "", clima: "", itens: g.its.map((i) => i.id) });
+    BUILDER.editId = null; ir("criar"); toast("Look montado na linha “" + t.nome + "”.");
+  },
+  recriar: (el) => {
+    const insp = INSPIRACOES.find((i) => i.id === el.dataset.id); if (!insp) return;
+    const r = recriaInspiracao(insp);
+    if (!r) { toast("Faltam peças parecidas no guarda-roupa."); return; }
+    carregaLookNoBuilder({ id: null, nome: insp.titulo, ocasiao: insp.ocasiao, estilo: insp.estilo, clima: insp.clima, itens: r.its.map((i) => i.id) });
+    BUILDER.editId = null; ir("criar"); toast("Montei algo parecido com as suas roupas ✨");
+  },
+
+  /* desejos */
+  addDesejo: () => {
+    const nome = ($("#d-nome") || {}).value || "";
+    if (!nome.trim()) { toast("Escreva o nome da peça."); return; }
+    const d = { id: uid(), nome: nome.trim(), cat: ($("#d-cat") || {}).value || "camiseta", cor: ($("#d-cor") || {}).value || "preto", preco: Number(($("#d-preco") || {}).value || 0), nota: ($("#d-nota") || {}).value || "" };
+    P().desejos = P().desejos || []; P().desejos.push(d); save(); render(); toast("Adicionado à lista ❤️");
+  },
+  delDesejo: (el) => { P().desejos = (P().desejos || []).filter((d) => d.id !== el.dataset.id); save(); render(); },
+
+  /* viagens */
+  gerarMala: () => {
+    geraMala(($("#v-destino") || {}).value || "Viagem", Math.max(1, Math.min(21, Number(($("#v-dias") || {}).value || 5))),
+      ($("#v-tipo") || {}).value || "viagem familiar", ($("#v-clima") || {}).value || "meia-estação");
+  },
+  delViagem: (el) => { P().viagens = (P().viagens || []).filter((v) => v.id !== el.dataset.id); save(); render(); },
+
+  /* looks */
+  abrirLook: (el) => ir("look", el.dataset.id),
+  favLook: (el) => { const l = look(el.dataset.id); if (l) { l.fav = !l.fav; save(); render(); toast(l.fav ? "Adicionado aos favoritos ⭐" : "Removido dos favoritos."); } },
+  usarLook: (el) => {
+    const l = look(el.dataset.id); if (!l) return;
+    l.usos = l.usos || []; if (!l.usos.includes(hoje())) l.usos.push(hoje());
+    registraUso(l.itens); save(); render(); toast("Uso registrado. 👍");
+  },
+  variacao: (el) => { const l = look(el.dataset.id); if (l) variacaoDe(l); },
+  editarLook: (el) => { const l = look(el.dataset.id); if (l) { carregaLookNoBuilder(l); ir("criar"); } },
+  planejarEsse: (el) => abrePlanejar(hoje(), el.dataset.id),
+  delLook: (el) => {
+    const l = look(el.dataset.id); if (!l) return;
+    if (!confirm("Excluir o look “" + l.nome + "”?")) return;
+    P().looks = P().looks.filter((x) => x.id !== l.id);
+    Object.keys(P().plano || {}).forEach((d) => { if (P().plano[d].lookId === l.id) delete P().plano[d]; });
+    save(); ir("criar"); toast("Look excluído.");
+  },
+
+  /* perfis e responsáveis */
+  trocarPerfil: (el) => { DB.ativo = el.dataset.id; CHAT = []; save(); toast("Agora é o guarda-roupa de " + P().nome + "."); ir("inicio"); },
+  novoPerfil: () => abreFormPerfil(null),
+  salvarPerfil: (el) => {
+    const nome = ($("#pf-nome") || {}).value.trim();
+    if (!nome) { toast("Escreva um nome."); return; }
+    const idade = Number(($("#pf-idade") || {}).value || 0);
+    const av = ($(".chip.on", $("#pf-av")) || {}).textContent || "🙂";
+    const id = el.dataset.id;
+    if (id) { const p = DB.perfis.find((x) => x.id === id); Object.assign(p, { nome, idade, avatar: av.trim() }); }
+    else {
+      const p = { id: uid(), nome, idade, avatar: av.trim(), estilos: [], itens: [], looks: [], plano: {}, desejos: [], viagens: [], criado: hoje() };
+      DB.perfis.push(p); DB.ativo = p.id;
+    }
+    save(); fechaModal(); render(); toast("Perfil salvo.");
+  },
+  delPerfil: (el) => {
+    if (DB.perfis.length <= 1) { toast("É preciso ter pelo menos um perfil."); return; }
+    const p = DB.perfis.find((x) => x.id === el.dataset.id); if (!p) return;
+    if (!confirm("Excluir o perfil de " + p.nome + " e todo o guarda-roupa dele(a)?")) return;
+    DB.perfis = DB.perfis.filter((x) => x.id !== p.id);
+    if (DB.ativo === p.id) DB.ativo = DB.perfis[0].id;
+    save(); render(); toast("Perfil excluído.");
+  },
+  entrarResp: () => {
+    const v = (($("#pin") || {}).value || "").trim();
+    if (!/^\d{4}$/.test(v)) { toast("O PIN tem 4 dígitos."); return; }
+    if (!DB.resp.pin) { DB.resp.pin = v; DB.modo = "guardian"; save(); render(); toast("PIN criado. Modo responsável ativo."); return; }
+    if (v !== DB.resp.pin) { toast("PIN incorreto."); return; }
+    DB.modo = "guardian"; save(); render(); toast("Modo responsável ativo.");
+  },
+  sairResp: () => { DB.modo = "kid"; save(); render(); toast("De volta ao modo do perfil."); },
+  sairConta: () => {
+    if (!confirm("Sair da conta? Os dados continuam guardados neste aparelho.")) return;
+    sair(); toast("Você saiu da conta.");
+  },
+  trocarSenha: () => {
+    const corpo = '<div class="field"><label>Senha atual</label><input class="inp" id="ts-atual" type="password" autocomplete="current-password" /></div>' +
+      '<div class="field" style="margin-top:12px"><label>Senha nova</label><input class="inp" id="ts-nova" type="password" autocomplete="new-password" placeholder="mínimo de 6 caracteres" /></div>' +
+      '<div class="field" style="margin-top:12px"><label>Repita a senha nova</label><input class="inp" id="ts-nova2" type="password" autocomplete="new-password" /></div>' +
+      '<p class="hint" style="margin-top:12px">A senha não é guardada em lugar nenhum — se esquecer, não há como recuperar. ' +
+      "Exporte um backup antes, por garantia.</p>";
+    abreModal("Trocar senha", corpo,
+      '<button class="btn" data-act="fecharModal">Cancelar</button><button class="btn pri" data-act="confirmaSenha">Salvar</button>',
+      () => setTimeout(() => { const f = $("#ts-atual"); if (f) f.focus(); }, 40));
+  },
+  confirmaSenha: async (el) => {
+    const atual = ($("#ts-atual") || {}).value || "", nova = ($("#ts-nova") || {}).value || "", nova2 = ($("#ts-nova2") || {}).value || "";
+    if (nova !== nova2) { toast("As duas senhas novas não são iguais."); return; }
+    el.disabled = true;
+    const erro = await trocarSenha(atual, nova);
+    el.disabled = false;
+    if (erro) { toast(erro); return; }
+    fechaModal(); toast("Senha trocada.");
+  },
+  apagarConta: () => {
+    const c = contaAtual(); if (!c) return;
+    if (!confirm("Excluir a conta " + c.email + " e TODO o guarda-roupa dela deste aparelho? Isso não tem volta.")) return;
+    if (!confirm("Tem certeza mesmo? Exporte um backup antes se quiser guardar os dados.")) return;
+    excluirConta(c.id);
+    CHAT = [];
+    AUTH = { modo: CONTAS.contas.length ? "entrar" : "criar", erro: "", ok: "Conta excluída.", ocupado: false };
+    desenhaAuth();
+  },
+  exportar: () => {
+    const blob = new Blob([JSON.stringify(DB, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "looklab-backup-" + hoje() + ".json";
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  },
+  importar: () => { const f = $("#fileImp"); if (f) f.click(); },
+  resetar: () => {
+    if (!confirm("Isso apaga o guarda-roupa desta conta e volta para os perfis de exemplo (Lucas, Marina e Pedro). Continuar?")) return;
+    const tema = temaAtual();
+    DB = seedDB(); DB.ui.theme = tema; save(); aplicaTema(); ir("inicio"); toast("Recomeçamos do exemplo.");
+  },
+  limparTudo: () => {
+    if (!confirm("Isso apaga todos os perfis, peças e looks desta conta, deixando um perfil vazio. Continuar?")) return;
+    const c = contaAtual(), tema = temaAtual();
+    DB = dbVazio((c && c.nome) || "Eu"); DB.ui.theme = tema; save(); aplicaTema(); ir("guarda");
+    toast("Guarda-roupa vazio. Cadastre as suas peças.");
+  },
+};
+
+/* chips */
+const CHIPS = {
+  "f-slot": (v) => { FILTRO.slot = v; render(); },
+  insp: (v) => { INSP_FILTRO = v; render(); },
+  "b-ocasiao": (v) => { BUILDER.ctx.ocasiao = BUILDER.ctx.ocasiao === v ? "" : v; render(); },
+  "b-estilo": (v) => { BUILDER.ctx.estilo = BUILDER.ctx.estilo === v ? "" : v; render(); },
+  "b-clima": (v) => { BUILDER.ctx.clima = BUILDER.ctx.clima === v ? "" : v; render(); },
+  "m-clima": (v) => { colheFormPeca(); toggle(FORM.climas, v); desenhaFormPeca(); },
+  "m-ocasiao": (v) => { colheFormPeca(); toggle(FORM.ocasioes, v); desenhaFormPeca(); },
+  "status-peca": (v) => { const it = item(ROTA.arg); if (it) { it.status = v; if (v !== "arquivada") it.destino = ""; save(); render(); } },
+  "destino-peca": (v) => { const it = item(ROTA.arg); if (it) { it.destino = it.destino === v ? "" : v; save(); render(); } },
+  "estilo-perfil": (v) => { P().estilos = P().estilos || []; toggle(P().estilos, v); save(); render(); },
+  tema: (v) => { DB.ui.theme = v; CONTAS.ui.theme = v; salvaContas(); save(); aplicaTema(); render(); },
+  perm: (v) => { DB.resp.perms[v] = !DB.resp.perms[v]; save(); render(); },
+};
+function toggle(arr, v) { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); }
+
+/* ===================== EVENTOS ===================== */
+document.addEventListener("click", (e) => {
+  const alvo = (sel) => e.target.closest(sel);
+  const ov = alvo(".ov");
+  if (ov && e.target === ov) { fechaModal(); return; }
+
+  const a = alvo("[data-act]");
+  if (a) { const fn = ACOES[a.dataset.act]; if (fn) { e.preventDefault(); Promise.resolve(fn(a)).catch(() => toast("Algo deu errado nessa ação.")); return; } }
+
+  const c = alvo("[data-chip]");
+  if (c) { const fn = CHIPS[c.dataset.chip]; if (fn) { fn(c.dataset.val); return; } }
+
+  const q = alvo("[data-pergunta]");
+  if (q) { perguntar(q.dataset.pergunta); return; }
+
+  const dia = alvo("[data-dia]");
+  if (dia) { abrePlanejar(dia.dataset.dia); return; }
+
+  const sl = alvo("[data-slot]");
+  if (sl) { abrePicker(sl.dataset.slot); return; }
+
+  const pc = alvo("[data-peca]");
+  if (pc) { ir("peca", pc.dataset.peca); return; }
+
+  const tb = alvo("[data-tab]");
+  if (tb) { ir(tb.dataset.tab); return; }
+});
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (el.id === "busca") { FILTRO.q = el.value; clearTimeout(render._t); render._t = setTimeout(render, 220); }
+});
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.sel) { FILTRO[el.dataset.sel] = el.value; render(); return; }
+  if (el.dataset && el.dataset.f === "cat" && FORM) {   // categoria nova → clima/ocasião padrão
+    const antes = FORM.cat;
+    colheFormPeca();
+    if (antes !== FORM.cat) {
+      FORM.climas = defaultClimas(FORM.cat);
+      FORM.ocasioes = defaultOcasioes(FORM.cat, FORM.estilo);
+      if (FORM._auto) FORM.nome = CATS[FORM.cat].label + " " + corLabel(FORM.cor).toLowerCase();
+      desenhaFormPeca();
+    }
+    return;
+  }
+  if (el.id === "fotoInp" && el.files && el.files[0]) {
+    processaFoto(el.files[0], (dataUrl, cor) => {
+      if (!dataUrl) { toast("Não consegui ler essa imagem."); return; }
+      FORM.foto = dataUrl;
+      if (cor) { FORM.cor = cor; if (!FORM.nome) { FORM.nome = CATS[FORM.cat].label + " " + corLabel(cor).toLowerCase(); FORM._auto = true; } }
+      desenhaFormPeca();
+      toast(cor ? "Foto adicionada. Sugeri a cor " + corLabel(cor).toLowerCase() + " — confira e ajuste." : "Foto adicionada.");
+    });
+    return;
+  }
+  if (el.id === "fileImp" && el.files && el.files[0]) {
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const novo = JSON.parse(fr.result);
+        if (!novo.perfis || !novo.perfis.length) throw new Error("formato");
+        DB = novo; save(); aplicaTema(); ir("inicio"); toast("Backup importado.");
+      } catch (err) { toast("Arquivo inválido."); }
+    };
+    fr.readAsText(el.files[0]);
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && MODAL) { fechaModal(); return; }
+  if (e.key === "Enter") {
+    if (e.target.id === "perg") { const v = e.target.value; e.target.value = ""; perguntar(v); }
+    if (e.target.id === "pin") ACOES.entrarResp(e.target);
+    if (e.target.id === "nomeLook") { BUILDER.nome = e.target.value; ACOES.salvarLook(); }
+  }
+});
+window.addEventListener("hashchange", () => { const r = lerHash(); if (r.tab !== ROTA.tab || r.arg !== ROTA.arg) { ROTA = r; render(); } });
+
+$("#themeBtn").onclick = () => {
+  giraTema();
+  toast("Tema: " + { auto: "automático", light: "claro", dark: "escuro" }[temaAtual()]);
+};
+$("#whoBtn").onclick = () => ir("perfil");
+
+/* ===================== INÍCIO ===================== */
+carregaContas();
+aplicaTema();
+TrendSource.fetch().then((d) => { TRENDS = d; if (DB && ROTA.tab === "tendencias") render(); }).catch(() => { });
+
+(function iniciar() {
+  const logado = CONTAS.sessao && contaAtual() && carregaDados(CONTAS.sessao);
+  if (logado) {
+    DB.ui = DB.ui || { theme: CONTAS.ui.theme || "auto" };
+    aplicaTema();
+    ROTA = lerHash();
+    render();
+  } else {
+    if (CONTAS.sessao) { CONTAS.sessao = ""; salvaContas(); }   // sessão órfã
+    AUTH.modo = CONTAS.contas.length ? "entrar" : "criar";
+  }
+  const sp = $("#splash");
+  let fechado = false;                     // toque + tempo não podem redesenhar duas vezes
+  const fim = () => {
+    if (fechado) return;
+    fechado = true;
+    sp.classList.add("gone");
+    if (!DB) desenhaAuth();
+  };
+  sp.addEventListener("click", fim);
+  setTimeout(fim, 1500);
+})();
+</script>
+</body>
+</html>

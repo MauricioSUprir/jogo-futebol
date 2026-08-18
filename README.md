@@ -8,9 +8,11 @@ Stack: **Next.js 15 (App Router) + TypeScript + Tailwind + Postgres (Drizzle ORM
 Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 `America/Sao_Paulo`, idioma pt-BR.
 
-> **Outros projetos neste repositório** (todos estáticos, publicados pelo GitHub Pages):
+> **Outros projetos deste repositório** (todos estáticos, publicados pelo GitHub Pages):
 > - [`studylab/`](./studylab/) — **StudyLab**, plataforma de organização, aprendizado e
 >   desempenho escolar (prioridades inteligentes, revisão espaçada, questões, foco, desempenho).
+> - [`looklab/`](./looklab/) — **LookLab**, guarda-roupa digital e criador de looks
+>   para crianças e adolescentes.
 > - [`financas-casa/`](./financas-casa/) — **NEXO**, painel de finanças da casa.
 > - [`legacy-total-match/`](./legacy-total-match/) — o jogo _Total Match_, preservado.
 
