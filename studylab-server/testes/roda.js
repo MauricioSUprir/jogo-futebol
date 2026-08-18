@@ -16,6 +16,7 @@ const BASE = `http://localhost:${process.env.PORT}`;
 const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
 let assinaturasMP = 0;
+let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
   const alvo = String(url);
 
@@ -26,6 +27,26 @@ globalThis.fetch = async (url, opcoes) => {
       return new Response(JSON.stringify({
         id: 'PREF-1', init_point: 'https://www.mercadopago.com.br/checkout/PREF-1',
         external_reference: c.external_reference,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (alvo.endsWith('/v1/payments') && opcoes?.method === 'POST') {
+      const c = JSON.parse(opcoes.body);
+      return new Response(JSON.stringify({
+        id: 'PIX-QR-1', status: 'pending', external_reference: c.external_reference,
+        transaction_amount: c.transaction_amount,
+        point_of_interaction: { transaction_data: {
+          qr_code: '00020126580014BR.GOV.BCB.PIX-CODIGO-COPIA-E-COLA',
+          qr_code_base64: 'iVBORw0KGgoAAAANSUhEUg==',
+          ticket_url: 'https://www.mercadopago.com.br/payments/PIX-QR-1/ticket',
+        } },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    if (alvo.includes('/v1/payments/PIX-QR-1')) {
+      // primeira consulta: ainda pendente; depois: aprovado
+      pixConsultas++;
+      return new Response(JSON.stringify({
+        id: 'PIX-QR-1', status: pixConsultas > 1 ? 'approved' : 'pending',
+        external_reference: 'aluno-qr|semanal', transaction_amount: 5.99,
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     if (alvo.includes('/v1/payments/PG-PIX')) {
@@ -251,6 +272,40 @@ console.log('\n== pagamento por Pix ==');
   conferir(repetido.dados.acao === 'já processado', 'aviso de Pix repetido é ignorado');
 }
 
+console.log('\n== Pix com QR dentro do app ==');
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-qr', email: 'qr@casa.com', nome: 'QR' } } });
+  const t = e.dados.token;
+
+  const semEmail = await pedir('POST', '/pagar/pix', { token: t, corpo: { planoId: 'semanal', email: 'nao-e-email' } });
+  conferir(semEmail.status === 400, 'e-mail inválido é recusado antes de criar a cobrança');
+
+  const { status, dados } = await pedir('POST', '/pagar/pix', { token: t, corpo: { planoId: 'semanal' } });
+  conferir(status === 200, 'cria a cobrança Pix');
+  conferir(dados.codigo.startsWith('00020126'), 'devolve o código copia-e-cola');
+  conferir(dados.qrBase64.length > 10, 'devolve a imagem do QR Code');
+  conferir(dados.status === 'pending', 'começa como pendente');
+
+  const primeira = await pedir('GET', `/pagamento/${dados.id}`, { token: t });
+  conferir(primeira.dados.status === 'pending' && primeira.dados.plano === 'free', 'enquanto não paga, continua no grátis');
+
+  const segunda = await pedir('GET', `/pagamento/${dados.id}`, { token: t });
+  conferir(segunda.dados.status === 'approved', 'a consulta detecta o pagamento');
+  conferir(segunda.dados.liberadoAgora === true, 'e libera o Pro na hora, sem esperar o webhook');
+  const em7 = new Date(); em7.setDate(em7.getDate() + 7);
+  conferir(segunda.dados.proAte === em7.toISOString().slice(0, 10), `7 dias liberados (${segunda.dados.proAte})`);
+
+  const terceira = await pedir('GET', `/pagamento/${dados.id}`, { token: t });
+  conferir(terceira.dados.liberadoAgora === false && terceira.dados.plano === 'pro', 'consultar de novo não soma dias de novo');
+
+  const outro = await pedir('POST', '/entrar', { corpo: { teste: { id: 'bisbilhoteiro', email: 'x@x.com', nome: 'X' } } });
+  const espiada = await pedir('GET', `/pagamento/${dados.id}`, { token: outro.dados.token });
+  conferir(espiada.status === 403, 'ninguém consulta o pagamento de outra pessoa');
+
+  const ia = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'b' } });
+  conferir(ia.status === 200, 'quem pagou por Pix usa o Study AI na hora');
+}
+
 console.log('\n== admin ==');
 {
   const semToken = await pedir('GET', '/admin/numeros');
@@ -258,7 +313,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 5, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+  conferir(r.status === 200 && d.usuarios === 7, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

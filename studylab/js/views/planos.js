@@ -6,7 +6,8 @@ import {
   RECURSOS_FREE, RECURSOS_PRO, selo,
 } from '../ui.js';
 import { PLANOS, precoBR, CODIGOS, SERVIDOR } from '../produto.js';
-import { temServidor, ativarCodigoNoServidor, cancelarNoServidor, pagarNoServidor, buscarEu, garantirSessao } from '../api.js';
+import { temServidor, ativarCodigoNoServidor, cancelarNoServidor, buscarEu, garantirSessao } from '../api.js';
+import { abrirPagamento } from './pagamento.js';
 
 export function render(el) {
   const pintar = () => { el.replaceChildren(); montar(el, pintar); };
@@ -106,61 +107,26 @@ function cartaoPlano(p, pintar) {
 }
 
 function assinar(p, pintar) {
-  const corpo = h('div', {},
+  // Com servidor: vai direto para a tela de pagamento (Pix aqui mesmo, ou cartão).
+  if (temServidor()) { abrirPagamento(p, pintar); return; }
+
+  // Sem servidor ainda: só dá para liberar por código, e o app diz isso na cara.
+  modal(`Assinar o plano ${p.nome}`, h('div', {},
     h('div', { class: 'center mb' },
       h('b', { style: { fontSize: '26px' } }, precoBR(p.preco)),
       h('span', { class: 'muted' }, p.periodo),
-      h('p', { class: 'tiny muted', style: { margin: '6px 0 0' } }, p.detalhe)));
-  const acoes = h('div', { class: 'flexb mt2' }, h('button', { class: 'btn sp', onclick: fecharModal }, 'Fechar'));
-  corpo.append(acoes);
-  modal(`Assinar o plano ${p.nome}`, corpo);
-
-  if (!temServidor()) {
-    corpo.insertBefore(h('p', { class: 'small' },
-      'O pagamento online ainda não está ligado neste aparelho. Para liberar o Pro agora, use um código de acesso.'), acoes);
-    acoes.append(h('button', {
-      class: 'btn btn--p', onclick: () => {
-        ativarPro({ planoId: p.id, dias: p.dias, codigo: null });
-        fecharModal(); toast(`Pro ${p.nome} ativado para teste`, 'good'); pintar();
-      },
-    }, '🧪 Ativar em modo teste'));
-    return;
-  }
-
-  const aviso = h('p', { class: 'small' },
-    'Você vai ser levado para o Mercado Pago para pagar com segurança. Assim que o pagamento cair, '
-    + 'o Pro é liberado sozinho — não precisa mandar comprovante nem esperar ninguém aprovar.');
-  corpo.insertBefore(aviso, acoes);
-
-  const irPagar = async (forma, botao, rotulo) => {
-    botao.disabled = true; botao.textContent = 'Abrindo o pagamento…';
-    try {
-      await garantirSessao();
-      const r = await pagarNoServidor(p.id, forma);
-      location.href = r.link;
-    } catch (e) {
-      aviso.textContent = e.message;
-      aviso.style.color = 'var(--bad)';
-      botao.disabled = false; botao.textContent = rotulo;
-    }
-  };
-
-  const bPix = h('button', { class: 'btn btn--p btn--blk' },
-    '💠 Pagar com Pix ou cartão');
-  bPix.onclick = () => irPagar('unico', bPix, '💠 Pagar com Pix ou cartão');
-
-  const bRec = h('button', { class: 'btn btn--blk' }, '🔁 Cartão que renova sozinho');
-  bRec.onclick = () => irPagar('recorrente', bRec, '🔁 Cartão que renova sozinho');
-
-  const escolhas = h('div', { class: 'grid', style: { gap: '8px', marginBottom: '10px' } },
-    bPix,
-    h('p', { class: 'tiny muted center', style: { margin: 0 } },
-      `Pix cai na hora. Compra ${p.dias} dias e pronto — quando acabar, você compra de novo.`),
-    h('div', { class: 'hr', style: { margin: '6px 0' } }),
-    bRec,
-    h('p', { class: 'tiny muted center', style: { margin: 0 } },
-      'Cobra no cartão automaticamente a cada período, até você cancelar. (Pix não permite cobrança automática.)'));
-  corpo.insertBefore(escolhas, acoes);
+      h('p', { class: 'tiny muted', style: { margin: '6px 0 0' } }, p.detalhe)),
+    h('p', { class: 'small' },
+      'O pagamento ainda não está ligado neste aparelho — falta informar o endereço do servidor '
+      + 'em Configurações → Área do criador. Enquanto isso, dá para liberar por código de acesso.'),
+    h('div', { class: 'flexb mt2' },
+      h('button', { class: 'btn sp', onclick: fecharModal }, 'Fechar'),
+      h('button', {
+        class: 'btn btn--p', onclick: () => {
+          ativarPro({ planoId: p.id, dias: p.dias, codigo: null });
+          fecharModal(); toast(`Pro ${p.nome} ativado para teste`, 'good'); pintar();
+        },
+      }, '🧪 Ativar em modo teste'))));
 }
 
 function assinaturaAtiva(el, pintar) {

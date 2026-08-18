@@ -104,4 +104,12 @@ export const perguntarAoServidor = (pedido) => chamar('/ia', { metodo: 'POST', c
 export const pagarNoServidor = (planoId, forma = 'unico') =>
   chamar('/pagar', { metodo: 'POST', corpo: { planoId, forma } });
 
+/** Cria a cobrança Pix (QR + código copia-e-cola). */
+export const criarPixNoServidor = (planoId, email) =>
+  chamar('/pagar/pix', { metodo: 'POST', corpo: { planoId, email } });
+
+/** Pergunta ao servidor se o pagamento já caiu. */
+export const consultarPagamentoNoServidor = (id) =>
+  chamar(`/pagamento/${id}`, { timeout: 20000 }).then((d) => { aplicarConta(d); return d; });
+
 export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });
