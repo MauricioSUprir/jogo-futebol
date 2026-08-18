@@ -20,7 +20,7 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | Rota | O que faz |
 | --- | --- |
 | `GET /saude` | está no ar? mostra modelo, banco e se a chave está configurada |
-| `POST /entrar` | `{ idToken }` do Google → sessão de 30 dias + plano |
+| `POST /entrar` | `{ idToken }` do Google **ou** `{ dispositivo }` → sessão de 30 dias + plano |
 | `GET /eu` | quem sou eu, meu plano e meu uso de hoje |
 | `POST /codigo` | `{ codigo }` → ativa o Pro |
 | `GET /planos` | os planos e preços (o servidor é a fonte da verdade do valor) |
@@ -44,16 +44,29 @@ e um freio por IP.
 3. **+ New → Database → Postgres**. O Railway cria a `DATABASE_URL` sozinho — as tabelas são
    criadas no primeiro start.
 4. Em **Variables**, adicione:
-   - `ANTHROPIC_API_KEY` — a sua chave do console.anthropic.com
-   - `SEGREDO` — uma frase longa e aleatória (assina as sessões)
-   - `GOOGLE_CLIENT_ID` — o mesmo do app
+   - `ANTHROPIC_API_KEY` — a sua chave do console.anthropic.com **(obrigatória)**
+   - `SEGREDO` — frase longa e aleatória, assina as sessões **(obrigatória)** — o app gera uma
+     para você em ⚙️ Configurações → Área do criador → *Gerar SEGREDO*
    - `ORIGENS` — `https://mauriciosuprir.github.io`
    - `ADMIN_TOKEN` — outra frase secreta, para o painel
+   - `GOOGLE_CLIENT_ID` — **opcional**: sem ele o aluno entra por conta de aparelho e assina
+     do mesmo jeito; com ele, ganha login do Google e recupera a conta em outro celular
 5. **Generate Domain**. Abra `https://SEU-DOMINIO/saude` e confira que veio
    `chaveConfigurada: true`.
 6. Cole esse domínio em `studylab/js/produto.js` → `SERVIDOR` e publique o app.
 
 Pronto: o Study AI passa a funcionar para quem tem o Pro, e a sua chave fica só no servidor.
+
+> `GET /saude` responde com um **checklist do que ainda falta** (`falta: [...]`,
+> `studyAiPronto`, `pagamentoPronto`). O app mostra isso na Área do criador, então dá para
+> conferir tudo pelo celular, sem abrir o Railway.
+
+### Contas de aparelho (sem Google)
+
+Se `GOOGLE_CLIENT_ID` não estiver configurado, o app sorteia um id e uma senha na primeira
+abertura e guarda no próprio celular — dá para usar o Study AI e assinar normalmente. Quem
+sabe só o id não entra: precisa da senha, que nunca sai do aparelho. A troca é que, sem
+Google, o aluno não recupera a assinatura em outro celular.
 
 ---
 

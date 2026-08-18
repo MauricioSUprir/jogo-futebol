@@ -15,6 +15,7 @@ export function estadoVazio() {
       desde: iso(), proAte: null, planoId: null, codigo: null,
       provedor: null,           // null (ainda não entrou) | 'google' | 'local'
       id: null, nome: '', email: '', foto: '', token: null,   // token = sessão no servidor
+      aparelhoId: null, aparelhoSegredo: null,                 // conta de aparelho (sem Google)
     },
     prefs: {
       minutosDia: 90,             // quanto pretende estudar por dia

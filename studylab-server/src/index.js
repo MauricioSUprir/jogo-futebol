@@ -10,7 +10,7 @@
      POST /admin/codigo   cria um código                                       */
 import http from 'node:http';
 import {
-  migrar, salvarUsuario, assinaturaAtiva, criarAssinatura, cancelarAssinatura,
+  migrar, salvarUsuario, entrarPorDispositivo, assinaturaAtiva, criarAssinatura, cancelarAssinatura,
   usarCodigo, criarCodigo, usoDoDia, usoDoMes, registrarUso, numeros, emMemoria,
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
 } from './db.js';
@@ -70,11 +70,25 @@ function muitasBatidas(ip, limite = 60, janela = 60000) {
 
 /* ---------- rotas ---------- */
 const rotas = {
-  'GET /saude': async () => ({
-    ok: true, banco: emMemoria ? 'memoria' : 'postgres', modelo: modeloPadrao(),
-    chaveConfigurada: !!process.env.ANTHROPIC_API_KEY, googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,
-    pagamentoConfigurado: pagamentoLigado(),
-  }),
+  'GET /saude': async () => {
+    const falta = [];
+    if (!process.env.ANTHROPIC_API_KEY) falta.push('ANTHROPIC_API_KEY — sem ela o Study AI não responde');
+    if (!process.env.SEGREDO) falta.push('SEGREDO — as sessões dos alunos ficam inseguras');
+    if (emMemoria) falta.push('DATABASE_URL — sem banco, tudo some quando o servidor reinicia');
+    if (!pagamentoLigado()) falta.push('MP_ACCESS_TOKEN — sem ele ninguém consegue pagar');
+    if (pagamentoLigado() && !process.env.MP_WEBHOOK_SECRET) falta.push('MP_WEBHOOK_SECRET — os avisos de pagamento não são verificados');
+    return {
+      ok: true,
+      banco: emMemoria ? 'memoria' : 'postgres',
+      modelo: modeloPadrao(),
+      chaveConfigurada: !!process.env.ANTHROPIC_API_KEY,
+      googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,     // opcional: dá para usar conta de aparelho
+      pagamentoConfigurado: pagamentoLigado(),
+      studyAiPronto: !!process.env.ANTHROPIC_API_KEY && !!process.env.SEGREDO,
+      pagamentoPronto: pagamentoLigado() && !!process.env.MP_WEBHOOK_SECRET,
+      falta,
+    };
+  },
 
   'GET /planos': async () => ({
     pagamentoLigado: pagamentoLigado(),
@@ -87,6 +101,15 @@ const rotas = {
     if (MODO_TESTE && corpo.teste) {
       // atalho SÓ para os testes automatizados (MODO_TESTE=1). Nunca em produção.
       dados = { id: String(corpo.teste.id), email: corpo.teste.email || '', nome: corpo.teste.nome || '', foto: '' };
+    } else if (corpo.dispositivo) {
+      // conta de aparelho: funciona sem Google, e é o suficiente para assinar
+      const { id, segredo, nome } = corpo.dispositivo;
+      if (!id || !segredo) throw Object.assign(new Error('Dados do aparelho incompletos'), { status: 400 });
+      const u = await entrarPorDispositivo({ id: String(id), segredo: String(segredo), nome: String(nome || 'Estudante') });
+      if (!u) throw Object.assign(new Error('Este aparelho não confere. Entre com o Google para recuperar sua conta.'), { status: 401 });
+      const token = await criarSessao({ id: u.id, email: u.email || '', nome: u.nome });
+      const assinatura = await assinaturaAtiva(u.id);
+      return { token, usuario: { id: u.id, nome: u.nome, email: u.email || '', foto: '' }, ...resumoAssinatura(assinatura) };
     } else {
       const { idToken } = corpo;
       if (!idToken) throw Object.assign(new Error('Falta o idToken do Google'), { status: 400 });

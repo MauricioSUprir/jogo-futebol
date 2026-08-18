@@ -2,6 +2,7 @@
    Com DATABASE_URL usa Postgres (é o que roda no Railway).
    Sem DATABASE_URL cai para memória, só para você testar na sua máquina —
    nesse modo os dados somem quando o servidor reinicia.                      */
+import crypto from 'node:crypto';
 import postgres from 'postgres';
 
 const URL_BANCO = process.env.DATABASE_URL || '';
@@ -27,6 +28,8 @@ export async function migrar() {
       email        text NOT NULL,
       nome         text NOT NULL DEFAULT '',
       foto         text NOT NULL DEFAULT '',
+      provedor     text NOT NULL DEFAULT 'google',   -- google | dispositivo
+      senha_hash   text,                             -- só para contas de aparelho
       criado_em    timestamptz NOT NULL DEFAULT now(),
       visto_em     timestamptz NOT NULL DEFAULT now()
     )`;
@@ -43,6 +46,9 @@ export async function migrar() {
       criada_em   timestamptz NOT NULL DEFAULT now()
     )`;
   await sql`CREATE INDEX IF NOT EXISTS idx_assin_usuario ON assinaturas (usuario_id, fim DESC)`;
+  // colunas novas em bancos que já existiam
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS provedor text NOT NULL DEFAULT 'google'`;
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS senha_hash text`;
   await sql`
     CREATE TABLE IF NOT EXISTS uso (
       usuario_id      text NOT NULL,
@@ -88,16 +94,43 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 const somaDias = (d) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
 
 /* ---------- usuários ---------- */
-export async function salvarUsuario({ id, email, nome, foto }) {
+export async function salvarUsuario({ id, email, nome, foto, provedor = 'google' }) {
   if (emMemoria) {
-    mem.usuarios.set(id, { id, email, nome, foto });
+    const antigo = mem.usuarios.get(id) || {};
+    mem.usuarios.set(id, { ...antigo, id, email, nome, foto, provedor });
     return mem.usuarios.get(id);
   }
   const [u] = await sql`
-    INSERT INTO usuarios ${sql({ id, email, nome, foto })}
+    INSERT INTO usuarios ${sql({ id, email, nome, foto, provedor })}
     ON CONFLICT (id) DO UPDATE SET email = excluded.email, nome = excluded.nome,
       foto = excluded.foto, visto_em = now()
     RETURNING *`;
+  return u;
+}
+
+/**
+ * Conta de aparelho: o app sorteia um id e uma senha na primeira vez e guarda
+ * no próprio celular. Serve para o aluno usar o StudyLab (e assinar) sem
+ * precisar de conta Google. Quem sabe só o id não entra: precisa da senha.
+ */
+export async function entrarPorDispositivo({ id, segredo, nome }) {
+  const hash = crypto.createHash('sha256').update(String(segredo)).digest('hex');
+  if (emMemoria) {
+    const u = mem.usuarios.get(id);
+    if (!u) { mem.usuarios.set(id, { id, email: '', nome, foto: '', provedor: 'dispositivo', senha_hash: hash }); return mem.usuarios.get(id); }
+    if (u.senha_hash !== hash) return null;
+    u.nome = nome || u.nome;
+    return u;
+  }
+  const [existente] = await sql`SELECT * FROM usuarios WHERE id = ${id}`;
+  if (!existente) {
+    const [u] = await sql`
+      INSERT INTO usuarios ${sql({ id, email: '', nome, foto: '', provedor: 'dispositivo', senha_hash: hash })}
+      RETURNING *`;
+    return u;
+  }
+  if (existente.senha_hash !== hash) return null;
+  const [u] = await sql`UPDATE usuarios SET nome = ${nome || existente.nome}, visto_em = now() WHERE id = ${id} RETURNING *`;
   return u;
 }
 

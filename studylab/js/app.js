@@ -24,7 +24,7 @@ import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
 import * as vPlanos from './views/planos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
-import { temServidor, buscarEu } from './api.js';
+import { temServidor, buscarEu, garantirSessao } from './api.js';
 
 export const MENU = [
   { r: 'inicio', i: '🏠', t: 'Início', v: vInicio, tab: true },
@@ -145,8 +145,9 @@ function iniciar() {
   rotinaDiaria();
   if (precisaEntrar()) abrirEntrada(() => { montarMenu(); rotinaDiaria(); render(); });
   // com servidor, quem manda no plano é ele — o app só espelha
-  if (temServidor() && st().conta.token) {
-    buscarEu().then(() => render()).catch(() => { /* offline: segue com o que está salvo */ });
+  if (temServidor()) {
+    garantirSessao().then(() => buscarEu()).then(() => render())
+      .catch(() => { /* offline ou servidor fora: segue com o que está salvo */ });
   }
 
   addEventListener('hashchange', render);

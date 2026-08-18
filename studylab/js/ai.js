@@ -5,7 +5,7 @@
    recursos locais (resumo extrativo, questões a partir dos flashcards, divisão
    de tarefas) continuam livres para todo mundo.                               */
 import { st, set, ehPro } from './store.js';
-import { perguntarAoServidor, temServidor } from './api.js';
+import { perguntarAoServidor, temServidor, garantirSessao } from './api.js';
 import {
   frases, palavras, STOP, norm, iso, uid, clamp, round, sum,
 } from './util.js';
@@ -48,6 +48,7 @@ export async function chamar({
 
   // Assinante com servidor: o servidor guarda a chave e confere a assinatura.
   if (temServidor()) {
+    await garantirSessao();
     const d = await perguntarAoServidor({ system, conteudo, schema, maxTokens, esforco });
     set((x) => {
       if (x.ia.usoDia !== iso()) { x.ia.usoDia = iso(); x.ia.usoHoje = 0; }
