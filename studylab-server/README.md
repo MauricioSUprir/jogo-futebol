@@ -26,6 +26,8 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | `GET /planos` | os planos e preços (o servidor é a fonte da verdade do valor) |
 | `POST /pagar` | `{ planoId, forma }` → link do Mercado Pago (`unico` · `recorrente`) |
 | `POST /pagar/pix` | `{ planoId, email }` → **QR Code e código copia-e-cola**, para pagar dentro do app |
+| `POST /pagar/cartao` | `{ planoId, cartao }` → cobra o cartão **sem sair do app** (recebe só o token) |
+| `GET /pagamento/chave-publica` | a chave pública do Mercado Pago, que monta o formulário do cartão |
 | `GET /pagamento/:id` | o app pergunta "já caiu?" — se caiu, libera o Pro na hora |
 | `POST /webhook/mercadopago` | o Mercado Pago avisa aqui quando alguém paga → libera o Pro |
 | `GET /meus-pagamentos` | histórico do aluno |
@@ -88,7 +90,8 @@ Google, o aluno não recupera a assinatura em outro celular.
 | Forma | Como funciona | Observação |
 | --- | --- | --- |
 | **Pix dentro do app** (`POST /pagar/pix`) | O StudyLab mostra o **QR Code e o código copia-e-cola** na própria tela e fica consultando até o pagamento cair | O aluno não sai do app. Pix não tem cobrança automática: compra os dias e, quando acabar, compra de novo |
-| **Cartão** (`forma: 'unico'`) | Checkout Pro do Mercado Pago — é lá que o cartão é digitado | Compra os dias do plano |
+| **Cartão dentro do app** (`POST /pagar/cartao`) | O formulário é o do Mercado Pago (SDK deles) renderizado na tela do StudyLab; ele devolve só um **token**, e o número do cartão nunca chega ao nosso servidor | Precisa da `MP_PUBLIC_KEY`. Sem ela, cai automaticamente no Checkout Pro |
+| **Cartão pelo Checkout Pro** (`forma: 'unico'`) | Abre o Mercado Pago em outra tela | Plano B, sempre disponível |
 | **Cartão que renova** (`forma: 'recorrente'`) | Assinatura: cobra sozinho a cada período até cancelar | Só cartão |
 
 Boleto fica de fora de propósito (demora dias para compensar e o aluno ficaria sem acesso).

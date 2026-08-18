@@ -138,6 +138,22 @@ ehPro()               // assinatura ativa? (respeita a data de vencimento)
 O **valor cobrado é o do servidor** (`studylab-server/src/pagamento.js` → `PLANOS`), não o que
 o app mostra — mexer no navegador não muda o preço.
 
+## Página de vendas
+
+`vender/index.html` — página pública, autocontida, em `/studylab/vender/`: o que o app faz,
+os três planos, comparação grátis × Pro e perguntas frequentes. Serve para divulgar sem
+mandar a pessoa direto para dentro do app.
+
+## Termos e privacidade
+
+`js/views/termos.js` (rota `#/termos`) traz os **Termos de uso** e a **Política de
+privacidade** escritos para este app: idade e responsáveis, preços, cancelamento, os 7 dias de
+arrependimento do Código de Defesa do Consumidor, o aviso de que a IA pode errar, o que fica no
+aparelho, o que o servidor guarda, o que é enviado à Anthropic e os direitos da LGPD. A tela de
+entrada, a de planos, a de pagamento e o rodapé das Configurações apontam para lá.
+
+> Antes de vender, troque `js/produto.js` → `EMAIL_CONTATO` e `RESPONSAVEL` pelos seus.
+
 ## Estrutura
 
 ```

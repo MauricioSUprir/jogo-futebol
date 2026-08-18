@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>StudyLab — estude, pratique, evolua</title>
+<meta name="description" content="O app que diz o que estudar agora: prioridades inteligentes, revisão espaçada, questões, foco e um tutor que conhece as suas matérias." />
+<meta name="theme-color" content="#0b0d16" />
+<link rel="icon" href="../assets/icon.svg" type="image/svg+xml" />
+<meta property="og:title" content="StudyLab — estude, pratique, evolua" />
+<meta property="og:description" content="Prioridades inteligentes, revisão espaçada, questões, foco e um tutor que conhece as suas matérias." />
+<style>
+  :root{
+    --bg:#0b0d16; --panel:#141826; --panel2:#1a1f30; --line:#242a3d;
+    --txt:#e9ecf6; --dim:#a3aac2; --dim2:#6e7590;
+    --acc:#7c5cff; --acc2:#22d3ee; --ok:#34d399;
+    --ff:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--txt);font-family:var(--ff);line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  .wrap{width:min(1060px,100%);margin:0 auto;padding:0 20px}
+  section{padding:64px 0}
+  h1,h2,h3{line-height:1.15;text-wrap:balance}
+  .grad{background:linear-gradient(100deg,#8b5cf6,#3b82f6 55%,#22d3ee);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+  /* topo */
+  header{position:sticky;top:0;z-index:9;background:color-mix(in srgb,var(--bg) 88%,transparent);
+    backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .barra{display:flex;align-items:center;gap:12px;height:62px}
+  .marca{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:-.3px}
+  .marca svg{width:28px;color:var(--txt)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 20px;
+    border-radius:12px;font-weight:700;font-size:15px;border:1px solid var(--line);background:var(--panel2);cursor:pointer}
+  .btn--p{background:linear-gradient(135deg,var(--acc),#5b8cff);border-color:transparent;color:#fff}
+  .btn--sm{height:38px;padding:0 14px;font-size:14px}
+  header .btn{margin-left:auto}
+
+  /* herói */
+  .heroi{padding:74px 0 54px;text-align:center;
+    background:radial-gradient(120% 120% at 50% -10%,rgba(124,92,255,.28),transparent 60%)}
+  .heroi h1{font-size:clamp(34px,6vw,58px);font-weight:800;letter-spacing:-1.5px}
+  .heroi p{color:var(--dim);font-size:clamp(16px,2.2vw,20px);max-width:36ch;margin:16px auto 0}
+  .acoes{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+  .selos{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px;font-size:12.5px;color:var(--dim2)}
+  .selo{border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--panel)}
+
+  /* pergunta que o app responde */
+  .perguntas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:34px}
+  .pergunta{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:left}
+  .pergunta b{display:block;font-size:15px;margin-bottom:4px}
+  .pergunta span{color:var(--dim);font-size:14px}
+
+  h2{font-size:clamp(24px,3.4vw,34px);font-weight:800;letter-spacing:-.8px}
+  .sub{color:var(--dim);margin-top:10px;max-width:52ch}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:30px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}
+  .card .em{font-size:26px}
+  .card h3{font-size:17px;margin:10px 0 6px}
+  .card p{color:var(--dim);font-size:14.5px}
+
+  /* planos */
+  .planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-top:30px;align-items:start}
+  .plano{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;text-align:center;position:relative}
+  .plano.destaque{border-color:#7c5cff88;box-shadow:0 0 0 1px #7c5cff33,0 16px 40px rgba(124,92,255,.15)}
+  .fita{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--acc),#5b8cff);
+    color:#fff;font-size:11.5px;font-weight:800;padding:4px 12px;border-radius:999px;white-space:nowrap}
+  .preco{font-size:38px;font-weight:800;letter-spacing:-1.5px;margin:12px 0 2px;font-variant-numeric:tabular-nums}
+  .preco small{font-size:14px;font-weight:600;color:var(--dim)}
+  .plano .obs{color:var(--dim);font-size:13px;min-height:38px}
+  .economia{display:inline-block;background:#34d39918;color:var(--ok);border:1px solid #34d39955;
+    border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:700;margin-top:6px}
+
+  table{width:100%;border-collapse:collapse;margin-top:26px;font-size:14.5px}
+  th,td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--dim2);font-size:12px;text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  td.c{text-align:center;width:110px}
+
+  details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:10px}
+  summary{cursor:pointer;font-weight:700;font-size:15px}
+  details p{color:var(--dim);font-size:14.5px;margin-top:10px}
+
+  footer{border-top:1px solid var(--line);padding:32px 0;color:var(--dim2);font-size:13px}
+  .fim{text-align:center;background:radial-gradient(120% 120% at 50% 110%,rgba(34,211,238,.18),transparent 60%)}
+  @media (max-width:620px){ section{padding:48px 0} .heroi{padding:52px 0 40px} }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap barra">
+    <span class="marca">
+      <svg viewBox="0 0 128 128" aria-hidden="true">
+        <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="0.35">
+          <stop offset="0" stop-color="#8b5cf6"/><stop offset="0.5" stop-color="#3b82f6"/><stop offset="1" stop-color="#22d3ee"/>
+        </linearGradient></defs>
+        <g fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="49" y="18" width="30" height="9" rx="4.5"/>
+          <path d="M55 27v16.5L28.5 94.5A8.5 8.5 0 0 0 36 107h56a8.5 8.5 0 0 0 7.5-12.5L73 43.5V27"/>
+        </g>
+        <g fill="none" stroke="url(#g1)" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M64 80 41 68v18l23 12z"/><path d="M64 80 87 68v18L64 98z"/>
+        </g>
+      </svg>
+      Study<span class="grad">Lab</span>
+    </span>
+    <a class="btn btn--p btn--sm" href="../">Abrir o app</a>
+  </div>
+</header>
+
+<section class="heroi">
+  <div class="wrap">
+    <h1>Você abre o app e já sabe <span class="grad">o que estudar agora</span>.</h1>
+    <p>Sem lista infinita, sem culpa. O StudyLab olha seus prazos, suas provas e o que você domina — e diz por onde começar.</p>
+    <div class="acoes">
+      <a class="btn btn--p" href="../">Começar de graça</a>
+      <a class="btn" href="#planos">Ver planos</a>
+    </div>
+    <div class="selos">
+      <span class="selo">Grátis para sempre</span>
+      <span class="selo">Funciona offline</span>
+      <span class="selo">Sem anúncios</span>
+      <span class="selo">Instala como app</span>
+    </div>
+
+    <div class="perguntas">
+      <div class="pergunta"><b>“O que eu faço agora?”</b><span>Uma tarefa por vez, escolhida por prazo, peso na nota e dificuldade.</span></div>
+      <div class="pergunta"><b>“Quando eu reviso?”</b><span>Revisão espaçada: o assunto volta pouco antes de você esquecer.</span></div>
+      <div class="pergunta"><b>“Estou pronto pra prova?”</b><span>Uma barra de preparo por conteúdo, e um plano dia a dia até a data.</span></div>
+      <div class="pergunta"><b>“Estou melhorando?”</b><span>Domínio por assunto, taxa de acerto e evolução, com dados reais.</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>O que ele faz por você</h2>
+    <p class="sub">Não é uma agenda bonitinha. É um motor que calcula o que fazer com o tempo que você tem.</p>
+    <div class="cards">
+      <div class="card"><div class="em">🚨</div><h3>Prioridade calculada</h3>
+        <p>Cada tarefa ganha uma nota de 0 a 100 juntando prazo, importância, quanto vale, dificuldade e tamanho. E o app mostra a conta.</p></div>
+      <div class="card"><div class="em">🔁</div><h3>Revisão espaçada</h3>
+        <p>1, 3, 7, 14, 30 dias. Errou, volta antes; dominou, o intervalo estica. É o método que faz lembrar meses depois.</p></div>
+      <div class="card"><div class="em">🎯</div><h3>Plano de prova automático</h3>
+        <p>Você marca a data e o que cai. Ele divide os dias, dá mais tempo ao que está fraco e reserva simulado e revisão final.</p></div>
+      <div class="card"><div class="em">🚫</div><h3>Modo anti-procrastinação</h3>
+        <p>Some com a lista inteira e mostra só a próxima coisa, com o tempo dela. Terminou? Aparece a seguinte.</p></div>
+      <div class="card"><div class="em">📝</div><h3>Questões e simulados</h3>
+        <p>Treino, modo prova cronometrado, desafio com vidas e boss battle. Todo erro vira revisão automaticamente.</p></div>
+      <div class="card"><div class="em">⏱️</div><h3>Foco e pomodoro</h3>
+        <p>Cronômetro em tela cheia, pausas na hora certa e som ambiente. Cada bloco entra no seu histórico sozinho.</p></div>
+    </div>
+  </div>
+</section>
+
+<section style="background:var(--panel2);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <h2>🤖 E tem o <span class="grad">Study AI</span></h2>
+    <p class="sub">Um tutor que não é um chat genérico: ele conhece as suas matérias, as suas provas, os seus erros e o seu calendário.</p>
+    <div class="cards">
+      <div class="card"><h3>“O que eu estudo agora?”</h3>
+        <p>“Comece História: sua prova é em dois dias e seu domínio em Revolução Francesa está em 58%. Faça 35 minutos de revisão e depois 10 questões.”</p></div>
+      <div class="card"><h3>Explica do seu jeito</h3>
+        <p>Normal, simples, do zero, com exemplos, por analogia — ou no modo professor socrático, que pergunta até você chegar sozinho.</p></div>
+      <div class="card"><h3>Vira material de estudo</h3>
+        <p>Fotografe a atividade ou mande o PDF: ele explica, resume, cria questões parecidas e transforma em flashcards.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="planos">
+  <div class="wrap">
+    <h2>Planos</h2>
+    <p class="sub">O StudyLab é gratuito e completo. O plano Pro libera o Study AI.</p>
+    <div class="planos">
+      <div class="plano">
+        <div class="obs" style="min-height:auto;color:var(--dim2);font-size:12px">Para experimentar</div>
+        <h3>Semanal</h3>
+        <div class="preco">R$ 5,99</div>
+        <div class="obs">7 dias de Pro. Pix ou cartão.</div>
+        <a class="btn" href="../#/planos" style="width:100%">Assinar</a>
+      </div>
+      <div class="plano destaque">
+        <span class="fita">O mais escolhido</span>
+        <h3 style="margin-top:8px">Mensal</h3>
+        <div class="preco">R$ 29,99</div>
+        <div class="obs">30 dias de Pro. Pix, cartão ou cobrança automática.</div>
+        <a class="btn btn--p" href="../#/planos" style="width:100%">Assinar</a>
+      </div>
+      <div class="plano">
+        <div class="obs" style="min-height:auto;color:var(--dim2);font-size:12px">Melhor custo</div>
+        <h3>Anual</h3>
+        <div class="preco">R$ 99,99</div>
+        <span class="economia">economiza 72%</span>
+        <div class="obs">365 dias. Sai por R$ 8,33 por mês.</div>
+        <a class="btn" href="../#/planos" style="width:100%">Assinar</a>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>O que você tem</th><th class="c">Grátis</th><th class="c">Pro</th></tr></thead>
+      <tbody>
+        <tr><td>Tarefas, provas, matérias, agenda e horário</td><td class="c">✅</td><td class="c">✅</td></tr>
+        <tr><td>Prioridade calculada e plano do dia</td><td class="c">✅</td><td class="c">✅</td></tr>
+        <tr><td>Revisão espaçada e banco de erros</td><td class="c">✅</td><td class="c">✅</td></tr>
+        <tr><td>Questões, simulados, flashcards e foco</td><td class="c">✅</td><td class="c">✅</td></tr>
+        <tr><td>Desempenho, notas e conquistas</td><td class="c">✅</td><td class="c">✅</td></tr>
+        <tr><td>Study AI — o tutor que conhece seus estudos</td><td class="c">—</td><td class="c">✅</td></tr>
+        <tr><td>Gerar questões e flashcards de qualquer material</td><td class="c">—</td><td class="c">✅</td></tr>
+        <tr><td>Resumos, mapas mentais e professor socrático</td><td class="c">—</td><td class="c">✅</td></tr>
+        <tr><td>Ler PDF e foto da atividade</td><td class="c">—</td><td class="c">✅</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section style="background:var(--panel2);border-block:1px solid var(--line)">
+  <div class="wrap">
+    <h2>Perguntas</h2>
+    <details><summary>Preciso pagar para usar?</summary><p>Não. Tudo o que organiza a sua vida escolar é gratuito, sem limite e sem anúncio. O plano Pro existe só para o Study AI, porque cada resposta tem um custo real de inteligência artificial.</p></details>
+    <details><summary>Meus dados vão para onde?</summary><p>Ficam no seu próprio aparelho. Matérias, notas, tarefas e anotações não passam pelos nossos servidores. O que guardamos é sua conta e sua assinatura — e nada do conteúdo dos seus estudos.</p></details>
+    <details><summary>Funciona sem internet?</summary><p>Sim. Depois de abrir uma vez, o app funciona offline e dá para instalar na tela de início como se fosse um aplicativo. Só o Study AI precisa de conexão.</p></details>
+    <details><summary>Sou menor de idade. Posso usar?</summary><p>Pode, com a autorização de um responsável — e o pagamento precisa ser feito por essa pessoa. É o que a lei pede.</p></details>
+    <details><summary>Como cancelo?</summary><p>Dentro do app, em um clique, sem multa nem fidelidade. No Pix você já compra uma quantidade de dias, então não existe cobrança surpresa. E você tem 7 dias para desistir e receber o dinheiro de volta.</p></details>
+    <details><summary>O Study AI erra?</summary><p>Pode errar, como qualquer inteligência artificial — por isso o app avisa para conferir datas, contas e fórmulas no seu material. Ele é apoio ao estudo, não substituto do professor.</p></details>
+  </div>
+</section>
+
+<section class="fim">
+  <div class="wrap">
+    <h2>Comece hoje, de graça</h2>
+    <p class="sub" style="margin:12px auto 0">Leva três minutos: você diz em que ano está, quais matérias tem, e o StudyLab já monta o seu dia.</p>
+    <div class="acoes"><a class="btn btn--p" href="../">Abrir o StudyLab</a></div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <span>StudyLab · Estude. Pratique. Evolua.</span>
+    <span style="margin-left:auto">
+      <a href="../#/termos">Termos de uso</a> ·
+      <a href="../#/termos?aba=privacidade">Privacidade</a>
+    </span>
+  </div>
+</footer>
+
+</body>
+</html>

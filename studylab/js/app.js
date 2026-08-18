@@ -24,6 +24,7 @@ import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
 import * as vPlanos from './views/planos.js';
 import * as vCriador from './views/criador.js';
+import * as vTermos from './views/termos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
 import { temServidor, buscarEu, garantirSessao } from './api.js';
 
@@ -44,6 +45,7 @@ export const MENU = [
   { r: 'planos', i: '✨', t: 'StudyLab Pro', v: vPlanos },
   { r: 'ai', i: '🤖', t: 'Study AI', v: vAI, tab: true },
   { r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
+  { r: 'termos', i: '📄', t: 'Termos e privacidade', v: vTermos, oculto: true },
   // rota escondida: não entra no menu (ver views/criador.js)
   { r: 'criador', i: '🛠️', t: 'Área do criador', v: vCriador, oculto: true },
 ];

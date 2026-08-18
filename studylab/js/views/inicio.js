@@ -45,6 +45,22 @@ function montar(el, pintar) {
       h('button', { class: 'btn', onclick: () => abrirMissao() }, '⚡ Missão de 5 minutos'),
       h('a', { class: 'btn', href: '#/agenda' }, '📅 Ver meu dia'))));
 
+  /* ---------- assinatura terminando ---------- */
+  if (s.conta?.plano === 'pro' && s.conta.proAte) {
+    const faltam = daysBetween(today(), parseISO(s.conta.proAte));
+    if (faltam <= 5) {
+      el.append(h('div', { class: 'card mb', style: { borderColor: faltam < 0 ? '#f8717166' : '#fbbf2466' } },
+        h('div', { class: 'flexb' },
+          h('span', { style: { fontSize: '22px' } }, faltam < 0 ? '⏳' : '⚠️'),
+          h('div', { class: 'grow' },
+            h('b', { class: 'small' }, faltam < 0 ? 'Sua assinatura venceu' : faltam === 0 ? 'Seu Pro termina hoje' : `Seu Pro termina em ${faltam} dia(s)`),
+            h('div', { class: 'tiny muted' }, faltam < 0
+              ? 'O Study AI ficou indisponível. Renove para voltar a usar.'
+              : `Renove para não perder o Study AI. Vence em ${fmtData(s.conta.proAte)}.`)),
+          h('a', { class: 'btn btn--p', href: '#/planos' }, 'Renovar'))));
+    }
+  }
+
   /* ---------- app novo: primeiros passos ---------- */
   if (!s.tarefas.length && !s.provas.length) {
     const feito = (ok, txt, acao) => h('div', { class: 'row row--flat' },

@@ -94,6 +94,8 @@ function montar(el, pintar) {
     h('button', { class: 'btn btn--p', onclick: () => enviar() }, 'Enviar')));
   el.append(h('div', { class: 'chips mt' }, ...SUGESTOES.map((sg) =>
     h('button', { class: 'chip', style: { cursor: 'pointer' }, onclick: () => enviar(sg) }, sg))));
+  el.append(h('p', { class: 'tiny muted center mt' },
+    '⚠️ O Study AI pode errar. Confira datas, contas e fórmulas no seu material.'));
   el.append(h('div', { class: 'flexb mt' },
     h('button', {
       class: 'btn btn--sm', onclick: () => confirmar('Limpar conversa?', 'O histórico desta conversa será apagado.', () => {

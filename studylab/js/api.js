@@ -112,4 +112,11 @@ export const criarPixNoServidor = (planoId, email) =>
 export const consultarPagamentoNoServidor = (id) =>
   chamar(`/pagamento/${id}`, { timeout: 20000 }).then((d) => { aplicarConta(d); return d; });
 
+/** Chave PÚBLICA do Mercado Pago — é ela que monta o formulário do cartão. */
+export const chavePublicaDoServidor = () => chamar('/pagamento/chave-publica', { comToken: false, timeout: 15000 });
+
+/** Envia o token do cartão (o número nunca passa por aqui). */
+export const pagarComCartaoNoServidor = (planoId, cartao) =>
+  chamar('/pagar/cartao', { metodo: 'POST', corpo: { planoId, cartao } });
+
 export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });

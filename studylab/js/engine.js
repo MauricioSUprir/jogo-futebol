@@ -434,6 +434,19 @@ export function notificacoes() {
     if (h <= 0) push(`tar_${t.id}`, '🚨', `"${t.titulo}" está atrasada.`, '#/tarefas', 4);
     else if (h <= 30) push(`tar_${t.id}`, '⏰', `"${t.titulo}" (${nomeMateria(t.materiaId)}) vence ${h <= 12 ? 'hoje' : 'amanhã'}.`, '#/tarefas', 3);
   }
+  // assinatura vencendo ou vencida
+  const c = s.conta || {};
+  if (c.plano === 'pro' && c.proAte) {
+    const faltam = daysBetween(today(), parseISO(c.proAte));
+    if (faltam < 0) {
+      push(`pro_venceu_${c.proAte}`, '⏳', 'Sua assinatura do StudyLab Pro venceu. O Study AI ficou indisponível.', '#/planos', 4);
+    } else if (faltam <= 5) {
+      push(`pro_vence_${c.proAte}`, '⏳',
+        faltam === 0 ? 'Seu StudyLab Pro termina hoje. Renove para não perder o Study AI.'
+          : `Seu StudyLab Pro termina em ${faltam} dia(s).`, '#/planos', 3);
+    }
+  }
+
   const rev = filaRevisao();
   if (rev.total) push(`rev_${iso()}`, '🔁', `${rev.total} item(ns) de revisão venceram hoje.`, '#/revisao', 2);
   const a = atividadeDoDia();

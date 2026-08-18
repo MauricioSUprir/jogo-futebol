@@ -157,6 +157,47 @@ export async function criarPix({ planoId, usuario, email }) {
   };
 }
 
+export const chavePublica = () => process.env.MP_PUBLIC_KEY || '';
+
+/**
+ * Cartão sem sair do app: o formulário do Mercado Pago (no navegador) gera um
+ * "token" do cartão e manda só ele para cá. O número do cartão nunca chega ao
+ * nosso servidor nem fica guardado em lugar nenhum.
+ */
+export async function pagarComCartao({ planoId, usuario, cartao }) {
+  const plano = PLANOS[planoId];
+  if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
+  const { token, metodo, emissor, parcelas, email, documento } = cartao || {};
+  if (!token) throw Object.assign(new Error('Dados do cartão incompletos'), { status: 400 });
+
+  const d = await mp('/v1/payments', {
+    metodo: 'POST',
+    idempotencia: `${usuario.id}-${planoId}-${token}`.slice(0, 120),
+    corpo: {
+      transaction_amount: plano.valor,
+      token,
+      description: `${plano.nome} — ${plano.dias} dias`,
+      installments: Number(parcelas) || 1,
+      payment_method_id: metodo,
+      ...(emissor ? { issuer_id: emissor } : {}),
+      external_reference: `${usuario.id}|${planoId}`,
+      notification_url: urlDoWebhook(),
+      payer: {
+        email: (email || usuario.email || '').trim(),
+        ...(documento?.numero ? { identification: { type: documento.tipo || 'CPF', number: documento.numero } } : {}),
+      },
+    },
+  });
+
+  return {
+    id: String(d.id),
+    status: d.status,                 // approved | in_process | rejected
+    detalhe: d.status_detail || '',
+    valor: plano.valor,
+    plano: planoId,
+  };
+}
+
 export const consultarAssinatura = (id) => mp(`/preapproval/${id}`);
 export const consultarPagamento = (id) => mp(`/v1/payments/${id}`);
 

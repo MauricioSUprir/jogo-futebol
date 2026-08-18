@@ -8,7 +8,24 @@ import { toast, inp, campo, confirmar } from '../ui.js';
 import { precoBR } from '../produto.js';
 import {
   garantirSessao, criarPixNoServidor, consultarPagamentoNoServidor, pagarNoServidor, buscarEu,
+  chavePublicaDoServidor, pagarComCartaoNoServidor,
 } from '../api.js';
+
+/* O formulário de cartão é o do próprio Mercado Pago (SDK deles). O número do
+   cartão nunca passa pelo StudyLab: o formulário devolve só um "token". */
+let sdkMP = null;
+function carregarSdkMP() {
+  if (window.MercadoPago) return Promise.resolve();
+  if (sdkMP) return sdkMP;
+  sdkMP = new Promise((ok, erro) => {
+    const s = document.createElement('script');
+    s.src = 'https://sdk.mercadopago.com/js/v2';
+    s.onload = () => ok();
+    s.onerror = () => { sdkMP = null; erro(new Error('Não consegui carregar o formulário de cartão.')); };
+    document.head.append(s);
+  });
+  return sdkMP;
+}
 
 export function abrirPagamento(plano, aoLiberar) {
   const tela = h('div', { class: 'focus-full', style: { alignContent: 'start', paddingTop: '18px', overflowY: 'auto' } });
@@ -56,7 +73,11 @@ export function abrirPagamento(plano, aoLiberar) {
             h('span', {}, '›'))),
 
         h('p', { class: 'tiny muted mt' },
-          'O StudyLab não guarda nem vê os dados do seu cartão nem a sua chave Pix. Quem processa é o Mercado Pago.'))));
+          'O StudyLab não guarda nem vê os dados do seu cartão nem a sua chave Pix. Quem processa é o Mercado Pago.'),
+        h('p', { class: 'tiny muted' },
+          'Ao pagar você aceita os ', h('a', { href: '#/termos', onclick: fechar }, 'Termos'),
+          '. Dá para cancelar quando quiser e desistir em até 7 dias. ',
+          h('b', {}, 'Menor de 18? O pagamento deve ser feito por um responsável.')))));
   }
 
   /* ---------- 2. e-mail (o Mercado Pago exige, para o comprovante) ---------- */
@@ -163,11 +184,68 @@ export function abrirPagamento(plano, aoLiberar) {
       h('button', { class: 'btn btn--blk mt', onclick: fechar }, 'Voltar ao app'))));
   }
 
-  /* ---------- cartão: quem digita é o Mercado Pago ---------- */
+  /* ---------- cartão ---------- */
   async function cartao() {
-    tela.replaceChildren(caixa(h('div', { class: 'card center' }, h('p', { class: 'muted' }, 'Abrindo o Mercado Pago…'))));
+    tela.replaceChildren(caixa(h('div', { class: 'card center' }, h('p', { class: 'muted' }, 'Preparando o pagamento…'))));
+    let chave = '';
     try {
       await garantirSessao();
+      chave = (await chavePublicaDoServidor()).chave || '';
+    } catch { /* sem chave pública: cai no checkout do Mercado Pago */ }
+    if (chave) return cartaoNoApp(chave);
+    return cartaoNoMercadoPago();
+  }
+
+  /** Formulário do cartão aqui dentro (Brick do Mercado Pago). */
+  async function cartaoNoApp(chave) {
+    const caixaForm = h('div', { id: 'mp-cartao', style: { minHeight: '260px' } });
+    const erroEl = h('p', { class: 'tiny', style: { color: 'var(--bad)' } });
+    tela.replaceChildren(caixa(h('div', { class: 'card' },
+      h('b', {}, '💳 Pagar com cartão'),
+      h('p', { class: 'tiny muted' }, `${plano.dias} dias de Pro · ${precoBR(plano.preco)}`),
+      caixaForm, erroEl,
+      h('p', { class: 'tiny muted' }, 'O formulário é do Mercado Pago. O número do cartão não passa pelo StudyLab.'),
+      h('button', { class: 'btn btn--sm mt', onclick: escolherForma }, '‹ Escolher outra forma'))));
+
+    try {
+      await carregarSdkMP();
+      const mp = new window.MercadoPago(chave, { locale: 'pt-BR' });
+      await mp.bricks().create('cardPayment', 'mp-cartao', {
+        initialization: { amount: plano.preco, payer: { email: st().conta.email || '' } },
+        customization: { visual: { style: { theme: 'dark' } }, paymentMethods: { maxInstallments: 1 } },
+        callbacks: {
+          onReady: () => {},
+          onError: (e) => { erroEl.textContent = e?.message || 'Confira os dados do cartão.'; },
+          onSubmit: async (dados) => {
+            erroEl.textContent = '';
+            try {
+              const r = await pagarComCartaoNoServidor(plano.id, {
+                token: dados.token,
+                metodo: dados.payment_method_id,
+                emissor: dados.issuer_id,
+                parcelas: dados.installments,
+                email: dados.payer?.email,
+                documento: dados.payer?.identification
+                  ? { tipo: dados.payer.identification.type, numero: dados.payer.identification.number }
+                  : null,
+              });
+              if (r.status === 'approved') confirmado(r);
+              else if (r.status === 'in_process') aguardando();
+              else erroEl.textContent = 'O pagamento foi recusado pelo banco. Tente outro cartão ou pague com Pix.';
+            } catch (e) { erroEl.textContent = e.message; }
+          },
+        },
+      });
+    } catch (e) {
+      erroEl.textContent = `${e.message} Vou te levar para o Mercado Pago.`;
+      setTimeout(cartaoNoMercadoPago, 1200);
+    }
+  }
+
+  /** Plano B: o checkout do Mercado Pago, em outra tela. */
+  async function cartaoNoMercadoPago() {
+    tela.replaceChildren(caixa(h('div', { class: 'card center' }, h('p', { class: 'muted' }, 'Abrindo o Mercado Pago…'))));
+    try {
       const r = await pagarNoServidor(plano.id, 'unico');
       location.href = r.link;
     } catch (e) {
@@ -176,6 +254,16 @@ export function abrirPagamento(plano, aoLiberar) {
         h('p', { class: 'small', style: { color: 'var(--bad)' } }, e.message),
         h('button', { class: 'btn btn--blk mt', onclick: escolherForma }, '‹ Voltar'))));
     }
+  }
+
+  /** Cartão em análise: o banco ainda vai responder. */
+  function aguardando() {
+    tela.replaceChildren(caixa(h('div', { class: 'card center' },
+      h('div', { style: { fontSize: '44px' } }, '⏳'),
+      h('h2', { style: { fontSize: '18px' } }, 'Pagamento em análise'),
+      h('p', { class: 'muted small' }, 'O banco ainda está confirmando. Assim que aprovar, o Pro é liberado sozinho — '
+        + 'pode fechar esta tela e voltar depois.'),
+      h('button', { class: 'btn btn--p btn--blk mt2', onclick: fechar }, 'Entendi'))));
   }
 
   escolherForma();
