@@ -286,6 +286,30 @@
   .ach .t b{display:block;font-size:13px;font-weight:730}
   .ach .t span{font-size:11.5px;color:var(--muted)}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+  /* ---------- login ---------- */
+  #auth{position:fixed;inset:0;z-index:150;background:var(--bg);display:none;overflow:auto;
+    padding:max(28px,env(safe-area-inset-top)) 18px 40px}
+  #auth.on{display:block}
+  .auth{max-width:420px;margin:0 auto}
+  .auth .mark{display:flex;flex-direction:column;align-items:center;gap:12px;margin-bottom:24px;text-align:center}
+  .auth .mark img{width:72px;height:72px;border-radius:20px;box-shadow:var(--shadow)}
+  .auth .mark h1{margin:0;font-size:26px;font-weight:820;letter-spacing:-.035em}
+  .auth .mark h1 span{color:var(--acc)}
+  .auth .mark p{margin:0;font-size:13px;color:var(--muted)}
+  .auth .seg2{display:flex;gap:4px;background:var(--bg2);border:1px solid var(--line);border-radius:13px;padding:4px;margin-bottom:16px}
+  .auth .seg2 button{flex:1;border:0;background:transparent;color:var(--text2);padding:9px;border-radius:10px;font-size:13.5px;font-weight:700}
+  .auth .seg2 button.on{background:var(--card);color:var(--text);box-shadow:var(--shadow)}
+  .auth form{display:flex;flex-direction:column;gap:12px}
+  .auth .erro{background:color-mix(in srgb,var(--bad) 12%,transparent);border:1px solid color-mix(in srgb,var(--bad) 34%,transparent);
+    color:var(--bad);border-radius:12px;padding:10px 13px;font-size:12.5px;font-weight:600}
+  .auth .ok{background:color-mix(in srgb,var(--good) 12%,transparent);border:1px solid color-mix(in srgb,var(--good) 34%,transparent);
+    color:var(--good);border-radius:12px;padding:10px 13px;font-size:12.5px;font-weight:600}
+  .auth .linha{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2)}
+  .auth .linha input[type=checkbox]{width:17px;height:17px;accent-color:var(--acc)}
+  .auth .rodape{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.55;text-align:center}
+  .auth .link{background:none;border:0;color:var(--acc);font-size:12.5px;font-weight:650;padding:0;text-align:left}
+  .auth .topo{display:flex;justify-content:flex-end;margin-bottom:4px}
 </style>
 </head>
 <body>
@@ -297,6 +321,8 @@
     <p class="tag">seu estilista digital</p>
   </div>
 </div>
+
+<div id="auth"></div>
 
 <header class="top">
   <div class="row">
@@ -622,7 +648,9 @@ function harmoniaCores(keys) {
 }
 
 /* ===================== estado ===================== */
-const KEY = "looklab.v1";
+const KEY = "looklab.v1";                       // formato antigo, sem login (migrado no 1º cadastro)
+const KEY_CONTAS = "looklab.contas";
+const KEY_DADOS = (id) => "looklab.dados." + id;
 let DB = null;
 
 function defaultClimas(cat) {
@@ -778,18 +806,31 @@ function seedDB() {
     ui: { theme: "auto" },
   };
 }
-function load() {
+/* guarda-roupa vazio, com um único perfil (conta nova sem dados de exemplo) */
+function dbVazio(nome) {
+  return {
+    v: 1, ativo: "p1", modo: "kid",
+    perfis: [{ id: "p1", nome: nome || "Eu", idade: 0, avatar: "🙂", estilos: [], itens: [], looks: [], plano: {}, desejos: [], viagens: [], criado: hoje() }],
+    resp: { pin: "", perms: { cadastrar: true, precos: false, desejos: true } },
+    ui: { theme: "auto" },
+  };
+}
+/* Os dados ficam separados por conta: looklab.dados.<id da conta>.
+   KEY ("looklab.v1") é a versão anterior, sem login — ela é migrada para a
+   primeira conta criada no aparelho. */
+function carregaDados(contaId) {
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) { DB = JSON.parse(raw); if (DB && DB.perfis && DB.perfis.length) return; }
-  } catch (e) { /* dados corrompidos: recomeça do exemplo */ }
-  DB = seedDB(); save();
+    const raw = localStorage.getItem(KEY_DADOS(contaId));
+    if (raw) { DB = JSON.parse(raw); if (DB && DB.perfis && DB.perfis.length) return true; }
+  } catch (e) { /* dados corrompidos: recomeça */ }
+  return false;
 }
 let saveT = null;
 function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify(DB)); }
+    if (!DB || !CONTAS.sessao) return;
+    try { localStorage.setItem(KEY_DADOS(CONTAS.sessao), JSON.stringify(DB)); }
     catch (e) { toast("Armazenamento cheio. Exporte um backup e remova fotos antigas."); }
   }, 60);
 }
@@ -1951,6 +1992,16 @@ function viewPerfil() {
     (learned.length ? '<p class="hint" style="margin-top:12px">Pelo que você vem salvando, o LookLab já percebeu preferência por <b>' +
       learned.map((s) => STYLES[s].label.toLowerCase()).join("</b> e <b>") + "</b>. Isso entra nas próximas sugestões.</p>" : "") +
 
+    '<div class="sec" style="margin:22px 0 10px"><h3>Conta</h3><p>login deste aparelho</p></div>' +
+    (contaAtual()
+      ? '<div class="li" style="border-bottom:0;padding-top:0"><span class="em">🔑</span>' +
+      '<span class="t"><b>' + esc(contaAtual().email) + "</b><span>" +
+      (contaAtual().nome ? esc(contaAtual().nome) + " · " : "") + "conta criada em " + dataCurta(contaAtual().criado) + "</span></span></div>" +
+      '<div class="row" style="margin-top:8px"><button class="btn sm" data-act="trocarSenha">Trocar senha</button>' +
+      '<button class="btn sm" data-act="sairConta">Sair</button>' +
+      (ehResp() ? '<button class="btn sm danger" data-act="apagarConta">Excluir conta</button>' : "") + "</div>"
+      : '<p class="hint">Nenhuma conta ativa.</p>') +
+
     '<div class="sec" style="margin:22px 0 10px"><h3>Aparência</h3></div>' +
     '<div class="chips">' + chipsHTML({ auto: { label: "Automático", emoji: "🌗" }, light: { label: "Claro", emoji: "☀️" }, dark: { label: "Escuro", emoji: "🌙" } }, DB.ui.theme, "tema", true) + "</div>" +
 
@@ -2024,6 +2075,7 @@ function painelResponsavel() {
     '<div class="sec" style="margin:20px 0 8px"><h3>Dados</h3><p>tudo fica só neste aparelho</p></div>' +
     '<div class="row"><button class="btn sm" data-act="exportar">⬇️ Exportar backup</button>' +
     '<button class="btn sm" data-act="importar">⬆️ Importar</button>' +
+    '<button class="btn sm danger" data-act="limparTudo">Esvaziar guarda-roupa</button>' +
     '<button class="btn sm danger" data-act="resetar">Recomeçar do exemplo</button></div>' +
     '<input type="file" id="fileImp" accept="application/json" class="sr" />' +
     "</div>";
@@ -2236,9 +2288,256 @@ function abreFormPerfil(id) {
 
 <script>
 "use strict";
+/* =====================================================================
+   Contas — login local com e-mail e senha.
+   Tudo fica NESTE aparelho: a senha nunca é guardada, só a derivação
+   PBKDF2-SHA256 (210 mil rodadas) com sal aleatório por conta.
+   Isso tranca o app no aparelho; não é login de servidor, não sincroniza
+   entre aparelhos e não há recuperação de senha por e-mail.
+   ===================================================================== */
+const ITER = 210000;
+let CONTAS = { contas: [], sessao: "", ui: { theme: "auto" } };
+let AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+
+function carregaContas() {
+  try {
+    const raw = localStorage.getItem(KEY_CONTAS);
+    if (raw) CONTAS = JSON.parse(raw);
+  } catch (e) { /* ignora e recomeça */ }
+  CONTAS = CONTAS || {};
+  CONTAS.contas = CONTAS.contas || [];
+  CONTAS.ui = CONTAS.ui || { theme: "auto" };
+  CONTAS.sessao = CONTAS.sessao || "";
+}
+function salvaContas() {
+  try { localStorage.setItem(KEY_CONTAS, JSON.stringify(CONTAS)); }
+  catch (e) { toast("Não foi possível salvar a conta (armazenamento cheio)."); }
+}
+const contaAtual = () => CONTAS.contas.find((c) => c.id === CONTAS.sessao) || null;
+const normEmail = (e) => String(e || "").trim().toLowerCase();
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normEmail(e));
+const achaConta = (e) => CONTAS.contas.find((c) => c.email === normEmail(e));
+
+const b64 = (buf) => btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+const deB64 = (t) => Uint8Array.from(atob(t), (c) => c.charCodeAt(0));
+const temCripto = () => !!(window.crypto && window.crypto.subtle && window.crypto.getRandomValues);
+async function derivaSenha(senha, saltB64, iter) {
+  const chave = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", salt: deB64(saltB64), iterations: iter || ITER, hash: "SHA-256" }, chave, 256);
+  return b64(bits);
+}
+function novoSalt() { return b64(crypto.getRandomValues(new Uint8Array(16))); }
+/* comparação em tempo constante, para o tempo de resposta não vazar o quanto acertou */
+function igual(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
+async function criarConta(nome, email, senha, comExemplo) {
+  const conta = { id: uid(), nome: (nome || "").trim(), email: normEmail(email), salt: novoSalt(), iter: ITER, criado: hoje() };
+  conta.hash = await derivaSenha(senha, conta.salt, conta.iter);
+  // a primeira conta do aparelho herda os dados que já existiam antes do login
+  let herdado = null;
+  if (!CONTAS.contas.length) {
+    try {
+      const antigo = localStorage.getItem(KEY);
+      if (antigo) { const d = JSON.parse(antigo); if (d && d.perfis && d.perfis.length) herdado = d; }
+    } catch (e) { /* ignora */ }
+  }
+  DB = herdado || (comExemplo ? seedDB() : dbVazio(conta.nome || "Eu"));
+  DB.ui = DB.ui || { theme: "auto" };
+  DB.ui.theme = CONTAS.ui.theme || "auto";
+  CONTAS.contas.push(conta);
+  CONTAS.sessao = conta.id;
+  salvaContas();
+  try { localStorage.setItem(KEY_DADOS(conta.id), JSON.stringify(DB)); } catch (e) { /* avisa no save seguinte */ }
+  if (herdado) { try { localStorage.removeItem(KEY); } catch (e) { } }
+  return { conta, herdado: !!herdado };
+}
+async function entrar(email, senha) {
+  const c = achaConta(email);
+  if (!c) return false;
+  const h = await derivaSenha(senha, c.salt, c.iter || ITER);
+  if (!igual(h, c.hash)) return false;
+  CONTAS.sessao = c.id; salvaContas();
+  if (!carregaDados(c.id)) { DB = dbVazio(c.nome || "Eu"); save(); }
+  DB.ui = DB.ui || { theme: "auto" };
+  return true;
+}
+function sair() {
+  CONTAS.sessao = ""; salvaContas();
+  DB = null; CHAT = [];
+  AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+  desenhaAuth();
+}
+async function trocarSenha(atual, nova) {
+  const c = contaAtual(); if (!c) return "Nenhuma conta ativa.";
+  const h = await derivaSenha(atual, c.salt, c.iter || ITER);
+  if (!igual(h, c.hash)) return "A senha atual não confere.";
+  if (String(nova).length < 6) return "A senha nova precisa ter pelo menos 6 caracteres.";
+  c.salt = novoSalt(); c.iter = ITER;
+  c.hash = await derivaSenha(nova, c.salt, c.iter);
+  salvaContas();
+  return "";
+}
+function excluirConta(id) {
+  CONTAS.contas = CONTAS.contas.filter((c) => c.id !== id);
+  try { localStorage.removeItem(KEY_DADOS(id)); } catch (e) { }
+  if (CONTAS.sessao === id) { CONTAS.sessao = ""; DB = null; }
+  salvaContas();
+}
+
+/* ---------- tela de login ---------- */
+function avisoHTML() {
+  return AUTH.erro ? '<div class="erro">' + esc(AUTH.erro) + "</div>"
+    : AUTH.ok ? '<div class="ok">' + esc(AUTH.ok) + "</div>" : "";
+}
+/* mostra o recado sem redesenhar a tela — o que já foi digitado continua lá */
+function avisaAuth(erro, ok) {
+  AUTH.erro = erro || ""; AUTH.ok = ok || "";
+  const box = $("#au-aviso");
+  if (box) box.innerHTML = avisoHTML(); else desenhaAuth();
+}
+function ocupaAuth(ocupado) {
+  AUTH.ocupado = ocupado;
+  const b = $("#au-enviar");
+  if (!b) return;
+  b.disabled = ocupado;
+  b.textContent = ocupado ? "Aguarde…" : AUTH.modo === "criar" ? "Criar conta" : "Entrar";
+}
+function desenhaAuth() {
+  const el = $("#auth");
+  const nContas = CONTAS.contas.length;
+  el.classList.add("on");
+  document.body.style.overflow = "hidden";
+
+  if (!temCripto()) {
+    el.innerHTML = '<div class="auth"><div class="mark"><img src="assets/logo.png" alt="" />' +
+      "<h1>Look<span>Lab</span></h1></div>" +
+      '<div class="erro">Este navegador não oferece as funções de segurança necessárias para guardar a senha ' +
+      "(WebCrypto). Abra o LookLab por <b>https://</b> ou em um navegador mais novo.</div></div>";
+    return;
+  }
+
+  const cab = '<div class="topo"><button class="iconbtn" id="authTema" title="Alternar tema">' +
+    (temaAtual() === "light" ? "☀️" : temaAtual() === "dark" ? "🌙" : "🌗") + "</button></div>" +
+    '<div class="mark"><img src="assets/logo.png" alt="" /><h1>Look<span>Lab</span></h1>' +
+    "<p>seu estilista digital</p></div>";
+  const aviso = '<div id="au-aviso">' + avisoHTML() + "</div>";
+  const rodape = '<p class="rodape">A conta e o guarda-roupa ficam <b>neste aparelho</b>. Nada é enviado para servidor nenhum — ' +
+    "por isso não dá para entrar do celular e do computador com os mesmos dados, e não existe recuperação de senha por e-mail. " +
+    "Faça um backup em <b>Perfil → área dos responsáveis</b>.</p>";
+
+  if (AUTH.modo === "esqueci") {
+    el.innerHTML = '<div class="auth">' + cab +
+      '<div class="card pad"><b style="font-size:15px">Esqueci minha senha</b>' +
+      '<p class="hint" style="margin:8px 0 0;line-height:1.55">Como tudo fica só neste aparelho, o LookLab não tem como enviar ' +
+      "um e-mail de recuperação: a senha não está guardada em lugar nenhum, nem aqui. Restam dois caminhos:</p>" +
+      '<p class="hint" style="margin:10px 0 0;line-height:1.55"><b>1.</b> Se você exportou um backup, crie uma conta nova e ' +
+      "importe o arquivo em <b>Perfil → área dos responsáveis → Importar</b>. Você recupera todo o guarda-roupa.</p>" +
+      '<p class="hint" style="margin:8px 0 14px;line-height:1.55"><b>2.</b> Sem backup, o jeito é apagar a conta e começar de novo — ' +
+      "o guarda-roupa dela se perde.</p>" +
+      (nContas ? '<div class="field"><label>Apagar qual conta?</label><select class="inp" id="au-apagar">' +
+        CONTAS.contas.map((c) => '<option value="' + c.id + '">' + esc(c.email) + "</option>").join("") + "</select></div>" +
+        '<button class="btn danger block" id="au-apagarBtn" style="margin-top:12px">Apagar conta e recomeçar</button>' : "") +
+      '<button class="link" id="au-voltar" style="margin-top:14px">← Voltar para o login</button>' +
+      "</div>" + rodape + "</div>";
+    $("#authTema").onclick = giraTema;
+    $("#au-voltar").onclick = () => { AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+    const b = $("#au-apagarBtn");
+    if (b) b.onclick = () => {
+      const id = $("#au-apagar").value;
+      const c = CONTAS.contas.find((x) => x.id === id);
+      if (!c || !confirm("Apagar a conta " + c.email + " e todo o guarda-roupa dela? Isso não tem volta.")) return;
+      excluirConta(id);
+      AUTH = { modo: CONTAS.contas.length ? "entrar" : "criar", erro: "", ok: "Conta apagada. Você pode criar outra agora.", ocupado: false };
+      desenhaAuth();
+    };
+    return;
+  }
+
+  const criando = AUTH.modo === "criar";
+  el.innerHTML = '<div class="auth">' + cab +
+    '<div class="seg2"><button id="au-tab-entrar" class="' + (criando ? "" : "on") + '">Entrar</button>' +
+    '<button id="au-tab-criar" class="' + (criando ? "on" : "") + '">Criar conta</button></div>' +
+    aviso +
+    '<form id="au-form" autocomplete="on" novalidate>' +
+    (criando ? '<div class="field"><label>Seu nome</label><input class="inp" id="au-nome" placeholder="como quer ser chamado(a)" autocomplete="name" /></div>' : "") +
+    '<div class="field"><label>E-mail</label><input class="inp" id="au-email" type="email" inputmode="email" autocomplete="' + (criando ? "username" : "username") + '" placeholder="voce@exemplo.com" /></div>' +
+    '<div class="field"><label>Senha</label><input class="inp" id="au-senha" type="password" autocomplete="' + (criando ? "new-password" : "current-password") + '" placeholder="' + (criando ? "mínimo de 6 caracteres" : "sua senha") + '" /></div>' +
+    (criando ? '<div class="field"><label>Repita a senha</label><input class="inp" id="au-senha2" type="password" autocomplete="new-password" /></div>' +
+      '<label class="linha"><input type="checkbox" id="au-exemplo" /> Começar com o guarda-roupa de exemplo (para experimentar)</label>' : "") +
+    '<button class="btn pri big block" id="au-enviar" type="submit"' + (AUTH.ocupado ? " disabled" : "") + ">" +
+    (AUTH.ocupado ? "Aguarde…" : criando ? "Criar conta" : "Entrar") + "</button>" +
+    "</form>" +
+    (criando ? "" : '<button class="link" id="au-esqueci" style="margin-top:12px">Esqueci minha senha</button>') +
+    rodape + "</div>";
+
+  $("#authTema").onclick = giraTema;
+  $("#au-tab-entrar").onclick = () => { AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  $("#au-tab-criar").onclick = () => { AUTH = { modo: "criar", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  const esq = $("#au-esqueci");
+  if (esq) esq.onclick = () => { AUTH = { modo: "esqueci", erro: "", ok: "", ocupado: false }; desenhaAuth(); };
+  $("#au-form").onsubmit = (e) => { e.preventDefault(); enviaAuth(); };
+  setTimeout(() => { const f = $(criando ? "#au-nome" : "#au-email"); if (f) f.focus(); }, 40);
+}
+async function enviaAuth() {
+  if (AUTH.ocupado) return;
+  const criando = AUTH.modo === "criar";
+  const email = ($("#au-email") || {}).value || "";
+  const senha = ($("#au-senha") || {}).value || "";
+  const falha = (m) => { ocupaAuth(false); avisaAuth(m); };
+
+  if (!emailValido(email)) return falha("Escreva um e-mail válido.");
+  if (criando) {
+    const nome = ($("#au-nome") || {}).value || "";
+    const senha2 = ($("#au-senha2") || {}).value || "";
+    if (senha.length < 6) return falha("A senha precisa ter pelo menos 6 caracteres.");
+    if (senha !== senha2) return falha("As duas senhas não são iguais.");
+    if (achaConta(email)) return falha("Já existe uma conta com esse e-mail neste aparelho.");
+    avisaAuth(""); ocupaAuth(true);
+    try {
+      const r = await criarConta(nome, email, senha, !!($("#au-exemplo") || {}).checked);
+      abreApp(r.herdado ? "Conta criada. O guarda-roupa que já estava aqui foi mantido." : "Conta criada. Bem-vindo(a) ao LookLab!");
+    } catch (e) { falha("Não consegui criar a conta neste navegador."); }
+    return;
+  }
+  avisaAuth(""); ocupaAuth(true);
+  try {
+    const ok = await entrar(email, senha);
+    if (!ok) return falha("E-mail ou senha não conferem.");
+    abreApp("Bem-vindo(a) de volta!");
+  } catch (e) { falha("Não consegui verificar a senha neste navegador."); }
+}
+function abreApp(msg) {
+  AUTH = { modo: "entrar", erro: "", ok: "", ocupado: false };
+  $("#auth").classList.remove("on");
+  $("#auth").innerHTML = "";
+  document.body.style.overflow = "";
+  aplicaTema();
+  ROTA = lerHash();
+  render();
+  if (msg) toast(msg);
+}
+function giraTema() {
+  const ordem = ["auto", "light", "dark"];
+  const t = ordem[(ordem.indexOf(temaAtual()) + 1) % 3];
+  CONTAS.ui.theme = t; salvaContas();
+  if (DB) { DB.ui.theme = t; save(); }
+  aplicaTema();
+  if ($("#auth").classList.contains("on")) desenhaAuth();
+  else if (ROTA.tab === "perfil") render();
+}
+const temaAtual = () => (DB && DB.ui && DB.ui.theme) || (CONTAS.ui && CONTAS.ui.theme) || "auto";
+</script>
+
+<script>
+"use strict";
 /* ===================== RENDER ===================== */
 function aplicaTema() {
-  const t = DB.ui.theme;
+  const t = temaAtual();
   if (t === "auto") document.documentElement.removeAttribute("data-theme");
   else document.documentElement.setAttribute("data-theme", t);
   $("#themeBtn").textContent = t === "light" ? "☀️" : t === "dark" ? "🌙" : "🌗";
@@ -2452,6 +2751,38 @@ const ACOES = {
     DB.modo = "guardian"; save(); render(); toast("Modo responsável ativo.");
   },
   sairResp: () => { DB.modo = "kid"; save(); render(); toast("De volta ao modo do perfil."); },
+  sairConta: () => {
+    if (!confirm("Sair da conta? Os dados continuam guardados neste aparelho.")) return;
+    sair(); toast("Você saiu da conta.");
+  },
+  trocarSenha: () => {
+    const corpo = '<div class="field"><label>Senha atual</label><input class="inp" id="ts-atual" type="password" autocomplete="current-password" /></div>' +
+      '<div class="field" style="margin-top:12px"><label>Senha nova</label><input class="inp" id="ts-nova" type="password" autocomplete="new-password" placeholder="mínimo de 6 caracteres" /></div>' +
+      '<div class="field" style="margin-top:12px"><label>Repita a senha nova</label><input class="inp" id="ts-nova2" type="password" autocomplete="new-password" /></div>' +
+      '<p class="hint" style="margin-top:12px">A senha não é guardada em lugar nenhum — se esquecer, não há como recuperar. ' +
+      "Exporte um backup antes, por garantia.</p>";
+    abreModal("Trocar senha", corpo,
+      '<button class="btn" data-act="fecharModal">Cancelar</button><button class="btn pri" data-act="confirmaSenha">Salvar</button>',
+      () => setTimeout(() => { const f = $("#ts-atual"); if (f) f.focus(); }, 40));
+  },
+  confirmaSenha: async (el) => {
+    const atual = ($("#ts-atual") || {}).value || "", nova = ($("#ts-nova") || {}).value || "", nova2 = ($("#ts-nova2") || {}).value || "";
+    if (nova !== nova2) { toast("As duas senhas novas não são iguais."); return; }
+    el.disabled = true;
+    const erro = await trocarSenha(atual, nova);
+    el.disabled = false;
+    if (erro) { toast(erro); return; }
+    fechaModal(); toast("Senha trocada.");
+  },
+  apagarConta: () => {
+    const c = contaAtual(); if (!c) return;
+    if (!confirm("Excluir a conta " + c.email + " e TODO o guarda-roupa dela deste aparelho? Isso não tem volta.")) return;
+    if (!confirm("Tem certeza mesmo? Exporte um backup antes se quiser guardar os dados.")) return;
+    excluirConta(c.id);
+    CHAT = [];
+    AUTH = { modo: CONTAS.contas.length ? "entrar" : "criar", erro: "", ok: "Conta excluída.", ocupado: false };
+    desenhaAuth();
+  },
   exportar: () => {
     const blob = new Blob([JSON.stringify(DB, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -2460,8 +2791,15 @@ const ACOES = {
   },
   importar: () => { const f = $("#fileImp"); if (f) f.click(); },
   resetar: () => {
-    if (!confirm("Isso apaga tudo deste aparelho e volta para o guarda-roupa de exemplo. Continuar?")) return;
-    DB = seedDB(); save(); aplicaTema(); ir("inicio"); toast("Recomeçamos do exemplo.");
+    if (!confirm("Isso apaga o guarda-roupa desta conta e volta para os perfis de exemplo (Lucas, Marina e Pedro). Continuar?")) return;
+    const tema = temaAtual();
+    DB = seedDB(); DB.ui.theme = tema; save(); aplicaTema(); ir("inicio"); toast("Recomeçamos do exemplo.");
+  },
+  limparTudo: () => {
+    if (!confirm("Isso apaga todos os perfis, peças e looks desta conta, deixando um perfil vazio. Continuar?")) return;
+    const c = contaAtual(), tema = temaAtual();
+    DB = dbVazio((c && c.nome) || "Eu"); DB.ui.theme = tema; save(); aplicaTema(); ir("guarda");
+    toast("Guarda-roupa vazio. Cadastre as suas peças.");
   },
 };
 
@@ -2477,7 +2815,7 @@ const CHIPS = {
   "status-peca": (v) => { const it = item(ROTA.arg); if (it) { it.status = v; if (v !== "arquivada") it.destino = ""; save(); render(); } },
   "destino-peca": (v) => { const it = item(ROTA.arg); if (it) { it.destino = it.destino === v ? "" : v; save(); render(); } },
   "estilo-perfil": (v) => { P().estilos = P().estilos || []; toggle(P().estilos, v); save(); render(); },
-  tema: (v) => { DB.ui.theme = v; save(); aplicaTema(); render(); },
+  tema: (v) => { DB.ui.theme = v; CONTAS.ui.theme = v; salvaContas(); save(); aplicaTema(); render(); },
   perm: (v) => { DB.resp.perms[v] = !DB.resp.perms[v]; save(); render(); },
 };
 function toggle(arr, v) { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); }
@@ -2489,7 +2827,7 @@ document.addEventListener("click", (e) => {
   if (ov && e.target === ov) { fechaModal(); return; }
 
   const a = alvo("[data-act]");
-  if (a) { const fn = ACOES[a.dataset.act]; if (fn) { e.preventDefault(); fn(a); return; } }
+  if (a) { const fn = ACOES[a.dataset.act]; if (fn) { e.preventDefault(); Promise.resolve(fn(a)).catch(() => toast("Algo deu errado nessa ação.")); return; } }
 
   const c = alvo("[data-chip]");
   if (c) { const fn = CHIPS[c.dataset.chip]; if (fn) { fn(c.dataset.val); return; } }
@@ -2560,22 +2898,35 @@ document.addEventListener("keydown", (e) => {
 window.addEventListener("hashchange", () => { const r = lerHash(); if (r.tab !== ROTA.tab || r.arg !== ROTA.arg) { ROTA = r; render(); } });
 
 $("#themeBtn").onclick = () => {
-  const ordem = ["auto", "light", "dark"];
-  DB.ui.theme = ordem[(ordem.indexOf(DB.ui.theme) + 1) % 3];
-  save(); aplicaTema(); if (ROTA.tab === "perfil") render();
-  toast("Tema: " + { auto: "automático", light: "claro", dark: "escuro" }[DB.ui.theme]);
+  giraTema();
+  toast("Tema: " + { auto: "automático", light: "claro", dark: "escuro" }[temaAtual()]);
 };
 $("#whoBtn").onclick = () => ir("perfil");
 
 /* ===================== INÍCIO ===================== */
-load();
+carregaContas();
 aplicaTema();
-ROTA = lerHash();
-render();
-TrendSource.fetch().then((d) => { TRENDS = d; if (ROTA.tab === "tendencias") render(); }).catch(() => { });
-(function splash() {
+TrendSource.fetch().then((d) => { TRENDS = d; if (DB && ROTA.tab === "tendencias") render(); }).catch(() => { });
+
+(function iniciar() {
+  const logado = CONTAS.sessao && contaAtual() && carregaDados(CONTAS.sessao);
+  if (logado) {
+    DB.ui = DB.ui || { theme: CONTAS.ui.theme || "auto" };
+    aplicaTema();
+    ROTA = lerHash();
+    render();
+  } else {
+    if (CONTAS.sessao) { CONTAS.sessao = ""; salvaContas(); }   // sessão órfã
+    AUTH.modo = CONTAS.contas.length ? "entrar" : "criar";
+  }
   const sp = $("#splash");
-  const fim = () => sp.classList.add("gone");
+  let fechado = false;                     // toque + tempo não podem redesenhar duas vezes
+  const fim = () => {
+    if (fechado) return;
+    fechado = true;
+    sp.classList.add("gone");
+    if (!DB) desenhaAuth();
+  };
   sp.addEventListener("click", fim);
   setTimeout(fim, 1500);
 })();
