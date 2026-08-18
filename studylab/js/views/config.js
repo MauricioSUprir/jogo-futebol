@@ -180,5 +180,8 @@ function montar(el, pintar) {
       if (toques >= 5) { toques = 0; location.hash = '#/criador'; }
       else if (toques === 3) toast('Mais 2 toques…');
     },
-  }, 'StudyLab · versão 1.1 · feito para funcionar offline'));
+  }, 'StudyLab · versão 1.2 · feito para funcionar offline'));
+  el.append(h('p', { class: 'tiny center', style: { marginTop: '6px' } },
+    h('a', { href: '#/termos' }, 'Termos de uso'), ' · ',
+    h('a', { href: '#/termos?aba=privacidade' }, 'Política de privacidade')));
 }

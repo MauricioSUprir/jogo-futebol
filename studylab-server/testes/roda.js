@@ -8,6 +8,7 @@ process.env.PORT = process.env.PORT || '4711';
 process.env.ORIGENS = '*';
 process.env.LIMITE_DIARIO = '3';
 process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
+process.env.MP_PUBLIC_KEY = 'APP_USR-publica';
 delete process.env.DATABASE_URL;
 
 const BASE = `http://localhost:${process.env.PORT}`;
@@ -32,6 +33,14 @@ globalThis.fetch = async (url, opcoes) => {
     }
     if (alvo.endsWith('/v1/payments') && opcoes?.method === 'POST') {
       const c = JSON.parse(opcoes.body);
+      if (c.token) {   // pagamento com cartão
+        const aprovado = c.token !== 'token-recusado';
+        return new Response(JSON.stringify({
+          id: aprovado ? 'CARD-OK' : 'CARD-NO', status: aprovado ? 'approved' : 'rejected',
+          status_detail: aprovado ? 'accredited' : 'cc_rejected_insufficient_amount',
+          external_reference: c.external_reference, transaction_amount: c.transaction_amount,
+        }), { status: 200, headers: { 'content-type': 'application/json' } });
+      }
       return new Response(JSON.stringify({
         id: 'PIX-QR-1', status: 'pending', external_reference: c.external_reference,
         transaction_amount: c.transaction_amount,
@@ -308,6 +317,34 @@ console.log('\n== Pix com QR dentro do app ==');
   conferir(ia.status === 200, 'quem pagou por Pix usa o Study AI na hora');
 }
 
+console.log('\n== cartão dentro do app ==');
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-cartao', email: 'card@casa.com', nome: 'Card' } } });
+  const t = e.dados.token;
+
+  const chave = await pedir('GET', '/pagamento/chave-publica');
+  conferir(chave.dados.chave === 'APP_USR-publica' && chave.dados.formularioNoApp, 'entrega a chave pública (a que pode ir para o navegador)');
+
+  const semToken = await pedir('POST', '/pagar/cartao', { token: t, corpo: { planoId: 'mensal', cartao: {} } });
+  conferir(semToken.status === 400, 'sem o token do cartão, recusa');
+
+  const r = await pedir('POST', '/pagar/cartao', {
+    token: t,
+    corpo: { planoId: 'mensal', cartao: { token: 'tok-123', metodo: 'visa', parcelas: 1, email: 'card@casa.com' } },
+  });
+  conferir(r.status === 200 && r.dados.status === 'approved', 'cartão aprovado', r.dados.detalhe || r.dados.erro);
+  conferir(r.dados.plano === 'pro', 'libera o Pro na mesma resposta, sem esperar webhook');
+
+  const recusado = await pedir('POST', '/pagar/cartao', {
+    token: t, corpo: { planoId: 'semanal', cartao: { token: 'token-recusado', metodo: 'visa', email: 'x@x.com' } },
+  });
+  conferir(recusado.dados.status === 'rejected', 'cartão recusado volta como recusado, sem liberar nada');
+
+  const eu = await pedir('GET', '/eu', { token: t });
+  const em30 = new Date(); em30.setDate(em30.getDate() + 30);
+  conferir(eu.dados.proAte === em30.toISOString().slice(0, 10), `continua com os 30 dias do cartão aprovado (${eu.dados.proAte})`);
+}
+
 console.log('\n== admin ==');
 {
   const semToken = await pedir('GET', '/admin/numeros');
@@ -315,7 +352,7 @@ console.log('\n== admin ==');
   process.env.ADMIN_TOKEN = 'chave-admin';
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
-  conferir(r.status === 200 && d.usuarios === 7, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+  conferir(r.status === 200 && d.usuarios === 8, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

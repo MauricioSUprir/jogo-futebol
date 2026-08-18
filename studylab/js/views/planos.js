@@ -45,7 +45,9 @@ function montar(el, pintar) {
   el.append(h('div', { class: 'grid g3' }, ...PLANOS.map((p) => cartaoPlano(p, pintar))));
 
   el.append(h('p', { class: 'tiny muted center mt' },
-    'Cancele quando quiser. Sem multa, sem fidelidade. O plano grátis continua completo — só sem o Study AI.'));
+    'Cancele quando quiser. Sem multa, sem fidelidade. O plano grátis continua completo — só sem o Study AI. ',
+    h('a', { href: '#/termos' }, 'Termos'), ' · ',
+    h('a', { href: '#/termos?aba=privacidade' }, 'Privacidade')));
 
   /* ---------- código de acesso ---------- */
   const codigo = inp({ placeholder: 'Tem um código? Digite aqui', style: { textTransform: 'uppercase' } });

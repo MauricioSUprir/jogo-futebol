@@ -18,7 +18,7 @@ import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
 import { perguntar, modeloPadrao } from './ia.js';
 import {
   PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico, criarPix,
-  interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
+  pagarComCartao, chavePublica, interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
 } from './pagamento.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -74,6 +74,7 @@ const rotas = {
   'GET /saude': async () => {
     const falta = [];
     if (!process.env.ANTHROPIC_API_KEY) falta.push('ANTHROPIC_API_KEY — sem ela o Study AI não responde');
+    if (pagamentoLigado() && !chavePublica()) falta.push('MP_PUBLIC_KEY — sem ela o cartão abre fora do app');
     if (!process.env.SEGREDO) falta.push('SEGREDO — as sessões dos alunos ficam inseguras');
     if (emMemoria) falta.push('DATABASE_URL — sem banco, tudo some quando o servidor reinicia');
     if (!pagamentoLigado()) falta.push('MP_ACCESS_TOKEN — sem ele ninguém consegue pagar');
@@ -200,6 +201,34 @@ const rotas = {
     const r = await criarPix({ planoId, usuario: aluno, email });
     await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia: `payment:${r.id}`, valor: r.valor });
     return r;
+  },
+
+  /* A chave PÚBLICA do Mercado Pago pode ficar no navegador — é ela que monta
+     o formulário do cartão. A privada (MP_ACCESS_TOKEN) nunca sai daqui. */
+  'GET /pagamento/chave-publica': async () => ({ chave: chavePublica(), formularioNoApp: !!chavePublica() }),
+
+  'POST /pagar/cartao': async (req) => {
+    const aluno = await exigirAluno(req);
+    if (!pagamentoLigado()) throw Object.assign(new Error('O pagamento ainda não está disponível.'), { status: 503 });
+    const { planoId, cartao } = await lerCorpo(req);
+    const plano = PLANOS[planoId];
+    if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
+
+    const r = await pagarComCartao({ planoId, usuario: aluno, cartao });
+    const referencia = `payment:${r.id}`;
+    // Registra como pendente: quem marca "pago" é o trecho abaixo, e é ele que
+    // libera os dias. Marcar pago antes faria a trava de duplicidade barrar a
+    // própria liberação.
+    const novo = !(await jaProcessado(referencia));
+    await registrarPagamento({ usuarioId: aluno.id, plano: planoId, referencia, valor: r.valor });
+
+    if (r.status === 'approved' && novo) {
+      await criarAssinatura({ usuarioId: aluno.id, plano: planoId, dias: plano.dias, origem: 'pagamento', referencia });
+      await marcarPago({ usuarioId: aluno.id, plano: planoId, referencia, valor: r.valor });
+      console.log(`✅ Pro liberado para ${aluno.id} (${planoId}, ${plano.dias} dias) — cartão`);
+    }
+    const assinatura = await assinaturaAtiva(aluno.id);
+    return { ...r, ...resumoAssinatura(assinatura) };
   },
 
   'GET /meus-pagamentos': async (req) => {

@@ -141,6 +141,11 @@ export function abrirEntrada(aoConcluir) {
       }, googleConfigurado() ? 'Continuar sem conta' : '▶ Começar'),
       h('p', { class: 'tiny muted center mt' },
         'Seus dados ficam no seu aparelho. Sem conta, eles não passam para outro celular.'),
+      h('p', { class: 'tiny muted center', style: { marginTop: '8px' } },
+        'Ao continuar você aceita os ',
+        h('a', { href: '#/termos' }, 'Termos de uso'), ' e a ',
+        h('a', { href: '#/termos?aba=privacidade' }, 'Política de privacidade'), '.',
+        h('br'), 'Menor de 18 anos? Use com a autorização de um responsável.'),
       h('div', { class: 'center mt2' },
         h('button', {
           class: 'btn btn--sm', style: { background: 'none', border: 0, color: 'var(--dim2)' },

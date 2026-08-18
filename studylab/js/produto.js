@@ -32,6 +32,12 @@ export const PLANOS = [
   },
 ];
 
+/** Aparece nos Termos e na Política de Privacidade. TROQUE pelo seu e-mail. */
+export const EMAIL_CONTATO = 'contato@studylab.app';
+
+/** Quem responde legalmente pelo app (nome ou razão social). TROQUE. */
+export const RESPONSAVEL = 'StudyLab';
+
 export const precoBR = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 /** Códigos de acesso que liberam o Pro sem pagamento online (testes, cortesia,
