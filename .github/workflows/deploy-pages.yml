@@ -33,9 +33,12 @@ jobs:
           # LookLab (estilista digital) fica em /looklab/
           mkdir -p _site/looklab
           cp -r looklab/. _site/looklab/
+          # StudyLab fica em /studylab/
+          mkdir -p _site/studylab
+          cp -r studylab/. _site/studylab/
       - uses: actions/upload-pages-artifact@v3
         with:
-          # Raiz = jogo Total Match. Subpastas: /financas-casa/ e /looklab/.
+          # Raiz = jogo Total Match. Subpastas: /financas-casa/, /looklab/ e /studylab/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment

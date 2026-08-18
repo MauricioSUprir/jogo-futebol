@@ -27,3 +27,8 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+
+# StudyLab
+studylab-server/node_modules
+studylab-server/.env
+studylab/studylab-single.html
