@@ -128,10 +128,12 @@ export function cancelarPro() {
 export function concluirOnboarding() { set((s) => { s.perfil.onboarding = true; }); }
 
 export function carregarExemplo() {
-  const conta = { ...S.conta }, perfil = { ...S.perfil };
+  const conta = { ...S.conta };
+  // só carrega para cima o que o aluno realmente preencheu (nome vazio não apaga o do exemplo)
+  const meu = Object.fromEntries(Object.entries(S.perfil).filter(([, v]) => v !== '' && v !== null && v !== undefined));
   S = seedInicial(estadoVazio());
   S.conta = conta;
-  S.perfil = { ...S.perfil, ...perfil, onboarding: true };
+  S.perfil = { ...S.perfil, ...meu, onboarding: true };
   salvar(); aplicarTema(); emit();
 }
 
