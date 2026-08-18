@@ -89,6 +89,15 @@ html = html
   .replace(/<link rel="stylesheet"[^>]*>/, () => `<style>\n${css}\n</style>`)
   .replace(/<script type="module"[^>]*><\/script>/, () => `<script type="module">\n${bundle}\n</script>`);
 
+/* --artifact: só o conteúdo, sem <html>/<head>/<body>.
+   Alguns hosts (Artifacts do Claude) já envolvem a página no próprio esqueleto. */
+if (process.argv.includes('--artifact')) {
+  const titulo = html.match(/<title>[\s\S]*?<\/title>/)[0];
+  const estilo = html.match(/<style>[\s\S]*?<\/style>/)[0];
+  const corpo = html.match(/<body[^>]*>([\s\S]*)<\/body>/)[1];
+  html = `${titulo}\n${estilo}\n${corpo.trim()}\n`;
+}
+
 fs.writeFileSync(SAIDA, html);
 console.log(`✔ ${SAIDA}`);
 console.log(`  ${ordem.length} módulos · ${(html.length / 1024).toFixed(0)} KB`);

@@ -128,8 +128,13 @@ Precisa do app em um arquivo só (para publicar como Artifact, mandar por e-mail
 totalmente offline)?
 
 ```bash
-node studylab/tools/bundle.mjs saida.html
+node studylab/tools/bundle.mjs saida.html              # HTML completo
+node studylab/tools/bundle.mjs saida.html --artifact   # só o conteúdo (Artifacts do Claude)
 ```
+
+> Dentro de um Artifact/preview a política de segurança da página bloqueia chamadas
+> externas — ou seja, o **Study AI não funciona lá**. Todo o resto funciona igual.
+> Para usar a IA, abra o app pelo link normal (GitHub Pages ou o arquivo local).
 
 ---
 
