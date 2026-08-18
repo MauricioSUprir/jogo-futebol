@@ -5,8 +5,7 @@
    recursos locais (resumo extrativo, questões a partir dos flashcards, divisão
    de tarefas) continuam livres para todo mundo.                               */
 import { st, set, ehPro } from './store.js';
-import { SERVIDOR } from './produto.js';
-import { perguntarAoServidor } from './api.js';
+import { perguntarAoServidor, temServidor } from './api.js';
 import {
   frases, palavras, STOP, norm, iso, uid, clamp, round, sum,
 } from './util.js';
@@ -25,12 +24,12 @@ export const MODELOS = [
 /** O Study AI está disponível agora? (assinante + um caminho para chamar o modelo) */
 export function temIA() {
   if (!ehPro()) return false;
-  return !!SERVIDOR || !!(st().ia.chaveCriador || '').trim();
+  return temServidor() || !!(st().ia.chaveCriador || '').trim();
 }
 /** Por que não está disponível — para a tela mostrar a mensagem certa. */
 export function motivoIA() {
   if (!ehPro()) return 'PRO';
-  if (!SERVIDOR && !(st().ia.chaveCriador || '').trim()) return 'SERVIDOR';
+  if (!temServidor() && !(st().ia.chaveCriador || '').trim()) return 'SERVIDOR';
   return null;
 }
 
@@ -43,12 +42,12 @@ export async function chamar({
 
   const modelo = s.ia.modelo || 'claude-opus-5';
   const chaveCriador = (s.ia.chaveCriador || '').trim();
-  if (!SERVIDOR && !chaveCriador) {
+  if (!temServidor() && !chaveCriador) {
     throw new Error('O Study AI ainda não está no ar: falta configurar o servidor do StudyLab.');
   }
 
   // Assinante com servidor: o servidor guarda a chave e confere a assinatura.
-  if (SERVIDOR) {
+  if (temServidor()) {
     const d = await perguntarAoServidor({ system, conteudo, schema, maxTokens, esforco });
     set((x) => {
       if (x.ia.usoDia !== iso()) { x.ia.usoDia = iso(); x.ia.usoHoje = 0; }

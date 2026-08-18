@@ -12,7 +12,7 @@ const sql = URL_BANCO
   : null;
 
 /* ---------- modo memória ---------- */
-const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map() };
+const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map(), pagamentos: new Map() };
 
 export async function migrar() {
   if (emMemoria) {
@@ -52,6 +52,19 @@ export async function migrar() {
       tokens_saida    bigint NOT NULL DEFAULT 0,
       PRIMARY KEY (usuario_id, dia)
     )`;
+  await sql`
+    CREATE TABLE IF NOT EXISTS pagamentos (
+      id            bigserial PRIMARY KEY,
+      usuario_id    text NOT NULL,
+      plano         text NOT NULL,
+      provedor      text NOT NULL DEFAULT 'mercadopago',
+      referencia    text UNIQUE,                  -- id do Mercado Pago (não processar 2x)
+      valor         numeric(10,2),
+      status        text NOT NULL DEFAULT 'pendente',
+      criado_em     timestamptz NOT NULL DEFAULT now(),
+      processado_em timestamptz
+    )`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_pag_usuario ON pagamentos (usuario_id, criado_em DESC)`;
   await sql`
     CREATE TABLE IF NOT EXISTS codigos (
       codigo     text PRIMARY KEY,
@@ -191,6 +204,43 @@ export async function registrarUso(usuarioId, { entrada = 0, saida = 0 } = {}) {
   return u;
 }
 
+/* ---------- pagamentos ---------- */
+export async function registrarPagamento({ usuarioId, plano, referencia, valor, status = 'pendente' }) {
+  if (emMemoria) {
+    const p = { usuarioId, plano, referencia, valor, status, processadoEm: null };
+    mem.pagamentos.set(referencia, p);
+    return p;
+  }
+  const [p] = await sql`
+    INSERT INTO pagamentos ${sql({ usuario_id: usuarioId, plano, referencia, valor, status })}
+    ON CONFLICT (referencia) DO UPDATE SET status = excluded.status
+    RETURNING *`;
+  return p;
+}
+
+/** true se este aviso do Mercado Pago já foi processado (evita liberar 2x). */
+export async function jaProcessado(referencia) {
+  if (emMemoria) return mem.pagamentos.get(referencia)?.status === 'pago';
+  const [p] = await sql`SELECT status FROM pagamentos WHERE referencia = ${referencia}`;
+  return p?.status === 'pago';
+}
+
+export async function marcarPago({ usuarioId, plano, referencia, valor }) {
+  if (emMemoria) {
+    mem.pagamentos.set(referencia, { usuarioId, plano, referencia, valor, status: 'pago', processadoEm: new Date().toISOString() });
+    return;
+  }
+  await sql`
+    INSERT INTO pagamentos ${sql({ usuario_id: usuarioId, plano, referencia, valor, status: 'pago' })}
+    ON CONFLICT (referencia) DO UPDATE SET status = 'pago', processado_em = now()`;
+  await sql`UPDATE pagamentos SET processado_em = now() WHERE referencia = ${referencia} AND processado_em IS NULL`;
+}
+
+export async function pagamentosDoUsuario(usuarioId, limite = 10) {
+  if (emMemoria) return [...mem.pagamentos.values()].filter((p) => p.usuarioId === usuarioId).slice(0, limite);
+  return sql`SELECT * FROM pagamentos WHERE usuario_id = ${usuarioId} ORDER BY criado_em DESC LIMIT ${limite}`;
+}
+
 /* ---------- painel simples ---------- */
 export async function numeros() {
   if (emMemoria) {
@@ -198,12 +248,15 @@ export async function numeros() {
       usuarios: mem.usuarios.size,
       assinantes: [...mem.assinaturas.values()].filter((a) => !a.cancelada && a.fim >= hoje()).length,
       chamadasHoje: [...mem.uso.entries()].filter(([k]) => k.endsWith(hoje())).reduce((s, [, v]) => s + v.chamadas, 0),
+      pagamentos: [...mem.pagamentos.values()].filter((p) => p.status === 'pago').length,
+      receita: [...mem.pagamentos.values()].filter((p) => p.status === 'pago').reduce((s, p) => s + Number(p.valor || 0), 0),
     };
   }
-  const [[u], [a], [c]] = await Promise.all([
+  const [[u], [a], [c], [p]] = await Promise.all([
     sql`SELECT count(*)::int AS n FROM usuarios`,
     sql`SELECT count(DISTINCT usuario_id)::int AS n FROM assinaturas WHERE cancelada = false AND fim >= current_date`,
     sql`SELECT coalesce(sum(chamadas),0)::int AS n FROM uso WHERE dia = current_date`,
+    sql`SELECT count(*)::int AS n, coalesce(sum(valor),0)::float AS receita FROM pagamentos WHERE status = 'pago'`,
   ]);
-  return { usuarios: u.n, assinantes: a.n, chamadasHoje: c.n };
+  return { usuarios: u.n, assinantes: a.n, chamadasHoje: c.n, pagamentos: p.n, receita: p.receita };
 }

@@ -23,6 +23,10 @@ Sem dependência pesada: `node:http` puro + `jose` (valida o token do Google) + 
 | `POST /entrar` | `{ idToken }` do Google → sessão de 30 dias + plano |
 | `GET /eu` | quem sou eu, meu plano e meu uso de hoje |
 | `POST /codigo` | `{ codigo }` → ativa o Pro |
+| `GET /planos` | os planos e preços (o servidor é a fonte da verdade do valor) |
+| `POST /pagar` | `{ planoId }` → link de pagamento no Mercado Pago |
+| `POST /webhook/mercadopago` | o Mercado Pago avisa aqui quando alguém paga → libera o Pro |
+| `GET /meus-pagamentos` | histórico do aluno |
 | `POST /ia` | o Study AI (**só para assinante**) |
 | `POST /cancelar` | cancela a assinatura |
 | `GET /admin/numeros?token=` | usuários, assinantes e chamadas de hoje |
@@ -50,6 +54,31 @@ e um freio por IP.
 6. Cole esse domínio em `studylab/js/produto.js` → `SERVIDOR` e publique o app.
 
 Pronto: o Study AI passa a funcionar para quem tem o Pro, e a sua chave fica só no servidor.
+
+---
+
+## Ligar o pagamento (Mercado Pago)
+
+1. Entre em [mercadopago.com.br/developers](https://www.mercadopago.com.br/developers) → **Suas
+   integrações** → crie uma aplicação (tipo: pagamentos online, modelo: assinaturas).
+2. Em **Credenciais de produção**, copie o **Access token** → variável `MP_ACCESS_TOKEN`.
+3. Em **Webhooks**, cadastre a URL `https://SEU-SERVIDOR/webhook/mercadopago` e marque os
+   eventos de **assinatura** (`preapproval` e `authorized payment`). Copie a
+   **assinatura secreta** → variável `MP_WEBHOOK_SECRET`.
+4. Coloque `URL_APP` com o endereço do app (para onde o aluno volta depois de pagar).
+
+Como funciona: o app chama `POST /pagar`, o servidor cria a assinatura no Mercado Pago e
+devolve o link do checkout. O aluno paga lá (o cartão nunca passa pelo seu código). Quando o
+Mercado Pago confirma, ele chama o seu `/webhook`, o servidor **confere o aviso na API deles**
+antes de liberar e soma os dias na assinatura. Avisos repetidos são ignorados, então ninguém
+ganha 60 dias por um pagamento de 30. As renovações mensais chegam pelo mesmo caminho e
+estendem a assinatura sozinhas.
+
+**Sem `MP_WEBHOOK_SECRET` a verificação é pulada** — o servidor avisa no start. Configure antes
+de vender de verdade: sem isso, qualquer um que descubra a URL poderia forjar um aviso.
+
+Os preços ficam em `src/pagamento.js` → `PLANOS`. **O valor cobrado é o do servidor**, não o
+que o app mostra — assim ninguém consegue pagar R$ 0,01 mexendo no navegador.
 
 ---
 
@@ -94,9 +123,11 @@ o servidor reinicia.
 npm run teste
 ```
 
-Sobe o servidor em memória, com login simulado e a Claude API dublada, e confere 21 pontos:
-login, sessão inválida, paywall, código de acesso, resposta do Study AI, contagem de uso,
-limite diário, isolamento entre alunos, cancelamento e painel do admin.
+Sobe o servidor em memória, com login simulado e a Claude API + Mercado Pago dublados, e
+confere 36 pontos: login, sessão inválida, paywall, código de acesso, resposta do Study AI,
+contagem de uso, limite diário, isolamento entre alunos, cancelamento, criação da assinatura,
+webhook liberando o Pro, aviso repetido sendo ignorado, renovação somando dias e o painel do
+admin (incluindo receita).
 
 > `MODO_TESTE=1` liga um atalho que aceita login simulado. **Nunca** use isso em produção —
 > o servidor avisa em letras garrafais no start quando essa variável está ligada.

@@ -6,11 +6,13 @@ import {
   RECURSOS_FREE, RECURSOS_PRO, selo,
 } from '../ui.js';
 import { PLANOS, precoBR, CODIGOS, SERVIDOR } from '../produto.js';
-import { temServidor, ativarCodigoNoServidor, cancelarNoServidor } from '../api.js';
+import { temServidor, ativarCodigoNoServidor, cancelarNoServidor, pagarNoServidor, buscarEu, saudeDoServidor } from '../api.js';
 
 export function render(el) {
   const pintar = () => { el.replaceChildren(); montar(el, pintar); };
   montar(el, pintar);
+  // ao voltar do Mercado Pago o plano pode ter mudado — confere com o servidor
+  if (temServidor()) buscarEu().then(() => pintar()).catch(() => {});
 }
 
 function montar(el, pintar) {
@@ -72,13 +74,13 @@ function montar(el, pintar) {
         },
       }, 'Ativar')))));
 
-  if (!SERVIDOR) {
+  if (!temServidor()) {
     el.append(h('div', { class: 'mt2' }, cartao(
-      h('b', { class: 'small' }, '⚠️ Aviso honesto para o dono do app'),
+      h('b', { class: 'small' }, '⚠️ Aviso para o dono do app'),
       h('p', { class: 'small', style: { marginBottom: 0 } },
-        'O pagamento online ainda não está conectado e o servidor do Study AI ainda não existe '
-        + '(produto.js → SERVIDOR está vazio). Hoje o Pro só é liberado por código de acesso, e a checagem '
-        + 'acontece no aparelho — serve para testes e para os primeiros clientes, não para escala.'))));
+        'Este aparelho ainda não está ligado ao servidor do StudyLab, então o pagamento online não aparece e '
+        + 'o Pro só é liberado por código — conferido aqui mesmo, o que serve para testes, não para escala. '
+        + 'Publique o studylab-server e informe o endereço em Configurações → Área do criador.'))));
   }
 }
 
@@ -103,21 +105,44 @@ function cartaoPlano(p, pintar) {
 }
 
 function assinar(p, pintar) {
-  modal(`Assinar o plano ${p.nome}`, h('div', {},
+  const corpo = h('div', {},
     h('div', { class: 'center mb' },
       h('b', { style: { fontSize: '26px' } }, precoBR(p.preco)),
-      h('span', { class: 'muted' }, p.periodo)),
-    h('p', { class: 'small' },
-      'O pagamento online ainda não está ligado. Para liberar o Pro agora, combine o pagamento direto com o '
-      + 'StudyLab e use o código de acesso que você receber.'),
-    h('div', { class: 'flexb mt2' },
-      h('button', { class: 'btn sp', onclick: fecharModal }, 'Fechar'),
-      h('button', {
-        class: 'btn btn--p', onclick: () => {
-          ativarPro({ planoId: p.id, dias: p.dias, codigo: null });
-          fecharModal(); toast(`Pro ${p.nome} ativado para teste`, 'good'); pintar();
-        },
-      }, '🧪 Ativar em modo teste'))));
+      h('span', { class: 'muted' }, p.periodo),
+      h('p', { class: 'tiny muted', style: { margin: '6px 0 0' } }, p.detalhe)));
+  const acoes = h('div', { class: 'flexb mt2' }, h('button', { class: 'btn sp', onclick: fecharModal }, 'Fechar'));
+  corpo.append(acoes);
+  modal(`Assinar o plano ${p.nome}`, corpo);
+
+  if (!temServidor()) {
+    corpo.insertBefore(h('p', { class: 'small' },
+      'O pagamento online ainda não está ligado neste aparelho. Para liberar o Pro agora, use um código de acesso.'), acoes);
+    acoes.append(h('button', {
+      class: 'btn btn--p', onclick: () => {
+        ativarPro({ planoId: p.id, dias: p.dias, codigo: null });
+        fecharModal(); toast(`Pro ${p.nome} ativado para teste`, 'good'); pintar();
+      },
+    }, '🧪 Ativar em modo teste'));
+    return;
+  }
+
+  const aviso = h('p', { class: 'small' }, 'Você vai ser levado para o Mercado Pago para concluir o pagamento com segurança. '
+    + 'Assim que ele confirmar, o Pro é liberado sozinho.');
+  corpo.insertBefore(aviso, acoes);
+  const botao = h('button', {
+    class: 'btn btn--p', onclick: async () => {
+      botao.disabled = true; botao.textContent = 'Abrindo o pagamento…';
+      try {
+        const r = await pagarNoServidor(p.id);
+        location.href = r.link;
+      } catch (e) {
+        aviso.textContent = e.message;
+        aviso.style.color = 'var(--bad)';
+        botao.disabled = false; botao.textContent = '💳 Pagar com Mercado Pago';
+      }
+    },
+  }, '💳 Pagar com Mercado Pago');
+  acoes.append(botao);
 }
 
 function assinaturaAtiva(el, pintar) {
