@@ -9,7 +9,7 @@ import {
 } from '../engine.js';
 import {
   titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento,
-  confirmar, barra, gAnel, progresso, gBarrasH,
+  confirmar, barra, gAnel, progresso, gBarrasH, paywall,
 } from '../ui.js';
 import { opcoesMaterias, opcoesConteudos, selMateria, tagMateria } from './comum.js';
 import { temIA, gerarQuestoes, questoesLocais, TIPOS_QUESTAO, NIVEIS_QUESTAO, analisarSimulado } from '../ai.js';
@@ -132,10 +132,9 @@ export function abrirGerador(aoSalvar, { materiaId = '', conteudoId = '' } = {})
       if (!temIA()) {
         const locais = questoesLocais({ materiaId: mid || null, conteudoId: cid || null, quantidade: qtd });
         if (!locais.length) {
-          saida.replaceChildren(h('div', { class: 'empty' },
-            h('b', {}, 'Sem Study AI configurado'),
-            h('span', {}, 'Para gerar questões novas eu preciso da chave da Claude API. Sem ela, só consigo montar questões a partir dos seus flashcards — e você tem poucos desta matéria.'),
-            h('div', { class: 'mt' }, h('a', { class: 'btn', href: '#/config', onclick: fecharModal }, '⚙️ Configurar Study AI'))));
+          saida.replaceChildren(paywall('Gerar questões novas é do Pro',
+            'No plano grátis eu monto questões a partir dos seus flashcards — e você ainda tem poucos desta matéria. '
+            + 'Com o Pro, o Study AI escreve questões novas sobre qualquer conteúdo.'));
           return;
         }
         mostrarPrevia(locais, { mid, cid, nivel }, saida, aoSalvar);
@@ -162,8 +161,8 @@ export function abrirGerador(aoSalvar, { materiaId = '', conteudoId = '' } = {})
     h('label', { class: 'f' }, h('span', {}, 'Tipo'), segmento(TIPOS_QUESTAO.map((t) => ({ v: t.id, t: t.rot })), tipo, (v) => { tipo = v; })),
     h('label', { class: 'f' }, h('span', {}, 'Dificuldade'), segmento(NIVEIS_QUESTAO.map((t) => ({ v: t.id, t: t.rot })), nivel, (v) => { nivel = v; })),
     campo('Material base (opcional)', f.material),
-    temIA() ? null : h('p', { class: 'tiny', style: { color: 'var(--warn)' } },
-      '⚠️ Study AI desligado: vou montar questões a partir dos seus flashcards. Para questões novas, configure a chave em ⚙️ Configurações.'),
+    temIA() ? null : h('div', { class: 'mb' }, paywall('Questões geradas por IA são do Pro',
+      'No plano grátis eu monto questões a partir dos seus flashcards. Com o Pro, o Study AI cria questões novas de qualquer conteúdo, no nível que você pedir.')),
     btn, saida), { largo: true });
 }
 

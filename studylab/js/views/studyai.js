@@ -2,8 +2,8 @@
 import { h, iso, uid, fmtMin } from '../util.js';
 import { st, set, nomeMateria } from '../store.js';
 import { resumoPeriodo, filaRevisao, filaTarefas, preparoProva, nivelDe } from '../engine.js';
-import { titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, txtarea, confirmar } from '../ui.js';
-import { temIA, chat, contextoDoAluno, observacoesLocais } from '../ai.js';
+import { titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, txtarea, confirmar, paywall } from '../ui.js';
+import { temIA, motivoIA, chat, contextoDoAluno, observacoesLocais } from '../ai.js';
 
 const SUGESTOES = [
   'O que eu estudo agora?',
@@ -26,14 +26,20 @@ function montar(el, pintar) {
     h('button', { class: 'btn', onclick: () => abrirMemoria(pintar) }, '🧠 Memória')));
 
   if (!temIA()) {
+    const porQue = motivoIA();
+    el.append(h('div', { class: 'mb' }, porQue === 'PRO'
+      ? paywall('O Study AI é do plano Pro',
+        'Ele conhece suas matérias, suas provas, seus erros e seu calendário — e responde com base nos seus dados de verdade, '
+        + 'não em achismo. Pergunte "o que eu estudo agora?" e veja a diferença.')
+      : paywall('Study AI temporariamente indisponível',
+        'Sua assinatura está ativa, mas o servidor do Study AI ainda não foi configurado. Avise o suporte do StudyLab.')));
+
     el.append(cartao(
-      h('b', {}, '🔌 Study AI ainda não está ligado'),
-      h('p', { class: 'small' },
-        'O StudyLab é um app 100% no seu aparelho — não existe servidor por trás. Para conversar com o Study AI, '
-        + 'você precisa colar uma chave da Claude API nas Configurações. A chave fica salva só neste aparelho.'),
-      h('p', { class: 'tiny muted' },
-        'Sem a chave, o resto do app continua inteiro: prioridades, revisão espaçada, questões, flashcards, foco, desempenho e gamificação.'),
-      h('a', { class: 'btn btn--p', href: '#/config' }, '⚙️ Configurar agora')));
+      h('b', {}, '🤔 O que ele responderia com os seus dados'),
+      h('p', { class: 'tiny muted' }, 'Exemplos reais do que o Study AI usa quando é liberado:'),
+      h('div', { class: 'chips' }, ...SUGESTOES.map((sg) => h('span', { class: 'chip' }, sg))),
+      h('a', { class: 'btn btn--p mt', href: '#/planos' }, '✨ Ver planos')));
+
     el.append(h('div', { class: 'mt2' }, cartaoObservacoes()));
     return;
   }

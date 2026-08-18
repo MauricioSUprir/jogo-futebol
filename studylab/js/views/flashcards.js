@@ -2,7 +2,7 @@
 import { h, iso, today, daysBetween, parseISO, norm, round } from '../util.js';
 import { st, novoFlashcard, atualizar, remover, nomeMateria, emojiMateria, conteudo as getConteudo, registrarSessao } from '../store.js';
 import { proximaRevisao, venceHoje, ganharXP, tocarStreak, verificarConquistas, recalcularDominios } from '../engine.js';
-import { titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento, confirmar, barra } from '../ui.js';
+import { titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento, confirmar, barra, paywall } from '../ui.js';
 import { formFlashcard, opcoesMaterias, opcoesConteudos, selMateria, tagMateria } from './comum.js';
 import { temIA, gerarFlashcards, flashcardsLocais } from '../ai.js';
 
@@ -156,7 +156,7 @@ export function abrirGerador(aoSalvar) {
         btn.disabled = false; btn.textContent = '✨ Criar flashcards';
       } else {
         cards = flashcardsLocais(texto, qtd);
-        if (!cards.length) { saida.replaceChildren(h('p', { class: 'small', style: { color: 'var(--warn)' } }, 'Sem o Study AI eu só consigo extrair cards de textos em formato "termo: definição" ou frases com termos-chave. Configure a chave em ⚙️ Configurações para gerar de qualquer material.')); return; }
+        if (!cards.length) { saida.replaceChildren(h('p', { class: 'small', style: { color: 'var(--warn)' } }, 'No plano grátis eu só consigo extrair cards de textos no formato "termo: definição" ou de frases com termos-chave. Com o Pro, o Study AI lê qualquer material e escreve os cards.')); return; }
         toast('Cards extraídos localmente (sem IA)');
       }
       const marcados = new Set(cards.map((_, i) => i));
@@ -184,6 +184,7 @@ export function abrirGerador(aoSalvar) {
     h('div', { class: 'f-row' }, campo('Matéria', f.materia), campo('Conteúdo', wrapC)),
     campo('Quantidade', f.qtd),
     campo('Material', f.texto),
-    temIA() ? null : h('p', { class: 'tiny', style: { color: 'var(--warn)' } }, '⚠️ Study AI desligado — vou tentar extrair os cards do texto localmente.'),
+    temIA() ? null : h('div', { class: 'mb' }, paywall('Criar cards com IA é do Pro',
+      'Sem o Pro eu ainda tento extrair os cards do seu texto localmente — funciona bem com listas de "termo: definição".')),
     btn, saida), { largo: true });
 }

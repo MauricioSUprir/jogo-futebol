@@ -4,8 +4,9 @@
 O aluno abre o app e sabe na hora: *o que eu faço agora, o que está atrasado, qual matéria
 precisa de mim, quando revisar, quanto falta para a prova e se eu estou melhorando.*
 
-App **100% estático** (HTML + CSS + JavaScript puro, sem build, sem servidor, sem login).
-Tudo é salvo no próprio navegador e funciona **offline** (PWA, dá para instalar na tela inicial).
+App **100% estático** (HTML + CSS + JavaScript puro, sem build). Tudo é salvo no próprio
+navegador e funciona **offline** (PWA, dá para instalar na tela inicial). Entra com o Google
+ou sem conta, e o **Study AI** é o recurso do plano pago.
 
 > Abra o `index.html` no navegador ou acesse pelo link do GitHub Pages: **/studylab/**
 
@@ -47,59 +48,69 @@ Tudo é salvo no próprio navegador e funciona **offline** (PWA, dá para instal
 
 ---
 
-## Study AI (opcional)
+## Conta e primeiro acesso
 
-O StudyLab não tem servidor: para usar IA, o aluno cola uma **chave da Claude API**
-em *⚙️ Configurações → Study AI*. A chamada vai **direto do navegador para a Anthropic**.
+O app **começa vazio**. No primeiro acesso o aluno passa por um cadastro de 4 passos:
 
-- A chave fica salva **só neste aparelho** (`localStorage`) — quem usar o mesmo navegador consegue lê-la. Não use em computador compartilhado.
-- O consumo é cobrado na conta Anthropic de quem colou a chave.
-- Modelo padrão: `claude-opus-5` (dá para trocar por Sonnet 5 ou Haiku 4.5 nas configurações).
-- Tem botão de **testar conexão** e de **apagar a chave**.
+1. **Entrar com o Google** ou continuar sem conta.
+2. Nome e em que ano está.
+3. **Quais matérias ele tem** — o StudyLab não adivinha a grade da escola: mostra as matérias
+   típicas do nível (fundamental ou médio) para marcar em um toque, e aceita outras digitadas.
+4. Quanto tempo pretende estudar por dia.
 
-**Sem chave o app continua inteiro.** O que muda:
+Pronto: as matérias são criadas e o app já funciona com a escola dele. Nada de dados de exemplo
+— quem quiser ver o app "cheio" tem o link *ver o app com dados de exemplo* na tela de entrada.
 
-| Função | Com Study AI | Sem Study AI (modo local) |
-| --- | --- | --- |
-| Gerar questões | questões novas sobre qualquer conteúdo | monta questões a partir dos seus flashcards |
-| Flashcards | lê qualquer material e escreve os cards | extrai de textos "termo: definição" ou frases-chave |
-| Resumo | 6 formatos, reescrito | resumo **extrativo** (escolhe as frases mais representativas, sem reescrever) |
-| Mapa mental | estrutura de conceitos | agrupamento automático por termo-chave |
-| Dividir tarefa | passos sob medida | receitas por tipo de trabalho |
-| Explicar / socrático / ler PDF e foto | ✅ | ❌ (o app avisa, não finge que funciona) |
+**Login com o Google:** já implementado (Google Identity Services, direto no navegador).
+Falta só criar o Client ID e colar em `js/produto.js` → `GOOGLE_CLIENT_ID`, autorizando a
+origem do Pages. Enquanto isso o botão explica o passo a passo e o aluno entra sem conta.
+
+---
+
+## Study AI — exclusivo do plano Pro
+
+O aluno **nunca vê chave de API**. Quem assina fala com o modelo através do servidor do
+StudyLab (`js/produto.js` → `SERVIDOR`), que guarda a chave e confere a assinatura.
+Sem assinatura, cada tela mostra o convite para assinar.
+
+O que continua **grátis para todo mundo**, porque não depende de IA:
+
+| Função | No plano grátis |
+| --- | --- |
+| Resumo | resumo **extrativo** — escolhe as frases mais representativas, sem reescrever |
+| Questões | monta questões a partir dos seus flashcards |
+| Flashcards | extrai de textos "termo: definição" ou de frases com termos-chave |
+| Dividir tarefa | receitas por tipo de trabalho (redação, seminário, lista, relatório…) |
+| Mapa mental | agrupamento automático por termo-chave |
 
 Prioridades, revisão espaçada, domínio, planos de prova, simulados, foco, desempenho,
 notas, metas e gamificação **nunca** dependem de IA.
 
----
+> **Falta para o Study AI funcionar de verdade:** o servidor. É um proxy pequeno que recebe
+> a pergunta, confere se aquele aluno é assinante e chama a Claude API com a **sua** chave.
+> Enquanto ele não existe, dá para testar pela *Área do criador* em Configurações — que só
+> funciona com o Pro ativo.
 
-## Modo pago (desenhado, ainda desligado)
+## Planos
 
-Toda a decisão passa por **um porteiro só**, em `js/ui.js`:
+| Plano | Preço | Observação |
+| --- | --- | --- |
+| Semanal | **R$ 5,99** | para experimentar |
+| Mensal | **R$ 29,99** | o mais escolhido |
+| Anual | **R$ 99,99** | sai por R$ 8,33/mês |
+
+Preços e textos ficam em `js/produto.js` → `PLANOS`. O que é grátis e o que é Pro fica em
+`js/ui.js` → `RECURSOS`, e **um porteiro só** decide tudo:
 
 ```js
-COBRANCA_ATIVA          // false hoje -> nada é bloqueado
-RECURSOS                // lista de recursos, cada um marcado pro: true|false
-LIMITES_FREE            // { iaPorDia, arquivosPorDia, simuladosIaPorSemana }
-ehPro(estado)           // o aluno é assinante?
-liberado(estado, id)    // { ok: true } | { ok: false, motivo }
-dentroDaCota(estado)    // cota diária de IA no plano gratuito
+liberado('ia_chat')   // { ok: false, motivo: 'Study AI — o tutor que…' }
+ehPro()               // assinatura ativa? (respeita a data de vencimento)
 ```
 
-**Gratuito para sempre:** motor de prioridades, revisão espaçada, domínio, planos de prova,
-tarefas, provas, matérias, foco, flashcards, desempenho, gamificação e o Study AI **com a
-chave do próprio aluno**.
-
-**Ideias para o Pro:** Study AI incluso (sem chave e sem cartão), sem limite diário, leitura
-ilimitada de PDF/foto, correção de redação, sincronizar celular + computador com backup na
-nuvem, relatório semanal para o responsável, cronograma de longo prazo (ENEM/vestibular),
-banco de questões pronto por série, relatórios avançados em PDF e personalizações exclusivas.
-
-O Pro incluso exige um backend simples (um proxy que guarda a chave e conta o uso) — é a
-única parte que ainda não existe. O resto já está preparado: virar `COBRANCA_ATIVA` para
-`true` faz as telas respeitarem limites e mostrarem o selo PRO.
-
----
+**Como alguém vira Pro hoje:** o pagamento online ainda não está conectado. A tela de planos
+libera por **código de acesso** (`js/produto.js` → `CODIGOS`), útil para testes, cortesia e
+para os primeiros clientes que pagarem por fora. A checagem acontece no aparelho — serve para
+uso controlado, não para escala; quando o servidor existir, a validação passa a ser feita lá.
 
 ## Estrutura
 
@@ -113,6 +124,8 @@ studylab/
 ├── tools/bundle.mjs      gera o app inteiro em UM arquivo HTML (para Artifact/offline)
 └── js/
     ├── app.js            rotas, menu, notificações, rotina diária
+    ├── produto.js        login, servidor, planos e códigos (o que você configura)
+    ├── auth.js           entrar com o Google
     ├── store.js          estado único + localStorage + CRUD
     ├── seed.js           dados de exemplo do primeiro acesso
     ├── engine.js         prioridades, revisão espaçada, domínio, planos, XP, conquistas

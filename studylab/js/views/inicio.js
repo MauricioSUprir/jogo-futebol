@@ -45,6 +45,29 @@ function montar(el, pintar) {
       h('button', { class: 'btn', onclick: () => abrirMissao() }, '⚡ Missão de 5 minutos'),
       h('a', { class: 'btn', href: '#/agenda' }, '📅 Ver meu dia'))));
 
+  /* ---------- app novo: primeiros passos ---------- */
+  if (!s.tarefas.length && !s.provas.length) {
+    const feito = (ok, txt, acao) => h('div', { class: 'row row--flat' },
+      h('span', {}, ok ? '✅' : '⬜'),
+      h('span', { class: 'grow small', style: ok ? { opacity: .55 } : {} }, txt),
+      ok ? null : acao);
+    el.append(cartao(
+      h('b', {}, '🚀 Primeiros passos'),
+      h('p', { class: 'tiny muted' }, 'Seu StudyLab começa vazio de propósito. Três minutos e ele já trabalha por você.'),
+      h('div', { class: 'list mt' },
+        feito(s.materias.length > 0, `Cadastrar suas matérias (${s.materias.length})`,
+          h('a', { class: 'btn btn--sm', href: '#/materias' }, 'Matérias')),
+        feito(false, 'Anotar a primeira tarefa ou dever',
+          h('button', { class: 'btn btn--sm btn--p', onclick: () => formTarefa(null, pintar) }, '➕ Tarefa')),
+        feito(false, 'Marcar a próxima prova — o plano de estudo sai pronto',
+          h('a', { class: 'btn btn--sm', href: '#/provas' }, 'Provas')),
+        feito(Object.keys(s.horario || {}).length > 0, 'Montar o horário escolar',
+          h('a', { class: 'btn btn--sm', href: '#/agenda' }, 'Agenda')),
+        feito(s.flashcards.length > 0 || s.questoes.length > 0, 'Criar um flashcard ou uma questão',
+          h('a', { class: 'btn btn--sm', href: '#/flashcards' }, 'Flashcards')))));
+    el.append(h('div', { class: 'mt2' }));
+  }
+
   /* ---------- FAÇA ISSO AGORA (anti-procrastinação) ---------- */
   const agora = agoraFaca();
   el.append(h('div', { class: 'grid g2 mb' },
@@ -57,7 +80,13 @@ function montar(el, pintar) {
           h('div', { style: { fontSize: '19px', fontWeight: 800, marginBottom: '4px' } }, `${emojiMateria(agora.materiaId)} ${agora.titulo}`),
           h('div', { class: 'muted small mb' }, `${nomeMateria(agora.materiaId)} · ⏱️ ${fmtMin(agora.minutos)}`),
           h('a', { class: 'btn btn--p btn--blk btn--xl', href: `#/foco?tarefa=${agora.tarefaId}&min=${agora.minutos}` }, '▶ COMEÇAR'))
-        : h('div', { class: 'empty' }, h('b', {}, 'Nada na fila 🎉'), h('span', {}, 'Todas as tarefas estão concluídas.'))),
+        : h('div', { class: 'empty' },
+          h('b', {}, s.tarefas.length ? 'Nada na fila 🎉' : 'Sem tarefas ainda'),
+          h('span', {}, s.tarefas.length
+            ? 'Todas as tarefas estão concluídas.'
+            : 'Assim que você anotar a primeira tarefa, o StudyLab diz por onde começar.'),
+          s.tarefas.length ? null : h('div', { class: 'mt' },
+            h('button', { class: 'btn btn--p', onclick: () => formTarefa(null, pintar) }, '➕ Primeira tarefa')))),
     cartao(
       h('div', { class: 'flexb mb' }, h('b', {}, '🎯 Ordem recomendada de hoje'),
         h('span', { class: 'chip sp' }, `${s.prefs.minutosDia} min`)),

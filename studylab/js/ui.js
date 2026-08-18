@@ -1,5 +1,6 @@
 /* ===== ui.js — peças de interface reutilizáveis + gráficos em SVG puro ===== */
 import { h, $, clamp, round, esc } from './util.js';
+import { ehPro } from './store.js';
 
 /* ---------- toast ---------- */
 export function toast(txt, tipo = '') {
@@ -195,54 +196,52 @@ export function progresso(rot, v, { cls = '', sufixo = '%' } = {}) {
 }
 
 /* ==========================================================
-   PLANO PAGO — já modelado, ainda desligado.
-   Vire COBRANCA_ATIVA para true quando o Pro entrar no ar:
-   as telas passam a respeitar limites e a mostrar o selo PRO.
+   PLANO PAGO — Study AI é exclusivo do Pro.
+   Todo o resto do StudyLab continua gratuito e sem limite.
    ========================================================== */
-export const COBRANCA_ATIVA = false;
+export const COBRANCA_ATIVA = true;
 
-/** O que cada plano entrega. `pro:true` = exclusivo do plano pago. */
+/** O que cada plano entrega. `pro:true` = exclusivo de quem assina. */
 export const RECURSOS = [
   { id: 'motor', nome: 'Prioridades, revisão espaçada, domínio e planos de prova', pro: false },
-  { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e desempenho', pro: false },
+  { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e questões', pro: false },
+  { id: 'desempenho', nome: 'Desempenho, notas, simulador de notas e metas', pro: false },
   { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e StudyCoins', pro: false },
-  { id: 'ia_propria', nome: 'Study AI com a sua própria chave da Claude API', pro: false },
-  { id: 'ia_inclusa', nome: 'Study AI incluso — sem precisar de chave nem cartão', pro: true },
-  { id: 'ia_ilimitada', nome: 'Sem limite diário de perguntas e gerações', pro: true },
-  { id: 'arquivos', nome: 'Leitura ilimitada de PDF e foto de atividade', pro: true },
-  { id: 'redacao', nome: 'Correção de redação com nota por competência', pro: true },
-  { id: 'sync', nome: 'Sincronizar celular e computador + backup na nuvem', pro: true },
-  { id: 'responsavel', nome: 'Relatório semanal para o responsável', pro: true },
-  { id: 'longo_prazo', nome: 'Cronograma de longo prazo (ENEM/vestibular)', pro: true },
-  { id: 'banco', nome: 'Banco de questões pronto por série e matéria', pro: true },
-  { id: 'relatorios', nome: 'Relatórios avançados e exportação em PDF', pro: true },
-  { id: 'temas', nome: 'Temas, avatares e personalizações exclusivas', pro: true },
+  { id: 'local', nome: 'Resumo automático e questões a partir dos seus flashcards', pro: false },
+
+  { id: 'ia_chat', nome: 'Study AI — o tutor que conhece suas matérias e notas', pro: true },
+  { id: 'ia_explica', nome: 'Me explica e professor socrático', pro: true },
+  { id: 'ia_questoes', nome: 'Gerar questões e simulados sobre qualquer conteúdo', pro: true },
+  { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', pro: true },
+  { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', pro: true },
+  { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', pro: true },
+  { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', pro: true },
 ];
 
-/** Limites do plano gratuito (só valem quando COBRANCA_ATIVA = true). */
-export const LIMITES_FREE = { iaPorDia: 20, arquivosPorDia: 3, simuladosIaPorSemana: 2 };
-
-export const ehPro = (estado) => estado?.conta?.plano === 'pro';
+export const RECURSOS_PRO = RECURSOS.filter((r) => r.pro);
+export const RECURSOS_FREE = RECURSOS.filter((r) => !r.pro);
+export const ehRecursoPro = (id) => !!RECURSOS.find((r) => r.id === id)?.pro;
 
 /**
- * Porteiro único do app. Enquanto a cobrança está desligada devolve sempre {ok:true},
- * então nenhuma tela precisa saber se o Pro existe ou não.
+ * Porteiro único do app.
  * @returns {{ok:boolean, motivo?:string}}
  */
-export function liberado(estado, recursoId) {
-  if (!COBRANCA_ATIVA || ehPro(estado)) return { ok: true };
+export function liberado(recursoId) {
+  if (!COBRANCA_ATIVA || ehPro()) return { ok: true };
   const r = RECURSOS.find((x) => x.id === recursoId);
   if (!r || !r.pro) return { ok: true };
   return { ok: false, motivo: r.nome };
 }
 
-/** Checagem de cota diária de IA no plano gratuito. */
-export function dentroDaCota(estado) {
-  if (!COBRANCA_ATIVA || ehPro(estado)) return { ok: true };
-  const usadas = estado?.ia?.usoHoje || 0;
-  return usadas < LIMITES_FREE.iaPorDia
-    ? { ok: true, restam: LIMITES_FREE.iaPorDia - usadas }
-    : { ok: false, motivo: `Você usou as ${LIMITES_FREE.iaPorDia} chamadas de IA do plano gratuito hoje.` };
-}
-
 export const selo = () => h('span', { class: 'pro-tag' }, 'PRO');
+
+/** Cartão padrão de "isso é do Pro", usado em todas as telas com IA. */
+export function paywall(titulo = 'Isso é do StudyLab Pro', texto = '') {
+  return h('div', { class: 'card', style: { borderColor: '#f59e0b55', textAlign: 'center' } },
+    h('div', { style: { fontSize: '30px' } }, '🔒'),
+    h('div', { class: 'flexb', style: { justifyContent: 'center', margin: '4px 0 6px' } },
+      h('b', {}, titulo), selo()),
+    h('p', { class: 'small muted', style: { maxWidth: '48ch', margin: '0 auto 12px' } },
+      texto || 'O Study AI é o tutor que conhece suas matérias, suas provas e seus erros. Ele faz parte do plano Pro.'),
+    h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos'));
+}

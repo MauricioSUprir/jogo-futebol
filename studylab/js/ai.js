@@ -1,9 +1,11 @@
-/* ===== ai.js — Study AI =====
-   Fala direto com a Claude API a partir do navegador (o app é 100% estático,
-   não existe servidor). A chave fica só no aparelho do aluno, no localStorage.
-   Sem chave, TODA função continua funcionando em "modo offline" com um
-   fallback local — mais simples, porém honesto (nunca inventa conteúdo).      */
-import { st, set } from './store.js';
+/* ===== ai.js — Study AI (exclusivo do plano Pro) =====
+   O aluno NUNCA vê chave de API. Quem é assinante fala com o modelo através do
+   servidor do StudyLab (produto.js → SERVIDOR), que guarda a chave e confere a
+   assinatura. Sem assinatura, as telas mostram o convite para assinar; os
+   recursos locais (resumo extrativo, questões a partir dos flashcards, divisão
+   de tarefas) continuam livres para todo mundo.                               */
+import { st, set, ehPro } from './store.js';
+import { SERVIDOR } from './produto.js';
 import {
   frases, palavras, STOP, norm, iso, uid, clamp, round, sum,
 } from './util.js';
@@ -19,56 +21,71 @@ export const MODELOS = [
   { id: 'claude-haiku-4-5', nome: 'Haiku 4.5 — o mais leve' },
 ];
 
-export const temIA = () => !!(st().ia.chave || '').trim();
+/** O Study AI está disponível agora? (assinante + um caminho para chamar o modelo) */
+export function temIA() {
+  if (!ehPro()) return false;
+  return !!SERVIDOR || !!(st().ia.chaveCriador || '').trim();
+}
+/** Por que não está disponível — para a tela mostrar a mensagem certa. */
+export function motivoIA() {
+  if (!ehPro()) return 'PRO';
+  if (!SERVIDOR && !(st().ia.chaveCriador || '').trim()) return 'SERVIDOR';
+  return null;
+}
 
 /* ---------- chamada base ---------- */
 export async function chamar({
   system, conteudo, schema = null, maxTokens = 8000, esforco = 'medium', timeout = 150000,
 }) {
   const s = st();
-  const chave = (s.ia.chave || '').trim();
-  if (!chave) throw new Error('SEM_CHAVE');
+  if (!ehPro()) throw new Error('O Study AI faz parte do plano Pro. Abra "Planos" para assinar.');
 
-  const body = {
-    model: s.ia.modelo || 'claude-opus-5',
+  const modelo = s.ia.modelo || 'claude-opus-5';
+  const chaveCriador = (s.ia.chaveCriador || '').trim();
+  if (!SERVIDOR && !chaveCriador) {
+    throw new Error('O Study AI ainda não está no ar: falta configurar o servidor do StudyLab.');
+  }
+
+  // Assinante: a chamada vai para o servidor do StudyLab, que guarda a chave e
+  // confere a assinatura. Sem servidor, cai na chave do criador (só para testes).
+  const url = SERVIDOR ? `${SERVIDOR.replace(/\/$/, '')}/ia` : URL_API;
+  const cabecalhos = SERVIDOR
+    ? { 'content-type': 'application/json', authorization: `Bearer ${s.conta.token || s.conta.id || ''}` }
+    : {
+      'content-type': 'application/json',
+      'x-api-key': chaveCriador,
+      'anthropic-version': VERSAO,
+      'anthropic-dangerous-direct-browser-access': 'true',
+    };
+
+  const corpo = {
+    model: modelo,
     max_tokens: maxTokens,
-    output_config: { effort: esforco },
+    output_config: { effort: esforco, ...(schema ? { format: { type: 'json_schema', schema } } : {}) },
     system,
     messages: [{ role: 'user', content: conteudo }],
   };
-  if (schema) body.output_config.format = { type: 'json_schema', schema };
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeout);
   let r;
   try {
-    r = await fetch(URL_API, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': chave,
-        'anthropic-version': VERSAO,
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
+    r = await fetch(url, { method: 'POST', headers: cabecalhos, body: JSON.stringify(corpo), signal: ctrl.signal });
   } catch (e) {
     clearTimeout(timer);
-    if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo (ou escolha um modelo mais leve nas Configurações).');
-    throw new Error('Não consegui falar com a Claude API. Verifique sua internet — e, se você abriu o StudyLab dentro de '
+    if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo (ou escolha um modelo mais leve).');
+    throw new Error('Não consegui falar com o Study AI. Verifique sua internet — e, se você abriu o StudyLab dentro de '
       + 'um preview (Artifact, sandbox, iframe), a política de segurança dessa página bloqueia chamadas externas: '
-      + 'use o link normal do app para o Study AI funcionar.');
+      + 'use o link normal do app.');
   }
   clearTimeout(timer);
 
   if (!r.ok) {
     let det = '';
     try { det = (await r.json())?.error?.message || ''; } catch { /* ignora */ }
-    if (r.status === 401) throw new Error('Chave da API inválida. Confira em Configurações → Study AI.');
-    if (r.status === 429) throw new Error('Muitas chamadas seguidas. Espere alguns segundos e tente de novo.');
-    if (r.status === 400 && /credit|balance/i.test(det)) throw new Error('Sua conta da Anthropic está sem créditos.');
-    throw new Error(`Erro ${r.status} da API${det ? ': ' + det : ''}`);
+    if (r.status === 401 || r.status === 403) throw new Error('Sua assinatura não foi reconhecida. Confira o plano em Configurações.');
+    if (r.status === 429) throw new Error('Muitas perguntas seguidas. Espere alguns segundos e tente de novo.');
+    throw new Error(`Erro ${r.status} no Study AI${det ? ': ' + det : ''}`);
   }
 
   const data = await r.json();

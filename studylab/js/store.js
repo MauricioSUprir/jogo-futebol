@@ -3,14 +3,19 @@ import { uid, iso, today, addDays } from './util.js';
 import { seedInicial } from './seed.js';
 
 const KEY = 'studylab.v1';
-const SCHEMA = 3;
+const SCHEMA = 4;
 
 /* ---------- estado padrão ---------- */
 export function estadoVazio() {
   return {
     schema: SCHEMA,
-    perfil: { nome: 'Estudante', serie: '8º ano', ano: new Date().getFullYear(), avatar: '🎓', tema: 'escuro' },
-    conta: { plano: 'free', desde: iso(), proAte: null },
+    perfil: { nome: '', serie: '', ano: new Date().getFullYear(), avatar: '🎓', tema: 'escuro', onboarding: false },
+    conta: {
+      plano: 'free',            // free | pro
+      desde: iso(), proAte: null, planoId: null, codigo: null,
+      provedor: null,           // null (ainda não entrou) | 'google' | 'local'
+      id: null, nome: '', email: '', foto: '',
+    },
     prefs: {
       minutosDia: 90,             // quanto pretende estudar por dia
       blocoFoco: 25,              // duração padrão do bloco de foco
@@ -21,7 +26,9 @@ export function estadoVazio() {
       notificar: true,
     },
     jogo: { xp: 0, moedas: 0, streak: 0, ultimoDia: null, recordeStreak: 0, conquistas: [], itens: [] },
-    ia: { chave: '', modelo: 'claude-opus-5', ligada: false, memoria: [], usoHoje: 0, usoDia: null },
+    // A chave da Claude API NÃO fica mais com o aluno: o Study AI é do plano Pro
+    // e passa pelo servidor. chaveCriador só existe para você testar (Área do criador).
+    ia: { modelo: 'claude-opus-5', memoria: [], usoHoje: 0, usoDia: null, chaveCriador: '' },
     materias: [], conteudos: [], tarefas: [], provas: [], eventos: [], horario: {},
     flashcards: [], questoes: [], tentativas: [], sessoes: [], notas: [], metas: [],
     anotacoes: [], biblioteca: [], resumos: [], mapas: [], conversas: [],
@@ -40,17 +47,22 @@ export function carregar() {
       const d = JSON.parse(raw);
       S = migrar({ ...estadoVazio(), ...d });
     } else {
-      S = seedInicial(estadoVazio());
+      S = estadoVazio();      // app começa vazio: o aluno cria a conta e as matérias
       salvar();
     }
   } catch (e) {
     console.warn('Falha ao ler dados salvos, começando limpo.', e);
-    S = seedInicial(estadoVazio());
+    S = estadoVazio();
   }
   aplicarTema();
   return S;
 }
 function migrar(d) {
+  if (d.schema < 4) {
+    d.perfil = { ...d.perfil, onboarding: true };            // já estava usando: não repete o cadastro
+    d.conta = { ...estadoVazio().conta, ...d.conta, provedor: d.conta?.provedor || 'local' };
+    if (d.ia?.chave) { d.ia.chaveCriador = d.ia.chave; delete d.ia.chave; }
+  }
   d.schema = SCHEMA;
   // garante que campos novos existam mesmo em dados antigos
   const base = estadoVazio();
@@ -88,8 +100,44 @@ export function importar(txt) {
   S = migrar({ ...estadoVazio(), ...d });
   salvar(); aplicarTema(); emit();
 }
+/* ---------- conta e assinatura ---------- */
+export const entrou = () => !!S.conta.provedor;
+export const ehPro = () => S.conta.plano === 'pro'
+  && (!S.conta.proAte || S.conta.proAte >= iso());
+
+export function entrarComo({ provedor, id = null, nome = '', email = '', foto = '' }) {
+  set((s) => {
+    s.conta = { ...s.conta, provedor, id, nome, email, foto };
+    if (nome && !s.perfil.nome) s.perfil.nome = nome.split(' ')[0];
+  });
+}
+export function sairDaConta() {
+  set((s) => { s.conta = { ...estadoVazio().conta }; s.perfil.onboarding = false; });
+}
+export function ativarPro({ planoId, dias, codigo = null }) {
+  set((s) => {
+    s.conta.plano = 'pro';
+    s.conta.planoId = planoId;
+    s.conta.codigo = codigo;
+    s.conta.proAte = iso(addDays(today(), dias));
+  });
+}
+export function cancelarPro() {
+  set((s) => { s.conta.plano = 'free'; s.conta.planoId = null; s.conta.proAte = null; s.conta.codigo = null; });
+}
+export function concluirOnboarding() { set((s) => { s.perfil.onboarding = true; }); }
+
+export function carregarExemplo() {
+  const conta = { ...S.conta }, perfil = { ...S.perfil };
+  S = seedInicial(estadoVazio());
+  S.conta = conta;
+  S.perfil = { ...S.perfil, ...perfil, onboarding: true };
+  salvar(); aplicarTema(); emit();
+}
+
 export function zerar({ comExemplo = false } = {}) {
   S = comExemplo ? seedInicial(estadoVazio()) : estadoVazio();
+  if (comExemplo) S.perfil.onboarding = true;
   salvar(); aplicarTema(); emit();
 }
 

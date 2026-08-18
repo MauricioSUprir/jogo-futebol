@@ -22,6 +22,8 @@ import * as vConquistas from './views/conquistas.js';
 import * as vBiblioteca from './views/biblioteca.js';
 import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
+import * as vPlanos from './views/planos.js';
+import { precisaEntrar, abrirEntrada } from './views/entrar.js';
 
 export const MENU = [
   { r: 'inicio', i: '🏠', t: 'Início', v: vInicio, tab: true },
@@ -37,6 +39,7 @@ export const MENU = [
   { r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
   { r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
   { r: 'biblioteca', i: '📂', t: 'Biblioteca', v: vBiblioteca },
+  { r: 'planos', i: '✨', t: 'StudyLab Pro', v: vPlanos },
   { r: 'ai', i: '🤖', t: 'Study AI', v: vAI, tab: true },
   { r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
 ];
@@ -139,6 +142,7 @@ function iniciar() {
   carregar();
   montarMenu();
   rotinaDiaria();
+  if (precisaEntrar()) abrirEntrada(() => { montarMenu(); rotinaDiaria(); render(); });
 
   addEventListener('hashchange', render);
   onChange(() => atualizarTopo());

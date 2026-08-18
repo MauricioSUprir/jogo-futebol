@@ -1,7 +1,7 @@
 /* ===== views/aprender.js — me explica, professor socrático, resumos, mapas e arquivos ===== */
 import { h, iso, uid, esc, round } from '../util.js';
 import { st, nomeMateria, novoMaterial, novoFlashcard, novaQuestao, conteudo as getConteudo } from '../store.js';
-import { titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento, barra } from '../ui.js';
+import { titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento, barra, paywall } from '../ui.js';
 import { opcoesMaterias, opcoesConteudos, selMateria, formMaterial } from './comum.js';
 import {
   temIA, explicar, socratico, resumir, resumoLocal, mapaMental, mapaLocal, lerArquivo,
@@ -19,12 +19,9 @@ function montar(el, params, pintar) {
   el.append(titulo('🧠 Aprender', 'Explicações, resumos, mapas mentais e leitura de material.'));
 
   if (!temIA()) {
-    el.append(h('div', { class: 'card card--flat mb', style: { borderColor: '#fbbf2455' } },
-      h('b', { class: 'small' }, '⚠️ Study AI desligado'),
-      h('p', { class: 'small', style: { marginBottom: '8px' } },
-        'Explicação, professor socrático, mapa mental com IA e leitura de PDF/foto precisam da chave da Claude API. '
-        + 'O resumo continua funcionando em modo local (extrai as frases mais importantes do texto).'),
-      h('a', { class: 'btn btn--sm', href: '#/config' }, '⚙️ Configurar Study AI')));
+    el.append(h('div', { class: 'mb' }, paywall('Explicações com IA são do Pro',
+      'Me explica, professor socrático, mapa mental com IA e leitura de PDF/foto fazem parte do plano Pro. '
+      + 'O resumo continua funcionando de graça, em modo local: ele destaca as frases mais importantes do seu texto.')));
   }
 
   el.append(h('div', { class: 'mb' }, segmento([
@@ -54,7 +51,7 @@ function abaExplicar(el, params) {
     class: 'btn btn--p btn--blk', onclick: async () => {
       const tema = f.tema.value.trim();
       if (!tema) return toast('Escreva o que você quer entender', 'bad');
-      if (!temIA()) return toast('Configure o Study AI em ⚙️ Configurações', 'bad');
+      if (!temIA()) return toast('Isso é do StudyLab Pro — veja em ✨ Planos', 'bad');
       btn.disabled = true; btn.textContent = 'Explicando…';
       saida.replaceChildren(h('p', { class: 'muted small' }, '🤖 Preparando a explicação…'));
       try {
@@ -115,7 +112,7 @@ function abaSocratico(el) {
     h('div', { class: 'f-row mt' }, campo('Tema', f.tema), campo('Matéria', f.materia)),
     h('button', {
       class: 'btn btn--p', onclick: () => {
-        if (!temIA()) return toast('Configure o Study AI em ⚙️ Configurações', 'bad');
+        if (!temIA()) return toast('Isso é do StudyLab Pro — veja em ✨ Planos', 'bad');
         if (!f.tema.value.trim()) return toast('Escreva o tema', 'bad');
         historico = []; pintarChat(); enviar('');
       },

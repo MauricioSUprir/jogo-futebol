@@ -1,11 +1,16 @@
 /* ===== views/config.js — configurações, Study AI, plano e seus dados ===== */
-import { h, iso } from '../util.js';
-import { st, set, aplicarTema, exportar, importar, zerar } from '../store.js';
+import { h, iso, fmtData, daysBetween, parseISO, today } from '../util.js';
+import {
+  st, set, aplicarTema, exportar, importar, zerar, carregarExemplo,
+  ehPro, sairDaConta,
+} from '../store.js';
+import { botaoGoogle, googleConfigurado, sairDoGoogle } from '../auth.js';
+import { SERVIDOR } from '../produto.js';
 import {
   titulo, cartao, kpi, toast, campo, inp, sel, txtarea, segmento, confirmar, modal, fecharModal,
-  COBRANCA_ATIVA, RECURSOS, LIMITES_FREE, ehPro, selo,
+  RECURSOS_PRO, selo,
 } from '../ui.js';
-import { MODELOS, temIA, chamar } from '../ai.js';
+import { MODELOS, chamar } from '../ai.js';
 
 export function render(el) {
   const pintar = () => { el.replaceChildren(); montar(el, pintar); };
@@ -68,90 +73,80 @@ function montar(el, pintar) {
       },
     }, 'Salvar preferências'))));
 
-  /* ---------- Study AI ---------- */
-  const chave = inp({ type: 'password', value: s.ia.chave, placeholder: 'sk-ant-...' });
-  const modelo = sel(MODELOS.map((m) => ({ v: m.id, t: m.nome })), s.ia.modelo);
-  const statusEl = h('span', { class: `chip ${temIA() ? 'ok' : ''}` }, temIA() ? '✅ configurado' : '○ desligado');
+  /* ---------- conta ---------- */
+  const c = s.conta;
+  const caixaGoogle = h('div', { style: { minHeight: '4px' } });
   el.append(h('div', { class: 'mt2' }, cartao(
-    h('div', { class: 'flexb mb' }, h('b', {}, '🤖 Study AI'), h('span', { class: 'sp' }, statusEl)),
-    h('p', { class: 'small' },
-      'O StudyLab roda inteiro no seu aparelho, sem servidor. Para usar as funções de IA (explicações, geração de questões e flashcards, '
-      + 'resumos, professor socrático, leitura de PDF e foto), cole aqui uma chave da Claude API.'),
-    h('details', { class: 'card card--flat mb' },
-      h('summary', { style: { cursor: 'pointer', fontWeight: 700, fontSize: '13.5px' } }, '📋 Como conseguir a chave — passo a passo'),
-      h('ol', { class: 'small', style: { margin: '10px 0 0', paddingLeft: '20px', lineHeight: 1.7 } },
-        h('li', {}, 'Abra ', h('a', { href: 'https://console.anthropic.com', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'),
-          ' e crie uma conta (serve o mesmo e-mail que você já usa no Claude).'),
-        h('li', {}, 'No menu, vá em ', h('b', {}, 'Billing'), ' e coloque um cartão. Sem crédito a chave existe, mas toda chamada falha.'),
-        h('li', {}, 'Adicione crédito. ', h('b', {}, 'US$ 5 já dura muito tempo'), ' para o uso de um aluno.'),
-        h('li', {}, 'Vá em ', h('b', {}, 'API Keys'), ' → ', h('b', {}, 'Create Key'), '. Dê um nome (ex.: "StudyLab") e crie.'),
-        h('li', {}, 'Copie a chave ', h('b', {}, 'na hora'), ' — ela começa com ', h('code', {}, 'sk-ant-'), ' e o site só mostra uma vez.'),
-        h('li', {}, 'Cole no campo abaixo, clique em ', h('b', {}, 'Salvar'), ' e depois em ', h('b', {}, '🔌 Testar conexão'), '.')),
-      h('p', { class: 'tiny muted', style: { marginBottom: 0 } },
-        'Quanto custa: você paga por uso, não por mês. Uma pergunta ao Study AI ou um lote de 5 questões custa poucos centavos de dólar. '
-        + 'O modelo Haiku 4.5 é o mais barato; o Opus 5 é o mais capaz. Dá para trocar aqui embaixo a qualquer momento.')),
-    h('div', { class: 'card card--flat mb' },
-      h('b', { class: 'small' }, '🔒 Sobre a segurança da chave'),
-      h('ul', { class: 'tiny muted', style: { margin: '6px 0 0', paddingLeft: '18px' } },
-        h('li', {}, 'A chave é guardada só neste navegador (localStorage) e vai direto do seu aparelho para a Anthropic.'),
-        h('li', {}, 'Quem usar este mesmo aparelho/navegador consegue recuperá-la — não use em computador compartilhado.'),
-        h('li', {}, 'O uso é cobrado na sua conta da Anthropic. Cada pergunta custa centavos, mas custa.'),
-        h('li', {}, 'Dá para apagar a chave a qualquer momento no botão abaixo.'))),
-    h('div', { class: 'f-row' }, campo('Chave da API', chave), campo('Modelo', modelo)),
-    h('div', { class: 'flexb' },
-      h('button', {
-        class: 'btn btn--p', onclick: () => {
-          set((x) => { x.ia.chave = chave.value.trim(); x.ia.modelo = modelo.value; x.ia.ligada = !!chave.value.trim(); });
-          toast('Study AI atualizado', 'good'); pintar();
-        },
-      }, 'Salvar'),
-      h('button', {
-        class: 'btn', onclick: async (e) => {
-          set((x) => { x.ia.chave = chave.value.trim(); x.ia.modelo = modelo.value; });
-          if (!chave.value.trim()) return toast('Cole a chave primeiro', 'bad');
-          e.target.disabled = true; e.target.textContent = 'Testando…';
-          try {
-            await chamar({ system: 'Responda apenas: ok', conteudo: 'teste', maxTokens: 20, esforco: 'low' });
-            toast('Conexão funcionando! 🎉', 'good');
-          } catch (err) { toast(err.message, 'bad'); }
-          e.target.disabled = false; e.target.textContent = '🔌 Testar conexão';
-        },
-      }, '🔌 Testar conexão'),
-      s.ia.chave ? h('button', {
-        class: 'btn btn--d sp', onclick: () => confirmar('Apagar a chave?', 'As funções de IA voltam ao modo local.', () => {
-          set((x) => { x.ia.chave = ''; x.ia.ligada = false; }); toast('Chave apagada'); pintar();
-        }),
-      }, 'Apagar chave') : null),
-    h('p', { class: 'tiny muted mt' }, `Chamadas hoje: ${s.ia.usoHoje || 0}`))));
+    h('div', { class: 'flexb mb' }, h('b', {}, '👤 Conta'),
+      h('span', { class: `chip sp ${c.provedor === 'google' ? 'ok' : ''}` },
+        c.provedor === 'google' ? 'Google' : 'Sem conta')),
+    c.provedor === 'google'
+      ? h('div', { class: 'flexb' },
+        c.foto ? h('img', { src: c.foto, referrerpolicy: 'no-referrer', style: { width: '42px', height: '42px', borderRadius: '50%' } }) : null,
+        h('div', { class: 'grow' }, h('b', { class: 'small' }, c.nome || '—'), h('div', { class: 'tiny muted' }, c.email || '')),
+        h('button', {
+          class: 'btn btn--d', onclick: () => confirmar('Sair da conta?', 'Seus dados de estudo continuam salvos neste aparelho.', () => {
+            sairDoGoogle(); sairDaConta(); location.reload();
+          }),
+        }, 'Sair'))
+      : h('div', {},
+        h('p', { class: 'small' }, googleConfigurado()
+          ? 'Você está usando o StudyLab sem conta. Entre com o Google para identificar sua assinatura.'
+          : 'Você está usando o StudyLab sem conta — tudo fica salvo só neste aparelho.'),
+        caixaGoogle))));
+  if (c.provedor !== 'google' && googleConfigurado()) {
+    botaoGoogle(caixaGoogle, () => { toast('Conectado!', 'good'); pintar(); }, (e) => toast(e.message, 'bad'));
+  }
 
   /* ---------- plano ---------- */
-  const gratis = RECURSOS.filter((r) => !r.pro);
-  const pro = RECURSOS.filter((r) => r.pro);
+  const pro = ehPro();
+  const dias = c.proAte ? daysBetween(today(), parseISO(c.proAte)) : null;
   el.append(h('div', { class: 'mt2' }, cartao(
-    h('div', { class: 'flexb mb' }, h('b', {}, '💳 Plano'),
-      h('span', { class: `chip sp ${ehPro(s) ? 'ok' : ''}` }, ehPro(s) ? 'Pro' : 'Gratuito')),
-    COBRANCA_ATIVA
-      ? null
-      : h('p', { class: 'small' },
-        'Hoje o StudyLab é gratuito e sem nenhum bloqueio. O plano pago já está desenhado no código '
-        + '(um único porteiro, a função liberado(), decide tudo) — quando for a hora, é ligar a chave e plugar o pagamento.'),
-    h('div', { class: 'grid g2 mt' },
-      h('div', { class: 'card card--flat' },
-        h('b', { class: 'small' }, '🆓 Gratuito — para sempre'),
-        h('ul', { class: 'small', style: { paddingLeft: '18px', margin: '8px 0 0', lineHeight: 1.6 } },
-          ...gratis.map((r) => h('li', {}, r.nome))),
-        COBRANCA_ATIVA
-          ? h('p', { class: 'tiny muted', style: { marginBottom: 0 } },
-            `Limites: ${LIMITES_FREE.iaPorDia} chamadas de IA por dia, ${LIMITES_FREE.arquivosPorDia} arquivos por dia.`)
-          : null),
-      h('div', { class: 'card card--flat', style: { borderColor: '#f59e0b55' } },
-        h('div', { class: 'flexb' }, h('b', { class: 'small' }, 'Pro'), h('span', { class: 'sp' }, selo())),
-        h('ul', { class: 'small', style: { paddingLeft: '18px', margin: '8px 0 0', lineHeight: 1.6 } },
-          ...pro.map((r) => h('li', {}, r.nome))),
+    h('div', { class: 'flexb mb' }, h('b', {}, '✨ Plano'),
+      h('span', { class: `chip sp ${pro ? 'ok' : ''}` }, pro ? 'Pro' : 'Gratuito')),
+    pro
+      ? h('div', {},
+        h('p', { class: 'small' }, dias === null ? 'Sua assinatura está ativa.'
+          : `Ativo até ${fmtData(c.proAte)}${dias >= 0 ? ` — faltam ${dias} dia(s).` : ' (vencido).'}`),
+        h('a', { class: 'btn', href: '#/planos' }, 'Gerenciar assinatura'))
+      : h('div', {},
+        h('p', { class: 'small' },
+          'O StudyLab é gratuito e completo: prioridades, revisão espaçada, questões, flashcards, foco, desempenho e conquistas. '
+          + 'O ', h('b', {}, 'Study AI'), ' — o tutor que conhece suas matérias, provas e erros — faz parte do plano Pro.'),
+        h('div', { class: 'chips mb' }, ...RECURSOS_PRO.slice(0, 4).map((r) => h('span', { class: 'chip' }, r.nome))),
+        h('a', { class: 'btn btn--p', href: '#/planos' }, '✨ Ver planos')))));
+
+  /* ---------- área do criador ---------- */
+  const chaveCriador = inp({ type: 'password', value: s.ia.chaveCriador || '', placeholder: 'sk-ant-… (só para testes)' });
+  const modelo = sel(MODELOS.map((m) => ({ v: m.id, t: m.nome })), s.ia.modelo);
+  el.append(h('div', { class: 'mt2' }, cartao(
+    h('details', {},
+      h('summary', { style: { cursor: 'pointer', fontWeight: 700, fontSize: '13.5px' } }, '🛠️ Área do criador'),
+      h('p', { class: 'small mt' },
+        'Esta parte não é para o aluno. Enquanto o servidor do StudyLab não existe, o Study AI só funciona '
+        + 'com uma chave da Claude API colada aqui — e ainda assim apenas para quem está com o Pro ativo. '
+        + 'Quando o servidor entrar no ar (produto.js → SERVIDOR), esta chave deixa de ser usada.'),
+      h('div', { class: 'f-row' }, campo('Chave da Claude API', chaveCriador), campo('Modelo', modelo)),
+      h('div', { class: 'flexb' },
         h('button', {
-          class: 'btn btn--p btn--blk mt', disabled: !COBRANCA_ATIVA || null,
-          onclick: () => toast('Assinatura ainda não disponível'),
-        }, COBRANCA_ATIVA ? 'Assinar o Pro' : 'Em breve'))))));
+          class: 'btn btn--p', onclick: () => {
+            set((x) => { x.ia.chaveCriador = chaveCriador.value.trim(); x.ia.modelo = modelo.value; });
+            toast('Salvo', 'good'); pintar();
+          },
+        }, 'Salvar'),
+        h('button', {
+          class: 'btn', onclick: async (e) => {
+            set((x) => { x.ia.chaveCriador = chaveCriador.value.trim(); x.ia.modelo = modelo.value; });
+            if (!ehPro()) return toast('Ative o Pro primeiro (em Planos) para testar', 'bad');
+            if (!chaveCriador.value.trim() && !SERVIDOR) return toast('Cole a chave primeiro', 'bad');
+            e.target.disabled = true; e.target.textContent = 'Testando…';
+            try { await chamar({ system: 'Responda apenas: ok', conteudo: 'teste', maxTokens: 20, esforco: 'low' }); toast('Study AI funcionando! 🎉', 'good'); }
+            catch (err) { toast(err.message, 'bad'); }
+            e.target.disabled = false; e.target.textContent = '🔌 Testar Study AI';
+          },
+        }, '🔌 Testar Study AI')),
+      h('p', { class: 'tiny muted mt' },
+        `Servidor configurado: ${SERVIDOR || 'nenhum'} · chamadas hoje: ${s.ia.usoHoje || 0}`))))); 
 
   /* ---------- dados ---------- */
   el.append(h('div', { class: 'mt2' }, cartao(
