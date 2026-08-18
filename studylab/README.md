@@ -73,12 +73,31 @@ notas, metas e gamificação **nunca** dependem de IA.
 
 ---
 
-## Modo pago (ainda não ligado)
+## Modo pago (desenhado, ainda desligado)
 
-O código já sabe distinguir plano **gratuito** e **Pro** (`ui.js` → `COBRANCA_ATIVA`,
-`RECURSOS_PRO`, `ehPro()`, `liberado()`), e a tela de Configurações já mostra o plano atual.
-Enquanto `COBRANCA_ATIVA = false`, **tudo fica liberado** e nenhum recurso é bloqueado —
-é só virar a chave e implementar o pagamento quando for a hora.
+Toda a decisão passa por **um porteiro só**, em `js/ui.js`:
+
+```js
+COBRANCA_ATIVA          // false hoje -> nada é bloqueado
+RECURSOS                // lista de recursos, cada um marcado pro: true|false
+LIMITES_FREE            // { iaPorDia, arquivosPorDia, simuladosIaPorSemana }
+ehPro(estado)           // o aluno é assinante?
+liberado(estado, id)    // { ok: true } | { ok: false, motivo }
+dentroDaCota(estado)    // cota diária de IA no plano gratuito
+```
+
+**Gratuito para sempre:** motor de prioridades, revisão espaçada, domínio, planos de prova,
+tarefas, provas, matérias, foco, flashcards, desempenho, gamificação e o Study AI **com a
+chave do próprio aluno**.
+
+**Ideias para o Pro:** Study AI incluso (sem chave e sem cartão), sem limite diário, leitura
+ilimitada de PDF/foto, correção de redação, sincronizar celular + computador com backup na
+nuvem, relatório semanal para o responsável, cronograma de longo prazo (ENEM/vestibular),
+banco de questões pronto por série, relatórios avançados em PDF e personalizações exclusivas.
+
+O Pro incluso exige um backend simples (um proxy que guarda a chave e conta o uso) — é a
+única parte que ainda não existe. O resto já está preparado: virar `COBRANCA_ATIVA` para
+`true` faz as telas respeitarem limites e mostrarem o selo PRO.
 
 ---
 
@@ -90,6 +109,8 @@ studylab/
 ├── manifest.webmanifest  PWA
 ├── sw.js                 cache offline
 ├── css/app.css           folha de estilo única (tema escuro e claro)
+├── assets/               marca (frasco + livro) em SVG e ícones do PWA
+├── tools/bundle.mjs      gera o app inteiro em UM arquivo HTML (para Artifact/offline)
 └── js/
     ├── app.js            rotas, menu, notificações, rotina diária
     ├── store.js          estado único + localStorage + CRUD
@@ -102,6 +123,13 @@ studylab/
 ```
 
 Sem dependências, sem build, sem `node_modules`. É só abrir.
+
+Precisa do app em um arquivo só (para publicar como Artifact, mandar por e-mail ou usar
+totalmente offline)?
+
+```bash
+node studylab/tools/bundle.mjs saida.html
+```
 
 ---
 

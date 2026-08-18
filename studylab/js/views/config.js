@@ -1,7 +1,10 @@
 /* ===== views/config.js — configurações, Study AI, plano e seus dados ===== */
 import { h, iso } from '../util.js';
 import { st, set, aplicarTema, exportar, importar, zerar } from '../store.js';
-import { titulo, cartao, kpi, toast, campo, inp, sel, txtarea, segmento, confirmar, modal, fecharModal, COBRANCA_ATIVA, RECURSOS_PRO, ehPro, selo } from '../ui.js';
+import {
+  titulo, cartao, kpi, toast, campo, inp, sel, txtarea, segmento, confirmar, modal, fecharModal,
+  COBRANCA_ATIVA, RECURSOS, LIMITES_FREE, ehPro, selo,
+} from '../ui.js';
 import { MODELOS, temIA, chamar } from '../ai.js';
 
 export function render(el) {
@@ -73,7 +76,20 @@ function montar(el, pintar) {
     h('div', { class: 'flexb mb' }, h('b', {}, '🤖 Study AI'), h('span', { class: 'sp' }, statusEl)),
     h('p', { class: 'small' },
       'O StudyLab roda inteiro no seu aparelho, sem servidor. Para usar as funções de IA (explicações, geração de questões e flashcards, '
-      + 'resumos, professor socrático, leitura de PDF e foto), cole uma chave da Claude API criada em console.anthropic.com.'),
+      + 'resumos, professor socrático, leitura de PDF e foto), cole aqui uma chave da Claude API.'),
+    h('details', { class: 'card card--flat mb' },
+      h('summary', { style: { cursor: 'pointer', fontWeight: 700, fontSize: '13.5px' } }, '📋 Como conseguir a chave — passo a passo'),
+      h('ol', { class: 'small', style: { margin: '10px 0 0', paddingLeft: '20px', lineHeight: 1.7 } },
+        h('li', {}, 'Abra ', h('a', { href: 'https://console.anthropic.com', target: '_blank', rel: 'noopener' }, 'console.anthropic.com'),
+          ' e crie uma conta (serve o mesmo e-mail que você já usa no Claude).'),
+        h('li', {}, 'No menu, vá em ', h('b', {}, 'Billing'), ' e coloque um cartão. Sem crédito a chave existe, mas toda chamada falha.'),
+        h('li', {}, 'Adicione crédito. ', h('b', {}, 'US$ 5 já dura muito tempo'), ' para o uso de um aluno.'),
+        h('li', {}, 'Vá em ', h('b', {}, 'API Keys'), ' → ', h('b', {}, 'Create Key'), '. Dê um nome (ex.: "StudyLab") e crie.'),
+        h('li', {}, 'Copie a chave ', h('b', {}, 'na hora'), ' — ela começa com ', h('code', {}, 'sk-ant-'), ' e o site só mostra uma vez.'),
+        h('li', {}, 'Cole no campo abaixo, clique em ', h('b', {}, 'Salvar'), ' e depois em ', h('b', {}, '🔌 Testar conexão'), '.')),
+      h('p', { class: 'tiny muted', style: { marginBottom: 0 } },
+        'Quanto custa: você paga por uso, não por mês. Uma pergunta ao Study AI ou um lote de 5 questões custa poucos centavos de dólar. '
+        + 'O modelo Haiku 4.5 é o mais barato; o Opus 5 é o mais capaz. Dá para trocar aqui embaixo a qualquer momento.')),
     h('div', { class: 'card card--flat mb' },
       h('b', { class: 'small' }, '🔒 Sobre a segurança da chave'),
       h('ul', { class: 'tiny muted', style: { margin: '6px 0 0', paddingLeft: '18px' } },
@@ -109,20 +125,33 @@ function montar(el, pintar) {
     h('p', { class: 'tiny muted mt' }, `Chamadas hoje: ${s.ia.usoHoje || 0}`))));
 
   /* ---------- plano ---------- */
+  const gratis = RECURSOS.filter((r) => !r.pro);
+  const pro = RECURSOS.filter((r) => r.pro);
   el.append(h('div', { class: 'mt2' }, cartao(
     h('div', { class: 'flexb mb' }, h('b', {}, '💳 Plano'),
       h('span', { class: `chip sp ${ehPro(s) ? 'ok' : ''}` }, ehPro(s) ? 'Pro' : 'Gratuito')),
     COBRANCA_ATIVA
-      ? h('div', {},
-        h('p', { class: 'small' }, 'Recursos do plano Pro:'),
-        h('div', { class: 'list' }, ...Object.values(RECURSOS_PRO).map((r) => h('div', { class: 'row row--flat' }, selo(), h('span', { class: 'grow small' }, r)))),
-        h('button', { class: 'btn btn--p btn--blk mt', onclick: () => toast('Assinatura ainda não disponível') }, 'Assinar o Pro'))
-      : h('div', {},
-        h('p', { class: 'small' },
-          'Hoje está tudo liberado — o StudyLab é gratuito e sem limites. O modo pago já está previsto no código '
-          + '(o app sabe distinguir plano gratuito e Pro), mas ainda não foi ligado.'),
-        h('p', { class: 'tiny muted' }, 'O que deve entrar no Pro quando ligar:'),
-        h('div', { class: 'chips' }, ...Object.values(RECURSOS_PRO).map((r) => h('span', { class: 'chip' }, r)))))));
+      ? null
+      : h('p', { class: 'small' },
+        'Hoje o StudyLab é gratuito e sem nenhum bloqueio. O plano pago já está desenhado no código '
+        + '(um único porteiro, a função liberado(), decide tudo) — quando for a hora, é ligar a chave e plugar o pagamento.'),
+    h('div', { class: 'grid g2 mt' },
+      h('div', { class: 'card card--flat' },
+        h('b', { class: 'small' }, '🆓 Gratuito — para sempre'),
+        h('ul', { class: 'small', style: { paddingLeft: '18px', margin: '8px 0 0', lineHeight: 1.6 } },
+          ...gratis.map((r) => h('li', {}, r.nome))),
+        COBRANCA_ATIVA
+          ? h('p', { class: 'tiny muted', style: { marginBottom: 0 } },
+            `Limites: ${LIMITES_FREE.iaPorDia} chamadas de IA por dia, ${LIMITES_FREE.arquivosPorDia} arquivos por dia.`)
+          : null),
+      h('div', { class: 'card card--flat', style: { borderColor: '#f59e0b55' } },
+        h('div', { class: 'flexb' }, h('b', { class: 'small' }, 'Pro'), h('span', { class: 'sp' }, selo())),
+        h('ul', { class: 'small', style: { paddingLeft: '18px', margin: '8px 0 0', lineHeight: 1.6 } },
+          ...pro.map((r) => h('li', {}, r.nome))),
+        h('button', {
+          class: 'btn btn--p btn--blk mt', disabled: !COBRANCA_ATIVA || null,
+          onclick: () => toast('Assinatura ainda não disponível'),
+        }, COBRANCA_ATIVA ? 'Assinar o Pro' : 'Em breve'))))));
 
   /* ---------- dados ---------- */
   el.append(h('div', { class: 'mt2' }, cartao(

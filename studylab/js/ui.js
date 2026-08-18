@@ -194,19 +194,55 @@ export function progresso(rot, v, { cls = '', sufixo = '%' } = {}) {
     barra(v, cls));
 }
 
-/* ---------- gate do plano pago (preparado, ainda desligado) ---------- */
-export const COBRANCA_ATIVA = false;   // vira true quando o modo pago entrar no ar
-export const RECURSOS_PRO = {
-  ia_ilimitada: 'Study AI sem limite diário',
-  simulados_ia: 'Simulados gerados por IA',
-  arquivos: 'Leitura de PDF e foto de atividade',
-  relatorios: 'Relatórios avançados e exportação',
-  temas: 'Temas e avatares exclusivos',
-};
-export function ehPro(estado) { return estado?.conta?.plano === 'pro'; }
-/** Devolve {ok, motivo}. Enquanto COBRANCA_ATIVA=false, tudo liberado. */
-export function liberado(estado, recurso) {
+/* ==========================================================
+   PLANO PAGO — já modelado, ainda desligado.
+   Vire COBRANCA_ATIVA para true quando o Pro entrar no ar:
+   as telas passam a respeitar limites e a mostrar o selo PRO.
+   ========================================================== */
+export const COBRANCA_ATIVA = false;
+
+/** O que cada plano entrega. `pro:true` = exclusivo do plano pago. */
+export const RECURSOS = [
+  { id: 'motor', nome: 'Prioridades, revisão espaçada, domínio e planos de prova', pro: false },
+  { id: 'estudo', nome: 'Tarefas, provas, matérias, foco, flashcards e desempenho', pro: false },
+  { id: 'jogo', nome: 'XP, níveis, conquistas, sequência e StudyCoins', pro: false },
+  { id: 'ia_propria', nome: 'Study AI com a sua própria chave da Claude API', pro: false },
+  { id: 'ia_inclusa', nome: 'Study AI incluso — sem precisar de chave nem cartão', pro: true },
+  { id: 'ia_ilimitada', nome: 'Sem limite diário de perguntas e gerações', pro: true },
+  { id: 'arquivos', nome: 'Leitura ilimitada de PDF e foto de atividade', pro: true },
+  { id: 'redacao', nome: 'Correção de redação com nota por competência', pro: true },
+  { id: 'sync', nome: 'Sincronizar celular e computador + backup na nuvem', pro: true },
+  { id: 'responsavel', nome: 'Relatório semanal para o responsável', pro: true },
+  { id: 'longo_prazo', nome: 'Cronograma de longo prazo (ENEM/vestibular)', pro: true },
+  { id: 'banco', nome: 'Banco de questões pronto por série e matéria', pro: true },
+  { id: 'relatorios', nome: 'Relatórios avançados e exportação em PDF', pro: true },
+  { id: 'temas', nome: 'Temas, avatares e personalizações exclusivas', pro: true },
+];
+
+/** Limites do plano gratuito (só valem quando COBRANCA_ATIVA = true). */
+export const LIMITES_FREE = { iaPorDia: 20, arquivosPorDia: 3, simuladosIaPorSemana: 2 };
+
+export const ehPro = (estado) => estado?.conta?.plano === 'pro';
+
+/**
+ * Porteiro único do app. Enquanto a cobrança está desligada devolve sempre {ok:true},
+ * então nenhuma tela precisa saber se o Pro existe ou não.
+ * @returns {{ok:boolean, motivo?:string}}
+ */
+export function liberado(estado, recursoId) {
   if (!COBRANCA_ATIVA || ehPro(estado)) return { ok: true };
-  return { ok: false, motivo: RECURSOS_PRO[recurso] || 'Recurso do plano Pro' };
+  const r = RECURSOS.find((x) => x.id === recursoId);
+  if (!r || !r.pro) return { ok: true };
+  return { ok: false, motivo: r.nome };
 }
+
+/** Checagem de cota diária de IA no plano gratuito. */
+export function dentroDaCota(estado) {
+  if (!COBRANCA_ATIVA || ehPro(estado)) return { ok: true };
+  const usadas = estado?.ia?.usoHoje || 0;
+  return usadas < LIMITES_FREE.iaPorDia
+    ? { ok: true, restam: LIMITES_FREE.iaPorDia - usadas }
+    : { ok: false, motivo: `Você usou as ${LIMITES_FREE.iaPorDia} chamadas de IA do plano gratuito hoje.` };
+}
+
 export const selo = () => h('span', { class: 'pro-tag' }, 'PRO');

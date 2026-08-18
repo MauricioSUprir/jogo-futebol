@@ -56,7 +56,9 @@ export async function chamar({
   } catch (e) {
     clearTimeout(timer);
     if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo (ou escolha um modelo mais leve nas Configurações).');
-    throw new Error('Não consegui falar com a Claude API. Verifique sua internet.');
+    throw new Error('Não consegui falar com a Claude API. Verifique sua internet — e, se você abriu o StudyLab dentro de '
+      + 'um preview (Artifact, sandbox, iframe), a política de segurança dessa página bloqueia chamadas externas: '
+      + 'use o link normal do app para o Study AI funcionar.');
   }
   clearTimeout(timer);
 
