@@ -11,7 +11,8 @@ organiza looks por ocasião e acompanha tendências.
 
 Abra o **`index.html`** no navegador (ou pelo link do GitHub Pages). Não precisa
 instalar nada — é um app de arquivo único, funciona offline e pode ser
-instalado na tela de início do celular (PWA).
+instalado na tela de início do celular (PWA). Na primeira vez o app pede para
+**criar uma conta** (e-mail e senha) — veja [Conta e senha](#conta-e-senha).
 
 ---
 
@@ -28,7 +29,7 @@ instalado na tela de início do celular (PWA).
 | 💡 **Inspirações** | Receitas de look que viram “**criar algo parecido com minhas roupas**”. |
 | ❤️ **Desejos** | Lista de compras futuras com duas contas úteis: **com quantas peças suas aquilo combinaria** e se é **parecida demais** com o que já existe. |
 | 🧳 **Viagens** | Destino + duração + tipo + clima → mala montada, com o look de cada dia. |
-| 👤 **Perfil** | Vários perfis (um guarda-roupa por pessoa), estilos preferidos, conquistas, tema e a **área dos responsáveis**. |
+| 👤 **Perfil** | Vários perfis (um guarda-roupa por pessoa), estilos preferidos, conquistas, tema, **conta** (trocar senha, sair, excluir) e a **área dos responsáveis**. |
 
 ### Como a sugestão é feita
 
@@ -66,12 +67,49 @@ já sugere a cor e um nome para a peça — é só conferir e ajustar.
 
 ---
 
+## Conta e senha
+
+O app abre numa tela de **cadastro / login com e-mail e senha**. Cada conta tem
+o seu próprio guarda-roupa, e várias contas podem conviver no mesmo aparelho.
+
+Como funciona por dentro:
+
+- a senha **não é guardada** em lugar nenhum — nem no aparelho. O que fica salvo
+  é a derivação **PBKDF2-SHA256 com 210 mil rodadas** e um **sal aleatório de
+  16 bytes por conta** (WebCrypto), e a comparação no login é feita em tempo
+  constante;
+- ao criar a conta você escolhe **começar do zero** ou **começar com o
+  guarda-roupa de exemplo** (Lucas, Marina e Pedro — só para experimentar);
+- a sessão continua aberta entre uma visita e outra; **Perfil → Conta** tem
+  *trocar senha*, *sair* e *excluir conta*;
+- quem já usava a versão anterior (sem login) não perde nada: os dados que
+  estavam no aparelho são herdados pela **primeira conta criada**.
+
+### O que este login é — e o que não é
+
+É uma **tranca local do app**, não autenticação de servidor. Sem back-end:
+
+- os dados **não sincronizam** entre celular, tablet e computador — cada
+  aparelho tem o seu;
+- **não existe recuperação de senha por e-mail**. Esquecendo a senha, restam
+  dois caminhos: restaurar um backup exportado numa conta nova, ou apagar a
+  conta (a tela “Esqueci minha senha” faz isso);
+- quem tiver acesso físico ao aparelho desbloqueado consegue ler o
+  `localStorage` pelo navegador. Serve para separar contas e evitar que alguém
+  abra o app por cima do seu ombro, não para proteger segredo de valor.
+
+Para login de verdade (recuperação por e-mail e sincronização entre aparelhos)
+seria preciso um servidor — dá para ligar depois num serviço como o Supabase ou
+no back-end do próprio repositório, sem refazer o app.
+
 ## Dados
 
-Tudo fica **no próprio aparelho** (`localStorage`, chave `looklab.v1`). Nada é
-enviado para servidor nenhum. Na área dos responsáveis dá para **exportar um
-backup** em JSON, **importar** de volta e **recomeçar do guarda-roupa de
-exemplo** (3 perfis já preenchidos, para ver o app funcionando na hora).
+Tudo fica **no próprio aparelho** (`localStorage`): as contas em
+`looklab.contas` e o guarda-roupa de cada uma em `looklab.dados.<id da conta>`.
+Nada é enviado para servidor nenhum. Na área dos responsáveis dá para
+**exportar um backup** em JSON (só o guarda-roupa — o backup **não** carrega
+e-mail nem senha), **importar** de volta, **esvaziar o guarda-roupa** e
+**recomeçar do exemplo**.
 
 ## Ligar as tendências numa fonte real
 
