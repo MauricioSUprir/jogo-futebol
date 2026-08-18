@@ -8,6 +8,11 @@ import { botaoGoogle, googleConfigurado } from '../auth.js';
 
 /* ---------- catálogo de matérias por nível ---------- */
 const M = (nome, emoji, cor) => ({ nome, emoji, cor });
+const FUND1 = [
+  M('Português', '📖', '#f472b6'), M('Matemática', '📐', '#60a5fa'), M('Ciências', '🔬', '#22d3ee'),
+  M('História', '🏛️', '#fbbf24'), M('Geografia', '🌎', '#34d399'), M('Inglês', '🌐', '#a78bfa'),
+  M('Arte', '🎨', '#fb923c'), M('Educação Física', '⚽', '#4ade80'), M('Ensino Religioso', '🕊️', '#94a3b8'),
+];
 const FUNDAMENTAL = [
   M('Português', '📖', '#f472b6'), M('Matemática', '📐', '#60a5fa'), M('História', '🏛️', '#fbbf24'),
   M('Geografia', '🌎', '#34d399'), M('Ciências', '🔬', '#22d3ee'), M('Inglês', '🌐', '#a78bfa'),
@@ -21,14 +26,40 @@ const MEDIO = [
   M('Filosofia', '🤔', '#a78bfa'), M('Sociologia', '👥', '#fb923c'), M('Inglês', '🌐', '#818cf8'),
   M('Espanhol', '🇪🇸', '#f87171'), M('Educação Física', '⚽', '#84cc16'), M('Arte', '🎨', '#f0abfc'),
 ];
-const SERIES = [
-  { v: '6º ano', t: '6º ano — fundamental' }, { v: '7º ano', t: '7º ano — fundamental' },
-  { v: '8º ano', t: '8º ano — fundamental' }, { v: '9º ano', t: '9º ano — fundamental' },
-  { v: '1º ano', t: '1º ano — médio' }, { v: '2º ano', t: '2º ano — médio' },
-  { v: '3º ano', t: '3º ano — médio' }, { v: 'Cursinho', t: 'Cursinho / pré-vestibular' },
+/* Do 1º ano até a faculdade. Os valores levam o nível junto porque "1º ano"
+   sozinho seria ambíguo (existe no fundamental e no médio). */
+export const SERIES = [
+  { v: '1º ano do fundamental', t: '1º ano — fundamental' },
+  { v: '2º ano do fundamental', t: '2º ano — fundamental' },
+  { v: '3º ano do fundamental', t: '3º ano — fundamental' },
+  { v: '4º ano do fundamental', t: '4º ano — fundamental' },
+  { v: '5º ano do fundamental', t: '5º ano — fundamental' },
+  { v: '6º ano', t: '6º ano — fundamental' },
+  { v: '7º ano', t: '7º ano — fundamental' },
+  { v: '8º ano', t: '8º ano — fundamental' },
+  { v: '9º ano', t: '9º ano — fundamental' },
+  { v: '1º ano do médio', t: '1º ano — ensino médio' },
+  { v: '2º ano do médio', t: '2º ano — ensino médio' },
+  { v: '3º ano do médio', t: '3º ano — ensino médio' },
+  { v: 'Técnico', t: 'Curso técnico' },
+  { v: 'Cursinho', t: 'Cursinho / pré-vestibular' },
+  { v: 'EJA', t: 'EJA — educação de jovens e adultos' },
+  { v: 'Faculdade', t: 'Faculdade / ensino superior' },
+  { v: 'Concurso', t: 'Estudando para concurso' },
   { v: 'Outro', t: 'Outro' },
 ];
-const ehMedio = (serie) => ['1º ano', '2º ano', '3º ano', 'Cursinho'].includes(serie);
+
+const ehMedio = (serie) => ['1º ano do médio', '2º ano do médio', '3º ano do médio',
+  'Cursinho', 'Técnico', 'EJA', 'Faculdade', 'Concurso',
+  '1º ano', '2º ano', '3º ano'].includes(serie);   // os três últimos: contas antigas
+const ehFund1 = (serie) => /^[1-5]º ano do fundamental$/.test(serie);
+
+/** Quais matérias sugerir para quem está nesse ano. */
+export function materiasSugeridas(serie) {
+  if (ehFund1(serie)) return FUND1;
+  if (ehMedio(serie)) return MEDIO;
+  return FUNDAMENTAL;
+}
 
 export const precisaEntrar = () => !st().perfil.onboarding;
 
@@ -59,7 +90,7 @@ export function comoLigarGoogle() {
    FLUXO
    ========================================================== */
 export function abrirEntrada(aoConcluir) {
-  const dados = { nome: '', serie: '8º ano', materias: new Set(), minutos: 90 };
+  const dados = { nome: '', serie: '6º ano', materias: new Set(), minutos: 90 };
   let passo = 0;
 
   const tela = h('div', { class: 'focus-full entrada', style: { alignContent: 'center', overflowY: 'auto', padding: '24px 16px' } });
@@ -143,7 +174,7 @@ export function abrirEntrada(aoConcluir) {
 
   /* ---------- passo 2: matérias ---------- */
   function materias() {
-    const lista = ehMedio(dados.serie) ? MEDIO : FUNDAMENTAL;
+    const lista = materiasSugeridas(dados.serie);
     const grade = h('div', { class: 'chips' });
     const extras = [];
     const pintarChips = () => {
@@ -171,7 +202,9 @@ export function abrirEntrada(aoConcluir) {
     tela.replaceChildren(h('div', { style: { width: 'min(560px,100%)', margin: '0 auto' } },
       passos(1),
       cabecalho('Quais matérias você tem?',
-        'O StudyLab não adivinha sua grade — você escolhe aqui e pode mudar quando quiser. Toque para marcar.'),
+        ['Faculdade', 'Concurso', 'Técnico'].includes(dados.serie)
+          ? 'Como cada curso tem a sua grade, comece digitando as suas matérias aqui embaixo. Dá para mudar depois.'
+          : 'O StudyLab não adivinha sua grade — você escolhe aqui e pode mudar quando quiser. Toque para marcar.'),
       caixa(
         grade,
         h('div', { class: 'flexb mt' }, nova, h('button', { class: 'btn', onclick: adicionar }, '+ Adicionar')),
@@ -218,7 +251,7 @@ export function abrirEntrada(aoConcluir) {
             h('span', { class: 'grow small' }, dados.serie))),
         h('button', {
           class: 'btn btn--p btn--blk btn--xl mt2', onclick: () => {
-            const catalogo = [...FUNDAMENTAL, ...MEDIO];
+            const catalogo = [...FUND1, ...FUNDAMENTAL, ...MEDIO];
             for (const nome of dados.materias) {
               const base = catalogo.find((m) => m.nome === nome) || M(nome, '📘', '#7c5cff');
               novaMateria({ nome: base.nome, emoji: base.emoji, cor: base.cor, meta: 9 });

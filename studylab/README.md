@@ -55,7 +55,9 @@ O app **começa vazio**. No primeiro acesso o aluno passa por um cadastro de 4 p
 1. **Entrar com o Google** ou continuar sem conta.
 2. Nome e em que ano está.
 3. **Quais matérias ele tem** — o StudyLab não adivinha a grade da escola: mostra as matérias
-   típicas do nível (fundamental ou médio) para marcar em um toque, e aceita outras digitadas.
+   típicas do nível para marcar em um toque, e aceita outras digitadas. A lista de anos vai do
+   **1º ano do fundamental até faculdade**, passando por curso técnico, EJA e cursinho, e as
+   matérias sugeridas mudam conforme o ano (fundamental I, fundamental II ou médio).
 4. Quanto tempo pretende estudar por dia.
 
 Pronto: as matérias são criadas e o app já funciona com a escola dele. Nada de dados de exemplo

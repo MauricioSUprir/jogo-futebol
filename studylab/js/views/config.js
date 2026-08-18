@@ -5,7 +5,7 @@ import {
   ehPro, sairDaConta,
 } from '../store.js';
 import { botaoGoogle, googleConfigurado, sairDoGoogle } from '../auth.js';
-import { comoLigarGoogle } from './entrar.js';
+import { comoLigarGoogle, SERIES } from './entrar.js';
 import { SERVIDOR } from '../produto.js';
 import {
   titulo, cartao, kpi, toast, campo, inp, sel, txtarea, segmento, confirmar, modal, fecharModal,
@@ -23,7 +23,10 @@ function montar(el, pintar) {
 
   /* ---------- perfil ---------- */
   const nome = inp({ value: s.perfil.nome });
-  const serie = inp({ value: s.perfil.serie, placeholder: 'Ex.: 8º ano' });
+  const serieAtual = s.perfil.serie || '';
+  const opcoesSerie = SERIES.some((o) => o.v === serieAtual) || !serieAtual
+    ? SERIES : [{ v: serieAtual, t: serieAtual }, ...SERIES];
+  const serie = sel(opcoesSerie, serieAtual);
   const avatar = inp({ value: s.perfil.avatar, maxlength: 2, style: { maxWidth: '80px', textAlign: 'center', fontSize: '20px' } });
   el.append(cartao(
     h('b', {}, '👤 Perfil'),
@@ -35,7 +38,7 @@ function montar(el, pintar) {
       })),
     h('button', {
       class: 'btn btn--p', onclick: () => {
-        set((x) => { x.perfil.nome = nome.value.trim() || 'Estudante'; x.perfil.serie = serie.value.trim(); x.perfil.avatar = avatar.value.trim() || '🎓'; });
+        set((x) => { x.perfil.nome = nome.value.trim() || 'Estudante'; x.perfil.serie = serie.value; x.perfil.avatar = avatar.value.trim() || '🎓'; });
         toast('Perfil salvo', 'good'); pintar();
       },
     }, 'Salvar perfil')));
