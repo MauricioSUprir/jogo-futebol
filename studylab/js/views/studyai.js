@@ -31,14 +31,19 @@ function montar(el, pintar) {
       ? paywall('O Study AI é do plano Pro',
         'Ele conhece suas matérias, suas provas, seus erros e seu calendário — e responde com base nos seus dados de verdade, '
         + 'não em achismo. Pergunte "o que eu estudo agora?" e veja a diferença.')
-      : paywall('Study AI temporariamente indisponível',
-        'Sua assinatura está ativa, mas o servidor do Study AI ainda não foi configurado. Avise o suporte do StudyLab.')));
+      : paywall('Study AI ainda não foi ligado',
+        'Sua assinatura está ativa, mas o servidor do StudyLab ainda não está no ar — é ele que guarda a chave e '
+        + 'conversa com a inteligência artificial. Se este app é seu: publique o studylab-server e informe o '
+        + 'endereço em ⚙️ Configurações → Área do criador.')));
 
+    if (porQue !== 'PRO') {
+      el.append(h('div', { class: 'mb' }, h('a', { class: 'btn btn--p', href: '#/config' }, '⚙️ Abrir a Área do criador')));
+    }
     el.append(cartao(
       h('b', {}, '🤔 O que ele responderia com os seus dados'),
       h('p', { class: 'tiny muted' }, 'Exemplos reais do que o Study AI usa quando é liberado:'),
       h('div', { class: 'chips' }, ...SUGESTOES.map((sg) => h('span', { class: 'chip' }, sg))),
-      h('a', { class: 'btn btn--p mt', href: '#/planos' }, '✨ Ver planos')));
+      porQue === 'PRO' ? h('a', { class: 'btn btn--p mt', href: '#/planos' }, '✨ Ver planos') : null));
 
     el.append(h('div', { class: 'mt2' }, cartaoObservacoes()));
     return;

@@ -119,9 +119,10 @@ ehPro()               // assinatura ativa? (respeita a data de vencimento)
 
 **Como alguém vira Pro:**
 
-- **Pagando** — a tela de planos abre o checkout do Mercado Pago. O cartão nunca passa pelo
-  StudyLab; quando o Mercado Pago confirma, o servidor libera os dias sozinho e as renovações
-  seguem pelo mesmo caminho. Precisa do servidor publicado com `MP_ACCESS_TOKEN`.
+- **Pagando** — a tela de planos abre o checkout do Mercado Pago, com **Pix ou cartão**
+  (compra os dias) ou **cartão que renova sozinho**. Nem cartão nem Pix passam pelo StudyLab;
+  quando o Mercado Pago confirma, o servidor libera os dias na hora. Precisa do servidor
+  publicado com `MP_ACCESS_TOKEN`.
 - **Por código de acesso** — para testes, cortesia ou venda combinada. Com servidor, o código
   é conferido no banco (com limite de usos); sem servidor, cai para `js/produto.js` →
   `CODIGOS`, no aparelho, o que serve só para testes.
