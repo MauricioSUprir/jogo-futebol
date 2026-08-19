@@ -15,7 +15,7 @@ import {
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
 } from './db.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
-import { perguntar, modeloPadrao, modeloPara, contarFotos } from './ia.js';
+import { perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso } from './ia.js';
 import {
   PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico, criarPix,
   pagarComCartao, chavePublica, interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
@@ -89,7 +89,10 @@ function muitasBatidas(ip, limite = num('FREIO_IP', 60), janela = 60000) {
 const rotas = {
   'GET /saude': async () => {
     const falta = [];
-    if (!process.env.ANTHROPIC_API_KEY) falta.push('ANTHROPIC_API_KEY — sem ela o Study AI não responde');
+    if (!temChaveIA()) {
+      falta.push('ANTHROPIC_API_KEY ou GEMINI_API_KEY — sem uma delas o Study AI não responde '
+        + '(a do Gemini é grátis em aistudio.google.com)');
+    }
     if (pagamentoLigado() && !chavePublica()) falta.push('MP_PUBLIC_KEY — sem ela o cartão abre fora do app');
     if (!process.env.SEGREDO) falta.push('SEGREDO — as sessões dos alunos ficam inseguras');
     if (emMemoria) falta.push('DATABASE_URL — sem banco, tudo some quando o servidor reinicia');
@@ -98,11 +101,12 @@ const rotas = {
     return {
       ok: true,
       banco: emMemoria ? 'memoria' : 'postgres',
-      modelo: modeloPadrao(),
-      chaveConfigurada: !!process.env.ANTHROPIC_API_KEY,
+      provedor: provedor(),                                  // claude | gemini | null
+      modelo: modeloEmUso(),
+      chaveConfigurada: temChaveIA(),
       googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,     // opcional: dá para usar conta de aparelho
       pagamentoConfigurado: pagamentoLigado(),
-      studyAiPronto: !!process.env.ANTHROPIC_API_KEY && !!process.env.SEGREDO,
+      studyAiPronto: temChaveIA() && !!process.env.SEGREDO,
       pagamentoPronto: pagamentoLigado() && !!process.env.MP_WEBHOOK_SECRET,
       falta,
     };
@@ -393,10 +397,10 @@ migrar()
   .then(() => servidor.listen(PORTA, () => {
     console.log(`StudyLab no ar em :${PORTA}`);
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
-    console.log(`  modelo: ${modeloPadrao()} (Plus: ${modeloPara('plus')})`);
+    console.log(`  IA: ${provedor() || 'NENHUMA CHAVE'} · modelo ${modeloEmUso()}${provedor() === 'claude' ? ` (Plus: ${modeloPara('plus')})` : ''}`);
     console.log(`  limites Pro: ${LIMITES.pro.dia}/dia, ${LIMITES.pro.mes}/mês, ${LIMITES.pro.fotosDia} fotos/dia`);
     console.log(`  limites Plus: ${LIMITES.plus.dia}/dia, ${LIMITES.plus.mes}/mês, ${LIMITES.plus.fotosDia} fotos/dia`);
-    console.log(`  chave da Claude: ${process.env.ANTHROPIC_API_KEY ? 'ok' : 'FALTANDO'}`);
+    console.log(`  chave de IA: ${temChaveIA() ? 'ok' : 'FALTANDO (ANTHROPIC_API_KEY ou GEMINI_API_KEY — a do Gemini é grátis)'}`);
     console.log(`  pagamento: ${pagamentoLigado() ? 'Mercado Pago ligado (Pix + cartão)' : 'desligado (só código de acesso)'}`);
     if (pagamentoLigado()) console.log(`  webhook: ${urlDoWebhook() || 'defina URL_WEBHOOK ou configure no painel do Mercado Pago'}`);
     if (pagamentoLigado() && !process.env.MP_WEBHOOK_SECRET) {
