@@ -22,11 +22,12 @@ function montar(el, pintar) {
 
   /* ---------- como o Study AI funciona ---------- */
   el.append(cartao(
-    h('b', {}, '🔐 Onde mora a chave da Claude'),
+    h('b', {}, '🔐 Onde mora a chave da IA'),
     h('p', { class: 'small' },
-      'O aluno ', h('b', {}, 'nunca'), ' coloca chave nenhuma. Ele paga, o servidor confirma o pagamento e libera o Pro; '
-      + 'quando ele pergunta algo, o app fala com o ', h('b', {}, 'seu servidor'), ', e é o servidor que chama a Claude com a '
-      + 'sua chave. A chave fica na variável ', h('code', {}, 'ANTHROPIC_API_KEY'), ' do Railway e nunca chega ao navegador.'),
+      'O aluno ', h('b', {}, 'nunca'), ' coloca chave nenhuma. Ele paga, o servidor confirma o pagamento e libera o plano; '
+      + 'quando ele pergunta algo, o app fala com o ', h('b', {}, 'seu servidor'), ', e é o servidor que chama a IA com a '
+      + 'sua chave — a da Claude (', h('code', {}, 'ANTHROPIC_API_KEY'), ') ou a do Gemini (', h('code', {}, 'GEMINI_API_KEY'),
+      ', que tem faixa grátis). A chave fica no Railway e nunca chega ao navegador.'),
     h('div', { class: 'card card--flat' },
       h('div', { class: 'small' }, '📱 aluno paga o Pix'),
       h('div', { class: 'tiny muted' }, '↓'),
@@ -61,7 +62,7 @@ function montar(el, pintar) {
           try {
             const d = await saudeDoServidor();
             status.replaceChildren(
-              h('div', {}, `✅ no ar · banco ${d.banco} · modelo ${d.modelo}`),
+              h('div', {}, `✅ no ar · banco ${d.banco} · IA ${d.provedor || 'sem chave'} (${d.modelo})`),
               h('div', { style: { marginTop: '4px' } },
                 `${d.studyAiPronto ? '✅' : '❌'} Study AI · `,
                 `${d.pagamentoPronto ? '✅' : '❌'} pagamento · `,
@@ -79,7 +80,8 @@ function montar(el, pintar) {
     h('div', { class: 'hr' }),
     h('b', { class: 'small' }, 'Variáveis do Railway'),
     h('ul', { class: 'tiny muted', style: { paddingLeft: '18px', lineHeight: 1.7 } },
-      h('li', {}, h('code', {}, 'ANTHROPIC_API_KEY'), ' — sua chave da Claude (obrigatória)'),
+      h('li', {}, h('code', {}, 'GEMINI_API_KEY'), ' — IA GRÁTIS para testar: crie em aistudio.google.com, sem cartão'),
+      h('li', {}, h('code', {}, 'ANTHROPIC_API_KEY'), ' — a Claude (paga por uso): use quando tiver assinantes; com as duas, ela vence'),
       h('li', {}, h('code', {}, 'SEGREDO'), ' — gere abaixo (obrigatória)'),
       h('li', {}, h('code', {}, 'MP_ACCESS_TOKEN'), ' — Access token do Mercado Pago, para receber'),
       h('li', {}, h('code', {}, 'MP_WEBHOOK_SECRET'), ' — assinatura secreta do webhook'),

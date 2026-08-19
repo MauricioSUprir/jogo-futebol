@@ -41,6 +41,30 @@ e um freio por IP.
 
 ---
 
+## Começar DE GRAÇA (Gemini)
+
+Não quer gastar nada para testar? O servidor também fala com o **Gemini**, do Google,
+que tem uma faixa gratuita **sem cartão**:
+
+1. Entre em [aistudio.google.com](https://aistudio.google.com) com uma conta Google
+   → **Get API key** → crie a chave.
+2. No Railway, em vez de `ANTHROPIC_API_KEY`, configure `GEMINI_API_KEY`.
+3. Pronto: o Study AI funciona de verdade, custo zero.
+
+Regras de convivência das chaves:
+
+- Só `GEMINI_API_KEY` → usa o Gemini (grátis).
+- Só `ANTHROPIC_API_KEY` → usa a Claude (paga por uso).
+- As duas → a **Claude vence** (mais estável para quem paga); `PROVEDOR=gemini` inverte.
+- `MODELO_GEMINI` troca o modelo do Gemini (padrão `gemini-2.5-flash`).
+
+⚠️ O limite do plano grátis do Gemini é **do app inteiro**, não por aluno — serve para
+testar e para os primeiros usuários, mas quando houver assinantes pagando, ponha a
+chave da Claude para ninguém ficar na fila (os limites por aluno continuam valendo
+igual nos dois provedores).
+
+---
+
 ## Publicar no Railway (10 minutos)
 
 1. No Railway, **New Project → Deploy from GitHub repo** e escolha `jogo-futebol`.
@@ -48,7 +72,8 @@ e um freio por IP.
 3. **+ New → Database → Postgres**. O Railway cria a `DATABASE_URL` sozinho — as tabelas são
    criadas no primeiro start.
 4. Em **Variables**, adicione:
-   - `ANTHROPIC_API_KEY` — a sua chave do console.anthropic.com **(obrigatória)**
+   - `GEMINI_API_KEY` **ou** `ANTHROPIC_API_KEY` — a chave da IA (uma das duas é obrigatória;
+     a do Gemini é grátis — veja a seção acima)
    - `SEGREDO` — frase longa e aleatória, assina as sessões **(obrigatória)** — o app gera uma
      para você em ⚙️ Configurações → Área do criador → *Gerar SEGREDO*
    - `ORIGENS` — `https://mauriciosuprir.github.io`

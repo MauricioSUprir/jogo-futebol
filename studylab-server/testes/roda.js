@@ -22,6 +22,7 @@ const { montarBRCode } = await import('./brcode.js');
 const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
 let ultimoModelo = '';
+let ultimoGemini = null;
 let assinaturasMP = 0;
 let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
@@ -89,6 +90,21 @@ globalThis.fetch = async (url, opcoes) => {
       }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     return new Response('{}', { status: 404 });
+  }
+
+  // ---- Gemini dublado ----
+  if (alvo.includes('generativelanguage')) {
+    const corpo = JSON.parse(opcoes.body);
+    ultimoGemini = {
+      model: (alvo.match(/models\/([^:]+):/) || [])[1] || '',
+      temFoto: JSON.stringify(corpo.contents).includes('inline_data'),
+      schemaLimpo: corpo.generationConfig.responseSchema
+        ? !JSON.stringify(corpo.generationConfig.responseSchema).includes('additionalProperties') : null,
+    };
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: corpo.generationConfig.responseSchema ? '{"x":"ok"}' : 'o gemini disse: oi' }] } }],
+      usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 20 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
   }
 
   if (alvo.includes('api.anthropic.com')) {
@@ -422,6 +438,49 @@ console.log('\n== admin ==');
   const r = await fetchReal(`${BASE}/admin/numeros?token=chave-admin`);
   const d = await r.json();
   conferir(r.status === 200 && d.usuarios === 10, `painel: ${d.usuarios} usuários, ${d.assinantes} assinante(s), receita R$ ${d.receita}`);
+}
+
+console.log('\n== Gemini (a IA grátis) ==');
+{
+  const e = await pedir('POST', '/entrar', { corpo: { teste: { id: 'aluno-gemini', email: 'gem@casa.com', nome: 'Gem' } } });
+  const t = e.dados.token;
+  await pedir('POST', '/codigo', { token: t, corpo: { codigo: 'TESTE7' } });
+
+  const chaveClaude = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  process.env.GEMINI_API_KEY = 'AIza-falsa';
+
+  const saude = await pedir('GET', '/saude');
+  conferir(saude.dados.provedor === 'gemini' && saude.dados.studyAiPronto === true,
+    'sem chave da Claude, o servidor usa o Gemini e o Study AI segue pronto', JSON.stringify(saude.dados.falta));
+  conferir(String(saude.dados.modelo).includes('gemini'), 'o modelo do Gemini aparece na saúde', saude.dados.modelo);
+
+  const r = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'oi pelo gemini' } });
+  conferir(r.status === 200 && r.dados.texto.includes('o gemini disse'), 'pergunta respondida pelo Gemini', r.dados.erro || r.dados.texto);
+  conferir(ultimoGemini?.model === 'gemini-2.5-flash', 'usa o modelo padrão do Gemini', ultimoGemini?.model);
+
+  const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
+  const rf = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'que foto é essa?' }] } });
+  conferir(rf.status === 200 && ultimoGemini?.temFoto === true, 'a foto vira inline_data no formato do Gemini', rf.dados.erro);
+
+  const rs = await pedir('POST', '/ia', {
+    token: t,
+    corpo: {
+      system: 'a', conteudo: 'me devolve um json',
+      schema: { type: 'object', additionalProperties: false, required: ['x'], properties: { x: { type: 'string' } } },
+    },
+  });
+  conferir(rs.status === 200 && rs.dados.texto === '{"x":"ok"}', 'resposta em formato JSON funciona no Gemini', rs.dados.erro);
+  conferir(ultimoGemini?.schemaLimpo === true, 'o additionalProperties (que o Gemini rejeita) é removido do schema');
+
+  process.env.ANTHROPIC_API_KEY = chaveClaude;
+  const volta = await pedir('GET', '/saude');
+  conferir(volta.dados.provedor === 'claude', 'com as duas chaves, a Claude vence (mais estável para assinantes)');
+  process.env.PROVEDOR = 'gemini';
+  const forcado = await pedir('GET', '/saude');
+  conferir(forcado.dados.provedor === 'gemini', 'PROVEDOR=gemini força o Gemini mesmo com a chave da Claude');
+  delete process.env.PROVEDOR;
+  delete process.env.GEMINI_API_KEY;
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);
