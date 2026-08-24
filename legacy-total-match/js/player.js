@@ -472,8 +472,8 @@
       teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, sat: injuredThisGame, compId: compId,
       title: TM.data.club(c.clubId).name + " · Rodada " + (c.round + 1), back: "player-hub",
       onComplete: function () {
-        if (injuredThisGame) { finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round); return; }
-        TM.ui.go("player-moments", { c: c, teamA: teamA, teamB: teamB, result: result, iAmHome: iAmHome, round: round, compId: compId });
+        // sem decisões no meio do jogo — vai direto para o pós-jogo
+        finishClubMatch(c, teamA, teamB, result, iAmHome, injuredThisGame, round);
       }
     });
   }
