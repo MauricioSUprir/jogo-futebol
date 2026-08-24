@@ -2025,6 +2025,8 @@
           : "✔ " + p.name + " assinou com o " + TM.data.club(c.teamId).name + "!";
         actionWrap.innerHTML = "";
         actionWrap.appendChild(TM.ui.button("Voltar ao mercado", function () { NEGO = null; TM.ui.go("coach-market"); }, "btn primary"));
+        // ceninha de apresentação do reforço
+        TM.ui.arrivalCutscene(p, TM.data.club(c.teamId), null);
       } else if (!roleOk) {
         quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Sou titular indiscutível. Não aceito função de reserva.”";
       } else {
