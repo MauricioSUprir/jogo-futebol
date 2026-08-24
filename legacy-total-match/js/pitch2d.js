@@ -298,6 +298,9 @@
         showEvt("🟨 Amarelo", "yellow");
       } else if (t === "sub") {
         showEvt("🔄 Substituição", "sep");
+      } else if (t === "var") {
+        showEvt(ev.decision === "annulled" ? "📺 VAR: gol anulado" : "📺 VAR: gol validado", ev.decision === "annulled" ? "red" : "goal");
+        phase = "dead"; setTimeout(function () { phase = "build"; }, 900);
       } else if (t === "injury") {
         showEvt("🚑 Lesão", "injury"); phase = "dead"; setTimeout(function () { phase = "build"; }, 900);
       } else if (t === "half") {
