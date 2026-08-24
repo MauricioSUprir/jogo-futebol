@@ -1520,3 +1520,15 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .var-h { font-size: 12px; letter-spacing: 3px; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
 .var-r { font-size: 16px; font-weight: 800; margin-top: 4px; }
 .var-r.ok { color: #3ad98a; } .var-r.no { color: #ff5a52; }
+
+/* ===== Estamina + capitão no chip do campinho ===== */
+.chip-stam { width: 82%; max-width: 46px; height: 4px; margin: 2px auto 0; border-radius: 3px; background: rgba(255,255,255,.16); overflow: hidden; }
+.chip-stam-fill { display: block; height: 100%; border-radius: 3px; }
+.chip-stam-fill.ok { background: #35c46a; }
+.chip-stam-fill.mid { background: #f4c430; }
+.chip-stam-fill.low { background: #e0483a; }
+.chip-cap {
+  position: absolute; left: -4px; top: -4px; width: 16px; height: 16px; border-radius: 50%;
+  background: var(--gold); color: #04180c; font-size: 10px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; border: 1px solid #04180c;
+}
