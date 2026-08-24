@@ -125,17 +125,50 @@
       overlay.addEventListener("click", dismiss);
       setTimeout(dismiss, 2000);
     }
-    // VAR: flash rápido e cosmético em alguns gols (não pausa o fluxo)
-    function showVarFlash(confirmed, text) {
-      var overlay = el("div", { class: "var-flash" }, [
-        el("div", { class: "var-box" }, [
-          el("div", { class: "var-scr", text: "📺" }),
-          el("div", { class: "var-h", text: "REVISÃO DO VAR" }),
-          el("div", { class: "var-r " + (confirmed ? "ok" : "no"), text: text })
-        ])
+    // VAR imersivo e interativo: pausa a partida, "analisa" o lance e revela o veredito.
+    function showVarReview(ev, after) {
+      var annulled = ev.decision === "annulled";
+      flashing = true;
+      var overlay = el("div", { class: "var-review" });
+      var stage = el("div", { class: "var-stage" });
+      // mini-campo com varredura da linha de impedimento
+      var mini = el("div", { class: "var-mini" }, [
+        el("div", { class: "var-mini-line" }),
+        el("div", { class: "var-mini-dot atk" }),
+        el("div", { class: "var-mini-dot def" })
       ]);
+      var head = el("div", { class: "var-title" }, [ el("span", { class: "var-tv", text: "📺" }), el("span", { text: "REVISÃO DO VAR" }) ]);
+      var sub = el("div", { class: "var-sub", text: "Checando o lance…" });
+      var bar = el("div", { class: "var-bar" }, [ el("i") ]);
+      stage.appendChild(head); stage.appendChild(mini); stage.appendChild(sub); stage.appendChild(bar);
+      var actionWrap = el("div", { class: "var-action" });
+      stage.appendChild(actionWrap);
+      overlay.appendChild(stage);
       document.body.appendChild(overlay);
-      setTimeout(function () { overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 250); }, 1500);
+
+      var done2 = false;
+      function finishVar() {
+        if (done2) return; done2 = true;
+        overlay.classList.add("out");
+        setTimeout(function () { overlay.remove(); }, 260);
+        flashing = false;
+        after && after();                         // mostra o gol (se confirmado) / segue o lance
+        if (!done && !paused && !proceeded) step();
+      }
+      function reveal() {
+        sub.textContent = annulled ? ev.reason : ev.reason;
+        var verdict = el("div", { class: "var-verdict " + (annulled ? "no" : "ok") }, [
+          el("div", { class: "var-stamp", text: annulled ? "GOL ANULADO" : "GOL VALIDADO" }),
+          el("div", { class: "var-reason", text: ev.reason })
+        ]);
+        stage.insertBefore(verdict, actionWrap);
+        actionWrap.innerHTML = "";
+        actionWrap.appendChild(TM.ui.button("Continuar ▶", finishVar, "btn primary"));
+      }
+      // interativo: o usuário toca em "Ver decisão" para revelar o veredito
+      actionWrap.appendChild(TM.ui.button("🔍 Ver decisão do VAR", function () { bar.classList.add("full"); reveal(); }, "btn"));
+      // avança sozinho se ninguém tocar (não trava a partida)
+      setTimeout(function () { if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, 3200);
     }
     function onSkip() {
       if (proceeded) return;                 // ignora cliques repetidos
@@ -252,6 +285,9 @@
         node = lineWith("🟨", ev.text, "yellow");
       } else if (ev.type === "sub") {
         node = lineWith("🔄 SUBSTITUIÇÃO", (ev["in"] + " ⬆  " + ev.out + " ⬇"), "sub");
+      } else if (ev.type === "var") {
+        node = lineWith(ev.decision === "annulled" ? "📺 VAR — GOL ANULADO" : "📺 VAR — GOL CONFIRMADO",
+          ev.reason + (ev.player ? " · " + ev.player : ""), ev.decision === "annulled" ? "red" : "sub");
       } else if (ev.type === "half") {
         node = el("div", { class: "bc-line bc-sep", text: "⏸️ Intervalo — " + ev.score[0] + " x " + ev.score[1] });
       } else if (ev.type === "kickoff") {
@@ -271,28 +307,32 @@
       ]);
     }
 
-    function renderMinute(mm) {
-      clockEl.textContent = mm + "'";
-      if (progressFill) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
-      if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
-      // flash de cartão/lesão (pausa) e VAR (cosmético) — só ao vivo
-      if (animating && delay > 0) {
-        var evs = byMin[mm] || [], fev = null, gev = null;
-        for (var _i = 0; _i < evs.length; _i++) {
-          var _e = evs[_i];
-          if (!fev && (_e.type === "yellow" || _e.type === "red" || _e.type === "injury")) fev = _e;
-          if (!gev && (_e.type === "goal" || _e.type === "pengoal")) gev = _e;
-        }
-        if (!fev && gev && Math.random() < 0.22) showVarFlash(true, "GOL CONFIRMADO ✅");
-        if (fev) showCardFlash(fev);
-      }
-      (byMin[mm] || []).forEach(function (ev) {
+    function processEvents(evs) {
+      evs.forEach(function (ev) {
         if ((ev.type === "goal" || ev.type === "pengoal") && ev.team != null) {
           score = ev.score.slice(); scoreEl.textContent = score[0] + " - " + score[1];
           scoreEl.classList.remove("flash"); void scoreEl.offsetWidth; scoreEl.classList.add("flash");
         }
         addLine(ev);
       });
+    }
+    function renderMinute(mm) {
+      clockEl.textContent = mm + "'";
+      if (progressFill) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
+      if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
+      var evs = byMin[mm] || [];
+      if (animating && delay > 0) {
+        var fev = null, varEv = null;
+        for (var _i = 0; _i < evs.length; _i++) {
+          var _e = evs[_i];
+          if (!fev && (_e.type === "yellow" || _e.type === "red" || _e.type === "injury")) fev = _e;
+          if (!varEv && _e.type === "var") varEv = _e;
+        }
+        // VAR imersivo: pausa, revisa e só então mostra o resto do lance (o gol, se confirmado)
+        if (varEv) { showVarReview(varEv, function () { processEvents(evs); }); return; }
+        if (fev) showCardFlash(fev);
+      }
+      processEvents(evs);
     }
 
     function step() {

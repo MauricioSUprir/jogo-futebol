@@ -124,6 +124,16 @@
       var goalP = isPen ? Math.max(0.68, Math.min(0.9, 0.72 + (scorer.attrs.sho - gk.attrs.def) * 0.004))
         : Math.max(0.08, Math.min(0.64, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.0078)) * (variance / 1.9);
       if (Math.random() < goalP) {
+        // VAR: parte dos gols (não-pênalti) passa por revisão; alguns são anulados
+        var varOn = !isPen && Math.random() < 0.13;
+        var annul = varOn && Math.random() < 0.42;
+        if (varOn) {
+          var okR = ["Sem impedimento — posição legal", "Lance limpo, sem falta", "A bola não saiu pela linha"];
+          var noR = ["Impedimento no início da jogada", "Falta do atacante no lance", "Mão na bola antes do gol"];
+          events.push({ minute: minute, type: "var", team: side, player: scorer.name,
+            decision: annul ? "annulled" : "confirmed", reason: annul ? pick(noR) : pick(okR) });
+        }
+        if (annul) { return; } // gol anulado pelo VAR — não conta
         onTarget[side]++; score[side]++;
         if (scorer.id === focusId) focusGoals++;
         events.push({ minute: minute, type: isPen ? "pengoal" : "goal", team: side, player: scorer.name,
