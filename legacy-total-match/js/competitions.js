@@ -588,6 +588,10 @@
       if (!career.recentForm) career.recentForm = [];
       career.recentForm.push(res);
       if (career.recentForm.length > 8) career.recentForm = career.recentForm.slice(-8);
+      // currículo (estatísticas de carreira)
+      if (!career.stats) career.stats = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+      career.stats.p++; career.stats.gf += gf; career.stats.ga += ga;
+      if (res === "V") career.stats.w++; else if (res === "D") career.stats.l++; else career.stats.d++;
       maybeBoardCall(career);
     }
     updateConfidence(career, result, userSide); // overall dinâmico

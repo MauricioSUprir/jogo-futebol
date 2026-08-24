@@ -1524,8 +1524,43 @@
   /* ---------- títulos ---------- */
   TM.ui.register("coach-honours", function (screen) {
     var c = TM.storage.coachCareer();
-    screen.appendChild(TM.ui.topbar("🗂️ Títulos & Histórico", function () { TM.ui.go("coach-hub"); }));
+    screen.appendChild(TM.ui.topbar("🗂️ Currículo & Títulos", function () { TM.ui.go("coach-hub"); }));
     var body = el("div", { class: "panel-narrow" });
+
+    // ---- currículo (resumo da carreira) ----
+    var st = c.stats || { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+    var titles = { liga: 0, copa: 0, cont: 0, mundial: 0, inter: 0 };
+    (c.honours || []).forEach(function (h) {
+      if (h.leagueChampion) titles.liga++; if (h.cupChampion) titles.copa++;
+      if (h.contChampion) titles.cont++; if (h.mundialChampion) titles.mundial++; if (h.interChampion) titles.inter++;
+    });
+    var totalTitles = titles.liga + titles.copa + titles.cont + titles.mundial + titles.inter;
+    var anos = c.season || 1;
+    var winPct = st.p ? Math.round(st.w / st.p * 100) : 0;
+    function stat(v, lab) { return el("div", { class: "cv-stat" }, [ el("div", { class: "cv-num", text: v }), el("div", { class: "cv-lab", text: lab }) ]); }
+    var natName = TM.data.club(c.teamId) ? TM.data.club(c.teamId).name : (c.teamName || "");
+    body.appendChild(el("div", { class: "cv-card" }, [
+      el("div", { class: "cv-head" }, [
+        (c.coachPhoto ? el("img", { src: c.coachPhoto, class: "cv-ava" }) : el("div", { class: "cv-ava cv-ava-i", text: (c.coachName || "T").slice(0, 1).toUpperCase() })),
+        el("div", {}, [ el("div", { class: "cv-name", text: c.coachName || "Treinador" }), el("div", { class: "cv-club", text: natName }) ])
+      ]),
+      el("div", { class: "cv-grid" }, [
+        stat("🏆 " + totalTitles, "Títulos"),
+        stat(anos, "Temporadas"),
+        stat(st.p, "Jogos"),
+        stat(winPct + "%", "Aproveit."),
+        stat(st.w + "-" + st.d + "-" + st.l, "V-E-D"),
+        stat((st.gf - st.ga >= 0 ? "+" : "") + (st.gf - st.ga), "Saldo")
+      ]),
+      totalTitles ? el("div", { class: "cv-titles" }, [
+        titles.liga ? el("span", { class: "cv-tchip", text: "🏆 " + titles.liga + " Liga" + (titles.liga > 1 ? "s" : "") }) : null,
+        titles.copa ? el("span", { class: "cv-tchip", text: "🏆 " + titles.copa + " Copa" + (titles.copa > 1 ? "s" : "") }) : null,
+        titles.cont ? el("span", { class: "cv-tchip", text: "🏆 " + titles.cont + " Continental" }) : null,
+        titles.mundial ? el("span", { class: "cv-tchip", text: "🌎 " + titles.mundial + " Mundial" }) : null,
+        titles.inter ? el("span", { class: "cv-tchip", text: "🌍 " + titles.inter + " Interc." }) : null
+      ]) : null
+    ]));
+    body.appendChild(el("div", { class: "list-head", text: "Histórico por temporada" }));
     if (!c.honours.length) body.appendChild(el("p", { class: "intro-text", text: "Complete uma temporada para registrar seu histórico." }));
     c.honours.slice().reverse().forEach(function (h) {
       var wins = [];
