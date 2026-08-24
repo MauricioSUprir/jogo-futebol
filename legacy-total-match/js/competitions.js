@@ -541,7 +541,20 @@
       if (so.side !== userSide) return;
       if (!inRoster(career, so.id)) return;
       career.suspensions[so.id] = 1;
+      career.yellows && (career.yellows[so.id] = 0);
       TM.notify.push(career, { icon: "🟥", title: "Suspensão", text: so.name + " foi expulso e está suspenso do próximo jogo." });
+    });
+    // cartões amarelos acumulados: a cada 3, suspensão automática de 1 jogo
+    if (!career.yellows) career.yellows = {};
+    (result.events || []).forEach(function (ev) {
+      if (ev.type !== "yellow" || ev.team !== userSide || !ev.playerId) return;
+      if (!inRoster(career, ev.playerId)) return;
+      career.yellows[ev.playerId] = (career.yellows[ev.playerId] || 0) + 1;
+      if (career.yellows[ev.playerId] >= 3) {
+        career.yellows[ev.playerId] = 0;
+        career.suspensions[ev.playerId] = 1;
+        TM.notify.push(career, { icon: "🟨", title: "Suspensão por cartões", text: (ev.player || "Um jogador") + " levou o 3º amarelo e está suspenso do próximo jogo." });
+      }
     });
     // interesse de outro clube em um jogador seu (ocasional)
     maybeIncomingOffer(career);
@@ -1435,6 +1448,7 @@
     var before = {};
     rosterPlayers(career).forEach(function (p) { before[p.id] = { ov: p.overall, age: p.age, name: p.name }; });
     career.season++;
+    career.yellows = {}; // zera cartões amarelos a cada nova temporada
     ageWorld(career);
     ageYouth(career);
     processLoans(career);
