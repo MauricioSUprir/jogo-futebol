@@ -1593,3 +1593,17 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .chip-dyn.up { background: #35c46a; color: #04180c; }
 .chip-dyn.down { background: #ff5a52; color: #fff; }
 .chip-dyn.steady { background: #4a4a4a; color: #ddd; }
+
+/* ===== Currículo do treinador ===== */
+.cv-card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; margin-bottom: 14px; }
+.cv-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cv-ava { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; }
+.cv-ava-i { display: flex; align-items: center; justify-content: center; background: var(--gold-dark); color: #04180c; font-weight: 800; font-size: 22px; }
+.cv-name { font-size: 18px; font-weight: 800; }
+.cv-club { font-size: 13px; color: var(--text-dim); }
+.cv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cv-stat { background: var(--fill); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+.cv-num { font-size: 18px; font-weight: 800; color: var(--gold-light); font-variant-numeric: tabular-nums; }
+.cv-lab { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+.cv-titles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.cv-tchip { font-size: 12px; font-weight: 700; background: rgba(34,197,94,.12); border: 1px solid var(--gold); border-radius: 999px; padding: 4px 10px; }
