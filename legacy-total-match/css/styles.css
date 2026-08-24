@@ -1634,3 +1634,47 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .totw-chip.mine .chip-face-wrap { box-shadow: 0 0 0 2px var(--gold); border-radius: 50%; }
 .totw-club { position: absolute; top: -6px; right: -6px; font-size: 9px; font-weight: 800;
   background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 4px; color: var(--text-dim); }
+
+/* ===== Menu de modos (redesenho imersivo) ===== */
+#screen-modes { background:
+  radial-gradient(90% 55% at 50% 0%, rgba(34,197,94,.12), transparent 55%),
+  linear-gradient(180deg, #06090c 0%, #070d0b 60%, #05100a 100%); overflow-x: hidden; }
+.modes-glow { position: absolute; top: -120px; left: 50%; transform: translateX(-50%); width: 520px; height: 340px;
+  background: radial-gradient(circle, rgba(34,197,94,.22), transparent 65%); filter: blur(20px); pointer-events: none; }
+.modes-head { position: relative; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 16px 18px 6px; max-width: 1000px; margin: 0 auto; width: 100%; }
+.modes-logo { height: 40px; width: auto; filter: drop-shadow(0 4px 14px rgba(34,197,94,.4)); }
+.modes-head-sp { flex: 1; }
+.modes-prof { display: flex; align-items: center; gap: 8px; background: var(--panel); border: 1px solid var(--line-2);
+  border-radius: 999px; padding: 5px 12px 5px 6px; color: var(--text); cursor: pointer; font-weight: 600; font-size: 13px; }
+.modes-prof.ghost { padding: 7px 16px; }
+.modes-prof-ava { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.modes-prof-name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.modes-wrap { position: relative; z-index: 2; max-width: 1000px; margin: 0 auto; padding: 8px 16px 40px; width: 100%; }
+.modes-sec-title { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin: 18px 4px 10px; }
+.modes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.mode-card { display: flex; flex-direction: row !important; align-items: center !important; gap: 11px; text-align: left; cursor: pointer;
+  background: linear-gradient(150deg, var(--panel), var(--black-soft)); border: 1px solid var(--line);
+  border-radius: 15px; padding: 13px 12px !important; color: var(--text); transition: transform .12s, border-color .15s, box-shadow .15s; }
+.mode-card::after { display: none !important; }
+.mode-card:hover { transform: translateY(-3px); border-color: var(--card-acc, var(--gold)); box-shadow: 0 12px 26px -14px var(--card-acc, rgba(34,197,94,.5)); }
+.mode-card:active { transform: translateY(0); }
+.mode-card.big { grid-column: span 2; padding: 16px 14px; }
+.mode-orb { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 13px; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; background: var(--card-acc-soft, rgba(34,197,94,.14)); border: 1px solid var(--card-acc, var(--gold)); }
+.mode-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mode-name { font-size: 14.5px; font-weight: 800; line-height: 1.12; }
+.mode-desc { font-size: 11px; color: var(--text-dim); line-height: 1.2; margin-top: 2px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mode-orb { flex: 0 0 auto; }
+.mode-go { flex: 0 0 auto; color: var(--card-acc, var(--gold)); font-size: 16px; opacity: .8; }
+/* acentos por categoria */
+.acc-car { --card-acc: #22c55e; --card-acc-soft: rgba(34,197,94,.14); }
+.acc-play { --card-acc: #38bdf8; --card-acc-soft: rgba(56,189,248,.14); }
+.acc-net { --card-acc: #f5b942; --card-acc-soft: rgba(245,185,66,.14); }
+.acc-more { --card-acc: #a78bfa; --card-acc-soft: rgba(167,139,250,.14); }
+.modes-ticker { margin-top: 22px; display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  background: var(--fill); border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; color: var(--text-dim); transition: opacity .4s; }
+.modes-ticker.fade { animation: cfIn .5s; }
+.mt-eye { flex: 0 0 auto; font-size: 10px; letter-spacing: 1.5px; font-weight: 800; color: var(--gold-light); }
+.mt-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (min-width: 620px) { .modes-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); } .mode-card.big { grid-column: span 1; } }
