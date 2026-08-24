@@ -448,19 +448,21 @@
   /* =================== TELA: SPLASH =================== */
   register("splash", function (screen) {
     screen.id = "screen-splash";
+    // atmosfera imersiva (só a logo protagoniza)
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
+    screen.appendChild(el("div", { class: "splash-glow", "aria-hidden": "true" }));
+    screen.appendChild(el("div", { class: "splash-vignette", "aria-hidden": "true" }));
 
     var content = el("div", { class: "splash-content" }, [
       el("img", { class: "splash-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-      el("h1", { class: "game-title", html: '<span class="title-total">TOTAL</span><span class="title-match">MATCH</span>' })
+      el("div", { class: "splash-tap", text: "toque para começar" })
     ]);
-
-    // contadores animados com os números reais do jogo (sobem de 0 até o total)
-    content.appendChild(splashCounters());
-
-    content.appendChild(el("button", { class: "btn-start", text: "TOQUE PARA COMEÇAR", on: { click: function () { go("modes"); } } }));
-    content.appendChild(el("p", { class: "version", text: "v0.3 — protótipo jogável" }));
     screen.appendChild(content);
+    screen.appendChild(el("div", { class: "splash-ver", text: "v0.3" }));
+
+    // a tela inteira inicia o jogo (mais imersivo)
+    var started = false;
+    screen.addEventListener("click", function () { if (started) return; started = true; go("modes"); });
   });
 
   /* curiosidades de futebol + dicas do jogo (rotativas no menu) */
