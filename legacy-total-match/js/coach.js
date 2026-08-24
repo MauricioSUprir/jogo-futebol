@@ -2201,11 +2201,24 @@
       selEl.addEventListener("change", function () { c[key] = selEl.value || null; TM.storage.saveCoachCareer(c); });
       return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: label }), selEl ]);
     }
+    // capitão
+    function captainSelect() {
+      var selEl = el("select", { class: "select" });
+      selEl.appendChild(el("option", { value: "", text: "Automático (líder do elenco)" }));
+      C().rosterPlayers(c).slice().sort(function (a, b) { return b.overall - a.overall; }).forEach(function (pl) {
+        var o = el("option", { value: pl.id, text: pl.name + " (" + TM.data.posLabel(pl) + " · " + pl.overall + ")" });
+        if (c.captainId === pl.id) o.selected = true;
+        selEl.appendChild(o);
+      });
+      selEl.addEventListener("change", function () { c.captainId = selEl.value || null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); });
+      return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🎽 Capitão" }), selEl ]);
+    }
     screen.appendChild(el("div", { class: "panel-narrow" }, [
-      el("h3", { class: "block-title", text: "⚽ Cobradores de bola parada" }),
+      el("h3", { class: "block-title", text: "⚽ Cobradores e capitão" }),
       takerSelect("penTakerId", "Batedor de pênalti"),
       takerSelect("fkTakerId", "Batedor de falta"),
-      el("div", { class: "setting-hint", text: "Só valem se o jogador estiver em campo; senão, o melhor finalizador cobra." })
+      captainSelect(),
+      el("div", { class: "setting-hint", text: "Cobradores só valem se o jogador estiver em campo; senão, o melhor finalizador cobra." })
     ]));
 
     // campinho + reservas (área interativa atualizada EM LUGAR — não recarrega a tela nem reseta o scroll)
@@ -2225,7 +2238,7 @@
         var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
           style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
           on: { click: function () { onStarterClick(i); } } },
-          TM.ui.chipKids(p, slot, { name: shortName(p.name), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
+          TM.ui.chipKids(p, slot, { name: shortName(p.name), captain: c.captainId === id, flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
         );
         pitch.appendChild(chip);
       });
