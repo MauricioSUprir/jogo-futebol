@@ -40,7 +40,16 @@
   TM.ui.register("coach", function (screen) {
     var _exist = TM.storage.coachCareer();
     if (_exist && !exPlayerHandoff) { TM.ui.go(_exist.type === "director" ? "director-hub" : "coach-hub"); return; }
+    // navegando clubes reais: garante o mundo "normal" (limpa clube personalizado pendente)
+    try { if (TM.storage.read("customClub", null)) { TM.storage.remove("customClub"); TM.data.resetWorld(); } } catch (e) {}
     screen.appendChild(TM.ui.topbar("🎯 Master League", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
+    screen.appendChild(el("div", { class: "panel-narrow", style: "padding-bottom:0" }, [
+      el("button", { class: "create-club-cta", on: { click: function () { TM.ui.go("coach-create-club"); } } }, [
+        el("span", { class: "ccc-ic", text: "➕" }),
+        el("div", { class: "ccc-txt" }, [ el("div", { class: "ccc-title", text: "Criar meu próprio clube" }), el("div", { class: "ccc-sub", text: "Nome, escudo, cores, verba e nível — do zero" }) ]),
+        el("span", { class: "ccc-arrow", text: "›" })
+      ])
+    ]));
     if (exPlayerHandoff) screen.appendChild(el("div", { class: "twin-bar open", style: "max-width:620px;margin:0 auto 4px" }, [ el("span", { text: "🎽➡️🎯 " + exPlayerHandoff.name + " começa a carreira de treinador" }), el("span", { class: "twin-sub", text: "escolha o clube para comandar" }) ]));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
@@ -76,9 +85,100 @@
     ]));
   });
 
+  /* ---------- criar meu próprio clube ---------- */
+  var customDraft = null;
+  function levelLabel(v) { return v >= 82 ? "Elite" : v >= 76 ? "Forte" : v >= 70 ? "Bom" : v >= 63 ? "Médio" : "Modesto"; }
+  TM.ui.register("coach-create-club", function (screen) {
+    if (!customDraft) customDraft = { name: "", short: "", colors: { primary: "#1f7a3c", secondary: "#f4f4f4" }, crestData: null, leagueId: "br", level: 68 };
+    var d = customDraft;
+    screen.appendChild(TM.ui.topbar("➕ Criar meu clube", function () { TM.ui.go("coach"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // pré-visualização do escudo
+    var preview = el("div", { class: "cc-preview" });
+    function drawPreview() {
+      TM.ui.clear(preview);
+      var mock = { name: d.name || "Meu Clube", colors: d.colors, crestData: d.crestData, id: "preview" };
+      preview.appendChild(TM.img.clubImg(mock, "cc-preview-crest"));
+      preview.appendChild(el("div", {}, [
+        el("div", { class: "cc-preview-name", text: d.name || "Meu Clube" }),
+        el("div", { class: "cc-preview-sub", text: (d.short || "MEU") + " · nível " + levelLabel(d.level) })
+      ]));
+    }
+    body.appendChild(preview);
+
+    // nome + sigla
+    var nameIn = el("input", { class: "text-input", type: "text", maxlength: "22", placeholder: "Nome do clube", value: d.name });
+    nameIn.addEventListener("input", function () { d.name = nameIn.value; if (!d._shortEdited) { d.short = (d.name.replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3) || "").toUpperCase(); shortIn.value = d.short; } drawPreview(); });
+    var shortIn = el("input", { class: "text-input", type: "text", maxlength: "3", placeholder: "SIG", value: d.short, style: "text-transform:uppercase" });
+    shortIn.addEventListener("input", function () { d._shortEdited = true; d.short = shortIn.value.toUpperCase(); drawPreview(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Nome e sigla" }), el("div", { class: "cc-name-row" }, [ nameIn, shortIn ]) ]));
+
+    // escudo (upload) + cores
+    var crestBox = el("div", { class: "photo-drop small" }, [ d.crestData ? el("img", { src: d.crestData, class: "photo-img" }) : el("span", { text: "🛡️ Escudo" }) ]);
+    var crestFile = el("input", { type: "file", accept: "image/*", style: "display:none" });
+    crestBox.addEventListener("click", function () { crestFile.click(); });
+    crestFile.addEventListener("change", function () {
+      var f = crestFile.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function (ev) { var img = new Image(); img.onload = function () {
+        var cv = document.createElement("canvas"), sc = Math.min(1, 256 / Math.max(img.width, img.height));
+        cv.width = img.width * sc; cv.height = img.height * sc; cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        d.crestData = cv.toDataURL("image/png"); TM.ui.clear(crestBox); crestBox.appendChild(el("img", { src: d.crestData, class: "photo-img" })); drawPreview();
+      }; img.src = ev.target.result; };
+      r.readAsDataURL(f);
+    });
+    var cPrim = el("input", { type: "color", class: "cc-color", value: d.colors.primary });
+    cPrim.addEventListener("input", function () { d.colors.primary = cPrim.value; drawPreview(); });
+    var cSec = el("input", { type: "color", class: "cc-color", value: d.colors.secondary });
+    cSec.addEventListener("input", function () { d.colors.secondary = cSec.value; drawPreview(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Escudo e cores" }),
+      el("div", { class: "cc-brand-row" }, [ crestBox, crestFile,
+        el("div", { class: "cc-colors" }, [ el("label", { class: "cc-color-lab" }, [ cPrim, el("span", { text: "Principal" }) ]), el("label", { class: "cc-color-lab" }, [ cSec, el("span", { text: "Secundária" }) ]) ]) ]),
+      el("div", { class: "setting-hint", text: "Sem escudo? O jogo gera um com as suas cores e a sigla." }) ]));
+
+    // liga onde vai jogar
+    var lgSel = el("select", { class: "select" });
+    TM.data.world().leagues.forEach(function (lg) { lgSel.appendChild(el("option", { value: lg.id, text: lg.name, selected: lg.id === d.leagueId })); });
+    lgSel.addEventListener("change", function () { d.leagueId = lgSel.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga onde vai jogar" }), lgSel,
+      el("div", { class: "setting-hint", text: "Seu clube entra nessa liga no lugar de um time genérico." }) ]));
+
+    // nível inicial
+    var lvlVal = el("span", { class: "range-val" });
+    var lvlSlider = el("input", { type: "range", min: 55, max: 85, step: 1, value: d.level, class: "slider" });
+    function updLvl() { lvlVal.textContent = " " + levelLabel(d.level) + " (~" + d.level + ")"; }
+    lvlSlider.addEventListener("input", function () { d.level = parseInt(lvlSlider.value, 10); updLvl(); drawPreview(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode("Nível inicial do elenco"), lvlVal ]), lvlSlider,
+      el("div", { class: "setting-hint", text: "Quanto mais alto, mais forte o time começa (e maior o orçamento). Comece modesto para o desafio de subir na base." }) ]));
+
+    updLvl(); drawPreview();
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Continuar →", function () {
+        if (!(d.name || "").trim()) { TM.ui.toast("Dê um nome ao clube"); return; }
+        if (!(d.short || "").trim()) d.short = (d.name.replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3) || "CLB").toUpperCase();
+        // escolhe o slot: o clube de menor nível da liga escolhida
+        var lgClubs = TM.data.league(d.leagueId).clubIds.map(TM.data.club).sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); });
+        var slot = lgClubs[0];
+        var spec = { slotClubId: slot.id, name: d.name.trim(), short: d.short.trim().toUpperCase(),
+          colors: { primary: d.colors.primary, secondary: d.colors.secondary }, crestData: d.crestData || null,
+          level: d.level, nation: TM.data.league(d.leagueId).nation };
+        TM.storage.write("customClub", spec);
+        TM.data.resetWorld();
+        TM.ui.go("coach-setup", { clubId: slot.id, custom: true });
+      }, "btn primary big")
+    ]));
+  });
+
   /* ---------- opções pré-carreira: técnico + moeda + aporte ---------- */
+  function activeCustomSpec(clubId) {
+    try { var s = TM.storage.read("customClub", null); return (s && s.slotClubId === clubId) ? s : null; } catch (e) { return null; }
+  }
   TM.ui.register("coach-setup", function (screen, params) {
     var clubId = params.clubId;
+    var isCustom = params.custom || !!activeCustomSpec(clubId);
     var club = TM.data.club(clubId);
     // reusa o rascunho ao voltar da lista de treinadores; senão começa novo
     if (!pendingSetup || pendingSetup.clubId !== clubId) {
@@ -86,7 +186,7 @@
     }
     var opts = pendingSetup;
 
-    screen.appendChild(TM.ui.topbar("Opções da carreira", function () { pendingSetup = null; TM.ui.go("coach"); }));
+    screen.appendChild(TM.ui.topbar("Opções da carreira", function () { pendingSetup = null; TM.ui.go(isCustom ? "coach-create-club" : "coach"); }));
     screen.appendChild(el("div", { class: "club-header" }, [
       TM.img.clubImg(club, "ch-crest"),
       el("div", {}, [ el("div", { class: "ch-name", text: club.name }), el("div", { class: "ch-sub", text: TM.data.league(club.leagueId).name } ) ])
@@ -228,7 +328,9 @@
           return;
         }
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
-        TM.storage.saveCoachCareer(C().newClubCareer(clubId, opts));
+        var career = C().newClubCareer(clubId, opts);
+        if (isCustom) { career.isCustomClub = true; customDraft = null; }
+        TM.storage.saveCoachCareer(career);
         pendingSetup = null; exPlayerHandoff = null;
         TM.ui.go("coach-hub");
       }, "btn primary big")

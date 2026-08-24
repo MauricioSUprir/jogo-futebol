@@ -1122,6 +1122,9 @@
       freeAgents.push(rfid);
     });
 
+    // ---- clube personalizado do jogador (carreira "Criar meu clube") ----
+    applyCustomClub(clubs, playersById, rng);
+
     return {
       seed: WORLD_SEED,
       leagues: leagues,
@@ -1133,6 +1136,46 @@
       nations: NATIONS,
       nationsById: NATIONS.reduce(function (m, n) { m[n.id] = n; return m; }, {})
     };
+  }
+
+  // distribuição de posições p/ um elenco genérico de 24 jogadores
+  var CUSTOM_POS = ["GK","GK","GK","DF","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW","FW"];
+  // aplica o clube personalizado (lido do storage) sobre um "slot" de uma liga:
+  // troca nome/sigla/cores/escudo e gera um elenco genérico no nível escolhido.
+  function applyCustomClub(clubs, playersById, rng) {
+    var cc = null;
+    try { cc = (TM.storage && TM.storage.read) ? TM.storage.read("customClub", null) : null; } catch (e) { cc = null; }
+    if (!cc || !cc.slotClubId) return;
+    var club = null;
+    for (var i = 0; i < clubs.length; i++) { if (clubs[i].id === cc.slotClubId) { club = clubs[i]; break; } }
+    if (!club) return;
+    club.name = cc.name || club.name;
+    club.short = cc.short || club.short;
+    if (cc.colors && cc.colors.primary) club.colors = { primary: cc.colors.primary, secondary: cc.colors.secondary || cc.colors.primary };
+    if (cc.crestData) club.crestData = cc.crestData;
+    club.custom = true;
+    var level = Math.max(50, Math.min(90, cc.level || 68));
+    club.strength = level;
+    var nation = natByName(cc.nation) || NATIONS[0];
+    var newIds = [];
+    for (var k = 0; k < CUSTOM_POS.length; k++) {
+      var pos = CUSTOM_POS[k];
+      var base = Math.max(48, Math.min(92, R.gaussian(rng, level, 4)));
+      var attrs = makeAttrs(rng, base, pos);
+      var ov = overallFrom(attrs, pos);
+      var age = R.int(rng, 17, 34);
+      var growth = age >= 30 ? 0 : Math.max(0, Math.round((26 - age) * 0.8) + R.int(rng, -1, 4));
+      var id = "cc" + k;
+      var pl = {
+        id: id, name: fullName(rng, nation.culture), clubId: club.id,
+        pos: pos, pos2: specificPos(rng, pos), age: age, overall: ov, potential: Math.min(99, ov + growth),
+        attrs: attrs, nationId: nation.id, nationName: nation.name,
+        height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92), form: 0, goals: 0
+      };
+      playersById[id] = pl;
+      newIds.push(id);
+    }
+    club.playerIds = newIds;
   }
 
   /* ---------- API pública ---------- */
@@ -1276,6 +1319,7 @@
 
   TM.data = {
     world: function () { return _world || (_world = generateWorld()); },
+    resetWorld: function () { _world = null; },
     stadium: function (club) { return stadiumInfo(club); },
     club: function (id) { return TM.data.world().clubsById[id]; },
     league: function (id) { return TM.data.world().leaguesById[id]; },
