@@ -518,69 +518,72 @@
   ];
 
   register("modes", function (screen) {
-    var MODES = [
-      { icon: "⚡", name: "Partida Rápida", route: "quick" },
-      { icon: "🎯", name: "Master League", route: "coach" },
-      { icon: "⭐", name: "Rumo ao Estrelato", route: "player" },
-      { icon: "🏆", name: "Jogar Competição", route: "compmode" },
-      { icon: "💎", name: "Dream Team", route: "dream" },
-      { icon: "🎲", name: "Draft", route: "draft" },
-      { icon: "🌐", name: "Online (amigos)", route: "online" },
-      { icon: "🏆", name: "Competição em Grupo", route: "groupcomp" },
-      { icon: "🎖️", name: "Informações", route: "competicoes" },
-      { icon: "💾", name: "Minhas Carreiras", route: "saves" },
-      { icon: "⚙️", name: "Configurações", route: "settings" },
-      { icon: "👤", name: "Perfil", route: "profile" }
+    screen.id = "screen-modes";
+    screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
+    screen.appendChild(el("div", { class: "modes-glow", "aria-hidden": "true" }));
+
+    var SECTIONS = [
+      { title: "Carreiras", accent: "car", items: [
+        { icon: "🎯", name: "Master League", desc: "Comande um clube e uma seleção", route: "coach", big: true },
+        { icon: "⭐", name: "Rumo ao Estrelato", desc: "Viva a carreira de um jogador", route: "player", big: true }
+      ] },
+      { title: "Jogar", accent: "play", items: [
+        { icon: "⚡", name: "Partida Rápida", desc: "Um jogo avulso, na hora", route: "quick" },
+        { icon: "🏆", name: "Competição", desc: "Ligas, copas e seleções", route: "compmode" },
+        { icon: "💎", name: "Dream Team", desc: "Monte seu time dos sonhos", route: "dream" },
+        { icon: "🎲", name: "Draft", desc: "Sorteie e escale", route: "draft" }
+      ] },
+      { title: "Online", accent: "net", items: [
+        { icon: "🌐", name: "Online", desc: "Jogue com amigos", route: "online" },
+        { icon: "🏟️", name: "Grupo", desc: "Torneio entre amigos", route: "groupcomp" }
+      ] },
+      { title: "Mais", accent: "more", items: [
+        { icon: "🎖️", name: "Informações", desc: "Competições e times", route: "competicoes" },
+        { icon: "💾", name: "Minhas Carreiras", desc: "Continue de onde parou", route: "saves" },
+        { icon: "⚙️", name: "Configurações", desc: "Ajuste o jogo", route: "settings" },
+        { icon: "👤", name: "Perfil", desc: "Conta e sincronização", route: "profile" }
+      ] }
     ];
 
     var prof = (TM.account && TM.account.profile) ? TM.account.profile() : null;
-    var titleBlock = prof
-      ? el("div", { class: "modes-profile", on: { click: function () { go("profile"); } } }, [
+    var right = prof
+      ? el("button", { class: "modes-prof", on: { click: function () { go("profile"); } } }, [
           (TM.account.avatar ? TM.account.avatar(prof, "modes-prof-ava") : el("span")),
-          el("div", {}, [ el("div", { class: "modes-prof-name", text: prof.name }), el("div", { class: "modes-sub", text: "Bem-vindo de volta!" }) ])
+          el("span", { class: "modes-prof-name", text: prof.name })
         ])
-      : el("div", {}, [ el("div", { class: "mini-logo", html: 'TOTAL<span>MATCH</span>' }), el("div", { class: "modes-sub", text: "Escolha um modo" }) ]);
-    screen.appendChild(el("header", { class: "modes-topbar" }, [
-      el("img", { class: "modes-emblem-img", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-      titleBlock,
-      el("button", { class: "btn-back small-back", text: "←", on: { click: function () { go("splash"); } } })
+      : el("button", { class: "modes-prof ghost", on: { click: function () { go("profile"); } } }, [ el("span", { text: "Entrar" }) ]);
+    screen.appendChild(el("header", { class: "modes-head" }, [
+      el("img", { class: "modes-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+      el("div", { class: "modes-head-sp" }),
+      right
     ]));
 
-    var layout = el("div", { class: "modes-layout" });
-    var sidebar = el("nav", { class: "modes-sidebar" });
-    MODES.forEach(function (m) {
-      sidebar.appendChild(el("button", { class: "side-item", on: { click: function () { go(m.route); } } }, [
-        el("span", { class: "side-ic", text: m.icon }),
-        el("span", { class: "side-info" }, [ el("span", { class: "side-name", text: m.name }) ]),
-        el("span", { class: "side-arrow", text: "→" })
-      ]));
+    var wrap = el("div", { class: "modes-wrap" });
+    SECTIONS.forEach(function (sec) {
+      wrap.appendChild(el("div", { class: "modes-sec-title", text: sec.title }));
+      var grid = el("div", { class: "modes-grid acc-" + sec.accent });
+      sec.items.forEach(function (m) {
+        grid.appendChild(el("button", { class: "mode-card" + (m.big ? " big" : ""), on: { click: function () { go(m.route); } } }, [
+          el("span", { class: "mode-orb", text: m.icon }),
+          el("span", { class: "mode-info" }, [
+            el("span", { class: "mode-name", text: m.name }),
+            el("span", { class: "mode-desc", text: m.desc })
+          ]),
+          el("span", { class: "mode-go", text: "▸" })
+        ]));
+      });
+      wrap.appendChild(grid);
     });
 
-    // painel de curiosidades rotativas
-    var factCard = el("div", { class: "fact-card" });
-    var factTitle = el("div", { class: "fact-title" });
-    var factText = el("div", { class: "fact-text" });
-    factCard.appendChild(el("div", { class: "fact-eyebrow", text: "VOCÊ SABIA?" }));
-    factCard.appendChild(factTitle);
-    factCard.appendChild(factText);
-    var dots = el("div", { class: "fact-dots" });
-    factCard.appendChild(dots);
-
+    // ticker de curiosidades (rodapé slim)
+    var ticker = el("div", { class: "modes-ticker" }, [ el("span", { class: "mt-eye", text: "VOCÊ SABIA?" }), el("span", { class: "mt-txt" }) ]);
+    var mtTxt = ticker.querySelector(".mt-txt");
     var idx = 0;
-    function showFact(i) {
-      var f = FACTS[i];
-      factCard.classList.remove("fade"); void factCard.offsetWidth; factCard.classList.add("fade");
-      factTitle.textContent = f.t; factText.textContent = f.d;
-    }
+    function showFact(i) { var f = FACTS[i]; ticker.classList.remove("fade"); void ticker.offsetWidth; ticker.classList.add("fade"); mtTxt.textContent = f.t + " — " + f.d; }
     showFact(0);
-    var timer = setInterval(function () {
-      if (!screen.isConnected) { clearInterval(timer); return; }
-      idx = (idx + 1) % FACTS.length; showFact(idx);
-    }, 4500);
-
-    layout.appendChild(sidebar);
-    layout.appendChild(factCard);
-    screen.appendChild(layout);
+    var timer = setInterval(function () { if (!screen.isConnected) { clearInterval(timer); return; } idx = (idx + 1) % FACTS.length; showFact(idx); }, 5000);
+    wrap.appendChild(ticker);
+    screen.appendChild(wrap);
   });
 
   /* ---------- Galeria de Competições (espaço para os logos) ---------- */
