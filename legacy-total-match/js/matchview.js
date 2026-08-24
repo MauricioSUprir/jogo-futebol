@@ -38,25 +38,50 @@
       if (co) kids.push(el("div", { class: "bc-coach", text: "Téc. " + co }));
       return el("div", { class: "bc-team" }, kids);
     }
-    screen.appendChild(el("div", { class: "broadcast" }, [
+    var broadcastEl = el("div", { class: "broadcast" }, [
       el("div", { class: "bc-top" }, [
         teamCol(a),
         el("div", { class: "bc-center" }, [ scoreEl, clockEl ]),
         teamCol(b)
       ]),
       el("div", { class: "bc-progress" }, [ progressFill ])
-    ]));
+    ]);
+    screen.appendChild(broadcastEl);
 
     // estádio do jogo (foto + nome) — mandante = time A; em jogo neutro, mostra como sede
+    var stadBannerEl = null;
     var homeClub = a.club || null;
     if (homeClub && TM.ui.stadiumBanner) {
       var neutral = cfg.simOpts && cfg.simOpts.neutral;
       var sb = TM.ui.stadiumBanner(homeClub, { compact: true, label: neutral ? "Sede da partida" : (TM.data.stadium(homeClub).capacity ? Math.round(TM.data.stadium(homeClub).capacity / 1000) + " mil lugares · casa do " + a.name : "casa do " + a.name) });
-      if (sb) screen.appendChild(sb);
+      if (sb) { screen.appendChild(sb); stadBannerEl = sb; }
     }
 
     var feed = el("div", { class: "broadcast-feed" });
     screen.appendChild(feed);
+
+    // ---- Campo 2D (alterna com o tradicional a qualquer momento) ----
+    var pitch = null, pitchOn = false, liveMult = 1;
+    var pitchHost = el("div", { class: "p2d-host", style: "display:none" });
+    screen.appendChild(pitchHost);
+    if (TM.pitch2d && delay > 0) {
+      try {
+        pitch = TM.pitch2d.create({ a: a, b: b, formationA: cfg.formation || "4-4-2", formationB: "4-4-2" });
+        pitchHost.appendChild(pitch.el);
+        pitch.onSpeed = function (m) { liveMult = m; };
+      } catch (e) { pitch = null; }
+    }
+    function toggleView() {
+      if (!pitch) { TM.ui.toast("Campo 2D indisponível nesta partida"); return; }
+      pitchOn = !pitchOn;
+      pitchHost.style.display = pitchOn ? "" : "none";
+      broadcastEl.style.display = pitchOn ? "none" : "";
+      feed.style.display = pitchOn ? "none" : "";
+      if (stadBannerEl) stadBannerEl.style.display = pitchOn ? "none" : "";
+      viewBtn.textContent = pitchOn ? "📋 Tradicional" : "🎥 Campo 2D";
+      if (pitchOn) { pitch.start(); pitch.setScore(score); pitch.setClock(minute); pitch.tick(minute, byMin[minute] || []); }
+      else { pitch.stop(); liveMult = 1; }
+    }
 
     var actions = el("div", { class: "actions" });
     // botão de pausa (só quando há um lado controlável e a partida está animada)
@@ -64,6 +89,9 @@
     var userTactic = (cfg.simOpts && cfg.simOpts.tactic) || "equilibrado";
     var subsUsed = 0;
     if (canPause) actions.appendChild(TM.ui.button("⏸ Pausar", function () { openPause(); }, "btn"));
+    // alternar visão Tradicional <-> Campo 2D
+    var viewBtn = TM.ui.button("🎥 Campo 2D", function () { toggleView(); }, "btn");
+    actions.appendChild(viewBtn);
     // um único handler: durante o jogo "Pular" encerra; depois "Ver resultado" avança (uma vez só)
     var skipBtn = TM.ui.button("Pular ⏭", function () { onSkip(); }, "btn ghost");
     actions.appendChild(skipBtn);
@@ -204,6 +232,7 @@
     function renderMinute(mm) {
       clockEl.textContent = mm + "'";
       if (progressFill) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
+      if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
       (byMin[mm] || []).forEach(function (ev) {
         if ((ev.type === "goal" || ev.type === "pengoal") && ev.team != null) {
           score = ev.score.slice(); scoreEl.textContent = score[0] + " - " + score[1];
@@ -221,11 +250,13 @@
       var hasGoal = (byMin[minute] || []).some(function (e) { return e.type === "goal" || e.type === "pengoal" || e.type === "penalty"; });
       renderMinute(minute);
       minute++;
-      setTimeout(step, hasGoal ? delay * 7 : delay);
+      var d = (hasGoal ? delay * 7 : delay) / (liveMult || 1);
+      setTimeout(step, d);
     }
 
     function end() {
       if (done) return; done = true;
+      if (pitch) pitch.tick(90, [{ type: "full", score: score }]);
       skipBtn.textContent = "Ver resultado ▶";
       skipBtn.className = "btn primary";
     }
