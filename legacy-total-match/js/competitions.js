@@ -524,6 +524,29 @@
   }
 
   /* ---------- processa o pós-jogo do usuário: lesões, suspensões, avisos ---------- */
+  // ---- Overall dinâmico: confiança que sobe/desce por desempenho ----
+  function steadyPlayer(id) { var s = String(id || ""), h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100) < 28; } // ~28% constantes (bem distribuído)
+  function dynamicInfo(career, p) {
+    var on = TM.storage.settings().dynamicOverall;
+    if (!on || !p) return { on: false, delta: 0, dir: null };
+    if (steadyPlayer(p.id)) return { on: true, delta: 0, dir: 0 };
+    var c = (career && career.confidence && career.confidence[p.id]) || 0;
+    var d = Math.max(-4, Math.min(4, Math.round(c)));
+    return { on: true, delta: d, dir: d > 0 ? 1 : d < 0 ? -1 : 0 };
+  }
+  function updateConfidence(career, result, userSide) {
+    if (!TM.storage.settings().dynamicOverall) return;
+    if (!career.confidence) career.confidence = {};
+    var win = result.score[userSide] > result.score[1 - userSide];
+    var loss = result.score[userSide] < result.score[1 - userSide];
+    rosterPlayers(career).forEach(function (p) {
+      if (steadyPlayer(p.id)) return;
+      var cur = career.confidence[p.id] || 0;
+      var drift = (win ? 0.7 : loss ? -0.7 : 0.1) + (Math.random() - 0.5) * 0.9;
+      cur = Math.max(-5, Math.min(5, cur * 0.92 + drift)); // leve retorno à média + variação
+      career.confidence[p.id] = cur;
+    });
+  }
   function processUserMatch(career, result, userSide) {
     // um jogo passou: reduz contadores
     ["injuries", "suspensions"].forEach(function (k) {
@@ -567,6 +590,7 @@
       if (career.recentForm.length > 8) career.recentForm = career.recentForm.slice(-8);
       maybeBoardCall(career);
     }
+    updateConfidence(career, result, userSide); // overall dinâmico
   }
   function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
 
@@ -1711,7 +1735,7 @@
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
-    processUserMatch: processUserMatch, resolveIncomingOffer: resolveIncomingOffer,
+    processUserMatch: processUserMatch, dynamicInfo: dynamicInfo, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,

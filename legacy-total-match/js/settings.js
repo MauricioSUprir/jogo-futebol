@@ -77,6 +77,10 @@
         { label: "Instantâneo", value: "instantaneo" }, { label: "Rápido", value: "rapido" }, { label: "Normal", value: "normal" }, { label: "Lento", value: "lento" }
       ]),
       toggle("Narração dos lances", "commentary"),
+      toggle("Overall dinâmico (confiança/desempenho)", "dynamicOverall"),
+      el("div", { class: "setting-hint", text:
+        "Overall dinâmico: nas carreiras e competições, o overall dos jogadores sobe e desce " +
+        "conforme a confiança e o desempenho na temporada (▲/▼). Alguns jogadores são constantes (=)." }),
       el("div", { class: "setting-hint", text:
         "Realismo baixo deixa o jogo mais imprevisível (mais gols e zebras). " +
         "Realismo alto faz os melhores times vencerem com mais frequência." })

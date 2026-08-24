@@ -1583,3 +1583,13 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .var-gap.on { background: rgba(53,196,106,.28); }
 .var-cal, .var-gap { animation: varCalIn .5s ease-out; }
 @keyframes varCalIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== Overall dinâmico (indicador no chip) ===== */
+.chip-ov.up { color: #35c46a; }
+.chip-ov.down { color: #ff6a61; }
+.chip-dyn { position: absolute; right: -3px; bottom: -3px; font-size: 10px; font-weight: 800;
+  width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  border: 1px solid #0a0a0a; }
+.chip-dyn.up { background: #35c46a; color: #04180c; }
+.chip-dyn.down { background: #ff5a52; color: #fff; }
+.chip-dyn.steady { background: #4a4a4a; color: #ddd; }
