@@ -135,8 +135,36 @@
       }
     }
 
+    // ---- substituições automáticas (IA) — o lado que NÃO é do usuário troca 2-3 jogadores ----
+    var uSide = (opts.userSide != null) ? opts.userSide : (opts.tacticSide != null ? opts.tacticSide : (opts.pauseSide != null ? opts.pauseSide : -1));
+    var subPlan = [];
+    function planSubs(team, side) {
+      var xi = team.players.slice(0, 11), bench = team.players.slice(11);
+      if (!bench.length) return;
+      var n = Math.min(bench.length, 2 + Math.floor(Math.random() * 2)); // 2-3
+      var outPool = [10, 9, 8, 7, 6, 5, 4].filter(function (i) { return xi[i]; });
+      for (var k = 0; k < n; k++) {
+        var mn = 58 + Math.floor(Math.random() * 30);
+        if (mn < startMinute) mn = startMinute + 1;
+        var oi = outPool[k % outPool.length];
+        var op = xi[oi], ip = bench[k];
+        if (op && ip) subPlan.push({ minute: mn, team: side, out: op.name, "in": ip.name });
+      }
+    }
+    if (uSide !== 0) planSubs(teamA, 0);
+    if (uSide !== 1) planSubs(teamB, 1);
+    subPlan.sort(function (a, b) { return a.minute - b.minute; });
+
     for (var m = startMinute; m <= 90; m++) {
       if (m === 45) events.push({ minute: 45, type: "half", score: score.slice(), text: "Fim do 1º tempo" });
+      // subs agendadas p/ este minuto
+      for (var si = 0; si < subPlan.length; si++) {
+        if (subPlan[si].minute === m) {
+          var sp = subPlan[si];
+          events.push({ minute: m, type: "sub", team: sp.team, out: sp.out, "in": sp["in"],
+            text: "🔄 " + (sp.team === 0 ? teamA.name : teamB.name) + ": " + sp["in"] + " entra no lugar de " + sp.out });
+        }
+      }
 
       var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0]);
       var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1]);

@@ -1532,3 +1532,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   background: var(--gold); color: #04180c; font-size: 10px; font-weight: 800;
   display: flex; align-items: center; justify-content: center; border: 1px solid #04180c;
 }
+
+/* substituição na timeline */
+.bc-badge.sub { background: #2b6fb0; color: #fff; }
+.bc-line.bc-sub .bc-detail.strong { color: #7fb4e6; }
