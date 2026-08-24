@@ -1627,3 +1627,10 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .arrival-meta { position: relative; font-size: 13px; color: var(--text-dim); margin-top: 2px; }
 .arrival-welcome { position: relative; font-size: 16px; font-weight: 700; color: var(--gold-light); margin-top: 12px; }
 .arrival-actions { position: relative; margin-top: 18px; }
+
+/* ===== Seleção da Semana ===== */
+.totw-pitch { margin-top: 8px; }
+.totw-chip.mine .chip-name { color: var(--gold-light); }
+.totw-chip.mine .chip-face-wrap { box-shadow: 0 0 0 2px var(--gold); border-radius: 50%; }
+.totw-club { position: absolute; top: -6px; right: -6px; font-size: 9px; font-weight: 800;
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 4px; color: var(--text-dim); }

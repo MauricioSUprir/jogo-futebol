@@ -494,7 +494,8 @@
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
-      hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); })
+      hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); }),
+      hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
   });
@@ -1576,6 +1577,50 @@
       ]));
     });
     screen.appendChild(body);
+  });
+
+  /* ---------- Seleção da Semana (Time da Rodada) ---------- */
+  TM.ui.register("coach-totw", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("coach"); return; }
+    var round = (c.comps && c.comps.league) ? c.comps.league.round : (c.season || 1);
+    screen.appendChild(TM.ui.topbar("🌟 Seleção da Semana", function () { TM.ui.go("coach-hub"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    body.appendChild(el("p", { class: "intro-text", text: "Os destaques da Rodada " + round + " da " + TM.data.league(c.leagueId).name + "." }));
+
+    // pontuação determinística por rodada
+    var seed = round * 9301 + 49297;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return (seed % 10000) / 10000; }
+    var lg = TM.data.league(c.leagueId);
+    var pool = [];
+    lg.clubIds.forEach(function (cid) {
+      TM.data.clubPlayers(cid).forEach(function (p) {
+        pool.push({ p: p, cid: cid, score: p.overall + rnd() * 8 });
+      });
+    });
+    // monta um 4-3-3 pegando os melhores por grupo
+    function topBy(group, n) {
+      return pool.filter(function (x) { return x.p.pos === group; }).sort(function (a, b) { return b.score - a.score; }).slice(0, n);
+    }
+    var xi = topBy("GK", 1).concat(topBy("DF", 4)).concat(topBy("MF", 3)).concat(topBy("FW", 3));
+    var slots = C().FORMATIONS["4-3-3"] || C().FORMATIONS["4-4-2"];
+
+    var pitch = el("div", { class: "pitch totw-pitch" });
+    pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+    pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+    xi.forEach(function (x, i) {
+      var slot = slots[i] || [null, 50, 50];
+      var mine = x.cid === c.teamId;
+      var chip = el("div", { class: "pl-chip totw-chip" + (mine ? " mine" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%" },
+        TM.ui.chipKids(x.p, slot, { name: shortName(x.p.name) }));
+      var club = TM.data.club(x.cid);
+      chip.appendChild(el("span", { class: "totw-club", text: club.short || club.name.slice(0, 3).toUpperCase() }));
+      pitch.appendChild(chip);
+    });
+    body.appendChild(pitch);
+    var mineCount = xi.filter(function (x) { return x.cid === c.teamId; }).length;
+    body.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: mineCount ? ("🎉 " + mineCount + " jogador(es) do seu time na seleção da rodada!") : "Nenhum jogador seu desta vez — corra atrás na próxima rodada." }));
   });
 
   /* ---------- elenco ---------- */
