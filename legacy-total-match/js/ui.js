@@ -364,12 +364,26 @@
     ];
     if (eff.off) faceKids.push(el("span", { class: "chip-warn", title: "Fora de posição (−" + eff.drop + ")", text: "!" }));
     if (opts.flag) faceKids.push(opts.flag);
+    if (opts.captain) faceKids.push(el("span", { class: "chip-cap", title: "Capitão", text: "C" }));
+    // barra de estamina (condição física) — aparece em todos os modos
+    var stam = chipStamina(player, opts);
     return [
       el("div", { class: "chip-face-wrap" + (eff.off ? " off" : "") }, faceKids),
       el("span", { class: "chip-pos" + (eff.off ? " off" : ""), text: posTxt }),
       el("span", { class: "chip-name", text: opts.name || player.name }),
+      el("div", { class: "chip-stam", title: "Estamina " + stam + "%" }, [ el("i", { class: "chip-stam-fill " + (stam >= 66 ? "ok" : stam >= 33 ? "mid" : "low"), style: "width:" + stam + "%" }) ]),
       (opts.age !== false && player.age) ? el("span", { class: "chip-age", text: player.age + " anos" }) : null
     ];
+  }
+  // condição física 0-100: usa a da carreira (opts/player.stamina) ou deriva algo estável
+  function chipStamina(player, opts) {
+    var s = (opts && opts.stamina != null) ? opts.stamina : (player.stamina != null ? player.stamina : null);
+    if (s == null) {
+      var id = String(player.id || player.name || "x"), h = 0;
+      for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 1000;
+      s = 74 + (h % 27); // 74..100, estável por jogador
+    }
+    return Math.max(0, Math.min(100, Math.round(s)));
   }
 
   // seletor compacto (dropdown) no estilo dos cobradores. options: [[valor, texto], ...] ou [valor, ...]
