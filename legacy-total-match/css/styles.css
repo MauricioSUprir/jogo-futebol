@@ -1457,7 +1457,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 
 /* ===== Campo 2D (visão de cima) ===== */
 .p2d-host { margin: 8px 0 4px; }
-.p2d-wrap { display: flex; flex-direction: column; gap: 8px; max-width: 720px; margin: 0 auto; }
+.p2d-wrap { display: flex; flex-direction: column; gap: 8px; max-width: min(96vw, 980px); margin: 0 auto; }
 .p2d-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
@@ -1488,3 +1488,35 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .p2d-evt.red { color: #ff5a52; }
 .p2d-evt.yellow { color: #f5d020; }
 .p2d-evt.injury { color: #ff9a4d; }
+
+/* ===== Flash de cartão / vermelho / lesão (pausa a partida) ===== */
+.card-flash {
+  position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,8,6,0.82); backdrop-filter: blur(3px); cursor: pointer;
+  animation: cfIn .22s ease-out;
+}
+.card-flash.out { animation: cfOut .2s ease-in forwards; }
+@keyframes cfIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cfOut { to { opacity: 0; } }
+.cf-inner { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; text-align: center; }
+.cf-face { width: 108px; height: 108px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,.85); box-shadow: 0 10px 30px rgba(0,0,0,.5); background: #1a1a1a; }
+.cf-noface { display: block; }
+.cf-card { width: 62px; height: 86px; border-radius: 8px; transform: rotate(-9deg); box-shadow: 0 8px 22px rgba(0,0,0,.55); animation: cfCard .4s cubic-bezier(.2,.9,.2,1.2); }
+.cf-card.cf-yellow { background: linear-gradient(160deg, #ffe23d, #f5c400); }
+.cf-card.cf-red { background: linear-gradient(160deg, #ff5b52, #e0241b); }
+.cf-injury { font-size: 60px; animation: cfCard .4s cubic-bezier(.2,.9,.2,1.2); }
+@keyframes cfCard { from { transform: rotate(-9deg) scale(0.3); opacity: 0; } to { transform: rotate(-9deg) scale(1); opacity: 1; } }
+.cf-min { font-size: 13px; letter-spacing: 2px; color: var(--gold-light); font-weight: 700; }
+.cf-label { font-size: 22px; font-weight: 900; letter-spacing: 1px; }
+.cf-bg-yellow .cf-label { color: #ffe23d; } .cf-bg-red .cf-label { color: #ff6a61; } .cf-bg-injury .cf-label { color: #ff9a4d; }
+.cf-name { font-size: 18px; font-weight: 700; color: #fff; }
+.cf-team { font-size: 13px; color: var(--text-dim); }
+
+/* ===== VAR (flash cosmético) ===== */
+.var-flash { position: fixed; top: 18%; left: 0; right: 0; z-index: 8500; display: flex; justify-content: center; pointer-events: none; animation: cfIn .2s ease-out; }
+.var-flash.out { animation: cfOut .25s ease-in forwards; }
+.var-box { background: rgba(6,10,8,0.92); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 14px 22px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+.var-scr { font-size: 26px; }
+.var-h { font-size: 12px; letter-spacing: 3px; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
+.var-r { font-size: 16px; font-weight: 800; margin-top: 4px; }
+.var-r.ok { color: #3ad98a; } .var-r.no { color: #ff5a52; }

@@ -160,11 +160,11 @@
         var prof2 = s === 0 ? A : B, team2 = s === 0 ? teamA : teamB;
         var pl = pick(prof2.xi);
         if (Math.random() < 0.14) {
-          events.push({ minute: m, type: "red", team: s, text: "🟥 " + pl.name + " (" + team2.name + ") está EXPULSO!" });
+          events.push({ minute: m, type: "red", team: s, player: pl.name, playerId: pl.id, text: "🟥 " + pl.name + " (" + team2.name + ") está EXPULSO!" });
           redPenalty[s]++;
           sentOff.push({ id: pl.id, name: pl.name, side: s });
         } else {
-          events.push({ minute: m, type: "yellow", team: s, text: "Amarelo para " + pl.name + " (" + team2.name + ")" });
+          events.push({ minute: m, type: "yellow", team: s, player: pl.name, playerId: pl.id, text: "Amarelo para " + pl.name + " (" + team2.name + ")" });
         }
       }
       // lesões
@@ -173,7 +173,7 @@
         var prof3 = si === 0 ? A : B, team3 = si === 0 ? teamA : teamB;
         var inj = pick(prof3.xi);
         var weeks = 1 + Math.floor(Math.random() * 6);
-        events.push({ minute: m, type: "injury", team: si, text: "🚑 " + inj.name + " (" + team3.name + ") se lesionou e deixa o campo." });
+        events.push({ minute: m, type: "injury", team: si, player: inj.name, playerId: inj.id, text: "🚑 " + inj.name + " (" + team3.name + ") se lesionou e deixa o campo." });
         injuries.push({ id: inj.id, name: inj.name, side: si, weeks: weeks });
         if (inj.id === focusId) focusInjured = weeks;
       }
