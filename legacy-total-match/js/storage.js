@@ -24,6 +24,7 @@
     realism: 3,             // 1 (arcade) .. 5 (realista) — controla imprevisibilidade
     matchSpeed: "normal",   // instantaneo | rapido | normal
     commentary: true,
+    dynamicOverall: false,  // overall sobe/desce por confiança e desempenho (carreira/competições)
     theme: "dark"           // dark (preto+verde) | light (branco+verde)
   };
 

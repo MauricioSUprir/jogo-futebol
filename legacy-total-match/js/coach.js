@@ -2238,7 +2238,7 @@
         var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
           style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
           on: { click: function () { onStarterClick(i); } } },
-          TM.ui.chipKids(p, slot, { name: shortName(p.name), captain: c.captainId === id, flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
+          TM.ui.chipKids(p, slot, { name: shortName(p.name), captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
         );
         pitch.appendChild(chip);
       });

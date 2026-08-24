@@ -358,10 +358,13 @@
     var C = window.TM.comp;
     var eff = (slot && C && C.effOverall) ? C.effOverall(player, slot[0]) : { ov: player.overall, off: false };
     var posTxt = (slot && C && C.slotPos) ? C.slotPos(slot) : window.TM.data.posLabel(player);
+    var dyn = opts.dyn;
+    var ovShown = eff.ov + ((dyn && dyn.on && dyn.delta) ? dyn.delta : 0);
     var faceKids = [
       window.TM.img.playerImg(player, "chip-face"),
-      el("span", { class: "chip-ov" + (eff.off ? " low" : ""), text: eff.ov })
+      el("span", { class: "chip-ov" + (eff.off ? " low" : "") + (dyn && dyn.on && dyn.delta > 0 ? " up" : dyn && dyn.on && dyn.delta < 0 ? " down" : ""), text: ovShown })
     ];
+    if (dyn && dyn.on) faceKids.push(el("span", { class: "chip-dyn " + (dyn.dir > 0 ? "up" : dyn.dir < 0 ? "down" : "steady"), title: "Overall dinâmico", text: dyn.dir > 0 ? "▲" : dyn.dir < 0 ? "▼" : "=" }));
     if (eff.off) faceKids.push(el("span", { class: "chip-warn", title: "Fora de posição (−" + eff.drop + ")", text: "!" }));
     if (opts.flag) faceKids.push(opts.flag);
     if (opts.captain) faceKids.push(el("span", { class: "chip-cap", title: "Capitão", text: "C" }));
