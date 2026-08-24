@@ -250,6 +250,8 @@
         node = lineWith("🚑 LESÃO", ev.text.replace("🚑 ", ""), "injury");
       } else if (ev.type === "yellow") {
         node = lineWith("🟨", ev.text, "yellow");
+      } else if (ev.type === "sub") {
+        node = lineWith("🔄 SUBSTITUIÇÃO", (ev["in"] + " ⬆  " + ev.out + " ⬇"), "sub");
       } else if (ev.type === "half") {
         node = el("div", { class: "bc-line bc-sep", text: "⏸️ Intervalo — " + ev.score[0] + " x " + ev.score[1] });
       } else if (ev.type === "kickoff") {

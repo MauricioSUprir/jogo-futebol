@@ -296,6 +296,8 @@
         showEvt("🟥 Cartão vermelho", "red"); phase = "dead"; setTimeout(function () { phase = "build"; }, 900);
       } else if (t === "yellow") {
         showEvt("🟨 Amarelo", "yellow");
+      } else if (t === "sub") {
+        showEvt("🔄 Substituição", "sep");
       } else if (t === "injury") {
         showEvt("🚑 Lesão", "injury"); phase = "dead"; setTimeout(function () { phase = "build"; }, 900);
       } else if (t === "half") {
