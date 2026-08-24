@@ -96,7 +96,47 @@
     var skipBtn = TM.ui.button("Pular ⏭", function () { onSkip(); }, "btn ghost");
     actions.appendChild(skipBtn);
     screen.appendChild(actions);
-    var proceeded = false, paused = false;
+    var proceeded = false, paused = false, flashing = false, animating = true;
+
+    // ---- flash de cartão / vermelho / lesão (pausa a partida, mostra o jogador) ----
+    function playerOfEvent(ev) {
+      var team = ev.team === 0 ? a : b, found = null;
+      (team.players || []).forEach(function (p) { if (!found && (p.id === ev.playerId || p.name === ev.player)) found = p; });
+      return found;
+    }
+    function showCardFlash(ev) {
+      var pl = playerOfEvent(ev), kind = ev.type;
+      var label = kind === "red" ? "CARTÃO VERMELHO" : kind === "yellow" ? "CARTÃO AMARELO" : "LESÃO";
+      var mark = kind === "injury" ? el("div", { class: "cf-injury", text: "🚑" }) : el("div", { class: "cf-card cf-" + kind });
+      var overlay = el("div", { class: "card-flash cf-bg-" + kind }, [
+        el("div", { class: "cf-inner" }, [
+          mark,
+          (pl ? TM.img.playerImg(pl, "cf-face") : el("div", { class: "cf-face cf-noface" })),
+          el("div", { class: "cf-min", text: ev.minute + "'" }),
+          el("div", { class: "cf-label", text: label }),
+          el("div", { class: "cf-name", text: (pl && pl.name) || ev.player || "" }),
+          el("div", { class: "cf-team", text: (ev.team === 0 ? a.name : b.name) })
+        ])
+      ]);
+      document.body.appendChild(overlay);
+      flashing = true;
+      var dismissed = false;
+      function dismiss() { if (dismissed) return; dismissed = true; overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 220); flashing = false; if (!done && !paused && !proceeded) step(); }
+      overlay.addEventListener("click", dismiss);
+      setTimeout(dismiss, 2000);
+    }
+    // VAR: flash rápido e cosmético em alguns gols (não pausa o fluxo)
+    function showVarFlash(confirmed, text) {
+      var overlay = el("div", { class: "var-flash" }, [
+        el("div", { class: "var-box" }, [
+          el("div", { class: "var-scr", text: "📺" }),
+          el("div", { class: "var-h", text: "REVISÃO DO VAR" }),
+          el("div", { class: "var-r " + (confirmed ? "ok" : "no"), text: text })
+        ])
+      ]);
+      document.body.appendChild(overlay);
+      setTimeout(function () { overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 250); }, 1500);
+    }
     function onSkip() {
       if (proceeded) return;                 // ignora cliques repetidos
       if (!done) finishNow();                // ainda rolando -> encerra a animação na hora
@@ -233,6 +273,17 @@
       clockEl.textContent = mm + "'";
       if (progressFill) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
       if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
+      // flash de cartão/lesão (pausa) e VAR (cosmético) — só ao vivo
+      if (animating && delay > 0) {
+        var evs = byMin[mm] || [], fev = null, gev = null;
+        for (var _i = 0; _i < evs.length; _i++) {
+          var _e = evs[_i];
+          if (!fev && (_e.type === "yellow" || _e.type === "red" || _e.type === "injury")) fev = _e;
+          if (!gev && (_e.type === "goal" || _e.type === "pengoal")) gev = _e;
+        }
+        if (!fev && gev && Math.random() < 0.22) showVarFlash(true, "GOL CONFIRMADO ✅");
+        if (fev) showCardFlash(fev);
+      }
       (byMin[mm] || []).forEach(function (ev) {
         if ((ev.type === "goal" || ev.type === "pengoal") && ev.team != null) {
           score = ev.score.slice(); scoreEl.textContent = score[0] + " - " + score[1];
@@ -245,12 +296,16 @@
     function step() {
       if (done) return;
       if (paused) return; // retoma via openPause -> step()
+      if (flashing) return; // retoma via dismiss do flash de cartão
       if (!screen.isConnected) { done = true; return; } // usuário saiu da tela
       if (minute > 90) { end(); return; }
       var hasGoal = (byMin[minute] || []).some(function (e) { return e.type === "goal" || e.type === "pengoal" || e.type === "penalty"; });
       renderMinute(minute);
       minute++;
-      var d = (hasGoal ? delay * 7 : delay) / (liveMult || 1);
+      if (flashing) return; // um cartão/lesão pausou: retoma depois
+      // no Campo 2D o ritmo é mais lento (assistível); botões 1x/2x/4x aceleram
+      var base = (pitch && pitchOn) ? 360 : delay;
+      var d = (hasGoal ? base * (pitch && pitchOn ? 3 : 7) : base) / (liveMult || 1);
       setTimeout(step, d);
     }
 
@@ -261,7 +316,7 @@
       skipBtn.className = "btn primary";
     }
     function finishNow() {
-      if (!done) { for (var mm = minute; mm <= 90; mm++) renderMinute(mm); end(); }
+      if (!done) { animating = false; for (var mm = minute; mm <= 90; mm++) renderMinute(mm); end(); }
     }
 
     if (delay === 0) { for (var mm = 0; mm <= 90; mm++) renderMinute(mm); end(); }

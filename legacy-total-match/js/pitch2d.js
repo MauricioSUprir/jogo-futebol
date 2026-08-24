@@ -105,7 +105,10 @@
     var W = 0, H = 0, PAD = 0, dpr = Math.min(2, global.devicePixelRatio || 1);
     function resize() {
       var cw = wrap.clientWidth || 340;
-      var ch = Math.round(cw * 0.64);
+      // no PC a altura é limitada pela viewport p/ caber inteiro; no celular usa a proporção
+      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.6));
+      cw = Math.round(ch / 0.64); // mantém proporção do campo
+      if (cw > wrap.clientWidth) { cw = wrap.clientWidth; ch = Math.round(cw * 0.64); }
       canvas.style.width = cw + "px"; canvas.style.height = ch + "px";
       canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
       W = canvas.width; H = canvas.height; PAD = Math.round(W * 0.03);
