@@ -7,15 +7,15 @@
   var TM = (global.TM = global.TM || {});
 
   var CUP_NAME = {
-    br: "Copa do Brasil", en: "Copa da Inglaterra", es: "Copa da Espanha", it: "Copa da Itália",
-    de: "Copa da Alemanha", fr: "Copa da França", pt: "Copa de Portugal", nl: "Copa da Holanda",
-    ar: "Copa da Argentina", us: "Copa dos EUA",
-    mx: "Copa do México", sa: "Copa da Arábia Saudita", tr: "Copa da Turquia",
-    ec: "Copa do Equador", uy: "Copa do Uruguai", ru: "Copa da Rússia", co: "Copa Colômbia",
-    br2: "Copa do Brasil", en2: "Copa da Inglaterra", it2: "Copa da Itália", es2: "Copa da Espanha"
+    br: "Copa Nacional", en: "Copa Nacional", es: "Copa Nacional", it: "Copa Nacional",
+    de: "Copa Nacional", fr: "Copa Nacional", pt: "Copa Nacional", nl: "Copa Nacional",
+    ar: "Copa Nacional", us: "Copa Nacional",
+    mx: "Copa Nacional", sa: "Copa Nacional", tr: "Copa Nacional",
+    ec: "Copa Nacional", uy: "Copa Nacional", ru: "Copa Nacional", co: "Copa Nacional",
+    br2: "Copa Nacional", en2: "Copa Nacional", it2: "Copa Nacional", es2: "Copa Nacional"
   };
   var REGION = { co: "sa", br: "sa", ar: "sa", ec: "sa", uy: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", us: "na", mx: "na", sa: "as" };
-  var CONT_NAME = { sa: "Libertadores", eu: "Champions League", na: "Copa dos Campeões (Am. do Norte)", as: "Champions League da Ásia" };
+  var CONT_NAME = { sa: "Copa Continental Sul", eu: "Copa Continental Europa", na: "Copa Continental Norte", as: "Copa Continental Ásia" };
   var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
 
   /* ---------- Confederações + Eliminatórias da Copa ---------- */

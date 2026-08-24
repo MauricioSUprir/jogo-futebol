@@ -148,44 +148,34 @@
     initials: initials,
     coachAvatarSVG: coachAvatarSVG,
     // <img> do treinador: foto real (assets/treinadores/<chave>.png) se existir, senão avatar de iniciais
+    // Versão fictícia: só imagens GERADAS (nada de fotos/escudos/logos reais).
     coachImg: function (coach, cls) {
-      var key = coach.photoKey, E = global.TM_EMBED, emb = embedded("treinadores", key);
-      var fb = coachAvatarSVG(coach);
-      // no artefato embutido, só usa foto se ela estiver embutida (evita 404); fora dele, tenta o arquivo
-      var real = emb || ((E && E.treinadores) ? null : ("assets/treinadores/" + key + ".png"));
-      return imgWithFallback(real || fb, fb, coach.name, cls);
+      return imgWithFallback(coachAvatarSVG(coach), coachAvatarSVG(coach), coach.name, cls);
     },
-    // devolve <img> para clube, jogador ou seleção, já com tentativa de imagem real
     clubImg: function (club, cls) {
       // escudo importado pelo jogador (clube personalizado) tem prioridade
       if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
-      return imgWithFallback(embedded("clubes", club.id) || ("assets/clubes/" + club.id + ".png"), crest(club), club.name, cls);
+      return imgWithFallback(crest(club), crest(club), club.name, cls);
     },
     playerImg: function (player, cls) {
-      var key = player.ph || player.id, E = global.TM_EMBED;
       var club = TM.data.club(player.clubId);
-      var fb = avatar(player, club);
-      var real = embedded("jogadores", key) || ((E && E.jogadores) ? null : ("assets/jogadores/" + key + ".jpg"));
-      return imgWithFallback(real || fb, fb, player.name, cls);
+      var av = avatar(player, club);
+      return imgWithFallback(av, av, player.name, cls);
     },
     nationImg: function (nation, cls) {
-      return imgWithFallback(embedded("selecoes", nation.id) || ("assets/selecoes/" + nation.id + ".png"), flag(nation), nation.name, cls);
+      // bandeira gerada por cores (países são reais/legais, mas mantemos consistência visual)
+      return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
     },
-    // "foto" do estádio: foto real (assets/estadios/<slug>.jpg) para clubes com foto; senão ilustração gerada
     stadiumImg: function (club, cls) {
       var art = stadiumArt(club);
-      var sl = stadSlug(club.name);
-      var emb = embedded("estadios", sl);
-      var real = emb || (STADIUM_PHOTOS[sl] && !(global.TM_EMBED && global.TM_EMBED.estadios) ? ("assets/estadios/" + sl + ".jpg") : null);
-      return imgWithFallback(real || art, art, (club.name + " — estádio"), cls);
+      return imgWithFallback(art, art, (club.name + " — estádio"), cls);
     },
     compBadge: compBadge,
-    // comp pode ser o id (string) ou o objeto de competição
     compImg: function (comp, cls) {
       if (typeof comp === "string") comp = TM.data.competition(comp);
       if (!comp) return imgWithFallback("", "", "", cls);
       var klass = (cls || "") + (comp.darkBg ? " comp-onblack" : "");
-      return imgWithFallback(embedded("competicoes", comp.id) || ("assets/competicoes/" + comp.id + ".png"), compBadge(comp), comp.name, klass);
+      return imgWithFallback(compBadge(comp), compBadge(comp), comp.name, klass);
     }
   };
 })(window);
