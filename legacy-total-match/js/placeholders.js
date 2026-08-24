@@ -157,6 +157,8 @@
     },
     // devolve <img> para clube, jogador ou seleção, já com tentativa de imagem real
     clubImg: function (club, cls) {
+      // escudo importado pelo jogador (clube personalizado) tem prioridade
+      if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
       return imgWithFallback(embedded("clubes", club.id) || ("assets/clubes/" + club.id + ".png"), crest(club), club.name, cls);
     },
     playerImg: function (player, cls) {
