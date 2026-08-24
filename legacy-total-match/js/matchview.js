@@ -131,11 +131,14 @@
       flashing = true;
       var overlay = el("div", { class: "var-review" });
       var stage = el("div", { class: "var-stage" });
-      // mini-campo com varredura da linha de impedimento
+      // mini-campo estilo VAR: linha do defensor (vermelha) e do atacante (azul).
+      // impedido (annulled) -> atacante à frente do defensor (mais perto do gol, à direita).
+      var defX = 48, atkX = annulled ? 60 : 44;   // % da largura
       var mini = el("div", { class: "var-mini" }, [
-        el("div", { class: "var-mini-line" }),
-        el("div", { class: "var-mini-dot atk" }),
-        el("div", { class: "var-mini-dot def" })
+        el("div", { class: "var-goal" }),
+        el("div", { class: "var-cal def", style: "left:" + defX + "%" }, [ el("span", { class: "var-cal-dot" }) ]),
+        el("div", { class: "var-cal atk", style: "left:" + atkX + "%" }, [ el("span", { class: "var-cal-dot" }) ]),
+        el("div", { class: "var-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" })
       ]);
       var head = el("div", { class: "var-title" }, [ el("span", { class: "var-tv", text: "📺" }), el("span", { text: "REVISÃO DO VAR" }) ]);
       var sub = el("div", { class: "var-sub", text: "Checando o lance…" });

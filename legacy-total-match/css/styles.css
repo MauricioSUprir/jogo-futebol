@@ -1567,3 +1567,19 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .var-reason { margin-top: 8px; color: #fff; font-size: 14px; }
 @keyframes varStamp { from { transform: scale(1.6) rotate(-5deg); opacity: 0; } to { transform: scale(1) rotate(-5deg); opacity: 1; } }
 .var-action { margin-top: 6px; }
+
+/* ===== VAR: gráfico de impedimento calibrado (linhas do defensor/atacante) ===== */
+.var-mini { height: 128px !important; perspective: 400px; }
+.var-goal { position: absolute; right: 4px; top: 22%; bottom: 22%; width: 5px; border-radius: 2px;
+  background: repeating-linear-gradient(0deg, #fff 0 6px, rgba(255,255,255,.4) 6px 12px); box-shadow: 0 0 10px rgba(255,255,255,.5); }
+.var-cal { position: absolute; top: -8px; bottom: -8px; width: 3px; transform: skewX(-10deg); z-index: 2; }
+.var-cal.def { background: linear-gradient(180deg, #ff6b63, #c62828); box-shadow: 0 0 12px #ff5a52; }
+.var-cal.atk { background: linear-gradient(180deg, #5aa9ff, #2f6fed); box-shadow: 0 0 12px #4da3ff; }
+.var-cal-dot { position: absolute; bottom: 12px; left: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+.var-cal.def .var-cal-dot { background: #ff5a52; }
+.var-cal.atk .var-cal-dot { background: #4da3ff; }
+.var-gap { position: absolute; top: 0; bottom: 0; transform: skewX(-10deg); z-index: 1; }
+.var-gap.off { background: rgba(255,80,70,.28); }
+.var-gap.on { background: rgba(53,196,106,.28); }
+.var-cal, .var-gap { animation: varCalIn .5s ease-out; }
+@keyframes varCalIn { from { opacity: 0; } to { opacity: 1; } }
