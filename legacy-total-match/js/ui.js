@@ -315,7 +315,7 @@
     topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown,
+    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
     current: function () { return current; }
   };
 
@@ -387,6 +387,26 @@
       s = 74 + (h % 27); // 74..100, estável por jogador
     }
     return Math.max(0, Math.min(100, Math.round(s)));
+  }
+
+  // ceninha de apresentação de reforço (chegada ao clube)
+  function arrivalCutscene(player, club, onDone) {
+    var TM = window.TM;
+    var overlay = el("div", { class: "arrival" });
+    function close() { overlay.classList.add("out"); setTimeout(function () { overlay.remove(); if (onDone) onDone(); }, 280); }
+    var stage = el("div", { class: "arrival-stage" }, [
+      el("div", { class: "arrival-flash" }),
+      el("div", { class: "arrival-eyebrow", text: "✍️ REFORÇO CONFIRMADO" }),
+      el("div", { class: "arrival-crestwrap" }, [ TM.img.clubImg(club, "arrival-crest") ]),
+      el("div", { class: "arrival-facewrap" }, [ TM.img.playerImg(player, "arrival-face") ]),
+      el("div", { class: "arrival-name", text: player.name }),
+      el("div", { class: "arrival-meta", text: TM.data.posLabel(player) + "  ·  " + player.overall + " OVR  ·  " + (player.age || "?") + " anos" }),
+      el("div", { class: "arrival-welcome", text: "Bem-vindo ao " + club.name + "!" }),
+      el("div", { class: "arrival-actions" }, [ button("Continuar ▶", close, "btn primary") ])
+    ]);
+    overlay.appendChild(stage);
+    document.body.appendChild(overlay);
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
   }
 
   // seletor compacto (dropdown) no estilo dos cobradores. options: [[valor, texto], ...] ou [valor, ...]

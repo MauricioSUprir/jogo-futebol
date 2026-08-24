@@ -1607,3 +1607,23 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .cv-lab { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
 .cv-titles { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .cv-tchip { font-size: 12px; font-weight: 700; background: rgba(34,197,94,.12); border: 1px solid var(--gold); border-radius: 999px; padding: 4px 10px; }
+
+/* ===== Ceninha de apresentação (chegada ao clube) ===== */
+.arrival { position: fixed; inset: 0; z-index: 9200; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(90% 70% at 50% 30%, rgba(34,197,94,.20), rgba(3,6,10,.94)); backdrop-filter: blur(4px);
+  animation: cfIn .3s ease-out; cursor: pointer; }
+.arrival.out { animation: cfOut .28s ease-in forwards; }
+.arrival-stage { position: relative; width: min(92vw, 400px); text-align: center; padding: 22px; }
+.arrival-flash { position: absolute; left: 50%; top: 40%; transform: translate(-50%,-50%); width: 320px; height: 320px;
+  border-radius: 50%; background: radial-gradient(circle, rgba(34,197,94,.35), transparent 60%); animation: splashBreath 4s ease-in-out infinite; pointer-events: none; }
+.arrival-eyebrow { position: relative; font-size: 12px; letter-spacing: 3px; color: var(--gold-light); font-weight: 800; }
+.arrival-crestwrap { position: relative; margin: 6px auto 0; }
+.arrival-crest { width: 44px; height: 50px; object-fit: contain; opacity: .9; }
+.arrival-facewrap { position: relative; margin: 6px auto; width: 132px; height: 132px; border-radius: 50%;
+  border: 3px solid var(--gold); overflow: hidden; box-shadow: 0 12px 40px -8px rgba(34,197,94,.5); animation: arrPop .5s cubic-bezier(.2,.9,.2,1.3); }
+.arrival-face { width: 100%; height: 100%; object-fit: cover; }
+@keyframes arrPop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.arrival-name { position: relative; font-size: 24px; font-weight: 900; letter-spacing: -.01em; text-wrap: balance; }
+.arrival-meta { position: relative; font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+.arrival-welcome { position: relative; font-size: 16px; font-weight: 700; color: var(--gold-light); margin-top: 12px; }
+.arrival-actions { position: relative; margin-top: 18px; }
