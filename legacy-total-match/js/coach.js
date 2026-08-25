@@ -997,7 +997,12 @@
       var matchDate = C().dateOf(c, nextDay);
       var kids = [
         el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
-        el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ])
+        // confronto com escudo + uniforme de cada time
+        el("div", { class: "md-versus" }, [
+          el("div", { class: "md-team" }, [ TM.img.clubImg(homeClub, "md-crest"), TM.img.kitImg(homeClub, "md-kit"), el("div", { class: "md-name", text: homeClub.name }) ]),
+          el("div", { class: "md-vs", text: "VS" }),
+          el("div", { class: "md-team" }, [ TM.img.clubImg(awayClub, "md-crest"), TM.img.kitImg(awayClub, "md-kit", true), el("div", { class: "md-name", text: awayClub.name }) ])
+        ])
       ];
       if (rivalryEnabled() && TM.data.areRivals(homeClub.id, awayClub.id)) {
         kids.push(el("div", { class: "classico-ribbon" }, [

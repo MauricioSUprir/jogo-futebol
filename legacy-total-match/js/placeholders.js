@@ -18,6 +18,14 @@
   // escudo gerado com ESTILO próprio por clube (listras, faixa, metades, roundel),
   // estrelas e tipografia — genérico, mas com cara de clube de verdade.
   function crestHash(s) { s = String(s || ""); var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  // clareia/escurece uma cor HEX (fallback: devolve a própria cor se não for hex)
+  function _hx2(x) { x = Math.max(0, Math.min(255, Math.round(x))); var s = x.toString(16); return s.length < 2 ? "0" + s : s; }
+  function hexAdj(hex, d) {
+    if (!hex || hex.charAt(0) !== "#" || hex.length < 7) return hex;
+    return "#" + _hx2(parseInt(hex.slice(1, 3), 16) + d) + _hx2(parseInt(hex.slice(3, 5), 16) + d) + _hx2(parseInt(hex.slice(5, 7), 16) + d);
+  }
+  function lighten(hex, pct) { return hexAdj(hex, Math.round(255 * pct / 100)); }
+  function darken(hex, pct) { return hexAdj(hex, -Math.round(255 * pct / 100)); }
   // gradiente vertical de brilho para dar volume (claro em cima -> escuro embaixo)
   function shadeDefs(id) {
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
@@ -33,12 +41,16 @@
     var style = h % 7;                 // 0 listras 1 sash 2 metades 3 hoops 4 quartos 5 chevron 6 roundel
     var stars = ((h >>> 3) % 6 === 0) ? 3 : ((h >>> 4) % 3 === 0) ? 2 : ((h >>> 6) % 2 === 0) ? 1 : 0;
     var chief = ((h >>> 8) % 2 === 0); // faixa superior?
-    var gold = "#e8c65a", goldDk = "#b8912f";
+    // MOLDURA variada: dourada, prateada, escura, branca ou na cor secundária do clube
+    var RIMS = [["#f6e39a", "#e8c65a", "#b8912f"], ["#eef2f6", "#c9d3dc", "#8a97a3"], ["#3a3f47", "#23262c", "#101216"],
+      ["#ffffff", "#e9edf1", "#b7bfc8"], [lighten(s, 22), s, darken(s, 18)]];
+    var rimSet = RIMS[(h >>> 10) % RIMS.length];
+    var rimTop = rimSet[0], gold = rimSet[1], goldDk = rimSet[2];
     var ini = initials(club.name, 2);
     var W = 80, HH = 92;
     var shieldPath = "M40 3 L74 14 V44 C74 66 58 81 40 89 C22 81 6 66 6 44 V14 Z";
     var defs = '<clipPath id="sc"><path d="' + shieldPath + '"/></clipPath>' +
-      '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset=".5" stop-color="' + gold + '"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient>' +
+      '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + rimTop + '"/><stop offset=".5" stop-color="' + gold + '"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient>' +
       shadeDefs("gl") +
       '<radialGradient id="rg" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
 
@@ -46,7 +58,7 @@
     if (style === 6) {
       var svgR =
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92"><defs>' + shadeDefs("gl") +
-        '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient></defs>' +
+        '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + rimTop + '"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient></defs>' +
         '<circle cx="40" cy="46" r="38" fill="url(#rim)"/>' +
         '<circle cx="40" cy="46" r="34" fill="' + s + '" stroke="#0a0a0a" stroke-width="1"/>' +
         '<circle cx="40" cy="46" r="27" fill="' + p + '"/>' +
