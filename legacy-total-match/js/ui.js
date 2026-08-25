@@ -565,7 +565,6 @@
 
     var MB = "assets/menu/";
     var SLIDES = [];
-    if (hasCoachSave) SLIDES.push({ key: "car", eyebrow: "CONTINUAR", name: "Retomar Carreira", desc: "Volte de onde você parou no comando do seu clube.", cta: "CONTINUAR", route: "coach-hub", bg: MB + "coach.jpg" });
     SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
     SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores: finanças e contratações.", cta: "JOGAR", route: "coach", bg: MB + "director.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
@@ -594,6 +593,15 @@
         el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
       ])
     ]));
+
+    // chip discreto num cantinho: retomar a carreira salva (só aparece se houver save)
+    if (hasCoachSave) {
+      var contName = ""; try { var _cc = TM.storage.coachCareer(); contName = (_cc && _cc.teamName) ? " · " + _cc.teamName : ""; } catch (e) {}
+      screen.appendChild(el("button", { class: "fc-continue", title: "Continuar carreira", on: { click: function () { go("coach-hub"); } } }, [
+        el("span", { class: "fc-continue-ic", text: "▶" }),
+        el("span", { class: "fc-continue-tx", text: "Continuar carreira" + contName })
+      ]));
+    }
 
     var stage = el("div", { class: "fc2-stage" });
     var upBtn = el("button", { class: "fc2-arrow fc2-up", title: "Anterior", text: "⌃" });
