@@ -76,6 +76,12 @@
       segmented("Tempo de jogo (velocidade)", "matchSpeed", [
         { label: "Instantâneo", value: "instantaneo" }, { label: "Rápido", value: "rapido" }, { label: "Normal", value: "normal" }, { label: "Lento", value: "lento" }
       ]),
+      segmented("Evolução dos atletas", "evoRate", [
+        { label: "Demorada", value: "demorada" }, { label: "Média", value: "media" }, { label: "Rápida", value: "rapida" }
+      ]),
+      el("div", { class: "setting-hint", text:
+        "Ritmo em que os jogadores evoluem rumo ao potencial a cada temporada. " +
+        "Rápida faz jovens amadurecerem antes; demorada exige mais paciência. (Nenhuma é exagerada.)" }),
       toggle("Narração dos lances", "commentary"),
       toggle("Overall dinâmico (confiança/desempenho)", "dynamicOverall"),
       el("div", { class: "setting-hint", text:

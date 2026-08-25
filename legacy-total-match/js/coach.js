@@ -1819,7 +1819,7 @@
   }
 
   /* ---------- mercado: busca + filtros + passe livre ---------- */
-  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false, sort: "ov" };
+  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, sort: "ov" };
   TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
@@ -1882,11 +1882,22 @@
       inp.addEventListener("input", function () { MKT[key] = parseInt(inp.value, 10); val.textContent = MKT[key] + (suffix || ""); renderResults(); });
       return el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode(label), val ]), inp ]);
     }
+    panel.appendChild(slider("Idade mínima", "ageMin", 15, 40, " anos"));
     panel.appendChild(slider("Idade máxima", "age", 17, 40, " anos"));
     panel.appendChild(slider("Overall mínimo", "ovMin", 0, 95, ""));
     panel.appendChild(slider("Potencial mínimo", "potMin", 0, 95, ""));
+    // valor máximo (0 = sem limite)
+    (function () {
+      var val = el("span", { class: "range-val", text: MKT.valMax ? MKT.valMax + " M" : "sem limite" });
+      var inp = el("input", { type: "range", min: 0, max: 200, step: 5, value: MKT.valMax || 0, class: "slider" });
+      inp.addEventListener("input", function () { MKT.valMax = parseInt(inp.value, 10); val.textContent = MKT.valMax ? MKT.valMax + " M" : "sem limite"; renderResults(); });
+      panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode("Valor máximo "), val ]), inp ]));
+    })();
+    // só o que cabe no orçamento
+    var affToggle = el("button", { class: "switch" + (MKT.affordable ? " on" : ""), on: { click: function () { MKT.affordable = !MKT.affordable; affToggle.classList.toggle("on", MKT.affordable); renderResults(); } } }, [ el("span", { class: "switch-knob" }) ]);
+    panel.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "💰 Só dentro do orçamento" }), affToggle ]));
 
-    panel.appendChild(el("button", { class: "btn ghost", text: "Limpar filtros", on: { click: function () { MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ovMin: 0, potMin: 0, free: false }; TM.ui.go("coach-market"); } } }));
+    panel.appendChild(el("button", { class: "btn ghost", text: "Limpar filtros", on: { click: function () { MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, sort: "ov" }; TM.ui.go("coach-market"); } } }));
 
     var results = el("div", { class: "panel-narrow" });
     screen.appendChild(results);
@@ -1904,8 +1915,11 @@
         if (MKT.league && (p.clubId === "free" || TM.data.club(p.clubId).leagueId !== MKT.league)) return false;
         if (MKT.club && p.clubId !== MKT.club) return false;
         if (p.age > MKT.age) return false;
+        if (MKT.ageMin && p.age < MKT.ageMin) return false;
         if (p.overall < MKT.ovMin) return false;
         if ((p.potential || p.overall) < MKT.potMin) return false;
+        if (MKT.valMax && TM.data.marketValue(p) > MKT.valMax * 1000000) return false;
+        if (MKT.affordable && TM.data.marketValue(p) > (c.budget || 0)) return false;
         return true;
       }).sort(function (a, b) {
         if (MKT.sort === "pot") return (b.potential || b.overall) - (a.potential || a.overall);

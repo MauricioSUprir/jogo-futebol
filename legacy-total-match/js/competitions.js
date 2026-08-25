@@ -1215,13 +1215,19 @@
 
   // evolução de 1 jogador por temporada, conforme a idade:
   // 14-29 ainda sobe rumo ao potencial | 30-33 quase não mexe (só cai devagar) | 34+ só cai
+  function evoFactor() {
+    try { var r = TM.storage.settings().evoRate; return r === "rapida" ? 1.4 : r === "demorada" ? 0.65 : 1; } catch (e) { return 1; }
+  }
   function ageWorldPlayer(p) {
     p.age = (p.age || 25) + 1;
     var pot = p.potential || p.overall, a = p.age;
     if (a <= 29) {
       if (p.overall < pot) {
         var ch = a <= 20 ? 0.85 : a <= 23 ? 0.65 : a <= 26 ? 0.45 : 0.28;
+        ch = Math.max(0.06, Math.min(0.95, ch * evoFactor()));   // taxa de evolução (config), sem exageros
         if (Math.random() < ch) p.overall = Math.min(pot, p.overall + 1);
+        // evolução rápida pode dar +2 num salto para os bem jovens (raro, limitado)
+        if (a <= 19 && evoFactor() > 1.2 && Math.random() < 0.10) p.overall = Math.min(pot, p.overall + 1);
       }
     } else if (a <= 33) {
       if (Math.random() < 0.25) p.overall = Math.max(45, p.overall - 1);

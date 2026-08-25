@@ -26,6 +26,7 @@
     commentary: true,
     dynamicOverall: false,  // overall sobe/desce por confiança e desempenho (carreira/competições)
     rivalry: true,          // rivalidades: clássicos + transferências raras entre rivais
+    evoRate: "media",       // taxa de evolução dos atletas: rapida | media | demorada
     theme: "dark"           // dark (preto+verde) | light (branco+verde)
   };
 
