@@ -2787,3 +2787,11 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .rt-bar { height: 8px; border-radius: 5px; background: var(--black-soft); overflow: hidden; margin-bottom: 10px; }
 .rt-fill { height: 100%; background: var(--green); border-radius: 5px; }
 .retrain-card .btn { width: 100%; }
+
+/* confronto do dia do jogo: escudo + uniforme */
+.md-versus { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 6px 0 4px; }
+.md-team { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; min-width: 0; }
+.md-crest { width: 46px; height: 52px; object-fit: contain; filter: drop-shadow(0 3px 8px rgba(0,0,0,.4)); }
+.md-kit { width: 34px; height: 34px; object-fit: contain; margin-top: -2px; }
+.md-name { font-size: 12.5px; font-weight: 800; text-align: center; line-height: 1.1; }
+.md-vs { font-weight: 900; font-size: 15px; color: var(--text-dim); flex: 0 0 auto; }

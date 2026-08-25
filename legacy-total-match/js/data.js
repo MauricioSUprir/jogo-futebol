@@ -56,6 +56,16 @@
     pt: ["FC","SC","CD","União","Sporting","Académico"], nl: ["FC","SC","VV","AZ","Sparta","Vitesse"],
     ar: ["FC","CA","Racing","Club","Atlético","Unión"], us: ["FC","City","SC","United","Rovers","Athletic"]
   };
+  // paletas de cores FORTES estilo futebol real (primária, secundária) — atribuídas por hash estável
+  var CLUB_PALETTES = [
+    ["#e01a22", "#ffffff"], ["#c8102e", "#111318"], ["#0a3d91", "#ffffff"], ["#0033a0", "#e01a22"],
+    ["#111318", "#ffffff"], ["#f4c20d", "#111318"], ["#ffd200", "#0033a0"], ["#009e60", "#ffffff"],
+    ["#0a7a3b", "#111318"], ["#2aa9e0", "#ffffff"], ["#6a1b9a", "#ffd200"], ["#ff6a00", "#111318"],
+    ["#7a1f2b", "#2aa9e0"], ["#0b1d51", "#f4c20d"], ["#1b1b1b", "#f4c20d"], ["#c8102e", "#0a3d91"],
+    ["#00897b", "#ffffff"], ["#8e0000", "#ffffff"], ["#2e7d32", "#ffd200"], ["#b3123b", "#111318"],
+    ["#5d4037", "#ffd200"], ["#37474f", "#ff6a00"], ["#1565c0", "#ffca28"], ["#b71c1c", "#ffeb3b"],
+    ["#004d98", "#a50044"], ["#e2001a", "#1a1a1a"], ["#003f2e", "#f7d417"], ["#6cabdd", "#1c2c5b"]
+  ];
   var LEAGUE_DEFS = [
     { id: "br", name: "Liga Brazil A", nation: "Brazil", culture: "br" },
     { id: "en", name: "Liga England A", nation: "England", culture: "en" },
@@ -1003,12 +1013,12 @@
       for (var ci = 0; ci < realList.length; ci++) {
         var rc = realList[ci];               // [nome, sigla, força]
         var clubId = ld.id + "-" + ci;
-        var hue = R.int(rng, 0, 360);
+        var pal = CLUB_PALETTES[stableHash(clubId) % CLUB_PALETTES.length];
         var strength = rc[2];                // força real do clube
         var club = {
           id: clubId, name: rc[0], short: rc[1],
           leagueId: ld.id, coach: fullName(rng, ld.culture),
-          colors: { primary: "hsl(" + hue + ",65%,42%)", secondary: "hsl(" + ((hue + 40) % 360) + ",60%,55%)" },
+          colors: { primary: pal[0], secondary: pal[1] },
           strength: strength, playerIds: []
         };
         // elenco: real (licenciado via Transfermarkt) quando existir; senão gerado
