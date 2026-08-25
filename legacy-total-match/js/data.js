@@ -1124,6 +1124,8 @@
 
     // ---- clube personalizado do jogador (carreira "Criar meu clube") ----
     applyCustomClub(clubs, playersById, rng);
+    // ---- edições do jogador (Editor: editar/criar/transferir) ----
+    applyEdits(clubs, playersById, rng);
 
     return {
       seed: WORLD_SEED,
@@ -1136,6 +1138,49 @@
       nations: NATIONS,
       nationsById: NATIONS.reduce(function (m, n) { m[n.id] = n; return m; }, {})
     };
+  }
+
+  // aplica edições do Editor (persistidas em storage "edits")
+  function applyEdits(clubs, playersById, rng) {
+    var ed = null;
+    try { ed = (TM.storage && TM.storage.read) ? TM.storage.read("edits", null) : null; } catch (e) { ed = null; }
+    if (!ed) return;
+    var byId = {}; clubs.forEach(function (c) { byId[c.id] = c; });
+    // 1) edições de atributos/nome/posição
+    var P = ed.players || {};
+    Object.keys(P).forEach(function (id) {
+      var p = playersById[id]; if (!p) return; var e = P[id];
+      if (e.name) p.name = e.name;
+      if (e.pos) p.pos = e.pos;
+      if (e.pos2) p.pos2 = e.pos2;
+      if (e.attrs) { p.attrs = p.attrs || {}; Object.keys(e.attrs).forEach(function (k) { p.attrs[k] = e.attrs[k]; }); }
+      if (e.overall != null) p.overall = e.overall;
+      if (e.age != null) p.age = e.age;
+    });
+    // 2) transferências (mover jogador de clube)
+    var M = ed.moves || {};
+    Object.keys(M).forEach(function (id) {
+      var p = playersById[id]; if (!p) return;
+      var dest = byId[M[id]]; if (!dest) return;
+      // remove do clube atual
+      clubs.forEach(function (c) { var i = c.playerIds.indexOf(id); if (i >= 0) c.playerIds.splice(i, 1); });
+      dest.playerIds.push(id); p.clubId = dest.id;
+    });
+    // 3) jogadores criados
+    (ed.created || []).forEach(function (cp, i) {
+      var dest = byId[cp.clubId]; if (!dest) return;
+      var pos = cp.pos || "MF";
+      var ov = cp.overall || 70;
+      var attrs = makeAttrs(rng, ov, pos);
+      var np = {
+        id: cp.id || ("ed" + i), name: cp.name || "Novo Jogador", clubId: dest.id,
+        pos: pos, pos2: cp.pos2 || specificPos(rng, pos), age: cp.age || 22, overall: ov,
+        potential: Math.min(99, ov + (cp.growth || 4)), attrs: attrs,
+        nationId: NATIONS[0].id, nationName: NATIONS[0].name,
+        height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92), form: 0, goals: 0
+      };
+      playersById[np.id] = np; dest.playerIds.push(np.id);
+    });
   }
 
   // distribuição de posições p/ um elenco genérico de 24 jogadores
