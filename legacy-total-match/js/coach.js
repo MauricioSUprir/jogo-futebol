@@ -7,6 +7,44 @@
 
   function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
+  // recados contextuais do AUXILIAR TÉCNICO e da DIRETORIA (chegam na Central de avisos)
+  function maybeStaffMessage(c) {
+    try {
+      var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
+      if (c._lastStaffStamp === stamp) return;      // no máx. 1 recado por ciclo de jogo
+      c._lastStaffStamp = stamp;
+      if ((c.matchNo || 0) < 1 || Math.random() < 0.30) return;   // nem sempre há recado
+      var squad = C().userSquad(c) || []; if (!squad.length) return;
+      var byOv = squad.slice().sort(function (a, b) { return b.overall - a.overall; });
+      var msgs = [];
+      // --- AUXILIAR TÉCNICO ---
+      var young = squad.filter(function (p) { return (p.age || 24) <= 20 && (p.potential || p.overall) >= 77; });
+      if (young.length) msgs.push({ w: 3, icon: "🧑‍🏫", title: "Auxiliar técnico", text: "Fica de olho no garoto " + young[0].name + ": o potencial (" + (young[0].potential || young[0].overall) + ") é alto. Dar minutos acelera a evolução dele." });
+      var vet = squad.slice().sort(function (a, b) { return (b.age || 0) - (a.age || 0); })[0];
+      if (vet && (vet.age || 0) >= 33) msgs.push({ w: 2, icon: "🧑‍🏫", title: "Auxiliar técnico", text: vet.name + " (" + vet.age + ") pesa a experiência, mas talvez precise de rodízio para render 90 minutos." });
+      // setor mais fraco
+      var sect = [["GK", "goleiro"], ["DF", "defesa"], ["MF", "meio-campo"], ["FW", "ataque"]].map(function (s) {
+        var arr = squad.filter(function (p) { return p.pos === s[0]; }).sort(function (a, b) { return b.overall - a.overall; }).slice(0, s[0] === "GK" ? 1 : 3);
+        return { name: s[1], f: arr.length ? Math.round(arr.reduce(function (t, p) { return t + p.overall; }, 0) / arr.length) : 0 };
+      }).sort(function (a, b) { return a.f - b.f; })[0];
+      if (sect && sect.f) msgs.push({ w: 2, icon: "🧑‍🏫", title: "Auxiliar técnico", text: "Analisando o elenco, o nosso ponto mais fraco é o " + sect.name + " (~" + sect.f + "). Vale buscar reforço no mercado." });
+      msgs.push({ w: 1, icon: "🧑‍🏫", title: "Auxiliar técnico", text: "Estudei o próximo adversário: bola parada pode ser o caminho. Treinamos escanteios essa semana." });
+      msgs.push({ w: 1, icon: "🧑‍🏫", title: "Auxiliar técnico", text: byOv[0].name + " está treinando muito bem. Se mantiver, é titular garantido." });
+      // --- DIRETORIA ---
+      var conf = boardConfidence(c);
+      if (conf < 35) msgs.push({ w: 4, icon: "🏛️", title: "Diretoria", text: "Os resultados não estão à altura do clube. A diretoria espera uma reação imediata — a sua permanência depende disso." });
+      else if (conf > 78) msgs.push({ w: 3, icon: "🏛️", title: "Diretoria", text: "A diretoria está muito satisfeita com o seu trabalho. Confiança total no projeto — continue assim!" });
+      else msgs.push({ w: 2, icon: "🏛️", title: "Diretoria", text: "A diretoria acompanha de perto. Mantenha a regularidade e cumpra a meta da temporada." });
+      if ((c.budget || 0) > 5000000) msgs.push({ w: 2, icon: "🏛️", title: "Diretoria", text: "Liberamos verba para reforços. Traga nomes que façam a diferença — a torcida pede." });
+      var rivalNm = TM.data.rivalName(c.teamId);
+      if (rivalNm && rivalryEnabled()) msgs.push({ w: 2, icon: "🏛️", title: "Diretoria", text: "Bater o " + rivalNm + " no clássico vale ouro para a nossa torcida. Prepare o time para essa guerra." });
+      // sorteio ponderado
+      var total = msgs.reduce(function (t, m) { return t + m.w; }, 0), r = Math.random() * total, pick = msgs[0];
+      for (var i = 0; i < msgs.length; i++) { r -= msgs[i].w; if (r <= 0) { pick = msgs[i]; break; } }
+      TM.notify.push(c, { icon: pick.icon, title: pick.title, text: pick.text, staff: true });
+    } catch (e) {}
+  }
+
   // confiança da diretoria (0-100): posição vs meta, ajustada pelo rigor do conselho
   function boardConfidence(c) {
     try {
@@ -421,6 +459,7 @@
     if (c.type === "director") { TM.ui.go("director-hub"); return; }
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
+    maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     TM.storage.saveCoachCareer(c);
     // se a temporada acabou e há título não comemorado, mostra a tela de parabéns primeiro
     var pnd = C().advanceToUserMatch(c);
