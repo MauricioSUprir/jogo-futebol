@@ -821,6 +821,8 @@
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
+    ensurePopularity(c);    // popularidade mundial do clube
+    applyPosOverrides(c);   // reaplica reposicionamentos concluídos (mundo regenera)
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
@@ -892,6 +894,17 @@
         el("div", { class: "rep-bar" }, [ el("div", { class: "rep-fill", style: "width:" + c.reputation + "%" }) ])
       ])
     ]));
+    // popularidade mundial do clube
+    (function () {
+      var pop = ensurePopularity(c);
+      screen.appendChild(el("div", { class: "rep-badge pop-badge" }, [
+        el("span", { class: "rep-star", text: "🌐" }),
+        el("div", { class: "rep-info" }, [
+          el("div", { class: "rep-top" }, [ el("span", { class: "rep-lbl", text: "Popularidade mundial" }), el("span", { class: "rep-val", text: pop + " · " + popularityLabel(pop) }) ]),
+          el("div", { class: "rep-bar" }, [ el("div", { class: "rep-fill", style: "width:" + pop + "%" }) ])
+        ])
+      ]));
+    })();
     // liderança do capitão no vestiário
     (function () {
       var lead = captainLeadership(c);
@@ -1931,6 +1944,7 @@
         TM.ui.confirm("Sair da partida?", "Sair agora REGISTRA o resultado atual da partida — você não poderá jogá-la de novo. (Para poder rejogar, ligue \"Reiniciar partidas\" nas opções da carreira.)", "Sair e registrar", function () {
           C().processUserMatch(c, result, userSide);
           try { C().recordPlayerStats(c, result, userSide, (userSide === 0 ? teamB : teamA).name); } catch (e) {}
+          try { tickRetrain(c, (c.lineup && c.lineup.starters) || []); } catch (e) {}
           var hs = result.score[0], as = result.score[1];
           var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
           var penWinnerId = null;
@@ -1945,6 +1959,8 @@
       onDone: function () {
         C().processUserMatch(c, result, userSide);
         try { C().recordPlayerStats(c, result, userSide, (userSide === 0 ? teamB : teamA).name); } catch (e) {}
+          try { tickRetrain(c, (c.lineup && c.lineup.starters) || []); } catch (e) {}
+        try { var _opp = p.homeId === c.teamId ? p.awayId : p.homeId; trackClassico(c, _opp, result.score[userSide], result.score[1 - userSide]); } catch (e) {}
         var hs = result.score[0], as = result.score[1];
         var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
         function finish(penWinnerId) {
@@ -2764,6 +2780,59 @@
   // taxa de transferência ~30% acima do valor de mercado; salário ~15% do valor/ano
   function askingPrice(p) { return Math.max(0.1, r2(TM.data.marketValue(p) * 1.3)); }
   function wageDemand(p) { return Math.max(0.05, r2(TM.data.marketValue(p) * 0.15)); }
+  // EMPRESÁRIOS: cada jogador tem um agente que influencia salário e cobra comissão
+  var AGENT_NAMES = ["Jorge Vendas", "R. Pimenta", "V. Struth", "K. Joorab", "F. Pastorello", "G. Bertolucci", "C. Leão", "André Cury", "Mino R.", "P. Zorc"];
+  var AGENT_TYPES = [
+    { type: "greedy", label: "Empresário durão", ic: "💼", wageMult: 1.35, feePct: 10, line: "Meu cliente é caro. Prepare o cheque." },
+    { type: "normal", label: "Empresário", ic: "🤝", wageMult: 1.10, feePct: 6, line: "Vamos conversar, mas o salário tem que ser justo." },
+    { type: "loyal", label: "Empresário parceiro", ic: "🫱", wageMult: 0.95, feePct: 4, line: "Meu cliente quer jogar no seu projeto. Facilito o acordo." }
+  ];
+  function agentOf(p) {
+    var h = phash("agent:" + p.id);
+    var t = AGENT_TYPES[h % 3];
+    return { name: AGENT_NAMES[h % AGENT_NAMES.length], type: t.type, label: t.label, ic: t.ic, wageMult: t.wageMult, feePct: t.feePct, line: t.line };
+  }
+  // REPOSICIONAMENTO (retrain)
+  var POS_LABELS = { GK: "Goleiro", DF: "Defensor", MF: "Meio-campo", FW: "Atacante" };
+  function posGroupOf(p) { var g = p && p.pos; return (g === "GK" || g === "DF" || g === "MF" || g === "FW") ? g : "MF"; }
+  // avança o treino de reposicionamento dos titulares que jogaram; ao concluir, muda a posição
+  function tickRetrain(c, starterIds) {
+    if (!c.retrain) return;
+    c.posOverride = c.posOverride || {};
+    (starterIds || []).forEach(function (id) {
+      var rt = c.retrain[id]; if (!rt) return;
+      rt.prog = (rt.prog || 0) + 1;
+      if (rt.prog >= 8) {
+        var pl = C().resolvePlayer(c, id); if (pl) { pl.pos2 = pl.pos; pl.pos = rt.toPos; c.posOverride[id] = rt.toPos; }
+        delete c.retrain[id];
+        TM.notify.push(c, { icon: "🔧", title: "Nova posição dominada", news: true, text: (pl ? pl.name : "Jogador") + " concluiu o reposicionamento e agora joga como " + POS_LABELS[rt.toPos] + "." });
+      }
+    });
+  }
+  function applyPosOverrides(c) {
+    if (!c.posOverride) return;
+    Object.keys(c.posOverride).forEach(function (id) { var pl = null; try { pl = C().resolvePlayer(c, id); } catch (e) {} if (pl) pl.pos = c.posOverride[id]; });
+  }
+  // PRESSÃO POR CLÁSSICOS: perder 3 clássicos seguidos gera crise mesmo indo bem na liga
+  function trackClassico(c, oppId, gf, ga) {
+    try { if (!rivalryEnabled() || !oppId || !TM.data.areRivals(c.teamId, oppId)) return; } catch (e) { return; }
+    var res = gf > ga ? "W" : gf < ga ? "L" : "D";
+    c.classicoLoss = res === "L" ? (c.classicoLoss || 0) + 1 : 0;
+    if (c.classicoLoss >= 3) {
+      c.classicoLoss = 0;
+      c.confidence = Math.max(-5, (c.confidence || 0) - 3);
+      try { if (TM.social && TM.social.nudgeMorale) TM.social.nudgeMorale(c, -18); } catch (e) {}
+      TM.notify.push(c, { icon: "💀", title: "Crise nos clássicos", news: true, text: "Três clássicos perdidos seguidos! A torcida está revoltada e a diretoria pressiona — mesmo com boa campanha na liga, o clima é de crise." });
+    } else if (res === "W") {
+      try { if (TM.social && TM.social.nudgeMorale) TM.social.nudgeMorale(c, 8); } catch (e) {}
+    }
+  }
+  // POPULARIDADE MUNDIAL do clube (cresce com bom desempenho; clube pequeno pode virar gigante)
+  function ensurePopularity(c) {
+    if (c.popularity == null) { var r = 70; try { r = TM.data.clubRating(c.teamId); } catch (e) {} c.popularity = Math.max(5, Math.min(72, r - 28)); }
+    return c.popularity;
+  }
+  function popularityLabel(v) { return v >= 85 ? "Fenômeno global" : v >= 68 ? "Grande clube mundial" : v >= 50 ? "Clube reconhecido" : v >= 32 ? "Em ascensão" : v >= 16 ? "Clube regional" : "Clube modesto"; }
   // JOGADOR INTRANSFERÍVEL: joia jovem de peso num clube grande não sai por qualquer proposta
   function isUntransferable(p) {
     if (!p || p.freeAgent) return false;
@@ -3002,8 +3071,11 @@
     var c = TM.storage.coachCareer();
     if (!NEGO) { TM.ui.go("coach-market"); return; }
     var p = TM.data.player(NEGO.pid);
-    var demand = curVal(c, wageDemand(p));
+    var ag = agentOf(p);
+    var demand = curVal(c, wageDemand(p) * ag.wageMult);
+    var agentFee = Math.round((NEGO.fee || 0) * ag.feePct / 100 * 100) / 100;
     var terms = { wage: demand, years: 3, role: "titular", release: false };
+    NEGO.agentFee = agentFee;
 
     var isFree = !NEGO.oldClubId;
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
@@ -3020,6 +3092,14 @@
     screen.appendChild(panel);
     var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de " + money(c, demand) + " por ano e um papel de destaque.”" });
     panel.appendChild(quote);
+    // empresário do jogador
+    panel.appendChild(el("div", { class: "agent-line agent-" + ag.type }, [
+      el("span", { class: "agent-ic", text: ag.ic }),
+      el("div", { class: "agent-info" }, [
+        el("div", { class: "agent-name", text: ag.label + " · " + ag.name }),
+        el("div", { class: "agent-note", text: "“" + ag.line + "”" + (agentFee > 0 ? " Comissão de " + ag.feePct + "% (" + money(c, agentFee) + ")." : " Comissão de " + ag.feePct + "%.") })
+      ])
+    ]));
 
     // salário
     var wageVal = el("span", { class: "range-val", text: money(c, terms.wage) + "/ano" });
@@ -3057,8 +3137,10 @@
         } else {
           var fee = NEGO.fee || 0, parts = Math.max(1, NEGO.parts || 1);
           var upfront = r2(fee / parts);
-          c.budget -= upfront;
-          c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += upfront;
+          var agFee = NEGO.agentFee || 0;                 // comissão do empresário (paga à vista)
+          c.budget -= (upfront + agFee);
+          c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += (upfront + agFee);
+          if (agFee > 0) TM.notify.push(c, { icon: "💼", title: "Comissão de empresário", text: "Paga comissão de " + money(c, agFee) + " ao empresário de " + p.name + "." });
           // parcelas futuras (pagas no início das próximas temporadas)
           if (parts > 1) {
             c.installments = c.installments || [];
@@ -3433,6 +3515,31 @@
         }
         wrap.appendChild(med);
       }
+
+      // ---- mudança de posição (retrain) ----
+      (function () {
+        c.retrain = c.retrain || {};
+        var rt = c.retrain[p.id];
+        var card = el("div", { class: "retrain-card" }, [ el("div", { class: "rt-h", text: "🔧 Reposicionamento" }) ]);
+        if (rt) {
+          var pct = Math.min(100, Math.round((rt.prog || 0) / 8 * 100));
+          card.appendChild(el("div", { class: "rt-prog-txt", text: "Treinando para " + POS_LABELS[rt.toPos] + " — " + pct + "% concluído (joga nessa posição para evoluir)." }));
+          card.appendChild(el("div", { class: "rt-bar" }, [ el("div", { class: "rt-fill", style: "width:" + pct + "%" }) ]));
+          card.appendChild(TM.ui.button("✖ Cancelar treino", function () { delete c.retrain[p.id]; TM.storage.saveCoachCareer(c); TM.ui.toast("Reposicionamento cancelado."); TM.ui.go("coach-player"); }, "btn ghost small"));
+        } else {
+          card.appendChild(el("div", { class: "rt-s", text: "Ensine " + shortName(p.name) + " a jogar em outra posição. Escolha o destino:" }));
+          var opts = el("div", { class: "rt-opts" });
+          ["GK", "DF", "MF", "FW"].filter(function (g) { return posGroupOf(p) !== g; }).forEach(function (g) {
+            opts.appendChild(el("button", { class: "rt-opt", text: POS_LABELS[g], on: { click: function () {
+              c.retrain[p.id] = { toPos: g, prog: 0 }; TM.storage.saveCoachCareer(c);
+              TM.notify.push(c, { icon: "🔧", title: "Reposicionamento", text: p.name + " começou a treinar como " + POS_LABELS[g] + ". Dê minutos nessa função para ele evoluir." });
+              TM.ui.toast("Treino iniciado!"); TM.ui.go("coach-player");
+            } } }));
+          });
+          card.appendChild(opts);
+        }
+        wrap.appendChild(card);
+      })();
     }
 
     // ---- ação: jogadores similares (scout) ----

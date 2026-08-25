@@ -2768,3 +2768,22 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .youth-tab.on { background: linear-gradient(180deg, var(--green), var(--gold-dark)); color: #fff; border-color: var(--green); }
 .youth-tab-n { font-size: 11px; opacity: .8; background: rgba(0,0,0,.18); border-radius: 10px; padding: 1px 7px; }
 .youth-cat { font-size: 10px; font-weight: 800; color: var(--text-dim); background: var(--black-soft); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; margin-right: 6px; }
+
+/* empresário na negociação */
+.agent-line { display: flex; align-items: center; gap: 11px; background: var(--black-soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 13px; margin: 4px 0 10px; }
+.agent-line.agent-greedy { border-color: rgba(255,90,60,.4); }
+.agent-line.agent-loyal { border-color: rgba(52,199,89,.4); }
+.agent-ic { font-size: 22px; }
+.agent-name { font-weight: 800; font-size: 13px; }
+.agent-note { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+/* reposicionamento */
+.retrain-card { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; margin-top: 12px; }
+.rt-h { font-weight: 800; font-size: 13.5px; margin-bottom: 8px; }
+.rt-s { font-size: 12.5px; color: var(--text-dim); margin-bottom: 10px; }
+.rt-opts { display: flex; gap: 8px; flex-wrap: wrap; }
+.rt-opt { flex: 1; min-width: 78px; padding: 10px 6px; border-radius: 11px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text); font-weight: 700; font-size: 13px; cursor: pointer; }
+.rt-opt:hover { border-color: var(--green); }
+.rt-prog-txt { font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px; }
+.rt-bar { height: 8px; border-radius: 5px; background: var(--black-soft); overflow: hidden; margin-bottom: 10px; }
+.rt-fill { height: 100%; background: var(--green); border-radius: 5px; }
+.retrain-card .btn { width: 100%; }

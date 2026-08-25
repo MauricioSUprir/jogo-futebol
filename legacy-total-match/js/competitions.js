@@ -1867,6 +1867,12 @@
         TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });
       }
     }
+    // POPULARIDADE MUNDIAL: cresce com bom desempenho, cai com campanha fraca
+    if (career.popularity != null) {
+      var pst = career.stats || {}; var ppl = pst.p || 0; var pwr = ppl ? (pst.w || 0) / ppl : 0.4;
+      var delta = Math.round((pwr - 0.5) * 10);            // ~ -5 a +5 por temporada
+      career.popularity = Math.max(3, Math.min(100, career.popularity + delta));
+    }
     // tempo de casa dos jogadores (para status de ídolo) — +1 temporada por quem fica
     if (career.tenure) { (career.roster || []).forEach(function (id) { career.tenure[id] = (career.tenure[id] || 0) + 1; }); }
     // parcelas de transferências (paga a próxima parcela de cada compra parcelada)
