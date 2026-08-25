@@ -2599,3 +2599,29 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .fc2-logo-wrap { display: flex; align-items: center; justify-content: center; height: 120px; background: radial-gradient(circle at 50% 45%, rgba(34,197,94,.12), transparent 65%), #0d1116; border-bottom: 1px solid rgba(255,255,255,.06); }
 .fc2-logo { height: 62px; width: auto; filter: drop-shadow(0 4px 16px rgba(34,197,94,.35)); }
 @media (min-width: 760px) { .fc2-logo-wrap { height: 150px; } .fc2-logo { height: 78px; } }
+
+/* perfil no canto superior direito do menu */
+.fc-top-right { display: flex; align-items: center; gap: 9px; }
+.fc-prof { display: flex; align-items: center; gap: 8px; background: rgba(20,24,20,.7); border: 1px solid rgba(255,255,255,.14); border-radius: 22px; padding: 6px 14px 6px 8px; color: #fff; font-weight: 700; font-size: 13.5px; cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: border-color .15s, transform .15s; }
+.fc-prof.ghost { padding: 8px 15px; }
+.fc-prof:hover { border-color: var(--gold); transform: translateY(-1px); }
+.fc-prof-ava { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
+.fc-prof-ic { font-size: 15px; }
+.fc-prof-name { max-width: 84px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* card MAIOR */
+.fc2-card { max-width: 440px; }
+.fc2-img { height: 180px; }
+.fc2-name { font-size: 25px; }
+.fc2-body { padding: 18px 20px 22px; }
+.fc2-desc { font-size: 13.5px; }
+@media (min-width: 760px) {
+  .fc2-card { max-width: 500px; }
+  .fc2-img { height: 220px; }
+  .fc2-name { font-size: 30px; }
+}
+@media (max-width: 430px) {
+  .fc2-card { max-width: 92vw; }
+  .fc2-img { height: 150px; }
+  .fc-prof-name { max-width: 60px; }
+}

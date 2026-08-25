@@ -579,10 +579,20 @@
       { icon: "⚙️", name: "Config", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
     ] });
 
-    // overlay: logo + engrenagem
+    // overlay: logo (esq) + perfil e engrenagem (canto sup. direito)
+    var prof = (TM.account && TM.account.profile) ? TM.account.profile() : null;
+    var profBtn = prof
+      ? el("button", { class: "fc-prof", title: "Perfil", on: { click: function () { go("profile"); } } }, [
+          (TM.account.avatar ? TM.account.avatar(prof, "fc-prof-ava") : el("span")),
+          el("span", { class: "fc-prof-name", text: prof.name })
+        ])
+      : el("button", { class: "fc-prof ghost", on: { click: function () { go("profile"); } } }, [ el("span", { class: "fc-prof-ic", text: "👤" }), el("span", { text: "Entrar" }) ]);
     screen.appendChild(el("div", { class: "fc-top" }, [
       el("img", { class: "fc-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-      el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
+      el("div", { class: "fc-top-right" }, [
+        profBtn,
+        el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
+      ])
     ]));
 
     var stage = el("div", { class: "fc2-stage" });
