@@ -424,7 +424,7 @@
   var COACHES = COACH_DATA.map(function (c, i) { return { id: "coach" + i, name: c[0], culture: c[1], age: c[2], photoKey: coachSlug(c[0]) }; });
   // mapa clube(real) -> treinador
   var COACH_CLUB = {};
-  COACH_DATA.forEach(function (c, i) { if (c[3]) COACH_CLUB[c[3]] = COACHES[i]; });
+  COACH_DATA.forEach(function (c, i) { if (c[3]) { COACH_CLUB[c[3]] = COACHES[i]; var bz = brazilify(c[3]); if (bz !== c[3] && !COACH_CLUB[bz]) COACH_CLUB[bz] = COACHES[i]; } });
 
   // Distribuição de posições no elenco de 20 jogadores (2 GK, 7 DF, 7 MF, 4 FW)
   var POS_POOL = ["GK","GK","DF","DF","DF","DF","DF","DF","DF","MF","MF","MF","MF","MF","MF","MF","FW","FW","FW","FW"];
@@ -1015,8 +1015,9 @@
         var clubId = ld.id + "-" + ci;
         var pal = CLUB_PALETTES[stableHash(clubId) % CLUB_PALETTES.length];
         var strength = rc[2];                // força real do clube
+        var cname = /^br/.test(ld.id) ? brazilify(rc[0]) : rc[0];
         var club = {
-          id: clubId, name: rc[0], short: rc[1],
+          id: clubId, name: cname, short: rc[1],
           leagueId: ld.id, coach: fullName(rng, ld.culture),
           colors: { primary: pal[0], secondary: pal[1] },
           strength: strength, playerIds: []
@@ -1275,6 +1276,25 @@
     "Ilha Grande", "Praia Nova", "do Cerrado", "Vale Verde", "Sol Nascente", "Boa Vista"
   ];
   function stableHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  // Deixa nomes de clubes brasileiros mais realistas (sem "City/United/Athletic/Sportivo"),
+  // usando prefixos/sufixos do futebol brasileiro (Atlético, Grêmio, Náutico, Sport, EC, FC, SC, CR...).
+  // Determinístico por nome (estável entre recarregamentos).
+  function brazilify(name) {
+    if (!name) return name;
+    var parts = name.split(" ");
+    var suf = parts[parts.length - 1];
+    var root = parts.slice(0, -1).join(" ");
+    if (!root) return name;
+    var h = stableHash(name);
+    switch (suf) {
+      case "Athletic": return (h % 3 === 0 ? "Athletico " : "Atlético ") + root;
+      case "City":     return (h % 2 ? "Náutico " + root : root + " EC");
+      case "United":   return (h % 2 ? "Sport " + root  : root + " FC");
+      case "Sportivo": return (h % 3 === 0 ? "SE " + root : root + " SC");
+      case "Real":     return (h % 2 ? "Grêmio " + root  : "CR " + root);
+      default:         return name; // AC, FC, SC, EC, CD, AA já soam brasileiros
+    }
+  }
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
     var name = STADIUMS[club.name];
