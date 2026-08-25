@@ -2161,6 +2161,7 @@
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
+    executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
     retireAndRegen: retireAndRegen, applyRegen: applyRegen,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
