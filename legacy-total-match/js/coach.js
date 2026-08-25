@@ -116,7 +116,7 @@
     // cabeçalho do sidebar (só aparece no PC via CSS)
     var club = TM.data.club(c.teamId);
     bar.insertBefore(el("div", { class: "sb-brand" }, [
-      el("span", { class: "sb-logo" }, [ el("img", { class: "sb-mark", src: "assets/logo-mark.png", alt: "" }), el("span", { text: "Total Match" }) ]),
+      el("span", { class: "sb-logo" }, [ el("img", { class: "sb-mark", src: "assets/logo.png", alt: "" }), el("span", { text: "Total Match" }) ]),
       el("div", { class: "sb-club-row" }, [
         club ? TM.img.clubImg(club, "sb-crest") : null,
         el("div", { class: "sb-club-info" }, [
@@ -902,24 +902,38 @@
   function buildHubRail(screen, c) {
     var rail = el("aside", { class: "coach-rail", "aria-hidden": "true" });
 
-    // -- elenco em destaque --
-    rail.appendChild(el("div", { class: "cr-title", text: "👥 Seu elenco" }));
-    var top = (c.roster || []).map(function (id) { return C().resolvePlayer(c, id); }).filter(Boolean)
-      .sort(function (a, b) { return b.overall - a.overall; }).slice(0, 8);
-    var pl = el("div", { class: "cr-players" });
-    top.forEach(function (p) {
-      var cap = c.captainId === p.id;
-      pl.appendChild(el("button", { class: "cr-prow", on: { click: (function (pp) { return function () { try { TM.coachUI.openPlayer(pp, "coach-hub"); } catch (e) {} }; })(p) } }, [
-        (TM.img && TM.img.playerImg) ? TM.img.playerImg(p, "cr-face") : el("div", { class: "cr-face" }),
-        el("div", { class: "cr-pinfo" }, [
-          el("div", { class: "cr-pname", text: (cap ? "🎽 " : "") + shortName(p.name) }),
-          el("div", { class: "cr-pmeta", text: TM.data.posLabel(p) + (c.injuries && c.injuries[p.id] ? " · 🚑" : "") })
-        ]),
-        el("div", { class: "cr-ovr", text: p.overall })
-      ]));
-    });
-    rail.appendChild(pl);
-    rail.appendChild(el("button", { class: "cr-more", text: "Ver elenco completo →", on: { click: function () { TM.ui.go("coach-squad"); } } }));
+    // -- forma recente --
+    var form = (c.recentForm || []).slice(-6);
+    if (form.length) {
+      rail.appendChild(el("div", { class: "cr-title", text: "📊 Forma recente" }));
+      var fr = el("div", { class: "cr-form" });
+      form.forEach(function (r) { fr.appendChild(el("span", { class: "cr-fp cr-fp-" + r, text: r })); });
+      rail.appendChild(fr);
+    }
+
+    // -- mini classificação da liga --
+    try {
+      if (c.comps && c.comps.league && c.comps.league.table) {
+        var st = C().standings(c.comps.league.table);
+        var myIdx = st.findIndex(function (r) { return r.id === c.teamId; });
+        rail.appendChild(el("div", { class: "cr-title", text: "🏆 Classificação" }));
+        var tbl = el("div", { class: "cr-table" });
+        // mostra top 5 + a linha do usuário se estiver fora do top 5
+        var rows = st.slice(0, 5);
+        if (myIdx >= 5) rows.push(st[myIdx]);
+        rows.forEach(function (row) {
+          var idx = st.indexOf(row), mine = row.id === c.teamId, cl = TM.data.club(row.id);
+          tbl.appendChild(el("div", { class: "cr-trow" + (mine ? " me" : "") }, [
+            el("span", { class: "cr-tpos", text: (idx + 1) }),
+            (TM.img && TM.img.clubImg && cl) ? TM.img.clubImg(cl, "cr-tcrest") : el("span", { class: "cr-tcrest" }),
+            el("span", { class: "cr-tname", text: cl ? cl.name : "—" }),
+            el("span", { class: "cr-tpts", text: (row.pts || 0) })
+          ]));
+        });
+        rail.appendChild(tbl);
+        rail.appendChild(el("button", { class: "cr-more", text: "Ver tabela completa →", on: { click: function () { TM.ui.go("coach-comps"); } } }));
+      }
+    } catch (e) {}
 
     // -- moral do clube --
     var mor = 60; try { mor = TM.social.morale(c); } catch (e) {}
@@ -2902,8 +2916,8 @@
       el("div", { class: "gauge-ring", html:
         '<svg viewBox="0 0 72 72" width="72" height="72">' +
         '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="6"/>' +
-        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(167,120,255,.35)" stroke-width="6" stroke-dasharray="4 8"/>' +
-        '<text x="36" y="44" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#a78bfa">?</text></svg>' }),
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(74,222,128,.35)" stroke-width="6" stroke-dasharray="4 8"/>' +
+        '<text x="36" y="44" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#4ade80">?</text></svg>' }),
       el("div", { class: "gauge-lbl", text: label })
     ]);
   }
@@ -2938,10 +2952,10 @@
         ])
       ]),
       el("div", { class: "prof-gauges" }, [
-        gaugeSVG(p.overall, 99, "OVR", "#8b5cf6"),
+        gaugeSVG(p.overall, 99, "OVR", "#22c55e"),
         (p.hiddenPot && !(c.scouted && c.scouted[p.id]))
           ? gaugeHidden("POT")
-          : gaugeSVG(pot, 99, "POT", pot > p.overall ? "#a78bfa" : "#8aa0b2")
+          : gaugeSVG(pot, 99, "POT", pot > p.overall ? "#4ade80" : "#8aa0b2")
       ])
     ]));
 
