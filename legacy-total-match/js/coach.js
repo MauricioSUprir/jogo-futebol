@@ -7,6 +7,47 @@
 
   function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
+  // ----- MORAL individual do jogador (por minutos jogados) -----
+  function playerMorale(c, p) {
+    var played = (c.stats && c.stats.p) || 0;
+    if (c.transferReq && c.transferReq[p.id]) return { v: 18, cls: "crit", txt: "Quer sair" };
+    if (played < 3) return { v: 68, cls: "ok", txt: "Tranquilo" };
+    var st = c.pstats && c.pstats[p.id]; var apps = st ? st.apps : 0;
+    var ratio = apps / played;
+    var m = 46 + Math.round(ratio * 48);
+    if (p.overall >= 80 && ratio < 0.3) m -= 12;   // craque encostado fica mais irritado
+    m = Math.max(10, Math.min(98, m));
+    var cls = m >= 70 ? "ok" : m >= 45 ? "mid" : "lo";
+    return { v: m, cls: cls, txt: m >= 78 ? "Feliz" : m >= 55 ? "Satisfeito" : m >= 35 ? "Incomodado" : "Insatisfeito" };
+  }
+  // jogador com poucos minutos pode pedir transferência (esporádico)
+  function maybePlayerUnrest(c) {
+    var played = (c.stats && c.stats.p) || 0;
+    if (played < 5) return;
+    if (!c.transferReq) c.transferReq = {};
+    // auto-resolve: quem voltou a jogar bastante deixa de querer sair
+    Object.keys(c.transferReq).forEach(function (id) {
+      var st = c.pstats && c.pstats[id];
+      if (st && played && (st.apps / played) > 0.55) { delete c.transferReq[id]; }
+    });
+    var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
+    if (c._lastUnrest === stamp) return;
+    if (Math.random() < 0.62) return;   // esporádico
+    c._lastUnrest = stamp;
+    var squad = []; try { squad = C().userSquad(c) || []; } catch (e) {}
+    var cand = squad.filter(function (p) {
+      if (c.transferReq[p.id]) return false;
+      if ((p.age || 24) > 32 || p.overall < 73) return false;
+      var st = c.pstats && c.pstats[p.id]; var apps = st ? st.apps : 0;
+      return apps <= Math.floor(played * 0.35);
+    }).sort(function (a, b) { return b.overall - a.overall; });
+    if (!cand.length) return;
+    var p = cand[0];
+    c.transferReq[p.id] = true;
+    TM.notify.push(c, { icon: "😤", title: "Pedido de transferência", news: true, text: p.name + " está insatisfeito com a falta de minutos e pediu para ser negociado. Dê mais oportunidades, converse com ele ou avalie uma venda." });
+    try { if (c.social) c.social.lastGen = ""; } catch (e) {}
+  }
+
   // ----- SETORES do treinador (barra de abas deslizável) -----
   function coachSectors(c, active) {
     var unread = 0; try { unread = TM.notify.unread(c); } catch (e) {}
@@ -584,6 +625,7 @@
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
+    maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
     TM.storage.saveCoachCareer(c);
     // se a temporada acabou e há título não comemorado, mostra a tela de parabéns primeiro
@@ -2649,6 +2691,37 @@
         gaugeSVG(pot, 99, "POT", pot > p.overall ? "#a78bfa" : "#8aa0b2")
       ])
     ]));
+
+    // ---- moral individual (só faz sentido para jogadores do meu elenco) ----
+    var inMySquad = (c.roster || []).indexOf(p.id) >= 0;
+    if (inMySquad) {
+      var mo = playerMorale(c, p);
+      wrap.appendChild(el("div", { class: "pmorale mm-" + mo.cls }, [
+        el("span", { class: "pmo-face", text: mo.v >= 70 ? "😃" : mo.v >= 45 ? "😐" : "😞" }),
+        el("div", { class: "pmo-info" }, [
+          el("div", { class: "pmo-top" }, [ el("span", { class: "pmo-lbl", text: "Moral · " + mo.txt }), el("span", { class: "pmo-val mm-" + mo.cls, text: mo.v + "%" }) ]),
+          el("div", { class: "pmo-bar" }, [ el("div", { class: "pmo-fill mm-" + mo.cls, style: "width:" + mo.v + "%" }) ])
+        ])
+      ]));
+      // pedido de transferência: ações
+      if (c.transferReq && c.transferReq[p.id]) {
+        wrap.appendChild(el("div", { class: "treq-banner" }, [
+          el("div", { class: "treq-t", text: "😤 " + shortName(p.name) + " pediu para ser negociado" }),
+          el("div", { class: "treq-s", text: "Por falta de minutos. Você pode prometer mais oportunidades ou colocá-lo na lista de transferências." }),
+          el("div", { class: "treq-acts" }, [
+            TM.ui.button("🤝 Prometer minutos", function () {
+              delete c.transferReq[p.id]; TM.storage.saveCoachCareer(c);
+              TM.notify.push(c, { icon: "🤝", title: "Conversa", text: "Você prometeu mais minutos a " + p.name + ". Ele topou dar a volta por cima — agora precisa jogar de verdade." });
+              TM.ui.toast("Promessa feita — dê minutos a ele!"); TM.ui.go("coach-player");
+            }, "btn primary small"),
+            TM.ui.button("📋 Listar p/ venda", function () {
+              c.transferList = c.transferList || []; if (c.transferList.indexOf(p.id) < 0) c.transferList.push(p.id);
+              TM.storage.saveCoachCareer(c); TM.ui.toast(p.name + " na lista de transferências."); TM.ui.go("coach-player");
+            }, "btn ghost small")
+          ])
+        ]));
+      }
+    }
 
     // ---- ação: jogadores similares (scout) ----
     wrap.appendChild(el("button", { class: "prof-scout-btn", on: { click: function () { openSimilar(p, "coach-player"); } } }, [

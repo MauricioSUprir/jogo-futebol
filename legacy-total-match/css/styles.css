@@ -2099,6 +2099,23 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .bottom-nav-spacer { height: 72px; width: 100%; flex: 0 0 auto; }
 @media (min-width: 760px) { .bottom-nav { max-width: 620px; margin: 0 auto; border-radius: 16px 16px 0 0; border: 1px solid var(--line); border-bottom: none; } }
 
+/* moral individual + pedido de transferência (perfil) */
+.pmorale { display: flex; align-items: center; gap: 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 10px 14px; }
+.pmo-face { font-size: 22px; }
+.pmo-info { flex: 1; }
+.pmo-top { display: flex; justify-content: space-between; align-items: baseline; }
+.pmo-lbl { font-size: 12.5px; font-weight: 700; }
+.pmo-val { font-weight: 800; font-size: 12.5px; }
+.pmo-bar { height: 7px; border-radius: 5px; background: var(--black-soft); overflow: hidden; margin-top: 6px; }
+.pmo-fill { height: 100%; border-radius: 5px; }
+.pmo-fill.mm-ok { background: linear-gradient(90deg,#22a355,#6ef0a0); } .pmo-fill.mm-mid { background: linear-gradient(90deg,#caa53a,#ffd54a); } .pmo-fill.mm-lo, .pmo-fill.mm-crit { background: linear-gradient(90deg,#c0392b,#ff6a61); }
+.pmo-val.mm-ok { color: #6ef0a0; } .pmo-val.mm-mid { color: #ffd54a; } .pmo-val.mm-lo, .pmo-val.mm-crit { color: #ff6a61; }
+.treq-banner { background: linear-gradient(135deg, rgba(255,90,60,.14), var(--panel)); border: 1px solid rgba(255,90,60,.4); border-radius: 13px; padding: 12px 14px; }
+.treq-t { font-weight: 800; font-size: 14px; }
+.treq-s { font-size: 12px; color: var(--text-dim); margin: 4px 0 10px; }
+.treq-acts { display: flex; gap: 8px; }
+.treq-acts .btn { flex: 1; }
+
 /* reputação do treinador */
 .rep-badge { display: flex; align-items: center; gap: 11px; width: 100%; max-width: 620px; margin: 0 auto 12px; background: linear-gradient(135deg, rgba(139,92,246,.14), var(--panel)); border: 1px solid rgba(139,92,246,.3); border-radius: 13px; padding: 10px 14px; }
 .rep-star { font-size: 20px; }
