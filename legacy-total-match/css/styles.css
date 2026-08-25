@@ -2109,6 +2109,41 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   /* partida ao vivo preenche mais a tela no PC */
   .broadcast, .broadcast-feed { max-width: 940px; }
 }
+
+/* ===== rail direito do hub (SÓ PC largo): elenco, moral e torcida ===== */
+.coach-rail { display: none; }
+@media (min-width: 1280px) {
+  .coach-rail { display: flex; flex-direction: column; gap: 12px; position: fixed; right: 0; top: 0; bottom: 0;
+    width: 316px; overflow-y: auto; padding: 18px 18px 40px; box-sizing: border-box;
+    background: linear-gradient(180deg, #10161c, #0b1014); border-left: 1px solid var(--line); z-index: 55; }
+  .coach-rail::-webkit-scrollbar { width: 0; }
+  /* abre espaço à direita para o rail e alinha o conteúdo central */
+  .screen.has-sidebar.has-rightrail { padding-right: 340px; }
+  .screen.has-sidebar.has-rightrail > * { max-width: 720px; }
+  .cr-title { font-size: 12px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #a78bfa; margin: 4px 2px 1px; }
+  .cr-players, .cr-posts { display: flex; flex-direction: column; gap: 7px; }
+  .cr-prow { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 11px; padding: 7px 10px; cursor: pointer; text-align: left; color: inherit; transition: border-color .15s, transform .1s; }
+  .cr-prow:hover { border-color: rgba(167,120,255,.5); transform: translateX(-2px); }
+  .cr-face { width: 32px; height: 32px; border-radius: 8px; flex: none; object-fit: cover; background: #17151f; }
+  .cr-pinfo { flex: 1; min-width: 0; }
+  .cr-pname { font-weight: 700; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cr-pmeta { font-size: 11px; color: var(--text-dim); }
+  .cr-ovr { font-weight: 800; font-size: 15px; color: #c4b5fd; flex: none; }
+  .cr-more { background: none; border: none; color: #a78bfa; font-size: 12px; font-weight: 700; cursor: pointer; padding: 3px 2px; text-align: left; }
+  .cr-more:hover { color: #c4b5fd; }
+  .cr-morale { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; }
+  .cr-mtop { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; }
+  .cr-mval { font-weight: 800; }
+  .cr-mval.mm-ok { color: #7ee39a; } .cr-mval.mm-mid { color: #ffd479; } .cr-mval.mm-lo { color: #ff8a8a; }
+  .cr-mbar { height: 6px; border-radius: 4px; background: rgba(0,0,0,.4); overflow: hidden; margin-top: 6px; }
+  .cr-mfill { height: 100%; border-radius: 4px; background: #8b5cf6; }
+  .cr-mfill.mm-ok { background: #34c759; } .cr-mfill.mm-mid { background: #f5b53f; } .cr-mfill.mm-lo { background: #ff5a3c; }
+  .cr-post { background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 8px 11px; }
+  .cr-phandle { font-size: 11.5px; font-weight: 800; color: #c4b5fd; }
+  .cr-ptext { font-size: 12px; color: #e8e6ef; margin: 2px 0 4px; line-height: 1.35; }
+  .cr-plikes { font-size: 10.5px; color: var(--text-dim); }
+}
 .sector-track::-webkit-scrollbar { display: none; }
 .sector-tab { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px 7px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text-dim); cursor: pointer; transition: transform .12s, background .15s, color .15s, border-color .15s; }
 .sector-tab:active { transform: scale(.94); }
