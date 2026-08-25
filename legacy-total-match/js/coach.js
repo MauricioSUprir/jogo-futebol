@@ -293,6 +293,56 @@
   }
   function getContract(c, id) { ensureContracts(c); return c.contracts[id]; }
 
+  // lista um jogador para venda — se for ídolo, avisa e a torcida/elenco reage
+  function listForSale(c, p) {
+    function doList(reaction) {
+      c.transferList = c.transferList || []; if (c.transferList.indexOf(p.id) < 0) c.transferList.push(p.id);
+      if (reaction) {
+        try { if (TM.social && TM.social.nudgeMorale) TM.social.nudgeMorale(c, -14); } catch (e) {}
+        try { if (c.social) c.social.lastGen = ""; } catch (e) {}
+        c.moraleAdj = c.moraleAdj || {};
+        (c.roster || []).forEach(function (id) { c.moraleAdj[id] = { v: Math.max(-20, (moraleAdjOf(c, id)) - 6), at: (c.matchNo || 0) }; });
+        TM.notify.push(c, { icon: "😡", title: "Revolta da torcida", news: true, text: "Colocar " + p.name + ", um ídolo do clube, à venda irritou a torcida e abalou o vestiário. Pense bem antes de negociá-lo." });
+      }
+      TM.storage.saveCoachCareer(c);
+      TM.ui.toast(p.name + " na lista de transferências.");
+      TM.ui.go("coach-player");
+    }
+    var idol = idolStatus(c, p);
+    if (idol && (idol.cls === "idol" || idol.cls === "legend")) {
+      TM.ui.confirm("Vender um ídolo?", p.name + " é " + idol.label.toLowerCase() + ". Listá-lo para venda vai revoltar a torcida e derrubar a moral do elenco. Tem certeza?", "Listar mesmo assim", function () { doList(true); }, true);
+    } else { doList(false); }
+  }
+
+  // ----- ÍDOLOS / CRIAS DO CLUBE (tempo de casa + formados na base) -----
+  function ensureTenure(c) {
+    if (!c.tenure) c.tenure = {};
+    if (!c.homegrown) c.homegrown = {};
+    (c.roster || []).forEach(function (id) {
+      if (c.tenure[id] == null) {
+        // no elenco inicial, distribui tempo de casa (0-6) e marca ~28% como crias da base
+        var isInitial = !c.signedFrom || !(id in c.signedFrom);
+        c.tenure[id] = isInitial ? (phash(id + ":ten") % 7) : 0;
+        if (isInitial && c.homegrown[id] == null) c.homegrown[id] = (phash(id + ":hg") % 100) < 28;
+      }
+      if (c.homegrown[id] == null) c.homegrown[id] = false;
+    });
+  }
+  // status de ídolo: cria com casa OU muito tempo de casa (servo leal)
+  function idolStatus(c, p) {
+    if (!c || !p) return null;
+    ensureTenure(c);
+    if ((c.roster || []).indexOf(p.id) < 0) return null;
+    var t = c.tenure[p.id] || 0, hg = !!c.homegrown[p.id];
+    if (hg && t >= 5) return { cls: "legend", label: "Ídolo eterno da base", ic: "👑" };
+    if (t >= 7) return { cls: "legend", label: "Ídolo do clube", ic: "👑" };
+    if (hg && t >= 3) return { cls: "idol", label: "Cria e ídolo do clube", ic: "⭐" };
+    if (t >= 5) return { cls: "idol", label: "Ídolo do clube", ic: "⭐" };
+    if (hg) return { cls: "home", label: "Cria da base", ic: "🌱" };
+    if (t >= 3) return { cls: "home", label: "Veterano da casa", ic: "🎖️" };
+    return null;
+  }
+
   // ----- CONTRATO DO PRÓPRIO TREINADOR (salário, duração, multa, objetivo) -----
   function ensureMyContract(c) {
     if (c.myContract) return c.myContract;
@@ -770,6 +820,7 @@
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
+    ensureTenure(c);        // tempo de casa / crias da base (ídolos)
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
@@ -3250,6 +3301,18 @@
     // ---- moral individual (só faz sentido para jogadores do meu elenco) ----
     var inMySquad = (c.roster || []).indexOf(p.id) >= 0;
     if (inMySquad) {
+      // selo de ídolo / cria do clube
+      var idol = idolStatus(c, p);
+      if (idol) {
+        var tn = (c.tenure && c.tenure[p.id]) || 0;
+        wrap.appendChild(el("div", { class: "idol-badge idol-" + idol.cls }, [
+          el("span", { class: "idol-ic", text: idol.ic }),
+          el("div", { class: "idol-info" }, [
+            el("div", { class: "idol-t", text: idol.label }),
+            el("div", { class: "idol-s", text: (c.homegrown && c.homegrown[p.id] ? "Formado na base · " : "") + tn + " temporada(s) de casa" })
+          ])
+        ]));
+      }
       var mo = playerMorale(c, p);
       wrap.appendChild(el("div", { class: "pmorale mm-" + mo.cls }, [
         el("span", { class: "pmo-face", text: mo.v >= 70 ? "😃" : mo.v >= 45 ? "😐" : "😞" }),
@@ -3311,10 +3374,7 @@
               TM.notify.push(c, { icon: "🤝", title: "Conversa", text: "Você prometeu mais minutos a " + p.name + ". Ele topou dar a volta por cima — agora precisa jogar de verdade." });
               TM.ui.toast("Promessa feita — dê minutos a ele!"); TM.ui.go("coach-player");
             }, "btn primary small"),
-            TM.ui.button("📋 Listar p/ venda", function () {
-              c.transferList = c.transferList || []; if (c.transferList.indexOf(p.id) < 0) c.transferList.push(p.id);
-              TM.storage.saveCoachCareer(c); TM.ui.toast(p.name + " na lista de transferências."); TM.ui.go("coach-player");
-            }, "btn ghost small")
+            TM.ui.button("📋 Listar p/ venda", function () { listForSale(c, p); }, "btn ghost small")
           ])
         ]));
       }
@@ -4118,6 +4178,7 @@
   function shortName(name) { var parts = name.split(" "); return parts.length > 1 ? parts[0][0] + ". " + parts[parts.length - 1] : name; }
 
   /* ---------- categorias de base ---------- */
+  var youthTab = "all";
   TM.ui.register("coach-youth", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🌱 Categorias de Base", function () { TM.ui.go("coach-hub"); }));
@@ -4127,10 +4188,27 @@
       TM.ui.button("⚽ Disputar partida de base", function () { TM.ui.go("coach-youth-match"); }, "btn primary")
     ]));
 
+    // abas por categoria: Sub-17 (<=16) e Sub-20 (17-19)
+    var all = c.youth || [];
+    var sub17 = all.filter(function (p) { return (p.age || 15) <= 16; });
+    var sub20 = all.filter(function (p) { return (p.age || 15) >= 17; });
+    var TABS = [["all", "Todos", all], ["s17", "Sub-17", sub17], ["s20", "Sub-20", sub20]];
+    if (!youthTab) youthTab = "all";
+    var tabRow = el("div", { class: "youth-tabs panel-narrow" });
+    TABS.forEach(function (t) {
+      tabRow.appendChild(el("button", { class: "youth-tab" + (youthTab === t[0] ? " on" : ""), on: { click: function () { youthTab = t[0]; TM.ui.go("coach-youth"); } } }, [
+        el("span", { text: t[1] }), el("span", { class: "youth-tab-n", text: t[2].length })
+      ]));
+    });
+    screen.appendChild(tabRow);
+
+    var shown = (TABS.filter(function (t) { return t[0] === youthTab; })[0] || TABS[0])[2];
     var list = el("div", { class: "panel-narrow squad-list" });
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
-    (c.youth || []).slice().sort(function (a, b) { return order[a.pos] - order[b.pos] || b.potential - a.potential; }).forEach(function (p) {
+    shown.slice().sort(function (a, b) { return order[a.pos] - order[b.pos] || b.potential - a.potential; }).forEach(function (p) {
       var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.coachUI.openPlayer(pl, TM.ui.current()); } });
+      var cat = (p.age || 15) <= 16 ? "Sub-17" : "Sub-20";
+      row.appendChild(el("span", { class: "youth-cat", text: cat }));
       var canPromote = p.age >= 15;
       row.appendChild(el("button", { class: "buy-btn" + (canPromote ? "" : " disabled"), text: canPromote ? "Subir ↑" : p.age + " anos", on: { click: function (e) {
         e.stopPropagation();
@@ -4139,7 +4217,7 @@
       } } }));
       list.appendChild(row);
     });
-    if (!(c.youth || []).length) list.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador na base (todos promovidos)." }));
+    if (!shown.length) list.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador nesta categoria." }));
     screen.appendChild(list);
   });
 
