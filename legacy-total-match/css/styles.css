@@ -2061,6 +2061,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .sh-logo { display: block; font-weight: 900; font-size: 20px; color: var(--green); letter-spacing: .5px; }
 .sh-sub { font-size: 11px; color: var(--text-dim); }
 .post { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.post.mine { border-color: rgba(45,210,110,.5); box-shadow: 0 0 0 1px rgba(45,210,110,.2) inset; }
 .post-head { display: flex; align-items: center; gap: 10px; }
 .post-ava { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; }
 .post-id { flex: 1; min-width: 0; }
@@ -2068,13 +2069,53 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .post-verified { color: #38bdf8; font-size: 12px; }
 .post-time { font-size: 11px; color: var(--text-dim); }
 .post-badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: rgba(45,210,110,.14); border: 1px solid var(--green); color: var(--green); flex: 0 0 auto; }
+.post-badge.hot { background: rgba(255,90,60,.16); border-color: #ff5a3c; color: #ff8a70; }
 .post-text { font-size: 14px; line-height: 1.45; color: var(--text); margin: 9px 0 10px; white-space: pre-wrap; }
+.post-photo { width: 100%; max-height: 260px; object-fit: cover; border-radius: 12px; margin: 2px 0 10px; display: block; border: 1px solid var(--line); }
 .post-actions { display: flex; gap: 18px; }
-.post-actions .pa { font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
-.post-comments { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; }
-.pc-row { font-size: 12.5px; line-height: 1.35; }
-.pc-who { font-weight: 800; color: var(--gold-light); margin-right: 5px; }
-.pc-txt { color: var(--text-dim); }
+.post-actions .pa { font-size: 12.5px; color: var(--text-dim); font-weight: 600; cursor: pointer; user-select: none; transition: color .15s, transform .1s; }
+.post-actions .pa:active { transform: scale(.9); }
+.post-actions .pa-like.on { color: #ff5470; }
+.post-comments { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.pc-row { display: flex; gap: 8px; }
+.pc-ava { width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto; }
+.pc-body { flex: 1; min-width: 0; }
+.pc-top { display: flex; align-items: center; gap: 4px; }
+.pc-who { font-weight: 800; color: var(--gold-light); font-size: 12px; }
+.pc-txt { color: var(--text); font-size: 12.5px; line-height: 1.35; }
+.pc-meta { display: flex; gap: 12px; margin-top: 2px; }
+.pc-like { font-size: 11px; color: var(--text-dim); cursor: pointer; }
+.pc-like.on { color: #ff5470; }
+.pc-reply { font-size: 11px; color: var(--text-dim); cursor: pointer; }
+.see-all { background: none; border: none; color: var(--gold-light); font-size: 12.5px; font-weight: 700; text-align: left; padding: 2px 0; cursor: pointer; }
+
+/* medidor de moral */
+.morale-meter { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.mm-row { display: flex; justify-content: space-between; align-items: center; }
+.mm-lbl { font-size: 12.5px; font-weight: 700; }
+.mm-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+.mm-bar { height: 8px; border-radius: 5px; background: var(--black-soft); overflow: hidden; }
+.mm-fill { height: 100%; border-radius: 5px; transition: width .4s; }
+.mm-ok .mm-fill, .mm-fill.mm-ok { background: linear-gradient(90deg,#22c55e,#6ef0a0); }
+.mm-val.mm-ok { color: #6ef0a0; } .mm-val.mm-mid { color: #ffcf49; } .mm-val.mm-lo { color: #ff9a4a; } .mm-val.mm-crit { color: #ff6a61; }
+.mm-fill.mm-mid { background: linear-gradient(90deg,#caa53a,#ffd54a); } .mm-fill.mm-lo { background: linear-gradient(90deg,#c96a2a,#ff9a4a); } .mm-fill.mm-crit { background: linear-gradient(90deg,#a11,#ff6a61); }
+.mm-msg { font-size: 11px; color: var(--text-dim); }
+
+/* compositor de post */
+.composer { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.comp-row { display: flex; gap: 8px; align-items: flex-start; }
+.comp-ava { width: 34px; height: 34px; border-radius: 50%; flex: 0 0 auto; }
+.comp-ta { flex: 1; resize: none; min-height: 46px; background: var(--black-soft); border: 1px solid var(--line); border-radius: 10px; color: var(--text); font: inherit; font-size: 13.5px; padding: 8px 10px; }
+.comp-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.comp-hint { font-size: 11px; color: var(--text-dim); }
+
+/* modal de comentários */
+.cmodal { width: 100%; max-width: 520px; max-height: 80vh; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 16px 16px 12px 12px; overflow: hidden; }
+.cmodal-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid var(--line); font-weight: 800; }
+.cmodal-x { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; }
+.cmodal-list { flex: 1; overflow-y: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+.cmodal-compose { display: flex; gap: 8px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.cmodal-compose .text-input { flex: 1; }
 
 /* ============ Estatísticas do time na temporada (elenco) ============ */
 .xray-season { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; }
