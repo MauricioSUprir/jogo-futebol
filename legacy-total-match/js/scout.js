@@ -117,6 +117,19 @@
         el("div", {}, [ el("div", { class: "scout-coach-lbl", text: "Treinador" }), el("div", { class: "scout-coach-nm", text: coach.name }) ])
       ]));
     }
+    // identidade tática do adversário (o jogo reconhece o estilo do time)
+    if (!isNation) {
+      try {
+        var _career = TM.storage.coachCareer();
+        if (_career && TM.coachUI && TM.coachUI.identityPhrase) {
+          var _phrase = TM.coachUI.identityPhrase(_career, teamId);
+          if (_phrase) root.appendChild(el("div", { class: "scout-identity" }, [
+            el("span", { class: "si-ic", text: "🎭" }),
+            el("span", { class: "si-tx", text: _phrase })
+          ]));
+        }
+      } catch (e) {}
+    }
 
     // provável escalação (campinho só-leitura)
     root.appendChild(el("h3", { class: "block-title", text: "Provável escalação · " + form }));

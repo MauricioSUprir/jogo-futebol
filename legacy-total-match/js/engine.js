@@ -249,7 +249,7 @@
   }
 
   TM.engine = {
-    simulate: simulate, TACTICS: TACTICS,
+    simulate: simulate, TACTICS: TACTICS, TACTIC_MODS: TACTIC_MODS,
     teamFromClub: function (clubId, rosterOverride) {
       var club = TM.data.club(clubId);
       var players = rosterOverride || TM.data.clubPlayers(clubId);
