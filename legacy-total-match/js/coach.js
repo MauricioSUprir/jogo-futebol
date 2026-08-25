@@ -504,7 +504,8 @@
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); }),
-      hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); })
+      hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); }),
+      hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
   });
