@@ -2058,6 +2058,69 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .bottom-nav-spacer { height: 72px; width: 100%; flex: 0 0 auto; }
 @media (min-width: 760px) { .bottom-nav { max-width: 620px; margin: 0 auto; border-radius: 16px 16px 0 0; border: 1px solid var(--line); border-bottom: none; } }
 
+/* ===== Scout: jogadores similares ===== */
+.prof-scout-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 620px; margin: 0 auto;
+  background: linear-gradient(120deg, #6d3bff, #8b5cf6); border: none; color: #fff; font-weight: 800; font-size: 14px; padding: 13px 16px; border-radius: 13px; cursor: pointer; box-shadow: 0 4px 16px rgba(124,58,237,.35); }
+.prof-scout-btn .psb-arrow { font-size: 18px; opacity: .8; }
+.similar-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
+.sim-ref { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
+.sim-ref-face { width: 42px; height: 42px; border-radius: 10px; object-fit: cover; }
+.sim-ref-id { flex: 1; min-width: 0; }
+.sim-ref-t { font-size: 11px; color: var(--text-dim); }
+.sim-ref-n { font-weight: 800; font-size: 14px; }
+.sim-perfil-btn { background: rgba(255,255,255,.08); border: 1px solid var(--line); color: var(--text); font-weight: 700; font-size: 12px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.sim-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sim-count { font-weight: 800; font-size: 13px; color: #b98cff; }
+.sim-fchip { margin-left: auto; background: var(--panel); border: 1px solid var(--line); color: var(--text-dim); font-weight: 700; font-size: 11.5px; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.sim-fchip + .sim-fchip { margin-left: 0; }
+.sim-fchip.on { background: rgba(124,58,237,.2); border-color: #8b5cf6; color: #c9b4ff; }
+.sim-hint { font-size: 11.5px; color: var(--text-dim); background: rgba(124,58,237,.08); border: 1px solid rgba(124,58,237,.25); border-radius: 10px; padding: 8px 10px; }
+.sim-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.sim-top { display: flex; align-items: center; gap: 10px; }
+.sim-face { width: 50px; height: 50px; border-radius: 12px; object-fit: cover; flex: 0 0 auto; background: var(--black-soft); }
+.sim-info { flex: 1; min-width: 0; }
+.sim-name { font-weight: 800; font-size: 15px; }
+.sim-club { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-dim); }
+.sim-crest { width: 15px; height: 17px; object-fit: contain; }
+.sim-sub { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-dim); }
+.sim-flag { width: 17px; height: 12px; border-radius: 2px; object-fit: cover; }
+.sim-ovp { text-align: right; flex: 0 0 auto; }
+.sim-ovp-row { display: flex; gap: 8px; }
+.sim-ovp-v { font-size: 18px; font-weight: 900; color: #38d66a; }
+.sim-ovp-v.pot { color: #6ef0a0; }
+.sim-ovp-l { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; }
+.sim-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sim-tag { font-size: 10.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px; }
+.sim-tag.match { background: linear-gradient(120deg, #6d3bff, #8b5cf6); color: #fff; }
+.sim-tag.gold { background: rgba(202,165,58,.2); color: #ffcf49; border: 1px solid rgba(202,165,58,.5); }
+.sim-tag.silver { background: rgba(160,175,190,.16); color: #cdd8e2; }
+.sim-tag.green { background: rgba(34,197,94,.18); color: #6ef0a0; }
+.sim-tag.brown { background: rgba(150,100,60,.22); color: #d0a878; }
+.sim-acts { display: flex; gap: 8px; }
+.sim-acts .btn { flex: 1; }
+.btn.sim-analise { background: linear-gradient(120deg, #6d3bff, #8b5cf6); border: none; }
+
+/* ===== Comparação (Análise) ===== */
+.compare-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 14px; }
+.cmp-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+.cmp-col { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1; }
+.cmp-face { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--black-soft); }
+.cmp-name { font-weight: 800; font-size: 13px; text-align: center; }
+.cmp-ov { font-size: 12px; color: #38d66a; font-weight: 800; }
+.cmp-dna { text-align: center; flex: 0 0 auto; }
+.cmp-dna-v { font-size: 26px; font-weight: 900; background: linear-gradient(120deg,#8b5cf6,#6ef0a0); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.cmp-dna-l { font-size: 10px; color: var(--text-dim); }
+.cmp-rows { display: flex; flex-direction: column; gap: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.cmp-row { display: flex; align-items: center; gap: 8px; }
+.cmp-attr { width: 84px; text-align: center; font-size: 11px; color: var(--text-dim); flex: 0 0 auto; }
+.cmp-bar-l, .cmp-bar-r { flex: 1; position: relative; height: 16px; background: var(--black-soft); border-radius: 5px; overflow: hidden; display: flex; align-items: center; }
+.cmp-bar-l { justify-content: flex-end; }
+.cmp-bar-l .cmp-fill { position: absolute; right: 0; height: 100%; background: #3a6ea5; border-radius: 5px; }
+.cmp-bar-r .cmp-fill { position: absolute; left: 0; height: 100%; background: #3a6ea5; border-radius: 5px; }
+.cmp-fill.win { background: #22a355; }
+.cmp-va, .cmp-vb { position: relative; z-index: 1; font-size: 10.5px; font-weight: 800; color: #fff; padding: 0 5px; }
+.cmp-btns { display: flex; flex-direction: column; gap: 8px; }
+
 /* ===== Perfil / Análise do jogador ===== */
 .prof-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
 .prof-head { display: flex; align-items: center; gap: 12px; background: linear-gradient(150deg, var(--panel), var(--black-soft)); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }

@@ -2617,6 +2617,11 @@
       ])
     ]));
 
+    // ---- ação: jogadores similares (scout) ----
+    wrap.appendChild(el("button", { class: "prof-scout-btn", on: { click: function () { openSimilar(p, "coach-player"); } } }, [
+      el("span", { text: "🧬 Buscar jogadores similares" }), el("span", { class: "psb-arrow", text: "›" })
+    ]));
+
     // ---- abas ----
     var TABS = [["geral", "Visão Geral"], ["attrs", "Atributos"], ["hist", "Histórico"], ["ins", "Insights"]];
     var tabBar = el("div", { class: "prof-tabs" });
@@ -2709,6 +2714,153 @@
       tips.forEach(function (t) { insList.appendChild(el("div", { class: "insight-row", text: t })); });
       body.appendChild(insList);
     }
+  });
+
+  /* ---------- SCOUT: jogadores similares + comparação (Análise) ---------- */
+  var similarRefId = null, similarBack = "coach-player", similarFilter = { afford: false, young: false };
+  var compareAId = null, compareBId = null, compareBack = "coach-similar";
+  function openSimilar(player, back) { similarRefId = player.id; similarBack = back || "coach-squad"; TM.ui.go("coach-similar"); }
+  function openCompare(aId, bId, back) { compareAId = aId; compareBId = bId; compareBack = back || "coach-similar"; TM.ui.go("coach-compare"); }
+  TM.coachUI.openSimilar = openSimilar;
+
+  var ATTR_KEYS = [["pac", "Velocidade"], ["sho", "Finalização"], ["pas", "Passe"], ["dri", "Drible"], ["def", "Defesa"], ["phy", "Físico"]];
+  function attrDist(a, b) { var A = a.attrs || {}, B = b.attrs || {}, d = 0; ATTR_KEYS.forEach(function (k) { d += Math.abs((A[k[0]] || 50) - (B[k[0]] || 50)); }); return d; }
+  function matchPct(ref, p) {
+    var m = 100 - attrDist(ref, p) * 0.42 - Math.abs((ref.overall || 70) - (p.overall || 70)) * 1.4;
+    return Math.max(35, Math.min(99, Math.round(m)));
+  }
+  function playerTags(p) {
+    var t = [];
+    if (p.overall >= 85) t.push({ cls: "gold", txt: "Top mundial" });
+    else if (p.overall >= 78) t.push({ cls: "silver", txt: "Destaque" });
+    if ((p.age || 24) <= 21 && (p.potential || p.overall) >= 82) t.push({ cls: "green", txt: "Promessa" });
+    if ((p.age || 24) >= 33) t.push({ cls: "brown", txt: "Veterano" });
+    return t;
+  }
+  function similarPlayers(ref, n) {
+    var W = TM.data.world(), out = [], ids = Object.keys(W.playersById);
+    for (var i = 0; i < ids.length; i++) {
+      var p = W.playersById[ids[i]];
+      if (!p || p.id === ref.id || p.pos !== ref.pos) continue;
+      out.push({ p: p, m: matchPct(ref, p) });
+    }
+    out.sort(function (a, b) { return b.m - a.m; });
+    return out.slice(0, n || 40);
+  }
+
+  TM.ui.register("coach-similar", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c || !similarRefId) { TM.ui.go(similarBack); return; }
+    var ref = C().resolvePlayer(c, similarRefId) || TM.data.player(similarRefId);
+    if (!ref) { TM.ui.go(similarBack); return; }
+    screen.appendChild(TM.ui.topbar("🐺 Scout · Similares", function () { TM.ui.go(similarBack); }));
+    addSectorBar(screen, "coach-market");
+    var wrap = el("div", { class: "similar-wrap" });
+    screen.appendChild(wrap);
+
+    // referência
+    wrap.appendChild(el("div", { class: "sim-ref" }, [
+      TM.img.playerImg(ref, "sim-ref-face"),
+      el("div", { class: "sim-ref-id" }, [
+        el("div", { class: "sim-ref-t", text: "Jogadores similares a" }),
+        el("div", { class: "sim-ref-n", text: ref.name + " · " + TM.data.posLabel(ref) })
+      ]),
+      el("button", { class: "sim-perfil-btn", text: "👤 Perfil", on: { click: function () { openPlayerProfile(ref, "coach-similar"); } } })
+    ]));
+
+    var all = similarPlayers(ref, 60);
+    // filtros simples
+    var list = all.filter(function (o) {
+      if (similarFilter.afford && curVal(c, TM.data.marketValue(o.p)) > (c.budget || 0)) return false;
+      if (similarFilter.young && (o.p.age || 24) > 23) return false;
+      return true;
+    }).slice(0, 20);
+
+    var fbar = el("div", { class: "sim-filters" });
+    function fchip(key, label) {
+      var b = el("button", { class: "sim-fchip" + (similarFilter[key] ? " on" : ""), text: label, on: { click: function () { similarFilter[key] = !similarFilter[key]; TM.ui.go("coach-similar"); } } });
+      return b;
+    }
+    fbar.appendChild(el("span", { class: "sim-count", text: "👥 " + list.length + " encontrados" }));
+    fbar.appendChild(fchip("afford", "💰 No orçamento"));
+    fbar.appendChild(fchip("young", "🌱 Jovens"));
+    wrap.appendChild(fbar);
+    wrap.appendChild(el("div", { class: "sim-hint", text: "Toque em Análise para a leitura de scouting: radar, DNA da similaridade e comparação direta — instantâneo." }));
+
+    list.forEach(function (o) {
+      var p = o.p, club = TM.data.club(p.clubId), nation = p.nationId ? TM.data.nation(p.nationId) : null;
+      var tags = [{ cls: "match", txt: o.m + "% match" }].concat(playerTags(p));
+      wrap.appendChild(el("div", { class: "sim-card" }, [
+        el("div", { class: "sim-top" }, [
+          TM.img.playerImg(p, "sim-face"),
+          el("div", { class: "sim-info" }, [
+            el("div", { class: "sim-name", text: p.name }),
+            el("div", { class: "sim-club" }, [ club ? TM.img.clubImg(club, "sim-crest") : null, el("span", { text: club ? club.name : "" }) ]),
+            el("div", { class: "sim-sub" }, [ nation ? TM.img.nationImg(nation, "sim-flag") : null, el("span", { text: (p.age || "?") + " anos · " + TM.data.posLabel(p) }) ])
+          ]),
+          el("div", { class: "sim-ovp" }, [
+            el("div", { class: "sim-ovp-row" }, [ el("span", { class: "sim-ovp-v", text: p.overall }), el("span", { class: "sim-ovp-v pot", text: p.potential || p.overall }) ]),
+            el("div", { class: "sim-ovp-l", text: "OVR  POT" })
+          ])
+        ]),
+        el("div", { class: "sim-tags" }, tags.map(function (t) { return el("span", { class: "sim-tag " + t.cls, text: t.txt }); })),
+        el("div", { class: "sim-acts" }, [
+          TM.ui.button("✨ Análise", function () { openCompare(ref.id, p.id, "coach-similar"); }, "btn primary sim-analise"),
+          TM.ui.button("👤 Perfil", function () { openPlayerProfile(p, "coach-similar"); }, "btn ghost")
+        ])
+      ]));
+    });
+  });
+
+  TM.ui.register("coach-compare", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c || !compareAId || !compareBId) { TM.ui.go(compareBack); return; }
+    var A = C().resolvePlayer(c, compareAId) || TM.data.player(compareAId);
+    var B = C().resolvePlayer(c, compareBId) || TM.data.player(compareBId);
+    if (!A || !B) { TM.ui.go(compareBack); return; }
+    screen.appendChild(TM.ui.topbar("Análise · Comparação", function () { TM.ui.go(compareBack); }));
+    addSectorBar(screen, "coach-market");
+    var wrap = el("div", { class: "compare-wrap" });
+    screen.appendChild(wrap);
+
+    var m = matchPct(A, B);
+    // cabeçalho com os dois
+    function col(p) { return el("div", { class: "cmp-col" }, [ TM.img.playerImg(p, "cmp-face"), el("div", { class: "cmp-name", text: shortName(p.name) }), el("div", { class: "cmp-ov", text: p.overall + " OVR" }) ]); }
+    wrap.appendChild(el("div", { class: "cmp-head" }, [
+      col(A),
+      el("div", { class: "cmp-dna" }, [ el("div", { class: "cmp-dna-v", text: m + "%" }), el("div", { class: "cmp-dna-l", text: "DNA similar" }) ]),
+      col(B)
+    ]));
+
+    // barras comparativas por atributo
+    var rows = el("div", { class: "cmp-rows" });
+    ATTR_KEYS.forEach(function (k) {
+      var va = (A.attrs && A.attrs[k[0]]) || 50, vb = (B.attrs && B.attrs[k[0]]) || 50;
+      rows.appendChild(el("div", { class: "cmp-row" }, [
+        el("div", { class: "cmp-bar-l" }, [ el("div", { class: "cmp-fill l" + (va >= vb ? " win" : ""), style: "width:" + va + "%" }), el("span", { class: "cmp-va", text: va }) ]),
+        el("div", { class: "cmp-attr", text: k[1] }),
+        el("div", { class: "cmp-bar-r" }, [ el("div", { class: "cmp-fill r" + (vb >= va ? " win" : ""), style: "width:" + vb + "%" }), el("span", { class: "cmp-vb", text: vb }) ])
+      ]));
+    });
+    wrap.appendChild(rows);
+
+    // leitura de scouting
+    var diff = ATTR_KEYS.map(function (k) { return { k: k[1], d: ((B.attrs && B.attrs[k[0]]) || 50) - ((A.attrs && A.attrs[k[0]]) || 50) }; });
+    var bestB = diff.slice().sort(function (a, b) { return b.d - a.d; })[0];
+    var bestA = diff.slice().sort(function (a, b) { return a.d - b.d; })[0];
+    var reading = [];
+    reading.push("🧬 DNA de similaridade: " + m + "% — " + (m >= 82 ? "perfis muito parecidos." : m >= 68 ? "perfis parecidos, com nuances." : "mesma posição, estilos diferentes."));
+    if (bestB && bestB.d >= 3) reading.push("↗️ " + shortName(B.name) + " leva vantagem em " + bestB.k + " (+" + bestB.d + ").");
+    if (bestA && bestA.d <= -3) reading.push("↘️ " + shortName(A.name) + " é melhor em " + bestA.k + " (+" + (-bestA.d) + ").");
+    reading.push("💰 Valor: " + shortName(A.name) + " " + money(c, curVal(c, TM.data.marketValue(A))) + " · " + shortName(B.name) + " " + money(c, curVal(c, TM.data.marketValue(B))));
+    var rcard = el("div", { class: "prof-card" }, [ el("div", { class: "prof-card-h", text: "LEITURA DE SCOUTING" }) ]);
+    reading.forEach(function (t) { rcard.appendChild(el("div", { class: "insight-row", text: t })); });
+    wrap.appendChild(rcard);
+
+    wrap.appendChild(el("div", { class: "cmp-btns" }, [
+      TM.ui.button("👤 Perfil de " + shortName(B.name), function () { openPlayerProfile(B, "coach-compare"); }, "btn"),
+      TM.ui.button("← Voltar aos similares", function () { TM.ui.go("coach-similar"); }, "btn ghost")
+    ]));
   });
 
   /* ---------- central de notificações ---------- */
