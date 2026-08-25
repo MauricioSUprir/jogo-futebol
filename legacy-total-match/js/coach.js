@@ -52,14 +52,14 @@
     var times = ["11:00", "15:00", "16:00", "16:30", "18:30", "19:00", "20:00", "21:00", "21:30"];
     var time = times[h % times.length];
     var W = [["☀️", "Ensolarado", 24, 33], ["🌤️", "Sol entre nuvens", 21, 29], ["⛅", "Parcialmente nublado", 18, 26], ["☁️", "Nublado", 14, 22], ["🌧️", "Chuva", 11, 18], ["⛈️", "Tempestade", 12, 19]];
-    var w = W[(h >> 3) % W.length];
-    var wTemp = w[2] + ((h >> 7) % (w[3] - w[2] + 1));
+    var w = W[(h >>> 3) % W.length];
+    var wTemp = w[2] + ((h >>> 7) % (w[3] - w[2] + 1));
     var cap = 30000; try { cap = TM.data.stadium(homeClub).capacity || 30000; } catch (e) {}
     var rating = 68; try { rating = TM.data.clubRating(homeClub.id); } catch (e) {}
     var fill = 0.50 + (rating - 60) * 0.012;
     if (rivalryEnabled() && pending && TM.data.areRivals(pending.homeId, pending.awayId)) fill += 0.28; // clássico lota
     if (w[0] === "🌧️" || w[0] === "⛈️") fill -= 0.06;                                                   // chuva esvazia um pouco
-    fill += (((h >> 11) % 11) - 5) * 0.01;
+    fill += (((h >>> 11) % 11) - 5) * 0.01;
     fill = Math.max(0.30, Math.min(1, fill));
     var attend = Math.round(cap * fill / 100) * 100;
     return { time: time, wIcon: w[0], wLabel: w[1], wTemp: wTemp, attend: attend.toLocaleString("pt-BR") + " / " + cap.toLocaleString("pt-BR") };
