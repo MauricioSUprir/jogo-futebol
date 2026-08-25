@@ -558,6 +558,51 @@
 
   register("modes", function (screen) {
     screen.id = "screen-modes";
+    screen.classList.add("modes-min");
+    // fundo escuro com textura de estádio (bem sutil, só ambientação)
+    screen.appendChild(el("div", { class: "m2-bg", "aria-hidden": "true" }));
+    screen.appendChild(el("div", { class: "m2-vignette", "aria-hidden": "true" }));
+
+    var inner = el("div", { class: "m2-inner" });
+    screen.appendChild(inner);
+
+    inner.appendChild(el("img", { class: "m2-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }));
+
+    var MODES = [
+      { ic: "🎯", name: "Carreira", sub: "Master League — Treinador ou Dirigente", route: "coach" },
+      { ic: "⚡", name: "Partida Rápida", sub: "Um jogo avulso, na hora", route: "quick" },
+      { ic: "🏆", name: "Competições", sub: "Ligas, copas e seleções", route: "compmode" },
+      { ic: "🌐", name: "Online", sub: "Jogue com amigos", route: "online" }
+    ];
+    var list = el("div", { class: "m2-modes" });
+    MODES.forEach(function (m) {
+      list.appendChild(el("button", { class: "m2-btn", on: { click: function () { go(m.route); } } }, [
+        el("span", { class: "m2-ic", text: m.ic }),
+        el("span", { class: "m2-txt" }, [ el("span", { class: "m2-name", text: m.name }), el("span", { class: "m2-sub", text: m.sub }) ]),
+        el("span", { class: "m2-arrow", text: "▶" })
+      ]));
+    });
+    inner.appendChild(list);
+
+    // links secundários (tudo acessível, sem poluir)
+    var SEC = [
+      { name: "Minhas Carreiras", route: "saves" }, { name: "Dream Team", route: "dream" },
+      { name: "Draft", route: "draft" }, { name: "Grupo", route: "groupcomp" },
+      { name: "Informações", route: "competicoes" }, { name: "Editor", route: "editor" },
+      { name: "Configurações", route: "settings" }, { name: "Perfil", route: "profile" }
+    ];
+    var sec = el("div", { class: "m2-secondary" });
+    SEC.forEach(function (s, i) {
+      if (i) sec.appendChild(el("span", { class: "m2-dot", text: "·" }));
+      sec.appendChild(el("button", { class: "m2-link", text: s.name, on: { click: function () { go(s.route); } } }));
+    });
+    inner.appendChild(sec);
+
+    screen.appendChild(el("div", { class: "m2-footer", text: "TOTAL MATCH • v1.0" }));
+  });
+
+  register("modes-old-unused", function (screen) {
+    screen.id = "screen-modes";
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
     screen.appendChild(el("div", { class: "modes-glow", "aria-hidden": "true" }));
 
