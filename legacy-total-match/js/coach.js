@@ -822,6 +822,7 @@
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
     ensurePopularity(c);    // popularidade mundial do clube
+    maybeBoardObjectiveShift(c); // diretoria muda meta / cobra no meio da temporada
     applyPosOverrides(c);   // reaplica reposicionamentos concluídos (mundo regenera)
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
@@ -2833,6 +2834,24 @@
     return c.popularity;
   }
   function popularityLabel(v) { return v >= 85 ? "Fenômeno global" : v >= 68 ? "Grande clube mundial" : v >= 50 ? "Clube reconhecido" : v >= 32 ? "Em ascensão" : v >= 16 ? "Clube regional" : "Clube modesto"; }
+  // DIRETORIA DINÂMICA no meio da temporada: muda a meta ou cobra resultados
+  function maybeBoardObjectiveShift(c) {
+    var mn = c.matchNo || 0;
+    if (mn < 6) return;
+    if (c._objShiftAt != null && mn - c._objShiftAt < 6) return;
+    var pos; try { pos = C().currentPosition(c); } catch (e) { return; }
+    if (!pos) return;
+    var target = (c.objective && c.objective.maxPos) || 10;
+    if (pos <= Math.max(1, target - 3) && target > 2) {
+      c._objShiftAt = mn;
+      var nt = Math.max(2, target - 2);
+      c.objective = { desc: nt <= 2 ? "Brigar pelo título da liga" : "Terminar entre os " + nt + " primeiros", maxPos: nt };
+      TM.notify.push(c, { icon: "📈", title: "Nova meta da diretoria", news: true, text: "Impressionada com a campanha, a diretoria elevou a meta: " + c.objective.desc + "." });
+    } else if (pos >= target + 5) {
+      c._objShiftAt = mn;
+      TM.notify.push(c, { icon: "⚠️", title: "Cobrança da diretoria", news: true, text: "O time está bem abaixo da meta (" + ((c.objective && c.objective.desc) || "as metas") + "). A diretoria exige reação imediata, sob risco de demissão." });
+    }
+  }
   // JOGADOR INTRANSFERÍVEL: joia jovem de peso num clube grande não sai por qualquer proposta
   function isUntransferable(p) {
     if (!p || p.freeAgent) return false;
@@ -2915,8 +2934,9 @@
       var st = { bid: Math.min(r2(asking * 0.75), c.budget), rounds: 0, patience: maxPat, agreed: false };
       // adoçantes da proposta (facilitam o acordo por um valor em dinheiro menor)
       var sweet = { bonus: false, sellOn: false, parts: 1 };
+      var swap = { id: null, val: 0, name: "" };            // jogador incluído na troca
       function sweetDiscount() { return (sweet.bonus ? 0.10 : 0) + (sweet.sellOn ? 0.08 : 0); }
-      function effAsking() { return Math.max(0.05, Math.round(asking * (1 - sweetDiscount()) * 100) / 100); }
+      function effAsking() { return Math.max(0.05, Math.round((asking * (1 - sweetDiscount()) - swap.val) * 100) / 100); }
 
       panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
 
@@ -2977,13 +2997,30 @@
         sweetNote
       ]));
 
+      // TROCA: incluir um jogador seu no negócio para abater o valor à vista
+      var swapNote = el("div", { class: "sweet-note" });
+      var swapSel = el("select", { class: "select" });
+      swapSel.appendChild(el("option", { value: "", text: "— nenhum (só dinheiro) —" }));
+      (c.roster || []).map(function (id) { return C().resolvePlayer(c, id); }).filter(Boolean)
+        .sort(function (a, b) { return TM.data.marketValue(b) - TM.data.marketValue(a); })
+        .forEach(function (pl) {
+          swapSel.appendChild(el("option", { value: pl.id, text: pl.name + " (" + TM.data.posLabel(pl) + " " + pl.overall + ") · " + money(c, curVal(c, TM.data.marketValue(pl))) }));
+        });
+      swapSel.addEventListener("change", function () {
+        swap.id = swapSel.value || null;
+        if (swap.id) { var sp = C().resolvePlayer(c, swap.id); swap.name = sp.name; swap.val = curVal(c, TM.data.marketValue(sp) * 0.9); swapNote.textContent = "Inclui " + sp.name + " (abate " + money(c, swap.val) + " do valor à vista)."; }
+        else { swap.val = 0; swap.name = ""; swapNote.textContent = ""; }
+      });
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "🔄 Incluir jogador na troca" }), swapSel, swapNote ]));
+
       var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
       var offerBtn = TM.ui.button("💬 Fazer proposta", doOffer, "btn primary");
       var acceptBtn = TM.ui.button("✅ Aceitar contraproposta", function () { setBid(effAsking()); doOffer(); }, "btn primary");
       acceptBtn.style.display = "none";
       var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
         goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid,
-          bonus: sweet.bonus ? bonusAmt : 0, sellOn: sweet.sellOn ? 10 : 0, parts: sweet.parts || 1 });
+          bonus: sweet.bonus ? bonusAmt : 0, sellOn: sweet.sellOn ? 10 : 0, parts: sweet.parts || 1,
+          swapId: swap.id || null, swapName: swap.name || "", swapVal: swap.val || 0 });
       }, "btn primary next-step");
       nextBtn.style.display = "none";
 
@@ -3154,6 +3191,17 @@
           C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: fee, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
           c.roster.push(p.id);
           c.signedFrom[p.id] = NEGO.oldClubId;
+          // TROCA: o jogador incluído sai do seu elenco rumo ao clube vendedor
+          if (NEGO.swapId && NEGO.oldClubId) {
+            var swp = C().resolvePlayer(c, NEGO.swapId);
+            c.roster = c.roster.filter(function (id) { return id !== NEGO.swapId; });
+            delete c.signedFrom[NEGO.swapId];
+            if (c.contracts) delete c.contracts[NEGO.swapId];
+            try { C().executeWorldTransfer(c, NEGO.swapId, NEGO.oldClubId); } catch (e) {}
+            c.finc.soldM = (c.finc.soldM || 0) + (NEGO.swapVal || 0);
+            C().logDeal(c, { type: "out", kind: "swap", pid: NEGO.swapId, name: NEGO.swapName || (swp && swp.name) || "Jogador", pos: swp ? swp.pos : "", ov: swp ? swp.overall : 0, fee: NEGO.swapVal || 0, other: TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "" });
+            TM.notify.push(c, { icon: "🔄", title: "Troca fechada", news: true, text: (NEGO.swapName || "Um jogador") + " foi incluído na negociação e se transferiu para o " + (TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "clube vendedor") + "." });
+          }
           C().syncLineup(c); // já entra no banco de reservas
           if (parts > 1) TM.notify.push(c, { icon: "💳", title: "Compra parcelada", text: p.name + " parcelado em " + parts + "x de " + money(c, upfront) + " — as próximas parcelas serão cobradas nas próximas temporadas." });
         }
