@@ -2158,6 +2158,18 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   .cr-phandle { font-size: 11.5px; font-weight: 800; color: #86efac; }
   .cr-ptext { font-size: 12px; color: #e8e6ef; margin: 2px 0 4px; line-height: 1.35; }
   .cr-plikes { font-size: 10.5px; color: var(--text-dim); }
+  .cr-market { display: flex; flex-direction: column; gap: 6px; }
+  .cr-mv { display: flex; align-items: center; gap: 9px; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 7px 10px; }
+  .cr-mvcrest { width: 26px; height: 26px; flex: none; border-radius: 6px; object-fit: contain; }
+  .cr-mvmid { flex: 1; min-width: 0; }
+  .cr-mvname { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; color: #e8e6ef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cr-mvic { color: #4ade80; font-size: 12px; flex: none; }
+  .cr-mvov { flex: none; font-size: 10.5px; font-weight: 800; color: #052e14; background: #4ade80; border-radius: 5px; padding: 0 5px; line-height: 16px; }
+  .cr-mvroute { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .cr-mvfee { flex: none; font-size: 11.5px; font-weight: 800; color: #86efac; }
+  .cr-mvfee.free { color: #f0c040; }
+  .cr-mv-empty { color: var(--text-dim); }
+  .cr-mv-empty .cr-mvroute { white-space: normal; line-height: 1.35; }
 }
 .sector-track::-webkit-scrollbar { display: none; }
 .sector-tab { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px 7px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text-dim); cursor: pointer; transition: transform .12s, background .15s, color .15s, border-color .15s; }
