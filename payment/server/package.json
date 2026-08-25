@@ -1,0 +1,13 @@
+{
+  "name": "tm-license-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Total Match — servidor de licenças (Render)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1"
+  },
+  "engines": { "node": ">=18" }
+}
