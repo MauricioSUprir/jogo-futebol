@@ -45,6 +45,42 @@
   }
   function standings(t) { return Object.keys(t).map(function (k) { return t[k]; }).sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga); }); }
 
+  // estilos de jogo por posição (bônus de atributo + identidade)
+  var PLAYSTYLES = {
+    GK: [
+      { id: "parede", icon: "🧱", name: "Paredão", desc: "Reflexos e defesas difíceis", b: { def: 4, phy: 2 } },
+      { id: "goleiro-linha", icon: "🦶", name: "Goleiro-linha", desc: "Sai jogando com os pés", b: { pas: 5, dri: 2 } },
+      { id: "dono-area", icon: "✋", name: "Dono da área", desc: "Domina a bola aérea", b: { def: 3, phy: 4 } }
+    ],
+    DF: [
+      { id: "muralha", icon: "🧱", name: "Muralha", desc: "Marcação e desarme", b: { def: 5, phy: 3 } },
+      { id: "ala", icon: "⚡", name: "Ala moderno", desc: "Sobe apoiando o ataque", b: { pac: 4, dri: 2, pas: 2 } },
+      { id: "saida", icon: "🎯", name: "Saída de bola", desc: "Constrói desde a defesa", b: { pas: 5, dri: 2 } }
+    ],
+    MF: [
+      { id: "maestro", icon: "🎼", name: "Maestro", desc: "Passe e visão de jogo", b: { pas: 6, dri: 2 } },
+      { id: "b2b", icon: "🔋", name: "Box-to-box", desc: "Corre o jogo inteiro", b: { phy: 4, pac: 3, def: 2 } },
+      { id: "armador", icon: "🧠", name: "Armador", desc: "Último passe e chegada", b: { pas: 4, dri: 3, sho: 2 } }
+    ],
+    FW: [
+      { id: "artilheiro", icon: "🎯", name: "Artilheiro", desc: "Faro de gol e finalização", b: { sho: 6, pac: 2 } },
+      { id: "veloz", icon: "⚡", name: "Veloz", desc: "Explode na velocidade", b: { pac: 6, dri: 3 } },
+      { id: "driblador", icon: "🪄", name: "Driblador", desc: "Um contra um e dribles", b: { dri: 6, pac: 2 } }
+    ]
+  };
+  // características extras (escolha até 2) — perks leves e independentes de posição
+  var TRAITS = [
+    { id: "falta", icon: "🎯", name: "Batedor de faltas", b: { sho: 2, pas: 1 } },
+    { id: "penalti", icon: "🥅", name: "Cobrador de pênaltis", b: { sho: 2 } },
+    { id: "lider", icon: "🫡", name: "Líder nato", b: { phy: 1, def: 1, pas: 1 } },
+    { id: "canhoto", icon: "🦵", name: "Canhoto habilidoso", b: { dri: 2, pas: 1 } },
+    { id: "cabeca", icon: "🗣️", name: "Bom de cabeça", b: { phy: 2, sho: 1 } },
+    { id: "motor", icon: "🔥", name: "Motor infinito", b: { phy: 2, pac: 1 } }
+  ];
+  function styleById(pos, id) { return (PLAYSTYLES[pos] || []).filter(function (s) { return s.id === id; })[0] || null; }
+  function traitById(id) { return TRAITS.filter(function (t) { return t.id === id; })[0] || null; }
+  function applyBonus(attrs, b) { if (!b) return; Object.keys(b).forEach(function (k) { attrs[k] = Math.max(20, Math.min(99, (attrs[k] || 0) + b[k])); }); }
+
   function makeAttrs(base, pos) {
     var a = { pac: base, sho: base, pas: base, dri: base, def: base, phy: base };
     if (pos === "GK") { a.def = base + 6; a.sho = base - 25; }
@@ -159,14 +195,53 @@
     body.appendChild(field("Peso", wInput.node));
 
     // posição
+    form.style = PLAYSTYLES.FW[0].id; form.traits = [];
     var posSeg = el("div", { class: "segmented full" });
     [["GK", "Goleiro"], ["DF", "Defensor"], ["MF", "Meia"], ["FW", "Atacante"]].forEach(function (o) {
       var b = el("button", { class: "seg-btn" + (form.pos === o[0] ? " active" : ""), text: o[1], on: { click: function () {
         form.pos = o[0]; posSeg.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); b.classList.add("active");
+        renderStyles();
       } } });
       posSeg.appendChild(b);
     });
     body.appendChild(field("Posição", posSeg));
+
+    // estilo de jogo (depende da posição)
+    var styleWrap = el("div", { class: "ps-grid" });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Estilo de jogo" }), styleWrap ]));
+    function renderStyles() {
+      TM.ui.clear(styleWrap);
+      var opts = PLAYSTYLES[form.pos] || [];
+      if (!opts.filter(function (s) { return s.id === form.style; }).length) form.style = opts[0].id;
+      opts.forEach(function (s) {
+        var card = el("button", { class: "ps-card" + (form.style === s.id ? " active" : ""), on: { click: function () {
+          form.style = s.id; styleWrap.querySelectorAll(".ps-card").forEach(function (x) { x.classList.remove("active"); }); card.classList.add("active");
+        } } }, [
+          el("span", { class: "ps-ic", text: s.icon }),
+          el("span", { class: "ps-name", text: s.name }),
+          el("span", { class: "ps-desc", text: s.desc }),
+          el("span", { class: "ps-bon", text: bonusText(s.b) })
+        ]);
+        styleWrap.appendChild(card);
+      });
+    }
+    function bonusText(b) { return Object.keys(b).map(function (k) { return "+" + b[k] + " " + k.toUpperCase(); }).join("  "); }
+    renderStyles();
+
+    // características extras (até 2)
+    var traitWrap = el("div", { class: "trait-grid" });
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting-label", text: "Características (até 2)" }), traitWrap,
+      el("div", { class: "setting-hint", text: "Perks que definem seu jeito de jogar. Cada um dá um pequeno bônus." })
+    ]));
+    TRAITS.forEach(function (t) {
+      var chip = el("button", { class: "trait-chip", on: { click: function () {
+        var i = form.traits.indexOf(t.id);
+        if (i >= 0) { form.traits.splice(i, 1); chip.classList.remove("active"); }
+        else { if (form.traits.length >= 2) { TM.ui.toast("Máximo de 2 características"); return; } form.traits.push(t.id); chip.classList.add("active"); }
+      } } }, [ el("span", { class: "tc-ic", text: t.icon }), el("span", { class: "tc-name", text: t.name }) ]);
+      traitWrap.appendChild(chip);
+    });
 
     // clube inicial
     var leagueSel = el("select", { class: "select" });
@@ -190,6 +265,9 @@
         var age = CUR_YEAR - form.year;
         var base = age <= 20 ? 66 : age <= 26 ? 72 : 70; // talento inicial
         var attrs = makeAttrs(base, form.pos);
+        // aplica estilo de jogo + características escolhidas
+        var st = styleById(form.pos, form.style); applyBonus(attrs, st && st.b);
+        (form.traits || []).forEach(function (id) { var t = traitById(id); applyBonus(attrs, t && t.b); });
         var player = {
           id: "me", name: form.name.trim(), photo: form.photo, clubId: form.clubId,
           pos: form.pos, pos2: ({ GK: "GOL", DF: "ZAG", MF: "MEI", FW: "CA" })[form.pos] || form.pos, age: age, birth: { d: form.day, m: form.month, y: form.year },
@@ -198,7 +276,8 @@
         };
         var career = Object.assign({}, player, {
           created: true, season: 1, careerGoals: 0, careerApps: 0, offers: [], calledUp: false, history: [],
-          notifications: [], skillPoints: 0, injured: 0, momentum: 0, recentRatings: []
+          notifications: [], skillPoints: 0, injured: 0, momentum: 0, recentRatings: [],
+          playstyle: form.style, playstyleName: st ? st.name : null, traits: (form.traits || []).slice()
         });
         startSeasonFixtures(career);
         TM.storage.savePlayerCareer(career);
@@ -301,6 +380,15 @@
       ]),
       TM.ui.ovBadge(c.overall)
     ]));
+
+    // estilo de jogo + características
+    if (c.playstyleName || (c.traits && c.traits.length)) {
+      var st2 = styleById(c.pos, c.playstyle);
+      var badges = [];
+      if (st2 || c.playstyleName) badges.push(el("span", { class: "id-badge id-style" }, [ el("span", { text: (st2 ? st2.icon + " " : "🎽 ") + (c.playstyleName || (st2 && st2.name)) }) ]));
+      (c.traits || []).forEach(function (id) { var t = traitById(id); if (t) badges.push(el("span", { class: "id-badge" }, [ el("span", { text: t.icon + " " + t.name }) ])); });
+      if (badges.length) screen.appendChild(el("div", { class: "id-badges" }, badges));
+    }
 
     if (c.calledUp && c.natSeason) {
       var isWCn = c.natSeason.type === "wc";
