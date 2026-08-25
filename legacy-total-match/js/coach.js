@@ -5,6 +5,8 @@
   var el = TM.ui.el;
   var C = function () { return TM.comp; };
 
+  function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
+
   function sym(c) { return c.money ? c.money.sym : "€"; }
   function mult(c) { return c.money ? c.money.mult : 1; }
   function r2(n) { return Math.round(n * 100) / 100; }                   // 2 casas (mantém sub-1M)
@@ -459,6 +461,13 @@
         el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
         el("div", { class: "nm-teams" }, [ el("span", { text: homeClub.name }), el("span", { class: "nm-x", text: "×" }), el("span", { text: awayClub.name }) ])
       ];
+      if (rivalryEnabled() && TM.data.areRivals(homeClub.id, awayClub.id)) {
+        kids.push(el("div", { class: "classico-ribbon" }, [
+          el("span", { class: "cr-flame", text: "🔥" }),
+          el("span", { class: "cr-txt", text: "CLÁSSICO" }),
+          el("span", { class: "cr-sub", text: "Jogo de rivalidade — clima quente nas arquibancadas" })
+        ]));
+      }
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
       var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
       kids.push(TM.ui.button("🔍 Analisar adversário", function () {
@@ -1353,6 +1362,21 @@
       { t: "Equilíbrio — jogo inteligente do início ao fim.", e: 0, r: "Mensagem tática clara." },
       { t: "Sorte — vamos precisar dela.", e: -1, r: "Depender de sorte desanima o grupo." } ] }
   ];
+  // perguntas específicas de CLÁSSICO (entram primeiro quando o adversário é rival)
+  var RIVAL_Q = [
+    { id: "rv1", q: "Clássico contra o {opp}: o que esse jogo representa para a torcida?", a: [
+      { t: "É o jogo do ano, vamos deixar a alma em campo.", e: 1, r: "A torcida rival promete lotar as arquibancadas ao seu lado." },
+      { t: "Respeitamos a rivalidade, mas é mais uma final.", e: 0, r: "Postura madura elogiada pela imprensa." },
+      { t: "Sinceramente, é só mais três pontos.", e: -1, r: "A frieza irrita a torcida em pleno clássico." } ] },
+    { id: "rv2", q: "A provocação da torcida do {opp} tomou conta da semana. Comentário?", a: [
+      { t: "A resposta a gente dá dentro de campo.", e: 1, r: "O vestiário compra a briga e se motiva." },
+      { t: "Ignoro provocação, foco no jogo.", e: 0, r: "Serenidade bem recebida." },
+      { t: "Eles vão se arrepender, prometo.", e: -1, r: "A promessa vira manchete e aumenta a pressão sobre você." } ] },
+    { id: "rv3", q: "Vencer o rival {opp} salva uma temporada irregular?", a: [
+      { t: "Bater o rival muda o humor de todo o clube.", e: 1, r: "A frase incendeia a torcida no bom sentido." },
+      { t: "Ajuda muito, mas o campeonato é longo.", e: 0, r: "Equilíbrio aprovado." },
+      { t: "Não muda nada se continuarmos mal.", e: -1, r: "O discurso derrotista pega mal às vésperas do clássico." } ] }
+  ];
   function pressShuffle(arr) { arr = arr.slice(); for (var i = arr.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), t = arr[i]; arr[i] = arr[j]; arr[j] = t; } return arr; }
 
   TM.ui.register("coach-press", function (screen) {
@@ -1376,6 +1400,12 @@
     var pool = PRESS_Q.filter(function (q) { return c.pressUsed.indexOf(q.id) < 0; });
     if (pool.length < 4) { c.pressUsed = []; pool = PRESS_Q.slice(); }
     var picked = pressShuffle(pool).slice(0, 4);
+    // clássico: força uma pergunta de rivalidade como abertura da coletiva
+    var isClassic = rivalryEnabled() && TM.data.areRivals(c.teamId, oppId);
+    if (isClassic) {
+      var rq = RIVAL_Q[Math.floor(Math.random() * RIVAL_Q.length)];
+      picked = [rq].concat(picked.filter(function (q) { return q.id !== rq.id; })).slice(0, 4);
+    }
 
     var panel = el("div", { class: "panel-narrow press-panel" });
     screen.appendChild(panel);
