@@ -568,6 +568,19 @@
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     if (c.type === "director") { TM.ui.go("director-hub"); return; }
+    if (c.unemployed) {
+      screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }));
+      addSectorBar(screen, "coach-offers");
+      screen.appendChild(el("div", { class: "panel-narrow" }, [
+        el("div", { class: "prof-empty" }, [
+          el("div", { class: "pe-ic", text: "🧳" }),
+          el("div", { class: "pe-t", text: "Você está sem clube" }),
+          el("div", { class: "pe-s", text: "Livre no mercado. Veja as propostas e assuma um novo clube para continuar a carreira." })
+        ]),
+        TM.ui.button("💼 Ver propostas", function () { TM.ui.go("coach-offers"); }, "btn primary")
+      ]));
+      return;
+    }
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
@@ -632,6 +645,16 @@
     var pos = C().currentPosition(c);
     var conf = boardConfidence(c);
     var within = pos <= c.objective.maxPos;
+    // reputação do treinador (badge)
+    c.reputation = C().computeReputation(c);
+    var repLbl = C().reputationLabel(c.reputation);
+    screen.appendChild(el("div", { class: "rep-badge" }, [
+      el("span", { class: "rep-star", text: "⭐" }),
+      el("div", { class: "rep-info" }, [
+        el("div", { class: "rep-top" }, [ el("span", { class: "rep-lbl", text: "Reputação do treinador" }), el("span", { class: "rep-val", text: c.reputation + " · " + repLbl }) ]),
+        el("div", { class: "rep-bar" }, [ el("div", { class: "rep-fill", style: "width:" + c.reputation + "%" }) ])
+      ])
+    ]));
     var pInfo = conf >= 70 ? { cls: "ok", txt: "Diretoria confiante" } : conf >= 40 ? { cls: "mid", txt: "Diretoria observando" } : conf >= 20 ? { cls: "lo", txt: "Sob pressão" } : { cls: "crit", txt: "🚨 Risco de demissão" };
     screen.appendChild(el("div", { class: "objective obj-card" }, [
       el("div", { class: "obj-top" }, [
@@ -936,8 +959,17 @@
     } else {
       box.appendChild(el("div", { class: "obj-result bad", text: "✖ Meta NÃO cumprida (" + c.objective.desc + ")" }));
       box.classList.add("fired");
-      box.appendChild(el("div", { class: "fired-msg", text: "🚪 A diretoria decidiu te demitir por não atingir os objetivos da temporada." }));
-      box.appendChild(TM.ui.button("Encerrar carreira", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, "btn primary"));
+      box.appendChild(el("div", { class: "fired-msg", text: "🚪 A diretoria decidiu te demitir por não atingir os objetivos da temporada. Mas sua carreira continua — outros clubes podem te contratar." }));
+      box.appendChild(el("div", { class: "actions" }, [
+        TM.ui.button("🔍 Procurar novo clube", function () {
+          c.unemployed = true; c.sackCount = (c.sackCount || 0) + 1;
+          if (!c.clubHistory) c.clubHistory = [];
+          c.clubHistory.push({ clubId: c.teamId, clubName: c.teamName, season: c.season, left: "demitido pela diretoria" });
+          c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
+          TM.storage.saveCoachCareer(c); TM.ui.go("coach-offers");
+        }, "btn primary"),
+        TM.ui.button("🗑️ Encerrar carreira", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, "btn ghost")
+      ]));
       screen.appendChild(box);
     }
   }

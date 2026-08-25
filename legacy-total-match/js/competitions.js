@@ -519,6 +519,7 @@
       coachName: (opts.coachName || "").trim() || "Treinador", coachPhoto: opts.coachPhoto || null, coachId: opts.coachId || null,
       board: opts.board || "intermediaria", role: opts.role || "treinador",
       recentForm: [], lastBoardCall: 0,
+      reputation: 18, careerStats: { p: 0, w: 0 }, sackCount: 0,
       money: money,
       budget: Math.round(baseEur * money.mult) + (opts.injection || 0),
       roster: TM.data.clubPlayers(clubId).map(function (p) { return p.id; }),
@@ -563,6 +564,18 @@
     return career;
   }
 
+  // ---- REPUTAÇÃO do treinador (0-100): desconhecido -> lenda ----
+  function computeReputation(career) {
+    var h = (career.honours || []).length;
+    var cs = career.careerStats || { p: 0, w: 0 };
+    var wr = cs.p >= 5 ? cs.w / cs.p : 0.42;
+    var rep = 8 + h * 7 + ((career.season || 1) - 1) * 2 + Math.round(wr * 24) - (career.sackCount || 0) * 5;
+    return Math.max(3, Math.min(100, Math.round(rep)));
+  }
+  function reputationLabel(r) {
+    return r >= 90 ? "Lenda" : r >= 76 ? "Elite mundial" : r >= 60 ? "Renomado" : r >= 42 ? "Respeitado" : r >= 25 ? "Promissor" : "Desconhecido";
+  }
+
   // ---- propostas de emprego de outros clubes (gera de acordo com o desempenho) ----
   function generateJobOffers(career) {
     if (career.type === "director") return;              // dirigente não recebe proposta de técnico
@@ -577,7 +590,7 @@
     var honours = (career.honours || []).length;
     var st = career.stats || { p: 0, w: 0 };
     var winRate = st.p >= 3 ? st.w / st.p : 0.4;
-    var rep = honours * 6 + Math.round(winRate * 20) + (career.season - 1) * 2; // 0..~40+
+    var rep = computeReputation(career); // reputação do treinador (0..100)
     // chance de surgir proposta
     var chance = unemployed ? 0.9 : (winRate > 0.6 ? 0.5 : winRate > 0.45 ? 0.28 : 0.12);
     if (Math.random() > chance) { career._lastOfferGen = matchNo; return; }
@@ -684,6 +697,8 @@
       if (!career.stats) career.stats = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
       career.stats.p++; career.stats.gf += gf; career.stats.ga += ga;
       if (res === "V") career.stats.w++; else if (res === "D") career.stats.l++; else career.stats.d++;
+      if (!career.careerStats) career.careerStats = { p: 0, w: 0 };
+      career.careerStats.p++; if (res === "V") career.careerStats.w++;
       maybeBoardCall(career);
     }
     updateConfidence(career, result, userSide); // overall dinâmico
@@ -1866,6 +1881,7 @@
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
+    computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
