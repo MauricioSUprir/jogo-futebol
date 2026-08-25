@@ -761,13 +761,16 @@ html, body {
 .note-actions { display: flex; flex-direction: column; gap: 6px; }
 
 /* campinho */
-.pitch { position: relative; width: 100%; max-width: 660px; aspect-ratio: 0.66; border-radius: 16px; margin: 4px 0 10px;
-  background: linear-gradient(160deg, #0f5a2c, #0b3d1f);
-  background-image: repeating-linear-gradient(0deg, var(--fill) 0 10%, transparent 10% 20%);
-  border: 2px solid var(--line-2); overflow: hidden; }
-.pitch-mark { position: absolute; border: 2px solid var(--line-2); }
+.pitch { position: relative; width: 100%; max-width: 760px; aspect-ratio: 0.66; border-radius: 16px; margin: 4px auto 10px;
+  background: linear-gradient(160deg, #23ab55, #178a44);
+  background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.07) 0 10%, transparent 10% 20%);
+  border: 3px solid rgba(0,0,0,.7); overflow: hidden; box-shadow: 0 12px 30px -16px rgba(0,0,0,.7); }
+/* moldura interna (linha do campo) e áreas, tudo em PRETO */
+.pitch::before { content: ""; position: absolute; inset: 3.5%; border: 2px solid rgba(0,0,0,.65); border-radius: 6px; pointer-events: none; }
+.pitch::after { content: ""; position: absolute; left: 20%; right: 20%; top: -1px; height: 16%; border: 2px solid rgba(0,0,0,.55); border-top: none; border-radius: 0 0 8px 8px; pointer-events: none; }
+.pitch-mark { position: absolute; border: 2px solid rgba(0,0,0,.7); }
 .pitch-mark.center-circle { width: 26%; aspect-ratio: 1; border-radius: 50%; left: 37%; top: calc(50% - 13%); }
-.pitch-mark.mid-line { width: 100%; height: 0; left: 0; top: 50%; border-width: 1px 0 0 0; }
+.pitch-mark.mid-line { width: 100%; height: 0; left: 0; top: 50%; border-width: 2px 0 0 0; }
 .pl-chip { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: rgba(10,10,10,.86); border: 1.5px solid var(--gold); border-radius: 12px; padding: 6px 7px 7px; cursor: pointer;
   min-width: 58px; box-shadow: 0 3px 10px rgba(0,0,0,.4); transition: transform .12s ease, box-shadow .12s ease; }
@@ -899,7 +902,7 @@ html, body {
 .comp-head .ch-name { font-size: 17px; font-weight: 800; }
 
 .pause-lineup { display: flex; flex-direction: column; gap: 8px; }
-.pause-lineup .pitch { max-width: 320px; align-self: center; margin-bottom: 2px; }
+.pause-lineup .pitch { max-width: 440px; align-self: center; margin-bottom: 2px; }
 .pause-lineup .lineup-hint { text-align: center; }
 .pause-bench { display: flex; flex-direction: column; gap: 5px; max-height: 34vh; overflow-y: auto; }
 .sub-area { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -1458,7 +1461,8 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 
 /* ===== Campo 2D (visão de cima) ===== */
 .p2d-host { margin: 8px 0 4px; }
-.p2d-wrap { display: flex; flex-direction: column; gap: 8px; max-width: min(96vw, 980px); margin: 0 auto; }
+.p2d-host { width: 100%; display: flex; justify-content: center; }
+.p2d-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; max-width: min(96vw, 1100px); margin: 0 auto; }
 .p2d-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
@@ -1470,7 +1474,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .p2d-mid { display: flex; flex-direction: column; align-items: center; flex: 0 0 auto; }
 .p2d-score { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .p2d-clock { font-size: 12px; color: var(--gold-light); font-variant-numeric: tabular-nums; }
-.p2d-canvas { width: 100%; display: block; border-radius: 12px; box-shadow: 0 10px 30px -14px rgba(0,0,0,.6); background: #2b924a; }
+.p2d-canvas { width: 100%; display: block; border-radius: 12px; box-shadow: 0 10px 30px -14px rgba(0,0,0,.7); background: #0a0f0c; border: 1px solid rgba(45,210,110,.25); }
 .p2d-ctrl { display: flex; gap: 6px; justify-content: center; }
 .p2d-btn {
   min-width: 44px; padding: 8px 12px; border-radius: 9px; cursor: pointer;
