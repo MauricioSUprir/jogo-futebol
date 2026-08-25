@@ -618,65 +618,43 @@
       ]));
     }
 
-    var stage = el("div", { class: "fc2-stage" });
-    var upBtn = el("button", { class: "fc2-arrow fc2-up", title: "Anterior", text: "⌃" });
-    var card = el("div", { class: "fc2-card" });
-    var downBtn = el("button", { class: "fc2-arrow fc2-down", title: "Próximo", text: "⌄" });
-    var dots = el("div", { class: "fc2-dots" });
-    SLIDES.forEach(function (_, i) { dots.appendChild(el("span", { class: "fc2-dot" + (i === 0 ? " on" : "") })); });
+    function goFn(rt) { return function () { go(rt); }; }
 
-    var idx = 0, animating = false;
-    function renderCard(s) {
-      card.className = "fc2-card acc-" + s.key;
-      card.innerHTML = "";
-      if (s.logo) { card.appendChild(el("div", { class: "fc2-logo-wrap" }, [ el("img", { class: "fc2-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }) ])); }
-      else if (s.bg) { var img = el("span", { class: "fc2-img" }); img.style.backgroundImage = "url('" + s.bg + "')"; card.appendChild(img); }
-      var body = el("div", { class: "fc2-body" }, [
-        el("div", { class: "fc2-eyebrow", text: s.eyebrow }),
-        el("h2", { class: "fc2-name", text: s.name }),
-        el("p", { class: "fc2-desc", text: s.desc })
-      ]);
-      if (s.more) {
-        var grid = el("div", { class: "fc2-more-grid" });
-        s.more.forEach(function (m) {
-          grid.appendChild(el("button", { class: "fc2-more-tile", on: { click: (function (rt) { return function () { go(rt); }; })(m.route) } }, [
-            el("span", { class: "fc2-more-ic", text: m.icon }), el("span", { class: "fc2-more-lb", text: m.name })
-          ]));
-        });
-        body.appendChild(grid);
-      } else {
-        body.appendChild(el("button", { class: "fc2-cta", on: { click: (function (rt) { return function () { go(rt); }; })(s.route) } }, [ el("span", { text: s.cta }), el("span", { class: "fc2-cta-arrow", text: "▶" }) ]));
-      }
-      card.appendChild(body);
-    }
-    function show(newIdx, dir) {
-      if (animating || newIdx < 0 || newIdx >= SLIDES.length) return;
-      animating = true;
-      var outCls = dir > 0 ? "fc2-out-up" : "fc2-out-down";
-      card.classList.add(outCls);
-      setTimeout(function () {
-        idx = newIdx;
-        renderCard(SLIDES[idx]);
-        card.classList.remove(outCls);
-        card.classList.add(dir > 0 ? "fc2-in-up" : "fc2-in-down");
-        // atualiza setas e dots
-        upBtn.disabled = idx === 0; downBtn.disabled = idx === SLIDES.length - 1;
-        dots.querySelectorAll(".fc2-dot").forEach(function (d, di) { d.classList.toggle("on", di === idx); });
-        setTimeout(function () { card.classList.remove("fc2-in-up", "fc2-in-down"); animating = false; }, 260);
-      }, 160);
-    }
-    upBtn.addEventListener("click", function () { show(idx - 1, -1); });
-    downBtn.addEventListener("click", function () { show(idx + 1, 1); });
-    // teclado (setas) e roda do mouse — opcional, mas continua "um por vez"
-    screen.addEventListener("wheel", function (e) { if (Math.abs(e.deltaY) < 8) return; if (e.deltaY > 0) show(idx + 1, 1); else show(idx - 1, -1); }, { passive: true });
+    // ---- grade de cards (todos os modos visíveis) ----
+    var mains = SLIDES.filter(function (s) { return !s.more; });
+    var moreSlide = SLIDES.filter(function (s) { return s.more; })[0];
 
-    renderCard(SLIDES[0]);
-    upBtn.disabled = true;
-    stage.appendChild(upBtn);
-    stage.appendChild(card);
-    stage.appendChild(downBtn);
-    stage.appendChild(dots);
-    screen.appendChild(stage);
+    var grid = el("div", { class: "mg-grid" });
+    mains.forEach(function (s, i) {
+      var card = el("button", { class: "mg-card acc-" + s.key + (i < 2 ? " feat" : ""), style: "--i:" + i, on: { click: goFn(s.route) } });
+      var img = el("span", { class: "mg-img", "aria-hidden": "true" });
+      if (s.bg) img.style.backgroundImage = "url('" + s.bg + "')";
+      card.appendChild(img);
+      card.appendChild(el("span", { class: "mg-shade", "aria-hidden": "true" }));
+      card.appendChild(el("div", { class: "mg-info" }, [
+        el("div", { class: "mg-eyebrow", text: s.eyebrow }),
+        el("div", { class: "mg-name", text: s.name }),
+        el("div", { class: "mg-desc", text: s.desc }),
+        el("span", { class: "mg-cta" }, [ el("span", { text: s.cta }), el("span", { class: "mg-cta-ar", text: "▶" }) ])
+      ]));
+      grid.appendChild(card);
+    });
+    screen.appendChild(grid);
+
+    // ---- faixa "mais modos" (extras compactos) ----
+    if (moreSlide && moreSlide.more) {
+      var strip = el("div", { class: "mg-more" });
+      moreSlide.more.forEach(function (m) {
+        strip.appendChild(el("button", { class: "mg-more-tile", on: { click: goFn(m.route) } }, [
+          el("span", { class: "mg-more-ic", text: m.icon }),
+          el("span", { class: "mg-more-lb", text: m.name })
+        ]));
+      });
+      screen.appendChild(el("div", { class: "mg-more-wrap" }, [
+        el("div", { class: "mg-more-h", text: "Mais modos" }),
+        strip
+      ]));
+    }
   });
 
   register("modes-min-unused", function (screen) {
