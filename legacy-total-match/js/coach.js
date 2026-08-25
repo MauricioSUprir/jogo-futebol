@@ -53,7 +53,7 @@
     // cabeçalho do sidebar (só aparece no PC via CSS)
     var club = TM.data.club(c.teamId);
     bar.insertBefore(el("div", { class: "sb-brand" }, [
-      el("span", { class: "sb-logo", text: "⚽ Total Match" }),
+      el("span", { class: "sb-logo" }, [ el("img", { class: "sb-mark", src: "assets/logo-mark.png", alt: "" }), el("span", { text: "Total Match" }) ]),
       el("div", { class: "sb-club-row" }, [
         club ? TM.img.clubImg(club, "sb-crest") : null,
         el("div", { class: "sb-club-info" }, [

@@ -2061,7 +2061,8 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   .has-sidebar .sector-tab.on { box-shadow: none; }
   /* cabeçalho do sidebar */
   .sb-brand { display: flex; flex-direction: column; gap: 10px; padding: 16px 14px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #0d1318; z-index: 1; }
-  .sb-logo { font-weight: 900; font-size: 15px; color: var(--green); letter-spacing: .3px; }
+  .sb-logo { display: flex; align-items: center; gap: 7px; font-weight: 900; font-size: 15px; color: #c4b5fd; letter-spacing: .3px; }
+  .sb-mark { height: 20px; width: auto; }
   .sb-club-row { display: flex; align-items: center; gap: 10px; }
   .sb-crest { width: 34px; height: 40px; object-fit: contain; flex: 0 0 auto; }
   .sb-club { font-weight: 800; font-size: 13.5px; line-height: 1.15; }
