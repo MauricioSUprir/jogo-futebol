@@ -642,9 +642,7 @@
         { label: (c.allowRestart ? "🔁 Reiniciar partidas: LIGADO" : "🔒 Reiniciar partidas: DESLIGADO"), fn: function () { c.allowRestart = !c.allowRestart; TM.storage.saveCoachCareer(c); TM.ui.toast(c.allowRestart ? "Agora você pode rejogar partidas" : "Sair no meio agora registra o resultado"); } },
         { label: "📤 Salvar e sair", fn: function () { TM.saves.park("coach"); TM.ui.toast("Carreira guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
         { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
-        { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
-          TM.ui.confirm("Finalizar esta carreira?", "O progresso será apagado permanentemente.", "Finalizar", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, true);
-        } }
+        { label: "👔 Aposentar / finalizar carreira", danger: true, fn: function () { TM.ui.go("coach-retire"); } }
       ]);
     } } });
     var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
@@ -1921,6 +1919,75 @@
       ]));
     });
     screen.appendChild(body);
+  });
+
+  /* ---------- APOSENTADORIA: retrospectiva da carreira ---------- */
+  TM.ui.register("coach-retire", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("modes"); return; }
+    var hon = c.honours || [];
+    var trophies = 0, leagueT = 0, cupT = 0, contT = 0, mundT = 0;
+    hon.forEach(function (h) {
+      if (h.leagueChampion) { trophies++; leagueT++; }
+      if (h.cupChampion) { trophies++; cupT++; }
+      if (h.contChampion) { trophies++; contT++; }
+      if (h.mundialChampion) { trophies++; mundT++; }
+      if (h.interChampion) { trophies++; }
+    });
+    // clubes comandados (histórico + atual)
+    var clubs = (c.clubHistory || []).map(function (h) { return h.clubName; });
+    if (c.teamName && clubs.indexOf(c.teamName) < 0) clubs.push(c.teamName);
+    var cs = c.careerStats || { p: 0, w: 0 };
+    var rep = C().computeReputation(c);
+    var repLbl = C().reputationLabel(rep);
+    var aprov = cs.p ? Math.round(cs.w / cs.p * 100) : 0;
+
+    screen.appendChild(TM.ui.topbar("👔 Fim de uma era", function () { TM.ui.go("coach-hub"); }));
+    var wrap = el("div", { class: "retire-wrap" });
+    screen.appendChild(wrap);
+
+    var verdict = trophies >= 10 ? "Uma LENDA se aposenta. Seu nome fica eternizado na história do futebol." :
+      trophies >= 4 ? "Uma carreira vitoriosa e respeitada chega ao fim. Muitos troféus, muitas histórias." :
+      trophies >= 1 ? "Uma trajetória digna, com conquistas que ficam na memória da torcida." :
+      "O apito final. Nem sempre vieram os títulos, mas a paixão pelo jogo esteve sempre presente.";
+
+    wrap.appendChild(el("div", { class: "retire-hero" }, [
+      el("div", { class: "rh-emoji", text: trophies >= 4 ? "🏆" : "👔" }),
+      el("div", { class: "rh-name", text: c.coachName || "Treinador" }),
+      el("div", { class: "rh-rep", text: "Reputação final: " + rep + " · " + repLbl }),
+      el("div", { class: "rh-verdict", text: verdict })
+    ]));
+
+    wrap.appendChild(el("div", { class: "retire-grid" }, [
+      rtile(c.season, "Temporadas"), rtile(clubs.length, "Clubes"), rtile(trophies, "Troféus"),
+      rtile(cs.p, "Jogos"), rtile(cs.w, "Vitórias"), rtile(aprov + "%", "Aproveitamento")
+    ]));
+
+    // vitrine de títulos
+    if (trophies) {
+      var tc = el("div", { class: "retire-titles" }, [ el("div", { class: "rt-h", text: "🏅 Galeria de Títulos" }) ]);
+      if (leagueT) tc.appendChild(rtRow("🏆 Ligas nacionais", leagueT));
+      if (cupT) tc.appendChild(rtRow("🏆 Copas nacionais", cupT));
+      if (contT) tc.appendChild(rtRow("🌎 Continentais", contT));
+      if (mundT) tc.appendChild(rtRow("🌍 Mundiais", mundT));
+      wrap.appendChild(tc);
+    }
+
+    // passagens
+    var pc = el("div", { class: "retire-titles" }, [ el("div", { class: "rt-h", text: "🗂️ Clubes que comandou" }) ]);
+    clubs.forEach(function (nm) { pc.appendChild(el("div", { class: "rt-club", text: "• " + nm })); });
+    wrap.appendChild(pc);
+
+    wrap.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("Encerrar carreira", function () {
+        TM.saves && TM.saves.park && TM.saves.park("coach");
+        TM.storage.clearCoachCareer(); TM.ui.go("modes");
+      }, "btn primary big"),
+      TM.ui.button("Voltar (continuar jogando)", function () { TM.ui.go("coach-hub"); }, "btn ghost")
+    ]));
+
+    function rtile(v, l) { return el("div", { class: "rtile" }, [ el("div", { class: "rt-v", text: v }), el("div", { class: "rt-l", text: l }) ]); }
+    function rtRow(l, n) { return el("div", { class: "rt-row" }, [ el("span", { text: l }), el("span", { class: "rt-n", text: "×" + n }) ]); }
   });
 
   /* ---------- Seleção da Semana (Time da Rodada) ---------- */
