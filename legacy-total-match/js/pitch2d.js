@@ -108,7 +108,7 @@
     function resize() {
       var cw = wrap.clientWidth || 340;
       // no PC a altura é limitada pela viewport p/ caber inteiro; no celular usa a proporção
-      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.6));
+      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.68));
       cw = Math.round(ch / 0.64); // mantém proporção do campo
       if (cw > wrap.clientWidth) { cw = wrap.clientWidth; ch = Math.round(cw * 0.64); }
       canvas.style.width = cw + "px"; canvas.style.height = ch + "px";
@@ -123,13 +123,15 @@
     // ---------- desenho do campo ----------
     function drawPitch() {
       var x0 = PAD, y0 = PAD, w = W - 2 * PAD, h = H - 2 * PAD;
-      // gramado com listras
+      // gramado PRETO com listras sutis (identidade Total Match)
       var stripes = 14, sw = w / stripes;
       for (var i = 0; i < stripes; i++) {
-        ctx.fillStyle = i % 2 === 0 ? "#2f9c4f" : "#2b924a";
+        ctx.fillStyle = i % 2 === 0 ? "#0a0f0c" : "#0d130f";
         ctx.fillRect(x0 + i * sw, y0, sw + 1, h);
       }
-      ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = Math.max(1.5, W * 0.0035); ctx.fillStyle = "rgba(255,255,255,0.85)";
+      // linhas VERDES
+      var GLINE = "rgba(45,210,110,0.92)";
+      ctx.strokeStyle = GLINE; ctx.lineWidth = Math.max(1.5, W * 0.0038); ctx.fillStyle = GLINE;
       // borda
       ctx.strokeRect(x0, y0, w, h);
       // linha central
@@ -153,11 +155,11 @@
       // gols
       var gh = h * 0.18;
       ctx.lineWidth = Math.max(2, W * 0.006);
-      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.strokeStyle = "rgba(60,230,130,0.98)";
       ctx.strokeRect(x0 - W * 0.012, y0 + (h - gh) / 2, W * 0.012, gh);
       ctx.strokeRect(x0 + w, y0 + (h - gh) / 2, W * 0.012, gh);
       // arcos de escanteio
-      ctx.lineWidth = Math.max(1.2, W * 0.003); ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = Math.max(1.2, W * 0.003); ctx.strokeStyle = "rgba(45,210,110,0.6)";
       arc(x0, y0, W * 0.014, 0, Math.PI / 2); arc(x0 + w, y0, W * 0.014, Math.PI / 2, Math.PI);
       arc(x0, y0 + h, W * 0.014, -Math.PI / 2, 0); arc(x0 + w, y0 + h, W * 0.014, Math.PI, Math.PI * 1.5);
     }
