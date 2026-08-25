@@ -7,6 +7,33 @@
 
   function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
+  // ----- SETORES do treinador (barra de abas deslizável) -----
+  function coachSectors(c, active) {
+    var unread = 0; try { unread = TM.notify.unread(c); } catch (e) {}
+    var props = 0; try { props = (c.jobOffers || []).filter(function (o) { return !o.seen; }).length; } catch (e) {}
+    return [
+      { ic: "🏠", label: "Início", route: "coach-hub" },
+      { ic: "👥", label: "Elenco", route: "coach-squad" },
+      { ic: "📋", label: "Escalação", route: "coach-lineup" },
+      { ic: "🌱", label: "Base", route: "coach-youth" },
+      { ic: "🔁", label: "Mercado", route: "coach-market" },
+      { ic: "🏆", label: "Competições", route: "coach-comps" },
+      { ic: "💰", label: "Finanças", route: "coach-finance" },
+      { ic: "📅", label: "Calendário", route: "coach-calendar" },
+      { ic: "🔄", label: "Movim.", route: "coach-transfers" },
+      { ic: "💼", label: "Propostas", route: "coach-offers", badge: props },
+      { ic: "📰", label: "Notícias", route: "coach-news" },
+      { ic: "📱", label: "Redes", route: "coach-social" },
+      { ic: "🔔", label: "Avisos", route: "coach-notifications", badge: unread }
+    ].map(function (s) { if (s.route === active) s.active = true; return s; });
+  }
+  // injeta a barra logo após a topbar
+  function addSectorBar(screen, active) {
+    var c = TM.storage.coachCareer(); if (!c) return;
+    screen.appendChild(TM.ui.sectorBar(coachSectors(c, active), active));
+  }
+  TM.coachUI = { sectors: coachSectors, addBar: addSectorBar };
+
   // recados contextuais do AUXILIAR TÉCNICO e da DIRETORIA (chegam na Central de avisos)
   function maybeStaffMessage(c) {
     try {
@@ -499,6 +526,7 @@
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
+    try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
     TM.storage.saveCoachCareer(c);
     // se a temporada acabou e há título não comemorado, mostra a tela de parabéns primeiro
     var pnd = C().advanceToUserMatch(c);
@@ -520,6 +548,7 @@
     } } });
     var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
+    screen.appendChild(TM.ui.sectorBar(coachSectors(c, "coach-hub"), "coach-hub"));
 
     var myCoach = c.coachId ? TM.data.coaches().filter(function (x) { return x.id === c.coachId; })[0] : null;
     var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" })
@@ -680,6 +709,7 @@
     if (!c) { TM.ui.go("coach"); return; }
     if (c.type === "director") { TM.ui.go("director-finance"); return; }
     screen.appendChild(TM.ui.topbar("💰 Finanças", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-finance");
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     var club = TM.data.club(c.teamId);
@@ -743,6 +773,7 @@
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     screen.appendChild(TM.ui.topbar("🔄 Movimentações", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-transfers");
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     var deals = c.deals || [];
@@ -872,6 +903,7 @@
   TM.ui.register("coach-calendar", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("📅 Calendário", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-calendar");
     var body = el("div", { class: "panel-narrow cal-wrap" });
     screen.appendChild(body);
 
@@ -1602,6 +1634,7 @@
   TM.ui.register("coach-comps", function (screen, params) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🏆 Competições", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-comps");
     var tabs = [ { key: "league", label: c.comps.league.name } ];
     if (c.comps.cup) tabs.push({ key: "cup", label: c.comps.cup.name });
     if (c.comps.cont) tabs.push({ key: "cont", label: c.comps.cont.name });
@@ -1883,6 +1916,7 @@
   TM.ui.register("coach-squad", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("👥 Central do Elenco", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-squad");
     var players = C().userSquad(c);
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     players.sort(function (a, b) { return order[a.pos] - order[b.pos] || b.overall - a.overall; });
@@ -1921,6 +1955,7 @@
   TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-market");
     screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
 
     var world = TM.data.world();
@@ -2363,10 +2398,112 @@
     }
   });
 
+  /* ---------- PROPOSTAS de outros clubes + movimentos de carreira ---------- */
+  TM.ui.register("coach-offers", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("coach"); return; }
+    // marca todas como vistas
+    (c.jobOffers || []).forEach(function (o) { o.seen = true; });
+    TM.storage.saveCoachCareer(c);
+    screen.appendChild(TM.ui.topbar("💼 Propostas", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-offers");
+    var wrap = el("div", { class: "offers-wrap" });
+    screen.appendChild(wrap);
+
+    var club = TM.data.club(c.teamId);
+    wrap.appendChild(el("div", { class: "offers-cur" }, [
+      club ? TM.img.clubImg(club, "oc-crest") : null,
+      el("div", { class: "oc-info" }, [
+        el("div", { class: "oc-lbl", text: c.unemployed ? "Situação atual" : "Clube atual" }),
+        el("div", { class: "oc-name", text: c.unemployed ? "Sem clube (livre no mercado)" : (club ? club.name : "—") }),
+        el("div", { class: "oc-sub", text: c.unemployed ? "Aguarde propostas ou aceite uma abaixo." : (TM.data.league(c.leagueId).name + " · Temporada " + c.season) })
+      ])
+    ]));
+
+    var offers = c.jobOffers || [];
+    if (!offers.length) {
+      wrap.appendChild(el("div", { class: "offers-empty" }, [
+        el("div", { class: "oe-ic", text: "📭" }),
+        el("div", { class: "oe-t", text: "Nenhuma proposta no momento" }),
+        el("div", { class: "oe-s", text: "Vença jogos e conquiste títulos para atrair o interesse de outros clubes. As propostas aparecem aqui." })
+      ]));
+    } else {
+      wrap.appendChild(el("div", { class: "offers-hd", text: offers.length + " proposta(s) na mesa" }));
+      offers.forEach(function (o) {
+        var ocl = TM.data.club(o.clubId);
+        var better = o.rating > TM.data.clubRating(c.teamId);
+        var card = el("div", { class: "offer-card" }, [
+          el("div", { class: "of-head" }, [
+            ocl ? TM.img.clubImg(ocl, "of-crest") : null,
+            el("div", { class: "of-id" }, [
+              el("div", { class: "of-name", text: o.clubName }),
+              el("div", { class: "of-lg", text: o.leagueName + " · força " + o.rating + (better ? " ↑" : "") })
+            ]),
+            el("span", { class: "of-badge" + (better ? " up" : ""), text: better ? "Clube maior" : "Convite" })
+          ]),
+          el("div", { class: "of-desc", text: "O " + o.clubName + " " + o.desc + "." }),
+          el("div", { class: "of-wage", text: "💰 Salário oferecido: " + money(c, o.wage) + "/temporada" }),
+          el("div", { class: "of-acts" }, [
+            TM.ui.button("✅ Aceitar", function () {
+              TM.ui.confirm("Assumir o " + o.clubName + "?", "Você deixará o " + (club ? club.name : "clube atual") + " e recomeçará no novo clube. Seu histórico e títulos são mantidos.", "Aceitar proposta", function () {
+                C().switchUserClub(c, o.clubId);
+                TM.storage.saveCoachCareer(c);
+                TM.ui.toast("🤝 Você é o novo treinador do " + o.clubName + "!");
+                TM.ui.go("coach-hub");
+              });
+            }, "btn primary"),
+            TM.ui.button("Recusar", function () {
+              c.jobOffers = c.jobOffers.filter(function (x) { return x.id !== o.id; });
+              TM.storage.saveCoachCareer(c);
+              TM.ui.go("coach-offers");
+            }, "btn ghost")
+          ])
+        ]);
+        wrap.appendChild(card);
+      });
+    }
+
+    // pedir demissão
+    if (!c.unemployed) {
+      wrap.appendChild(el("div", { class: "offers-resign" }, [
+        el("div", { class: "or-t", text: "Deixar o clube" }),
+        el("div", { class: "or-s", text: "Peça demissão para ficar livre no mercado. Propostas passam a chegar com mais frequência — mas você fica sem clube até aceitar uma." }),
+        TM.ui.button("🚪 Pedir demissão", function () {
+          TM.ui.confirm("Pedir demissão do " + (club ? club.name : "clube") + "?", "Você ficará sem clube e dependerá de propostas para voltar a trabalhar.", "Pedir demissão", function () {
+            c.unemployed = true;
+            if (!c.clubHistory) c.clubHistory = [];
+            c.clubHistory.push({ clubId: c.teamId, clubName: c.teamName, season: c.season, left: "pediu demissão" });
+            TM.notify.push(c, { icon: "🚪", title: "Demissão", news: true, text: "Você deixou o comando do " + (club ? club.name : "clube") + " e está livre no mercado." });
+            // gera propostas imediatamente
+            c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
+            TM.storage.saveCoachCareer(c);
+            TM.ui.go("coach-offers");
+          }, true);
+        }, "btn danger")
+      ]));
+    } else {
+      wrap.appendChild(TM.ui.button("🔄 Procurar propostas", function () {
+        c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("coach-offers");
+      }, "btn"));
+    }
+
+    // histórico de clubes
+    if ((c.clubHistory || []).length) {
+      var hist = el("div", { class: "offers-hist" }, [ el("div", { class: "oh-t", text: "🗂️ Passagens anteriores" }) ]);
+      c.clubHistory.slice().reverse().forEach(function (h) {
+        hist.appendChild(el("div", { class: "oh-row", text: (h.clubName || "Clube") + " — temporada " + (h.season || "?") + " · " + (h.left || "") }));
+      });
+      wrap.appendChild(hist);
+    }
+  });
+
   /* ---------- central de notificações ---------- */
   TM.ui.register("coach-notifications", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔔 Avisos", function () { TM.notify.markAllRead(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-notifications");
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     var notes = c.notifications || [];
@@ -2531,6 +2668,7 @@
     if (!c.lineup) c.lineup = C().buildLineup(C().rosterPlayers(c), "4-4-2");
     C().syncLineup(c); TM.storage.saveCoachCareer(c); // garante contratados no banco
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-lineup");
 
     // formação + tática (dropdowns compactos)
     screen.appendChild(el("div", { class: "panel-narrow" }, [
@@ -2680,6 +2818,7 @@
   TM.ui.register("coach-youth", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🌱 Categorias de Base", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-youth");
     screen.appendChild(el("div", { class: "panel-narrow" }, [
       el("p", { class: "intro-text", text: "Elenco da base do seu clube. Promova jogadores de 15 anos ou mais para o profissional, ou dispute uma partida de base." }),
       TM.ui.button("⚽ Disputar partida de base", function () { TM.ui.go("coach-youth-match"); }, "btn primary")

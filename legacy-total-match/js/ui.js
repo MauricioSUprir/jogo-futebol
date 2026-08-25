@@ -66,6 +66,31 @@
     ]);
   }
 
+  // ----- barra de SETORES (abas deslizáveis: emoji + nome) -----
+  // items: [{ic, label, route, badge}], active = route atual.
+  // Rola horizontalmente, destaca o setor ativo e centraliza-o.
+  function sectorBar(items, active) {
+    var bar = el("div", { class: "sector-bar" });
+    var track = el("div", { class: "sector-track" });
+    var activeNode = null;
+    items.forEach(function (it) {
+      var on = it.route === active;
+      var tab = el("button", { class: "sector-tab" + (on ? " on" : ""), on: { click: function () { if (!on) go(it.route, it.params || {}); } } }, [
+        el("span", { class: "st-ic", text: it.ic }),
+        el("span", { class: "st-lb", text: it.label }),
+        it.badge ? el("span", { class: "st-badge", text: it.badge > 9 ? "9+" : it.badge }) : null
+      ]);
+      if (on) activeNode = tab;
+      track.appendChild(tab);
+    });
+    bar.appendChild(track);
+    // centraliza o setor ativo após render
+    if (activeNode) requestAnimationFrame(function () {
+      try { track.scrollLeft = activeNode.offsetLeft - (bar.clientWidth - activeNode.clientWidth) / 2; } catch (e) {}
+    });
+    return bar;
+  }
+
   function ovBadge(overall) {
     var cls = overall >= 85 ? "ov-elite" : overall >= 78 ? "ov-high" : overall >= 68 ? "ov-mid" : "ov-low";
     return el("span", { class: "ov " + cls, text: overall });
@@ -312,7 +337,7 @@
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
-    topbar: topbar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
+    topbar: topbar, sectorBar: sectorBar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
     stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,

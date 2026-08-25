@@ -1992,6 +1992,49 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .matchday-info .mdi-item:last-child .mdi-v { font-size: 11px; }
 
 /* ============ Redes Sociais (feed) ============ */
+/* ----- barra de SETORES (abas deslizáveis) ----- */
+.sector-bar { position: sticky; top: 0; z-index: 30; width: 100%; margin: 0 0 12px; background: linear-gradient(180deg, var(--bg) 60%, rgba(0,0,0,0)); }
+.sector-track { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 8px 2px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+.sector-track::-webkit-scrollbar { display: none; }
+.sector-tab { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px 7px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text-dim); cursor: pointer; transition: transform .12s, background .15s, color .15s, border-color .15s; }
+.sector-tab:active { transform: scale(.94); }
+.sector-tab .st-ic { font-size: 19px; line-height: 1; }
+.sector-tab .st-lb { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.sector-tab.on { background: linear-gradient(180deg, var(--green), #0f8a42); color: #fff; border-color: var(--green); box-shadow: 0 4px 14px rgba(34,197,94,.30); }
+.sector-tab .st-badge { position: absolute; top: 2px; right: 6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: #e23b3b; color: #fff; font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--panel); }
+.sector-tab.on .st-badge { box-shadow: 0 0 0 2px #0f8a42; }
+
+/* ----- Propostas ----- */
+.offers-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
+.offers-cur { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.offers-cur .oc-crest { width: 46px; height: 52px; object-fit: contain; }
+.oc-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-dim); }
+.oc-name { font-weight: 800; font-size: 16px; }
+.oc-sub { font-size: 12px; color: var(--text-dim); }
+.offers-empty { text-align: center; padding: 26px 16px; background: var(--panel); border: 1px dashed var(--line); border-radius: 14px; }
+.offers-empty .oe-ic { font-size: 34px; }
+.offers-empty .oe-t { font-weight: 800; margin-top: 6px; }
+.offers-empty .oe-s { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+.offers-hd { font-weight: 800; font-size: 13px; color: var(--text-dim); }
+.offer-card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.offer-card .of-head { display: flex; align-items: center; gap: 10px; }
+.offer-card .of-crest { width: 40px; height: 46px; object-fit: contain; }
+.of-id { flex: 1; }
+.of-name { font-weight: 800; font-size: 15px; }
+.of-lg { font-size: 11px; color: var(--text-dim); }
+.of-badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 10px; background: rgba(255,255,255,.08); color: var(--text-dim); }
+.of-badge.up { background: rgba(34,197,94,.18); color: #6ef0a0; }
+.of-desc { font-size: 13px; }
+.of-wage { font-size: 12px; color: var(--text-dim); }
+.of-acts { display: flex; gap: 8px; }
+.of-acts .btn { flex: 1; }
+.offers-resign { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.offers-resign .or-t { font-weight: 800; }
+.offers-resign .or-s { font-size: 12px; color: var(--text-dim); margin: 4px 0 10px; }
+.offers-hist { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; }
+.offers-hist .oh-t { font-weight: 800; font-size: 13px; margin-bottom: 6px; }
+.offers-hist .oh-row { font-size: 12px; color: var(--text-dim); padding: 3px 0; border-top: 1px solid var(--line); }
+
 .social-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
 .social-head { text-align: center; padding: 6px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
 .sh-logo { display: block; font-weight: 900; font-size: 20px; color: var(--green); letter-spacing: .5px; }

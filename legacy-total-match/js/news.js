@@ -66,6 +66,7 @@
     var back = mode === "player" ? "player-hub" : "coach-hub";
     if (!career) { TM.ui.go(back); return; }
     screen.appendChild(TM.ui.topbar("📰 Notícias", function () { TM.ui.go(back); }));
+    if (mode === "coach" && TM.coachUI) TM.coachUI.addBar(screen, "coach-news");
 
     var items = feed(career);
     var wrap = el("div", { class: "news-wrap" });
