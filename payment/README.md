@@ -82,7 +82,7 @@ var CONFIG = {
   PAYWALL: true,                                   // liga o cadeado
   API: "https://tm-license.SEU-USUARIO.workers.dev", // URL do Passo 1
   BUY_URL: "https://pay.kiwify.com.br/SEU-LINK",     // link do Passo 3
-  PRICE_LABEL: "R$ 14,90",                          // aparece na tela (opcional)
+  PRICE_LABEL: "R$ 9,90",                           // aparece na tela (opcional)
   ...
 };
 ```

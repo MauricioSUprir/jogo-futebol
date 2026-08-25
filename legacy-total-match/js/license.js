@@ -14,7 +14,7 @@
     PAYWALL: false,                                   // <<< liga/desliga o cadeado
     API: "",                                          // <<< URL do Worker, ex: https://tm-license.SEU-USER.workers.dev
     BUY_URL: "",                                      // <<< link do produto no Kiwify
-    PRICE_LABEL: "",                                  // ex: "R$ 14,90" (só texto na tela)
+    PRICE_LABEL: "R$ 9,90",                           // texto na tela (ajuste se mudar o preço no Kiwify)
     // modos LIBERADOS na demonstração (o resto pede a chave)
     FREE_ROUTES: { quick: 1, compmode: 1, settings: 1, profile: 1, saves: 1, competicoes: 1 },
     // modos que EXIGEM compra
