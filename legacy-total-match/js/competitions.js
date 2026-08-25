@@ -6,6 +6,8 @@
   "use strict";
   var TM = (global.TM = global.TM || {});
 
+  function rivalryOn() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
+
   var CUP_NAME = {
     br: "Copa Nacional", en: "Copa Nacional", es: "Copa Nacional", it: "Copa Nacional",
     de: "Copa Nacional", fr: "Copa Nacional", pt: "Copa Nacional", nl: "Copa Nacional",
@@ -1309,6 +1311,8 @@
       if (val > buyerBudget) continue;                      // comprador precisa ter caixa
       if (buyerRating < target.overall - 5) continue;       // clube fraco não atrai jogador melhor
       if (target.overall >= 80 && buyerRating < sellRating - 4) continue; // estrela não desce para clube bem pior
+      // rivalidade: jogador dificilmente troca direto entre rivais (~92% das vezes recusa)
+      if (rivalryOn() && TM.data.areRivals(sc.id, buyer.id) && Math.random() < 0.92) continue;
       return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val) };
     }
     return null;

@@ -81,6 +81,10 @@
       el("div", { class: "setting-hint", text:
         "Overall dinâmico: nas carreiras e competições, o overall dos jogadores sobe e desce " +
         "conforme a confiança e o desempenho na temporada (▲/▼). Alguns jogadores são constantes (=)." }),
+      toggle("Rivalidade (clássicos e mercado)", "rivalry"),
+      el("div", { class: "setting-hint", text:
+        "Rivalidade: partidas entre rivais viram CLÁSSICO (com clima especial na tela pré-jogo e nas " +
+        "entrevistas). No mercado, jogadores dificilmente se transferem direto entre rivais." }),
       el("div", { class: "setting-hint", text:
         "Realismo baixo deixa o jogo mais imprevisível (mais gols e zebras). " +
         "Realismo alto faz os melhores times vencerem com mais frequência." })

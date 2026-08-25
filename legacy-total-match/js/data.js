@@ -1225,6 +1225,23 @@
 
   /* ---------- API pública ---------- */
   var _world = null;
+  var _rivalCache = null;
+  // mapa de rivalidades: dentro de cada liga, pareia clubes por ranking de força
+  // (0-1, 2-3, …) — os 2 maiores viram o clássico principal; todos ganham 1 rival.
+  function rivalMap() {
+    if (_rivalCache) return _rivalCache;
+    var W = TM.data.world(), map = {};
+    (W.leagues || []).forEach(function (lg) {
+      var cs = (lg.clubIds || []).map(function (id) { return W.clubsById[id]; }).filter(Boolean)
+        .sort(function (a, b) { return (b.strength || 0) - (a.strength || 0); });
+      for (var i = 0; i < cs.length; i += 2) {
+        var a = cs[i], b = cs[i + 1]; if (!b) break;
+        (map[a.id] = map[a.id] || []).push(b.id);
+        (map[b.id] = map[b.id] || []).push(a.id);
+      }
+    });
+    _rivalCache = map; return map;
+  }
   // estádios reais dos grandes clubes; os demais recebem um nome gerado de forma estável
   var STADIUMS = {
     "Riacho City": "RheinEnergie Stadion", "Guardião EC": "Avnet Arena", "Juvenil CD": "Estádio Moisés Lucarelli",
@@ -1364,7 +1381,10 @@
 
   TM.data = {
     world: function () { return _world || (_world = generateWorld()); },
-    resetWorld: function () { _world = null; },
+    resetWorld: function () { _world = null; _rivalCache = null; },
+    rivalsOf: function (clubId) { return (rivalMap()[clubId] || []).slice(); },
+    areRivals: function (aId, bId) { return !!aId && !!bId && (rivalMap()[aId] || []).indexOf(bId) >= 0; },
+    rivalName: function (clubId) { var r = rivalMap()[clubId] || []; if (!r.length) return null; var c = TM.data.club(r[0]); return c ? c.name : null; },
     stadium: function (club) { return stadiumInfo(club); },
     club: function (id) { return TM.data.world().clubsById[id]; },
     league: function (id) { return TM.data.world().leaguesById[id]; },
