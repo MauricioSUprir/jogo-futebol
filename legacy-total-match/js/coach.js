@@ -1425,6 +1425,7 @@
         if (c.allowRestart) { TM.ui.go("coach-hub"); return; }
         TM.ui.confirm("Sair da partida?", "Sair agora REGISTRA o resultado atual da partida — você não poderá jogá-la de novo. (Para poder rejogar, ligue \"Reiniciar partidas\" nas opções da carreira.)", "Sair e registrar", function () {
           C().processUserMatch(c, result, userSide);
+          try { C().recordPlayerStats(c, result, userSide, (userSide === 0 ? teamB : teamA).name); } catch (e) {}
           var hs = result.score[0], as = result.score[1];
           var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
           var penWinnerId = null;
@@ -1438,6 +1439,7 @@
       },
       onDone: function () {
         C().processUserMatch(c, result, userSide);
+        try { C().recordPlayerStats(c, result, userSide, (userSide === 0 ? teamB : teamA).name); } catch (e) {}
         var hs = result.score[0], as = result.score[1];
         var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
         function finish(penWinnerId) {
@@ -1989,7 +1991,7 @@
     c.transferList = c.transferList || [];
     players.forEach(function (p) {
       if (p.pos !== lastPos) { list.appendChild(el("div", { class: "pos-header", text: ({ GK: "Goleiros", DF: "Defensores", MF: "Meio-campistas", FW: "Atacantes" })[p.pos] })); lastPos = p.pos; }
-      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } });
+      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.coachUI.openPlayer(pl, TM.ui.current()); } });
       var listed = c.transferList.indexOf(p.id) >= 0;
       var isLoan = c.loanedIn && c.loanedIn[p.id];
       if (!isLoan) {
@@ -2561,6 +2563,154 @@
     }
   });
 
+  /* ---------- PERFIL / ANÁLISE do jogador (tela cheia, com abas) ---------- */
+  var profilePid = null, profileBack = "coach-squad", profileTab = "geral";
+  function openPlayerProfile(player, back) { profilePid = player.id; profileBack = back || "coach-squad"; profileTab = "geral"; TM.ui.go("coach-player"); }
+  TM.coachUI.openPlayer = openPlayerProfile;
+
+  function gaugeSVG(val, max, label, color) {
+    var pct = Math.max(0, Math.min(1, val / max));
+    var r = 30, cx = 36, cy = 36, circ = 2 * Math.PI * r;
+    var dash = (pct * circ).toFixed(1) + " " + circ.toFixed(1);
+    return el("div", { class: "gauge" }, [
+      el("div", { class: "gauge-ring", html:
+        '<svg viewBox="0 0 72 72" width="72" height="72">' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="6"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + color + '" stroke-width="6" stroke-linecap="round" stroke-dasharray="' + dash + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' +
+        '<text x="36" y="42" text-anchor="middle" font-family="Arial" font-size="20" font-weight="800" fill="#fff">' + val + '</text></svg>' }),
+      el("div", { class: "gauge-lbl", text: label })
+    ]);
+  }
+  function formPill(res) { return el("span", { class: "fp fp-" + res, text: res }); }
+
+  TM.ui.register("coach-player", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c || !profilePid) { TM.ui.go(profileBack); return; }
+    var p = C().resolvePlayer(c, profilePid) || TM.data.player(profilePid);
+    if (!p) { TM.ui.go(profileBack); return; }
+    var st = (c.pstats && c.pstats[p.id]) || null;
+    var pot = p.potential || p.overall;
+    var val = curVal(c, TM.data.marketValue(p));
+    var nation = p.nationId ? TM.data.nation(p.nationId) : null;
+
+    screen.appendChild(TM.ui.topbar("Análise do jogador", function () { TM.ui.go(profileBack); }));
+    addSectorBar(screen, "coach-squad");
+
+    var wrap = el("div", { class: "prof-wrap" });
+    screen.appendChild(wrap);
+
+    // ---- header ----
+    wrap.appendChild(el("div", { class: "prof-head" }, [
+      TM.img.playerImg(p, "prof-face"),
+      el("div", { class: "prof-id" }, [
+        el("div", { class: "prof-name", text: p.name }),
+        el("div", { class: "prof-meta" }, [
+          nation ? TM.img.nationImg(nation, "prof-flag") : null,
+          el("span", { text: p.age + " anos" }),
+          el("span", { class: "prof-pos pos-" + (p.pos || "MF"), text: TM.data.posLabel(p) }),
+          el("span", { class: "prof-val", text: money(c, val) })
+        ])
+      ]),
+      el("div", { class: "prof-gauges" }, [
+        gaugeSVG(p.overall, 99, "OVR", "#22c55e"),
+        gaugeSVG(pot, 99, "POT", pot > p.overall ? "#6ef0a0" : "#8aa0b2")
+      ])
+    ]));
+
+    // ---- abas ----
+    var TABS = [["geral", "Visão Geral"], ["attrs", "Atributos"], ["hist", "Histórico"], ["ins", "Insights"]];
+    var tabBar = el("div", { class: "prof-tabs" });
+    TABS.forEach(function (t) {
+      tabBar.appendChild(el("button", { class: "prof-tab" + (profileTab === t[0] ? " on" : ""), text: t[1], on: { click: function () { profileTab = t[0]; TM.ui.go("coach-player"); } } }));
+    });
+    wrap.appendChild(tabBar);
+    var body = el("div", { class: "prof-body" });
+    wrap.appendChild(body);
+
+    function statCell(v, lbl, cls) { return el("div", { class: "pstat-cell" }, [ el("div", { class: "pstat-v " + (cls || ""), text: v }), el("div", { class: "pstat-l", text: lbl }) ]); }
+
+    if (profileTab === "geral") {
+      // ESTADO ATUAL
+      if (st && st.last) {
+        var estado = el("div", { class: "prof-card" }, [
+          el("div", { class: "prof-card-h", text: "ESTADO ATUAL" }),
+          el("div", { class: "estado-row" }, [
+            el("div", { class: "estado-last" }, [
+              el("span", { class: "el-res el-" + st.last.res, text: st.last.res }),
+              el("div", {}, [ el("div", { class: "el-opp", text: "vs " + st.last.opp }), el("div", { class: "el-score", text: st.last.score }) ])
+            ]),
+            el("div", { class: "estado-nota" }, [ el("div", { class: "en-v", text: st.last.rating.toFixed(1) }), el("div", { class: "en-l", text: "última nota" }) ])
+          ]),
+          el("div", { class: "estado-form" }, [ el("span", { class: "ef-lbl", text: "Últimas " + st.form.length + ":" }) ].concat(st.form.map(formPill))),
+          st.noScore > 0 && (p.pos === "FW" || p.pos === "MF") ? el("div", { class: "estado-note", text: st.noScore + " jogo(s) sem marcar" }) : null
+        ]);
+        body.appendChild(estado);
+        // MELHOR PARTIDA
+        if (st.best) body.appendChild(el("div", { class: "prof-card best-match" }, [
+          el("div", { class: "bm-l" }, [ el("span", { class: "bm-star", text: "★" }), el("div", {}, [ el("div", { class: "bm-t", text: "MELHOR PARTIDA" }), el("div", { class: "bm-opp", text: st.best.opp + " · " + st.best.score }) ]) ]),
+          el("div", { class: "bm-rate", text: st.best.rating.toFixed(1) + "★" })
+        ]));
+        // GRID
+        var ga = st.goals + st.assists;
+        var aprov = st.apps ? Math.round((st.form.filter(function (x) { return x === "V"; }).length / st.form.length) * 100) : 0;
+        var avgR = st.rn ? (st.rsum / st.rn) : 0;
+        body.appendChild(el("div", { class: "pstat-grid" }, [
+          statCell(st.apps, "Partidas"), statCell(st.goals, "Gols", "c-green"), statCell(st.assists, "Assist.", "c-blue"),
+          statCell(ga, "G+A", "c-purple"), statCell(avgR.toFixed(1), "Rating", "c-gold"), statCell(aprov + "%", "Aprov.", "c-gold")
+        ]));
+        // barra V/E/D
+        var w = st.form.filter(function (x) { return x === "V"; }).length, d = st.form.filter(function (x) { return x === "E"; }).length, l = st.form.filter(function (x) { return x === "D"; }).length;
+        var tot = Math.max(1, w + d + l);
+        body.appendChild(el("div", { class: "wdl-bar" }, [
+          el("div", { class: "wdl w", style: "width:" + (w / tot * 100) + "%", text: w ? w + "V" : "" }),
+          el("div", { class: "wdl d", style: "width:" + (d / tot * 100) + "%", text: d ? d + "E" : "" }),
+          el("div", { class: "wdl l", style: "width:" + (l / tot * 100) + "%", text: l ? l + "D" : "" })
+        ]));
+      } else {
+        body.appendChild(el("div", { class: "prof-empty" }, [
+          el("div", { class: "pe-ic", text: "📊" }),
+          el("div", { class: "pe-t", text: "Sem jogos registrados nesta temporada" }),
+          el("div", { class: "pe-s", text: "As estatísticas aparecem aqui conforme " + shortName(p.name) + " joga pelo seu time." })
+        ]));
+      }
+    } else if (profileTab === "attrs") {
+      var a = p.attrs || {};
+      function bar(label, v) { return el("div", { class: "attr" }, [ el("span", { class: "attr-label", text: label }), el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%" }) ]), el("span", { class: "attr-val", text: v }) ]); }
+      body.appendChild(el("div", { class: "attrs" }, [
+        bar("Velocidade", a.pac || 50), bar("Finalização", a.sho || 50), bar("Passe", a.pas || 50),
+        bar("Drible", a.dri || 50), bar("Defesa", a.def || 50), bar("Físico", a.phy || 50)
+      ]));
+      body.appendChild(el("div", { class: "player-detail-grid" }, [
+        el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: p.overall }), el("div", { class: "pd-lbl", text: "Overall" }) ]),
+        el("div", { class: "pd-item" }, [ el("div", { class: "pd-val " + (pot > p.overall ? "up" : ""), text: pot }), el("div", { class: "pd-lbl", text: "Potencial" }) ]),
+        el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: money(c, val) }), el("div", { class: "pd-lbl", text: "Valor" }) ]),
+        el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: (p.height || "?") + "cm" }), el("div", { class: "pd-lbl", text: "Altura" }) ])
+      ]));
+    } else if (profileTab === "hist") {
+      if (st) {
+        var avg = st.rn ? (st.rsum / st.rn).toFixed(1) : "—";
+        body.appendChild(el("div", { class: "pstat-grid" }, [
+          statCell(st.apps, "Jogos"), statCell(st.goals, "Gols", "c-green"), statCell(st.assists, "Assist.", "c-blue"),
+          statCell(avg, "Média", "c-gold"), statCell(st.best ? st.best.rating.toFixed(1) : "—", "Melhor", "c-gold"), statCell(st.goals + st.assists, "G+A", "c-purple")
+        ]));
+        body.appendChild(el("div", { class: "estado-form", style: "margin-top:10px" }, [ el("span", { class: "ef-lbl", text: "Forma:" }) ].concat((st.form || []).map(formPill))));
+      } else body.appendChild(el("div", { class: "prof-empty" }, [ el("div", { class: "pe-t", text: "Ainda sem histórico nesta temporada." }) ]));
+    } else {
+      // Insights
+      var tips = [];
+      if (pot - p.overall >= 6) tips.push("💎 Potencial alto (" + pot + "): com minutos, tende a evoluir bastante.");
+      else if (pot - p.overall <= 1) tips.push("🧱 Já perto do teto de evolução (" + pot + ").");
+      if ((p.age || 24) <= 20) tips.push("🌱 Jovem (" + p.age + "): ideal para desenvolver como titular ou rodízio.");
+      if ((p.age || 24) >= 33) tips.push("🎓 Veterano (" + p.age + "): experiência valiosa, mas precisa de rodízio.");
+      if (st && st.goals >= 3) tips.push("🔥 Boa fase de gols (" + st.goals + " na temporada).");
+      if (st && st.noScore >= 4 && (p.pos === "FW" || p.pos === "MF")) tips.push("❄️ Jejum de gols: pode precisar de confiança ou descanso.");
+      tips.push("💰 Valor de mercado atual: " + money(c, val) + ".");
+      var insList = el("div", { class: "prof-card" }, [ el("div", { class: "prof-card-h", text: "INSIGHTS" }) ]);
+      tips.forEach(function (t) { insList.appendChild(el("div", { class: "insight-row", text: t })); });
+      body.appendChild(insList);
+    }
+  });
+
   /* ---------- central de notificações ---------- */
   TM.ui.register("coach-notifications", function (screen) {
     var c = TM.storage.coachCareer();
@@ -2932,7 +3082,7 @@
     var list = el("div", { class: "panel-narrow squad-list" });
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     (c.youth || []).slice().sort(function (a, b) { return order[a.pos] - order[b.pos] || b.potential - a.potential; }).forEach(function (p) {
-      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.ui.showPlayer(pl, { moneySym: sym(c), moneyMult: mult(c) }); } });
+      var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.coachUI.openPlayer(pl, TM.ui.current()); } });
       var canPromote = p.age >= 15;
       row.appendChild(el("button", { class: "buy-btn" + (canPromote ? "" : " disabled"), text: canPromote ? "Subir ↑" : p.age + " anos", on: { click: function (e) {
         e.stopPropagation();
