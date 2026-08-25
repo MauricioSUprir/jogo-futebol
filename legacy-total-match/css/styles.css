@@ -1724,10 +1724,20 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 @keyframes heroIn { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
 .hero-wm { position: absolute; right: -8px; bottom: -22px; font-size: 118px; line-height: 1; opacity: .16;
   filter: grayscale(.2); pointer-events: none; transform: rotate(-8deg); }
-.hero-body { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 3px; }
-.hero-eyebrow { font-size: 10px; letter-spacing: 2px; font-weight: 900; color: var(--card-acc, var(--gold)); }
-.hero-name { font-size: 26px; font-weight: 900; line-height: 1.05; }
-.hero-tag { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+/* ---- hero CINEMÁTICO: foto de estádio ao fundo ---- */
+.hero-card.cinema { min-height: 176px; display: flex; align-items: flex-end; border-color: rgba(255,255,255,.12); }
+.hero-bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0;
+  transform: scale(1.06); animation: heroZoom 14s ease-in-out infinite alternate; }
+@keyframes heroZoom { from { transform: scale(1.06); } to { transform: scale(1.16) translateY(-4px); } }
+.hero-shade { position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(90deg, rgba(4,10,7,.92) 0%, rgba(4,10,7,.72) 42%, rgba(4,10,7,.30) 100%),
+    linear-gradient(0deg, rgba(4,10,7,.85), transparent 60%); }
+.hero-card.cinema::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; z-index: 1; background: var(--card-acc, var(--gold)); }
+.hero-body { position: relative; z-index: 2; display: flex; flex-direction: column; gap: 3px; }
+.hero-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 2px; font-weight: 900; color: var(--card-acc, var(--gold)); }
+.hero-eyebrow .he-ic { font-size: 15px; }
+.hero-name { font-size: 30px; font-weight: 900; line-height: 1.03; text-shadow: 0 2px 14px rgba(0,0,0,.7); }
+.hero-tag { font-size: 13px; color: #dfe7e2; margin-bottom: 10px; text-shadow: 0 1px 6px rgba(0,0,0,.7); }
 .hero-cta { align-self: flex-start; font-size: 12px; font-weight: 800; letter-spacing: .5px; color: #05100a;
   background: var(--card-acc, var(--gold)); padding: 7px 16px; border-radius: 999px; }
 .hero-dots { display: flex; justify-content: center; gap: 7px; margin: 10px 0 4px; }
