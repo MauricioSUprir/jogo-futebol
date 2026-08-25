@@ -606,10 +606,14 @@
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
     screen.appendChild(el("div", { class: "modes-glow", "aria-hidden": "true" }));
 
+    var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
+    var carItems = [];
+    if (hasCoachSave) carItems.push({ icon: "▶️", name: "Continuar carreira", desc: "Retome de onde você parou", route: "coach-hub", big: true });
+    carItems.push({ icon: "🎯", name: "Carreira de Treinador", desc: "Comande o clube e a seleção — Master League", route: "coach", big: !hasCoachSave });
+    carItems.push({ icon: "🏛️", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores", route: "coach" });
+    carItems.push({ icon: "💾", name: "Minhas carreiras", desc: "Continue outros saves", route: "saves" });
     var CATS = [
-      { key: "car", tab: "Carreiras", ic: "⭐", items: [
-        { icon: "🎯", name: "Master League", desc: "Carreira de Treinador ou Dirigente — comande o clube e a seleção", route: "coach", big: true }
-      ] },
+      { key: "car", tab: "Carreiras", ic: "⭐", items: carItems },
       { key: "play", tab: "Jogar", ic: "⚡", items: [
         { icon: "⚡", name: "Partida Rápida", desc: "Um jogo avulso, na hora", route: "quick" },
         { icon: "🏆", name: "Competição", desc: "Ligas, copas e seleções", route: "compmode" },
@@ -645,9 +649,11 @@
           el("span", { class: "modes-prof-name", text: prof.name })
         ])
       : el("button", { class: "modes-prof ghost", on: { click: function () { go("profile"); } } }, [ el("span", { text: "Entrar" }) ]);
+    var gearBtn = el("button", { class: "modes-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ]);
     screen.appendChild(el("header", { class: "modes-head" }, [
       el("img", { class: "modes-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
       el("div", { class: "modes-head-sp" }),
+      gearBtn,
       right
     ]));
 
