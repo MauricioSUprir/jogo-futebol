@@ -18,55 +18,102 @@
   // escudo gerado com ESTILO próprio por clube (listras, faixa, metades, roundel),
   // estrelas e tipografia — genérico, mas com cara de clube de verdade.
   function crestHash(s) { s = String(s || ""); var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  // gradiente vertical de brilho para dar volume (claro em cima -> escuro embaixo)
+  function shadeDefs(id) {
+    return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0" stop-color="#fff" stop-opacity=".22"/>' +
+      '<stop offset=".5" stop-color="#fff" stop-opacity="0"/>' +
+      '<stop offset="1" stop-color="#000" stop-opacity=".28"/></linearGradient>';
+  }
+  // ESCUDO — brasão profissional: moldura dourada, campo com padrão do clube,
+  // faixa superior (chief) com estrelas, medalhão central e brilho.
   function crest(club) {
     var c = club.colors, p = c.primary, s = c.secondary;
     var h = crestHash(club.id || club.name);
-    var style = h % 4;                 // 0 listras · 1 faixa diagonal · 2 metades · 3 roundel
-    var stars = (h >> 3) % 5 === 0 ? 3 : (h >> 3) % 3 === 0 ? 1 : (h >> 5) % 2 === 0 ? 2 : 0;
+    var style = h % 7;                 // 0 listras 1 sash 2 metades 3 hoops 4 quartos 5 chevron 6 roundel
+    var stars = ((h >>> 3) % 6 === 0) ? 3 : ((h >>> 4) % 3 === 0) ? 2 : ((h >>> 6) % 2 === 0) ? 1 : 0;
+    var chief = ((h >>> 8) % 2 === 0); // faixa superior?
+    var gold = "#e8c65a", goldDk = "#b8912f";
     var ini = initials(club.name, 2);
-    // moldura do escudo (path) usada nos estilos 0-2
-    var shieldPath = "M40 3 L74 15 V45 C74 67 57 81 40 87 C23 81 6 67 6 45 V15 Z";
-    var clip = '<clipPath id="sc"><path d="' + shieldPath + '"/></clipPath>';
-    var inner = "";
-    if (style === 0) {                 // LISTRAS verticais
-      inner = '<rect x="0" y="0" width="80" height="92" fill="' + p + '"/>';
-      for (var i = 0; i < 6; i++) inner += '<rect x="' + (6 + i * 12) + '" y="0" width="6" height="92" fill="' + s + '" opacity="0.9"/>';
-    } else if (style === 1) {          // FAIXA diagonal (sash)
-      inner = '<rect width="80" height="92" fill="' + p + '"/><polygon points="0,60 0,88 30,92 80,34 80,8 50,4" fill="' + s + '" opacity="0.92"/>';
-    } else if (style === 2) {          // METADES
-      inner = '<rect width="40" height="92" fill="' + p + '"/><rect x="40" width="40" height="92" fill="' + s + '"/>';
-    } else {                           // ROUNDEL (círculo) — não usa o shield
+    var W = 80, HH = 92;
+    var shieldPath = "M40 3 L74 14 V44 C74 66 58 81 40 89 C22 81 6 66 6 44 V14 Z";
+    var defs = '<clipPath id="sc"><path d="' + shieldPath + '"/></clipPath>' +
+      '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset=".5" stop-color="' + gold + '"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient>' +
+      shadeDefs("gl") +
+      '<radialGradient id="rg" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".28"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>';
+
+    // ---- ROUNDEL (estilo circular, comum na América do Sul) ----
+    if (style === 6) {
       var svgR =
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92">' +
-        '<circle cx="40" cy="46" r="37" fill="' + s + '" stroke="#0a0a0a" stroke-width="2"/>' +
-        '<circle cx="40" cy="46" r="30" fill="' + p + '"/>' +
-        '<circle cx="40" cy="46" r="30" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>' +
-        starRow(stars, 40, 20) +
-        '<text x="40" y="55" font-family="Georgia, serif" font-size="24" font-weight="800" fill="#fff" text-anchor="middle" style="paint-order:stroke;stroke:#00000055;stroke-width:2">' + ini + '</text>' +
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92"><defs>' + shadeDefs("gl") +
+        '<linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6e39a"/><stop offset="1" stop-color="' + goldDk + '"/></linearGradient></defs>' +
+        '<circle cx="40" cy="46" r="38" fill="url(#rim)"/>' +
+        '<circle cx="40" cy="46" r="34" fill="' + s + '" stroke="#0a0a0a" stroke-width="1"/>' +
+        '<circle cx="40" cy="46" r="27" fill="' + p + '"/>' +
+        // gomos/raios sutis
+        '<circle cx="40" cy="46" r="27" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="1"/>' +
+        '<circle cx="40" cy="46" r="16" fill="rgba(255,255,255,.94)" stroke="' + s + '" stroke-width="2"/>' +
+        '<text x="40" y="52" font-family="Georgia, serif" font-size="17" font-weight="800" fill="' + p + '" text-anchor="middle">' + ini + '</text>' +
+        starRow(stars, 40, 24) +
+        '<circle cx="40" cy="46" r="34" fill="url(#gl)"/>' +
         '</svg>';
       return svgURI(svgR);
     }
+
+    // ---- campo interno conforme o estilo ----
+    var inner = '<rect width="80" height="92" fill="' + p + '"/>';
+    if (style === 0) {                 // LISTRAS verticais
+      for (var i = 0; i < 5; i++) inner += '<rect x="' + (10 + i * 12) + '" y="0" width="6" height="92" fill="' + s + '"/>';
+    } else if (style === 1) {          // FAIXA diagonal
+      inner += '<polygon points="0,58 0,86 26,90 80,30 80,4 52,2" fill="' + s + '"/>';
+    } else if (style === 2) {          // METADES
+      inner = '<rect width="40" height="92" fill="' + p + '"/><rect x="40" width="40" height="92" fill="' + s + '"/>';
+    } else if (style === 3) {          // HOOPS (faixas horizontais)
+      for (var j = 0; j < 5; j++) inner += '<rect x="0" y="' + (8 + j * 16) + '" width="80" height="8" fill="' + s + '"/>';
+    } else if (style === 4) {          // QUARTOS
+      inner = '<rect width="40" height="46" fill="' + p + '"/><rect x="40" width="40" height="46" fill="' + s + '"/>' +
+              '<rect y="46" width="40" height="46" fill="' + s + '"/><rect x="40" y="46" width="40" height="46" fill="' + p + '"/>';
+    } else {                           // CHEVRON
+      inner += '<polygon points="0,30 40,58 80,30 80,50 40,78 0,50" fill="' + s + '"/>';
+    }
+    // faixa superior (chief) com estrelas
+    var chiefG = "";
+    if (chief) {
+      chiefG = '<rect x="0" y="10" width="80" height="18" fill="' + s + '"/>' +
+               '<rect x="0" y="26" width="80" height="2" fill="rgba(0,0,0,.25)"/>';
+    }
+
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92"><defs>' + clip + '</defs>' +
-      '<g clip-path="url(#sc)">' + inner + '</g>' +
-      '<path d="' + shieldPath + '" fill="none" stroke="#0a0a0a" stroke-width="3"/>' +
-      '<path d="M40 3 L74 15 V27 H6 V15 Z" fill="rgba(0,0,0,.18)"/>' +
-      '<circle cx="40" cy="50" r="16" fill="rgba(255,255,255,.92)"/>' +
-      '<text x="40" y="57" font-family="Georgia, serif" font-size="19" font-weight="800" fill="' + p + '" text-anchor="middle">' + ini + '</text>' +
-      starRow(stars, 40, 15) +
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92"><defs>' + defs + '</defs>' +
+      // moldura dourada
+      '<path d="' + shieldPath + '" fill="url(#rim)"/>' +
+      '<g clip-path="url(#sc)"><g transform="translate(40 46) scale(.9) translate(-40 -46)">' +
+        inner + chiefG +
+      '</g>' +
+      '<rect width="80" height="92" fill="url(#gl)"/>' +
+      '<rect width="80" height="92" fill="url(#rg)"/>' +
+      '</g>' +
+      // contorno interno + externo
+      '<path d="' + shieldPath + '" fill="none" stroke="rgba(0,0,0,.55)" stroke-width="1.4"/>' +
+      // estrelas (na chief se houver, senão no topo do campo)
+      starRow(stars, 40, chief ? 19 : 22) +
+      // medalhão central com iniciais
+      '<circle cx="40" cy="54" r="15" fill="rgba(255,255,255,.95)" stroke="' + goldDk + '" stroke-width="1.6"/>' +
+      '<circle cx="40" cy="54" r="15" fill="url(#gl)"/>' +
+      '<text x="40" y="60" font-family="Georgia, serif" font-size="16" font-weight="800" fill="' + p + '" text-anchor="middle">' + ini + '</text>' +
       '</svg>';
     return svgURI(svg);
   }
   function starRow(n, cx, cy) {
     if (!n) return "";
-    var out = "", gap = 9, x0 = cx - (n - 1) * gap / 2;
-    for (var i = 0; i < n; i++) out += star(x0 + i * gap, cy, 3.4);
+    var out = "", gap = 8.5, x0 = cx - (n - 1) * gap / 2;
+    for (var i = 0; i < n; i++) out += star(x0 + i * gap, cy, 3.2);
     return out;
   }
   function star(cx, cy, r) {
     var pts = "";
     for (var i = 0; i < 10; i++) { var ang = Math.PI / 5 * i - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; pts += (cx + rr * Math.cos(ang)).toFixed(1) + "," + (cy + rr * Math.sin(ang)).toFixed(1) + " "; }
-    return '<polygon points="' + pts + '" fill="#ffd54a" stroke="#00000040" stroke-width="0.5"/>';
+    return '<polygon points="' + pts + '" fill="#ffd54a" stroke="#00000055" stroke-width="0.5"/>';
   }
 
   // "Foto" de jogador: avatar com iniciais e cor derivada da nação/posição
@@ -84,30 +131,49 @@
     return svgURI(svg);
   }
 
-  // UNIFORME (camisa) gerado com o padrão do clube (listras/faixa/metades/sólido)
+  // UNIFORME (camisa) — silhueta com mangas, gola, punhos, sombreado e mini-escudo
   function kit(club, away) {
     var c = club.colors, p = away ? c.secondary : c.primary, s = away ? c.primary : c.secondary;
-    var h = crestHash((club.id || club.name) + (away ? "away" : "home")), style = h % 4;
+    var h = crestHash((club.id || club.name) + (away ? "away" : "home")), style = h % 6;
+    var vneck = ((h >>> 4) % 2 === 0);
+    // corpo (torso) e mangas separados para punhos/detalhes
     var shirt = "M16 22 L29 10 C35 5 45 5 51 10 L64 22 L73 32 L62 43 L56 37 L56 71 C46 75 34 75 24 71 L24 37 L18 43 L7 32 Z";
-    var pat = "";
-    if (style === 0) {                 // sólido + gola/mangas na cor 2
-      pat = '<rect width="80" height="80" fill="' + p + '"/>';
-    } else if (style === 1) {          // listras verticais
-      pat = '<rect width="80" height="80" fill="' + p + '"/>';
-      for (var i = 0; i < 7; i++) pat += '<rect x="' + (10 + i * 9) + '" y="0" width="4.5" height="80" fill="' + s + '"/>';
+    var body = "M24 37 L24 71 C34 75 46 75 56 71 L56 37 L51 10 C45 5 35 5 29 10 Z";
+    var pat = '<rect width="80" height="80" fill="' + p + '"/>';
+    if (style === 1) {                 // listras verticais
+      for (var i = 0; i < 6; i++) pat += '<rect x="' + (12 + i * 9.5) + '" y="0" width="4.6" height="80" fill="' + s + '"/>';
     } else if (style === 2) {          // metades
       pat = '<rect width="40" height="80" fill="' + p + '"/><rect x="40" width="40" height="80" fill="' + s + '"/>';
-    } else {                           // faixa diagonal
-      pat = '<rect width="80" height="80" fill="' + p + '"/><polygon points="8,58 8,74 74,20 74,6" fill="' + s + '"/>';
+    } else if (style === 3) {          // faixa diagonal (banda no peito)
+      pat += '<polygon points="10,60 10,74 74,20 74,6" fill="' + s + '"/>';
+    } else if (style === 4) {          // hoops (faixas horizontais)
+      for (var j = 0; j < 5; j++) pat += '<rect x="0" y="' + (12 + j * 13) + '" width="80" height="6.5" fill="' + s + '"/>';
+    } else if (style === 5) {          // faixa central + laterais (placket)
+      pat += '<rect x="36" y="0" width="8" height="80" fill="' + s + '"/>';
     }
+    var collar = vneck
+      ? '<path d="M31 11 L40 22 L49 11 L46 9 L40 17 L34 9 Z" fill="' + s + '"/>'
+      : '<path d="M29 10 C35 5 45 5 51 10 L47 16 C43 12.5 37 12.5 33 16 Z" fill="' + s + '"/>';
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80"><defs>' +
       '<clipPath id="kc"><path d="' + shirt + '"/></clipPath>' +
-      '<linearGradient id="ksh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient></defs>' +
-      '<g clip-path="url(#kc)">' + pat + '<rect width="80" height="80" fill="url(#ksh)"/></g>' +
+      '<clipPath id="kb"><path d="' + body + '"/></clipPath>' +
+      '<linearGradient id="ksh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>' +
+      '<radialGradient id="kr" cx="42%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>' +
+      // mangas na cor secundária (sob o corpo)
+      '<g clip-path="url(#kc)"><rect width="80" height="80" fill="' + s + '"/></g>' +
+      // corpo com o padrão
+      '<g clip-path="url(#kb)">' + pat + '<rect width="80" height="80" fill="url(#ksh)"/><rect width="80" height="80" fill="url(#kr)"/></g>' +
+      // punhos das mangas
+      '<path d="M73 32 L67.5 37.5 L57 33 L62 27 Z" fill="' + p + '" opacity=".9"/>' +
+      '<path d="M7 32 L12.5 37.5 L23 33 L18 27 Z" fill="' + p + '" opacity=".9"/>' +
       // gola
-      '<path d="M29 10 C35 5 45 5 51 10 L46 16 C43 13 37 13 34 16 Z" fill="' + s + '"/>' +
-      '<path d="' + shirt + '" fill="none" stroke="#0a0a0a" stroke-width="2.4"/>' +
+      collar +
+      // mini-escudo no peito
+      '<circle cx="50" cy="30" r="4.4" fill="rgba(255,255,255,.92)" stroke="' + s + '" stroke-width="1"/>' +
+      '<text x="50" y="32.6" font-family="Georgia, serif" font-size="5" font-weight="800" fill="' + p + '" text-anchor="middle">' + initials(club.name, 1) + '</text>' +
+      // contorno
+      '<path d="' + shirt + '" fill="none" stroke="#0a0a0a" stroke-width="2.2" stroke-linejoin="round"/>' +
       '</svg>';
     return svgURI(svg);
   }
