@@ -8,7 +8,16 @@
   var el = null;
   function E() { el = TM.ui.el; }
 
-  var SPEED = { instantaneo: 0, rapido: 35, normal: 110, lento: 300 };
+  var SPEED = { instantaneo: 0, rapido: 60, normal: 150, lento: 420 };
+  // falas de ambiente: preenchem minutos sem lance p/ dar fluidez à transmissão
+  var AMBIENT = [
+    "Muita marcação no meio-campo.", "O time troca passes na saída de bola.",
+    "A torcida empurra o time.", "Boa triangulação, mas falta o passe final.",
+    "O jogo ganha intensidade agora.", "Zaga bem postada, sem sustos.",
+    "Disputa acirrada no meio-campo.", "Time busca espaço pelas laterais.",
+    "Ritmo mais cadenciado neste trecho.", "Pressão alta força o erro adversário.",
+    "Bola rolando de pé em pé no meio.", "Goleiro sai jogando com calma."
+  ];
 
   function play(screen, cfg) {
     E();
@@ -319,9 +328,10 @@
         addLine(ev);
       });
     }
+    var lastAmbient = -8;
     function renderMinute(mm) {
       clockEl.textContent = mm + "'";
-      if (progressFill) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
+      if (progressFill && !animating) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
       if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
       var evs = byMin[mm] || [];
       if (animating && delay > 0) {
@@ -334,6 +344,10 @@
         // VAR imersivo: pausa, revisa e só então mostra o resto do lance (o gol, se confirmado)
         if (varEv) { showVarReview(varEv, function () { processEvents(evs); }); return; }
         if (fev) showCardFlash(fev);
+        // fala de ambiente em minutos "parados" (dá fluidez, sem poluir)
+        if (!evs.length && !(pitch && pitchOn) && mm > 1 && mm - lastAmbient >= 9 && Math.random() < 0.55) {
+          lastAmbient = mm; addAmbient(mm);
+        }
       }
       processEvents(evs);
     }
@@ -348,10 +362,20 @@
       renderMinute(minute);
       minute++;
       if (flashing) return; // um cartão/lesão pausou: retoma depois
-      // no Campo 2D o ritmo é mais lento (assistível); botões 1x/2x/4x aceleram
-      var base = (pitch && pitchOn) ? 360 : delay;
+      // no Campo 2D o ritmo é bem mais lento (assistível); botões 1x/2x/4x aceleram
+      var base = (pitch && pitchOn) ? 720 : delay;
       var d = (hasGoal ? base * (pitch && pitchOn ? 3 : 7) : base) / (liveMult || 1);
+      // barra de progresso desliza suavemente até o próximo minuto (fluidez)
+      if (progressFill && animating && delay > 0 && !(pitch && pitchOn)) {
+        progressFill.style.transitionDuration = Math.max(80, d) + "ms";
+        progressFill.style.width = Math.min(100, minute / 90 * 100) + "%";
+      }
       setTimeout(step, d);
+    }
+    function addAmbient(mm) {
+      var txt = AMBIENT[Math.floor(Math.random() * AMBIENT.length)];
+      var node = el("div", { class: "bc-line bc-ambient", text: mm + "' " + txt });
+      feed.appendChild(node); feed.scrollTop = feed.scrollHeight;
     }
 
     function end() {
@@ -361,10 +385,10 @@
       skipBtn.className = "btn primary";
     }
     function finishNow() {
-      if (!done) { animating = false; for (var mm = minute; mm <= 90; mm++) renderMinute(mm); end(); }
+      if (!done) { animating = false; if (progressFill) progressFill.style.transitionDuration = "0ms"; for (var mm = minute; mm <= 90; mm++) renderMinute(mm); end(); }
     }
 
-    if (delay === 0) { for (var mm = 0; mm <= 90; mm++) renderMinute(mm); end(); }
+    if (delay === 0) { animating = false; for (var mm = 0; mm <= 90; mm++) renderMinute(mm); end(); }
     else { setTimeout(step, 400); }
   }
 

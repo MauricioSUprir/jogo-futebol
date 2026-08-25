@@ -473,7 +473,8 @@
         if (replayT <= 0) { confetti = []; resetKickoff(); }
       }
       // move jogadores em direção ao alvo (velocidade limitada = sem teleporte)
-      var pmax = 0.012 * speedMult;
+      // ritmo mais lento/fluido por padrão; os botões 1x/2x/4x aceleram
+      var pmax = 0.0065 * speedMult;
       all.forEach(function (p) {
         var d = dist(p.x, p.y, p.tx, p.ty);
         var v = Math.min(pmax, d);
@@ -484,9 +485,9 @@
         var dir = carrier.side === 0 ? 1 : -1;
         ball.tx = clamp(carrier.x + 0.02 * dir, 0.01, 0.99); ball.ty = carrier.y;
       }
-      // move a bola
+      // move a bola (ritmo mais lento por padrão; 1x/2x/4x aceleram)
       var bd = dist(ball.x, ball.y, ball.tx, ball.ty);
-      var bv = Math.min(ball.speed * speedMult, bd);
+      var bv = Math.min(ball.speed * speedMult * 0.6, bd);
       if (bd > 0.0008) { ball.x += (ball.tx - ball.x) / bd * bv; ball.y += (ball.ty - ball.y) / bd * bv; }
       else { ball.flying = false; }
       render();
