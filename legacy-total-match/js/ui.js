@@ -517,27 +517,41 @@
     { t: "⭐ Seleções", d: "A cada 4 anos rola a Copa do Mundo — fique de olho na convocação!" }
   ];
 
+  // ripple tátil de toque nos elementos do menu
+  function attachRipple(node) {
+    node.addEventListener("pointerdown", function (e) {
+      var r = node.getBoundingClientRect();
+      var ink = el("span", { class: "ripple-ink" });
+      var size = Math.max(r.width, r.height);
+      ink.style.width = ink.style.height = size + "px";
+      ink.style.left = (e.clientX - r.left - size / 2) + "px";
+      ink.style.top = (e.clientY - r.top - size / 2) + "px";
+      node.appendChild(ink);
+      setTimeout(function () { if (ink.parentNode) ink.parentNode.removeChild(ink); }, 620);
+    });
+  }
+
   register("modes", function (screen) {
     screen.id = "screen-modes";
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
     screen.appendChild(el("div", { class: "modes-glow", "aria-hidden": "true" }));
 
-    var SECTIONS = [
-      { title: "Carreiras", accent: "car", items: [
+    var CATS = [
+      { key: "car", tab: "Carreiras", ic: "⭐", items: [
         { icon: "🎯", name: "Master League", desc: "Comande um clube e uma seleção", route: "coach", big: true },
-        { icon: "⭐", name: "Rumo ao Estrelato", desc: "Viva a carreira de um jogador", route: "player", big: true }
+        { icon: "🌟", name: "Rumo ao Estrelato", desc: "Viva a carreira de um jogador", route: "player", big: true }
       ] },
-      { title: "Jogar", accent: "play", items: [
+      { key: "play", tab: "Jogar", ic: "⚡", items: [
         { icon: "⚡", name: "Partida Rápida", desc: "Um jogo avulso, na hora", route: "quick" },
         { icon: "🏆", name: "Competição", desc: "Ligas, copas e seleções", route: "compmode" },
         { icon: "💎", name: "Dream Team", desc: "Monte seu time dos sonhos", route: "dream" },
         { icon: "🎲", name: "Draft", desc: "Sorteie e escale", route: "draft" }
       ] },
-      { title: "Online", accent: "net", items: [
+      { key: "net", tab: "Online", ic: "🌐", items: [
         { icon: "🌐", name: "Online", desc: "Jogue com amigos", route: "online" },
         { icon: "🏟️", name: "Grupo", desc: "Torneio entre amigos", route: "groupcomp" }
       ] },
-      { title: "Mais", accent: "more", items: [
+      { key: "more", tab: "Mais", ic: "⋯", items: [
         { icon: "🎖️", name: "Informações", desc: "Competições e times", route: "competicoes" },
         { icon: "✏️", name: "Editor", desc: "Edite, crie e transfira jogadores", route: "editor" },
         { icon: "💾", name: "Minhas Carreiras", desc: "Continue de onde parou", route: "saves" },
@@ -545,7 +559,15 @@
         { icon: "👤", name: "Perfil", desc: "Conta e sincronização", route: "profile" }
       ] }
     ];
+    // destaques do carrossel (topo)
+    var FEATURED = [
+      { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car" },
+      { icon: "🌟", name: "Rumo ao Estrelato", tag: "Crie um craque e escreva sua lenda", route: "player", acc: "car" },
+      { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play" },
+      { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "net" === "net" ? "online" : "online", acc: "net" }
+    ];
 
+    // ---- header ----
     var prof = (TM.account && TM.account.profile) ? TM.account.profile() : null;
     var right = prof
       ? el("button", { class: "modes-prof", on: { click: function () { go("profile"); } } }, [
@@ -560,23 +582,75 @@
     ]));
 
     var wrap = el("div", { class: "modes-wrap" });
-    SECTIONS.forEach(function (sec) {
-      wrap.appendChild(el("div", { class: "modes-sec-title", text: sec.title }));
-      var list = el("div", { class: "modes-list acc-" + sec.accent });
-      sec.items.forEach(function (m) {
-        list.appendChild(el("button", { class: "mode-row", on: { click: function () { go(m.route); } } }, [
-          el("span", { class: "mode-orb", text: m.icon }),
-          el("span", { class: "mode-info" }, [
-            el("span", { class: "mode-name", text: m.name }),
-            el("span", { class: "mode-desc", text: m.desc })
-          ]),
-          el("span", { class: "mode-go", text: "›" })
-        ]));
-      });
-      wrap.appendChild(list);
-    });
+    screen.appendChild(wrap);
 
-    // ticker de curiosidades (rodapé slim)
+    // ---- carrossel de destaque (interativo: dots + auto-rotate + swipe) ----
+    var hero = el("button", { class: "hero-card" });
+    var dotsWrap = el("div", { class: "hero-dots" });
+    var hIdx = 0, hTimer = null;
+    function renderHero(i) {
+      hIdx = (i + FEATURED.length) % FEATURED.length;
+      var f = FEATURED[hIdx];
+      hero.className = "hero-card acc-" + f.acc;
+      hero.innerHTML = "";
+      hero.appendChild(el("span", { class: "hero-wm", text: f.icon }));
+      hero.appendChild(el("div", { class: "hero-body" }, [
+        el("span", { class: "hero-eyebrow", text: "EM DESTAQUE" }),
+        el("span", { class: "hero-name", text: f.name }),
+        el("span", { class: "hero-tag", text: f.tag }),
+        el("span", { class: "hero-cta", text: "JOGAR ▶" })
+      ]));
+      hero.onclick = function () { go(f.route); };
+      dotsWrap.querySelectorAll(".hero-dot").forEach(function (d, di) { d.classList.toggle("on", di === hIdx); });
+    }
+    FEATURED.forEach(function (f, di) {
+      dotsWrap.appendChild(el("button", { class: "hero-dot", on: { click: function () { renderHero(di); restartHero(); } } }));
+    });
+    function restartHero() { if (hTimer) clearInterval(hTimer); hTimer = setInterval(function () {
+      if (!screen.isConnected) { clearInterval(hTimer); return; } renderHero(hIdx + 1);
+    }, 4200); }
+    // swipe no hero
+    var sx = 0;
+    hero.addEventListener("pointerdown", function (e) { sx = e.clientX; });
+    hero.addEventListener("pointerup", function (e) { var dx = e.clientX - sx; if (Math.abs(dx) > 45) { renderHero(hIdx + (dx < 0 ? 1 : -1)); restartHero(); } });
+    wrap.appendChild(hero);
+    wrap.appendChild(dotsWrap);
+    renderHero(0); restartHero();
+
+    // ---- abas de categoria (interativo: troca a grade) ----
+    var tabsEl = el("div", { class: "cat-tabs" });
+    var gridEl = el("div", { class: "cat-grid" });
+    var curCat = 0;
+    CATS.forEach(function (c, ci) {
+      tabsEl.appendChild(el("button", { class: "cat-tab acc-" + c.key, on: { click: function () { selectCat(ci); } } }, [
+        el("span", { class: "ct-ic", text: c.ic }), el("span", { class: "ct-lbl", text: c.tab })
+      ]));
+    });
+    function selectCat(ci) {
+      curCat = ci;
+      tabsEl.querySelectorAll(".cat-tab").forEach(function (t, ti) { t.classList.toggle("on", ti === ci); });
+      var c = CATS[ci];
+      gridEl.className = "cat-grid acc-" + c.key;
+      gridEl.classList.remove("in"); void gridEl.offsetWidth; gridEl.classList.add("in");
+      gridEl.innerHTML = "";
+      c.items.forEach(function (m, mi) {
+        var card = el("button", { class: "mode-tile" + (m.big ? " big" : ""), style: "animation-delay:" + (mi * 45) + "ms", on: { click: function () { go(m.route); } } }, [
+          el("span", { class: "mt-orb", text: m.icon }),
+          el("span", { class: "mt-info" }, [
+            el("span", { class: "mt-name", text: m.name }),
+            el("span", { class: "mt-desc", text: m.desc })
+          ]),
+          el("span", { class: "mt-go", text: "›" })
+        ]);
+        attachRipple(card);
+        gridEl.appendChild(card);
+      });
+    }
+    wrap.appendChild(tabsEl);
+    wrap.appendChild(gridEl);
+    selectCat(0);
+
+    // ---- ticker de curiosidades (rodapé slim) ----
     var ticker = el("div", { class: "modes-ticker" }, [ el("span", { class: "mt-eye", text: "VOCÊ SABIA?" }), el("span", { class: "mt-txt" }) ]);
     var mtTxt = ticker.querySelector(".mt-txt");
     var idx = 0;
@@ -584,7 +658,6 @@
     showFact(0);
     var timer = setInterval(function () { if (!screen.isConnected) { clearInterval(timer); return; } idx = (idx + 1) % FACTS.length; showFact(idx); }, 5000);
     wrap.appendChild(ticker);
-    screen.appendChild(wrap);
   });
 
   /* ---------- Galeria de Competições (espaço para os logos) ---------- */
