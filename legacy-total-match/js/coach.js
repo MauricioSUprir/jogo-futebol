@@ -2790,20 +2790,34 @@
       var pitch = el("div", { class: "pitch" });
       pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
       pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+      if (!c.lineup.pos) c.lineup.pos = {};
       c.lineup.starters.forEach(function (id, i) {
         var p = C().resolvePlayer(c, id); if (!p) return;
         var slot = slots[i] || [null, 50, 50];
         var unavail = !C().available(c, id);
-        var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : ""),
-          style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-          on: { click: function () { onStarterClick(i); } } },
+        var cp = c.lineup.pos[i];
+        var x = cp ? cp[0] : slot[1], y = cp ? cp[1] : slot[2];
+        var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : "") + (cp ? " custom" : ""),
+          style: "left:" + x + "%;top:" + y + "%" },
           TM.ui.chipKids(p, slot, { name: shortName(p.name), captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
         );
+        attachChipDrag(chip, i, pitch);
         pitch.appendChild(chip);
       });
       board.appendChild(pitch);
 
-      board.appendChild(el("div", { class: "lineup-hint", text: pickSlot != null ? "Toque em OUTRO titular para trocar as posições, ou num reserva para substituir. Toque no mesmo para cancelar." : "Toque num titular e depois em outro titular (troca de posição) ou num reserva (substituição)." }));
+      var hasCustom = Object.keys(c.lineup.pos).length > 0;
+      var hintRow = el("div", { class: "lineup-hint" }, [
+        document.createTextNode(pickSlot != null
+          ? "Toque em OUTRO titular para trocar, ou num reserva para substituir. 👆 Arraste para mover livre."
+          : "👆 Toque para trocar/substituir · ✋ Arraste o jogador pelo campo para posicioná-lo livremente.")
+      ]);
+      board.appendChild(hintRow);
+      if (hasCustom) {
+        board.appendChild(TM.ui.button("↩️ Redefinir posições da formação", function () {
+          c.lineup.pos = {}; TM.storage.saveCoachCareer(c); renderBoard();
+        }, "btn ghost small"));
+      }
       board.appendChild(TM.ui.posPanel(c.lineup.starters.map(function (id, i) { return { player: C().resolvePlayer(c, id), slot: slots[i] }; })));
 
       var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
@@ -2858,6 +2872,35 @@
       pickSlot = null;
       TM.storage.saveCoachCareer(c);
       renderBoard();
+    }
+    // arrastar o jogador livremente pelo campo (movimentação manual, como pediram)
+    function attachChipDrag(chip, i, pitch) {
+      var sx = null, sy = null, dragging = false, pid = null, nx = null, ny = null;
+      chip.style.touchAction = "none";
+      chip.addEventListener("pointerdown", function (e) { sx = e.clientX; sy = e.clientY; dragging = false; pid = e.pointerId; nx = ny = null; });
+      chip.addEventListener("pointermove", function (e) {
+        if (sx == null) return;
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!dragging && (dx * dx + dy * dy) > 36) { dragging = true; try { chip.setPointerCapture(pid); } catch (er) {} chip.classList.add("dragging"); }
+        if (dragging) {
+          var r = pitch.getBoundingClientRect();
+          nx = Math.max(5, Math.min(95, (e.clientX - r.left) / r.width * 100));
+          ny = Math.max(6, Math.min(95, (e.clientY - r.top) / r.height * 100));
+          chip.style.left = nx + "%"; chip.style.top = ny + "%";
+        }
+      });
+      function end() {
+        if (sx == null) return;
+        var wasDrag = dragging; sx = sy = null; dragging = false; chip.classList.remove("dragging");
+        if (wasDrag && nx != null) {
+          if (!c.lineup.pos) c.lineup.pos = {};
+          c.lineup.pos[i] = [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10];
+          TM.storage.saveCoachCareer(c);
+          renderBoard();
+        } else { onStarterClick(i); }
+      }
+      chip.addEventListener("pointerup", end);
+      chip.addEventListener("pointercancel", function () { sx = sy = null; dragging = false; chip.classList.remove("dragging"); });
     }
     function toExcluded(id) {
       c.lineup.bench = (c.lineup.bench || []).filter(function (x) { return x !== id; });
