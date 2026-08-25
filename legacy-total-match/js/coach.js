@@ -111,6 +111,7 @@
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🏆", label: "Competições", route: "coach-comps" },
       { ic: "💰", label: "Finanças", route: "coach-finance" },
+      { ic: "📜", label: "Contrato", route: "coach-contract" },
       { ic: "📅", label: "Calendário", route: "coach-calendar" },
       { ic: "🔄", label: "Movim.", route: "coach-transfers" },
       { ic: "💼", label: "Propostas", route: "coach-offers", badge: props },
@@ -291,6 +292,28 @@
     Object.keys(c.contracts).forEach(function (id) { if ((c.roster || []).indexOf(id) < 0) delete c.contracts[id]; });
   }
   function getContract(c, id) { ensureContracts(c); return c.contracts[id]; }
+
+  // ----- CONTRATO DO PRÓPRIO TREINADOR (salário, duração, multa, objetivo) -----
+  function ensureMyContract(c) {
+    if (c.myContract) return c.myContract;
+    var rating = 70; try { rating = TM.data.clubRating(c.teamId); } catch (e) {}
+    var baseWageEur = Math.max(0.3, (rating - 55) * 0.35);            // ~0.3M a ~14M/ano
+    var obj = (c.objective && c.objective.desc) || "Cumprir as metas da diretoria";
+    c.myContract = {
+      years: 2 + (phash("myc:" + c.teamId) % 2),                     // 2-3 temporadas
+      wage: r2(baseWageEur * mult(c)),                                // salário/ano na moeda
+      fine: r2(baseWageEur * mult(c) * 1.5),                          // multa para sair antes
+      objective: obj, signedSeason: c.season || 1
+    };
+    return c.myContract;
+  }
+  // renovação oferecida pela diretoria — melhora conforme confiança + reputação
+  function renewalTerms(c) {
+    var mc = ensureMyContract(c);
+    var conf = boardConfidence(c), rep = 0; try { rep = C().computeReputation(c); } catch (e) {}
+    var raise = 1 + Math.max(0, (conf - 55)) / 140 + Math.max(0, (rep - 20)) / 260;   // até ~+55%
+    return { years: mc.years + 2, wage: r2(mc.wage * raise), fine: r2(mc.wage * raise * 1.6), raisePct: Math.round((raise - 1) * 100) };
+  }
 
   // DEADLINE DAY — dispara boatos de mercado uma vez por janela
   function maybeDeadlineRumors(c, win) {
@@ -746,6 +769,7 @@
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     ensureContracts(c);     // garante contratos do elenco
+    ensureMyContract(c);    // garante o contrato do próprio treinador
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
@@ -957,6 +981,7 @@
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
+      hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🌍", "Mundo", function () { TM.ui.go("coach-world"); }),
@@ -1063,6 +1088,102 @@
     var expense = r2(wages + ops + spent);
     var profit = r2(income - expense);
     return { r: r, tv: tv, gate: gate, sponsor: sponsor, sold: sold, prize: prize, income: income, wages: wages, ops: ops, spent: spent, expense: expense, profit: profit };
+  }
+
+  TM.ui.register("coach-contract", function (screen) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
+    var mc = ensureMyContract(c); TM.storage.saveCoachCareer(c);
+    var club = TM.data.club(c.teamId);
+    screen.appendChild(TM.ui.topbar("📜 Meu contrato", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-hub");
+    var conf = boardConfidence(c);
+    var wrap = el("div", { class: "panel-narrow" });
+    screen.appendChild(wrap);
+
+    wrap.appendChild(el("div", { class: "mc-club" }, [
+      club ? TM.img.clubImg(club, "mc-crest") : null,
+      el("div", {}, [
+        el("div", { class: "mc-club-name", text: club ? club.name : "Clube" }),
+        el("div", { class: "mc-club-sub", text: "Técnico: " + (c.coachName || "você") + " · Temporada " + (c.season || 1) })
+      ])
+    ]));
+    var yrsTxt = mc.years <= 0 ? "⚠ EXPIRADO" : mc.years === 1 ? "1 temporada (último ano)" : mc.years + " temporadas";
+    wrap.appendChild(el("div", { class: "contract-card" }, [
+      el("div", { class: "cc-h", text: "📜 Seu vínculo" }),
+      el("div", { class: "cc-grid" }, [
+        el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v" + (mc.years <= 1 ? " warn" : ""), text: mc.years <= 0 ? "0" : mc.years }), el("div", { class: "cc-l", text: "temporadas" }) ]),
+        el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, mc.wage) }), el("div", { class: "cc-l", text: "salário/ano" }) ]),
+        el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, mc.fine) }), el("div", { class: "cc-l", text: "multa p/ sair" }) ])
+      ]),
+      el("div", { class: "cc-note", text: yrsTxt + " · Objetivo: " + mc.objective })
+    ]));
+
+    // renovação (a diretoria oferece termos conforme confiança/reputação)
+    var rt = renewalTerms(c);
+    var canRenew = conf >= 35;
+    wrap.appendChild(el("div", { class: "mc-offer" + (canRenew ? "" : " locked") }, [
+      el("div", { class: "mc-offer-h", text: canRenew ? "✍️ Proposta de renovação" : "🔒 Renovação indisponível" }),
+      el("div", { class: "mc-offer-s", text: canRenew
+        ? "A diretoria oferece renovar por +" + rt.years + " temporada(s) com salário de " + money(c, rt.wage) + "/ano (" + (rt.raisePct >= 0 ? "+" : "") + rt.raisePct + "%)."
+        : "A diretoria está insatisfeita (confiança " + conf + "%). Melhore os resultados para destravar uma renovação." }),
+      canRenew ? TM.ui.button("✍️ Aceitar renovação", function () {
+        mc.years = rt.years; mc.wage = rt.wage; mc.fine = rt.fine; mc.signedSeason = c.season;
+        TM.storage.saveCoachCareer(c);
+        TM.notify.push(c, { icon: "✍️", title: "Renovação assinada", news: true, text: "Você renovou com o " + (club ? club.name : "clube") + " por mais " + rt.years + " temporada(s)." });
+        TM.ui.toast("Contrato renovado!"); TM.ui.go("coach-contract");
+      }, "btn primary") : null
+    ]));
+
+    // negociar orçamento com a diretoria
+    wrap.appendChild(el("div", { class: "mc-budget" }, [
+      el("div", { class: "mc-offer-h", text: "💰 Negociar orçamento" }),
+      el("div", { class: "mc-offer-s", text: "Peça mais verba para reforços. A chance de aprovação depende da confiança da diretoria (" + conf + "%)." }),
+      TM.ui.button("💬 Pedir mais verba", function () { askBudget(c); }, "btn ghost")
+    ]));
+
+    // sair do clube (fim de temporada de graça, ou agora pagando a multa)
+    wrap.appendChild(el("div", { class: "mc-leave" }, [
+      el("div", { class: "mc-offer-h", text: "🚪 Deixar o clube" }),
+      el("div", { class: "mc-offer-s", text: "Peça demissão e fique livre no mercado. Ao fim da temporada é de graça; agora, custa a multa (" + money(c, mc.fine) + ")." }),
+      el("div", { class: "mc-leave-acts" }, [
+        TM.ui.button("Sair no fim da temporada", function () {
+          c.leaveAtSeasonEnd = true; TM.storage.saveCoachCareer(c);
+          TM.notify.push(c, { icon: "🚪", title: "Saída anunciada", news: true, text: "Você anunciou que deixará o " + (club ? club.name : "clube") + " ao fim da temporada." });
+          TM.ui.toast("Saída marcada para o fim da temporada."); TM.ui.go("coach-contract");
+        }, "btn ghost small"),
+        TM.ui.button("Rescindir agora (multa)", function () {
+          TM.ui.confirm("Rescindir agora?", "Você paga " + money(c, mc.fine) + " de multa e fica livre imediatamente.", "Rescindir", function () {
+            c.budget = r2((c.budget || 0) - mc.fine);
+            c.unemployed = true; if (!c.clubHistory) c.clubHistory = [];
+            c.clubHistory.push({ clubId: c.teamId, clubName: c.teamName, season: c.season, left: "rescindiu contrato" });
+            c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
+            TM.storage.saveCoachCareer(c); TM.ui.go("coach-offers");
+          }, true);
+        }, "btn danger small")
+      ])
+    ]));
+  });
+  // pedido de mais verba à diretoria (chance depende da confiança)
+  function askBudget(c) {
+    var conf = boardConfidence(c);
+    var stamp = "budget:" + (c.season || 1);
+    c._budgetAsk = c._budgetAsk || {};
+    if (c._budgetAsk[stamp]) { TM.ui.toast("A diretoria já respondeu nesta temporada."); return; }
+    c._budgetAsk[stamp] = true;
+    var m = mult(c), rating = 70; try { rating = TM.data.clubRating(c.teamId); } catch (e) {}
+    var ask = Math.round(Math.max(5, (rating - 55) * 1.2) * m);
+    var chance = Math.max(0.1, Math.min(0.9, (conf - 30) / 70));
+    if (Math.random() < chance) {
+      var grant = Math.round(ask * (0.5 + Math.random() * 0.6));
+      c.budget = r2((c.budget || 0) + grant);
+      TM.notify.push(c, { icon: "💰", title: "Verba aprovada", news: true, text: "A diretoria liberou +" + money(c, grant) + " para reforços. Use com sabedoria." });
+      TM.ui.toast("✔ Verba aprovada: +" + money(c, grant));
+    } else {
+      TM.notify.push(c, { icon: "🚫", title: "Pedido negado", text: "A diretoria negou mais verba no momento. Mostre resultados para convencê-los." });
+      TM.ui.toast("Pedido negado.");
+    }
+    TM.storage.saveCoachCareer(c);
+    TM.ui.go("coach-contract");
   }
 
   TM.ui.register("coach-finance", function (screen) {
