@@ -1995,11 +1995,39 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 /* ----- barra de SETORES (abas deslizáveis) ----- */
 .sector-bar { position: sticky; top: 0; z-index: 30; width: 100%; max-width: 620px; margin: 0 auto 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
 .sector-track { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 8px 2px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
-/* PC: setores quebram em linhas dentro da coluna (sem barra de rolagem horizontal) */
-@media (min-width: 760px) {
+/* tablets 760-1023: setores quebram em linhas dentro da coluna */
+@media (min-width: 760px) and (max-width: 1023px) {
   .sector-bar { position: static; border-bottom: none; }
   .sector-track { justify-content: center; flex-wrap: wrap; overflow-x: visible; gap: 8px; padding-bottom: 4px; }
   .sector-tab { min-width: 76px; flex: 0 0 auto; }
+}
+.sb-brand { display: none; }
+
+/* ===== PC (>=1024px): layout com SIDEBAR à esquerda (estilo desktop) ===== */
+@media (min-width: 1024px) {
+  .screen.has-sidebar { padding-left: 248px; align-items: center; }
+  /* a barra de setores vira sidebar fixa */
+  .has-sidebar .sector-bar { position: fixed; left: 0; top: 0; bottom: 0; width: 228px; max-width: 228px; margin: 0;
+    background: linear-gradient(180deg, #10161c, #0b1014); border-right: 1px solid var(--line); border-bottom: none;
+    z-index: 60; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; padding: 0; }
+  .has-sidebar .sector-track { flex-direction: column; flex-wrap: nowrap; overflow: visible; gap: 3px; padding: 8px 10px 20px; align-items: stretch; scroll-behavior: auto; }
+  .has-sidebar .sector-tab { flex-direction: row; justify-content: flex-start; align-items: center; gap: 11px; width: 100%; min-width: 0; padding: 11px 13px; border-radius: 11px; }
+  .has-sidebar .sector-tab .st-ic { font-size: 18px; }
+  .has-sidebar .sector-tab .st-lb { font-size: 13.5px; }
+  .has-sidebar .sector-tab .st-badge { position: static; margin-left: auto; box-shadow: none; }
+  .has-sidebar .sector-tab.on { box-shadow: none; }
+  /* cabeçalho do sidebar */
+  .sb-brand { display: flex; flex-direction: column; gap: 10px; padding: 16px 14px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: #0d1318; z-index: 1; }
+  .sb-logo { font-weight: 900; font-size: 15px; color: var(--green); letter-spacing: .3px; }
+  .sb-club-row { display: flex; align-items: center; gap: 10px; }
+  .sb-crest { width: 34px; height: 40px; object-fit: contain; flex: 0 0 auto; }
+  .sb-club { font-weight: 800; font-size: 13.5px; line-height: 1.15; }
+  .sb-sub { font-size: 11px; color: var(--text-dim); }
+  /* esconde a nav inferior no PC (o sidebar substitui) */
+  .has-sidebar .bottom-nav, .has-sidebar .bottom-nav-spacer { display: none !important; }
+  /* conteúdo mais LARGO preenchendo a tela */
+  .screen.has-sidebar > * { max-width: 960px; }
+  .screen.has-sidebar > .sector-bar { max-width: 228px; }
 }
 .sector-track::-webkit-scrollbar { display: none; }
 .sector-tab { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px 7px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text-dim); cursor: pointer; transition: transform .12s, background .15s, color .15s, border-color .15s; }
