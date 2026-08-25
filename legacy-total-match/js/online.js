@@ -48,6 +48,8 @@
           TM.ui.button("📋 Copiar número", function () { copy(me.number); TM.ui.toast("Número copiado!"); }, "btn ghost small")
         ])
       ]));
+      // reputação de fair play (abandonos)
+      if (TM.fairplay) body.appendChild(TM.fairplay.repCard());
       // convite pendente?
       renderInviteBanner(body);
       N().onInvite(function () { if (body.isConnected) { /* re-render banner */ var old = body.querySelector(".invite-banner"); if (old) old.remove(); renderInviteBanner(body); } });
@@ -180,6 +182,7 @@
   TM.ui.register("online-random", function (screen) {
     screen.appendChild(TM.ui.topbar("🔀 Partida aleatória", function () { if (mmActive) { N().cancelFind(); mmActive = false; } TM.ui.go("online-play"); }));
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    if (TM.fairplay && !TM.fairplay.gate(screen)) return; // suspenso por abandono
     var body = el("div", { class: "panel-narrow", style: "text-align:center" });
     screen.appendChild(body);
     body.appendChild(el("div", { class: "mm-spinner" }));
@@ -232,6 +235,7 @@
   TM.ui.register("online-play", function (screen) {
     screen.appendChild(TM.ui.topbar("⚔️ Partida online", function () { TM.ui.go("online"); }));
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    if (TM.fairplay && !TM.fairplay.gate(screen)) return; // suspenso por abandono
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     body.appendChild(el("p", { class: "intro-text", text: "Crie uma sala e mostre o QR code (ou o código) para o amigo entrar, ou entre numa sala com o código." }));
@@ -502,12 +506,28 @@
         onDone: function () { toResult(result.shootout.winner); } });
       return;
     }
+    var finished = false;
     TM.matchview.play(screen, {
       teamA: a, teamB: b, result: result, settings: settings,
       title: (m.hostName || "Anfitrião") + " × " + (m.guestName || "Convidado"),
       pauseSide: null, simOpts: { realism: settings.realism, neutral: true },
-      onBack: function () { TM.ui.go("online"); },
+      onBack: function () {
+        // sair no meio = abandono (conta como derrota + eventual suspensão)
+        if (finished || !TM.fairplay) { TM.ui.go("online"); return; }
+        TM.fairplay.confirmAbandon(function () {
+          // registra derrota do abandonador no ranking, se possível
+          try {
+            var myUid = side === "host" ? m.host : m.guest;
+            var oppUid = side === "host" ? m.guest : m.host;
+            var oppName = side === "host" ? m.guestName : m.hostName;
+            var myName = side === "host" ? m.hostName : m.guestName;
+            if (myUid && oppUid) { N().recordResult(m.host, m.guest, oppUid); N().recordWin(oppUid, oppName, myUid, myName); }
+          } catch (e) {}
+          TM.ui.go("online");
+        });
+      },
       onDone: function () {
+        finished = true;
         // empate → cai direto na disputa de pênaltis (mesmo resultado nos dois celulares)
         if (result.shootout) {
           TM.ui.go("pen-shootout", { teamA: a, teamB: b, shoot: result.shootout, title: "Pênaltis · Online",
