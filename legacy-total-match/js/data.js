@@ -1254,136 +1254,28 @@
     _rivalCache = map; return map;
   }
   // estádios reais dos grandes clubes; os demais recebem um nome gerado de forma estável
-  var STADIUMS = {
-    "Riacho City": "RheinEnergie Stadion", "Guardião EC": "Avnet Arena", "Juvenil CD": "Estádio Moisés Lucarelli",
-    "Xavante Sportivo": "Stadio Brianteo", "Lince AC": "Mapei Stadium - Città del Tricolore", "Gávea Sportivo": "Estadio Alfonso Murube",
-    "Palmar United": "Batistão", "Oceânico Sportivo": "WerkTalent Stadion", "Oriente United": "Dean Court",
-    "Riacho Sportivo": "Johan Cruijff ArenA", "Íbis SC": "Akhmat-Arena", "Farol AC": "Samara Arena",
-    "Hidra SC": "King Abdullah Sports City", "Encanto AC": "Prince Salman Bin Abdulaziz Sport City Stadium", "Granada EC": "Prince Abdullah bin Jalawi Sports City",
-    "Granada AC": "Prince Salman Bin Abdulaziz Sport City Stadium", "Litoral CD": "Al-Hazem Club Stadium", "Verdano CD": "King Fahd Sports City",
-    "Hidra Athletic": "King Abdullah Sports City", "Fortim Real": "KSU Stadium", "Encanto AC": "Prince Turki bin Abdul Aziz Stadium",
-    "Tramontana United": "King Fahd Sports City", "Aurora United": "King Abdullah Sport City Stadium", "Estrela Athletic": "Alanya Oba Stadium",
-    "Vento Sportivo": "Estadio Carlos Belmonte", "Zênite AC": "Estádio Municipal Carlos Zamith", "Vulcano City": "Estádio Independência",
-    "Sirius Sportivo": "Stade Raymond Kopa", "Anápolis FC": "Estádio Jonas Duarte", "Aurora Athletic": "Diego Armando Maradona Stadium",
-    "Nortenho FC": "Bielefelder Alm", "Bravante City": "Emirates Stadium", "Riacho Athletic": "Stade Marcel Picot",
-    "AS Saint-Étienne": "Stade Geoffroy-Guichard", "Zênite Real": "Villa Park", "Nortenho EC": "Gewiss Stadium",
-    "Íbis Sportivo": "San Mamés", "Litoral Sportivo": "Ligga Arena", "Lince SC": "Mercedes-Benz Stadium",
-    "Meridiano Sportivo": "Jalisco Stadium", "Riacho SC": "Riyadh Air Metropolitano", "Bravante EC": "Estadio Libertad Financiera",
-    "Delmar Sportivo": "Estádio Serra Dourada", "Duna City": "Arena MRV", "Pampa Sportivo": "Q2 Stadium",
-    "Nébula Athletic": "Stade de l'Abbé-Deschamps", "Hidra Real": "Estádio da Ressacada", "Cabral United": "AFAS Stadion",
-    "Cabral FC": "Arena Fonte Nova", "Vento SC": "Rostec Arena", "Recanto Athletic": "Spotify Camp Nou",
-    "Nortenho Athletic": "Estadio Monumental Banco Pichincha", "Ilhéu City": "Başakşehir Fatih Terim Stadium", "Tridente EC": "BayArena",
-    "Guardião Athletic": "Allianz Arena", "Fortim Real": "Estádio da Luz", "Boreal United": "Beşiktaş Stadium",
-    "Horizonte FC": "St Andrew's", "Horizonte SC": "Ewood Park", "Tramontana Athletic": "La Bombonera",
-    "Cabral Sportivo": "Stadio Renato Dall'Ara", "Íbis SC": "Signal Iduna Park", "Falcão United": "ista-Borussia-Park",
-    "Portuário Sportivo": "Nilton Santos", "Vento Real": "Stade de la Réunification", "Juvenil Sportivo": "Estádio Municipal de Braga",
-    "Palmar United": "Griffin Park", "Rubro United": "Brighton Community Stadium", "Litoral SC": "Ashton Gate Stadium",
-    "Nébula AC": "Estadio El Plantío", "Delmar Real": "Estadio Complejo Rentistas", "Zênite Sportivo": "Estadio Luis Tróccoli",
-    "Vulcano City": "Estadio Parque Artigas Las Piedras", "CA Peñarol": "Estadio Campeón del Siglo", "Jaguar City": "Unipol Domus",
-    "Duna City": "Stadio Euganeo", "Jangada EC": "Cambuur Stadion", "Encanto Sportivo": "Nou Estadi Castalia",
-    "Pampa United": "Estadio Azteca", "Juvenil EC": "Estadio Municipal de Butarque", "Oceânico Real": "Estadio Reino de León",
-    "Tramontana AC": "Estadio Municipal de Anduva", "Bravante CD": "Claro Arena", "Tridente SC": "Estádio Presidente Vargas",
-    "Litoral United": "Campo Municipal de Barreiro", "Solano CD": "Parque Palermo", "Horizonte Sportivo": "Estadio Arquitecto Antonio Eleuterio Ubilla",
-    "Farol Real": "Stadio Dino Manuzzi", "CF América": "Estadio Azteca", "Recanto Athletic": "Ciudad de los Deportes Stadium",
-    "Farol FC": "Estadio Monterrey", "Estrela United": "Gorda hilda", "Vulcano Real": "Arena Condá",
-    "Dourado City": "The Valley", "Dourado Real": "Stamford Bridge", "Horizonte City": "Great American Ball Park",
-    "Andino SC": "Stade Gabriel Montpied", "Oriente SC": "Estadio Domingo Burgueño", "Club León": "León Stadium",
-    "Meridiano Athletic": "Estadio Gran Parque Central", "Nortenho SC": "Victoria Stadium", "Andino Sportivo": "Caliente Stadium",
-    "Rubro AC": "ScottsMiracle-Gro Field", "Tramontana Real": "Stadio Giuseppe Sinigaglia", "Zênite City": "Neo Química Arena",
-    "Palmar CD": "Couto Pereira", "Marés Sportivo": "Estádio Rei Pelé", "Recanto United": "Estádio Heriberto Hülse",
-    "Falcão City": "Mineirão", "Tucano FC": "Selhurst Park", "Hidra Athletic": "Estadio George Capwell",
-    "Juvenil Real": "VEB Arena", "Nortenho Athletic": "Arena Pantaloneta", "Serrano SC": "Estadio Nuevo Mirandilla",
-    "Duna Athletic": "Estadio Nuevo Arcángel", "Xavante Athletic": "Norberto Tomaghello Stadium", "Sirius CD": "Estadio Luis Franzini",
-    "Encanto SC": "Stadio Adriatico", "Tucano FC": "Mendizorrotza Stadium", "Farol CD": "Estadio Alejandro Serrano Aguilar",
-    "Litoral United": "Estadio Akron", "Bravante Sportivo": "Estadio Municipal de Abanca Riazor", "Kappa AC": "Nemesio Diez Stadium",
-    "Aurora Athletic": "Pride Park Stadium", "Duna United": "Stade Gaston Gérard", "Dínamo Moscou": "VTB Arena",
-    "Nortenho SC": "Stade de Roudourou", "Bosque AC": "Estádio Alfredo Jaconi", "Granada EC": "Eintracht-Stadion",
-    "Hidra Sportivo": "Deutsche Bank Park", "Delmar SC": "Estadio Manuel Martínez Valero", "Íbis CD": "Kazım Karabekir Stadium",
-    "Dourado City": "Estadi de Sarrià", "Espadas City": "Estádio António Coimbra da Mota", "Ígneo FC": "Estádio José Gomes",
-    "Ígneo United": "UNO", "Ígneo AC": "Hill Dickinson Stadium", "Bosque EC": "Stadion Woudestein",
-    "Lunar Athletic": "Estadi Nacional", "Ilhéu Real": "Parc des Sports, Annecy", "Montano Sportivo": "WWK Arena",
-    "Farol CD": "Stadio Nicola Ceravolo", "Farol CD": "Toyota Stadium", "Falcão Real": "Stadio Carlo Castellani",
-    "Jangada Athletic": "LEAG Energie Stadion", "Aljube SC": "Stade Saint-Symphorien", "Bosque FC": "Riverside Stadium",
-    "Horizonte City": "Stade de la Beaujoire", "Boreal Athletic": "Fratton Park", "Horizonte United": "Stade Auguste Bonal",
-    "Pampa FC": "St Mary's Stadium", "Ultramar FC": "Millerntor-Stadion", "Pampa Sportivo": "Stadio Druso",
-    "Recanto Sportivo": "Vicarage Road", "Riacho SC": "Şükrü Saracoğlu Stadium", "Costeiro Athletic": "De Kuip",
-    "Pampa SC": "Estádio Orlando Scarpelli", "Bravante United": "Artemio Franchi", "Portuário City": "Krasnodar Stadium",
-    "Fortim Real": "Gazovik Stadium", "Lunar Athletic": "Rostov Arena", "Andino Real": "Maracanã",
-    "Tramontana CD": "Maracanã", "Montano City": "Castelão", "Espadas CD": "Fortuna Sittard Stadion",
-    "Meridiano United": "Benito Stirpe Stadium", "Encanto United": "Benito Stirpe Stadium", "Duna Athletic": "Craven Cottage",
-    "Costeiro EC": "Rams Park", "Cristalino Sportivo": "Gaziantep Stadium", "Jaguar United": "Eryaman Stadium",
-    "Espadas EC": "Stadio Luigi Ferraris", "Cristalino Athletic": "Estadio Coliseum", "Guardião Real": "Estádio Cidade de Barcelos",
-    "Lince Sportivo": "Juan Carmelo Zerillo Stadium", "Jaguar Real": "De Adelaarshorst", "Horizonte Sportivo": "Estadio Feliciano Gambarte",
-    "Tramontana FC": "Estádio Serra Dourada", "Montano CD": "Estadio Nuevo Los Cármeness", "Farol Sportivo": "Stade des Alpes",
-    "Portuário United": "Arena do Grêmio", "Nébula Sportivo": "Estádio Jorge Ismael de Biasi", "Marés FC": "Volksparkstadion",
-    "Zênite EC": "Niedersachsenstadion", "Querência City": "Thialf", "Nevado AC": "Berlin Olympic Stadium",
-    "Cristalino SC": "Holstein-Stadion", "Meridiano CD": "MKM Stadium", "Nortenho SC": "Estadio Tomás Adolfo Ducó",
-    "Meridiano CD": "Libertadores de América Stadium", "Lince SC": "Estadio de Independiente del Valle", "Lince SC": "San Siro",
-    "Montano CD": "Chase Stadium", "Palmar United": "Beira-Rio", "Delmar Sportivo": "Portman Road",
-    "Litoral Sportivo": "Portman Road", "Dourado Real": "Allianz Stadium", "Ultramar Athletic": "Wildparkstadion",
-    "Lince Athletic": "Recep Tayyip Erdoğan Stadium", "Ultramar United": "Kocaeli Stadium", "Meridiano Sportivo": "Konya Büyükşehir Stadium",
-    "Ultramar City": "Samara Arena", "Nébula SC": "BMO Stadium", "Tramontana Athletic": "Olímpico de Roma",
-    "Tridente Athletic": "Estadio Rodrigo Paz Delgado", "Costeiro AC": "Antarès", "Fortim Athletic": "Stadio Via del Mare",
-    "Aljube City": "Elland Road", "Falcão Real": "Leicester City Stadium", "Guardião Athletic": "Estadio Alberto Grisales",
-    "Lunar Athletic": "Estadi Ciutat de València", "Oceânico Athletic": "Estadio Jorge \\", "Lince Athletic": "Anfield",
-    "Vulcano SC": "Belvedere Stadium", "Encanto Real": "RZD Arena", "Granada Real": "Estádio do Café",
-    "Serrano Athletic": "Dignity Health Sports Park", "Solano United": "Mewa Arena", "Ultramar Real": "Etihad Stadium",
-    "Tridente EC": "Old Trafford", "Ilhéu Real": "Stadio Danilo Martelli", "Estrela Sportivo": "Castelão",
-    "Meridiano FC": "Estádio Willie Davids", "Sirius United": "Estádio do Marítimo", "Nortenho City": "San Siro",
-    "Aljube AC": "The Den", "Guardião CD": "Allianz Field", "Cristalino Athletic": "Estádio Municipal José Maria de Campos Maia",
-    "Guardião City": "Stadio Alberto Braglia", "Horizonte Athletic": "Louis II", "Falcão Athletic": "Estadio Municipal Casto Martínez Laguarda",
-    "Íbis United": "Estadio Viera", "Lunar City": "Stade de la Mosson", "Marés FC": "Stadio Brianteo",
-    "Fortim Sportivo": "Parque de Jogos Comendador Joaquim de Almeida Freitas", "Tucano City": "Estadio Bellavista", "Guardião SC": "La Rosaleda Stadium",
-    "Tucano Athletic": "Estadio Gran Parque Central", "Delmar CD": "Diego Armando Maradona", "Verdano SC": "Geodis Park",
-    "Jangada Athletic": "Stadion de Goffert", "Aljube Athletic": "Yankee Stadium", "Montano CD": "Sports Illustrated Stadium",
-    "Gávea SC": "St James' Park", "Litoral SC": "Marcelo Bielsa Stadium", "Farol Athletic": "Carrow Road",
-    "Delmar SC": "City Ground", "Ilhéu United": "Estádio dos Aflitos", "Lunar Real": "Groupama Stadium",
-    "Espadas CD": "Orange Vélodrome", "Andino SC": "Inter&Co Stadium", "Encanto EC": "Tajonar Facilities",
-    "Aurora AC": "Kassam Stadium", "Granada Sportivo": "Stadio Renzo Barbera", "Espadas Athletic": "Allianz Parque",
-    "Hidra Sportivo": "Stade Charléty", "Vulcano AC": "Parc des Princes", "Nébula Sportivo": "Stadio Ennio Tardini",
-    "Oriente United": "Nouste Camp", "Ultramar FC": "Estádio da Curuzú", "Hidra Sportivo": "MAC³PARK stadion",
-    "Oceânico FC": "Subaru Park", "Solano CD": "Providence Park", "Tridente Sportivo": "Estádio do Dragão",
-    "Litoral Real": "Deepdale", "Dourado EC": "Philips Stadion", "Verdano AC": "Estadio Cuauhtémoc",
-    "Verdano United": "Kiyan Prince Foundation Stadium", "Falcão United": "Corregidora Stadium", "Aurora Sportivo": "El Cilindro",
-    "Jaguar Real": "Campos de Sport de El Sardinero", "Estrela Sportivo": "Campo de Fútbol de Vallecas", "Boreal Real": "Red Bull Arena",
-    "Lince EC": "Benito Villamarín", "Oceânico FC": "Santiago Bernabéu", "Vento Athletic": "America First Field",
-    "Andino Sportivo": "Reale Arena", "Duna United": "El Molinón-Enrique Castro Quini", "Nortenho Sportivo": "Estadio Nuevo José Zorrilla",
-    "Granada United": "Ibercaja Stadium", "Litoral SC": "Stade Linité", "Bosque Real": "Roazhon Park",
-    "Vento Real": "Monumental", "Portuário Sportivo": "Stade Paul-Lignon", "Horizonte City": "Olímpico de Roma",
-    "Andino CD": "Gigante de Arroyito Stadium", "Duna Athletic": "Central Stadium", "Meridiano United": "Samsun 19 Mayıs Stadium",
-    "Bravante EC": "Snapdragon Stadium", "Estrela AC": "Vila Belmiro", "Ilhéu Real": "Corona Stadium",
-    "Andino United": "Mapei Stadium - Città del Tricolore", "Vento Athletic": "Europa-Park-Stadion", "Granada AC": "Arena AufSchalke",
-    "Vulcano Athletic": "Estadio Gonzalo Pozo Ripalda", "Querência Real": "Ipurúa Municipal Stadium", "Sirius AC": "Estadio El Alcoraz",
-    "Cabral United": "Lumen Field", "Litoral United": "Ramón Sánchez-Pizjuán", "Querência United": "Rudolf-Harbig-Stadion",
-    "Granada United": "Bramall Lane", "Estrela AC": "Hillsborough Stadium", "Querência CD": "Sparta Stadion Het Kasteel",
-    "Delmar AC": "Lukoil Arena", "Nébula Athletic": "Stadio Alberto Picco", "Portuário FC": "Estádio Ilha do Retiro",
-    "Oriente United": "José Alvalade", "Tramontana City": "Sporting Park", "Tucano FC": "Trolli Arena",
-    "Litoral City": "Stadio Romeo Menti", "Jaguar FC": "Stadio San Nicola", "Boreal Real": "Energizer Park",
-    "Gávea Athletic": "Stade Francis Le Basser", "Farol AC": "Stade Auguste Delaune", "Falcão SC": "Britannia Stadium",
-    "Nébula United": "Stade de la Meinau", "Nortenho Athletic": "Stadion am Böllenfalltor", "Tramontana Real": "Waldstadion an der Kaiserlinde",
-    "Verdano SC": "Liberty Stadium", "Cabral Athletic": "Estádio Primeiro de Maio", "Aljube AC": "MorumBIS",
-    "Bosque Sportivo": "Estadio La Boutique", "Lunar United": "BUKO Stadion", "Pampa Sportivo": "Estadio Universitario",
-    "Tramontana City": "Stadio Olimpico Grande Torino", "Tucano Sportivo": "Tottenham Hotspur Stadium", "Palmar Athletic": "Stadium Municipal",
-    "Aljube Real": "Papara Park", "Bosque SC": "Stade de l'Aube", "Ígneo AC": "SNP Arena",
-    "Horizonte FC": "De Grolsch Veste", "Horizonte Athletic": "Estadio Bellavista", "Litoral FC": "Stadio Luigi Ferraris",
-    "Portuário United": "Estadio Municipal Juan Rojas", "Cabral United": "Gran Canaria Stadium", "Lince City": "Stadio Friuli",
-    "Guardião Sportivo": "Universitary Olympic Stadium", "Farol FC": "Stadion An der Alten Försterei", "Vento SC": "Stadio Partenio-Adriano Lombardi",
-    "Portuário Real": "Stade de la Libération", "Nortenho FC": "Stade Marcel Tribut", "Litoral FC": "São Januário",
-    "Hidra Athletic": "Stadio Pierluigi Penzo", "Meridiano United": "Stadio Pierluigi Penzo", "VfB Stuttgart": "MHPArena",
-    "Xavante United": "Ruhrstadion", "Juvenil AC": "Stadion an der Bremer Brücke", "Zênite United": "Volkswagen Arena",
-    "Oriente United": "Estádio Serra Dourada", "Ígneo FC": "Estadio de la Cerámica", "Litoral United": "Barradão",
-    "Nébula City": "Estádio D. Afonso Henriques", "Jangada Real": "José Amalfitani Stadium", "Guardião United": "Weserstadion",
-    "Nortenho FC": "The Hawthorns", "Dourado City": "Koning Willem II Stadion", "Querência SC": "Racecourse Ground",
-    "Delmar Athletic": "Estádio Olímpico Colosso da Lagoa", "Montano FC": "Gazprom Arena"
-  };
-  var STAD_PATTERNS = ["Estádio %", "Arena %", "% Arena", "Estádio Municipal"];
+  // Estádios FICTÍCIOS gerados de forma estável (sem nomes reais).
+  var STADIUMS = {};
+  // nomes de lugar/padroeiro 100% fictícios para compor estádios sem usar nada real
+  var STAD_PATRON = [
+    "Monte Aurora", "Vale do Norte", "das Palmeiras", "do Horizonte", "Beira-Campo", "Serra Azul",
+    "Nova Aliança", "Portal do Sol", "Terra Nova", "Grande Sul", "do Lago", "Costa Verde",
+    "Alto da Colina", "Rio Claro", "Vista Alegre", "Bosque Real", "Pedra Branca", "Campo Belo",
+    "Luz do Vale", "Nova Era", "das Dunas", "Morro Alto", "Ponta Leste", "Céu Aberto",
+    "Ilha Grande", "Praia Nova", "do Cerrado", "Vale Verde", "Sol Nascente", "Boa Vista"
+  ];
   function stableHash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
     var name = STADIUMS[club.name];
     if (!name) {
-      var pat = STAD_PATTERNS[stableHash(club.name) % STAD_PATTERNS.length];
-      name = pat.indexOf("%") >= 0 ? pat.replace("%", club.name) : pat;
+      var h = stableHash(club.name), mode = h % 6;
+      if (mode === 0) name = "Arena " + club.name;
+      else if (mode === 1) name = "Estádio " + club.name;
+      else if (mode === 2) name = "Arena " + STAD_PATRON[h % STAD_PATRON.length];
+      else if (mode === 3) name = "Estádio " + STAD_PATRON[(Math.floor(h / 7)) % STAD_PATRON.length];
+      else if (mode === 4) name = "Estádio Municipal " + STAD_PATRON[(Math.floor(h / 13)) % STAD_PATRON.length];
+      else name = STAD_PATRON[(Math.floor(h / 3)) % STAD_PATRON.length].replace(/^(das|do|de|da) /, "") + " Arena";
     }
     var r = TM.data.clubRating(club.id);
     var cap = 18000 + Math.round(Math.max(0, r - 60) * 1500) + (stableHash(club.name) % 8000); // ~18k..85k
