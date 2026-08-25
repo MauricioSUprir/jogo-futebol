@@ -1833,6 +1833,16 @@
       xTile("Jogadores", players.length, "👥"),
       xTile("Valor do plantel", money(c, totalVal), "💰")
     ]));
+    // estatísticas do TIME na temporada
+    var st = c.stats || { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+    var apr = st.p ? Math.round(st.w * 3 + st.d) / (st.p * 3) * 100 : 0;
+    wrap.appendChild(el("div", { class: "xray-season" }, [
+      el("div", { class: "xray-h", text: "📊 Temporada " + (c.season || 1) },),
+      el("div", { class: "xs-grid" }, [
+        xsCell("Jogos", st.p), xsCell("Vitórias", st.w, "ok"), xsCell("Empates", st.d), xsCell("Derrotas", st.l, "bad"),
+        xsCell("Gols pró", st.gf), xsCell("Gols contra", st.ga), xsCell("Saldo", (st.gf - st.ga >= 0 ? "+" : "") + (st.gf - st.ga)), xsCell("Aprov.", Math.round(apr) + "%")
+      ])
+    ]));
     // barras de setor
     var bars = el("div", { class: "xray-sectors" }, [ el("div", { class: "xray-h", text: "🧭 Força por setor" }) ]);
     sectors.forEach(function (s) {
@@ -1862,6 +1872,7 @@
     return wrap;
   }
   function xTile(label, val, ic) { return el("div", { class: "xtile" }, [ el("div", { class: "xt-ic", text: ic }), el("div", { class: "xt-val", text: String(val) }), el("div", { class: "xt-lbl", text: label }) ]); }
+  function xsCell(label, val, tone) { return el("div", { class: "xs-cell" }, [ el("div", { class: "xs-v" + (tone ? " xs-" + tone : ""), text: String(val) }), el("div", { class: "xs-l", text: label }) ]); }
   function xHigh(tag, p, meta) {
     return el("div", { class: "xhigh" }, [
       TM.img.playerImg(p, "xh-face"),

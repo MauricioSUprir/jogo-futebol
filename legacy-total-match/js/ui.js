@@ -538,8 +538,7 @@
 
     var CATS = [
       { key: "car", tab: "Carreiras", ic: "⭐", items: [
-        { icon: "🎯", name: "Master League", desc: "Comande um clube e uma seleção", route: "coach", big: true },
-        { icon: "🌟", name: "Rumo ao Estrelato", desc: "Viva a carreira de um jogador", route: "player", big: true }
+        { icon: "🎯", name: "Master League", desc: "Carreira de Treinador ou Dirigente — comande o clube e a seleção", route: "coach", big: true }
       ] },
       { key: "play", tab: "Jogar", ic: "⚡", items: [
         { icon: "⚡", name: "Partida Rápida", desc: "Um jogo avulso, na hora", route: "quick" },
@@ -563,7 +562,7 @@
     var SB = "assets/estadios/";
     var FEATURED = [
       { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car", bg: SB + "st-270085.jpg" },
-      { icon: "🌟", name: "Rumo ao Estrelato", tag: "Crie um craque e escreva sua lenda", route: "player", acc: "car", bg: SB + "st-30651230.jpg" },
+      { icon: "🏛️", name: "Seja o Dirigente", tag: "Gerencie o clube nos bastidores", route: "coach", acc: "car", bg: SB + "st-30651230.jpg" },
       { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play", bg: SB + "st-17779076.jpg" },
       { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "online", acc: "net", bg: SB + "st-399187.jpg" }
     ];

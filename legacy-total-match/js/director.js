@@ -476,7 +476,9 @@
       dbtn("🏋️", "CT", "director-ct"),
       dbtn("🏆", "Competições", "coach-comps"),
       dbtn("📅", "Calendário", "coach-calendar"),
-      dbtn("🗂️", "Títulos", "coach-honours")
+      dbtn("🗂️", "Títulos", "coach-honours"),
+      dbtn("📰", "Notícias", "coach-news"),
+      dbtn("📱", "Redes Sociais", "coach-social")
     ]));
     function dbtn(icon, label, route) { return el("button", { class: "hub-btn", on: { click: function () { TM.ui.go(route); } } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
   });
