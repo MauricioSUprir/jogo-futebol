@@ -539,6 +539,7 @@
       ] },
       { title: "Mais", accent: "more", items: [
         { icon: "🎖️", name: "Informações", desc: "Competições e times", route: "competicoes" },
+        { icon: "✏️", name: "Editor", desc: "Edite, crie e transfira jogadores", route: "editor" },
         { icon: "💾", name: "Minhas Carreiras", desc: "Continue de onde parou", route: "saves" },
         { icon: "⚙️", name: "Configurações", desc: "Ajuste o jogo", route: "settings" },
         { icon: "👤", name: "Perfil", desc: "Conta e sincronização", route: "profile" }
