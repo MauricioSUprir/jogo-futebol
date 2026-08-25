@@ -45,6 +45,26 @@
     } catch (e) {}
   }
 
+  // informações do dia do jogo (determinísticas): horário, clima e lotação
+  function matchDayInfo(c, homeClub, matchNo, pending) {
+    var key = (homeClub.id || "") + ":" + (c.season || 1) + ":" + (matchNo || 0);
+    var h = 2166136261; for (var i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); } h = h >>> 0;
+    var times = ["11:00", "15:00", "16:00", "16:30", "18:30", "19:00", "20:00", "21:00", "21:30"];
+    var time = times[h % times.length];
+    var W = [["☀️", "Ensolarado", 24, 33], ["🌤️", "Sol entre nuvens", 21, 29], ["⛅", "Parcialmente nublado", 18, 26], ["☁️", "Nublado", 14, 22], ["🌧️", "Chuva", 11, 18], ["⛈️", "Tempestade", 12, 19]];
+    var w = W[(h >>> 3) % W.length];
+    var wTemp = w[2] + ((h >>> 7) % (w[3] - w[2] + 1));
+    var cap = 30000; try { cap = TM.data.stadium(homeClub).capacity || 30000; } catch (e) {}
+    var rating = 68; try { rating = TM.data.clubRating(homeClub.id); } catch (e) {}
+    var fill = 0.50 + (rating - 60) * 0.012;
+    if (rivalryEnabled() && pending && TM.data.areRivals(pending.homeId, pending.awayId)) fill += 0.28; // clássico lota
+    if (w[0] === "🌧️" || w[0] === "⛈️") fill -= 0.06;                                                   // chuva esvazia um pouco
+    fill += (((h >>> 11) % 11) - 5) * 0.01;
+    fill = Math.max(0.30, Math.min(1, fill));
+    var attend = Math.round(cap * fill / 100) * 100;
+    return { time: time, wIcon: w[0], wLabel: w[1], wTemp: wTemp, attend: attend.toLocaleString("pt-BR") + " / " + cap.toLocaleString("pt-BR") };
+  }
+
   // confiança da diretoria (0-100): posição vs meta, ajustada pelo rigor do conselho
   function boardConfidence(c) {
     try {
@@ -579,6 +599,13 @@
           el("span", { class: "cr-sub", text: "Jogo de rivalidade — clima quente nas arquibancadas" })
         ]));
       }
+      // informações do dia do jogo: horário, clima e lotação do estádio
+      var md = matchDayInfo(c, homeClub, c.matchNo, pending);
+      kids.push(el("div", { class: "matchday-info" }, [
+        el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: "🕐" }), el("span", { class: "mdi-v", text: md.time }), el("span", { class: "mdi-l", text: "horário" }) ]),
+        el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: md.wIcon }), el("span", { class: "mdi-v", text: md.wTemp + "°" }), el("span", { class: "mdi-l", text: md.wLabel }) ]),
+        el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: "👥" }), el("span", { class: "mdi-v", text: md.attend }), el("span", { class: "mdi-l", text: "público" }) ])
+      ]));
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
       var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
       kids.push(TM.ui.button("🔍 Analisar adversário", function () {
