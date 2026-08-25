@@ -1797,3 +1797,27 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .fp-warn { font-size: 12px; color: #f5d020; }
 .fp-ok { font-size: 12px; color: var(--text-dim); }
 .fp-countdown { text-align: center; font-weight: 900; font-size: 26px; color: #ff7a7a; margin: 12px 0; letter-spacing: 1px; }
+
+/* ============ Emotes online + Ping + Revanche ============ */
+.actions-col { flex-direction: column; }
+.actions-col .btn { width: 100%; }
+.emote-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+.emote-fly { position: absolute; bottom: 22%; font-size: 44px; animation: emoteFly 1.8s ease-out forwards; filter: drop-shadow(0 3px 6px rgba(0,0,0,.5)); }
+.emote-fly.mine { right: 16%; }
+.emote-fly.opp { left: 16%; }
+@keyframes emoteFly { 0% { transform: translateY(20px) scale(.4); opacity: 0; } 15% { transform: translateY(0) scale(1.2); opacity: 1; } 70% { opacity: 1; } 100% { transform: translateY(-120px) scale(1); opacity: 0; } }
+.emote-wrap { position: fixed; right: 12px; bottom: 78px; z-index: 61; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.emote-toggle { width: 46px; height: 46px; border-radius: 50%; font-size: 22px; background: var(--panel);
+  border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,.4); cursor: pointer; }
+.emote-bar { display: none; flex-wrap: wrap; gap: 6px; max-width: 210px; justify-content: flex-end;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.emote-bar.open { display: flex; }
+.emote-btn { width: 38px; height: 38px; border-radius: 10px; font-size: 20px; background: var(--black-soft);
+  border: 1px solid var(--line); cursor: pointer; transition: transform .1s; }
+.emote-btn:active { transform: scale(1.3); }
+.ping-badge { position: fixed; top: 60px; right: 12px; z-index: 61; display: flex; align-items: center; gap: 6px;
+  background: rgba(0,0,0,.55); border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #fff; }
+.ping-badge .ping-dot { width: 8px; height: 8px; border-radius: 50%; background: #888; }
+.ping-badge.good .ping-dot { background: #38d66a; } .ping-badge.good { color: #9ff2bd; }
+.ping-badge.ok .ping-dot { background: #f5d020; } .ping-badge.ok { color: #ffe98a; }
+.ping-badge.bad .ping-dot { background: #e0483a; } .ping-badge.bad { color: #ff9a90; }

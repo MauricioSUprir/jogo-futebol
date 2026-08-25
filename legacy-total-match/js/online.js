@@ -66,7 +66,7 @@
     var inv = N()._invite;
     if (!inv) return;
     var banner = el("div", { class: "invite-banner" }, [
-      el("div", { class: "inv-txt", text: "⚔️ " + (inv.fromName || "Um amigo") + " te convidou para jogar!" }),
+      el("div", { class: "inv-txt", text: (inv.rematch ? "🔁 " + (inv.fromName || "Um amigo") + " quer a REVANCHE!" : "⚔️ " + (inv.fromName || "Um amigo") + " te convidou para jogar!") }),
       el("div", { class: "inv-acts" }, [
         TM.ui.button("Entrar", function () { N().clearInvite(); N().joinMatch(inv.code, function (code, err) { if (code) { TM.ui.go("online-room", { code: code, side: "guest" }); } else TM.ui.toast(err || "Sala indisponível"); }); }, "btn primary small"),
         TM.ui.button("Ignorar", function () { N().clearInvite(); banner.remove(); }, "btn ghost small")
@@ -535,7 +535,58 @@
         } else { toResult(null); }
       }
     });
+    // emotes + ping ao vivo (só em partidas online reais, com código de sala)
+    if (params.code && N().available) { setupEmotes(screen, params.code, side); setupPing(screen); }
   });
+
+  /* ---------- EMOTES durante a partida online ---------- */
+  var EMOTES = ["👏", "😂", "😮", "😡", "🔥", "😢", "💪", "🤝", "⚽", "🧤"];
+  function setupEmotes(screen, code, side) {
+    var oppSide = side === "host" ? "guest" : "host";
+    // overlay de emote recebido
+    var overlay = el("div", { class: "emote-overlay" });
+    screen.appendChild(overlay);
+    // barra de emotes
+    var bar = el("div", { class: "emote-bar" });
+    var toggle = el("button", { class: "emote-toggle", text: "😀", on: { click: function () { bar.classList.toggle("open"); } } });
+    EMOTES.forEach(function (e) {
+      bar.appendChild(el("button", { class: "emote-btn", text: e, on: { click: function () {
+        try { N().sendEmote(code, side, e); } catch (err) {}
+        flashEmote(overlay, e, "mine"); bar.classList.remove("open");
+      } } }));
+    });
+    var wrap = el("div", { class: "emote-wrap" }, [ bar, toggle ]);
+    screen.appendChild(wrap);
+    // escuta emotes do oponente
+    var lastTs = 0;
+    var stop = N().listenEmote(code, function (v) {
+      if (!screen.isConnected) { if (stop) stop(); return; }
+      if (v.from === oppSide && v.ts !== lastTs) { lastTs = v.ts; flashEmote(overlay, v.emoji, "opp"); }
+    });
+  }
+  function flashEmote(overlay, emoji, who) {
+    var e = el("div", { class: "emote-fly " + who, text: emoji });
+    overlay.appendChild(e);
+    setTimeout(function () { if (e.parentNode) e.parentNode.removeChild(e); }, 1800);
+  }
+
+  /* ---------- PING (indicador de conexão) ---------- */
+  function setupPing(screen) {
+    var badge = el("div", { class: "ping-badge" }, [ el("span", { class: "ping-dot" }), el("span", { class: "ping-txt", text: "-- ms" }) ]);
+    screen.appendChild(badge);
+    var timer = null;
+    function tick() {
+      if (!screen.isConnected) { if (timer) clearInterval(timer); return; }
+      N().measurePing(function (ms) {
+        if (!screen.isConnected) return;
+        var txt = badge.querySelector(".ping-txt"), dot = badge.querySelector(".ping-dot");
+        if (ms == null) { txt.textContent = "offline"; badge.className = "ping-badge bad"; return; }
+        txt.textContent = ms + " ms";
+        badge.className = "ping-badge " + (ms < 90 ? "good" : ms < 220 ? "ok" : "bad");
+      });
+    }
+    tick(); timer = setInterval(tick, 3000);
+  }
   function sanitize(r) {
     r = r || {};
     r.events = r.events || [];
@@ -564,10 +615,21 @@
       el("div", { class: "result-score" }, [ el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: hs + " × " + as }), el("span", { class: "rs-team", text: b.name }) ]),
       el("div", { class: "result-tag", text: winner ? (pen ? "🎯 " + winner + " venceu nos pênaltis!" : "🏆 " + winner + " venceu!") : "🤝 Empate!" })
     ]));
-    screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("Voltar ao online", function () { TM.ui.go("online"); }, "btn primary"),
-      TM.ui.button("Central de amigos", function () { TM.ui.go("online-friends"); }, "btn ghost")
-    ]));
+    // revanche imediata: recria a partida com o mesmo adversário (via convite)
+    var oppUid = params.side === "host" ? params.guestUid : params.hostUid;
+    var acts = [];
+    if (N().available && N().ready && oppUid) {
+      acts.push(TM.ui.button("🔁 Revanche", function () {
+        TM.ui.toast("Enviando convite de revanche…");
+        N().rematch(oppUid, { source: "club" }, function (code) {
+          if (code) { TM.ui.toast("Convite enviado! Aguardando…"); TM.ui.go("online-room", { code: code, side: "host" }); }
+          else TM.ui.toast("Não foi possível criar a revanche.");
+        });
+      }, "btn primary"));
+    }
+    acts.push(TM.ui.button("Voltar ao online", function () { TM.ui.go("online"); }, N().available && oppUid ? "btn ghost" : "btn primary"));
+    acts.push(TM.ui.button("Central de amigos", function () { TM.ui.go("online-friends"); }, "btn ghost"));
+    screen.appendChild(el("div", { class: "actions actions-col" }, acts));
   });
 
 })(window);
