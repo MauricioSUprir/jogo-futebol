@@ -1240,6 +1240,16 @@
         (map[b.id] = map[b.id] || []).push(a.id);
       }
     });
+    // rival ESCOLHIDO pelo jogador (clube personalizado) vira o rival PRINCIPAL
+    try {
+      var cc = (TM.storage && TM.storage.read) ? TM.storage.read("customClub", null) : null;
+      if (cc && cc.slotClubId && cc.rivalClubId && cc.slotClubId !== cc.rivalClubId) {
+        map[cc.slotClubId] = map[cc.slotClubId] || [];
+        if (map[cc.slotClubId].indexOf(cc.rivalClubId) < 0) map[cc.slotClubId].unshift(cc.rivalClubId); else { map[cc.slotClubId].splice(map[cc.slotClubId].indexOf(cc.rivalClubId), 1); map[cc.slotClubId].unshift(cc.rivalClubId); }
+        map[cc.rivalClubId] = map[cc.rivalClubId] || [];
+        if (map[cc.rivalClubId].indexOf(cc.slotClubId) < 0) map[cc.rivalClubId].unshift(cc.slotClubId);
+      }
+    } catch (e) {}
     _rivalCache = map; return map;
   }
   // estádios reais dos grandes clubes; os demais recebem um nome gerado de forma estável

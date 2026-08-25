@@ -143,9 +143,40 @@
     // liga onde vai jogar
     var lgSel = el("select", { class: "select" });
     TM.data.world().leagues.forEach(function (lg) { lgSel.appendChild(el("option", { value: lg.id, text: lg.name, selected: lg.id === d.leagueId })); });
-    lgSel.addEventListener("change", function () { d.leagueId = lgSel.value; });
-    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga onde vai jogar" }), lgSel,
-      el("div", { class: "setting-hint", text: "Seu clube entra nessa liga no lugar de um time genérico." }) ]));
+    lgSel.addEventListener("change", function () { d.leagueId = lgSel.value; d.slotClubId = null; d.rivalClubId = null; fillClubs(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Liga onde vai jogar" }), lgSel ]));
+
+    // clube que será SUBSTITUÍDO pelo seu
+    var repSel = el("select", { class: "select" });
+    repSel.addEventListener("change", function () { d.slotClubId = repSel.value; fillRivals(); });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Substituir qual time?" }), repSel,
+      el("div", { class: "setting-hint", text: "Seu clube entra na liga NO LUGAR desse time." }) ]));
+
+    // RIVAL do seu clube (clássico forte)
+    var rivSel = el("select", { class: "select" });
+    rivSel.addEventListener("change", function () { d.rivalClubId = rivSel.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🔥 Escolha seu maior RIVAL" }), rivSel,
+      el("div", { class: "setting-hint", text: "Jogos contra o rival viram CLÁSSICO — clima quente, e quase nunca há transferências entre vocês." }) ]));
+
+    function leagueClubs() {
+      return TM.data.league(d.leagueId).clubIds.map(TM.data.club)
+        .sort(function (a, b) { return TM.data.clubRating(b.id) - TM.data.clubRating(a.id); });
+    }
+    function fillClubs() {
+      var cs = leagueClubs();
+      TM.ui.clear(repSel);
+      // padrão: substituir o mais fraco
+      if (!d.slotClubId) d.slotClubId = cs[cs.length - 1].id;
+      cs.forEach(function (c) { repSel.appendChild(el("option", { value: c.id, text: c.name + " (" + TM.data.clubRating(c.id) + ")", selected: c.id === d.slotClubId })); });
+      fillRivals();
+    }
+    function fillRivals() {
+      var cs = leagueClubs().filter(function (c) { return c.id !== d.slotClubId; });
+      TM.ui.clear(rivSel);
+      if (!d.rivalClubId || d.rivalClubId === d.slotClubId) d.rivalClubId = cs[0].id; // padrão: o mais forte
+      cs.forEach(function (c) { rivSel.appendChild(el("option", { value: c.id, text: c.name + " (" + TM.data.clubRating(c.id) + ")", selected: c.id === d.rivalClubId })); });
+    }
+    fillClubs();
 
     // nível inicial
     var lvlVal = el("span", { class: "range-val" });
@@ -161,15 +192,14 @@
       TM.ui.button("Continuar →", function () {
         if (!(d.name || "").trim()) { TM.ui.toast("Dê um nome ao clube"); return; }
         if (!(d.short || "").trim()) d.short = (d.name.replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3) || "CLB").toUpperCase();
-        // escolhe o slot: o clube de menor nível da liga escolhida
-        var lgClubs = TM.data.league(d.leagueId).clubIds.map(TM.data.club).sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); });
-        var slot = lgClubs[0];
-        var spec = { slotClubId: slot.id, name: d.name.trim(), short: d.short.trim().toUpperCase(),
+        var slotId = d.slotClubId || TM.data.league(d.leagueId).clubIds.map(TM.data.club).sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); })[0].id;
+        if (d.rivalClubId === slotId) d.rivalClubId = null;   // rival não pode ser o substituído
+        var spec = { slotClubId: slotId, rivalClubId: d.rivalClubId || null, name: d.name.trim(), short: d.short.trim().toUpperCase(),
           colors: { primary: d.colors.primary, secondary: d.colors.secondary }, crestData: d.crestData || null,
           level: d.level, nation: TM.data.league(d.leagueId).nation };
         TM.storage.write("customClub", spec);
         TM.data.resetWorld();
-        TM.ui.go("coach-setup", { clubId: slot.id, custom: true });
+        TM.ui.go("coach-setup", { clubId: slotId, custom: true });
       }, "btn primary big")
     ]));
   });
@@ -810,7 +840,9 @@
               kids.push(el("div", { class: "fc-ev-glyph", text: compGlyph(mt.key) }));
             } else {
               var opp = TM.data.club(mt.homeId === c.teamId ? mt.awayId : mt.homeId);
+              var home = mt.homeId === c.teamId;
               kids.push(TM.img.clubImg(opp, "fc-crest"));
+              kids.push(el("div", { class: "fc-oppname", text: (home ? "" : "@ ") + (opp.short || opp.name.split(" ")[0]) }));
             }
           }
           if (off != null && winOpenOff[off] != null) { cls += " win-open"; kids.push(el("div", { class: "fc-win open", text: "🟢" })); }
@@ -2391,14 +2423,20 @@
     // capitão
     function captainSelect() {
       var selEl = el("select", { class: "select" });
-      selEl.appendChild(el("option", { value: "", text: "Automático (líder do elenco)" }));
-      C().rosterPlayers(c).slice().sort(function (a, b) { return b.overall - a.overall; }).forEach(function (pl) {
+      selEl.appendChild(el("option", { value: "", text: "Automático (líder dos titulares)" }));
+      // APENAS os 11 titulares podem ser capitão
+      var starterIds = (c.lineup && c.lineup.starters) || [];
+      var starters = starterIds.map(function (id) { return C().resolvePlayer(c, id); }).filter(Boolean)
+        .sort(function (a, b) { return b.overall - a.overall; });
+      // se o capitão atual não é titular, cai para automático
+      if (c.captainId && starterIds.indexOf(c.captainId) < 0) { c.captainId = null; }
+      starters.forEach(function (pl) {
         var o = el("option", { value: pl.id, text: pl.name + " (" + TM.data.posLabel(pl) + " · " + pl.overall + ")" });
         if (c.captainId === pl.id) o.selected = true;
         selEl.appendChild(o);
       });
       selEl.addEventListener("change", function () { c.captainId = selEl.value || null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); });
-      return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🎽 Capitão" }), selEl ]);
+      return el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🎽 Capitão (titular)" }), selEl ]);
     }
     screen.appendChild(el("div", { class: "panel-narrow" }, [
       el("h3", { class: "block-title", text: "⚽ Cobradores e capitão" }),

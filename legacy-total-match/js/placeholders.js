@@ -56,8 +56,15 @@
   }
 
   // Emblema placeholder de competição: medalhão com iniciais + cor da competição
+  // cores geradas de forma estável a partir de um texto (fallback p/ comps sem cor)
+  function genCompColors(key) {
+    key = String(key || "comp"); var h = 0;
+    for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+    return { primary: "hsl(" + h + ",62%,34%)", secondary: "hsl(" + ((h + 45) % 360) + ",70%,60%)" };
+  }
   function compBadge(comp) {
-    var c = comp.colors, ico = ({ liga: "", copa: "🏆", continental: "★", selecao: "🌍" })[comp.type] || "";
+    var c = (comp && comp.colors) || genCompColors(comp && (comp.id || comp.name)),
+        ico = ({ liga: "", copa: "🏆", continental: "★", mundial: "🌐", selecao: "🌍" })[comp && comp.type] || "🏆";
     var svg =
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">' +
       '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">' +
@@ -182,8 +189,10 @@
     },
     compBadge: compBadge,
     compImg: function (comp, cls) {
+      var raw = comp;
       if (typeof comp === "string") comp = TM.data.competition(comp);
-      if (!comp) return imgWithFallback("", "", "", cls);
+      // comp desconhecido/sem dados: gera um badge mesmo assim (nunca fica sem foto)
+      if (!comp) comp = { id: (typeof raw === "string" ? raw : "comp"), name: (typeof raw === "string" ? raw : "Competição"), type: "copa" };
       var klass = (cls || "") + (comp.darkBg ? " comp-onblack" : "");
       return imgWithFallback(compBadge(comp), compBadge(comp), comp.name, klass);
     }
