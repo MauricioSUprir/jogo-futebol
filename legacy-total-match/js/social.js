@@ -31,13 +31,21 @@
   var HEREWEGO = "@FabricioBall 🔴⚪";
 
   // fotos genéricas (assets/social) por tema — algumas postagens ganham imagem
+  // SOMENTE fotos relacionadas a futebol (torcida, estádio, bola, jogo) — nada de retratos de pessoas.
+  var STAD = ["st-30651230.jpg", "st-1171084.jpg", "st-270085.jpg", "st-17071576.jpg", "st-399187.jpg", "st-6295431.jpg", "st-9735500.jpg", "st-10287243.jpg"].map(function (s) { return "assets/estadios/" + s; });
   var PHOTOS = {
-    torcida: ["assets/social/s-1884574.jpg", "assets/social/s-2291874.jpg", "assets/social/s-3629810.jpg"],
+    torcida: ["assets/social/s-1884574.jpg"].concat(STAD),
     jogo: ["assets/social/s-274422.jpg", "assets/social/s-3148452.jpg", "assets/social/s-262524.jpg", "assets/social/s-685382.jpg"],
     bola: ["assets/social/s-274506.jpg", "assets/social/s-3621104.jpg", "assets/social/s-1171084.jpg"],
-    uniao: ["assets/social/s-3755440.jpg"]
+    uniao: ["assets/social/s-3755440.jpg"].concat(STAD.slice(0, 3))
   };
-  function photoOf(theme) { var a = PHOTOS[theme] || PHOTOS.jogo; return pick(a); }
+  var _lastPhoto = null;
+  function photoOf(theme) {
+    var a = PHOTOS[theme] || PHOTOS.jogo;
+    var p = pick(a);
+    if (a.length > 1) { var g = 0; while (p === _lastPhoto && g++ < 4) p = pick(a); }  // evita repetir a mesma seguidas vezes
+    _lastPhoto = p; return p;
+  }
 
   var COMMENT_POOL = ["kkkkk é isso aí", "concordo demais", "não é bem assim não", "tá sonhando 😂", "esse aí é fenômeno", "PRENDE ELE!", "vai dar ruim...", "sou obrigado a concordar", "melhor do time disparado", "chora time pequeno", "aiaiai meu coração ❤️", "confia demais nesse elenco", "taticamente perfeito", "vendido!!!", "poupa esse cara pelo amor", "falou tudo", "discordo totalmente", "esse técnico não sabe o que faz", "esse técnico é gênio", "a diretoria que se cuide", "vai ter volta", "printei 📸", "guarda esse tweet"];
   function makeComments(n, mood) {

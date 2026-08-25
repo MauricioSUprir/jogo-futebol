@@ -116,16 +116,8 @@
     return '<polygon points="' + pts + '" fill="#ffd54a" stroke="#00000055" stroke-width="0.5"/>';
   }
 
-  // FOTO fictícia do jogador (rostos gerados por IA — pessoas que não existem).
-  // Mapeia cada jogador a um rosto do acervo de forma determinística.
-  var FACE_COUNT = 120;
-  function pad3(n) { return n < 10 ? "00" + n : n < 100 ? "0" + n : "" + n; }
-  function facePhoto(player) {
-    var idx = crestHash(player.id || player.name) % FACE_COUNT;
-    return "assets/faces/f-" + pad3(idx) + ".jpg";
-  }
-
-  // "Foto" de jogador: avatar com iniciais e cor derivada da nação/posição (fallback)
+  // "Foto" de jogador: avatar gerado (iniciais + cor). SEM fotos de pessoas reais.
+  // As fotos de jogador virão por IA depois (o usuário providenciará).
   function avatar(player, club) {
     var base = (club && club.colors.primary) || "#444";
     var svg =
@@ -334,7 +326,6 @@
       var av = avatar(player, club);
       return imgWithFallback(av, av, player.name, cls);
     },
-    facePhoto: facePhoto,
     nationImg: function (nation, cls) {
       // bandeira gerada por cores (países são reais/legais, mas mantemos consistência visual)
       return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
