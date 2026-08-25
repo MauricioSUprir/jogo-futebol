@@ -563,15 +563,16 @@
     var SB = "assets/estadios/";
     var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
 
+    var MB = "assets/menu/";
     var SLIDES = [];
-    if (hasCoachSave) SLIDES.push({ key: "car", eyebrow: "CONTINUAR", name: "Retomar Carreira", desc: "Volte de onde você parou no comando do seu clube.", cta: "CONTINUAR", route: "coach-hub", bg: SB + "st-270085.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: SB + "st-30651230.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores: finanças e contratações.", cta: "JOGAR", route: "coach", bg: SB + "st-17071576.jpg" });
-    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: SB + "st-17779076.jpg" });
-    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: SB + "st-1171084.jpg" });
-    SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: SB + "st-399187.jpg" });
-    // passo final "diferente": explorar mais modos
-    SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Dream Team, Draft, Editor, Grupo, Perfil e mais.", more: [
+    if (hasCoachSave) SLIDES.push({ key: "car", eyebrow: "CONTINUAR", name: "Retomar Carreira", desc: "Volte de onde você parou no comando do seu clube.", cta: "CONTINUAR", route: "coach-hub", bg: MB + "coach.jpg" });
+    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
+    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores: finanças e contratações.", cta: "JOGAR", route: "coach", bg: MB + "director.jpg" });
+    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
+    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: MB + "trophy.jpg" });
+    SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: MB + "online.jpg" });
+    // passo final "diferente": explorar mais modos (com a logo do Total Match)
+    SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Dream Team, Draft, Editor, Grupo, Perfil e mais.", logo: true, more: [
       { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
       { icon: "💾", name: "Carreiras", route: "saves" }, { icon: "🎖️", name: "Info", route: "competicoes" },
@@ -595,7 +596,8 @@
     function renderCard(s) {
       card.className = "fc2-card acc-" + s.key;
       card.innerHTML = "";
-      if (s.bg) { var img = el("span", { class: "fc2-img" }); img.style.backgroundImage = "url('" + s.bg + "')"; card.appendChild(img); }
+      if (s.logo) { card.appendChild(el("div", { class: "fc2-logo-wrap" }, [ el("img", { class: "fc2-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }) ])); }
+      else if (s.bg) { var img = el("span", { class: "fc2-img" }); img.style.backgroundImage = "url('" + s.bg + "')"; card.appendChild(img); }
       var body = el("div", { class: "fc2-body" }, [
         el("div", { class: "fc2-eyebrow", text: s.eyebrow }),
         el("h2", { class: "fc2-name", text: s.name }),
