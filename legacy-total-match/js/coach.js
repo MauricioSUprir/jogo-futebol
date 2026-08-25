@@ -46,12 +46,26 @@
     });
     return nav;
   }
-  // injeta a barra de setores (topo) + a nav inferior (rodapé)
+  // injeta a barra de setores (topo no celular / SIDEBAR no PC) + a nav inferior (celular)
   function addSectorBar(screen, active) {
     var c = TM.storage.coachCareer(); if (!c) return;
-    screen.appendChild(TM.ui.sectorBar(coachSectors(c, active), active));
+    var bar = TM.ui.sectorBar(coachSectors(c, active), active);
+    // cabeçalho do sidebar (só aparece no PC via CSS)
+    var club = TM.data.club(c.teamId);
+    bar.insertBefore(el("div", { class: "sb-brand" }, [
+      el("span", { class: "sb-logo", text: "⚽ Total Match" }),
+      el("div", { class: "sb-club-row" }, [
+        club ? TM.img.clubImg(club, "sb-crest") : null,
+        el("div", { class: "sb-club-info" }, [
+          el("div", { class: "sb-club", text: club ? club.name : "Carreira" }),
+          el("div", { class: "sb-sub", text: "Temporada " + (c.season || 1) })
+        ])
+      ])
+    ]), bar.firstChild);
+    screen.appendChild(bar);
     screen.appendChild(bottomNav(c, active));
     screen.appendChild(el("div", { class: "bottom-nav-spacer" }));
+    screen.classList.add("has-sidebar");
   }
   TM.coachUI = { sectors: coachSectors, addBar: addSectorBar };
 
