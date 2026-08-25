@@ -2753,3 +2753,18 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .sweet-note { font-size: 12px; color: #7ee39a; margin-top: 8px; min-height: 16px; }
 .prof-val.vt-up { color: #4ade80; } .prof-val.vt-down { color: #ff8a6a; }
 .vt-arrow { font-size: 10px; }
+
+/* selo de ídolo / cria do clube */
+.idol-badge { display: flex; align-items: center; gap: 11px; border-radius: 13px; padding: 10px 14px; margin-top: 12px; }
+.idol-badge.idol-home { background: linear-gradient(135deg, rgba(52,199,89,.14), var(--panel)); border: 1px solid rgba(52,199,89,.35); }
+.idol-badge.idol-idol { background: linear-gradient(135deg, rgba(255,200,60,.16), var(--panel)); border: 1px solid rgba(255,200,60,.42); }
+.idol-badge.idol-legend { background: linear-gradient(135deg, rgba(255,170,40,.2), rgba(255,120,40,.08)); border: 1px solid rgba(255,170,40,.5); }
+.idol-ic { font-size: 24px; }
+.idol-t { font-weight: 800; font-size: 14px; }
+.idol-s { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+/* abas Sub-17/Sub-20 */
+.youth-tabs { display: flex; gap: 8px; margin-bottom: 4px; }
+.youth-tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 6px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); font-weight: 700; font-size: 13px; cursor: pointer; }
+.youth-tab.on { background: linear-gradient(180deg, var(--green), var(--gold-dark)); color: #fff; border-color: var(--green); }
+.youth-tab-n { font-size: 11px; opacity: .8; background: rgba(0,0,0,.18); border-radius: 10px; padding: 1px 7px; }
+.youth-cat { font-size: 10px; font-weight: 800; color: var(--text-dim); background: var(--black-soft); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; margin-right: 6px; }

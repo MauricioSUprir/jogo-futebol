@@ -482,7 +482,7 @@
     var roles = ["GK", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "FW", "FW", "GK", "DF", "MF", "FW"];
     var youth = [];
     roles.forEach(function (pos, i) {
-      var age = 14 + Math.floor(Math.random() * 5); // 14 a 18
+      var age = 14 + Math.floor(Math.random() * 6); // 14 a 19
       var ov = 47 + Math.floor(Math.random() * 15);  // 47 a 61
       var jewel = Math.random() < 0.08;              // joia rara na base
       var pot = jewel ? Math.min(93, ov + 22 + Math.floor(Math.random() * 11))
@@ -1144,6 +1144,9 @@
     yp.youth = false;
     career.customPlayers[youthId] = yp;
     career.roster.push(youthId);
+    // formado na base: é uma cria do clube (conta para status de ídolo)
+    career.homegrown = career.homegrown || {}; career.homegrown[youthId] = true;
+    career.tenure = career.tenure || {}; career.tenure[youthId] = 0;
     if (career.lineup) career.lineup.bench.push(youthId);
     syncLineup(career);
     return true;
@@ -1864,6 +1867,8 @@
         TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });
       }
     }
+    // tempo de casa dos jogadores (para status de ídolo) — +1 temporada por quem fica
+    if (career.tenure) { (career.roster || []).forEach(function (id) { career.tenure[id] = (career.tenure[id] || 0) + 1; }); }
     // parcelas de transferências (paga a próxima parcela de cada compra parcelada)
     if (career.installments && career.installments.length) {
       var stillDue = [], paidTot = 0;

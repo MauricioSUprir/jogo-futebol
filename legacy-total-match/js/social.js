@@ -344,7 +344,7 @@
     } } }));
   }
 
-  TM.social = { moraleEdge: moraleEdge, ensureFeed: ensureFeed, morale: morale, userPost: userPost };
+  TM.social = { moraleEdge: moraleEdge, ensureFeed: ensureFeed, morale: morale, userPost: userPost, nudgeMorale: nudgeMorale };
   TM.ui.register("coach-social", function (screen) { renderSocial(screen, "coach"); });
   TM.ui.register("player-social", function (screen) { renderSocial(screen, "player"); });
 })(window);
