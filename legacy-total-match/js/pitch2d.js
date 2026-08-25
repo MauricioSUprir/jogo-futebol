@@ -108,7 +108,7 @@
     function resize() {
       var cw = wrap.clientWidth || 340;
       // no PC a altura é limitada pela viewport p/ caber inteiro; no celular usa a proporção
-      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.80));
+      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.70));
       cw = Math.round(ch / 0.64); // mantém proporção do campo
       if (cw > wrap.clientWidth) { cw = wrap.clientWidth; ch = Math.round(cw * 0.64); }
       canvas.style.width = cw + "px"; canvas.style.height = ch + "px";
@@ -311,21 +311,36 @@
     var flowT = 0;
     function flowStep() {
       if (phase === "dead" || phase === "celebrate" || phase === "shot" || phase === "goal") return;
-      // portador avança e passa para um companheiro bem posicionado
+      // construção realista: troca de passes curta, às vezes progride, às vezes RECUA p/ defesa
       var team = poss === 0 ? teamA : teamB;
       var dir = poss === 0 ? 1 : -1;
-      // escolhe alvo do passe: companheiro à frente e livre
-      var cand = team.filter(function (p) { return p !== carrier && !p.gk; });
-      cand.sort(function (m, n) { return (n.x - m.x) * dir; });
-      // 65% passa pra frente, senão mantém/curto
-      var target = cand[Math.floor(rnd(0, Math.min(3, cand.length)))] || carrier;
-      passTo(target, 0.03);
-      // pequena chance de perder a posse (cosmético, não muda placar)
-      if (Math.random() < 0.18) { poss = 1 - poss; }
+      var cand = team.filter(function (p) { return p !== carrier; }); // inclui goleiro (recuo)
+      var forward = [], sideways = [], back = [];
+      cand.forEach(function (p) {
+        var rel = (p.x - carrier.x) * dir;
+        if (rel > 0.07) forward.push(p);
+        else if (rel < -0.07) back.push(p);
+        else sideways.push(p);
+      });
+      var r = Math.random(), pool;
+      if (r < 0.42) pool = sideways.length ? sideways : forward;        // troca lateral / apoio
+      else if (r < 0.70) pool = forward.length ? forward : sideways;    // progride
+      else if (r < 0.88) pool = back.length ? back : sideways;          // recompõe atrás (segura a posse)
+      else pool = forward.length ? forward : sideways;                  // tenta o passe vertical
+      if (!pool || !pool.length) pool = cand;
+      // prefere um companheiro mais livre (longe do adversário mais próximo)
+      var opp = poss === 0 ? teamB : teamA;
+      pool = pool.slice().sort(function (m, n) { return nearestOppDist(n, opp) - nearestOppDist(m, opp); });
+      var target = pool[Math.floor(rnd(0, Math.min(3, pool.length)))] || carrier;
+      passTo(target, 0.022);                                            // passe mais lento (assistível)
+      if (Math.random() < 0.12) poss = 1 - poss;                        // disputa de vez em quando
+    }
+    function nearestOppDist(p, opp) {
+      var best = 9; opp.forEach(function (o) { var d = dist(p.x, p.y, o.x, o.y); if (d < best) best = d; }); return best;
     }
     function passTo(p, spd) {
       ball.tx = p.x + (p.side === 0 ? 0.01 : -0.01); ball.ty = p.y;
-      ball.flying = true; ball.speed = spd || 0.03;
+      ball.flying = true; ball.speed = spd || 0.022;
       carrier = p; poss = p.side;
     }
     function shootAt(side) {
@@ -477,7 +492,7 @@
       // fluxo contínuo: a bola circula sozinha entre os minutos (movimento fluido)
       if (phase === "build" || phase === "attack" || phase === "kickoff") {
         flowAcc += speedMult;
-        if (flowAcc >= 34) { flowAcc = 0; flowStep(); }
+        if (flowAcc >= 52) { flowAcc = 0; flowStep(); }   // passes mais espaçados = ritmo calmo
       }
       // movimento com EASING exponencial (suave, sem parar de repente) = fluidez
       var ease = Math.min(0.34, 0.085 * speedMult);
@@ -492,8 +507,8 @@
         var dir = carrier.side === 0 ? 1 : -1;
         ball.tx = clamp(carrier.x + 0.02 * dir, 0.01, 0.99); ball.ty = carrier.y;
       }
-      // bola com easing (mais viva); passes/chutes deixam a bola "voando"
-      var bEase = ball.flying ? Math.min(0.5, ball.speed * speedMult * 7) : Math.min(0.42, 0.16 * speedMult);
+      // bola com easing; passes/chutes deixam a bola "voando" (mais lenta = assistível)
+      var bEase = ball.flying ? Math.min(0.34, ball.speed * speedMult * 4.5) : Math.min(0.30, 0.12 * speedMult);
       ball.x += (ball.tx - ball.x) * bEase;
       ball.y += (ball.ty - ball.y) * bEase;
       if (dist(ball.x, ball.y, ball.tx, ball.ty) < 0.004) ball.flying = false;

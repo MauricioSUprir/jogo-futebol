@@ -153,42 +153,28 @@
       document.body.appendChild(overlay);
       flashing = true;
       var dismissed = false;
-      function dismiss() { if (dismissed) return; dismissed = true; overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 240); flashing = false; if (!done && !paused && !proceeded) step(); }
+      function dismiss() { if (dismissed) return; dismissed = true; overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 240); flashing = false; if (pitch && pitchOn && !paused) pitch.resume(); if (!done && !paused && !proceeded) step(); }
       overlay.addEventListener("click", dismiss);
       setTimeout(dismiss, 2400);
     }
     function teamColor(t) { var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6"; }
-    // constrói o "quadro" da revisão conforme o tipo (impedimento / falta / mão / linha de gol)
+    // SÓ o impedimento tem quadro gráfico; falta/mão/linha ficam só com "Revisando…".
     function buildVarScene(kind, annulled, atkCol, defCol, side) {
+      if (kind !== "offside") return null;
       var attacksRight = side !== 1;   // time 0 ataca p/ direita; time 1 p/ esquerda (espelha)
-      var mini = el("div", { class: "var-mini vk-" + kind + (attacksRight ? " atk-right" : " atk-left") });
-      if (kind === "goalline") {
-        // tecnologia de linha de gol: bola vs linha do gol
-        var crossed = !annulled; // confirmado = cruzou (gol)
-        mini.appendChild(el("div", { class: "gl-net" }));
-        mini.appendChild(el("div", { class: "gl-line" }));
-        mini.appendChild(el("div", { class: "gl-ball" + (crossed ? " over" : " short") }, [ el("span", { class: "gl-ball-dot", style: "background:" + atkCol }) ]));
-      } else if (kind === "foul" || kind === "handball") {
-        // zona de contato + dois jogadores (cores dos times)
-        mini.appendChild(el("div", { class: "foul-zone" + (annulled ? " hit" : "") }));
-        mini.appendChild(el("div", { class: "foul-dot atk", style: "background:" + atkCol }));
-        mini.appendChild(el("div", { class: "foul-dot def", style: "background:" + defCol }));
-        if (kind === "handball") mini.appendChild(el("div", { class: "foul-hand", text: "🖐️" }));
-      } else {
-        // impedimento: duas linhas TRACEJADAS (azul=defensor, vermelho=atacante), CENTRADAS.
-        // offside(annulled)=atacante à frente rumo ao gol; onside=quase juntos.
-        var gap = annulled ? 4.5 : 1.8;   // impedimento apertado: bem difícil de cravar
-        var dir = attacksRight ? 1 : -1;          // gol à direita (dir=1) ou esquerda (dir=-1)
-        var atkAhead = annulled ? 1 : -1;         // atacante à frente (offside) ou atrás (onside)
-        var defX = 50 - dir * atkAhead * (gap / 2);
-        var atkX = 50 + dir * atkAhead * (gap / 2);
-        var arrow = el("div", { class: "off-arrow", text: attacksRight ? "ataque →" : "← ataque" });
-        mini.appendChild(arrow);
-        mini.appendChild(el("div", { class: "off-line blue", style: "left:" + defX + "%" }, [ el("span", { class: "off-dot", style: "background:" + defCol }) ]));
-        mini.appendChild(el("div", { class: "off-line red", style: "left:" + atkX + "%" }, [ el("span", { class: "off-dot", style: "background:" + atkCol }) ]));
-        mini.appendChild(el("div", { class: "off-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" }));
-      }
-      mini.appendChild(el("div", { class: "var-scan" })); // linha que fica "revisando"
+      var mini = el("div", { class: "var-mini vk-offside " + (attacksRight ? "atk-right" : "atk-left") });
+      // REGRA: no gol VALIDADO o atacante fica ATRÁS/na linha da última defesa;
+      // no gol ANULADO o atacante está À FRENTE (mais perto do gol) = impedido.
+      var dir = attacksRight ? 1 : -1;                 // gol à direita (dir=1) ou esquerda (dir=-1)
+      var defX = 50;                                   // última linha de defesa no centro
+      var gap = annulled ? 4 : 3;                      // apertado, mas claro de que lado está
+      var atkX = annulled ? defX + dir * gap           // impedido: atacante à frente rumo ao gol
+                          : defX - dir * gap;           // legal: atacante atrás da última linha
+      mini.appendChild(el("div", { class: "off-arrow", text: attacksRight ? "ataque →" : "← ataque" }));
+      mini.appendChild(el("div", { class: "off-line blue", style: "left:" + defX + "%" }, [ el("span", { class: "off-dot", style: "background:" + defCol }) ]));
+      mini.appendChild(el("div", { class: "off-line red", style: "left:" + atkX + "%" }, [ el("span", { class: "off-dot", style: "background:" + atkCol }) ]));
+      mini.appendChild(el("div", { class: "off-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" }));
+      mini.appendChild(el("div", { class: "var-scan" }));
       return mini;
     }
     // VAR imersivo e interativo: pausa a partida, "revisando…" e revela o veredito.
@@ -209,7 +195,11 @@
       ]) : null;
       var sub = el("div", { class: "var-sub revisando" }, [ el("span", { class: "var-spin" }), el("span", { class: "vs-txt", text: "Revisando o lance…" }) ]);
       var bar = el("div", { class: "var-bar" }, [ el("i") ]);
-      stage.appendChild(head); stage.appendChild(scene); if (legend) stage.appendChild(legend); stage.appendChild(sub); stage.appendChild(bar);
+      stage.appendChild(head);
+      if (scene) stage.appendChild(scene);       // só impedimento tem gráfico
+      else stage.appendChild(el("div", { class: "var-textonly", text: "📺" }));
+      if (legend) stage.appendChild(legend);
+      stage.appendChild(sub); stage.appendChild(bar);
       var actionWrap = el("div", { class: "var-action" });
       stage.appendChild(actionWrap);
       overlay.appendChild(stage);
@@ -225,7 +215,7 @@
         if (!done && !paused && !proceeded) step();
       }
       function reveal() {
-        scene.classList.add("resolved");                 // para o "revisando" e mostra a marcação final
+        if (scene) scene.classList.add("resolved");      // para o "revisando" e mostra a marcação final
         sub.classList.remove("revisando");
         sub.innerHTML = ""; sub.appendChild(el("span", { class: "vs-txt", text: ev.reason }));
         var stampTxt = kind === "goalline" ? (annulled ? "NÃO FOI GOL" : "GOL CONFIRMADO") : (annulled ? "GOL ANULADO" : "GOL VALIDADO");
@@ -263,6 +253,7 @@
     function openPause() {
       if (done || paused) return;
       paused = true;
+      if (pitch && pitchOn) pitch.pause();   // congela o Campo 2D enquanto pausado
       var team = myTeam();
       var overlay = el("div", { class: "pause-overlay" });
       var box = el("div", { class: "pause-box" });
@@ -317,7 +308,9 @@
       box.appendChild(TM.ui.button("▶ Retomar partida", function () {
         overlay.remove();
         resimRest();
-        paused = false; step();
+        paused = false;
+        if (pitch && pitchOn) pitch.resume();   // volta a animar o Campo 2D
+        step();
       }, "btn primary"));
       document.body.appendChild(overlay);
     }
@@ -414,8 +407,8 @@
         }
         // VAR imersivo: pausa, revisa e só então mostra o resto do lance (o gol, se confirmado)
         if (varEv) { showVarReview(varEv, function () { processEvents(evs); }); return; }
-        // cutscene de GOL (no modo tradicional; no Campo 2D a comemoração é no próprio campo)
-        if (gev && !(pitch && pitchOn)) { processEvents(evs); showGoalFlash(gev); return; }
+        // cutscene de GOL (igual ao flash de cartão) — nos DOIS modos
+        if (gev) { processEvents(evs); if (pitch && pitchOn) pitch.pause(); showGoalFlash(gev); return; }
         if (fev) showCardFlash(fev);
         // fala de ambiente em minutos "parados" (dá fluidez, sem poluir)
         if (!evs.length && !(pitch && pitchOn) && mm > 1 && mm - lastAmbient >= 9 && Math.random() < 0.55) {
