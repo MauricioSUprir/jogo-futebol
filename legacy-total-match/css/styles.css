@@ -2681,3 +2681,12 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
   .has-sidebar .sector-bar { display: none !important; }
   .screen.has-sidebar { padding-top: 0; }
 }
+
+/* logo do jogo em destaque no topo do menu (centralizada e maior) */
+.fcmenu .fc-top { position: fixed; justify-content: center; padding: 18px 18px 10px; }
+.fcmenu .fc-logo { height: 52px; filter: drop-shadow(0 4px 18px rgba(34,197,94,.4)); }
+.fcmenu .fc-top-right { position: absolute; right: 16px; top: 14px; }
+@media (max-width: 430px) { .fcmenu .fc-logo { height: 44px; } .fcmenu .fc-top-right { top: 16px; } }
+/* a stage começa um pouco mais abaixo pra não colar na logo maior */
+.fcmenu .fc2-stage { padding-top: 92px; }
+@media (max-width: 430px) { .fcmenu .fc2-stage { padding-top: 82px; } }
