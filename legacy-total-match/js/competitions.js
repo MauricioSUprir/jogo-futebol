@@ -1864,6 +1864,32 @@
         TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });
       }
     }
+    // CONTRATO DO PRÓPRIO TREINADOR: saída anunciada, expiração e renovação da diretoria
+    if (career.myContract) {
+      var mc = career.myContract;
+      var st = career.stats || {}; var pl = st.p || 0; var wr = pl ? (st.w || 0) / pl : 0.4;
+      if (career.leaveAtSeasonEnd) {
+        career.leaveAtSeasonEnd = false; career.unemployed = true; career._lastOfferGen = 0;
+        if (!career.clubHistory) career.clubHistory = [];
+        career.clubHistory.push({ clubId: career.teamId, clubName: career.teamName, season: career.season - 1, left: "saiu ao fim da temporada" });
+        TM.notify.push(career, { icon: "🚪", title: "Fim de ciclo", news: true, text: "Você deixou o " + career.teamName + " ao fim da temporada, como havia anunciado. Está livre no mercado." });
+      } else {
+        mc.years = Math.max(0, (mc.years || 1) - 1);
+        if (mc.years === 0) {
+          if (wr >= 0.42) {
+            mc.years = 2; mc.wage = Math.round(mc.wage * 1.12 * 100) / 100; mc.fine = Math.round(mc.wage * 1.6 * 100) / 100; mc.signedSeason = career.season;
+            TM.notify.push(career, { icon: "🤝", title: "Renovação automática", news: true, text: "Satisfeita com a campanha, a diretoria renovou seu contrato por mais 2 temporadas com aumento salarial." });
+          } else {
+            career.unemployed = true; career._lastOfferGen = 0; career.sackCount = (career.sackCount || 0) + 1;
+            if (!career.clubHistory) career.clubHistory = [];
+            career.clubHistory.push({ clubId: career.teamId, clubName: career.teamName, season: career.season - 1, left: "contrato não renovado" });
+            TM.notify.push(career, { icon: "📉", title: "Contrato não renovado", news: true, text: "A diretoria não renovou seu contrato após uma campanha abaixo do esperado. Você está livre no mercado." });
+          }
+        } else if (mc.years === 1) {
+          TM.notify.push(career, { icon: "📜", title: "Último ano de contrato", news: true, text: "Seu vínculo entra no último ano. Negocie a renovação em 'Meu contrato' ou avalie sair no fim da temporada." });
+        }
+      }
+    }
     ageWorld(career);
     retireAndRegen(career); // veteranos se aposentam; newgens surgem no lugar
     ageYouth(career);
