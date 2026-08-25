@@ -641,6 +641,25 @@
     var d = Math.max(-4, Math.min(4, Math.round(c)));
     return { on: true, delta: d, dir: d > 0 ? 1 : d < 0 ? -1 : 0 };
   }
+  // multiplicador de valor por desempenho na temporada (gols, assistências, notas)
+  function perfMult(career, p) {
+    if (!p) return 1;
+    var st = career && career.pstats && career.pstats[p.id];
+    if (!st || !st.apps) return 1;
+    var played = (career.stats && career.stats.p) || st.apps;
+    var appsRatio = Math.min(1, st.apps / Math.max(4, played));
+    var contrib = (st.goals + st.assists * 0.5) / st.apps;        // participação em gols por jogo
+    var avg = st.rn ? st.rsum / st.rn : 6.6;
+    var isAtk = p.pos === "FW" || p.pos === "MF";
+    var mult = 1;
+    mult += Math.min(1.5, contrib * (isAtk ? 1.7 : 2.6));         // artilheiro dispara de valor
+    mult += (avg - 6.8) * 0.32;                                    // nota média sobe/desce o valor
+    mult *= (0.72 + appsRatio * 0.28);                            // quem joga pouco reage menos
+    if ((p.age || 24) >= 33) mult *= 0.85;                        // veterano em queda vale menos
+    return Math.max(0.5, Math.min(3.0, mult));
+  }
+  // valor de mercado DINÂMICO (base * desempenho) em milhões de euro
+  function dynValue(career, p) { return TM.data.marketValue(p) * perfMult(career, p); }
   function updateConfidence(career, result, userSide) {
     if (!TM.storage.settings().dynamicOverall) return;
     if (!career.confidence) career.confidence = {};
@@ -2112,7 +2131,7 @@
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
-    processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, resolveIncomingOffer: resolveIncomingOffer,
+    processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, dynValue: dynValue, perfMult: perfMult, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
