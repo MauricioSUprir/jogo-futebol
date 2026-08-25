@@ -1462,7 +1462,7 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 /* ===== Campo 2D (visão de cima) ===== */
 .p2d-host { margin: 8px 0 4px; }
 .p2d-host { width: 100%; display: flex; justify-content: center; }
-.p2d-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; max-width: min(96vw, 1100px); margin: 0 auto; }
+.p2d-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; max-width: min(97vw, 1240px); margin: 0 auto; }
 .p2d-head {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px;
@@ -1862,3 +1862,30 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .ping-badge.good .ping-dot { background: #38d66a; } .ping-badge.good { color: #9ff2bd; }
 .ping-badge.ok .ping-dot { background: #f5d020; } .ping-badge.ok { color: #ffe98a; }
 .ping-badge.bad .ping-dot { background: #e0483a; } .ping-badge.bad { color: #ff9a90; }
+
+/* ============ Raio-X do Elenco (Central do Elenco) ============ */
+.xray { gap: 12px; margin-bottom: 6px; }
+.xray-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.xtile { background: linear-gradient(155deg, var(--panel), var(--black-soft)); border: 1px solid var(--line); border-radius: 13px; padding: 12px; text-align: center; }
+.xt-ic { font-size: 18px; }
+.xt-val { font-size: 19px; font-weight: 900; color: var(--green); margin-top: 2px; line-height: 1.1; }
+.xt-lbl { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.xray-sectors { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+.xray-h { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+.xsec { display: flex; align-items: center; gap: 10px; }
+.xsec-lbl { flex: 0 0 62px; font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
+.xsec-bar { flex: 1; height: 10px; border-radius: 6px; background: var(--black-soft); overflow: hidden; }
+.xsec-fill { display: block; height: 100%; border-radius: 6px; transition: width .5s ease; }
+.xsec-fill.hi { background: linear-gradient(90deg, #1f9d55, #38d66a); }
+.xsec-fill.mid { background: linear-gradient(90deg, #b8860b, #f5d020); }
+.xsec-fill.lo { background: linear-gradient(90deg, #a13228, #e0483a); }
+.xsec-val { flex: 0 0 28px; text-align: right; font-weight: 800; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
+.xray-highs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.xhigh { display: flex; flex-direction: column; align-items: center; gap: 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 10px 6px; text-align: center; }
+.xh-face { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; background: var(--black-soft); }
+.xh-tag { font-size: 10px; font-weight: 800; color: var(--gold-light); letter-spacing: .3px; }
+.xh-name { font-size: 12px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.xh-meta { font-size: 10.5px; color: var(--text-dim); }
+.xray-alert { display: flex; align-items: center; gap: 10px; background: rgba(224,72,58,.12); border: 1px solid rgba(224,72,58,.4); border-radius: 12px; padding: 11px 13px; font-size: 12.5px; color: #ffb3ac; }
+.xray-alert .xa-ic { font-size: 17px; flex: 0 0 auto; }
+@media (max-width: 380px) { .xray-highs { grid-template-columns: 1fr; } }

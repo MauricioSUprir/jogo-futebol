@@ -362,8 +362,10 @@
       renderMinute(minute);
       minute++;
       if (flashing) return; // um cartão/lesão pausou: retoma depois
-      // no Campo 2D o ritmo é bem mais lento (assistível); botões 1x/2x/4x aceleram
-      var base = (pitch && pitchOn) ? 720 : delay;
+      // no Campo 2D o ritmo é bem mais lento (assistível); no PC é ainda mais lento
+      // para dar pra acompanhar táticas e posições. Botões 1x/2x/4x aceleram.
+      var wideScreen = (window.innerWidth || 0) >= 820;
+      var base = (pitch && pitchOn) ? (wideScreen ? 1150 : 760) : delay;
       var d = (hasGoal ? base * (pitch && pitchOn ? 3 : 7) : base) / (liveMult || 1);
       // barra de progresso desliza suavemente até o próximo minuto (fluidez)
       if (progressFill && animating && delay > 0 && !(pitch && pitchOn)) {

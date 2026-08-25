@@ -108,7 +108,7 @@
     function resize() {
       var cw = wrap.clientWidth || 340;
       // no PC a altura é limitada pela viewport p/ caber inteiro; no celular usa a proporção
-      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.68));
+      var ch = Math.min(Math.round(cw * 0.64), Math.round((global.innerHeight || 700) * 0.80));
       cw = Math.round(ch / 0.64); // mantém proporção do campo
       if (cw > wrap.clientWidth) { cw = wrap.clientWidth; ch = Math.round(cw * 0.64); }
       canvas.style.width = cw + "px"; canvas.style.height = ch + "px";
@@ -231,7 +231,7 @@
     function arc(x, y, r, s, e) { ctx.beginPath(); ctx.arc(x, y, r, s, e); ctx.stroke(); }
 
     function drawPlayer(p) {
-      var x = px(p.x), y = py(p.y), r = W * 0.017;
+      var x = px(p.x), y = py(p.y), r = W * 0.019;
       var col = p.side === 0 ? colA.primary : colB.primary;
       // destaque de posse
       if (carrier === p) {
@@ -250,7 +250,7 @@
       ctx.fillText(p.num, x, y + 0.5);
     }
     function drawBall() {
-      var x = px(ball.x), y = py(ball.y), r = W * 0.011;
+      var x = px(ball.x), y = py(ball.y), r = W * 0.0125;
       ctx.beginPath(); ctx.arc(x, y, r, 0, 7);
       ctx.fillStyle = "#fff"; ctx.fill();
       ctx.lineWidth = 1; ctx.strokeStyle = "rgba(0,0,0,0.6)"; ctx.stroke();
