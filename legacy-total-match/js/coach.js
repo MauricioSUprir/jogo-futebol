@@ -1655,12 +1655,86 @@
   });
 
   /* ---------- elenco ---------- */
+  // Raio-X do elenco: médias, força por setor, destaques e alertas de profundidade
+  function squadXray(c, players) {
+    function avg(arr, f) { return arr.length ? arr.reduce(function (s, p) { return s + f(p); }, 0) / arr.length : 0; }
+    function sectorTop(pos, n) {
+      return players.filter(function (p) { return p.pos === pos; }).sort(function (a, b) { return b.overall - a.overall; }).slice(0, n);
+    }
+    function sectorForce(pos, n) { var t = sectorTop(pos, n); return t.length ? Math.round(avg(t, function (p) { return p.overall; })) : 0; }
+    var ovAvg = Math.round(avg(players, function (p) { return p.overall; }));
+    var ageAvg = Math.round(avg(players, function (p) { return p.age || 24; }) * 10) / 10;
+    var totalVal = players.reduce(function (s, p) { return s + (TM.data.marketValue(p) || 0); }, 0);
+    // força por setor
+    var sectors = [
+      { key: "GK", label: "Goleiro", f: sectorForce("GK", 1) },
+      { key: "DF", label: "Defesa", f: sectorForce("DF", 4) },
+      { key: "MF", label: "Meio", f: sectorForce("MF", 3) },
+      { key: "FW", label: "Ataque", f: sectorForce("FW", 3) }
+    ];
+    // destaques
+    var byOv = players.slice().sort(function (a, b) { return b.overall - a.overall; });
+    var craque = byOv[0];
+    var promessa = players.slice().filter(function (p) { return (p.age || 24) <= 21; })
+      .sort(function (a, b) { return ((b.potential || b.overall) - b.overall) - ((a.potential || a.overall) - a.overall) || (b.potential || 0) - (a.potential || 0); })[0];
+    var veterano = players.slice().sort(function (a, b) { return (b.age || 0) - (a.age || 0); })[0];
+    // profundidade
+    var counts = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    players.forEach(function (p) { counts[p.pos] = (counts[p.pos] || 0) + 1; });
+    var need = { GK: 2, DF: 5, MF: 4, FW: 3 }, alerts = [];
+    Object.keys(need).forEach(function (k) { if ((counts[k] || 0) < need[k]) alerts.push({ k: k, have: counts[k] || 0, need: need[k] }); });
+
+    var wrap = el("div", { class: "panel-narrow xray" });
+    // tiles resumo
+    wrap.appendChild(el("div", { class: "xray-tiles" }, [
+      xTile("Overall médio", ovAvg, "🎯"),
+      xTile("Idade média", ageAvg, "🎂"),
+      xTile("Jogadores", players.length, "👥"),
+      xTile("Valor do plantel", money(c, totalVal), "💰")
+    ]));
+    // barras de setor
+    var bars = el("div", { class: "xray-sectors" }, [ el("div", { class: "xray-h", text: "🧭 Força por setor" }) ]);
+    sectors.forEach(function (s) {
+      var pct = Math.max(4, Math.min(100, (s.f - 40) / 59 * 100));
+      var cls = s.f >= 82 ? "hi" : s.f >= 74 ? "mid" : "lo";
+      bars.appendChild(el("div", { class: "xsec" }, [
+        el("span", { class: "xsec-lbl", text: s.label }),
+        el("span", { class: "xsec-bar" }, [ el("span", { class: "xsec-fill " + cls, style: "width:" + pct + "%" }) ]),
+        el("span", { class: "xsec-val", text: s.f || "—" })
+      ]));
+    });
+    wrap.appendChild(bars);
+    // destaques
+    var hi = el("div", { class: "xray-highs" });
+    if (craque) hi.appendChild(xHigh("⭐ Craque", craque, craque.overall + " OVR"));
+    if (promessa) hi.appendChild(xHigh("💎 Promessa", promessa, "pot. " + (promessa.potential || promessa.overall)));
+    if (veterano) hi.appendChild(xHigh("🧓 Veterano", veterano, (veterano.age || "?") + " anos"));
+    wrap.appendChild(hi);
+    // alertas de profundidade
+    if (alerts.length) {
+      var al = el("div", { class: "xray-alert" }, [ el("span", { class: "xa-ic", text: "⚠️" }),
+        el("span", { text: "Pouca profundidade: " + alerts.map(function (a) { return ({ GK: "gols", DF: "zaga", MF: "meio", FW: "ataque" })[a.k] + " (" + a.have + "/" + a.need + ")"; }).join(", ") + ". Considere reforços no mercado." }) ]);
+      al.addEventListener("click", function () { TM.ui.go("coach-market"); });
+      al.classList.add("clickable");
+      wrap.appendChild(al);
+    }
+    return wrap;
+  }
+  function xTile(label, val, ic) { return el("div", { class: "xtile" }, [ el("div", { class: "xt-ic", text: ic }), el("div", { class: "xt-val", text: String(val) }), el("div", { class: "xt-lbl", text: label }) ]); }
+  function xHigh(tag, p, meta) {
+    return el("div", { class: "xhigh" }, [
+      TM.img.playerImg(p, "xh-face"),
+      el("div", { class: "xh-info" }, [ el("div", { class: "xh-tag", text: tag }), el("div", { class: "xh-name", text: p.name }), el("div", { class: "xh-meta", text: TM.data.posLabel(p) + " · " + meta }) ])
+    ]);
+  }
+
   TM.ui.register("coach-squad", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("👥 Central do Elenco", function () { TM.ui.go("coach-hub"); }));
     var players = C().userSquad(c);
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     players.sort(function (a, b) { return order[a.pos] - order[b.pos] || b.overall - a.overall; });
+    screen.appendChild(squadXray(c, players));
     screen.appendChild(el("div", { class: "setting-hint", style: "max-width:620px", text: "Toque num jogador para ver detalhes. Use “Listar” para colocá-lo na lista de transferências (recebe mais propostas)." }));
     var list = el("div", { class: "panel-narrow squad-list" });
     var lastPos = null;
