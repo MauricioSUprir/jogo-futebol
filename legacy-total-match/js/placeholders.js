@@ -313,8 +313,7 @@
     // Versão fictícia: só imagens GERADAS (nada de fotos/escudos/logos reais).
     coachImg: function (coach, cls) {
       if (coach.photo) return imgWithFallback(coach.photo, coachAvatarSVG(coach), coach.name, cls);
-      // rosto fictício (IA), com leve deslocamento para não repetir o de um jogador
-      return imgWithFallback(facePhoto({ id: "tec-" + (coach.id || coach.name) }), coachAvatarSVG(coach), coach.name, (cls || "") + " pface");
+      return imgWithFallback(coachAvatarSVG(coach), coachAvatarSVG(coach), coach.name, cls);
     },
     clubImg: function (club, cls) {
       // escudo importado pelo jogador (clube personalizado) tem prioridade
@@ -330,9 +329,10 @@
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
-      // foto importada pelo jogador (carreira própria) tem prioridade; senão rosto fictício (IA); fallback SVG
+      // foto importada pelo jogador (carreira própria) tem prioridade; senão avatar gerado (SVG)
       if (player.photo) return imgWithFallback(player.photo, avatar(player, club), player.name, cls);
-      return imgWithFallback(facePhoto(player), avatar(player, club), player.name, (cls || "") + " pface");
+      var av = avatar(player, club);
+      return imgWithFallback(av, av, player.name, cls);
     },
     facePhoto: facePhoto,
     nationImg: function (nation, cls) {
