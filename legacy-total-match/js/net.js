@@ -339,6 +339,37 @@
     var ref = net._db.ref("matches/" + code);
     ref.once("value").then(function (snap) { var v = snap.val(); if (v && v.host === net.me.uid) ref.remove(); });
   };
+  // ---- emotes durante a partida (escreve no nó da partida; o outro lado escuta) ----
+  net.sendEmote = function (code, side, emoji) {
+    if (!net.available || !net._db || !code) return;
+    try { net._db.ref("matches/" + code + "/emote").set({ from: side, emoji: emoji, ts: firebaseNow() }); } catch (e) {}
+  };
+  net.listenEmote = function (code, cb) {
+    if (!net.available || !net._db || !code) return function () {};
+    var ref = net._db.ref("matches/" + code + "/emote");
+    var h = ref.on("value", function (snap) { var v = snap.val(); if (v && v.emoji) cb(v); });
+    return function stop() { ref.off("value", h); };
+  };
+  // ---- ping / latência: mede o tempo de ida-e-volta de uma leitura no servidor ----
+  net.measurePing = function (cb) {
+    if (!net.available || !net._db) { cb(null); return; }
+    var t0 = 0; try { t0 = Date.now(); } catch (e) {}
+    try {
+      net._db.ref(".info/serverTimeOffset").once("value").then(function () {
+        var dt = 0; try { dt = Date.now() - t0; } catch (e) {}
+        cb(dt);
+      }).catch(function () { cb(null); });
+    } catch (e) { cb(null); }
+  };
+  // ---- revanche: recria uma partida com o mesmo adversário (via convite) ----
+  net.rematch = function (opponentUid, opts, cb) {
+    if (!net.available || !net.me) { cb && cb(null); return; }
+    net.createMatch(opts || { source: "club" }, function (code) {
+      if (!code) { cb && cb(null); return; }
+      try { net._db.ref("users/" + opponentUid + "/invite").set({ from: net.me.uid, fromName: net.me.name, code: code, ts: firebaseNow(), rematch: true }); } catch (e) {}
+      cb && cb(code);
+    });
+  };
 
   // ---- Competição em Grupo (lobby: amigos entram e escolhem um time) ----
   net.createGroupComp = function (size, myTeamId, cb, tries) {
