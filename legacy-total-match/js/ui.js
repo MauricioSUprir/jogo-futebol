@@ -556,6 +556,93 @@
     });
   }
 
+  // ===== MENU VERTICAL estilo FC: um modo por tela, rola pra cima/baixo =====
+  register("modes", function (screen) {
+    screen.id = "screen-modes";
+    screen.classList.add("fcmenu");
+    var SB = "assets/estadios/";
+    var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
+
+    var SLIDES = [];
+    if (hasCoachSave) SLIDES.push({ key: "car", eyebrow: "CONTINUAR", name: "Retomar Carreira", desc: "Volte de onde você parou no comando do seu clube.", cta: "CONTINUAR", route: "coach-hub", bg: SB + "st-270085.jpg" });
+    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco de reservas ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: SB + "st-30651230.jpg" });
+    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores: finanças, contratações e estrutura.", cta: "JOGAR", route: "coach", bg: SB + "st-17071576.jpg" });
+    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: SB + "st-17779076.jpg" });
+    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: SB + "st-1171084.jpg" });
+    SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: SB + "st-399187.jpg" });
+
+    // overlay fixo: logo + engrenagem
+    screen.appendChild(el("div", { class: "fc-top" }, [
+      el("img", { class: "fc-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+      el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
+    ]));
+
+    var scroller = el("div", { class: "fc-scroll" });
+    var slideEls = [];
+    SLIDES.forEach(function (s, i) {
+      var bg = el("span", { class: "fc-bg" }); if (s.bg) bg.style.backgroundImage = "url('" + s.bg + "')";
+      var slide = el("section", { class: "fc-slide acc-" + s.key }, [
+        bg,
+        el("span", { class: "fc-shade" }),
+        el("div", { class: "fc-body" }, [
+          el("div", { class: "fc-eyebrow", text: s.eyebrow }),
+          el("h2", { class: "fc-name", text: s.name }),
+          el("p", { class: "fc-desc", text: s.desc }),
+          el("button", { class: "fc-cta", on: { click: (function (rt) { return function () { go(rt); }; })(s.route) } }, [ el("span", { text: s.cta }), el("span", { class: "fc-cta-arrow", text: "▶" }) ])
+        ])
+      ]);
+      slideEls.push(slide);
+      scroller.appendChild(slide);
+    });
+
+    // slide final "diferente": grade de acessos rápidos
+    var MORE = [
+      { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
+      { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
+      { icon: "💾", name: "Minhas Carreiras", route: "saves" }, { icon: "🎖️", name: "Informações", route: "competicoes" },
+      { icon: "⚙️", name: "Configurações", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
+    ];
+    var moreGrid = el("div", { class: "fc-more-grid" });
+    MORE.forEach(function (m) {
+      moreGrid.appendChild(el("button", { class: "fc-more-tile", on: { click: (function (rt) { return function () { go(rt); }; })(m.route) } }, [
+        el("span", { class: "fc-more-ic", text: m.icon }), el("span", { class: "fc-more-lb", text: m.name })
+      ]));
+    });
+    var moreSlide = el("section", { class: "fc-slide fc-slide-more" }, [
+      el("div", { class: "fc-body fc-more-body" }, [
+        el("div", { class: "fc-eyebrow", text: "EXPLORAR" }),
+        el("h2", { class: "fc-name", text: "Mais modos" }),
+        moreGrid
+      ])
+    ]);
+    slideEls.push(moreSlide);
+    scroller.appendChild(moreSlide);
+    screen.appendChild(scroller);
+
+    // indicador de posição (dots) + seta "role"
+    var dots = el("div", { class: "fc-dots" });
+    slideEls.forEach(function (_, i) {
+      dots.appendChild(el("button", { class: "fc-dot" + (i === 0 ? " on" : ""), on: { click: (function (idx) { return function () { slideEls[idx].scrollIntoView({ behavior: "smooth" }); }; })(i) } }));
+    });
+    screen.appendChild(dots);
+    var hint = el("div", { class: "fc-scrollhint", html: "role para ver mais <span class='fc-chev'>⌄</span>" });
+    screen.appendChild(hint);
+
+    // observa qual slide está ativo → atualiza dots e esconde a dica
+    try {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) {
+            var idx = slideEls.indexOf(en.target);
+            dots.querySelectorAll(".fc-dot").forEach(function (d, di) { d.classList.toggle("on", di === idx); });
+            if (idx > 0) hint.classList.add("hide"); else hint.classList.remove("hide");
+          }
+        });
+      }, { root: scroller, threshold: 0.6 });
+      slideEls.forEach(function (s) { io.observe(s); });
+    } catch (e) {}
+  });
+
   register("modes-min-unused", function (screen) {
     screen.id = "screen-modes";
     screen.classList.add("modes-min");
@@ -601,7 +688,7 @@
     screen.appendChild(el("div", { class: "m2-footer", text: "TOTAL MATCH • v1.0" }));
   });
 
-  register("modes", function (screen) {
+  register("modes-rich-unused", function (screen) {
     screen.id = "screen-modes";
     screen.appendChild(el("div", { class: "pitch-lines", "aria-hidden": "true" }));
     screen.appendChild(el("div", { class: "modes-glow", "aria-hidden": "true" }));
