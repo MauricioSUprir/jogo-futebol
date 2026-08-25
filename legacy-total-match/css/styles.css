@@ -2596,3 +2596,6 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   .fc2-img { height: 168px; }
   .fc2-name { font-size: 26px; }
 }
+.fc2-logo-wrap { display: flex; align-items: center; justify-content: center; height: 120px; background: radial-gradient(circle at 50% 45%, rgba(34,197,94,.12), transparent 65%), #0d1116; border-bottom: 1px solid rgba(255,255,255,.06); }
+.fc2-logo { height: 62px; width: auto; filter: drop-shadow(0 4px 16px rgba(34,197,94,.35)); }
+@media (min-width: 760px) { .fc2-logo-wrap { height: 150px; } .fc2-logo { height: 78px; } }
