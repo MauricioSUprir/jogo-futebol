@@ -618,7 +618,7 @@
       ]));
     }
 
-    function goFn(rt) { return function () { go(rt); }; }
+    function goFn(rt) { return function () { if (TM.license && TM.license.enter) TM.license.enter(rt); else go(rt); }; }
 
     // ---- grade de cards (todos os modos visíveis) ----
     var mains = SLIDES.filter(function (s) { return !s.more; });
