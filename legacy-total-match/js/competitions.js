@@ -748,6 +748,18 @@
       st.last = { rating: r, opp: oppName || "Adversário", score: scoreStr, res: res, goals: g, assists: a };
       if (!st.best || r > st.best.rating) st.best = { rating: r, opp: oppName || "Adversário", score: scoreStr };
     });
+    // ---- fadiga: titulares cansam, reservas recuperam ----
+    career.fatigue = career.fatigue || {};
+    var startedNow = {};
+    onField.forEach(function (p) {
+      startedNow[p.id] = true;
+      var base = (p.age || 24) >= 31 ? 26 : (p.age || 24) <= 21 ? 16 : 20;   // veteranos cansam mais
+      career.fatigue[p.id] = Math.min(100, (career.fatigue[p.id] || 0) + base);
+    });
+    (career.roster || []).forEach(function (id) {
+      if (startedNow[id]) return;
+      career.fatigue[id] = Math.max(0, (career.fatigue[id] || 0) - 34);        // quem não jogou descansa
+    });
   }
 
   /* ---------- chamadas da diretoria ---------- */
