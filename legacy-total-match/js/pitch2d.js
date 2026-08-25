@@ -455,7 +455,7 @@
     }
 
     // ---------- loop de animação (suave, 60fps) ----------
-    var raf = null, lastT = 0;
+    var raf = null, lastT = 0, flowAcc = 0, tickN = 0;
     function frame(ts) {
       if (!running) return;
       raf = global.requestAnimationFrame(frame);
@@ -474,24 +474,30 @@
         replayT--;
         if (replayT <= 0) { confetti = []; resetKickoff(); }
       }
-      // move jogadores em direção ao alvo (velocidade limitada = sem teleporte)
-      // ritmo mais lento/fluido por padrão; os botões 1x/2x/4x aceleram
-      var pmax = 0.0065 * speedMult;
+      // fluxo contínuo: a bola circula sozinha entre os minutos (movimento fluido)
+      if (phase === "build" || phase === "attack" || phase === "kickoff") {
+        flowAcc += speedMult;
+        if (flowAcc >= 34) { flowAcc = 0; flowStep(); }
+      }
+      // movimento com EASING exponencial (suave, sem parar de repente) = fluidez
+      var ease = Math.min(0.34, 0.085 * speedMult);
       all.forEach(function (p) {
-        var d = dist(p.x, p.y, p.tx, p.ty);
-        var v = Math.min(pmax, d);
-        if (d > 0.0005) { p.x += (p.tx - p.x) / d * v; p.y += (p.ty - p.y) / d * v; }
+        p.x += (p.tx - p.x) * ease;
+        p.y += (p.ty - p.y) * ease;
+        // micro-oscilação natural pra não ficarem estáticos (bem sutil)
+        if (phase === "build" && !p.gk) { p.x += Math.sin((tickN + p.num * 11) * 0.06) * 0.00018; }
       });
       // portador carrega a bola de leve à frente
       if (carrier && !ball.flying) {
         var dir = carrier.side === 0 ? 1 : -1;
         ball.tx = clamp(carrier.x + 0.02 * dir, 0.01, 0.99); ball.ty = carrier.y;
       }
-      // move a bola (ritmo mais lento por padrão; 1x/2x/4x aceleram)
-      var bd = dist(ball.x, ball.y, ball.tx, ball.ty);
-      var bv = Math.min(ball.speed * speedMult * 0.6, bd);
-      if (bd > 0.0008) { ball.x += (ball.tx - ball.x) / bd * bv; ball.y += (ball.ty - ball.y) / bd * bv; }
-      else { ball.flying = false; }
+      // bola com easing (mais viva); passes/chutes deixam a bola "voando"
+      var bEase = ball.flying ? Math.min(0.5, ball.speed * speedMult * 7) : Math.min(0.42, 0.16 * speedMult);
+      ball.x += (ball.tx - ball.x) * bEase;
+      ball.y += (ball.ty - ball.y) * bEase;
+      if (dist(ball.x, ball.y, ball.tx, ball.ty) < 0.004) ball.flying = false;
+      tickN++;
       render();
     }
     function render() {
@@ -507,15 +513,17 @@
       else if (phase === "replay") { drawReplayOverlay(); }
     }
 
-    // ---------- controles ----------
+    // ---------- controles (mais opções de velocidade) ----------
     var speedBtns = [];
-    ["⏸", "1x", "2x", "4x"].forEach(function (lab, i) {
+    var SPEEDS = [["⏸", 0], ["0.5x", 0.5], ["1x", 1], ["2x", 2], ["3x", 3], ["4x", 4], ["6x", 6], ["8x", 8]];
+    SPEEDS.forEach(function (o) {
+      var lab = o[0], mult = o[1];
       var btn = document.createElement("button");
       btn.className = "p2d-btn" + (lab === "1x" ? " on" : "");
       btn.textContent = lab;
       btn.addEventListener("click", function () {
         if (lab === "⏸") { paused = !paused; btn.textContent = paused ? "▶" : "⏸"; return; }
-        speedMult = lab === "2x" ? 2 : lab === "4x" ? 4 : 1;
+        speedMult = mult;
         speedBtns.forEach(function (x) { x.classList.remove("on"); }); btn.classList.add("on");
         if (api.onSpeed) api.onSpeed(speedMult);
       });

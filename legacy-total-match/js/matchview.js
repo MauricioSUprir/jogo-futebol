@@ -134,25 +134,75 @@
       overlay.addEventListener("click", dismiss);
       setTimeout(dismiss, 2000);
     }
-    // VAR imersivo e interativo: pausa a partida, "analisa" o lance e revela o veredito.
+    // ---- cutscene de GOL (igual ao flash de cartão, mas comemorativo) ----
+    function showGoalFlash(ev) {
+      var pl = playerOfEvent(ev);
+      var team = ev.team === 0 ? a : b;
+      var overlay = el("div", { class: "card-flash goal-flash" }, [
+        el("div", { class: "gf-rays" }),
+        el("div", { class: "cf-inner" }, [
+          el("div", { class: "gf-ball", text: "⚽" }),
+          (pl ? TM.img.playerImg(pl, "cf-face gf-face") : el("div", { class: "cf-face cf-noface" })),
+          el("div", { class: "cf-min", text: ev.minute + "'" }),
+          el("div", { class: "gf-goool", text: "G O O O L !" }),
+          el("div", { class: "cf-name", text: (pl && pl.name) || ev.player || "" }),
+          el("div", { class: "cf-team", text: team.name }),
+          el("div", { class: "gf-score", text: (ev.score ? ev.score[0] + " - " + ev.score[1] : "") })
+        ])
+      ]);
+      document.body.appendChild(overlay);
+      flashing = true;
+      var dismissed = false;
+      function dismiss() { if (dismissed) return; dismissed = true; overlay.classList.add("out"); setTimeout(function () { overlay.remove(); }, 240); flashing = false; if (!done && !paused && !proceeded) step(); }
+      overlay.addEventListener("click", dismiss);
+      setTimeout(dismiss, 2400);
+    }
+    function teamColor(t) { var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6"; }
+    // constrói o "quadro" da revisão conforme o tipo (impedimento / falta / mão / linha de gol)
+    function buildVarScene(kind, annulled, atkCol, defCol) {
+      var mini = el("div", { class: "var-mini vk-" + kind });
+      if (kind === "goalline") {
+        // tecnologia de linha de gol: bola vs linha do gol
+        var crossed = !annulled; // confirmado = cruzou (gol)
+        mini.appendChild(el("div", { class: "gl-net" }));
+        mini.appendChild(el("div", { class: "gl-line" }));
+        mini.appendChild(el("div", { class: "gl-ball" + (crossed ? " over" : " short") }, [ el("span", { class: "gl-ball-dot", style: "background:" + atkCol }) ]));
+      } else if (kind === "foul" || kind === "handball") {
+        // zona de contato + dois jogadores (cores dos times)
+        mini.appendChild(el("div", { class: "foul-zone" + (annulled ? " hit" : "") }));
+        mini.appendChild(el("div", { class: "foul-dot atk", style: "background:" + atkCol }));
+        mini.appendChild(el("div", { class: "foul-dot def", style: "background:" + defCol }));
+        if (kind === "handball") mini.appendChild(el("div", { class: "foul-hand", text: "🖐️" }));
+      } else {
+        // impedimento: duas linhas TRACEJADAS (azul = defensor, vermelho = atacante) + bolinha da cor do time
+        var defX = 48, atkX = annulled ? 61 : 43;
+        mini.appendChild(el("div", { class: "var-goal" }));
+        mini.appendChild(el("div", { class: "off-line blue", style: "left:" + defX + "%" }, [ el("span", { class: "off-dot", style: "background:" + defCol }) ]));
+        mini.appendChild(el("div", { class: "off-line red", style: "left:" + atkX + "%" }, [ el("span", { class: "off-dot", style: "background:" + atkCol }) ]));
+        mini.appendChild(el("div", { class: "off-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" }));
+      }
+      mini.appendChild(el("div", { class: "var-scan" })); // linha que fica "revisando"
+      return mini;
+    }
+    // VAR imersivo e interativo: pausa a partida, "revisando…" e revela o veredito.
     function showVarReview(ev, after) {
+      var kind = ev.kind || "offside";
       var annulled = ev.decision === "annulled";
       flashing = true;
+      var atkTeam = ev.team === 0 ? a : b, defTeam = ev.team === 0 ? b : a;
+      var atkCol = teamColor(atkTeam), defCol = teamColor(defTeam);
+      var TITLE = kind === "goalline" ? "TECNOLOGIA DE LINHA" : kind === "foul" ? "REVISÃO DE FALTA" : kind === "handball" ? "REVISÃO — MÃO NA BOLA" : "REVISÃO DE IMPEDIMENTO";
       var overlay = el("div", { class: "var-review" });
       var stage = el("div", { class: "var-stage" });
-      // mini-campo estilo VAR: linha do defensor (vermelha) e do atacante (azul).
-      // impedido (annulled) -> atacante à frente do defensor (mais perto do gol, à direita).
-      var defX = 48, atkX = annulled ? 60 : 44;   // % da largura
-      var mini = el("div", { class: "var-mini" }, [
-        el("div", { class: "var-goal" }),
-        el("div", { class: "var-cal def", style: "left:" + defX + "%" }, [ el("span", { class: "var-cal-dot" }) ]),
-        el("div", { class: "var-cal atk", style: "left:" + atkX + "%" }, [ el("span", { class: "var-cal-dot" }) ]),
-        el("div", { class: "var-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" })
-      ]);
-      var head = el("div", { class: "var-title" }, [ el("span", { class: "var-tv", text: "📺" }), el("span", { text: "REVISÃO DO VAR" }) ]);
-      var sub = el("div", { class: "var-sub", text: "Checando o lance…" });
+      var scene = buildVarScene(kind, annulled, atkCol, defCol);
+      var head = el("div", { class: "var-title" }, [ el("span", { class: "var-tv", text: "📺" }), el("span", { text: TITLE }) ]);
+      var legend = kind === "offside" ? el("div", { class: "var-legend" }, [
+        el("span", {}, [ el("i", { class: "lg blue" }), document.createTextNode(" Última linha da defesa") ]),
+        el("span", {}, [ el("i", { class: "lg red" }), document.createTextNode(" Atacante") ])
+      ]) : null;
+      var sub = el("div", { class: "var-sub revisando" }, [ el("span", { class: "var-spin" }), el("span", { class: "vs-txt", text: "Revisando o lance…" }) ]);
       var bar = el("div", { class: "var-bar" }, [ el("i") ]);
-      stage.appendChild(head); stage.appendChild(mini); stage.appendChild(sub); stage.appendChild(bar);
+      stage.appendChild(head); stage.appendChild(scene); if (legend) stage.appendChild(legend); stage.appendChild(sub); stage.appendChild(bar);
       var actionWrap = el("div", { class: "var-action" });
       stage.appendChild(actionWrap);
       overlay.appendChild(stage);
@@ -164,23 +214,25 @@
         overlay.classList.add("out");
         setTimeout(function () { overlay.remove(); }, 260);
         flashing = false;
-        after && after();                         // mostra o gol (se confirmado) / segue o lance
+        after && after();
         if (!done && !paused && !proceeded) step();
       }
       function reveal() {
-        sub.textContent = annulled ? ev.reason : ev.reason;
+        scene.classList.add("resolved");                 // para o "revisando" e mostra a marcação final
+        sub.classList.remove("revisando");
+        sub.innerHTML = ""; sub.appendChild(el("span", { class: "vs-txt", text: ev.reason }));
+        var stampTxt = kind === "goalline" ? (annulled ? "NÃO FOI GOL" : "GOL CONFIRMADO") : (annulled ? "GOL ANULADO" : "GOL VALIDADO");
         var verdict = el("div", { class: "var-verdict " + (annulled ? "no" : "ok") }, [
-          el("div", { class: "var-stamp", text: annulled ? "GOL ANULADO" : "GOL VALIDADO" }),
+          el("div", { class: "var-stamp", text: stampTxt }),
           el("div", { class: "var-reason", text: ev.reason })
         ]);
         stage.insertBefore(verdict, actionWrap);
         actionWrap.innerHTML = "";
         actionWrap.appendChild(TM.ui.button("Continuar ▶", finishVar, "btn primary"));
       }
-      // interativo: o usuário toca em "Ver decisão" para revelar o veredito
       actionWrap.appendChild(TM.ui.button("🔍 Ver decisão do VAR", function () { bar.classList.add("full"); reveal(); }, "btn"));
-      // avança sozinho se ninguém tocar (não trava a partida)
-      setTimeout(function () { if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, 3200);
+      // deixa "revisando" por um tempo antes de revelar sozinho (não trava a partida)
+      setTimeout(function () { if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, 3600);
     }
     function onSkip() {
       if (proceeded) return;                 // ignora cliques repetidos
@@ -335,14 +387,17 @@
       if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
       var evs = byMin[mm] || [];
       if (animating && delay > 0) {
-        var fev = null, varEv = null;
+        var fev = null, varEv = null, gev = null;
         for (var _i = 0; _i < evs.length; _i++) {
           var _e = evs[_i];
           if (!fev && (_e.type === "yellow" || _e.type === "red" || _e.type === "injury")) fev = _e;
           if (!varEv && _e.type === "var") varEv = _e;
+          if (!gev && (_e.type === "goal" || _e.type === "pengoal")) gev = _e;
         }
         // VAR imersivo: pausa, revisa e só então mostra o resto do lance (o gol, se confirmado)
         if (varEv) { showVarReview(varEv, function () { processEvents(evs); }); return; }
+        // cutscene de GOL (no modo tradicional; no Campo 2D a comemoração é no próprio campo)
+        if (gev && !(pitch && pitchOn)) { processEvents(evs); showGoalFlash(gev); return; }
         if (fev) showCardFlash(fev);
         // fala de ambiente em minutos "parados" (dá fluidez, sem poluir)
         if (!evs.length && !(pitch && pitchOn) && mm > 1 && mm - lastAmbient >= 9 && Math.random() < 0.55) {

@@ -1517,6 +1517,21 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .cf-name { font-size: 18px; font-weight: 700; color: #fff; }
 .cf-team { font-size: 13px; color: var(--text-dim); }
 
+/* ===== Cutscene de GOL (estilo cartão, comemorativo) ===== */
+.goal-flash { background: radial-gradient(80% 60% at 50% 42%, rgba(20,90,45,.55), rgba(4,10,6,.9)); }
+.goal-flash .gf-rays { position: absolute; inset: 0; pointer-events: none;
+  background: conic-gradient(from 0deg at 50% 46%, rgba(45,224,110,.16) 0 8deg, transparent 8deg 24deg);
+  animation: gfSpin 9s linear infinite; opacity: .8; }
+@keyframes gfSpin { to { transform: rotate(360deg); } }
+.goal-flash .cf-inner { position: relative; z-index: 1; }
+.gf-ball { font-size: 60px; animation: gfBall .5s cubic-bezier(.2,.9,.2,1.4); }
+@keyframes gfBall { 0% { transform: scale(.2) rotate(-40deg); opacity: 0; } 60% { transform: scale(1.25) rotate(10deg); } 100% { transform: scale(1) rotate(0); opacity: 1; } }
+.gf-face { border-color: #2de06e !important; box-shadow: 0 0 0 4px rgba(45,224,110,.3), 0 10px 30px rgba(0,0,0,.5) !important; }
+.gf-goool { font-size: 34px; font-weight: 900; letter-spacing: 3px; color: #2de06e; text-shadow: 0 0 18px rgba(45,224,110,.7);
+  animation: gfPop .45s cubic-bezier(.2,.9,.2,1.3); }
+@keyframes gfPop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.gf-score { font-size: 30px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; margin-top: 2px; letter-spacing: 2px; }
+
 /* ===== VAR (flash cosmético) ===== */
 .var-flash { position: fixed; top: 18%; left: 0; right: 0; z-index: 8500; display: flex; justify-content: center; pointer-events: none; animation: cfIn .2s ease-out; }
 .var-flash.out { animation: cfOut .25s ease-in forwards; }
@@ -1553,14 +1568,50 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .var-title { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; letter-spacing: 3px; font-size: 15px; color: #fff; }
 .var-tv { font-size: 20px; animation: varBlink 1s steps(2) infinite; }
 @keyframes varBlink { 50% { opacity: .4; } }
-.var-mini { position: relative; height: 90px; margin: 14px 0; border-radius: 10px; overflow: hidden;
-  background: repeating-linear-gradient(90deg, #2f9c4f 0 26px, #2b924a 26px 52px); border: 1px solid rgba(255,255,255,.25); }
-.var-mini-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #ffe23d; left: 44%;
-  box-shadow: 0 0 8px #ffe23d; animation: varSweep 2.6s ease-in-out infinite; }
-@keyframes varSweep { 0%,100% { left: 40%; } 50% { left: 58%; } }
-.var-mini-dot { position: absolute; width: 12px; height: 12px; border-radius: 50%; top: 50%; transform: translateY(-50%); }
-.var-mini-dot.atk { background: #2f6fed; left: 52%; }
-.var-mini-dot.def { background: #e0483a; left: 42%; }
+.var-mini { position: relative; height: 150px; margin: 14px 0; border-radius: 10px; overflow: hidden;
+  background: repeating-linear-gradient(90deg, #0a0f0c 0 26px, #0d130f 26px 52px);
+  border: 1px solid rgba(45,210,110,.35); box-shadow: inset 0 0 0 1px rgba(45,210,110,.12); }
+/* linha de "revisando" varrendo o quadro (some quando resolvido) */
+.var-scan { position: absolute; top: 0; bottom: 0; width: 42px; z-index: 4; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(45,210,110,.28), transparent);
+  animation: varScan 1.5s linear infinite; }
+@keyframes varScan { 0% { left: -12%; } 100% { left: 100%; } }
+.var-mini.resolved .var-scan { display: none; }
+/* --- impedimento: linhas TRACEJADAS azul (defesa) / vermelho (atacante) + bolinha da cor do time --- */
+.var-mini.vk-offside { perspective: 500px; }
+.off-line { position: absolute; top: -6px; bottom: -6px; width: 0; transform: skewX(-9deg); z-index: 2;
+  animation: varCalIn .45s ease-out; }
+.off-line.blue { border-left: 3px dashed #4da3ff; filter: drop-shadow(0 0 6px rgba(77,163,255,.8)); }
+.off-line.red { border-left: 3px dashed #ff5a52; filter: drop-shadow(0 0 6px rgba(255,90,82,.8)); }
+.off-dot { position: absolute; bottom: 16px; left: -8px; width: 15px; height: 15px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
+.off-gap { position: absolute; top: 0; bottom: 0; transform: skewX(-9deg); z-index: 1; animation: varCalIn .45s ease-out; }
+.off-gap.off { background: rgba(255,80,70,.26); } .off-gap.on { background: rgba(53,196,106,.26); }
+/* --- tecnologia de linha de gol --- */
+.var-mini.vk-goalline { background: repeating-linear-gradient(90deg, #0a0f0c 0 26px, #0d130f 26px 52px); }
+.gl-net { position: absolute; right: 8%; top: 20%; bottom: 20%; width: 26%;
+  background: repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 6px, transparent 6px 12px), repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 6px, transparent 6px 12px);
+  border: 2px solid rgba(255,255,255,.6); border-radius: 3px; }
+.gl-line { position: absolute; right: 34%; top: 8%; bottom: 8%; width: 4px; background: #2de06e; box-shadow: 0 0 10px #2de06e; }
+.gl-ball { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; animation: varCalIn .45s ease-out; }
+.gl-ball.short { right: 44%; } .gl-ball.over { right: 26%; }
+.gl-ball-dot { display: block; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+/* --- revisão de falta / mão na bola --- */
+.foul-zone { position: absolute; left: 50%; top: 50%; width: 74px; height: 74px; transform: translate(-50%,-50%);
+  border-radius: 50%; border: 2px dashed rgba(45,210,110,.7); }
+.foul-zone.hit { border-color: #ff5a52; box-shadow: 0 0 16px rgba(255,90,82,.5); }
+.foul-dot { position: absolute; top: 50%; width: 17px; height: 17px; border-radius: 50%; transform: translateY(-50%);
+  border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); z-index: 3; }
+.foul-dot.atk { left: calc(50% - 16px); } .foul-dot.def { left: calc(50% + 4px); }
+.foul-hand { position: absolute; left: 50%; top: 26%; transform: translateX(-50%); font-size: 22px; z-index: 3; }
+.var-legend { display: flex; justify-content: center; gap: 16px; font-size: 11px; color: var(--text-dim); margin: -4px 0 6px; }
+.var-legend .lg { display: inline-block; width: 16px; height: 0; border-top: 3px dashed; vertical-align: middle; margin-right: 4px; }
+.var-legend .lg.blue { border-color: #4da3ff; } .var-legend .lg.red { border-color: #ff5a52; }
+.var-spin { display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25);
+  border-top-color: var(--green); animation: varSpin .7s linear infinite; vertical-align: middle; margin-right: 7px; }
+.var-sub.revisando { color: #cfe9d8; }
+.var-sub.revisando .vs-txt { animation: varBlink 1.1s steps(2) infinite; }
+@keyframes varSpin { to { transform: rotate(360deg); } }
 .var-sub { color: var(--text-dim); font-size: 13px; min-height: 18px; }
 .var-bar { height: 5px; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; margin: 12px 0; }
 .var-bar > i { display: block; height: 100%; width: 8%; background: var(--gold); transition: width 2.8s linear; }
@@ -1573,20 +1624,8 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 @keyframes varStamp { from { transform: scale(1.6) rotate(-5deg); opacity: 0; } to { transform: scale(1) rotate(-5deg); opacity: 1; } }
 .var-action { margin-top: 6px; }
 
-/* ===== VAR: gráfico de impedimento calibrado (linhas do defensor/atacante) ===== */
-.var-mini { height: 128px !important; perspective: 400px; }
-.var-goal { position: absolute; right: 4px; top: 22%; bottom: 22%; width: 5px; border-radius: 2px;
-  background: repeating-linear-gradient(0deg, #fff 0 6px, rgba(255,255,255,.4) 6px 12px); box-shadow: 0 0 10px rgba(255,255,255,.5); }
-.var-cal { position: absolute; top: -8px; bottom: -8px; width: 3px; transform: skewX(-10deg); z-index: 2; }
-.var-cal.def { background: linear-gradient(180deg, #ff6b63, #c62828); box-shadow: 0 0 12px #ff5a52; }
-.var-cal.atk { background: linear-gradient(180deg, #5aa9ff, #2f6fed); box-shadow: 0 0 12px #4da3ff; }
-.var-cal-dot { position: absolute; bottom: 12px; left: 50%; width: 13px; height: 13px; border-radius: 50%; transform: translateX(-50%); border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
-.var-cal.def .var-cal-dot { background: #ff5a52; }
-.var-cal.atk .var-cal-dot { background: #4da3ff; }
-.var-gap { position: absolute; top: 0; bottom: 0; transform: skewX(-10deg); z-index: 1; }
-.var-gap.off { background: rgba(255,80,70,.28); }
-.var-gap.on { background: rgba(53,196,106,.28); }
-.var-cal, .var-gap { animation: varCalIn .5s ease-out; }
+.var-goal { position: absolute; right: 5px; top: 20%; bottom: 20%; width: 5px; border-radius: 2px;
+  background: repeating-linear-gradient(0deg, #2de06e 0 6px, rgba(45,224,110,.4) 6px 12px); box-shadow: 0 0 10px rgba(45,224,110,.6); }
 @keyframes varCalIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ===== Overall dinâmico (indicador no chip) ===== */

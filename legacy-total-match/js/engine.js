@@ -128,10 +128,22 @@
         var varOn = !isPen && Math.random() < 0.13;
         var annul = varOn && Math.random() < 0.42;
         if (varOn) {
-          var okR = ["Sem impedimento — posição legal", "Lance limpo, sem falta", "A bola não saiu pela linha"];
-          var noR = ["Impedimento no início da jogada", "Falta do atacante no lance", "Mão na bola antes do gol"];
-          events.push({ minute: minute, type: "var", team: side, player: scorer.name,
-            decision: annul ? "annulled" : "confirmed", reason: annul ? pick(noR) : pick(okR) });
+          // tipo de revisão: impedimento, falta, mão na bola ou tecnologia de linha
+          var okK = [
+            { k: "offside", r: "Sem impedimento — posição legal" },
+            { k: "foul", r: "Lance limpo, sem falta na origem" },
+            { k: "handball", r: "A bola não tocou no braço" },
+            { k: "goalline", r: "A bola cruzou totalmente a linha" }
+          ];
+          var noK = [
+            { k: "offside", r: "Impedimento no início da jogada" },
+            { k: "foul", r: "Falta do atacante no lance" },
+            { k: "handball", r: "Mão na bola antes do gol" },
+            { k: "goalline", r: "A bola não cruzou a linha por completo" }
+          ];
+          var kk = annul ? pick(noK) : pick(okK);
+          events.push({ minute: minute, type: "var", team: side, player: scorer.name, kind: kk.k,
+            decision: annul ? "annulled" : "confirmed", reason: kk.r });
         }
         if (annul) { return; } // gol anulado pelo VAR — não conta
         onTarget[side]++; score[side]++;
