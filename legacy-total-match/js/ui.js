@@ -599,79 +599,7 @@
     inner.appendChild(sec);
 
     screen.appendChild(el("div", { class: "m2-footer", text: "TOTAL MATCH • v1.0" }));
-
-    // ---- painéis laterais (SÓ desktop; escondidos no celular via CSS) ----
-    try { buildDesktopPanels(screen); } catch (e) {}
   });
-
-  // painéis que preenchem a tela grande: jogadores em destaque, posts e moral do time
-  function buildDesktopPanels(screen) {
-    var career = null; try { career = TM.storage.coachCareer(); } catch (e) {}
-
-    // ---------- ESQUERDA: jogadores em destaque ----------
-    var left = el("aside", { class: "m2-side m2-side-left", "aria-hidden": "true" });
-    var featured = [], title = "★ Craques do mundo";
-    if (career && career.roster && career.roster.length) {
-      title = "★ Seu elenco — " + (career.teamName || "seu clube");
-      featured = career.roster.map(function (id) { try { return TM.comp.resolvePlayer ? TM.comp.resolvePlayer(career, id) : TM.data.player(id); } catch (e) { return TM.data.player(id); } })
-        .filter(Boolean).sort(function (a, b) { return b.overall - a.overall; }).slice(0, 9);
-    } else {
-      var pb = TM.data.world().playersById;
-      featured = Object.keys(pb).map(function (k) { return pb[k]; }).filter(Boolean)
-        .sort(function (a, b) { return b.overall - a.overall; }).slice(0, 9);
-    }
-    left.appendChild(el("div", { class: "m2p-title", text: title }));
-    var flist = el("div", { class: "m2p-players" });
-    featured.forEach(function (p) {
-      var nat = p.nationId ? TM.data.nation(p.nationId) : null;
-      flist.appendChild(el("div", { class: "m2p-prow" }, [
-        (TM.img && TM.img.playerImg) ? TM.img.playerImg(p, "m2p-face") : el("div", { class: "m2p-face" }),
-        el("div", { class: "m2p-pinfo" }, [
-          el("div", { class: "m2p-pname", text: p.name }),
-          el("div", { class: "m2p-pmeta", text: (nat ? nat.name + " · " : "") + TM.data.posLabel(p) })
-        ]),
-        el("div", { class: "m2p-ovr", text: p.overall })
-      ]));
-    });
-    left.appendChild(flist);
-    screen.appendChild(left);
-
-    // ---------- DIREITA: moral do time + posts ----------
-    var right = el("aside", { class: "m2-side m2-side-right", "aria-hidden": "true" });
-    if (career) {
-      var mor = 60; try { mor = TM.social.morale(career); } catch (e) {}
-      var mcls = mor >= 70 ? "ok" : mor >= 45 ? "mid" : "lo";
-      var mtxt = mor >= 78 ? "Vestiário eufórico" : mor >= 60 ? "Clima positivo" : mor >= 45 ? "Clima neutro" : mor >= 30 ? "Torcida cobrando" : "Panela pegando fogo";
-      right.appendChild(el("div", { class: "m2p-title", text: "📣 Moral do clube" }));
-      right.appendChild(el("div", { class: "m2p-morale" }, [
-        el("div", { class: "m2p-mtop" }, [ el("span", { text: mtxt }), el("span", { class: "m2p-mval mm-" + mcls, text: Math.round(mor) + "%" }) ]),
-        el("div", { class: "m2p-mbar" }, [ el("div", { class: "m2p-mfill mm-" + mcls, style: "width:" + mor + "%" }) ])
-      ]));
-    }
-    right.appendChild(el("div", { class: "m2p-title", text: "💬 Torcida agora" }));
-    var posts = [];
-    if (career && career.social && career.social.posts && career.social.posts.length) {
-      posts = career.social.posts.slice(0, 6);
-    } else {
-      posts = [
-        { handle: "@ultras_tm", text: "Ano de título é esse! Confia no processo. 🟣⚽", likes: 1842 },
-        { handle: "@tati_torcedora", text: "A base do clube tá surreal, que geração! 🔥", likes: 934 },
-        { handle: "@zonamista", text: "Mercado abrindo… quem vem reforçar? 👀", likes: 512 },
-        { handle: "@voz_da_arquibancada", text: "Camisa pesada. Respeito quem veste. ❤️", likes: 1290 },
-        { handle: "@analista_tm", text: "Meio-campo é o setor mais forte da liga hoje.", likes: 388 }
-      ];
-    }
-    var plist = el("div", { class: "m2p-posts" });
-    posts.forEach(function (p) {
-      plist.appendChild(el("div", { class: "m2p-post" }, [
-        el("div", { class: "m2p-phandle", text: p.handle || "@torcedor" }),
-        el("div", { class: "m2p-ptext", text: p.text || "" }),
-        el("div", { class: "m2p-plikes", text: "♥ " + (p.likes != null ? p.likes : "") })
-      ]));
-    });
-    right.appendChild(plist);
-    screen.appendChild(right);
-  }
 
   register("modes-old-unused", function (screen) {
     screen.id = "screen-modes";

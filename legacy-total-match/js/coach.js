@@ -893,7 +893,64 @@
       hubBtn("📱", "Redes Sociais", function () { TM.ui.go("coach-social"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
+
+    // ---- rail lateral direito (SÓ desktop): elenco, moral e torcida preenchendo a tela ----
+    try { buildHubRail(screen, c); screen.classList.add("has-rightrail"); } catch (e) {}
   });
+
+  // painel direito do hub no PC — jogadores em destaque, moral do clube e posts da torcida
+  function buildHubRail(screen, c) {
+    var rail = el("aside", { class: "coach-rail", "aria-hidden": "true" });
+
+    // -- elenco em destaque --
+    rail.appendChild(el("div", { class: "cr-title", text: "👥 Seu elenco" }));
+    var top = (c.roster || []).map(function (id) { return C().resolvePlayer(c, id); }).filter(Boolean)
+      .sort(function (a, b) { return b.overall - a.overall; }).slice(0, 8);
+    var pl = el("div", { class: "cr-players" });
+    top.forEach(function (p) {
+      var cap = c.captainId === p.id;
+      pl.appendChild(el("button", { class: "cr-prow", on: { click: (function (pp) { return function () { try { TM.coachUI.openPlayer(pp, "coach-hub"); } catch (e) {} }; })(p) } }, [
+        (TM.img && TM.img.playerImg) ? TM.img.playerImg(p, "cr-face") : el("div", { class: "cr-face" }),
+        el("div", { class: "cr-pinfo" }, [
+          el("div", { class: "cr-pname", text: (cap ? "🎽 " : "") + shortName(p.name) }),
+          el("div", { class: "cr-pmeta", text: TM.data.posLabel(p) + (c.injuries && c.injuries[p.id] ? " · 🚑" : "") })
+        ]),
+        el("div", { class: "cr-ovr", text: p.overall })
+      ]));
+    });
+    rail.appendChild(pl);
+    rail.appendChild(el("button", { class: "cr-more", text: "Ver elenco completo →", on: { click: function () { TM.ui.go("coach-squad"); } } }));
+
+    // -- moral do clube --
+    var mor = 60; try { mor = TM.social.morale(c); } catch (e) {}
+    var mcls = mor >= 70 ? "ok" : mor >= 45 ? "mid" : "lo";
+    var mtxt = mor >= 78 ? "Vestiário eufórico" : mor >= 60 ? "Clima positivo" : mor >= 45 ? "Clima neutro" : mor >= 30 ? "Torcida cobrando" : "Clima pegando fogo";
+    rail.appendChild(el("div", { class: "cr-title", text: "📣 Moral do clube" }));
+    rail.appendChild(el("div", { class: "cr-morale" }, [
+      el("div", { class: "cr-mtop" }, [ el("span", { text: mtxt }), el("span", { class: "cr-mval mm-" + mcls, text: Math.round(mor) + "%" }) ]),
+      el("div", { class: "cr-mbar" }, [ el("div", { class: "cr-mfill mm-" + mcls, style: "width:" + mor + "%" }) ])
+    ]));
+
+    // -- torcida agora (posts) --
+    rail.appendChild(el("div", { class: "cr-title", text: "💬 Torcida agora" }));
+    var posts = (c.social && c.social.posts && c.social.posts.slice(0, 6)) || [];
+    var pw = el("div", { class: "cr-posts" });
+    if (posts.length) {
+      posts.forEach(function (p) {
+        pw.appendChild(el("div", { class: "cr-post" }, [
+          el("div", { class: "cr-phandle", text: p.handle || "@torcedor" }),
+          el("div", { class: "cr-ptext", text: p.text || "" }),
+          el("div", { class: "cr-plikes", text: "♥ " + (p.likes != null ? p.likes : 0) })
+        ]));
+      });
+    } else {
+      pw.appendChild(el("div", { class: "cr-post" }, [ el("div", { class: "cr-ptext", text: "A torcida ainda está quieta — jogue uma partida para movimentar as redes." }) ]));
+    }
+    rail.appendChild(pw);
+    rail.appendChild(el("button", { class: "cr-more", text: "Abrir redes sociais →", on: { click: function () { TM.ui.go("coach-social"); } } }));
+
+    screen.appendChild(rail);
+  }
 
   /* ---------- finanças do clube (receitas / despesas / lucro) ---------- */
   // folha salarial estimada do elenco (na moeda da carreira)
