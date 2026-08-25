@@ -2612,8 +2612,8 @@
         ])
       ]),
       el("div", { class: "prof-gauges" }, [
-        gaugeSVG(p.overall, 99, "OVR", "#22c55e"),
-        gaugeSVG(pot, 99, "POT", pot > p.overall ? "#6ef0a0" : "#8aa0b2")
+        gaugeSVG(p.overall, 99, "OVR", "#8b5cf6"),
+        gaugeSVG(pot, 99, "POT", pot > p.overall ? "#a78bfa" : "#8aa0b2")
       ])
     ]));
 
