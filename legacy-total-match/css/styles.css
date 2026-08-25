@@ -2011,3 +2011,12 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .pc-row { font-size: 12.5px; line-height: 1.35; }
 .pc-who { font-weight: 800; color: var(--gold-light); margin-right: 5px; }
 .pc-txt { color: var(--text-dim); }
+
+/* ============ Estatísticas do time na temporada (elenco) ============ */
+.xray-season { background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 12px 14px; }
+.xs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.xs-cell { background: var(--black-soft); border: 1px solid var(--line); border-radius: 10px; padding: 8px 4px; text-align: center; }
+.xs-v { font-size: 16px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.xs-v.xs-ok { color: #38d66a; } .xs-v.xs-bad { color: #ff6a61; }
+.xs-l { font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .3px; margin-top: 1px; }
+@media (max-width: 380px) { .xs-grid { grid-template-columns: repeat(2, 1fr); } }
