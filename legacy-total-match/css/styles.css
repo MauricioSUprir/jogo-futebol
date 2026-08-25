@@ -2099,6 +2099,16 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .bottom-nav-spacer { height: 72px; width: 100%; flex: 0 0 auto; }
 @media (min-width: 760px) { .bottom-nav { max-width: 620px; margin: 0 auto; border-radius: 16px 16px 0 0; border: 1px solid var(--line); border-bottom: none; } }
 
+/* reputação do treinador */
+.rep-badge { display: flex; align-items: center; gap: 11px; width: 100%; max-width: 620px; margin: 0 auto 12px; background: linear-gradient(135deg, rgba(139,92,246,.14), var(--panel)); border: 1px solid rgba(139,92,246,.3); border-radius: 13px; padding: 10px 14px; }
+.rep-star { font-size: 20px; }
+.rep-info { flex: 1; }
+.rep-top { display: flex; justify-content: space-between; align-items: baseline; }
+.rep-lbl { font-size: 12px; color: var(--text-dim); }
+.rep-val { font-weight: 800; font-size: 13px; color: #c4b5fd; }
+.rep-bar { height: 7px; border-radius: 5px; background: var(--black-soft); overflow: hidden; margin-top: 6px; }
+.rep-fill { height: 100%; border-radius: 5px; background: linear-gradient(90deg, #7c3aed, #a78bfa); transition: width .4s; }
+
 /* ===== Mundo: ranking + prêmios ===== */
 .world-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
 .rank-note { font-size: 12px; color: var(--text-dim); text-align: center; }
