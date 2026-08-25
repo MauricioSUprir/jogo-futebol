@@ -2636,3 +2636,48 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .fc-continue-ic { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; background: rgba(0,0,0,.18); font-size: 10px; flex: none; }
 .fc-continue-tx { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 430px) { .fc-continue { font-size: 12px; padding: 8px 13px 8px 10px; } }
+
+/* MENU sempre ESCURO, mesmo no tema claro (evita "menu branco" no celular) */
+#screen-modes.fcmenu, body.theme-light #screen-modes.fcmenu { background: radial-gradient(120% 90% at 50% 12%, rgba(34,197,94,.10), transparent 55%), #06070a !important; }
+.fc2-name { color: #fff; }
+.fc2-desc { color: rgba(255,255,255,.82); }
+.fc2-more-lb { color: #fff; }
+body.theme-light .fc2-card { background: #12161c; border-color: rgba(255,255,255,.09); }
+body.theme-light .fc2-desc { color: rgba(255,255,255,.82); }
+body.theme-light .fc2-name, body.theme-light .fc2-more-lb { color: #fff; }
+body.theme-light .fc-prof, body.theme-light .fc-gear { background: rgba(20,24,20,.7); color: #fff; }
+body.theme-light .fc-prof-name { color: #fff; }
+body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff; }
+
+/* botão "Mais" (⋯) e badge na nav inferior */
+.bn-item.bn-more .bn-ic { font-weight: 900; }
+.bn-badge { position: absolute; top: 2px; right: calc(50% - 20px); min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px;
+  background: #e23b3b; color: #fff; font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px #0d1116; }
+/* com 6 itens, aperta um pouco o texto */
+.bottom-nav .bn-item .bn-lb { font-size: 10px; }
+
+/* SHEET (bandeja) com todas as seções */
+.sheet-overlay { position: fixed; inset: 0; z-index: 120; background: rgba(0,0,0,.55); display: flex; align-items: flex-end;
+  opacity: 0; transition: opacity .22s ease; -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.sheet-overlay.show { opacity: 1; }
+.sheet { width: 100%; max-width: 620px; margin: 0 auto; background: var(--panel); border-top-left-radius: 20px; border-top-right-radius: 20px;
+  border: 1px solid var(--line); border-bottom: none; padding: 10px 16px calc(20px + env(safe-area-inset-bottom)); transform: translateY(100%); transition: transform .26s cubic-bezier(.2,.8,.2,1); }
+.sheet-overlay.show .sheet { transform: translateY(0); }
+.sheet-handle { width: 40px; height: 4px; border-radius: 3px; background: var(--line-2); margin: 4px auto 12px; }
+.sheet-title { font-weight: 800; font-size: 14px; margin: 0 4px 12px; }
+.sheet-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.sheet-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 13px 6px; border-radius: 14px;
+  background: var(--black-soft); border: 1px solid var(--line); color: var(--text); cursor: pointer; transition: transform .12s, border-color .12s; }
+.sheet-tile:active { transform: scale(.94); }
+.sheet-tile.on { border-color: var(--green); background: color-mix(in srgb, var(--green) 14%, var(--panel)); }
+.sheet-ic { font-size: 22px; line-height: 1; }
+.sheet-lb { font-size: 11px; font-weight: 700; text-align: center; }
+.sheet-badge { position: absolute; top: 5px; right: 7px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #e23b3b; color: #fff; font-size: 9.5px; font-weight: 800; line-height: 16px; text-align: center; }
+@media (min-width: 1024px) { .sheet-overlay { display: none; } }
+
+/* CELULAR: navegação só pela nav inferior (+ ⋯ Mais); esconde a barra de setores do topo.
+   No PC (>=1024px) essa mesma barra vira a sidebar e continua aparecendo. */
+@media (max-width: 1023px) {
+  .has-sidebar .sector-bar { display: none !important; }
+  .screen.has-sidebar { padding-top: 0; }
+}
