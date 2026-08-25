@@ -96,6 +96,7 @@
     var back = mode === "player" ? "player-hub" : "coach-hub";
     if (!career) { TM.ui.go(back); return; }
     screen.appendChild(TM.ui.topbar("📱 Redes Sociais", function () { TM.ui.go(back); }));
+    if (mode === "coach" && TM.coachUI) TM.coachUI.addBar(screen, "coach-social");
     var wrap = el("div", { class: "social-wrap" });
     screen.appendChild(wrap);
     wrap.appendChild(el("div", { class: "social-head" }, [ el("span", { class: "sh-logo", text: "⚽ BolaSocial" }), el("span", { class: "sh-sub", text: "o que estão falando agora" }) ]));

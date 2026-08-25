@@ -536,6 +536,84 @@
     return career;
   }
 
+  // ---- troca de clube (aceitar proposta de outro clube / recomeçar após demissão) ----
+  function switchUserClub(career, clubId) {
+    var club = TM.data.club(clubId); if (!club) return career;
+    if (!career.clubHistory) career.clubHistory = [];
+    career.clubHistory.push({ clubId: career.teamId, clubName: career.teamName, season: career.season, seasonYear: career.seasonYear, left: "trocou de clube" });
+    // reset ligado ao clube (mantém histórico, treinador, moeda, seleção, honours)
+    career.teamId = clubId;
+    career.teamName = club.name;
+    career.leagueId = club.leagueId;
+    career.roster = TM.data.clubPlayers(clubId).map(function (p) { return p.id; });
+    career.signedFrom = {};
+    career.objective = generateObjective(clubId);
+    career.budget = Math.round(baseBudgetEur(TM.data.clubRating(clubId)) * (career.money ? career.money.mult : 1));
+    career.tactic = "equilibrado";
+    career.injuries = {}; career.suspensions = {}; career.confidence = {};
+    career.recentForm = []; career.stats = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
+    career.youth = generateYouth(clubId);
+    career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    career.jobOffers = [];
+    career.unemployed = false;
+    career.matchNo = 0; career.currentDay = 0;
+    seasonSetup(career);
+    TM.notify.push(career, { icon: "🤝", title: "Novo desafio", news: true, title2: club.name, text: "Você assumiu o comando do " + club.name + "! Uma nova história começa." });
+    return career;
+  }
+
+  // ---- propostas de emprego de outros clubes (gera de acordo com o desempenho) ----
+  function generateJobOffers(career) {
+    if (career.type === "director") return;              // dirigente não recebe proposta de técnico
+    if (!career.jobOffers) career.jobOffers = [];
+    var matchNo = career.matchNo || 0;
+    var unemployed = !!career.unemployed;
+    // limpa propostas velhas (mais de ~6 jogos)
+    career.jobOffers = career.jobOffers.filter(function (o) { return unemployed || (matchNo - (o.matchNo || 0)) <= 6; });
+    var throttle = unemployed ? 0 : 3;
+    if (!unemployed && (matchNo - (career._lastOfferGen || 0)) < throttle) return;
+    // reputação do treinador: títulos + desempenho na temporada
+    var honours = (career.honours || []).length;
+    var st = career.stats || { p: 0, w: 0 };
+    var winRate = st.p >= 3 ? st.w / st.p : 0.4;
+    var rep = honours * 6 + Math.round(winRate * 20) + (career.season - 1) * 2; // 0..~40+
+    // chance de surgir proposta
+    var chance = unemployed ? 0.9 : (winRate > 0.6 ? 0.5 : winRate > 0.45 ? 0.28 : 0.12);
+    if (Math.random() > chance) { career._lastOfferGen = matchNo; return; }
+    if (career.jobOffers.length >= 4) { career._lastOfferGen = matchNo; return; }
+    // escolhe um clube pretendente (melhor quanto maior a reputação); evita o clube atual
+    var W = TM.data.world();
+    var pool = W.clubs.filter(function (cl) { return cl.id !== career.teamId; });
+    var myRating = TM.data.clubRating(career.teamId);
+    var targetBand = myRating + Math.min(8, Math.round(rep / 4)); // clubes um pouco melhores
+    pool = pool.map(function (cl) { return { cl: cl, r: TM.data.clubRating(cl.id) }; })
+      .filter(function (o) { return o.r <= targetBand + 4 && o.r >= targetBand - 10; });
+    if (!pool.length) { career._lastOfferGen = matchNo; return; }
+    // não repete clube já com proposta aberta
+    var open = {}; career.jobOffers.forEach(function (o) { open[o.clubId] = true; });
+    pool = pool.filter(function (o) { return !open[o.cl.id]; });
+    if (!pool.length) { career._lastOfferGen = matchNo; return; }
+    pool.sort(function (a, b) { return b.r - a.r; });
+    var pick = pool[Math.floor(Math.random() * Math.min(pool.length, 5))];
+    var cl = pick.cl;
+    var lg = TM.data.league(cl.leagueId);
+    var descs = [
+      "vê em você o perfil ideal para o projeto",
+      "acaba de demitir o treinador e quer você no comando",
+      "prepara uma reformulação e sonha com o seu trabalho",
+      "tem ambições grandes e quer você para liderar o elenco"
+    ];
+    var wage = Math.round(baseBudgetEur(pick.r) * (career.money ? career.money.mult : 1) * 0.02);
+    career.jobOffers.unshift({
+      id: "job-" + cl.id + "-" + matchNo + "-" + Math.floor(Math.random() * 999),
+      clubId: cl.id, clubName: cl.name, leagueName: lg ? lg.name : "",
+      rating: pick.r, desc: descs[Math.floor(Math.random() * descs.length)],
+      wage: wage, matchNo: matchNo, season: career.season, seen: false
+    });
+    career._lastOfferGen = matchNo;
+    TM.notify.push(career, { icon: "💼", title: "Proposta recebida", news: true, text: "O " + cl.name + " sondou você para ser o novo treinador. Veja em Propostas." });
+  }
+
   /* ---------- processa o pós-jogo do usuário: lesões, suspensões, avisos ---------- */
   // ---- Overall dinâmico: confiança que sobe/desce por desempenho ----
   function steadyPlayer(id) { var s = String(id || ""), h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 100) < 28; } // ~28% constantes (bem distribuído)
@@ -1743,6 +1821,7 @@
 
   TM.comp = {
     newClubCareer: newClubCareer, newSeason: newSeason, migrateCareer: migrateCareer,
+    switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
