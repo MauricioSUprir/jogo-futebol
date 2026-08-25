@@ -1678,3 +1678,30 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .mt-eye { flex: 0 0 auto; font-size: 10px; letter-spacing: 1.5px; font-weight: 800; color: var(--gold-light); }
 .mt-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 620px) { .modes-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); } .mode-card.big { grid-column: span 1; } }
+
+/* ===== Menu em lista vertical (rolável) + PC ===== */
+#screen-modes { overflow-y: auto; }
+.modes-wrap { max-width: 620px; }
+.modes-list { display: flex; flex-direction: column; gap: 8px; }
+.mode-row { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer;
+  background: linear-gradient(150deg, var(--panel), var(--black-soft)); border: 1px solid var(--line);
+  border-left: 3px solid var(--card-acc, var(--gold)); border-radius: 13px; padding: 14px 15px; color: var(--text);
+  transition: transform .1s, border-color .15s, box-shadow .15s, background .15s; }
+.mode-row:hover { transform: translateX(3px); box-shadow: 0 8px 22px -14px var(--card-acc, rgba(34,197,94,.5)); background: linear-gradient(150deg, var(--black-soft), var(--panel)); }
+.mode-row:active { transform: translateX(0); }
+.mode-row .mode-orb { width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center;
+  font-size: 21px; flex: 0 0 auto; background: var(--card-acc-soft, rgba(34,197,94,.14)); border: 1px solid var(--card-acc, var(--gold)); }
+.mode-row .mode-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.mode-row .mode-name { font-size: 16px; font-weight: 700; }
+.mode-row .mode-desc { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; -webkit-line-clamp: 1; }
+.mode-row .mode-go { flex: 0 0 auto; font-size: 22px; color: var(--card-acc, var(--gold)); opacity: .7; }
+/* Computador: centraliza, mais largo e confortável */
+@media (min-width: 720px) {
+  .modes-head, .modes-wrap { max-width: 680px; }
+  .modes-head { padding-top: 26px; }
+  .modes-logo { height: 48px; }
+  .mode-row { padding: 16px 18px; border-radius: 15px; }
+  .mode-row .mode-orb { width: 48px; height: 48px; font-size: 23px; }
+  .mode-row .mode-name { font-size: 17px; }
+  .modes-sec-title { margin-top: 22px; font-size: 13px; }
+}

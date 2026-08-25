@@ -561,18 +561,18 @@
     var wrap = el("div", { class: "modes-wrap" });
     SECTIONS.forEach(function (sec) {
       wrap.appendChild(el("div", { class: "modes-sec-title", text: sec.title }));
-      var grid = el("div", { class: "modes-grid acc-" + sec.accent });
+      var list = el("div", { class: "modes-list acc-" + sec.accent });
       sec.items.forEach(function (m) {
-        grid.appendChild(el("button", { class: "mode-card" + (m.big ? " big" : ""), on: { click: function () { go(m.route); } } }, [
+        list.appendChild(el("button", { class: "mode-row", on: { click: function () { go(m.route); } } }, [
           el("span", { class: "mode-orb", text: m.icon }),
           el("span", { class: "mode-info" }, [
             el("span", { class: "mode-name", text: m.name }),
             el("span", { class: "mode-desc", text: m.desc })
           ]),
-          el("span", { class: "mode-go", text: "▸" })
+          el("span", { class: "mode-go", text: "›" })
         ]));
       });
-      wrap.appendChild(grid);
+      wrap.appendChild(list);
     });
 
     // ticker de curiosidades (rodapé slim)
