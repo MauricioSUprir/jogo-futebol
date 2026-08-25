@@ -452,6 +452,7 @@
     career.seasonYear = 2025 + career.season;
     career.currentDay = 0;
     career.matchNo = 0;
+    career.pstats = {};            // estatísticas por jogador zeram a cada temporada
     career.pendingWorldDeals = [];
     buildWindows(career);
   }
@@ -688,6 +689,49 @@
     updateConfidence(career, result, userSide); // overall dinâmico
   }
   function inRoster(career, id) { return career.roster.indexOf(id) >= 0; }
+
+  // ---- estatísticas por JOGADOR na temporada (jogos, gols, assist, nota, forma) ----
+  function posRankOf(p) { return p.pos === "FW" ? 3 : p.pos === "MF" ? 2 : p.pos === "DF" ? 1 : 0; }
+  function clampRating(r) { return Math.max(3.5, Math.min(10, Math.round(r * 10) / 10)); }
+  function recordPlayerStats(career, result, userSide, oppName) {
+    if (!result || !result.score) return;
+    if (!career.pstats) career.pstats = {};
+    var gf = result.score[userSide], ga = result.score[1 - userSide];
+    var res = gf > ga ? "V" : gf < ga ? "D" : "E";
+    var scoreStr = gf + "×" + ga;
+    var starters = ((career.lineup && career.lineup.starters) || []).slice();
+    var onField = starters.map(function (id) { return resolvePlayer(career, id); }).filter(Boolean);
+    if (!onField.length) return;
+    // gols do meu time por NOME do artilheiro (eventos guardam o nome)
+    var goalByName = {};
+    (result.events || []).forEach(function (ev) {
+      if ((ev.type === "goal" || ev.type === "pengoal") && ev.team === userSide && ev.player) goalByName[ev.player] = (goalByName[ev.player] || 0) + 1;
+    });
+    // assistências sintéticas (o motor não gera): ~50% dos gols têm um assistente companheiro
+    var goalsList = [];
+    onField.forEach(function (p) { var g = goalByName[p.name] || 0; for (var k = 0; k < g; k++) goalsList.push(p.id); });
+    var assistCount = {};
+    goalsList.forEach(function (scorerId) {
+      if (Math.random() < 0.5) {
+        var mates = onField.filter(function (p) { return p.id !== scorerId; }).sort(function (a, b) { return posRankOf(b) - posRankOf(a); });
+        var cand = mates[Math.floor(Math.random() * Math.min(5, mates.length))];
+        if (cand) assistCount[cand.id] = (assistCount[cand.id] || 0) + 1;
+      }
+    });
+    onField.forEach(function (p) {
+      var st = career.pstats[p.id] || (career.pstats[p.id] = { apps: 0, goals: 0, assists: 0, rsum: 0, rn: 0, form: [], noScore: 0, best: null, last: null });
+      var g = goalByName[p.name] || 0, a = assistCount[p.id] || 0;
+      var r = 6.0 + (Math.random() * 1.2 - 0.6) + g * 0.85 + a * 0.45 + (res === "V" ? 0.35 : res === "D" ? -0.35 : 0);
+      if ((p.pos === "GK" || p.pos === "DF") && ga === 0) r += 0.4;
+      if ((p.pos === "GK" || p.pos === "DF") && ga >= 3) r -= 0.5;
+      r = clampRating(r);
+      st.apps++; st.goals += g; st.assists += a; st.rsum += r; st.rn++;
+      st.form.push(res); if (st.form.length > 5) st.form = st.form.slice(-5);
+      if (g > 0) st.noScore = 0; else if (p.pos === "FW" || p.pos === "MF") st.noScore++;
+      st.last = { rating: r, opp: oppName || "Adversário", score: scoreStr, res: res, goals: g, assists: a };
+      if (!st.best || r > st.best.rating) st.best = { rating: r, opp: oppName || "Adversário", score: scoreStr };
+    });
+  }
 
   /* ---------- chamadas da diretoria ---------- */
   // exigência: quantas derrotas seguidas até a diretoria cobrar / quantas vitórias para elogiar
@@ -1839,7 +1883,7 @@
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
-    processUserMatch: processUserMatch, dynamicInfo: dynamicInfo, resolveIncomingOffer: resolveIncomingOffer,
+    processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
     promoteYouth: promoteYouth, generateYouth: generateYouth,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
