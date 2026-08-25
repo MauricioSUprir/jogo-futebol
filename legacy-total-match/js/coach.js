@@ -7,6 +7,18 @@
 
   function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
+  // confiança da diretoria (0-100): posição vs meta, ajustada pelo rigor do conselho
+  function boardConfidence(c) {
+    try {
+      var pos = C().currentPosition(c), target = (c.objective && c.objective.maxPos) || 10;
+      var diff = target - pos;                         // + = melhor que a meta
+      var rigor = c.board === "rigorosa" ? 1.35 : c.board === "tranquila" ? 0.7 : 1;
+      var v = 58 + diff * 6 * rigor;
+      if (c.confidence != null) v += (c.confidence - 50) * 0.2;   // moral recente influencia
+      return Math.max(3, Math.min(100, Math.round(v)));
+    } catch (e) { return 60; }
+  }
+
   function sym(c) { return c.money ? c.money.sym : "€"; }
   function mult(c) { return c.money ? c.money.mult : 1; }
   function r2(n) { return Math.round(n * 100) / 100; }                   // 2 casas (mantém sub-1M)
@@ -462,13 +474,23 @@
       ]));
     }
 
-    // meta da diretoria
+    // meta da diretoria + PRESSÃO (confiança da diretoria)
     var pos = C().currentPosition(c);
-    screen.appendChild(el("div", { class: "objective" }, [
-      el("span", { class: "obj-ic", text: "🎯" }),
-      el("div", {}, [
-        el("div", { class: "obj-desc", text: "Meta: " + c.objective.desc }),
-        el("div", { class: "obj-prog", text: "Posição atual: " + pos + "º" + (pos <= c.objective.maxPos ? " ✓ (dentro da meta)" : " ⚠ (abaixo da meta)") })
+    var conf = boardConfidence(c);
+    var within = pos <= c.objective.maxPos;
+    var pInfo = conf >= 70 ? { cls: "ok", txt: "Diretoria confiante" } : conf >= 40 ? { cls: "mid", txt: "Diretoria observando" } : conf >= 20 ? { cls: "lo", txt: "Sob pressão" } : { cls: "crit", txt: "🚨 Risco de demissão" };
+    screen.appendChild(el("div", { class: "objective obj-card" }, [
+      el("div", { class: "obj-top" }, [
+        el("span", { class: "obj-ic", text: "🎯" }),
+        el("div", { class: "obj-main" }, [
+          el("div", { class: "obj-desc", text: "Meta da diretoria: " + c.objective.desc }),
+          el("div", { class: "obj-prog", text: "Posição atual: " + pos + "º" + (within ? " ✓ dentro da meta" : " ⚠ abaixo da meta") })
+        ])
+      ]),
+      el("div", { class: "board-meter" }, [
+        el("div", { class: "bm-row" }, [ el("span", { class: "bm-lbl", text: "Confiança da diretoria" }), el("span", { class: "bm-val bm-" + pInfo.cls, text: conf + "%" }) ]),
+        el("div", { class: "bm-bar" }, [ el("div", { class: "bm-fill bm-" + pInfo.cls, style: "width:" + conf + "%" }) ]),
+        el("div", { class: "bm-msg bm-" + pInfo.cls, text: pInfo.txt })
       ])
     ]));
 
@@ -2582,7 +2604,30 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: "Partida de Base",
       onBack: function () { TM.ui.go("coach-youth"); },
-      onDone: function () { TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result }); }
+      onDone: function () { driftYouthPotential(c, result, myYouth); TM.storage.saveCoachCareer(c); TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result }); }
     });
   });
+  // o potencial da base SOBE ou CAI conforme o desempenho nas partidas de base
+  function driftYouthPotential(c, result, myPlayers) {
+    var won = result.score[0] > result.score[1], lost = result.score[0] < result.score[1];
+    var scorers = {}; (result.events || []).forEach(function (e) { if ((e.type === "goal" || e.type === "pengoal") && e.team === 0 && e.player) scorers[e.player] = true; });
+    var ups = [], downs = [];
+    (myPlayers || []).forEach(function (mp) {
+      var yp = (c.youth || []).filter(function (y) { return y.id === mp.id; })[0]; if (!yp) return;
+      var pot = yp.potential || yp.overall || 60;
+      var pUp = won ? 0.30 : lost ? 0.08 : 0.16;         // chance base de subir
+      var pDn = lost ? 0.26 : won ? 0.04 : 0.10;         // chance base de cair
+      if (scorers[mp.name]) { pUp += 0.30; pDn = 0; }    // quem decidiu, cresce
+      if ((yp.age || 18) <= 17) pUp += 0.06;             // mais jovem = mais volátil p/ cima
+      var r = Math.random();
+      if (r < pUp && pot < 95) { yp.potential = pot + 1; ups.push(yp.name); }
+      else if (r > 1 - pDn && pot > (yp.overall || 50) + 1) { yp.potential = pot - 1; downs.push(yp.name); }
+    });
+    if (ups.length || downs.length) {
+      var parts = [];
+      if (ups.length) parts.push("📈 " + ups.slice(0, 4).join(", ") + (ups.length > 4 ? " e +" + (ups.length - 4) : "") + " evoluíram");
+      if (downs.length) parts.push("📉 " + downs.slice(0, 3).join(", ") + (downs.length > 3 ? " e +" + (downs.length - 3) : "") + " regrediram");
+      TM.notify.push(c, { icon: "🌱", title: "Potencial da base atualizado", text: parts.join(" · ") + " após a partida de base." });
+    }
+  }
 })(window);
