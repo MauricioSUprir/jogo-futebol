@@ -159,8 +159,9 @@
     }
     function teamColor(t) { var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6"; }
     // constrói o "quadro" da revisão conforme o tipo (impedimento / falta / mão / linha de gol)
-    function buildVarScene(kind, annulled, atkCol, defCol) {
-      var mini = el("div", { class: "var-mini vk-" + kind });
+    function buildVarScene(kind, annulled, atkCol, defCol, side) {
+      var attacksRight = side !== 1;   // time 0 ataca p/ direita; time 1 p/ esquerda (espelha)
+      var mini = el("div", { class: "var-mini vk-" + kind + (attacksRight ? " atk-right" : " atk-left") });
       if (kind === "goalline") {
         // tecnologia de linha de gol: bola vs linha do gol
         var crossed = !annulled; // confirmado = cruzou (gol)
@@ -174,9 +175,15 @@
         mini.appendChild(el("div", { class: "foul-dot def", style: "background:" + defCol }));
         if (kind === "handball") mini.appendChild(el("div", { class: "foul-hand", text: "🖐️" }));
       } else {
-        // impedimento: duas linhas TRACEJADAS (azul = defensor, vermelho = atacante) + bolinha da cor do time
-        var defX = 48, atkX = annulled ? 61 : 43;
-        mini.appendChild(el("div", { class: "var-goal" }));
+        // impedimento: duas linhas TRACEJADAS (azul=defensor, vermelho=atacante), CENTRADAS.
+        // offside(annulled)=atacante à frente rumo ao gol; onside=quase juntos.
+        var gap = annulled ? 4.5 : 1.8;   // impedimento apertado: bem difícil de cravar
+        var dir = attacksRight ? 1 : -1;          // gol à direita (dir=1) ou esquerda (dir=-1)
+        var atkAhead = annulled ? 1 : -1;         // atacante à frente (offside) ou atrás (onside)
+        var defX = 50 - dir * atkAhead * (gap / 2);
+        var atkX = 50 + dir * atkAhead * (gap / 2);
+        var arrow = el("div", { class: "off-arrow", text: attacksRight ? "ataque →" : "← ataque" });
+        mini.appendChild(arrow);
         mini.appendChild(el("div", { class: "off-line blue", style: "left:" + defX + "%" }, [ el("span", { class: "off-dot", style: "background:" + defCol }) ]));
         mini.appendChild(el("div", { class: "off-line red", style: "left:" + atkX + "%" }, [ el("span", { class: "off-dot", style: "background:" + atkCol }) ]));
         mini.appendChild(el("div", { class: "off-gap" + (annulled ? " off" : " on"), style: "left:" + Math.min(defX, atkX) + "%;width:" + Math.abs(atkX - defX) + "%" }));
@@ -194,7 +201,7 @@
       var TITLE = kind === "goalline" ? "TECNOLOGIA DE LINHA" : kind === "foul" ? "REVISÃO DE FALTA" : kind === "handball" ? "REVISÃO — MÃO NA BOLA" : "REVISÃO DE IMPEDIMENTO";
       var overlay = el("div", { class: "var-review" });
       var stage = el("div", { class: "var-stage" });
-      var scene = buildVarScene(kind, annulled, atkCol, defCol);
+      var scene = buildVarScene(kind, annulled, atkCol, defCol, ev.team);
       var head = el("div", { class: "var-title" }, [ el("span", { class: "var-tv", text: "📺" }), el("span", { text: TITLE }) ]);
       var legend = kind === "offside" ? el("div", { class: "var-legend" }, [
         el("span", {}, [ el("i", { class: "lg blue" }), document.createTextNode(" Última linha da defesa") ]),
@@ -231,8 +238,19 @@
         actionWrap.appendChild(TM.ui.button("Continuar ▶", finishVar, "btn primary"));
       }
       actionWrap.appendChild(TM.ui.button("🔍 Ver decisão do VAR", function () { bar.classList.add("full"); reveal(); }, "btn"));
-      // deixa "revisando" por um tempo antes de revelar sozinho (não trava a partida)
-      setTimeout(function () { if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, 3600);
+      // impedimento é apertado: a análise demora mais, com etapas ("traçando linhas…")
+      var vsTxt = sub.querySelector(".vs-txt");
+      var steps = kind === "offside"
+        ? ["Revisando o lance…", "Congelando o frame…", "Traçando as linhas…", "Calibrando o impedimento…"]
+        : kind === "goalline" ? ["Revisando o lance…", "Checando a linha do gol…"]
+        : ["Revisando o lance…", "Analisando o contato…"];
+      var si = 0;
+      var stepTimer = setInterval(function () {
+        if (done2 || stage.querySelector(".var-verdict")) { clearInterval(stepTimer); return; }
+        si = (si + 1) % steps.length; if (vsTxt) vsTxt.textContent = steps[si];
+      }, 1100);
+      var waitMs = kind === "offside" ? 5600 : 3400;
+      setTimeout(function () { clearInterval(stepTimer); if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, waitMs);
     }
     function onSkip() {
       if (proceeded) return;                 // ignora cliques repetidos

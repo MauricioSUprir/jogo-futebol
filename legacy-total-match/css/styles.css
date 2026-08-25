@@ -1587,6 +1587,13 @@ textarea.text-input { resize: vertical; font-family: inherit; }
   border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.6); }
 .off-gap { position: absolute; top: 0; bottom: 0; transform: skewX(-9deg); z-index: 1; animation: varCalIn .45s ease-out; }
 .off-gap.off { background: rgba(255,80,70,.26); } .off-gap.on { background: rgba(53,196,106,.26); }
+.off-arrow { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 10px; letter-spacing: 1px;
+  font-weight: 700; color: rgba(45,210,110,.75); text-transform: uppercase; }
+/* espelha a tecnologia de linha de gol conforme o lado do ataque */
+.var-mini.atk-left.vk-goalline .gl-net { right: auto; left: 8%; }
+.var-mini.atk-left.vk-goalline .gl-line { right: auto; left: 34%; }
+.var-mini.atk-left.vk-goalline .gl-ball.short { right: auto; left: 44%; }
+.var-mini.atk-left.vk-goalline .gl-ball.over { right: auto; left: 26%; }
 /* --- tecnologia de linha de gol --- */
 .var-mini.vk-goalline { background: repeating-linear-gradient(90deg, #0a0f0c 0 26px, #0d130f 26px 52px); }
 .gl-net { position: absolute; right: 8%; top: 20%; bottom: 20%; width: 26%;
