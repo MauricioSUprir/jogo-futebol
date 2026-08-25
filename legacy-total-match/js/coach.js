@@ -3005,6 +3005,38 @@
           }, "btn ghost small")
         ]));
       }
+
+      // ---- histórico médico / risco de lesão ----
+      var hist = (c.injHistory && c.injHistory[p.id]) || [];
+      var injured = c.injuries && c.injuries[p.id] > 0;
+      var risk = (c.injRisk && c.injRisk[p.id]) || 0;
+      if (hist.length || injured || risk > 0) {
+        var med = el("div", { class: "med-card" }, [ el("div", { class: "med-h", text: "🏥 Departamento médico" }) ]);
+        if (injured) {
+          var last = hist.length ? hist[hist.length - 1] : null;
+          med.appendChild(el("div", { class: "med-status sev-" + (last ? last.sev : "leve") },
+            [ el("span", { text: "🩼 Lesionado: " + (last ? last.label : "recuperando") + " · fora por ~" + c.injuries[p.id] + " jogo(s)" }) ]));
+        } else if (risk >= 4) {
+          med.appendChild(el("div", { class: "med-status sev-grave", html: "⚠ <b>Alto risco de recaída</b> — voltou há pouco de lesão séria. Evite forçar." }));
+        } else if (risk > 0) {
+          med.appendChild(el("div", { class: "med-status sev-moderada", text: "⚠ Em recuperação — risco de recaída elevado por mais alguns jogos." }));
+        } else {
+          med.appendChild(el("div", { class: "med-status sev-ok", text: "✔ Sem lesões no momento." }));
+        }
+        if (hist.length) {
+          var histWrap = el("div", { class: "med-hist" });
+          histWrap.appendChild(el("div", { class: "med-hist-t", text: "Histórico (" + hist.length + ")" }));
+          hist.slice(-5).reverse().forEach(function (h) {
+            histWrap.appendChild(el("div", { class: "med-row" }, [
+              el("span", { class: "med-dot sev-" + h.sev }),
+              el("span", { class: "med-lbl", text: (h.relapse ? "↻ " : "") + h.label }),
+              el("span", { class: "med-meta", text: "T" + h.season + " · ~" + h.weeks + "j" })
+            ]));
+          });
+          med.appendChild(histWrap);
+        }
+        wrap.appendChild(med);
+      }
     }
 
     // ---- ação: jogadores similares (scout) ----
