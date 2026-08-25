@@ -617,24 +617,25 @@
     wrap.appendChild(dotsWrap);
     renderHero(0); restartHero();
 
-    // ---- abas de categoria (interativo: troca a grade) ----
+    // ---- abas de categoria (sincronizadas com o pager) ----
     var tabsEl = el("div", { class: "cat-tabs" });
-    var gridEl = el("div", { class: "cat-grid" });
-    var curCat = 0;
     CATS.forEach(function (c, ci) {
-      tabsEl.appendChild(el("button", { class: "cat-tab acc-" + c.key, on: { click: function () { selectCat(ci); } } }, [
+      tabsEl.appendChild(el("button", { class: "cat-tab acc-" + c.key, on: { click: function () { goCat(ci); } } }, [
         el("span", { class: "ct-ic", text: c.ic }), el("span", { class: "ct-lbl", text: c.tab })
       ]));
     });
-    function selectCat(ci) {
-      curCat = ci;
-      tabsEl.querySelectorAll(".cat-tab").forEach(function (t, ti) { t.classList.toggle("on", ti === ci); });
-      var c = CATS[ci];
-      gridEl.className = "cat-grid acc-" + c.key;
-      gridEl.classList.remove("in"); void gridEl.offsetWidth; gridEl.classList.add("in");
-      gridEl.innerHTML = "";
+    wrap.appendChild(tabsEl);
+
+    // ---- pager deslizável: arrasta pros lados para trocar de categoria ----
+    var pager = el("div", { class: "cat-pager" });
+    var track = el("div", { class: "cat-track" });
+    pager.appendChild(track);
+    CATS.forEach(function (c) {
+      var grid = el("div", { class: "cat-grid" });
       c.items.forEach(function (m, mi) {
-        var card = el("button", { class: "mode-tile" + (m.big ? " big" : ""), style: "animation-delay:" + (mi * 45) + "ms", on: { click: function () { go(m.route); } } }, [
+        var card = el("button", { class: "mode-tile" + (m.big ? " big" : ""), style: "animation-delay:" + (mi * 55) + "ms", on: { click: function () {
+          if (justDragged) return; go(m.route);
+        } } }, [
           el("span", { class: "mt-orb", text: m.icon }),
           el("span", { class: "mt-info" }, [
             el("span", { class: "mt-name", text: m.name }),
@@ -643,12 +644,51 @@
           el("span", { class: "mt-go", text: "›" })
         ]);
         attachRipple(card);
-        gridEl.appendChild(card);
+        grid.appendChild(card);
       });
+      track.appendChild(el("div", { class: "cat-page acc-" + c.key }, [ grid ]));
+    });
+    wrap.appendChild(pager);
+
+    var curCat = 0, justDragged = false;
+    function goCat(ci, noAnim) {
+      curCat = Math.max(0, Math.min(CATS.length - 1, ci));
+      track.style.transition = noAnim ? "none" : "transform .42s cubic-bezier(.22,.61,.36,1)";
+      track.style.transform = "translateX(" + (-curCat * 100) + "%)";
+      tabsEl.querySelectorAll(".cat-tab").forEach(function (t, ti) { t.classList.toggle("on", ti === curCat); });
+      var at = tabsEl.querySelectorAll(".cat-tab")[curCat];
+      if (at && at.scrollIntoView) { try { at.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" }); } catch (e) {} }
+      var page = track.children[curCat];
+      if (page) { page.classList.remove("in"); void page.offsetWidth; page.classList.add("in"); }
     }
-    wrap.appendChild(tabsEl);
-    wrap.appendChild(gridEl);
-    selectCat(0);
+
+    // gesto de arrastar (pointer) com captura — segue o dedo e encaixa ao soltar
+    var dsx = 0, dsy = 0, dragging = false, moved = false, pw = 0;
+    pager.addEventListener("pointerdown", function (e) {
+      dsx = e.clientX; dsy = e.clientY; dragging = true; moved = false; pw = pager.clientWidth || 1;
+      track.style.transition = "none";
+      try { pager.setPointerCapture(e.pointerId); } catch (er) {}
+    });
+    pager.addEventListener("pointermove", function (e) {
+      if (!dragging) return;
+      var dx = e.clientX - dsx, dy = e.clientY - dsy;
+      if (!moved && Math.abs(dx) < Math.abs(dy)) return; // deixa o scroll vertical passar
+      if (Math.abs(dx) > 6) moved = true;
+      // resistência nas bordas
+      var edge = (curCat === 0 && dx > 0) || (curCat === CATS.length - 1 && dx < 0);
+      var eff = edge ? dx * 0.35 : dx;
+      track.style.transform = "translateX(" + (-curCat * pw + eff) + "px)";
+    });
+    function endDrag(e) {
+      if (!dragging) return; dragging = false;
+      var dx = (e.clientX || dsx) - dsx;
+      if (moved && Math.abs(dx) > pw * 0.16) goCat(curCat + (dx < 0 ? 1 : -1));
+      else goCat(curCat);
+      if (moved) { justDragged = true; setTimeout(function () { justDragged = false; }, 60); }
+    }
+    pager.addEventListener("pointerup", endDrag);
+    pager.addEventListener("pointercancel", endDrag);
+    goCat(0, true);
 
     // ---- ticker de curiosidades (rodapé slim) ----
     var ticker = el("div", { class: "modes-ticker" }, [ el("span", { class: "mt-eye", text: "VOCÊ SABIA?" }), el("span", { class: "mt-txt" }) ]);
