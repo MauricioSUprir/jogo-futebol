@@ -662,29 +662,30 @@
       if (page) { page.classList.remove("in"); void page.offsetWidth; page.classList.add("in"); }
     }
 
-    // gesto de arrastar (pointer) com captura — segue o dedo e encaixa ao soltar
-    var dsx = 0, dsy = 0, dragging = false, moved = false, pw = 0;
+    // gesto de arrastar (pointer). IMPORTANTE: só captura o ponteiro DEPOIS que
+    // o arrasto começa — senão um clique simples num tile é "roubado" pelo pager
+    // e o botão não abre (bug que travava tudo no PC/mobile).
+    var dsx = 0, dsy = 0, dragging = false, moved = false, captured = false, pw = 0, pid = null;
     pager.addEventListener("pointerdown", function (e) {
-      dsx = e.clientX; dsy = e.clientY; dragging = true; moved = false; pw = pager.clientWidth || 1;
-      track.style.transition = "none";
-      try { pager.setPointerCapture(e.pointerId); } catch (er) {}
+      dsx = e.clientX; dsy = e.clientY; dragging = true; moved = false; captured = false; pid = e.pointerId; pw = pager.clientWidth || 1;
     });
     pager.addEventListener("pointermove", function (e) {
       if (!dragging) return;
       var dx = e.clientX - dsx, dy = e.clientY - dsy;
-      if (!moved && Math.abs(dx) < Math.abs(dy)) return; // deixa o scroll vertical passar
-      if (Math.abs(dx) > 6) moved = true;
-      // resistência nas bordas
+      if (!moved && Math.abs(dx) < 8) return;                 // ainda pode ser um clique
+      if (!moved && Math.abs(dx) < Math.abs(dy)) { dragging = false; return; } // scroll vertical
+      moved = true;
+      if (!captured) { captured = true; track.style.transition = "none"; try { pager.setPointerCapture(pid); } catch (er) {} }
       var edge = (curCat === 0 && dx > 0) || (curCat === CATS.length - 1 && dx < 0);
       var eff = edge ? dx * 0.35 : dx;
       track.style.transform = "translateX(" + (-curCat * pw + eff) + "px)";
     });
     function endDrag(e) {
       if (!dragging) return; dragging = false;
+      if (!moved) return;                                     // clique puro: deixa o tile abrir
       var dx = (e.clientX || dsx) - dsx;
-      if (moved && Math.abs(dx) > pw * 0.16) goCat(curCat + (dx < 0 ? 1 : -1));
-      else goCat(curCat);
-      if (moved) { justDragged = true; setTimeout(function () { justDragged = false; }, 60); }
+      if (Math.abs(dx) > pw * 0.16) goCat(curCat + (dx < 0 ? 1 : -1)); else goCat(curCat);
+      justDragged = true; setTimeout(function () { justDragged = false; }, 80);
     }
     pager.addEventListener("pointerup", endDrag);
     pager.addEventListener("pointercancel", endDrag);
