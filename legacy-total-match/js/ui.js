@@ -586,8 +586,23 @@
           el("span", { class: "fc-prof-name", text: prof.name })
         ])
       : el("button", { class: "fc-prof ghost", on: { click: function () { go("profile"); } } }, [ el("span", { class: "fc-prof-ic", text: "👤" }), el("span", { text: "Entrar" }) ]);
+    // info do mundo (nº de clubes, jogadores, ligas) para preencher o canto
+    var wInfo = { clubs: 0, players: 0, leagues: 0 };
+    try { var W = TM.data.world(); wInfo.clubs = (W.clubs || []).length; wInfo.players = Object.keys(W.playersById || {}).length; wInfo.leagues = (W.leagues || []).length; } catch (e) {}
+    var saveName = ""; try { var _cc = TM.storage.coachCareer(); if (_cc && _cc.teamName) saveName = _cc.teamName; } catch (e) {}
     screen.appendChild(el("div", { class: "fc-top" }, [
-      el("img", { class: "fc-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+      el("div", { class: "fc-brand" }, [
+        el("img", { class: "fc-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+        el("div", { class: "fc-brand-txt" }, [
+          el("div", { class: "fc-brand-title", text: "TOTAL MATCH" }),
+          el("div", { class: "fc-brand-sub", text: saveName ? "Carreira: " + saveName : "Simulador de futebol" }),
+          el("div", { class: "fc-brand-stats" }, [
+            el("span", { class: "fc-stat", html: "<b>" + wInfo.leagues + "</b> ligas" }),
+            el("span", { class: "fc-stat", html: "<b>" + wInfo.clubs + "</b> clubes" }),
+            el("span", { class: "fc-stat", html: "<b>" + (wInfo.players >= 1000 ? Math.round(wInfo.players / 1000) + "k" : wInfo.players) + "</b> jogadores" })
+          ])
+        ])
+      ]),
       el("div", { class: "fc-top-right" }, [
         profBtn,
         el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
