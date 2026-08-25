@@ -126,11 +126,11 @@
       // gramado PRETO com listras sutis (identidade Total Match)
       var stripes = 14, sw = w / stripes;
       for (var i = 0; i < stripes; i++) {
-        ctx.fillStyle = i % 2 === 0 ? "#0a0f0c" : "#0d130f";
+        ctx.fillStyle = i % 2 === 0 ? "#0a0a10" : "#0d0d15";
         ctx.fillRect(x0 + i * sw, y0, sw + 1, h);
       }
       // linhas VERDES
-      var GLINE = "rgba(45,210,110,0.92)";
+      var GLINE = "rgba(167,120,255,0.92)";
       ctx.strokeStyle = GLINE; ctx.lineWidth = Math.max(1.5, W * 0.0038); ctx.fillStyle = GLINE;
       // borda
       ctx.strokeRect(x0, y0, w, h);
@@ -155,11 +155,11 @@
       // gols
       var gh = h * 0.18;
       ctx.lineWidth = Math.max(2, W * 0.006);
-      ctx.strokeStyle = "rgba(60,230,130,0.98)";
+      ctx.strokeStyle = "rgba(190,150,255,0.98)";
       ctx.strokeRect(x0 - W * 0.012, y0 + (h - gh) / 2, W * 0.012, gh);
       ctx.strokeRect(x0 + w, y0 + (h - gh) / 2, W * 0.012, gh);
       // arcos de escanteio
-      ctx.lineWidth = Math.max(1.2, W * 0.003); ctx.strokeStyle = "rgba(45,210,110,0.6)";
+      ctx.lineWidth = Math.max(1.2, W * 0.003); ctx.strokeStyle = "rgba(167,120,255,0.55)";
       arc(x0, y0, W * 0.014, 0, Math.PI / 2); arc(x0 + w, y0, W * 0.014, Math.PI / 2, Math.PI);
       arc(x0, y0 + h, W * 0.014, -Math.PI / 2, 0); arc(x0 + w, y0 + h, W * 0.014, Math.PI, Math.PI * 1.5);
     }
