@@ -1681,7 +1681,27 @@
     var buyer = clubs[Math.floor(Math.random() * clubs.length)];
     return { pid: target.id, name: target.name, ov: target.overall, fromId: "free", fromName: "sem clube", toId: buyer.id, toName: buyer.name, val: 0, free: true };
   }
+  // registra uma transferência concluída no "mercado da bola" (mostrado no painel direito do hub no PC)
+  function recordMarketMove(career, deal, kind) {
+    try {
+      career.marketFeed = career.marketFeed || [];
+      // valor preciso (o deal.val da IA é arredondado p/ inteiro e zera contratações baratas)
+      var val = deal.val || 0;
+      if (kind !== "free") {
+        try { var p = TM.data.world().playersById[deal.pid]; if (p) val = TM.data.marketValue(p); } catch (e) {}
+        if (!val) val = deal.val || 0;
+      } else { val = 0; }
+      career.marketFeed.unshift({
+        name: deal.name, ov: deal.ov,
+        fromId: deal.fromId, fromName: deal.fromName,
+        toId: deal.toId, toName: deal.toName,
+        val: val, kind: kind, day: career.currentDay || 0
+      });
+      if (career.marketFeed.length > 24) career.marketFeed.length = 24;
+    } catch (e) {}
+  }
   function freeAgentNews(career, deal) {
+    recordMarketMove(career, deal, "free");
     var onShort = (career.shortlist || []).indexOf(deal.pid) >= 0;
     if (onShort) {
       TM.notify.push(career, { icon: "⭐", title: "Alvo da Central assinou", news: true,
@@ -1700,6 +1720,7 @@
       TM.notify.push(career, { icon: "🔁", title: "Mercado da bola", news: true,
         text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
     }
+    if (arrived) recordMarketMove(career, deal, deal.fireSale ? "fire" : "buy");
   }
   function fireSaleNews(career, deal) {
     TM.notify.push(career, { icon: "🚨", title: "Crise financeira", news: true,
@@ -1803,7 +1824,7 @@
     // crise financeira: um clube da IA faz venda relâmpago do craque (raro, mais provável na janela)
     if (Math.random() < (open ? 0.05 : 0.02)) {
       var fs = findFireSaleDeal(career);
-      if (fs) { if (open) { if (executeWorldTransfer(career, fs.pid, fs.toId)) fireSaleNews(career, fs); } else { career.pendingWorldDeals.push(fs); fireSaleNews(career, fs); } }
+      if (fs) { if (open) { if (executeWorldTransfer(career, fs.pid, fs.toId)) { fireSaleNews(career, fs); recordMarketMove(career, fs, "fire"); } } else { career.pendingWorldDeals.push(fs); fireSaleNews(career, fs); } }
     }
     // crise financeira do próprio clube (caixa no vermelho)
     checkUserFinancialCrisis(career);

@@ -1103,6 +1103,34 @@
       }
     } catch (e) {}
 
+    // -- últimas transferências do mercado --
+    rail.appendChild(el("div", { class: "cr-title", text: "🔁 Mercado da bola" }));
+    var feed = (c.marketFeed || []).slice(0, 6);
+    var tw = el("div", { class: "cr-market" });
+    if (feed.length) {
+      feed.forEach(function (mv) {
+        var ic = mv.kind === "fire" ? "🚨" : mv.kind === "free" ? "✍️" : "→";
+        var toCl = TM.data.club(mv.toId);
+        var feeTxt = mv.kind === "free" ? "Livre" : money(c, curVal(c, mv.val || 0));
+        tw.appendChild(el("div", { class: "cr-mv" }, [
+          (TM.img && TM.img.clubImg && toCl) ? TM.img.clubImg(toCl, "cr-mvcrest") : el("span", { class: "cr-mvcrest" }),
+          el("div", { class: "cr-mvmid" }, [
+            el("div", { class: "cr-mvname" }, [
+              el("span", { class: "cr-mvic", text: ic }),
+              el("span", { text: mv.name }),
+              el("span", { class: "cr-mvov", text: mv.ov })
+            ]),
+            el("div", { class: "cr-mvroute", text: (mv.fromName || "—") + " → " + (mv.toName || "—") })
+          ]),
+          el("span", { class: "cr-mvfee" + (mv.kind === "free" ? " free" : ""), text: feeTxt })
+        ]));
+      });
+    } else {
+      tw.appendChild(el("div", { class: "cr-mv cr-mv-empty" }, [ el("div", { class: "cr-mvroute", text: "Mercado calmo — avance no calendário para ver os clubes se mexerem." }) ]));
+    }
+    rail.appendChild(tw);
+    rail.appendChild(el("button", { class: "cr-more", text: "Abrir o mercado →", on: { click: function () { TM.ui.go("coach-market"); } } }));
+
     // -- moral do clube --
     var mor = 60; try { mor = TM.social.morale(c); } catch (e) {}
     var mcls = mor >= 70 ? "ok" : mor >= 45 ? "mid" : "lo";
