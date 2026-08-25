@@ -716,6 +716,7 @@
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
+      hubBtn("🌍", "Mundo", function () { TM.ui.go("coach-world"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); }),
       hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); }),
       hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
@@ -2861,6 +2862,88 @@
       TM.ui.button("👤 Perfil de " + shortName(B.name), function () { openPlayerProfile(B, "coach-compare"); }, "btn"),
       TM.ui.button("← Voltar aos similares", function () { TM.ui.go("coach-similar"); }, "btn ghost")
     ]));
+  });
+
+  /* ---------- MUNDO: ranking mundial de clubes + prêmios da temporada ---------- */
+  function seasonDrift(id, season) { var h = 2166136261, s = String(id) + ":" + season; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 91) / 10 - 4.5; }
+  function worldRankList(season) {
+    var W = TM.data.world();
+    var arr = W.clubs.map(function (cl) { return { id: cl.id, name: cl.name, region: (C().REGION[cl.leagueId] || "eu"), power: TM.data.clubRating(cl.id) + seasonDrift(cl.id, season) }; });
+    arr.sort(function (a, b) { return b.power - a.power; });
+    arr.forEach(function (o, i) { o.rank = i + 1; });
+    return arr;
+  }
+  function rankMapOf(season) { var m = {}; worldRankList(season).forEach(function (o) { m[o.id] = o.rank; }); return m; }
+  function seasonAwards(career) {
+    var W = TM.data.world(), season = career.season;
+    var all = []; W.clubs.forEach(function (cl) { TM.data.clubPlayers(cl.id).forEach(function (p) { all.push(p); }); });
+    function seed(p) { var h = 2166136261, s = String(p.id) + ":" + season; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return ((h >>> 0) % 1000) / 1000; }
+    var best = all.slice().sort(function (a, b) { return (b.overall + seed(b) * 6) - (a.overall + seed(a) * 6); })[0];
+    var scPool = all.filter(function (p) { return p.pos === "FW" || p.pos === "MF"; });
+    var scorer = scPool.slice().sort(function (a, b) { return (b.overall * 0.7 + seed(b) * 30) - (a.overall * 0.7 + seed(a) * 30); })[0];
+    var scorerGoals = Math.round(20 + seed(scorer) * 18);
+    var uTop = null, uMax = 0; if (career.pstats) Object.keys(career.pstats).forEach(function (id) { var st = career.pstats[id]; if (st.goals > uMax) { uMax = st.goals; uTop = id; } });
+    if (uTop && uMax > scorerGoals) { var up = C().resolvePlayer(career, uTop); if (up) { scorer = up; scorerGoals = uMax; } }
+    var young = all.filter(function (p) { return (p.age || 24) <= 21; }).sort(function (a, b) { return ((b.potential || b.overall) + seed(b) * 4) - ((a.potential || a.overall) + seed(a) * 4); })[0];
+    var gk = all.filter(function (p) { return p.pos === "GK"; }).sort(function (a, b) { return (b.overall + seed(b) * 5) - (a.overall + seed(a) * 5); })[0];
+    var coachName = "Comissão técnica", coachClub = null;
+    try { var st = C().standings(career); if (st && st[0]) { coachClub = TM.data.club(st[0].id); coachName = (st[0].id === career.teamId) ? (career.coachName || "Você") : ((coachClub && coachClub.coach) || "Comissão técnica"); } } catch (e) {}
+    return { best: best, scorer: scorer, scorerGoals: scorerGoals, young: young, gk: gk, coachName: coachName, coachClub: coachClub };
+  }
+
+  var worldTab = "rank";
+  TM.ui.register("coach-world", function (screen) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
+    screen.appendChild(TM.ui.topbar("🌍 Mundo", function () { TM.ui.go("coach-hub"); }));
+    addSectorBar(screen, "coach-comps");
+    var wrap = el("div", { class: "world-wrap" }); screen.appendChild(wrap);
+    var tabs = el("div", { class: "prof-tabs" });
+    [["rank", "🏅 Ranking de Clubes"], ["awards", "🏆 Prêmios"]].forEach(function (t) {
+      tabs.appendChild(el("button", { class: "prof-tab" + (worldTab === t[0] ? " on" : ""), text: t[1], on: { click: function () { worldTab = t[0]; TM.ui.go("coach-world"); } } }));
+    });
+    wrap.appendChild(tabs);
+    var body = el("div", { class: "prof-body" }); wrap.appendChild(body);
+
+    if (worldTab === "rank") {
+      var cur = worldRankList(c.season), prev = rankMapOf(c.season - 1);
+      body.appendChild(el("div", { class: "rank-note", text: "Ranking mundial · Temporada " + c.season + " (sobe e desce a cada temporada)" }));
+      var REGNAME = { sa: "América do Sul", eu: "Europa", na: "Norte/Centro", as: "Ásia/Outros" };
+      cur.slice(0, 50).forEach(function (o) {
+        var club = TM.data.club(o.id);
+        var prevRank = prev[o.id] || o.rank, mv = prevRank - o.rank;
+        var mvEl = mv > 0 ? el("span", { class: "rk-mv up", text: "▲" + mv }) : mv < 0 ? el("span", { class: "rk-mv dn", text: "▼" + (-mv) }) : el("span", { class: "rk-mv eq", text: "–" });
+        body.appendChild(el("div", { class: "rank-row" + (o.id === c.teamId ? " me" : "") }, [
+          el("span", { class: "rk-pos", text: o.rank }),
+          club ? TM.img.clubImg(club, "rk-crest") : null,
+          el("div", { class: "rk-info" }, [ el("div", { class: "rk-name", text: o.name }), el("div", { class: "rk-reg", text: REGNAME[o.region] || "" }) ]),
+          mvEl,
+          el("span", { class: "rk-pw", text: Math.round(o.power) })
+        ]));
+      });
+    } else {
+      var a = seasonAwards(c);
+      function awCard(icon, title, player, extra, club) {
+        if (!player) return null;
+        var pClub = club || TM.data.club(player.clubId);
+        return el("div", { class: "award-card" }, [
+          el("div", { class: "aw-top" }, [ el("span", { class: "aw-ic", text: icon }), el("span", { class: "aw-title", text: title }) ]),
+          el("div", { class: "aw-body" }, [
+            player.name ? TM.img.playerImg(player, "aw-face") : (pClub ? TM.img.clubImg(pClub, "aw-face") : null),
+            el("div", { class: "aw-info" }, [
+              el("div", { class: "aw-name", text: player.name || player }),
+              el("div", { class: "aw-sub", text: (pClub ? pClub.name : "") + (extra ? " · " + extra : "") })
+            ]),
+            player.overall ? TM.ui.ovBadge(player.overall) : null
+          ])
+        ]);
+      }
+      body.appendChild(el("div", { class: "rank-note", text: "🏆 Prêmios da Temporada " + c.season }));
+      body.appendChild(awCard("🌟", "Melhor do Mundo", a.best, "Bola de Ouro"));
+      body.appendChild(awCard("⚽", "Artilheiro", a.scorer, a.scorerGoals + " gols"));
+      body.appendChild(awCard("💎", "Melhor Jovem", a.young, "revelação (pot. " + (a.young ? (a.young.potential || a.young.overall) : "") + ")"));
+      body.appendChild(awCard("🧤", "Goleiro do Ano", a.gk, null));
+      body.appendChild(awCard("👔", "Treinador do Ano", { name: a.coachName }, "campeão da liga", a.coachClub));
+    }
   });
 
   /* ---------- central de notificações ---------- */
