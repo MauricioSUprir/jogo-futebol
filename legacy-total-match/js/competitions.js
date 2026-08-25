@@ -1635,6 +1635,15 @@
     rosterPlayers(career).forEach(function (p) { before[p.id] = { ov: p.overall, age: p.age, name: p.name }; });
     career.season++;
     career.yellows = {}; // zera cartões amarelos a cada nova temporada
+    // contratos: passa uma temporada; avisa expirados
+    if (career.contracts) {
+      var expiring = [];
+      Object.keys(career.contracts).forEach(function (id) { var ct = career.contracts[id]; ct.years = Math.max(0, (ct.years || 1) - 1); if (ct.years === 0 && career.roster.indexOf(id) >= 0) expiring.push(id); });
+      if (expiring.length) {
+        var nm = expiring.slice(0, 3).map(function (id) { var p = TM.data.player(id); return p ? p.name : ""; }).filter(Boolean).join(", ");
+        TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });
+      }
+    }
     ageWorld(career);
     ageYouth(career);
     processLoans(career);
