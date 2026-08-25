@@ -1990,3 +1990,24 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .mdi-v { font-size: 13px; font-weight: 800; color: var(--text); margin-top: 3px; }
 .mdi-l { font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .5px; }
 .matchday-info .mdi-item:last-child .mdi-v { font-size: 11px; }
+
+/* ============ Redes Sociais (feed) ============ */
+.social-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 10px; }
+.social-head { text-align: center; padding: 6px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.sh-logo { display: block; font-weight: 900; font-size: 20px; color: var(--green); letter-spacing: .5px; }
+.sh-sub { font-size: 11px; color: var(--text-dim); }
+.post { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.post-head { display: flex; align-items: center; gap: 10px; }
+.post-ava { width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; }
+.post-id { flex: 1; min-width: 0; }
+.post-handle { font-weight: 800; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.post-verified { color: #38bdf8; font-size: 12px; }
+.post-time { font-size: 11px; color: var(--text-dim); }
+.post-badge { font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 999px; background: rgba(45,210,110,.14); border: 1px solid var(--green); color: var(--green); flex: 0 0 auto; }
+.post-text { font-size: 14px; line-height: 1.45; color: var(--text); margin: 9px 0 10px; white-space: pre-wrap; }
+.post-actions { display: flex; gap: 18px; }
+.post-actions .pa { font-size: 12.5px; color: var(--text-dim); font-weight: 600; }
+.post-comments { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; }
+.pc-row { font-size: 12.5px; line-height: 1.35; }
+.pc-who { font-weight: 800; color: var(--gold-light); margin-right: 5px; }
+.pc-txt { color: var(--text-dim); }
