@@ -72,6 +72,8 @@
     var attackDir = 1;            // casa ataca +x
     var score = [0, 0], clock = 0;
     var speedMult = 1, paused = false, running = false, celebrateT = 0, flashT = 0;
+    var lastShot = null, replayT = 0, goalText = "", goalSide = 0, confetti = [], ringT = 0;
+    var setPiece = null; // {kind:'corner'|'free', side, wall:[]}
 
     // ---------- DOM ----------
     var wrap = document.createElement("div");
@@ -158,6 +160,70 @@
       ctx.lineWidth = Math.max(1.2, W * 0.003); ctx.strokeStyle = "rgba(255,255,255,0.7)";
       arc(x0, y0, W * 0.014, 0, Math.PI / 2); arc(x0 + w, y0, W * 0.014, Math.PI / 2, Math.PI);
       arc(x0, y0 + h, W * 0.014, -Math.PI / 2, 0); arc(x0 + w, y0 + h, W * 0.014, Math.PI, Math.PI * 1.5);
+    }
+    // ---------- confete + overlays de gol/replay ----------
+    function spawnConfetti(side) {
+      confetti = [];
+      var cols = [colA.primary, colB.primary, "#f5d020", "#ffffff", "#38d66a"];
+      for (var i = 0; i < 60; i++) {
+        confetti.push({ x: rnd(0.1, 0.9), y: rnd(-0.1, 0.4), vy: rnd(0.004, 0.012), vx: rnd(-0.003, 0.003),
+          c: cols[Math.floor(Math.random() * cols.length)], s: rnd(0.004, 0.009), rot: rnd(0, 6) });
+      }
+    }
+    function updateConfetti() {
+      confetti.forEach(function (p) { p.y += p.vy; p.x += p.vx; p.rot += 0.2; });
+      confetti = confetti.filter(function (p) { return p.y < 1.05; });
+    }
+    function drawConfetti() {
+      confetti.forEach(function (p) {
+        var x = px(p.x), y = py(p.y), s = W * p.s;
+        ctx.save(); ctx.translate(x, y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.fillRect(-s / 2, -s / 2, s, s * 1.6); ctx.restore();
+      });
+    }
+    function drawGoalOverlay() {
+      var cx = W / 2, cy = H / 2;
+      // anéis expansivos a partir do local do gol
+      if (ringT > 0 && lastShot) {
+        var rx = px(lastShot.tx), ry = py(lastShot.ty), prog = (30 - ringT) / 30;
+        for (var k = 0; k < 3; k++) {
+          var rr = W * (0.03 + (prog + k * 0.14) * 0.28);
+          ctx.beginPath(); ctx.arc(rx, ry, rr, 0, 7);
+          ctx.lineWidth = Math.max(1.5, W * 0.004); ctx.strokeStyle = "rgba(255,235,90," + (0.5 * (1 - prog)) + ")"; ctx.stroke();
+        }
+      }
+      // faixa "GOOOL" com a cor do time
+      var col = goalSide === 0 ? colA.primary : colB.primary;
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(0,0,0,0.35)"; ctx.fillRect(0, cy - H * 0.11, W, H * 0.22);
+      ctx.fillStyle = col; ctx.fillRect(0, cy - H * 0.11, W, H * 0.012);
+      ctx.fillRect(0, cy + H * 0.098, W, H * 0.012);
+      ctx.globalAlpha = 1;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#f5d020"; ctx.font = "900 " + Math.round(W * 0.075) + "px system-ui, sans-serif";
+      ctx.fillText("G O O O L !", cx, cy - H * 0.02);
+      ctx.fillStyle = "#fff"; ctx.font = "800 " + Math.round(W * 0.032) + "px system-ui, sans-serif";
+      ctx.fillText(goalText, cx, cy + H * 0.055);
+      ctx.restore();
+    }
+    function drawReplayOverlay() {
+      if (!lastShot) return;
+      // traço pontilhado da finalização
+      ctx.save();
+      ctx.setLineDash([W * 0.012, W * 0.01]);
+      ctx.lineWidth = Math.max(1.5, W * 0.004); ctx.strokeStyle = "rgba(255,235,90,0.9)";
+      ctx.beginPath(); ctx.moveTo(px(lastShot.fx), py(lastShot.fy)); ctx.lineTo(px(lastShot.tx), py(lastShot.ty)); ctx.stroke();
+      ctx.setLineDash([]);
+      // marcador de origem e alvo
+      ctx.fillStyle = "rgba(255,235,90,0.95)"; dot(px(lastShot.fx), py(lastShot.fy), W * 0.008);
+      ctx.fillStyle = "#e0483a"; dot(px(lastShot.tx), py(lastShot.ty), W * 0.009);
+      // etiqueta REPLAY
+      ctx.textAlign = "left"; ctx.textBaseline = "top";
+      ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(PAD, PAD, W * 0.19, H * 0.07);
+      ctx.fillStyle = "#fff"; ctx.font = "800 " + Math.round(W * 0.028) + "px system-ui, sans-serif";
+      ctx.fillText("🔁 REPLAY", PAD + W * 0.012, PAD + H * 0.018);
+      ctx.restore();
     }
     function dot(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }
     function arc(x, y, r, s, e) { ctx.beginPath(); ctx.arc(x, y, r, s, e); ctx.stroke(); }
@@ -264,9 +330,53 @@
       // chuta para o gol adversário
       phase = "shot";
       var gx = side === 0 ? 0.985 : 0.015;
-      ball.tx = gx; ball.ty = clamp(0.5 + rnd(-0.12, 0.12), 0.36, 0.64);
+      var ty = clamp(0.5 + rnd(-0.12, 0.12), 0.36, 0.64);
+      lastShot = { fx: ball.x, fy: ball.y, tx: gx, ty: ty, side: side }; // guarda p/ replay
+      ball.tx = gx; ball.ty = ty;
       ball.flying = true; ball.speed = 0.06; carrier = null;
       setTimeout(function () { if (phase === "shot") phase = "build"; }, 700);
+    }
+    // ---------- escanteio (cosmético) ----------
+    function cornerKick(side) {
+      phase = "dead"; setPiece = { kind: "corner", side: side };
+      var atkRight = side === 0;
+      var cx = atkRight ? 0.985 : 0.015;
+      var cy = Math.random() < 0.5 ? 0.03 : 0.97;
+      ball.x = ball.tx = cx; ball.y = ball.ty = cy; ball.flying = false;
+      carrier = pickForward(side);
+      // atacantes sobem à área; zaga adversária marca
+      var team = side === 0 ? teamA : teamB, opp = side === 0 ? teamB : teamA;
+      var boxX = atkRight ? 0.86 : 0.14;
+      team.forEach(function (p) { if (!p.gk && p.grp !== "GK") { p.tx = clamp(boxX + rnd(-0.05, 0.05), 0.05, 0.95); p.ty = clamp(0.5 + rnd(-0.18, 0.18), 0.2, 0.8); } });
+      opp.forEach(function (p) { if (!p.gk && p.grp === "DF") { p.tx = clamp(boxX + rnd(-0.04, 0.04) + (atkRight ? 0.02 : -0.02), 0.05, 0.95); p.ty = clamp(0.5 + rnd(-0.15, 0.15), 0.2, 0.8); } });
+      showEvt("🚩 Escanteio", "sep");
+      // cruzamento após 900ms → cabeçada/chute
+      setTimeout(function () {
+        if (paused) { setPiece = null; phase = "build"; return; }
+        ball.tx = clamp(boxX, 0.05, 0.95); ball.ty = clamp(0.5 + rnd(-0.1, 0.1), 0.3, 0.7); ball.flying = true; ball.speed = 0.05;
+        setTimeout(function () { setPiece = null; if (Math.random() < 0.4) shootAt(side); else phase = "build"; }, 500);
+      }, 900);
+    }
+    // ---------- falta (cosmético, com barreira) ----------
+    function freeKick(side) {
+      phase = "dead"; setPiece = { kind: "free", side: side };
+      var atkRight = side === 0;
+      var fx = atkRight ? rnd(0.62, 0.74) : rnd(0.26, 0.38);
+      var fy = clamp(0.5 + rnd(-0.22, 0.22), 0.2, 0.8);
+      ball.x = ball.tx = fx; ball.y = ball.ty = fy; ball.flying = false;
+      carrier = (side === 0 ? teamA : teamB)[Math.random() < 0.5 ? 7 : 9];
+      // barreira: 3 defensores adversários entre a bola e o gol
+      var opp = side === 0 ? teamB : teamA;
+      var gx = atkRight ? 0.985 : 0.015;
+      var wallX = fx + (gx - fx) * 0.18;
+      var wall = opp.filter(function (p) { return !p.gk; }).slice(0, 3);
+      wall.forEach(function (p, i) { p.tx = clamp(wallX, 0.05, 0.95); p.ty = clamp(fy - 0.05 + i * 0.05, 0.1, 0.9); });
+      showEvt("🎯 Falta perigosa", "sep");
+      setTimeout(function () {
+        if (paused) { setPiece = null; phase = "build"; return; }
+        setPiece = null;
+        if (Math.random() < 0.45) shootAt(side); else { phase = "attack"; passTo(pickForward(side), 0.04); }
+      }, 1000);
     }
 
     // ---------- eventos vindos da simulação ----------
@@ -283,7 +393,9 @@
         poss = side; carrier = pickForward(side); shootAt(side);
         setTimeout(function () {
           score = ev.score ? ev.score.slice() : score; scoreEl.textContent = score[0] + " - " + score[1];
-          phase = "celebrate"; celebrateT = 60; showEvt("⚽ GOL!  " + (ev.player || ""), "goal");
+          phase = "celebrate"; celebrateT = 72; showEvt("⚽ GOL!  " + (ev.player || ""), "goal");
+          goalText = ev.player ? String(ev.player).toUpperCase() : "GOL!"; goalSide = side; ringT = 30;
+          spawnConfetti(side);
           // bola na rede
           ball.x = ball.tx = side === 0 ? 0.99 : 0.01;
         }, 650);
@@ -310,9 +422,13 @@
       } else if (t === "kickoff") {
         resetKickoff();
       } else {
-        // lance/chance: leva a bola ao ataque e ameaça o gol
+        // lance/chance: às vezes vira escanteio/falta (cosmético), senão ameaça o gol
+        var s = poss;
+        var roll = Math.random();
+        if (roll < 0.16) { cornerKick(s); return; }
+        if (roll < 0.30) { freeKick(s); return; }
         phase = "attack";
-        var s = poss; carrier = pickForward(s);
+        carrier = pickForward(s);
         ball.tx = s === 0 ? rnd(0.72, 0.86) : rnd(0.14, 0.28); ball.ty = clamp(rnd(0.25, 0.75), 0.1, 0.9);
         ball.flying = true; ball.speed = 0.05;
         if (Math.random() < 0.5) setTimeout(function () { if (!paused) shootAt(s); }, 500);
@@ -347,9 +463,14 @@
       // celebração: jogadores do time convergem perto da bola
       if (phase === "celebrate") {
         celebrateT--;
+        if (ringT > 0) ringT--;
+        updateConfetti();
         var team = poss === 0 ? teamA : teamB;
         team.forEach(function (p) { if (!p.gk) { p.tx = clamp(ball.x + rnd(-0.05, 0.05), 0.05, 0.95); p.ty = clamp(ball.y + rnd(-0.05, 0.05), 0.05, 0.95); } });
-        if (celebrateT <= 0) resetKickoff();
+        if (celebrateT <= 0) { phase = "replay"; replayT = 40; }
+      } else if (phase === "replay") {
+        replayT--;
+        if (replayT <= 0) { confetti = []; resetKickoff(); }
       }
       // move jogadores em direção ao alvo (velocidade limitada = sem teleporte)
       var pmax = 0.012 * speedMult;
@@ -377,7 +498,10 @@
       // jogadores atrás, portador/bola por cima
       all.forEach(function (p) { if (p !== carrier) drawPlayer(p); });
       if (carrier) drawPlayer(carrier);
-      drawBall();
+      if (phase !== "replay") drawBall();
+      // overlays de gol / replay
+      if (phase === "celebrate") { drawConfetti(); drawGoalOverlay(); }
+      else if (phase === "replay") { drawReplayOverlay(); }
     }
 
     // ---------- controles ----------
