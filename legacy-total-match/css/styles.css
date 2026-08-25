@@ -2738,3 +2738,18 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .mc-offer .btn, .mc-budget .btn { width: 100%; }
 .mc-leave-acts { display: flex; gap: 8px; }
 .mc-leave-acts .btn { flex: 1; }
+
+/* jogador intransferível */
+.untransfer-box { text-align: center; background: linear-gradient(160deg, rgba(255,90,60,.12), var(--panel)); border: 1px solid rgba(255,90,60,.4); border-radius: 16px; padding: 22px 18px; margin: 12px auto; max-width: 560px; }
+.ut-ic { font-size: 40px; }
+.ut-t { font-weight: 900; font-size: 18px; margin: 8px 0 6px; }
+.ut-s { font-size: 13px; color: var(--text-dim); line-height: 1.45; margin-bottom: 14px; }
+/* adoçantes de negociação */
+.sweet-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.sweet-chip { padding: 8px 13px; border-radius: 20px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text-dim); font-size: 12.5px; font-weight: 700; cursor: pointer; transition: all .15s; }
+.sweet-chip.on { background: color-mix(in srgb, var(--green) 20%, var(--panel)); border-color: var(--green); color: var(--text); }
+.sweet-parts { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.sweet-parts-lbl { font-size: 12px; color: var(--text-dim); flex: none; }
+.sweet-note { font-size: 12px; color: #7ee39a; margin-top: 8px; min-height: 16px; }
+.prof-val.vt-up { color: #4ade80; } .prof-val.vt-down { color: #ff8a6a; }
+.vt-arrow { font-size: 10px; }
