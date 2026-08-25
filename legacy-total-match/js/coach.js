@@ -70,6 +70,35 @@
     try { if (c.social) c.social.lastGen = ""; } catch (e) {}
   }
 
+  // ----- ESTILOS DE JOGO / FILOSOFIA (mapeiam para as táticas do motor) -----
+  var PLAY_STYLES = [
+    { key: "posse", ic: "🎯", name: "Posse de bola", desc: "Controlar o jogo com a bola nos pés, com cadência e paciência.", id: "posse de bola e controle" },
+    { key: "pressao", ic: "🔥", name: "Gegenpress", desc: "Pressão altíssima para recuperar a bola no campo adversário.", id: "pressão agressiva" },
+    { key: "contra-ataque", ic: "⚡", name: "Contra-ataque", desc: "Recuar e explorar os espaços na velocidade das transições.", id: "transições rápidas" },
+    { key: "direto", ic: "🎿", name: "Jogo direto", desc: "Bola longa e objetiva, buscando o ataque de forma vertical.", id: "jogo direto e vertical" },
+    { key: "retranca", ic: "🛡️", name: "Defesa baixa", desc: "Bloco baixo e compacto, priorizando não sofrer gols.", id: "solidez defensiva" },
+    { key: "ofensivo", ic: "⚔️", name: "Futebol ofensivo", desc: "Buscar o gol a todo custo, com muitos jogadores no ataque.", id: "futebol ofensivo" },
+    { key: "pontas", ic: "↔️", name: "Jogo pelas pontas", desc: "Amplitude e cruzamentos, explorando as laterais do campo.", id: "jogo pelas pontas" },
+    { key: "tiki-taka", ic: "🎼", name: "Construção curta", desc: "Trocas de passe curtas, saindo jogando desde a defesa.", id: "construção curta e toque de bola" }
+  ];
+  function playStyleOf(key) { for (var i = 0; i < PLAY_STYLES.length; i++) if (PLAY_STYLES[i].key === key) return PLAY_STYLES[i]; return null; }
+  // identidade estável de um clube (o do usuário usa a filosofia escolhida)
+  function clubStyle(c, clubId) {
+    if (c && clubId === c.teamId) { var st = playStyleOf(c.tactic); return st || PLAY_STYLES[0]; }
+    return PLAY_STYLES[phash("cstyle:" + clubId) % PLAY_STYLES.length];
+  }
+  // frase de identidade: "O <Clube> de <Técnico> é conhecido por <identidade>."
+  function clubIdentityPhrase(c, clubId) {
+    var club = TM.data.club(clubId); if (!club) return "";
+    var st = clubStyle(c, clubId);
+    var coach = (clubId === c.teamId) ? (c.coachName || "você") : (club.coach || "seu técnico");
+    return "O " + club.name + " de " + coach + " é conhecido por " + st.id + ".";
+  }
+  TM.coachUI = TM.coachUI || {};
+  TM.coachUI.identityPhrase = clubIdentityPhrase;
+  TM.coachUI.clubStyle = clubStyle;
+  TM.coachUI.playStyleOf = playStyleOf;
+
   // ----- SETORES do treinador (barra de abas deslizável) -----
   function coachSectors(c, active) {
     var unread = 0; try { unread = TM.notify.unread(c); } catch (e) {}
@@ -161,7 +190,8 @@
     screen.appendChild(el("div", { class: "bottom-nav-spacer" }));
     screen.classList.add("has-sidebar");
   }
-  TM.coachUI = { sectors: coachSectors, addBar: addSectorBar };
+  TM.coachUI = TM.coachUI || {};
+  TM.coachUI.sectors = coachSectors; TM.coachUI.addBar = addSectorBar;
 
   // recados contextuais do AUXILIAR TÉCNICO e da DIRETORIA (chegam na Central de avisos)
   function maybeStaffMessage(c) {
@@ -799,6 +829,18 @@
           el("div", { class: "cap-top", text: "Capitão: " + shortName(lead.name) + (lead.exp ? " (experiente)" : "") }),
           el("div", { class: "cap-sub", text: txt + " · " + (lead.edge >= 0 ? "+" : "") + lead.edge + " no jogo" })
         ])
+      ]));
+    })();
+    // identidade / estilo de jogo do time (clicável -> escolher filosofia)
+    (function () {
+      var st = playStyleOf(c.tactic) || PLAY_STYLES[0];
+      screen.appendChild(el("div", { class: "style-badge", on: { click: function () { TM.ui.go("coach-style"); } } }, [
+        el("span", { class: "style-badge-ic", text: st.ic }),
+        el("div", { class: "style-badge-info" }, [
+          el("div", { class: "style-badge-top", text: "Estilo: " + st.name }),
+          el("div", { class: "style-badge-sub", text: "Conhecido por " + st.id + " · toque para mudar" })
+        ]),
+        el("span", { class: "style-badge-arrow", text: "›" })
       ]));
     })();
     // aviso de fadiga: titulares no vermelho pedem rodízio
@@ -3631,6 +3673,47 @@
     ]));
   });
 
+  /* ---------- estilo de jogo / filosofia ---------- */
+  TM.ui.register("coach-style", function (screen) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
+    screen.appendChild(TM.ui.topbar("🎭 Estilo de jogo", function () { TM.ui.go("coach-lineup"); }));
+    addSectorBar(screen, "coach-lineup");
+    var cur = playStyleOf(c.tactic) || PLAY_STYLES[0];
+    screen.appendChild(el("div", { class: "panel-narrow" }, [
+      el("div", { class: "style-hero" }, [
+        el("div", { class: "style-hero-ic", text: cur.ic }),
+        el("div", {}, [
+          el("div", { class: "style-hero-name", text: cur.name }),
+          el("div", { class: "style-hero-id", text: "Seu time é conhecido por " + cur.id + "." })
+        ])
+      ]),
+      el("div", { class: "style-hint", text: "A filosofia molda como o time joga e sua identidade no mundo. Escolha a que combina com seu elenco." })
+    ]));
+    var list = el("div", { class: "style-list panel-narrow" });
+    PLAY_STYLES.forEach(function (st) {
+      var mods = (TM.engine.TACTIC_MODS && TM.engine.TACTIC_MODS[st.key]) || [1, 1];
+      var atk = Math.round((mods[0] - 1) * 100), con = Math.round((mods[1] - 1) * 100);
+      var on = st.key === c.tactic;
+      list.appendChild(el("button", { class: "style-card" + (on ? " on" : ""), on: { click: function () {
+        c.tactic = st.key; TM.storage.saveCoachCareer(c);
+        TM.notify.push(c, { icon: st.ic, title: "Nova filosofia", text: "Seu time agora joga com " + st.name + " — conhecido por " + st.id + "." });
+        TM.ui.toast("Estilo: " + st.name); TM.ui.go("coach-style");
+      } } }, [
+        el("div", { class: "style-card-top" }, [
+          el("span", { class: "style-card-ic", text: st.ic }),
+          el("span", { class: "style-card-name", text: st.name }),
+          on ? el("span", { class: "style-card-on", text: "✓ Ativo" }) : null
+        ]),
+        el("div", { class: "style-card-desc", text: st.desc }),
+        el("div", { class: "style-card-mods" }, [
+          el("span", { class: "scm " + (atk >= 0 ? "up" : "down"), text: "Ataque " + (atk >= 0 ? "+" : "") + atk + "%" }),
+          el("span", { class: "scm " + (con <= 0 ? "up" : "down"), text: "Sofre gols " + (con >= 0 ? "+" : "") + con + "%" })
+        ])
+      ]));
+    });
+    screen.appendChild(list);
+  });
+
   /* ---------- escalação (campinho) ---------- */
   var pickSlot = null; // índice de titular selecionado para troca
   TM.ui.register("coach-lineup", function (screen) {
@@ -3646,7 +3729,17 @@
       TM.ui.dropdown("Formação", Object.keys(C().FORMATIONS), c.lineup.formation, function (f) {
         c.lineup = C().buildLineup(C().rosterPlayers(c), f); pickSlot = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup");
       }),
-      TM.ui.dropdown("Tática", TM.engine.TACTICS, c.tactic, function (v) { c.tactic = v; TM.storage.saveCoachCareer(c); TM.ui.go("coach-lineup"); })
+      (function () {
+        var st = playStyleOf(c.tactic) || PLAY_STYLES[0];
+        return el("button", { class: "style-btn", on: { click: function () { TM.ui.go("coach-style"); } } }, [
+          el("span", { class: "style-btn-ic", text: st.ic }),
+          el("div", { class: "style-btn-info" }, [
+            el("div", { class: "style-btn-lbl", text: "Estilo de jogo" }),
+            el("div", { class: "style-btn-name", text: st.name })
+          ]),
+          el("span", { class: "style-btn-arrow", text: "›" })
+        ]);
+      })()
     ]));
 
     // cobradores de bola parada (pênalti e falta)
