@@ -371,6 +371,7 @@ html, body {
   padding: 10px 12px; border-radius: 12px; }
 .player-row.clickable { cursor: pointer; transition: border-color .15s ease, transform .1s ease; }
 .player-row.clickable:hover { border-color: var(--gold); transform: translateX(2px); }
+.pface { object-fit: cover; }
 .prow-face { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex-shrink: 0; background: var(--black-soft); }
 .prow-info { flex: 1; min-width: 0; }
 .prow-name { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
