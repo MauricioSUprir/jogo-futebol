@@ -80,8 +80,19 @@
   var MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function matchDay(i) { return 3 + i * 4; }            // dia (offset) do i-ésimo jogo do usuário
-  function dateOf(career, offset) {                      // converte offset de dias -> data (início: 10/ago)
-    var y = career.seasonYear || 2026, m = 7, d = 10 + offset;
+  // início da temporada por região: América do Sul começa em JANEIRO; Europa (e demais) em AGOSTO
+  var SOUTHAM = { Brazil: 1, Argentina: 1, Ecuador: 1, Uruguay: 1, Colombia: 1, Paraguay: 1, Peru: 1, Chile: 1, Bolivia: 1, Venezuela: 1 };
+  function seasonStartMonth(career) {
+    try {
+      if (career._startMonth != null) return career._startMonth;
+      var club = TM.data.club(career.teamId), lg = club && TM.data.league(club.leagueId);
+      var m = (lg && SOUTHAM[lg.nation]) ? 0 : 7;          // 0 = Jan, 7 = Ago
+      career._startMonth = m; return m;
+    } catch (e) { return 7; }
+  }
+  function dateOf(career, offset) {                      // converte offset de dias -> data (início regional)
+    var sm = seasonStartMonth(career);
+    var y = career.seasonYear || 2026, m = sm, d = (sm === 0 ? 20 : 10) + offset;
     while (true) { var dim = MONTHS[m]; if (d <= dim) break; d -= dim; m++; if (m > 11) { m = 0; y++; } }
     return { d: d, m: m + 1, y: y, short: pad(d) + "/" + pad(m + 1), full: pad(d) + "/" + pad(m + 1) + "/" + y };
   }
@@ -1312,7 +1323,7 @@
       if (buyerRating < target.overall - 5) continue;       // clube fraco não atrai jogador melhor
       if (target.overall >= 80 && buyerRating < sellRating - 4) continue; // estrela não desce para clube bem pior
       // rivalidade: jogador dificilmente troca direto entre rivais (~92% das vezes recusa)
-      if (rivalryOn() && TM.data.areRivals(sc.id, buyer.id) && Math.random() < 0.92) continue;
+      if (rivalryOn() && TM.data.areRivals(sc.id, buyer.id) && Math.random() < 0.985) continue;
       return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val) };
     }
     return null;

@@ -973,7 +973,9 @@ html, body {
 .fc-cell.league { background: rgba(46,125,70,.16); border-color: rgba(46,125,70,.4); }
 .fc-cell.cup { background: rgba(214,178,52,.15); border-color: rgba(214,178,52,.4); }
 .fc-cell.cont { background: rgba(120,80,220,.18); border-color: rgba(120,80,220,.45); }
-.fc-crest { width: 62%; height: 62%; object-fit: contain; }
+.fc-crest { width: 46%; height: 46%; object-fit: contain; margin-top: -4px; }
+.fc-oppname { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; font-size: 8.5px; font-weight: 700;
+  color: var(--text); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; z-index: 2; }
 .fc-ev-glyph { font-size: 20px; line-height: 1; }
 .fc-badge { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1; z-index: 2; }
 .fc-win { position: absolute; bottom: 2px; right: 3px; font-size: 9px; line-height: 1; z-index: 2; }
