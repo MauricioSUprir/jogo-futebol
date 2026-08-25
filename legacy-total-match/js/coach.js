@@ -8,17 +8,39 @@
   function rivalryEnabled() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
   // ----- MORAL individual do jogador (por minutos jogados) -----
+  // ajuste de moral vindo de conversas (elogiar/cobrar) — decai com o tempo
+  function moraleAdjOf(c, id) {
+    if (!c.moraleAdj || !c.moraleAdj[id]) return 0;
+    var a = c.moraleAdj[id];
+    var age = (c.matchNo || 0) - (a.at || 0);   // decai ~2 pontos por partida
+    var v = a.v > 0 ? Math.max(0, a.v - age * 2) : Math.min(0, a.v + age * 2);
+    return v;
+  }
   function playerMorale(c, p) {
     var played = (c.stats && c.stats.p) || 0;
-    if (c.transferReq && c.transferReq[p.id]) return { v: 18, cls: "crit", txt: "Quer sair" };
-    if (played < 3) return { v: 68, cls: "ok", txt: "Tranquilo" };
+    var adj = moraleAdjOf(c, p.id);
+    var capBonus = (c.captainId === p.id) ? 5 : 0;   // vestir a braçadeira dá orgulho
+    if (c.transferReq && c.transferReq[p.id]) { var vv = Math.max(6, 18 + adj); return { v: vv, cls: "crit", txt: "Quer sair" }; }
+    if (played < 3) { var v0 = Math.max(10, Math.min(98, 68 + adj + capBonus)); return { v: v0, cls: v0 >= 70 ? "ok" : "mid", txt: v0 >= 70 ? "Tranquilo" : "Atento" }; }
     var st = c.pstats && c.pstats[p.id]; var apps = st ? st.apps : 0;
     var ratio = apps / played;
     var m = 46 + Math.round(ratio * 48);
     if (p.overall >= 80 && ratio < 0.3) m -= 12;   // craque encostado fica mais irritado
+    m += adj + capBonus;
     m = Math.max(10, Math.min(98, m));
     var cls = m >= 70 ? "ok" : m >= 45 ? "mid" : "lo";
     return { v: m, cls: cls, txt: m >= 78 ? "Feliz" : m >= 55 ? "Satisfeito" : m >= 35 ? "Incomodado" : "Insatisfeito" };
+  }
+  // liderança do capitão: moral do capitão + faixa etária -> bônus/ônus no vestiário (-3..+4)
+  function captainLeadership(c) {
+    if (!c.captainId) return { edge: 0, name: null };
+    var p = null; try { p = C().resolvePlayer(c, c.captainId); } catch (e) {}
+    if (!p) return { edge: 0, name: null };
+    var mo = playerMorale(c, p);
+    var edge = mo.v >= 80 ? 4 : mo.v >= 65 ? 2 : mo.v >= 45 ? 0 : -3;
+    if ((p.age || 24) >= 30) edge += 1;   // experiência conta
+    edge = Math.max(-3, Math.min(4, edge));
+    return { edge: edge, name: p.name, morale: mo.v, exp: (p.age || 24) >= 30 };
   }
   // jogador com poucos minutos pode pedir transferência (esporádico)
   function maybePlayerUnrest(c) {
@@ -734,6 +756,37 @@
         el("div", { class: "rep-bar" }, [ el("div", { class: "rep-fill", style: "width:" + c.reputation + "%" }) ])
       ])
     ]));
+    // liderança do capitão no vestiário
+    (function () {
+      var lead = captainLeadership(c);
+      if (!lead.name) return;
+      var cls = lead.edge >= 3 ? "ok" : lead.edge >= 1 ? "mid" : lead.edge <= -1 ? "lo" : "mid";
+      var txt = lead.edge >= 3 ? "Vestiário unido — liderança forte" : lead.edge >= 1 ? "Boa influência no elenco" : lead.edge <= -1 ? "Capitão desmotivado contagia o grupo" : "Liderança neutra";
+      screen.appendChild(el("div", { class: "cap-badge cap-" + cls, on: { click: function () { try { TM.coachUI.openPlayer(C().resolvePlayer(c, c.captainId), "coach-hub"); } catch (e) {} } } }, [
+        el("span", { class: "cap-ic", text: "🅲" }),
+        el("div", { class: "cap-info" }, [
+          el("div", { class: "cap-top", text: "Capitão: " + shortName(lead.name) + (lead.exp ? " (experiente)" : "") }),
+          el("div", { class: "cap-sub", text: txt + " · " + (lead.edge >= 0 ? "+" : "") + lead.edge + " no jogo" })
+        ])
+      ]));
+    })();
+    // aviso de fadiga: titulares no vermelho pedem rodízio
+    (function () {
+      if (!c.fatigue) return;
+      var starters = (c.lineup && c.lineup.starters) || [];
+      var tired = starters.map(function (id) { return C().resolvePlayer(c, id); }).filter(function (p) { return p && (c.fatigue[p.id] || 0) >= 78; });
+      if (!tired.length) return;
+      tired.sort(function (a, b) { return (c.fatigue[b.id] || 0) - (c.fatigue[a.id] || 0); });
+      var names = tired.slice(0, 3).map(function (p) { return shortName(p.name); }).join(", ");
+      screen.appendChild(el("div", { class: "fatigue-warn", on: { click: function () { TM.ui.go("coach-lineup"); } } }, [
+        el("span", { class: "fw-ic", text: "🥵" }),
+        el("div", { class: "fw-info" }, [
+          el("div", { class: "fw-t", text: tired.length + " titular(es) desgastado(s)" }),
+          el("div", { class: "fw-s", text: names + (tired.length > 3 ? " e outros" : "") + " precisam descansar — faça rodízio ou caem de rendimento e arriscam lesão." })
+        ]),
+        el("span", { class: "fw-arrow", text: "›" })
+      ]));
+    })();
     var pInfo = conf >= 70 ? { cls: "ok", txt: "Diretoria confiante" } : conf >= 40 ? { cls: "mid", txt: "Diretoria observando" } : conf >= 20 ? { cls: "lo", txt: "Sob pressão" } : { cls: "crit", txt: "🚨 Risco de demissão" };
     screen.appendChild(el("div", { class: "objective obj-card" }, [
       el("div", { class: "obj-top" }, [
@@ -1542,7 +1595,16 @@
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
     var userSide = p.homeId === c.teamId ? 0 : 1;
     var socialEdge = 0; try { socialEdge = TM.social.moraleEdge(c); } catch (e) {}
-    var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge, moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
+    var capEdge = 0; try { capEdge = captainLeadership(c).edge; } catch (e) {}
+    var fatigueEdge = 0;
+    try {
+      if (c.fatigue) {
+        var st2 = (c.lineup && c.lineup.starters) || [];
+        var tiredN = st2.filter(function (id) { return (c.fatigue[id] || 0) >= 78; }).length;
+        fatigueEdge = -Math.min(3, Math.floor(tiredN / 2));   // muitos titulares cansados pesam
+      }
+    } catch (e) {}
+    var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge + capEdge + fatigueEdge, moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
@@ -2860,6 +2922,48 @@
           el("div", { class: "pmo-bar" }, [ el("div", { class: "pmo-fill mm-" + mo.cls, style: "width:" + mo.v + "%" }) ])
         ])
       ]));
+
+      // ---- conversa individual (elogiar / cobrar / explicar o banco) ----
+      (function () {
+        var talkedAt = (c.talkedAt && c.talkedAt[p.id]);
+        var onCooldown = talkedAt != null && talkedAt === (c.matchNo || 0);
+        function doTalk(kind) {
+          c.moraleAdj = c.moraleAdj || {}; c.talkedAt = c.talkedAt || {};
+          c.talkedAt[p.id] = (c.matchNo || 0);
+          var cur = playerMorale(c, p).v, msg, delta;
+          if (kind === "praise") {
+            delta = cur >= 85 ? 3 : 9;   // já muito feliz, elogio rende menos
+            msg = { icon: "👏", title: "Elogio", text: "Você elogiou " + p.name + " pelo empenho. Ele saiu da conversa mais confiante." };
+          } else if (kind === "demand") {
+            var motivated = Math.random() < (cur < 55 ? 0.72 : 0.5);
+            delta = motivated ? 7 : -8;
+            msg = motivated
+              ? { icon: "📢", title: "Cobrança", text: "Você cobrou mais de " + p.name + ". Ele encarou como desafio e prometeu responder em campo." }
+              : { icon: "😠", title: "Cobrança", text: p.name + " não gostou da cobrança e saiu contrariado do vestiário." };
+          } else { // bench
+            delta = 6;
+            if (c.transferReq && c.transferReq[p.id] && Math.random() < 0.5) delete c.transferReq[p.id];
+            msg = { icon: "🪑", title: "Papo franco", text: "Você explicou o momento no banco a " + p.name + ". Ele entendeu a situação e vai seguir trabalhando." };
+          }
+          c.moraleAdj[p.id] = { v: Math.max(-20, Math.min(20, (moraleAdjOf(c, p.id)) + delta)), at: (c.matchNo || 0) };
+          TM.storage.saveCoachCareer(c);
+          TM.notify.push(c, msg);
+          TM.ui.toast(delta >= 0 ? "Conversa positiva 👍" : "Não foi bem 👎");
+          TM.ui.go("coach-player");
+        }
+        var card = el("div", { class: "talk-card" }, [ el("div", { class: "talk-h", text: "💬 Conversar com " + shortName(p.name) }) ]);
+        if (onCooldown) {
+          card.appendChild(el("div", { class: "talk-cd", text: "Você já conversou com ele nesta semana. Fale de novo após a próxima partida." }));
+        } else {
+          card.appendChild(el("div", { class: "talk-acts" }, [
+            TM.ui.button("👏 Elogiar", function () { doTalk("praise"); }, "btn ghost small"),
+            TM.ui.button("📢 Cobrar", function () { doTalk("demand"); }, "btn ghost small"),
+            TM.ui.button("🪑 Explicar banco", function () { doTalk("bench"); }, "btn ghost small")
+          ]));
+        }
+        wrap.appendChild(card);
+      })();
+
       // pedido de transferência: ações
       if (c.transferReq && c.transferReq[p.id]) {
         wrap.appendChild(el("div", { class: "treq-banner" }, [
@@ -3469,9 +3573,12 @@
         var unavail = !C().available(c, id);
         var cp = c.lineup.pos[i];
         var x = cp ? cp[0] : slot[1], y = cp ? cp[1] : fieldY(slot[2]);
-        var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : "") + (cp ? " custom" : ""),
+        var tiredChip = !unavail && c.fatigue && (c.fatigue[id] || 0) >= 78;
+        var chipFlag = unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" })
+          : (tiredChip ? el("span", { class: "chip-flag", text: "🥵" }) : null);
+        var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : "") + (tiredChip ? " tired" : "") + (cp ? " custom" : ""),
           style: "left:" + x + "%;top:" + y + "%" },
-          TM.ui.chipKids(p, slot, { name: shortName(p.name), age: false, captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
+          TM.ui.chipKids(p, slot, { name: shortName(p.name), age: false, captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: chipFlag })
         );
         attachChipDrag(chip, i, pitch);
         pitch.appendChild(chip);
