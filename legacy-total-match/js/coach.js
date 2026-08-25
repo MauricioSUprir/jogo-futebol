@@ -90,7 +90,28 @@
       { ic: "🔔", label: "Avisos", route: "coach-notifications", badge: unread }
     ].map(function (s) { if (s.route === active) s.active = true; return s; });
   }
-  // NAV inferior (estilo app, diferente da barra de cima): setores primários fixos no rodapé
+  // sheet (modal) com TODOS os setores — aberto pelo botão "Mais" (⋯) da nav inferior
+  function openSectorSheet(c, active) {
+    var overlay = el("div", { class: "sheet-overlay", on: { click: function (e) { if (e.target === overlay) close(); } } });
+    function close() { overlay.classList.remove("show"); setTimeout(function () { overlay.remove(); }, 220); }
+    var grid = el("div", { class: "sheet-grid" });
+    coachSectors(c, active).forEach(function (s) {
+      grid.appendChild(el("button", { class: "sheet-tile" + (s.active ? " on" : ""), on: { click: function () { close(); if (!s.active) TM.ui.go(s.route); } } }, [
+        el("span", { class: "sheet-ic", text: s.ic }),
+        el("span", { class: "sheet-lb", text: s.label }),
+        s.badge ? el("span", { class: "sheet-badge", text: s.badge > 9 ? "9+" : s.badge }) : null
+      ]));
+    });
+    var sheet = el("div", { class: "sheet" }, [
+      el("div", { class: "sheet-handle" }),
+      el("div", { class: "sheet-title", text: "Todas as seções" }),
+      grid
+    ]);
+    overlay.appendChild(sheet);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { overlay.classList.add("show"); });
+  }
+  // NAV inferior (estilo app): setores primários fixos no rodapé + "Mais" (⋯) para o resto
   function bottomNav(c, active) {
     var items = [
       { ic: "🏠", label: "Início", route: "coach-hub" },
@@ -107,6 +128,16 @@
         el("span", { class: "bn-lb", text: it.label })
       ]));
     });
+    // botão "Mais" (⋯) — abre o sheet com todas as seções; badge soma avisos/propostas
+    var extra = 0;
+    try { extra = (TM.notify.unread(c) || 0) + ((c.jobOffers || []).filter(function (o) { return !o.seen; }).length || 0); } catch (e) {}
+    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-social": 1 };
+    var moreActive = !primary[active];
+    nav.appendChild(el("button", { class: "bn-item bn-more" + (moreActive ? " on" : ""), on: { click: function () { openSectorSheet(c, active); } } }, [
+      el("span", { class: "bn-ic", text: "⋯" }),
+      el("span", { class: "bn-lb", text: "Mais" }),
+      extra ? el("span", { class: "bn-badge", text: extra > 9 ? "9+" : extra }) : null
+    ]));
     return nav;
   }
   // injeta a barra de setores (topo no celular / SIDEBAR no PC) + a nav inferior (celular)
