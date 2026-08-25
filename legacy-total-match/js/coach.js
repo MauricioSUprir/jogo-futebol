@@ -2777,6 +2777,17 @@
       el("div", { class: "gauge-lbl", text: label })
     ]);
   }
+  function gaugeHidden(label) {
+    var r = 30, cx = 36, cy = 36, circ = 2 * Math.PI * r;
+    return el("div", { class: "gauge" }, [
+      el("div", { class: "gauge-ring", html:
+        '<svg viewBox="0 0 72 72" width="72" height="72">' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="6"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(167,120,255,.35)" stroke-width="6" stroke-dasharray="4 8"/>' +
+        '<text x="36" y="44" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#a78bfa">?</text></svg>' }),
+      el("div", { class: "gauge-lbl", text: label })
+    ]);
+  }
   function formPill(res) { return el("span", { class: "fp fp-" + res, text: res }); }
 
   TM.ui.register("coach-player", function (screen) {
@@ -2809,9 +2820,34 @@
       ]),
       el("div", { class: "prof-gauges" }, [
         gaugeSVG(p.overall, 99, "OVR", "#8b5cf6"),
-        gaugeSVG(pot, 99, "POT", pot > p.overall ? "#a78bfa" : "#8aa0b2")
+        (p.hiddenPot && !(c.scouted && c.scouted[p.id]))
+          ? gaugeHidden("POT")
+          : gaugeSVG(pot, 99, "POT", pot > p.overall ? "#a78bfa" : "#8aa0b2")
       ])
     ]));
+
+    // ---- potencial oculto / joia rara (jogadores jovens ainda não observados) ----
+    if (p.hiddenPot) {
+      var scouted = c.scouted && c.scouted[p.id];
+      if (!scouted) {
+        wrap.appendChild(el("div", { class: "scout-pot" }, [
+          el("div", { class: "sp-info" }, [
+            el("div", { class: "sp-t", text: "🔎 Potencial desconhecido" }),
+            el("div", { class: "sp-s", text: "Coloque um observador para revelar o teto de " + shortName(p.name) + "." })
+          ]),
+          TM.ui.button("👁️ Observar", function () {
+            c.scouted = c.scouted || {}; c.scouted[p.id] = true;
+            TM.storage.saveCoachCareer(c);
+            var jw = p.jewel || p.potential >= 82;
+            TM.notify.push(c, { icon: jw ? "💎" : "🔎", title: jw ? "JOIA RARA revelada!" : "Relatório do observador",
+              text: "O observador avaliou " + p.name + ": potencial " + p.potential + (jw ? ". Um talento raro — segure esse jogador!" : ".") });
+            TM.ui.toast(jw ? "💎 Joia rara descoberta!" : "Potencial revelado."); TM.ui.go("coach-player");
+          }, "btn primary small")
+        ]));
+      } else if (p.jewel || p.potential >= 82) {
+        wrap.appendChild(el("div", { class: "jewel-badge", html: "💎 <b>JOIA RARA</b> — potencial " + p.potential + ", segure esse talento!" }));
+      }
+    }
 
     // ---- moral individual (só faz sentido para jogadores do meu elenco) ----
     var inMySquad = (c.roster || []).indexOf(p.id) >= 0;

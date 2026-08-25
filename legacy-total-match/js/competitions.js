@@ -484,12 +484,14 @@
     roles.forEach(function (pos, i) {
       var age = 14 + Math.floor(Math.random() * 5); // 14 a 18
       var ov = 47 + Math.floor(Math.random() * 15);  // 47 a 61
-      var pot = Math.min(91, ov + 8 + Math.floor(Math.random() * 22));
+      var jewel = Math.random() < 0.08;              // joia rara na base
+      var pot = jewel ? Math.min(93, ov + 22 + Math.floor(Math.random() * 11))
+                      : Math.min(89, ov + 8 + Math.floor(Math.random() * 20));
       youth.push({
         id: "y" + clubId + "-" + i, name: TM.data.randomName(culture), clubId: clubId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
         age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos),
         nationId: nat.id, nationName: nat.name, height: 165 + Math.floor(Math.random() * 28),
-        weight: 58 + Math.floor(Math.random() * 26), youth: true
+        weight: 58 + Math.floor(Math.random() * 26), youth: true, hiddenPot: true, jewel: jewel
       });
     });
     return youth;
@@ -1391,6 +1393,80 @@
     });
   }
 
+  /* ---------- REGENERAÇÃO: aposentadorias + newgens (joias com potencial oculto) ---------- */
+  function makeNewgen(career, clubId, pos) {
+    var club = TM.data.club(clubId);
+    var culture = TM.data.cultureOfLeague(club.leagueId);
+    var natName = TM.data.league(club.leagueId).nation;
+    var nat = TM.data.nationByName(natName) || TM.data.world().nations[0];
+    career.newgenSeq = (career.newgenSeq || 0) + 1;
+    var id = "ng" + (career.season || 1) + "-" + career.newgenSeq + "-" + clubId;
+    var age = 16 + Math.floor(Math.random() * 3);   // 16-18
+    var ov = 46 + Math.floor(Math.random() * 15);   // 46-60
+    var jewel = Math.random() < 0.07;               // ~7% joia rara
+    var pot = jewel ? Math.min(94, ov + 24 + Math.floor(Math.random() * 11))
+                    : Math.min(87, ov + 6 + Math.floor(Math.random() * 20));
+    return {
+      id: id, name: TM.data.randomName(culture), clubId: clubId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
+      age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos),
+      nationId: nat.id, nationName: nat.name, height: 168 + Math.floor(Math.random() * 25),
+      weight: 60 + Math.floor(Math.random() * 24), newgen: true, hiddenPot: true, jewel: jewel
+    };
+  }
+  // no fim da temporada: veteranos se aposentam e um garoto da base surge no lugar (mundo estável)
+  function retireAndRegen(career) {
+    var W = TM.data.world(), pb = W.playersById;
+    career.retired = career.retired || {};
+    career.newgens = career.newgens || {};
+    var userRetired = [], stars = [];
+    Object.keys(pb).forEach(function (id) {
+      if (career.retired[id]) return;
+      var p = pb[id]; if (!p) return;
+      var a = p.age || 25;
+      var chance = a >= 40 ? 1 : a >= 38 ? 0.6 : a >= 36 ? 0.32 : a >= 34 ? 0.11 : 0;
+      if (p.pos === "GK") chance *= 0.7;   // goleiros duram mais
+      if (chance <= 0 || Math.random() >= chance) return;
+      career.retired[id] = true;
+      if (career.worldEvo) delete career.worldEvo[id];
+      var clubId = p.clubId, cl = clubId && TM.data.club(clubId);
+      if (cl) {
+        var ng = makeNewgen(career, clubId, p.pos || "MF");
+        career.newgens[ng.id] = ng; pb[ng.id] = ng;
+        if (cl.playerIds.indexOf(ng.id) < 0) cl.playerIds.push(ng.id);
+        cl.playerIds = cl.playerIds.filter(function (x) { return x !== id; });
+      }
+      delete pb[id];
+      if (career.roster.indexOf(id) >= 0) { career.roster = career.roster.filter(function (x) { return x !== id; }); userRetired.push(p.name); }
+      else if ((p.overall || 0) >= 84) stars.push(p);
+    });
+    syncLineup(career);
+    if (userRetired.length) {
+      TM.notify.push(career, { icon: "👋", title: "Aposentadoria no elenco", news: true,
+        text: userRetired.join(", ") + (userRetired.length > 1 ? " penduraram as chuteiras — garotos da base assumem as vagas." : " pendurou as chuteiras. Um garoto da base assume a vaga.") });
+    }
+    stars.sort(function (a, b) { return b.overall - a.overall; });
+    stars.slice(0, 4).forEach(function (p) {
+      TM.notify.push(career, { icon: "🎖️", title: "Craque se aposenta", news: true,
+        text: p.name + " (" + TM.data.posLabel(p) + ", overall " + p.overall + ") encerrou a carreira aos " + p.age + " anos." });
+    });
+  }
+  // ao recarregar: remove aposentados do mundo regenerado e reinjeta os newgens
+  function applyRegen(career) {
+    if (!career) return;
+    var pb = TM.data.world().playersById;
+    if (career.retired) Object.keys(career.retired).forEach(function (id) {
+      var p = pb[id];
+      if (p && p.clubId && TM.data.club(p.clubId)) { var cl = TM.data.club(p.clubId); cl.playerIds = cl.playerIds.filter(function (x) { return x !== id; }); }
+      delete pb[id];
+    });
+    if (career.newgens) Object.keys(career.newgens).forEach(function (id) {
+      var ng = career.newgens[id]; if (!ng) return;
+      pb[id] = ng;
+      var cl = ng.clubId && TM.data.club(ng.clubId);
+      if (cl && cl.playerIds.indexOf(id) < 0) cl.playerIds.push(id);
+    });
+  }
+
   /* ---------- janelas de transferências ---------- */
   // offset (em dias a partir de 10/ago) para uma data (mês 1-12, dia) dentro da temporada
   function offsetOfDate(career, month1, day) {
@@ -1645,6 +1721,7 @@
       }
     }
     ageWorld(career);
+    retireAndRegen(career); // veteranos se aposentam; newgens surgem no lugar
     ageYouth(career);
     processLoans(career);
     applyPromRel(career); // rebaixa/promove antes de montar a nova temporada
@@ -1717,6 +1794,7 @@
     if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     if (!career.windows) buildWindows(career);
     if (!career.pendingWorldDeals) career.pendingWorldDeals = [];
+    applyRegen(career); // remove aposentados e reinjeta newgens ANTES de escalar/reaplicar evolução
     syncLineup(career); // reincorpora contratados que faltavam no banco
     applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
     applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
@@ -1894,6 +1972,7 @@
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
+    retireAndRegen: retireAndRegen, applyRegen: applyRegen,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
     nationSquadPlayers: nationSquadPlayers, nationTeam: nationTeam, oppNationTeam: oppNationTeam,
     setupNationSeason: setupNationSeason, natRating: natRating, nationPending: nationPending,
