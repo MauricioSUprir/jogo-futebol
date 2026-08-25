@@ -1,0 +1,15 @@
+# Cloudflare Worker do Total Match (licenças)
+# Deploy:  npx wrangler deploy
+name = "tm-license"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# KV que guarda as chaves já ativadas.
+# Crie com:  npx wrangler kv namespace create LICENSES
+# e cole o "id" retornado aqui embaixo:
+[[kv_namespaces]]
+binding = "LICENSES"
+id = "COLE_O_ID_DO_KV_AQUI"
+
+# O secret NÃO vai aqui. Configure com:
+#   npx wrangler secret put LICENSE_SECRET
