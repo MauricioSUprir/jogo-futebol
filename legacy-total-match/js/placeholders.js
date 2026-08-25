@@ -15,16 +15,58 @@
   }
 
   // Escudo do clube: brasão simples com iniciais e cores do clube
+  // escudo gerado com ESTILO próprio por clube (listras, faixa, metades, roundel),
+  // estrelas e tipografia — genérico, mas com cara de clube de verdade.
+  function crestHash(s) { s = String(s || ""); var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function crest(club) {
-    var c = club.colors;
+    var c = club.colors, p = c.primary, s = c.secondary;
+    var h = crestHash(club.id || club.name);
+    var style = h % 4;                 // 0 listras · 1 faixa diagonal · 2 metades · 3 roundel
+    var stars = (h >> 3) % 5 === 0 ? 3 : (h >> 3) % 3 === 0 ? 1 : (h >> 5) % 2 === 0 ? 2 : 0;
+    var ini = initials(club.name, 2);
+    // moldura do escudo (path) usada nos estilos 0-2
+    var shieldPath = "M40 3 L74 15 V45 C74 67 57 81 40 87 C23 81 6 67 6 45 V15 Z";
+    var clip = '<clipPath id="sc"><path d="' + shieldPath + '"/></clipPath>';
+    var inner = "";
+    if (style === 0) {                 // LISTRAS verticais
+      inner = '<rect x="0" y="0" width="80" height="92" fill="' + p + '"/>';
+      for (var i = 0; i < 6; i++) inner += '<rect x="' + (6 + i * 12) + '" y="0" width="6" height="92" fill="' + s + '" opacity="0.9"/>';
+    } else if (style === 1) {          // FAIXA diagonal (sash)
+      inner = '<rect width="80" height="92" fill="' + p + '"/><polygon points="0,60 0,88 30,92 80,34 80,8 50,4" fill="' + s + '" opacity="0.92"/>';
+    } else if (style === 2) {          // METADES
+      inner = '<rect width="40" height="92" fill="' + p + '"/><rect x="40" width="40" height="92" fill="' + s + '"/>';
+    } else {                           // ROUNDEL (círculo) — não usa o shield
+      var svgR =
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92">' +
+        '<circle cx="40" cy="46" r="37" fill="' + s + '" stroke="#0a0a0a" stroke-width="2"/>' +
+        '<circle cx="40" cy="46" r="30" fill="' + p + '"/>' +
+        '<circle cx="40" cy="46" r="30" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.5"/>' +
+        starRow(stars, 40, 20) +
+        '<text x="40" y="55" font-family="Georgia, serif" font-size="24" font-weight="800" fill="#fff" text-anchor="middle" style="paint-order:stroke;stroke:#00000055;stroke-width:2">' + ini + '</text>' +
+        '</svg>';
+      return svgURI(svgR);
+    }
     var svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 90" width="80" height="90">' +
-      '<path d="M40 2 L76 14 V46 C76 68 58 82 40 88 C22 82 4 68 4 46 V14 Z" fill="' + c.primary + '" stroke="#0a0a0a" stroke-width="2"/>' +
-      '<path d="M40 2 L76 14 V30 H4 V14 Z" fill="' + c.secondary + '" opacity="0.85"/>' +
-      '<circle cx="40" cy="52" r="18" fill="rgba(255,255,255,0.14)"/>' +
-      '<text x="40" y="59" font-family="Arial" font-size="20" font-weight="800" fill="#fff" text-anchor="middle">' +
-      initials(club.name, 2) + '</text></svg>';
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 92" width="80" height="92"><defs>' + clip + '</defs>' +
+      '<g clip-path="url(#sc)">' + inner + '</g>' +
+      '<path d="' + shieldPath + '" fill="none" stroke="#0a0a0a" stroke-width="3"/>' +
+      '<path d="M40 3 L74 15 V27 H6 V15 Z" fill="rgba(0,0,0,.18)"/>' +
+      '<circle cx="40" cy="50" r="16" fill="rgba(255,255,255,.92)"/>' +
+      '<text x="40" y="57" font-family="Georgia, serif" font-size="19" font-weight="800" fill="' + p + '" text-anchor="middle">' + ini + '</text>' +
+      starRow(stars, 40, 15) +
+      '</svg>';
     return svgURI(svg);
+  }
+  function starRow(n, cx, cy) {
+    if (!n) return "";
+    var out = "", gap = 9, x0 = cx - (n - 1) * gap / 2;
+    for (var i = 0; i < n; i++) out += star(x0 + i * gap, cy, 3.4);
+    return out;
+  }
+  function star(cx, cy, r) {
+    var pts = "";
+    for (var i = 0; i < 10; i++) { var ang = Math.PI / 5 * i - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; pts += (cx + rr * Math.cos(ang)).toFixed(1) + "," + (cy + rr * Math.sin(ang)).toFixed(1) + " "; }
+    return '<polygon points="' + pts + '" fill="#ffd54a" stroke="#00000040" stroke-width="0.5"/>';
   }
 
   // "Foto" de jogador: avatar com iniciais e cor derivada da nação/posição
@@ -39,6 +81,34 @@
       '<path d="M15 76 C15 56 65 56 65 76 Z" fill="rgba(255,255,255,0.85)"/>' +
       '<text x="40" y="35" font-family="Arial" font-size="15" font-weight="800" fill="' + base + '" text-anchor="middle">' +
       initials(player.name, 2) + '</text></svg>';
+    return svgURI(svg);
+  }
+
+  // UNIFORME (camisa) gerado com o padrão do clube (listras/faixa/metades/sólido)
+  function kit(club, away) {
+    var c = club.colors, p = away ? c.secondary : c.primary, s = away ? c.primary : c.secondary;
+    var h = crestHash((club.id || club.name) + (away ? "away" : "home")), style = h % 4;
+    var shirt = "M16 22 L29 10 C35 5 45 5 51 10 L64 22 L73 32 L62 43 L56 37 L56 71 C46 75 34 75 24 71 L24 37 L18 43 L7 32 Z";
+    var pat = "";
+    if (style === 0) {                 // sólido + gola/mangas na cor 2
+      pat = '<rect width="80" height="80" fill="' + p + '"/>';
+    } else if (style === 1) {          // listras verticais
+      pat = '<rect width="80" height="80" fill="' + p + '"/>';
+      for (var i = 0; i < 7; i++) pat += '<rect x="' + (10 + i * 9) + '" y="0" width="4.5" height="80" fill="' + s + '"/>';
+    } else if (style === 2) {          // metades
+      pat = '<rect width="40" height="80" fill="' + p + '"/><rect x="40" width="40" height="80" fill="' + s + '"/>';
+    } else {                           // faixa diagonal
+      pat = '<rect width="80" height="80" fill="' + p + '"/><polygon points="8,58 8,74 74,20 74,6" fill="' + s + '"/>';
+    }
+    var svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80"><defs>' +
+      '<clipPath id="kc"><path d="' + shirt + '"/></clipPath>' +
+      '<linearGradient id="ksh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient></defs>' +
+      '<g clip-path="url(#kc)">' + pat + '<rect width="80" height="80" fill="url(#ksh)"/></g>' +
+      // gola
+      '<path d="M29 10 C35 5 45 5 51 10 L46 16 C43 13 37 13 34 16 Z" fill="' + s + '"/>' +
+      '<path d="' + shirt + '" fill="none" stroke="#0a0a0a" stroke-width="2.4"/>' +
+      '</svg>';
     return svgURI(svg);
   }
 
@@ -173,6 +243,13 @@
       // escudo importado pelo jogador (clube personalizado) tem prioridade
       if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
       return imgWithFallback(crest(club), crest(club), club.name, cls);
+    },
+    kit: kit,
+    kitImg: function (club, cls, away) {
+      // uniforme importado pelo jogador tem prioridade (kitData / kitAwayData)
+      var custom = away ? club.kitAwayData : club.kitData;
+      if (custom) return imgWithFallback(custom, kit(club, away), club.name + " — uniforme", cls);
+      return imgWithFallback(kit(club, away), kit(club, away), club.name + " — uniforme", cls);
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
