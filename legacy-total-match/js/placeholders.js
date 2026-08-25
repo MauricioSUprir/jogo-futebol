@@ -116,7 +116,16 @@
     return '<polygon points="' + pts + '" fill="#ffd54a" stroke="#00000055" stroke-width="0.5"/>';
   }
 
-  // "Foto" de jogador: avatar com iniciais e cor derivada da nação/posição
+  // FOTO fictícia do jogador (rostos gerados por IA — pessoas que não existem).
+  // Mapeia cada jogador a um rosto do acervo de forma determinística.
+  var FACE_COUNT = 120;
+  function pad3(n) { return n < 10 ? "00" + n : n < 100 ? "0" + n : "" + n; }
+  function facePhoto(player) {
+    var idx = crestHash(player.id || player.name) % FACE_COUNT;
+    return "assets/faces/f-" + pad3(idx) + ".jpg";
+  }
+
+  // "Foto" de jogador: avatar com iniciais e cor derivada da nação/posição (fallback)
   function avatar(player, club) {
     var base = (club && club.colors.primary) || "#444";
     var svg =
@@ -303,7 +312,9 @@
     // <img> do treinador: foto real (assets/treinadores/<chave>.png) se existir, senão avatar de iniciais
     // Versão fictícia: só imagens GERADAS (nada de fotos/escudos/logos reais).
     coachImg: function (coach, cls) {
-      return imgWithFallback(coachAvatarSVG(coach), coachAvatarSVG(coach), coach.name, cls);
+      if (coach.photo) return imgWithFallback(coach.photo, coachAvatarSVG(coach), coach.name, cls);
+      // rosto fictício (IA), com leve deslocamento para não repetir o de um jogador
+      return imgWithFallback(facePhoto({ id: "tec-" + (coach.id || coach.name) }), coachAvatarSVG(coach), coach.name, (cls || "") + " pface");
     },
     clubImg: function (club, cls) {
       // escudo importado pelo jogador (clube personalizado) tem prioridade
@@ -319,9 +330,11 @@
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
-      var av = avatar(player, club);
-      return imgWithFallback(av, av, player.name, cls);
+      // foto importada pelo jogador (carreira própria) tem prioridade; senão rosto fictício (IA); fallback SVG
+      if (player.photo) return imgWithFallback(player.photo, avatar(player, club), player.name, cls);
+      return imgWithFallback(facePhoto(player), avatar(player, club), player.name, (cls || "") + " pface");
     },
+    facePhoto: facePhoto,
     nationImg: function (nation, cls) {
       // bandeira gerada por cores (países são reais/legais, mas mantemos consistência visual)
       return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
