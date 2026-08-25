@@ -643,7 +643,8 @@
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); }),
       hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); }),
-      hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); })
+      hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
+      hubBtn("📱", "Redes Sociais", function () { TM.ui.go("coach-social"); })
     ]));
     function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
   });

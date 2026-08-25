@@ -519,6 +519,7 @@
       evoBtn,
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-table"); } } }, [ el("span", { class: "hub-ic", text: "📊" }), el("span", { text: "Tabela" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-news"); } } }, [ el("span", { class: "hub-ic", text: "📰" }), el("span", { text: "Notícias" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-social"); } } }, [ el("span", { class: "hub-ic", text: "📱" }), el("span", { text: "Redes Sociais" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("player-history"); } } }, [ el("span", { class: "hub-ic", text: "🗂️" }), el("span", { text: "Histórico" }) ])
     ]));
 
