@@ -194,6 +194,44 @@
   // passo do slider conforme a grandeza do valor (permite frações abaixo de 1M)
   function moneyStep(maxv) { return maxv >= 50 ? 1 : maxv >= 10 ? 0.5 : maxv >= 3 ? 0.1 : 0.05; }
 
+  // ----- CONTRATOS (duração, salário, cláusula de rescisão) -----
+  function phash(s) { s = String(s || ""); var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function ensureContracts(c) {
+    if (!c.contracts) c.contracts = {};
+    (c.roster || []).forEach(function (id) {
+      if (!c.contracts[id]) {
+        var p = TM.data.player(id); if (!p) return;
+        var val = TM.data.marketValue ? TM.data.marketValue(p) : (p.overall || 70) / 10;
+        c.contracts[id] = { years: 1 + (phash(id + ":ct") % 4), wage: r2(Math.max(0.02, val * 0.10)), clause: r2(val * (2 + (phash(id + ":cl") % 20) / 10)) };
+      }
+    });
+    Object.keys(c.contracts).forEach(function (id) { if ((c.roster || []).indexOf(id) < 0) delete c.contracts[id]; });
+  }
+  function getContract(c, id) { ensureContracts(c); return c.contracts[id]; }
+
+  // DEADLINE DAY — dispara boatos de mercado uma vez por janela
+  function maybeDeadlineRumors(c, win) {
+    if (!win) return;
+    var key = "dd:" + c.season + ":" + Math.round(win.closeDay);
+    c.ddRumors = c.ddRumors || {};
+    if (c.ddRumors[key]) return;
+    c.ddRumors[key] = true;
+    try {
+      var clubs = (TM.data.world().clubs || []).filter(function (cl) { return cl.id !== c.teamId; });
+      var pool = [];
+      clubs.forEach(function (cl) { (cl.squad || []).forEach(function (id) { var p = TM.data.player(id); if (p && (p.overall || 0) >= 78) pool.push({ p: p, cl: cl }); }); });
+      for (var i = pool.length - 1; i > 0; i--) { var j = phash("dd" + key + i) % (i + 1); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+      var picks = pool.slice(0, 3);
+      var verbs = ["está perto de acertar com", "recebe proposta milionária de", "pode trocar de clube: alvo d", "tem futuro em aberto na reta final da janela em"];
+      picks.forEach(function (o, k) {
+        var dest = clubs[phash("dst" + key + k) % clubs.length];
+        TM.notify.push(c, { icon: "📰", title: "Boato de mercado", news: true, text: o.p.name + " (" + o.cl.name + ") " + verbs[k % verbs.length] + (verbs[k % verbs.length].endsWith("d") ? "o " + dest.name : " " + dest.name) + "." });
+      });
+      TM.notify.push(c, { icon: "⏰", title: "DEADLINE DAY", news: true, text: "Última chamada: a " + win.name + " fecha em breve. Feche seus reforços!" });
+    } catch (e) {}
+    TM.storage.saveCoachCareer(c);
+  }
+
   function roundTitle(nTies) { return ({ 8: "Oitavas de final", 4: "Quartas de final", 2: "Semifinal", 1: "Final" })[nTies] || (nTies * 2 + " times"); }
 
   // rascunho da configuração de carreira (persiste ao abrir a lista de treinadores e voltar)
@@ -624,6 +662,7 @@
     }
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
+    ensureContracts(c);     // garante contratos do elenco
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
@@ -721,6 +760,21 @@
         el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: C().dateOf(c, c.currentDay).full }) ]),
         el("button", { class: "date-cal-btn", text: "Calendário →", on: { click: function () { TM.ui.go("coach-calendar"); } } })
       ]));
+
+      // Deadline Day — último(s) dia(s) da janela aberta
+      try {
+        var _win = C().currentWindow(c);
+        if (_win && (_win.closeDay - c.currentDay) <= 1) {
+          var _dd = _win.closeDay - c.currentDay;
+          maybeDeadlineRumors(c, _win);
+          var ddBanner = el("div", { class: "deadline-banner" }, [
+            el("div", { class: "dd-flash", text: "⏰ DEADLINE DAY" }),
+            el("div", { class: "dd-sub", text: _dd <= 0 ? "Último dia da " + _win.name + " — o mercado fecha hoje!" : "A " + _win.name + " fecha amanhã (" + C().dateOf(c, _win.closeDay).full + ")." }),
+            TM.ui.button("💼 Ir ao mercado", function () { TM.ui.go("coach-market"); }, "btn small")
+          ]);
+          screen.appendChild(ddBanner);
+        }
+      } catch (e) {}
 
       var compId = compIdFor(c, pending.key);
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
@@ -2786,6 +2840,29 @@
               TM.storage.saveCoachCareer(c); TM.ui.toast(p.name + " na lista de transferências."); TM.ui.go("coach-player");
             }, "btn ghost small")
           ])
+        ]));
+      }
+    }
+
+    // ---- contrato (jogadores do meu elenco) ----
+    if (inMySquad) {
+      var ct = getContract(c, p.id);
+      if (ct) {
+        var yrsTxt = ct.years <= 0 ? "⚠ Contrato EXPIRADO" : ct.years === 1 ? "1 temporada (último ano)" : ct.years + " temporadas";
+        wrap.appendChild(el("div", { class: "contract-card" }, [
+          el("div", { class: "cc-h", text: "📜 Contrato" }),
+          el("div", { class: "cc-grid" }, [
+            el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v" + (ct.years <= 1 ? " warn" : ""), text: ct.years <= 0 ? "0" : ct.years }), el("div", { class: "cc-l", text: "temporadas" }) ]),
+            el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, curVal(c, ct.wage)) }), el("div", { class: "cc-l", text: "salário/ano" }) ]),
+            el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, curVal(c, ct.clause)) }), el("div", { class: "cc-l", text: "cláusula" }) ])
+          ]),
+          el("div", { class: "cc-note", text: yrsTxt }),
+          TM.ui.button("✍️ Renovar contrato (+2 temporadas)", function () {
+            ct.years = Math.min(6, (ct.years > 0 ? ct.years : 0) + 2); ct.wage = r2(ct.wage * 1.08);
+            TM.storage.saveCoachCareer(c);
+            TM.notify.push(c, { icon: "✍️", title: "Renovação", text: p.name + " renovou até mais " + ct.years + " temporada(s)." });
+            TM.ui.toast("Contrato renovado!"); TM.ui.go("coach-player");
+          }, "btn ghost small")
         ]));
       }
     }
