@@ -2530,3 +2530,63 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .xs-v.xs-ok { color: #38d66a; } .xs-v.xs-bad { color: #ff6a61; }
 .xs-l { font-size: 9.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .3px; margin-top: 1px; }
 @media (max-width: 380px) { .xs-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===================== MENU VERTICAL estilo FC (um modo por tela) ===================== */
+#screen-modes.fcmenu { padding: 0; min-height: 100dvh; height: 100dvh; overflow: hidden; position: relative; background: #06070a; }
+.fc-top { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 18px; pointer-events: none; background: linear-gradient(180deg, rgba(4,5,8,.85), transparent); }
+.fc-top > * { pointer-events: auto; }
+.fc-logo { height: 34px; width: auto; filter: drop-shadow(0 3px 10px rgba(0,0,0,.6)); }
+.fc-gear { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 50%;
+  background: rgba(20,24,20,.7); border: 1px solid rgba(255,255,255,.14); font-size: 19px; cursor: pointer;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: transform .15s, border-color .15s; }
+.fc-gear:hover { transform: rotate(35deg) scale(1.05); border-color: var(--gold); }
+.fc-scroll { height: 100dvh; overflow-y: auto; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; }
+.fc-scroll::-webkit-scrollbar { width: 0; }
+.fc-slide { position: relative; height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; display: flex; align-items: flex-end;
+  overflow: hidden; }
+.fc-bg { position: absolute; inset: 0; background-size: cover; background-position: center; z-index: 0;
+  transform: scale(1.06); animation: fcbg 12s ease-in-out infinite alternate; }
+@keyframes fcbg { from { transform: scale(1.06); } to { transform: scale(1.14); } }
+.fc-shade { position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgba(4,5,8,.35) 0%, rgba(4,5,8,.15) 38%, rgba(4,5,8,.72) 74%, rgba(4,5,8,.96) 100%); }
+.fc-slide::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 2;
+  background: var(--card-acc, var(--gold)); box-shadow: 0 0 26px var(--card-acc, var(--gold)); opacity: .9; }
+.fc-body { position: relative; z-index: 3; width: 100%; max-width: 620px; margin: 0 auto; padding: 0 26px 16vh; }
+.fc-eyebrow { font-size: 12.5px; font-weight: 800; letter-spacing: .22em; color: var(--card-acc, var(--gold)); margin-bottom: 8px; }
+.fc-name { font-size: clamp(30px, 8vw, 52px); font-weight: 900; line-height: 1.02; letter-spacing: -.5px; margin: 0 0 10px;
+  text-shadow: 0 4px 24px rgba(0,0,0,.6); }
+.fc-desc { font-size: 15px; color: rgba(255,255,255,.82); line-height: 1.45; margin: 0 0 20px; max-width: 460px; }
+.fc-cta { display: inline-flex; align-items: center; gap: 10px; padding: 14px 30px; border-radius: 40px; border: none; cursor: pointer;
+  font-weight: 800; font-size: 15px; letter-spacing: .04em; color: #06231a;
+  background: linear-gradient(120deg, var(--gold-light), var(--gold)); box-shadow: 0 10px 30px rgba(0,0,0,.4);
+  transition: transform .16s ease, box-shadow .16s ease; }
+.fc-cta:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 40px rgba(0,0,0,.5); }
+.fc-cta:active { transform: scale(.97); }
+.fc-cta-arrow { font-size: 11px; }
+/* acentos por categoria (herda as classes acc-*) */
+.fc-slide.acc-car { --card-acc: #22c55e; } .fc-slide.acc-play { --card-acc: #f5b53f; } .fc-slide.acc-net { --card-acc: #4aa3ff; }
+/* dots laterais */
+.fc-dots { position: fixed; right: 12px; top: 50%; transform: translateY(-50%); z-index: 20; display: flex; flex-direction: column; gap: 9px; }
+.fc-dot { width: 8px; height: 8px; border-radius: 50%; border: none; background: rgba(255,255,255,.28); cursor: pointer; padding: 0; transition: all .2s; }
+.fc-dot.on { background: var(--gold); height: 22px; border-radius: 5px; }
+/* dica de rolagem */
+.fc-scrollhint { position: fixed; bottom: 18px; left: 0; right: 0; z-index: 20; text-align: center; pointer-events: none;
+  font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.6); transition: opacity .3s; }
+.fc-scrollhint.hide { opacity: 0; }
+.fc-chev { display: block; font-size: 20px; line-height: 1; animation: fcbounce 1.4s ease-in-out infinite; }
+@keyframes fcbounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+/* slide final "Mais modos" */
+.fc-slide-more { align-items: center; background: radial-gradient(120% 80% at 50% 30%, rgba(34,197,94,.1), transparent 60%), #08090d; }
+.fc-more-body { padding-bottom: 8vh; }
+.fc-more-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 11px; margin-top: 18px; }
+.fc-more-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 16px; border-radius: 15px; cursor: pointer;
+  background: rgba(20,24,22,.7); border: 1px solid rgba(255,255,255,.09); color: #fff; text-align: left; transition: transform .14s, border-color .14s; }
+.fc-more-tile:hover { transform: translateY(-2px); border-color: var(--gold); }
+.fc-more-ic { font-size: 24px; }
+.fc-more-lb { font-weight: 700; font-size: 14px; }
+@media (min-width: 900px) {
+  .fc-more-grid { grid-template-columns: repeat(4, 1fr); max-width: 720px; }
+  .fc-body { padding-left: 6vw; margin: 0; max-width: 720px; }
+}
