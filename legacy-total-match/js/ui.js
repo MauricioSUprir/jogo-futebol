@@ -218,12 +218,12 @@
 
   /* ---------- tema por competição (cor de destaque + logo) ---------- */
   var COMP_ACCENT = {
-    "lg-br": "#2fe86b", "lg-en": "#b14bff", "lg-es": "#ff5a3c", "lg-it": "#3aa0ff", "lg-de": "#ff3b3b", "lg-fr": "#dfe600",
-    "lg-pt": "#2ee6a0", "lg-nl": "#ff7a1a", "lg-ar": "#7ec8ff", "lg-us": "#d6b24a", "lg-mx": "#2ee66b", "lg-sa": "#20c98a",
+    "lg-br": "#a06bff", "lg-en": "#b14bff", "lg-es": "#ff5a3c", "lg-it": "#3aa0ff", "lg-de": "#ff3b3b", "lg-fr": "#dfe600",
+    "lg-pt": "#c86bff", "lg-nl": "#ff7a1a", "lg-ar": "#7ec8ff", "lg-us": "#d6b24a", "lg-mx": "#9b6bff", "lg-sa": "#7c5cff",
     "lg-tr": "#ff4d4d", "lg-ec": "#ffd21a", "lg-uy": "#7ec8ff", "lg-ru": "#5a86ff",
     "cont-sa": "#f2c21a", "cont-eu": "#2f8bff", "cont-na": "#00c2b8", "cont-as": "#00d4c2",
     "cwc-world": "#e8c65a", "cwc-inter": "#c9a24a",
-    "nat-world": "#e8c65a", "nat-america": "#2fe86b", "nat-euro": "#2f8bff", "nat-africa": "#2ee66b"
+    "nat-world": "#e8c65a", "nat-america": "#a06bff", "nat-euro": "#2f8bff", "nat-africa": "#cf6bff"
   };
   function compAccent(compId) {
     if (!compId) return null;
@@ -348,9 +348,9 @@
   var EMBLEM =
     '<svg viewBox="0 0 200 210" role="img" aria-label="Total Match">' +
     '<defs>' +
-    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ef0a0"/><stop offset="0.5" stop-color="#22c55e"/><stop offset="1" stop-color="#0f8a42"/></linearGradient>' +
+    '<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c4b5fd"/><stop offset="0.5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#6d28d9"/></linearGradient>' +
     '<linearGradient id="inner" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a1a1a"/><stop offset="1" stop-color="#0a0a0a"/></linearGradient>' +
-    '<radialGradient id="glow" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="rgba(34,197,94,0.35)"/><stop offset="1" stop-color="rgba(34,197,94,0)"/></radialGradient>' +
+    '<radialGradient id="glow" cx="0.5" cy="0.35" r="0.7"><stop offset="0" stop-color="rgba(139,92,246,0.35)"/><stop offset="1" stop-color="rgba(139,92,246,0)"/></radialGradient>' +
     '</defs>' +
     '<ellipse cx="100" cy="112" rx="86" ry="92" fill="url(#glow)"/>' +
     // estrela no topo
@@ -360,16 +360,16 @@
     // escudo interno (fundo escuro)
     '<path d="M100 37 L159 54 V106 C159 145 132 169 100 181 C68 169 41 145 41 106 V54 Z" fill="url(#inner)"/>' +
     // faixa superior
-    '<path d="M100 37 L159 54 V70 H41 V54 Z" fill="#22c55e" opacity="0.22"/>' +
+    '<path d="M100 37 L159 54 V70 H41 V54 Z" fill="#8b5cf6" opacity="0.22"/>' +
     // arco de gramado sutil
-    '<path d="M55 150 A 55 44 0 0 1 145 150" fill="none" stroke="#22c55e" stroke-width="1.5" opacity="0.25"/>' +
+    '<path d="M55 150 A 55 44 0 0 1 145 150" fill="none" stroke="#8b5cf6" stroke-width="1.5" opacity="0.25"/>' +
     // bola
     '<g transform="translate(100 108)"><circle r="30" fill="#0a0a0a" stroke="url(#gold)" stroke-width="3"/>' +
     '<path d="M0,-20 L13,-6.2 L7.6,11 L-7.6,11 L-13,-6.2 Z" fill="url(#gold)"/>' +
     '<path d="M0,-30 L0,-20 M13,-6.2 L24,-14 M7.6,11 L18,20 M-7.6,11 L-18,20 M-13,-6.2 L-24,-14" stroke="url(#gold)" stroke-width="2" fill="none"/>' +
     '<circle cx="0" cy="-25" r="2.2" fill="url(#gold)"/><circle cx="22" cy="-8" r="2.2" fill="url(#gold)"/><circle cx="14" cy="17" r="2.2" fill="url(#gold)"/><circle cx="-14" cy="17" r="2.2" fill="url(#gold)"/><circle cx="-22" cy="-8" r="2.2" fill="url(#gold)"/></g>' +
     // sigla
-    '<text x="100" y="168" font-family="Arial" font-size="15" font-weight="800" fill="#22c55e" text-anchor="middle" letter-spacing="1">TM</text>' +
+    '<text x="100" y="168" font-family="Arial" font-size="15" font-weight="800" fill="#8b5cf6" text-anchor="middle" letter-spacing="1">TM</text>' +
     '</svg>';
 
   function statChip(icon, text) {
