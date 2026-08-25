@@ -1519,12 +1519,31 @@
     Object.keys(career.worldTransfers).forEach(function (pid) { moveWorldPlayer(pid, career.worldTransfers[pid]); });
   }
   // encontra um negócio plausível: comprador que pode pagar, vendedor que topa liberar (raramente um craque)
+  // grupo de posição (GK/DF/MF/FW) e efetivo ideal por grupo — usado para contratação por necessidade
+  var POS_TARGET = { GK: 3, DF: 8, MF: 8, FW: 5 };
+  function posGroup(p) { var g = p.pos || "MF"; return (g === "GK" || g === "DF" || g === "MF" || g === "FW") ? g : "MF"; }
+  // retorna a posição em que o clube está mais carente (poucos jogadores ou fracos), ou null
+  function squadNeed(clubId) {
+    var squad = TM.data.clubPlayers(clubId);
+    var cnt = { GK: 0, DF: 0, MF: 0, FW: 0 }, best = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    squad.forEach(function (p) { var g = posGroup(p); cnt[g]++; if (p.overall > best[g]) best[g] = p.overall; });
+    var clubRat = TM.data.clubRating(clubId), needs = [];
+    ["GK", "DF", "MF", "FW"].forEach(function (g) {
+      var deficit = POS_TARGET[g] - cnt[g];               // falta gente nesse setor?
+      var weak = best[g] < clubRat - 3;                   // ou o melhor do setor é fraco pro nível do clube
+      if (deficit > 0 || weak) needs.push({ g: g, score: deficit * 2 + (weak ? 2 : 0) });
+    });
+    if (!needs.length) return null;
+    needs.sort(function (a, b) { return b.score - a.score; });
+    return needs[0].g;
+  }
   function findAiDeal(career) {
     var clubs = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId; });
     if (clubs.length < 4) return null;
     var buyer = clubs[Math.floor(Math.random() * clubs.length)];
     var buyerRating = TM.data.clubRating(buyer.id), buyerBudget = baseBudgetEur(buyerRating);
-    for (var t = 0; t < 24; t++) {
+    var need = squadNeed(buyer.id);                        // posição carente do comprador
+    for (var t = 0; t < 28; t++) {
       var sc = clubs[Math.floor(Math.random() * clubs.length)];
       if (sc.id === buyer.id) continue;
       var squad = TM.data.clubPlayers(sc.id);
@@ -1535,6 +1554,8 @@
           && !(career.loanedIn && career.loanedIn[p.id]) && !(career.loanedOut && career.loanedOut[p.id])
           && !(career.worldTransfers && career.worldTransfers[p.id]);
       });
+      // contratação por necessidade: nas primeiras tentativas exige a posição carente do comprador
+      if (need && t < 20) { var np = pool.filter(function (p) { return posGroup(p) === need; }); if (np.length) pool = np; else continue; }
       if (!pool.length) continue;
       var target = pool[Math.floor(Math.random() * pool.length)];
       var val = TM.data.marketValue(target), sellRating = TM.data.clubRating(sc.id);
@@ -1543,9 +1564,37 @@
       if (target.overall >= 80 && buyerRating < sellRating - 4) continue; // estrela não desce para clube bem pior
       // rivalidade: jogador dificilmente troca direto entre rivais (~92% das vezes recusa)
       if (rivalryOn() && TM.data.areRivals(sc.id, buyer.id) && Math.random() < 0.985) continue;
-      return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val) };
+      return { pid: target.id, name: target.name, ov: target.overall, fromId: sc.id, fromName: sc.name, toId: buyer.id, toName: buyer.name, val: Math.round(val), need: need && posGroup(target) === need };
     }
     return null;
+  }
+  // CRISE FINANCEIRA de um clube da IA: é obrigado a vender seu craque para um clube rico
+  function findFireSaleDeal(career) {
+    var clubs = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId; });
+    if (clubs.length < 6) return null;
+    // clube pequeno/médio em apuros (rating mais baixo tem mais chance de crise)
+    var seller = null;
+    for (var s = 0; s < 20; s++) {
+      var cand = clubs[Math.floor(Math.random() * clubs.length)];
+      var r = TM.data.clubRating(cand.id);
+      if (r <= 82 && Math.random() < 0.7) { seller = cand; break; }
+    }
+    if (!seller) return null;
+    var squad = TM.data.clubPlayers(seller.id).filter(function (p) {
+      return career.roster.indexOf(p.id) < 0 && !(career.worldTransfers && career.worldTransfers[p.id]);
+    });
+    if (squad.length < 12) return null;
+    var star = squad[0];                                   // o craque do clube
+    if (!star || star.overall < 76) return null;
+    var val = TM.data.marketValue(star), sellRating = TM.data.clubRating(seller.id);
+    // comprador rico que se encaixa
+    var buyers = clubs.filter(function (cl) {
+      return cl.id !== seller.id && TM.data.clubRating(cl.id) >= sellRating && baseBudgetEur(TM.data.clubRating(cl.id)) >= val * 0.8
+        && !(rivalryOn() && TM.data.areRivals(cl.id, seller.id));
+    });
+    if (!buyers.length) return null;
+    var buyer = buyers[Math.floor(Math.random() * buyers.length)];
+    return { pid: star.id, name: star.name, ov: star.overall, fromId: seller.id, fromName: seller.name, toId: buyer.id, toName: buyer.name, val: Math.round(val * 0.85), fireSale: true };
   }
   // um clube da IA contrata um jogador que está livre no mercado (sem clube)
   function findAiFreeAgentDeal(career) {
@@ -1580,6 +1629,26 @@
       TM.notify.push(career, { icon: "🔁", title: "Mercado da bola", news: true,
         text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
     }
+  }
+  function fireSaleNews(career, deal) {
+    TM.notify.push(career, { icon: "🚨", title: "Crise financeira", news: true,
+      text: "Em apuros no caixa, o " + deal.fromName + " foi obrigado a vender seu craque " + deal.name + " (" + deal.ov + ") ao " + deal.toName + " por " + fmtMoney(career, deal.val) + ". Venda relâmpago para equilibrar as contas." });
+  }
+  // CRISE FINANCEIRA DO USUÁRIO: caixa muito negativo -> diretoria cobra venda de um titular
+  function checkUserFinancialCrisis(career) {
+    if (career.role === "dirigente") return;
+    var mult = career.money ? career.money.mult : 1;
+    var threshold = -15 * mult;                 // ~ -15M de rombo
+    if ((career.budget || 0) >= threshold) { career._crisisNoted = false; return; }
+    if (career._crisisNoted) return;
+    career._crisisNoted = true;
+    var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 74 && !(career.loanedIn && career.loanedIn[p.id]); });
+    mine.sort(function (a, b) { return TM.data.marketValue(b) - TM.data.marketValue(a); });
+    var star = mine[0];
+    career.transferList = career.transferList || [];
+    if (star && career.transferList.indexOf(star.id) < 0) career.transferList.push(star.id);
+    TM.notify.push(career, { icon: "🚨", title: "Diretoria: crise no caixa", news: true,
+      text: "O clube está no vermelho (" + fmtMoney(career, career.budget) + "). A diretoria exige uma venda para equilibrar as contas" + (star ? " — " + star.name + " foi colocado na lista de transferências." : ".") });
   }
   // notificação de INTERESSE de um clube num jogador (antes/independente de uma proposta concreta)
   function maybeInterest(career) {
@@ -1660,6 +1729,13 @@
         if (fdeal2 && executeWorldTransfer(career, fdeal2.pid, fdeal2.toId)) freeAgentNews(career, fdeal2);
       }
     }
+    // crise financeira: um clube da IA faz venda relâmpago do craque (raro, mais provável na janela)
+    if (Math.random() < (open ? 0.05 : 0.02)) {
+      var fs = findFireSaleDeal(career);
+      if (fs) { if (open) { if (executeWorldTransfer(career, fs.pid, fs.toId)) fireSaleNews(career, fs); } else { career.pendingWorldDeals.push(fs); fireSaleNews(career, fs); } }
+    }
+    // crise financeira do próprio clube (caixa no vermelho)
+    checkUserFinancialCrisis(career);
     // sondagens de interesse (independem de proposta concreta)
     if (Math.random() < 0.28) maybeInterest(career);
   }
