@@ -3093,15 +3093,17 @@
       pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
       pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
       if (!c.lineup.pos) c.lineup.pos = {};
+      // empurra só os ATACANTES um pouco para baixo (não cruzam a área); goleiro fica no fundo
+      function fieldY(sy) { return Math.round((20 + (sy - 15) * (88 - 20) / (88 - 15)) * 10) / 10; }
       c.lineup.starters.forEach(function (id, i) {
         var p = C().resolvePlayer(c, id); if (!p) return;
         var slot = slots[i] || [null, 50, 50];
         var unavail = !C().available(c, id);
         var cp = c.lineup.pos[i];
-        var x = cp ? cp[0] : slot[1], y = cp ? cp[1] : slot[2];
+        var x = cp ? cp[0] : slot[1], y = cp ? cp[1] : fieldY(slot[2]);
         var chip = el("button", { class: "pl-chip" + (pickSlot === i ? " picked" : "") + (unavail ? " unavail" : "") + (cp ? " custom" : ""),
           style: "left:" + x + "%;top:" + y + "%" },
-          TM.ui.chipKids(p, slot, { name: shortName(p.name), captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
+          TM.ui.chipKids(p, slot, { name: shortName(p.name), age: false, captain: c.captainId === id, dyn: C().dynamicInfo(c, p), flag: unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" }) : null })
         );
         attachChipDrag(chip, i, pitch);
         pitch.appendChild(chip);
