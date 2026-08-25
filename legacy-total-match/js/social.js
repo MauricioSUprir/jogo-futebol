@@ -135,6 +135,24 @@
       }
     }
 
+    // --- SAF investe em clube pequeno / clube troca técnico (mundo) ---
+    if (chance(0.3)) {
+      var small = W.clubs.slice().sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); })[rint(0, 40)];
+      if (small) {
+        var funds = ["Aurora Capital", "Vanguarda Sports", "Pantera Investimentos", "Meridian Group", "Atlas Holding"];
+        out.push(post({ handle: pick(PRESS), verified: true, kind: "press", badge: "💼 SAF",
+          text: "🚨 " + pick(funds) + " assume a SAF do " + small.name + " e promete aporte de R$ " + rint(120, 900) + " milhões! Clube pequeno vai sonhar alto. 💰",
+          likes: rint(300, 6000), extraComments: rint(30, 200) }));
+      }
+    }
+    if (chance(0.3)) {
+      var c2 = pick(W.clubs);
+      var techs = ["Renato Bianchi", "Héctor Salas", "Fábio Rebelo", "Diego Marques", "Paulo Vidal", "Andrés Coelho"];
+      out.push(post({ handle: pick(PRESS), verified: chance(0.6), kind: "press", badge: "🔁 Bastidores",
+        text: "OFICIAL: o " + c2.name + " demitiu o técnico e acertou com " + pick(techs) + ". Reformulação a caminho.",
+        likes: rint(150, 3000) }));
+    }
+
     // --- clássico / rival ---
     if (rival && chance(0.4)) {
       out.push(post({ handle: pick(FANS), kind: "banter", badge: "🔥 Clássico", morale: 0.3,

@@ -7,6 +7,7 @@
   var el = TM.ui.el;
 
   function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+  function rint(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
   function clubName(id) { var c = TM.data.club(id); return c ? c.name : ""; }
 
   // manchetes geradas a partir do mundo (evergreen, dão vida ao jornal)
@@ -50,6 +51,27 @@
     if (scorer) out.push({ icon: "⚽", tag: "ARTILHARIA", thumb: scorer.clubId,
       headline: scorer.name + " embala e lidera a artilharia",
       body: "Em grande fase, " + scorer.name + " do " + clubName(scorer.clubId) + " vem sendo decisivo e aparece na ponta da lista de goleadores da temporada." });
+
+    // 5) SAF: investimento pesado num clube pequeno (de vez em quando)
+    if (Math.random() < 0.5) {
+      var small = clubs.slice().sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); })[Math.floor(Math.random() * Math.min(4, clubs.length))];
+      if (small) {
+        var funds = ["Aurora Capital", "Vanguarda Sports", "Pantera Investimentos", "GreenField Partners", "Meridian Group", "Atlas Holding", "Nova Era Capital"];
+        var val = (rint(120, 900));
+        out.push({ icon: "💼", tag: "SAF", thumb: small.id,
+          headline: small.name + " recebe aporte bilionário da " + pick(funds),
+          body: "Em movimento que agita o mercado, o fundo assumiu a SAF do " + small.name + " e promete investir cerca de R$ " + val + " milhões em reforços e infraestrutura. O clube pequeno sonha alto." });
+      }
+    }
+    // 6) clube troca de treinador (de vez em quando)
+    if (Math.random() < 0.5) {
+      var club2 = pick(clubs);
+      var names = ["Renato Bianchi", "Oswaldo Prado", "Héctor Salas", "Miguel Antunes", "Fábio Rebelo", "Diego Marques", "Paulo Vidal", "Sérgio Lemos", "Andrés Coelho", "Vítor Nunes"];
+      var why = pick(["após sequência ruim de resultados", "por decisão da nova diretoria", "em comum acordo, buscando novo ciclo", "após eliminação precoce"]);
+      out.push({ icon: "🔁", tag: "BASTIDORES", thumb: club2.id,
+        headline: club2.name + " demite o técnico e anuncia " + pick(names),
+        body: "O " + club2.name + " oficializou a troca no comando técnico " + why + ". O novo treinador chega com a missão de reerguer o time na temporada." });
+    }
     return out;
   }
 
