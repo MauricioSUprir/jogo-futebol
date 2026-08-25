@@ -110,5 +110,24 @@
         TM.ui.toast("✔ Configurações salvas");
       }, "btn primary")
     ]));
+
+    // ---- zona de perigo: zerar o aplicativo (apagar tudo) ----
+    screen.appendChild(el("div", { class: "danger-zone" }, [
+      el("div", { class: "danger-h", text: "Zona de perigo" }),
+      el("div", { class: "setting-hint", text: "Apaga TODAS as carreiras, jogos salvos, perfil e configurações deste aparelho. Não dá pra desfazer." }),
+      TM.ui.button("🗑️ Zerar aplicativo", function () {
+        TM.ui.confirm(
+          "Zerar aplicativo?",
+          "Isso apaga todas as carreiras, jogos salvos, perfil e configurações deste navegador. Não é possível recuperar.",
+          "Apagar tudo",
+          function () {
+            TM.storage.wipeAll();
+            TM.ui.toast("Aplicativo zerado");
+            setTimeout(function () { try { location.reload(); } catch (e) { TM.ui.go("modes"); } }, 500);
+          },
+          true
+        );
+      }, "btn danger")
+    ]));
   });
 })(window);

@@ -48,6 +48,17 @@
     savePlayerCareer: function (c) { write("player", c); },
     clearPlayerCareer: function () { remove("player"); },
 
+    // apaga TODOS os dados do jogo (carreiras, saves, perfil, config) — "zerar o app"
+    wipeAll: function () {
+      try {
+        var keys = [];
+        for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf(PREFIX) === 0) keys.push(k); }
+        keys.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+        if (TM._onSave) { try { TM._onSave("*"); } catch (e) {} }
+        return true;
+      } catch (e) { return false; }
+    },
+
     // ---- biblioteca de jogos salvos (várias carreiras/competições) ----
     listSaves: function () { return read("saves", []); },
     saveGame: function (rec) {
