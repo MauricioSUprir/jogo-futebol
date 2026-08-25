@@ -226,6 +226,8 @@
         stage.insertBefore(verdict, actionWrap);
         actionWrap.innerHTML = "";
         actionWrap.appendChild(TM.ui.button("Continuar ▶", finishVar, "btn primary"));
+        // AUTO-AVANÇA sozinho (não trava a partida se ninguém clicar)
+        setTimeout(function () { if (!done2) finishVar(); }, 1900);
       }
       actionWrap.appendChild(TM.ui.button("🔍 Ver decisão do VAR", function () { bar.classList.add("full"); reveal(); }, "btn"));
       // impedimento é apertado: a análise demora mais, com etapas ("traçando linhas…")
@@ -239,7 +241,7 @@
         if (done2 || stage.querySelector(".var-verdict")) { clearInterval(stepTimer); return; }
         si = (si + 1) % steps.length; if (vsTxt) vsTxt.textContent = steps[si];
       }, 1100);
-      var waitMs = kind === "offside" ? 5600 : 3400;
+      var waitMs = kind === "offside" ? 4000 : 2600;
       setTimeout(function () { clearInterval(stepTimer); if (!done2 && !stage.querySelector(".var-verdict")) { bar.classList.add("full"); reveal(); } }, waitMs);
     }
     function onSkip() {
