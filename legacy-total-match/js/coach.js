@@ -2713,6 +2713,14 @@
   // taxa de transferência ~30% acima do valor de mercado; salário ~15% do valor/ano
   function askingPrice(p) { return Math.max(0.1, r2(TM.data.marketValue(p) * 1.3)); }
   function wageDemand(p) { return Math.max(0.05, r2(TM.data.marketValue(p) * 0.15)); }
+  // JOGADOR INTRANSFERÍVEL: joia jovem de peso num clube grande não sai por qualquer proposta
+  function isUntransferable(p) {
+    if (!p || p.freeAgent) return false;
+    var club = TM.data.club(p.clubId); if (!club) return false;
+    var clubRat = 70; try { clubRat = TM.data.clubRating(club.id); } catch (e) {}
+    // estrela jovem (<=23) e muito boa, em clube forte → pilar do projeto, não vendável
+    return (p.age || 24) <= 23 && (p.overall || 0) >= 84 && clubRat >= 82;
+  }
 
   function segCtl(options, def, cb) {
     var wrap = el("div", { class: "segmented full" });
@@ -2741,6 +2749,17 @@
       el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: p.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + sellClub.name }) ]),
       TM.ui.ovBadge(p.overall)
     ]));
+
+    // jogador INTRANSFERÍVEL — o clube não vende de jeito nenhum
+    if (isUntransferable(p)) {
+      screen.appendChild(el("div", { class: "untransfer-box" }, [
+        el("div", { class: "ut-ic", text: "🔒" }),
+        el("div", { class: "ut-t", text: p.name + " é INTRANSFERÍVEL" }),
+        el("div", { class: "ut-s", text: "O " + sellClub.name + " considera " + p.name + " (" + p.overall + ", " + p.age + " anos) um pilar do projeto e não aceita vendê-lo por nenhum valor." }),
+        TM.ui.button("← Voltar ao mercado", function () { TM.ui.go("coach-market"); }, "btn")
+      ]));
+      return;
+    }
 
     // postura do clube dono
     var stanceLines = [];
@@ -2774,6 +2793,10 @@
       var asking = r2(mval * stance.priceMult * (stance.willSell ? 1 : 1.12));
       var maxPat = stance.isKey ? 4 : 6;
       var st = { bid: Math.min(r2(asking * 0.75), c.budget), rounds: 0, patience: maxPat, agreed: false };
+      // adoçantes da proposta (facilitam o acordo por um valor em dinheiro menor)
+      var sweet = { bonus: false, sellOn: false, parts: 1 };
+      function sweetDiscount() { return (sweet.bonus ? 0.10 : 0) + (sweet.sellOn ? 0.08 : 0); }
+      function effAsking() { return Math.max(0.05, Math.round(asking * (1 - sweetDiscount()) * 100) / 100); }
 
       panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
 
@@ -2806,13 +2829,42 @@
         el("button", { class: "chip-btn", text: "+5%", on: { click: function () { setBid(st.bid * 1.05); } } }),
         el("button", { class: "chip-btn", text: "Igualar pedido", on: { click: function () { setBid(asking); } } })
       ]);
-      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]), quick ]));
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua proposta (à vista)" }), el("div", { class: "range-wrap" }, [ slider, bidVal ]), quick ]));
+
+      // ADOÇANTES: bônus por metas, % de venda futura, parcelamento
+      var bonusAmt = Math.round(asking * 0.15 * 100) / 100;
+      var sweetNote = el("div", { class: "sweet-note" });
+      function updSweet() {
+        sweetNote.innerHTML = "";
+        var parts = [];
+        if (sweet.bonus) parts.push("bônus de " + money(c, bonusAmt) + " por metas");
+        if (sweet.sellOn) parts.push("10% de uma venda futura");
+        if (sweet.parts > 1) parts.push("parcelado em " + sweet.parts + "x");
+        sweetNote.textContent = parts.length ? "Proposta inclui: " + parts.join(", ") + "." : "";
+      }
+      function sweetToggle(label, get, set) {
+        var b = el("button", { class: "sweet-chip" + (get() ? " on" : ""), text: label, on: { click: function () { set(!get()); b.classList.toggle("on", get()); updSweet(); } } });
+        return b;
+      }
+      var partSeg = segCtl([[1, "À vista"], [2, "2x"], [3, "3x"]], 1, function (v) { sweet.parts = parseInt(v, 10); updSweet(); });
+      panel.appendChild(el("div", { class: "nego-field" }, [
+        el("label", { text: "Adoçantes (ajudam a fechar por menos à vista)" }),
+        el("div", { class: "sweet-row" }, [
+          sweetToggle("💰 Bônus por metas", function () { return sweet.bonus; }, function (v) { sweet.bonus = v; }),
+          sweetToggle("📈 10% venda futura", function () { return sweet.sellOn; }, function (v) { sweet.sellOn = v; })
+        ]),
+        el("div", { class: "sweet-parts" }, [ el("span", { class: "sweet-parts-lbl", text: "Pagamento:" }), partSeg ]),
+        sweetNote
+      ]));
 
       var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
       var offerBtn = TM.ui.button("💬 Fazer proposta", doOffer, "btn primary");
-      var acceptBtn = TM.ui.button("✅ Aceitar contraproposta", function () { setBid(asking); doOffer(); }, "btn primary");
+      var acceptBtn = TM.ui.button("✅ Aceitar contraproposta", function () { setBid(effAsking()); doOffer(); }, "btn primary");
       acceptBtn.style.display = "none";
-      var nextBtn = TM.ui.button("Negociar com o jogador →", function () { goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid }); }, "btn primary next-step");
+      var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
+        goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: st.bid,
+          bonus: sweet.bonus ? bonusAmt : 0, sellOn: sweet.sellOn ? 10 : 0, parts: sweet.parts || 1 });
+      }, "btn primary next-step");
       nextBtn.style.display = "none";
 
       function lockControls() { offerBtn.disabled = true; slider.disabled = true; acceptBtn.style.display = "none"; quick.querySelectorAll("button").forEach(function (b) { b.disabled = true; }); }
@@ -2821,14 +2873,17 @@
         st.rounds++;
         bubble("me", "Ofereço " + money(c, st.bid) + ".");
         acceptBtn.style.display = "none";
-        if (st.bid > c.budget) { bubble("them", "Seu orçamento é de apenas " + money(c, c.budget) + ".", "angry"); return; }
-        if (st.bid >= asking * 0.93) {
-          bubble("them", "Fechado! " + p.name + " é seu por " + money(c, st.bid) + ". Agora acerte com o jogador.", "happy");
+        var partsNow = sweet.parts > 1 ? st.bid / sweet.parts : st.bid;   // à vista, só a 1ª parcela pesa agora
+        if (partsNow > c.budget) { bubble("them", "Seu caixa não cobre nem a entrada (" + money(c, c.budget) + ").", "angry"); return; }
+        var ea = effAsking();
+        if (st.bid >= ea * 0.93) {
+          var extra = (sweetDiscount() > 0 ? " (com os adoçantes)" : "");
+          bubble("them", "Fechado! " + p.name + " é seu por " + money(c, st.bid) + extra + ". Agora acerte com o jogador.", "happy");
           st.agreed = true; lockControls(); nextBtn.style.display = "block";
-        } else if (st.bid >= asking * 0.78 && st.patience > 0) {
+        } else if (st.bid >= ea * 0.78 && st.patience > 0) {
           st.patience--; asking = Math.round((asking + st.bid) / 2);
-          bubble("them", "Estamos perto... chegue a " + money(c, asking) + " e fechamos.");
-          acceptBtn.textContent = "✅ Aceitar " + money(c, asking); acceptBtn.style.display = "block";
+          bubble("them", "Estamos perto... chegue a " + money(c, effAsking()) + " e fechamos.");
+          acceptBtn.textContent = "✅ Aceitar " + money(c, effAsking()); acceptBtn.style.display = "block";
         } else if (st.rounds >= 7 || st.patience <= 0) {
           bubble("them", "Encerramos a conversa por ora. Volte com uma proposta melhor.", "angry"); lockControls();
         } else {
@@ -2949,12 +3004,25 @@
             buyPrice: NEGO.buyPrice || 0, termYears: NEGO.termYears || 1, loanFee: NEGO.loanFee || 0, wage: terms.wage
           });
         } else {
-          c.budget -= (NEGO.fee || 0);
-          c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += (NEGO.fee || 0);
-          C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: NEGO.fee || 0, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
+          var fee = NEGO.fee || 0, parts = Math.max(1, NEGO.parts || 1);
+          var upfront = r2(fee / parts);
+          c.budget -= upfront;
+          c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += upfront;
+          // parcelas futuras (pagas no início das próximas temporadas)
+          if (parts > 1) {
+            c.installments = c.installments || [];
+            c.installments.push({ pid: p.id, name: p.name, per: upfront, left: parts - 1, to: NEGO.oldClubId ? (TM.data.club(NEGO.oldClubId) || {}).name : "" });
+          }
+          // bônus por metas e % de venda futura ficam registrados no jogador
+          if (NEGO.bonus || NEGO.sellOn) {
+            c.dealTerms = c.dealTerms || {};
+            c.dealTerms[p.id] = { bonus: NEGO.bonus || 0, sellOn: NEGO.sellOn || 0 };
+          }
+          C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: fee, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
           c.roster.push(p.id);
           c.signedFrom[p.id] = NEGO.oldClubId;
           C().syncLineup(c); // já entra no banco de reservas
+          if (parts > 1) TM.notify.push(c, { icon: "💳", title: "Compra parcelada", text: p.name + " parcelado em " + parts + "x de " + money(c, upfront) + " — as próximas parcelas serão cobradas nas próximas temporadas." });
         }
         TM.storage.saveCoachCareer(c);
         quote.className = "nego-quote happy";
@@ -3124,7 +3192,10 @@
     if (!p) { TM.ui.go(profileBack); return; }
     var st = (c.pstats && c.pstats[p.id]) || null;
     var pot = p.potential || p.overall;
-    var val = curVal(c, TM.data.marketValue(p));
+    var baseEur = TM.data.marketValue(p);
+    var dynEur = baseEur; try { dynEur = C().dynValue(c, p); } catch (e) {}
+    var val = curVal(c, dynEur);
+    var valTrend = dynEur > baseEur * 1.08 ? "up" : dynEur < baseEur * 0.92 ? "down" : "";
     var nation = p.nationId ? TM.data.nation(p.nationId) : null;
 
     screen.appendChild(TM.ui.topbar("Análise do jogador", function () { TM.ui.go(profileBack); }));
@@ -3142,7 +3213,7 @@
           nation ? TM.img.nationImg(nation, "prof-flag") : null,
           el("span", { text: p.age + " anos" }),
           el("span", { class: "prof-pos pos-" + (p.pos || "MF"), text: TM.data.posLabel(p) }),
-          el("span", { class: "prof-val", text: money(c, val) })
+          el("span", { class: "prof-val" + (valTrend ? " vt-" + valTrend : ""), html: money(c, val) + (valTrend === "up" ? " <span class='vt-arrow'>▲</span>" : valTrend === "down" ? " <span class='vt-arrow'>▼</span>" : "") })
         ])
       ]),
       el("div", { class: "prof-gauges" }, [

@@ -1864,6 +1864,15 @@
         TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });
       }
     }
+    // parcelas de transferências (paga a próxima parcela de cada compra parcelada)
+    if (career.installments && career.installments.length) {
+      var stillDue = [], paidTot = 0;
+      career.installments.forEach(function (it) {
+        if (it.left > 0) { career.budget -= it.per; paidTot += it.per; it.left--; if (it.left > 0) stillDue.push(it); }
+      });
+      career.installments = stillDue;
+      if (paidTot > 0) TM.notify.push(career, { icon: "💳", title: "Parcelas de transferências", text: "Pagas parcelas de transferências no valor de " + fmtMoney(career, Math.round(paidTot * 100) / 100) + " nesta temporada." });
+    }
     // CONTRATO DO PRÓPRIO TREINADOR: saída anunciada, expiração e renovação da diretoria
     if (career.myContract) {
       var mc = career.myContract;
