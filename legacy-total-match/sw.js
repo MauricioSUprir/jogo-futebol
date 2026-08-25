@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v93";
+var CACHE = "total-match-v94";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
@@ -11,7 +11,7 @@ var SHELL = [
   "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js",
   "js/competitions.js", "js/coach.js", "js/player.js", "js/director.js", "js/build.js",
   "js/compmode.js", "js/tournament.js", "js/groupcomp.js", "js/matchview.js", "js/pitch2d.js", "js/scout.js",
-  "js/net.js", "js/online.js", "js/account.js", "js/news.js", "js/editor.js", "js/app.js"
+  "js/net.js", "js/fairplay.js", "js/online.js", "js/account.js", "js/news.js", "js/editor.js", "js/app.js"
 ];
 
 self.addEventListener("install", function (e) {
