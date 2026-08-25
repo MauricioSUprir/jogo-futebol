@@ -654,17 +654,54 @@
       career.confidence[p.id] = cur;
     });
   }
+  // diagnóstico da lesão conforme a gravidade (nº de jogos fora)
+  var INJ_LIGHT = ["estiramento leve", "torção no tornozelo", "pancada na coxa", "dores musculares", "entorse leve"];
+  var INJ_MOD = ["lesão na coxa", "estiramento muscular", "lesão no joelho", "problema no adutor", "lesão na panturrilha"];
+  var INJ_GRAVE = ["ruptura de ligamento", "lesão no ligamento cruzado", "fratura no tornozelo", "ruptura muscular grave", "lesão grave no joelho", "fratura na fíbula"];
+  function injuryDiagnosis(weeks) {
+    if (weeks >= 6) return { label: INJ_GRAVE[Math.floor(Math.random() * INJ_GRAVE.length)], sev: "grave" };
+    if (weeks >= 3) return { label: INJ_MOD[Math.floor(Math.random() * INJ_MOD.length)], sev: "moderada" };
+    return { label: INJ_LIGHT[Math.floor(Math.random() * INJ_LIGHT.length)], sev: "leve" };
+  }
+  function logInjury(career, id, name, weeks, dg, relapse) {
+    career.injHistory = career.injHistory || {};
+    (career.injHistory[id] = career.injHistory[id] || []).push({ label: dg.label, sev: dg.sev, weeks: weeks, season: career.season || 1, relapse: !!relapse });
+    if (career.injHistory[id].length > 12) career.injHistory[id] = career.injHistory[id].slice(-12);
+  }
   function processUserMatch(career, result, userSide) {
     // um jogo passou: reduz contadores
     ["injuries", "suspensions"].forEach(function (k) {
       Object.keys(career[k]).forEach(function (id) { career[k][id]--; if (career[k][id] <= 0) delete career[k][id]; });
     });
+    // risco de recaída: jogadores que voltaram há pouco de lesão têm chance de recair
+    career.injRisk = career.injRisk || {};
+    Object.keys(career.injRisk).forEach(function (id) {
+      career.injRisk[id]--; if (career.injRisk[id] <= 0) { delete career.injRisk[id]; return; }
+      if (career.injuries[id] > 0) return;              // já está lesionado
+      if (!inRoster(career, id)) return;
+      var high = career.injRisk[id] >= 4;               // recém-recuperado de lesão grave
+      if (Math.random() < (high ? 0.10 : 0.05)) {
+        var p = resolvePlayer(career, id); if (!p) return;
+        var wk = 2 + Math.floor(Math.random() * (high ? 6 : 3));
+        var dg = injuryDiagnosis(wk);
+        career.injuries[id] = wk; logInjury(career, id, p.name, wk, dg, true);
+        career.injRisk[id] = wk + 3;
+        TM.notify.push(career, { icon: "🩼", title: "Recaída", news: true, text: p.name + " sofreu uma RECAÍDA (" + dg.label + ") e ficará fora por ~" + wk + " jogo(s). Cuidado ao apressar o retorno." });
+      }
+    });
     // novas lesões do meu time
     (result.injuries || []).forEach(function (inj) {
       if (inj.side !== userSide) return;
       if (!inRoster(career, inj.id)) return;
-      career.injuries[inj.id] = inj.weeks;
-      TM.notify.push(career, { icon: "🚑", title: "Lesão", text: inj.name + " se lesionou e ficará fora por ~" + inj.weeks + " jogo(s)." });
+      var weeks = inj.weeks;
+      // ~13% das lesões escalam para algo grave (temporada de recuperação longa)
+      if (Math.random() < 0.13) weeks = Math.max(weeks, 6 + Math.floor(Math.random() * 9));
+      var dg = injuryDiagnosis(weeks);
+      career.injuries[inj.id] = weeks;
+      logInjury(career, inj.id, inj.name, weeks, dg, false);
+      career.injRisk[inj.id] = (dg.sev === "grave" ? weeks + 5 : dg.sev === "moderada" ? 3 : 2);
+      TM.notify.push(career, { icon: dg.sev === "grave" ? "🩼" : "🚑", title: dg.sev === "grave" ? "Lesão grave" : "Lesão",
+        news: dg.sev === "grave", text: inj.name + " sofreu " + dg.label + " e ficará fora por ~" + weeks + " jogo(s)." + (dg.sev === "grave" ? " Golpe duro para o elenco." : "") });
     });
     // suspensões (cartão vermelho)
     (result.sentOff || []).forEach(function (so) {
