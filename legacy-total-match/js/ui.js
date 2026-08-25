@@ -560,11 +560,12 @@
       ] }
     ];
     // destaques do carrossel (topo)
+    var SB = "assets/estadios/";
     var FEATURED = [
-      { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car" },
-      { icon: "🌟", name: "Rumo ao Estrelato", tag: "Crie um craque e escreva sua lenda", route: "player", acc: "car" },
-      { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play" },
-      { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "net" === "net" ? "online" : "online", acc: "net" }
+      { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car", bg: SB + "st-270085.jpg" },
+      { icon: "🌟", name: "Rumo ao Estrelato", tag: "Crie um craque e escreva sua lenda", route: "player", acc: "car", bg: SB + "st-30651230.jpg" },
+      { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play", bg: SB + "st-17779076.jpg" },
+      { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "online", acc: "net", bg: SB + "st-399187.jpg" }
     ];
 
     // ---- header ----
@@ -591,11 +592,13 @@
     function renderHero(i) {
       hIdx = (i + FEATURED.length) % FEATURED.length;
       var f = FEATURED[hIdx];
-      hero.className = "hero-card acc-" + f.acc;
+      hero.className = "hero-card cinema acc-" + f.acc;
       hero.innerHTML = "";
-      hero.appendChild(el("span", { class: "hero-wm", text: f.icon }));
+      var bg = el("span", { class: "hero-bg" }); if (f.bg) bg.style.backgroundImage = "url('" + f.bg + "')";
+      hero.appendChild(bg);
+      hero.appendChild(el("span", { class: "hero-shade" }));
       hero.appendChild(el("div", { class: "hero-body" }, [
-        el("span", { class: "hero-eyebrow", text: "EM DESTAQUE" }),
+        el("span", { class: "hero-eyebrow" }, [ el("span", { class: "he-ic", text: f.icon }), el("span", { text: "EM DESTAQUE" }) ]),
         el("span", { class: "hero-name", text: f.name }),
         el("span", { class: "hero-tag", text: f.tag }),
         el("span", { class: "hero-cta", text: "JOGAR ▶" })
