@@ -1993,8 +1993,14 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 
 /* ============ Redes Sociais (feed) ============ */
 /* ----- barra de SETORES (abas deslizáveis) ----- */
-.sector-bar { position: sticky; top: 0; z-index: 30; width: 100%; margin: 0 0 12px; background: linear-gradient(180deg, var(--bg) 60%, rgba(0,0,0,0)); }
+.sector-bar { position: sticky; top: 0; z-index: 30; width: 100%; max-width: 620px; margin: 0 auto 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
 .sector-track { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 8px 2px 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
+/* PC: setores quebram em linhas dentro da coluna (sem barra de rolagem horizontal) */
+@media (min-width: 760px) {
+  .sector-bar { position: static; border-bottom: none; }
+  .sector-track { justify-content: center; flex-wrap: wrap; overflow-x: visible; gap: 8px; padding-bottom: 4px; }
+  .sector-tab { min-width: 76px; flex: 0 0 auto; }
+}
 .sector-track::-webkit-scrollbar { display: none; }
 .sector-tab { flex: 0 0 auto; position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 62px; padding: 8px 12px 7px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); color: var(--text-dim); cursor: pointer; transition: transform .12s, background .15s, color .15s, border-color .15s; }
 .sector-tab:active { transform: scale(.94); }
@@ -2003,6 +2009,21 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .sector-tab.on { background: linear-gradient(180deg, var(--green), #0f8a42); color: #fff; border-color: var(--green); box-shadow: 0 4px 14px rgba(34,197,94,.30); }
 .sector-tab .st-badge { position: absolute; top: 2px; right: 6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: #e23b3b; color: #fff; font-size: 9px; font-weight: 800; line-height: 15px; text-align: center; box-shadow: 0 0 0 2px var(--panel); }
 .sector-tab.on .st-badge { box-shadow: 0 0 0 2px #0f8a42; }
+
+/* ----- NAV inferior (estilo app, fixa no rodapé) ----- */
+.bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; justify-content: center; gap: 2px;
+  background: rgba(12,16,20,.96); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)); }
+.bn-item { position: relative; flex: 1 1 0; max-width: 120px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 5px 2px 3px; border-radius: 12px; transition: color .15s, background .15s; }
+.bn-item .bn-ic { font-size: 21px; line-height: 1; filter: grayscale(.35) opacity(.85); transition: filter .15s, transform .12s; }
+.bn-item .bn-lb { font-size: 10.5px; font-weight: 700; }
+.bn-item.on { color: var(--green); }
+.bn-item.on .bn-ic { filter: none; transform: translateY(-1px) scale(1.08); }
+.bn-item.on::before { content: ""; position: absolute; top: 0; width: 26px; height: 3px; border-radius: 0 0 4px 4px; background: var(--green); box-shadow: 0 0 10px rgba(34,197,94,.6); }
+.bn-item:active { transform: scale(.9); }
+.bottom-nav-spacer { height: 72px; width: 100%; flex: 0 0 auto; }
+@media (min-width: 760px) { .bottom-nav { max-width: 620px; margin: 0 auto; border-radius: 16px 16px 0 0; border: 1px solid var(--line); border-bottom: none; } }
 
 /* ----- Propostas ----- */
 .offers-wrap { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 12px; }

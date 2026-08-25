@@ -27,10 +27,31 @@
       { ic: "🔔", label: "Avisos", route: "coach-notifications", badge: unread }
     ].map(function (s) { if (s.route === active) s.active = true; return s; });
   }
-  // injeta a barra logo após a topbar
+  // NAV inferior (estilo app, diferente da barra de cima): setores primários fixos no rodapé
+  function bottomNav(c, active) {
+    var items = [
+      { ic: "🏠", label: "Início", route: "coach-hub" },
+      { ic: "👥", label: "Elenco", route: "coach-squad" },
+      { ic: "📋", label: "Escalar", route: "coach-lineup" },
+      { ic: "🔁", label: "Mercado", route: "coach-market" },
+      { ic: "📱", label: "Redes", route: "coach-social" }
+    ];
+    var nav = el("nav", { class: "bottom-nav" });
+    items.forEach(function (it) {
+      var on = it.route === active;
+      nav.appendChild(el("button", { class: "bn-item" + (on ? " on" : ""), on: { click: function () { if (!on) TM.ui.go(it.route); } } }, [
+        el("span", { class: "bn-ic", text: it.ic }),
+        el("span", { class: "bn-lb", text: it.label })
+      ]));
+    });
+    return nav;
+  }
+  // injeta a barra de setores (topo) + a nav inferior (rodapé)
   function addSectorBar(screen, active) {
     var c = TM.storage.coachCareer(); if (!c) return;
     screen.appendChild(TM.ui.sectorBar(coachSectors(c, active), active));
+    screen.appendChild(bottomNav(c, active));
+    screen.appendChild(el("div", { class: "bottom-nav-spacer" }));
   }
   TM.coachUI = { sectors: coachSectors, addBar: addSectorBar };
 
@@ -559,7 +580,7 @@
     } } });
     var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
-    screen.appendChild(TM.ui.sectorBar(coachSectors(c, "coach-hub"), "coach-hub"));
+    addSectorBar(screen, "coach-hub");
 
     var myCoach = c.coachId ? TM.data.coaches().filter(function (x) { return x.id === c.coachId; })[0] : null;
     var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" })
