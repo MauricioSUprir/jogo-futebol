@@ -125,7 +125,7 @@
   // repasse do jogador aposentado (Rumo ao Estrelato) que virou treinador
   var exPlayerHandoff = null;
   function freshSetup(clubId, mode) {
-    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador" };
+    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador", allowRestart: false };
     if (exPlayerHandoff) { s.coachName = exPlayerHandoff.name || ""; s.coachPhoto = exPlayerHandoff.photo || null; s.coachMode = "create"; }
     return s;
   }
@@ -430,6 +430,15 @@
     });
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "🏛️ Diretoria" }), boardWrap, boardHint ]));
 
+    // reiniciar partidas (permitir rejogar ao sair no meio)
+    var restartToggle = el("button", { class: "switch" + (opts.allowRestart ? " on" : ""), on: { click: function () {
+      opts.allowRestart = !opts.allowRestart; restartToggle.classList.toggle("on", opts.allowRestart);
+    } } }, [ el("span", { class: "switch-knob" }) ]);
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "🔁 Reiniciar partidas" }), restartToggle ]),
+      el("div", { class: "setting-hint", text: "Ligado: você pode sair no meio da partida e jogá-la de novo. Desligado (recomendado): sair no meio registra o resultado — sem rejogar, como na vida real." })
+    ]));
+
     // seu cargo no clube
     var roleSel = el("select", { class: "select" });
     [["treinador", "Treinador"], ["dirigente", "Dirigente"]].forEach(function (o) {
@@ -477,6 +486,7 @@
         }
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         var career = C().newClubCareer(clubId, opts);
+        career.allowRestart = !!opts.allowRestart;
         if (isCustom) { career.isCustomClub = true; customDraft = null; }
         TM.storage.saveCoachCareer(career);
         pendingSetup = null; exPlayerHandoff = null;
@@ -539,6 +549,7 @@
     var dots = el("button", { class: "tb-menu", text: "⋯", on: { click: function () {
       TM.ui.optionsMenu("Opções da carreira", [
         { label: "💾 Salvar (continuar jogando)", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
+        { label: (c.allowRestart ? "🔁 Reiniciar partidas: LIGADO" : "🔒 Reiniciar partidas: DESLIGADO"), fn: function () { c.allowRestart = !c.allowRestart; TM.storage.saveCoachCareer(c); TM.ui.toast(c.allowRestart ? "Agora você pode rejogar partidas" : "Sair no meio agora registra o resultado"); } },
         { label: "📤 Salvar e sair", fn: function () { TM.saves.park("coach"); TM.ui.toast("Carreira guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
         { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
         { label: "🗑️ Finalizar carreira", danger: true, fn: function () {
@@ -1373,7 +1384,22 @@
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
       pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation,
-      onBack: function () { TM.ui.go("coach-hub"); },
+      onBack: function () {
+        // sair no meio: se "reiniciar partidas" estiver desligado, o resultado é registrado (sem rejogar)
+        if (c.allowRestart) { TM.ui.go("coach-hub"); return; }
+        TM.ui.confirm("Sair da partida?", "Sair agora REGISTRA o resultado atual da partida — você não poderá jogá-la de novo. (Para poder rejogar, ligue \"Reiniciar partidas\" nas opções da carreira.)", "Sair e registrar", function () {
+          C().processUserMatch(c, result, userSide);
+          var hs = result.score[0], as = result.score[1];
+          var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
+          var penWinnerId = null;
+          if (penCtx) { var sh = TM.engine.shootout(C().anyTeam(c, penCtx.aId), C().anyTeam(c, penCtx.bId)); penWinnerId = sh.winner === 0 ? penCtx.aId : penCtx.bId; }
+          C().applyUserResult(c, hs, as, penWinnerId);
+          c.pressEdge = 0;
+          TM.storage.saveCoachCareer(c);
+          TM.ui.toast("Resultado registrado: " + hs + " × " + as);
+          TM.ui.go("coach-hub");
+        });
+      },
       onDone: function () {
         C().processUserMatch(c, result, userSide);
         var hs = result.score[0], as = result.score[1];
