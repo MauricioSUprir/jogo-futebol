@@ -1973,3 +1973,11 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .bm-val.bm-lo, .bm-msg.bm-lo { color: #f59e42; }
 .bm-val.bm-crit, .bm-msg.bm-crit { color: #ff6a61; }
 .bm-msg { font-size: 12px; font-weight: 700; }
+
+/* ============ Uniforme (kit) ============ */
+.cc-preview { display: flex; align-items: center; gap: 12px; }
+.cc-preview-info { flex: 1; min-width: 0; }
+.cc-preview-kit { width: 56px; height: 56px; flex: 0 0 auto; }
+.ch-kit { width: 46px; height: 46px; flex: 0 0 auto; }
+.ch-info { flex: 1; min-width: 0; }
+@media (max-width: 400px) { .ch-kit { display: none; } }
