@@ -76,6 +76,22 @@
     } catch (e) { cb({ ok: false, error: "Falha ao validar. Tente de novo." }); }
   }
 
+  // recupera a chave pelo e-mail da compra e já ativa (comprador nem vê a chave)
+  function recoverByEmail(email, cb) {
+    email = (email || "").trim();
+    if (!email) { cb({ ok: false, error: "Digite o e-mail da compra." }); return; }
+    if (!CONFIG.API) { cb({ ok: false, error: "Servidor não configurado." }); return; }
+    var url = CONFIG.API.replace(/\/+$/, "") + "/key?email=" + encodeURIComponent(email);
+    try {
+      fetch(url).then(function (r) { return r.json().catch(function () { return { ok: false, error: "Resposta inválida." }; }); })
+        .then(function (d) {
+          if (d && d.ok && d.key) { activate(d.key, cb); }   // achou a compra -> ativa a chave automaticamente
+          else { cb({ ok: false, error: (d && d.error) || "Nenhuma compra encontrada com esse e-mail." }); }
+        })
+        .catch(function () { cb({ ok: false, error: "Sem conexão com o servidor. Tente de novo." }); });
+    } catch (e) { cb({ ok: false, error: "Falha ao recuperar. Tente de novo." }); }
+  }
+
   // ponto central: navega para um modo, respeitando o cadeado
   function enter(route, params) {
     if (CONFIG.PAYWALL && isPaidRoute(route) && !isUnlocked()) {
@@ -91,6 +107,7 @@
     isUnlocked: isUnlocked,
     isPaidRoute: isPaidRoute,
     activate: activate,
+    recoverByEmail: recoverByEmail,
     enter: enter,
     state: state
   };
@@ -134,25 +151,41 @@
       } } });
       wrap.appendChild(buy);
 
-      // ativação de chave
-      wrap.appendChild(el("div", { class: "pw-key-h", text: "Já comprou? Ative sua chave" }));
-      var input = el("input", { class: "pw-input", type: "text", placeholder: "TM-XXXX-XXXX-XXXX-XXXX", maxlength: "40", autocomplete: "off", autocapitalize: "characters", spellcheck: "false" });
       var msg = el("div", { class: "pw-msg" });
+      function done(res, okText) {
+        if (res.ok) {
+          msg.className = "pw-msg ok"; msg.textContent = okText || "✔ Desbloqueado! Aproveite.";
+          setTimeout(function () { TM.ui.go(params && params.route ? params.route : "modes"); }, 800);
+        } else {
+          msg.className = "pw-msg err"; msg.textContent = res.error || "Não foi possível desbloquear.";
+        }
+      }
+
+      // ---- PRINCIPAL: já comprou? recupera pelo e-mail (sem precisar da chave) ----
+      wrap.appendChild(el("div", { class: "pw-key-h", text: "Já comprou? Desbloqueie com seu e-mail" }));
+      var mail = el("input", { class: "pw-input", type: "email", placeholder: "e-mail usado na compra", autocomplete: "email", spellcheck: "false" });
+      var rec = el("button", { class: "btn primary pw-activate", text: "Desbloquear", on: { click: function () {
+        msg.className = "pw-msg"; msg.textContent = "Buscando sua compra…"; rec.disabled = true;
+        recoverByEmail(mail.value, function (res) { rec.disabled = false; done(res); });
+      } } });
+      mail.addEventListener("keydown", function (e) { if (e.key === "Enter") rec.click(); });
+      wrap.appendChild(el("div", { class: "pw-key-row" }, [ mail, rec ]));
+
+      // ---- SECUNDÁRIO: ativar por código (chave) ----
+      var keyWrap = el("div", { class: "pw-alt" });
+      var toggle = el("button", { class: "pw-alt-toggle", text: "Tenho um código de chave", on: { click: function () { keyWrap.classList.toggle("open"); } } });
+      var input = el("input", { class: "pw-input", type: "text", placeholder: "TM-XXXX-XXXX-XXXX-XXXX", maxlength: "40", autocomplete: "off", autocapitalize: "characters", spellcheck: "false" });
       var act = el("button", { class: "btn pw-activate", text: "Ativar", on: { click: function () {
         msg.className = "pw-msg"; msg.textContent = "Validando…"; act.disabled = true;
-        activate(input.value, function (res) {
-          act.disabled = false;
-          if (res.ok) {
-            msg.className = "pw-msg ok"; msg.textContent = "✔ Desbloqueado! Aproveite.";
-            setTimeout(function () { TM.ui.go(params && params.route ? params.route : "modes"); }, 800);
-          } else {
-            msg.className = "pw-msg err"; msg.textContent = res.error || "Não foi possível ativar.";
-          }
-        });
+        activate(input.value, function (res) { act.disabled = false; done(res); });
       } } });
-      wrap.appendChild(el("div", { class: "pw-key-row" }, [ input, act ]));
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") act.click(); });
+      keyWrap.appendChild(el("div", { class: "pw-key-row" }, [ input, act ]));
+      wrap.appendChild(toggle);
+      wrap.appendChild(keyWrap);
+
       wrap.appendChild(msg);
-      wrap.appendChild(el("div", { class: "pw-fine", text: "A chave funciona em 1 aparelho. Problemas? Fale com o suporte pelo Kiwify." }));
+      wrap.appendChild(el("div", { class: "pw-fine", text: "Funciona em 1 aparelho. Use o mesmo e-mail da compra (pode levar 1 min após pagar). Problemas? Suporte pelo Kiwify." }));
 
       screen.appendChild(wrap);
     });
