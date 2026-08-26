@@ -15,10 +15,10 @@
     API: "https://tm-license.onrender.com",           // servidor de licenças (Render) — já no ar
     BUY_URL: "https://pay.kiwify.com.br/q8ROOrh",     // checkout do produto no Kiwify
     PRICE_LABEL: "R$ 9,90",                           // texto na tela (ajuste se mudar o preço no Kiwify)
-    // modos LIBERADOS na demonstração (o resto pede a chave)
-    FREE_ROUTES: { quick: 1, compmode: 1, settings: 1, profile: 1, saves: 1, competicoes: 1 },
-    // modos que EXIGEM compra
-    PAID_ROUTES: { coach: 1, online: 1, dream: 1, draft: 1, groupcomp: 1, editor: 1 }
+    // telas livres (utilidades — não são jogo): config, perfil, salvos, infos
+    FREE_ROUTES: { settings: 1, profile: 1, saves: 1, competicoes: 1 },
+    // TODOS os modos de jogo exigem compra (sem demo grátis)
+    PAID_ROUTES: { coach: 1, online: 1, dream: 1, draft: 1, groupcomp: 1, editor: 1, quick: 1, compmode: 1 }
   };
   TM.LICENSE_CONFIG = CONFIG;
 
@@ -121,22 +121,16 @@
 
       wrap.appendChild(el("div", { class: "pw-hero" }, [
         el("img", { class: "pw-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-        el("div", { class: "pw-h1", text: "Versão completa" }),
-        el("div", { class: "pw-sub", text: "Você está na demonstração. Desbloqueie o jogo completo com uma chave." })
+        el("div", { class: "pw-h1", text: "Desbloqueie o Total Match" }),
+        el("div", { class: "pw-sub", text: "Acesso completo ao jogo" + (CONFIG.PRICE_LABEL ? " por " + CONFIG.PRICE_LABEL : "") + " — pagamento único." })
       ]));
 
-      wrap.appendChild(el("div", { class: "pw-cols" }, [
-        el("div", { class: "pw-col" }, [
-          el("div", { class: "pw-col-h", text: "🎮 Grátis (demo)" }),
-          el("ul", { class: "pw-list" }, [
-            el("li", { text: "Partida Rápida" }),
-            el("li", { text: "Competições (ligas, copas, seleções)" })
-          ])
-        ]),
+      wrap.appendChild(el("div", { class: "pw-cols pw-cols-1" }, [
         el("div", { class: "pw-col pw-col-pro" }, [
-          el("div", { class: "pw-col-h", text: "⭐ Completo" + (CONFIG.PRICE_LABEL ? " · " + CONFIG.PRICE_LABEL : "") }),
+          el("div", { class: "pw-col-h", text: "⭐ O que você recebe" + (CONFIG.PRICE_LABEL ? " · " + CONFIG.PRICE_LABEL : "") }),
           el("ul", { class: "pw-list" }, [
             el("li", { text: "Carreira de Treinador e de Dirigente" }),
+            el("li", { text: "Partida Rápida e Competições (ligas, copas, seleções)" }),
             el("li", { text: "Modo Online com amigos" }),
             el("li", { text: "Dream Team, Draft, Grupo e Editor" }),
             el("li", { text: "Todas as atualizações futuras" })
