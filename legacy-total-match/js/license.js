@@ -11,9 +11,9 @@
   var TM = (global.TM = global.TM || {});
 
   var CONFIG = {
-    PAYWALL: false,                                   // <<< liga/desliga o cadeado (ligue após configurar o Kiwify)
+    PAYWALL: true,                                    // cadeado LIGADO — venda no ar
     API: "https://tm-license.onrender.com",           // servidor de licenças (Render) — já no ar
-    BUY_URL: "",                                      // <<< COLE aqui o link do produto no Kiwify
+    BUY_URL: "https://pay.kiwify.com.br/q8ROOrh",     // checkout do produto no Kiwify
     PRICE_LABEL: "R$ 9,90",                           // texto na tela (ajuste se mudar o preço no Kiwify)
     // modos LIBERADOS na demonstração (o resto pede a chave)
     FREE_ROUTES: { quick: 1, compmode: 1, settings: 1, profile: 1, saves: 1, competicoes: 1 },
