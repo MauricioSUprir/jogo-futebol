@@ -158,37 +158,55 @@ app.get("/key", async (req, res) => {
   } catch (e) { return res.status(503).json({ ok: false, error: "Tente de novo." }); }
 });
 
-// página simples onde o comprador pega a chave
-app.get("/minha-chave", (req, res) => {
+// página de acesso / obrigado — o comprador cai aqui após pagar
+const GAME_URL = "https://mauriciosuprir.github.io/jogo-futebol/";
+app.get(["/minha-chave", "/obrigado", "/acesso"], (req, res) => {
   res.type("html").send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sua chave — Total Match</title>
+<title>Acesso — Total Match</title>
 <style>
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#06070a;color:#e8e6ef;
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(120% 70% at 50% 0%, rgba(34,197,94,.14), transparent 55%), #06070a;color:#e8e6ef;
     display:flex;min-height:100vh;align-items:center;justify-content:center;padding:20px}
-  .card{width:100%;max-width:440px;background:#0d0f14;border:1px solid #1e2230;border-radius:18px;padding:28px 24px;text-align:center}
-  h1{font-size:20px;margin:0 0 4px}.sub{color:#9aa0ab;font-size:13.5px;margin:0 0 20px;line-height:1.45}
-  input{width:100%;box-sizing:border-box;background:#06070a;border:1px solid #1e2230;border-radius:12px;
-    padding:13px 14px;color:#fff;font-size:15px;text-align:center}
-  button{width:100%;margin-top:10px;background:#22c55e;color:#052e14;border:0;border-radius:12px;padding:13px;
-    font-size:15px;font-weight:800;cursor:pointer}
-  .key{margin-top:16px;font-size:20px;font-weight:800;letter-spacing:2px;color:#4ade80;word-break:break-all;display:none}
-  .msg{margin-top:12px;font-size:13px;min-height:16px}.err{color:#f87171}.ok{color:#4ade80}
-  .steps{margin-top:18px;font-size:12px;color:#9aa0ab;line-height:1.5;text-align:left}
-  a{color:#4ade80}
+  .card{width:100%;max-width:460px;background:#0d0f14;border:1px solid #1e2230;border-radius:20px;padding:30px 26px;text-align:center}
+  .badge{display:inline-block;background:rgba(34,197,94,.15);color:#4ade80;font-size:12px;font-weight:800;
+    padding:6px 14px;border-radius:999px;letter-spacing:.05em}
+  h1{font-size:23px;margin:14px 0 4px}h1 b{color:#22c55e}
+  .sub{color:#9aa0ab;font-size:14px;margin:0 0 22px;line-height:1.45}
+  .play{display:block;width:100%;text-decoration:none;background:linear-gradient(120deg,#4ade80,#22c55e);color:#052e14;
+    border-radius:14px;padding:16px;font-size:17px;font-weight:900;box-shadow:0 10px 26px rgba(34,197,94,.3)}
+  .or{margin:22px 0 12px;font-size:12px;font-weight:800;letter-spacing:.08em;color:#6b7280;text-transform:uppercase}
+  input{width:100%;background:#06070a;border:1px solid #1e2230;border-radius:12px;padding:13px 14px;color:#fff;font-size:15px;text-align:center}
+  .kb{width:100%;margin-top:10px;background:#161a22;color:#e8e6ef;border:1px solid #262c38;border-radius:12px;padding:13px;
+    font-size:14px;font-weight:700;cursor:pointer}
+  .key{margin-top:14px;font-size:22px;font-weight:800;letter-spacing:2px;color:#4ade80;word-break:break-all;display:none;
+    background:#06070a;border:1px dashed #2a3446;border-radius:12px;padding:12px}
+  .msg{margin-top:11px;font-size:13px;min-height:16px}.err{color:#f87171}.ok{color:#4ade80}
+  .steps{margin-top:20px;font-size:12.5px;color:#9aa0ab;line-height:1.6;text-align:left;
+    background:#0a0c11;border:1px solid #1a1e28;border-radius:12px;padding:14px 16px}
+  .steps b{color:#cdd2db}
 </style></head><body>
 <div class="card">
-  <h1>⚽ Total Match</h1>
-  <p class="sub">Digite o e-mail que você usou na compra para receber sua chave.</p>
-  <input id="e" type="email" placeholder="seu@email.com" autocomplete="email">
-  <button id="b">Pegar minha chave</button>
+  <span class="badge">✔ COMPRA APROVADA</span>
+  <h1>Bem-vindo ao <b>Total Match</b>! ⚽</h1>
+  <p class="sub">Seu acesso está liberado. Toque no botão abaixo e desbloqueie no jogo com o e-mail da compra.</p>
+
+  <a class="play" href="${GAME_URL}">▶ JOGAR AGORA</a>
+
+  <div class="steps">
+    <b>Como desbloquear (30 segundos):</b><br>
+    1) Toque em <b>JOGAR AGORA</b>.<br>
+    2) Entre num modo (ex.: <b>Carreira</b>).<br>
+    3) Em <b>"Já comprou? Desbloqueie com seu e-mail"</b>, digite o <b>mesmo e-mail da compra</b>.<br>
+    4) Pronto, jogo liberado! 🎮
+  </div>
+
+  <div class="or">Prefere o código da chave?</div>
+  <input id="e" type="email" placeholder="e-mail usado na compra" autocomplete="email">
+  <button class="kb" id="b">Ver minha chave</button>
   <div id="k" class="key"></div>
   <div id="m" class="msg"></div>
-  <div class="steps">
-    <b>Como ativar:</b><br>1) Copie a chave acima.<br>
-    2) Abra o jogo → entre num modo pago → <b>Ativar chave</b>.<br>
-    3) Cole e pronto! 🎮
-  </div>
 </div>
 <script>
   var b=document.getElementById('b'),e=document.getElementById('e'),k=document.getElementById('k'),m=document.getElementById('m');
@@ -197,7 +215,7 @@ app.get("/minha-chave", (req, res) => {
     m.className='msg';m.textContent='Buscando…';k.style.display='none';b.disabled=true;
     fetch('/key?email='+encodeURIComponent(email)).then(function(r){return r.json();}).then(function(d){
       b.disabled=false;
-      if(d.ok){k.textContent=d.key;k.style.display='block';m.className='msg ok';m.textContent='✔ Aqui está sua chave!';}
+      if(d.ok){k.textContent=d.key;k.style.display='block';m.className='msg ok';m.textContent='✔ Sua chave (cole no jogo em "Tenho um código de chave")';}
       else{m.className='msg err';m.textContent=d.error||'Não encontrada.';}
     }).catch(function(){b.disabled=false;m.className='msg err';m.textContent='Erro de conexão. Tente de novo.';});
   };
