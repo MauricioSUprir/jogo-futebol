@@ -4601,10 +4601,12 @@
       function fieldY(sy) { return Math.round((20 + (sy - 15) * (88 - 20) / (88 - 15)) * 10) / 10; }
       c.lineup.starters.forEach(function (id, i) {
         var p = C().resolvePlayer(c, id); if (!p) return;
-        var slot = slots[i] || [null, 50, 50];
+        var baseSlot = slots[i] || [null, 50, 50];
         var unavail = !C().available(c, id);
         var cp = c.lineup.pos[i];
-        var x = cp ? cp[0] : slot[1], y = cp ? cp[1] : fieldY(slot[2]);
+        var x = cp ? cp[0] : baseSlot[1], y = cp ? cp[1] : fieldY(baseSlot[2]);
+        // se foi arrastado, identifica a NOVA posição (grupo + rótulo) e ajusta o overall
+        var slot = cp ? C().fieldSlot(x, y) : baseSlot;
         var tiredChip = !unavail && c.fatigue && (c.fatigue[id] || 0) >= 78;
         var chipFlag = unavail ? el("span", { class: "chip-flag", text: c.injuries[id] ? "🚑" : "🟥" })
           : (tiredChip ? el("span", { class: "chip-flag", text: "🥵" }) : null);
@@ -4629,7 +4631,7 @@
           c.lineup.pos = {}; TM.storage.saveCoachCareer(c); renderBoard();
         }, "btn ghost small"));
       }
-      board.appendChild(TM.ui.posPanel(c.lineup.starters.map(function (id, i) { return { player: C().resolvePlayer(c, id), slot: slots[i] }; })));
+      board.appendChild(TM.ui.posPanel(c.lineup.starters.map(function (id, i) { return { player: C().resolvePlayer(c, id), slot: C().lineupSlot(c, i) }; })));
 
       var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
       (c.lineup.bench || []).forEach(function (id) {

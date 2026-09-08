@@ -216,6 +216,22 @@
     var pen = p ? posPenalty(p.pos, slotGroup, p) : 0;
     return { ov: Math.max(40, (p ? p.overall : 60) - pen), off: pen > 0, drop: pen };
   }
+  // converte a posição LIVRE (arrastada no campinho, em coords de tela) para um slot
+  // [grupo, x, y] — identificando o GRUPO (GOL/ZAG/MEIO/ATA) pela altura no campo.
+  // y de tela ~20 (ataque) a ~88 (gol); desfaz o fieldY p/ casar com slotPos.
+  function fieldSlot(x, yDisplay) {
+    var raw = 15 + (yDisplay - 20) * 73 / 68;
+    raw = Math.max(10, Math.min(92, raw));
+    var g = raw >= 82 ? "GK" : raw >= 62 ? "DF" : raw >= 38 ? "MF" : "FW";
+    return [g, x, raw];
+  }
+  // slot efetivo do titular i: usa a posição livre (arrastada) se existir, senão a da formação
+  function lineupSlot(career, i) {
+    var formation = (career.lineup && career.lineup.formation) || "4-4-2";
+    var base = (FORMATIONS[formation] || FORMATIONS["4-4-2"])[i] || [null, 50, 50];
+    var cp = career.lineup && career.lineup.pos && career.lineup.pos[i];
+    return cp ? fieldSlot(cp[0], cp[1]) : base;
+  }
   // rótulo específico da posição do slot (a partir das coordenadas da formação)
   function slotPos(slot) {
     if (!slot) return "?";
@@ -256,7 +272,7 @@
     var xiIds = effectiveXI(career);
     var formation = (career.lineup && career.lineup.formation) || "4-4-2";
     var slots = FORMATIONS[formation] || FORMATIONS["4-4-2"];
-    var xi = xiIds.map(function (id, i) { var p = resolvePlayer(career, id); return p ? adjustForSlot(p, slots[i]) : null; }).filter(Boolean);
+    var xi = xiIds.map(function (id, i) { var p = resolvePlayer(career, id); return p ? adjustForSlot(p, lineupSlot(career, i)) : null; }).filter(Boolean);
     var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
     var rest = rosterPlayers(career).filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
     return { id: club.id, name: club.name, players: xi.concat(rest), club: club };
@@ -2202,6 +2218,7 @@
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
+    fieldSlot: fieldSlot, lineupSlot: lineupSlot,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, dynValue: dynValue, perfMult: perfMult, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
