@@ -1038,13 +1038,18 @@
       var homeClub = TM.data.club(pending.homeId), awayClub = TM.data.club(pending.awayId);
       var badgeText = pending.label ? pending.label : (pending.ko ? "Mata-mata" : "Liga");
       var matchDate = C().dateOf(c, nextDay);
+      // uniforme escolhido para este jogo (padrão: mandante 1º, visitante 2º)
+      var kitPick = (c.kitPick && c.kitPick.mn === c.matchNo) ? c.kitPick : null;
+      var homeVar = kitPick ? kitPick.home : 0, awayVar = kitPick ? kitPick.away : 1;
+      var homeKitImg = TM.img.kitImg(homeClub, "md-kit", homeVar);
+      var awayKitImg = TM.img.kitImg(awayClub, "md-kit", awayVar);
       var kids = [
         el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
         // confronto com escudo + uniforme de cada time
         el("div", { class: "md-versus" }, [
-          el("div", { class: "md-team" }, [ TM.img.clubImg(homeClub, "md-crest"), TM.img.kitImg(homeClub, "md-kit"), el("div", { class: "md-name", text: homeClub.name }) ]),
+          el("div", { class: "md-team" }, [ TM.img.clubImg(homeClub, "md-crest"), homeKitImg, el("div", { class: "md-name", text: homeClub.name }) ]),
           el("div", { class: "md-vs", text: "VS" }),
-          el("div", { class: "md-team" }, [ TM.img.clubImg(awayClub, "md-crest"), TM.img.kitImg(awayClub, "md-kit", true), el("div", { class: "md-name", text: awayClub.name }) ])
+          el("div", { class: "md-team" }, [ TM.img.clubImg(awayClub, "md-crest"), awayKitImg, el("div", { class: "md-name", text: awayClub.name }) ])
         ])
       ];
       if (rivalryEnabled() && TM.data.areRivals(homeClub.id, awayClub.id)) {
@@ -1083,6 +1088,37 @@
           }, "btn small"));
         }
         renderMdEdit();
+      })();
+
+      // editar uniformes (1/2/3) dos dois times antes do jogo
+      var kitEdit = el("div", { class: "md-edit" }); kids.push(kitEdit);
+      (function () {
+        var editing = false;
+        var VLBL = ["1º (principal)", "2º (reserva)", "3º (terceiro)"];
+        function persist() {
+          c.kitPick = { mn: c.matchNo, home: homeVar, away: awayVar };
+          TM.storage.saveCoachCareer(c);
+        }
+        function kitChooser(club, cur, onPick) {
+          var wrap = el("div", { class: "kit-choose" });
+          [0, 1, 2].forEach(function (v) {
+            var opt = el("button", { class: "kit-opt" + (v === cur ? " on" : ""), on: { click: function () { onPick(v); } } }, [
+              TM.img.kitImg(club, "kit-opt-img", v),
+              el("span", { class: "kit-opt-lbl", text: (v + 1) + "º" })
+            ]);
+            wrap.appendChild(opt);
+          });
+          return wrap;
+        }
+        function render() {
+          kitEdit.innerHTML = "";
+          if (!editing) { kitEdit.appendChild(el("button", { class: "md-edit-btn", text: "👕 Escolher uniformes", on: { click: function () { editing = true; render(); } } })); return; }
+          kitEdit.appendChild(el("div", { class: "kit-edit-title", text: "👕 Uniformes deste jogo" }));
+          kitEdit.appendChild(el("div", { class: "kit-edit-team" }, [ el("div", { class: "kit-edit-nm", text: homeClub.name + " (mandante) — " + VLBL[homeVar] }), kitChooser(homeClub, homeVar, function (v) { homeVar = v; persist(); homeKitImg.src = TM.img.kitImg(homeClub, "md-kit", v).src; render(); }) ]));
+          kitEdit.appendChild(el("div", { class: "kit-edit-team" }, [ el("div", { class: "kit-edit-nm", text: awayClub.name + " (visitante) — " + VLBL[awayVar] }), kitChooser(awayClub, awayVar, function (v) { awayVar = v; persist(); awayKitImg.src = TM.img.kitImg(awayClub, "md-kit", v).src; render(); }) ]));
+          kitEdit.appendChild(el("button", { class: "md-edit-btn", text: "✓ Pronto", on: { click: function () { editing = false; render(); } } }));
+        }
+        render();
       })();
 
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
@@ -2044,6 +2080,10 @@
     var compId = compIdFor(c, p.key);
     TM.ui.applyCompTheme(screen, compId); // botões/detalhes na cor da competição
     var teamA = C().anyTeam(c, p.homeId), teamB = C().anyTeam(c, p.awayId);
+    // uniforme escolhido no pré-jogo (mandante = teamA, visitante = teamB)
+    var _kp = (c.kitPick && c.kitPick.mn === c.matchNo) ? c.kitPick : null;
+    teamA.kitVariant = _kp ? _kp.home : 0;
+    teamB.kitVariant = _kp ? _kp.away : 1;
     var userSide = p.homeId === c.teamId ? 0 : 1;
     var socialEdge = 0; try { socialEdge = TM.social.moraleEdge(c); } catch (e) {}
     var capEdge = 0; try { capEdge = captainLeadership(c).edge; } catch (e) {}

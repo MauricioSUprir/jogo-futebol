@@ -1243,6 +1243,17 @@ html, body {
 .md-edit-row { display: flex; gap: 10px; margin: 8px 0; }
 .md-edit-lab { flex: 1; display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--text-dim); font-weight: 700; }
 .md-edit-lab .select { width: 100%; }
+/* escolha de uniforme (1/2/3) no pré-jogo */
+.kit-edit-title { font-size: 12.5px; font-weight: 800; color: var(--green); margin: 6px 2px 4px; }
+.kit-edit-team { margin: 6px 0; }
+.kit-edit-nm { font-size: 11.5px; color: var(--text-dim); font-weight: 700; margin-bottom: 5px; }
+.kit-choose { display: flex; gap: 8px; }
+.kit-opt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; border-radius: 11px; background: rgba(255,255,255,.04); border: 1.5px solid var(--line); cursor: pointer; transition: border-color .15s, transform .1s; }
+.kit-opt:hover { border-color: rgba(34,197,94,.5); }
+.kit-opt.on { border-color: var(--green); background: rgba(34,197,94,.12); box-shadow: 0 0 0 1px var(--green) inset; }
+.kit-opt-img { width: 46px; height: 46px; object-fit: contain; }
+.kit-opt-lbl { font-size: 11px; font-weight: 800; color: var(--text-dim); }
+.kit-opt.on .kit-opt-lbl { color: #86efac; }
 .tm-range { width: 100%; accent-color: var(--green); margin-top: 6px; }
 
 .fin-bar { display: flex; width: 100%; height: 16px; border-radius: 8px; overflow: hidden; margin: 10px 0 6px; background: rgba(255,255,255,.06); }

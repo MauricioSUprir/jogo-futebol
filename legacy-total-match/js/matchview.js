@@ -157,7 +157,11 @@
       overlay.addEventListener("click", dismiss);
       setTimeout(dismiss, 2400);
     }
-    function teamColor(t) { var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6"; }
+    function teamColor(t) {
+      // usa a cor do uniforme escolhido (1/2/3) quando for um clube
+      if (t && t.club && t.kitVariant != null && TM.img && TM.img.kitColor) { try { return TM.img.kitColor(t.club, t.kitVariant); } catch (e) {} }
+      var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6";
+    }
     // SÓ o impedimento tem quadro gráfico; falta/mão/linha ficam só com "Revisando…".
     function buildVarScene(kind, annulled, atkCol, defCol, side) {
       if (kind !== "offside") return null;
