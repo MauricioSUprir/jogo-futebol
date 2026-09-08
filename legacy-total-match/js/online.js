@@ -54,11 +54,17 @@
       renderInviteBanner(body);
       N().onInvite(function () { if (body.isConnected) { /* re-render banner */ var old = body.querySelector(".invite-banner"); if (old) old.remove(); renderInviteBanner(body); } });
       // ações
+      var reqBadge = el("span", { class: "hub-badge", hidden: true });
       body.appendChild(el("div", { class: "hub-actions" }, [
-        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "hub-ic", text: "👥" }), el("span", { text: "Central de amigos" }) ]),
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "hub-ic", text: "👥" }), el("span", { text: "Central de amigos" }), reqBadge ]),
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-play"); } } }, [ el("span", { class: "hub-ic", text: "⚔️" }), el("span", { text: "Partida online" }) ]),
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-ranking"); } } }, [ el("span", { class: "hub-ic", text: "🏅" }), el("span", { text: "Ranking global" }) ])
       ]));
+      // badge de solicitações pendentes (atualiza ao vivo enquanto o hub estiver aberto)
+      var hubReqStop = N().listenRequests(function (reqs) {
+        if (!reqBadge.isConnected) { if (hubReqStop) hubReqStop(); return; }
+        reqBadge.hidden = !reqs.length; reqBadge.textContent = reqs.length > 9 ? "9+" : reqs.length;
+      });
     });
   });
 
@@ -78,13 +84,26 @@
   function copy(t) { try { navigator.clipboard.writeText(t); } catch (e) {} }
 
   /* ---------- CENTRAL DE AMIGOS ---------- */
-  var friendsStop = null;
+  var friendsStop = null, reqStop = null;
+  function stopFriendListeners() { if (friendsStop) { friendsStop(); friendsStop = null; } if (reqStop) { reqStop(); reqStop = null; } }
+  // avatar simples por inicial/cor (determinístico pelo nome)
+  function avatarOf(name, cls) {
+    name = name || "?";
+    var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">' +
+      '<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="hsl(' + h + ',58%,48%)"/><stop offset="1" stop-color="hsl(' + ((h + 34) % 360) + ',52%,32%)"/></linearGradient></defs>' +
+      '<rect width="48" height="48" rx="24" fill="url(#g)"/><text x="24" y="32" font-family="Arial" font-size="22" font-weight="800" fill="#fff" text-anchor="middle">' +
+      name.replace(/[^A-Za-zÀ-ÿ]/g, "").slice(0, 1).toUpperCase() + '</text></svg>';
+    return el("img", { class: cls || "friend-ava", src: "data:image/svg+xml;utf8," + encodeURIComponent(svg) });
+  }
+  function openProfile(uid, name) { stopFriendListeners(); TM.ui.go("online-profile", { uid: uid, name: name }); }
+
   TM.ui.register("online-friends", function (screen) {
-    screen.appendChild(TM.ui.topbar("👥 Amigos", function () { if (friendsStop) { friendsStop(); friendsStop = null; } TM.ui.go("online"); }));
+    screen.appendChild(TM.ui.topbar("👥 Amigos", function () { stopFriendListeners(); TM.ui.go("online"); }));
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
-    // adicionar por número
+    // adicionar por número → abre o PERFIL (onde você envia a solicitação)
     body.appendChild(el("div", { class: "list-head", text: "Adicionar amigo pelo número" }));
     var addIn = el("input", { class: "select", type: "text", placeholder: "ex.: 4827-1093" });
     var addRow = el("div", { class: "add-friend-row" }, [ addIn, TM.ui.button("🔎 Buscar", function () {
@@ -92,17 +111,33 @@
       if (!num) { TM.ui.toast("Digite o número"); return; }
       N().findByNumber(num, function (p) {
         if (!p) { TM.ui.toast("Ninguém encontrado com #" + num); return; }
-        TM.ui.confirm("Adicionar amigo", p.name + " (#" + p.number + ")", "Adicionar", function () {
-          N().addFriend(p.uid, function () { TM.ui.toast(p.name + " adicionado!"); addIn.value = ""; });
-        });
+        addIn.value = ""; openProfile(p.uid, p.name);
       });
     }, "btn primary small") ]);
     body.appendChild(addRow);
-    // lista
+
+    // --- solicitações recebidas ---
+    var reqHead = el("div", { class: "list-head", hidden: true }, [ el("span", { text: "📨 Solicitações de amizade" }) ]);
+    var reqList = el("div", { class: "friend-list" });
+    body.appendChild(reqHead); body.appendChild(reqList);
+    reqStop = N().listenRequests(function (reqs) {
+      if (!reqList.isConnected) { if (reqStop) { reqStop(); reqStop = null; } return; }
+      reqList.innerHTML = "";
+      reqHead.hidden = !reqs.length;
+      reqs.forEach(function (r) {
+        reqList.appendChild(el("div", { class: "friend-row req-row" }, [
+          avatarOf(r.name),
+          el("div", { class: "friend-info clickable", on: { click: function () { openProfile(r.uid, r.name); } } }, [ el("div", { class: "friend-name", text: r.name }), el("div", { class: "friend-sub", text: "#" + (r.number || "----") + " · quer ser seu amigo" }) ]),
+          TM.ui.button("✓ Aceitar", function () { N().acceptRequest(r.uid, function () { TM.ui.toast(r.name + " agora é seu amigo!"); }); }, "btn primary small"),
+          TM.ui.button("✕", function () { N().declineRequest(r.uid, function () { TM.ui.toast("Solicitação recusada"); }); }, "btn ghost small")
+        ]));
+      });
+    });
+
+    // --- lista de amigos ---
     body.appendChild(el("div", { class: "list-head", text: "Meus amigos" }));
     var list = el("div", { class: "friend-list" });
     body.appendChild(list);
-    if (friendsStop) { friendsStop(); }
     friendsStop = N().listenFriends(function (friends) {
       if (!list.isConnected) { if (friendsStop) { friendsStop(); friendsStop = null; } return; }
       list.innerHTML = "";
@@ -110,14 +145,85 @@
       friends.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
       friends.forEach(function (f) {
         list.appendChild(el("div", { class: "friend-row" }, [
-          onlineDot(f.online),
-          el("div", { class: "friend-info" }, [ el("div", { class: "friend-name", text: f.name }), el("div", { class: "friend-sub", text: "#" + f.number + " · " + (f.online ? "online" : "offline") }) ]),
-          TM.ui.button("💬", function () { if (friendsStop) { friendsStop(); friendsStop = null; } TM.ui.go("online-chat", { fuid: f.uid, name: f.name }); }, "btn ghost small"),
+          el("div", { class: "friend-ava-wrap clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ avatarOf(f.name), onlineDot(f.online) ]),
+          el("div", { class: "friend-info clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ el("div", { class: "friend-name", text: f.name }), el("div", { class: "friend-sub", text: "#" + f.number + " · " + (f.online ? "online" : "offline") }) ]),
+          TM.ui.button("💬", function () { stopFriendListeners(); TM.ui.go("online-chat", { fuid: f.uid, name: f.name }); }, "btn ghost small"),
           TM.ui.button("⚔️", function () { inviteFriend(f); }, "btn primary small")
         ]));
       });
     });
   });
+
+  /* ---------- PERFIL DO JOGADOR ---------- */
+  TM.ui.register("online-profile", function (screen, params) {
+    if (!params || !params.uid) { TM.ui.go("online-friends"); return; }
+    screen.appendChild(TM.ui.topbar("Perfil", function () { TM.ui.go("online-friends"); }));
+    if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    var loading = el("p", { class: "intro-text", text: "Carregando perfil…" });
+    body.appendChild(loading);
+    var meUid = N().me ? N().me.uid : null;
+    var isMe = params.uid === meUid;
+    N().getProfile(params.uid, function (p) {
+      if (!body.isConnected) return;
+      TM.ui.clear(body);
+      var winPct = p.played ? Math.round((p.wins / p.played) * 100) : 0;
+      // cabeçalho
+      body.appendChild(el("div", { class: "profile-head" }, [
+        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava"), onlineDot(p.online) ]),
+        el("div", { class: "profile-id" }, [
+          el("div", { class: "profile-name", text: p.name }),
+          el("div", { class: "profile-num", text: "#" + (p.number || "----") }),
+          el("div", { class: "profile-status " + (p.online ? "on" : "off"), text: p.online ? "🟢 Online agora" : ("⚪ " + lastSeenTxt(p.lastSeen)) })
+        ])
+      ]));
+      // estatísticas online
+      body.appendChild(el("div", { class: "profile-stats" }, [
+        statTile("Vitórias", p.wins), statTile("Jogos", p.played), statTile("Aproveit.", winPct + "%")
+      ]));
+      // botão copiar número
+      body.appendChild(TM.ui.button("📋 Copiar número", function () { copy(p.number || ""); TM.ui.toast("Número copiado!"); }, "btn ghost small"));
+
+      if (isMe) {
+        body.appendChild(el("p", { class: "intro-text", text: "Este é o seu perfil. Compartilhe seu número para receber solicitações." }));
+        return;
+      }
+
+      // retrospecto entre vocês (se já jogaram)
+      var h2h = el("div", { class: "h2h-bar", text: "Retrospecto: carregando…" });
+      body.appendChild(h2h);
+      N().getH2H(params.uid, function (r) { if (h2h.isConnected) h2h.textContent = "🏆 Você " + r.me + " · " + r.draws + " empate(s) · " + r.them + " " + p.name; });
+
+      // ações conforme o status de amizade
+      var acts = el("div", { class: "profile-acts" });
+      body.appendChild(acts);
+      if (p.isFriend) {
+        acts.appendChild(TM.ui.button("💬 Conversar", function () { TM.ui.go("online-chat", { fuid: params.uid, name: p.name }); }, "btn primary"));
+        acts.appendChild(TM.ui.button("⚔️ Desafiar", function () { inviteFriend({ uid: params.uid, name: p.name, online: p.online }); }, "btn"));
+        acts.appendChild(TM.ui.button("🗑️ Remover amigo", function () {
+          TM.ui.confirm("Remover " + p.name + "?", "Vocês deixarão de ser amigos.", "Remover", function () { N().removeFriend(params.uid, function () { TM.ui.toast("Amigo removido"); TM.ui.go("online-friends"); }); }, true);
+        }, "btn ghost small"));
+      } else {
+        var addBtn = TM.ui.button("➕ Enviar solicitação de amizade", function () {
+          N().sendFriendRequest(params.uid, function (ok, msg) {
+            if (ok) { TM.ui.toast("Solicitação enviada a " + p.name + "!"); addBtn.textContent = "✅ Solicitação enviada"; addBtn.disabled = true; addBtn.classList.add("sent"); }
+            else { TM.ui.toast(msg === "já é seu amigo" ? "Vocês já são amigos" : "Não foi possível enviar"); }
+          });
+        }, "btn primary");
+        acts.appendChild(addBtn);
+      }
+    });
+  });
+  function statTile(lbl, val) { return el("div", { class: "profile-stat" }, [ el("div", { class: "ps-val", text: val }), el("div", { class: "ps-lbl", text: lbl }) ]); }
+  function lastSeenTxt(ts) {
+    if (!ts) return "offline";
+    var d = Date.now() - ts;
+    if (d < 60000) return "visto agora";
+    if (d < 3600000) return "visto há " + Math.floor(d / 60000) + " min";
+    if (d < 86400000) return "visto há " + Math.floor(d / 3600000) + "h";
+    return "visto há " + Math.floor(d / 86400000) + " dia(s)";
+  }
 
   function inviteFriend(f) {
     if (!f.online) { TM.ui.toast(f.name + " está offline"); return; }

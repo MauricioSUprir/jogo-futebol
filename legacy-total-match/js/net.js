@@ -230,6 +230,51 @@
     });
     return function stop() { friendsRef.off(); Object.keys(perFriend).forEach(function (id) { net._db.ref("users/" + id).off("value", perFriend[id]); }); };
   };
+  // perfil público de um jogador (dados do usuário + estatísticas do ranking)
+  net.getProfile = function (uid, cb) {
+    var out = { uid: uid, name: "Jogador", number: null, online: false, lastSeen: 0, wins: 0, played: 0 };
+    net._db.ref("users/" + uid).once("value").then(function (s) {
+      var v = s.val() || {};
+      out.name = v.name || "Jogador"; out.number = v.number || null; out.online = !!v.online; out.lastSeen = v.lastSeen || 0;
+      out.isFriend = !!(v.friends && net.me && v.friends[net.me.uid]);
+      return net._db.ref("ranking/" + uid).once("value");
+    }).then(function (s2) {
+      var r = s2.val() || {}; out.wins = r.wins || 0; out.played = r.played || 0;
+      cb(out);
+    }).catch(function () { cb(out); });
+  };
+  // ---- solicitações de amizade ----
+  // envia um PEDIDO (não adiciona direto); o outro precisa aceitar
+  net.sendFriendRequest = function (fuid, cb) {
+    if (!net.me || fuid === net.me.uid) { cb && cb(false, "inválido"); return; }
+    net._db.ref("users/" + net.me.uid + "/friends/" + fuid).once("value").then(function (s) {
+      if (s.val()) { cb && cb(false, "já é seu amigo"); return; }
+      net._db.ref("users/" + fuid + "/requests/" + net.me.uid).set({ name: net.me.name, number: net.me.number || null, ts: firebaseNow() })
+        .then(function () { cb && cb(true); }).catch(function () { cb && cb(false, "erro"); });
+    }).catch(function () { cb && cb(false, "erro"); });
+  };
+  // observa os pedidos de amizade recebidos
+  net.listenRequests = function (cb) {
+    var ref = net._db.ref("users/" + net.me.uid + "/requests");
+    var h = ref.on("value", function (snap) {
+      var v = snap.val() || {}, arr = [];
+      Object.keys(v).forEach(function (uid) { arr.push({ uid: uid, name: v[uid].name || "Jogador", number: v[uid].number, ts: v[uid].ts || 0 }); });
+      arr.sort(function (a, b) { return b.ts - a.ts; });
+      cb(arr);
+    });
+    return function stop() { ref.off("value", h); };
+  };
+  net.acceptRequest = function (fuid, cb) {
+    var me = net.me.uid, updates = {};
+    updates["users/" + me + "/friends/" + fuid] = true;
+    updates["users/" + fuid + "/friends/" + me] = true;
+    updates["users/" + me + "/requests/" + fuid] = null;
+    updates["users/" + fuid + "/requests/" + me] = null; // caso haja pedido cruzado
+    net._db.ref().update(updates).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
+  net.declineRequest = function (fuid, cb) {
+    net._db.ref("users/" + net.me.uid + "/requests/" + fuid).remove().then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
 
   // ---- chat ----
   function chatId(a, b) { return [a, b].sort().join("_"); }
