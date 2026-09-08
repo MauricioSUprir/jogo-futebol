@@ -96,7 +96,7 @@
       name.replace(/[^A-Za-zÀ-ÿ]/g, "").slice(0, 1).toUpperCase() + '</text></svg>';
     return el("img", { class: cls || "friend-ava", src: "data:image/svg+xml;utf8," + encodeURIComponent(svg) });
   }
-  function openProfile(uid, name) { stopFriendListeners(); TM.ui.go("online-profile", { uid: uid, name: name }); }
+  function openProfile(uid, name, back) { stopFriendListeners(); TM.ui.go("online-profile", { uid: uid, name: name, back: back || "online-friends" }); }
 
   TM.ui.register("online-friends", function (screen) {
     screen.appendChild(TM.ui.topbar("👥 Amigos", function () { stopFriendListeners(); TM.ui.go("online"); }));
@@ -157,7 +157,8 @@
   /* ---------- PERFIL DO JOGADOR ---------- */
   TM.ui.register("online-profile", function (screen, params) {
     if (!params || !params.uid) { TM.ui.go("online-friends"); return; }
-    screen.appendChild(TM.ui.topbar("Perfil", function () { TM.ui.go("online-friends"); }));
+    var backTo = params.back || "online-friends";
+    screen.appendChild(TM.ui.topbar("Perfil", function () { TM.ui.go(backTo); }));
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
@@ -242,7 +243,8 @@
   var STICKERS = ["⚽🔥", "🏆🎉", "🐐", "😂😂😂", "👏👏", "😱", "💪😎", "😭😭", "🥳🎊", "⚽🥅 GOOOL!", "🤡", "💯🔥", "😤⚽", "🙏", "🚀", "👑"];
   TM.ui.register("online-chat", function (screen, params) {
     if (!params || !params.fuid) { TM.ui.go("online-friends"); return; }
-    screen.appendChild(TM.ui.topbar("💬 " + params.name, function () { if (chatStop) { chatStop(); chatStop = null; } TM.ui.go("online-friends"); }));
+    var profBtn = el("button", { class: "tb-menu", text: "👤", title: "Ver perfil", on: { click: function () { if (chatStop) { chatStop(); chatStop = null; } TM.ui.go("online-profile", { uid: params.fuid, name: params.name, back: "online-friends" }); } } });
+    screen.appendChild(TM.ui.topbar("💬 " + params.name, function () { if (chatStop) { chatStop(); chatStop = null; } TM.ui.go("online-friends"); }, profBtn));
     // retrospecto (placar histórico entre vocês)
     var h2h = el("div", { class: "h2h-bar", text: "Retrospecto: carregando…" });
     screen.appendChild(h2h);
@@ -317,7 +319,7 @@
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
-    body.appendChild(el("p", { class: "intro-text", text: "Os que mais venceram partidas online. Jogue partidas online para pontuar!" }));
+    body.appendChild(el("p", { class: "intro-text", text: "Os que mais venceram partidas online. Toque num jogador para ver o perfil ou adicioná-lo." }));
     var list = el("div", { class: "friend-list" });
     body.appendChild(list);
     list.appendChild(el("p", { class: "intro-text", text: "Carregando…" }));
@@ -328,11 +330,16 @@
       var me = N().me ? N().me.uid : null;
       arr.forEach(function (r, i) {
         var medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : (i + 1) + "º";
-        list.appendChild(el("div", { class: "friend-row" + (r.uid === me ? " rank-me" : "") }, [
+        var isMe = r.uid === me;
+        var row = el("div", { class: "friend-row" + (isMe ? " rank-me" : "") + (isMe ? "" : " clickable") }, [
           el("span", { class: "rank-pos", text: medal }),
-          el("div", { class: "friend-info" }, [ el("div", { class: "friend-name", text: r.name + (r.uid === me ? " (você)" : "") }), el("div", { class: "friend-sub", text: r.played + " jogo(s)" }) ]),
-          el("div", { class: "rank-wins" }, [ el("b", { text: r.wins }), el("span", { text: " vit." }) ])
-        ]));
+          avatarOf(r.name),
+          el("div", { class: "friend-info" }, [ el("div", { class: "friend-name", text: r.name + (isMe ? " (você)" : "") }), el("div", { class: "friend-sub", text: r.played + " jogo(s)" }) ]),
+          el("div", { class: "rank-wins" }, [ el("b", { text: r.wins }), el("span", { text: " vit." }) ]),
+          isMe ? null : el("span", { class: "row-chev", text: "›" })
+        ]);
+        if (!isMe) row.addEventListener("click", function () { openProfile(r.uid, r.name, "online-ranking"); });
+        list.appendChild(row);
       });
     });
   });
@@ -723,8 +730,10 @@
     ]));
     // revanche imediata: recria a partida com o mesmo adversário (via convite)
     var oppUid = params.side === "host" ? params.guestUid : params.hostUid;
+    var oppName = params.side === "host" ? (params.guestName || b.name) : (params.hostName || a.name);
     var acts = [];
     if (N().available && N().ready && oppUid) {
+      acts.push(TM.ui.button("👤 Ver perfil do adversário", function () { TM.ui.go("online-profile", { uid: oppUid, name: oppName, back: "online" }); }, "btn"));
       acts.push(TM.ui.button("🔁 Revanche", function () {
         TM.ui.toast("Enviando convite de revanche…");
         N().rematch(oppUid, { source: "club" }, function (code) {

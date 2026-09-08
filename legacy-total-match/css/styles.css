@@ -1493,6 +1493,9 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .friend-info.clickable, .friend-ava-wrap.clickable { cursor: pointer; }
 .friend-info.clickable:hover .friend-name { color: var(--gold); }
 .req-row { border-color: rgba(240,192,64,.4); background: rgba(240,192,64,.06); }
+.friend-row.clickable { cursor: pointer; transition: border-color .15s ease, transform .1s ease; }
+.friend-row.clickable:hover { border-color: var(--gold); transform: translateX(2px); }
+.row-chev { color: var(--text-dim); font-size: 20px; font-weight: 700; flex: 0 0 auto; padding: 0 2px; }
 /* badge de solicitações no hub */
 .hub-btn { position: relative; }
 .hub-badge { position: absolute; top: 8px; right: 10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e23b3b; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
