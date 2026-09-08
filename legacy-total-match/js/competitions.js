@@ -225,13 +225,14 @@
     var g = raw >= 82 ? "GK" : raw >= 62 ? "DF" : raw >= 38 ? "MF" : "FW";
     return [g, x, raw];
   }
-  // slot efetivo do titular i: usa a posição livre (arrastada) se existir, senão a da formação
-  function lineupSlot(career, i) {
-    var formation = (career.lineup && career.lineup.formation) || "4-4-2";
+  // slot efetivo do titular i de uma escalação qualquer (posição livre arrastada, senão a da formação)
+  function slotForLineup(lineup, i) {
+    var formation = (lineup && lineup.formation) || "4-4-2";
     var base = (FORMATIONS[formation] || FORMATIONS["4-4-2"])[i] || [null, 50, 50];
-    var cp = career.lineup && career.lineup.pos && career.lineup.pos[i];
+    var cp = lineup && lineup.pos && lineup.pos[i];
     return cp ? fieldSlot(cp[0], cp[1]) : base;
   }
+  function lineupSlot(career, i) { return slotForLineup(career.lineup, i); }
   // rótulo específico da posição do slot (a partir das coordenadas da formação)
   function slotPos(slot) {
     if (!slot) return "?";
@@ -1424,7 +1425,8 @@
   function nationSquadPlayers(career) { return career.nation.squad.map(TM.data.player).filter(Boolean); }
   function nationTeam(career) {
     var nat = TM.data.nation(career.nation.id), lu = career.nation.lineup;
-    var xi = lu.starters.map(TM.data.player).filter(Boolean);
+    // aplica a posição (livre/arrastada ou da formação) ao titular — ajusta overall se fora de posição
+    var xi = lu.starters.map(function (id, i) { var p = TM.data.player(id); return p ? adjustForSlot(p, slotForLineup(lu, i)) : null; }).filter(Boolean);
     var inxi = {}; xi.forEach(function (p) { inxi[p.id] = 1; });
     var rest = career.nation.squad.map(TM.data.player).filter(function (p) { return p && !inxi[p.id]; });
     return { id: nat.id, name: nat.name, players: xi.concat(rest), nation: nat };
@@ -2221,7 +2223,7 @@
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
-    fieldSlot: fieldSlot, lineupSlot: lineupSlot,
+    fieldSlot: fieldSlot, lineupSlot: lineupSlot, slotForLineup: slotForLineup,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, dynValue: dynValue, perfMult: perfMult, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,

@@ -2022,19 +2022,54 @@
     ]));
 
     var slots = C().FORMATIONS[lu.formation];
+    if (!lu.pos) lu.pos = {};
+    function natFieldY(sy) { return Math.round((20 + (sy - 15) * (88 - 20) / (88 - 15)) * 10) / 10; }
     var pitch = el("div", { class: "pitch" });
     pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
     pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
     lu.starters.forEach(function (id, i) {
       var p = TM.data.player(id); if (!p) return;
-      var slot = slots[i] || [null, 50, 50];
-      pitch.appendChild(el("button", { class: "pl-chip" + (natPick === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", on: { click: function () { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); } } },
+      var baseSlot = slots[i] || [null, 50, 50];
+      var cp = lu.pos[i];
+      var x = cp ? cp[0] : baseSlot[1], y = cp ? cp[1] : natFieldY(baseSlot[2]);
+      // se arrastado, identifica a NOVA posição e ajusta o overall
+      var slot = cp ? C().fieldSlot(x, y) : baseSlot;
+      var chip = el("button", { class: "pl-chip" + (natPick === i ? " picked" : "") + (cp ? " custom" : ""), style: "left:" + x + "%;top:" + y + "%" },
         TM.ui.chipKids(p, slot, { name: shortName(p.name) })
-      ));
+      );
+      attachNatChipDrag(chip, i, pitch);
+      pitch.appendChild(chip);
     });
     screen.appendChild(pitch);
-    screen.appendChild(el("div", { class: "lineup-hint", text: natPick != null ? "Toque num reserva para colocar no lugar do titular." : "Toque num titular e depois num reserva." }));
-    screen.appendChild(TM.ui.posPanel(lu.starters.map(function (id, i) { return { player: TM.data.player(id), slot: slots[i] }; })));
+    var natHasCustom = Object.keys(lu.pos).length > 0;
+    screen.appendChild(el("div", { class: "lineup-hint", text: natPick != null ? "Toque num reserva para colocar no lugar do titular." : "👆 Toque para trocar · ✋ Arraste pelo campo para reposicionar (a posição e o overall se ajustam)." }));
+    if (natHasCustom) screen.appendChild(TM.ui.button("↩️ Redefinir posições da formação", function () { lu.pos = {}; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); }, "btn ghost small"));
+    screen.appendChild(TM.ui.posPanel(lu.starters.map(function (id, i) { return { player: TM.data.player(id), slot: C().slotForLineup(lu, i) }; })));
+
+    function attachNatChipDrag(chip, i, pitchEl) {
+      var sx = null, sy = null, dragging = false, pid = null, nx = null, ny = null;
+      chip.style.touchAction = "none";
+      chip.addEventListener("pointerdown", function (e) { sx = e.clientX; sy = e.clientY; dragging = false; pid = e.pointerId; nx = ny = null; });
+      chip.addEventListener("pointermove", function (e) {
+        if (sx == null) return;
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!dragging && (dx * dx + dy * dy) > 36) { dragging = true; try { chip.setPointerCapture(pid); } catch (er) {} chip.classList.add("dragging"); }
+        if (dragging) {
+          var r = pitchEl.getBoundingClientRect();
+          nx = Math.max(5, Math.min(95, (e.clientX - r.left) / r.width * 100));
+          ny = Math.max(6, Math.min(95, (e.clientY - r.top) / r.height * 100));
+          chip.style.left = nx + "%"; chip.style.top = ny + "%";
+        }
+      });
+      function end() {
+        if (sx == null) return;
+        var wasDrag = dragging; sx = sy = null; dragging = false; chip.classList.remove("dragging");
+        if (wasDrag && nx != null) { lu.pos[i] = [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10]; TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-lineup"); }
+        else { natPick = (natPick === i ? null : i); TM.ui.go("coach-nation-lineup"); }
+      }
+      chip.addEventListener("pointerup", end);
+      chip.addEventListener("pointercancel", function () { sx = sy = null; dragging = false; chip.classList.remove("dragging"); });
+    }
 
     var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas convocados" }) ]);
     lu.bench.forEach(function (id) {
