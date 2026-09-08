@@ -293,6 +293,7 @@
     ["cup-ec", "Copa Equador", "copa", "#ffdd00", "#034ea2"],
     ["cup-uy", "Copa Uruguai", "copa", "#7bafd4", "#001b69"],
     ["cup-ru", "Copa Ucrânia", "copa", "#0039a6", "#d52b1e"],
+    ["cup-rus", "Copa Rússia", "copa", "#d52b1e", "#0039a6"],
     ["cup-co", "Copa Colômbia", "copa", "#fcd116", "#003893"],
     // Continentais de clubes
     ["cont-eu", "Copa Continental Europa", "continental", "#03063d", "#0f9bd7"],
