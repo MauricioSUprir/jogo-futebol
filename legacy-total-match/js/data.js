@@ -1042,7 +1042,7 @@
     "Manchester City": [
       {n:"Ederson",p:"GK",q:"GOL",a:31,o:88,t:88,v:35000000,nat:"Brazil"},{n:"Stefan Ortega",p:"GK",q:"GOL",a:32,o:80,t:80,v:8000000,nat:"Germany"},
       {n:"Kyle Walker",p:"DF",q:"LD",a:34,o:84,t:84,v:12000000,nat:"England"},{n:"Rúben Dias",p:"DF",q:"ZAG",a:27,o:88,t:90,v:75000000,nat:"Portugal"},{n:"John Stones",p:"DF",q:"ZAG",a:30,o:85,t:85,v:35000000,nat:"England"},{n:"Nathan Aké",p:"DF",q:"ZAG",a:29,o:83,t:83,v:35000000,nat:"Netherlands"},{n:"Joško Gvardiol",p:"DF",q:"LE",a:22,o:85,t:90,v:80000000,nat:"Croatia"},
-      {n:"Rodri",p:"MF",q:"VOL",a:28,o:91,t:91,v:120000000,nat:"Spain"},{n:"Mateo Kovačić",p:"MF",q:"MC",a:30,o:84,t:84,v:30000000,nat:"Croatia"},{n:"Bernardo Silva",p:"MF",q:"MEI",a:30,o:87,t:87,v:60000000,nat:"Portugal"},{n:"Kevin De Bruyne",p:"MF",q:"MEI",a:33,o:88,t:88,v:35000000,nat:"Belgium"},{n:"Phil Foden",p:"MF",q:"MEI",a:24,o:88,t:92,v:130000000,nat:"England"},{n:"İlkay Gündoğan",p:"MF",q:"MC",a:34,o:83,t:83,v:8000000,nat:"Germany"},
+      {n:"Rodri",p:"MF",q:"VOL",a:28,o:91,t:91,v:120000000,nat:"Spain"},{n:"Mateo Kovačić",p:"MF",q:"MC",a:30,o:84,t:84,v:30000000,nat:"Croatia"},{n:"Bernardo Silva",p:"MF",q:"MEI",a:30,o:87,t:87,v:60000000,nat:"Portugal"},{n:"Phil Foden",p:"MF",q:"MEI",a:24,o:88,t:92,v:130000000,nat:"England"},{n:"İlkay Gündoğan",p:"MF",q:"MC",a:34,o:83,t:83,v:8000000,nat:"Germany"},
       {n:"Jérémy Doku",p:"FW",q:"PE",a:22,o:83,t:88,v:60000000,nat:"Belgium"},{n:"Savinho",p:"FW",q:"PD",a:20,o:80,t:89,v:45000000,nat:"Brazil"},{n:"Erling Haaland",p:"FW",q:"CA",a:24,o:91,t:94,v:180000000,nat:"Norway"},{n:"Julián Álvarez",p:"FW",q:"SA",a:24,o:85,t:89,v:80000000,nat:"Argentina"}
     ],
     "Liverpool": [
@@ -1084,7 +1084,7 @@
     "Flamengo": [
       {n:"Agustín Rossi",p:"GK",q:"GOL",a:29,o:80,t:81,v:8000000,nat:"Argentina"},{n:"Matheus Cunha",p:"GK",q:"GOL",a:24,o:76,t:82,v:5000000,nat:"Brazil"},
       {n:"Wesley",p:"DF",q:"LD",a:20,o:79,t:88,v:20000000,nat:"Brazil"},{n:"Léo Ortiz",p:"DF",q:"ZAG",a:28,o:81,t:82,v:12000000,nat:"Brazil"},{n:"Léo Pereira",p:"DF",q:"ZAG",a:28,o:80,t:81,v:10000000,nat:"Brazil"},{n:"Fabrício Bruno",p:"DF",q:"ZAG",a:28,o:80,t:81,v:11000000,nat:"Brazil"},{n:"Ayrton Lucas",p:"DF",q:"LE",a:27,o:79,t:80,v:9000000,nat:"Brazil"},
-      {n:"Erick Pulgar",p:"MF",q:"VOL",a:31,o:79,t:79,v:6000000,nat:"Chile"},{n:"Nicolás de la Cruz",p:"MF",q:"MEI",a:27,o:82,t:83,v:20000000,nat:"Uruguay"},{n:"Gerson",p:"MF",q:"MC",a:27,o:81,t:82,v:18000000,nat:"Brazil"},{n:"De Arrascaeta",p:"MF",q:"MEI",a:30,o:84,t:84,v:22000000,nat:"Uruguay"},{n:"Allan",p:"MF",q:"VOL",a:27,o:78,t:80,v:8000000,nat:"Brazil"},
+      {n:"Erick Pulgar",p:"MF",q:"VOL",a:31,o:79,t:79,v:6000000,nat:"Chile"},{n:"Nicolás de la Cruz",p:"MF",q:"MEI",a:27,o:82,t:83,v:20000000,nat:"Uruguay"},{n:"De Arrascaeta",p:"MF",q:"MEI",a:30,o:84,t:84,v:22000000,nat:"Uruguay"},{n:"Allan",p:"MF",q:"VOL",a:27,o:78,t:80,v:8000000,nat:"Brazil"},
       {n:"Bruno Henrique",p:"FW",q:"PE",a:34,o:79,t:79,v:5000000,nat:"Brazil"},{n:"Gabriel Barbosa",p:"FW",q:"CA",a:28,o:80,t:81,v:12000000,nat:"Brazil"},{n:"Pedro",p:"FW",q:"CA",a:27,o:82,t:83,v:22000000,nat:"Brazil"},{n:"Everton Cebolinha",p:"FW",q:"PE",a:28,o:80,t:81,v:12000000,nat:"Brazil"}
     ],
     "Palmeiras": [
@@ -1276,6 +1276,8 @@
       if (e.attrs) { p.attrs = p.attrs || {}; Object.keys(e.attrs).forEach(function (k) { p.attrs[k] = e.attrs[k]; }); }
       if (e.overall != null) p.overall = e.overall;
       if (e.age != null) p.age = e.age;
+      if (e.photo) p.photo = e.photo;                 // foto adicionada pelo usuário no editor
+      if (e.nationId) { p.nationId = e.nationId; try { p.nationName = TM.data.nation(e.nationId).name; } catch (er) {} }
     });
     // 2) transferências (mover jogador de clube)
     var M = ed.moves || {};
