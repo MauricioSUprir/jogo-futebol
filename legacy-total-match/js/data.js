@@ -341,7 +341,8 @@
     "Scotland": "Escócia", "Turkey": "Turquia", "Ukraine": "Ucrânia", "Wales": "País de Gales", "Bosnia": "Bósnia",
     "Cape Verde": "Cabo Verde", "Tunisia": "Tunísia", "Algeria": "Argélia",
     "Greece": "Grécia", "Czech Republic": "Chéquia", "Hungary": "Hungria", "Romania": "Romênia", "Ireland": "Irlanda",
-    "Venezuela": "Venezuela", "Costa Rica": "Costa Rica", "South Africa": "África do Sul", "DR Congo": "RD Congo", "Jamaica": "Jamaica"
+    "Venezuela": "Venezuela", "Costa Rica": "Costa Rica", "South Africa": "África do Sul", "DR Congo": "RD Congo", "Jamaica": "Jamaica",
+    "Georgia": "Geórgia", "Armenia": "Armênia", "Russia": "Rússia"
   };
   var NATIONS = [
     ["Brazil","#009c3b","#ffdf00","br"],["Argentina","#75aadb","#ffffff","ar"],["France","#0055a4","#ffffff","fr"],
@@ -363,7 +364,8 @@
     ["Greece","#0d5eaf","#ffffff","it"],["Czech Republic","#d7141a","#11457e","de"],["Hungary","#cd2a3e","#436f4d","de"],
     ["Romania","#002b7f","#fcd116","it"],["Ireland","#169b62","#ff883e","en"],["Venezuela","#cf142b","#00247d","es"],
     ["Costa Rica","#002b7f","#ce1126","es"],["South Africa","#007a4d","#ffb612","af"],["DR Congo","#007fff","#f7d618","af"],
-    ["Jamaica","#009b3a","#fed100","us"]
+    ["Jamaica","#009b3a","#fed100","us"],
+    ["Georgia","#ffffff","#ff0000","it"],["Armenia","#d90012","#0033a0","it"],["Russia","#ffffff","#0039a6","de"]
   ].map(function (n, i) {
     return { id: "nat" + i, key: n[0], name: NATION_PT[n[0]] || n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
@@ -1020,6 +1022,91 @@
   };
   function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
 
+  /* ---------- EDIÇÃO ATUALIZADO: elencos REAIS dos grandes clubes ----------
+     Nomes/posições/nacionalidades são dados factuais; valores aproximados.
+     Chave = nome real do clube (igual ao PRO_CLUBS). Usado só na edição pro.
+     Fotos continuam geradas (não usamos imagens reais por direitos autorais). */
+  var PRO_SQUADS = {
+    "Real Madrid": [
+      {n:"Thibaut Courtois",p:"GK",q:"GOL",a:32,o:89,t:89,v:25000000,nat:"Belgium"},{n:"Andriy Lunin",p:"GK",q:"GOL",a:25,o:80,t:83,v:18000000,nat:"Ukraine"},
+      {n:"Dani Carvajal",p:"DF",q:"LD",a:32,o:85,t:85,v:15000000,nat:"Spain"},{n:"Éder Militão",p:"DF",q:"ZAG",a:26,o:85,t:88,v:50000000,nat:"Brazil"},{n:"Antonio Rüdiger",p:"DF",q:"ZAG",a:31,o:87,t:87,v:25000000,nat:"Germany"},{n:"David Alaba",p:"DF",q:"ZAG",a:32,o:83,t:83,v:12000000,nat:"Austria"},{n:"Ferland Mendy",p:"DF",q:"LE",a:29,o:82,t:82,v:20000000,nat:"France"},{n:"Fran García",p:"DF",q:"LE",a:25,o:78,t:81,v:12000000,nat:"Spain"},
+      {n:"Aurélien Tchouaméni",p:"MF",q:"VOL",a:24,o:86,t:90,v:80000000,nat:"France"},{n:"Eduardo Camavinga",p:"MF",q:"VOL",a:22,o:85,t:91,v:90000000,nat:"France"},{n:"Federico Valverde",p:"MF",q:"MC",a:26,o:88,t:90,v:100000000,nat:"Uruguay"},{n:"Jude Bellingham",p:"MF",q:"MEI",a:21,o:90,t:94,v:180000000,nat:"England"},{n:"Luka Modrić",p:"MF",q:"MC",a:39,o:82,t:82,v:4000000,nat:"Croatia"},{n:"Dani Ceballos",p:"MF",q:"MC",a:28,o:80,t:81,v:15000000,nat:"Spain"},{n:"Arda Güler",p:"MF",q:"MEI",a:19,o:79,t:90,v:40000000,nat:"Turkey"},
+      {n:"Vinícius Júnior",p:"FW",q:"PE",a:24,o:91,t:93,v:200000000,nat:"Brazil"},{n:"Rodrygo",p:"FW",q:"PD",a:23,o:86,t:90,v:110000000,nat:"Brazil"},{n:"Kylian Mbappé",p:"FW",q:"CA",a:26,o:91,t:93,v:180000000,nat:"France"},{n:"Endrick",p:"FW",q:"CA",a:18,o:78,t:91,v:40000000,nat:"Brazil"},{n:"Brahim Díaz",p:"FW",q:"SA",a:25,o:82,t:84,v:25000000,nat:"Spain"}
+    ],
+    "Barcelona": [
+      {n:"Marc-André ter Stegen",p:"GK",q:"GOL",a:32,o:87,t:87,v:22000000,nat:"Germany"},{n:"Iñaki Peña",p:"GK",q:"GOL",a:25,o:78,t:81,v:8000000,nat:"Spain"},
+      {n:"Jules Koundé",p:"DF",q:"LD",a:26,o:85,t:87,v:60000000,nat:"France"},{n:"Ronald Araújo",p:"DF",q:"ZAG",a:25,o:85,t:88,v:70000000,nat:"Uruguay"},{n:"Pau Cubarsí",p:"DF",q:"ZAG",a:17,o:80,t:92,v:60000000,nat:"Spain"},{n:"Iñigo Martínez",p:"DF",q:"ZAG",a:33,o:82,t:82,v:6000000,nat:"Spain"},{n:"Alejandro Balde",p:"DF",q:"LE",a:21,o:82,t:88,v:50000000,nat:"Spain"},
+      {n:"Frenkie de Jong",p:"MF",q:"MC",a:27,o:86,t:88,v:70000000,nat:"Netherlands"},{n:"Pedri",p:"MF",q:"MEI",a:22,o:86,t:92,v:100000000,nat:"Spain"},{n:"Gavi",p:"MF",q:"MC",a:20,o:83,t:91,v:80000000,nat:"Spain"},{n:"Marc Casadó",p:"MF",q:"VOL",a:21,o:78,t:86,v:20000000,nat:"Spain"},{n:"Dani Olmo",p:"MF",q:"MEI",a:26,o:85,t:87,v:60000000,nat:"Spain"},{n:"Fermín López",p:"MF",q:"MEI",a:21,o:80,t:87,v:30000000,nat:"Spain"},
+      {n:"Lamine Yamal",p:"FW",q:"PD",a:17,o:86,t:94,v:180000000,nat:"Spain"},{n:"Raphinha",p:"FW",q:"PE",a:28,o:86,t:86,v:60000000,nat:"Brazil"},{n:"Robert Lewandowski",p:"FW",q:"CA",a:36,o:87,t:87,v:15000000,nat:"Poland"},{n:"Ferran Torres",p:"FW",q:"CA",a:24,o:81,t:84,v:30000000,nat:"Spain"}
+    ],
+    "Manchester City": [
+      {n:"Ederson",p:"GK",q:"GOL",a:31,o:88,t:88,v:35000000,nat:"Brazil"},{n:"Stefan Ortega",p:"GK",q:"GOL",a:32,o:80,t:80,v:8000000,nat:"Germany"},
+      {n:"Kyle Walker",p:"DF",q:"LD",a:34,o:84,t:84,v:12000000,nat:"England"},{n:"Rúben Dias",p:"DF",q:"ZAG",a:27,o:88,t:90,v:75000000,nat:"Portugal"},{n:"John Stones",p:"DF",q:"ZAG",a:30,o:85,t:85,v:35000000,nat:"England"},{n:"Nathan Aké",p:"DF",q:"ZAG",a:29,o:83,t:83,v:35000000,nat:"Netherlands"},{n:"Joško Gvardiol",p:"DF",q:"LE",a:22,o:85,t:90,v:80000000,nat:"Croatia"},
+      {n:"Rodri",p:"MF",q:"VOL",a:28,o:91,t:91,v:120000000,nat:"Spain"},{n:"Mateo Kovačić",p:"MF",q:"MC",a:30,o:84,t:84,v:30000000,nat:"Croatia"},{n:"Bernardo Silva",p:"MF",q:"MEI",a:30,o:87,t:87,v:60000000,nat:"Portugal"},{n:"Kevin De Bruyne",p:"MF",q:"MEI",a:33,o:88,t:88,v:35000000,nat:"Belgium"},{n:"Phil Foden",p:"MF",q:"MEI",a:24,o:88,t:92,v:130000000,nat:"England"},{n:"İlkay Gündoğan",p:"MF",q:"MC",a:34,o:83,t:83,v:8000000,nat:"Germany"},
+      {n:"Jérémy Doku",p:"FW",q:"PE",a:22,o:83,t:88,v:60000000,nat:"Belgium"},{n:"Savinho",p:"FW",q:"PD",a:20,o:80,t:89,v:45000000,nat:"Brazil"},{n:"Erling Haaland",p:"FW",q:"CA",a:24,o:91,t:94,v:180000000,nat:"Norway"},{n:"Julián Álvarez",p:"FW",q:"SA",a:24,o:85,t:89,v:80000000,nat:"Argentina"}
+    ],
+    "Liverpool": [
+      {n:"Alisson",p:"GK",q:"GOL",a:32,o:89,t:89,v:30000000,nat:"Brazil"},{n:"Caoimhín Kelleher",p:"GK",q:"GOL",a:26,o:79,t:82,v:15000000,nat:"Ireland"},
+      {n:"Trent Alexander-Arnold",p:"DF",q:"LD",a:26,o:87,t:89,v:80000000,nat:"England"},{n:"Virgil van Dijk",p:"DF",q:"ZAG",a:33,o:89,t:89,v:30000000,nat:"Netherlands"},{n:"Ibrahima Konaté",p:"DF",q:"ZAG",a:25,o:84,t:88,v:55000000,nat:"France"},{n:"Andrew Robertson",p:"DF",q:"LE",a:30,o:84,t:84,v:22000000,nat:"Scotland"},{n:"Konstantinos Tsimikas",p:"DF",q:"LE",a:28,o:79,t:80,v:15000000,nat:"Greece"},
+      {n:"Alexis Mac Allister",p:"MF",q:"MC",a:25,o:86,t:89,v:80000000,nat:"Argentina"},{n:"Ryan Gravenberch",p:"MF",q:"VOL",a:22,o:83,t:89,v:55000000,nat:"Netherlands"},{n:"Dominik Szoboszlai",p:"MF",q:"MEI",a:24,o:84,t:88,v:70000000,nat:"Hungary"},{n:"Curtis Jones",p:"MF",q:"MC",a:23,o:81,t:85,v:35000000,nat:"England"},{n:"Wataru Endō",p:"MF",q:"VOL",a:31,o:80,t:80,v:12000000,nat:"Japan"},
+      {n:"Mohamed Salah",p:"FW",q:"PD",a:32,o:89,t:89,v:55000000,nat:"Egypt"},{n:"Luis Díaz",p:"FW",q:"PE",a:27,o:85,t:87,v:75000000,nat:"Colombia"},{n:"Cody Gakpo",p:"FW",q:"PE",a:25,o:83,t:87,v:60000000,nat:"Netherlands"},{n:"Diogo Jota",p:"FW",q:"CA",a:28,o:84,t:85,v:50000000,nat:"Portugal"},{n:"Darwin Núñez",p:"FW",q:"CA",a:25,o:82,t:87,v:55000000,nat:"Uruguay"}
+    ],
+    "Arsenal": [
+      {n:"David Raya",p:"GK",q:"GOL",a:29,o:85,t:86,v:35000000,nat:"Spain"},{n:"Neto",p:"GK",q:"GOL",a:35,o:78,t:78,v:3000000,nat:"Brazil"},
+      {n:"Ben White",p:"DF",q:"LD",a:27,o:84,t:85,v:50000000,nat:"England"},{n:"William Saliba",p:"DF",q:"ZAG",a:23,o:87,t:91,v:80000000,nat:"France"},{n:"Gabriel Magalhães",p:"DF",q:"ZAG",a:27,o:86,t:88,v:65000000,nat:"Brazil"},{n:"Jurriën Timber",p:"DF",q:"LD",a:23,o:82,t:88,v:45000000,nat:"Netherlands"},{n:"Riccardo Calafiori",p:"DF",q:"LE",a:22,o:82,t:88,v:45000000,nat:"Italy"},
+      {n:"Declan Rice",p:"MF",q:"VOL",a:25,o:88,t:91,v:120000000,nat:"England"},{n:"Martin Ødegaard",p:"MF",q:"MEI",a:26,o:88,t:90,v:110000000,nat:"Norway"},{n:"Mikel Merino",p:"MF",q:"MC",a:28,o:83,t:84,v:35000000,nat:"Spain"},{n:"Jorginho",p:"MF",q:"VOL",a:32,o:81,t:81,v:6000000,nat:"Italy"},{n:"Kai Havertz",p:"MF",q:"SA",a:25,o:84,t:87,v:70000000,nat:"Germany"},
+      {n:"Bukayo Saka",p:"FW",q:"PD",a:23,o:89,t:93,v:150000000,nat:"England"},{n:"Gabriel Martinelli",p:"FW",q:"PE",a:23,o:83,t:88,v:60000000,nat:"Brazil"},{n:"Leandro Trossard",p:"FW",q:"PE",a:29,o:83,t:83,v:30000000,nat:"Belgium"},{n:"Gabriel Jesus",p:"FW",q:"CA",a:27,o:82,t:84,v:45000000,nat:"Brazil"}
+    ],
+    "Bayern de Munique": [
+      {n:"Manuel Neuer",p:"GK",q:"GOL",a:38,o:86,t:86,v:4000000,nat:"Germany"},{n:"Sven Ulreich",p:"GK",q:"GOL",a:36,o:76,t:76,v:1000000,nat:"Germany"},
+      {n:"Joshua Kimmich",p:"DF",q:"LD",a:29,o:87,t:87,v:55000000,nat:"Germany"},{n:"Dayot Upamecano",p:"DF",q:"ZAG",a:26,o:85,t:88,v:60000000,nat:"France"},{n:"Kim Min-jae",p:"DF",q:"ZAG",a:27,o:85,t:86,v:50000000,nat:"South Korea"},{n:"Eric Dier",p:"DF",q:"ZAG",a:30,o:81,t:81,v:12000000,nat:"England"},{n:"Alphonso Davies",p:"DF",q:"LE",a:24,o:85,t:89,v:70000000,nat:"Canada"},
+      {n:"Leon Goretzka",p:"MF",q:"MC",a:29,o:83,t:83,v:25000000,nat:"Germany"},{n:"Aleksandar Pavlović",p:"MF",q:"VOL",a:20,o:80,t:88,v:35000000,nat:"Germany"},{n:"Jamal Musiala",p:"MF",q:"MEI",a:21,o:88,t:94,v:150000000,nat:"Germany"},{n:"João Palhinha",p:"MF",q:"VOL",a:29,o:84,t:85,v:45000000,nat:"Portugal"},{n:"Konrad Laimer",p:"MF",q:"MC",a:27,o:81,t:82,v:25000000,nat:"Austria"},
+      {n:"Michael Olise",p:"FW",q:"PD",a:22,o:84,t:90,v:80000000,nat:"France"},{n:"Leroy Sané",p:"FW",q:"PE",a:28,o:85,t:86,v:60000000,nat:"Germany"},{n:"Kingsley Coman",p:"FW",q:"PE",a:28,o:84,t:85,v:50000000,nat:"France"},{n:"Harry Kane",p:"FW",q:"CA",a:31,o:90,t:90,v:90000000,nat:"England"},{n:"Serge Gnabry",p:"FW",q:"SA",a:29,o:83,t:83,v:35000000,nat:"Germany"}
+    ],
+    "Paris Saint-Germain": [
+      {n:"Gianluigi Donnarumma",p:"GK",q:"GOL",a:25,o:87,t:89,v:45000000,nat:"Italy"},{n:"Matvey Safonov",p:"GK",q:"GOL",a:25,o:80,t:83,v:15000000,nat:"Russia"},
+      {n:"Achraf Hakimi",p:"DF",q:"LD",a:26,o:86,t:88,v:70000000,nat:"Morocco"},{n:"Marquinhos",p:"DF",q:"ZAG",a:30,o:86,t:86,v:40000000,nat:"Brazil"},{n:"Willian Pacho",p:"DF",q:"ZAG",a:23,o:82,t:87,v:45000000,nat:"Ecuador"},{n:"Lucas Hernández",p:"DF",q:"ZAG",a:28,o:83,t:83,v:30000000,nat:"France"},{n:"Nuno Mendes",p:"DF",q:"LE",a:22,o:84,t:89,v:65000000,nat:"Portugal"},
+      {n:"Vitinha",p:"MF",q:"MC",a:24,o:85,t:89,v:75000000,nat:"Portugal"},{n:"João Neves",p:"MF",q:"VOL",a:20,o:83,t:91,v:70000000,nat:"Portugal"},{n:"Warren Zaïre-Emery",p:"MF",q:"MC",a:18,o:82,t:92,v:70000000,nat:"France"},{n:"Fabián Ruiz",p:"MF",q:"MEI",a:28,o:83,t:84,v:35000000,nat:"Spain"},
+      {n:"Ousmane Dembélé",p:"FW",q:"PD",a:27,o:85,t:87,v:60000000,nat:"France"},{n:"Bradley Barcola",p:"FW",q:"PE",a:22,o:83,t:89,v:70000000,nat:"France"},{n:"Khvicha Kvaratskhelia",p:"FW",q:"PE",a:23,o:86,t:90,v:85000000,nat:"Georgia"},{n:"Gonçalo Ramos",p:"FW",q:"CA",a:23,o:82,t:87,v:55000000,nat:"Portugal"},{n:"Marco Asensio",p:"FW",q:"SA",a:28,o:82,t:82,v:25000000,nat:"Spain"}
+    ],
+    "Inter de Milão": [
+      {n:"Yann Sommer",p:"GK",q:"GOL",a:35,o:84,t:84,v:8000000,nat:"Switzerland"},{n:"Josep Martínez",p:"GK",q:"GOL",a:26,o:78,t:82,v:12000000,nat:"Spain"},
+      {n:"Benjamin Pavard",p:"DF",q:"ZAG",a:28,o:84,t:85,v:35000000,nat:"France"},{n:"Alessandro Bastoni",p:"DF",q:"ZAG",a:25,o:86,t:89,v:75000000,nat:"Italy"},{n:"Francesco Acerbi",p:"DF",q:"ZAG",a:36,o:82,t:82,v:3000000,nat:"Italy"},{n:"Denzel Dumfries",p:"DF",q:"MD",a:28,o:83,t:83,v:30000000,nat:"Netherlands"},{n:"Federico Dimarco",p:"DF",q:"LE",a:27,o:85,t:86,v:45000000,nat:"Italy"},
+      {n:"Nicolò Barella",p:"MF",q:"MC",a:27,o:87,t:88,v:80000000,nat:"Italy"},{n:"Hakan Çalhanoğlu",p:"MF",q:"VOL",a:30,o:86,t:86,v:45000000,nat:"Turkey"},{n:"Henrikh Mkhitaryan",p:"MF",q:"MC",a:35,o:82,t:82,v:6000000,nat:"Armenia"},{n:"Davide Frattesi",p:"MF",q:"MC",a:25,o:82,t:86,v:40000000,nat:"Italy"},{n:"Piotr Zieliński",p:"MF",q:"MEI",a:30,o:83,t:83,v:20000000,nat:"Poland"},
+      {n:"Lautaro Martínez",p:"FW",q:"CA",a:27,o:89,t:90,v:110000000,nat:"Argentina"},{n:"Marcus Thuram",p:"FW",q:"CA",a:27,o:85,t:87,v:65000000,nat:"France"},{n:"Marko Arnautović",p:"FW",q:"CA",a:35,o:78,t:78,v:2000000,nat:"Austria"},{n:"Mehdi Taremi",p:"FW",q:"SA",a:32,o:81,t:81,v:12000000,nat:"Iran"}
+    ],
+    "Milan": [
+      {n:"Mike Maignan",p:"GK",q:"GOL",a:29,o:87,t:88,v:45000000,nat:"France"},{n:"Marco Sportiello",p:"GK",q:"GOL",a:32,o:76,t:76,v:2000000,nat:"Italy"},
+      {n:"Emerson Royal",p:"DF",q:"LD",a:25,o:80,t:82,v:18000000,nat:"Brazil"},{n:"Fikayo Tomori",p:"DF",q:"ZAG",a:26,o:84,t:85,v:40000000,nat:"England"},{n:"Malick Thiaw",p:"DF",q:"ZAG",a:23,o:81,t:87,v:30000000,nat:"Germany"},{n:"Matteo Gabbia",p:"DF",q:"ZAG",a:25,o:79,t:82,v:18000000,nat:"Italy"},{n:"Theo Hernández",p:"DF",q:"LE",a:27,o:86,t:87,v:55000000,nat:"France"},
+      {n:"Youssouf Fofana",p:"MF",q:"VOL",a:25,o:82,t:85,v:35000000,nat:"France"},{n:"Tijjani Reijnders",p:"MF",q:"MC",a:26,o:84,t:87,v:50000000,nat:"Netherlands"},{n:"Ismaël Bennacer",p:"MF",q:"VOL",a:27,o:82,t:83,v:25000000,nat:"Algeria"},{n:"Ruben Loftus-Cheek",p:"MF",q:"MEI",a:28,o:81,t:82,v:20000000,nat:"England"},
+      {n:"Christian Pulisic",p:"FW",q:"PD",a:26,o:85,t:86,v:55000000,nat:"USA"},{n:"Rafael Leão",p:"FW",q:"PE",a:25,o:86,t:89,v:90000000,nat:"Portugal"},{n:"Álvaro Morata",p:"FW",q:"CA",a:32,o:82,t:82,v:12000000,nat:"Spain"},{n:"Tammy Abraham",p:"FW",q:"CA",a:27,o:79,t:81,v:20000000,nat:"England"}
+    ],
+    "Flamengo": [
+      {n:"Agustín Rossi",p:"GK",q:"GOL",a:29,o:80,t:81,v:8000000,nat:"Argentina"},{n:"Matheus Cunha",p:"GK",q:"GOL",a:24,o:76,t:82,v:5000000,nat:"Brazil"},
+      {n:"Wesley",p:"DF",q:"LD",a:20,o:79,t:88,v:20000000,nat:"Brazil"},{n:"Léo Ortiz",p:"DF",q:"ZAG",a:28,o:81,t:82,v:12000000,nat:"Brazil"},{n:"Léo Pereira",p:"DF",q:"ZAG",a:28,o:80,t:81,v:10000000,nat:"Brazil"},{n:"Fabrício Bruno",p:"DF",q:"ZAG",a:28,o:80,t:81,v:11000000,nat:"Brazil"},{n:"Ayrton Lucas",p:"DF",q:"LE",a:27,o:79,t:80,v:9000000,nat:"Brazil"},
+      {n:"Erick Pulgar",p:"MF",q:"VOL",a:31,o:79,t:79,v:6000000,nat:"Chile"},{n:"Nicolás de la Cruz",p:"MF",q:"MEI",a:27,o:82,t:83,v:20000000,nat:"Uruguay"},{n:"Gerson",p:"MF",q:"MC",a:27,o:81,t:82,v:18000000,nat:"Brazil"},{n:"De Arrascaeta",p:"MF",q:"MEI",a:30,o:84,t:84,v:22000000,nat:"Uruguay"},{n:"Allan",p:"MF",q:"VOL",a:27,o:78,t:80,v:8000000,nat:"Brazil"},
+      {n:"Bruno Henrique",p:"FW",q:"PE",a:34,o:79,t:79,v:5000000,nat:"Brazil"},{n:"Gabriel Barbosa",p:"FW",q:"CA",a:28,o:80,t:81,v:12000000,nat:"Brazil"},{n:"Pedro",p:"FW",q:"CA",a:27,o:82,t:83,v:22000000,nat:"Brazil"},{n:"Everton Cebolinha",p:"FW",q:"PE",a:28,o:80,t:81,v:12000000,nat:"Brazil"}
+    ],
+    "Palmeiras": [
+      {n:"Weverton",p:"GK",q:"GOL",a:36,o:80,t:80,v:3000000,nat:"Brazil"},{n:"Marcelo Lomba",p:"GK",q:"GOL",a:37,o:74,t:74,v:500000,nat:"Brazil"},
+      {n:"Marcos Rocha",p:"DF",q:"LD",a:36,o:76,t:76,v:1000000,nat:"Brazil"},{n:"Gustavo Gómez",p:"DF",q:"ZAG",a:31,o:82,t:82,v:10000000,nat:"Paraguay"},{n:"Murilo",p:"DF",q:"ZAG",a:27,o:80,t:81,v:12000000,nat:"Brazil"},{n:"Vitor Reis",p:"DF",q:"ZAG",a:19,o:76,t:87,v:15000000,nat:"Brazil"},{n:"Piquerez",p:"DF",q:"LE",a:26,o:80,t:82,v:14000000,nat:"Uruguay"},
+      {n:"Aníbal Moreno",p:"MF",q:"VOL",a:25,o:79,t:82,v:12000000,nat:"Argentina"},{n:"Richard Ríos",p:"MF",q:"VOL",a:24,o:80,t:85,v:18000000,nat:"Colombia"},{n:"Raphael Veiga",p:"MF",q:"MEI",a:29,o:81,t:81,v:14000000,nat:"Brazil"},{n:"Maurício",p:"MF",q:"MEI",a:23,o:78,t:84,v:12000000,nat:"Brazil"},{n:"Emiliano Martínez",p:"MF",q:"MC",a:22,o:76,t:83,v:8000000,nat:"Argentina"},
+      {n:"Estêvão",p:"FW",q:"PD",a:17,o:80,t:92,v:45000000,nat:"Brazil"},{n:"Flaco López",p:"FW",q:"CA",a:24,o:78,t:83,v:14000000,nat:"Argentina"},{n:"Dudu",p:"FW",q:"PE",a:32,o:78,t:78,v:5000000,nat:"Brazil"},{n:"Rony",p:"FW",q:"CA",a:29,o:78,t:78,v:7000000,nat:"Brazil"}
+    ],
+    "Boca Juniors": [
+      {n:"Sergio Romero",p:"GK",q:"GOL",a:37,o:78,t:78,v:1000000,nat:"Argentina"},{n:"Leandro Brey",p:"GK",q:"GOL",a:21,o:73,t:82,v:4000000,nat:"Argentina"},
+      {n:"Luis Advíncula",p:"DF",q:"LD",a:34,o:77,t:77,v:2000000,nat:"Peru"},{n:"Cristian Lema",p:"DF",q:"ZAG",a:34,o:74,t:74,v:800000,nat:"Argentina"},{n:"Marcos Rojo",p:"DF",q:"ZAG",a:34,o:76,t:76,v:1500000,nat:"Argentina"},{n:"Nicolás Figal",p:"DF",q:"ZAG",a:30,o:75,t:75,v:2500000,nat:"Argentina"},{n:"Lautaro Blanco",p:"DF",q:"LE",a:26,o:74,t:76,v:2500000,nat:"Argentina"},
+      {n:"Pol Fernández",p:"MF",q:"VOL",a:33,o:76,t:76,v:1500000,nat:"Argentina"},{n:"Kevin Zenón",p:"MF",q:"MC",a:23,o:76,t:81,v:8000000,nat:"Argentina"},{n:"Cristian Medina",p:"MF",q:"MC",a:22,o:77,t:84,v:12000000,nat:"Argentina"},{n:"Ezequiel Fernández",p:"MF",q:"VOL",a:22,o:77,t:84,v:12000000,nat:"Argentina"},
+      {n:"Miguel Merentiel",p:"FW",q:"CA",a:28,o:78,t:79,v:9000000,nat:"Uruguay"},{n:"Edinson Cavani",p:"FW",q:"CA",a:37,o:77,t:77,v:1500000,nat:"Uruguay"},{n:"Exequiel Zeballos",p:"FW",q:"PE",a:22,o:74,t:82,v:6000000,nat:"Argentina"},{n:"Brian Aguirre",p:"FW",q:"PD",a:21,o:73,t:81,v:5000000,nat:"Argentina"}
+    ],
+    "River Plate": [
+      {n:"Franco Armani",p:"GK",q:"GOL",a:38,o:79,t:79,v:1500000,nat:"Argentina"},{n:"Jeremías Ledesma",p:"GK",q:"GOL",a:31,o:76,t:76,v:2000000,nat:"Argentina"},
+      {n:"Andrés Herrera",p:"DF",q:"LD",a:26,o:75,t:78,v:4000000,nat:"Argentina"},{n:"Paulo Díaz",p:"DF",q:"ZAG",a:30,o:79,t:79,v:6000000,nat:"Chile"},{n:"Germán Pezzella",p:"DF",q:"ZAG",a:33,o:78,t:78,v:3000000,nat:"Argentina"},{n:"Leandro González Pírez",p:"DF",q:"ZAG",a:32,o:75,t:75,v:1500000,nat:"Argentina"},{n:"Marcos Acuña",p:"DF",q:"LE",a:33,o:79,t:79,v:3000000,nat:"Argentina"},
+      {n:"Enzo Pérez",p:"MF",q:"VOL",a:38,o:76,t:76,v:800000,nat:"Argentina"},{n:"Rodrigo Villagra",p:"MF",q:"VOL",a:23,o:76,t:82,v:9000000,nat:"Argentina"},{n:"Kevin Castaño",p:"MF",q:"VOL",a:23,o:76,t:82,v:9000000,nat:"Colombia"},{n:"Franco Mastantuono",p:"MF",q:"MEI",a:17,o:77,t:91,v:35000000,nat:"Argentina"},{n:"Ignacio Fernández",p:"MF",q:"MEI",a:34,o:79,t:79,v:2500000,nat:"Argentina"},
+      {n:"Facundo Colidio",p:"FW",q:"CA",a:24,o:77,t:82,v:12000000,nat:"Argentina"},{n:"Miguel Borja",p:"FW",q:"CA",a:31,o:78,t:78,v:5000000,nat:"Colombia"},{n:"Sebastián Driussi",p:"FW",q:"SA",a:28,o:80,t:81,v:14000000,nat:"Argentina"},{n:"Esequiel Barco",p:"FW",q:"PE",a:25,o:78,t:82,v:11000000,nat:"Argentina"}
+    ]
+  };
+
   function generateWorld() {
     var rng = R.make(WORLD_SEED);
     var leagues = [], clubs = [], playersById = {}, pid = 1;
@@ -1044,8 +1131,8 @@
           colors: { primary: pal[0], secondary: pal[1] },
           strength: strength, playerIds: []
         };
-        // elenco: real (licenciado via Transfermarkt) quando existir; senão gerado
-        var realSquad = REAL_SQUADS[rc[0]];
+        // elenco: na edição Atualizado usa o elenco REAL do clube (se houver); senão o padrão
+        var realSquad = (pro && proc && PRO_SQUADS[cname]) ? PRO_SQUADS[cname] : REAL_SQUADS[rc[0]];
         if (realSquad) {
           for (var rp = 0; rp < realSquad.length; rp++) {
             var rpl = realSquad[rp];
