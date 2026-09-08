@@ -532,6 +532,9 @@
       injuries: {}, suspensions: {}, notifications: [],
       youth: generateYouth(clubId)
     };
+    // popularidade / reputação iniciais editáveis na criação
+    if (opts.startPop != null) career.popularity = Math.max(3, Math.min(99, opts.startPop));
+    if (opts.startRep != null) { career.reputation = Math.max(3, Math.min(99, opts.startRep)); career.repBias = career.reputation - 18; }
     career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
     career.nation = opts.nationId ? buildNation(opts.nationId) : null;
     setupNationSeason(career);
@@ -572,7 +575,7 @@
     var h = (career.honours || []).length;
     var cs = career.careerStats || { p: 0, w: 0 };
     var wr = cs.p >= 5 ? cs.w / cs.p : 0.42;
-    var rep = 8 + h * 7 + ((career.season || 1) - 1) * 2 + Math.round(wr * 24) - (career.sackCount || 0) * 5;
+    var rep = 8 + h * 7 + ((career.season || 1) - 1) * 2 + Math.round(wr * 24) - (career.sackCount || 0) * 5 + (career.repBias || 0);
     return Math.max(3, Math.min(100, Math.round(rep)));
   }
   function reputationLabel(r) {

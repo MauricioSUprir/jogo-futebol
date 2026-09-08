@@ -1015,9 +1015,9 @@
         var clubId = ld.id + "-" + ci;
         var pal = CLUB_PALETTES[stableHash(clubId) % CLUB_PALETTES.length];
         var strength = rc[2];                // força real do clube
-        var cname = /^br/.test(ld.id) ? brazilify(rc[0]) : rc[0];
+        var cname = localizeName(rc[0], ld.id);
         var club = {
-          id: clubId, name: cname, short: rc[1],
+          id: clubId, name: cname, origName: rc[0], short: rc[1],
           leagueId: ld.id, coach: fullName(rng, ld.culture),
           colors: { primary: pal[0], secondary: pal[1] },
           strength: strength, playerIds: []
@@ -1074,7 +1074,7 @@
     });
 
     // técnicos reais alocados ao seu clube real (os demais mantêm nome gerado)
-    clubs.forEach(function (c) { var co = COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; } });
+    clubs.forEach(function (c) { var co = COACH_CLUB[c.origName || c.name] || COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; } });
 
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = NAT_COACH[n.key] || fullName(rng, n.culture); n.coachPhotoKey = coachSlug(n.coach); });
@@ -1295,6 +1295,48 @@
       default:         return name; // AC, FC, SC, EC, CD, AA já soam brasileiros
     }
   }
+  // Localiza o nome do clube conforme o país/região da liga (mais realista).
+  function localizeName(name, ldId) {
+    var lg = String(ldId || "").replace(/[0-9]/g, "");   // br2 -> br, es2 -> es
+    if (lg === "br") return brazilify(name);
+    if (["es", "it", "de", "fr", "pt", "ar"].indexOf(lg) < 0) return name; // en, us, mx... mantêm
+    var parts = name.split(" "); var suf = parts[parts.length - 1]; var root = parts.slice(0, -1).join(" ");
+    if (!root) return name;
+    var h = stableHash(name);
+    function pre(arr) { return arr[h % arr.length] + " " + root; }
+    function sfx(s) { return root + " " + s; }
+    if (lg === "es") switch (suf) {
+      case "City": return h % 2 ? pre(["Real", "Atlético"]) : sfx("CF");
+      case "United": return sfx("CD"); case "Athletic": return pre(["Athletic", "Atlético"]);
+      case "Sportivo": return sfx("Deportivo"); case "Real": return "Real " + root; default: return name;
+    }
+    if (lg === "it") switch (suf) {
+      case "City": return sfx("Calcio"); case "United": return pre(["US", "SS"]);
+      case "Athletic": return pre(["AC", "Atalanta"]); case "Sportivo": return pre(["SSC", "US"]);
+      case "Real": return pre(["AC", "SS"]); default: return name;
+    }
+    if (lg === "de") switch (suf) {
+      case "City": return pre(["FC", "1. FC"]); case "United": return pre(["SV", "SC"]);
+      case "Athletic": return pre(["VfB", "VfL"]); case "Sportivo": return pre(["SV", "TSV"]);
+      case "Real": return pre(["Borussia", "FC"]); default: return name;
+    }
+    if (lg === "fr") switch (suf) {
+      case "City": return pre(["AS", "RC"]); case "United": return sfx("FC");
+      case "Athletic": return pre(["Stade", "AS"]); case "Sportivo": return pre(["Olympique", "AS"]);
+      case "Real": return pre(["Racing", "AS"]); default: return name;
+    }
+    if (lg === "pt") switch (suf) {
+      case "City": return sfx("FC"); case "United": return pre(["SC", "GD"]);
+      case "Athletic": return pre(["Sporting", "SC"]); case "Sportivo": return sfx("SC");
+      case "Real": return pre(["CD", "SC"]); default: return name;
+    }
+    if (lg === "ar") switch (suf) {
+      case "City": return pre(["Club", "CA"]); case "United": return pre(["Atlético", "CA"]);
+      case "Athletic": return pre(["Atlético", "Racing"]); case "Sportivo": return pre(["Deportivo", "CA"]);
+      case "Real": return pre(["Racing", "Club"]); default: return name;
+    }
+    return name;
+  }
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
     var name = STADIUMS[club.name];
@@ -1401,6 +1443,7 @@
     },
     clubRating: function (clubId) {
       var cl = TM.data.club(clubId);
+      if (cl && CLUB_RATING_OVERRIDE[cl.origName || cl.name] != null) return CLUB_RATING_OVERRIDE[cl.origName || cl.name];
       if (cl && CLUB_RATING_OVERRIDE[cl.name] != null) return CLUB_RATING_OVERRIDE[cl.name];
       var ps = TM.data.clubPlayers(clubId).slice(0, 11);
       return Math.round(ps.reduce(function (s, p) { return s + p.overall; }, 0) / ps.length);
