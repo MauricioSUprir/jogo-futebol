@@ -11,7 +11,7 @@
   var TM = (global.TM = global.TM || {});
 
   var CONFIG = {
-    PAYWALL: true,                                    // cadeado LIGADO — venda no ar
+    PAYWALL: false,                                   // cadeado DESLIGADO (jogo liberado; ligue quando for vender)
     API: "https://tm-license.onrender.com",           // servidor de licenças (Render) — já no ar
     BUY_URL: "https://pay.kiwify.com.br/q8ROOrh",     // checkout do produto no Kiwify
     PRICE_LABEL: "R$ 9,90",                           // texto na tela (ajuste se mudar o preço no Kiwify)
