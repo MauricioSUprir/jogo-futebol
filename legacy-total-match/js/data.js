@@ -1010,7 +1010,7 @@
      na mesma ordem de força — o elenco e o origName originais são preservados,
      muda só o NOME exibido e a sigla. A edição pública (vendável) segue fictícia. */
   var PRO_CLUBS = {
-    br: [["Flamengo","FLA"],["Palmeiras","PAL"],["Botafogo","BOT"],["Atlético Mineiro","CAM"],["Fluminense","FLU"],["São Paulo","SAO"],["Corinthians","COR"],["Internacional","INT"],["Grêmio","GRE"],["Cruzeiro","CRU"],["Fortaleza","FOR"],["Athletico-PR","CAP"],["Bahia","BAH"],["Vasco da Gama","VAS"],["Bragantino","RBB"],["Santos","SAN"],["Vitória","VIT"],["Juventude","JUV"],["Criciúma","CRI"],["Cuiabá","CUI"]],
+    br: [["Palmeiras","PAL"],["Flamengo","FLA"],["Cruzeiro","CRU"],["Botafogo","BOT"],["São Paulo","SAO"],["Bahia","BAH"],["Red Bull Bragantino","RBB"],["Fluminense","FLU"],["Internacional","INT"],["Corinthians","COR"],["Atlético Mineiro","CAM"],["Grêmio","GRE"],["Vasco da Gama","VAS"],["Santos","SAN"],["Fortaleza","FOR"],["Ceará","CEA"],["Mirassol","MIR"],["Vitória","VIT"],["Juventude","JUV"],["Sport Recife","SPT"]],
     en: [["Manchester City","MCI"],["Arsenal","ARS"],["Liverpool","LIV"],["Manchester United","MUN"],["Chelsea","CHE"],["Tottenham","TOT"],["Newcastle","NEW"],["Aston Villa","AVL"],["Brighton","BHA"],["West Ham","WHU"],["Crystal Palace","CRY"],["Everton","EVE"],["Fulham","FUL"],["Brentford","BRE"],["Nottingham Forest","NFO"],["Wolverhampton","WOL"],["Bournemouth","BOU"],["Leicester","LEI"],["Ipswich Town","IPS"],["Southampton","SOU"]],
     es: [["Real Madrid","RMA"],["Barcelona","BAR"],["Atlético de Madrid","ATM"],["Athletic Bilbao","ATH"],["Real Sociedad","RSO"],["Real Betis","BET"],["Villarreal","VIL"],["Valencia","VAL"],["Sevilla","SEV"],["Girona","GIR"],["Osasuna","OSA"],["Celta de Vigo","CEL"],["Rayo Vallecano","RAY"],["Getafe","GET"],["Mallorca","MAL"],["Las Palmas","LPA"],["Espanyol","ESP"],["Alavés","ALA"],["Leganés","LEG"],["Valladolid","VLL"]],
     it: [["Inter de Milão","INT"],["Milan","MIL"],["Juventus","JUV"],["Napoli","NAP"],["Atalanta","ATA"],["Roma","ROM"],["Lazio","LAZ"],["Fiorentina","FIO"],["Bologna","BOL"],["Torino","TOR"],["Udinese","UDI"],["Genoa","GEN"],["Monza","MON"],["Como","COM"],["Cagliari","CAG"],["Parma","PAR"],["Lecce","LEC"],["Hellas Verona","VER"],["Empoli","EMP"],["Venezia","VEN"]],
@@ -1357,7 +1357,7 @@
      Superclásico...), e na pública os mesmos confrontos de slot. O 1º par de
      cada clube é o clássico PRINCIPAL. */
   var DERBIES = {
-    br: [[0,4],[1,6],[2,13],[3,9],[7,8],[12,16],[5,15],[0,2],[4,13]],       // Fla-Flu, Palmeiras-Corinthians, Botafogo-Vasco, Galo-Cruzeiro, Gre-Nal, Ba-Vi...
+    br: [[1,7],[0,9],[3,12],[2,10],[8,11],[5,17],[13,4],[0,4],[4,9],[1,3]],  // Fla-Flu, Palmeiras-Corinthians, Botafogo-Vasco, Galo-Cruzeiro, Gre-Nal, Ba-Vi, San-São, Choque-Rei, Majestoso, Fla-Botafogo
     en: [[2,11],[1,5],[0,3],[4,9],[17,14],[2,3],[1,4]],                     // Merseyside, North London, Manchester, Londres, East Midlands...
     es: [[0,1],[1,16],[0,2],[3,4],[5,8],[7,6]],                            // El Clásico, derби de Barcelona, de Madrid, basco, sevilhano, valenciano
     it: [[0,1],[5,6],[2,9],[0,2],[7,2],[3,5]],                            // Madonnina, Capitale, Mole, d'Italia, Fiorentina-Juve, Napoli-Roma
@@ -1374,7 +1374,7 @@
     "it-0-1": "Derby della Madonnina", "it-5-6": "Derby della Capitale", "it-2-9": "Derby della Mole", "it-0-2": "Derby d'Italia",
     "fr-0-2": "Le Classique", "fr-4-17": "Derby do Rhône", "fr-3-6": "Derby do Norte",
     "de-0-2": "Der Klassiker", "de-2-11": "Derby do Borussia",
-    "br-0-4": "Fla-Flu", "br-1-6": "Derby Paulista", "br-2-13": "Clássico Vovô", "br-3-9": "Clássico Mineiro", "br-7-8": "Gre-Nal", "br-12-16": "Ba-Vi", "br-5-15": "Clássico San-São",
+    "br-1-7": "Fla-Flu", "br-0-9": "Derby Paulista", "br-0-4": "Choque-Rei", "br-4-9": "Majestoso", "br-3-12": "Clássico Vovô", "br-2-10": "Clássico Mineiro", "br-8-11": "Gre-Nal", "br-5-17": "Ba-Vi", "br-4-13": "Clássico San-São",
     "en-2-11": "Derby de Merseyside", "en-1-5": "Derby do Norte de Londres", "en-0-3": "Derby de Manchester", "en-2-3": "Clássico do Noroeste",
     "nl-1-2": "De Klassieker", "nl-0-2": "Ajax-PSV",
     "pt-0-2": "Derby de Lisboa", "pt-0-1": "O Clássico"
