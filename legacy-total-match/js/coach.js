@@ -237,9 +237,11 @@
     var key = (homeClub.id || "") + ":" + (c.season || 1) + ":" + (matchNo || 0);
     var h = 2166136261; for (var i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); } h = h >>> 0;
     var times = ["11:00", "15:00", "16:00", "16:30", "18:30", "19:00", "20:00", "21:00", "21:30"];
-    var time = times[h % times.length];
     var W = [["☀️", "Ensolarado", 24, 33], ["🌤️", "Sol entre nuvens", 21, 29], ["⛅", "Parcialmente nublado", 18, 26], ["☁️", "Nublado", 14, 22], ["🌧️", "Chuva", 11, 18], ["⛈️", "Tempestade", 12, 19]];
-    var w = W[(h >>> 3) % W.length];
+    // override editável pelo usuário (horário/clima) para este jogo
+    var over = (c.mdOverride && c.mdOverride.mn === (matchNo || 0)) ? c.mdOverride : null;
+    var time = over && over.time ? over.time : times[h % times.length];
+    var w = (over && over.w != null && W[over.w]) ? W[over.w] : W[(h >>> 3) % W.length];
     var wTemp = w[2] + ((h >>> 7) % (w[3] - w[2] + 1));
     var cap = 30000; try { cap = TM.data.stadium(homeClub).capacity || 30000; } catch (e) {}
     var rating = 68; try { rating = TM.data.clubRating(homeClub.id); } catch (e) {}
@@ -734,6 +736,25 @@
     natWrap.appendChild(el("div", { class: "setting-hint", text: "Você comanda o clube E a seleção ao mesmo tempo, alternando entre eles. Precisa fazer a convocação dentro do prazo, ou é demitido da seleção." }));
     body.appendChild(natWrap);
 
+    // popularidade e reputação iniciais (editáveis)
+    if (opts.role !== "dirigente") {
+      var defPop = 40; try { var rr0 = TM.data.clubRating(clubId); defPop = Math.max(5, Math.min(72, rr0 - 28)); } catch (e) {}
+      if (opts.startPop == null) opts.startPop = defPop;
+      if (opts.startRep == null) opts.startRep = 18;
+      function sliderRow(label, key, min, max, labelFn) {
+        var val = el("span", { class: "rep-val" });
+        var inp = el("input", { type: "range", min: min, max: max, value: opts[key], class: "tm-range" });
+        function upd() { val.textContent = opts[key] + " · " + labelFn(opts[key]); }
+        inp.addEventListener("input", function () { opts[key] = parseInt(inp.value, 10); upd(); });
+        upd();
+        return el("div", { class: "setting" }, [ el("div", { class: "rep-top" }, [ el("span", { class: "rep-lbl", text: label }), val ]), inp ]);
+      }
+      body.appendChild(el("div", { class: "setting-label", text: "Início da carreira (opcional)" }));
+      body.appendChild(sliderRow("📣 Popularidade do clube", "startPop", 5, 95, function (v) { return popularityLabel(v); }));
+      body.appendChild(sliderRow("⭐ Sua reputação", "startRep", 3, 95, function (v) { return C().reputationLabel(v); }));
+      body.appendChild(el("div", { class: "setting-hint", text: "Comece com um clube mais/menos famoso e você mais/menos renomado. Deixe no padrão para uma jornada do zero." }));
+    }
+
     var summary = el("div", { class: "market-budget" });
     body.appendChild(summary);
     function updateInfo() {
@@ -824,6 +845,7 @@
     ensurePopularity(c);    // popularidade mundial do clube
     maybeBoardObjectiveShift(c); // diretoria muda meta / cobra no meio da temporada
     applyPosOverrides(c);   // reaplica reposicionamentos concluídos (mundo regenera)
+    applyKitOverrides(c);   // reaplica uniformes importados do clube (mundo regenera)
     maybeStaffMessage(c);   // recados do auxiliar técnico e da diretoria
     maybePlayerUnrest(c);   // jogador insatisfeito pedindo transferência
     try { C().generateJobOffers(c); } catch (e) {}   // propostas de outros clubes
@@ -853,11 +875,11 @@
     var coachFace = c.coachPhoto ? el("img", { src: c.coachPhoto, class: "coach-mini" })
       : myCoach ? TM.img.coachImg(myCoach, "coach-mini")
       : el("div", { class: "coach-mini placeholder", text: "👔" });
-    screen.appendChild(el("div", { class: "club-header" }, [
+    screen.appendChild(el("div", { class: "club-header ch-clickable", title: "Ver informações do clube", on: { click: function () { TM.ui.go("coach-club-info", { clubId: c.teamId, back: "coach-hub" }); } } }, [
       TM.img.clubImg(club, "ch-crest"),
       el("div", { class: "ch-info" }, [
         el("div", { class: "ch-name", text: club.name }),
-        el("div", { class: "ch-sub", text: TM.data.league(c.leagueId).name + " · Temporada " + c.season }),
+        el("div", { class: "ch-sub", text: TM.data.league(c.leagueId).name + " · Temporada " + c.season + "  ℹ️" }),
         el("div", { class: "ch-budget", text: "💰 Orçamento: " + money(c, c.budget) })
       ]),
       TM.img.kitImg(club, "ch-kit"),
@@ -1018,6 +1040,30 @@
         el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: md.wIcon }), el("span", { class: "mdi-v", text: md.wTemp + "°" }), el("span", { class: "mdi-l", text: md.wLabel }) ]),
         el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: "👥" }), el("span", { class: "mdi-v", text: md.attend }), el("span", { class: "mdi-l", text: "público" }) ])
       ]));
+      // editar horário e clima antes do jogo
+      var mdEdit = el("div", { class: "md-edit" }); kids.push(mdEdit);
+      (function () {
+        var editing = false;
+        function renderMdEdit() {
+          mdEdit.innerHTML = "";
+          if (!editing) { mdEdit.appendChild(el("button", { class: "md-edit-btn", text: "✏️ Editar horário e clima", on: { click: function () { editing = true; renderMdEdit(); } } })); return; }
+          var times = ["11:00", "15:00", "16:00", "16:30", "18:30", "19:00", "20:00", "21:00", "21:30"];
+          var Wl = [["☀️", "Ensolarado"], ["🌤️", "Sol entre nuvens"], ["⛅", "Parc. nublado"], ["☁️", "Nublado"], ["🌧️", "Chuva"], ["⛈️", "Tempestade"]];
+          var tSel = el("select", { class: "select mini" }); times.forEach(function (t) { var o = el("option", { value: t, text: t }); if (t === md.time) o.selected = true; tSel.appendChild(o); });
+          var wSel = el("select", { class: "select mini" }); Wl.forEach(function (w, i) { var o = el("option", { value: i, text: w[0] + " " + w[1] }); wSel.appendChild(o); });
+          var curW = Wl.map(function (w) { return w[0]; }).indexOf(md.wIcon); if (curW >= 0) wSel.value = String(curW);
+          mdEdit.appendChild(el("div", { class: "md-edit-row" }, [
+            el("label", { class: "md-edit-lab" }, [ el("span", { text: "🕐 Horário" }), tSel ]),
+            el("label", { class: "md-edit-lab" }, [ el("span", { text: "🌦️ Clima" }), wSel ])
+          ]));
+          mdEdit.appendChild(TM.ui.button("Salvar", function () {
+            c.mdOverride = { mn: c.matchNo, time: tSel.value, w: parseInt(wSel.value, 10) };
+            TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub");
+          }, "btn small"));
+        }
+        renderMdEdit();
+      })();
+
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
       var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
       kids.push(TM.ui.button("🔍 Analisar adversário", function () {
@@ -2331,6 +2377,109 @@
       ]));
     }
     render();
+  });
+
+  /* ---------- helpers: import de imagem + histórico + uniformes ---------- */
+  function importImage(cb, maxSize) {
+    maxSize = maxSize || 512;
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.addEventListener("change", function () {
+      var f = inp.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function (ev) {
+        var img = new Image();
+        img.onload = function () {
+          var cv = document.createElement("canvas"), sc = Math.min(1, maxSize / Math.max(img.width, img.height));
+          cv.width = Math.max(1, Math.round(img.width * sc)); cv.height = Math.max(1, Math.round(img.height * sc));
+          cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+          try { cb(cv.toDataURL("image/png")); } catch (e) {}
+        };
+        img.src = ev.target.result;
+      };
+      r.readAsDataURL(f);
+    });
+    inp.click();
+  }
+  function applyKitOverrides(c) {
+    if (!c || !c.kitOverrides) return;
+    var club = TM.data.club(c.teamId); if (!club) return;
+    if (c.kitOverrides[0]) club.kitData = c.kitOverrides[0];
+    if (c.kitOverrides[1]) club.kitAwayData = c.kitOverrides[1];
+    if (c.kitOverrides[2]) club.kitThirdData = c.kitOverrides[2];
+  }
+  TM.coachUI = TM.coachUI || {}; TM.coachUI.applyKitOverrides = applyKitOverrides;
+  function clubHistory(club) {
+    var s = String(club.id || club.name), h = 2166136261;
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    h = h >>> 0;
+    var founded = 1895 + (h % 106);
+    var rating = TM.data.clubRating(club.id);
+    var porte = rating >= 85 ? "gigante" : rating >= 79 ? "grande" : rating >= 73 ? "tradicional" : rating >= 67 ? "de médio porte" : "modesto";
+    var league = TM.data.league(club.leagueId), nation = league ? league.nation : "";
+    var titlesNat = Math.max(0, Math.round((rating - 62) / 2.2));
+    var titlesCont = rating >= 82 ? Math.max(1, Math.round((rating - 80) / 2)) : 0;
+    var myst = rating >= 82 ? "É uma potência respeitada dentro e fora das quatro linhas, sempre entre os favoritos."
+      : rating >= 74 ? "Tem uma torcida fiel e um histórico de boas campanhas na temporada."
+      : "Luta temporada após temporada para crescer e surpreender os grandes.";
+    var desc = "Fundado em " + founded + ", o " + club.name + " é um clube " + porte + (nation ? " da " + nation : "") +
+      ". Ao longo da história conquistou " + titlesNat + " título" + (titlesNat !== 1 ? "s" : "") + " nacio" + (titlesNat !== 1 ? "nais" : "nal") +
+      (titlesCont ? " e " + titlesCont + " internaciona" + (titlesCont !== 1 ? "is" : "l") : "") + ". " + myst;
+    return { founded: founded, rating: rating, porte: porte, nation: nation, titlesNat: titlesNat, titlesCont: titlesCont, desc: desc };
+  }
+
+  /* ---------- INFORMAÇÕES DO CLUBE (clicar no nome do time) ---------- */
+  TM.ui.register("coach-club-info", function (screen, params) {
+    var c = TM.storage.coachCareer();
+    var clubId = (params && params.clubId) || (c && c.teamId);
+    var club = TM.data.club(clubId);
+    if (!club) { TM.ui.go(c ? "coach-hub" : "modes"); return; }
+    var back = (params && params.back) || "coach-hub";
+    var mine = c && club.id === c.teamId;
+    var hist = clubHistory(club);
+    var stad = TM.data.stadium(club);
+
+    screen.appendChild(TM.ui.topbar("Sobre o clube", function () { TM.ui.go(back); }));
+    var body = el("div", { class: "panel-narrow ci-wrap" }); screen.appendChild(body);
+
+    body.appendChild(el("div", { class: "ci-head" }, [
+      TM.img.clubImg(club, "ci-crest"),
+      el("div", { class: "ci-hinfo" }, [ el("div", { class: "ci-name", text: club.name }), el("div", { class: "ci-league", text: (TM.data.league(club.leagueId) || {}).name || "" }) ]),
+      TM.ui.ovBadge(hist.rating)
+    ]));
+
+    body.appendChild(el("div", { class: "ci-stadium" }, [
+      TM.img.stadiumImg(club, "ci-stad-img"),
+      el("div", { class: "ci-stad-cap" }, [ el("span", { text: "🏟️ " + stad.name }), el("span", { text: "👥 " + (stad.capacity || 0).toLocaleString("pt-BR") + " lugares" }) ])
+    ]));
+
+    body.appendChild(el("div", { class: "ci-card" }, [ el("div", { class: "ci-ct", text: "📖 História" }), el("div", { class: "ci-desc", text: hist.desc }) ]));
+
+    function stat(l, v) { return el("div", { class: "ci-stat" }, [ el("div", { class: "ci-sv", text: v }), el("div", { class: "ci-sl", text: l }) ]); }
+    body.appendChild(el("div", { class: "ci-stats" }, [
+      stat("Fundação", hist.founded), stat("Força", hist.rating), stat("Títulos nac.", hist.titlesNat), stat("Internac.", hist.titlesCont)
+    ]));
+
+    body.appendChild(el("div", { class: "ci-card" }, [ el("div", { class: "ci-ct", text: "🎨 Cores" }),
+      el("div", { class: "ci-colors" }, [
+        el("div", { class: "ci-swatch", style: "background:" + club.colors.primary }),
+        el("div", { class: "ci-swatch", style: "background:" + club.colors.secondary })
+      ]) ]));
+
+    var kitsCard = el("div", { class: "ci-card" });
+    kitsCard.appendChild(el("div", { class: "ci-ct", text: "👕 Uniformes" }));
+    var krow = el("div", { class: "ci-kits" });
+    ["1º", "2º", "3º"].forEach(function (lbl, v) {
+      var tile = el("div", { class: "ci-kit" }, [ TM.img.kitImg(club, "ci-kit-img", v), el("div", { class: "ci-kit-lbl", text: lbl } ) ]);
+      if (mine) {
+        tile.appendChild(el("button", { class: "ci-kit-edit", text: "✏️ Trocar", on: { click: function () {
+          importImage(function (data) { c.kitOverrides = c.kitOverrides || {}; c.kitOverrides[v] = data; applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
+        } } }));
+      }
+      krow.appendChild(tile);
+    });
+    kitsCard.appendChild(krow);
+    if (mine) kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube." }));
+    body.appendChild(kitsCard);
   });
 
   /* ---------- competições ---------- */

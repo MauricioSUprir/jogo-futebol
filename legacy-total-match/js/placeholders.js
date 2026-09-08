@@ -26,6 +26,7 @@
   }
   function lighten(hex, pct) { return hexAdj(hex, Math.round(255 * pct / 100)); }
   function darken(hex, pct) { return hexAdj(hex, -Math.round(255 * pct / 100)); }
+  function _lum(hex) { hex = String(hex || "#000").replace("#", ""); if (hex.length === 3) hex = hex.split("").map(function (x) { return x + x; }).join(""); var n = parseInt(hex, 16) || 0; var r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255; return 0.2126 * r + 0.7152 * g + 0.0722 * b; }
   // gradiente vertical de brilho para dar volume (claro em cima -> escuro embaixo)
   function shadeDefs(id) {
     return '<linearGradient id="' + id + '" x1="0" y1="0" x2="0" y2="1">' +
@@ -145,9 +146,19 @@
   }
 
   // UNIFORME (camisa) — silhueta com mangas, gola, punhos, sombreado e mini-escudo
-  function kit(club, away) {
-    var c = club.colors, p = away ? c.secondary : c.primary, s = away ? c.primary : c.secondary;
-    var h = crestHash((club.id || club.name) + (away ? "away" : "home")), style = h % 6;
+  function kit(club, variant) {
+    variant = variant === true ? 1 : (parseInt(variant, 10) || 0);
+    var c = club.colors, p, s, seed;
+    if (variant === 1) {                       // 2º uniforme — inverte cores
+      p = c.secondary; s = c.primary; seed = "away";
+    } else if (variant === 2) {                // 3º uniforme — versão especial (escura ou clara)
+      p = _lum(c.primary) < 0.28 ? lighten(c.secondary, 26) : darken(c.primary, 48);
+      s = _lum(p) < 0.32 ? lighten(c.secondary, 22) : darken(c.primary, 24);
+      seed = "third";
+    } else {                                   // 1º uniforme
+      p = c.primary; s = c.secondary; seed = "home";
+    }
+    var h = crestHash((club.id || club.name) + seed), style = h % 6;
     var vneck = ((h >>> 4) % 2 === 0);
     // corpo (torso) e mangas separados para punhos/detalhes
     var shirt = "M16 22 L29 10 C35 5 45 5 51 10 L64 22 L73 32 L62 43 L56 37 L56 71 C46 75 34 75 24 71 L24 37 L18 43 L7 32 Z";
@@ -325,11 +336,12 @@
       return imgWithFallback(crest(club), crest(club), club.name, cls);
     },
     kit: kit,
-    kitImg: function (club, cls, away) {
-      // uniforme importado pelo jogador tem prioridade (kitData / kitAwayData)
-      var custom = away ? club.kitAwayData : club.kitData;
-      if (custom) return imgWithFallback(custom, kit(club, away), club.name + " — uniforme", cls);
-      return imgWithFallback(kit(club, away), kit(club, away), club.name + " — uniforme", cls);
+    kitImg: function (club, cls, variant) {
+      variant = variant === true ? 1 : (parseInt(variant, 10) || 0);
+      // uniforme importado pelo jogador tem prioridade (kitData / kitAwayData / kitThirdData)
+      var custom = variant === 1 ? club.kitAwayData : variant === 2 ? club.kitThirdData : club.kitData;
+      if (custom) return imgWithFallback(custom, kit(club, variant), club.name + " — uniforme", cls);
+      return imgWithFallback(kit(club, variant), kit(club, variant), club.name + " — uniforme", cls);
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
