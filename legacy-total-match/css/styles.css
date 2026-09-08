@@ -773,6 +773,29 @@ html, body {
 /* coletiva de imprensa */
 .press-done { text-align: center; font-size: 13px; color: var(--text-dim); padding: 8px; }
 .press-panel { gap: 12px; }
+/* palco imersivo da coletiva */
+.press-stage { width: 100%; max-width: 620px; margin: 0 auto; background: linear-gradient(150deg, rgba(34,197,94,.12), rgba(13,15,20,.85)); border: 1px solid rgba(34,197,94,.25); border-radius: 18px; padding: 16px; text-align: center; }
+.press-match { display: flex; align-items: center; justify-content: center; gap: 18px; }
+.pm-side { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.pm-crest { width: 52px; height: 52px; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,.4)); }
+.pm-nm { font-size: 12.5px; font-weight: 800; text-align: center; line-height: 1.15; }
+.pm-vs { font-size: 15px; font-weight: 900; color: var(--text-dim); flex: none; }
+.press-substage { margin-top: 12px; font-size: 12.5px; font-weight: 700; color: #86efac; }
+/* medidor de clima */
+.press-meter { width: 100%; max-width: 620px; margin: 10px auto 0; }
+.pmeter-top { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--text-dim); margin-bottom: 5px; }
+.pmeter-lbl.hi, .pmeter-lbl.mid-hi { color: #4ade80; } .pmeter-lbl.mid { color: #cdd2db; } .pmeter-lbl.lo, .pmeter-lbl.mid-lo { color: #f87171; }
+.pmeter-track { height: 9px; border-radius: 6px; background: rgba(255,255,255,.07); overflow: hidden; }
+.pmeter-fill { height: 100%; border-radius: 6px; transition: width .35s cubic-bezier(.2,.8,.2,1); }
+.pmeter-fill.hi, .pmeter-fill.mid-hi { background: linear-gradient(90deg, #1f9d55, #4ade80); }
+.pmeter-fill.mid { background: linear-gradient(90deg, #6b7280, #9aa0ab); }
+.pmeter-fill.lo, .pmeter-fill.mid-lo { background: linear-gradient(90deg, #b5342c, #f87171); }
+/* repórter com avatar */
+.press-ava { width: 40px; height: 40px; flex: none; border-radius: 50%; color: #06070a; font-weight: 900; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+.press-rmid { flex: 1; min-width: 0; }
+.press-rname { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.press-rname > span:first-child { font-size: 13px; font-weight: 800; }
+.press-outlet { font-size: 10.5px; font-weight: 700; color: var(--text-dim); background: rgba(255,255,255,.05); border-radius: 6px; padding: 1px 6px; }
 .press-progress { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-dim); font-weight: 700; }
 .press-vs { color: var(--gold); }
 .press-reporter { display: flex; gap: 10px; align-items: flex-start; background: var(--black-soft); border: 1px solid var(--line); border-left: 3px solid var(--gold); border-radius: 12px; padding: 12px 14px; }

@@ -47,11 +47,42 @@
     _lastPhoto = p; return p;
   }
 
-  var COMMENT_POOL = ["kkkkk é isso aí", "concordo demais", "não é bem assim não", "tá sonhando 😂", "esse aí é fenômeno", "PRENDE ELE!", "vai dar ruim...", "sou obrigado a concordar", "melhor do time disparado", "chora time pequeno", "aiaiai meu coração ❤️", "confia demais nesse elenco", "taticamente perfeito", "vendido!!!", "poupa esse cara pelo amor", "falou tudo", "discordo totalmente", "esse técnico não sabe o que faz", "esse técnico é gênio", "a diretoria que se cuide", "vai ter volta", "printei 📸", "guarda esse tweet"];
+  // comentários contextuais — reagem ao tom da postagem
+  var COMMENTS = {
+    win: ["QUE JOGO! 🔥", "esse time tá voando ✈️", "merecido demais", "VAMO QUE VAMO 💪", "orgulho dessa camisa ❤️", "melhor time disparado", "seguimos rumo ao título 🏆", "que atuação, parabéns 👏", "tô empolgado demais", "3 pontos e moral lá em cima", "esse elenco é especial", "chora, rival 😂"],
+    loss: ["que vergonha…", "assim não dá pra torcer", "cadê a RAÇA?!", "precisa mudar TUDO", "jogou muito mal", "diretoria, ACORDA", "tá difícil viu", "perdemos fácil demais", "decepcionante", "voltou a decepcionar", "esse time não tem alma", "reforço URGENTE"],
+    neutral: ["kkkk é isso aí", "bora o próximo jogo", "faltou capricho", "empate é pouco", "segue o jogo", "vamo com fé", "dava pra mais", "ponto é ponto", "sério isso?", "sei não hein"],
+    support: ["nação presente! ❤️", "sempre juntos 💪", "esse time é NOSSO", "confio no trabalho", "vamo pra cima!", "tamo junto professor", "não larga a mão não", "fé no elenco 🙏", "orgulho de torcer"],
+    bold: ["ousado hein 👀", "gostei da postura!", "isso que é atitude", "bota pra quebrar!", "confia no professor", "AGORA VAI", "falou como líder", "postura de campeão 👏", "esse é o discurso!", "comprou minha confiança"],
+    agree: ["concordo demais", "falou tudo", "precisava ser dito", "verdade nua e crua", "é isso mesmo", "assinei embaixo", "não podia concordar mais", "tá certíssimo", "obrigado por falar isso"],
+    polemic: ["PRENDE ELE 😂", "vai dar ruim isso...", "polêmico hein", "comprou briga agora", "screenshot salvo 📸", "tretaaa", "guarda esse tweet", "já era", "coragem ou loucura?"]
+  };
+  function commentPool(mood) { return COMMENTS[mood] || COMMENTS.neutral.concat(COMMENTS.bold, COMMENTS.support); }
   function makeComments(n, mood) {
-    var out = [];
-    for (var i = 0; i < n; i++) out.push({ who: pick(FANS), txt: pick(COMMENT_POOL), likes: rint(0, 240), liked: false, verified: chance(0.08) });
+    var pool = commentPool(mood).slice(), out = [];
+    for (var i = 0; i < n && pool.length; i++) {
+      out.push({ who: pick(FANS), txt: pool.splice(Math.floor(Math.random() * pool.length), 1)[0], likes: rint(0, 240), liked: false, verified: chance(0.06) });
+    }
     return out;
+  }
+  // tom de um post do feed (por tipo/moral)
+  function moodOfPost(o) {
+    if (!o) return "neutral";
+    if (o.kind === "critica") return "loss";
+    if (o.kind === "apoio" || o.kind === "board") return "support";
+    if (o.kind === "polemica") return "polemic";
+    if (o.kind === "press") return "neutral";
+    var m = o.morale || 0;
+    return m > 0.3 ? "win" : m < -0.3 ? "loss" : "neutral";
+  }
+  // classifica o texto que O USUÁRIO postou p/ os comentários reagirem no tema
+  function classifyUserPost(text) {
+    var t = (text || "").toLowerCase();
+    if (/desculp|erram|falha|pe[çc]o|humild|melhorar|reconhe|assumo/.test(t)) return "support";
+    if (/roubo|arbitr|absurd|vergonha|injusti|ladr|\bvar\b|p[êe]nalti|expuls|impedi/.test(t)) return "agree";
+    if (/t[íi]tulo|campe|ganhar|melhor|favorit|vencer|respeit|brigar|\btop\b|somos|pra cima|confia|foco/.test(t)) return "bold";
+    if (/pol[êe]mic|treta|provoca|alfineta|cutuc/.test(t)) return "polemic";
+    return null; // mistura empolgação/opinião
   }
 
   function ageLabel() { var r = Math.random(); return r < 0.25 ? "agora" : r < 0.6 ? rint(1, 59) + "min" : rint(1, 22) + "h"; }
@@ -60,7 +91,7 @@
     return {
       id: nid(), handle: o.handle, verified: !!o.verified, badge: o.badge || null, photo: o.photo || null,
       text: o.text, likes: o.likes != null ? o.likes : rint(20, 900), liked: false, reposts: rint(0, 300),
-      comments: o.comments || makeComments(rint(1, 4)), kind: o.kind || "banter", age: ageLabel(),
+      comments: o.comments || makeComments(rint(1, 4), moodOfPost(o)), kind: o.kind || "banter", age: ageLabel(),
       morale: o.morale || 0, extraComments: o.extraComments || rint(0, 60)
     };
   }
@@ -205,7 +236,7 @@
     ensure(career);
     var handle = "@" + ((career.coachName || "voce").toLowerCase().replace(/[^a-zà-ÿ0-9]/g, "").slice(0, 14) || "treinador");
     var p = post({ handle: handle, verified: true, kind: "user", text: text,
-      likes: rint(40, 500), comments: makeComments(rint(2, 5)), extraComments: rint(10, 120) });
+      likes: rint(40, 500), comments: makeComments(rint(3, 6), classifyUserPost(text)), extraComments: 0 });
     p.mine = true;
     // repercussão: às vezes a imprensa cita e vira manchete
     var repercuss = chance(0.55);
