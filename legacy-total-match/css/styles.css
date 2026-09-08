@@ -707,6 +707,43 @@ html, body {
 .nego-quote.angry { border-left-color: #d0342c; }
 .nego-row { display: flex; align-items: center; gap: 8px; }
 .nego-row .text-input { flex: 1; min-width: 0; text-align: right; }
+
+/* ===== Negociação imersiva (proposta recebida — estilo FC) ===== */
+.nego2 { width: 100%; max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 24px; }
+.nego2-call { display: flex; align-items: center; gap: 13px; padding: 14px 16px; border-radius: 16px;
+  background: linear-gradient(135deg, rgba(34,197,94,.10), rgba(13,15,20,.9)); border: 1px solid rgba(34,197,94,.25); }
+.nego2-crest { width: 48px; height: 48px; flex: none; border-radius: 11px; object-fit: contain; background: rgba(255,255,255,.04); }
+.nego2-callinfo { flex: 1; min-width: 0; }
+.nego2-role { font-size: 10px; font-weight: 800; letter-spacing: .12em; color: var(--text-dim); }
+.nego2-club { font-size: 17px; font-weight: 900; line-height: 1.15; }
+.nego2-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 1px; }
+.nego2-tension { flex: none; display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800;
+  padding: 6px 11px; border-radius: 999px; }
+.nego2-tdot { width: 7px; height: 7px; border-radius: 50%; }
+.nego2-tension.low { color: #4ade80; background: rgba(34,197,94,.14); } .nego2-tension.low .nego2-tdot { background: #4ade80; }
+.nego2-tension.mid { color: #f0c040; background: rgba(240,192,64,.14); } .nego2-tension.mid .nego2-tdot { background: #f0c040; }
+.nego2-tension.high { color: #f87171; background: rgba(248,113,113,.14); } .nego2-tension.high .nego2-tdot { background: #f87171; }
+.nego2-quote { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--green);
+  border-radius: 12px; padding: 13px 15px; font-size: 14px; line-height: 1.5; font-style: italic; color: #e8e6ef; }
+.nego2-player { display: flex; align-items: center; gap: 13px; padding: 13px 15px; border-radius: 16px;
+  background: linear-gradient(120deg, #12151c, #0c0e13); border: 1px solid var(--line); }
+.nego2-face { width: 58px; height: 58px; flex: none; border-radius: 12px; object-fit: cover; background: var(--black-soft); }
+.nego2-pinfo { flex: 1; min-width: 0; }
+.nego2-pname { font-size: 17px; font-weight: 900; line-height: 1.1; }
+.nego2-pmeta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.nego2-chip { font-size: 10px; font-weight: 700; letter-spacing: .04em; color: var(--text-dim);
+  background: rgba(255,255,255,.05); border: 1px solid var(--line); border-radius: 7px; padding: 3px 8px; }
+.nego2-chip b { color: #e8e6ef; font-weight: 800; margin-left: 3px; }
+.nego2-ovr { flex: none; text-align: center; background: var(--green); color: #052e14; border-radius: 12px; padding: 6px 12px; }
+.nego2-ovrn { font-size: 24px; font-weight: 900; line-height: 1; }
+.nego2-ovrl { font-size: 9px; font-weight: 800; letter-spacing: .1em; }
+.nego2-terms { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 4px 16px; }
+.nego2-counter { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.nego2-ch { font-size: 13px; font-weight: 800; }
+.nego2-actions { display: flex; gap: 10px; margin-top: 2px; }
+.nego2-actions .btn { flex: 1; }
+@media (min-width: 1024px) { .nego2 { max-width: 680px; } }
+
 .nego-field { display: flex; flex-direction: column; gap: 6px; }
 .nego-field label { font-size: 12.5px; color: var(--text-dim); }
 /* negociação interativa */

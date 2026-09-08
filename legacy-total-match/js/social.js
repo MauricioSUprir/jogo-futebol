@@ -269,7 +269,7 @@
       if (p.liked && p.morale) nudgeMorale(career, p.morale > 0 ? 0.4 : -0.4);
       save(); likeBtn.classList.toggle("on", p.liked); likeBtn.textContent = (p.liked ? "❤️ " : "🤍 ") + fmtLikes(p.likes);
     });
-    var totalComments = p.comments.length + (p.extraComments || 0);
+    var totalComments = p.comments.length;
     var cBtn = el("span", { class: "pa", text: "💬 " + totalComments });
     cBtn.addEventListener("click", function () { openComments(career, p, save); });
 

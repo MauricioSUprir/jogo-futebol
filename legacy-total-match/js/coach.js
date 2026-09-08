@@ -4009,53 +4009,87 @@
     var player = C().resolvePlayer(c, off.playerId);
     var buyer = TM.data.club(off.buyerId);
 
-    screen.appendChild(TM.ui.topbar("Analisar proposta", function () { TM.ui.go("coach-notifications"); }));
-    screen.appendChild(el("div", { class: "player-card" }, [
-      TM.img.playerImg(player, "pc-face"),
-      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: player.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(player) + " · " + player.age + " anos · " + player.nationName }) ]),
-      TM.ui.ovBadge(player.overall)
-    ]));
+    screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-notifications"); }));
 
     function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
     var value = curVal(c, TM.data.marketValue(player));
-    screen.appendChild(el("div", { class: "nego-panel" }, [
-      el("div", { class: "nego-quote", text: "🏟️ " + buyer.name + " quer contratar " + player.name + "." }),
-      line("Clube interessado", buyer.name),
-      line("Overall do clube", TM.data.clubRating(off.buyerId)),
-      line("Valor de mercado", money(c, value)),
-      line("Proposta oferecida", money(c, off.fee), off.fee >= value ? "good" : "bad"),
-      line("Diferença", (off.fee - value >= 0 ? "+" : "") + money(c, off.fee - value), off.fee >= value ? "good" : "bad"),
-      el("div", { class: "setting-hint", text: off.fee >= value ? "A proposta está acima do valor de mercado — bom negócio." : "A proposta está abaixo do valor de mercado." })
+    var fee = off.fee, diff = r2(fee - value), good = fee >= value;
+    var caixa = r2((c.budget || 0) + fee);
+    var wage = 0; try { wage = curVal(c, wageDemand(player)); } catch (e) {}
+    var tension = off.finalOffer ? "high" : (fee >= value * 1.08 ? "low" : (fee < value * 0.9 ? "high" : "mid"));
+    var tensionLbl = tension === "low" ? "Baixa tensão" : (tension === "high" ? "Alta tensão" : "Tensão média");
+
+    var wrap = el("div", { class: "nego2" });
+
+    // ---- "na linha com" o clube comprador ----
+    wrap.appendChild(el("div", { class: "nego2-call" }, [
+      (TM.img && TM.img.clubImg ? TM.img.clubImg(buyer, "nego2-crest") : el("span", { class: "nego2-crest" })),
+      el("div", { class: "nego2-callinfo" }, [
+        el("div", { class: "nego2-role", text: "NA MESA COM" }),
+        el("div", { class: "nego2-club", text: buyer.name }),
+        el("div", { class: "nego2-sub", text: "Direção de futebol · OVR " + TM.data.clubRating(off.buyerId) })
+      ]),
+      el("div", { class: "nego2-tension " + tension }, [ el("span", { class: "nego2-tdot" }), el("span", { text: tensionLbl }) ])
     ]));
 
-    // ---- contraproposta (negociar por mais) ----
+    // ---- fala do clube ----
+    var quote = off.finalOffer
+      ? "Essa é a nossa proposta final: " + money(c, fee) + " por " + player.name + ". É pegar ou largar."
+      : (good ? "Temos grande interesse em " + player.name + ". Colocamos " + money(c, fee) + " na mesa — um bom valor. O que acha?"
+              : "Gostaríamos de contar com " + player.name + ". Oferecemos " + money(c, fee) + " por ele.");
+    wrap.appendChild(el("div", { class: "nego2-quote", text: quote }));
+
+    // ---- card do jogador (estilo FC) ----
+    wrap.appendChild(el("div", { class: "nego2-player" }, [
+      TM.img.playerImg(player, "nego2-face"),
+      el("div", { class: "nego2-pinfo" }, [
+        el("div", { class: "nego2-pname", text: player.name }),
+        el("div", { class: "nego2-pmeta" }, [
+          el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(player) + "</b>" }),
+          el("span", { class: "nego2-chip", html: "IDADE <b>" + player.age + "</b>" }),
+          el("span", { class: "nego2-chip", html: "SALÁRIO <b>" + (wage ? money(c, wage) : "—") + "</b>" })
+        ])
+      ]),
+      el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: player.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
+    ]));
+
+    // ---- termos do negócio ----
+    wrap.appendChild(el("div", { class: "nego2-terms" }, [
+      line("Proposta na mesa", money(c, fee), good ? "good" : "bad"),
+      line("Valor de mercado", money(c, value)),
+      line("Diferença", (diff >= 0 ? "+" : "") + money(c, diff), good ? "good" : "bad"),
+      line("Caixa após a venda", money(c, caixa), "good")
+    ]));
+
+    // ---- pedir mais (contraproposta) ----
     if (!off.finalOffer) {
-      var negWrap = el("div", { class: "nego-panel" });
-      negWrap.appendChild(el("div", { class: "nego-quote", text: "💬 Faça uma contraproposta — peça um valor maior." }));
-      var demandInput = el("input", { class: "text-input", type: "number", min: off.fee, step: 0.05, value: r2(off.fee * 1.2), placeholder: "Valor pedido (milhões)" });
-      negWrap.appendChild(el("div", { class: "nego-row" }, [
-        el("span", { class: "deal-lbl", text: "Pedir " + sym(c) }), demandInput, el("span", { class: "deal-lbl", text: "M" })
+      var demandInput = el("input", { class: "text-input", type: "number", min: fee, step: 0.05, value: r2(fee * 1.2), placeholder: "valor" });
+      wrap.appendChild(el("div", { class: "nego2-counter" }, [
+        el("div", { class: "nego2-ch", text: "💬 Peça mais pelo jogador" }),
+        el("div", { class: "nego-row" }, [ el("span", { class: "deal-lbl", text: "Quero " + sym(c) }), demandInput, el("span", { class: "deal-lbl", text: "M" }) ]),
+        TM.ui.button("📤 Enviar contraproposta", function () {
+          var d = r2(parseFloat(demandInput.value));
+          if (!d || d <= 0) { TM.ui.toast("Informe um valor válido"); return; }
+          var r = C().counterIncomingOffer(c, note, d); TM.storage.saveCoachCareer(c);
+          TM.ui.toast(r.text || "");
+          if (r.status === "retirada") { TM.ui.go("coach-notifications"); }
+          else { TM.ui.go("coach-offer", { noteId: note.id }); }
+        }, "btn small")
       ]));
-      negWrap.appendChild(TM.ui.button("📤 Enviar contraproposta", function () {
-        var d = r2(parseFloat(demandInput.value));
-        if (!d || d <= 0) { TM.ui.toast("Informe um valor válido"); return; }
-        var r = C().counterIncomingOffer(c, note, d); TM.storage.saveCoachCareer(c);
-        TM.ui.toast(r.text || "");
-        if (r.status === "retirada") { TM.ui.go("coach-notifications"); }
-        else { TM.ui.go("coach-offer", { noteId: note.id }); }
-      }, "btn primary small"));
-      screen.appendChild(negWrap);
     } else {
-      screen.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "🔒 Proposta final — não é possível negociar mais." }));
+      wrap.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: "🔒 Proposta final — não dá pra pedir mais." }));
     }
 
-    screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("✅ Aceitar proposta", function () {
+    // ---- ações ----
+    wrap.appendChild(el("div", { class: "nego2-actions" }, [
+      TM.ui.button("✅ Aceitar e vender", function () {
         var r = C().resolveIncomingOffer(c, note, true); TM.storage.saveCoachCareer(c);
-        TM.ui.toast(r === "vendido" ? "Jogador vendido!" : "O jogador recusou sair."); TM.ui.go("coach-notifications");
+        TM.ui.toast(r === "vendido" ? "💰 Jogador vendido!" : "O jogador recusou sair."); TM.ui.go("coach-notifications");
       }, "btn primary"),
-      TM.ui.button("❌ Recusar", function () { C().resolveIncomingOffer(c, note, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn ghost")
+      TM.ui.button("📞 Encerrar negociação", function () { C().resolveIncomingOffer(c, note, false); TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications"); }, "btn danger")
     ]));
+
+    screen.appendChild(wrap);
   });
 
   /* ---------- analisar/negociar pedido de empréstimo recebido ---------- */
