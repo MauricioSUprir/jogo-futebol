@@ -146,6 +146,14 @@
   }
 
   // UNIFORME (camisa) — silhueta com mangas, gola, punhos, sombreado e mini-escudo
+  // cor principal do uniforme para uma variante (usada no campo/comentário)
+  function kitPrimary(club, variant) {
+    variant = variant === true ? 1 : (parseInt(variant, 10) || 0);
+    var c = club.colors;
+    if (variant === 1) return c.secondary;
+    if (variant === 2) return _lum(c.primary) < 0.28 ? lighten(c.secondary, 26) : darken(c.primary, 48);
+    return c.primary;
+  }
   function kit(club, variant) {
     variant = variant === true ? 1 : (parseInt(variant, 10) || 0);
     var c = club.colors, p, s, seed;
@@ -336,6 +344,7 @@
       return imgWithFallback(crest(club), crest(club), club.name, cls);
     },
     kit: kit,
+    kitColor: kitPrimary,
     kitImg: function (club, cls, variant) {
       variant = variant === true ? 1 : (parseInt(variant, 10) || 0);
       // uniforme importado pelo jogador tem prioridade (kitData / kitAwayData / kitThirdData)
