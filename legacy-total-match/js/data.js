@@ -1020,6 +1020,19 @@
     nl: [["PSV","PSV"],["Feyenoord","FEY"],["Ajax","AJA"],["AZ Alkmaar","AZ"],["Twente","TWE"],["Utrecht","UTR"],["Sparta Rotterdam","SPA"],["Go Ahead Eagles","GAE"],["Heerenveen","HEE"],["NEC Nijmegen","NEC"],["Fortuna Sittard","FOR"],["Groningen","GRO"],["Willem II","WIL"],["Heracles","HER"],["PEC Zwolle","PEC"],["Almere City","ALM"],["RKC Waalwijk","RKC"],["NAC Breda","NAC"]],
     ar: [["River Plate","RIV"],["Boca Juniors","BOC"],["Racing Club","RAC"],["Independiente","IND"],["San Lorenzo","SLO"],["Estudiantes","EDL"],["Vélez Sarsfield","VEL"],["Talleres","TAL"],["Argentinos Juniors","AAAJ"],["Rosario Central","CARC"],["Newell's Old Boys","NOB"],["Lanús","LAN"],["Defensa y Justicia","DYJ"],["Huracán","HUR"],["Godoy Cruz","GC"],["Gimnasia LP","GLP"],["Banfield","BAN"],["Instituto","INS"],["Belgrano","BEL"],["Platense","PLA"]]
   };
+  // CORES REAIS por clube (só a edição Atualizado) — cor não é protegida por direito autoral,
+  // então o escudo/uniforme gerado já fica com a "cara" do time (rubro-negro, verde, etc.).
+  var PRO_COLORS = {
+    "Palmeiras":["#006437","#ffffff"],"Flamengo":["#c52613","#111111"],"Cruzeiro":["#1f3c95","#ffffff"],"Botafogo":["#111111","#ffffff"],"São Paulo":["#cc0000","#111111"],"Bahia":["#0157a9","#e30613"],"Red Bull Bragantino":["#e30613","#ffffff"],"Fluminense":["#7a1f3d","#0a5c37"],"Internacional":["#e30613","#ffffff"],"Corinthians":["#111111","#ffffff"],"Atlético Mineiro":["#111111","#ffffff"],"Grêmio":["#1e6cb4","#111111"],"Vasco da Gama":["#111111","#ffffff"],"Santos":["#111111","#ffffff"],"Fortaleza":["#0a3b8c","#e30613"],"Ceará":["#111111","#ffffff"],"Mirassol":["#f0b000","#0a7d34"],"Vitória":["#e30613","#111111"],"Juventude":["#0a8a3f","#ffffff"],"Sport Recife":["#e30613","#111111"],
+    "Real Madrid":["#eeeeee","#00529f"],"Barcelona":["#a50044","#004d98"],"Atlético de Madrid":["#cb3524","#1c2e5f"],"Athletic Bilbao":["#e30613","#ffffff"],"Real Sociedad":["#004b9e","#ffffff"],"Sevilla":["#d81920","#ffffff"],"Valencia":["#f7b41c","#111111"],
+    "Manchester City":["#6cabdd","#ffffff"],"Arsenal":["#ef0107","#ffffff"],"Liverpool":["#c8102e","#ffffff"],"Manchester United":["#da291c","#ffffff"],"Chelsea":["#034694","#ffffff"],"Tottenham":["#eeeeee","#132257"],"Newcastle":["#111111","#ffffff"],
+    "Inter de Milão":["#0068a8","#111111"],"Milan":["#fb090b","#111111"],"Juventus":["#111111","#ffffff"],"Napoli":["#199fdb","#ffffff"],"Roma":["#8e1111","#f0bc42"],
+    "Bayern de Munique":["#dc052d","#ffffff"],"Borussia Dortmund":["#f5e100","#111111"],
+    "Paris Saint-Germain":["#004170","#e30613"],
+    "Benfica":["#e30613","#ffffff"],"Porto":["#0059a3","#ffffff"],"Sporting":["#0a8a3f","#ffffff"],
+    "PSV":["#ee2400","#ffffff"],"Ajax":["#d2122e","#ffffff"],"Feyenoord":["#e30613","#111111"],
+    "Boca Juniors":["#003f88","#f7c815"],"River Plate":["#eeeeee","#e2231a"]
+  };
   function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
 
   /* ---------- EDIÇÃO ATUALIZADO: elencos REAIS dos grandes clubes ----------
@@ -1125,10 +1138,12 @@
         var proc = proList && proList[ci];
         var cname = proc ? proc[0] : localizeName(rc[0], ld.id);
         var cshort = proc ? proc[1] : rc[1];
+        // cores reais na edição Atualizado; senão a paleta padrão
+        var proCol = (pro && PRO_COLORS[cname]) || null;
         var club = {
           id: clubId, name: cname, origName: rc[0], short: cshort,
           leagueId: ld.id, coach: fullName(rng, ld.culture),
-          colors: { primary: pal[0], secondary: pal[1] },
+          colors: { primary: proCol ? proCol[0] : pal[0], secondary: proCol ? proCol[1] : pal[1] },
           strength: strength, playerIds: []
         };
         // elenco: na edição Atualizado usa o elenco REAL do clube (se houver); senão o padrão
