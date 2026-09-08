@@ -138,6 +138,8 @@
     function showGoalFlash(ev) {
       var pl = playerOfEvent(ev);
       var team = ev.team === 0 ? a : b;
+      // cor do time que fez o gol (com uma versão clara p/ texto/brilho ficar sempre visível)
+      var gc = teamColor(team), gcl = lightenHex(gc, 0.5);
       var overlay = el("div", { class: "card-flash goal-flash" }, [
         el("div", { class: "gf-rays" }),
         el("div", { class: "cf-inner" }, [
@@ -150,6 +152,8 @@
           el("div", { class: "gf-score", text: (ev.score ? ev.score[0] + " - " + ev.score[1] : "") })
         ])
       ]);
+      overlay.style.setProperty("--gc", gc);
+      overlay.style.setProperty("--gcl", gcl);
       document.body.appendChild(overlay);
       flashing = true;
       var dismissed = false;
@@ -161,6 +165,14 @@
       // usa a cor do uniforme escolhido (1/2/3) quando for um clube
       if (t && t.club && t.kitVariant != null && TM.img && TM.img.kitColor) { try { return TM.img.kitColor(t.club, t.kitVariant); } catch (e) {} }
       var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6";
+    }
+    // clareia uma cor hex em direção ao branco (amt 0..1) — garante texto/brilho visível em cores escuras
+    function lightenHex(hex, amt) {
+      var m = /^#?([0-9a-f]{6})$/i.exec(String(hex || "").trim());
+      if (!m) return "#7ee39a";
+      var n = parseInt(m[1], 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      r = Math.round(r + (255 - r) * amt); g = Math.round(g + (255 - g) * amt); b = Math.round(b + (255 - b) * amt);
+      return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
     // SÓ o impedimento tem quadro gráfico; falta/mão/linha ficam só com "Revisando…".
     function buildVarScene(kind, annulled, atkCol, defCol, side) {
