@@ -68,29 +68,29 @@
   ];
   var LEAGUE_DEFS = [
     { id: "br", name: "Liga Brasil A", nation: "Brazil", culture: "br" },
-    { id: "en", name: "Liga England A", nation: "England", culture: "en" },
-    { id: "es", name: "Liga Spain A", nation: "Spain", culture: "es" },
-    { id: "it", name: "Liga Italy A", nation: "Italy", culture: "it" },
-    { id: "de", name: "Liga Germany A", nation: "Germany", culture: "de" },
-    { id: "fr", name: "Liga France A", nation: "France", culture: "fr" },
+    { id: "en", name: "Liga Inglaterra A", nation: "England", culture: "en" },
+    { id: "es", name: "Liga Espanha A", nation: "Spain", culture: "es" },
+    { id: "it", name: "Liga Itália A", nation: "Italy", culture: "it" },
+    { id: "de", name: "Liga Alemanha A", nation: "Germany", culture: "de" },
+    { id: "fr", name: "Liga França A", nation: "France", culture: "fr" },
     { id: "pt", name: "Liga Portugal A", nation: "Portugal", culture: "pt" },
-    { id: "nl", name: "Liga Netherlands A", nation: "Netherlands", culture: "nl" },
+    { id: "nl", name: "Liga Holanda A", nation: "Netherlands", culture: "nl" },
     { id: "ar", name: "Liga Argentina A", nation: "Argentina", culture: "ar" },
-    { id: "us", name: "Liga USA A", nation: "USA", culture: "us" },
-    { id: "mx", name: "Liga Mexico A", nation: "Mexico", culture: "es" },
-    { id: "sa", name: "Liga Saudi Arabia A", nation: "Saudi Arabia", culture: "es" },
-    { id: "tr", name: "Liga Turkey A", nation: "Turkey", culture: "es" },
-    { id: "ec", name: "Liga Ecuador A", nation: "Ecuador", culture: "es" },
-    { id: "uy", name: "Liga Uruguay A", nation: "Uruguay", culture: "es" },
-    { id: "ru", name: "Liga Ukraine A", nation: "Ukraine", culture: "es" },
+    { id: "us", name: "Liga EUA A", nation: "USA", culture: "us" },
+    { id: "mx", name: "Liga México A", nation: "Mexico", culture: "es" },
+    { id: "sa", name: "Liga Arábia Saudita A", nation: "Saudi Arabia", culture: "es" },
+    { id: "tr", name: "Liga Turquia A", nation: "Turkey", culture: "es" },
+    { id: "ec", name: "Liga Equador A", nation: "Ecuador", culture: "es" },
+    { id: "uy", name: "Liga Uruguai A", nation: "Uruguay", culture: "es" },
+    { id: "ru", name: "Liga Ucrânia A", nation: "Ukraine", culture: "es" },
     { id: "br2", name: "Liga Brasil B", nation: "Brazil", culture: "br" },
-    { id: "en2", name: "Liga England B", nation: "England", culture: "en" },
-    { id: "it2", name: "Liga Italy B", nation: "Italy", culture: "it" },
-    { id: "es2", name: "Liga Spain B", nation: "Spain", culture: "es" },
+    { id: "en2", name: "Liga Inglaterra B", nation: "England", culture: "en" },
+    { id: "it2", name: "Liga Itália B", nation: "Italy", culture: "it" },
+    { id: "es2", name: "Liga Espanha B", nation: "Spain", culture: "es" },
     { id: "br3", name: "Liga Brasil C", nation: "Brazil", culture: "br" },
-    { id: "fr2", name: "Liga France B", nation: "France", culture: "fr" },
-    { id: "de2", name: "Liga Germany B", nation: "Germany", culture: "de" },
-    { id: "co", name: "Liga Colombia A", nation: "Colombia", culture: "es" }
+    { id: "fr2", name: "Liga França B", nation: "France", culture: "fr" },
+    { id: "de2", name: "Liga Alemanha B", nation: "Germany", culture: "de" },
+    { id: "co", name: "Liga Colômbia A", nation: "Colombia", culture: "es" }
   ];
 
   /* Overall geral fixo por clube (o que aparece abaixo da logo). Sobrepõe a média do elenco. */
@@ -120,7 +120,7 @@
       ["Litoral FC","LIT",76],["Estrela AC","EST",76],["Cristalino Athletic","CRI",75],["Litoral United","LIT",73],
       ["Litoral Sportivo","LIT",74],["Palmar CD","PAL",72],["Granada United","GRA",70],["Vulcano Real","VUL",70]
     ],
-    // Liga England A 2026-27
+    // Liga Inglaterra A 2026-27
     en: [
       ["Ultramar Real","ULT",88],["Bravante City","BRA",88],["Lince Athletic","LIN",87],["Dourado Real","DOU",84],
       ["Gávea SC","GVE",83],["Tridente EC","TRI",82],["Zênite Real","ZNI",82],["Tucano Sportivo","TUC",81],
@@ -128,7 +128,7 @@
       ["Ígneo AC","GNE",77],["Duna Athletic","DUN",77],["Palmar United","PAL",76],["Riacho Athletic","RIA",76],
       ["Aljube City","ALJ",75],["Nébula SC","NBU",73],["Delmar Sportivo","DEL",73],["Meridiano CD","MER",71]
     ],
-    // Liga Spain B026-27
+    // Liga Espanha B026-27
     es: [
       ["Oceânico FC","OCE",89],["Recanto Athletic","REC",88],["Riacho SC","RIA",85],["Íbis Sportivo","BIS",81],
       ["Ígneo FC","GNE",80],["Lince EC","LIN",79],["Andino Sportivo","AND",79],["Litoral United","LIT",77],
@@ -136,7 +136,7 @@
       ["Cristalino Athletic","CRI",74],["Dourado City","DOU",74],["Tucano FC","TUC",73],["Lunar Athletic","LUN",73],
       ["Delmar SC","DEL",73],["Jaguar Real","JAG",73],["Bravante Sportivo","BRA",73],["Kappa AC","KAP",72]
     ],
-    // Liga Italy A 2026-27
+    // Liga Itália A 2026-27
     it: [
       ["Lince SC","LIN",85],["Delmar CD","DEL",84],["Nortenho City","NOR",83],["Dourado Real","DOU",82],
       ["Nortenho EC","NOR",82],["Horizonte City","HOR",81],["Tramontana Athletic","TRA",80],["Bravante United","BRA",79],
@@ -144,7 +144,7 @@
       ["Espadas EC","ESP",74],["Jaguar City","JAG",73],["Nébula Sportivo","NBU",73],["Marés FC","MAR",72],
       ["Fortim Athletic","FOR",72],["Andino United","AND",72],["Meridiano United","MER",71],["Hidra Athletic","HID",71]
     ],
-    // Liga Germany 2026-27
+    // Liga Alemanha 2026-27
     de: [
       ["Guardião Athletic","GUA",88],["Tridente EC","TRI",84],["Íbis SC","BIS",83],["Boreal Real","BOR",82],
       ["Hidra Sportivo","HID",80],["VfB Stuttgart","VfB",79],["Vento Athletic","VEN",77],["Solano United","SOL",76],
@@ -152,7 +152,7 @@
       ["Marés FC","MAR",74],["Montano Sportivo","MON",73],["Riacho City","RIA",73],["Granada AC","GRA",73],
       ["Tramontana Real","TRA",70],["Lunar Real","LUN",70]
     ],
-    // Liga France A 2026-27
+    // Liga França A 2026-27
     fr: [
       ["Vulcano AC","VUL",88],["Espadas CD","ESP",81],["Horizonte Athletic","HOR",80],["Lunar Real","LUN",78],
       ["Rubro EC","RUB",78],["Juvenil Athletic","JUV",77],["Rubro United","RUB",77],["Bosque Real","BOS",76],
@@ -168,7 +168,7 @@
       ["Oceânico FC","OCE",71],["Tucano Athletic","TUC",70],["Sirius United","SIR",70],["Ígneo FC","GNE",69],
       ["Nortenho Athletic","NOR",69],["Oceânico CD","OCE",69]
     ],
-    // Liga Netherlands 2026-27
+    // Liga Holanda 2026-27
     nl: [
       ["Dourado EC","Dourado EC",83],["Riacho Sportivo","RIA",82],["Costeiro Athletic","COS",82],["Cabral United","CAB",78],
       ["Horizonte FC","HOR",77],["Solano City","SOL",76],["Jangada Athletic","JAN",73],["Querência City","QUE",72],
@@ -184,7 +184,7 @@
       ["Litoral SC","LIT",73],["Nortenho SC","NOR",73],["Horizonte Sportivo","HOR",72],["Delmar United","DEL",72],
       ["Lince Sportivo","LIN",71],["Pampa FC","PAM",71],["Nevado United","NEV",71],["Bravante United","BRA",71]
     ],
-    // Liga USA 2026 (seleção dos 20 principais)
+    // Liga EUA 2026 (seleção dos 20 principais)
     us: [
       ["Montano CD","MON",79],["Rubro AC","RUB",77],["Nébula SC","Nébula SC",77],["Serrano Athletic","SER",76],
       ["Horizonte City","HOR",76],["Cabral United","CAB",75],["Bravante EC","BRA",75],["Andino SC","AND",74],
@@ -192,7 +192,7 @@
       ["Montano CD","MON",73],["Solano CD","SOL",73],["Verdano SC","VER",73],["Guardião CD","GUA",73],
       ["Tramontana City","TRA",72],["Farol CD","FAR",72],["Pampa Sportivo","PAM",72],["Boreal Real","BOR",72]
     ],
-    // Liga Mexico 2026
+    // Liga México 2026
     mx: [
       ["Kappa AC","KAP",77],["CF América","AMÉ",77],["Litoral United","LIT",76],["Pampa United","PAM",76],["Farol FC","FAR",76],["Pampa Sportivo","PAM",76],["Guardião Sportivo","GUA",75],["Club León","LEÓ",75],["Estrela United","EST",75],["FC Juárez","JUÁ",75],["Ilhéu Real","ILH",74],["Andino Sportivo","AND",74],["Bravante EC","BRA",74],["Meridiano Sportivo","MER",73],["Nortenho SC","NOR",73],["Falcão United","FAL",73],["Verdano AC","VER",72],["Recanto Athletic","REC",70]
     ],
@@ -200,19 +200,19 @@
     sa: [
       ["Verdano CD","VER",79],["Fortim Real","FOR",78],["Hidra SC","HID",78],["Hidra Athletic","HID",78],["Bravante City","BRA",77],["Litoral Sportivo","LIT",75],["Aurora United","AUR",75],["Tramontana United","TRA",74],["Espadas Athletic","ESP",74],["Lince EC","LIN",73],["Fortim Real","FOR",73],["Granada AC","GRA",72],["Litoral CD","LIT",72],["Granada EC","GRA",72],["Encanto AC","ENC",72],["Cristalino SC","CRI",71],["Encanto AC","ENC",70],["Bosque United","BOS",70]
     ],
-    // Liga Turkey 2026
+    // Liga Turquia 2026
     tr: [
       ["Costeiro EC","COS",80],["Riacho SC","RIA",79],["Boreal United","BOR",78],["Aljube Real","ALJ",77],["Ilhéu City","ILH",75],["Göztepe","GÖZ",75],["Meridiano United","MER",75],["Sirius Athletic","SIR",74],["Estrela Athletic","EST",74],["Meridiano Sportivo","MER",74],["Lince Athletic","LIN",73],["Cristalino Sportivo","CRI",73],["Ultramar United","ULT",73],["Jaguar United","JAG",73],["Palmar United","PAL",72],["Farol Athletic","FAR",72],["Eyüpspor","EYÜ",72],["Íbis CD","BIS",71]
     ],
-    // Liga Ukraine 2026
+    // Liga Ucrânia 2026
     ru: [
       ["Montano FC","MON",78],["Delmar AC","DEL",77],["Portuário City","POR",77],["Dínamo Moscou","DÍN",77],["Juvenil Real","JUV",76],["Encanto Real","ENC",76],["Duna Athletic","DUN",75],["Lunar Athletic","LUN",74],["Vento SC","VEN",73],["Íbis SC","BIS",73],["Ultramar City","ULT",73],["Horizonte FC","HOR",72],["Tridente City","TRI",72],["Juvenil FC","JUV",72],["Fortim Real","FOR",71],["Farol AC","FAR",70]
     ],
-    // Liga Ecuador (Equador) 2026
+    // Liga Equador (Equador) 2026
     ec: [
       ["Lince SC","LIN",76],["Bravante CD","BRA",76],["Nortenho Athletic","NOR",75],["Tridente Athletic","TRI",75],["Hidra Athletic","HID",75],["Granada FC","GRA",74],["Vulcano Athletic","VUL",74],["Riacho FC","RIA",74],["Farol CD","FAR",73],["Guardião Athletic","GUA",73],["Encanto EC","ENC",73],["Tucano City","TUC",73],["Xavante United","XAV",73],["Tridente FC","TRI",73],["Oceânico Athletic","OCE",73],["Horizonte Athletic","HOR",72]
     ],
-    // Liga Uruguay (Uruguai) 2026
+    // Liga Uruguai (Uruguai) 2026
     uy: [
       ["CA Peñarol","PEÑ",77],["Meridiano Athletic","MER",75],["Sirius CD","SIR",74],["Vulcano SC","VUL",74],["Tridente Real","TRI",74],["Delmar Real","DEL",73],["Vulcano City","VUL",73],["Falcão Athletic","FAL",73],["Ilhéu Real","ILH",73],["Íbis United","BIS",73],["Oriente SC","ORI",73],["Jangada United","JAN",73],["Duna Athletic","DUN",73],["Solano CD","SOL",72],["Horizonte Sportivo","HOR",72],["Zênite Sportivo","ZNI",72]
     ],
@@ -248,47 +248,47 @@
   var COMPETITIONS = [
     // Ligas nacionais
     ["lg-br", "Liga Brasil A", "liga", "#0a7d34", "#ffd200"],
-    ["lg-en", "Liga England A", "liga", "#37003c", "#00ff85"],
-    ["lg-es", "Liga Spain A", "liga", "#ee1c25", "#ff8200"],
-    ["lg-it", "Liga Italy A", "liga", "#0a2f6e", "#00a3e0"],
-    ["lg-de", "Liga Germany A", "liga", "#d20515", "#000000"],
-    ["lg-fr", "Liga France A", "liga", "#091c3e", "#dcff00"],
+    ["lg-en", "Liga Inglaterra A", "liga", "#37003c", "#00ff85"],
+    ["lg-es", "Liga Espanha A", "liga", "#ee1c25", "#ff8200"],
+    ["lg-it", "Liga Itália A", "liga", "#0a2f6e", "#00a3e0"],
+    ["lg-de", "Liga Alemanha A", "liga", "#d20515", "#000000"],
+    ["lg-fr", "Liga França A", "liga", "#091c3e", "#dcff00"],
     ["lg-pt", "Liga Portugal A", "liga", "#006847", "#c8102e"],
-    ["lg-nl", "Liga Netherlands A", "liga", "#e2001a", "#000000"],
+    ["lg-nl", "Liga Holanda A", "liga", "#e2001a", "#000000"],
     ["lg-ar", "Liga Argentina A", "liga", "#6cace4", "#ffffff"],
-    ["lg-us", "Liga USA A", "liga", "#001838", "#c39e6d"],
-    ["lg-mx", "Liga Mexico A", "liga", "#006341", "#ce1126"],
-    ["lg-sa", "Liga Saudi Arabia A", "liga", "#006c35", "#ffffff"],
-    ["lg-tr", "Liga Turkey A", "liga", "#e30a17", "#ffffff"],
-    ["lg-ec", "Liga Ecuador A", "liga", "#ffdd00", "#034ea2"],
-    ["lg-uy", "Liga Uruguay A", "liga", "#7bafd4", "#001b69"],
-    ["lg-ru", "Liga Ukraine A", "liga", "#0039a6", "#d52b1e"],
+    ["lg-us", "Liga EUA A", "liga", "#001838", "#c39e6d"],
+    ["lg-mx", "Liga México A", "liga", "#006341", "#ce1126"],
+    ["lg-sa", "Liga Arábia Saudita A", "liga", "#006c35", "#ffffff"],
+    ["lg-tr", "Liga Turquia A", "liga", "#e30a17", "#ffffff"],
+    ["lg-ec", "Liga Equador A", "liga", "#ffdd00", "#034ea2"],
+    ["lg-uy", "Liga Uruguai A", "liga", "#7bafd4", "#001b69"],
+    ["lg-ru", "Liga Ucrânia A", "liga", "#0039a6", "#d52b1e"],
     ["lg-br2", "Liga Brasil B", "liga", "#1e9e4a", "#ffd200"],
-    ["lg-en2", "Liga England B", "liga", "#1c2c5b", "#e5b611"],
-    ["lg-it2", "Liga Italy B", "liga", "#004b8d", "#26c6da"],
-    ["lg-es2", "Liga Spain B", "liga", "#e30613", "#1f6fb2"],
+    ["lg-en2", "Liga Inglaterra B", "liga", "#1c2c5b", "#e5b611"],
+    ["lg-it2", "Liga Itália B", "liga", "#004b8d", "#26c6da"],
+    ["lg-es2", "Liga Espanha B", "liga", "#e30613", "#1f6fb2"],
     ["lg-br3", "Liga Brasil C", "liga", "#1e7d3a", "#ffd200"],
-    ["lg-fr2", "Liga France B", "liga", "#0a2a5e", "#e30613"],
-    ["lg-de2", "Liga Germany B", "liga", "#d40028", "#111111"],
-    ["lg-co", "Liga Colombia A", "liga", "#fcd116", "#003893"],
+    ["lg-fr2", "Liga França B", "liga", "#0a2a5e", "#e30613"],
+    ["lg-de2", "Liga Alemanha B", "liga", "#d40028", "#111111"],
+    ["lg-co", "Liga Colômbia A", "liga", "#fcd116", "#003893"],
     // Copas nacionais
     ["cup-br", "Copa Brasil", "copa", "#1b8a3a", "#f2c200"],
-    ["cup-en", "Copa England", "copa", "#c8102e", "#0a2240"],
-    ["cup-es", "Copa Spain", "copa", "#c60b1e", "#ffc400"],
-    ["cup-it", "Copa Italy", "copa", "#0b3d91", "#57b4e5"],
-    ["cup-de", "Copa Germany", "copa", "#111111", "#d20515"],
-    ["cup-fr", "Copa France", "copa", "#1c2b57", "#e30613"],
+    ["cup-en", "Copa Inglaterra", "copa", "#c8102e", "#0a2240"],
+    ["cup-es", "Copa Espanha", "copa", "#c60b1e", "#ffc400"],
+    ["cup-it", "Copa Itália", "copa", "#0b3d91", "#57b4e5"],
+    ["cup-de", "Copa Alemanha", "copa", "#111111", "#d20515"],
+    ["cup-fr", "Copa França", "copa", "#1c2b57", "#e30613"],
     ["cup-pt", "Copa Portugal", "copa", "#046a38", "#da291c"],
-    ["cup-nl", "Copa Netherlands", "copa", "#ff6a00", "#0a2240"],
+    ["cup-nl", "Copa Holanda", "copa", "#ff6a00", "#0a2240"],
     ["cup-ar", "Copa Argentina", "copa", "#75aadb", "#0a3a6b"],
-    ["cup-us", "Copa USA", "copa", "#0a2240", "#c8102e"],
-    ["cup-mx", "Copa Mexico", "copa", "#006341", "#ce1126"],
-    ["cup-sa", "Copa Saudi Arabia", "copa", "#006c35", "#ffffff"],
-    ["cup-tr", "Copa Turkey", "copa", "#e30a17", "#ffffff"],
-    ["cup-ec", "Copa Ecuador", "copa", "#ffdd00", "#034ea2"],
-    ["cup-uy", "Copa Uruguay", "copa", "#7bafd4", "#001b69"],
-    ["cup-ru", "Copa Ukraine", "copa", "#0039a6", "#d52b1e"],
-    ["cup-co", "Copa Colombia", "copa", "#fcd116", "#003893"],
+    ["cup-us", "Copa EUA", "copa", "#0a2240", "#c8102e"],
+    ["cup-mx", "Copa México", "copa", "#006341", "#ce1126"],
+    ["cup-sa", "Copa Arábia Saudita", "copa", "#006c35", "#ffffff"],
+    ["cup-tr", "Copa Turquia", "copa", "#e30a17", "#ffffff"],
+    ["cup-ec", "Copa Equador", "copa", "#ffdd00", "#034ea2"],
+    ["cup-uy", "Copa Uruguai", "copa", "#7bafd4", "#001b69"],
+    ["cup-ru", "Copa Ucrânia", "copa", "#0039a6", "#d52b1e"],
+    ["cup-co", "Copa Colômbia", "copa", "#fcd116", "#003893"],
     // Continentais de clubes
     ["cont-eu", "Copa Continental Europa", "continental", "#03063d", "#0f9bd7"],
     ["cont-sa", "Copa Continental Sul", "continental", "#0a6b3b", "#f2b100"],
@@ -372,29 +372,29 @@
   // Cada técnico é alocado ao seu clube real; os "livres" (null) ficam só disponíveis
   // para o jogador escolher na carreira.
   var COACH_DATA = [
-    // Liga England A
+    // Liga Inglaterra A
     ["Braulio Duran","es",55,"Ultramar Real"],["Leandro Galvan","es",43,"Bravante City"],["Gijs Ijssel","nl",47,"Lince Athletic"],
     ["Quique Robledo","es",44,"Dourado Real"],["George Naylor","en",48,"Gávea SC"],["Jayden Whitaker","en",44,"Tridente EC"],
     ["Quique Ibarra","es",54,"Zênite Real"],["Alessio Longo","it",46,"Tucano Sportivo"],["Malte Conrad","de",32,"Rubro United"],
     ["Ovidio Arriaga","es",43,"Oriente United"],["Ralf Lang","de",51,"Tucano FC"],["Teodoro Trejo","es",42,"Duna Athletic"],
-    // Liga Spain A
+    // Liga Espanha A
     ["Quim Quintela","pt",63,"Oceânico FC"],["Gustav Keller","de",60,"Recanto Athletic"],["Bruno Toledo","ar",55,"Riacho SC"],
     ["Feliciano Fuentes","es",61,"Íbis Sportivo"],["Teodoro Higuera","es",60,"Ígneo FC"],["Ignacio Merino","es",72,"Lince EC"],
     ["Ulises Ibáñez","ar",52,"Litoral United"],["Kurt Adler","de",48,"Andino Sportivo"],
-    // Liga Italy A
+    // Liga Itália A
     ["Nicolò Zanetti","it",56,"Delmar CD"],["Fabio Amato","it",45,"Lince SC"],["Gianni Marino","it",58,"Nortenho City"],
     ["Umberto Donati","it",66,"Dourado Real"],["Lorenzo Rizzo","it",41,"Nortenho EC"],["Gianni Testa","it",67,"Horizonte City"],
     ["Fabio Donati","it",67,"Tramontana Athletic"],["Tiziano Villa","it",53,"Bravante United"],["Matteo Serra","it",48,"Cabral Sportivo"],
-    // Liga Germany
+    // Liga Alemanha
     ["Maël Joubert","fr",39,"Guardião Athletic"],["Claas Vogel","de",54,"Íbis SC"],["Malte Conrad","de",53,"Tridente EC"],
     ["Kurt Ingwer","de",37,"Boreal Real"],["Ovidio Higuera","es",43,"Hidra Sportivo"],["Malte Ostermann","de",43,"VfB Stuttgart"],
     ["Claas Engel","de",40,"Vento Athletic"],
-    // Liga France A
+    // Liga França A
     ["Sancho Trejo","es",55,"Vulcano AC"],["Ivan Imbert","fr",59,"Espadas CD"],["Everton Lacerda","br",40,"Horizonte Athletic"],
     ["Nuno Machado","pt",52,"Lunar Real"],["Gaël Marchand","fr",64,"Juvenil Athletic"],["Fabio Serra","it",36,"Rubro EC"],
     // Liga Portugal
     ["Hélio Justo","pt",48,"Fortim Real"],["Valerio Villa","it",37,"Tridente Sportivo"],["Otávio Abreu","pt",44,"Oriente United"],["Braulio Merino","es",38,"Juvenil Sportivo"],
-    // Liga Netherlands
+    // Liga Holanda
     ["Wout Smit","nl",62,"Dourado EC"],["Sander Vermeer","nl",60,"Riacho Sportivo"],["Teun Mulder","nl",42,"Costeiro Athletic"],
     // Liga Brasil (todos os 20)
     ["Otávio Vaz","pt",51,"Andino Real"],["Belmiro Vaz","pt",47,"Espadas Athletic"],["Telmo Ornelas","pt",53,"Falcão City"],
