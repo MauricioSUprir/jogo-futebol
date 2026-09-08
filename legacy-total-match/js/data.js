@@ -1210,6 +1210,8 @@
     if (cc.colors && cc.colors.primary) club.colors = { primary: cc.colors.primary, secondary: cc.colors.secondary || cc.colors.primary };
     if (cc.crestData) club.crestData = cc.crestData;
     if (cc.kitData) club.kitData = cc.kitData;
+    if (cc.kitAwayData) club.kitAwayData = cc.kitAwayData;
+    if (cc.kitThirdData) club.kitThirdData = cc.kitThirdData;
     club.custom = true;
     var level = Math.max(50, Math.min(90, cc.level || 68));
     club.strength = level;
