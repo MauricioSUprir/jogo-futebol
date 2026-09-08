@@ -84,6 +84,10 @@
     { id: "uy", name: "Liga Uruguai A", nation: "Uruguay", culture: "es" },
     { id: "ru", name: "Liga Ucrânia A", nation: "Ukraine", culture: "es" },
     { id: "rus", name: "Liga Rússia A", nation: "Russia", culture: "es" },
+    { id: "ma", name: "Liga Marrocos A", nation: "Morocco", culture: "af" },
+    { id: "jp", name: "Liga Japão A", nation: "Japan", culture: "asia" },
+    { id: "ch", name: "Liga Suíça A", nation: "Switzerland", culture: "de" },
+    { id: "py", name: "Liga Paraguai A", nation: "Paraguay", culture: "ar" },
     { id: "br2", name: "Liga Brasil B", nation: "Brazil", culture: "br" },
     { id: "en2", name: "Liga Inglaterra B", nation: "England", culture: "en" },
     { id: "it2", name: "Liga Itália B", nation: "Italy", culture: "it" },
@@ -213,6 +217,22 @@
     rus: [
       ["Neva FC","NEV",78],["Kuban Real","KUB",77],["Lobo Escarlate SC","LOB",76],["Exército Central","EXC",76],["Azul Capital","AZC",75],["Ferroviário City","FER",75],["Tártaro Athletic","TAR",72],["Rio Don FC","DON",72],["Asas Athletic","ASA",71],["Montanhês SC","MTS",71],["Báltico United","BAL",71],["Caspiano FC","CAS",70],["Estepe Athletic","EST",70],["Volga Athletic","VLG",70],["Tocha FC","TOC",69],["Pátria City","PAT",69]
     ],
+    // Liga Marrocos (Marrocos) 2026-27
+    ma: [
+      ["Atlas City","ATL",76],["Leão Rubro SC","LEA",76],["Oriental FC","ORI",75],["Legião Real","LEG",75],["Cedro Athletic","CED",74],["Estreito FC","EST",73],["Medina City","MDC",72],["Areal Athletic","ARE",72],["Costa Dourada AC","COD",71],["Planalto SC","PLA",71],["Oásis City","OAS",70],["Palmar Real","PAL",70],["Kasbah FC","KAS",70],["Atlante Athletic","ATE",69],["Litoral SC","LIT",69],["Muralha United","MUR",69]
+    ],
+    // Liga Japão (Japão) 2026-27
+    jp: [
+      ["Sol Nascente FC","SOL",78],["Corrente Azul SC","CAZ",77],["Baía City","BAI",77],["Fênix Athletic","FEN",76],["Cervo Real","CER",76],["Diamante Rubro FC","DIA",75],["Cerejeira SC","CEJ",74],["Metrópole City","MET",74],["Capital FC","CAP",73],["Grampo Athletic","GRP",73],["Antiga Real","ANT",72],["Zelva City","ZEL",72],["Verde Tóquio FC","VRD",72],["Vespa Athletic","VES",71],["Folha SC","FOL",71],["Maré Clara FC","MAR",71],["Colina Athletic","COL",70],["Farol Oeste SC","FAR",70],["Vento United","VEN",70],["Falcão do Norte FC","FAL",70]
+    ],
+    // Liga Suíça (Suíça) 2026-27
+    ch: [
+      ["Jovens Rapazes FC","JOV",78],["Basileia SC","BSL",78],["Genebra Athletic","GEN",76],["Lago Real","LAG",75],["Abadia FC","ABA",74],["Cidadela City","CID",74],["Farol dos Alpes SC","ALP",73],["Lemano Athletic","LEM",73],["Vale Real","VAL",72],["Gafanhoto FC","GAF",72],["Montanhês United","MTU",71],["Principado SC","PRI",71]
+    ],
+    // Liga Paraguai (Paraguai) 2026
+    py: [
+      ["Coração Rubro FC","COR",77],["Decano Real","DEC",76],["Franjeado SC","FRA",76],["Aborígene Athletic","ABO",75],["Tricolor Capital FC","TRC",74],["Auriazul City","AUR",73],["Novo Sol SC","NOV",73],["Sagrado Athletic","SAG",72],["Duas Datas FC","DUA",71],["Recoleto United","REC",71],["Nhandu SC","NHA",70],["Cavalheiro Real","CAV",70]
+    ],
     // Liga Equador (Equador) 2026
     ec: [
       ["Lince SC","LIN",76],["Bravante CD","BRA",76],["Nortenho Athletic","NOR",75],["Tridente Athletic","TRI",75],["Hidra Athletic","HID",75],["Granada FC","GRA",74],["Vulcano Athletic","VUL",74],["Riacho FC","RIA",74],["Farol CD","FAR",73],["Guardião Athletic","GUA",73],["Encanto EC","ENC",73],["Tucano City","TUC",73],["Xavante United","XAV",73],["Tridente FC","TRI",73],["Oceânico Athletic","OCE",73],["Horizonte Athletic","HOR",72]
@@ -294,6 +314,10 @@
     ["cup-uy", "Copa Uruguai", "copa", "#7bafd4", "#001b69"],
     ["cup-ru", "Copa Ucrânia", "copa", "#0039a6", "#d52b1e"],
     ["cup-rus", "Copa Rússia", "copa", "#d52b1e", "#0039a6"],
+    ["cup-ma", "Copa Marrocos", "copa", "#c1272d", "#006233"],
+    ["cup-jp", "Copa Japão", "copa", "#bc002d", "#ffffff"],
+    ["cup-ch", "Copa Suíça", "copa", "#d52b1e", "#ffffff"],
+    ["cup-py", "Copa Paraguai", "copa", "#d52b1e", "#0038a8"],
     ["cup-co", "Copa Colômbia", "copa", "#fcd116", "#003893"],
     // Continentais de clubes
     ["cont-eu", "Copa Continental Europa", "continental", "#03063d", "#0f9bd7"],
@@ -1057,6 +1081,10 @@
     uy: [["Peñarol","PEN"],["Nacional","NAC"],["Defensor Sporting","DEF"],["Liverpool FC","LIV"],["Danubio","DAN"],["Racing Montevideo","RAC"],["Montevideo City Torque","MCT"],["Cerro Largo","CLA"],["Boston River","BOS"],["Montevideo Wanderers","WAN"],["Progreso","PRO"],["Plaza Colonia","PLA"],["Miramar Misiones","MIR"],["River Plate","RIV"],["Juventud","JUV"],["Cerro","CER"]],
     ru: [["Shakhtar Donetsk","SHA"],["Dynamo Kyiv","DYN"],["Zorya Luhansk","ZOR"],["Bukovyna Chernivtsi","BUK"],["FC Kharkiv","KHR"],["Kryvbas","KRY"],["Epitsentr K-P","EPI"],["Kudrivka","KUD"],["Kolos Kovalivka","KOL"],["Polissya","PLS"],["Chornomorets","CHO"],["Veres Rivne","VER"],["Obolon Kyiv","OBO"],["LNZ Cherkasy","LNZ"],["Livyi Bereh","LBE"],["Karpaty Lviv","KAR"]],
     rus: [["Zenit","ZEN"],["Krasnodar","KRA"],["Spartak Moscou","SPK"],["CSKA Moscou","CSKA"],["Dínamo Moscou","DMO"],["Lokomotiv Moscou","LOK"],["Rubin Kazan","RUB"],["Rostov","ROS"],["Krylia Sovetov","KRY"],["Akhmat Grozny","AKH"],["Baltika","BAL"],["Dínamo Makhachkala","DMK"],["Orenburg","ORE"],["Akron Tolyatti","AKR"],["Fakel","FAK"],["Rodina Moscou","ROD"]],
+    ma: [["Wydad AC","WAC"],["Raja CA","RCA"],["RS Berkane","RSB"],["AS FAR","FAR"],["MAS Fez","MAS"],["Ittihad Tanger","IRT"],["FUS Rabat","FUS"],["Hassania Agadir","HUSA"],["Difaâ El Jadida","DHJ"],["COD Meknès","CODM"],["RCA Zemamra","RCAZ"],["KAC Marrakech","KACM"],["Olympique Dcheira","OCD"],["Maghreb de Fès","MAF"],["Chabab Mohammédia","SCCM"],["Union Touarga","UTS"]],
+    jp: [["Vissel Kobe","VIS"],["Kawasaki Frontale","KAW"],["Yokohama F. Marinos","YFM"],["Sanfrecce Hiroshima","SAN"],["Kashima Antlers","KAS"],["Urawa Red Diamonds","URA"],["Cerezo Osaka","CER"],["Gamba Osaka","GAM"],["FC Tokyo","FCT"],["Nagoya Grampus","NAG"],["Kyoto Sanga","KYO"],["Machida Zelvia","MCZ"],["Tokyo Verdy","TKV"],["Avispa Fukuoka","AVI"],["Kashiwa Reysol","KSW"],["Shimizu S-Pulse","SHI"],["Fagiano Okayama","FAG"],["V-Varen Nagasaki","VVN"],["JEF United Chiba","JEF"],["Mito HollyHock","MIT"]],
+    ch: [["Young Boys","YB"],["Basel","BAS"],["Servette","SER"],["Lugano","LUG"],["St. Gallen","STG"],["Zürich","FCZ"],["Luzern","LUZ"],["Lausanne-Sport","LAU"],["Sion","SIO"],["Grasshopper","GC"],["Thun","THU"],["Vaduz","VAD"]],
+    py: [["Cerro Porteño","CER"],["Olimpia","OLI"],["Libertad","LIB"],["Guaraní","GUA"],["Nacional","NAC"],["Sportivo Luqueño","LUQ"],["Sportivo Ameliano","AME"],["Sportivo Trinidense","TRI"],["2 de Mayo","DDM"],["Deportivo Recoleta","REC"],["Rubio Ñu","RUB"],["General Caballero JLM","GCJ"]],
     co: [["Atlético Nacional","NAC"],["Millonarios","MIL"],["América de Cali","AME"],["Deportivo Cali","CAL"],["Junior","JUN"],["Independiente Medellín","DIM"],["Santa Fe","SFE"],["Deportes Tolima","TOL"],["Once Caldas","ONC"],["Bucaramanga","BUC"],["Deportivo Pereira","PER"],["Águilas Doradas","AGU"],["Cúcuta Deportivo","CUC"],["Jaguares","JAG"],["Alianza FC","ALI"],["Deportivo Pasto","PAS"],["Fortaleza CEIF","FOR"],["Boyacá Chicó","CHI"],["Llaneros","LLA"],["Internacional de Bogotá","IBO"]]
   };
   // CORES REAIS por clube (só a edição Atualizado) — cor não é protegida por direito autoral,
@@ -1071,7 +1099,11 @@
     "Benfica":["#e30613","#ffffff"],"Porto":["#0059a3","#ffffff"],"Sporting":["#0a8a3f","#ffffff"],
     "PSV":["#ee2400","#ffffff"],"Ajax":["#d2122e","#ffffff"],"Feyenoord":["#e30613","#111111"],
     "Boca Juniors":["#003f88","#f7c815"],"River Plate":["#eeeeee","#e2231a"],
-    "Zenit":["#0a3d91","#87ceeb"],"Spartak Moscou":["#c8102e","#ffffff"],"CSKA Moscou":["#b31217","#0a2472"],"Krasnodar":["#00843d","#111111"],"Dínamo Moscou":["#1560bd","#ffffff"],"Lokomotiv Moscou":["#00843d","#c8102e"],"Rubin Kazan":["#7a1f1f","#008751"]
+    "Zenit":["#0a3d91","#87ceeb"],"Spartak Moscou":["#c8102e","#ffffff"],"CSKA Moscou":["#b31217","#0a2472"],"Krasnodar":["#00843d","#111111"],"Dínamo Moscou":["#1560bd","#ffffff"],"Lokomotiv Moscou":["#00843d","#c8102e"],"Rubin Kazan":["#7a1f1f","#008751"],
+    "Wydad AC":["#e2001a","#ffffff"],"Raja CA":["#009b48","#ffffff"],"RS Berkane":["#f47b20","#ffffff"],"AS FAR":["#006233","#ffffff"],
+    "Vissel Kobe":["#8b1a2b","#111111"],"Kawasaki Frontale":["#0a3b8c","#111111"],"Yokohama F. Marinos":["#00398f","#ee1c25"],"Urawa Red Diamonds":["#e60012","#111111"],"Kashima Antlers":["#8b0000","#000080"],"Gamba Osaka":["#0a1f5c","#111111"],"Cerezo Osaka":["#e6007e","#111111"],
+    "Young Boys":["#ffcc00","#111111"],"Basel":["#e30613","#0a3b8c"],"Zürich":["#ffffff","#0a3b8c"],"Servette":["#7a0019","#ffffff"],
+    "Cerro Porteño":["#e2001a","#003da5"],"Olimpia":["#eeeeee","#111111"],"Libertad":["#eeeeee","#111111"],"Guaraní":["#111111","#ffdd00"]
   };
   function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
 
@@ -1422,7 +1454,11 @@
     pt: [[0,2],[0,1],[1,3]],                                               // Derby de Lisboa, O Clássico, Porto-Braga
     nl: [[2,1],[0,2],[0,1]],                                               // De Klassieker, Ajax-PSV, PSV-Feyenoord
     ar: [[0,1],[2,3],[9,10],[5,15],[11,16],[4,13],[17,18]],                // Superclásico, Avellaneda, Rosarino, La Plata, Sur, San Lorenzo-Huracán, Córdoba
-    rus: [[2,3],[0,2],[3,4],[2,4],[2,5],[4,5]]                             // Spartak-CSKA, Zenit-Spartak, derbies de Moscou
+    rus: [[2,3],[0,2],[3,4],[2,4],[2,5],[4,5]],                            // Spartak-CSKA, Zenit-Spartak, derbies de Moscou
+    ma: [[0,1]],                                                          // Derby de Casablanca (Wydad-Raja)
+    jp: [[6,7],[8,12]],                                                   // Derby de Osaka (Cerezo-Gamba), Tóquio (FC Tokyo-Verdy)
+    ch: [[5,9],[0,1]],                                                    // Derby de Zurique (Zürich-Grasshopper), Young Boys-Basel
+    py: [[0,1]]                                                           // Superclásico (Cerro-Olimpia)
   };
   // nomes famosos dos clássicos (chave "liga-i-j" com i<j). Só usados na edição Atualizado.
   var DERBY_NAMES = {
@@ -1435,7 +1471,8 @@
     "en-2-11": "Derby de Merseyside", "en-1-5": "Derby do Norte de Londres", "en-0-3": "Derby de Manchester", "en-2-3": "Clássico do Noroeste",
     "nl-1-2": "De Klassieker", "nl-0-2": "Ajax-PSV",
     "pt-0-2": "Derby de Lisboa", "pt-0-1": "O Clássico",
-    "rus-2-3": "Derby de Moscou", "rus-0-2": "Zenit-Spartak"
+    "rus-2-3": "Derby de Moscou", "rus-0-2": "Zenit-Spartak",
+    "ma-0-1": "Derby de Casablanca", "jp-6-7": "Derby de Osaka", "ch-5-9": "Derby de Zurique", "py-0-1": "Superclásico Paraguaio"
   };
   function derbyName(aId, bId) {
     try {
@@ -1612,10 +1649,10 @@
       }
       // continentais de clubes: melhores clubes das ligas da região
       var CONT = {
-        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus"], size: 32 },
-        "cont-sa": { leagues: ["br", "ar", "ec", "uy", "co"], size: 32 },
+        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus", "ch"], size: 32 },
+        "cont-sa": { leagues: ["br", "ar", "ec", "uy", "co", "py"], size: 32 },
         "cont-na": { leagues: ["us", "mx"], size: 16 },
-        "cont-as": { leagues: ["sa"], size: 16 }
+        "cont-as": { leagues: ["sa", "jp", "ma"], size: 16 }
       };
       if (CONT[compId]) {
         var def = CONT[compId], pool = [];
