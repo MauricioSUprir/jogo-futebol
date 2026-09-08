@@ -1262,18 +1262,65 @@
   /* ---------- API pública ---------- */
   var _world = null;
   var _rivalCache = null;
-  // mapa de rivalidades: dentro de cada liga, pareia clubes por ranking de força
-  // (0-1, 2-3, …) — os 2 maiores viram o clássico principal; todos ganham 1 rival.
+  /* ---------- CLÁSSICOS/DERBIES REAIS (por índice de clube na liga) ----------
+     Como o "slot" (liga+índice) é o mesmo nas duas edições, essas rivalidades
+     valem para AMBAS: na Atualizado são os derbies reais (Fla-Flu, El Clásico,
+     Superclásico...), e na pública os mesmos confrontos de slot. O 1º par de
+     cada clube é o clássico PRINCIPAL. */
+  var DERBIES = {
+    br: [[0,4],[1,6],[2,13],[3,9],[7,8],[12,16],[5,15],[0,2],[4,13]],       // Fla-Flu, Palmeiras-Corinthians, Botafogo-Vasco, Galo-Cruzeiro, Gre-Nal, Ba-Vi...
+    en: [[2,11],[1,5],[0,3],[4,9],[17,14],[2,3],[1,4]],                     // Merseyside, North London, Manchester, Londres, East Midlands...
+    es: [[0,1],[1,16],[0,2],[3,4],[5,8],[7,6]],                            // El Clásico, derби de Barcelona, de Madrid, basco, sevilhano, valenciano
+    it: [[0,1],[5,6],[2,9],[0,2],[7,2],[3,5]],                            // Madonnina, Capitale, Mole, d'Italia, Fiorentina-Juve, Napoli-Roma
+    de: [[0,2],[2,11],[5,12],[0,3]],                                       // Der Klassiker, Borussen, Rhein-Main, Bayern-Leipzig
+    fr: [[0,2],[4,17],[3,6],[7,11],[2,5]],                                 // Le Classique, Rhône, Nord, Bretão, Costa Azul
+    pt: [[0,2],[0,1],[1,3]],                                               // Derby de Lisboa, O Clássico, Porto-Braga
+    nl: [[2,1],[0,2],[0,1]],                                               // De Klassieker, Ajax-PSV, PSV-Feyenoord
+    ar: [[0,1],[2,3],[9,10],[5,15],[11,16],[4,13],[17,18]]                 // Superclásico, Avellaneda, Rosarino, La Plata, Sur, San Lorenzo-Huracán, Córdoba
+  };
+  // nomes famosos dos clássicos (chave "liga-i-j" com i<j). Só usados na edição Atualizado.
+  var DERBY_NAMES = {
+    "es-0-1": "El Clásico", "es-1-16": "Derby de Barcelona", "es-0-2": "Derby de Madrid", "es-3-4": "Derby Basco", "es-5-8": "Derby Sevilhano",
+    "ar-0-1": "Superclásico", "ar-2-3": "Clássico de Avellaneda", "ar-9-10": "Clássico Rosarino", "ar-5-15": "Clássico de La Plata",
+    "it-0-1": "Derby della Madonnina", "it-5-6": "Derby della Capitale", "it-2-9": "Derby della Mole", "it-0-2": "Derby d'Italia",
+    "fr-0-2": "Le Classique", "fr-4-17": "Derby do Rhône", "fr-3-6": "Derby do Norte",
+    "de-0-2": "Der Klassiker", "de-2-11": "Derby do Borussia",
+    "br-0-4": "Fla-Flu", "br-1-6": "Derby Paulista", "br-2-13": "Clássico Vovô", "br-3-9": "Clássico Mineiro", "br-7-8": "Gre-Nal", "br-12-16": "Ba-Vi", "br-5-15": "Clássico San-São",
+    "en-2-11": "Derby de Merseyside", "en-1-5": "Derby do Norte de Londres", "en-0-3": "Derby de Manchester", "en-2-3": "Clássico do Noroeste",
+    "nl-1-2": "De Klassieker", "nl-0-2": "Ajax-PSV",
+    "pt-0-2": "Derby de Lisboa", "pt-0-1": "O Clássico"
+  };
+  function derbyName(aId, bId) {
+    try {
+      if (!isProEdition()) return null;                      // nomes reais só na Atualizado
+      var pa = String(aId).split("-"), pb = String(bId).split("-");
+      if (pa[0] !== pb[0]) return null;
+      var i = parseInt(pa[1], 10), j = parseInt(pb[1], 10);
+      var lo = Math.min(i, j), hi = Math.max(i, j);
+      return DERBY_NAMES[pa[0] + "-" + lo + "-" + hi] || null;
+    } catch (e) { return null; }
+  }
+  // mapa de rivalidades: 1) derbies reais definidos; 2) o resto pareia por força.
   function rivalMap() {
     if (_rivalCache) return _rivalCache;
     var W = TM.data.world(), map = {};
+    function link(aId, bId) {
+      if (!aId || !bId || aId === bId || !W.clubsById[aId] || !W.clubsById[bId]) return;
+      (map[aId] = map[aId] || []); if (map[aId].indexOf(bId) < 0) map[aId].push(bId);
+      (map[bId] = map[bId] || []); if (map[bId].indexOf(aId) < 0) map[bId].push(aId);
+    }
+    // 1) clássicos reais (por índice) — valem nas duas edições
+    Object.keys(DERBIES).forEach(function (lgId) {
+      DERBIES[lgId].forEach(function (pair) { link(lgId + "-" + pair[0], lgId + "-" + pair[1]); });
+    });
+    // 2) clubes ainda SEM rival: pareia por força dentro da liga
     (W.leagues || []).forEach(function (lg) {
       var cs = (lg.clubIds || []).map(function (id) { return W.clubsById[id]; }).filter(Boolean)
+        .filter(function (c) { return !(map[c.id] && map[c.id].length); })
         .sort(function (a, b) { return (b.strength || 0) - (a.strength || 0); });
       for (var i = 0; i < cs.length; i += 2) {
         var a = cs[i], b = cs[i + 1]; if (!b) break;
-        (map[a.id] = map[a.id] || []).push(b.id);
-        (map[b.id] = map[b.id] || []).push(a.id);
+        link(a.id, b.id);
       }
     });
     // rival ESCOLHIDO pelo jogador (clube personalizado) vira o rival PRINCIPAL
@@ -1383,6 +1430,7 @@
     resetWorld: function () { _world = null; _rivalCache = null; },
     rivalsOf: function (clubId) { return (rivalMap()[clubId] || []).slice(); },
     areRivals: function (aId, bId) { return !!aId && !!bId && (rivalMap()[aId] || []).indexOf(bId) >= 0; },
+    derbyName: derbyName,
     rivalName: function (clubId) { var r = rivalMap()[clubId] || []; if (!r.length) return null; var c = TM.data.club(r[0]); return c ? c.name : null; },
     stadium: function (club) { return stadiumInfo(club); },
     club: function (id) { return TM.data.world().clubsById[id]; },
