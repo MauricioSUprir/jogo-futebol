@@ -364,6 +364,29 @@
       rail.appendChild(el("div", { class: "cr-next" }, [ TM.img.clubImg(opp, "cr-tcrest"), el("div", { class: "cr-nextinfo" }, [ el("div", { class: "cr-nextnm", text: opp.name }), el("div", { class: "cr-nextsub", text: (isHome ? "Em casa" : "Fora") + " · Rodada " + (c.round + 1) }) ]) ]));
     }
 
+    // -- mini classificação da liga do jogador --
+    try {
+      var st = standings(c.table);
+      var myIdx = st.findIndex(function (r) { return r.id === c.clubId; });
+      if (st.length) {
+        rail.appendChild(el("div", { class: "cr-title", text: "🏆 Classificação" }));
+        var tbl = el("div", { class: "cr-table" });
+        var rows = st.slice(0, 5);
+        if (myIdx >= 5) rows.push(st[myIdx]);
+        rows.forEach(function (row) {
+          var idx = st.indexOf(row), mine = row.id === c.clubId, cl = TM.data.club(row.id);
+          tbl.appendChild(el("div", { class: "cr-trow" + (mine ? " me" : "") }, [
+            el("span", { class: "cr-tpos", text: (idx + 1) }),
+            TM.img.clubImg(cl, "cr-tcrest"),
+            el("span", { class: "cr-tname", text: cl ? cl.name : "—" }),
+            el("span", { class: "cr-tpts", text: (row.pts || 0) })
+          ]));
+        });
+        rail.appendChild(tbl);
+        rail.appendChild(el("button", { class: "cr-more", text: "Ver tabela completa →", on: { click: function () { TM.ui.go("player-table"); } } }));
+      }
+    } catch (e) {}
+
     if (c.objective) {
       rail.appendChild(el("div", { class: "cr-title", text: "🎯 Meta da temporada" }));
       var target = c.objective.target || 1;
@@ -381,6 +404,35 @@
       c.potential ? el("div", { class: "cr-mtop", style: "margin-top:6px" }, [ el("span", { text: "Potencial" }), el("span", { class: "cr-mval", text: c.potential }) ]) : null
     ]));
     if (c.skillPoints > 0) rail.appendChild(el("button", { class: "cr-more", text: "⭐ Gastar " + c.skillPoints + " ponto(s) →", on: { click: function () { TM.ui.go("player-attrs"); } } }));
+
+    // -- atributos de destaque --
+    try {
+      var ATLBL = { pac: "Velocidade", sho: "Finalização", pas: "Passe", dri: "Drible", def: "Defesa", phy: "Físico" };
+      var top = Object.keys(ATLBL).map(function (k) { return { k: k, v: c.attrs[k] || 0 }; })
+        .sort(function (a, b) { return b.v - a.v; }).slice(0, 4);
+      rail.appendChild(el("div", { class: "cr-title", text: "⚡ Atributos de destaque" }));
+      var aw = el("div", { class: "cr-attrs" });
+      top.forEach(function (a) {
+        var cls = a.v >= 80 ? "hi" : a.v >= 68 ? "mid" : "lo";
+        aw.appendChild(el("div", { class: "cr-attr" }, [
+          el("div", { class: "cr-attop" }, [ el("span", { text: ATLBL[a.k] }), el("span", { class: "cr-atval cra-" + cls, text: a.v }) ]),
+          el("div", { class: "cr-atbar" }, [ el("div", { class: "cr-atfill cra-" + cls, style: "width:" + Math.min(100, a.v) + "%" }) ])
+        ]));
+      });
+      rail.appendChild(aw);
+      rail.appendChild(el("button", { class: "cr-more", text: "Ver todos os atributos →", on: { click: function () { TM.ui.go("player-attrs"); } } }));
+    } catch (e) {}
+
+    // -- totais na carreira --
+    try {
+      var totJ = (c.careerApps || 0) + (c.seasonApps || 0);
+      var totG = (c.careerGoals || 0) + (c.seasonGoals || 0);
+      var temps = (c.history ? c.history.length : 0) + 1;
+      rail.appendChild(el("div", { class: "cr-title", text: "🏅 Na carreira" }));
+      function cbox(l, v) { return el("div", { class: "cr-pbox" }, [ el("div", { class: "cr-pv", text: v }), el("div", { class: "cr-pl", text: l }) ]); }
+      rail.appendChild(el("div", { class: "cr-pnum" }, [ cbox("Temp.", temps), cbox("Jogos", totJ), cbox("Gols", totG) ]));
+      rail.appendChild(el("button", { class: "cr-more", text: "Abrir histórico →", on: { click: function () { TM.ui.go("player-history"); } } }));
+    } catch (e) {}
 
     screen.appendChild(rail);
   }
