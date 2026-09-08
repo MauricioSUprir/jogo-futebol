@@ -88,6 +88,7 @@
     { id: "jp", name: "Liga Japão A", nation: "Japan", culture: "asia" },
     { id: "ch", name: "Liga Suíça A", nation: "Switzerland", culture: "de" },
     { id: "py", name: "Liga Paraguai A", nation: "Paraguay", culture: "ar" },
+    { id: "be", name: "Liga Bélgica A", nation: "Belgium", culture: "nl" },
     { id: "br2", name: "Liga Brasil B", nation: "Brazil", culture: "br" },
     { id: "en2", name: "Liga Inglaterra B", nation: "England", culture: "en" },
     { id: "it2", name: "Liga Itália B", nation: "Italy", culture: "it" },
@@ -233,6 +234,10 @@
     py: [
       ["Coração Rubro FC","COR",77],["Decano Real","DEC",76],["Franjeado SC","FRA",76],["Aborígene Athletic","ABO",75],["Tricolor Capital FC","TRC",74],["Auriazul City","AUR",73],["Novo Sol SC","NOV",73],["Sagrado Athletic","SAG",72],["Duas Datas FC","DUA",71],["Recoleto United","REC",71],["Nhandu SC","NHA",70],["Cavalheiro Real","CAV",70]
     ],
+    // Liga Bélgica (Bélgica) 2026-27
+    be: [
+      ["Cruzado Azul FC","CRA",78],["Sindicato Real","SIN",77],["Púrpura City","PUR",77],["Mineiro Athletic","MIN",76],["Portuário Real","PTR",75],["Corvo SC","COV",75],["Círculo FC","CIR",73],["Ardósia Real","ARD",73],["Aurora City","AUR",72],["Negro-Azul FC","NAZ",72],["Campina Athletic","CMP",71],["Universitário SC","UNI",71],["Trindade FC","TRD",71],["Tapete Real","TAP",70],["Vale do Lys SC","LYS",70],["Lobo Cinza FC","LBC",70],["Lombardo Athletic","LOM",70],["Ribeira City","RIB",70]
+    ],
     // Liga Equador (Equador) 2026
     ec: [
       ["Lince SC","LIN",76],["Bravante CD","BRA",76],["Nortenho Athletic","NOR",75],["Tridente Athletic","TRI",75],["Hidra Athletic","HID",75],["Granada FC","GRA",74],["Vulcano Athletic","VUL",74],["Riacho FC","RIA",74],["Farol CD","FAR",73],["Guardião Athletic","GUA",73],["Encanto EC","ENC",73],["Tucano City","TUC",73],["Xavante United","XAV",73],["Tridente FC","TRI",73],["Oceânico Athletic","OCE",73],["Horizonte Athletic","HOR",72]
@@ -318,6 +323,7 @@
     ["cup-jp", "Copa Japão", "copa", "#bc002d", "#ffffff"],
     ["cup-ch", "Copa Suíça", "copa", "#d52b1e", "#ffffff"],
     ["cup-py", "Copa Paraguai", "copa", "#d52b1e", "#0038a8"],
+    ["cup-be", "Copa Bélgica", "copa", "#111111", "#fae042"],
     ["cup-co", "Copa Colômbia", "copa", "#fcd116", "#003893"],
     // Continentais de clubes
     ["cont-eu", "Copa Continental Europa", "continental", "#03063d", "#0f9bd7"],
@@ -1085,6 +1091,7 @@
     jp: [["Vissel Kobe","VIS"],["Kawasaki Frontale","KAW"],["Yokohama F. Marinos","YFM"],["Sanfrecce Hiroshima","SAN"],["Kashima Antlers","KAS"],["Urawa Red Diamonds","URA"],["Cerezo Osaka","CER"],["Gamba Osaka","GAM"],["FC Tokyo","FCT"],["Nagoya Grampus","NAG"],["Kyoto Sanga","KYO"],["Machida Zelvia","MCZ"],["Tokyo Verdy","TKV"],["Avispa Fukuoka","AVI"],["Kashiwa Reysol","KSW"],["Shimizu S-Pulse","SHI"],["Fagiano Okayama","FAG"],["V-Varen Nagasaki","VVN"],["JEF United Chiba","JEF"],["Mito HollyHock","MIT"]],
     ch: [["Young Boys","YB"],["Basel","BAS"],["Servette","SER"],["Lugano","LUG"],["St. Gallen","STG"],["Zürich","FCZ"],["Luzern","LUZ"],["Lausanne-Sport","LAU"],["Sion","SIO"],["Grasshopper","GC"],["Thun","THU"],["Vaduz","VAD"]],
     py: [["Cerro Porteño","CER"],["Olimpia","OLI"],["Libertad","LIB"],["Guaraní","GUA"],["Nacional","NAC"],["Sportivo Luqueño","LUQ"],["Sportivo Ameliano","AME"],["Sportivo Trinidense","TRI"],["2 de Mayo","DDM"],["Deportivo Recoleta","REC"],["Rubio Ñu","RUB"],["General Caballero JLM","GCJ"]],
+    be: [["Club Brugge","CLB"],["Union SG","USG"],["Anderlecht","AND"],["Genk","GNK"],["Antwerp","ANT"],["Gent","GNT"],["Cercle Brugge","CER"],["Standard Liège","STL"],["Mechelen","MEC"],["Charleroi","CHA"],["Westerlo","WES"],["OH Leuven","OHL"],["Sint-Truiden","STV"],["Kortrijk","KOR"],["Zulte Waregem","ZWA"],["La Louvière","LLO"],["Lommel","LOM"],["Beveren","BEV"]],
     co: [["Atlético Nacional","NAC"],["Millonarios","MIL"],["América de Cali","AME"],["Deportivo Cali","CAL"],["Junior","JUN"],["Independiente Medellín","DIM"],["Santa Fe","SFE"],["Deportes Tolima","TOL"],["Once Caldas","ONC"],["Bucaramanga","BUC"],["Deportivo Pereira","PER"],["Águilas Doradas","AGU"],["Cúcuta Deportivo","CUC"],["Jaguares","JAG"],["Alianza FC","ALI"],["Deportivo Pasto","PAS"],["Fortaleza CEIF","FOR"],["Boyacá Chicó","CHI"],["Llaneros","LLA"],["Internacional de Bogotá","IBO"]]
   };
   // CORES REAIS por clube (só a edição Atualizado) — cor não é protegida por direito autoral,
@@ -1103,7 +1110,8 @@
     "Wydad AC":["#e2001a","#ffffff"],"Raja CA":["#009b48","#ffffff"],"RS Berkane":["#f47b20","#ffffff"],"AS FAR":["#006233","#ffffff"],
     "Vissel Kobe":["#8b1a2b","#111111"],"Kawasaki Frontale":["#0a3b8c","#111111"],"Yokohama F. Marinos":["#00398f","#ee1c25"],"Urawa Red Diamonds":["#e60012","#111111"],"Kashima Antlers":["#8b0000","#000080"],"Gamba Osaka":["#0a1f5c","#111111"],"Cerezo Osaka":["#e6007e","#111111"],
     "Young Boys":["#ffcc00","#111111"],"Basel":["#e30613","#0a3b8c"],"Zürich":["#ffffff","#0a3b8c"],"Servette":["#7a0019","#ffffff"],
-    "Cerro Porteño":["#e2001a","#003da5"],"Olimpia":["#eeeeee","#111111"],"Libertad":["#eeeeee","#111111"],"Guaraní":["#111111","#ffdd00"]
+    "Cerro Porteño":["#e2001a","#003da5"],"Olimpia":["#eeeeee","#111111"],"Libertad":["#eeeeee","#111111"],"Guaraní":["#111111","#ffdd00"],
+    "Club Brugge":["#0a2f7a","#111111"],"Union SG":["#ffcc00","#00368c"],"Anderlecht":["#4b1e78","#ffffff"],"Genk":["#005ca9","#ffffff"],"Antwerp":["#c8102e","#111111"],"Gent":["#1560bd","#ffffff"],"Standard Liège":["#e2001a","#ffffff"]
   };
   function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
 
@@ -1458,7 +1466,8 @@
     ma: [[0,1]],                                                          // Derby de Casablanca (Wydad-Raja)
     jp: [[6,7],[8,12]],                                                   // Derby de Osaka (Cerezo-Gamba), Tóquio (FC Tokyo-Verdy)
     ch: [[5,9],[0,1]],                                                    // Derby de Zurique (Zürich-Grasshopper), Young Boys-Basel
-    py: [[0,1]]                                                           // Superclásico (Cerro-Olimpia)
+    py: [[0,1]],                                                          // Superclásico (Cerro-Olimpia)
+    be: [[0,2],[0,6],[2,7]]                                               // Topper (Brugge-Anderlecht), Derby de Bruges, Anderlecht-Standard
   };
   // nomes famosos dos clássicos (chave "liga-i-j" com i<j). Só usados na edição Atualizado.
   var DERBY_NAMES = {
@@ -1472,7 +1481,8 @@
     "nl-1-2": "De Klassieker", "nl-0-2": "Ajax-PSV",
     "pt-0-2": "Derby de Lisboa", "pt-0-1": "O Clássico",
     "rus-2-3": "Derby de Moscou", "rus-0-2": "Zenit-Spartak",
-    "ma-0-1": "Derby de Casablanca", "jp-6-7": "Derby de Osaka", "ch-5-9": "Derby de Zurique", "py-0-1": "Superclásico Paraguaio"
+    "ma-0-1": "Derby de Casablanca", "jp-6-7": "Derby de Osaka", "ch-5-9": "Derby de Zurique", "py-0-1": "Superclásico Paraguaio",
+    "be-0-2": "Topper (Brugge-Anderlecht)", "be-0-6": "Derby de Bruges", "be-2-7": "Anderlecht-Standard"
   };
   function derbyName(aId, bId) {
     try {
@@ -1649,7 +1659,7 @@
       }
       // continentais de clubes: melhores clubes das ligas da região
       var CONT = {
-        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus", "ch"], size: 32 },
+        "cont-eu": { leagues: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus", "ch", "be"], size: 32 },
         "cont-sa": { leagues: ["br", "ar", "ec", "uy", "co", "py"], size: 32 },
         "cont-na": { leagues: ["us", "mx"], size: 16 },
         "cont-as": { leagues: ["sa", "jp", "ma"], size: 16 }
