@@ -434,6 +434,27 @@
       rail.appendChild(el("button", { class: "cr-more", text: "Abrir histórico →", on: { click: function () { TM.ui.go("player-history"); } } }));
     } catch (e) {}
 
+    // -- torcida agora (redes sociais) --
+    try {
+      if (TM.social && TM.social.ensureFeed) TM.social.ensureFeed(c);
+      var posts = (c.social && c.social.posts) ? c.social.posts.slice(0, 5) : [];
+      rail.appendChild(el("div", { class: "cr-title", text: "💬 Torcida agora" }));
+      var pw = el("div", { class: "cr-posts" });
+      if (posts.length) {
+        posts.forEach(function (p) {
+          pw.appendChild(el("div", { class: "cr-post" }, [
+            el("div", { class: "cr-phandle", text: p.handle || "@torcedor" }),
+            el("div", { class: "cr-ptext", text: p.text || "" }),
+            el("div", { class: "cr-plikes", text: "♥ " + (p.likes != null ? p.likes : 0) })
+          ]));
+        });
+      } else {
+        pw.appendChild(el("div", { class: "cr-post" }, [ el("div", { class: "cr-ptext", text: "As redes ainda estão quietas — jogue partidas para movimentar a torcida." }) ]));
+      }
+      rail.appendChild(pw);
+      rail.appendChild(el("button", { class: "cr-more", text: "Abrir redes sociais →", on: { click: function () { TM.ui.go("player-social"); } } }));
+    } catch (e) {}
+
     screen.appendChild(rail);
   }
 

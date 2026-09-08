@@ -111,17 +111,25 @@
   }
 
   /* ---------- geração de posts a partir do contexto ---------- */
+  // clube "do usuário": treinador usa teamId, jogador (RÉ) usa clubId
+  function mainClubId(career) { return career.teamId != null ? career.teamId : career.clubId; }
+
   function genBatch(career) {
     var W = TM.data.world();
-    var myClub = TM.data.club(career.teamId);
+    var cid = mainClubId(career);
+    var myClub = TM.data.club(cid);
     if (!myClub) return [];
+    var isPlayer = career.id === "me" || (career.teamId == null && career.clubId != null);
     var out = [];
-    var form = career.recentForm || [];
+    var form = (career.recentForm && career.recentForm.length) ? career.recentForm
+      : (career.recentRatings || []).map(function (r) { return r >= 6.8 ? "V" : r >= 6 ? "E" : "D"; });
     var last = form.length ? form[form.length - 1] : null; // "V"/"E"/"D"
     var pos = null; try { pos = TM.comp.currentPosition(career); } catch (e) {}
-    var rival = null; try { rival = TM.data.rivalName(career.teamId); } catch (e) {}
+    var rival = null; try { rival = TM.data.rivalName(cid); } catch (e) {}
     var squad = []; try { squad = TM.comp.userSquad(career) || []; } catch (e) {}
     var star = squad.length ? squad.slice().sort(function (a, b) { return b.overall - a.overall; })[0] : null;
+    // no RÉ, a "estrela" é o próprio jogador
+    if (!star && isPlayer) star = { name: career.name, overall: career.overall };
 
     // --- reação ao ÚLTIMO RESULTADO ---
     if (last === "D") { // DERROTA → críticas (e uma pitada de apoio)
@@ -234,7 +242,10 @@
   /* ---------- postar como usuário (repercute na imprensa) ---------- */
   function userPost(career, text) {
     ensure(career);
-    var handle = "@" + ((career.coachName || "voce").toLowerCase().replace(/[^a-zà-ÿ0-9]/g, "").slice(0, 14) || "treinador");
+    var isPlayer = career.id === "me" || (career.teamId == null && career.clubId != null);
+    var who = career.coachName || (isPlayer ? career.name : null) || "voce";
+    var clubNm = (TM.data.club(mainClubId(career)) || {}).name || "clube";
+    var handle = "@" + (who.toLowerCase().replace(/[^a-zà-ÿ0-9]/g, "").slice(0, 14) || (isPlayer ? "jogador" : "treinador"));
     var p = post({ handle: handle, verified: true, kind: "user", text: text,
       likes: rint(40, 500), comments: makeComments(rint(3, 6), classifyUserPost(text)), extraComments: 0 });
     p.mine = true;
@@ -242,14 +253,15 @@
     var repercuss = chance(0.55);
     career.social.posts = [p].concat(career.social.posts).slice(0, 60);
     if (repercuss) {
+      var roleTxt = isPlayer ? career.name + ", do " + clubNm + "," : "técnico do " + clubNm;
       var pressReply = post({ handle: pick(PRESS), verified: true, kind: "press", badge: "🗞️ Repercussão",
-        text: "Declaração do técnico do " + (TM.data.club(career.teamId) || {}).name + " viraliza: “" + (text.length > 90 ? text.slice(0, 88) + "…" : text) + "”. Torcida reage.",
+        text: "Declaração de " + roleTxt + " viraliza: “" + (text.length > 90 ? text.slice(0, 88) + "…" : text) + "”. Torcida reage.",
         likes: rint(200, 3500), extraComments: rint(20, 200) });
       career.social.posts = career.social.posts.slice(0, 1).concat([pressReply], career.social.posts.slice(1)).slice(0, 60);
       // vira notícia no jornal
-      try { TM.notify.push(career, { icon: "🎙️", title: "Fala do treinador repercute", news: true, text: "“" + (text.length > 120 ? text.slice(0, 118) + "…" : text) + "” — declaração do comando do " + (TM.data.club(career.teamId) || {}).name + " ganhou as redes e a imprensa." }); } catch (e) {}
+      try { TM.notify.push(career, { icon: "🎙️", title: (isPlayer ? "Sua fala repercute" : "Fala do treinador repercute"), news: true, text: "“" + (text.length > 120 ? text.slice(0, 118) + "…" : text) + "” — declaração " + (isPlayer ? "de " + career.name : "do comando do " + clubNm) + " ganhou as redes e a imprensa." }); } catch (e) {}
     }
-    TM.storage.saveCoachCareer(career);
+    if (isPlayer) TM.storage.savePlayerCareer(career); else TM.storage.saveCoachCareer(career);
     return repercuss;
   }
 
@@ -334,8 +346,9 @@
     var back = mode === "player" ? "player-hub" : "coach-hub";
     if (!career) { TM.ui.go(back); return; }
     ensureFeed(career);
-    TM.storage.saveCoachCareer(career);
-    function save() { TM.storage.saveCoachCareer(career); }
+    var saveCareer = mode === "player" ? function () { TM.storage.savePlayerCareer(career); } : function () { TM.storage.saveCoachCareer(career); };
+    saveCareer();
+    function save() { saveCareer(); }
 
     screen.appendChild(TM.ui.topbar("📱 Redes Sociais", function () { TM.ui.go(back); }));
     if (mode === "coach" && TM.coachUI) TM.coachUI.addBar(screen, "coach-social");
@@ -361,7 +374,7 @@
       TM.ui.toast(rep ? "📣 Seu post viralizou e virou notícia!" : "Post publicado");
       TM.ui.go(mode === "player" ? "player-social" : "coach-social");
     } } });
-    composer.appendChild(el("div", { class: "comp-row" }, [ el("img", { class: "comp-ava", src: userAvatar((career.coachName || "T")) }), ta ]));
+    composer.appendChild(el("div", { class: "comp-row" }, [ el("img", { class: "comp-ava", src: userAvatar((career.coachName || career.name || "T")) }), ta ]));
     composer.appendChild(el("div", { class: "comp-actions" }, [ el("span", { class: "comp-hint", text: "Sua fala pode repercutir na imprensa" }), postBtn ]));
     wrap.appendChild(composer);
 
