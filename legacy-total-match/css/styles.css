@@ -1037,21 +1037,22 @@ html, body {
 .twin-sub { font-size: 11.5px; font-weight: 600; opacity: .85; }
 /* calendário estilo FIFA: grade do mês com o escudo/ícone dentro do dia */
 .cal-fmonth { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 12px; }
+@media (min-width: 1024px) { .cal-wrap.panel-narrow { max-width: 900px; } }
 .cal-mtitle { font-size: 15px; font-weight: 900; margin-bottom: 10px; text-align: center; letter-spacing: .4px; text-transform: uppercase; }
-.fc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
-.fc-wd { text-align: center; font-size: 10px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; padding-bottom: 2px; }
-.fc-cell { position: relative; aspect-ratio: 1 / 1; border-radius: 8px; background: var(--black-soft); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.fc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.fc-wd { text-align: center; font-size: 10.5px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; padding-bottom: 4px; }
+.fc-cell { position: relative; aspect-ratio: 1 / 1.12; border-radius: 11px; background: var(--black-soft); border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .fc-cell.other { background: transparent; border-color: transparent; }
-.fc-num { position: absolute; top: 3px; left: 4px; font-size: 10px; font-weight: 700; color: var(--text-dim); line-height: 1; z-index: 2; }
-.fc-cell.other .fc-num { opacity: .35; }
-.fc-cell.today { border-color: var(--green); box-shadow: 0 0 0 1.5px var(--green) inset; }
+.fc-num { position: absolute; top: 4px; left: 6px; font-size: 11.5px; font-weight: 800; color: var(--text-dim); line-height: 1; z-index: 2; }
+.fc-cell.other .fc-num { opacity: .3; }
+.fc-cell.today { border-color: var(--green); box-shadow: 0 0 0 2px var(--green) inset, 0 6px 18px rgba(34,197,94,.18); }
 .fc-cell.today .fc-num { color: var(--green); }
 /* fundo tênue por competição */
-.fc-cell.league { background: rgba(15,122,58,.16); border-color: rgba(15,122,58,.4); }
-.fc-cell.cup { background: rgba(214,178,52,.15); border-color: rgba(214,178,52,.4); }
-.fc-cell.cont { background: rgba(120,80,220,.18); border-color: rgba(120,80,220,.45); }
-.fc-crest { width: 46%; height: 46%; object-fit: contain; margin-top: -4px; }
-.fc-oppname { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; font-size: 8.5px; font-weight: 700;
+.fc-cell.league { background: linear-gradient(160deg, rgba(34,197,94,.28), rgba(15,122,58,.10)); border-color: rgba(34,197,94,.45); }
+.fc-cell.cup { background: linear-gradient(160deg, rgba(240,192,64,.28), rgba(214,178,52,.08)); border-color: rgba(214,178,52,.5); }
+.fc-cell.cont { background: linear-gradient(160deg, rgba(140,100,240,.30), rgba(120,80,220,.10)); border-color: rgba(140,100,240,.5); }
+.fc-crest { width: 58%; height: 58%; object-fit: contain; margin-top: -6px; filter: drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+.fc-oppname { position: absolute; bottom: 3px; left: 0; right: 0; text-align: center; font-size: 10px; font-weight: 800;
   color: var(--text); line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; z-index: 2; }
 .fc-ev-glyph { font-size: 20px; line-height: 1; }
 .fc-badge { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1; z-index: 2; }
@@ -1128,6 +1129,35 @@ html, body {
 .stat-tiles.dir-fin .tile.good .tile-val { color: var(--green); }
 .stat-tiles.dir-fin .tile.bad .tile-val { color: #e6675f; }
 /* barra de receitas x despesas (finanças do técnico) */
+/* ===== Finanças imersivas ===== */
+.fin-heros { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 620px; margin: 0 auto; }
+.fin-hero { border-radius: 18px; padding: 16px 18px; border: 1px solid var(--line); position: relative; overflow: hidden; }
+.fin-hero.green { background: linear-gradient(140deg, rgba(34,197,94,.28), rgba(13,15,20,.6)); border-color: rgba(34,197,94,.4); }
+.fin-hero.red { background: linear-gradient(140deg, rgba(220,38,38,.26), rgba(13,15,20,.6)); border-color: rgba(220,38,38,.4); }
+.fin-hero-ic { font-size: 22px; }
+.fin-hero-lbl { font-size: 12px; color: #c9cdd6; font-weight: 700; margin-top: 6px; }
+.fin-hero-val { font-size: 24px; font-weight: 900; margin-top: 2px; letter-spacing: .3px; }
+.fin-hero.green .fin-hero-val { color: #86efac; } .fin-hero.red .fin-hero-val { color: #fca5a5; }
+.fin-cat { width: 100%; max-width: 620px; margin: 12px auto 0; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; }
+.fin-cat-h { font-size: 13.5px; font-weight: 800; margin-bottom: 10px; display: flex; justify-content: space-between; }
+.fin-cat-h.good { color: #86efac; } .fin-cat-h.bad { color: #fca5a5; }
+.fin-cat-h b { font-weight: 900; }
+.fin-cline { margin-bottom: 11px; }
+.fin-ctop { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 4px; }
+.fin-clbl { color: #d7dae1; }
+.fin-cval { font-weight: 800; } .fin-cval.good { color: #4ade80; } .fin-cval.bad { color: #f87171; }
+.fin-cbar { height: 7px; border-radius: 5px; background: rgba(255,255,255,.06); overflow: hidden; }
+.fin-cfill { height: 100%; border-radius: 5px; }
+.fin-cfill.good { background: linear-gradient(90deg, #1f9d55, #4ade80); }
+.fin-cfill.bad { background: linear-gradient(90deg, #b5342c, #f87171); }
+@media (max-width: 460px) { .fin-heros { grid-template-columns: 1fr; } }
+
+/* prêmios travados até o fim da temporada */
+.award-locked { max-width: 480px; margin: 20px auto; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 28px 22px; }
+.awl-ic { font-size: 40px; }
+.awl-h { font-size: 17px; font-weight: 900; margin-top: 8px; }
+.awl-sub { font-size: 13px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
+
 .fin-bar { display: flex; width: 100%; height: 16px; border-radius: 8px; overflow: hidden; margin: 10px 0 6px; background: rgba(255,255,255,.06); }
 .fin-bar-in { background: linear-gradient(90deg, #1f9d55, var(--green)); height: 100%; }
 .fin-bar-out { background: linear-gradient(90deg, #e6675f, #b5342c); height: 100%; }

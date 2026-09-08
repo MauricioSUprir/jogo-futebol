@@ -1295,37 +1295,58 @@
     var club = TM.data.club(c.teamId);
     var f = coachFinances(c);
 
-    body.appendChild(el("div", { class: "market-budget" + (c.budget < 0 ? " debt" : ""), text: (c.budget < 0 ? "🔴 Caixa em dívida: " : "💰 Caixa disponível (orçamento): ") + money(c, c.budget) }));
-    body.appendChild(el("div", { class: "setting-hint", text: club.name + " · Temporada " + c.season + " · Porte do clube (overall): " + f.r }));
+    var pos = f.profit >= 0;
 
-    function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
+    // ---- heros: caixa + resultado da temporada (com degradê) ----
+    body.appendChild(el("div", { class: "fin-heros" }, [
+      el("div", { class: "fin-hero " + (c.budget < 0 ? "red" : "green") }, [
+        el("div", { class: "fin-hero-ic", text: c.budget < 0 ? "🔴" : "💰" }),
+        el("div", { class: "fin-hero-lbl", text: c.budget < 0 ? "Caixa em dívida" : "Caixa disponível" }),
+        el("div", { class: "fin-hero-val", text: money(c, c.budget) })
+      ]),
+      el("div", { class: "fin-hero " + (pos ? "green" : "red") }, [
+        el("div", { class: "fin-hero-ic", text: pos ? "📈" : "📉" }),
+        el("div", { class: "fin-hero-lbl", text: (pos ? "Lucro" : "Prejuízo") + " da temporada" }),
+        el("div", { class: "fin-hero-val", text: (pos ? "+" : "") + money(c, f.profit) })
+      ])
+    ]));
+    body.appendChild(el("div", { class: "setting-hint", style: "text-align:center", text: club.name + " · Temporada " + c.season + " · Porte do clube: OVR " + f.r }));
+
+    // linha com barra proporcional
+    function catLine(icon, label, val, total, cls) {
+      var pct = Math.max(2, Math.round((Math.abs(val) / Math.max(1, total)) * 100));
+      return el("div", { class: "fin-cline" }, [
+        el("div", { class: "fin-ctop" }, [
+          el("span", { class: "fin-clbl", html: icon + " " + label }),
+          el("span", { class: "fin-cval " + cls, text: (cls === "bad" ? "-" : "") + money(c, Math.abs(val)) })
+        ]),
+        el("div", { class: "fin-cbar" }, [ el("div", { class: "fin-cfill " + cls, style: "width:" + pct + "%" }) ])
+      ]);
+    }
 
     // receitas
-    body.appendChild(el("div", { class: "nego-panel" }, [
-      el("div", { class: "nego-quote", text: "📈 Receitas da temporada" }),
-      line("Cotas de TV", money(c, f.tv), "good"),
-      line("Bilheteria e sócios", money(c, f.gate), "good"),
-      line("Patrocínios e publicidade", money(c, f.sponsor), "good"),
-      line("Vendas de jogadores", money(c, f.sold), "good"),
-      line("Prêmios de competições", money(c, f.prize), "good"),
-      line("Total de receitas", money(c, f.income), "good")
+    body.appendChild(el("div", { class: "fin-cat" }, [
+      el("div", { class: "fin-cat-h good", html: "📈 Receitas <b>" + money(c, f.income) + "</b>" }),
+      catLine("📺", "Cotas de TV", f.tv, f.income, "good"),
+      catLine("🎟️", "Bilheteria e sócios", f.gate, f.income, "good"),
+      catLine("🤝", "Patrocínios e publicidade", f.sponsor, f.income, "good"),
+      catLine("💸", "Vendas de jogadores", f.sold, f.income, "good"),
+      catLine("🏆", "Prêmios de competições", f.prize, f.income, "good")
     ]));
 
     // despesas
-    body.appendChild(el("div", { class: "nego-panel" }, [
-      el("div", { class: "nego-quote", text: "📉 Despesas da temporada" }),
-      line("Folha salarial do elenco", "-" + money(c, f.wages), "bad"),
-      line("Estrutura, CT e comissão", "-" + money(c, f.ops), "bad"),
-      line("Contratações", "-" + money(c, f.spent), "bad"),
-      line("Total de despesas", "-" + money(c, f.expense), "bad")
+    body.appendChild(el("div", { class: "fin-cat" }, [
+      el("div", { class: "fin-cat-h bad", html: "📉 Despesas <b>" + money(c, f.expense) + "</b>" }),
+      catLine("👥", "Folha salarial do elenco", f.wages, f.expense, "bad"),
+      catLine("🏗️", "Estrutura, CT e comissão", f.ops, f.expense, "bad"),
+      catLine("✍️", "Contratações", f.spent, f.expense, "bad")
     ]));
 
-    // lucro / prejuízo
-    var pos = f.profit >= 0;
+    // balanço receitas x despesas
     var total = Math.max(1, f.income + f.expense);
     var incPct = Math.round((f.income / total) * 100);
-    body.appendChild(el("div", { class: "nego-panel" }, [
-      el("div", { class: "nego-quote " + (pos ? "happy" : "angry"), text: (pos ? "🟢 Lucro da temporada: +" : "🔴 Prejuízo da temporada: ") + money(c, f.profit) }),
+    body.appendChild(el("div", { class: "fin-cat" }, [
+      el("div", { class: "fin-cat-h", text: "⚖️ Balanço da temporada" }),
       el("div", { class: "fin-bar" }, [
         el("div", { class: "fin-bar-in", style: "width:" + incPct + "%" }),
         el("div", { class: "fin-bar-out", style: "width:" + (100 - incPct) + "%" })
@@ -1335,8 +1356,8 @@
         el("span", { class: "bad", text: "▮ Despesas " + money(c, f.expense) })
       ]),
       el("div", { class: "setting-hint", text: pos
-        ? "As contas estão no azul. Você pode reinvestir o lucro em reforços pelo Mercado."
-        : "As contas estão no vermelho. Venda jogadores, ganhe títulos (prêmios) ou reduza a folha salarial para equilibrar." })
+        ? "As contas estão no azul. Reinvista o lucro em reforços pelo Mercado."
+        : "As contas estão no vermelho. Venda jogadores, ganhe títulos ou reduza a folha para equilibrar." })
     ]));
 
     body.appendChild(el("div", { class: "actions" }, [
@@ -3926,6 +3947,19 @@
         ]));
       });
     } else {
+      // prêmios só saem NO FIM da temporada (quando a liga acabou)
+      var stA = C().standings(c.comps.league.table);
+      var meA = stA.filter(function (r) { return r.id === c.teamId; })[0] || { p: 0 };
+      var totalRounds = (stA.length - 1) * 2;
+      var leagueLeft = Math.max(0, totalRounds - (meA.p || 0));
+      if (leagueLeft > 0) {
+        body.appendChild(el("div", { class: "award-locked" }, [
+          el("div", { class: "awl-ic", text: "🔒" }),
+          el("div", { class: "awl-h", text: "Prêmios saem no fim da temporada" }),
+          el("div", { class: "awl-sub", text: "Ainda faltam " + leagueLeft + " rodada" + (leagueLeft > 1 ? "s" : "") + " da liga. Termine a temporada para conhecer o Melhor do Mundo, Artilheiro, Melhor Jovem e mais." })
+        ]));
+        return;
+      }
       var a = seasonAwards(c);
       function awCard(icon, title, player, extra, club) {
         if (!player) return null;
