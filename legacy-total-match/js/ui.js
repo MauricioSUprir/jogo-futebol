@@ -188,7 +188,7 @@
 
   // menu de opções (bottom sheet) — usado nos três-pontinhos das carreiras
   function optionsMenu(title, items) {
-    var overlay = el("div", { class: "sheet-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
     var sheet = el("div", { class: "sheet" }, [ el("div", { class: "sheet-title", text: title }) ]);
     items.forEach(function (it) {
       sheet.appendChild(el("button", { class: "sheet-item" + (it.danger ? " danger" : ""), text: it.label, on: { click: function () { overlay.remove(); it.fn(); } } }));
@@ -200,7 +200,7 @@
 
   // confirmação própria (window.confirm costuma ser bloqueado em páginas publicadas)
   function confirmSheet(title, message, confirmLabel, onYes, danger) {
-    var overlay = el("div", { class: "sheet-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
     var sheet = el("div", { class: "sheet" }, [
       el("div", { class: "sheet-title", text: title }),
       message ? el("div", { class: "sheet-msg", text: message }) : null,
