@@ -3,20 +3,35 @@
 (function (global) {
   "use strict";
   var TM = (global.TM = global.TM || {});
-  var PREFIX = "totalmatch:";
+  var BASE = "totalmatch:";
+  var EDITION_KEY = "totalmatch:__edition";
+  var PRO_PREFIX = "totalmatch:pro:";
+  // edição atual: "public" (padrão, vendável) ou "pro" (Atualizado, pessoal/licenciado)
+  var edition = "public";
+  try { var _e = localStorage.getItem(EDITION_KEY); if (_e === "pro") edition = "pro"; } catch (e) {}
+  // prefixo dos saves por edição: público mantém "totalmatch:" (não quebra carreiras já salvas),
+  // Atualizado usa "totalmatch:pro:" — assim as duas edições têm saves separados.
+  function prefix() { return edition === "pro" ? PRO_PREFIX : BASE; }
 
   function read(key, fallback) {
     try {
-      var raw = localStorage.getItem(PREFIX + key);
+      var raw = localStorage.getItem(prefix() + key);
       return raw ? JSON.parse(raw) : fallback;
     } catch (e) { return fallback; }
   }
   function write(key, value) {
-    try { localStorage.setItem(PREFIX + key, JSON.stringify(value)); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } return true; }
+    try { localStorage.setItem(prefix() + key, JSON.stringify(value)); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } return true; }
     catch (e) { return false; }
   }
   function remove(key) {
-    try { localStorage.removeItem(PREFIX + key); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } } catch (e) {}
+    try { localStorage.removeItem(prefix() + key); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } } catch (e) {}
+  }
+  // pertence à edição ATUAL? (público exclui as chaves "pro:" e a flag de edição)
+  function inCurrentEdition(k) {
+    if (!k || k.indexOf(BASE) !== 0) return false;
+    if (k === EDITION_KEY) return false;
+    if (edition === "pro") return k.indexOf(PRO_PREFIX) === 0;
+    return k.indexOf(PRO_PREFIX) !== 0; // público: tudo menos as chaves pro:
   }
 
   var DEFAULT_SETTINGS = {
@@ -48,11 +63,19 @@
     savePlayerCareer: function (c) { write("player", c); },
     clearPlayerCareer: function () { remove("player"); },
 
-    // apaga TODOS os dados do jogo (carreiras, saves, perfil, config) — "zerar o app"
+    // edição do jogo: "public" (vendável) ou "pro" (Atualizado, pessoal)
+    edition: function () { return edition; },
+    setEdition: function (e) {
+      edition = (e === "pro") ? "pro" : "public";
+      try { localStorage.setItem(EDITION_KEY, edition); } catch (er) {}
+      return edition;
+    },
+
+    // apaga os dados do jogo DA EDIÇÃO ATUAL (carreiras, saves, perfil, config) — "zerar o app"
     wipeAll: function () {
       try {
         var keys = [];
-        for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf(PREFIX) === 0) keys.push(k); }
+        for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (inCurrentEdition(k)) keys.push(k); }
         keys.forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
         if (TM._onSave) { try { TM._onSave("*"); } catch (e) {} }
         return true;

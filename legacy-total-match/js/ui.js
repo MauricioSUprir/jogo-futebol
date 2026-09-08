@@ -514,12 +514,25 @@
     screen.appendChild(el("div", { class: "splash-glow", "aria-hidden": "true" }));
     screen.appendChild(el("div", { class: "splash-vignette", "aria-hidden": "true" }));
 
+    var ed = "public"; try { ed = TM.storage.edition(); } catch (e) {}
+    var isPro = ed === "pro";
     var content = el("div", { class: "splash-content" }, [
       el("img", { class: "splash-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+      el("div", { class: "splash-title", text: isPro ? "ATUALIZADO" : "TOTAL MATCH" }),
+      isPro ? el("div", { class: "splash-edition", text: "🔒 Edição pessoal · times licenciados" }) : null,
       el("div", { class: "splash-tap", text: "toque para começar" })
     ]);
     screen.appendChild(content);
-    screen.appendChild(el("div", { class: "splash-ver", text: "v0.3" }));
+
+    // alternar entre as duas edições (não inicia o jogo — para o clique de propagar)
+    var switchBtn = el("button", { class: "splash-switch" + (isPro ? " pro" : ""), text: isPro ? "↩ Voltar à versão padrão" : "🔒 Abrir versão Atualizada", on: { click: function (e) {
+      e.stopPropagation();
+      TM.storage.setEdition(isPro ? "public" : "pro");
+      try { location.reload(); } catch (er) { go("splash"); }
+    } } });
+    screen.appendChild(switchBtn);
+
+    screen.appendChild(el("div", { class: "splash-ver", text: (isPro ? "Atualizado · " : "") + "v0.3" }));
 
     // a tela inteira inicia o jogo (mais imersivo)
     var started = false;
