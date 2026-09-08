@@ -67,7 +67,7 @@
     ["#004d98", "#a50044"], ["#e2001a", "#1a1a1a"], ["#003f2e", "#f7d417"], ["#6cabdd", "#1c2c5b"]
   ];
   var LEAGUE_DEFS = [
-    { id: "br", name: "Liga Brazil A", nation: "Brazil", culture: "br" },
+    { id: "br", name: "Liga Brasil A", nation: "Brazil", culture: "br" },
     { id: "en", name: "Liga England A", nation: "England", culture: "en" },
     { id: "es", name: "Liga Spain A", nation: "Spain", culture: "es" },
     { id: "it", name: "Liga Italy A", nation: "Italy", culture: "it" },
@@ -83,11 +83,11 @@
     { id: "ec", name: "Liga Ecuador A", nation: "Ecuador", culture: "es" },
     { id: "uy", name: "Liga Uruguay A", nation: "Uruguay", culture: "es" },
     { id: "ru", name: "Liga Ukraine A", nation: "Ukraine", culture: "es" },
-    { id: "br2", name: "Liga Brazil B", nation: "Brazil", culture: "br" },
+    { id: "br2", name: "Liga Brasil B", nation: "Brazil", culture: "br" },
     { id: "en2", name: "Liga England B", nation: "England", culture: "en" },
     { id: "it2", name: "Liga Italy B", nation: "Italy", culture: "it" },
     { id: "es2", name: "Liga Spain B", nation: "Spain", culture: "es" },
-    { id: "br3", name: "Liga Brazil C", nation: "Brazil", culture: "br" },
+    { id: "br3", name: "Liga Brasil C", nation: "Brazil", culture: "br" },
     { id: "fr2", name: "Liga France B", nation: "France", culture: "fr" },
     { id: "de2", name: "Liga Germany B", nation: "Germany", culture: "de" },
     { id: "co", name: "Liga Colombia A", nation: "Colombia", culture: "es" }
@@ -112,7 +112,7 @@
      A força define o nível médio do elenco gerado (grandes = mais fortes).
      Quantidade por liga = tamanho real (par, para o mata-mata de pontos-corridos). */
   var REAL_CLUBS = {
-    // Liga Brazil A 2026
+    // Liga Brasil A 2026
     br: [
       ["Andino Real","AND",85],["Espadas Athletic","ESP",84],["Falcão City","FAL",82],["Portuário Sportivo","POR",80],
       ["Aljube AC","ALJ",79],["Cabral FC","CAB",79],["Tramontana CD","TRA",78],["Duna City","DUN",78],
@@ -247,7 +247,7 @@
   // [id, nome, tipo, corPrimária, corSecundária]
   var COMPETITIONS = [
     // Ligas nacionais
-    ["lg-br", "Liga Brazil A", "liga", "#0a7d34", "#ffd200"],
+    ["lg-br", "Liga Brasil A", "liga", "#0a7d34", "#ffd200"],
     ["lg-en", "Liga England A", "liga", "#37003c", "#00ff85"],
     ["lg-es", "Liga Spain A", "liga", "#ee1c25", "#ff8200"],
     ["lg-it", "Liga Italy A", "liga", "#0a2f6e", "#00a3e0"],
@@ -263,16 +263,16 @@
     ["lg-ec", "Liga Ecuador A", "liga", "#ffdd00", "#034ea2"],
     ["lg-uy", "Liga Uruguay A", "liga", "#7bafd4", "#001b69"],
     ["lg-ru", "Liga Ukraine A", "liga", "#0039a6", "#d52b1e"],
-    ["lg-br2", "Liga Brazil B", "liga", "#1e9e4a", "#ffd200"],
+    ["lg-br2", "Liga Brasil B", "liga", "#1e9e4a", "#ffd200"],
     ["lg-en2", "Liga England B", "liga", "#1c2c5b", "#e5b611"],
     ["lg-it2", "Liga Italy B", "liga", "#004b8d", "#26c6da"],
     ["lg-es2", "Liga Spain B", "liga", "#e30613", "#1f6fb2"],
-    ["lg-br3", "Liga Brazil C", "liga", "#1e7d3a", "#ffd200"],
+    ["lg-br3", "Liga Brasil C", "liga", "#1e7d3a", "#ffd200"],
     ["lg-fr2", "Liga France B", "liga", "#0a2a5e", "#e30613"],
     ["lg-de2", "Liga Germany B", "liga", "#d40028", "#111111"],
     ["lg-co", "Liga Colombia A", "liga", "#fcd116", "#003893"],
     // Copas nacionais
-    ["cup-br", "Copa Brazil", "copa", "#1b8a3a", "#f2c200"],
+    ["cup-br", "Copa Brasil", "copa", "#1b8a3a", "#f2c200"],
     ["cup-en", "Copa England", "copa", "#c8102e", "#0a2240"],
     ["cup-es", "Copa Spain", "copa", "#c60b1e", "#ffc400"],
     ["cup-it", "Copa Italy", "copa", "#0b3d91", "#57b4e5"],
@@ -396,7 +396,7 @@
     ["Hélio Justo","pt",48,"Fortim Real"],["Valerio Villa","it",37,"Tridente Sportivo"],["Otávio Abreu","pt",44,"Oriente United"],["Braulio Merino","es",38,"Juvenil Sportivo"],
     // Liga Netherlands
     ["Wout Smit","nl",62,"Dourado EC"],["Sander Vermeer","nl",60,"Riacho Sportivo"],["Teun Mulder","nl",42,"Costeiro Athletic"],
-    // Liga Brazil (todos os 20)
+    // Liga Brasil (todos os 20)
     ["Otávio Vaz","pt",51,"Andino Real"],["Belmiro Vaz","pt",47,"Espadas Athletic"],["Telmo Ornelas","pt",53,"Falcão City"],
     ["Leonel Abreu","pt",45,"Portuário Sportivo"],["Franco Sosa","ar",50,"Aljube AC"],["Valdir Lacerda","br",52,"Cabral FC"],
     ["Agustín Duarte","ar",44,"Tramontana CD"],["Tomás Vega","ar",47,"Duna City"],["Gastón Vega","ar",42,"Palmar United"],
