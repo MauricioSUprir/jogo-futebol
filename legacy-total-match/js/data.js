@@ -1090,8 +1090,8 @@
     "Palmeiras": [
       {n:"Weverton",p:"GK",q:"GOL",a:36,o:80,t:80,v:3000000,nat:"Brazil"},{n:"Marcelo Lomba",p:"GK",q:"GOL",a:37,o:74,t:74,v:500000,nat:"Brazil"},
       {n:"Marcos Rocha",p:"DF",q:"LD",a:36,o:76,t:76,v:1000000,nat:"Brazil"},{n:"Gustavo Gómez",p:"DF",q:"ZAG",a:31,o:82,t:82,v:10000000,nat:"Paraguay"},{n:"Murilo",p:"DF",q:"ZAG",a:27,o:80,t:81,v:12000000,nat:"Brazil"},{n:"Vitor Reis",p:"DF",q:"ZAG",a:19,o:76,t:87,v:15000000,nat:"Brazil"},{n:"Piquerez",p:"DF",q:"LE",a:26,o:80,t:82,v:14000000,nat:"Uruguay"},
-      {n:"Aníbal Moreno",p:"MF",q:"VOL",a:25,o:79,t:82,v:12000000,nat:"Argentina"},{n:"Richard Ríos",p:"MF",q:"VOL",a:24,o:80,t:85,v:18000000,nat:"Colombia"},{n:"Raphael Veiga",p:"MF",q:"MEI",a:29,o:81,t:81,v:14000000,nat:"Brazil"},{n:"Maurício",p:"MF",q:"MEI",a:23,o:78,t:84,v:12000000,nat:"Brazil"},{n:"Emiliano Martínez",p:"MF",q:"MC",a:22,o:76,t:83,v:8000000,nat:"Argentina"},
-      {n:"Estêvão",p:"FW",q:"PD",a:17,o:80,t:92,v:45000000,nat:"Brazil"},{n:"Flaco López",p:"FW",q:"CA",a:24,o:78,t:83,v:14000000,nat:"Argentina"},{n:"Dudu",p:"FW",q:"PE",a:32,o:78,t:78,v:5000000,nat:"Brazil"},{n:"Rony",p:"FW",q:"CA",a:29,o:78,t:78,v:7000000,nat:"Brazil"}
+      {n:"Aníbal Moreno",p:"MF",q:"VOL",a:25,o:79,t:82,v:12000000,nat:"Argentina"},{n:"Richard Ríos",p:"MF",q:"VOL",a:24,o:80,t:85,v:18000000,nat:"Colombia"},{n:"Maurício",p:"MF",q:"MEI",a:23,o:78,t:84,v:12000000,nat:"Brazil"},{n:"Emiliano Martínez",p:"MF",q:"MC",a:22,o:76,t:83,v:8000000,nat:"Argentina"},
+      {n:"Flaco López",p:"FW",q:"CA",a:24,o:78,t:83,v:14000000,nat:"Argentina"},{n:"Dudu",p:"FW",q:"PE",a:32,o:78,t:78,v:5000000,nat:"Brazil"},{n:"Rony",p:"FW",q:"CA",a:29,o:78,t:78,v:7000000,nat:"Brazil"}
     ],
     "Boca Juniors": [
       {n:"Sergio Romero",p:"GK",q:"GOL",a:37,o:78,t:78,v:1000000,nat:"Argentina"},{n:"Leandro Brey",p:"GK",q:"GOL",a:21,o:73,t:82,v:4000000,nat:"Argentina"},
