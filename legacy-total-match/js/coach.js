@@ -3158,10 +3158,28 @@
       el("div", { class: "nego-dot active", text: "1. Com o clube" }),
       el("div", { class: "nego-dot", text: "2. Com o jogador" })
     ]));
-    screen.appendChild(el("div", { class: "player-card" }, [
-      TM.img.playerImg(p, "pc-face"),
-      el("div", { class: "pc-info" }, [ el("div", { class: "pc-name", text: p.name }), el("div", { class: "pc-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + sellClub.name }) ]),
-      TM.ui.ovBadge(p.overall)
+    var negTension = stance.isKey ? "high" : (stance.willSell ? "low" : "mid");
+    var negTLbl = negTension === "low" ? "Aberto a negociar" : negTension === "high" ? "Peça-chave — difícil" : "Vai resistir";
+    screen.appendChild(el("div", { class: "nego2-call" }, [
+      (TM.img && TM.img.clubImg ? TM.img.clubImg(sellClub, "nego2-crest") : el("span", { class: "nego2-crest" })),
+      el("div", { class: "nego2-callinfo" }, [
+        el("div", { class: "nego2-role", text: "NEGOCIANDO COM" }),
+        el("div", { class: "nego2-club", text: sellClub.name }),
+        el("div", { class: "nego2-sub", text: "Caixa disponível: " + money(c, c.budget) })
+      ]),
+      el("div", { class: "nego2-tension " + negTension }, [ el("span", { class: "nego2-tdot" }), el("span", { text: negTLbl }) ])
+    ]));
+    screen.appendChild(el("div", { class: "nego2-player", style: "max-width:640px;margin:10px auto 0" }, [
+      TM.img.playerImg(p, "nego2-face"),
+      el("div", { class: "nego2-pinfo" }, [
+        el("div", { class: "nego2-pname", text: p.name }),
+        el("div", { class: "nego2-pmeta" }, [
+          el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(p) + "</b>" }),
+          el("span", { class: "nego2-chip", html: "IDADE <b>" + p.age + "</b>" }),
+          el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, mval) + "</b>" })
+        ])
+      ]),
+      el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: p.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
     ]));
 
     // jogador INTRANSFERÍVEL — o clube não vende de jeito nenhum
@@ -3179,11 +3197,8 @@
     var stanceLines = [];
     stanceLines.push(stance.willSell ? "• Aberto a vender por um bom valor." : "• Reluta em vender — quer segurar o jogador.");
     stanceLines.push(stance.willLoan ? (stance.willBuyOption ? "• Aceita empréstimo (com ou sem opção de compra)." : "• Aceita apenas empréstimo simples.") : "• Não quer emprestar este jogador.");
-    screen.appendChild(el("div", { class: "stance-box" }, [
-      el("div", { class: "stance-title", text: "📋 Postura do " + sellClub.name }),
-      el("div", { class: "stance-line", text: stanceLines[0] }),
-      el("div", { class: "stance-line", text: stanceLines[1] })
-    ]));
+    screen.appendChild(el("div", { class: "nego2-quote", style: "max-width:640px;margin:10px auto 0", text:
+      (stance.willSell ? "Podemos ouvir uma boa proposta por " + p.name + "." : p.name + " é importante pra gente — só sai por muito. ") + " " + stanceLines[1].replace("• ", "") }));
 
     // seletor de tipo de negócio
     var types = [["buy", "Comprar"]];
