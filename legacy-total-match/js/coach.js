@@ -2221,24 +2221,65 @@
       picked = [rq].concat(picked.filter(function (q) { return q.id !== rq.id; })).slice(0, 4);
     }
 
+    // repórteres (rotativos) e cores de avatar
+    var REPORTERS = [
+      { n: "Rafael Tavares", o: "Canal Esporte" }, { n: "Bianca Rocha", o: "Rádio Gol" },
+      { n: "Otávio Nunes", o: "Jornal Lance" }, { n: "Marina Prado", o: "TV Placar" },
+      { n: "Diego Farias", o: "PodBola" }, { n: "Camila Souza", o: "Portal Chute" },
+      { n: "Henrique Dias", o: "Rede Esporte" }, { n: "Letícia Amaral", o: "Gazeta FC" }
+    ];
+    var RCOLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+    var reporters = pressShuffle(REPORTERS.slice()).slice(0, 4);
+
+    // palco: confronto + subtítulo
+    screen.appendChild(el("div", { class: "press-stage" }, [
+      el("div", { class: "press-match" }, [
+        el("div", { class: "pm-side" }, [ TM.img.clubImg(TM.data.club(c.teamId), "pm-crest"), el("span", { class: "pm-nm", text: myName }) ]),
+        el("span", { class: "pm-vs", text: "VS" }),
+        el("div", { class: "pm-side" }, [ TM.img.clubImg(TM.data.club(oppId), "pm-crest"), el("span", { class: "pm-nm", text: oppName }) ])
+      ]),
+      el("div", { class: "press-substage", text: "🎤 Coletiva pré-jogo" + (compName ? " · " + compName : "") + (isClassic ? " · ⚔️ CLÁSSICO" : "") })
+    ]));
+
+    // medidor de clima (ao vivo)
+    var idx = 0, edge = 0;
+    var meter = el("div", { class: "press-meter" });
+    screen.appendChild(meter);
+    function updMeter() {
+      var pct = Math.max(4, Math.min(96, Math.round(((edge + 4) / 8) * 100)));
+      var cls = edge >= 2 ? "hi" : edge > 0 ? "mid-hi" : edge === 0 ? "mid" : edge <= -2 ? "lo" : "mid-lo";
+      var lbl = edge >= 2 ? "Imprensa impressionada 😎" : edge > 0 ? "Clima positivo 🙂" : edge === 0 ? "Clima neutro 😐" : edge <= -2 ? "Clima tenso 😬" : "Leve tensão 😕";
+      meter.innerHTML = "";
+      meter.appendChild(el("div", { class: "pmeter-top" }, [ el("span", { text: "🌡️ Clima da coletiva" }), el("span", { class: "pmeter-lbl " + cls, text: lbl }) ]));
+      meter.appendChild(el("div", { class: "pmeter-track" }, [ el("div", { class: "pmeter-fill " + cls, style: "width:" + pct + "%" }) ]));
+    }
+    updMeter();
+
     var panel = el("div", { class: "panel-narrow press-panel" });
     screen.appendChild(panel);
-    var idx = 0, edge = 0;
 
     function render() {
       panel.innerHTML = "";
       if (idx >= 4) { done(); return; }
+      var rep = reporters[idx % reporters.length];
+      var col = RCOLORS[idx % RCOLORS.length];
       panel.appendChild(el("div", { class: "press-progress" }, [ el("span", { text: "Pergunta " + (idx + 1) + " de 4" }), el("span", { class: "press-vs", text: "vs " + oppName }) ]));
       var q = picked[idx];
-      panel.appendChild(el("div", { class: "press-reporter" }, [ el("span", { class: "press-mic", text: "🎙️" }), el("div", { class: "press-q", text: fill(q.q) }) ]));
+      panel.appendChild(el("div", { class: "press-reporter" }, [
+        el("div", { class: "press-ava", style: "background:" + col, text: rep.n.charAt(0) }),
+        el("div", { class: "press-rmid" }, [
+          el("div", { class: "press-rname" }, [ el("span", { text: rep.n }), el("span", { class: "press-outlet", text: rep.o }) ]),
+          el("div", { class: "press-q", text: fill(q.q) })
+        ])
+      ]));
       var opts = el("div", { class: "press-opts" });
       q.a.forEach(function (opt) {
         opts.appendChild(el("button", { class: "press-opt", on: { click: function () {
-          edge += opt.e;
+          edge += opt.e; updMeter();
           if (c.pressUsed.indexOf(q.id) < 0) c.pressUsed.push(q.id);
           panel.innerHTML = "";
           panel.appendChild(el("div", { class: "press-answer" }, [ el("span", { class: "press-you", text: "Você:" }), el("span", { text: " " + fill(opt.t) }) ]));
-          panel.appendChild(el("div", { class: "press-react " + (opt.e > 0 ? "good" : opt.e < 0 ? "bad" : "") , text: opt.r }));
+          panel.appendChild(el("div", { class: "press-react " + (opt.e > 0 ? "good" : opt.e < 0 ? "bad" : "") , text: (opt.e > 0 ? "😎 " : opt.e < 0 ? "😬 " : "🎙️ ") + opt.r }));
           panel.appendChild(el("div", { class: "actions" }, [ TM.ui.button(idx < 3 ? "Próxima pergunta →" : "Encerrar coletiva", function () { idx++; render(); }, "btn primary") ]));
         } } }, [ el("span", { text: fill(opt.t) }) ]));
       });
