@@ -64,8 +64,11 @@ html, body {
   justify-content: flex-start;
   min-height: 100vh;
   padding: 20px 18px 40px;
-  animation: fadeIn 0.4s ease;
+  /* animação SÓ de opacidade — sem transform, senão a nav fixa (filha da .screen)
+     fica posicionada relativa à .screen e "trava" no meio da tela durante a animação */
+  animation: screenFade 0.35s ease;
 }
+@keyframes screenFade { from { opacity: 0; } to { opacity: 1; } }
 .screen.is-active { display: flex; }
 .screen-centered { justify-content: center; }
 #screen-splash { justify-content: center; }
@@ -569,6 +572,19 @@ html, body {
 
 /* mercado */
 .market-budget { width: 100%; max-width: 620px; text-align: center; color: var(--gold); font-weight: 700; margin-bottom: 12px; }
+/* radar do olheiro (dica de reforço) */
+.scout-tip { width: 100%; max-width: 620px; display: flex; align-items: center; gap: 10px; justify-content: space-between;
+  background: linear-gradient(135deg, rgba(34,197,94,.12), var(--black-soft)); border: 1px solid rgba(34,197,94,.3);
+  border-radius: 12px; padding: 10px 13px; margin-bottom: 10px; }
+.scout-tip[onclick], .scout-tip { cursor: pointer; }
+.scout-tip-tx { font-size: 12.5px; color: #d7f5e0; line-height: 1.35; }
+.scout-tip-go { flex: 0 0 auto; font-size: 11.5px; font-weight: 800; color: #86efac; text-transform: uppercase; }
+/* filtros rápidos (chips) */
+.mkt-chips { width: 100%; max-width: 620px; display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.mkt-chip { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--black-soft); color: var(--text-dim);
+  font-size: 12.5px; font-weight: 700; cursor: pointer; transition: border-color .15s, color .15s, background .15s; }
+.mkt-chip:hover { border-color: rgba(34,197,94,.5); color: var(--text); }
+.mkt-chip.on { border-color: var(--green); color: #041; background: var(--green); }
 .buy-btn { padding: 8px 12px; border-radius: 8px; border: none; background: linear-gradient(120deg, var(--gold-light), var(--gold));
   color: #000; font-weight: 700; font-size: 12.5px; cursor: pointer; flex-shrink: 0; }
 

@@ -1730,6 +1730,7 @@
       TM.notify.push(career, { icon: "✍️", title: "Livre no mercado assinou", news: true,
         text: deal.toName + " acertou com " + deal.name + " (" + deal.ov + "), que estava sem clube. Contratação a custo zero." });
     }
+    try { if ((deal.ov || 0) >= 79 && TM.social && TM.social.marketPost && Math.random() < 0.6) TM.social.marketPost(career, Object.assign({ free: true }, deal)); } catch (e) {}
   }
   function dealNews(career, deal, arrived) {
     var onShort = (career.shortlist || []).indexOf(deal.pid) >= 0;
@@ -1741,6 +1742,8 @@
         text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
     }
     if (arrived) recordMarketMove(career, deal, deal.fireSale ? "fire" : "buy");
+    // reforços de destaque de outros clubes também aparecem nas redes
+    try { if (arrived && (deal.ov || 0) >= 79 && TM.social && TM.social.marketPost && Math.random() < 0.7) TM.social.marketPost(career, deal); } catch (e) {}
   }
   function fireSaleNews(career, deal) {
     TM.notify.push(career, { icon: "🚨", title: "Crise financeira", news: true,

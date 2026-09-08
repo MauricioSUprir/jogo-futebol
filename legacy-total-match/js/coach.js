@@ -2952,6 +2952,38 @@
     var world = TM.data.world();
     var rosterSet = {}; c.roster.forEach(function (id) { rosterSet[id] = true; });
 
+    // ---- radar do olheiro: setor mais carente do elenco ----
+    var GROUP_LBL = { GK: "goleiro", DF: "defesa", MF: "meio-campo", FW: "ataque" };
+    (function scoutTip() {
+      try {
+        var cnt = { GK: 0, DF: 0, MF: 0, FW: 0 }, best = { GK: 0, DF: 0, MF: 0, FW: 0 };
+        C().rosterPlayers(c).forEach(function (p) { var g = (p.pos in cnt) ? p.pos : "MF"; cnt[g]++; if (p.overall > best[g]) best[g] = p.overall; });
+        var need = { GK: 3, DF: 8, MF: 8, FW: 5 }, worst = null, worstScore = -99;
+        ["GK", "DF", "MF", "FW"].forEach(function (g) { var s = (need[g] - cnt[g]) * 2 + (best[g] < (TM.data.clubRating(c.teamId) - 3) ? 3 : 0); if (s > worstScore) { worstScore = s; worst = g; } });
+        var msg = worstScore > 0
+          ? "🔍 Olheiros recomendam reforçar o " + GROUP_LBL[worst] + " — é o setor mais carente do elenco."
+          : "🔍 Elenco equilibrado. Busque oportunidades de mercado para elevar o nível.";
+        var tipOpts = { class: "scout-tip" };
+        if (worstScore > 0) tipOpts.on = { click: function () { MKT.pos = worst; MKT.sort = "ov"; TM.ui.go("coach-market"); } };
+        var tip = el("div", tipOpts, [
+          el("span", { class: "scout-tip-tx", text: msg }),
+          worstScore > 0 ? el("span", { class: "scout-tip-go", text: "ver " + worst + " →" }) : null
+        ]);
+        screen.appendChild(tip);
+      } catch (e) {}
+    })();
+
+    // ---- filtros rápidos (chips) ----
+    var chipRow = el("div", { class: "mkt-chips" });
+    function chip(label, active, fn) { return el("button", { class: "mkt-chip" + (active ? " on" : ""), text: label, on: { click: fn } }); }
+    var isProm = MKT.potMin >= 78 && MKT.age <= 21, isStar = MKT.ovMin >= 82, isCheap = MKT.valMax > 0 && MKT.valMax <= 12;
+    chipRow.appendChild(chip("💎 Promessas", isProm, function () { MKT.potMin = 78; MKT.age = 21; MKT.ageMin = 15; MKT.ovMin = 0; MKT.sort = "pot"; MKT.free = false; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("⭐ Estrelas", isStar, function () { MKT.ovMin = 82; MKT.potMin = 0; MKT.age = 40; MKT.sort = "ov"; MKT.free = false; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("🆓 Livres", MKT.free, function () { MKT.free = !MKT.free; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("💰 Baratos", isCheap, function () { MKT.valMax = 12; MKT.sort = "ov"; MKT.ovMin = 0; MKT.age = 40; MKT.free = false; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("💵 No orçamento", MKT.affordable, function () { MKT.affordable = !MKT.affordable; TM.ui.go("coach-market"); }));
+    screen.appendChild(chipRow);
+
     // busca
     var input = el("input", { class: "text-input", type: "text", placeholder: "Pesquisar pelo nome...", value: MKT.q });
     input.addEventListener("input", function () { MKT.q = input.value; renderResults(); });
@@ -3556,6 +3588,17 @@
           C().syncLineup(c); // já entra no banco de reservas
           if (parts > 1) TM.notify.push(c, { icon: "💳", title: "Compra parcelada", text: p.name + " parcelado em " + parts + "x de " + money(c, upfront) + " — as próximas parcelas serão cobradas nas próximas temporadas." });
         }
+        // OFICIALIZA a contratação: notícia + post nas redes + feed do mercado
+        try {
+          var myNm = TM.data.club(c.teamId).name;
+          var fromNm = NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "sem clube";
+          var annTxt = isLoan
+            ? myNm + " garante " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ") por empréstimo junto ao " + fromNm + "."
+            : myNm + " anuncia a contratação de " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ")" + (NEGO.oldClubId ? " junto ao " + fromNm + ((NEGO.fee || 0) > 0 ? " por " + money(c, NEGO.fee || 0) : "") : ", que estava livre no mercado") + ".";
+          TM.notify.push(c, { icon: "✍️", title: "Reforço oficializado", news: true, text: annTxt });
+          C().recordMarketMove(c, { pid: p.id, name: p.name, ov: p.overall, fromId: NEGO.oldClubId || null, fromName: fromNm, toId: c.teamId, toName: myNm, val: NEGO.fee || 0 }, isLoan ? "buy" : (NEGO.oldClubId ? "buy" : "free"));
+          if (TM.social && TM.social.announceSigning) TM.social.announceSigning(c, p, myNm, fromNm, NEGO.fee || 0, isLoan);
+        } catch (e) {}
         TM.storage.saveCoachCareer(c);
         quote.className = "nego-quote happy";
         quote.textContent = isLoan

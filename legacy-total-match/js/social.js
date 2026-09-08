@@ -421,7 +421,42 @@
     } } }));
   }
 
-  TM.social = { moraleEdge: moraleEdge, ensureFeed: ensureFeed, morale: morale, userPost: userPost, nudgeMorale: nudgeMorale };
+  // fmt de dinheiro curtinho p/ posts (usa a moeda da carreira quando dá)
+  function feeTxt(career, valEur) {
+    if (!valEur) return "";
+    try { if (TM.money && TM.data) return TM.money(career, valEur); } catch (e) {}
+    var m = valEur / 1e6; return "€" + (m >= 10 ? Math.round(m) : m.toFixed(1)) + "M";
+  }
+  // ANÚNCIO OFICIAL de reforço DO SEU CLUBE — post da diretoria + "here we go", no topo do feed
+  function announceSigning(career, player, toName, fromName, valEur, isLoan) {
+    ensure(career);
+    var origem = isLoan ? "Chega por empréstimo." : (fromName && !/sem clube|livre/i.test(fromName) ? "Contratado junto ao " + fromName + (valEur ? " por " + feeTxt(career, valEur) : "") + "." : "Chega livre no mercado.");
+    var official = post({ handle: toName + " 🏛️", verified: true, kind: "board", badge: "✍️ OFICIAL",
+      photo: chance(0.7) ? photoOf("uniao") : null, morale: 0.7,
+      text: "✍️ OFICIAL: " + player.name + " (" + player.overall + ", " + TM.data.posLabel(player) + ") é o novo reforço do " + toName + "! " + origem + " Bem-vindo! 💚",
+      likes: rint(600, 7000) });
+    official.comments = makeComments(commentCountFor({ badge: "x", morale: 1 }), "mercado");
+    var hwg = post({ handle: HEREWEGO, verified: true, kind: "herewego", badge: "🗞️ Mercado",
+      photo: chance(0.4) ? photoOf("bola") : null,
+      text: "🚨🔴⚪ HERE WE GO! " + player.name + " (" + player.overall + ") é do " + toName + "! " + (isLoan ? "Empréstimo fechado. " : "Contrato assinado. ") + "✍️",
+      likes: rint(900, 12000) });
+    career.social.posts = [official, hwg].concat(career.social.posts).slice(0, 60);
+    career.social.lastGen = career.social.lastGen || "seed";
+    nudgeMorale(career, 0.7);
+  }
+  // post de mercado de OUTROS clubes (movimentação do mundo) — mais leve
+  function marketPost(career, deal) {
+    ensure(career);
+    var val = deal.val || 0;
+    var p = post({ handle: HEREWEGO, verified: true, kind: "herewego", badge: "🗞️ Mercado",
+      photo: chance(0.25) ? photoOf("bola") : null,
+      text: (deal.free ? "✍️ " + deal.toName + " acerta com " + deal.name + " (" + deal.ov + "), livre no mercado."
+        : "🔴⚪ HERE WE GO! " + deal.name + " (" + deal.ov + ") acertou com o " + deal.toName + (deal.fromName ? ", deixando o " + deal.fromName : "") + (val ? " por " + feeTxt(career, val) : "") + ". ✍️"),
+      likes: rint(400, 8000) });
+    career.social.posts = [p].concat(career.social.posts).slice(0, 60);
+  }
+
+  TM.social = { moraleEdge: moraleEdge, ensureFeed: ensureFeed, morale: morale, userPost: userPost, nudgeMorale: nudgeMorale, announceSigning: announceSigning, marketPost: marketPost };
   TM.ui.register("coach-social", function (screen) { renderSocial(screen, "coach"); });
   TM.ui.register("player-social", function (screen) { renderSocial(screen, "player"); });
 })(window);
