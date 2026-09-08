@@ -1485,6 +1485,33 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .invite-banner { padding: 11px 13px; border-radius: 12px; background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.35); margin-bottom: 10px; }
 .inv-txt { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 .inv-acts { display: flex; gap: 8px; }
+/* avatar + linhas clicáveis de amigos */
+.friend-ava, .profile-ava { border-radius: 50%; object-fit: cover; flex: 0 0 auto; background: #17151f; }
+.friend-ava { width: 40px; height: 40px; }
+.friend-ava-wrap { position: relative; flex: 0 0 auto; }
+.friend-ava-wrap .online-dot { position: absolute; right: -1px; bottom: -1px; border: 2px solid var(--black); }
+.friend-info.clickable, .friend-ava-wrap.clickable { cursor: pointer; }
+.friend-info.clickable:hover .friend-name { color: var(--gold); }
+.req-row { border-color: rgba(240,192,64,.4); background: rgba(240,192,64,.06); }
+/* badge de solicitações no hub */
+.hub-btn { position: relative; }
+.hub-badge { position: absolute; top: 8px; right: 10px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #e23b3b; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; }
+/* perfil do jogador */
+.profile-head { display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, rgba(34,197,94,.12), var(--black-soft)); border: 1px solid var(--line); margin-bottom: 10px; }
+.profile-ava-wrap { position: relative; flex: 0 0 auto; }
+.profile-ava { width: 66px; height: 66px; }
+.profile-ava-wrap .online-dot { position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; border: 2px solid var(--black); }
+.profile-id { min-width: 0; }
+.profile-name { font-size: 20px; font-weight: 800; }
+.profile-num { font-size: 13px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+.profile-status { font-size: 11.5px; margin-top: 3px; }
+.profile-status.on { color: #7ee39a; } .profile-status.off { color: var(--text-dim); }
+.profile-stats { display: flex; gap: 8px; margin-bottom: 10px; }
+.profile-stat { flex: 1; text-align: center; padding: 10px 6px; border-radius: 12px; background: var(--black-soft); border: 1px solid var(--line); }
+.ps-val { font-size: 19px; font-weight: 800; color: #86efac; }
+.ps-lbl { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
+.profile-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.profile-acts .btn.sent { opacity: .7; }
 /* chat */
 .chat-thread { display: flex; flex-direction: column; gap: 6px; padding: 10px; overflow-y: auto; max-height: 62vh; }
 .chat-bar { display: flex; gap: 8px; padding: 8px 10px; position: sticky; bottom: 0; background: var(--black); border-top: 1px solid var(--line); }
