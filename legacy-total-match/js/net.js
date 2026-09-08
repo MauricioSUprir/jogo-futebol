@@ -127,10 +127,12 @@
   function firebaseNow() { return global.firebase.database.ServerValue.TIMESTAMP; }
 
   function finishReady(uid, number, name) {
-    net.me = { uid: uid, number: number, name: name };
+    net.me = { uid: uid, number: number, name: name, photo: null, favClub: null, bio: null };
     net.ready = true;
     setupPresence(uid);
     listenInvites(uid);
+    // carrega extras do perfil (foto/clube favorito/bio) sem bloquear o ready
+    try { net._db.ref("users/" + uid).once("value").then(function (s) { var v = s.val() || {}; net.me.photo = v.photo || null; net.me.favClub = v.favClub || null; net.me.bio = v.bio || null; }); } catch (e) {}
     var cbs = net._cbReady.slice(); net._cbReady = [];
     cbs.forEach(function (cb) { try { cb(net.me); } catch (e) {} });
   }
@@ -160,6 +162,17 @@
     name = (name || "").trim().slice(0, 16) || "Jogador";
     saveLocalName(name);
     if (net.me) { net.me.name = name; net._db.ref("users/" + net.me.uid + "/name").set(name); }
+  };
+  // atualiza o perfil próprio (foto / clube favorito / bio / nome)
+  net.updateProfile = function (data, cb) {
+    if (!net.me) { cb && cb(false); return; }
+    data = data || {};
+    var upd = {};
+    if (data.name != null) { var nm = (data.name || "").trim().slice(0, 16) || "Jogador"; upd.name = nm; net.me.name = nm; saveLocalName(nm); }
+    if (data.photo !== undefined) { upd.photo = data.photo || null; net.me.photo = data.photo || null; }
+    if (data.favClub !== undefined) { upd.favClub = data.favClub || null; net.me.favClub = data.favClub || null; }
+    if (data.bio !== undefined) { upd.bio = (data.bio || "").slice(0, 140) || null; net.me.bio = upd.bio; }
+    net._db.ref("users/" + net.me.uid).update(upd).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
   };
 
   // ---- vínculo de conta <-> identidade online ----
@@ -222,7 +235,7 @@
         if (perFriend[id]) return;
         var h = net._db.ref("users/" + id).on("value", function (s) {
           var v = s.val() || {};
-          state[id] = { uid: id, name: v.name || "Jogador", number: v.number, online: !!v.online, lastSeen: v.lastSeen || 0 };
+          state[id] = { uid: id, name: v.name || "Jogador", number: v.number, online: !!v.online, lastSeen: v.lastSeen || 0, photo: v.photo || null };
           emit();
         });
         perFriend[id] = h;
@@ -232,10 +245,11 @@
   };
   // perfil público de um jogador (dados do usuário + estatísticas do ranking)
   net.getProfile = function (uid, cb) {
-    var out = { uid: uid, name: "Jogador", number: null, online: false, lastSeen: 0, wins: 0, played: 0 };
+    var out = { uid: uid, name: "Jogador", number: null, online: false, lastSeen: 0, wins: 0, played: 0, photo: null, favClub: null, bio: null };
     net._db.ref("users/" + uid).once("value").then(function (s) {
       var v = s.val() || {};
       out.name = v.name || "Jogador"; out.number = v.number || null; out.online = !!v.online; out.lastSeen = v.lastSeen || 0;
+      out.photo = v.photo || null; out.favClub = v.favClub || null; out.bio = v.bio || null;
       out.isFriend = !!(v.friends && net.me && v.friends[net.me.uid]);
       return net._db.ref("ranking/" + uid).once("value");
     }).then(function (s2) {

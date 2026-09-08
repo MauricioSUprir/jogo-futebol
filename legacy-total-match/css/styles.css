@@ -1515,6 +1515,30 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 .ps-lbl { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-top: 2px; }
 .profile-acts { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
 .profile-acts .btn.sent { opacity: .7; }
+/* clube favorito + bio no perfil */
+.profile-fav { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; background: var(--black-soft); border: 1px solid var(--line); margin-bottom: 8px; }
+.pf-crest { width: 30px; height: 34px; object-fit: contain; flex: 0 0 auto; }
+.pf-lbl { font-size: 10.5px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; }
+.pf-name { font-size: 14px; font-weight: 700; }
+.profile-bio { font-style: italic; color: var(--text-dim); font-size: 13px; padding: 8px 12px; border-left: 3px solid var(--green); background: rgba(34,197,94,.06); border-radius: 0 8px 8px 0; margin-bottom: 10px; }
+/* cartão "meu perfil" no hub */
+.id-me { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 4px; border-radius: 12px; }
+.id-me:hover { background: rgba(255,255,255,.03); }
+.profile-ava-sm { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; background: #17151f; }
+.id-me-info { flex: 1; min-width: 0; }
+.id-me-name { font-size: 16px; font-weight: 800; }
+.id-me-num { font-size: 12px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
+.id-me-fav { font-size: 11.5px; color: #86efac; margin-top: 1px; }
+.id-me-fav.dim { color: var(--text-dim); }
+.id-me-acts { display: flex; gap: 8px; margin-top: 10px; }
+.id-me-acts .btn { flex: 1; }
+/* editar perfil: foto */
+.pe-photo { width: 96px !important; height: 96px !important; border-radius: 50% !important; margin: 0 auto; }
+.pe-photo .photo-img { border-radius: 50%; }
+.pe-photo-acts { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+/* mini-perfil (modal) */
+.profile-sheet .ps-body { padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.profile-sheet .profile-stats { margin-top: 8px; }
 /* chat */
 .chat-thread { display: flex; flex-direction: column; gap: 6px; padding: 10px; overflow-y: auto; max-height: 62vh; }
 .chat-bar { display: flex; gap: 8px; padding: 8px 10px; position: sticky; bottom: 0; background: var(--black); border-top: 1px solid var(--line); }

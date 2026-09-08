@@ -37,14 +37,19 @@
       done = true;
       if (!body.isConnected) return;
       TM.ui.clear(body);
-      // cartão de identidade
-      var nameIn = el("input", { class: "select", type: "text", maxlength: "16", value: me.name });
-      nameIn.addEventListener("change", function () { N().setName(nameIn.value); TM.ui.toast("Nome salvo"); });
+      // cartão de identidade (com foto do perfil + editar)
       body.appendChild(el("div", { class: "id-card" }, [
-        el("div", { class: "id-row" }, [ el("span", { class: "id-lbl", text: "Seu nome" }), nameIn ]),
-        el("div", { class: "id-num-wrap" }, [
-          el("div", { class: "id-num-lbl", text: "Seu número (compartilhe com amigos)" }),
-          el("div", { class: "id-num", text: "#" + me.number }),
+        el("div", { class: "id-me clickable", on: { click: function () { TM.ui.go("online-profile", { uid: me.uid, name: me.name, back: "online" }); } } }, [
+          el("div", { class: "friend-ava-wrap" }, [ avatarOf(me.name, "profile-ava-sm", me.photo) ]),
+          el("div", { class: "id-me-info" }, [
+            el("div", { class: "id-me-name", text: me.name }),
+            el("div", { class: "id-me-num", text: "#" + me.number }),
+            me.favClub && TM.data.club(me.favClub) ? el("div", { class: "id-me-fav", text: "❤ " + TM.data.club(me.favClub).name }) : el("div", { class: "id-me-fav dim", text: "Toque para ver seu perfil" })
+          ]),
+          el("span", { class: "row-chev", text: "›" })
+        ]),
+        el("div", { class: "id-me-acts" }, [
+          TM.ui.button("✏️ Editar perfil", function () { TM.ui.go("online-profile-edit", { back: "online" }); }, "btn small"),
           TM.ui.button("📋 Copiar número", function () { copy(me.number); TM.ui.toast("Número copiado!"); }, "btn ghost small")
         ])
       ]));
@@ -86,8 +91,9 @@
   /* ---------- CENTRAL DE AMIGOS ---------- */
   var friendsStop = null, reqStop = null;
   function stopFriendListeners() { if (friendsStop) { friendsStop(); friendsStop = null; } if (reqStop) { reqStop(); reqStop = null; } }
-  // avatar simples por inicial/cor (determinístico pelo nome)
-  function avatarOf(name, cls) {
+  // avatar: foto personalizada se houver, senão inicial/cor (determinístico pelo nome)
+  function avatarOf(name, cls, photo) {
+    if (photo) return el("img", { class: cls || "friend-ava", src: photo });
     name = name || "?";
     var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">' +
@@ -97,6 +103,42 @@
     return el("img", { class: cls || "friend-ava", src: "data:image/svg+xml;utf8," + encodeURIComponent(svg) });
   }
   function openProfile(uid, name, back) { stopFriendListeners(); TM.ui.go("online-profile", { uid: uid, name: name, back: back || "online-friends" }); }
+  // mini-perfil em modal (sem sair da tela atual — ideal para a sala de partida)
+  function openProfileSheet(uid, name) {
+    if (!uid || (N().me && uid === N().me.uid)) return;
+    var overlay = el("div", { class: "modal-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var box = el("div", { class: "cmodal profile-sheet" });
+    box.appendChild(el("div", { class: "cmodal-head" }, [ el("span", { text: "Perfil" }), el("button", { class: "cmodal-x", text: "✕", on: { click: function () { overlay.remove(); } } }) ]));
+    var content = el("div", { class: "ps-body" }, [ el("p", { class: "intro-text", text: "Carregando…" }) ]);
+    box.appendChild(content);
+    overlay.appendChild(box); document.body.appendChild(overlay);
+    N().getProfile(uid, function (p) {
+      if (!content.isConnected) return;
+      TM.ui.clear(content);
+      var winPct = p.played ? Math.round((p.wins / p.played) * 100) : 0;
+      var favClub = p.favClub ? TM.data.club(p.favClub) : null;
+      content.appendChild(el("div", { class: "profile-head" }, [
+        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo), onlineDot(p.online) ]),
+        el("div", { class: "profile-id" }, [ el("div", { class: "profile-name", text: p.name }), el("div", { class: "profile-num", text: "#" + (p.number || "----") }), el("div", { class: "profile-status " + (p.online ? "on" : "off"), text: p.online ? "🟢 Online" : ("⚪ " + lastSeenTxt(p.lastSeen)) }) ])
+      ]));
+      if (favClub) content.appendChild(el("div", { class: "profile-fav" }, [ TM.img.clubImg(favClub, "pf-crest"), el("div", {}, [ el("div", { class: "pf-lbl", text: "Clube do coração" }), el("div", { class: "pf-name", text: favClub.name }) ]) ]));
+      if (p.bio) content.appendChild(el("div", { class: "profile-bio", text: "“" + p.bio + "”" }));
+      content.appendChild(el("div", { class: "profile-stats" }, [ statTile("Vitórias", p.wins), statTile("Jogos", p.played), statTile("Aproveit.", winPct + "%") ]));
+      if (!p.isFriend) {
+        var addBtn = TM.ui.button("➕ Enviar solicitação de amizade", function () {
+          N().sendFriendRequest(uid, function (ok, msg) {
+            if (ok) { TM.ui.toast("Solicitação enviada a " + p.name + "!"); addBtn.textContent = "✅ Enviada"; addBtn.disabled = true; }
+            else TM.ui.toast(msg === "já é seu amigo" ? "Vocês já são amigos" : "Não foi possível enviar");
+          });
+        }, "btn primary");
+        content.appendChild(addBtn);
+      } else {
+        content.appendChild(el("div", { class: "profile-bio", style: "text-align:center", text: "✔ Já é seu amigo" }));
+      }
+      content.appendChild(TM.ui.button("Abrir perfil completo →", function () { overlay.remove(); openProfile(uid, p.name, "online"); }, "btn ghost small"));
+    });
+  }
+  TM.online = TM.online || {}; TM.online.openProfileSheet = openProfileSheet;
 
   TM.ui.register("online-friends", function (screen) {
     screen.appendChild(TM.ui.topbar("👥 Amigos", function () { stopFriendListeners(); TM.ui.go("online"); }));
@@ -145,7 +187,7 @@
       friends.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
       friends.forEach(function (f) {
         list.appendChild(el("div", { class: "friend-row" }, [
-          el("div", { class: "friend-ava-wrap clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ avatarOf(f.name), onlineDot(f.online) ]),
+          el("div", { class: "friend-ava-wrap clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ avatarOf(f.name, null, f.photo), onlineDot(f.online) ]),
           el("div", { class: "friend-info clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ el("div", { class: "friend-name", text: f.name }), el("div", { class: "friend-sub", text: "#" + f.number + " · " + (f.online ? "online" : "offline") }) ]),
           TM.ui.button("💬", function () { stopFriendListeners(); TM.ui.go("online-chat", { fuid: f.uid, name: f.name }); }, "btn ghost small"),
           TM.ui.button("⚔️", function () { inviteFriend(f); }, "btn primary small")
@@ -170,15 +212,25 @@
       if (!body.isConnected) return;
       TM.ui.clear(body);
       var winPct = p.played ? Math.round((p.wins / p.played) * 100) : 0;
+      var favClub = p.favClub ? TM.data.club(p.favClub) : null;
       // cabeçalho
       body.appendChild(el("div", { class: "profile-head" }, [
-        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava"), onlineDot(p.online) ]),
+        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo), onlineDot(p.online) ]),
         el("div", { class: "profile-id" }, [
           el("div", { class: "profile-name", text: p.name }),
           el("div", { class: "profile-num", text: "#" + (p.number || "----") }),
           el("div", { class: "profile-status " + (p.online ? "on" : "off"), text: p.online ? "🟢 Online agora" : ("⚪ " + lastSeenTxt(p.lastSeen)) })
         ])
       ]));
+      // clube favorito
+      if (favClub) {
+        body.appendChild(el("div", { class: "profile-fav" }, [
+          TM.img.clubImg(favClub, "pf-crest"),
+          el("div", {}, [ el("div", { class: "pf-lbl", text: "Clube do coração" }), el("div", { class: "pf-name", text: favClub.name }) ])
+        ]));
+      }
+      // bio
+      if (p.bio) body.appendChild(el("div", { class: "profile-bio", text: "“" + p.bio + "”" }));
       // estatísticas online
       body.appendChild(el("div", { class: "profile-stats" }, [
         statTile("Vitórias", p.wins), statTile("Jogos", p.played), statTile("Aproveit.", winPct + "%")
@@ -187,7 +239,8 @@
       body.appendChild(TM.ui.button("📋 Copiar número", function () { copy(p.number || ""); TM.ui.toast("Número copiado!"); }, "btn ghost small"));
 
       if (isMe) {
-        body.appendChild(el("p", { class: "intro-text", text: "Este é o seu perfil. Compartilhe seu número para receber solicitações." }));
+        body.appendChild(TM.ui.button("✏️ Editar meu perfil", function () { TM.ui.go("online-profile-edit", { back: backTo }); }, "btn primary"));
+        body.appendChild(el("p", { class: "intro-text", text: "Compartilhe seu número (#" + (p.number || "----") + ") para receber solicitações de amizade." }));
         return;
       }
 
@@ -225,6 +278,77 @@
     if (d < 86400000) return "visto há " + Math.floor(d / 3600000) + "h";
     return "visto há " + Math.floor(d / 86400000) + " dia(s)";
   }
+
+  /* ---------- EDITAR MEU PERFIL ---------- */
+  TM.ui.register("online-profile-edit", function (screen, params) {
+    if (!N().available || !N().ready) { TM.ui.go("online"); return; }
+    var backTo = (params && params.back) || "online";
+    screen.appendChild(TM.ui.topbar("✏️ Meu perfil", function () { TM.ui.go(backTo); }));
+    var me = N().me;
+    var draft = { name: me.name, photo: me.photo || null, favClub: me.favClub || null, bio: me.bio || "" };
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // foto
+    var photoBox = el("div", { class: "photo-drop pe-photo" });
+    function paintPhoto() { TM.ui.clear(photoBox); if (draft.photo) photoBox.appendChild(el("img", { src: draft.photo, class: "photo-img" })); else photoBox.appendChild(el("span", { text: "📷 Foto" })); }
+    var fileIn = el("input", { type: "file", accept: "image/*", style: "display:none" });
+    photoBox.addEventListener("click", function () { fileIn.click(); });
+    fileIn.addEventListener("change", function () {
+      var f = fileIn.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function (ev) { var img = new Image(); img.onload = function () {
+        var cv = document.createElement("canvas"), sc = Math.min(1, 160 / Math.max(img.width, img.height));
+        cv.width = img.width * sc; cv.height = img.height * sc; cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        draft.photo = cv.toDataURL("image/jpeg", 0.8); paintPhoto();
+      }; img.src = ev.target.result; };
+      r.readAsDataURL(f);
+    });
+    paintPhoto();
+    var photoActs = el("div", { class: "pe-photo-acts" }, [
+      TM.ui.button("Trocar foto", function () { fileIn.click(); }, "btn ghost small"),
+      draft.photo ? TM.ui.button("Remover", function () { draft.photo = null; paintPhoto(); }, "btn ghost small") : null
+    ]);
+    body.appendChild(el("div", { class: "setting center" }, [ photoBox, fileIn, photoActs ]));
+
+    // nome
+    var nameIn = el("input", { class: "select", type: "text", maxlength: "16", value: draft.name });
+    nameIn.addEventListener("input", function () { draft.name = nameIn.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Nome" }), nameIn ]));
+
+    // clube favorito (liga -> clube)
+    var lgSel = el("select", { class: "select" });
+    lgSel.appendChild(el("option", { value: "", text: "— nenhum —" }));
+    TM.data.world().leagues.forEach(function (lg) { lgSel.appendChild(el("option", { value: lg.id, text: lg.name })); });
+    var clubSel = el("select", { class: "select" });
+    function fillClubs(leagueId, sel) {
+      TM.ui.clear(clubSel);
+      if (!leagueId) { clubSel.appendChild(el("option", { value: "", text: "—" })); clubSel.disabled = true; return; }
+      clubSel.disabled = false;
+      TM.data.league(leagueId).clubIds.map(TM.data.club).sort(function (a, b) { return a.name.localeCompare(b.name); })
+        .forEach(function (c) { var o = el("option", { value: c.id, text: c.name }); if (c.id === sel) o.selected = true; clubSel.appendChild(o); });
+    }
+    // pré-seleção se já tiver clube favorito
+    if (draft.favClub) { var fc = TM.data.club(draft.favClub); if (fc) { lgSel.value = fc.leagueId; fillClubs(fc.leagueId, draft.favClub); } else fillClubs(null); } else fillClubs(null);
+    lgSel.addEventListener("change", function () { fillClubs(lgSel.value); draft.favClub = clubSel.value || null; });
+    clubSel.addEventListener("change", function () { draft.favClub = clubSel.value || null; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Clube do coração" }), el("div", { class: "cc-name-row" }, [ lgSel, clubSel ]) ]));
+
+    // bio
+    var bioIn = el("textarea", { class: "comp-ta", maxlength: "140", placeholder: "Escreva algo sobre você (opcional)…" });
+    bioIn.value = draft.bio || "";
+    bioIn.addEventListener("input", function () { draft.bio = bioIn.value; });
+    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Bio" }), bioIn ]));
+
+    body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("💾 Salvar perfil", function () {
+        N().updateProfile({ name: draft.name, photo: draft.photo, favClub: draft.favClub, bio: draft.bio }, function (ok) {
+          TM.ui.toast(ok ? "✔ Perfil salvo!" : "Não foi possível salvar");
+          if (ok) TM.ui.go(backTo);
+        });
+      }, "btn primary big")
+    ]));
+  });
 
   function inviteFriend(f) {
     if (!f.online) { TM.ui.toast(f.name + " está offline"); return; }
@@ -484,9 +608,9 @@
 
     // status dos dois jogadores
     wrap.appendChild(el("div", { class: "room-status" }, [
-      seatChip("🔵", m.hostName || "Anfitrião", isDraft ? !!m.hostDraft : !!m.hostTeam),
+      seatChip("🔵", m.hostName || "Anfitrião", isDraft ? !!m.hostDraft : !!m.hostTeam, m.host),
       el("span", { class: "vs-mini", text: "×" }),
-      seatChip("🔴", m.guestName || "Convidado…", isDraft ? !!m.guestDraft : !!m.guestTeam)
+      seatChip("🔴", m.guestName || "Convidado…", isDraft ? !!m.guestDraft : !!m.guestTeam, m.guest)
     ]));
 
     if (!m.guest) { wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Aguardando o adversário…" })); }
@@ -533,8 +657,12 @@
     if (myTeam && oppTeam) wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Tudo pronto! Iniciando a partida…" }));
   }
 
-  function seatChip(emoji, name, ready) {
-    return el("div", { class: "seat-chip" + (ready ? " ready" : "") }, [ el("span", { text: emoji }), el("span", { class: "seat-chip-nm", text: name }), el("span", { class: "seat-chip-st", text: ready ? "✔" : "…" }) ]);
+  function seatChip(emoji, name, ready, uid) {
+    var me = N().me ? N().me.uid : null;
+    var clickable = uid && uid !== me;
+    var chip = el("div", { class: "seat-chip" + (ready ? " ready" : "") + (clickable ? " clickable" : "") }, [ el("span", { text: emoji }), el("span", { class: "seat-chip-nm", text: name }), el("span", { class: "seat-chip-st", text: clickable ? "👤" : (ready ? "✔" : "…") }) ]);
+    if (clickable) chip.addEventListener("click", function () { openProfileSheet(uid, name); });
+    return chip;
   }
   function teamPreview(source, id, owner) {
     var t = teamObj(source, id);
