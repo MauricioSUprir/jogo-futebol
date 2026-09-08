@@ -340,6 +340,51 @@
   }
 
   /* ---------- central do jogador ---------- */
+  // painel lateral direito (SÓ PC largo) da carreira de jogador
+  function buildPlayerRail(screen, c) {
+    var club = TM.data.club(c.clubId);
+    var rail = el("aside", { class: "coach-rail", "aria-hidden": "true" });
+    function numBox(l, v) { return el("div", { class: "cr-pbox" }, [ el("div", { class: "cr-pv", text: v }), el("div", { class: "cr-pl", text: l }) ]); }
+    var avg = c.seasonApps ? (c.seasonRatingSum / c.seasonApps).toFixed(1) : "—";
+    rail.appendChild(el("div", { class: "cr-title", text: "📊 Seus números" }));
+    rail.appendChild(el("div", { class: "cr-pnum" }, [ numBox("Jogos", c.seasonApps || 0), numBox("Gols", c.seasonGoals || 0), numBox("Nota", avg) ]));
+
+    var recent = (c.recentRatings || []).slice(-6);
+    if (recent.length) {
+      rail.appendChild(el("div", { class: "cr-title", text: "🔥 Forma recente" }));
+      var fr = el("div", { class: "cr-form" });
+      recent.forEach(function (r) { fr.appendChild(el("span", { class: "cr-fp rating-" + ratingClass(r), text: r.toFixed(1) })); });
+      rail.appendChild(fr);
+    }
+
+    var nextFix = null; if (c.round < c.fixtures.length) c.fixtures[c.round].forEach(function (m) { if (m[0] === c.clubId || m[1] === c.clubId) nextFix = m; });
+    if (nextFix) {
+      var isHome = nextFix[0] === c.clubId, opp = TM.data.club(isHome ? nextFix[1] : nextFix[0]);
+      rail.appendChild(el("div", { class: "cr-title", text: "⚽ Próximo jogo" }));
+      rail.appendChild(el("div", { class: "cr-next" }, [ TM.img.clubImg(opp, "cr-tcrest"), el("div", { class: "cr-nextinfo" }, [ el("div", { class: "cr-nextnm", text: opp.name }), el("div", { class: "cr-nextsub", text: (isHome ? "Em casa" : "Fora") + " · Rodada " + (c.round + 1) }) ]) ]));
+    }
+
+    if (c.objective) {
+      rail.appendChild(el("div", { class: "cr-title", text: "🎯 Meta da temporada" }));
+      var target = c.objective.target || 1;
+      var cur = c.objective.type === "goals" ? (c.seasonGoals || 0) : (c.seasonApps ? c.seasonRatingSum / c.seasonApps : 0);
+      var pct = Math.max(0, Math.min(100, Math.round((cur / target) * 100)));
+      rail.appendChild(el("div", { class: "cr-morale" }, [
+        el("div", { class: "cr-mtop" }, [ el("span", { text: c.objective.desc }), el("span", { class: "cr-mval mm-ok", text: pct + "%" }) ]),
+        el("div", { class: "cr-mbar" }, [ el("div", { class: "cr-mfill mm-ok", style: "width:" + pct + "%" }) ])
+      ]));
+    }
+
+    rail.appendChild(el("div", { class: "cr-title", text: "📈 Evolução" }));
+    rail.appendChild(el("div", { class: "cr-morale" }, [
+      el("div", { class: "cr-mtop" }, [ el("span", { text: "Overall atual" }), el("span", { class: "cr-mval mm-ok", text: c.overall }) ]),
+      c.potential ? el("div", { class: "cr-mtop", style: "margin-top:6px" }, [ el("span", { text: "Potencial" }), el("span", { class: "cr-mval", text: c.potential }) ]) : null
+    ]));
+    if (c.skillPoints > 0) rail.appendChild(el("button", { class: "cr-more", text: "⭐ Gastar " + c.skillPoints + " ponto(s) →", on: { click: function () { TM.ui.go("player-attrs"); } } }));
+
+    screen.appendChild(rail);
+  }
+
   TM.ui.register("player-hub", function (screen) {
     var c = TM.storage.playerCareer();
     if (!c) { TM.ui.go("player"); return; }
@@ -369,6 +414,8 @@
       ]);
     } } });
     screen.appendChild(TM.ui.topbar("Minha Carreira", function () { TM.ui.go("modes"); }, el("div", { class: "tb-actions" }, [ bell, dots ])));
+
+    try { buildPlayerRail(screen, c); screen.classList.add("coach-rail-host", "rae-desk"); } catch (e) {}
 
     // cartão do jogador
     screen.appendChild(el("div", { class: "player-card" }, [
