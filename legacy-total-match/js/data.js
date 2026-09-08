@@ -342,7 +342,16 @@
     "Cape Verde": "Cabo Verde", "Tunisia": "Tunísia", "Algeria": "Argélia",
     "Greece": "Grécia", "Czech Republic": "Chéquia", "Hungary": "Hungria", "Romania": "Romênia", "Ireland": "Irlanda",
     "Venezuela": "Venezuela", "Costa Rica": "Costa Rica", "South Africa": "África do Sul", "DR Congo": "RD Congo", "Jamaica": "Jamaica",
-    "Georgia": "Geórgia", "Armenia": "Armênia", "Russia": "Rússia"
+    "Georgia": "Geórgia", "Armenia": "Armênia", "Russia": "Rússia",
+    "Slovenia": "Eslovênia", "Slovakia": "Eslováquia", "Finland": "Finlândia", "Iceland": "Islândia", "Albania": "Albânia",
+    "Kosovo": "Kosovo", "North Macedonia": "Macedônia do Norte", "Montenegro": "Montenegro", "Israel": "Israel", "Angola": "Angola",
+    "Mali": "Mali", "Guinea": "Guiné", "Burkina Faso": "Burkina Faso", "Zambia": "Zâmbia", "Gabon": "Gabão",
+    "Congo": "Congo", "Guinea-Bissau": "Guiné-Bissau", "Mozambique": "Moçambique", "Bolivia": "Bolívia", "Honduras": "Honduras",
+    "Panama": "Panamá", "Guatemala": "Guatemala", "El Salvador": "El Salvador", "Azerbaijan": "Azerbaijão", "Kazakhstan": "Cazaquistão",
+    "Uzbekistan": "Uzbequistão", "Northern Ireland": "Irlanda do Norte", "Curaçao": "Curaçao", "Suriname": "Suriname", "Equatorial Guinea": "Guiné Equatorial",
+    "Togo": "Togo", "Benin": "Benin", "Kenya": "Quênia", "Uganda": "Uganda", "Comoros": "Comores",
+    "Madagascar": "Madagascar", "New Zealand": "Nova Zelândia", "China": "China", "Belarus": "Bielorrússia", "Moldova": "Moldávia",
+    "Bulgaria": "Bulgária", "Lithuania": "Lituânia", "Luxembourg": "Luxemburgo", "The Gambia": "Gâmbia", "Sierra Leone": "Serra Leoa"
   };
   var NATIONS = [
     ["Brazil","#009c3b","#ffdf00","br"],["Argentina","#75aadb","#ffffff","ar"],["France","#0055a4","#ffffff","fr"],
@@ -365,7 +374,22 @@
     ["Romania","#002b7f","#fcd116","it"],["Ireland","#169b62","#ff883e","en"],["Venezuela","#cf142b","#00247d","es"],
     ["Costa Rica","#002b7f","#ce1126","es"],["South Africa","#007a4d","#ffb612","af"],["DR Congo","#007fff","#f7d618","af"],
     ["Jamaica","#009b3a","#fed100","us"],
-    ["Georgia","#ffffff","#ff0000","it"],["Armenia","#d90012","#0033a0","it"],["Russia","#ffffff","#0039a6","de"]
+    ["Georgia","#ffffff","#ff0000","it"],["Armenia","#d90012","#0033a0","it"],["Russia","#ffffff","#0039a6","de"],
+    ["Slovenia","#ffffff","#005da4","de"],["Slovakia","#ee1c25","#0b4ea2","de"],["Finland","#ffffff","#003580","nl"],
+    ["Iceland","#02529c","#dc1e35","nl"],["Albania","#e41e20","#000000","it"],["Kosovo","#244aa5","#d0a650","it"],
+    ["North Macedonia","#d20000","#ffe600","it"],["Montenegro","#c40308","#d4af37","it"],["Israel","#0038b8","#ffffff","asia"],
+    ["Angola","#cc092f","#000000","af"],["Mali","#14b53a","#fcd116","af"],["Guinea","#ce1126","#fcd116","af"],
+    ["Burkina Faso","#009e49","#ef2b2d","af"],["Zambia","#198a00","#ef7d00","af"],["Gabon","#009e60","#3a75c4","af"],
+    ["Congo","#009543","#dc241f","af"],["Guinea-Bissau","#ce1126","#009e49","af"],["Mozambique","#007168","#ffd200","af"],
+    ["Bolivia","#d52b1e","#f9e300","es"],["Honduras","#0073cf","#ffffff","es"],["Panama","#005293","#d21034","es"],
+    ["Guatemala","#4997d0","#ffffff","es"],["El Salvador","#0f47af","#ffffff","es"],["Azerbaijan","#00b5e2","#ef3340","de"],
+    ["Kazakhstan","#00afca","#fec50c","de"],["Uzbekistan","#1eb53a","#0099b5","asia"],["Northern Ireland","#ffffff","#00843d","en"],
+    ["Curaçao","#002b7f","#f9d616","nl"],["Suriname","#377e3f","#b40a2d","nl"],["Equatorial Guinea","#3e9a00","#e32118","af"],
+    ["Togo","#006a4e","#ffce00","af"],["Benin","#008751","#fcd116","af"],["Kenya","#006600","#bb0000","af"],
+    ["Uganda","#000000","#fcdc04","af"],["Comoros","#3d8e33","#ffffff","af"],["Madagascar","#fc3d32","#007e3a","af"],
+    ["New Zealand","#00247d","#ffffff","en"],["China","#de2910","#ffde00","asia"],["Belarus","#d22730","#009739","de"],
+    ["Moldova","#0046ae","#ffd200","it"],["Bulgaria","#ffffff","#00966e","it"],["Lithuania","#fdb913","#006a44","de"],
+    ["Luxembourg","#ed2939","#00a1de","fr"],["The Gambia","#3a7728","#0c1c8c","af"],["Sierra Leone","#1eb53a","#0072c6","af"]
   ].map(function (n, i) {
     return { id: "nat" + i, key: n[0], name: NATION_PT[n[0]] || n[0], colors: { primary: n[1], secondary: n[2] }, culture: n[3], players: [] };
   });
@@ -1155,7 +1179,8 @@
           strength: strength, playerIds: []
         };
         // elenco: na edição Atualizado usa o elenco REAL do clube (se houver); senão o padrão
-        var realSquad = (pro && proc && PRO_SQUADS[cname]) ? PRO_SQUADS[cname] : REAL_SQUADS[rc[0]];
+        var realSquad = (pro && proc) ? (PRO_SQUADS[ld.id + "/" + cname] || PRO_SQUADS[cname]) : null;
+        if (!realSquad) realSquad = REAL_SQUADS[rc[0]];
         if (realSquad) {
           for (var rp = 0; rp < realSquad.length; rp++) {
             var rpl = realSquad[rp];
