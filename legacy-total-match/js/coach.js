@@ -2228,7 +2228,7 @@
       { n: "Diego Farias", o: "PodBola" }, { n: "Camila Souza", o: "Portal Chute" },
       { n: "Henrique Dias", o: "Rede Esporte" }, { n: "Letícia Amaral", o: "Gazeta FC" }
     ];
-    var RCOLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#a855f7", "#06b6d4"];
+    var RCOLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#14b8a6", "#06b6d4"];
     var reporters = pressShuffle(REPORTERS.slice()).slice(0, 4);
 
     // palco: confronto + subtítulo
