@@ -374,7 +374,9 @@
       // comp desconhecido/sem dados: gera um badge mesmo assim (nunca fica sem foto)
       if (!comp) comp = { id: (typeof raw === "string" ? raw : "comp"), name: (typeof raw === "string" ? raw : "Competição"), type: "copa" };
       var klass = (cls || "") + (comp.darkBg ? " comp-onblack" : "");
-      return imgWithFallback(compBadge(comp), compBadge(comp), comp.name, klass);
+      var cid = comp.id || (typeof raw === "string" ? raw : "comp");
+      // usa a imagem REAL em assets/competicoes/<id>.png quando existir; senão o emblema gerado
+      return imgWithFallback(embedded("competicoes", cid) || ("assets/competicoes/" + cid + ".png"), compBadge(comp), comp.name, klass);
     }
   };
 })(window);
