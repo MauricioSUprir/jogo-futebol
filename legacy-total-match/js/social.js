@@ -47,33 +47,63 @@
     _lastPhoto = p; return p;
   }
 
-  // comentários contextuais — reagem ao tom da postagem
+  // comentários contextuais — reagem AO TOM E AO TEMA da postagem
   var COMMENTS = {
-    win: ["QUE JOGO! 🔥", "esse time tá voando ✈️", "merecido demais", "VAMO QUE VAMO 💪", "orgulho dessa camisa ❤️", "melhor time disparado", "seguimos rumo ao título 🏆", "que atuação, parabéns 👏", "tô empolgado demais", "3 pontos e moral lá em cima", "esse elenco é especial", "chora, rival 😂"],
-    loss: ["que vergonha…", "assim não dá pra torcer", "cadê a RAÇA?!", "precisa mudar TUDO", "jogou muito mal", "diretoria, ACORDA", "tá difícil viu", "perdemos fácil demais", "decepcionante", "voltou a decepcionar", "esse time não tem alma", "reforço URGENTE"],
-    neutral: ["kkkk é isso aí", "bora o próximo jogo", "faltou capricho", "empate é pouco", "segue o jogo", "vamo com fé", "dava pra mais", "ponto é ponto", "sério isso?", "sei não hein"],
-    support: ["nação presente! ❤️", "sempre juntos 💪", "esse time é NOSSO", "confio no trabalho", "vamo pra cima!", "tamo junto professor", "não larga a mão não", "fé no elenco 🙏", "orgulho de torcer"],
-    bold: ["ousado hein 👀", "gostei da postura!", "isso que é atitude", "bota pra quebrar!", "confia no professor", "AGORA VAI", "falou como líder", "postura de campeão 👏", "esse é o discurso!", "comprou minha confiança"],
-    agree: ["concordo demais", "falou tudo", "precisava ser dito", "verdade nua e crua", "é isso mesmo", "assinei embaixo", "não podia concordar mais", "tá certíssimo", "obrigado por falar isso"],
-    polemic: ["PRENDE ELE 😂", "vai dar ruim isso...", "polêmico hein", "comprou briga agora", "screenshot salvo 📸", "tretaaa", "guarda esse tweet", "já era", "coragem ou loucura?"]
+    win: ["QUE JOGO! 🔥", "esse time tá voando ✈️", "merecido demais", "VAMO QUE VAMO 💪", "orgulho dessa camisa ❤️", "melhor time disparado", "seguimos rumo ao título 🏆", "que atuação, parabéns 👏", "tô empolgado demais", "3 pontos e moral lá em cima", "esse elenco é especial", "chora, rival 😂", "jogando bonito assim dá gosto", "vitória convincente!", "tá on esse time 🟢"],
+    loss: ["que vergonha…", "assim não dá pra torcer", "cadê a RAÇA?!", "precisa mudar TUDO", "jogou muito mal", "diretoria, ACORDA", "tá difícil viu", "perdemos fácil demais", "decepcionante", "voltou a decepcionar", "esse time não tem alma", "reforço URGENTE", "que atuação pobre…", "não dá mais pra aguentar", "cadê a intensidade?"],
+    neutral: ["kkkk é isso aí", "bora o próximo jogo", "faltou capricho", "empate é pouco", "segue o jogo", "vamo com fé", "dava pra mais", "ponto é ponto", "sério isso?", "sei não hein", "vamo ver no próximo", "tá empatado o campeonato"],
+    support: ["nação presente! ❤️", "sempre juntos 💪", "esse time é NOSSO", "confio no trabalho", "vamo pra cima!", "tamo junto professor", "não larga a mão não", "fé no elenco 🙏", "orgulho de torcer", "na alegria e na tristeza ❤️", "seguimos firmes"],
+    bold: ["ousado hein 👀", "gostei da postura!", "isso que é atitude", "bota pra quebrar!", "confia no professor", "AGORA VAI", "falou como líder", "postura de campeão 👏", "esse é o discurso!", "comprou minha confiança", "faladíssimo 🎯", "é assim que se fala!"],
+    agree: ["concordo demais", "falou tudo", "precisava ser dito", "verdade nua e crua", "é isso mesmo", "assinei embaixo", "não podia concordar mais", "tá certíssimo", "obrigado por falar isso", "alguém precisava dizer"],
+    polemic: ["PRENDE ELE 😂", "vai dar ruim isso...", "polêmico hein", "comprou briga agora", "screenshot salvo 📸", "tretaaa", "guarda esse tweet", "já era", "coragem ou loucura?", "vixe, vai sobrar 🍿", "tá lançado o barraco"],
+    // temas específicos (coerência com o assunto do post)
+    mercado: ["VEM REFORÇO 🔥", "confia no mercado ✍️", "será que fecha mesmo?", "aeee, e a fila anda 👀", "toma que a diretoria mexeu", "esse aí ia ajudar muito", "fonte confiável, acredito", "cadê a placa de assinou? 📝", "se vier, é festa", "melhor que soltar o pipoco no fim da janela"],
+    oficial: ["diretoria falou 📢", "confio na gestão", "só quero reforço, o resto é conversa", "papo bonito, cadê a prática?", "vamo cumprir o prometido", "nota oficial anotada ✅", "que venha o planejamento", "esperando as ações agora", "torcida cobrando resultado"],
+    estrela: ["craque DEMAIS 👑", "vale ouro esse cara", "NÃO VENDE nunca!", "melhor do elenco disparado", "esse merece a seleção 🇧🇷", "joga muito, respeitem", "ídolo em construção", "blindem esse jogador 🔒", "orgulho de ter ele"],
+    news: ["importante isso", "mercado fervendo 🔥", "boa matéria", "acredito na fonte", "seguindo de perto 👀", "notícia quente", "vamo ver no que dá", "anotado ✍️"],
+    classico: ["É CLÁSSICO, é diferente! 🔥", "perder esse jogo NÃO PODE", "semana mais tensa do ano 😤", "vamo pra cima do rival! 💪", "quero ganhar de qualquer jeito", "clássico é DECISÃO", "só penso nesse jogo 👀", "rival não ganha da gente não!", "arrepiei só de pensar"]
   };
-  function commentPool(mood) { return COMMENTS[mood] || COMMENTS.neutral.concat(COMMENTS.bold, COMMENTS.support); }
+  function commentPool(mood) { return COMMENTS[mood] || COMMENTS.neutral; }
   function makeComments(n, mood) {
-    var pool = commentPool(mood).slice(), out = [];
-    for (var i = 0; i < n && pool.length; i++) {
-      out.push({ who: pick(FANS), txt: pool.splice(Math.floor(Math.random() * pool.length), 1)[0], likes: rint(0, 240), liked: false, verified: chance(0.06) });
+    // garante N comentários COERENTES; mistura uma pitada de reação genérica pra parecer real,
+    // sem repetir o mesmo texto em seguida e sem esgotar (recicla o pool se precisar)
+    var base = commentPool(mood).slice();
+    var spice = COMMENTS.neutral;
+    var out = [], last = null;
+    for (var i = 0; i < n; i++) {
+      var usePool = (base.length && (i % 4 !== 3)) ? base : spice; // 1 a cada ~4 é reação genérica
+      if (!usePool.length) usePool = commentPool(mood);
+      var txt = pick(usePool), guard = 0;
+      while (txt === last && guard++ < 6) txt = pick(usePool);
+      // remove do pool principal p/ variedade enquanto houver itens
+      if (usePool === base) { var ix = base.indexOf(txt); if (ix >= 0) base.splice(ix, 1); }
+      last = txt;
+      out.push({ who: pick(FANS), txt: txt, likes: rint(0, 240), liked: false, verified: chance(0.06) });
     }
     return out;
   }
-  // tom de um post do feed (por tipo/moral)
+  // TEMA de um post do feed (por tipo/moral) — define QUAIS comentários combinam
   function moodOfPost(o) {
     if (!o) return "neutral";
     if (o.kind === "critica") return "loss";
-    if (o.kind === "apoio" || o.kind === "board") return "support";
+    if (o.kind === "apoio") return "support";
+    if (o.kind === "board") return "oficial";
     if (o.kind === "polemica") return "polemic";
-    if (o.kind === "press") return "neutral";
+    if (o.kind === "herewego") return "mercado";
+    if (o.kind === "star") return "estrela";
+    if (o.kind === "press") return "news";
+    if (o.badge && /Clássico/i.test(o.badge)) return "classico";
+    if (o.kind === "banter") { var mb = o.morale || 0; return mb > 0.2 ? "win" : "neutral"; }
     var m = o.morale || 0;
     return m > 0.3 ? "win" : m < -0.3 ? "loss" : "neutral";
+  }
+  // nº de comentários de acordo com a repercussão do post (posts "quentes" têm mais)
+  function commentCountFor(o) {
+    var big = o && (o.kind === "polemica" || o.kind === "herewego" || o.badge);
+    var hot = o && Math.abs(o.morale || 0) >= 1;
+    if (big) return rint(6, 11);
+    if (hot) return rint(4, 8);
+    return rint(3, 6);
   }
   // classifica o texto que O USUÁRIO postou p/ os comentários reagirem no tema
   function classifyUserPost(text) {
@@ -91,8 +121,8 @@
     return {
       id: nid(), handle: o.handle, verified: !!o.verified, badge: o.badge || null, photo: o.photo || null,
       text: o.text, likes: o.likes != null ? o.likes : rint(20, 900), liked: false, reposts: rint(0, 300),
-      comments: o.comments || makeComments(rint(1, 4), moodOfPost(o)), kind: o.kind || "banter", age: ageLabel(),
-      morale: o.morale || 0, extraComments: o.extraComments || rint(0, 60)
+      comments: o.comments || makeComments(commentCountFor(o), moodOfPost(o)), kind: o.kind || "banter", age: ageLabel(),
+      morale: o.morale || 0
     };
   }
 
@@ -133,34 +163,34 @@
 
     // --- reação ao ÚLTIMO RESULTADO ---
     if (last === "D") { // DERROTA → críticas (e uma pitada de apoio)
-      out.push(post({ handle: pick(FANS), kind: "critica", photo: chance(0.4) ? photoOf("torcida") : null, morale: -1.2,
+      out.push(post({ handle: pick(FANS), kind: "critica", photo: chance(0.6) ? photoOf("torcida") : null, morale: -1.2,
         text: pick(["Que atuação VERGONHOSA do " + myClub.name + "... 😡 assim não dá!", "Perdemos de novo?? Esse time não joga NADA. Diretoria, acorda!", "Cadê a raça?? O " + myClub.name + " entrou em campo de salto alto. Inaceitável.", "Se depender desse elenco a gente cai. Que decepção. 📉"]),
         likes: rint(300, 5200) }));
       if (chance(0.7)) out.push(post({ handle: pick(FANS), kind: "critica", morale: -0.6, text: pick(["O técnico precisa mudar TUDO. Escalação errada de novo.", "Perdeu a mão. Não sabe o que fazer nos jogos decisivos.", star ? "Nem o " + star.name + " salvou. Que fase ruim..." : "Time sem alma. Precisa de reforço urgente."]), likes: rint(120, 2600) }));
       if (chance(0.45)) out.push(post({ handle: pick(FANS), kind: "apoio", morale: 0.6, text: pick(["Gente, é uma derrota só. VAMOS PRA CIMA no próximo! 💪", "Apoio sempre, na vitória e na derrota. Esse time é nosso! ❤️", "Cabeça erguida, " + myClub.name + ". A torcida tá junto!"]), likes: rint(60, 1400) }));
     } else if (last === "V") { // VITÓRIA → elogios / apoio
-      out.push(post({ handle: pick(FANS), kind: "apoio", photo: chance(0.5) ? photoOf(chance(0.5) ? "jogo" : "torcida") : null, morale: 1.2,
+      out.push(post({ handle: pick(FANS), kind: "apoio", photo: chance(0.72) ? photoOf(chance(0.5) ? "jogo" : "torcida") : null, morale: 1.2,
         text: pick(["QUE JOGO! O " + myClub.name + " atropelou! 🔥🔥 esse time joga demais!", "Vitória suada e MERECIDA! Confia no processo, tá lindo de ver 🟢", star ? star.name + " deu SHOW hoje. Craque demais! 👏" : "Time ligado, entrega total. Respeitem o " + myClub.name + "!", "3 pontos e a torcida em festa! É ISSO! 🎉"]),
         likes: rint(400, 7000) }));
-      if (chance(0.6)) out.push(post({ handle: pick(PRESS), verified: chance(0.6), kind: "press", text: pick([myClub.name + " embala e ganha moral na temporada. Técnico encontrou o time ideal.", "Boa vitória do " + myClub.name + "; o trabalho do treinador começa a dar frutos."]), likes: rint(200, 3200) }));
+      if (chance(0.6)) out.push(post({ handle: pick(PRESS), verified: chance(0.6), kind: "press", photo: chance(0.45) ? photoOf("jogo") : null, text: pick([myClub.name + " embala e ganha moral na temporada. Técnico encontrou o time ideal.", "Boa vitória do " + myClub.name + "; o trabalho do treinador começa a dar frutos."]), likes: rint(200, 3200) }));
     } else if (last === "E") {
-      out.push(post({ handle: pick(FANS), kind: "banter", morale: -0.2, text: pick(["Empate gosto de pouco... dava pra ganhar. 😐", "Mais um empate. Falta capricho na hora de finalizar.", "Ponto é ponto, mas a torcida quer VITÓRIA."]), likes: rint(80, 1800) }));
+      out.push(post({ handle: pick(FANS), kind: "banter", photo: chance(0.35) ? photoOf("jogo") : null, morale: -0.2, text: pick(["Empate gosto de pouco... dava pra ganhar. 😐", "Mais um empate. Falta capricho na hora de finalizar.", "Ponto é ponto, mas a torcida quer VITÓRIA."]), likes: rint(80, 1800) }));
     }
 
     // --- post POLÊMICO (mexe na moral, às vezes forte) ---
     if (chance(0.5)) {
       var up = chance(0.5);
       out.push(post({ handle: pick(PRESS), verified: chance(0.5), kind: "polemica", badge: "⚡ Polêmica",
-        photo: chance(0.3) ? photoOf("bola") : null, morale: up ? 2.2 : -2.4,
+        photo: chance(0.55) ? photoOf(up ? "uniao" : "bola") : null, morale: up ? 2.2 : -2.4,
         text: up
           ? pick(["EXCLUSIVO: bastidores revelam elenco do " + myClub.name + " UNIDO e comprando a ideia do técnico. Clima ótimo no vestiário! 🔥", "Fontes internas: diretoria promete PREMIAÇÃO especial se o time seguir crescendo. Jogadores animados! 💰", "Torcida organizada marca FESTA na chegada do time. Elenco motivadíssimo pra próxima!"])
           : pick(["POLÊMICA: jogadores do " + myClub.name + " estariam INSATISFEITOS com o técnico nos bastidores. Clima pesado no vestiário. 👀", "Rumores de RACHA no elenco do " + myClub.name + ". Estrelas teriam batido boca no treino...", "Diretoria estuda mudanças e o nome do técnico estaria em xeque. Torcida se divide."]),
-        likes: rint(500, 9000), extraComments: rint(40, 400) }));
+        likes: rint(500, 9000) }));
     }
 
     // --- post da DIRETORIA (oficial) de vez em quando ---
     if (chance(0.4)) {
-      out.push(post({ handle: myClub.name + " 🏛️", verified: true, kind: "board", badge: "Oficial",
+      out.push(post({ handle: myClub.name + " 🏛️", verified: true, kind: "board", badge: "Oficial", photo: chance(0.5) ? photoOf("uniao") : null,
         text: pick(["Nota oficial: a diretoria reafirma total confiança no elenco e na comissão técnica. Juntos somos mais fortes! 💚", "Comunicado: seguimos trabalhando por reforços que elevem o nível do time. Contamos com a nossa torcida!", "A diretoria agradece o apoio incondicional da nossa nação. Vamos em busca dos nossos objetivos!", "Reunião definida com a comissão técnica para alinhar o planejamento da temporada."]),
         likes: rint(300, 4000), morale: 0.4 }));
     }
@@ -173,11 +203,11 @@
         var s = pick(stars), dest = pick(W.clubs);
         if (dest.id !== s.clubId) {
           var done = chance(0.5);
-          out.push(post({ handle: HEREWEGO, verified: true, kind: "herewego", badge: "🗞️ Mercado", photo: chance(0.25) ? photoOf("bola") : null,
+          out.push(post({ handle: HEREWEGO, verified: true, kind: "herewego", badge: "🗞️ Mercado", photo: chance(0.5) ? photoOf("bola") : null,
             text: done
               ? "🚨🔴⚪ HERE WE GO! " + s.name + " (" + s.overall + ") está ACERTADO com o " + dest.name + "! Contrato assinado, exames marcados. ✍️"
               : "🔵 " + dest.name + " abriu conversas por " + s.name + " (" + s.overall + "), hoje no " + ((TM.data.club(s.clubId) || {}).name || "clube") + ". Negócio avança nos bastidores...",
-            likes: rint(800, 12000), extraComments: rint(50, 300) }));
+            likes: rint(800, 12000) }));
         }
       }
     }
@@ -187,9 +217,9 @@
       var small = W.clubs.slice().sort(function (a, b) { return TM.data.clubRating(a.id) - TM.data.clubRating(b.id); })[rint(0, 40)];
       if (small) {
         var funds = ["Aurora Capital", "Vanguarda Sports", "Pantera Investimentos", "Meridian Group", "Atlas Holding"];
-        out.push(post({ handle: pick(PRESS), verified: true, kind: "press", badge: "💼 SAF",
+        out.push(post({ handle: pick(PRESS), verified: true, kind: "press", badge: "💼 SAF", photo: chance(0.4) ? photoOf("bola") : null,
           text: "🚨 " + pick(funds) + " assume a SAF do " + small.name + " e promete aporte de R$ " + rint(120, 900) + " milhões! Clube pequeno vai sonhar alto. 💰",
-          likes: rint(300, 6000), extraComments: rint(30, 200) }));
+          likes: rint(300, 6000) }));
       }
     }
     if (chance(0.3)) {
@@ -202,14 +232,14 @@
 
     // --- clássico / rival ---
     if (rival && chance(0.4)) {
-      out.push(post({ handle: pick(FANS), kind: "banter", badge: "🔥 Clássico", morale: 0.3,
+      out.push(post({ handle: pick(FANS), kind: "banter", badge: "🔥 Clássico", morale: 0.3, photo: chance(0.4) ? photoOf("torcida") : null,
         text: pick(["Semana de CLÁSSICO contra o " + rival + "! Já tô sem dormir 😤🔥", "Perder pro " + rival + " NÃO é opção. NUNCA.", "90 minutos de guerra contra o " + rival + ". Bora, " + myClub.name + "! 💪"]),
         likes: rint(200, 4200) }));
     }
 
     // --- destaque de estrela ---
     if (star && chance(0.4)) {
-      out.push(post({ handle: pick(PRESS), verified: chance(0.5), kind: "star", photo: chance(0.3) ? photoOf("jogo") : null,
+      out.push(post({ handle: pick(PRESS), verified: chance(0.5), kind: "star", photo: chance(0.6) ? photoOf("jogo") : null,
         text: pick([star.name + " (" + star.overall + ") é simplesmente o melhor do elenco do " + myClub.name + ". Fenômeno.", "Olho no " + star.name + ": decisivo e já desperta interesse de clubes maiores 👀"]),
         likes: rint(200, 4500) }));
     }
@@ -225,9 +255,12 @@
     return out;
   }
 
+  var FEED_V = 2; // versão do feed — sobe quando o formato de posts/comentários muda
   // gera novos posts quando há novidade (troca de matchNo/season), aplica moral
   function ensureFeed(career) {
     ensure(career);
+    // migração: descarta posts antigos (contagem/comentários incoerentes) uma única vez
+    if (career.social.v !== FEED_V) { career.social.posts = []; career.social.lastGen = ""; career.social.v = FEED_V; }
     var stamp = (career.matchNo || 0) + ":" + (career.season || 1);
     if (career.social.lastGen === stamp && career.social.posts.length) return;
     var fresh = genBatch(career);
@@ -247,7 +280,7 @@
     var clubNm = (TM.data.club(mainClubId(career)) || {}).name || "clube";
     var handle = "@" + (who.toLowerCase().replace(/[^a-zà-ÿ0-9]/g, "").slice(0, 14) || (isPlayer ? "jogador" : "treinador"));
     var p = post({ handle: handle, verified: true, kind: "user", text: text,
-      likes: rint(40, 500), comments: makeComments(rint(3, 6), classifyUserPost(text)), extraComments: 0 });
+      likes: rint(40, 500), comments: makeComments(rint(3, 6), classifyUserPost(text)) });
     p.mine = true;
     // repercussão: às vezes a imprensa cita e vira manchete
     var repercuss = chance(0.55);
@@ -256,7 +289,7 @@
       var roleTxt = isPlayer ? career.name + ", do " + clubNm + "," : "técnico do " + clubNm;
       var pressReply = post({ handle: pick(PRESS), verified: true, kind: "press", badge: "🗞️ Repercussão",
         text: "Declaração de " + roleTxt + " viraliza: “" + (text.length > 90 ? text.slice(0, 88) + "…" : text) + "”. Torcida reage.",
-        likes: rint(200, 3500), extraComments: rint(20, 200) });
+        likes: rint(200, 3500) });
       career.social.posts = career.social.posts.slice(0, 1).concat([pressReply], career.social.posts.slice(1)).slice(0, 60);
       // vira notícia no jornal
       try { TM.notify.push(career, { icon: "🎙️", title: (isPlayer ? "Sua fala repercute" : "Fala do treinador repercute"), news: true, text: "“" + (text.length > 120 ? text.slice(0, 118) + "…" : text) + "” — declaração " + (isPlayer ? "de " + career.name : "do comando do " + clubNm) + " ganhou as redes e a imprensa." }); } catch (e) {}
