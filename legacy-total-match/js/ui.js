@@ -105,7 +105,6 @@
       document.createTextNode(" · " + player.age + " anos")
     ];
     var natEl = el("span", { class: "prow-nat" }, [
-      nation ? TM.img.nationImg(nation, "prow-flag") : null,
       el("span", { text: player.nationName || (nation && nation.name) || "" })
     ]);
     var kids = [

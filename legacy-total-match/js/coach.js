@@ -3702,7 +3702,7 @@
       el("div", { class: "prof-id" }, [
         el("div", { class: "prof-name", text: p.name }),
         el("div", { class: "prof-meta" }, [
-          nation ? TM.img.nationImg(nation, "prof-flag") : null,
+          (p.nationName || (nation && nation.name)) ? el("span", { class: "prof-nat", text: p.nationName || nation.name }) : null,
           el("span", { text: p.age + " anos" }),
           el("span", { class: "prof-pos pos-" + (p.pos || "MF"), text: TM.data.posLabel(p) }),
           el("span", { class: "prof-val" + (valTrend ? " vt-" + valTrend : ""), html: money(c, val) + (valTrend === "up" ? " <span class='vt-arrow'>▲</span>" : valTrend === "down" ? " <span class='vt-arrow'>▼</span>" : "") })
@@ -4080,7 +4080,7 @@
           el("div", { class: "sim-info" }, [
             el("div", { class: "sim-name", text: p.name }),
             el("div", { class: "sim-club" }, [ club ? TM.img.clubImg(club, "sim-crest") : null, el("span", { text: club ? club.name : "" }) ]),
-            el("div", { class: "sim-sub" }, [ nation ? TM.img.nationImg(nation, "sim-flag") : null, el("span", { text: (p.age || "?") + " anos · " + TM.data.posLabel(p) }) ])
+            el("div", { class: "sim-sub" }, [ el("span", { text: (p.nationName || (nation && nation.name) ? (p.nationName || nation.name) + " · " : "") + (p.age || "?") + " anos · " + TM.data.posLabel(p) }) ])
           ]),
           el("div", { class: "sim-ovp" }, [
             el("div", { class: "sim-ovp-row" }, [ el("span", { class: "sim-ovp-v", text: p.overall }), el("span", { class: "sim-ovp-v pot", text: p.potential || p.overall }) ]),
