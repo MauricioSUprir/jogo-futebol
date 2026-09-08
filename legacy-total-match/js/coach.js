@@ -2231,12 +2231,31 @@
     var RCOLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#ef4444", "#14b8a6", "#06b6d4"];
     var reporters = pressShuffle(REPORTERS.slice()).slice(0, 4);
 
-    // palco: confronto + subtítulo
+    // barra AO VIVO com nº de espectadores
+    var viewers = Math.max(8, Math.round((TM.data.clubRating(c.teamId) - 40) * (isClassic ? 3.4 : 1.7)) + Math.floor(Math.random() * 11) + 4);
+    screen.appendChild(el("div", { class: "press-live" }, [
+      el("span", { class: "plive-dot" }),
+      el("span", { class: "plive-txt", text: "AO VIVO · Sala de imprensa" }),
+      el("span", { class: "plive-views", text: "👁️ " + viewers + " mil" })
+    ]));
+
+    // palco: flashes de câmera + confronto + púlpito do técnico + subtítulo
     screen.appendChild(el("div", { class: "press-stage" }, [
+      el("span", { class: "press-flash f1", "aria-hidden": "true" }),
+      el("span", { class: "press-flash f2", "aria-hidden": "true" }),
+      el("span", { class: "press-flash f3", "aria-hidden": "true" }),
       el("div", { class: "press-match" }, [
         el("div", { class: "pm-side" }, [ TM.img.clubImg(TM.data.club(c.teamId), "pm-crest"), el("span", { class: "pm-nm", text: myName }) ]),
         el("span", { class: "pm-vs", text: "VS" }),
         el("div", { class: "pm-side" }, [ TM.img.clubImg(TM.data.club(oppId), "pm-crest"), el("span", { class: "pm-nm", text: oppName }) ])
+      ]),
+      el("div", { class: "press-podium" }, [
+        el("div", { class: "ppod-ava", text: (c.coachName || "T").charAt(0).toUpperCase() }),
+        el("div", { class: "ppod-info" }, [
+          el("div", { class: "ppod-name", text: c.coachName || "Treinador" }),
+          el("div", { class: "ppod-role", text: "Técnico · " + myName })
+        ]),
+        el("span", { class: "ppod-mic", text: "🎙️" })
       ]),
       el("div", { class: "press-substage", text: "🎤 Coletiva pré-jogo" + (compName ? " · " + compName : "") + (isClassic ? " · ⚔️ CLÁSSICO" : "") })
     ]));
@@ -2280,6 +2299,8 @@
           panel.innerHTML = "";
           panel.appendChild(el("div", { class: "press-answer" }, [ el("span", { class: "press-you", text: "Você:" }), el("span", { text: " " + fill(opt.t) }) ]));
           panel.appendChild(el("div", { class: "press-react " + (opt.e > 0 ? "good" : opt.e < 0 ? "bad" : "") , text: (opt.e > 0 ? "😎 " : opt.e < 0 ? "😬 " : "🎙️ ") + opt.r }));
+          var room = opt.e > 0 ? "👏 A sala reage bem — alguns aplausos e cliques de câmera." : (opt.e < 0 ? "😯 Murmúrios na sala de imprensa e olhares trocados." : "🎙️ A sala anota em silêncio e segue para a próxima pergunta.");
+          panel.appendChild(el("div", { class: "press-room " + (opt.e > 0 ? "good" : opt.e < 0 ? "bad" : ""), text: room }));
           panel.appendChild(el("div", { class: "actions" }, [ TM.ui.button(idx < 3 ? "Próxima pergunta →" : "Encerrar coletiva", function () { idx++; render(); }, "btn primary") ]));
         } } }, [ el("span", { text: fill(opt.t) }) ]));
       });
@@ -2293,6 +2314,16 @@
       panel.appendChild(el("div", { class: "press-summary" + (good ? " good" : bad ? " bad" : "") }, [
         el("div", { class: "press-sum-emoji", text: good ? "😎" : bad ? "😬" : "😐" }),
         el("div", { class: "press-sum-txt", text: good ? "O elenco saiu confiante da coletiva — pequeno empurrão para o jogo." : bad ? "A coletiva gerou clima tenso no vestiário — o time entra pressionado." : "Coletiva tranquila, sem grandes repercussões." })
+      ]));
+      // manchete gerada pela imprensa a partir do tom das respostas
+      var headline = good
+        ? fill("“Viemos para vencer”: comando do {team} passa confiança antes de encarar o {opp}")
+        : bad
+          ? fill("Clima quente: técnico do {team} bate de frente com a imprensa na véspera do jogo com o {opp}")
+          : fill("{team} mantém discurso cauteloso na véspera do duelo com o {opp}");
+      panel.appendChild(el("div", { class: "press-manchete" }, [
+        el("div", { class: "pman-tag", text: "🗞️ MANCHETE DE AMANHÃ" }),
+        el("div", { class: "pman-txt", text: headline })
       ]));
       panel.appendChild(el("div", { class: "actions" }, [
         TM.ui.button("▶ Ir para o jogo", function () { TM.ui.go("coach-play"); }, "btn primary"),
