@@ -1053,9 +1053,10 @@
         ])
       ];
       if (rivalryEnabled() && TM.data.areRivals(homeClub.id, awayClub.id)) {
+        var derby = null; try { derby = TM.data.derbyName(homeClub.id, awayClub.id); } catch (e) {}
         kids.push(el("div", { class: "classico-ribbon" }, [
           el("span", { class: "cr-flame", text: "🔥" }),
-          el("span", { class: "cr-txt", text: "CLÁSSICO" }),
+          el("span", { class: "cr-txt", text: derby ? derby.toUpperCase() : "CLÁSSICO" }),
           el("span", { class: "cr-sub", text: "Jogo de rivalidade — clima quente nas arquibancadas" })
         ]));
       }
