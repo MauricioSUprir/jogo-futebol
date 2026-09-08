@@ -484,9 +484,10 @@
     roles.forEach(function (pos, i) {
       var age = 14 + Math.floor(Math.random() * 6); // 14 a 19
       var ov = 47 + Math.floor(Math.random() * 15);  // 47 a 61
-      var jewel = Math.random() < 0.08;              // joia rara na base
-      var pot = jewel ? Math.min(93, ov + 22 + Math.floor(Math.random() * 11))
-                      : Math.min(89, ov + 8 + Math.floor(Math.random() * 20));
+      var jewel = Math.random() < 0.07;              // joia rara na base
+      // base costuma ter teto modesto; só a joia rara promete virar craque
+      var pot = jewel ? Math.min(90, ov + 16 + Math.floor(Math.random() * 12))
+                      : Math.min(77, ov + 3 + Math.floor(Math.random() * 13));
       youth.push({
         id: "y" + clubId + "-" + i, name: TM.data.randomName(culture), clubId: clubId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
         age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos),
