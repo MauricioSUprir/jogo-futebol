@@ -366,7 +366,10 @@
     else if (divs.length === 2) { pool = topClubs(divs[0], 16).concat(topClubs(divs[1], 16)); } // 32
     else { pool = topClubs(leagueId, 16); }
     if (pool.indexOf(teamId) < 0) { pool[pool.length - 1] = teamId; } // garante o usuário
-    return buildKO(pool, CUP_NAME[divs[0]] || "Copa Nacional", "cup", true); // nome pela 1ª divisão; ida e volta
+    // nome da copa: usa o nome (real na edição Atualizado) da competição registrada; senão o mapa CUP_NAME
+    var cupComp = TM.data.competition("cup-" + divs[0]);
+    var cupName = (cupComp && cupComp.name) || CUP_NAME[divs[0]] || "Copa Nacional";
+    return buildKO(pool, cupName, "cup", true); // nome pela 1ª divisão; ida e volta
   }
   // ranking de uma liga: pela posição final da temporada passada (só a liga do
   // usuário é simulada); as demais ligas usam o overall como critério
@@ -401,7 +404,9 @@
       if (!pad) break; field.push(pad);
     }
     var groups = size === 32 ? 8 : 4;
-    return { type: "tournament", key: "cont", name: CONT_NAME[region] || "Continental",
+    var contComp = TM.data.competition("cont-" + region);
+    var contName = (contComp && contComp.name) || CONT_NAME[region] || "Continental";
+    return { type: "tournament", key: "cont", name: contName,
       tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
   }
 

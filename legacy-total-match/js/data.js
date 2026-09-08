@@ -1117,6 +1117,38 @@
   };
   function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
 
+  /* ---------- NOMES REAIS de competições (só na edição Atualizado) ----------
+     A edição pública (vendável) mantém os nomes genéricos por segurança de marca. */
+  var PRO_LEAGUE_NAMES = {
+    br: "Brasileirão Série A", en: "Premier League", es: "LaLiga", it: "Serie A", de: "Bundesliga",
+    fr: "Ligue 1", pt: "Liga Portugal", nl: "Eredivisie", ar: "Liga Profesional Argentina",
+    us: "Major League Soccer", mx: "Liga MX", sa: "Saudi Pro League", tr: "Süper Lig",
+    ec: "LigaPro Serie A", uy: "Primera División Uruguaia", ru: "Ucrânia Premier League",
+    rus: "Rússia Premier Liga", co: "Categoría Primera A", ma: "Botola Pro", jp: "J1 League",
+    ch: "Swiss Super League", py: "Primera División Paraguaia", be: "Belgian Pro League",
+    br2: "Brasileirão Série B", en2: "EFL Championship", it2: "Serie B", es2: "LaLiga Hypermotion",
+    br3: "Brasileirão Série C", fr2: "Ligue 2", de2: "2. Bundesliga"
+  };
+  var PRO_COMP_NAMES = {
+    "cup-br": "Copa do Brasil", "cup-en": "FA Cup", "cup-es": "Copa del Rey", "cup-it": "Coppa Italia",
+    "cup-de": "DFB-Pokal", "cup-fr": "Coupe de France", "cup-pt": "Taça de Portugal", "cup-nl": "KNVB Beker",
+    "cup-ar": "Copa Argentina", "cup-us": "US Open Cup", "cup-mx": "Copa MX", "cup-sa": "King's Cup",
+    "cup-tr": "Türkiye Kupası", "cup-ec": "Copa Ecuador", "cup-uy": "Copa Uruguay", "cup-ru": "Copa da Ucrânia",
+    "cup-rus": "Copa da Rússia", "cup-co": "Copa Colombia", "cup-ma": "Coupe du Trône", "cup-jp": "Copa do Imperador",
+    "cup-ch": "Schweizer Cup", "cup-py": "Copa Paraguay", "cup-be": "Beker van België",
+    "cont-eu": "UEFA Champions League", "cont-sa": "Copa Libertadores", "cont-na": "CONCACAF Champions Cup",
+    "cont-as": "AFC Champions League", "cwc-world": "Mundial de Clubes FIFA", "cwc-inter": "Copa Intercontinental",
+    "nat-america": "Copa América", "nat-euro": "UEFA Euro", "nat-africa": "Copa Africana de Nações"
+  };
+  // aplica nomes reais/genéricos às competições conforme a edição (chamado no generateWorld)
+  function syncCompNames(pro) {
+    for (var i = 0; i < COMPETITIONS.length; i++) {
+      var c = COMPETITIONS[i];
+      if (c.baseName == null) c.baseName = c.name;   // captura o genérico uma vez
+      c.name = (pro && PRO_COMP_NAMES[c.id]) ? PRO_COMP_NAMES[c.id] : c.baseName;
+    }
+  }
+
   /* ---------- EDIÇÃO ATUALIZADO: elencos REAIS dos grandes clubes ----------
      Nomes/posições/nacionalidades são dados factuais; valores aproximados.
      Chave = nome real do clube (igual ao PRO_CLUBS). Usado só na edição pro.
@@ -8633,8 +8665,9 @@
     var leagues = [], clubs = [], playersById = {}, pid = 1;
 
     var pro = isProEdition();
+    syncCompNames(pro);
     LEAGUE_DEFS.forEach(function (ld) {
-      var league = { id: ld.id, name: ld.name, nation: ld.nation, culture: ld.culture, clubIds: [] };
+      var league = { id: ld.id, name: (pro && PRO_LEAGUE_NAMES[ld.id]) || ld.name, nation: ld.nation, culture: ld.culture, clubIds: [] };
       var realList = REAL_CLUBS[ld.id];
       var proList = pro ? PRO_CLUBS[ld.id] : null;   // nomes REAIS na edição Atualizado
       for (var ci = 0; ci < realList.length; ci++) {
