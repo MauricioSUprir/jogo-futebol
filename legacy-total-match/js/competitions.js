@@ -9,16 +9,17 @@
   function rivalryOn() { try { return TM.storage.settings().rivalry !== false; } catch (e) { return true; } }
 
   var CUP_NAME = {
-    br: "Copa Nacional", en: "Copa Nacional", es: "Copa Nacional", it: "Copa Nacional",
-    de: "Copa Nacional", fr: "Copa Nacional", pt: "Copa Nacional", nl: "Copa Nacional",
-    ar: "Copa Nacional", us: "Copa Nacional",
-    mx: "Copa Nacional", sa: "Copa Nacional", tr: "Copa Nacional",
-    ec: "Copa Nacional", uy: "Copa Nacional", ru: "Copa Nacional", co: "Copa Nacional",
-    br2: "Copa Nacional", en2: "Copa Nacional", it2: "Copa Nacional", es2: "Copa Nacional"
+    br: "Copa Brasil", en: "Copa Inglaterra", es: "Copa Espanha", it: "Copa Itália",
+    de: "Copa Alemanha", fr: "Copa França", pt: "Copa Portugal", nl: "Copa Holanda",
+    ar: "Copa Argentina", us: "Copa EUA",
+    mx: "Copa México", sa: "Copa Arábia Saudita", tr: "Copa Turquia",
+    ec: "Copa Equador", uy: "Copa Uruguai", ru: "Copa Ucrânia", rus: "Copa Rússia", co: "Copa Colômbia",
+    ma: "Copa Marrocos", jp: "Copa Japão", ch: "Copa Suíça", py: "Copa Paraguai", be: "Copa Bélgica",
+    br2: "Copa Brasil", en2: "Copa Inglaterra", it2: "Copa Itália", es2: "Copa Espanha"
   };
-  var REGION = { co: "sa", br: "sa", ar: "sa", ec: "sa", uy: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", us: "na", mx: "na", sa: "as" };
+  var REGION = { co: "sa", br: "sa", ar: "sa", ec: "sa", uy: "sa", py: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", rus: "eu", ch: "eu", be: "eu", us: "na", mx: "na", sa: "as", jp: "as", ma: "as" };
   var CONT_NAME = { sa: "Copa Continental Sul", eu: "Copa Continental Europa", na: "Copa Continental Norte", as: "Copa Continental Ásia" };
-  var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru"], na: ["us", "mx"], as: ["sa"] };
+  var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co", "py"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus", "ch", "be"], na: ["us", "mx"], as: ["sa", "jp", "ma"] };
 
   /* ---------- Confederações + Eliminatórias da Copa ---------- */
   // Copa do Mundo com 32 seleções. Cada confederação classifica um número de vagas.
