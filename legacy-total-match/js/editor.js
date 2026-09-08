@@ -65,9 +65,29 @@
     screen.appendChild(TM.ui.topbar("✏️ " + p.name, function () { TM.ui.go("editor-find"); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
-    body.appendChild(el("div", { class: "editor-head" }, [ TM.img.playerImg(p, "eh-face"), el("div", {}, [ el("div", { class: "eh-name", text: p.name }), el("div", { class: "eh-sub", text: (TM.data.club(p.clubId) ? TM.data.club(p.clubId).name : "Sem clube") + " · " + (p.nationName || "") }) ]) ]));
+    var draft = { name: p.name, pos: p.pos, overall: p.overall, age: p.age, clubId: p.clubId, photo: p.photo || null };
 
-    var draft = { name: p.name, pos: p.pos, overall: p.overall, age: p.age, clubId: p.clubId };
+    // cabeçalho com a foto (clicável para trocar) + upload
+    var faceImg = TM.img.playerImg(p, "eh-face");
+    var fileIn = el("input", { type: "file", accept: "image/*", style: "display:none" });
+    var head = el("div", { class: "editor-head" }, [
+      el("div", { class: "eh-face-wrap", style: "cursor:pointer;position:relative", on: { click: function () { fileIn.click(); } } }, [ faceImg, el("span", { class: "eh-face-edit", text: "📷" }) ]),
+      fileIn,
+      el("div", {}, [ el("div", { class: "eh-name", text: p.name }), el("div", { class: "eh-sub", text: (TM.data.club(p.clubId) ? TM.data.club(p.clubId).name : "Sem clube") + " · " + (p.nationName || "") }), el("button", { class: "btn ghost small", style: "margin-top:6px", text: "📷 Trocar foto", on: { click: function () { fileIn.click(); } } }) ])
+    ]);
+    fileIn.addEventListener("change", function () {
+      var f = fileIn.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function (ev) { var img = new Image(); img.onload = function () {
+        var cv = document.createElement("canvas"), sc = Math.min(1, 256 / Math.max(img.width, img.height));
+        cv.width = img.width * sc; cv.height = img.height * sc; cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        draft.photo = cv.toDataURL("image/jpeg", 0.82);
+        var nf = el("img", { src: draft.photo, class: "eh-face" }); faceImg.parentNode.replaceChild(nf, faceImg); faceImg = nf;
+        TM.ui.toast("Foto carregada — salve para aplicar");
+      }; img.src = ev.target.result; };
+      r.readAsDataURL(f);
+    });
+    body.appendChild(head);
     var nameIn = el("input", { class: "text-input", type: "text", maxlength: "26", value: draft.name });
     nameIn.addEventListener("input", function () { draft.name = nameIn.value; });
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Nome" }), nameIn ]));
@@ -90,6 +110,7 @@
       TM.ui.button("💾 Salvar", function () {
         var e = edits();
         e.players[p.id] = { name: draft.name, pos: draft.pos, overall: draft.overall, age: draft.age };
+        if (draft.photo) e.players[p.id].photo = draft.photo;
         if (draft.clubId && draft.clubId !== p.clubId) e.moves[p.id] = draft.clubId; else if (e.moves[p.id]) delete e.moves[p.id];
         saveEdits(e);
         TM.ui.toast("✔ Jogador salvo");
