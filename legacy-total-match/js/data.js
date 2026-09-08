@@ -9065,7 +9065,11 @@
   }
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
-    var name = STADIUMS[club.name];
+    // edição Atualizado: estádio REAL (por liga+clube, evita conflito de nomes iguais); senão gerado
+    var ent = (isProEdition() && (STADIUMS[club.leagueId + "/" + club.name] || STADIUMS[club.name])) || null;
+    var name = null, cap = null;
+    if (ent && typeof ent === "object") { name = ent.n; cap = ent.c; }
+    else if (typeof ent === "string") { name = ent; }
     if (!name) {
       var h = stableHash(club.name), mode = h % 6;
       if (mode === 0) name = "Arena " + club.name;
@@ -9075,8 +9079,10 @@
       else if (mode === 4) name = "Estádio Municipal " + STAD_PATRON[(Math.floor(h / 13)) % STAD_PATRON.length];
       else name = STAD_PATRON[(Math.floor(h / 3)) % STAD_PATRON.length].replace(/^(das|do|de|da) /, "") + " Arena";
     }
-    var r = TM.data.clubRating(club.id);
-    var cap = 18000 + Math.round(Math.max(0, r - 60) * 1500) + (stableHash(club.name) % 8000); // ~18k..85k
+    if (!cap) {
+      var r = TM.data.clubRating(club.id);
+      cap = 18000 + Math.round(Math.max(0, r - 60) * 1500) + (stableHash(club.name) % 8000); // ~18k..85k
+    }
     return { name: name, capacity: cap };
   }
 
