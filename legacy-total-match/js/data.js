@@ -1003,21 +1003,43 @@
 };
   function natByName(nm) { for (var i = 0; i < NATIONS.length; i++) if (NATIONS[i].key === nm || NATIONS[i].name === nm) return NATIONS[i]; return null; }
 
+  /* ---------- EDIÇÃO ATUALIZADO (pessoal): nomes REAIS de clubes ----------
+     Usado SÓ na edição "pro" (privada). Mesma contagem por liga do REAL_CLUBS,
+     na mesma ordem de força — o elenco e o origName originais são preservados,
+     muda só o NOME exibido e a sigla. A edição pública (vendável) segue fictícia. */
+  var PRO_CLUBS = {
+    br: [["Flamengo","FLA"],["Palmeiras","PAL"],["Botafogo","BOT"],["Atlético Mineiro","CAM"],["Fluminense","FLU"],["São Paulo","SAO"],["Corinthians","COR"],["Internacional","INT"],["Grêmio","GRE"],["Cruzeiro","CRU"],["Fortaleza","FOR"],["Athletico-PR","CAP"],["Bahia","BAH"],["Vasco da Gama","VAS"],["Bragantino","RBB"],["Santos","SAN"],["Vitória","VIT"],["Juventude","JUV"],["Criciúma","CRI"],["Cuiabá","CUI"]],
+    en: [["Manchester City","MCI"],["Arsenal","ARS"],["Liverpool","LIV"],["Manchester United","MUN"],["Chelsea","CHE"],["Tottenham","TOT"],["Newcastle","NEW"],["Aston Villa","AVL"],["Brighton","BHA"],["West Ham","WHU"],["Crystal Palace","CRY"],["Everton","EVE"],["Fulham","FUL"],["Brentford","BRE"],["Nottingham Forest","NFO"],["Wolverhampton","WOL"],["Bournemouth","BOU"],["Leicester","LEI"],["Ipswich Town","IPS"],["Southampton","SOU"]],
+    es: [["Real Madrid","RMA"],["Barcelona","BAR"],["Atlético de Madrid","ATM"],["Athletic Bilbao","ATH"],["Real Sociedad","RSO"],["Real Betis","BET"],["Villarreal","VIL"],["Valencia","VAL"],["Sevilla","SEV"],["Girona","GIR"],["Osasuna","OSA"],["Celta de Vigo","CEL"],["Rayo Vallecano","RAY"],["Getafe","GET"],["Mallorca","MAL"],["Las Palmas","LPA"],["Espanyol","ESP"],["Alavés","ALA"],["Leganés","LEG"],["Valladolid","VLL"]],
+    it: [["Inter de Milão","INT"],["Milan","MIL"],["Juventus","JUV"],["Napoli","NAP"],["Atalanta","ATA"],["Roma","ROM"],["Lazio","LAZ"],["Fiorentina","FIO"],["Bologna","BOL"],["Torino","TOR"],["Udinese","UDI"],["Genoa","GEN"],["Monza","MON"],["Como","COM"],["Cagliari","CAG"],["Parma","PAR"],["Lecce","LEC"],["Hellas Verona","VER"],["Empoli","EMP"],["Venezia","VEN"]],
+    de: [["Bayern de Munique","BAY"],["Bayer Leverkusen","B04"],["Borussia Dortmund","BVB"],["RB Leipzig","RBL"],["Stuttgart","VFB"],["Eintracht Frankfurt","SGE"],["Wolfsburg","WOB"],["Freiburg","SCF"],["Hoffenheim","TSG"],["Union Berlin","FCU"],["Werder Bremen","SVW"],["Mönchengladbach","BMG"],["Mainz 05","M05"],["Augsburg","FCA"],["Bochum","BOC"],["Heidenheim","HDH"],["St. Pauli","STP"],["Holstein Kiel","KIE"]],
+    fr: [["Paris Saint-Germain","PSG"],["Monaco","ASM"],["Marseille","OM"],["Lille","LOSC"],["Lyon","OL"],["Nice","NIC"],["Lens","RCL"],["Rennes","REN"],["Strasbourg","RCS"],["Brest","SB29"],["Toulouse","TFC"],["Nantes","FCN"],["Reims","SDR"],["Montpellier","MHSC"],["Auxerre","AJA"],["Le Havre","HAC"],["Angers","SCO"],["Saint-Étienne","ASSE"]],
+    pt: [["Benfica","SLB"],["Porto","POR"],["Sporting","SCP"],["Braga","SCB"],["Vitória de Guimarães","VSC"],["Moreirense","MOR"],["Famalicão","FAM"],["Gil Vicente","GIL"],["Estoril","EST"],["Casa Pia","CAS"],["Boavista","BOA"],["Rio Ave","RAV"],["Arouca","ARO"],["Estrela Amadora","ESA"],["Farense","FAR"],["Nacional","NAC"],["Santa Clara","SCL"],["AVS","AVS"]],
+    nl: [["PSV","PSV"],["Feyenoord","FEY"],["Ajax","AJA"],["AZ Alkmaar","AZ"],["Twente","TWE"],["Utrecht","UTR"],["Sparta Rotterdam","SPA"],["Go Ahead Eagles","GAE"],["Heerenveen","HEE"],["NEC Nijmegen","NEC"],["Fortuna Sittard","FOR"],["Groningen","GRO"],["Willem II","WIL"],["Heracles","HER"],["PEC Zwolle","PEC"],["Almere City","ALM"],["RKC Waalwijk","RKC"],["NAC Breda","NAC"]],
+    ar: [["River Plate","RIV"],["Boca Juniors","BOC"],["Racing Club","RAC"],["Independiente","IND"],["San Lorenzo","SLO"],["Estudiantes","EDL"],["Vélez Sarsfield","VEL"],["Talleres","TAL"],["Argentinos Juniors","AAAJ"],["Rosario Central","CARC"],["Newell's Old Boys","NOB"],["Lanús","LAN"],["Defensa y Justicia","DYJ"],["Huracán","HUR"],["Godoy Cruz","GC"],["Gimnasia LP","GLP"],["Banfield","BAN"],["Instituto","INS"],["Belgrano","BEL"],["Platense","PLA"]]
+  };
+  function isProEdition() { try { return TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
+
   function generateWorld() {
     var rng = R.make(WORLD_SEED);
     var leagues = [], clubs = [], playersById = {}, pid = 1;
 
+    var pro = isProEdition();
     LEAGUE_DEFS.forEach(function (ld) {
       var league = { id: ld.id, name: ld.name, nation: ld.nation, culture: ld.culture, clubIds: [] };
       var realList = REAL_CLUBS[ld.id];
+      var proList = pro ? PRO_CLUBS[ld.id] : null;   // nomes REAIS na edição Atualizado
       for (var ci = 0; ci < realList.length; ci++) {
         var rc = realList[ci];               // [nome, sigla, força]
         var clubId = ld.id + "-" + ci;
         var pal = CLUB_PALETTES[stableHash(clubId) % CLUB_PALETTES.length];
         var strength = rc[2];                // força real do clube
-        var cname = localizeName(rc[0], ld.id);
+        // edição Atualizado usa o nome real; a pública mantém o fictício (localizado)
+        var proc = proList && proList[ci];
+        var cname = proc ? proc[0] : localizeName(rc[0], ld.id);
+        var cshort = proc ? proc[1] : rc[1];
         var club = {
-          id: clubId, name: cname, origName: rc[0], short: rc[1],
+          id: clubId, name: cname, origName: rc[0], short: cshort,
           leagueId: ld.id, coach: fullName(rng, ld.culture),
           colors: { primary: pal[0], secondary: pal[1] },
           strength: strength, playerIds: []
