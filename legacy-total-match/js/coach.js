@@ -3902,6 +3902,8 @@
       '<circle cx="' + X(0) + '" cy="' + Y(vals[0]) + '" r="4" fill="#fff"/><text x="' + (X(0) + 6) + '" y="' + (Y(vals[0]) - 6) + '" font-size="10" font-weight="800" fill="#fff">' + ov + ' hoje</text>' +
       (pk > 0 ? '<circle cx="' + X(pk) + '" cy="' + Y(vals[pk]) + '" r="4" fill="#f5c542"/><text x="' + Math.min(W - 60, X(pk) + 6) + '" y="' + (Y(vals[pk]) - 6) + '" font-size="10" font-weight="800" fill="#f5c542">pico ' + Math.round(vals[pk]) + ' aos ' + ages[pk] + '</text>' : "") + ticks + '</svg>';
   }
+  // helpers do perfil gráfico, reaproveitados pelo modal de jogador de todos os modos
+  TM.profile = { ATTR6: ATTR6, radarSVG: radarSVG, pitchSVG: pitchSVG, traitsOf: traitsOf, projectionSVG: projectionSVG, gaugeSVG: gaugeSVG, attrColor: attrColor, POS_ALT: POS_ALT, ROLE_TXT: ROLE_TXT };
   function squadAvgAttrs(c) {
     var ps = []; try { ps = C().rosterPlayers(c); } catch (e) {}
     if (!ps.length) return null;

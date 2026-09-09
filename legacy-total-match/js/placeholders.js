@@ -343,6 +343,11 @@
     clubImg: function (club, cls) {
       // escudo importado pelo jogador (clube personalizado) tem prioridade
       if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
+      // Season Update: escudo REAL do clube (assets/clubes/<liga>-<clube>.png) quando existir
+      if (club.leagueId && club.name) {
+        var cf = club.leagueId + "-" + stadSlug(club.name) + ".png";
+        if (hasPhoto("clubes", cf)) return imgWithFallback("assets/clubes/" + cf, crest(club), club.name, cls);
+      }
       return imgWithFallback(crest(club), crest(club), club.name, cls);
     },
     kit: kit,

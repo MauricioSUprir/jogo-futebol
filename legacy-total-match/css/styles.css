@@ -3297,3 +3297,17 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .coin-admin-form .select { width: 100%; }
 .next-match.elim { border-color: #e0472c; box-shadow: 0 0 0 1px rgba(224,71,44,.25); }
 .next-match.elim .nm-label { color: #ff7b6b; }
+
+/* ===== modal de jogador (todos os modos) — versão gráfica ===== */
+.modal.player-modal { max-width: 440px; max-height: 92vh; overflow-y: auto; padding: 14px; }
+.player-modal .pm-head { margin: 0 0 8px; border-radius: 14px; }
+.player-modal .prof-face { width: 74px; height: 74px; }
+.player-modal .prof-club { opacity: .85; }
+.player-modal .pm-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.player-modal .pm-two .prof-card { margin: 0; padding: 8px; }
+.player-modal .radar-wrap svg, .player-modal .pitch-wrap svg { width: 100%; height: auto; }
+.player-modal .tat-mini { font-size: 11px; color: var(--muted); text-align: center; margin-top: 4px; }
+.player-modal .trait-row { margin: 6px 0; }
+.player-modal .attrs { margin: 8px 0; }
+.player-modal .proj-wrap svg { width: 100%; height: auto; }
+@media (max-width: 380px) { .player-modal .pm-two { grid-template-columns: 1fr; } }
