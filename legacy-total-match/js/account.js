@@ -65,15 +65,77 @@
   });
 
   function renderLoggedIn(body, p) {
-    // boas-vindas + foto
-    var pcard = el("div", { class: "prof-card" }, [
+    var me = N().me || {};
+    var number = me.number || null;
+    // cartão da conta: foto, nome, e-mail, NÚMERO DA CONTA (para receber coins / adicionar amigos)
+    var pcard = el("div", { class: "prof-card acct-card" }, [
       avatar(p, "prof-photo-lg"),
-      el("div", {}, [
+      el("div", { class: "acct-info" }, [
         el("div", { class: "prof-hi", text: "👋 Olá, " + p.name + "!" }),
-        el("div", { class: "prof-email", text: p.email })
+        el("div", { class: "prof-email", text: p.email }),
+        el("div", { class: "acct-number" }, [
+          el("span", { class: "acct-lbl", text: "Nº da conta" }),
+          el("span", { class: "acct-num", text: number || "…" }),
+          number ? el("button", { class: "acct-copy", title: "Copiar", on: { click: function () { try { navigator.clipboard.writeText(number); TM.ui.toast("Número copiado: " + number); } catch (e) { TM.ui.toast(number); } } } }, [ el("span", { text: "⧉" }) ]) : null
+        ].filter(Boolean)),
+        el("div", { class: "acct-status" + (me.uid ? " on" : ""), text: me.uid ? "● online" : "○ offline" })
       ])
     ]);
     body.appendChild(pcard);
+    body.appendChild(el("div", { class: "setting-hint", text: "Seu número é como os outros te encontram: para adicionar como amigo e para receber Total Coins." }));
+
+    // Total Coins / Total Points
+    if (TM.coins) {
+      var cs = TM.coins.state();
+      body.appendChild(el("div", { class: "acct-stats" }, [
+        el("button", { class: "acct-stat", on: { click: function () { TM.ui.go("coins"); } } }, [ el("div", { class: "acct-stat-v", text: cs.bal + " 🪙" }), el("div", { class: "acct-stat-l", text: "Total Coins" }) ]),
+        el("button", { class: "acct-stat", on: { click: function () { TM.ui.go("coins"); } } }, [ el("div", { class: "acct-stat-v", text: String(cs.earned || 0) }), el("div", { class: "acct-stat-l", text: "Total Points" }) ]),
+        el("button", { class: "acct-stat", on: { click: function () { TM.ui.go("coins"); } } }, [ el("div", { class: "acct-stat-v", text: String(cs.best || 0) }), el("div", { class: "acct-stat-l", text: "Melhor sequência" }) ])
+      ]));
+    }
+
+    // perfil online: clube do coração, bio, partidas online, amigos
+    var onl = el("div", { class: "prof-card pblock acct-online" }, [ el("div", { class: "prof-card-h", text: "PERFIL ONLINE" }), el("div", { class: "setting-hint", text: "Carregando…" }) ]);
+    body.appendChild(onl);
+    if (me.uid && N().getProfile) {
+      N().getProfile(me.uid, function (op) {
+        if (!onl.isConnected) return;
+        TM.ui.clear(onl);
+        onl.appendChild(el("div", { class: "prof-card-h", text: "PERFIL ONLINE" }));
+        var fav = op.favClub && TM.data.club(op.favClub);
+        onl.appendChild(el("div", { class: "acct-row" }, [
+          fav ? TM.img.clubImg(fav, "pf-crest") : el("span", { class: "pf-crest-empty", text: "❤" }),
+          el("div", {}, [ el("div", { class: "pf-lbl", text: "Clube do coração" }), el("div", { class: "pf-name", text: fav ? fav.name : "não escolhido" }) ])
+        ]));
+        if (op.bio) onl.appendChild(el("div", { class: "profile-bio", text: "“" + op.bio + "”" }));
+        var winPct = op.played ? Math.round((op.wins / op.played) * 100) : 0;
+        onl.appendChild(el("div", { class: "acct-stats" }, [
+          el("div", { class: "acct-stat" }, [ el("div", { class: "acct-stat-v", text: String(op.played || 0) }), el("div", { class: "acct-stat-l", text: "Jogos online" }) ]),
+          el("div", { class: "acct-stat" }, [ el("div", { class: "acct-stat-v", text: String(op.wins || 0) }), el("div", { class: "acct-stat-l", text: "Vitórias" }) ]),
+          el("div", { class: "acct-stat" }, [ el("div", { class: "acct-stat-v", text: winPct + "%" }), el("div", { class: "acct-stat-l", text: "Aproveitamento" }) ])
+        ]));
+        onl.appendChild(el("div", { class: "hub-actions" }, [
+          el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-profile-edit", { back: "profile" }); } } }, [ el("span", { class: "hub-ic", text: "✏️" }), el("span", { text: "Editar" }) ]),
+          el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-profile", { uid: me.uid, back: "profile" }); } } }, [ el("span", { class: "hub-ic", text: "👁️" }), el("span", { text: "Ver público" }) ]),
+          el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "hub-ic", text: "👥" }), el("span", { text: "Amigos" }) ]),
+          el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-ranking"); } } }, [ el("span", { class: "hub-ic", text: "🏅" }), el("span", { text: "Ranking" }) ])
+        ]));
+      });
+    } else {
+      TM.ui.clear(onl); onl.appendChild(el("div", { class: "prof-card-h", text: "PERFIL ONLINE" })); onl.appendChild(el("div", { class: "setting-hint", text: "Conecte-se para ver seu perfil online." }));
+    }
+
+    // carreiras neste aparelho
+    try {
+      var cc = TM.storage.coachCareer();
+      if (cc && cc.teamName) {
+        body.appendChild(el("div", { class: "prof-card pblock" }, [
+          el("div", { class: "prof-card-h", text: "CARREIRA" }),
+          el("div", { class: "acct-row" }, [ TM.data.club(cc.teamId) ? TM.img.clubImg(TM.data.club(cc.teamId), "pf-crest") : el("span"), el("div", {}, [ el("div", { class: "pf-lbl", text: "Master League" }), el("div", { class: "pf-name", text: cc.teamName + (cc.season ? " · temporada " + cc.season : "") }) ]) ]),
+          el("div", { class: "actions" }, [ TM.ui.button("▶ Continuar carreira", function () { TM.ui.go("coach-hub"); }, "btn small") ])
+        ]));
+      }
+    } catch (e) {}
 
     // editar perfil (foto + nome)
     body.appendChild(el("div", { class: "list-head", text: "Personalizar" }));
