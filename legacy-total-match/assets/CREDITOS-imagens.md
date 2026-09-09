@@ -154,3 +154,8 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `pt-nacional.jpg` — Mghamburg — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Eng._Rui_Alves_1.jpg
 - `pt-santa-clara.jpg` — Rasibo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_de_S%C3%A3o_Miguel_(62276).jpg
 - `nl-psv.jpg` — TaraO — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Philips_Stadion.jpg
+- `nl-ajax.jpg` — Alf van Beem — CC0 — https://commons.wikimedia.org/wiki/File:Arena,_Ajax_stadion,_Amsterdam.JPG
+- `nl-az-alkmaar.jpg` — Jesperverbruggen — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vooraanzicht_AFAS_Stadion_april2022.jpg
+- `nl-twente.jpg` — Mark92 at nl.wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Grolsch_Veste_wedstrijd.JPG
+- `nl-utrecht.jpg` — Kevertje77 at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Stadion_FC_Utrecht_-_Bunnikside.jpg
+- `nl-sparta-rotterdam.jpg` — Hanhil at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:SpartaKasteel.jpg
