@@ -1710,6 +1710,23 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `fr-angers__jordan-lefort.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Lefort_asse_sco_2425.png
 - `br-athletico-paranaense__leo.jpg` — Portal de Dados Abertos do Tribunal Superior Eleitoral do Brasil (TSE) — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2020_DR._L%C3%89O_KAHN_CANDIDATO_VICE-PREFEITO_SP_SANTO_ANDRE_TSE_(250001268294).jpg
 - `br-athletico-paranaense__isaac.jpg` — Aziz911q8 — Public domain — https://commons.wikimedia.org/wiki/File:The_Prophet_Ishaq_(Isaac_In_Islam).png
+- `br-athletico-paranaense__alejandro-garcia.jpg` — United Satates Department of Labor
+
+derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Alejandro_Garcia_Padilla_-cropped.jpg
+- `br-athletico-paranaense__leozinho.jpg` — Humor Multishow — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Leozinho_Nunes.png
+- `br-athletico-paranaense__santos.jpg` — Leone Melo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:DeMolay_-_Santos.jpg
+- `br-athletico-paranaense__dantas.jpg` — O desembargador — CC0 — https://commons.wikimedia.org/wiki/File:BRAS%C3%83O_DE_CARNA%C3%9ABA_DOS_DANTAS_-_RN.jpg
+- `br-athletico-paranaense__matheus-soares.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Matheus_Thuler_(26926085948)_(cropped).jpg
+- `br-atletico-mineiro__everson.jpg` — BabelStone — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Michael_Everson_with_Charter_Fragment_at_British_Library.jpg
+- `br-atletico-mineiro__tomas-perez.jpg` — D. Benjamin Miller — CC0 — https://commons.wikimedia.org/wiki/File:Tom%C3%A1s_P%C3%A9rez_throws_a_ball_in_warmups,_Aug_05_2022_1_(cropped).jpg
+- `br-atletico-mineiro__victor-hugo.jpg` — autor no Commons — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Victor_Hugo_1802-1885,_fransk_f%C3%B6rfattare_dramatiker_och_diktare_-_SLSA_1270_34_foto_880.jpg
+- `br-atletico-mineiro__robert.jpg` — Robert444444 aka Philip K (and admin of holyirishmartyrs.com) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Robert_Scurlock,_Catholic_Martyr_of_Dublin.png
+- `br-atletico-mineiro__dudu.jpg` — Agência Brasília — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:2023-06-23_Dudu_Nobre.jpg
+- `br-bahia__caio-alexandre.jpg` — Lega Pallavolo Serie A — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Caio_Alexandre_De_Oliveira_(Legavolley_2019).jpg
+- `br-bahia__leo-vieira.jpg` — Sir Velpertex di Crantx — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Leo_Vieira_2022.jpg
+- `br-bahia__david-duarte.jpg` — UN Trade and Development (UNCTAD) / William Albors — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:H.E._Mr._Christian_David_Duarte_Chavez,_Secretary_of_State,_Office_of_Finance,_Honduras_-_2025_(cropped).jpg
+- `br-bahia__marcos-victor.jpg` — Victor Fabrizio Garibay Sanchez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Conmemoraciones_tras_cumplirse_un_a%C3%B1o_del_Asalto_a_San_Marcos_del_2023.jpg
+- `br-botafogo__vitinho.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Vitinho_-_S%C3%A3o_Bernardo_FC_2022.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
