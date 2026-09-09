@@ -1599,6 +1599,115 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `es-espanyol__marcos-fernandez.jpg` — PePeEfe — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:F%C3%A1tima_Marcos_Fern%C3%A1ndez_-_oct_2025.jpg
 - `es-espanyol__kike-garcia.jpg` — MarcoTevar — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Biel_Perello,_Tom%C3%A0s_Fuentes_y_Kike_Garcia_en_el_International_Podcast_en_el_festival_de_comedia_alternativa_La_Llama_Fest_2022.jpg
 - `ru-epitsentr-k-p__vadym-sydun.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%92%D0%B0%D0%B4%D0%B8%D0%BC_%D0%A1%D0%B8%D0%B4%D1%83%D0%BD_%E2%80%94_%D0%A4%D0%9A_%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8_%D0%9B%D1%8C%D0%B2%D1%96%D0%B2_U-19_(2024)_full_image.png
+- `be-club-brugge__nordin-jackers.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:RSC_Anderlecht_v_Club_Brugge,_18_May_2025_(image_4).jpg
+- `ru-epitsentr-k-p__andriy-boryachuk.jpg` — Олег Дубина — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Andriy_Boryachuk.jpg
+- `be-club-brugge__hugo-siquet.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hugo_Siquet_Club_Brugge_2025_(cropped).jpg
+- `be-club-brugge__brandon-mechele.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brandon_Mechele_USMNT_v_Belgium_Mar_28_2026-78_(cropped).jpg
+- `be-club-brugge__joaquin-seys.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joaquin_Seys_USMNT_v_Belgium_Mar_28_2026-206.jpg
+- `es-espanyol__jose-angel-lopez.jpg` — Gobierno de Guatemala — Public domain — https://commons.wikimedia.org/wiki/File:Jos%C3%A9_%C3%81ngel_L%C3%B3pez_(2020).jpg
+- `be-club-brugge__mamadou-diakhon.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Diakhon_asse_sr_2425.png
+- `be-club-brugge__felix-lemarechal.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Lemarechal_asse_rcsa_2425.jpg
+- `es-getafe__andres-garcia.jpg` — Zarateman — CC0 — https://commons.wikimedia.org/wiki/File:Getafe_-_Homenaje_a_Andr%C3%A9s_Garc%C3%ADa_Madrid_3.jpg
+- `be-genk__tobe-leysen.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_(U19)_gegen_KRC_Genk_(U19)_(UEFA_Youth_League_17._September_2019)_21_(cropped).jpg
+- `be-genk__benjamin-tahirovic.jpg` — Carlo Bruil from Nederland — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Benjamin_Tahirovi%C4%87_-_GAE_-_Ajax_(53465349575).jpg
+- `es-levante__petar-ratkov.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_Club_Br%C3%BCgge_(2025-08-06_Championsleague_Qualifikation_Dritte_Runde)_99.jpg
+- `be-genk__christiaan-ravych.jpg` — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File:ChristiaanRavychfebruari2025.jpg
+- `be-genk__bryan-heynen.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_KRC_Genk_(UEFA_Championsleague_17._September_2019)_09.jpg
+- `be-genk__junya-ito.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Ito_asse_sr_2425.png
+- `be-genk__yaimar-medina.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yaimar_Medina_Cote_D%27Ivoire_v_Ecuador_14_June_2026-36_(cropped).jpg
+- `be-genk__nikolas-sattlberger.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_SK_Rapid_Wien_(Nikolas_Sattlberger)_17_(cropped).jpg
+- `be-genk__tobias-lawal.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_LASK_(2023-10-21)_34.jpg
+- `es-malaga__ramon.jpg` — Tyk — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:San_Ram%C3%B3n_Neonato,_M%C3%A1laga.jpg
+- `es-malaga__rafa.jpg` — Pedro J Pacheco — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Festival_de_M%C3%A1laga_2024_-_Rafa_%C3%81lamos.jpg
+- `be-gent__laszlo-benes.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:L%C3%A1szl%C3%B3_B%C3%A9nes_(2026).jpg
+- `be-gent__aime-omgba.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Aim%C3%A9_Omgba_(2026).jpg
+- `be-gent__momodou-sonko.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:Momodou_Sonko_(H%C3%A4cken_vs_Qaraba%C4%9F,_UEFA_Europa_League,_5_October_2023).jpg
+- `es-malaga__juan-cruz.jpg` — Dlakbza — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Cruz_Morellato_2_Jugador_de_F%C3%BAtbol.jpg
+- `be-gent__christian-burgess.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Christian_Burgess_(2026).jpg
+- `be-gent__matisse-samoise.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Matisse_Samoise_(2026).jpg
+- `be-gent__tiago-araujo.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Tiago_Ara%C3%BAjo_(2026).jpg
+- `be-gent__max-dean.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Max_Dean_(2026).jpg
+- `be-gent__leonardo-lopes.jpg` — autor no Commons — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Leo-da-Silva-lopes_(cropped).jpeg
+- `be-gent__tibe-de-vlieger.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Tibe_De_Vlieger_(2026).jpg
+- `be-gent__mohammed-el-adfaoui.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Mohammed_El_%C3%82dfaoui_(2026).jpg
+- `be-gent__lars-cooman.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Lars_Cooman_(2026).jpg
+- `be-gent__kjell-peersman.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Kjell_Peersman_(2026).jpg
+- `be-gent__bas-evers.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Bas_Evers_(2026).jpg
+- `uy-liverpool-fc__ruben-bentancourt.jpg` — Ago76 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:R%C3%BAben_Bentancourt.JPG
+- `es-malaga__juani.jpg` — Aspnx69 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Juani_Guirado.jpg
+- `be-gent__siebe-van-der-heyden.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Siebe_Van_der_Heyden_(2026).jpg
+- `be-gent__hyllarion-goore.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Hyllarion_Goore_(2026).jpg
+- `be-gent__josue-vergara.jpg` — Joost Pauwels — CC0 — https://commons.wikimedia.org/wiki/File:Josu%C3%A9_Vergara_(2026)_A.jpg
+- `be-gent__mamadou-diallo.jpg` — Manuel |MC — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Mamadou_Diallo_(11-11-2006).jpg
+- `es-racing-santander__andre-almeida.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Andre_Almeida_2019.png
+- `es-racing-santander__inigo-vicente.jpg` — Javier.alonso.martinez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:I%C3%B1igo_Vicente.jpg
+- `es-racing-santander__asier-villalibre.jpg` — Alberto Cabello Mayero — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Asier_Villalibre_(cropped).jpg
+- `be-gent__dante-vanzeir.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_Union-Saint-Gilloise_(05-08-2020)_16.jpg
+- `be-kortrijk__matthew-anderson.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Celtic-20240722-055.jpg
+- `be-kortrijk__goduine-koyalipou.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Koyalipou_rcl_asse_2425.png
+- `es-racing-santander__facundo-gonzalez.jpg` — ChecoVPI — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Facundo_Gonz%C3%A1lez_Uruguay.png
+- `es-racing-santander__matteo-prati.jpg` — Sandrino 14 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matteo_Prati_2024_(cropped).jpg
+- `es-racing-santander__yassir-zabiri.jpg` — Abdelali Bentarki — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Yassir_Zabiri_(cropped).jpg
+- `es-racing-santander__pedro-felipe.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Liefering_gegen_Grazer_AK_(2022-04-29)_28.jpg
+- `es-racing-santander__jeanuel-belocian.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Stade_Rennais_(20-08-2023)_56_(cropped).jpg
+- `es-racing-santander__carlos-sanchez.jpg` — Danilo Borges/copa2014.gov.br  Licença Creative Commons Atribuição 3.0 Brasil — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Carlos_Alberto_S%C3%A1nchez_Moreno.jpg
+- `be-kortrijk__brecht-dejaegere.jpg` — Gaillac — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brecht_Dejaegere_et_ses_co%C3%A9quipiers_-_2023-02-01_(cropped).jpg
+- `es-racing-santander__hugo-perez.jpg` — Aligf1968 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hugo_perico_perez.jpg
+- `be-kortrijk__jamie-roche.jpg` — Jens Backeman — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jamie_Roche_(Sirius,_2020,_cropped).jpg
+- `fr-angers__carlens-arcus.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Go_Ahead_Eagles_-_Vitesse_-_53310711408.jpg
+- `fr-angers__ousmane-camara.jpg` — Fédération Guinéenne Football — Public domain — https://commons.wikimedia.org/wiki/File:0K8A7017.jpg
+- `ar-argentinos-juniors__nicolas-oroz.jpg` — AlsinayColon (AlsinayColon) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_Oroz_(cropepd).jpg
+- `fr-angers__branco-van-den-boomen.jpg` — Gaillac — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:VanDenBoomen_2022-01-19_1_(cropped).jpg
+- `fr-angers__amine-sbai.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Amine_Sbai_Brazil_V_Morocco_13_June_2026-64.jpg
+- `ar-argentinos-juniors__leandro-fernandez.jpg` — Новикова Юлия — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Leandro_Fernandez_2012.jpg
+- `fr-angers__melvin-zinga.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Zinga_asse_sco_2425.png
+- `ar-argentinos-juniors__brayan-cortes.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brayan_Cort%C3%A9s_Copiap%C3%B3_v_Colo-Colo_20241110_05.jpg
+- `fr-angers__jim-allevinah.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Allevinah_asse_sco_2425.png
+- `fr-angers__lilian-raolisoa.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Raolisoa_asse_sco_2425.png
+- `es-athletic-bilbao__unai-egiluz.jpg` — Hiruka komunikazio-taldea — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Athleticeko_gabarra_itsasadarrean_(Unai_Egiluz).jpg
+- `fr-angers__haris-belkebla.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Belkebla_asse_sco_2425.png
+- `ar-argentinos-juniors__enzo-perez.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Argentina_team_in_St._Petersburg_(cropped)_Perez.jpg
+- `fr-auxerre__paul-nardi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Paul_Nardi_02082025_(1).jpg
+- `ar-argentinos-juniors__matias-gimenez.jpg` — Eljuan.marcos — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Matias_Gimenez_Rojas.jpg
+- `fr-auxerre__francisco-sierralta.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Francisco_Sierralta_2017.jpg
+- `fr-auxerre__naouirou-ahamada.jpg` — Jeollo von VfB-exklusiv.de — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Naouirou_ahamada.jpg
+- `fr-auxerre__cameron-archer.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Cameron_Archer_221202024.jpg
+- `fr-auxerre__pierre-ekwah.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Pierre_Ekwah_03042026_(2).jpg
+- `fr-auxerre__fredrik-oppegard.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:GAE_-_Ajax_-_52787513607_(cropped).jpg
+- `fr-auxerre__bryan-okoh.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Liefering_gegen_SV_Gr%C3%B6dig_(Testspiel_16._Juli_2019)_08.jpg
+- `ar-banfield__favio-alvarez.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:CINvLAG_2019-06-22_-_Favio_%C3%81lvarez_(51168115773)_(cropped).jpg
+- `ar-banfield__sergio-vittor.jpg` — Amarhgil — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Sergio_Vittor_IMG_3882.jpg
+- `fr-auxerre__clement-akpa.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Akpro_aja_asse_2425_(cropped).png
+- `fr-auxerre__axel-tuanzebe.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Axel_Tuanzebe_29112025_(1).jpg
+- `fr-brest__egil-selvik.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Egil_Selvik_03042026_(1).jpg
+- `fr-brest__brendan-chardonnet.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Chardonnet_asse_sb_2425_(cropped).png
+- `fr-brest__mamady-diambou.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Liefering_gegen_SKN_St._P%C3%B6lten_(30._Juli_2021)_37.jpg
+- `fr-brest__joseph-nonge.jpg` — Saca Fútbol — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Joseph_Nonge_Boende_(PSG_VS_Juventus).jpg
+- `fr-brest__hugo-magnetti.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Magnetti_asse_sb_2425.png
+- `fr-brest__noah-edjouma.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Edjouma_asse_tfc_2425.png
+- `fr-brest__joris-chotard.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Chotard_asse_mhsc_2425.png
+- `fr-brest__kamory-doumbia.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Doumbia_asse_sb_2425.png
+- `fr-brest__lucas-tousart.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:20191002_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League,_RB_Leipzig_-_Olympique_Lyonnais_by_Stepro_StP_0300.jpg
+- `ar-belgrano__lisandro-lopez.jpg` — cropped by Shory (extracted from Jejecam's image) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Lopez_(3).JPG
+- `ar-belgrano__franco-vazquez.jpg` — Clément Bucco-Lechat — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:20150616_-_Portugal_-_Italie_-_Gen%C3%A8ve_-_Franco_Vazquez_(cropped).jpg
+- `fr-brest__mathieu-patouillet.jpg` — ESTAC Troyes — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Mathieu_Patouillet_en_2022.png
+- `fr-brest__djylian-n-guessan.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:N%27Guessan_asse_sr_2425.png
+- `ar-belgrano__nicolas-fernandez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_Fern%C3%A1ndez_NYCFC_vs_DC_United_on_Aug_30_2025-038_(cropped).jpg
+- `fr-brest__kenny-lala.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Lala_asse_sb_2425.png
+- `fr-le-havre__junior-mwanga.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Mwanga_asse_rcsa_2425.jpg
+- `fr-le-havre__amir-richardson.jpg` — Nawfel Ajari — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:AmirRichardson.jpg
+- `ar-belgrano__emiliano-rigoni.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Emiliano_Ariel_Rigoni.jpg
+- `fr-angers__louis-mouton.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Mouton_ASSE_losc_2425_(cropped).jpg
+- `fr-auxerre__kevin-danois.jpg` — Christophe.focus — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_Danois.jpg
+- `ar-argentinos-juniors__gino-infantino.jpg` — BugWarp — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Entrenamiento_Argentina_Sub20_previo_al_mundial_-_BugWarp_(47)_(cropped).jpg
+- `fr-auxerre__marvin-senaya.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marvin_Senaya_England_v_Ghana_23_June_2026-211.jpg
+- `ar-banfield__marcos-lopez.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Go_Ahead_Eagles_-_Feyenoord_-_53679351270_(cropped).jpg
+- `fr-brest__mama-balde.jpg` — ESTAC Troyes — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Mama_Bald%C3%A9.png
+- `fr-brest__ludovic-ajorque.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Ajorque_asse_sb_2425.png
+- `fr-brest__luck-zogbe.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Zogbe_asse_sb_2425.png
+- `fr-le-havre__josh-maja.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Josh_Maja_04102025_(1).jpg
+- `ar-argentinos-juniors__gabriel-florentin.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%C2%AB%D0%9E%D1%80%D0%B5%D0%BD%D0%B1%D1%83%D1%80%D0%B3%C2%BB_%E2%80%94_%C2%AB%D0%97%D0%B5%D0%BD%D0%B8%D1%82%C2%BB_(cropped).jpg
+- `fr-angers__jordan-lefort.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Lefort_asse_sco_2425.png
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
