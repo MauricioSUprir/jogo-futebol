@@ -150,6 +150,28 @@
         });
       }).catch(function () { cb && cb(false, "Falha ao aplicar."); });
     },
+    // admin: lista todas as contas do jogo (e-mail, nome, número, coins, online)
+    listAccounts: function (cb) {
+      if (!coins.isAdmin()) { cb([], "Só o administrador."); return; }
+      if (!cloudReady()) { cb([], "Sem conexão com a nuvem."); return; }
+      var n = net(), db = n._db;
+      Promise.all([db.ref("accounts").once("value"), db.ref("users").once("value")]).then(function (r) {
+        var accts = r[0].val() || {}, users = r[1].val() || {}, out = [], seen = {};
+        Object.keys(accts).forEach(function (k) {
+          var a = accts[k] || {}; var u = (a.onlineUid && users[a.onlineUid]) || {};
+          var num = a.onlineNumber || u.number || null;
+          out.push({ email: a.email || k.replace(/,/g, "."), name: a.name || u.name || "Jogador", number: num, uid: a.onlineUid || null, coins: (typeof u.coins === "number") ? u.coins : null, online: !!u.online, lastSeen: u.lastSeen || a.createdAt || 0, account: true });
+          if (a.onlineUid) seen[a.onlineUid] = true;
+        });
+        Object.keys(users).forEach(function (uid) {
+          if (seen[uid]) return; var u = users[uid] || {};
+          if (!u.number) return;
+          out.push({ email: null, name: u.name || "Jogador", number: u.number, uid: uid, coins: (typeof u.coins === "number") ? u.coins : null, online: !!u.online, lastSeen: u.lastSeen || 0, account: false });
+        });
+        out.sort(function (x, y) { return (y.online - x.online) || ((y.lastSeen || 0) - (x.lastSeen || 0)); });
+        cb(out, null);
+      }).catch(function (e) { cb([], "Sem permissão para ler a lista (regras do banco)."); });
+    },
     badge: function (cls) {
       var has = hasAccount();
       var b = el("button", { class: "coin-badge " + (cls || "") + (has ? "" : " nocct"), title: has ? "Total Coins" : "Entre na conta para ter Total Coins", on: { click: function () { TM.ui.go("coins"); } } }, [
@@ -278,6 +300,44 @@
     var takeBtn = TM.ui.button("➖ Tirar coins", function () { doOp(-1); }, "btn ghost");
     box.appendChild(el("div", { class: "coin-admin-form" }, [ numIn, findBtn, amtIn, noteIn, el("div", { class: "coin-admin-btns" }, [ sendBtn, takeBtn ]) ]));
     box.appendChild(info);
+
+    // ---- diretório de contas ----
+    box.appendChild(el("div", { class: "list-head", text: "👥 Contas do jogo" }));
+    var dirInfo = el("div", { class: "setting-hint", text: "Todas as contas cadastradas, com número, coins e quem está online." });
+    var dirSearch = el("input", { class: "select", type: "text", placeholder: "buscar por nome, e-mail ou número…" });
+    var dirList = el("div", { class: "coin-dir" }); var dirData = []; var showAnon = false;
+    function renderDir() {
+      TM.ui.clear(dirList);
+      var q = (dirSearch.value || "").toLowerCase().trim(), shown = 0;
+      dirData.forEach(function (a) {
+        if (!showAnon && !a.account) return;
+        if (q && [a.name, a.email, a.number].join(" ").toLowerCase().indexOf(q) < 0) return;
+        shown++;
+        dirList.appendChild(el("div", { class: "coin-dir-row" + (a.online ? " on" : "") }, [
+          el("span", { class: "coin-dir-dot" }),
+          el("div", { class: "coin-dir-main" }, [
+            el("div", { class: "coin-dir-name", text: a.name + (a.account ? "" : " · sem conta") }),
+            el("div", { class: "coin-dir-sub", text: (a.email ? a.email + " · " : "") + (a.number ? "nº " + a.number : "sem número") })
+          ]),
+          el("div", { class: "coin-dir-coins", text: a.coins != null ? a.coins + " 🪙" : "—" }),
+          a.number ? el("button", { class: "acct-copy", text: "usar", on: { click: function () { numIn.value = a.number; found = { uid: a.uid, name: a.name, coins: a.coins }; info.textContent = "✅ " + a.name + " · conta " + a.number + (a.coins != null ? " · saldo " + a.coins + " 🪙" : ""); try { numIn.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} } } }) : el("span")
+        ]));
+      });
+      var total = dirData.filter(function (a) { return a.account; }).length, onl = dirData.filter(function (a) { return a.account && a.online; }).length;
+      dirInfo.textContent = total + " conta(s) cadastrada(s) · " + onl + " online agora" + (shown < total ? " · mostrando " + shown : "");
+    }
+    var loadBtn = TM.ui.button("🔄 Carregar contas", function () {
+      loadBtn.disabled = true; dirInfo.textContent = "Carregando…";
+      coins.listAccounts(function (list, err) {
+        loadBtn.disabled = false;
+        if (err) { dirInfo.textContent = err; return; }
+        dirData = list; renderDir();
+      });
+    }, "btn ghost small");
+    var anonBtn = TM.ui.button("Mostrar aparelhos sem conta", function () { showAnon = !showAnon; anonBtn.textContent = showAnon ? "Esconder aparelhos sem conta" : "Mostrar aparelhos sem conta"; renderDir(); }, "btn ghost small");
+    dirSearch.addEventListener("input", renderDir);
+    box.appendChild(el("div", { class: "coin-admin-btns" }, [ loadBtn, anonBtn ]));
+    box.appendChild(dirInfo); box.appendChild(dirSearch); box.appendChild(dirList);
     return box;
   }
 })(window);
