@@ -109,6 +109,7 @@
       { ic: "📋", label: "Escalação", route: "coach-lineup" },
       { ic: "🌱", label: "Base", route: "coach-youth" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
+      { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
       { ic: "🏆", label: "Competições", route: "coach-comps" },
       { ic: "💰", label: "Finanças", route: "coach-finance" },
       { ic: "📜", label: "Contrato", route: "coach-contract" },
@@ -148,6 +149,7 @@
       { ic: "👥", label: "Elenco", route: "coach-squad" },
       { ic: "📋", label: "Escalar", route: "coach-lineup" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
+      { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
       { ic: "📱", label: "Redes", route: "coach-social" }
     ];
     var nav = el("nav", { class: "bottom-nav" });
@@ -1138,6 +1140,7 @@
       hubBtn("🌱", "Base", function () { TM.ui.go("coach-youth"); }),
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
+      hubBtn("🔭", "Olheiros", function () { TM.ui.go("coach-scouting", { from: "coach-hub" }); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
       hubBtn("🤝", "Patrocínios", function () { TM.ui.go("club-sponsors", { from: "coach-hub" }); }),
@@ -2145,6 +2148,7 @@
           if (penCtx) { var sh = TM.engine.shootout(C().anyTeam(c, penCtx.aId), C().anyTeam(c, penCtx.bId)); penWinnerId = sh.winner === 0 ? penCtx.aId : penCtx.bId; }
           C().applyUserResult(c, hs, as, penWinnerId);
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
+          try { TM.scouting.tick(c); } catch (e) {}
           c.pressEdge = 0;
           TM.storage.saveCoachCareer(c);
           TM.ui.toast("Resultado registrado: " + hs + " × " + as);
@@ -2161,6 +2165,7 @@
         function finish(penWinnerId) {
           C().applyUserResult(c, hs, as, penWinnerId);
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
+          try { TM.scouting.tick(c); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
           TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId });
@@ -2976,7 +2981,8 @@
   }
 
   /* ---------- mercado: busca + filtros + passe livre ---------- */
-  var MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, sort: "ov" };
+  function mktDefault() { return { q: "", pos: "", pos2: "", nat: "", region: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, scouted: false, sort: "ov", limit: 60 }; }
+  var MKT = mktDefault();
   TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
@@ -3016,6 +3022,8 @@
     chipRow.appendChild(chip("🆓 Livres", MKT.free, function () { MKT.free = !MKT.free; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("💰 Baratos", isCheap, function () { MKT.valMax = 12; MKT.sort = "ov"; MKT.ovMin = 0; MKT.age = 40; MKT.free = false; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("💵 No orçamento", MKT.affordable, function () { MKT.affordable = !MKT.affordable; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("🔭 Indicados", MKT.scouted, function () { MKT.scouted = !MKT.scouted; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("🕵️ Olheiros", false, function () { TM.ui.go("coach-scouting", { from: "coach-market" }); }));
     screen.appendChild(chipRow);
 
     // busca
@@ -3037,10 +3045,18 @@
       posRow.appendChild(el("button", { class: "seg-btn" + (MKT.pos === o[0] ? " active" : ""), text: o[1], on: { click: function () { MKT.pos = o[0]; posRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); renderResults(); } } }));
     });
     panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Posição" }), posRow ]));
+    // posição detalhada (LD, ZAG, VOL, MEI, PE, CA...)
+    var pos2Sel = el("select", { class: "select" });
+    pos2Sel.appendChild(el("option", { value: "", text: "Função específica: qualquer" }));
+    [["GOL", "Goleiro"], ["LD", "Lateral direito"], ["LE", "Lateral esquerdo"], ["ZAG", "Zagueiro"], ["VOL", "Volante"], ["MC", "Meio-campo central"], ["MEI", "Meia armador"], ["PD", "Ponta direita"], ["PE", "Ponta esquerda"], ["SA", "Segundo atacante"], ["CA", "Centroavante"]].forEach(function (o) {
+      var op = el("option", { value: o[0], text: o[1] }); if (MKT.pos2 === o[0]) op.selected = true; pos2Sel.appendChild(op);
+    });
+    pos2Sel.addEventListener("change", function () { MKT.pos2 = pos2Sel.value; renderResults(); });
+    panel.appendChild(pos2Sel);
 
     // ordenação
     var sortRow = el("div", { class: "segmented full" });
-    [["ov", "Overall"], ["pot", "Potencial"], ["val", "Valor"], ["age", "Mais jovens"]].forEach(function (o) {
+    [["ov", "Overall"], ["pot", "Potencial"], ["val", "Mais caros"], ["valasc", "Mais baratos"], ["age", "Mais jovens"], ["name", "Nome"]].forEach(function (o) {
       sortRow.appendChild(el("button", { class: "seg-btn" + (MKT.sort === o[0] ? " active" : ""), text: o[1], on: { click: function () { MKT.sort = o[0]; sortRow.querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("active"); }); this.classList.add("active"); renderResults(); } } }));
     });
     panel.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Ordenar por" }), sortRow ]));
@@ -3051,19 +3067,28 @@
     world.nations.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (n) { var o = el("option", { value: n.id, text: n.name }); if (MKT.nat === n.id) o.selected = true; natSel.appendChild(o); });
     natSel.addEventListener("change", function () { MKT.nat = natSel.value; renderResults(); });
 
-    // liga + clube
+    // região + liga + clube
+    var REG = (TM.scouting && TM.scouting.REGIONS) || {}, REG_ORDER = (TM.scouting && TM.scouting.REGION_ORDER) || [];
+    var regionSel = el("select", { class: "select" });
+    regionSel.appendChild(el("option", { value: "", text: "Todas as regiões" }));
+    REG_ORDER.forEach(function (r) { var o = el("option", { value: r, text: REG[r].label }); if (MKT.region === r) o.selected = true; regionSel.appendChild(o); });
     var leagueSel = el("select", { class: "select" });
-    leagueSel.appendChild(el("option", { value: "", text: "Todas as ligas" }));
-    world.leagues.forEach(function (lg) { var o = el("option", { value: lg.id, text: lg.name }); if (MKT.league === lg.id) o.selected = true; leagueSel.appendChild(o); });
+    function fillLeagues() {
+      TM.ui.clear(leagueSel); leagueSel.appendChild(el("option", { value: "", text: "Todas as ligas" }));
+      world.leagues.filter(function (lg) { return !MKT.region || !REG[MKT.region] || REG[MKT.region].leagues.indexOf(lg.id) >= 0; })
+        .forEach(function (lg) { var o = el("option", { value: lg.id, text: lg.name }); if (MKT.league === lg.id) o.selected = true; leagueSel.appendChild(o); });
+    }
     var clubSel = el("select", { class: "select" });
     function fillClubs() {
       TM.ui.clear(clubSel); clubSel.appendChild(el("option", { value: "", text: "Todos os clubes" }));
-      if (MKT.league) TM.data.league(MKT.league).clubIds.map(TM.data.club).sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (cl) { var o = el("option", { value: cl.id, text: cl.name }); if (MKT.club === cl.id) o.selected = true; clubSel.appendChild(o); });
+      var L = MKT.league ? TM.data.league(MKT.league) : null;
+      if (L) L.clubIds.map(TM.data.club).filter(Boolean).sort(function (a, b) { return a.name.localeCompare(b.name); }).forEach(function (cl) { var o = el("option", { value: cl.id, text: cl.name }); if (MKT.club === cl.id) o.selected = true; clubSel.appendChild(o); });
     }
+    regionSel.addEventListener("change", function () { MKT.region = regionSel.value; MKT.league = ""; MKT.club = ""; fillLeagues(); fillClubs(); renderResults(); });
     leagueSel.addEventListener("change", function () { MKT.league = leagueSel.value; MKT.club = ""; fillClubs(); renderResults(); });
     clubSel.addEventListener("change", function () { MKT.club = clubSel.value; renderResults(); });
-    fillClubs();
-    panel.appendChild(el("div", { class: "filter-grid" }, [ natSel, leagueSel, clubSel ]));
+    fillLeagues(); fillClubs();
+    panel.appendChild(el("div", { class: "filter-grid" }, [ natSel, regionSel, leagueSel, clubSel ]));
 
     // sliders
     function slider(label, key, min, max, suffix) {
@@ -3087,43 +3112,56 @@
     var affToggle = el("button", { class: "switch" + (MKT.affordable ? " on" : ""), on: { click: function () { MKT.affordable = !MKT.affordable; affToggle.classList.toggle("on", MKT.affordable); renderResults(); } } }, [ el("span", { class: "switch-knob" }) ]);
     panel.appendChild(el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "💰 Só dentro do orçamento" }), affToggle ]));
 
-    panel.appendChild(el("button", { class: "btn ghost", text: "Limpar filtros", on: { click: function () { MKT = { q: "", pos: "", nat: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, sort: "ov" }; TM.ui.go("coach-market"); } } }));
+    panel.appendChild(el("button", { class: "btn ghost", text: "Limpar filtros", on: { click: function () { MKT = mktDefault(); TM.ui.go("coach-market"); } } }));
 
     var results = el("div", { class: "panel-narrow" });
     screen.appendChild(results);
 
     function renderResults() {
       TM.ui.clear(results);
+      try { renderResultsInner(); } catch (e) { results.appendChild(el("p", { class: "intro-text", text: "Erro ao filtrar: " + (e && e.message ? e.message : e) })); }
+    }
+    function renderResultsInner() {
       var pool;
-      if (MKT.free) pool = world.freeAgents.map(TM.data.player);
-      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return !p.freeAgent && !rosterSet[p.id]; });
+      if (MKT.free) pool = (world.freeAgents || []).map(TM.data.player).filter(Boolean);
+      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return p && !p.freeAgent && !rosterSet[p.id]; });
       var q = MKT.q.trim().toLowerCase();
+      var qn = q ? q.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
+      var regLeagues = null; if (MKT.region && REG[MKT.region]) { regLeagues = {}; REG[MKT.region].leagues.forEach(function (l) { regLeagues[l] = 1; }); }
       var list = pool.filter(function (p) {
-        if (q && p.name.toLowerCase().indexOf(q) < 0) return false;
+        if (q) { var nm = (p.name || "").toLowerCase(); if (nm.indexOf(q) < 0 && nm.normalize("NFD").replace(/[\u0300-\u036f]/g, "").indexOf(qn) < 0) return false; }
         if (MKT.pos && p.pos !== MKT.pos) return false;
+        if (MKT.pos2 && (p.pos2 || "") !== MKT.pos2) return false;
         if (MKT.nat && p.nationId !== MKT.nat) return false;
-        if (MKT.league && (p.clubId === "free" || TM.data.club(p.clubId).leagueId !== MKT.league)) return false;
+        var cl = (p.clubId && p.clubId !== "free") ? TM.data.club(p.clubId) : null;
+        if (MKT.league && (!cl || cl.leagueId !== MKT.league)) return false;
+        if (regLeagues && (!cl || !regLeagues[cl.leagueId])) return false;
         if (MKT.club && p.clubId !== MKT.club) return false;
-        if (p.age > MKT.age) return false;
-        if (MKT.ageMin && p.age < MKT.ageMin) return false;
-        if (p.overall < MKT.ovMin) return false;
-        if ((p.potential || p.overall) < MKT.potMin) return false;
-        if (MKT.valMax && TM.data.marketValue(p) > MKT.valMax * 1000000) return false;
-        if (MKT.affordable && TM.data.marketValue(p) > (c.budget || 0)) return false;
+        if ((p.age || 0) > MKT.age) return false;
+        if (MKT.ageMin && (p.age || 0) < MKT.ageMin) return false;
+        if ((p.overall || 0) < MKT.ovMin) return false;
+        if ((p.potential || p.overall || 0) < MKT.potMin) return false;
+        if (MKT.valMax && TM.data.marketValue(p) > MKT.valMax) return false;
+        if (MKT.affordable && curVal(c, askingPrice(p)) > (c.budget || 0)) return false;
+        if (MKT.scouted && !(TM.scouting && TM.scouting.isScouted(c, p.id))) return false;
         return true;
       }).sort(function (a, b) {
-        if (MKT.sort === "pot") return (b.potential || b.overall) - (a.potential || a.overall);
+        if (MKT.sort === "pot") return (b.potential || b.overall) - (a.potential || a.overall) || b.overall - a.overall;
         if (MKT.sort === "val") return TM.data.marketValue(b) - TM.data.marketValue(a);
-        if (MKT.sort === "age") return a.age - b.age || b.overall - a.overall;
-        return b.overall - a.overall;
-      }).slice(0, 120);
+        if (MKT.sort === "valasc") return TM.data.marketValue(a) - TM.data.marketValue(b) || b.overall - a.overall;
+        if (MKT.sort === "age") return (a.age || 0) - (b.age || 0) || b.overall - a.overall;
+        if (MKT.sort === "name") return (a.name || "").localeCompare(b.name || "");
+        return b.overall - a.overall || (b.potential || 0) - (a.potential || 0);
+      });
+      var total = list.length; list = list.slice(0, MKT.limit || 60);
 
-      results.appendChild(el("div", { class: "results-count", text: list.length + " jogador(es)" + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
-      if (!list.length) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
+      results.appendChild(el("div", { class: "results-count", text: total + " jogador(es)" + (total > list.length ? " · mostrando " + list.length : "") + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
+      if (!total) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
       c.shortlist = c.shortlist || [];
       list.forEach(function (p) {
         var row = TM.ui.playerRow(p, { showClub: true });
         row.classList.add("clickable");
+        if (TM.scouting && TM.scouting.isScouted(c, p.id)) { var nmEl = row.querySelector(".prow-name, .pr-name"); (nmEl || row).appendChild(el("span", { class: "mkt-scouted", text: "🔭 indicado" })); }
         // estrela: adiciona/remove da Central de transferências
         var star = el("button", { class: "shortlist-star" + (c.shortlist.indexOf(p.id) >= 0 ? " on" : ""), text: c.shortlist.indexOf(p.id) >= 0 ? "★" : "☆",
           title: "Central de transferências", on: { click: function (e) {
@@ -3142,6 +3180,7 @@
         }
         results.appendChild(row);
       });
+      if (total > list.length) results.appendChild(TM.ui.button("Mostrar mais (" + (total - list.length) + ")", function () { MKT.limit = (MKT.limit || 60) + 60; renderResults(); }, "btn ghost mkt-more"));
     }
     renderResults();
   });
