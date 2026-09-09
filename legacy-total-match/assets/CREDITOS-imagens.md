@@ -46,3 +46,10 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `br-vasco-da-gama.jpg` — Diego Baravelli — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_de_S%C3%A3o_Janu%C3%A1rio_by_Diego_Baravelli.jpg
 - `br-santos.jpg` — BrazilianDude70 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vila_Belmiro_pre-match_Santos_vs_Gr%C3%AAmio_2021.jpg
 - `br-chapecoense.jpg` — Rafinha C. — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Arena_Cond%C3%A1_Novo_gramado.jpg
+- `br-vitoria.jpg` — eu — Public domain — https://commons.wikimedia.org/wiki/File:Jogo_barradao.jpg
+- `br-coritiba.jpg` — Original uploader was Kevinklop at nl.wikipedia
+
+(Original text : Kevin Klop) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Major_Ant%C3%B4nio_Couto_Pereira,_2007-2.jpg
+- `en-manchester-city.jpg` — Joe.Bekker at English Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:TelstraDomeDocklands.jpg
+- `en-arsenal.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Emirates_Stadium_arsenal.jpg
+- `en-liverpool.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Liverpool_anfield_road_stadium.jpg
