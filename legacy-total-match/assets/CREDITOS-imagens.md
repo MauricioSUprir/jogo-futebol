@@ -2863,6 +2863,210 @@ derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.o
 - `de-borussia-dortmund__silas-ostrzinski.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ASilas_Ostrzinski.jpg
 - `de-borussia-dortmund__alexander-meyer.jpg` — Sandro Halank, Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2023-08-12_TSV_Schott_Mainz_gegen_Borussia_Dortmund_%28DFB-Pokal_2023-24%29_by_Sandro_Halank%E2%80%93018.jpg
 - `be-oh-leuven__jamie-lawrence.jpg` — John Smith/FAW — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A20210330_James_Lawrence_Wales_v_Czechia.png
+- `be-oh-leuven__siebe-schrijvers.jpg` — Daniel Schrijvers — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ASiebe_Schrijvers.jpg
+- `be-oh-leuven__abdoul-karim-traore.jpg` — Chabe01 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMatch_Football_Paris_13_Atletico_x_FBBP01_Stade_Pel%C3%A9_-_Paris_XIII_%28FR75%29_-_2025-02-28_-_40.jpg
+- `de-eintracht-frankfurt__noah-atubolu.jpg` — James Steakley — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANoah_Atubolu.jpg
+- `de-eintracht-frankfurt__lilian-brassier.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ABrassier_asse_om_2425.png
+- `be-oh-leuven__chukwubuikem-ikwuemesi.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_SK_Vorw%C3%A4rts_Steyr_%2829.Oktober_2021%29_81_%28cropped2%29.jpg
+- `be-oh-leuven__ukasz-akomy.jpg` — Pierre.berendes — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%C5%81ukasz_%C5%81akomy%2C_YB_ist_zum_17._Mal_in_der_Klubgeschichte_Schweizer_Meister%21.jpg
+- `de-eintracht-frankfurt__fares-chaibi.jpg` — feguifoot — Public domain — https://commons.wikimedia.org/wiki/File%3AWorld_Cup_Qualification_Africa_Guinea_v_Algeria_14_%28Far%C3%A8s_Cha%C3%AFbi%29.jpg
+- `de-eintracht-frankfurt__ritsu-doan.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARitsu_D%C5%8Dan_2024_%28cropped%29.jpg
+- `de-eintracht-frankfurt__timothy-chandler.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022128151252_2022-05-08_Fussball_Eintracht_Frankfurt_vs_Borussia_M%C3%B6nchengladbach_-_Sven_-_1D_X_MK_II_-_0380_-_B70I6491_%28Timothy_Chandler_cropped%29.jpg
+- `be-sint-truiden__kota-takai.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANaoto_Kamifukumoto_2023.jpg
+- `be-sint-truiden__shogo-taniguchi.jpg` — Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3A4822953_AE7I9053_%28cropped%29.jpg
+- `be-sint-truiden__arbnor-muja.jpg` — Tom Van de Velde — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AArbnor_muja-1691909639.png
+- `de-eintracht-frankfurt__mario-gotze.jpg` — Rufus46 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMario_Goetze_Training_FC_Bayern_M%C3%BCnchen-1.jpg
+- `be-sint-truiden__abdoulaye-sissako.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_LB_Ch%C3%A2teauroux_%2803-11-2018%29_11.jpg
+- `de-eintracht-frankfurt__jens-grahl.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022128150908_2022-05-08_Fussball_Eintracht_Frankfurt_vs_Borussia_M%C3%B6nchengladbach_-_Sven_-_1D_X_MK_II_-_0312_-_B70I6423_%28cropped%29.jpg
+- `be-sint-truiden__leo-kokubo.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJapanese_pre-match_preparations_-_Japan_vs._Spain%2C_2024_Summer_Olympic_men%27s_association_football%2C_2024-08-02.jpg
+- `de-eintracht-frankfurt__jessic-ngankam.jpg` — Biso — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJessic_Ngankam.jpg
+- `de-elversberg__nicholas-mickelson.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANicholas_Mickelson_in_match_with_Japan_in_2024.jpeg
+- `de-elversberg__florian-le-joncour.jpg` — Mikey 111 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFlorian_Le_Joncour.jpg
+- `de-elversberg__amara-conde.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-04-24_Fu%C3%9Fball%2C_M%C3%A4nner%2C_3._Liga%2C_1._FC_Magdeburg_-_FSV_Zwickau_1DX_8484_by_Stepro_%28cropped%29.jpg
+- `de-elversberg__ukasz-poreba.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Lukasz_Poreba_HSV_pic1.jpg
+- `be-sint-truiden__andres-ferrari.jpg` — Carlos A. Cermele — Public domain — https://commons.wikimedia.org/wiki/File%3APaulo_Andr%C3%A9s_Ferrari.jpg
+- `de-elversberg__luca-pfeiffer.jpg` — Jeollo von VfB-exklusiv.de — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALuca_pfeiffer.jpg
+- `de-elversberg__frederik-schmahl.jpg` — Quew3Pat — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFrederik_Schmahl_2025.jpg
+- `be-standard-liege__dimitri-lavalee.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_RB_salzburg_gegen_SK_Sturm_Graz_%282024-02-09%29_51_%28Dimitri_Laval%C3%A9e%29.jpg
+- `de-elversberg__lukas-pinckert.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-05-21_VSG_Altglienicke_gegen_FC_Viktoria_1889_Berlin_%28Finale_AOK-Landespokal_Berlin_2021-22%29_by_Sandro_Halank%E2%80%93211.jpg
+- `de-elversberg__lukas-petkov.jpg` — Biso — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALukas_Petkov.jpg
+- `be-standard-liege__dennis-eckert.jpg` — Harpagornis — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AXXIII_Memorial_Quinocho_%28RC_Celta_vs_Mainz_05%29_-_55_%28cropped%29.jpg
+- `de-elversberg__luca-sirch.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2021-05-29_1._FC_Lokomotive_Leipzig_gegen_Chemnitzer_FC_%28Finale_Wernesgr%C3%BCner_Sachsenpokal_2020-21%29_by_Sandro_Halank%E2%80%93040.jpg
+- `de-elversberg__tim-boss.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2019-07-17_SG_Dynamo_Dresden_vs._Paris_Saint-Germain_by_Sandro_Halank%E2%80%93560.jpg
+- `be-standard-liege__sylvester-jasper.jpg` — CLEMENATOR — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASylvester_Jasper_Footballer.jpg
+- `de-freiburg__mio-backhaus.jpg` — Stefan van Nierop — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMio_backhaus-1695107703.jpeg
+- `de-freiburg__philipp-lienhart.jpg` — James Steakley — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APhilipp_Lienhart.jpg
+- `be-standard-liege__belmin-dizdarevic.jpg` — MHSC TV - Montpellier Hérault Sport Club — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ABelmin_Dizdarevi%C4%87_2023.jpg
+- `de-freiburg__anthony-jung.jpg` — Christian Bier — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAnthony_Jung.JPG
+- `be-standard-liege__ryan-fosso.jpg` — User:Zafer — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARyan_Fosso_80_SK_Sturm_Graz_20260805_%281%29.JPG
+- `de-freiburg__maximilian-eggestein.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaximilianEggestein.jpg
+- `be-standard-liege__casper-nielsen.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_Union-Saint-Gilloise_%2805-08-2020%29_22.jpg
+- `de-freiburg__lucas-holer.jpg` — James Steakley — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALucas_H%C3%B6ler_%282019_-_2%29.jpg
+- `be-union-sg__vic-chambaere.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AGo_Ahead_Eagles_-_Royale_Union_Saint-Gillloise_-_53852790353.jpg
+- `be-union-sg__kevin-mac-allister.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AGo_Ahead_Eagles_-_Royale_Union_Saint-Gillloise_-_53852891619_%28Kevin_Mac_Allister%29.jpg
+- `de-freiburg__yuito-suzuki.jpg` — 3point.dk — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ASuzuki_%282023%29.png
+- `be-union-sg__kamiel-van-de-perre.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKamiel_Van_De_Perre_Union_2025.jpg
+- `be-union-sg__adem-zorgane.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABelgian_Super_Cup_2025_-_Union_SG_vs_Club_Brugge_%28Adem_Zorgane%29.jpg
+- `de-freiburg__rihito-yamamoto.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJapanese_pre-match_preparations_-_Japan_vs._Spain%2C_2024_Summer_Olympic_men%27s_association_football%2C_2024-08-02.jpg
+- `be-union-sg__anouar-ait-el-hadj.jpg` — anderlecht-online.be — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAnouar_Ait_El_Hadj_-_RSCA_%282021%29_%28cropped%29.jpg
+- `de-freiburg__florian-muller.jpg` — Jeollo — GFDL — https://commons.wikimedia.org/wiki/File%3AFlorian_M%C3%BCller.jpg
+- `de-freiburg__jannik-huth.jpg` — Ailura — CC BY-SA 3.0 at — https://commons.wikimedia.org/wiki/File%3A20161011_U21_AUT_GER_9329.jpg
+- `be-union-sg__herve-koffi.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AKoffi_rcl_asse_2425.png
+- `be-union-sg__kevin-rodriguez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKevin_Rodriguez_Cote_D%27Ivoire_v_Ecuador_14_June_2026-212.jpg
+- `de-freiburg__matthias-ginter.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMatthias_Ginter_2019.jpg
+- `de-freiburg__philipp-treu.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Philipp_Treu.jpg
+- `be-union-sg__besfort-zeneli.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABesfort_Zeneli_Union_Saint-Gilloise_2026.jpg
+- `de-freiburg__christian-gunter.jpg` — James Steakley — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AChristian_G%C3%BCnter_%282025_-_1%29.jpg
+- `de-freiburg__igor-matanovic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AIgor_Matanovic_Croatia_v_Portugal_2_July_2026-016.jpg
+- `be-union-sg__darius-olaru.jpg` — @8Dodo8 — Public domain — https://commons.wikimedia.org/wiki/File%3ADarius_Olaru%2C_FCSB_vs._CFR_Cluj%2C_23_Jan_2022.jpg
+- `be-union-sg__nikki-havenaar.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_SV_Horn_%2822._Juli_2016%29_Nikki_Havenaar.jpg
+- `de-hamburger-sv__daniel-heuer-fernandes.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-05-16_Hamburger_SV_Daniel_Heuer_Fernandes.jpg
+- `be-westerlo__amando-lapage.jpg` — Carlo Bruil — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAmando_Lapage_%28cropped%29.png
+- `be-westerlo__seiji-kimura.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJapanese_pre-match_preparations_-_Japan_vs._Spain%2C_2024_Summer_Olympic_men%27s_association_football%2C_2024-08-02.jpg
+- `de-hamburger-sv__david-m-ller-wolfe.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADavid_M%C3%B8ller_Wolfe_Morocco_v_Norway_7_June_2026-97_%28cropped%29.jpg
+- `de-hamburger-sv__albert-sambi-lokonga.jpg` — Maryland GovPics — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AAlbert_Sambi_Lokonga_Arsenal_v_Everton_-_52222904853_%28cropped%29.jpg
+- `be-westerlo__serhiy-sydorchuk.jpg` — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%92%D1%96%D0%B4%D0%BA%D1%80%D0%B8%D1%82%D0%B5_%D1%82%D1%80%D0%B5%D0%BD%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BC%D0%B0%D1%82%D1%87%D0%B5%D0%BC_%D0%B7_%C2%AB%D0%90%D1%80%D1%96%D1%81%D0%BE%D0%BC%C2%BB._16_%D1%81%D0%B5%D1%80%D0%BF%D0%BD%D1%8F_2023_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1466577.jpg
+- `be-westerlo__nikola-storm.jpg` — Станислав Ведмидь — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ADnepr-Brugge_%2811%29.jpg
+- `de-hamburger-sv__zakaria-el-ouahdi.jpg` — Photographe : Abdelali Bentarki ( Ali Graphy Pic ) ; recadrage : A.Nawfel — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AZakaria_El_Ouahdi_at_the_Olympic_Games_2024_%28cropped%29.jpg
+- `de-hamburger-sv__fabio-vieira.jpg` — David — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A2023_MLS_All_Star_Game_2023-07-19_Tim_Parker_Fabio_Vieira.jpg
+- `be-westerlo__cameron-congreve.jpg` — Stuartp1213 — CC0 — https://commons.wikimedia.org/wiki/File%3ACameron_Congreve.jpg
+- `de-hamburger-sv__terem-moffi.jpg` — Sese le Merlu — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATerem_Moffi.jpg
+- `de-hamburger-sv__immanuel-pherai.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Immanuel_Pherai_HSV_pic1.jpg
+- `de-hamburger-sv__sander-tangvik.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASander_Tangvik_Morocco_v_Norway_7_June_2026-46.jpg
+- `de-hamburger-sv__yussuf-poulsen.jpg` — Christian Bier — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AYussuf_Poulsen.JPG
+- `de-hamburger-sv__warmed-omari.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Stade_Rennais_%2820-08-2023%29_48.jpg
+- `de-hamburger-sv__bakery-jatta.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-05-16_Hamburger_SV_Bakery_Jatta.jpg
+- `de-hamburger-sv__otto-stange.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Otto_Stange_HSV_pic1.jpg
+- `be-westerlo__yang-min-hyeok.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AYang_Min-hyuk_15032025_%289%29.jpg
+- `de-hamburger-sv__nicolai-remberg.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Nicolai_Remberg_Holstein_Kiel_pic2.jpg
+- `de-hamburger-sv__jordan-torunarigha.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-08-05_Jordan_Torunarigha_HSV_2.jpg
+- `be-westerlo__andreas-jungdal.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndreas_Jungdal%2C_FC_RB_Salzburg_gegen_SCR_Altach_%282023-03-19%29_%28cropped%29.jpg
+- `de-hamburger-sv__patson-daka.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3APatson_Daka_and_Louis_Page_23082025_%287%29.jpg
+- `de-hamburger-sv__miro-muheim.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-05-16_Hamburger_SV_Miro_Muheim_%28cropped%29.jpg
+- `de-hamburger-sv__sebastiaan-bornauw.jpg` — anderlecht-online.be — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASebastiaan_Bornauw_01-_VfL_Wolfsburg_%282024%29_%28cropped%29.jpg
+- `de-hamburger-sv__alexander-r-ssing-lelesiit.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-10_Alexander_R%C3%B8ssing-Lelesiit_HSV_1.jpg
+- `be-zulte-waregem__nikola-mituljikic.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANikola_Mituljiki%C4%87.jpg
+- `de-hamburger-sv__joel-agyekum.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Joel_Agyekum_HSV_pic1.jpg
+- `de-hoffenheim__oliver-baumann.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATeam_Germany%2C_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_04_Oliver_Baumann.jpg
+- `be-zulte-waregem__salim-diakite.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASalim_Diakit%C3%A9_2026.jpg
+- `de-hoffenheim__ozan-kabak.jpg` — mlsz.hu – the official website of the Hungarian Football Federation — Attribution — https://commons.wikimedia.org/wiki/File%3AKabak_and_K%C3%B6nyves_in_the_international_match_%28November_2020%29_%28cropped%29.jpg
+- `de-hoffenheim__adam-hlozek.jpg` — Pyaet — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAdam_Hlo%C5%BEek%2C_2022-07-31%2C_Saisoner%C3%B6ffnung_Bayer_04%2C_Leverkusen_%281%29.jpg
+- `uy-boston-river__francisco-barrios.jpg` — ProtoplasmaKid — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AFrancisco_Barrios_%22El_Mastuerzo%22_en_Plaza_Santa_Ana_04.jpg
+- `de-hoffenheim__fisnik-asllani.jpg` — Artur Kraus — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFisnik_Asllani_%28cropped%29.jpg
+- `de-hoffenheim__bernardo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABernardo_Silva_Croatia_v_Portugal_2_July_2026-238.jpg
+- `de-hoffenheim__adam-daghim.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_SV_Stripfing_%282023-09-15%29_05.jpg
+- `de-hoffenheim__nathan-de-cat.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANathan_De_Cat_USMNT_v_Belgium_Mar_28_2026-18_%28cropped%29.jpg
+- `uy-boston-river__facundo-rodriguez.jpg` — Biso — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AFacundo_Rodriguez.jpg
+- `de-hoffenheim__tim-lemperle.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2021-08-08_FC_Carl_Zeiss_Jena_gegen_1._FC_K%C3%B6ln_%28DFB-Pokal%29_by_Sandro_Halank%E2%80%93100.jpg
+- `uy-boston-river__francisco-bonfiglio.jpg` — Embajada de los Estados Unidos en Uruguay from Montevideo, Uruguay — Public domain — https://commons.wikimedia.org/wiki/File%3ABonfiglio_%285137139156%29_%28cropped%29.jpg
+- `de-hoffenheim__alexander-prass.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_FC_Juniors_O%C3%96._%2819._April_2019%29_34.jpg
+- `de-hoffenheim__andrej-kramaric.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndrej_Kramaric_Croatia_v_Portugal_2_July_2026-014.jpg
+- `de-hoffenheim__koki-machida.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AKoki_Machida_2024_%28cropped%29.jpg
+- `uy-boston-river__alexander-gonzalez.jpg` — SounderBruce — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2023_Leagues_Cup_-_Seattle_vs._Monterrey_-_Jonathan_Gonz%C3%A1lez_%28cropped%29.jpg
+- `de-hoffenheim__vladimir-coufal.jpg` — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AHamad_Al_Qallaf%2C_Vladim%C3%ADr_Coufal_CZE-KUW_2021-11-11_%283%29_%28cropped%29.jpg
+- `de-hoffenheim__mats-rots.jpg` — Hans Reefman — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMats_Rots.JPG
+- `uy-boston-river__ignacio-fernandez.jpg` — Fuguito — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEqui-Fern%C3%A1ndez-2025.jpg
+- `de-mainz-05__alexander-schwolow.jpg` — Nonametells — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlexander_Schwolow_2023.jpg
+- `de-mainz-05__stefan-posch.jpg` — Steindy ( talk ) 18:04, 19 June 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFriendly_match_Austria_U-21_vs._Hungary_U-21_2017-06-12_%28087%29.jpg
+- `de-mainz-05__eric-martel.jpg` — Werner100359 — CC0 — https://commons.wikimedia.org/wiki/File%3AEric_Martel%2C_FC_RB_Salzburg_gegen_FK_Austria_Wien_%288._August_2021%29_%28cropped%29.jpg
+- `de-mainz-05__kaishu-sano.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AKaishu_Sano_2024_%28cropped%29.jpg
+- `de-mainz-05__lee-jae-sung.jpg` — M.Sadegh Nikgostar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAsian_Nations_Cup_-_Jordan_and_South_Korea_%2874%29_%28cropped%29_2.jpg
+- `de-mainz-05__paul-nebel.jpg` — FriederRöcklerII — CC0 — https://commons.wikimedia.org/wiki/File%3APaul_Nebel_with_Mainz_05_%282026%29.jpg
+- `de-mainz-05__nadiem-amiri.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANadiem_Amiri_Ecuador_v_Germany_25_June_2026-158.jpg
+- `uy-boston-river__martin-gonzalez.jpg` — Rob Croes for Anefo — CC0 — https://commons.wikimedia.org/wiki/File%3A%C3%81ngel_Mart%C3%ADn_Gonz%C3%A1lez%2C_Campeonato_de_Europa_de_ajedrez_juvenil%2C_Groningen%2C_1972.jpg
+- `de-mainz-05__ransford-yeboah-konigsdorffer.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Ransford_K%C3%B6nigsd%C3%B6rffer_HSV_pic1.jpg
+- `de-mainz-05__stefan-bell.jpg` — Schiplagerheide — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AStefan_Bell.jpg
+- `de-mainz-05__benedict-hollerbach.jpg` — Winfrey — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AU19_DFB_Perspektivteam%2C_Duisburg-Wedau_%28cropped%29.jpg
+- `uy-boston-river__juan-acosta.jpg` — Unknown author Unknown author — Public domain — https://commons.wikimedia.org/wiki/File%3AJuan_Alberto_Acosta.jpg
+- `de-mainz-05__danny-da-costa.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022128151106_2022-05-08_Fussball_Eintracht_Frankfurt_vs_Borussia_M%C3%B6nchengladbach_-_Sven_-_1D_X_MK_II_-_0333_-_B70I6444_%28Danny_da_Costa_cropped%29.jpg
+- `de-mainz-05__sheraldo-becker.jpg` — Richard Mulder — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ASheraldo_Becker_%282017%29.jpg
+- `de-mainz-05__silas.jpg` — Jeollo von VfB-exklusiv.de — GFDL — https://commons.wikimedia.org/wiki/File%3ASilas_Katompa_Mvumpa.jpg
+- `de-mainz-05__robin-zentner.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALiverpool_FC_gegen_1._FSV_Mainz_05_%28Testspiel_23._Juli_2021%29_01.jpg
+- `de-mainz-05__silvan-widmer.jpg` — Steindy ( talk ) 14:51, 25 November 2015 (UTC) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AAUT_vs._SUI_2015-11-17_%28173%29_Silvan_Widmer.jpg
+- `de-mainz-05__dominik-kohr.jpg` — Дмитрий Неймырок — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMetallist-Bayer-04_%289%29.jpg
+- `de-mainz-05__maximilian-kinzig.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-05-21_VSG_Altglienicke_gegen_FC_Viktoria_1889_Berlin_%28Finale_AOK-Landespokal_Berlin_2021-22%29_by_Sandro_Halank%E2%80%93280_%28cropped%29.jpg
+- `uy-cerro-largo__lucas-correa.jpg` — Humor Multishow — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ALucas_Lucco_Multishow.jpg
+- `de-monchengladbach__isac-lidberg.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AGo_Ahead_Eagles_-_FC_Volendam_-_52915164480.jpg
+- `de-monchengladbach__kevin-diks.jpg` — Vanbronchorst.idn — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKevin_Diks_FC_K%C3%B8benhavn_2023.jpg
+- `de-monchengladbach__kevin-stoger.jpg` — Fuguito — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKevin-St%C3%B6ger-08-2019.jpg
+- `de-monchengladbach__franck-honorat.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_Clermont_Foot_63_%2804-05-2019%29_55.jpg
+- `de-monchengladbach__florian-neuhaus.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANeuhaus%2C_Florian_D%C3%9CS_17-18_WP.jpg
+- `de-monchengladbach__tim-kleindienst.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AKleindienst%2C_Tim_Heidenheim_16-17_%283%29_WP.jpg
+- `de-monchengladbach__shuto-machino.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-15_Sh%C5%ABto_Machino.jpg
+- `de-monchengladbach__nicolas-kuhn.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACeltic-20240722-068_%28cropped%29.jpg
+- `de-monchengladbach__david-herold.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADavid_Herold_%282023-03-19%29_72_%28cropped%29.jpg
+- `de-monchengladbach__tobias-sippel.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022128163602_2022-05-08_Fussball_Eintracht_Frankfurt_vs_Borussia_M%C3%B6nchengladbach_-_Sven_-_1D_X_MK_II_-_1549_-_B70I7660_%28cropped%29.jpg
+- `de-monchengladbach__joe-scally.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJoe_Scally_Australia_v_USA_19_June_2026-68_%28cropped%29.jpg
+- `de-paderborn__markus-schubert.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3A2017-08-11_TuS_Koblenz_vs._SG_Dynamo_Dresden_%28DFB-Pokal%29_by_Sandro_Halank%E2%80%93017.jpg
+- `de-paderborn__oliver-batista-meier.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AOliver_Batista-Meier_2019.jpg
+- `de-paderborn__rayan-philippe.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-08-05_Rayan_Philippe_HSV_1.jpg
+- `de-paderborn__sven-michel.jpg` — Words in the Wind — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASven_Michel_2026_Players.jpg
+- `de-paderborn__steffen-tigges.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ATigges%2C_Steffen_Osnabr%C3%BCck_15-16_WP_%28cropped%29.jpg
+- `uy-defensor-sporting__daniel-martinez.jpg` — Caguaré — CC0 — https://commons.wikimedia.org/wiki/File%3ADaniel_Martinez.png
+- `de-rb-leipzig__rjan-nyland.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlexander_Sorloth_Morocco_v_Norway_7_June_2026-141.jpg
+- `de-rb-leipzig__maxime-esteve.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMaxime_Est%C3%A8ve_29112025_%281%29.jpg
+- `de-rb-leipzig__willi-orban.jpg` — crop by FMSky — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-04-20_Fu%C3%9Fball%2C_M%C3%A4nner%2C_DFB-Pokal%2C_RB_Leipzig_-_1._FC_Union_Berlin_1DX_8250_by_Stepro_%28cropped%29.jpg
+- `de-rb-leipzig__antonio-nusa.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAntonio_Nusa_Morocco_v_Norway_7_June_2026-110_%28cropped%29.jpg
+- `de-rb-leipzig__assan-ouedraogo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAssan_Ouedraogo_Ecuador_v_Germany_25_June_2026-155_%28cropped%29.jpg
+- `de-rb-leipzig__marc-guiu.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File%3AMarc_Guiu_FIFA_Club_World_Cup_final_extraction.jpg
+- `de-rb-leipzig__nicolas-seiwald.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_versus_WSG_Wattens_%2824._Mai_2019%29_04.jpg
+- `de-rb-leipzig__christoph-baumgartner.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2023-10-04_Fu%C3%9Fball%2C_M%C3%A4nner%2C_UEFA_Champions_League%2C_RB_Leipzig_-_Manchester_City_FC_1DX_2789.jpg
+- `de-rb-leipzig__lukas-klostermann.jpg` — Fernando Frazão/Agência Brasil — CC BY 3.0 br — https://commons.wikimedia.org/wiki/File%3ALukas_Klostermann_Rio2016_Penalty_Final.jpg
+- `de-rb-leipzig__ridle-baku.jpg` — Original: Steffen Prößdorf ; Derivative work: FMSky — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARidle_Baku_2020-09-20_Fu%C3%9Fball%2C_M%C3%A4nner%2C_1._Bundesliga%2C_RB_Leipzig_-_1._FSV_Mainz_05_1DX_1394_by_Stepro_%28cropped%29.jpg
+- `de-rb-leipzig__neil-el-aynaoui.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANeil_El_Aynaoui_Neil_El_Aynaoui_Morocco_v_Norway_7_June_2026-13_%28cropped%29.jpg
+- `de-rb-leipzig__david-raum.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADavid_Raum_22_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_01_%28cropped%29.jpg
+- `de-rb-leipzig__maarten-vandevoordt.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaarten_Vandevoordt_USMNT_v_Belgium_Mar_28_2026-26_%28cropped%29.jpg
+- `de-rb-leipzig__christopher-nkunku.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-07-30_Fu%C3%9Fball%2C_M%C3%A4nner%2C_DFL-Supercup%2C_RB_Leipzig_-_FC_Bayern_M%C3%BCnchen_1DX_3321_by_Stepro_%28cropped%29.jpg
+- `de-rb-leipzig__benjamin-henrichs.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABenjamin_Henrichs_for_RB_Leipzig_in_2022_%28cropped%29.jpg
+- `de-rb-leipzig__romulo.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ARomulo-Athletico-Palmeiras-jul-2022.jpg
+- `de-schalke-04__loris-karius.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ALoris_Karius.jpg
+- `de-schalke-04__hasan-kurucay.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AHasanKurucay_%28cropped%29.jpg
+- `de-schalke-04__timo-becker.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-02-19_Timo_Becker_1.jpg
+- `de-schalke-04__hwang-hee-chan.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A240622_%ED%99%A9%ED%9D%AC%EC%B0%AC_%ED%92%8B%EB%B3%BC_%ED%8E%98%EC%8A%A4%ED%8B%B0%EB%B2%8C.jpg
+- `de-schalke-04__robin-gosens.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Salzburg_gegen_Inter_Mailand_%28Testspiel_2023-08-09%29_90.jpg
+- `de-schalke-04__moussa-sylla.jpg` — Niels98 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMoussa_Sylla_%2806-09-2022%29.jpg
+- `de-schalke-04__edin-dzeko.jpg` — Ailura — CC BY-SA 3.0 at — https://commons.wikimedia.org/wiki/File%3A20150331_2026_AUT_BIH_2177_Edin_D%C5%BEeko_%28cropped%29.jpg
+- `de-schalke-04__janik-bachmann.jpg` — Thomas Hilmes / https://www.der-betze-brennt.de — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A26-janik-bachmann.jpg
+- `de-schalke-04__kenan-karaman.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AKenan_Karaman.jpg
+- `de-schalke-04__junior-adamu.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_Austria_Lustenau_%285._April_2019%29_50.jpg
+- `de-schalke-04__dejan-ljubicic.jpg` — Steindy ( talk ) 09:35, 19 May 2018 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADejan_Ljubicic_-_SC_Wiener_Neustadt_%2801%29.jpg
+- `uy-miramar-misiones__camilo-sanchez.jpg` — Jossimar24+ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACamilo_S%C3%A1nchez_Gil.jpg
+- `de-schalke-04__kevin-muller.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AM%C3%BCller%2C_Kevin_Heidenheim_16-17_WP.jpg
+- `de-schalke-04__adil-aouchiche.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Saint-Etienne_%2803-10-2020%29_18.jpg
+- `de-schalke-04__nikola-katic.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ASM-Rangers18_%2816%29.jpg
+- `de-schalke-04__finn-porath.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFinnPorath_%28cropped%29.jpg
+- `de-schalke-04__junior-dina-ebimbe.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Dijon_%2815-08-2020%29_33.jpg
+- `uy-miramar-misiones__agustin-rodriguez.jpg` — FotosCutervo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAgust%C3%ADn_Rodr%C3%ADguez_%28Chuki%29_Jugadores_de_Comerciantes_Unidos_esperando_decisi%C3%B3n_del_VAR_%28cropped%29.jpg
+- `de-schalke-04__maximilian-wober.jpg` — Steindy ( talk ) 12:22, 8 December 2015 (UTC) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AFC_Admira_Wacker_vs._SK_Rapid_Wien_2015-12-02_%28154%29.jpg
+- `de-stuttgart__fabian-bredlow.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_vs.FC_Wacker_Innsbruck_%283.Oktober_2014%29_17.JPG
+- `uy-miramar-misiones__oscar-diaz.jpg` — Marshall Esquina — Public domain — https://commons.wikimedia.org/wiki/File%3A%C3%93scar_D%C3%ADaz_Delm%C3%A1s.jpg
+- `de-stuttgart__josha-vagnoman.jpg` — Jeollo von VfB-exklusiv.de — GFDL — https://commons.wikimedia.org/wiki/File%3AJosha_vagnoman.jpg
+- `de-stuttgart__angelo-stiller.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAngelo_Stiller_Ecuador_v_Germany_25_June_2026-233_%28cropped%29.jpg
+- `de-stuttgart__maximilian-mittelstadt.jpg` — Jeollo von VfB-exklusiv.de — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMaxi_mittelstaedt.jpg
+- `de-stuttgart__tiago-tomas.jpg` — Sporting Clube de Portugal — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ATiago_Tom%C3%A1s.jpg
+- `de-stuttgart__chris-fuhrich.jpg` — dronepicr — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AChris_F%C3%BChrich_1._FC_K%C3%B6ln_%2833947844388%29.jpg
+- `de-stuttgart__jamie-leweling.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJamie_Leweling_Ecuador_v_Germany_25_June_2026-162.jpg
+- `de-stuttgart__grischa-promel.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-04-20_Fu%C3%9Fball%2C_M%C3%A4nner%2C_DFB-Pokal%2C_RB_Leipzig_-_1._FC_Union_Berlin_1DX_8155_by_Stepro.jpg
+- `de-stuttgart__lorenz-assignon.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Stade_Rennais_%2820-08-2023%29_31.jpg
+- `de-stuttgart__dan-axel-zagadou.jpg` — Reto Stauffer — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AZagadou.jpg
+- `de-stuttgart__jeff-chabot.jpg` — Victor van Werkhooven — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AJeff_Chabot_%282018%29.jpg
+- `de-stuttgart__deniz-undav.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADeniz_Undav_Ecuador_v_Germany_25_June_2026-203_%28cropped%29.jpg
+- `de-stuttgart__nikolas-nartey.jpg` — Jeollo — GFDL — https://commons.wikimedia.org/wiki/File%3ANikolas_Nartey.jpg
+- `de-stuttgart__marius-funk.jpg` — Jeollo von http://www.vfb-exklusiv.de — GFDL — https://commons.wikimedia.org/wiki/File%3AMarius_funk.jpg
+- `uy-montevideo-city-torque__ignacio-molina.jpg` — Juanimolinaa — CC0 — https://commons.wikimedia.org/wiki/File%3AJuan_Ignacio_Molina_%28Futbolista%29.jpg
+- `de-stuttgart__dennis-seimen.jpg` — FriederRöcklerII — CC0 — https://commons.wikimedia.org/wiki/File%3ADennis_Seimen_%282024%29.jpg
+- `de-union-berlin__frederik-r-nnow.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-04-20_Fu%C3%9Fball%2C_M%C3%A4nner%2C_DFB-Pokal%2C_RB_Leipzig_-_1._FC_Union_Berlin_1DX_8246_by_Stepro.jpg
+- `de-union-berlin__marvin-friedrich.jpg` — Der Auslöser — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AMarvin_Friedrich_20150416.jpg
+- `de-union-berlin__aljoscha-kemlein.jpg` — Artur Kraus — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAljoscha_Kemlein_%282022%29.jpg
+- `de-union-berlin__rani-khedira.jpg` — Nonametells — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARani_Khedira_2023.jpg
+- `de-union-berlin__jeong-woo-yeong.jpg` — GOAL TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3A%EC%9D%B8%EA%B0%80_%ED%97%B7%EA%B0%88%EB%A6%AC%EB%8A%94_%EC%A0%95%EC%9A%B0%EC%98%81%EC%9D%B4_%EB%B0%9D%ED%9E%88%EB%8A%94_%EC%9D%B4%EA%B0%95%EC%9D%B8%EA%B3%BC%EC%9D%98_%ED%98%B8%ED%9D%A1.jpg
+- `de-union-berlin__andras-schafer.jpg` — mlsz.hu – the official website of the Hungarian Football Federation — Attribution — https://commons.wikimedia.org/wiki/File%3ASch%C3%A4fer_2022.jpg
+- `de-union-berlin__leopold-querfeld.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Liefering_gegen_SK_Rapid_Wien_II_%2812._September_2021%29_09_%28cropped%29.jpg
+- `de-union-berlin__janik-haberer.jpg` — James Steakley — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJanik_Haberer.jpg
+- `de-union-berlin__robert-skov.jpg` — Agência Brasília — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ARobert_Skov%2C_Dinamarca_x_%C3%81frica_do_Sul_-_Olimp%C3%ADadas_Rio_2016_%28cropped%29.jpg
+- `de-union-berlin__marin-ljubicic.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Red_Bull_Salzburg_gegen_LASK_%282024-05-19%29_18.jpg
+- `de-union-berlin__christopher-trimmel.jpg` — Steindy ( talk ) 13:05, 30 July 2009 (UTC) — GFDL — https://commons.wikimedia.org/wiki/File%3AChristopher_Trimmel_-_SK_Rapid_Wien_%281%29.jpg
+- `de-union-berlin__emmanuel-latte-lath.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEmmanuel_Latte_Lath_Red_Bull_Atlanta_5.31.25-068_%28cropped%29.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
