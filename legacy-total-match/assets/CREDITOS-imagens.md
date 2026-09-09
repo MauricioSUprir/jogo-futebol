@@ -37,6 +37,50 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `br-cruzeiro__matheus-cunha.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
 - `br-cruzeiro__gabriel-rojas.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Gabriel_Rojas_2017.jpg
 - `br-cruzeiro__lucas-silva.jpg` — Matias Arraez — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Pr%C3%A9sentation_de_Lucas_Silva_au_Santiago_Bernabeu_le_26_janvier_2015_(cropped).JPG
+- `br-athletico-paranaense__gilberto-dos-santos.jpg` — Splitfire1000 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Gilberto_dos_Santos_Sac_Republic.jpeg
+- `br-athletico-paranaense__felipinho.jpg` — Raul Ramos — CC0 — https://commons.wikimedia.org/wiki/File:Botafogo-SP_0x3_Ponte_Preta_-_07-02-2024_-_Felipinho_(cropped).jpg
+- `br-athletico-paranaense__stiven-mendoza.jpg` — Josetramontin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Foto_passaporte.jpg
+- `br-athletico-paranaense__joao-cruz.jpg` — Sporting Football Club — Public domain — https://commons.wikimedia.org/wiki/File:Joao_cruz_sporting_com_equipa.jpg
+- `br-athletico-paranaense__kevin-viveros.jpg` — Ronald 2001 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevinviveros.jpg
+- `br-athletico-paranaense__gilberto-moraes.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%91%D0%B5%D0%BD%D1%84%D1%96%D0%BA%D0%B0%C2%BB_0-0._14_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1271571.jpg
+- `br-athletico-paranaense__luiz-gustavo.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Derbide_Fenerbah%C3%A7e_Yedek_Oyuncular_(2021-22_S%C3%BCper_Lig).png
+- `br-athletico-paranaense__jadson.jpg` — Wh15oSer10us — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:JadsonRodriguesCorinthians.png
+- `br-athletico-paranaense__kerwin-vargas.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Raul_Gustavo_Kerwin_Vargas_NYCFC_v_Charlotte_20_Sep_2025-167.jpg
+- `br-athletico-paranaense__juan-portilla.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Colombia_NT_presidential_send-off_for_World_Cup,_Jun_2026_(71).jpg
+- `br-athletico-paranaense__gaston-benavidez.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:FC_Zenit_Saint_Petersburg_v_Talleres,_5_July_2024_-_01.jpg
+- `br-athletico-paranaense__riquelme.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File:Sport_0X0_N%C3%A1utico_Pernambucano_BetNacional_2024_Final_-_Riquelme.jpg
+- `br-athletico-paranaense__renan-peixoto.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Treino_AD_S%C3%A3o_Caetano_-_06-02-2021_-_Renan_(cropped).jpg
+- `br-atletico-mineiro__natanael.jpg` — Dfotev — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Natanael_Batista_Pimenta.jpg
+- `br-atletico-mineiro__leo-duarte.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:L%C3%A9o_Duarte_5_%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_FK_20250731_(3).jpg
+- `br-atletico-mineiro__renan-lodi.jpg` — Анна Нэсси — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Renan_Lodi_2019.jpg
+- `br-atletico-mineiro__fred.jpg` — Onda Solidária TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Fred_2022.png
+- `br-atletico-mineiro__maycon.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Sulamericana_CUP_2023_Semifinal_-_Corinthians_x_Fortaleza-CE_(53555082400).jpg
+- `br-atletico-mineiro__mateo-cassierra.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Mateo_Casierra_in_2025.jpg
+- `br-atletico-mineiro__gustavo-scarpa.jpg` — ImgBB — Attribution — https://commons.wikimedia.org/wiki/File:2022-Gustavo-Scarpa-2022.png
+- `us-atlanta-united__enea-mihaj.jpg` — PAOK FC / ΠΑΕ ΠΑΟΚ — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Enea_Mihaj_2020.png
+- `br-atletico-mineiro__bernard.jpg` — ОЛЕГ БАТРАК — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Bernard_An%C3%ADcio_Caldeira_Duarte.jpg
+- `us-atlanta-united__junior-alonso.jpg` — El Loko — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:J%C3%BAnior_Alonso_20180612_(cropped).jpg
+- `br-atletico-mineiro__lyanco.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:COLOMBIA_VS_BRAZIL_SUB_20_(32465941520).jpg
+- `us-atlanta-united__steven-alzate.jpg` — jamesboyes — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Enciso_2022_2.jpg
+- `us-atlanta-united__tristan-muyumba.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Tristan_Muyumba.jpg
+- `us-atlanta-united__miguel-almiron.jpg` — ProtoplasmaKid — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:FIFA_Fan_Festival_CDMX_-_120626_-_64.jpg
+- `br-atletico-mineiro__vitor-hugo.jpg` — Unknown authorUnknown author — Attribution — https://commons.wikimedia.org/wiki/File:VitorHugoSEP.jpg
+- `br-atletico-mineiro__kevin-castano.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Kevin_Casta%C3%B1o,_Colombia_NT_presidential_send-off,_Jun_2026.jpg
+- `us-atlanta-united__adrian-gill.jpg` — Eric.Jason.Cross — CC0 — https://commons.wikimedia.org/wiki/File:2026-01-30_-_Adrian_Gill.jpg
+- `us-atlanta-united__luke-brennan.jpg` — Totallynotarandomalt69 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:FOOvBHH-125.jpg
+- `us-atlanta-united__fafa-picault.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `us-atlanta-united__paulo-diaz.jpg` — Дмитрий Садовников — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Paulo_D%C3%ADaz_(cropped).jpg
+- `br-atletico-mineiro__igor-gomes.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_-_Igor_Gomes_em_2022.jpg
+- `us-atlanta-united__will-reilly.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Will_Reilly_NYCvATL-06.12.25-113_(cropped).jpg
+- `us-atlanta-united__cayman-togashi.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Cayman_Togashi.jpg
+- `us-atlanta-united__ajani-fortune.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ajani_Fortune.jpg
+- `us-atlanta-united__breel-embolo.jpg` — David Eboutou — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:David_Eboutou_En_compagnie_du_footballeur_international_d%E2%80%99origine_Camerounaise_%C3%A0_Monaco_BREEL_EMBOLO_qui_%C3%A9volue_pour_l%E2%80%99%C3%A9quipe_nationale_Suisse.jpg
+- `br-atletico-mineiro__alan-franco.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alan_Franco_Cote_D%27Ivoire_v_Ecuador_14_June_2026-41.jpg
+- `us-atlanta-united__jayden-hibbert.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Jayden_Hibbert.jpg
+- `br-atletico-mineiro__angelo-preciado.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manuel_Neuer_1,_Angelo_Preciado_17_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_02.jpg
+- `us-atlanta-united__dominik-chong-qui.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Dominik_Chong-Qui.jpg
+- `br-atletico-mineiro__alan-minda.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alan_Minda_Cote_D%27Ivoire_v_Ecuador_14_June_2026-186.jpg
+- `us-atlanta-united__aleksei-miranchuk.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Aleksei_Miranchuk_2.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
