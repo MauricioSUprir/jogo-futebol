@@ -53,3 +53,17 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `en-manchester-city.jpg` — Joe.Bekker at English Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:TelstraDomeDocklands.jpg
 - `en-arsenal.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Emirates_Stadium_arsenal.jpg
 - `en-liverpool.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Liverpool_anfield_road_stadium.jpg
+- `en-chelsea.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Stamford_Bridge.jpg
+- `en-tottenham.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Tottenham_Hotspur_Stadium.jpg
+- `en-newcastle.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Newcastle_st-james-park_stadium.jpg
+- `en-aston-villa.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Birmingham_aston_villa_park_stadium.jpg
+- `en-brighton.jpg` — Dominic Alves from Brighton, England — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Falmer_Stadium_-_night.jpg
+- `en-ipswich-town.jpg` — autor no Commons — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Cobbold_Stand,_Ipswich_Town_Football_Club_8418.jpg
+- `en-crystal-palace.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Selhurst_Park_crystal_palace_stadium_aerialview.JPG
+- `en-everton.jpg` — Pete from Liverpool, UK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Project_366_-217_040824_Approaching_Lift_Off_(53902389448).jpg
+- `en-fulham.jpg` — Kenneth Yarham — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Craven_Cottage_Football_Ground_-_geograph.org.uk_-_778731.jpg
+- `en-brentford.jpg` — AndyScott — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brentford_Community_Stadium_2020.jpg
+- `en-nottingham-forest.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Nottingham_the_city_ground_stadium_forest.jpg
+- `en-hull-city.jpg` — Paul — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:KC_South_Stand.JPG
+- `en-bournemouth.jpg` — Matthew Jackson — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Deancourt_14092013_vblackpool.jpg
+- `en-leeds-united.jpg` — Lufc83 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Elland_Road_Stadium_panoramic_view_from_its_southeastearn_corner.jpg
