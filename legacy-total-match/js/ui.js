@@ -619,6 +619,7 @@
         ])
       ]),
       el("div", { class: "fc-top-right" }, [
+        (TM.coins ? TM.coins.badge("fc-coins") : el("span")),
         profBtn,
         el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
       ])
