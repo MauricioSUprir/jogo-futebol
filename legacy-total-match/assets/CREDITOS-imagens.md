@@ -1583,6 +1583,22 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `be-charleroi__freddy-mbemba.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_USL_Dunkerque_(08-07-2023)_46.jpg
 - `be-charleroi__aurelien-scheidler.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_US_Orl%C3%A9ans_(17-05-2019)_16.jpg
 - `be-charleroi__mohamed-kone.jpg` — XaviYuahanda — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:KapfenbergJudenburg15.jpg
+- `be-club-brugge__yann-sommer.jpg` — Steindy (talk) 14:48, 25 November 2015 (UTC) — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Yann_Sommer_(cropped).jpg
+- `be-club-brugge__lee-han-beom.jpg` — FC SEOUL — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:%27%EC%8A%88%ED%8D%BC_%EB%A3%A8%ED%82%A4%27_%EC%9D%B4%ED%95%9C%EB%B2%94_%EC%B2%AB_%EC%9D%B8%ED%84%B0%EB%B7%B0.jpg
+- `be-club-brugge__joel-ordonez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joel_Ordonez_Cote_D%27Ivoire_v_Ecuador_14_June_2026-154_(cropped).jpg
+- `be-club-brugge__freddie-potts.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Freddie_Potts_(cropped).jpeg
+- `be-club-brugge__hugo-vetlesen.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_Club_Br%C3%BCgge_(2025-08-06_Championsleague_Qualifikation_Dritte_Runde)_69_(Hugo_Vetlesen).jpg
+- `es-espanyol__roberto-fernandez.jpg` — Almostred — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Blow_Down_(Spain,_2024),_Official_film_poster._Dir._Roberto_F._Canuto_%26_Xu_Xiaoxi.jpg
+- `be-club-brugge__romeo-vermant.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_Club_Br%C3%BCgge_(2025-08-06_Championsleague_Qualifikation_Dritte_Runde)_69_(Romeo_Vermant).jpg
+- `es-espanyol__carlos-serrano.jpg` — Pedro J Pacheco — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:M%C3%A1laga_Film_Festival_2026_-_Carlos_Serrano.jpg
+- `ru-epitsentr-k-p__kyrylo-kovalets.jpg` — ОЛЕГ БАТРАК — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Kyrylo_Kovalets.jpg
+- `ru-epitsentr-k-p__andriy-matkevych.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%92%D0%B5%D1%80%D0%B5%D1%81%C2%BB_%E2%80%93_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_0-1._%D0%9F%D0%B5%D1%80%D1%88%D1%96%D1%81%D1%82%D1%8C_U-19._18_%D0%BB%D0%B8%D1%81%D1%82%D0%BE%D0%BF%D0%B0%D0%B4%D0%B0_2022_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1392291.jpg
+- `ru-epitsentr-k-p__andriy-bezhenar.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Andriy_Bezhenar_2023.jpg
+- `ru-epitsentr-k-p__serjan-repaj.jpg` — ФК «Епіцентр» (Кам'янець-Подільський) — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Serjan_Repaj_(%D0%95%D0%BF%D1%96%D1%86%D0%B5%D0%BD%D1%82%D1%80,_2026).jpg
+- `ru-epitsentr-k-p__yehor-demchenko.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Yehor_Demchenko.jpg
+- `es-espanyol__marcos-fernandez.jpg` — PePeEfe — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:F%C3%A1tima_Marcos_Fern%C3%A1ndez_-_oct_2025.jpg
+- `es-espanyol__kike-garcia.jpg` — MarcoTevar — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Biel_Perello,_Tom%C3%A0s_Fuentes_y_Kike_Garcia_en_el_International_Podcast_en_el_festival_de_comedia_alternativa_La_Llama_Fest_2022.jpg
+- `ru-epitsentr-k-p__vadym-sydun.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%92%D0%B0%D0%B4%D0%B8%D0%BC_%D0%A1%D0%B8%D0%B4%D1%83%D0%BD_%E2%80%94_%D0%A4%D0%9A_%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8_%D0%9B%D1%8C%D0%B2%D1%96%D0%B2_U-19_(2024)_full_image.png
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
