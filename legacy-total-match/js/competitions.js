@@ -429,7 +429,7 @@
       for (var i = 0; i < extra.length && field.length < 32; i++) { if (field.indexOf(extra[i]) < 0) field.push(extra[i]); }
     }
     if (field.indexOf(career.teamId) < 0) field[field.length - 1] = career.teamId; // garante o clube do usuário
-    return { type: "tournament", key: "mundial", name: "Mundial de Clubes",
+    return { type: "tournament", key: "mundial", name: ((TM.data.competition && TM.data.competition("cwc-world")) || {}).name || "Mundial de Clubes",
       tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: false, twoLeg: false, userId: career.teamId }) };
   }
 

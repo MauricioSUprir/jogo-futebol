@@ -1575,6 +1575,9 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `be-cercle-brugge__geoffrey-kondo.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Geoffrey_Kondogbia_Atl%C3%A9tico_de_Madrid_2022_(cropped).jpg
 - `be-cercle-brugge__hannes-van-der-bruggen.jpg` — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File:HannesVanderBruggenjuni2024.jpg
 - `ru-dynamo-kyiv__taras-mykhavko.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%92%D1%96%D0%B4%D0%BA%D1%80%D0%B8%D1%82%D0%B5_%D1%82%D1%80%D0%B5%D0%BD%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB._15_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2023_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1474271_(cropped).jpg
+- `ru-dynamo-kyiv__kristian-bilovar.jpg` — Werner100359 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Kristian_Bilovar_(cropped).jpg
+- `be-cercle-brugge__tayo-adaramola.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Tayo_Adaramola_26072025_(1).jpg
+- `es-elche__josan.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_Josan_Ferr%C3%A1ndez.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg

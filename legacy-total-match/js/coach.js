@@ -1546,8 +1546,8 @@
     if (st[0] && st[0].id === c.teamId) add("league", c.comps.league.name, TITLE_PRIZE_EUR.league, "lg-" + c.leagueId);
     if (c.comps.cup && c.comps.cup.championId === c.teamId) add("cup", c.comps.cup.name, TITLE_PRIZE_EUR.cup, "cup-" + c.leagueId);
     if (c.comps.cont && c.comps.cont.tour && c.comps.cont.tour.championId === c.teamId) { var reg = C().REGION[c.leagueId] || "eu"; add("cont", c.comps.cont.name, TITLE_PRIZE_EUR["cont-" + reg] || 40, "cont-" + reg); }
-    if (c.comps.mundial && c.comps.mundial.championId === c.teamId) add("mundial", "Mundial de Clubes", TITLE_PRIZE_EUR.mundial, "cwc-world");
-    if (c.interChampion && c.interChampion === c.teamId) add("inter", "Copa Intercontinental", TITLE_PRIZE_EUR.inter, "cwc-inter");
+    if (c.comps.mundial && c.comps.mundial.championId === c.teamId) add("mundial", ((TM.data.competition("cwc-world") || {}).name || "Mundial de Clubes"), TITLE_PRIZE_EUR.mundial, "cwc-world");
+    if (c.interChampion && c.interChampion === c.teamId) add("inter", ((TM.data.competition("cwc-inter") || {}).name || "Copa Intercontinental"), TITLE_PRIZE_EUR.inter, "cwc-inter");
     return out;
   }
   TM.ui.register("coach-title", function (screen) {
