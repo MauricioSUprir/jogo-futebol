@@ -14519,8 +14519,11 @@
     },
     clubRating: function (clubId) {
       var cl = TM.data.club(clubId);
-      if (cl && CLUB_RATING_OVERRIDE[cl.origName || cl.name] != null) return CLUB_RATING_OVERRIDE[cl.origName || cl.name];
-      if (cl && CLUB_RATING_OVERRIDE[cl.name] != null) return CLUB_RATING_OVERRIDE[cl.name];
+      // na edição Season Update (elencos reais) o overall do time sai só dos 11 melhores jogadores
+      if (!isProEdition()) {
+        if (cl && CLUB_RATING_OVERRIDE[cl.origName || cl.name] != null) return CLUB_RATING_OVERRIDE[cl.origName || cl.name];
+        if (cl && CLUB_RATING_OVERRIDE[cl.name] != null) return CLUB_RATING_OVERRIDE[cl.name];
+      }
       var ps = TM.data.clubPlayers(clubId).slice(0, 11);
       return Math.round(ps.reduce(function (s, p) { return s + p.overall; }, 0) / ps.length);
     },

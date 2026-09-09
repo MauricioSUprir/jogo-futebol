@@ -1971,6 +1971,7 @@
     career.budget += bonus;
     career.finc = { prizeM: bonus, spentM: 0, soldM: 0 }; // zera o balanço da temporada; a verba entra como receita
     try { TM.club.seasonTick(career); } catch (e) {} // contratos comerciais vencem, parcelas de empréstimo
+    try { TM.scouting.seasonTick(career); } catch (e) {} // salários dos olheiros, novos candidatos
     TM.notify.push(career, { icon: "💰", title: "Verba da diretoria", text: "A diretoria liberou +" + fmtMoney(career, bonus) + " de verba para a nova temporada." });
     // resumo da evolução do elenco
     seasonEvoSummary(career, before);
