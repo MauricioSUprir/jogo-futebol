@@ -1088,7 +1088,14 @@
     ch: [["Young Boys","YB"],["Basel","BAS"],["Servette","SER"],["Lugano","LUG"],["St. Gallen","STG"],["Zürich","FCZ"],["Luzern","LUZ"],["Lausanne-Sport","LAU"],["Sion","SIO"],["Grasshopper","GC"],["Thun","THU"],["Vaduz","VAD"]],
     py: [["Cerro Porteño","CER"],["Olimpia","OLI"],["Libertad","LIB"],["Guaraní","GUA"],["Nacional","NAC"],["Sportivo Luqueño","LUQ"],["Sportivo Ameliano","AME"],["Sportivo Trinidense","TRI"],["2 de Mayo","DDM"],["Deportivo Recoleta","REC"],["Rubio Ñu","RUB"],["General Caballero JLM","GCJ"]],
     be: [["Club Brugge","CLB"],["Union SG","USG"],["Anderlecht","AND"],["Genk","GNK"],["Antwerp","ANT"],["Gent","GNT"],["Cercle Brugge","CER"],["Standard Liège","STL"],["Mechelen","MEC"],["Charleroi","CHA"],["Westerlo","WES"],["OH Leuven","OHL"],["Sint-Truiden","STV"],["Kortrijk","KOR"],["Zulte Waregem","ZWA"],["La Louvière","LLO"],["Lommel","LOM"],["Beveren","BEV"]],
-    co: [["Atlético Nacional","NAC"],["Millonarios","MIL"],["América de Cali","AME"],["Deportivo Cali","CAL"],["Junior","JUN"],["Independiente Medellín","DIM"],["Santa Fe","SFE"],["Deportes Tolima","TOL"],["Once Caldas","ONC"],["Bucaramanga","BUC"],["Deportivo Pereira","PER"],["Águilas Doradas","AGU"],["Cúcuta Deportivo","CUC"],["Jaguares","JAG"],["Alianza FC","ALI"],["Deportivo Pasto","PAS"],["Fortaleza CEIF","FOR"],["Boyacá Chicó","CHI"],["Llaneros","LLA"],["Internacional de Bogotá","IBO"]]
+    co: [["Atlético Nacional","NAC"],["Millonarios","MIL"],["América de Cali","AME"],["Deportivo Cali","CAL"],["Junior","JUN"],["Independiente Medellín","DIM"],["Santa Fe","SFE"],["Deportes Tolima","TOL"],["Once Caldas","ONC"],["Bucaramanga","BUC"],["Deportivo Pereira","PER"],["Águilas Doradas","AGU"],["Cúcuta Deportivo","CUC"],["Jaguares","JAG"],["Alianza FC","ALI"],["Deportivo Pasto","PAS"],["Fortaleza CEIF","FOR"],["Boyacá Chicó","CHI"],["Llaneros","LLA"],["Internacional de Bogotá","IBO"]],
+    br2: [["Juventude", "JUV", 71], ["Criciúma", "CRI", 71], ["Novorizontino", "NOV", 70], ["Vila Nova", "VNO", 70], ["Fortaleza", "FOR", 70], ["CRB", "CRB", 70], ["Operário Ferroviário", "OFE", 70], ["Atlético Goianiense", "AGO", 70], ["Cuiabá", "CUI", 70], ["Sport", "SPO", 69], ["Náutico", "NAU", 69], ["Athletic", "ATH", 69], ["Goiás", "GOI", 69], ["São Bernardo", "SBE", 69], ["Botafogo-SP", "BSP", 69], ["Ceará", "CEA", 69], ["Avaí", "AVA", 69], ["Londrina", "LON", 69], ["América Mineiro", "AMI", 69], ["Ponte Preta", "PPR", 68]],
+    br3: [["Botafogo-PB", "BPB", 67], ["Brusque", "BRU", 67], ["Ferroviária", "FER", 67], ["Maringá", "MAR", 67], ["Floresta", "FLO", 67], ["Inter de Limeira", "IDE", 67], ["Paysandu", "PAY", 67], ["Santa Cruz", "SCR", 67], ["Ypiranga", "YPI", 67], ["Guarani", "GUA", 67], ["Figueirense", "FIG", 67], ["Maranhão", "MA2", 67], ["Amazonas", "AMA", 66], ["Caxias", "CAX", 66], ["Ituano", "ITU", 66], ["Volta Redonda", "VRE", 66], ["Barra", "BAR", 66], ["Anápolis", "ANA", 66], ["Itabaiana", "ITA", 66], ["Confiança", "CON", 66]],
+    en2: [["West Ham United", "WHA", 76], ["Swansea City", "SCI", 75], ["Middlesbrough", "MID", 75], ["Queens Park Rangers", "QPA", 75], ["Bristol City", "BCI", 74], ["West Bromwich Albion", "WBR", 74], ["Charlton Athletic", "CAT", 74], ["Millwall", "MIL", 73], ["Sheffield United", "SUN", 73], ["Wolverhampton Wanderers", "WWA", 73], ["Watford", "WAT", 73], ["Southampton", "SOU", 73], ["Wrexham", "WRE", 73], ["Birmingham City", "BC2", 73], ["Stoke City", "SC2", 73], ["Norwich City", "NCI", 72], ["Portsmouth", "POR", 72], ["Blackburn Rovers", "BRO", 72], ["Lincoln City", "LCI", 71], ["Cardiff City", "CCI", 71], ["Derby County", "DCO", 71], ["Bolton Wanderers", "BWA", 70], ["Burnley", "BUR", 70], ["Preston North End", "PNO", 63]],
+    it2: [["Palermo", "PAL", 72], ["Mantova", "MAN", 71], ["F.C. Südtirol", "FSU", 71], ["Ascoli", "ASC", 71], ["U.S. Avellino 1912", "UAV", 70], ["Pisa S.C.", "PS.", 69], ["Modena 2018", "MOD", 69], ["Empoli", "EMP", 69], ["Cesena", "CES", 69], ["Hellas Verona", "HVE", 69], ["Padova", "PAD", 68], ["L.R. Vicenza", "LVI", 68], ["U.S. Cremonese", "UCR", 68], ["S.S. Arezzo", "SAR", 68], ["Virtus Entella", "VEN", 68], ["Benevento", "BEN", 68], ["Carrarese", "CAR", 68], ["U.C. Sampdoria", "USA", 68], ["S.S. Juve Stabia", "SJU", 67], ["Catanzaro", "CAT", 62]],
+    es2: [["Castellón", "CAS", 71], ["Eibar", "EIB", 70], ["Sabadell", "SAB", 70], ["Leganés", "LEG", 70], ["Girona", "GIR", 70], ["Celta Fortuna", "CFO", 69], ["Mallorca", "MAL", 69], ["Tenerife", "TEN", 69], ["Granada", "GRA", 69], ["Las Palmas", "LPA", 69], ["Sporting Gijón", "SGI", 69], ["Almería", "ALM", 68], ["Burgos", "BUR", 68], ["Real Sociedad B", "RSO", 68], ["Oviedo", "OVI", 68], ["Valladolid", "VAL", 68], ["Andorra", "AND", 68], ["Cádiz", "CAD", 68], ["Córdoba", "COR", 68], ["Eldense", "ELD", 68], ["Albacete", "ALB", 67], ["Ceuta", "CEU", 67]],
+    fr2: [["Saint-Étienne", "SET", 74], ["Annecy", "ANN", 74], ["Reims", "REI", 73], ["Metz", "MET", 73], ["Montpellier", "MON", 72], ["Red Star", "RST", 71], ["Nancy", "NAN", 71], ["Rodez", "ROD", 71], ["FC Sochaux", "FCS", 71], ["Dunkerque", "DUN", 71], ["Guingamp", "GUI", 70], ["Pau", "PAU", 70], ["Boulogne", "BOU", 69], ["Clermont Foot 63", "CFO", 69], ["Nantes", "NA2", 69], ["Grenoble", "GRE", 69], ["Laval", "LAV", 68], ["Dijon", "DIJ", 68]],
+    de2: [["Hertha BSC", "HBS", 76], ["VfL Wolfsburg", "VWO", 73], ["VfL Bochum", "VBO", 73], ["Hannover 96", "HAN", 73], ["1. FC Nürnberg", "FCN", 72], ["FC St. Pauli", "FCS", 72], ["Holstein Kiel", "HKI", 72], ["1. FC Kaiserslautern", "FCK", 72], ["Karlsruher SC", "KSC", 72], ["Darmstadt 98", "DAR", 71], ["Greuther Fürth", "GFU", 71], ["1. FC Heidenheim", "FCH", 71], ["1. FC Magdeburg", "FCM", 71], ["Eintracht Braunschweig", "EBR", 70], ["Dynamo Dresden", "DDR", 70], ["Arminia Bielefeld", "ABI", 70], ["Energie Cottbus", "ECO", 68], ["VfL Osnabrück", "VOS", 68]],
   };
   // CORES REAIS por clube (só a edição Atualizado) — cor não é protegida por direito autoral,
   // então o escudo/uniforme gerado já fica com a "cara" do time (rubro-negro, verde, etc.).
@@ -11836,34 +11843,43 @@
       {n:"Unai Hernández",num:0,p:"MF",q:"MEI",a:22,o:66,t:72,v:15000000,nat:"Spain"}
     ],
     "sa/Al-Khaleej": [
-      {n:"Ahmed Al-Hosani",num:1,p:"GK",q:"GOL",a:26,o:65,t:67,v:7000000,nat:"Saudi Arabia"},
-      {n:"Yousef Al-Ameri",num:2,p:"DF",q:"LD",a:26,o:65,t:67,v:10000000,nat:"Saudi Arabia"},
-      {n:"Kayque Campos",num:3,p:"DF",q:"LE",a:26,o:66,t:68,v:12000000,nat:"Brazil"},
-      {n:"Rafael Pereira",num:4,p:"DF",q:"ZAG",a:26,o:67,t:69,v:13000000,nat:"Brazil"},
-      {n:"Akram Nakach",num:6,p:"DF",q:"ZAG",a:30,o:67,t:67,v:7000000,nat:"Morocco"},
-      {n:"Junior Flemmings",num:7,p:"MF",q:"VOL",a:30,o:67,t:67,v:7000000,nat:"Jamaica"},
-      {n:"Abdullah Al-Naqbi",num:8,p:"MF",q:"MEI",a:26,o:66,t:68,v:12000000,nat:"Saudi Arabia"},
-      {n:"Tarik Tissoudali",num:9,p:"FW",q:"PE",a:33,o:69,t:69,v:5000000,nat:"Morocco"},
-      {n:"Aylton Boa Morte",num:10,p:"FW",q:"PD",a:33,o:68,t:68,v:4000000,nat:"Portugal"},
-      {n:"Ahmed Jshak",num:11,p:"DF",q:"ZAG",a:26,o:65,t:67,v:10000000,nat:"Saudi Arabia"},
-      {n:"Ahmed Barman",num:13,p:"MF",q:"MC",a:26,o:66,t:68,v:12000000,nat:"Saudi Arabia"},
-      {n:"Pedro Pavlov",num:16,p:"DF",q:"ZAG",a:26,o:65,t:67,v:10000000,nat:"Argentina"},
-      {n:"Sultan Al-Zaabi",num:17,p:"DF",q:"ZAG",a:26,o:65,t:67,v:10000000,nat:"Saudi Arabia"},
-      {n:"Luis Haquín",num:19,p:"DF",q:"ZAG",a:28,o:67,t:68,v:13000000,nat:"Bolivia"},
-      {n:"Selim Amallah",num:21,p:"MF",q:"MC",a:29,o:69,t:69,v:16000000,nat:"Morocco"},
-      {n:"Yahya Yousri",num:22,p:"FW",q:"CA",a:26,o:67,t:69,v:13000000,nat:"Egypt"},
-      {n:"Saeed Ahmed Abdulla",num:23,p:"DF",q:"ZAG",a:26,o:65,t:67,v:10000000,nat:"Saudi Arabia"},
-      {n:"Khalid Al-Hanaai",num:25,p:"MF",q:"MC",a:22,o:63,t:69,v:9000000,nat:"Saudi Arabia"},
-      {n:"Serano Seymor",num:34,p:"DF",q:"ZAG",a:20,o:58,t:66,v:4000000,nat:"Netherlands"},
-      {n:"Rashed Ali",num:50,p:"GK",q:"GOL",a:20,o:58,t:66,v:3000000,nat:"Saudi Arabia"},
-      {n:"Ahmadou Camara",num:72,p:"MF",q:"MC",a:20,o:59,t:67,v:5000000,nat:"Guinea"},
-      {n:"Rilwanu Sarki",num:77,p:"MF",q:"MC",a:22,o:55,t:61,v:1000000,nat:"Saudi Arabia"},
-      {n:"Jean N'Guessan",num:79,p:"MF",q:"MC",a:20,o:59,t:67,v:5000000,nat:"Ivory Coast"},
-      {n:"Mohamed Al-Eter",num:87,p:"MF",q:"MC",a:20,o:59,t:67,v:5000000,nat:"Saudi Arabia"},
-      {n:"Adama Diallo",num:90,p:"FW",q:"CA",a:20,o:60,t:68,v:7000000,nat:"Ivory Coast"},
-      {n:"Rashed Al-Naour",num:96,p:"GK",q:"GOL",a:20,o:58,t:66,v:3000000,nat:"Saudi Arabia"},
-      {n:"Rashid Abdalla",num:95,p:"GK",q:"GOL",a:20,o:58,t:66,v:3000000,nat:"Saudi Arabia"},
-      {n:"Mohamed Jamal",num:0,p:"MF",q:"MC",a:26,o:66,t:68,v:12000000,nat:"Saudi Arabia"}
+      {n:"Mohammed Al Ibrahim",num:1,p:"GK",q:"GOL",a:26,o:64,t:64,v:5000000,nat:"Saudi Arabia"},
+      {n:"Hamad Al-Jayzani",num:2,p:"DF",q:"LE",a:33,o:61,t:61,v:1000000,nat:"Saudi Arabia"},
+      {n:"Mohammed Al-Khabrani",num:3,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Kiki Kouyaté",num:4,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Guinea"},
+      {n:"Pedro Rebocho",num:5,p:"DF",q:"LE",a:31,o:73,t:73,v:15000000,nat:"Portugal"},
+      {n:"Joshua King",num:7,p:"FW",q:"CA",a:34,o:74,t:74,v:8000000,nat:"Norway"},
+      {n:"Omar Mascarell",num:8,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Equatorial Guinea"},
+      {n:"Angelo Fulgini",num:10,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Saleh Al-Amri",num:11,p:"MF",q:"PE",a:33,o:69,t:69,v:5000000,nat:"Saudi Arabia"},
+      {n:"Majed Kanabah",num:12,p:"MF",q:"MC",a:33,o:61,t:61,v:1000000,nat:"Saudi Arabia"},
+      {n:"Ahmed Assiri",num:13,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Ali Al-Shaafi",num:14,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Mansour Hamzi",num:15,p:"MF",q:"VOL",a:34,o:68,t:68,v:4000000,nat:"Saudi Arabia"},
+      {n:"Bader Munshi",num:16,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Abdullah Al-Hafith",num:17,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Nawaf Al-Sadi",num:18,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Miguel Crespo",num:19,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Portugal"},
+      {n:"Witcha",num:20,p:"FW",q:"CA",a:26,o:64,t:64,v:8000000,nat:"Cape Verde"},
+      {n:"Rakan Al-Kaabi",num:23,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Ali Abdulrouf",num:24,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Abdullah Al Zaynaldeen",num:27,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Hussain Al-Eisa",num:28,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Raed Al-Shanqiti",num:29,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Mohammed Al-Ghanem",num:31,p:"GK",q:"GOL",a:26,o:64,t:64,v:5000000,nat:"Saudi Arabia"},
+      {n:"Saeed Al Hamsal",num:39,p:"DF",q:"LD",a:30,o:62,t:62,v:3000000,nat:"Saudi Arabia"},
+      {n:"Anthony Moris",num:49,p:"GK",q:"GOL",a:36,o:75,t:75,v:7000000,nat:"Luxembourg"},
+      {n:"Faisal Al-Bakr",num:78,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Abdoulie Mboge",num:88,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"The Gambia"},
+      {n:"Thamer Al-Khaibari",num:90,p:"FW",q:"CA",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Abdulmajeed Al-Khathami",num:92,p:"FW",q:"CA",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Marwan Al-Haidari",num:96,p:"GK",q:"GOL",a:30,o:60,t:60,v:1000000,nat:"Saudi Arabia"},
+      {n:"Musa Barrow",num:99,p:"FW",q:"CA",a:26,o:64,t:64,v:8000000,nat:"The Gambia"},
+      {n:"Fawaz Al-Sqoor",num:0,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Abdullah Al-Ammar",num:0,p:"DF",q:"ZAG",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Fahad Al-Rashidi",num:0,p:"MF",q:"MC",a:26,o:64,t:64,v:8000000,nat:"Saudi Arabia"},
+      {n:"Mohammed Al-Abdullah",num:0,p:"MF",q:"PD",a:24,o:53,t:55,v:600000,nat:"Saudi Arabia"},
+      {n:"Mateo Benegas",num:0,p:"FW",q:"CA",a:26,o:64,t:64,v:8000000,nat:"Argentina"}
     ],
     "sa/Al-Kholood": [
       {n:"Hamed Al-Shanqiti",num:1,p:"GK",q:"GOL",a:27,o:67,t:70,v:10000000,nat:"Saudi Arabia"},
@@ -13909,7 +13925,8 @@
         var rc = realList[ci];               // [nome, sigla, força]
         var clubId = ld.id + "-" + ci;
         var pal = CLUB_PALETTES[stableHash(clubId) % CLUB_PALETTES.length];
-        var strength = rc[2];                // força real do clube
+        var proc0 = proList && proList[ci];
+        var strength = (proc0 && proc0[2]) || rc[2];   // força real do clube (lista real da Season Update quando traz a força)
         // edição Atualizado usa o nome real; a pública mantém o fictício (localizado)
         var proc = proList && proList[ci];
         var cname = proc ? proc[0] : localizeName(rc[0], ld.id);

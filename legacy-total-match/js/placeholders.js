@@ -344,7 +344,8 @@
       // escudo importado pelo jogador (clube personalizado) tem prioridade
       if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
       // Season Update: escudo REAL do clube (assets/clubes/<liga>-<clube>.png) quando existir
-      if (club.leagueId && club.name) {
+      var proC = false; try { proC = TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) {}
+      if (proC && club.leagueId && club.name) {
         var cf = club.leagueId + "-" + stadSlug(club.name) + ".png";
         if (hasPhoto("clubes", cf)) return imgWithFallback("assets/clubes/" + cf, crest(club), club.name, cls);
       }
@@ -391,7 +392,9 @@
       if (!comp) comp = { id: (typeof raw === "string" ? raw : "comp"), name: (typeof raw === "string" ? raw : "Competição"), type: "copa" };
       var klass = (cls || "") + (comp.darkBg ? " comp-onblack" : "");
       var cid = comp.id || (typeof raw === "string" ? raw : "comp");
-      // usa a imagem REAL em assets/competicoes/<id>.png quando existir; senão o emblema gerado
+      // logo REAL da competição só na Season Update; a versão genérica usa sempre o emblema gerado
+      var pro = false; try { pro = TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) {}
+      if (!pro) return imgWithFallback(compBadge(comp), compBadge(comp), comp.name, klass);
       return imgWithFallback(embedded("competicoes", cid) || ("assets/competicoes/" + cid + ".png"), compBadge(comp), comp.name, klass);
     }
   };
