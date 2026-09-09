@@ -143,3 +143,14 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `pt-benfica.jpg` — Massimo Catarinella — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:LuzLissabon.jpg
 - `pt-porto.jpg` — Edgar Jiménez from Porto, Portugal — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_do_Drag%C3%A3o_(8468978586).jpg
 - `pt-sporting.jpg` — Megutim — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Jos%C3%A9_Alvalade_antes_do_jogo_Sporting_-_Arouca.jpg
+- `pt-vitoria-de-guimaraes.jpg` — Estádio_do_Vitória_de_Guimarães_visto_da_torre_central_do_Castelo_de_Guimarães_02.jpg: Wagner Bonifacio Leite — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_do_Vit%C3%B3ria_de_Guimar%C3%A3es_visto_da_torre_central_do_Castelo_de_Guimar%C3%A3es_03.JPG
+- `pt-moreirense.jpg` — Bohemio09 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Blick_auf_die_Haupttrib%C3%BCne_-_Est%C3%A1dio_Comendador_Joaquim_de_Almeida_Freitas.jpg
+- `pt-gil-vicente.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Cidade_de_Barcelos.jpg
+- `pt-estoril.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:20011019_CD_Estoril_Praia_(2).JPG
+- `pt-casa-pia.jpg` — Vitor Oliveira from Torres Vedras, PORTUGAL — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Rio_Maior.jpg
+- `pt-arouca.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Municipal_de_Arouca.jpg
+- `pt-estrela-amadora.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Jos%C3%A9_Gomes_(Reboleira).jpg
+- `pt-maritimo.jpg` — Pedro Miguel Monteiro — Public domain — https://commons.wikimedia.org/wiki/File:Est%C3%A1diodosBarreirosCentral.jpg
+- `pt-nacional.jpg` — Mghamburg — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Eng._Rui_Alves_1.jpg
+- `pt-santa-clara.jpg` — Rasibo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_de_S%C3%A3o_Miguel_(62276).jpg
+- `nl-psv.jpg` — TaraO — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Philips_Stadion.jpg
