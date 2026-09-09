@@ -266,6 +266,8 @@
     var E = global.TM_EMBED;
     return (E && E[kind] && E[kind][id]) || null;
   }
+  // índice de fotos REAIS de licença livre (Wikimedia Commons), gerado em assets/photo-index.js
+  function hasPhoto(kind, file) { var I = global.TM_PHOTO_INDEX; return !!(I && I[kind] && I[kind][file]); }
 
   // slug do nome do clube (casa com os arquivos em assets/estadios/<slug>.jpg)
   function stadSlug(name) {
@@ -354,9 +356,13 @@
     },
     playerImg: function (player, cls) {
       var club = TM.data.club(player.clubId);
-      // foto importada pelo jogador (carreira própria) tem prioridade; senão avatar gerado (SVG)
+      // foto importada pelo jogador (carreira própria) tem prioridade; senão foto REAL de licença livre; senão avatar (SVG)
       if (player.photo) return imgWithFallback(player.photo, avatar(player, club), player.name, cls);
       var av = avatar(player, club);
+      if (club) {
+        var pf = club.leagueId + "-" + stadSlug(club.name) + "__" + stadSlug(player.name) + ".jpg";
+        if (hasPhoto("jogadores", pf)) return imgWithFallback("assets/jogadores/" + pf, av, player.name, cls);
+      }
       return imgWithFallback(av, av, player.name, cls);
     },
     nationImg: function (nation, cls) {
@@ -364,7 +370,9 @@
       return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
     },
     stadiumImg: function (club, cls) {
-      // foto real (genérica) com fallback pro SVG gerado
+      // foto REAL do estádio (licença livre, Commons) quando existir; senão foto genérica; senão SVG gerado
+      var sf = club.leagueId + "-" + stadSlug(club.name) + ".jpg";
+      if (hasPhoto("estadios", sf)) return imgWithFallback("assets/estadios/" + sf, stadiumPhoto(club), (club.name + " — estádio"), cls);
       return imgWithFallback(stadiumPhoto(club), stadiumArt(club), (club.name + " — estádio"), cls);
     },
     compBadge: compBadge,
