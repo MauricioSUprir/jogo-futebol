@@ -289,6 +289,12 @@
     ["lg-fr2", "Liga França B", "liga", "#0a2a5e", "#e30613"],
     ["lg-de2", "Liga Alemanha B", "liga", "#d40028", "#111111"],
     ["lg-co", "Liga Colômbia A", "liga", "#fcd116", "#003893"],
+    ["lg-rus", "Liga Rússia A", "liga", "#d52b1e", "#0039a6"],
+    ["lg-ma", "Liga Marrocos A", "liga", "#c1272d", "#006233"],
+    ["lg-jp", "Liga Japão A", "liga", "#bc002d", "#ffffff"],
+    ["lg-ch", "Liga Suíça A", "liga", "#d52b1e", "#ffffff"],
+    ["lg-py", "Liga Paraguai A", "liga", "#d52b1e", "#0038a8"],
+    ["lg-be", "Liga Bélgica A", "liga", "#000000", "#fdda24"],
     // Copas nacionais
     ["cup-br", "Copa Brasil", "copa", "#1b8a3a", "#f2c200"],
     ["cup-en", "Copa Inglaterra", "copa", "#c8102e", "#0a2240"],
@@ -1118,6 +1124,8 @@
     br3: "Brasileirão Série C", fr2: "Ligue 2", de2: "2. Bundesliga"
   };
   var PRO_COMP_NAMES = {
+    "nat-world": "Copa do Mundo FIFA", "nat-america": "Copa América", "nat-euro": "Eurocopa", "nat-africa": "Copa Africana de Nações",
+    "cwc-world": "Mundial de Clubes FIFA", "cwc-inter": "Copa Intercontinental FIFA",
     "cup-br": "Copa do Brasil", "cup-en": "FA Cup", "cup-es": "Copa del Rey", "cup-it": "Coppa Italia",
     "cup-de": "DFB-Pokal", "cup-fr": "Coupe de France", "cup-pt": "Taça de Portugal", "cup-nl": "KNVB Beker",
     "cup-ar": "Copa Argentina", "cup-us": "US Open Cup", "cup-mx": "Copa MX", "cup-sa": "King's Cup",
@@ -1129,11 +1137,14 @@
     "nat-america": "Copa América", "nat-euro": "UEFA Euro", "nat-africa": "Copa Africana de Nações"
   };
   // aplica nomes reais/genéricos às competições conforme a edição (chamado no generateWorld)
+  var _compNamesEd = null;
   function syncCompNames(pro) {
+    if (_compNamesEd === !!pro) return; _compNamesEd = !!pro;
     for (var i = 0; i < COMPETITIONS.length; i++) {
       var c = COMPETITIONS[i];
       if (c.baseName == null) c.baseName = c.name;   // captura o genérico uma vez
-      c.name = (pro && PRO_COMP_NAMES[c.id]) ? PRO_COMP_NAMES[c.id] : c.baseName;
+      var lgId = c.id.indexOf("lg-") === 0 ? c.id.slice(3) : null;
+      c.name = (pro && PRO_COMP_NAMES[c.id]) ? PRO_COMP_NAMES[c.id] : (pro && lgId && PRO_LEAGUE_NAMES[lgId]) ? PRO_LEAGUE_NAMES[lgId] : c.baseName;
     }
   }
 
@@ -14448,8 +14459,8 @@
     league: function (id) { return TM.data.world().leaguesById[id]; },
     player: function (id) { return TM.data.world().playersById[id]; },
     nation: function (id) { return TM.data.world().nationsById[id]; },
-    competitions: function () { return COMPETITIONS; },
-    competition: function (id) { return COMPETITIONS_BY_ID[id] || null; },
+    competitions: function () { syncCompNames(isProEdition()); return COMPETITIONS; },
+    competition: function (id) { syncCompNames(isProEdition()); return COMPETITIONS_BY_ID[id] || null; },
     coaches: function () { return COACHES; },
     // clubId do time que o treinador comanda (ou null se for livre)
     coachClub: function (coachId) {

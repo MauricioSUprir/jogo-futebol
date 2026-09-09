@@ -10,15 +10,15 @@
   /* ---------- catálogo de competições ---------- */
   // seleções por confederação (nomes reais existentes no jogo)
   var NAT_GROUPS = {
-    world:   { name: "Copa do Mundo",           size: 48, groups: 12, all: true, bestThirds: 8 },
-    america: { name: "Copa América",            size: 8,  groups: 2, list: ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay"] },
-    euro:    { name: "Eurocopa",                size: 16, groups: 4, list: ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine"] },
-    africa:  { name: "Copa Africana de Nações",  size: 8,  groups: 2, list: ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"] }
+    world:   { get name() { var r = TM.data.competition && TM.data.competition("nat-world"); return (r && r.name) || "Copa do Mundo"; },           size: 48, groups: 12, all: true, bestThirds: 8 },
+    america: { get name() { var r = TM.data.competition && TM.data.competition("nat-america"); return (r && r.name) || "Copa América"; },            size: 8,  groups: 2, list: ["Brazil", "Argentina", "Uruguay", "Colombia", "Chile", "Peru", "Ecuador", "Paraguay"] },
+    euro:    { get name() { var r = TM.data.competition && TM.data.competition("nat-euro"); return (r && r.name) || "Eurocopa"; },                size: 16, groups: 4, list: ["France", "England", "Spain", "Germany", "Portugal", "Netherlands", "Italy", "Belgium", "Croatia", "Switzerland", "Denmark", "Poland", "Serbia", "Austria", "Turkey", "Ukraine"] },
+    africa:  { get name() { var r = TM.data.competition && TM.data.competition("nat-africa"); return (r && r.name) || "Copa Africana de Nações"; },  size: 8,  groups: 2, list: ["Senegal", "Morocco", "Nigeria", "Egypt", "Cameroon", "Ghana", "Ivory Coast", "Algeria"] }
   };
   var CONT_CLUB = {
-    libertadores: { name: "Libertadores",     leagues: ["br", "ar"],                         size: 32, groups: 8, dbl: true, twoLeg: true },
-    champions:    { name: "Champions League", leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32, groups: 8, dbl: true, twoLeg: true },
-    mundial:      { name: "Mundial de Clubes", allLeagues: true,                              size: 32, groups: 8, dbl: false, twoLeg: false } // formato Copa do Mundo (jogo único)
+    libertadores: { get name() { var r = TM.data.competition && TM.data.competition("cont-sa"); return (r && r.name) || "Libertadores"; },     leagues: ["br", "ar"],                         size: 32, groups: 8, dbl: true, twoLeg: true },
+    champions:    { get name() { var r = TM.data.competition && TM.data.competition("cont-eu"); return (r && r.name) || "Champions League"; }, leagues: ["en", "es", "it", "de", "fr", "pt", "nl"], size: 32, groups: 8, dbl: true, twoLeg: true },
+    mundial:      { get name() { var r = TM.data.competition && TM.data.competition("cwc-world"); return (r && r.name) || "Mundial de Clubes"; }, allLeagues: true,                              size: 32, groups: 8, dbl: false, twoLeg: false } // formato Copa do Mundo (jogo único)
   };
 
   // mapeia a competição do modo-jogar para o id do logo (registro de COMPETITIONS)
@@ -243,7 +243,7 @@
     body.appendChild(E("p", { class: "intro-text", text: "Escolha uma competição e comande um time ou seleção apenas nela." }));
     function catCard(icon, title, sub, fn) { return E("button", { class: "choice-card", on: { click: fn } }, [ E("span", { class: "cc-ic", text: icon }), E("span", { class: "cc-t", text: title }), E("span", { class: "cc-d", text: sub }) ]); }
     body.appendChild(E("div", { class: "big-choice" }, [
-      catCard("🏟️", "Ligas de Clubes", "Dispute uma das 10 ligas nacionais", function () { TM.ui.go("compmode-list", { cat: "league" }); }),
+      catCard("🏟️", "Ligas de Clubes", "Dispute uma das " + TM.data.world().leagues.length + " ligas nacionais", function () { TM.ui.go("compmode-list", { cat: "league" }); }),
       catCard("🏆", "Copas de Clubes", "Copa nacional, Libertadores ou Champions", function () { TM.ui.go("compmode-list", { cat: "clubcup" }); }),
       catCard("🌍", "Copas de Seleções", "Copa do Mundo, América, Eurocopa, Africana", function () { TM.ui.go("compmode-list", { cat: "natcup" }); })
     ]));
@@ -256,9 +256,9 @@
     screen.appendChild(body);
     var items = [];
     if (params.cat === "league") {
-      TM.data.world().leagues.forEach(function (lg) { items.push({ catKey: "league", id: lg.id, name: lg.name, sub: "Liga · 18 clubes" }); });
+      TM.data.world().leagues.forEach(function (lg) { items.push({ catKey: "league", id: lg.id, name: lg.name, sub: "Liga · " + lg.clubIds.length + " clubes" }); });
     } else if (params.cat === "clubcup") {
-      TM.data.world().leagues.forEach(function (lg) { items.push({ catKey: "domestic", id: lg.id, name: TM.comp.CUP_NAME[lg.id] || "Copa", sub: "Mata-mata · 16 clubes" }); });
+      TM.data.world().leagues.forEach(function (lg) { items.push({ catKey: "domestic", id: lg.id, name: ((TM.data.competition("cup-" + lg.id) || {}).name) || TM.comp.CUP_NAME[lg.id] || "Copa", sub: "Mata-mata · 16 clubes" }); });
       Object.keys(CONT_CLUB).forEach(function (k) { items.push({ catKey: "continental", id: k, name: CONT_CLUB[k].name, sub: CONT_CLUB[k].size + " clubes · grupos + mata-mata" }); });
     } else {
       Object.keys(NAT_GROUPS).forEach(function (k) { items.push({ catKey: "nation", id: k, name: NAT_GROUPS[k].name, sub: NAT_GROUPS[k].size + " seleções · grupos + mata-mata" }); });
