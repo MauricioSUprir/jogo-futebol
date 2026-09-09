@@ -282,8 +282,13 @@
         el("span", { text: "Gasto: " + money(spent) }),
         el("span", { class: rem < 0 ? "over" : "", text: "Resta: " + money(rem) })
       ]),
-      el("div", { class: "budget-track" }, [ el("div", { class: "budget-fill" + (spent > dream.budget ? " over" : ""), style: "width:" + pct + "%" }) ])
-    ]));
+      el("div", { class: "budget-track" }, [ el("div", { class: "budget-fill" + (spent > dream.budget ? " over" : ""), style: "width:" + pct + "%" }) ]),
+      TM.coins ? el("div", { class: "budget-boost" }, [
+        TM.ui.button("💎 +10% de orçamento por " + TM.coins.COST.dreamBudget + " 🪙", function () {
+          TM.coins.pay(TM.coins.COST.dreamBudget, "Orçamento extra · Dream Team", function () { dream.budget = Math.round(dream.budget * 1.1); dream.boosts = (dream.boosts || 0) + 1; TM.ui.toast("Orçamento agora: " + money(dream.budget)); TM.ui.go("dream"); });
+        }, "btn ghost small")
+      ]) : null
+    ].filter(Boolean)));
     // slots por posição
     var keys = dreamSlotKeys();
     var grid = el("div", { class: "build-list" });
@@ -435,6 +440,12 @@
     if (!draft.rerolled) {
       body.appendChild(el("div", { class: "actions" }, [
         TM.ui.button("🎲 Sortear outras 5 opções", function () { draft.rerolled = true; rollOptions(); TM.ui.go("draft-pick"); }, "btn ghost")
+      ]));
+    } else if (TM.coins) {
+      body.appendChild(el("div", { class: "actions" }, [
+        TM.ui.button("🎲 Sortear mais 5 por " + TM.coins.COST.draftReroll + " 🪙", function () {
+          TM.coins.pay(TM.coins.COST.draftReroll, "Novo sorteio · Draft", function () { rollOptions(); TM.ui.go("draft-pick"); });
+        }, "btn ghost")
       ]));
     }
   });

@@ -25,9 +25,10 @@
 
   // avatar do perfil (foto ou iniciais)
   function avatar(p, cls) {
-    if (p && p.photo) return el("img", { src: p.photo, class: cls });
+    var fr = (p && p.frame === "gold") ? " frame-gold" : "";
+    if (p && p.photo) return el("img", { src: p.photo, class: cls + fr });
     var initials = ((p && p.name) || "?").trim().slice(0, 1).toUpperCase();
-    return el("div", { class: cls + " prof-initials", text: initials });
+    return el("div", { class: cls + " prof-initials" + fr, text: initials });
   }
   // seletor de foto (redimensiona p/ 160px)
   function pickPhoto(cb) {
@@ -84,6 +85,21 @@
     body.appendChild(pcard);
     body.appendChild(el("div", { class: "setting-hint", text: "Seu número é como os outros te encontram: para adicionar como amigo e para receber Total Coins." }));
 
+    // moldura dourada (compra com Total Coins)
+    if (TM.coins) {
+      body.appendChild(el("div", { class: "actions" }, [
+        p.frame === "gold"
+          ? TM.ui.button("🥇 Moldura dourada ativa", function () { TM.ui.toast("Sua foto já tem a moldura dourada."); }, "btn ghost small")
+          : TM.ui.button("🥇 Moldura dourada por " + TM.coins.COST.goldFrame + " 🪙", function () {
+              TM.coins.pay(TM.coins.COST.goldFrame, "Moldura dourada", function () {
+                var np = { email: p.email, name: p.name, photo: p.photo || null, frame: "gold" }; setProfile(np);
+                try { N().cloudSaveProfile(np.email, np, function () {}); } catch (e) {}
+                try { if (N().updateProfile) N().updateProfile({ frame: "gold" }, function () {}); } catch (e) {}
+                TM.ui.toast("Moldura dourada ativada! 🥇"); TM.ui.go("profile");
+              });
+            }, "btn ghost small")
+      ]));
+    }
     // Total Coins / Total Points
     if (TM.coins) {
       var cs = TM.coins.state();
@@ -146,7 +162,7 @@
     body.appendChild(el("div", { class: "prof-edit" }, [ photoBox, nameIn ]));
     body.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("💾 Salvar perfil", function () {
-        var np = { email: p.email, name: (nameIn.value || "").trim() || p.name, photo: draft.photo || null };
+        var np = { email: p.email, name: (nameIn.value || "").trim() || p.name, photo: draft.photo || null, frame: p.frame || null };
         setProfile(np); N().cloudSaveProfile(np.email, np, function () {}); TM.ui.toast("Perfil salvo! ✅"); TM.ui.go("profile");
       }, "btn primary")
     ]));
