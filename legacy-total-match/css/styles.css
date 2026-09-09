@@ -3229,3 +3229,5 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .sp-stars { color: #f5c542; font-weight: 800; margin-right: 4px; }
 .mkt-scouted { display: inline-block; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 10px; background: rgba(245,197,66,.18); color: #f5c542; margin-left: 6px; }
 .mkt-more { width: 100%; margin-top: 8px; }
+.saf-clauses { margin: 8px 0 4px; padding-left: 18px; font-size: 12.5px; line-height: 1.45; }
+.saf-clauses li { margin-bottom: 3px; }

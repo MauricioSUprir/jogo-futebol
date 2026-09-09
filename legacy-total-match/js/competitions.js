@@ -943,6 +943,7 @@
     if (!accept) {
       TM.notify.remove(career, note.id);
       TM.notify.push(career, { icon: "🚫", title: "Proposta recusada", text: "Você recusou a proposta por " + player.name + "." });
+      try { TM.club.onOfferRejected(career, player, off.fee, off.buyerId); } catch (e) {}
       return "recusada";
     }
     // o jogador decide se topa sair (clubes maiores atraem mais)
@@ -953,6 +954,7 @@
       career.budget += off.fee;
       career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += off.fee;
       logDeal(career, { type: "out", kind: "sale", pid: off.playerId, name: player.name, pos: player.pos, ov: player.overall, fee: off.fee, other: TM.data.club(off.buyerId).name });
+      try { TM.club.onPlayerSold(career, player, off.fee, off.buyerId); } catch (e) {}
       career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
       if (career.lineup) {
         career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });

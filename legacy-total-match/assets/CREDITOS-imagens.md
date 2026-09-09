@@ -1578,6 +1578,11 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `ru-dynamo-kyiv__kristian-bilovar.jpg` — Werner100359 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Kristian_Bilovar_(cropped).jpg
 - `be-cercle-brugge__tayo-adaramola.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Tayo_Adaramola_26072025_(1).jpg
 - `es-elche__josan.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_Josan_Ferr%C3%A1ndez.jpg
+- `ru-dynamo-kyiv__tomasz-kedziora.jpg` — Roger Gor — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Tomasz_K%C4%99dziora.jpg
+- `be-charleroi__parfait-guiagon.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Parfait_Guiagon_Cote_D%27Ivoire_v_Ecuador_14_June_2026-27_(cropped).jpg
+- `be-charleroi__freddy-mbemba.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_USL_Dunkerque_(08-07-2023)_46.jpg
+- `be-charleroi__aurelien-scheidler.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_US_Orl%C3%A9ans_(17-05-2019)_16.jpg
+- `be-charleroi__mohamed-kone.jpg` — XaviYuahanda — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:KapfenbergJudenburg15.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg

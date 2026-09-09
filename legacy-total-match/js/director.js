@@ -163,7 +163,32 @@
     return n;
   }
 
-  /* ---------- investidor / SAF (a cada janela de transferências) ---------- */
+  /* ---------- investidor / SAF (raro) — com cláusulas, contrapartidas e consequências ---------- */
+  var INVESTORS_REAL = ["Grupo 777 Partners", "Eagle Football", "City Football Group", "Red Bull", "Fundo Mubadala", "Grupo Textor", "Fundo PIF", "Clearlake Capital", "RedBird Capital", "Grupo Fenway", "Grupo Squadra", "Ares Management", "Fundo QSI", "Grupo Pacific Media", "Grupo Amazônia Capital"];
+  var INVESTORS_GENERIC = ["Grupo Atlas Capital", "Fundo Meridiano", "Horizonte Sports Group", "Fundo Vértice", "Grupo Alfa Esportes", "Continental Sports Fund", "Grupo Pátria Sports", "Nova Era Capital"];
+  function pickInvestor(c) { var l = isPro() ? INVESTORS_REAL : INVESTORS_GENERIC; return l[Math.floor(Math.random() * l.length)]; }
+  function isEuroClub(clubId) { try { var cl = TM.data.club(clubId); var R = C().REGION || {}; return cl && R[cl.leagueId] === "eu"; } catch (e) { return false; } }
+  // cláusulas possíveis (o investidor escolhe 2-3): when = "season" (avaliada no fim da temporada) | "event" (avaliada na hora)
+  function makeClauses(c) {
+    var pool = [];
+    var meta = Math.max(1, ((c.objective && c.objective.maxPos) || 8) - 1);
+    pool.push({ id: "meta", when: "season", pos: meta, finePct: 0.15, text: "Terminar a liga em " + meta + "º lugar ou melhor" });
+    pool.push({ id: "euro", when: "event", finePct: 0.10, text: "Aceitar qualquer proposta de clube europeu acima do valor de mercado por um jogador seu (o investidor quer retorno)" });
+    try {
+      var best = C().rosterPlayers(c).slice().sort(function (x, y) { return y.overall - x.overall; })[0];
+      if (best) pool.push({ id: "simbolo", when: "event", pid: best.id, pname: best.name, finePct: 0.25, text: "Não vender " + best.name + ", o jogador-símbolo do projeto" });
+    } catch (e) {}
+    var wage = 0; try { wage = C().rosterPlayers(c).reduce(function (sum, p) { return sum + TM.data.marketValue(p) * 0.075; }, 0) * mult(c); } catch (e) {}
+    if (wage) pool.push({ id: "folha", when: "season", limitM: Math.round(wage * 1.15), finePct: 0.10, text: "Manter a folha salarial do elenco abaixo de " + money(c, Math.round(wage * 1.15)) + " por temporada" });
+    pool.push({ id: "jovens", when: "season", n: 3, finePct: 0.08, text: "Ter ao menos 3 jogadores de até 21 anos no elenco ao fim da temporada" });
+    pool.push({ id: "semEmprestimo", when: "event", finePct: 0.10, text: "Não pegar empréstimos bancários enquanto a SAF vigorar" });
+    pool.push({ id: "reforcos", when: "season", pct: 0.5, finePct: 0.10, text: "Investir ao menos metade do aporte em contratações nesta temporada" });
+    if (TM.data.clubRating(c.teamId) >= 78) pool.push({ id: "titulo", when: "season", finePct: 0.12, text: "Conquistar ao menos um título nesta temporada" });
+    // meta esportiva sempre + 1 ou 2 sorteadas
+    var out = [pool[0]], rest = pool.slice(1), n = 1 + (Math.random() < 0.5 ? 1 : 0);
+    for (var i = 0; i < n && rest.length; i++) { var k = Math.floor(Math.random() * rest.length); out.push(rest[k]); rest.splice(k, 1); }
+    return out;
+  }
   function maybeSafOffer(c) {
     if (!c.windows) return;
     var d = c.currentDay || 0;
@@ -172,39 +197,95 @@
       var open = d >= w.openDay && d < w.closeDay;
       if (!open || w.safRolled) return;
       w.safRolled = true;
-      if (c.safOffer) return;
+      if (c.safOffer || c.saf) return;                                  // já tem investidor: sem novas propostas
+      if ((c.season || 1) - (c.safLastSeason || -9) < 2) return;         // no máximo uma proposta a cada 2 temporadas
       var rep = c.reputation || 18, pop = c.popularity || 40;
-      var chance = 0.22 + (pop > 60 ? 0.1 : 0) + (rep > 50 ? 0.08 : 0) + (c.budget < 0 ? 0.15 : 0);
+      var chance = 0.05 + (c.budget < 0 ? 0.06 : 0) + (pop > 60 ? 0.02 : 0) + (rep > 50 ? 0.02 : 0);   // RARO
       if (Math.random() >= chance) return;
       var r = TM.data.clubRating(c.teamId), m = mult(c);
       var base = Math.round((40 + Math.max(0, r - 60) * 6) * m);
       var fromCash = Math.round(Math.max(0, c.budget) * 0.25);
       var amount = base + fromCash;
       var pct = 30 + Math.floor(Math.random() * 41); // 30–70% do clube
-      c.safOffer = { amountM: amount, pct: pct, closeDay: w.closeDay, windowName: w.name, investor: pickInvestor(c) };
+      c.safOffer = { amountM: amount, pct: pct, closeDay: w.closeDay, windowName: w.name, investor: pickInvestor(c), clauses: makeClauses(c) };
+      c.safLastSeason = c.season || 1;
       TM.notify.push(c, { icon: "💼", title: "Proposta de SAF", saf: true, news: true,
-        text: c.safOffer.investor + " quer comprar " + pct + "% do clube (SAF) e injetar " + money(c, amount) + " no caixa nesta " + w.name + ". Decida em 💰 Finanças." });
+        text: c.safOffer.investor + " quer comprar " + pct + "% do clube (SAF) e injetar " + money(c, amount) + " no caixa nesta " + w.name + ", com " + c.safOffer.clauses.length + " contrapartidas. Decida em 💰 Finanças." });
     });
   }
-  var INVESTORS_REAL = ["Grupo 777 Partners", "Eagle Football", "City Football Group", "Red Bull", "Fundo Mubadala", "Grupo Textor", "Fundo PIF", "Clearlake Capital", "RedBird Capital", "Grupo Fenway", "Grupo Squadra", "Ares Management", "Fundo QSI", "Grupo Pacific Media", "Grupo Amazônia Capital"];
-  var INVESTORS_GENERIC = ["Grupo Atlas Capital", "Fundo Meridiano", "Horizonte Sports Group", "Fundo Vértice", "Grupo Alfa Esportes", "Continental Sports Fund", "Grupo Pátria Sports", "Nova Era Capital"];
-  function pickInvestor(c) { var l = isPro() ? INVESTORS_REAL : INVESTORS_GENERIC; return l[Math.floor(Math.random() * l.length)]; }
   function acceptSaf(c, route) {
     var o = c.safOffer; if (!o) return;
     c.budget += o.amountM; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + o.amountM;
-    c.saf = { investor: o.investor, pct: o.pct, season: c.season || 1, amountM: o.amountM };
-    TM.notify.push(c, { icon: "💼", title: "SAF fechada", news: true, text: o.investor + " comprou " + o.pct + "% do clube e injetou " + money(c, o.amountM) + " no caixa. Use a verba no Mercado." });
+    c.saf = { investor: o.investor, pct: o.pct, season: c.season || 1, amountM: o.amountM, clauses: o.clauses || [], strikes: 0, spentAt: c.finc.spentM || 0, honoursAt: (c.honours || []).length, log: [] };
+    TM.notify.push(c, { icon: "💼", title: "SAF fechada", news: true, text: o.investor + " comprou " + o.pct + "% do clube e injetou " + money(c, o.amountM) + ". Cumpra as contrapartidas: " + c.saf.clauses.map(function (x) { return x.text; }).join("; ") + "." });
     try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "💼", title: "SAF", text: TM.data.club(c.teamId).name + " vira SAF: " + o.investor + " assume " + o.pct + "% do clube com aporte de " + money(c, o.amountM) + "." }); } catch (e) {}
     c.safOffer = null; TM.storage.saveCoachCareer(c); TM.ui.toast("Investimento aceito: +" + money(c, o.amountM)); TM.ui.go(route);
+  }
+  // penalidade por descumprir uma cláusula (multa + strike; 2 strikes = investidor rompe)
+  function safPenalty(c, cl, why) {
+    if (!c.saf) return;
+    var fine = Math.round(c.saf.amountM * (cl.finePct || 0.1));
+    c.budget -= fine; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + fine;
+    c.saf.strikes = (c.saf.strikes || 0) + 1; c.saf.log.push({ season: c.season || 1, id: cl.id, why: why, fine: fine });
+    c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 12);
+    TM.notify.push(c, { icon: "⚠️", title: "Cláusula da SAF descumprida", news: true, text: why + " " + c.saf.investor + " aplicou multa de " + money(c, fine) + " (" + c.saf.strikes + "ª advertência)." });
+    if (c.saf.strikes >= 2) {
+      var out = Math.round(c.saf.amountM * 0.2);
+      c.budget -= out; c.finc.spentM += out; c.confidence = Math.max(0, c.confidence - 15);
+      TM.notify.push(c, { icon: "💥", title: "SAF rompida", news: true, text: c.saf.investor + " deixou o clube por descumprimento das contrapartidas, levando " + money(c, out) + " de volta. A diretoria está furiosa." });
+      try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "💥", title: "Crise", text: c.saf.investor + " rompe a SAF com o " + TM.data.club(c.teamId).name + " após contrapartidas descumpridas." }); } catch (e) {}
+      c.safEnded = { investor: c.saf.investor, season: c.season || 1 }; c.saf = null;
+    }
+  }
+  function clauseOf(c, id) { return (c.saf && c.saf.clauses || []).filter(function (x) { return x.id === id; })[0]; }
+  // eventos: proposta recusada / jogador vendido / empréstimo
+  function onOfferRejected(c, player, fee, buyerId) {
+    var cl = clauseOf(c, "euro"); if (!cl || !player) return;
+    if (isEuroClub(buyerId) && fee >= TM.data.marketValue(player) * mult(c)) safPenalty(c, cl, "Você recusou " + money(c, fee) + " de um clube europeu por " + player.name + " (acima do valor de mercado).");
+  }
+  function onPlayerSold(c, player, fee, buyerId) {
+    var cl = clauseOf(c, "simbolo"); if (!cl || !player || cl.pid !== player.id) return;
+    safPenalty(c, cl, "Você vendeu " + player.name + ", o jogador-símbolo do projeto.");
+  }
+  function onLoanTaken(c) { var cl = clauseOf(c, "semEmprestimo"); if (cl) safPenalty(c, cl, "Você pegou um empréstimo bancário durante a SAF."); }
+  // fim da temporada: avalia as cláusulas de temporada; tudo cumprido = aporte extra
+  function evaluateSaf(c) {
+    if (!c.saf) return;
+    var fails = [];
+    c.saf.clauses.forEach(function (cl) {
+      if (cl.when !== "season") return;
+      var ok = true, why = "";
+      try {
+        if (cl.id === "meta") { var pos = C().currentPosition(c); ok = pos <= cl.pos; why = "O time terminou em " + pos + "º; a meta era " + cl.pos + "º."; }
+        else if (cl.id === "folha") { var wage = C().rosterPlayers(c).reduce(function (sum, p) { return sum + TM.data.marketValue(p) * 0.075; }, 0) * mult(c); ok = wage <= cl.limitM; why = "A folha ficou em " + money(c, Math.round(wage)) + ", acima do limite de " + money(c, cl.limitM) + "."; }
+        else if (cl.id === "jovens") { var n = C().rosterPlayers(c).filter(function (p) { return (p.age || 30) <= 21; }).length; ok = n >= cl.n; why = "Só " + n + " jogador(es) de até 21 anos no elenco; o mínimo era " + cl.n + "."; }
+        else if (cl.id === "reforcos") { var spent = ((c.finc && c.finc.spentM) || 0) - (c.saf.spentAt || 0); ok = spent >= c.saf.amountM * cl.pct; why = "Foram investidos " + money(c, Math.max(0, Math.round(spent))) + " em contratações; o mínimo era " + money(c, Math.round(c.saf.amountM * cl.pct)) + "."; }
+        else if (cl.id === "titulo") { ok = (c.honours || []).length > (c.saf.honoursAt || 0); why = "Nenhum título conquistado na temporada."; }
+      } catch (e) {}
+      if (!ok) fails.push({ cl: cl, why: why });
+    });
+    if (!fails.length) {
+      var bonus = Math.round(c.saf.amountM * 0.15);
+      c.budget += bonus; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + bonus;
+      c.confidence = Math.min(100, (c.confidence == null ? 50 : c.confidence) + 8);
+      TM.notify.push(c, { icon: "💼", title: "Contrapartidas cumpridas", news: true, text: c.saf.investor + " aprovou a temporada e liberou um aporte extra de " + money(c, bonus) + "." });
+    } else {
+      fails.forEach(function (f) { if (c.saf) safPenalty(c, f.cl, f.why); });
+    }
+    if (c.saf) { c.saf.spentAt = (c.finc && c.finc.spentM) || 0; c.saf.honoursAt = (c.honours || []).length; c.saf.clauses = c.saf.clauses.map(function (cl) { if (cl.id === "meta") { var meta = Math.max(1, ((c.objective && c.objective.maxPos) || 8) - 1); cl.pos = meta; cl.text = "Terminar a liga em " + meta + "º lugar ou melhor"; } return cl; }); }
+  }
+  function clauseList(c, clauses) {
+    return el("ul", { class: "saf-clauses" }, (clauses || []).map(function (cl) { return el("li", { text: (cl.when === "season" ? "📅 " : "⚡ ") + cl.text + " (multa " + Math.round((cl.finePct || 0.1) * 100) + "% do aporte)" }); }));
   }
   function safCard(c, route) {
     if (!c.safOffer) return null;
     var o = c.safOffer;
     return el("div", { class: "saf-card" }, [
       el("div", { class: "saf-title", text: "💼 Proposta de SAF — " + o.investor }),
-      el("div", { class: "saf-text", text: "O grupo quer comprar " + o.pct + "% do clube e injetar " + money(c, o.amountM) + " no caixa nesta " + (o.windowName || "janela") + ". A verba fica disponível para contratações." + (c.saf ? " (O clube já tem um sócio: " + c.saf.investor + ", " + c.saf.pct + "%.)" : "") }),
+      el("div", { class: "saf-text", text: "O grupo quer comprar " + o.pct + "% do clube e injetar " + money(c, o.amountM) + " no caixa nesta " + (o.windowName || "janela") + ". Em troca, exige contrapartidas. Duas advertências e o investidor rompe o contrato, levando 20% do aporte de volta. Cumprindo tudo, libera +15% ao fim da temporada." }),
+      clauseList(c, o.clauses),
       el("div", { class: "note-actions" }, [
-        TM.ui.button("✅ Aceitar " + money(c, o.amountM), function () { TM.ui.confirm("Aceitar a SAF?", o.investor + " passa a ter " + o.pct + "% do clube em troca de " + money(c, o.amountM) + ".", "Aceitar", function () { acceptSaf(c, route); }); }, "btn primary small"),
+        TM.ui.button("✅ Aceitar " + money(c, o.amountM), function () { TM.ui.confirm("Aceitar a SAF?", o.investor + " passa a ter " + o.pct + "% do clube em troca de " + money(c, o.amountM) + " e das contrapartidas listadas.", "Aceitar", function () { acceptSaf(c, route); }); }, "btn primary small"),
         TM.ui.button("Recusar", function () {
           TM.notify.push(c, { icon: "🚫", title: "SAF recusada", text: "Você recusou a proposta de " + o.investor + "." });
           c.safOffer = null; TM.storage.saveCoachCareer(c); TM.ui.go(route);
@@ -225,6 +306,7 @@
     c.loans = c.loans || [];
     if (c.loans.filter(function (l) { return l.left > 0; }).length >= 2) { TM.ui.toast("O banco não libera mais de 2 empréstimos ativos."); return; }
     c.loans.push({ amountM: o.amountM, totalM: o.totalM, perM: o.perM, left: o.years, season: c.season || 1 });
+    onLoanTaken(c);
     c.budget += o.amountM; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.loanM = (c.finc.loanM || 0) + o.amountM;
     TM.notify.push(c, { icon: "🏦", title: "Empréstimo aprovado", text: "O banco liberou " + money(c, o.amountM) + ". Você pagará " + money(c, o.perM) + " por temporada durante " + o.years + " temporadas (juros de " + Math.round(o.rate * 100) + "%)." });
     TM.storage.saveCoachCareer(c); TM.ui.toast("+" + money(c, o.amountM) + " no caixa"); TM.ui.go(route);
@@ -236,7 +318,7 @@
     var cur = [];
     TIER_ORDER.forEach(function (t) { var d = c.sponsors && c.sponsors[t]; if (d) cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: TIERS[t].icon + " " + TIERS[t].label + " · " + d.name + (d.until ? " (até temp. " + d.until + ")" : "") }), el("span", { class: "deal-val good", text: "+" + money(c, d.seasonM) + "/temp" }) ])); });
     if (c.supplier) cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "👕 Material · " + c.supplier.name + (c.supplier.until ? " (até temp. " + c.supplier.until + ")" : "") }), el("span", { class: "deal-val good", text: "+" + money(c, c.supplier.seasonM) + "/temp" }) ]));
-    if (c.saf) cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "💼 SAF · " + c.saf.investor + " (" + c.saf.pct + "%)" }), el("span", { class: "deal-val", text: "aporte " + money(c, c.saf.amountM) }) ]));
+    if (c.saf) { cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "💼 SAF · " + c.saf.investor + " (" + c.saf.pct + "%) · " + (c.saf.strikes || 0) + "/2 advertências" }), el("span", { class: "deal-val", text: "aporte " + money(c, c.saf.amountM) }) ])); cur.push(clauseList(c, c.saf.clauses)); }
     body.appendChild(el("div", { class: "nego-panel" }, [
       el("div", { class: "nego-quote", text: "🤝 Contratos comerciais" }),
       cur.length ? el("div", {}, cur) : el("div", { class: "setting-hint", text: "Nenhum patrocínio fechado. Casas de apostas pagam mais; grandes marcas dão estabilidade." }),
@@ -289,6 +371,7 @@
   // virada de temporada: contratos vencem, parcelas de empréstimo
   function seasonTick(c) {
     ensure(c);
+    try { evaluateSaf(c); } catch (e) {}
     var s = c.season || 1, ended = [];
     TIER_ORDER.forEach(function (t) { var d = c.sponsors[t]; if (d && d.until && s > d.until) { ended.push(TIERS[t].label + ": " + d.name); c.sponsors[t] = null; } });
     if (c.supplier && c.supplier.until && s > c.supplier.until) { ended.push("Material: " + c.supplier.name); c.supplier = null; }
@@ -432,7 +515,7 @@
   TM.ui.register("director-hub", function () { migrateDirector(TM.storage.coachCareer()); TM.ui.go("coach-hub"); });
   TM.ui.register("director-sponsors", function (screen, params) { TM.ui.go("club-sponsors", params); });
 
-  TM.club = { ensure: ensure, migrateDirector: migrateDirector, maybeSafOffer: maybeSafOffer, safCard: safCard, financePanels: financePanels,
+  TM.club = { ensure: ensure, migrateDirector: migrateDirector, maybeSafOffer: maybeSafOffer, safCard: safCard, financePanels: financePanels, onOfferRejected: onOfferRejected, onPlayerSold: onPlayerSold, evaluateSaf: evaluateSaf, safClauses: makeClauses, safPenalty: safPenalty, acceptSaf: acceptSaf,
     sponsorIncome: sponsorIncome, sponsorNames: sponsorNames, matchIncome: matchIncome, seasonTick: seasonTick, clubEdge: clubEdge,
     ctUpkeep: ctUpkeep, stadIncomeMult: stadIncomeMult, loansDue: loansDue, TIERS: TIERS };
   TM.director = { ensureDirector: ensure };
