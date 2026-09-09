@@ -106,3 +106,13 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `it-venezia.jpg` — kallerna — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Pierluigi_Penzo.jpg
 - `it-sassuolo.jpg` — Vincenzo.togni — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Das_Mapei_Stadium_von_Reggio_nell%60Emilia_(2026).jpg
 - `de-bayern-de-munique.jpg` — Maximilian Dörrbecker (Chumwa) — CC BY-SA 2.5 — https://commons.wikimedia.org/wiki/File:M%C3%BCnchen_-_Allianz-Arena_(Luftbild).jpg
+- `de-bayer-leverkusen.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Bayarena_Leverkusen_2020.jpg
+- `de-borussia-dortmund.jpg` — Arne Müseler / www.arne-mueseler.com — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Signal_iduna_park_stadium_dortmund_6.jpg
+- `de-rb-leipzig.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Leipzig_stadium.jpg
+- `de-stuttgart.jpg` — Xocolatl (talk) 09:17, 21 June 2011 (UTC) — CC0 — https://commons.wikimedia.org/wiki/File:Blick_vom_Rotenberg_Stadion.jpg
+- `de-eintracht-frankfurt.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Frankfurt_stadium.jpg
+- `de-schalke-04.jpg` — Frank Vincentz — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Gelsenkirchen_-_Schalker_Feld_-_AufSchalke_26_ies.jpg
+- `de-freiburg.jpg` — Andreas Schwarzkopf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Europa_Park_Stadion_in_Freiburg_von_der_Georges-K%C3%B6hler-Allee_gesehen_8.jpg
+- `de-hoffenheim.jpg` — Photographs by Radosław Drożdżewski (User:Zwiadowca21) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sinsheim_-_Rhein-Neckar-Arena_-_blick_von_der_Burg_Steinsberg_2016-03-28_17-08-31.JPG
+- `de-union-berlin.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Berlin_alte_f%C3%B6rsterei.jpg
+- `de-werder-bremen.jpg` — Arne Müseler — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Germany_bremen_stadium.jpg
