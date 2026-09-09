@@ -1524,6 +1524,57 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `uy-penarol__nicolas-fernandez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NYCFC_v_Columbus_10_May_2026-73.jpg
 - `es-osasuna__alex-jimenez.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alex_Jimenez_00-02-07.99.png
 - `es-osasuna__unai-santos.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Unai_Santos.jpg
+- `es-osasuna__miguel-auria.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Miguel_Auria.jpg
+- `uy-penarol__leonardo-fernandez.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_gole%C3%B3_4-0_a_The_Strongest_-_240814-5998-jikatu_(cropped).jpg
+- `be-antwerp__luis-narh.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Luis_Narh_02082026_(2).jpg
+- `uy-penarol__leandro-diaz.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Leandro_D%C3%ADaz_Everton_v_Uni%C3%B3n_La_Calera_20230716_03.jpg
+- `uy-penarol__eduardo-darias.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_gole%C3%B3_4-0_a_The_Strongest_-_240814-5989-jikatu.jpg
+- `be-beveren__johannes-schenk.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:SL_Benfica_Lissabon_gegen_FC_Bayern_M%C3%BCnchen_(Spiel_um_den_dritten_Platz)_34.jpg
+- `es-racing-santander__aaron-martin.jpg` — Harpagornis — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:A%C3%A1ron_-_Espanyol_-_WMES_(cropped).jpg
+- `br-cruzeiro__kaua-moraes.jpg` — Renan Cardoso - Mundo do Esporte TV RC — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Endrick_(Real_Madri_)_e_Kau%C3%A3_Moraes_(Cruzeiro_EC)_-_Acervo_Mundo_Do_Esporte_TV_RC_-_Renan_Cardoso.jpg
+- `ru-bukovyna-chernivtsi__danylo-karas.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%C2%AB%D0%9E%D0%B1%D0%BE%D0%BB%D0%BE%D0%BD%D1%8C%C2%BB_2-0._11_%D0%B3%D1%80%D1%83%D0%B4%D0%BD%D1%8F_2023_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1495470.jpg
+- `ru-bukovyna-chernivtsi__mykyta-bezuhlyi.jpg` — http://fcbrovar.obolon.ua/player/13027/ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B8%D0%BA%D0%B8%D1%82%D0%B0_%D0%91%D0%B5%D0%B7%D1%83%D0%B3%D0%BB%D0%B8%D0%B9.png
+- `ru-bukovyna-chernivtsi__taras-sakiv.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%A2%D0%B0%D1%80%D0%B0%D1%81_%D0%A1%D0%B0%D0%BA%D1%96%D0%B2_%E2%80%94_%D0%A4%D0%9A_%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8_%D0%9B%D1%8C%D0%B2%D1%96%D0%B2_(2024).jpg
+- `ru-bukovyna-chernivtsi__vladyslav-pryimak.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%94%D1%80%D1%83%D0%B3%D0%B0_%D0%BB%D1%96%D0%B3%D0%B0._%C2%AB%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8%C2%BB_%E2%80%94_%C2%AB%D0%A7%D0%B5%D1%80%D0%BD%D1%96%D0%B3%D1%96%D0%B2%C2%BB_%E2%80%94_5-0_%E2%80%94_6916.jpg
+- `ru-bukovyna-chernivtsi__vyacheslav-tankovskyi.jpg` — БОГДАН ЗАЯЦ — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Vyacheslav_Tankovskyi.jpg
+- `ru-bukovyna-chernivtsi__oleh-kozhushko.jpg` — ФК Карпати Львів — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Oleh_Kozhushko.jpg
+- `ru-bukovyna-chernivtsi__bohdan-boychuk.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Bohdan_Boychuk1.jpg
+- `ru-bukovyna-chernivtsi__vitaliy-dakhnovskyi.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Vitaliy_Dakhnovskyi.jpg
+- `ru-bukovyna-chernivtsi__yevhen-pidlepenets.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%84%D0%B2%D0%B3%D0%B5%D0%BD_%D0%9F%D1%96%D0%B4%D0%BB%D0%B5%D0%BF%D0%B5%D0%BD%D0%B5%D1%86%D1%8C_%E2%80%94_%D0%A4%D0%9A_%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8_%D0%9B%D1%8C%D0%B2%D1%96%D0%B2_(2024).jpg
+- `ru-bukovyna-chernivtsi__danylo-kravchuk.jpg` — Olegdubyna — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Danulo_Kravcuk_(cropped).jpg
+- `es-athletic-bilbao__alex-padilla.jpg` — Harold9595959 — CC0 — https://commons.wikimedia.org/wiki/File:%C3%81lex_Padilla_Athletic_Bilbao.jpg
+- `ru-bukovyna-chernivtsi__vitaliy-hrusha.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8%C2%BB_%E2%80%94_%C2%AB%D0%9E%D0%B1%D0%BE%D0%BB%D0%BE%D0%BD%D1%8C%C2%BB_%E2%80%94_1-1_%E2%80%94_1971.jpg
+- `ru-bukovyna-chernivtsi__danylo-kanevtsev.jpg` — Богдан Заяць — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Danylo_Kanevtsev.jpg
+- `ru-bukovyna-chernivtsi__vadym-vitenchuk.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Vadym_Vitenchuk.jpg
+- `ru-bukovyna-chernivtsi__petro-stasyuk.jpg` — ФК Карпати Львів — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Petro_Stasyuk.jpg
+- `ru-bukovyna-chernivtsi__ivan-tyshchenko.jpg` — Mykola Tys — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ivan_Tyshchenko_(cropped).jpg
+- `es-barcelona__gavi.jpg` — TheSoccerBoy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gavi_(footballer).jpg
+- `ru-dynamo-kyiv__heorhiy-bushchan.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%D0%9B%D0%9D%D0%97_1-0._1_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2024_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1555374_(cropped).jpg
+- `be-beveren__christian-bruls.jpg` — S. Plaine — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stade_rennais_vs_USM_Alger,_July_16th_2016_-_Christian_Br%C3%BCls.jpg
+- `uy-cerro-largo__nicolas-bertocchi.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Palestino_-_Deportes_Temuco,_2018-08-11_-_Nicol%C3%A1s_Bertochi_-_01.jpg
+- `be-beveren__arno-verschueren.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:GAE_-_Sparta_Rotterdam_-_Arno_Verschueren_(cropped).jpg
+- `es-barcelona__gerard-martin.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:2025_04_26_Final_de_la_Copa_del_Rey_-_54482387776_-_Gerard_Mart%C3%ADn.jpg
+- `ru-dynamo-kyiv__kostyantyn-vivcharenko.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9A%D0%BE%D1%81%D1%82%D1%8F%D0%BD%D1%82%D0%B8%D0%BD_%D0%92%D1%96%D0%B2%D1%87%D0%B0%D1%80%D0%B5%D0%BD%D0%BA%D0%BE._31_%D0%BB%D0%B8%D0%BF%D0%BD%D1%8F_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1252125_(cropped).jpg
+- `es-celta-de-vigo__pablo-duran.jpg` — Galizianwiki — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Fot_pablito.jpg
+- `ru-dynamo-kyiv__denys-popov.jpg` — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%94%D0%B5%D0%BD%D0%B8%D1%81_%D0%9F%D0%BE%D0%BF%D0%BE%D0%B2_%E2%80%94_1195605_(cropped).jpg
+- `ru-dynamo-kyiv__andriy-yarmolenko.jpg` — --Steindy (talk) 22:38, 13 October 2019 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hertha_BSC_vs._West_Ham_United_20190731_(210).jpg
+- `ru-dynamo-kyiv__oleksandr-pikhalyonok.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%C2%AB%D0%92%D0%BE%D1%80%D1%81%D0%BA%D0%BB%D0%B0%C2%BB_3-1._18_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2024_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1559597.jpg
+- `ru-dynamo-kyiv__nazar-voloshyn.jpg` — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9D%D0%B0%D0%B7%D0%B0%D1%80_%D0%92%D0%BE%D0%BB%D0%BE%D1%88%D0%B8%D0%BD._27_%D0%BC%D0%B0%D1%80%D1%82%D0%B0_2021_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_1211142_(cropped).jpg
+- `ru-dynamo-kyiv__mykola-shaparenko.jpg` — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B8%D0%BA%D0%BE%D0%BB%D0%B0_%D0%A8%D0%B0%D0%BF%D0%B0%D1%80%D0%B5%D0%BD%D0%BA%D0%BE._1_%D0%BB%D0%B8%D1%81%D1%82%D0%BE%D0%BF%D0%B0%D0%B4%D0%B0_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1288138_(cropped).jpg
+- `be-beveren__bruno-godeau.jpg` — V4nco — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2018-02-22_Entrainement_excel-53.jpg
+- `be-beveren__victor-olatunji.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Victor_Olatunji.jpg
+- `be-cercle-brugge__gaetan-coucke.jpg` — Alain Coucke — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Coucke_gaetan-1558778855_(cropped_2).jpg
+- `be-cercle-brugge__ibrahim-diakite.jpg` — feguifoot — Public domain — https://commons.wikimedia.org/wiki/File:Ibrahim_Diakit%C3%A9.jpg
+- `ru-dynamo-kyiv__matviy-ponomarenko.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%C2%AB%D0%92%D0%B5%D1%80%D0%B5%D1%81%C2%BB_3-0._1_%D1%82%D1%80%D0%B0%D0%B2%D0%BD%D1%8F_2024_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1527677.jpg
+- `ru-dynamo-kyiv__valentyn-rubchynskyi.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%C2%AB%D0%92%D0%BE%D1%80%D1%81%D0%BA%D0%BB%D0%B0%C2%BB_3-1._18_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2024_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1559461_(cropped).jpg
+- `ru-dynamo-kyiv__justin-lonwijk.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%9C%D0%B5%D1%82%D0%B0%D0%BB%D1%96%D1%81%D1%82_1925%C2%BB_0-0._26_%D0%BB%D0%B8%D1%81%D1%82%D0%BE%D0%BF%D0%B0%D0%B4%D0%B0_2022_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1394816.jpg
+- `es-deportivo-la-coruna__yeremay-hernandez.jpg` — Magno2002 — CC0 — https://commons.wikimedia.org/wiki/File:Yeremay_Hern%C3%A1ndez_(cropped).jpg
+- `be-cercle-brugge__dante-vanzeir.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_Union-Saint-Gilloise_(05-08-2020)_16.jpg
+- `be-cercle-brugge__joel-ndala.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:ManCity20240722-056_(Ndala).jpg
+- `ru-dynamo-kyiv__vitaliy-buyalskyi.jpg` — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%92%D0%B8%D1%82%D0%B0%D0%BB%D0%B8%D0%B9_%D0%91%D1%83%D1%8F%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D0%B9._1_%D0%BC%D0%B0%D1%80%D1%82%D0%B0_2016_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_670307_(cropped).jpg
+- `be-cercle-brugge__geoffrey-kondo.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Geoffrey_Kondogbia_Atl%C3%A9tico_de_Madrid_2022_(cropped).jpg
+- `be-cercle-brugge__hannes-van-der-bruggen.jpg` — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File:HannesVanderBruggenjuni2024.jpg
+- `ru-dynamo-kyiv__taras-mykhavko.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%92%D1%96%D0%B4%D0%BA%D1%80%D0%B8%D1%82%D0%B5_%D1%82%D1%80%D0%B5%D0%BD%D1%83%D0%B2%D0%B0%D0%BD%D0%BD%D1%8F_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB._15_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2023_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1474271_(cropped).jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
