@@ -1155,6 +1155,7 @@
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
+      hubBtn("🤝", "Patrocínios", function () { TM.ui.go("director-sponsors", { from: "coach-hub" }); }),
       hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
@@ -1281,7 +1282,7 @@
     var over = Math.max(0, r - 55);
     var tv = r2((10 + over * 2.0) * m);          // cotas de TV
     var gate = r2((5 + over * 1.3) * m);         // bilheteria + sócios
-    var sponsor = r2((4 + over * 1.0) * m);      // patrocínios + publicidade
+    var sponsor = (c.sponsor || c.supplier) ? r2((c.sponsor ? c.sponsor.seasonM : 0) + (c.supplier ? c.supplier.seasonM : 0) + (2 + over * 0.3) * m) : r2((4 + over * 1.0) * m);      // patrocínios (contratos reais) + publicidade
     var sold = fc.soldM || 0, prize = fc.prizeM || 0;
     var income = r2(tv + gate + sponsor + sold + prize);
     var wages = seasonWageBillCur(c);
@@ -1433,7 +1434,7 @@
       el("div", { class: "fin-cat-h good", html: "📈 Receitas <b>" + money(c, f.income) + "</b>" }),
       catLine("📺", "Cotas de TV", f.tv, f.income, "good"),
       catLine("🎟️", "Bilheteria e sócios", f.gate, f.income, "good"),
-      catLine("🤝", "Patrocínios e publicidade", f.sponsor, f.income, "good"),
+      catLine("🤝", "Patrocínios e publicidade" + ((c.sponsor || c.supplier) ? " (" + [c.sponsor && c.sponsor.name, c.supplier && c.supplier.name].filter(Boolean).join(" · ") + ")" : ""), f.sponsor, f.income, "good"),
       catLine("💸", "Vendas de jogadores", f.sold, f.income, "good"),
       catLine("🏆", "Prêmios de competições", f.prize, f.income, "good")
     ]));

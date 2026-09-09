@@ -67,15 +67,79 @@
   }
   function matchesPerSeason(career) { return Math.max(30, (career.order || []).length); }
 
-  /* ---------- patrocínios ---------- */
+  /* ---------- patrocínios & parcerias (empresas reais na edição Atualizado) ---------- */
+  function isPro() { try { return TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) { return false; } }
+  // [nome, categoria, região, porte]  região: br | latam | eu | us | mena | asia | global   porte: 2 grande · 1 médio
+  var SPONSORS_REAL = [
+    // casas de apostas — pagam muito
+    ["Betano","bet","global",2],["Superbet","bet","br",2],["Esportes da Sorte","bet","br",2],["Betnacional","bet","br",2],["EstrelaBet","bet","br",1],
+    ["Pixbet","bet","br",1],["Sportingbet","bet","br",1],["Parimatch","bet","global",1],["Bet365","bet","global",2],["Novibet","bet","br",1],
+    ["Vaidebet","bet","br",1],["Rei do Pitaco","bet","br",1],["Bet7k","bet","br",1],["BetMGM","bet","us",2],["Betfair","bet","global",1],
+    ["1xBet","bet","global",1],["Stake","bet","global",2],["Betsson","bet","latam",1],["Aposta Ganha","bet","br",1],["F12.bet","bet","br",1],
+    // bancos & fintechs
+    ["Itaú","banco","br",2],["Bradesco","banco","br",2],["Banco do Brasil","banco","br",2],["Caixa","banco","br",2],["Nubank","banco","br",2],
+    ["PicPay","banco","br",1],["Santander","banco","global",2],["Standard Chartered","banco","eu",2],["Allianz","banco","eu",2],["Visa","banco","global",2],["Mastercard","banco","global",2],
+    // bebidas
+    ["Coca-Cola","bebida","global",2],["Pepsi","bebida","global",2],["Heineken","bebida","global",2],["Brahma","bebida","br",2],["Skol","bebida","br",1],
+    ["Guaraná Antarctica","bebida","br",1],["Red Bull","bebida","global",2],["Monster","bebida","global",1],["Gatorade","bebida","global",1],["Ambev","bebida","br",2],
+    // telecom & tech
+    ["TIM","telecom","br",2],["Vivo","telecom","br",2],["Claro","telecom","br",2],["Etisalat","telecom","mena",2],["Samsung","tech","global",2],
+    ["LG","tech","asia",1],["Sony","tech","asia",1],["Microsoft","tech","global",2],["Google","tech","global",2],["Amazon","tech","global",2],
+    ["Spotify","tech","global",2],["Netflix","tech","global",1],["Rakuten","tech","asia",2],["Binance","tech","global",2],["Crypto.com","tech","global",1],
+    // aéreas, energia, varejo, alimentos, outros
+    ["Emirates","aereo","mena",2],["Qatar Airways","aereo","mena",2],["Etihad","aereo","mena",2],["Turkish Airlines","aereo","eu",1],["Latam","aereo","latam",2],["Gol","aereo","br",1],["Azul","aereo","br",1],
+    ["Petrobras","energia","br",2],["Shell","energia","global",2],["Ipiranga","energia","br",1],["TotalEnergies","energia","eu",2],["Vale","energia","br",2],
+    ["Mercado Livre","varejo","latam",2],["Magalu","varejo","br",1],["Casas Bahia","varejo","br",1],["Havan","varejo","br",1],["Assaí","varejo","br",1],["Renner","varejo","br",1],["iFood","varejo","br",1],["Uber","varejo","global",1],
+    ["JBS","alimento","br",2],["BRF","alimento","br",1],["Natura","alimento","br",1],["O Boticário","alimento","br",1],["Hyundai","auto","global",2],["Kia","auto","global",1],["Toyota","auto","asia",2],["Chevrolet","auto","us",1],["Jeep","auto","global",1],["Localiza","auto","br",1],["Globoplay","midia","br",1]
+  ];
+  var SPONSORS_GENERIC = [
+    ["Bet Arena","bet","global",2],["Aposta Já","bet","global",2],["Lucky Gol","bet","global",1],["ProBet","bet","global",1],
+    ["Banco Aliança","banco","global",2],["Crédito Nacional","banco","global",1],["Refrigerantes Solar","bebida","global",2],["Cerveja Estádio","bebida","global",1],
+    ["TeleMax","telecom","global",2],["NovaTech","tech","global",2],["AeroSul","aereo","global",1],["Energia Vale","energia","global",2],["Loja Mundial","varejo","global",1],["Alimentos Campo","alimento","global",1],["AutoPrime","auto","global",1]
+  ];
+  var SUPPLIERS_REAL = ["Nike","Adidas","Puma","Umbro","New Balance","Kappa","Castore","Macron","Joma","Hummel","Mizuno","Le Coq Sportif","Diadora","Under Armour","Lotto","Erreà","Topper","Penalty","Volt","Reebok"];
+  var SUPPLIERS_GENERIC = ["Sportiva","Atleta Pro","Vento Sport","Campo & Cia","Gol Wear","Fibra Esportes"];
+  var CAT = { bet: [1.9, 1.6, "🎰", "Casa de apostas: a maior receita, com bônus alto."], banco: [1.3, 1.3, "🏦", "Banco/fintech: receita sólida e estável."], bebida: [1.1, 1.2, "🥤", "Bebidas: forte presença no estádio."], telecom: [1.2, 1.1, "📱", "Telecom: exposição nacional."], tech: [1.25, 1.2, "💻", "Tecnologia: marca global."], aereo: [1.15, 1.1, "✈️", "Companhia aérea: viagens e visibilidade."], energia: [1.3, 1.2, "⛽", "Energia: contrato robusto."], varejo: [1.0, 1.1, "🛒", "Varejo: receita e ativações."], alimento: [0.9, 1.0, "🍽️", "Alimentos: parceria de base."], auto: [1.1, 1.1, "🚗", "Automotiva: frota e bônus."], midia: [0.95, 1.0, "📺", "Mídia: exposição e conteúdo."] };
+  var LEAGUE_REGION = { br: "br", ar: "latam", uy: "latam", py: "latam", co: "latam", ec: "latam", mx: "latam", us: "us", sa: "mena", ma: "mena", jp: "asia", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", be: "eu", ch: "eu", tr: "eu", ru: "eu", rus: "eu" };
+  function seededRng(seed) { var h = 2166136261; for (var i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); } return function () { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); return ((h ^= h >>> 16) >>> 0) / 4294967296; }; }
+  function clubRegion(c) { var club = TM.data.club(c.teamId); return (club && LEAGUE_REGION[club.leagueId]) || "global"; }
+  function pickWeighted(list, rng, n, region, used) {
+    var out = [], pool = list.filter(function (x) { return !used[x[0]]; });
+    for (var k = 0; k < n && pool.length; k++) {
+      var tot = 0, ws = pool.map(function (x) { var w = x[2] === region ? 3 : x[2] === "global" ? 1.2 : 0.25; w *= x[3] === 2 ? 1.3 : 1; tot += w; return w; });
+      var r = rng() * tot, idx = 0; for (var i = 0; i < pool.length; i++) { r -= ws[i]; if (r <= 0) { idx = i; break; } }
+      out.push(pool[idx]); used[pool[idx][0]] = 1; pool.splice(idx, 1);
+    }
+    return out;
+  }
   function sponsorOffers(c) {
     var r = TM.data.clubRating(c.teamId), m = mult(c);
     var base = 6 + Math.max(0, (r - 60)) * 0.7; // euros M
-    return [
-      { id: "master", name: "Patrocínio Master", bonusM: Math.round(base * 1.4 * m), seasonM: Math.round(base * 1.9 * m), desc: "Maior receita por temporada." },
-      { id: "padrao", name: "Patrocínio Padrão", bonusM: Math.round(base * 1.3 * m), seasonM: Math.round(base * 1.2 * m), desc: "Equilibrado: bônus e receita." },
-      { id: "cash", name: "Patrocínio Bônus", bonusM: Math.round(base * 3.2 * m), seasonM: Math.round(base * 0.5 * m), desc: "Grande bônus imediato para contratar já." }
-    ];
+    var rng = seededRng((c.teamId || "x") + "|" + (c.season || 1) + "|sp");
+    var list = isPro() ? SPONSORS_REAL : SPONSORS_GENERIC, region = clubRegion(c), used = {};
+    var bets = pickWeighted(list.filter(function (x) { return x[1] === "bet"; }), rng, 2, region, used);
+    var others = pickWeighted(list.filter(function (x) { return x[1] !== "bet"; }), rng, 4, region, used);
+    return bets.concat(others).map(function (x) {
+      var cat = CAT[x[1]] || CAT.varejo, big = x[3] === 2 ? 1.2 : 0.9, jitter = 0.85 + rng() * 0.3;
+      return { id: "sp:" + x[0], name: x[0], cat: x[1], icon: cat[2], desc: cat[3],
+        seasonM: Math.round(base * cat[0] * big * jitter * m), bonusM: Math.round(base * cat[1] * big * jitter * m), years: x[1] === "bet" ? 1 : 2 };
+    }).sort(function (a, b) { return b.seasonM - a.seasonM; });
+  }
+  function supplierOffers(c) {
+    var r = TM.data.clubRating(c.teamId), m = mult(c);
+    var base = 3 + Math.max(0, (r - 60)) * 0.45;
+    var rng = seededRng((c.teamId || "x") + "|" + (c.season || 1) + "|kit");
+    var list = (isPro() ? SUPPLIERS_REAL : SUPPLIERS_GENERIC).slice();
+    // clubes grandes atraem as gigantes; menores, marcas médias
+    var tierBig = r >= 80, cand = list.filter(function (n, i) { return tierBig ? i < 8 : i >= 3; });
+    var out = [];
+    for (var k = 0; k < 3 && cand.length; k++) { var i = Math.floor(rng() * cand.length); out.push(cand[i]); cand.splice(i, 1); }
+    return out.map(function (n, i) { var f = (1.25 - i * 0.15) * (0.9 + rng() * 0.2);
+      return { id: "kit:" + n, name: n, seasonM: Math.round(base * f * m), bonusM: Math.round(base * 0.8 * f * m), years: 3, desc: i === 0 ? "Fornecedora premium: material completo + maior receita." : "Contrato de material esportivo (camisas, treino, chuteiras)." }; });
+  }
+  function announceDeal(c, kind, name, seasonM) {
+    var club = TM.data.club(c.teamId), cname = club ? club.name : "Clube";
+    try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: kind === "kit" ? "👕" : "🤝", title: kind === "kit" ? "Nova fornecedora" : "Novo patrocinador master", text: (kind === "kit" ? cname + " anuncia " + name + " como nova fornecedora de material esportivo" : cname + " fecha patrocínio master com " + name) + " — " + money(c, seasonM) + " por temporada." }); } catch (e) {}
   }
 
   /* ---------- investidor / SAF (raro, a cada janela de transferências) ---------- */
@@ -297,7 +361,8 @@
     var incomeMatch = Math.round(seasonBaseIncomeEur(career.teamId) / mps * mult(career) * stadM);
     var homeBonus = userSide === 0 ? Math.round(seasonBaseIncomeEur(career.teamId) / mps * 0.4 * mult(career) * stadM) : 0;
     var sponsorMatch = career.sponsor ? Math.round(career.sponsor.seasonM / mps) : 0;
-    var income = incomeMatch + homeBonus + sponsorMatch;
+    var supplierMatch = career.supplier ? Math.round(career.supplier.seasonM / mps) : 0;
+    var income = incomeMatch + homeBonus + sponsorMatch + supplierMatch;
     var expense = Math.round((career.wagesM + career.coach.salaryM + ctUpkeep(career, career.ctLevel)) / mps);
     career.budget += income - expense;
     career.fin.incomeM += income; career.fin.expenseM += expense;
@@ -736,37 +801,50 @@
   });
 
   /* ================= PATROCÍNIOS ================= */
-  TM.ui.register("director-sponsors", function (screen) {
+  TM.ui.register("director-sponsors", function (screen, params) {
     var c = TM.storage.coachCareer(); ensureDirector(c);
-    screen.appendChild(TM.ui.topbar("🤝 Patrocínios", function () { TM.ui.go("director-hub"); }));
+    var back = (params && params.from) || "director-hub";
+    screen.appendChild(TM.ui.topbar("🤝 Patrocínios & Parcerias", function () { TM.ui.go(back); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
 
-    if (c.sponsor) {
-      body.appendChild(el("div", { class: "nego-panel" }, [
-        el("div", { class: "nego-quote happy", text: "✅ Patrocinador atual: " + c.sponsor.name + " — " + money(c, c.sponsor.seasonM) + "/temporada." }),
-        el("div", { class: "setting-hint", text: "A receita do patrocínio entra a cada jogo, ao longo da temporada. Você pode trocar por outra proposta abaixo." })
-      ]));
-    } else {
-      body.appendChild(el("p", { class: "intro-text", text: "Feche um patrocínio para gerar receita e reforçar o caixa. Escolha a proposta que combina com o seu projeto." }));
-    }
+    // ---- contratos atuais ----
+    var cur = [];
+    if (c.sponsor) cur.push(el("div", { class: "nego-quote happy", text: "🤝 Patrocinador master: " + c.sponsor.name + " — " + money(c, c.sponsor.seasonM) + "/temporada" + (c.sponsor.until ? " (até a temp. " + c.sponsor.until + ")" : "") + "." }));
+    if (c.supplier) cur.push(el("div", { class: "nego-quote happy", text: "👕 Fornecedora de material: " + c.supplier.name + " — " + money(c, c.supplier.seasonM) + "/temporada" + (c.supplier.until ? " (até a temp. " + c.supplier.until + ")" : "") + "." }));
+    if (cur.length) { cur.push(el("div", { class: "setting-hint", text: "A receita entra a cada jogo ao longo da temporada. Trocar de patrocinador antes do fim do contrato custa a multa (metade do bônus recebido)." })); body.appendChild(el("div", { class: "nego-panel" }, cur)); }
+    else body.appendChild(el("p", { class: "intro-text", text: "Feche um patrocínio master e um contrato de material esportivo. Casas de apostas pagam mais; grandes marcas dão estabilidade. As propostas mudam a cada temporada." }));
 
-    sponsorOffers(c).forEach(function (s) {
-      body.appendChild(el("div", { class: "sponsor-card" }, [
-        el("div", { class: "sp-head" }, [ el("div", { class: "sp-name", text: "🤝 " + s.name }), el("div", { class: "sp-desc", text: s.desc }) ]),
+    function accept(kind, s) {
+      var curDeal = kind === "kit" ? c.supplier : c.sponsor;
+      if (curDeal && curDeal.id === s.id) { TM.ui.toast("Já é o seu contrato atual."); return; }
+      var fine = (curDeal && curDeal.until && (c.season || 1) < curDeal.until) ? Math.round((curDeal.bonusM || 0) / 2) : 0;
+      var go = function () {
+        c.budget += s.bonusM - fine; c.fin.incomeM += s.bonusM; if (fine) c.fin.expenseM = (c.fin.expenseM || 0) + fine;
+        var deal = { id: s.id, name: s.name, cat: s.cat || "kit", seasonM: s.seasonM, bonusM: s.bonusM, until: (c.season || 1) + (s.years || 1) };
+        if (kind === "kit") c.supplier = deal; else c.sponsor = deal;
+        TM.notify.push(c, { icon: kind === "kit" ? "👕" : "🤝", title: kind === "kit" ? "Fornecedora fechada" : "Patrocínio fechado", text: s.name + " — bônus de " + money(c, s.bonusM) + (fine ? " (multa de " + money(c, fine) + " pela rescisão)" : "") + " e " + money(c, s.seasonM) + "/temporada por " + (s.years || 1) + " temporada(s)." });
+        announceDeal(c, kind, s.name, s.seasonM);
+        TM.storage.saveCoachCareer(c); TM.ui.toast((kind === "kit" ? "Fornecedora" : "Patrocínio") + " fechado! +" + money(c, s.bonusM - fine)); TM.ui.go("director-sponsors", { from: back });
+      };
+      if (fine) TM.ui.confirm("Rescindir contrato atual?", "Sair de " + curDeal.name + " antes do fim custa " + money(c, fine) + " de multa.", "Trocar", go, true); else go();
+    }
+    function card(kind, s, curDeal) {
+      var mine = curDeal && curDeal.id === s.id;
+      return el("div", { class: "sponsor-card" + (mine ? " current" : "") }, [
+        el("div", { class: "sp-head" }, [ el("div", { class: "sp-name", text: (s.icon || "👕") + " " + s.name }), el("div", { class: "sp-desc", text: s.desc }) ]),
         el("div", { class: "sp-vals" }, [
-          el("span", { class: "sp-tag good", text: "Bônus imediato: " + money(c, s.bonusM) }),
-          el("span", { class: "sp-tag", text: "Receita: " + money(c, s.seasonM) + "/temp" })
+          el("span", { class: "sp-tag good", text: "Bônus: " + money(c, s.bonusM) }),
+          el("span", { class: "sp-tag", text: money(c, s.seasonM) + "/temp" }),
+          el("span", { class: "sp-tag", text: (s.years || 1) + " temp." })
         ]),
-        TM.ui.button(c.sponsor && c.sponsor.id === s.id ? "Patrocinador atual" : "Fechar patrocínio", function () {
-          if (c.sponsor && c.sponsor.id === s.id) { TM.ui.toast("Já é o seu patrocinador."); return; }
-          c.budget += s.bonusM; c.fin.incomeM += s.bonusM;
-          c.sponsor = { id: s.id, name: s.name, seasonM: s.seasonM };
-          TM.notify.push(c, { icon: "🤝", title: "Patrocínio fechado", text: s.name + " — bônus de " + money(c, s.bonusM) + " e " + money(c, s.seasonM) + "/temporada." });
-          TM.storage.saveCoachCareer(c); TM.ui.toast("Patrocínio fechado! +" + money(c, s.bonusM)); TM.ui.go("director-hub");
-        }, "btn " + (c.sponsor && c.sponsor.id === s.id ? "ghost" : "primary") + " small")
-      ]));
-    });
+        TM.ui.button(mine ? "Contrato atual" : "Fechar contrato", function () { accept(kind, s); }, "btn " + (mine ? "ghost" : "primary") + " small")
+      ]);
+    }
+    body.appendChild(el("h3", { class: "section-title", text: "🤝 Patrocínio master — propostas desta temporada" }));
+    sponsorOffers(c).forEach(function (s) { body.appendChild(card("sp", s, c.sponsor)); });
+    body.appendChild(el("h3", { class: "section-title", text: "👕 Fornecedora de material esportivo" }));
+    supplierOffers(c).forEach(function (s) { body.appendChild(card("kit", s, c.supplier)); });
   });
 
   /* ================= VERBA DE TRANSFERÊNCIAS (o técnico contrata) ================= */
