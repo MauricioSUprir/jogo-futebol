@@ -81,6 +81,1407 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `us-atlanta-united__dominik-chong-qui.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Dominik_Chong-Qui.jpg
 - `br-atletico-mineiro__alan-minda.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alan_Minda_Cote_D%27Ivoire_v_Ecuador_14_June_2026-186.jpg
 - `us-atlanta-united__aleksei-miranchuk.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Aleksei_Miranchuk_2.jpg
+- `us-austin-fc__brad-stuver.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Austin_(Apr_2025)_17.jpg
+- `us-austin-fc__mikkel-desler.jpg` — Gaillac — CC0 — https://commons.wikimedia.org/wiki/File:TFC_players_on_Fan_days_-_Restes_-_Nicolaisen_-_Mart%C3%ADnez_Novell.jpg
+- `br-atletico-mineiro__indio.jpg` — UnknownUnknown — Public domain — https://commons.wikimedia.org/wiki/File:Correio_da_Manh%C3%A3_AN_416.jpg
+- `us-austin-fc__oleksandr-svatok.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Austin_vs_Houston_Dynamo_(2025_US_Open_Cup)_32.jpg
+- `br-atletico-mineiro__vitao.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%A8%D0%B0%D1%85%D1%82%D1%91%D1%80%C2%BB_2-3._4_%D0%B8%D1%8E%D0%BB%D1%8F_2020_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_1109299.jpg
+- `us-austin-fc__ilie-sanchez.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Austin_vs_Houston_Dynamo_(2025_US_Open_Cup)_33.jpg
+- `br-bahia__ronaldo.jpg` — Had me quickly untied — CC0 — https://commons.wikimedia.org/wiki/File:House_next_to_the_one_where_Ronaldo_lived.jpg
+- `us-austin-fc__brandon-vazquez.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Austin_vs_Houston_Dynamo_(2025_US_Open_Cup)_33.jpg
+- `us-austin-fc__myrto-uzuni.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Austin_(Apr_2025)_01_(cropped).jpg
+- `br-bahia__nicolas-acevedo.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:CINvNYC_2022-06-29_-_Nicol%C3%A1s_Acevedo,_H%C3%A9ber,_Maxime_Chanot,_Tayvon_Gray,_Talles_Magno_(52187857895)_(Acevedo_crop).jpg
+- `us-austin-fc__facundo-torres.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gustavo-gomez-lucas-evangelista-flaco-lopez-facundo-torres-palmeiras-internacional-sep2025.jpg
+- `us-austin-fc__damian-las.jpg` — Connortrace — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:20250629_ctc_41659_copy.jpg
+- `us-austin-fc__besard-sabovic.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Austin_(Apr_2025)_08.jpg
+- `br-bahia__ademir.jpg` — Revista El Gráfico — Public domain — https://commons.wikimedia.org/wiki/File:Delantera_Brasil_1953.jpg
+- `us-austin-fc__jon-bell.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NYCFC.Seattle.18.Oct.2025-147.jpg
+- `br-bahia__alejo-veliz.jpg` — BugWarp — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Entrenamiento_Argentina_Sub20_previo_al_mundial_-_BugWarp_(41)_(cropped).jpg
+- `us-austin-fc__jon-gallagher.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Austin_(Apr_2025)_14.jpg
+- `br-bahia__everton-ribeiro.jpg` — Unknown authorUnknown author — CC0 — https://commons.wikimedia.org/wiki/File:%C3%89verton_ribeiro_no_bahia.png
+- `br-bahia__rodrigo-nestor.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Rodrigo_Nestor_-_S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_(cropped).jpg
+- `us-austin-fc__christian-ramirez.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Minnesota_United_-_Houston_Dynamo_-_TCF_Bank_Stadium_-_Minneapolis_-_MLS_(41067710304).jpg
+- `br-bahia__willian-jose.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:2022_04_28_Recepci%C3%B3n_oficial_Del_Real_Betis_Balompi%C3%A9_por_la_consecuci%C3%B3n_de_la_Copa_del_Rey._(52037838280).jpg
+- `us-austin-fc__zan-kolmanic.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%C5%BDan_Kolmani%C4%8D.jpg
+- `br-bahia__erick.jpg` — BPMI Sekretariat Presiden/Muchlis Jr. — Public domain — https://commons.wikimedia.org/wiki/File:Atraksi_Drone_pada_Merdeka_Run.jpg
+- `us-austin-fc__guilherme-biro.jpg` — SOCCER DIGITAL — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Paulista_Sub-20-_S%C3%A3o_Caetano_1_x_0_Corinthians_-_Guilherme_Biro.jpg
+- `br-bahia__guido-herrera.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Guido_Herrera.jpg
+- `us-colorado-rapids__zack-steffen.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Colorado_Rapids_(Apr_2025)_30.jpg
+- `br-bahia__everaldo.jpg` — Panini — Public domain — https://commons.wikimedia.org/wiki/File:Everaldo_(1970).jpg
+- `us-colorado-rapids__keegan-rosenberry.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_O%27Toole_NYCFC_v_Colorado_Mar_14_2026-83.jpg
+- `us-colorado-rapids__reggie-cannon.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Colorado_Rapids_(Apr_2025)_28.jpg
+- `us-colorado-rapids__rob-holding.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rob_Holding_NYCFC_v_Colorado_Mar_14_2026-51.jpg
+- `us-colorado-rapids__morgan-whittaker.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Morgan_Whittaker_16082025_(1).jpg
+- `us-colorado-rapids__hamzat-ojediran.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hamzat_Ojediran_NYCFC_v_Colorado_Mar_14_2026-65.jpg
+- `br-bahia__luiz-gustavo.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Derbide_Fenerbah%C3%A7e_Yedek_Oyuncular_(2021-22_S%C3%BCper_Lig).png
+- `us-colorado-rapids__paxten-aaronson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Paxten_Aaronson_NYCFC_v_Colorado_Mar_14_2026-64.jpg
+- `us-colorado-rapids__alexis-manyoma.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alexis_Manyoma_NYCFC_v_Colorado_Mar_14_2026-40.jpg
+- `us-colorado-rapids__josh-atencio.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Josh_Atencio_NYCFC_v_Colorado_Mar_14_2026-5_(cropped).jpg
+- `us-colorado-rapids__wayne-frederick.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Wayne_Frederick_NYCFC_v_Colorado_Mar_14_2026-33_(cropped).jpg
+- `us-colorado-rapids__alex-harris.jpg` — Tim Roberts — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Alex_Harris_2018-10-27_2.jpg
+- `us-colorado-rapids__noah-cobb.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Noah_Cobb_Red_Bull_Atlanta_5.31.25-11.jpg
+- `us-colorado-rapids__mamadou-billo-diop.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mamadou_Billo_Diop_NYCFC_v_Colorado_Mar_14_2026-152.jpg
+- `us-colorado-rapids__miguel-navarro.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Miguel_Navarro_NYCFC_v_Colorado_Mar_14_2026-6_(cropped).jpg
+- `br-botafogo__arthur-chaves.jpg` — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Luciano_Gondou_en_el_Preol%C3%ADmpico_Sub_23.jpg
+- `br-botafogo__mateo-ponte.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4563-jikatu_(52989626106)_(cropped).jpg
+- `us-colorado-rapids__nicolas-defreitas-hansen.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicolas_Defreitas-Hansen_NYCFC_v_Colorado_Mar_14_2026-31_(cropped).jpg
+- `br-botafogo__cristian-medina.jpg` — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Cristian_Medina,_2024_Summer_Olympics.jpg
+- `us-colorado-rapids__darren-yapi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matt_Freese_NYCFC_v_Colorado_Mar_14_2026-125.jpg
+- `br-botafogo__junior-santos.jpg` — Copa do Nordeste — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:J%C3%BAnior_Santos-2019.jpg
+- `us-colorado-rapids__youssef-maziz.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_FC_Metz_(14-03-2021)_61.jpg
+- `us-colorado-rapids__georgi-minoungou.jpg` — SounderBruce — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Georgi_Minoungou_at_2025_Sounders_Fan_Fest_(cropped).jpg
+- `us-colorado-rapids__jackson-travis.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jackson_Travis_NYCFC_v_Colorado_Mar_14_2026-7.jpg
+- `us-colorado-rapids__ibrahim-sadiq.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Ibrahim_Sadiq_-_Go_Ahead_Eagles_-_AZ_-_53717900810.jpg
+- `br-botafogo__alex-telles.jpg` — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_3_Botafogo_1_-_-_241030-1265-jikatu.jpg
+- `br-botafogo__warleson.jpg` — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File:Warlesonjuni2024.jpg
+- `br-botafogo__arthur-cabral.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Arthur_Cabral,_atacante_do_Benfica,_em_promo%C3%A7%C3%A3o_ao_EAFC_24_(cropped).jpg
+- `us-fc-cincinnati__alvas-powell.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alvas_Powell_NYCFC_v_Cincinnati_22_Apr_26-15_(cropped).jpg
+- `us-fc-cincinnati__nick-hagglund.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:CINvPOR_2019-03-17_-_Nick_Hagglund_(33624969588)_(cropped).jpg
+- `us-fc-cincinnati__obinna-nwobodo.jpg` — Hayden Schiff — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:FC_CINCINATTI.jpg
+- `us-fc-cincinnati__kevin-denkey.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_Denkey_NYCFC_v_Cincinnati_22_Apr_26-91.jpg
+- `br-botafogo__allan.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Everton,_2_October_2021_(41).jpg
+- `us-fc-cincinnati__samuel-gidi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Samuel_Gidi_NYCFC_v_Cincinnati_22_Apr_26-58.jpg
+- `us-fc-cincinnati__miles-robinson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Miles_Robinson_Australia_v_USA_19_June_2026-72_(cropped).jpg
+- `us-fc-cincinnati__evan-louro.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Evan_Louro_NYCFC_v_Cincinnati_22_Apr_26-1_(cropped).jpg
+- `us-fc-cincinnati__teenage-hadebe.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Teenage_Hadebe_NYCFC_v_Cincinnati_22_Apr_26-48.jpg
+- `us-fc-cincinnati__tom-barlow.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tom_Barlow_NYCFC_v_Cincinnati_22_Apr_26-51.jpg
+- `br-botafogo__paulinho.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681298318).jpg
+- `us-fc-cincinnati__kenji-mboma-dem.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kenji_Mboma_Dem_NYCFC_v_Cincinnati_22_Apr_26-44_(cropped).jpg
+- `br-botafogo__kaio-pantaleao.jpg` — Артем Гусев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Kaio_Pantale%C3%A3o_2021.jpg
+- `us-fc-cincinnati__roman-celentano.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Roman_Celentano_NYCFC_v_Cincinnati_22_Apr_26-39_(cropped).jpg
+- `us-fc-cincinnati__pavel-bucha.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pavel_Bucha_NYCFC_v_Cincinnati_22_Apr_26-167.jpg
+- `us-fc-cincinnati__matt-miazga.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_Matt_Miazga_(51171093429)_(cropped).jpg
+- `us-fc-cincinnati__gerardo-valenzuela.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gerardo_Valenzuela_NYCFC_v_Cincinnati_22_Apr_26-166_(cropped).jpg
+- `br-botafogo__edenilson.jpg` — Tomofumi Kitano — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Paolo_Guerrero_with_Corinthians_celebrate_FIFA_Club_World_Cup_win_(cropped).jpg
+- `br-botafogo__danilo-pereira.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_Feyenoord_Rotterdam_(Testspiel_2022-07-09)_28_(cropped).jpg
+- `us-fc-cincinnati__brian-anunga.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tah_Brian_Anunga_NYCFC_v_Cincinnati_22_Apr_26-19.jpg
+- `us-fc-cincinnati__ender-echenique.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ender_Echenique_NYCFC_v_Cincinnati_22_Apr_26-55_(cropped).jpg
+- `us-fc-cincinnati__andrei-chirila.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Andrei_Chirila_NYCFC_v_Cincinnati_22_Apr_26-168_(cropped).jpg
+- `br-chapecoense__giovanni-augusto.jpg` — Record TV Goiás — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Giovanni_Augusto_2019.png
+- `br-chapecoense__yannick-bolasie.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yannick-Bolasie-Palmeiras-Criciuma-sep24.jpg
+- `us-fc-cincinnati__ayoub-jabbari.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ayoub_Jabbari_NYCFC_v_Cincinnati_22_Apr_26-8.jpg
+- `br-chapecoense__vinicius-balieiro.jpg` — Анна Мейер — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Equality_Cup_2024,_Zenit_-_Santos_14_-_Vinciius_Balieiro.jpg
+- `us-fc-cincinnati__david-doudera.jpg` — Tadeáš Bednarz — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:David_Doud%C4%9Bra,_U21_CZE-GRE_2019-10-10.jpg
+- `us-houston-dynamo__jimmy-maurer.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Austin_vs_Houston_Dynamo_(2025_US_Open_Cup)_33.jpg
+- `us-houston-dynamo__marcelo-saracchi.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_RasenBallsport_Leipzig_(Euroleague_Gruppenphase_F%C3%BCnfte_Runde)_13.jpg
+- `us-houston-dynamo__lawrence-ennali.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_training_2025,_214.jpg
+- `us-houston-dynamo__duane-holmes.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_training_2025,_190.jpg
+- `us-houston-dynamo__hector-herrera.jpg` — Hossein Zohrevand — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:H%C3%A9ctor_Herrera_WC2022.jpg
+- `us-houston-dynamo__diadie-samassekou.jpg` — Steindy (talk) 21:09, 28 August 2018 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_2018-04-15_(043).jpg
+- `us-houston-dynamo__mateusz-bogusz.jpg` — Trener Janek — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Mateusz_Bogusz_2020.jpg
+- `us-houston-dynamo__franco-negri.jpg` — Cuban Boy — CC0 — https://commons.wikimedia.org/wiki/File:MIA-NSH_Yellow_Card.jpg
+- `us-houston-dynamo__duncan-mcguire.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Duncan_McGuire.jpg
+- `us-houston-dynamo__ibrahim-aliyu.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_training_2025,_124.jpg
+- `br-chapecoense__mauricio-garcez.jpg` — Biser Todorov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:M.garcez.jpg
+- `us-houston-dynamo__blake-gillingham.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_32.jpg
+- `us-houston-dynamo__agustin-bouzat.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Formaci%C3%B3n_Colo-Colo_Everton_v_Colo-Colo_20230806_01.jpg
+- `br-chapecoense__yago-felipe.jpg` — Renato Gizzi from Guarulhos — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:YagoVitoria2018.jpg
+- `us-houston-dynamo__jonathan-bond.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_32.jpg
+- `br-chapecoense__bruno-pacheco.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Brasileir%C3%A3o_2022-_Corinthians_1x0_Cear%C3%A1_-_Bruno_Pacheco.jpg
+- `br-chapecoense__kevin-ramirez.jpg` — Rodrigo Peña Cortés — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_Ram%C3%ADrez.jpg
+- `us-houston-dynamo__felipe-andrade.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_26.jpg
+- `us-houston-dynamo__lyle-foster.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Lyle_Foster_29112025_(6).jpg
+- `us-inter-miami__gonzalo-lujan.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_0-3_Orlando_City_SC_(18_May_2025)_134_(cropped).jpg
+- `br-corinthians__hugo-souza.jpg` — Prefeitura de Itapevi — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Hugo_Souza2017.jpg
+- `us-inter-miami__sergio-reguilon.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `us-inter-miami__facundo-mura.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__matheuzinho.jpg` — TV Central do Timão — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Matheuzinho_2026_(cropped).jpg
+- `us-inter-miami__casemiro.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Casemiro_Brazil_V_Morocco_13_June_2026-76_(cropped).jpg
+- `br-corinthians__gabriel-paulista.jpg` — TV Central do Timão — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Gabriel_Paulista_2026_(cropped).jpg
+- `us-inter-miami__rodrigo-de-paul.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:Rodrigo_De_Paul_and_Lionel_Messi_receiving_their_2026_FIFA_World_Cup_medals.jpg
+- `us-inter-miami__telasco-segovia.jpg` — Cuban Boy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Segovia_for_IMCF.jpg
+- `us-inter-miami__luis-suarez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luis_Su%C3%A1rez_NE_Revolution_Inter_Miami_7.9.25-053_(cropped).jpg
+- `us-inter-miami__lionel-messi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Leo_Messi_Argentina_v_Egypt_7_July_2026-1.jpg
+- `us-inter-miami__luis-barraza.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__joao-pedro.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `br-corinthians__andre-ramalho.jpg` — Steindy (talk) 21:11, 28 August 2018 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_2018-04-15_(058).jpg
+- `us-inter-miami__ian-fray.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__breno-bidon.jpg` — Severo D. Santos — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Breno-de-souza-bidon-no-corinthians_y_corinthians.jpg
+- `us-inter-miami__german-berterame.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0910_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `us-inter-miami__santiago-morales.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `us-inter-miami__tadeo-allende.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0910_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__rodrigo-garro.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:Botafogo-SP_1x4_Corinthians_-_14-02-2024_01_-_Rodrigo_Garro.jpg
+- `br-corinthians__yuri-alberto.jpg` — autor no Commons — CC0 — https://commons.wikimedia.org/wiki/File:Yuri-Alberto-Corinthians-2024.jpg
+- `br-corinthians__memphis-depay.jpg` — محمد رضا عباسی — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Chile_24_(Mehr,_2014).jpg
+- `us-inter-miami__mateo-silvetti.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mateo_Silvetti_NYCFC_Miami_24_Sep_2025-024_(cropped).jpg
+- `us-inter-miami__rocco-rios-novo.jpg` — User:CubanoBoi — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rocco_Rios_Novo.jpg
+- `br-corinthians__gustavo-henrique.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:Botafogo-SP_x_Corinthians_-_14-02-2024_-_Jonas_Tor%C3%B3_and_Gustavo_Henrique.jpg
+- `us-inter-miami__maximiliano-falcon.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__raniele.jpg` — TV Botafogo — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Raniele_2020.png
+- `br-corinthians__pedro-raul.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%89RIE_A_-_CORINTHIANS_1_X_0_GOI%C3%81S_-_IMG_2324.jpg
+- `us-inter-miami__yannick-bright.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-corinthians__andre-carrillo.jpg` — Руденко Денис — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Andr%C3%A9_Carrillo.jpg
+- `us-inter-miami__israel-boatwright.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_vs._Real_Salt_Lake_24_(cropped).jpg
+- `br-corinthians__matheus-pereira.jpg` — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Pereira_Al-Hilal_2022_(cropped).jpg
+- `br-corinthians__fabrizio-angileri.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Palestino_-_River_Plate_20190424_07.jpg
+- `br-corinthians__allan.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Everton,_2_October_2021_(41).jpg
+- `br-corinthians__kayke.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Santos_comemora_segundo_gol_marcado_diante_do_S%C3%A3o_Paulo,_na_partida_em_que_o_Peixe_venceu_o_tricolor_por_3_a_2._O_jogo_foi_v%C3%A1lido_pelo_Campeonato_Brasileiro_de_2017_(35660120682).jpg
+- `us-inter-miami__dayne-st-clair.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dayne_St._Clair_Canada_v_Qatar_18_June_2026-082.jpg
+- `us-inter-miami__matias-galarza.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Mat%C3%ADas_Galarza_warmups.jpg
+- `br-corinthians__felipe-longo.jpg` — Tv Central do Timão — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Felipe_Longo_goleiro.jpg
+- `us-la-galaxy__maya-yoshida.jpg` — 内閣官房内閣広報室 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Maya_Yoshida_along_with_Japan_National_Football_Team_at_the_Kantei.jpg
+- `br-corinthians__zakaria-labyad.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9E%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D1%82%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0_%C2%AB%D0%90%D1%8F%D0%BA%D1%81%D0%B0%C2%BB_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BC%D0%B0%D1%82%D1%87%D0%B5%D0%BC_%D1%81_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB._27_%D0%B0%D0%B2%D0%B3%D1%83%D1%81%D1%82%D0%B0_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_900388.jpg
+- `us-la-galaxy__jakob-glesnes.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jakob_Glesnes_Philadelphia_Chicago_10.26.25-046_(cropped).jpg
+- `br-corinthians__luiz-gustavo.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Derbide_Fenerbah%C3%A7e_Yedek_Oyuncular_(2021-22_S%C3%BCper_Lig).png
+- `us-la-galaxy__sergi-roberto.jpg` — www.realvalladolid.es — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Real_Valladolid_-_FC_Barcelona,_2018-08-25_(77).jpg
+- `br-corinthians__gui-negao.jpg` — TV Central do Timão — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Gui-negao-entrevista-2025_(cropped).png
+- `us-la-galaxy__kyogo-furuhashi.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Furuhashi_asse_srfc_2425.png
+- `br-corinthians__dieguinho.jpg` — TV Central do Timão — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Dieguinho-entrevista-2025_(cropped).png
+- `us-la-galaxy__riqui-puig.jpg` — Frenchieinportland — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Riqui_Puig_against_Portland_Timbers_(cropped2).jpg
+- `br-corinthians__jesse-lingard.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:240609_FC_%EC%84%9C%EC%9A%B8_%ED%8C%AC%EC%82%AC%EC%9D%B8%ED%9A%8C_(Jesse_Lingard).jpg
+- `br-coritiba__tinga.jpg` — Helmut S. Otto — Public domain — https://commons.wikimedia.org/wiki/File:Tinga2.jpg
+- `br-coritiba__maicon.jpg` — Hanson K Joseph — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brazil_national_Team_,photos_by_Hanson.jpg
+- `br-coritiba__rodrigo-moledo.jpg` — Михаил Масловский — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Moledo.jpg
+- `br-coritiba__felipe-jonatan.jpg` — BrazilianDude70 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Santos_4-0_Portuguesa_-_2023_Campeonato_Paulista_-_19-02-2023_-_Felipe_Jonatan.jpg
+- `br-coritiba__joaquin-lavega.jpg` — Pdra1m — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lavega.jpg
+- `us-la-galaxy__hirving-lozano.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Spartak_-_Napoli_(16).jpg
+- `br-coritiba__josue-pesqueira.jpg` — Conradoc15 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Josu%C3%A9_Pesqueira_z_fanem.jpg
+- `us-la-galaxy__john-nelson.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:CINvNYC_2022-06-29_-_John_Nelson_(52187855135).jpg
+- `us-la-galaxy__justin-haak.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Maxi_Moralez_Philadelphia_Union_New_York_City_FC_Nov_23_2025-067.jpg
+- `us-la-galaxy__marco-reus.jpg` — Sandro Halank, Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2023-08-12_TSV_Schott_Mainz_gegen_Borussia_Dortmund_(DFB-Pokal_2023-24)_by_Sandro_Halank%E2%80%93141.jpg
+- `us-la-galaxy__robert-taylor.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_vs._Real_Salt_Lake_14.jpg
+- `us-la-galaxy__elijah-wynder.jpg` — Connortrace — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:ElijahWynder.jpg
+- `br-coritiba__sebastian-gomez.jpg` — http://www.soccer.ru/gallery/45975 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Sebasti%C3%A0_G%C3%B3mez_2011.jpg
+- `us-la-galaxy__carlos-garces.jpg` — Archivo Fotográfico Colección Casasola. Autor Desconocido. — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Garc%C3%A9s_L%C3%B3pez.jpg
+- `br-coritiba__thiago-santos.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Thiago_Dos_Santos.jpg
+- `us-la-galaxy__erik-thommy.jpg` — Conman33 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Erik_Thommy_2022.png
+- `br-coritiba__fabinho.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01_(Fabinho).jpg
+- `us-la-galaxy__joao-klauss.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_16.jpg
+- `br-coritiba__pedro-rocha.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Homenaje_a_Pedro_Virgilio_Rocha_-_130226-8552-jikatu_(8513296528).jpg
+- `us-lafc__hugo-lloris.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_LAFC_(Apr_2025)_22.jpg
+- `us-lafc__eddie-segura.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_LAFC_(Apr_2025)_14_(cropped).jpg
+- `br-coritiba__jp-chermont.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_16.jpg
+- `br-coritiba__breno-lopes.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_03.jpg
+- `us-lafc__ryan-porteous.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ryan_Porteous_12072025_(2).jpg
+- `us-lafc__igor-jesus.jpg` — AD Sports — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Igor_Jesus_Shabab_Al_Ahli.png
+- `us-lafc__son-heung-min.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%EC%86%90%ED%9D%A5%EB%AF%BC_%ED%86%A0%ED%8A%B8%EB%84%98_%ED%99%8B%EC%8A%A4%ED%8D%BC_%EC%A0%80%EC%A7%80_(%EC%95%9E).jpg
+- `us-lafc__mark-delgado.jpg` — guydeborg — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:LA_Galaxy_vs_Toronto_FC_20200215-P2150091_(49542439693).jpg
+- `us-lafc__thomas-hasal.jpg` — Thomas Hasal — Public domain — https://commons.wikimedia.org/wiki/File:Thomas_Hasal_signature.png
+- `us-lafc__sergi-palencia.jpg` — SteveMcKay — CC0 — https://commons.wikimedia.org/wiki/File:Sergi_Palencia_with_LAFC.jpg
+- `us-lafc__jacob-shaffelburg.jpg` — Sebas — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Shaffelburg_attacks,_Montiel_defends_-_ARG_v_CAN_-_2024-07-09.jpg
+- `br-cruzeiro__matheus-henrique.jpg` — Chabe01 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Henrique_Match_Football_Spezia_Calcio_x_US_Sassuolo_Calcio_Stade_Alberto_Picco_-_La_Spezia_(IT42)_-_2022-08-27_-_2_(cropped).jpg
+- `us-lafc__tyler-boyd.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_United_States_team_photo_(51171388595).jpg
+- `br-cruzeiro__gerson.jpg` — Rolls Press / Popperfoto / Getty Images — Public domain — https://commons.wikimedia.org/wiki/File:G%C3%A9rson_1970_(cropped).jpg
+- `br-cruzeiro__matheus-pereira.jpg` — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Pereira_Al-Hilal_2022_(cropped).jpg
+- `us-lafc__jude-terry.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_LAFC_(Apr_2025)_23_(cropped).jpg
+- `us-lafc__yevhen-cheberko.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yevhen_Cheberko_NYCFC_v_Columbus_10_May_2026-22_(cropped).jpg
+- `br-cruzeiro__marquinhos.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_(Marquinhos)_(cropped).jpg
+- `us-lafc__ryan-hollingshead.jpg` — Patrick Rouin from Salt Lake City, United States — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:MLS_FC_Dallas_at_Real_Salt_Lake_(51429221850).jpg
+- `us-lafc__aaron-long.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_Salom%C3%B3n_Rond%C3%B3n,_Aaron_Long_(51171068149).jpg
+- `br-cruzeiro__luis-sinisterra.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Luis_Sinisterra.png
+- `br-cruzeiro__fagner.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Sulamericana_CUP_2023_Semifinal_-_Corinthians_x_Fortaleza-CE_(53554836078).jpg
+- `us-lafc__mathieu-choiniere.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mathieu_Choiniere_Canada_v_Qatar_18_June_2026-090.jpg
+- `us-lafc__nkosi-tafari.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_LAFC_(Apr_2025)_22.jpg
+- `us-lafc__denis-bouanga.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_LAFC_(Apr_2025)_22.jpg
+- `br-cruzeiro__lucas-romero.jpg` — jmmuguerza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Independiente_-_Central_Norte_-_Copa_Argentina_2022_(98).jpg
+- `us-lafc__leo-walta.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:Halmstad_vs_Mj%C3%A4llby_in_2023.jpg
+- `us-lafc__million-manhoef.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Queens_Park_Rangers_vs_Stoke_City_20092025_(50).jpg
+- `us-minnesota-united__kyle-duncan.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kyle_Duncan_Saba_Lobjanidze_Red_Bull_Atlanta_5.31.25-111_(cropped).jpg
+- `br-cruzeiro__otavio.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Otavio_2023_(cropped).jpg
+- `br-cruzeiro__wanderson.jpg` — Steindy (talk) 14:40, 22 May 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_(Cup)_2017-04-26_(130).jpg
+- `br-flamengo__luiz-araujo.jpg` — Liondartois — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:LOSC_chinese_new_year_(cropped_trio).jpg
+- `br-flamengo__saul-niguez.jpg` — Gvngok — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%C4%B0ngiltere_-_%C4%B0spanya.jpg
+- `br-flamengo__giorgian-de-arrascaeta.jpg` — Ailura — CC BY-SA 3.0 at — https://commons.wikimedia.org/wiki/File:Giorgian_De_Arrascaeta_20171114_AUT_URU_4546_(cropped).jpg
+- `us-minnesota-united__peter-stroud.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Peter_Stroud_Red_Bull_Atlanta_5.31.25-52.jpg
+- `us-minnesota-united__tomas-chancalay.jpg` — ptheodores5 — Public domain — https://commons.wikimedia.org/wiki/File:New_England_Revolution_vs_Liga_Deportivo_Alajuense_2024-03-06_53572863199.jpg
+- `br-flamengo__lucas-paqueta.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brazil_World_Cup_Roster_Brazil_V_Morocco_13_June_2026-72_(Lucas_Paquet%C3%A1).jpg
+- `br-flamengo__bruno-henrique.jpg` — Marcelo Pedro dos Santos 2025 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:53593950298_bc38c23ce4_c_easy_resize_com_-33484322.jpg
+- `us-minnesota-united__kelvin-yeboah.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_20.jpg
+- `br-flamengo__vitao.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%A8%D0%B0%D1%85%D1%82%D1%91%D1%80%C2%BB_2-3._4_%D0%B8%D1%8E%D0%BB%D1%8F_2020_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_1109299.jpg
+- `us-minnesota-united__drake-callender.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_vs_Real_Salt_Lake_01.jpg
+- `us-minnesota-united__michael-boxall.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Michael_Boxall_-_MNUFC_-_MLS_-_new_zealand_-_(52125271279).jpg
+- `us-minnesota-united__aziel-jackson.jpg` — IDontHaveSkype — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Aziel_Jackson,_Vancouver_Whitecaps_FC_v_Colorado_Rapids_2026-04-25_(cropped).jpg
+- `us-minnesota-united__wil-trapp.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_Zack_Steffen_(51169587152).jpg
+- `us-minnesota-united__bongokuhle-hlongwane.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:MNUFC_-_Allianz_Field_-_MLS_-_(52125523720).jpg
+- `br-fluminense__fabio.jpg` — MagnusWolfEikrem at en.wikipedia — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Fabirochdale1.png
+- `br-fluminense__samuel-xavier.jpg` — Copa do Nordeste — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Samuel_Xavier.jpg
+- `br-fluminense__thiago-silva.jpg` — オールダム — CC0 — https://commons.wikimedia.org/wiki/File:19-05-2024_Chelsea_vs_Bournemouth2.jpg
+- `us-minnesota-united__julian-gressel.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_17.jpg
+- `us-minnesota-united__nectarios-triantis.jpg` — Western Sydney Wanderers FC — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Nectarios_Triantis_2023.png
+- `us-minnesota-united__joaquin-pereyra.jpg` — Carlos Figueroa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Colo_Colo_-_San_Luis,_2018-08-12_-_Joaqu%C3%ADn_Pereyra_-_01.jpg
+- `br-fluminense__jefferson-savarino.jpg` — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_3_Botafogo_1_-_-_241030-1209-jikatu.jpg
+- `us-minnesota-united__jefferson-diaz.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_18.jpg
+- `br-fluminense__guilherme-arana.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:URUGUAY_vs_BRASIL_SUDAMERICANO_SUB_20_(32636763576).jpg
+- `br-fluminense__german-cano.jpg` — Crismejia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:GECano.jpg
+- `us-minnesota-united__carlos-harvey.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Harvey_England_v_Panama_27_June_26-215_(cropped).jpg
+- `br-fluminense__matheus-reis.jpg` — User:RickMorais — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:MatheusReis2021.png
+- `br-fluminense__agustin-canobbio.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%89RIE_A_-_PALMEIRAS_0_X_2_ATHLETICO_PARANAENSE_-_Mayke_e_Agust%C3%ADn_Canobbio_em_2022.jpg
+- `us-nashville-sc__joe-willis.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Revolution_Nashville_6.25.25-124.jpg
+- `br-fluminense__juan-pablo-freytes.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Pablo_Freytes_Everton_v_Uni%C3%B3n_La_Calera_20230716_01.jpg
+- `us-nashville-sc__jeisson-palacios.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tom%C3%A1s_Chancalay_Revolution_Nashville_6.25.25-089_(cropped).jpg
+- `us-nashville-sc__jack-maher.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jack_Maher_Revolution_Nashville_6.25.25-193.jpg
+- `us-nashville-sc__bryan-acosta.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bryan_Acosta_Revolution_Nashville_6.25.25-031.jpg
+- `br-fluminense__alisson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alisson_Becker_Brazil_V_Morocco_13_June_2026-117_(cropped).jpg
+- `br-fluminense__riquelme.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File:Sport_0X0_N%C3%A1utico_Pernambucano_BetNacional_2024_Final_-_Riquelme.jpg
+- `br-fluminense__yeferson-soteldo.jpg` — Tv Alviverde — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Yeferson_Soteldo_-_Palmeiras_1-0_Santos_-_18-09-2022.png
+- `us-nashville-sc__patrick-yazbek.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Revolution_Nashville_6.25.25-136.jpg
+- `br-fluminense__jemmes.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Jogo-treino_Assembleia_Sindicato-_Uni%C3%A3o_Suzano_x_Velo_Clube_-_Jemmes.jpg
+- `us-nashville-sc__sam-surridge.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tanner_Beason_Revolution_Nashville_6.25.25-115.jpg
+- `us-nashville-sc__hany-mukhtar.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hany_Mukhtar_Revolution_Nashville_6.25.25-074_(cropped).jpg
+- `us-nashville-sc__elias-saad.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-04-23_-_FC_St_Pauli_-_Oladapo_Afolayan.jpg
+- `us-nashville-sc__xavier-valdez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Xavier_Valdez_Revolution_Nashville_6.25.25-047_(cropped).jpg
+- `us-nashville-sc__matthew-corcoran.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matthew_Corcoran_Revolution_Nashville_6.25.25-045_(cropped).jpg
+- `us-nashville-sc__alex-muyl.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Revolution_Nashville_6.25.25-159.jpg
+- `us-nashville-sc__edvard-tagseth.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Edvard_Tagseth_Revolution_Nashville_6.25.25-034_(cropped).jpg
+- `us-nashville-sc__josh-bauer.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Josh_Bauer_Revolution_Nashville_6.25.25-049_(cropped).jpg
+- `us-nashville-sc__reed-baker-whiting.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Reed_Baker-Whiting_NYCFC.Seattle.18.Oct.2025-028_(cropped).jpg
+- `us-nashville-sc__andy-najar.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tom%C3%A1s_Chancalay_Andy_Najar_Revolution_Nashville_6.25.25-126.jpg
+- `us-nashville-sc__ahmed-qasem.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Revolution_Nashville_6.25.25-203.jpg
+- `us-nashville-sc__warren-madrigal.jpg` — Jdmunacr — CC0 — https://commons.wikimedia.org/wiki/File:Warren_Madrigal_entrenando.jpg
+- `br-fluminense__otavio.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Otavio_2023_(cropped).jpg
+- `br-gremio__weverton.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `us-nashville-sc__brian-schwake.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brian_Schwake_Revolution_Nashville_6.25.25-038_(cropped).jpg
+- `br-gremio__fabian-balbuena.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681233530).jpg
+- `br-gremio__wagner-leonardo.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Wagner_Leonardo_-_Campeonato_Paulista_Sub20-_S%C3%A3o_Caetano_2_x_1_Santos_FC_-_48105549001.jpg
+- `us-nashville-sc__owen-presthus.jpg` — John Manard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Owen_Presthus_45_DF_Columbus_Crew.jpg
+- `br-gremio__walter-kannemann.jpg` — Bruno2803 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Walter_Kannemann_entreinamento.png
+- `us-new-york-city-fc__nico-cavallo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicolas_Fernandez_Mercau_NYCFC_v_Columbus_10_May_2026-83.jpg
+- `us-new-york-city-fc__kai-trewin.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kai_Trewin_Australia_v_USA_19_June_2026-83.jpg
+- `br-gremio__cristian-pavon.jpg` — Guy de Borg — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Osorio_and_Bono_Toronto_FC.png
+- `br-gremio__francis-amuzu.jpg` — KALMPSPAZ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FRAncis_AmuZU_1_(cropped).jpg
+- `br-gremio__filip-krovinovic.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Filip_Krovinovic_2018.png
+- `br-gremio__marcos-rocha.jpg` — Renato Gizzi from Guarulhos — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:MarcosRochaPalmeiras2018_(cropped).jpg
+- `us-new-york-city-fc__james-sands.jpg` — Jim Easton — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:James_Sands_2022.jpg
+- `br-gremio__danilo-barbosa.jpg` — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_3_Botafogo_1_-_-_241030-0976-jikatu.jpg
+- `us-new-york-city-fc__nicolas-fernandez-mercau.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NYCFC_v_Columbus_10_May_2026-73.jpg
+- `br-gremio__joao-pedro.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `us-new-york-city-fc__andres-perea.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Maxi_Moralez_NYCFC.Seattle.18.Oct.2025-150.jpg
+- `br-gremio__martin-braithwaite.jpg` — Web Summit — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Martin_Braithwaite_Web_Summit_2021.jpg
+- `us-new-york-city-fc__benie-traore.jpg` — Liv Lovisa — CC0 — https://commons.wikimedia.org/wiki/File:B%C3%A9nie_Traor%C3%A9_2022.jpg
+- `br-gremio__caio-paulista.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Caio-PaulistaPalmeiras-Sao-Paulo-ago24.jpg
+- `br-gremio__tiago.jpg` — Clément Bucco-Lechat — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:20150616_-_Portugal_-_Italie_-_Gen%C3%A8ve_-_Tiago_Mendes_devant_Antonio_Candreva.jpg
+- `br-gremio__riquelme.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File:Sport_0X0_N%C3%A1utico_Pernambucano_BetNacional_2024_Final_-_Riquelme.jpg
+- `br-gremio__jovane-cabral.jpg` — Sporting Clube de Portugal — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:JovaneCabral_2021.jpg
+- `us-new-york-city-fc__maxi-moralez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rudy_Camacho_NYCFC_v_Columbus_10_May_2026-136.jpg
+- `br-gremio__carlos-vinicius.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Fulham_v_West_Ham_0423.jpeg
+- `us-new-york-city-fc__talles-magno.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Talles_Magno_NYCFC_v_Cincinnati_22_Apr_26-34.jpg
+- `us-new-york-city-fc__thiago-martins.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NYCFC_v_Columbus_10_May_2026-73.jpg
+- `us-new-york-city-fc__kevin-pierre.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_Pierre_NYCFC_v_Columbus_10_May_2026-47.jpg
+- `br-internacional__felix-torres.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Felix_Torres_Cote_D%27Ivoire_v_Ecuador_14_June_2026-75.jpg
+- `us-new-york-city-fc__alonso-martinez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thiago_Martins_NYCFC.Seattle.18.Oct.2025-151.jpg
+- `us-new-york-city-fc__hannes-wolf.jpg` — Steindy (talk) 21:10, 28 August 2018 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_2018-04-15_(052).jpg
+- `us-new-york-city-fc__greg-ranjitsingh.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Greg_Ranjitsingh_NYCvATL-06.12.25-002_(cropped).jpg
+- `us-new-york-city-fc__luighi.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luighi-Palmeiras-Juventude-jun24.jpg
+- `us-new-york-city-fc__aiden-o-neill.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kai_Trewin_NYCFC_v_Cincinnati_22_Apr_26-129.jpg
+- `br-internacional__bruno-henrique.jpg` — Marcelo Pedro dos Santos 2025 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:53593950298_bc38c23ce4_c_easy_resize_com_-33484322.jpg
+- `br-internacional__alerrandro.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A1_Bragantino_1x0_Corinthians_(52633088863).jpg
+- `us-new-york-city-fc__kevin-o-toole.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kai_Trewin_NYCFC_v_Cincinnati_22_Apr_26-129.jpg
+- `us-new-york-city-fc__max-murray.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Max_Murray_NYCvATL-06.12.25-009.jpg
+- `us-new-york-city-fc__tayvon-gray.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sean_Zawadzki_NYCFC_v_Columbus_10_May_2026-131_(cropped).jpg
+- `us-new-york-city-fc__agustin-ojeda.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thiago_Martins_NYCFC_v_Columbus_10_May_2026-169.jpg
+- `us-new-york-city-fc__maximo-carrizo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:M%C3%A1ximo_Carrizo_NYCFC_v_Colorado_Mar_14_2026-11.jpg
+- `us-new-york-city-fc__tomas-romero.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tomas_Romero_NYCFC_v_Colorado_Mar_14_2026-2.jpg
+- `br-internacional__alan-patrick.jpg` — Lennon Haas — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alan_Patrick_at_Internacional_in_2023.png
+- `us-new-york-city-fc__jonathan-shore.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jonathan_Shore_NYCFC_v_Colorado_Mar_14_2026-155.jpg
+- `us-new-york-city-fc__raul-gustavo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Raul_Gustavo_NYCFC_v_Columbus_10_May_2026-171.jpg
+- `br-internacional__kayky.jpg` — 0futura — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kayky_da_Silva_Chagas.jpg
+- `br-internacional__bruno-gomes.jpg` — Lennon Haas — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Bruno_Gomes_-_Internacional_2024.png
+- `br-internacional__ronaldo.jpg` — Had me quickly untied — CC0 — https://commons.wikimedia.org/wiki/File:House_next_to_the_one_where_Ronaldo_lived.jpg
+- `us-new-york-city-fc__matt-freese.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matt_Freese_Australia_v_USA_19_June_2026-204.jpg
+- `us-new-york-city-fc__keaton-parks.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Keaton_Parks_NYCFC_v_Colorado_Mar_14_2026-26_(cropped).jpg
+- `br-internacional__niclas-eliasson.jpg` — https://www.flickr.com/photos/anders-h-foto/ — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Niclas_Eliasson_2015-07-15.jpg
+- `us-new-york-city-fc__arnau-farnos.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Arnau_Farn%C3%B3s_NYCFC_v_Cincinnati_22_Apr_26-32_(cropped).jpg
+- `br-internacional__juninho.jpg` — Los ruidos del deporte — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Final_CONCACAF_11.jpg
+- `us-new-york-city-fc__malachi-jones.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Malachi_Jones_NYCFC_v_Columbus_10_May_2026-48_(cropped).jpg
+- `br-internacional__matheus-cunha.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `us-new-york-red-bulls__aj-marcucci.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:AJ_Marcucci_Red_Bull_Atlanta_5.31.25-45.jpg
+- `us-new-york-red-bulls__justin-che.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Justin_Che_Red_Bulls_Revolution-32_(cropped).jpg
+- `us-new-york-red-bulls__jahkeele-marshall-rutty.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jahkeele_Marshall-Rutty_NY_Red_Bulls_v_FC_Dallas_2_May_2026-19.jpg
+- `us-new-york-red-bulls__omar-valencia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Omar_Valencia_NY_Red_Bulls_v_FC_Dallas_2_May_2026-22.jpg
+- `us-new-york-red-bulls__robert-voloder.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Robert_Voloder_NY_Red_Bulls_v_FC_Dallas_2_May_2026-20_(cropped).jpg
+- `br-internacional__gabriel-mercado.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Argentina_team_in_St._Petersburg.jpg
+- `us-new-york-red-bulls__cade-cowell.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cade_Cowell_Red_Bulls_Revolution-29_(cropped).jpg
+- `br-internacional__paulinho.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681298318).jpg
+- `us-new-york-red-bulls__emil-forsberg.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Shaq_Moore_NY_Red_Bulls_v_FC_Dallas_2_May_2026-138.jpg
+- `br-internacional__thiago-maia.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Lance_da_partida_Santos_0_x_1_Sport_Recife,_v%C3%A1lida_pela_10%C2%AA_rodada_do_Brasileir%C3%A3o_2017_(35515139075).jpg
+- `us-new-york-red-bulls__jorge-ruvalcaba.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jorge_Ruvalcaba_Red_Bulls_Revolution-38_(cropped).jpg
+- `us-new-york-red-bulls__dylan-nealis.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Shaq_Moore_NY_Red_Bulls_v_FC_Dallas_2_May_2026-128.jpg
+- `us-new-york-red-bulls__eric-maxim-choupo-moting.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jackson_Yueill_Eric_Maxim_Choupo-Moting_Red_Bulls_Revolution-144.jpg
+- `us-new-york-red-bulls__adri-mehmeti.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Adri_Mehmeti_Red_Bulls_Revolution-075_(cropped).jpg
+- `us-new-york-red-bulls__julian-hall.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Julian_Hall_NY_Red_Bulls_v_FC_Dallas_2_May_2026-133.jpg
+- `us-new-york-red-bulls__cameron-harper.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cameron_Harper_Red_Bull_Atlanta_5.31.25-32_(cropped).jpg
+- `us-new-york-red-bulls__juan-jose-mina.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Mina_Red_Bulls_Revolution-22_(cropped).jpg
+- `us-new-york-red-bulls__tim-parker.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tim_Parker_NY_Red_Bulls_v_FC_Dallas_2_May_2026-93.jpg
+- `us-new-york-red-bulls__ethan-horvath.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Shaq_Moore_NY_Red_Bulls_v_FC_Dallas_2_May_2026-136.jpg
+- `us-new-york-red-bulls__mohammed-sofo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mohammed_Sofo_NY_Red_Bulls_v_FC_Dallas_2_May_2026-23_(cropped).jpg
+- `br-mirassol__reinaldo.jpg` — Badsnows — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Reinaldo_com_a_camisa_do_Inter_de_Lages_(cropped).jpeg
+- `us-new-york-red-bulls__ronald-donkor.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ronald_Donkor_NY_Red_Bulls_v_FC_Dallas_2_May_2026-98.jpg
+- `br-mirassol__shaylon.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Shaylon_atuando_pelo_S%C3%A3o_Paulo_em_2017_(35660138772)_(cropped).jpg
+- `us-new-york-red-bulls__matthew-dos-santos.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matthew_Dos_Santos_Red_Bulls_Revolution-19_(cropped).jpg
+- `br-mirassol__denilson.jpg` — Ronnie Macdonald from Chelmsford, United Kingdom — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Manuel_La_Costa,_Marouane_Chamakh_and_Denilson_(5131086496).jpg
+- `us-new-york-red-bulls__tanner-rosborough.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tanner_Rosborough_Red_Bulls_Revolution-090.jpg
+- `us-new-york-red-bulls__andy-rojas.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Andy_Rojas_Red_Bulls_Revolution-24_(cropped).jpg
+- `us-new-york-red-bulls__rafael-mosquera.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rafael_Mosquera_Red_Bulls_Revolution-08_(cropped).jpg
+- `br-mirassol__negueba.jpg` — GOAL TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:%EB%84%A4%EA%B2%8C%EB%B0%94_%EC%88%99%EC%86%8C.jpg
+- `us-orlando-city__david-brekalo.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_0-3_Orlando_City_SC_(18_May_2025)_28_(cropped).jpg
+- `us-orlando-city__robin-jansson.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Robin_Jansson_v_RSL.jpg
+- `br-mirassol__fernandinho.jpg` — Министерство спорта Республики Татарстан — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Brazil_vs_Belgium_2018_World_Cup_19.jpg
+- `us-orlando-city__antoine-griezmann.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Griezmann_free_kick.jpg
+- `br-mirassol__alex-muralha.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Alex-Muralha-Coritiba-Bragantino-jun-2022.jpg
+- `br-mirassol__neto-moura.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:08-05-2023_-_Botafogo_SP_v_Mirassol_-_Neto_Moura_(cropped).jpg
+- `us-orlando-city__braian-ojeda.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Iv%C3%A1n_Angulo,_Tiago,_and_Braian_Ojeda.jpg
+- `us-orlando-city__martin-ojeda.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_0-3_Orlando_City_SC_(18_May_2025)_24_(cropped).jpg
+- `us-orlando-city__tiago.jpg` — Clément Bucco-Lechat — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:20150616_-_Portugal_-_Italie_-_Gen%C3%A8ve_-_Tiago_Mendes_devant_Antonio_Candreva.jpg
+- `br-mirassol__eduardo.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Maillot_Croatie_Eduardo_da_Silva.jpg
+- `br-mirassol__marcelinho.jpg` — Mr.schultz — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Marcelinho_2005_(cropped).jpg
+- `br-mirassol__gustavo-cazonatti.jpg` — Chalisimo5 — CC0 — https://commons.wikimedia.org/wiki/File:Cazonatti.jpg
+- `br-mirassol__alesson.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Alesson-Cuiaba-Palmeiras-jul-2022.jpg
+- `br-mirassol__thomazella.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Copa_Paulista-_Juventus_0_x_2_Portuguesa_-_Thomazella.jpg
+- `br-palmeiras__ramon-sosa.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ramon-sosa-palmeiras-sport-ago-25-4_(cropped).jpg
+- `br-palmeiras__jose-manuel-lopez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jose_Manuel_Lopez_Argentina_v_Spain_19_July_2026-272_(cropped).jpg
+- `br-palmeiras__arthur-gabriel.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Arthur-Palmeiras-Jacuipense-abr26-2.jpg
+- `us-orlando-city__wilder-cartagena.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Wilder_Cartagena_warmups.jpg
+- `br-red-bull-bragantino__guzman-rodriguez.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_gole%C3%B3_4-0_a_The_Strongest_-_240814-5979-jikatu_(Guzm%C3%A1n_Rodr%C3%ADguez).jpg
+- `us-orlando-city__eduard-atuesta.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Eduard_Atuesta_Orlando_City.jpg
+- `br-red-bull-bragantino__fabinho.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01_(Fabinho).jpg
+- `us-orlando-city__griffin-dorsey.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Griffin_Dorsey_throw-in.jpg
+- `us-orlando-city__joran-gerbet.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_0-3_Orlando_City_SC_(18_May_2025)_33_(cropped).jpg
+- `us-orlando-city__maxime-crepeau.jpg` — Sebas — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Maxime_Cr%C3%A9peau_saves_against_Juli%C3%A1n_%C3%81lvarez_-_ARG_v_CAN_-_2024-07-09.jpg
+- `us-orlando-city__ivan-angulo.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_0-3_Orlando_City_SC_(18_May_2025)_58_(cropped).jpg
+- `us-orlando-city__marco-pasalic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marco_Pasalic_Croatia_v_Portugal_2_July_2026-170.jpg
+- `us-philadelphia-union__jovan-lukic.jpg` — Fede130509 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jovan_Luki%C4%87.jpg
+- `us-philadelphia-union__cavan-sullivan.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cavan_Sullivan_Philadelphia_Union_New_York_City_FC_Nov_23_2025-016_(cropped).jpg
+- `us-philadelphia-union__jesus-bueno.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_Bueno_Philadelphia_Union_New_York_City_FC_Nov_23_2025-020_(cropped).jpg
+- `us-philadelphia-union__bruno-damiani.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bruno_Damiani_Philadelphia_Chicago_10.26.25-047_(cropped).jpg
+- `us-philadelphia-union__milan-iloski.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Milan_Iloski_Philadelphia_Chicago_10.26.25-044_(cropped).jpg
+- `us-philadelphia-union__alejandro-bedoya.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alejandro_Bedoya_Philadelphia_Union_New_York_City_FC_Nov_23_2025-021_(cropped).jpg
+- `us-philadelphia-union__jeremy-rafanello.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jeremy_Rafanello_Philadelphia_Union_New_York_City_FC_Nov_23_2025-022_(cropped).jpg
+- `us-philadelphia-union__ben-bender.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ben_Bender_Philadelphia_Union_New_York_City_FC_Nov_23_2025-023_(cropped).jpg
+- `br-red-bull-bragantino__isidro-pitta.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Isidro-Pitta-Juventude-Corinthians-jun-2022.jpg
+- `br-red-bull-bragantino__vanderlan.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vanderlan-Palmeiras-Liverpool-abr24.jpg
+- `us-philadelphia-union__andre-blake.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Andre_Blake_Philadelphia_Union_New_York_City_FC_Nov_23_2025-061.jpg
+- `us-philadelphia-union__indiana-vassilev.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Indiana_Vassilev_Philadelphia_Chicago_10.26.25-070_(cropped).jpg
+- `us-philadelphia-union__danley-jean-jacques.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Danley_Jean_Jacques_Philadelphia_Union_New_York_City_FC_Nov_23_2025-062_(cropped).jpg
+- `us-philadelphia-union__nathan-harriel.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Olwethu_Makhanya_Philadelphia_Union_New_York_City_FC_Nov_23_2025-073.jpg
+- `us-philadelphia-union__kai-wagner.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mikael_Uhre_Philadelphia_Union_New_York_City_FC_Nov_23_2025-092.jpg
+- `us-philadelphia-union__george-marks.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:George_Marks_Philadelphia_Union_New_York_City_FC_Nov_23_2025-006_(cropped).jpg
+- `us-philadelphia-union__frankie-westfield.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Frankie_Westfield_Philadelphia_Union_New_York_City_FC_Nov_23_2025-031_(cropped).jpg
+- `br-red-bull-bragantino__lucas-barbosa.jpg` — Tv Alviverde — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Lucas_Barbosa_2_-_Palmeiras_1-0_Santos_-_18-09-2022.png
+- `br-red-bull-bragantino__agustin-sant-anna.jpg` — Agencia de Noticias ANDES — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Agust%C3%ADn_Sant%27Anna.jpg
+- `br-red-bull-bragantino__juninho-capixaba.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A1_Bragantino_1x0_Corinthians_(52633089518).jpg
+- `br-red-bull-bragantino__matheus-fernandes.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A1_Bragantino_1x0_Corinthians_(52633091053).jpg
+- `br-remo__alef-manga.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Brasileir%C3%A3o_S%C3%A9rie_A-_Bragantino_4_x_2_Coritiba_-_52151863746.jpg
+- `br-remo__marllon.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A_-_Palmeiras_1_x_0_Cuiab%C3%A1_-_52227241649.jpg
+- `us-philadelphia-union__andrew-rick.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Andrew_Rick_Philadelphia_Union_New_York_City_FC_Nov_23_2025-003_(cropped).jpg
+- `us-portland-timbers__joel-waterman.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joel_Waterman_Canada_v_Qatar_18_June_2026-087.jpg
+- `us-portland-timbers__kamal-miller.jpg` — Cuban Boy — CC0 — https://commons.wikimedia.org/wiki/File:NYCFC_corner_Noche_d%27Or_(4).jpg
+- `us-portland-timbers__brandon-bye.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NE_Revolution_Inter_Miami_7.9.25-065.jpg
+- `us-portland-timbers__alex-bonetig.jpg` — Western Sydney Wanderers FC — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alex_Bonetig_2022.png
+- `us-portland-timbers__ariel-lassiter.jpg` — Diario Deportivo CR — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Ariel_Lassiter_(2019).jpg
+- `us-portland-timbers__david-da-costa.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:David_Pereira_da_Costa_ASSE_RCL_23_24.jpg
+- `us-portland-timbers__vincent-janssen.jpg` — senolsengul at Pixabay — CC0 — https://commons.wikimedia.org/wiki/File:Game_situation_(The_Intercontinental_Derby,_October_2017)_-_Pic4.jpg
+- `br-remo__vitor-bueno.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9E%D1%82%D0%BA%D1%80%D1%8B%D1%82%D0%B0%D1%8F_%D1%82%D1%80%D0%B5%D0%BD%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%D0%BF%D0%B5%D1%80%D0%B5%D0%B4_%D0%BC%D0%B0%D1%82%D1%87%D0%B5%D0%BC_%D1%81_%C2%AB%D0%AF%D0%B1%D0%BB%D0%BE%D0%BD%D1%86%D0%B5%D0%BC%C2%BB._12_%D0%B4%D0%B5%D0%BA%D0%B0%D0%B1%D1%80%D1%8F_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_934897.jpg
+- `us-portland-timbers__eric-miller.jpg` — Frenchieinportland — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Franck_Boli_2023_Portland_Plaid_jersey.jpg
+- `br-remo__yago-pikachu.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_22.jpg
+- `us-portland-timbers__finn-surman.jpg` — Macosal — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Finn_Surman.jpg
+- `us-portland-timbers__diego-chara.jpg` — Frenchieinportland — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Diego_Char%C3%A1_Heritage_Rose_jersey_2022-05-14.jpg
+- `us-portland-timbers__omir-fernandez.jpg` — Werner100359 — CC0 — https://commons.wikimedia.org/wiki/File:Next_Generation_Trophy_2014_Spiel_um_den_drit._Platz_RasenBallsport_Leipzig_gegen_New_York_Red_Bulls_46.JPG
+- `br-remo__edson-fernando.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_%E2%80%93_%C2%AB%D0%A0%D1%83%D1%85%C2%BB_2-0._26_%D0%BB%D0%B8%D1%81%D1%82%D0%BE%D0%BF%D0%B0%D0%B4%D0%B0_2023_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1491794.jpg
+- `br-remo__ze-ricardo.jpg` — Emperador del Mundo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Z%C3%A9_Ricardo.jpg
+- `us-portland-timbers__alexander-aravena.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Formaci%C3%B3n_Universidad_Cat%C3%B3lica_Universidad_Cat%C3%B3lica_v_Coquimbo_Unido_20230723_01.jpg
+- `br-remo__marcelinho.jpg` — Mr.schultz — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Marcelinho_2005_(cropped).jpg
+- `us-portland-timbers__jose-caicedo.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_3-1_UNAM_(6_August_2025)_24.jpg
+- `br-remo__marcelo-rangel.jpg` — Record TV Goiás — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Marcelo_Rangel.jpg
+- `us-portland-timbers__james-pantemis.jpg` — Frenchieinportland — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Maxime_Cr%C3%A9peau_and_James_Pantemis_Portland_Timbers_2024_(cropped2).jpg
+- `us-portland-timbers__joao-ortiz.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:EMELEC-UNIVERSIDAD_DE_CHILE_(17052252220).jpg
+- `br-santos__lucas-verissimo.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Lucas_Ver%C3%ADssimo_2023.png
+- `br-santos__joao-schmidt.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_08.jpg
+- `br-santos__gabriel-bontempo.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_16.jpg
+- `br-santos__gabriel-barbosa.jpg` — Arthur Miranda — CC0 — https://commons.wikimedia.org/wiki/File:Gabriel_Barbosa_2022.jpg
+- `br-santos__neymar.jpg` — ProtoplasmaKid — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:F%C3%BAtbol_Dise%C3%B1ando_una_pasi%C3%B3n_-_123_(cropped).jpg
+- `br-santos__luan-peres.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_08.jpg
+- `br-santos__willian-arao.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_20.jpg
+- `br-santos__thaciano.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Santos_x_Remo_-_02-04-2026_28.jpg
+- `br-santos__igor-vinicius.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_10.jpg
+- `br-santos__alvaro-barreal.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_04_-_Barreal.jpg
+- `br-santos__gabriel-menino.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gabriel-Menino-Palmeiras-Juventude-jun24_(cropped).jpg
+- `us-portland-timbers__ronald-hernandez.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ronald_Hern%C3%A1ndez_1.jpg
+- `br-santos__christian-oliva.jpg` — Valencia CF — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Christian_Oliva_2021.png
+- `br-santos__miguel-terceros.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ross_Stewart_Scotland_v_Bolivia_6_June_2026-153.jpg
+- `br-santos__gonzalo-escobar.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_19.jpg
+- `br-santos__benjamin-rollheiser.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File:Santos_x_Fortaleza_-_02-11-2025_06.jpg
+- `br-santos__gustavo-henrique.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:Botafogo-SP_x_Corinthians_-_14-02-2024_-_Jonas_Tor%C3%B3_and_Gustavo_Henrique.jpg
+- `us-seattle-sounders__ryan-sailor.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `br-santos__gabriel-brazao.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Santos_x_Remo_-_02-04-2026_10.jpg
+- `us-seattle-sounders__nouhou-tolo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thiago_Martins_NYCFC.Seattle.18.Oct.2025-067.jpg
+- `br-sao-paulo__rafael-toloi.jpg` — Ago76 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rafael_Tol%C3%B3i_02_(cropped).JPG
+- `br-sao-paulo__robert-arboleda.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Santos_0_x_0_S%C3%A3o_Paulo._Jogo_v%C3%A1lido_pelo_Brasileir%C3%A3o_2018,_disputado_no_dia_16_de_setembro,_na_Vila_Belmiro_(44677815362).jpg
+- `br-sao-paulo__lucas-moura.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2020-03-10_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League_Achtelfinale,_RB_Leipzig_-_Tottenham_Hotspur_1DX_3703_by_Stepro.jpg
+- `br-sao-paulo__marcos-antonio.jpg` — Ampfinger — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Marcos_Antonio_1860_2009.JPG
+- `br-sao-paulo__jonathan-calleri.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_-_Calleri_joga_com_a_bola.jpg
+- `br-sao-paulo__lucas-ramon.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:08-05-2024_-_Mirassol_vs_Botafogo-SP_-_Lucas_Ramon_(cropped).jpg
+- `us-seattle-sounders__cristian-roldan.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cristian_Roldan_Gio_Reyna_Auston_Trusty_Australia_v_USA_19_June_2026-39.jpg
+- `br-sao-paulo__aurelio-buta.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Buta_asse_sr_2425.png
+- `us-seattle-sounders__pedro-de-la-vega.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedro_de_la_Vega_NYCFC.Seattle.18.Oct.2025-058_(cropped).jpg
+- `us-seattle-sounders__albert-rusnak.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nouhou_Tolo_NYCFC.Seattle.18.Oct.2025-074.jpg
+- `us-seattle-sounders__jordan-morris.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thiago_Martins_NYCFC.Seattle.18.Oct.2025-101.jpg
+- `us-seattle-sounders__paul-rothrock.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thiago_Martins_NYCFC.Seattle.18.Oct.2025-067.jpg
+- `br-sao-paulo__rafael.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:20191002_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League,_RB_Leipzig_-_Olympique_Lyonnais_by_Stepro_StP_0072-2.jpg
+- `us-seattle-sounders__alex-roldan.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%C3%81lex_Rold%C3%A1n_NYCFC.Seattle.18.Oct.2025-082.jpg
+- `us-seattle-sounders__paul-arriola.jpg` — All-Pro Reels — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Paul_Arriola_with_D.C._United.jpg
+- `br-sao-paulo__pablo-maia.jpg` — https://www.flickr.com/people/132986455@N04 — Public domain — https://commons.wikimedia.org/wiki/File:PABLO_MAIA_-_S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_(cropped).jpg
+- `br-sao-paulo__carlos-coronel.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Coronel_Red_Bull_Atlanta_5.31.25-05_(cropped).jpg
+- `us-seattle-sounders__danny-musovski.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jackson_Ragen_NYCFC.Seattle.18.Oct.2025-143.jpg
+- `us-seattle-sounders__kim-kee-hee.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:241110_FC_%EC%84%9C%EC%9A%B8_vs_%EC%9A%B8%EC%82%B0_(%EA%B9%80%EA%B8%B0%ED%9D%AC).jpg
+- `us-seattle-sounders__stefan-frei.jpg` — Razcle at English Wikipedia — Public domain — https://commons.wikimedia.org/wiki/File:Stefan_Frei.jpg
+- `us-seattle-sounders__jackson-ragen.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jackson_Ragen_NYCFC.Seattle.18.Oct.2025-047.jpg
+- `br-sao-paulo__joao-pedro.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `us-seattle-sounders__jesus-ferreira.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_Ferreira_Thiago_Martins_NYCFC.Seattle.18.Oct.2025-118.jpg
+- `us-seattle-sounders__hassani-dotson.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Hassani_Dotson_-_MNUFC_-_Minnesota_United_Loons_-_Allianz_Field_-_St._Paul_Minnesota_(48259055007).jpg
+- `us-seattle-sounders__snyder-brunell.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Snyder_Brunell_NYCFC.Seattle.18.Oct.2025-011_(cropped).jpg
+- `us-seattle-sounders__stuart-hawkins.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stuart_Hawkins_NYCFC.Seattle.18.Oct.2025-010_(cropped).jpg
+- `us-seattle-sounders__nikola-petkovic.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NCFC_vs_Charlotte_(2025_US_Open_Cup)_078_(Petkovi%C4%87).jpg
+- `us-seattle-sounders__peter-kingston.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Peter_Kingston_NYCFC.Seattle.18.Oct.2025-003_(cropped).jpg
+- `br-vasco-da-gama__leo-jardim.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_Lille_OSC_(17-09-2021)_30.jpg
+- `us-seattle-sounders__kalani-kossa-rienzi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kalani_Kossa-Rienzi_NYCFC.Seattle.18.Oct.2025-046_(cropped).jpg
+- `br-vasco-da-gama__tche-tche.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%A2%D0%BE%D0%B2%D0%B0%D1%80%D0%B8%D1%89%D0%B5%D1%81%D0%BA%D0%B8%D0%B9_%D0%BC%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%90%D1%80%D1%81%D0%B5%D0%BD%D0%B0%D0%BB-%D0%9A%D0%B8%D0%B5%D0%B2%C2%BB_0-1._13_%D0%BE%D0%BA%D1%82%D1%8F%D0%B1%D1%80%D1%8F_2018_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_915602.jpg
+- `us-seattle-sounders__sebastian-gomez.jpg` — http://www.soccer.ru/gallery/45975 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Sebasti%C3%A0_G%C3%B3mez_2011.jpg
+- `br-vasco-da-gama__alan-saldivia.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Formaci%C3%B3n_Colo-Colo_Copiap%C3%B3_v_Colo-Colo_20241110_17.jpg
+- `br-vasco-da-gama__lucas-piton.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Santos-Corinthians-Copa-do-Brasil-jul-2022-02.jpg
+- `us-sporting-kansas-city__jake-davis.jpg` — Ionyouimage — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jake-Davis-RW.jpg
+- `br-vasco-da-gama__nuno-moreira.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_versus_Sporting_Lissabon_(UEFA_Youth_League_Play_off,_7._Februar_2018).jpg_14_(Nuno_Moreira).jpg
+- `us-sporting-kansas-city__justin-reynolds.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Justin_Reynolds_Philadelphia_Chicago_10.26.25-013_(cropped).jpg
+- `br-vasco-da-gama__thiago-mendes.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:20191002_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League,_RB_Leipzig_-_Olympique_Lyonnais_by_Stepro_StP_0297.jpg
+- `us-sporting-kansas-city__emir-karic.jpg` — Steindy (talk) 10:36, 30 June 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Austria_national_under-21_football_team_-_Teamcamp_June_2017_(060).jpg
+- `br-vasco-da-gama__adson.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681234825).jpg
+- `br-vasco-da-gama__paulinho.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681298318).jpg
+- `us-sporting-kansas-city__zorhan-bassong.jpg` — Begogna0812 — CC0 — https://commons.wikimedia.org/wiki/File:ZB_IMG_8512.jpg
+- `us-sporting-kansas-city__stefan-cleveland.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_2_vs_Austin_II_(Apr_2025)_09.jpg
+- `us-sporting-kansas-city__owen-wolff.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Austin_vs_Houston_Dynamo_(2025_US_Open_Cup)_33.jpg
+- `us-sporting-kansas-city__jayden-reid.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Next_-Generation_-_Trophy_13.jpg
+- `us-st-louis-city__roman-burki.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_13_(Donyell_Malen).jpg
+- `br-vasco-da-gama__robert-renan.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Daniel_de_Melo_Ara%C3%BAjo_J%C3%BAnior_(cropped).jpg
+- `us-st-louis-city__lukas-macnaughton.jpg` — Cold, Indrid — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Lukas_MacNaughton_of_Pacific_FC.jpg
+- `us-st-louis-city__tomas-ostrak.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_15.jpg
+- `us-st-louis-city__chris-durkin.jpg` — Pedro  Semitiel — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Francia-usa-34.jpg
+- `us-st-louis-city__simon-becher.jpg` — Robin Glover — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Simon_Becher.jpg
+- `us-st-louis-city__celio-pompeu.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_08_(C%C3%A9lio_Pompeu,_Amadou_Onana).jpg
+- `us-st-louis-city__tomas-totland.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:Tomas_Olai_Toland_(H%C3%A4cken_vs_Qaraba%C4%9F,_UEFA_Europa_League,_5_October_2023).jpg
+- `us-st-louis-city__carlo-holse.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Samsunspor_20260130_(8).jpg
+- `us-st-louis-city__kyle-hiebert.jpg` — Robin Glover — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Kyle_Hiebert_(cropped).jpg
+- `us-st-louis-city__alexandru-matan.jpg` — Hayden Schiff — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Alexandru_M%C4%83%C8%9Ban.jpg
+- `us-st-louis-city__daniel-edelman.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kyle_Duncan_Red_Bull_Atlanta_5.31.25-125.jpg
+- `us-st-louis-city__fallou-fall.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Reims_(12-05-2023)_47.jpg
+- `br-vasco-da-gama__carlos-cuesta.jpg` — PP Comunidad de Madrid — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Concentraci%C3%B3n_en_Plaza_de_Col%C3%B3n_por_la_unidad_de_Espa%C3%B1a._(40084940493).jpg
+- `us-st-louis-city__timo-baumgartl.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_10.jpg
+- `us-st-louis-city__damion-downs.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Welington_and_Damion_Downs_22112025_(2).jpg
+- `us-st-louis-city__jeong-sang-bin.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_01.jpg
+- `br-vitoria__emanuel-britez.jpg` — TitiNicola — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Emanuel_Britez_Club_Atletico_Union_de_Santa_Fe_60.jpg
+- `mx-america__luis-malagon.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:%C3%81ngel_Malag%C3%B3n_2.png
+- `mx-america__israel-reyes.jpg` — Omar David Sandoval Sida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Tarjeta_roja_a_Themba_Zwane_en_M1,_M%C3%A9xico_vs_Sud%C3%A1frica_del_Mundial_2026.jpg
+- `br-vitoria__marinho.jpg` — Rainer Mittelstädt — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Bundesarchiv_Bild_183-N0706-0040,_Fu%C3%9Fball-WM,_VR_Polen_-_Brasilien_1-0.jpg
+- `mx-america__kevin-alvarez.jpg` — Hossein Zohrevand — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:K._alvarez_Argentina_vs_mexico_mexico_lineup_(cropped).jpg
+- `mx-america__edwin-cerrillo.jpg` — Patrick Rouin from Salt Lake City, United States — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:MLS_FC_Dallas_at_Real_Salt_Lake_(51429260540).jpg
+- `mx-america__brian-rodriguez.jpg` — LA LATA — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Brian_Rodriguez.png
+- `br-vitoria__alex-bruno.jpg` — FC Zimbru TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:FC_Zimbru_-_Alex_Bruno.jpg
+- `br-vitoria__matheuzinho.jpg` — TV Central do Timão — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Matheuzinho_2026_(cropped).jpg
+- `mx-america__henry-martin.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Henry_Martin_2.png
+- `br-vitoria__osvaldo.jpg` — Unknown authorUnknown author — Public domain — https://commons.wikimedia.org/wiki/File:Ceballos_Kempes_Ardiles.jpg
+- `mx-america__alejandro-zendejas.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ayumu_Seko_Japan_2025_(cropped).jpg
+- `mx-america__alan-cervantes.jpg` — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alan_Cervantes.png
+- `mx-america__alexis-gutierrez.jpg` — Selección Nacional de México — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Alexis_Guti%C3%A9rrez_2.png
+- `mx-america__raphael-veiga.jpg` — Leonef — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Raphael_Veiga_Bandeirinha.jpg
+- `mx-america__cristian-borja.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Cristian_Alexis_Borja_-_beIN-Sports-Reklam_(2021)_(cropped).png
+- `br-vitoria__walace.jpg` — Fernando Frazão/Agência Brasil — CC BY 3.0 br — https://commons.wikimedia.org/wiki/File:Walace_Souza_Silva_-_Rio_2016.jpg
+- `mx-america__erick-sanchez.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Erick_Sanchez.png
+- `mx-america__ramon-juarez.jpg` — PelucheEn ElEstuche — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Ram%C3%B3n_Ju%C3%A1rez.png
+- `br-vitoria__lucas-silva.jpg` — Matias Arraez — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Pr%C3%A9sentation_de_Lucas_Silva_au_Santiago_Bernabeu_le_26_janvier_2015_(cropped).JPG
+- `mx-america__rodolfo-cota.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:M%C3%A9xico_vs_Bosnia_2018_1_(cropped).png
+- `br-vitoria__edenilson.jpg` — Tomofumi Kitano — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Paolo_Guerrero_with_Corinthians_celebrate_FIFA_Club_World_Cup_win_(cropped).jpg
+- `br-vitoria__erick.jpg` — BPMI Sekretariat Presiden/Muchlis Jr. — Public domain — https://commons.wikimedia.org/wiki/File:Atraksi_Drone_pada_Merdeka_Run.jpg
+- `mx-america__miguel-borja.jpg` — Ex l4u — CC0 — https://commons.wikimedia.org/wiki/File:Borja_en_River_2024.png
+- `br-vitoria__luan-candido.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A1_Bragantino_1x0_Corinthians_(52633088383).jpg
+- `br-vitoria__ze-vitor.jpg` — MLatzer — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Zevitor.JPG
+- `en-arsenal__david-raya.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:David_Raya_Argentina_v_Spain_19_July_2026-003_(cropped).jpg
+- `en-arsenal__william-saliba.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:William_Saliba_France_v_Spain_7.24.26-071.jpg
+- `en-arsenal__cristhian-mosquera.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2_Cristhian_Mosquera_(cropped).jpg
+- `en-arsenal__ben-white.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Arsenal_Parade_31052026_(30).jpg
+- `mx-atlante__eugenio-pizzuto.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_25_(cropped).jpg
+- `en-arsenal__piero-hincapie.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tori_Penso,_Kai_Havertz_7,_Piero_Hincapie_3_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `en-arsenal__gabriel-magalhaes.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `en-arsenal__bukayo-saka.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jose_Luis_Rodriguez_Bukayo_Saka_England_v_Panama_27_June_26-099.jpg
+- `en-arsenal__martin-degaard.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Norway_Starting_XI_Morocco_v_Norway_7_June_2026-61.jpg
+- `en-arsenal__eberechi-eze.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Eberechi_Eze_England_v_Panama_27_June_26-231.jpg
+- `mx-atlante__daniel-gonzalez.jpg` — El Pantera — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jerez_Industrial-IMG-20260412-WA0001.jpg
+- `mx-atlante__martin-sarrafiore.jpg` — Rancaguacl — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:OHiggins2026.jpg
+- `mx-atlante__edgar-jimenez.jpg` — Nikkomanzano — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Edgar-Jimenez.jpg
+- `mx-atlas__adrian-mora.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Atlas_huddle.jpg
+- `en-arsenal__jurrien-timber.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:1_arsenal_crystal_palace_epl_champions_2026.jpg
+- `en-arsenal__kepa-arrizabalaga.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:1_arsenal_crystal_palace_epl_champions_2026.jpg
+- `en-arsenal__viktor-gyokeres.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Viktor_Gyokeres_-17,_Dayot_Upamecano_-4_France_v_Sweden_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `mx-atlas__camilo-vargas.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Colombia_NT_presidential_send-off_for_World_Cup,_Jun_2026_(11).jpg
+- `en-arsenal__ezri-konsa.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jose_Fajardo_Ezri_Konsa_England_v_Panama_27_June_26-233.jpg
+- `mx-atlas__milton-valenzuela.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Milton_Valenzuela_2017.jpg
+- `mx-atlas__rivaldo-lozano.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Rivaldo_Lozano_2.jpg
+- `en-arsenal__christos-tzolis.jpg` — Mikael Hervestad — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sweden_-_Greece22_(cropped).jpg
+- `en-arsenal__noni-madueke.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Noni_Madueke_England_v_Panama_27_June_26-055.jpg
+- `mx-atlas__rodrigo-schlegel.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Referee_showing_a_red_card_(cropped).jpg
+- `en-arsenal__mikel-merino.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mikel_Merino_France_v_Spain_7.24.26-281.jpg
+- `en-arsenal__kai-havertz.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Willian_Pacho_6,_Kai_Havertz_7_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_09.jpg
+- `en-arsenal__illan-meslier.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Karl_Darlow_and_Illan_Meslier_13092025_(2).jpg
+- `en-arsenal__riccardo-calafiori.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:1_arsenal_crystal_palace_epl_champions_2026.jpg
+- `mx-atlas__manuel-capasso.jpg` — Youtube: Newell's Old Boys — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Manuel_Capasso_em_confer%C3%AAncia_de_Imprensa_de_2020_(cropped).jpg
+- `en-arsenal__martin-zubimendi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `mx-atlas__alfonso-gonzalez.jpg` — Agência Brasília — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Cor%C3%A9ia_do_Sul_x_M%C3%A9xico_-_Futebol_masculino_-_Olimp%C3%ADada_Rio_2016_(28792988452)_(cropped).jpg
+- `en-arsenal__bruno-guimaraes.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `en-arsenal__declan-rice.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Declan_Rice_England_v_Ghana_23_June_2026-150.jpg
+- `en-arsenal__myles-lewis-skelly.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Arsenal_Parade_31052026_(30).jpg
+- `en-arsenal__ethan-nwaneri.jpg` — WorldWide1z — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Ethan_Nwaneri.png
+- `en-arsenal__tommy-setford.jpg` — Arashnoroozi — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Setford.jpg
+- `en-aston-villa__zion-suzuki.jpg` — Timnas Indonesia — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:AFC_Asian_Cup_-_Japan_v_Indonesia_-_5325.jpg
+- `mx-atletico-san-luis__roman-torres.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:ENG-PAN_(7).jpg
+- `en-aston-villa__matty-cash.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matty_Cash_2021_(cropped).jpg
+- `en-aston-villa__victor-lindelof.jpg` — Rolandhino1 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sweden-Slovenia_Nations_League_2022-09-27_6_(Victor_Lindelof,_cropped).jpg
+- `en-aston-villa__taylor-harwood-bellis.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Wally_Downes_and_Cameron_Bragg_22112025_(3).jpg
+- `en-aston-villa__tyrone-mings.jpg` — Photographer.JuliaMustard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tyrone_Mings_at_SXSW_London_2026.jpg
+- `en-aston-villa__ross-barkley.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luton_v_West_Ham_2023.jpeg
+- `mx-atletico-san-luis__sebastien-salles-lamonge.jpg` — S. Plaine — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stade_rennais_vs_SM_Caen,_July_22nd_2017_-_Coup_franc.jpg
+- `en-aston-villa__john-mcginn.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marcelo_Torrez_Scotland_v_Bolivia_6_June_2026-168.jpg
+- `en-aston-villa__boubacar-kamara.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Marseille_(22-01-2022)_17.jpg
+- `en-aston-villa__emiliano-buendia.jpg` — Kolforn (Kolforn)
+I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this picture out of the Wik — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:-2019-10-05_Carrow_Road,_Norwich_city_V_Aston_Villa_(3).JPG
+- `en-aston-villa__nicolas-jackson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicolas_Jackson_France_v_Senegal_16_June_2026-463.jpg
+- `en-aston-villa__matteo-ruggeri.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Next_Generation_Trophy_2017_Dritter_Tag_05.jpg
+- `mx-atletico-san-luis__anderson-duarte.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4404-jikatu_(52989021307)_(cropped).jpg
+- `en-aston-villa__pau-torres.jpg` — MintyGel — CC0 — https://commons.wikimedia.org/wiki/File:Pau_Torres_April_2026_(cropped).jpg
+- `en-aston-villa__alejandro-garnacho.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alejandro_Garnacho_7_August_2022_(cropped).jpg
+- `en-aston-villa__tammy-abraham.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_AS_Roma_(UEFA_Euroleague_play-off,_2023-02-16)_39_(cropped2).jpg
+- `en-aston-villa__ibrahim-mbaye.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ibrahim_Mbaye_France_v_Senegal_16_June_2026-503.jpg
+- `mx-atletico-san-luis__gibran-lajud.jpg` — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Gibr%C3%A1n_Lajud_(cropped).png
+- `mx-atletico-san-luis__jesus-medina.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_Medina_Spartak_(cropped).jpg
+- `en-aston-villa__ian-maatsen.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_06_(Ian_Maatsen).jpg
+- `mx-atletico-san-luis__benjamin-galindo.jpg` — RUFOVISION — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Benjam%C3%ADn_Galindo.jpg
+- `en-aston-villa__amadou-onana.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tim_Ream_USMNT_v_Belgium_Mar_28_2026-165.jpg
+- `en-aston-villa__lamare-bogarde.jpg` — MintyGel — CC0 — https://commons.wikimedia.org/wiki/File:Lamare_Bogarde_July_2025.jpg
+- `mx-atletico-san-luis__felipe-mora.jpg` — Frenchieinportland — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Felipe_Mora.jpg
+- `en-aston-villa__leon-goretzka.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Germany,_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_04_Leon_Goretzka.jpg
+- `en-aston-villa__aaron-wan-bissaka.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aaron_Wan-Bissaka_of_West_Ham_United.jpeg
+- `mx-cruz-azul__omar-campos.jpg` — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Omar_Antonio_Campos_Chagoya.png
+- `mx-cruz-azul__willer-ditta.jpg` — Newell's Old Boys — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Willer_Ditta_en_Newell%27s_Old_Boys.jpg
+- `en-aston-villa__brian-madjo.jpg` — MintyGel — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Brian_Madjo_July_2026_(cropped).jpg
+- `en-aston-villa__marco-bizot.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:St._Louis_City_vs_Aston_Villa_(Jul_2025)_04.jpg
+- `en-bournemouth__or-e-petrovic.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(16).jpg
+- `en-bournemouth__julian-araujo.jpg` — Government of Catalonia — Attribution — https://commons.wikimedia.org/wiki/File:D%27esquerra_a_dreta,_Juli%C3%A1n_Araujo_i_Marc_Casad%C3%B3,_jugadors_del_FCBarcelona_durant_la_gira_de_pretemporada_a_EUA._(05-08-2024)_(cropped2).jpg
+- `mx-cruz-azul__jesus-orozco.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_Orozco.png
+- `en-bournemouth__adrien-truffert.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(09).jpg
+- `mx-cruz-azul__erik-lira.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Erik_Lira_2.png
+- `en-bournemouth__lewis-cook.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(15).jpg
+- `mx-cruz-azul__nicolas-ibanez.jpg` — Nicocaponico — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_Ib%C3%A1%C3%B1ez.jpg
+- `en-bournemouth__julio-soler.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Julio_Soler_2025.jpg
+- `en-bournemouth__alex-scott.jpg` — Department for Culture, Media and Sport — Public domain — https://commons.wikimedia.org/wiki/File:Lionesses_Victory_Parade_2025_(54687088435).jpg
+- `mx-cruz-azul__ricardo-rodriguez.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Torino_FC_(02-08-2023)_29.jpg
+- `en-bournemouth__evanilson.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(11).jpg
+- `mx-cruz-azul__jeremy-marquez.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Jeremy_M%C3%A1rquez.png
+- `mx-cruz-azul__luka-romero.jpg` — BugWarp — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luka_Romero_-_BugWarp_(cropped).jpg
+- `mx-cruz-azul__gabriel-fernandez.jpg` — Sohail Saadatmandi/Fars News Agency — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Persepolis_v_Al_Sadd_SC_Gabi.jpg
+- `en-bournemouth__ryan-christie.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(16).jpg
+- `en-bournemouth__ben-gannon-doak.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ben_Gannon-Doak_Scotland_v_Bolivia_6_June_2026-68_(cropped).jpg
+- `mx-guadalajara__raul-rangel.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Ra%C3%BAl_Rangel.png
+- `en-bournemouth__tyler-adams.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(09).jpg
+- `en-bournemouth__adam-smith.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(16).jpg
+- `en-bournemouth__marcus-tavernier.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Marcus_Tavernier_2022.jpg
+- `en-bournemouth__fraser-forster.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fraser_Forster_and_Alex_T%C3%B3th_09052026_(1).jpg
+- `en-bournemouth__bafode-diakite.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(04).jpg
+- `mx-guadalajara__omar-govea.jpg` — SounderBruce — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2023_Leagues_Cup_-_Seattle_vs._Monterrey_-_combined_starting_lineups.jpg
+- `mx-guadalajara__luis-romo.jpg` — Selección Nacional de México — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Luis_Romo.png
+- `mx-guadalajara__angel-sepulveda.jpg` — Dan18-12-96 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sepulveda.JPG
+- `mx-guadalajara__efrain-alvarez.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Efra%C3%ADn_%C3%81lvarez.png
+- `en-bournemouth__justin-kluivert.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(13).jpg
+- `en-bournemouth__michele-di-gregorio.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(14).jpg
+- `mx-guadalajara__brian-gutierrez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brian_Guti%C3%A9rrez_Philadelphia_Chicago_10.26.25-126_(cropped).jpg
+- `en-bournemouth__amine-adli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Oscar_Bobb_and_Amine_Adli_09052026_(1).jpg
+- `mx-guadalajara__oscar-whalley.jpg` — Asturkian — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%C3%93scar_Whalley.jpg
+- `en-bournemouth__eli-junior-kroupi.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Eli_Kroupi_Jr.png
+- `en-bournemouth__juanlu-sanchez.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(04).jpg
+- `mx-guadalajara__jonathan-perez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jonathan_P%C3%A9rez_Revolution_Nashville_6.25.25-118_(cropped).jpg
+- `en-bournemouth__alex-toth.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fraser_Forster_and_Alex_T%C3%B3th_09052026_(1).jpg
+- `en-bournemouth__max-aarons.jpg` — Kolforn (Kolforn)
+I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this picture out of the Wik — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:-2021-12-14_Norwich_City_V_Aston_Villa,_(0-2)_(4).JPG
+- `en-bournemouth__daniel-jebbison.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Daniel_Jebbison_2024.jpg
+- `mx-guadalajara__roberto-alvarado.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Maximilian_Arfsten,_2025_CONCACAF_Gold_Cup,_03.jpg
+- `en-bournemouth__veljko-milosavljevic.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Veljko_Milosavljevi%C4%87_with_AFC_Bournemouth.png
+- `en-bournemouth__alex-paulsen.jpg` — JaumeBG — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alex_Paulsen.jpg
+- `en-bournemouth__alex-jimenez.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alex_Jimenez_00-02-07.99.png
+- `mx-juarez__jesus-murillo.jpg` — SteveMcKay — CC0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_David_Murillo_with_LAFC.jpg
+- `en-brentford__caoimhin-kelleher.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Thomas_Meunier,_Dango_Ouattara_and_Caoimh%C3%ADn_Kelleher_05092026_(1).jpg
+- `mx-juarez__rodrigo-dourado.jpg` — Israel Cidade — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Dourado_Cunha_2017.jpg
+- `en-brentford__aaron-hickey.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aaron_Hickey_Scotland_v_Bolivia_6_June_2026-87_(cropped).jpg
+- `en-brentford__rico-henry.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Wilson_Isidor_and_Rico_Henry_05092026_(1).jpg
+- `mx-juarez__lucas-romero.jpg` — jmmuguerza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Independiente_-_Central_Norte_-_Copa_Argentina_2022_(98).jpg
+- `en-brentford__sepp-van-den-berg.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Brentford_v_Burnley_29112025_(9).jpg
+- `en-brentford__yehor-yarmolyuk.jpg` — Yuliia Perekopaiko — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%D0%A1%D0%9A_%C2%AB%D0%94%D0%BD%D0%B5%D0%BF%D1%80-1%C2%BB_2-0._24_%D0%BE%D0%BA%D1%82%D1%8F%D0%B1%D1%80%D1%8F_2021_%D0%B3%D0%BE%D0%B4%D0%B0._II_%E2%80%94_1285477_(Yehor_Yarmolyuk).jpg
+- `en-brentford__kevin-schade.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Kevin_Schade_02082025_(1).jpg
+- `mx-juarez__javier-aquino.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_22.jpg
+- `en-brentford__mathias-jensen.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nathan_Collins_and_Mathias_Jensen_27122025_(1).jpg
+- `mx-juarez__ricardinho.jpg` — Alface — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Ricardinho_on_Benfica_(cropped).jpg
+- `en-brentford__igor-thiago.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nordi_Mukiele_and_Igor_Thiago_05092026_(1).jpg
+- `en-brentford__dango-ouattara.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:VAR_Announcement_05092026_(4).jpg
+- `en-brentford__hakon-valdimarsson.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:H%C3%A1kon_Rafn_Valdimarsson_(Elfsborg_vs_AIK,_23_October_2023).jpg
+- `en-brentford__callum-wilson.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Callum_Wilson_05092026_(2).jpg
+- `en-brentford__fabio-carvalho.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:F%C3%A1bio_Carvalho_05092026_(1).jpg
+- `en-brentford__antoni-milambo.jpg` — Hainotdeptrai — CC0 — https://commons.wikimedia.org/wiki/File:MCI_VS_FER_2024_(3)_(Antoni_Milambo).jpg
+- `en-brentford__mamadou-sangare.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:VAR_Announcement_05092026_(4).jpg
+- `mx-leon__sebastian-vegas.jpg` — Mohammad Amin Ansari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:AL_AHLY_SC_VS_C.F._Monterrey_in_2021_FIFA_Club_World_Cup_8_(cropped).jpg
+- `en-brentford__jaidon-anthony.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Jaidon_Anthony_2020.png
+- `en-brentford__kristoffer-ajer.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Kristoffer_Ajer,_Nordi_Mukiele_and_Jannik_Schuster_05092026_(1).jpg
+- `mx-leon__fernando-beltran.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Fernando_Beltr%C3%A1n_warmups.jpg
+- `en-brentford__nathan-collins.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nathan_Collins_05092026_(1).jpg
+- `en-brentford__keane-lewis-potter.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sunderland_Players_05092026_(4).jpg
+- `mx-leon__ismael-diaz.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ismael_Diaz_England_v_Panama_27_June_26-176.jpg
+- `en-brentford__mikkel-damsgaard.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Mikkel_Damsgaard_29112025_(2)_(cropped).jpg
+- `en-brentford__el-hadji-malick-diouf.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:El_Hadji_Malick_Diouf_05092026_(1).jpg
+- `en-brentford__vitaly-janelt.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Vitaly_Janelt_and_Aaron_Hickey_05092026_(1).jpg
+- `en-brentford__michael-kayode.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Brentford_v_AFC_Bournemouth_27122025_(Kayode).jpg
+- `en-brentford__jannik-schuster.jpg` — Werner100359 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:FC_Liefering_gegen_SKN_St._P%C3%B6lten_(2024-03-02)_28.jpg
+- `en-brighton__bart-verbruggen.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `mx-leon__rodrigo-echeverria.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Echeverr%C3%ADa.jpg
+- `en-brighton__jaouen-hadjam.jpg` — Pierre.berendes — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:YB_ist_zum_17._Mal_in_der_Klubgeschichte_Schweizer_Meister!_(Cedric_Itten).jpg
+- `en-brighton__pascal-struijk.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Pascal_Struijk_13092025_(1).jpg
+- `en-brighton__lewis-dunk.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Lewis_Dunk_24012026_(2).jpg
+- `mx-leon__oscar-garcia.jpg` — Steindy (talk) 14:31, 22 May 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_(Cup)_2017-04-26_(032).jpg
+- `en-brighton__kaoru-mitoma.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Kaoru_Mitoma_and_Nils_Ramming_24012026_(1).jpg
+- `en-brighton__jack-hinshelwood.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jack_Hinshelwood_24012026_(2).jpg
+- `en-brighton__georginio-rutter.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Georginio_Rutter_(cropped).jpeg
+- `mx-leon__salvador-reyes.jpg` — miseleccionmx — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:2012_Olympic_Football_-_Brazil_v._Mexico_(Tena_and_Reyes).jpg
+- `en-brighton__yankuba-minteh.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Yankuba_Minteh_and_Jack_Hinshelwood_24012026_(1).jpg
+- `en-brighton__promise-david.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Promise_David_Canada_v_Qatar_18_June_2026-023.jpg
+- `en-brighton__pascal-gro.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Germany,_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_04_Pascal_Gro%C3%9F.jpg
+- `en-brighton__ibrahim-osman.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ibrahim_Osman_(footballer,_born_2004).jpg
+- `en-brighton__charalampos-kostoulas.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Charalampos_Kostoulas_24012026_(2).jpg
+- `en-brighton__costinha.jpg` — Christophe95 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Costinha_(footballer_born_1974).jpg
+- `en-brighton__olivier-boscagli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Olivier_Boscagli_24012026_(1)_(cropped).jpg
+- `en-brighton__jason-steele.jpg` — Jon Candy from Cardiff, Wales — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Jason_Steele.jpg
+- `en-brighton__ferdi-kad-oglu.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ferdi_Kad%C4%B1o%C4%9Flu_24012026_(1).jpg
+- `en-brighton__yasin-ayari.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yasin_Ayari_-18,_Michael_Olise_-11_France_v_Sweden_at_2026_Fifa_World_Cup_by_YantsImages_06.jpg
+- `en-brighton__mats-wieffer.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_Feyenoord_Rotterdam_(Testspiel_2022-07-09)_39_(cropped).jpg
+- `mx-leon__diber-cambindo.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-2_Club_Necaxa_(2_August_2025)_04_(cropped).jpg
+- `mx-leon__jose-ivan-rodriguez.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-2_Club_Necaxa_(2_August_2025)_32_(cropped).jpg
+- `en-brighton__evan-ferguson.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Evan_Ferguson,_Henri_Avagyan_YantsImages_-_Asatur_Yesayants_681.jpg
+- `en-brighton__maxim-de-cuyper.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tim_Ream_USMNT_v_Belgium_Mar_28_2026-165.jpg
+- `mx-monterrey__esteban-andrada.jpg` — SounderBruce — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2023_Leagues_Cup_-_Seattle_vs._Monterrey_-_combined_starting_lineups.jpg
+- `en-brighton__michael-svoboda.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_WSG_Swarowski_Tirol_(7._Dezember_2019)_62_(Michael_Svoboda).jpg
+- `en-brighton__matt-o-riley.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Celtic-20240722-030.jpg
+- `mx-monterrey__gerardo-arteaga.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Gerardo_Arteaga.png
+- `mx-monterrey__lucas-ocampos.jpg` — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Argentina_national_football_team_-_2_-_2022.jpg
+- `mx-monterrey__oliver-torres.jpg` — Дмитрий Пукалик — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%C3%93liver_Torres_2020_(cropped).jpg
+- `en-brighton__femi-azeez.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Femi_Azeez_01082026_(1).jpg
+- `en-brighton__luka-vuskovic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luka_Vuskovic_Croatia_v_Portugal_2_July_2026-020.jpg
+- `mx-monterrey__diego-rossi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Diego_Rossi_Nicolas_Fernandez_Mercau_NYCFC_v_Columbus_10_May_2026-191.jpg
+- `en-chelsea__emiliano-martinez.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260719DT-1548_President_Donald_J._Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_World_Cup_Final.jpg
+- `mx-monterrey__carlos-salcedo.jpg` — Светлана Бекетова — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Mex-Kor_(3).jpg
+- `en-chelsea__wesley-fofana.jpg` — RammyAlbarn — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Illan_Meslier_France_U21_Serbie_U21.jpg
+- `en-chelsea__valentin-barco.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Valentin_Barco_Argentina_v_Spain_19_July_2026-027.jpg
+- `mx-monterrey__erick-aguirre.jpg` — SounderBruce — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2023_Leagues_Cup_-_Seattle_vs._Monterrey_-_combined_starting_lineups.jpg
+- `en-chelsea__maxence-lacroix.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mikel_Oyarzabal_Maxence_Lacroix_France_v_Spain_7.24.26-120.jpg
+- `mx-monterrey__jesus-manuel-corona.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:LocM-Por_(7).jpg
+- `mx-monterrey__cesar-garza.jpg` — Stuartp1213 — CC0 — https://commons.wikimedia.org/wiki/File:Cesar_Garza.jpg
+- `en-chelsea__levi-colwill.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:Levi_Colwill_FIFA_Club_World_Cup_final_extraction.jpg
+- `en-chelsea__pedro-neto.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedro_Neto_Croatia_v_Portugal_2_July_2026-113.jpg
+- `mx-monterrey__orbelin-pineda.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Orbel%C3%ADn_Pineda_2.png
+- `en-chelsea__joao-pedro.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `en-chelsea__cole-palmer.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:Cole_Palmer_2025_FIFA_Club_World_Cup_Final.jpg
+- `en-chelsea__jordan-henderson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jordan_Henderson_England_v_Ghana_23_June_2026-029_(cropped).jpg
+- `en-chelsea__morgan-rogers.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Morgan_Rogers_England_v_Panama_27_June_26-156.jpg
+- `en-chelsea__danny-welbeck.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_vs_Brighton_%26_Hove_Albion_24012026_(4).jpg
+- `en-chelsea__jorrel-hato.jpg` — Oscar0123 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Jorrel_Hato_Chelsea_AC_Milan_warm_up.jpg
+- `en-chelsea__reece-james.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Reece_James_England_v_Ghana_23_June_2026-248_(cropped).jpg
+- `en-chelsea__moises-caicedo.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Piero_Hincapie_3,_Moises_Caicedo_23_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_02.jpg
+- `en-chelsea__malo-gusto.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Malo_Gusto_France_v_Senegal_16_June_2026-399.jpg
+- `en-chelsea__teddy-sharman-lowe.jpg` — Mtaylor848 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Doncaster_Rovers_v_Harrogate_Town_(25th_January_2025)_013.jpg
+- `en-chelsea__aaron-anselmino.jpg` — Oscar0123 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Aaron_Anselmino_Chelsea_AC_Milan_warm_up.jpg
+- `en-chelsea__josh-acheampong.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:AH100487_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `en-chelsea__romeo-lavia.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Rom%C3%A9o_Lavia_20042025_(1)_cropped.jpg
+- `en-coventry-city__ethan-pinnock.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ethan_Pinnock_29112025_(1).jpg
+- `en-coventry-city__jay-dasilva.jpg` — @cfcunofficial (Chelsea Debs) London — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Jay_Dasilva_2015.jpg
+- `en-coventry-city__bobby-thomas.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Bobby_Thomas.png
+- `mx-monterrey__uros-ur-evic.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Referee_showing_a_red_card_(cropped).jpg
+- `en-coventry-city__jack-rudoni.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Jack_Rudoni.png
+- `en-coventry-city__matt-grimes.jpg` — The2Coming — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matty_Grimes_taking_photos_after_a_Swans_game.png
+- `mx-monterrey__stefan-medina.jpg` — jmmuguerza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Stefan_Medina_(cropped).jpg
+- `mx-monterrey__hugo-cuypers.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hugo_Cuypers_Philadelphia_Chicago_10.26.25-008.jpg
+- `en-coventry-city__tatsuhiro-sakamoto.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Tatshurio_Sakamoto.png
+- `en-coventry-city__caleb-yirenkyi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Caleb_Yirenkyi_England_v_Ghana_23_June_2026-012.jpg
+- `en-coventry-city__ellis-simms.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ellis_Reco_Simms_2016.jpg
+- `mx-necaxa__alexis-pena.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-2_Club_Necaxa_(2_August_2025)_16_(cropped).jpg
+- `en-coventry-city__haji-wright.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Haji_Wright_Australia_v_USA_19_June_2026-76.jpg
+- `en-coventry-city__taiwo-awoniyi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Taiwo_Awoniyi_22122025_(1).jpg
+- `en-coventry-city__frank-onyeka.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Frank_Onyeka_29112025_(1).jpg
+- `en-coventry-city__loum-tchaouna.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Loum_Tchaouna_29112025_(6).jpg
+- `en-coventry-city__kaine-kesler-hayden.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Kaide_Kesler_Hayden.png
+- `en-coventry-city__jake-bidwell.jpg` — Jrppezza — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jake%2BBidwell%2BQPR%2B2016_(cropped).jpg
+- `en-coventry-city__joel-latibeaudiere.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Joel_Lautibaudiere.png
+- `en-coventry-city__brandon-thomas-asante.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brandon_Thomas-Asante_England_v_Ghana_23_June_2026-109.jpg
+- `en-coventry-city__dan-bentley.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Dan_Bentley_and_Scott_Bevan_01112025_(2).jpg
+- `en-coventry-city__luke-woolfenden.jpg` — Xaneph — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luke_Woolfenden.jpg
+- `mx-necaxa__danny-leyva.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Danny_Leyva_NYCFC.Seattle.18.Oct.2025-044_(cropped).jpg
+- `mx-necaxa__kevin-rosero.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-2_Club_Necaxa_(2_August_2025)_17_(cropped).jpg
+- `en-coventry-city__victor-torp.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Victor_Torp.png
+- `mx-necaxa__lorenzo-faravelli.jpg` — OswaldoGares — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lorenzo_Abel_Faravelli.jpg
+- `mx-necaxa__luis-jimenez.jpg` — Carlos Figueroa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Colo-Colo_v_Palestino_20200128_23.jpg
+- `en-coventry-city__yann-gboho.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Gboho_asse_tfc_2425.png
+- `en-coventry-city__gustavo-hamer.jpg` — KlaasHamer — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Guga_Wiki_2.45.jpg
+- `en-coventry-city__sidiki-cherif.jpg` — User:Zafer — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sidiki_Ch%C3%A9rif_26_Fenerbah%C3%A7e_20260805_(4).JPG
+- `en-crystal-palace__dean-henderson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dean_Henderson_England_v_Panama_27_June_26-039.jpg
+- `en-crystal-palace__tyrick-mitchell.jpg` — Spike 'em — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Crystal_Palace_FA_Cup_winners.jpg
+- `en-crystal-palace__chadi-riad.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Morocco_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `mx-pachuca__sergio-barreto.jpg` — jmmuguerza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Independiente_-_Central_Norte_-_Copa_Argentina_2022_(64).jpg
+- `mx-pachuca__eduardo-bauermann.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Santos-Corinthians-Copa-do-Brasil-jul-2022-01.jpg
+- `mx-pachuca__rodolfo-pizarro.jpg` — Sebasnep87 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pizarrointermiami.jpg
+- `mx-pachuca__oussama-idrissi.jpg` — Дмитрий Пукалик — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Idrissi_Gazinskiy_2020.jpg
+- `mx-pachuca__carlos-sanchez.jpg` — --Steindy (talk) 22:39, 13 October 2019 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hertha_BSC_vs._West_Ham_United_20190731_(215).jpg
+- `mx-pachuca__christian-rivera.jpg` — MrSala — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Christian_Rivera_Cu%C3%A9llar_Xolos.jpg
+- `en-crystal-palace__axel-disasi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Gerard_Prenderville_04032026_(1).jpg
+- `mx-pachuca__salomon-rondon.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Everton,_2_October_2021_(43).jpg
+- `en-crystal-palace__jaydee-canvot.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Canvot_asse_tfc_2425.png
+- `mx-pachuca__kenedy.jpg` — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2021_FIFA_Club_World_Cup_Final_-_23.jpg
+- `mx-pachuca__jose-eulogio.jpg` — Hans Peters for Anefo — CC BY-SA 3.0 nl — https://commons.wikimedia.org/wiki/File:Jos%C3%A9_Eulogio_G%C3%A1rate_and_Javier_Irureta_1973.jpg
+- `en-crystal-palace__ismaila-sarr.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ismaila_Sarr_France_v_Senegal_16_June_2026-425_(cropped).jpg
+- `en-crystal-palace__jefferson-lerma.jpg` — MichaelEmilio — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Fredrikstad_Fotballklubb_v_Crystal_Palace_FC,_28_August_2025_B08.jpg
+- `en-crystal-palace__eddie-nketiah.jpg` — Scroogebz — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:UA_Next_Training_Session_2025.jpg
+- `mx-puebla__juan-pablo-vargas.jpg` — WaaslandBro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Pablo_Vargas_-_2019.jpg
+- `en-crystal-palace__yeremy-pino.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yeremy_Pino_Argentina_v_Spain_19_July_2026-317.jpg
+- `en-crystal-palace__dwight-mcneil.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_v_Everton_10052025_(12).jpg
+- `en-crystal-palace__jean-philippe-mateta.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jean-Philippe_Mateta_France_v_Senegal_16_June_2026-409.jpg
+- `en-crystal-palace__takehiro-tomiyasu.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_Arsenal_FC_(03-10-2023)_29.jpg
+- `mx-puebla__ignacio-maestro-puch.jpg` — BugWarp — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Entrenamiento_Argentina_Sub20_previo_al_mundial_-_BugWarp_(16).jpg
+- `mx-pumas-unam__keylor-navas.jpg` — ProtoplasmaKid — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pumas_vs_Xolos_varonil_-_Liga_MX_Apertura_2025_07.jpg
+- `mx-pumas-unam__ruben-duarte.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_3-1_UNAM_(6_August_2025)_28_(cropped).jpg
+- `en-crystal-palace__daichi-kamada.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Daichi_Kamada_and_Tyler_Adams.jpg
+- `en-crystal-palace__will-hughes.jpg` — Spike 'em — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Crystal_Palace_FA_Cup_winners.jpg
+- `en-crystal-palace__adam-wharton.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2_adam_wharton_2026.jpg
+- `mx-pumas-unam__adalberto-carrasquilla.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Adalberto_Carrasquilla_England_v_Panama_27_June_26-015.jpg
+- `mx-pumas-unam__cesar-huerta.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:RSC_Anderlecht_v_Club_Brugge,_18_May_2025_(image_2).jpg
+- `mx-pumas-unam__sebastian-cordova.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_27.jpg
+- `mx-pumas-unam__juninho.jpg` — Los ruidos del deporte — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Final_CONCACAF_11.jpg
+- `mx-pumas-unam__santiago-lopez.jpg` — Feuu - Uruguay — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Santiago_%27Bigote%27_L%C3%B3pez_(born_1982)_in_the_2015_video_%27Volver_el_tiempo_para_adelante%27.png
+- `en-crystal-palace__j-rgen-strand-larsen.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jorgen_Strand_Larsen_France_v_Norway_26_June_26-152.jpg
+- `en-crystal-palace__quinten-timber.jpg` — Hainotdeptrai — CC0 — https://commons.wikimedia.org/wiki/File:MCI_VS_FER_2024_(3)_(Antoni_Milambo).jpg
+- `en-crystal-palace__anan-khalaili.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Anan_Khalaili_RUSG_2026.jpg
+- `en-crystal-palace__chris-richards.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Chris_Richards_Nestory_Irankunda_Australia_v_USA_19_June_2026-227.jpg
+- `en-crystal-palace__cheick-doucoure.jpg` — Bigmatbasket — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cheick_Doucour%C3%A9.jpg
+- `en-crystal-palace__evann-guessand.jpg` — IDontHaveSkype — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2026_FIFA_World_Cup_Match_33,_Germany_v_Ivory_Coast,_Toronto_Stadium.jpg
+- `en-crystal-palace__oscar-mingueza.jpg` — Yuliia Perekopaiko — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%91%D0%B0%D1%80%D1%81%D0%B5%D0%BB%D0%BE%D0%BD%D0%B0%C2%BB_0-1._2_%D0%BD%D0%BE%D1%8F%D0%B1%D1%80%D1%8F_2021_%D0%B3%D0%BE%D0%B4%D0%B0._II_%E2%80%94_1289827.jpg
+- `en-crystal-palace__remi-matthews.jpg` — MichaelEmilio — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Fredrikstad_Fotballklubb_v_Crystal_Palace_FC,_28_August_2025_B30_(Remi_Matthews).jpg
+- `en-crystal-palace__ben-chilwell.jpg` — Spike 'em — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Crystal_Palace_FA_Cup_winners.jpg
+- `en-crystal-palace__walter-benitez.jpg` — MichaelEmilio — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Fredrikstad_Fotballklubb_v_Crystal_Palace_FC,_28_August_2025_B26.jpg
+- `en-everton__jordan-pickford.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jordan_Pickford_England_v_Panama_27_June_26-220.jpg
+- `en-everton__ainsley-maitland-niles.jpg` — Daniel from Glasgow, United Kingdom — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Arsenal_U23_v_Manchester_City_U23_(49599930951).jpg
+- `en-everton__jarrad-branthwaite.jpg` — Pete from Liverpool, UK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Celebration!_(54493257432)_(Jarrad_Branthwaite).jpg
+- `en-everton__michael-keane.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Everton,_2_October_2021_(42).jpg
+- `mx-pumas-unam__pedro-vite.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedro_Vite_Cote_D%27Ivoire_v_Ecuador_14_June_2026-71.jpg
+- `mx-pumas-unam__alvaro-angulo.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_3-1_UNAM_(6_August_2025)_39.jpg
+- `mx-queretaro__santiago-homenchenko.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_0-1_Benfica_-_Final_Intercontinental_Sub_20_-_220821-3174-jikatu.jpg
+- `mx-queretaro__bernardo-parra.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_27_(cropped)_2.jpg
+- `mx-queretaro__paulo-victor.jpg` — Hora do Esporte — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Paulo_Victor.jpg
+- `en-everton__james-tarkowski.jpg` — Jon Harris/Press Association — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:James_Tarkowski_(Oct_2017).jpg
+- `en-everton__kiernan-dewsbury-hall.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `mx-queretaro__diego-reyes.jpg` — Oleg Bkhambri (Voltmetro) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2017_Confederation_Cup_-_MEXNZL_-_Diego_Reyes_(cropped).jpg
+- `en-everton__jack-grealish.jpg` — Christian David — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_City_dressing_room_2022_(Juli%C3%A1n_%C3%81lvarez).jpg
+- `en-everton__mark-travers.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Mark_Travers_2019.jpg
+- `en-everton__jake-o-brien.jpg` — Irish Football Fan TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Jake_O%27Brien_in_2024.png
+- `mx-queretaro__carlos-villanueva.jpg` — LaverSkiess — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Villanueva_2019.png
+- `en-everton__tyrique-george.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1186_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `mx-queretaro__erik-duenas.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_training_2025,_203.jpg
+- `mx-queretaro__daniel-parra.jpg` — Thiaguitocpl — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Daniel_Parra.jpg
+- `en-everton__christian-n-rgaard.jpg` — Chensiyuan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:1_arsenal_crystal_palace_epl_champions_2026.jpg
+- `en-everton__hayden-hackney.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Hayden_Hackney_16082025_(3).jpg
+- `en-everton__james-garner.jpg` — Toffee TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:James_Garner_2025.jpg
+- `en-fulham__bernd-leno.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Bernd_Leno_24052026_(3).jpg
+- `en-fulham__kenny-tete.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Kenny_Tete_24052026_(2).jpg
+- `mx-queretaro__jesus-arellano.jpg` — Jarrett Campbell from Cary, NC, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Jes%C3%BAs_Arellano.jpg
+- `mx-santos-laguna__carlos-acevedo.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Carlos_Acevedo.png
+- `mx-santos-laguna__jose-abella.jpg` — Los ruidos del deporte — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Jos%C3%A9_Abella.jpg
+- `en-fulham__calvin-bassey.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jacob_Ramsey,_Calvin_Bassey_and_William_Osula_24052026_(1).jpg
+- `mx-santos-laguna__javier-guemez.jpg` — AlfonsitoHDZ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:G%C3%BCem%C3%A9z.jpg
+- `en-fulham__jorge-cuenca.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jorge_Cuenca_24082024.jpg
+- `en-fulham__joachim-andersen.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Joachim_Andersen_and_Rodrigo_Muniz_09052026_(1).jpg
+- `mx-santos-laguna__diego-gonzalez.jpg` — Los ruidos del deporte — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Diego_Hern%C3%A1n_Gonz%C3%A1lez.jpg
+- `en-fulham__harrison-reed.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Harrison_Reed_and_Armando_Broja_21032026_(1).jpg
+- `en-fulham__rodrigo-muniz.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Timothy_Castagne,_Malick_Thiaw,_Rodrigo_Muniz_and_Nick_Woltemade_24052026_(1).jpg
+- `en-fulham__tom-cairney.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Tom_Cairney_and_Robert_Jones_24052026_(1).jpg
+- `mx-santos-laguna__carlos-gruezo.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:ECUADOR-HONDURAS_(21261756845)_(cropped).jpg
+- `en-fulham__oscar-bobb.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Muniz_and_Oscar_Bobb_24052026_(1).jpg
+- `en-fulham__hugo-larsson.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:Hugo_Larsson_(Sweden_starting_XI_vs_Moldova,_12_October_2023).jpg
+- `en-fulham__sander-berge.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Norway_Starting_XI_Morocco_v_Norway_7_June_2026-61.jpg
+- `en-fulham__alex-iwobi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_vs_Burnley_on_23_December_2023_(2).jpg
+- `en-fulham__jonah-kusi-asare.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Muniz,_Andrew_Madley_and_Jonah_Kusi-Asare_09052026_(1).jpg
+- `en-fulham__timothy-castagne.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Timothy_Castagne_and_Harvey_Barnes_24052026_(2).jpg
+- `en-fulham__david-affengruber.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_SK_Sturm_Graz(2023-05-21)_56.jpg
+- `mx-santos-laguna__fran-villalba.jpg` — Struway2 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Fran_Villalba_Birmingham_Aug_2019.jpg
+- `en-fulham__benjamin-lecomte.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Lewis_Hall_and_Oscar_Bobb_24052026_(2).jpg
+- `mx-santos-laguna__diego-medina.jpg` — FutbolConnect — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Diego_Medina_Rom%C3%A1n_en_junio_de_2019.jpg
+- `en-fulham__josh-king.jpg` — Mattythewhite — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Josh_King_2022-05-21_2.jpg
+- `en-fulham__ryan-sessegnon.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ryan_Sessegnon_24052026_(1).jpg
+- `mx-santos-laguna__ramiro-sordo.jpg` — Newell's Old Boys — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Sordo.png
+- `en-fulham__emile-smith-rowe.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sander_Berge,_Bruno_Guimar%C3%A3es_and_Emile_Smith_Rowe_24052026_(1).jpg
+- `en-fulham__antonee-robinson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Antonee_Robinson_Australia_v_USA_19_June_2026-24_(cropped).jpg
+- `en-hull-city__jack-butland.jpg` — Jim Easton — Public domain — https://commons.wikimedia.org/wiki/File:Jack_Butland_2024.jpg
+- `en-hull-city__ryan-giles.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luton_v_West_Ham_2023.jpeg
+- `en-hull-city__hidemasa-morita.jpg` — Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:4822953_AE7I9053.jpg
+- `en-hull-city__semi-ajayi.jpg` — Kieran Clarke — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Semi_Ajayyi_vs_West_Brom_(9777906261)_(cropped_x2).jpg
+- `en-hull-city__sorba-thomas.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sorba_Thomas_and_Liam_Morrison_20092025_(1).jpg
+- `en-hull-city__oli-mcburnie.jpg` — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Las_Palmas_2025_04_23_Athletic_Club.jpg
+- `en-hull-city__joe-gelhardt.jpg` — Rccousins — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gelhardt.jpg
+- `en-hull-city__dillon-phillips.jpg` — Adam.P.Shaw — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Dillon_Phillips_warming_up_prior_to_the_away_game_against_Brentford_in_2014.jpg
+- `mx-tigres-uanl__nahuel-guzman.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:UANL_Tigres_2015_-_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F_(2).jpg
+- `mx-tigres-uanl__cesar-araujo.jpg` — Keiteay — CC0 — https://commons.wikimedia.org/wiki/File:OCSC_huddle.jpg
+- `mx-tigres-uanl__fernando-gorriaran.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_03_(cropped).jpg
+- `mx-tigres-uanl__juan-brunetta.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_22.jpg
+- `mx-tigres-uanl__antonio-carrera.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_24_(cropped).jpg
+- `mx-tigres-uanl__jesus-garza.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_20_(cropped)_2.jpg
+- `mx-tigres-uanl__alan-franco.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alan_Franco_Cote_D%27Ivoire_v_Ecuador_14_June_2026-41.jpg
+- `mx-tigres-uanl__diego-lainez.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_31.jpg
+- `en-hull-city__john-egan.jpg` — joshjdss — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:John_Egan_(2014).jpg
+- `en-hull-city__paddy-mcnair.jpg` — Paul Hudson — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:QPR_vs_Boro.jpg
+- `mx-tigres-uanl__marcelo-flores.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_26_(cropped).jpg
+- `mx-tigres-uanl__romulo.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:R%C3%B4mulo_FLAMENGO.jpg
+- `mx-tigres-uanl__carlos-felipe-rodriguez.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_27_(cropped).jpg
+- `en-hull-city__konstantinos-tzolakis.jpg` — Bjelica — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Konstantinos_Tzolakis_(cropped),_2023%E2%80%9324_UEFA_Europa_Conference_League_Quarter-Final_game_Fenerbah%C3%A7e_-_Olympiacos_FC_penalty_shootout_(cropped).jpg
+- `en-hull-city__elliot-stroud.jpg` — YantsImages — CC0 — https://commons.wikimedia.org/wiki/File:William_Saliba_-17,_Elliot_Stroud_-24_France_v_Sweden_at_2026_Fifa_World_Cup_by_YantsImages_06_(cropped).jpg
+- `en-hull-city__lucas-herrington.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lucas_Herrington_Australia_v_USA_19_June_2026-98_(cropped).jpg
+- `en-hull-city__matt-targett.jpg` — Kolforn (Kolforn)
+I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this picture out of the Wik — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:-2019-10-05_Carrow_Road,_Norwich_city_V_Aston_Villa,_(score_1-5).JPG
+- `en-hull-city__kieran-dowell.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Norwich_City,_16_April_2022_(22).jpg
+- `en-hull-city__lucas-gourna-douath.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_Real_Sociedad_(Championsleague_Gruppe_D_2023-10-03)_32.jpg
+- `mx-tigres-uanl__osvaldo-rodriguez.jpg` — MadriCR — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Osvaldo_Rodr%C3%ADguez_Flores.jpg
+- `mx-tigres-uanl__ozziel-herrera.jpg` — TheSoccerBoy — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Inter_Miami_CF_2-1_UANL_(20_August_2025)_20_(cropped).jpg
+- `mx-tijuana__jose-antonio-rodriguez.jpg` — Los ruidos del deporte — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Jose_de_Jesus_Corona_Rodriguez.jpg
+- `en-hull-city__abdulkadir-omur.jpg` — senolsengul at Pixabay — CC0 — https://commons.wikimedia.org/wiki/File:Abdus_Omur_2017.jpg
+- `en-hull-city__mohamed-ali-cho.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Cho_asse_ogcn_2425.png
+- `en-ipswich-town__alex-palmer.jpg` — James Cracknell — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alex_Palmer.png
+- `en-ipswich-town__darnell-furlong.jpg` — Jrppezza — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Darnellfurlongqpr2017.jpg
+- `en-ipswich-town__leif-davis.jpg` — CrispoTeabaggo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Leif_Davis_Corner.png
+- `mx-tijuana__gilberto-mora.jpg` — Selección Nacional de México — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Gilberto_Mora_2.png
+- `en-ipswich-town__cedric-kipre.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Kipre_asse_sr_2425.png
+- `en-ipswich-town__azor-matusiwa.jpg` — LHC88 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Milan_Rennes_2024_(7).png
+- `en-ipswich-town__issa-diop.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:VINICIUS_JUNIOR,_Ismael_SAIBARI,_Issa_Diopand,_and_Ayyoub_BOUADDI_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `en-ipswich-town__abdul-fatawu.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Abdul_Fatawu_7_England_v_Ghana_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `en-ipswich-town__sindre-walle-egeli.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Sindre_Walle_Eghli.png
+- `en-ipswich-town__zian-flemming.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Zian_Flemming_and_Lyle_Foster_21032026_(1).jpg
+- `mx-tijuana__jackson-porozo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jackson_Porozo_Cote_D%27Ivoire_v_Ecuador_14_June_2026-35.jpg
+- `mx-tijuana__ignacio-rivero.jpg` — Cementeɾo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ignacio_Rivero.jpg
+- `en-ipswich-town__julio-enciso.jpg` — COYB123 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Enciso_220826.jpg
+- `en-ipswich-town__jaden-philogene.jpg` — COYB123 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Jaden_Philogene.jpg
+- `en-ipswich-town__florentino-luis.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Brentford_v_Burnley_29112025_(26).jpg
+- `en-ipswich-town__kasey-mcateer.jpg` — Timfilbert — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kasey_McAteer.jpg
+- `mx-tijuana__pablo-ortiz.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_20.jpg
+- `mx-tijuana__frank-boya.jpg` — V4nco — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Frank_Boya_2018-02-22_Entrainement_excel-50.jpg
+- `mx-toluca__hugo-gonzalez.jpg` — JoseQ123 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hugo_Gonz%C3%A1lez_Con_Monterrey.jpg
+- `en-ipswich-town__sasa-lukic.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Tyler_Adams_and_Sa%C5%A1a_Luki%C4%87_09052026_(1).jpg
+- `en-ipswich-town__jacob-greaves.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Jacob_Greaves.png
+- `en-ipswich-town__exequiel-palacios.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Exequiel_Palacios_Argentina_v_Spain_19_July_2026-022.jpg
+- `en-ipswich-town__dara-o-shea.jpg` — Irish Football Fan TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Dara_Oshea_2020.jpg
+- `mx-toluca__antonio-briseno.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:UANL_Tigres_2015_-_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F_(5).jpg
+- `mx-toluca__bruno-mendez.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681299748).jpg
+- `mx-toluca__franco-romero.jpg` — Jotagolpe — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:EL10EN_ACCI%C3%93N.jpg
+- `en-ipswich-town__david-button.jpg` — COYB123 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:McAteer_220826.jpg
+- `en-ipswich-town__christian-walton.jpg` — ITFC1234 — CC0 — https://commons.wikimedia.org/wiki/File:Christian_Walton_121223.jpg
+- `en-ipswich-town__chuba-akpom.jpg` — Ryllyld — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Blackburn_Ipswich_20_9_25.jpg
+- `en-ipswich-town__marcelino-nunez.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Marcelino_Nunez.png
+- `mx-toluca__nicolas-castro.jpg` — Newell's Old Boys — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Nicolas_Castro_2017.jpg
+- `en-ipswich-town__kjell-scherpen.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Red_Bull_Salzburg_gegen_SK_Sturm_Graz_(2025-03-02_%C3%96sterreichische_Bundesliga)_59.jpg
+- `mx-toluca__alexis-vega.jpg` — Omar David Sandoval Sida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Tarjeta_roja_a_Themba_Zwane_en_M1,_M%C3%A9xico_vs_Sud%C3%A1frica_del_Mundial_2026.jpg
+- `en-ipswich-town__daizen-maeda.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Daizen_Maeda.jpg
+- `en-ipswich-town__jack-clarke.jpg` — COYB123 — CC0 — https://commons.wikimedia.org/wiki/File:Jack_Clarke.jpg
+- `en-ipswich-town__ben-johnson.jpg` — --Steindy (talk) 16:20, 29 August 2019 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hertha_BSC_vs._West_Ham_United_20190731_(202).jpg
+- `en-ipswich-town__chiedozie-ogbene.jpg` — Pinkd56 — CC0 — https://commons.wikimedia.org/wiki/File:Chiedozie_Ogbene_13032024.jpg
+- `en-ipswich-town__cameron-humphreys.jpg` — EchetusXe — CC0 — https://commons.wikimedia.org/wiki/File:Cameron_Humphreys_October_2025.jpg
+- `en-ipswich-town__kayne-van-oevelen.jpg` — Stefan van Nierop — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kayne_van_oevelen-1700326579_(cropped).jpeg
+- `en-leeds-united__james-trafford.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:James_Trafford_England_v_Ghana_23_June_2026-027.jpg
+- `en-leeds-united__jayden-bogle.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jayden_Bogle_13092025_(6).jpg
+- `mx-toluca__marcel-ruiz.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Marcel_Ruiz.png
+- `mx-toluca__federico-vinas.jpg` — Club América — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Federico_Vi%C3%B1as.jpg
+- `mx-toluca__jesus-gallardo.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Alex_Freeman,_2025_CONCACAF_Gold_Cup,_01.jpg
+- `mx-toluca__luis-garcia.jpg` — Chin Yu Chu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Luis_Garc%C3%ADa_Sanz_-_53690670543.jpg
+- `mx-toluca__paulinho.jpg` — Ludovic Péron — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:OM_-_FC_Porto_-_Valais_Cup_2013_-_Paulinho_Santos.jpg
+- `mx-toluca__erick-gutierrez.jpg` — Hossein Zohrevand — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Argentina_vs_mexico_messi_vs_erick_gutierrez_(cropped).jpg
+- `ec-aucas__santiago-morales.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260305MR-0917_President_Donald_J._Trump_hosts_MLS_Champions_Inter_Miami_CF_at_the_White_House.jpg
+- `ec-aucas__ayrton-preciado.jpg` — https://www.flickr.com/photos/agenciaandes_ec/with/40859860034/ — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Emelec_0_River_1_(7).jpg
+- `ec-aucas__hamilton-piedra.jpg` — Elanonimo5353555 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hamilton_Piedra_2.png
+- `en-leeds-united__ethan-ampadu.jpg` — Nickb1792 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ethan_Ampadu_With_Wales_2020_(cropped).jpg
+- `en-leeds-united__tarik-muharemovic.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Internazionale_Milano_v_US_Sassuolo_Calcio,_21_September_2025_-_08_(Tarik_Muharemovi%C4%87).jpg
+- `en-leeds-united__joe-rodon.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Leeds_United_Players_Training_13092025_(7).jpg
+- `en-leeds-united__daniel-james.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Daniel_James_and_Karl_Darlow_13092025_(1).jpg
+- `en-leeds-united__sean-longstaff.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sean_Longstaff_13092025_(1).jpg
+- `en-leeds-united__dominic-calvert-lewin.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_v_Leeds_United_13092025_(9).jpg
+- `en-leeds-united__harry-wilson.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sander_Berge,_Harry_Wilson_and_Josh_King_24052026_(1).jpg
+- `en-leeds-united__brenden-aaronson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brenden_Aaronson_Australia_v_USA_19_June_2026-69.jpg
+- `en-leeds-united__lukas-nmecha.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Lukas_Nmecha_13092025_(4).jpg
+- `en-leeds-united__jaka-bijol.jpg` — Delo — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Jaka_Bijol_2025.png
+- `en-leeds-united__michael-zetterer.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:MichaelZetterer.jpg
+- `en-leeds-united__anton-stach.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Anton_Stach_13092025_(1).jpg
+- `en-leeds-united__noah-okafor.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_FK_Austria_Wien_(2022-04-24)_68.jpg
+- `en-leeds-united__alex-cairns.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Alex_Cairns_13092025_(6).jpg
+- `en-leeds-united__ao-tanaka.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Wilfried_Gnonto_and_Ao_Tanaka_13092025_(1).jpg
+- `en-leeds-united__james-justin.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Noah_Okafor_and_James_Justin_3092025_(1).jpg
+- `en-leeds-united__melvin-bard.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Bard_asse_ogcn_2425.png
+- `en-leeds-united__nico-elvedi.jpg` — Press Service of the President of the Republic of Azerbaijan — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Wales-Switzerland_match_at_Euro_2020_in_Baku_(cropped).jpg
+- `en-leeds-united__ilia-gruev.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ilia_Gruev_13092025_(1).jpg
+- `en-leeds-united__mateo-joseph.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Mateo_Joseph_15032025_(2).jpg
+- `en-liverpool__alisson-becker.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alisson_Becker_Brazil_V_Morocco_13_June_2026-117_(cropped).jpg
+- `en-liverpool__joe-gomez.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Joe_Gomez_04012026_(2).jpg
+- `en-liverpool__wataru-endo.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Wataru_End%C5%8D_06042025_(2).jpg
+- `en-liverpool__virgil-van-dijk.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `en-liverpool__milos-kerkez.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Milos_Kerkez_04012026_(3).jpg
+- `en-liverpool__florian-wirtz.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Germany_players,_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_01_Florian_Wirtz.jpg
+- `en-liverpool__dominik-szoboszlai.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Dominik_Szoboszlai_04012026_(1).jpg
+- `en-liverpool__alexander-isak.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aurelien_Tchouameni_-8,_Alexander_Isak_-9_France_v_Sweden_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `en-liverpool__alexis-mac-allister.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260719DT-0633_President_Donald_J._Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_World_Cup_Final.jpg
+- `ec-aucas__danny-luna.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:DANNY_LUNA_(25048060009).jpg
+- `en-liverpool__conor-bradley.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ryan_Gravenberch,_Dominik_Szoboszlai_and_Conor_Bradley_04012026_(1).jpg
+- `en-liverpool__federico-chiesa.jpg` — Kirill Venediktov — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:FC_Zenit_Saint_Petersburg_vs._Juventus,_20_October_2021_29.jpg
+- `ec-barcelona-sc__gustavo-vallecilla.jpg` — Hayden Schiff — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Steven_Moreira_dribbling.jpg
+- `ec-barcelona-sc__dario-benedetto.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Marseille_(03-02-2021)_53.jpg
+- `ec-barcelona-sc__joao-rojas.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Santos_0_x_0_S%C3%A3o_Paulo._Jogo_v%C3%A1lido_pelo_Brasileir%C3%A3o_2018,_disputado_no_dia_16_de_setembro,_na_Vila_Belmiro_(44677815362).jpg
+- `ec-barcelona-sc__hector-villalba.jpg` — Eric.Jason.Cross — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2018-03-17_-_Atlanta_United_vs_Vancouver_Whitecaps.jpg
+- `en-liverpool__cody-gakpo.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `en-liverpool__kostas-tsimikas.jpg` — Mikael Hervestad — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sweden_-_Greece17.jpg
+- `en-liverpool__hugo-ekitike.jpg` — Liondartois — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Renato_Sanches_(PSG_2023).jpg
+- `ec-barcelona-sc__jordan-medina.jpg` — MadriCR — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Jordan_Medina.jpg
+- `ec-barcelona-sc__matias-lugo.jpg` — Rancaguacl — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mat%C3%ADas_Lugo.jpg
+- `ec-barcelona-sc__jefferson-intriago.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Jefferson_Intriago.jpg
+- `en-liverpool__freddie-woodman.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Ryan_Gravenberch,_Alexis_Mac_Allister_and_Freddie_Woodman_04012026_(1).jpg
+- `en-liverpool__bradley-barcola.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bradley_Barcola_France_v_Spain_7.24.26-112_(cropped).jpg
+- `en-liverpool__jeremie-frimpong.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jeremie_Frimpong_04012026_(3)_(cropped).jpg
+- `en-liverpool__ronald-araujo.jpg` — Government of Catalonia — Attribution — https://commons.wikimedia.org/wiki/File:Ronald_Araujo_i_Gavi_amb_els_polos_de_passeig_que_inclouen_la_marca_Catalunya_(28-07-2023)_(Ronald_Ara%C3%BAjo).jpg
+- `ec-delfin__luis-castro.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:(Tehran)_Persepolis_F.C._v_Al_Nassr_FC,_19_September_2023_02_(cropped).jpg
+- `en-liverpool__ryan-gravenberch.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `en-liverpool__trey-nyoni.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Trey_Nyoni_04012026_(1).jpg
+- `ec-delfin__juan-cavallaro.jpg` — TitiNicola — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Ignacio_Cavallaro_Club_Atletico_Union_de_Santa_Fe_08.jpg
+- `en-liverpool__vitezslav-jaros.jpg` — Mtjonenfa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ko_Itakura.jpg
+- `en-liverpool__rio-ngumoha.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Rio_Ngumoha_04012026_(6).jpg
+- `en-liverpool__harvey-davies.jpg` — comedy_nose — CC0 — https://commons.wikimedia.org/wiki/File:LFC_Parade_2025_-_54546998853.jpg
+- `en-liverpool__harvey-elliott.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Liverpool,_22_August_2022_(10).jpg
+- `en-manchester-city__gianluigi-donnarumma.jpg` — Original:  MichaelEmilio / Derivative work:  Danyele — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Norway_Italy_-_June_2025_B_33_-_Gianluigi_Donnarumma_(close-up).jpg
+- `en-manchester-city__ruben-dias.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Diogo_Costa_Ruben_Dias_Croatia_v_Portugal_2_July_2026-181_(cropped).jpg
+- `ec-deportivo-cuenca__edison-vega.jpg` — Rauldvs1224 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vega-wiki.png
+- `en-manchester-city__elliot-anderson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jose_Fajardo_Elliot_Anderson_England_v_Panama_27_June_26-192.jpg
+- `ec-deportivo-cuenca__romario-ibarra.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Romario_Ibarra_-_Ecuador_-_Minnesota_United_-_MNUFC_v_NYCFC_NEW_YORK_CITY_FOOTBALL_CLUB_-_ALLIANZ_FIELD_-_St._PAUL_MINNESOTA_(40636738223).jpg
+- `en-manchester-city__marc-guehi.jpg` — User:YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marc_Gu%C3%A9hi_at_2026_FIFA_World_Cup_by_YantsImages_(cropped).jpg
+- `en-manchester-city__iliman-ndiaye.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Iliman_Ndiaye_France_v_Senegal_16_June_2026-492.jpg
+- `en-manchester-city__mateo-kovacic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nuno_Mendes_Mateo_Kovacic_Croatia_v_Portugal_2_July_2026-094.jpg
+- `ec-deportivo-cuenca__carlos-arboleda.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Arboleda_en_LDUP.JPG
+- `en-manchester-city__erling-haaland.jpg` — Stiopa — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Stiopa-Solaris_Urbino_18.75_foto.2.jpg
+- `en-manchester-city__rayan-cherki.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rayan_Cherki_France_v_Spain_7.24.26-252.jpg
+- `en-manchester-city__jeremy-doku.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:J%C3%A9r%C3%A9my_Doku_USMNT_v_Belgium_Mar_28_2026-27_(cropped).jpg
+- `en-manchester-city__marcus-bettinelli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Marcus_Bettinelli_20042025_(1).jpg
+- `en-manchester-city__enzo-fernandez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rodri_Enzo_Fernandez_Argentina_v_Spain_19_July_2026-185.jpg
+- `en-manchester-city__rayan-ait-nouri.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Palermo_FC_v_Manchester_City_FC,_9_August_2025_02.jpg
+- `en-manchester-city__vitor-reis.jpg` — Anual — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Betis_Girona_23_nov_2025_002.jpg
+- `en-manchester-city__josko-gvardiol.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Josko_Gvardiol_Nelson_Semedo_Croatia_v_Portugal_2_July_2026-260.jpg
+- `en-manchester-city__matheus-nunes.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Nunes_USMNT_v_Portugal_Mar_31_2026-21.jpg
+- `en-manchester-city__geronimo-rulli.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Geronimo_Rulli_Argentina_v_Spain_19_July_2026-267_(cropped).jpg
+- `en-manchester-city__ayyoub-bouaddi.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:VINICIUS_JUNIOR,_Ismael_SAIBARI,_Issa_Diopand,_and_Ayyoub_BOUADDI_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `en-manchester-city__nico-o-reilly.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nico_O%27Reilly_England_v_Panama_27_June_26-236_(cropped).jpg
+- `en-manchester-city__allan.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Everton,_2_October_2021_(41).jpg
+- `en-manchester-city__antoine-semenyo.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Morgan_Rogers_17,_Reece_James_24,_Antoine_Semenyo_11_England_v_Ghana_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `en-manchester-city__abdukodir-khusanov.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Iran_v_Uzbekistan_2-2,_25_March_2025,_Azadi_Stadium,_World_Cup_2026_qualifier_29.jpg
+- `en-manchester-city__phil-foden.jpg` — Hmickey — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:National_Football_Museum_displays_2.jpg
+- `en-manchester-city__josh-wilson-esbrand.jpg` — Hameltion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:ManCity20240722-057.jpg
+- `ec-el-nacional__jonathan-borja.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:JONATHAN_BORJA_(24789171283).jpg
+- `en-manchester-city__jack-grealish.jpg` — Christian David — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_City_dressing_room_2022_(Juli%C3%A1n_%C3%81lvarez).jpg
+- `en-manchester-city__claudio-echeverri.jpg` — Venice Champions Trophy 2017 — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Claudio_Echeverri_in_2017_vs_Juventus.png
+- `en-manchester-city__jeremy-monga.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jeremy_Monga_2025.jpg
+- `en-manchester-city__sverre-nypan.jpg` — Ssu — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Str%C3%B8msgodset_v_Rosenborg_BK,_29_March_2025_(48)_(Sverre_Nypan).jpg
+- `en-manchester-city__kalvin-phillips.jpg` — Christian David — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_City_dressing_room_2022_(Juli%C3%A1n_%C3%81lvarez).jpg
+- `en-manchester-city__max-alleyne.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Max_Alleyne_and_Ryan_Andrews_09082025_(1).jpg
+- `en-manchester-city__omar-marmoush.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Omar_Marmoush_Argentina_v_Egypt_7_July_2026-102.jpg
+- `en-manchester-united__senne-lammens.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Senne_Lammens_USMNT_v_Belgium_Mar_28_2026-98_(cropped).jpg
+- `en-manchester-united__diogo-dalot.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Diogo_Dalot_USMNT_v_Portugal_Mar_31_2026-12.jpg
+- `en-manchester-united__noussair-mazraoui.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Morocco_at_2026_FIFA_World_Cup_by_YantsImages.jpg
+- `en-manchester-united__matthijs-de-ligt.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Allianz_Arena_(25-11-2023)_07.jpg
+- `en-manchester-united__harry-maguire.jpg` — UK Prime Minister — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Harry_Maguire_2023_(cropped).jpg
+- `en-manchester-united__lisandro-martinez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lisandro_Martinez_Argentina_v_Egypt_7_July_2026-343_(cropped).jpg
+- `en-manchester-united__mason-mount.jpg` — Colesy2024 — CC0 — https://commons.wikimedia.org/wiki/File:Mason_Mount_Manchester_United_Signing_Day.jpg
+- `en-manchester-united__bruno-fernandes.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bruno_Fernandes_USMNT_v_Portugal_Mar_31_2026-27_(cropped).jpg
+- `en-manchester-united__marcus-rashford.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marcus_Rashford_England_v_Panama_27_June_26-047.jpg
+- `en-manchester-united__matheus-cunha.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `en-manchester-united__joshua-zirkzee.jpg` — Hainotdeptrai — CC0 — https://commons.wikimedia.org/wiki/File:LIV-MU-CARABAO-24(18)_(Joshua_Zirkzee,_11).jpg
+- `en-manchester-united__karl-darlow.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Karl_Darlow_and_Illan_Meslier_13092025_(2).jpg
+- `ec-emelec__pedro-ortiz.jpg` — Elanonimo5353555 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedro_Ortiz.png
+- `en-manchester-united__patrick-dorgu.jpg` — Fra Casa — CC0 — https://commons.wikimedia.org/wiki/File:Patrick_Dorgu_Como-Lecce_30_Dec_2024.jpg
+- `en-manchester-united__leny-yoro.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:RC_Lens_-_Lille_OSC_(08-10-2023)_28.jpg
+- `en-manchester-united__amad-diallo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Amad_Diallo_Cote_D%27Ivoire_v_Ecuador_14_June_2026-260.jpg
+- `en-manchester-united__andrey-santos.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `en-manchester-united__youri-tielemans.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Youri_Tielemans_2018_(cropped_2).jpg
+- `en-manchester-united__bryan-mbeumo.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Bryan_Mbeumo_00-02-31.18.png
+- `en-manchester-united__carlos-baleba.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Carlos_Baleba_2026.jpg
+- `en-manchester-united__tom-heaton.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Liverpool,_22_August_2022_(31).jpg
+- `en-manchester-united__luke-shaw.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luke_Shaw,_Manchester_United_v_Newcastle_United,_11_September_2021_(44)_(cropped).jpg
+- `ec-emelec__sergio-quintero.jpg` — Asamblea Nacional  del Ecuador from QUito, Ecuador — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SESI%C3%93N_NO._603_DEL_PLENO_DE_LA_ASAMBLEA_NACIONAL,_QUITO_25_DE_JUNIO_DEL_2019_(48129476463).jpg
+- `en-manchester-united__manuel-ugarte.jpg` — Atmedia25 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:M.UGARTE.jpg
+- `en-manchester-united__ayden-heaven.jpg` — AFC Bournemouth — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ayden_Heaven_2025.png
+- `en-manchester-united__benjamin-sesko.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_SK_Austria_Klagenfurt_(2023-05-28)_38_(cropped).jpg
+- `en-manchester-united__kobbie-mainoo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kobbie_Mainoo_England_v_Panama_27_June_26-052.jpg
+- `en-manchester-united__tyler-fletcher.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Tyler_Fletcher_Scotland_v_Bolivia_6_June_2026-4.jpg
+- `en-manchester-united__harry-amass.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Harry_Amass_18102025_(4).jpg
+- `en-manchester-united__altay-bay-nd-r.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Altay_Bay%C4%B1nd%C4%B1r_(2021-22_S%C3%BCper_Lig)_-_Resim2.png
+- `en-newcastle__nick-pope.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nick_Woltemade,_Nick_Pope_and_Issa_Diop_24052026_(1).jpg
+- `en-newcastle__lewis-hall.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Lewis_Hall_24052026_(2).jpg
+- `en-newcastle__sven-botman.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `en-newcastle__fabian-schar.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `en-newcastle__nico-gonzalez.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(17).jpg
+- `en-newcastle__joelinton.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Premier_League_Newcastle-Arsenal_2023-05-07_27.jpg
+- `en-newcastle__yoane-wissa.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(14).jpg
+- `en-newcastle__william-osula.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:William_Osula_24052026_(8).jpg
+- `en-newcastle__harvey-barnes.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `en-newcastle__malick-thiaw.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(17).jpg
+- `en-newcastle__sean-steur.jpg` — Mtjonenfa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sean_Steur.jpg
+- `en-newcastle__bazoumana-toure.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bazoumana_Toure_Cote_D%27Ivoire_v_Ecuador_14_June_2026-50.jpg
+- `ec-emelec__jaime-ayovi.jpg` — Hefebreo — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Jaime_Ayovi.jpg
+- `en-newcastle__anthony-elanga.jpg` — Amanda Aikioniemi — Public domain — https://commons.wikimedia.org/wiki/File:Anthony_Elanga_(Sweden_vs_Moldova,_12_October_2023).jpg
+- `en-newcastle__matias-fernandez-pardo.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `ec-emelec__miller-bolanos.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_2_-_Ecuador_1_-_161110_(9).jpg
+- `en-newcastle__jacob-murphy.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(17).jpg
+- `en-newcastle__joe-willock.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `ec-emelec__jose-cevallos.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:LIGA_BARCELONA_29_ABR_(17291372676).jpg
+- `ec-imbabura__jonathan-benitez.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jonathan_Ben%C3%ADtez_Palestino_v_Deportes_Copiap%C3%B3_20230730_01.jpg
+- `en-newcastle__mark-gillespie.jpg` — Mattythewhite — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mark_Gillespie_19-09-2015_1.jpg
+- `en-newcastle__dan-burn.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dan_Burn_England_v_Panama_27_June_26-048.jpg
+- `en-newcastle__amar-dedic.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:(2024-09-10_)_FC_RB_Salzburg_gegen_SCR_Altach_24.jpg
+- `en-newcastle__jacob-ramsey.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(15).jpg
+- `en-newcastle__lewis-miley.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Newcastle_United_vs_AFC_Bournemouth,_5_September_2026_(18).jpg
+- `en-nottingham-forest__ousmane-diomande.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ousmane_Diomand%C3%A9_Cote_D%27Ivoire_v_Ecuador_14_June_2026-58.jpg
+- `en-nottingham-forest__neco-williams.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Neco_Williams_and_Harry_Wilson_22122025_(1).jpg
+- `en-nottingham-forest__ibrahim-sangare.jpg` — IDontHaveSkype — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2026_FIFA_World_Cup_Match_33,_Germany_v_Ivory_Coast,_Toronto_Stadium.jpg
+- `en-nottingham-forest__callum-hudson-odoi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nottingham_Forest_Players_22122025_(1).jpg
+- `en-nottingham-forest__chris-wood.jpg` — Sebalston — CC0 — https://commons.wikimedia.org/wiki/File:Morgan_Gibbs-White_-_Nottingham_Forest_-_2025.jpg
+- `en-nottingham-forest__morgan-gibbs-white.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Morgan_Gibbs-White_22122025_(3).jpg
+- `en-nottingham-forest__igor-jesus.jpg` — AD Sports — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Igor_Jesus_Shabab_Al_Ahli.png
+- `en-nottingham-forest__john-victor.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:John_Victor_22122025_(1).jpg
+- `en-nottingham-forest__dan-ndoye.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Nice_(23-01-2021)_52.jpg
+- `en-nottingham-forest__arnaud-kalimuendo.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Kalimuendo_asse_srfc_2425.png
+- `en-nottingham-forest__liam-delap.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20250713DT-1236_President_Donald_Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_Club_World_Cup_Final_soccer_match.jpg
+- `en-nottingham-forest__xaver-schlager.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Liefering_gegen_Austria_Lustenau_SKY_GO_Liga_15.JPG
+- `en-nottingham-forest__ryan-yates.jpg` — Nottingham Forest F.C. — CC0 — https://commons.wikimedia.org/wiki/File:Ryan_Yates.jpg
+- `en-nottingham-forest__jair-cunha.jpg` — Fernando Bortolo — CC0 — https://commons.wikimedia.org/wiki/File:JairPaulaSantosFC2024.png
+- `en-nottingham-forest__james-mcatee.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:James_McAtee_22122025_(1).jpg
+- `en-nottingham-forest__luca-netz.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2022128171658_2022-05-08_Fussball_Eintracht_Frankfurt_vs_Borussia_M%C3%B6nchengladbach_-_Sven_-_1D_X_MK_II_-_0441_-_AK8I7176.jpg
+- `en-nottingham-forest__matz-sels.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matz_Sels_USMNT_v_Belgium_Mar_28_2026-12_(cropped).jpg
+- `en-nottingham-forest__daniel-munoz.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Daniel_Mu%C3%B1oz,_Colombia_NT_presidential_send-off,_Jun_2026.jpg
+- `en-nottingham-forest__nikola-milenkovic.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nottingham_Forest_Players_22122025_(1).jpg
+- `en-nottingham-forest__steven-benda.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_Goalkeepers_training_Steven_Benda.jpg
+- `ec-imbabura__edisson-recalde.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Edisson_Recalde_Imbabura_SC_2015.jpg
+- `en-nottingham-forest__ola-aina.jpg` — Dynamomania.com — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%AE%D0%BD%D0%BE%D1%88%D0%B5%D1%81%D0%BA%D0%B0%D1%8F_%D0%BB%D0%B8%D0%B3%D0%B0_%D0%A3%D0%95%D0%A4%D0%90._%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%A7%D0%B5%D0%BB%D1%81%D0%B8%C2%BB_0-2._20_%D0%BE%D0%BA%D1%82%D1%8F%D0%B1%D1%80%D1%8F_2015_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_643952.jpg
+- `en-nottingham-forest__nicolo-savona.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%B2_Savona_and_Neco_Williams_22122025_(1).jpg
+- `en-sunderland__kevin-danso.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Thomas_Bramall,_Kevin_Danso_and_Robin_Roefs_05092026_(1).jpg
+- `en-sunderland__daniel-ballard.jpg` — Biser Todorov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Daniel_Ballard.jpg
+- `ec-independiente-del-valle__jhon-espinoza.jpg` — Asamblea Nacional  del Ecuador from QUito, Ecuador — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SESI%C3%93N_NO._603_DEL_PLENO_DE_LA_ASAMBLEA_NACIONAL._QUITO,_25_DE_JUNIO_2019._(48129425138).jpg
+- `en-sunderland__dayann-methalie.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Dayann_Methalie_05092026_(3).jpg
+- `en-sunderland__chemsdine-talbi.jpg` — Abdelali Bentarki — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Chemsdine_Talbi_warming_up_with_Morocco_(cropped).jpg
+- `en-sunderland__alan-browne.jpg` — Preston North End F.C. — CC0 — https://commons.wikimedia.org/wiki/File:Alan_Browne.jpg
+- `en-sunderland__brian-brobbey.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sunderland_Players_05092026_(3).jpg
+- `en-sunderland__nilson-angulo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nilson_Angulo_Cote_D%27Ivoire_v_Ecuador_14_June_2026-32.jpg
+- `en-sunderland__chris-rigg.jpg` — Loaf 1212 — CC0 — https://commons.wikimedia.org/wiki/File:Chrisriggsafcplayerawards.jpg
+- `ec-independiente-del-valle__jordy-alcivar.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jordy_Alcivar_Cote_D%27Ivoire_v_Ecuador_14_June_2026-10_(cropped).jpg
+- `en-sunderland__thomas-meunier.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Thomas_Meunier_05092026_(7).jpg
+- `en-sunderland__luke-o-nien.jpg` — user:Skippo10 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:O%27Nien,_Luke.jpg
+- `en-sunderland__omar-alderete.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Omar_Alderete_05092026_(6).jpg
+- `ec-independiente-del-valle__patrik-mercado.jpg` — Juanthemagic — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Patrik_mercado.png
+- `en-sunderland__reinildo.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sunderland_Players_05092026_(3).jpg
+- `en-sunderland__wilson-isidor.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Wilson_Isidor_and_Rico_Henry_05092026_(1).jpg
+- `ec-independiente-del-valle__junior-sornoza.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:INDEPENDIENTE_DEL_VALLE_VENCE_A_BOCA_JUNIORS_(8).jpg
+- `en-sunderland__habib-diarra.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aurelien_Tchouameni_France_v_Senegal_16_June_2026-477.jpg
+- `en-sunderland__nordi-mukiele.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Nordi_Mukiele_and_Kevin_Schade_05092026_(1).jpg
+- `en-sunderland__robin-roefs.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Robin_Roefs_05092026_(1).jpg
+- `en-sunderland__noah-sadiki.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sunderland_Players_waiting_05092026_(1).jpg
+- `en-sunderland__enzo-le-fee.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:VAR_Announcement_05092026_(3).jpg
+- `en-sunderland__melker-ellborg.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Melker_Ellborg_05092026_(1).jpg
+- `en-sunderland__trai-hume.jpg` — Loaf 1212 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Traihumesafcawards.jpg
+- `en-sunderland__granit-xhaka.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Mikkel_Damsgaard_and_Granit_Xhaka_05092026_(1).jpg
+- `en-sunderland__malick-fofana.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Fofana_asse_ol_2425.png
+- `en-sunderland__aji-alese.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aji_Alese.jpeg
+- `en-sunderland__abdoullah-ba.jpg` — Benoit-caen — CC0 — https://commons.wikimedia.org/wiki/File:Joueurs_du_Stade_Malherbe_Caen_apr%C3%A8s_la_d%C3%A9faite_contre_Dunkerque.jpg
+- `en-tottenham__andy-robertson.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Scotland_v_Bolivia_6_June_2026-12.jpg
+- `en-tottenham__tosin-adarabioyo.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:Tosin_Adarabioyo_FIFA_Club_World_Cup_extraction.jpg
+- `en-tottenham__marcos-senesi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marcos_Senesi_Argentina_v_Spain_19_July_2026-266.jpg
+- `en-tottenham__jan-paul-van-hecke.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `en-tottenham__xavi-simons.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2023-10-04_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League,_RB_Leipzig_-_Manchester_City_FC_IMG_6179.jpg
+- `en-tottenham__conor-gallagher.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File:PSG_attacking_vs_Atletico_Madrid_Club_World_Cup.jpg
+- `en-tottenham__richarlison.jpg` — Minerva97 — Public domain — https://commons.wikimedia.org/wiki/File:Aut%C3%B3grafo_de_Richarlison.png
+- `en-tottenham__james-maddison.jpg` — Hmickey — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:National_Football_Museum_displays_4_(cropped_-_Maddison).jpg
+- `en-tottenham__mathys-tel.jpg` — MFonzatti — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FRA-SRB_2025_016.jpg
+- `en-tottenham__destiny-udogie.jpg` — MichaelEmilio — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Norway_Italy_-_June_2025_D_27.jpg
+- `en-tottenham__archie-gray.jpg` — Jim Easton — CC0 — https://commons.wikimedia.org/wiki/File:Rangers_v_Tottenham_Hotspur_-_54202663229_(Archie_Gray).jpg
+- `en-tottenham__lucas-bergvall.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gustaf_LAGERBIELKE_-2,_Lucas_BERGVALL_-7,_Bradley_BARCOLA_-12_France_v_Sweden_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `en-tottenham__sandro-tonali.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Sandro_Tonali_24052026_(1).jpg
+- `en-tottenham__mateus-fernandes.jpg` — Cunha, Neves — Public domain — https://commons.wikimedia.org/wiki/File:Mateus_Fernandes_(cropped).png
+- `en-tottenham__dominic-solanke.jpg` — Amy Martin Photography — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dominic_Solanke_at_Avatar_fire_and_ash_premiere_London_2025.jpg
+- `en-tottenham__mohammed-kudus.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:West_Ham_United_players_14092024_(4).jpg
+- `en-tottenham__dejan-kulusevski.jpg` — Original:  Rolandhino1 / Derivative work:  Danyele — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sweden-Slovenia_Nations_League_2022-09-27_17_Kulusevski_(cropped).jpg
+- `en-tottenham__omar-marmoush.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Omar_Marmoush_Argentina_v_Egypt_7_July_2026-102.jpg
+- `en-tottenham__pedro-porro.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedro_Porro_Argentina_v_Spain_19_July_2026-177_(cropped).jpg
+- `en-tottenham__mykhailo-mudryk.jpg` — Yuliia Perekopaiko — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%A3%D0%BA%D1%80%D0%B0%D1%97%D0%BD%D0%B0_U-21_%E2%80%94_%D0%92%D1%96%D1%80%D0%BC%D0%B5%D0%BD%D1%96%D1%8F_U-21_(2-1)._7_%D0%B2%D0%B5%D1%80%D0%B5%D1%81%D0%BD%D1%8F_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1268673.jpg
+- `ec-independiente-del-valle__juan-cazares.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:ECUADOR_VS_PERU_-_RUSIA_2018_(36882672982)_-_Juan_Cazares.jpg
+- `en-tottenham__wilson-odobert.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_vs_Burnley_on_23_December_2023_(3).jpg
+- `ec-independiente-del-valle__jhegson-mendez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SELECCI%C3%93N_ECUATORIANA_DE_F%C3%9ATBOL_SUB_20_(32041003952)_(cropped).jpg
+- `en-tottenham__rodrigo-bentancur.jpg` — Micaela Ayala para Agencia Andes — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Rodrigo_Bentancur.jpg
+- `en-tottenham__antonin-kinsky.jpg` — Amarhgil — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Anton%C3%ADn_Kinsk%C3%BD_3239.jpg
+- `en-tottenham__micky-van-de-ven.jpg` — KrispyKrumpets — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Micky_Van_De_Ven_pre-match_training_(cropped).jpg
+- `en-tottenham__martin-dubravka.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Dango_Ouattara%27s_goal_29112025_(2).jpg
+- `ec-ldu-quito__gonzalo-valle.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gonzalo_Valle_Cote_D%27Ivoire_v_Ecuador_14_June_2026-4.jpg
+- `en-tottenham__guglielmo-vicario.jpg` — AFC Bournemouth — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Guglielmo_Vicario.png
+- `ec-ldu-quito__richard-mina.jpg` — Asamblea Nacional  del Ecuador from QUito, Ecuador — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SESI%C3%93N_NO._603_DEL_PLENO_DE_LA_ASAMBLEA_NACIONAL,_QUITO_25_DE_JUNIO_DEL_2019_(48129534722)_(cropped).jpg
+- `en-tottenham__kota-takai.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Japanese_pre-match_preparations_-_Japan_vs._Spain,_2024_Summer_Olympic_men%27s_association_football,_2024-08-02.jpg
+- `ec-ldu-quito__sebastian-gonzalez.jpg` — Carlos Figueroa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Universidad_de_Chile_-_Colo-Colo,_2018-04-15_-_Sebasti%C3%A1n_Gonz%C3%A1lez_-_03.jpg
+- `ec-ldu-quito__jesus-pretell.jpg` — Chalisimo5 — CC0 — https://commons.wikimedia.org/wiki/File:Jesus_Pretell.jpg
+- `ec-ldu-quito__michael-estrada.jpg` — حسین ظهروند — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2022_FIFA_World_Cup_Qatar_0%E2%80%932_Ecuador_-_(11).jpg
+- `ec-ldu-quito__jose-quintero.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jos%C3%A9_Quintero_2016.JPG
+- `ec-ldu-quito__gabriel-villamil.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gabriel_Villamil_Scotland_v_Bolivia_6_June_2026-49.jpg
+- `ec-ldu-quito__deyverson.jpg` — TV Alviverde — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Deyverson-2022_(cropped).png
+- `ec-ldu-quito__fernando-cornejo.jpg` — Andre el gigante — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FernandoCornejoM.png
+- `en-tottenham__pape-matar-sarr.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pape_Matar_Sarr_France_v_Senegal_16_June_2026-230.jpg
+- `en-tottenham__kevin-danso.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Thomas_Bramall,_Kevin_Danso_and_Robin_Roefs_05092026_(1).jpg
+- `en-tottenham__radu-dragusin.jpg` — Original:  Antonio Fraioli / Derivative work:  8Dodo8 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Radu_Dragusin_-_Frosinone_vs_Genoa_14_May_2023.jpg
+- `es-alaves__denis-suarez.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:RS_-_VCF_DSC02215_(23527281519)_(cropped).jpg
+- `es-alaves__ander-guevara.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:DSC_2461_(51299266453).jpg
+- `es-alaves__angel-perez.jpg` — MagoangelESP — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%C3%81ngel_P%C3%A9rez_Garc%C3%ADa.jpg
+- `es-alaves__antonio-blanco.jpg` — Diario La Capital — Public domain — https://commons.wikimedia.org/wiki/File:RC_1922.JPG
+- `es-alaves__mariano-diaz.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:2023_05_06_Final_de_la_Copa_del_Rey_-_52879242230.jpg
+- `es-alaves__carles-alena.jpg` — Olga Shcherbytska — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%91%D0%B0%D1%80%D1%81%D0%B5%D0%BB%D0%BE%D0%BD%D0%B0%C2%BB_0-4._24_%D0%BD%D0%BE%D1%8F%D0%B1%D1%80%D1%8F_2020_%D0%B3%D0%BE%D0%B4%D0%B0_%E2%80%94_1166858_(Carles_Ale%C3%B1%C3%A1).jpg
+- `es-alaves__toni-martinez.jpg` — Tam Tam from Shizuoka, JAPAN — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Toni_Martinez_2015_SBS_Cup_(cropped).jpg
+- `es-alaves__hugo-novoa.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2022-07-30_Fu%C3%9Fball,_M%C3%A4nner,_DFL-Supercup,_RB_Leipzig_-_FC_Bayern_M%C3%BCnchen_1DX_3362_by_Stepro.jpg
+- `ec-ldu-quito__alexander-dominguez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Ecuador_tren2015_(3).jpg
+- `ec-ldu-quito__luis-segovia.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:ECUADOR_vs_VENEZUELA_SUDAMERICANO_SUB_20_(32298524760).jpg
+- `ec-ldu-quito__marcelo-weigandt.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marcelo_Weigandt_NYCFC_Miami_24_Sep_2025-004.jpg
+- `ec-ldu-quito__kevin-minda.jpg` — Diario El Comercio — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Kevin_Minda-Liga_Deportiva_Universitaria_2018.jpg
+- `ec-libertad__carlos-gruezo.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:ECUADOR-HONDURAS_(21261756845)_(cropped).jpg
+- `ec-libertad__gabriel-cortez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:IDV_vs_MUNICIPAL_(32408060842)_(cropped).jpg
+- `ec-libertad__elvis-patta.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:ELVIS_PATTA.jpg
+- `es-alaves__lucas-boye.jpg` — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Argentina_national_football_team_-_2_-_2022_(Lucas_Boy%C3%A9).jpg
+- `es-alaves__ville-koski.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:UEFA_Euro_2023_Qualifiers_Austria_vs._Finland_(2022-06-03)_69_(cropped).jpg
+- `es-alaves__pablo-ibanez.jpg` — Елена Рыбакова — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Pablo_Ib%C3%A1%C3%B1ez.jpg
+- `es-alaves__abde-rebbach.jpg` — Alberto Cabello Mayero — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jugadores_del_Deportivo_Alav%C3%A9s_celebrando_el_ascenso_a_Primera_Divisi%C3%B3n.jpg
+- `es-alaves__miguel-rodriguez.jpg` — FCUFAN — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Utrecht_v_Ajax_Apr_2025_Rodr%C3%ADguez_63.jpg
+- `es-athletic-bilbao__unai-simon.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Unai_Simon_Argentina_v_Spain_19_July_2026-078_(cropped).jpg
+- `ec-macara__jose-luis-cazares.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:JOSE_LUIS_CAZARES_(25120019950).jpg
+- `ec-macara__luca-ferro.jpg` — Fundriver — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luca_Ferro.JPG
+- `ec-manta-fc__robert-burbano.jpg` — Medios Públicos EP — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Emelec-Flamengo_-_Ren%C3%AA_dando_um_carrinho.jpg
+- `ec-manta-fc__jose-enrique-angulo.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:INDEPENDIENTE_DEL_VALLE_VENCE_A_BOCA_JUNIORS_(4).jpg
+- `es-athletic-bilbao__aitor-paredes.jpg` — Montxohache — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:AitorParedes2022.jpg
+- `ec-mushuc-runa__carlos-orejuela.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Orejuela_Qui%C3%B1%C3%B3nez_en_2015.JPG
+- `es-athletic-bilbao__yeray-alvarez.jpg` — Дмитрий Садовников — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:SM-AB_2018_(15).jpg
+- `es-athletic-bilbao__benat-prados.jpg` — Montxohache — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BenarPrados2022.jpg
+- `es-athletic-bilbao__oihan-sancet.jpg` — Maider Goikoetxea — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:OSASUNA-ATHLETIC_SEMIFINALES._MAIDER_GOIKOETXEA_H_(36)_(1).jpg
+- `es-athletic-bilbao__inaki-williams.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Inaki_Williams_19,_Jude_Bellingham_10_England_v_Ghana_at_2026_Fifa_World_Cup_by_YantsImages_01.jpg
+- `es-athletic-bilbao__nico-williams.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-athletic-bilbao__aymeric-laporte.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Cristiano_Ronaldo_with_Al_Nassr,_19_September_2023_-_29.jpg
+- `es-athletic-bilbao__inigo-ruiz-de-galarreta.jpg` — Cristina Cifuentes — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:I%C3%B1igo_Ruiz_de_Galarreta_(cropped).jpg
+- `es-athletic-bilbao__yuri-berchiche.jpg` — Frédéric  Kessas — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Toulouse_IMG_9997_(26391101568).jpg
+- `es-athletic-bilbao__mikel-jauregizar.jpg` — Maider Goikoetxea Hidalgo — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Mikel_Jauregizar._Athletic_-_Racing._Foto_Maider_Goikoetxea_(53909642167).jpg
+- `es-athletic-bilbao__maroan-sannadi.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Maroan_Sannadi_(cropped).jpg
+- `es-athletic-bilbao__nico-serrano.jpg` — Montxohache — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NicoSerrano2022.jpg
+- `es-athletic-bilbao__robert-navarro.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Navarro_RSO.jpg
+- `ec-orense__angel-mena.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Ecu_tren_(3)_(cropped).jpg
+- `es-athletic-bilbao__benat-gerenabarrena.jpg` — Montxohache — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:BenatGerenabarrena2022_1.jpg
+- `es-athletic-bilbao__alvaro-djalo.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Alvaro_Djalo_1.jpg
+- `ec-orense__renny-jaramillo.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SELECCI%C3%93N_ECUATORIANA_DE_F%C3%9ATBOL_SUB_20_(32040997152).jpg
+- `ec-orense__pedro-velasco.jpg` — Asamblea Nacional  del Ecuador from Quito, Ecuador — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:SESI%C3%93N_913_DEL_PLENO_DE_LA_ASAMBLEA_NACIONAL._ECUADOR,_19_DE_MARZO_DE_2024_(53598465434).jpg
+- `ec-tecnico-universitario__luis-estupinan.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Uni%C3%B3n_Espa%C3%B1ola_-_Mushuc_Runa_20190320_16.jpg
+- `ec-tecnico-universitario__ayrton-morales.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Ayrton_Morales.jpg
+- `ec-tecnico-universitario__jose-caicedo.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jos%C3%A9_Caicedo_en_Delf%C3%ADn_Sporting_Club.JPG
+- `es-atletico-de-madrid__juan-musso.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Musso_Argentina_v_Spain_19_July_2026-261.jpg
+- `ec-tecnico-universitario__kener-arce.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Kener_Arce.jpg
+- `es-atletico-de-madrid__johnny-cardoso.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Johnny_Cardoso_USMNT_v_Belgium_Mar_28_2026-115_(cropped).jpg
+- `ec-universidad-catolica__jhon-chancellor.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_Zack_Steffen_(51169587152).jpg
+- `es-atletico-de-madrid__koke.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_vs._Atletico_Madrid_(2025-01-29_UEFA_Championsleague)_55.jpg
+- `ec-universidad-catolica__jeronimo-cacciabue.jpg` — Frodar — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jer%C3%B3nimo_Cacciabue.jpg
+- `es-atletico-de-madrid__lee-kang-in.jpg` — Chabe01 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Match_Football_Paris_SG_x_AS_Saint_%C3%89tienne_Stade_Parc_Princes_-_Paris_XVI_(FR75)_-_2025-01-12_-_49.jpg
+- `ec-universidad-catolica__diego-palacios.jpg` — FC Karpaty Lviv — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:%D0%94%D1%96%D1%94%D0%B3%D0%BE_%D0%9F%D0%B0%D0%BB%D0%B0%D1%81%D1%96%D0%BE%D1%81_%E2%80%94_%D0%A4%D0%9A_%D0%9A%D0%B0%D1%80%D0%BF%D0%B0%D1%82%D0%B8_%D0%9B%D1%8C%D0%B2%D1%96%D0%B2_(2025)_full_image.png
+- `es-atletico-de-madrid__pablo-barrios.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Spanish_pre-match_preparations_-_Japan_vs._Spain,_2024_Summer_Olympic_men%27s_association_football,_2024-08-02.jpg
+- `ec-universidad-catolica__jose-fajardo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jose_Fajardo_England_v_Panama_27_June_26-010.jpg
+- `ec-universidad-catolica__azarias-londono.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Azarias_Londono_England_v_Panama_27_June_26-175.jpg
+- `es-atletico-de-madrid__alexander-s-rloth.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alexander_Sorloth_France_v_Norway_26_June_26-048.jpg
+- `ec-universidad-catolica__facundo-martinez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:FACUNDO_MART%C3%8DNEZ.jpg
+- `es-atletico-de-madrid__alex-baena.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-atletico-de-madrid__ademola-lookman.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2019-10-23_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League,_RB_Leipzig_-_FC_Zenit_St._Petersburg_1DX_2642_by_Stepro.jpg
+- `es-atletico-de-madrid__jan-oblak.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File:PSG_attacking_vs_Atletico_Madrid_Club_World_Cup.jpg
+- `es-atletico-de-madrid__marcos-llorente.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Yeremy_Pino_Argentina_v_Spain_19_July_2026-317.jpg
+- `es-atletico-de-madrid__jonathan-david.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jonathan_David_Pedro_Miguel_Canada_v_Qatar_18_June_2026-160.jpg
+- `ec-universidad-catolica__rafael-romo.jpg` — Hayden Schiff from Cincinnati, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:USAvVEN_2019-06-09_-_Rafael_Romo_(51171123994).jpg
+- `es-atletico-de-madrid__david-hancko.jpg` — Hainotdeptrai — CC0 — https://commons.wikimedia.org/wiki/File:MCI_VS_FER_2024_(3)_(Antoni_Milambo).jpg
+- `es-atletico-de-madrid__marc-pubill.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-atletico-de-madrid__julian-alvarez.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260719DT-0633_President_Donald_J._Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_World_Cup_Final.jpg
+- `es-atletico-de-madrid__giuliano-simeone.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Giuliano_Simeone_Argentina_v_Spain_19_July_2026-268.jpg
+- `es-atletico-de-madrid__cristian-romero.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260719DT-0633_President_Donald_J._Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_World_Cup_Final.jpg
+- `es-atletico-de-madrid__morten-hjulmand.jpg` — Splinter1333 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:MortenHjulmandSporting24.jpg
+- `es-atletico-de-madrid__robin-le-normand.jpg` — Biso — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Spain_football_team_in_2025.jpg
+- `es-barcelona__joan-garcia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-barcelona__joao-cancelo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joao_Cancelo_Mateo_Kovacic_Croatia_v_Portugal_2_July_2026-180.jpg
+- `es-barcelona__alejandro-balde.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:2025_04_26_Final_de_la_Copa_del_Rey_(cropped).jpg
+- `es-barcelona__pau-cubarsi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pau_Cubarsi_Argentina_v_Spain_19_July_2026-181_(cropped).jpg
+- `ec-universidad-catolica__mauricio-alonso.jpg` — Panini — Public domain — https://commons.wikimedia.org/wiki/File:Pipo_Rodr%C3%ADguez.jpg
+- `ec-universidad-catolica__luis-canga.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Luis_David_Cang%C3%A1_S%C3%A1nchez.jpg
+- `es-barcelona__fermin-lopez.jpg` — Biso — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Ferm%C3%ADn_L%C3%B3pez_(cropped).jpg
+- `uy-boston-river__andres-romero.jpg` — Joe Nuxoll from San Jose, CA, USA — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:2013_Impact_de_Montr%C3%A9al_blanc.jpg
+- `es-barcelona__pedri.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-barcelona__gabriel-jesus.jpg` — Granada — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:20180610_FIFA_Friendly_Match_Austria_vs._Brazil_Gabriel_Jesus_850_1688.jpg
+- `es-barcelona__lamine-yamal.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lamine_Yamal_Argentina_v_Spain_19_July_2026-214_(cropped).jpg
+- `es-barcelona__raphinha.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `es-barcelona__wojciech-szczesny.jpg` — Original:  Ronnie Macdonald / Derivative work:  Danyele — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Wojciech_Szcz%C4%99sny_2013_(edited).jpg
+- `es-barcelona__karim-adeyemi.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_RB_Salzburg_gegen_SK_Sturm_Graz_(2022-03-13)_56_(cropped).jpg
+- `uy-boston-river__gaston-ramirez.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_quattro-Cup_48.JPG
+- `es-barcelona__andreas-christensen.jpg` — Press Service of the President of the Republic of Azerbaijan — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Chelsea_won_UEFA_Europa_League_final_at_Olympic_Stadium_and_President_Ilham_Aliyev_watched_the_final_match_24.JPG
+- `uy-boston-river__felipe-avenatti.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_gole%C3%B3_4-0_a_The_Strongest_-_240814-6411-jikatu_(Avenatti).jpg
+- `es-barcelona__anthony-gordon.jpg` — VictorInLA — CC0 — https://commons.wikimedia.org/wiki/File:PENALTYAGAINGSTMEXICO.png
+- `es-barcelona__roony-bardghji.jpg` — Thomas Dahlstrøm Nielsen — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vejle_Boldklub_-_FC_K%C3%B8benhavn,_29._July_2023_-_opvarmning.jpg
+- `es-barcelona__dani-olmo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Dani_Olmo_France_v_Spain_7.24.26-217.jpg
+- `es-barcelona__frenkie-de-jong.jpg` — elisfkc3 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Netherlands_v_Tunisia_2026_World_Cup_-_55374906960.jpg
+- `es-barcelona__marc-bernal.jpg` — Unknown authorUnknown author — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Marc_Bernal_(2025).png
+- `es-barcelona__jules-kounde.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Pedri_Jules_Kounde_Aurelien_Tchouameni_France_v_Spain_7.24.26-234.jpg
+- `uy-cerro-largo__matias-fracchia.jpg` — Rancaguacl — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matias_Fracchia.jpg
+- `es-barcelona__eric-garcia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-barcelona__dominik-livakovic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luka_Modric_Dominik_Livakovic_Croatia_v_Portugal_2_July_2026-054.jpg
+- `es-barcelona__hamza-abdelkarim.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hamza_Abdelkarim_Argentina_v_Egypt_7_July_2026-005.jpg
+- `es-celta-de-vigo__altay-bay-nd-r.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Altay_Bay%C4%B1nd%C4%B1r_(2021-22_S%C3%BCper_Lig)_-_Resim2.png
+- `es-celta-de-vigo__carl-starfelt.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:2023.07.19_Yokohama_F._Marinos_-_Celtic_Glasgow_(6-4)_-_53062949186.jpg
+- `es-celta-de-vigo__marcos-alonso.jpg` — Press Service of the President of the Republic of Azerbaijan — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Chelsea_won_UEFA_Europa_League_final_at_Olympic_Stadium_and_President_Ilham_Aliyev_watched_the_final_match_24.JPG
+- `es-celta-de-vigo__abdoulaye-faye.jpg` — Frazerscfc — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:AbdoulayeFaye25.JPG
+- `es-celta-de-vigo__ilaix-moriba.jpg` — Mamadou Saliou Barry - Fédération Guinéenne de football — Public domain — https://commons.wikimedia.org/wiki/File:Ilaixmoriba_(cropped).jpg
+- `es-celta-de-vigo__borja-iglesias.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Spain_World_Cup_Winners_Argentina_v_Spain_19_July_2026-1_(cropped).jpg
+- `es-celta-de-vigo__ferran-jutgla.jpg` — Haggis MacHaggis — CC0 — https://commons.wikimedia.org/wiki/File:Bekerfinale_Club_Brugge_-_Anderlecht_2024-25_002.jpg
+- `es-celta-de-vigo__iago-aspas.jpg` — Mohammadreza Abbasi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Iran_v_Spain_9_(Mehr,_2018).jpg
+- `uy-cerro__brahian-aleman.jpg` — Rauldvs1224 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brahian_Aleman_LDU.jpg
+- `uy-cerro__damian-suarez.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:URUGUAY_5_%E2%80%93_PANAM%C3%81_0_-_220611-7279-jikatu.jpg
+- `es-celta-de-vigo__ionut-radu.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Ionu%C8%9B_Radu_2023.jpg
+- `es-celta-de-vigo__hugo-gonzalez.jpg` — JoseQ123 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hugo_Gonz%C3%A1lez_Con_Monterrey.jpg
+- `uy-danubio__mauro-goicoechea.jpg` — Gaillac — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mauro_Goicoechea_2019_Tolosa.jpg
+- `es-celta-de-vigo__williot-swedberg.jpg` — User:Rolandhino1 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cropped,_Williot_Swedberg,_Hammarby_IF_-_Brage_2021-02-07_30.jpg
+- `es-celta-de-vigo__javi-rodriguez.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gran_Pe%C3%B1a_-_R%C3%A1pido_de_Bouzas,_no_Estadio_Municipal_de_Barreiro_91.jpg
+- `uy-danubio__emiliano-velazquez.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Vel%C3%A1zquez_-_S%C3%89RIE_A_-_CORINTHIANS_0_X_0_SANTOS_FC_-_52172221187_(cropped).jpg
+- `es-celta-de-vigo__sebastian-caceres.jpg` — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Sebasti%C3%A1n_C%C3%A1ceres.jpg
+- `es-celta-de-vigo__couhaib-driouech.jpg` — Hans Reefman — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Couhaib_driouech-1772637324_(cropped).JPG
+- `uy-danubio__joaquin-pereyra.jpg` — Carlos Figueroa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Colo_Colo_-_San_Luis,_2018-08-12_-_Joaqu%C3%ADn_Pereyra_-_01.jpg
+- `es-celta-de-vigo__ivan-villar.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Partido_Galicia_-_Panam%C3%A1_en_Bala%C3%ADdos_71.jpg
+- `uy-danubio__leandro-sosa.jpg` — GORE Callao from Callao — Public domain — https://commons.wikimedia.org/wiki/File:Leandro_Sosa_en_2023.jpg
+- `es-deportivo-la-coruna__dani-barcia.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Deportivo_da_Coru%C3%B1a_-_CD_Castell%C3%B3n,_ida_da_final_da_Primeira_RFEF_2023-24_-_32_(Dani_Barcia).jpg
+- `es-deportivo-la-coruna__marc-casado.jpg` — Government of Catalonia — Attribution — https://commons.wikimedia.org/wiki/File:Marc_Casad%C3%B3,_durant_la_gira_de_pretemporada_a_EUA._(05-08-2024)_(cropped).jpg
+- `es-deportivo-la-coruna__diego-villares.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Partido_Galicia_-_Panam%C3%A1_en_Bala%C3%ADdos_13_(cropped).jpg
+- `es-deportivo-la-coruna__zakaria-eddahchouri.jpg` — Michael Tjon En Fa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Zakaria_Eddahchouri.jpg
+- `es-deportivo-la-coruna__david-mella.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Deportivo_da_Coru%C3%B1a_-_CD_Castell%C3%B3n,_ida_da_final_da_Primeira_RFEF_2023-24_-_9.jpg
+- `es-deportivo-la-coruna__giacomo-quagliata.jpg` — Frank Oortwijn — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Giacomo_quagliata-1648882110.jpg
+- `uy-danubio__camilo-mayada.jpg` — https://www.flickr.com/photos/agenciaandes_ec/with/40859860034/ — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Emelec_0_River_1_(Camilo_Mayada).jpg
+- `uy-danubio__sebastian-fernandez.jpg` — Fedebolso — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nacional_vs_Boca_Juniors,_Libertadores_2016_100.JPG
+- `es-deportivo-la-coruna__miguel-loureiro.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Partido_Galicia_-_Panam%C3%A1_en_Bala%C3%ADdos_117.jpg
+- `es-deportivo-la-coruna__lorenzo-amatucci.jpg` — Equipos de fútbol — CC0 — https://commons.wikimedia.org/wiki/File:Las_Palmas_2026_06_10_M%C3%A1laga_CF.jpg
+- `es-deportivo-la-coruna__angelino.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2022-07-21_Fu%C3%9Fball,_M%C3%A4nner,Freundschaftsspiel,_RB_Leipzig_-_FC_Liverpool_1DX_2187_by_Stepro.jpg
+- `es-deportivo-la-coruna__jonathan-asp-jensen.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Red_Bull_Salzburg_gegen_Bayern_M%C3%BCnchen_(2025-01-06_Testspiel)_114.jpg
+- `es-deportivo-la-coruna__luismi-cruz.jpg` — Magno2002 — CC0 — https://commons.wikimedia.org/wiki/File:Luismicruz.jpg
+- `es-deportivo-la-coruna__jose-maria-gimenez.jpg` — Cabeza2000 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Estadio_Metropolitano_-_Atl%C3%A9tico_de_Madrid_-_Vestuario_local_-_Septiembre_2022.jpg
+- `es-deportivo-la-coruna__mario-soriano.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_gegen_Atletico_Madrid_(Testspiel_28._Juli_2021)_40.jpg
+- `es-deportivo-la-coruna__adama-traore.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Adama_Traor%C3%A9_22122025_(1).jpg
+- `uy-defensor-sporting__kevin-dawson.jpg` — Hoofy — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Kevin_Dawson.jpg
+- `es-deportivo-la-coruna__alvaro-fernandez.jpg` — Noelle Noble — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Sounders_vs_Galaxy_2011.jpg
+- `uy-defensor-sporting__brian-montenegro.jpg` — Egghead06 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:BrianMontenegro.jpg
+- `es-elche__matias-dituro.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553.jpg
+- `es-elche__bambo-diaby.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_Bambo_Diaby.jpg
+- `es-elche__federico-redondo.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553.jpg
+- `uy-defensor-sporting__facundo-castro.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Formaci%C3%B3n_O%27Higgins_Universidad_de_Chile_v_O%27Higgins_20230807_01.jpg
+- `uy-juventud__sebastian-sosa.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:URUGUAY_5_%E2%80%93_PANAM%C3%81_0_-_220611-7113-jikatu.jpg
+- `uy-juventud__martin-caceres.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_4_-_Bolivia_2_-_Camino_a_Rusia!_-_171011-0325-jikatu_(37597143392).jpg
+- `es-elche__ezequiel-ponce.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Houston_Dynamo_vs_Minnesota_United_(May_2025)_25.jpg
+- `uy-juventud__nicolas-rossi.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_0-1_Benfica_-_Final_Intercontinental_Sub_20_-_220821-3212-jikatu.jpg
+- `es-elche__martim-neto.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Next_Generation_Trophy_2018_-Erster_Tag_05.jpg
+- `uy-juventud__mauricio-rodriguez.jpg` — Panini — Public domain — https://commons.wikimedia.org/wiki/File:Pipo_Rodr%C3%ADguez.jpg
+- `es-elche__grady-diangana.jpg` — --Steindy (talk) 16:19, 29 August 2019 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Hertha_BSC_vs._West_Ham_United_20190731_(198).jpg
+- `es-elche__lucas-cepeda.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lucas_Cepeda_Copiap%C3%B3_v_Colo-Colo_20241110_11.jpg
+- `es-elche__victor-chust.jpg` — Pedro  Semitiel from Cehegín, España — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Espana-escocia-sub19-75_(40133191843).jpg
+- `es-elche__ali-houary.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_Ali_Houary.jpg
+- `es-elche__adam-boayar.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_Adam_Boayar.jpg
+- `es-elche__kevin-lomonaco.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:S%C3%A9rie_A1_Bragantino_1x0_Corinthians_(52633090128).jpg
+- `uy-juventud__rodrigo-chagas.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4425-jikatu_(52989759954)_(Rodrigo_Chagas).jpg
+- `uy-juventud__juan-boselli.jpg` — Dmitry Burdonov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Juan_Boselli.jpg
+- `es-elche__thomas-lemar.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Thomas_Lemar.jpg
+- `es-elche__axel-werner.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Loko-AM2018_tren_(9).jpg
+- `es-elche__john-chetauya.jpg` — Gobierno de Castilla-La Mancha — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2025-12-03_-_Copa_del_Rey_de_f%C3%BAtbol,_C.D._Quintanar_del_Rey_contra_el_Elche_C.F_-_54962303553_(cropped)_John_Chetauya_Donald.jpg
+- `es-espanyol__andoni-gorosabel.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Gorosabel.jpg
+- `es-espanyol__quilindschy-hartman.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Quilindschy_Hartman_21032026_(5).jpg
+- `es-espanyol__clemens-riedel.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:ClemensRiedel.jpg
+- `es-espanyol__leandro-cabrera.jpg` — jamesboyes — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Leandro_Cabrera_2022.jpg
+- `es-espanyol__marko-dmitrovic.jpg` — Voltmetro — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:FWC_2018_-_Group_E_-_SRB_v_BRA_-_Photo_108.jpg
+- `es-espanyol__vanja-drkusic.jpg` — Vanja Drkušić — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Vanja_Drku%C5%A1i%C4%87_in_2025.jpg
+- `es-espanyol__gabriel-moscardo.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Moscardo_asse_sr_2425.png
+- `es-espanyol__omar-el-hilali.jpg` — jamesboyes — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:BHA_5_v_Espanyol_1_pre_season_30_07_2022_92.jpg
+- `es-espanyol__tyrhys-dolan.jpg` — Kane Brooker — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Tyrhys_Dolan_October_2017_(cropped).jpg
+- `uy-liverpool-fc__martin-campana.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Urug_tren_(4)_-_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F.jpg
+- `es-espanyol__javi-hernandez.jpg` — Tadeáš Bednarz — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Javi_Hern%C3%A1ndez,_friendly_match_MFK_Karvin%C3%A1-Cracovia_in_D%C4%9Btmarovice_02.jpg
+- `es-getafe__saba-sazonov.jpg` — Екатерина Лаут — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Saba_Sazonov_2022_(cropped).jpg
+- `es-getafe__abdel-abqar.jpg` — Wikimedia Morocco — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mohammed_VI_Football_Academy_(1)_-_Terrain_Abqar.jpg
+- `uy-miramar-misiones__gaston-ramirez.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Audi_quattro-Cup_48.JPG
+- `br-bahia__jean-lucas.jpg` — Imagem: MARCIO ROBERTO/ESTADÃO — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Jean_Lucas_comemora_gol_marcado_pelo_Bahia.jpg
+- `es-getafe__juanmi.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Betiscoparey2022.jpg
+- `br-bahia__erick-pulga.jpg` — Raphael Henrique — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Erick_pulga_jogando_pelo_Bahia.jpg
+- `es-getafe__nemanja-gudelj.jpg` — Vux33 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Utakmica_izme%C4%91u_Crne_Gore_i_Srbije_37.jpg
+- `es-getafe__borja-mayoral.jpg` — All-Pro Reels from District of Columbia, USA — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Icc-42_30004773878_o_(50121545312).jpg
+- `es-getafe__david-soria.jpg` — Soccer.ru — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:David_Soria.jpg
+- `es-getafe__sebastian-boselli.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4425-jikatu_(52989759954)_(cropped).jpg
+- `es-getafe__kiko-femenia.jpg` — Castroquini-FCB — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Kiko_Femen%C3%ADa_at_FC_Barcelona_B.jpg
+- `es-getafe__enes-unal.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Justin_Kluivert,_Enes_%C3%9Cnal_and_Adam_Smith_09052026_(1).jpg
+- `es-getafe__johan-mojica.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Colombia_NT_presidential_send-off_for_World_Cup,_Jun_2026_(11).jpg
+- `es-getafe__orel-mangala.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:OrelMangala.jpg
+- `uy-montevideo-city-torque__franco-torgnascioli.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Franco_Torgnascioli_Everton_v_Colo-Colo_20230806_01.jpg
+- `es-levante__pablo-campos.jpg` — Rkinnan at English Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Pablo_Campos_2011.jpg
+- `es-levante__aissa-mandi.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Mandi_asselosc_2425_(cropped).jpg
+- `uy-montevideo-city-torque__franco-romero.jpg` — Jotagolpe — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:EL10EN_ACCI%C3%93N.jpg
+- `es-levante__hugo-sotelo.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Partido_Galicia_-_Panam%C3%A1_en_Bala%C3%ADdos_109.jpg
+- `be-anderlecht__zoumana-keita.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Zoumana_Keita_RSC_Anderlecht_2026.jpg
+- `be-anderlecht__lucas-hey.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lucas_Hey_RSCA_2025.jpg
+- `be-anderlecht__giulian-biancone.jpg` — ESTAC Troyes — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Giulian_Biancone_(2021).jpg
+- `be-anderlecht__oleg-reabciuk.jpg` — Анна Мейер — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Oleg_Reabciuk_in_2025.jpg
+- `be-anderlecht__ludwig-augustinsson.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ludwig_Augustinsson_RSC_Anderlecht_2025.jpg
+- `uy-montevideo-city-torque__gonzalo-montes.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gonzalo_Montes_Uni%C3%B3n_Espa%C3%B1ola_v_Huachipato_20230812_01.jpg
+- `uy-montevideo-city-torque__gary-kagelmacher.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gary_Kagelmacher_Universidad_Cat%C3%B3lica_v_Coquimbo_Unido_20230723_02.jpg
+- `uy-montevideo-city-torque__facundo-martinez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:FACUNDO_MART%C3%8DNEZ.jpg
+- `be-anderlecht__romeo-amane.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Red_Bull_Salzburg_gegen_SK_Rapid_Wien_(2025-05-24_Bundesliga)_53.jpg
+- `be-anderlecht__mihajlo-cvetkovic.jpg` — KALMPSPAZ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Cvetkovic_1312_AnderlechtSTVV.jpg
+- `be-anderlecht__marten-winkler.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marten_Winkler_RSC_Anderlecht_2026.jpg
+- `uy-montevideo-city-torque__sebastian-caceres.jpg` — Club Santos Laguna — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Sebasti%C3%A1n_C%C3%A1ceres.jpg
+- `uy-montevideo-wanderers__geronimo-govea.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Geronimo_Govea_Scotland_v_Bolivia_6_June_2026-22_(cropped).jpg
+- `be-anderlecht__oliver-antman.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Oliver_Antman_RSC_Anderlecht_2026.jpg
+- `be-anderlecht__andrew-omobamidele.jpg` — Irish Football Fan TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Andrew_Omobamidele_2019.jpg
+- `es-levante__mathew-ryan.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mathew_Ryan_Australia_v_USA_19_June_2026-15.jpg
+- `be-anderlecht__danylo-sikan.jpg` — Football.ua — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Shaktat_2020-2021_04_(cropped).jpg
+- `be-anderlecht__lukas-ambros.jpg` — KALMPSPAZ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ambros_2026.jpg
+- `be-anderlecht__thelo-aasgaard.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Thelo_Aasgaard_Morocco_v_Norway_7_June_2026-23.jpg
+- `be-anderlecht__enric-llansana.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:GAE_-_Vitesse_-_52498793614_(Enric_Llansana).jpg
+- `be-anderlecht__colin-coosemans.jpg` — anderlecht-online.be — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Colin_Coosemans_-_RSCA_(2024)_(cropped).jpg
+- `be-anderlecht__leo-petrot.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:L%C3%A9o_P%C3%A9trot_ASSE_RCL_2425.jpg
+- `be-anderlecht__mario-stroeykens.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mario_Stroeykens_RSC_Anderlecht_2025.jpg
+- `be-anderlecht__noa-ojea.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Noa_Ojea_RSC_Anderlecht_2026.jpg
+- `be-anderlecht__killian-sardella.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Killian_Sardella_2024_Anderlecht_-_Ferencvaros.jpg
+- `be-anderlecht__marco-kana.jpg` — Eembeeck jonathan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marco_kana_-1659983599_(cropped).jpeg
+- `be-anderlecht__joshua-nga-kana.jpg` — KALMPSPAZ — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joshua_Nga_Kana_2026.jpg
+- `es-levante__axel-tape.jpg` — Like tears in rain — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Paris_Saint-Germain_-_Manchester_City_FC,_22_January_2025_(44).jpg
+- `be-anderlecht__adriano-bertaccini.jpg` — Sidney.Cortez — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Adriano_Bertaccini_RSC_Anderlecht_2025.jpg
+- `uy-montevideo-wanderers__jonathan-urretaviscaya.jpg` — Ailura — CC BY-SA 3.0 at — https://commons.wikimedia.org/wiki/File:20171114_AUT_URU_7801_(cropped)_2.jpg
+- `be-antwerp__yuto-tsunashima.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Yuto_Tsunashima_01082026_(2).jpg
+- `es-levante__enzo-bardeli.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Enzo_Bardeli.jpg
+- `uy-nacional__luis-mejia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Luis_Mejia_England_v_Panama_27_June_26-003.jpg
+- `uy-nacional__agustin-rogel.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:PREMIACI%C3%93N_CAMPEONATO_SUDAMERICANO_SUB_20_5.jpg
+- `uy-nacional__sebastian-coates.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Sebastian_Coates_Urugway.jpg
+- `uy-nacional__francisco-calvo.jpg` — Andy Witchger — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Francisco_Calvo_-_Minnesota_United_-_MNUFC_v_NYCFC_NEW_YORK_CITY_FOOTBALL_CLUB_-_ALLIANZ_FIELD_-_St._PAUL_MINNESOTA_(47607982341).jpg
+- `be-antwerp__daam-foulon.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Daam_Foulon_02082026_(1).jpg
+- `be-antwerp__anthony-valencia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Anthony_Valencia_Cote_D%27Ivoire_v_Ecuador_14_June_2026-46.jpg
+- `be-antwerp__michael-frey.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Michael_Frey_26042025_(2).jpg
+- `be-antwerp__geoffry-hairemans.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Geoffry_Hairemans_01082026_(1).jpg
+- `be-antwerp__xander-dierckx.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Xander_Dierckx_01082026_(2).jpg
+- `be-antwerp__yannick-thoelen.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Yannick_Thoelen_02082026_(1).jpg
+- `es-levante__jeremy-toljan.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2017083215132_2017-03-24_Fussball_U21_Deutschland_vs_England_-_Sven_-_1D_X_II_-_0513_-_AK8I3326_mod.jpg
+- `be-antwerp__louie-van-gelder.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Louie_Van_Gelder_02082026_(1).jpg
+- `be-antwerp__semm-renders.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Semm_Renders_01082026_(1).jpg
+- `be-antwerp__gerard-vandeplas.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Gerard_Vandeplas_01082026_(1).jpg
+- `be-antwerp__mukhammadali-urinboev.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Mukhammadali_Urinboev_02082026_(1).jpg
+- `be-antwerp__rein-van-helden.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Rein_Van_Helden_01082026_(1).jpg
+- `be-antwerp__andreas-verstraeten.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Andreas_Verstraeten_02082026_(1).jpg
+- `uy-nacional__maxi-gomez.jpg` — Hossein Zohrevand — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2022_FIFA_World_Cup_Match_32,_Portugal_v_Uruguay_-_04.jpg
+- `be-antwerp__farouck-adekami.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Farouck_Adekami_01082026_(1).jpg
+- `be-antwerp__koki-ando.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Koki_Ando_02082026_(2).jpg
+- `uy-nacional__maximiliano-silvera.jpg` — jikatu — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Pe%C3%B1arol_gole%C3%B3_4-0_a_The_Strongest_-_240814-6342-jikatu_(cropped).jpg
+- `be-antwerp__thibo-somers.jpg` — Cercletitoke — CC0 — https://commons.wikimedia.org/wiki/File:ThiboSomersjuni2024.jpg
+- `be-antwerp__modibo-fofana.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Modibo_Fofana_01082026_(1).jpg
+- `uy-nacional__nicolas-lodeiro.jpg` — Brandon Moore (Raskuly) — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_Lodeiro_02-24-2024.jpg
+- `es-malaga__jens-cajuste.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Jens_Cajuste.png
+- `es-malaga__einar-galilea.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Sochaux_(15-09-2018)_78.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
