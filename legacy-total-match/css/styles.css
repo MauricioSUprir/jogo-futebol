@@ -3363,3 +3363,14 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .coin-dir-field { display: grid; grid-template-columns: 90px 1fr auto; gap: 6px; align-items: center; font-size: 12px; }
 .coin-dir-fl { color: var(--muted); }
 .coin-dir-fv { word-break: break-all; }
+/* gerenciador de contas: layout corrigido */
+.coin-dir-item { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.coin-dir-item .coin-dir-row { border: 0; border-radius: 0; background: transparent; grid-template-columns: 10px minmax(0, 1fr) auto auto; }
+.coin-dir-main { min-width: 0; }
+.coin-dir-sub { display: flex; flex-wrap: wrap; gap: 4px; }
+.coin-dir-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coin-dir-details { margin: 0; padding: 8px 10px 10px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
+.coin-dir-field { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.coin-dir-fv { min-width: 0; overflow-wrap: anywhere; word-break: normal; }
+.coin-dir-acts { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+.coin-dir-acts .acct-copy { white-space: nowrap; font-size: 12px; padding: 4px 8px; }

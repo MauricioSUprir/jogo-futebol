@@ -354,15 +354,15 @@
           copyField("Coins", a.coins), copyField("Online", a.online ? "sim" : "não"), copyField("Último acesso", a.lastSeen ? new Date(a.lastSeen).toLocaleString("pt-BR") : ""),
           el("div", { class: "coin-dir-field" }, [ el("button", { class: "acct-copy", text: "⧉ copiar tudo", on: { click: function (e) { e.stopPropagation(); copyText("Nome: " + a.name + "\nE-mail: " + (a.email || "—") + "\nNúmero: " + (a.number || "—") + "\nID: " + (a.uid || "—") + "\nCoins: " + (a.coins != null ? a.coins : "—") + "\nOnline: " + (a.online ? "sim" : "não"), "Conta"); } } }) ])
         ]);
-        dirList.appendChild(el("div", { class: "coin-dir-row" + (a.online ? " on" : ""), on: { click: function () { details.hidden = !details.hidden; } } }, [
+        var wrap = el("div", { class: "coin-dir-item" });
+        wrap.appendChild(el("div", { class: "coin-dir-row" + (a.online ? " on" : ""), on: { click: function () { details.hidden = !details.hidden; } } }, [
           el("span", { class: "coin-dir-dot" }),
           el("div", { class: "coin-dir-main" }, [
             el("div", { class: "coin-dir-name", text: a.name + (a.account ? "" : " · sem conta") }),
             el("div", { class: "coin-dir-sub" }, [
               a.email ? el("span", { class: "coin-dir-chip", text: a.email, on: { click: function (e) { e.stopPropagation(); copyText(a.email, "E-mail"); } } }) : null,
               a.number ? el("span", { class: "coin-dir-chip", text: "nº " + a.number, on: { click: function (e) { e.stopPropagation(); copyText(a.number, "Número"); } } }) : el("span", { text: "sem número" })
-            ].filter(Boolean)),
-            details
+            ].filter(Boolean))
           ]),
           el("div", { class: "coin-dir-coins", text: a.coins != null ? a.coins + " 🪙" : "—" }),
           el("div", { class: "coin-dir-acts" }, [
@@ -376,6 +376,8 @@
             } } })
           ])
         ]));
+        wrap.appendChild(details);
+        dirList.appendChild(wrap);
       });
       var total = dirData.filter(function (a) { return a.account; }).length, onl = dirData.filter(function (a) { return a.account && a.online; }).length;
       dirInfo.textContent = total + " conta(s) cadastrada(s) · " + onl + " online agora" + (shown < total ? " · mostrando " + shown : "");
