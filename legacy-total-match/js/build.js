@@ -75,14 +75,16 @@
     // cabeçalho do meu time
     screen.appendChild(el("div", { class: "club-header" }, [
       el("div", { class: "myteam-badge", text: "★" }),
-      el("div", {}, [ el("div", { class: "ch-name", text: s.myName }), el("div", { class: "ch-sub", text: "Força geral " + teamOverall(s.myPlayers) + " · " + s.myPlayers.length + " jogadores" }) ])
+      el("div", {}, [ el("div", { class: "ch-name", text: s.myName }), el("div", { class: "ch-sub", text: "Força geral " + teamOverall(s.myPlayers) + " · " + s.myPlayers.length + " jogadores" }) ]),
+      TM.coins ? el("div", { class: "ch-coins" }, [ TM.coins.badge() ]) : el("span")
     ]));
 
     // campinho do meu time (na central)
     screen.appendChild(xiPitch(s.myPlayers));
 
     var done = s.results.length, total = s.oppIds.length;
-    if (done >= total) { renderChDone(screen, s); return; }
+    if (s.ended || done >= total) { renderChDone(screen, s); return; }
+    if (s.eliminated) { renderEliminated(screen, s); return; }
 
     // escada de adversários
     var ladder = el("div", { class: "ladder" });
@@ -162,18 +164,57 @@
         var hs = result.score[0], as = result.score[1];
         var res = hs > as ? "V" : as > hs ? "D" : "E";
         s.results.push({ res: res, label: hs + "×" + as + " (" + teamB.name + ")" });
+        applyRewards(s, res);
         saveCh(s);
         TM.ui.go("build-hub");
       }
     });
   });
 
+  // Total Coins: prêmios por resultado; no Draft, derrota = eliminado (sequência)
+  function applyRewards(s, res) {
+    if (!TM.coins) return;
+    var isDraft = s.mode === "draft", R = isDraft ? TM.coins.REWARD.draft : TM.coins.REWARD.dream;
+    var tag = isDraft ? "Draft" : "Dream Team";
+    var n = s.results.length, total = s.oppIds.length, isFinal = n === total;
+    if (res === "V") {
+      TM.coins.earn(R.win, "Vitória · " + tag);
+      if (isFinal) TM.coins.earn(R.final, "Derrubou o time principal · " + tag);
+      var wins = s.results.filter(function (r) { return r.res === "V"; }).length;
+      if (isDraft) { s.streak = (s.streak || 0) + 1; TM.coins.noteStreak(s.streak); }
+      if (isFinal && wins === total) TM.coins.earn(R.champion, "Campeão invicto · " + tag);
+    } else if (res === "E") {
+      TM.coins.earn(R.draw, "Empate · " + tag);
+    } else if (isDraft) {
+      s.eliminated = true;
+    }
+  }
+
+  function renderEliminated(screen, s) {
+    var done = s.results.length, last = s.results[done - 1];
+    var club = TM.data.club(s.oppIds[done - 1]);
+    var cost = TM.coins ? TM.coins.COST.draftRetry : 0;
+    screen.appendChild(el("div", { class: "next-match season-end elim" }, [
+      el("div", { class: "nm-label", text: "✖ ELIMINADO" }),
+      el("div", { class: "nm-teams", text: "Perdeu para " + club.name + " · " + last.label }),
+      el("p", { class: "intro-text", style: "text-align:center", text: "O Draft é uma sequência: quem perde, para. Você pode pagar por uma 2ª chance e repetir este jogo, ou encerrar aqui." }),
+      el("div", { class: "coin-entry" }, [ TM.coins ? TM.coins.badge() : el("span"), el("span", { class: "coin-entry-tx", text: "2ª chance custa " + cost + " 🪙" }) ]),
+      TM.ui.button("🔁 2ª chance por " + cost + " 🪙", function () {
+        if (!TM.coins) return;
+        TM.coins.pay(cost, "2ª chance · Draft", function () {
+          s.results.pop(); s.eliminated = false; saveCh(s); TM.ui.go("build-play");
+        });
+      }, "btn primary"),
+      TM.ui.button("🏁 Encerrar o Draft", function () { s.ended = true; saveCh(s); TM.ui.go("build-hub"); }, "btn ghost")
+    ]));
+  }
+
   function renderChDone(screen, s) {
     var wins = s.results.filter(function (r) { return r.res === "V"; }).length;
     var beatChamp = s.results[s.results.length - 1] && s.results[s.results.length - 1].res === "V";
     var champ = wins === s.oppIds.length;
     screen.appendChild(el("div", { class: "next-match season-end" }, [
-      el("div", { class: "nm-label", text: champ ? "🏆 INVICTO E CAMPEÃO!" : beatChamp ? "👑 Você venceu o time principal!" : "🏁 Desafio encerrado" }),
+      el("div", { class: "nm-label", text: champ ? "🏆 INVICTO E CAMPEÃO!" : beatChamp ? "👑 Você venceu o time principal!" : s.ended ? "✖ Eliminado no jogo " + s.results.length + " de " + s.oppIds.length : "🏁 Desafio encerrado" }),
       el("div", { class: "nm-teams", text: s.myName + " — " + wins + " vitória(s) em " + s.oppIds.length + " jogos" }),
       el("p", { class: "intro-text", style: "text-align:center", text: champ ? "Perfeito! Você venceu todos os adversários." : beatChamp ? "Você derrubou o maior time do desafio. Excelente campanha!" : "Bom desafio! Tente de novo montando um time ainda melhor." })
     ]));
@@ -320,12 +361,21 @@
     screen.appendChild(TM.ui.topbar("🎲 Draft", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
-    body.appendChild(el("p", { class: "intro-text", text: "Escolha uma liga. O sorteio te dá 5 opções por posição — você escolhe 1. Depois monta 10 reservas do mesmo jeito e encara 6 times da liga, do menor até o campeão." }));
+    body.appendChild(el("p", { class: "intro-text", text: "Escolha uma liga. O sorteio te dá 5 opções por posição — você escolhe 1. Depois monta 10 reservas do mesmo jeito e encara 6 times da liga, do menor até o campeão. É uma sequência: perdeu, acabou (ou pague por uma 2ª chance)." }));
+    if (TM.coins) {
+      body.appendChild(el("div", { class: "coin-entry" }, [
+        TM.coins.badge(),
+        el("span", { class: "coin-entry-tx", text: "Entrada: " + TM.coins.COST.draftEntry + " 🪙 · vitória +" + TM.coins.REWARD.draft.win + " · campeão +" + TM.coins.REWARD.draft.champion })
+      ]));
+    }
     body.appendChild(el("div", { class: "list-head", text: "Escolha a liga" }));
     var list = el("div", { class: "build-list" });
     TM.data.world().leagues.forEach(function (lg) {
       var comp = TM.data.competition("lg-" + lg.id);
-      var row = el("button", { class: "comp-list-item", on: { click: function () { startDraft(lg.id); } } }, [
+      var row = el("button", { class: "comp-list-item", on: { click: function () {
+        if (TM.coins) TM.coins.pay(TM.coins.COST.draftEntry, "Entrada no Draft · " + lg.name, function () { startDraft(lg.id); });
+        else startDraft(lg.id);
+      } } }, [
         el("div", { class: "cli-left" }, [
           comp ? TM.img.compImg(comp, "cli-logo") : el("span", {}),
           el("div", { class: "cli-text" }, [ el("div", { class: "cli-name", text: lg.name }), el("div", { class: "cli-sub", text: lg.clubIds.length + " clubes" }) ])
