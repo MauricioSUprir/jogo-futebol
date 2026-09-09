@@ -323,6 +323,18 @@
     return box;
   }
 
+  function copyText(t, label) {
+    t = String(t == null ? "" : t);
+    try { navigator.clipboard.writeText(t).then(function () { TM.ui.toast((label || "Copiado") + ": " + t); }, function () { TM.ui.toast(t); }); }
+    catch (e) { try { var ta = document.createElement("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); TM.ui.toast((label || "Copiado") + ": " + t); } catch (e2) { TM.ui.toast(t); } }
+  }
+  function copyField(label, value) {
+    return el("div", { class: "coin-dir-field" }, [
+      el("span", { class: "coin-dir-fl", text: label }),
+      el("span", { class: "coin-dir-fv", text: value == null || value === "" ? "—" : String(value) }),
+      (value != null && value !== "") ? el("button", { class: "acct-copy", text: "⧉", title: "Copiar " + label, on: { click: function (e) { e.stopPropagation(); copyText(value, label); } } }) : el("span")
+    ]);
+  }
   function accountsPanel(numIn, info, setFound) {
     var box = el("div", { class: "coin-admin coin-accounts" });
     // ---- diretório de contas ----
@@ -337,16 +349,25 @@
         if (!showAnon && !a.account) return;
         if (q && [a.name, a.email, a.number].join(" ").toLowerCase().indexOf(q) < 0) return;
         shown++;
-        dirList.appendChild(el("div", { class: "coin-dir-row" + (a.online ? " on" : "") }, [
+        var details = el("div", { class: "coin-dir-details", hidden: true }, [
+          copyField("Nome", a.name), copyField("E-mail", a.email), copyField("Número", a.number), copyField("ID online", a.uid),
+          copyField("Coins", a.coins), copyField("Online", a.online ? "sim" : "não"), copyField("Último acesso", a.lastSeen ? new Date(a.lastSeen).toLocaleString("pt-BR") : ""),
+          el("div", { class: "coin-dir-field" }, [ el("button", { class: "acct-copy", text: "⧉ copiar tudo", on: { click: function (e) { e.stopPropagation(); copyText("Nome: " + a.name + "\nE-mail: " + (a.email || "—") + "\nNúmero: " + (a.number || "—") + "\nID: " + (a.uid || "—") + "\nCoins: " + (a.coins != null ? a.coins : "—") + "\nOnline: " + (a.online ? "sim" : "não"), "Conta"); } } }) ])
+        ]);
+        dirList.appendChild(el("div", { class: "coin-dir-row" + (a.online ? " on" : ""), on: { click: function () { details.hidden = !details.hidden; } } }, [
           el("span", { class: "coin-dir-dot" }),
           el("div", { class: "coin-dir-main" }, [
             el("div", { class: "coin-dir-name", text: a.name + (a.account ? "" : " · sem conta") }),
-            el("div", { class: "coin-dir-sub", text: (a.email ? a.email + " · " : "") + (a.number ? "nº " + a.number : "sem número") })
+            el("div", { class: "coin-dir-sub" }, [
+              a.email ? el("span", { class: "coin-dir-chip", text: a.email, on: { click: function (e) { e.stopPropagation(); copyText(a.email, "E-mail"); } } }) : null,
+              a.number ? el("span", { class: "coin-dir-chip", text: "nº " + a.number, on: { click: function (e) { e.stopPropagation(); copyText(a.number, "Número"); } } }) : el("span", { text: "sem número" })
+            ].filter(Boolean)),
+            details
           ]),
           el("div", { class: "coin-dir-coins", text: a.coins != null ? a.coins + " 🪙" : "—" }),
           el("div", { class: "coin-dir-acts" }, [
-            a.number ? el("button", { class: "acct-copy", text: "🪙 usar", on: { click: function () { numIn.value = a.number; setFound({ uid: a.uid, name: a.name, coins: a.coins }); info.textContent = "✅ " + a.name + " · conta " + a.number + (a.coins != null ? " · saldo " + a.coins + " 🪙" : ""); try { numIn.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} } } }) : el("span"),
-            el("button", { class: "acct-copy danger", text: "🗑 excluir", on: { click: function () {
+            a.number ? el("button", { class: "acct-copy", text: "🪙 usar", on: { click: function (e) { e.stopPropagation(); numIn.value = a.number; setFound({ uid: a.uid, name: a.name, coins: a.coins }); info.textContent = "✅ " + a.name + " · conta " + a.number + (a.coins != null ? " · saldo " + a.coins + " 🪙" : ""); try { numIn.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} } } }) : el("span"),
+            el("button", { class: "acct-copy danger", text: "🗑 excluir", on: { click: function (e) { e.stopPropagation();
               TM.ui.confirm("Excluir " + a.name + "?", "Apaga a conta PARA SEMPRE: perfil, número " + (a.number || "") + ", coins e amigos. O e-mail " + (a.email || "") + " fica bloqueado e não consegue criar conta de novo.", "Excluir para sempre", function () {
                 TM.ui.confirm("Tem certeza?", "Não dá para desfazer.", "Sim, excluir", function () {
                   coins.deleteAccount(a, function (ok, msg) { TM.ui.toast(msg); if (ok) { dirData = dirData.filter(function (x) { return x !== a; }); renderDir(); } });

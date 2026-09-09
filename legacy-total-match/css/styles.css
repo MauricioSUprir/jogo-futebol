@@ -3356,3 +3356,10 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .coin-dir-row { grid-template-columns: 10px 1fr auto auto; }
 .coin-dir-acts { display: flex; flex-direction: column; gap: 4px; }
 .acct-copy.danger { border-color: #e0472c; color: #ff7b6b; }
+.coin-dir-row { cursor: pointer; }
+.coin-dir-chip { display: inline-block; background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 8px; padding: 1px 6px; margin: 2px 4px 0 0; font-size: 11px; cursor: pointer; }
+.coin-dir-chip:hover { border-color: var(--gold); }
+.coin-dir-details { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.coin-dir-field { display: grid; grid-template-columns: 90px 1fr auto; gap: 6px; align-items: center; font-size: 12px; }
+.coin-dir-fl { color: var(--muted); }
+.coin-dir-fv { word-break: break-all; }
