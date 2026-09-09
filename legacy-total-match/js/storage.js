@@ -6,11 +6,11 @@
   var BASE = "totalmatch:";
   var EDITION_KEY = "totalmatch:__edition";
   var PRO_PREFIX = "totalmatch:pro:";
-  // edição atual: "public" (padrão, vendável) ou "pro" (Atualizado, pessoal/licenciado)
+  // edição atual: "public" (padrão, vendável) ou "pro" (Season Update, pessoal/licenciado)
   var edition = "public";
   try { var _e = localStorage.getItem(EDITION_KEY); if (_e === "pro") edition = "pro"; } catch (e) {}
   // prefixo dos saves por edição: público mantém "totalmatch:" (não quebra carreiras já salvas),
-  // Atualizado usa "totalmatch:pro:" — assim as duas edições têm saves separados.
+  // Season Update usa "totalmatch:pro:" — assim as duas edições têm saves separados.
   function prefix() { return edition === "pro" ? PRO_PREFIX : BASE; }
 
   function read(key, fallback) {
@@ -63,7 +63,7 @@
     savePlayerCareer: function (c) { write("player", c); },
     clearPlayerCareer: function () { remove("player"); },
 
-    // edição do jogo: "public" (vendável) ou "pro" (Atualizado, pessoal)
+    // edição do jogo: "public" (vendável) ou "pro" (Season Update, pessoal)
     edition: function () { return edition; },
     setEdition: function (e) {
       edition = (e === "pro") ? "pro" : "public";

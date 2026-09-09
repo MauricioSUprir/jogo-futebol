@@ -129,7 +129,7 @@
         el("div", { class: "pw-col pw-col-pro" }, [
           el("div", { class: "pw-col-h", text: "⭐ O que você recebe" + (CONFIG.PRICE_LABEL ? " · " + CONFIG.PRICE_LABEL : "") }),
           el("ul", { class: "pw-list" }, [
-            el("li", { text: "Carreira de Treinador e de Dirigente" }),
+            el("li", { text: "Carreira de Treinador (Master League) com gestão do clube" }),
             el("li", { text: "Partida Rápida e Competições (ligas, copas, seleções)" }),
             el("li", { text: "Modo Online com amigos" }),
             el("li", { text: "Dream Team, Draft, Grupo e Editor" }),

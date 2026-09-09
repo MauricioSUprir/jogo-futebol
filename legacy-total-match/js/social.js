@@ -15,7 +15,18 @@
   function fmtLikes(n) { return n >= 1000 ? (n / 1000).toFixed(1).replace(".0", "") + "k" : String(n); }
   var uid = 0; function nid() { return "p" + (Date.now ? 0 : 0) + (++uid) + "_" + rint(1000, 9999); }
 
-  // avatar de usuário (círculo colorido + inicial)
+  // avatar de usuário: foto de pessoa (banco de retratos livres em assets/avatares) ou círculo colorido + inicial
+  var AVA_N = 0; try { AVA_N = (global.TM_PHOTO_INDEX && global.TM_PHOTO_INDEX.avatares) || 0; } catch (e) {}
+  function avatarPhoto(handle) {
+    if (!AVA_N) return null;
+    var h = 7; for (var i = 0; i < handle.length; i++) h = (h * 33 + handle.charCodeAt(i)) >>> 0;
+    return "assets/avatares/a" + ((h % AVA_N) + 1) + ".jpg";
+  }
+  function avatarImg(cls, handle) {
+    var ph = avatarPhoto(handle), img = el("img", { class: cls, src: ph || userAvatar(handle), alt: "" });
+    if (ph) img.addEventListener("error", function () { img.src = userAvatar(handle); });
+    return img;
+  }
   function userAvatar(handle) {
     var h = 0; for (var i = 0; i < handle.length; i++) h = (h * 31 + handle.charCodeAt(i)) % 360;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">' +
@@ -308,7 +319,7 @@
     var likeEl = el("span", { class: "pc-like" + (cm.liked ? " on" : ""), text: (cm.liked ? "❤️ " : "🤍 ") + fmtLikes(cm.likes) });
     likeEl.addEventListener("click", function () { cm.liked = !cm.liked; cm.likes += cm.liked ? 1 : -1; onLike(); });
     return el("div", { class: "pc-row" }, [
-      el("img", { class: "pc-ava", src: userAvatar(cm.who) }),
+      avatarImg("pc-ava", cm.who),
       el("div", { class: "pc-body" }, [
         el("div", { class: "pc-top" }, [ el("span", { class: "pc-who", text: cm.who.replace("@", "") }), cm.verified ? el("span", { class: "post-verified", text: "✔" }) : null ]),
         el("div", { class: "pc-txt", text: cm.txt }),
@@ -350,7 +361,7 @@
     cBtn.addEventListener("click", function () { openComments(career, p, save); });
 
     var head = el("div", { class: "post-head" }, [
-      el("img", { class: "post-ava", src: userAvatar(p.handle) }),
+      avatarImg("post-ava", p.handle),
       el("div", { class: "post-id" }, [
         el("div", { class: "post-handle" }, [ el("span", { text: p.handle.replace(/🔴⚪|🏛️/g, "").trim() }), p.verified ? el("span", { class: "post-verified", text: "✔" }) : null ]),
         el("div", { class: "post-time", text: "há " + p.age })

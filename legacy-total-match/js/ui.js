@@ -529,14 +529,14 @@
     screen.appendChild(content);
 
     // alternar entre as duas edições (não inicia o jogo — para o clique de propagar)
-    var switchBtn = el("button", { class: "splash-switch" + (isPro ? " pro" : ""), text: isPro ? "↩ Voltar à versão padrão" : "🔒 Abrir versão Atualizada", on: { click: function (e) {
+    var switchBtn = el("button", { class: "splash-switch" + (isPro ? " pro" : ""), text: isPro ? "↩ Voltar à versão padrão" : "🔒 Abrir versão Season Update", on: { click: function (e) {
       e.stopPropagation();
       TM.storage.setEdition(isPro ? "public" : "pro");
       try { location.reload(); } catch (er) { go("splash"); }
     } } });
     screen.appendChild(switchBtn);
 
-    screen.appendChild(el("div", { class: "splash-ver", text: (isPro ? "Atualizado · " : "") + "v0.3" }));
+    screen.appendChild(el("div", { class: "splash-ver", text: (isPro ? "Season Update · " : "") + "v0.3" }));
 
     // a tela inteira inicia o jogo (mais imersivo)
     var started = false;
@@ -582,7 +582,6 @@
     var MB = "assets/menu/";
     var SLIDES = [];
     SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores: finanças e contratações.", cta: "JOGAR", route: "coach", bg: MB + "director.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: MB + "trophy.jpg" });
     SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: MB + "online.jpg" });
@@ -686,7 +685,7 @@
     inner.appendChild(el("img", { class: "m2-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }));
 
     var MODES = [
-      { ic: "🎯", name: "Carreira", sub: "Master League — Treinador ou Dirigente", route: "coach" },
+      { ic: "🎯", name: "Carreira", sub: "Master League — treinador e gestor do clube", route: "coach" },
       { ic: "⚡", name: "Partida Rápida", sub: "Um jogo avulso, na hora", route: "quick" },
       { ic: "🏆", name: "Competições", sub: "Ligas, copas e seleções", route: "compmode" },
       { ic: "🌐", name: "Online", sub: "Jogue com amigos", route: "online" }
@@ -726,8 +725,7 @@
     var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
     var carItems = [];
     if (hasCoachSave) carItems.push({ icon: "▶️", name: "Continuar carreira", desc: "Retome de onde você parou", route: "coach-hub", big: true });
-    carItems.push({ icon: "🎯", name: "Carreira de Treinador", desc: "Comande o clube e a seleção — Master League", route: "coach", big: !hasCoachSave });
-    carItems.push({ icon: "🏛️", name: "Carreira de Dirigente", desc: "Gerencie o clube nos bastidores", route: "coach" });
+    carItems.push({ icon: "🎯", name: "Carreira de Treinador", desc: "Comande o clube, a gestão (patrocínios, SAF, estádio, CT) e a seleção — Master League", route: "coach", big: !hasCoachSave });
     carItems.push({ icon: "💾", name: "Minhas carreiras", desc: "Continue outros saves", route: "saves" });
     var CATS = [
       { key: "car", tab: "Carreiras", ic: "⭐", items: carItems },
@@ -753,7 +751,7 @@
     var SB = "assets/estadios/";
     var FEATURED = [
       { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car", bg: SB + "st-270085.jpg" },
-      { icon: "🏛️", name: "Seja o Dirigente", tag: "Gerencie o clube nos bastidores", route: "coach", acc: "car", bg: SB + "st-30651230.jpg" },
+      { icon: "🌍", name: "Carreira de Jogador", tag: "Viva a vida de um craque", route: "player", acc: "car", bg: SB + "st-30651230.jpg" },
       { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play", bg: SB + "st-17779076.jpg" },
       { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "online", acc: "net", bg: SB + "st-399187.jpg" }
     ];

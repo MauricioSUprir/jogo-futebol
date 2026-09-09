@@ -607,7 +607,6 @@
 
   // ---- propostas de emprego de outros clubes (gera de acordo com o desempenho) ----
   function generateJobOffers(career) {
-    if (career.type === "director") return;              // dirigente não recebe proposta de técnico
     if (!career.jobOffers) career.jobOffers = [];
     var matchNo = career.matchNo || 0;
     var unemployed = !!career.unemployed;
@@ -1759,7 +1758,6 @@
   }
   // CRISE FINANCEIRA DO USUÁRIO: caixa muito negativo -> diretoria cobra venda de um titular
   function checkUserFinancialCrisis(career) {
-    if (career.role === "dirigente") return;
     var mult = career.money ? career.money.mult : 1;
     var threshold = -15 * mult;                 // ~ -15M de rombo
     if ((career.budget || 0) >= threshold) { career._crisisNoted = false; return; }
@@ -1972,6 +1970,7 @@
     var bonus = Math.round(20 * mult);
     career.budget += bonus;
     career.finc = { prizeM: bonus, spentM: 0, soldM: 0 }; // zera o balanço da temporada; a verba entra como receita
+    try { TM.club.seasonTick(career); } catch (e) {} // contratos comerciais vencem, parcelas de empréstimo
     TM.notify.push(career, { icon: "💰", title: "Verba da diretoria", text: "A diretoria liberou +" + fmtMoney(career, bonus) + " de verba para a nova temporada." });
     // resumo da evolução do elenco
     seasonEvoSummary(career, before);
