@@ -149,42 +149,69 @@
     function fmtVal(m) { var n = Math.abs(m); if (n >= 1) return sym + " " + (n < 10 ? Math.round(n * 10) / 10 : Math.round(n)) + "M"; var k = Math.round(n * 1000); return k <= 0 ? sym + " 0" : sym + " " + k + " mil"; }
     var overlay = el("div", { class: "modal-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
     var a = p.attrs || {};
-    function bar(label, v) {
-      return el("div", { class: "attr" }, [
-        el("span", { class: "attr-label", text: label }),
-        el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%" }) ]),
-        el("span", { class: "attr-val", text: v })
-      ]);
-    }
-    function info(label, val, cls) { return el("div", { class: "pd-item" }, [ el("div", { class: "pd-val " + (cls || ""), text: val }), el("div", { class: "pd-lbl", text: label }) ]); }
-
+    var PR = TM.profile || null;
     var potential = p.potential || p.overall;
     var value = TM.data.marketValue ? TM.data.marketValue(p) : p.overall;
     var dev = TM.data.devRate ? TM.data.devRate(p) : "—";
+    var club = (p.clubId && p.clubId !== "free" && TM.data.club) ? TM.data.club(p.clubId) : null;
+    var pc1 = (club && club.colors && club.colors.primary) || "#1e9e4a", pc2 = (club && club.colors && club.colors.secondary) || "#0b2a1a";
+    var nationName = p.nationName || (p.nationId && TM.data.nation ? (TM.data.nation(p.nationId) || {}).name : "") || "";
+    function col(v) { return PR ? PR.attrColor(v) : "#22c55e"; }
+    function bar(k) {
+      var v = a[k[0]] || 50;
+      return el("div", { class: "attr attr-x" }, [
+        el("span", { class: "attr-label", text: k[2] }),
+        el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%; background: linear-gradient(90deg, " + col(v) + "88, " + col(v) + ")" }) ]),
+        el("span", { class: "attr-val", style: "color:" + col(v), text: v })
+      ]);
+    }
+    function info(label, val, cls) { return el("div", { class: "pd-item" }, [ el("div", { class: "pd-val " + (cls || ""), text: val }), el("div", { class: "pd-lbl", text: label }) ]); }
+    var ATTR6 = PR ? PR.ATTR6 : [["pac","VEL","Velocidade"],["sho","FIN","Finalização"],["pas","PAS","Passe"],["dri","DRI","Drible"],["def","DEF","Defesa"],["phy","FÍS","Físico"]];
 
-    overlay.appendChild(el("div", { class: "modal" }, [
-      el("button", { class: "modal-close", text: "×", on: { click: function () { overlay.remove(); } } }),
-      el("div", { class: "modal-head" }, [
-        (p.photo ? el("img", { src: p.photo, class: "modal-face" }) : TM.img.playerImg(p, "modal-face")),
-        el("div", {}, [
-          el("div", { class: "modal-name", text: p.name }),
-          el("div", { class: "modal-sub", text: TM.data.posLabel(p) + " · " + p.age + " anos · " + p.nationName }),
-          el("div", { class: "modal-sub", text: (p.height || "?") + " cm · " + (p.weight || "?") + " kg" })
-        ]),
-        ovBadge(p.overall)
+    // cabeçalho com degradê nas cores do clube + medidores de OVR/POT
+    var head = el("div", { class: "prof-head prof-head-grad pm-head", style: "background: linear-gradient(135deg, " + pc1 + "cc 0%, " + pc2 + "cc 55%, var(--panel) 100%)" }, [
+      (p.photo ? el("img", { src: p.photo, class: "prof-face" }) : TM.img.playerImg(p, "prof-face")),
+      el("div", { class: "prof-id" }, [
+        el("div", { class: "prof-name" }, [ (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name) ].filter(Boolean)),
+        el("div", { class: "prof-meta" }, [
+          nationName ? el("span", { class: "prof-nat", text: nationName }) : null,
+          el("span", { text: p.age + " anos" }),
+          el("span", { class: "prof-pos pos-" + (p.pos || "MF"), text: TM.data.posLabel(p) }),
+          club ? el("span", { class: "prof-club", text: club.name }) : null
+        ].filter(Boolean))
       ]),
+      PR ? el("div", { class: "prof-gauges" }, [
+        PR.gaugeSVG(p.overall, 99, "OVR", "#22c55e"),
+        PR.gaugeSVG(potential, 99, "POT", potential > p.overall ? "#4ade80" : "#8aa0b2")
+      ]) : ovBadge(p.overall)
+    ]);
+    var traits = PR ? PR.traitsOf(p) : [];
+    var mainPos = p.pos2 || (p.pos === "GK" ? "GOL" : p.pos === "DF" ? "ZAG" : p.pos === "FW" ? "CA" : "MC");
+    var alts = PR ? (PR.POS_ALT[mainPos] || []) : [];
+
+    var modal = el("div", { class: "modal player-modal" }, [
+      el("button", { class: "modal-close", text: "×", on: { click: function () { overlay.remove(); } } }),
+      head,
+      traits.length ? el("div", { class: "trait-row" }, traits.map(function (t) { return el("span", { class: "trait-chip", text: t[0] + " " + t[1] }); })) : null,
       el("div", { class: "player-detail-grid" }, [
         info("Overall", p.overall),
         info("Potencial", potential, potential > p.overall ? "up" : ""),
         info("Valor", fmtVal(value * mult)),
-        info("Desenvolvimento", dev)
+        info("Evolução", dev)
       ]),
-      el("h4", { class: "pd-section", text: "Qualidades" }),
-      el("div", { class: "attrs" }, [
-        bar("Velocidade", a.pac || 50), bar("Finalização", a.sho || 50), bar("Passe", a.pas || 50),
-        bar("Drible", a.dri || 50), bar("Defesa", a.def || 50), bar("Físico", a.phy || 50)
-      ])
-    ]));
+      PR ? el("div", { class: "pm-two" }, [
+        el("div", { class: "prof-card radar-card pblock" }, [ el("div", { class: "prof-card-h", text: "RADAR" }), el("div", { class: "radar-wrap", html: PR.radarSVG(a, null, pc1) }) ]),
+        el("div", { class: "prof-card tat-card pblock" }, [
+          el("div", { class: "prof-card-h", text: "POSIÇÕES" }),
+          el("div", { class: "pitch-wrap", html: PR.pitchSVG(p) }),
+          el("div", { class: "tat-mini", text: "Principal: " + mainPos + (alts.length ? " · também: " + alts.join(", ") : "") })
+        ])
+      ]) : null,
+      el("div", { class: "attrs" }, ATTR6.map(bar)),
+      PR ? el("div", { class: "prof-card pblock" }, [ el("div", { class: "prof-card-h", text: "PROJEÇÃO" }), el("div", { class: "proj-wrap", html: PR.projectionSVG(p) }) ]) : null,
+      el("div", { class: "setting-hint", text: (p.height || "?") + " cm · " + (p.weight || "?") + " kg" + (PR && PR.ROLE_TXT[mainPos] ? " · " + PR.ROLE_TXT[mainPos] : "") })
+    ].filter(Boolean));
+    overlay.appendChild(modal);
     document.body.appendChild(overlay);
   }
 
