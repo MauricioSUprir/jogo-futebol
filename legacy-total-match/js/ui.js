@@ -110,7 +110,10 @@
     var kids = [
       TM.img.playerImg(player, "prow-face"),
       el("div", { class: "prow-info" }, [
-        el("div", { class: "prow-name", text: player.name }),
+        el("div", { class: "prow-name" }, [
+          (player.number > 0 ? el("span", { class: "prow-num", text: player.number }) : null),
+          document.createTextNode(player.name)
+        ].filter(Boolean)),
         el("div", { class: "prow-sub" }, subKids),
         natEl
       ])
@@ -392,6 +395,7 @@
     if (eff.off) faceKids.push(el("span", { class: "chip-warn", title: "Fora de posição (−" + eff.drop + ")", text: "!" }));
     if (opts.flag) faceKids.push(opts.flag);
     if (opts.captain) faceKids.push(el("span", { class: "chip-cap", title: "Capitão", text: "C" }));
+    if (player.number > 0) faceKids.push(el("span", { class: "chip-num", title: "Camisa " + player.number, text: player.number }));
     // barra de estamina (condição física) — aparece em todos os modos
     var stam = chipStamina(player, opts);
     return [

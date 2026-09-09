@@ -3819,7 +3819,7 @@
     wrap.appendChild(el("div", { class: "prof-head" }, [
       TM.img.playerImg(p, "prof-face"),
       el("div", { class: "prof-id" }, [
-        el("div", { class: "prof-name", text: p.name }),
+        el("div", { class: "prof-name" }, [ (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name) ].filter(Boolean)),
         el("div", { class: "prof-meta" }, [
           (p.nationName || (nation && nation.name)) ? el("span", { class: "prof-nat", text: p.nationName || nation.name }) : null,
           el("span", { text: p.age + " anos" }),
