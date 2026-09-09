@@ -556,10 +556,33 @@
     screen.appendChild(content);
 
     // alternar entre as duas edições (não inicia o jogo — para o clique de propagar)
+    // Season Update é fechada: precisa de chave de acesso (lembrada neste aparelho)
+    var SU_KEY = "21011004", SU_FLAG = "totalmatch:su_unlocked";
+    function suUnlocked() { try { return localStorage.getItem(SU_FLAG) === "1"; } catch (e) { return false; } }
+    if (isPro && !suUnlocked()) { TM.storage.setEdition("public"); try { location.reload(); } catch (er) {} return; }
+    function askKey() {
+      var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+      var input = el("input", { class: "select", type: "password", inputmode: "numeric", maxlength: "16", placeholder: "chave de acesso", autocomplete: "off" });
+      var msg = el("div", { class: "setting-hint", text: "A versão Season Update é fechada. Digite a chave de acesso." });
+      var sheet = el("div", { class: "sheet" }, [
+        el("div", { class: "sheet-title", text: "🔒 Season Update" }),
+        msg, input,
+        el("button", { class: "sheet-item", text: "Entrar", on: { click: function () {
+          if ((input.value || "").trim() === SU_KEY) {
+            try { localStorage.setItem(SU_FLAG, "1"); } catch (e) {}
+            overlay.remove(); TM.storage.setEdition("pro"); try { location.reload(); } catch (er) { go("splash"); }
+          } else { msg.textContent = "Chave inválida. Tente de novo."; msg.style.color = "#ff7b6b"; input.value = ""; input.focus(); }
+        } } }),
+        el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } })
+      ]);
+      input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") sheet.querySelector(".sheet-item").click(); });
+      overlay.appendChild(sheet); document.body.appendChild(overlay); setTimeout(function () { try { input.focus(); } catch (e) {} }, 50);
+    }
     var switchBtn = el("button", { class: "splash-switch" + (isPro ? " pro" : ""), text: isPro ? "↩ Voltar à versão padrão" : "🔒 Abrir versão Season Update", on: { click: function (e) {
       e.stopPropagation();
-      TM.storage.setEdition(isPro ? "public" : "pro");
-      try { location.reload(); } catch (er) { go("splash"); }
+      if (isPro) { TM.storage.setEdition("public"); try { location.reload(); } catch (er) { go("splash"); } return; }
+      if (suUnlocked()) { TM.storage.setEdition("pro"); try { location.reload(); } catch (er) { go("splash"); } return; }
+      askKey();
     } } });
     screen.appendChild(switchBtn);
 
