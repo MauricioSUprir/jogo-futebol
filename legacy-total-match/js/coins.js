@@ -50,6 +50,7 @@
     if (cloudRef && cloudHandler) { try { cloudRef.off("value", cloudHandler); } catch (e) {} }
     cloudRef = null; cloudHandler = null; cloudUid = null; lastCloud = null;
   }
+  var pending = 0;   // operações minhas em andamento na nuvem (o listener não trata como presente)
   function attach() {
     if (!cloudReady() || !hasAccount()) return;
     var n = net(), uid = n.me.uid;
@@ -60,19 +61,18 @@
     cloudRef.once("value").then(function (snap) {
       var v = snap.val();
       var s = load();
-      if (v == null) { cloudRef.set(s.bal); }           // primeira vez: sobe o saldo local
-      else if (typeof v === "number" && v !== s.bal) {     // conta vinda de outro aparelho / presente
-        var diff = v - s.bal; s.bal = v;
-        if (diff > 0 && lastCloud != null) addLog(diff, "Recebido");
-        save(); refreshBadges();
-      }
-      lastCloud = v == null ? s.bal : v;
+      if (v == null) { cloudRef.set(s.bal); }                       // primeira vez nesta conta: sobe o saldo local
+      else if (typeof v === "number") { s.bal = v; save(); refreshBadges(); }   // nuvem manda: saldo da conta
+      lastCloud = (v == null) ? s.bal : v;
       cloudHandler = function (sn) {
         var nv = sn.val(); if (typeof nv !== "number") return;
         var st = load();
         if (nv !== st.bal) {
           var d = nv - st.bal; st.bal = nv;
-          if (d > 0) { addLog(d, "Presente recebido"); st.earned += d; TM.ui.toast("Você recebeu " + fmt(d) + "! 🎁"); }
+          if (pending === 0) {                                          // mudança que não veio de mim: presente/retirada do admin
+            if (d > 0) { addLog(d, "Presente recebido"); st.earned += d; TM.ui.toast("Você recebeu " + fmt(d) + "! 🎁"); }
+            else { addLog(d, "Retirado pelo administrador"); TM.ui.toast("Foram retirados " + fmt(-d) + " da sua conta."); }
+          }
           save(); refreshBadges();
         }
         lastCloud = nv;
@@ -80,12 +80,18 @@
       cloudRef.on("value", cloudHandler);
     }).catch(function () {});
   }
-  function pushCloud(delta) {
-    if (!cloudReady()) return;
+  // aplica um delta: a NUVEM é a verdade (transação); local só espelha (e serve offline)
+  function applyDelta(delta) {
+    var s = load();
+    s.bal = Math.max(0, s.bal + delta); save(); refreshBadges();      // resposta imediata na tela
+    if (!cloudReady() || !hasAccount()) return;
     try {
-      var n = net();
-      n._db.ref("users/" + n.me.uid + "/coins").transaction(function (cur) { return (typeof cur === "number" ? cur : START) + delta; });
-    } catch (e) {}
+      var n = net(); pending++;
+      n._db.ref("users/" + n.me.uid + "/coins").transaction(function (cur) { return Math.max(0, (typeof cur === "number" ? cur : START) + delta); }, function (err, committed, snap) {
+        pending = Math.max(0, pending - 1);
+        if (!err && committed && snap && typeof snap.val() === "number") { var st = load(); st.bal = snap.val(); save(); refreshBadges(); }
+      });
+    } catch (e) { pending = Math.max(0, pending - 1); }
   }
   function logCloud(uid, entry) {
     if (!cloudReady()) return;
@@ -102,15 +108,13 @@
     hasAccount: hasAccount,
     earn: function (n, reason) {
       if (!n || n <= 0 || !hasAccount()) return;
-      var s = load(); s.bal += n; s.earned += n; addLog(n, reason || "Ganho"); save();
-      pushCloud(n); refreshBadges();
+      var s = load(); s.earned += n; addLog(n, reason || "Ganho"); applyDelta(n);
       TM.ui.toast("+" + n + " 🪙 " + (reason || ""));
     },
     spend: function (n, reason) {
       var s = load();
       if (!hasAccount() || s.bal < n) return false;
-      s.bal -= n; s.spent += n; addLog(-n, reason || "Gasto"); save();
-      pushCloud(-n); refreshBadges();
+      s.spent += n; addLog(-n, reason || "Gasto"); applyDelta(-n);
       return true;
     },
     // tenta pagar; se não der, mostra aviso e abre a tela de coins
@@ -126,9 +130,9 @@
       var p = (TM.account && TM.account.profile) ? TM.account.profile() : null;
       return !!(p && p.email && ADMIN_EMAILS.indexOf(String(p.email).toLowerCase().trim()) >= 0);
     },
-    // admin: dá coins a uma conta pelo número (ex.: 1234-5678)
+    // admin: dá (amount > 0) ou tira (amount < 0) coins de uma conta pelo número (ex.: 1234-5678)
     give: function (number, amount, note, cb) {
-      if (!coins.isAdmin()) { cb && cb(false, "Só o administrador pode dar coins."); return; }
+      if (!coins.isAdmin()) { cb && cb(false, "Só o administrador pode mexer nos coins."); return; }
       if (!cloudReady()) { cb && cb(false, "Sem conexão com a nuvem."); return; }
       amount = Math.round(Number(amount) || 0);
       if (!amount) { cb && cb(false, "Quantidade inválida."); return; }
@@ -136,12 +140,15 @@
       n._db.ref("numbers/" + String(number || "").trim()).once("value").then(function (snap) {
         var uid = snap.val();
         if (!uid) { cb && cb(false, "Conta não encontrada."); return; }
-        return n._db.ref("users/" + uid + "/coins").transaction(function (cur) { return (typeof cur === "number" ? cur : START) + amount; }).then(function () {
-          logCloud(uid, { t: Date.now(), d: amount, r: note || ("Presente de " + (n.me.name || "admin")), from: n.me.number || null });
-          if (uid === n.me.uid) { var s = load(); s.bal += amount; addLog(amount, note || "Presente"); save(); refreshBadges(); }
-          cb && cb(true, "Enviado " + fmt(amount) + " para a conta " + number + ".");
+        var ref = n._db.ref("users/" + uid + "/coins"), after = null;
+        return ref.transaction(function (cur) { return Math.max(0, (typeof cur === "number" ? cur : START) + amount); }, function (err, committed, sn) {
+          if (err || !committed) { cb && cb(false, "Falha ao aplicar."); return; }
+          after = sn ? sn.val() : null;
+          logCloud(uid, { t: Date.now(), d: amount, r: note || (amount > 0 ? "Presente de " + (n.me.name || "admin") : "Retirado pelo administrador"), from: n.me.number || null });
+          // se for a minha própria conta, o listener já atualiza o saldo local; nada a somar aqui
+          cb && cb(true, (amount > 0 ? "Dado " + fmt(amount) : "Retirado " + fmt(-amount)) + " · conta " + number + " agora tem " + (after != null ? after + " 🪙" : "novo saldo") + ".");
         });
-      }).catch(function () { cb && cb(false, "Falha ao enviar."); });
+      }).catch(function () { cb && cb(false, "Falha ao aplicar."); });
     },
     badge: function (cls) {
       var has = hasAccount();
@@ -240,7 +247,7 @@
     var box = el("div", { class: "coin-admin" });
     box.appendChild(el("div", { class: "list-head", text: "👑 Administrador · dar Total Coins" }));
     var numIn = el("input", { class: "select", type: "text", placeholder: "número da conta (ex.: 1234-5678)", maxlength: "12" });
-    var amtIn = el("input", { class: "select", type: "number", placeholder: "quantidade", min: "1", step: "1" });
+    var amtIn = el("input", { class: "select", type: "number", placeholder: "quantidade (só o número)", min: "1", step: "1" });
     var noteIn = el("input", { class: "select", type: "text", placeholder: "mensagem (opcional)", maxlength: "40" });
     var info = el("div", { class: "setting-hint", text: "Digite o número da conta e clique em buscar para confirmar o nome." });
     var found = null;
@@ -256,17 +263,20 @@
         });
       }).catch(function () { info.textContent = "Falha ao buscar."; });
     }, "btn ghost");
-    var sendBtn = TM.ui.button("🎁 Enviar coins", function () {
-      var num = numIn.value.trim(), amt = Math.round(Number(amtIn.value) || 0);
+    function doOp(sign) {
+      var num = numIn.value.trim(), amt = Math.abs(Math.round(Number(amtIn.value) || 0));
       if (!num || !amt) { TM.ui.toast("Informe o número da conta e a quantidade."); return; }
-      TM.ui.confirm("Enviar " + fmt(amt) + "?", "Para a conta " + num + (found ? " (" + found.name + ")" : "") + ".", "Enviar", function () {
-        sendBtn.disabled = true;
-        coins.give(num, amt, noteIn.value.trim() || null, function (ok, msg) {
-          sendBtn.disabled = false; info.textContent = msg; TM.ui.toast(ok ? "Enviado! 🎁" : msg);
+      var verb = sign > 0 ? "Dar" : "Tirar";
+      TM.ui.confirm(verb + " " + fmt(amt) + "?", (sign > 0 ? "Para" : "Da") + " conta " + num + (found ? " (" + found.name + ")" : "") + ".", verb, function () {
+        sendBtn.disabled = true; takeBtn.disabled = true;
+        coins.give(num, sign * amt, noteIn.value.trim() || null, function (ok, msg) {
+          sendBtn.disabled = false; takeBtn.disabled = false; info.textContent = msg; TM.ui.toast(ok ? (sign > 0 ? "Coins enviados! 🎁" : "Coins retirados.") : msg);
         });
-      });
-    }, "btn primary");
-    box.appendChild(el("div", { class: "coin-admin-form" }, [ numIn, findBtn, amtIn, noteIn, sendBtn ]));
+      }, sign < 0);
+    }
+    var sendBtn = TM.ui.button("🎁 Dar coins", function () { doOp(1); }, "btn primary");
+    var takeBtn = TM.ui.button("➖ Tirar coins", function () { doOp(-1); }, "btn ghost");
+    box.appendChild(el("div", { class: "coin-admin-form" }, [ numIn, findBtn, amtIn, noteIn, el("div", { class: "coin-admin-btns" }, [ sendBtn, takeBtn ]) ]));
     box.appendChild(info);
     return box;
   }

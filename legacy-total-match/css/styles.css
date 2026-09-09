@@ -3343,3 +3343,4 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .frame-gold { box-shadow: 0 0 0 3px #f5c542, 0 0 12px rgba(245,197,66,.6) !important; border-color: #f5c542 !important; }
 .budget-boost { margin-top: 8px; display: flex; justify-content: flex-end; }
 .nat-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0; }
+.coin-admin-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
