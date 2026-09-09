@@ -1823,6 +1823,162 @@ derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.o
 - `sa-al-hazem__afimico-pululu.jpg` — Krisgola — CC0 — https://commons.wikimedia.org/wiki/File%3A26_05_2024_JAG_WAR_4_%28Afimico_Pululu%29.jpg
 - `sa-al-hazem__amir-sayoud.jpg` — S. Plaine — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AStade_rennais_vs_USM_Alger%2C_July_16th_2016_-_Amir_Sayoud.jpg
 - `sa-al-hazem__jindrich-stanek.jpg` — Richtr Jan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJind%C5%99ich_Stan%C4%9Bk_brank%C3%A1%C5%99_FK_Viktorie_Plze%C5%88_%28r._2023%29_%28cropped%29.jpg
+- `sa-al-hilal__kalidou-koulibaly.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKalidou_Koulibaly_France_v_Senegal_16_June_2026-370_%28cropped%29.jpg
+- `sa-al-hilal__gabriel-martinelli.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGabriel_Martinelli_Brazil_V_Morocco_13_June_2026-144.jpg
+- `sa-al-hilal__ruben-neves.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARuben_Neves_USMNT_v_Portugal_Mar_31_2026-25.jpg
+- `sa-al-hilal__ollie-watkins.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AOllie_Watkins_England_v_Ghana_23_June_2026-035.jpg
+- `sa-al-hilal__theo-hernandez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATheo_Hernandez_France_v_Senegal_16_June_2026-222_%28cropped%29.jpg
+- `sa-al-hilal__sergej-milinkovic-savic.jpg` — Эдгар Брещанов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ASer-Swi_%2840%29.jpg
+- `br-cruzeiro__joao-marcelo.jpg` — João Marcelo Franchozza — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Franchozza_%22Col%C3%AAra%22.jpg
+- `sa-al-hilal__mohamed-kanno.jpg` — Petsbikes — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMohamed_Kanno_Fifa_World_Cup_2026.jpg
+- `sa-al-hilal__salem-al-dawsari.jpg` — Unknown author Unknown author — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASalem_Al-Dawsari_%28Saudi_Arabia_v_Uruguay%2C_June_2026%29_%28cropped%29.jpg
+- `br-flamengo__agustin-rossi.jpg` — Raphael Henrique — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAgust%C3%ADn_Rossi_pelo_Flamengo.jpg
+- `sa-al-hilal__mohammed-al-owais.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMohammed_Al-Owais.jpg
+- `sa-al-hilal__yassine-bounou.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AYassine_Bounou_Brazil_V_Morocco_13_June_2026-157.jpg
+- `sa-al-hilal__crysencio-summerville.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACrysencio_Summerville_of_West_Ham_United.jpeg
+- `br-gremio__dodi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADodi_Luk%C3%A9bakio_USMNT_v_Belgium_Mar_28_2026-212_%28cropped_2%29.jpg
+- `sa-al-hilal__ali-lajami.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAFC_Elite_League_Western%2C_Azadi_Stadium%2C_Persepolis_0-0_Al_Nassr%2C_17_February_2025%2C_Ali_Lajami.jpg
+- `sa-al-hilal__hassan-al-tambakti.jpg` — Unknown author Unknown author — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AHassan_Tambakti_with_Saudi_National_Football_Team_%28Pre-Match_Warm-Ups_v_Uruguay%2C_2026_WorldCup%29_%28cropped%29.jpg
+- `sa-al-hilal__darwin-nunez.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADarwin_N%C3%BA%C3%B1ez_%28cropped%29.jpg
+- `sa-al-ittihad__predrag-rajkovic.jpg` — Екатерина Лаут — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3APredrag_Rajkovi%C4%87_2018.jpg
+- `sa-al-ittihad__danilo-pereira.jpg` — Bigmatbasket — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADanilo_Pereira_PSG.jpg
+- `sa-al-ittihad__richard-rios.jpg` — Ser! — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARichard_Rios_2026_2.jpg
+- `br-gremio__jose-enamorado.jpg` — Programa Satélite — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AJos%C3%A9_Enamorado.jpg
+- `sa-al-ittihad__george-ilenikhena.jpg` — Tom Van de Velde — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGeorge_Llenikhena.png
+- `sa-al-ittihad__houssem-aouar.jpg` — Algérie Presse Service — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AHoussem_Aouar_in_2024.jpg
+- `sa-al-ittihad__saleh-al-shehri.jpg` — Al Ahly Tv — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ASaleh_Al-Shehri.jpg
+- `sa-al-ittihad__mahamadou-doumbia.jpg` — Tom Van de Velde — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMahamadou_Doumbia.png
+- `sa-al-ittihad__ahmed-al-ghamdi.jpg` — Astro medya Org. Ltd. ŞTİ. — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AAhmed_Al-Ghamdi_20220810_6_%28cropped%29.jpg
+- `sa-al-ittihad__dion-lopy.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Reims_%2812-05-2023%29_14_%28cropped%29.jpg
+- `br-internacional__vitinho.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AVitinho_23122023_%281%29.jpg
+- `sa-al-ittihad__steven-bergwijn.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AGAE_-_Ajax_-_52788530788_%28Steven_Bergwijn%29.jpg
+- `br-internacional__braian-aguirre.jpg` — Canal do Gira - Matheus Girardello — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ABraian_Aguirre_-_SCI_2025.png
+- `sa-al-ittihad__mario-mitaj.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMario_Mitaj_2022.jpg
+- `br-mirassol__lucas-oliveira.jpg` — Imagem: MARCIO ROBERTO/ESTADÃO — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJean_Lucas_comemora_gol_marcado_pelo_Bahia.jpg
+- `br-mirassol__chico-kim.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AChico-Juventude-Corinthians-jun-2022.jpg
+- `br-mirassol__victor-luis.jpg` — Sepguilherme — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AVictor-luis-palmeiras-wikipedia.png
+- `br-mirassol__gustavo-silva.jpg` — SOCCER DIGITAL — CC0 — https://commons.wikimedia.org/wiki/File%3AGustavo_Mosquito_-_Copa_do_Brasil_-_Santos_1_x_0_Corinthians_22.jpg
+- `sa-al-khaleej__luis-haquin.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALuis_Haquin_Scotland_v_Bolivia_6_June_2026-44.jpg
+- `br-mirassol__daniel-borges.jpg` — Thiaguitocpl — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATristan-borges.jpg
+- `sa-al-khaleej__selim-amallah.jpg` — Nawfel Ajari — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAmallah.jpg
+- `br-mirassol__jose-aldo.jpg` — Andrius Petrucenia on Flickr (Original version) UCinternational (Crop) — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AJos%C3%A9_Aldo%2C_UFC_189_World_Tour_London_%282%29_%28cropped%29.jpg
+- `sa-al-khaleej__jean-n-guessan.jpg` — Fexedyte — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJean_N%27Guessan.jpg
+- `sa-al-kholood__john-buckley.jpg` — Kane Brooker — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AJohn_Buckley.jpg
+- `br-mirassol__joao-victor.jpg` — Razyakobov — CC0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_victor.jpg
+- `sa-al-kholood__seydouba-cisse.jpg` — feguifoot — Public domain — https://commons.wikimedia.org/wiki/File%3ASeydouba_Ciss%C3%A9.jpg
+- `sa-al-kholood__ramiro-enrique.jpg` — Raskuly — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARamiro_Enrique_02-24-2024.png
+- `sa-al-kholood__shaquille-pinas.jpg` — Biser Todorov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AShaquille_Pinas.jpg
+- `br-palmeiras__carlos-miguel.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACarlos-miguel-palmeiras-internacional-sep2025_%28cropped%29.jpg
+- `br-palmeiras__alexander-barboza.jpg` — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3APe%C3%B1arol_3_Botafogo_1_-_-_241030-1250_-_Alexander_Barboza.jpg
+- `br-palmeiras__murilo.jpg` — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMurilo_Palmeiras_2025_06_16_Oporto.jpg
+- `br-palmeiras__luiz-benedetti.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABenedetti-Palmeiras-Santos-mai26.jpg
+- `sa-al-nassr__nawaf-al-aqidi.jpg` — Mohammad Hossein Movahedi Nejad — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANawaf_Al-Aqidi_2023_%28cropped%29.jpg
+- `sa-al-nassr__sultan-al-ghannam.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASultan_Al-Ghannam_2023_%28cropped%29.jpg
+- `sa-al-nassr__mohamed-simakan.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMohamed_Simakan_Al-Nassr_2025_%28cropped%29.jpg
+- `sa-al-nassr__abdulelah-al-amri.jpg` — Unknown author Unknown author — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAbdulelah_Al-Amri_After_Scoring_for_the_Saudi_National_Team_Against_Uruguay_in_World_Cup_2026_%28cropped%29.jpg
+- `sa-al-nassr__cristiano-ronaldo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACristiano_Ronaldo_Croatia_v_Portugal_2_July_2026-075_%28cropped%29.jpg
+- `sa-al-nassr__sadio-mane.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASadio_Mane_France_v_Senegal_16_June_2026-450.jpg
+- `sa-al-nassr__samu-costa.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASam%C3%BA_Costa_USMNT_v_Portugal_Mar_31_2026-54_%28cropped%29.jpg
+- `br-red-bull-bragantino__eduardo-sasha.jpg` — Palácio do Planalto from Brasilia, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3A16_11_2019_Partida_de_futebol_Santos_e_S%C3%A3o_Paulo_Sasha.jpg
+- `sa-al-nassr__nawaf-boushal.jpg` — Tasnim News Agency — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AEsteghlal_0_-_0_Al_Nassr%2C_round_of_16_of_the_AFC_Elite_League%2C_Azadi_Stadium%2C_3_March_2025%2C_Nawaf_Boushal.jpg
+- `sa-al-nassr__mohammed-maran.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAFC_Elite_League_Western%2C_Azadi_Stadium%2C_Persepolis_0-0_Al_Nassr%2C_17_February_2025%2C_Mohammed_Maran.jpg
+- `sa-al-nassr__abdullah-al-khaibari.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAbdullah_Al-Khaibari_2023_%28cropped%29.jpg
+- `sa-al-nassr__angelo-gabriel.jpg` — Tasnim News Agency — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AEsteghlal_0_-_0_Al_Nassr%2C_round_of_16_of_the_AFC_Elite_League%2C_Azadi_Stadium%2C_3_March_2025%2C_%C3%82ngelo_Gabriel.jpg
+- `sa-al-nassr__kingsley-coman.jpg` — Sven Mandel — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKingsley_Coman_%282019%29_%28cropped%29.jpg
+- `sa-al-nassr__ayman-yahya.jpg` — Peadara — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAyman_Yahya%2C_2025_CONCACAF_Gold_Cup_%28cropped%29.jpg
+- `sa-al-nassr__bento.jpg` — Fatemeh Amuzad/Ali Haddadi Asl — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AEsteghlal_F.C._v_Al_Nassr_FC%2C_3_March_2025_%28Bento_Matheus_Krepski%29.jpg
+- `sa-al-nassr__inigo-martinez.jpg` — Junta de Andalucía — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AI%C3%B1igo_Mart%C3%ADnez_2025_04_26_Final_de_la_Copa_del_Rey%28cropped%29.jpg
+- `sa-al-nassr__abdulrahman-ghareeb.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APersepolis_F.C._v_Al_Nassr_FC%2C_19_September_2023%2C_Abdulrahman_Ghareeb.jpg
+- `sa-al-nassr__majed-qasheesh.jpg` — Meghdad Madadi — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAFC_Elite_League_Western%2C_Azadi_Stadium%2C_Persepolis_0-0_Al_Nassr%2C_17_February_2025%2C_Majed_Qasheesh.jpg
+- `sa-al-nassr__joao-felix.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_F%C3%A9lix_USMNT_v_Portugal_Mar_31_2026-22_%28cropped%29.jpg
+- `br-remo__matheus-alexandre.jpg` — Mauricio5151 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlexandre_Imperador.jpg
+- `sa-al-nassr__salem-al-najdi.jpg` — Tasnim News Agency — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AEsteghlal_0_-_0_Al_Nassr%2C_round_of_16_of_the_AFC_Elite_League%2C_Azadi_Stadium%2C_3_March_2025%2C_Salem_Al-Najdi.jpg
+- `sa-al-qadsiah__koen-casteels.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Salzburg_gegen_VfL_Wolfsburg_%28CL-Gruppenphase_20._Oktober_2021%29_75.jpg
+- `sa-al-qadsiah__julian-weigl.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AJulian_Weigl_2020.png
+- `sa-al-qadsiah__nacho.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANacho_Fern%C3%A1ndez.jpg
+- `sa-al-khaleej__kiki-kouyate.jpg` — MHSC TV - Montpellier Hérault Sport Club — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ABoubakar_Kouyat%C3%A9_2023.jpg
+- `sa-al-khaleej__joshua-king.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AKing_asse_tfc_2425.png
+- `sa-al-khaleej__omar-mascarell.jpg` — Елена Рыбакова — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AOmar_Mascarell_2018_%28cropped%29.jpg
+- `sa-al-khaleej__miguel-crespo.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMiguel_Crespo_13_%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_FK_20250731_%2810%29_%28cropped%29.jpg
+- `br-chapecoense__rafael-santos.jpg` — MAGERSA78 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARAFAEL_BORRE_%28cropped2%29.jpg
+- `sa-al-khaleej__anthony-moris.jpg` — Standarddefour77 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AAnthony_moris_sous_la_vareuse_du_standard_de_li%C3%A8ge.jpg
+- `sa-al-khaleej__musa-barrow.jpg` — Anneprudence — CC0 — https://commons.wikimedia.org/wiki/File%3AMusa_Barrow_%28cropped%29.jpg
+- `sa-al-qadsiah__nahitan-nandez.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AUrug_tren_%283%29_-_%D0%BA%D0%BE%D0%BF%D0%B8%D1%8F.jpg
+- `sa-al-qadsiah__yasser-al-shahrani.jpg` — Дмитрий Садовников — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AYasser_Al-Shahrani.jpg
+- `sa-al-qadsiah__tijjani-reijnders.jpg` — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AManchester_City_2025_06_26_Juventus_%28cropped_to_Reijniders%29.jpg
+- `sa-al-qadsiah__mohammed-qassem.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMohammed_Qassem_%28footballer%2C_born_1995%29_%28cropped%29.jpg
+- `br-gremio__marlon.jpg` — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%A8%D0%B0%D1%85%D1%82%D0%B0%D1%80%C2%BB_0-0._3_%D0%B6%D0%BE%D0%B2%D1%82%D0%BD%D1%8F_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1278829.jpg
+- `sa-al-qadsiah__mateo-retegui.jpg` — MichaelEmilio — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ANorway_Italy_-_June_2025_A_21_%28cropped%29.jpg
+- `sa-al-qadsiah__julian-quinones.jpg` — Selección Nacional de México — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AJuli%C3%A1n_Qui%C3%B1ones_%281%29.png
+- `sa-al-qadsiah__souffian-el-karouani.jpg` — Abdelali Bentarki — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASouffian_El_Karouani_against_Paraguay_%28cropped%29.jpg
+- `sa-al-qadsiah__otavio.jpg` — M.Reza Abbasi/Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AOtavio_2023_%28cropped%29.jpg
+- `sa-al-riyadh__sultan-al-essa.jpg` — World Economic Forum from Cologny, Switzerland — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3ATarek_Sultan_Al_Essa.jpg
+- `sa-al-riyadh__kader-keita.jpg` — Doha Stadium Plus Qatar — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AAbdul_Kader_Keita_2011_%281%29.jpg
+- `sa-al-riyadh__trezeguet.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATrezeguet_Argentina_v_Egypt_7_July_2026-008.jpg
+- `sa-al-riyadh__mamadou-sylla.jpg` — Alberto Cabello Mayero — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMamadou_Sylla_2023.jpg
+- `br-remo__marlon.jpg` — .mw-parser-output .commons-creator-table{background-color:#f0f0ff;box-sizing:border-box;font-size:95%;text-align:start;c — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%D0%9C%D0%B0%D1%82%D1%87_%C2%AB%D0%94%D0%B8%D0%BD%D0%B0%D0%BC%D0%BE%C2%BB_-_%C2%AB%D0%A8%D0%B0%D1%85%D1%82%D0%B0%D1%80%C2%BB_0-0._3_%D0%B6%D0%BE%D0%B2%D1%82%D0%BD%D1%8F_2021_%D1%80%D0%BE%D0%BA%D1%83_%E2%80%94_1278829.jpg
+- `br-remo__antonio-galeano.jpg` — Alexander Steffler from Washington, DC, US — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AJos%C3%A9_Antonio_Galeano_en_el_CA_Deportivo_Paraguayo-Buenos_Aires-wwwflickrcom-photos-alex-s-167507230.jpg
+- `sa-al-riyadh__victor-lekhal.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_Le_Havre_%2816-07-2020%29_11.jpg
+- `br-remo__ze-ivaldo.jpg` — BrazilianDude70 — CC0 — https://commons.wikimedia.org/wiki/File%3ASantos_0x0_Cear%C3%A1_-_12-05-2025_-_Z%C3%A9_Ivaldo_%28cropped%29.jpg
+- `br-remo__ze-welison.jpg` — Record TV Goiás — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AZ%C3%A9_Welison_2021.png
+- `br-remo__joao-victor.jpg` — Razyakobov — CC0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_victor.jpg
+- `sa-al-riyadh__bernard-mensah.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ABernard_Mensah_-_beIN-Sports-Reklam_%282021%29_%28cropped%29.png
+- `sa-al-riyadh__milan-borjan.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMilan_Borjan_2018_crop.jpg
+- `br-santos__diogenes.jpg` — TV Franca - Canal 23 — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ADiogenes_Santos_2023_-_2.png
+- `br-santos__vinicius-lira.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AVinicius_Lira_12-09-2025.png
+- `sa-al-shabab__mamadou-barry.jpg` — Dltl2010 — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AMamadou_Hady_Barry_%28cropped%29.jpg
+- `sa-al-shabab__tin-jedvaj.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ATin_Jedvaj_2021.jpg
+- `sa-al-shabab__awad-al-nashri.jpg` — Astro medya Org. Ltd. ŞTİ. — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AAwad_Al-Nashri_20220810_2_%28cropped%29.jpg
+- `sa-al-shabab__josh-brownhill.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJosh_Brownhill_26042025_%284%29.jpg
+- `sa-al-shabab__roger-martinez.jpg` — Estevoaei — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASD_Sarriana_-_CD_Lugo%2C_Copa_Federaci%C3%B3n_2024_-_86_-_Roger_Mart%C3%ADnez.jpg
+- `br-santos__gustavo-caballero.jpg` — Chabe01 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMatch_Football_Paraguay_x_Mali_Jeux_Olympiques_2024_Stade_Parc_Princes_-_Paris_XVI_%28FR75%29_-_2024-07-30_-_35_-_Gustavo_Caballero.jpg
+- `br-santos__pepe-fermino.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APep%C3%AA_Fermino_26-10-2024.png
+- `sa-al-shabab__yannick-carrasco.jpg` — Светлана Бекетова — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AYannick_Ferreira_Carrasco_%28cropped%29.jpg
+- `sa-al-shabab__daniel-podence.jpg` — Bex Walton — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ADaniel_Podence_%28cropped%29_WolvesvManCitySeptember2022_2.jpg
+- `br-santos__moises.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMoises_Caicedo_23_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_01_%28cropped%29.jpg
+- `br-santos__joao-ananias.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Ananias_08-04-2026.png
+- `sa-al-shabab__thomas-partey.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AThomas_Partey_5_England_v_Ghana_at_2026_Fifa_World_Cup_by_YantsImages_02_%28cropped%29.jpg
+- `sa-al-shabab__majed-abdullah.jpg` — Saudi newspapers — Public domain — https://commons.wikimedia.org/wiki/File%3AMajed_Abdullah_in_Asia_Cup_1984.jpg
+- `br-santos__joao-paulo.jpg` — Petsbikes — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Paulo_Fernandes_%28cropped%29.jpg
+- `br-santos__joao-alencar.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Alencar_20-02-2026.png
+- `sa-al-shabab__yacine-adli.jpg` — Saggittarius A — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMilan_Lecce_2023_Adli.jpg
+- `br-santos__mateus-xavier.jpg` — TV Botafogo — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AMateus_Xavier_2025.png
+- `sa-al-shabab__ali-al-bulaihi.jpg` — Foad Ashtari — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASaudi_Arabia_v_Oman_%2813%29_%28cropped%29.jpg
+- `sa-al-shabab__ricardo-mathias.jpg` — Lennon Haas — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARicardo_Mathias_in_2024.png
+- `sa-al-taawoun__zineddine-belaid.jpg` — Mohamed Assil Chaibainou — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AZineddine_Bela%C3%AFd_-_20240326_%28cropped%29.jpg
+- `br-santos__joao-pedro.jpg` — DHSgov — Public domain — https://commons.wikimedia.org/wiki/File%3AJo%C3%A3o_Pedro%2C_2025_FIFA_Club_World_Cup_final_%2854654843615%29.jpg
+- `sa-al-taawoun__parfait-guiagon.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AParfait_Guiagon_Cote_D%27Ivoire_v_Ecuador_14_June_2026-27_%28cropped%29.jpg
+- `sa-al-taawoun__abderrazak-hamdallah.jpg` — Nawfel Ajari — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AHamdallah.jpg
+- `sa-al-taawoun__aschraf-el-mahdioui.jpg` — Richard Mulder — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AAschraf_El_Mahdioui_%282016%29.jpg
+- `sa-al-taawoun__marin-petkov.jpg` — Biser Todorov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMarin_petkov.jpg
+- `sa-neom__marcin-bu-ka.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_OGC_Nice_%2810-04-2022%29_5.jpg
+- `sa-neom__mohammed-al-breik.jpg` — Анна Нэсси — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMohammed_Al-Breik_%28cropped%29.jpg
+- `sa-neom__malang-sarr.jpg` — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMalang_Sarr_-_2021_FIFA_Club_World_Cup_Final_%28cropped%29.jpg
+- `sa-neom__georgios-masouras.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGeorgios_Masouras_%28Testspiel%2C_2022-07-02%29_47_%28cropped%29.jpg
+- `sa-neom__said-benrahma.jpg` — Mohamed Assil Chaibainou — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASa%C3%AFd_Benrahma_-_20240326.jpg
+- `sa-neom__valentin-vada.jpg` — Adrien33000 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AValentin_Vada_%28cropped%29.jpg
+- `br-cruzeiro__cassio.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ACassio-Corinthians-Juventude-jul-2022.jpg
+- `sa-neom__luis-maximiano.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Salzburg_gegen_Sporting_Lissabon_%28UEFA_Youth_League_Play_off%2C_7._Februar_2018%29_47.jpg
+- `sa-neom__alexandre-lacazette.jpg` — MHSC TV - Montpellier Hérault Sport Club — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ALacazette_vs_MHSC_7_May_2023.png
+- `sa-neom__luciano-rodriguez.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AUruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4459-jikatu_%2852990083488%29_%28cropped%29.jpg
+- `tr-alanyaspor__ianis-hagi.jpg` — Rolandhino1 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AIanis_Hagi_-_Sweden_vs_Romania_23_March_2019_%28cropped%29.jpg
+- `tr-alanyaspor__hwang-ui-jo.jpg` — Mohammad Moussa — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALebanon_v_South_Korea%2C_14_November_2019_20_%28Hwang_Ui-jo%29.jpg
+- `tr-alanyaspor__paulo-victor.jpg` — Steindy ( talk ) 13:49, 7 May 2018 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASC_Wiener_Neustadt_vs._SC_Austria_Lustenau_2018-04-24_%28024%29.jpg
+- `tr-alanyaspor__florent-hadergjonaj.jpg` — @cfcunofficial (Chelsea Debs) London from London, UK — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AChelsea_1_Huddersfield_1_%28Florent_Hadergjonaj%29.jpg
+- `tr-amedspor__david-bates.jpg` — daniel0685 — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ADavid_Bates_2018.jpg
+- `tr-amedspor__cem-ustundag.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ACem_%C3%9Cst%C3%BCndag_6_Kas%C4%B1mpa%C5%9Fa_SK_20260130_%283%29.jpg
+- `tr-amedspor__ermal-krasniqi.jpg` — @8Dodo8 — Public domain — https://commons.wikimedia.org/wiki/File%3AErmal_Krasniqi_-_Petrolul_Ploiesti_vs_CFR_Cluj%2C_27_February_2023.jpg
+- `tr-amedspor__umut-meras.jpg` — Beşiktaş JK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AUmut_Mera%C5%9F.jpg
+- `tr-amedspor__alban-lafont.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAlban_Lafont_Cote_D%27Ivoire_v_Ecuador_14_June_2026-76_%283x4_cropped%29.jpg
+- `tr-amedspor__dia-saba.jpg` — Adir Benyamini — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADia_Saba_3.jpg
+- `tr-basaksehir__volkan-babacan.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AVolkan_Babacan_1_%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_FK_20250731_%281%29.jpg
+- `tr-basaksehir__jerome-opoku.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJerome_Opoku_England_v_Ghana_23_June_2026-234_%28cropped%29.jpg
+- `tr-basaksehir__onur-bulut.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AOnur_Bulut_6_%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_FK_UECL_20250821_%283%29.jpg
+- `br-sao-paulo__tete.jpg` — Football.ua — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ATet%C3%AA_in_2021.jpg
+- `br-sao-paulo__artur.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AArtur-Victor-Bragantino-Coritiba-jun-2022-2.jpg
+- `tr-basaksehir__olivier-kemen.jpg` — Zafer — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AOlivier_Kemen_8_%C4%B0stanbul_Ba%C5%9Fak%C5%9Fehir_FK_20250731_%2810%29.jpg
+- `tr-basaksehir__davie-selke.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Davie_Selke_HSV_pic1.jpg
+- `tr-basaksehir__edin-visca.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AEdin_Vi%C5%A1%C4%87a_as_Soccerplayer_of_Ba%C5%9Fak%C5%9Fehir_FK_%282019%E2%80%9320_S%C3%BCper_Lig%29_%28cropped%29.png
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg

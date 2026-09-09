@@ -3311,3 +3311,12 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .player-modal .attrs { margin: 8px 0; }
 .player-modal .proj-wrap svg { width: 100%; height: auto; }
 @media (max-width: 380px) { .player-modal .pm-two { grid-template-columns: 1fr; } }
+/* modal de jogador: cabeçalho compacto no celular */
+.player-modal .pm-head { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 12px; }
+.player-modal .prof-face { width: 64px; height: 64px; border-radius: 12px; }
+.player-modal .prof-name { font-size: 17px; line-height: 1.15; }
+.player-modal .prof-meta { display: flex; flex-wrap: wrap; gap: 4px 8px; font-size: 12px; align-items: center; }
+.player-modal .prof-gauges { display: flex; gap: 4px; }
+.player-modal .prof-gauges svg { width: 52px; height: 52px; }
+@media (max-width: 400px) { .player-modal .pm-head { grid-template-columns: 56px 1fr auto; } .player-modal .prof-face { width: 56px; height: 56px; } .player-modal .prof-gauges svg { width: 46px; height: 46px; } .player-modal .prof-name { font-size: 15px; } }
+.player-modal .modal-close { z-index: 2; }
