@@ -327,7 +327,11 @@
         // no elenco inicial, distribui tempo de casa (0-6) e marca ~28% como crias da base
         var isInitial = !c.signedFrom || !(id in c.signedFrom);
         c.tenure[id] = isInitial ? (phash(id + ":ten") % 7) : 0;
-        if (isInitial && c.homegrown[id] == null) c.homegrown[id] = (phash(id + ":hg") % 100) < 28;
+        if (isInitial && c.homegrown[id] == null) {
+          var pl0 = null, lg0 = null; try { pl0 = C().resolvePlayer(c, id); lg0 = TM.data.league(c.leagueId); } catch (e) {}
+          var sameNation = !pl0 || !lg0 || !lg0.nation || !pl0.nationName || pl0.nationName === lg0.nation;
+          c.homegrown[id] = sameNation && (!pl0 || (pl0.age || 25) <= 29) && (phash(id + ":hg") % 100) < 28;
+        }
       }
       if (c.homegrown[id] == null) c.homegrown[id] = false;
     });
@@ -3833,6 +3837,78 @@
   }
   function formPill(res) { return el("span", { class: "fp fp-" + res, text: res }); }
 
+  /* ---------- análise do jogador: gráficos (radar, campinho, projeção) ---------- */
+  var ATTR6 = [["pac", "VEL", "Velocidade"], ["sho", "FIN", "Finalização"], ["pas", "PAS", "Passe"], ["dri", "DRI", "Drible"], ["def", "DEF", "Defesa"], ["phy", "FÍS", "Físico"]];
+  function attrColor(v) { return v >= 85 ? "#f5c542" : v >= 75 ? "#22c55e" : v >= 62 ? "#eab308" : "#ef4444"; }
+  function radarSVG(a, avg, color) {
+    var cx = 125, cy = 100, R = 76, n = ATTR6.length;
+    function pt(i, r) { var ang = -Math.PI / 2 + i * 2 * Math.PI / n; return [cx + Math.cos(ang) * r, cy + Math.sin(ang) * r]; }
+    var grid = "";
+    [0.25, 0.5, 0.75, 1].forEach(function (f) { grid += '<polygon points="' + ATTR6.map(function (k, i) { return pt(i, R * f).join(","); }).join(" ") + '" fill="none" stroke="rgba(255,255,255,.12)"/>'; });
+    var axes = ATTR6.map(function (k, i) { var e = pt(i, R); return '<line x1="' + cx + '" y1="' + cy + '" x2="' + e[0] + '" y2="' + e[1] + '" stroke="rgba(255,255,255,.12)"/>'; }).join("");
+    function poly(vals) { return ATTR6.map(function (k, i) { return pt(i, R * Math.max(0.05, Math.min(1, (vals[k[0]] || 40) / 100))).join(","); }).join(" "); }
+    var avgPoly = avg ? '<polygon points="' + poly(avg) + '" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.35)" stroke-dasharray="3 3"/>' : "";
+    var labels = ATTR6.map(function (k, i) { var e = pt(i, R + 16); var v = a[k[0]] || 40; return '<text x="' + e[0] + '" y="' + (e[1] + 4) + '" text-anchor="middle" font-size="10" font-weight="800" fill="' + attrColor(v) + '">' + k[1] + ' ' + v + '</text>'; }).join("");
+    var dots = ATTR6.map(function (k, i) { var e = pt(i, R * Math.max(0.05, Math.min(1, (a[k[0]] || 40) / 100))); return '<circle cx="' + e[0] + '" cy="' + e[1] + '" r="3" fill="' + attrColor(a[k[0]] || 40) + '"/>'; }).join("");
+    return '<svg viewBox="0 0 250 200" class="radar-svg"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="' + color + '" stop-opacity=".75"/><stop offset="1" stop-color="#f5c542" stop-opacity=".45"/></linearGradient></defs>' + grid + axes + avgPoly + '<polygon points="' + poly(a) + '" fill="url(#rg)" stroke="' + color + '" stroke-width="2"/>' + dots + labels + '</svg>';
+  }
+  var PITCH_XY = { GOL: [50, 128], LD: [84, 100], LE: [16, 100], ZAG: [50, 108], VOL: [50, 82], MC: [50, 66], MEI: [50, 50], PD: [84, 34], PE: [16, 34], SA: [50, 32], CA: [50, 14] };
+  var POS_ALT = { GOL: [], LD: ["PD"], LE: ["PE"], ZAG: ["VOL"], VOL: ["ZAG", "MC"], MC: ["VOL", "MEI"], MEI: ["MC", "SA"], PD: ["LD", "SA"], PE: ["LE", "SA"], SA: ["MEI", "CA"], CA: ["SA"] };
+  var ROLE_TXT = { GOL: "Goleiro: reflexos, saída do gol e segurança nos cruzamentos.", LD: "Lateral direito: apoio pelo lado, cruzamentos e recomposição.", LE: "Lateral esquerdo: profundidade, cruzamentos e marcação do ponta.", ZAG: "Zagueiro: jogo aéreo, antecipação e saída de bola.", VOL: "Volante: proteção da zaga, desarmes e distribuição curta.", MC: "Meio-campo central: equilíbrio entre marcação e construção.", MEI: "Meia armador: último passe, visão e finalização de fora.", PD: "Ponta direita: velocidade, drible e chegada ao fundo.", PE: "Ponta esquerda: 1x1, diagonal e cruzamentos.", SA: "Segundo atacante: flutuação entre as linhas e tabelas.", CA: "Centroavante: finalização, pivô e presença de área." };
+  function pitchSVG(p) {
+    var main = p.pos2 || (p.pos === "GK" ? "GOL" : p.pos === "DF" ? "ZAG" : p.pos === "FW" ? "CA" : "MC");
+    var alts = POS_ALT[main] || [];
+    var out = '<svg viewBox="0 0 100 140" class="pitch-svg"><defs><linearGradient id="pg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f7a3a"/><stop offset="1" stop-color="#0e4d24"/></linearGradient></defs><rect x="0" y="0" width="100" height="140" rx="4" fill="url(#pg)"/>';
+    out += '<g stroke="rgba(255,255,255,.55)" fill="none" stroke-width="1"><rect x="4" y="4" width="92" height="132"/><line x1="4" y1="70" x2="96" y2="70"/><circle cx="50" cy="70" r="11"/><rect x="24" y="4" width="52" height="20"/><rect x="24" y="116" width="52" height="20"/><rect x="38" y="4" width="24" height="8"/><rect x="38" y="128" width="24" height="8"/></g>';
+    Object.keys(PITCH_XY).forEach(function (k) {
+      var xy = PITCH_XY[k], isMain = k === main, isAlt = alts.indexOf(k) >= 0;
+      if (k === "ZAG" || k === "MC") { /* duplica zagueiro/meia central nos dois lados */ }
+      var fill = isMain ? "#f5c542" : isAlt ? "rgba(34,197,94,.9)" : "rgba(255,255,255,.18)";
+      out += '<circle cx="' + xy[0] + '" cy="' + xy[1] + '" r="' + (isMain ? 7 : 5) + '" fill="' + fill + '" stroke="' + (isMain ? "#fff" : "rgba(255,255,255,.4)") + '" stroke-width="' + (isMain ? 1.5 : 0.8) + '"/>';
+      out += '<text x="' + xy[0] + '" y="' + (xy[1] + 2.4) + '" text-anchor="middle" font-size="' + (isMain ? 5.2 : 4.2) + '" font-weight="800" fill="' + (isMain ? "#1a1a1a" : "#fff") + '">' + k + '</text>';
+    });
+    return out + '</svg>';
+  }
+  function traitsOf(p) {
+    var a = p.attrs || {}, t = [];
+    if (a.pac >= 84) t.push(["⚡", "Velocista"]); if (a.sho >= 82) t.push(["🎯", "Finalizador"]); if (a.pas >= 83) t.push(["🧠", "Maestro"]);
+    if (a.dri >= 83) t.push(["🌀", "Driblador"]); if (a.def >= 83) t.push(["🧱", "Muralha"]); if (a.phy >= 83) t.push(["💪", "Força física"]);
+    if (p.pos === "MF" && Math.abs((a.def || 0) - (a.pas || 0)) <= 6 && a.phy >= 74) t.push(["🔁", "Box-to-box"]);
+    if (p.pos === "FW" && a.pas >= 78 && a.dri >= 78) t.push(["🎩", "Criador"]);
+    if (p.pos === "DF" && a.pas >= 76) t.push(["📤", "Saída de bola"]);
+    if ((p.age || 25) <= 21 && (p.potential || p.overall) - p.overall >= 8) t.push(["💎", "Promessa"]);
+    if ((p.age || 25) >= 32) t.push(["🎖️", "Experiente"]);
+    if (!t.length) t.push(["⚖️", "Equilibrado"]);
+    return t.slice(0, 4);
+  }
+  function projectionSVG(p) {
+    var age = p.age || 25, ov = p.overall, pot = p.potential || ov, W = 300, H = 110, x0 = 30, y0 = 8, w = W - 40, h = H - 30;
+    var ages = [], vals = [], peak = 27, end = 36;
+    for (var a2 = age; a2 <= end; a2++) {
+      var v;
+      if (a2 <= peak) v = ov + (pot - ov) * Math.min(1, (a2 - age) / Math.max(1, peak - age));
+      else v = pot - (a2 - peak) * (a2 - peak) * 0.45;
+      ages.push(a2); vals.push(Math.max(40, v));
+    }
+    var minV = Math.min.apply(null, vals) - 4, maxV = Math.max.apply(null, vals) + 4;
+    function X(i) { return x0 + (i / Math.max(1, ages.length - 1)) * w; }
+    function Y(v) { return y0 + (1 - (v - minV) / Math.max(1, maxV - minV)) * h; }
+    var path = vals.map(function (v, i) { return (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1); }).join(" ");
+    var area = path + " L" + X(vals.length - 1).toFixed(1) + " " + (y0 + h) + " L" + x0 + " " + (y0 + h) + " Z";
+    var ticks = ages.filter(function (a3, i) { return i % 3 === 0 || i === ages.length - 1; }).map(function (a3) { var i = ages.indexOf(a3); return '<text x="' + X(i) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.6)">' + a3 + '</text>'; }).join("");
+    var pk = vals.indexOf(Math.max.apply(null, vals));
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" class="proj-svg"><defs><linearGradient id="pj" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#22c55e" stop-opacity=".55"/><stop offset="1" stop-color="#22c55e" stop-opacity="0"/></linearGradient></defs>' +
+      '<path d="' + area + '" fill="url(#pj)"/><path d="' + path + '" fill="none" stroke="#22c55e" stroke-width="2.2"/>' +
+      '<circle cx="' + X(0) + '" cy="' + Y(vals[0]) + '" r="4" fill="#fff"/><text x="' + (X(0) + 6) + '" y="' + (Y(vals[0]) - 6) + '" font-size="10" font-weight="800" fill="#fff">' + ov + ' hoje</text>' +
+      (pk > 0 ? '<circle cx="' + X(pk) + '" cy="' + Y(vals[pk]) + '" r="4" fill="#f5c542"/><text x="' + Math.min(W - 60, X(pk) + 6) + '" y="' + (Y(vals[pk]) - 6) + '" font-size="10" font-weight="800" fill="#f5c542">pico ' + Math.round(vals[pk]) + ' aos ' + ages[pk] + '</text>' : "") + ticks + '</svg>';
+  }
+  function squadAvgAttrs(c) {
+    var ps = []; try { ps = C().rosterPlayers(c); } catch (e) {}
+    if (!ps.length) return null;
+    var avg = {}; ATTR6.forEach(function (k) { var sum = 0, n = 0; ps.forEach(function (q) { if (q.attrs && q.attrs[k[0]] != null) { sum += q.attrs[k[0]]; n++; } }); avg[k[0]] = n ? Math.round(sum / n) : 50; });
+    return avg;
+  }
+
   TM.ui.register("coach-player", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c || !profilePid) { TM.ui.go(profileBack); return; }
@@ -3853,7 +3929,9 @@
     screen.appendChild(wrap);
 
     // ---- header ----
-    wrap.appendChild(el("div", { class: "prof-head" }, [
+    var pcl = (p.clubId && p.clubId !== "free") ? TM.data.club(p.clubId) : null;
+    var pc1 = (pcl && pcl.colors && pcl.colors.primary) || "#1e9e4a", pc2 = (pcl && pcl.colors && pcl.colors.secondary) || "#0b2a1a";
+    var head = el("div", { class: "prof-head prof-head-grad", style: "background: linear-gradient(135deg, " + pc1 + "cc 0%, " + pc2 + "cc 55%, var(--panel) 100%)" }, [
       TM.img.playerImg(p, "prof-face"),
       el("div", { class: "prof-id" }, [
         el("div", { class: "prof-name" }, [ (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name) ].filter(Boolean)),
@@ -3870,7 +3948,12 @@
           ? gaugeHidden("POT")
           : gaugeSVG(pot, 99, "POT", pot > p.overall ? "#4ade80" : "#8aa0b2")
       ])
-    ]));
+    ]);
+    wrap.appendChild(head);
+    wrap.appendChild(el("div", { class: "trait-row" }, traitsOf(p).map(function (t) { return el("span", { class: "trait-chip", text: t[0] + " " + t[1] }); }).concat([
+      pcl ? el("span", { class: "trait-chip club", text: "🏟️ " + pcl.name }) : null,
+      p.pos2 ? el("span", { class: "trait-chip pos", text: "📍 " + p.pos2 }) : null
+    ])));
 
     // ---- potencial oculto / joia rara (jogadores jovens ainda não observados) ----
     if (p.hiddenPot) {
@@ -4063,7 +4146,7 @@
     ]));
 
     // ---- abas ----
-    var TABS = [["geral", "Visão Geral"], ["attrs", "Atributos"], ["hist", "Histórico"], ["ins", "Insights"]];
+    var TABS = [["geral", "Visão Geral"], ["attrs", "Atributos"], ["tat", "Tático"], ["hist", "Histórico"], ["ins", "Insights"]];
     var tabBar = el("div", { class: "prof-tabs" });
     TABS.forEach(function (t) {
       tabBar.appendChild(el("button", { class: "prof-tab" + (profileTab === t[0] ? " on" : ""), text: t[1], on: { click: function () { profileTab = t[0]; TM.ui.go("coach-player"); } } }));
@@ -4120,17 +4203,71 @@
       }
     } else if (profileTab === "attrs") {
       var a = p.attrs || {};
-      function bar(label, v) { return el("div", { class: "attr" }, [ el("span", { class: "attr-label", text: label }), el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%" }) ]), el("span", { class: "attr-val", text: v }) ]); }
-      body.appendChild(el("div", { class: "attrs" }, [
-        bar("Velocidade", a.pac || 50), bar("Finalização", a.sho || 50), bar("Passe", a.pas || 50),
-        bar("Drible", a.dri || 50), bar("Defesa", a.def || 50), bar("Físico", a.phy || 50)
+      var avgA = inMySquad ? squadAvgAttrs(c) : null;
+      body.appendChild(el("div", { class: "prof-card radar-card pblock" }, [
+        el("div", { class: "prof-card-h", text: "RADAR DE ATRIBUTOS" + (avgA ? " · tracejado = média do elenco" : "") }),
+        el("div", { class: "radar-wrap", html: radarSVG(a, avgA, pc1) })
       ]));
+      function attrBarX(k) {
+        var v = a[k[0]] || 50, av = avgA ? avgA[k[0]] : null, diff = av != null ? v - av : null;
+        return el("div", { class: "attr attr-x" }, [
+          el("span", { class: "attr-label", text: k[2] }),
+          el("div", { class: "attr-bar" }, [ el("div", { class: "attr-fill", style: "width:" + v + "%; background: linear-gradient(90deg, " + attrColor(v) + "88, " + attrColor(v) + ")" }), av != null ? el("div", { class: "attr-avg", style: "left:" + av + "%" }) : null ]),
+          el("span", { class: "attr-val", style: "color:" + attrColor(v), text: v }),
+          diff != null ? el("span", { class: "attr-diff " + (diff >= 0 ? "up" : "down"), text: (diff >= 0 ? "+" : "") + diff }) : null
+        ]);
+      }
+      body.appendChild(el("div", { class: "attrs" }, ATTR6.map(attrBarX)));
       body.appendChild(el("div", { class: "player-detail-grid" }, [
         el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: p.overall }), el("div", { class: "pd-lbl", text: "Overall" }) ]),
         el("div", { class: "pd-item" }, [ el("div", { class: "pd-val " + (pot > p.overall ? "up" : ""), text: pot }), el("div", { class: "pd-lbl", text: "Potencial" }) ]),
         el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: money(c, val) }), el("div", { class: "pd-lbl", text: "Valor" }) ]),
         el("div", { class: "pd-item" }, [ el("div", { class: "pd-val", text: (p.height || "?") + "cm" }), el("div", { class: "pd-lbl", text: "Altura" }) ])
       ]));
+      body.appendChild(el("div", { class: "prof-card pblock" }, [
+        el("div", { class: "prof-card-h", text: "PROJEÇÃO DE EVOLUÇÃO" }),
+        el("div", { class: "proj-wrap", html: projectionSVG(p) }),
+        el("div", { class: "setting-hint", text: pot > p.overall ? "Com minutos e bom CT, pode chegar a " + pot + ". Jovens evoluem mais rápido jogando." : (p.age || 25) >= 30 ? "No auge ou em declínio suave: mantenha a forma e evite lesões." : "Perto do teto: rendimento estável nas próximas temporadas." })
+      ]));
+    } else if (profileTab === "tat") {
+      var mainPos = p.pos2 || (p.pos === "GK" ? "GOL" : p.pos === "DF" ? "ZAG" : p.pos === "FW" ? "CA" : "MC");
+      var alts = POS_ALT[mainPos] || [];
+      body.appendChild(el("div", { class: "prof-card tat-card pblock" }, [
+        el("div", { class: "prof-card-h", text: "POSIÇÕES EM CAMPO" }),
+        el("div", { class: "tat-row" }, [
+          el("div", { class: "pitch-wrap", html: pitchSVG(p) }),
+          el("div", { class: "tat-info" }, [
+            el("div", { class: "tat-main" }, [ el("span", { class: "tat-dot main" }), el("span", { text: "Principal: " + mainPos }) ]),
+            alts.length ? el("div", { class: "tat-alt" }, [ el("span", { class: "tat-dot alt" }), el("span", { text: "Também joga: " + alts.join(", ") }) ]) : null,
+            el("div", { class: "tat-role", text: ROLE_TXT[mainPos] || "" })
+          ])
+        ])
+      ]));
+      if (inMySquad) {
+        var same = C().rosterPlayers(c).filter(function (q) { return q.pos === p.pos; }).sort(function (x, y) { return y.overall - x.overall; });
+        var rank = same.findIndex(function (q) { return q.id === p.id; }) + 1;
+        var lu = c.lineup || {}, isStarter = (lu.starters || []).indexOf(p.id) >= 0, isBench = (lu.bench || []).indexOf(p.id) >= 0;
+        var best = same[0];
+        body.appendChild(el("div", { class: "prof-card pblock" }, [
+          el("div", { class: "prof-card-h", text: "ENCAIXE NO SEU TIME" }),
+          el("div", { class: "fit-grid" }, [
+            el("div", { class: "fit-cell" }, [ el("div", { class: "fit-v " + (isStarter ? "c-green" : isBench ? "c-gold" : ""), text: isStarter ? "Titular" : isBench ? "Banco" : "Fora" }), el("div", { class: "fit-l", text: "escalação atual" }) ]),
+            el("div", { class: "fit-cell" }, [ el("div", { class: "fit-v", text: rank + "º/" + same.length }), el("div", { class: "fit-l", text: "entre os " + POS_LABELS[posGroupOf(p)].toLowerCase() + "s" }) ]),
+            el("div", { class: "fit-cell" }, [ el("div", { class: "fit-v " + (p.overall >= TM.data.clubRating(c.teamId) ? "c-green" : ""), text: (p.overall - TM.data.clubRating(c.teamId) >= 0 ? "+" : "") + (p.overall - TM.data.clubRating(c.teamId)) }), el("div", { class: "fit-l", text: "vs. média do time" }) ])
+          ]),
+          el("div", { class: "setting-hint", text: best && best.id !== p.id ? "Concorre com " + shortName(best.name) + " (" + best.overall + ") pela vaga." : "É a referência da posição no elenco." })
+        ]));
+        var tips = [];
+        var a2 = p.attrs || {};
+        if (a2.pac >= 80 && p.pos === "FW") tips.push("Explore a velocidade: bolas em profundidade e contra-ataques.");
+        if (a2.pas >= 80 && p.pos === "MF") tips.push("Faça dele o organizador: posse de bola e construção pelo meio.");
+        if (a2.def >= 80 && p.pos === "DF") tips.push("Linha alta funciona bem com ele: ganha duelos e antecipa.");
+        if (a2.phy >= 80) tips.push("Aguenta jogos seguidos; bom em partidas físicas e disputas aéreas.");
+        if (a2.dri >= 80) tips.push("Peça 1x1 pelos lados e infiltrações.");
+        if ((c.fatigue && c.fatigue[p.id] || 0) >= 70) tips.push("Está cansado: considere poupar no próximo jogo.");
+        if (!tips.length) tips.push("Jogador de sistema: rende melhor com o time organizado ao redor.");
+        body.appendChild(el("div", { class: "prof-card pblock" }, [ el("div", { class: "prof-card-h", text: "DICAS TÁTICAS" }) ].concat(tips.map(function (t) { return el("div", { class: "tip-row", text: "• " + t }); }))));
+      }
     } else if (profileTab === "hist") {
       if (st) {
         var avg = st.rn ? (st.rsum / st.rn).toFixed(1) : "—";
