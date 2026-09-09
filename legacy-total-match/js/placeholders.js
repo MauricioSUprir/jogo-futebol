@@ -352,6 +352,9 @@
       // uniforme importado pelo jogador tem prioridade (kitData / kitAwayData / kitThirdData)
       var custom = variant === 1 ? club.kitAwayData : variant === 2 ? club.kitThirdData : club.kitData;
       if (custom) return imgWithFallback(custom, kit(club, variant), club.name + " — uniforme", cls);
+      // uniforme REAL da temporada (desenho da Wikipedia/Commons, licença livre) em assets/uniformes/<liga>-<clube>-N.png
+      var kf = club.leagueId + "-" + stadSlug(club.name) + "-" + (variant + 1) + ".png";
+      if (hasPhoto("uniformes", kf)) return imgWithFallback("assets/uniformes/" + kf, kit(club, variant), club.name + " — uniforme", cls);
       return imgWithFallback(kit(club, variant), kit(club, variant), club.name + " — uniforme", cls);
     },
     playerImg: function (player, cls) {
