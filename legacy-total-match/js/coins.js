@@ -8,7 +8,12 @@
   "use strict";
   var TM = global.TM, el = TM.ui.el;
 
-  var KEY = "totalmatch:coins";            // global (não muda com a edição)
+  var KEY_BASE = "totalmatch:coins:";      // uma carteira por CONTA (e-mail); sem conta, sem coins
+  function acctId() {
+    try { var p = TM.account && TM.account.profile ? TM.account.profile() : null; return (p && p.email) ? String(p.email).toLowerCase().trim() : null; } catch (e) { return null; }
+  }
+  function KEY() { var a = acctId(); return a ? KEY_BASE + a : null; }
+  var stateAcct = null;   // conta a que o estado carregado pertence
   var ADMIN_EMAILS = ["mauricio@gruposuprir.com", "gui.drodrigues21@gmail.com", "gui.drodrigues21@gnail.com"];
   var START = 100;
   var COST = { draftEntry: 20, draftRetry: 30 };
@@ -21,13 +26,19 @@
   var cloudRef = null, cloudUid = null, cloudHandler = null, lastCloud = null;
 
   function load() {
-    if (state) return state;
-    try { var raw = localStorage.getItem(KEY); state = raw ? JSON.parse(raw) : null; } catch (e) { state = null; }
+    var a = acctId();
+    if (!a) { state = { bal: 0, earned: 0, spent: 0, best: 0, log: [], none: true }; stateAcct = null; return state; }
+    if (state && stateAcct === a && !state.none) return state;
+    try { var raw = localStorage.getItem(KEY()); state = raw ? JSON.parse(raw) : null; } catch (e) { state = null; }
     if (!state || typeof state.bal !== "number") state = { bal: START, earned: START, spent: 0, best: 0, log: [{ t: Date.now(), d: START, r: "Bônus de boas-vindas" }] };
     if (!state.log) state.log = [];
-    return state;
+    stateAcct = a; return state;
   }
-  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function save() { var k = KEY(); if (!k || !state || state.none) return; try { localStorage.setItem(k, JSON.stringify(state)); } catch (e) {} }
+  function hasAccount() { return !!acctId(); }
+  function needAccount(what) {
+    TM.ui.confirm("Precisa de uma conta", (what || "Total Coins e o Draft") + " são por conta: cada pessoa tem o seu saldo. Entre ou crie a sua conta no Perfil.", "Ir para o Perfil", function () { TM.ui.go("profile"); });
+  }
   function fmt(n) { return (n < 0 ? "−" : "") + Math.abs(n) + " 🪙"; }
   function addLog(d, r) { var s = load(); s.log.unshift({ t: Date.now(), d: d, r: r }); if (s.log.length > 60) s.log.length = 60; }
 
@@ -40,7 +51,7 @@
     cloudRef = null; cloudHandler = null; cloudUid = null; lastCloud = null;
   }
   function attach() {
-    if (!cloudReady()) return;
+    if (!cloudReady() || !hasAccount()) return;
     var n = net(), uid = n.me.uid;
     if (cloudUid === uid) return;
     detach();
@@ -88,21 +99,23 @@
     state: function () { return load(); },
     fmt: fmt,
     canPay: function (n) { return load().bal >= n; },
+    hasAccount: hasAccount,
     earn: function (n, reason) {
-      if (!n || n <= 0) return;
+      if (!n || n <= 0 || !hasAccount()) return;
       var s = load(); s.bal += n; s.earned += n; addLog(n, reason || "Ganho"); save();
       pushCloud(n); refreshBadges();
       TM.ui.toast("+" + n + " 🪙 " + (reason || ""));
     },
     spend: function (n, reason) {
       var s = load();
-      if (s.bal < n) return false;
+      if (!hasAccount() || s.bal < n) return false;
       s.bal -= n; s.spent += n; addLog(-n, reason || "Gasto"); save();
       pushCloud(-n); refreshBadges();
       return true;
     },
     // tenta pagar; se não der, mostra aviso e abre a tela de coins
     pay: function (n, reason, onOk) {
+      if (!hasAccount()) { needAccount(); return false; }
       if (coins.spend(n, reason)) { onOk && onOk(); return true; }
       TM.ui.confirm("Total Coins insuficientes", "Você tem " + fmt(load().bal) + " e precisa de " + fmt(n) + ". Ganhe coins vencendo desafios (Draft e Dream Team).", "Ver meus coins", function () { TM.ui.go("coins"); });
       return false;
@@ -131,8 +144,9 @@
       }).catch(function () { cb && cb(false, "Falha ao enviar."); });
     },
     badge: function (cls) {
-      var b = el("button", { class: "coin-badge " + (cls || ""), title: "Total Coins", on: { click: function () { TM.ui.go("coins"); } } }, [
-        el("span", { class: "coin-ic", text: "🪙" }), el("span", { class: "coin-val", text: String(load().bal) })
+      var has = hasAccount();
+      var b = el("button", { class: "coin-badge " + (cls || "") + (has ? "" : " nocct"), title: has ? "Total Coins" : "Entre na conta para ter Total Coins", on: { click: function () { TM.ui.go("coins"); } } }, [
+        el("span", { class: "coin-ic", text: "🪙" }), el("span", { class: "coin-val", text: has ? String(load().bal) : "—" })
       ]);
       return b;
     }
@@ -140,7 +154,7 @@
   TM.coins = coins;
 
   function refreshBadges() {
-    var v = String(load().bal);
+    var v = hasAccount() ? String(load().bal) : "—";
     var els = document.querySelectorAll(".coin-badge .coin-val"); for (var i = 0; i < els.length; i++) els[i].textContent = v;
   }
 
@@ -149,8 +163,8 @@
     var N = net();
     if (N) {
       N.onReady(function () { attach(); });
-      if (N.linkAccount) { var _link = N.linkAccount; N.linkAccount = function (l) { _link(l); detach(); attach(); }; }
-      if (N.unlinkAccount) { var _unlink = N.unlinkAccount; N.unlinkAccount = function () { _unlink(); detach(); setTimeout(attach, 800); }; }
+      if (N.linkAccount) { var _link = N.linkAccount; N.linkAccount = function (l) { _link(l); state = null; stateAcct = null; detach(); setTimeout(function () { attach(); refreshBadges(); }, 300); }; }
+      if (N.unlinkAccount) { var _unlink = N.unlinkAccount; N.unlinkAccount = function () { _unlink(); state = null; stateAcct = null; detach(); refreshBadges(); }; }
     }
   } catch (e) {}
 
@@ -159,6 +173,21 @@
     var s = load();
     screen.appendChild(TM.ui.topbar("🪙 Total Coins", function () { TM.ui.go("modes"); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    if (!hasAccount()) {
+      body.appendChild(el("div", { class: "coin-hero" }, [
+        el("div", { class: "coin-hero-lbl", text: "Total Coins" }),
+        el("div", { class: "coin-hero-val", text: "🔒" }),
+        el("div", { class: "coin-hero-sub", text: "Cada conta tem o seu saldo. Para ter Total Coins e jogar o Draft, entre ou crie a sua conta." })
+      ]));
+      body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("👤 Entrar / criar conta", function () { TM.ui.go("profile"); }, "btn primary") ]));
+      body.appendChild(el("div", { class: "list-head", text: "Como funciona" }));
+      body.appendChild(el("div", { class: "coin-rules" }, [
+        el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: "🎁" }), el("span", { class: "coin-rule-tx", text: "Conta nova começa com " + START + " 🪙" }), el("span", { class: "coin-rule-v", text: "+" + START }) ]),
+        el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: "🎲" }), el("span", { class: "coin-rule-tx", text: "Entrar no Draft" }), el("span", { class: "coin-rule-v", text: "−" + COST.draftEntry + " 🪙" }) ]),
+        el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: "✔" }), el("span", { class: "coin-rule-tx", text: "Vitória no Draft" }), el("span", { class: "coin-rule-v", text: "+" + REWARD.draft.win + " 🪙" }) ])
+      ]));
+      return;
+    }
 
     var n = net(), num = (n && n.me && n.me.number) ? n.me.number : null;
     body.appendChild(el("div", { class: "coin-hero" }, [
