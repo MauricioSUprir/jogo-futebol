@@ -9,7 +9,7 @@
   var TM = global.TM, el = TM.ui.el;
 
   var KEY = "totalmatch:coins";            // global (não muda com a edição)
-  var ADMIN_EMAILS = ["mauricio@gruposuprir.com"];
+  var ADMIN_EMAILS = ["mauricio@gruposuprir.com", "gui.drodrigues21@gmail.com", "gui.drodrigues21@gnail.com"];
   var START = 100;
   var COST = { draftEntry: 20, draftRetry: 30 };
   var REWARD = {
