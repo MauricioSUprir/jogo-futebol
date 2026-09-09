@@ -172,6 +172,18 @@
         cb(out, null);
       }).catch(function (e) { cb([], "Sem permissão para ler a lista (regras do banco)."); });
     },
+    // admin: exclui uma conta PARA SEMPRE (conta, identidade online, número, ranking) e bloqueia o e-mail
+    deleteAccount: function (entry, cb) {
+      if (!coins.isAdmin()) { cb(false, "Só o administrador."); return; }
+      if (!cloudReady()) { cb(false, "Sem conexão com a nuvem."); return; }
+      var n = net(), db = n._db, upd = {};
+      if (entry.uid && n.me && entry.uid === n.me.uid) { cb(false, "Não dá para excluir a própria conta por aqui."); return; }
+      var key = entry.email ? n.acctKey(entry.email) : null;
+      if (key) { upd["accounts/" + key] = null; upd["banned/" + key] = { email: entry.email, number: entry.number || null, uid: entry.uid || null, t: Date.now(), by: n.me.number || null }; }
+      if (entry.uid) { upd["users/" + entry.uid] = null; upd["ranking/" + entry.uid] = null; }
+      if (entry.number) { upd["numbers/" + entry.number] = null; upd["bannedNumbers/" + entry.number] = true; }
+      db.ref().update(upd).then(function () { cb(true, "Conta excluída para sempre" + (entry.email ? " e e-mail bloqueado" : "") + "."); }).catch(function () { cb(false, "Falha ao excluir (regras do banco)."); });
+    },
     badge: function (cls) {
       var has = hasAccount();
       var b = el("button", { class: "coin-badge " + (cls || "") + (has ? "" : " nocct"), title: has ? "Total Coins" : "Entre na conta para ter Total Coins", on: { click: function () { TM.ui.go("coins"); } } }, [
@@ -247,7 +259,8 @@
       rule("🥇", "Perfil: moldura dourada na foto", "−" + COST.goldFrame + " 🪙")
     ]));
 
-    if (coins.isAdmin()) body.appendChild(adminPanel());
+    var adminRef = null;
+    if (coins.isAdmin()) { adminRef = adminPanel(); body.appendChild(adminRef); }
 
     body.appendChild(el("div", { class: "list-head", text: "Histórico" }));
     var hist = el("div", { class: "coin-log" });
@@ -260,6 +273,12 @@
       ]));
     });
     body.appendChild(hist);
+    if (coins.isAdmin() && adminRef) {
+      body.appendChild(el("div", { class: "list-head", text: "👑 Gerenciar contas" }));
+      var acc = accountsPanel(adminRef._numIn, adminRef._info, adminRef._setFound);
+      body.appendChild(acc);
+      setTimeout(function () { var lb = acc.querySelector(".btn"); if (lb) lb.click(); }, 50);   // carrega sozinho
+    }
 
     function stat(lbl, v, sub) { return el("div", { class: "coin-stat" }, [ el("div", { class: "coin-stat-v", text: String(v) }), el("div", { class: "coin-stat-l", text: lbl }), el("div", { class: "coin-stat-s", text: sub }) ]); }
     function rule(ic, txt, val) { return el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: ic }), el("span", { class: "coin-rule-tx", text: txt }), el("span", { class: "coin-rule-v", text: val }) ]); }
@@ -300,7 +319,12 @@
     var takeBtn = TM.ui.button("➖ Tirar coins", function () { doOp(-1); }, "btn ghost");
     box.appendChild(el("div", { class: "coin-admin-form" }, [ numIn, findBtn, amtIn, noteIn, el("div", { class: "coin-admin-btns" }, [ sendBtn, takeBtn ]) ]));
     box.appendChild(info);
+    box._numIn = numIn; box._info = info; box._setFound = function (f) { found = f; };
+    return box;
+  }
 
+  function accountsPanel(numIn, info, setFound) {
+    var box = el("div", { class: "coin-admin coin-accounts" });
     // ---- diretório de contas ----
     box.appendChild(el("div", { class: "list-head", text: "👥 Contas do jogo" }));
     var dirInfo = el("div", { class: "setting-hint", text: "Todas as contas cadastradas, com número, coins e quem está online." });
@@ -320,7 +344,16 @@
             el("div", { class: "coin-dir-sub", text: (a.email ? a.email + " · " : "") + (a.number ? "nº " + a.number : "sem número") })
           ]),
           el("div", { class: "coin-dir-coins", text: a.coins != null ? a.coins + " 🪙" : "—" }),
-          a.number ? el("button", { class: "acct-copy", text: "usar", on: { click: function () { numIn.value = a.number; found = { uid: a.uid, name: a.name, coins: a.coins }; info.textContent = "✅ " + a.name + " · conta " + a.number + (a.coins != null ? " · saldo " + a.coins + " 🪙" : ""); try { numIn.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} } } }) : el("span")
+          el("div", { class: "coin-dir-acts" }, [
+            a.number ? el("button", { class: "acct-copy", text: "🪙 usar", on: { click: function () { numIn.value = a.number; setFound({ uid: a.uid, name: a.name, coins: a.coins }); info.textContent = "✅ " + a.name + " · conta " + a.number + (a.coins != null ? " · saldo " + a.coins + " 🪙" : ""); try { numIn.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {} } } }) : el("span"),
+            el("button", { class: "acct-copy danger", text: "🗑 excluir", on: { click: function () {
+              TM.ui.confirm("Excluir " + a.name + "?", "Apaga a conta PARA SEMPRE: perfil, número " + (a.number || "") + ", coins e amigos. O e-mail " + (a.email || "") + " fica bloqueado e não consegue criar conta de novo.", "Excluir para sempre", function () {
+                TM.ui.confirm("Tem certeza?", "Não dá para desfazer.", "Sim, excluir", function () {
+                  coins.deleteAccount(a, function (ok, msg) { TM.ui.toast(msg); if (ok) { dirData = dirData.filter(function (x) { return x !== a; }); renderDir(); } });
+                }, true);
+              }, true);
+            } } })
+          ])
         ]));
       });
       var total = dirData.filter(function (a) { return a.account; }).length, onl = dirData.filter(function (a) { return a.account && a.online; }).length;
