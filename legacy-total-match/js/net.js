@@ -526,6 +526,7 @@
       return global.Promise.resolve("f" + (h >>> 0).toString(16));
     }
   }
+  net.acctKey = function (email) { return acctKey(email); };
   function acctKey(email) { return String(email || "").trim().toLowerCase().replace(/[.#$\[\]\/]/g, ","); }
   function validEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(e || "").trim()); }
   net.createAccount = function (email, pass, name, cb) {
@@ -535,6 +536,12 @@
     var dn = (name || "").trim() || e.split("@")[0];
     var onUid = net.me ? net.me.uid : null, onNum = net.me ? net.me.number : null;
     sha256hex(e + ":" + pass + ":totalmatch").then(function (hash) {
+      return net._db.ref("banned/" + acctKey(e)).once("value").then(function (bs) {
+        if (bs.val()) { cb(null, "Este e-mail foi bloqueado pelo administrador e não pode criar conta."); return; }
+        return hash;
+      });
+    }).then(function (hash) {
+      if (!hash) return;
       var ref = net._db.ref("accounts/" + acctKey(e));
       ref.transaction(function (cur) { if (cur) return; return { pass: hash, email: e, name: dn, photo: null, onlineUid: onUid, onlineNumber: onNum, createdAt: firebaseNow() }; },
         function (err, committed) {
@@ -552,7 +559,7 @@
     sha256hex(e + ":" + pass + ":totalmatch").then(function (hash) {
       net._db.ref("accounts/" + acctKey(e)).once("value").then(function (s) {
         var v = s.val();
-        if (!v) { cb(null, "Conta não encontrada."); return; }
+        if (!v) { net._db.ref("banned/" + acctKey(e)).once("value").then(function (bs) { cb(null, bs.val() ? "Esta conta foi excluída pelo administrador." : "Conta não encontrada."); }).catch(function () { cb(null, "Conta não encontrada."); }); return; }
         if (v.pass !== hash) { cb(null, "Senha incorreta."); return; }
         var name = v.name || e.split("@")[0];
         // vincula a identidade online: se a conta já tem, adota-a; senão, adota a atual e grava

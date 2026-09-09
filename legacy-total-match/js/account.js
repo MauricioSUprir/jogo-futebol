@@ -85,6 +85,10 @@
     body.appendChild(pcard);
     body.appendChild(el("div", { class: "setting-hint", text: "Seu número é como os outros te encontram: para adicionar como amigo e para receber Total Coins." }));
 
+    // administrador: atalho para gerenciar contas e coins
+    if (TM.coins && TM.coins.isAdmin && TM.coins.isAdmin()) {
+      body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("👑 Gerenciar contas e coins", function () { TM.ui.go("coins"); }, "btn primary") ]));
+    }
     // moldura dourada (compra com Total Coins)
     if (TM.coins) {
       body.appendChild(el("div", { class: "actions" }, [
