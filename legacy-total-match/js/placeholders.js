@@ -375,7 +375,12 @@
       return imgWithFallback(av, av, player.name, cls);
     },
     nationImg: function (nation, cls) {
-      // bandeira gerada por cores (países são reais/legais, mas mantemos consistência visual)
+      // Season Update: escudo REAL da seleção (assets/selecoes/<pais>.png) quando existir; senão bandeira gerada
+      var proN = false; try { proN = TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) {}
+      if (proN && nation && nation.key) {
+        var nf = stadSlug(nation.key) + ".png";
+        if (hasPhoto("selecoes", nf)) return imgWithFallback("assets/selecoes/" + nf, flag(nation), nation.name, cls);
+      }
       return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
     },
     stadiumImg: function (club, cls) {
