@@ -159,3 +159,10 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `nl-twente.jpg` — Mark92 at nl.wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Grolsch_Veste_wedstrijd.JPG
 - `nl-utrecht.jpg` — Kevertje77 at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Stadion_FC_Utrecht_-_Bunnikside.jpg
 - `nl-sparta-rotterdam.jpg` — Hanhil at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:SpartaKasteel.jpg
+- `nl-go-ahead-eagles.jpg` — Kevster — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Adelaarshorst-uitvak.jpg
+- `nl-heerenveen.jpg` — Udo Ockema — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Abe_Lenstra_Stadion_08c.JPG
+- `nl-nec-nijmegen.jpg` — Justinrtw5 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Goffertstadion_tijdens_een_wedstrijd.jpg
+- `nl-fortuna-sittard.jpg` — Weiderinder.de.vu — Public domain — https://commons.wikimedia.org/wiki/File:Stadion_Sittard_Rapsstroh_pressen.JPG
+- `nl-groningen.jpg` — Kevster at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Euroborg.jpg
+- `nl-excelsior.jpg` — Wikifrits — Public domain — https://commons.wikimedia.org/wiki/File:Rotterdam_stadion_woudestein.jpg
+- `nl-willem-ii.jpg` — Maarten van Esch — Public domain — https://commons.wikimedia.org/wiki/File:Willem_II_stadion.jpg
