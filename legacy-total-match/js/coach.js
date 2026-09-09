@@ -177,7 +177,7 @@
     // cabeçalho do sidebar (só aparece no PC via CSS)
     var club = TM.data.club(c.teamId);
     bar.insertBefore(el("div", { class: "sb-brand" }, [
-      el("span", { class: "sb-logo" }, [ el("img", { class: "sb-mark", src: "assets/logo.png", alt: "" }), el("span", { text: "Total Match" + ((TM.storage.edition && TM.storage.edition() === "pro") ? " · Atualizado" : "") }) ]),
+      el("span", { class: "sb-logo" }, [ el("img", { class: "sb-mark", src: "assets/logo.png", alt: "" }), el("span", { text: "Total Match" + ((TM.storage.edition && TM.storage.edition() === "pro") ? " · Season Update" : "") }) ]),
       el("div", { class: "sb-club-row" }, [
         club ? TM.img.clubImg(club, "sb-crest") : null,
         el("div", { class: "sb-club-info" }, [
@@ -410,7 +410,7 @@
   /* ---------- entrada ---------- */
   TM.ui.register("coach", function (screen) {
     var _exist = TM.storage.coachCareer();
-    if (_exist && !exPlayerHandoff) { TM.ui.go(_exist.type === "director" ? "director-hub" : "coach-hub"); return; }
+    if (_exist && !exPlayerHandoff) { if (_exist.type === "director") TM.club.migrateDirector(_exist); TM.ui.go("coach-hub"); return; }
     // navegando clubes reais: garante o mundo "normal" (limpa clube personalizado pendente)
     try { if (TM.storage.read("customClub", null)) { TM.storage.remove("customClub"); TM.data.resetWorld(); } } catch (e) {}
     screen.appendChild(TM.ui.topbar("🎯 Master League", function () { exPlayerHandoff = null; TM.ui.go("modes"); }));
@@ -732,17 +732,6 @@
       el("div", { class: "setting-hint", text: "Ligado: você pode sair no meio da partida e jogá-la de novo. Desligado (recomendado): sair no meio registra o resultado — sem rejogar, como na vida real." })
     ]));
 
-    // seu cargo no clube
-    var roleSel = el("select", { class: "select" });
-    [["treinador", "Treinador"], ["dirigente", "Dirigente"]].forEach(function (o) {
-      roleSel.appendChild(el("option", { value: o[0], text: o[1], selected: opts.role === o[0] }));
-    });
-    roleSel.addEventListener("change", function () { opts.role = roleSel.value; });
-    body.appendChild(el("div", { class: "setting" }, [
-      el("div", { class: "setting-label", text: "🧷 Seu cargo no clube" }), roleSel,
-      el("div", { class: "setting-hint", text: "Treinador comanda o time em campo. Dirigente cuida mais da gestão do clube — em breve com novos recursos." })
-    ]));
-
     // comandar também uma seleção
     var natWrap = el("div", { class: "setting" });
     var natToggle = el("button", { class: "switch" + (opts.nationId ? " on" : ""), on: { click: function () {
@@ -758,7 +747,7 @@
     body.appendChild(natWrap);
 
     // popularidade e reputação iniciais (editáveis)
-    if (opts.role !== "dirigente") {
+    {
       var defPop = 40; try { var rr0 = TM.data.clubRating(clubId); defPop = Math.max(5, Math.min(72, rr0 - 28)); } catch (e) {}
       if (opts.startPop == null) opts.startPop = defPop;
       if (opts.startRep == null) opts.startRep = 18;
@@ -790,12 +779,6 @@
 
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("Começar carreira", function () {
-        if (opts.role === "dirigente") {
-          TM.director.start(clubId, opts);
-          pendingSetup = null; exPlayerHandoff = null;
-          TM.ui.go("director-hub");
-          return;
-        }
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         var career = C().newClubCareer(clubId, opts);
         career.allowRestart = !!opts.allowRestart;
@@ -844,7 +827,7 @@
   TM.ui.register("coach-hub", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
-    if (c.type === "director") { TM.ui.go("director-hub"); return; }
+    if (c.type === "director") TM.club.migrateDirector(c);
     if (c.unemployed) {
       screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }));
       addSectorBar(screen, "coach-offers");
@@ -860,6 +843,7 @@
     }
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
+    try { TM.club.ensure(c); TM.club.maybeSafOffer(c); } catch (e) {} // propostas de SAF nas janelas
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
@@ -1007,6 +991,7 @@
         el("div", { class: "bm-msg bm-" + pInfo.cls, text: pInfo.txt })
       ])
     ]));
+    try { var safEl = TM.club.safCard(c, "coach-hub"); if (safEl) screen.appendChild(safEl); } catch (e) {}
 
     var pending = C().advanceToUserMatch(c);
     if (pending.seasonEnd) {
@@ -1155,6 +1140,9 @@
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
+      hubBtn("🤝", "Patrocínios", function () { TM.ui.go("club-sponsors", { from: "coach-hub" }); }),
+      hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }),
+      hubBtn("🏋️", "CT", function () { TM.ui.go("club-ct", { from: "coach-hub" }); }),
       hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
@@ -1280,16 +1268,20 @@
     var fc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 };
     var over = Math.max(0, r - 55);
     var tv = r2((10 + over * 2.0) * m);          // cotas de TV
-    var gate = r2((5 + over * 1.3) * m);         // bilheteria + sócios
-    var sponsor = r2((4 + over * 1.0) * m);      // patrocínios + publicidade
-    var sold = fc.soldM || 0, prize = fc.prizeM || 0;
-    var income = r2(tv + gate + sponsor + sold + prize);
+    var stadM = 1; try { stadM = TM.club.stadIncomeMult(c); } catch (e) {}
+    var gate = r2((5 + over * 1.3) * m * stadM);  // bilheteria + sócios (+ ampliação do estádio)
+    var deals = 0; try { deals = TM.club.sponsorIncome(c); } catch (e) {}
+    var sponsor = deals ? r2(deals + (2 + over * 0.3) * m) : r2((4 + over * 1.0) * m);      // patrocínios (contratos) + publicidade
+    var sold = fc.soldM || 0, prize = fc.prizeM || 0, bonus = fc.bonusM || 0, saf = fc.safM || 0, loan = fc.loanM || 0;
+    var income = r2(tv + gate + sponsor + sold + prize + bonus + saf + loan);
     var wages = seasonWageBillCur(c);
-    var ops = r2((3 + over * 0.6) * m);           // estrutura, CT, comissão técnica
+    var upkeep = 0; try { upkeep = TM.club.ctUpkeep(c, c.ctLevel || 2); } catch (e) {}
+    var ops = r2((3 + over * 0.6) * m + upkeep);  // estrutura, CT, comissão técnica
     var spent = fc.spentM || 0;
-    var expense = r2(wages + ops + spent);
+    var loanDue = 0; try { loanDue = TM.club.loansDue(c); } catch (e) {}
+    var expense = r2(wages + ops + spent + loanDue);
     var profit = r2(income - expense);
-    return { r: r, tv: tv, gate: gate, sponsor: sponsor, sold: sold, prize: prize, income: income, wages: wages, ops: ops, spent: spent, expense: expense, profit: profit };
+    return { r: r, tv: tv, gate: gate, sponsor: sponsor, sold: sold, prize: prize, bonus: bonus, saf: saf, loan: loan, income: income, wages: wages, ops: ops, spent: spent, loanDue: loanDue, expense: expense, profit: profit };
   }
 
   TM.ui.register("coach-contract", function (screen) {
@@ -1391,7 +1383,6 @@
   TM.ui.register("coach-finance", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
-    if (c.type === "director") { TM.ui.go("director-finance"); return; }
     screen.appendChild(TM.ui.topbar("💰 Finanças", function () { TM.ui.go("coach-hub"); }));
     addSectorBar(screen, "coach-finance");
     var body = el("div", { class: "panel-narrow" });
@@ -1433,7 +1424,10 @@
       el("div", { class: "fin-cat-h good", html: "📈 Receitas <b>" + money(c, f.income) + "</b>" }),
       catLine("📺", "Cotas de TV", f.tv, f.income, "good"),
       catLine("🎟️", "Bilheteria e sócios", f.gate, f.income, "good"),
-      catLine("🤝", "Patrocínios e publicidade", f.sponsor, f.income, "good"),
+      catLine("🤝", "Patrocínios e publicidade" + (function () { var n = []; try { n = TM.club.sponsorNames(c); } catch (e) {} return n.length ? " (" + n.join(" · ") + ")" : ""; })(), f.sponsor, f.income, "good"),
+      f.bonus ? catLine("🎁", "Bônus de assinatura (patrocínios)", f.bonus, f.income, "good") : null,
+      f.saf ? catLine("💼", "Aporte de investidor (SAF)", f.saf, f.income, "good") : null,
+      f.loan ? catLine("🏦", "Empréstimo bancário", f.loan, f.income, "good") : null,
       catLine("💸", "Vendas de jogadores", f.sold, f.income, "good"),
       catLine("🏆", "Prêmios de competições", f.prize, f.income, "good")
     ]));
@@ -1443,7 +1437,8 @@
       el("div", { class: "fin-cat-h bad", html: "📉 Despesas <b>" + money(c, f.expense) + "</b>" }),
       catLine("👥", "Folha salarial do elenco", f.wages, f.expense, "bad"),
       catLine("🏗️", "Estrutura, CT e comissão", f.ops, f.expense, "bad"),
-      catLine("✍️", "Contratações", f.spent, f.expense, "bad")
+      catLine("✍️", "Contratações e obras", f.spent, f.expense, "bad"),
+      f.loanDue ? catLine("🏦", "Parcelas de empréstimo (temp.)", f.loanDue, f.expense, "bad") : null
     ]));
 
     // balanço receitas x despesas
@@ -1464,6 +1459,7 @@
         : "As contas estão no vermelho. Venda jogadores, ganhe títulos ou reduza a folha para equilibrar." })
     ]));
 
+    try { TM.club.financePanels(c, body, "coach-finance"); } catch (e) {}
     body.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("🔄 Ver movimentações", function () { TM.ui.go("coach-transfers"); }, "btn"),
       TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn ghost")
@@ -2131,7 +2127,7 @@
         fatigueEdge = -Math.min(3, Math.floor(tiredN / 2));   // muitos titulares cansados pesam
       }
     } catch (e) {}
-    var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge + capEdge + fatigueEdge, moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
+    var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge + capEdge + fatigueEdge + (function () { try { return TM.club.clubEdge(c); } catch (e) { return 0; } })(), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,
@@ -2148,6 +2144,7 @@
           var penWinnerId = null;
           if (penCtx) { var sh = TM.engine.shootout(C().anyTeam(c, penCtx.aId), C().anyTeam(c, penCtx.bId)); penWinnerId = sh.winner === 0 ? penCtx.aId : penCtx.bId; }
           C().applyUserResult(c, hs, as, penWinnerId);
+          try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           c.pressEdge = 0;
           TM.storage.saveCoachCareer(c);
           TM.ui.toast("Resultado registrado: " + hs + " × " + as);
@@ -2163,6 +2160,7 @@
         var penCtx = hs === as ? C().userPenContext(c, hs, as) : null;
         function finish(penWinnerId) {
           C().applyUserResult(c, hs, as, penWinnerId);
+          try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
           TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId });
@@ -3819,7 +3817,7 @@
     wrap.appendChild(el("div", { class: "prof-head" }, [
       TM.img.playerImg(p, "prof-face"),
       el("div", { class: "prof-id" }, [
-        el("div", { class: "prof-name", text: p.name }),
+        el("div", { class: "prof-name" }, [ (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name) ].filter(Boolean)),
         el("div", { class: "prof-meta" }, [
           (p.nationName || (nation && nation.name)) ? el("span", { class: "prof-nat", text: p.nationName || nation.name }) : null,
           el("span", { text: p.age + " anos" }),

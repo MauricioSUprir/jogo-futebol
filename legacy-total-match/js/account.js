@@ -91,7 +91,7 @@
 
     // carreiras (nuvem)
     body.appendChild(el("div", { class: "list-head", text: "Sincronização (nuvem)" }));
-    body.appendChild(el("p", { class: "intro-text", text: "Sua conta guarda tudo: carreiras (treinador, jogador, dirigente e competições) sobem sozinhas, e seu perfil online — número, amigos e conversas — segue com a conta em qualquer aparelho. Ao entrar em outro celular, o progresso é restaurado automaticamente." }));
+    body.appendChild(el("p", { class: "intro-text", text: "Sua conta guarda tudo: carreiras (treinador, jogador e competições) sobem sozinhas, e seu perfil online — número, amigos e conversas — segue com a conta em qualquer aparelho. Ao entrar em outro celular, o progresso é restaurado automaticamente." }));
     body.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("☁️ Salvar carreiras na nuvem agora", function () { N().cloudSave(p.email, snapshot(), function (ok) { TM.ui.toast(ok ? "Carreiras salvas! ✅" : "Erro ao salvar"); }); }, "btn"),
       TM.ui.button("⬇️ Baixar carreiras da nuvem", function () {

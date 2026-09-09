@@ -9034,6 +9034,21 @@
     ]
   };
 
+  // Números de camisa: mantém o oficial (number>0) e completa os demais com números
+  // únicos por clube, preferindo a faixa clássica de cada posição.
+  var NUM_PREF = { GK: [1, 12, 23, 31, 40, 99], DF: [2, 3, 4, 5, 6, 13, 14, 15, 16, 22, 24, 26, 33], MF: [5, 6, 8, 10, 7, 18, 20, 21, 25, 28, 29, 30], FW: [9, 11, 7, 10, 17, 19, 27, 32, 37, 39, 45, 77] };
+  function assignNumbers(club, playersById) {
+    var used = {};
+    club.playerIds.forEach(function (id) { var p = playersById[id]; if (p && p.number > 0) { if (used[p.number]) p.number = 0; else used[p.number] = 1; } });
+    club.playerIds.forEach(function (id) {
+      var p = playersById[id]; if (!p || p.number > 0) return;
+      var pref = NUM_PREF[p.pos] || NUM_PREF.MF, n = 0;
+      for (var i = 0; i < pref.length; i++) if (!used[pref[i]]) { n = pref[i]; break; }
+      if (!n) for (var k = 2; k < 100; k++) if (!used[k]) { n = k; break; }
+      p.number = n || 99; used[p.number] = 1;
+    });
+  }
+
   function generateWorld() {
     var rng = R.make(WORLD_SEED);
     var leagues = [], clubs = [], playersById = {}, pid = 1;
@@ -9071,6 +9086,7 @@
             var rplayer = {
               id: "p" + (pid++), name: rpl.n, clubId: clubId,
               pos: rpl.p, pos2: rpl.q, age: rpl.a, overall: rpl.o, potential: rpl.t,
+              number: rpl.num || 0,   // número oficial da camisa (0 = atribuir)
               attrs: makeAttrs(rng, rpl.o, rpl.p),
               nationId: rnat.id, nationName: rnat.name,
               height: R.int(rng, 168, 196), weight: R.int(rng, 62, 92),
@@ -9107,6 +9123,7 @@
           nation.players.push(player.id);
         }
         }
+        assignNumbers(club, playersById);
         league.clubIds.push(clubId);
         clubs.push(club);
       }

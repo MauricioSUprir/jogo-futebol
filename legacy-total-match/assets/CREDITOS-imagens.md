@@ -3,35 +3,40 @@
 Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças livres (CC BY, CC BY-SA, domínio público). Cada linha: arquivo — autor — licença — página de origem.
 
 ## Jogadores
-- `br-cruzeiro__fagner.jpg` — Кирилл Венедиктов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Bra-Cos_(20)_(cropped).jpg
+- `br-palmeiras__marcelo-lomba.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Marcelo-lomba-palmeiras-internacional-sep2025.jpg
+- `br-palmeiras__agustin-giay.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Agustin-giay-palmeiras-juventude-out2025.jpg
+- `br-palmeiras__khellven.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Khellven-Palmeiras-Jacuipense-abr26.jpg
+- `br-palmeiras__gustavo-gomez.jpg` — Alexis Doine — CC0 — https://commons.wikimedia.org/wiki/File:2026_FIFA_World_Cup_Match_4,_United_States_v_Paraguay_(2).jpg
+- `br-palmeiras__bruno-fuchs.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Bruno-Fuchs-Palmeiras-Jacuipense-abr26.jpg
+- `br-palmeiras__joaquin-piquerez.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joaquin-piquerez-palmeiras-juventude-out2025.jpg
+- `br-palmeiras__jefte.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jefte-palmeiras-juventude-out2025_(cropped).jpg
+- `br-palmeiras__andreas-pereira.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Fulham_vs_Burnley_on_23_December_2023_(2).jpg
+- `br-palmeiras__lucas-evangelista.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Lucas-Evangelista-Palmeiras-Santos-mai26.jpg
+- `br-palmeiras__emiliano-martinez.jpg` — The White House — Public domain — https://commons.wikimedia.org/wiki/File:P20260719DT-1548_President_Donald_J._Trump_and_First_Lady_Melania_Trump_attend_the_FIFA_World_Cup_Final.jpg
+- `br-palmeiras__marlon-freitas.jpg` — Jimmy Baikovicius — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:MarlonFreitasPe%C3%B1arolxBotafogo2024.jpg
+- `br-palmeiras__mauricio.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Mauricio-palmeiras-sport-ago-25_(cropped).jpg
+- `br-palmeiras__jhon-arias.jpg` — F.edeeee1 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Jhon_Arias.jpg
+- `br-palmeiras__felipe-anderson.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Felipe-Anderson-Palmeiras-Jacuipense-abr26.jpg
+- `br-palmeiras__paulinho.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File:Paulist%C3%A3o_A1_-_S%C3%A3o_Bernardo_2x0_Corinthians_(52681298318).jpg
+- `br-palmeiras__vitor-roque.jpg` — NullReason — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vitor-Roque-Palmeiras-Jacuipense-abr26.jpg
+- `br-flamengo__guillermo-varela.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Guillermo_Varela_2022.jpg
+- `br-flamengo__emerson-royal.jpg` — Unknown authorUnknown author — CC0 — https://commons.wikimedia.org/wiki/File:Emerson_Royal_in_2018_for_Atletico_Mineiro_(cropped).jpg
+- `br-flamengo__leo-ortiz.jpg` — Cleisson Lima — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:LEO_ORTIZ_X_FLU_-_ONE9_CONTENT_-_GABRIEL_NUFFER_2024-7.jpg
+- `br-flamengo__leo-pereira.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Leo_Pereira_Brazil_V_Morocco_13_June_2026-136_(cropped).jpg
+- `br-flamengo__danilo.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `br-flamengo__ayrton-lucas.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Ayrton_Lucas_2022.jpg
+- `br-flamengo__alex-sandro.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
+- `br-flamengo__jorginho.jpg` — محمد امین انصاری — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2021_FIFA_Club_World_Cup_Final_-_32_(cropped).jpg
+- `br-flamengo__erick-pulgar.jpg` — DSanchez17 — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:ErickPulgar.png
+- `br-flamengo__nicolas-de-la-cruz.jpg` — Agencia de Noticias ANDES — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_de_la_Cruz.jpg
+- `br-flamengo__jorge-carrascal.jpg` — Fotografía oficial de la Presidencia de Colombia — Public domain — https://commons.wikimedia.org/wiki/File:Colombia_NT_presidential_send-off_for_World_Cup,_Jun_2026_(68).jpg
+- `br-flamengo__anthony-valencia.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Anthony_Valencia_Cote_D%27Ivoire_v_Ecuador_14_June_2026-46.jpg
+- `br-flamengo__gonzalo-plata.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gonzalo_Plato_19_Ecuador_v_Germany_at_2026_Fifa_World_Cup_by_YantsImages_02.jpg
+- `br-flamengo__samuel-lino.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Samuel_Lino,_FC_Salzburg_vs._Atletico_Madrid_(2025-01-29_UEFA_Championsleague)_83_(cropped).jpg
+- `br-flamengo__pedro.jpg` — Press Service of the President of the Republic of Azerbaijan — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Chelsea_won_UEFA_Europa_League_final_at_Olympic_Stadium_and_President_Ilham_Aliyev_watched_the_final_match_24.JPG
+- `br-cruzeiro__matheus-cunha.jpg` — YantsImages — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Team_Brazil_at_2026_FIFA_World_Cup_by_YantsImages_01.jpg
 - `br-cruzeiro__gabriel-rojas.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Gabriel_Rojas_2017.jpg
 - `br-cruzeiro__lucas-silva.jpg` — Matias Arraez — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Pr%C3%A9sentation_de_Lucas_Silva_au_Santiago_Bernabeu_le_26_janvier_2015_(cropped).JPG
-- `br-cruzeiro__matheus-henrique.jpg` — Chabe01 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Henrique_Match_Football_Spezia_Calcio_x_US_Sassuolo_Calcio_Stade_Alberto_Picco_-_La_Spezia_(IT42)_-_2022-08-27_-_2_(cropped).jpg
-- `br-cruzeiro__gerson.jpg` — Rolls Press / Popperfoto / Getty Images — Public domain — https://commons.wikimedia.org/wiki/File:G%C3%A9rson_1970_(cropped).jpg
-- `br-cruzeiro__matheus-pereira.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Matheus_Pereira.jpg
-- `br-cruzeiro__luis-sinisterra.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Luis_Sinisterra.png
-- `br-cruzeiro__wanderson.jpg` — Steindy (talk) 14:40, 22 May 2017 (UTC) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Admira_Wacker_M%C3%B6dling_vs._FC_Red_Bull_Salzburg_(Cup)_2017-04-26_(130).jpg
-- `br-botafogo__mateo-ponte.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4563-jikatu_(52989626106)_(cropped).jpg
-- `br-botafogo__bastos.jpg` — Анна Нэсси — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Bastos_2021_v_Spartak.jpg
-- `br-botafogo__alex-telles.jpg` — Антон Зайцев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Alex_Telles_2018.jpg
-- `br-botafogo__danilo.jpg` — Original:  YantsImages / Derivative work:  Danyele — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Danilo_at_2026_FIFA_World_Cup_by_YantsImages_(cropped).jpg
-- `br-botafogo__allan.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:FC_Salzburg_versus_SSC_Napoli_(UEFA_Euroleague_Achtelfinalr%C3%BCckspiel_14._M%C3%A4rz_2019)_04.jpg
-- `br-botafogo__cristian-medina.jpg` — Argentina.gob.ar — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Cristian_Medina,_2024_Summer_Olympics.jpg
-- `br-botafogo__joaquin-correa.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joaqu%C3%ADn_Correa_in_2023.jpg
-- `br-botafogo__arthur-cabral.jpg` — Sport Lisboa e Benfica — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Arthur_Cabral,_atacante_do_Benfica,_em_promo%C3%A7%C3%A3o_ao_EAFC_24_(cropped).jpg
-- `br-sao-paulo__rafael.jpg` — Andrea Sartorati — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Rafael_Man_Utd_2011.jpg
-- `br-sao-paulo__carlos-coronel.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Coronel_Red_Bull_Atlanta_5.31.25-05_(cropped).jpg
-- `br-sao-paulo__rafael-toloi.jpg` — Ago76 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rafael_Tol%C3%B3i_01.JPG
-- `br-sao-paulo__robert-arboleda.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Robert_Arboleda_-_16_de_setembro_de_2018.jpg
-- `br-sao-paulo__aurelio-buta.jpg` — Wackotaku — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Aur%C3%A9lio_Buta_Antwerp_2022.jpg
-- `br-sao-paulo__lucas-ramon.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File:08-05-2024_-_Mirassol_vs_Botafogo-SP_-_Lucas_Ramon_(cropped).jpg
-- `br-sao-paulo__pablo-maia.jpg` — https://www.flickr.com/people/132986455@N04 — Public domain — https://commons.wikimedia.org/wiki/File:PABLO_MAIA_-_S%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_(cropped).jpg
-- `br-sao-paulo__marcos-antonio.jpg` — Ampfinger — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Marcos_Antonio_1860_2009.JPG
-- `br-sao-paulo__lucas-moura.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2020-03-10_Fu%C3%9Fball,_M%C3%A4nner,_UEFA_Champions_League_Achtelfinale,_RB_Leipzig_-_Tottenham_Hotspur_1DX_3703_by_Stepro.jpg
-- `br-sao-paulo__jonathan-calleri.jpg` — Agência Brasília — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Jonathan_Calleri1.jpg
-- `br-bahia__ronaldo.jpg` — Web Summit — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:051119SMcC0014.jpg
-- `br-bahia__kanu.jpg` — www.thai-fussball.com — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Anderson_Dos_Santos.jpg
-- `br-bahia__gabriel-xavier.jpg` — Georges Duarte — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Gabriel_Xavier_2016-03-06_at_16.48.13.png
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
@@ -53,3 +58,111 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `en-manchester-city.jpg` — Joe.Bekker at English Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:TelstraDomeDocklands.jpg
 - `en-arsenal.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Emirates_Stadium_arsenal.jpg
 - `en-liverpool.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Liverpool_anfield_road_stadium.jpg
+- `en-chelsea.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Stamford_Bridge.jpg
+- `en-tottenham.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Tottenham_Hotspur_Stadium.jpg
+- `en-newcastle.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Newcastle_st-james-park_stadium.jpg
+- `en-aston-villa.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Birmingham_aston_villa_park_stadium.jpg
+- `en-brighton.jpg` — Dominic Alves from Brighton, England — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Falmer_Stadium_-_night.jpg
+- `en-ipswich-town.jpg` — autor no Commons — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Cobbold_Stand,_Ipswich_Town_Football_Club_8418.jpg
+- `en-crystal-palace.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:London_Selhurst_Park_crystal_palace_stadium_aerialview.JPG
+- `en-everton.jpg` — Pete from Liverpool, UK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Project_366_-217_040824_Approaching_Lift_Off_(53902389448).jpg
+- `en-fulham.jpg` — Kenneth Yarham — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Craven_Cottage_Football_Ground_-_geograph.org.uk_-_778731.jpg
+- `en-brentford.jpg` — AndyScott — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Brentford_Community_Stadium_2020.jpg
+- `en-nottingham-forest.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Nottingham_the_city_ground_stadium_forest.jpg
+- `en-hull-city.jpg` — Paul — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:KC_South_Stand.JPG
+- `en-bournemouth.jpg` — Matthew Jackson — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Deancourt_14092013_vblackpool.jpg
+- `en-leeds-united.jpg` — Lufc83 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Elland_Road_Stadium_panoramic_view_from_its_southeastearn_corner.jpg
+- `en-sunderland.jpg` — Massimo Catarinella — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:LuzLissabon.jpg
+- `es-real-madrid.jpg` — Nationaal Archief, Den Haag, Rijksfotoarchief: Fotocollectie Algemeen Nederlands Fotopersbureau (ANEFO), 1945-1989 - neg — CC BY-SA 3.0 nl — https://commons.wikimedia.org/wiki/File:Santiago_Bernabeu.jpg
+- `es-barcelona.jpg` — Oh-Barcelona.com from Barcelona, Spain — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Camp_Nou_aerial_(cropped).jpg
+- `es-real-betis.jpg` — Gregory Zeier — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Stade_Manuel_Ruiz_de_Lopera_S%C3%A9ville.JPG
+- `es-villarreal.jpg` — Oldelpaso — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:City_v_Villarreal.jpg
+- `es-valencia.jpg` — Valencia CF — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:CAMP_DE_MESTALLA_GRADA_DE_LA_MAR_2014.JPG
+- `es-sevilla.jpg` — Niels98 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2022-10-25_1_Estadio_Ram%C3%B3n_S%C3%A1nchez_Pizju%C3%A1n_(Sevilla_FC).jpg
+- `es-deportivo-la-coruna.jpg` — Albert galiza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Estadio_de_Riazor.A_Corunha.Galiza.jpg
+- `es-osasuna.jpg` — Visma17 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Estadio_El_Sadar.jpg
+- `es-celta-de-vigo.jpg` — Jsmq — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Grada_R%C3%ADo.JPG
+- `es-rayo-vallecano.jpg` — K3T0 — CC BY 2.5 es — https://commons.wikimedia.org/wiki/File:Estadio_de_Vallecas.jpg
+- `es-getafe.jpg` — Vincenzo.togni — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:The_Coliseum_Alfonso_P%C3%A9rez_in_2018.jpg
+- `es-malaga.jpg` — Hidalgismael — CC0 — https://commons.wikimedia.org/wiki/File:Estado_de_la_Rosaleda_(M%C3%A1laga_C.F.).jpg
+- `es-espanyol.jpg` — RCD Espanyol de Barcelona — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stage_Front_Stadium.jpg
+- `es-alaves.jpg` — Miguelazo84 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Alav%C3%A9s2-2Lega2018.jpg
+- `es-levante.jpg` — Francesc Fort — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Estadi_Ciutat_de_Val%C3%A8ncia_-_nocturna.jpg
+- `es-racing-santander.jpg` — Maria Victoria Gomez Fernandez — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:El_Sardinero_-_Palacio_de_Deportes.jpg
+- `it-inter-de-milao.jpg` — Prelvini — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Meazza_2021_3.jpg
+- `it-milan.jpg` — Prelvini — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Meazza_2021_3.jpg
+- `it-juventus.jpg` — Arturo Pardavila — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Allianz_Stadium_from_above.jpg
+- `it-napoli.jpg` — Gaetano Capaldo — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Maradona_Serie_A.jpg
+- `it-atalanta.jpg` — Vincenzo.togni — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:The_outside_of_the_Gewiss_Stadium_in_2020.jpg
+- `it-roma.jpg` — ildirettore — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Stadio_Olimpico_(Roma,_ITA).jpg
+- `it-lazio.jpg` — ildirettore — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Stadio_Olimpico_(Roma,_ITA).jpg
+- `it-fiorentina.jpg` — Sailko — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Firenze,_stadio_artemio_franchi,_campo_da_gioco,_10,0.jpg
+- `it-bologna.jpg` — Beric Dondarrion — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Dall%27Ara_01-02-2020.jpg
+- `it-torino.jpg` — Asgaw — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Olimpico_di_Torino.jpg
+- `it-genoa.jpg` — Stefano Delfrate — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Autumn_Nations_Series_%2722-_Italia_vs_Sudafrica-954_(52519137176).jpg
+- `it-monza.jpg` — Simonemb — CC0 — https://commons.wikimedia.org/wiki/File:Stadio_Brianteo_2024_(cropped).jpg
+- `it-como.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Sinigaglia_Como_16-07-2025.jpg
+- `it-cagliari.jpg` — Sandrino 14 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Unipol_Domus_from_Distinti_2026.jpg
+- `it-parma.jpg` — Brodolò1 — CC0 — https://commons.wikimedia.org/wiki/File:Stadio_Ennio_Tardini_2026.jpg
+- `it-lecce.jpg` — ParisTaras — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Via_del_Mare_-_Lecce.jpg
+- `it-venezia.jpg` — kallerna — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stadio_Pierluigi_Penzo.jpg
+- `it-sassuolo.jpg` — Vincenzo.togni — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Das_Mapei_Stadium_von_Reggio_nell%60Emilia_(2026).jpg
+- `de-bayern-de-munique.jpg` — Maximilian Dörrbecker (Chumwa) — CC BY-SA 2.5 — https://commons.wikimedia.org/wiki/File:M%C3%BCnchen_-_Allianz-Arena_(Luftbild).jpg
+- `de-bayer-leverkusen.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Bayarena_Leverkusen_2020.jpg
+- `de-borussia-dortmund.jpg` — Arne Müseler / www.arne-mueseler.com — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Signal_iduna_park_stadium_dortmund_6.jpg
+- `de-rb-leipzig.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Leipzig_stadium.jpg
+- `de-stuttgart.jpg` — Xocolatl (talk) 09:17, 21 June 2011 (UTC) — CC0 — https://commons.wikimedia.org/wiki/File:Blick_vom_Rotenberg_Stadion.jpg
+- `de-eintracht-frankfurt.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Frankfurt_stadium.jpg
+- `de-schalke-04.jpg` — Frank Vincentz — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Gelsenkirchen_-_Schalker_Feld_-_AufSchalke_26_ies.jpg
+- `de-freiburg.jpg` — Andreas Schwarzkopf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Europa_Park_Stadion_in_Freiburg_von_der_Georges-K%C3%B6hler-Allee_gesehen_8.jpg
+- `de-hoffenheim.jpg` — Photographs by Radosław Drożdżewski (User:Zwiadowca21) — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Sinsheim_-_Rhein-Neckar-Arena_-_blick_von_der_Burg_Steinsberg_2016-03-28_17-08-31.JPG
+- `de-union-berlin.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Berlin_alte_f%C3%B6rsterei.jpg
+- `de-werder-bremen.jpg` — Arne Müseler — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Germany_bremen_stadium.jpg
+- `de-monchengladbach.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:M%C3%B6nchengladbach_stadion.jpg
+- `de-mainz-05.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2019-06-11_Fu%C3%9Fball,_M%C3%A4nner,_L%C3%A4nderspiel,_Deutschland-Estland_StP_2019_LR10_by_Stepro.jpg
+- `de-augsburg.jpg` — Futbol vic — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Impuls_Arena_Augsburg_2011.jpg
+- `de-hamburger-sv.jpg` — Reinhard Kraasch — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:RK_1009_9831_Volksparkstadion.jpg
+- `de-paderborn.jpg` — Ungry Young Man from Vienna, Austria — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Benteler-Arena_(17107125877).jpg
+- `de-1-fc-koln.jpg` — Maximilian Zarbl — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:FIFA_WM06_Stadion_Koeln.jpg
+- `fr-paris-saint-germain.jpg` — Валерий Дед — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Paris_Parc_des_Princes_1.jpg
+- `fr-monaco.jpg` — Валерий Дед — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Monaco_Stade_Louis-II_1.jpg
+- `fr-marseille.jpg` — Bernard Ddd — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Stade_V%C3%A9lodrome_closeup.jpg
+- `fr-lille.jpg` — Felouch Kotek — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Finale_Coupe_Davis_2017_Pouille_Goffin.jpg
+- `fr-lyon.jpg` — AsGunReview — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stade_Lumi%C3%A8re.jpg
+- `fr-nice.jpg` — Mirasol — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Allianzcoupdenvoi.jpg
+- `fr-lens.jpg` — Liondartois — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stade_Bollaert_Delelis.JPG
+- `fr-rennes.jpg` — Kuso — Public domain — https://commons.wikimedia.org/wiki/File:Staderennais-routelorient.JPG
+- `fr-strasbourg.jpg` — Xaviyeah — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:La_Meinau_en_National.jpg
+- `fr-brest.jpg` — Brestois029200 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Tribune-Foucauld-2009.jpg
+- `fr-toulouse.jpg` — Luc-Éric Manneville Lucio fr — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:StadiumToulouse3.JPG
+- `fr-lorient.jpg` — NORMOTE — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Stade_du_Moustoir.jpg
+- `fr-troyes.jpg` — TaraO — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Stade_de_l%27Aube.jpg
+- `fr-auxerre.jpg` — Vicente Auxerre — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Auxerre_-_Stade_Abb%C3%A9-Deschamps_(31).JPG
+- `fr-angers.jpg` — M. Mouchoir — Public domain — https://commons.wikimedia.org/wiki/File:Stade_Jean_Bouin_Angers_2.JPG
+- `fr-paris-fc.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Paris_Stade_Jean-Bouin_(cropped).jpg
+- `pt-benfica.jpg` — Massimo Catarinella — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:LuzLissabon.jpg
+- `pt-porto.jpg` — Edgar Jiménez from Porto, Portugal — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_do_Drag%C3%A3o_(8468978586).jpg
+- `pt-sporting.jpg` — Megutim — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Jos%C3%A9_Alvalade_antes_do_jogo_Sporting_-_Arouca.jpg
+- `pt-vitoria-de-guimaraes.jpg` — Estádio_do_Vitória_de_Guimarães_visto_da_torre_central_do_Castelo_de_Guimarães_02.jpg: Wagner Bonifacio Leite — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_do_Vit%C3%B3ria_de_Guimar%C3%A3es_visto_da_torre_central_do_Castelo_de_Guimar%C3%A3es_03.JPG
+- `pt-moreirense.jpg` — Bohemio09 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Blick_auf_die_Haupttrib%C3%BCne_-_Est%C3%A1dio_Comendador_Joaquim_de_Almeida_Freitas.jpg
+- `pt-gil-vicente.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Cidade_de_Barcelos.jpg
+- `pt-estoril.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:20011019_CD_Estoril_Praia_(2).JPG
+- `pt-casa-pia.jpg` — Vitor Oliveira from Torres Vedras, PORTUGAL — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Rio_Maior.jpg
+- `pt-arouca.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Municipal_de_Arouca.jpg
+- `pt-estrela-amadora.jpg` — JP Ribeiro — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Jos%C3%A9_Gomes_(Reboleira).jpg
+- `pt-maritimo.jpg` — Pedro Miguel Monteiro — Public domain — https://commons.wikimedia.org/wiki/File:Est%C3%A1diodosBarreirosCentral.jpg
+- `pt-nacional.jpg` — Mghamburg — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_Eng._Rui_Alves_1.jpg
+- `pt-santa-clara.jpg` — Rasibo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_de_S%C3%A3o_Miguel_(62276).jpg
+- `nl-psv.jpg` — TaraO — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Philips_Stadion.jpg
+- `nl-ajax.jpg` — Alf van Beem — CC0 — https://commons.wikimedia.org/wiki/File:Arena,_Ajax_stadion,_Amsterdam.JPG
+- `nl-az-alkmaar.jpg` — Jesperverbruggen — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vooraanzicht_AFAS_Stadion_april2022.jpg
+- `nl-twente.jpg` — Mark92 at nl.wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Grolsch_Veste_wedstrijd.JPG
+- `nl-utrecht.jpg` — Kevertje77 at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Stadion_FC_Utrecht_-_Bunnikside.jpg
+- `nl-sparta-rotterdam.jpg` — Hanhil at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:SpartaKasteel.jpg
+- `nl-go-ahead-eagles.jpg` — Kevster — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Adelaarshorst-uitvak.jpg
+- `nl-heerenveen.jpg` — Udo Ockema — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Abe_Lenstra_Stadion_08c.JPG
+- `nl-nec-nijmegen.jpg` — Justinrtw5 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Goffertstadion_tijdens_een_wedstrijd.jpg
+- `nl-fortuna-sittard.jpg` — Weiderinder.de.vu — Public domain — https://commons.wikimedia.org/wiki/File:Stadion_Sittard_Rapsstroh_pressen.JPG
+- `nl-groningen.jpg` — Kevster at Dutch Wikipedia — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Euroborg.jpg
+- `nl-excelsior.jpg` — Wikifrits — Public domain — https://commons.wikimedia.org/wiki/File:Rotterdam_stadion_woudestein.jpg
+- `nl-willem-ii.jpg` — Maarten van Esch — Public domain — https://commons.wikimedia.org/wiki/File:Willem_II_stadion.jpg
