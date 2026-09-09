@@ -1113,6 +1113,9 @@
 
   /* ---------- NOMES REAIS de competições (só na edição Atualizado) ----------
      A edição pública (vendável) mantém os nomes genéricos por segurança de marca. */
+  // técnicos reais por clube (chave "liga/Clube"), extraídos da ficha da Wikipedia — só na Season Update
+  var PRO_COACHES = {
+  };
   var PRO_LEAGUE_NAMES = {
     br: "Brasileirão Série A", en: "Premier League", es: "LaLiga", it: "Serie A", de: "Bundesliga",
     fr: "Ligue 1", pt: "Liga Portugal", nl: "Eredivisie", ar: "Liga Profesional Argentina",
@@ -13692,7 +13695,12 @@
     });
 
     // técnicos reais alocados ao seu clube real (os demais mantêm nome gerado)
-    clubs.forEach(function (c) { var co = COACH_CLUB[c.origName || c.name] || COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; } });
+    clubs.forEach(function (c) {
+      // Season Update: técnico REAL atual do clube (ficha da Wikipedia); senão o gerado
+      var real = pro && (PRO_COACHES[c.leagueId + "/" + c.name] || PRO_COACHES[c.name]);
+      if (real) { c.coach = real; c.coachId = null; return; }
+      var co = COACH_CLUB[c.origName || c.name] || COACH_CLUB[c.name]; if (co) { c.coach = co.name; c.coachId = co.id; }
+    });
 
     // técnico de cada seleção
     NATIONS.forEach(function (n) { n.coach = NAT_COACH[n.key] || fullName(rng, n.culture); n.coachPhotoKey = coachSlug(n.coach); });
