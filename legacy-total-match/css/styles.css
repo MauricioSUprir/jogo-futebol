@@ -3320,3 +3320,4 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .player-modal .prof-gauges svg { width: 52px; height: 52px; }
 @media (max-width: 400px) { .player-modal .pm-head { grid-template-columns: 56px 1fr auto; } .player-modal .prof-face { width: 56px; height: 56px; } .player-modal .prof-gauges svg { width: 46px; height: 46px; } .player-modal .prof-name { font-size: 15px; } }
 .player-modal .modal-close { z-index: 2; }
+.coin-badge.nocct { opacity: .75; filter: saturate(.6); }
