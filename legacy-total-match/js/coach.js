@@ -2002,8 +2002,41 @@
     body.appendChild(el("p", { class: "intro-text", text: "Jogadores de " + c.nation.name + ". Toque para convocar/remover (máx. 23)." }));
 
     var squadSet = {}; c.nation.squad.forEach(function (id) { squadSet[id] = true; });
-    var pool = nat.players.map(TM.data.player).filter(Boolean).sort(function (a, b) { return b.overall - a.overall; });
-    pool.forEach(function (p) {
+    // pool: TODOS os jogadores da nacionalidade que existem no jogo (clubes de todas as ligas) + pool fixo da seleção
+    var seen = {}, pool = [];
+    function addP(p) { if (p && !seen[p.id]) { seen[p.id] = true; pool.push(p); } }
+    nat.players.map(TM.data.player).forEach(addP);
+    try {
+      var W = TM.data.world();
+      Object.keys(W.playersById || {}).forEach(function (id) { var p = W.playersById[id]; if (p && p.nationId === nat.id && p.clubId && p.clubId !== "free") addP(p); });
+      (c.roster || []).forEach(function (id) { var p = C().resolvePlayer(c, id); if (p && p.nationId === nat.id) addP(p); });
+    } catch (e) {}
+    pool.sort(function (a, b) { return b.overall - a.overall; });
+    // filtros: posição + busca por nome
+    var natFilter = TM.ui._natFilter || { pos: "", q: "" };
+    var fbar = el("div", { class: "mkt-filters nat-filters" });
+    [["", "Todos"], ["GK", "GOL"], ["DF", "DEF"], ["MF", "MEI"], ["FW", "ATA"]].forEach(function (f) {
+      fbar.appendChild(el("button", { class: "seg-btn" + (natFilter.pos === f[0] ? " active" : ""), text: f[1], on: { click: function () { natFilter.pos = f[0]; TM.ui._natFilter = natFilter; TM.ui.go("coach-nation-scout"); } } }));
+    });
+    var qIn = el("input", { class: "select", type: "text", placeholder: "buscar jogador…", value: natFilter.q || "" });
+    qIn.addEventListener("input", function () { natFilter.q = qIn.value; TM.ui._natFilter = natFilter; renderList(); });
+    body.appendChild(fbar); body.appendChild(qIn);
+    var listBox = el("div", { class: "build-list" }); body.appendChild(listBox);
+    var infoLine = el("div", { class: "setting-hint" }); body.appendChild(infoLine);
+    function norm(x) { return String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase(); }
+    function renderList() {
+      TM.ui.clear(listBox);
+      var q = norm(natFilter.q), shown = 0;
+      pool.forEach(function (p) {
+        if (natFilter.pos && p.pos !== natFilter.pos) return;
+        if (q && norm(p.name).indexOf(q) < 0) return;
+        if (shown >= 120) return;
+        shown++;
+        listBox.appendChild(rowFor(p));
+      });
+      infoLine.textContent = pool.length + " jogador(es) de " + c.nation.name + " no jogo" + (shown >= 120 ? " · mostrando os 120 melhores do filtro" : "");
+    }
+    function rowFor(p) {
       var inSquad = squadSet[p.id];
       var row = TM.ui.playerRow(p, {});
       row.classList.add("clickable");
@@ -2015,8 +2048,9 @@
         c.nation.lineup = C().buildLineup(c.nation.squad.map(TM.data.player), c.nation.lineup.formation);
         TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation-scout");
       } } }));
-      body.appendChild(row);
-    });
+      return row;
+    }
+    renderList();
   });
 
   /* ---------- campinho da seleção ---------- */

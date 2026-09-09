@@ -1061,7 +1061,6 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `en-manchester-city__iliman-ndiaye.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Iliman_Ndiaye_France_v_Senegal_16_June_2026-492.jpg
 - `en-manchester-city__mateo-kovacic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Nuno_Mendes_Mateo_Kovacic_Croatia_v_Portugal_2_July_2026-094.jpg
 - `ec-deportivo-cuenca__carlos-arboleda.jpg` — Johnniebm — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Carlos_Arboleda_en_LDUP.JPG
-- `en-manchester-city__erling-haaland.jpg` — Stiopa — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Stiopa-Solaris_Urbino_18.75_foto.2.jpg
 - `en-manchester-city__rayan-cherki.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Rayan_Cherki_France_v_Spain_7.24.26-252.jpg
 - `en-manchester-city__jeremy-doku.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:J%C3%A9r%C3%A9my_Doku_USMNT_v_Belgium_Mar_28_2026-27_(cropped).jpg
 - `en-manchester-city__marcus-bettinelli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Marcus_Bettinelli_20042025_(1).jpg
@@ -3501,6 +3500,74 @@ derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.o
 - `en2-middlesbrough__george-edmundson.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AGeorge_Edmundson_16082025_%281%29.jpg
 - `en2-middlesbrough__adilson-malanda.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAdilson_Malanda_NYCFC_v_Charlotte_20_Sep_2025-133.jpg
 - `jp-fc-tokyo__kento-hashimoto.jpg` — Артем Гусев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AHashimoto_Rostov.jpg
+- `jp-gamba-osaka__masaaki-higashiguchi.jpg` — TAKA@P.P.R.S — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AMasaaki_Higashiguchi_Gamba_Osaka_2017.jpg
+- `en2-millwall__lukas-jensen.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ALukas_Jensen_01082026_%282%29.jpg
+- `jp-gamba-osaka__genta-miura.jpg` — TAKA@P.P.R.S — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AGenta_Miura_Gamba_Osaka_2017.jpg
+- `en2-millwall__tristan-crama.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ATristan_Crama_12042025_%281%29.jpg
+- `jp-gamba-osaka__takashi-usami.jpg` — TAKA@P.P.R.S — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3ATakashi_Usami.jpg
+- `en2-millwall__jake-cooper.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJake_Cooper_30082025_%281%29.jpg
+- `en2-millwall__caleb-taylor.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACaleb_Taylor_30082025_%283%29.jpg
+- `jp-gamba-osaka__shu-kurata.jpg` — TAKA@P.P.R.S — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AShu_Kurata_2017_%2836700073003%29_%28cropped%29.jpg
+- `en2-millwall__tairyk-arconte.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ATa%C3%AFryk_Arconte_01082026_%282%29.jpg
+- `en2-millwall__mathis-servais.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMathis_Servais_01082026_%281%29.jpg
+- `en2-millwall__mihailo-ivanovic.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMihailo_Ivanovi%C4%87_12042025_%282%29.jpg
+- `en2-millwall__camiel-neghli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACamiel_Neghli_01082026_%281%29.jpg
+- `en2-millwall__elkan-baggott.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AElkan_Baggott_01082026_%281%29.jpg
+- `en2-millwall__jenson-metcalfe.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJenson_Metcalfe_01082026_%283%29.jpg
+- `en2-millwall__max-crocombe.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AGerard_Vandeplas_and_Max_Crocombe_01082026_%281%29.jpg
+- `en2-millwall__daniel-kelly.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ADaniel_Kelly_01082026_%282%29.jpg
+- `en2-millwall__mark-sykes.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMark_Sykes_01082026_%285%29.jpg
+- `en2-millwall__ryan-leonard.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARyan_Leonard_01082026_%282%29.jpg
+- `en2-millwall__josh-coburn.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJosh_Coburn_12042025_%285%29.jpg
+- `en2-millwall__massimo-luongo.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMassimo_Luongo_16082025_%281%29.jpg
+- `en2-millwall__kyrell-lisbie.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKyrell_Lisbie_01082026_%282%29.jpg
+- `en2-millwall__danny-batth.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ADanny_Batth_01082026_%282%29.jpg
+- `en2-millwall__casper-de-norre.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACasper_De_Norre_12042025_%285%29.jpg
+- `en2-millwall__zak-lovelace.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AZak_Lovelace_01082026_%282%29.jpg
+- `en2-millwall__joel-coleman.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJoel_Coleman_04102025_%281%29.jpg
+- `en2-millwall__alfie-doughty.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAlfie_Doughty_16082025_%281%29.jpg
+- `en2-millwall__derek-mazou-sacko.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ADerek_Mazou-Sacko_01082026_%281%29.jpg
+- `jp-kashima-antlers__kento-misao.jpg` — Fars News Agency — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AKento_Misao.jpg
+- `jp-kashima-antlers__yuma-suzuki.jpg` — underarmourjapan — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AYuma_Suzuki.png
+- `en2-norwich-city__mathias-kvistgaarden.jpg` — 3point.dk — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AMathias_Kvistgaarden_2020.jpg
+- `en2-norwich-city__kellen-fisher.jpg` — CanarieColin — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AKellen_Fisher.jpg
+- `jp-kashiwa-reysol__yusuke-segawa.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AYusuke_Segawa_2023.jpg
+- `jp-kashiwa-reysol__ryosuke-kojima.jpg` — 阿文 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A%E6%97%A5%E6%9C%AC%E8%B6%B3%E7%90%83%E9%81%8B%E5%8B%95%E5%93%A1%E5%B0%8F%E5%B3%B6%E4%BA%A8%E4%BB%8B.jpg
+- `jp-kashiwa-reysol__sachiro-toshima.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASachiro_Toshima_2023.jpg
+- `en2-portsmouth__marlon-pack.jpg` — Bamberini8 — GFDL — https://commons.wikimedia.org/wiki/File%3AMarlon_Pack_2012_League_2_play-off_final.jpg
+- `jp-kawasaki-frontale__ryota-oshima.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARyota_Oshima_2023.jpg
+- `jp-kawasaki-frontale__yu-kobayashi.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AYu_Kobayashi_2023.jpg
+- `jp-kawasaki-frontale__yasuto-wakizaka.jpg` — VietnamJ25 — CC0 — https://commons.wikimedia.org/wiki/File%3AYasuto_Wakizaka_2023_Kawasaki_Frontale.jpg
+- `jp-kawasaki-frontale__yuichi-maruyama.jpg` — Whispered11 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaruyama_Yuichi_FC_Tokyo.jpg
+- `jp-kawasaki-frontale__akihiro-ienaga.jpg` — RuinDig/Yuki Uchida — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAkihiro_Ienaga_%28cropped%29.jpg
+- `en2-preston-north-end__harry-clarke.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AHarry_Clarke_07032026_%281%29.jpg
+- `en2-preston-north-end__thierry-small.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AThierry_Small_02032025_%282%29.jpg
+- `jp-kyoto-sanga__marco-tulio.jpg` — Western Sydney Wanderers FC — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMarco_Tulio_2023.png
+- `en2-preston-north-end__lewis-gibson.jpg` — CLEMENATOR — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALewis_Gibson_Bristol_Rovers.jpg
+- `en2-preston-north-end__andrew-moran.jpg` — University of North Carolina at Chapel Hill — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AAndrew_Moran.jpg
+- `en2-queens-park-rangers__kealey-adamson.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKealey_Adamson_03042026_%283%29.jpg
+- `en2-queens-park-rangers__jimmy-dunne.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AQueens_Park_Rangers_v_Cardiff_City_05042025_%283%29_%28Jimmy_Dunne%29.jpg
+- `en2-queens-park-rangers__liam-morrison.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AQueens_Park_Rangers_v_Cardiff_City_05042025_%284%29_%28Liam_Morrison%29.jpg
+- `en2-queens-park-rangers__ronnie-edwards.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARonnie_Edwards_15032025_%282%29.jpg
+- `en2-queens-park-rangers__jake-clarke-salter.jpg` — Struway2 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJake_Clarke-Salter_Birmingham_2019.jpg
+- `en2-queens-park-rangers__karamoko-dembele.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKaramoko_Demb%C3%A9l%C3%A9_05042025_%282%29.jpg
+- `jp-machida-zelvia__mitchell-duke.jpg` — Western Sydney Wanderers FC — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMitchell_Duke_2020.png
+- `en2-queens-park-rangers__ilias-chair.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AIlias_Chair_25072026_%282%29.jpg
+- `en2-queens-park-rangers__paul-smyth.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3APaul_Smyth_26042025_%281%29.jpg
+- `en2-queens-park-rangers__koki-saito.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AK%C5%8Dki_Sait%C5%8D_05042025_%281%29.jpg
+- `en2-queens-park-rangers__alfie-lloyd.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAlfie_Lloyd_25072026_%283%29.jpg
+- `en2-queens-park-rangers__rumarn-burrell.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARumarn_Burrell_11042026_%283%29.jpg
+- `en2-queens-park-rangers__kwame-poku.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKwame_Poku_03042026_%285%29.jpg
+- `jp-machida-zelvia__tete-yengi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATete_Yengi_Australia_v_USA_19_June_2026-121.jpg
+- `en2-queens-park-rangers__harvey-vale.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AHarvey_Vale_02082025_%284%29.jpg
+- `en2-queens-park-rangers__richard-kone.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARichard_Kone_20092025_%283%29.jpg
+- `en2-queens-park-rangers__isak-alemayehu.jpg` — NoahQPR — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AIsak_Alemayehu_QPR_training_session.jpg
+- `en2-queens-park-rangers__justin-obikwu.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJustin_Obikwu_25072026_%283%29.jpg
+- `en2-queens-park-rangers__rayan-kolli.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARayan_Kolli_26042025_%281%29.jpg
+- `en2-queens-park-rangers__amadou-mbengue.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAmadou_Mbengue_20092025_%282%29.jpg
+- `en2-queens-park-rangers__matteo-salamon.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMatteo_Salamon_25072026_%283%29.jpg
+- `en2-queens-park-rangers__jonathan-varane.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJonathan_Varane_25042026_%281%29.jpg
+- `jp-nagoya-grampus__kensuke-nagai.jpg` — hiro — CC BY 2.1 jp — https://commons.wikimedia.org/wiki/File%3AKensuke_Nagai_2015.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
