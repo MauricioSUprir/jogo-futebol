@@ -1708,6 +1708,8 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `fr-le-havre__josh-maja.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Josh_Maja_04102025_(1).jpg
 - `ar-argentinos-juniors__gabriel-florentin.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:%C2%AB%D0%9E%D1%80%D0%B5%D0%BD%D0%B1%D1%83%D1%80%D0%B3%C2%BB_%E2%80%94_%C2%AB%D0%97%D0%B5%D0%BD%D0%B8%D1%82%C2%BB_(cropped).jpg
 - `fr-angers__jordan-lefort.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Lefort_asse_sco_2425.png
+- `br-athletico-paranaense__leo.jpg` — Portal de Dados Abertos do Tribunal Superior Eleitoral do Brasil (TSE) — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2020_DR._L%C3%89O_KAHN_CANDIDATO_VICE-PREFEITO_SP_SANTO_ANDRE_TSE_(250001268294).jpg
+- `br-athletico-paranaense__isaac.jpg` — Aziz911q8 — Public domain — https://commons.wikimedia.org/wiki/File:The_Prophet_Ishaq_(Isaac_In_Islam).png
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
