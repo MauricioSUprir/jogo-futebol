@@ -43,3 +43,6 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - `br-corinthians.jpg` — Alexandre Breveglieri — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:ARENA_CORINTHIANS.jpg
 - `br-atletico-mineiro.jpg` — Felipe Bini — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Atl%C3%A9tico_Mineiro_v_Botafogo,_Arena_MRV,_Horizonte,_2023.jpg
 - `br-gremio.jpg` — Contato: clickdearaujo@gmail.com — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Arena_do_Gr%C3%AAmio_2014.jpg
+- `br-vasco-da-gama.jpg` — Diego Baravelli — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Est%C3%A1dio_de_S%C3%A3o_Janu%C3%A1rio_by_Diego_Baravelli.jpg
+- `br-santos.jpg` — BrazilianDude70 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Vila_Belmiro_pre-match_Santos_vs_Gr%C3%AAmio_2021.jpg
+- `br-chapecoense.jpg` — Rafinha C. — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Arena_Cond%C3%A1_Novo_gramado.jpg
