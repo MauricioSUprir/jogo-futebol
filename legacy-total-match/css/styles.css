@@ -3262,3 +3262,5 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .tip-row { font-size: 13px; padding: 4px 0; }
 .prof-card.pblock { display: block; }
 .prof-card.pblock .prof-card-h { margin-bottom: 8px; }
+.ql-slot { font-size: 10px; font-weight: 800; width: 26px; text-align: center; color: var(--gold-light); flex: 0 0 auto; }
+.ql-picked { outline: 2px solid var(--gold); background: rgba(245,197,66,.12); }

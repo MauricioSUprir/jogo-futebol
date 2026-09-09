@@ -73,10 +73,94 @@
     updatePreview();
 
     screen.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("▶ Simular partida", function () {
+      TM.ui.button("📋 Escalar meu time", function () {
+        if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
+        TM.ui.go("quick-lineup", { side: 0 });
+      }, "btn primary big"),
+      TM.ui.button("▶ Simular direto", function () {
         if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
         TM.ui.go("quick-match", { a: teamObj(setup.teamA), b: teamObj(setup.teamB) });
-      }, "btn primary big")
+      }, "btn ghost")
+    ]));
+  });
+
+  /* ---------- Tela 1b: escalação pré-jogo (formação, tática, titulares e banco) ---------- */
+  var QL = { key: null, A: null, B: null, pick: null };   // estado da escalação da partida rápida
+  function qTeamPlayers(id) { return setup.source === "nation" ? TM.data.nationSquad(id) : TM.data.clubPlayers(id); }
+  function qEnsure() {
+    var key = setup.source + ":" + setup.teamA + ":" + setup.teamB;
+    if (QL.key !== key) {
+      QL.key = key; QL.pick = null;
+      QL.A = { formation: "4-4-2", tactic: "equilibrado", lu: TM.comp.buildLineup(qTeamPlayers(setup.teamA), "4-4-2") };
+      QL.B = { formation: "4-4-2", tactic: "equilibrado", lu: TM.comp.buildLineup(qTeamPlayers(setup.teamB), "4-4-2") };
+    }
+  }
+  function qTeam(side) {
+    var id = side === 0 ? setup.teamA : setup.teamB, st = side === 0 ? QL.A : QL.B;
+    var all = qTeamPlayers(id), byId = {}; all.forEach(function (p) { byId[p.id] = p; });
+    var xi = st.lu.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
+    var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
+    var rest = all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
+    var t = setup.source === "nation" ? TM.engine.teamFromNation(id, xi.concat(rest)) : TM.engine.teamFromClub(id, xi.concat(rest));
+    t.formation = st.formation; t.tactic = st.tactic;
+    return t;
+  }
+  TM.ui.register("quick-lineup", function (screen, params) {
+    if (!setup.teamA || !setup.teamB) { TM.ui.go("quick"); return; }
+    qEnsure();
+    var side = (params && params.side) || 0, st = side === 0 ? QL.A : QL.B, id = side === 0 ? setup.teamA : setup.teamB;
+    var all = qTeamPlayers(id), byId = {}; all.forEach(function (p) { byId[p.id] = p; });
+    var name = setup.source === "nation" ? TM.data.nation(id).name : TM.data.club(id).name;
+    screen.appendChild(TM.ui.topbar("📋 Escalação · " + name, function () { QL.pick = null; TM.ui.go("quick"); }));
+    var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+
+    // casa / visitante
+    var seg = el("div", { class: "segmented full" });
+    [[0, "🏠 " + (setup.source === "nation" ? TM.data.nation(setup.teamA).name : TM.data.club(setup.teamA).name)], [1, "✈️ " + (setup.source === "nation" ? TM.data.nation(setup.teamB).name : TM.data.club(setup.teamB).name)]].forEach(function (o) {
+      seg.appendChild(el("button", { class: "seg-btn" + (side === o[0] ? " active" : ""), text: o[1], on: { click: function () { QL.pick = null; TM.ui.go("quick-lineup", { side: o[0] }); } } }));
+    });
+    body.appendChild(seg);
+
+    var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
+    var xi = st.lu.starters.map(function (pid) { return byId[pid]; });
+    var ovr = Math.round(xi.filter(Boolean).reduce(function (s, p) { return s + p.overall; }, 0) / Math.max(1, xi.filter(Boolean).length));
+    body.appendChild(el("div", { class: "market-budget", text: "⭐ Força do time titular: " + ovr }));
+    body.appendChild(TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), st.formation, function (f) {
+      st.formation = f; st.lu = TM.comp.buildLineup(all, f); QL.pick = null; TM.ui.go("quick-lineup", { side: side });
+    }));
+    body.appendChild(TM.ui.dropdown("Tática", TM.engine.TACTICS, st.tactic, function (t) { st.tactic = t; }));
+    body.appendChild(el("div", { class: "actions two" }, [
+      TM.ui.button("✨ Melhor time automático", function () { st.lu = TM.comp.buildLineup(all, st.formation); QL.pick = null; TM.ui.go("quick-lineup", { side: side }); }, "btn ghost small"),
+      TM.ui.button("🔍 Analisar", function () { TM.ui.go("scout", { teamId: id, isNation: setup.source === "nation", back: function () { TM.ui.go("quick-lineup", { side: side }); } }); }, "btn ghost small")
+    ]));
+
+    // titulares (toque para trocar)
+    body.appendChild(el("h3", { class: "section-title", text: "Titulares" + (QL.pick != null ? " — escolha quem entra no lugar" : " — toque num jogador para trocar") }));
+    st.lu.starters.forEach(function (pid, i) {
+      var p = byId[pid]; if (!p) return;
+      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable"); if (QL.pick === i) row.classList.add("ql-picked");
+      row.insertBefore(el("span", { class: "ql-slot", text: (slots[i] && slots[i][0]) || "" }), row.firstChild);
+      row.addEventListener("click", function () {
+        if (QL.pick == null) { QL.pick = i; TM.ui.go("quick-lineup", { side: side }); return; }
+        if (QL.pick === i) { QL.pick = null; TM.ui.go("quick-lineup", { side: side }); return; }
+        var tmp = st.lu.starters[QL.pick]; st.lu.starters[QL.pick] = st.lu.starters[i]; st.lu.starters[i] = tmp; QL.pick = null; TM.ui.go("quick-lineup", { side: side });
+      });
+      body.appendChild(row);
+    });
+    // banco / reservas
+    body.appendChild(el("h3", { class: "section-title", text: "Reservas" }));
+    var inXi = {}; st.lu.starters.forEach(function (pid) { inXi[pid] = 1; });
+    all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
+      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable");
+      row.addEventListener("click", function () {
+        if (QL.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
+        st.lu.starters[QL.pick] = p.id; QL.pick = null; TM.ui.go("quick-lineup", { side: side });
+      });
+      body.appendChild(row);
+    });
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("▶ Iniciar partida", function () { QL.pick = null; TM.ui.go("quick-match", { a: qTeam(0), b: qTeam(1) }); }, "btn primary big")
     ]));
   });
 
@@ -84,6 +168,7 @@
   TM.ui.register("quick-match", function (screen, params) {
     var settings = TM.storage.settings();
     var simOpts = { realism: settings.realism, neutral: setup.source === "nation" };
+    if (params.a && params.a.tactic) { simOpts.tactic = params.a.tactic; simOpts.tacticSide = 0; }   // tática escolhida na escalação
     var result = TM.engine.simulate(params.a, params.b, simOpts);
     TM.matchview.play(screen, {
       teamA: params.a, teamB: params.b, result: result, settings: settings,
