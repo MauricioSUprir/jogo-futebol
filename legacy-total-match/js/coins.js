@@ -23,7 +23,7 @@
   function load() {
     if (state) return state;
     try { var raw = localStorage.getItem(KEY); state = raw ? JSON.parse(raw) : null; } catch (e) { state = null; }
-    if (!state || typeof state.bal !== "number") state = { bal: START, earned: 0, spent: 0, best: 0, log: [{ t: Date.now(), d: START, r: "Bônus de boas-vindas" }] };
+    if (!state || typeof state.bal !== "number") state = { bal: START, earned: START, spent: 0, best: 0, log: [{ t: Date.now(), d: START, r: "Bônus de boas-vindas" }] };
     if (!state.log) state.log = [];
     return state;
   }
