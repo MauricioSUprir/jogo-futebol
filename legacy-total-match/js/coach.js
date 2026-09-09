@@ -1148,6 +1148,16 @@
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
       hubBtn("💰", "Finanças", function () { TM.ui.go("coach-finance"); }),
       hubBtn("🤝", "Patrocínios", function () { TM.ui.go("club-sponsors", { from: "coach-hub" }); }),
+      hubBtn("🔥", "Motivar (" + (TM.coins ? TM.coins.COST.morale : 0) + "🪙)", function () {
+        if (!TM.coins) return;
+        TM.ui.confirm("Motivação extra", "Uma preleção especial: todo o elenco ganha +12 de moral por algumas partidas. Custa " + TM.coins.COST.morale + " 🪙.", "Motivar", function () {
+          TM.coins.pay(TM.coins.COST.morale, "Motivação extra · Master League", function () {
+            c.moraleAdj = c.moraleAdj || {};
+            (c.roster || []).forEach(function (id) { var cur = (c.moraleAdj[id] && c.moraleAdj[id].v) || 0; c.moraleAdj[id] = { v: Math.min(20, Math.max(cur, 0) + 12), at: c.matchNo || 0 }; });
+            TM.storage.saveCoachCareer(c); TM.ui.toast("Elenco motivado! 🔥"); TM.ui.go("coach-hub");
+          });
+        });
+      }),
       hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }),
       hubBtn("🏋️", "CT", function () { TM.ui.go("club-ct", { from: "coach-hub" }); }),
       hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),

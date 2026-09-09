@@ -16,7 +16,7 @@
   var stateAcct = null;   // conta a que o estado carregado pertence
   var ADMIN_EMAILS = ["mauricio@gruposuprir.com", "gui.drodrigues21@gmail.com", "gui.drodrigues21@gnail.com"];
   var START = 100;
-  var COST = { draftEntry: 20, draftRetry: 30 };
+  var COST = { draftEntry: 20, draftRetry: 30, draftReroll: 5, dreamBudget: 25, scoutRush: 10, sponsorRenew: 20, morale: 15, goldFrame: 50 };
   var REWARD = {
     draft: { win: 15, draw: 5, final: 40, champion: 100 },
     dream: { win: 6, draw: 2, final: 15, champion: 40 }
@@ -207,6 +207,15 @@
       rule("=", "Empate no Draft / Dream Team", "+" + REWARD.draft.draw + " / +" + REWARD.dream.draw + " 🪙"),
       rule("👑", "Derrubar o time principal", "+" + REWARD.draft.final + " / +" + REWARD.dream.final + " 🪙"),
       rule("🏆", "Campeão invicto (6 vitórias)", "+" + REWARD.draft.champion + " / +" + REWARD.dream.champion + " 🪙")
+    ]));
+    body.appendChild(el("div", { class: "list-head", text: "Onde gastar" }));
+    body.appendChild(el("div", { class: "coin-rules" }, [
+      rule("🎲", "Draft: sortear mais 5 opções (depois do sorteio grátis)", "−" + COST.draftReroll + " 🪙"),
+      rule("💎", "Dream Team: +10% de orçamento", "−" + COST.dreamBudget + " 🪙"),
+      rule("🔭", "Master League: olheiro entrega a missão agora", "−" + COST.scoutRush + " 🪙"),
+      rule("🤝", "Master League: novas propostas de patrocínio", "−" + COST.sponsorRenew + " 🪙"),
+      rule("🔥", "Master League: motivação extra para o elenco", "−" + COST.morale + " 🪙"),
+      rule("🥇", "Perfil: moldura dourada na foto", "−" + COST.goldFrame + " 🪙")
     ]));
 
     if (coins.isAdmin()) body.appendChild(adminPanel());

@@ -144,10 +144,13 @@
         card.appendChild(el("div", { class: "sc-mtx muted", text: "Disponível" + (s.done ? " · " + s.done + " missão(ões) concluída(s)" : "") }));
       }
       card.appendChild(el("div", { class: "note-actions" }, [
+        (s.mission && TM.coins) ? TM.ui.button("⚡ Entregar agora (" + TM.coins.COST.scoutRush + " 🪙)", function () {
+          TM.coins.pay(TM.coins.COST.scoutRush, "Missão de olheiro acelerada", function () { finishMission(c, s); TM.storage.saveCoachCareer(c); TM.ui.toast("Relatório entregue! 📋"); TM.ui.go("coach-scouting", { from: back }); });
+        }, "btn primary small") : null,
         s.mission ? TM.ui.button("Cancelar missão", function () { s.mission = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back }); }, "btn ghost small")
                   : TM.ui.button("🧭 Nova missão", function () { TM.ui.go("coach-scout-mission", { sid: s.id, from: back }); }, "btn primary small"),
         TM.ui.button("Dispensar", function () { TM.ui.confirm("Dispensar " + s.name + "?", "Sem multa. Os relatórios ficam guardados.", "Dispensar", function () { c.scouts = c.scouts.filter(function (x) { return x.id !== s.id; }); TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back }); }, true); }, "btn ghost small")
-      ]));
+      ].filter(Boolean)));
       body.appendChild(card);
     });
 

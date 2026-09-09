@@ -172,6 +172,7 @@
     if (data.photo !== undefined) { upd.photo = data.photo || null; net.me.photo = data.photo || null; }
     if (data.favClub !== undefined) { upd.favClub = data.favClub || null; net.me.favClub = data.favClub || null; }
     if (data.bio !== undefined) { upd.bio = (data.bio || "").slice(0, 140) || null; net.me.bio = upd.bio; }
+    if (data.frame !== undefined) { upd.frame = data.frame || null; net.me.frame = upd.frame; }
     net._db.ref("users/" + net.me.uid).update(upd).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
   };
 
@@ -249,7 +250,7 @@
     net._db.ref("users/" + uid).once("value").then(function (s) {
       var v = s.val() || {};
       out.name = v.name || "Jogador"; out.number = v.number || null; out.online = !!v.online; out.lastSeen = v.lastSeen || 0;
-      out.photo = v.photo || null; out.favClub = v.favClub || null; out.bio = v.bio || null;
+      out.photo = v.photo || null; out.favClub = v.favClub || null; out.bio = v.bio || null; out.frame = v.frame || null;
       out.isFriend = !!(v.friends && net.me && v.friends[net.me.uid]);
       return net._db.ref("ranking/" + uid).once("value");
     }).then(function (s2) {

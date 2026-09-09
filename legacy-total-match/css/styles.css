@@ -3339,3 +3339,6 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .acct-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
 .pf-crest-empty { width: 40px; height: 40px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: var(--panel); border: 1px solid var(--line); color: #e0472c; }
 .acct-online .hub-actions { margin-top: 8px; grid-template-columns: repeat(4, 1fr); }
+/* moldura dourada (Total Coins) */
+.frame-gold { box-shadow: 0 0 0 3px #f5c542, 0 0 12px rgba(245,197,66,.6) !important; border-color: #f5c542 !important; }
+.budget-boost { margin-top: 8px; display: flex; justify-content: flex-end; }

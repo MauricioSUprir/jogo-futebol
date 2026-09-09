@@ -114,7 +114,7 @@
   // propostas da temporada (determinísticas por clube+temporada) — as três cotas são sorteadas juntas, sem repetir empresa
   var _offersCache = {};
   function allOffers(c) {
-    var key = (c.teamId || "x") + "|" + (c.season || 1) + "|" + (isPro() ? "pro" : "pub");
+    var key = (c.teamId || "x") + "|" + (c.season || 1) + "|" + (isPro() ? "pro" : "pub") + "|" + (c.sponsorRenew || 0);
     if (_offersCache[key]) return _offersCache[key];
     var r = TM.data.clubRating(c.teamId), m = mult(c);
     var rng = seededRng(key);
@@ -439,6 +439,11 @@
         TM.ui.button(mine ? "Contrato atual" : "Fechar contrato", function () { accept(kind, s); }, "btn " + (mine ? "ghost" : "primary") + " small")
       ]);
     }
+    if (TM.coins) body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("🔁 Pedir novas propostas por " + TM.coins.COST.sponsorRenew + " 🪙", function () {
+        TM.coins.pay(TM.coins.COST.sponsorRenew, "Novas propostas de patrocínio", function () { c.sponsorRenew = (c.sponsorRenew || 0) + 1; TM.storage.saveCoachCareer(c); TM.ui.toast("Novas empresas na mesa! 🤝"); TM.ui.go("club-sponsors", { from: "coach-hub" }); });
+      }, "btn ghost small")
+    ]));
     TIER_ORDER.forEach(function (t) {
       body.appendChild(el("h3", { class: "section-title", text: TIERS[t].icon + " Cota " + TIERS[t].label.toLowerCase() + " — " + TIERS[t].desc }));
       sponsorOffers(c, t).forEach(function (s) { body.appendChild(card("sp", s, c.sponsors[t])); });

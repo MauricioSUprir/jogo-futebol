@@ -40,7 +40,7 @@
       // cartão de identidade (com foto do perfil + editar)
       body.appendChild(el("div", { class: "id-card" }, [
         el("div", { class: "id-me clickable", on: { click: function () { TM.ui.go("online-profile", { uid: me.uid, name: me.name, back: "online" }); } } }, [
-          el("div", { class: "friend-ava-wrap" }, [ avatarOf(me.name, "profile-ava-sm", me.photo) ]),
+          el("div", { class: "friend-ava-wrap" }, [ avatarOf(me.name, "profile-ava-sm", me.photo, me.frame) ]),
           el("div", { class: "id-me-info" }, [
             el("div", { class: "id-me-name", text: me.name }),
             el("div", { class: "id-me-num", text: "#" + me.number }),
@@ -92,7 +92,8 @@
   var friendsStop = null, reqStop = null;
   function stopFriendListeners() { if (friendsStop) { friendsStop(); friendsStop = null; } if (reqStop) { reqStop(); reqStop = null; } }
   // avatar: foto personalizada se houver, senão inicial/cor (determinístico pelo nome)
-  function avatarOf(name, cls, photo) {
+  function avatarOf(name, cls, photo, frame) {
+    if (frame === "gold") cls = (cls || "friend-ava") + " frame-gold";
     if (photo) return el("img", { class: cls || "friend-ava", src: photo });
     name = name || "?";
     var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
@@ -118,7 +119,7 @@
       var winPct = p.played ? Math.round((p.wins / p.played) * 100) : 0;
       var favClub = p.favClub ? TM.data.club(p.favClub) : null;
       content.appendChild(el("div", { class: "profile-head" }, [
-        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo), onlineDot(p.online) ]),
+        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo, p.frame), onlineDot(p.online) ]),
         el("div", { class: "profile-id" }, [ el("div", { class: "profile-name", text: p.name }), el("div", { class: "profile-num", text: "#" + (p.number || "----") }), el("div", { class: "profile-status " + (p.online ? "on" : "off"), text: p.online ? "🟢 Online" : ("⚪ " + lastSeenTxt(p.lastSeen)) }) ])
       ]));
       if (favClub) content.appendChild(el("div", { class: "profile-fav" }, [ TM.img.clubImg(favClub, "pf-crest"), el("div", {}, [ el("div", { class: "pf-lbl", text: "Clube do coração" }), el("div", { class: "pf-name", text: favClub.name }) ]) ]));
@@ -215,7 +216,7 @@
       var favClub = p.favClub ? TM.data.club(p.favClub) : null;
       // cabeçalho
       body.appendChild(el("div", { class: "profile-head" }, [
-        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo), onlineDot(p.online) ]),
+        el("div", { class: "profile-ava-wrap" }, [ avatarOf(p.name, "profile-ava", p.photo, p.frame), onlineDot(p.online) ]),
         el("div", { class: "profile-id" }, [
           el("div", { class: "profile-name", text: p.name }),
           el("div", { class: "profile-num", text: "#" + (p.number || "----") }),
