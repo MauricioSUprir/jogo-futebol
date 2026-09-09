@@ -1482,6 +1482,48 @@ I'd appreciate if you could mail me (Kolforn@gmail.com) if you want to use this 
 - `uy-nacional__nicolas-lodeiro.jpg` — Brandon Moore (Raskuly) — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Nicol%C3%A1s_Lodeiro_02-24-2024.jpg
 - `es-malaga__jens-cajuste.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File:Jens_Cajuste.png
 - `es-malaga__einar-galilea.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File:Lens_-_Sochaux_(15-09-2018)_78.jpg
+- `be-antwerp__eran-tuypens.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Eran_Tuypens_02082026_(2).jpg
+- `be-antwerp__luca-schelfhout.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Luca_Schelfhout_02082026_(4).jpg
+- `es-malaga__haitam.jpg` — Артем Гусев — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Haitam_Aleesami_2021.jpg
+- `be-antwerp__jeff-godelaine.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Jeff_Godelaine_01082026_(1).jpg
+- `be-antwerp__christopher-scott.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Christopher_Scott_02082026_(2).jpg
+- `uy-nacional__juan-cruz-de-los-santos.jpg` — Jimmy Baikovicius from Montevideo, Uruguay — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:Uruguay_1_Italia_0_a_Italia_-_Uruguay_campe%C3%B3n_Mundial_Sub_20_2023_230611-4477-jikatu_(52989990995)_(Juan_Cruz_de_los_Santos).jpg
+- `es-malaga__joaquin-munoz.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Joaqu%C3%ADn_Mu%C3%B1oz_Audax_Italiano_v_Curic%C3%B3_Unido_20230724_01.jpg
+- `br-corinthians__kaue.jpg` — TV Central do Timão — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Kaue-camargo-entrevista-2026.png
+- `br-coritiba__paulo-roberto.jpg` — Junius — Public domain — https://commons.wikimedia.org/wiki/File:Roberto_Brum.jpg
+- `es-malaga__fernando-calero.jpg` — jamesboyes — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:BHA_5_v_Espanyol_1_pre_season_30_07_2022_84.jpg
+- `uy-nacional__alexis-martin-arias.jpg` — Carlos Figueroa — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Universidad_de_Chile_v_Uni%C3%B3n_La_Calera_20200227_12.jpg
+- `uy-nacional__lucas-rodriguez.jpg` — jmmuguerza — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Lucas_Rodr%C3%ADguez_(73)_(cropped).jpg
+- `es-malaga__rafita.jpg` — Almju — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Rafita_Ramos.jpg
+- `es-malaga__moussa-diarra.jpg` — Gaillac — CC0 — https://commons.wikimedia.org/wiki/File:TFC_players_on_Fan_days_-_Nicolaisen_-_Desler_-_Costa_-_Suazo_-_Diarra.jpg
+- `es-osasuna__sergio-herrera.jpg` — Jim Early — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Sergio_Herrera2010.jpg
+- `uy-nacional__bruno-zuculini.jpg` — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Palestino_-_River_Plate_20190424_11.jpg
+- `be-antwerp__maxime-busi.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Maxime_Busi_02082026_(1).jpg
+- `es-osasuna__jon-moncayola.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Moncayola1.jpg
+- `es-osasuna__raul-garcia.jpg` — Carlos Delgado — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File:Ra%C3%BAl_Garc%C3%ADa_y_Hern%C3%A1n_Pellerano_-_01.jpg
+- `be-antwerp__arthur-vermeeren.jpg` — Tom Van de Velde — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Arthur_vermeeren-1691915252.png
+- `es-osasuna__aimar-oroz.jpg` — Kilyann Le Hen — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Spanish_pre-match_preparations_-_Japan_vs._Spain,_2024_Summer_Olympic_men%27s_association_football,_2024-08-02.jpg
+- `es-osasuna__kike-barja.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File:CSC_0149_(29636216028)_Kike_(cropped).jpg
+- `be-antwerp__ibrahim-salah.jpg` — Nawfel Ajari — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:SalahIbrahim.jpg
+- `es-osasuna__aitor-fernandez.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Aitor_nFernandez_1.jpg
+- `es-osasuna__diego-rico.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Diego_Rico_2019.png
+- `es-osasuna__moi-gomez.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Manchester_United_v_Villarreal_CF,_29_September_2021_(39).jpg
+- `es-osasuna__ante-budimir.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ante_Budimir_Croatia_v_Portugal_2_July_2026-034.jpg
+- `es-osasuna__raul-moro.jpg` — -jem- — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Ra%C3%BAl_Moro_en_la_tienda_Movistar.jpg
+- `uy-penarol__german-pezzella.jpg` — GCBA — CC BY 2.5 — https://commons.wikimedia.org/wiki/File:Germ%C3%A1n_Pezella_y_Fabi%C3%A1n_Turnes_en_los_premios_Jorge_Newbery_2024.jpg
+- `es-osasuna__valentin-rosier.jpg` — Beşiktaş JK — CC BY 2.0 — https://commons.wikimedia.org/wiki/File:Valentine_Rosier_20231008_(cropped).jpg
+- `uy-penarol__mauricio-lemos.jpg` — beIN SPORTS Türkiye — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Mauricio_Lemos_(2020)_(cropped).png
+- `es-osasuna__romain-del-castillo.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File:Del_castillo_asse_sb_2425.png
+- `uy-penarol__franco-romero.jpg` — Jotagolpe — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:EL10EN_ACCI%C3%93N.jpg
+- `uy-penarol__eric-remedi.jpg` — Eric.Jason.Cross — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:2018-08-19_-_Atlanta_United_-_Eric_Remedi.jpg
+- `es-osasuna__mauro-echegoyen.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Mauro_Etxegoien.jpg
+- `be-antwerp__carlos-mejia.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Carlos_Mejia_02082026_(2).jpg
+- `es-osasuna__asier-osambela.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Asier_Otsanbela.jpg
+- `be-antwerp__niels-devalckeneer.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File:Niels_Devalckeneer_01082026_(1).jpg
+- `es-osasuna__asier-bonel.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Asier_bonel.jpg
+- `uy-penarol__nicolas-fernandez.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:NYCFC_v_Columbus_10_May_2026-73.jpg
+- `es-osasuna__alex-jimenez.jpg` — AFC Bournemouth — CC BY 3.0 — https://commons.wikimedia.org/wiki/File:Alex_Jimenez_00-02-07.99.png
+- `es-osasuna__unai-santos.jpg` — Daeri — CC0 — https://commons.wikimedia.org/wiki/File:Unai_Santos.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
