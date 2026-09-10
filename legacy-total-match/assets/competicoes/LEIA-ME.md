@@ -69,3 +69,6 @@ Assim que o arquivo existir, ele aparece automaticamente no lugar do emblema ger
 `nat-africa.png`  →  Copa Africana de Nações
 
 Total de arquivos: 57
+
+## Origem
+Logos oficiais das competições (uso no jogo). `cup-pt.png` (Taça de Portugal) e `cup-py.png` (Copa Paraguay) foram enviados pelo autor do jogo em 10/09/2026, com fundo removido e centralizados em 512×512.
