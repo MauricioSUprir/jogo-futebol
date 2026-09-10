@@ -3568,6 +3568,320 @@ derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.o
 - `en2-queens-park-rangers__matteo-salamon.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMatteo_Salamon_25072026_%283%29.jpg
 - `en2-queens-park-rangers__jonathan-varane.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJonathan_Varane_25042026_%281%29.jpg
 - `jp-nagoya-grampus__kensuke-nagai.jpg` — hiro — CC BY 2.1 jp — https://commons.wikimedia.org/wiki/File%3AKensuke_Nagai_2015.jpg
+- `jp-sanfrecce-hiroshima__keisuke-osako.jpg` — neko kabachi — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3ASanfrecce_Hiroshima_-1_Keisuke_OSAKO.jpg
+- `en2-sheffield-united__jamie-shackleton.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3AJamie_Shakleton.png
+- `en2-sheffield-united__mark-mcguinness.jpg` — Irish Football Fan TV — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AMark_McGuinness.png
+- `en2-sheffield-united__rhys-norrington-davies.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3ARhys_Norrington_Davies.png
+- `en2-sheffield-united__sydie-peck.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3ASydie_Peck.png
+- `jp-sanfrecce-hiroshima__kim-ju-sung.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A250412_FC_%EC%84%9C%EC%9A%B8_vs_%EB%8C%80%EC%A0%84_%28%EA%B9%80%EC%A3%BC%EC%84%B1%29_1.jpg
+- `en2-southampton__ryan-manning.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARyan_Manning_22122024_%283%29.jpg
+- `en2-southampton__flynn-downes.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AFlynn_Downes_22112025_%281%29.jpg
+- `en2-southampton__jack-stephens.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJack_Stephens_22112025_%281%29.jpg
+- `jp-shimizu-s-pulse__park-seung-wook.jpg` — Explicit — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A250629_FC_%EC%84%9C%EC%9A%B8_vs_%ED%8F%AC%ED%95%AD_%28%EB%B0%95%EC%8A%B9%EC%9A%B1%29_2.jpg
+- `en2-southampton__leo-scienza.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AL%C3%A9o_Scienza_22112025_%284%29.jpg
+- `en2-southampton__finn-azaz.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AFinn_Azaz_12042025_%281%29.jpg
+- `en2-southampton__james-bree.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJames_Bree_22122024_%282%29.jpg
+- `en2-southampton__tom-fellows.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ATom_Fellows_22112025_%289%29.jpg
+- `en2-southampton__george-long.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AGeorge_Long_22112025_%281%29.jpg
+- `en2-southampton__cam-bragg.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACameron_Bragg_22112025_%282%29.jpg
+- `en2-southampton__aaron-ramsdale.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAaron_Ramsdale_22122024_%281%29.jpg
+- `en2-southampton__welington.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AWelington_22112025_%284%29.jpg
+- `en2-stoke-city__viktor-johansson.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AViktor_Johansson_20092025_%2810%29.jpg
+- `en2-stoke-city__aaron-cresswell.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAaron_Cresswell_20092025_%284%29.jpg
+- `jp-urawa-red-diamonds__ado-onaiwu.jpg` — Gaillac — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AOnaiwu_2022-01-19_2_%28cropped_American%29.jpg
+- `en2-stoke-city__lamine-cisse.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ALamine_Ciss%C3%A9_20092025_%286%29.jpg
+- `en2-stoke-city__ben-wilmot.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ABen_Wilmot_20092025_%283%29.jpg
+- `en2-stoke-city__tomas-rigo.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ATom%C3%A1%C5%A1_Rigo_20092025_%282%29.jpg
+- `en2-stoke-city__junior-tchamadeu.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJunior_Tchamadeu_20092025_%282%29.jpg
+- `en2-stoke-city__maksym-talovierov.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMaksym_Talovyerov_20092025_%281%29.jpg
+- `en2-stoke-city__million-manhoef.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3AMillion_Manhoef.png
+- `jp-vissel-kobe__yosuke-ideguchi.jpg` — TAKA@P.P.R.S — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AYosuke_Ideguchi_%2837340172202%29_%28cropped%29.jpg
+- `jp-vissel-kobe__kota-watanabe.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AMatt_O%27Riley_2023.07.19.jpg
+- `en2-watford__jeremy-ngakia.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJeremy_Ngakia_and_K%C3%A9vin_Keben_26072025_%282%29.jpg
+- `en2-watford__kevin-keben.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AK%C3%A9vin_Keben_03042026_%283%29.jpg
+- `jp-yokohama-f-marinos__ryo-miyaichi.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3A2023.07.19_Yokohama_F._Marinos_-_Celtic_Glasgow_%286-4%29_-_53062368387_%28Ryo_Miyaichi%29.jpg
+- `en2-watford__hector-kyprianou.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AHector_Kyprianou_12072025_%282%29.jpg
+- `en2-watford__mattie-pollock.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMattie_Pollock_03042026_%281%29.jpg
+- `jp-yokohama-f-marinos__ken-matsubara.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AYokohama_F._Marinos_-_Manchester_City_%283-5%29_-_53074499487_%28Ken_Matsubara%29.jpg
+- `en2-watford__edoardo-bove.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AEdoardo_Bove_03042026_%282%29.jpg
+- `en2-watford__luca-kjerrumgaard.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ALuca_Kjerrumgaard_03042026_%281%29.jpg
+- `jp-yokohama-f-marinos__riku-yamane.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3A2023.07.19_Yokohama_F._Marinos_-_Celtic_Glasgow_%286-4%29_-_53063335930_%28Riku_Yamane%29.jpg
+- `en2-watford__rocco-vata.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARocco_Vata_12072025_%286%29.jpg
+- `jp-yokohama-f-marinos__takuto-kimura.jpg` — pantkiewicz — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3A2023.07.19_Yokohama_F._Marinos_-_Celtic_Glasgow_%286-4%29_-_53063335930_%28Takuto_Kimura%29.jpg
+- `en2-watford__kwadwo-baah.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKwadwo_Baah_09082025_%282%29.jpg
+- `en2-watford__marc-bola.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMarc_Bola_12072025_%283%29.jpg
+- `en2-watford__mamadou-doumbia.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMamadou_Doumbia_12072025_%282%29.jpg
+- `en2-watford__amin-nabizada.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAmin_Nabizada_03042026_%281%29.jpg
+- `en2-watford__edo-kayembe.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AEdo_Kayembe_2025_%28cropped%29.jpg
+- `en2-watford__jack-grieves.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJack_Grieves_09082025_%284%29.jpg
+- `en2-west-bromwich-albion__chris-mepham.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AChris_Mepham_04102025_%282%29.jpg
+- `en2-west-bromwich-albion__toby-collyer.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AToby_Collyer_04102025_%281%29.jpg
+- `en2-west-bromwich-albion__aune-heggeb.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAune_Heggeb%C3%B8_04102025_%282%29.jpg
+- `en2-west-bromwich-albion__rabby-nzingoula.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ANzingoula_asse_mhsc_2425.png
+- `en2-west-ham-united__mads-hermansen.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AMads_Hermansen_04032026_%281%29.jpg
+- `en2-west-ham-united__maximilian-kilman.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaximilian_Kilman_of_West_Ham_United.jpeg
+- `en2-west-ham-united__edson-alvarez.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AEdson_Alvarez_2023.jpg
+- `en2-west-ham-united__konstantinos-mavropanos.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKonstantinos_Mavropanos_2023_%28cropped%29.jpeg
+- `en2-west-ham-united__jarrod-bowen.jpg` — Ardfern — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJarrod_Bowen_%28cropped%29.jpg
+- `en2-west-ham-united__maxwel-cornet.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACornet_West_Ham.jpeg
+- `en2-west-ham-united__alphonse-areola.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AAlphonse_Areola_04032026_%281%29.jpg
+- `en2-west-ham-united__tomas-soucek.jpg` — Egghead06 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATom%C3%A1%C5%A1_Sou%C4%8Dek_WHU_%28cropped%29.jpeg
+- `en2-west-ham-united__ezra-mayers.jpg` — West Ham United FC — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AErza_Mayers_2026.png
+- `en2-wolverhampton-wanderers__jose-sa.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJos%C3%A9_S%C3%A1_01112025_%281%29.jpg
+- `en2-wolverhampton-wanderers__hugo-bueno.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AHugo_Bueno_01112025_%281%29.jpg
+- `en2-wolverhampton-wanderers__santiago-bueno.jpg` — Æthelred — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASantiago_Bueno.png
+- `ma-raja-ca__badr-benoun.jpg` — Oussama 499 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABadr_Benoun_2019.jpg
+- `en2-wolverhampton-wanderers__pedro-lima.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File%3ASport_0X0_N%C3%A1utico_Pernambucano_BetNacional_2024_Final_%2853637173499%29_-_Pedro_Lima.jpg
+- `en2-wolverhampton-wanderers__tommy-doyle.jpg` — Æthelred — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ATommy_Doyle.png
+- `en2-wolverhampton-wanderers__john-ruddy.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJohn_Ruddy_24052026_%282%29.jpg
+- `en2-wolverhampton-wanderers__jean-ricner-bellegarde.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJean%E2%80%90Ricner_Bellegarde_01112025_%281%29.jpg
+- `en2-wolverhampton-wanderers__fer-lopez.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AFer_L%C3%B3pez_01112025_%281%29.jpg
+- `en2-wolverhampton-wanderers__nasser-djiga.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANasser_Djiga_%28Red_Star_Belgrade%2C_2024%29.jpg
+- `en2-wolverhampton-wanderers__ladislav-krejci.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ALadislav_Krej%C4%8D%C3%AD_01112025_%283%29.jpg
+- `en2-wolverhampton-wanderers__jackson-tchatchoua.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AJackson_Tchatchoua_01112025_%281%29.jpg
+- `en2-wrexham__callum-doyle.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ACallum_Doyle_30082025_%281%29.jpg
+- `en2-wrexham__liberato-cacace.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ALiberato_Cacace_30082025_%281%29.jpg
+- `ma-wydad-ac__yahya-jabrane.jpg` — Mohammed Ayman Nechchad — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJabrane.jpg
+- `en2-wrexham__george-dobson.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3AGeorge_Dobson_Wrexham_2025.png
+- `en2-wrexham__ben-sheaf.jpg` — joshjdss — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ABen_Sheaf_2015.jpg
+- `en2-wrexham__kieffer-moore.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AKieffer_Moore_30082025_%281%29.jpg
+- `en2-wrexham__danny-ward.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ADanny_Ward_24082024.jpg
+- `en2-wrexham__callum-burton.jpg` — JMShrewsbury — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACallum_Burton.jpg
+- `en2-wrexham__matty-james.jpg` — MilesaMFC — CC0 — https://commons.wikimedia.org/wiki/File%3AMatty_James.png
+- `en2-wrexham__ryan-longman.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3ARyan_Longman_30082025_%283%29.jpg
+- `ch-basel__jonas-omlin.jpg` — Дмитрий Пукалик — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AJonas_Omlin_2019.jpg
+- `it2-benevento__christian-dalle-mura.jpg` — Rapallo80 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AChristian_Dalle_Mura01.jpg
+- `ch-grasshopper__amir-abrashi.jpg` — Endoyatto — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAmir_Abrashi_2021.jpg
+- `ch-grasshopper__allan-arigoni.jpg` — Endoyatto — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAllan_Arigoni_2021.jpg
+- `ch-lugano__anto-grgic.jpg` — Jeollo von http://www.vfb-exklusiv.de — GFDL — https://commons.wikimedia.org/wiki/File%3AAnto_grgic.jpg
+- `it2-f-c-sudtirol__daniele-casiraghi.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADaniele_Casiraghi_Sudtirol_1_mag_2024.jpeg
+- `it2-f-c-sudtirol__fabian-tait.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFabian_Tait_stadio_Druso_1_maggio_2024.jpeg
+- `it2-f-c-sudtirol__federico-davi.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFederico_Davi.jpg
+- `it2-f-c-sudtirol__simone-davi.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASimone_Davi.jpeg
+- `it2-f-c-sudtirol__silvio-merkaj.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASilvio_Merkaj.jpg
+- `it2-f-c-sudtirol__frederic-veseli.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFreddie_Veseli.jpg
+- `it2-f-c-sudtirol__andrea-giorgini.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndrea_Giorgini.jpeg
+- `it2-f-c-sudtirol__salvatore-molina.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASalvatore_Molina.jpeg
+- `it2-f-c-sudtirol__hamza-el-kaouakibi.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AHamza_El_Kaouakibi.jpeg
+- `it2-hellas-verona__daniel-oyegoke.jpg` — Bradford City AFC — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ADaniel_Oyegoke_2023.jpg
+- `ch-sion__numa-lavanchy.jpg` — Константин Золин — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANuma_Lavanchy.jpg
+- `ch-sion__nias-hefti.jpg` — Константин Золин — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ANias_Hefti.jpg
+- `ch-sion__kreshnik-hajrizi.jpg` — Константин Золин — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AKreshnik_Hajrizi.jpg
+- `ch-sion__theo-berdayes.jpg` — J24N — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATheoBerdayes.jpg
+- `it2-hellas-verona__samuele-mulattieri.jpg` — Antonio Fraioli — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASamuele_Mulattieri_9_C_-_Frosinone_Calcio_-_100_0378_AF_%28cropped%29.jpg
+- `it2-hellas-verona__abdou-harroui.jpg` — EdgeGladiator2 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAbdou_Harroui.jpg
+- `ch-thun__simon-lengen.jpg` — Nicolasdino — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASimon-lengen-26-27.jpg
+- `ch-young-boys__ryan-andrews.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AImran_Louza_and_Ryan_Andrews_12072025_%281%29.jpg
+- `ch-young-boys__gregory-wuthrich.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_RB_salzburg_gegen_SK_Sturm_Graz_%282024-02-09%29_48.jpg
+- `ch-young-boys__armin-gigovic.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-02-19_Armin_Gigovic_1.jpg
+- `ch-young-boys__christian-fassnacht.jpg` — Олег Батрак — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AChristian_Fassnacht_%28cropped%29.jpg
+- `it2-modena-2018__andrea-belotti.jpg` — GestisciCommons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGallo_Belotti_2.jpg
+- `ch-young-boys__facinet-conte.jpg` — Fédération Guinéenne Football — Public domain — https://commons.wikimedia.org/wiki/File%3AFacinet_Cont%C3%A9_en_2023.jpg
+- `it2-padova__alessandro-sorrentino.jpg` — TV SEI — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AAlessandro_Sorrentino_TV_SEI%2C_2022.png
+- `it2-padova__cristian-buonaiuto.jpg` — Andriurson — CC0 — https://commons.wikimedia.org/wiki/File%3ACristian_Buonaiuto_al_Padova.jpg
+- `it2-palermo__claudio-gomes.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACesena_FC_v_Palermo_FC%2C_27_September_2025_-_21_%28Claudio_Gomes%29.jpg
+- `it2-palermo__jacopo-segre.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACesena_FC_v_Palermo_FC%2C_27_September_2025_-_21_%28Claudio_Gomes%29.jpg
+- `it2-pisa-s-c__felipe-loyola.jpg` — Carlos yo — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFelipe_Loyola_Uni%C3%B3n_Espa%C3%B1ola_v_Huachipato_20230812_01_%28cropped%29.jpg
+- `py-cerro-porteno__gatito-fernandez.jpg` — VictorVoorhees — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AGatito_Fern%C3%A1ndez_%28Cerro_Porte%C3%B1o%29.png
+- `py-cerro-porteno__ignacio-aliseda.jpg` — Leandorox — CC0 — https://commons.wikimedia.org/wiki/File%3AIgnacio_Aliseda_en_2025.png
+- `it2-pisa-s-c__stefano-moreo.jpg` — Unknown author Unknown author — Public domain — https://commons.wikimedia.org/wiki/File%3AStefano_Moreo_con_in_mano_il_premio_Miglior_Giocatore_del_match%2C_in_Serie_A.jpg
+- `py-general-caballero-jlm__hector-caballero.jpg` — Marc7000 — Public domain — https://commons.wikimedia.org/wiki/File%3AH%C3%A9ctor_Caballero_1972.jpg
+- `it2-s-s-juve-stabia__nicola-pietrangeli.jpg` — Vale93b — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANicola_Pietrangeli_calciatore.jpg
+- `py-nacional__ignacio-bailone.jpg` — Nak179 — CC0 — https://commons.wikimedia.org/wiki/File%3ABailone_Nacional.jpg
+- `it2-u-s-avellino-1912__roberto-insigne.jpg` — Antonio Fraioli — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFrosinone_Calcio_-_Benito_Stirpe_-_vs_Cittadella_11_2_2023_-_DSC_2773_Insigne_gioco.jpg
+- `py-olimpia__richard-ortiz.jpg` — User:Caarlos 19 — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ARichard_Ortiz_With_Toluca_2014_2014-06-19_02-55.jpg
+- `py-olimpia__derlis-gonzalez.jpg` — Douglas Teixeira from Santos, Brasil — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3ADerlis_Gonz%C3%A1les%2C_atacante_do_Santos_%2844009431894%29_%28cropped%29.jpg
+- `it2-virtus-entella__giacomo-corona.jpg` — SonoGrazy — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APalermo_FC_v_AC_Reggiana_1919%2C_23_August_2025_-_05_%28Andrea_Papetti%29.jpg
+- `es2-almeria__leo-baptistao.jpg` — Carlos Delgado — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AL%C3%A9o_Baptist%C3%A3o_-_01.jpg
+- `es2-andorra__julian-rijkhoff.jpg` — Carlo Bruil Fotografie — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AJulian_Rijkhoff_2023.jpg
+- `py-sportivo-trinidense__nicolas-mana.jpg` — Cristian Avilés — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANicol%C3%A1s_Man%C3%A1_Sportivo_Luque%C3%B1o_2024.jpeg
+- `es2-cadiz__iuri-tabatadze.jpg` — FotosLaLiga — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATabatadze_-_Cadiz_-_Partido_C%C3%A1diz_vs_Cultural_Leonesa_%28cropped%29.jpg
+- `es2-ceuta__edgar-sevikyan.jpg` — fradi.hu — GFDL — https://commons.wikimedia.org/wiki/File%3AEdgar_Szevikjan.jpg
+- `es2-eibar__anaitz-arbilla.jpg` — Giovanni Batista Rodriguez from San Sebastian-Donostia, España — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AAnaitz_Arbilla.jpg
+- `mx-leon__juan-guevara.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJuan_Guevara.jpg
+- `mx-leon__julio-gonzalez.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJulio_Gonz%C3%A1lez_Club_Le%C3%B3n.jpg
+- `mx-leon__daniel-arcila.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ADaniel_Arcila.jpg
+- `mx-leon__jhohan-romana.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJhohan_Roma%C3%B1a.jpg
+- `mx-leon__jordi-cortizo.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJordi_Cortizo.jpg
+- `mx-leon__sebastian-santos.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASebasti%C3%A1n_Santos.jpg
+- `es2-las-palmas__jese.jpg` — Equipos de fútbol — CC0 — https://commons.wikimedia.org/wiki/File%3AJes%C3%A9_Rodriguez_Las_Palmas.jpg
+- `es2-las-palmas__sandro-ramirez.jpg` — Equipos de fútbol — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALas_Palmas_2025_04_23_Athletic_Club_%28cropped%29_%28cropped%29.jpg
+- `es2-las-palmas__kirian-rodriguez.jpg` — Equipos de fútbol — CC0 — https://commons.wikimedia.org/wiki/File%3AJes%C3%A9_Rodriguez_Las_Palmas.jpg
+- `es2-leganes__enric-franquesa.jpg` — Comunidad de Madrid — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEnric_Franquesa.jpg
+- `es2-mallorca__arnau-puigmal.jpg` — Kane Brooker — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AArnau_Puigmal_%28cropped%29.jpg
+- `es2-mallorca__pablo-torre.jpg` — Radio Marca Baleares — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APablo_Torre_2026.png
+- `es2-oviedo__aritz-aldasoro.jpg` — Goierriko Hitza — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAritz_Aldasoro.png
+- `es2-tenerife__dani-fernandez.jpg` — Gaca 12 Oficial — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADani_Fern%C3%A1ndez_en_una_firma_de_aut%C3%B3grafos.jpg
+- `es2-valladolid__guille-bueno.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-11-11_Borussia_Dortund_II_gegen_FC_Erzgebirge_Aue_%283._Liga_2022-23%29_by_Sandro_Halank%E2%80%93262.jpg
+- `fr2-boulogne__ibrahim-kone.jpg` — feguifoot — Public domain — https://commons.wikimedia.org/wiki/File%3AB24AMSM0124.jpg
+- `us-atlanta-united__elias-baez.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AEl%C3%ADas_B%C3%A1ez.jpg
+- `fr2-clermont-foot-63__adrien-hunou.jpg` — S. Plaine — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AStade_rennais_-_Le_Havre_AC_20150708_37.JPG
+- `us-atlanta-united__matthew-edwards.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMatthew_Edwards_Red_Bull_Atlanta_5.31.25-159_%28cropped%29.jpg
+- `us-atlanta-united__cooper-sanchez.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ACooper_Sanchez.jpg
+- `fr2-dijon__quentin-bernard.jpg` — DDectateur — CC0 — https://commons.wikimedia.org/wiki/File%3AQuentin_Bernard.jpg
+- `fr2-dijon__julio-tavares.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Dijon_%2815-08-2020%29_27.jpg
+- `fr2-dunkerque__ousmane-toure.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AOusmane_Tour%C3%A9_asse_losc_2425.jpg
+- `us-colorado-rapids__ted-ku-dipietro.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATed_Ku-DiPietro_NYCFC_v_Colorado_Mar_14_2026-124_%28cropped%29.jpg
+- `us-columbus-crew__nicholas-hagen.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANicholas_Hagen_NYCFC_v_Columbus_10_May_2026-1.jpg
+- `us-columbus-crew__andres-herrera.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndres_Herrera_NYCFC_v_Columbus_10_May_2026-68_%28cropped%29.jpg
+- `us-columbus-crew__rudy-camacho.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ARudy_Camacho_NYCFC_v_Columbus_10_May_2026-69_%28cropped%29.jpg
+- `us-columbus-crew__dylan-chambost.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ADylan_Chambost_NYCFC_v_Columbus_10_May_2026-176.jpg
+- `us-columbus-crew__cesar-ruvalcaba.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ACesar_Ruvalcaba_NYCFC_v_Columbus_10_May_2026-12.jpg
+- `us-columbus-crew__amar-sejdic.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAmar_Sejdic_NYCFC_v_Columbus_10_May_2026-212_%28cropped%29.jpg
+- `us-columbus-crew__taha-habroune.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATaha_Habroune_NYCFC_v_Columbus_10_May_2026-27.jpg
+- `us-columbus-crew__sekou-bangoura.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASekou_Tidiany_Bangoura_NYCFC_v_Columbus_10_May_2026-19_%28cropped%29.jpg
+- `us-columbus-crew__malte-amundsen.jpg` — John Manard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMalte_Amundsen_18_DF_Columbus_Crew.jpg
+- `us-columbus-crew__jamal-thiare.jpg` — John Manard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJamal_Thiar%C3%A9_19_FW_Columbus_Crew-2.jpg
+- `us-columbus-crew__andre-gomes.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndre_Gomes_NYCFC_v_Columbus_10_May_2026-65_%28cropped%29.jpg
+- `us-columbus-crew__tristan-brown.jpg` — John Manard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATristan_Brown_22_MF_Columbus_Crew-2_%28cropped%29.jpg
+- `us-columbus-crew__mohamed-farsi.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMohamed_Farsi_NYCFC_v_Columbus_10_May_2026-35_%28cropped%29.jpg
+- `us-columbus-crew__evan-bush.jpg` — John Manard — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEvan_Bush_24_GK_Columbus_Crew-3.jpg
+- `us-columbus-crew__sean-zawadzki.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASean_Zawadzki_NYCFC_v_Columbus_10_May_2026-108_%28cropped%29.jpg
+- `us-columbus-crew__patrick-schulte.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APatrick_Schulte_NYCFC_v_Columbus_10_May_2026-64_%28cropped%29.jpg
+- `us-columbus-crew__steven-moreira.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ASteven_Moreira_NYCFC_v_Columbus_10_May_2026-67_%28cropped%29.jpg
+- `us-columbus-crew__chase-adams.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AChase_Adams_NYCFC_v_Columbus_10_May_2026-37.jpg
+- `us-columbus-crew__luke-pruter.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALuke_Pruter_NYCFC_v_Columbus_10_May_2026-15.jpg
+- `us-fc-cincinnati__evander.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AEvander_NYCFC_v_Cincinnati_22_Apr_26-14_%28cropped%29.jpg
+- `us-fc-cincinnati__kyle-smith.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKyle_Smith_NYCFC_v_Cincinnati_22_Apr_26-42_%28cropped%29.jpg
+- `fr2-metz__ousmane-ba.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_FC_Metz_%2814-03-2021%29_12.jpg
+- `fr2-montpellier__naoufel-el-hannach.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File%3ANaoufel_El_Hannach_Montpellier_%28cropped%29.jpg
+- `fr2-montpellier__florian-tardieu.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ATardieu_asse_mhsc_2425.png
+- `fr2-montpellier__theo-sainte-luce.jpg` — MHSC TV - Montpellier Hérault Sport Club — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ATh%C3%A9o_Sainte-Luce_goal_vs_Nice_celebration_2024.png
+- `fr2-montpellier__daylam-meddah.jpg` — MHSC TV - Montpellier Hérault Sport Club — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ADaylam_Meddah_2026.jpg
+- `fr2-montpellier__simon-ngapandouetnbu.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Marseille_%2822-01-2022%29_2.jpg
+- `us-inter-miami__micael.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AHouston_Dynamo_vs_San_Antonio_2025%2C_11.jpg
+- `fr2-nancy__nicolas-saint-ruf.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_AS_Nancy-Lorraine_%2819-01-2019%29_74.jpg
+- `fr2-nantes__maxime-dupe.jpg` — Gaillac — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaxime_Dup%C3%A9_%282020-09-14%29_2_%28cropped%29.jpg
+- `fr2-nantes__johann-lepenant.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ALepenant_asse_fcn_2425.png
+- `fr2-nantes__dehmaine-tabibou.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ATabibou_asse_fcn_2425.png
+- `fr2-nantes__louis-leroux.jpg` — Werner100359 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Salzburg_U19_gegen_FC_Nantes_U19_%282024-02-28%29_11a_07.jpg
+- `fr2-nantes__ignatius-ganago.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ARC_Lens_-_FC_Nantes_%2828-10-2023%29_2.jpg
+- `fr2-red-star__josue-escartin.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File%3ARed_Star-Ajaccio%2C_26-08-2024%2C_Josu%C3%A9_Escartin_%28cropped%29.jpg
+- `fr2-red-star__damien-durand.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File%3ARed_Star-Ajaccio%2C_26-08-2024%2C_Damien_Durand_%28cropped%29.jpg
+- `fr2-red-star__samuel-renel.jpg` — Paul Vaurie — CC0 — https://commons.wikimedia.org/wiki/File%3ARed_Star-Ajaccio%2C_26-08-2024%2C_Renel%2C_Escartin%2C_El_Hriti%2C_Benali_%28cropped%29.jpg
+- `fr2-reims__joseph-okumu.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AOkumu_asse_sr_2425.png
+- `fr2-reims__theo-leoni.jpg` — Gérald Garitan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFoire_de_chalons_Foot_Reims_1585898_%28cropped%29.jpg
+- `fr2-reims__sergio-akieme.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AAkieme_ase_sr_2425.png
+- `fr2-reims__mory-gbane.jpg` — Gérald Garitan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFoire_de_Chalons_foot_Reims_1585913.jpg
+- `fr2-reims__john-patrick.jpg` — Gérald Garitan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFoire_de_Chalons_foot_Reims_1585921.jpg
+- `fr2-reims__ange-martial-tia.jpg` — Gérald Garitan — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFoire_de_Chalons_foot_Reims_1585945.jpg
+- `fr2-reims__soumaila-sylla.jpg` — Supporterhéninois — CC0 — https://commons.wikimedia.org/wiki/File%3ALens_-_Reims_%2812-05-2023%29_48.jpg
+- `fr2-reims__aleksandr-guboglo.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAleksandr_Guboglo_CF_Montreal_NYCFC_6.28.25-163.jpg
+- `fr2-saint-etienne__maxime-bernauer.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ABernauer_asse_ogcn_2425.png
+- `fr2-saint-etienne__irvin-cardona.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ACardona_asse_sb_2425.png
+- `fr2-saint-etienne__thierno-ballo.jpg` — Timmy96 — CC0 — https://commons.wikimedia.org/wiki/File%3AThierno_Ballo_14032026_%281%29.jpg
+- `fr2-saint-etienne__ben-old.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3AOld_asse_psg_2425.png
+- `fr2-saint-etienne__augustine-boakye.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ABoakye_ASSE_MHSC_2425.png
+- `fr2-saint-etienne__julien-le-cardinal.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ALe_cardinal_asse_sb_2425.png
+- `fr2-saint-etienne__gautier-larsonneur.jpg` — Paté kroute — CC0 — https://commons.wikimedia.org/wiki/File%3ALarsonneur_asse_rcl_2425.jpg
+- `de2-1-fc-heidenheim__marnon-busch.jpg` — Northside — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ABusch%2C_Marnon_Heidenheim_17-18_WP.jpg
+- `de2-1-fc-heidenheim__paul-tschernuth.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Red_Bull_Salzburg_%28Nachwuchs%29_gegen_West_African_Football_Academy_U24.jpg
+- `us-orlando-city__adrian-marin.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAdri%C3%A1n_Mar%C3%ADn_warmups.jpg
+- `us-orlando-city__luis-otavio.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALuis_Ot%C3%A1vio.jpg
+- `us-orlando-city__daryl-dike.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ADaryl_Dike.jpg
+- `us-orlando-city__javier-otero.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJavier_Otero.jpg
+- `us-orlando-city__tyrese-spicer.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ATyrese_Spicer.jpg
+- `us-orlando-city__zakaria-taifi.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AZakaria_Taifi_Orlando_City.jpg
+- `de2-1-fc-magdeburg__bar-s-atik.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2019-07-17_SG_Dynamo_Dresden_vs._Paris_Saint-Germain_by_Sandro_Halank%E2%80%93456.jpg
+- `us-orlando-city__justin-ellis.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJustin_Ellis_1.jpg
+- `us-orlando-city__harvey-sarajian.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AHarvey_Sarajian.jpg
+- `de2-1-fc-magdeburg__tarek-chahed.jpg` — Steven Schaap — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATarek_Chahed.JPG
+- `us-orlando-city__bernardo-rhein.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ABernardo_Rhein_1.jpg
+- `us-orlando-city__iago-teodoro.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AIago_Teodoro.jpg
+- `de2-1-fc-nurnberg__christian-mathenia.jpg` — Granada — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A20190714_OEFBL_friendly_SK_Rapid_Wien_-_1.FC_N%C3%BCrnberg_Christian_Mathenia_850_1266.jpg
+- `de2-arminia-bielefeld__maximilian-gro-er.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2021-05-12_SG_Dynamo_Dresden_gegen_Bischofswerdaer_FV_08_%28Wernesgr%C3%BCner_Sachsenpokal_2020-21%29_by_Sandro_Halank%E2%80%93048.jpg
+- `de2-darmstadt-98__marcel-schuhen.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMarcelSchuhen.jpg
+- `de2-darmstadt-98__merveille-papela.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMerveille_Papela_%28cropped%29.jpg
+- `us-real-salt-lake__rafael-cabral.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARafael_Cabral.jpg
+- `us-real-salt-lake__kobi-henry.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AKobi_Henry_warmups.jpg
+- `us-real-salt-lake__juan-manuel-sanabria.jpg` — Salt City FC — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJuan_Manuel_Sanabria_speaking_with_Salt_City_FC.png
+- `us-real-salt-lake__morgan-guilavogui.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Morgan_Guilavogui.jpg
+- `us-real-salt-lake__diego-luna.jpg` — u/reepers_hellcat — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ADiego_Luna%2C_2025_CONCACAF_Gold_Cup%2C_02.jpg
+- `us-real-salt-lake__dominik-marczuk.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ADominik_Marczuk.jpg
+- `us-real-salt-lake__saba-lobjanidze.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASaba_Lobjanidze_with_Real_Salt_Lake.jpg
+- `de2-dynamo-dresden__niklas-hauptmann.jpg` — Sandro Halank , Wikimedia Commons — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3A2018-08-19_BFC_Dynamo_vs._1._FC_K%C3%B6ln_%28DFB-Pokal%29_by_Sandro_Halank%E2%80%93223.jpg
+- `us-real-salt-lake__justen-glad.jpg` — Patrick Rouin from Salt Lake City, United States — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AMLS_FC_Dallas_at_Real_Salt_Lake_%2851427451952%29_%28cropped%29.jpg
+- `us-real-salt-lake__juan-jose-arias.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJuan_Jos%C3%A9_Arias.jpg
+- `us-real-salt-lake__philip-quinton.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3APhilip_Quinton_warmups.jpg
+- `us-real-salt-lake__sam-junqua.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ASam_Junqua.jpg
+- `de2-eintracht-braunschweig__frederik-jakel.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2019-07-12_Fu%C3%9Fball%3B_Freundschaftsspiel_RB_Leipzig_-_FC_Z%C3%BCrich_1DX_1082_by_Stepro.jpg
+- `us-real-salt-lake__mason-stajduhar.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AMason_Stajduhar.jpg
+- `us-real-salt-lake__luca-moisa.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ALuca_Moisa.jpg
+- `us-real-salt-lake__aiden-hezarkhani.jpg` — Keiteay — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAiden_Hezarkhani.jpg
+- `de2-eintracht-braunschweig__sanoussy-ba.jpg` — Steffen Prößdorf — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2022-07-21_Fu%C3%9Fball%2C_M%C3%A4nner%2CFreundschaftsspiel%2C_RB_Leipzig_-_FC_Liverpool_1DX_2174_by_Stepro_%28cropped%29.jpg
+- `us-seattle-sounders__andrew-thomas.jpg` — Bryan Berlin — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AAndrew_Thomas_NYCFC.Seattle.18.Oct.2025-004_%28cropped%29.jpg
+- `de2-energie-cottbus__leonardo-bittencourt.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALeonardoBittencourt2.jpg
+- `de2-fc-st-pauli__ben-voll.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Ben_Voll_1.jpg
+- `de2-fc-st-pauli__david-nemeth.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_David_Nemeth_1.jpg
+- `de2-fc-st-pauli__youssoupha-niang.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Youssoupha_Niang.jpg
+- `de2-fc-st-pauli__eric-smith.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Eric_Smith.jpg
+- `de2-fc-st-pauli__abdoulie-ceesay.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Abdoulie_Ceesay_1.jpg
+- `de2-fc-st-pauli__arkadiusz-pyrka.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Arkadiusz_Pyrka.jpg
+- `de2-fc-st-pauli__joel-chima-fujita.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Joel_Chima_Fujita.jpg
+- `de2-fc-st-pauli__scott-banks.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Scott_Banks.jpg
+- `de2-fc-st-pauli__mathias-rasmussen.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Mathias_Rasmussen.jpg
+- `de2-fc-st-pauli__lars-ritzka.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Lars_Ritzka_1.jpg
+- `de2-fc-st-pauli__sam-klein.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Sam_Klein.jpg
+- `de2-fc-st-pauli__connor-metcalfe.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Connor_Metcalfe.jpg
+- `de2-fc-st-pauli__adam-dzwiga-a.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-04-23_-_FC_St_Pauli_-_Adam_D%C5%BAwiga%C5%82a.jpg
+- `de2-fc-st-pauli__simon-spari.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-09-08_-_FC_St_Pauli_-_Simon_Spari.jpg
+- `de2-greuther-furth__ole-pohlmann.jpg` — Sandro Halank, Wikimedia Commons — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2023-08-12_TSV_Schott_Mainz_gegen_Borussia_Dortmund_%28DFB-Pokal_2023-24%29_by_Sandro_Halank%E2%80%93072.jpg
+- `de2-greuther-furth__felix-klaus.jpg` — xtranews.de — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AFelix_Klaus_2012_%28cropped%29.jpg
+- `de2-hannover-96__husseyn-chakroun.jpg` — Dirk Einecke — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AKarlsruher_SC_vs_Hannover_96_-_2026-04-25%2C_Husseyn_Chakroun_02_%28cropped%29.jpg
+- `de2-hertha-bsc__julian-eitschberger.jpg` — Metroit1984 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AJ._Eitschberger_2022.jpg
+- `de2-hertha-bsc__konstantin-heide.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Red_Bull_Salzburg_gegen_SpVgg_Unterhaching_%28Testspiel_2024-06-29%29_10_%28cropped%29.jpg
+- `de2-hertha-bsc__farid-alfa-ruprecht.jpg` — Fuguito — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-07-21_Farid_Alfa-Ruprecht_Leverkusen.jpg
+- `ec-barcelona-sc__carlos-montano.jpg` — Agencia de Noticias ANDES — CC BY-SA 2.0 — https://commons.wikimedia.org/wiki/File%3AJean_Carlos_Monta%C3%B1o_2018.jpg
+- `de2-hertha-bsc__linus-gechter.jpg` — Silesia711 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ALinusGechter.jpg
+- `de2-holstein-kiel__timon-weiner.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-03-05_Timon_Weiner_Holstein_Kiel_pic1.jpg
+- `de2-holstein-kiel__frederik-roslyng.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Frederik_Roslyng.jpg
+- `de2-holstein-kiel__jonas-therkelsen.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Jonas_Therkelsen.jpg
+- `de2-holstein-kiel__ivan-nekic.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Ivan_Neki%C4%87.jpg
+- `de2-holstein-kiel__kasper-davidsen.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Kasper_Davidsen.jpg
+- `de2-holstein-kiel__andu-kelati.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Andu_Kelati.jpg
+- `de2-holstein-kiel__phil-harres.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2025-02-19_Phil_Harres_1.jpg
+- `de2-holstein-kiel__adrian-kapralik.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Adri%C3%A1n_Kapr%C3%A1lik.jpg
+- `de2-holstein-kiel__lasse-rosenboom.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Lasse_Rosenboom.jpg
+- `de2-holstein-kiel__david-zec.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_David_Zec.jpg
+- `de2-holstein-kiel__jonas-meffert.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Jonas_Meffert.jpg
+- `de2-holstein-kiel__marcel-engelhardt.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Marcel_Engelhardt.jpg
+- `de2-holstein-kiel__leon-parduzi.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_Leon_Parduzi.jpg
+- `de2-holstein-kiel__john-tolkin.jpg` — Lanthan2003 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3A2026-03-04_John_Tolkin.jpg
+- `de2-karlsruher-sc__marvin-wanitzek.jpg` — Carolus requiescat — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMarvin_Wanitzek.jpg
+- `de2-karlsruher-sc__christoph-kobald.jpg` — Carolus requiescat — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AChristoph_Kobald.jpg
+- `ec-deportivo-cuenca__stalin-morocho.jpg` — Alex v m — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AStalin_morocho_firmando.png
+- `de2-vfl-osnabruck__niklas-sauter.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANiklas_Sauter.png
+- `de2-vfl-osnabruck__bryan-henning.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABryan_Henning_%282025%29.png
+- `de2-vfl-osnabruck__ismail-badjie.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AIsmael_Badjie.jpg
+- `de2-vfl-osnabruck__bjarke-jacobsen.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ABjarke_Jacobsen.png
+- `de2-vfl-osnabruck__theo-janotta.jpg` — Fotowallenstein — CC0 — https://commons.wikimedia.org/wiki/File%3ATheo_Janotta.jpg
+- `de2-vfl-osnabruck__tony-lesueur.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ATony_Lesueur.png
+- `de2-vfl-osnabruck__jannik-muller.jpg` — Fotowallenstein — CC0 — https://commons.wikimedia.org/wiki/File%3AJannik_M%C3%BCller.jpg
+- `de2-vfl-osnabruck__niklas-wiemann.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3ANiklas_Wiemann.png
+- `de2-vfl-osnabruck__fridolin-wagner.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFridolin_Wagner.png
+- `de2-vfl-osnabruck__patrick-kammerbauer.jpg` — Fotowallenstein — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3APatrick_Kammerbauer_2025.png
+- `de2-vfl-wolfsburg__maximilian-arnold.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AMaximilian_Arnold%28cropped%29.jpg
+- `de2-vfl-wolfsburg__yannick-gerhardt.jpg` — Светлана Бекетова — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3ARusu21vsGeru21_%2811%29.jpg
+- `de2-vfl-wolfsburg__aster-vranckx.jpg` — Werner100359 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File%3AFC_Salzburg_gegen_VfL_Wolfsburg_%28CL-Gruppenphase_20._Oktober_2021%29_77_%28cropped%29.jpg
+- `br2-atletico-goianiense__marcao.jpg` — Анна Нэсси — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3AMarc%C3%A3o_2021.jpg
+- `br2-avai__igor-bohn.jpg` — Raul Ramos — CC0 — https://commons.wikimedia.org/wiki/File%3ABotafogo-SP_x_Ava%C3%AD_-_2023_-_Igor_Bohn_%28cropped%29.jpg
+- `br2-avai__leo-gamalho.jpg` — Copa do Nordeste — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3AL%C3%A9o_Gamalho_2020.jpg
+- `br2-botafogo-sp__gabriel-inocencio.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_03_-_Gabriel_Inoc%C3%AAncio.jpg
+- `br2-botafogo-sp__patrick-brey.jpg` — Raul Ramos — CC0 — https://commons.wikimedia.org/wiki/File%3ABotafogo-SP_x_Portuguesa_-_2024_-_Patrick_Brey_%28cropped%29.jpg
+- `br2-botafogo-sp__leandro-maciel.jpg` — TV Botafogo — CC BY 3.0 — https://commons.wikimedia.org/wiki/File%3ALeandro_Maciel_2024.png
+- `br2-botafogo-sp__pedro-tortello.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3APedro_Tortello_-_2023.jpg
+- `br2-crb__dada-belmonte.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ADRAFT_FUTEBOL_2019-_Express%C3%A3o_Paulista_0_%282%29_x_%283%29_0_%C3%81gua_Santa_-_49191179208_-_Dad%C3%A1_Belmonte.jpg
+- `br2-cuiaba__vitor-mendes.jpg` — SOCCER DIGITAL — CC BY 2.0 — https://commons.wikimedia.org/wiki/File%3AS%C3%A9rie_A_-_S%C3%83O_PAULO_0_X_0_JUVENTUDE_-_Vitor_Mendes_%28cropped%29.jpg
+- `br2-cuiaba__alan-empereur.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AAlan-Empereur-Cuiaba-Palmeiras-jul-2022.jpg
+- `br2-goias__anselmo-ramon.jpg` — Record Goiás — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AAnselmo_Ramon_2026.jpg
+- `br2-goias__tadeu.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3ATadeu_-_S%C3%89RIE_A_-_CORINTHIANS_1_X_0_GOI%C3%81S_-_IMG_2280_%28cropped%29.jpg
+- `br2-nautico__paulo-sergio.jpg` — JHTimbu — CC0 — https://commons.wikimedia.org/wiki/File%3APaulo_S%C3%A9rgio_-_Santa_Cruz_x_N%C3%A1utico_11-02-2026.jpg
+- `br2-novorizontino__renato-palm.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3APremia%C3%A7%C3%A3o_S%C3%A9rie_A2_2023_-_Renato_Palm_%28cropped%29.jpg
+- `br2-operario-ferroviario__felipe-augusto.jpg` — Вячеслав Евдокимов — CC BY-SA 3.0 — https://commons.wikimedia.org/wiki/File%3A23.08.2026_FC_Spartak_Moscow_vs._FC_Zenit_Saint_Petersburg5_%28cropped%29.jpg
+- `br2-ponte-preta__jonathan-cafu.jpg` — Biser Todorov — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3AJ._Cafu.jpg
+- `br2-sao-bernardo__rodrigo-ferreira.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARodrigo_Ferreira_24-04-2024.png
+- `br2-sao-bernardo__hugo-sanches.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AS%C3%A9rie_D_2022-_S%C3%A3o_Bernardo_FC_1_x_0_Cianorte_-_52073701433_-_Hugo_Sanches.jpg
+- `br2-sport__chrystian-barletta.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File%3ASanta_Cruz_1X0_Sport_Pernambucano_BetNacional_2025_%2854302495230%29_Barletta.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
