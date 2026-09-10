@@ -419,7 +419,18 @@
     return function stop() { ref.off("value", h); };
   };
   net.setMatchTeam = function (code, side, teamId) {
-    var patch = {}; patch[side === "host" ? "hostTeam" : "guestTeam"] = teamId;
+    var k = side === "host" ? "host" : "guest";
+    var patch = {}; patch[k + "Team"] = teamId; patch[k + "Lineup"] = null; patch[k + "Ready"] = null; // trocou de time: escalação e "pronto" zeram
+    net._db.ref("matches/" + code).update(patch);
+  };
+  // escalação pré-jogo de cada lado ({ formation, tactic, starters:[ids] }) e confirmação "pronto"
+  net.setMatchLineup = function (code, side, lineup) {
+    var k = side === "host" ? "host" : "guest";
+    var patch = {}; patch[k + "Lineup"] = lineup || null; patch[k + "Ready"] = null;
+    net._db.ref("matches/" + code).update(patch);
+  };
+  net.setMatchReady = function (code, side, ready) {
+    var patch = {}; patch[(side === "host" ? "host" : "guest") + "Ready"] = ready ? true : null;
     net._db.ref("matches/" + code).update(patch);
   };
   net.setMatchResult = function (code, payload) {

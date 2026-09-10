@@ -579,7 +579,22 @@
 
   /* ---------- SALA DA PARTIDA ---------- */
   var roomStop = null, roomComputed = false, lastDeclineTs = null;
-  function teamObj(source, id) { return source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id); }
+  function teamObj(source, id, lu) {
+    var t = source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id);
+    if (lu && lu.starters && lu.starters.length) {
+      // escalação escolhida na sala: titulares na ordem da formação + reservas por overall
+      var byId = {}; t.players.forEach(function (p) { byId[p.id] = p; });
+      var xi = lu.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
+      if (xi.length === 11) {
+        var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
+        var rest = t.players.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
+        t.players = xi.concat(rest);
+      }
+      if (lu.formation) t.formation = lu.formation;
+      if (lu.tactic) t.tactic = lu.tactic;
+    }
+    return t;
+  }
   function randomClubId() { var cs = TM.data.world().clubs; return cs[Math.floor(Math.random() * cs.length)].id; }
   function teamOptions(source, leagueId) {
     if (source === "nation") return TM.data.world().nations.map(function (n) { return { id: n.id, name: n.name }; }).sort(function (a, b) { return a.name.localeCompare(b.name); });
@@ -610,7 +625,7 @@
       }
       renderRoom(wrap, code, side, m);
       // host calcula o resultado quando os dois lados estão prontos
-      var ready = m.mode === "draft" ? (m.hostDraft && m.guestDraft) : (m.hostTeam && m.guestTeam);
+      var ready = m.mode === "draft" ? (m.hostDraft && m.guestDraft) : (m.hostTeam && m.guestTeam && m.hostReady && m.guestReady);
       if (side === "host" && ready && !m.result && !roomComputed) {
         roomComputed = true;
         var teams = buildMatchTeams(m), a = teams[0], b = teams[1];
@@ -619,7 +634,7 @@
           // disputa de pênaltis direto (sem partida)
           N().setMatchResult(code, { penaltyOnly: true, score: [0, 0], events: [], shootout: TM.engine.shootout(a, b) });
         } else {
-          var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true });
+          var result = TM.engine.simulate(a, b, { realism: settings.realism, neutral: true, tactics: [a.tactic || null, b.tactic || null] });
           if (result.score[0] === result.score[1]) { result.shootout = TM.engine.shootout(a, b); }
           N().setMatchResult(code, result);
         }
@@ -633,7 +648,7 @@
       var mk = function (ids, name) { return { id: "d", name: name, players: (ids || []).map(function (id) { return TM.data.player(id); }).filter(Boolean) }; };
       return [ mk(m.hostDraft, (m.hostName || "Anfitrião") + " (Draft)"), mk(m.guestDraft, (m.guestName || "Convidado") + " (Draft)") ];
     }
-    return [ teamObj(m.source, m.hostTeam), teamObj(m.source, m.guestTeam) ];
+    return [ teamObj(m.source, m.hostTeam, m.hostLineup), teamObj(m.source, m.guestTeam, m.guestLineup) ];
   }
 
   function renderRoom(wrap, code, side, m) {
@@ -671,9 +686,9 @@
 
     // status dos dois jogadores
     wrap.appendChild(el("div", { class: "room-status" }, [
-      seatChip("🔵", m.hostName || "Anfitrião", isDraft ? !!m.hostDraft : !!m.hostTeam, m.host),
+      seatChip("🔵", m.hostName || "Anfitrião", isDraft ? !!m.hostDraft : !!(m.hostTeam && m.hostReady), m.host),
       el("span", { class: "vs-mini", text: "×" }),
-      seatChip("🔴", m.guestName || "Convidado…", isDraft ? !!m.guestDraft : !!m.guestTeam, m.guest)
+      seatChip("🔴", m.guestName || "Convidado…", isDraft ? !!m.guestDraft : !!(m.guestTeam && m.guestReady), m.guest)
     ]));
 
     if (!m.guest) { wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Aguardando o adversário…" })); }
@@ -698,7 +713,7 @@
       else wrap.appendChild(el("div", { class: "waiting-line", text: "🎰 Sorteando seu time…" }));
       if (oppTeam) wrap.appendChild(teamPreview(m.source, oppTeam, oppName || "Adversário (sorteado)"));
       else if (m.guest) wrap.appendChild(el("div", { class: "waiting-line", text: "🎰 Sorteando o adversário…" }));
-      if (myTeam && oppTeam) wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Iniciando…" }));
+      if (myTeam) lineupBlock(wrap, code, side, m, myTeam, oppTeam);
       return;
     }
 
@@ -717,8 +732,102 @@
     if (oppTeam) wrap.appendChild(teamPreview(m.source, oppTeam, oppName || "Adversário"));
     else if (m.guest) wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Adversário escolhendo o time…" }));
 
-    if (myTeam && oppTeam) wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Tudo pronto! Iniciando a partida…" }));
+    if (myTeam) lineupBlock(wrap, code, side, m, myTeam, oppTeam);
   }
+
+  // ---- escalação pré-jogo + confirmação "pronto" (os dois lados) ----
+  function lineupBlock(wrap, code, side, m, myTeam, oppTeam) {
+    var k = side === "host" ? "host" : "guest", ok = side === "host" ? "guest" : "host";
+    var lu = m[k + "Lineup"] || null, meReady = !!m[k + "Ready"], oppReady = !!m[ok + "Ready"];
+    var t = teamObj(m.source, myTeam, lu);
+    var ovr = Math.round(t.players.slice(0, 11).reduce(function (a, p) { return a + p.overall; }, 0) / 11);
+    var isPen = m.mode === "penalty";
+    wrap.appendChild(el("div", { class: "list-head", text: "📋 Sua escalação" }));
+    var card = el("div", { class: "lineup-card" + (meReady ? " ready" : "") }, [
+      el("div", { class: "lc-row" }, [
+        el("div", { class: "lc-info" }, [
+          el("div", { class: "lc-title", text: (lu ? "Formação " + (lu.formation || "4-4-2") + " · " + (lu.tactic || "equilibrado") : "Escalação automática (4-4-2 · equilibrado)") }),
+          el("div", { class: "lc-sub", text: "Força dos titulares " + ovr + (meReady ? " · ✔ você confirmou" : " · toque em Alterar para mexer nos titulares, formação e tática") })
+        ]),
+        TM.ui.ovBadge(ovr)
+      ]),
+      el("div", { class: "lc-acts" }, [
+        TM.ui.button("📋 Alterar escalação", function () { TM.ui.go("online-lineup", { code: code, side: side, source: m.source, teamId: myTeam, lineup: lu, mode: m.mode }); }, "btn small" + (meReady ? " ghost" : "")),
+        meReady
+          ? TM.ui.button("✏️ Desfazer pronto", function () { N().setMatchReady(code, k, false); }, "btn ghost small")
+          : TM.ui.button(isPen ? "✅ Pronto pros pênaltis" : "✅ Pronto para jogar", function () { N().setMatchReady(code, k, true); }, "btn primary small")
+      ])
+    ]);
+    wrap.appendChild(card);
+    if (!m.guest) return;
+    if (!oppTeam) wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Adversário escolhendo o time…" }));
+    else if (!oppReady) wrap.appendChild(el("div", { class: "waiting-line", text: "⏳ Adversário ajustando a escalação…" }));
+    else if (!meReady) wrap.appendChild(el("div", { class: "waiting-line", text: "✔ Adversário pronto — confirme a sua escalação para começar" }));
+    else wrap.appendChild(el("div", { class: "waiting-line", text: "✅ Os dois prontos! Iniciando a partida…" }));
+  }
+
+  /* ---------- ESCALAÇÃO ONLINE (formação, tática, titulares e banco) ---------- */
+  var OL = null; // { code, side, source, teamId, formation, tactic, starters, pick }
+  TM.ui.register("online-lineup", function (screen, params) {
+    if (!params || !params.code || !params.teamId) { TM.ui.go("online"); return; }
+    var all = params.source === "nation" ? TM.data.nationSquad(params.teamId) : TM.data.clubPlayers(params.teamId);
+    var byId = {}; all.forEach(function (p) { byId[p.id] = p; });
+    if (!OL || OL.code !== params.code || OL.teamId !== params.teamId) {
+      var lu = params.lineup || null;
+      var starters = lu && lu.starters ? lu.starters.filter(function (id) { return byId[id]; }) : [];
+      OL = { code: params.code, side: params.side, source: params.source, teamId: params.teamId,
+        formation: (lu && lu.formation) || "4-4-2", tactic: (lu && lu.tactic) || "equilibrado", starters: starters, pick: null };
+      if (OL.starters.length !== 11) OL.starters = TM.comp.buildLineup(all, OL.formation).starters;
+    }
+    var st = OL;
+    var name = params.source === "nation" ? TM.data.nation(params.teamId).name : TM.data.club(params.teamId).name;
+    function back() { OL = null; TM.ui.go("online-room", { code: params.code, side: params.side }); }
+    function again() { TM.ui.go("online-lineup", params); }
+    screen.appendChild(TM.ui.topbar("📋 Escalação · " + name, back));
+    var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    body.appendChild(el("p", { class: "intro-text", text: "Monte o time que vai a campo. O adversário faz o mesmo do lado dele. Quando salvar, volte à sala e toque em Pronto." }));
+    var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
+    var xi = st.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
+    var ovr = Math.round(xi.reduce(function (a, p) { return a + p.overall; }, 0) / Math.max(1, xi.length));
+    body.appendChild(el("div", { class: "market-budget", text: "⭐ Força do time titular: " + ovr }));
+    body.appendChild(TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), st.formation, function (f) {
+      st.formation = f; st.starters = TM.comp.buildLineup(all, f).starters; st.pick = null; again();
+    }));
+    body.appendChild(TM.ui.dropdown("Tática", TM.engine.TACTICS, st.tactic, function (t) { st.tactic = t; }));
+    body.appendChild(el("div", { class: "actions two" }, [
+      TM.ui.button("✨ Melhor time automático", function () { st.starters = TM.comp.buildLineup(all, st.formation).starters; st.pick = null; again(); }, "btn ghost small"),
+      TM.ui.button("🔍 Analisar", function () { TM.ui.go("scout", { teamId: params.teamId, isNation: params.source === "nation", back: again }); }, "btn ghost small")
+    ]));
+    body.appendChild(el("h3", { class: "section-title", text: "Titulares" + (st.pick != null ? " — escolha quem entra no lugar" : " — toque num jogador para trocar") }));
+    st.starters.forEach(function (pid, i) {
+      var p = byId[pid]; if (!p) return;
+      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable"); if (st.pick === i) row.classList.add("ql-picked");
+      row.insertBefore(el("span", { class: "ql-slot", text: (slots[i] && slots[i][0]) || "" }), row.firstChild);
+      row.addEventListener("click", function () {
+        if (st.pick == null) { st.pick = i; again(); return; }
+        if (st.pick === i) { st.pick = null; again(); return; }
+        var tmp = st.starters[st.pick]; st.starters[st.pick] = st.starters[i]; st.starters[i] = tmp; st.pick = null; again();
+      });
+      body.appendChild(row);
+    });
+    body.appendChild(el("h3", { class: "section-title", text: "Reservas" }));
+    var inXi = {}; st.starters.forEach(function (pid) { inXi[pid] = 1; });
+    all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
+      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable");
+      row.addEventListener("click", function () {
+        if (st.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
+        st.starters[st.pick] = p.id; st.pick = null; again();
+      });
+      body.appendChild(row);
+    });
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("💾 Salvar escalação e voltar à sala", function () {
+        N().setMatchLineup(params.code, params.side === "host" ? "host" : "guest", { formation: st.formation, tactic: st.tactic, starters: st.starters.slice(0, 11) });
+        TM.ui.toast("Escalação salva — agora toque em Pronto");
+        back();
+      }, "btn primary big")
+    ]));
+  });
 
   function seatChip(emoji, name, ready, uid) {
     var me = N().me ? N().me.uid : null;
@@ -814,7 +923,7 @@
     TM.matchview.play(screen, {
       teamA: a, teamB: b, result: result, settings: settings,
       title: (m.hostName || "Anfitrião") + " × " + (m.guestName || "Convidado"),
-      pauseSide: null, simOpts: { realism: settings.realism, neutral: true },
+      pauseSide: null, simOpts: { realism: settings.realism, neutral: true }, formation: a.formation || "4-4-2", formationB: b.formation || "4-4-2",
       onBack: function () {
         // sair no meio = abandono (conta como derrota + eventual suspensão)
         if (finished || !TM.fairplay) { TM.ui.go("online"); return; }
