@@ -79,14 +79,60 @@
     var banner = el("div", { class: "invite-banner" }, [
       el("div", { class: "inv-txt", text: (inv.rematch ? "🔁 " + (inv.fromName || "Um amigo") + " quer a REVANCHE!" : "⚔️ " + (inv.fromName || "Um amigo") + " te convidou para jogar!") }),
       el("div", { class: "inv-acts" }, [
-        TM.ui.button("Entrar", function () { N().clearInvite(); N().joinMatch(inv.code, function (code, err) { if (code) { TM.ui.go("online-room", { code: code, side: "guest" }); } else TM.ui.toast(err || "Sala indisponível"); }); }, "btn primary small"),
-        TM.ui.button("Ignorar", function () { N().clearInvite(); banner.remove(); }, "btn ghost small")
+        TM.ui.button("✅ Aceitar", function () { acceptInvite(inv); }, "btn primary small"),
+        TM.ui.button("✕ Recusar", function () { declineInvite(inv); banner.remove(); }, "btn ghost small")
       ])
     ]);
     body.insertBefore(banner, body.firstChild.nextSibling);
   }
 
   function copy(t) { try { navigator.clipboard.writeText(t); } catch (e) {} }
+
+  /* ---------- CONVITE DE AMIGO: notificação em qualquer tela (aceitar / recusar) ---------- */
+  function acceptInvite(inv) {
+    hideInvitePop();
+    N().clearInvite();
+    N().joinMatch(inv.code, function (code, err) {
+      if (code) { stopFriendListeners(); TM.ui.go("online-room", { code: code, side: "guest" }); }
+      else TM.ui.toast(err || "A sala não existe mais");
+    });
+  }
+  function declineInvite(inv) {
+    hideInvitePop();
+    N().declineInvite(inv, function () { TM.ui.toast("Convite recusado"); });
+  }
+  var popEl = null, popKey = null, popTimer = null;
+  function hideInvitePop() {
+    if (popTimer) { clearTimeout(popTimer); popTimer = null; }
+    if (popEl) { var e = popEl; popEl = null; e.classList.remove("show"); setTimeout(function () { e.remove(); }, 250); }
+  }
+  function showInvitePop(inv) {
+    if (!inv) { hideInvitePop(); popKey = null; return; }
+    var key = inv.code + ":" + (inv.ts || 0);
+    if (popEl && popKey === key) return;
+    hideInvitePop(); popKey = key;
+    var who = (inv.fromName || "Um amigo") + (inv.fromNumber ? " · #" + inv.fromNumber : "");
+    popEl = el("div", { class: "invite-pop" }, [
+      el("div", { class: "ip-row" }, [
+        avatarOf(inv.fromName, "friend-ava", inv.fromPhoto),
+        el("div", { class: "ip-txt" }, [
+          el("div", { class: "ip-title", text: inv.rematch ? "🔁 Pedido de revanche!" : "⚔️ Convite para uma partida" }),
+          el("div", { class: "ip-sub", text: who + " te chamou para jogar agora" })
+        ])
+      ]),
+      el("div", { class: "ip-acts" }, [
+        TM.ui.button("✅ Aceitar", function () { acceptInvite(inv); }, "btn primary small"),
+        TM.ui.button("✕ Recusar", function () { declineInvite(inv); }, "btn ghost small")
+      ])
+    ]);
+    document.body.appendChild(popEl);
+    requestAnimationFrame(function () { if (popEl) popEl.classList.add("show"); });
+    try { if (navigator.vibrate) navigator.vibrate([90, 40, 90]); } catch (e) {}
+    // some sozinho depois de 2 min (o convite continua no hub Online)
+    popTimer = setTimeout(function () { hideInvitePop(); }, 120000);
+  }
+  // registra o observador global assim que a rede estiver pronta
+  try { if (N()) N().onReady(function () { if (N().watchInvites) N().watchInvites(showInvitePop); }); } catch (e) {}
 
   /* ---------- CENTRAL DE AMIGOS ---------- */
   var friendsStop = null, reqStop = null;
@@ -141,11 +187,14 @@
   }
   TM.online = TM.online || {}; TM.online.openProfileSheet = openProfileSheet;
 
-  TM.ui.register("online-friends", function (screen) {
-    screen.appendChild(TM.ui.topbar("👥 Amigos", function () { stopFriendListeners(); TM.ui.go("online"); }));
+  TM.ui.register("online-friends", function (screen, params) {
+    var inviteCode = params && params.inviteCode ? params.inviteCode : null;
+    screen.appendChild(TM.ui.topbar(inviteCode ? "👥 Chamar amigo" : "👥 Amigos", function () { stopFriendListeners(); if (inviteCode) TM.ui.go("online-room", { code: inviteCode, side: "host" }); else TM.ui.go("online"); }));
     if (!N().available || !N().ready) { TM.ui.go("online"); return; }
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
+    if (inviteCode) body.appendChild(el("div", { class: "invite-banner" }, [ el("div", { class: "inv-txt", text: "⚔️ Toque no amigo (online) para chamar para a sala " + inviteCode + ". Ele recebe a notificação e aceita ou recusa — sem QR code." }) ]));
+    else body.appendChild(el("p", { class: "intro-text", text: "Toque em ⚔️ para chamar um amigo online para uma partida — ele recebe a notificação na hora e aceita ou recusa. Sem QR code." }));
     // adicionar por número → abre o PERFIL (onde você envia a solicitação)
     body.appendChild(el("div", { class: "list-head", text: "Adicionar amigo pelo número" }));
     var addIn = el("input", { class: "select", type: "text", placeholder: "ex.: 4827-1093" });
@@ -191,7 +240,7 @@
           el("div", { class: "friend-ava-wrap clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ avatarOf(f.name, null, f.photo), onlineDot(f.online) ]),
           el("div", { class: "friend-info clickable", on: { click: function () { openProfile(f.uid, f.name); } } }, [ el("div", { class: "friend-name", text: f.name }), el("div", { class: "friend-sub", text: "#" + f.number + " · " + (f.online ? "online" : "offline") }) ]),
           TM.ui.button("💬", function () { stopFriendListeners(); TM.ui.go("online-chat", { fuid: f.uid, name: f.name }); }, "btn ghost small"),
-          TM.ui.button("⚔️", function () { inviteFriend(f); }, "btn primary small")
+          TM.ui.button(inviteCode ? "⚔️ Chamar" : "⚔️", function () { inviteFriend(f, inviteCode); }, "btn primary small" + (f.online ? "" : " dim"))
         ]));
       });
     });
@@ -260,6 +309,7 @@
           TM.ui.confirm("Remover " + p.name + "?", "Vocês deixarão de ser amigos.", "Remover", function () { N().removeFriend(params.uid, function () { TM.ui.toast("Amigo removido"); TM.ui.go("online-friends"); }); }, true);
         }, "btn ghost small"));
       } else {
+        acts.appendChild(TM.ui.button("⚔️ Desafiar", function () { TM.ui.toast("Só amigos podem ser chamados direto. Adicione " + p.name + " ou use o QR code/código."); }, "btn dim"));
         var addBtn = TM.ui.button("➕ Enviar solicitação de amizade", function () {
           N().sendFriendRequest(params.uid, function (ok, msg) {
             if (ok) { TM.ui.toast("Solicitação enviada a " + p.name + "!"); addBtn.textContent = "✅ Solicitação enviada"; addBtn.disabled = true; addBtn.classList.add("sent"); }
@@ -351,15 +401,18 @@
     ]));
   });
 
-  function inviteFriend(f) {
-    if (!f.online) { TM.ui.toast(f.name + " está offline"); return; }
-    N().createMatch("club", function (code) {
-      if (!code) { TM.ui.toast("Erro ao criar sala"); return; }
-      N().sendInvite(f.uid, code);
-      TM.ui.toast("Convite enviado a " + f.name);
-      if (friendsStop) { friendsStop(); friendsStop = null; }
-      TM.ui.go("online-room", { code: code, side: "host" });
-    });
+  function inviteFriend(f, code) {
+    if (!f.online) { TM.ui.toast(f.name + " está offline — precisa estar no jogo para receber o convite"); return; }
+    function send(c) {
+      N().sendInvite(f.uid, c, function (ok, err) {
+        if (!ok) { TM.ui.toast(err || "Não foi possível convidar"); if (!code) N().leaveMatch(c); return; }
+        TM.ui.toast("Convite enviado a " + f.name + " — aguardando resposta…");
+        stopFriendListeners();
+        TM.ui.go("online-room", { code: c, side: "host" });
+      });
+    }
+    if (code) send(code);
+    else N().createMatch("club", function (c) { if (!c) { TM.ui.toast("Erro ao criar sala"); return; } send(c); });
   }
 
   /* ---------- CHAT ---------- */
@@ -476,8 +529,9 @@
     if (TM.fairplay && !TM.fairplay.gate(screen)) return; // suspenso por abandono
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
-    body.appendChild(el("p", { class: "intro-text", text: "Crie uma sala e mostre o QR code (ou o código) para o amigo entrar, ou entre numa sala com o código." }));
+    body.appendChild(el("p", { class: "intro-text", text: "Amigo? Chame direto — ele recebe a notificação e aceita ou recusa. Não é amigo? Crie a sala e mostre o QR code (ou o código)." }));
     var seg = el("div", { class: "preset-msgs" });
+    seg.appendChild(el("button", { class: "preset-msg hl", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "preset-ic", text: "👥" }), el("span", { class: "preset-tx", text: "Chamar um amigo (sem QR code)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickSourceThenCreate(); } } }, [ el("span", { class: "preset-ic", text: "⚽" }), el("span", { class: "preset-tx", text: "Partida normal (escolher time)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { pickLeagueThenDraft(); } } }, [ el("span", { class: "preset-ic", text: "🎲" }), el("span", { class: "preset-tx", text: "Draft online (montar time por sorteio)" }), el("span", { class: "preset-mood", text: "→" }) ]));
     seg.appendChild(el("button", { class: "preset-msg", on: { click: function () { doCreate({ source: "club", mode: "penalty" }); } } }, [ el("span", { class: "preset-ic", text: "🥅" }), el("span", { class: "preset-tx", text: "Disputa de pênaltis (direto)" }), el("span", { class: "preset-mood", text: "→" }) ]));
@@ -524,7 +578,7 @@
   });
 
   /* ---------- SALA DA PARTIDA ---------- */
-  var roomStop = null, roomComputed = false;
+  var roomStop = null, roomComputed = false, lastDeclineTs = null;
   function teamObj(source, id) { return source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id); }
   function randomClubId() { var cs = TM.data.world().clubs; return cs[Math.floor(Math.random() * cs.length)].id; }
   function teamOptions(source, leagueId) {
@@ -545,6 +599,7 @@
     roomStop = N().listenMatch(code, function (m) {
       if (!wrap.isConnected) { if (roomStop) { roomStop(); roomStop = null; } return; }
       if (!m) { TM.ui.clear(wrap); wrap.appendChild(el("p", { class: "intro-text", text: "A sala foi encerrada." })); return; }
+      if (m.declined && m.declined.ts && m.declined.ts !== lastDeclineTs) { lastDeclineTs = m.declined.ts; if (side === "host") TM.ui.toast("❌ " + (m.declined.name || "Seu amigo") + " recusou o convite"); }
       // resultado pronto → todos vão para a partida
       if (m.result) { if (roomStop) { roomStop(); roomStop = null; } TM.ui.go("online-match", { code: code, side: side, match: m }); return; }
       // "time surpresa": sorteia um time aleatório para cada lado automaticamente
@@ -593,8 +648,15 @@
       var url = joinUrl(code);
       var qrBox = el("div", { class: "qr-box" });
       try { qrBox.innerHTML = qrSvg(url); } catch (e) { qrBox.textContent = code; }
+      if (m.declined && m.declined.name) {
+        wrap.appendChild(el("div", { class: "invite-banner declined" }, [
+          el("div", { class: "inv-txt", text: "❌ " + m.declined.name + " recusou o convite." }),
+          el("div", { class: "inv-acts" }, [ TM.ui.button("👥 Chamar outro amigo", function () { TM.ui.go("online-friends", { inviteCode: code }); }, "btn primary small") ])
+        ]));
+      }
+      wrap.appendChild(TM.ui.button("👥 Chamar um amigo (sem QR code)", function () { TM.ui.go("online-friends", { inviteCode: code }); }, "btn primary big"));
       wrap.appendChild(el("div", { class: "room-share" }, [
-        el("div", { class: "share-lbl", text: "Peça para o amigo escanear o QR com a câmera, ou digitar o código:" }),
+        el("div", { class: "share-lbl", text: "Quem não é amigo: peça para escanear o QR com a câmera, ou digitar o código:" }),
         qrBox,
         el("div", { class: "share-code", text: code }),
         TM.ui.button("📋 Copiar código", function () { copy(code); TM.ui.toast("Código copiado!"); }, "btn ghost small"),
