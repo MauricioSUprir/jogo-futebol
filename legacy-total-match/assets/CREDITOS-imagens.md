@@ -3882,6 +3882,13 @@ derivative work: Coronades  (talk) — CC BY 2.0 — https://commons.wikimedia.o
 - `br2-sao-bernardo__rodrigo-ferreira.jpg` — BrazilianDude70 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File%3ARodrigo_Ferreira_24-04-2024.png
 - `br2-sao-bernardo__hugo-sanches.jpg` — SOCCER DIGITAL — Public domain — https://commons.wikimedia.org/wiki/File%3AS%C3%A9rie_D_2022-_S%C3%A3o_Bernardo_FC_1_x_0_Cianorte_-_52073701433_-_Hugo_Sanches.jpg
 - `br2-sport__chrystian-barletta.jpg` — Federação Pernambucana de Futebol from Brasil — Public domain — https://commons.wikimedia.org/wiki/File%3ASanta_Cruz_1X0_Sport_Pernambucano_BetNacional_2025_%2854302495230%29_Barletta.jpg
+- `br3-ferroviaria__vitor-barreto.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3A28-01-24_-_Comercial_x_Ferrovi%C3%A1ria_-_Paulist%C3%A3o_A2_01_-_Vitor_Barreto.jpg
+- `br3-ferroviaria__gustavo-medina.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3A28-01-24_-_Comercial_x_Ferrovi%C3%A1ria_-_Paulist%C3%A3o_A2_-_Gustavo_Medina_01.jpg
+- `br3-guarani__nathan-melo.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_05_-_Nathan_Melo.jpg
+- `br3-guarani__willian-farias.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_04_-_Willian_Farias.jpg
+- `br3-guarani__diego-torres.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_12_-_Diego_Torres.jpg
+- `br3-guarani__isaque.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_06_-_Isaque.jpg
+- `br3-guarani__mirandinha.jpg` — Raul Ramos — Public domain — https://commons.wikimedia.org/wiki/File%3AGuarani_0x2_Botafogo-SP_-_Campeonato_Paulista_-_07-02-2026_07_-_Mirandinha.jpg
 
 ## Estádios
 - `br-flamengo.jpg` — Arne Müseler — CC BY-SA 3.0 de — https://commons.wikimedia.org/wiki/File:Maracana_2022.jpg
