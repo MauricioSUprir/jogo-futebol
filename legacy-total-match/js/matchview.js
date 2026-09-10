@@ -75,7 +75,7 @@
     screen.appendChild(pitchHost);
     if (TM.pitch2d && delay > 0) {
       try {
-        pitch = TM.pitch2d.create({ a: a, b: b, formationA: cfg.formation || "4-4-2", formationB: "4-4-2" });
+        pitch = TM.pitch2d.create({ a: a, b: b, formationA: cfg.formation || a.formation || "4-4-2", formationB: cfg.formationB || b.formation || "4-4-2" });
         pitchHost.appendChild(pitch.el);
         pitch.onSpeed = function (m) { liveMult = m; };
       } catch (e) { pitch = null; }

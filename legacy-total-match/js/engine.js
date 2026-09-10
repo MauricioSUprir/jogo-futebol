@@ -82,6 +82,10 @@
       var tm = TACTIC_MODS[t];
       if (tm) { atkMod[s] = tm[0]; defMod[s] = tm[1]; }
     }
+    // online: cada lado pode ter a própria tática (opts.tactics = [táticaA, táticaB])
+    if (opts.tactics) {
+      opts.tactics.forEach(function (t, i) { var tm2 = t && TACTIC_MODS[t]; if (tm2) { atkMod[i] = tm2[0]; defMod[i] = tm2[1]; } });
+    }
     // moral (ex.: coletiva de imprensa): pequeno empurrão no ataque e defesa do lado
     if (opts.moraleBoost && opts.moraleSide != null) {
       var mb = Math.max(-3, Math.min(3, opts.moraleBoost)) * 0.02; // ±6%
