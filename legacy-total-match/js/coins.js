@@ -121,7 +121,7 @@
     pay: function (n, reason, onOk) {
       if (!hasAccount()) { needAccount(); return false; }
       if (coins.spend(n, reason)) { onOk && onOk(); return true; }
-      TM.ui.confirm("Total Coins insuficientes", "Você tem " + fmt(load().bal) + " e precisa de " + fmt(n) + ". Ganhe coins vencendo desafios (Draft e Dream Team).", "Ver meus coins", function () { TM.ui.go("coins"); });
+      TM.ui.confirm("Total Coins insuficientes", "Você tem " + fmt(load().bal) + " e precisa de " + fmt(n) + ". Ganhe coins vencendo desafios (Draft, Dream Team e Arena Coins).", "Ver meus coins", function () { TM.ui.go("coins"); });
       return false;
     },
     noteStreak: function (n) { var s = load(); if (n > (s.best || 0)) { s.best = n; save(); } },
@@ -256,8 +256,12 @@
       rule("🔭", "Master League: olheiro entrega a missão agora", "−" + COST.scoutRush + " 🪙"),
       rule("🤝", "Master League: novas propostas de patrocínio", "−" + COST.sponsorRenew + " 🪙"),
       rule("🔥", "Master League: motivação extra para o elenco", "−" + COST.morale + " 🪙"),
-      rule("🥇", "Perfil: moldura dourada na foto", "−" + COST.goldFrame + " 🪙")
+      rule("🥇", "Perfil: moldura dourada na foto", "−" + COST.goldFrame + " 🪙"),
+      rule("⚡", "Arena: Desafio Relâmpago (3 jogos seguidos; +10 por vitória, +50 nos 3)", "−15 🪙"),
+      rule("👑", "Arena: Chefão das Lendas (vitória +80, empate +20)", "−25 🪙"),
+      rule("🎯", "Arena: Palpite (acertou ×2, empate ×3)", "5 / 10 / 20 🪙")
     ]));
+    body.appendChild(TM.ui.button("🪙 Ir para a Arena Coins", function () { TM.ui.go("arena"); }, "btn primary"));
 
     var adminRef = null;
     if (coins.isAdmin()) { adminRef = adminPanel(); body.appendChild(adminRef); }

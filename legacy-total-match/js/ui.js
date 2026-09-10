@@ -638,7 +638,7 @@
     // passo final "diferente": explorar mais modos (com a logo do Total Match)
     SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Dream Team, Draft, Editor, Grupo, Perfil e mais.", logo: true, more: [
       { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
-      { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
+      { icon: "🪙", name: "Arena Coins", route: "arena" }, { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
       { icon: "💾", name: "Carreiras", route: "saves" }, { icon: "🎖️", name: "Info", route: "competicoes" },
       { icon: "⚙️", name: "Config", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
     ] });

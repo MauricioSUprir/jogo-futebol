@@ -304,18 +304,49 @@
     return function stop() { ref.off("child_added", handler); };
   };
 
-  // ---- convites ----
+  // ---- convites (só entre amigos; quem não é amigo entra pelo QR/código) ----
+  net._inviteCbs = []; net._sentInvite = null;
   function listenInvites(uid) {
     net._db.ref("users/" + uid + "/invite").on("value", function (snap) {
-      var v = snap.val();
-      net._invite = v || null;
+      var v = snap.val() || null;
+      net._invite = v;
       if (v && net._onInvite) net._onInvite(v);
+      net._inviteCbs.forEach(function (cb) { try { cb(v); } catch (e) {} });
     });
   }
   net.onInvite = function (cb) { net._onInvite = cb; if (net._invite) cb(net._invite); };
+  // observador global (recebe null quando o convite some)
+  net.watchInvites = function (cb) { net._inviteCbs.push(cb); if (net._invite) cb(net._invite); };
   net.clearInvite = function () { if (net.me) net._db.ref("users/" + net.me.uid + "/invite").remove(); };
-  net.sendInvite = function (fuid, code) {
-    net._db.ref("users/" + fuid + "/invite").set({ from: net.me.uid, fromName: net.me.name, code: code, ts: firebaseNow() });
+  // envia convite para a sala `code` — exige amizade
+  net.sendInvite = function (fuid, code, cb) {
+    if (!net.me || !fuid || fuid === net.me.uid) { cb && cb(false, "Convite inválido."); return; }
+    net._db.ref("users/" + net.me.uid + "/friends/" + fuid).once("value").then(function (s) {
+      if (!s.val()) { cb && cb(false, "Só amigos podem ser chamados direto. Quem não é amigo entra pelo QR code ou código."); return; }
+      var inv = { from: net.me.uid, fromName: net.me.name, fromNumber: net.me.number || null, fromPhoto: net.me.photo || null, code: code, ts: firebaseNow() };
+      return net._db.ref("users/" + fuid + "/invite").set(inv).then(function () { net._sentInvite = { fuid: fuid, code: code }; cb && cb(true); });
+    }).catch(function () { cb && cb(false, "Não foi possível enviar o convite."); });
+  };
+  // recusa: limpa o convite e avisa a sala do anfitrião
+  net.declineInvite = function (inv, cb) {
+    if (!net.me) { cb && cb(false); return; }
+    var mine = net._db.ref("users/" + net.me.uid + "/invite");
+    if (!inv || !inv.code) { mine.remove(); cb && cb(true); return; }
+    var mref = net._db.ref("matches/" + inv.code);
+    mref.once("value").then(function (s) {
+      var upd = {}; upd["users/" + net.me.uid + "/invite"] = null;
+      if (s.val() && !s.val().guest) upd["matches/" + inv.code + "/declined"] = { uid: net.me.uid, name: net.me.name, ts: firebaseNow() };
+      return net._db.ref().update(upd);
+    }).then(function () { cb && cb(true); }).catch(function () { mine.remove(); cb && cb(false); });
+  };
+  // anfitrião desistiu: retira o convite pendente do amigo (se ainda for o mesmo)
+  net.cancelInvite = function () {
+    var sent = net._sentInvite; net._sentInvite = null;
+    if (!sent) return;
+    try {
+      var ref = net._db.ref("users/" + sent.fuid + "/invite");
+      ref.once("value").then(function (s) { var v = s.val(); if (v && v.code === sent.code) ref.remove(); });
+    } catch (e) {}
   };
 
   // ---- sala de partida online ----
@@ -396,6 +427,7 @@
   };
   net.leaveMatch = function (code) {
     if (!net.me || !code) return;
+    if (net._sentInvite && net._sentInvite.code === code) net.cancelInvite();
     var ref = net._db.ref("matches/" + code);
     ref.once("value").then(function (snap) { var v = snap.val(); if (v && v.host === net.me.uid) ref.remove(); });
   };
