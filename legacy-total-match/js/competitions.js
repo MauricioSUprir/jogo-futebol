@@ -1052,8 +1052,8 @@
 
   // postura do clube dono quanto a emprestar/vender — estável por jogador (hash do id)
   function clubStance(p) {
-    var squad = TM.data.clubPlayers(p.clubId).slice().sort(function (a, b) { return b.overall - a.overall; });
-    var rank = 0; for (var i = 0; i < squad.length; i++) { if (squad[i].id === p.id) { rank = i; break; } }
+    var squad = (p.clubId ? TM.data.clubPlayers(p.clubId) : []).slice().sort(function (a, b) { return b.overall - a.overall; });
+    var rank = 20; for (var i = 0; i < squad.length; i++) { if (squad[i].id === p.id) { rank = i; break; } }
     var isKey = rank < 5, isFringe = rank >= 13;
     var young = p.age <= 21, prime = p.age >= 23 && p.age <= 31;
     var h = 2166136261, s = String(p.id);

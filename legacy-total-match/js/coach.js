@@ -3172,7 +3172,7 @@
     function renderResultsInner() {
       var pool;
       if (MKT.free) pool = (world.freeAgents || []).map(TM.data.player).filter(Boolean);
-      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return p && !p.freeAgent && !rosterSet[p.id]; });
+      else pool = Object.keys(world.playersById).map(function (id) { return world.playersById[id]; }).filter(function (p) { return p && !p.freeAgent && !rosterSet[p.id] && p.clubId && TM.data.club(p.clubId); });
       var q = MKT.q.trim().toLowerCase();
       var qn = q ? q.normalize("NFD").replace(/[\u0300-\u036f]/g, "") : "";
       var regLeagues = null; if (MKT.region && REG[MKT.region]) { regLeagues = {}; REG[MKT.region].leagues.forEach(function (l) { regLeagues[l] = 1; }); }
@@ -3363,7 +3363,9 @@
   TM.ui.register("coach-nego-club", function (screen, params) {
     var c = TM.storage.coachCareer();
     var p = TM.data.player(params.pid);
-    var sellClub = TM.data.club(p.clubId);
+    if (!p) { TM.ui.go("coach-market"); return; }
+    var sellClub = p.clubId ? TM.data.club(p.clubId) : null;
+    if (!sellClub) { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); return; }
     var stance = C().clubStance(p);
     var mval = curVal(c, TM.data.marketValue(p));
 
