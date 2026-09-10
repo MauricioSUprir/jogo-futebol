@@ -19317,7 +19317,9 @@
       return { isNation: false, teamIds: [] };
     },
     clubPlayers: function (clubId) {
-      return TM.data.club(clubId).playerIds.map(TM.data.player)
+      var _cl = clubId ? TM.data.club(clubId) : null;
+      if (!_cl || !_cl.playerIds) return [];   // sem clube (pool da seleção / agente livre / id antigo): lista vazia em vez de erro
+      return _cl.playerIds.map(TM.data.player)
         .sort(function (a, b) { return b.overall - a.overall; });
     },
     // melhores XI da nação (para seleções)
