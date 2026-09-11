@@ -112,19 +112,48 @@
     var focusGoals = 0, focusInvolved = 0, focusInjured = false;
     var injuries = [], sentOff = [];
 
+    // QUEM ESTÁ EM CAMPO: expulsos, lesionados e substituídos saem do jogo de verdade (não marcam gol nem levam cartão);
+    // quem entra do banco passa a poder marcar. opts.excludeIds = já fora antes do startMinute (re-simulação após pausa)
+    var excl = {}; (opts.excludeIds || []).forEach(function (id) { excl[id] = true; });
+    var yellows = {}; (opts.yellowIds || []).forEach(function (id) { yellows[id] = 1; });
+    var subsUsed0 = opts.subsUsed || [0, 0];
+    var state = [A, B].map(function (prof, i) {
+      var team = i === 0 ? teamA : teamB;
+      return { pitch: prof.xi.filter(function (p) { return !excl[p.id]; }), bench: team.players.slice(11).filter(function (p) { return !excl[p.id]; }), subs: subsUsed0[i] || 0 };
+    });
+    function scorersOf(side) { var pl = state[side].pitch; var s = pl.filter(function (p) { return p.pos === "FW" || p.pos === "MF"; }); return s.length ? s : pl; }
+    function gkOf(side, prof) {
+      if (state[side].pitch.indexOf(prof.gk) >= 0) return prof.gk;
+      var best = null; state[side].pitch.forEach(function (p) { if (!best || (p.attrs.def || 0) > (best.attrs.def || 0)) best = p; });
+      return best || prof.gk;      // goleiro expulso: um jogador de linha vai para o gol
+    }
+    function leavePitch(side, p) { state[side].pitch = state[side].pitch.filter(function (x) { return x.id !== p.id; }); }
+    function aiSub(side, outP, minute, team, inP) {
+      var st = state[side]; if (st.subs >= 3 || !st.bench.length) return false;
+      if (!inP || st.bench.indexOf(inP) < 0) inP = st.bench[0];
+      st.bench = st.bench.filter(function (x) { return x !== inP; }); st.subs++;
+      if (outP) leavePitch(side, outP);
+      st.pitch.push(inP);
+      events.push({ minute: minute, type: "sub", team: side, out: outP ? outP.name : "", outId: outP ? outP.id : null, "in": inP.name, inId: inP.id,
+        text: "🔄 " + team.name + ": " + inP.name + " entra" + (outP ? " no lugar de " + outP.name : "") });
+      return true;
+    }
+
     function findIn(xi, id) { for (var i = 0; i < xi.length; i++) if (xi[i].id === id) return xi[i]; return null; }
     function tryScore(side, prof, opp, team, minute, isPen) {
+      if (!state[side].pitch.length) return;
       shots[side]++;
       var isUser = (opts.userSide === side);
       var scorer = null;
-      // batedor de pênalti designado (time do usuário)
-      if (isPen && isUser && opts.penTakerId) scorer = findIn(prof.xi, opts.penTakerId);
+      // batedor de pênalti designado (time do usuário) — só se estiver em campo
+      if (isPen && isUser && opts.penTakerId) scorer = findIn(state[side].pitch, opts.penTakerId);
       // gol de falta do batedor designado (fração dos gols normais do usuário)
       var isFK = false;
-      if (!scorer && !isPen && isUser && opts.fkTakerId && Math.random() < 0.16) { scorer = findIn(prof.xi, opts.fkTakerId); if (scorer) isFK = true; }
-      if (!scorer) scorer = chooseScorer(prof, focusId, opts.focusFormMult);
+      if (!scorer && !isPen && isUser && opts.fkTakerId && Math.random() < 0.16) { scorer = findIn(state[side].pitch, opts.fkTakerId); if (scorer) isFK = true; }
+      if (!scorer) scorer = chooseScorer({ scorers: scorersOf(side) }, focusId, opts.focusFormMult);
+      if (!scorer) return;
       if (scorer.id === focusId) focusInvolved++;
-      var gk = opp.gk;
+      var gk = gkOf(1 - side, opp);
       var goalP = isPen ? Math.max(0.68, Math.min(0.9, 0.72 + (scorer.attrs.sho - gk.attrs.def) * 0.004))
         : Math.max(0.08, Math.min(0.64, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.0078)) * (variance / 1.9);
       if (Math.random() < goalP) {
@@ -165,16 +194,16 @@
     var uSide = (opts.userSide != null) ? opts.userSide : (opts.tacticSide != null ? opts.tacticSide : (opts.pauseSide != null ? opts.pauseSide : -1));
     var subPlan = [];
     function planSubs(team, side) {
-      var xi = team.players.slice(0, 11), bench = team.players.slice(11);
+      var st = state[side]; var xi = st.pitch.slice(), bench = st.bench.slice();
       if (!bench.length) return;
-      var n = Math.min(bench.length, 2 + Math.floor(Math.random() * 2)); // 2-3
+      var n = Math.min(bench.length, 3 - st.subs, 2 + Math.floor(Math.random() * 2)); // 2-3 (respeita o limite de 3 no jogo)
       var outPool = [10, 9, 8, 7, 6, 5, 4].filter(function (i) { return xi[i]; });
       for (var k = 0; k < n; k++) {
         var mn = 58 + Math.floor(Math.random() * 30);
         if (mn < startMinute) mn = startMinute + 1;
         var oi = outPool[k % outPool.length];
         var op = xi[oi], ip = bench[k];
-        if (op && ip) subPlan.push({ minute: mn, team: side, out: op.name, "in": ip.name });
+        if (op && ip) subPlan.push({ minute: mn, team: side, outObj: op, inObj: ip });
       }
     }
     if (uSide !== 0) planSubs(teamA, 0);
@@ -186,9 +215,13 @@
       // subs agendadas p/ este minuto
       for (var si = 0; si < subPlan.length; si++) {
         if (subPlan[si].minute === m) {
-          var sp = subPlan[si];
-          events.push({ minute: m, type: "sub", team: sp.team, out: sp.out, "in": sp["in"],
-            text: "🔄 " + (sp.team === 0 ? teamA.name : teamB.name) + ": " + sp["in"] + " entra no lugar de " + sp.out });
+          var sp = subPlan[si], stS = state[sp.team];
+          var outP = stS.pitch.indexOf(sp.outObj) >= 0 ? sp.outObj : null;
+          if (!outP) { // o planejado já saiu (expulso/lesionado): troca outro jogador de linha
+            var cands = stS.pitch.filter(function (p) { return p.pos !== "GK"; });
+            outP = cands.length ? cands[cands.length - 1] : null;
+          }
+          if (outP) aiSub(sp.team, outP, m, sp.team === 0 ? teamA : teamB, sp.inObj);
         }
       }
 
@@ -211,25 +244,34 @@
       // cartões
       if (Math.random() < 0.02) {
         var s = Math.random() < 0.5 ? 0 : 1;
-        var prof2 = s === 0 ? A : B, team2 = s === 0 ? teamA : teamB;
-        var pl = pick(prof2.xi);
-        if (Math.random() < 0.14) {
+        var team2 = s === 0 ? teamA : teamB;
+        var pl = state[s].pitch.length ? pick(state[s].pitch) : null;
+        if (pl && Math.random() < 0.14) {
           events.push({ minute: m, type: "red", team: s, player: pl.name, playerId: pl.id, text: "🟥 " + pl.name + " (" + team2.name + ") está EXPULSO!" });
-          redPenalty[s]++;
-          sentOff.push({ id: pl.id, name: pl.name, side: s });
-        } else {
-          events.push({ minute: m, type: "yellow", team: s, player: pl.name, playerId: pl.id, text: "Amarelo para " + pl.name + " (" + team2.name + ")" });
+          redPenalty[s]++; leavePitch(s, pl);
+          sentOff.push({ id: pl.id, name: pl.name, side: s, minute: m });
+        } else if (pl) {
+          yellows[pl.id] = (yellows[pl.id] || 0) + 1;
+          if (yellows[pl.id] >= 2) {
+            events.push({ minute: m, type: "red", team: s, player: pl.name, playerId: pl.id, second: true, text: "🟥 Segundo amarelo: " + pl.name + " (" + team2.name + ") está EXPULSO!" });
+            redPenalty[s]++; leavePitch(s, pl);
+            sentOff.push({ id: pl.id, name: pl.name, side: s, minute: m, second: true });
+          } else {
+            events.push({ minute: m, type: "yellow", team: s, player: pl.name, playerId: pl.id, text: "Amarelo para " + pl.name + " (" + team2.name + ")" });
+          }
         }
       }
       // lesões
-      if (Math.random() < 0.0028) {
+      if (Math.random() < 0.0028 && state[0].pitch.length && state[1].pitch.length) {
         var si = Math.random() < 0.5 ? 0 : 1;
-        var prof3 = si === 0 ? A : B, team3 = si === 0 ? teamA : teamB;
-        var inj = pick(prof3.xi);
+        var team3 = si === 0 ? teamA : teamB;
+        var inj = pick(state[si].pitch);
         var weeks = 1 + Math.floor(Math.random() * 6);
         events.push({ minute: m, type: "injury", team: si, player: inj.name, playerId: inj.id, text: "🚑 " + inj.name + " (" + team3.name + ") se lesionou e deixa o campo." });
-        injuries.push({ id: inj.id, name: inj.name, side: si, weeks: weeks });
+        injuries.push({ id: inj.id, name: inj.name, side: si, weeks: weeks, minute: m });
+        leavePitch(si, inj);
         if (inj.id === focusId) focusInjured = weeks;
+        if (si !== uSide) aiSub(si, null, m, team3);   // IA coloca alguém do banco no lugar do lesionado
       }
     }
 

@@ -3484,3 +3484,4 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .pre-t{font-weight:800;font-size:14px;color:#fde68a}.pre-s{font-size:13px;opacity:.9;margin:6px 0 8px}
 .ci-kit-edit.locked{opacity:.55;cursor:not-allowed}
 .ci-crest-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pl-chip.sent-off{opacity:.45;filter:grayscale(1)}
