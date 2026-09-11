@@ -47,7 +47,7 @@
 
   var DEFAULT_SETTINGS = {
     difficulty: "normal",   // facil | normal | dificil | lenda
-    realism: 3,             // 1 (arcade) .. 5 (realista) — controla imprevisibilidade
+    realism: 4,             // 1 (arcade) .. 5 (simulação) — quanto a qualidade dos elencos pesa no resultado (média de gols não muda)
     matchSpeed: "normal",   // instantaneo | rapido | normal
     commentary: true,
     dynamicOverall: false,  // overall sobe/desce por confiança e desempenho (carreira/competições)
