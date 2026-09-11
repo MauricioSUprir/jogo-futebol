@@ -3479,3 +3479,6 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ys-face{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;font-size:20px}
 .ys-info{flex:1;min-width:0}.ys-name{font-weight:700}.ys-sub{font-size:12px;opacity:.8;margin-top:2px}.ys-note{font-size:12px;margin-top:4px;opacity:.9}
 .fin-ban.warn{background:rgba(250,204,21,.12);border-color:rgba(250,204,21,.45);color:#fde68a}
+.mkt-scouted.ending{background:rgba(250,204,21,.16);color:#fde047;border-color:rgba(250,204,21,.45)}
+.pre-box{max-width:640px;margin:10px auto 0;padding:12px 14px;border-radius:14px;background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.4)}
+.pre-t{font-weight:800;font-size:14px;color:#fde68a}.pre-s{font-size:13px;opacity:.9;margin:6px 0 8px}

@@ -1862,6 +1862,7 @@
     if (career._lastCalDay === d) return;
     var lastD = career._lastCalDay == null ? d - 1 : career._lastCalDay;
     career._lastCalDay = d;
+    try { if (TM.fin && TM.fin.dailyPoach) for (var pd = 0; pd < Math.min(12, d - lastD); pd++) TM.fin.dailyPoach(career); } catch (e) {}
     var open = windowOpenNow(career);
     if (open) {
       // cada dia que passou dentro da janela gera negócios entre os OUTROS clubes (mais no fim da janela: "deadline day")
@@ -1949,10 +1950,13 @@
     rosterPlayers(career).forEach(function (p) { before[p.id] = { ov: p.overall, age: p.age, name: p.name }; });
     career.season++;
     career.yellows = {}; // zera cartões amarelos a cada nova temporada
+    // quem assinou pré-contrato com outro clube sai agora, de graça
+    try { if (TM.fin && TM.fin.leaveFree) TM.fin.leaveFree(career); } catch (e) {}
     // contratos: passa uma temporada; avisa expirados
     if (career.contracts) {
       var expiring = [];
-      Object.keys(career.contracts).forEach(function (id) { var ct = career.contracts[id]; ct.years = Math.max(0, (ct.years || 1) - 1); if (ct.years === 0 && career.roster.indexOf(id) >= 0) expiring.push(id); });
+      var pendCt = {}; (career.pendingArrivals || []).forEach(function (a) { pendCt[a.pid] = 1; });
+      Object.keys(career.contracts).forEach(function (id) { if (pendCt[id]) return; var ct = career.contracts[id]; ct.years = Math.max(0, (ct.years || 1) - 1); if (ct.years === 0 && career.roster.indexOf(id) >= 0) expiring.push(id); });
       if (expiring.length) {
         var nm = expiring.slice(0, 3).map(function (id) { var p = TM.data.player(id); return p ? p.name : ""; }).filter(Boolean).join(", ");
         TM.notify.push(career, { icon: "📜", title: "Contratos a vencer", news: true, text: expiring.length + " jogador(es) com contrato encerrado (" + nm + (expiring.length > 3 ? "…" : "") + "). Renove ou pode perdê-los de graça." });

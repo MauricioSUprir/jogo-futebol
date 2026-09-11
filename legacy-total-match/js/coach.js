@@ -293,7 +293,8 @@
         c.contracts[id] = { years: 1 + (phash(id + ":ct") % 4), wage: r2(Math.max(0.02, val * 0.10)), clause: (phash(id + ":hc") % 100 < 55) ? r2(val * (2 + (phash(id + ":cl") % 20) / 10)) : 0 };
       }
     });
-    Object.keys(c.contracts).forEach(function (id) { if ((c.roster || []).indexOf(id) < 0) delete c.contracts[id]; });
+    var keepCt = {}; (c.pendingArrivals || []).forEach(function (a) { keepCt[a.pid] = 1; });   // pré-contratos / chegadas pendentes mantêm o contrato
+    Object.keys(c.contracts).forEach(function (id) { if ((c.roster || []).indexOf(id) < 0 && !keepCt[id]) delete c.contracts[id]; });
   }
   function getContract(c, id) { ensureContracts(c); return c.contracts[id]; }
 
@@ -1487,7 +1488,7 @@
 
   /* ---------- movimentações: contratações e vendas por data ---------- */
   function dealKindLabel(k) {
-    return { buy: "Compra", free: "Contratação livre", loan: "Empréstimo", loanBuy: "Empréstimo c/ opção", sale: "Venda" }[k] || (k || "");
+    return { buy: "Compra", free: "Contratação livre", loan: "Empréstimo", loanBuy: "Empréstimo c/ opção", sale: "Venda", pre: "Pré-contrato (luvas)", clause: "Cláusula paga", swap: "Troca", installment: "Parcela", bonus: "Bônus por metas", sellon: "% de venda" }[k] || (k || "");
   }
   TM.ui.register("coach-transfers", function (screen) {
     var c = TM.storage.coachCareer();
@@ -3031,7 +3032,7 @@
   }
 
   /* ---------- mercado: busca + filtros + passe livre ---------- */
-  function mktDefault() { return { q: "", pos: "", pos2: "", nat: "", region: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, scouted: false, sort: "ov", limit: 60 }; }
+  function mktDefault() { return { q: "", pos: "", pos2: "", nat: "", region: "", league: "", club: "", age: 40, ageMin: 15, ovMin: 0, potMin: 0, valMax: 0, affordable: false, free: false, scouted: false, ending: false, sort: "ov", limit: 60 }; }
   var MKT = mktDefault();
   TM.ui.register("coach-market", function (screen) {
     var c = TM.storage.coachCareer();
@@ -3039,7 +3040,7 @@
     addSectorBar(screen, "coach-market");
     screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
     if (TM.fin && TM.fin.banned(c)) screen.appendChild(el("div", { class: "fin-ban", text: TM.fin.banLabel(c) + " · vendas liberadas" }));
-    if ((c.pendingArrivals || []).length) screen.appendChild(el("div", { class: "fin-ban warn", text: "⏳ " + c.pendingArrivals.map(function (a) { return a.name; }).join(", ") + " — pré-contrato assinado; chega" + (c.pendingArrivals.length > 1 ? "m" : "") + " " + nextWinTxt(c) + "." }));
+    if ((c.pendingArrivals || []).length) screen.appendChild(el("div", { class: "fin-ban warn", text: "⏳ " + c.pendingArrivals.map(function (a) { return a.name + (a.pre ? " (pré-contrato, próxima temporada)" : ""); }).join(", ") + " — chega" + (c.pendingArrivals.length > 1 ? "m" : "") + " " + (c.pendingArrivals.every(function (a) { return a.pre; }) ? "no início da próxima temporada" : nextWinTxt(c)) + "." }));
 
     var world = TM.data.world();
     var rosterSet = {}; c.roster.forEach(function (id) { rosterSet[id] = true; });
@@ -3075,6 +3076,7 @@
     chipRow.appendChild(chip("💰 Baratos", isCheap, function () { MKT.valMax = 12; MKT.sort = "ov"; MKT.ovMin = 0; MKT.age = 40; MKT.free = false; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("💵 No orçamento", MKT.affordable, function () { MKT.affordable = !MKT.affordable; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🔭 Indicados", MKT.scouted, function () { MKT.scouted = !MKT.scouted; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("📝 Fim de contrato", MKT.ending, function () { MKT.ending = !MKT.ending; MKT.free = false; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🕵️ Olheiros", false, function () { TM.ui.go("coach-scouting", { from: "coach-market" }); }));
     chipRow.appendChild(chip("📰 Negócios", false, function () { TM.ui.go("coach-market-feed"); }));
     screen.appendChild(chipRow);
@@ -3197,6 +3199,7 @@
         if (MKT.valMax && TM.data.marketValue(p) > MKT.valMax) return false;
         if (MKT.affordable && curVal(c, askingPrice(p)) > (c.budget || 0)) return false;
         if (MKT.scouted && !(TM.scouting && TM.scouting.isScouted(c, p.id))) return false;
+        if (MKT.ending && !(TM.fin && TM.fin.endingContract(p, c))) return false;
         return true;
       }).sort(function (a, b) {
         if (MKT.sort === "pot") return (b.potential || b.overall) - (a.potential || a.overall) || b.overall - a.overall;
@@ -3215,6 +3218,7 @@
         var row = TM.ui.playerRow(p, { showClub: true });
         row.classList.add("clickable");
         if (TM.scouting && TM.scouting.isScouted(c, p.id)) { var nmEl = row.querySelector(".prow-name, .pr-name"); (nmEl || row).appendChild(el("span", { class: "mkt-scouted", text: "🔭 indicado" })); }
+        if (!p.freeAgent && TM.fin && TM.fin.endingContract(p, c)) { var nmEl2 = row.querySelector(".prow-name, .pr-name"); (nmEl2 || row).appendChild(el("span", { class: "mkt-scouted ending", text: "📝 fim de contrato" })); }
         // estrela: adiciona/remove da Central de transferências
         var star = el("button", { class: "shortlist-star" + (c.shortlist.indexOf(p.id) >= 0 ? " on" : ""), text: c.shortlist.indexOf(p.id) >= 0 ? "★" : "☆",
           title: "Central de transferências", on: { click: function (e) {
@@ -3474,6 +3478,20 @@
       ].filter(Boolean)));
     }
 
+    // FIM DE CONTRATO: pré-contrato (Lei Bosman) — de graça, chega na próxima temporada
+    if (TM.fin && TM.fin.endingContract(p, c)) {
+      var preOk = TM.fin.preOpen(c);
+      screen.appendChild(el("div", { class: "pre-box" }, [
+        el("div", { class: "pre-t", text: "📝 Contrato com o " + sellClub.name + " termina no fim da temporada" }),
+        el("div", { class: "pre-s", text: preOk
+          ? "Você pode assinar um pré-contrato direto com o jogador: sem taxa de transferência, ele chega no início da próxima temporada. Custa apenas as luvas (bônus de assinatura) e o salário combinado."
+          : "Pré-contratos só podem ser assinados a partir da segunda metade da temporada (dia " + TM.fin.PRE_DAY + "; hoje é o dia " + (c.currentDay || 0) + "). Até lá, só comprando do clube." }),
+        preOk ? TM.ui.button("📝 Negociar pré-contrato (grátis)", function () {
+          if (!TM.fin.preWilling(c, p)) { TM.ui.toast(p.name + " prefere esperar: quer renovar com o " + sellClub.name + " ou um clube maior."); return; }
+          goPlayer({ pid: p.id, oldClubId: p.clubId, type: "pre", fee: 0, parts: 1, preContract: true });
+        }, "btn primary") : null
+      ].filter(Boolean)));
+    }
     // postura do clube dono
     var stanceLines = [];
     stanceLines.push(stance.willSell ? "• Aberto a vender por um bom valor." : "• Reluta em vender — quer segurar o jogador.");
@@ -3737,9 +3755,10 @@
   // janela abriu: os reforços fechados fora da janela entram no elenco
   function arrivePending(c) {
     var list = c.pendingArrivals || []; if (!list.length) return 0;
-    var n = 0;
-    c.pendingArrivals = [];
+    var n = 0, cur = c.season || 1;
+    c.pendingArrivals = list.filter(function (a) { return a.arriveSeason && cur < a.arriveSeason; });
     list.forEach(function (a) {
+      if (a.arriveSeason && cur < a.arriveSeason) return;
       var p = TM.data.player(a.pid) || C().resolvePlayer(c, a.pid); if (!p) return;
       try { completeSigning(c, p, a.nego, a.terms, a.share == null ? 100 : a.share, true); n++; } catch (e) {}
     });
@@ -3779,6 +3798,8 @@
     var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de " + money(c, demand) + " por ano e um papel de destaque.”" });
     panel.appendChild(quote);
     if (NEGO.viaClause) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📜 Cláusula de rescisão depositada" }), el("span", { class: "deal-val", text: money(c, NEGO.fee || 0) }) ]));
+    var isPre = NEGO.type === "pre", luvas = isPre ? r2(demand * 0.5) : 0;
+    if (isPre) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📝 Pré-contrato — chega na próxima temporada, sem taxa · luvas (bônus de assinatura)" }), el("span", { class: "deal-val", text: money(c, luvas) }) ]));
     if (isLoanDeal) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "🔁 Empréstimo de " + C().loanTermLabel(NEGO.termYears || 1) + (NEGO.type === "loanBuy" ? " com opção de compra" : "") }), el("span", { class: "deal-val", text: "você paga " + share + "% do salário" }) ]));
     // empresário do jogador
     panel.appendChild(el("div", { class: "agent-line agent-" + ag.type }, [
@@ -3838,6 +3859,22 @@
         // fechado!
         var isLoan = NEGO.type === "loan" || NEGO.type === "loanBuy";
         var winOpen = C().windowOpenNow(c);
+        if (isPre) {
+          if (c.budget < luvas) { quote.className = "nego-quote angry"; quote.textContent = "Seu caixa não cobre as luvas (" + money(c, luvas) + ")."; return; }
+          c.budget -= luvas; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += luvas;
+          c.contracts = c.contracts || {};
+          c.contracts[p.id] = { years: terms.years, wage: r2(terms.wage / mult(c)), clause: terms.release ? r2(terms.clauseM / mult(c)) : 0, role: terms.role };
+          C().logDeal(c, { type: "in", kind: "pre", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: luvas, other: (TM.data.club(NEGO.oldClubId) || {}).name || "" });
+          var psnap = {}; Object.keys(NEGO).forEach(function (k) { psnap[k] = NEGO[k]; }); psnap.oldClubId = NEGO.oldClubId; psnap.type = "buy"; psnap.fee = 0;
+          c.pendingArrivals = c.pendingArrivals || [];
+          c.pendingArrivals.push({ pid: p.id, name: p.name, nego: psnap, terms: { wage: terms.wage, years: terms.years, role: terms.role, release: terms.release, clauseM: terms.clauseM }, share: 100, isLoan: false, pre: true, arriveSeason: (c.season || 1) + 1, season: c.season || 1, day: c.currentDay || 0 });
+          TM.notify.push(c, { icon: "📝", title: "Pré-contrato assinado", news: true, text: p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ") assinou pré-contrato com o " + TM.data.club(c.teamId).name + ": chega de graça no início da próxima temporada, quando o contrato com o " + ((TM.data.club(NEGO.oldClubId) || {}).name || "clube atual") + " terminar. Luvas pagas: " + money(c, luvas) + "." });
+          try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "📝", title: "Pré-contrato", text: TM.data.club(c.teamId).name + " acerta pré-contrato com " + p.name + " (" + ((TM.data.club(NEGO.oldClubId) || {}).name || "") + "), que chega de graça na próxima temporada." }); } catch (e) {}
+          TM.storage.saveCoachCareer(c);
+          quote.className = "nego-quote happy"; quote.textContent = "✔ " + p.name + " assinou pré-contrato! Chega de graça no início da próxima temporada.";
+          actionWrap.innerHTML = ""; actionWrap.appendChild(TM.ui.button("Voltar ao mercado", function () { NEGO = null; TM.ui.go("coach-market"); }, "btn primary"));
+          return;
+        }
         if (isLoan) {
           // taxa de empréstimo paga agora; o vínculo (signLoan) acontece na chegada
           var lFee = NEGO.loanFee || 0;
@@ -4280,7 +4317,8 @@
             el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, curVal(c, ct.wage)) }), el("div", { class: "cc-l", text: "salário/ano" }) ]),
             el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: ct.clause ? money(c, curVal(c, ct.clause)) : "—" }), el("div", { class: "cc-l", text: ct.clause ? "cláusula" : "sem cláusula" }) ])
           ]),
-          el("div", { class: "cc-note", text: yrsTxt }),
+          el("div", { class: "cc-note", text: yrsTxt + (c.leavingFree && c.leavingFree[p.id] ? " · 📝 assinou pré-contrato com o " + ((TM.data.club(c.leavingFree[p.id]) || {}).name || "outro clube") + " — sai de graça no fim da temporada" : "") }),
+          (c.leavingFree && c.leavingFree[p.id]) ? el("div", { class: "setting-hint", text: "Não é mais possível renovar. Se quiser algum retorno, coloque-o à venda ainda nesta janela." }) :
           TM.ui.button("✍️ Renovar contrato (+2 temporadas)", function () {
             ct.years = Math.min(6, (ct.years > 0 ? ct.years : 0) + 2); ct.wage = r2(ct.wage * 1.08);
             TM.storage.saveCoachCareer(c);
