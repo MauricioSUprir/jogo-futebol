@@ -3039,6 +3039,7 @@
     addSectorBar(screen, "coach-market");
     screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
     if (TM.fin && TM.fin.banned(c)) screen.appendChild(el("div", { class: "fin-ban", text: TM.fin.banLabel(c) + " · vendas liberadas" }));
+    if ((c.pendingArrivals || []).length) screen.appendChild(el("div", { class: "fin-ban warn", text: "⏳ " + c.pendingArrivals.map(function (a) { return a.name; }).join(", ") + " — pré-contrato assinado; chega" + (c.pendingArrivals.length > 1 ? "m" : "") + " " + nextWinTxt(c) + "." }));
 
     var world = TM.data.world();
     var rosterSet = {}; c.roster.forEach(function (id) { rosterSet[id] = true; });
@@ -3407,6 +3408,8 @@
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
     if (TM.fin && TM.fin.banned(c)) { screen.appendChild(TM.fin.banBox(c, "coach-market")); return; }
+    if ((c.pendingArrivals || []).some(function (a) { return a.pid === p.id; })) { screen.appendChild(el("div", { class: "untransfer-box" }, [ el("div", { class: "ut-ic", text: "⏳" }), el("div", { class: "ut-t", text: p.name + " já tem pré-contrato com você" }), el("div", { class: "ut-s", text: "Ele chega quando a janela abrir." }), TM.ui.button("← Voltar ao mercado", function () { TM.ui.go("coach-market"); }, "btn") ])); return; }
+    if (!C().windowOpenNow(c)) screen.appendChild(el("div", { class: "fin-ban warn", text: "🔴 Janela fechada — dá para negociar e assinar pré-contrato, mas o jogador só chega " + nextWinTxt(c) + "." }));
     var clauseV = TM.fin ? curVal(c, TM.fin.worldClause(p)) : 0, clauseMode = (TM.fin && clauseV) ? TM.fin.clauseMode(p, stance) : null;
     screen.appendChild(el("div", { class: "nego-step" }, [
       el("div", { class: "nego-dot active", text: "1. Com o clube" }),
@@ -3695,6 +3698,56 @@
 
   var NEGO = null;
 
+  // CHEGADA do reforço (entra no elenco). Fora da janela, fica pendente e só acontece quando a janela abrir.
+  function completeSigning(c, p, nego, terms, share, quiet) {
+    var isLoan = nego.type === "loan" || nego.type === "loanBuy";
+    if (isLoan) {
+      C().signLoan(c, p, { parentClubId: nego.oldClubId, buyOption: nego.type === "loanBuy", buyPrice: nego.buyPrice || 0, termYears: nego.termYears || 1, loanFee: 0, wage: terms.wage, share: share, noLog: true });
+      if (c.loanedIn && c.loanedIn[p.id]) c.loanedIn[p.id].share = share;
+    } else {
+      if (c.roster.indexOf(p.id) < 0) c.roster.push(p.id);
+      c.signedFrom[p.id] = nego.oldClubId;
+      // TROCA: o jogador incluído sai do seu elenco rumo ao clube vendedor
+      if (nego.swapId && nego.oldClubId) {
+        var swp = C().resolvePlayer(c, nego.swapId);
+        c.roster = c.roster.filter(function (id) { return id !== nego.swapId; });
+        delete c.signedFrom[nego.swapId];
+        if (c.contracts) delete c.contracts[nego.swapId];
+        try { C().executeWorldTransfer(c, nego.swapId, nego.oldClubId); } catch (e) {}
+        c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.soldM = (c.finc.soldM || 0) + (nego.swapVal || 0);
+        C().logDeal(c, { type: "out", kind: "swap", pid: nego.swapId, name: nego.swapName || (swp && swp.name) || "Jogador", pos: swp ? swp.pos : "", ov: swp ? swp.overall : 0, fee: nego.swapVal || 0, other: TM.data.club(nego.oldClubId) ? TM.data.club(nego.oldClubId).name : "" });
+        TM.notify.push(c, { icon: "🔄", title: "Troca fechada", news: true, text: (nego.swapName || "Um jogador") + " foi incluído na negociação e se transferiu para o " + (TM.data.club(nego.oldClubId) ? TM.data.club(nego.oldClubId).name : "clube vendedor") + "." });
+      }
+      C().syncLineup(c); // já entra no banco de reservas
+    }
+    // OFICIALIZA a contratação: notícia + post nas redes + feed do mercado
+    try {
+      var myNm = TM.data.club(c.teamId).name;
+      var fromNm = nego.oldClubId && TM.data.club(nego.oldClubId) ? TM.data.club(nego.oldClubId).name : "sem clube";
+      var annTxt = isLoan
+        ? myNm + " garante " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ") por empréstimo junto ao " + fromNm + "."
+        : myNm + " anuncia a contratação de " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ")" + (nego.oldClubId ? " junto ao " + fromNm + ((nego.fee || 0) > 0 ? " por " + money(c, nego.fee || 0) : "") : ", que estava livre no mercado") + ".";
+      TM.notify.push(c, { icon: "✍️", title: quiet ? "Reforço chegou" : "Reforço oficializado", news: true, text: annTxt + (quiet ? " A janela abriu e o jogador já está à disposição." : "") });
+      C().recordMarketMove(c, { pid: p.id, name: p.name, ov: p.overall, fromId: nego.oldClubId || null, fromName: fromNm, toId: c.teamId, toName: myNm, val: nego.fee || 0 }, isLoan ? "buy" : (nego.oldClubId ? "buy" : "free"));
+      if (TM.social && TM.social.announceSigning) TM.social.announceSigning(c, p, myNm, fromNm, nego.fee || 0, isLoan);
+    } catch (e) {}
+  }
+  // "chega em 04/01/2027" ou "chega no início da próxima temporada"
+  function nextWinTxt(c) { var nxt = C().nextWindowOpenDay(c); return nxt != null ? "em " + C().dateOf(c, nxt).full : "no início da próxima temporada (janela de verão)"; }
+  // janela abriu: os reforços fechados fora da janela entram no elenco
+  function arrivePending(c) {
+    var list = c.pendingArrivals || []; if (!list.length) return 0;
+    var n = 0;
+    c.pendingArrivals = [];
+    list.forEach(function (a) {
+      var p = TM.data.player(a.pid) || C().resolvePlayer(c, a.pid); if (!p) return;
+      try { completeSigning(c, p, a.nego, a.terms, a.share == null ? 100 : a.share, true); n++; } catch (e) {}
+    });
+    if (n) TM.storage.saveCoachCareer(c);
+    return n;
+  }
+  TM.coachUI = TM.coachUI || {}; TM.coachUI.arrivePending = arrivePending;
+
   /* ---------- negociação: com o jogador ---------- */
   TM.ui.register("coach-nego-player", function (screen) {
     var c = TM.storage.coachCareer();
@@ -3784,12 +3837,12 @@
       if (wageOk && roleOk) {
         // fechado!
         var isLoan = NEGO.type === "loan" || NEGO.type === "loanBuy";
+        var winOpen = C().windowOpenNow(c);
         if (isLoan) {
-          C().signLoan(c, p, {
-            parentClubId: NEGO.oldClubId, buyOption: NEGO.type === "loanBuy",
-            buyPrice: NEGO.buyPrice || 0, termYears: NEGO.termYears || 1, loanFee: NEGO.loanFee || 0, wage: terms.wage, share: share
-          });
-          if (c.loanedIn && c.loanedIn[p.id]) c.loanedIn[p.id].share = share;
+          // taxa de empréstimo paga agora; o vínculo (signLoan) acontece na chegada
+          var lFee = NEGO.loanFee || 0;
+          c.budget -= lFee; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += lFee;
+          C().logDeal(c, { type: "in", kind: NEGO.type === "loanBuy" ? "loanBuy" : "loan", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: lFee, other: TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "" });
           if (share < 100) TM.notify.push(c, { icon: "🔁", title: "Salário dividido", text: "No empréstimo de " + p.name + ", o " + ((TM.data.club(NEGO.oldClubId) || {}).name || "clube dono") + " paga " + (100 - share) + "% do salário; você paga " + money(c, r2(terms.wage * share / 100)) + "/ano." });
         } else {
           var fee = NEGO.fee || 0, parts = Math.max(1, NEGO.parts || 1);
@@ -3814,41 +3867,28 @@
           c.contracts[p.id] = { years: terms.years, wage: r2(terms.wage / mult(c)), clause: terms.release ? r2(terms.clauseM / mult(c)) : 0, role: terms.role };
           if (NEGO.viaClause) TM.notify.push(c, { icon: "📜", title: "Cláusula paga", news: true, text: "Você depositou a cláusula de rescisão de " + money(c, fee) + " e o " + (sellNm || "clube") + " foi obrigado a liberar " + p.name + "." });
           C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: fee, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
-          c.roster.push(p.id);
-          c.signedFrom[p.id] = NEGO.oldClubId;
-          // TROCA: o jogador incluído sai do seu elenco rumo ao clube vendedor
-          if (NEGO.swapId && NEGO.oldClubId) {
-            var swp = C().resolvePlayer(c, NEGO.swapId);
-            c.roster = c.roster.filter(function (id) { return id !== NEGO.swapId; });
-            delete c.signedFrom[NEGO.swapId];
-            if (c.contracts) delete c.contracts[NEGO.swapId];
-            try { C().executeWorldTransfer(c, NEGO.swapId, NEGO.oldClubId); } catch (e) {}
-            c.finc.soldM = (c.finc.soldM || 0) + (NEGO.swapVal || 0);
-            C().logDeal(c, { type: "out", kind: "swap", pid: NEGO.swapId, name: NEGO.swapName || (swp && swp.name) || "Jogador", pos: swp ? swp.pos : "", ov: swp ? swp.overall : 0, fee: NEGO.swapVal || 0, other: TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "" });
-            TM.notify.push(c, { icon: "🔄", title: "Troca fechada", news: true, text: (NEGO.swapName || "Um jogador") + " foi incluído na negociação e se transferiu para o " + (TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "clube vendedor") + "." });
-          }
-          C().syncLineup(c); // já entra no banco de reservas
         }
-        // OFICIALIZA a contratação: notícia + post nas redes + feed do mercado
-        try {
-          var myNm = TM.data.club(c.teamId).name;
-          var fromNm = NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "sem clube";
-          var annTxt = isLoan
-            ? myNm + " garante " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ") por empréstimo junto ao " + fromNm + "."
-            : myNm + " anuncia a contratação de " + p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ")" + (NEGO.oldClubId ? " junto ao " + fromNm + ((NEGO.fee || 0) > 0 ? " por " + money(c, NEGO.fee || 0) : "") : ", que estava livre no mercado") + ".";
-          TM.notify.push(c, { icon: "✍️", title: "Reforço oficializado", news: true, text: annTxt });
-          C().recordMarketMove(c, { pid: p.id, name: p.name, ov: p.overall, fromId: NEGO.oldClubId || null, fromName: fromNm, toId: c.teamId, toName: myNm, val: NEGO.fee || 0 }, isLoan ? "buy" : (NEGO.oldClubId ? "buy" : "free"));
-          if (TM.social && TM.social.announceSigning) TM.social.announceSigning(c, p, myNm, fromNm, NEGO.fee || 0, isLoan);
-        } catch (e) {}
+        var snap = {}; Object.keys(NEGO).forEach(function (k) { snap[k] = NEGO[k]; });
+        var tsnap = { wage: terms.wage, years: terms.years, role: terms.role, release: terms.release, clauseM: terms.clauseM };
+        if (winOpen) {
+          completeSigning(c, p, snap, tsnap, share, false);
+        } else {
+          // FORA DA JANELA: pré-contrato assinado, o jogador só chega quando a próxima janela abrir
+          c.pendingArrivals = c.pendingArrivals || [];
+          c.pendingArrivals.push({ pid: p.id, name: p.name, nego: snap, terms: tsnap, share: share, isLoan: isLoan, season: c.season || 1, day: c.currentDay || 0 });
+          TM.notify.push(c, { icon: "⏳", title: "Pré-contrato assinado", news: true, text: p.name + " (" + p.overall + ", " + TM.data.posLabel(p) + ") acertou com o " + TM.data.club(c.teamId).name + (isLoan ? " por empréstimo" : "") + ", mas a janela está fechada: ele só chega e pode ser registrado " + nextWinTxt(c) + "." });
+        }
         TM.storage.saveCoachCareer(c);
         quote.className = "nego-quote happy";
-        quote.textContent = isLoan
+        quote.textContent = !winOpen
+          ? "✔ " + p.name + " assinou pré-contrato! A janela está fechada: ele chega " + nextWinTxt(c) + "."
+          : isLoan
           ? "✔ " + p.name + " chega por empréstimo (" + C().loanTermLabel(NEGO.termYears) + ")" + (NEGO.type === "loanBuy" ? " com opção de compra!" : "!")
           : "✔ " + p.name + " assinou com o " + TM.data.club(c.teamId).name + "!";
         actionWrap.innerHTML = "";
         actionWrap.appendChild(TM.ui.button("Voltar ao mercado", function () { NEGO = null; TM.ui.go("coach-market"); }, "btn primary"));
-        // ceninha de apresentação do reforço
-        TM.ui.arrivalCutscene(p, TM.data.club(c.teamId), null);
+        // ceninha de apresentação do reforço (só quando ele chega de fato)
+        if (winOpen) TM.ui.arrivalCutscene(p, TM.data.club(c.teamId), null);
       } else if (!roleOk) {
         quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Sou titular indiscutível. Não aceito função de reserva.”";
       } else if (clFactor > 1) {
