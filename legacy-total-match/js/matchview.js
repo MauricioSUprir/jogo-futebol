@@ -298,9 +298,10 @@
         pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
         team.players.slice(0, 11).forEach(function (pl, i) {
           var slot = slots[i] || [null, 50, 50];
-          pitch.appendChild(el("button", { class: "pl-chip" + (selOut.idx === i ? " picked" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-            on: { click: function () { selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } },
-            TM.ui.chipKids(pl, slot, { name: shortP(pl.name), age: pl.age ? true : false })
+          var isOff = !!sentOffIds()[pl.id];
+          pitch.appendChild(el("button", { class: "pl-chip" + (selOut.idx === i ? " picked" : "") + (isOff ? " sent-off" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
+            on: { click: function () { if (isOff) { TM.ui.toast("🟥 " + pl.name + " foi expulso: não pode ser substituído (o time segue com um a menos)."); return; } selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } },
+            TM.ui.chipKids(pl, slot, { name: shortP(pl.name) + (isOff ? " 🟥" : ""), age: pl.age ? true : false })
           ));
         });
         subArea.appendChild(pitch);
@@ -339,15 +340,26 @@
       if (cfg.simOpts) Object.keys(cfg.simOpts).forEach(function (k) { o[k] = cfg.simOpts[k]; });
       o.startMinute = minute; o.startScore = score.slice();
       o.tacticSide = cfg.pauseSide; o.tactic = userTactic;
+      // quem já saiu do jogo antes da pausa (expulsos, lesionados, substituídos) continua fora; amarelos contam para o 2º
+      var before = result.events.filter(function (e) { return e.minute < minute; });
+      var offIds = [], yel = [], subsUsed = [0, 0];
+      before.forEach(function (e) {
+        if ((e.type === "red" || e.type === "injury") && e.playerId) offIds.push(e.playerId);
+        if (e.type === "yellow" && e.playerId) yel.push(e.playerId);
+        if (e.type === "sub") { if (e.outId) offIds.push(e.outId); if (e.team != null) subsUsed[e.team]++; }
+      });
+      o.excludeIds = offIds; o.yellowIds = yel; o.subsUsed = subsUsed;
       var partial = TM.engine.simulate(a, b, o);
       Object.keys(byMin).forEach(function (k) { if (+k >= minute) delete byMin[k]; });
       partial.events.forEach(function (ev) { if (ev.minute >= minute) (byMin[ev.minute] = byMin[ev.minute] || []).push(ev); });
-      var before = result.events.filter(function (e) { return e.minute < minute; });
       result.events = before.concat(partial.events);
       result.score = partial.score; result.stats = partial.stats;
-      result.injuries = partial.injuries; result.sentOff = partial.sentOff;
+      result.injuries = (result.injuries || []).filter(function (x) { return (x.minute || 0) < minute; }).concat(partial.injuries);
+      result.sentOff = (result.sentOff || []).filter(function (x) { return (x.minute || 0) < minute; }).concat(partial.sentOff);
       if (result.focus && partial.focus) result.focus = partial.focus;
     }
+    // ids expulsos até o minuto atual (não podem ser substituídos: o time fica com um a menos)
+    function sentOffIds() { var s = {}; result.events.forEach(function (e) { if (e.type === "red" && e.minute <= minute && e.playerId) s[e.playerId] = true; }); return s; }
 
     // indexa eventos por minuto
     var byMin = {};
