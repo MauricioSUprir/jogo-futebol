@@ -34,23 +34,72 @@
     if (!c.scouts) c.scouts = [];
     if (!c.scoutReports) c.scoutReports = [];
     if (!c.scoutCands || c.scoutCands.season !== (c.season || 1)) c.scoutCands = { season: c.season || 1, list: genCandidates(c) };
+    // olheiros da BASE (garotos de 15 a 19 anos para as categorias de base)
+    if (!c.yscouts) c.yscouts = [];
+    if (!c.yscoutReports) c.yscoutReports = [];
+    if (!c.yscoutCands || c.yscoutCands.season !== (c.season || 1)) c.yscoutCands = { season: c.season || 1, list: genCandidates(c, true) };
     return c;
   }
-  function genCandidates(c) {
+  var YNAMES = ["Zé Roberto Lima", "Ademir Fonseca", "Toninho Cerezo Jr.", "Paulo Autuori Neto", "Ricardo Gomes", "Sérgio Manoel", "Marcelo Veiga", "Jorge Sampaoli Jr.", "Oscar Tabárez Neto", "Juan Román Vidal", "Pep Segura", "Albert Capellas", "Jan Olde Riekerink", "Ernst Middendorp", "Tom Saintfiet", "Kenta Hasegawa"];
+  function genCandidates(c, youth) {
     var out = [], used = {};
     for (var i = 0; i < 6; i++) {
-      var r = REGION_ORDER[(i + (c.season || 1)) % REGION_ORDER.length];
-      var nm = pick(REGIONS[r].names); if (used[nm]) continue; used[nm] = 1;
+      var r = REGION_ORDER[(i + (c.season || 1) + (youth ? 3 : 0)) % REGION_ORDER.length];
+      var nm = youth ? pick(YNAMES) : pick(REGIONS[r].names); if (used[nm]) continue; used[nm] = 1;
       var stars = Math.max(2, Math.min(5, rnd(2, 5)));
-      out.push({ id: "sc" + Date.now().toString(36) + i, name: nm, region: r, stars: stars, age: rnd(34, 62) });
+      out.push({ id: (youth ? "ysc" : "sc") + Date.now().toString(36) + i, name: nm, region: r, stars: stars, age: rnd(34, 62), kind: youth ? "youth" : "pro" });
     }
     return out;
   }
   function seasonTick(c) {
     ensure(c);
-    var tot = 0; c.scouts.forEach(function (s) { tot += salary(c, s.stars); });
-    if (tot) { c.budget -= tot; TM.notify.push(c, { icon: "🔭", title: "Salários dos olheiros", text: "Pagos " + money(c, tot) + " em salários da equipe de olheiros nesta temporada." }); }
+    var tot = 0; c.scouts.forEach(function (s) { tot += salary(c, s.stars); }); c.yscouts.forEach(function (s) { tot += salary(c, s.stars) * 0.6; });
+    tot = Math.round(tot * 100) / 100;
+    if (tot) { c.budget -= tot; TM.notify.push(c, { icon: "🔭", title: "Salários dos olheiros", text: "Pagos " + money(c, tot) + " em salários da equipe de olheiros (profissional e base) nesta temporada." }); }
     c.scoutCands = { season: c.season || 1, list: genCandidates(c) };
+    c.yscoutCands = { season: c.season || 1, list: genCandidates(c, true) };
+  }
+
+  /* ---------- olheiros da base: geram garotos (15-19) de uma região para você contratar para a base ---------- */
+  function genProspect(c, m, s) {
+    var lgs = m.league ? [m.league] : (REGIONS[m.region] || REGIONS.br).leagues;
+    var lg = pick(lgs), L = TM.data.league(lg);
+    var culture = TM.data.cultureOfLeague(lg);
+    var nat = (L && TM.data.nationByName(L.nation)) || TM.data.world().nations[0];
+    var pos = m.pos || pick(["GK", "DF", "DF", "MF", "MF", "FW"]);
+    var age = m.dur >= 10 ? rnd(15, 18) : rnd(16, 19);
+    var ov = 44 + rnd(0, 12) + s.stars + (age - 15);
+    var jewel = Math.random() < 0.05 * s.stars + (m.dur >= 10 ? 0.06 : 0);
+    var pot = jewel ? Math.min(92, ov + 16 + rnd(0, 12)) : Math.min(80, ov + 4 + rnd(0, 12));
+    var est = Math.max(1, Math.min(5, Math.round((pot - 58) / 6)));       // estrelas = estimativa do olheiro (com ruído)
+    if (s.stars <= 3 && Math.random() < 0.35) est = Math.max(1, Math.min(5, est + (Math.random() < 0.5 ? -1 : 1)));
+    var cost = Math.round((0.04 + Math.max(0, pot - 60) * 0.012 + (jewel ? 0.15 : 0)) * mult(c) * 100) / 100;
+    return { id: "ys" + Date.now().toString(36) + rnd(100, 999) + rnd(0, 9), name: TM.data.randomName(culture), clubId: c.teamId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
+      age: age, overall: ov, potential: pot, attrs: C().youthAttrs ? C().youthAttrs(ov, pos) : null, nationId: nat.id, nationName: nat.name,
+      height: 160 + rnd(0, 30), weight: 52 + rnd(0, 26), youth: true, hiddenPot: true, jewel: jewel, est: est, cost: cost, from: L ? L.name : (REGIONS[m.region] || {}).label, scoutedBy: s.name,
+      note: pick(jewel && s.stars >= 4 ? ["Joia. Não deixe outro clube chegar antes.", "Melhor garoto que vi em anos nessa idade.", "Técnica rara; com minutos, vira craque."] : pot - ov >= 12 ? ["Cru, mas o teto é alto.", "Físico ainda em formação; a leitura de jogo impressiona.", "Precisa de dois anos de base, mas vale."] : ["Jogador de base sólido, sem grandes riscos.", "Encaixa nas categorias de base; pode virar reserva útil.", "Regular; bom para completar a turma."]) };
+  }
+  function finishYouthMission(c, s) {
+    var m = s.mission;
+    var n = 2 + Math.round(m.dur / 3) + Math.round(s.stars / 2), list = [];
+    for (var i = 0; i < n; i++) list.push(genProspect(c, m, s));
+    list.sort(function (a, b) { return b.est - a.est || b.potential - a.potential; });
+    var rep = { id: "yrp" + Date.now().toString(36), season: c.season || 1, day: c.currentDay || 0, scout: s.name, scoutStars: s.stars, region: m.region, league: m.league || "", pos: m.pos || "", dur: m.dur, players: list, seen: false, youth: true };
+    c.yscoutReports.unshift(rep); if (c.yscoutReports.length > 12) c.yscoutReports = c.yscoutReports.slice(0, 12);
+    s.mission = null; s.done = (s.done || 0) + 1;
+    TM.notify.push(c, { icon: "🌱", title: "Relatório da base", news: true, text: s.name + " voltou de " + missionLabel(rep) + " com " + list.length + " garoto(s) para a base" + (list.some(function (x) { return x.jewel && s.stars >= 4; }) ? " — inclusive uma possível joia" : "") + ". Veja em Olheiros → Base." });
+  }
+  function signProspect(c, rep, x) {
+    if (c.budget < x.cost) { TM.ui.toast("Caixa insuficiente (" + money(c, x.cost) + ")."); return false; }
+    if ((c.youth || []).length >= 30) { TM.ui.toast("A base está lotada (30). Suba ou dispense alguém."); return false; }
+    c.budget -= x.cost; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + x.cost;
+    var y = {}; Object.keys(x).forEach(function (k) { y[k] = x[k]; }); delete y.cost; delete y.est; delete y.note; y.signedSeason = c.season || 1;
+    if (!y.attrs && C().youthAttrs) y.attrs = C().youthAttrs(y.overall, y.pos);
+    c.youth = c.youth || []; c.youth.push(y); c.youthMap = null;
+    x.signed = true;
+    TM.notify.push(c, { icon: "🌱", title: "Reforço na base", text: y.name + " (" + y.pos + ", " + y.age + " anos) foi contratado para as categorias de base por " + money(c, x.cost) + ", indicado por " + (y.scoutedBy || "olheiro") + "." });
+    TM.storage.saveCoachCareer(c);
+    return true;
   }
 
   /* ---------- missões ---------- */
@@ -110,16 +159,25 @@
   function tick(c) {
     ensure(c);
     c.scouts.forEach(function (s) { if (s.mission) { s.mission.left--; if (s.mission.left <= 0) finishMission(c, s); } });
+    c.yscouts.forEach(function (s) { if (s.mission) { s.mission.left--; if (s.mission.left <= 0) finishYouthMission(c, s); } });
   }
   function isScouted(c, pid) { return !!(c && c.scouted && c.scouted[pid]); }
   function stars(n) { var s = ""; for (var i = 0; i < 5; i++) s += i < n ? "★" : "☆"; return s; }
 
   /* ================= TELA: OLHEIROS ================= */
+  var scoutTab = "pro";
   TM.ui.register("coach-scouting", function (screen, params) {
     var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; } ensure(c);
     var back = (params && params.from) || "coach-hub";
+    if (params && params.tab) scoutTab = params.tab;
     screen.appendChild(TM.ui.topbar("🔭 Olheiros", function () { TM.ui.go(back); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    var tabs = el("div", { class: "segmented full scout-kind-tabs" }, [
+      el("button", { class: "seg-btn" + (scoutTab === "pro" ? " active" : ""), text: "⚽ Profissional (" + c.scouts.length + "/3)", on: { click: function () { scoutTab = "pro"; TM.ui.go("coach-scouting", { from: back }); } } }),
+      el("button", { class: "seg-btn" + (scoutTab === "youth" ? " active" : ""), text: "🌱 Base (" + c.yscouts.length + "/2)", on: { click: function () { scoutTab = "youth"; TM.ui.go("coach-scouting", { from: back }); } } })
+    ]);
+    body.appendChild(tabs);
+    if (scoutTab === "youth") { renderYouthScouting(c, body, back); return; }
     body.appendChild(el("div", { class: "market-budget", text: "💰 Caixa: " + money(c, c.budget) + " · " + c.scouts.length + "/3 olheiros" }));
 
     // equipe atual
@@ -193,12 +251,13 @@
   TM.ui.register("coach-scout-mission", function (screen, params) {
     var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; } ensure(c);
     var back = (params && params.from) || "coach-hub";
-    var s = c.scouts.filter(function (x) { return x.id === (params && params.sid); })[0];
+    var s = c.scouts.concat(c.yscouts).filter(function (x) { return x.id === (params && params.sid); })[0];
     if (!s) { TM.ui.go("coach-scouting", { from: back }); return; }
-    screen.appendChild(TM.ui.topbar("🧭 Missão de " + s.name, function () { TM.ui.go("coach-scouting", { from: back }); }));
+    var isY = s.kind === "youth";
+    screen.appendChild(TM.ui.topbar("🧭 Missão de " + s.name, function () { TM.ui.go("coach-scouting", { from: back, tab: isY ? "youth" : "pro" }); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
-    var m = { region: s.region, league: "", pos: "", ageMax: 40, dur: 6 };
-    body.appendChild(el("div", { class: "setting-hint", text: "Fora da especialidade (" + REGIONS[s.region].label + ") o olheiro rende um pouco menos. Missões profundas acham mais joias." }));
+    var m = { region: s.region, league: "", pos: "", ageMax: isY ? 19 : 40, dur: 6 };
+    body.appendChild(el("div", { class: "setting-hint", text: isY ? "Olheiro da base: volta com garotos de 15 a 19 anos de escolinhas e bases da região, que você pode contratar para as suas categorias de base. Missões profundas acham garotos mais novos e mais joias." : "Fora da especialidade (" + REGIONS[s.region].label + ") o olheiro rende um pouco menos. Missões profundas acham mais joias." }));
 
     var regSel = el("select", { class: "select" });
     REGION_ORDER.forEach(function (r) { regSel.appendChild(el("option", { value: r, text: REGIONS[r].label + (r === s.region ? " (especialidade)" : ""), selected: r === m.region })); });
@@ -219,10 +278,12 @@
     });
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Posição" }), posRow ]));
 
-    var ageVal = el("span", { class: "range-val", text: "até 40 anos" });
-    var ageInp = el("input", { type: "range", min: 17, max: 40, value: 40, class: "slider" });
-    ageInp.addEventListener("input", function () { m.ageMax = parseInt(ageInp.value, 10); ageVal.textContent = m.ageMax >= 40 ? "qualquer idade" : "até " + m.ageMax + " anos"; upd(); });
-    body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode("Idade máxima "), ageVal ]), ageInp ]));
+    if (!isY) {
+      var ageVal = el("span", { class: "range-val", text: "até 40 anos" });
+      var ageInp = el("input", { type: "range", min: 17, max: 40, value: 40, class: "slider" });
+      ageInp.addEventListener("input", function () { m.ageMax = parseInt(ageInp.value, 10); ageVal.textContent = m.ageMax >= 40 ? "qualquer idade" : "até " + m.ageMax + " anos"; upd(); });
+      body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label" }, [ document.createTextNode("Idade máxima "), ageVal ]), ageInp ]));
+    }
 
     var durRow = el("div", { class: "segmented full" });
     [3, 6, 10].forEach(function (d) {
@@ -231,15 +292,15 @@
     body.appendChild(el("div", { class: "setting" }, [ el("div", { class: "setting-label", text: "Duração" }), durRow ]));
 
     var summary = el("div", { class: "market-budget" }); body.appendChild(summary);
-    function upd() { var n = poolFor(c, m).length; summary.textContent = "🔎 " + n + " jogador(es) no radar · custo da missão " + money(c, missionCost(c, s.stars, m.dur)); }
+    function upd() { if (isY) { summary.textContent = "🌱 Garotos de 15 a 19 anos · custo da missão " + money(c, missionCost(c, s.stars, m.dur) * 0.7); return; } var n = poolFor(c, m).length; summary.textContent = "🔎 " + n + " jogador(es) no radar · custo da missão " + money(c, missionCost(c, s.stars, m.dur)); }
     upd();
     body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("🚌 Enviar olheiro", function () {
-      var cost = missionCost(c, s.stars, m.dur);
+      var cost = Math.round(missionCost(c, s.stars, m.dur) * (isY ? 0.7 : 1) * 100) / 100;
       if (c.budget < cost) { TM.ui.toast("Caixa insuficiente para a missão."); return; }
       c.budget -= cost; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + cost;
       s.mission = { region: m.region, league: m.league, pos: m.pos, ageMax: m.ageMax, dur: m.dur, left: m.dur };
       TM.notify.push(c, { icon: "🚌", title: "Olheiro em missão", text: s.name + " viajou para " + missionLabel(s.mission) + ". Relatório em " + m.dur + " jogos." });
-      TM.storage.saveCoachCareer(c); TM.ui.toast("Missão iniciada!"); TM.ui.go("coach-scouting", { from: back });
+      TM.storage.saveCoachCareer(c); TM.ui.toast("Missão iniciada!"); TM.ui.go("coach-scouting", { from: back, tab: isY ? "youth" : "pro" });
     }, "btn primary") ]));
   });
 
@@ -272,5 +333,81 @@
     });
   });
 
-  TM.scouting = { ensure: ensure, tick: tick, seasonTick: seasonTick, isScouted: isScouted, REGIONS: REGIONS, REGION_ORDER: REGION_ORDER, regionOfLeague: regionOfLeague };
+  function renderYouthScouting(c, body, back) {
+    body.appendChild(el("div", { class: "market-budget", text: "💰 Caixa: " + money(c, c.budget) + " · " + c.yscouts.length + "/2 olheiros da base · " + (c.youth || []).length + "/30 na base" }));
+    body.appendChild(el("h3", { class: "section-title", text: "🌱 Olheiros da base" }));
+    if (!c.yscouts.length) body.appendChild(el("p", { class: "intro-text", text: "Olheiros da base descobrem garotos de 15 a 19 anos em escolinhas e bases de outras regiões. Você contrata os melhores para as suas categorias de base e sobe ao profissional quando estiverem prontos (até os 21 anos)." }));
+    c.yscouts.forEach(function (s) {
+      var card = el("div", { class: "scout-card" });
+      card.appendChild(el("div", { class: "sc-head" }, [
+        el("div", { class: "sc-ava", text: "🌱" }),
+        el("div", { class: "sc-info" }, [ el("div", { class: "sc-name", text: s.name }), el("div", { class: "sc-sub", text: stars(s.stars) + " · " + REGIONS[s.region].label + " · " + s.age + " anos · " + money(c, salary(c, s.stars) * 0.6) + "/temp" }) ])
+      ]));
+      if (s.mission) {
+        var m = s.mission, pct = Math.round(((m.dur - m.left) / m.dur) * 100);
+        card.appendChild(el("div", { class: "sc-mission" }, [ el("div", { class: "sc-mtx", text: "🚌 Em missão: " + missionLabel(m) + " — volta em " + m.left + " jogo(s)" }), el("div", { class: "sc-bar" }, [ el("div", { class: "sc-fill", style: "width:" + pct + "%" }) ]) ]));
+      } else card.appendChild(el("div", { class: "sc-mtx muted", text: "Disponível" + (s.done ? " · " + s.done + " missão(ões)" : "") }));
+      card.appendChild(el("div", { class: "note-actions" }, [
+        (s.mission && TM.coins) ? TM.ui.button("⚡ Entregar agora (" + TM.coins.COST.scoutRush + " 🪙)", function () { TM.coins.pay(TM.coins.COST.scoutRush, "Missão de olheiro acelerada", function () { finishYouthMission(c, s); TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back, tab: "youth" }); }); }, "btn primary small") : null,
+        s.mission ? TM.ui.button("Cancelar missão", function () { s.mission = null; TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back, tab: "youth" }); }, "btn ghost small")
+                  : TM.ui.button("🧭 Nova missão", function () { TM.ui.go("coach-scout-mission", { sid: s.id, from: back }); }, "btn primary small"),
+        TM.ui.button("Dispensar", function () { TM.ui.confirm("Dispensar " + s.name + "?", "Sem multa.", "Dispensar", function () { c.yscouts = c.yscouts.filter(function (x) { return x.id !== s.id; }); TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back, tab: "youth" }); }, true); }, "btn ghost small")
+      ].filter(Boolean)));
+      body.appendChild(card);
+    });
+    if (c.yscouts.length < 2) {
+      body.appendChild(el("h3", { class: "section-title", text: "📋 Olheiros de base disponíveis" }));
+      c.yscoutCands.list.filter(function (k) { return !c.yscouts.some(function (s) { return s.id === k.id; }); }).forEach(function (k) {
+        var f = Math.round(fee(c, k.stars) * 0.6 * 100) / 100, afford = c.budget >= f;
+        body.appendChild(el("div", { class: "scout-card cand" }, [
+          el("div", { class: "sc-head" }, [ el("div", { class: "sc-ava", text: "🕵️" }), el("div", { class: "sc-info" }, [ el("div", { class: "sc-name", text: k.name }), el("div", { class: "sc-sub", text: stars(k.stars) + " · base de " + REGIONS[k.region].label + " · " + k.age + " anos" }) ]), el("div", { class: "sc-fee", text: money(c, f) }) ]),
+          el("div", { class: "note-actions" }, [ TM.ui.button(afford ? "Contratar (" + money(c, f) + ")" : "Caixa insuficiente", function () {
+            if (!afford) { TM.ui.toast("Caixa insuficiente."); return; }
+            c.budget -= f; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + f;
+            c.yscouts.push({ id: k.id, name: k.name, region: k.region, stars: k.stars, age: k.age, kind: "youth", mission: null, done: 0 });
+            TM.notify.push(c, { icon: "🌱", title: "Olheiro da base contratado", text: k.name + " (" + stars(k.stars) + ") vai garimpar garotos para a base. Mande-o em uma missão." });
+            TM.storage.saveCoachCareer(c); TM.ui.go("coach-scouting", { from: back, tab: "youth" });
+          }, "btn " + (afford ? "primary" : "ghost") + " small") ])
+        ]));
+      });
+    }
+    body.appendChild(el("h3", { class: "section-title", text: "📑 Relatórios da base" }));
+    if (!c.yscoutReports.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhum relatório ainda." }));
+    c.yscoutReports.forEach(function (r) {
+      var left = r.players.filter(function (x) { return !x.signed; }).length;
+      body.appendChild(el("button", { class: "scout-report" + (r.seen ? "" : " new"), on: { click: function () { TM.ui.go("coach-yscout-report", { id: r.id, from: back }); } } }, [
+        el("div", { class: "sr-title", text: (r.seen ? "📄 " : "🆕 ") + missionLabel(r) }),
+        el("div", { class: "sr-sub", text: r.scout + " · " + stars(r.scoutStars) + " · " + r.players.length + " garoto(s), " + left + " disponível(is) · temp. " + r.season })
+      ]));
+    });
+  }
+  TM.ui.register("coach-yscout-report", function (screen, params) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; } ensure(c);
+    var back = (params && params.from) || "coach-hub";
+    var r = c.yscoutReports.filter(function (x) { return x.id === (params && params.id); })[0];
+    if (!r) { TM.ui.go("coach-scouting", { from: back, tab: "youth" }); return; }
+    r.seen = true; TM.storage.saveCoachCareer(c);
+    screen.appendChild(TM.ui.topbar("🌱 Relatório da base", function () { TM.ui.go("coach-scouting", { from: back, tab: "youth" }); }));
+    var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    body.appendChild(el("div", { class: "nego-panel" }, [
+      el("div", { class: "nego-quote", text: "🌱 " + r.scout + " (" + stars(r.scoutStars) + ") — " + missionLabel(r) }),
+      el("div", { class: "setting-hint", text: "Estrelas = potencial estimado pelo olheiro (quanto mais estrelas o olheiro, mais confiável). Contrate para a base e suba ao profissional quando estiver pronto." })
+    ]));
+    body.appendChild(el("div", { class: "market-budget", text: "💰 Caixa: " + money(c, c.budget) + " · base " + (c.youth || []).length + "/30" }));
+    r.players.forEach(function (x) {
+      var row = el("div", { class: "ys-pros" + (x.jewel && r.scoutStars >= 4 ? " jewel" : "") }, [
+        el("div", { class: "ys-face", text: x.pos === "GK" ? "🧤" : "🧒" }),
+        el("div", { class: "ys-info" }, [
+          el("div", { class: "ys-name", text: x.name + (x.jewel && r.scoutStars >= 4 ? " 💎" : "") }),
+          el("div", { class: "ys-sub", text: (TM.data.posLabel ? TM.data.posLabel(x) : x.pos) + " · " + x.age + " anos · OVR " + x.overall + " · " + (x.nationName || "") + " · " + (x.from || "") }),
+          el("div", { class: "ys-note" }, [ el("span", { class: "sp-stars", text: stars(x.est) }), el("span", { text: " " + x.note }) ])
+        ]),
+        x.signed ? el("span", { class: "price-tag" }, [ el("span", { text: "Na base ✔" }) ])
+                 : TM.ui.button(money(c, x.cost), function () { if (signProspect(c, r, x)) { TM.ui.toast("🌱 " + x.name + " na base!"); TM.ui.go("coach-yscout-report", { id: r.id, from: back }); } }, "btn primary small")
+      ]);
+      body.appendChild(row);
+    });
+  });
+
+  TM.scouting = { ensure: ensure, tick: tick, seasonTick: seasonTick, isScouted: isScouted, REGIONS: REGIONS, REGION_ORDER: REGION_ORDER, regionOfLeague: regionOfLeague, signProspect: signProspect };
 })(window);
