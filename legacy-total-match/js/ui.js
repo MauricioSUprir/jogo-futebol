@@ -410,8 +410,12 @@
   function chipKids(player, slot, opts) {
     opts = opts || {};
     var C = window.TM.comp;
-    var eff = (slot && C && C.effOverall) ? C.effOverall(player, slot[0]) : { ov: player.overall, off: false };
-    var posTxt = (slot && C && C.slotPos) ? C.slotPos(slot) : window.TM.data.posLabel(player);
+    var eff = (slot && C && C.effOverall) ? C.effOverall(player, slot) : { ov: player.overall, off: false };
+    // mostra a POSIÇÃO DE ORIGEM do jogador; fora da função aparece "origem→função" em amarelo
+    var natural = window.TM.data.posLabel(player);
+    var misfit = !!(eff.off || eff.light);
+    var yellow = misfit && (eff.drop || 0) >= 2;               // adaptação leve (ex.: MEI de MC) não pinta de amarelo
+    var posTxt = misfit && eff.slotLbl ? natural + "→" + eff.slotLbl : natural;
     var dyn = opts.dyn;
     var ovShown = eff.ov + ((dyn && dyn.on && dyn.delta) ? dyn.delta : 0);
     var faceKids = [
@@ -426,8 +430,8 @@
     // barra de estamina (condição física) — aparece em todos os modos
     var stam = chipStamina(player, opts);
     return [
-      el("div", { class: "chip-face-wrap" + (eff.off ? " off" : "") }, faceKids),
-      el("span", { class: "chip-pos" + (eff.off ? " off" : ""), text: posTxt }),
+      el("div", { class: "chip-face-wrap" + (yellow ? " off" : "") }, faceKids),
+      el("span", { class: "chip-pos" + (yellow ? " off" : misfit ? " near" : ""), title: misfit ? "Fora de posição: é " + natural + ", está jogando de " + eff.slotLbl + " (−" + eff.drop + " de overall)" : "Posição de origem: " + natural, text: posTxt }),
       el("span", { class: "chip-name", text: opts.name || player.name }),
       el("div", { class: "chip-stam", title: "Estamina " + stam + "%" }, [ el("i", { class: "chip-stam-fill " + (stam >= 66 ? "ok" : stam >= 33 ? "mid" : "low"), style: "width:" + stam + "%" }) ]),
       (opts.age !== false && player.age) ? el("span", { class: "chip-age", text: player.age + " anos" }) : null
@@ -481,11 +485,11 @@
   // entries: [{ player, slot }]
   function posPanel(entries) {
     var C = window.TM.comp;
-    var off = (entries || []).filter(function (e) { return e.player && e.slot && C.posPenalty(e.player.pos, e.slot[0], e.player) > 0; });
+    var off = (entries || []).filter(function (e) { return e.player && e.slot && C.slotPenalty(e.player, e.slot) > 0; });
     var body = el("div", { class: "panel-narrow pos-panel" }, [ el("h3", { class: "block-title", text: "🧭 Posições" }) ]);
     if (!off.length) { body.appendChild(el("div", { class: "setting-hint", text: "✅ Todos os titulares estão na posição." })); return body; }
     off.forEach(function (e) {
-      var eff = C.effOverall(e.player, e.slot[0]);
+      var eff = C.effOverall(e.player, e.slot);
       body.appendChild(el("div", { class: "pos-row" }, [
         window.TM.img.playerImg(e.player, "pos-face"),
         el("div", { class: "pos-info" }, [

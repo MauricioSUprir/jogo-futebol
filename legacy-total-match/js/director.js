@@ -396,7 +396,7 @@
     c.type = "club"; c.role = "treinador";
     delete c.coach; delete c.coachChat; delete c._lastSim;
     ensure(c);
-    try { if (!c.lineup) c.lineup = C().buildLineup(C().rosterPlayers(c), "4-4-2"); } catch (e) {}
+    try { if (!c.lineup) c.lineup = C().buildBestLineup(C().rosterPlayers(c)); } catch (e) {}
     TM.notify.push(c, { icon: "🎯", title: "Agora você é o treinador", text: "A carreira de dirigente foi unificada com a Master League: você comanda o time em campo e também a gestão (patrocínios, SAF, estádio e CT)." });
     TM.storage.saveCoachCareer(c);
     return c;
