@@ -1358,7 +1358,7 @@
       el("div", { class: "mc-offer-s", text: "Peça demissão e fique livre no mercado. Ao fim da temporada é de graça; agora, custa a multa (" + money(c, mc.fine) + ")." }),
       el("div", { class: "mc-leave-acts" }, [
         TM.ui.button("Sair no fim da temporada", function () {
-          c.leaveAtSeasonEnd = true; TM.storage.saveCoachCareer(c);
+          c.leaveAtSeasonEnd = true; try { if (TM.saf) TM.saf.onLeave(c); } catch (e) {} TM.storage.saveCoachCareer(c);
           TM.notify.push(c, { icon: "🚪", title: "Saída anunciada", news: true, text: "Você anunciou que deixará o " + (club ? club.name : "clube") + " ao fim da temporada." });
           TM.ui.toast("Saída marcada para o fim da temporada."); TM.ui.go("coach-contract");
         }, "btn ghost small"),
@@ -4615,6 +4615,14 @@
             C().returnLoanIn(c, n.buyOption.pid); TM.notify.remove(c, n.id);
             TM.storage.saveCoachCareer(c); TM.ui.go("coach-notifications");
           }, "btn ghost small")
+        ]));
+      } else if (n.saf) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("💼 Ver proposta", function () { TM.ui.go("club-saf-offer", { from: "coach-notifications" }); }, "btn primary small")
+        ]));
+      } else if (n.safEvent) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("💼 Responder", function () { TM.ui.go("club-saf-event", { noteId: n.id }); }, "btn primary small")
         ]));
       } else if (n.nationInvite) {
         card.appendChild(el("div", { class: "note-actions" }, [
