@@ -3482,3 +3482,5 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .mkt-scouted.ending{background:rgba(250,204,21,.16);color:#fde047;border-color:rgba(250,204,21,.45)}
 .pre-box{max-width:640px;margin:10px auto 0;padding:12px 14px;border-radius:14px;background:rgba(250,204,21,.08);border:1px solid rgba(250,204,21,.4)}
 .pre-t{font-weight:800;font-size:14px;color:#fde68a}.pre-s{font-size:13px;opacity:.9;margin:6px 0 8px}
+.ci-kit-edit.locked{opacity:.55;cursor:not-allowed}
+.ci-crest-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
