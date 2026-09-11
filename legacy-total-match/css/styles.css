@@ -1939,9 +1939,10 @@ textarea.text-input { resize: vertical; font-family: inherit; }
 @keyframes varCalIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ===== Overall dinâmico (indicador no chip) ===== */
-.chip-ov.up { color: #35c46a; }
-.chip-ov.down { color: #ff6a61; }
-.chip-dyn { position: absolute; right: -3px; bottom: -3px; font-size: 10px; font-weight: 800;
+/* overall subiu/caiu: fundo próprio (claro) para o número continuar legível em qualquer cor de tema */
+.chip-ov.up { color: #14532d; background: linear-gradient(180deg, #dcfce7, #a7f3c4); box-shadow: 0 0 0 1.5px #22c55e, 0 1px 3px rgba(0,0,0,.4); }
+.chip-ov.down { color: #7f1d1d; background: linear-gradient(180deg, #fee2e2, #fca5a5); box-shadow: 0 0 0 1.5px #ef4444, 0 1px 3px rgba(0,0,0,.4); }
+.chip-dyn { position: absolute; right: -7px; bottom: -4px; font-size: 10px; font-weight: 800;
   width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   border: 1px solid #0a0a0a; }
 .chip-dyn.up { background: #35c46a; color: #04180c; }
