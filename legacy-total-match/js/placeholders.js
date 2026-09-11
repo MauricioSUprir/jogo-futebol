@@ -338,6 +338,12 @@
     // Versão fictícia: só imagens GERADAS (nada de fotos/escudos/logos reais).
     coachImg: function (coach, cls) {
       if (coach.photo) return imgWithFallback(coach.photo, coachAvatarSVG(coach), coach.name, cls);
+      // Season Update: foto REAL do técnico (assets/treinadores/<slug>.jpg, identidade conferida no Wikidata) quando existir
+      var proT = false; try { proT = TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) {}
+      if (proT && coach.name) {
+        var ck = (coach.photoKey || stadSlug(coach.name)) + ".jpg";
+        if (hasPhoto("treinadores", ck)) return imgWithFallback("assets/treinadores/" + ck, coachAvatarSVG(coach), coach.name, cls);
+      }
       return imgWithFallback(coachAvatarSVG(coach), coachAvatarSVG(coach), coach.name, cls);
     },
     clubImg: function (club, cls) {

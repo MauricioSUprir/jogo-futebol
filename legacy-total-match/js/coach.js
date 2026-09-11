@@ -821,7 +821,7 @@
         } } }, [
           avaWrap,
           el("div", { class: "cc-name", text: co.name }),
-          el("div", { class: "cc-age", text: (coClubId ? TM.data.club(coClubId).name + " · " : "") + co.age + " anos" })
+          el("div", { class: "cc-age", text: (coClubId ? TM.data.club(coClubId).name + " · " : (co.free ? "Sem clube no jogo · " : "")) + co.age + " anos" })
         ]);
         grid.appendChild(card);
       });
@@ -2551,9 +2551,19 @@
     });
     inp.click();
   }
+  // troca de escudo/uniforme: UMA vez por temporada cada (escudo, 1º, 2º e 3º uniforme)
+  function kitChangeSlot(c, slot) {
+    c.kitChanges = c.kitChanges || {};
+    if (c.kitChanges.season !== (c.season || 1)) c.kitChanges = { season: c.season || 1, used: {} };
+    return c.kitChanges.used[slot] ? false : true;
+  }
+  function kitChangeUse(c, slot) { kitChangeSlot(c, slot); c.kitChanges.used[slot] = true; }
   function applyKitOverrides(c) {
-    if (!c || !c.kitOverrides) return;
+    if (!c) return;
+    if (c.crestOverride) { var cl0 = TM.data.club(c.teamId); if (cl0) cl0.crestData = c.crestOverride; }
+    if (!c.kitOverrides) return;
     var club = TM.data.club(c.teamId); if (!club) return;
+    if (c.crestOverride) club.crestData = c.crestOverride;
     if (c.kitOverrides[0]) club.kitData = c.kitOverrides[0];
     if (c.kitOverrides[1]) club.kitAwayData = c.kitOverrides[1];
     if (c.kitOverrides[2]) club.kitThirdData = c.kitOverrides[2];
@@ -2622,15 +2632,35 @@
     ["1º", "2º", "3º"].forEach(function (lbl, v) {
       var tile = el("div", { class: "ci-kit" }, [ TM.img.kitImg(club, "ci-kit-img", v), el("div", { class: "ci-kit-lbl", text: lbl } ) ]);
       if (mine) {
-        tile.appendChild(el("button", { class: "ci-kit-edit", text: "✏️ Trocar", on: { click: function () {
-          importImage(function (data) { c.kitOverrides = c.kitOverrides || {}; c.kitOverrides[v] = data; applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
+        var canK = kitChangeSlot(c, "kit" + v);
+        tile.appendChild(el("button", { class: "ci-kit-edit" + (canK ? "" : " locked"), text: canK ? "✏️ Trocar" : "🔒 Trocado nesta temporada", on: { click: function () {
+          if (!kitChangeSlot(c, "kit" + v)) { TM.ui.toast("O " + lbl + " uniforme já foi trocado nesta temporada. Só na próxima."); return; }
+          importImage(function (data) { c.kitOverrides = c.kitOverrides || {}; c.kitOverrides[v] = data; kitChangeUse(c, "kit" + v); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
         } } }));
       }
       krow.appendChild(tile);
     });
     kitsCard.appendChild(krow);
-    if (mine) kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube." }));
+    if (mine) kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube. Regra: cada uniforme só pode ser trocado UMA vez por temporada." }));
     body.appendChild(kitsCard);
+    // escudo (uma troca por temporada)
+    if (mine) {
+      var canC = kitChangeSlot(c, "crest");
+      body.appendChild(el("div", { class: "ci-card" }, [
+        el("div", { class: "ci-ct", text: "🛡️ Escudo" }),
+        el("div", { class: "ci-crest-row" }, [
+          TM.img.clubImg(club, "ci-crest"),
+          el("div", { class: "note-actions" }, [
+            el("button", { class: "ci-kit-edit" + (canC ? "" : " locked"), text: canC ? "✏️ Trocar escudo" : "🔒 Trocado nesta temporada", on: { click: function () {
+              if (!kitChangeSlot(c, "crest")) { TM.ui.toast("O escudo já foi trocado nesta temporada. Só na próxima."); return; }
+              importImage(function (data) { c.crestOverride = data; kitChangeUse(c, "crest"); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Escudo atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); }, 256);
+            } } }),
+            c.crestOverride ? el("button", { class: "ci-kit-edit", text: "↩ Escudo original", on: { click: function () { c.crestOverride = null; var cl1 = TM.data.club(c.teamId); if (cl1) delete cl1.crestData; TM.storage.saveCoachCareer(c); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); } } }) : null
+          ].filter(Boolean))
+        ]),
+        el("div", { class: "setting-hint", text: "O escudo só pode ser trocado UMA vez por temporada." })
+      ]));
+    }
   });
 
   /* ---------- competições ---------- */
