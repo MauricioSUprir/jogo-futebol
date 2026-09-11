@@ -180,9 +180,19 @@
       if (entry.uid && n.me && entry.uid === n.me.uid) { cb(false, "Não dá para excluir a própria conta por aqui."); return; }
       var key = entry.email ? n.acctKey(entry.email) : null;
       if (key) { upd["accounts/" + key] = null; upd["banned/" + key] = { email: entry.email, number: entry.number || null, uid: entry.uid || null, t: Date.now(), by: n.me.number || null }; }
-      if (entry.uid) { upd["users/" + entry.uid] = null; upd["ranking/" + entry.uid] = null; }
+      if (entry.uid) { upd["users/" + entry.uid] = null; upd["ranking/" + entry.uid] = null; upd["bannedUids/" + entry.uid] = true; }
       if (entry.number) { upd["numbers/" + entry.number] = null; upd["bannedNumbers/" + entry.number] = true; }
-      db.ref().update(upd).then(function () { cb(true, "Conta excluída para sempre" + (entry.email ? " e e-mail bloqueado" : "") + "."); }).catch(function () { cb(false, "Falha ao excluir (regras do banco)."); });
+      var keys = Object.keys(upd);
+      db.ref().update(upd).then(function () { cb(true, "Conta excluída para sempre" + (entry.email ? " e e-mail bloqueado" : "") + ". O aparelho dela é desconectado na próxima abertura."); }).catch(function (err) {
+        // regras do banco podem barrar a gravação em bloco: tenta caminho por caminho e informa o que falhou
+        var fails = [], done = 0;
+        keys.forEach(function (k) {
+          db.ref(k).set(upd[k]).catch(function (e2) { fails.push(k + ": " + (e2 && e2.message ? e2.message : e2)); }).then(function () {
+            done++;
+            if (done === keys.length) { if (!fails.length) cb(true, "Conta excluída para sempre."); else if (fails.length < keys.length) cb(true, "Conta excluída, mas parte falhou (" + fails.join(" | ").slice(0, 200) + ")."); else cb(false, "Falha ao excluir: " + fails.join(" | ").slice(0, 300)); }
+          });
+        });
+      });
     },
     badge: function (cls) {
       var has = hasAccount();
