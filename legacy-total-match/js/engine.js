@@ -69,7 +69,10 @@
   function simulate(teamA, teamB, opts) {
     opts = opts || {};
     var realism = opts.realism || 3;
-    var variance = 1.9 - (realism - 1) * 0.28;
+    // realismo (1..5): quanto a QUALIDADE dos elencos pesa no resultado. Não muda a média de gols:
+    // 1 = muito aleatório (zebras frequentes) · 3 = padrão · 5 = bem fiel aos elencos (zebra rara, mas possível)
+    var variance = 1.34;                                   // fator fixo de gols (~2,6 a 3 por jogo)
+    var kq = 0.6 + (realism - 1) * 0.2;                    // 0.6 .. 1.4
     var focusId = opts.focusPlayerId || null;
 
     var A = teamProfile(teamA), B = teamProfile(teamB);
@@ -103,7 +106,7 @@
       var edge = (atk - opDef);
       // qualidade dos elencos pesa mais (setores + overall médio do time), sem impedir zebras:
       // o time pior sempre mantém um mínimo de chances por jogo
-      var base = Math.min(0.13, Math.max(0.036, 0.088 + edge * 0.0040 + (ovrGap || 0) * 0.0012)) * variance / 1.9;
+      var base = Math.min(0.12 + kq * 0.01, Math.max(0.04 - kq * 0.006, 0.088 + (edge * 0.0040 + (ovrGap || 0) * 0.0012) * kq)) * variance / 1.9;
       return base * (1 - redsMine * 0.16);
     }
 
