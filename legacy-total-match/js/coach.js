@@ -259,11 +259,15 @@
   // confiança da diretoria (0-100): posição vs meta, ajustada pelo rigor do conselho
   function boardConfidence(c) {
     try {
+      // saves antigos: 'confidence' é o mapa de confiança por jogador; se virou número/NaN por engano, restaura o mapa
+      if (c && (typeof c.confidence !== "object" || c.confidence === null)) c.confidence = {};
+      if (c && (typeof c.boardTrust !== "number" || !isFinite(c.boardTrust))) c.boardTrust = 50;
       var pos = C().currentPosition(c), target = (c.objective && c.objective.maxPos) || 10;
       var diff = target - pos;                         // + = melhor que a meta
       var rigor = c.board === "rigorosa" ? 1.35 : c.board === "tranquila" ? 0.7 : 1;
       var v = 58 + diff * 6 * rigor;
-      if (c.confidence != null) v += (c.confidence - 50) * 0.2;   // moral recente influencia
+      if (typeof c.boardTrust === "number" && isFinite(c.boardTrust)) v += (c.boardTrust - 50) * 0.2;   // confiança acumulada (SAF, dívidas, vendas) influencia
+      if (!isFinite(v)) v = 58;
       return Math.max(3, Math.min(100, Math.round(v)));
     } catch (e) { return 60; }
   }
@@ -3388,7 +3392,7 @@
     c.classicoLoss = res === "L" ? (c.classicoLoss || 0) + 1 : 0;
     if (c.classicoLoss >= 3) {
       c.classicoLoss = 0;
-      c.confidence = Math.max(-5, (c.confidence || 0) - 3);
+      c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 3);
       try { if (TM.social && TM.social.nudgeMorale) TM.social.nudgeMorale(c, -18); } catch (e) {}
       TM.notify.push(c, { icon: "💀", title: "Crise nos clássicos", news: true, text: "Três clássicos perdidos seguidos! A torcida está revoltada e a diretoria pressiona — mesmo com boa campanha na liga, o clima é de crise." });
     } else if (res === "W") {

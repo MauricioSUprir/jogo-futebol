@@ -158,7 +158,7 @@
   // ===== GESTÃO (8) =====
   def("popularidade", "gestao", "season", 0.08, function (c) { return { n: Math.min(95, (c.popularity || 40) + 5) }; }, function (c, cl) { return "Elevar a popularidade do clube para " + cl.n + "+"; }, function (c, cl) { return { ok: (c.popularity || 0) >= cl.n, why: "A popularidade ficou em " + (c.popularity || 0) + "." }; });
   def("reputacao", "gestao", "season", 0.08, function (c) { return { n: Math.min(95, (c.reputation || 18) + 5) }; }, function (c, cl) { return "Elevar sua reputação como treinador para " + cl.n + "+"; }, function (c, cl) { return { ok: (c.reputation || 0) >= cl.n, why: "A reputação ficou em " + (c.reputation || 0) + "." }; });
-  def("confianca", "gestao", "season", 0.08, function () { return { n: 55 }; }, function (c, cl) { return "Manter a confiança da diretoria em " + cl.n + "+ ao fim da temporada"; }, function (c, cl) { var v = c.confidence == null ? 50 : c.confidence; return { ok: v >= cl.n, why: "A confiança ficou em " + v + "." }; });
+  def("confianca", "gestao", "season", 0.08, function () { return { n: 55 }; }, function (c, cl) { return "Manter a confiança da diretoria em " + cl.n + "+ ao fim da temporada"; }, function (c, cl) { var v = (typeof c.boardTrust === "number" && isFinite(c.boardTrust)) ? c.boardTrust : 50; return { ok: v >= cl.n, why: "A confiança ficou em " + v + "." }; });
   def("olheiros", "gestao", "season", 0.05, function () { return { n: 2 }; }, function (c, cl) { return "Manter ao menos " + cl.n + " olheiros contratados"; }, function (c, cl) { var n = (c.scouts || []).length; return { ok: n >= cl.n, why: "Só " + n + " olheiro(s) contratado(s)." }; });
   def("moral", "gestao", "season", 0.06, yes, function () { return "Terminar a temporada com o elenco motivado (moral positiva)"; }, function (c) { return { ok: (c.moraleAdj || 0) >= 0, why: "O elenco terminou desmotivado." }; });
   def("permanencia", "gestao", "event", 0.15, yes, function () { return "O treinador não pode deixar o clube por vontade própria durante a SAF"; }, null);
@@ -299,14 +299,14 @@
     var fine = R(c.saf.amountM * (cl.finePct || 0.1));
     c.budget -= fine; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + fine;
     c.saf.strikes = (c.saf.strikes || 0) + 1; sat(c, -15, "cláusula descumprida: " + clauseText(c, cl));
-    c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 10);
+    c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 10);
     note(c, { icon: "⚠️", title: "Cláusula da SAF descumprida", news: true, text: why + " " + c.saf.investor + " aplicou multa de " + money(c, fine) + " (" + c.saf.strikes + "ª advertência de " + c.saf.patience + ")." });
     if (c.saf.strikes >= (c.saf.patience || 2) || c.saf.sat <= 0) breakSaf(c, "descumprimento das contrapartidas");
   }
   function breakSaf(c, why) {
     if (!c.saf) return;
     var out = R(c.saf.amountM * 0.2);
-    c.budget -= out; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + out; c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 15);
+    c.budget -= out; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + out; c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 15);
     note(c, { icon: "💥", title: "SAF rompida", news: true, text: c.saf.investor + " deixou o clube por " + why + ", levando " + money(c, out) + " de volta. A diretoria está furiosa." });
     post(c, "💥", "Crise", c.saf.investor + " rompe a SAF com o " + club(c).name + ".");
     c.safEnded = { investor: c.saf.investor, season: season(c) }; c.saf = null;
@@ -531,7 +531,7 @@
     if (!fails.length) {
       var bonus = R(c.saf.amountM * (c.saf.bonusPct || 0.15)) + bonusExtra;
       c.budget += bonus; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + bonus;
-      c.confidence = Math.min(100, (c.confidence == null ? 50 : c.confidence) + 8); sat(c, 15, "temporada aprovada");
+      c.boardTrust = Math.min(100, (c.boardTrust == null ? 50 : c.boardTrust) + 8); sat(c, 15, "temporada aprovada");
       note(c, { icon: "💼", title: "Contrapartidas cumpridas", news: true, text: c.saf.investor + " aprovou a temporada e liberou um aporte extra de " + money(c, bonus) + "." });
     } else {
       fails.forEach(function (f) { if (c.saf) penalty(c, f.cl, f.why); });

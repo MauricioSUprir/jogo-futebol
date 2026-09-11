@@ -181,8 +181,8 @@
     if (off.bonus && TM.fin && TM.fin.addReceivable) TM.fin.addReceivable(c, { name: p.name, from: buyer.name, fromId: buyer.id, per: off.bonus, parts: 1, kind: "bonus", cond: "20 jogos pelo " + buyer.name });
     if (off.sellOn) { c.sellOnRights = c.sellOnRights || {}; c.sellOnRights[p.id] = { pct: off.sellOn, from: buyer.name, fromId: buyer.id, name: p.name, season: c.season || 1 }; }
     // torcida e clima
-    if (fans.risk >= 2) { c.popularity = Math.max(3, (c.popularity || 40) - (fans.risk === 3 ? 6 : 3)); c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 3); }
-    else if (fans.risk === 0 && off.fee >= curVal(c, TM.data.marketValue(p)) * 1.2) c.confidence = Math.min(100, (c.confidence == null ? 50 : c.confidence) + 2);
+    if (fans.risk >= 2) { c.popularity = Math.max(3, (c.popularity || 40) - (fans.risk === 3 ? 6 : 3)); c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 3); }
+    else if (fans.risk === 0 && off.fee >= curVal(c, TM.data.marketValue(p)) * 1.2) c.boardTrust = Math.min(100, (c.boardTrust == null ? 50 : c.boardTrust) + 2);
     // despedida
     var farewell = pick(["“Obrigado por tudo. Levo esse clube no coração.”", "“Foi uma honra vestir essa camisa. Torcida, vocês são demais.”", "“Saio com a sensação de dever cumprido. Até um dia.”"]);
     note(c, { icon: "👋", title: "Despedida de " + p.name, news: true, text: p.name + " se despediu do elenco: " + farewell + " Vendido ao " + buyer.name + " por " + money(c, off.fee) + (off.parts > 1 ? " (" + off.parts + " parcelas)" : "") + (off.sellOn ? ", com " + off.sellOn + "% de uma revenda futura" : "") + "." });

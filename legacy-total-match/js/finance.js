@@ -149,7 +149,7 @@
     var cur = c.transferBan;
     if (cur && (cur.untilSeason > last.s || (cur.untilSeason === last.s && cur.untilDay >= last.d))) return cur; // já está punido por mais tempo
     c.transferBan = { windows: windows, untilSeason: last.s, untilDay: last.d, why: why, sinceSeason: season(c), sinceDay: day(c) };
-    c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 8);
+    c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 8);
     note(c, { icon: "🚫", title: "TRANSFER BAN", news: true, fin: true, text: "A FIFA proibiu o clube de registrar contratações por " + windows + " janela(s) — " + why + ". A punição vale até " + dateTxt(c, last.s, last.d) + ". Vendas continuam liberadas." });
     try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "🚫", title: "Transfer ban", text: TM.data.club(c.teamId).name + " é punido pela FIFA com transfer ban de " + windows + " janela(s) por dívidas de transferências." }); } catch (e) {}
     return c.transferBan;
@@ -252,7 +252,7 @@
     }
     if (abs - c.debt.lastTickAbs < 30) return;      // consequências a cada ~30 dias
     c.debt.lastTickAbs = abs;
-    if (di.level >= 2) { c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - (di.level >= 4 ? 12 : di.level === 3 ? 7 : 3)); }
+    if (di.level >= 2) { c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - (di.level >= 4 ? 12 : di.level === 3 ? 7 : 3)); }
     if (di.level >= 2 && c.saf && TM.saf && TM.saf.sat) TM.saf.sat(c, di.level >= 4 ? -25 : di.level === 3 ? -14 : -6, "endividamento do clube (" + di.label.toLowerCase() + ")");
     if (di.level >= 3) {
       var months = Math.round((abs - (c.debt.sinceSeason * SEASON_LEN + c.debt.sinceDay)) / 30);
@@ -264,7 +264,7 @@
         if (tier) { var nm = c.sponsors[tier].name; c.sponsors[tier] = null; c.sponsor = c.sponsors.master || null; note(c, { icon: "🤝", title: "Patrocinador saiu", news: true, text: nm + " rompeu o contrato de patrocínio por causa da situação financeira do clube." }); }
       }
       if (di.level >= 4 && c.saf && TM.saf && TM.saf.breakSaf && months >= 1) { TM.saf.breakSaf(c, "insolvência do clube"); }
-      if (di.level >= 4 && months >= 4 && Math.random() < 0.4 && !c.leaveAtSeasonEnd) { c.confidence = 0; note(c, { icon: "🪑", title: "Diretoria em pânico", news: true, text: "Com o clube insolvente, a diretoria coloca seu cargo em risco: a confiança chegou a zero." }); }
+      if (di.level >= 4 && months >= 4 && Math.random() < 0.4 && !c.leaveAtSeasonEnd) { c.boardTrust = 0; note(c, { icon: "🪑", title: "Diretoria em pânico", news: true, text: "Com o clube insolvente, a diretoria coloca seu cargo em risco: a confiança chegou a zero." }); }
     }
   }
 
