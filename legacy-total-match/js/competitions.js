@@ -1058,7 +1058,7 @@
     }
     // o jogador decide se topa sair (clubes maiores atraem mais)
     var buyerRating = TM.data.clubRating(off.buyerId), myRating = TM.data.clubRating(career.teamId);
-    var playerWants = Math.random() < 0.4 + Math.max(0, (buyerRating - myRating)) * 0.05;
+    var playerWants = off.forceWants != null ? !!off.forceWants : (Math.random() < 0.4 + Math.max(0, (buyerRating - myRating)) * 0.05);
     TM.notify.remove(career, note.id);
     if (playerWants) {
       career.budget += off.fee;
