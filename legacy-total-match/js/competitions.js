@@ -80,7 +80,8 @@
   /* ---------- calendário (datas reais) ---------- */
   var MONTHS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
-  function matchDay(i) { return 3 + i * 4; }            // dia (offset) do i-ésimo jogo do usuário
+  var FIRST_MATCH_DAY = 20;                               // 1ª rodada oficial 20 dias após o início da temporada (pré-temporada nos dias 7, 10 e 13)
+  function matchDay(i) { return FIRST_MATCH_DAY + i * 4; }  // dia (offset) do i-ésimo jogo do usuário
   // início da temporada por região: América do Sul começa em JANEIRO; Europa (e demais) em AGOSTO
   var SOUTHAM = { Brazil: 1, Argentina: 1, Ecuador: 1, Uruguay: 1, Colombia: 1, Paraguay: 1, Peru: 1, Chile: 1, Bolivia: 1, Venezuela: 1 };
   function seasonStartMonth(career) {
