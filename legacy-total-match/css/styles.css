@@ -3485,3 +3485,20 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ci-kit-edit.locked{opacity:.55;cursor:not-allowed}
 .ci-crest-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .pl-chip.sent-off{opacity:.45;filter:grayscale(1)}
+
+/* ---- pré-temporada ---- */
+.pre-card{border-color:rgba(56,189,248,.45)}
+.pre-vs{display:flex;align-items:center;justify-content:center;gap:10px;margin:8px 0;flex-wrap:wrap}
+.pre-crest{width:40px;height:40px;object-fit:contain}
+.pre-x{font-weight:800;opacity:.7}.pre-opp{font-weight:700}
+.pre-opt{margin-top:12px;padding:12px;border-radius:14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1)}
+.pre-opt-h{display:flex;align-items:center;gap:10px}.pre-opt-ic{font-size:26px}.pre-opt-name{font-weight:800;font-size:15px}.pre-opt-sub{font-size:12px;opacity:.8}
+.pre-opp-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.pre-opp-tile{flex:1;min-width:90px;text-align:center;padding:8px 4px;border-radius:10px;background:rgba(255,255,255,.04)}
+.pre-opp-n{font-size:12px;font-weight:700;margin-top:4px}.pre-opp-r{font-size:11px;opacity:.75}
+.pre-money{display:flex;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:700;color:#86efac;margin:4px 0 6px}
+.pre-fix{display:flex;align-items:center;gap:8px;padding:8px 10px;margin-top:6px;border-radius:10px;background:rgba(255,255,255,.04);font-size:13px}
+.pre-fix.mine{border:1px solid rgba(56,189,248,.45)}
+.pre-fix-r{opacity:.6;font-size:11px;width:26px}.pre-fix-s{font-weight:800;min-width:48px;text-align:center}
+.pre-table{width:100%;border-collapse:collapse;font-size:13px}.pre-table th,.pre-table td{padding:6px 4px;text-align:center}.pre-table td:nth-child(2),.pre-table th:nth-child(2){text-align:left}
+.pre-table tr.mine td{background:rgba(56,189,248,.12)}.tbl-crest{width:18px;height:18px;object-fit:contain;vertical-align:middle}
