@@ -267,7 +267,8 @@
   function fieldSlot(x, yDisplay) {
     var raw = 15 + (yDisplay - 20) * 73 / 68;
     raw = Math.max(10, Math.min(92, raw));
-    var g = raw >= 82 ? "GK" : raw >= 62 ? "DF" : raw >= 38 ? "MF" : "FW";
+    // zonas: gol >= 82 · defesa >= 60 · meio-campo >= 26 (inclui o MEI, atrás dos atacantes) · ataque < 26
+    var g = raw >= 82 ? "GK" : raw >= 60 ? "DF" : raw >= 26 ? "MF" : "FW";
     return [g, x, raw];
   }
   // slot efetivo do titular i de uma escalação qualquer (posição livre arrastada, senão a da formação)
@@ -284,7 +285,7 @@
     var g = slot[0], x = slot[1], y = slot[2];
     if (g === "GK") return "GOL";
     if (g === "DF") { if (x <= 22) return "LE"; if (x >= 78) return "LD"; return "ZAG"; }
-    if (g === "MF") { if (x <= 20) return "ME"; if (x >= 80) return "MD"; if (y >= 53) return "VOL"; if (y <= 37) return "MEI"; return "MC"; }
+    if (g === "MF") { if (x <= 20) return "ME"; if (x >= 80) return "MD"; if (y >= 53) return "VOL"; if (y <= 40) return "MEI"; return "MC"; }
     if (x <= 30) return "PE"; if (x >= 70) return "PD"; return "CA";
   }
   // devolve o jogador ajustado ao slot: se estiver fora de posição, vira o grupo do slot com atributos reduzidos
