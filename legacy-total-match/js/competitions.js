@@ -910,6 +910,24 @@
       if (!buyers.length) return;
       var buyer = buyers[Math.floor(Math.random() * buyers.length)];
       var fee = Math.round(val * (0.8 + Math.random() * 0.6) * mult);
+      // cláusula de rescisão: clube rico pode simplesmente depositar o valor — você não pode recusar
+      var clause = (career.contracts && career.contracts[target.id] && career.contracts[target.id].clause) || 0;
+      if (clause > 0 && !wantListed && clause <= val * 3.2 && baseBudgetEur(TM.data.clubRating(buyer.id)) >= clause * 0.9 && TM.data.clubRating(buyer.id) >= target.overall && Math.random() < 0.35) {
+        var cfee = Math.round(clause * mult * 100) / 100;
+        var wants = Math.random() < 0.55 + Math.max(0, TM.data.clubRating(buyer.id) - TM.data.clubRating(career.teamId)) * 0.05;
+        if (!wants) { TM.notify.push(career, { icon: "📜", title: "Tentaram pagar a cláusula", news: true, text: buyer.name + " depositou a cláusula de rescisão de " + target.name + " (" + fmtMoney(career, cfee) + "), mas o jogador recusou se transferir." }); return; }
+        career.budget += cfee; career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += cfee;
+        logDeal(career, { type: "out", kind: "clause", pid: target.id, name: target.name, pos: target.pos, ov: target.overall, fee: cfee, other: buyer.name });
+        try { TM.club.onPlayerSold(career, target, cfee, buyer.id); } catch (e) {}
+        try { if (TM.fin) TM.fin.onSale(career, target.id, cfee); } catch (e) {}
+        career.roster = career.roster.filter(function (id) { return id !== target.id; });
+        if (career.contracts) delete career.contracts[target.id];
+        try { executeWorldTransfer(career, target.id, buyer.id); } catch (e) {}
+        syncLineup(career);
+        TM.notify.push(career, { icon: "📜", title: "Cláusula de rescisão paga", news: true, text: buyer.name + " pagou a cláusula de rescisão de " + target.name + " (" + fmtMoney(career, cfee) + "). Pela regra do contrato, o clube não pôde recusar." });
+        try { if (TM.social && TM.social.marketPost) TM.social.marketPost(career, { icon: "📜", title: "Cláusula ativada", text: buyer.name + " paga a cláusula de " + target.name + ": " + fmtMoney(career, cfee) + "." }); } catch (e) {}
+        return;
+      }
       TM.notify.push(career, {
         icon: "📨", title: "Proposta recebida",
         text: buyer.name + " ofereceu " + fmtMoney(career, fee) + " por " + target.name + ".",
@@ -955,6 +973,8 @@
       career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += off.fee;
       logDeal(career, { type: "out", kind: "sale", pid: off.playerId, name: player.name, pos: player.pos, ov: player.overall, fee: off.fee, other: TM.data.club(off.buyerId).name });
       try { TM.club.onPlayerSold(career, player, off.fee, off.buyerId); } catch (e) {}
+      try { if (TM.fin) TM.fin.onSale(career, off.playerId, off.fee); } catch (e) {}
+      if (career.contracts) delete career.contracts[off.playerId];
       career.roster = career.roster.filter(function (id) { return id !== off.playerId; });
       if (career.lineup) {
         career.lineup.starters = career.lineup.starters.filter(function (id) { return id !== off.playerId; });
@@ -1721,12 +1741,12 @@
         if (!val) val = deal.val || 0;
       } else { val = 0; }
       career.marketFeed.unshift({
-        name: deal.name, ov: deal.ov,
+        name: deal.name, ov: deal.ov, pid: deal.pid,
         fromId: deal.fromId, fromName: deal.fromName,
         toId: deal.toId, toName: deal.toName,
-        val: val, kind: kind, day: career.currentDay || 0
+        val: val, kind: kind, day: career.currentDay || 0, season: career.season || 1
       });
-      if (career.marketFeed.length > 24) career.marketFeed.length = 24;
+      if (career.marketFeed.length > 120) career.marketFeed.length = 120;
     } catch (e) {}
   }
   function freeAgentNews(career, deal) {
@@ -1747,7 +1767,11 @@
       TM.notify.push(career, { icon: "⭐", title: "Alvo da Central contratado",
         text: "Atenção: o " + deal.toName + " " + (arrived ? "fechou" : "acertou") + " a contratação de " + deal.name + " (" + deal.ov + "), um dos seus alvos na Central de Transferências." });
     } else {
-      TM.notify.push(career, { icon: "🔁", title: "Mercado da bola", news: true,
+      // só negócios relevantes viram notificação (craques, rivais, minha liga); o resto fica no feed 📰 Negócios
+      var myLg = null; try { myLg = TM.data.club(career.teamId).leagueId; } catch (e) {}
+      var toCl = TM.data.club(deal.toId), fromCl = TM.data.club(deal.fromId);
+      var relevant = (deal.ov || 0) >= 80 || (toCl && toCl.leagueId === myLg) || (fromCl && fromCl.leagueId === myLg) || (deal.val || 0) >= 40;
+      if (relevant) TM.notify.push(career, { icon: "🔁", title: "Mercado da bola", news: true,
         text: deal.toName + " " + (arrived ? "contratou" : "acertou") + " " + deal.name + " (" + deal.ov + ") do " + deal.fromName + " por " + fmtMoney(career, deal.val) + (arrived ? "." : " — chega quando a janela abrir.") });
     }
     if (arrived) recordMarketMove(career, deal, deal.fireSale ? "fire" : "buy");
@@ -1824,17 +1848,28 @@
       }
       if (d >= w.closeDay && !w.closedNotified) {
         w.closedNotified = true;
-        TM.notify.push(career, { icon: "🔴", title: w.name + " fechada", text: "A " + w.name.toLowerCase() + " fechou. Novas transferências só na próxima janela." });
+        var wf = (career.marketFeed || []).filter(function (m) { return m.kind !== "free" && (m.day || 0) >= w.openDay && (m.day || 0) < w.closeDay && m.season === (career.season || 1); });
+        var top = wf.slice().sort(function (a, b) { return (b.val || 0) - (a.val || 0); }).slice(0, 3).map(function (m) { return m.name + " (" + m.fromName + " → " + m.toName + ", " + fmtMoney(career, m.val || 0) + ")"; });
+        TM.notify.push(career, { icon: "🔴", title: w.name + " fechada", news: true, text: "A " + w.name.toLowerCase() + " fechou com " + wf.length + " transferência(s) entre os outros clubes." + (top.length ? " Maiores: " + top.join("; ") + "." : "") + " Veja tudo em Mercado → 📰 Negócios." });
       }
     });
+    try { if (TM.fin) TM.fin.tick(career); } catch (e) {}   // parcelas com vencimento, bônus, transfer ban, endividamento
     // atividade de mercado da IA — só quando o dia avança (evita repetir a cada re-render do hub)
     if (career._lastCalDay === d) return;
+    var lastD = career._lastCalDay == null ? d - 1 : career._lastCalDay;
     career._lastCalDay = d;
     var open = windowOpenNow(career);
     if (open) {
-      if (Math.random() < 0.45) {
-        var deal = findAiDeal(career);
-        if (deal) { if (executeWorldTransfer(career, deal.pid, deal.toId)) dealNews(career, deal, true); }
+      // cada dia que passou dentro da janela gera negócios entre os OUTROS clubes (mais no fim da janela: "deadline day")
+      var cw = currentWindow(career), daysPassed = Math.max(1, Math.min(12, d - lastD));
+      for (var di = 0; di < daysPassed; di++) {
+        var dayX = d - daysPassed + 1 + di, toClose = cw ? cw.closeDay - dayX : 30;
+        var chance = toClose <= 3 ? 0.95 : toClose <= 10 ? 0.7 : 0.5;
+        var nDeals = Math.random() < chance ? 1 + (Math.random() < (toClose <= 3 ? 0.7 : 0.3) ? 1 : 0) : 0;
+        for (var k = 0; k < nDeals; k++) {
+          var deal = findAiDeal(career);
+          if (deal) { if (executeWorldTransfer(career, deal.pid, deal.toId)) dealNews(career, deal, true); }
+        }
       }
       // clubes também assinam quem está livre no mercado (custo zero) — aos poucos
       if (Math.random() < 0.06) {
@@ -1927,8 +1962,9 @@
     }
     // tempo de casa dos jogadores (para status de ídolo) — +1 temporada por quem fica
     if (career.tenure) { (career.roster || []).forEach(function (id) { career.tenure[id] = (career.tenure[id] || 0) + 1; }); }
-    // parcelas de transferências (paga a próxima parcela de cada compra parcelada)
-    if (career.installments && career.installments.length) {
+    // parcelas de transferências: NÃO são debitadas automaticamente — vencem por data e o treinador paga em Finanças
+    if (TM.fin) { try { TM.fin.seasonEnd(career); } catch (e) {} }
+    else if (career.installments && career.installments.length) {
       var stillDue = [], paidTot = 0;
       career.installments.forEach(function (it) {
         if (it.left > 0) { career.budget -= it.per; paidTot += it.per; it.left--; if (it.left > 0) stillDue.push(it); }
@@ -1988,9 +2024,63 @@
     if (career.nation && !career.nation.fired) setupNationSeason(career);
   }
   // envelhece e evolui os jogadores da base (não estão no mundo global)
+  var YOUTH_MAX_AGE = 21;
   function ageYouth(career) {
     (career.youth || []).forEach(function (y) { ageWorldPlayer(y); });
     Object.keys(career.customPlayers || {}).forEach(function (id) { ageWorldPlayer(career.customPlayers[id]); });
+    // BASE É ATÉ 21 ANOS: quem passa da idade sem subir ao profissional é dispensado e vai para os passes livres
+    var out = [], keep = [];
+    (career.youth || []).forEach(function (y) { if ((y.age || 15) > YOUTH_MAX_AGE) out.push(y); else keep.push(y); });
+    if (out.length) {
+      career.youth = keep; career.youthMap = null;
+      career.releasedYouth = career.releasedYouth || {};
+      out.forEach(function (y) { releaseYouthToWorld(career, y); });
+      TM.notify.push(career, { icon: "🌱", title: "Dispensados da base", news: true, text: out.map(function (y) { return y.name + " (" + y.pos + " " + y.overall + ", " + y.age + " anos)"; }).join(", ") + " passaram dos 21 anos sem subir ao profissional e foram liberados. Estão livres no mercado (🆓 Livres)." });
+    }
+    // aviso: último ano na base
+    var last = (career.youth || []).filter(function (y) { return (y.age || 15) === YOUTH_MAX_AGE; });
+    if (last.length) TM.notify.push(career, { icon: "⏳", title: "Último ano na base", text: last.map(function (y) { return y.name + " (" + y.pos + " " + y.overall + "/" + (y.potential || y.overall) + ")"; }).join(", ") + " completam 21 anos: suba ao profissional nesta temporada ou serão dispensados no fim dela." });
+    // nova turma da base (3 a 5 garotos de 14 a 16 anos por temporada)
+    youthIntake(career);
+  }
+  function releaseYouthToWorld(career, y) {
+    var W = TM.data.world(); if (!W || !W.playersById) return;
+    var fp = {}; Object.keys(y).forEach(function (k) { fp[k] = y[k]; });
+    fp.clubId = null; fp.freeAgent = true; fp.youth = false; fp.hiddenPot = false; fp.releasedFrom = career.teamId;
+    W.playersById[fp.id] = fp;
+    W.freeAgents = W.freeAgents || []; if (W.freeAgents.indexOf(fp.id) < 0) W.freeAgents.push(fp.id);
+    career.releasedYouth[fp.id] = fp;
+  }
+  // reinjeta no mundo (que regenera determinístico) os garotos dispensados da base
+  function applyReleasedYouth(career) {
+    if (!career || !career.releasedYouth) return;
+    var W = TM.data.world(); if (!W || !W.playersById) return;
+    Object.keys(career.releasedYouth).forEach(function (id) {
+      var fp = career.releasedYouth[id]; if (!fp) return;
+      if (W.playersById[id]) return;                       // já está (ou foi contratado por alguém: worldTransfers cuida)
+      if (career.roster && career.roster.indexOf(id) >= 0) return;
+      W.playersById[id] = fp; W.freeAgents = W.freeAgents || []; if (fp.freeAgent && W.freeAgents.indexOf(id) < 0) W.freeAgents.push(id);
+    });
+  }
+  function youthIntake(career) {
+    var club = TM.data.club(career.teamId); if (!club) return;
+    var culture = TM.data.cultureOfLeague(club.leagueId);
+    var natName = TM.data.league(club.leagueId).nation;
+    var nat = TM.data.nationByName(natName) || TM.data.world().nations[0];
+    var n = 3 + Math.floor(Math.random() * 3), s = career.season || 1, pool = ["GK", "DF", "DF", "MF", "MF", "FW", "DF", "MF", "FW"];
+    var added = [];
+    for (var i = 0; i < n; i++) {
+      var pos = pool[Math.floor(Math.random() * pool.length)];
+      var age = 14 + Math.floor(Math.random() * 3), ov = 44 + Math.floor(Math.random() * 12);
+      var jewel = Math.random() < 0.06 + Math.min(0.06, (career.ctLevel || 2) * 0.015);
+      var pot = jewel ? Math.min(90, ov + 18 + Math.floor(Math.random() * 12)) : Math.min(77, ov + 4 + Math.floor(Math.random() * 12));
+      var y = { id: "y" + career.teamId + "-s" + s + "-" + i + Math.floor(Math.random() * 100), name: TM.data.randomName(culture), clubId: career.teamId, pos: pos, pos2: TM.data.randomSpecificPos(pos),
+        age: age, overall: ov, potential: pot, attrs: youthAttrs(ov, pos), nationId: nat.id, nationName: nat.name,
+        height: 160 + Math.floor(Math.random() * 30), weight: 52 + Math.floor(Math.random() * 26), youth: true, hiddenPot: true, jewel: jewel, intake: s };
+      career.youth.push(y); added.push(y.name);
+    }
+    career.youthMap = null;
+    if (added.length) TM.notify.push(career, { icon: "🌱", title: "Nova turma na base", text: added.length + " garotos entraram nas categorias de base: " + added.join(", ") + ". Veja em 🌱 Base." });
   }
   function seasonEvoSummary(career, before) {
     var risers = [], aged = [];
@@ -2039,6 +2129,7 @@
     if (!career.windows) buildWindows(career);
     if (!career.pendingWorldDeals) career.pendingWorldDeals = [];
     applyRegen(career); // remove aposentados e reinjeta newgens ANTES de escalar/reaplicar evolução
+    try { applyReleasedYouth(career); } catch (e) {}
     syncLineup(career); // reincorpora contratados que faltavam no banco
     applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
     applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
@@ -2235,7 +2326,7 @@
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, dynValue: dynValue, perfMult: perfMult, resolveIncomingOffer: resolveIncomingOffer,
     counterIncomingOffer: counterIncomingOffer, counterLoanOffer: counterLoanOffer,
-    promoteYouth: promoteYouth, generateYouth: generateYouth,
+    promoteYouth: promoteYouth, generateYouth: generateYouth, youthAttrs: youthAttrs, YOUTH_MAX_AGE: YOUTH_MAX_AGE, ageYouth: ageYouth, maybeIncomingOffer: maybeIncomingOffer,
     clubStance: clubStance, signLoan: signLoan, exerciseLoanBuy: exerciseLoanBuy, returnLoanIn: returnLoanIn,
     resolveLoanOffer: resolveLoanOffer, loanTermLabel: loanTermLabel, fmtMoney: fmtMoney,
     baseBudgetEur: baseBudgetEur

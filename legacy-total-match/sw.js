@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v262";
+var CACHE = "total-match-v263";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
@@ -9,7 +9,7 @@ var SHELL = [
   "js/vendor/qrcode.js",
   "js/rng.js", "js/data.js", "js/placeholders.js", "js/storage.js", "js/notify.js",
   "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js",
-  "js/competitions.js", "js/coach.js", "js/player.js", "js/director.js", "js/saf.js", "js/build.js", "js/arena.js",
+  "js/competitions.js", "js/coach.js", "js/player.js", "js/director.js", "js/saf.js", "js/finance.js", "js/build.js", "js/arena.js",
   "js/compmode.js", "js/tournament.js", "js/groupcomp.js", "js/matchview.js", "js/pitch2d.js", "js/scout.js",
   "js/net.js", "js/fairplay.js", "js/online.js", "js/account.js", "js/news.js", "js/social.js", "js/editor.js", "js/app.js",
   "assets/estadios/st-10287243.jpg", "assets/estadios/st-10463656.jpg", "assets/estadios/st-1171084.jpg",

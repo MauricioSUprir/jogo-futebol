@@ -290,7 +290,7 @@
       if (!c.contracts[id]) {
         var p = TM.data.player(id); if (!p) return;
         var val = TM.data.marketValue ? TM.data.marketValue(p) : (p.overall || 70) / 10;
-        c.contracts[id] = { years: 1 + (phash(id + ":ct") % 4), wage: r2(Math.max(0.02, val * 0.10)), clause: r2(val * (2 + (phash(id + ":cl") % 20) / 10)) };
+        c.contracts[id] = { years: 1 + (phash(id + ":ct") % 4), wage: r2(Math.max(0.02, val * 0.10)), clause: (phash(id + ":hc") % 100 < 55) ? r2(val * (2 + (phash(id + ":cl") % 20) / 10)) : 0 };
       }
     });
     Object.keys(c.contracts).forEach(function (id) { if ((c.roster || []).indexOf(id) < 0) delete c.contracts[id]; });
@@ -850,6 +850,7 @@
     C().migrateCareer(c);
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     try { TM.club.ensure(c); TM.club.maybeSafOffer(c); } catch (e) {} // propostas de SAF nas janelas
+    try { if (TM.fin) TM.fin.tick(c); } catch (e) {}                 // parcelas, bônus, transfer ban, endividamento
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
@@ -1275,7 +1276,7 @@
   // folha salarial estimada do elenco (na moeda da carreira)
   function seasonWageBillCur(c) {
     var sum = 0;
-    C().rosterPlayers(c).forEach(function (p) { sum += TM.data.marketValue(p) * 0.075; });
+    C().rosterPlayers(c).forEach(function (p) { var li = c.loanedIn && c.loanedIn[p.id]; var sh = li && li.share != null ? li.share / 100 : 1; sum += TM.data.marketValue(p) * 0.075 * sh; });
     return r2(sum * mult(c));
   }
   // balanço financeiro estimado da temporada — receitas fixas (TV, bilheteria, patrocínio)
@@ -1476,6 +1477,7 @@
         : "As contas estão no vermelho. Venda jogadores, ganhe títulos ou reduza a folha para equilibrar." })
     ]));
 
+    try { if (TM.fin) TM.fin.panels(c, body); } catch (e) {}
     try { TM.club.financePanels(c, body, "coach-finance"); } catch (e) {}
     body.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("🔄 Ver movimentações", function () { TM.ui.go("coach-transfers"); }, "btn"),
@@ -3036,6 +3038,7 @@
     screen.appendChild(TM.ui.topbar("🔁 Mercado", function () { TM.ui.go("coach-hub"); }));
     addSectorBar(screen, "coach-market");
     screen.appendChild(el("div", { class: "market-budget", text: "💰 Orçamento: " + money(c, c.budget) }));
+    if (TM.fin && TM.fin.banned(c)) screen.appendChild(el("div", { class: "fin-ban", text: TM.fin.banLabel(c) + " · vendas liberadas" }));
 
     var world = TM.data.world();
     var rosterSet = {}; c.roster.forEach(function (id) { rosterSet[id] = true; });
@@ -3072,6 +3075,7 @@
     chipRow.appendChild(chip("💵 No orçamento", MKT.affordable, function () { MKT.affordable = !MKT.affordable; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🔭 Indicados", MKT.scouted, function () { MKT.scouted = !MKT.scouted; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🕵️ Olheiros", false, function () { TM.ui.go("coach-scouting", { from: "coach-market" }); }));
+    chipRow.appendChild(chip("📰 Negócios", false, function () { TM.ui.go("coach-market-feed"); }));
     screen.appendChild(chipRow);
 
     // busca
@@ -3233,6 +3237,38 @@
     renderResults();
   });
 
+  /* ---------- 📰 negócios do mercado: transferências entre os outros clubes ---------- */
+  TM.ui.register("coach-market-feed", function (screen) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
+    screen.appendChild(TM.ui.topbar("📰 Negócios do mercado", function () { TM.ui.go("coach-market"); }));
+    var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    var feed = (c.marketFeed || []);
+    var open = C().windowOpenNow(c);
+    body.appendChild(el("div", { class: "market-budget", text: (open ? "🟢 Janela aberta" : "🔴 Janela fechada") + " · " + feed.length + " movimentações registradas" }));
+    if (!feed.length) { body.appendChild(el("p", { class: "intro-text", text: "Nenhuma transferência registrada ainda. Durante as janelas os outros clubes negociam entre si — cada dia que passa gera negócios (e o fim da janela é um frenesi)." })); return; }
+    var bySeason = {}; feed.forEach(function (m) { var k = m.season || 1; (bySeason[k] = bySeason[k] || []).push(m); });
+    Object.keys(bySeason).sort(function (a, b) { return b - a; }).forEach(function (sk) {
+      body.appendChild(el("h3", { class: "section-title", text: "Temporada " + sk }));
+      bySeason[sk].forEach(function (mv) {
+        var ic = mv.kind === "fire" ? "🚨" : mv.kind === "free" ? "✍️" : "🔁";
+        var toCl = TM.data.club(mv.toId), fromCl = mv.fromId && mv.fromId !== "free" ? TM.data.club(mv.fromId) : null;
+        var feeTxt = mv.kind === "free" ? "Livre" : money(c, curVal(c, mv.val || 0));
+        var dtx = ""; try { dtx = C().dateOf(c, mv.day || 0).short; } catch (e) {}
+        var row = el("div", { class: "feed-mv" }, [
+          (TM.img && TM.img.clubImg && toCl) ? TM.img.clubImg(toCl, "cr-mvcrest") : el("span", { class: "cr-mvcrest" }),
+          el("div", { class: "feed-mid" }, [
+            el("div", { class: "feed-name" }, [ el("span", { text: ic + " " + mv.name + " " }), el("span", { class: "cr-mvov", text: mv.ov }) ]),
+            el("div", { class: "feed-sub", text: (fromCl ? fromCl.name : (mv.fromName || "sem clube")) + " → " + (toCl ? toCl.name : mv.toName) + (dtx ? " · " + dtx : "") })
+          ]),
+          el("div", { class: "feed-fee" + (mv.kind === "fire" ? " fire" : ""), text: feeTxt })
+        ]);
+        var pl = mv.pid ? TM.data.player(mv.pid) : null;
+        if (pl) { row.classList.add("clickable"); row.addEventListener("click", function () { openPlayerProfile(pl, "coach-market-feed"); }); }
+        body.appendChild(row);
+      });
+    });
+  });
+
   /* ---------- central de transferências (alvos / shortlist) ---------- */
   function toggleShortlist(c, pid) {
     c.shortlist = c.shortlist || [];
@@ -3370,6 +3406,8 @@
     var mval = curVal(c, TM.data.marketValue(p));
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
+    if (TM.fin && TM.fin.banned(c)) { screen.appendChild(TM.fin.banBox(c, "coach-market")); return; }
+    var clauseV = TM.fin ? curVal(c, TM.fin.worldClause(p)) : 0, clauseMode = (TM.fin && clauseV) ? TM.fin.clauseMode(p, stance) : null;
     screen.appendChild(el("div", { class: "nego-step" }, [
       el("div", { class: "nego-dot active", text: "1. Com o clube" }),
       el("div", { class: "nego-dot", text: "2. Com o jogador" })
@@ -3392,21 +3430,45 @@
         el("div", { class: "nego2-pmeta" }, [
           el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(p) + "</b>" }),
           el("span", { class: "nego2-chip", html: "IDADE <b>" + p.age + "</b>" }),
-          el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, mval) + "</b>" })
+          el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, mval) + "</b>" }),
+          clauseV ? el("span", { class: "nego2-chip clause", html: "CLÁUSULA <b>" + money(c, clauseV) + "</b>" }) : null
         ])
       ]),
       el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: p.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
     ]));
 
-    // jogador INTRANSFERÍVEL — o clube não vende de jeito nenhum
+    // pagar a cláusula de rescisão: o clube não pode recusar (o jogador ainda precisa aceitar o contrato)
+    function clauseButton(cls) {
+      var can = c.budget >= clauseV;
+      return TM.ui.button("💥 Pagar cláusula de " + money(c, clauseV) + (can ? "" : " (sem caixa)"), function () {
+        if (!can) { TM.ui.toast("Seu caixa não cobre a cláusula (" + money(c, c.budget) + ")."); return; }
+        TM.ui.confirm("Pagar a cláusula?", "Você deposita " + money(c, clauseV) + " à vista e o " + sellClub.name + " é obrigado a liberar " + p.name + ". Depois é só acertar o contrato com o jogador.", "Pagar", function () {
+          goPlayer({ pid: p.id, oldClubId: p.clubId, type: "buy", fee: clauseV, parts: 1, viaClause: true });
+        });
+      }, cls || "btn primary");
+    }
+
+    // jogador INTRANSFERÍVEL — o clube não vende de jeito nenhum (só a cláusula de rescisão obriga)
     if (isUntransferable(p)) {
       screen.appendChild(el("div", { class: "untransfer-box" }, [
         el("div", { class: "ut-ic", text: "🔒" }),
         el("div", { class: "ut-t", text: p.name + " é INTRANSFERÍVEL" }),
-        el("div", { class: "ut-s", text: "O " + sellClub.name + " considera " + p.name + " (" + p.overall + ", " + p.age + " anos) um pilar do projeto e não aceita vendê-lo por nenhum valor." }),
+        el("div", { class: "ut-s", text: "O " + sellClub.name + " considera " + p.name + " (" + p.overall + ", " + p.age + " anos) um pilar do projeto e não aceita vendê-lo por nenhum valor." + (clauseV ? " A única saída é pagar a cláusula de rescisão de " + money(c, clauseV) + "." : "") }),
+        clauseV ? clauseButton("btn primary") : null,
         TM.ui.button("← Voltar ao mercado", function () { TM.ui.go("coach-market"); }, "btn")
-      ]));
+      ].filter(Boolean)));
       return;
+    }
+    // clube que SÓ libera pela cláusula: não senta para negociar
+    if (clauseMode === "only") {
+      screen.appendChild(el("div", { class: "untransfer-box clause-only" }, [
+        el("div", { class: "ut-ic", text: "📜" }),
+        el("div", { class: "ut-t", text: sellClub.name + " não negocia " + p.name }),
+        el("div", { class: "ut-s", text: "“Não vamos sentar para conversar. Quem quiser o jogador paga a cláusula de rescisão: " + money(c, clauseV) + ", à vista.”" + (stance.willLoan ? " O clube até aceita conversar sobre empréstimo." : "") }),
+        clauseButton("btn primary"),
+        stance.willLoan ? TM.ui.button("🔁 Propor empréstimo", function () { deal.type = "loan"; clauseMode = null; TM.ui.toast("Negociando empréstimo…"); render(); }, "btn") : null,
+        TM.ui.button("← Voltar ao mercado", function () { TM.ui.go("coach-market"); }, "btn ghost")
+      ].filter(Boolean)));
     }
 
     // postura do clube dono
@@ -3422,13 +3484,18 @@
     if (stance.willBuyOption) types.push(["loanBuy", "Empr. c/ opção"]);
     var deal = { type: "buy" };
     var panel = el("div", { class: "nego-panel" });
-    screen.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tipo de negócio" }), segCtl(types, "buy", function (v) { deal.type = v; render(); }) ]));
+    var typeRow = el("div", { class: "nego-field" }, [ el("label", { text: "Tipo de negócio" }), segCtl(types, deal.type, function (v) { deal.type = v; render(); }) ]);
+    if (clauseMode === "only") typeRow.style.display = "none";
+    screen.appendChild(typeRow);
     screen.appendChild(panel);
 
     function goPlayer(nego) { NEGO = nego; TM.ui.go("coach-nego-player"); }
 
+    var onlyClause = clauseMode === "only";
     function render() {
       panel.innerHTML = "";
+      if (onlyClause && deal.type === "buy") { if (clauseMode === null) panel.appendChild(el("div", { class: "nego-quote angry", text: sellClub.name + ": “Compra só pela cláusula de rescisão (" + money(c, clauseV) + "). Empréstimo a gente conversa.”" })); return; }
+      typeRow.style.display = "";
       if (deal.type === "buy") renderBuy();
       else renderLoan(deal.type === "loanBuy");
     }
@@ -3445,6 +3512,7 @@
       function effAsking() { return Math.max(0.05, Math.round((asking * (1 - sweetDiscount()) - swap.val) * 100) / 100); }
 
       panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "Valor de mercado" }), el("span", { class: "deal-val", text: money(c, mval) }) ]));
+      if (clauseV) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📜 Cláusula de rescisão (atalho: paga e leva)" }), el("span", { class: "deal-val", text: money(c, clauseV) }) ]));
 
       // paciência do clube (some conforme você insiste com propostas baixas)
       var moodBar = el("div", { class: "nego-mood" });
@@ -3483,7 +3551,7 @@
       function updSweet() {
         sweetNote.innerHTML = "";
         var parts = [];
-        if (sweet.bonus) parts.push("bônus de " + money(c, bonusAmt) + " por metas");
+        if (sweet.bonus) parts.push("bônus de " + money(c, bonusAmt) + " se o jogador fizer " + (TM.fin ? TM.fin.BONUS_APPS : 20) + " jogos na temporada");
         if (sweet.sellOn) parts.push("10% de uma venda futura");
         if (sweet.parts > 1) parts.push("parcelado em " + sweet.parts + "x");
         sweetNote.textContent = parts.length ? "Proposta inclui: " + parts.join(", ") + "." : "";
@@ -3557,13 +3625,17 @@
 
       updateMood();
       actionWrap.appendChild(offerBtn); actionWrap.appendChild(acceptBtn); actionWrap.appendChild(nextBtn);
+      if (clauseV) actionWrap.appendChild(clauseButton("btn ghost"));
       panel.appendChild(actionWrap);
     }
 
     /* --- empréstimo (simples ou com opção de compra) --- */
     function renderLoan(withOption) {
-      var d = { termYears: 1, loanFee: Math.max(0.05, r2(mval * 0.08)), buyPrice: r2(mval * stance.priceMult * 1.15) };
+      var d = { termYears: 1, loanFee: Math.max(0.05, r2(mval * 0.08)), buyPrice: r2(mval * stance.priceMult * 1.15), share: 100 };
       var minBuy = r2(mval * stance.priceMult); // o clube dono exige no mínimo isso
+      // divisão do salário: o clube dono aceita bancar parte, mas quanto menos você paga, mais taxa ele exige
+      var minShare = stance.isKey ? 80 : stance.willSell ? 40 : 60;
+      function minFeeFor(share) { return r2(Math.max(0.05, mval * 0.05 * (1 + (100 - share) / 60))); }
       var quote = el("div", { class: "nego-quote", text: sellClub.name + ": “" + (withOption ? "Topamos emprestar " + p.name + " com opção — mas a opção não sai por menos de " + money(c, minBuy) + "." : "Podemos emprestar " + p.name + ". Combine a taxa e o tempo.") + "”" });
       panel.appendChild(quote);
 
@@ -3578,6 +3650,18 @@
       feeSlider.addEventListener("input", function () { d.loanFee = r2(parseFloat(feeSlider.value)); feeVal.textContent = money(c, d.loanFee); });
       panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Taxa de empréstimo" }), el("div", { class: "range-wrap" }, [ feeSlider, feeVal ]) ]));
 
+      // divisão do salário no período do empréstimo
+      var wDem = curVal(c, wageDemand(p));
+      var shVal = el("span", { class: "range-val", text: "você 100% · " + sellClub.name + " 0%" });
+      var shSlider = el("input", { type: "range", min: 0, max: 100, step: 10, value: 100, class: "slider" });
+      var shNote = el("div", { class: "sweet-note", text: "Salário estimado " + money(c, wDem) + "/ano — você paga " + money(c, wDem) + "." });
+      shSlider.addEventListener("input", function () {
+        d.share = parseInt(shSlider.value, 10);
+        shVal.textContent = "você " + d.share + "% · " + sellClub.name + " " + (100 - d.share) + "%";
+        shNote.textContent = "Salário estimado " + money(c, wDem) + "/ano — você paga " + money(c, r2(wDem * d.share / 100)) + ". " + (d.share < minShare ? "⚠ O " + sellClub.name + " não banca mais de " + (100 - minShare) + "%." : d.share < 100 ? "O clube dono vai pedir taxa mínima de " + money(c, minFeeFor(d.share)) + "." : "");
+      });
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Divisão do salário no período" }), el("div", { class: "range-wrap" }, [ shSlider, shVal ]), shNote ]));
+
       // preço da opção de compra
       if (withOption) {
         var bpVal = el("span", { class: "range-val", text: money(c, d.buyPrice) });
@@ -3590,6 +3674,8 @@
       var actionWrap = el("div", { class: "actions", style: "margin-top:6px" });
       var offerBtn = TM.ui.button("Propor empréstimo", function () {
         if (d.loanFee > c.budget) { quote.className = "nego-quote angry"; quote.textContent = "Você não tem orçamento nem para a taxa (" + money(c, c.budget) + ")."; return; }
+        if (d.share < minShare) { quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Não vamos pagar " + (100 - d.share) + "% do salário de um jogador que vai jogar por vocês. No máximo " + (100 - minShare) + "%.”"; return; }
+        if (d.share < 100 && d.loanFee < minFeeFor(d.share)) { quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “Se vamos bancar " + (100 - d.share) + "% do salário, a taxa tem que ser de pelo menos " + money(c, minFeeFor(d.share)) + ".”"; return; }
         if (withOption && d.buyPrice < minBuy) {
           quote.className = "nego-quote angry"; quote.textContent = sellClub.name + ": “A opção de compra é baixa demais. No mínimo " + money(c, minBuy) + ".”"; return;
         }
@@ -3597,7 +3683,7 @@
         offerBtn.disabled = true; nextBtn.style.display = "block";
       }, "btn primary");
       var nextBtn = TM.ui.button("Negociar com o jogador →", function () {
-        goPlayer({ pid: p.id, oldClubId: p.clubId, type: withOption ? "loanBuy" : "loan", loanFee: d.loanFee, termYears: d.termYears, buyPrice: withOption ? d.buyPrice : 0 });
+        goPlayer({ pid: p.id, oldClubId: p.clubId, type: withOption ? "loanBuy" : "loan", loanFee: d.loanFee, termYears: d.termYears, buyPrice: withOption ? d.buyPrice : 0, share: d.share });
       }, "btn primary next-step");
       nextBtn.style.display = "none";
       actionWrap.appendChild(offerBtn); actionWrap.appendChild(nextBtn);
@@ -3617,11 +3703,15 @@
     var ag = agentOf(p);
     var demand = curVal(c, wageDemand(p) * ag.wageMult);
     var agentFee = Math.round((NEGO.fee || 0) * ag.feePct / 100 * 100) / 100;
-    var terms = { wage: demand, years: 3, role: "titular", release: false };
+    var terms = { wage: demand, years: 3, role: "titular", release: false, clauseM: 0 };
     NEGO.agentFee = agentFee;
+    var mvalCur = curVal(c, TM.data.marketValue(p));
+    var isLoanDeal = NEGO.type === "loan" || NEGO.type === "loanBuy";
+    var share = isLoanDeal && NEGO.share != null ? NEGO.share : 100;
 
     var isFree = !NEGO.oldClubId;
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
+    if (TM.fin && TM.fin.banned(c)) { screen.appendChild(TM.fin.banBox(c, "coach-market")); return; }
     if (isFree) {
       screen.appendChild(el("div", { class: "nego-step" }, [ el("div", { class: "nego-dot active", text: "🆓 Passe livre — acerto direto com o jogador" }) ]));
     } else {
@@ -3635,6 +3725,8 @@
     screen.appendChild(panel);
     var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de " + money(c, demand) + " por ano e um papel de destaque.”" });
     panel.appendChild(quote);
+    if (NEGO.viaClause) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📜 Cláusula de rescisão depositada" }), el("span", { class: "deal-val", text: money(c, NEGO.fee || 0) }) ]));
+    if (isLoanDeal) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "🔁 Empréstimo de " + C().loanTermLabel(NEGO.termYears || 1) + (NEGO.type === "loanBuy" ? " com opção de compra" : "") }), el("span", { class: "deal-val", text: "você paga " + share + "% do salário" }) ]));
     // empresário do jogador
     panel.appendChild(el("div", { class: "agent-line agent-" + ag.type }, [
       el("span", { class: "agent-ic", text: ag.ic }),
@@ -3645,29 +3737,49 @@
     ]));
 
     // salário
-    var wageVal = el("span", { class: "range-val", text: money(c, terms.wage) + "/ano" });
+    function wageTxt() { return money(c, terms.wage) + "/ano" + (share < 100 ? " (sua parte: " + money(c, r2(terms.wage * share / 100)) + ")" : ""); }
+    var wageVal = el("span", { class: "range-val", text: wageTxt() });
     var wageMax = Math.max(0.15, r2(demand * 3)), wStep = moneyStep(wageMax);
     var wageSlider = el("input", { type: "range", min: wStep, max: wageMax, step: wStep, value: Math.min(terms.wage, wageMax), class: "slider" });
-    wageSlider.addEventListener("input", function () { terms.wage = r2(parseFloat(wageSlider.value)); wageVal.textContent = money(c, terms.wage) + "/ano"; });
+    wageSlider.addEventListener("input", function () { terms.wage = r2(parseFloat(wageSlider.value)); wageVal.textContent = wageTxt(); });
     panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Salário anual" }), el("div", { class: "range-wrap" }, [ wageSlider, wageVal ]) ]));
 
-    // tempo de contrato
-    var yearsSeg = seg(["1", "2", "3", "4", "5"], "3", function (v) { terms.years = parseInt(v, 10); });
-    panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tempo de contrato (anos)" }), yearsSeg ]));
+    // tempo de contrato (empréstimo: o período já foi acertado com o clube dono)
+    if (isLoanDeal) {
+      terms.years = Math.max(1, Math.round(NEGO.termYears || 1));
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Período" }), el("div", { class: "setting-hint", text: "Empréstimo de " + C().loanTermLabel(NEGO.termYears || 1) + " — o vínculo do jogador continua com o " + (TM.data.club(NEGO.oldClubId) || {}).name + "; não há contrato longo a negociar." }) ]));
+    } else {
+      var yearsSeg = seg(["1", "2", "3", "4", "5"], "3", function (v) { terms.years = parseInt(v, 10); });
+      panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tempo de contrato (anos)" }), yearsSeg ]));
+    }
 
     // função no elenco
     var roleSeg = seg([["estrela", "Estrela"], ["titular", "Titular"], ["rodizio", "Rodízio"], ["promessa", "Promessa"]], "titular", function (v) { terms.role = v; });
     panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Função no elenco" }), roleSeg ]));
 
-    // cláusula de rescisão
-    var relBtn = el("button", { class: "switch" + (terms.release ? " on" : ""), on: { click: function () { terms.release = !terms.release; relBtn.classList.toggle("on", terms.release); } } }, [ el("span", { class: "switch-knob" }) ]);
-    panel.appendChild(el("div", { class: "nego-field", style: "flex-direction:row;justify-content:space-between;align-items:center" }, [ el("label", { text: "Incluir cláusula de rescisão" }), relBtn ]));
+    // cláusula de rescisão (você escolhe o valor; baixa agrada o jogador, alta protege o clube mas ele pede mais salário)
+    if (!isLoanDeal) {
+      var clMin = Math.max(0.1, r2(mvalCur * 1)), clMax = Math.max(clMin + 0.5, r2(mvalCur * 6)), clStep = moneyStep(clMax);
+      terms.clauseM = r2(Math.min(clMax, Math.max(clMin, mvalCur * 2.5)));
+      var clVal = el("span", { class: "range-val", text: money(c, terms.clauseM) });
+      var clSlider = el("input", { type: "range", min: clMin, max: clMax, step: clStep, value: terms.clauseM, class: "slider" });
+      var clNote = el("div", { class: "sweet-note" });
+      function clTxt() { var m = terms.clauseM / Math.max(0.01, mvalCur); clNote.textContent = "Cláusula = " + m.toFixed(1) + "x o valor de mercado. " + (m <= 1.5 ? "Baixa: o jogador aceita salário menor, mas qualquer clube pode levá-lo pagando esse valor." : m >= 4 ? "Alta: protege o clube, mas o jogador pede ~10% a mais de salário." : "Equilibrada."); }
+      clSlider.addEventListener("input", function () { terms.clauseM = r2(parseFloat(clSlider.value)); clVal.textContent = money(c, terms.clauseM); clTxt(); });
+      var clWrap = el("div", { class: "nego-field", style: "display:none" }, [ el("label", { text: "Valor da cláusula de rescisão" }), el("div", { class: "range-wrap" }, [ clSlider, clVal ]), clNote ]);
+      clTxt();
+      var relBtn = el("button", { class: "switch" + (terms.release ? " on" : ""), on: { click: function () { terms.release = !terms.release; relBtn.classList.toggle("on", terms.release); clWrap.style.display = terms.release ? "" : "none"; } } }, [ el("span", { class: "switch-knob" }) ]);
+      panel.appendChild(el("div", { class: "nego-field", style: "flex-direction:row;justify-content:space-between;align-items:center" }, [ el("label", { text: "Incluir cláusula de rescisão" }), relBtn ]));
+      panel.appendChild(clWrap);
+    }
 
     var actionWrap = el("div", { class: "actions" });
     var proposeBtn = TM.ui.button("Oferecer contrato", function () {
       // avaliação do jogador
       var roleScore = { estrela: 1.2, titular: 1.0, rodizio: 0.7, promessa: 0.6 }[terms.role];
-      var wageOk = terms.wage >= demand * (terms.role === "promessa" || terms.role === "rodizio" ? 1.15 : 0.9);
+      var clMult = (!isLoanDeal && terms.release) ? terms.clauseM / Math.max(0.01, mvalCur) : 0;
+      var clFactor = clMult ? (clMult <= 1.5 ? 0.85 : clMult >= 4 ? 1.1 : 1) : 1;
+      var wageOk = terms.wage >= demand * (terms.role === "promessa" || terms.role === "rodizio" ? 1.15 : 0.9) * clFactor;
       var roleOk = !((p.overall >= 80 && (terms.role === "rodizio" || terms.role === "promessa")));
       if (wageOk && roleOk) {
         // fechado!
@@ -3675,8 +3787,10 @@
         if (isLoan) {
           C().signLoan(c, p, {
             parentClubId: NEGO.oldClubId, buyOption: NEGO.type === "loanBuy",
-            buyPrice: NEGO.buyPrice || 0, termYears: NEGO.termYears || 1, loanFee: NEGO.loanFee || 0, wage: terms.wage
+            buyPrice: NEGO.buyPrice || 0, termYears: NEGO.termYears || 1, loanFee: NEGO.loanFee || 0, wage: terms.wage, share: share
           });
+          if (c.loanedIn && c.loanedIn[p.id]) c.loanedIn[p.id].share = share;
+          if (share < 100) TM.notify.push(c, { icon: "🔁", title: "Salário dividido", text: "No empréstimo de " + p.name + ", o " + ((TM.data.club(NEGO.oldClubId) || {}).name || "clube dono") + " paga " + (100 - share) + "% do salário; você paga " + money(c, r2(terms.wage * share / 100)) + "/ano." });
         } else {
           var fee = NEGO.fee || 0, parts = Math.max(1, NEGO.parts || 1);
           var upfront = r2(fee / parts);
@@ -3684,16 +3798,21 @@
           c.budget -= (upfront + agFee);
           c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM += (upfront + agFee);
           if (agFee > 0) TM.notify.push(c, { icon: "💼", title: "Comissão de empresário", text: "Paga comissão de " + money(c, agFee) + " ao empresário de " + p.name + "." });
-          // parcelas futuras (pagas no início das próximas temporadas)
+          // parcelas futuras: vencimentos com aviso, pagamento MANUAL em Finanças
+          var sellNm = NEGO.oldClubId ? (TM.data.club(NEGO.oldClubId) || {}).name : "";
           if (parts > 1) {
-            c.installments = c.installments || [];
-            c.installments.push({ pid: p.id, name: p.name, per: upfront, left: parts - 1, to: NEGO.oldClubId ? (TM.data.club(NEGO.oldClubId) || {}).name : "" });
+            if (TM.fin) TM.fin.addInstallments(c, { pid: p.id, name: p.name, per: upfront, parts: parts, toName: sellNm, toId: NEGO.oldClubId || null });
+            else { c.installments = c.installments || []; c.installments.push({ pid: p.id, name: p.name, per: upfront, left: parts - 1, to: sellNm }); }
           }
-          // bônus por metas e % de venda futura ficam registrados no jogador
+          // bônus por metas (20 jogos na temporada) e % de venda futura — cobrados quando acontecem
           if (NEGO.bonus || NEGO.sellOn) {
-            c.dealTerms = c.dealTerms || {};
-            c.dealTerms[p.id] = { bonus: NEGO.bonus || 0, sellOn: NEGO.sellOn || 0 };
+            if (TM.fin) TM.fin.setDealTerms(c, { pid: p.id, bonus: NEGO.bonus || 0, sellOn: NEGO.sellOn || 0, toId: NEGO.oldClubId || null, toName: sellNm, fee: fee });
+            else { c.dealTerms = c.dealTerms || {}; c.dealTerms[p.id] = { bonus: NEGO.bonus || 0, sellOn: NEGO.sellOn || 0 }; }
           }
+          // contrato conforme o negociado (salário e cláusula guardados em euro-base)
+          c.contracts = c.contracts || {};
+          c.contracts[p.id] = { years: terms.years, wage: r2(terms.wage / mult(c)), clause: terms.release ? r2(terms.clauseM / mult(c)) : 0, role: terms.role };
+          if (NEGO.viaClause) TM.notify.push(c, { icon: "📜", title: "Cláusula paga", news: true, text: "Você depositou a cláusula de rescisão de " + money(c, fee) + " e o " + (sellNm || "clube") + " foi obrigado a liberar " + p.name + "." });
           C().logDeal(c, { type: "in", kind: NEGO.oldClubId ? "buy" : "free", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: fee, other: NEGO.oldClubId && TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "Sem clube (livre)" });
           c.roster.push(p.id);
           c.signedFrom[p.id] = NEGO.oldClubId;
@@ -3709,7 +3828,6 @@
             TM.notify.push(c, { icon: "🔄", title: "Troca fechada", news: true, text: (NEGO.swapName || "Um jogador") + " foi incluído na negociação e se transferiu para o " + (TM.data.club(NEGO.oldClubId) ? TM.data.club(NEGO.oldClubId).name : "clube vendedor") + "." });
           }
           C().syncLineup(c); // já entra no banco de reservas
-          if (parts > 1) TM.notify.push(c, { icon: "💳", title: "Compra parcelada", text: p.name + " parcelado em " + parts + "x de " + money(c, upfront) + " — as próximas parcelas serão cobradas nas próximas temporadas." });
         }
         // OFICIALIZA a contratação: notícia + post nas redes + feed do mercado
         try {
@@ -3733,6 +3851,8 @@
         TM.ui.arrivalCutscene(p, TM.data.club(c.teamId), null);
       } else if (!roleOk) {
         quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Sou titular indiscutível. Não aceito função de reserva.”";
+      } else if (clFactor > 1) {
+        quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Com uma cláusula tão alta, quero pelo menos " + money(c, r2(demand * 1.1)) + "/ano — ou baixe a cláusula.”";
       } else {
         quote.className = "nego-quote angry"; quote.textContent = p.name + ": “Salário insuficiente. Quero pelo menos " + money(c, demand) + "/ano.”";
       }
@@ -4118,7 +4238,7 @@
           el("div", { class: "cc-grid" }, [
             el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v" + (ct.years <= 1 ? " warn" : ""), text: ct.years <= 0 ? "0" : ct.years }), el("div", { class: "cc-l", text: "temporadas" }) ]),
             el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, curVal(c, ct.wage)) }), el("div", { class: "cc-l", text: "salário/ano" }) ]),
-            el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: money(c, curVal(c, ct.clause)) }), el("div", { class: "cc-l", text: "cláusula" }) ])
+            el("div", { class: "cc-cell" }, [ el("div", { class: "cc-v", text: ct.clause ? money(c, curVal(c, ct.clause)) : "—" }), el("div", { class: "cc-l", text: ct.clause ? "cláusula" : "sem cláusula" }) ])
           ]),
           el("div", { class: "cc-note", text: yrsTxt }),
           TM.ui.button("✍️ Renovar contrato (+2 temporadas)", function () {
@@ -4624,6 +4744,10 @@
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("💼 Responder", function () { TM.ui.go("club-saf-event", { noteId: n.id }); }, "btn primary small")
         ]));
+      } else if (n.fin) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("💰 Ir a Finanças", function () { TM.ui.go("coach-finance"); }, "btn primary small")
+        ]));
       } else if (n.nationInvite) {
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("Aceitar", function () {
@@ -5048,15 +5172,19 @@
     screen.appendChild(TM.ui.topbar("🌱 Categorias de Base", function () { TM.ui.go("coach-hub"); }));
     addSectorBar(screen, "coach-youth");
     screen.appendChild(el("div", { class: "panel-narrow" }, [
-      el("p", { class: "intro-text", text: "Elenco da base do seu clube. Promova jogadores de 15 anos ou mais para o profissional, ou dispute uma partida de base." }),
-      TM.ui.button("⚽ Disputar partida de base", function () { TM.ui.go("coach-youth-match"); }, "btn primary")
+      el("p", { class: "intro-text", text: "Elenco da base do seu clube (até 21 anos). Promova jogadores de 15 anos ou mais para o profissional. Quem completar 22 anos sem subir é dispensado e vai para os passes livres." }),
+      el("div", { class: "actions", style: "margin-top:6px" }, [
+        TM.ui.button("⚽ Disputar partida de base", function () { TM.ui.go("coach-youth-match"); }, "btn primary"),
+        TM.ui.button("🔭 Olheiros da base", function () { TM.ui.go("coach-scouting", { from: "coach-youth", tab: "youth" }); }, "btn")
+      ])
     ]));
 
-    // abas por categoria: Sub-17 (<=16) e Sub-20 (17-19)
+    // abas por categoria: Sub-17 (<=16), Sub-20 (17-19) e Sub-21 (20-21)
     var all = c.youth || [];
     var sub17 = all.filter(function (p) { return (p.age || 15) <= 16; });
-    var sub20 = all.filter(function (p) { return (p.age || 15) >= 17; });
-    var TABS = [["all", "Todos", all], ["s17", "Sub-17", sub17], ["s20", "Sub-20", sub20]];
+    var sub20 = all.filter(function (p) { return (p.age || 15) >= 17 && (p.age || 15) <= 19; });
+    var sub21 = all.filter(function (p) { return (p.age || 15) >= 20; });
+    var TABS = [["all", "Todos", all], ["s17", "Sub-17", sub17], ["s20", "Sub-20", sub20], ["s21", "Sub-21", sub21]];
     if (!youthTab) youthTab = "all";
     var tabRow = el("div", { class: "youth-tabs panel-narrow" });
     TABS.forEach(function (t) {
@@ -5071,8 +5199,9 @@
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     shown.slice().sort(function (a, b) { return order[a.pos] - order[b.pos] || b.potential - a.potential; }).forEach(function (p) {
       var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.coachUI.openPlayer(pl, TM.ui.current()); } });
-      var cat = (p.age || 15) <= 16 ? "Sub-17" : "Sub-20";
-      row.appendChild(el("span", { class: "youth-cat", text: cat }));
+      var cat = (p.age || 15) <= 16 ? "Sub-17" : (p.age || 15) <= 19 ? "Sub-20" : "Sub-21";
+      row.appendChild(el("span", { class: "youth-cat" + ((p.age || 15) >= 21 ? " last" : ""), text: (p.age || 15) >= 21 ? "⏳ último ano" : cat }));
+      if (p.scoutedBy) row.appendChild(el("span", { class: "youth-cat", text: "🔭 " + p.scoutedBy }));
       var canPromote = p.age >= 15;
       row.appendChild(el("button", { class: "buy-btn" + (canPromote ? "" : " disabled"), text: canPromote ? "Subir ↑" : p.age + " anos", on: { click: function (e) {
         e.stopPropagation();
