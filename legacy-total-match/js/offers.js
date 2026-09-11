@@ -49,7 +49,7 @@
     var mood = MOODS[h % MOODS.length];
     off.v2 = true; off.mood = mood.id; off.patience = mood.patience; off.rounds = 0; off.history = [];
     off.reason = REASONS[(h >>> 4) % REASONS.length].replace("{p}", p.name);
-    off.deadlineDay = day(c) + 3 + ((h >>> 8) % 4);                    // 3 a 6 dias para responder
+    off.deadlineDay = day(c) + 8 + ((h >>> 8) % 4);                    // 8 a 11 dias para responder (2 a 3 rodadas; os jogos avançam 4 dias)
     off.spokesman = buyer.coach ? { name: buyer.coach, role: "Técnico", photoKey: buyer.coachPhotoKey || null } : { name: "Diretor de futebol", role: "Diretoria", photoKey: null };
     off.parts = 1 + ((h >>> 12) % 3);                                   // 1, 2 ou 3 parcelas propostas pelo comprador
     off.bonus = 0; off.sellOn = 0; off.upfront = off.parts > 1;
@@ -205,6 +205,7 @@
     var changed = false;
     pendingOffers(c).forEach(function (n) {
       var off = enrich(c, n); if (!off) return;
+      if (!off.longDeadline) { off.longDeadline = true; if (off.deadlineDay != null && off.deadlineDay - (off.arrivedDay || day(c)) < 8) off.deadlineDay = (off.arrivedDay || day(c)) + 9; changed = true; }
       if (off.deadlineDay != null && day(c) > off.deadlineDay) {
         var p = C().resolvePlayer(c, off.playerId); TM.notify.remove(c, n.id); changed = true;
         note(c, { icon: "⌛", title: "Proposta expirou", text: buyerName(off) + " não teve resposta e desistiu de " + (p ? p.name : "seu jogador") + "." });
