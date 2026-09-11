@@ -1098,7 +1098,7 @@
     };
     career.budget -= (opts.loanFee || 0);
     career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.spentM += (opts.loanFee || 0);
-    logDeal(career, { type: "in", kind: opts.buyOption ? "loanBuy" : "loan", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: opts.loanFee || 0, other: TM.data.club(opts.parentClubId) ? TM.data.club(opts.parentClubId).name : "" });
+    if (!opts.noLog) logDeal(career, { type: "in", kind: opts.buyOption ? "loanBuy" : "loan", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: opts.loanFee || 0, other: TM.data.club(opts.parentClubId) ? TM.data.club(opts.parentClubId).name : "" });
     syncLineup(career);
   }
   function returnLoanIn(career, pid) {
@@ -1672,7 +1672,8 @@
       var pool = squad.slice(startIdx).filter(function (p) {
         return career.roster.indexOf(p.id) < 0
           && !(career.loanedIn && career.loanedIn[p.id]) && !(career.loanedOut && career.loanedOut[p.id])
-          && !(career.worldTransfers && career.worldTransfers[p.id]);
+          && !(career.worldTransfers && career.worldTransfers[p.id])
+          && !(career.pendingArrivals || []).some(function (a) { return a.pid === p.id; });
       });
       // contratação por necessidade: nas primeiras tentativas exige a posição carente do comprador
       if (need && t < 20) { var np = pool.filter(function (p) { return posGroup(p) === need; }); if (np.length) pool = np; else continue; }
@@ -1838,6 +1839,8 @@
       if (d >= w.openDay && !w.openedNotified) {
         w.openedNotified = true;
         TM.notify.push(career, { icon: "🟢", title: w.name + " aberta", text: "A " + w.name.toLowerCase() + " está aberta até " + dateOf(career, w.closeDay).full + ". Reforce o elenco!" });
+        // reforços com pré-contrato assinado fora da janela chegam agora
+        try { if (TM.coachUI && TM.coachUI.arrivePending) TM.coachUI.arrivePending(career); } catch (e) {}
         // conclui os acordos que estavam pendentes aguardando a janela
         var still = [];
         career.pendingWorldDeals.forEach(function (dl) {
@@ -1854,6 +1857,7 @@
       }
     });
     try { if (TM.fin) TM.fin.tick(career); } catch (e) {}   // parcelas com vencimento, bônus, transfer ban, endividamento
+    try { if (windowOpenNow(career) && (career.pendingArrivals || []).length && TM.coachUI && TM.coachUI.arrivePending) TM.coachUI.arrivePending(career); } catch (e) {}
     // atividade de mercado da IA — só quando o dia avança (evita repetir a cada re-render do hub)
     if (career._lastCalDay === d) return;
     var lastD = career._lastCalDay == null ? d - 1 : career._lastCalDay;
