@@ -12,6 +12,11 @@
   // prefixo dos saves por edição: público mantém "totalmatch:" (não quebra carreiras já salvas),
   // Season Update usa "totalmatch:pro:" — assim as duas edições têm saves separados.
   function prefix() { return edition === "pro" ? PRO_PREFIX : BASE; }
+  function prefixFor(ed) { return ed === "pro" ? PRO_PREFIX : BASE; }
+  // carimbo de modificação por chave (sincronização entre aparelhos: o mais novo vence)
+  var TS = "totalmatch:__ts:";
+  function stamp(fullKey, t) { try { localStorage.setItem(TS + fullKey, String(t || Date.now())); } catch (e) {} }
+  function tsOf(fullKey) { try { return parseInt(localStorage.getItem(TS + fullKey) || "0", 10) || 0; } catch (e) { return 0; } }
 
   function read(key, fallback) {
     try {
@@ -20,12 +25,18 @@
     } catch (e) { return fallback; }
   }
   function write(key, value) {
-    try { localStorage.setItem(prefix() + key, JSON.stringify(value)); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } return true; }
+    try { localStorage.setItem(prefix() + key, JSON.stringify(value)); stamp(prefix() + key); if (TM._onSave) { try { TM._onSave(key, edition); } catch (e) {} } return true; }
     catch (e) { return false; }
   }
   function remove(key) {
-    try { localStorage.removeItem(prefix() + key); if (TM._onSave) { try { TM._onSave(key); } catch (e) {} } } catch (e) {}
+    try { localStorage.removeItem(prefix() + key); stamp(prefix() + key); if (TM._onSave) { try { TM._onSave(key, edition); } catch (e) {} } } catch (e) {}
   }
+  // acesso "cru" por edição, sem disparar a sincronização (usado pela própria sincronização)
+  function readRaw(ed, key) { try { var raw = localStorage.getItem(prefixFor(ed) + key); return raw ? JSON.parse(raw) : null; } catch (e) { return null; } }
+  function writeRaw(ed, key, value, t) { try { localStorage.setItem(prefixFor(ed) + key, JSON.stringify(value)); stamp(prefixFor(ed) + key, t); return true; } catch (e) { return false; } }
+  function removeRaw(ed, key, t) { try { localStorage.removeItem(prefixFor(ed) + key); stamp(prefixFor(ed) + key, t); } catch (e) {} }
+  function tsRaw(ed, key) { return tsOf(prefixFor(ed) + key); }
+  function touchRaw(ed, key, t) { stamp(prefixFor(ed) + key, t); }
   // pertence à edição ATUAL? (público exclui as chaves "pro:" e a flag de edição)
   function inCurrentEdition(k) {
     if (!k || k.indexOf(BASE) !== 0) return false;
@@ -47,6 +58,7 @@
 
   TM.storage = {
     read: read, write: write, remove: remove,
+    readRaw: readRaw, writeRaw: writeRaw, removeRaw: removeRaw, tsRaw: tsRaw, touchRaw: touchRaw,
     settings: function () {
       var s = read("settings", {});
       return Object.assign({}, DEFAULT_SETTINGS, s);
