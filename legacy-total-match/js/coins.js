@@ -14,7 +14,7 @@
   }
   function KEY() { var a = acctId(); return a ? KEY_BASE + a : null; }
   var stateAcct = null;   // conta a que o estado carregado pertence
-  var ADMIN_EMAILS = ["mauricio@gruposuprir.com", "gui.drodrigues21@gmail.com", "gui.drodrigues21@gnail.com"];
+  var ADMIN_EMAILS = ["mauricio@gruposuprir.com"];   // só a conta do dono tem acesso de administrador
   var START = 100;
   var COST = { draftEntry: 20, draftRetry: 30, draftReroll: 5, dreamBudget: 25, scoutRush: 10, sponsorRenew: 20, morale: 15, goldFrame: 50 };
   var REWARD = {
