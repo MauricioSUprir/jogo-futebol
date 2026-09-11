@@ -852,6 +852,7 @@
     C().processCalendar(c); // janelas de transferência + mercado da IA + notificações
     try { TM.club.ensure(c); TM.club.maybeSafOffer(c); } catch (e) {} // propostas de SAF nas janelas
     try { if (TM.fin) TM.fin.tick(c); } catch (e) {}                 // parcelas, bônus, transfer ban, endividamento
+    try { if (TM.pre) TM.pre.tick(c); } catch (e) {}                 // convites de torneio de pré-temporada
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
@@ -1000,6 +1001,7 @@
       ])
     ]));
     try { var safEl = TM.club.safCard(c, "coach-hub"); if (safEl) screen.appendChild(safEl); } catch (e) {}
+    try { var preEl = TM.pre && TM.pre.card(c); if (preEl) screen.appendChild(preEl); } catch (e) {}
 
     var pending = C().advanceToUserMatch(c);
     if (pending.seasonEnd) {
@@ -4855,6 +4857,10 @@
       } else if (n.fin) {
         card.appendChild(el("div", { class: "note-actions" }, [
           TM.ui.button("💰 Ir a Finanças", function () { TM.ui.go("coach-finance"); }, "btn primary small")
+        ]));
+      } else if (n.preseason) {
+        card.appendChild(el("div", { class: "note-actions" }, [
+          TM.ui.button("🏖️ Ver os torneios", function () { TM.ui.go("coach-preseason"); }, "btn primary small")
         ]));
       } else if (n.nationInvite) {
         card.appendChild(el("div", { class: "note-actions" }, [
