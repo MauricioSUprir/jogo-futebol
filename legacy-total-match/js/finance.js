@@ -262,6 +262,60 @@
   }
   function myClause(c, pid) { var ct = c.contracts && c.contracts[pid]; return ct && ct.clause ? ct.clause : 0; }
 
+  /* =================== FIM DE CONTRATO / PRÉ-CONTRATO (Lei Bosman) =================== */
+  var PRE_DAY = 90;   // a partir da 2ª metade da temporada dá para assinar pré-contrato
+  // anos restantes do contrato de um jogador de OUTRO clube (determinístico, cai 1 por temporada, ciclo de 4)
+  function worldContractYears(p, c) {
+    if (!p || p.freeAgent || !p.clubId) return 0;
+    var base = 1 + (phash(p.id + ":wct") % 4), s = season(c) - 1;
+    var left = ((base - s) % 4 + 4) % 4; return left === 0 ? 4 : left;
+  }
+  function endingContract(p, c) { return worldContractYears(p, c) === 1; }
+  function preOpen(c) { return day(c) >= PRE_DAY; }
+  // o jogador topa assinar pré-contrato com você? (clube maior atrai; decisão fixa na temporada)
+  function preWilling(c, p) {
+    var my = TM.data.clubRating(c.teamId), his = p.clubId ? TM.data.clubRating(p.clubId) : my;
+    var chance = 55 + (my - his) * 5 - Math.max(0, (p.overall || 0) - my - 2) * 6;
+    return (phash(p.id + ":pre" + season(c)) % 100) < Math.max(5, Math.min(92, chance));
+  }
+  // OUTROS clubes assinam pré-contrato com os MEUS jogadores em último ano de contrato (roda por dia, na 2ª metade)
+  function dailyPoach(c) {
+    if (!preOpen(c) || !c.contracts) return;
+    c.leavingFree = c.leavingFree || {};
+    if (!c._preWarnSeason || c._preWarnSeason !== season(c)) {
+      c._preWarnSeason = season(c);
+      var risk = (c.roster || []).filter(function (id) { var ct = c.contracts[id]; return ct && ct.years <= 1 && !c.leavingFree[id]; }).map(function (id) { var p = C().resolvePlayer(c, id); return p ? p.name : null; }).filter(Boolean);
+      if (risk.length) note(c, { icon: "📜", title: "Pré-contratos liberados", news: true, text: "Segunda metade da temporada: jogadores em último ano de contrato já podem assinar pré-contrato com outros clubes. Em risco: " + risk.slice(0, 5).join(", ") + (risk.length > 5 ? " e mais " + (risk.length - 5) : "") + ". Renove no perfil do jogador." });
+    }
+    (c.roster || []).forEach(function (id) {
+      var ct = c.contracts[id]; if (!ct || ct.years > 1 || c.leavingFree[id]) return;
+      var p = C().resolvePlayer(c, id); if (!p || (p.overall || 0) < 66) return;
+      if (c.loanedIn && c.loanedIn[id]) return;
+      if (Math.random() > 0.03) return;
+      var buyers = TM.data.world().clubs.filter(function (cl) { return cl.id !== c.teamId && TM.data.clubRating(cl.id) >= (p.overall || 0) - 3; });
+      if (!buyers.length) return;
+      var b = buyers[Math.floor(Math.random() * buyers.length)];
+      c.leavingFree[id] = b.id;
+      note(c, { icon: "📝", title: "Pré-contrato assinado por outro clube", news: true, text: p.name + " (" + p.overall + ") assinou pré-contrato com o " + b.name + ". Como está no último ano de contrato, sai de graça no fim da temporada — você não pode mais renovar. Se quiser algum dinheiro, tente vendê-lo ainda nesta janela." });
+      try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "📝", title: "Pré-contrato", text: b.name + " acerta pré-contrato com " + p.name + ", que deixa o " + TM.data.club(c.teamId).name + " de graça no fim da temporada." }); } catch (e) {}
+    });
+  }
+  // fim da temporada: quem assinou pré-contrato com outro clube vai embora
+  function leaveFree(c) {
+    var lf = c.leavingFree || {}; var gone = [];
+    Object.keys(lf).forEach(function (id) {
+      if ((c.roster || []).indexOf(id) < 0) { delete lf[id]; return; }
+      var p = C().resolvePlayer(c, id);
+      c.roster = c.roster.filter(function (x) { return x !== id; });
+      if (c.contracts) delete c.contracts[id];
+      try { C().executeWorldTransfer(c, id, lf[id]); } catch (e) {}
+      try { C().logDeal(c, { type: "out", kind: "free", pid: id, name: p ? p.name : "Jogador", pos: p ? p.pos : "", ov: p ? p.overall : 0, fee: 0, other: (TM.data.club(lf[id]) || {}).name || "" }); } catch (e) {}
+      gone.push((p ? p.name : "Jogador") + " → " + ((TM.data.club(lf[id]) || {}).name || "outro clube"));
+      delete lf[id];
+    });
+    if (gone.length) { try { C().syncLineup(c); } catch (e) {} note(c, { icon: "👋", title: "Saídas de graça", news: true, text: gone.join(" · ") + " — contratos encerrados, saíram sem custo para o novo clube." }); }
+  }
+
   /* =================== PAINÉIS (tela Finanças) =================== */
   function panels(c, body) {
     migrate(c);
@@ -320,7 +374,7 @@
     body.appendChild(dbox);
   }
 
-  TM.fin = { migrate: migrate, tick: tick, seasonEnd: seasonEnd, addInstallments: addInstallments, pending: pending, overdueList: overdueList, payInstallment: payInstallment,
+  TM.fin = { migrate: migrate, tick: tick, seasonEnd: seasonEnd, worldContractYears: worldContractYears, endingContract: endingContract, preOpen: preOpen, preWilling: preWilling, dailyPoach: dailyPoach, leaveFree: leaveFree, PRE_DAY: PRE_DAY, addInstallments: addInstallments, pending: pending, overdueList: overdueList, payInstallment: payInstallment,
     banned: banned, banInfo: banInfo, banBox: banBox, banLabel: banLabel, applyBan: applyBan, setDealTerms: setDealTerms, onSale: onSale, checkBonuses: checkBonuses,
     debtInfo: debtInfo, panels: panels, worldClause: worldClause, clauseMode: clauseMode, myClause: myClause, BONUS_APPS: BONUS_APPS };
 })(window);
