@@ -176,15 +176,41 @@
   function buildLineup(playerObjs, formation) {
     var slots = FORMATIONS[formation] || FORMATIONS["4-4-2"];
     var used = {}, starters = [];
+    // 1ª passada: em cada slot, o melhor jogador do grupo descontando a penalidade da função específica
+    // (lateral no lado certo, volante de volante, ponta na ponta) — evita o "amarelinho" de fora de posição
     slots.forEach(function (slot) {
       var role = slot[0];
       var cand = playerObjs.filter(function (p) { return !used[p.id] && p.pos === role; });
       if (!cand.length) cand = playerObjs.filter(function (p) { return !used[p.id]; });
-      cand.sort(function (a, b) { return b.overall - a.overall; });
+      cand.sort(function (a, b) { return (b.overall - slotPenalty(b, slot)) - (a.overall - slotPenalty(a, slot)) || b.overall - a.overall; });
       var pk = cand[0]; if (pk) { used[pk.id] = true; starters.push(pk.id); }
     });
+    // 2ª passada: trocas dentro do mesmo grupo que reduzem a penalidade total (ex.: LD e LE invertidos)
+    for (var pass = 0; pass < 2; pass++) {
+      for (var i = 0; i < slots.length; i++) for (var j = i + 1; j < slots.length; j++) {
+        if (slots[i][0] !== slots[j][0]) continue;
+        var pi = playerObjs.filter(function (p) { return p.id === starters[i]; })[0], pj = playerObjs.filter(function (p) { return p.id === starters[j]; })[0];
+        if (!pi || !pj) continue;
+        var cur = slotPenalty(pi, slots[i]) + slotPenalty(pj, slots[j]), sw = slotPenalty(pi, slots[j]) + slotPenalty(pj, slots[i]);
+        if (sw < cur) { var t = starters[i]; starters[i] = starters[j]; starters[j] = t; }
+      }
+    }
     var bench = playerObjs.filter(function (p) { return !used[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).map(function (p) { return p.id; });
     return { formation: formation, starters: starters, bench: bench };
+  }
+
+  // formação que MELHOR encaixa o elenco (maior soma de overall descontadas as penalidades de posição)
+  var AUTO_FORMATIONS = ["4-4-2", "4-3-3", "4-2-3-1", "4-1-4-1", "4-5-1", "4-4-1-1", "4-1-2-1-2", "3-5-2", "3-4-3", "5-3-2", "5-4-1"];
+  function buildBestLineup(playerObjs, prefer) {
+    if (prefer && prefer !== "auto" && FORMATIONS[prefer]) return buildLineup(playerObjs, prefer);
+    var best = null, bestScore = -1e9;
+    AUTO_FORMATIONS.forEach(function (f) {
+      if (!FORMATIONS[f]) return;
+      var lu = buildLineup(playerObjs, f), slots = FORMATIONS[f], score = 0;
+      lu.starters.forEach(function (id, i) { var p = playerObjs.filter(function (x) { return x.id === id; })[0]; if (p) score += (p.overall || 60) - slotPenalty(p, slots[i]); });
+      if (score > bestScore) { bestScore = score; best = lu; }
+    });
+    return best || buildLineup(playerObjs, "4-4-2");
   }
 
   /* ---------- posições: variabilidade + penalidade por jogar fora de posição ---------- */
@@ -213,10 +239,27 @@
     var d = Math.abs((POS_ORDER[playerPos] == null ? 2 : POS_ORDER[playerPos]) - (POS_ORDER[slotGroup] == null ? 2 : POS_ORDER[slotGroup]));
     return d >= 2 ? 9 : 4;                                        // 2 grupos (DEF<->ATA): -9 ; adjacente: -4
   }
-  // overall efetivo do jogador num slot: { ov, off (fora de posição), drop }
-  function effOverall(p, slotGroup) {
-    var pen = p ? posPenalty(p.pos, slotGroup, p) : 0;
-    return { ov: Math.max(40, (p ? p.overall : 60) - pen), off: pen > 0, drop: pen };
+  // posição ESPECÍFICA: jogar fora da função de origem dentro do mesmo grupo também custa (leve)
+  var SPEC_CLOSE = { "LD|LE": 1, "LE|LD": 1, "VOL|MC": 1, "MC|VOL": 1, "MC|MEI": 1, "MEI|MC": 1, "MD|ME": 1, "ME|MD": 1, "PD|PE": 1, "PE|PD": 1, "CA|SA": 1, "SA|CA": 1, "MEI|SA": 1, "SA|MEI": 1, "MD|PD": 1, "PD|MD": 1, "ME|PE": 1, "PE|ME": 1 };
+  function specificPenalty(p, slot) {
+    if (!p || !slot || !Array.isArray(slot)) return 0;
+    if (posPenalty(p.pos, slot[0], p) > 0) return 0;                 // já é outro grupo: a penalidade de grupo cuida
+    var nat = p.pos2 || TM.data.posLabel(p), sl = slotPos(slot);
+    if (!nat || nat === sl || nat === "GOL" || sl === "GOL") return 0;
+    var k = nat + "|" + sl; if (SPEC_CLOSE[k]) return SPEC_CLOSE[k];
+    return 2;
+  }
+  function slotPenalty(p, slot) {
+    if (!p || !slot) return 0;
+    var g = Array.isArray(slot) ? slot[0] : slot;
+    var gp = posPenalty(p.pos, g, p);
+    return gp > 0 ? gp : specificPenalty(p, slot);
+  }
+  // overall efetivo do jogador num slot: { ov, off (outro grupo), light (mesma linha, função diferente), drop, natural, slotLbl }
+  function effOverall(p, slotOrGroup) {
+    var slot = Array.isArray(slotOrGroup) ? slotOrGroup : null, g = slot ? slot[0] : slotOrGroup;
+    var gp = p ? posPenalty(p.pos, g, p) : 0, sp = (p && slot && gp === 0) ? specificPenalty(p, slot) : 0, pen = gp + sp;
+    return { ov: Math.max(40, (p ? p.overall : 60) - pen), off: gp > 0, light: sp > 0, drop: pen, natural: p ? (p.pos2 || TM.data.posLabel(p)) : "?", slotLbl: slot ? slotPos(slot) : g };
   }
   // converte a posição LIVRE (arrastada no campinho, em coords de tela) para um slot
   // [grupo, x, y] — identificando o GRUPO (GOL/ZAG/MEIO/ATA) pela altura no campo.
@@ -247,7 +290,7 @@
   // devolve o jogador ajustado ao slot: se estiver fora de posição, vira o grupo do slot com atributos reduzidos
   function adjustForSlot(p, slot) {
     if (!p || !slot) return p;
-    var pen = posPenalty(p.pos, slot[0], p);
+    var pen = slotPenalty(p, slot);
     if (pen <= 0) return p;
     var a = p.attrs || {}, na = {};
     Object.keys(a).forEach(function (k) { na[k] = Math.max(20, (a[k] || 50) - pen); });
@@ -606,7 +649,7 @@
     // popularidade / reputação iniciais editáveis na criação
     if (opts.startPop != null) career.popularity = Math.max(3, Math.min(99, opts.startPop));
     if (opts.startRep != null) { career.reputation = Math.max(3, Math.min(99, opts.startRep)); career.repBias = career.reputation - 18; }
-    career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    career.lineup = buildBestLineup(rosterPlayers(career));
     career.nation = opts.nationId ? buildNation(opts.nationId) : null;
     setupNationSeason(career);
     seasonSetup(career);
@@ -632,7 +675,7 @@
     career.injuries = {}; career.suspensions = {}; career.confidence = {};
     career.recentForm = []; career.stats = { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
     career.youth = generateYouth(clubId);
-    career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    career.lineup = buildBestLineup(rosterPlayers(career));
     career.jobOffers = [];
     career.unemployed = false;
     career.matchNo = 0; career.currentDay = 0;
@@ -1252,7 +1295,7 @@
   // e remove da escalação quem não está mais no elenco. Corrige contratados sumidos.
   function syncLineup(career) {
     if (!career.roster) return career.lineup;
-    if (!career.lineup) { career.lineup = buildLineup(rosterPlayers(career), "4-4-2"); return career.lineup; }
+    if (!career.lineup) { career.lineup = buildBestLineup(rosterPlayers(career)); return career.lineup; }
     var lu = career.lineup;
     if (!lu.starters) lu.starters = [];
     if (!lu.bench) lu.bench = [];
@@ -2181,7 +2224,7 @@
     if (career.matchNo == null) career.matchNo = 0;
     if (!career.seasonYear) career.seasonYear = 2025 + (career.season || 1);
     if (!career.youth || !career.youth.length) career.youth = generateYouth(career.teamId);
-    if (!career.lineup) career.lineup = buildLineup(rosterPlayers(career), "4-4-2");
+    if (!career.lineup) career.lineup = buildBestLineup(rosterPlayers(career));
     if (!career.windows) buildWindows(career);
     if (!career.pendingWorldDeals) career.pendingWorldDeals = [];
     applyRegen(career); // remove aposentados e reinjeta newgens ANTES de escalar/reaplicar evolução
@@ -2378,7 +2421,7 @@
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
-    playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot,
+    playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot, slotPenalty: slotPenalty, specificPenalty: specificPenalty, buildBestLineup: buildBestLineup,
     fieldSlot: fieldSlot, lineupSlot: lineupSlot, slotForLineup: slotForLineup,
     available: available, effectiveXI: effectiveXI, rosterPlayers: rosterPlayers, syncLineup: syncLineup,
     processUserMatch: processUserMatch, recordPlayerStats: recordPlayerStats, dynamicInfo: dynamicInfo, dynValue: dynValue, perfMult: perfMult, resolveIncomingOffer: resolveIncomingOffer,

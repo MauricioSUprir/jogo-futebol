@@ -5073,7 +5073,7 @@
   var pickSlot = null; // índice de titular selecionado para troca
   TM.ui.register("coach-lineup", function (screen) {
     var c = TM.storage.coachCareer();
-    if (!c.lineup) c.lineup = C().buildLineup(C().rosterPlayers(c), "4-4-2");
+    if (!c.lineup) c.lineup = C().buildBestLineup(C().rosterPlayers(c));
     C().syncLineup(c); TM.storage.saveCoachCareer(c); // garante contratados no banco
     screen.appendChild(TM.ui.topbar("📋 Escalação", function () { pickSlot = null; TM.ui.go("coach-hub"); }));
     addSectorBar(screen, "coach-lineup");

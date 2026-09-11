@@ -3504,3 +3504,5 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .pre-table tr.mine td{background:rgba(56,189,248,.12)}.tbl-crest{width:18px;height:18px;object-fit:contain;vertical-align:middle}
 .ctx-line{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:6px 0}
 .ctx-chip{font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12)}
+.chip-face-wrap.off .chip-face,.chip-pos.off{box-shadow:0 0 0 1px #f0a000}
+.chip-pos.near{background:rgba(255,255,255,.7);color:#333}
