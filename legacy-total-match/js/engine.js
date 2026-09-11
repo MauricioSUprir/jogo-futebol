@@ -47,7 +47,8 @@
                 + avg(mf.length ? mf : xi, function (p) { return (p.attrs.pas + p.attrs.dri) / 2; }) * 0.4);
     var defense = (avg(df.length ? df : xi, function (p) { return (p.attrs.def + p.attrs.phy) / 2; }) * 0.7 + gk.attrs.def * 0.3);
     var midfield = avg(mf.length ? mf : xi, function (p) { return p.attrs.pas; });
-    return { xi: xi, gk: gk, attack: attack, defense: defense, midfield: midfield,
+    var ovr = avg(xi, function (p) { return p.overall || 60; });
+    return { xi: xi, gk: gk, attack: attack, defense: defense, midfield: midfield, ovr: ovr,
       scorers: (fw.concat(mf)).length ? fw.concat(mf) : xi };
   }
 
@@ -98,10 +99,11 @@
       atkMod[opts.userSide] *= (1 + de); defMod[opts.userSide] *= (1 + de);
     }
 
-    function chanceProb(atk, opDef, redsMine) {
+    function chanceProb(atk, opDef, redsMine, ovrGap) {
       var edge = (atk - opDef);
-      // coeficiente maior = resultado mais fiel à qualidade dos elencos (sem impedir zebras)
-      var base = Math.max(0.018, 0.09 + edge * 0.0038) * variance / 1.9;
+      // qualidade dos elencos pesa mais (setores + overall médio do time), sem impedir zebras:
+      // o time pior sempre mantém um mínimo de chances por jogo
+      var base = Math.min(0.13, Math.max(0.036, 0.088 + edge * 0.0040 + (ovrGap || 0) * 0.0012)) * variance / 1.9;
       return base * (1 - redsMine * 0.16);
     }
 
@@ -155,7 +157,7 @@
       if (scorer.id === focusId) focusInvolved++;
       var gk = gkOf(1 - side, opp);
       var goalP = isPen ? Math.max(0.68, Math.min(0.9, 0.72 + (scorer.attrs.sho - gk.attrs.def) * 0.004))
-        : Math.max(0.08, Math.min(0.64, 0.30 + (scorer.attrs.sho - gk.attrs.def) * 0.0078)) * (variance / 1.9);
+        : Math.max(0.08, Math.min(0.6, 0.29 + (scorer.attrs.sho - gk.attrs.def) * 0.0085)) * (variance / 1.9) * (score[side] - score[1 - side] >= 3 ? 0.8 : 1);
       if (Math.random() < goalP) {
         // VAR: parte dos gols (não-pênalti) passa por revisão; alguns são anulados
         var varOn = !isPen && Math.random() < 0.13;
@@ -225,8 +227,8 @@
         }
       }
 
-      var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0]);
-      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1]);
+      var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0], A.ovr - B.ovr);
+      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1], B.ovr - A.ovr);
 
       [[0, pA, A, B, teamA], [1, pB, B, A, teamB]].forEach(function (row) {
         var side = row[0], prob = row[1], prof = row[2], opp = row[3], team = row[4];
