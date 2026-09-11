@@ -633,6 +633,11 @@
   net.cloudSave = function (email, data, cb) {
     net._db.ref("accounts/" + acctKey(email) + "/saves").set(data).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
   };
+  // sincronização v2: por edição e por chave (accounts/<conta>/sync/<edição>/<chave> = { t, v })
+  net.syncRef = function (email, ed) { return net._db.ref("accounts/" + acctKey(email) + "/sync" + (ed ? "/" + ed : "")); };
+  net.cloudPatch = function (email, patch, cb) {
+    net._db.ref("accounts/" + acctKey(email)).update(patch).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
   net.cloudLoad = function (email, cb) {
     net._db.ref("accounts/" + acctKey(email) + "/saves").once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
   };
