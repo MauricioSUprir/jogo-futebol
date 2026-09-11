@@ -32,6 +32,9 @@
     { id: "elite", label: "Elite", desc: "Gigantes convidados. Difícil de vencer, mas a cota e o prêmio são maiores.", diff: [1, 9], prizeMult: 1.7, icon: "🥇" }
   ];
   function prizeBase(c) { var r = TM.data.clubRating(c.teamId); return R((1.2 + Math.max(0, r - 60) * 0.18) * mult(c)); }
+  var ROUND_DAYS = [7, 10, 13];   // jogos da pré-temporada: 7 dias após o início, depois a cada 3 dias (1ª rodada oficial no dia 20)
+  function nextDay(c) { var m = myMatch(c); return m ? m.day : null; }
+  function daysToMatch(c) { var d = nextDay(c); return d == null ? null : d - (c.currentDay || 0); }
 
   function makeOffer(c, tier, used) {
     var myR = TM.data.clubRating(c.teamId), W = TM.data.world();
@@ -61,7 +64,11 @@
     if (!c || c.unemployed) return;
     if (c.preseason && !c.preseason.done && (c.matchNo || 0) > 0) { finishAuto(c); return; }   // a liga começou: encerra o que faltava
     if ((c.matchNo || 0) > 0) return;
-    if (c.preOffers && c.preOffers.season === season(c)) return;
+    if (c.preOffers && c.preOffers.season === season(c)) {
+      // sem resposta até o dia do 1º jogo: os convites expiram
+      if (!c.preOffers.decided && (c.currentDay || 0) >= ROUND_DAYS[0]) { c.preOffers.decided = true; c.preOffers.expired = true; note(c, { icon: "🏖️", title: "Convites expiraram", text: "Os torneios de pré-temporada começaram sem o " + TM.data.club(c.teamId).name + ". O elenco treina em casa até a 1ª rodada." }); save(c); }
+      return;
+    }
     if (c.preseason && c.preseason.season === season(c)) return;
     var used = {}; var list = TIERS.map(function (t) { return makeOffer(c, t, used); }).filter(Boolean);
     if (!list.length) return;
@@ -75,10 +82,10 @@
     // grupo de 4: 3 rodadas, 2 jogos por rodada (round-robin)
     var rounds = [[[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]]];
     c.preseason = { id: o.id, season: season(c), name: o.name, host: o.host, tier: o.tier, teamIds: ids, fee: o.fee, prize: o.prize, runnerUp: o.runnerUp,
-      rounds: rounds.map(function (r) { return r.map(function (m) { return { a: ids[m[0]], b: ids[m[1]], score: null }; }); }), round: 0, done: false, place: null };
+      rounds: rounds.map(function (r, ri) { return r.map(function (m) { return { a: ids[m[0]], b: ids[m[1]], score: null, day: ROUND_DAYS[ri] }; }); }), round: 0, done: false, place: null };
     c.preOffers.decided = true;
     c.budget = R(c.budget + o.fee); c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.prizeM = R((c.finc.prizeM || 0) + o.fee);
-    note(c, { icon: "🏖️", title: "Pré-temporada confirmada", news: true, text: TM.data.club(c.teamId).name + " vai disputar o " + o.name + " (" + o.host.city + "). Cota de participação de " + money(c, o.fee) + " já no caixa. Campeão leva mais " + money(c, o.prize) + "." });
+    note(c, { icon: "🏖️", title: "Pré-temporada confirmada", news: true, text: TM.data.club(c.teamId).name + " vai disputar o " + o.name + " (" + o.host.city + "): jogos nos dias " + ROUND_DAYS.map(function (d) { try { return C().dateOf(c, d).short; } catch (e) { return d; } }).join(", ") + ". Cota de participação de " + money(c, o.fee) + " já no caixa. Campeão leva mais " + money(c, o.prize) + "." });
     try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "🏖️", title: "Pré-temporada", text: TM.data.club(c.teamId).name + " confirmado no " + o.name + ", em " + o.host.city + "." }); } catch (e) {}
     save(c); return true;
   }
@@ -99,6 +106,7 @@
   function applyRound(c, myScore) {
     var p = c.preseason, m = myMatch(c); if (!m) return;
     m.score = myScore.slice();
+    if (m.day != null && (c.currentDay || 0) < m.day) c.currentDay = m.day;
     simOther(c, otherMatch(c));
     p.round++;
     if (p.round >= p.rounds.length) finish(c);
@@ -139,17 +147,23 @@
     if (po && po.season === season(c) && !po.decided && (c.matchNo || 0) === 0) {
       return el("div", { class: "next-match pre-card" }, [
         el("div", { class: "nm-label", text: "🏖️ Convites de pré-temporada" }),
-        el("div", { class: "setting-hint", text: po.list.length + " torneios internacionais te convidaram. Escolha um antes da 1ª rodada (ou recuse todos)." }),
+        el("div", { class: "setting-hint", text: po.list.length + " torneios internacionais te convidaram. Os jogos são nos dias " + ROUND_DAYS.map(function (d) { try { return C().dateOf(c, d).short; } catch (e) { return d; } }).join(", ") + ". Responda em até " + Math.max(0, ROUND_DAYS[0] - (c.currentDay || 0)) + " dia(s), ou recuse todos." }),
         el("div", { class: "actions" }, [ TM.ui.button("Ver os torneios", function () { TM.ui.go("coach-preseason"); }, "btn primary") ])
       ]);
     }
     var p = c.preseason; if (!p || p.done || p.season !== season(c)) return null;
     var m = myMatch(c); if (!m) return null;
     var oppId = m.a === c.teamId ? m.b : m.a, opp = TM.data.club(oppId);
+    var dl = daysToMatch(c), dTxt = ""; try { dTxt = C().dateOf(c, m.day).full; } catch (e) {}
     return el("div", { class: "next-match pre-card" }, [
       el("div", { class: "nm-label", text: "🏖️ " + p.name + " · " + p.host.flag + " " + p.host.city + " · jogo " + (p.round + 1) + "/3" }),
       el("div", { class: "pre-vs" }, [ TM.img.clubImg(TM.data.club(c.teamId), "pre-crest"), el("span", { class: "pre-x", text: "×" }), TM.img.clubImg(opp, "pre-crest"), el("span", { class: "pre-opp", text: opp.name + " (" + TM.data.clubRating(opp.id) + ")" }) ]),
-      el("div", { class: "actions" }, [
+      el("div", { class: "setting-hint", style: "text-align:center", text: dl > 0 ? "📅 " + dTxt + " — falta" + (dl > 1 ? "m " : " ") + dl + " dia" + (dl > 1 ? "s" : "") : "📅 " + dTxt + " — é hoje!" }),
+      el("div", { class: "actions" }, dl > 0 ? [
+        TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay = (c.currentDay || 0) + 1; save(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
+        TM.ui.button("⏩ Avançar até o amistoso", function () { c.currentDay = m.day; save(c); TM.ui.go("coach-hub"); }, "btn small"),
+        TM.ui.button("📊 Tabela", function () { TM.ui.go("coach-preseason"); }, "btn ghost small")
+      ] : [
         TM.ui.button("▶ Jogar amistoso", function () { TM.ui.go("coach-preseason-match"); }, "btn primary"),
         TM.ui.button("📊 Tabela", function () { TM.ui.go("coach-preseason"); }, "btn ghost small")
       ])
@@ -171,9 +185,10 @@
       body.appendChild(el("div", { class: "list-head", text: "Jogos" }));
       p.rounds.forEach(function (r, ri) { r.forEach(function (m) {
         var A = TM.data.club(m.a), B = TM.data.club(m.b);
-        body.appendChild(el("div", { class: "pre-fix" + ((m.a === c.teamId || m.b === c.teamId) ? " mine" : "") }, [ el("span", { class: "pre-fix-r", text: "R" + (ri + 1) }), el("span", { text: A.name }), el("span", { class: "pre-fix-s", text: m.score ? m.score[0] + " × " + m.score[1] : "×" }), el("span", { text: B.name }) ]));
+        var dsh = ""; try { dsh = m.day != null ? C().dateOf(c, m.day).short : ""; } catch (e) {}
+        body.appendChild(el("div", { class: "pre-fix" + ((m.a === c.teamId || m.b === c.teamId) ? " mine" : "") }, [ el("span", { class: "pre-fix-r", text: dsh || ("R" + (ri + 1)) }), el("span", { text: A.name }), el("span", { class: "pre-fix-s", text: m.score ? m.score[0] + " × " + m.score[1] : "×" }), el("span", { text: B.name }) ]));
       }); });
-      if (!p.done && myMatch(c)) body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("▶ Jogar próximo amistoso", function () { TM.ui.go("coach-preseason-match"); }, "btn primary") ]));
+      if (!p.done && myMatch(c)) { var dl2 = daysToMatch(c); body.appendChild(el("div", { class: "actions" }, [ dl2 > 0 ? TM.ui.button("⏩ Avançar até o amistoso (" + dl2 + " dia" + (dl2 > 1 ? "s" : "") + ")", function () { c.currentDay = myMatch(c).day; save(c); TM.ui.go("coach-preseason"); }, "btn") : TM.ui.button("▶ Jogar próximo amistoso", function () { TM.ui.go("coach-preseason-match"); }, "btn primary") ])); }
       return;
     }
     if (!po || po.season !== season(c) || po.decided || (c.matchNo || 0) > 0) {
@@ -200,6 +215,7 @@
   TM.ui.register("coach-preseason-match", function (screen) {
     var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
     var m = myMatch(c); if (!m) { TM.ui.go("coach-preseason"); return; }
+    if (m.day != null && (c.currentDay || 0) < m.day) { TM.ui.toast("O amistoso é só no dia " + m.day + ". Avance os dias."); TM.ui.go("coach-hub"); return; }
     var home = m.a === c.teamId, oppId = home ? m.b : m.a;
     var teamA = C().anyTeam(c, home ? c.teamId : oppId), teamB = C().anyTeam(c, home ? oppId : c.teamId);
     var userSide = home ? 0 : 1;
@@ -216,5 +232,5 @@
     });
   });
 
-  TM.pre = { tick: tick, card: card, accept: accept, declineAll: declineAll, applyRound: applyRound, table: table, myMatch: myMatch, TIERS: TIERS };
+  TM.pre = { tick: tick, card: card, accept: accept, declineAll: declineAll, applyRound: applyRound, table: table, myMatch: myMatch, nextDay: nextDay, TIERS: TIERS, ROUND_DAYS: ROUND_DAYS };
 })(window);

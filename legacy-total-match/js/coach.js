@@ -1125,7 +1125,7 @@
       if (daysLeft > 0) {
         kids.push(el("div", { class: "skip-row" }, [
           TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
-          TM.ui.button("⏩ Avançar até o jogo", function () { c.currentDay = nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn small")
+          TM.ui.button("⏩ Avançar até o jogo", function () { var pd = TM.pre && TM.pre.nextDay ? TM.pre.nextDay(c) : null; c.currentDay = (pd != null && pd > c.currentDay && pd < nextDay) ? pd : nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn small")
         ]));
       } else {
         if (c.pressDoneFor !== c.matchNo) {
