@@ -167,6 +167,20 @@
   var CAT_ORDER = ["receita", "elenco", "propostas", "mercado", "esportivo", "gestao"];
   var CAT_LABEL = { receita: "💰 Receita", elenco: "👥 Elenco", propostas: "📨 Propostas", mercado: "🔁 Mercado", esportivo: "🏆 Esportivo", gestao: "🏢 Gestão" };
   var CAT_ICON = { receita: "💰", elenco: "👥", propostas: "📨", mercado: "🔁", esportivo: "🏆", gestao: "🏢" };
+  // metas PREMIADAS: cumpriu, o investidor paga; não cumpriu, não há multa
+  var GOAL_IDS = ["vitorias", "gols", "aproveitamento", "saldo_gols", "invicto_10", "copa", "meta", "venda_grande", "balanco_positivo", "popularidade", "sub21", "promessa", "valor_elenco", "patrocinio_master", "dois_patrocinios", "estadio_1", "crias", "titulo", "duas_vendas", "reforco_impacto", "gols_sofridos", "derrotas_max", "caixa_positivo", "sequencia_5"];
+  def("sequencia_5", "esportivo", "season", 0.05, function () { return { n: 5 }; }, function (c, cl) { return "Ter uma sequência de " + cl.n + " vitórias seguidas na temporada"; }, function (c, cl) { var b = (c.saf && c.saf.bestWinStreak) || 0; return { ok: b >= cl.n, why: "A maior sequência de vitórias foi de " + b + " jogos." }; });
+  function pickGoals(c, type, n, amountM, exclude) {
+    var pool = GOAL_IDS.filter(function (id) { return CAT[id] && !(exclude || []).some(function (x) { return x.id === id; }); });
+    var out = [], tries = 0;
+    while (out.length < n && tries++ < 100 && pool.length) {
+      var id = pick(pool); if (out.some(function (x) { return x.id === id; })) continue;
+      var w = type.focus.indexOf(CAT[id].cat) >= 0 ? 3 : 1; if (Math.random() > w / 3) continue;
+      var g = makeClause(c, id); if (!g) continue;
+      g.bonusM = R(amountM * (0.06 + Math.random() * 0.10)); delete g.finePct; g.goal = true; out.push(g);
+    }
+    return out;
+  }
   function makeClause(c, id) {
     var t = CAT[id]; if (!t) return null;
     var params = t.make(c); if (params === null) return null;
@@ -199,8 +213,12 @@
     var pct = s < 30 ? 45 + rnd(31) : s < 60 ? 30 + rnd(31) : 15 + rnd(26);   // pequeno: 45–75%, médio: 30–60%, grande: 15–40%
     var type = pickType(c);
     var n = s < 30 ? 3 : s < 60 ? 4 : 5;
+    var clauses = pickClauses(c, type, n);
+    var windowCash = (type.id === "estatal" || type.id === "empresario") ? true : Math.random() < 0.35;   // alguns investidores injetam dinheiro a cada janela
+    var windowPct = 0.08 + rnd(4) * 0.04;                                                                  // 8% a 20% do aporte por janela
     return { amountM: amount, pct: pct, closeDay: w ? w.closeDay : day(c) + 30, windowName: w ? w.name : "janela", investor: investorName(c), type: type.id,
-      clauses: pickClauses(c, type, n), term: 3 + rnd(3), bonusPct: 0.15, counter: 0, size: s, day: day(c), season: season(c) };
+      clauses: clauses, goals: pickGoals(c, type, 2 + rnd(2), amount, clauses), windowCash: windowCash, windowPct: windowPct,
+      term: 3 + rnd(3), bonusPct: 0.15, counter: 0, size: s, day: day(c), season: season(c) };
   }
   function typeOf(id) { return TYPES.filter(function (t) { return t.id === id; })[0] || TYPES[0]; }
 
@@ -211,7 +229,7 @@
       note(c, { icon: "⌛", title: "Proposta de SAF expirou", text: c.safOffer.investor + " retirou a proposta: a janela fechou sem resposta." });
       c.safOffer = null;
     }
-    if (d < 45) return;                                   // nunca nos primeiros dias de carreira
+    if (d < 5) return;                                    // nunca nos primeiros 4 dias de carreira
     c.windows.forEach(function (w) {
       var open = d >= w.openDay && d < w.closeDay;
       if (!open || w.safRolled) return;
@@ -237,6 +255,7 @@
     c.budget += o.amountM; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + o.amountM;
     var st = c.stats || { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
     c.saf = { investor: o.investor, type: o.type, pct: o.pct, season: season(c), amountM: o.amountM, term: o.term, bonusPct: o.bonusPct, clauses: o.clauses || [],
+      goals: o.goals || [], windowCash: !!o.windowCash, windowPct: o.windowPct || 0.1, windowsPaid: {}, bestWinStreak: 0, curWinStreak: 0,
       strikes: 0, patience: typeOf(o.type).patience, sat: 60, log: [], events: 0, ignored: 0,
       statsAt: { p: st.p, w: st.w, d: st.d, l: st.l, gf: st.gf, ga: st.ga }, honoursAt: (c.honours || []).length, classicoAt: c.classicoLoss || 0,
       bestUnbeaten: 0, curUnbeaten: 0, lastEventDay: day(c), nextEventDay: day(c) + 20 + rnd(20), formSeen: 0, extra: 0 };
@@ -332,9 +351,9 @@
     if (played <= seen) return;
     var form = (c.recentForm || []).slice(-(played - seen));
     form.forEach(function (r) {
-      if (r === "V") { sat(c, 1, null); c.saf.curUnbeaten = (c.saf.curUnbeaten || 0) + 1; c.saf.lossStreak = 0; }
-      else if (r === "E") { c.saf.curUnbeaten = (c.saf.curUnbeaten || 0) + 1; c.saf.lossStreak = 0; }
-      else { sat(c, -2, null); c.saf.curUnbeaten = 0; c.saf.lossStreak = (c.saf.lossStreak || 0) + 1; }
+      if (r === "V") { sat(c, 1, null); c.saf.curUnbeaten = (c.saf.curUnbeaten || 0) + 1; c.saf.lossStreak = 0; c.saf.curWinStreak = (c.saf.curWinStreak || 0) + 1; c.saf.bestWinStreak = Math.max(c.saf.bestWinStreak || 0, c.saf.curWinStreak); }
+      else if (r === "E") { c.saf.curUnbeaten = (c.saf.curUnbeaten || 0) + 1; c.saf.lossStreak = 0; c.saf.curWinStreak = 0; }
+      else { sat(c, -2, null); c.saf.curUnbeaten = 0; c.saf.lossStreak = (c.saf.lossStreak || 0) + 1; c.saf.curWinStreak = 0; }
       c.saf.bestUnbeaten = Math.max(c.saf.bestUnbeaten || 0, c.saf.curUnbeaten || 0);
     });
     c.saf.formSeen = played;
@@ -343,8 +362,29 @@
     if ((c.saf.lossStreak || 0) < 4) c.saf.streakFined = 0;
   }
 
+  /* ---------- aporte a cada janela de transferências ---------- */
+  function windowCash(c) {
+    if (!c.saf || !c.saf.windowCash || !c.windows) return;
+    var d = day(c);
+    c.windows.forEach(function (w) {
+      if (!(d >= w.openDay && d < w.closeDay)) return;
+      var k = season(c) + ":" + w.openDay; c.saf.windowsPaid = c.saf.windowsPaid || {};
+      if (c.saf.windowsPaid[k]) return;
+      c.saf.windowsPaid[k] = 1;
+      var v = R(c.saf.amountM * (c.saf.windowPct || 0.1)); if (v < 1) v = 1;
+      var cond = Math.random() < 0.5;
+      note(c, { icon: "💸", title: "SAF: Aporte de janela", safEvent: { id: "aporte_janela", title: "Aporte de janela", params: { v: v, cond: cond, closeDay: w.closeDay, wname: w.name }, day: d },
+        text: c.saf.investor + " libera " + money(c, v) + " para esta " + w.name + (cond ? ", com a condição de usar ao menos metade em contratações até o fim da janela" : ", sem condições") + ". Toque para responder." });
+    });
+  }
   /* ---------- eventos interativos do investidor ---------- */
   var EVENTS = [
+    { id: "aporte_janela", title: "Aporte de janela", when: function () { return false; },
+      make: function () { return null; },
+      text: function (c, e) { return c.saf.investor + " libera " + money(c, e.v) + " para esta " + (e.wname || "janela") + (e.cond ? ". Condição: investir ao menos " + money(c, R(e.v / 2)) + " em contratações até o fim da janela, senão o valor não usado volta para o investidor." : ", sem condições."); },
+      options: function (c, e) { return [
+        { label: "💸 Receber " + money(c, e.v), fn: function () { c.budget += e.v; c.finc.safM = (c.finc.safM || 0) + e.v; sat(c, 4, "aporte de janela recebido"); if (e.cond) { c.saf.windowCond = { v: e.v, need: R(e.v / 2), closeDay: e.closeDay, spentAt: inDeals(c).reduce(function (a, d) { return a + (d.fee || 0); }, 0) }; } return "+" + money(c, e.v) + " no caixa." + (e.cond ? " Invista ao menos " + money(c, R(e.v / 2)) + " em contratações até o fim da janela." : ""); } },
+        { label: "Dispensar desta vez", fn: function () { sat(c, -1, "aporte de janela dispensado"); return "Você dispensou o aporte desta janela."; } } ]; } },
     { id: "aporte_extra", title: "Aporte extra com condição", when: function (c) { return true; },
       make: function (c) { var v = R(c.saf.amountM * (0.25 + Math.random() * 0.25)); var cl = pickClauses(c, typeOf(c.saf.type), 1, c.saf.clauses).filter(function (x) { return x.id !== "meta"; })[0]; return cl ? { v: v, cl: cl } : null; },
       text: function (c, e) { return c.saf.investor + " oferece um aporte extra de " + money(c, e.v) + " agora, em troca de uma nova contrapartida: " + e.cl.text + "."; },
@@ -435,6 +475,13 @@
         else { note(c, { icon: "⚠️", title: "Ultimato descumprido", text: "Só " + pts + " ponto(s) nos últimos " + u.n + " jogos." }); penalty(c, { id: "ultimato", finePct: 0.05 }, "O ultimato do investidor não foi cumprido."); }
       }
     }
+    // condição do aporte de janela: metade em contratações até o fim da janela
+    if (c.saf.windowCond && d >= c.saf.windowCond.closeDay) {
+      var wc = c.saf.windowCond; c.saf.windowCond = null;
+      var spent = inDeals(c).reduce(function (a, dd) { return a + (dd.fee || 0); }, 0) - (wc.spentAt || 0);
+      if (spent < wc.need) { var back = Math.min(c.budget, wc.v - spent); if (back > 0) { c.budget -= back; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + back; } sat(c, -6, "aporte de janela não usado"); note(c, { icon: "↩️", title: "Aporte de janela devolvido", text: "Você investiu " + money(c, R(spent)) + " em contratações; a condição era " + money(c, wc.need) + ". " + c.saf.investor + " recolheu " + money(c, R(back)) + "." }); }
+      else { sat(c, 4, "condição do aporte cumprida"); note(c, { icon: "✅", title: "Aporte de janela bem usado", text: "Você investiu " + money(c, R(spent)) + " em contratações. " + c.saf.investor + " aprovou." }); }
+    }
     if (d < (c.saf.nextEventDay || 0)) return;
     var pool = EVENTS.filter(function (e) { try { return e.when(c); } catch (x) { return false; } });
     // eventos de pressão têm prioridade quando cabem
@@ -456,6 +503,7 @@
     newDeals(c).forEach(function (d) { if (c.saf) checkDeal(c, d); });
     markDealsSeen(c);
     if (c.saf) checkForm(c);
+    if (c.saf) windowCash(c);
     if (c.saf) maybeEvent(c);
     if (c.saf && c.saf.sat <= 0) breakSaf(c, "insatisfação total");
   }
@@ -467,6 +515,19 @@
       var r; try { r = t.check(c, cl); } catch (e) { r = { ok: true }; }
       if (r.ok) { oks++; if (cl.bonusM) bonusExtra += cl.bonusM; } else fails.push({ cl: cl, why: r.why || "Contrapartida não cumprida." });
     });
+    // metas premiadas: paga o que foi cumprido, sem multa pelo resto
+    var won = [], lost = [];
+    (c.saf.goals || []).forEach(function (g) {
+      var t = CAT[g.id]; if (!t || !t.check) return;
+      var r; try { r = t.check(c, g); } catch (e) { r = { ok: false }; }
+      if (r.ok) won.push(g); else lost.push(g);
+    });
+    if (won.length) {
+      var gb = won.reduce(function (a, g) { return a + (g.bonusM || 0); }, 0);
+      c.budget += gb; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + gb; sat(c, 4 * won.length, won.length + " meta(s) premiada(s) cumprida(s)");
+      note(c, { icon: "🏅", title: "Metas premiadas cumpridas", news: true, text: c.saf.investor + " pagou " + money(c, gb) + " por: " + won.map(function (g) { return clauseText(c, g); }).join("; ") + "." });
+    }
+    if (lost.length) note(c, { icon: "📉", title: "Metas premiadas não alcançadas", text: "Sem prêmio por: " + lost.map(function (g) { return clauseText(c, g); }).join("; ") + "." });
     if (!fails.length) {
       var bonus = R(c.saf.amountM * (c.saf.bonusPct || 0.15)) + bonusExtra;
       c.budget += bonus; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + bonus;
@@ -485,7 +546,9 @@
     // nova temporada: zera referências e sorteia 1 cláusula nova no lugar da mais antiga (mantém a meta)
     var st = c.stats || { p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0 };
     c.saf.statsAt = { p: st.p, w: st.w, d: st.d, l: st.l, gf: st.gf, ga: st.ga }; c.saf.honoursAt = (c.honours || []).length; c.saf.classicoAt = c.classicoLoss || 0;
-    c.saf.bestUnbeaten = 0; c.saf.curUnbeaten = 0; c.saf.formSeen = st.p || 0; c.saf.ignored = 0;
+    c.saf.bestUnbeaten = 0; c.saf.curUnbeaten = 0; c.saf.bestWinStreak = 0; c.saf.curWinStreak = 0; c.saf.formSeen = st.p || 0; c.saf.ignored = 0; c.saf.windowsPaid = {};
+    c.saf.goals = pickGoals(c, typeOf(c.saf.type), 2 + rnd(2), c.saf.amountM, c.saf.clauses);
+    if (c.saf.goals.length) note(c, { icon: "🏅", title: "Novas metas premiadas", text: c.saf.investor + " definiu metas com prêmio para a temporada: " + c.saf.goals.map(function (g) { return g.text + " (+" + money(c, g.bonusM) + ")"; }).join("; ") + "." });
     c.saf.clauses = c.saf.clauses.map(function (cl) { if (cl.id === "meta") { var m = makeClause(c, "meta"); return m || cl; } return cl; });
     var other = c.saf.clauses.filter(function (x) { return x.id !== "meta"; });
     if (other.length) { var old = other[0]; var nc = pickClauses(c, typeOf(c.saf.type), 2, c.saf.clauses).filter(function (x) { return x.id !== "meta"; })[0]; if (nc) { c.saf.clauses = c.saf.clauses.filter(function (x) { return x !== old; }); c.saf.clauses.push(nc); note(c, { icon: "📝", title: "Contrapartidas renovadas", text: c.saf.investor + " trocou \"" + clauseText(c, old) + "\" por \"" + nc.text + "\" para a nova temporada." }); } }
@@ -501,6 +564,7 @@
       c.saf.clauses = (c.saf.clauses || []).map(function (cl) { var id = map[cl.id] || cl.id; var nc = makeClause(c, id) || cl; if (cl.pid) { nc.pid = cl.pid; nc.pname = cl.pname; } return nc; });
       markDealsSeen(c);
     }
+    if (c.saf && c.saf.goals == null) { c.saf.goals = pickGoals(c, typeOf(c.saf.type), 2, c.saf.amountM, c.saf.clauses); c.saf.windowCash = Math.random() < 0.5; c.saf.windowPct = 0.1; c.saf.windowsPaid = {}; c.saf.bestWinStreak = 0; c.saf.curWinStreak = 0; }
     if (c.safOffer && c.safOffer.type == null) { c.safOffer.type = "fundo"; c.safOffer.term = 4; c.safOffer.bonusPct = 0.15; c.safOffer.clauses = (c.safOffer.clauses || []).map(function (cl) { return makeClause(c, cl.id) || cl; }); }
   }
 
@@ -535,6 +599,13 @@
       el("span", { class: "saf-cl-tx" }, [ el("span", { text: clauseText(c, cl) + " (multa " + Math.round((cl.finePct || 0.1) * 100) + "%)" }), status ? el("span", { class: "saf-cl-st" + (status.indexOf("⚠") === 0 ? " bad" : ""), text: status }) : null ])
     ]);
   }
+  function goalList(c, goals, live) {
+    return el("ul", { class: "saf-clauses" }, (goals || []).map(function (g) {
+      var t = CAT[g.id], status = null;
+      if (live && t && t.check) { try { var r = t.check(c, g); status = r.ok ? "✔ no caminho do prêmio" : "⏳ " + r.why; } catch (e) {} }
+      return el("li", { class: "saf-cl" }, [ el("span", { class: "saf-cl-ic", text: "🏅" }), el("span", { class: "saf-cl-tx" }, [ el("span", { text: clauseText(c, g) + " → +" + money(c, g.bonusM || 0) }), status ? el("span", { class: "saf-cl-st" + (status.indexOf("⏳") === 0 ? " bad" : ""), text: status }) : null ]) ]);
+    }));
+  }
   function clauseList(c, clauses, live) {
     var byCat = {}; (clauses || []).forEach(function (cl) { (byCat[cl.cat || "outros"] = byCat[cl.cat || "outros"] || []).push(cl); });
     var wrap = el("div", { class: "saf-cl-groups" });
@@ -563,6 +634,12 @@
       ])
     ]));
     body.appendChild(el("p", { class: "intro-text", text: "Por que agora: " + club(c).name + " é um " + sizeLabel(s) + (c.budget < 0 ? " com o caixa no vermelho" : "") + ", e investidores enxergam espaço para crescer. Paciência do investidor: " + t.patience + " advertências antes de romper (levando 20% do aporte de volta). Prazo de resposta: até o fim da " + (o.windowName || "janela") + "." }));
+    body.appendChild(el("div", { class: "list-head", text: "O que o investidor paga" }));
+    body.appendChild(el("div", { class: "coin-rules" }, [
+      el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: "💸" }), el("span", { class: "coin-rule-tx", text: o.windowCash ? "Aporte a cada janela de transferências: cerca de " + money(c, R(o.amountM * (o.windowPct || 0.1))) + " por janela (às vezes com a condição de investir metade em reforços)." : "Sem aporte por janela (só o aporte inicial e os bônus)." }) ]),
+      el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: "🏅" }), el("span", { class: "coin-rule-tx", text: "Metas premiadas: cumpriu, recebe o prêmio; não cumpriu, não há multa." }) ])
+    ]));
+    if (o.goals && o.goals.length) body.appendChild(goalList(c, o.goals, false));
     body.appendChild(el("div", { class: "list-head", text: "Contrapartidas (" + o.clauses.length + ")" }));
     body.appendChild(clauseList(c, o.clauses, false));
     body.appendChild(el("div", { class: "list-head", text: "Como o investidor age" }));
@@ -600,6 +677,8 @@
       el("div", { class: "saf-text", text: "Satisfação " + (s.sat || 0) + "/100 · " + si.txt + " · " + (s.strikes || 0) + "/" + s.patience + " advertências · aportes " + money(c, s.amountM) })
     ]));
     if (s.ultimatum) body.appendChild(el("div", { class: "invite-banner declined" }, [ el("div", { class: "inv-txt", text: "⏳ Ultimato em andamento: " + s.ultimatum.need + " pontos nos próximos " + s.ultimatum.n + " jogos." }) ]));
+    if (s.windowCash) body.appendChild(el("div", { class: "setting-hint", text: "💸 Este investidor libera cerca de " + money(c, R(s.amountM * (s.windowPct || 0.1))) + " a cada janela de transferências (chega pelas notificações)." }));
+    if (s.goals && s.goals.length) { body.appendChild(el("div", { class: "list-head", text: "Metas premiadas (" + s.goals.length + ") — situação agora" })); body.appendChild(goalList(c, s.goals, true)); }
     body.appendChild(el("div", { class: "list-head", text: "Contrapartidas (" + s.clauses.length + ") — situação agora" }));
     body.appendChild(clauseList(c, s.clauses, true));
     body.appendChild(el("div", { class: "list-head", text: "Falar com o investidor" }));

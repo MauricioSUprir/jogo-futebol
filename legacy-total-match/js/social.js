@@ -27,6 +27,12 @@
     if (ph) img.addEventListener("error", function () { img.src = userAvatar(handle); });
     return img;
   }
+  var _me = null;   // carreira atual (para o avatar do próprio treinador)
+  function myAvatar(cls) {
+    var c = _me || {}; var name = c.coachName || c.name || "T";
+    if (c.coachPhoto) return el("img", { class: cls, src: c.coachPhoto, alt: "" });
+    return el("img", { class: cls, src: userAvatar(name), alt: "" });
+  }
   function userAvatar(handle) {
     var h = 0; for (var i = 0; i < handle.length; i++) h = (h * 31 + handle.charCodeAt(i)) % 360;
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">' +
@@ -319,7 +325,7 @@
     var likeEl = el("span", { class: "pc-like" + (cm.liked ? " on" : ""), text: (cm.liked ? "❤️ " : "🤍 ") + fmtLikes(cm.likes) });
     likeEl.addEventListener("click", function () { cm.liked = !cm.liked; cm.likes += cm.liked ? 1 : -1; onLike(); });
     return el("div", { class: "pc-row" }, [
-      avatarImg("pc-ava", cm.who),
+      cm.mine ? myAvatar("pc-ava") : avatarImg("pc-ava", cm.who),
       el("div", { class: "pc-body" }, [
         el("div", { class: "pc-top" }, [ el("span", { class: "pc-who", text: cm.who.replace("@", "") }), cm.verified ? el("span", { class: "post-verified", text: "✔" }) : null ]),
         el("div", { class: "pc-txt", text: cm.txt }),
@@ -329,6 +335,7 @@
   }
 
   function openComments(career, p, save) {
+    _me = career;
     var overlay = el("div", { class: "modal-overlay", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
     var box = el("div", { class: "cmodal" });
     box.appendChild(el("div", { class: "cmodal-head" }, [ el("span", { text: "Comentários" }), el("button", { class: "cmodal-x", text: "✕", on: { click: function () { overlay.remove(); } } }) ]));
@@ -349,6 +356,7 @@
   }
 
   function postCard(career, p, save, refresh) {
+    _me = career;
     var likeBtn = el("span", { class: "pa pa-like" + (p.liked ? " on" : ""), text: (p.liked ? "❤️ " : "🤍 ") + fmtLikes(p.likes) });
     likeBtn.addEventListener("click", function () {
       p.liked = !p.liked; p.likes += p.liked ? 1 : -1;
@@ -361,7 +369,7 @@
     cBtn.addEventListener("click", function () { openComments(career, p, save); });
 
     var head = el("div", { class: "post-head" }, [
-      avatarImg("post-ava", p.handle),
+      p.mine ? myAvatar("post-ava") : avatarImg("post-ava", p.handle),
       el("div", { class: "post-id" }, [
         el("div", { class: "post-handle" }, [ el("span", { text: p.handle.replace(/🔴⚪|🏛️/g, "").trim() }), p.verified ? el("span", { class: "post-verified", text: "✔" }) : null ]),
         el("div", { class: "post-time", text: "há " + p.age })
@@ -418,7 +426,8 @@
       TM.ui.toast(rep ? "📣 Seu post viralizou e virou notícia!" : "Post publicado");
       TM.ui.go(mode === "player" ? "player-social" : "coach-social");
     } } });
-    composer.appendChild(el("div", { class: "comp-row" }, [ el("img", { class: "comp-ava", src: userAvatar((career.coachName || career.name || "T")) }), ta ]));
+    _me = career;
+    composer.appendChild(el("div", { class: "comp-row" }, [ myAvatar("comp-ava"), ta ]));
     composer.appendChild(el("div", { class: "comp-actions" }, [ el("span", { class: "comp-hint", text: "Sua fala pode repercutir na imprensa" }), postBtn ]));
     wrap.appendChild(composer);
 
