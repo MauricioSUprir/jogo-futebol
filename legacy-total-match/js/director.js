@@ -228,11 +228,11 @@
     var fine = Math.round(c.saf.amountM * (cl.finePct || 0.1));
     c.budget -= fine; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.spentM = (c.finc.spentM || 0) + fine;
     c.saf.strikes = (c.saf.strikes || 0) + 1; c.saf.log.push({ season: c.season || 1, id: cl.id, why: why, fine: fine });
-    c.confidence = Math.max(0, (c.confidence == null ? 50 : c.confidence) - 12);
+    c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 12);
     TM.notify.push(c, { icon: "⚠️", title: "Cláusula da SAF descumprida", news: true, text: why + " " + c.saf.investor + " aplicou multa de " + money(c, fine) + " (" + c.saf.strikes + "ª advertência)." });
     if (c.saf.strikes >= 2) {
       var out = Math.round(c.saf.amountM * 0.2);
-      c.budget -= out; c.finc.spentM += out; c.confidence = Math.max(0, c.confidence - 15);
+      c.budget -= out; c.finc.spentM += out; c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 15);
       TM.notify.push(c, { icon: "💥", title: "SAF rompida", news: true, text: c.saf.investor + " deixou o clube por descumprimento das contrapartidas, levando " + money(c, out) + " de volta. A diretoria está furiosa." });
       try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { icon: "💥", title: "Crise", text: c.saf.investor + " rompe a SAF com o " + TM.data.club(c.teamId).name + " após contrapartidas descumpridas." }); } catch (e) {}
       c.safEnded = { investor: c.saf.investor, season: c.season || 1 }; c.saf = null;
@@ -270,7 +270,7 @@
     if (!fails.length) {
       var bonus = Math.round(c.saf.amountM * 0.15);
       c.budget += bonus; c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 }; c.finc.safM = (c.finc.safM || 0) + bonus;
-      c.confidence = Math.min(100, (c.confidence == null ? 50 : c.confidence) + 8);
+      c.boardTrust = Math.min(100, (c.boardTrust == null ? 50 : c.boardTrust) + 8);
       TM.notify.push(c, { icon: "💼", title: "Contrapartidas cumpridas", news: true, text: c.saf.investor + " aprovou a temporada e liberou um aporte extra de " + money(c, bonus) + "." });
     } else {
       fails.forEach(function (f) { if (c.saf) safPenalty(c, f.cl, f.why); });
