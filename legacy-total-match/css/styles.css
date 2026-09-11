@@ -3510,3 +3510,18 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 /* ---- campinho: marcações completas (áreas, pequena área, marca do pênalti, meia-lua, círculo central, escanteios, gols) ---- */
 .pitch{background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 166.67%22 preserveAspectRatio=%22none%22%3E%3Cg fill=%22none%22 stroke=%22rgba(34,197,94,.55)%22 stroke-width=%220.7%22%3E%3Crect x=%223%22 y=%223%22 width=%2294%22 height=%22160.67%22 rx=%221%22/%3E%3Cline x1=%223%22 y1=%2283.33%22 x2=%2297%22 y2=%2283.33%22/%3E%3Cellipse cx=%2250%22 cy=%2283.33%22 rx=%2213.5%22 ry=%2214.5%22/%3E%3Crect x=%2220.4%22 y=%223%22 width=%2259.2%22 height=%2226.2%22/%3E%3Crect x=%2236.5%22 y=%223%22 width=%2227%22 height=%228.7%22/%3E%3Crect x=%2220.4%22 y=%22137.47%22 width=%2259.2%22 height=%2226.2%22/%3E%3Crect x=%2236.5%22 y=%22154.97%22 width=%2227%22 height=%228.7%22/%3E%3Cpath d=%22M39.2,29.2 A13.5,14.5 0 0 0 60.8,29.2%22/%3E%3Cpath d=%22M39.2,137.47 A13.5,14.5 0 0 1 60.8,137.47%22/%3E%3Crect x=%2244.6%22 y=%220.3%22 width=%2210.8%22 height=%222.7%22/%3E%3Crect x=%2244.6%22 y=%22163.67%22 width=%2210.8%22 height=%222.7%22/%3E%3Cpath d=%22M3,6 A3,3 0 0 0 6,3%22/%3E%3Cpath d=%22M94,3 A3,3 0 0 0 97,6%22/%3E%3Cpath d=%22M3,160.67 A3,3 0 0 1 6,163.67%22/%3E%3Cpath d=%22M94,163.67 A3,3 0 0 1 97,160.67%22/%3E%3C/g%3E%3Cg fill=%22rgba(34,197,94,.7)%22%3E%3Ccircle cx=%2250%22 cy=%2283.33%22 r=%220.9%22/%3E%3Ccircle cx=%2250%22 cy=%2220.5%22 r=%220.9%22/%3E%3Ccircle cx=%2250%22 cy=%22146.17%22 r=%220.9%22/%3E%3C/g%3E%3C/svg%3E"),radial-gradient(120% 80% at 50% 42%,rgba(34,197,94,.08),transparent 60%);background-size:100% 100%,auto;background-repeat:no-repeat}
 .pitch::before,.pitch::after,.pitch-mark{display:none!important}
+
+/* ---- propostas recebidas v2 ---- */
+.offer-card{border-color:rgba(251,191,36,.5)}
+.offer-row{display:flex;align-items:center;gap:10px;margin:6px 0}
+.offer-mid{flex:1;min-width:0}.offer-t{font-weight:800;font-size:14px}.offer-s{font-size:12px;opacity:.8}
+.offer-face{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3)}
+.offer-spk{width:44px;height:44px;border-radius:50%;object-fit:cover;border:2px solid rgba(251,191,36,.7)}
+.offer-meta{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px auto;max-width:640px}
+.offer-consult{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:8px auto;max-width:640px}
+.nego-bubble.info{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);align-self:center;max-width:92%;font-size:13px}
+.farewell-hero{text-align:center;padding:22px 14px;border-radius:16px;background:linear-gradient(160deg,rgba(251,191,36,.12),var(--panel));border:1px solid rgba(251,191,36,.35);margin-top:10px}
+.farewell-face{width:110px;height:110px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.4);margin:0 auto 10px;display:block}
+.farewell-name{font-size:22px;font-weight:900}.farewell-sub{opacity:.8;margin:4px 0 10px}
+.farewell-quote{font-style:italic;font-size:15px;margin:8px auto 12px;max-width:420px}
+.farewell-crest{width:56px;height:56px;object-fit:contain;display:block;margin:0 auto}

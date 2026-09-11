@@ -75,6 +75,56 @@
     return true;
   }
 
+  /* =================== A RECEBER (vendas parceladas, bônus, % de revenda) =================== */
+  function addReceivable(c, o) {
+    c.receivables = c.receivables || [];
+    var parts = Math.max(1, o.parts || 1), d = due(c, 1);
+    var it = { id: "rc" + Date.now().toString(36) + Math.floor(Math.random() * 1e4), name: o.name, from: o.from || "", fromId: o.fromId || null, per: R(o.per), left: parts, total: parts, kind: o.kind || "venda", cond: o.cond || null, dueSeason: d.s, dueDay: d.d };
+    c.receivables.push(it);
+    note(c, { icon: "💵", title: o.kind === "bonus" ? "Bônus a receber" : "Parcelas a receber", fin: true, text: (o.kind === "bonus" ? "Bônus de " + money(c, it.per) + " por " + o.name + " (condição: " + (o.cond || "metas") + ")" : o.from + " paga " + o.name + " em " + parts + " parcela(s) de " + money(c, it.per)) + ". Acompanhe em 💰 Finanças → A receber." });
+    return it;
+  }
+  function receivables(c) { return (c.receivables || []).filter(function (r) { return r.left > 0; }); }
+  function tickReceivables(c) {
+    var got = [];
+    receivables(c).forEach(function (r) {
+      if (r.kind === "bonus") return;                                  // bônus é avaliado no fim da temporada
+      if (!isDue(c, r)) return;
+      r.left--; c.budget = R(c.budget + r.per); finc(c).soldM = R((finc(c).soldM || 0) + r.per); got.push(r);
+      if (r.left > 0) { var d = due(c, 1); r.dueSeason = d.s; r.dueDay = d.d; }
+    });
+    if (got.length) { c.receivables = c.receivables.filter(function (r) { return r.left > 0; }); note(c, { icon: "💵", title: "Parcela recebida", fin: true, text: got.map(function (r) { return r.from + " pagou " + money(c, r.per) + " por " + r.name; }).join(" · ") + "." }); }
+  }
+  function seasonEndReceivables(c) {
+    (c.receivables || []).forEach(function (r) {
+      if (r.kind !== "bonus" || r.left <= 0) return;
+      if (Math.random() < 0.6) { c.budget = R(c.budget + r.per); finc(c).soldM = R((finc(c).soldM || 0) + r.per); r.left = 0; note(c, { icon: "🎯", title: "Bônus recebido", fin: true, text: r.name + " cumpriu a meta no " + r.from + ": " + money(c, r.per) + " entraram no caixa." }); }
+      else { r.left = 0; note(c, { icon: "🎯", title: "Bônus não pago", text: r.name + " não cumpriu a meta (" + (r.cond || "metas") + ") no " + r.from + " nesta temporada." }); }
+    });
+    c.receivables = (c.receivables || []).filter(function (r) { return r.left > 0; });
+    // % de revenda: às vezes o clube comprador revende o jogador
+    var so = c.sellOnRights || {};
+    Object.keys(so).forEach(function (pid) {
+      var r = so[pid]; if ((season(c) - (r.season || season(c))) > 3) { delete so[pid]; return; }
+      if (Math.random() < 0.15) {
+        var p = C().resolvePlayer(c, pid) || TM.data.player(pid); var val = p ? curValM(c, TM.data.marketValue(p) * 1.1) : 5; var cut = R(val * r.pct / 100);
+        c.budget = R(c.budget + cut); finc(c).soldM = R((finc(c).soldM || 0) + cut); delete so[pid];
+        note(c, { icon: "📈", title: "% de revenda recebida", news: true, text: r.from + " revendeu " + r.name + " e você recebeu " + r.pct + "% (" + money(c, cut) + ")." });
+      }
+    });
+  }
+  function curValM(c, eur) { return R(eur * mult(c)); }
+  function receivablesPanel(c, body) {
+    var list = receivables(c); var so = c.sellOnRights || {};
+    if (!list.length && !Object.keys(so).length) return;
+    var box = el("div", { class: "fin-cat" }, [ el("div", { class: "fin-cat-h good", html: "💵 A receber <b>" + money(c, R(list.reduce(function (s, r) { return s + r.per * r.left; }, 0))) + "</b>" }) ]);
+    list.sort(function (a, b) { return daysToDue(c, a) - daysToDue(c, b); }).forEach(function (r) {
+      box.appendChild(el("div", { class: "inst-row" }, [ el("div", { class: "inst-info" }, [ el("div", { class: "inst-name", text: r.name + " ← " + r.from }), el("div", { class: "inst-sub", text: (r.kind === "bonus" ? "Bônus de " + money(c, r.per) + " se " + (r.cond || "cumprir metas") + " (avaliado no fim da temporada)" : "Parcela de " + money(c, r.per) + " · faltam " + r.left + " · próxima " + dateTxt(c, r.dueSeason, r.dueDay)) }) ]) ]));
+    });
+    Object.keys(so).forEach(function (pid) { var r = so[pid]; box.appendChild(el("div", { class: "inst-row" }, [ el("div", { class: "inst-info" }, [ el("div", { class: "inst-name", text: r.name + " ← " + r.from }), el("div", { class: "inst-sub", text: r.pct + "% de uma revenda futura (vale por 3 temporadas)" }) ]) ])); });
+    body.appendChild(box);
+  }
+
   /* =================== TRANSFER BAN =================== */
   // próximos fechamentos de janela (nesta e nas próximas temporadas), em ordem
   function upcomingWindowCloses(c, n) {
@@ -160,6 +210,7 @@
     migrate(c);
     var dt = c.dealTerms || {};
     Object.keys(dt).forEach(function (pid) { if ((c.roster || []).indexOf(pid) < 0) delete dt[pid]; });
+    try { seasonEndReceivables(c); } catch (e) {}
   }
 
   /* =================== ENDIVIDAMENTO =================== */
@@ -236,6 +287,7 @@
     }
     banned(c);
     checkBonuses(c);
+    try { tickReceivables(c); } catch (e) {}
     tickDebt(c);
     if (changed) save(c);
   }
@@ -347,6 +399,7 @@
     head.appendChild(el("div", { class: "setting-hint", text: "Regra: mais de 2 clubes/jogadores com parcelas vencidas = transfer ban (1 janela; 2 com 4+ credores; 3 se algum atraso passar de 60 dias)." }));
     body.appendChild(head);
 
+    try { receivablesPanel(c, body); } catch (e) {}
     // ---- compromissos (bônus e % de venda) ----
     var dt = c.dealTerms || {}, keys = Object.keys(dt).filter(function (pid) { return dt[pid] && (dt[pid].bonus && !dt[pid].paid || dt[pid].sellOn) && (c.roster || []).indexOf(pid) >= 0; });
     if (keys.length) {
@@ -374,7 +427,7 @@
     body.appendChild(dbox);
   }
 
-  TM.fin = { migrate: migrate, tick: tick, seasonEnd: seasonEnd, worldContractYears: worldContractYears, endingContract: endingContract, preOpen: preOpen, preWilling: preWilling, dailyPoach: dailyPoach, leaveFree: leaveFree, PRE_DAY: PRE_DAY, addInstallments: addInstallments, pending: pending, overdueList: overdueList, payInstallment: payInstallment,
+  TM.fin = { migrate: migrate, tick: tick, seasonEnd: seasonEnd, addReceivable: addReceivable, receivables: receivables, worldContractYears: worldContractYears, endingContract: endingContract, preOpen: preOpen, preWilling: preWilling, dailyPoach: dailyPoach, leaveFree: leaveFree, PRE_DAY: PRE_DAY, addInstallments: addInstallments, pending: pending, overdueList: overdueList, payInstallment: payInstallment,
     banned: banned, banInfo: banInfo, banBox: banBox, banLabel: banLabel, applyBan: applyBan, setDealTerms: setDealTerms, onSale: onSale, checkBonuses: checkBonuses,
     debtInfo: debtInfo, panels: panels, worldClause: worldClause, clauseMode: clauseMode, myClause: myClause, BONUS_APPS: BONUS_APPS };
 })(window);

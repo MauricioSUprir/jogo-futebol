@@ -853,6 +853,7 @@
     try { TM.club.ensure(c); TM.club.maybeSafOffer(c); } catch (e) {} // propostas de SAF nas janelas
     try { if (TM.fin) TM.fin.tick(c); } catch (e) {}                 // parcelas, bônus, transfer ban, endividamento
     try { if (TM.pre) TM.pre.tick(c); } catch (e) {}                 // convites de torneio de pré-temporada
+    try { if (TM.offers) TM.offers.tick(c); } catch (e) {}           // prazos das propostas recebidas
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
@@ -1002,6 +1003,7 @@
     ]));
     try { var safEl = TM.club.safCard(c, "coach-hub"); if (safEl) screen.appendChild(safEl); } catch (e) {}
     try { var preEl = TM.pre && TM.pre.card(c); if (preEl) screen.appendChild(preEl); } catch (e) {}
+    try { var offEl = TM.offers && TM.offers.card(c); if (offEl) screen.appendChild(offEl); } catch (e) {}
 
     var pending = C().advanceToUserMatch(c);
     if (pending.seasonEnd) {
@@ -4088,6 +4090,7 @@
   var profilePid = null, profileBack = "coach-squad", profileTab = "geral";
   function openPlayerProfile(player, back) { profilePid = player.id; profileBack = back || "coach-squad"; profileTab = "geral"; TM.ui.go("coach-player"); }
   TM.coachUI.openPlayer = openPlayerProfile;
+  TM.coachUI.idolStatus = idolStatus; TM.coachUI.agentOf = agentOf;
 
   function gaugeSVG(val, max, label, color) {
     var pct = Math.max(0, Math.min(1, val / max));
@@ -4832,7 +4835,7 @@
       ]);
       if (n.offer) {
         card.appendChild(el("div", { class: "note-actions" }, [
-          TM.ui.button("Analisar proposta", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary small")
+          TM.ui.button("🤝 Sentar para negociar", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary small")
         ]));
       } else if (n.loanOffer) {
         card.appendChild(el("div", { class: "note-actions" }, [
