@@ -190,6 +190,7 @@
     return out;
   }
   function maybeSafOffer(c) {
+    if (TM.saf) { TM.saf.tick(c); return; }   // SAF v2 (saf.js)
     if (!c.windows) return;
     var d = c.currentDay || 0;
     if (c.safOffer && d >= c.safOffer.closeDay) { c.safOffer = null; }
@@ -240,14 +241,16 @@
   function clauseOf(c, id) { return (c.saf && c.saf.clauses || []).filter(function (x) { return x.id === id; })[0]; }
   // eventos: proposta recusada / jogador vendido / empréstimo
   function onOfferRejected(c, player, fee, buyerId) {
+    if (TM.saf) { TM.saf.onOfferRejected(c, player, fee, buyerId); return; }
     var cl = clauseOf(c, "euro"); if (!cl || !player) return;
     if (isEuroClub(buyerId) && fee >= TM.data.marketValue(player) * mult(c)) safPenalty(c, cl, "Você recusou " + money(c, fee) + " de um clube europeu por " + player.name + " (acima do valor de mercado).");
   }
   function onPlayerSold(c, player, fee, buyerId) {
+    if (TM.saf) { TM.saf.onPlayerSold(c, player, fee, buyerId); return; }
     var cl = clauseOf(c, "simbolo"); if (!cl || !player || cl.pid !== player.id) return;
     safPenalty(c, cl, "Você vendeu " + player.name + ", o jogador-símbolo do projeto.");
   }
-  function onLoanTaken(c) { var cl = clauseOf(c, "semEmprestimo"); if (cl) safPenalty(c, cl, "Você pegou um empréstimo bancário durante a SAF."); }
+  function onLoanTaken(c) { if (TM.saf) { TM.saf.onLoanTaken(c); return; } var cl = clauseOf(c, "semEmprestimo"); if (cl) safPenalty(c, cl, "Você pegou um empréstimo bancário durante a SAF."); }
   // fim da temporada: avalia as cláusulas de temporada; tudo cumprido = aporte extra
   function evaluateSaf(c) {
     if (!c.saf) return;
@@ -278,6 +281,7 @@
     return el("ul", { class: "saf-clauses" }, (clauses || []).map(function (cl) { return el("li", { text: (cl.when === "season" ? "📅 " : "⚡ ") + cl.text + " (multa " + Math.round((cl.finePct || 0.1) * 100) + "% do aporte)" }); }));
   }
   function safCard(c, route) {
+    if (TM.saf) return TM.saf.card(c, route);
     if (!c.safOffer) return null;
     var o = c.safOffer;
     return el("div", { class: "saf-card" }, [
@@ -318,7 +322,8 @@
     var cur = [];
     TIER_ORDER.forEach(function (t) { var d = c.sponsors && c.sponsors[t]; if (d) cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: TIERS[t].icon + " " + TIERS[t].label + " · " + d.name + (d.until ? " (até temp. " + d.until + ")" : "") }), el("span", { class: "deal-val good", text: "+" + money(c, d.seasonM) + "/temp" }) ])); });
     if (c.supplier) cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "👕 Material · " + c.supplier.name + (c.supplier.until ? " (até temp. " + c.supplier.until + ")" : "") }), el("span", { class: "deal-val good", text: "+" + money(c, c.supplier.seasonM) + "/temp" }) ]));
-    if (c.saf) { cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "💼 SAF · " + c.saf.investor + " (" + c.saf.pct + "%) · " + (c.saf.strikes || 0) + "/2 advertências" }), el("span", { class: "deal-val", text: "aporte " + money(c, c.saf.amountM) }) ])); cur.push(clauseList(c, c.saf.clauses)); }
+    if (c.saf && TM.saf) { cur.push(TM.saf.card(c, route)); }
+    else if (c.saf) { cur.push(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "💼 SAF · " + c.saf.investor + " (" + c.saf.pct + "%) · " + (c.saf.strikes || 0) + "/" + (c.saf.patience || 2) + " advertências" }), el("span", { class: "deal-val", text: "aporte " + money(c, c.saf.amountM) }) ])); cur.push(clauseList(c, c.saf.clauses)); }
     body.appendChild(el("div", { class: "nego-panel" }, [
       el("div", { class: "nego-quote", text: "🤝 Contratos comerciais" }),
       cur.length ? el("div", {}, cur) : el("div", { class: "setting-hint", text: "Nenhum patrocínio fechado. Casas de apostas pagam mais; grandes marcas dão estabilidade." }),
@@ -371,7 +376,7 @@
   // virada de temporada: contratos vencem, parcelas de empréstimo
   function seasonTick(c) {
     ensure(c);
-    try { evaluateSaf(c); } catch (e) {}
+    try { if (TM.saf) TM.saf.seasonEnd(c); else evaluateSaf(c); } catch (e) {}
     var s = c.season || 1, ended = [];
     TIER_ORDER.forEach(function (t) { var d = c.sponsors[t]; if (d && d.until && s > d.until) { ended.push(TIERS[t].label + ": " + d.name); c.sponsors[t] = null; } });
     if (c.supplier && c.supplier.until && s > c.supplier.until) { ended.push("Material: " + c.supplier.name); c.supplier = null; }
