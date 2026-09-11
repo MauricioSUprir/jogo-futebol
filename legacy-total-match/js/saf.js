@@ -211,9 +211,13 @@
       note(c, { icon: "⌛", title: "Proposta de SAF expirou", text: c.safOffer.investor + " retirou a proposta: a janela fechou sem resposta." });
       c.safOffer = null;
     }
+    if (d < 45) return;                                   // nunca nos primeiros dias de carreira
     c.windows.forEach(function (w) {
       var open = d >= w.openDay && d < w.closeDay;
       if (!open || w.safRolled) return;
+      // a proposta chega num dia aleatório dentro da janela, não na abertura
+      if (w.safDay == null) w.safDay = w.openDay + 3 + rnd(Math.max(1, (w.closeDay - w.openDay) - 6));
+      if (d < w.safDay) return;
       w.safRolled = true;
       if (c.safOffer || c.saf) return;
       var s = clubSize(c);
@@ -503,6 +507,7 @@
   /* ---------- UI: cartão no hub / finanças ---------- */
   function satInfo(s) { return s >= 75 ? { cls: "good", txt: "muito satisfeito" } : s >= 50 ? { cls: "ok", txt: "satisfeito" } : s >= 30 ? { cls: "warn", txt: "impaciente" } : { cls: "bad", txt: "prestes a romper" }; }
   function card(c, route) {
+    if (route === "coach-hub") return null;               // tela principal limpa: proposta e pedidos só nas notificações
     if (c.safOffer) {
       var o = c.safOffer;
       return el("div", { class: "saf-card clickable", on: { click: function () { TM.ui.go("club-saf-offer", { from: route }); } } }, [
