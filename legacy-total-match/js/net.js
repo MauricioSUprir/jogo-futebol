@@ -129,6 +129,15 @@
   function finishReady(uid, number, name) {
     net.me = { uid: uid, number: number, name: name, photo: null, favClub: null, bio: null };
     net.ready = true;
+    // identidade excluída pelo administrador: derruba a conta local deste aparelho
+    try {
+      net._db.ref("bannedUids/" + uid).once("value").then(function (s) {
+        if (!s.val()) return;
+        net.banned = true;
+        try { TM.storage.remove("profile"); } catch (e) {}
+        try { TM.ui.toast("Esta conta foi excluída pelo administrador."); } catch (e) {}
+      });
+    } catch (e) {}
     setupPresence(uid);
     listenInvites(uid);
     // carrega extras do perfil (foto/clube favorito/bio) sem bloquear o ready
@@ -180,10 +189,11 @@
   // adota a identidade online da conta neste aparelho (mesmo número + amigos + chats)
   net.linkAccount = function (link) {
     if (!link || !link.uid) return;
+    try { net._db && net._db.ref("bannedUids/" + link.uid).once("value").then(function (s) { if (s.val()) { net.banned = true; try { TM.storage.remove("profile"); } catch (e) {} try { TM.ui.toast("Esta conta foi excluída pelo administrador."); } catch (e) {} } }); } catch (e) {}
     saveLink(link);
     if (!net._db) return;
     var name = link.name || localName() || "Jogador";
-    net._db.ref("users/" + link.uid).update({ name: name, number: link.number || null });
+    net._db.ref("users/" + link.uid).update({ name: name, number: link.number || null }).catch(function () {});
     net.me = { uid: link.uid, number: link.number, name: name };
     net.ready = true;
     setupPresence(link.uid);

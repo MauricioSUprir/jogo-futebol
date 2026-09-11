@@ -12,6 +12,20 @@
   function restore(o) { SYNC_KEYS.forEach(function (k) { if (o && o[k] != null) TM.storage.write(k, o[k]); }); }
   function profile() { return TM.storage.read("profile", null); }        // { email, name, photo }
   function setProfile(p) { if (p) TM.storage.write("profile", p); else TM.storage.remove("profile"); }
+  // conta excluída pelo administrador em outro aparelho: derruba o login local ao abrir o jogo
+  function verifyProfile() {
+    var p = profile(); if (!p || !p.email) return;
+    try {
+      var n = N(); if (!n || !n._db || !n.acctKey) return;
+      n._db.ref("accounts/" + n.acctKey(p.email)).once("value").then(function (s) {
+        if (s.val()) return;
+        setProfile(null); if (n.unlinkAccount) n.unlinkAccount();
+        TM.ui.toast("Esta conta foi excluída pelo administrador.");
+        try { if (document.getElementById("screen-modes") || document.querySelector(".acct-card")) TM.ui.go("modes"); } catch (e) {}
+      }).catch(function () {});
+    } catch (e) {}
+  }
+  try { if (N()) N().onReady(function () { setTimeout(verifyProfile, 800); }); } catch (e) {}
   TM.account = { profile: profile };
 
   // auto-sync: quando logado, sobe as carreiras (debounce de 3s)
