@@ -1119,6 +1119,8 @@
 
       if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
       var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
+      // contexto do jogo (o que pesa além dos elencos)
+      try { var ctxL = C().contextLabels(c, pending.homeId, pending.awayId, pending.ko); if (ctxL.length) kids.push(el("div", { class: "ctx-line" }, ctxL.map(function (t) { return el("span", { class: "ctx-chip", text: t }); }))); } catch (e) {}
       kids.push(TM.ui.button("🔍 Analisar adversário", function () {
         TM.ui.go("scout", { teamId: oppId, isNation: false, compId: compId, back: function () { TM.ui.go("coach-hub"); } });
       }, "btn ghost"));
@@ -2184,6 +2186,7 @@
       }
     } catch (e) {}
     var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge + capEdge + fatigueEdge + (function () { try { return TM.club.clubEdge(c); } catch (e) { return 0; } })(), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
+    try { Object.assign(simOpts, C().matchContext(c, p.homeId, p.awayId, p.ko)); } catch (e) {}   // fase, clássico, torcida, o que está em jogo
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: p.name,

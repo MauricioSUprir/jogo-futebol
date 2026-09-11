@@ -283,11 +283,58 @@
   function oppTeam(career, clubId) { var c = TM.data.club(clubId); return { id: c.id, name: c.name, players: oppPlayers(career, clubId), club: c }; }
   function anyTeam(career, clubId) { return clubId === career.teamId ? userTeam(career) : oppTeam(career, clubId); }
 
+  /* ---------- contexto de futebol (fase, clássico, torcida, o que está em jogo) ---------- */
+  function recordForm(career, homeId, awayId, score) {
+    career.form = career.form || {};
+    function push(id, v) { var a = career.form[id] || []; a.push(v); if (a.length > 5) a.shift(); career.form[id] = a; }
+    var hs = score[0], as = score[1];
+    push(homeId, hs > as ? 1 : hs < as ? -1 : 0); push(awayId, as > hs ? 1 : as < hs ? -1 : 0);
+  }
+  function formOf(career, id) { var a = (career.form || {})[id] || []; if (!a.length) return 0; return a.reduce(function (s, v) { return s + v; }, 0) / Math.max(3, a.length); }
+  function crowdOf(career, clubId) {
+    var cl = TM.data.club(clubId); if (!cl) return 0.5;
+    var cap = 20000; try { cap = (TM.data.stadium(cl) || {}).capacity || 20000; } catch (e) {}
+    var pop = clubId === career.teamId ? (career.popularity || 40) : Math.max(20, TM.data.clubRating(clubId) - 40);
+    return Math.max(0.1, Math.min(1, cap / 70000 * 0.7 + pop / 100 * 0.3));
+  }
+  function stakesOf(career, clubId) {
+    try {
+      var lg = career.comps && career.comps.league; if (!lg || !lg.table || !lg.fixtures) return 0;
+      var prog = lg.round / Math.max(1, lg.fixtures.length); if (prog < 0.55) return 0;
+      var st = standings(lg.table), n = st.length, i = st.findIndex(function (r) { return r.id === clubId; }); if (i < 0) return 0;
+      var me = st[i], lead = st[0];
+      if (i < 4 && lead.pts - me.pts <= 6) return 0.6 + prog * 0.4;        // briga pelo título
+      if (i >= n - 5 && Math.abs(me.pts - st[n - 4].pts) <= 5) return 0.5 + prog * 0.5; // briga contra o rebaixamento
+      return 0;
+    } catch (e) { return 0; }
+  }
+  function matchContext(career, homeId, awayId, neutral) {
+    var ctx = { form: [formOf(career, homeId), formOf(career, awayId)], stakes: [stakesOf(career, homeId), stakesOf(career, awayId)] };
+    try { ctx.derby = !!(TM.data.areRivals && TM.data.areRivals(homeId, awayId)); } catch (e) { ctx.derby = false; }
+    ctx.crowd = neutral ? 0.5 : crowdOf(career, homeId);
+    return ctx;
+  }
+  function contextLabels(career, homeId, awayId, neutral) {
+    var ctx = matchContext(career, homeId, awayId, neutral), out = [];
+    if (ctx.derby) out.push("🔥 Clássico: a diferença técnica pesa menos, jogo quente");
+    var mine = homeId === career.teamId ? 0 : awayId === career.teamId ? 1 : -1;
+    if (mine >= 0) {
+      var f = ctx.form[mine], fo = ctx.form[1 - mine];
+      if (f >= 0.5) out.push("📈 Seu time vive boa fase"); else if (f <= -0.5) out.push("📉 Seu time vem de má fase");
+      if (fo >= 0.5) out.push("⚠️ Adversário embalado"); else if (fo <= -0.5) out.push("🎯 Adversário em crise");
+      if (ctx.stakes[mine] >= 0.6) out.push("🏆 Jogo decisivo na tabela");
+      if (!neutral) out.push(mine === 0 ? (ctx.crowd >= 0.7 ? "🏟️ Casa lotada a favor" : "🏟️ Jogo em casa") : (ctx.crowd >= 0.7 ? "🏟️ Caldeirão adversário" : "✈️ Jogo fora"));
+    }
+    return out;
+  }
   function simMatch(career, homeId, awayId, neutral) {
     var opts = { realism: realism(), neutral: neutral };
     if (homeId === career.teamId) { opts.tacticSide = 0; opts.tactic = career.tactic; }
     else if (awayId === career.teamId) { opts.tacticSide = 1; opts.tactic = career.tactic; }
-    return TM.engine.simulate(anyTeam(career, homeId), anyTeam(career, awayId), opts);
+    try { Object.assign(opts, matchContext(career, homeId, awayId, neutral)); } catch (e) {}
+    var res = TM.engine.simulate(anyTeam(career, homeId), anyTeam(career, awayId), opts);
+    try { recordForm(career, homeId, awayId, res.score); } catch (e) {}
+    return res;
   }
   // contexto para o motor de torneio (continental)
   function contCtx(career) {
@@ -2237,6 +2284,7 @@
   function applyUserResult(career, homeScore, awayScore, penWinnerId) {
     var p = career.pending;
     if (!p || p.seasonEnd) return;
+    try { if (p.homeId && p.awayId) recordForm(career, p.homeId, p.awayId, [homeScore, awayScore]); } catch (e) {}
     if (p.key === "inter") {
       var iw = homeScore > awayScore ? p.homeId : awayScore > homeScore ? p.awayId : (penWinnerId || penaltyWinner(p.homeId, p.awayId));
       career.interChampion = iw;
@@ -2326,7 +2374,7 @@
     CONFED: CONFED, CONFED_NAME: CONFED_NAME, CONFED_SLOTS: CONFED_SLOTS,
     advanceWorldCup: advanceWorldCup, applyWorldCupResult: applyWorldCupResult, wcRoundLabel: wcRoundLabel,
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult, userPenContext: userPenContext,
-    standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam,
+    standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam, matchContext: matchContext, contextLabels: contextLabels, recordForm: recordForm,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
     CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,

@@ -76,7 +76,10 @@
     var focusId = opts.focusPlayerId || null;
 
     var A = teamProfile(teamA), B = teamProfile(teamB);
-    var homeBoost = opts.neutral ? 0 : 3;
+    // CONTEXTO DE FUTEBOL (opcional): torcida/estádio (0..1), fase recente (-1..1 por lado), clássico, o que está em jogo (0..1 por lado)
+    var crowd = opts.crowd == null ? 0.5 : Math.max(0, Math.min(1, opts.crowd));
+    var homeBoost = opts.neutral ? 0 : 1.5 + crowd * 3;          // casa lotada pesa mais (1.5 .. 4.5)
+    var form = opts.form || [0, 0], stakes = opts.stakes || [0, 0], derby = !!opts.derby;
     var redPenalty = [0, 0]; // redução de força por expulsão
 
     // modificadores de tática do time do usuário
@@ -95,6 +98,11 @@
       var mb = Math.max(-3, Math.min(3, opts.moraleBoost)) * 0.02; // ±6%
       atkMod[opts.moraleSide] *= (1 + mb); defMod[opts.moraleSide] *= (1 + mb);
     }
+    // fase recente (embalo/crise) e motivação (briga por título/rebaixamento): até ±4% no ataque e ±2% na defesa
+    [0, 1].forEach(function (i) {
+      var f = Math.max(-1, Math.min(1, form[i] || 0)), st = Math.max(0, Math.min(1, stakes[i] || 0));
+      atkMod[i] *= (1 + f * 0.04 + st * 0.03); defMod[i] *= (1 + f * 0.02 + st * 0.02);
+    });
     // dificuldade: ajusta a força do time do usuário (fácil ajuda, lenda dificulta)
     var DIFF = { facil: 1.4, normal: 0, dificil: -1.4, lenda: -2.8 };
     if (opts.difficulty && opts.userSide != null && DIFF[opts.difficulty]) {
@@ -102,12 +110,28 @@
       atkMod[opts.userSide] *= (1 + de); defMod[opts.userSide] *= (1 + de);
     }
 
-    function chanceProb(atk, opDef, redsMine, ovrGap) {
+    function chanceProb(atk, opDef, redsMine, ovrGap, redsOpp) {
       var edge = (atk - opDef);
       // qualidade dos elencos pesa mais (setores + overall médio do time), sem impedir zebras:
-      // o time pior sempre mantém um mínimo de chances por jogo
-      var base = Math.min(0.12 + kq * 0.01, Math.max(0.04 - kq * 0.006, 0.088 + (edge * 0.0040 + (ovrGap || 0) * 0.0012) * kq)) * variance / 1.9;
-      return base * (1 - redsMine * 0.16);
+      // o time pior sempre mantém um mínimo de chances por jogo. Em clássico a diferença técnica pesa menos.
+      var kk = derby ? kq * 0.6 : kq;
+      var base = Math.min(0.12 + kq * 0.01, Math.max(0.04 - kq * 0.006, 0.088 + (edge * 0.0040 + (ovrGap || 0) * 0.0012) * kk)) * variance / 1.9;
+      if (derby) base *= 1.06;                                   // clássico: jogo mais aberto e intenso
+      return base * (1 - redsMine * 0.16) * (1 + (redsOpp || 0) * 0.10);   // com um a mais, o adversário cria mais
+    }
+    // DINÂMICA DA PARTIDA: time pequeno se fecha, quem está atrás se lança, fim de jogo tem gol, embalo depois do gol
+    var lastGoalMin = -99, lastGoalSide = -1;
+    function dyn(side, minute) {
+      var m = 1, diff = score[side] - score[1 - side], gap = (side === 0 ? A.ovr - B.ovr : B.ovr - A.ovr);
+      var under = gap <= -6, fav = gap >= 6;
+      if (under && diff >= 0 && minute < 65) m *= 0.85;         // zebra segurando o resultado: joga fechada
+      if (fav && diff <= 0 && minute < 65 && (side === 0 ? B.ovr - A.ovr : A.ovr - B.ovr) <= -6) m *= 0.92; // e o favorito encontra o ônibus estacionado
+      if (minute >= 60 && diff < 0) m *= (minute >= 80 ? 1.4 : 1.22);   // atrás no placar: vai para cima
+      if (minute >= 60 && diff > 0) m *= (diff === 1 ? 0.86 : 0.8);      // na frente: administra (abre espaço para contra-ataque)
+      if (minute >= 60 && diff > 0 && (side === 0 ? B : A).ovr < (side === 0 ? A : B).ovr - 3) m *= 1.08; // ...mas o time melhor mata no contra-ataque
+      if (minute >= 86) m *= 1.25;                                  // acréscimos: bola na área, gol tardio
+      if (minute - lastGoalMin <= 4 && lastGoalSide === side) m *= 1.12;   // embalo de quem acabou de marcar
+      return m;
     }
 
     var startMinute = opts.startMinute || 1;
@@ -184,7 +208,7 @@
             decision: annul ? "annulled" : "confirmed", reason: kk.r });
         }
         if (annul) { return; } // gol anulado pelo VAR — não conta
-        onTarget[side]++; score[side]++;
+        onTarget[side]++; score[side]++; lastGoalMin = minute; lastGoalSide = side;
         if (scorer.id === focusId) focusGoals++;
         events.push({ minute: minute, type: isPen ? "pengoal" : "goal", team: side, player: scorer.name,
           score: score.slice(), text: (isPen ? "PÊNALTI CONVERTIDO! " : isFK ? "GOL DE FALTA! " : "") + fmt(pick(GOAL_LINES), scorer.name, team.name) });
@@ -230,8 +254,8 @@
         }
       }
 
-      var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0], A.ovr - B.ovr);
-      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1], B.ovr - A.ovr);
+      var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0], A.ovr - B.ovr, redPenalty[1]) * dyn(0, m);
+      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1], B.ovr - A.ovr, redPenalty[0]) * dyn(1, m);
 
       [[0, pA, A, B, teamA], [1, pB, B, A, teamB]].forEach(function (row) {
         var side = row[0], prob = row[1], prof = row[2], opp = row[3], team = row[4];
@@ -247,7 +271,7 @@
       });
 
       // cartões
-      if (Math.random() < 0.02) {
+      if (Math.random() < (derby ? 0.032 : 0.02)) {
         var s = Math.random() < 0.5 ? 0 : 1;
         var team2 = s === 0 ? teamA : teamB;
         var pl = state[s].pitch.length ? pick(state[s].pitch) : null;
