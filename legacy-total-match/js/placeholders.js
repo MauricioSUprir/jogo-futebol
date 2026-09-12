@@ -268,6 +268,15 @@
   }
   // índice de fotos REAIS de licença livre (Wikimedia Commons), gerado em assets/photo-index.js
   function hasPhoto(kind, file) { var I = global.TM_PHOTO_INDEX; return !!(I && I[kind] && I[kind][file]); }
+  // chave de arquivo do clube: liga de ORIGEM (a liga atual muda com acesso/rebaixamento; os arquivos não)
+  function clubKey(club) { return (club.homeLeagueId || club.leagueId) + "-" + stadSlug(club.name); }
+  // nome de arquivo existente para um tipo, testando a liga de origem e depois a atual
+  function clubFile(kind, club, suffix) {
+    if (!club || !club.name) return null;
+    var k1 = clubKey(club) + suffix; if (hasPhoto(kind, k1)) return k1;
+    if (club.leagueId && club.homeLeagueId && club.leagueId !== club.homeLeagueId) { var k2 = club.leagueId + "-" + stadSlug(club.name) + suffix; if (hasPhoto(kind, k2)) return k2; }
+    return null;
+  }
 
   // slug do nome do clube (casa com os arquivos em assets/estadios/<slug>.jpg)
   function stadSlug(name) {
@@ -351,9 +360,9 @@
       if (club.crestData) return imgWithFallback(club.crestData, crest(club), club.name, cls);
       // Season Update: escudo REAL do clube (assets/clubes/<liga>-<clube>.png) quando existir
       var proC = false; try { proC = TM.storage && TM.storage.edition && TM.storage.edition() === "pro"; } catch (e) {}
-      if (proC && club.leagueId && club.name) {
-        var cf = club.leagueId + "-" + stadSlug(club.name) + ".png";
-        if (hasPhoto("clubes", cf)) return imgWithFallback("assets/clubes/" + cf, crest(club), club.name, cls);
+      if (proC && club.name) {
+        var cf = clubFile("clubes", club, ".png");
+        if (cf) return imgWithFallback("assets/clubes/" + cf, crest(club), club.name, cls);
       }
       return imgWithFallback(crest(club), crest(club), club.name, cls);
     },
@@ -365,8 +374,8 @@
       var custom = variant === 1 ? club.kitAwayData : variant === 2 ? club.kitThirdData : club.kitData;
       if (custom) return imgWithFallback(custom, kit(club, variant), club.name + " — uniforme", cls);
       // uniforme REAL da temporada (desenho da Wikipedia/Commons, licença livre) em assets/uniformes/<liga>-<clube>-N.png
-      var kf = club.leagueId + "-" + stadSlug(club.name) + "-" + (variant + 1) + ".png";
-      if (hasPhoto("uniformes", kf)) return imgWithFallback("assets/uniformes/" + kf, kit(club, variant), club.name + " — uniforme", cls);
+      var kf = clubFile("uniformes", club, "-" + (variant + 1) + ".png");
+      if (kf) return imgWithFallback("assets/uniformes/" + kf, kit(club, variant), club.name + " — uniforme", cls);
       return imgWithFallback(kit(club, variant), kit(club, variant), club.name + " — uniforme", cls);
     },
     playerImg: function (player, cls) {
@@ -374,10 +383,10 @@
       // foto importada pelo jogador (carreira própria) tem prioridade; senão foto REAL de licença livre; senão avatar (SVG)
       if (player.photo) return imgWithFallback(player.photo, avatar(player, club), player.name, cls);
       var av = avatar(player, club);
-      if (club) {
-        var pf = club.leagueId + "-" + stadSlug(club.name) + "__" + stadSlug(player.name) + ".jpg";
-        if (hasPhoto("jogadores", pf)) return imgWithFallback("assets/jogadores/" + pf, av, player.name, cls);
-      }
+      // foto real: clube atual, depois o clube de ORIGEM (a foto continua a mesma depois de uma transferência)
+      var suf = "__" + stadSlug(player.name) + ".jpg", pf = club ? clubFile("jogadores", club, suf) : null;
+      if (!pf && player.homeClubId && player.homeClubId !== player.clubId) { var hc = TM.data.club(player.homeClubId); if (hc) pf = clubFile("jogadores", hc, suf); }
+      if (pf) return imgWithFallback("assets/jogadores/" + pf, av, player.name, cls);
       return imgWithFallback(av, av, player.name, cls);
     },
     nationImg: function (nation, cls) {
@@ -391,8 +400,8 @@
     },
     stadiumImg: function (club, cls) {
       // foto REAL do estádio (licença livre, Commons) quando existir; senão foto genérica; senão SVG gerado
-      var sf = club.leagueId + "-" + stadSlug(club.name) + ".jpg";
-      if (hasPhoto("estadios", sf)) return imgWithFallback("assets/estadios/" + sf, stadiumPhoto(club), (club.name + " — estádio"), cls);
+      var sf = clubFile("estadios", club, ".jpg");
+      if (sf) return imgWithFallback("assets/estadios/" + sf, stadiumPhoto(club), (club.name + " — estádio"), cls);
       return imgWithFallback(stadiumPhoto(club), stadiumArt(club), (club.name + " — estádio"), cls);
     },
     compBadge: compBadge,
