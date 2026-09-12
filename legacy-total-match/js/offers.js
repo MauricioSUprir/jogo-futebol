@@ -324,6 +324,37 @@
     if (!off.final) consult.appendChild(consultBtn("⏳ Pedir mais prazo", function () { var ok = askTime(c, n); save(c); bubble("them", off.history[off.history.length - 1].text, ok ? "" : "angry"); }));
     wrap.appendChild(consult);
 
+    // exigir a CLÁUSULA DE RESCISÃO (só se o contrato dele tiver uma): o clube comprador paga o valor cheio ou desiste
+    var myCl = 0; try { myCl = TM.fin && TM.fin.myClause ? curVal(c, TM.fin.myClause(c, p.id)) : 0; } catch (e) {}
+    if (myCl > 0 && !off.clausePaid) {
+      var podePagar = rating(off.buyerId) >= (p.overall || 70) - 3;
+      wrap.appendChild(el("div", { class: "nego-field clause-demand" }, [
+        el("label", { text: "📜 Cláusula de rescisão do contrato" }),
+        el("div", { class: "setting-hint", text: p.name + " tem cláusula de " + money(c, myCl) + ". Você pode exigir o valor cheio: o " + buyer.name + " paga tudo à vista ou desiste da contratação." }),
+        el("div", { class: "actions" }, [ TM.ui.button("📜 Exigir a cláusula (" + money(c, myCl) + ")", function () {
+          off.rounds = (off.rounds || 0) + 1;
+          say(off, "me", "A cláusula de rescisão dele é " + money(c, myCl) + ". Se quiserem, paguem a cláusula.");
+          var teto = off.ceil || 0, folga = podePagar ? teto * 2.6 : teto * 1.25;
+          if (myCl <= folga) {
+            off.fee = R(myCl); off.parts = 1; off.upfront = false; off.bonus = 0; off.sellOn = 0; off.clausePaid = true; off.final = true;
+            n.text = buyer.name + " aceitou pagar a cláusula de " + money(c, myCl) + " por " + p.name + ".";
+            say(off, "them", "“Tudo bem. Vamos depositar a cláusula: " + money(c, myCl) + ", à vista. Agora é com o jogador.”", "happy");
+            TM.ui.toast("📜 " + buyer.name + " topou pagar a cláusula!");
+          } else {
+            off.patience = (off.patience || 2) - 1;
+            if (off.patience <= 0) {
+              say(off, "them", "“Não vamos pagar essa cláusula. Desistimos.”", "angry");
+              TM.notify.remove(c, n.id); note(c, { icon: "🚪", title: "Proposta retirada", news: true, text: buyer.name + " desistiu de " + p.name + ": não quis pagar a cláusula de " + money(c, myCl) + "." });
+              save(c); TM.ui.toast(buyer.name + " desistiu da contratação."); TM.ui.go("coach-notifications"); return;
+            }
+            say(off, "them", "“" + money(c, myCl) + " está muito acima do que podemos pagar. Vamos pensar.”", "angry");
+            TM.ui.toast("O " + buyer.name + " achou a cláusula cara demais.");
+          }
+          save(c); TM.ui.go("coach-offer", { noteId: n.id });
+        }, "btn") ])
+      ]));
+    }
+
     // contraproposta
     if (!off.final) {
       var ask = { fee: R(Math.max(off.fee * 1.15, value)), upfront: false, bonus: false, sellOn: false };

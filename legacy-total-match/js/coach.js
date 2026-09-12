@@ -117,7 +117,7 @@
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
       { ic: "🏆", label: "Competições", route: "coach-comps" },
-      { ic: "🌍", label: "Ligas", route: "coach-world" },
+      { ic: "🌍", label: "Mundo", route: "coach-world" },
       { ic: "💬", label: "Mensagens", route: "coach-messenger", badge: (function () { try { return TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) { return 0; } })() },
       { ic: "💰", label: "Finanças", route: "coach-finance" },
       { ic: "📜", label: "Contrato", route: "coach-contract" },
@@ -158,7 +158,7 @@
       { ic: "📋", label: "Escalar", route: "coach-lineup" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
-      { ic: "🌍", label: "Ligas", route: "coach-world" }
+      { ic: "🌍", label: "Mundo", route: "coach-world" }
     ];
     var nav = el("nav", { class: "bottom-nav" });
     items.forEach(function (it) {
@@ -4276,6 +4276,149 @@
   }
   TM.coachUI.openNumberPicker = openNumberPicker;
 
+  /* ---------- RENOVAÇÃO DE CONTRATO (negociação igual à de contratação) ---------- */
+  var RENEW = null;   // { pid, rounds, demandWage, demandYears, lastLine }
+  function renewOpen(c, p) {
+    var ct = (c.contracts && c.contracts[p.id]) || { years: 1, wage: wageDemand(p), clause: 0 };
+    var ag = agentOf(p);
+    var idol = null; try { idol = idolStatus(c, p); } catch (e) {}
+    var apps = (c.pstats && c.pstats[p.id] && c.pstats[p.id].apps) || 0, jogos = c.matchNo || 0;
+    var usoRatio = jogos ? apps / jogos : 0.5;
+    // quanto ele pede: mercado x empresário x fase x minutos x tempo de casa
+    var base = wageDemand(p) * ag.wageMult;
+    base *= (usoRatio >= 0.6 ? 1.12 : usoRatio <= 0.25 ? 0.9 : 1);
+    if (idol && idol.cls === "legend") base *= 0.92;                       // ídolo facilita
+    if ((ct.years || 0) <= 1) base *= 1.1;                                  // fim de contrato: força na negociação
+    if ((p.age || 25) >= 33) base *= 0.8;
+    var st = c.pstats && c.pstats[p.id];
+    if (st && st.rn && (st.rsum / st.rn) >= 7.2) base *= 1.15;              // temporada de gala
+    RENEW = { pid: p.id, rounds: 0, demandWage: r2(curVal(c, base)), demandYears: (p.age || 25) >= 32 ? 1 : (p.age || 25) <= 23 ? 4 : 3, done: false };
+    TM.ui.go("coach-renew");
+  }
+  TM.coachUI.renewOpen = renewOpen;
+
+  TM.ui.register("coach-renew", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c || !RENEW) { TM.ui.go("coach-squad"); return; }
+    var p = C().resolvePlayer(c, RENEW.pid);
+    if (!p) { RENEW = null; TM.ui.go("coach-squad"); return; }
+    var ct = (c.contracts && c.contracts[p.id]) || { years: 1, wage: 0, clause: 0 };
+    var ag = agentOf(p), idol = null; try { idol = idolStatus(c, p); } catch (e) {}
+    var mvalCur = curVal(c, TM.data.marketValue(p));
+    var curWage = curVal(c, ct.wage || 0);
+    var terms = { wage: RENEW.demandWage, years: RENEW.demandYears, role: "titular", release: !!ct.clause, clauseM: ct.clause ? curVal(c, ct.clause) : r2(mvalCur * 2.5) };
+
+    screen.appendChild(TM.ui.topbar("Renovação de contrato", function () { RENEW = null; TM.ui.go("coach-player"); }));
+    screen.appendChild(el("div", { class: "nego-step" }, [ el("div", { class: "nego-dot active", text: "Conversa com " + p.name + " e o empresário" }) ]));
+
+    screen.appendChild(el("div", { class: "nego2-player", style: "max-width:640px;margin:10px auto 0" }, [
+      TM.img.playerImg(p, "nego2-face"),
+      el("div", { class: "nego2-pinfo" }, [
+        el("div", { class: "nego2-pname", text: p.name + (idol ? " " + idol.ic : "") }),
+        el("div", { class: "nego2-pmeta" }, [
+          el("span", { text: TM.data.posLabel(p) }), el("span", { text: (p.age || 25) + " anos" }), el("span", { text: p.overall + " OVR" })
+        ])
+      ])
+    ]));
+
+    var panel = el("div", { class: "nego-panel" }); screen.appendChild(panel);
+    panel.appendChild(el("div", { class: "deal-line" }, [
+      el("span", { class: "deal-lbl", text: "📜 Contrato atual" }),
+      el("span", { class: "deal-val", text: (ct.years || 0) + " temporada(s) · " + money(c, curWage) + "/ano" + (ct.clause ? " · cláusula " + money(c, curVal(c, ct.clause)) : " · sem cláusula") })
+    ]));
+    var quote = el("div", { class: "nego-quote", text: RENEW.lastLine || (p.name + ": “Gosto daqui. Para renovar, quero cerca de " + money(c, RENEW.demandWage) + " por ano e " + RENEW.demandYears + " temporada(s).”") });
+    panel.appendChild(quote);
+    panel.appendChild(el("div", { class: "agent-line agent-" + ag.type }, [
+      el("span", { class: "agent-ic", text: ag.ic }),
+      el("div", { class: "agent-info" }, [
+        el("div", { class: "agent-name", text: ag.label + " · " + ag.name }),
+        el("div", { class: "agent-note", text: "“" + ag.line + "”" })
+      ])
+    ]));
+
+    function segRow(options, def, cb) {
+      var row = el("div", { class: "segmented" });
+      options.forEach(function (o) {
+        var val = Array.isArray(o) ? o[0] : o, lbl = Array.isArray(o) ? o[1] : o;
+        var b = el("button", { class: "seg-btn" + (String(val) === String(def) ? " active" : ""), text: lbl, on: { click: function () {
+          Array.prototype.forEach.call(row.children, function (x) { x.classList.remove("active"); });
+          b.classList.add("active"); cb(val);
+        } } });
+        row.appendChild(b);
+      });
+      return row;
+    }
+
+    var wageVal = el("span", { class: "range-val", text: money(c, terms.wage) + "/ano" });
+    var wageMax = Math.max(0.15, r2(RENEW.demandWage * 3)), wStep = moneyStep(wageMax);
+    var wageSlider = el("input", { type: "range", min: wStep, max: wageMax, step: wStep, value: Math.min(terms.wage, wageMax), class: "slider" });
+    wageSlider.addEventListener("input", function () { terms.wage = r2(parseFloat(wageSlider.value)); wageVal.textContent = money(c, terms.wage) + "/ano"; });
+    panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Novo salário anual (hoje: " + money(c, curWage) + ")" }), el("div", { class: "range-wrap" }, [ wageSlider, wageVal ]) ]));
+
+    panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Tempo de contrato (anos)" }), segRow(["1", "2", "3", "4", "5"], String(terms.years), function (v) { terms.years = parseInt(v, 10); }) ]));
+    panel.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Função no elenco" }), segRow([["estrela", "Estrela"], ["titular", "Titular"], ["rodizio", "Rodízio"], ["promessa", "Promessa"]], "titular", function (v) { terms.role = v; }) ]));
+
+    var clMin = Math.max(0.1, r2(mvalCur * 1)), clMax = Math.max(clMin + 0.5, r2(mvalCur * 6)), clStep = moneyStep(clMax);
+    terms.clauseM = r2(Math.min(clMax, Math.max(clMin, terms.clauseM)));
+    var clVal = el("span", { class: "range-val", text: money(c, terms.clauseM) });
+    var clSlider = el("input", { type: "range", min: clMin, max: clMax, step: clStep, value: terms.clauseM, class: "slider" });
+    var clNote = el("div", { class: "sweet-note" });
+    function clTxt() { var m = terms.clauseM / Math.max(0.01, mvalCur); clNote.textContent = "Cláusula = " + m.toFixed(1) + "x o valor de mercado. " + (m <= 1.5 ? "Baixa: ele aceita salário menor, mas sai fácil." : m >= 4 ? "Alta: protege o clube, porém ele pede mais salário." : "Equilibrada."); }
+    clSlider.addEventListener("input", function () { terms.clauseM = r2(parseFloat(clSlider.value)); clVal.textContent = money(c, terms.clauseM); clTxt(); });
+    var clWrap = el("div", { class: "nego-field", style: terms.release ? "" : "display:none" }, [ el("label", { text: "Valor da cláusula de rescisão" }), el("div", { class: "range-wrap" }, [ clSlider, clVal ]), clNote ]);
+    clTxt();
+    var relBtn = el("button", { class: "switch" + (terms.release ? " on" : ""), on: { click: function () { terms.release = !terms.release; relBtn.classList.toggle("on", terms.release); clWrap.style.display = terms.release ? "" : "none"; } } });
+    panel.appendChild(el("div", { class: "nego-field", style: "flex-direction:row;justify-content:space-between;align-items:center" }, [ el("label", { text: "Incluir cláusula de rescisão" }), relBtn ]));
+    panel.appendChild(clWrap);
+
+    panel.appendChild(el("div", { class: "setting-hint", text: "Rodada " + (RENEW.rounds + 1) + " de 3. Se a conversa travar, ele só volta a negociar mais para a frente." }));
+
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("🤝 Oferecer renovação", function () {
+        var roleScore = { estrela: 1.18, titular: 1.0, rodizio: 0.78, promessa: 0.7 }[terms.role] || 1;
+        var clMult = terms.release ? terms.clauseM / Math.max(0.01, mvalCur) : 0;
+        var clFactor = clMult ? (clMult <= 1.5 ? 0.88 : clMult >= 4 ? 1.12 : 1) : 1.05;   // sem cláusula ele pede um pouco mais
+        var precisa = RENEW.demandWage * clFactor / roleScore;
+        var anosOk = terms.years >= Math.max(1, RENEW.demandYears - 1);
+        if (!anosOk) precisa *= 1.12;
+        RENEW.rounds++;
+        if (terms.wage >= precisa * 0.98) {
+          c.contracts = c.contracts || {};
+          var novo = c.contracts[p.id] || {};
+          novo.years = terms.years;
+          novo.wage = r2(terms.wage / (c.money ? c.money.mult : 1));
+          novo.clause = terms.release ? r2(terms.clauseM / (c.money ? c.money.mult : 1)) : 0;
+          novo.role = terms.role;
+          c.contracts[p.id] = novo;
+          if (c.leavingFree) delete c.leavingFree[p.id];
+          if (c.transferReq) delete c.transferReq[p.id];
+          try { C().logDeal(c, { type: "renew", kind: "renew", pid: p.id, name: p.name, pos: p.pos, ov: p.overall, fee: 0, other: (TM.data.club(c.teamId) || {}).name }); } catch (e) {}
+          TM.notify.push(c, { icon: "✍️", title: "Renovação assinada", news: true,
+            text: p.name + " renovou com o " + (TM.data.club(c.teamId) || {}).name + " por mais " + terms.years + " temporada(s), a " + money(c, terms.wage) + "/ano" + (terms.release ? ", com cláusula de " + money(c, terms.clauseM) : ", sem cláusula de rescisão") + "." });
+          try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { name: p.name, ov: p.overall, toName: (TM.data.club(c.teamId) || {}).name, free: true, val: 0 }); } catch (e) {}
+          try { if (c.confidence && typeof c.confidence === "object") c.confidence[p.id] = Math.min(5, (c.confidence[p.id] || 0) + 2); } catch (e) {}
+          RENEW = null; TM.storage.saveCoachCareer(c);
+          TM.ui.toast("✍️ " + p.name + " renovou!"); TM.ui.go("coach-player"); return;
+        }
+        // recusa: ele explica e (se ainda houver rodada) pede um meio-termo
+        var falta = Math.round((precisa / Math.max(0.01, terms.wage) - 1) * 100);
+        if (RENEW.rounds >= 3) {
+          c.renewBlock = c.renewBlock || {}; c.renewBlock[p.id] = (c.matchNo || 0) + 8;
+          TM.notify.push(c, { icon: "🚪", title: "Renovação travada", text: p.name + " encerrou a conversa sobre renovação. Ele só volta a negociar daqui a algumas rodadas." });
+          try { if (c.confidence && typeof c.confidence === "object") c.confidence[p.id] = Math.max(-5, (c.confidence[p.id] || 0) - 1); } catch (e) {}
+          RENEW = null; TM.storage.saveCoachCareer(c);
+          TM.ui.toast("A negociação travou."); TM.ui.go("coach-player"); return;
+        }
+        var meio = r2(Math.min(precisa, terms.wage + (precisa - terms.wage) * 0.6));
+        RENEW.demandWage = meio;
+        RENEW.lastLine = p.name + ": “" + (falta >= 40 ? "Está bem longe do que eu esperava." : falta >= 15 ? "Ainda falta um pouco." : "Estamos quase lá.") + " Por " + money(c, meio) + " por ano" + (anosOk ? "" : " e pelo menos " + Math.max(1, RENEW.demandYears - 1) + " temporadas") + " eu assino.”";
+        TM.storage.saveCoachCareer(c);
+        TM.ui.go("coach-renew");
+      }, "btn primary"),
+      TM.ui.button("Deixar para depois", function () { RENEW = null; TM.ui.go("coach-player"); }, "btn ghost")
+    ]));
+  });
+
   TM.ui.register("coach-player", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c || !profilePid) { TM.ui.go(profileBack); return; }
@@ -4444,12 +4587,9 @@
           ]),
           el("div", { class: "cc-note", text: yrsTxt + (c.leavingFree && c.leavingFree[p.id] ? " · 📝 assinou pré-contrato com o " + ((TM.data.club(c.leavingFree[p.id]) || {}).name || "outro clube") + " — sai de graça no fim da temporada" : "") }),
           (c.leavingFree && c.leavingFree[p.id]) ? el("div", { class: "setting-hint", text: "Não é mais possível renovar. Se quiser algum retorno, coloque-o à venda ainda nesta janela." }) :
-          TM.ui.button("✍️ Renovar contrato (+2 temporadas)", function () {
-            ct.years = Math.min(6, (ct.years > 0 ? ct.years : 0) + 2); ct.wage = r2(ct.wage * 1.08);
-            TM.storage.saveCoachCareer(c);
-            TM.notify.push(c, { icon: "✍️", title: "Renovação", text: p.name + " renovou até mais " + ct.years + " temporada(s)." });
-            TM.ui.toast("Contrato renovado!"); TM.ui.go("coach-player");
-          }, "btn ghost small")
+          ((c.renewBlock && (c.renewBlock[p.id] || 0) > (c.matchNo || 0))
+            ? el("div", { class: "setting-hint", text: "A conversa de renovação travou. Ele volta a negociar em " + ((c.renewBlock[p.id] || 0) - (c.matchNo || 0)) + " jogo(s)." })
+            : TM.ui.button("✍️ Negociar renovação", function () { renewOpen(c, p); }, "btn small"))
         ]));
       }
 
