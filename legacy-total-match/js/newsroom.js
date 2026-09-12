@@ -12,7 +12,8 @@
   /* ---------- utilidades ---------- */
   function hash(str) { var h = 2166136261; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function rngOf(seed) { var x = hash(seed) || 1; return function () { x ^= x << 13; x >>>= 0; x ^= x >>> 17; x ^= x << 5; x >>>= 0; return x / 4294967296; }; }
-  function pick(r, arr) { return arr[Math.floor(r() * arr.length)]; }
+  function pick(r, arr) { arr = arr || []; return arr[Math.floor(r() * arr.length)]; }
+  function arr(x) { return Array.isArray(x) ? x : (x && typeof x === "object" ? Object.keys(x).map(function (k) { return x[k]; }) : []); }
   function club(id) { return id ? TM.data.club(id) : null; }
   function cname(id) { var c = club(id); return c ? c.name : "clube"; }
   function money(c, v) { try { return C().fmtMoney(c, v); } catch (e) { return v + "M"; } }
@@ -67,13 +68,14 @@
   /* ---------- 1) crônicas das partidas ---------- */
   function matchArticles(c) {
     var out = [], me = myClub(c); if (!me) return out;
-    (c.matchLog || []).forEach(function (m) {
-      if (m.season !== (c.season || 1)) return;
+    arr(c.matchLog).forEach(function (m) { try {
+      if (!m || m.season !== (c.season || 1)) return;
       var home = club(m.homeId), away = club(m.awayId); if (!home || !away) return;
       var r = rngOf("match" + m.season + "-" + m.matchNo + "-" + m.hs + m.as);
       var gf = m.userSide === 0 ? m.hs : m.as, ga = m.userSide === 0 ? m.as : m.hs, opp = m.userSide === 0 ? away : home;
       var won = gf > ga, lost = gf < ga, diff = Math.abs(gf - ga), atHome = m.userSide === 0;
-      var mine = m.scorers.filter(function (s) { return s.t === m.userSide; }), theirs = m.scorers.filter(function (s) { return s.t !== m.userSide; });
+      var scorers = arr(m.scorers).filter(Boolean), reds = arr(m.reds).filter(Boolean);
+      var mine = scorers.filter(function (s) { return s.t === m.userSide; }), theirs = scorers.filter(function (s) { return s.t !== m.userSide; });
       var top = null, cnt = {}; mine.forEach(function (s) { cnt[s.n] = (cnt[s.n] || 0) + 1; if (!top || cnt[s.n] > cnt[top]) top = s.n; });
       var head, sub;
       if (won && diff >= 3) { head = pick(r, [me.name + " atropela o " + opp.name + " e vence por " + gf + " a " + ga, "Show de bola: " + me.name + " goleia o " + opp.name, me.name + " passeia " + (atHome ? "em casa" : "fora de casa") + " e aplica " + gf + " a " + ga + " no " + opp.name]); }
@@ -86,7 +88,7 @@
       sub = (m.name ? m.name + (m.label ? " · " + m.label : "") + ". " : "") + (mine.length ? "Gols de " + mine.map(function (s) { return s.n + " (" + s.m + "'" + (s.pen ? ", pênalti" : "") + ")"; }).join(", ") + (theirs.length ? "; " : ".") : "") + (theirs.length ? (mine.length ? "" : "Marcaram ") + theirs.map(function (s) { return s.n + " (" + s.m + "')"; }).join(", ") + " para o " + opp.name + "." : "");
       var stad = null; try { stad = TM.data.stadium(home).name; } catch (e) {}
       var p1 = "Em partida válida pela " + (m.name || c.comps.league.name) + ", o " + home.name + " " + (m.hs > m.as ? "venceu" : m.hs < m.as ? "perdeu para" : "empatou com") + " o " + away.name + " por " + m.hs + " a " + m.as + (stad ? ", no " + stad : "") + ", " + dateTxt(c, m.day) + ".";
-      var p2 = m.scorers.length ? "O placar foi aberto por " + m.scorers[0].n + " aos " + m.scorers[0].m + " minutos" + (m.scorers.length > 1 ? ", e o jogo ainda teve " + (m.scorers.length - 1) + " gol" + (m.scorers.length > 2 ? "s" : "") + " depois disso" : "") + "." + (m.reds.length ? " A partida ficou marcada pela expulsão de " + m.reds.map(function (x) { return x.n + " (" + x.m + "')"; }).join(" e ") + "." : "") : "Faltou pontaria: apesar das chances, nenhum dos dois times balançou as redes." + (m.reds.length ? " Houve ainda expulsão de " + m.reds.map(function (x) { return x.n; }).join(" e ") + "." : "");
+      var p2 = scorers.length ? "O placar foi aberto por " + scorers[0].n + " aos " + scorers[0].m + " minutos" + (scorers.length > 1 ? ", e o jogo ainda teve " + (scorers.length - 1) + " gol" + (scorers.length > 2 ? "s" : "") + " depois disso" : "") + "." + (reds.length ? " A partida ficou marcada pela expulsão de " + reds.map(function (x) { return x.n + " (" + x.m + "')"; }).join(" e ") + "." : "") : "Faltou pontaria: apesar das chances, nenhum dos dois times balançou as redes." + (reds.length ? " Houve ainda expulsão de " + reds.map(function (x) { return x.n; }).join(" e ") + "." : "");
       var p3 = m.stats && m.stats.poss ? "Nos números, o " + home.name + " teve " + m.stats.poss[0] + "% de posse de bola e finalizou " + (m.stats.shots ? m.stats.shots[0] : "-") + " vezes, contra " + (m.stats.shots ? m.stats.shots[1] : "-") + " do " + away.name + "." : null;
       var q1 = won ? pick(r, ["Foi uma vitória de equipe. O grupo entendeu o plano e executou.", "Os três pontos eram fundamentais. Agora é descansar e pensar no próximo.", "Gostei da postura. Quando o time é intenso assim, fica difícil para o adversário."]) : lost ? pick(r, ["Não foi a nossa noite. Erramos em momentos decisivos e pagamos caro.", "A responsabilidade é minha. Vamos corrigir na semana.", "O resultado dói, mas o campeonato é longo. Cabeça erguida."]) : pick(r, ["Um ponto fora de casa tem valor, mas queríamos mais.", "Criamos o suficiente para vencer. Faltou o último passe.", "Empate justo pelo que os dois times produziram."]);
       var oc = oppCoach(opp), q2 = oc ? (won ? pick(r, ["Eles foram mais eficientes. Parabéns ao " + me.name + ".", "Tivemos volume de jogo, mas faltou capricho."]) : lost ? pick(r, ["Vitória merecida. O time se doou do primeiro ao último minuto.", "Sabíamos que seria difícil aqui, e o grupo respondeu."]) : pick(r, ["Foi um jogo equilibrado, o empate reflete o que aconteceu.", "Poderíamos ter vencido, mas respeito o ponto."])) : null;
@@ -94,14 +96,14 @@
         headline: head, sub: sub, paras: [p1, p2, p3, nextPara(c)], priority: 3,
         quotes: [ { who: coachName(c) + ", técnico do " + me.name, text: q1 }, q2 ? { who: oc + ", técnico do " + opp.name, text: q2 } : null ],
         img: { type: "stadium", clubId: home.id }, clubId: opp.id, playerName: top || null, motm: top }));
-    });
+    } catch (e) {} });
     return out;
   }
 
   /* ---------- 2) análise semanal da tabela ---------- */
   function analysisArticle(c) {
     var me = myClub(c); if (!me || !c.comps || !c.comps.league) return null;
-    var st = C().standings(c.comps.league.table), idx = st.findIndex(function (x) { return x.id === c.teamId; }); if (idx < 0) return null;
+    var st = C().standings(c.comps.league.table) || [], idx = st.findIndex(function (x) { return x.id === c.teamId; }); if (idx < 0 || st.length < 2) return null;
     var row = st[idx]; if (!row.p) return null;
     var r = rngOf("ana" + (c.season || 1) + "-" + (c.matchNo || 0));
     var lead = st[0], gapTop = lead.pts - row.pts, n = st.length, relLine = st[Math.max(0, n - 4)], gapRel = row.pts - relLine.pts;
@@ -127,8 +129,8 @@
   var KIND_TXT = { in: "contrata", out: "vende", loanIn: "recebe por empréstimo", loanOut: "empresta", free: "assina com", pre: "assina pré-contrato com", clause: "paga a cláusula de", swap: "fecha troca por" };
   function marketArticles(c) {
     var out = [], me = myClub(c); if (!me) return out;
-    (c.deals || []).slice(0, 10).forEach(function (d, i) {
-      if (d.season !== (c.season || 1)) return;
+    arr(c.deals).slice(0, 10).forEach(function (d, i) { try {
+      if (!d || d.season !== (c.season || 1)) return;
       var r = rngOf("deal" + d.season + "-" + d.day + "-" + d.pid + "-" + d.type);
       var incoming = d.type === "in" || d.type === "loanIn" || d.type === "free" || d.type === "pre";
       var other = d.other || "outro clube";
@@ -139,11 +141,11 @@
       var q = incoming ? { who: coachName(c), text: pick(r, ["É um atleta que encaixa no que queremos jogar. Chega para brigar por posição.", "Pedi esse reforço e a diretoria fez o esforço. Agora é trabalho.", "Conhece bem a competição e vai nos ajudar já."]) } : { who: coachName(c), text: pick(r, ["Foi uma decisão de clube. Desejo sorte a ele.", "Toda negociação tem dois lados. Ficamos com a parte boa: o que ele entregou aqui.", "O elenco segue forte. Confio em quem fica."]) };
       out.push(article({ id: hash("deal" + d.season + "-" + d.day + "-" + d.pid + "-" + d.type), day: d.day || 0, section: "mercado", outlet: "gm", tag: incoming ? "MERCADO · REFORÇO" : "MERCADO · SAÍDA", headline: head,
         sub: firstSentence(p1), paras: [p1, p2, ctxPara(c, r)], quotes: [q], img: { type: d.pid && d.pid[0] !== "y" ? "player" : "club", pid: d.pid, clubId: c.teamId }, playerId: d.pid, priority: 2 }));
-    });
+    } catch (e) {} });
     // giro do mercado: negócios dos outros clubes (agrupados por dia da carreira)
-    var feed = (c.marketFeed || []).filter(function (m) { return m.season === (c.season || 1); }).slice(0, 40);
+    var feed = arr(c.marketFeed).filter(function (m) { return m && m.season === (c.season || 1); }).slice(0, 40);
     var byDay = {}; feed.forEach(function (m) { var k = m.day || 0; (byDay[k] = byDay[k] || []).push(m); });
-    Object.keys(byDay).sort(function (a, b) { return b - a; }).slice(0, 6).forEach(function (k) {
+    Object.keys(byDay).sort(function (a, b) { return b - a; }).slice(0, 6).forEach(function (k) { try {
       var list = byDay[k].slice().sort(function (a, b) { return (b.val || 0) - (a.val || 0); }), big = list[0];
       var r = rngOf("giro" + (c.season || 1) + "-" + k);
       var head = big.val ? pick(r, [big.toName + " fecha com " + big.name + " por " + money(c, big.val) + (list.length > 1 ? " e movimenta o mercado" : ""), "Giro do mercado: " + big.name + " é o negócio do dia" + (list.length > 1 ? " entre " + list.length + " transferências" : "")]) : pick(r, [big.toName + " anuncia " + big.name, "Giro do mercado: " + list.length + " negócio(s) fechado(s)"]);
@@ -152,15 +154,15 @@
       var toC = club(big.toId), oc = oppCoach(toC);
       out.push(article({ id: hash("giro" + (c.season || 1) + "-" + k), day: +k, section: "mercado", outlet: "gm", tag: "GIRO DO MERCADO", headline: head, sub: firstSentence(p1), paras: [p1, p2, "Acompanhe todos os negócios em Mercado → 📰 Negócios."],
         quotes: oc ? [ { who: oc + ", técnico do " + big.toName, text: pick(r, ["Era o nome que pedimos. Chega para nos dar mais opções.", "Reforço de qualidade, que conhece a competição.", "Estamos montando um grupo forte para a temporada."]) } ] : [], img: { type: big.pid && big.pid[0] !== "y" ? "player" : "club", pid: big.pid, clubId: big.toId }, clubId: big.toId, priority: 1 }));
-    });
+    } catch (e) {} });
     return out;
   }
 
   /* ---------- 4) mundo: ligas observadas ---------- */
   function worldArticles(c) {
     var out = []; if (!c.wl || !c.wl.leagues) return out;
-    Object.keys(c.wl.leagues).forEach(function (lid) {
-      var L = c.wl.leagues[lid], lg = TM.data.league(lid); if (!L || !lg || !L.round || L.season !== (c.season || 1)) return;
+    Object.keys(c.wl.leagues).forEach(function (lid) { try {
+      var L = c.wl.leagues[lid], lg = TM.data.league(lid); if (!L || !lg || !L.round || !L.table || L.season !== (c.season || 1)) return;
       var st = Object.keys(L.table).map(function (k) { return L.table[k]; }).sort(function (a, b) { return b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga); });
       var lead = st[0], sec = st[1]; if (!lead) return;
       var r = rngOf("world" + lid + "-" + L.round), sc = TM.wl && TM.wl.topScorers ? TM.wl.topScorers(L, 1)[0] : null;
@@ -170,7 +172,7 @@
       var last = (L.last || []).slice(0, 3).map(function (m) { return cname(m[0]) + " " + m[2] + " x " + m[3] + " " + cname(m[1]); }).join(" · ");
       out.push(article({ id: hash("world" + lid + "-" + L.round), day: L.lastDay || c.currentDay || 0, section: "mundo", outlet: "mf", tag: "MUNDO · " + lg.name.toUpperCase(), headline: head, sub: firstSentence(p1),
         paras: [p1, p2, last ? "Resultados recentes: " + last + "." : null, "Tabela completa, rodadas e artilheiros em 🌍 Ligas."], img: { type: "club", clubId: lead.id }, clubId: lead.id, priority: 1 }));
-    });
+    } catch (e) {} });
     return out;
   }
 
@@ -217,7 +219,7 @@
   };
   function noteArticles(c) {
     var out = [], me = myClub(c);
-    (c.notifications || []).filter(function (n) { return n.news && !n.offer && !n.loanOffer; }).slice(0, 40).forEach(function (n) {
+    arr(c.notifications).filter(function (n) { return n && n.news && !n.offer && !n.loanOffer; }).slice(0, 40).forEach(function (n) { try {
       var cat = CATS[n.icon] || { section: "club", outlet: "tn", tag: "ÚLTIMA HORA", lead: "", q: ["Seguimos trabalhando.", "O foco é o próximo jogo."] };
       var r = rngOf("note" + n.id + n.ts), title = cleanTitle(n.title), text = n.text || "";
       var head = title.length < 26 && me ? title + ": " + firstSentence(text).replace(/\.$/, "") : title;
@@ -225,7 +227,7 @@
       var ctx = ctxPara(c, r);
       out.push(article({ id: hash("note" + n.id), day: n.day != null ? n.day : (c.currentDay || 0), section: cat.section, outlet: cat.outlet, tag: cat.tag, headline: head, sub: firstSentence(text),
         paras: [ (cat.lead ? cat.lead + " " : "") + text, ctx ], quotes: [ { who: coachName(c) + (me ? ", técnico do " + me.name : ""), text: pick(r, cat.q) } ], img: { type: "club", clubId: c.teamId }, priority: n.day === (c.currentDay || 0) ? 2 : 1 }));
-    });
+    } catch (e) {} });
     return out;
   }
 
@@ -234,7 +236,8 @@
   function feed(c) {
     var key = [c.season, c.currentDay, c.matchNo, (c.notifications || []).length, (c.deals || []).length, (c.marketFeed || []).length, c._nseq].join("|");
     if (cache.key === key) return cache.items;
-    var items = [].concat(matchArticles(c), [analysisArticle(c)].filter(Boolean), marketArticles(c), worldArticles(c), noteArticles(c));
+    function safe(fn) { try { var v = fn(c); return Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []); } catch (e) { try { console.warn("notícia ignorada:", e); } catch (e2) {} return []; } }
+    var items = [].concat(safe(matchArticles), safe(analysisArticle), safe(marketArticles), safe(worldArticles), safe(noteArticles));
     items.sort(function (a, b) { return (b.day - a.day) || (b.priority - a.priority) || (a.id - b.id); });
     cache = { key: key, items: items };
     return items;
@@ -301,11 +304,11 @@
     wrap.appendChild(el("h1", { class: "nw-art-head", text: a.headline }));
     if (a.sub) wrap.appendChild(el("div", { class: "nw-art-sub", text: a.sub }));
     wrap.appendChild(byline(c, a));
-    a.paras.forEach(function (p, i) {
+    arr(a.paras).forEach(function (p, i) {
       wrap.appendChild(el("p", { class: "nw-p" + (i === 0 ? " lead" : ""), text: p }));
-      if (i === 0 && a.quotes[0]) wrap.appendChild(el("blockquote", { class: "nw-quote" }, [ el("div", { class: "nw-q-text", text: "“" + a.quotes[0].text + "”" }), el("div", { class: "nw-q-who", text: "— " + a.quotes[0].who }) ]));
+      if (i === 0 && arr(a.quotes)[0]) wrap.appendChild(el("blockquote", { class: "nw-quote" }, [ el("div", { class: "nw-q-text", text: "“" + a.quotes[0].text + "”" }), el("div", { class: "nw-q-who", text: "— " + a.quotes[0].who }) ]));
     });
-    a.quotes.slice(1).forEach(function (q) { wrap.appendChild(el("blockquote", { class: "nw-quote" }, [ el("div", { class: "nw-q-text", text: "“" + q.text + "”" }), el("div", { class: "nw-q-who", text: "— " + q.who }) ])); });
+    arr(a.quotes).slice(1).forEach(function (q) { wrap.appendChild(el("blockquote", { class: "nw-quote" }, [ el("div", { class: "nw-q-text", text: "“" + q.text + "”" }), el("div", { class: "nw-q-who", text: "— " + q.who }) ])); });
     var rel = el("div", { class: "actions nw-rel" });
     var relClub = club(a.clubId || (a.img && a.img.clubId));
     if (relClub) rel.appendChild(TM.ui.button("🏟️ " + relClub.name, function () { TM.ui.go("coach-club-info", { clubId: relClub.id, back: "coach-news" }); }, "btn ghost small"));

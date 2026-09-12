@@ -118,6 +118,7 @@
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
       { ic: "🏆", label: "Competições", route: "coach-comps" },
       { ic: "🌍", label: "Ligas", route: "coach-world" },
+      { ic: "💬", label: "Mensagens", route: "coach-messenger", badge: (function () { try { return TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) { return 0; } })() },
       { ic: "💰", label: "Finanças", route: "coach-finance" },
       { ic: "📜", label: "Contrato", route: "coach-contract" },
       { ic: "📅", label: "Calendário", route: "coach-calendar" },
@@ -865,7 +866,8 @@
     try { if (TM.fin) TM.fin.tick(c); } catch (e) {}                 // parcelas, bônus, transfer ban, endividamento
     try { if (TM.pre) TM.pre.tick(c); } catch (e) {}                 // convites de torneio de pré-temporada
     try { if (TM.offers) TM.offers.tick(c); } catch (e) {}           // prazos das propostas recebidas
-    try { if (TM.wl) TM.wl.tick(c); } catch (e) {}                   // observação de ligas do mundo + rodadas das ligas acompanhadas
+    try { if (TM.wl) TM.wl.tick(c); } catch (e) {}
+    try { if (TM.msgr) TM.msgr.tick(c); } catch (e) {}                 // Total Messenger: novas conversas                   // observação de ligas do mundo + rodadas das ligas acompanhadas
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)
@@ -1016,6 +1018,17 @@
     try { var safEl = TM.club.safCard(c, "coach-hub"); if (safEl) screen.appendChild(safEl); } catch (e) {}
     try { var preEl = TM.pre && TM.pre.card(c); if (preEl) screen.appendChild(preEl); } catch (e) {}
     try { var offEl = TM.offers && TM.offers.card(c); if (offEl) screen.appendChild(offEl); } catch (e) {}
+    // Total Messenger: conversas esperando resposta
+    try {
+      var mq = TM.msgr ? TM.msgr.pending(c) : 0;
+      if (mq) screen.appendChild(el("div", { class: "next-match tm-hub clickable", on: { click: function () { TM.ui.go("coach-messenger"); } } }, [
+        el("div", { class: "nm-label", text: "💬 Total Messenger" }),
+        el("div", { class: "offer-row" }, [ el("div", { class: "offer-mid" }, [
+          el("div", { class: "offer-t", text: mq + " mensagem" + (mq > 1 ? "s" : "") + " esperando sua resposta" }),
+          el("div", { class: "offer-s", text: "Jogadores, diretoria, empresários e imprensa querem falar com você." })
+        ]), el("span", { class: "wl-hub-go", text: "›" }) ])
+      ]));
+    } catch (e) {}
     // atalho para 🌍 Ligas do mundo (observação de 8 dias) — a aba fica no menu "Mais"
     try {
       var wlS = (c.wl && c.wl.seen) ? Object.keys(c.wl.seen).length : 0, wlO = (c.wl && c.wl.obs) ? Object.keys(c.wl.obs).filter(function (k) { return !(c.wl.seen && c.wl.seen[k]); }).length : 0;

@@ -2431,6 +2431,7 @@
       var comp = career.nation.comps[k]; if (!comp) return;
       if (comp.tour) repairTour(comp.tour); else if (comp.rounds !== undefined || comp.teamIds !== undefined) repairKO(comp);
     });
+    (career.matchLog || []).forEach(function (m) { if (!m || typeof m !== "object") return; m.scorers = toArr(m.scorers).filter(Boolean); m.reds = toArr(m.reds).filter(Boolean); });
     if (career.wl && career.wl.leagues) Object.keys(career.wl.leagues).forEach(function (lid) {
       var L = career.wl.leagues[lid]; if (!L) return;
       L.fixtures = toArr(L.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); });
