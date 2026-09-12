@@ -2820,7 +2820,7 @@
     advanceToUserMatch: advanceToUserMatch, applyUserResult: applyUserResult, userPenContext: userPenContext,
     standings: standings, userTeam: userTeam, oppTeam: oppTeam, anyTeam: anyTeam, matchContext: matchContext, contextLabels: contextLabels, recordForm: recordForm,
     userSquad: userSquad, simMatch: simMatch, CURRENCIES: CURRENCIES,
-    CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION,
+    CUP_NAME: CUP_NAME, CONT_NAME: CONT_NAME, REGION: REGION, DIV_UP_MAP: DIV_UP, DIV_DOWN_MAP: DIV_DOWN, PROMO_N: PROMO_N, RELEG_N: RELEG_N,
     FORMATIONS: FORMATIONS, buildLineup: buildLineup, resolvePlayer: resolvePlayer,
     playerVersa: playerVersa, posPenalty: posPenalty, effOverall: effOverall, slotPos: slotPos, adjustForSlot: adjustForSlot, slotPenalty: slotPenalty, specificPenalty: specificPenalty, buildBestLineup: buildBestLineup,
     fieldSlot: fieldSlot, lineupSlot: lineupSlot, slotForLineup: slotForLineup,
