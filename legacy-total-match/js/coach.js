@@ -50,18 +50,24 @@
     // auto-resolve: quem voltou a jogar bastante deixa de querer sair
     Object.keys(c.transferReq).forEach(function (id) {
       var st = c.pstats && c.pstats[id];
-      if (st && played && (st.apps / played) > 0.55) { delete c.transferReq[id]; }
+      var jd = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0, sinceJ = Math.max(1, (c.matchNo || 0) - jd);
+      if (st && (st.apps / sinceJ) > 0.55) { delete c.transferReq[id]; }
     });
     var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
     if (c._lastUnrest === stamp) return;
     if (Math.random() < 0.62) return;   // esporádico
     c._lastUnrest = stamp;
     var squad = []; try { squad = C().userSquad(c) || []; } catch (e) {}
+    var MIN_CASA = 6;                      // so reclama depois de 6 jogos no clube (reforco recem-chegado tem paciencia)
     var cand = squad.filter(function (p) {
       if (c.transferReq[p.id]) return false;
       if ((p.age || 24) > 32 || p.overall < 73) return false;
+      var joined = (c.joinedAt && c.joinedAt[p.id] != null) ? c.joinedAt[p.id] : 0;
+      var since = (c.matchNo || 0) - joined;            // jogos do clube desde que ele chegou
+      if (since < MIN_CASA) return false;               // acabou de chegar: nada de pedido de transferencia
+      if (c.injuries && c.injuries[p.id]) return false; // lesionado nao reclama de falta de minutos
       var st = c.pstats && c.pstats[p.id]; var apps = st ? st.apps : 0;
-      return apps <= Math.floor(played * 0.35);
+      return apps <= Math.floor(since * 0.35);
     }).sort(function (a, b) { return b.overall - a.overall; });
     if (!cand.length) return;
     var p = cand[0];
@@ -151,7 +157,7 @@
       { ic: "📋", label: "Escalar", route: "coach-lineup" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
-      { ic: "📱", label: "Redes", route: "coach-social" }
+      { ic: "🌍", label: "Ligas", route: "coach-world" }
     ];
     var nav = el("nav", { class: "bottom-nav" });
     items.forEach(function (it) {
@@ -164,7 +170,7 @@
     // botão "Mais" (⋯) — abre o sheet com todas as seções; badge soma avisos/propostas
     var extra = 0;
     try { extra = (TM.notify.unread(c) || 0) + ((c.jobOffers || []).filter(function (o) { return !o.seen; }).length || 0); } catch (e) {}
-    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-social": 1 };
+    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1 };
     var moreActive = !primary[active];
     nav.appendChild(el("button", { class: "bn-item bn-more" + (moreActive ? " on" : ""), on: { click: function () { openSectorSheet(c, active); } } }, [
       el("span", { class: "bn-ic", text: "⋯" }),
@@ -1022,7 +1028,12 @@
       ]));
     } catch (e) {}
 
-    var pending = C().advanceToUserMatch(c);
+    var pending;
+    try { pending = C().advanceToUserMatch(c); }
+    catch (errAdv) {                                   // calendario corrompido: remonta a temporada e segue
+      try { C().rebuildSeason(c); TM.storage.saveCoachCareer(c); pending = C().advanceToUserMatch(c); }
+      catch (e2) { pending = { seasonEnd: true }; }
+    }
     if (pending.seasonEnd) {
       renderSeasonEnd(screen, c);
     } else {

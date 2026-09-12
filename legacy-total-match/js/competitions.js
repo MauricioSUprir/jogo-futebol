@@ -2148,18 +2148,45 @@
       moveClubToLeague(s.userLg, s.targetLg, s.user);
       if (s.counterpart) moveClubToLeague(s.targetLg, s.userLg, s.counterpart);
     });
+    (career.divMoves || []).forEach(function (m) { moveClubToLeague(m.from, m.to, m.id); });
   }
+  function recordMove(career, id, from, to) {
+    if (!id || !from || !to || from === to) return;
+    moveClubToLeague(from, to, id);
+    career.divMoves = career.divMoves || [];
+    career.divMoves.push({ id: id, from: from, to: to });
+  }
+  function lgName(id) { var L = TM.data.league(id); return L ? L.name : id; }
+  function clubNames(ids) { return ids.map(function (id) { var cl = TM.data.club(id); return cl ? cl.name : id; }).join(", "); }
+  // ACESSO E REBAIXAMENTO: sobem os PROMO_N PRIMEIROS, caem os RELEG_N ULTIMOS — para o seu clube e para os outros.
+  // A tabela da sua liga e a real; a da outra divisao vem da liga observada (Ligas do mundo) ou da forca dos elencos.
   function applyPromRel(career) {
-    var lg = career.leagueId, st = career.lastStanding || [];
+    var lg = career.leagueId, st = (career.lastStanding || []).slice();
     if (!st.length) return;
     var pos = st.indexOf(career.teamId) + 1, N = st.length;
     if (pos <= 0) return;
-    if (DIV_DOWN[lg] && pos > N - RELEG_N) {
-      var toL = DIV_DOWN[lg]; swapDivisions(career, lg, toL);
-      TM.notify.push(career, { icon: "⬇️", title: "Rebaixamento", text: career.teamName + " terminou em " + pos + "º e foi rebaixado para a " + TM.data.league(toL).name + "." });
-    } else if (DIV_UP[lg] && pos <= PROMO_N) {
-      var toU = DIV_UP[lg]; swapDivisions(career, lg, toU);
-      TM.notify.push(career, { icon: "⬆️", title: "Acesso!", text: career.teamName + " terminou em " + pos + "º e conquistou o acesso à " + TM.data.league(toU).name + "!" });
+    var down = DIV_DOWN[lg], up = DIV_UP[lg];
+    var goDown = down ? st.slice(Math.max(0, N - RELEG_N)) : [];
+    var comeUp = down ? rankLeague(career, down).filter(function (id) { return st.indexOf(id) < 0; }).slice(0, PROMO_N) : [];
+    var goUp = up ? st.slice(0, PROMO_N) : [];
+    var comeDown = up ? rankLeague(career, up).filter(function (id) { return st.indexOf(id) < 0; }).slice(-RELEG_N) : [];
+    var myMove = null;
+    goDown.forEach(function (id) { recordMove(career, id, lg, down); if (id === career.teamId) myMove = { to: down, dir: -1 }; });
+    comeUp.forEach(function (id) { recordMove(career, id, down, lg); });
+    goUp.forEach(function (id) { recordMove(career, id, lg, up); if (id === career.teamId) myMove = { to: up, dir: 1 }; });
+    comeDown.forEach(function (id) { recordMove(career, id, up, lg); });
+    if (myMove) {
+      career.leagueId = myMove.to;
+      var outros = (myMove.dir < 0 ? goDown : goUp).filter(function (id) { return id !== career.teamId; });
+      if (myMove.dir < 0) TM.notify.push(career, { icon: "\u2b07\ufe0f", title: "Rebaixamento", news: true,
+        text: career.teamName + " terminou em " + pos + "\u00ba lugar (os " + RELEG_N + " \u00faltimos caem) e foi rebaixado para a " + lgName(myMove.to) + "." + (outros.length ? " Tamb\u00e9m ca\u00edram: " + clubNames(outros) + "." : "") });
+      else TM.notify.push(career, { icon: "\u2b06\ufe0f", title: "Acesso!", news: true,
+        text: career.teamName + " terminou em " + pos + "\u00ba lugar (s\u00f3 os " + PROMO_N + " primeiros sobem) e conquistou o acesso \u00e0 " + lgName(myMove.to) + "!" + (outros.length ? " Sobem tamb\u00e9m: " + clubNames(outros) + "." : "") });
+    } else if (goUp.length || goDown.length) {
+      var partes = [];
+      if (goUp.length) partes.push("Sobem para a " + lgName(up) + ": " + clubNames(goUp));
+      if (goDown.length) partes.push("Caem para a " + lgName(down) + ": " + clubNames(goDown));
+      TM.notify.push(career, { icon: "\ud83d\udd04", title: "Acessos e rebaixamentos", news: true, text: partes.join(" \u00b7 ") + "." });
     }
   }
 
@@ -2330,62 +2357,149 @@
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
   // conserto de saves antigos: clube que acabou de SUBIR de divisão estava entrando na continental (a tabela da
   // divisão de baixo era lida como se fosse a de cima). Só fica se foi campeão da copa nacional.
-  function fixPromotedInContinental(career) {
-    if (!career.comps || !career.comps.cont || career.contFixSeason === career.season) return;
-    career.contFixSeason = career.season;
-    var sw = (career.divSwaps || []).slice(-1)[0];
-    if (!sw || sw.targetLg !== career.leagueId || DIV_UP[sw.userLg] !== sw.targetLg || !career.lastStanding || !career.lastStanding.length) return;
-    var oldLg = TM.data.league(sw.userLg); if (!oldLg) return;
-    var inOld = career.lastStanding.filter(function (id) { return oldLg.clubIds.indexOf(id) >= 0; }).length;
-    if (inOld < career.lastStanding.length * 0.6) return;                      // a promoção não foi nesta virada
-    var cupCh = career.lastCupChampion === career.teamId || (career.honours || []).some(function (h) { return h.season === career.season - 1 && h.cupChampion; });
-    if (cupCh) return;
-    var nm = career.comps.cont.name || "continental";
-    career.comps.cont = null; career.contVia = null;
-    if (career.pending && career.pending.key === "cont") career.pending = null;
-    TM.notify.push(career, { icon: "🏆", title: "Vaga na " + nm + " corrigida", news: true, text: career.teamName + " subiu de divisão e, pelas regras, não disputa a " + nm + " nesta temporada. Só os melhores colocados da primeira divisão e o campeão da copa nacional se classificam." });
-  }
-  /* ---------- reparo de estruturas mutiladas pela nuvem (Firebase apaga [] e nulls; arrays esparsos viram objetos) ---------- */
-  function isIntKeyed(o) { if (!o || typeof o !== "object" || Array.isArray(o)) return false; var ks = Object.keys(o); return ks.length > 0 && ks.every(function (k) { return /^\d+$/.test(k); }); }
+  /* ---------- reparo de estruturas mutiladas pela nuvem (Firebase apaga [] e nulls; array esparso vira objeto) ---------- */
+  function isIntKeyed(o) { if (!o || typeof o !== "object" || Array.isArray(o)) return false; var ks = Object.keys(o); return ks.length > 0 && ks.every(function (k) { return /^\d{1,3}$/.test(k); }); }
   function toArr(x, len) {
     if (Array.isArray(x)) { if (len != null) while (x.length < len) x.push(null); return x; }
-    if (x == null) return len != null ? new Array(len).fill(null) : [];
-    if (isIntKeyed(x)) { var max = -1; Object.keys(x).forEach(function (k) { max = Math.max(max, +k); }); var a = new Array(Math.max(max + 1, len || 0)).fill(null); Object.keys(x).forEach(function (k) { a[+k] = x[k]; }); return a; }
-    return len != null ? new Array(len).fill(null) : [];
+    if (x == null) { var z = []; if (len != null) while (z.length < len) z.push(null); return z; }
+    if (isIntKeyed(x)) {
+      var max = -1; Object.keys(x).forEach(function (k) { max = Math.max(max, +k); });
+      var a = []; var n = Math.max(max + 1, len || 0); for (var i = 0; i < n; i++) a.push(null);
+      Object.keys(x).forEach(function (k) { a[+k] = x[k]; });
+      return a;
+    }
+    var y = []; if (len != null) while (y.length < len) y.push(null); return y;
+  }
+  // normaliza TUDO: objeto com chaves so numericas volta a ser array (mapas do jogo usam ids "p123"/"br-2"/"en")
+  function deepRepair(x, depth) {
+    if (x == null || typeof x !== "object" || (depth || 0) > 9) return x;
+    if (Array.isArray(x)) { for (var i = 0; i < x.length; i++) x[i] = deepRepair(x[i], (depth || 0) + 1); return x; }
+    var ks = Object.keys(x);
+    if (ks.length && ks.every(function (k) { return /^\d{1,3}$/.test(k); })) {
+      var max = -1; ks.forEach(function (k) { max = Math.max(max, +k); });
+      var a = []; for (var j = 0; j <= max; j++) a.push(null);
+      ks.forEach(function (k) { a[+k] = deepRepair(x[k], (depth || 0) + 1); });
+      return a;
+    }
+    ks.forEach(function (k) { x[k] = deepRepair(x[k], (depth || 0) + 1); });
+    return x;
   }
   function repairKO(ko) {
     if (!ko || typeof ko !== "object") return;
-    ko.rounds = toArr(ko.rounds); ko.roundIndex = ko.roundIndex || 0; ko.teamIds = toArr(ko.teamIds);
+    ko.rounds = toArr(ko.rounds); ko.roundIndex = ko.roundIndex || 0; ko.teamIds = toArr(ko.teamIds).filter(Boolean);
     ko.rounds = ko.rounds.map(function (rd) { return toArr(rd).filter(Boolean).map(function (t) { return toArr(t, ko.twoLeg ? 10 : 5); }); });
-    ko.rounds.forEach(function (rd) { rd.forEach(function (t) { if (ko.twoLeg && (t[9] == null)) t[9] = (t[7] != null ? 2 : t[5] != null ? 1 : 0); }); });
+    if (ko.twoLeg) ko.rounds.forEach(function (rd) { rd.forEach(function (t) { if (t[9] == null) t[9] = (t[7] != null ? 2 : t[5] != null ? 1 : 0); }); });
   }
   function repairTour(tour) {
     if (!tour || typeof tour !== "object") return;
     tour.groups = toArr(tour.groups).filter(Boolean);
-    tour.groups.forEach(function (g) { g.teamIds = toArr(g.teamIds).filter(Boolean); g.fixtures = toArr(g.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); }); g.table = g.table || emptyTable(g.teamIds); g.round = g.round || 0; });
+    tour.groups.forEach(function (g) {
+      g.teamIds = toArr(g.teamIds).filter(Boolean);
+      g.fixtures = toArr(g.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); });
+      if (!g.table) g.table = emptyTable(g.teamIds);
+      g.round = g.round || 0;
+    });
     if (tour.ko) { tour.ko.twoLeg = tour.twoLeg; repairKO(tour.ko); }
     else if (tour.phase === "ko") tour.ko = { teamIds: [], rounds: [], roundIndex: 0 };
+    tour.groupRound = tour.groupRound || 0;
   }
   function repairShapes(career) {
-    ["roster", "transferList", "notifications", "deals", "marketFeed", "honours", "recentForm", "order", "lastStanding", "youth", "pendingArrivals", "divSwaps", "matchLog", "windows", "pendingWorldDeals", "loanedOut", "jobOffers", "clubHistory", "sellOnRights", "receivables", "installments", "yscouts", "scouts"].forEach(function (k) {
-      if (career[k] != null && !Array.isArray(career[k]) && isIntKeyed(career[k])) career[k] = toArr(career[k]).filter(function (x) { return x != null; });
+    if (!career) return;
+    try { deepRepair(career, 0); } catch (e) {}
+    ["roster", "transferList", "notifications", "deals", "marketFeed", "honours", "recentForm", "order", "lastStanding", "youth",
+     "pendingArrivals", "divSwaps", "divMoves", "matchLog", "windows", "pendingWorldDeals", "jobOffers", "clubHistory",
+     "sellOnRights", "receivables", "installments", "yscouts", "scouts", "yscoutCands"].forEach(function (k) {
+      if (career[k] != null && !Array.isArray(career[k])) career[k] = toArr(career[k]).filter(function (x) { return x != null; });
     });
     if (!Array.isArray(career.roster)) career.roster = [];
-    if (career.lineup) { career.lineup.starters = toArr(career.lineup.starters).filter(Boolean); career.lineup.bench = toArr(career.lineup.bench).filter(Boolean); if (!career.lineup.pos || typeof career.lineup.pos !== "object") career.lineup.pos = {}; }
+    if (career.lineup) {
+      career.lineup.starters = toArr(career.lineup.starters).filter(Boolean);
+      career.lineup.bench = toArr(career.lineup.bench).filter(Boolean);
+      if (!career.lineup.pos || typeof career.lineup.pos !== "object") career.lineup.pos = {};
+    }
     if (career.comps) {
       Object.keys(career.comps).forEach(function (k) {
-        var comp = career.comps[k]; if (!comp) return;
-        if (comp.type === "league") { comp.fixtures = toArr(comp.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); }); comp.round = comp.round || 0; comp.table = comp.table || {}; }
-        else if (comp.type === "tournament") repairTour(comp.tour);
+        var comp = career.comps[k]; if (!comp || typeof comp !== "object") return;
+        if (comp.type === "league") {
+          comp.fixtures = toArr(comp.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); });
+          comp.round = comp.round || 0; if (!comp.table) comp.table = {};
+        } else if (comp.type === "tournament") repairTour(comp.tour);
         else repairKO(comp);
       });
     }
-    if (career.nation && career.nation.comps) Object.keys(career.nation.comps).forEach(function (k) { var comp = career.nation.comps[k]; if (comp && comp.tour) repairTour(comp.tour); else if (comp && comp.rounds !== undefined) repairKO(comp); });
-    if (career.wl && career.wl.leagues) Object.keys(career.wl.leagues).forEach(function (lid) { var L = career.wl.leagues[lid]; if (!L) return; L.fixtures = toArr(L.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); }); L.last = toArr(L.last).filter(Boolean); L.prev = toArr(L.prev).filter(Boolean); L.table = L.table || {}; L.scorers = L.scorers || {}; });
+    if (career.nation && career.nation.comps) Object.keys(career.nation.comps).forEach(function (k) {
+      var comp = career.nation.comps[k]; if (!comp) return;
+      if (comp.tour) repairTour(comp.tour); else if (comp.rounds !== undefined || comp.teamIds !== undefined) repairKO(comp);
+    });
+    if (career.wl && career.wl.leagues) Object.keys(career.wl.leagues).forEach(function (lid) {
+      var L = career.wl.leagues[lid]; if (!L) return;
+      L.fixtures = toArr(L.fixtures).map(function (rd) { return toArr(rd).filter(Boolean).map(function (m) { return toArr(m); }); });
+      L.last = toArr(L.last).filter(Boolean); L.prev = toArr(L.prev).filter(Boolean);
+      if (!L.table) L.table = {}; if (!L.scorers) L.scorers = {};
+    });
+  }
+  // a carreira consegue abrir? (calendario, liga, copas e elenco coerentes)
+  function seasonOk(career) {
+    try {
+      var c = career.comps; if (!c || !c.league) return false;
+      if (!Array.isArray(career.order) || !career.order.length) return false;
+      if (!Array.isArray(c.league.fixtures) || !c.league.fixtures.length || !c.league.table) return false;
+      if (!c.league.fixtures.every(function (rd) { return Array.isArray(rd) && rd.length && rd.every(function (m) { return Array.isArray(m) && m[0] && m[1]; }); })) return false;
+      var ok = true;
+      Object.keys(c).forEach(function (k) {
+        var comp = c[k]; if (!comp || comp.type === "league") return;
+        if (comp.type === "tournament") {
+          if (!comp.tour || !Array.isArray(comp.tour.groups) || !comp.tour.groups.length) { ok = false; return; }
+          if (!comp.tour.groups.every(function (g) { return g && Array.isArray(g.teamIds) && Array.isArray(g.fixtures); })) ok = false;
+          if (comp.tour.ko && !Array.isArray(comp.tour.ko.rounds)) ok = false;
+        } else if (!Array.isArray(comp.rounds) || !Array.isArray(comp.teamIds)) ok = false;
+      });
+      if (!ok) return false;
+      if (!Array.isArray(career.roster) || career.roster.length < 11) return false;
+      if (!career.lineup || !Array.isArray(career.lineup.starters) || career.lineup.starters.length < 11) return false;
+      return true;
+    } catch (e) { return false; }
+  }
+  // ultimo recurso: remonta as competicoes DESTA temporada (elenco, dinheiro, contratos e historico ficam)
+  function rebuildSeason(career) {
+    try { if (!Array.isArray(career.roster) || career.roster.length < 11) career.roster = (TM.data.club(career.teamId).playerIds || []).slice(0, 24); } catch (e) {}
+    try { career.lineup = buildBestLineup(rosterPlayers(career)); } catch (e) {}
+    career.matchNo = 0; career.orderIndex = 0; career.pending = null;
+    seasonSetup(career);
+    TM.notify.push(career, { icon: "🛠️", title: "Carreira recuperada", news: true,
+      text: "O calendário desta temporada estava corrompido (acontecia ao baixar o jogo salvo da nuvem) e foi remontado. Elenco, dinheiro, contratos e histórico foram preservados; a tabela desta temporada recomeça." });
+  }
+  function ensureSeason(career) {
+    if (seasonOk(career)) return false;
+    try { rebuildSeason(career); } catch (e) { return false; }
+    return true;
+  }
+  function fixPromotedInContinental(career) {
+    if (!career.comps || !career.comps.cont || career.contFixSeason === career.season) return;
+    career.contFixSeason = career.season;
+    // subiu de divisao nesta virada? (a tabela final guardada e da divisao de baixo)
+    var from = career.lastStandingLg;
+    if (!from || DIV_UP[from] !== career.leagueId) return;
+    var cupCh = career.lastCupChampion === career.teamId || (career.honours || []).some(function (h) { return h.season === career.season - 1 && h.cupChampion; });
+    if (cupCh) return;                                   // campeao da copa nacional mantem a vaga
+    var nm = career.comps.cont.name || "continental";
+    career.comps.cont = null; career.contVia = null;
+    if (career.pending && career.pending.key === "cont") career.pending = null;
+    career.order = (career.order || []).filter(function (k) { return k !== "cont"; });
+    if (career.orderIndex > career.order.length) career.orderIndex = career.order.length;
+    TM.notify.push(career, { icon: "\ud83c\udfc6", title: "Vaga na " + nm + " corrigida", news: true, text: career.teamName + " subiu de divis\u00e3o e, pelas regras, n\u00e3o disputa a " + nm + " nesta temporada. Classificam-se os melhores colocados da primeira divis\u00e3o e o campe\u00e3o da copa nacional." });
   }
   function migrateCareer(career) {
     try { repairShapes(career); } catch (e) {}
+    // carimbo de chegada ao clube: reforco recem-contratado nao pode reclamar de falta de minutos
+    try {
+      var first = !career.joinedAt;
+      career.joinedAt = career.joinedAt || {};
+      (career.roster || []).forEach(function (id) { if (career.joinedAt[id] == null) career.joinedAt[id] = first ? 0 : (career.matchNo || 0); });
+      Object.keys(career.joinedAt).forEach(function (id) { if ((career.roster || []).indexOf(id) < 0) delete career.joinedAt[id]; });
+    } catch (e) {}
     try { fixPromotedInContinental(career); } catch (e) {}
+    try { if (ensureSeason(career)) TM.storage.saveCoachCareer(career); } catch (e) {}
     if (!career) return career;
     // save de versão antiga sem a estrutura de competições atual → reconstrói a temporada
     if (!career.comps || !career.comps.league || !career.comps.league.fixtures || !career.order || career.orderIndex == null) {
@@ -2595,7 +2709,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes,
+    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
