@@ -3658,3 +3658,19 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .zone-key .zk.z-up .zk-dot{background:#38bdf8}.zone-key .zk.z-releg .zk-dot{background:#e0472c}
 .league-table tr.z-up td:first-child{box-shadow:inset 3px 0 0 #38bdf8}
 .wl-flag.small{width:24px;height:24px}
+
+/* ===== confronto de ida e volta ===== */
+.agg-box{width:100%;max-width:620px;margin:8px auto 0;background:var(--panel);border:1px solid var(--line);border-left-width:4px;border-radius:12px;padding:10px 12px}
+.agg-box.up{border-left-color:#22c55e}.agg-box.down{border-left-color:#e0472c}.agg-box.even{border-left-color:#f2b100}
+.agg-t{font-size:11px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim)}
+.agg-line{display:flex;align-items:center;gap:8px;margin-top:6px}
+.agg-crest{width:24px;height:24px;object-fit:contain}
+.agg-sc{font-weight:800;font-size:17px}
+.agg-lbl{font-size:11px;color:var(--text-dim);margin-left:2px}
+.agg-agg{font-size:12.5px;margin-top:6px;font-weight:700}
+.agg-box.up .agg-agg{color:#35c46a}.agg-box.down .agg-agg{color:#ff6a61}.agg-box.even .agg-agg{color:#f6b73c}
+.agg-live{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;width:100%;max-width:620px;margin:6px auto 0;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.05);border:1px solid var(--line)}
+.agg-live-l{font-size:11px;color:var(--text-dim)}
+.agg-live-v{font-weight:800;font-size:13.5px}
+.agg-live-s{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px}
+.agg-live.up .agg-live-s{color:#35c46a}.agg-live.down .agg-live-s{color:#ff6a61}.agg-live.even .agg-live-s{color:#f6b73c}

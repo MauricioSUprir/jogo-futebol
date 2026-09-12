@@ -56,6 +56,23 @@
       el("div", { class: "bc-progress" }, [ progressFill ])
     ]);
     screen.appendChild(broadcastEl);
+    // confronto de ida e volta: resultado da ida e agregado ao vivo
+    var aggEl = null;
+    if (cfg.leg) {
+      var meSide = cfg.pauseSide != null ? cfg.pauseSide : 0;
+      aggEl = el("div", { class: "agg-live" });
+      screen.appendChild(aggEl);
+      var updAgg = function () {
+        var meu = cfg.leg.meuGol + score[meSide], deles = cfg.leg.delesGol + score[1 - meSide];
+        TM.ui.clear(aggEl);
+        aggEl.className = "agg-live " + (meu > deles ? "up" : meu < deles ? "down" : "even");
+        aggEl.appendChild(el("span", { class: "agg-live-l", text: "🔁 IDA " + cfg.leg.firstHs + " x " + cfg.leg.firstAs }));
+        aggEl.appendChild(el("span", { class: "agg-live-v", text: "AGREGADO " + meu + " x " + deles }));
+        aggEl.appendChild(el("span", { class: "agg-live-s", text: meu > deles ? "classificando" : meu < deles ? "eliminado" : "empatado" }));
+      };
+      updAgg();
+      cfg._updAgg = updAgg;
+    }
 
     // estádio do jogo (foto + nome) — mandante = time A; em jogo neutro, mostra como sede
     var stadBannerEl = null;
@@ -426,6 +443,7 @@
       clockEl.textContent = mm + "'";
       if (progressFill && !animating) progressFill.style.width = Math.min(100, mm / 90 * 100) + "%";
       if (pitch && pitchOn) pitch.tick(mm, byMin[mm] || []);
+      if (cfg._updAgg) cfg._updAgg();
       var evs = byMin[mm] || [];
       if (animating && delay > 0) {
         var fev = null, varEv = null, gev = null;
