@@ -19,6 +19,8 @@
   };
   var REGION = { co: "sa", br: "sa", ar: "sa", ec: "sa", uy: "sa", py: "sa", en: "eu", es: "eu", it: "eu", de: "eu", fr: "eu", pt: "eu", nl: "eu", tr: "eu", ru: "eu", rus: "eu", ch: "eu", be: "eu", us: "na", mx: "na", sa: "as", jp: "as", ma: "as" };
   var CONT_NAME = { sa: "Copa Continental Sul", eu: "Copa Continental Europa", na: "Copa Continental Norte", as: "Copa Continental Ásia" };
+  var CONT2_NAME = { sa: "Copa Continental Sul II", eu: "Copa Continental Europa II", na: "Copa Continental Norte II", as: "Copa Continental Ásia II" };
+  var CONT2_FROM = 7, CONT2_TO = 12;   // zona de classificação da continental secundária (7º ao 12º)
   var REGION_LEAGUES = { sa: ["br", "ar", "ec", "uy", "co", "py"], eu: ["en", "es", "it", "de", "fr", "pt", "nl", "tr", "ru", "rus", "ch", "be"], na: ["us", "mx"], as: ["sa", "jp", "ma"] };
 
   /* ---------- Confederações + Eliminatórias da Copa ---------- */
@@ -531,6 +533,45 @@
       tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
   }
 
+  // Continental SECUNDÁRIA (Sul-Americana / Europa League): 7º ao 12º de cada liga da região.
+  // Quem se classificou para a principal NÃO entra aqui.
+  function buildContinental2(career) {
+    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, principal = Q.initial;
+    var size = 32, field = [], mine = false;
+    leagues.forEach(function (lg) {
+      var rank = rankLeague(career, lg);
+      for (var i = CONT2_FROM - 1; i < Math.min(CONT2_TO, rank.length); i++) {
+        var id = rank[i];
+        if (!id || principal.indexOf(id) >= 0 || field.indexOf(id) >= 0) continue;
+        field.push(id); if (id === career.teamId) mine = true;
+      }
+    });
+    if (!mine) { career.cont2Via = null; return null; }          // o usuário não se classificou
+    var myPos = 0; (function () { var rk = rankLeague(career, career.lastStandingLg || career.leagueId); myPos = rk.indexOf(career.teamId) + 1; })();
+    career.cont2Via = myPos ? "liga (" + myPos + "º)" : "liga";
+    if (field.length > size) {
+      var me = career.teamId;
+      field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      field = field.slice(0, size);
+      if (field.indexOf(me) < 0) field[field.length - 1] = me;
+    }
+    while (field.length < size) {                                 // completa com os melhores ainda de fora
+      var pad = null, best = -1;
+      leagues.forEach(function (lg) {
+        TM.data.league(lg).clubIds.forEach(function (id) {
+          if (field.indexOf(id) >= 0 || principal.indexOf(id) >= 0) return;
+          var r = TM.data.clubRating(id); if (r > best) { best = r; pad = id; }
+        });
+      });
+      if (!pad) break; field.push(pad);
+    }
+    if (field.length < 8) return null;
+    var comp2 = TM.data.competition("cont2-" + region);
+    var name2 = (comp2 && comp2.name) || CONT2_NAME[region] || "Continental II";
+    return { type: "tournament", key: "cont2", name: name2,
+      tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
+  }
+
   // Mundial de Clubes (carreira): 32 melhores clubes de todas as ligas, formato Copa
   // do Mundo (grupos + mata-mata em jogo único). Acontece 1 ano antes da Copa (season % 4 === 0).
   function buildMundial(career) {
@@ -554,7 +595,8 @@
       tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: false, twoLeg: false, userId: career.teamId }) };
   }
 
-  function buildOrder(leagueRounds, contSlots, mundialSlots) {
+  function buildOrder(leagueRounds, contSlots, mundialSlots, contKey) {
+    contKey = contKey || "cont";
     // liga em turno e returno; copa nacional (ida e volta), continental
     // (grupos de ida/volta + mata-mata) e Mundial de Clubes intercalados na temporada
     var cupAt = spread(8, leagueRounds), contAt = spread(contSlots, leagueRounds), mundAt = spread(mundialSlots || 0, leagueRounds);
@@ -562,11 +604,11 @@
     for (var lr = 1; lr <= leagueRounds; lr++) {
       order.push("league");
       while (cupI < cupAt.length && cupAt[cupI] === lr) { order.push("cup"); cupI++; }
-      while (contI < contAt.length && contAt[contI] === lr) { order.push("cont"); contI++; }
+      while (contI < contAt.length && contAt[contI] === lr) { order.push(contKey); contI++; }
       while (mundI < mundAt.length && mundAt[mundI] === lr) { order.push("mundial"); mundI++; }
     }
     while (cupI < cupAt.length) { order.push("cup"); cupI++; }
-    while (contI < contAt.length) { order.push("cont"); contI++; }
+    while (contI < contAt.length) { order.push(contKey); contI++; }
     while (mundI < mundAt.length) { order.push("mundial"); mundI++; }
     return order;
   }
@@ -575,6 +617,7 @@
     var leagueId = career.leagueId;
     var league = TM.data.league(leagueId);
     var cont = buildContinental(career);
+    var cont2 = cont ? null : buildContinental2(career);        // quem está na principal não joga a secundária
     var fixtures = doubleRoundRobin(league.clubIds.slice()); // turno e returno (34 rodadas p/ 18 clubes)
     // Mundial de Clubes: 1 ano antes da Copa do Mundo (temporadas 4, 8, 12, ... — a Copa é em 1, 5, 9, ...)
     var mundial = (career.season % 4 === 0) ? buildMundial(career) : null;
@@ -582,11 +625,12 @@
       league: { type: "league", name: league.name, fixtures: fixtures, round: 0, table: emptyTable(league.clubIds) },
       cup: buildDomesticCup(career.teamId, leagueId),
       cont: cont,
+      cont2: cont2,
       mundial: mundial
     };
     // continental: 6 rodadas de grupo (ida/volta) + até 8 de mata-mata (ida e volta) = ~14 (folga p/ 20)
     // Mundial: 3 rodadas de grupo + 4 de mata-mata = 7 (folga p/ 10)
-    career.order = buildOrder(fixtures.length, cont ? 20 : 0, mundial ? 10 : 0);
+    career.order = buildOrder(fixtures.length, cont ? 20 : (cont2 ? 20 : 0), mundial ? 10 : 0, cont2 ? "cont2" : "cont");
     // Intercontinental: jogo único no fim da temporada (campeão da Liberta x campeão da Champions)
     career.order.push("inter");
     career.interChampion = null; career.interMatch = null;

@@ -158,20 +158,22 @@
       { ic: "📋", label: "Escalar", route: "coach-lineup" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
-      { ic: "🌍", label: "Mundo", route: "coach-world" }
+      { ic: "🌍", label: "Mundo", route: "coach-world" },
+      { ic: "💬", label: "Msgs", route: "coach-messenger", badge: (function () { try { return TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) { return 0; } })() }
     ];
     var nav = el("nav", { class: "bottom-nav" });
     items.forEach(function (it) {
       var on = it.route === active;
       nav.appendChild(el("button", { class: "bn-item" + (on ? " on" : ""), on: { click: function () { if (!on) TM.ui.go(it.route); } } }, [
         el("span", { class: "bn-ic", text: it.ic }),
-        el("span", { class: "bn-lb", text: it.label })
-      ]));
+        el("span", { class: "bn-lb", text: it.label }),
+        it.badge ? el("span", { class: "bn-badge", text: it.badge > 9 ? "9+" : it.badge }) : null
+      ].filter(Boolean)));
     });
     // botão "Mais" (⋯) — abre o sheet com todas as seções; badge soma avisos/propostas
     var extra = 0;
     try { extra = (TM.notify.unread(c) || 0) + ((c.jobOffers || []).filter(function (o) { return !o.seen; }).length || 0); } catch (e) {}
-    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1 };
+    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1, "coach-messenger": 1 };
     var moreActive = !primary[active];
     nav.appendChild(el("button", { class: "bn-item bn-more" + (moreActive ? " on" : ""), on: { click: function () { openSectorSheet(c, active); } } }, [
       el("span", { class: "bn-ic", text: "⋯" }),
@@ -896,7 +898,11 @@
         { label: "👔 Aposentar / finalizar carreira", danger: true, fn: function () { TM.ui.go("coach-retire"); } }
       ]);
     } } });
-    var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
+    var mUn = 0; try { mUn = TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) {}
+    var chat = el("button", { class: "tb-bell tb-chat", title: "Total Messenger", on: { click: function () { TM.ui.go("coach-messenger"); } } }, [
+      el("span", { text: "💬" }), mUn ? el("span", { class: "bell-badge", text: mUn > 9 ? "9+" : mUn }) : null
+    ]);
+    var right = el("div", { class: "tb-actions" }, [ chat, bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
     addSectorBar(screen, "coach-hub");
 
@@ -1192,6 +1198,9 @@
       hubBtn("📋", "Escalação", function () { TM.ui.go("coach-lineup"); }),
       hubBtn("🌱", "Base", function () { TM.ui.go("coach-youth"); }),
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
+      hubBtn("🌍", "Mundo", function () { TM.ui.go("coach-world"); }),
+      hubBtn("💬", "Mensagens" + (function () { try { var u = TM.msgr ? TM.msgr.unread(c) : 0; return u ? " (" + u + ")" : ""; } catch (e) { return ""; } })(), function () { TM.ui.go("coach-messenger"); }),
+      hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("🔭", "Olheiros", function () { TM.ui.go("coach-scouting", { from: "coach-hub" }); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
@@ -2716,6 +2725,7 @@
   function compIdFor(c, key) {
     if (key === "cup") return "cup-" + c.leagueId;
     if (key === "cont") return "cont-" + (C().REGION[c.leagueId] || "eu");
+    if (key === "cont2") return "cont2-" + (C().REGION[c.leagueId] || "eu");
     if (key === "mundial") return "cwc-world";
     if (key === "inter") return "cwc-inter";
     return "lg-" + c.leagueId;
@@ -2728,6 +2738,7 @@
     var tabs = [ { key: "league", label: c.comps.league.name } ];
     if (c.comps.cup) tabs.push({ key: "cup", label: c.comps.cup.name });
     if (c.comps.cont) tabs.push({ key: "cont", label: c.comps.cont.name });
+    if (c.comps.cont2) tabs.push({ key: "cont2", label: c.comps.cont2.name });
     if (c.comps.mundial) tabs.push({ key: "mundial", label: c.comps.mundial.name });
     var active = (params && params.tab) || "league";
 
@@ -2745,7 +2756,8 @@
     screen.appendChild(el("div", { class: "comp-head" }, [
       TM.img.compImg(compIdFor(c, active), ""),
       el("div", { class: "ch-name", text: activeTab.label }),
-      (active === "cont" && c.contVia) ? el("div", { class: "setting-hint", text: "Vaga conquistada como " + c.contVia + " na temporada passada." }) : null
+      (active === "cont" && c.contVia) ? el("div", { class: "setting-hint", text: "Vaga conquistada como " + c.contVia + " na temporada passada." })
+        : (active === "cont2" && c.cont2Via) ? el("div", { class: "setting-hint", text: "Vaga da continental secundária: " + c.cont2Via + " na temporada passada (zona do 7º ao 12º)." }) : null
     ].filter(Boolean)));
 
     if (active === "league") renderLeague(screen, c);
@@ -2781,9 +2793,11 @@
     var st = C().standings(c.comps.league.table);
     var table = el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "V", "E", "D", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]) ]);
     var tb = el("tbody");
+    var nL = st.length;
     st.forEach(function (row, i) {
       var club = TM.data.club(row.id);
-      tb.appendChild(el("tr", { class: row.id === c.teamId ? "me" : "" }, [
+      var zona = i < 4 ? "z-cont" : (i >= 6 && i < 12) ? "z-cont2" : (i >= nL - 4) ? "z-releg" : "";
+      tb.appendChild(el("tr", { class: (row.id === c.teamId ? "me " : "") + zona }, [
         el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.clubImg(club, "lt-crest"), el("span", { text: club.name }) ]),
         el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: row.w }), el("td", { text: row.d }), el("td", { text: row.l }),
         el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
@@ -2791,6 +2805,11 @@
     });
     table.appendChild(tb);
     screen.appendChild(el("div", { class: "table-wrap" }, [ table ]));
+    screen.appendChild(el("div", { class: "zone-key" }, [
+      el("span", { class: "zk z-cont", text: "1º-4º · continental principal" }),
+      el("span", { class: "zk z-cont2", text: "7º-12º · continental secundária" }),
+      el("span", { class: "zk z-releg", text: "últimos 4 · rebaixamento" })
+    ]));
   }
 
   function renderBracket(screen, c, ko) {
