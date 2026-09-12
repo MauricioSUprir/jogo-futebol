@@ -2217,6 +2217,31 @@
     });
     (career.divMoves || []).forEach(function (m) { moveClubToLeague(m.from, m.to, m.id); });
   }
+  // CONSERTO de saves antigos: a versão antiga trocava o usuário pelo clube MAIS FORTE da divisão de destino
+  // (ex.: o Flamengo caía para a Série B quando você subia). Troca esse "contrapeso" pelo clube mais fraco e
+  // completa o acesso/rebaixamento dos outros 3 de cada lado.
+  function fixLegacyDivSwaps(career) {
+    if (career.divSwapsFixed || !career.divSwaps || !career.divSwaps.length) return;
+    career.divSwapsFixed = 1;
+    var trocados = [];
+    career.divSwaps.forEach(function (sw) {
+      if (!sw || !sw.counterpart || !sw.targetLg || !sw.userLg) return;
+      if (DIV_UP[sw.userLg] !== sw.targetLg) return;                 // só quando o usuário SUBIU
+      var lgTo = TM.data.league(sw.targetLg); if (!lgTo) return;
+      var rank = lgTo.clubIds.slice().filter(function (id) { return id !== career.teamId; })
+        .sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      if (rank.indexOf(sw.counterpart) >= Math.max(4, Math.floor(rank.length / 2))) return;  // já era um clube fraco: ok
+      var novo = rank[rank.length - 1];                               // o mais fraco desce, não o mais forte
+      if (!novo || novo === sw.counterpart) return;
+      var antigo = TM.data.club(sw.counterpart), nv = TM.data.club(novo);
+      trocados.push({ de: antigo ? antigo.name : sw.counterpart, para: nv ? nv.name : novo, lg: lgTo.name });
+      sw.counterpart = novo;
+    });
+    if (trocados.length) {
+      TM.notify.push(career, { icon: "🛠️", title: "Acesso corrigido", news: true,
+        text: "O rebaixamento da temporada passada estava errado no seu jogo salvo: " + trocados.map(function (t) { return t.de + " voltou para a " + t.lg + " e o " + t.para + " foi rebaixado no lugar"; }).join("; ") + ". Agora sobem os " + PROMO_N + " primeiros e caem os " + RELEG_N + " últimos em todas as ligas." });
+    }
+  }
   function recordMove(career, id, from, to) {
     if (!id || !from || !to || from === to) return;
     moveClubToLeague(from, to, id);
@@ -2603,6 +2628,7 @@
     // números de camisa escolhidos pelo técnico (só para quem ainda está no elenco)
     try { if (career.numbers) Object.keys(career.numbers).forEach(function (id) { if (career.roster.indexOf(id) >= 0) { var q = resolvePlayer(career, id); if (q) q.number = career.numbers[id]; } else delete career.numbers[id]; }); } catch (e) {}
     applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
+    try { fixLegacyDivSwaps(career); } catch (e) {}
     applyDivSwaps(career); // reaplica rebaixamentos/acessos (mundo regenera determinístico)
     return career;
   }
