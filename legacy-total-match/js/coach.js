@@ -1010,6 +1010,17 @@
     try { var safEl = TM.club.safCard(c, "coach-hub"); if (safEl) screen.appendChild(safEl); } catch (e) {}
     try { var preEl = TM.pre && TM.pre.card(c); if (preEl) screen.appendChild(preEl); } catch (e) {}
     try { var offEl = TM.offers && TM.offers.card(c); if (offEl) screen.appendChild(offEl); } catch (e) {}
+    // atalho para 🌍 Ligas do mundo (observação de 8 dias) — a aba fica no menu "Mais"
+    try {
+      var wlS = (c.wl && c.wl.seen) ? Object.keys(c.wl.seen).length : 0, wlO = (c.wl && c.wl.obs) ? Object.keys(c.wl.obs).filter(function (k) { return !(c.wl.seen && c.wl.seen[k]); }).length : 0;
+      screen.appendChild(el("div", { class: "next-match wl-hub clickable", on: { click: function () { TM.ui.go("coach-world"); } } }, [
+        el("div", { class: "nm-label", text: "🌍 Ligas do mundo" }),
+        el("div", { class: "offer-row" }, [ el("div", { class: "offer-mid" }, [
+          el("div", { class: "offer-t", text: wlS ? wlS + " liga" + (wlS > 1 ? "s" : "") + " acompanhada" + (wlS > 1 ? "s" : "") + (wlO ? " · " + wlO + " em observação" : "") : (wlO ? wlO + " liga" + (wlO > 1 ? "s" : "") + " em observação" : "Escolha uma liga para observar") }),
+          el("div", { class: "offer-s", text: "Observe uma liga por 8 dias e acompanhe tabela, rodadas e artilheiros do mundo inteiro." })
+        ]), el("span", { class: "wl-hub-go", text: "›" }) ])
+      ]));
+    } catch (e) {}
 
     var pending = C().advanceToUserMatch(c);
     if (pending.seasonEnd) {
