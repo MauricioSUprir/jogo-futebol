@@ -60,13 +60,15 @@
         if (plr) TM.notify.push(c, { icon: "🤝", title: "Clima resolvido", text: plr.name + " voltou a jogar com regularidade e retirou o pedido de transferência." });
       }
     });
+    var clock = (c.careerStats && c.careerStats.p) || 0;
     var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
     if (c._lastUnrest === stamp) return;
-    if (Math.random() < 0.80) return;   // esporádico (raro)
+    if (Math.random() < 0.88) return;   // esporádico (raro)
+    if (clock - (c._lastUnrestAt || -99) < 10) return;   // descanso entre pedidos
+    c._lastUnrestAt = clock;
     c._lastUnrest = stamp;
     var squad = []; try { squad = C().userSquad(c) || []; } catch (e) {}
     var MIN_CASA = 12;                     // só reclama depois de 12 jogos no clube (reforço recém-chegado tem paciência)
-    var clock = (c.careerStats && c.careerStats.p) || 0;
     var cand = squad.filter(function (p) {
       if (c.transferReq[p.id]) return false;
       if ((p.age || 24) > 32 || p.overall < 73) return false;

@@ -24,7 +24,7 @@
   function shortName(n) { var p = String(n || "").split(" "); return p.length > 1 ? p[0][0] + ". " + p[p.length - 1] : n; }
   function played(c) { return (c.stats && c.stats.p) || 0; }
   function appsOf(c, id) { var s = c.pstats && c.pstats[id]; return s ? s.apps : 0; }
-  function sinceJoin(c, id) { var j = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0; return Math.max(0, (c.matchNo || 0) - j); }
+  function sinceJoin(c, id) { var j = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0, clk = (c.careerStats && c.careerStats.p) || 0; return Math.max(0, clk - j); }
   function pos(c) { try { return C().currentPosition(c); } catch (e) { return 0; } }
   function squad(c) { try { return C().userSquad(c) || []; } catch (e) { return []; } }
 
@@ -76,10 +76,19 @@
   var GENS = [
     // 1) jogador com poucos minutos
     function (c) {
+      // MESMA regra do pedido de transferência: só quem tem casa e realmente não joga
+      var S0 = st(c), clk = (c.careerStats && c.careerStats.p) || 0;
+      if ((S0.threads || []).some(function (t) { return !t.done && String(t.key || "").indexOf("minutos:") === 0; })) return false;  // só uma conversa dessas por vez
+      if (clk - (S0.lastMinuteTalk || -99) < 10) return false;                                                                       // descanso entre reclamações
       var p = squad(c).filter(function (p) {
-        return sinceJoin(c, p.id) >= 5 && p.overall >= 70 && appsOf(c, p.id) <= Math.floor(sinceJoin(c, p.id) * 0.3) && !(c.injuries && c.injuries[p.id]);
-      })[0];
+        if (c.injuries && c.injuries[p.id]) return false;
+        if (c.promises && c.promises[p.id] && (c.promises[p.id].until || 0) >= (c.matchNo || 0)) return false;
+        if ((p.age || 25) > 32) return false;
+        var since = sinceJoin(c, p.id);
+        return since >= 12 && p.overall >= 72 && appsOf(c, p.id) <= Math.floor(since * 0.25);
+      }).sort(function (a, b) { return b.overall - a.overall; })[0];
       if (!p) return false;
+      S0.lastMinuteTalk = clk;
       newThread(c, { key: "minutos:" + p.id, kind: "player", pid: p.id, fromName: p.name, fromSub: TM.data.posLabel(p) + " · " + p.overall + " OVR",
         subject: "Quero jogar mais",
         text: "Professor, queria conversar sobre minha situação. Venho treinando forte e não tenho tido chance. Em " + sinceJoin(c, p.id) + " jogos do time eu entrei em " + appsOf(c, p.id) + ". O que falta para eu jogar?",
@@ -252,9 +261,9 @@
     var gap = S.lastDay == null ? 1 : d - S.lastDay;
     S.lastDay = d;
     if (gap <= 0) { if (changed) save(c); return; }
-    var tries = Math.min(3, Math.max(1, Math.round(gap / 4)));
+    var tries = Math.min(2, Math.max(1, Math.round(gap / 6)));
     for (var n = 0; n < tries; n++) {
-      if (Math.random() > 0.55) continue;
+      if (Math.random() > 0.35) continue;
       var order = GENS.slice().sort(function () { return Math.random() - 0.5; });
       for (var i = 0; i < order.length; i++) {
         var snap = S.threads.length;
