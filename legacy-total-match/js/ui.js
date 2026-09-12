@@ -645,10 +645,11 @@
     SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: MB + "trophy.jpg" });
+    SLIDES.push({ key: "ut", eyebrow: "CARTAS", name: "Total Ultimate", desc: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", cta: "JOGAR", route: "ut", bg: MB + "director.jpg" });
     SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: MB + "online.jpg" });
     // passo final "diferente": explorar mais modos (com a logo do Total Match)
-    SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Dream Team, Draft, Editor, Grupo, Perfil e mais.", logo: true, more: [
-      { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
+    SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Total Ultimate, Dream Team, Draft, Editor, Grupo e mais.", logo: true, more: [
+      { icon: "⬤", name: "Total Ultimate", route: "ut" }, { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🪙", name: "Arena Coins", route: "arena" }, { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
       { icon: "💾", name: "Carreiras", route: "saves" }, { icon: "🎖️", name: "Info", route: "competicoes" },
       { icon: "⚙️", name: "Config", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
