@@ -158,20 +158,22 @@
       { ic: "📋", label: "Escalar", route: "coach-lineup" },
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
-      { ic: "🌍", label: "Mundo", route: "coach-world" }
+      { ic: "🌍", label: "Mundo", route: "coach-world" },
+      { ic: "💬", label: "Msgs", route: "coach-messenger", badge: (function () { try { return TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) { return 0; } })() }
     ];
     var nav = el("nav", { class: "bottom-nav" });
     items.forEach(function (it) {
       var on = it.route === active;
       nav.appendChild(el("button", { class: "bn-item" + (on ? " on" : ""), on: { click: function () { if (!on) TM.ui.go(it.route); } } }, [
         el("span", { class: "bn-ic", text: it.ic }),
-        el("span", { class: "bn-lb", text: it.label })
-      ]));
+        el("span", { class: "bn-lb", text: it.label }),
+        it.badge ? el("span", { class: "bn-badge", text: it.badge > 9 ? "9+" : it.badge }) : null
+      ].filter(Boolean)));
     });
     // botão "Mais" (⋯) — abre o sheet com todas as seções; badge soma avisos/propostas
     var extra = 0;
     try { extra = (TM.notify.unread(c) || 0) + ((c.jobOffers || []).filter(function (o) { return !o.seen; }).length || 0); } catch (e) {}
-    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1 };
+    var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1, "coach-messenger": 1 };
     var moreActive = !primary[active];
     nav.appendChild(el("button", { class: "bn-item bn-more" + (moreActive ? " on" : ""), on: { click: function () { openSectorSheet(c, active); } } }, [
       el("span", { class: "bn-ic", text: "⋯" }),
@@ -896,7 +898,11 @@
         { label: "👔 Aposentar / finalizar carreira", danger: true, fn: function () { TM.ui.go("coach-retire"); } }
       ]);
     } } });
-    var right = el("div", { class: "tb-actions" }, [ bell, dots ]);
+    var mUn = 0; try { mUn = TM.msgr ? TM.msgr.unread(c) : 0; } catch (e) {}
+    var chat = el("button", { class: "tb-bell tb-chat", title: "Total Messenger", on: { click: function () { TM.ui.go("coach-messenger"); } } }, [
+      el("span", { text: "💬" }), mUn ? el("span", { class: "bell-badge", text: mUn > 9 ? "9+" : mUn }) : null
+    ]);
+    var right = el("div", { class: "tb-actions" }, [ chat, bell, dots ]);
     screen.appendChild(TM.ui.topbar("Carreira", function () { TM.ui.go("modes"); }, right));
     addSectorBar(screen, "coach-hub");
 

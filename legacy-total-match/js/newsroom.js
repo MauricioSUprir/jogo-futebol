@@ -176,6 +176,111 @@
     return out;
   }
 
+  /* ---------- 4b) NOTÍCIAS DO MUNDO (outros clubes, sem depender de observação) ---------- */
+  var BIG_LEAGUES = ["en", "es", "it", "de", "fr", "br", "ar", "pt", "nl"];
+  function worldPool(c) {
+    var W = TM.data.world(), clubs = [];
+    BIG_LEAGUES.forEach(function (lid) { var lg = TM.data.league(lid); if (lg) clubs = clubs.concat((lg.clubIds || []).map(function (id) { return TM.data.club(id); }).filter(Boolean)); });
+    var my = null; try { my = TM.data.club(c.teamId); } catch (e) {}
+    if (my && clubs.indexOf(my) < 0) { var mlg = TM.data.league(my.leagueId); if (mlg) clubs = clubs.concat((mlg.clubIds || []).map(function (id) { return TM.data.club(id); }).filter(Boolean)); }
+    return clubs.filter(function (cl) { return cl.id !== c.teamId; });
+  }
+  function bigStars(c, clubs, minOv) {
+    var out = [];
+    clubs.forEach(function (cl) {
+      try { TM.data.clubPlayers(cl.id).forEach(function (p) { if (p && p.overall >= (minOv || 84)) out.push(p); }); } catch (e) {}
+    });
+    return out;
+  }
+  // bloco de notícias do mundo: renova a cada 2 jogos seus, com semente fixa (não muda ao reabrir)
+  function worldNews(c) {
+    var out = [], clubs = worldPool(c);
+    if (clubs.length < 8) return out;
+    var blk = Math.floor((c.matchNo || 0) / 2), seed = "wn" + (c.season || 1) + "-" + blk;
+    var r = rngOf(seed), day0 = c.currentDay || 0;
+    function clubAt(i) { return clubs[Math.floor(r() * clubs.length)]; }
+    function lgOf(cl) { var L = TM.data.league(cl.leagueId); return L ? L.name : ""; }
+    var stars = bigStars(c, clubs, 85); if (stars.length < 3) stars = bigStars(c, clubs, 82);
+    var used = {};
+    function add(a) { if (a && !used[a.id]) { used[a.id] = 1; out.push(a); } }
+
+    // 1) craque em fase artilheira
+    if (stars.length) {
+      var s1 = stars[Math.floor(r() * stars.length)], c1 = club(s1.clubId), g = 4 + Math.floor(r() * 9);
+      if (c1) add(article({ id: hash(seed + "star" + s1.id), day: day0, section: "mundo", outlet: "mf", tag: "MUNDO · DESTAQUE",
+        headline: pick(r, [s1.name + " engata sequência e assume a artilharia " + (lgOf(c1) ? "da " + lgOf(c1) : ""), "Fase artilheira: " + s1.name + " decide mais uma pelo " + c1.name, s1.name + " vive a melhor fase da carreira no " + c1.name]),
+        sub: s1.name + " (" + s1.overall + ", " + posLabel(s1) + ", " + (s1.age || 26) + " anos) chegou a " + g + " gols na temporada pelo " + c1.name + ".",
+        paras: [ "O " + posLabel(s1).toLowerCase() + " " + s1.name + " virou o nome da temporada " + (lgOf(c1) ? "na " + lgOf(c1) : "no futebol europeu") + ". São " + g + " gols e uma média que o coloca na frente da artilharia.",
+          "Clubes de todo o mundo observam a situação, mas o " + c1.name + " garante que não pretende negociá-lo agora.",
+          "Para quem enfrenta o " + c1.name + ", o recado é claro: parar " + s1.name.split(" ")[0] + " virou o principal problema tático da temporada." ],
+        quotes: [ { who: (c1.coach || "O técnico") + ", técnico do " + c1.name, text: pick(r, ["Ele está num momento raro. Nosso trabalho é dar a bola para ele.", "É um jogador diferenciado, e está com confiança total."]) } ],
+        img: { type: "player", pid: s1.id, clubId: c1.id }, clubId: c1.id, playerId: s1.id, priority: 1 }));
+    }
+    // 2) gigante em crise / técnico pressionado
+    var c2 = clubAt(); 
+    if (c2) add(article({ id: hash(seed + "crise" + c2.id), day: day0, section: "mundo", outlet: "bf", tag: "MUNDO · BASTIDORES",
+      headline: pick(r, ["Pressão no " + c2.name + ": diretoria se reúne para avaliar o comando técnico", c2.name + " vive clima tenso após sequência irregular", "Torcida do " + c2.name + " protesta e cobra reação"]),
+      sub: "O " + c2.name + " passa por um momento delicado " + (lgOf(c2) ? "na " + lgOf(c2) : "") + ", segundo pessoas ligadas ao clube.",
+      paras: [ "Nos bastidores, o " + c2.name + " discute mudanças. A diretoria evita falar em demissão, mas admite que a paciência tem prazo.",
+        "O elenco foi reapresentado com treinos fechados e conversa entre líderes e comissão técnica.",
+        "Nomes já circulam no mercado de treinadores, embora o clube negue qualquer sondagem." ],
+      quotes: [ { who: (c2.coach || "O técnico") + ", técnico do " + c2.name, text: pick(r, ["Sei onde estou. Cobrança faz parte de clube grande.", "Trabalho é a única resposta que eu conheço."]) } ],
+      img: { type: "club", clubId: c2.id }, clubId: c2.id, priority: 1 }));
+    // 3) clássico no fim de semana
+    var c3 = clubAt(), riv = null;
+    try { var rs = TM.data.rivalsOf(c3.id) || []; riv = rs.length ? club(rs[0]) : null; } catch (e) {}
+    if (c3 && riv) add(article({ id: hash(seed + "class" + c3.id), day: day0, section: "mundo", outlet: "db", tag: "MUNDO · CLÁSSICO",
+      headline: pick(r, ["Clima esquenta para " + c3.name + " x " + riv.name, c3.name + " e " + riv.name + " se enfrentam num clássico decisivo"]),
+      sub: "O clássico " + (lgOf(c3) ? "da " + lgOf(c3) : "") + " promete casa cheia e as duas torcidas em festa.",
+      paras: [ "A rivalidade entre " + c3.name + " e " + riv.name + " é das mais antigas do futebol e volta a pesar na tabela nesta rodada.",
+        "Os dois clubes fecharam os treinos e trocam alfinetadas pela imprensa desde o início da semana.",
+        "A expectativa é de estádio lotado e ingressos esgotados horas depois de abrir a venda." ],
+      quotes: [ { who: (c3.coach || "O técnico") + ", técnico do " + c3.name, text: "Clássico não se joga, se ganha." },
+        { who: (riv.coach || "O técnico") + ", técnico do " + riv.name, text: "Respeitamos o adversário, mas vamos impor o nosso jogo." } ],
+      img: { type: "club", clubId: c3.id }, clubId: c3.id, priority: 1 }));
+    // 4) joia revelada
+    var jovens = [];
+    clubs.forEach(function (cl) { try { TM.data.clubPlayers(cl.id).forEach(function (p) { if (p && (p.age || 30) <= 20 && p.overall >= 76) jovens.push(p); }); } catch (e) {} });
+    if (jovens.length) {
+      var j = jovens[Math.floor(r() * jovens.length)], cj = club(j.clubId);
+      if (cj) add(article({ id: hash(seed + "joia" + j.id), day: day0, section: "mundo", outlet: "gm", tag: "MUNDO · REVELAÇÃO",
+        headline: pick(r, [j.name + ", de " + (j.age || 19) + " anos, vira alvo dos gigantes", "Joia do " + cj.name + ": " + j.name + " chama a atenção do mercado"]),
+        sub: j.name + " (" + j.overall + ", " + posLabel(j) + ") é apontado como uma das maiores promessas do futebol mundial.",
+        paras: [ "Com " + (j.age || 19) + " anos, " + j.name + " ganhou espaço no " + cj.name + " e já é tratado como peça de futuro pelo clube.",
+          "Olheiros de vários países acompanham os jogos dele, e o entorno do atleta admite sondagens.",
+          "O " + cj.name + " trabalha para blindar o jogador com renovação e cláusula alta." ],
+        quotes: [ { who: "Empresário de " + j.name, text: pick(r, ["Meu cliente está feliz, mas o futebol dá voltas.", "Ele quer jogar. Onde, o tempo dirá."]) } ],
+        img: { type: "player", pid: j.id, clubId: cj.id }, clubId: cj.id, playerId: j.id, priority: 1 }));
+    }
+    // 5) veterano/ídolo
+    var velhos = [];
+    clubs.forEach(function (cl) { try { TM.data.clubPlayers(cl.id).forEach(function (p) { if (p && (p.age || 20) >= 35 && p.overall >= 74) velhos.push(p); }); } catch (e) {} });
+    if (velhos.length) {
+      var v = velhos[Math.floor(r() * velhos.length)], cv = club(v.clubId);
+      if (cv) add(article({ id: hash(seed + "vet" + v.id), day: day0, section: "mundo", outlet: "tn", tag: "MUNDO · HISTÓRIA",
+        headline: pick(r, [v.name + ", aos " + (v.age || 36) + ", segue decisivo no " + cv.name, "Eterno: " + v.name + " desafia o tempo no " + cv.name]),
+        sub: "Aos " + (v.age || 36) + " anos, " + v.name + " continua entre os nomes mais influentes do elenco do " + cv.name + ".",
+        paras: [ "A carreira de " + v.name + " atravessa gerações e ele segue como referência dentro e fora de campo no " + cv.name + ".",
+          "O clube já discute o futuro do atleta: renovação por mais uma temporada ou início de uma despedida planejada." ],
+        quotes: [ { who: (cv.coach || "O técnico") + ", técnico do " + cv.name, text: "Profissional exemplar. Os jovens aprendem só de olhar." } ],
+        img: { type: "player", pid: v.id, clubId: cv.id }, clubId: cv.id, playerId: v.id, priority: 1 }));
+    }
+    // 6) panorama de uma liga grande
+    var lgId = BIG_LEAGUES[Math.floor(r() * BIG_LEAGUES.length)], lgo = TM.data.league(lgId);
+    if (lgo && lgo.clubIds && lgo.clubIds.length > 4) {
+      var rank = lgo.clubIds.slice().sort(function (a, b) { var ra = 0, rb = 0; try { ra = TM.data.clubRating(a); rb = TM.data.clubRating(b); } catch (e) {} return rb - ra; });
+      var l1 = club(rank[0]), l2 = club(rank[1]), l3 = club(rank[2]);
+      if (l1 && l2) add(article({ id: hash(seed + "lg" + lgId), day: day0, section: "mundo", outlet: "pc", tag: "MUNDO · " + lgo.name.toUpperCase(),
+        headline: pick(r, [lgo.name + ": " + l1.name + " e " + l2.name + " prometem briga ponto a ponto", "Quem leva a " + lgo.name + "? " + l1.name + " lidera as apostas"]),
+        sub: "Análise do momento da " + lgo.name + " e dos favoritos ao título.",
+        paras: [ "A " + lgo.name + " chega à parte decisiva com " + l1.name + " e " + l2.name + " como principais candidatos" + (l3 ? ", e o " + l3.name + " logo atrás" : "") + ".",
+          "Elencos equilibrados e um calendário apertado devem decidir o campeonato nos detalhes.",
+          "Acompanhe tabela, rodadas e artilheiros observando a liga em 🌍 Mundo." ],
+        quotes: [], img: { type: "club", clubId: l1.id }, clubId: l1.id, priority: 1 }));
+    }
+    return out;
+  }
+
   /* ---------- 5) avisos marcados como notícia → texto jornalístico ---------- */
   var CATS = {
     "😤": { section: "bastidores", outlet: "bf", tag: "VESTIÁRIO", lead: "Clima tenso nos bastidores.", q: ["Conversei com ele. Situações assim se resolvem dentro do vestiário.", "Todo jogador quer jogar; respeito, mas quem escala sou eu."] },
@@ -237,7 +342,7 @@
     var key = [c.season, c.currentDay, c.matchNo, (c.notifications || []).length, (c.deals || []).length, (c.marketFeed || []).length, c._nseq].join("|");
     if (cache.key === key) return cache.items;
     function safe(fn) { try { var v = fn(c); return Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []); } catch (e) { try { console.warn("notícia ignorada:", e); } catch (e2) {} return []; } }
-    var items = [].concat(safe(matchArticles), safe(analysisArticle), safe(marketArticles), safe(worldArticles), safe(noteArticles));
+    var items = [].concat(safe(matchArticles), safe(analysisArticle), safe(marketArticles), safe(worldArticles), safe(worldNews), safe(noteArticles));
     items.sort(function (a, b) { return (b.day - a.day) || (b.priority - a.priority) || (a.id - b.id); });
     cache = { key: key, items: items };
     return items;
