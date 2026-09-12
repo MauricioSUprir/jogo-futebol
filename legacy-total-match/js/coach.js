@@ -50,24 +50,27 @@
     // auto-resolve: quem voltou a jogar bastante deixa de querer sair
     Object.keys(c.transferReq).forEach(function (id) {
       var st = c.pstats && c.pstats[id];
-      var jd = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0, sinceJ = Math.max(1, (c.matchNo || 0) - jd);
+      var clk = (c.careerStats && c.careerStats.p) || 0;
+      var jd = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0, sinceJ = Math.max(1, clk - jd);
       if (st && (st.apps / sinceJ) > 0.55) { delete c.transferReq[id]; }
     });
     var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
     if (c._lastUnrest === stamp) return;
-    if (Math.random() < 0.62) return;   // esporádico
+    if (Math.random() < 0.80) return;   // esporádico (raro)
     c._lastUnrest = stamp;
     var squad = []; try { squad = C().userSquad(c) || []; } catch (e) {}
-    var MIN_CASA = 6;                      // so reclama depois de 6 jogos no clube (reforco recem-chegado tem paciencia)
+    var MIN_CASA = 12;                     // só reclama depois de 12 jogos no clube (reforço recém-chegado tem paciência)
+    var clock = (c.careerStats && c.careerStats.p) || 0;
     var cand = squad.filter(function (p) {
       if (c.transferReq[p.id]) return false;
       if ((p.age || 24) > 32 || p.overall < 73) return false;
       var joined = (c.joinedAt && c.joinedAt[p.id] != null) ? c.joinedAt[p.id] : 0;
-      var since = (c.matchNo || 0) - joined;            // jogos do clube desde que ele chegou
-      if (since < MIN_CASA) return false;               // acabou de chegar: nada de pedido de transferencia
-      if (c.injuries && c.injuries[p.id]) return false; // lesionado nao reclama de falta de minutos
+      var since = clock - joined;                       // jogos da carreira desde que ele chegou ao clube
+      if (since < MIN_CASA) return false;               // acabou de chegar: nada de pedido de transferência
+      if (c.injuries && c.injuries[p.id]) return false; // lesionado não reclama de falta de minutos
+      if (c.promises && c.promises[p.id] && (c.promises[p.id].until || 0) >= (c.matchNo || 0)) return false;  // você prometeu minutos
       var st = c.pstats && c.pstats[p.id]; var apps = st ? st.apps : 0;
-      return apps <= Math.floor(since * 0.35);
+      return apps <= Math.floor(since * 0.25);          // praticamente não joga
     }).sort(function (a, b) { return b.overall - a.overall; });
     if (!cand.length) return;
     var p = cand[0];

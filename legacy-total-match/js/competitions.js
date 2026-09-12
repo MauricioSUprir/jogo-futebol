@@ -2561,9 +2561,11 @@
     try { repairShapes(career); } catch (e) {}
     // carimbo de chegada ao clube: reforco recem-contratado nao pode reclamar de falta de minutos
     try {
-      var first = !career.joinedAt;
+      var clock = (career.careerStats && career.careerStats.p) || 0;   // jogos totais da carreira (não zera na virada)
+      if (!career.joinedAtV2) { career.joinedAt = {}; career.joinedAtV2 = 1; }   // migra do relógio antigo (matchNo)
+      var first = !career.joinedAt || !Object.keys(career.joinedAt).length;
       career.joinedAt = career.joinedAt || {};
-      (career.roster || []).forEach(function (id) { if (career.joinedAt[id] == null) career.joinedAt[id] = first ? 0 : (career.matchNo || 0); });
+      (career.roster || []).forEach(function (id) { if (career.joinedAt[id] == null) career.joinedAt[id] = first ? Math.max(0, clock - 30) : clock; });
       Object.keys(career.joinedAt).forEach(function (id) { if ((career.roster || []).indexOf(id) < 0) delete career.joinedAt[id]; });
     } catch (e) {}
     try { fixPromotedInContinental(career); } catch (e) {}
