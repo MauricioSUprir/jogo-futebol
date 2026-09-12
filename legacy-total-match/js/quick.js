@@ -3,6 +3,10 @@
   "use strict";
   var TM = global.TM;
   var el = TM.ui.el;
+  function shortNm(name) {
+    var a = String(name || "").trim().split(/\s+/);
+    return a.length > 1 ? a[0][0] + ". " + a[a.length - 1] : (a[0] || "");
+  }
 
   // Estado local da configuração de partida
   var setup = { source: "club", leagueA: "br", leagueB: "es", teamA: null, teamB: null };
@@ -111,6 +115,7 @@
     var side = (params && params.side) || 0, st = side === 0 ? QL.A : QL.B, id = side === 0 ? setup.teamA : setup.teamB;
     var all = qTeamPlayers(id), byId = {}; all.forEach(function (p) { byId[p.id] = p; });
     var name = setup.source === "nation" ? TM.data.nation(id).name : TM.data.club(id).name;
+    if (!st.pos) st.pos = {};
     screen.appendChild(TM.ui.topbar("📋 Escalação · " + name, function () { QL.pick = null; TM.ui.go("quick"); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
 
@@ -121,47 +126,120 @@
     });
     body.appendChild(seg);
 
-    var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
-    var xi = st.lu.starters.map(function (pid) { return byId[pid]; });
-    var ovr = Math.round(xi.filter(Boolean).reduce(function (s, p) { return s + p.overall; }, 0) / Math.max(1, xi.filter(Boolean).length));
-    body.appendChild(el("div", { class: "market-budget", text: "⭐ Força do time titular: " + ovr }));
+    var ovrEl = el("div", { class: "market-budget" });
+    body.appendChild(ovrEl);
     body.appendChild(TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), st.formation, function (f) {
-      st.formation = f; st.lu = TM.comp.buildLineup(all, f); QL.pick = null; TM.ui.go("quick-lineup", { side: side });
+      st.formation = f; st.lu = TM.comp.buildLineup(all, f); st.pos = {}; QL.pick = null; TM.ui.go("quick-lineup", { side: side });
     }));
     body.appendChild(TM.ui.dropdown("Tática", TM.engine.TACTICS, st.tactic, function (t) { st.tactic = t; }));
     body.appendChild(el("div", { class: "actions two" }, [
-      TM.ui.button("✨ Melhor time automático", function () { st.lu = TM.comp.buildLineup(all, st.formation); QL.pick = null; TM.ui.go("quick-lineup", { side: side }); }, "btn ghost small"),
+      TM.ui.button("✨ Melhor time automático", function () { st.lu = TM.comp.buildLineup(all, st.formation); st.pos = {}; QL.pick = null; renderBoard(); }, "btn ghost small"),
       TM.ui.button("🔍 Analisar", function () { TM.ui.go("scout", { teamId: id, isNation: setup.source === "nation", back: function () { TM.ui.go("quick-lineup", { side: side }); } }); }, "btn ghost small")
     ]));
 
-    // titulares (toque para trocar)
-    body.appendChild(el("h3", { class: "section-title", text: "Titulares" + (QL.pick != null ? " — escolha quem entra no lugar" : " — toque num jogador para trocar") }));
-    st.lu.starters.forEach(function (pid, i) {
-      var p = byId[pid]; if (!p) return;
-      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable"); if (QL.pick === i) row.classList.add("ql-picked");
-      row.insertBefore(el("span", { class: "ql-slot", text: (slots[i] && slots[i][0]) || "" }), row.firstChild);
-      row.addEventListener("click", function () {
-        if (QL.pick == null) { QL.pick = i; TM.ui.go("quick-lineup", { side: side }); return; }
-        if (QL.pick === i) { QL.pick = null; TM.ui.go("quick-lineup", { side: side }); return; }
-        var tmp = st.lu.starters[QL.pick]; st.lu.starters[QL.pick] = st.lu.starters[i]; st.lu.starters[i] = tmp; QL.pick = null; TM.ui.go("quick-lineup", { side: side });
-      });
-      body.appendChild(row);
-    });
-    // banco / reservas
-    body.appendChild(el("h3", { class: "section-title", text: "Reservas" }));
-    var inXi = {}; st.lu.starters.forEach(function (pid) { inXi[pid] = 1; });
-    all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
-      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable");
-      row.addEventListener("click", function () {
-        if (QL.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
-        st.lu.starters[QL.pick] = p.id; QL.pick = null; TM.ui.go("quick-lineup", { side: side });
-      });
-      body.appendChild(row);
-    });
-
+    // campinho + reservas (atualizado em lugar, sem recarregar a tela)
+    var board = el("div", { class: "lineup-board" });
+    screen.appendChild(board);
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("▶ Iniciar partida", function () { QL.pick = null; TM.ui.go("quick-match", { a: qTeam(0), b: qTeam(1) }); }, "btn primary big")
     ]));
+    renderBoard();
+
+    // o goleiro fica no fundo e os atacantes não invadem a área: mesma régua da carreira
+    function fieldY(sy) { return Math.round((20 + (sy - 15) * (88 - 20) / (88 - 15)) * 10) / 10; }
+
+    function renderBoard() {
+      board.innerHTML = "";
+      var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
+      var xi = st.lu.starters.map(function (pid) { return byId[pid]; });
+      var live = xi.filter(Boolean);
+      ovrEl.textContent = "⭐ Força do time titular: " + Math.round(live.reduce(function (a, p) { return a + p.overall; }, 0) / Math.max(1, live.length));
+
+      var pitch = el("div", { class: "pitch" });
+      pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+      pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+      st.lu.starters.forEach(function (pid, i) {
+        var p = byId[pid]; if (!p) return;
+        var baseSlot = slots[i] || [null, 50, 50];
+        var cp = st.pos[i];
+        var x = cp ? cp[0] : baseSlot[1], y = cp ? cp[1] : fieldY(baseSlot[2]);
+        var slot = cp ? TM.comp.fieldSlot(x, y) : baseSlot;
+        var chip = el("button", { class: "pl-chip" + (QL.pick === i ? " picked" : "") + (cp ? " custom" : ""),
+          style: "left:" + x + "%;top:" + y + "%" },
+          TM.ui.chipKids(p, slot, { name: shortNm(p.name), age: false })
+        );
+        attachChipDrag(chip, i, pitch);
+        pitch.appendChild(chip);
+      });
+      board.appendChild(pitch);
+
+      board.appendChild(el("div", { class: "lineup-hint", text: QL.pick != null
+        ? "Toque em OUTRO titular para trocar, ou num reserva para substituir. ✋ Arraste para mover livre."
+        : "👆 Toque para trocar/substituir · ✋ Arraste o jogador pelo campo para posicioná-lo livremente." }));
+      if (Object.keys(st.pos).length) {
+        board.appendChild(TM.ui.button("↩️ Redefinir posições da formação", function () { st.pos = {}; renderBoard(); }, "btn ghost small"));
+      }
+      board.appendChild(TM.ui.posPanel(st.lu.starters.map(function (pid, i) {
+        var cp = st.pos[i];
+        return { player: byId[pid], slot: cp ? TM.comp.fieldSlot(cp[0], cp[1]) : (slots[i] || null) };
+      }).filter(function (e) { return e.player; })));
+
+      var inXi = {}; st.lu.starters.forEach(function (pid) { inXi[pid] = 1; });
+      var benchWrap = el("div", { class: "panel-narrow" }, [ el("h3", { class: "block-title", text: "Reservas" }) ]);
+      all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("clickable");
+        if (QL.pick != null) row.classList.add("row-target");
+        row.addEventListener("click", function () {
+          if (QL.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
+          st.lu.starters[QL.pick] = p.id; QL.pick = null; renderBoard();
+        });
+        benchWrap.appendChild(row);
+      });
+      board.appendChild(benchWrap);
+    }
+
+    function onStarterClick(i) {
+      if (QL.pick == null) { QL.pick = i; }
+      else if (QL.pick === i) { QL.pick = null; }
+      else {
+        var t = st.lu.starters[QL.pick]; st.lu.starters[QL.pick] = st.lu.starters[i]; st.lu.starters[i] = t;
+        // a posição arrastada acompanha o jogador
+        var pa = st.pos[QL.pick], pb = st.pos[i];
+        if (pa) st.pos[i] = pa; else delete st.pos[i];
+        if (pb) st.pos[QL.pick] = pb; else delete st.pos[QL.pick];
+        QL.pick = null;
+      }
+      renderBoard();
+    }
+
+    // arrastar o jogador livremente pelo campo
+    function attachChipDrag(chip, i, pitch) {
+      var sx = null, sy = null, dragging = false, pid = null, nx = null, ny = null;
+      chip.style.touchAction = "none";
+      chip.addEventListener("pointerdown", function (e) { sx = e.clientX; sy = e.clientY; dragging = false; pid = e.pointerId; nx = ny = null; });
+      chip.addEventListener("pointermove", function (e) {
+        if (sx == null) return;
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!dragging && (dx * dx + dy * dy) > 36) { dragging = true; try { chip.setPointerCapture(pid); } catch (er) {} chip.classList.add("dragging"); }
+        if (dragging) {
+          var r = pitch.getBoundingClientRect();
+          nx = Math.max(5, Math.min(95, (e.clientX - r.left) / r.width * 100));
+          ny = Math.max(6, Math.min(95, (e.clientY - r.top) / r.height * 100));
+          chip.style.left = nx + "%"; chip.style.top = ny + "%";
+        }
+      });
+      function done() {
+        if (sx == null) return;
+        var wasDrag = dragging; sx = sy = null; dragging = false;
+        chip.classList.remove("dragging");
+        try { chip.releasePointerCapture(pid); } catch (er) {}
+        if (wasDrag) { if (nx != null) { st.pos[i] = [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10]; } renderBoard(); }
+        else { onStarterClick(i); }
+      }
+      chip.addEventListener("pointerup", done);
+      chip.addEventListener("pointercancel", done);
+    }
   });
 
   /* ---------- Tela 2: partida ao vivo (imersiva) ---------- */
