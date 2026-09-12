@@ -324,6 +324,11 @@
     ["cont-sa", "Copa Continental Sul", "continental", "#0a6b3b", "#f2b100"],
     ["cont-na", "Copa Continental Norte", "continental", "#1a1a1a", "#00b2a9"],
     ["cont-as", "Copa Continental Ásia", "continental", "#0a1a3a", "#00b2a9"],
+    // Continentais SECUNDÁRIAS (7º ao 12º da liga)
+    ["cont2-eu", "Copa Continental Europa II", "continental", "#2b1a4a", "#ff7a1a"],
+    ["cont2-sa", "Copa Continental Sul II", "continental", "#5a2d0c", "#f2b100"],
+    ["cont2-na", "Copa Continental Norte II", "continental", "#14324a", "#00b2a9"],
+    ["cont2-as", "Copa Continental Ásia II", "continental", "#1a2a1a", "#7be2a0"],
     // Mundiais de clubes
     ["cwc-world", "Mundial de Clubes", "mundial", "#c8a24a", "#0a2240"],
     ["cwc-inter", "Copa Intercontinental", "mundial", "#1a1a1a", "#c39e6d"],
@@ -2317,6 +2322,7 @@
     "cup-ch": "Schweizer Cup", "cup-py": "Copa Paraguay", "cup-be": "Beker van België",
     "cont-eu": "UEFA Champions League", "cont-sa": "Copa Libertadores", "cont-na": "CONCACAF Champions Cup",
     "cont-as": "AFC Champions League", "cwc-world": "Mundial de Clubes FIFA", "cwc-inter": "Copa Intercontinental",
+    "cont2-sa": "Copa Sul-Americana", "cont2-eu": "UEFA Europa League", "cont2-na": "CONCACAF Copa Regional", "cont2-as": "AFC Champions League Two",
     "nat-america": "Copa América", "nat-euro": "UEFA Euro", "nat-africa": "Copa Africana de Nações"
   };
   // aplica nomes reais/genéricos às competições conforme a edição (chamado no generateWorld)
@@ -19304,6 +19310,13 @@
       if (!cl.homeLeagueId) cl.homeLeagueId = cl.leagueId;
       (cl.playerIds || []).forEach(function (pid) { var pl = playersById[pid]; if (pl && !pl.homeClubId) pl.homeClubId = cl.id; });
     });
+    // referência do jogador no dia 1 da carreira: o valor de mercado sobe/desce conforme ele evolui ou cai
+    Object.keys(playersById).forEach(function (pid) {
+      var pl = playersById[pid]; if (!pl) return;
+      if (pl.ovBase == null) pl.ovBase = pl.overall;
+      if (pl.ageBase == null) pl.ageBase = pl.age;
+      if (pl.potBase == null) pl.potBase = pl.potential || pl.overall;
+    });
 
     return {
       seed: WORLD_SEED,
@@ -20244,7 +20257,24 @@
     // valor de mercado base (em milhões de euro) — curva realista:
     // ~60=4M, 70=18M, 80=55M, 85=85M, 90=125M, 95=175M
     marketValue: function (p) {
-      if (p.valueEur != null) return p.valueEur / 1e6;
+      // fórmula base por overall/idade/potencial
+      function calc(ov, age, pot) {
+        var b = Math.pow(Math.max(0.6, (ov - 45) / 10), 3.2);
+        var a = age <= 21 ? 1.35 : age <= 25 ? 1.15 : age <= 29 ? 1.0 : age <= 32 ? 0.55 : 0.28;
+        var pf = 1 + Math.max(0, (pot || ov) - ov) * 0.04;
+        return b * a * pf;
+      }
+      // valor real (Transfermarkt) ACOMPANHA a evolução: compara o jogador de hoje com o do início
+      if (p.valueEur != null) {
+        var atual = calc(p.overall, p.age, p.potential || p.overall);
+        var ini = calc(p.ovBase == null ? p.overall : p.ovBase, p.ageBase == null ? p.age : p.ageBase, p.potBase == null ? (p.potential || p.overall) : p.potBase);
+        var rt = ini > 0 ? atual / ini : 1;
+        rt = Math.max(0.2, Math.min(5, rt));
+        var vv = (p.valueEur / 1e6) * rt;
+        if (vv >= 100) return Math.round(vv / 5) * 5;
+        if (vv >= 1) return Math.round(vv);
+        return Math.max(0.05, Math.round(vv * 20) / 20);
+      }
       var base = Math.pow(Math.max(0.6, (p.overall - 45) / 10), 3.2);
       var ageF = p.age <= 21 ? 1.35 : p.age <= 25 ? 1.15 : p.age <= 29 ? 1.0 : p.age <= 32 ? 0.55 : 0.28;
       var potF = 1 + Math.max(0, (p.potential || p.overall) - p.overall) * 0.04;
