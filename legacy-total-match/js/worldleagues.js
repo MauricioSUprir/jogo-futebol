@@ -131,7 +131,8 @@
   function leagueRow(c, lg) {
     var info = obsInfo(c, lg.id), nat = nationOf(lg);
     var kids = [];
-    kids.push(nat ? TM.img.nationImg(nat, "wl-flag") : el("span", { class: "wl-flag" }));
+    var lgo = null; try { lgo = TM.img.compImg("lg-" + lg.id, "wl-flag"); } catch (e) {}
+    kids.push(lgo || (nat ? TM.img.nationImg(nat, "wl-flag") : el("span", { class: "wl-flag" })));
     var mid = el("div", { class: "wl-mid" }, [ el("div", { class: "wl-name", text: lg.name }), el("div", { class: "wl-sub", text: natPt(lg.nation) + " · " + lg.clubIds.length + " clubes" }) ]);
     if (info.status === "watching") mid.appendChild(el("div", { class: "wl-bar" }, [ el("i", { style: "width:" + info.pct + "%" }) ]));
     kids.push(mid);
@@ -175,8 +176,10 @@
     var tab = (params && params.tab) || "table", nat = nationOf(lg);
     screen.appendChild(TM.ui.topbar(lg.name, function () { TM.ui.go("coach-world"); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
+    var lgBig = null; try { lgBig = TM.img.compImg("lg-" + lg.id, "wl-flag big"); } catch (e) {}
     body.appendChild(el("div", { class: "wl-head" }, [
-      nat ? TM.img.nationImg(nat, "wl-flag big") : null,
+      lgBig || (nat ? TM.img.nationImg(nat, "wl-flag big") : null),
+      lgBig && nat ? TM.img.nationImg(nat, "wl-flag small") : null,
       el("div", { class: "wl-mid" }, [ el("div", { class: "wl-name", text: lg.name }), el("div", { class: "wl-sub", text: natPt(lg.nation) + " · " + lg.clubIds.length + " clubes · rodada " + Math.min(L.round, L.fixtures.length) + " de " + L.fixtures.length }) ])
     ]));
     if (L.championId) { var ch = TM.data.club(L.championId); if (ch) body.appendChild(el("div", { class: "champion-banner", text: "🏆 Campeão: " + ch.name })); }
