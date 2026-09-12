@@ -51,7 +51,7 @@
     off.reason = REASONS[(h >>> 4) % REASONS.length].replace("{p}", p.name);
     off.deadlineDay = day(c) + 8 + ((h >>> 8) % 4);                    // 8 a 11 dias para responder (2 a 3 rodadas; os jogos avançam 4 dias)
     off.spokesman = buyer.coach ? { name: buyer.coach, role: "Técnico", photoKey: buyer.coachPhotoKey || null } : { name: "Diretor de futebol", role: "Diretoria", photoKey: null };
-    off.parts = 1 + ((h >>> 12) % 3);                                   // 1, 2 ou 3 parcelas propostas pelo comprador
+    off.parts = (off.fee || 0) >= 1 ? 1 + ((h >>> 12) % 3) : 1;          // 1, 2 ou 3 parcelas (só faz sentido acima de 1M)
     off.bonus = 0; off.sellOn = 0; off.upfront = off.parts > 1;
     off.final = !!off.finalOffer; off.ceil = ceiling(c, n);
     var w = wantsInfo(c, off, p); off.wants = w.wants; off.wantLine = w.line; off.forceWants = w.wants;
@@ -213,16 +213,41 @@
     });
     if (changed) save(c);
   }
+  function pendingLoans(c) { return (c.notifications || []).filter(function (n) { return n.loanOffer; }); }
+  // card do hub: TODAS as propostas de compra e pedidos de empréstimo pendentes (cada um com seu botão)
   function card(c) {
-    var list = pendingOffers(c); if (!list.length) return null;
-    var n = list[0], off = enrich(c, n), p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
-    if (!p || !buyer) return null;
-    var left = Math.max(0, (off.deadlineDay || day(c)) - day(c));
-    return el("div", { class: "next-match offer-card" }, [
-      el("div", { class: "nm-label", text: "📨 " + list.length + " proposta" + (list.length > 1 ? "s" : "") + " pelo seu elenco" }),
-      el("div", { class: "offer-row" }, [ TM.img.clubImg(buyer, "pre-crest"), el("div", { class: "offer-mid" }, [ el("div", { class: "offer-t", text: buyer.name + " quer " + p.name }), el("div", { class: "offer-s", text: money(c, off.fee) + (off.parts > 1 ? " em " + off.parts + "x" : " à vista") + " · responde até " + dateTxt(c, off.deadlineDay) + (left ? " (" + left + " dia" + (left > 1 ? "s" : "") + ")" : " (hoje!)") }) ]), TM.img.playerImg(p, "offer-face") ]),
-      el("div", { class: "actions" }, [ TM.ui.button("🤝 Sentar para negociar", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary") ])
-    ]);
+    var list = pendingOffers(c), loans = pendingLoans(c);
+    if (!list.length && !loans.length) return null;
+    var kids = [ el("div", { class: "nm-label", text: "📨 " + (list.length ? list.length + " proposta" + (list.length > 1 ? "s" : "") : "") + (list.length && loans.length ? " · " : "") + (loans.length ? loans.length + " pedido" + (loans.length > 1 ? "s" : "") + " de empréstimo" : "") + " pelo seu elenco" }) ];
+    list.slice(0, 4).forEach(function (n) {
+      var off = enrich(c, n), p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
+      if (!p || !buyer) return;
+      var left = Math.max(0, (off.deadlineDay || day(c)) - day(c));
+      kids.push(el("div", { class: "offer-row clickable", on: { click: function () { TM.ui.go("coach-offer", { noteId: n.id }); } } }, [
+        TM.img.clubImg(buyer, "pre-crest"),
+        el("div", { class: "offer-mid" }, [
+          el("div", { class: "offer-t", text: buyer.name + " quer " + p.name }),
+          el("div", { class: "offer-s", text: money(c, off.fee) + (off.parts > 1 ? " em " + off.parts + "x" : " à vista") + " · responde até " + dateTxt(c, off.deadlineDay) + (left ? " (" + left + " dia" + (left > 1 ? "s" : "") + ")" : " (hoje!)") })
+        ]),
+        TM.img.playerImg(p, "offer-face")
+      ]));
+      kids.push(el("div", { class: "actions" }, [ TM.ui.button("🤝 Sentar para negociar", function () { TM.ui.go("coach-offer", { noteId: n.id }); }, "btn primary") ]));
+    });
+    loans.slice(0, 3).forEach(function (n) {
+      var lo = n.loanOffer, p = C().resolvePlayer(c, lo.playerId), buyer = TM.data.club(lo.buyerId);
+      if (!p || !buyer) return;
+      kids.push(el("div", { class: "offer-row clickable", on: { click: function () { TM.ui.go("coach-loan-offer", { noteId: n.id }); } } }, [
+        TM.img.clubImg(buyer, "pre-crest"),
+        el("div", { class: "offer-mid" }, [
+          el("div", { class: "offer-t", text: buyer.name + " pede " + p.name + " emprestado" }),
+          el("div", { class: "offer-s", text: (lo.buyOption ? "Com opção de compra de " + money(c, lo.buyPrice) + " · " : "") + "taxa " + money(c, lo.loanFee) })
+        ]),
+        TM.img.playerImg(p, "offer-face")
+      ]));
+      kids.push(el("div", { class: "actions" }, [ TM.ui.button("🔄 Ver pedido de empréstimo", function () { TM.ui.go("coach-loan-offer", { noteId: n.id }); }, "btn") ]));
+    });
+    if (list.length + loans.length > (Math.min(4, list.length) + Math.min(3, loans.length))) kids.push(el("div", { class: "offer-s", style: "text-align:center", text: "Todas as propostas estão em 🔔 Avisos." }));
+    return el("div", { class: "next-match offer-card" }, kids);
   }
 
   /* ---------- TELA ---------- */

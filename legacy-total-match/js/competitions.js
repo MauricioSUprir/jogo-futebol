@@ -860,8 +860,9 @@
         TM.notify.push(career, { icon: "🟨", title: "Suspensão por cartões", text: (ev.player || "Um jogador") + " levou o 3º amarelo e está suspenso do próximo jogo." });
       }
     });
-    // interesse de outro clube em um jogador seu (ocasional)
-    maybeIncomingOffer(career);
+    // interesse de outro clube em um jogador seu — nunca fica mais de 5 jogos sem nenhuma proposta
+    career.offerDrought = (career.offerDrought || 0) + 1;
+    maybeIncomingOffer(career, { force: career.offerDrought >= 5 });
     // registra o resultado e avalia uma possível chamada da diretoria
     if (result && result.score) {
       var gf = result.score[userSide], ga = result.score[1 - userSide];
@@ -980,34 +981,67 @@
     }
   }
 
-  function maybeIncomingOffer(career) {
+  // destaque da temporada: peso extra p/ artilheiros, garçons e quem tem nota alta (atraem propostas)
+  function standoutScore(career, p) {
+    var st = career && career.pstats && career.pstats[p.id]; if (!st || !st.apps) return 0;
+    var avg = st.rn ? st.rsum / st.rn : 6.6;
+    return Math.max(0, (avg - 6.9) * 2) + (st.goals + st.assists * 0.6) / Math.max(3, st.apps) * 4;
+  }
+  // alvo de uma proposta: os melhores do elenco (relativo ao clube, sem piso absoluto) + destaques da temporada
+  function pickOfferTarget(career) {
+    var mine = rosterPlayers(career).filter(function (p) { return !(career.loanedIn && career.loanedIn[p.id]); });
+    if (!mine.length) return null;
+    var byOv = mine.slice().sort(function (a, b) { return b.overall - a.overall; });
+    var pool = byOv.slice(0, Math.min(8, byOv.length)).map(function (p) { return { p: p, w: 1 + (p.overall - byOv[byOv.length - 1].overall) * 0.05 + ((p.age || 25) <= 23 ? 0.6 : 0) }; });
+    mine.forEach(function (p) {
+      var sc = standoutScore(career, p); if (sc <= 0.8) return;
+      var ex = pool.filter(function (x) { return x.p.id === p.id; })[0];
+      if (ex) ex.w += sc; else pool.push({ p: p, w: sc });
+    });
+    var tot = pool.reduce(function (a, x) { return a + x.w; }, 0), r = Math.random() * tot;
+    for (var k = 0; k < pool.length; k++) { r -= pool[k].w; if (r <= 0) return pool[k].p; }
+    return pool[pool.length - 1].p;
+  }
+  // clubes que podem comprar o jogador: nível parecido ou maior; sem candidatos, os grandes do mundo
+  function offerBuyers(career, target) {
+    var all = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId; });
+    var myLg = TM.data.club(career.teamId), myNation = myLg && TM.data.league(myLg.leagueId) ? TM.data.league(myLg.leagueId).nation : null;
+    var ok = all.filter(function (cl) { return TM.data.clubRating(cl.id) >= target.overall - 4; });
+    if (!ok.length) ok = all.slice().sort(function (a, b) { return TM.data.clubRating(b.id) - TM.data.clubRating(a.id); }).slice(0, 40);
+    // metade das vezes o interesse vem do mesmo país (mais realista para clubes menores)
+    if (myNation && Math.random() < 0.5) {
+      var same = ok.filter(function (cl) { var lg = TM.data.league(cl.leagueId); return lg && lg.nation === myNation; });
+      if (same.length) ok = same;
+    }
+    return ok;
+  }
+  // opts.force: garante uma proposta (usado quando o técnico está há muitos jogos sem receber nada)
+  function maybeIncomingOffer(career, opts) {
+    opts = opts || {};
     // jogadores na lista de transferências recebem MUITO mais propostas
     var listed = (career.transferList || []).filter(function (id) { return career.roster.indexOf(id) >= 0 && !(career.loanedIn && career.loanedIn[id]); });
     var wantListed = listed.length > 0 && Math.random() < 0.6;
-    if (!wantListed && Math.random() > 0.30) return;
+    var base = opts.chance != null ? opts.chance : 0.38;
+    if (!opts.force && !wantListed && Math.random() > base) return false;
     var target;
-    if (wantListed) {
-      target = resolvePlayer(career, listed[Math.floor(Math.random() * listed.length)]);
-    } else {
-      // não recebe propostas por jogadores que eu mesmo peguei emprestado
-      var mine = rosterPlayers(career).filter(function (p) { return p.overall >= 66 && !(career.loanedIn && career.loanedIn[p.id]); }).sort(function (a, b) { return b.overall - a.overall; });
-      if (!mine.length) return;
-      target = mine[Math.floor(Math.random() * Math.min(8, mine.length))];
-    }
-    if (!target) return;
+    if (wantListed) target = resolvePlayer(career, listed[Math.floor(Math.random() * listed.length)]);
+    else target = pickOfferTarget(career);
+    if (!target) return false;
+    career.offerDrought = 0;
     var val = TM.data.marketValue(target), mult = career.money ? career.money.mult : 1;
-    var kind = Math.random(); // 0.55 compra · 0.28 empréstimo · 0.17 empréstimo c/ opção
-    if (kind < 0.55) {
-      var buyers = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= target.overall - 2; });
-      if (!buyers.length) return;
+    var kind = opts.force ? Math.random() * 0.55 : Math.random(); // 0.62 compra · 0.24 empréstimo · 0.14 empréstimo c/ opção
+    if (kind < 0.62) {
+      var buyers = offerBuyers(career, target);
+      if (!buyers.length) return false;
       var buyer = buyers[Math.floor(Math.random() * buyers.length)];
-      var fee = Math.round(val * (0.8 + Math.random() * 0.6) * mult);
+      var hot = standoutScore(career, target);
+      var fee = Math.max(0.05, Math.round(val * (0.8 + Math.random() * 0.6 + Math.min(0.5, hot * 0.08)) * mult * 100) / 100);   // destaque da temporada vale mais (valores em milhões, 2 casas)
       // cláusula de rescisão: clube rico pode simplesmente depositar o valor — você não pode recusar
       var clause = (career.contracts && career.contracts[target.id] && career.contracts[target.id].clause) || 0;
       if (clause > 0 && !wantListed && clause <= val * 3.2 && baseBudgetEur(TM.data.clubRating(buyer.id)) >= clause * 0.9 && TM.data.clubRating(buyer.id) >= target.overall && Math.random() < 0.35) {
         var cfee = Math.round(clause * mult * 100) / 100;
         var wants = Math.random() < 0.55 + Math.max(0, TM.data.clubRating(buyer.id) - TM.data.clubRating(career.teamId)) * 0.05;
-        if (!wants) { TM.notify.push(career, { icon: "📜", title: "Tentaram pagar a cláusula", news: true, text: buyer.name + " depositou a cláusula de rescisão de " + target.name + " (" + fmtMoney(career, cfee) + "), mas o jogador recusou se transferir." }); return; }
+        if (!wants) { TM.notify.push(career, { icon: "📜", title: "Tentaram pagar a cláusula", news: true, text: buyer.name + " depositou a cláusula de rescisão de " + target.name + " (" + fmtMoney(career, cfee) + "), mas o jogador recusou se transferir." }); return true; }
         career.budget += cfee; career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 }; career.finc.soldM += cfee;
         logDeal(career, { type: "out", kind: "clause", pid: target.id, name: target.name, pos: target.pos, ov: target.overall, fee: cfee, other: buyer.name });
         try { TM.club.onPlayerSold(career, target, cfee, buyer.id); } catch (e) {}
@@ -1018,7 +1052,7 @@
         syncLineup(career);
         TM.notify.push(career, { icon: "📜", title: "Cláusula de rescisão paga", news: true, text: buyer.name + " pagou a cláusula de rescisão de " + target.name + " (" + fmtMoney(career, cfee) + "). Pela regra do contrato, o clube não pôde recusar." });
         try { if (TM.social && TM.social.marketPost) TM.social.marketPost(career, { icon: "📜", title: "Cláusula ativada", text: buyer.name + " paga a cláusula de " + target.name + ": " + fmtMoney(career, cfee) + "." }); } catch (e) {}
-        return;
+        return true;
       }
       TM.notify.push(career, {
         icon: "📨", title: "Proposta recebida",
@@ -1031,12 +1065,12 @@
         var r = TM.data.clubRating(cl.id);
         return cl.id !== career.teamId && r >= target.overall - 12 && r <= target.overall + 4;
       });
-      if (!lbuyers.length) return;
+      if (!lbuyers.length) return false;
       var lb = lbuyers[Math.floor(Math.random() * lbuyers.length)];
-      var loanFee = Math.round(Math.max(1, val * 0.08) * mult);
+      var loanFee = Math.max(0.02, Math.round(Math.max(0.1, val * 0.08) * mult * 100) / 100);
       var withOption = kind >= 0.83;
       var termYears = [0.5, 1, 1, 1.5][Math.floor(Math.random() * 4)];
-      var buyPrice = withOption ? Math.round(val * (1.1 + Math.random() * 0.4) * mult) : 0;
+      var buyPrice = withOption ? Math.max(0.05, Math.round(val * (1.1 + Math.random() * 0.4) * mult * 100) / 100) : 0;
       TM.notify.push(career, {
         icon: withOption ? "🔁" : "🔄",
         title: withOption ? "Empréstimo c/ opção" : "Pedido de empréstimo",
@@ -1044,6 +1078,7 @@
         loanOffer: { playerId: target.id, buyerId: lb.id, loanFee: loanFee, buyOption: withOption, buyPrice: buyPrice, termYears: termYears }
       });
     }
+    return true;
   }
 
   // resolve uma proposta recebida (aceitar = vende; jogador pode ou não topar)
@@ -1957,6 +1992,8 @@
     try { if (TM.fin && TM.fin.dailyPoach) for (var pd = 0; pd < Math.min(12, d - lastD); pd++) TM.fin.dailyPoach(career); } catch (e) {}
     var open = windowOpenNow(career);
     if (open) {
+      // com a janela aberta, outros clubes também sondam o SEU elenco (mesmo sem jogo no meio)
+      try { for (var od = 0; od < Math.min(12, d - lastD); od++) { if (Math.random() < 0.10) maybeIncomingOffer(career, { force: true }); } } catch (e) {}
       // cada dia que passou dentro da janela gera negócios entre os OUTROS clubes (mais no fim da janela: "deadline day")
       var cw = currentWindow(career), daysPassed = Math.max(1, Math.min(12, d - lastD));
       for (var di = 0; di < daysPassed; di++) {
