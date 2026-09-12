@@ -3487,7 +3487,7 @@
     var sellClub = p.clubId ? TM.data.club(p.clubId) : null;
     if (!sellClub) { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); return; }
     var stance = C().clubStance(p);
-    var mval = curVal(c, TM.data.marketValue(p));
+    var mval = curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p));   // fim de contrato barateia
 
     screen.appendChild(TM.ui.topbar("Negociação", function () { TM.ui.go("coach-market"); }));
     if (TM.fin && TM.fin.banned(c)) { screen.appendChild(TM.fin.banBox(c, "coach-market")); return; }
@@ -3498,6 +3498,21 @@
       el("div", { class: "nego-dot active", text: "1. Com o clube" }),
       el("div", { class: "nego-dot", text: "2. Com o jogador" })
     ]));
+    // RIVAL: negociar com o maior rival é quase impossível
+    var rivalInfo = null; try { rivalInfo = TM.disp ? TM.disp.rivalSellerInfo(c, sellClub.id) : null; } catch (e) {}
+    if (rivalInfo) {
+      stance = { willSell: false, isKey: true, priceMult: (stance.priceMult || 1.2) * rivalInfo.priceMult, line: "Com você? Nem pensar." };
+      screen.appendChild(el("div", { class: "fin-ban warn", text: "🔥 " + rivalInfo.line }));
+    }
+    // CONCORRÊNCIA: outros clubes atrás do mesmo alvo
+    var BRACE = null; try { BRACE = TM.disp ? TM.disp.buyRace(c, p, sellClub) : null; } catch (e) {}
+    var braceBox = el("div");
+    function renderRace() {
+      TM.ui.clear(braceBox);
+      if (!BRACE || !TM.disp) return;
+      var pn = TM.disp.panel(c, "⚔️ Concorrência por " + p.name, BRACE.suitors, { hint: BRACE.lost ? "Você perdeu a disputa." : "Se demorar ou oferecer pouco, outro clube pode fechar antes." });
+      if (pn) braceBox.appendChild(pn);
+    }
     var negTension = stance.isKey ? "high" : (stance.willSell ? "low" : "mid");
     var negTLbl = negTension === "low" ? "Aberto a negociar" : negTension === "high" ? "Peça-chave — difícil" : "Vai resistir";
     screen.appendChild(el("div", { class: "nego2-call" }, [
@@ -3509,6 +3524,7 @@
       ]),
       el("div", { class: "nego2-tension " + negTension }, [ el("span", { class: "nego2-tdot" }), el("span", { text: negTLbl }) ])
     ]));
+    screen.appendChild(braceBox); renderRace();
     screen.appendChild(el("div", { class: "nego2-player", style: "max-width:640px;margin:10px auto 0" }, [
       TM.img.playerImg(p, "nego2-face"),
       el("div", { class: "nego2-pinfo" }, [
@@ -3704,6 +3720,18 @@
         st.rounds++;
         bubble("me", "Ofereço " + money(c, st.bid) + ".");
         acceptBtn.style.display = "none";
+        // rival: a diretoria deles pode simplesmente encerrar
+        if (rivalInfo && Math.random() < rivalInfo.refuseChance) {
+          bubble("them", "“Não vendemos para vocês. Procurem outro jogador.”", "angry");
+          lockControls(); return;
+        }
+        // concorrência reage
+        if (BRACE && TM.disp) {
+          var evs = TM.disp.buyRound(c, p, BRACE, st.bid, sellClub);
+          renderRace();
+          evs.forEach(function (t) { bubble("info", "⚔️ " + t); });
+          if (BRACE.lost) { lockControls(); TM.storage.saveCoachCareer(c); return; }
+        }
         var partsNow = sweet.parts > 1 ? st.bid / sweet.parts : st.bid;   // à vista, só a 1ª parcela pesa agora
         if (partsNow > c.budget) { bubble("them", "Seu caixa não cobre nem a entrada (" + money(c, c.budget) + ").", "angry"); return; }
         var ea = effAsking();
@@ -4592,6 +4620,15 @@
             : TM.ui.button("✍️ Negociar renovação", function () { renewOpen(c, p); }, "btn small"))
         ]));
       }
+
+      // ---- fim de contrato derruba o valor de mercado ----
+      try {
+        var cf = C().contractFactor ? C().contractFactor(c, p) : 1;
+        if (cf < 0.98) wrap.appendChild(el("div", { class: "fin-ban warn", text: "📉 " + (cf <= 0.45 ? "Contrato encerrado ou pré-contrato assinado com outro clube" : cf <= 0.8 ? "Último ano de contrato" : "Contrato curto") + ": o valor de mercado dele caiu " + Math.round((1 - cf) * 100) + "%. Renove para recuperar o valor." }));
+      } catch (e) {}
+
+      // ---- quem está de olho nele (mercado) ----
+      try { var ip = TM.disp ? TM.disp.interestPanel(c, p) : null; if (ip) wrap.appendChild(ip); } catch (e) {}
 
       // ---- histórico médico / risco de lesão ----
       var hist = (c.injHistory && c.injHistory[p.id]) || [];

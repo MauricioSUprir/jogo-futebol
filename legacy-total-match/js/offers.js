@@ -83,7 +83,7 @@
   }
   /* ---------- diretoria e torcida ---------- */
   function boardInfo(c, off, p) {
-    var value = curVal(c, TM.data.marketValue(p)), ido = idol(c, p);
+    var value = curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p)), ido = idol(c, p);
     var minOk = R(value * (ido && ido.cls !== "home" ? 1.35 : 1.0));
     var debt = 0; try { debt = TM.fin ? TM.fin.debtInfo(c).level : 0; } catch (e) {}
     var line;
@@ -182,7 +182,7 @@
     if (off.sellOn) { c.sellOnRights = c.sellOnRights || {}; c.sellOnRights[p.id] = { pct: off.sellOn, from: buyer.name, fromId: buyer.id, name: p.name, season: c.season || 1 }; }
     // torcida e clima
     if (fans.risk >= 2) { c.popularity = Math.max(3, (c.popularity || 40) - (fans.risk === 3 ? 6 : 3)); c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 3); }
-    else if (fans.risk === 0 && off.fee >= curVal(c, TM.data.marketValue(p)) * 1.2) c.boardTrust = Math.min(100, (c.boardTrust == null ? 50 : c.boardTrust) + 2);
+    else if (fans.risk === 0 && off.fee >= curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p)) * 1.2) c.boardTrust = Math.min(100, (c.boardTrust == null ? 50 : c.boardTrust) + 2);
     // despedida
     var farewell = pick(["“Obrigado por tudo. Levo esse clube no coração.”", "“Foi uma honra vestir essa camisa. Torcida, vocês são demais.”", "“Saio com a sensação de dever cumprido. Até um dia.”"]);
     note(c, { icon: "👋", title: "Despedida de " + p.name, news: true, text: p.name + " se despediu do elenco: " + farewell + " Vendido ao " + buyer.name + " por " + money(c, off.fee) + (off.parts > 1 ? " (" + off.parts + " parcelas)" : "") + (off.sellOn ? ", com " + off.sellOn + "% de uma revenda futura" : "") + "." });
@@ -258,7 +258,7 @@
     var off = enrich(c, n); save(c);
     var p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
     if (!p || !buyer) { TM.notify.remove(c, n.id); save(c); TM.ui.go("coach-notifications"); return; }
-    var value = curVal(c, TM.data.marketValue(p)), left = Math.max(0, (off.deadlineDay || day(c)) - day(c));
+    var value = curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p)), left = Math.max(0, (off.deadlineDay || day(c)) - day(c));
     var mood = MOODS.filter(function (m) { return m.id === off.mood; })[0] || MOODS[0];
     screen.appendChild(TM.ui.topbar("Proposta por " + p.name, function () { TM.ui.go("coach-notifications"); }));
     var wrap = el("div", { class: "nego2" }); screen.appendChild(wrap);
@@ -324,6 +324,26 @@
     if (!off.final) consult.appendChild(consultBtn("⏳ Pedir mais prazo", function () { var ok = askTime(c, n); save(c); bubble("them", off.history[off.history.length - 1].text, ok ? "" : "angry"); }));
     wrap.appendChild(consult);
 
+    // DISPUTA: outros clubes atrás do mesmo jogador
+    try {
+      if (TM.disp) {
+        var race = TM.disp.ensureRace(c, n, p); if (race && !off.raceSaved) { off.raceSaved = 1; save(c); }
+        var best = TM.disp.bestSuitor(off);
+        var dp = TM.disp.panel(c, "⚔️ Quem mais quer " + p.name, (race && race.suitors) || [], {
+          hint: best ? "Toque no clube para vender direto por " + money(c, best.bid) + "." : "Clubes observando. Uma contraproposta sua pode fazê-los entrar na disputa.",
+          onPick: function (s) {
+            TM.ui.confirm("Vender ao " + s.name + "?", "Você aceita a proposta de " + money(c, s.bid) + " do " + s.name + " e encerra a negociação com o " + buyer.name + "." + (s.rival ? " ATENÇÃO: é um rival — a torcida vai detestar." : ""), "Vender", function () {
+              off.buyerId = s.id; off.fee = s.bid; off.parts = 1; off.bonus = 0; off.sellOn = 0;
+              save(c); accept(c, n); TM.ui.go("coach-hub");
+            });
+          }
+        });
+        if (dp) wrap.appendChild(dp);
+        var rv = TM.disp.rivalBuyerInfo(c, off.buyerId);
+        if (rv) wrap.appendChild(el("div", { class: "fin-ban warn", text: "🔥 " + rv.line }));
+      }
+    } catch (e) {}
+
     // exigir a CLÁUSULA DE RESCISÃO (só se o contrato dele tiver uma): o clube comprador paga o valor cheio ou desiste
     var myCl = 0; try { myCl = TM.fin && TM.fin.myClause ? curVal(c, TM.fin.myClause(c, p.id)) : 0; } catch (e) {}
     if (myCl > 0 && !off.clausePaid) {
@@ -368,7 +388,9 @@
         el("div", { class: "range-wrap" }, [ slider, askVal ]),
         el("div", { class: "sweet-row" }, [ off.parts > 1 ? tog("💵 Exigir à vista", "upfront") : null, tog("🎯 Bônus por metas", "bonus"), tog("📈 10% da revenda", "sellOn") ].filter(Boolean)),
         el("div", { class: "actions" }, [ TM.ui.button("📤 Enviar contraproposta", function () {
-          var r = counter(c, n, ask); save(c);
+          var r = counter(c, n, ask);
+          try { if (TM.disp) TM.disp.raceRound(c, n, p, ask.fee); } catch (e) {}
+          save(c);
           if (r.status === "retirada") { TM.ui.toast(r.text); TM.ui.go("coach-notifications"); return; }
           if (r.status === "leilao") TM.ui.toast(r.text);
           TM.ui.go("coach-offer", { noteId: n.id });
