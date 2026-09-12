@@ -12,6 +12,7 @@
       note.id = "n" + career._nseq;
       note.read = false;
       note.ts = career._nseq;
+      note.day = career.currentDay || 0; note.season = career.season || 1;
       career.notifications.unshift(note);
       if (career.notifications.length > 60) career.notifications.pop();
       return note;
