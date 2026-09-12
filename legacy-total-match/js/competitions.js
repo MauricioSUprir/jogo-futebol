@@ -432,6 +432,36 @@
     for (var i = 0; i < round.length; i++) if (round[i][0] === teamId || round[i][1] === teamId) return round[i];
     return null;
   }
+  // INFO DO CONFRONTO de ida e volta: resultado do jogo de ida e placar agregado até agora.
+  // tie = [a, b, dispA, dispB, winner, ga1, gb1, ga2, gb2, legs]
+  function tieOf(career, key) {
+    var comp = career.comps && career.comps[key]; if (!comp) return null;
+    if (comp.type === "tournament") {
+      var t = comp.tour; if (!t || !t.twoLeg || !t.ko || !Array.isArray(t.ko.rounds)) return null;
+      var rd = t.ko.rounds[t.ko.roundIndex]; if (!rd) return null;
+      for (var i = 0; i < rd.length; i++) if (rd[i] && (rd[i][0] === career.teamId || rd[i][1] === career.teamId)) return rd[i];
+      return null;
+    }
+    if (!comp.twoLeg || !Array.isArray(comp.rounds)) return null;
+    return userTieIn(comp, career.teamId);
+  }
+  // -> { hasFirst, firstHomeId, firstAwayId, firstHs, firstAs, aggA, aggB, aId, bId, line }
+  function legInfo(career, pending) {
+    try {
+      if (!pending || pending.leg !== 2) return null;
+      var tie = tieOf(career, pending.key); if (!tie) return null;
+      if (tie[9] < 1 || tie[5] == null || tie[6] == null) return null;
+      var aId = tie[0], bId = tie[1], hs = tie[5], as = tie[6];
+      var meA = aId === career.teamId;
+      var meuGol = meA ? hs : as, delesGol = meA ? as : hs;
+      var nomeA = (TM.data.club(aId) || {}).name || "", nomeB = (TM.data.club(bId) || {}).name || "";
+      var res = meuGol > delesGol ? "vitória" : meuGol < delesGol ? "derrota" : "empate";
+      return { aId: aId, bId: bId, firstHs: hs, firstAs: as, aggA: hs, aggB: as, meA: meA,
+        meuGol: meuGol, delesGol: delesGol, res: res,
+        line: "Ida: " + nomeA + " " + hs + " x " + as + " " + nomeB,
+        aggLine: "Agregado: " + meuGol + " x " + delesGol + " para " + (meuGol > delesGol ? "você" : meuGol < delesGol ? "eles" : "ninguém (empate)") };
+    } catch (e) { return null; }
+  }
   function resolveKORoundAuto(career, ko) {
     ensureKORound(ko);
     var round = ko.rounds[ko.roundIndex];
@@ -2805,7 +2835,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
+    legInfo: legInfo, tieOf: tieOf, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,

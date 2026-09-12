@@ -1099,6 +1099,21 @@
           el("div", { class: "md-team" }, [ TM.img.clubImg(awayClub, "md-crest"), awayKitImg, el("div", { class: "md-name", text: awayClub.name }) ])
         ])
       ];
+      // jogo de VOLTA: resultado da ida e placar agregado
+      var _leg = null; try { _leg = C().legInfo(c, pending); } catch (e) {}
+      if (_leg) {
+        var favor = _leg.meuGol > _leg.delesGol ? "up" : _leg.meuGol < _leg.delesGol ? "down" : "even";
+        kids.push(el("div", { class: "agg-box " + favor }, [
+          el("div", { class: "agg-t", text: "🔁 Jogo de volta" }),
+          el("div", { class: "agg-line" }, [
+            TM.img.clubImg(TM.data.club(_leg.aId), "agg-crest"),
+            el("span", { class: "agg-sc", text: _leg.firstHs + " x " + _leg.firstAs }),
+            TM.img.clubImg(TM.data.club(_leg.bId), "agg-crest"),
+            el("span", { class: "agg-lbl", text: "resultado da ida" })
+          ]),
+          el("div", { class: "agg-agg", text: "Agregado: " + _leg.meuGol + " x " + _leg.delesGol + " · " + (_leg.meuGol > _leg.delesGol ? "você joga por um empate" : _leg.meuGol < _leg.delesGol ? "você precisa reverter " + (_leg.delesGol - _leg.meuGol) + (_leg.delesGol - _leg.meuGol > 1 ? " gols" : " gol") : "tudo igual: quem vencer avança") })
+        ]));
+      }
       if (rivalryEnabled() && TM.data.areRivals(homeClub.id, awayClub.id)) {
         var derby = null; try { derby = TM.data.derbyName(homeClub.id, awayClub.id); } catch (e) {}
         kids.push(el("div", { class: "classico-ribbon" }, [
@@ -2243,8 +2258,9 @@
     var simOpts = { realism: TM.storage.settings().realism, difficulty: TM.storage.settings().difficulty, neutral: p.ko, tacticSide: userSide, tactic: c.tactic, moraleBoost: (c.pressEdge || 0) + socialEdge + capEdge + fatigueEdge + (function () { try { return TM.club.clubEdge(c); } catch (e) { return 0; } })(), moraleSide: userSide, userSide: userSide, penTakerId: c.penTakerId || null, fkTakerId: c.fkTakerId || null };
     try { Object.assign(simOpts, C().matchContext(c, p.homeId, p.awayId, p.ko)); } catch (e) {}   // fase, clássico, torcida, o que está em jogo
     var result = TM.engine.simulate(teamA, teamB, simOpts);
+    var legI = null; try { legI = C().legInfo(c, p); } catch (e) {}
     TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, title: p.name,
+      teamA: teamA, teamB: teamB, result: result, title: p.name, leg: legI,
       pauseSide: userSide, simOpts: simOpts, formation: c.lineup && c.lineup.formation,
       onBack: function () {
         // sair no meio: se "reiniciar partidas" estiver desligado, o resultado é registrado (sem rejogar)
@@ -2279,7 +2295,7 @@
           try { TM.scouting.tick(c); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
-          TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId });
+          TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId, leg: legI, userSide: userSide });
         }
         if (penCtx) {
           var tA = C().anyTeam(c, penCtx.aId), tB = C().anyTeam(c, penCtx.bId);
@@ -2298,6 +2314,7 @@
     if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
     screen.appendChild(TM.ui.topbar("Sua partida", function () { TM.ui.go(back); }));
     if (params.compId) { var bn = TM.ui.compBanner(params.compId); if (bn) screen.appendChild(bn); }
+    var legR = params.leg || null;
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     var penName = params.penWinnerId ? (params.penWinnerId === a.id ? a.name : b.name) : null;
     var tag = win ? "🏆 " + win + " venceu" : penName ? "🎯 " + penName + " venceu nos pênaltis" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
@@ -2307,6 +2324,20 @@
       ]),
       el("div", { class: "result-tag", text: tag })
     ]));
+    if (legR) {
+      var meNow = (params.userSide != null) ? params.userSide : (a.id === (TM.storage.coachCareer() || {}).teamId ? 0 : 1);
+      var meuTotal = legR.meuGol + r.score[meNow], delesTotal = legR.delesGol + r.score[1 - meNow];
+      screen.appendChild(el("div", { class: "agg-box " + (meuTotal > delesTotal ? "up" : meuTotal < delesTotal ? "down" : "even") }, [
+        el("div", { class: "agg-t", text: "🔁 Confronto de ida e volta" }),
+        el("div", { class: "agg-line" }, [
+          TM.img.clubImg(TM.data.club(legR.aId), "agg-crest"),
+          el("span", { class: "agg-sc", text: legR.firstHs + " x " + legR.firstAs }),
+          TM.img.clubImg(TM.data.club(legR.bId), "agg-crest"),
+          el("span", { class: "agg-lbl", text: "ida" })
+        ]),
+        el("div", { class: "agg-agg", text: "Agregado: " + meuTotal + " x " + delesTotal + " · " + (meuTotal > delesTotal ? "você avança" : meuTotal < delesTotal ? "você está eliminado" : "empate no agregado — decisão nos pênaltis") })
+      ]));
+    }
     var feed = el("div", { class: "commentary-feed static" });
     r.events.filter(function (e) { return /goal|red|penalty/.test(e.type); }).forEach(function (e) {
       feed.appendChild(el("div", { class: "cm-line cm-" + (e.type.indexOf("goal") >= 0 ? "goal" : "card"), text: (e.minute) + "' " + (e.player ? "⚽ " + e.player : e.text) }));
