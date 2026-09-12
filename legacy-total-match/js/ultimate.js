@@ -592,7 +592,8 @@
       tile("👥", "Meu Clube", s.cards.length + " jogadores", "ut-club"),
       tile("🏆", "Rivais", "Divisão " + s.riv.div, "ut-rivals"),
       tile("🧩", "DME", "Desafios de construção", "ut-sbc"),
-      tile("🎯", "Objetivos", objDone + "/" + (s.obj.list || []).length + " concluídos", "ut-obj")
+      tile("🎯", "Objetivos", objDone + "/" + (s.obj.list || []).length + " concluídos", "ut-obj"),
+      tile("🌐", "Online", "Enfrente elencos de verdade", "ut-online")
     ]));
 
     screen.appendChild(el("div", { class: "ut-foot" }, [
@@ -1362,6 +1363,7 @@
     chemistry: chemistry, squadRating: squadRating, cardData: cardData, cardEl: cardEl,
     basePrice: basePrice, openPack: openPack, PACKS: PACKS, SBCS: SBCS, DIVS: DIVS,
     autoFill: autoFill, slotRole: slotRole, posFit: posFit, linkVal: linkVal, isTotw: isTotw,
+    effOv: effOv, earn: earn, statsOf: statsOf, quickSell: quickSell, packById: packById,
     _new: function (name) { S = blank(); S.club = name || "Meu Ultimate"; save(); return S; }
   };
 })(window);

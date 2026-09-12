@@ -642,5 +642,55 @@
     net._db.ref("accounts/" + acctKey(email) + "/saves").once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
   };
 
+  /* ---- Total Ultimate online: elencos publicados, duelos e ranking ---- */
+  // cada jogador publica o seu elenco; os outros podem enfrentá-lo mesmo offline
+  net.utPublish = function (payload, cb) {
+    if (!net.available || !net._db || !net.me) { cb && cb(false, "sem conexão"); return; }
+    payload = payload || {};
+    payload.uid = net.me.uid; payload.owner = net.me.name; payload.num = net.me.number;
+    payload.ts = firebaseNow();
+    net._db.ref("utsquads/" + net.me.uid).set(payload)
+      .then(function () { cb && cb(true); })
+      .catch(function (e) { cb && cb(false, e.message); });
+  };
+  net.utUnpublish = function (cb) {
+    if (!net.available || !net._db || !net.me) { cb && cb(false); return; }
+    net._db.ref("utsquads/" + net.me.uid).remove().then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
+  net.utMine = function (cb) {
+    if (!net.available || !net._db || !net.me) { cb(null); return; }
+    net._db.ref("utsquads/" + net.me.uid).once("value").then(function (s) { cb(s.val()); }).catch(function () { cb(null); });
+  };
+  net.utList = function (limit, cb) {
+    if (!net.available || !net._db) { cb([]); return; }
+    net._db.ref("utsquads").limitToLast(limit || 60).once("value").then(function (snap) {
+      var arr = [];
+      snap.forEach(function (ch) { var v = ch.val(); if (v && v.xi) { v.uid = v.uid || ch.key; arr.push(v); } });
+      cb(arr);
+    }).catch(function () { cb([]); });
+  };
+  // ranking próprio do modo (vitórias no Ultimate online)
+  net.utRecord = function (winnerUid, winnerName, loserUid, loserName) {
+    if (!net.available || !net._db) return;
+    var db = net._db;
+    if (winnerUid) { db.ref("utrank/" + winnerUid + "/name").set(winnerName || "Jogador"); db.ref("utrank/" + winnerUid + "/wins").transaction(function (c) { return (c || 0) + 1; }); db.ref("utrank/" + winnerUid + "/played").transaction(function (c) { return (c || 0) + 1; }); }
+    if (loserUid) { db.ref("utrank/" + loserUid + "/name").set(loserName || "Jogador"); db.ref("utrank/" + loserUid + "/played").transaction(function (c) { return (c || 0) + 1; }); }
+  };
+  net.utRanking = function (cb) {
+    if (!net.available || !net._db) { cb([]); return; }
+    net._db.ref("utrank").orderByChild("wins").limitToLast(30).once("value").then(function (snap) {
+      var arr = [];
+      snap.forEach(function (ch) { var v = ch.val(); arr.push({ uid: ch.key, name: v.name || "Jogador", wins: v.wins || 0, played: v.played || 0 }); });
+      arr.sort(function (a, b) { return b.wins - a.wins || b.played - a.played; });
+      cb(arr);
+    }).catch(function () { cb([]); });
+  };
+  // duelo ao vivo: cada lado grava o seu elenco no nó da partida
+  net.setMatchUt = function (code, side, payload) {
+    if (!net.available || !net._db || !code) return;
+    var patch = {}; patch[(side === "host" ? "host" : "guest") + "Ut"] = payload || null;
+    net._db.ref("matches/" + code).update(patch);
+  };
+
   TM.net = net;
 })(window);
