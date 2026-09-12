@@ -863,6 +863,16 @@
     // interesse de outro clube em um jogador seu — nunca fica mais de 5 jogos sem nenhuma proposta
     career.offerDrought = (career.offerDrought || 0) + 1;
     maybeIncomingOffer(career, { force: career.offerDrought >= 5 });
+    // diário de partidas (alimenta as crônicas do jornal)
+    try {
+      var pd0 = career.pending || {};
+      var entry = { season: career.season || 1, day: career.currentDay || 0, matchNo: career.matchNo || 0, key: pd0.key || "league", name: pd0.name || "", label: pd0.label || "",
+        homeId: pd0.homeId || (userSide === 0 ? career.teamId : null), awayId: pd0.awayId || (userSide === 1 ? career.teamId : null), hs: result.score[0], as: result.score[1], userSide: userSide,
+        scorers: (result.events || []).filter(function (e) { return e.type === "goal" || e.type === "pengoal"; }).map(function (e) { return { n: e.player, m: e.minute, t: e.team, pen: e.type === "pengoal", pid: e.playerId || null }; }),
+        reds: (result.events || []).filter(function (e) { return e.type === "red"; }).map(function (e) { return { n: e.player, m: e.minute, t: e.team }; }),
+        stats: result.stats ? { poss: result.stats.possession, shots: result.stats.shots, on: result.stats.onTarget } : null };
+      career.matchLog = career.matchLog || []; career.matchLog.unshift(entry); if (career.matchLog.length > 14) career.matchLog.length = 14;
+    } catch (e) {}
     // registra o resultado e avalia uma possível chamada da diretoria
     if (result && result.score) {
       var gf = result.score[userSide], ga = result.score[1 - userSide];
