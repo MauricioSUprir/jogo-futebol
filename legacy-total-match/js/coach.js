@@ -2796,11 +2796,24 @@
     var st = C().standings(c.comps.league.table);
     var table = el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "V", "E", "D", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]) ]);
     var tb = el("tbody");
-    var nL = st.length;
+    // ZONAS: o que cada posição vale (continental principal, secundária, acesso, rebaixamento)
+    var nL = st.length, lgId = c.leagueId, REG = C().REGION[lgId] || "eu";
+    var temCima = !!C().DIV_UP_MAP && !!C().DIV_UP_MAP[lgId], temBaixo = !!C().DIV_DOWN_MAP && !!C().DIV_DOWN_MAP[lgId];
+    function compName(id, fb) { try { var cp = TM.data.competition(id); return (cp && cp.name) || fb; } catch (e) { return fb; } }
+    var zonas = [];
+    if (temCima) {
+      zonas.push({ cls: "z-up", ate: 4, de: 1, lbl: "Acesso à " + ((TM.data.league(C().DIV_UP_MAP[lgId]) || {}).name || "divisão de cima"), ic: null, comp: "lg-" + C().DIV_UP_MAP[lgId] });
+    } else {
+      zonas.push({ cls: "z-cont", de: 1, ate: 4, lbl: compName("cont-" + REG, "Continental"), comp: "cont-" + REG });
+      zonas.push({ cls: "z-cont2", de: 7, ate: 12, lbl: compName("cont2-" + REG, "Continental II"), comp: "cont2-" + REG });
+    }
+    if (temBaixo) zonas.push({ cls: "z-releg", de: nL - 3, ate: nL, lbl: "Rebaixamento para a " + ((TM.data.league(C().DIV_DOWN_MAP[lgId]) || {}).name || "divisão de baixo"), comp: "lg-" + C().DIV_DOWN_MAP[lgId] });
+    function zoneOf(pos) { for (var z = 0; z < zonas.length; z++) if (pos >= zonas[z].de && pos <= zonas[z].ate) return zonas[z]; return null; }
+
     st.forEach(function (row, i) {
       var club = TM.data.club(row.id);
-      var zona = i < 4 ? "z-cont" : (i >= 6 && i < 12) ? "z-cont2" : (i >= nL - 4) ? "z-releg" : "";
-      tb.appendChild(el("tr", { class: (row.id === c.teamId ? "me " : "") + zona }, [
+      var z = zoneOf(i + 1), zona = z ? z.cls : "";
+      tb.appendChild(el("tr", { class: (row.id === c.teamId ? "me " : "") + zona, title: z ? z.lbl : "" }, [
         el("td", { text: i + 1 }), el("td", { class: "lt-club" }, [ TM.img.clubImg(club, "lt-crest"), el("span", { text: club.name }) ]),
         el("td", { class: "lt-pts", text: row.pts }), el("td", { text: row.p }), el("td", { text: row.w }), el("td", { text: row.d }), el("td", { text: row.l }),
         el("td", { text: (row.gf - row.ga > 0 ? "+" : "") + (row.gf - row.ga) })
@@ -2808,11 +2821,18 @@
     });
     table.appendChild(tb);
     screen.appendChild(el("div", { class: "table-wrap" }, [ table ]));
-    screen.appendChild(el("div", { class: "zone-key" }, [
-      el("span", { class: "zk z-cont", text: "1º-4º · continental principal" }),
-      el("span", { class: "zk z-cont2", text: "7º-12º · continental secundária" }),
-      el("span", { class: "zk z-releg", text: "últimos 4 · rebaixamento" })
-    ]));
+    if (zonas.length) {
+      var key = el("div", { class: "zone-key" });
+      zonas.forEach(function (z) {
+        var logo = null; try { logo = TM.img.compImg(z.comp, "zk-logo"); } catch (e) {}
+        key.appendChild(el("div", { class: "zk " + z.cls }, [
+          el("span", { class: "zk-dot" }),
+          logo, el("span", { class: "zk-pos", text: z.de === z.ate ? z.de + "º" : z.de + "º-" + z.ate + "º" }),
+          el("span", { class: "zk-lbl", text: z.lbl })
+        ].filter(Boolean)));
+      });
+      screen.appendChild(key);
+    }
   }
 
   function renderBracket(screen, c, ko) {
