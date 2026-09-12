@@ -1021,9 +1021,44 @@
   // ---- estatísticas por JOGADOR na temporada (jogos, gols, assist, nota, forma) ----
   function posRankOf(p) { return p.pos === "FW" ? 3 : p.pos === "MF" ? 2 : p.pos === "DF" ? 1 : 0; }
   function clampRating(r) { return Math.max(3.5, Math.min(10, Math.round(r * 10) / 10)); }
+  /* ---------- BARRA DE ÍDOLO: o quanto o jogador é querido no clube ---------- */
+  var IDOL_LEVELS = [
+    { min: 0, key: "novato", label: "Recém-chegado", ic: "🆕" },
+    { min: 20, key: "conhecido", label: "Conhecido da torcida", ic: "🙂" },
+    { min: 45, key: "querido", label: "Querido pela torcida", ic: "💚" },
+    { min: 80, key: "referencia", label: "Referência do elenco", ic: "🎖️" },
+    { min: 130, key: "idolo", label: "Ídolo do clube", ic: "⭐" },
+    { min: 200, key: "lenda", label: "Lenda do clube", ic: "👑" }
+  ];
+  function idolScore(career, p) {
+    if (!career || !p) return null;
+    var tot = (career.clubTotals && career.clubTotals[p.id]) || { apps: 0, goals: 0, assists: 0, titles: 0 };
+    var ten = (career.tenure && career.tenure[p.id]) || 0;
+    var hg = !!(career.homegrown && career.homegrown[p.id]);
+    var cap = career.captainId === p.id;
+    var parts = [];
+    var pts = 0;
+    function add(v, lbl) { if (v > 0) { pts += v; parts.push({ v: Math.round(v), lbl: lbl }); } }
+    add(Math.min(60, tot.apps * 1.2), tot.apps + " jogo(s) pelo clube");
+    add(Math.min(50, tot.goals * 2.5), tot.goals + " gol(is)");
+    add(Math.min(25, tot.assists * 1.2), tot.assists + " assistência(s)");
+    add(tot.titles * 22, tot.titles + " título(s) conquistado(s) aqui");
+    add(Math.min(45, ten * 7), ten + " temporada(s) de casa");
+    if (hg) add(25, "cria da base");
+    if (cap) add(12, "capitão do time");
+    // insatisfação derruba o carinho
+    if (career.transferReq && career.transferReq[p.id]) { pts -= 20; parts.push({ v: -20, lbl: "pediu para sair" }); }
+    pts = Math.max(0, Math.round(pts));
+    var lvl = IDOL_LEVELS[0], nxt = null;
+    for (var i = 0; i < IDOL_LEVELS.length; i++) { if (pts >= IDOL_LEVELS[i].min) { lvl = IDOL_LEVELS[i]; nxt = IDOL_LEVELS[i + 1] || null; } }
+    var base = lvl.min, teto = nxt ? nxt.min : lvl.min + 60;
+    var pct = nxt ? Math.max(0, Math.min(100, Math.round((pts - base) / Math.max(1, teto - base) * 100))) : 100;
+    return { pts: pts, level: lvl, next: nxt, pct: pct, parts: parts, totals: tot, tenure: ten, homegrown: hg, faltam: nxt ? Math.max(0, nxt.min - pts) : 0 };
+  }
   function recordPlayerStats(career, result, userSide, oppName) {
     if (!result || !result.score) return;
     if (!career.pstats) career.pstats = {};
+    career.clubTotals = career.clubTotals || {};
     var gf = result.score[userSide], ga = result.score[1 - userSide];
     var res = gf > ga ? "V" : gf < ga ? "D" : "E";
     var scoreStr = gf + "×" + ga;
@@ -1047,6 +1082,7 @@
       }
     });
     onField.forEach(function (p) {
+      var ct0 = career.clubTotals[p.id] || (career.clubTotals[p.id] = { apps: 0, goals: 0, assists: 0, titles: 0 });
       var st = career.pstats[p.id] || (career.pstats[p.id] = { apps: 0, goals: 0, assists: 0, rsum: 0, rn: 0, form: [], noScore: 0, best: null, last: null });
       var g = goalByName[p.name] || 0, a = assistCount[p.id] || 0;
       var r = 6.0 + (Math.random() * 1.2 - 0.6) + g * 0.85 + a * 0.45 + (res === "V" ? 0.35 : res === "D" ? -0.35 : 0);
@@ -1054,6 +1090,7 @@
       if ((p.pos === "GK" || p.pos === "DF") && ga >= 3) r -= 0.5;
       r = clampRating(r);
       st.apps++; st.goals += g; st.assists += a; st.rsum += r; st.rn++;
+      ct0.apps++; ct0.goals += g; ct0.assists += a;                      // totais de toda a passagem pelo clube
       st.form.push(res); if (st.form.length > 5) st.form = st.form.slice(-5);
       if (g > 0) st.noScore = 0; else if (p.pos === "FW" || p.pos === "MF") st.noScore++;
       st.last = { rating: r, opp: oppName || "Adversário", score: scoreStr, res: res, goals: g, assists: a };
@@ -2819,6 +2856,10 @@
     var champ = st[0];
     var contChamp = c.cont && c.cont.tour && c.cont.tour.championId === career.teamId;
     var mundialChamp = c.mundial && c.mundial.tour && c.mundial.tour.championId === career.teamId;
+    try {
+      var tit = (champ.id === career.teamId ? 1 : 0) + ((c.cup && c.cup.championId === career.teamId) ? 1 : 0) + (contChamp ? 1 : 0) + (mundialChamp ? 1 : 0);
+      if (tit) { career.clubTotals = career.clubTotals || {}; (career.roster || []).forEach(function (id) { var t = career.clubTotals[id] || (career.clubTotals[id] = { apps: 0, goals: 0, assists: 0, titles: 0 }); t.titles += tit; }); }
+    } catch (e) {}
     career.honours.push({
       season: career.season,
       leaguePos: st.findIndex(function (r) { return r.id === career.teamId; }) + 1,
@@ -2835,7 +2876,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    legInfo: legInfo, tieOf: tieOf, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
+    legInfo: legInfo, tieOf: tieOf, idolScore: idolScore, IDOL_LEVELS: IDOL_LEVELS, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
