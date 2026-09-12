@@ -427,5 +427,200 @@
     body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("Seguir em frente", function () { TM.ui.go("coach-hub"); }, "btn primary") ]));
   });
 
+  /* ================= PEDIDO DE EMPRÉSTIMO — versão imersiva ================= */
+  var LOAN_REASONS = [
+    "Precisamos de {p} para a sequência da temporada.",
+    "Nosso técnico pediu {p} pessoalmente: encaixa como uma luva no esquema.",
+    "Perdemos um titular por lesão e {p} é a solução imediata.",
+    "Queremos dar minutos a {p}: ele volta melhor para vocês.",
+    "{p} é o nome que falta para brigarmos lá em cima.",
+    "Nosso projeto é jovem e {p} daria experiência ao grupo."
+  ];
+  function enrichLoan(c, n) {
+    var lo = n.loanOffer, p = C().resolvePlayer(c, lo.playerId), buyer = TM.data.club(lo.buyerId);
+    if (!p || !buyer) return lo;
+    if (!lo.v2) {
+      var h = phash("loan:" + lo.playerId + ":" + lo.buyerId + ":" + (c.season || 1));
+      var mood = MOODS[h % MOODS.length];
+      lo.v2 = true; lo.mood = mood.id; lo.patience = mood.patience; lo.rounds = 0; lo.history = [];
+      lo.reason = LOAN_REASONS[(h >>> 4) % LOAN_REASONS.length].replace("{p}", p.name);
+      lo.deadlineDay = day(c) + 8 + ((h >>> 8) % 4);
+      lo.spokesman = buyer.coach ? { name: buyer.coach, role: "Técnico", photoKey: buyer.coachPhotoKey || null } : { name: "Diretor de futebol", role: "Diretoria", photoKey: null };
+      lo.share = lo.share == null ? 40 + ((h >>> 12) % 4) * 10 : lo.share;     // % do salário que o clube interessado banca
+      lo.arrived = day(c);
+    }
+    if (lo.share == null) lo.share = 50;
+    return lo;
+  }
+  function loanWants(c, lo, p) {
+    var h = phash("lw:" + lo.playerId + ":" + lo.buyerId + ":" + (c.season || 1)) % 100;
+    var apps = (c.pstats && c.pstats[p.id] && c.pstats[p.id].apps) || 0, jogos = c.matchNo || 0;
+    var pouco = jogos >= 4 && apps <= Math.floor(jogos * 0.3);
+    var quer = pouco ? h < 78 : (p.age || 25) <= 21 ? h < 62 : h < 34;
+    return { wants: quer, line: quer
+      ? (pouco ? "“Quero jogar. Aqui eu não tenho tido chance, e lá eu jogaria todo domingo.”" : "“Seria bom pegar ritmo e voltar melhor.”")
+      : (p.age || 25) >= 30 ? "“Estou bem aqui. Não quero mudar de casa a esta altura.”" : "“Prefiro brigar pela vaga aqui mesmo.”" };
+  }
+  function loanBoard(c, lo, p) {
+    var ov = p.overall || 70, key = ov >= 76;
+    return { line: key ? "“Ele é peça do elenco. Só empresta se a taxa compensar e com o salário bancado.”"
+      : "“Tirar esse salário da folha ajuda. Negocie uma taxa decente.”" };
+  }
+  function loanFans(c, lo, p) {
+    var ido = idol(c, p);
+    return { line: ido ? "A torcida não quer ver " + p.name + " saindo nem por empréstimo." : "A torcida entende o empréstimo se ele voltar melhor." };
+  }
+  // outros clubes também querem o jogador emprestado
+  function loanRace(c, n, p) {
+    var lo = n.loanOffer;
+    if (lo.race && lo.race.suitors) return lo.race;
+    var list = [];
+    try { list = TM.disp ? TM.disp.suitorsFor(c, p, { ownerId: c.teamId, exclude: [lo.buyerId], max: 3, minRating: (p.overall || 70) - 14, maxRating: (p.overall || 70) + 2 }) : []; } catch (e) {}
+    lo.race = { suitors: list.map(function (s, i) {
+      var h = s.h, entra = (h % 100) < (i === 0 ? 60 : 35);
+      return { id: s.id, name: s.name, bid: entra ? R(Math.max(0.02, lo.loanFee * (0.9 + ((h >>> 6) % 40) / 100))) : 0,
+        ceil: R(Math.max(0.05, lo.loanFee * (1.2 + ((h >>> 10) % 60) / 100))), stance: entra ? "in" : "watch",
+        noAuction: ((h >>> 15) % 100) < 30, rival: isRival(c, s.id) };
+    }) };
+    return lo.race;
+  }
+
+  TM.ui.register("coach-loan-offer", function (screen, params) {
+    var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
+    var n = TM.notify.get(c, params && params.noteId);
+    if (!n || !n.loanOffer) { TM.ui.go("coach-notifications"); return; }
+    var lo = enrichLoan(c, n); save(c);
+    var p = C().resolvePlayer(c, lo.playerId), buyer = TM.data.club(lo.buyerId);
+    if (!p || !buyer) { TM.notify.remove(c, n.id); save(c); TM.ui.go("coach-notifications"); return; }
+    var value = curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p));
+    var left = Math.max(0, (lo.deadlineDay || day(c)) - day(c));
+    var mood = MOODS.filter(function (m) { return m.id === lo.mood; })[0] || MOODS[0];
+    var spk = lo.spokesman || {};
+    var ct = c.contracts && c.contracts[p.id];
+    var wageAno = ct ? curVal(c, ct.wage || 0) : 0;
+
+    screen.appendChild(TM.ui.topbar("Empréstimo de " + p.name, function () { TM.ui.go("coach-notifications"); }));
+    var wrap = el("div", { class: "nego2" }); screen.appendChild(wrap);
+
+    wrap.appendChild(el("div", { class: "nego2-call" }, [
+      TM.img.clubImg(buyer, "nego2-crest"),
+      el("div", { class: "nego2-callinfo" }, [
+        el("div", { class: "nego2-role", text: "PEDIDO DE EMPRÉSTIMO" }),
+        el("div", { class: "nego2-club", text: buyer.name + (isRival(c, buyer.id) ? " 🔥" : "") }),
+        el("div", { class: "nego2-sub", text: (spk.role || "Diretoria") + ": " + (spk.name || "—") + " · OVR " + rating(buyer.id) + " · " + ((TM.data.league(buyer.leagueId) || {}).name || "") })
+      ]),
+      spk.name && spk.role === "Técnico" ? TM.img.coachImg({ name: spk.name, photoKey: spk.photoKey }, "offer-spk") : el("div", { class: "nego2-tension " + mood.tone }, [ el("span", { class: "nego2-tdot" }), el("span", { text: mood.label }) ])
+    ]));
+    wrap.appendChild(el("div", { class: "offer-meta" }, [
+      el("span", { class: "ctx-chip", text: "🧭 " + mood.label }),
+      el("span", { class: "ctx-chip", text: "⏳ até " + dateTxt(c, lo.deadlineDay) + (left ? " · " + left + " dia" + (left > 1 ? "s" : "") : " · HOJE") }),
+      el("span", { class: "ctx-chip", text: lo.finalOffer ? "🔒 proposta final" : "💬 paciência " + "●".repeat(Math.max(0, lo.patience || 2)) + "○".repeat(Math.max(0, 5 - (lo.patience || 2))) })
+    ]));
+
+    var ido = idol(c, p);
+    wrap.appendChild(el("div", { class: "nego2-player" }, [
+      TM.img.playerImg(p, "nego2-face"),
+      el("div", { class: "nego2-pinfo" }, [
+        el("div", { class: "nego2-pname", text: p.name + (ido ? " " + ido.ic : "") }),
+        el("div", { class: "nego2-pmeta" }, [
+          el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(p) + "</b>" }),
+          el("span", { class: "nego2-chip", html: "IDADE <b>" + p.age + "</b>" }),
+          el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, value) + "</b>" }),
+          ct ? el("span", { class: "nego2-chip", html: "SALÁRIO <b>" + money(c, wageAno) + "</b>" }) : null
+        ].filter(Boolean)),
+        ido ? el("div", { class: "setting-hint", text: ido.label }) : null
+      ].filter(Boolean)),
+      el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: p.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
+    ]));
+
+    function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
+    wrap.appendChild(el("div", { class: "nego2-terms" }, [
+      line("Duração", C().loanTermLabel(lo.termYears || 1)),
+      line("Taxa de empréstimo", money(c, lo.loanFee), lo.loanFee >= value * 0.1 ? "good" : ""),
+      line("Salário bancado por eles", (lo.share || 50) + "%" + (wageAno ? " (" + money(c, R(wageAno * (lo.share || 50) / 100)) + "/ano)" : ""), (lo.share || 50) >= 70 ? "good" : ""),
+      line("Opção de compra", lo.buyOption ? money(c, lo.buyPrice) : "não incluída", lo.buyOption ? "good" : ""),
+      line("Você economiza na folha", wageAno ? money(c, R(wageAno * (lo.share || 50) / 100)) + "/ano" : "—", "good")
+    ]));
+
+    var thread = el("div", { class: "nego-thread" }); wrap.appendChild(thread);
+    function bubble(side, text, tone) { thread.appendChild(el("div", { class: "nego-bubble " + side + (tone ? " " + tone : "") }, [ el("span", { text: text }) ])); thread.scrollTop = thread.scrollHeight; }
+    bubble("them", (spk.name ? spk.name + " (" + buyer.name + "): " : buyer.name + ": ") + "“" + lo.reason + " Propomos " + C().loanTermLabel(lo.termYears || 1) + ", taxa de " + money(c, lo.loanFee) + " e bancamos " + (lo.share || 50) + "% do salário" + (lo.buyOption ? ", com opção de compra de " + money(c, lo.buyPrice) : "") + ".”");
+    (lo.history || []).forEach(function (h) { bubble(h.who, h.text, h.tone); });
+
+    var consult = el("div", { class: "offer-consult" });
+    function cb(label, fn) { return el("button", { class: "chip-btn", text: label, on: { click: fn } }); }
+    consult.appendChild(cb("🗣️ Ouvir o jogador", function () { var w = loanWants(c, lo, p); bubble("info", "🗣️ " + p.name + ": " + w.line); }));
+    consult.appendChild(cb("🏛️ Consultar a diretoria", function () { bubble("info", "🏛️ Diretoria: " + loanBoard(c, lo, p).line); }));
+    consult.appendChild(cb("📣 Sentir a torcida", function () { bubble("info", "📣 Torcida: " + loanFans(c, lo, p).line); }));
+    wrap.appendChild(consult);
+
+    // outros clubes que também querem o empréstimo
+    try {
+      if (TM.disp) {
+        var race = loanRace(c, n, p);
+        var dp = TM.disp.panel(c, "⚔️ Quem mais quer " + p.name + " emprestado", race.suitors || [], {
+          hint: "Uma contraproposta sua pode fazer outro clube entrar. Toque num clube para emprestar direto a ele.",
+          onPick: function (sx) {
+            TM.ui.confirm("Emprestar ao " + sx.name + "?", "Você empresta " + p.name + " ao " + sx.name + " por " + money(c, sx.bid) + " de taxa, nos mesmos termos." + (sx.rival ? " ATENÇÃO: é um rival." : ""), "Emprestar", function () {
+              lo.buyerId = sx.id; lo.loanFee = sx.bid; save(c);
+              C().resolveLoanOffer(c, n, true); save(c); TM.ui.toast("Empréstimo fechado com o " + sx.name + "."); TM.ui.go("coach-hub");
+            });
+          }
+        });
+        if (dp) wrap.appendChild(dp);
+        var rv = TM.disp.rivalBuyerInfo(c, lo.buyerId);
+        if (rv) wrap.appendChild(el("div", { class: "fin-ban warn", text: "🔥 " + rv.line }));
+      }
+    } catch (e) {}
+
+    // contraproposta
+    if (!lo.finalOffer) {
+      var ask = { loanFee: R(Math.max(lo.loanFee * 1.4, value * 0.08)), askOption: !!lo.buyOption, buyPrice: lo.buyPrice || R(value * 1.2), share: Math.min(100, (lo.share || 50) + 20) };
+      var maxFee = R(Math.max(lo.loanFee * 3, value * 0.35)), step = maxFee >= 10 ? 0.5 : maxFee >= 3 ? 0.1 : 0.05;
+      var feeVal = el("span", { class: "range-val", text: money(c, ask.loanFee) });
+      var feeSl = el("input", { type: "range", min: lo.loanFee, max: maxFee, step: step, value: ask.loanFee, class: "slider" });
+      feeSl.addEventListener("input", function () { ask.loanFee = R(parseFloat(feeSl.value)); feeVal.textContent = money(c, ask.loanFee); });
+      var shVal = el("span", { class: "range-val", text: ask.share + "% do salário" });
+      var shSl = el("input", { type: "range", min: 0, max: 100, step: 10, value: ask.share, class: "slider" });
+      shSl.addEventListener("input", function () { ask.share = parseInt(shSl.value, 10); shVal.textContent = ask.share + "% do salário"; });
+      var optBtn = el("button", { class: "switch" + (ask.askOption ? " on" : ""), on: { click: function () { ask.askOption = !ask.askOption; optBtn.classList.toggle("on", ask.askOption); prRow.style.display = ask.askOption ? "" : "none"; } } });
+      var prVal = el("span", { class: "range-val", text: money(c, ask.buyPrice) });
+      var prMax = R(Math.max(value * 2.2, ask.buyPrice * 1.5)), prStep = prMax >= 10 ? 0.5 : 0.1;
+      var prSl = el("input", { type: "range", min: R(value * 0.6), max: prMax, step: prStep, value: ask.buyPrice, class: "slider" });
+      prSl.addEventListener("input", function () { ask.buyPrice = R(parseFloat(prSl.value)); prVal.textContent = money(c, ask.buyPrice); });
+      var prRow = el("div", { class: "nego-field", style: ask.askOption ? "" : "display:none" }, [ el("label", { text: "Preço da opção de compra" }), el("div", { class: "range-wrap" }, [ prSl, prVal ]) ]);
+      wrap.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Sua contraproposta" }), el("div", { class: "range-wrap" }, [ feeSl, feeVal ]) ]));
+      wrap.appendChild(el("div", { class: "nego-field" }, [ el("label", { text: "Quanto do salário eles bancam" }), el("div", { class: "range-wrap" }, [ shSl, shVal ]) ]));
+      wrap.appendChild(el("div", { class: "nego-field", style: "flex-direction:row;justify-content:space-between;align-items:center" }, [ el("label", { text: "Exigir opção de compra" }), optBtn ]));
+      wrap.appendChild(prRow);
+      wrap.appendChild(el("div", { class: "actions" }, [ TM.ui.button("📤 Enviar contraproposta", function () {
+        var r = C().counterLoanOffer(c, n, { loanFee: ask.loanFee, askOption: ask.askOption, buyPrice: ask.buyPrice });
+        // divisão do salário: quanto mais você exige, maior a chance de recusarem
+        var dif = ask.share - (lo.share || 50);
+        if (dif > 0) {
+          var ok = Math.random() < Math.max(0.1, 0.85 - dif / 100);
+          if (ok) { lo.share = ask.share; lo.history.push({ who: "them", text: "“Fechado: bancamos " + ask.share + "% do salário.”", tone: "happy" }); }
+          else { lo.history.push({ who: "them", text: "“" + ask.share + "% do salário é demais para nós. Ficamos nos " + (lo.share || 50) + "%.”", tone: "angry" }); }
+        }
+        lo.history.push({ who: "me", text: "Quero " + money(c, ask.loanFee) + " de taxa" + (ask.askOption ? " e opção de compra de " + money(c, ask.buyPrice) : "") + "." });
+        lo.history.push({ who: "them", text: "“" + (r.text || "Vamos avaliar.") + "”", tone: r.status === "final" ? "angry" : "happy" });
+        try { if (TM.disp) { var rc = loanRace(c, n, p); rc.suitors.forEach(function (sx) { if (sx.stance === "in" && ask.loanFee > sx.ceil) sx.stance = "out"; else if (sx.stance === "in" && Math.random() < 0.5) sx.bid = R(Math.min(sx.ceil, Math.max(sx.bid * 1.1, ask.loanFee * 0.95))); }); } } catch (e) {}
+        save(c); TM.ui.toast(r.text || ""); TM.ui.go("coach-loan-offer", { noteId: n.id });
+      }, "btn") ]));
+    } else {
+      wrap.appendChild(el("div", { class: "fin-ban warn", text: "🔒 Proposta final — não dá para negociar mais." }));
+    }
+
+    wrap.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("🤝 Aceitar e emprestar", function () {
+        C().resolveLoanOffer(c, n, true); save(c);
+        TM.ui.toast(p.name + " foi emprestado ao " + buyer.name + "."); TM.ui.go("coach-hub");
+      }, "btn primary"),
+      TM.ui.button("❌ Recusar", function () {
+        C().resolveLoanOffer(c, n, false); save(c); TM.ui.go("coach-notifications");
+      }, "btn ghost")
+    ]));
+  });
+
   TM.offers = { enrich: enrich, tick: tick, card: card, counter: counter, accept: accept, reject: reject, wantsInfo: wantsInfo, boardInfo: boardInfo, fansInfo: fansInfo, pending: pendingOffers };
 })(window);

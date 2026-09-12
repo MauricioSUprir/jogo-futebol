@@ -29,18 +29,24 @@
     var ownerId = opts.ownerId || p.clubId || null;
     var exclude = opts.exclude || [];
     var W = TM.data.world(), val = TM.data.marketValue(p), ov = p.overall || 70;
+    // FAIXA REALISTA: cada clube contrata jogadores do seu nível. Gigante não se interessa por reserva de time médio.
+    var jovemProm = (p.age || 25) <= 21 && (p.potential || ov) >= ov + 6;
+    var lo = opts.minRating != null ? opts.minRating : ov - 6;
+    var hi = opts.maxRating != null ? opts.maxRating : (jovemProm ? ov + 12 : ov + 6);
     var cands = W.clubs.filter(function (cl) {
       if (cl.id === ownerId || exclude.indexOf(cl.id) >= 0) return false;
       if (opts.excludeMine && cl.id === c.teamId) return false;
       var r = rating(cl.id);
-      if (r < ov - 5) return false;                       // clube muito pior não sonha com ele
+      if (r < lo || r > hi) return false;                 // fora do nível do jogador: não tem interesse real
       if (budgetOf(cl.id) < val * 0.55) return false;     // precisa de caixa plausível
       return true;
     });
     var seed = "suit:" + p.id + ":" + (c.season || 1);
     var out = cands.map(function (cl) {
       var h = hash(seed + cl.id);
-      var score = (rating(cl.id) - ov) * 3 + (h % 40);
+      var dist = Math.abs(rating(cl.id) - ov);
+      var score = 26 - dist * 4 + (h % 30);                           // quanto mais parecido o nível, mais provável
+      if (rating(cl.id) > ov) score += 6;                             // subir de patamar atrai o jogador
       if (leagueOf(cl.id) === leagueOf(ownerId)) score += 8;          // mesma liga se mexe mais
       if (areRivals(cl.id, ownerId)) score -= 70;                     // rival do dono: quase nunca
       if (budgetOf(cl.id) >= val * 2) score += 10;
