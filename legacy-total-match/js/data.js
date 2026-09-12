@@ -19298,6 +19298,12 @@
     applyCustomClub(clubs, playersById, rng);
     // ---- edições do jogador (Editor: editar/criar/transferir) ----
     applyEdits(clubs, playersById, rng);
+    // liga/clube DE ORIGEM (chave dos arquivos de escudo, uniforme, estádio e fotos): não muda com acesso,
+    // rebaixamento ou transferência — evita o escudo "genérico" ao trocar de divisão e a foto sumir ao trocar de clube
+    clubs.forEach(function (cl) {
+      if (!cl.homeLeagueId) cl.homeLeagueId = cl.leagueId;
+      (cl.playerIds || []).forEach(function (pid) { var pl = playersById[pid]; if (pl && !pl.homeClubId) pl.homeClubId = cl.id; });
+    });
 
     return {
       seed: WORLD_SEED,
@@ -20115,7 +20121,7 @@
   function stadiumInfo(club) {
     if (!club) return { name: "Estádio", capacity: 30000 };
     // edição Atualizado: estádio REAL (por liga+clube, evita conflito de nomes iguais); senão gerado
-    var ent = (isProEdition() && (STADIUMS[club.leagueId + "/" + club.name] || STADIUMS[club.name])) || null;
+    var ent = (isProEdition() && (STADIUMS[(club.homeLeagueId || club.leagueId) + "/" + club.name] || STADIUMS[club.leagueId + "/" + club.name] || STADIUMS[club.name])) || null;
     var name = null, cap = null;
     if (ent && typeof ent === "object") { name = ent.n; cap = ent.c; }
     else if (typeof ent === "string") { name = ent; }
