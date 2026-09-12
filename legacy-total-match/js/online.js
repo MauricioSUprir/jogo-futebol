@@ -581,18 +581,27 @@
   var roomStop = null, roomComputed = false, lastDeclineTs = null;
   function teamObj(source, id, lu) {
     var t = source === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id);
-    if (lu && lu.starters && lu.starters.length) {
-      // escalação escolhida na sala: titulares na ordem da formação + reservas por overall
-      var byId = {}; t.players.forEach(function (p) { byId[p.id] = p; });
-      var xi = lu.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
-      if (xi.length === 11) {
-        var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
-        var rest = t.players.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
-        t.players = xi.concat(rest);
-      }
-      if (lu.formation) t.formation = lu.formation;
-      if (lu.tactic) t.tactic = lu.tactic;
+    if (!lu || !lu.starters || !lu.starters.length) return t;
+    var byId = {}; t.players.forEach(function (p) { byId[p.id] = p; });
+    var xi = lu.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
+    var inXi = {}; xi.forEach(function (p) { inXi[p.id] = 1; });
+    // antes: se um titular não resolvesse, a escalação INTEIRA era ignorada em silêncio
+    // e entrava o time padrão do clube. Agora completa só o que faltou.
+    if (xi.length < 11) {
+      var fill = t.players.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
+      while (xi.length < 11 && fill.length) { var fp = fill.shift(); xi.push(fp); inXi[fp.id] = 1; }
     }
+    // banco = SÓ quem foi relacionado. Quem o jogador cortou não entra nem como reserva
+    // (o motor troca 2-3 jogadores sozinho nos dois lados numa partida online).
+    var bench;
+    if (lu.bench && lu.bench.length) {
+      bench = lu.bench.map(function (pid) { return byId[pid]; }).filter(function (p) { return p && !inXi[p.id]; });
+    } else {
+      bench = t.players.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; });
+    }
+    t.players = xi.concat(bench);
+    if (lu.formation) t.formation = lu.formation;
+    if (lu.tactic) t.tactic = lu.tactic;
     return t;
   }
   function randomClubId() { var cs = TM.data.world().clubs; return cs[Math.floor(Math.random() * cs.length)].id; }
@@ -776,57 +785,165 @@
       var lu = params.lineup || null;
       var starters = lu && lu.starters ? lu.starters.filter(function (id) { return byId[id]; }) : [];
       OL = { code: params.code, side: params.side, source: params.source, teamId: params.teamId,
-        formation: (lu && lu.formation) || "4-4-2", tactic: (lu && lu.tactic) || "equilibrado", starters: starters, pick: null };
-      if (OL.starters.length !== 11) OL.starters = TM.comp.buildLineup(all, OL.formation).starters;
+        formation: (lu && lu.formation) || "4-4-2", tactic: (lu && lu.tactic) || "equilibrado",
+        starters: starters, bench: (lu && lu.bench ? lu.bench.filter(function (id) { return byId[id]; }) : null),
+        pos: (lu && lu.pos) || {}, pick: null };
+      if (OL.starters.length !== 11) { OL.starters = TM.comp.buildLineup(all, OL.formation).starters; OL.bench = null; OL.pos = {}; }
     }
     var st = OL;
+    if (!st.bench) st.bench = defaultBench();
+    function defaultBench() {
+      var inXi = {}; st.starters.forEach(function (id) { inXi[id] = 1; });
+      return all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).map(function (p) { return p.id; });
+    }
+    function cut(id) { st.bench = st.bench.filter(function (x) { return x !== id; }); render(); }
+    function relist(id) { if (st.bench.indexOf(id) < 0) st.bench.push(id); render(); }
+    function shortNm(name) { var a = String(name || "").trim().split(/\s+/); return a.length > 1 ? a[0][0] + ". " + a[a.length - 1] : (a[0] || ""); }
+    function fieldY(sy) { return Math.round((20 + (sy - 15) * (88 - 20) / (88 - 15)) * 10) / 10; }
+
     var name = params.source === "nation" ? TM.data.nation(params.teamId).name : TM.data.club(params.teamId).name;
     function back() { OL = null; TM.ui.go("online-room", { code: params.code, side: params.side }); }
-    function again() { TM.ui.go("online-lineup", params); }
     screen.appendChild(TM.ui.topbar("📋 Escalação · " + name, back));
-    var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
-    body.appendChild(el("p", { class: "intro-text", text: "Monte o time que vai a campo. O adversário faz o mesmo do lado dele. Quando salvar, volte à sala e toque em Pronto." }));
-    var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
-    var xi = st.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
-    var ovr = Math.round(xi.reduce(function (a, p) { return a + p.overall; }, 0) / Math.max(1, xi.length));
-    body.appendChild(el("div", { class: "market-budget", text: "⭐ Força do time titular: " + ovr }));
-    body.appendChild(TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), st.formation, function (f) {
-      st.formation = f; st.starters = TM.comp.buildLineup(all, f).starters; st.pick = null; again();
+    var head = el("div", { class: "panel-narrow" }); screen.appendChild(head);
+    head.appendChild(el("p", { class: "intro-text", text: "Monte o time que vai a campo. Quem você deixar como Não relacionado fica FORA da partida — não entra nem do banco." }));
+    var ovrEl = el("div", { class: "market-budget" });
+    head.appendChild(ovrEl);
+    head.appendChild(TM.ui.dropdown("Formação", Object.keys(TM.comp.FORMATIONS), st.formation, function (f) {
+      st.formation = f; st.starters = TM.comp.buildLineup(all, f).starters; st.bench = defaultBench(); st.pos = {}; st.pick = null; render();
     }));
-    body.appendChild(TM.ui.dropdown("Tática", TM.engine.TACTICS, st.tactic, function (t) { st.tactic = t; }));
-    body.appendChild(el("div", { class: "actions two" }, [
-      TM.ui.button("✨ Melhor time automático", function () { st.starters = TM.comp.buildLineup(all, st.formation).starters; st.pick = null; again(); }, "btn ghost small"),
-      TM.ui.button("🔍 Analisar", function () { TM.ui.go("scout", { teamId: params.teamId, isNation: params.source === "nation", back: again }); }, "btn ghost small")
+    head.appendChild(TM.ui.dropdown("Tática", TM.engine.TACTICS, st.tactic, function (t) { st.tactic = t; }));
+    head.appendChild(el("div", { class: "actions two" }, [
+      TM.ui.button("✨ Melhor time automático", function () { st.starters = TM.comp.buildLineup(all, st.formation).starters; st.bench = defaultBench(); st.pos = {}; st.pick = null; render(); }, "btn ghost small"),
+      TM.ui.button("🔍 Analisar", function () { TM.ui.go("scout", { teamId: params.teamId, isNation: params.source === "nation", back: function () { TM.ui.go("online-lineup", params); } }); }, "btn ghost small")
     ]));
-    body.appendChild(el("h3", { class: "section-title", text: "Titulares" + (st.pick != null ? " — escolha quem entra no lugar" : " — toque num jogador para trocar") }));
-    st.starters.forEach(function (pid, i) {
-      var p = byId[pid]; if (!p) return;
-      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable"); if (st.pick === i) row.classList.add("ql-picked");
-      row.insertBefore(el("span", { class: "ql-slot", text: (slots[i] && slots[i][0]) || "" }), row.firstChild);
-      row.addEventListener("click", function () {
-        if (st.pick == null) { st.pick = i; again(); return; }
-        if (st.pick === i) { st.pick = null; again(); return; }
-        var tmp = st.starters[st.pick]; st.starters[st.pick] = st.starters[i]; st.starters[i] = tmp; st.pick = null; again();
-      });
-      body.appendChild(row);
-    });
-    body.appendChild(el("h3", { class: "section-title", text: "Reservas" }));
-    var inXi = {}; st.starters.forEach(function (pid) { inXi[pid] = 1; });
-    all.filter(function (p) { return !inXi[p.id]; }).sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
-      var row = TM.ui.playerRow(p, {}); row.classList.add("clickable");
-      row.addEventListener("click", function () {
-        if (st.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
-        st.starters[st.pick] = p.id; st.pick = null; again();
-      });
-      body.appendChild(row);
-    });
+
+    var board = el("div", { class: "lineup-board" });
+    screen.appendChild(board);
     screen.appendChild(el("div", { class: "actions" }, [
       TM.ui.button("💾 Salvar escalação e voltar à sala", function () {
-        N().setMatchLineup(params.code, params.side === "host" ? "host" : "guest", { formation: st.formation, tactic: st.tactic, starters: st.starters.slice(0, 11) });
+        N().setMatchLineup(params.code, params.side === "host" ? "host" : "guest", {
+          formation: st.formation, tactic: st.tactic,
+          starters: st.starters.slice(0, 11), bench: st.bench.slice(0, 12), pos: st.pos
+        });
         TM.ui.toast("Escalação salva — agora toque em Pronto");
         back();
       }, "btn primary big")
     ]));
+    render();
+
+    function render() {
+      board.innerHTML = "";
+      var slots = TM.comp.FORMATIONS[st.formation] || TM.comp.FORMATIONS["4-4-2"];
+      var xi = st.starters.map(function (pid) { return byId[pid]; }).filter(Boolean);
+      ovrEl.textContent = "⭐ Força do time titular: " + Math.round(xi.reduce(function (a, p) { return a + p.overall; }, 0) / Math.max(1, xi.length));
+
+      var pitch = el("div", { class: "pitch" });
+      pitch.appendChild(el("div", { class: "pitch-mark center-circle" }));
+      pitch.appendChild(el("div", { class: "pitch-mark mid-line" }));
+      st.starters.forEach(function (pid, i) {
+        var p = byId[pid]; if (!p) return;
+        var baseSlot = slots[i] || [null, 50, 50];
+        var cp = st.pos[i];
+        var x = cp ? cp[0] : baseSlot[1], y = cp ? cp[1] : fieldY(baseSlot[2]);
+        var slot = cp ? TM.comp.fieldSlot(x, y) : baseSlot;
+        var chip = el("button", { class: "pl-chip" + (st.pick === i ? " picked" : "") + (cp ? " custom" : ""),
+          style: "left:" + x + "%;top:" + y + "%" },
+          TM.ui.chipKids(p, slot, { name: shortNm(p.name), age: false })
+        );
+        attachChipDrag(chip, i, pitch);
+        pitch.appendChild(chip);
+      });
+      board.appendChild(pitch);
+      board.appendChild(el("div", { class: "lineup-hint", text: st.pick != null
+        ? "Toque em OUTRO titular para trocar, ou num reserva para substituir. ✋ Arraste para mover livre."
+        : "👆 Toque para trocar/substituir · ✋ Arraste o jogador pelo campo para posicioná-lo livremente." }));
+      if (Object.keys(st.pos).length) {
+        board.appendChild(TM.ui.button("↩️ Redefinir posições da formação", function () { st.pos = {}; render(); }, "btn ghost small"));
+      }
+      board.appendChild(TM.ui.posPanel(st.starters.map(function (pid, i) {
+        var cp = st.pos[i];
+        return { player: byId[pid], slot: cp ? TM.comp.fieldSlot(cp[0], cp[1]) : (slots[i] || null) };
+      }).filter(function (e) { return e.player; })));
+
+      // reservas: podem entrar durante a partida
+      var inXi = {}; st.starters.forEach(function (pid) { inXi[pid] = 1; });
+      st.bench = st.bench.filter(function (id) { return !inXi[id] && byId[id]; });
+      var benchWrap = el("div", { class: "panel-narrow" }, [
+        el("h3", { class: "block-title", text: "Reservas" }),
+        el("div", { class: "setting-hint", text: "Podem entrar no lugar de um titular durante a partida." })
+      ]);
+      st.bench.slice().sort(function (a, b) { return byId[b].overall - byId[a].overall; }).forEach(function (id) {
+        var p = byId[id];
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("clickable");
+        if (st.pick != null) row.classList.add("row-target");
+        row.addEventListener("click", function () {
+          if (st.pick == null) { TM.ui.toast("Toque primeiro no titular que vai sair."); return; }
+          var out = st.starters[st.pick];
+          st.starters[st.pick] = id;
+          st.bench = st.bench.filter(function (x) { return x !== id; });
+          st.bench.push(out);
+          st.pick = null; render();
+        });
+        row.appendChild(el("button", { class: "squad-move-btn cut", text: "Cortar", on: { click: function (e) { e.stopPropagation(); cut(id); } } }));
+        benchWrap.appendChild(row);
+      });
+      board.appendChild(benchWrap);
+
+      // não relacionados: ficam de fora da partida
+      var out = all.filter(function (p) { return !inXi[p.id] && st.bench.indexOf(p.id) < 0; });
+      var exWrap = el("div", { class: "panel-narrow" }, [
+        el("h3", { class: "block-title", text: "Não relacionados" }),
+        el("div", { class: "setting-hint", text: "Ficam fora da partida — nem titulares, nem reservas." })
+      ]);
+      if (!out.length) exWrap.appendChild(el("p", { class: "intro-text", text: "Ninguém cortado. Toque em “Cortar” num reserva para deixá-lo de fora." }));
+      out.sort(function (a, b) { return b.overall - a.overall; }).forEach(function (p) {
+        var row = TM.ui.playerRow(p, {});
+        row.classList.add("row-excluded");
+        row.appendChild(el("button", { class: "squad-move-btn add", text: "Relacionar", on: { click: function (e) { e.stopPropagation(); relist(p.id); } } }));
+        exWrap.appendChild(row);
+      });
+      board.appendChild(exWrap);
+    }
+
+    function onStarterClick(i) {
+      if (st.pick == null) { st.pick = i; }
+      else if (st.pick === i) { st.pick = null; }
+      else {
+        var t = st.starters[st.pick]; st.starters[st.pick] = st.starters[i]; st.starters[i] = t;
+        var pa = st.pos[st.pick], pb = st.pos[i];
+        if (pa) st.pos[i] = pa; else delete st.pos[i];
+        if (pb) st.pos[st.pick] = pb; else delete st.pos[st.pick];
+        st.pick = null;
+      }
+      render();
+    }
+    function attachChipDrag(chip, i, pitch) {
+      var sx = null, sy = null, dragging = false, pid = null, nx = null, ny = null;
+      chip.style.touchAction = "none";
+      chip.addEventListener("pointerdown", function (e) { sx = e.clientX; sy = e.clientY; dragging = false; pid = e.pointerId; nx = ny = null; });
+      chip.addEventListener("pointermove", function (e) {
+        if (sx == null) return;
+        var dx = e.clientX - sx, dy = e.clientY - sy;
+        if (!dragging && (dx * dx + dy * dy) > 36) { dragging = true; try { chip.setPointerCapture(pid); } catch (er) {} chip.classList.add("dragging"); }
+        if (dragging) {
+          var r = pitch.getBoundingClientRect();
+          nx = Math.max(5, Math.min(95, (e.clientX - r.left) / r.width * 100));
+          ny = Math.max(6, Math.min(95, (e.clientY - r.top) / r.height * 100));
+          chip.style.left = nx + "%"; chip.style.top = ny + "%";
+        }
+      });
+      function done() {
+        if (sx == null) return;
+        var wasDrag = dragging; sx = sy = null; dragging = false;
+        chip.classList.remove("dragging");
+        try { chip.releasePointerCapture(pid); } catch (er) {}
+        if (wasDrag) { if (nx != null) st.pos[i] = [Math.round(nx * 10) / 10, Math.round(ny * 10) / 10]; render(); }
+        else { onStarterClick(i); }
+      }
+      chip.addEventListener("pointerup", done);
+      chip.addEventListener("pointercancel", done);
+    }
   });
 
   function seatChip(emoji, name, ready, uid) {
