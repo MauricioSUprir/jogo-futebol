@@ -43,7 +43,9 @@
       var id = ed + "|" + k; if (!all && !dirty[id]) return;
       var t = TM.storage.tsRaw(ed, k), v = TM.storage.readRaw(ed, k);
       if (v == null && !t) return;                       // nunca existiu neste aparelho
-      patch["sync/" + ed + "/" + k] = { t: t || 1, v: v == null ? null : v }; n++;
+      // o valor vai como TEXTO JSON: o Firebase apaga arrays vazios/nulls dentro de arrays e transforma arrays
+      // esparsos em objetos, o que corrompia copas/mata-matas ao baixar em outro aparelho
+      patch["sync/" + ed + "/" + k] = { t: t || 1, v: v == null ? null : JSON.stringify(v), j: 1 }; n++;
     }); });
     if (!n) { cb && cb(true); return; }
     N().cloudPatch(p.email, patch, function (ok) {
@@ -52,6 +54,11 @@
       cb && cb(ok);
     });
   }
+  // valor da nuvem: texto JSON (formato novo, j:1) ou objeto cru (formato antigo, pode vir mutilado pelo Firebase)
+  function decodeVal(e) {
+    if (e.j || typeof e.v === "string") { try { return JSON.parse(e.v); } catch (err) { return e.v; } }
+    return e.v;
+  }
   // aplica uma entrada da nuvem se for mais nova que a local (ou à força)
   function applyEntry(ed, k, e, force) {
     if (!e || typeof e !== "object" || !("t" in e || "v" in e)) return false;
@@ -59,7 +66,7 @@
     if (!force && ct <= lt) return false;
     if (!force && lv != null && !lt && ct <= 1) return false;   // os dois são antigos (sem carimbo): mantém o local
     if (e.v == null) { if (lv == null) { TM.storage.touchRaw(ed, k, ct); return false; } TM.storage.removeRaw(ed, k, ct); }
-    else TM.storage.writeRaw(ed, k, e.v, ct);
+    else TM.storage.writeRaw(ed, k, decodeVal(e), ct);
     return true;
   }
   function pull(cb, force) {
@@ -281,7 +288,7 @@
     try {
       N().syncRef(p.email).once("value").then(function (s) {
         var v = s.val() || {}; var parts = [];
-        EDS.forEach(function (ed) { var cc2 = v[ed] && v[ed].coach && v[ed].coach.v; if (cc2 && cc2.teamName) parts.push((ed === "pro" ? "Season Update" : "Pública") + ": " + cc2.teamName + (cc2.season ? " · temp. " + cc2.season : "") + " (" + new Date(v[ed].coach.t || 0).toLocaleDateString("pt-BR") + ")"); });
+        EDS.forEach(function (ed) { var cc2 = v[ed] && v[ed].coach ? decodeVal(v[ed].coach) : null; if (cc2 && cc2.teamName) parts.push((ed === "pro" ? "Season Update" : "Pública") + ": " + cc2.teamName + (cc2.season ? " · temp. " + cc2.season : "") + " (" + new Date(v[ed].coach.t || 0).toLocaleDateString("pt-BR") + ")"); });
         if (syncSt.isConnected) syncSt.textContent = "☁️ " + lastSyncTxt() + (parts.length ? " · na nuvem: " + parts.join(" | ") : " · nenhuma carreira de treinador na nuvem ainda");
       });
     } catch (e) {}
