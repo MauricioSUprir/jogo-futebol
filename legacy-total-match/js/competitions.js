@@ -1636,8 +1636,58 @@
     var pb = TM.data.world().playersById;
     Object.keys(career.worldEvo).forEach(function (id) {
       var p = pb[id], e = career.worldEvo[id];
-      if (p) { p.age = e.age; p.overall = e.overall; }
+      if (p) { var dlt = (e.overall || p.overall) - p.overall; p.age = e.age; p.overall = e.overall; if (dlt) shiftAttrs(p, dlt); }
     });
+  }
+  // move todos os atributos junto com o overall (para a evolução valer dentro do motor da partida)
+  function shiftAttrs(p, delta) {
+    if (!p || !p.attrs || !delta) return;
+    Object.keys(p.attrs).forEach(function (k) { if (typeof p.attrs[k] === "number") p.attrs[k] = Math.max(1, Math.min(99, p.attrs[k] + delta)); });
+  }
+  // aplica +1/-1 no overall de um jogador do elenco e persiste (mundo regenera do zero ao recarregar)
+  function shiftOverall(career, p, delta) {
+    if (!p || !delta) return;
+    p.overall = Math.max(40, Math.min(99, p.overall + delta));
+    shiftAttrs(p, delta);
+    if (p.id && p.id[0] !== "y") { career.worldEvo = career.worldEvo || {}; career.worldEvo[p.id] = { age: p.age, overall: p.overall }; }
+  }
+  /* ---------- DESENVOLVIMENTO DIÁRIO do elenco (todo mundo evolui: titular, reserva e base) ----------
+     Cada dia acumula progresso conforme idade x potencial (jovens sobem, veteranos caem). Quem joga evolui um pouco
+     mais rápido, mas o reserva também evolui. Ao fechar 100 pontos, +1 no overall (ou -1 quando cai). */
+  var DEV_STEP = 100;
+  function devRate(career, p) {
+    var a = p.age || 25, pot = p.potential || (p.overall + (a <= 21 ? 6 : a <= 24 ? 3 : 0)), gap = pot - p.overall;
+    var r;
+    if (a <= 20) r = 1.5; else if (a <= 23) r = 1.1; else if (a <= 26) r = 0.7; else if (a <= 29) r = 0.35;
+    else if (a <= 31) r = 0; else if (a <= 33) r = -0.35; else r = -0.7;
+    if (r > 0 && gap <= 0) r = 0.05;                                   // já chegou no potencial: quase parado
+    if (r > 0) r *= Math.min(1.4, 0.6 + gap * 0.08);                   // muito longe do potencial = sobe mais rápido
+    var starters = (career.lineup && career.lineup.starters) || [];
+    if (r > 0) r *= starters.indexOf(p.id) >= 0 ? 1.3 : 0.85;          // titular acelera; reserva também evolui
+    if (career.injuries && career.injuries[p.id]) r *= 0.5;            // lesionado evolui devagar
+    return r * evoFactor();
+  }
+  function tickDevelopment(career, days) {
+    if (!days || days <= 0) return;
+    career.dev = career.dev || {};
+    var ups = [], downs = [], seen = {};
+    // elenco principal + categorias de base (a base evolui um pouco mais devagar, sem jogar no profissional)
+    var list = rosterPlayers(career).map(function (p) { return { p: p, k: 1 }; })
+      .concat((career.youth || []).map(function (y) { return { p: y, k: 0.8 }; }));
+    list.forEach(function (it) {
+      var p = it.p; if (!p || !p.id || seen[p.id]) return; seen[p.id] = 1;
+      var r = devRate(career, p) * it.k; if (!r) return;
+      var cur = (career.dev[p.id] || 0) + r * days * (0.75 + Math.random() * 0.5);
+      if (cur >= DEV_STEP) { cur -= DEV_STEP; var was = p.overall; shiftOverall(career, p, 1); if (p.overall !== was) ups.push(p.name + " (" + was + "→" + p.overall + ")"); }
+      else if (cur <= -DEV_STEP) { cur += DEV_STEP; var was2 = p.overall; shiftOverall(career, p, -1); if (p.overall !== was2) downs.push(p.name + " (" + was2 + "→" + p.overall + ")"); }
+      career.dev[p.id] = cur;
+    });
+    if (ups.length || downs.length) {
+      var parts = [];
+      if (ups.length) parts.push("📈 " + ups.slice(0, 5).join(", ") + (ups.length > 5 ? " e +" + (ups.length - 5) : ""));
+      if (downs.length) parts.push("📉 " + downs.slice(0, 4).join(", ") + (downs.length > 4 ? " e +" + (downs.length - 4) : ""));
+      TM.notify.push(career, { icon: "📈", title: "Evolução do elenco", news: true, text: parts.join(" · ") + ". Jovens sobem rumo ao potencial; veteranos caem aos poucos. Quem joga evolui mais rápido, mas o reserva também evolui." });
+    }
   }
 
   /* ---------- REGENERAÇÃO: aposentadorias + newgens (joias com potencial oculto) ---------- */
@@ -1990,6 +2040,7 @@
     var lastD = career._lastCalDay == null ? d - 1 : career._lastCalDay;
     career._lastCalDay = d;
     try { if (TM.fin && TM.fin.dailyPoach) for (var pd = 0; pd < Math.min(12, d - lastD); pd++) TM.fin.dailyPoach(career); } catch (e) {}
+    try { tickDevelopment(career, Math.min(30, d - lastD)); } catch (e) {}   // evolução diária do elenco (titulares, reservas e base)
     var open = windowOpenNow(career);
     if (open) {
       // com a janela aberta, outros clubes também sondam o SEU elenco (mesmo sem jogo no meio)
@@ -2443,6 +2494,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
+    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
