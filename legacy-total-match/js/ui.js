@@ -48,7 +48,14 @@
         el("h2", { text: "Não foi possível abrir esta tela" }),
         el("p", { text: "Isso costuma acontecer com um jogo salvo de uma versão anterior. Você pode voltar ao menu ou reiniciar esta carreira." }),
         el("p", { class: "re-detail", text: (err && err.message) ? String(err.message) : "" }),
-        el("button", { class: "btn primary big", text: "🏠 Voltar ao menu", on: { click: function () { go("modes"); } } }),
+        (isCoach ? el("button", { class: "btn primary big", text: "🛠️ Reparar carreira", on: { click: function () {
+          try {
+            var cc = TM.storage.coachCareer();
+            if (cc) { TM.comp.repairShapes(cc); TM.comp.ensureSeason(cc); TM.storage.saveCoachCareer(cc); }
+            go("coach-hub");
+          } catch (e) { go("modes"); }
+        } } }) : null),
+        el("button", { class: "btn" + (isCoach ? "" : " primary") + " big", text: "🏠 Voltar ao menu", on: { click: function () { go("modes"); } } }),
         (isCoach ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de treinador", on: { click: function () { try { TM.storage.clearCoachCareer(); } catch (e) {} go("modes"); } } }) : null),
         (isPlayer ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de jogador", on: { click: function () { try { TM.storage.clearPlayerCareer && TM.storage.clearPlayerCareer(); } catch (e) {} go("modes"); } } }) : null)
       ]));
