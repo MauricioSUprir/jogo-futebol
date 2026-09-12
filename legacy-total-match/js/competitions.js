@@ -2320,6 +2320,8 @@
     try { applyReleasedYouth(career); } catch (e) {}
     syncLineup(career); // reincorpora contratados que faltavam no banco
     applyWorldEvo(career); // reaplica envelhecimento/evolução do mundo (world regenera determinístico)
+    // números de camisa escolhidos pelo técnico (só para quem ainda está no elenco)
+    try { if (career.numbers) Object.keys(career.numbers).forEach(function (id) { if (career.roster.indexOf(id) >= 0) { var q = resolvePlayer(career, id); if (q) q.number = career.numbers[id]; } else delete career.numbers[id]; }); } catch (e) {}
     applyWorldTransfers(career); // reaplica transferências da IA (mundo regenera determinístico)
     applyDivSwaps(career); // reaplica rebaixamentos/acessos (mundo regenera determinístico)
     return career;

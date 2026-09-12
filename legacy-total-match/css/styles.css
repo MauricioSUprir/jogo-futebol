@@ -3547,3 +3547,11 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .wl-face{width:36px;height:36px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.25)}
 .wl-goals{font-weight:800;white-space:nowrap}
 .league-table tr.clickable{cursor:pointer}
+
+/* ===== escolha do número da camisa ===== */
+.num-edit{margin-left:8px;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:8px;color:#fff;font-size:13px;padding:2px 7px;cursor:pointer;vertical-align:2px}
+.num-sheet{max-height:86vh;display:flex;flex-direction:column}
+.num-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow-y:auto;padding:4px 2px;margin:6px 0 10px;max-height:52vh;width:100%;box-sizing:border-box}
+.num-cell{background:var(--panel);border:1px solid var(--line);border-radius:10px;color:#fff;padding:6px 2px;display:flex;flex-direction:column;align-items:center;cursor:pointer;min-height:44px;min-width:0}
+.num-cell .nc-n{font-weight:800;font-size:15px}.num-cell .nc-who{font-size:9px;color:var(--text-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.num-cell.taken{opacity:.75;border-style:dashed}.num-cell.mine{border-color:var(--gold);color:var(--gold)}

@@ -4198,6 +4198,48 @@
     return avg;
   }
 
+  // ----- número da camisa: escolha 1–99; número ocupado troca com o dono (persistido em c.numbers) -----
+  function setNumber(c, p, n) {
+    c.numbers = c.numbers || {};
+    p.number = n; c.numbers[p.id] = n;
+  }
+  function openNumberPicker(c, p) {
+    var owners = {};
+    C().rosterPlayers(c).forEach(function (q) { if (q.id !== p.id && q.number > 0) owners[q.number] = q; });
+    var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
+    var grid = el("div", { class: "num-grid" });
+    for (var n = 1; n <= 99; n++) {
+      (function (n) {
+        var own = owners[n], mine = p.number === n;
+        var b = el("button", { class: "num-cell" + (mine ? " mine" : own ? " taken" : ""), title: own ? own.name : "" }, [
+          el("span", { class: "nc-n", text: n }), own ? el("span", { class: "nc-who", text: shortName(own.name) }) : null
+        ]);
+        b.addEventListener("click", function () {
+          if (mine) { overlay.remove(); return; }
+          if (own) {
+            overlay.remove();
+            TM.ui.confirm("Trocar números?", "A camisa " + n + " é de " + own.name + ". " + p.name + " fica com a " + n + " e " + own.name + (p.number > 0 ? " passa a usar a " + p.number + "." : " fica sem número."), "Trocar", function () {
+              var old = p.number || 0; setNumber(c, p, n); setNumber(c, own, old);
+              TM.storage.saveCoachCareer(c); TM.ui.toast("🔢 " + p.name + " agora usa a camisa " + n + "."); TM.ui.go("coach-player");
+            });
+            return;
+          }
+          setNumber(c, p, n); TM.storage.saveCoachCareer(c); overlay.remove();
+          TM.ui.toast("🔢 " + p.name + " agora usa a camisa " + n + "."); TM.ui.go("coach-player");
+        });
+        grid.appendChild(b);
+      })(n);
+    }
+    var sheet = el("div", { class: "sheet num-sheet" }, [
+      el("div", { class: "sheet-title", text: "Camisa de " + p.name + (p.number > 0 ? " (atual: " + p.number + ")" : "") }),
+      el("div", { class: "sheet-msg", text: "Toque num número livre. Número ocupado mostra o dono: tocar troca as camisas entre os dois." }),
+      grid,
+      el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } })
+    ]);
+    overlay.appendChild(sheet); document.body.appendChild(overlay);
+  }
+  TM.coachUI.openNumberPicker = openNumberPicker;
+
   TM.ui.register("coach-player", function (screen) {
     var c = TM.storage.coachCareer();
     if (!c || !profilePid) { TM.ui.go(profileBack); return; }
@@ -4223,7 +4265,10 @@
     var head = el("div", { class: "prof-head prof-head-grad", style: "background: linear-gradient(135deg, " + pc1 + "cc 0%, " + pc2 + "cc 55%, var(--panel) 100%)" }, [
       TM.img.playerImg(p, "prof-face"),
       el("div", { class: "prof-id" }, [
-        el("div", { class: "prof-name" }, [ (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name) ].filter(Boolean)),
+        el("div", { class: "prof-name" }, [
+          (p.number > 0 ? el("span", { class: "prof-num", text: "#" + p.number }) : null), document.createTextNode(p.name),
+          (c.roster.indexOf(p.id) >= 0) ? el("button", { class: "num-edit", title: "Trocar número da camisa", text: "🔢", on: { click: function () { openNumberPicker(c, p); } } }) : null
+        ].filter(Boolean)),
         el("div", { class: "prof-meta" }, [
           (p.nationName || (nation && nation.name)) ? el("span", { class: "prof-nat", text: p.nationName || nation.name }) : null,
           el("span", { text: p.age + " anos" }),
