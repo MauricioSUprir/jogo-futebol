@@ -806,7 +806,30 @@
     return Math.max(0.5, Math.min(3.0, mult));
   }
   // valor de mercado DINÂMICO (base * desempenho) em milhões de euro
-  function dynValue(career, p) { return TM.data.marketValue(p) * perfMult(career, p); }
+  // FIM DE CONTRATO derruba o valor: quem sai de graça na virada vale muito menos no mercado
+  // 1 temporada restante = -25% · último ano já vencido / pré-contrato assinado com outro = -60%
+  function contractFactor(career, p) {
+    if (!p || !p.id) return 1;
+    try {
+      if (p.freeAgent) return 0.35;
+      var yrs = null;
+      if (career && career.roster && career.roster.indexOf(p.id) >= 0) {
+        var ct = career.contracts && career.contracts[p.id];
+        yrs = ct ? (ct.years == null ? 2 : ct.years) : 2;
+        if (career.leavingFree && career.leavingFree[p.id]) return 0.3;
+      } else if (TM.fin && TM.fin.worldContractYears) {
+        yrs = TM.fin.worldContractYears(p, career);
+      }
+      if (yrs == null) return 1;
+      if (yrs <= 0) return 0.4;
+      if (yrs === 1) return 0.75;
+      if (yrs === 2) return 0.95;
+      return 1;
+    } catch (e) { return 1; }
+  }
+  // valor de mercado levando em conta o contrato (usado nas telas e nas negociações)
+  function valueOf(career, p) { return TM.data.marketValue(p) * contractFactor(career, p); }
+  function dynValue(career, p) { return TM.data.marketValue(p) * perfMult(career, p) * contractFactor(career, p); }
   function updateConfidence(career, result, userSide) {
     if (!TM.storage.settings().dynamicOverall) return;
     if (!career.confidence) career.confidence = {};
@@ -2710,7 +2733,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
+    tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
