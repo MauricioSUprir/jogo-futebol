@@ -2709,8 +2709,9 @@
     var activeTab = tabs.filter(function (t) { return t.key === active; })[0] || tabs[0];
     screen.appendChild(el("div", { class: "comp-head" }, [
       TM.img.compImg(compIdFor(c, active), ""),
-      el("div", { class: "ch-name", text: activeTab.label })
-    ]));
+      el("div", { class: "ch-name", text: activeTab.label }),
+      (active === "cont" && c.contVia) ? el("div", { class: "setting-hint", text: "Vaga conquistada como " + c.contVia + " na temporada passada." }) : null
+    ].filter(Boolean)));
 
     if (active === "league") renderLeague(screen, c);
     else if (c.comps[active].type === "tournament") renderTournament(screen, c, c.comps[active]);

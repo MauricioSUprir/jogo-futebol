@@ -465,23 +465,52 @@
   }
   // ranking de uma liga: pela posição final da temporada passada (só a liga do
   // usuário é simulada); as demais ligas usam o overall como critério
+  // classificação FINAL da temporada passada de uma liga: a do usuário (guardada em checkHonours), a de uma liga
+  // observada em 🌍 Ligas (tabela simulada completa) ou, sem dados, a força dos elencos
   function rankLeague(career, lg) {
-    if (lg === career.leagueId && career.lastStanding && career.lastStanding.length) return career.lastStanding.slice();
+    var stLg = career.lastStandingLg || career.leagueId;
+    if (lg === stLg && career.lastStanding && career.lastStanding.length) return career.lastStanding.slice();
+    try {
+      var L = career.wl && career.wl.leagues && career.wl.leagues[lg];
+      if (L && L.season === (career.season || 1) - 1 && L.fixtures && L.round >= L.fixtures.length) return standings(L.table).map(function (r) { return r.id; });
+    } catch (e) {}
     return TM.data.league(lg).clubIds.slice().sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
   }
 
-  // Continental com fase de grupos. Só clubes bem colocados na liga se classificam
-  // (top 4 de cada liga da região). Retorna null se o usuário não se classificar.
-  function buildContinental(career) {
-    var region = REGION[career.leagueId] || "eu";
+  // Continental (Libertadores / Champions / etc.): vagas por LIGA pela tabela da temporada passada
+  // [top-N, +1 campeão da copa nacional]. Se o campeão da copa (ou o campeão continental) já está no top-N,
+  // a vaga passa ao próximo colocado. Clube recém-promovido só entra se for campeão da copa.
+  var CONT_SIZE = { sa: 32, eu: 32, na: 16, as: 16 };
+  var CONT_SLOTS = {
+    sa: { br: [4, 1], ar: [4, 1], co: [3, 1], ec: [3, 1], uy: [3, 1], py: [3, 1] },
+    eu: { en: [4, 1], es: [4, 1], it: [4, 1], de: [4, 1], fr: [3, 0], pt: [2, 0], nl: [2, 0], tr: [1, 0], ru: [1, 0], rus: [1, 0], ch: [1, 0], be: [1, 0] },
+    na: { us: [4, 1], mx: [4, 1] },
+    as: { sa: [4, 1], jp: [4, 1], ma: [4, 1] }
+  };
+  function topDivOf(lg) { var g = 0; while (DIV_UP[lg] && g++ < 4) lg = DIV_UP[lg]; return lg; }
+  function contQualifiers(career) {
+    var region = REGION[career.leagueId] || REGION[DIV_UP[career.leagueId]] || REGION[DIV_UP[DIV_UP[career.leagueId] || ""]] || "eu";
     var leagues = REGION_LEAGUES[region] || [career.leagueId];
-    var size = leagues.length >= 4 ? 32 : 16;          // Europa: 32; Am. do Sul / outros: 16
-    var perLeague = Math.ceil(size / leagues.length);   // vagas por liga (top-N da tabela)
-    // classificados: melhores colocados de cada liga
-    var initial = [];
-    leagues.forEach(function (lg) { initial = initial.concat(rankLeague(career, lg).slice(0, perLeague)); });
-    initial = initial.filter(function (id, i) { return initial.indexOf(id) === i; });
-    if (initial.indexOf(career.teamId) < 0) return null; // usuário não se classificou
+    var size = CONT_SIZE[region] || 16, slots = CONT_SLOTS[region] || {};
+    var initial = [], via = {}, stLg = career.lastStandingLg || career.leagueId;
+    function add(id, how) { if (id && initial.indexOf(id) < 0) { initial.push(id); via[id] = how; return true; } return false; }
+    leagues.forEach(function (lg) {
+      var q = slots[lg] || [Math.max(1, Math.floor(size / leagues.length)), 0], rank = rankLeague(career, lg), n = q[0];
+      rank.slice(0, n).forEach(function (id, k) { add(id, "liga (" + (k + 1) + "º)"); });
+      if (q[1]) {
+        var cupCh = lg === topDivOf(stLg) ? career.lastCupChampion : null;   // só a copa do usuário é disputada de verdade (vale p/ quem estava na 2ª divisão)
+        if (cupCh && add(cupCh, "campeão da copa")) return;
+        for (var k = n; k < rank.length; k++) if (add(rank[k], "liga (" + (k + 1) + "º)")) break;   // vaga passa ao próximo
+      }
+    });
+    // campeão continental da temporada passada mantém a vaga (se já classificado, nada muda)
+    if (career.lastContChampion) add(career.lastContChampion, "campeão continental");
+    return { region: region, leagues: leagues, size: size, initial: initial, via: via };
+  }
+  function buildContinental(career) {
+    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, size = Q.size, initial = Q.initial;
+    if (initial.indexOf(career.teamId) < 0) { career.contVia = null; return null; } // usuário não se classificou
+    career.contVia = Q.via[career.teamId] || null;
     var field = initial.slice();
     if (field.length > size) {
       field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
@@ -2299,7 +2328,25 @@
   }
 
   // preenche campos novos em carreiras antigas (salvas antes destes recursos)
+  // conserto de saves antigos: clube que acabou de SUBIR de divisão estava entrando na continental (a tabela da
+  // divisão de baixo era lida como se fosse a de cima). Só fica se foi campeão da copa nacional.
+  function fixPromotedInContinental(career) {
+    if (!career.comps || !career.comps.cont || career.contFixSeason === career.season) return;
+    career.contFixSeason = career.season;
+    var sw = (career.divSwaps || []).slice(-1)[0];
+    if (!sw || sw.targetLg !== career.leagueId || DIV_UP[sw.userLg] !== sw.targetLg || !career.lastStanding || !career.lastStanding.length) return;
+    var oldLg = TM.data.league(sw.userLg); if (!oldLg) return;
+    var inOld = career.lastStanding.filter(function (id) { return oldLg.clubIds.indexOf(id) >= 0; }).length;
+    if (inOld < career.lastStanding.length * 0.6) return;                      // a promoção não foi nesta virada
+    var cupCh = career.lastCupChampion === career.teamId || (career.honours || []).some(function (h) { return h.season === career.season - 1 && h.cupChampion; });
+    if (cupCh) return;
+    var nm = career.comps.cont.name || "continental";
+    career.comps.cont = null; career.contVia = null;
+    if (career.pending && career.pending.key === "cont") career.pending = null;
+    TM.notify.push(career, { icon: "🏆", title: "Vaga na " + nm + " corrigida", news: true, text: career.teamName + " subiu de divisão e, pelas regras, não disputa a " + nm + " nesta temporada. Só os melhores colocados da primeira divisão e o campeão da copa nacional se classificam." });
+  }
   function migrateCareer(career) {
+    try { fixPromotedInContinental(career); } catch (e) {}
     if (!career) return career;
     // save de versão antiga sem a estrutura de competições atual → reconstrói a temporada
     if (!career.comps || !career.comps.league || !career.comps.league.fixtures || !career.order || career.orderIndex == null) {
@@ -2485,6 +2532,9 @@
     var st = standings(c.league.table);
     // guarda a classificação final da liga (usada para classificar à continental)
     career.lastStanding = st.map(function (r) { return r.id; });
+    career.lastStandingLg = career.leagueId;                                   // a tabela é DESTA liga (o clube pode subir/cair depois)
+    career.lastCupChampion = (c.cup && c.cup.championId) || null;
+    career.lastContChampion = (c.cont && c.cont.tour && c.cont.tour.championId) || null;
     var already = career.honours.some(function (h) { return h.season === career.season; });
     if (already) return;
     var champ = st[0];
