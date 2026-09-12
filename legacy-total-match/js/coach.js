@@ -111,6 +111,7 @@
       { ic: "🔁", label: "Mercado", route: "coach-market" },
       { ic: "🔭", label: "Olheiros", route: "coach-scouting" },
       { ic: "🏆", label: "Competições", route: "coach-comps" },
+      { ic: "🌍", label: "Ligas", route: "coach-world" },
       { ic: "💰", label: "Finanças", route: "coach-finance" },
       { ic: "📜", label: "Contrato", route: "coach-contract" },
       { ic: "📅", label: "Calendário", route: "coach-calendar" },
@@ -858,6 +859,7 @@
     try { if (TM.fin) TM.fin.tick(c); } catch (e) {}                 // parcelas, bônus, transfer ban, endividamento
     try { if (TM.pre) TM.pre.tick(c); } catch (e) {}                 // convites de torneio de pré-temporada
     try { if (TM.offers) TM.offers.tick(c); } catch (e) {}           // prazos das propostas recebidas
+    try { if (TM.wl) TM.wl.tick(c); } catch (e) {}                   // observação de ligas do mundo + rodadas das ligas acompanhadas
     ensureContracts(c);     // garante contratos do elenco
     ensureMyContract(c);    // garante o contrato do próprio treinador
     ensureTenure(c);        // tempo de casa / crias da base (ídolos)

@@ -210,7 +210,7 @@
         if (annul) { return; } // gol anulado pelo VAR — não conta
         onTarget[side]++; score[side]++; lastGoalMin = minute; lastGoalSide = side;
         if (scorer.id === focusId) focusGoals++;
-        events.push({ minute: minute, type: isPen ? "pengoal" : "goal", team: side, player: scorer.name,
+        events.push({ minute: minute, type: isPen ? "pengoal" : "goal", team: side, player: scorer.name, playerId: scorer.id,
           score: score.slice(), text: (isPen ? "PÊNALTI CONVERTIDO! " : isFK ? "GOL DE FALTA! " : "") + fmt(pick(GOAL_LINES), scorer.name, team.name) });
       } else {
         if (Math.random() < 0.5) onTarget[side]++;
