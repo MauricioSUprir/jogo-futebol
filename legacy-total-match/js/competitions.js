@@ -519,6 +519,7 @@
     na: { us: [4, 1], mx: [4, 1] },
     as: { sa: [4, 1], jp: [4, 1], ma: [4, 1] }
   };
+  var CONT_PRE_N = 2;   // logo abaixo das vagas diretas: 2 clubes vão para a fase PRÉ (ex.: 5º e 6º no Brasil)
   function topDivOf(lg) { var g = 0; while (DIV_UP[lg] && g++ < 4) lg = DIV_UP[lg]; return lg; }
   function contQualifiers(career) {
     var region = REGION[career.leagueId] || REGION[DIV_UP[career.leagueId]] || REGION[DIV_UP[DIV_UP[career.leagueId] || ""]] || "eu";
@@ -529,19 +530,35 @@
     leagues.forEach(function (lg) {
       var q = slots[lg] || [Math.max(1, Math.floor(size / leagues.length)), 0], rank = rankLeague(career, lg), n = q[0];
       rank.slice(0, n).forEach(function (id, k) { add(id, "liga (" + (k + 1) + "º)"); });
+      // vaga do campeão da copa nacional: é EXTRA. Se ele já está no top-N, ninguém herda a vaga
+      // (assim o 5º e o 6º ficam sempre com a fase PRÉ, como manda a regra).
       if (q[1]) {
-        var cupCh = lg === topDivOf(stLg) ? career.lastCupChampion : null;   // só a copa do usuário é disputada de verdade (vale p/ quem estava na 2ª divisão)
-        if (cupCh && add(cupCh, "campeão da copa")) return;
-        for (var k = n; k < rank.length; k++) if (add(rank[k], "liga (" + (k + 1) + "º)")) break;   // vaga passa ao próximo
+        var cupCh = lg === topDivOf(stLg) ? career.lastCupChampion : null;
+        if (cupCh) add(cupCh, "campeão da copa");
       }
     });
     // campeão continental da temporada passada mantém a vaga (se já classificado, nada muda)
     if (career.lastContChampion) add(career.lastContChampion, "campeão continental");
-    return { region: region, leagues: leagues, size: size, initial: initial, via: via };
+    // fase PRÉ: os CONT_PRE_N logo abaixo das vagas diretas de cada liga
+    var pre = [], preFrom = {};
+    leagues.forEach(function (lg) {
+      var q = slots[lg] || [Math.max(1, Math.floor(size / leagues.length)), 0], rank = rankLeague(career, lg), n = q[0];
+      var k = 0;
+      for (var i = n; i < rank.length && k < CONT_PRE_N; i++) {
+        var id = rank[i];
+        if (!id || initial.indexOf(id) >= 0 || pre.indexOf(id) >= 0) continue;
+        pre.push(id); preFrom[id] = i + 1; k++;
+      }
+    });
+    return { region: region, leagues: leagues, size: size, initial: initial, via: via, pre: pre, preFrom: preFrom };
   }
-  function buildContinental(career) {
-    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, size = Q.size, initial = Q.initial;
-    if (initial.indexOf(career.teamId) < 0) { career.contVia = null; return null; } // usuário não se classificou
+  function buildContinental(career, opts) {
+    opts = opts || {};
+    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, size = Q.size, initial = Q.initial.slice();
+    if (initial.indexOf(career.teamId) < 0) {
+      if (!opts.force) { career.contVia = null; return null; }      // usuário não se classificou
+      initial.push(career.teamId); Q.via[career.teamId] = opts.via || "fase pré";
+    }
     career.contVia = Q.via[career.teamId] || null;
     var field = initial.slice();
     if (field.length > size) {
@@ -565,7 +582,8 @@
 
   // Continental SECUNDÁRIA (Sul-Americana / Europa League): 7º ao 12º de cada liga da região.
   // Quem se classificou para a principal NÃO entra aqui.
-  function buildContinental2(career) {
+  function buildContinental2(career, opts) {
+    opts = opts || {};
     var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, principal = Q.initial;
     var size = 32, field = [], mine = false;
     leagues.forEach(function (lg) {
@@ -576,9 +594,14 @@
         field.push(id); if (id === career.teamId) mine = true;
       }
     });
-    if (!mine) { career.cont2Via = null; return null; }          // o usuário não se classificou
-    var myPos = 0; (function () { var rk = rankLeague(career, career.lastStandingLg || career.leagueId); myPos = rk.indexOf(career.teamId) + 1; })();
-    career.cont2Via = myPos ? "liga (" + myPos + "º)" : "liga";
+    if (!mine) {
+      if (!opts.force) { career.cont2Via = null; return null; }   // o usuário não se classificou
+      field.push(career.teamId); mine = true; career.cont2Via = opts.via || "eliminado na fase pré";
+    }
+    if (!opts.force) {
+      var myPos = 0; (function () { var rk = rankLeague(career, career.lastStandingLg || career.leagueId); myPos = rk.indexOf(career.teamId) + 1; })();
+      career.cont2Via = myPos ? "liga (" + myPos + "º)" : "liga";
+    }
     if (field.length > size) {
       var me = career.teamId;
       field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
@@ -600,6 +623,124 @@
     var name2 = (comp2 && comp2.name) || CONT2_NAME[region] || "Continental II";
     return { type: "tournament", key: "cont2", name: name2,
       tour: TM.tournament.create(field, { groups: 8, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
+  }
+
+  // FASE PRÉ da continental principal (Pré-Libertadores / Pré-Champions): quem fica logo abaixo das vagas
+  // diretas disputa um mata-mata de ida e volta. Quem passa entra na principal; quem cai vai para a secundária.
+  function buildContPre(career) {
+    var Q = contQualifiers(career);
+    if ((Q.pre || []).indexOf(career.teamId) < 0) { career.contPreVia = null; return null; }
+    var pos = Q.preFrom[career.teamId] || 0;
+    career.contPreVia = pos ? "liga (" + pos + "º)" : "liga";
+    var field = (Q.pre || []).slice();
+    // completa para uma potência de 2 (mínimo 4, máximo 8)
+    var alvo = 4;                       // 4 clubes, 2 confrontos de ida e volta: quem vence entra na principal
+    if (field.length > alvo) {
+      field.sort(function (a, b) { return TM.data.clubRating(b) - TM.data.clubRating(a); });
+      field = field.slice(0, alvo);
+      if (field.indexOf(career.teamId) < 0) field[field.length - 1] = career.teamId;
+    }
+    while (field.length < alvo) {
+      var pad = null, best = -1;
+      (Q.leagues || []).forEach(function (lg) {
+        TM.data.league(lg).clubIds.forEach(function (id) {
+          if (field.indexOf(id) >= 0 || (Q.initial || []).indexOf(id) >= 0) return;
+          var r = TM.data.clubRating(id); if (r > best) { best = r; pad = id; }
+        });
+      });
+      if (!pad) break; field.push(pad);
+    }
+    if (field.length < 2) return null;
+    var comp = TM.data.competition("cont-" + Q.region);
+    var nome = "Pré-" + ((comp && comp.name) || CONT_NAME[Q.region] || "Continental");
+    var ko = buildKO(field, nome, "contPre", true);
+    ko.preOf = Q.region;
+    return ko;
+  }
+  // depois da fase PRÉ: quem passou entra na principal, quem caiu vai para a secundária
+  /* ---------- PREMIAÇÕES: por fase nos mata-matas e por posição na liga ---------- */
+  function payPrize(career, eur, title, text, icon) {
+    var v = Math.round(eur * (career.money ? career.money.mult : 1) * 100) / 100;
+    if (v <= 0) return 0;
+    career.budget = (career.budget || 0) + v;
+    career.finc = career.finc || { prizeM: 0, spentM: 0, soldM: 0 };
+    career.finc.prizeM = (career.finc.prizeM || 0) + v;
+    TM.notify.push(career, { icon: icon || "\ud83d\udcb0", title: title, news: true, text: text + " Pr\u00eamio de " + fmtMoney(career, v) + " creditado no caixa." });
+    return v;
+  }
+  // for\u00e7a da liga: pr\u00eamios maiores nas ligas ricas
+  function leagueMoneyFactor(career) {
+    try {
+      var ids = TM.data.league(career.leagueId).clubIds, soma = 0;
+      ids.forEach(function (id) { soma += TM.data.clubRating(id); });
+      var med = soma / Math.max(1, ids.length);
+      return Math.max(0.35, Math.min(2.2, (med - 58) / 14));
+    } catch (e) { return 1; }
+  }
+  var ROUND_PRIZE = { cup: 2.2, contPre: 3, cont: 5.5, cont2: 2.6 };
+  // paga por cada fase nova que o usu\u00e1rio passou nos mata-matas
+  function payRoundPrizes(career) {
+    if (!career.comps) return;
+    career.koPaid = career.koPaid || {};
+    var f = leagueMoneyFactor(career);
+    ["cup", "contPre", "cont", "cont2"].forEach(function (key) {
+      var comp = career.comps[key]; if (!comp) return;
+      var idx = 0, alive = true, nome = comp.name || key, grupos = false;
+      if (comp.type === "tournament") {
+        var t = comp.tour; if (!t) return;
+        alive = t.aliveUser !== false;
+        if (t.phase === "ko" && t.userQualified) { idx = 1 + ((t.ko && t.ko.roundIndex) || 0); grupos = true; }
+        else if (t.phase === "done") { idx = 1 + ((t.ko && t.ko.roundIndex) || 0); }
+        else idx = 0;
+      } else {
+        alive = comp.aliveUser !== false;
+        idx = comp.roundIndex || 0;
+        if (comp.championId === career.teamId) idx = (comp.rounds || []).length;
+      }
+      var pago = career.koPaid[key] || 0;
+      if (!alive || idx <= pago) { if (!alive) career.koPaid[key] = Math.max(pago, idx); return; }
+      var fases = idx - pago;
+      career.koPaid[key] = idx;
+      var base = (ROUND_PRIZE[key] || 2) * f, total = 0;
+      for (var i = 0; i < fases; i++) total += base * (1 + (pago + i) * 0.45);   // cada fase vale mais que a anterior
+      payPrize(career, total, "Premia\u00e7\u00e3o por fase",
+        (grupos && pago === 0 ? "Classifica\u00e7\u00e3o na fase de grupos da " + nome + "." : "Classifica\u00e7\u00e3o para a pr\u00f3xima fase da " + nome + "."), "\ud83c\udfc5");
+    });
+  }
+  // pr\u00eamio por posi\u00e7\u00e3o final na liga (pago na virada de temporada)
+  var POS_PRIZE = [26, 21, 17, 14, 12, 10, 8.5, 7.5, 7, 6.5, 6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 2];
+  function payLeaguePosPrize(career) {
+    try {
+      var st = standings(career.comps.league.table), n = st.length;
+      var pos = st.findIndex(function (r) { return r.id === career.teamId; }) + 1;
+      if (pos <= 0) return 0;
+      var base = POS_PRIZE[Math.min(POS_PRIZE.length - 1, pos - 1)] * leagueMoneyFactor(career);
+      return payPrize(career, base, "Premia\u00e7\u00e3o do campeonato",
+        career.teamName + " terminou a " + career.comps.league.name + " em " + pos + "\u00ba lugar entre " + n + " clubes.", "\ud83c\udfc6");
+    } catch (e) { return 0; }
+  }
+  function resolveContPre(career) {
+    var pre = career.comps && career.comps.contPre;
+    if (!pre || career.comps.cont || career.comps.cont2 || career.contPreDone) return;
+    var rd = (pre.rounds || [])[0];
+    if (!rd || !rd.length) return;
+    var minha = null;
+    rd.forEach(function (t) { if (t && (t[0] === career.teamId || t[1] === career.teamId)) minha = t; });
+    if (!minha || minha[4] == null) return;                 // confronto ainda em andamento
+    var passou = minha[4] === career.teamId;
+    pre.championId = minha[4];                              // encerra a fase pré (só uma rodada)
+    pre.aliveUser = passou;
+    career.contPreDone = true;
+    if (passou) {
+      career.comps.cont = buildContinental(career, { force: true, via: "vindo da fase pré" });
+      if (career.comps.cont) TM.notify.push(career, { icon: "🎉", title: "Classificado!", news: true, text: career.teamName + " passou pela " + pre.name + " e está na " + career.comps.cont.name + "!" });
+    } else {
+      career.comps.cont2 = buildContinental2(career, { force: true, via: "eliminado na " + pre.name });
+      if (career.comps.cont2) {
+        career.order = (career.order || []).map(function (k) { return k === "cont" ? "cont2" : k; });
+        TM.notify.push(career, { icon: "🥈", title: "Rumo à segunda competição", news: true, text: career.teamName + " caiu na " + pre.name + " e vai disputar a " + career.comps.cont2.name + "." });
+      }
+    }
   }
 
   // Mundial de Clubes (carreira): 32 melhores clubes de todas as ligas, formato Copa
@@ -647,7 +788,9 @@
     var leagueId = career.leagueId;
     var league = TM.data.league(leagueId);
     var cont = buildContinental(career);
-    var cont2 = cont ? null : buildContinental2(career);        // quem está na principal não joga a secundária
+    var contPre = cont ? null : buildContPre(career);           // 5º/6º: fase pré da principal
+    var cont2 = (cont || contPre) ? null : buildContinental2(career);   // quem está na principal/pré não entra direto na secundária
+    career.contPreDone = false;
     var fixtures = doubleRoundRobin(league.clubIds.slice()); // turno e returno (34 rodadas p/ 18 clubes)
     // Mundial de Clubes: 1 ano antes da Copa do Mundo (temporadas 4, 8, 12, ... — a Copa é em 1, 5, 9, ...)
     var mundial = (career.season % 4 === 0) ? buildMundial(career) : null;
@@ -655,12 +798,21 @@
       league: { type: "league", name: league.name, fixtures: fixtures, round: 0, table: emptyTable(league.clubIds) },
       cup: buildDomesticCup(career.teamId, leagueId),
       cont: cont,
+      contPre: contPre,
       cont2: cont2,
       mundial: mundial
     };
     // continental: 6 rodadas de grupo (ida/volta) + até 8 de mata-mata (ida e volta) = ~14 (folga p/ 20)
     // Mundial: 3 rodadas de grupo + 4 de mata-mata = 7 (folga p/ 10)
-    career.order = buildOrder(fixtures.length, cont ? 20 : (cont2 ? 20 : 0), mundial ? 10 : 0, cont2 ? "cont2" : "cont");
+    career.order = buildOrder(fixtures.length, (cont || cont2 || contPre) ? 20 : 0, mundial ? 10 : 0, cont2 ? "cont2" : "cont");
+    if (contPre) {                                               // 2 slots de PRÉ (ida e volta) antes da principal
+      var ins = [], put = 0;
+      career.order.forEach(function (k) {
+        if (k === "cont" && put < 2) { ins.push("contPre"); put++; }
+        ins.push(k);
+      });
+      career.order = ins;
+    }
     // Intercontinental: jogo único no fim da temporada (campeão da Liberta x campeão da Champions)
     career.order.push("inter");
     career.interChampion = null; career.interMatch = null;
@@ -2418,9 +2570,11 @@
     applyPromRel(career); // rebaixa/promove antes de montar a nova temporada
     // verba de fim de temporada (independente de títulos)
     var mult = career.money ? career.money.mult : 1;
+    var posPrize = 0; try { posPrize = payLeaguePosPrize(career); } catch (e) {}
+    career.koPaid = {};
     var bonus = Math.round(20 * mult);
     career.budget += bonus;
-    career.finc = { prizeM: bonus, spentM: 0, soldM: 0 }; // zera o balanço da temporada; a verba entra como receita
+    career.finc = { prizeM: bonus + posPrize, spentM: 0, soldM: 0 }; // zera o balanço da temporada; a verba entra como receita
     try { TM.club.seasonTick(career); } catch (e) {} // contratos comerciais vencem, parcelas de empréstimo
     try { TM.scouting.seasonTick(career); } catch (e) {} // salários dos olheiros, novos candidatos
     TM.notify.push(career, { icon: "💰", title: "Verba da diretoria", text: "A diretoria liberou +" + fmtMoney(career, bonus) + " de verba para a nova temporada." });
@@ -2709,6 +2863,7 @@
 
   // resolve slots automáticos e para na próxima partida do usuário. Idempotente.
   function advanceToUserMatch(career) {
+    try { payRoundPrizes(career); } catch (e) {}
     var guard = 0;
     while (guard++ < 200) {
       if (career.orderIndex >= career.order.length) { checkHonours(career); career.pending = { seasonEnd: true }; TM.storage.saveCoachCareer(career); return career.pending; }
@@ -2733,6 +2888,7 @@
         TM.storage.saveCoachCareer(career);
         return career.pending;
       }
+      if (key === "cont" || key === "cont2") { try { resolveContPre(career); } catch (e) {} }
       var comp = career.comps[key];
       if (!comp) { career.orderIndex++; continue; }
       if (comp.type === "tournament") {
@@ -2876,7 +3032,7 @@
     switchUserClub: switchUserClub, generateJobOffers: generateJobOffers,
     computeReputation: computeReputation, reputationLabel: reputationLabel,
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
-    legInfo: legInfo, tieOf: tieOf, idolScore: idolScore, IDOL_LEVELS: IDOL_LEVELS, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
+    legInfo: legInfo, tieOf: tieOf, resolveContPre: resolveContPre, CONT_PRE_N: CONT_PRE_N, payRoundPrizes: payRoundPrizes, payLeaguePosPrize: payLeaguePosPrize, idolScore: idolScore, IDOL_LEVELS: IDOL_LEVELS, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
