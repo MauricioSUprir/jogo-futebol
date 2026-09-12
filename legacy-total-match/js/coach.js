@@ -52,7 +52,13 @@
       var st = c.pstats && c.pstats[id];
       var clk = (c.careerStats && c.careerStats.p) || 0;
       var jd = (c.joinedAt && c.joinedAt[id] != null) ? c.joinedAt[id] : 0, sinceJ = Math.max(1, clk - jd);
-      if (st && (st.apps / sinceJ) > 0.55) { delete c.transferReq[id]; }
+      var reqAt = (c.transferReqAt && c.transferReqAt[id] != null) ? c.transferReqAt[id] : 0;
+      // voltou a jogar depois do pedido: a insatisfação passa
+      if (clk - reqAt >= 3 && st && (st.apps / sinceJ) > 0.45) {
+        delete c.transferReq[id]; if (c.transferReqAt) delete c.transferReqAt[id];
+        var plr = C().resolvePlayer(c, id);
+        if (plr) TM.notify.push(c, { icon: "🤝", title: "Clima resolvido", text: plr.name + " voltou a jogar com regularidade e retirou o pedido de transferência." });
+      }
     });
     var stamp = (c.matchNo || 0) + ":" + (c.season || 1);
     if (c._lastUnrest === stamp) return;
@@ -74,8 +80,11 @@
     }).sort(function (a, b) { return b.overall - a.overall; });
     if (!cand.length) return;
     var p = cand[0];
+    var joinedP = (c.joinedAt && c.joinedAt[p.id] != null) ? c.joinedAt[p.id] : 0;
+    var sinceOf = Math.max(1, clock - joinedP), appsOf = (c.pstats && c.pstats[p.id] && c.pstats[p.id].apps) || 0;
     c.transferReq[p.id] = true;
-    TM.notify.push(c, { icon: "😤", title: "Pedido de transferência", news: true, text: p.name + " está insatisfeito com a falta de minutos e pediu para ser negociado. Dê mais oportunidades, converse com ele ou avalie uma venda." });
+    c.transferReqAt = c.transferReqAt || {}; c.transferReqAt[p.id] = clock;
+    TM.notify.push(c, { icon: "😤", title: "Pedido de transferência", news: true, text: p.name + " entrou em campo em apenas " + appsOf + " dos últimos " + sinceOf + " jogos do clube e pediu para ser negociado. Dê mais minutos, converse com ele no Total Messenger ou avalie uma venda." });
     try { if (c.social) c.social.lastGen = ""; } catch (e) {}
   }
 
@@ -4693,6 +4702,38 @@
             : TM.ui.button("✍️ Negociar renovação", function () { renewOpen(c, p); }, "btn small"))
         ]));
       }
+
+      // ---- BARRA DE ÍDOLO ----
+      try {
+        var isc = C().idolScore ? C().idolScore(c, p) : null;
+        if (isc && (c.roster || []).indexOf(p.id) >= 0) {
+          var ibox = el("div", { class: "idol-box lv-" + isc.level.key }, [
+            el("div", { class: "idol-head" }, [
+              el("span", { class: "idol-ic", text: isc.level.ic }),
+              el("div", { class: "idol-hinfo" }, [
+                el("div", { class: "idol-lvl", text: isc.level.label }),
+                el("div", { class: "idol-sub", text: isc.next ? "Faltam " + isc.faltam + " pontos para " + isc.next.label.toLowerCase() : "Nível máximo alcançado" })
+              ]),
+              el("span", { class: "idol-pts", text: isc.pts })
+            ]),
+            el("div", { class: "idol-bar" }, [ el("i", { style: "width:" + isc.pct + "%" }) ]),
+            el("div", { class: "idol-steps" }, (C().IDOL_LEVELS || []).map(function (L) {
+              return el("span", { class: "idol-step" + (isc.pts >= L.min ? " on" : ""), title: L.label + " (" + L.min + " pts)", text: L.ic });
+            }))
+          ]);
+          var idet = el("div", { class: "idol-parts" });
+          isc.parts.forEach(function (pt) {
+            idet.appendChild(el("div", { class: "idol-part" + (pt.v < 0 ? " bad" : "") }, [
+              el("span", { class: "idol-part-v", text: (pt.v > 0 ? "+" : "") + pt.v }),
+              el("span", { class: "idol-part-l", text: pt.lbl })
+            ]));
+          });
+          if (!isc.parts.length) idet.appendChild(el("div", { class: "setting-hint", text: "Ele ainda não construiu história aqui. Jogos, gols, assistências, títulos e tempo de casa aumentam o carinho da torcida." }));
+          ibox.appendChild(idet);
+          ibox.appendChild(el("div", { class: "setting-hint", text: "Ídolo pesa na hora de vender: a torcida se revolta e ele aceita ficar por menos." }));
+          wrap.appendChild(ibox);
+        }
+      } catch (e) {}
 
       // ---- fim de contrato derruba o valor de mercado ----
       try {
