@@ -177,13 +177,13 @@
     screen.appendChild(TM.ui.topbar(lg.name, function () { TM.ui.go("coach-world"); }));
     var body = el("div", { class: "panel-narrow" }); screen.appendChild(body);
     var lgBig = null; try { lgBig = TM.img.compImg("lg-" + lg.id, "wl-flag big"); } catch (e) {}
-    body.appendChild(el("div", { class: "wl-head" }, [
+    if (tab !== "squads" || !(params && params.club)) body.appendChild(el("div", { class: "wl-head" }, [
       lgBig || (nat ? TM.img.nationImg(nat, "wl-flag big") : null),
       lgBig && nat ? TM.img.nationImg(nat, "wl-flag small") : null,
       el("div", { class: "wl-mid" }, [ el("div", { class: "wl-name", text: lg.name }), el("div", { class: "wl-sub", text: natPt(lg.nation) + " · " + lg.clubIds.length + " clubes · rodada " + Math.min(L.round, L.fixtures.length) + " de " + L.fixtures.length }) ])
     ]));
     if (L.championId) { var ch = TM.data.club(L.championId); if (ch) body.appendChild(el("div", { class: "champion-banner", text: "🏆 Campeão: " + ch.name })); }
-    var tabs = [ ["table", "Tabela"], ["round", "Rodada"], ["scorers", "Artilheiros"] ];
+    var tabs = [ ["table", "Tabela"], ["round", "Rodada"], ["scorers", "Artilheiros"], ["squads", "Elencos"] ];
     body.appendChild(el("div", { class: "comp-tabs" }, tabs.map(function (t) { return el("button", { class: "comp-tab" + (tab === t[0] ? " active" : ""), on: { click: function () { TM.ui.go("coach-world-league", { lid: lid, tab: t[0] }); } } }, [ el("span", { class: "ct-name", text: t[1] }) ]); })));
     if (tab === "table") {
       var table = el("table", { class: "league-table" }, [ el("thead", {}, [ el("tr", {}, ["#", "Clube", "P", "J", "V", "E", "D", "SG"].map(function (h, i) { return el("th", { class: i === 1 ? "lt-club" : "", text: h }); })) ]) ]);
@@ -216,6 +216,36 @@
       if (L.round < L.fixtures.length) {
         body.appendChild(el("h3", { class: "block-title", text: "Próxima rodada · " + dateTxt(c, roundDay(L, L.round)) }));
         L.fixtures[L.round].forEach(function (m) { var r = resRow([m[0], m[1]]); if (r) body.appendChild(r); });
+      }
+    } else if (tab === "squads") {
+      var clubId = params && params.club;
+      if (!clubId) {
+        body.appendChild(el("p", { class: "setting-hint", text: "Observando a " + lg.name + ", você tem acesso aos elencos completos. Escolha um clube:" }));
+        standings(L.table).forEach(function (row, i) {
+          var cl2 = TM.data.club(row.id); if (!cl2) return;
+          body.appendChild(el("div", { class: "wl-row clickable", on: { click: function () { TM.ui.go("coach-world-league", { lid: lid, tab: "squads", club: cl2.id }); } } }, [
+            TM.img.clubImg(cl2, "wl-flag"),
+            el("div", { class: "wl-mid" }, [ el("div", { class: "wl-name", text: (i + 1) + "º " + cl2.name }), el("div", { class: "wl-sub", text: "força " + TM.data.clubRating(cl2.id) + " · " + (TM.data.clubPlayers(cl2.id) || []).length + " jogadores" }) ]),
+            el("span", { class: "wl-hub-go", text: "›" })
+          ]));
+        });
+      } else {
+        var cl3 = TM.data.club(clubId), pls = (TM.data.clubPlayers(clubId) || []).slice().sort(function (a, b) { return b.overall - a.overall; });
+        body.appendChild(el("div", { class: "wl-head" }, [
+          TM.img.clubImg(cl3, "wl-flag big"),
+          el("div", { class: "wl-mid" }, [ el("div", { class: "wl-name", text: cl3.name }), el("div", { class: "wl-sub", text: "Elenco completo · força " + TM.data.clubRating(clubId) + (cl3.coach ? " · téc. " + cl3.coach : "") }) ])
+        ]));
+        body.appendChild(el("div", { class: "actions" }, [
+          TM.ui.button("🏟️ Sobre o clube", function () { TM.ui.go("coach-club-info", { clubId: clubId, back: "coach-world" }); }, "btn ghost small"),
+          TM.ui.button("← Todos os elencos", function () { TM.ui.go("coach-world-league", { lid: lid, tab: "squads" }); }, "btn ghost small")
+        ]));
+        if (!pls.length) body.appendChild(el("p", { class: "intro-text", text: "Elenco indisponível." }));
+        pls.forEach(function (pl) {
+          var row = TM.ui.playerRow(pl, {});
+          row.classList.add("clickable");
+          row.addEventListener("click", function () { try { TM.coachUI.openPlayer(pl, "coach-world"); } catch (e) {} });
+          body.appendChild(row);
+        });
       }
     } else {
       var sc = topScorers(L, 15);
