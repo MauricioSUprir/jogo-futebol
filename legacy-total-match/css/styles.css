@@ -3695,3 +3695,5 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .idol-part-v{font-weight:800;color:#35c46a;min-width:38px;text-align:right;flex:0 0 auto}
 .idol-part.bad .idol-part-v{color:#ff6a61}
 .idol-part-l{color:var(--text-dim)}
+.league-table tr.z-pre td:first-child{box-shadow:inset 3px 0 0 #7be2a0}
+.zone-key .zk.z-pre .zk-dot{background:#7be2a0}

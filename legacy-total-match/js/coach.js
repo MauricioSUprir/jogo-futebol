@@ -1227,7 +1227,6 @@
       hubBtn("🏆", "Competições", function () { TM.ui.go("coach-comps"); }),
       hubBtn("🌍", "Mundo", function () { TM.ui.go("coach-world"); }),
       hubBtn("💬", "Mensagens" + (function () { try { var u = TM.msgr ? TM.msgr.unread(c) : 0; return u ? " (" + u + ")" : ""; } catch (e) { return ""; } })(), function () { TM.ui.go("coach-messenger"); }),
-      hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
       hubBtn("🔁", "Mercado", function () { TM.ui.go("coach-market"); }),
       hubBtn("🔭", "Olheiros", function () { TM.ui.go("coach-scouting", { from: "coach-hub" }); }),
       hubBtn("⭐", "Central", function () { TM.ui.go("coach-shortlist"); }),
@@ -2769,6 +2768,7 @@
     if (key === "cup") return "cup-" + c.leagueId;
     if (key === "cont") return "cont-" + (C().REGION[c.leagueId] || "eu");
     if (key === "cont2") return "cont2-" + (C().REGION[c.leagueId] || "eu");
+    if (key === "contPre") return "cont-" + (C().REGION[c.leagueId] || "eu");
     if (key === "mundial") return "cwc-world";
     if (key === "inter") return "cwc-inter";
     return "lg-" + c.leagueId;
@@ -2780,6 +2780,7 @@
     addSectorBar(screen, "coach-comps");
     var tabs = [ { key: "league", label: c.comps.league.name } ];
     if (c.comps.cup) tabs.push({ key: "cup", label: c.comps.cup.name });
+    if (c.comps.contPre) tabs.push({ key: "contPre", label: c.comps.contPre.name });
     if (c.comps.cont) tabs.push({ key: "cont", label: c.comps.cont.name });
     if (c.comps.cont2) tabs.push({ key: "cont2", label: c.comps.cont2.name });
     if (c.comps.mundial) tabs.push({ key: "mundial", label: c.comps.mundial.name });
@@ -2800,7 +2801,8 @@
       TM.img.compImg(compIdFor(c, active), ""),
       el("div", { class: "ch-name", text: activeTab.label }),
       (active === "cont" && c.contVia) ? el("div", { class: "setting-hint", text: "Vaga conquistada como " + c.contVia + " na temporada passada." })
-        : (active === "cont2" && c.cont2Via) ? el("div", { class: "setting-hint", text: "Vaga da continental secundária: " + c.cont2Via + " na temporada passada (zona do 7º ao 12º)." }) : null
+        : (active === "cont2" && c.cont2Via) ? el("div", { class: "setting-hint", text: "Vaga da continental secundária: " + c.cont2Via + " na temporada passada (zona do 7º ao 12º)." })
+        : (active === "contPre" && c.contPreVia) ? el("div", { class: "setting-hint", text: "Fase pré: " + c.contPreVia + " na temporada passada. Quem passa entra na competição principal; quem cai vai para a secundária." }) : null
     ].filter(Boolean)));
 
     if (active === "league") renderLeague(screen, c);
@@ -2844,8 +2846,10 @@
     if (temCima) {
       zonas.push({ cls: "z-up", ate: 4, de: 1, lbl: "Acesso à " + ((TM.data.league(C().DIV_UP_MAP[lgId]) || {}).name || "divisão de cima"), ic: null, comp: "lg-" + C().DIV_UP_MAP[lgId] });
     } else {
-      zonas.push({ cls: "z-cont", de: 1, ate: 4, lbl: compName("cont-" + REG, "Continental"), comp: "cont-" + REG });
-      zonas.push({ cls: "z-cont2", de: 7, ate: 12, lbl: compName("cont2-" + REG, "Continental II"), comp: "cont2-" + REG });
+      var nDir = 4, nPre = (C().CONT_PRE_N || 2);
+      zonas.push({ cls: "z-cont", de: 1, ate: nDir, lbl: compName("cont-" + REG, "Continental"), comp: "cont-" + REG });
+      zonas.push({ cls: "z-pre", de: nDir + 1, ate: nDir + nPre, lbl: "Fase pré da " + compName("cont-" + REG, "Continental"), comp: "cont-" + REG });
+      zonas.push({ cls: "z-cont2", de: nDir + nPre + 1, ate: 12, lbl: compName("cont2-" + REG, "Continental II"), comp: "cont2-" + REG });
     }
     if (temBaixo) zonas.push({ cls: "z-releg", de: nL - 3, ate: nL, lbl: "Rebaixamento para a " + ((TM.data.league(C().DIV_DOWN_MAP[lgId]) || {}).name || "divisão de baixo"), comp: "lg-" + C().DIV_DOWN_MAP[lgId] });
     function zoneOf(pos) { for (var z = 0; z < zonas.length; z++) if (pos >= zonas[z].de && pos <= zonas[z].ate) return zonas[z]; return null; }
