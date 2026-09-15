@@ -2325,6 +2325,7 @@
           C().applyUserResult(c, hs, as, penWinnerId);
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           try { TM.scouting.tick(c); } catch (e) {}
+          try { if (TM.obs) TM.obs.tick(c); } catch (e) {}
           c.pressEdge = 0;
           TM.storage.saveCoachCareer(c);
           TM.ui.toast("Resultado registrado: " + hs + " × " + as);
@@ -2342,6 +2343,7 @@
           C().applyUserResult(c, hs, as, penWinnerId);
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           try { TM.scouting.tick(c); } catch (e) {}
+          try { if (TM.obs) TM.obs.tick(c); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
           TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId, leg: legI, userSide: userSide });
@@ -3282,6 +3284,7 @@
     chipRow.appendChild(chip("💰 Baratos", isCheap, function () { MKT.valMax = 12; MKT.sort = "ov"; MKT.ovMin = 0; MKT.age = 40; MKT.free = false; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("💵 No orçamento", MKT.affordable, function () { MKT.affordable = !MKT.affordable; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🔭 Indicados", MKT.scouted, function () { MKT.scouted = !MKT.scouted; TM.ui.go("coach-market"); }));
+    chipRow.appendChild(chip("📄 Com relatório", MKT.obsOnly, function () { MKT.obsOnly = !MKT.obsOnly; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("📝 Fim de contrato", MKT.ending, function () { MKT.ending = !MKT.ending; MKT.free = false; TM.ui.go("coach-market"); }));
     chipRow.appendChild(chip("🕵️ Olheiros", false, function () { TM.ui.go("coach-scouting", { from: "coach-market" }); }));
     chipRow.appendChild(chip("📰 Negócios", false, function () { TM.ui.go("coach-market-feed"); }));
@@ -3405,6 +3408,7 @@
         if (MKT.valMax && TM.data.marketValue(p) > MKT.valMax) return false;
         if (MKT.affordable && curVal(c, askingPrice(p)) > (c.budget || 0)) return false;
         if (MKT.scouted && !(TM.scouting && TM.scouting.isScouted(c, p.id))) return false;
+        if (MKT.obsOnly && !(TM.obs && TM.obs.isOpen(c, p.id))) return false;
         if (MKT.ending && !(TM.fin && TM.fin.endingContract(p, c))) return false;
         return true;
       }).sort(function (a, b) {
@@ -3424,6 +3428,13 @@
         var row = TM.ui.playerRow(p, { showClub: true });
         row.classList.add("clickable");
         if (TM.scouting && TM.scouting.isScouted(c, p.id)) { var nmEl = row.querySelector(".prow-name, .pr-name"); (nmEl || row).appendChild(el("span", { class: "mkt-scouted", text: "🔭 indicado" })); }
+        try {
+          if (TM.obs) {
+            var os = TM.obs.stateOf(c, p.id), nmO = row.querySelector(".prow-name, .pr-name");
+            if (os.st === "done") (nmO || row).appendChild(el("span", { class: "mkt-scouted obs-ok", text: "📄 relatório" }));
+            else if (os.st === "run") (nmO || row).appendChild(el("span", { class: "mkt-scouted obs-run", text: "🔭 " + os.left + "d" }));
+          }
+        } catch (e) {}
         if (!p.freeAgent && TM.fin && TM.fin.endingContract(p, c)) { var nmEl2 = row.querySelector(".prow-name, .pr-name"); (nmEl2 || row).appendChild(el("span", { class: "mkt-scouted ending", text: "📝 fim de contrato" })); }
         // estrela: adiciona/remove da Central de transferências
         var star = el("button", { class: "shortlist-star" + (c.shortlist.indexOf(p.id) >= 0 ? " on" : ""), text: c.shortlist.indexOf(p.id) >= 0 ? "★" : "☆",
@@ -3435,11 +3446,11 @@
         row.appendChild(star);
         if (p.freeAgent) {
           row.appendChild(el("div", { class: "price-tag" }, [ el("span", { text: "Livre" }), el("span", { class: "price-note", text: "grátis" }) ]));
-          row.addEventListener("click", function () { NEGO = { pid: p.id, oldClubId: null, fee: 0 }; TM.ui.go("coach-nego-player"); });
+          row.addEventListener("click", function () { TM.ui.go("coach-target", { pid: p.id, back: "coach-market" }); });
         } else {
           var price = curVal(c, askingPrice(p)), afford = price <= c.budget;
           row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [ el("span", { text: money(c, price) }), el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" }) ]));
-          row.addEventListener("click", function () { TM.ui.go("coach-nego-club", { pid: p.id }); });
+          row.addEventListener("click", function () { TM.ui.go("coach-target", { pid: p.id, back: "coach-market" }); });
         }
         results.appendChild(row);
       });
@@ -3949,6 +3960,12 @@
   });
 
   var NEGO = null;
+  // permite abrir a negociação a partir de outras telas (ex.: ficha do alvo)
+  TM.coachUI = TM.coachUI || {};
+  TM.coachUI.openNego = function (pid, oldClubId, fee) {
+    NEGO = { pid: pid, oldClubId: oldClubId || null, fee: fee || 0 };
+    TM.ui.go("coach-nego-player");
+  };
 
   // CHEGADA do reforço (entra no elenco). Fora da janela, fica pendente e só acontece quando a janela abrir.
   function completeSigning(c, p, nego, terms, share, quiet) {
