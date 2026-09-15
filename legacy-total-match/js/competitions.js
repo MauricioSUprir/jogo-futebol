@@ -1287,7 +1287,9 @@
     if (lossStreak >= cfg.sackStreak) {
       career.lastBoardCall = matchNo;
       TM.notify.push(career, { icon: "☎️", title: "Chamada da diretoria", boardCall: true,
-        text: boardLabel(career) + " está muito insatisfeita: " + lossStreak + " derrotas seguidas. O seu cargo está por um fio — vença os próximos jogos ou será demitido." });
+        text: boardLabel(career) + " está muito insatisfeita: " + lossStreak + " derrotas seguidas. " + (career.noSack
+          ? "Não vão te demitir, mas o clima ficou pesado e a cobrança é pública."
+          : "O seu cargo está por um fio — vença os próximos jogos ou será demitido.") });
       return;
     }
     if (lossStreak >= cfg.badStreak) {
@@ -1848,6 +1850,12 @@
     if (wc) {
       if (!wc.convoked && career.currentDay > wc.deadlineDay) {
         var nmc = career.nation.name;
+        if (career.noSack) {
+          // estabilidade: a federação convoca por você em vez de demitir
+          wc.convoked = true;
+          TM.notify.push(career, { icon: "📋", title: "Convocação feita pela comissão", text: "Você perdeu o prazo, mas a comissão técnica enviou a lista de " + nmc + " no seu lugar. Dá para ajustar a escalação antes do jogo." });
+          return;
+        }
         career.nation = null;
         TM.notify.push(career, { icon: "🚫", title: "Demitido da seleção", text: "Você não convocou " + nmc + " para a Copa do Mundo a tempo. Perdeu o cargo na seleção e segue apenas no clube." });
       }
@@ -1856,6 +1864,11 @@
     var w = nationNextWindow(career);
     if (w && !w.convoked && career.currentDay > w.deadlineDay) {
       var nm = career.nation.name;
+      if (career.noSack) {
+        w.convoked = true;
+        TM.notify.push(career, { icon: "📋", title: "Convocação feita pela comissão", text: "Você perdeu o prazo, mas a comissão técnica enviou a lista de " + nm + " no seu lugar." });
+        return;
+      }
       career.nation = null;
       TM.notify.push(career, { icon: "🚫", title: "Demitido da seleção", text: "Você não enviou a convocação de " + nm + " a tempo. Perdeu o cargo na seleção e segue apenas no clube." });
     }
@@ -2554,6 +2567,11 @@
           if (wr >= 0.42) {
             mc.years = 2; mc.wage = Math.round(mc.wage * 1.12 * 100) / 100; mc.fine = Math.round(mc.wage * 1.6 * 100) / 100; mc.signedSeason = career.season;
             TM.notify.push(career, { icon: "🤝", title: "Renovação automática", news: true, text: "Satisfeita com a campanha, a diretoria renovou seu contrato por mais 2 temporadas com aumento salarial." });
+          } else if (career.noSack) {
+            // estabilidade no cargo: renova a contragosto, sem aumento
+            mc.years = 2; mc.signedSeason = career.season;
+            TM.notify.push(career, { icon: "📜", title: "Contrato renovado a contragosto", news: true,
+              text: "A campanha ficou abaixo do esperado, mas a diretoria renovou seu vínculo por mais 2 temporadas, sem aumento. O recado foi dado nos bastidores." });
           } else {
             career.unemployed = true; career._lastOfferGen = 0; career.sackCount = (career.sackCount || 0) + 1;
             if (!career.clubHistory) career.clubHistory = [];
