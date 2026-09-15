@@ -4001,3 +4001,19 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ut-duel-nm{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ut-duel-sq{font-size:11px;color:var(--text-dim);margin-top:3px}
 .ut-duel-x{font-size:17px;font-weight:900;color:var(--text-dim);flex:0 0 auto}
+
+/* ---------- troca: pedir um jogador do clube que fez a proposta ---------- */
+.sweet-chip.swap.on{background:#22c55e;border-color:#22c55e;color:#04240f}
+.swap-pick{margin:8px 0 0}
+.swap-row{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:9px 11px}
+.swap-face{width:42px;height:42px;border-radius:50%;object-fit:cover;flex:0 0 auto}
+.swap-i{flex:1;min-width:0}
+.swap-n{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.swap-s{font-size:11.5px;color:var(--text-dim);margin-top:2px}
+.swap-x{background:none;border:none;color:var(--text-dim);font-size:17px;cursor:pointer;padding:2px 6px}
+.swap-warn{font-size:11.5px;color:#ff9d8a;margin-top:6px}
+.swap-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.swap-val{margin-left:auto;font-size:12px;font-weight:800;color:#7be2a0;white-space:nowrap;padding-left:8px}
+.swap-deal{background:linear-gradient(120deg,rgba(34,197,94,.14),var(--panel));border:1px solid #22c55e;border-radius:13px;padding:11px;margin:10px 0}
+.swap-deal-t{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#7be2a0;margin-bottom:8px}
+.swap-deal .swap-row{background:transparent;border:none;padding:0}
