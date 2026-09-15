@@ -117,10 +117,19 @@
     var alvo = targetRating(career), lv = coachLevel(career);
     var W = TM.data.world();
     var open = {}; career.jobOffers.forEach(function (o) { open[o.clubId] = true; });
+    // 7% das vezes um clube acima do seu patamar arrisca em você — raro, mas acontece
+    var surpresa = Math.random() < 0.07;
+    var teto = alvo + (surpresa ? 10 : 4);
     var pool = W.clubs.filter(function (cl) {
       if (cl.id === career.teamId || open[cl.id]) return false;
       var r = rating(cl.id);
-      if (r > alvo + 4 || r < alvo - 11) return false;    // a faixa sai do SEU nível, não do elenco que você tinha
+      if (r > teto || r < alvo - 11) return false;        // a faixa sai do SEU nível, não do elenco que você tinha
+      if (surpresa && r > alvo + 4) {
+        // no tiro de sorte, só o porte manda — a região ainda pesa
+        var cl2 = null; try { cl2 = TM.data.club(cl.id); } catch (e) {}
+        var mr = regionOfLeague(career.leagueId), dr = cl2 ? regionOfLeague(cl2.leagueId) : mr;
+        return mr === dr || lv >= 45;
+      }
       return wouldHire(career, cl.id).ok;
     });
     if (!pool.length) { career._lastOfferGen = matchNo; return; }
@@ -138,7 +147,8 @@
     career.jobOffers.unshift({
       id: "job-" + cl.id + "-" + matchNo + "-" + Math.floor(Math.random() * 999),
       clubId: cl.id, clubName: cl.name, leagueName: lg ? lg.name : "",
-      rating: r, tier: tierOf(r), desc: pick(descs),
+      rating: r, tier: tierOf(r), desc: (r > alvo + 4 ? "apostou alto e quer conversar com você mesmo fora do radar" : pick(descs)),
+      surpresa: r > alvo + 4,
       wage: r2(Math.max(0.3, (r - 55) * 0.35) * mult(career)),
       matchNo: matchNo, season: career.season, seen: false, lv: lv
     });

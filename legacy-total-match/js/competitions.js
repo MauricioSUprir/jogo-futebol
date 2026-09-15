@@ -935,6 +935,13 @@
     career.jobOffers = [];
     career.unemployed = false;
     career.matchNo = 0; career.currentDay = 0;
+    // visual: o clube antigo volta ao original e o novo entra com o que for dele
+    try {
+      var velho = TM.data.club(career.clubHistory[career.clubHistory.length - 1].clubId);
+      if (velho) { delete velho.crestData; delete velho.kitData; delete velho.kitAwayData; delete velho.kitThirdData; }
+    } catch (e) {}
+    career.kitChanges = null; career.kitPick = null;
+    try { if (TM.coachUI && TM.coachUI.applyKitOverrides) TM.coachUI.applyKitOverrides(career); } catch (e) {}
     seasonSetup(career);
     TM.notify.push(career, { icon: "🤝", title: "Novo desafio", news: true, title2: club.name, text: "Você assumiu o comando do " + club.name + "! Uma nova história começa." });
     return career;

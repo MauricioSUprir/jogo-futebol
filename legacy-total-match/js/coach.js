@@ -432,7 +432,7 @@
   // repasse do jogador aposentado (Rumo ao Estrelato) que virou treinador
   var exPlayerHandoff = null;
   function freshSetup(clubId, mode) {
-    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador", allowRestart: false, noSack: false };
+    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador", allowRestart: false, noSack: false, sackMode: "propostas" };
     if (exPlayerHandoff) { s.coachName = exPlayerHandoff.name || ""; s.coachPhoto = exPlayerHandoff.photo || null; s.coachMode = "create"; }
     return s;
   }
@@ -780,6 +780,26 @@
       sackHint
     ]));
 
+    // o que acontece quando você fica sem clube
+    var SACK_MODES = [
+      ["propostas", "Esperar propostas", "Realista: você passa os dias sem clube e os convites chegam no tempo deles."],
+      ["escolher2", "Escolher entre dois", "Ao ficar livre, o jogo apresenta dois clubes interessados e você decide."],
+      ["escolher1", "Escolher o clube", "Ao ficar livre, você escolhe qualquer clube que te aceitaria. Bem mais fácil."]
+    ];
+    var smWrap = el("div", { class: "board-opts" });
+    var smHint = el("div", { class: "setting-hint", text: SACK_MODES[0][2] });
+    SACK_MODES.forEach(function (o) {
+      var bt = el("button", { class: "board-opt" + (opts.sackMode === o[0] ? " on" : ""), text: o[1], on: { click: function () {
+        opts.sackMode = o[0];
+        Array.prototype.forEach.call(smWrap.children, function (x) { x.classList.remove("on"); });
+        bt.classList.add("on"); smHint.textContent = o[2];
+      } } });
+      smWrap.appendChild(bt);
+    });
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting-label", text: "🚪 Quando eu ficar sem clube" }), smWrap, smHint
+    ]));
+
     // comandar também uma seleção
     var natWrap = el("div", { class: "setting" });
     var natToggle = el("button", { class: "switch" + (opts.nationId ? " on" : ""), on: { click: function () {
@@ -831,6 +851,7 @@
         var career = C().newClubCareer(clubId, opts);
         career.allowRestart = !!opts.allowRestart;
         career.noSack = !!opts.noSack;
+        career.sackMode = opts.sackMode || "propostas";
         if (isCustom) { career.isCustomClub = true; customDraft = null; }
         TM.storage.saveCoachCareer(career);
         pendingSetup = null; exPlayerHandoff = null;
@@ -874,6 +895,7 @@
 
   /* ---------- hub ---------- */
   TM.ui.register("coach-hub", function (screen) {
+    try { var _c0 = TM.storage.coachCareer(); if (_c0 && _c0.unemployed && TM.free) { TM.ui.go("coach-free"); return; } } catch (e) {}
     var c = TM.storage.coachCareer();
     if (!c) { TM.ui.go("coach"); return; }
     if (c.type === "director") TM.club.migrateDirector(c);
@@ -1469,7 +1491,8 @@
             c.unemployed = true; if (!c.clubHistory) c.clubHistory = [];
             c.clubHistory.push({ clubId: c.teamId, clubName: c.teamName, season: c.season, left: "rescindiu contrato" });
             c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
-            TM.storage.saveCoachCareer(c); TM.ui.go("coach-offers");
+            try { if (TM.free) TM.free.openingBuzz(c); } catch (e) {}
+            TM.storage.saveCoachCareer(c); TM.ui.go(TM.free ? "coach-free" : "coach-offers");
           }, true);
         }, "btn danger small")
       ])
@@ -1725,7 +1748,8 @@
           if (!c.clubHistory) c.clubHistory = [];
           c.clubHistory.push({ clubId: c.teamId, clubName: c.teamName, season: c.season, left: "demitido pela diretoria" });
           c._lastOfferGen = 0; try { C().generateJobOffers(c); } catch (e) {}
-          TM.storage.saveCoachCareer(c); TM.ui.go("coach-offers");
+          try { if (TM.free) TM.free.openingBuzz(c); } catch (e) {}
+          TM.storage.saveCoachCareer(c); TM.ui.go(TM.free ? "coach-free" : "coach-offers");
         }, "btn primary"),
         TM.ui.button("🗑️ Encerrar carreira", function () { TM.storage.clearCoachCareer(); TM.ui.go("modes"); }, "btn ghost")
       ]));
@@ -2724,16 +2748,34 @@
     return c.kitChanges.used[slot] ? false : true;
   }
   function kitChangeUse(c, slot) { kitChangeSlot(c, slot); c.kitChanges.used[slot] = true; }
-  function applyKitOverrides(c) {
-    if (!c) return;
-    if (c.crestOverride) { var cl0 = TM.data.club(c.teamId); if (cl0) cl0.crestData = c.crestOverride; }
-    if (!c.kitOverrides) return;
-    var club = TM.data.club(c.teamId); if (!club) return;
-    if (c.crestOverride) club.crestData = c.crestOverride;
-    if (c.kitOverrides[0]) club.kitData = c.kitOverrides[0];
-    if (c.kitOverrides[1]) club.kitAwayData = c.kitOverrides[1];
-    if (c.kitOverrides[2]) club.kitThirdData = c.kitOverrides[2];
+  // escudo e uniformes ficam guardados POR CLUBE (c.clubSkins[clubId]).
+  // Antes moravam soltos na carreira e, ao trocar de clube, a camisa do time
+  // antigo era aplicada no novo.
+  function skinOf(c, clubId) {
+    if (!c) return null;
+    c.clubSkins = c.clubSkins || {};
+    clubId = clubId || c.teamId;
+    // migração: overrides antigos pertencem ao clube em que você estava
+    if ((c.crestOverride || c.kitOverrides) && c.teamId && !c.clubSkins[c.teamId]) {
+      c.clubSkins[c.teamId] = { crest: c.crestOverride || null, kits: c.kitOverrides || {} };
+      delete c.crestOverride; delete c.kitOverrides;
+    }
+    if (!c.clubSkins[clubId]) c.clubSkins[clubId] = { crest: null, kits: {} };
+    return c.clubSkins[clubId];
   }
+  function applyKitOverrides(c) {
+    if (!c || !c.teamId) return;
+    var sk = skinOf(c, c.teamId), club = TM.data.club(c.teamId);
+    if (!club) return;
+    // o clube volta ao visual original antes de receber o que for do treinador
+    delete club.crestData; delete club.kitData; delete club.kitAwayData; delete club.kitThirdData;
+    if (!sk) return;
+    if (sk.crest) club.crestData = sk.crest;
+    if (sk.kits && sk.kits[0]) club.kitData = sk.kits[0];
+    if (sk.kits && sk.kits[1]) club.kitAwayData = sk.kits[1];
+    if (sk.kits && sk.kits[2]) club.kitThirdData = sk.kits[2];
+  }
+  TM.coachUI = TM.coachUI || {}; TM.coachUI.skinOf = skinOf;
   TM.coachUI = TM.coachUI || {}; TM.coachUI.applyKitOverrides = applyKitOverrides;
   function clubHistory(club) {
     var s = String(club.id || club.name), h = 2166136261;
@@ -2801,7 +2843,7 @@
         var canK = kitChangeSlot(c, "kit" + v);
         tile.appendChild(el("button", { class: "ci-kit-edit" + (canK ? "" : " locked"), text: canK ? "✏️ Trocar" : "🔒 Trocado nesta temporada", on: { click: function () {
           if (!kitChangeSlot(c, "kit" + v)) { TM.ui.toast("O " + lbl + " uniforme já foi trocado nesta temporada. Só na próxima."); return; }
-          importImage(function (data) { c.kitOverrides = c.kitOverrides || {}; c.kitOverrides[v] = data; kitChangeUse(c, "kit" + v); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
+          importImage(function (data) { var sk = skinOf(c, c.teamId); sk.kits = sk.kits || {}; sk.kits[v] = data; kitChangeUse(c, "kit" + v); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
         } } }));
       }
       krow.appendChild(tile);
@@ -2819,9 +2861,9 @@
           el("div", { class: "note-actions" }, [
             el("button", { class: "ci-kit-edit" + (canC ? "" : " locked"), text: canC ? "✏️ Trocar escudo" : "🔒 Trocado nesta temporada", on: { click: function () {
               if (!kitChangeSlot(c, "crest")) { TM.ui.toast("O escudo já foi trocado nesta temporada. Só na próxima."); return; }
-              importImage(function (data) { c.crestOverride = data; kitChangeUse(c, "crest"); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Escudo atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); }, 256);
+              importImage(function (data) { skinOf(c, c.teamId).crest = data; kitChangeUse(c, "crest"); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Escudo atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); }, 256);
             } } }),
-            c.crestOverride ? el("button", { class: "ci-kit-edit", text: "↩ Escudo original", on: { click: function () { c.crestOverride = null; var cl1 = TM.data.club(c.teamId); if (cl1) delete cl1.crestData; TM.storage.saveCoachCareer(c); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); } } }) : null
+            (skinOf(c, c.teamId).crest) ? el("button", { class: "ci-kit-edit", text: "↩ Escudo original", on: { click: function () { skinOf(c, c.teamId).crest = null; applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); } } }) : null
           ].filter(Boolean))
         ]),
         el("div", { class: "setting-hint", text: "O escudo só pode ser trocado UMA vez por temporada." })

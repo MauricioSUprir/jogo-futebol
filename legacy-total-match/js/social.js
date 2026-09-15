@@ -27,6 +27,14 @@
     if (ph) img.addEventListener("error", function () { img.src = userAvatar(handle); });
     return img;
   }
+  // post de clube usa o escudo do clube, não a foto de uma pessoa qualquer
+  function clubAvatar(cls, clubId) {
+    try {
+      var cl = TM.data.club(clubId);
+      if (cl) { var im = TM.img.clubImg(cl, cls + " club"); return im; }
+    } catch (e) {}
+    return null;
+  }
   var _me = null;   // carreira atual (para o avatar do próprio treinador)
   function myAvatar(cls) {
     var c = _me || {}; var name = c.coachName || c.name || "T";
@@ -137,6 +145,7 @@
   function post(o) {
     return {
       id: nid(), handle: o.handle, verified: !!o.verified, badge: o.badge || null, photo: o.photo || null,
+      clubId: o.clubId || null,
       text: o.text, likes: o.likes != null ? o.likes : rint(20, 900), liked: false, reposts: rint(0, 300),
       comments: o.comments || makeComments(commentCountFor(o), moodOfPost(o)), kind: o.kind || "banter", age: ageLabel(),
       morale: o.morale || 0
@@ -160,6 +169,70 @@
   /* ---------- geração de posts a partir do contexto ---------- */
   // clube "do usuário": treinador usa teamId, jogador (RÉ) usa clubId
   function mainClubId(career) { return career.teamId != null ? career.teamId : career.clubId; }
+
+  /* ---------- PERFIL OFICIAL DO CLUBE: o próprio time postando ----------
+     Posts com o escudo no lugar da foto de pessoa, no tom de rede social de
+     clube: dia de jogo, escalação, resultado, bastidores, base, sócio. */
+  function clubPosts(career, myClub, last, star, rival, pos) {
+    var out = [], nome = myClub.name, cid = myClub.id;
+    function cpost(o) { o.handle = nome; o.verified = true; o.clubId = cid; o.kind = o.kind || "club"; o.badge = o.badge || "Oficial"; return post(o); }
+
+    // dia de jogo / pré-jogo
+    var next = null; try { next = career.pending && !career.pending.seasonEnd ? career.pending : null; } catch (e) {}
+    if (next && chance(0.75)) {
+      var advId = next.homeId === cid ? next.awayId : next.homeId, adv = null;
+      try { adv = TM.data.club(advId); } catch (e) {}
+      var casa = next.homeId === cid;
+      out.push(cpost({ badge: "⚽ Dia de jogo", photo: chance(0.6) ? photoOf(casa ? "torcida" : "jogo") : null, morale: 0.5,
+        text: pick([
+          "DIA DE JOGO! 🔥 " + (casa ? "Em casa" : "Fora de casa") + " contra o " + (adv ? adv.name : "adversário") + ". Vamos juntos! #Vamos" + nome.replace(/\s/g, ""),
+          "Hoje tem " + nome + "! " + (casa ? "Nossa casa, nossas regras." : "Levamos a nossa torcida no peito.") + " 💪",
+          "Tudo pronto para mais uma. " + (adv ? adv.name : "Adversário") + " pela frente. Bora, nação! ⚪🔴"
+        ]), likes: rint(2000, 22000) }));
+    }
+    // escalação divulgada
+    if (next && chance(0.5)) {
+      var onze = [];
+      try { onze = (career.lineup && career.lineup.starters || []).slice(0, 11).map(function (id) { var p = TM.comp.resolvePlayer(career, id); return p ? p.name.split(" ").pop() : null; }).filter(Boolean); } catch (e) {}
+      if (onze.length >= 7) {
+        out.push(cpost({ badge: "📋 Escalação", morale: 0.2,
+          text: "ESCALAÇÃO DEFINIDA! 📋\n\n" + onze.join(" · ") + "\n\nÉ com esses que vamos pra cima! 💚",
+          likes: rint(1500, 18000) }));
+      }
+    }
+    // reação do clube ao último resultado
+    if (last === "V" && chance(0.8)) {
+      out.push(cpost({ badge: "✅ Vitória", photo: chance(0.7) ? photoOf("jogo") : null, morale: 1,
+        text: pick([
+          "VITÓRIA DO " + nome.toUpperCase() + "! 🎉 Três pontos e muito trabalho no gramado. Obrigado, torcida!",
+          "É DELE, É NOSSO, É DO " + nome.toUpperCase() + "! Que jogo, que entrega. 👏",
+          "Trabalho reconhecido dentro de campo. Seguimos firmes. 🔝"
+        ]), likes: rint(4000, 40000) }));
+    } else if (last === "D" && chance(0.6)) {
+      out.push(cpost({ badge: "📌 Nota oficial", morale: -0.2,
+        text: pick([
+          "Não foi o resultado que queríamos. O grupo já se reapresenta amanhã para virar a chave. Obrigado a quem esteve com a gente.",
+          "Derrota dói, mas não muda o caminho. Cabeça erguida e trabalho. 🤍",
+          "Assumimos a responsabilidade. Vamos corrigir e responder dentro de campo."
+        ]), likes: rint(800, 9000) }));
+    }
+    // bastidores, base, sócio e clássico
+    if (chance(0.45)) out.push(cpost({ badge: "🎥 Bastidores", photo: chance(0.6) ? photoOf("uniao") : null,
+      text: pick(["Manhã de trabalho no CT. Foco total na próxima. 🎬", "Bola rolando no treino de hoje. Grupo à disposição da comissão.",
+        star ? "Mais um dia de dedicação. E o " + star.name + " caprichando na finalização. 🎯" : "Academia, campo e muita conversa. É assim que se constrói."]),
+      likes: rint(900, 12000) }));
+    if (chance(0.22)) out.push(cpost({ badge: "🌱 Base",
+      text: pick(["Nossa base segue formando talento. Garotada treinando forte no CT!", "Time sub-20 vence e segue na briga. O futuro do clube passa por aqui. 🌱"]),
+      likes: rint(400, 5000) }));
+    if (chance(0.2)) out.push(cpost({ badge: "🎟️ Ingressos",
+      text: pick(["Ingressos à venda para o próximo jogo em casa! Sócio tem prioridade. 🎟️", "Vamos lotar a nossa casa. Garanta o seu lugar!"]),
+      likes: rint(300, 4000) }));
+    if (rival && chance(0.18)) out.push(cpost({ badge: "🔥 Clássico", photo: chance(0.5) ? photoOf("torcida") : null, morale: 0.4,
+      text: "Semana de clássico contra o " + rival + ". Prepara o coração, nação! ❤️‍🔥", likes: rint(3000, 30000) }));
+    if (pos && pos <= 4 && chance(0.25)) out.push(cpost({ badge: "📊 Tabela",
+      text: nome + " em " + pos + "º lugar. Um passo de cada vez, com os pés no chão e o olho lá em cima. 👀", likes: rint(1200, 14000) }));
+    return out;
+  }
 
   function genBatch(career) {
     var W = TM.data.world();
@@ -205,12 +278,8 @@
         likes: rint(500, 9000) }));
     }
 
-    // --- post da DIRETORIA (oficial) de vez em quando ---
-    if (chance(0.4)) {
-      out.push(post({ handle: myClub.name + " 🏛️", verified: true, kind: "board", badge: "Oficial", photo: chance(0.5) ? photoOf("uniao") : null,
-        text: pick(["Nota oficial: a diretoria reafirma total confiança no elenco e na comissão técnica. Juntos somos mais fortes! 💚", "Comunicado: seguimos trabalhando por reforços que elevem o nível do time. Contamos com a nossa torcida!", "A diretoria agradece o apoio incondicional da nossa nação. Vamos em busca dos nossos objetivos!", "Reunião definida com a comissão técnica para alinhar o planejamento da temporada."]),
-        likes: rint(300, 4000), morale: 0.4 }));
-    }
+    // --- PERFIL OFICIAL DO CLUBE: o próprio time postando ---
+    out = out.concat(clubPosts(career, myClub, last, star, rival, pos));
 
     // --- rumor HERE WE GO (mercado) ---
     if (chance(0.45)) {
@@ -369,7 +438,7 @@
     cBtn.addEventListener("click", function () { openComments(career, p, save); });
 
     var head = el("div", { class: "post-head" }, [
-      p.mine ? myAvatar("post-ava") : avatarImg("post-ava", p.handle),
+      p.mine ? myAvatar("post-ava") : (p.clubId ? (clubAvatar("post-ava", p.clubId) || avatarImg("post-ava", p.handle)) : avatarImg("post-ava", p.handle)),
       el("div", { class: "post-id" }, [
         el("div", { class: "post-handle" }, [ el("span", { text: p.handle.replace(/🔴⚪|🏛️/g, "").trim() }), p.verified ? el("span", { class: "post-verified", text: "✔" }) : null ]),
         el("div", { class: "post-time", text: "há " + p.age })
