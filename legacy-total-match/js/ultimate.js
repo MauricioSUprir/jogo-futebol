@@ -77,8 +77,10 @@
 
   /* ================= cartas ================= */
   // raridade pela nota; versões: base / rara / TOTW (Time da Semana)
-  function rarOf(ov) { return ov >= 75 ? "g" : ov >= 65 ? "s" : "b"; }
-  var RAR_NAME = { b: "Bronze", s: "Prata", g: "Ouro" };
+  // patamares do Total Match (em vez de bronze/prata/ouro): o topo é raro de verdade
+  function rarOf(ov) { return ov >= 85 ? "l" : ov >= 75 ? "g" : ov >= 65 ? "s" : "b"; }
+  var RAR_NAME = { b: "Base", s: "Elite", g: "Craque", l: "Lenda" };
+  var RAR_ORDER = ["b", "s", "g", "l"];
 
   // Time da Semana: 23 jogadores sorteados por semana, com +2 de nota
   var _totw = null, _totwWeek = -1;
@@ -123,9 +125,9 @@
     else if (ov <= 69) v = 250 + (ov - 63) * 60;
     else if (ov <= 74) v = 650 + (ov - 69) * 190;
     else if (ov <= 79) v = 1600 + (ov - 74) * 900;
-    else if (ov <= 84) v = 6100 + (ov - 79) * 4200;
-    else if (ov <= 88) v = 27100 + (ov - 84) * 22000;
-    else v = 115100 + (ov - 88) * 90000;
+    else if (ov <= 84) v = 6100 + (ov - 79) * 5200;
+    else if (ov <= 88) v = 32100 + (ov - 84) * 52000;
+    else v = 240100 + (ov - 88) * 260000;
     if (ver === "totw") v = Math.round(v * 2.6);
     return Math.round(v);
   }
@@ -223,7 +225,7 @@
   var S = null;
   function blank() {
     return {
-      v: 1, club: "", coins: 25000, cards: [],
+      v: 1, club: "", coins: 9000, cards: [],
       squad: { f: "4-3-3", xi: [null, null, null, null, null, null, null, null, null, null, null], sub: [] },
       mkt: { day: -1, buy: [], sell: [] },
       riv: { div: 10, pts: 0, pl: 0, w: 0, d: 0, l: 0, seas: 1, best: 10, wk: 0, wkDay: -1 },
@@ -264,11 +266,11 @@
   var PACKS = [
     { id: "bronze", name: "Pacote Bronze", desc: "12 itens · 1 raro garantido", price: 400, n: 12, lo: 45, hi: 64, rare: 0.10 },
     { id: "prata", name: "Pacote Prata", desc: "12 itens · 1 raro garantido", price: 2500, n: 12, lo: 62, hi: 74, rare: 0.16, up: 0.04 },
-    { id: "ouro", name: "Pacote Ouro", desc: "12 itens · mínimo 75 de nota", price: 7500, n: 12, lo: 75, hi: 99, rare: 0.22 },
-    { id: "ourorare", name: "Ouro Raro", desc: "12 itens · todos raros", price: 25000, n: 12, lo: 75, hi: 99, rare: 1 },
-    { id: "jumbo", name: "Jumbo Ouro Raro", desc: "24 itens · todos raros · 1 jogador 83+ garantido", price: 55000, n: 24, lo: 75, hi: 99, rare: 1, floor: 83 },
-    { id: "mega", name: "Mega Pacote", desc: "24 itens · 1 jogador 86+ garantido · chance de Time da Semana", price: 125000, n: 24, lo: 78, hi: 99, rare: 1, floor: 86, totw: 0.35 },
-    { id: "premium", name: "Pacote Premium", desc: "24 itens · 1 jogador 87+ garantido · alta chance de Time da Semana", tc: 15, n: 24, lo: 80, hi: 99, rare: 1, floor: 87, totw: 0.6 }
+    { id: "ouro", name: "Pacote Craque", desc: "12 itens · mínimo 75 de nota", price: 9000, n: 12, lo: 75, hi: 99, rare: 0.22 },
+    { id: "ourorare", name: "Craque Raro", desc: "12 itens · todos raros", price: 30000, n: 12, lo: 75, hi: 99, rare: 1 },
+    { id: "jumbo", name: "Jumbo Craque", desc: "24 itens · todos raros · 1 jogador 80+ garantido", price: 70000, n: 24, lo: 75, hi: 99, rare: 1, floor: 80 },
+    { id: "mega", name: "Mega Pacote", desc: "24 itens · 1 jogador 83+ garantido · chance de Seleção da Semana", price: 180000, n: 24, lo: 78, hi: 99, rare: 1, floor: 83, totw: 0.18 },
+    { id: "premium", name: "Pacote Lendário", desc: "24 itens · 1 jogador 84+ garantido · a melhor chance de Lenda", tc: 15, n: 24, lo: 80, hi: 99, rare: 1, floor: 84, totw: 0.3 }
   ];
   function packById(id) { for (var i = 0; i < PACKS.length; i++) if (PACKS[i].id === id) return PACKS[i]; return null; }
 
@@ -278,7 +280,7 @@
     for (var tries = 0; tries < 220; tries++) {
       var p = src[Math.floor(rnd() * src.length)];
       if (!p || p.overall < lo || p.overall > hi) continue;
-      var w = Math.pow(0.70, Math.max(0, p.overall - lo));
+      var w = Math.pow(0.60, Math.max(0, p.overall - lo));
       if (rnd() < w) return p;
     }
     // rede de segurança: pega qualquer um na faixa
@@ -324,7 +326,9 @@
     if (s.mkt.day === d && s.mkt.buy && s.mkt.buy.length) return;
     var rnd = mulberry(hashStr("mkt" + d + "" + s.seed));
     var list = [];
-    var bands = [[45, 64, 16], [65, 74, 20], [75, 79, 18], [80, 83, 12], [84, 86, 7], [87, 99, 3]];
+    // o mercado do dia vai até 86: quem quer Lenda (85+) precisa tirar de pacote,
+    // fechar um DME difícil ou subir de divisão — não dá para simplesmente comprar
+    var bands = [[45, 64, 16], [65, 74, 20], [75, 79, 18], [80, 83, 10], [84, 86, 3]];
     bands.forEach(function (b) {
       for (var i = 0; i < b[2]; i++) {
         var p = drawPlayer(b[0], b[1], rnd);
@@ -333,7 +337,9 @@
         if (isTotw(p.id) && rnd() < 0.5) ver = "totw";
         var ov = p.overall + (ver === "totw" ? 2 : 0);
         var base = basePrice(ov, ver);
-        var bin = Math.round(base * (0.85 + rnd() * 0.45) / 50) * 50;
+        // quanto melhor a carta, mais os vendedores pedem acima da média
+        var sobretaxa = ov >= 84 ? 1.6 : ov >= 80 ? 1.2 : 1;
+        var bin = Math.round(base * sobretaxa * (0.9 + rnd() * 0.5) / 50) * 50;
         list.push({ k: "m" + d + "_" + list.length, p: p.id, v: ver, bin: Math.max(200, bin) });
       }
     });
@@ -400,7 +406,11 @@
       else if (r.t === "sameLeague") { have = countBy(function (d) { return d.lg; }); label = "Jogadores da mesma liga: " + r.v; }
       else if (r.t === "sameNation") { have = countBy(function (d) { return d.nat; }); label = "Jogadores do mesmo país: " + r.v; }
       else if (r.t === "sameClub") { have = countBy(function (d) { return d.club ? d.club.id : null; }); label = "Jogadores do mesmo clube: " + r.v; }
-      else if (r.t === "rar") { have = filled.filter(function (d) { return d.rar === r.r; }).length; label = "Cartas " + RAR_NAME[r.r] + ": " + r.v; }
+      else if (r.t === "rar") {
+        var mi = RAR_ORDER.indexOf(r.r);
+        have = filled.filter(function (d) { return RAR_ORDER.indexOf(d.rar) >= mi; }).length;
+        label = "Cartas " + RAR_NAME[r.r] + " ou melhor: " + r.v;
+      }
       else if (r.t === "rare") { have = filled.filter(function (d) { return d.ver === "rare" || d.ver === "totw"; }).length; label = "Cartas raras: " + r.v; }
       else if (r.t === "totw") { have = filled.filter(function (d) { return d.ver === "totw"; }).length; label = "Cartas do Time da Semana: " + r.v; }
       return { label: label, have: have, need: r.v, ok: have >= r.v };
@@ -440,11 +450,11 @@
 
   /* ================= Rivais (divisões) ================= */
   var DIVS = [
-    { d: 10, need: 9, ov: 58, win: 1200 }, { d: 9, need: 12, ov: 62, win: 1800 },
-    { d: 8, need: 15, ov: 66, win: 2600 }, { d: 7, need: 18, ov: 70, win: 3600 },
-    { d: 6, need: 21, ov: 73, win: 4800 }, { d: 5, need: 24, ov: 76, win: 6500 },
-    { d: 4, need: 27, ov: 79, win: 8500 }, { d: 3, need: 30, ov: 82, win: 11000 },
-    { d: 2, need: 33, ov: 85, win: 15000 }, { d: 1, need: 999, ov: 88, win: 22000 }
+    { d: 10, need: 12, ov: 58, win: 800 }, { d: 9, need: 15, ov: 62, win: 1200 },
+    { d: 8, need: 18, ov: 66, win: 1700 }, { d: 7, need: 21, ov: 70, win: 2300 },
+    { d: 6, need: 24, ov: 73, win: 3100 }, { d: 5, need: 27, ov: 76, win: 4200 },
+    { d: 4, need: 30, ov: 79, win: 5600 }, { d: 3, need: 33, ov: 82, win: 7500 },
+    { d: 2, need: 36, ov: 85, win: 10000 }, { d: 1, need: 999, ov: 88, win: 15000 }
   ];
   function divInfo(d) { for (var i = 0; i < DIVS.length; i++) if (DIVS[i].d === d) return DIVS[i]; return DIVS[0]; }
   // adversário dos Rivais: clube real com nota próxima da divisão
@@ -501,7 +511,8 @@
       var lv = opts.chem >= 9 ? "c3" : opts.chem >= 7 ? "c2" : opts.chem >= 4 ? "c1" : "c0";
       kids.push(el("div", { class: "utc-chem " + lv, text: opts.chem }));
     }
-    if (d.ver === "totw") kids.push(el("div", { class: "utc-tag", text: "TDS" }));
+    // um selo só no rodapé: a versão manda, senão o patamar
+    kids.push(el("div", { class: "utc-tier" + (d.ver === "totw" ? " tds" : ""), text: d.ver === "totw" ? "Seleção da Semana" : (RAR_NAME[d.rar] || "") }));
     if (opts.price != null) kids.push(el("div", { class: "utc-price" }, [coinsEl(opts.price)]));
     var cls = "ut-card r-" + d.rar + " v-" + d.ver + (opts.cls ? " " + opts.cls : "");
     var node = el("div", { class: cls }, kids);
@@ -549,7 +560,7 @@
         S = blank(); S.club = nm;
         // pacote inicial: um elenco jogável para começar
         var start = packById("prata");
-        openPack(S, { n: 16, lo: 62, hi: 76, rare: 0.3 });
+        openPack(S, { n: 16, lo: 60, hi: 73, rare: 0.25 });
         autoFill(S);
         save();
         TM.ui.toast("Clube criado! Seu elenco inicial está pronto.");
@@ -929,7 +940,7 @@
           on: { click: function () { f.pos = o[0]; draw(); } }
         }));
       });
-      [["g", "Ouro"], ["s", "Prata"], ["b", "Bronze"]].forEach(function (o) {
+      [["l", "Lenda"], ["g", "Craque"], ["s", "Elite"], ["b", "Base"]].forEach(function (o) {
         chips.appendChild(el("button", {
           class: "ut-chip r" + o[0] + (f.rar === o[0] ? " on" : ""), text: o[1],
           on: { click: function () { f.rar = f.rar === o[0] ? "" : o[0]; draw(); } }
@@ -1210,7 +1221,8 @@
         if (s.riv.div > 1 && s.riv.pts >= info.need) {
           s.riv.div--; s.riv.pts = 0; promoted = true;
           if (s.riv.div < s.riv.best) s.riv.best = s.riv.div;
-          s.packs = s.packs || []; s.packs.push(s.riv.div <= 3 ? "jumbo" : s.riv.div <= 6 ? "ourorare" : "ouro");
+          // subir de divisão é o caminho mais confiável para uma Lenda
+          s.packs = s.packs || []; s.packs.push(s.riv.div <= 2 ? "mega" : s.riv.div <= 4 ? "jumbo" : s.riv.div <= 7 ? "ourorare" : "ouro");
         }
         var r = squadRating(s);
         if (r.chem >= 70) objBump(s, "chem70", 1);

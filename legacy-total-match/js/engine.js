@@ -71,14 +71,17 @@
     var realism = opts.realism || 3;
     // realismo (1..5): quanto a QUALIDADE dos elencos pesa no resultado. Não muda a média de gols:
     // 1 = muito aleatório (zebras frequentes) · 3 = padrão · 5 = bem fiel aos elencos (zebra rara, mas possível)
-    var variance = 1.34;                                   // fator fixo de gols (~2,6 a 3 por jogo)
+    var variance = 1.30;                                   // fator fixo de gols (~2,6 por jogo, como nas ligas reais)
     var kq = 0.6 + (realism - 1) * 0.2;                    // 0.6 .. 1.4
     var focusId = opts.focusPlayerId || null;
 
     var A = teamProfile(teamA), B = teamProfile(teamB);
     // CONTEXTO DE FUTEBOL (opcional): torcida/estádio (0..1), fase recente (-1..1 por lado), clássico, o que está em jogo (0..1 por lado)
     var crowd = opts.crowd == null ? 0.5 : Math.max(0, Math.min(1, opts.crowd));
-    var homeBoost = opts.neutral ? 0 : 1.5 + crowd * 3;          // casa lotada pesa mais (1.5 .. 4.5)
+    // mandar pesa em dois lados: o time da casa cria mais e sofre menos.
+    // calibrado contra a distribuição real (casa ~46%, empate ~26%, fora ~28%).
+    var homeBoost = opts.neutral ? 0 : 2.4 + crowd * 3.0;         // ataque da casa (2.4 .. 5.4)
+    var homeDefEdge = opts.neutral ? 1 : 1 - (0.03 + crowd * 0.02); // defesa da casa rende mais (x0.96 .. x0.95)
     var form = opts.form || [0, 0], stakes = opts.stakes || [0, 0], derby = !!opts.derby;
     var redPenalty = [0, 0]; // redução de força por expulsão
 
@@ -255,7 +258,7 @@
       }
 
       var pA = chanceProb((A.attack + homeBoost) * atkMod[0], B.defense * defMod[1], redPenalty[0], A.ovr - B.ovr, redPenalty[1]) * dyn(0, m);
-      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0], redPenalty[1], B.ovr - A.ovr, redPenalty[0]) * dyn(1, m);
+      var pB = chanceProb(B.attack * atkMod[1], A.defense * defMod[0] / homeDefEdge, redPenalty[1], B.ovr - A.ovr, redPenalty[0]) * dyn(1, m);
 
       [[0, pA, A, B, teamA], [1, pB, B, A, teamB]].forEach(function (row) {
         var side = row[0], prob = row[1], prof = row[2], opp = row[3], team = row[4];

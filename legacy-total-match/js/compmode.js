@@ -100,7 +100,8 @@
   function nameFor(s, cid) { return s.isNation ? TM.data.nation(cid).name : TM.data.club(cid).name; }
   function ratingFor(s, cid) { return s.isNation ? natRating(cid) : TM.data.clubRating(cid); }
   function imgFor(s, cid, cls) { return s.isNation ? TM.img.nationImg(TM.data.nation(cid), cls) : TM.img.clubImg(TM.data.club(cid), cls); }
-  function simTeams(s, a, b) { return TM.engine.simulate(teamFor(s, a), teamFor(s, b), { realism: realism(), neutral: true }); }
+  // clubes jogam com mando (casa pesa); torneio de seleções é em campo neutro
+  function simTeams(s, a, b) { return TM.engine.simulate(teamFor(s, a), teamFor(s, b), { realism: realism(), neutral: !!s.isNation }); }
   function ctxFor(s) { return { sim: function (a, b) { return simTeams(s, a, b); }, rating: function (id) { return ratingFor(s, id); } }; }
 
   function roundRobin(ids) {
@@ -514,7 +515,7 @@
     TM.ui.applyCompTheme(screen, themeId(s));
     var teamA = teamFor(s, nx.homeId), teamB = teamFor(s, nx.awayId);
     var userSide = nx.homeId === s.userId ? 0 : 1;
-    var simOpts = { realism: realism(), neutral: true };
+    var simOpts = { realism: realism(), neutral: !!s.isNation, tacticSide: userSide };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: s.name,
