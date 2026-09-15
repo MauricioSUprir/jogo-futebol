@@ -1241,7 +1241,7 @@
       }, "btn ghost"));
       if (daysLeft > 0) {
         kids.push(el("div", { class: "skip-row" }, [
-          TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
+          TM.ui.button("⏭ Pular 1 dia", function () { c.currentDay++; try { if (TM.job && TM.job.tickSond) TM.job.tickSond(c); } catch (e) {} TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn ghost small"),
           TM.ui.button("⏩ Avançar até o jogo", function () { var pd = TM.pre && TM.pre.nextDay ? TM.pre.nextDay(c) : null; c.currentDay = (pd != null && pd > c.currentDay && pd < nextDay) ? pd : nextDay; TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn small")
         ]));
       } else {
@@ -2374,6 +2374,7 @@
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           try { TM.scouting.tick(c); } catch (e) {}
           try { if (TM.obs) TM.obs.tick(c); } catch (e) {}
+          try { if (TM.job && TM.job.tickSond) TM.job.tickSond(c); } catch (e) {}
           c.pressEdge = 0;
           TM.storage.saveCoachCareer(c);
           TM.ui.toast("Resultado registrado: " + hs + " × " + as);
@@ -2392,6 +2393,7 @@
           try { TM.club.matchIncome(c, userSide === 0); } catch (e) {}
           try { TM.scouting.tick(c); } catch (e) {}
           try { if (TM.obs) TM.obs.tick(c); } catch (e) {}
+          try { if (TM.job && TM.job.tickSond) TM.job.tickSond(c); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
           TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId, leg: legI, userSide: userSide });

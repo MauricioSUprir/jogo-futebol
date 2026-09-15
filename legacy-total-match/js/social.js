@@ -234,6 +234,86 @@
     return out;
   }
 
+  /* ---------- POLÊMICA: demissão e contratação ----------
+     O assunto mais quente de qualquer torcida. Sai no feed quando há
+     sondagem por você, quando o clima aperta e quando chega reforço. */
+  function hotPosts(career, myClub, pos, last) {
+    var out = [], nome = myClub.name;
+    var tec = career.coachName || "o técnico do " + nome;                 // sujeito da frase
+    var tecDe = career.coachName ? ("de " + career.coachName) : "do técnico do " + nome;   // depois de "de"
+    var forma = (career.recentForm || []).slice(-5);
+    var ruim = forma.filter(function (x) { return x === "D"; }).length >= 3;
+
+    // --- sondagem por VOCÊ: o feed descobre antes de você confirmar ---
+    (career.sond || []).forEach(function (sd) {
+      if (sd.social >= sd.heat) return;
+      sd.social = sd.heat;
+      var alvo = sd.clubName;
+      if (sd.heat >= 2) {
+        out.push(post({ handle: pick(PRESS), verified: chance(0.6), kind: "polemica", badge: "⚡ Bastidores",
+          photo: chance(0.35) ? photoOf("bola") : null, morale: -1.4,
+          text: pick([
+            "BOMBA 💣 " + tec + " teria sido SONDADO pelo " + alvo + ". No " + nome + ", ninguém confirma — e ninguém desmente também. 👀",
+            "Fontes: o " + alvo + " já fez contato com o entorno " + tecDe + ". A torcida do " + nome + " merece uma explicação.",
+            "E se " + tec + " sair no meio da temporada? O " + alvo + " está rondando e o " + nome + " segue calado."
+          ]), likes: rint(1500, 22000) }));
+      } else {
+        out.push(post({ handle: pick(FANS), kind: "banter", morale: -0.5,
+          text: pick([
+            "Tô vendo muita gente falando que o " + alvo + " tá de olho no nosso técnico. Alguém confirma? 😬",
+            "Rumor forte de que o " + alvo + " quer o " + tec + ". Se for verdade, a diretoria tem que agir AGORA.",
+            "Se o " + tec + " sair pro " + alvo + ", eu paro de acompanhar. Cansado de ver isso todo ano. 😤"
+          ]), likes: rint(200, 3500) }));
+      }
+    });
+
+    // --- clima de demissão quando a fase aperta ---
+    if (ruim && chance(0.55)) {
+      out.push(post({ handle: pick(PRESS), verified: chance(0.5), kind: "polemica", badge: "🔥 Pressão",
+        morale: -2, text: pick([
+          "ENQUETE: a torcida do " + nome + " quer a demissão do técnico? Os números do nosso site assustam. 📉",
+          "Diretoria do " + nome + " marca reunião de emergência. O cargo do treinador está em discussão, segundo apurou nossa reportagem.",
+          "Já circula uma lista de substitutos no " + nome + ". O técnico atual sabe disso."
+        ]), likes: rint(2000, 28000) }));
+      if (chance(0.7)) out.push(post({ handle: pick(FANS), kind: "critica", morale: -1.2,
+        text: pick(["FORA TÉCNICO. Chega. 🚫", "Não é ódio, é cansaço. O time não evolui há meses.",
+          "Demite logo e para de enrolar a torcida."]), likes: rint(800, 14000) }));
+      if (chance(0.5)) out.push(post({ handle: pick(FANS), kind: "apoio", morale: 0.8,
+        text: pick(["Demitir agora é jogar mais um ano fora. Já vimos esse filme. 🎬",
+          "O problema não é o técnico, é a diretoria que monta elenco ruim todo ano.",
+          "Bancar o trabalho seria novidade nesse clube. Fico com o treinador."]), likes: rint(400, 9000) }));
+    }
+
+    // --- polêmica sobre contratação recente ---
+    try {
+      var ult = (career.deals || []).filter(function (d) { return d.type === "in"; }).slice(-1)[0];
+      if (ult && !ult._hot && chance(0.75)) {
+        ult._hot = 1;
+        var caro = (ult.fee || 0) > 0;
+        out.push(post({ handle: pick(PRESS), verified: chance(0.55), kind: "polemica", badge: "💸 Reforço",
+          photo: chance(0.4) ? photoOf("bola") : null, morale: -0.8,
+          text: caro
+            ? pick([
+                "VALE O QUANTO PAGOU? O " + nome + " gastou alto em " + ult.name + " enquanto outras posições seguem carentes. Discussão aberta. 💸",
+                "Pergunta honesta: " + ult.name + " era MESMO a prioridade do " + nome + "? A torcida se divide.",
+                "Reforço anunciado e a pergunta que não quer calar: e o setor que todo mundo pedia?"
+              ])
+            : pick([
+                "O " + nome + " anuncia " + ult.name + " e a torcida quer saber: é reforço ou tapa-buraco? 👀",
+                "Chegou " + ult.name + " ao " + nome + ". Nome conhecido, mas o momento dele gera dúvida."
+              ]),
+          likes: rint(900, 16000) }));
+        if (chance(0.8)) out.push(post({ handle: pick(FANS), kind: "banter", morale: -0.3,
+          text: pick([
+            "Sinceramente? Esperava mais. " + ult.name + " não me anima. 😐",
+            "BEM-VINDO " + ult.name.toUpperCase() + "! Vamos dar tempo ao cara antes de crucificar. 🙏",
+            "Mais um que vai jogar duas partidas e sumir. Já vi esse roteiro."
+          ]), likes: rint(300, 6000) }));
+      }
+    } catch (e) {}
+    return out;
+  }
+
   function genBatch(career) {
     var W = TM.data.world();
     var cid = mainClubId(career);
@@ -280,6 +360,8 @@
 
     // --- PERFIL OFICIAL DO CLUBE: o próprio time postando ---
     out = out.concat(clubPosts(career, myClub, last, star, rival, pos));
+    // --- polêmica de demissão e contratação ---
+    out = out.concat(hotPosts(career, myClub, pos, last));
 
     // --- rumor HERE WE GO (mercado) ---
     if (chance(0.45)) {
