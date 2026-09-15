@@ -2764,12 +2764,18 @@
       var dono = ant || c.teamId;
       if (dono && !skinCheio(c.clubSkins[dono])) c.clubSkins[dono] = { crest: c.crestOverride || null, kits: c.kitOverrides || {} };
       delete c.crestOverride; delete c.kitOverrides;
-    } else if (ant && c.teamId && ant !== c.teamId && skinCheio(c.clubSkins[c.teamId]) && !skinCheio(c.clubSkins[ant])) {
-      // uma versão anterior colou o visual do clube antigo no clube novo: devolve pro dono
-      c.clubSkins[ant] = c.clubSkins[c.teamId];
+    } else if (ant && c.teamId && ant !== c.teamId && skinCheio(c.clubSkins[c.teamId])) {
+      // uma versão anterior colou o visual do clube antigo no clube novo.
+      // devolve pro dono (ou só limpa, se o dono já tiver o visual dele)
+      if (!skinCheio(c.clubSkins[ant])) c.clubSkins[ant] = c.clubSkins[c.teamId];
       delete c.clubSkins[c.teamId];
     }
+    // versoes antigas nao zeravam o limite de trocas ao mudar de clube:
+    // o "ja trocou nesta temporada" do clube anterior vinha junto e travava tudo
+    if (ant && c.teamId && ant !== c.teamId) c.kitChanges = null;
     c.skinsV = 2;
+    // grava o conserto p/ nao depender de rodar de novo no proximo carregamento
+    try { if (c.teamId && TM.storage && TM.storage.saveCoachCareer) TM.storage.saveCoachCareer(c); } catch (e) {}
   }
   function skinOf(c, clubId) {
     if (!c) return null;
@@ -2780,11 +2786,12 @@
     return c.clubSkins[clubId];
   }
   // volta o clube ao visual de fábrica (escudo e/ou uniformes)
+  function skinLibera(c, slot) { if (c && c.kitChanges && c.kitChanges.used) delete c.kitChanges.used[slot]; }
   function skinReset(c, slot) {
     var sk = skinOf(c, c.teamId); if (!sk) return;
-    if (slot === "crest") sk.crest = null;
-    else if (slot === "all") { sk.crest = null; sk.kits = {}; }
-    else { sk.kits = sk.kits || {}; delete sk.kits[slot]; }
+    if (slot === "crest") { sk.crest = null; skinLibera(c, "crest"); }
+    else if (slot === "all") { sk.crest = null; sk.kits = {}; c.kitChanges = null; }
+    else { sk.kits = sk.kits || {}; delete sk.kits[slot]; skinLibera(c, "kit" + slot); }
     applyKitOverrides(c);
     TM.storage.saveCoachCareer(c);
   }
@@ -2861,6 +2868,7 @@
         el("div", { class: "ci-swatch", style: "background:" + club.colors.secondary })
       ]) ]));
 
+    if (mine) { try { applyKitOverrides(c); } catch (e) {} }
     var kitsCard = el("div", { class: "ci-card" });
     kitsCard.appendChild(el("div", { class: "ci-ct", text: "👕 Uniformes" }));
     var krow = el("div", { class: "ci-kits" });
@@ -2869,7 +2877,8 @@
       if (mine) {
         var canK = kitChangeSlot(c, "kit" + v);
         var skAtual = skinOf(c, c.teamId);
-        if (skAtual && skAtual.kits && skAtual.kits[v]) {
+        var impAtual = v === 1 ? club.kitAwayData : v === 2 ? club.kitThirdData : club.kitData;
+        if ((skAtual && skAtual.kits && skAtual.kits[v]) || impAtual) {
           tile.appendChild(el("button", { class: "ci-kit-edit", text: "↩ Original", on: { click: (function (idx, rot) { return function () {
             skinReset(c, idx); TM.ui.toast("Uniforme " + rot + " voltou ao original."); TM.ui.go("coach-club-info", { clubId: clubId, back: back });
           }; })(v, lbl) } }));
@@ -2883,8 +2892,8 @@
     });
     kitsCard.appendChild(krow);
     if (mine) {
-      kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube. Regra: cada uniforme só pode ser trocado UMA vez por temporada. Voltar ao original é sempre livre, mas não devolve a troca da temporada." }));
-      if (skinCheio(skinOf(c, c.teamId))) {
+      kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube. Regra: cada uniforme só pode ser trocado UMA vez por temporada. Voltar ao original é livre e devolve a troca daquela peça." }));
+      {
         kitsCard.appendChild(el("button", { class: "ci-kit-edit", text: "🧹 Restaurar todo o visual do " + club.name, on: { click: function () {
           TM.ui.confirm("Restaurar visual", "Escudo e uniformes do " + club.name + " voltam ao original. Confirma?", function () {
             skinReset(c, "all"); TM.ui.toast("Visual do " + club.name + " restaurado."); TM.ui.go("coach-club-info", { clubId: clubId, back: back });
