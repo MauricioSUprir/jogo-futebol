@@ -4269,7 +4269,8 @@
           el("div", { class: "of-desc", text: "O " + o.clubName + " " + o.desc + "." }),
           el("div", { class: "of-wage", text: "💰 Salário oferecido: " + money(c, o.wage) + "/temporada" }),
           el("div", { class: "of-acts" }, [
-            TM.ui.button("✅ Aceitar", function () {
+            TM.ui.button("🤝 Conversar", function () {
+              if (TM.job) { TM.job.reset(); TM.ui.go("coach-job-talk", { id: o.id }); return; }
               TM.ui.confirm("Assumir o " + o.clubName + "?", "Você deixará o " + (club ? club.name : "clube atual") + " e recomeçará no novo clube. Seu histórico e títulos são mantidos.", "Aceitar proposta", function () {
                 C().switchUserClub(c, o.clubId);
                 TM.storage.saveCoachCareer(c);
