@@ -338,11 +338,83 @@
 
   /* ---------- feed ---------- */
   var cache = { key: null, items: [] };
+  /* ---------- INDIRETAS: o interesse que ninguém confirma ----------
+     Sondagem por você (treinador) e sondagem por jogadores do seu elenco
+     viram matéria antes de virar proposta, no tom de bastidor. */
+  function rumorArticles(c) {
+    var out = [], dia = c.currentDay || 0, meu = myClub(c);
+    // --- por VOCÊ ---
+    var sond = (c.sond || []);
+    sond.forEach(function (sd) {
+      if (sd.seen >= sd.heat) return;         // uma matéria por grau de aquecimento
+      sd.seen = sd.heat;
+      var cl = club(sd.clubId), nome = cl ? cl.name : sd.clubName;
+      var tec = c.coachName || "o treinador do " + meu.name;
+      var tecPoss = c.coachName ? ("de " + c.coachName) : "do treinador do " + meu.name;
+      var frio = [
+        { h: "Dirigentes do " + nome + " são vistos em reunião fora do clube",
+          l: "Encontro em hotel da capital alimenta especulação; diretoria nega pauta de treinador.",
+          p: ["O " + nome + " reuniu parte da cúpula longe do CT nesta semana. Questionado, o clube afirmou que o encontro tratava de \"planejamento\" e nada além disso.",
+              "Nos bastidores, porém, a conversa foi outra. Três pessoas com acesso ao clube relataram que o nome de um treinador que hoje está empregado foi citado mais de uma vez."],
+          q: [{ w: "Dirigente do " + nome, t: "“Reunião normal de planejamento. Não tem nada demais nisso.”" }] },
+        { h: "Presidente do " + nome + " desconversa sobre o comando técnico",
+          l: "“Temos treinador”, diz o dirigente — sem descartar mudanças.",
+          p: ["Pressionado sobre o momento do time, o presidente do " + nome + " foi curto: \"temos treinador\". A frase, repetida duas vezes, veio sem o complemento que a torcida esperava.",
+              "A ausência de um voto de confiança explícito não passou despercebida. No mercado, o entendimento é de que o clube já mapeia alternativas."],
+          q: [{ w: "Presidente do " + nome, t: "“Temos treinador. O resto é especulação de vocês.”" }] }
+      ];
+      var morno = [
+        { h: "Nos bastidores, nome do técnico do " + meu.name + " circula no " + nome,
+          l: "Sondagem informal já teria acontecido; nenhuma proposta formal foi feita.",
+          p: ["O trabalho de " + tec + " no " + meu.name + " entrou no radar do " + nome + ". A informação é de duas fontes ligadas à diretoria, que pediram para não ser identificadas.",
+              "Não há proposta formal, e ninguém nos dois clubes confirma contato. Mas o nome está na mesa, e isso por si só já muda a temperatura."],
+          q: [{ w: "Fonte ligada ao " + nome, t: "“Existe admiração pelo trabalho dele. Daí a uma proposta é outra conversa.”" }] },
+        { h: "Empresário " + tecPoss + " é visto em restaurante com gente do " + nome,
+          l: "Almoço de quase três horas; ambos os lados falam em “encontro pessoal”.",
+          p: ["A imagem circulou rápido: o empresário que cuida da carreira " + tecPoss + " almoçando com um executivo do " + nome + ". Três horas de conversa.",
+              "Procurados, os dois lados deram a mesma versão — \"encontro pessoal, amizade antiga\". No mercado, poucos compraram."],
+          q: [{ w: "Empresário", t: "“Almocei com um amigo. Vocês transformam almoço em negociação.”" }] }
+      ];
+      var quente = [
+        { h: "" + nome + " define alvo para o banco e aguarda o momento certo",
+          l: "Clube tem um nome à frente dos demais e estuda quando avançar.",
+          p: ["A escolha do " + nome + " está feita internamente. Falta apenas definir o momento de formalizar — e é aí que o assunto trava.",
+              "O treinador escolhido está empregado, e o clube quer evitar desgaste público. A avaliação interna é de que a conversa acontece nos próximos dias."],
+          q: [{ w: "Fonte do " + nome, t: "“Tem um nome na frente. Não vou dizer qual.”" },
+               { w: tec, t: "“Meu foco é aqui. Não comento coisa que não existe.”" }] }
+      ];
+      var set = sd.heat >= 3 ? quente : sd.heat === 2 ? morno : frio;
+      var a0 = set[hash(sd.clubId + "" + sd.heat) % set.length];
+      out.push(article({ day: dia, kind: "rumor", outlet: "tn", priority: 2,
+        headline: a0.h, lead: a0.l, paras: a0.p, quotes: a0.q, clubId: sd.clubId,
+        tag: "Bastidores", img: { type: "club", clubId: sd.clubId } }));
+    });
+
+    // --- por JOGADORES do seu elenco (interesse antes da proposta) ---
+    try {
+      var abertas = (c.notifications || []).filter(function (n) { return n.offer && !n.offer.done; });
+      abertas.slice(0, 2).forEach(function (n) {
+        if (n._rumored) return;
+        n._rumored = 1;
+        var p = C().resolvePlayer(c, n.offer.playerId), cb = club(n.offer.buyerId);
+        if (!p || !cb) return;
+        out.push(article({ day: dia, kind: "rumor", outlet: "tn", priority: 1,
+          headline: "Nome de " + p.name + " aparece nos planos do " + cb.name,
+          lead: "Clube observa o jogador há semanas; conversa entre as partes ainda é informal.",
+          paras: ["O " + cb.name + " tem " + p.name + " na lista. O monitoramento vem de antes desta janela, segundo pessoas com acesso à negociação.",
+                  "No " + meu.name + ", a orientação é não comentar. O jogador segue treinando normalmente e foi relacionado para a próxima partida."],
+          quotes: [{ w: "Dirigente do " + cb.name, t: "“Acompanhamos vários jogadores. Não vou falar de nome.”" }],
+          clubId: n.offer.buyerId, tag: "Mercado", img: { type: "player", pid: p.id } }));
+      });
+    } catch (e) {}
+    return out;
+  }
+
   function feed(c) {
-    var key = [c.season, c.currentDay, c.matchNo, (c.notifications || []).length, (c.deals || []).length, (c.marketFeed || []).length, c._nseq].join("|");
+    var key = [c.season, c.currentDay, c.matchNo, (c.notifications || []).length, (c.deals || []).length, (c.marketFeed || []).length, (c.sond || []).map(function (x) { return x.clubId + ":" + x.heat; }).join(","), c._nseq].join("|");
     if (cache.key === key) return cache.items;
     function safe(fn) { try { var v = fn(c); return Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []); } catch (e) { try { console.warn("notícia ignorada:", e); } catch (e2) {} return []; } }
-    var items = [].concat(safe(matchArticles), safe(analysisArticle), safe(marketArticles), safe(worldArticles), safe(worldNews), safe(noteArticles));
+    var items = [].concat(safe(matchArticles), safe(analysisArticle), safe(marketArticles), safe(rumorArticles), safe(worldArticles), safe(worldNews), safe(noteArticles));
     items.sort(function (a, b) { return (b.day - a.day) || (b.priority - a.priority) || (a.id - b.id); });
     cache = { key: key, items: items };
     return items;

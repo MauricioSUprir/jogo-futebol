@@ -100,6 +100,76 @@
     return Math.max(porNivel, porBagagem);
   }
 
+  /* ================= sondagens: o interesse antes da proposta =================
+     Um clube não liga do nada. Primeiro o nome circula nos bastidores, a
+     imprensa solta indiretas, e só depois a proposta chega. */
+  function ensureSond(c) { if (!c.sond) c.sond = []; return c.sond; }
+  function sondOf(c, clubId) {
+    ensureSond(c);
+    for (var i = 0; i < c.sond.length; i++) if (c.sond[i].clubId === clubId) return c.sond[i];
+    return null;
+  }
+  // planta um boato: clube que te contrataria, mas que ainda não se declarou
+  function plantSond(c) {
+    ensureSond(c);
+    if (c.sond.length >= 3) return null;
+    var alvo = targetRating(c), W = TM.data.world();
+    var jaTem = {}; c.sond.forEach(function (x) { jaTem[x.clubId] = 1; });
+    (c.jobOffers || []).forEach(function (o) { jaTem[o.clubId] = 1; });
+    var pool = W.clubs.filter(function (cl) {
+      if (cl.id === c.teamId || jaTem[cl.id]) return false;
+      var r = rating(cl.id);
+      if (r > alvo + 4 || r < alvo - 11) return false;
+      return wouldHire(c, cl.id).ok;
+    });
+    if (!pool.length) return null;
+    var cl = pool[Math.floor(Math.random() * pool.length)];
+    var sd = { clubId: cl.id, clubName: cl.name, day: c.currentDay || 0, heat: 1,
+      prazo: 4 + Math.floor(Math.random() * 9), seen: 0 };
+    c.sond.push(sd);
+    return sd;
+  }
+  // esfria, esquenta ou vira proposta
+  function tickSond(c) {
+    ensureSond(c);
+    var virou = null;
+    c.sond = c.sond.filter(function (sd) {
+      var dias = (c.currentDay || 0) - sd.day;
+      if (dias >= sd.prazo) {
+        // 65% viram proposta de verdade; o resto morre nos bastidores
+        if (Math.random() < 0.65 && (c.jobOffers || []).length < 4) {
+          offerFrom(c, sd.clubId);
+          virou = sd.clubName;
+        } else {
+          TM.notify.push(c, { icon: "🗞️", title: "Boato esfriou", news: true,
+            text: "O " + sd.clubName + " acabou seguindo por outro caminho. O seu nome saiu da pauta por lá." });
+        }
+        return false;
+      }
+      if (Math.random() < 0.3) sd.heat = clamp(sd.heat + 1, 1, 3);
+      return true;
+    });
+    return virou;
+  }
+  // transforma um clube específico em proposta formal
+  function offerFrom(c, clubId) {
+    var cl = null; try { cl = TM.data.club(clubId); } catch (e) {}
+    if (!cl) return null;
+    var r = rating(clubId), lg = null; try { lg = TM.data.league(cl.leagueId); } catch (e) {}
+    var o = {
+      id: "job-" + clubId + "-" + (c.matchNo || 0) + "-" + Math.floor(Math.random() * 999),
+      clubId: clubId, clubName: cl.name, leagueName: lg ? lg.name : "",
+      rating: r, tier: tierOf(r), desc: "acompanhou o seu trabalho e decidiu avançar",
+      wage: r2(Math.max(0.3, (r - 55) * 0.35) * mult(c)),
+      matchNo: c.matchNo || 0, season: c.season, seen: false, lv: coachLevel(c), daSondagem: true
+    };
+    c.jobOffers = c.jobOffers || [];
+    c.jobOffers.unshift(o);
+    TM.notify.push(c, { icon: "📨", title: "Proposta do " + cl.name, news: true,
+      text: "O que era boato virou proposta: o " + cl.name + " quer conversar com você." });
+    return o;
+  }
+
   /* ================= geração das propostas ================= */
   function generate(career) {
     if (!career.jobOffers) career.jobOffers = [];
@@ -112,6 +182,10 @@
     var winRate = st.p >= 3 ? st.w / st.p : 0.4;
     var chance = unemployed ? 0.75 : (winRate > 0.6 ? 0.45 : winRate > 0.45 ? 0.24 : 0.09);
     if (Math.random() > chance) { career._lastOfferGen = matchNo; return; }
+    // com clube, o interesse começa como boato: o nome circula antes da proposta
+    if (!unemployed && Math.random() < 0.7) {
+      plantSond(career); career._lastOfferGen = matchNo; return;
+    }
     if (career.jobOffers.length >= 4) { career._lastOfferGen = matchNo; return; }
 
     var alvo = targetRating(career), lv = coachLevel(career);
@@ -410,6 +484,7 @@
     coachLevel: coachLevel, levelLabel: levelLabel, tierOf: tierOf, TIER_LBL: TIER_LBL,
     wouldHire: wouldHire, targetRating: targetRating, generate: generate, biggestManaged: biggestManaged,
     startTalk: startTalk, evaluate: evaluate, sign: sign, talk: function () { return TALK; },
+    ensureSond: ensureSond, plantSond: plantSond, tickSond: tickSond, offerFrom: offerFrom, sondOf: sondOf,
     reset: function () { TALK = null; }
   };
 })(window);

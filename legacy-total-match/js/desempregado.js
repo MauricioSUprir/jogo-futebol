@@ -85,6 +85,7 @@
       // o mundo segue jogando
       try { if (TM.wl && TM.wl.tick) TM.wl.tick(c, 1); } catch (e) {}
       try { if (TM.obs) TM.obs.tick(c); } catch (e) {}
+      try { if (TM.job && TM.job.tickSond) { var vv = TM.job.tickSond(c); if (vv) feed(c, "📨", "Proposta", "O boato virou proposta: o " + vv + " avançou."); } } catch (e) {}
       dailyBuzz(c);
       // as propostas chegam no tempo delas
       var antes = (c.jobOffers || []).length;
