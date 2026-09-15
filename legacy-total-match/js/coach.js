@@ -2753,20 +2753,44 @@
   // escudo e uniformes ficam guardados POR CLUBE (c.clubSkins[clubId]).
   // Antes moravam soltos na carreira e, ao trocar de clube, a camisa do time
   // antigo era aplicada no novo.
+  function skinCheio(sk) { return !!(sk && (sk.crest || (sk.kits && (sk.kits[0] || sk.kits[1] || sk.kits[2])))); }
+  // conserta saves antigos UMA vez: o visual importado tem que ficar no clube onde foi feito
+  function migrateSkins(c) {
+    if (!c || c.skinsV >= 2) return;
+    c.clubSkins = c.clubSkins || {};
+    var ant = (c.clubHistory && c.clubHistory.length) ? c.clubHistory[c.clubHistory.length - 1].clubId : null;
+    if (c.crestOverride || c.kitOverrides) {
+      // formato antigo (solto na carreira): dono é o clube em que você estava quando importou
+      var dono = ant || c.teamId;
+      if (dono && !skinCheio(c.clubSkins[dono])) c.clubSkins[dono] = { crest: c.crestOverride || null, kits: c.kitOverrides || {} };
+      delete c.crestOverride; delete c.kitOverrides;
+    } else if (ant && c.teamId && ant !== c.teamId && skinCheio(c.clubSkins[c.teamId]) && !skinCheio(c.clubSkins[ant])) {
+      // uma versão anterior colou o visual do clube antigo no clube novo: devolve pro dono
+      c.clubSkins[ant] = c.clubSkins[c.teamId];
+      delete c.clubSkins[c.teamId];
+    }
+    c.skinsV = 2;
+  }
   function skinOf(c, clubId) {
     if (!c) return null;
+    migrateSkins(c);
     c.clubSkins = c.clubSkins || {};
     clubId = clubId || c.teamId;
-    // migração: overrides antigos pertencem ao clube em que você estava
-    if ((c.crestOverride || c.kitOverrides) && c.teamId && !c.clubSkins[c.teamId]) {
-      c.clubSkins[c.teamId] = { crest: c.crestOverride || null, kits: c.kitOverrides || {} };
-      delete c.crestOverride; delete c.kitOverrides;
-    }
     if (!c.clubSkins[clubId]) c.clubSkins[clubId] = { crest: null, kits: {} };
     return c.clubSkins[clubId];
   }
+  // volta o clube ao visual de fábrica (escudo e/ou uniformes)
+  function skinReset(c, slot) {
+    var sk = skinOf(c, c.teamId); if (!sk) return;
+    if (slot === "crest") sk.crest = null;
+    else if (slot === "all") { sk.crest = null; sk.kits = {}; }
+    else { sk.kits = sk.kits || {}; delete sk.kits[slot]; }
+    applyKitOverrides(c);
+    TM.storage.saveCoachCareer(c);
+  }
   function applyKitOverrides(c) {
     if (!c || !c.teamId) return;
+    migrateSkins(c);
     var sk = skinOf(c, c.teamId), club = TM.data.club(c.teamId);
     if (!club) return;
     // o clube volta ao visual original antes de receber o que for do treinador
@@ -2778,6 +2802,7 @@
     if (sk.kits && sk.kits[2]) club.kitThirdData = sk.kits[2];
   }
   TM.coachUI = TM.coachUI || {}; TM.coachUI.skinOf = skinOf;
+  TM.coachUI.skinReset = skinReset;
   TM.coachUI = TM.coachUI || {}; TM.coachUI.applyKitOverrides = applyKitOverrides;
   function clubHistory(club) {
     var s = String(club.id || club.name), h = 2166136261;
@@ -2843,6 +2868,12 @@
       var tile = el("div", { class: "ci-kit" }, [ TM.img.kitImg(club, "ci-kit-img", v), el("div", { class: "ci-kit-lbl", text: lbl } ) ]);
       if (mine) {
         var canK = kitChangeSlot(c, "kit" + v);
+        var skAtual = skinOf(c, c.teamId);
+        if (skAtual && skAtual.kits && skAtual.kits[v]) {
+          tile.appendChild(el("button", { class: "ci-kit-edit", text: "↩ Original", on: { click: (function (idx, rot) { return function () {
+            skinReset(c, idx); TM.ui.toast("Uniforme " + rot + " voltou ao original."); TM.ui.go("coach-club-info", { clubId: clubId, back: back });
+          }; })(v, lbl) } }));
+        }
         tile.appendChild(el("button", { class: "ci-kit-edit" + (canK ? "" : " locked"), text: canK ? "✏️ Trocar" : "🔒 Trocado nesta temporada", on: { click: function () {
           if (!kitChangeSlot(c, "kit" + v)) { TM.ui.toast("O " + lbl + " uniforme já foi trocado nesta temporada. Só na próxima."); return; }
           importImage(function (data) { var sk = skinOf(c, c.teamId); sk.kits = sk.kits || {}; sk.kits[v] = data; kitChangeUse(c, "kit" + v); applyKitOverrides(c); TM.storage.saveCoachCareer(c); TM.ui.toast("Uniforme " + lbl + " atualizado!"); TM.ui.go("coach-club-info", { clubId: clubId, back: back }); });
@@ -2851,7 +2882,16 @@
       krow.appendChild(tile);
     });
     kitsCard.appendChild(krow);
-    if (mine) kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube. Regra: cada uniforme só pode ser trocado UMA vez por temporada." }));
+    if (mine) {
+      kitsCard.appendChild(el("div", { class: "setting-hint", text: "Toque em Trocar para importar a imagem do uniforme do seu clube. Regra: cada uniforme só pode ser trocado UMA vez por temporada. Voltar ao original é sempre livre, mas não devolve a troca da temporada." }));
+      if (skinCheio(skinOf(c, c.teamId))) {
+        kitsCard.appendChild(el("button", { class: "ci-kit-edit", text: "🧹 Restaurar todo o visual do " + club.name, on: { click: function () {
+          TM.ui.confirm("Restaurar visual", "Escudo e uniformes do " + club.name + " voltam ao original. Confirma?", function () {
+            skinReset(c, "all"); TM.ui.toast("Visual do " + club.name + " restaurado."); TM.ui.go("coach-club-info", { clubId: clubId, back: back });
+          });
+        } } }));
+      }
+    }
     body.appendChild(kitsCard);
     // escudo (uma troca por temporada)
     if (mine) {
