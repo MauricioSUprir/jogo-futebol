@@ -1915,6 +1915,8 @@
   // convite de seleção (se foi bem e ainda não comanda nenhuma)
   function maybeNationInvite(career) {
     if (career.nation) return;
+    // pediu demissão: a federação (e as outras) deixam você esfriar um tempo
+    if (career.natCooldown && (career.season || 1) < career.natCooldown) return;
     var last = career.honours[career.honours.length - 1];
     if (!last) return;
     var good = last.leagueChampion || last.cupChampion || last.contChampion || last.leaguePos <= 3;
