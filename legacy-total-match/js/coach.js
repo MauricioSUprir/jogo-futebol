@@ -432,7 +432,7 @@
   // repasse do jogador aposentado (Rumo ao Estrelato) que virou treinador
   var exPlayerHandoff = null;
   function freshSetup(clubId, mode) {
-    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador", allowRestart: false };
+    var s = { clubId: clubId, currency: "eur", injection: 0, coachName: "", coachPhoto: null, coachId: null, coachMode: mode || "create", nationId: null, board: "intermediaria", role: "treinador", allowRestart: false, noSack: false };
     if (exPlayerHandoff) { s.coachName = exPlayerHandoff.name || ""; s.coachPhoto = exPlayerHandoff.photo || null; s.coachMode = "create"; }
     return s;
   }
@@ -767,6 +767,19 @@
       el("div", { class: "setting-hint", text: "Ligado: você pode sair no meio da partida e jogá-la de novo. Desligado (recomendado): sair no meio registra o resultado — sem rejogar, como na vida real." })
     ]));
 
+    // estabilidade no cargo: só sai quem quer sair
+    var sackToggle = el("button", { class: "switch" + (opts.noSack ? " on" : ""), on: { click: function () {
+      opts.noSack = !opts.noSack; sackToggle.classList.toggle("on", opts.noSack);
+      sackHint.textContent = opts.noSack
+        ? "Ligado: ninguém te demite. A diretoria cobra, reclama e pode até ameaçar, mas você só deixa o clube pedindo demissão ou rescindindo. Vale também para a seleção."
+        : "Desligado: perder a meta da temporada ou fazer uma campanha ruim no fim do contrato custa o emprego, como na vida real.";
+    } } }, [ el("span", { class: "switch-knob" }) ]);
+    var sackHint = el("div", { class: "setting-hint", text: "Desligado: perder a meta da temporada ou fazer uma campanha ruim no fim do contrato custa o emprego, como na vida real." });
+    body.appendChild(el("div", { class: "setting" }, [
+      el("div", { class: "setting row" }, [ el("div", { class: "setting-label", text: "🛡️ Estabilidade no cargo" }), sackToggle ]),
+      sackHint
+    ]));
+
     // comandar também uma seleção
     var natWrap = el("div", { class: "setting" });
     var natToggle = el("button", { class: "switch" + (opts.nationId ? " on" : ""), on: { click: function () {
@@ -817,6 +830,7 @@
         if (opts.coachMode === "existing" && !opts.coachName) { TM.ui.toast("Escolha um treinador da lista"); return; }
         var career = C().newClubCareer(clubId, opts);
         career.allowRestart = !!opts.allowRestart;
+        career.noSack = !!opts.noSack;
         if (isCustom) { career.isCustomClub = true; customDraft = null; }
         TM.storage.saveCoachCareer(career);
         pendingSetup = null; exPlayerHandoff = null;
@@ -907,6 +921,7 @@
       TM.ui.optionsMenu("Opções da carreira", [
         { label: "💾 Salvar (continuar jogando)", fn: function () { TM.storage.saveCoachCareer(c); TM.ui.toast("✔ Carreira salva"); } },
         { label: (c.allowRestart ? "🔁 Reiniciar partidas: LIGADO" : "🔒 Reiniciar partidas: DESLIGADO"), fn: function () { c.allowRestart = !c.allowRestart; TM.storage.saveCoachCareer(c); TM.ui.toast(c.allowRestart ? "Agora você pode rejogar partidas" : "Sair no meio agora registra o resultado"); } },
+        { label: (c.noSack ? "🛡️ Estabilidade no cargo: LIGADA" : "⚠️ Estabilidade no cargo: DESLIGADA"), fn: function () { TM.ui.toast(c.noSack ? "Ninguém te demite nesta carreira" : "Escolhido na criação da carreira"); } },
         { label: "📤 Salvar e sair", fn: function () { TM.saves.park("coach"); TM.ui.toast("Carreira guardada em Minhas Carreiras"); TM.ui.go("modes"); } },
         { label: "🏠 Voltar ao menu (sem sair)", fn: function () { TM.ui.go("modes"); } },
         { label: "👔 Aposentar / finalizar carreira", danger: true, fn: function () { TM.ui.go("coach-retire"); } }
@@ -1693,6 +1708,15 @@
       screen.appendChild(box);
     } else {
       box.appendChild(el("div", { class: "obj-result bad", text: "✖ Meta NÃO cumprida (" + c.objective.desc + ")" }));
+      if (c.noSack) {
+        // estabilidade no cargo: leva bronca, mas continua
+        c.boardTrust = Math.max(0, (c.boardTrust == null ? 50 : c.boardTrust) - 12);
+        box.appendChild(el("div", { class: "fired-msg", text: "😠 A diretoria bateu na mesa pela meta não cumprida e a confiança caiu. Mas o seu cargo está garantido — aqui, só sai quem quer sair." }));
+        box.appendChild(TM.ui.button("Iniciar próxima temporada", function () { C().newSeason(c); TM.storage.saveCoachCareer(c); TM.ui.go("coach-hub"); }, "btn primary"));
+        box.appendChild(TM.ui.button("🚪 Pedir demissão mesmo assim", function () { TM.ui.go("coach-offers"); }, "btn ghost small"));
+        screen.appendChild(box);
+        return;
+      }
       box.classList.add("fired");
       box.appendChild(el("div", { class: "fired-msg", text: "🚪 A diretoria decidiu te demitir por não atingir os objetivos da temporada. Mas sua carreira continua — outros clubes podem te contratar." }));
       box.appendChild(el("div", { class: "actions" }, [

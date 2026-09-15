@@ -91,8 +91,8 @@
     if (j.hist.length > 40) j.hist.length = 40;
     recalcRank(c);
     feed(c, venceu ? "✅" : empate ? "➖" : "❌", tipo + " · " + hs + "x" + as + " contra " + natName(oppId) + ". " + linha);
-    // a federação pode perder a paciência
-    if (j.fed <= 12 && j.j >= 4) {
+    // a federação pode perder a paciência (com estabilidade no cargo, não demite)
+    if (j.fed <= 12 && j.j >= 4 && !c.noSack) {
       TM.notify.push(c, { icon: "🚫", title: "Demitido da seleção", news: true,
         text: "A federação de " + c.nation.name + " anunciou a sua saída. Aproveitamento de " + aproveitamento(j) + "% e a sequência recente pesaram na decisão." });
       c.natRep = clamp((c.natRep == null ? 50 : c.natRep) - 12, 0, 100);
@@ -231,7 +231,9 @@
     ]));
     wrap.appendChild(barra("apr", j.apr, "Aprovação do país", aprLabel(j.apr)));
     wrap.appendChild(barra("fed", j.fed, "Confiança da federação", fedLabel(j.fed)));
-    if (j.fed < 30) wrap.appendChild(el("div", { class: "sel-alert", text: "⚠ A federação está impaciente. Mais tropeços e você cai." }));
+    if (j.fed < 30) wrap.appendChild(el("div", { class: "sel-alert", text: c.noSack
+      ? "⚠ A federação está impaciente, mas o seu cargo está garantido. A cobrança é só no discurso."
+      : "⚠ A federação está impaciente. Mais tropeços e você cai." }));
     if (c.nation.promessa) wrap.appendChild(el("div", { class: "sel-promise", text: "🎙️ Você prometeu o título em público. O país vai cobrar." }));
     return wrap;
   }
