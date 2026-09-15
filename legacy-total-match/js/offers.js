@@ -106,6 +106,38 @@
   function say(off, who, text, tone) { off.history.push({ who: who, text: text, tone: tone || "" }); if (off.history.length > 30) off.history.shift(); }
   function buyerName(off) { return TM.data.club(off.buyerId).name; }
   // contraproposta: ask = { fee, upfront (exigir à vista), bonus (bônus por metas), sellOn (% revenda) }
+  /* ---------- TROCA: pedir um jogador do clube que fez a proposta ---------- */
+  // valor do jogador na moeda da carreira
+  function swapValue(c, sp) {
+    var eur = 0;
+    try { eur = C().valueOf ? C().valueOf(c, sp) : TM.data.marketValue(sp); } catch (e) { eur = TM.data.marketValue(sp); }
+    return curVal(c, eur);
+  }
+  // o clube topa incluir esse jogador? devolve { ok, motivo }
+  function swapWilling(c, clubId, sp) {
+    var squad = [];
+    try { squad = TM.data.clubPlayers(clubId); } catch (e) {}
+    var melhor = squad.reduce(function (a, x) { return (!a || x.overall > a.overall) ? x : a; }, null);
+    var r = rating(clubId);
+    if (melhor && sp.id === melhor.id) return { ok: false, motivo: "é o melhor jogador do elenco" };
+    if (sp.overall >= r + 3) return { ok: false, motivo: "é intocável no projeto" };
+    // joia da base: resistem bastante
+    if (sp.age <= 21 && (sp.potential || sp.overall) >= sp.overall + 8) {
+      if (Math.random() < 0.75) return { ok: false, motivo: "é a joia da base deles" };
+    }
+    // rival dificilmente negocia jogador com rival
+    if (isRival(c, clubId) && Math.random() < 0.7) return { ok: false, motivo: "não negocia jogador com rival" };
+    // titular importante: às vezes topam, às vezes não
+    if (sp.overall >= r && Math.random() < 0.45) return { ok: false, motivo: "é titular absoluto" };
+    return { ok: true };
+  }
+  // jogadores que dá para pedir, do mais caro para o mais barato
+  function swapCandidates(c, clubId) {
+    var squad = [];
+    try { squad = TM.data.clubPlayers(clubId); } catch (e) { return []; }
+    return squad.slice().sort(function (a, b) { return b.overall - a.overall; });
+  }
+
   function counter(c, n, ask) {
     var off = n.offer, p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
     if (off.final) return { status: "final", text: buyer.name + " já fez a proposta final." };
@@ -113,13 +145,41 @@
     var ceil = off.ceil || ceiling(c, n);
     // custo dos extras para o comprador (equivalente em dinheiro)
     var extra = 0; if (ask.upfront && off.parts > 1) extra += ceil * 0.04; if (ask.bonus) extra += ceil * 0.06; if (ask.sellOn) extra += ceil * 0.05;
-    var eff = ask.fee + extra;
     var parts = [];
     if (ask.upfront) parts.push("pagamento à vista"); if (ask.bonus) parts.push("bônus por metas"); if (ask.sellOn) parts.push("10% de uma revenda");
-    say(off, "me", "Quero " + money(c, ask.fee) + (parts.length ? " + " + parts.join(", ") : "") + ".");
-    if (eff <= off.fee) { say(off, "them", "“Isso já está coberto. Fechamos por " + money(c, off.fee) + "?”", "happy"); return { status: "aceita" }; }
+    // TROCA: você pede um jogador do elenco deles dentro do negócio
+    var swapP = null, swapVal = 0;
+    if (ask.swapId) {
+      swapP = TM.data.player(ask.swapId);
+      if (swapP) {
+        say(off, "me", "Quero " + money(c, ask.fee) + " e " + swapP.name + " incluído no negócio" + (parts.length ? ", com " + parts.join(", ") : "") + ".");
+        var w = swapWilling(c, off.buyerId, swapP);
+        if (!w.ok) {
+          off.patience--;
+          say(off, "them", "“" + swapP.name + "? Nem pensar — " + w.motivo + ". Pode pedir outro nome ou seguimos só no dinheiro.”", "angry");
+          off.swapBlocked = off.swapBlocked || {}; off.swapBlocked[swapP.id] = w.motivo;
+          if (off.patience <= 0) {
+            say(off, "them", "“Assim não vamos a lugar nenhum. Encerramos.”", "angry");
+            TM.notify.remove(c, n.id); note(c, { icon: "🚪", title: "Proposta retirada", news: true, text: buyer.name + " desistiu de " + p.name + " durante a conversa da troca." });
+            return { status: "retirada", text: buyer.name + " retirou o interesse." };
+          }
+          return { status: "trocaRecusada", text: w.motivo };
+        }
+        // eles valorizam o próprio jogador acima do mercado
+        swapVal = swapValue(c, swapP);
+        extra += swapVal * 1.15;
+        parts.push(swapP.name + " na negociação");
+      }
+    }
+    if (!swapP) say(off, "me", "Quero " + money(c, ask.fee) + (parts.length ? " + " + parts.join(", ") : "") + ".");
+    var eff = ask.fee + extra;
+    if (eff <= off.fee) {
+      if (swapP) { off.swapInId = swapP.id; off.swapInName = swapP.name; off.swapInVal = R(swapVal); }
+      say(off, "them", "“Isso já está coberto. Fechamos por " + money(c, off.fee) + (swapP ? " com " + swapP.name + " incluído" : "") + "?”", "happy"); return { status: "aceita" };
+    }
     if (eff <= ceil) {
       off.fee = R(ask.fee); if (ask.upfront) { off.parts = 1; off.upfront = false; } if (ask.bonus) off.bonus = R(ceil * 0.06); if (ask.sellOn) off.sellOn = 10;
+      if (swapP) { off.swapInId = swapP.id; off.swapInName = swapP.name; off.swapInVal = R(swapVal); }
       n.text = buyer.name + " aceitou pagar " + money(c, off.fee) + " por " + p.name + ".";
       say(off, "them", "“Fechado. " + money(c, off.fee) + (parts.length ? " com " + parts.join(", ") : "") + ". Agora é com vocês e com o jogador.”", "happy");
       return { status: "aceita" };
@@ -189,8 +249,28 @@
     if (fans.risk >= 2) note(c, { icon: "😡", title: "Torcida revoltada", news: true, text: fans.line });
     try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { name: p.name, ov: p.overall, fromName: myClub(c).name, toName: buyer.name, val: TM.data.marketValue(p) }); } catch (e) {}
     try { if (TM.social && TM.social.marketPost && fans.risk >= 2) TM.social.marketPost(c, { icon: "😡", title: "Revolta", text: "Torcida do " + myClub(c).name + " protesta contra a venda de " + p.name + " ao " + buyer.name + "." }); } catch (e) {}
+    // TROCA: o jogador que você pediu chega ao seu elenco
+    if (off.swapInId) {
+      var inP = TM.data.player(off.swapInId);
+      if (inP) {
+        try { C().executeWorldTransfer(c, inP.id, c.teamId); } catch (e) {}
+        if (c.roster.indexOf(inP.id) < 0) c.roster.push(inP.id);
+        c.signedFrom = c.signedFrom || {}; c.signedFrom[inP.id] = buyer.id;
+        c.contracts = c.contracts || {};
+        c.contracts[inP.id] = { years: 3, wage: R(Math.max(0.05, TM.data.marketValue(inP) * 0.15)), clause: 0, role: "titular" };
+        try { C().syncLineup(c); } catch (e) {}
+        c.finc = c.finc || { prizeM: 0, spentM: 0, soldM: 0 };
+        c.finc.spentM = R((c.finc.spentM || 0) + (off.swapInVal || 0));
+        try {
+          C().logDeal(c, { type: "in", kind: "swap", pid: inP.id, name: inP.name, pos: inP.pos, ov: inP.overall, fee: off.swapInVal || 0, other: buyer.name });
+        } catch (e) {}
+        note(c, { icon: "🔄", title: "Troca fechada: " + inP.name + " chegou", news: true,
+          text: inP.name + " (" + inP.overall + ") foi incluído na saída de " + p.name + " e já se apresenta ao elenco. Veio do " + buyer.name + "." });
+        try { if (TM.social && TM.social.marketPost) TM.social.marketPost(c, { name: inP.name, ov: inP.overall, fromName: buyer.name, toName: myClub(c).name, val: TM.data.marketValue(inP) }); } catch (e) {}
+      }
+    }
     // outros clubes ficam sabendo que você vende: sondagens por outros jogadores (imersão)
-    return { sold: true, farewell: farewell, fans: fans };
+    return { sold: true, farewell: farewell, fans: fans, swapIn: off.swapInName || null };
   }
   function reject(c, n) {
     var off = n.offer, p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
@@ -377,34 +457,101 @@
 
     // contraproposta
     if (!off.final) {
-      var ask = { fee: R(Math.max(off.fee * 1.15, value)), upfront: false, bonus: false, sellOn: false };
+      var ask = { fee: R(Math.max(off.fee * 1.15, value)), upfront: false, bonus: false, sellOn: false, swapId: null };
       var maxAsk = R(Math.max(off.fee * 2, value * 2)), step = maxAsk >= 50 ? 1 : maxAsk >= 10 ? 0.5 : 0.1;
       var askVal = el("span", { class: "range-val", text: money(c, ask.fee) });
       var slider = el("input", { type: "range", min: off.fee, max: maxAsk, step: step, value: ask.fee, class: "slider" });
       slider.addEventListener("input", function () { ask.fee = R(parseFloat(slider.value)); askVal.textContent = money(c, ask.fee); });
       function tog(label, key) { var b = el("button", { class: "sweet-chip", text: label, on: { click: function () { ask[key] = !ask[key]; b.classList.toggle("on", ask[key]); } } }); return b; }
+      // pedir um jogador do elenco deles dentro do negócio
+      var swapBtn = el("button", { class: "sweet-chip swap", text: "🔄 Pedir um jogador deles" });
+      var swapInfo = el("div", { class: "swap-pick", hidden: true });
+      function clearSwap() {
+        ask.swapId = null; swapBtn.classList.remove("on"); swapBtn.textContent = "🔄 Pedir um jogador deles";
+        swapInfo.hidden = true; TM.ui.clear(swapInfo);
+      }
+      function setSwap(sp) {
+        ask.swapId = sp.id; swapBtn.classList.add("on"); swapBtn.textContent = "🔄 " + sp.name;
+        var val = swapValue(c, sp), wage = curVal(c, Math.max(0.05, TM.data.marketValue(sp) * 0.15));
+        TM.ui.clear(swapInfo); swapInfo.hidden = false;
+        swapInfo.appendChild(el("div", { class: "swap-row" }, [
+          (function () { try { return TM.img.playerImg(sp, "swap-face"); } catch (e) { return el("span"); } })(),
+          el("div", { class: "swap-i" }, [
+            el("div", { class: "swap-n", text: sp.name + " · " + (TM.data.posLabel ? TM.data.posLabel(sp) : sp.pos) + " · " + sp.overall }),
+            el("div", { class: "swap-s", text: "Vale ~" + money(c, val) + " · salário " + money(c, wage) + " por temporada" })
+          ]),
+          el("button", { class: "swap-x", text: "✕", on: { click: clearSwap } })
+        ]));
+        var bl = off.swapBlocked && off.swapBlocked[sp.id];
+        if (bl) swapInfo.appendChild(el("div", { class: "swap-warn", text: "Eles já disseram não a esse nome: " + bl + "." }));
+      }
+      swapBtn.addEventListener("click", function () {
+        if (ask.swapId) { clearSwap(); return; }
+        var list = swapCandidates(c, off.buyerId);
+        if (!list.length) { TM.ui.toast("Não consegui ver o elenco deles"); return; }
+        var sheet = el("div", { class: "ut-sheet" });
+        sheet.appendChild(el("div", { class: "ut-sheet-in" }, [
+          el("div", { class: "ut-sheet-h" }, [
+            el("span", { text: "Pedir um jogador do " + buyer.name }),
+            el("button", { class: "ut-x", text: "✕", on: { click: close } })
+          ]),
+          el("p", { class: "intro-text", text: "Escolha quem você quer incluir na negociação. Craques e joias da base dificilmente são liberados — e o valor dele entra no lugar do dinheiro." }),
+          el("div", { class: "swap-list" }, list.map(function (sp) {
+            var bl = off.swapBlocked && off.swapBlocked[sp.id];
+            var row = TM.ui.playerRow(sp, {});
+            row.classList.add("clickable");
+            if (bl) row.classList.add("row-excluded");
+            row.appendChild(el("span", { class: "swap-val", text: money(c, swapValue(c, sp)) }));
+            row.addEventListener("click", function () { setSwap(sp); close(); });
+            return row;
+          }))
+        ]));
+        sheet.addEventListener("click", function (e) { if (e.target === sheet) close(); });
+        document.body.appendChild(sheet);
+        requestAnimationFrame(function () { sheet.classList.add("show"); });
+        function close() { sheet.classList.remove("show"); setTimeout(function () { sheet.remove(); }, 200); }
+      });
       wrap.appendChild(el("div", { class: "nego-field" }, [
         el("label", { text: "Sua contraproposta" }),
         el("div", { class: "range-wrap" }, [ slider, askVal ]),
-        el("div", { class: "sweet-row" }, [ off.parts > 1 ? tog("💵 Exigir à vista", "upfront") : null, tog("🎯 Bônus por metas", "bonus"), tog("📈 10% da revenda", "sellOn") ].filter(Boolean)),
+        el("div", { class: "sweet-row" }, [ off.parts > 1 ? tog("💵 Exigir à vista", "upfront") : null, tog("🎯 Bônus por metas", "bonus"), tog("📈 10% da revenda", "sellOn"), swapBtn ].filter(Boolean)),
+        swapInfo,
         el("div", { class: "actions" }, [ TM.ui.button("📤 Enviar contraproposta", function () {
           var r = counter(c, n, ask);
           try { if (TM.disp) TM.disp.raceRound(c, n, p, ask.fee); } catch (e) {}
           save(c);
           if (r.status === "retirada") { TM.ui.toast(r.text); TM.ui.go("coach-notifications"); return; }
+          if (r.status === "trocaRecusada") TM.ui.toast("Recusaram: " + r.text);
           if (r.status === "leilao") TM.ui.toast(r.text);
           TM.ui.go("coach-offer", { noteId: n.id });
         }, "btn") ])
       ]));
     }
 
+    // troca já acertada: aparece no resumo antes de fechar
+    if (off.swapInId) {
+      var agreedP = TM.data.player(off.swapInId);
+      if (agreedP) {
+        wrap.appendChild(el("div", { class: "swap-deal" }, [
+          el("div", { class: "swap-deal-t", text: "🔄 NA NEGOCIAÇÃO" }),
+          el("div", { class: "swap-row" }, [
+            (function () { try { return TM.img.playerImg(agreedP, "swap-face"); } catch (e) { return el("span"); } })(),
+            el("div", { class: "swap-i" }, [
+              el("div", { class: "swap-n", text: agreedP.name + " · " + (TM.data.posLabel ? TM.data.posLabel(agreedP) : agreedP.pos) + " · " + agreedP.overall }),
+              el("div", { class: "swap-s", text: "Vem do " + buyer.name + " junto com " + money(c, off.fee) + "." })
+            ])
+          ])
+        ]));
+      }
+    }
+
     // decisão
     wrap.appendChild(el("div", { class: "actions" }, [
-      TM.ui.button("✅ Aceitar " + money(c, off.fee), function () {
+      TM.ui.button("✅ Aceitar " + money(c, off.fee) + (off.swapInName ? " + " + off.swapInName : ""), function () {
         var fans = fansInfo(c, off, p);
-        TM.ui.confirm("Vender " + p.name + "?", money(c, off.fee) + (off.parts > 1 ? " em " + off.parts + " parcelas" : " à vista") + ". " + (fans.risk >= 2 ? fans.line : "O jogador ainda precisa aceitar.") , "Vender", function () {
+        TM.ui.confirm("Vender " + p.name + "?", money(c, off.fee) + (off.parts > 1 ? " em " + off.parts + " parcelas" : " à vista") + (off.swapInName ? ", com " + off.swapInName + " vindo na negociação" : "") + ". " + (fans.risk >= 2 ? fans.line : "O jogador ainda precisa aceitar.") , "Vender", function () {
           var r = accept(c, n); save(c);
-          if (r.sold) { TM.ui.toast("👋 " + p.name + " vendido ao " + buyer.name); TM.ui.go("coach-farewell", { pid: p.id, buyerId: buyer.id, fee: off.fee, farewell: r.farewell }); }
+          if (r.sold) { TM.ui.toast(r.swapIn ? ("🔄 " + p.name + " saiu e " + r.swapIn + " chegou") : ("👋 " + p.name + " vendido ao " + buyer.name)); TM.ui.go("coach-farewell", { pid: p.id, buyerId: buyer.id, fee: off.fee, farewell: r.farewell }); }
           else { TM.ui.toast("🙅 " + p.name + " recusou a transferência"); TM.ui.go("coach-notifications"); }
         }, fans.risk >= 2);
       }, "btn primary"),
