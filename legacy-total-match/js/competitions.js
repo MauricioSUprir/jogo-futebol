@@ -954,6 +954,9 @@
 
   // ---- propostas de emprego de outros clubes (gera de acordo com o desempenho) ----
   function generateJobOffers(career) {
+    // regra nova: a faixa de clubes sai do CURRÍCULO do treinador, não do elenco
+    // que ele tinha. Sem isso, montar um Avaí forte abria proposta de gigante.
+    if (TM.job && TM.job.generate) { try { TM.job.generate(career); return; } catch (e) {} }
     if (!career.jobOffers) career.jobOffers = [];
     var matchNo = career.matchNo || 0;
     var unemployed = !!career.unemployed;

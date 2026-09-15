@@ -4094,3 +4094,37 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .obs-note{font-size:11.5px;color:var(--text-dim);line-height:1.5;margin-top:10px;text-align:center}
 .mkt-scouted.obs-ok{background:rgba(34,197,94,.2);color:#7be2a0}
 .mkt-scouted.obs-run{background:rgba(242,177,0,.2);color:#f2c94c}
+
+/* ---------- Carreira do treinador: conversa com o clube ---------- */
+.job-wrap{padding:0 14px 26px;max-width:620px;margin:0 auto;width:100%;box-sizing:border-box}
+.job-head{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,rgba(34,197,94,.13),rgba(0,0,0,.25));border:1px solid var(--line);border-radius:14px;padding:13px;margin:10px 0}
+.job-crest{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
+.job-id{flex:1;min-width:0}
+.job-club{font-size:17px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.job-lg{font-size:11.5px;color:var(--text-dim);margin-top:2px}
+.job-dir{font-size:11.5px;color:#7be2a0;margin-top:3px}
+.job-int{background:rgba(0,0,0,.32);border-radius:10px;padding:7px 10px;text-align:center;flex:0 0 auto}
+.job-int b{display:block;font-size:17px;font-weight:900;line-height:1}
+.job-int i{font-style:normal;font-size:8.5px;font-weight:800;letter-spacing:.06em;color:var(--text-dim)}
+.job-proj{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px;margin-bottom:10px}
+.job-proj-t{font-size:14px;font-weight:800}
+.job-proj-d{font-size:13px;color:var(--text-dim);line-height:1.5;margin:6px 0;font-style:italic}
+.job-proj-o{font-size:11.5px;color:#7be2a0;font-weight:700}
+.job-chat{display:flex;flex-direction:column;gap:7px;margin:12px 0}
+.job-msg{max-width:88%;padding:9px 12px;border-radius:13px;font-size:13px;line-height:1.45}
+.job-msg.me{align-self:flex-end;background:rgba(34,197,94,.18);border:1px solid rgba(34,197,94,.35)}
+.job-msg.them{align-self:flex-start;background:var(--panel);border:1px solid var(--line)}
+.job-msg.them.happy{border-color:rgba(34,197,94,.45)}
+.job-msg.them.angry{border-color:rgba(224,71,44,.45)}
+.job-q{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:12px;margin:12px 0 9px}
+.job-q-n{font-size:10.5px;font-weight:800;letter-spacing:.09em;color:var(--text-dim)}
+.job-q-t{font-size:15px;font-weight:700;margin-top:6px;line-height:1.45}
+.job-a{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--text);
+  border-radius:12px;padding:12px;font-size:13.5px;font-family:inherit;margin-bottom:7px;cursor:pointer;line-height:1.45}
+.job-a:hover{border-color:var(--gold)}
+.job-terms{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:13px;margin:12px 0}
+.job-terms-t{font-size:14px;font-weight:800;margin-bottom:10px}
+.job-deal{background:linear-gradient(120deg,rgba(34,197,94,.2),var(--panel));border:1px solid #22c55e;border-radius:13px;padding:13px;margin:12px 0;text-align:center}
+.job-deal-t{font-size:16px;font-weight:900}
+.job-deal-s{font-size:13px;color:var(--text-dim);margin-top:6px;line-height:1.5}
+.job-over{background:rgba(224,71,44,.14);border:1px solid rgba(224,71,44,.4);color:#ffb4a3;border-radius:12px;padding:12px;margin:12px 0;font-size:13px;text-align:center}
