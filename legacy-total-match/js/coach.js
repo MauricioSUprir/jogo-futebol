@@ -1828,8 +1828,9 @@
       el("button", { class: "date-cal-btn", text: "🔄 Voltar ao clube", on: { click: function () { TM.ui.go("coach-hub"); } } })
     ]));
     screen.appendChild(el("div", { class: "date-bar" }, [ el("div", { class: "date-now" }, [ el("span", { class: "date-ic", text: "📅" }), el("span", { text: "Hoje: " + C().dateOf(c, c.currentDay).full }) ]) ]));
+    try { if (TM.sel) screen.appendChild(TM.sel.panel(c)); } catch (e) {}
 
-    if (isWC) { renderWorldCupPanel(screen, c); return; }
+    if (isWC) { renderWorldCupPanel(screen, c); natActions(screen, c); return; }
 
     // ano da Copa mas a seleção não se classificou
     if (c.nation.eliminated) {
@@ -1872,7 +1873,12 @@
               if (c.nation.squad.length < 11) { TM.ui.toast("Convoque pelo menos 11 jogadores"); return; }
               w.convoked = true; TM.storage.saveCoachCareer(c);
               TM.notify.push(c, { icon: "📋", title: "Convocação enviada", text: "Convocação de " + c.nation.name + " confirmada para as Eliminatórias contra " + opp.name + "." });
-              TM.storage.saveCoachCareer(c); TM.ui.go("coach-nation");
+              var msgs = [];
+              try { if (TM.sel) msgs = TM.sel.callupReaction(c) || []; } catch (e) {}
+              TM.storage.saveCoachCareer(c);
+              if (msgs.length) {
+                TM.ui.confirm("📰 Repercussão da lista", msgs.map(function (m) { return m.icon + " " + m.text; }).join("\n\n"), "Entendi", function () { TM.ui.go("coach-nation"); });
+              } else { TM.ui.go("coach-nation"); }
             }, "btn primary small")
           ]));
         } else if (c.currentDay >= w.friendlyDay) {
@@ -1892,7 +1898,23 @@
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-scout"); } } }, [ el("span", { class: "hub-ic", text: "🔍" }), el("span", { text: "Scout / Convocar" }) ]),
       el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-lineup"); } } }, [ el("span", { class: "hub-ic", text: "📋" }), el("span", { text: "Escalação" }) ])
     ]));
+    natActions(screen, c);
   });
+
+  // coletiva, histórico do ciclo e saída do cargo
+  function natActions(screen, c) {
+    if (!c.nation) return;
+    var feita = !!c.nation.pressDone;
+    screen.appendChild(el("div", { class: "hub-actions" }, [
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-press"); } } }, [
+        el("span", { class: "hub-ic", text: "🎤" }), el("span", { text: feita ? "Coletiva (feita)" : "Coletiva da seleção" }) ]),
+      el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("coach-nation-job"); } } }, [
+        el("span", { class: "hub-ic", text: "📜" }), el("span", { text: "Meu trabalho" }) ]),
+      el("button", { class: "hub-btn danger", on: { click: function () {
+        if (TM.sel) TM.sel.askResign(c, function () { TM.ui.go("coach-hub"); });
+      } } }, [ el("span", { class: "hub-ic", text: "🚪" }), el("span", { text: "Pedir demissão" }) ])
+    ]));
+  }
 
   /* ---------- tabela das Eliminatórias (confederação do usuário) ---------- */
   TM.ui.register("coach-nation-standings", function (screen) {
@@ -2008,7 +2030,8 @@
     var teamA = userHome ? C().nationTeam(c) : C().oppNationTeam(m.homeId);
     var teamB = userHome ? C().oppNationTeam(m.awayId) : C().nationTeam(c);
     var userSide = userHome ? 0 : 1;
-    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: userSide, tactic: c.nation.tactic };
+    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: userSide, tactic: c.nation.tactic,
+      moraleBoost: c.nation.pressEdge || 0, moraleSide: userSide };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     var label = C().wcRoundLabel(c, m);
     TM.matchview.play(screen, {
@@ -2018,6 +2041,11 @@
         C().applyWorldCupResult(c, result.score[0], result.score[1]);
         var us = userHome ? result.score[0] : result.score[1], them = userHome ? result.score[1] : result.score[0];
         var res = us > them ? "Vitória" : us < them ? "Derrota" : "Empate";
+        // Copa pesa o dobro na aprovação do país e na federação
+        try {
+          if (TM.sel) TM.sel.recordResult(c, { hs: us, as: them, oppId: (userHome ? m.awayId : m.homeId), tipo: "Copa do Mundo" });
+        } catch (e) {}
+        if (c.nation) { c.nation.pressDone = false; c.nation.pressEdge = 0; }
         TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: res + " " + us + "x" + them + " de " + c.nation.name + "." });
         TM.storage.saveCoachCareer(c);
         TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: m.phase === "ko", back: "coach-nation" });
@@ -2226,7 +2254,8 @@
     var w = C().nationNextWindow(c);
     if (!c.nation || !w || !w.convoked || c.currentDay < w.friendlyDay) { TM.ui.go("coach-nation"); return; }
     var teamA = C().nationTeam(c), teamB = C().oppNationTeam(w.oppId);
-    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: 0, tactic: c.nation.tactic };
+    var simOpts = { realism: TM.storage.settings().realism, neutral: true, tacticSide: 0, tactic: c.nation.tactic,
+      moraleBoost: c.nation.pressEdge || 0, moraleSide: 0 };
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: "Eliminatórias · " + c.nation.name, pauseSide: 0, simOpts: simOpts, formation: c.nation.lineup && c.nation.lineup.formation,
@@ -2236,7 +2265,17 @@
         C().applyQualiResult(c, w); // pontua na tabela + simula os outros jogos da rodada
         var res = result.score[0] > result.score[1] ? "Vitória" : result.score[0] < result.score[1] ? "Derrota" : "Empate";
         TM.notify.push(c, { icon: "🌍", title: "Eliminatórias da Copa", text: res + " " + result.score[0] + "x" + result.score[1] + " contra " + teamB.name + "." });
+        // pressão do cargo: aprovação do país, federação e ranking
+        var saiu = false;
+        try {
+          if (TM.sel) {
+            var rr = TM.sel.recordResult(c, { hs: result.score[0], as: result.score[1], oppId: w.oppId, tipo: "Eliminatórias" });
+            saiu = !!(rr && rr.fired);
+          }
+        } catch (e) {}
+        if (c.nation) { c.nation.pressDone = false; c.nation.pressEdge = 0; }
         TM.storage.saveCoachCareer(c);
+        if (saiu) { TM.ui.toast("Você foi demitido da seleção."); TM.ui.go("coach-hub"); return; }
         TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result });
       }
     });
