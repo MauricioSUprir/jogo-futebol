@@ -117,11 +117,11 @@
         var ks = Object.keys(st.vistos);
         if (ks.length > 120) ks.slice(0, ks.length - 120).forEach(function (k) { delete st.vistos[k]; });
         var msg = e.r || (e.d > 0 ? "Presente recebido" : "Retirado pelo administrador");
-        st.log.unshift({ t: e.t || Date.now(), d: e.d, r: msg });
+        st.log.unshift({ t: e.t || Date.now(), d: e.d, r: msg, adm: 1, de: e.from || null });
         if (st.log.length > 60) st.log.length = 60;
         if (e.d > 0) st.earned += e.d;
         logsRecentes.push({ d: e.d, t: Date.now() });
-        save(); refreshBadges();
+        save(); refreshBadges(); refreshMsgBadge();
         // ao abrir o jogo o histórico inteiro chega de uma vez: não enche de aviso
         if (cargaInicial) return;
         TM.ui.toast((e.d > 0 ? "🎁 " : "⚠️ ") + msg + " · " + fmt(e.d));
@@ -244,6 +244,26 @@
         });
       });
     },
+    // mensagens que o administrador mandou junto com coins
+    adminMsgs: function () {
+      return (load().log || []).filter(function (L) { return L.adm; }).slice(0, 40);
+    },
+    unreadAdmin: function () {
+      var s = load(), ate = s.msgLidoAte || 0;
+      return (s.log || []).filter(function (L) { return L.adm && (L.t || 0) > ate; }).length;
+    },
+    lidoAte: function () { return load().msgLidoAte || 0; },
+    markMsgsRead: function () {
+      var s = load(); s.msgLidoAte = Date.now(); save(); refreshMsgBadge();
+    },
+    msgBadge: function (cls) {
+      var n = coins.unreadAdmin();
+      var b = el("button", { class: "msg-badge " + (cls || ""), title: "Mensagens", on: { click: function () { TM.ui.go("mensagens"); } } }, [
+        el("span", { class: "msg-ic", text: "💬" }),
+        el("span", { class: "msg-count" + (n ? " on" : ""), text: n ? String(n > 9 ? "9+" : n) : "" })
+      ]);
+      return b;
+    },
     badge: function (cls) {
       var has = hasAccount();
       var b = el("button", { class: "coin-badge " + (cls || "") + (has ? "" : " nocct"), title: has ? "Total Coins" : "Entre na conta para ter Total Coins", on: { click: function () { TM.ui.go("coins"); } } }, [
@@ -254,6 +274,16 @@
   };
   TM.coins = coins;
 
+  function refreshMsgBadge() {
+    try {
+      var n = coins.unreadAdmin();
+      var els = document.querySelectorAll(".msg-badge .msg-count");
+      for (var i = 0; i < els.length; i++) {
+        els[i].textContent = n ? String(n > 9 ? "9+" : n) : "";
+        els[i].classList.toggle("on", !!n);
+      }
+    } catch (e) {}
+  }
   function refreshBadges() {
     var v = hasAccount() ? String(load().bal) : "—";
     var els = document.querySelectorAll(".coin-badge .coin-val"); for (var i = 0; i < els.length; i++) els[i].textContent = v;
@@ -346,6 +376,60 @@
 
     function stat(lbl, v, sub) { return el("div", { class: "coin-stat" }, [ el("div", { class: "coin-stat-v", text: String(v) }), el("div", { class: "coin-stat-l", text: lbl }), el("div", { class: "coin-stat-s", text: sub }) ]); }
     function rule(ic, txt, val) { return el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: ic }), el("span", { class: "coin-rule-tx", text: txt }), el("span", { class: "coin-rule-v", text: val }) ]); }
+  });
+
+  /* ---------- caixa de mensagens (topo, ao lado dos coins) ---------- */
+  TM.ui.register("mensagens", function (screen) {
+    screen.appendChild(TM.ui.topbar("💬 Mensagens", function () { TM.ui.go("modes"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+
+    // --- do administrador (vêm junto com os Total Coins) ---
+    var msgs = coins.adminMsgs();
+    body.appendChild(el("div", { class: "list-head", text: "👑 Do administrador" }));
+    if (!msgs.length) {
+      body.appendChild(el("div", { class: "setting-hint", text: "Nenhuma mensagem ainda. Quando o administrador te enviar Total Coins com um recado, ele aparece aqui." }));
+    } else {
+      var caixa = el("div", { class: "msg-list" });
+      msgs.forEach(function (m) {
+        caixa.appendChild(el("div", { class: "msg-item" + ((m.t || 0) > (coins.lidoAte() || 0) ? " nova" : "") }, [
+          el("div", { class: "msg-top" }, [
+            el("span", { class: "msg-de", text: "👑 Administrador" + (m.de ? " · #" + m.de : "") }),
+            el("span", { class: "msg-val " + (m.d >= 0 ? "pos" : "neg"), text: (m.d >= 0 ? "+" : "−") + Math.abs(m.d) + " 🪙" })
+          ]),
+          el("div", { class: "msg-txt", text: m.r }),
+          el("div", { class: "msg-data", text: new Date(m.t).toLocaleString("pt-BR") })
+        ]));
+      });
+      body.appendChild(caixa);
+    }
+
+    // --- conversas com amigos ---
+    body.appendChild(el("div", { class: "list-head", text: "💬 Conversas" }));
+    var n = TM.net;
+    if (!n || !n.available || !n.ready || !n.listenFriends) {
+      body.appendChild(el("div", { class: "setting-hint", text: "Entre na sua conta para conversar com amigos." }));
+      body.appendChild(TM.ui.button("👤 Ir para o Perfil", function () { TM.ui.go("profile"); }, "btn"));
+    } else {
+      var lista = el("div", { class: "friend-list" });
+      body.appendChild(lista);
+      lista.appendChild(el("div", { class: "setting-hint", text: "Carregando…" }));
+      var parar = n.listenFriends(function (amigos) {
+        if (!lista.isConnected) { if (parar) parar(); return; }
+        lista.innerHTML = "";
+        if (!amigos.length) { lista.appendChild(el("div", { class: "setting-hint", text: "Você ainda não tem amigos. Adicione pelo número na aba Online." })); return; }
+        amigos.sort(function (a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); });
+        amigos.forEach(function (f) {
+          lista.appendChild(el("button", { class: "msg-conv", on: { click: function () { if (parar) parar(); TM.ui.go("online-chat", { fuid: f.uid, name: f.name }); } } }, [
+            el("span", { class: "msg-conv-n", text: f.name }),
+            el("span", { class: "msg-conv-s", text: "#" + f.number + " · " + (f.online ? "online" : "offline") }),
+            el("span", { class: "msg-conv-go", text: "💬" })
+          ]));
+        });
+      });
+      body.appendChild(TM.ui.button("👥 Amigos e solicitações", function () { if (parar) parar(); TM.ui.go("online-friends"); }, "btn ghost"));
+    }
+    coins.markMsgsRead();
   });
 
   // tela própria do administrador: o botão 👑 do menu cai direto aqui, sem

@@ -4307,3 +4307,25 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 /* versão que está rodando */
 .fc-ver { opacity: .55; letter-spacing: .04em; }
 .prof-ver { font-size: 11px; color: var(--muted, #9a9aa6); margin-top: 3px; opacity: .8; }
+
+/* caixa de mensagens no topo (ao lado dos coins) */
+.msg-badge { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(20,24,20,.7); border: 1px solid rgba(255,255,255,.14); font-size: 17px; cursor: pointer; transition: transform .15s, border-color .15s; }
+.msg-badge:hover { transform: scale(1.08); border-color: var(--gold, #f5c542); }
+.msg-count { position: absolute; top: -3px; right: -3px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #dd4b4b; color: #fff;
+  font-size: 10.5px; font-weight: 800; line-height: 17px; text-align: center; display: none; }
+.msg-count.on { display: block; }
+.msg-list { display: flex; flex-direction: column; gap: 9px; }
+.msg-item { background: var(--card,#16161c); border: 1px solid rgba(255,255,255,.08); border-radius: 13px; padding: 12px; }
+.msg-item.nova { border-color: rgba(245,197,66,.5); background: rgba(245,197,66,.06); }
+.msg-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.msg-de { font-size: 11.5px; font-weight: 700; color: var(--muted,#9a9aa6); }
+.msg-val { font-size: 13px; font-weight: 800; }
+.msg-val.pos { color: #49d07c; } .msg-val.neg { color: #dd6a6e; }
+.msg-txt { font-size: 14px; line-height: 1.5; }
+.msg-data { font-size: 11px; color: var(--muted,#9a9aa6); margin-top: 6px; }
+.msg-conv { display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; text-align: left; background: var(--card,#16161c);
+  border: 1px solid rgba(255,255,255,.07); border-radius: 12px; padding: 11px 12px; color: inherit; font: inherit; cursor: pointer; margin-bottom: 7px; }
+.msg-conv-n { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-conv-s { font-size: 11.5px; color: var(--muted,#9a9aa6); }
+.msg-conv-go { font-size: 16px; }
