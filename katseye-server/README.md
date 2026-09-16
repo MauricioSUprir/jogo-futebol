@@ -25,6 +25,15 @@ dois de propósito**. Se o servidor obedecesse ao prompt de quem chama, ele vira
 de IA genérico com a sua chave — bastaria alguém mandar outro prompt. Aqui ele só sabe ser o
 Conselheiro do KATSEYE.
 
+### Navegação e pesquisa
+
+O servidor manda `google_search` e `url_context` junto da pergunta, então o modelo busca no
+Google e lê páginas. A resposta devolve `fontes` e `buscas` para o app citar.
+
+**Essas ferramentas exigem faturamento ativo** no Google Cloud do projeto da chave. Sem isso a
+API responde 429 falando em *billing* — e o servidor, em vez de falhar, refaz a pergunta sem
+ferramenta e devolve `semWeb: true`. Para desligá-las de vez, `WEB=0`.
+
 ### O freio de mão
 
 O endereço é público: quem descobrir pode chamar. A checagem de origem (`ORIGENS`) só vale
@@ -37,6 +46,7 @@ contadores, todos ajustáveis por variável de ambiente:
 | `LIMITE_DIA_IP` | 40 | perguntas por dia, por IP |
 | `LIMITE_DIA_TOTAL` | 800 | teto do servidor inteiro por dia |
 | `SENHA` | vazio | se preenchida, exige o cabeçalho `x-senha` — deixa o servidor só seu |
+| `WEB` | 1 | `0` desliga a busca e a leitura de páginas |
 
 Os contadores vivem em memória e zeram quando o servidor reinicia. É de propósito: para o
 tamanho deste app, um contador que some no deploy é melhor do que um banco que ninguém mantém.
