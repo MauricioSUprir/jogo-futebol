@@ -163,6 +163,9 @@
   /* ---------- TELA PERFIL ---------- */
   TM.ui.register("profile", function (screen) {
     screen.appendChild(TM.ui.topbar("👤 Perfil", function () { TM.ui.go("modes"); }));
+    // seletor de edição: fica ANTES do portão de rede, porque trocar de versão
+    // não depende de estar logado
+    screen.appendChild(edicaoCard());
     var body = el("div", { class: "panel-narrow" });
     screen.appendChild(body);
     N().init();
@@ -173,6 +176,57 @@
     setTimeout(function () { if (!done && body.isConnected) { TM.ui.clear(body); body.appendChild(el("p", { class: "intro-text", text: "Não foi possível conectar. Verifique a internet." })); } }, 9000);
     N().onReady(function () { done = true; if (!body.isConnected) return; TM.ui.clear(body); var p = profile(); if (p) renderLoggedIn(body, p); else renderLoggedOut(body); });
   });
+
+  /* ---------- versão do jogo (troca na hora, sem recarregar) ---------- */
+  var EDICOES = [
+    { id: "public", ic: "⚽", nome: "Total Match",   desc: "Times, jogadores e competições fictícios." },
+    { id: "pro",    ic: "🔒", nome: "Season Update", desc: "Elencos, escudos e fotos reais. Edição fechada." }
+  ];
+  function edicaoCard() {
+    var atual = "public"; try { atual = TM.storage.edition(); } catch (e) {}
+    var card = el("div", { class: "ed-card" });
+    card.appendChild(el("div", { class: "ed-title", text: "🎮 Versão do jogo" }));
+    EDICOES.forEach(function (e) {
+      var on = e.id === atual;
+      var trancada = e.id === "pro" && !TM.storage.suUnlocked();
+      card.appendChild(el("button", { class: "ed-opt" + (on ? " on" : ""), on: { click: function () {
+        if (on) return;
+        if (trancada) { pedeChave(); return; }
+        troca(e.id);
+      } } }, [
+        el("span", { class: "ed-ic", text: e.ic }),
+        el("span", { class: "ed-i" }, [
+          el("span", { class: "ed-n", text: e.nome }),
+          el("span", { class: "ed-d", text: e.desc })
+        ]),
+        el("span", { class: "ed-mark", text: on ? "✓" : (trancada ? "🔑" : "") })
+      ]));
+    });
+    card.appendChild(el("div", { class: "setting-hint", text: "Cada versão tem as suas próprias carreiras e saves — trocar aqui não apaga nada, só leva você para o outro mundo." }));
+    return card;
+  }
+  function troca(id) {
+    TM.storage.switchEdition(id);
+    var nome = id === "pro" ? "Season Update" : "Total Match";
+    TM.ui.toast("Agora você está na versão " + nome);
+    TM.ui.go("modes");
+  }
+  function pedeChave() {
+    var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (ev) { if (ev.target === overlay) overlay.remove(); } } });
+    var input = el("input", { class: "select", type: "password", inputmode: "numeric", maxlength: "16", placeholder: "chave de acesso", autocomplete: "off" });
+    var msg = el("div", { class: "setting-hint", text: "A versão Season Update é fechada. Digite a chave de acesso." });
+    var entrar = el("button", { class: "sheet-item", text: "Entrar", on: { click: function () {
+      if (TM.storage.unlockSU(input.value)) { overlay.remove(); troca("pro"); }
+      else { msg.textContent = "Chave inválida. Tente de novo."; msg.style.color = "#ff7b6b"; input.value = ""; input.focus(); }
+    } } });
+    var sheet = el("div", { class: "sheet" }, [
+      el("div", { class: "sheet-title", text: "🔒 Season Update" }), msg, input, entrar,
+      el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } })
+    ]);
+    input.addEventListener("keydown", function (ev) { if (ev.key === "Enter") entrar.click(); });
+    overlay.appendChild(sheet); document.body.appendChild(overlay);
+    setTimeout(function () { try { input.focus(); } catch (e) {} }, 50);
+  }
 
   function renderLoggedIn(body, p) {
     var me = N().me || {};

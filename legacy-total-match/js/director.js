@@ -113,6 +113,7 @@
   }
   // propostas da temporada (determinísticas por clube+temporada) — as três cotas são sorteadas juntas, sem repetir empresa
   var _offersCache = {};
+  try { TM.storage.onEditionChange(function () { _offersCache = {}; }); } catch (e) {}
   function allOffers(c) {
     var key = (c.teamId || "x") + "|" + (c.season || 1) + "|" + (isPro() ? "pro" : "pub") + "|" + (c.sponsorRenew || 0);
     if (_offersCache[key]) return _offersCache[key];

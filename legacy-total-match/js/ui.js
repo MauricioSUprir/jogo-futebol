@@ -568,9 +568,8 @@
 
     // alternar entre as duas edições (não inicia o jogo — para o clique de propagar)
     // Season Update é fechada: precisa de chave de acesso (lembrada neste aparelho)
-    var SU_KEY = "21011004", SU_FLAG = "totalmatch:su_unlocked";
-    function suUnlocked() { try { return localStorage.getItem(SU_FLAG) === "1"; } catch (e) { return false; } }
-    if (isPro && !suUnlocked()) { TM.storage.setEdition("public"); try { location.reload(); } catch (er) {} return; }
+    function suUnlocked() { return TM.storage.suUnlocked(); }
+    if (isPro && !suUnlocked()) { TM.storage.switchEdition("public"); go("splash"); return; }
     function askKey() {
       var overlay = el("div", { class: "sheet-overlay modal show", on: { click: function (e) { if (e.target === overlay) overlay.remove(); } } });
       var input = el("input", { class: "select", type: "password", inputmode: "numeric", maxlength: "16", placeholder: "chave de acesso", autocomplete: "off" });
@@ -579,9 +578,8 @@
         el("div", { class: "sheet-title", text: "🔒 Season Update" }),
         msg, input,
         el("button", { class: "sheet-item", text: "Entrar", on: { click: function () {
-          if ((input.value || "").trim() === SU_KEY) {
-            try { localStorage.setItem(SU_FLAG, "1"); } catch (e) {}
-            overlay.remove(); TM.storage.setEdition("pro"); try { location.reload(); } catch (er) { go("splash"); }
+          if (TM.storage.unlockSU(input.value)) {
+            overlay.remove(); TM.storage.switchEdition("pro"); go("splash");
           } else { msg.textContent = "Chave inválida. Tente de novo."; msg.style.color = "#ff7b6b"; input.value = ""; input.focus(); }
         } } }),
         el("button", { class: "sheet-item cancel", text: "Cancelar", on: { click: function () { overlay.remove(); } } })
@@ -591,8 +589,8 @@
     }
     var switchBtn = el("button", { class: "splash-switch" + (isPro ? " pro" : ""), text: isPro ? "↩ Voltar à versão padrão" : "🔒 Abrir versão Season Update", on: { click: function (e) {
       e.stopPropagation();
-      if (isPro) { TM.storage.setEdition("public"); try { location.reload(); } catch (er) { go("splash"); } return; }
-      if (suUnlocked()) { TM.storage.setEdition("pro"); try { location.reload(); } catch (er) { go("splash"); } return; }
+      if (isPro) { TM.storage.switchEdition("public"); go("splash"); return; }
+      if (suUnlocked()) { TM.storage.switchEdition("pro"); go("splash"); return; }
       askKey();
     } } });
     screen.appendChild(switchBtn);
