@@ -81,7 +81,19 @@ Três modos, e a tela **diz em qual está, mensagem por mensagem**:
 | 🛰️ **Servidor seu** | O app faz `POST /conselho` com `{ sistema, mensagens, modelo }` e espera `{ texto }`. É o caminho certo para publicar: a chave fica no servidor. |
 
 Se a chamada falhar (limite estourado, internet fora), ele **avisa e responde pelo motor local**
-em vez de travar.
+em vez de travar. E quando o Google aposenta um modelo — acontece, o `gemini-2.5-flash` deixou
+de aceitar chave nova — o app **troca sozinho pelo apelido `gemini-flash-latest` e refaz a
+pergunta**, em vez de estourar o erro na cara de quem perguntou.
+
+#### Link de ativação (pessoal)
+
+Abrir o app com `#/ativar?chave=SUA_CHAVE` liga o Gemini de uma vez, sem digitar nada — útil
+para guardar um atalho no celular. A chave vai no fragmento da URL (depois do `#`), que o
+navegador **nunca envia ao servidor**, e o app a remove da barra de endereço assim que a
+guarda.
+
+> ⚠️ Esse link é **pessoal**. Quem o tiver usa a sua cota. Não poste em lugar público — para
+> deixar o chat ligado para outras pessoas, use o [`katseye-server/`](../katseye-server/).
 
 ### 6. ⚙️ Sistema
 Tema escuro/claro, densidade, cor de acento, chave para desligar animações, escolha das cidades

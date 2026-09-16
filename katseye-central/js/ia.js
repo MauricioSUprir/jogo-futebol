@@ -36,8 +36,13 @@ export const PROVEDORES = [
     id: 'gemini',
     nome: 'Google Gemini',
     chamada: 'tem camada gratuita',
-    padrao: 'gemini-2.5-flash',
-    modelos: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    // Apelido, de propósito: o Google aposenta versão numerada sem aviso
+    // (o 2.5-flash parou de aceitar chave nova), e o apelido acompanha.
+    padrao: 'gemini-flash-latest',
+    modelos: [
+      'gemini-flash-latest', 'gemini-flash-lite-latest', 'gemini-pro-latest',
+      'gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-2.5-flash',
+    ],
     ondePegar: 'https://aistudio.google.com/apikey',
     campo: 'chaveGemini',
     nota: 'O Google AI Studio dá uma chave de graça, com limite de uso por minuto e por dia. '
@@ -217,8 +222,10 @@ async function viaAnthropic(mensagens) {
  * chave na query, e o formato das mensagens é diferente: 'model' no lugar de
  * 'assistant' e o texto dentro de `parts`.
  */
-async function viaGemini(mensagens) {
-  const modelo = modeloAtual();
+const MODELO_SOCORRO = 'gemini-flash-latest';
+
+async function viaGemini(mensagens, modeloForcado = null) {
+  const modelo = modeloForcado || modeloAtual();
   let r;
   try {
     r = await fetchGemini(modelo, mensagens);
@@ -232,17 +239,33 @@ async function viaGemini(mensagens) {
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg = d?.error?.message || `A API respondeu ${r.status}.`;
-    if (r.status === 429) throw new Error(`Limite da camada gratuita atingido. ${msg}`);
+
+    // O Google aposenta modelo e devolve 404 dizendo qual usar. Em vez de
+    // largar o erro na cara de quem perguntou, troca pelo apelido que
+    // acompanha as versões e tenta de novo — uma vez só.
+    if (r.status === 404 && modelo !== MODELO_SOCORRO) {
+      const texto = await viaGemini(mensagens, MODELO_SOCORRO);
+      set((x) => { x.ia.modelo = MODELO_SOCORRO; });
+      return texto;
+    }
+
+    if (r.status === 429) throw new Error(`Limite de uso atingido: ${msg}`);
+    if (r.status === 503) throw new Error('O modelo está sobrecarregado no Google agora. Tente de novo em instantes.');
     if (r.status === 400 && /api key/i.test(msg)) throw new Error('A chave foi recusada pelo Google. Confira se copiou inteira.');
     if (r.status === 403) throw new Error(`Acesso negado pelo Google: ${msg}`);
-    if (r.status === 404) throw new Error(`O modelo "${modelo}" não existe ou não está liberado para a sua chave.`);
+    if (r.status === 404) throw new Error(`O modelo "${modelo}" não está disponível para a sua chave.`);
     throw new Error(msg);
   }
   const cand = d.candidates?.[0];
   if (!cand && d.promptFeedback?.blockReason) {
     throw new Error(`O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
   }
-  return (cand?.content?.parts || []).map((x) => x.text || '').join('\n').trim();
+  // Os modelos novos devolvem também blocos de raciocínio; só o texto importa.
+  return (cand?.content?.parts || [])
+    .filter((x) => !x.thought && typeof x.text === 'string' && x.text)
+    .map((x) => x.text)
+    .join('\n')
+    .trim();
 }
 
 function fetchGemini(modelo, mensagens) {

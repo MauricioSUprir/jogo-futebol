@@ -220,6 +220,37 @@ function render() {
 }
 
 /* ==========================================================
+   ATIVAÇÃO POR LINK
+   ==========================================================
+   Abrir o app com `#/ativar?chave=SUA_CHAVE` liga o Gemini de uma vez, sem
+   ninguém digitar nada. Serve para o dono guardar um atalho pessoal.
+
+   A chave vai no fragmento (depois do #), que o navegador NUNCA envia ao
+   servidor — nem o GitHub Pages a vê. Ainda assim ela fica no endereço, então
+   o app a tira da barra assim que guarda, e o aviso é claro: esse link é
+   pessoal, quem o tiver usa a sua cota.                                     */
+function ativacaoPorLink() {
+  const corte = location.hash.indexOf('?');
+  if (corte < 0) return false;
+  const params = new URLSearchParams(location.hash.slice(corte + 1));
+  const chave = (params.get('chave') || '').trim();
+  if (!chave) return false;
+
+  set((s) => {
+    s.ia.chaveGemini = chave;
+    s.ia.provedor = 'gemini';
+    s.ia.modo = 'chave';
+  });
+
+  // limpa o endereço: a chave sai da barra, do histórico desta navegação e
+  // de qualquer print de tela que a pessoa venha a tirar depois
+  try {
+    history.replaceState(null, '', `${location.pathname}#/conselheiro`);
+  } catch { location.hash = '#/conselheiro'; }
+  return true;
+}
+
+/* ==========================================================
    BOOT
    ========================================================== */
 function iniciar() {
@@ -236,6 +267,8 @@ function iniciar() {
   carregar();
   aplicarPrefs();
   montarMenu();
+
+  const ligouPeloLink = ativacaoPorLink();
 
   addEventListener('hashchange', render);
   aoMudar(() => atualizarTopo());
@@ -270,6 +303,12 @@ function iniciar() {
   $('#boot')?.remove();
   $('#app').hidden = false;
 
+  if (ligouPeloLink) {
+    set((s) => { s.visto.boasVindas = true; });   // não atrapalha com o modal
+    toast('Gemini ligado neste aparelho 🎉', 'good');
+    registrarAtivacao();
+  }
+
   // primeira visita: uma palavra sobre o que é isso, e nada mais
   if (!st().visto.boasVindas) {
     setTimeout(() => {
@@ -293,6 +332,19 @@ function iniciar() {
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
+}
+
+/** Confirma que a chave do link funciona de verdade, sem travar a tela. */
+async function registrarAtivacao() {
+  const { perguntar } = await import('./ia.js');
+  const r = await perguntar([], 'Responda apenas: ok');
+  if (r.local) {
+    set((s) => { s.ia.modo = 'local'; });
+    toast(`A chave do link não funcionou: ${r.erro || 'recusada'}`, 'bad');
+  } else {
+    toast('Testado: o Conselheiro já está respondendo pela IA ✅', 'good');
+  }
+  render();
 }
 
 if (document.readyState === 'loading') addEventListener('DOMContentLoaded', iniciar);
