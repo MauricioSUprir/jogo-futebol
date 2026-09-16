@@ -24,6 +24,7 @@ import {
   corPrioridade, saudeDoPlano, aniversarios,
 } from './engine.js';
 import { GRUPO } from './dados.js';
+import { CHAVE_EMBUTIDA, PROVEDOR_EMBUTIDO, temChaveEmbutida } from './chave.js';
 import { fmtData, iso, hoje, cortar, esperar } from './util.js';
 
 const ENDPOINT_ANTHROPIC = 'https://api.anthropic.com/v1/messages';
@@ -61,11 +62,26 @@ export const PROVEDORES = [
 ];
 export const provedor = (id) => PROVEDORES.find((p) => p.id === id) || PROVEDORES[0];
 
-/** A chave guardada para o provedor escolhido (ou o que estiver ativo). */
+/**
+ * A chave em uso para um provedor: a que a pessoa colou vence; na falta
+ * dela, a que vem embutida no app (chave.js).
+ */
 export function chaveDe(id = null) {
   const ia = st().ia;
-  const p = provedor(id || ia.provedor);
-  return String(ia[p.campo] || '').trim();
+  const alvo = id || ia.provedor;
+  const p = provedor(alvo);
+  const propria = String(ia[p.campo] || '').trim();
+  if (propria) return propria;
+  if (temChaveEmbutida() && alvo === PROVEDOR_EMBUTIDO) return CHAVE_EMBUTIDA.trim();
+  return '';
+}
+
+/** Está usando a chave que veio no app, e não uma colada pela pessoa? */
+export function usandoChaveEmbutida() {
+  const ia = st().ia;
+  return temChaveEmbutida()
+    && ia.provedor === PROVEDOR_EMBUTIDO
+    && !String(ia[provedor(ia.provedor).campo] || '').trim();
 }
 export function modeloAtual() {
   const ia = st().ia;
@@ -88,6 +104,10 @@ export function motivoIA() {
   if (m === 'servidor') return { ok: true, txt: 'Conectado ao seu servidor.' };
   if (m === 'chave') {
     const p = provedor(st().ia.provedor);
+    if (usandoChaveEmbutida()) {
+      return { ok: true, txt: `Conectado ao ${p.nome} (${modeloAtual()}) pela chave que já vem no app. `
+        + 'Para usar a sua, cole em Configurações — a sua sempre vence.' };
+    }
     return { ok: true, txt: `Conectado ao ${p.nome} (${modeloAtual()}), com a chave guardada neste aparelho.` };
   }
   return {

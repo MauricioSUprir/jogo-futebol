@@ -85,6 +85,20 @@ em vez de travar. E quando o Google aposenta um modelo — acontece, o `gemini-2
 de aceitar chave nova — o app **troca sozinho pelo apelido `gemini-flash-latest` e refaz a
 pergunta**, em vez de estourar o erro na cara de quem perguntou.
 
+#### Deixar o chat ligado para quem abrir o link
+
+Preencha `js/chave.js` → `CHAVE_EMBUTIDA` com uma chave do Gemini. Com ela preenchida, o app
+abre já conectado e ninguém precisa configurar nada.
+
+> ⚠️ **O que isso custa:** o app é estático e público, então essa chave é lida por qualquer
+> visitante no "ver código-fonte", e o Google costuma revogar automaticamente chaves que
+> encontra em repositório público. Se o chat parar do nada, é isso — gere outra e troque a
+> linha. Para o chat ligado **sem** esse problema, use o
+> [`katseye-server/`](../katseye-server/), que guarda a chave fora do navegador.
+>
+> Se a chave embutida falhar, o app não quebra: avisa, volta para o motor local e mostra o
+> campo para colar outra.
+
 #### Link de ativação (pessoal)
 
 Abrir o app com `#/ativar?chave=SUA_CHAVE` liga o Gemini de uma vez, sem digitar nada — útil
