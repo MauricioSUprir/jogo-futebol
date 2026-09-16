@@ -19254,9 +19254,48 @@
       var _p = playersById[_pid];
       if (_p && _p.ph && phToId[_p.ph] == null) phToId[_p.ph] = _p.id;
     }
+    // Season Update: a convocação sai dos jogadores REAIS dos clubes do jogo,
+    // pela nacionalidade — nome, foto, clube e overall de verdade. O REAL_NATIONS
+    // guarda só a FORMA do elenco (posição/idade/overall/valor) com nomes
+    // genéricos: serve na edição pública, mas na Season Update ficava um Brasil
+    // cheio de jogador inventado.
+    var porNacao = {};
+    if (pro) {
+      for (var _qid in playersById) {
+        var _pl = playersById[_qid];
+        if (!_pl || !_pl.clubId || _pl.clubId === "free" || !_pl.nationId) continue;
+        (porNacao[_pl.nationId] = porNacao[_pl.nationId] || []).push(_pl);
+      }
+      Object.keys(porNacao).forEach(function (k) {
+        porNacao[k].sort(function (a, b) { return b.overall - a.overall; });
+      });
+    }
+    // cotas por setor: sem isso uma seleção podia vir com 20 atacantes
+    var COTA_NAC = { GK: 3, DF: 9, MF: 8, FW: 6 };
+    function convocaveisReais(n) {
+      var pool = porNacao[n.id] || [];
+      if (pool.length < 16) return null;
+      // sem dois goleiros de verdade não dá pra montar seleção: cai no elenco
+      // de reserva, que ao menos vem com os setores completos
+      if (pool.filter(function (pl) { return pl.pos === "GK"; }).length < 2) return null;
+      var falta = { GK: COTA_NAC.GK, DF: COTA_NAC.DF, MF: COTA_NAC.MF, FW: COTA_NAC.FW };
+      var out = [], usado = {};
+      pool.forEach(function (pl) {
+        if (out.length >= 26) return;
+        if (falta[pl.pos] > 0) { falta[pl.pos]--; usado[pl.id] = 1; out.push(pl.id); }
+      });
+      // completa com os melhores que sobraram quando algum setor não tinha gente
+      pool.forEach(function (pl) { if (out.length < 26 && !usado[pl.id]) { usado[pl.id] = 1; out.push(pl.id); } });
+      return out.length >= 16 ? out : null;
+    }
+
     // zera os pools e reconstrói cada seleção só com jogadores REAIS (sem genéricos)
     NATIONS.forEach(function (n) {
       n.players = [];
+      if (pro) {
+        var reais = convocaveisReais(n);
+        if (reais) { n.players = reais; return; }
+      }
       var roster = REAL_NATIONS[n.key];
       if (!roster) return;
       var used = {};
@@ -20235,8 +20274,19 @@
     },
     // melhores XI da nação (para seleções)
     nationSquad: function (natId) {
-      var ids = TM.data.nation(natId).players.map(TM.data.player);
-      return ids.sort(function (a, b) { return b.overall - a.overall; }).slice(0, 23);
+      var ids = TM.data.nation(natId).players.map(TM.data.player).filter(Boolean)
+        .sort(function (a, b) { return b.overall - a.overall; });
+      var out = ids.slice(0, 23);
+      // garante ao menos 2 goleiros: cortando só pelo overall dava pra ficar sem
+      var gks = out.filter(function (p) { return p.pos === "GK"; }).length;
+      if (gks < 2) {
+        var fora = ids.slice(23).filter(function (p) { return p.pos === "GK"; });
+        while (gks < 2 && fora.length) {
+          for (var i = out.length - 1; i >= 0; i--) { if (out[i].pos !== "GK") { out.splice(i, 1); break; } }
+          out.push(fora.shift()); gks++;
+        }
+      }
+      return out;
     },
     // pool completo de convocáveis da seleção (26 reais), ordenado por overall
     nationPool: function (natId) {
