@@ -2415,6 +2415,10 @@
     if (career._lastCalDay === d) return;
     var lastD = career._lastCalDay == null ? d - 1 : career._lastCalDay;
     career._lastCalDay = d;
+    // observação de alvos: o relógio só corria depois de uma PARTIDA, então
+    // quem pulava dias via a barra chegar a 100% e o relatório nunca fechar.
+    // Aqui é o funil único por onde todo avanço de dia passa.
+    try { if (TM.obs && TM.obs.tick) TM.obs.tick(career); } catch (e) {}
     try { if (TM.fin && TM.fin.dailyPoach) for (var pd = 0; pd < Math.min(12, d - lastD); pd++) TM.fin.dailyPoach(career); } catch (e) {}
     try { tickDevelopment(career, Math.min(30, d - lastD)); } catch (e) {}   // evolução diária do elenco (titulares, reservas e base)
     var open = windowOpenNow(career);
