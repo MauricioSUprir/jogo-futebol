@@ -789,6 +789,7 @@
     var carItems = [];
     if (hasCoachSave) carItems.push({ icon: "▶️", name: "Continuar carreira", desc: "Retome de onde você parou", route: "coach-hub", big: true });
     carItems.push({ icon: "🎯", name: "Carreira de Treinador", desc: "Comande o clube, a gestão (patrocínios, SAF, estádio, CT) e a seleção — Master League", route: "coach", big: !hasCoachSave });
+    carItems.push({ icon: "🌟", name: "Rumo ao Estrelato", desc: "Carreira de jogador: a semana é o jogo, e o técnico tem uma opinião sua que sobe e desce", route: "rae" });
     carItems.push({ icon: "💾", name: "Minhas carreiras", desc: "Continue outros saves", route: "saves" });
     var CATS = [
       { key: "car", tab: "Carreiras", ic: "⭐", items: carItems },
@@ -814,7 +815,8 @@
     var SB = "assets/estadios/";
     var FEATURED = [
       { icon: "🎯", name: "Master League", tag: "Do banco de reservas ao topo do mundo", route: "coach", acc: "car", bg: SB + "st-270085.jpg" },
-      { icon: "🌍", name: "Carreira de Jogador", tag: "Viva a vida de um craque", route: "player", acc: "car", bg: SB + "st-30651230.jpg" },
+      { icon: "🌟", name: "Rumo ao Estrelato", tag: "A semana é o jogo. Brigue pela vaga.", route: "rae", acc: "car", bg: SB + "st-30651230.jpg" },
+      { icon: "🌍", name: "Carreira de Jogador", tag: "Viva a vida de um craque", route: "player", acc: "car", bg: SB + "st-10287243.jpg" },
       { icon: "⚡", name: "Partida Rápida", tag: "Escolha dois times e jogue agora", route: "quick", acc: "play", bg: SB + "st-17779076.jpg" },
       { icon: "🌐", name: "Jogue Online", tag: "Desafie amigos em tempo real", route: "online", acc: "net", bg: SB + "st-399187.jpg" }
     ];

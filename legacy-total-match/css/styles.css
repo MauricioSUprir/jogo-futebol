@@ -4157,3 +4157,132 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .free-club-n{font-size:15px;font-weight:800}
 .free-club-s{font-size:11.5px;color:var(--text-dim);margin-top:2px}
 .post-ava.club{object-fit:contain;background:rgba(255,255,255,.06);padding:3px;box-sizing:border-box}
+
+/* ================= RUMO AO ESTRELATO ================= */
+.rae-body{width:100%;max-width:560px;box-sizing:border-box;padding:0 14px 28px;display:flex;flex-direction:column;gap:12px}
+.rae-intro{background:var(--card,#16161c);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:16px;margin-bottom:14px}
+.rae-intro-t{font-size:19px;font-weight:800;margin-bottom:6px}
+.rae-intro-d{font-size:13px;line-height:1.5;color:var(--muted,#9a9aa6)}
+
+/* cartão do jogador */
+.rae-card{display:flex;align-items:center;gap:12px;background:var(--card,#16161c);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:14px}
+.rae-card-l{flex:1;min-width:0}
+.rae-name{font-size:18px;font-weight:800;line-height:1.2}
+.rae-sub{font-size:12px;color:var(--muted,#9a9aa6);margin-top:2px}
+.rae-club{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:13px}
+.rae-crest{width:20px;height:20px;object-fit:contain}
+
+/* A BARRA DE CONFIANÇA */
+.rae-conf{background:var(--card,#16161c);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:14px}
+.rae-conf.compacta{padding:11px}
+.rae-conf-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.rae-conf-lbl{font-size:10.5px;letter-spacing:.09em;color:var(--muted,#9a9aa6);font-weight:700}
+.rae-conf-val{font-size:15px;font-weight:800}
+.rae-bar{position:relative;height:14px;border-radius:8px;background:rgba(255,255,255,.07);overflow:hidden}
+.rae-bar-fill{height:100%;border-radius:8px;transition:width .45s ease}
+.rae-bar-fill.rae-st-top{background:linear-gradient(90deg,#f5c542,#ffd977)}
+.rae-bar-fill.rae-st-tit{background:linear-gradient(90deg,#2fa35a,#49d07c)}
+.rae-bar-fill.rae-st-alt{background:linear-gradient(90deg,#a06bd4,#c79af0)}
+.rae-bar-fill.rae-st-res{background:linear-gradient(90deg,#7a7a86,#a0a0ad)}
+.rae-bar-fill.rae-st-out{background:linear-gradient(90deg,#b8474b,#dd6a6e)}
+.rae-bar-mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:#fff;opacity:.92}
+.rae-bar-mark::after{content:"";position:absolute;top:-3px;left:-3px;width:8px;height:8px;border-radius:50%;background:#fff}
+.rae-bar-mark.keep{background:#ff9f43;opacity:.8;width:2px}
+.rae-bar-mark.keep::after{background:#ff9f43;width:6px;height:6px;left:-2px}
+.rae-conf-sub{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+.rae-status{font-size:12.5px;font-weight:800;padding:3px 9px;border-radius:999px}
+.rae-status.rae-st-top{background:rgba(245,197,66,.16);color:#f5c542}
+.rae-status.rae-st-tit{background:rgba(73,208,124,.15);color:#49d07c}
+.rae-status.rae-st-alt{background:rgba(199,154,240,.15);color:#c79af0}
+.rae-status.rae-st-res{background:rgba(160,160,173,.15);color:#a0a0ad}
+.rae-status.rae-st-out{background:rgba(221,106,110,.15);color:#dd6a6e}
+.rae-conf-hint{font-size:11.5px;color:var(--muted,#9a9aa6);text-align:right;flex:1}
+.rae-conf-last{display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:9px;border-top:1px solid rgba(255,255,255,.06)}
+.rae-delta{font-weight:800;font-size:13px;min-width:30px;text-align:center;border-radius:6px;padding:1px 5px}
+.rae-delta.up{color:#49d07c;background:rgba(73,208,124,.13)}
+.rae-delta.down{color:#dd6a6e;background:rgba(221,106,110,.13)}
+.rae-delta-txt,.rae-log-t{font-size:12px;color:var(--muted,#9a9aa6);flex:1;min-width:0}
+
+/* energia */
+.rae-energia{background:var(--card,#16161c);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:12px}
+.rae-en-top{display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:7px}
+.rae-en-val.ok{color:#49d07c}.rae-en-val.mid{color:#f5c542}.rae-en-val.low{color:#dd6a6e}
+.rae-en-bar{height:8px;border-radius:5px;background:rgba(255,255,255,.07);overflow:hidden}
+.rae-en-fill{height:100%;transition:width .4s ease}
+.rae-en-fill.ok{background:#49d07c}.rae-en-fill.mid{background:#f5c542}.rae-en-fill.low{background:#dd6a6e}
+.rae-warn{font-size:11.5px;color:#f5c542;margin-top:8px;line-height:1.45}
+.rae-warn.big{background:rgba(221,106,110,.12);color:#dd6a6e;border-radius:12px;padding:11px 13px;font-size:13px;font-weight:600;margin-top:0}
+
+/* concorrente */
+.rae-rival{background:var(--card,#16161c);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:12px;cursor:pointer}
+.rae-rival-h{font-size:11px;letter-spacing:.05em;color:var(--muted,#9a9aa6);font-weight:700;margin-bottom:9px}
+.rae-rival-b{display:flex;align-items:center;gap:10px}
+.rae-rival-face{width:40px;height:40px;border-radius:50%;object-fit:cover;flex:none}
+.rae-rival-i{flex:1;min-width:0}
+.rae-rival-n{font-weight:700;font-size:14px}
+.rae-rival-s{font-size:11.5px;color:var(--muted,#9a9aa6)}
+.rae-go{font-size:11.5px;color:var(--accent,#a06bd4);white-space:nowrap}
+
+/* semana */
+.rae-week-h{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700}
+.rae-week-d{color:var(--accent,#a06bd4)}
+.rae-inst{background:rgba(160,107,212,.09);border:1px solid rgba(160,107,212,.24);border-radius:14px;padding:13px}
+.rae-inst-h{font-size:11.5px;color:var(--muted,#9a9aa6);font-weight:700;margin-bottom:5px}
+.rae-inst-t{font-size:13.5px;line-height:1.5;font-style:italic}
+.rae-inst-s{font-size:11.5px;color:var(--muted,#9a9aa6);margin-top:7px}
+.rae-inst-s.ok{color:#49d07c;font-weight:700}
+.rae-feito{display:flex;flex-wrap:wrap;gap:6px}
+.rae-chip{background:rgba(255,255,255,.07);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600}
+.rae-week-end{background:var(--card,#16161c);border-radius:14px;padding:13px;font-size:14px;font-weight:700}
+.rae-ativs{display:flex;flex-direction:column;gap:8px}
+.rae-ativ{display:flex;align-items:center;gap:11px;width:100%;box-sizing:border-box;text-align:left;background:var(--card,#16161c);border:1px solid rgba(255,255,255,.07);border-radius:13px;padding:12px;color:inherit;font:inherit;cursor:pointer}
+.rae-ativ.pedido{border-color:rgba(160,107,212,.5);background:rgba(160,107,212,.07)}
+.rae-ativ.sem-energia{opacity:.4}
+.rae-ativ-ic{font-size:21px;flex:none}
+.rae-ativ-i{flex:1;min-width:0;display:flex;flex-direction:column}
+.rae-ativ-n{font-weight:700;font-size:14px}
+.rae-ativ-d{font-size:11.5px;color:var(--muted,#9a9aa6);margin-top:1px}
+.rae-ativ-c{font-weight:800;font-size:13px;flex:none}
+.rae-ativ-c.gasta{color:#dd6a6e}.rae-ativ-c.ganha{color:#49d07c}
+
+/* escalação e resultado */
+.rae-esc{border-radius:16px;padding:16px;border:1px solid}
+.rae-esc.tit{background:rgba(73,208,124,.10);border-color:rgba(73,208,124,.3)}
+.rae-esc.alt{background:rgba(199,154,240,.10);border-color:rgba(199,154,240,.3)}
+.rae-esc.out{background:rgba(221,106,110,.10);border-color:rgba(221,106,110,.3)}
+.rae-esc-t{font-size:17px;font-weight:800;margin-bottom:8px}
+.rae-esc-m{font-size:14px;line-height:1.55;font-style:italic}
+.rae-esc-w{font-size:11.5px;color:var(--muted,#9a9aa6);margin-top:8px;text-align:right}
+.rae-res{border-radius:16px;padding:18px;text-align:center}
+.rae-res.v{background:rgba(73,208,124,.12)}.rae-res.e{background:rgba(255,255,255,.05)}.rae-res.d{background:rgba(221,106,110,.12)}
+.rae-res-p{font-size:34px;font-weight:800;letter-spacing:.02em}
+.rae-res-s{font-size:12.5px;color:var(--muted,#9a9aa6);margin-top:5px}
+.rae-minha{background:var(--card,#16161c);border-radius:14px;padding:13px}
+.rae-minha-h{font-size:12px;color:var(--muted,#9a9aa6);font-weight:700;margin-bottom:10px}
+.rae-minha-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rae-log{background:var(--card,#16161c);border-radius:14px;padding:13px;display:flex;flex-direction:column;gap:9px}
+.rae-log-h{font-size:12px;color:var(--muted,#9a9aa6);font-weight:700}
+.rae-log-row{display:flex;align-items:center;gap:9px}
+.rae-flash{border-radius:13px;padding:13px;font-size:13.5px;font-weight:700;line-height:1.45}
+.rae-flash.rae-st-top{background:rgba(245,197,66,.14);color:#f5c542}
+.rae-flash.rae-st-tit{background:rgba(73,208,124,.14);color:#49d07c}
+.rae-flash.rae-st-alt{background:rgba(199,154,240,.14);color:#c79af0}
+.rae-flash.rae-st-res{background:rgba(160,160,173,.14);color:#a0a0ad}
+.rae-flash.rae-st-out{background:rgba(221,106,110,.14);color:#dd6a6e}
+
+/* técnico e elenco */
+.rae-tec{background:var(--card,#16161c);border-radius:16px;padding:15px}
+.rae-tec-n{font-size:18px;font-weight:800}
+.rae-tec-tp{font-size:12.5px;color:var(--accent,#a06bd4);font-weight:700;margin-top:2px}
+.rae-tec-d{font-size:13px;color:var(--muted,#9a9aa6);margin-top:7px;line-height:1.5}
+.rae-expl{background:rgba(255,255,255,.04);border-radius:14px;padding:13px}
+.rae-expl-h{font-size:13px;font-weight:700;margin-bottom:6px}
+.rae-expl-b{font-size:12.5px;color:var(--muted,#9a9aa6);line-height:1.55}
+.rae-fila{display:flex;align-items:center;gap:10px;width:100%;box-sizing:border-box;text-align:left;background:var(--card,#16161c);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:11px 12px;color:inherit;font:inherit;cursor:pointer;margin-bottom:7px}
+.rae-fila.eu{border-color:rgba(160,107,212,.55);background:rgba(160,107,212,.09)}
+.rae-fila.alvo{border-color:rgba(245,197,66,.5)}
+.rae-fila-p{font-size:12px;color:var(--muted,#9a9aa6);font-weight:800;min-width:24px}
+.rae-fila-n{flex:1;min-width:0;font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rae-fila-a{font-size:11.5px;color:var(--muted,#9a9aa6)}
+.rae-fila-o{font-weight:800;font-size:15px;min-width:28px;text-align:right}
+.rae-fila-tag{font-size:14px}
