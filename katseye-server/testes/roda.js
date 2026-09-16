@@ -62,7 +62,7 @@ await teste('GET /saude diz qual provedor está ligado', async () => {
   const d = await (await chamar('/saude')).json();
   assert.equal(d.ok, true);
   assert.equal(d.ia.provedor, 'gemini');
-  assert.equal(d.ia.modelo, 'gemini-2.5-flash');
+  assert.equal(d.ia.modelo, 'gemini-flash-latest');
 });
 
 await teste('POST /conselho devolve o texto do modelo', async () => {
@@ -111,7 +111,35 @@ await teste('429 do Gemini vira mensagem em português', async () => {
   const r = await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
   const d = await r.json();
   assert.equal(r.status, 429);
-  assert.ok(d.erro.includes('camada gratuita'), `mensagem crua: ${d.erro}`);
+  assert.ok(d.erro.includes('Limite de uso'), `mensagem crua: ${d.erro}`);
+});
+
+await teste('modelo aposentado cai no apelido sozinho', async () => {
+  // o Google responde 404 quando aposenta um modelo; o servidor deve tentar
+  // de novo com gemini-flash-latest em vez de estourar o erro no app
+  process.env.MODELO_GEMINI = 'gemini-2.5-flash';
+  proximaResposta = {
+    status: 404,
+    corpo: { error: { message: 'This model models/gemini-2.5-flash is no longer available to new users.' } },
+  };
+  const r = await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
+  const d = await r.json();
+  assert.equal(r.status, 200, `deveria ter se recuperado, veio: ${d.erro}`);
+  assert.equal(d.texto, 'resposta de mentira');
+  assert.ok(pedidos.at(-1).url.includes('gemini-flash-latest'), 'a segunda tentativa deveria usar o apelido');
+  delete process.env.MODELO_GEMINI;
+});
+
+await teste('blocos de raciocinio nao entram na resposta', async () => {
+  proximaResposta = {
+    status: 200,
+    corpo: { candidates: [{ content: { parts: [
+      { text: 'pensando alto...', thought: true },
+      { text: 'a resposta', thoughtSignature: 'xyz' },
+    ] } }] },
+  };
+  const d = await (await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta })).json();
+  assert.equal(d.texto, 'a resposta');
 });
 
 await teste('rota inexistente leva 404 explicando o que existe', async () => {

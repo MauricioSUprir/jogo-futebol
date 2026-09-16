@@ -40,7 +40,10 @@ export function provedor() {
   return null;
 }
 export const temChave = () => !!provedor();
-export const modeloGemini = () => process.env.MODELO_GEMINI || 'gemini-2.5-flash';
+/* Apelido de propósito: o Google aposenta versão numerada sem aviso — o
+   gemini-2.5-flash deixou de aceitar chave nova — e o apelido acompanha. */
+export const MODELO_SOCORRO = 'gemini-flash-latest';
+export const modeloGemini = () => process.env.MODELO_GEMINI || MODELO_SOCORRO;
 export const modeloAnthropic = () => process.env.MODELO_ANTHROPIC || 'claude-haiku-4-5-20251001';
 export const modeloEmUso = () => (provedor() === 'anthropic' ? modeloAnthropic() : modeloGemini());
 
@@ -71,8 +74,8 @@ export function validar(mensagens) {
 }
 
 /* ---------- Gemini ---------- */
-async function viaGemini(mensagens, sinal) {
-  const modelo = modeloGemini();
+async function viaGemini(mensagens, sinal, modeloForcado = null) {
+  const modelo = modeloForcado || modeloGemini();
   const url = `${URL_GEMINI()}/v1beta/models/${encodeURIComponent(modelo)}:generateContent`
     + `?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
 
@@ -93,7 +96,14 @@ async function viaGemini(mensagens, sinal) {
   const d = await r.json().catch(() => ({}));
   if (!r.ok) {
     const msg = d?.error?.message || `o Gemini respondeu ${r.status}`;
-    if (r.status === 429) throw erro(429, 'Limite da camada gratuita do Gemini atingido. Tente daqui a pouco.');
+    // Modelo aposentado: o Google responde 404 dizendo qual usar. Troca pelo
+    // apelido que acompanha as versões e tenta uma vez, em vez de falhar.
+    if (r.status === 404 && modelo !== MODELO_SOCORRO) {
+      console.warn(`[ia] modelo "${modelo}" indisponível, caindo para ${MODELO_SOCORRO}`);
+      return viaGemini(mensagens, sinal, MODELO_SOCORRO);
+    }
+    if (r.status === 429) throw erro(429, 'Limite de uso do Gemini atingido. Tente daqui a pouco.');
+    if (r.status === 503) throw erro(503, 'O modelo está sobrecarregado no Google agora. Tente em instantes.');
     if (r.status === 400 && /api key/i.test(msg)) throw erro(500, 'A chave do servidor foi recusada pelo Google.');
     if (r.status === 404) throw erro(500, `O modelo "${modelo}" não está disponível para esta chave.`);
     throw erro(r.status >= 500 ? 502 : 400, msg);
@@ -103,7 +113,10 @@ async function viaGemini(mensagens, sinal) {
   if (!cand && d.promptFeedback?.blockReason) {
     throw erro(400, `O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
   }
-  const texto = (cand?.content?.parts || []).map((x) => x.text || '').join('\n').trim();
+  // Modelos novos devolvem também blocos de raciocínio; só o texto importa.
+  const texto = (cand?.content?.parts || [])
+    .filter((x) => !x.thought && typeof x.text === 'string' && x.text)
+    .map((x) => x.text).join('\n').trim();
   if (!texto) throw erro(502, 'A resposta veio vazia.');
   return texto;
 }
