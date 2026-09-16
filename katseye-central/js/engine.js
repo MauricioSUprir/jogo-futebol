@@ -196,7 +196,7 @@ export function interpretar(bruto) {
   // senão "em São Paulo dia 12 de outubro" viraria um local com data dentro.
   const resto = tirar(texto, trData, trHora);
   let local = '';
-  const mLocal = resto.match(/\b(?:no|na|em|@)\s+([A-ZÁÉÍÓÚÂÊÔÃÕÇ][\wÀ-ÿ' ]{2,28}?)\s*$/);
+  const mLocal = resto.match(/\b(?:no|na|em|@)\s+([\wÀ-ÿ][\wÀ-ÿ' ]{2,28}?)\s*$/);
   if (mLocal) local = mLocal[1].trim();
 
   // título: a sobra, sem as marcações que já viraram campo

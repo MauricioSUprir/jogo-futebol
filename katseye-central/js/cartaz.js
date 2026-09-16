@@ -45,7 +45,19 @@ export function cfgPadrao(formatoId = 'cartaz') {
 
 /* ---------- utilidades de desenho ---------- */
 const PILHA_FONTE = "Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-const fonte = (peso, tam, esp = '') => `${esp} ${peso} ${Math.round(tam)}px ${PILHA_FONTE}`.trim();
+
+/**
+ * O atalho `ctx.font` segue a gramática do CSS `font`, que NÃO aceita
+ * letter-spacing — enfiar o espaçamento aqui invalida a declaração inteira e
+ * o canvas volta para os 10px padrão. Por isso a fonte é só fonte, e o
+ * espaçamento vai por `espacar()`, que mexe na propriedade certa.
+ */
+const fonte = (peso, tam) => `${peso} ${Math.round(tam)}px ${PILHA_FONTE}`;
+
+/** Define o espaçamento entre letras (ignorado em navegador que não suporta). */
+function espacar(ctx, px = 0) {
+  try { ctx.letterSpacing = `${px}px`; } catch { /* navegador antigo: segue sem */ }
+}
 
 function retArred(ctx, x, y, w, h, r) {
   const rr = Math.min(r, w / 2, h / 2);
@@ -82,15 +94,18 @@ function escrever(ctx, linhas, x, y, alturaLinha) {
 }
 
 /** Diminui a fonte até o texto caber em no máximo `maxLinhas`. */
-function ajustar(ctx, txt, maxL, tamInicial, maxLinhas, peso = 800, esp = '') {
+function ajustar(ctx, txt, maxL, tamInicial, maxLinhas, peso = 800, esp = 0) {
   let tam = tamInicial;
+  espacar(ctx, esp);
   for (let i = 0; i < 40; i += 1) {
-    ctx.font = fonte(peso, tam, esp);
+    ctx.font = fonte(peso, tam);
     const linhas = quebrar(ctx, txt, maxL);
-    if (linhas.length <= maxLinhas) return { tam, linhas };
+    if (linhas.length <= maxLinhas && linhas.every((l) => ctx.measureText(l).width <= maxL)) {
+      return { tam, linhas };
+    }
     tam *= 0.94;
   }
-  ctx.font = fonte(peso, tam, esp);
+  ctx.font = fonte(peso, tam);
   return { tam, linhas: quebrar(ctx, txt, maxL) };
 }
 
@@ -281,9 +296,9 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
     ctx.fillStyle = txtCor;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.letterSpacing = `${w * 0.004}px`;
+    espacar(ctx, w * 0.004);
     ctx.fillText(cx(cfg.selo), sx + w * 0.058, y + alturaSelo / 2);
-    ctx.letterSpacing = '0px';
+    espacar(ctx, 0);
     ctx.textAlign = centro ? 'center' : 'left';
     ctx.textBaseline = 'top';
     y += alturaSelo + h * 0.03;
@@ -292,7 +307,7 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
   /* --- bloco central: título + subtítulo --- */
   const alturaBloco = h - y - margem * 2.2;
   const tituloBase = Math.min(w * 0.155, alturaBloco * 0.34) * e;
-  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, tituloBase, 3, 800, `${-w * 0.002}px`);
+  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, tituloBase, 3, 800, -w * 0.002);
 
   // o título fica na parte de baixo, como cartaz de show
   const alturaTitulo = linhas.length * tam * 1.02;
@@ -311,7 +326,8 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
     escrever(ctx, ls.slice(0, 2), x, yTitulo - (ls.length > 1 ? w * 0.045 : 0), w * 0.045 * e);
   }
 
-  ctx.font = fonte(800, tam, `${-w * 0.002}px`);
+  espacar(ctx, -w * 0.002);
+  ctx.font = fonte(800, tam);
   ctx.fillStyle = txtCor;
   if (cfg.brilho) {
     ctx.save();
@@ -321,6 +337,7 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
     ctx.restore();
   }
   escrever(ctx, linhas, x, yTitulo + alturaSub, tam * 1.02);
+  espacar(ctx, 0);
 
   let yInfo = yTitulo + alturaSub + alturaTitulo + w * 0.022;
 
@@ -336,19 +353,21 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
   yInfo += w * 0.026;
 
   if (infos.length) {
-    ctx.font = fonte(700, w * 0.031 * e, `${w * 0.003}px`);
+    espacar(ctx, w * 0.003);
+    ctx.font = fonte(700, w * 0.031 * e);
     ctx.fillStyle = p.c;
     ctx.fillText(infos.join('   ·   '), x, yInfo);
-    ctx.letterSpacing = '0px';
+    espacar(ctx, 0);
   }
 
   /* --- rodapé --- */
   if (cfg.rodape) {
-    ctx.font = fonte(600, w * 0.022 * e, `${w * 0.004}px`);
+    espacar(ctx, w * 0.004);
+    ctx.font = fonte(600, w * 0.022 * e);
     ctx.fillStyle = `${txtCor}70`;
     ctx.textBaseline = 'bottom';
     ctx.fillText(cx(cfg.rodape), x, h - margem * 0.55);
-    ctx.letterSpacing = '0px';
+    espacar(ctx, 0);
     ctx.textBaseline = 'top';
   }
   if (cfg.preco) {
@@ -421,27 +440,17 @@ function desenharIngresso(ctx, cfg, w, h, p, img) {
   let y = margem;
 
   olho(ctx, margem + h * 0.045, y + h * 0.045, h * 0.09, p.a);
-  ctx.font = fonte(800, h * 0.052 * e, `${h * 0.012}px`);
+  espacar(ctx, h * 0.012);
+  ctx.font = fonte(800, h * 0.052 * e);
   ctx.fillStyle = p.txt;
   ctx.fillText(cx(cfg.selo || 'KATSEYE'), margem + h * 0.12, y + h * 0.02);
-  ctx.letterSpacing = '0px';
+  espacar(ctx, 0);
   y += h * 0.13;
 
+  /* O título só pode ocupar o que sobra entre o cabeçalho e a linha de
+     campos — por isso os campos são posicionados primeiro e o título é
+     dimensionado para caber no vão que restou. */
   const maxL = corte - margem * 2;
-  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, h * 0.19 * e, 2, 800, `${-h * 0.002}px`);
-  ctx.font = fonte(800, tam, `${-h * 0.002}px`);
-  ctx.fillStyle = p.txt;
-  y += escrever(ctx, linhas, margem, y, tam * 1.04);
-  ctx.letterSpacing = '0px';
-
-  if (cfg.subtitulo) {
-    ctx.font = fonte(600, h * 0.052 * e);
-    ctx.fillStyle = `${p.txt}aa`;
-    ctx.fillText(cx(cfg.subtitulo).slice(0, 52), margem, y + h * 0.015);
-    y += h * 0.08;
-  }
-
-  /* linha de campos */
   const campos = [
     ['DATA', cfg.data],
     ['HORA', cfg.hora],
@@ -449,25 +458,51 @@ function desenharIngresso(ctx, cfg, w, h, p, img) {
     ['SETOR', cfg.setor],
   ].filter(([, v]) => v);
 
-  const yCampos = h - margem - h * 0.13;
-  let xCampo = margem;
-  for (const [rot, val] of campos) {
-    ctx.font = fonte(700, h * 0.036 * e, `${h * 0.008}px`);
-    ctx.fillStyle = `${p.txt}80`;
-    ctx.fillText(rot, xCampo, yCampos);
-    ctx.letterSpacing = '0px';
-    ctx.font = fonte(800, h * 0.058 * e);
-    ctx.fillStyle = p.txt;
-    const texto = cx(val);
-    ctx.fillText(texto, xCampo, yCampos + h * 0.052);
-    xCampo += Math.max(ctx.measureText(texto).width, h * 0.2) + h * 0.09;
+  const yCampos = h - margem - h * 0.2;
+  const alturaSub = cfg.subtitulo ? h * 0.085 : 0;
+  const vao = Math.max(h * 0.12, yCampos - y - alturaSub - h * 0.03);
+  const tamTitulo = Math.min(h * 0.2 * e, (vao / 2) / 1.04);
+
+  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, tamTitulo, 2, 800, -h * 0.002);
+  ctx.fillStyle = p.txt;
+  y += escrever(ctx, linhas, margem, y, tam * 1.04);
+  espacar(ctx, 0);
+
+  if (cfg.subtitulo) {
+    ctx.font = fonte(600, h * 0.05 * e);
+    ctx.fillStyle = `${p.txt}aa`;
+    const [linhaSub] = quebrar(ctx, cx(cfg.subtitulo), maxL);
+    ctx.fillText(linhaSub || '', margem, Math.min(y + h * 0.015, yCampos - h * 0.07));
   }
 
+  /* linha de campos — colunas iguais, para nunca invadir o canhoto */
+  const larguraCol = (corte - margem * 2) / Math.max(1, campos.length);
+
+  campos.forEach(([rot, val], i) => {
+    const xc = margem + i * larguraCol;
+    espacar(ctx, h * 0.008);
+    ctx.font = fonte(700, h * 0.034 * e);
+    ctx.fillStyle = `${p.txt}80`;
+    ctx.fillText(rot, xc, yCampos);
+    espacar(ctx, 0);
+
+    // o valor encolhe até caber na própria coluna
+    let tamVal = h * 0.056 * e;
+    ctx.font = fonte(800, tamVal);
+    const texto = cx(val);
+    while (ctx.measureText(texto).width > larguraCol - h * 0.03 && tamVal > h * 0.026) {
+      tamVal *= 0.93;
+      ctx.font = fonte(800, tamVal);
+    }
+    ctx.fillStyle = p.txt;
+    ctx.fillText(texto, xc, yCampos + h * 0.05);
+  });
+
   if (cfg.portador) {
-    ctx.font = fonte(600, h * 0.042 * e);
+    ctx.font = fonte(600, h * 0.04 * e);
     ctx.fillStyle = `${p.txt}9a`;
     ctx.textAlign = 'left';
-    ctx.fillText(`${cx('portador')}: ${cx(cfg.portador)}`, margem, h - margem * 0.62);
+    ctx.fillText(`${cx('portador')}: ${cx(cfg.portador)}`, margem, h - margem * 0.55);
   }
 
   /* --- canhoto: setor, série e código de barras --- */
@@ -477,10 +512,17 @@ function desenharIngresso(ctx, cfg, w, h, p, img) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  ctx.font = fonte(800, h * 0.085 * e, `${h * 0.006}px`);
+  espacar(ctx, h * 0.006);
+  let tamSetor = h * 0.085 * e;
+  ctx.font = fonte(800, tamSetor);
+  const textoSetor = cx(cfg.setor || 'ADMIT ONE');
+  while (ctx.measureText(textoSetor).width > canhoto * 0.86 && tamSetor > h * 0.03) {
+    tamSetor *= 0.92;
+    ctx.font = fonte(800, tamSetor);
+  }
   ctx.fillStyle = corCanhoto;
-  ctx.fillText(cx(cfg.setor || 'ADMIT ONE').slice(0, 14), 0, -h * 0.22);
-  ctx.letterSpacing = '0px';
+  ctx.fillText(textoSetor, 0, -h * 0.22);
+  espacar(ctx, 0);
 
   if (cfg.preco) {
     ctx.font = fonte(800, h * 0.1 * e);
@@ -502,9 +544,11 @@ function desenharIngresso(ctx, cfg, w, h, p, img) {
   }
   ctx.restore();
 
-  ctx.font = fonte(700, h * 0.045 * e, `${h * 0.01}px`);
+  espacar(ctx, h * 0.01);
+  ctx.font = fonte(700, h * 0.042 * e);
   ctx.fillStyle = `${corCanhoto}dd`;
   ctx.fillText(serie, 0, h * 0.3);
+  espacar(ctx, 0);
   ctx.restore();
 }
 

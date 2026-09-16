@@ -52,9 +52,11 @@ export function estadoVazio() {
     conversas: [],                      // { id, titulo, mensagens:[{de,txt,em}], em }
     ia: {
       modo: 'local',                    // local | servidor | chave
-      servidor: '',                     // endpoint proxy (POST /conselho)
-      chave: '',                        // chave da Anthropic, guardada só neste aparelho
-      modelo: 'claude-opus-5',
+      provedor: 'gemini',               // gemini | anthropic  (quando modo = 'chave')
+      servidor: '',                     // endpoint proxy próprio (POST /conselho)
+      chaveGemini: '',                  // chave do Google AI Studio (só neste aparelho)
+      chaveAnthropic: '',               // chave da Anthropic (só neste aparelho)
+      modelo: '',                       // vazio = usa o padrão do provedor
       usoHoje: 0, usoDia: null,
     },
 

@@ -177,6 +177,16 @@ export function lerArquivo(file) {
   });
 }
 
+/** Lê um <input type=file> como texto (usado para importar o backup). */
+export function lerTexto(file) {
+  return new Promise((ok, erro) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result || ''));
+    r.onerror = () => erro(new Error('Não consegui ler o arquivo.'));
+    r.readAsText(file, 'utf-8');
+  });
+}
+
 /* ---------- texto ---------- */
 export const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 export const inicial = (s) => (String(s || '?').trim()[0] || '?').toUpperCase();

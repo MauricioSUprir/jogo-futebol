@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>KATSEYE Central</title>
+<meta name="description" content="KATSEYE Central: painel de gestão criativa dedicado ao KATSEYE — command center, enciclopédia do grupo, agenda inteligente, estúdio de cartazes e ingressos e um conselheiro estratégico." />
+<meta name="theme-color" content="#07070f" />
+<meta name="color-scheme" content="dark light" />
+<meta property="og:title" content="KATSEYE Central" />
+<meta property="og:description" content="Command center, enciclopédia, agenda inteligente, estúdio criativo e conselheiro estratégico." />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./assets/icon.svg" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+
+<!-- ===== abertura ===== -->
+<div id="boot" class="boot">
+  <div class="boot__mark">
+    <svg class="mark" viewBox="0 0 128 128" aria-hidden="true">
+      <defs>
+        <linearGradient id="gBoot" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#a855f7"/><stop offset=".55" stop-color="#ff4f8b"/><stop offset="1" stop-color="#f0c674"/>
+        </linearGradient>
+      </defs>
+      <path d="M10 64c18-26 34-39 54-39s36 13 54 39c-18 26-34 39-54 39S28 90 10 64Z"
+            fill="none" stroke="url(#gBoot)" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="64" cy="64" r="19" fill="none" stroke="url(#gBoot)" stroke-width="5"/>
+      <circle cx="64" cy="64" r="7.5" fill="url(#gBoot)"/>
+      <path d="M64 12v9M64 107v9M22 30l6 6M100 92l6 6M106 30l-6 6M28 92l-6 6"
+            stroke="url(#gBoot)" stroke-width="4.5" stroke-linecap="round"/>
+    </svg>
+  </div>
+  <div class="wordmark boot__name">KATS<span>EYE</span></div>
+  <div class="tagline">Central<i>·</i>de<i>·</i>comando</div>
+  <div class="boot__bar"><i></i></div>
+</div>
+
+<div id="app" class="app" hidden>
+
+  <!-- ===== menu lateral ===== -->
+  <aside class="side" id="side">
+    <div class="side__brand">
+      <span class="side__logo">
+        <svg class="mark" viewBox="0 0 128 128" aria-hidden="true">
+          <defs>
+            <linearGradient id="gSide" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#a855f7"/><stop offset=".55" stop-color="#ff4f8b"/><stop offset="1" stop-color="#f0c674"/>
+            </linearGradient>
+          </defs>
+          <path d="M10 64c18-26 34-39 54-39s36 13 54 39c-18 26-34 39-54 39S28 90 10 64Z"
+                fill="none" stroke="url(#gSide)" stroke-width="6" stroke-linejoin="round"/>
+          <circle cx="64" cy="64" r="19" fill="none" stroke="url(#gSide)" stroke-width="6"/>
+          <circle cx="64" cy="64" r="8" fill="url(#gSide)"/>
+        </svg>
+      </span>
+      <span class="side__name">
+        <span class="wordmark">KATS<span>EYE</span></span>
+        <span class="tagline">Central de comando</span>
+      </span>
+      <button class="side__close icon-btn" data-fechar-menu aria-label="Fechar menu">✕</button>
+    </div>
+    <nav class="side__nav" id="sideNav"></nav>
+    <div class="side__foot" id="sideFoot"></div>
+  </aside>
+  <div class="side__scrim" data-fechar-menu hidden></div>
+
+  <!-- ===== barra superior ===== -->
+  <header class="top">
+    <button class="icon-btn top__burger" data-abrir-menu aria-label="Abrir menu">☰</button>
+    <button class="top__search" data-acao="busca">
+      <span>🔍</span>
+      <span class="top__search-txt">Buscar em tudo…</span>
+      <kbd>Ctrl K</kbd>
+    </button>
+    <div class="top__right">
+      <button class="pill chip" data-acao="saude" id="topSaude" title="Saúde do planejamento">—</button>
+      <button class="icon-btn" data-acao="notifs" id="topBell" title="Notificações">🔔<i class="dot" hidden></i></button>
+      <button class="avatar" data-acao="perfil" id="topAvatar" title="Seu perfil">☉</button>
+    </div>
+  </header>
+
+  <!-- ===== conteúdo ===== -->
+  <main class="main" id="view" tabindex="-1"></main>
+
+  <!-- ===== navegação inferior (mobile) ===== -->
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+
+<!-- ===== modal ===== -->
+<div class="modal" id="modal" hidden>
+  <div class="modal__scrim" data-modal-fechar></div>
+  <div class="modal__box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header class="modal__head">
+      <h2 id="modalTitle">—</h2>
+      <button class="icon-btn" data-modal-fechar aria-label="Fechar">✕</button>
+    </header>
+    <div class="modal__body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<noscript>
+  <div style="padding:32px;text-align:center;color:#f4f2ff;font-family:system-ui">
+    <h1>KATSEYE Central</h1>
+    <p>Este app precisa de JavaScript para funcionar. Ative e recarregue a página.</p>
+  </div>
+</noscript>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

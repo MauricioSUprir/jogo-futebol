@@ -13,6 +13,9 @@ Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 >   desempenho escolar (prioridades inteligentes, revisão espaçada, questões, foco, desempenho).
 > - [`looklab/`](./looklab/) — **LookLab**, guarda-roupa digital e criador de looks
 >   para crianças e adolescentes.
+> - [`katseye-central/`](./katseye-central/) — **KATSEYE Central**, painel de gestão criativa
+>   dedicado ao grupo KATSEYE (command center, enciclopédia, agenda em linguagem natural,
+>   estúdio de cartazes e ingressos e um conselheiro estratégico).
 > - [`financas-casa/`](./financas-casa/) — **NEXO**, painel de finanças da casa.
 > - [`legacy-total-match/`](./legacy-total-match/) — o jogo _Total Match_, preservado.
 

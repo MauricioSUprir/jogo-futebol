@@ -2,9 +2,12 @@
 
    Três modos, e o app SEMPRE diz em qual está:
 
-   1. 'chave'    — a chave da Anthropic fica só neste aparelho e o navegador
-                   fala direto com a API. Prático para uso pessoal; a chave
-                   nunca sai do localStorage deste navegador.
+   1. 'chave'    — a chave fica só neste aparelho e o navegador fala direto
+                   com a API. Dois provedores: **Gemini** (Google AI Studio,
+                   tem camada gratuita) e **Anthropic**. A chave nunca sai do
+                   localStorage deste navegador — mas quem usar este navegador
+                   consegue vê-la, então não é o caminho para publicar o app
+                   para outras pessoas.
    2. 'servidor' — o app manda a pergunta para um endereço seu (um proxy que
                    guarda a chave). É o caminho certo para publicar.
    3. 'local'    — o padrão. NÃO é IA e o app não finge que é: um motor
@@ -24,15 +27,53 @@ import { GRUPO } from './dados.js';
 import { fmtData, iso, hoje, cortar } from './util.js';
 
 const ENDPOINT_ANTHROPIC = 'https://api.anthropic.com/v1/messages';
+const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models';
 const LIMITE_DIA = 60;
+
+/** Provedores disponíveis no modo 'chave'. */
+export const PROVEDORES = [
+  {
+    id: 'gemini',
+    nome: 'Google Gemini',
+    chamada: 'tem camada gratuita',
+    padrao: 'gemini-2.5-flash',
+    modelos: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash'],
+    ondePegar: 'https://aistudio.google.com/apikey',
+    campo: 'chaveGemini',
+    nota: 'O Google AI Studio dá uma chave de graça, com limite de uso por minuto e por dia. '
+      + 'Passando do limite, a API recusa e o app cai no motor local automaticamente.',
+  },
+  {
+    id: 'anthropic',
+    nome: 'Anthropic (Claude)',
+    chamada: 'pago por uso',
+    padrao: 'claude-opus-5',
+    modelos: ['claude-opus-5', 'claude-sonnet-5', 'claude-haiku-4-5-20251001'],
+    ondePegar: 'https://console.anthropic.com/settings/keys',
+    campo: 'chaveAnthropic',
+    nota: 'Cobrado por uso, sem camada gratuita. A chamada sai direto do navegador.',
+  },
+];
+export const provedor = (id) => PROVEDORES.find((p) => p.id === id) || PROVEDORES[0];
+
+/** A chave guardada para o provedor escolhido (ou o que estiver ativo). */
+export function chaveDe(id = null) {
+  const ia = st().ia;
+  const p = provedor(id || ia.provedor);
+  return String(ia[p.campo] || '').trim();
+}
+export function modeloAtual() {
+  const ia = st().ia;
+  return String(ia.modelo || '').trim() || provedor(ia.provedor).padrao;
+}
 
 /* ==========================================================
    ESTADO DA CONEXÃO
    ========================================================== */
 export function modoIA() {
   const ia = st().ia;
-  if (ia.modo === 'servidor' && ia.servidor.trim()) return 'servidor';
-  if (ia.modo === 'chave' && ia.chave.trim()) return 'chave';
+  if (ia.modo === 'servidor' && String(ia.servidor || '').trim()) return 'servidor';
+  if (ia.modo === 'chave' && chaveDe()) return 'chave';
   return 'local';
 }
 export const temIA = () => modoIA() !== 'local';
@@ -40,7 +81,10 @@ export const temIA = () => modoIA() !== 'local';
 export function motivoIA() {
   const m = modoIA();
   if (m === 'servidor') return { ok: true, txt: 'Conectado ao seu servidor.' };
-  if (m === 'chave') return { ok: true, txt: 'Usando a chave guardada neste aparelho.' };
+  if (m === 'chave') {
+    const p = provedor(st().ia.provedor);
+    return { ok: true, txt: `Conectado ao ${p.nome} (${modeloAtual()}), com a chave guardada neste aparelho.` };
+  }
   return {
     ok: false,
     txt: 'Modo local: as respostas são montadas pelo motor do próprio app a partir dos seus dados — '
@@ -120,6 +164,9 @@ export function contexto({ curto = false } = {}) {
     }
   }
 
+  linhas.push(`\n# Como este app funciona (para tirar dúvidas de uso)`);
+  for (const [t, txt] of MANUAL) linhas.push(`- ${t}: ${txt}`);
+
   linhas.push(`\n# Observação importante`);
   linhas.push('Os dados do grupo neste app são uma semente editável, não uma base oficial. '
     + 'Não invente números de vendas, streams, posições de parada ou datas que não estejam acima.');
@@ -144,18 +191,17 @@ Regras:
 /* ==========================================================
    CHAMADA
    ========================================================== */
-async function viaChave(mensagens) {
-  const ia = st().ia;
+async function viaAnthropic(mensagens) {
   const r = await fetch(ENDPOINT_ANTHROPIC, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
-      'x-api-key': ia.chave.trim(),
+      'x-api-key': chaveDe('anthropic'),
       'anthropic-version': '2023-06-01',
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: ia.modelo || 'claude-opus-5',
+      model: modeloAtual(),
       max_tokens: 1400,
       system: SISTEMA,
       messages: mensagens,
@@ -166,6 +212,38 @@ async function viaChave(mensagens) {
   return (d.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
 }
 
+/**
+ * Gemini. A API de Generative Language aceita chamada do navegador com a
+ * chave na query, e o formato das mensagens é diferente: 'model' no lugar de
+ * 'assistant' e o texto dentro de `parts`.
+ */
+async function viaGemini(mensagens) {
+  const modelo = modeloAtual();
+  const r = await fetch(`${ENDPOINT_GEMINI}/${encodeURIComponent(modelo)}:generateContent?key=${encodeURIComponent(chaveDe('gemini'))}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: SISTEMA }] },
+      contents: mensagens.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }],
+      })),
+      generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+    }),
+  });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = d?.error?.message || `A API respondeu ${r.status}.`;
+    if (r.status === 429) throw new Error(`Limite da camada gratuita atingido. ${msg}`);
+    throw new Error(msg);
+  }
+  const cand = d.candidates?.[0];
+  if (!cand && d.promptFeedback?.blockReason) {
+    throw new Error(`O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
+  }
+  return (cand?.content?.parts || []).map((x) => x.text || '').join('\n').trim();
+}
+
 async function viaServidor(mensagens) {
   const base = st().ia.servidor.trim().replace(/\/$/, '');
   const ctrl = new AbortController();
@@ -174,7 +252,7 @@ async function viaServidor(mensagens) {
     const r = await fetch(`${base}/conselho`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ sistema: SISTEMA, mensagens, modelo: st().ia.modelo }),
+      body: JSON.stringify({ sistema: SISTEMA, mensagens, modelo: modeloAtual() }),
       signal: ctrl.signal,
     });
     const d = await r.json().catch(() => ({}));
@@ -209,7 +287,9 @@ export async function perguntar(historico, pergunta) {
   ];
 
   try {
-    const texto = modo === 'chave' ? await viaChave(mensagens) : await viaServidor(mensagens);
+    const texto = modo === 'servidor'
+      ? await viaServidor(mensagens)
+      : (st().ia.provedor === 'anthropic' ? await viaAnthropic(mensagens) : await viaGemini(mensagens));
     contarUso();
     if (!texto) throw new Error('A resposta veio vazia.');
     return { texto, modo, local: false };
@@ -225,9 +305,57 @@ export async function perguntar(historico, pergunta) {
 }
 
 /* ==========================================================
+   MANUAL — o chatbot também tira dúvida sobre o próprio app
+   ========================================================== */
+export const MANUAL = [
+  ['Criar compromisso ou tarefa', 'Na Agenda ou no Command Center, escreva na captura rápida do jeito que você pensa '
+    + '("ensaio sexta 19h no estúdio"). O app separa data, hora, tipo e integrante, mostra o que entendeu e só salva '
+    + 'depois que você confirma. Se ele ler como compromisso e era tarefa (ou o contrário), há um botão para trocar.'],
+  ['Como a prioridade é calculada', 'Nota de 0 a 100 que combina prazo, importância e esforço. Tarefa atrasada nunca cai '
+    + 'abaixo de 90 — ela tem que aparecer. Quanto mais perto o prazo e maior a importância, mais alto; tarefa curta '
+    + 'ganha um empurrãozinho, porque fechar rápido destrava a lista.'],
+  ['Exportar cartaz ou ingresso', 'Estúdio Criativo → monte a peça → Exportar. PNG em 1×, 2× ou 3× (3× é o de impressão). '
+    + 'Para PDF, o botão abre a janela de impressão do navegador com a página no tamanho exato da peça: escolha '
+    + '"Salvar como PDF".'],
+  ['Ingresso colecionável', 'Escolha o formato Ingresso. Ele tem canhoto destacável, picote, setor, preço, nome do portador '
+    + 'e um código de barras gerado a partir da série — a mesma série gera sempre o mesmo padrão.'],
+  ['Onde ficam meus dados', 'Tudo no seu próprio navegador: o estado no localStorage e as imagens no IndexedDB. Nada é '
+    + 'enviado para servidor nenhum, a não ser as perguntas que você fizer com a IA ligada. Em Configurações dá para '
+    + 'exportar um backup em JSON, importar e apagar tudo.'],
+  ['Editar os dados do grupo', 'Enciclopédia → toque na integrante → Editar. O que já vem preenchido é uma semente com o que '
+    + 'é amplamente conhecido, não uma base oficial; o que você editar passa a valer e dá para restaurar o original.'],
+  ['Ligar a IA de verdade', 'Configurações → Conselheiro. Duas opções: colar uma chave da Anthropic (fica só neste aparelho) '
+    + 'ou apontar para um servidor seu que guarde a chave — o caminho certo para publicar.'],
+  ['Funciona offline', 'Sim. É um PWA: dá para instalar na tela inicial e tudo continua funcionando sem internet, menos as '
+    + 'respostas da IA conectada.'],
+  ['Resumos automáticos', 'Agenda → Resumos, ou o botão Resumo no Command Center. São calculados no aparelho com os seus '
+    + 'números — sem IA e sem internet.'],
+];
+
+function ajudaDoApp(pergunta = '') {
+  const p = String(pergunta).toLowerCase();
+  const achados = MANUAL.filter(([t, txt]) => {
+    const alvo = `${t} ${txt}`.toLowerCase();
+    return p.split(/\s+/).filter((w) => w.length > 3).some((w) => alvo.includes(w));
+  });
+  const escolhidos = achados.length ? achados.slice(0, 3) : MANUAL.slice(0, 4);
+  return [
+    achados.length ? '## Sobre o app' : '## O que dá para fazer aqui',
+    '',
+    ...escolhidos.map(([t, txt]) => `**${t}**\n${txt}\n`),
+    achados.length ? '' : '_Pergunte de forma mais específica ("como exporto em PDF?") que eu vou direto ao ponto._',
+  ].join('\n');
+}
+
+/* ==========================================================
    MOTOR LOCAL — determinístico, sem rede
    ========================================================== */
 const ROTEIROS = [
+  {
+    id: 'ajuda',
+    quando: /(como (eu )?(fa[çc]o|uso|exporto|salvo|crio|edito|ligo|instalo)|onde (fica|salva|guarda)|pra que serve|o que (voc[êe]|esse app|isso) faz|d[úu]vida|ajuda|tutorial|n[ãa]o sei usar|funciona offline|meus dados)/i,
+    responde: (p) => ajudaDoApp(p),
+  },
   {
     id: 'semana',
     quando: /(semana|agenda|plano|planejamento|cronograma|o que fazer|por onde come)/i,
@@ -425,6 +553,7 @@ export function respostaLocal(pergunta) {
     '- **"monta um plano de evento"** — roteiro de 30/14/7 dias',
     '- **"estou travado"** — protocolo de desbloqueio',
     '- **"faz um diagnóstico"** — forças, fraquezas e o próximo movimento',
+    '- **"como eu exporto em PDF?"** — dúvidas sobre o próprio app',
     '',
     'Para conversar de verdade com a Claude sobre qualquer assunto, ligue a IA em '
     + '**Configurações → Conselheiro**.',
