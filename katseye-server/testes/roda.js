@@ -15,13 +15,14 @@ const teste = async (nome, fn) => {
 
 /* ---------- Gemini dublado ---------- */
 let proximaResposta = null;
+let filaRespostas = [];        // para simular erro que insiste (o servidor reintenta)
 const pedidos = [];
 const falso = http.createServer((req, res) => {
   let corpo = '';
   req.on('data', (p) => { corpo += p; });
   req.on('end', () => {
     pedidos.push({ url: req.url, corpo: JSON.parse(corpo || '{}') });
-    const r = proximaResposta || {
+    const r = filaRespostas.shift() || proximaResposta || {
       status: 200,
       corpo: { candidates: [{ content: { parts: [{ text: 'resposta de mentira' }] } }] },
     };
@@ -106,12 +107,21 @@ await teste('mensagem malformada leva 400 antes de gastar API', async () => {
   assert.equal(pedidos.length, antes, 'não podia ter chamado o Gemini');
 });
 
-await teste('429 do Gemini vira mensagem em português', async () => {
-  proximaResposta = { status: 429, corpo: { error: { message: 'Quota exceeded' } } };
+await teste('429 passageiro e reintentado', async () => {
+  // uma rajada: o primeiro 429 passa, o segundo pedido ja da certo
+  filaRespostas = [{ status: 429, corpo: { error: { message: 'Quota exceeded' } } }];
+  const d = await (await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta })).json();
+  assert.equal(d.texto, 'resposta de mentira');
+});
+
+await teste('429 que insiste vira mensagem em português', async () => {
+  const quota = { status: 429, corpo: { error: { message: 'Quota exceeded' } } };
+  filaRespostas = [quota, quota, quota];
   const r = await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
   const d = await r.json();
   assert.equal(r.status, 429);
   assert.ok(d.erro.includes('Limite de uso'), `mensagem crua: ${d.erro}`);
+  filaRespostas = [];
 });
 
 await teste('modelo aposentado cai no apelido sozinho', async () => {
@@ -140,6 +150,17 @@ await teste('blocos de raciocinio nao entram na resposta', async () => {
   };
   const d = await (await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta })).json();
   assert.equal(d.texto, 'a resposta');
+});
+
+await teste('503 do Google e reintentado, nao estourado', async () => {
+  // a dublagem responde 503 uma vez e depois volta ao normal
+  filaRespostas = [{ status: 503, corpo: { error: { message: 'high demand' } } }];
+  const antes = pedidos.length;
+  const r = await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
+  const d = await r.json();
+  assert.equal(r.status, 200, `deveria ter insistido, veio: ${d.erro}`);
+  assert.equal(d.texto, 'resposta de mentira');
+  assert.ok(pedidos.length - antes >= 2, 'deveria ter tentado mais de uma vez');
 });
 
 await teste('rota inexistente leva 404 explicando o que existe', async () => {

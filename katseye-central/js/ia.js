@@ -24,7 +24,7 @@ import {
   corPrioridade, saudeDoPlano, aniversarios,
 } from './engine.js';
 import { GRUPO } from './dados.js';
-import { fmtData, iso, hoje, cortar } from './util.js';
+import { fmtData, iso, hoje, cortar, esperar } from './util.js';
 
 const ENDPOINT_ANTHROPIC = 'https://api.anthropic.com/v1/messages';
 const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models';
@@ -93,7 +93,7 @@ export function motivoIA() {
   return {
     ok: false,
     txt: 'Modo local: as respostas são montadas pelo motor do próprio app a partir dos seus dados — '
-      + 'não é um modelo de IA. Para conversar com a Claude, configure em Configurações → Conselheiro.',
+      + 'não é um modelo de IA. Para ligar o Gemini ou a Claude, vá em Configurações → Conselheiro.',
   };
 }
 
@@ -222,13 +222,19 @@ async function viaAnthropic(mensagens) {
  * chave na query, e o formato das mensagens é diferente: 'model' no lugar de
  * 'assistant' e o texto dentro de `parts`.
  */
+/* O Google tem picos de carga: o mesmo modelo responde 200, 503 e 200 em
+   segundos. Desistir na primeira tentativa joga esse soluço na cara de quem
+   perguntou — então espera e tenta de novo, e só depois troca de modelo. */
 const MODELO_SOCORRO = 'gemini-flash-latest';
+const MODELO_LEVE = 'gemini-flash-lite-latest';
+const ESPERAS_503 = [900, 2800];
 
-async function viaGemini(mensagens, modeloForcado = null) {
-  const modelo = modeloForcado || modeloAtual();
+async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = false } = {}) {
+  const emUso = modelo || modeloAtual();
+  const repetir = (op) => viaGemini(mensagens, { modelo: emUso, tentativa, jaTrocou, ...op });
   let r;
   try {
-    r = await fetchGemini(modelo, mensagens);
+    r = await fetchGemini(emUso, mensagens);
   } catch (e) {
     // fetch só joga TypeError genérico ("Failed to fetch") para qualquer
     // problema de rede — traduz para algo acionável.
@@ -240,20 +246,40 @@ async function viaGemini(mensagens, modeloForcado = null) {
   if (!r.ok) {
     const msg = d?.error?.message || `A API respondeu ${r.status}.`;
 
-    // O Google aposenta modelo e devolve 404 dizendo qual usar. Em vez de
-    // largar o erro na cara de quem perguntou, troca pelo apelido que
-    // acompanha as versões e tenta de novo — uma vez só.
-    if (r.status === 404 && modelo !== MODELO_SOCORRO) {
-      const texto = await viaGemini(mensagens, MODELO_SOCORRO);
+    // 404: o Google aposentou o modelo e diz qual usar. Troca pelo apelido
+    // que acompanha as versões, guarda a troca e refaz a pergunta.
+    if (r.status === 404 && emUso !== MODELO_SOCORRO) {
+      const texto = await viaGemini(mensagens, { modelo: MODELO_SOCORRO });
       set((x) => { x.ia.modelo = MODELO_SOCORRO; });
       return texto;
     }
 
-    if (r.status === 429) throw new Error(`Limite de uso atingido: ${msg}`);
-    if (r.status === 503) throw new Error('O modelo está sobrecarregado no Google agora. Tente de novo em instantes.');
+    // 503: sobrecarga momentânea. Espera e insiste; se persistir, tenta uma
+    // vez no modelo leve, que costuma ter fila menor.
+    if (r.status === 503) {
+      if (tentativa < ESPERAS_503.length) {
+        await esperar(ESPERAS_503[tentativa]);
+        return repetir({ tentativa: tentativa + 1 });
+      }
+      if (!jaTrocou && emUso !== MODELO_LEVE) {
+        return viaGemini(mensagens, { modelo: MODELO_LEVE, jaTrocou: true });
+      }
+      throw new Error('O Gemini está sobrecarregado agora — tentei três vezes e troquei de modelo. '
+        + 'Costuma passar em poucos minutos.');
+    }
+
+    // 429 pode ser rajada (passa em segundos) ou cota do dia (não passa).
+    // Uma tentativa a mais separa os dois casos sem irritar.
+    if (r.status === 429) {
+      if (tentativa === 0) {
+        await esperar(2500);
+        return repetir({ tentativa: 1 });
+      }
+      throw new Error(`Limite de uso da sua chave atingido: ${msg}`);
+    }
     if (r.status === 400 && /api key/i.test(msg)) throw new Error('A chave foi recusada pelo Google. Confira se copiou inteira.');
     if (r.status === 403) throw new Error(`Acesso negado pelo Google: ${msg}`);
-    if (r.status === 404) throw new Error(`O modelo "${modelo}" não está disponível para a sua chave.`);
+    if (r.status === 404) throw new Error(`O modelo "${emUso}" não está disponível para a sua chave.`);
     throw new Error(msg);
   }
   const cand = d.candidates?.[0];
@@ -337,7 +363,7 @@ export async function perguntar(historico, pergunta) {
     return {
       texto: `⚠️ **Não consegui falar com a IA.** ${detalhe}\n\n`
         + 'Respondendo pelo motor local enquanto isso:\n\n---\n\n'
-        + respostaLocal(pergunta),
+        + respostaLocal(pergunta, { comConvite: false }),
       modo, local: true, erro: detalhe,
     };
   }
@@ -577,10 +603,10 @@ function analiseSWOT() {
 }
 
 /** Resposta do motor local: acha o roteiro que combina, ou devolve o guia. */
-export function respostaLocal(pergunta) {
+export function respostaLocal(pergunta, { comConvite = true } = {}) {
   const p = String(pergunta || '');
   for (const r of ROTEIROS) if (r.quando.test(p)) return r.responde(p);
-  return [
+  const guia = [
     '## Estou no modo local',
     '',
     'Não sou um modelo de IA agora — sou o motor do próprio app, e por isso respondo bem a temas '
@@ -593,10 +619,13 @@ export function respostaLocal(pergunta) {
     '- **"estou travado"** — protocolo de desbloqueio',
     '- **"faz um diagnóstico"** — forças, fraquezas e o próximo movimento',
     '- **"como eu exporto em PDF?"** — dúvidas sobre o próprio app',
-    '',
-    'Para conversar de verdade com a Claude sobre qualquer assunto, ligue a IA em '
-    + '**Configurações → Conselheiro**.',
-  ].join('\n');
+  ];
+  // Quando a IA está ligada e só falhou, convidar a ligá-la seria mentira.
+  if (comConvite) {
+    guia.push('', 'Para conversar sobre qualquer assunto, ligue a IA em '
+      + '**Configurações → Conselheiro**.');
+  }
+  return guia.join('\n');
 }
 
 /* ==========================================================
