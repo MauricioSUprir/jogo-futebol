@@ -281,6 +281,7 @@
       el("div", { class: "acct-info" }, [
         el("div", { class: "prof-hi", text: "👋 Olá, " + p.name + "!" }),
         el("div", { class: "prof-email", text: p.email }),
+        el("div", { class: "prof-ver", text: "Total Match " + ((TM.versao && TM.versao()) || "") + (TM.storage.edition() === "pro" ? " · Season Update" : "") }),
         el("div", { class: "acct-number" }, [
           el("span", { class: "acct-lbl", text: "Nº da conta" }),
           el("span", { class: "acct-num", text: number || "…" }),

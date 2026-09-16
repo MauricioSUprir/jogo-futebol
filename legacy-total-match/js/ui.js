@@ -370,6 +370,17 @@
     }));
   });
 
+  // versão que está realmente rodando, lida do ?v= dos scripts. Serve para
+  // saber na hora se o aparelho pegou a atualização ou ficou no cache antigo.
+  function versaoAtual() {
+    try {
+      var sc = document.querySelector('script[src*="app.js"]');
+      var m = sc && sc.getAttribute("src").match(/v=(\d+)/);
+      return m ? "v" + m[1] : "";
+    } catch (e) { return ""; }
+  }
+  TM.versao = versaoAtual;
+
   // botão do administrador: só existe na conta de admin, ao lado das coins.
   // Fica no escopo do módulo porque as duas telas de menu o usam.
   function adminBtn() {
@@ -682,7 +693,8 @@
           el("div", { class: "fc-brand-stats" }, [
             el("span", { class: "fc-stat", html: "<b>" + wInfo.leagues + "</b> ligas" }),
             el("span", { class: "fc-stat", html: "<b>" + wInfo.clubs + "</b> clubes" }),
-            el("span", { class: "fc-stat", html: "<b>" + (wInfo.players >= 1000 ? Math.round(wInfo.players / 1000) + "k" : wInfo.players) + "</b> jogadores" })
+            el("span", { class: "fc-stat", html: "<b>" + (wInfo.players >= 1000 ? Math.round(wInfo.players / 1000) + "k" : wInfo.players) + "</b> jogadores" }),
+            el("span", { class: "fc-stat fc-ver", text: versaoAtual() })
           ])
         ])
       ]),
