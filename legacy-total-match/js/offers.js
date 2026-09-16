@@ -331,6 +331,35 @@
   }
 
   /* ---------- TELA ---------- */
+  /* ---------- lista de transferências ----------
+     Ao receber uma proposta você precisa saber se AQUELE jogador estava
+     listado para venda ou se o clube veio atrás de alguém que você não
+     tinha colocado no mercado — muda completamente a leitura da proposta. */
+  function naLista(c, pid) { return (c.transferList || []).indexOf(pid) >= 0; }
+  function chipLista(c, p) {
+    var on = naLista(c, p.id);
+    return el("span", { class: "nego2-chip lista" + (on ? " on" : " off"),
+      html: on ? "🏷️ <b>NA LISTA DE VENDA</b>" : "🔒 <b>FORA DA LISTA</b>" });
+  }
+  function toggleLista(c, p, voltar) {
+    c.transferList = c.transferList || [];
+    var i = c.transferList.indexOf(p.id);
+    if (i >= 0) { c.transferList.splice(i, 1); TM.ui.toast("🔒 " + p.name + " saiu da lista de venda."); }
+    else { c.transferList.push(p.id); TM.ui.toast("🏷️ " + p.name + " entrou na lista de venda."); }
+    save(c);
+    voltar();
+  }
+  function linhaLista(c, p, voltar) {
+    var on = naLista(c, p.id);
+    return el("div", { class: "of-lista" }, [
+      el("div", { class: "of-lista-txt", text: on
+        ? "Você colocou " + p.name + " na lista de venda — por isso apareceu comprador."
+        : p.name + " NÃO está na lista de venda: o interesse partiu do outro clube." }),
+      el("button", { class: "chip-btn", text: on ? "Tirar da lista" : "Colocar na lista",
+        on: { click: function () { toggleLista(c, p, voltar); } } })
+    ]);
+  }
+
   TM.ui.register("coach-offer", function (screen, params) {
     var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; }
     var n = TM.notify.get(c, params.noteId);
@@ -370,12 +399,14 @@
           el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(p) + "</b>" }),
           el("span", { class: "nego2-chip", html: "IDADE <b>" + p.age + "</b>" }),
           el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, value) + "</b>" }),
-          ct ? el("span", { class: "nego2-chip", html: "CONTRATO <b>" + ct.years + " temp." + "</b>" }) : null
+          ct ? el("span", { class: "nego2-chip", html: "CONTRATO <b>" + ct.years + " temp." + "</b>" }) : null,
+          chipLista(c, p)
         ].filter(Boolean)),
         ido ? el("div", { class: "setting-hint", text: ido.label }) : null
       ].filter(Boolean)),
       el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: p.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
     ]));
+    wrap.appendChild(linhaLista(c, p, function () { TM.ui.go("coach-offer", { noteId: params.noteId }); }));
 
     // termos atuais
     function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
@@ -673,12 +704,14 @@
           el("span", { class: "nego2-chip", html: "POS <b>" + TM.data.posLabel(p) + "</b>" }),
           el("span", { class: "nego2-chip", html: "IDADE <b>" + p.age + "</b>" }),
           el("span", { class: "nego2-chip", html: "VALOR <b>" + money(c, value) + "</b>" }),
-          ct ? el("span", { class: "nego2-chip", html: "SALÁRIO <b>" + money(c, wageAno) + "</b>" }) : null
+          ct ? el("span", { class: "nego2-chip", html: "SALÁRIO <b>" + money(c, wageAno) + "</b>" }) : null,
+          chipLista(c, p)
         ].filter(Boolean)),
         ido ? el("div", { class: "setting-hint", text: ido.label }) : null
       ].filter(Boolean)),
       el("div", { class: "nego2-ovr" }, [ el("div", { class: "nego2-ovrn", text: p.overall }), el("div", { class: "nego2-ovrl", text: "OVR" }) ])
     ]));
+    wrap.appendChild(linhaLista(c, p, function () { TM.ui.go("coach-loan-offer", { noteId: params && params.noteId }); }));
 
     function line(label, val, cls) { return el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: label }), el("span", { class: "deal-val " + (cls || ""), text: val }) ]); }
     wrap.appendChild(el("div", { class: "nego2-terms" }, [

@@ -4345,3 +4345,9 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .obsl-sub { font-size:11.5px; color:var(--muted,#9a9aa6); }
 .obsl-falta { font-size:11.5px; color:var(--muted,#9a9aa6); }
 .obsl-pronto { font-size:12px; color:#49d07c; font-weight:700; }
+
+/* está na lista de transferências? (tela da proposta) */
+.nego2-chip.lista.on { background: rgba(245,197,66,.16); color: #f5c542; }
+.nego2-chip.lista.off { background: rgba(255,255,255,.07); color: var(--muted,#9a9aa6); }
+.of-lista { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); border-radius:12px; padding:11px 12px; margin:10px 0; }
+.of-lista-txt { flex:1; min-width:0; font-size:12.5px; line-height:1.45; color:var(--muted,#9a9aa6); }
