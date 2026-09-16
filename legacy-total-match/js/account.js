@@ -12,12 +12,17 @@
   function profile() { return TM.storage.accountProfile(); }             // { email, name, photo }
   function setProfile(p) { TM.storage.saveAccountProfile(p || null); }
   // conta excluída pelo administrador em outro aparelho: derruba o login local ao abrir o jogo
+  var faltas = 0;
   function verifyProfile() {
     var p = profile(); if (!p || !p.email) return;
     try {
       var n = N(); if (!n || !n._db || !n.acctKey) return;
       n._db.ref("accounts/" + n.acctKey(p.email)).once("value").then(function (s) {
-        if (s.val()) return;
+        if (s.val()) { faltas = 0; return; }
+        // uma leitura vazia sozinha não derruba ninguém: já aconteceu de tirar
+        // o login (e com ele a sincronização e o painel de admin) por causa de
+        // uma resposta ruim do banco. Precisa falhar duas vezes seguidas.
+        if (++faltas < 2) return;
         setProfile(null); if (n.unlinkAccount) n.unlinkAccount();
         TM.ui.toast("Esta conta foi excluída pelo administrador.");
         try { if (document.getElementById("screen-modes") || document.querySelector(".acct-card")) TM.ui.go("modes"); } catch (e) {}
@@ -289,10 +294,16 @@
 
     // administrador: o gerenciamento de contas fica AQUI dentro, não numa tela
     // à parte — é onde ele é procurado e funciona em qualquer aparelho logado
-    if (TM.coins && TM.coins.isAdmin && TM.coins.isAdmin()) {
-      var bloco = TM.coins.adminBlock ? TM.coins.adminBlock() : null;
+    var ehAdmin = false; try { ehAdmin = !!(TM.coins && TM.coins.isAdmin && TM.coins.isAdmin()); } catch (e) {}
+    // a carteira fica sempre à mão; o painel completo também, como segunda
+    // porta caso o bloco embutido não consiga montar
+    body.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button(ehAdmin ? "👑 Painel do administrador" : "🪙 Meus Total Coins", function () { TM.ui.go("coins"); }, ehAdmin ? "btn primary" : "btn")
+    ]));
+    if (ehAdmin) {
+      var bloco = null;
+      try { bloco = TM.coins.adminBlock ? TM.coins.adminBlock() : null; } catch (e) { bloco = null; }
       if (bloco) body.appendChild(bloco);
-      else body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("👑 Gerenciar contas e coins", function () { TM.ui.go("coins"); }, "btn primary") ]));
     }
     // moldura dourada (compra com Total Coins)
     if (TM.coins) {
