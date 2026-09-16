@@ -367,7 +367,7 @@
   function koTitle(n) { return ({ 32: "16 avos de final", 16: "Oitavas", 8: "Quartas", 4: "Semifinal", 2: "Final", 1: "Final" })[n] || (n + " times"); }
   // nome da fase: no formato de liga o play-off tem 16 times, mas não é "oitavas"
   function faseNome(state, nteams) {
-    if (state && state.ko && state.ko.labels) {
+    if (state && state.ko && state.ko.labels && state.ko.roundIndex != null) {
       var l = state.ko.labels[state.ko.roundIndex];
       if (l) return l;
     }
