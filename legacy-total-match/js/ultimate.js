@@ -159,6 +159,7 @@
   }
   // ligações da formação: cada casa liga nas vizinhas mais próximas
   var _linkCache = {};
+  try { TM.storage.onEditionChange(function () { _linkCache = {}; }); } catch (e) {}
   function linksOf(fname) {
     if (_linkCache[fname]) return _linkCache[fname];
     var F = TM.comp.FORMATIONS[fname] || TM.comp.FORMATIONS["4-3-3"];

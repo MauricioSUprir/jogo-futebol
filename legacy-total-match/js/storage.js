@@ -82,6 +82,29 @@
       try { localStorage.setItem(EDITION_KEY, edition); } catch (er) {}
       return edition;
     },
+    // troca de edição SEM recarregar a página: muda o prefixo dos saves e
+    // derruba todo cache de memória que depende da edição (mundo, elencos,
+    // nomes, escudos, fotos, tabelas, notícias).
+    switchEdition: function (e) {
+      var nova = (e === "pro") ? "pro" : "public";
+      if (nova === edition) return edition;
+      edition = nova;
+      try { localStorage.setItem(EDITION_KEY, edition); } catch (er) {}
+      try { if (TM.data && TM.data.resetWorld) TM.data.resetWorld(); } catch (er) {}
+      (TM._edHooks || []).forEach(function (fn) { try { fn(edition); } catch (er) {} });
+      return edition;
+    },
+    // módulos com cache próprio se registram aqui para limpar na troca
+    onEditionChange: function (fn) { if (typeof fn === "function") TM._edHooks = (TM._edHooks || []).concat(fn); },
+
+    // chave da Season Update (edição fechada), lembrada neste aparelho
+    SU_FLAG: "totalmatch:su_unlocked",
+    suUnlocked: function () { try { return localStorage.getItem("totalmatch:su_unlocked") === "1"; } catch (e) { return false; } },
+    unlockSU: function (chave) {
+      if (String(chave || "").trim() !== "21011004") return false;
+      try { localStorage.setItem("totalmatch:su_unlocked", "1"); } catch (e) {}
+      return true;
+    },
 
     // apaga os dados do jogo DA EDIÇÃO ATUAL (carreiras, saves, perfil, config) — "zerar o app"
     wipeAll: function () {

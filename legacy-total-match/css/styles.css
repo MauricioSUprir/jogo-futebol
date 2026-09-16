@@ -4286,3 +4286,14 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .rae-fila-a{font-size:11.5px;color:var(--muted,#9a9aa6)}
 .rae-fila-o{font-weight:800;font-size:15px;min-width:28px;text-align:right}
 .rae-fila-tag{font-size:14px}
+
+/* seletor de versão no perfil */
+.ed-card{width:100%;max-width:560px;box-sizing:border-box;margin:0 auto 14px;padding:0 14px;display:flex;flex-direction:column;gap:8px}
+.ed-title{font-size:13px;font-weight:800;letter-spacing:.02em;margin-bottom:2px}
+.ed-opt{display:flex;align-items:center;gap:11px;width:100%;box-sizing:border-box;text-align:left;background:var(--card,#16161c);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:12px;color:inherit;font:inherit;cursor:pointer}
+.ed-opt.on{border-color:var(--accent,#a06bd4);background:rgba(160,107,212,.10)}
+.ed-ic{font-size:20px;flex:none}
+.ed-i{flex:1;min-width:0;display:flex;flex-direction:column}
+.ed-n{font-weight:700;font-size:14px}
+.ed-d{font-size:11.5px;color:var(--muted,#9a9aa6);margin-top:1px}
+.ed-mark{font-size:15px;font-weight:800;color:var(--accent,#a06bd4);flex:none}

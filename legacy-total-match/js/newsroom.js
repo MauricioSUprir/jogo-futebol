@@ -338,6 +338,7 @@
 
   /* ---------- feed ---------- */
   var cache = { key: null, items: [] };
+  try { TM.storage.onEditionChange(function () { cache = { key: null, items: [] }; }); } catch (e) {}
   /* ---------- INDIRETAS: o interesse que ninguém confirma ----------
      Sondagem por você (treinador) e sondagem por jogadores do seu elenco
      viram matéria antes de virar proposta, no tom de bastidor. */

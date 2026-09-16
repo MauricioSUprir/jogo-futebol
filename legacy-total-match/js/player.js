@@ -1086,6 +1086,7 @@
 
   /* ---------- tabela da liga do jogador ---------- */
   var _leagueTblCache = {};
+  try { TM.storage.onEditionChange(function () { _leagueTblCache = {}; }); } catch (e) {}
   // tabela de uma liga: a do jogador vem ao vivo (c.table); as outras são simuladas até a mesma rodada (cacheadas)
   function tableForLeague(c, leagueId) {
     var myLeague = TM.data.club(c.clubId).leagueId;
