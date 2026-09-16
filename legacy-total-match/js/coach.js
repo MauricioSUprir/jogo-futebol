@@ -3319,6 +3319,69 @@
     ]);
   }
 
+  /* ---------- situação de contrato do elenco ----------
+     "years" conta temporadas; aqui vira MESES, que é como se fala de contrato. */
+  function mesesDeContrato(c, pid) {
+    var ct = c.contracts && c.contracts[pid];
+    if (!ct) return null;
+    var faltaNaTemporada = Math.max(0, 330 - (c.currentDay || 0));
+    return Math.max(0, (ct.years - 1) * 12 + Math.round(faltaNaTemporada / 30));
+  }
+  function rotuloContrato(m) {
+    if (m == null) return null;
+    if (m <= 0) return "contrato encerrado";
+    if (m === 1) return "1 mês";
+    if (m < 12) return m + " meses";
+    var a = Math.floor(m / 12), r = m % 12;
+    return a + (a > 1 ? " anos" : " ano") + (r ? " e " + r + (r > 1 ? " meses" : " mês") : "");
+  }
+  function urgenciaContrato(m) { return m == null ? "" : m <= 6 ? "critico" : m <= 12 ? "alerta" : ""; }
+
+  // bloco do topo do elenco: quem está acabando e quem está de olho
+  function painelContratos(c, players) {
+    var itens = [];
+    players.forEach(function (p) {
+      if (c.loanedIn && c.loanedIn[p.id]) return;
+      var m = mesesDeContrato(c, p.id);
+      if (m == null || m > 12) return;
+      var olho = []; try { olho = C().interessadosEm(c, p.id) || []; } catch (e) {}
+      itens.push({ p: p, m: m, olho: olho });
+    });
+    if (!itens.length) return null;
+    itens.sort(function (a, b) { return a.m - b.m; });
+
+    var box = el("div", { class: "ct-panel" });
+    box.appendChild(el("div", { class: "ct-head" }, [
+      el("span", { text: "📝 Fim de contrato" }),
+      el("span", { class: "ct-count", text: itens.length + " jogador(es)" })
+    ]));
+    itens.forEach(function (it) {
+      var u = urgenciaContrato(it.m);
+      var linha = el("button", { class: "ct-row " + u, on: { click: function () { TM.coachUI.openPlayer(it.p, "coach-squad"); } } }, [
+        el("div", { class: "ct-r1" }, [
+          el("span", { class: "ct-nome", text: it.p.name }),
+          el("span", { class: "ct-prazo " + u, text: rotuloContrato(it.m) })
+        ]),
+        el("div", { class: "ct-r2", text: TM.data.posLabel(it.p) + " · " + it.p.age + " anos · " + it.p.overall + " OVR" })
+      ]);
+      if (it.olho.length) {
+        var chips = el("div", { class: "ct-olho" }, [ el("span", { class: "ct-olho-l", text: "👀 interesse:" }) ].concat(
+          it.olho.map(function (x) {
+            return el("span", { class: "ct-chip", text: x.clubName + (x.val ? " · " + money(c, curVal(c, x.val)) : "") });
+          })
+        ));
+        linha.appendChild(chips);
+      } else {
+        linha.appendChild(el("div", { class: "ct-olho vazio", text: "👀 ninguém sondou ainda" }));
+      }
+      box.appendChild(linha);
+    });
+    box.appendChild(el("div", { class: "setting-hint", text: "A menos de 6 meses o jogador pode assinar pré-contrato com outro clube e sair de graça. Renove antes disso." }));
+    return box;
+  }
+  TM.coachUI.mesesDeContrato = mesesDeContrato;
+  TM.coachUI.rotuloContrato = rotuloContrato;
+
   TM.ui.register("coach-squad", function (screen) {
     var c = TM.storage.coachCareer();
     screen.appendChild(TM.ui.topbar("👥 Central do Elenco", function () { TM.ui.go("coach-hub"); }));
@@ -3327,6 +3390,8 @@
     var order = { GK: 0, DF: 1, MF: 2, FW: 3 };
     players.sort(function (a, b) { return order[a.pos] - order[b.pos] || b.overall - a.overall; });
     screen.appendChild(squadXray(c, players));
+    var pc = painelContratos(c, players);
+    if (pc) screen.appendChild(pc);
     screen.appendChild(el("div", { class: "setting-hint", style: "max-width:620px", text: "Toque num jogador para ver detalhes. Use “Listar” para colocá-lo na lista de transferências (recebe mais propostas)." }));
     var list = el("div", { class: "panel-narrow squad-list" });
     var lastPos = null;
@@ -3336,6 +3401,16 @@
       var row = TM.ui.playerRow(p, { onClick: function (pl) { TM.coachUI.openPlayer(pl, TM.ui.current()); } });
       var listed = c.transferList.indexOf(p.id) >= 0;
       var isLoan = c.loanedIn && c.loanedIn[p.id];
+      // selo de contrato na própria linha, com quantos clubes estão de olho
+      if (!isLoan) {
+        var mm = mesesDeContrato(c, p.id);
+        if (mm != null && mm <= 12) {
+          var nInt = 0; try { nInt = (C().interessadosEm(c, p.id) || []).length; } catch (e) {}
+          var nmEl = row.querySelector(".prow-name, .pr-name") || row;
+          nmEl.appendChild(el("span", { class: "ct-tag " + urgenciaContrato(mm),
+            text: "📝 " + rotuloContrato(mm) + (nInt ? " · 👀 " + nInt : "") }));
+        }
+      }
       if (!isLoan) {
         var btn = el("button", { class: "list-toggle" + (listed ? " on" : ""), text: listed ? "🏷️ Listado" : "Listar", title: "Lista de transferências",
           on: { click: function (e) {

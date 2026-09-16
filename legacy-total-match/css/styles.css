@@ -4351,3 +4351,25 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .nego2-chip.lista.off { background: rgba(255,255,255,.07); color: var(--muted,#9a9aa6); }
 .of-lista { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04); border-radius:12px; padding:11px 12px; margin:10px 0; }
 .of-lista-txt { flex:1; min-width:0; font-size:12.5px; line-height:1.45; color:var(--muted,#9a9aa6); }
+
+/* fim de contrato no elenco */
+.ct-panel { width:100%; max-width:620px; box-sizing:border-box; margin:0 auto 12px; padding:13px; background:var(--card,#16161c); border:1px solid rgba(245,197,66,.3); border-radius:15px; }
+.ct-head { display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:800; margin-bottom:10px; }
+.ct-count { font-size:11.5px; color:var(--muted,#9a9aa6); font-weight:600; }
+.ct-row { display:flex; flex-direction:column; gap:4px; width:100%; box-sizing:border-box; text-align:left; background:rgba(255,255,255,.04);
+  border:1px solid transparent; border-radius:12px; padding:10px 11px; color:inherit; font:inherit; cursor:pointer; margin-bottom:8px; }
+.ct-row.alerta { border-color:rgba(245,197,66,.35); }
+.ct-row.critico { border-color:rgba(221,106,110,.45); background:rgba(221,106,110,.07); }
+.ct-r1 { display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.ct-nome { font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ct-prazo { font-size:12.5px; font-weight:800; color:var(--muted,#9a9aa6); white-space:nowrap; }
+.ct-prazo.alerta { color:#f5c542; } .ct-prazo.critico { color:#dd6a6e; }
+.ct-r2 { font-size:11.5px; color:var(--muted,#9a9aa6); }
+.ct-olho { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:5px; }
+.ct-olho.vazio { font-size:11px; color:var(--muted,#9a9aa6); opacity:.65; }
+.ct-olho-l { font-size:11px; color:var(--muted,#9a9aa6); }
+.ct-chip { font-size:11px; font-weight:700; background:rgba(160,107,212,.16); color:#c79af0; border-radius:999px; padding:2px 8px; }
+.ct-tag { font-size:10px; font-weight:800; border-radius:999px; padding:1px 6px; margin-left:6px; white-space:nowrap;
+  background:rgba(255,255,255,.08); color:var(--muted,#9a9aa6); }
+.ct-tag.alerta { background:rgba(245,197,66,.16); color:#f5c542; }
+.ct-tag.critico { background:rgba(221,106,110,.16); color:#dd6a6e; }

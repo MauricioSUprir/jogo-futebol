@@ -365,6 +365,8 @@
     var n = TM.notify.get(c, params.noteId);
     if (!n || !n.offer) { TM.ui.go("coach-notifications"); return; }
     var off = enrich(c, n); save(c);
+    // proposta concreta é o interesse mais forte que existe: fica registrada
+    try { C().registraInteresse(c, off.playerId, off.buyerId, curVal(c, off.fee) / (c.money ? c.money.mult : 1)); } catch (e) {}
     var p = C().resolvePlayer(c, off.playerId), buyer = TM.data.club(off.buyerId);
     if (!p || !buyer) { TM.notify.remove(c, n.id); save(c); TM.ui.go("coach-notifications"); return; }
     var value = curVal(c, C().valueOf ? C().valueOf(c, p) : TM.data.marketValue(p)), left = Math.max(0, (off.deadlineDay || day(c)) - day(c));
