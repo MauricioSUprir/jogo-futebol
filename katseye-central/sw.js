@@ -7,7 +7,7 @@ const CACHE = 'katseye-central-v1';
 const ARQUIVOS = [
   './', './index.html', './manifest.webmanifest', './css/app.css',
   './assets/icon.svg', './assets/icon-maskable.svg',
-  './js/app.js', './js/store.js', './js/util.js', './js/ui.js', './js/motion.js',
+  './js/app.js', './js/store.js', './js/chave.js', './js/util.js', './js/ui.js', './js/motion.js',
   './js/engine.js', './js/dados.js', './js/ia.js', './js/cartaz.js', './js/fotos.js',
   './js/views/comum.js', './js/views/inicio.js', './js/views/membros.js',
   './js/views/agenda.js', './js/views/estudio.js', './js/views/conselheiro.js',

@@ -6,7 +6,7 @@ import { h, baixar, fmtQuando, nf, lerTexto } from '../util.js';
 import {
   st, set, aplicarPrefs, exportar, importar, zerar, resumoDados, registrar, GRUPO,
 } from '../store.js';
-import { PROVEDORES, provedor, chaveDe, modeloAtual, modoIA, motivoIA, usoHoje, MANUAL } from '../ia.js';
+import { PROVEDORES, provedor, chaveDe, modeloAtual, modoIA, motivoIA, usoHoje, MANUAL, usandoChaveEmbutida } from '../ia.js';
 import { FUSOS, AVISO_DADOS } from '../dados.js';
 import {
   tituloPagina, painel, campo, inp, sel, segmento, chave as chaveUI, toast,
@@ -207,9 +207,11 @@ function painelIA(recarregar) {
   const p = provedor(ia.provedor);
   const motivo = motivoIA();
 
+  const embutida = usandoChaveEmbutida();
   const cChave = inp({
     type: 'password',
-    value: chaveDe(ia.provedor),
+    // não mostra a chave embutida no campo: ela não é "sua", é do app
+    value: embutida ? '' : chaveDe(ia.provedor),
     placeholder: p.id === 'gemini' ? 'AIza…' : 'sk-ant-…',
     autocomplete: 'off',
   });
@@ -225,7 +227,11 @@ function painelIA(recarregar) {
         set((x) => { x.ia.provedor = v; x.ia.modelo = ''; });
         recarregar();
       })),
-    campo('Chave da API', cChave, p.nota),
+    campo(embutida ? 'Sua chave (opcional)' : 'Chave da API', cChave,
+      embutida
+        ? 'O app já vem com uma chave embutida e está usando ela. Cole a sua aqui só se quiser '
+          + 'gastar a sua própria cota — a sua sempre vence.'
+        : p.nota),
     campo('Modelo', cModelo),
     h('div', { class: 'flexb' },
       h('a', { class: 'btn btn--sm', href: p.ondePegar, target: '_blank', rel: 'noopener' }, '🔗 Pegar uma chave'),
@@ -273,7 +279,12 @@ function painelIA(recarregar) {
     ia.modo === 'local' ? h('p', { class: 'small muted' },
       'Sem conexão nenhuma: o Conselheiro responde com cálculos sobre os seus dados e frameworks fixos. '
       + 'Funciona offline e nunca inventa número.') : null,
-    ia.modo === 'chave' ? aviso(
+    embutida ? aviso(
+      '**Este app vem com uma chave embutida.** Ela está no código, que é público, então '
+      + 'qualquer visitante pode lê-la e gastar a cota. Se o chat parar do nada, provavelmente '
+      + 'o Google a revogou — troque em `katseye-central/js/chave.js`. Para o chat ligado sem '
+      + 'esse problema, use o `katseye-server/`.', '') : null,
+    ia.modo === 'chave' && !embutida ? aviso(
       '**Cuidado ao publicar:** a chave salva aqui fica no `localStorage` deste navegador. '
       + 'Para uso pessoal, tudo bem. Se outras pessoas forem usar o app, prefira o modo servidor — '
       + 'senão a sua chave roda na máquina delas.', 'bad') : null,

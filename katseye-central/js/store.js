@@ -9,6 +9,7 @@
 
 import { uid, iso, hoje, addDias, cortar } from './util.js';
 import { INTEGRANTES, DISCOGRAFIA, FUSOS_PADRAO, GRUPO } from './dados.js';
+import { temChaveEmbutida, PROVEDOR_EMBUTIDO } from './chave.js';
 
 const CHAVE = 'katseye.central.v1';
 const SCHEMA = 1;
@@ -51,8 +52,10 @@ export function estadoVazio() {
     /* Conselheiro */
     conversas: [],                      // { id, titulo, mensagens:[{de,txt,em}], em }
     ia: {
-      modo: 'local',                    // local | servidor | chave
-      provedor: 'gemini',               // gemini | anthropic  (quando modo = 'chave')
+      // Com chave embutida (chave.js), o app já abre conectado — é o que faz
+      // o chat funcionar para quem só abre o link, sem configurar nada.
+      modo: temChaveEmbutida() ? 'chave' : 'local',
+      provedor: temChaveEmbutida() ? PROVEDOR_EMBUTIDO : 'gemini',
       servidor: '',                     // endpoint proxy próprio (POST /conselho)
       chaveGemini: '',                  // chave do Google AI Studio (só neste aparelho)
       chaveAnthropic: '',               // chave da Anthropic (só neste aparelho)
@@ -93,6 +96,17 @@ function migrar(d) {
     d[grupo] = { ...base[grupo], ...(d[grupo] || {}) };
   }
   if (!Array.isArray(d.prefs.fusos) || !d.prefs.fusos.length) d.prefs.fusos = [...FUSOS_PADRAO];
+
+  // Quem já usava o app antes da chave embutida existir ficou salvo em
+  // 'local'. Se a pessoa não escolheu servidor nem colou chave própria,
+  // liga na embutida — senão abriria no motor local sem motivo.
+  if (temChaveEmbutida() && d.ia.modo === 'local'
+      && !String(d.ia.chaveGemini || '').trim()
+      && !String(d.ia.chaveAnthropic || '').trim()
+      && !String(d.ia.servidor || '').trim()) {
+    d.ia.modo = 'chave';
+    d.ia.provedor = PROVEDOR_EMBUTIDO;
+  }
   d.schema = SCHEMA;
   return d;
 }
