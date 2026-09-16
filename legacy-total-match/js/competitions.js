@@ -2352,6 +2352,46 @@
       text: "O clube está no vermelho (" + fmtMoney(career, career.budget) + "). A diretoria exige uma venda para equilibrar as contas" + (star ? " — " + star.name + " foi colocado na lista de transferências." : ".") });
   }
   // notificação de INTERESSE de um clube num jogador (antes/independente de uma proposta concreta)
+  /* ---------- interesse de outros clubes que fica guardado ----------
+     Antes o interesse virava só uma notícia e sumia: não dava pra abrir o
+     elenco e ver quem está de olho em quem, nem por quanto. */
+  function registraInteresse(career, pid, clubId, val) {
+    if (!pid || !clubId) return;
+    career.interesse = career.interesse || {};
+    var hoje = career.currentDay || 0;
+    var lista = (career.interesse[pid] || []).filter(function (x) { return hoje - (x.day || 0) <= 75; });
+    var ja = null;
+    for (var i = 0; i < lista.length; i++) if (lista[i].clubId === clubId) ja = lista[i];
+    var cl = TM.data.club(clubId);
+    if (ja) { ja.day = hoje; ja.val = Math.max(ja.val || 0, Math.round(val || 0)); }
+    else lista.push({ clubId: clubId, clubName: cl ? cl.name : "Clube", val: Math.round(val || 0), day: hoje });
+    lista.sort(function (a, b) { return (b.val || 0) - (a.val || 0); });
+    career.interesse[pid] = lista.slice(0, 5);
+  }
+  function interessadosEm(career, pid) {
+    if (!career || !career.interesse) return [];
+    var hoje = career.currentDay || 0;
+    return (career.interesse[pid] || []).filter(function (x) { return hoje - (x.day || 0) <= 75; });
+  }
+  // quem está no último ano de contrato vira alvo: é assim que se perde jogador de graça
+  function interesseFimDeContrato(career) {
+    if (!TM.fin || !TM.fin.endingContract) return;
+    var meus = rosterPlayers(career).filter(function (p) {
+      var ct = career.contracts && career.contracts[p.id];
+      return ct && ct.years <= 1 && !(career.loanedIn && career.loanedIn[p.id]);
+    });
+    if (!meus.length) return;
+    var p = meus[Math.floor(Math.random() * meus.length)];
+    var val = TM.data.marketValue(p);
+    var pretendentes = TM.data.world().clubs.filter(function (cl) {
+      return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= p.overall - 6 && baseBudgetEur(TM.data.clubRating(cl.id)) >= val * 0.5;
+    });
+    if (!pretendentes.length) return;
+    var cl = pretendentes[Math.floor(Math.random() * pretendentes.length)];
+    // contrato acabando derruba o preço: dá pra levar mais barato, ou de graça na virada
+    registraInteresse(career, p.id, cl.id, val * (0.45 + Math.random() * 0.35));
+  }
+
   function maybeInterest(career) {
     // escolhe entre um alvo da Central e um jogador do seu elenco
     var shortlist = (career.shortlist || []).filter(function (id) { return career.roster.indexOf(id) < 0; });
@@ -2375,6 +2415,7 @@
       var buyers = TM.data.world().clubs.filter(function (cl) {
         return cl.id !== career.teamId && TM.data.clubRating(cl.id) >= player.overall - 2;
       });
+      if (buyers.length) { try { registraInteresse(career, player.id, buyers[Math.floor(Math.random() * buyers.length)].id, TM.data.marketValue(player) * (0.8 + Math.random() * 0.5)); } catch (e) {} }
       if (!buyers.length) return;
       var b1 = buyers[Math.floor(Math.random() * buyers.length)];
       icon = "👀"; title = "Interesse no seu jogador";
@@ -2461,6 +2502,7 @@
     checkUserFinancialCrisis(career);
     // sondagens de interesse (independem de proposta concreta)
     if (Math.random() < 0.28) maybeInterest(career);
+    if (Math.random() < 0.22) interesseFimDeContrato(career);
   }
 
   /* ---------- rebaixamento / acesso (1ª <-> 2ª divisão) ---------- */
@@ -3095,6 +3137,7 @@
     legInfo: legInfo, tieOf: tieOf, resolveContPre: resolveContPre, CONT_PRE_N: CONT_PRE_N, payRoundPrizes: payRoundPrizes, payLeaguePosPrize: payLeaguePosPrize, idolScore: idolScore, IDOL_LEVELS: IDOL_LEVELS, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
     executeWorldTransfer: executeWorldTransfer, pendingDealFor: pendingDealFor, buildWindows: buildWindows,
+    registraInteresse: registraInteresse, interessadosEm: interessadosEm,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
     retireAndRegen: retireAndRegen, applyRegen: applyRegen,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
