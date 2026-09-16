@@ -4297,3 +4297,9 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ed-n{font-weight:700;font-size:14px}
 .ed-d{font-size:11.5px;color:var(--muted,#9a9aa6);margin-top:1px}
 .ed-mark{font-size:15px;font-weight:800;color:var(--accent,#a06bd4);flex:none}
+
+/* botão do administrador no topo do menu (só aparece na conta de admin) */
+.fc-admin { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(20,24,20,.7); border: 1px solid rgba(245,197,66,.45); font-size: 18px; cursor: pointer; transition: transform .15s, border-color .15s; }
+.fc-admin:hover { transform: scale(1.08); border-color: var(--gold, #f5c542); }
+body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }

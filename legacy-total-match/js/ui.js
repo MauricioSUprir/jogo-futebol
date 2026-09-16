@@ -370,6 +370,14 @@
     }));
   });
 
+  // botão do administrador: só existe na conta de admin, ao lado das coins.
+  // Fica no escopo do módulo porque as duas telas de menu o usam.
+  function adminBtn() {
+    var eh = false; try { eh = !!(TM.coins && TM.coins.isAdmin && TM.coins.isAdmin()); } catch (e) {}
+    if (!eh) return el("span");
+    return el("button", { class: "fc-admin", title: "Administração", on: { click: function () { go("admin"); } } }, [ el("span", { text: "👑" }) ]);
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
     el: el, clear: clear, register: register, go: go,
@@ -680,6 +688,7 @@
       ]),
       el("div", { class: "fc-top-right" }, [
         (TM.coins ? TM.coins.badge("fc-coins") : el("span")),
+        adminBtn(),
         profBtn,
         el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
       ])

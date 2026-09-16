@@ -298,6 +298,24 @@
     function rule(ic, txt, val) { return el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: ic }), el("span", { class: "coin-rule-tx", text: txt }), el("span", { class: "coin-rule-v", text: val }) ]); }
   });
 
+  // tela própria do administrador: o botão 👑 do menu cai direto aqui, sem
+  // passar pela carteira
+  TM.ui.register("admin", function (screen) {
+    screen.appendChild(TM.ui.topbar("👑 Administração", function () { TM.ui.go("modes"); }));
+    var body = el("div", { class: "panel-narrow" });
+    screen.appendChild(body);
+    if (!coins.isAdmin()) {
+      body.appendChild(el("div", { class: "setting-hint", text: "Esta área é só do administrador. Entre na conta de administrador para abrir." }));
+      body.appendChild(TM.ui.button("👤 Ir para o Perfil", function () { TM.ui.go("profile"); }, "btn primary"));
+      return;
+    }
+    var bloco = null;
+    try { bloco = coins.adminBlock(); } catch (e) { bloco = null; }
+    if (bloco) body.appendChild(bloco);
+    else body.appendChild(el("div", { class: "setting-hint", text: "Não foi possível carregar o painel. Verifique a conexão." }));
+    body.appendChild(TM.ui.button("🪙 Minha carteira", function () { TM.ui.go("coins"); }, "btn ghost"));
+  });
+
   // bloco completo de administração (dar coins + diretório de contas) para
   // embutir em qualquer tela. Fica no Perfil, sem precisar abrir outra tela.
   coins.adminBlock = function () {
