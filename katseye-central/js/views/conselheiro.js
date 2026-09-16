@@ -9,11 +9,11 @@ import {
 } from '../store.js';
 import {
   perguntar, contexto, modoIA, motivoIA, PRESETS, usoHoje,
-  falar, pararDeFalar, temVoz,
+  falar, pararDeFalar, temVoz, provedor,
 } from '../ia.js';
 import {
-  tituloPagina, painel, vazio, toast, modal, confirmar, txtarea,
-  cascata, entrada, aviso,
+  tituloPagina, painel, vazio, toast, modal, confirmar, txtarea, inp,
+  cascata, entrada, aviso, campo, tremer,
 } from '../ui.js';
 
 let conversaAtual = null;
@@ -186,7 +186,7 @@ export function render(alvo) {
         : 'Enter envia, Shift+Enter quebra linha.'));
 
   const raiz = h('div', { class: 'flexc', style: { gap: '18px' } },
-    motivo.ok ? null : aviso(motivo.txt, 'info'),
+    motivo.ok ? null : ligarGemini(recarregar),
     h('div', { class: 'grid g-side' },
       painelChat,
       h('div', { class: 'flexc' }, atalhos, listaConversas)));
@@ -200,4 +200,70 @@ export function render(alvo) {
 
   // ao sair da tela, cala a voz
   return () => pararDeFalar();
+}
+
+/* ==========================================================
+   LIGAR O GEMINI SEM SAIR DA TELA
+   ==========================================================
+   Antes era preciso ir até Sistema só para colar a chave. Como esta é a
+   tela em que a falta dela aparece, o campo mora aqui também — as duas
+   telas escrevem no mesmo lugar do estado.                              */
+function ligarGemini(recarregar) {
+  const p = provedor('gemini');
+  const campoChave = inp({
+    type: 'password',
+    placeholder: 'Cole aqui a chave do Google AI Studio (AIza…)',
+    autocomplete: 'off',
+  });
+
+  const botao = h('button', {
+    class: 'btn btn--p',
+    onclick: async () => {
+      const valor = campoChave.value.trim();
+      if (!valor) { tremer(campoChave); campoChave.focus(); return; }
+      set((x) => { x.ia.chaveGemini = valor; x.ia.provedor = 'gemini'; x.ia.modo = 'chave'; });
+
+      botao.disabled = true;
+      const antes = botao.textContent;
+      botao.textContent = 'testando…';
+      const r = await perguntar([], 'Responda apenas: ok');
+      botao.disabled = false;
+      botao.textContent = antes;
+
+      if (r.local) {
+        // a chave não funcionou: desliga de volta para não deixar o app
+        // num estado que finge estar conectado
+        set((x) => { x.ia.modo = 'local'; });
+        toast(`Não consegui conectar: ${r.erro || 'a chave foi recusada'}`, 'bad');
+        recarregar();
+        return;
+      }
+      registrar('🔌', 'Gemini conectado', 'pela tela do Conselheiro', '#/conselheiro');
+      toast('Gemini conectado — pode perguntar 🎉', 'good');
+      recarregar();
+    },
+  }, 'Ligar');
+
+  campoChave.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') botao.click(); });
+
+  return h('div', { class: 'card card--acc' },
+    h('div', { class: 'card__h' },
+      h('span', { style: { fontSize: '16px' } }, '🔌'),
+      h('h3', {}, 'Ligar o chatbot de verdade'),
+      h('span', { class: 'chip sp' }, 'camada gratuita')),
+    h('p', { class: 'small muted mb' },
+      'Agora ele responde pelo motor do próprio app — útil, mas não é IA. '
+      + 'Com uma chave do Google AI Studio, quem responde é o Gemini, '
+      + 'com os seus dados do app como contexto.'),
+    h('div', { class: 'f-row', style: { gridTemplateColumns: 'minmax(0,1fr) auto', alignItems: 'end' } },
+      campo('Chave do Gemini', campoChave),
+      h('div', { style: { marginBottom: '12px' } }, botao)),
+    h('div', { class: 'flexb' },
+      h('a', { class: 'btn btn--sm', href: p.ondePegar, target: '_blank', rel: 'noopener' },
+        '🔗 Pegar a chave (é grátis)'),
+      h('a', { class: 'btn btn--sm', href: '#/config' }, '⚙️ Outras opções')),
+    h('p', { class: 'tiny dim2 mt' },
+      'A chave fica só no armazenamento deste navegador e vai direto para o Google — '
+      + 'nenhum servidor meu no meio. Se você for publicar o app para outras pessoas, '
+      + 'use o modo servidor em Sistema, senão a sua chave roda na máquina delas.'));
 }

@@ -219,7 +219,34 @@ async function viaAnthropic(mensagens) {
  */
 async function viaGemini(mensagens) {
   const modelo = modeloAtual();
-  const r = await fetch(`${ENDPOINT_GEMINI}/${encodeURIComponent(modelo)}:generateContent?key=${encodeURIComponent(chaveDe('gemini'))}`, {
+  let r;
+  try {
+    r = await fetchGemini(modelo, mensagens);
+  } catch (e) {
+    // fetch só joga TypeError genérico ("Failed to fetch") para qualquer
+    // problema de rede — traduz para algo acionável.
+    throw new Error('Não consegui alcançar a API do Gemini. Verifique a internet; '
+      + 'se o app estiver aberto dentro de um preview ou iframe, a política de '
+      + 'segurança da página bloqueia chamadas externas.');
+  }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const msg = d?.error?.message || `A API respondeu ${r.status}.`;
+    if (r.status === 429) throw new Error(`Limite da camada gratuita atingido. ${msg}`);
+    if (r.status === 400 && /api key/i.test(msg)) throw new Error('A chave foi recusada pelo Google. Confira se copiou inteira.');
+    if (r.status === 403) throw new Error(`Acesso negado pelo Google: ${msg}`);
+    if (r.status === 404) throw new Error(`O modelo "${modelo}" não existe ou não está liberado para a sua chave.`);
+    throw new Error(msg);
+  }
+  const cand = d.candidates?.[0];
+  if (!cand && d.promptFeedback?.blockReason) {
+    throw new Error(`O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
+  }
+  return (cand?.content?.parts || []).map((x) => x.text || '').join('\n').trim();
+}
+
+function fetchGemini(modelo, mensagens) {
+  return fetch(`${ENDPOINT_GEMINI}/${encodeURIComponent(modelo)}:generateContent?key=${encodeURIComponent(chaveDe('gemini'))}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
@@ -231,17 +258,6 @@ async function viaGemini(mensagens) {
       generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
     }),
   });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const msg = d?.error?.message || `A API respondeu ${r.status}.`;
-    if (r.status === 429) throw new Error(`Limite da camada gratuita atingido. ${msg}`);
-    throw new Error(msg);
-  }
-  const cand = d.candidates?.[0];
-  if (!cand && d.promptFeedback?.blockReason) {
-    throw new Error(`O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
-  }
-  return (cand?.content?.parts || []).map((x) => x.text || '').join('\n').trim();
 }
 
 async function viaServidor(mensagens) {
