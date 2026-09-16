@@ -24,6 +24,10 @@
 
   var state = null;   // { bal, earned, spent, best, log:[{t,d,r}], uid }
   var cloudRef = null, cloudUid = null, cloudHandler = null, lastCloud = null;
+  var logRef = null, logHandler = null, cargaInicial = true;
+  // mensagens do administrador que acabaram de chegar, p/ o aviso genérico não
+  // duplicar a mesma movimentação
+  var logsRecentes = [];
 
   function load() {
     var a = acctId();
@@ -48,7 +52,9 @@
   // ---- nuvem: users/{uid}/coins é a verdade quando existe ----
   function detach() {
     if (cloudRef && cloudHandler) { try { cloudRef.off("value", cloudHandler); } catch (e) {} }
+    if (logRef && logHandler) { try { logRef.off("child_added", logHandler); } catch (e) {} }
     cloudRef = null; cloudHandler = null; cloudUid = null; lastCloud = null;
+    logRef = null; logHandler = null; cargaInicial = true;
   }
   var pending = 0;   // operações minhas em andamento na nuvem (o listener não trata como presente)
   function attach() {
@@ -69,16 +75,60 @@
         var st = load();
         if (nv !== st.bal) {
           var d = nv - st.bal; st.bal = nv;
-          if (pending === 0) {                                          // mudança que não veio de mim: presente/retirada do admin
-            if (d > 0) { addLog(d, "Presente recebido"); st.earned += d; TM.ui.toast("Você recebeu " + fmt(d) + "! 🎁"); }
-            else { addLog(d, "Retirado pelo administrador"); TM.ui.toast("Foram retirados " + fmt(-d) + " da sua conta."); }
-          }
+          // mudança que não veio de mim: presente/retirada do administrador.
+          // A MENSAGEM que ele escreveu vem pelo coinLog; só se ela não chegar
+          // é que entra o texto genérico.
+          if (pending === 0) setTimeout(function () { avisoGenerico(d); }, 1600);
           save(); refreshBadges();
         }
         lastCloud = nv;
       };
       cloudRef.on("value", cloudHandler);
+      attachLog(uid);
     }).catch(function () {});
+  }
+  function avisoGenerico(d) {
+    // casa pelo VALOR, não pelo relógio: um presente com mensagem não pode
+    // silenciar a retirada seguinte só porque veio pouco antes
+    var agora = Date.now();
+    logsRecentes = logsRecentes.filter(function (x) { return agora - x.t < 6000; });
+    for (var i = 0; i < logsRecentes.length; i++) {
+      if (logsRecentes[i].d === d) { logsRecentes.splice(i, 1); return; }
+    }
+    var st = load();
+    if (d > 0) { addLog(d, "Presente recebido"); st.earned += d; TM.ui.toast("Você recebeu " + fmt(d) + "! 🎁"); }
+    else { addLog(d, "Retirado pelo administrador"); TM.ui.toast("Foram retirados " + fmt(-d) + " da sua conta."); }
+    save();
+  }
+  // Histórico da nuvem: é AQUI que vem a mensagem escrita pelo administrador.
+  // Antes ela era gravada em users/<uid>/coinLog e nunca lida por ninguém — o
+  // aparelho de quem recebia só via o saldo mudar e escrevia um texto fixo.
+  function attachLog(uid) {
+    if (!cloudReady()) return;
+    try {
+      cargaInicial = true;
+      logRef = net()._db.ref("users/" + uid + "/coinLog").orderByChild("t").limitToLast(25);
+      logHandler = function (snap) {
+        var e = snap.val(); if (!e || typeof e.d !== "number") return;
+        var st = load();
+        st.vistos = st.vistos || {};
+        if (st.vistos[snap.key]) return;
+        st.vistos[snap.key] = 1;
+        var ks = Object.keys(st.vistos);
+        if (ks.length > 120) ks.slice(0, ks.length - 120).forEach(function (k) { delete st.vistos[k]; });
+        var msg = e.r || (e.d > 0 ? "Presente recebido" : "Retirado pelo administrador");
+        st.log.unshift({ t: e.t || Date.now(), d: e.d, r: msg });
+        if (st.log.length > 60) st.log.length = 60;
+        if (e.d > 0) st.earned += e.d;
+        logsRecentes.push({ d: e.d, t: Date.now() });
+        save(); refreshBadges();
+        // ao abrir o jogo o histórico inteiro chega de uma vez: não enche de aviso
+        if (cargaInicial) return;
+        TM.ui.toast((e.d > 0 ? "🎁 " : "⚠️ ") + msg + " · " + fmt(e.d));
+      };
+      logRef.on("child_added", logHandler);
+      setTimeout(function () { cargaInicial = false; }, 2500);
+    } catch (er) {}
   }
   // aplica um delta: a NUVEM é a verdade (transação); local só espelha (e serve offline)
   function applyDelta(delta) {
