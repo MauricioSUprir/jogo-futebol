@@ -553,8 +553,11 @@
     return { region: region, leagues: leagues, size: size, initial: initial, via: via, pre: pre, preFrom: preFrom };
   }
   function buildContinental(career, opts) {
+    // tamanho do torneio: a Champions tem 36 na fase de liga
     opts = opts || {};
-    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, size = Q.size, initial = Q.initial.slice();
+    var Q = contQualifiers(career), region = Q.region, leagues = Q.leagues, initial = Q.initial.slice();
+    // a Champions tem 36 clubes na fase de liga; as outras continentais, 32
+    var size = Q.region === "eu" ? 36 : Q.size;
     if (initial.indexOf(career.teamId) < 0) {
       if (!opts.force) { career.contVia = null; return null; }      // usuário não se classificou
       initial.push(career.teamId); Q.via[career.teamId] = opts.via || "fase pré";
@@ -573,9 +576,19 @@
       });
       if (!pad) break; field.push(pad);
     }
-    var groups = size === 32 ? 8 : 4;
     var contComp = TM.data.competition("cont-" + region);
     var contName = (contComp && contComp.name) || CONT_NAME[region] || "Continental";
+    // Champions: formato novo (fase de liga de 36 numa tabela só). As outras
+    // continentais seguem no formato de grupos.
+    if (region === "eu") {
+      return { type: "tournament", key: "cont", name: contName,
+        tour: TM.tournament.createLiga(field, {
+          userId: career.teamId,
+          ratingOf: function (id) { return TM.data.clubRating(id); },
+          countryOf: function (id) { var cl = TM.data.club(id); return cl ? (cl.homeLeagueId || cl.leagueId) : null; }
+        }) };
+    }
+    var groups = size === 32 ? 8 : 4;
     return { type: "tournament", key: "cont", name: contName,
       tour: TM.tournament.create(field, { groups: groups, perGroup: 4, advance: 2, doubleGroups: true, twoLeg: true, userId: career.teamId }) };
   }
@@ -1906,8 +1919,8 @@
   // rótulo da próxima partida da Copa (grupo/mata-mata) sem mutar o torneio
   function wcRoundLabel(career, m) {
     if (!m || m.end) return "";
-    if (m.phase === "group") return "Fase de Grupos · Rodada " + (m.groupRound + 1);
-    return TM.tournament.koTitle(m.round);
+    if (m.phase === "group") return (m.liga ? "Fase de Liga · Rodada " : "Fase de Grupos · Rodada ") + (m.groupRound + 1);
+    return m.faseNome || TM.tournament.koTitle(m.round);
   }
   // status resumido da seleção para o botão de troca no hub (não muta estado)
   function nationPending(career) {
@@ -2997,7 +3010,7 @@
         var nx = TM.tournament.nextUserMatch(comp.tour, contCtx(career));
         if (nx.end) { career.orderIndex++; continue; }
         career.pending = { key: key, name: comp.name, homeId: nx.homeId, awayId: nx.awayId, ko: nx.ko, tour: true, leg: nx.leg,
-          label: nx.phase === "group" ? "Grupos · Rodada " + (nx.groupRound + 1) : (TM.tournament.koTitle(nx.round) + (nx.leg ? (nx.leg === 1 ? " · Ida" : " · Volta") : "")) };
+          label: nx.phase === "group" ? ((nx.liga ? "Liga · Rodada " : "Grupos · Rodada ") + (nx.groupRound + 1)) : ((nx.faseNome || TM.tournament.koTitle(nx.round)) + (nx.leg ? (nx.leg === 1 ? " · Ida" : " · Volta") : "")) };
         TM.storage.saveCoachCareer(career);
         return career.pending;
       }
@@ -3006,7 +3019,7 @@
       ensureKORound(ko);
       var tie = userTieIn(ko, career.teamId);
       if (ko.aliveUser && tie) {
-        var koLabel = TM.tournament.koTitle(ko.rounds[ko.roundIndex].length * 2);
+        var koLabel = TM.tournament.faseNome(tour, ko.rounds[ko.roundIndex].length * 2);
         if (ko.twoLeg) {
           if (tie[9] === 0) career.pending = { key: key, name: ko.name, homeId: tie[0], awayId: tie[1], ko: true, leg: 1, label: koLabel + " · Ida" };
           else career.pending = { key: key, name: ko.name, homeId: tie[1], awayId: tie[0], ko: true, leg: 2, label: koLabel + " · Volta" };
