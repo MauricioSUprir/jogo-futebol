@@ -12,7 +12,7 @@
    servidor (veja o comentário no topo de ia.js).                           */
 
 import http from 'node:http';
-import { perguntar, validar, provedor, temChave, modeloEmUso, SISTEMA } from './ia.js';
+import { perguntar, validar, provedor, temChave, modeloEmUso, SISTEMA, webLigada } from './ia.js';
 import { cobrar, estornar, ipDe, numeros } from './limites.js';
 
 const PORTA = Number(process.env.PORT) || 3000;
@@ -80,8 +80,11 @@ async function conselho(req, res) {
   try {
     const corpo = await lerCorpo(req);
     const mensagens = validar(corpo.mensagens);
-    const texto = await perguntar(mensagens);
-    return json(res, 200, { texto, modelo: modeloEmUso(), restanteHoje: vez.restanteHoje });
+    const saida = await perguntar(mensagens);
+    return json(res, 200, {
+      texto: saida.texto, fontes: saida.fontes || [], buscas: saida.buscas || [],
+      semWeb: !!saida.semWeb, modelo: modeloEmUso(), restanteHoje: vez.restanteHoje,
+    });
   } catch (e) {
     // erro de validação é culpa de quem chamou e a cobrança fica de pé;
     // erro do provedor não é, então devolve a vez.
@@ -103,7 +106,7 @@ const servidor = http.createServer(async (req, res) => {
     return json(res, 200, {
       ok: true,
       app: 'katseye-server',
-      ia: temChave() ? { provedor: provedor(), modelo: modeloEmUso() } : null,
+      ia: temChave() ? { provedor: provedor(), modelo: modeloEmUso(), web: webLigada() } : null,
       aviso: temChave() ? undefined : 'Sem GEMINI_API_KEY nem ANTHROPIC_API_KEY: defina uma nas variáveis.',
       origensLiberadas: ORIGENS,
       senhaExigida: !!SENHA,

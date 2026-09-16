@@ -163,6 +163,39 @@ await teste('503 do Google e reintentado, nao estourado', async () => {
   assert.ok(pedidos.length - antes >= 2, 'deveria ter tentado mais de uma vez');
 });
 
+await teste('manda as ferramentas de web para o Google', async () => {
+  await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
+  const ferramentas = (pedidos.at(-1).corpo.tools || []).map((t) => Object.keys(t)[0]);
+  assert.deepEqual(ferramentas, ['google_search', 'url_context']);
+});
+
+await teste('devolve as fontes consultadas ao app', async () => {
+  filaRespostas = [{ status: 200, corpo: { candidates: [{
+    content: { parts: [{ text: 'resposta com fonte' }] },
+    groundingMetadata: {
+      webSearchQueries: ['katseye'],
+      groundingChunks: [{ web: { uri: 'https://exemplo.com/a', title: 'Exemplo A' } }],
+    },
+  }] } }];
+  const d = await (await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta })).json();
+  assert.equal(d.fontes.length, 1);
+  assert.equal(d.fontes[0].url, 'https://exemplo.com/a');
+  assert.deepEqual(d.buscas, ['katseye']);
+});
+
+await teste('faturamento recusado: refaz sem ferramenta em vez de falhar', async () => {
+  // o 429 de billing so acontece quando as ferramentas vao junto
+  filaRespostas = [{
+    status: 429,
+    corpo: { error: { message: 'You exceeded your current quota, please check your plan and billing details.' } },
+  }];
+  const r = await chamar('/conselho', { metodo: 'POST', corpo: umaPergunta });
+  const d = await r.json();
+  assert.equal(r.status, 200, `deveria ter respondido mesmo assim, veio: ${d.erro}`);
+  assert.equal(d.semWeb, true, 'precisa avisar que foi sem web');
+  assert.ok(!pedidos.at(-1).corpo.tools, 'a segunda tentativa nao pode levar ferramenta');
+});
+
 await teste('rota inexistente leva 404 explicando o que existe', async () => {
   const d = await (await chamar('/naoexiste')).json();
   assert.ok(d.erro.includes('/conselho'));

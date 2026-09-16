@@ -9,7 +9,7 @@ import {
 } from '../store.js';
 import {
   perguntar, contexto, modoIA, motivoIA, PRESETS, usoHoje,
-  falar, pararDeFalar, temVoz, provedor,
+  falar, pararDeFalar, temVoz, provedor, webLigada, webBloqueada,
 } from '../ia.js';
 import {
   tituloPagina, painel, vazio, toast, modal, confirmar, txtarea, inp,
@@ -31,6 +31,26 @@ export function render(alvo) {
   /* ---------- barra de estado ---------- */
   const selo = h('span', { class: `chip ${motivo.ok ? 'ok' : 'warn'}` },
     modo === 'servidor' ? '🛰️ servidor' : modo === 'chave' ? '🔑 chave local' : '🧩 motor local');
+
+  /* Botão da web: liga a busca do Google e a leitura de páginas. Quando a
+     chave não tem direito às ferramentas, ele fica desabilitado dizendo o
+     porquê, em vez de sumir sem explicação. */
+  const ligada = webLigada();
+  const bloqueada = webBloqueada();
+  const botaoWeb = modo === 'local' || s.ia.provedor !== 'gemini' ? null : h('button', {
+    class: `chip chip--btn ${ligada && !bloqueada ? 'chip--on' : ''}`,
+    title: bloqueada
+      ? 'A sua chave do Gemini não tem as ferramentas de web liberadas (exige faturamento ativo no Google Cloud). Clique para tentar de novo.'
+      : ligada ? 'Busca e leitura de páginas ligadas — clique para desligar'
+        : 'Ligar busca do Google e leitura de páginas',
+    onclick: () => {
+      set((x) => {
+        if (x.ia.webBloqueada) { x.ia.webBloqueada = false; x.ia.web = true; }
+        else x.ia.web = !x.ia.web;
+      });
+      recarregar();
+    },
+  }, bloqueada ? '🌐 web indisponível' : ligada ? '🌐 web ligada' : '🌐 web desligada');
 
   /* ---------- lista de conversas ---------- */
   const listaConversas = painel('Conversas', {
@@ -86,6 +106,19 @@ export function render(alvo) {
       if (m.de === 'me') bolha.textContent = m.txt;
       else bolha.innerHTML = textoRico(m.txt);
       chat.append(bolha);
+      if (m.de === 'ia' && m.fontes?.length) {
+        chat.append(h('div', { class: 'fontes' },
+          h('div', { class: 'fontes__t' },
+            `🌐 ${m.fontes.length} fonte${m.fontes.length > 1 ? 's' : ''} consultada${m.fontes.length > 1 ? 's' : ''}`,
+            m.buscas?.length ? ` · buscou por: ${m.buscas.join(', ')}` : ''),
+          ...m.fontes.slice(0, 6).map((f, i) => h('a', {
+            class: 'fontes__i', href: f.url, target: '_blank', rel: 'noopener noreferrer',
+          }, h('b', {}, `${i + 1}.`), cortar(f.titulo, 70)))));
+      }
+      if (m.de === 'ia' && m.semWeb) {
+        chat.append(h('div', { class: 'tiny dim2', style: { marginTop: '-2px' } },
+          '🌐 respondi sem consultar a web — a chave não tem direito às ferramentas do Google'));
+      }
       if (m.de === 'ia') {
         chat.append(h('div', { class: 'flexb tiny dim2', style: { marginTop: '-4px' } },
           m.local ? h('span', { class: 'chip warn' }, 'motor local — não é IA') : h('span', { class: 'chip ok' }, 'resposta da IA'),
@@ -149,7 +182,11 @@ export function render(alvo) {
     set((s2) => {
       const conv = s2.conversas.find((x) => x.id === conversaAtual);
       const ultima = conv?.mensagens[conv.mensagens.length - 1];
-      if (ultima) ultima.local = !!r.local;
+      if (!ultima) return;
+      ultima.local = !!r.local;
+      if (r.fontes?.length) ultima.fontes = r.fontes;
+      if (r.buscas?.length) ultima.buscas = r.buscas;
+      if (r.semWeb) ultima.semWeb = true;
     });
 
     ocupado = false;
@@ -164,6 +201,7 @@ export function render(alvo) {
     icone: '🧠',
     acao: h('div', { class: 'flexb' },
       selo,
+      botaoWeb,
       h('button', {
         class: 'btn btn--xs',
         onclick: () => modal('👁️ O que ele sabe', h('div', {},
@@ -185,8 +223,19 @@ export function render(alvo) {
         ? `${usoHoje()} pergunta(s) enviadas hoje · Enter envia, Shift+Enter quebra linha.`
         : 'Enter envia, Shift+Enter quebra linha.'));
 
+  /* Quando o Google recusa as ferramentas por falta de faturamento, a
+     explicação não pode ficar só no tooltip do botão — no celular não existe
+     tooltip. Fica visível, com o que fazer. */
+  const avisoWeb = bloqueada ? aviso(
+    '**A web está indisponível para esta chave.** A busca do Google e a leitura de páginas não '
+    + 'entram na camada gratuita do Gemini: é preciso ativar faturamento no Google Cloud para o '
+    + 'projeto da chave (o uso continua barato, mas exige cartão cadastrado). '
+    + 'O chat segue funcionando normalmente sem web. Depois de ativar, toque em '
+    + '"🌐 web indisponível" para tentar de novo.', '') : null;
+
   const raiz = h('div', { class: 'flexc', style: { gap: '18px' } },
     motivo.ok ? null : ligarGemini(recarregar),
+    avisoWeb,
     h('div', { class: 'grid g-side' },
       painelChat,
       h('div', { class: 'flexc' }, atalhos, listaConversas)));

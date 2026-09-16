@@ -85,6 +85,22 @@ em vez de travar. E quando o Google aposenta um modelo — acontece, o `gemini-2
 de aceitar chave nova — o app **troca sozinho pelo apelido `gemini-flash-latest` e refaz a
 pergunta**, em vez de estourar o erro na cara de quem perguntou.
 
+#### 🌐 Navegação e pesquisa em tempo real
+
+Com o Gemini ligado, o Conselheiro pode **buscar no Google** e **ler páginas web** — inclusive
+um link que você colar na pergunta. O botão `🌐 web` no topo do chat liga e desliga, e cada
+resposta mostra as **fontes consultadas**, clicáveis.
+
+> ⚠️ **Isso não está na camada gratuita.** As ferramentas de web do Gemini exigem faturamento
+> ativado no Google Cloud para o projeto da chave (o uso é barato, mas pede cartão). Sem isso,
+> a API responde 429 falando em *billing*.
+>
+> Quando isso acontece o app **não dá erro**: ele refaz a mesma pergunta sem as ferramentas,
+> entrega a resposta, marca a web como indisponível para não desperdiçar tentativas, e explica
+> na tela o que fazer. Tocar no botão tenta de novo.
+
+No servidor, o mesmo comportamento; `WEB=0` desliga as ferramentas de vez.
+
 #### Deixar o chat ligado para quem abrir o link
 
 Preencha `js/chave.js` → `CHAVE_EMBUTIDA` com uma chave do Gemini. Com ela preenchida, o app

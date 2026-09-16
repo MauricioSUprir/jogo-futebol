@@ -32,6 +32,12 @@ const ENDPOINT_GEMINI = 'https://generativelanguage.googleapis.com/v1beta/models
 const LIMITE_DIA = 60;
 
 /** Provedores disponíveis no modo 'chave'. */
+/* Ferramentas de web do Gemini. Elas NAO entram na camada gratuita: sem
+   faturamento ativado no Google Cloud, a API devolve 429 falando em billing.
+   Por isso o app trata a recusa como caso normal — refaz a pergunta sem
+   ferramenta, para a pessoa receber resposta em vez de erro. */
+export const FERRAMENTAS_WEB = [{ google_search: {} }, { url_context: {} }];
+
 export const PROVEDORES = [
   {
     id: 'gemini',
@@ -87,6 +93,11 @@ export function modeloAtual() {
   const ia = st().ia;
   return String(ia.modelo || '').trim() || provedor(ia.provedor).padrao;
 }
+
+/** A web está ligada? Só o Gemini tem as ferramentas, por enquanto. */
+export const webLigada = () => st().ia.web === true && modoIA() !== 'local' && st().ia.provedor === 'gemini';
+/** Já descobrimos que esta chave não tem direito às ferramentas? */
+export const webBloqueada = () => st().ia.webBloqueada === true;
 
 /* ==========================================================
    ESTADO DA CONEXÃO
@@ -249,12 +260,13 @@ const MODELO_SOCORRO = 'gemini-flash-latest';
 const MODELO_LEVE = 'gemini-flash-lite-latest';
 const ESPERAS_503 = [900, 2800];
 
-async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = false } = {}) {
+async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = false, web = null } = {}) {
   const emUso = modelo || modeloAtual();
-  const repetir = (op) => viaGemini(mensagens, { modelo: emUso, tentativa, jaTrocou, ...op });
+  const comWeb = web === null ? (webLigada() && !webBloqueada()) : web;
+  const repetir = (op) => viaGemini(mensagens, { modelo: emUso, tentativa, jaTrocou, web: comWeb, ...op });
   let r;
   try {
-    r = await fetchGemini(emUso, mensagens);
+    r = await fetchGemini(emUso, mensagens, comWeb);
   } catch (e) {
     // fetch só joga TypeError genérico ("Failed to fetch") para qualquer
     // problema de rede — traduz para algo acionável.
@@ -269,9 +281,9 @@ async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = f
     // 404: o Google aposentou o modelo e diz qual usar. Troca pelo apelido
     // que acompanha as versões, guarda a troca e refaz a pergunta.
     if (r.status === 404 && emUso !== MODELO_SOCORRO) {
-      const texto = await viaGemini(mensagens, { modelo: MODELO_SOCORRO });
+      const saida = await viaGemini(mensagens, { modelo: MODELO_SOCORRO, web: comWeb });
       set((x) => { x.ia.modelo = MODELO_SOCORRO; });
-      return texto;
+      return saida;
     }
 
     // 503: sobrecarga momentânea. Espera e insiste; se persistir, tenta uma
@@ -282,7 +294,7 @@ async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = f
         return repetir({ tentativa: tentativa + 1 });
       }
       if (!jaTrocou && emUso !== MODELO_LEVE) {
-        return viaGemini(mensagens, { modelo: MODELO_LEVE, jaTrocou: true });
+        return viaGemini(mensagens, { modelo: MODELO_LEVE, jaTrocou: true, web: comWeb });
       }
       throw new Error('O Gemini está sobrecarregado agora — tentei três vezes e troquei de modelo. '
         + 'Costuma passar em poucos minutos.');
@@ -291,6 +303,14 @@ async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = f
     // 429 pode ser rajada (passa em segundos) ou cota do dia (não passa).
     // Uma tentativa a mais separa os dois casos sem irritar.
     if (r.status === 429) {
+      // Ferramenta de web recusada por falta de faturamento: a mesma pergunta
+      // sem ferramenta funciona. Refaz e entrega a resposta, marcando que
+      // esta chave não tem direito a web — para não gastar a tentativa toda vez.
+      if (comWeb && /billing/i.test(msg)) {
+        set((x) => { x.ia.webBloqueada = true; });
+        const texto = await viaGemini(mensagens, { modelo: emUso, web: false });
+        return { texto, semWeb: true };
+      }
       if (tentativa === 0) {
         await esperar(2500);
         return repetir({ tentativa: 1 });
@@ -307,27 +327,53 @@ async function viaGemini(mensagens, { modelo = null, tentativa = 0, jaTrocou = f
     throw new Error(`O Gemini bloqueou a resposta (${d.promptFeedback.blockReason}).`);
   }
   // Os modelos novos devolvem também blocos de raciocínio; só o texto importa.
-  return (cand?.content?.parts || [])
+  const texto = (cand?.content?.parts || [])
     .filter((x) => !x.thought && typeof x.text === 'string' && x.text)
     .map((x) => x.text)
     .join('\n')
     .trim();
+
+  return { texto, fontes: lerFontes(cand), buscas: cand?.groundingMetadata?.webSearchQueries || [] };
 }
 
-function fetchGemini(modelo, mensagens) {
+/** Extrai as páginas que o modelo consultou, para a tela poder citá-las. */
+function lerFontes(cand) {
+  const out = [];
+  for (const c of cand?.groundingMetadata?.groundingChunks || []) {
+    if (c.web?.uri) out.push({ titulo: c.web.title || c.web.uri, url: c.web.uri });
+  }
+  const meta = cand?.urlContextMetadata?.urlMetadata || cand?.url_context_metadata?.url_metadata || [];
+  for (const u of meta) {
+    const url = u.retrievedUrl || u.retrieved_url;
+    const status = u.urlRetrievalStatus || u.url_retrieval_status || '';
+    if (url && status.includes('SUCCESS') && !out.some((x) => x.url === url)) {
+      out.push({ titulo: url.replace(/^https?:\/\//, '').slice(0, 60), url });
+    }
+  }
+  return out;
+}
+
+function fetchGemini(modelo, mensagens, comWeb = false) {
+  const corpo = {
+    system_instruction: { parts: [{ text: comWeb ? `${SISTEMA}\n\n${SISTEMA_WEB}` : SISTEMA }] },
+    contents: mensagens.map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    })),
+    generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+  };
+  if (comWeb) corpo.tools = FERRAMENTAS_WEB;
   return fetch(`${ENDPOINT_GEMINI}/${encodeURIComponent(modelo)}:generateContent?key=${encodeURIComponent(chaveDe('gemini'))}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: SISTEMA }] },
-      contents: mensagens.map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      })),
-      generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
-    }),
+    body: JSON.stringify(corpo),
   });
 }
+
+const SISTEMA_WEB = `Você tem acesso à busca do Google e à leitura de páginas web.
+Use quando a pergunta depender de informação atual, de um link que a pessoa mandou, ou de
+qualquer dado que você não tenha certeza. Diga de onde tirou o que afirmar, e continue sem
+inventar: se a busca não achar, diga que não achou.`;
 
 async function viaServidor(mensagens) {
   const base = st().ia.servidor.trim().replace(/\/$/, '');
@@ -372,12 +418,17 @@ export async function perguntar(historico, pergunta) {
   ];
 
   try {
-    const texto = modo === 'servidor'
-      ? await viaServidor(mensagens)
-      : (st().ia.provedor === 'anthropic' ? await viaAnthropic(mensagens) : await viaGemini(mensagens));
+    let saida;
+    if (modo === 'servidor') saida = { texto: await viaServidor(mensagens) };
+    else if (st().ia.provedor === 'anthropic') saida = { texto: await viaAnthropic(mensagens) };
+    else saida = await viaGemini(mensagens);
+
     contarUso();
-    if (!texto) throw new Error('A resposta veio vazia.');
-    return { texto, modo, local: false };
+    if (!saida?.texto) throw new Error('A resposta veio vazia.');
+    return {
+      texto: saida.texto, modo, local: false,
+      fontes: saida.fontes || [], buscas: saida.buscas || [], semWeb: !!saida.semWeb,
+    };
   } catch (e) {
     const detalhe = e.name === 'AbortError' ? 'A resposta demorou demais.' : String(e.message || e);
     return {

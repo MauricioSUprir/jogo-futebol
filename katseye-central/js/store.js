@@ -60,6 +60,8 @@ export function estadoVazio() {
       chaveGemini: '',                  // chave do Google AI Studio (só neste aparelho)
       chaveAnthropic: '',               // chave da Anthropic (só neste aparelho)
       modelo: '',                       // vazio = usa o padrão do provedor
+      web: true,                        // busca e leitura de páginas (só Gemini)
+      webBloqueada: false,              // a chave não tem direito às ferramentas
       usoHoje: 0, usoDia: null,
     },
 

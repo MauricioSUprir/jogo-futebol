@@ -10,6 +10,12 @@ const URL_GEMINI = () => process.env.URL_GEMINI || 'https://generativelanguage.g
 const URL_ANTHROPIC = () => process.env.URL_ANTHROPIC || 'https://api.anthropic.com/v1/messages';
 const VERSAO_ANTHROPIC = '2023-06-01';
 
+/* Busca do Google e leitura de páginas. Não entram na camada gratuita do
+   Gemini: sem faturamento ativo, a API responde 429 falando em billing. O
+   servidor trata isso como caso normal — refaz sem ferramenta e avisa. */
+export const FERRAMENTAS_WEB = [{ google_search: {} }, { url_context: {} }];
+export const webLigada = () => process.env.WEB !== '0';
+
 export const TETO_MENSAGENS = 24;
 export const TETO_TEXTO = 60000;        // caracteres somados de todas as mensagens
 
@@ -80,8 +86,9 @@ export function validar(mensagens) {
 }
 
 /* ---------- Gemini ---------- */
-async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa = 0, jaTrocou = false } = {}) {
+async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa = 0, jaTrocou = false, web = null } = {}) {
   const modelo = forcado || modeloGemini();
+  const comWeb = web === null ? webLigada() : web;
   const url = `${URL_GEMINI()}/v1beta/models/${encodeURIComponent(modelo)}:generateContent`
     + `?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
 
@@ -90,12 +97,13 @@ async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa =
     headers: { 'content-type': 'application/json' },
     signal: sinal,
     body: JSON.stringify({
-      system_instruction: { parts: [{ text: SISTEMA }] },
+      system_instruction: { parts: [{ text: comWeb ? `${SISTEMA}\n\n${SISTEMA_WEB}` : SISTEMA }] },
       contents: mensagens.map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       })),
       generationConfig: { maxOutputTokens: 2048, temperature: 0.8 },
+      ...(comWeb ? { tools: FERRAMENTAS_WEB } : {}),
     }),
   });
 
@@ -106,23 +114,29 @@ async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa =
     // apelido que acompanha as versões e tenta uma vez, em vez de falhar.
     if (r.status === 404 && modelo !== MODELO_SOCORRO) {
       console.warn(`[ia] modelo "${modelo}" indisponível, caindo para ${MODELO_SOCORRO}`);
-      return viaGemini(mensagens, sinal, { modelo: MODELO_SOCORRO });
+      return viaGemini(mensagens, sinal, { modelo: MODELO_SOCORRO, web: comWeb });
     }
     if (r.status === 503) {
       if (tentativa < ESPERAS_503.length) {
         await dormir(ESPERAS_503[tentativa]);
-        return viaGemini(mensagens, sinal, { modelo, tentativa: tentativa + 1, jaTrocou });
+        return viaGemini(mensagens, sinal, { modelo, tentativa: tentativa + 1, jaTrocou, web: comWeb });
       }
       if (!jaTrocou && modelo !== MODELO_LEVE) {
         console.warn(`[ia] "${modelo}" sobrecarregado, tentando ${MODELO_LEVE}`);
-        return viaGemini(mensagens, sinal, { modelo: MODELO_LEVE, jaTrocou: true });
+        return viaGemini(mensagens, sinal, { modelo: MODELO_LEVE, jaTrocou: true, web: comWeb });
       }
       throw erro(503, 'O Gemini está sobrecarregado agora — insisti e troquei de modelo. Costuma passar em poucos minutos.');
+    }
+    // ferramenta recusada por faturamento: a mesma pergunta sem ela funciona
+    if (r.status === 429 && comWeb && /billing/i.test(msg)) {
+      console.warn('[ia] ferramentas de web indisponíveis nesta chave; respondendo sem elas');
+      const saida = await viaGemini(mensagens, sinal, { modelo, web: false });
+      return { ...saida, semWeb: true };
     }
     if (r.status === 429) {
       if (tentativa === 0) {
         await dormir(2500);
-        return viaGemini(mensagens, sinal, { modelo, tentativa: 1, jaTrocou });
+        return viaGemini(mensagens, sinal, { modelo, tentativa: 1, jaTrocou, web: comWeb });
       }
       throw erro(429, `Limite de uso da chave atingido: ${msg}`);
     }
@@ -140,8 +154,23 @@ async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa =
     .filter((x) => !x.thought && typeof x.text === 'string' && x.text)
     .map((x) => x.text).join('\n').trim();
   if (!texto) throw erro(502, 'A resposta veio vazia.');
-  return texto;
+
+  const fontes = [];
+  for (const c of cand?.groundingMetadata?.groundingChunks || []) {
+    if (c.web?.uri) fontes.push({ titulo: c.web.title || c.web.uri, url: c.web.uri });
+  }
+  for (const u of cand?.urlContextMetadata?.urlMetadata || []) {
+    const url = u.retrievedUrl || u.retrieved_url;
+    const ok = String(u.urlRetrievalStatus || u.url_retrieval_status || '').includes('SUCCESS');
+    if (url && ok && !fontes.some((x) => x.url === url)) fontes.push({ titulo: url, url });
+  }
+  return { texto, fontes, buscas: cand?.groundingMetadata?.webSearchQueries || [] };
 }
+
+const SISTEMA_WEB = `Você tem acesso à busca do Google e à leitura de páginas web.
+Use quando a pergunta depender de informação atual, de um link que a pessoa mandou, ou de
+qualquer dado que você não tenha certeza. Diga de onde tirou o que afirmar, e não invente:
+se a busca não achar, diga que não achou.`;
 
 /* ---------- Anthropic ---------- */
 async function viaAnthropic(mensagens, sinal) {
@@ -180,9 +209,8 @@ export async function perguntar(mensagens, { timeout = 90000 } = {}) {
   const ctrl = new AbortController();
   const relogio = setTimeout(() => ctrl.abort(), timeout);
   try {
-    return qual === 'anthropic'
-      ? await viaAnthropic(mensagens, ctrl.signal)
-      : await viaGemini(mensagens, ctrl.signal);
+    if (qual === 'anthropic') return { texto: await viaAnthropic(mensagens, ctrl.signal) };
+    return viaGemini(mensagens, ctrl.signal);
   } catch (e) {
     if (e.name === 'AbortError') throw erro(504, 'O modelo demorou demais para responder.');
     if (e.status) throw e;
