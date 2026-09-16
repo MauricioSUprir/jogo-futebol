@@ -75,7 +75,27 @@
     savePlayerCareer: function (c) { write("player", c); },
     clearPlayerCareer: function () { remove("player"); },
 
-    // edição do jogo: "public" (vendável) ou "pro" (Season Update, pessoal)
+      // O PERFIL DA CONTA é do aparelho, não da edição. Antes ele morava no
+    // prefixo da edição atual, então trocar de versão derrubava o login e a
+    // foto — e, sem perfil, a sincronização inteira parava de rodar.
+    accountProfile: function () {
+      try {
+        var raw = localStorage.getItem(BASE + "profile");
+        if (!raw) {
+          var preso = localStorage.getItem(PRO_PREFIX + "profile");   // migra o que ficou preso na Season Update
+          if (preso) { localStorage.setItem(BASE + "profile", preso); localStorage.removeItem(PRO_PREFIX + "profile"); raw = preso; }
+        }
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    },
+    saveAccountProfile: function (v) {
+      try {
+        if (v == null) localStorage.removeItem(BASE + "profile");
+        else localStorage.setItem(BASE + "profile", JSON.stringify(v));
+        return true;
+      } catch (e) { return false; }
+    },
+
     edition: function () { return edition; },
     setEdition: function (e) {
       edition = (e === "pro") ? "pro" : "public";

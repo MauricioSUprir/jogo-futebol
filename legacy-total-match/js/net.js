@@ -628,7 +628,7 @@
     });
   };
   net.cloudSaveProfile = function (email, prof, cb) {
-    net._db.ref("accounts/" + acctKey(email)).update({ name: prof.name || "", photo: prof.photo || null }).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+    net._db.ref("accounts/" + acctKey(email)).update({ name: prof.name || "", photo: prof.photo || null, frame: prof.frame || null }).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
   };
   net.cloudSave = function (email, data, cb) {
     net._db.ref("accounts/" + acctKey(email) + "/saves").set(data).then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
