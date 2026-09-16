@@ -43,6 +43,12 @@ export const temChave = () => !!provedor();
 /* Apelido de propósito: o Google aposenta versão numerada sem aviso — o
    gemini-2.5-flash deixou de aceitar chave nova — e o apelido acompanha. */
 export const MODELO_SOCORRO = 'gemini-flash-latest';
+/* O Google tem picos: o mesmo modelo responde 200, 503 e 200 em segundos.
+   Insistir com espera resolve quase sempre; trocar para o leve resolve o
+   resto. Só depois disso o erro sobe para o app. */
+const MODELO_LEVE = 'gemini-flash-lite-latest';
+const ESPERAS_503 = [900, 2800];
+const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 export const modeloGemini = () => process.env.MODELO_GEMINI || MODELO_SOCORRO;
 export const modeloAnthropic = () => process.env.MODELO_ANTHROPIC || 'claude-haiku-4-5-20251001';
 export const modeloEmUso = () => (provedor() === 'anthropic' ? modeloAnthropic() : modeloGemini());
@@ -74,8 +80,8 @@ export function validar(mensagens) {
 }
 
 /* ---------- Gemini ---------- */
-async function viaGemini(mensagens, sinal, modeloForcado = null) {
-  const modelo = modeloForcado || modeloGemini();
+async function viaGemini(mensagens, sinal, { modelo: forcado = null, tentativa = 0, jaTrocou = false } = {}) {
+  const modelo = forcado || modeloGemini();
   const url = `${URL_GEMINI()}/v1beta/models/${encodeURIComponent(modelo)}:generateContent`
     + `?key=${encodeURIComponent(process.env.GEMINI_API_KEY)}`;
 
@@ -100,10 +106,26 @@ async function viaGemini(mensagens, sinal, modeloForcado = null) {
     // apelido que acompanha as versões e tenta uma vez, em vez de falhar.
     if (r.status === 404 && modelo !== MODELO_SOCORRO) {
       console.warn(`[ia] modelo "${modelo}" indisponível, caindo para ${MODELO_SOCORRO}`);
-      return viaGemini(mensagens, sinal, MODELO_SOCORRO);
+      return viaGemini(mensagens, sinal, { modelo: MODELO_SOCORRO });
     }
-    if (r.status === 429) throw erro(429, 'Limite de uso do Gemini atingido. Tente daqui a pouco.');
-    if (r.status === 503) throw erro(503, 'O modelo está sobrecarregado no Google agora. Tente em instantes.');
+    if (r.status === 503) {
+      if (tentativa < ESPERAS_503.length) {
+        await dormir(ESPERAS_503[tentativa]);
+        return viaGemini(mensagens, sinal, { modelo, tentativa: tentativa + 1, jaTrocou });
+      }
+      if (!jaTrocou && modelo !== MODELO_LEVE) {
+        console.warn(`[ia] "${modelo}" sobrecarregado, tentando ${MODELO_LEVE}`);
+        return viaGemini(mensagens, sinal, { modelo: MODELO_LEVE, jaTrocou: true });
+      }
+      throw erro(503, 'O Gemini está sobrecarregado agora — insisti e troquei de modelo. Costuma passar em poucos minutos.');
+    }
+    if (r.status === 429) {
+      if (tentativa === 0) {
+        await dormir(2500);
+        return viaGemini(mensagens, sinal, { modelo, tentativa: 1, jaTrocou });
+      }
+      throw erro(429, `Limite de uso da chave atingido: ${msg}`);
+    }
     if (r.status === 400 && /api key/i.test(msg)) throw erro(500, 'A chave do servidor foi recusada pelo Google.');
     if (r.status === 404) throw erro(500, `O modelo "${modelo}" não está disponível para esta chave.`);
     throw erro(r.status >= 500 ? 502 : 400, msg);
