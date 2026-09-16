@@ -3047,7 +3047,9 @@
     var wrap = el("div", { class: "bracket" });
     ko.rounds.forEach(function (round, ri) {
       if (!round) return;
-      var rd = el("div", { class: "bracket-round" }, [ el("div", { class: "br-round-title", text: roundTitle(round.length) }) ]);
+      // no formato de liga a primeira fase é o PLAY-OFF, não as oitavas
+      var titulo = (ko.labels && ko.labels[ri]) || roundTitle(round.length);
+      var rd = el("div", { class: "bracket-round" }, [ el("div", { class: "br-round-title", text: titulo }) ]);
       round.forEach(function (tie) {
         var mine = tie[0] === c.teamId || tie[1] === c.teamId;
         var played = tie[4] != null;
