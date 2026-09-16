@@ -3565,8 +3565,16 @@
           row.appendChild(el("div", { class: "price-tag" }, [ el("span", { text: "Livre" }), el("span", { class: "price-note", text: "grátis" }) ]));
           row.addEventListener("click", function () { TM.ui.go("coach-target", { pid: p.id, back: "coach-market" }); });
         } else {
-          var price = curVal(c, askingPrice(p)), afford = price <= c.budget;
-          row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [ el("span", { text: money(c, price) }), el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" }) ]));
+          // já acertado com outro clube: some da disputa até a janela abrir.
+          // Antes a notícia dizia que ele tinha acertado e o jogador continuava
+          // na lista como se nada tivesse acontecido.
+          var acerto = null; try { acerto = C().pendingDealFor(c, p.id); } catch (e) {}
+          if (acerto) {
+            row.appendChild(el("div", { class: "price-tag pend" }, [ el("span", { text: "🔒 acertado" }), el("span", { class: "price-note", text: "vai p/ o " + acerto.toName } ) ]));
+          } else {
+            var price = curVal(c, askingPrice(p)), afford = price <= c.budget;
+            row.appendChild(el("div", { class: "price-tag" + (afford ? "" : " over") }, [ el("span", { text: money(c, price) }), el("span", { class: "price-note", text: afford ? "no orçamento" : "acima" }) ]));
+          }
           row.addEventListener("click", function () { TM.ui.go("coach-target", { pid: p.id, back: "coach-market" }); });
         }
         results.appendChild(row);

@@ -2121,11 +2121,36 @@
     return -1;
   }
   function buildWindows(career) {
-    // verão: aberta desde o início (10/ago) até 01/out · inverno: 04/jan a 28/fev
-    career.windows = [
-      { name: "Janela de Verão", openDay: 0, closeDay: offsetOfDate(career, 10, 1), openedNotified: true, closedNotified: false },
-      { name: "Janela de Inverno", openDay: offsetOfDate(career, 1, 4), closeDay: offsetOfDate(career, 2, 28), openedNotified: false, closedNotified: false }
+    // As datas reais (01/out e 04/jan–28/fev) só fazem sentido no calendário
+    // europeu, que começa em agosto. Numa liga que começa em janeiro (Brasil,
+    // EUA, Japão) o 04/01 não existe dentro da temporada — virava openDay -1 —
+    // e o 01/out caía no fim do ano, deixando a "janela de verão" aberta por
+    // mais de 8 meses. Aí o mercado nunca fechava e não havia dia da virada.
+    var ab = offsetOfDate(career, 10, 1);
+    var iA = offsetOfDate(career, 1, 4), iB = offsetOfDate(career, 2, 28);
+    var euro = ab > 20 && ab <= 90 && iA > ab && iB > iA;
+    career.windows = euro ? [
+      { name: "Janela de Verão", openDay: 0, closeDay: ab, openedNotified: true, closedNotified: false },
+      { name: "Janela de Inverno", openDay: iA, closeDay: iB, openedNotified: false, closedNotified: false }
+    ] : [
+      { name: "Primeira janela", openDay: 0, closeDay: 52, openedNotified: true, closedNotified: false },
+      { name: "Janela do meio do ano", openDay: 150, closeDay: 195, openedNotified: false, closedNotified: false }
     ];
+  }
+  // conserta carreiras salvas com as janelas quebradas (openDay negativo ou
+  // janela de mais de 100 dias)
+  function windowsOk(career) {
+    var ws = career.windows;
+    if (!ws || ws.length < 2) return false;
+    return !ws.some(function (w) { return w.openDay < 0 || (w.closeDay - w.openDay) > 100 || w.closeDay <= w.openDay; });
+  }
+  // negócio já acertado por outro clube, esperando a janela abrir
+  function pendingDealFor(career, pid) {
+    if (!career || !career.pendingWorldDeals) return null;
+    for (var i = 0; i < career.pendingWorldDeals.length; i++) {
+      if (career.pendingWorldDeals[i].pid === pid) return career.pendingWorldDeals[i];
+    }
+    return null;
   }
   function windowOpenNow(career) {
     var d = career.currentDay || 0;
@@ -2200,6 +2225,7 @@
         return career.roster.indexOf(p.id) < 0
           && !(career.loanedIn && career.loanedIn[p.id]) && !(career.loanedOut && career.loanedOut[p.id])
           && !(career.worldTransfers && career.worldTransfers[p.id])
+          && !pendingDealFor(career, p.id)
           && !(career.pendingArrivals || []).some(function (a) { return a.pid === p.id; });
       });
       // contratação por necessidade: nas primeiras tentativas exige a posição carente do comprador
@@ -2358,7 +2384,7 @@
   }
   // roda a cada visita ao hub: transições de janela, negócios pendentes e atividade de mercado da IA
   function processCalendar(career) {
-    if (!career.windows) buildWindows(career);
+    if (!windowsOk(career)) buildWindows(career);
     career.pendingWorldDeals = career.pendingWorldDeals || [];
     var d = career.currentDay || 0;
     // transições de abertura/fechamento das janelas
@@ -3064,7 +3090,7 @@
     evaluateObjective: evaluateObjective, currentPosition: currentPosition,
     legInfo: legInfo, tieOf: tieOf, resolveContPre: resolveContPre, CONT_PRE_N: CONT_PRE_N, payRoundPrizes: payRoundPrizes, payLeaguePosPrize: payLeaguePosPrize, idolScore: idolScore, IDOL_LEVELS: IDOL_LEVELS, tickDevelopment: tickDevelopment, shiftOverall: shiftOverall, devRate: devRate, repairShapes: repairShapes, contractFactor: contractFactor, valueOf: valueOf, ensureSeason: ensureSeason, seasonOk: seasonOk, rebuildSeason: rebuildSeason,
     matchDay: matchDay, dateOf: dateOf, logDeal: logDeal, peekSchedule: peekSchedule, offsetOfDate: offsetOfDate,
-    executeWorldTransfer: executeWorldTransfer,
+    executeWorldTransfer: executeWorldTransfer, pendingDealFor: pendingDealFor, buildWindows: buildWindows,
     processCalendar: processCalendar, windowOpenNow: windowOpenNow, currentWindow: currentWindow, nextWindowOpenDay: nextWindowOpenDay,
     retireAndRegen: retireAndRegen, applyRegen: applyRegen,
     buildNation: buildNation, nationNextWindow: nationNextWindow, checkNationDeadlines: checkNationDeadlines,
