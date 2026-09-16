@@ -79,14 +79,18 @@
     // prefixo da edição atual, então trocar de versão derrubava o login e a
     // foto — e, sem perfil, a sincronização inteira parava de rodar.
     accountProfile: function () {
+      function ler(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+      var g = ler(BASE + "profile"), pr = ler(PRO_PREFIX + "profile");
+      // um perfil só serve se tiver e-mail — é ele que identifica a conta.
+      // Com os dois válidos, vale o da Season Update: é onde a conta vinha
+      // sendo usada, e o global pode ser um login antigo e esquecido.
+      var bom = (pr && pr.email) ? pr : ((g && g.email) ? g : (g || pr));
+      if (!bom) return null;
       try {
-        var raw = localStorage.getItem(BASE + "profile");
-        if (!raw) {
-          var preso = localStorage.getItem(PRO_PREFIX + "profile");   // migra o que ficou preso na Season Update
-          if (preso) { localStorage.setItem(BASE + "profile", preso); localStorage.removeItem(PRO_PREFIX + "profile"); raw = preso; }
-        }
-        return raw ? JSON.parse(raw) : null;
-      } catch (e) { return null; }
+        if (bom !== g) localStorage.setItem(BASE + "profile", JSON.stringify(bom));
+        if (pr && bom.email && pr.email === bom.email) localStorage.removeItem(PRO_PREFIX + "profile");
+      } catch (e) {}
+      return bom;
     },
     saveAccountProfile: function (v) {
       try {
