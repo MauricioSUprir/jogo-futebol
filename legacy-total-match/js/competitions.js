@@ -3019,7 +3019,9 @@
       ensureKORound(ko);
       var tie = userTieIn(ko, career.teamId);
       if (ko.aliveUser && tie) {
-        var koLabel = TM.tournament.faseNome(tour, ko.rounds[ko.roundIndex].length * 2);
+        // este ramo é de copa de mata-mata puro (não tem estado de torneio),
+        // então o nome da fase sai do número de times
+        var koLabel = TM.tournament.koTitle(ko.rounds[ko.roundIndex].length * 2);
         if (ko.twoLeg) {
           if (tie[9] === 0) career.pending = { key: key, name: ko.name, homeId: tie[0], awayId: tie[1], ko: true, leg: 1, label: koLabel + " · Ida" };
           else career.pending = { key: key, name: ko.name, homeId: tie[1], awayId: tie[0], ko: true, leg: 2, label: koLabel + " · Volta" };

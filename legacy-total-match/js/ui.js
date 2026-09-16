@@ -39,26 +39,78 @@
     try {
       routes[name](screen, params || {});
     } catch (err) {
-      // evita "tela preta": qualquer erro ao renderizar vira uma tela de recuperação
+      // evita "tela preta": qualquer erro ao renderizar vira uma tela de
+      // recuperação que DIZ O MOTIVO e o que fazer, em vez de só mostrar a
+      // mensagem técnica do navegador
       console.error("Erro ao abrir a tela '" + name + "':", err);
       clear(screen);
       var isCoach = name.indexOf("coach") === 0, isPlayer = name.indexOf("player") === 0;
-      screen.appendChild(el("div", { class: "route-error" }, [
-        el("div", { class: "re-emoji", text: "⚠️" }),
-        el("h2", { text: "Não foi possível abrir esta tela" }),
-        el("p", { text: "Isso costuma acontecer com um jogo salvo de uma versão anterior. Você pode voltar ao menu ou reiniciar esta carreira." }),
-        el("p", { class: "re-detail", text: (err && err.message) ? String(err.message) : "" }),
-        (isCoach ? el("button", { class: "btn primary big", text: "🛠️ Reparar carreira", on: { click: function () {
-          try {
-            var cc = TM.storage.coachCareer();
-            if (cc) { TM.comp.repairShapes(cc); TM.comp.ensureSeason(cc); TM.storage.saveCoachCareer(cc); }
-            go("coach-hub");
-          } catch (e) { go("modes"); }
-        } } }) : null),
-        el("button", { class: "btn" + (isCoach ? "" : " primary") + " big", text: "🏠 Voltar ao menu", on: { click: function () { go("modes"); } } }),
-        (isCoach ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de treinador", on: { click: function () { try { TM.storage.clearCoachCareer(); } catch (e) {} go("modes"); } } }) : null),
-        (isPlayer ? el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de jogador", on: { click: function () { try { TM.storage.clearPlayerCareer && TM.storage.clearPlayerCareer(); } catch (e) {} go("modes"); } } }) : null)
-      ]));
+      var msg = (err && err.message) ? String(err.message) : String(err || "");
+      var online = true; try { online = navigator.onLine !== false; } catch (e) {}
+      var ver = ""; try { ver = (TM.versao && TM.versao()) || ""; } catch (e) {}
+
+      // ---- diagnóstico: qual dos casos é ----
+      var dg;
+      if (!online) {
+        dg = { ic: "📶", tit: "Você está sem internet",
+               causa: "A tela tentou carregar algo da rede e não conseguiu.",
+               fazer: "Conecte no Wi-Fi ou nos dados e toque em Tentar de novo. O jogo funciona offline, mas algumas partes (conta, online, fotos novas) precisam de rede." };
+      } else if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+        dg = { ic: "🌐", tit: "A conexão falhou no meio do caminho",
+               causa: "A internet está ligada, mas alguma coisa não chegou.",
+               fazer: "Toque em Tentar de novo. Se insistir, troque de rede (Wi-Fi ↔ dados) e tente outra vez." };
+      } else if (/quota|storage|exceeded/i.test(msg)) {
+        dg = { ic: "💾", tit: "O armazenamento do aparelho encheu",
+               causa: "Não coube salvar mais nada, e o jogo não conseguiu ler a carreira.",
+               fazer: "Libere espaço no celular (fotos, apps) e abra o jogo de novo. Se tiver carreiras antigas que não usa, apague em Minhas Carreiras." };
+      } else if (/can't find variable|is not defined|is not a function|cannot read propert|undefined is not|null is not/i.test(msg)) {
+        dg = { ic: "🐞", tit: "Isso é um bug do jogo",
+               causa: "Uma parte do código tentou usar algo que não existe. Não é culpa do seu aparelho nem da sua carreira.",
+               fazer: "Primeiro toque em Atualizar o jogo: muitas vezes o aparelho está com uma versão antiga em cache. Se continuar, copie os detalhes e me manda — com esse texto eu acho o problema direto." };
+      } else {
+        dg = { ic: "🗂️", tit: "A carreira salva está fora de forma",
+               causa: "O jogo salvo veio de uma versão anterior e falta alguma coisa nova nele.",
+               fazer: "Toque em Reparar carreira: ele completa o que falta sem apagar seu progresso." };
+      }
+
+      var detalhe = "Total Match " + ver + " · tela: " + name + "\n" + msg;
+      var box = el("div", { class: "route-error" }, [
+        el("div", { class: "re-emoji", text: dg.ic }),
+        el("h2", { text: dg.tit }),
+        el("p", { class: "re-causa", text: dg.causa }),
+        el("p", { class: "re-fazer", text: "👉 " + dg.fazer }),
+        el("details", { class: "re-det" }, [
+          el("summary", { text: "Detalhes técnicos" }),
+          el("pre", { class: "re-detail", text: detalhe })
+        ])
+      ]);
+
+      var acts = el("div", { class: "re-acts" });
+      acts.appendChild(el("button", { class: "btn primary big", text: "🔄 Tentar de novo", on: { click: function () { go(name, params || {}); } } }));
+      if (isCoach) acts.appendChild(el("button", { class: "btn big", text: "🛠️ Reparar carreira", on: { click: function () {
+        try {
+          var cc = TM.storage.coachCareer();
+          if (cc) { TM.comp.repairShapes(cc); TM.comp.ensureSeason(cc); TM.storage.saveCoachCareer(cc); }
+          go("coach-hub");
+        } catch (e) { go("modes"); }
+      } } }));
+      acts.appendChild(el("button", { class: "btn big", text: "⬇️ Atualizar o jogo", on: { click: function () {
+        // limpa o cache do service worker e recarrega: resolve versão presa
+        try {
+          if (window.caches && caches.keys) caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }).then(rec).catch(rec);
+          else rec();
+        } catch (e) { rec(); }
+        function rec() { try { location.reload(); } catch (e) {} }
+      } } }));
+      acts.appendChild(el("button", { class: "btn big", text: "📋 Copiar detalhes", on: { click: function (ev) {
+        try { navigator.clipboard.writeText(detalhe); toast("Detalhes copiados — cola na conversa comigo."); }
+        catch (e) { toast(detalhe); }
+      } } }));
+      acts.appendChild(el("button", { class: "btn big", text: "🏠 Voltar ao menu", on: { click: function () { go("modes"); } } }));
+      if (isCoach) acts.appendChild(el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de treinador", on: { click: function () { try { TM.storage.clearCoachCareer(); } catch (e) {} go("modes"); } } }));
+      if (isPlayer) acts.appendChild(el("button", { class: "btn danger big", text: "🗑️ Reiniciar carreira de jogador", on: { click: function () { try { TM.storage.clearPlayerCareer && TM.storage.clearPlayerCareer(); } catch (e) {} go("modes"); } } }));
+      box.appendChild(acts);
+      screen.appendChild(box);
     }
     window.scrollTo(0, 0);
   }
