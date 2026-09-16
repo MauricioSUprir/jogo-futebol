@@ -167,6 +167,19 @@
   /* ================= TELA: OLHEIROS ================= */
   var scoutTab = "pro";
   TM.ui.register("coach-scouting", function (screen, params) {
+    // atalho para as observações de alvos (módulo TM.obs), que antes não tinham
+    // nenhuma tela onde acompanhar o andamento
+    setTimeout(function () {
+      try {
+        if (!screen.isConnected || screen.querySelector(".obs-atalho")) return;
+        var c = TM.storage.coachCareer(); if (!c || !TM.obs) return;
+        var ids = Object.keys(c.obs || {});
+        var andando = ids.filter(function (k) { return !c.obs[k].done; }).length;
+        var alvo = screen.querySelector(".panel-narrow") || screen;
+        var b = TM.ui.button("🔭 Minhas observações" + (ids.length ? " (" + andando + " em campo · " + (ids.length - andando) + " prontos)" : ""), function () { TM.ui.go("coach-obs"); }, "btn obs-atalho");
+        alvo.insertBefore(b, alvo.firstChild);
+      } catch (e) {}
+    }, 0);
     var c = TM.storage.coachCareer(); if (!c) { TM.ui.go("coach"); return; } ensure(c);
     var back = (params && params.from) || "coach-hub";
     if (params && params.tab) scoutTab = params.tab;

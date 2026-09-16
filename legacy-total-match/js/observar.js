@@ -256,14 +256,68 @@
 
     // negociar sempre é possível — só que no escuro
     var neg = el("div", { class: "actions" }, [
-      TM.ui.button(aberto ? "🤝 Negociar" : "🤝 Negociar mesmo assim", function () {
+      TM.ui.button(aberto ? "🤝 Negociar" : "🤝 Negociar sem relatório", function () {
         if (p.freeAgent || !p.clubId || p.clubId === "free") TM.ui.go("coach-nego-player", { pid: p.id });
         else TM.ui.go("coach-nego-club", { pid: p.id });
-      }, "btn" + (aberto ? " primary" : "")),
+      }, "btn primary"),
       TM.ui.button("Voltar ao mercado", function () { TM.ui.go(backTo); }, "btn ghost")
     ]);
     wrap.appendChild(neg);
-    if (!aberto) wrap.appendChild(el("div", { class: "obs-note", text: "Dá para contratar sem relatório, mas você assume o risco: nota, potencial e contrato seguem no escuro." }));
+    if (!aberto) wrap.appendChild(el("div", { class: "obs-note", text: "Observar NÃO é obrigatório: dá para contratar qualquer um sem relatório. Você só assume o risco de nota, potencial e contrato seguirem no escuro." }));
+  });
+
+  /* ================= tela: meus olheiros em campo ================= */
+  TM.ui.register("coach-obs", function (screen) {
+    var c = TM.storage.coachCareer();
+    if (!c) { TM.ui.go("coach-hub"); return; }
+    ensure(c);
+    try { tick(c); } catch (e) {}
+    screen.appendChild(TM.ui.topbar("🔭 Observações", function () { TM.ui.go("coach-scouting"); }));
+    try { if (TM.coachUI && TM.coachUI.addBar) TM.coachUI.addBar(screen, "coach-scouting"); } catch (e) {}
+    var body = el("div", { class: "obs-wrap" });
+    screen.appendChild(body);
+
+    var ids = Object.keys(c.obs || {});
+    var andando = ids.filter(function (k) { return !c.obs[k].done; });
+    var prontos = ids.filter(function (k) { return c.obs[k].done; });
+
+    body.appendChild(el("div", { class: "obs-topo" }, [
+      el("span", { text: "Olheiros em campo" }),
+      el("b", { text: andando.length + " / " + MAX_OBS })
+    ]));
+
+    function linha(pid, pronto) {
+      var p = null; try { p = C().resolvePlayer(c, pid) || TM.data.player(pid); } catch (e) {}
+      var nome = (c.obs[pid] && c.obs[pid].name) || (p && p.name) || "Alvo";
+      var st = stateOf(c, pid);
+      var cl = (p && p.clubId && p.clubId !== "free") ? TM.data.club(p.clubId) : null;
+      var kids = [
+        el("div", { class: "obsl-top" }, [
+          el("span", { class: "obsl-n", text: nome }),
+          el("span", { class: "obsl-ov", text: pronto && p ? String(p.overall) : (st.st === "run" ? Math.round(st.pct * 100) + "%" : "") })
+        ]),
+        el("div", { class: "obsl-sub", text: (cl ? cl.name : "sem clube") + (p ? " · " + TM.data.posLabel(p) + " · " + p.age + " anos" : "") })
+      ];
+      if (!pronto) {
+        kids.push(el("div", { class: "obs-prog" }, [ el("div", { class: "obs-prog-f", style: "width:" + Math.round(st.pct * 100) + "%" }) ]));
+        kids.push(el("div", { class: "obsl-falta", text: st.left > 0 ? "faltam " + st.left + " dia(s)" : "relatório sai no próximo dia" }));
+      } else {
+        kids.push(el("div", { class: "obsl-pronto", text: "📄 relatório completo" }));
+      }
+      return el("button", { class: "obsl" + (pronto ? " ok" : ""), on: { click: function () {
+        TM.ui.go("coach-target", { pid: pid, back: "coach-obs" });
+      } } }, kids);
+    }
+
+    body.appendChild(el("h3", { class: "section-title", text: "Em andamento" }));
+    if (!andando.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhuma observação agora. Vá ao Mercado, toque num jogador e mande um olheiro." }));
+    else andando.forEach(function (pid) { body.appendChild(linha(pid, false)); });
+
+    body.appendChild(el("h3", { class: "section-title", text: "Relatórios prontos" }));
+    if (!prontos.length) body.appendChild(el("p", { class: "intro-text", text: "Nenhum ainda." }));
+    else prontos.forEach(function (pid) { body.appendChild(linha(pid, true)); });
+
+    body.appendChild(TM.ui.button("🔁 Ir ao Mercado", function () { TM.ui.go("coach-market"); }, "btn primary"));
   });
 
   TM.obs = {

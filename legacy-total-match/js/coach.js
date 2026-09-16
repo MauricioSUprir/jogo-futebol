@@ -3539,7 +3539,17 @@
       var total = list.length; list = list.slice(0, MKT.limit || 60);
 
       results.appendChild(el("div", { class: "results-count", text: total + " jogador(es)" + (total > list.length ? " · mostrando " + list.length : "") + (MKT.free ? " — passe livre (contrate só negociando com o jogador, sem custo de transferência)" : "") }));
-      if (!total) { results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." })); return; }
+      if (!total) {
+        if (MKT.obsOnly) {
+          // o filtro "Com relatório" some com o mercado inteiro enquanto nenhum
+          // olheiro fechou relatório — e parecia que não dava pra contratar ninguém
+          results.appendChild(el("p", { class: "intro-text", text: "O filtro 📄 Com relatório está ligado e você ainda não tem nenhum relatório pronto. Contratar NÃO exige observar." }));
+          results.appendChild(TM.ui.button("Mostrar todos os jogadores", function () { MKT.obsOnly = false; TM.ui.go("coach-market"); }, "btn primary"));
+        } else {
+          results.appendChild(el("p", { class: "intro-text", text: "Nenhum jogador com esses filtros." }));
+        }
+        return;
+      }
       c.shortlist = c.shortlist || [];
       list.forEach(function (p) {
         var row = TM.ui.playerRow(p, { showClub: true });
