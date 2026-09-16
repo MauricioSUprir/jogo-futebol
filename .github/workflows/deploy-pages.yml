@@ -36,9 +36,13 @@ jobs:
           # StudyLab fica em /studylab/
           mkdir -p _site/studylab
           cp -r studylab/. _site/studylab/
+          # KATSEYE Central fica em /katseye-central/
+          mkdir -p _site/katseye-central
+          cp -r katseye-central/. _site/katseye-central/
       - uses: actions/upload-pages-artifact@v3
         with:
-          # Raiz = jogo Total Match. Subpastas: /financas-casa/, /looklab/ e /studylab/.
+          # Raiz = jogo Total Match.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/ e /katseye-central/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment

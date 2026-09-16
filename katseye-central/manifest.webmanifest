@@ -1,0 +1,17 @@
+{
+  "name": "KATSEYE Central — gestão criativa",
+  "short_name": "KATSEYE Central",
+  "description": "Command center, enciclopédia do grupo, agenda inteligente, estúdio de cartazes e ingressos e conselheiro estratégico.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07070f",
+  "theme_color": "#07070f",
+  "lang": "pt-BR",
+  "categories": ["productivity", "entertainment", "lifestyle"],
+  "icons": [
+    { "src": "./assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
