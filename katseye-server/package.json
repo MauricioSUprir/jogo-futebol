@@ -1,0 +1,14 @@
+{
+  "name": "katseye-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Servidor do KATSEYE Central: guarda a chave do Gemini e responde ao Conselheiro. Sem banco, sem dependência.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "teste": "node testes/roda.js",
+    "test": "node testes/roda.js"
+  }
+}
