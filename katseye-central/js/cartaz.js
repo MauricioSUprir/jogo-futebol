@@ -114,10 +114,10 @@ function fundoMalha(ctx, w, h, p) {
   ctx.fillStyle = p.fundo;
   ctx.fillRect(0, 0, w, h);
   const bolhas = [
-    { x: 0.12, y: 0.10, r: 0.78, cor: p.a, op: 0.60 },
-    { x: 0.92, y: 0.20, r: 0.66, cor: p.b, op: 0.50 },
-    { x: 0.62, y: 0.96, r: 0.80, cor: p.c, op: 0.32 },
-    { x: 0.05, y: 0.80, r: 0.54, cor: p.b, op: 0.26 },
+    { x: 0.14, y: 0.16, r: 0.70, cor: p.a, op: 0.78 },
+    { x: 0.90, y: 0.26, r: 0.60, cor: p.b, op: 0.64 },
+    { x: 0.58, y: 0.92, r: 0.72, cor: p.c, op: 0.38 },
+    { x: 0.06, y: 0.72, r: 0.50, cor: p.b, op: 0.34 },
   ];
   for (const b of bolhas) {
     const raio = b.r * Math.max(w, h) * 0.62;
@@ -213,7 +213,7 @@ function grao(ctx, w, h, forca = 0.06) {
 function vinheta(ctx, w, h, cor) {
   const g = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.78);
   g.addColorStop(0, `${cor}00`);
-  g.addColorStop(1, `${cor}cc`);
+  g.addColorStop(1, `${cor}a0`);
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 }
@@ -272,7 +272,17 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
   const cx = (t) => (cfg.maiusculas ? String(t || '').toUpperCase() : String(t || ''));
 
   (FUNDOS[cfg.fundo] || fundoMalha)(ctx, w, h, p);
-  if (img) fotoCover(ctx, img, w, h, cfg.fotoPosicao, cfg.fotoOpacidade);
+  if (img) {
+    fotoCover(ctx, img, w, h, cfg.fotoPosicao, cfg.fotoOpacidade);
+  } else {
+    // Sem foto, a metade de cima fica um vazio escuro que parece peça
+    // inacabada. A marca d'água ocupa esse espaço de propósito — discreta
+    // o bastante para nunca competir com o título.
+    ctx.save();
+    ctx.globalAlpha = 0.07;
+    olho(ctx, w / 2, h * 0.33, w * 0.62, p.txt);
+    ctx.restore();
+  }
   vinheta(ctx, w, h, p.fundo);
 
   ctx.textAlign = centro ? 'center' : 'left';
@@ -304,82 +314,93 @@ function desenharCartaz(ctx, cfg, w, h, p, img) {
     y += alturaSelo + h * 0.03;
   }
 
-  /* --- bloco central: título + subtítulo --- */
-  const alturaBloco = h - y - margem * 2.2;
-  const tituloBase = Math.min(w * 0.155, alturaBloco * 0.34) * e;
-  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, tituloBase, 3, 800, -w * 0.002);
-
-  // o título fica na parte de baixo, como cartaz de show
-  const alturaTitulo = linhas.length * tam * 1.02;
-  let yTitulo = h - margem * 1.05 - alturaTitulo;
-
-  /* --- rodapé de informações (data / local / preço) --- */
+  /* --- da base para cima ---
+     O conteúdo é empilhado de baixo para cima, cada bloco empurrando o
+     limite. Antes o rodapé era ancorado no fim da peça por fora dessa
+     conta, e quando o título crescia as duas linhas se sobrepunham. */
+  const topoLivre = y;                       // onde o selo terminou
   const infos = [cfg.data, cfg.hora, cfg.local].filter(Boolean).map(cx);
-  const alturaInfo = infos.length ? w * 0.05 * e : 0;
-  const alturaSub = cfg.subtitulo ? w * 0.052 * e : 0;
-  yTitulo -= alturaInfo + alturaSub;
+  let base = h - margem * 0.7;
+  ctx.textBaseline = 'bottom';
 
-  if (cfg.subtitulo) {
-    ctx.font = fonte(600, w * 0.036 * e);
-    ctx.fillStyle = `${txtCor}b8`;
-    const ls = quebrar(ctx, cx(cfg.subtitulo), maxL);
-    escrever(ctx, ls.slice(0, 2), x, yTitulo - (ls.length > 1 ? w * 0.045 : 0), w * 0.045 * e);
+  // rodapé e preço, na mesma linha
+  if (cfg.rodape || cfg.preco) {
+    const tamRodape = w * 0.022 * e;
+    const tamPreco = w * 0.03 * e;
+    if (cfg.rodape) {
+      espacar(ctx, w * 0.004);
+      ctx.font = fonte(600, tamRodape);
+      ctx.fillStyle = `${txtCor}70`;
+      ctx.fillText(cx(cfg.rodape), x, base);
+      espacar(ctx, 0);
+    }
+    if (cfg.preco) {
+      ctx.save();
+      ctx.textAlign = 'right';
+      ctx.font = fonte(800, tamPreco);
+      ctx.fillStyle = p.c;
+      ctx.fillText(cx(cfg.preco), w - margem, base);
+      ctx.restore();
+    }
+    base -= Math.max(tamRodape, cfg.preco ? tamPreco : 0) * 1.7;
   }
+
+  // linha de data / hora / local
+  if (infos.length) {
+    const tamInfo = w * 0.031 * e;
+    espacar(ctx, w * 0.003);
+    ctx.font = fonte(700, tamInfo);
+    ctx.fillStyle = p.c;
+    ctx.fillText(infos.join('   ·   '), x, base);
+    espacar(ctx, 0);
+    base -= tamInfo * 1.7;
+  }
+
+  // filete decorativo
+  const larguraFilete = centro ? w * 0.6 : maxL * 0.5;
+  const xFilete = centro ? (w - larguraFilete) / 2 : margem;
+  const grad = ctx.createLinearGradient(xFilete, 0, xFilete + larguraFilete, 0);
+  grad.addColorStop(0, `${p.a}00`);
+  grad.addColorStop(0.5, p.a);
+  grad.addColorStop(1, `${p.c}00`);
+  ctx.fillStyle = grad;
+  ctx.fillRect(xFilete, base, larguraFilete, Math.max(2, w * 0.003));
+  base -= w * 0.035;
+
+  // título: só pode usar o vão entre o selo e o que já foi empilhado
+  const alturaSub = cfg.subtitulo ? w * 0.055 * e : 0;
+  const vao = Math.max(w * 0.1, base - topoLivre - alturaSub);
+  const tituloBase = Math.min(w * 0.155 * e, (vao / 3) / 1.02);
+  const { tam, linhas } = ajustar(ctx, cx(cfg.titulo), maxL, tituloBase, 3, 800, -w * 0.002);
 
   espacar(ctx, -w * 0.002);
   ctx.font = fonte(800, tam);
   ctx.fillStyle = txtCor;
+  const desenharTitulo = () => linhas.forEach((l, i) => {
+    ctx.fillText(l, x, base - (linhas.length - 1 - i) * tam * 1.02);
+  });
   if (cfg.brilho) {
     ctx.save();
-    ctx.shadowColor = `${p.a}aa`;
-    ctx.shadowBlur = w * 0.05;
-    escrever(ctx, linhas, x, yTitulo + alturaSub, tam * 1.02);
+    ctx.shadowColor = `${p.a}99`;
+    ctx.shadowBlur = w * 0.045;
+    desenharTitulo();
     ctx.restore();
   }
-  escrever(ctx, linhas, x, yTitulo + alturaSub, tam * 1.02);
+  desenharTitulo();
   espacar(ctx, 0);
+  base -= linhas.length * tam * 1.02 + w * 0.012;
 
-  let yInfo = yTitulo + alturaSub + alturaTitulo + w * 0.022;
-
-  // linha decorativa
-  ctx.save();
-  const g = ctx.createLinearGradient(centro ? w * 0.2 : margem, 0, centro ? w * 0.8 : margem + maxL * 0.5, 0);
-  g.addColorStop(0, `${p.a}00`);
-  g.addColorStop(0.5, p.a);
-  g.addColorStop(1, `${p.c}00`);
-  ctx.fillStyle = g;
-  ctx.fillRect(centro ? w * 0.2 : margem, yInfo, centro ? w * 0.6 : maxL * 0.5, Math.max(2, w * 0.003));
-  ctx.restore();
-  yInfo += w * 0.026;
-
-  if (infos.length) {
-    espacar(ctx, w * 0.003);
-    ctx.font = fonte(700, w * 0.031 * e);
-    ctx.fillStyle = p.c;
-    ctx.fillText(infos.join('   ·   '), x, yInfo);
-    espacar(ctx, 0);
+  // subtítulo, acima do título
+  if (cfg.subtitulo) {
+    ctx.font = fonte(600, w * 0.036 * e);
+    ctx.fillStyle = `${txtCor}b8`;
+    const [linhaSub] = quebrar(ctx, cx(cfg.subtitulo), maxL);
+    ctx.fillText(linhaSub || '', x, base);
   }
 
-  /* --- rodapé --- */
-  if (cfg.rodape) {
-    espacar(ctx, w * 0.004);
-    ctx.font = fonte(600, w * 0.022 * e);
-    ctx.fillStyle = `${txtCor}70`;
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(cx(cfg.rodape), x, h - margem * 0.55);
-    espacar(ctx, 0);
-    ctx.textBaseline = 'top';
-  }
-  if (cfg.preco) {
-    ctx.save();
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'bottom';
-    ctx.font = fonte(800, w * 0.03 * e);
-    ctx.fillStyle = p.c;
-    ctx.fillText(cx(cfg.preco), w - margem, h - margem * 0.55);
-    ctx.restore();
-  }
+  ctx.textBaseline = 'top';
 }
+
 
 /* ==========================================================
    LAYOUT 2 — ingresso colecionável
