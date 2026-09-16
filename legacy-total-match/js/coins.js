@@ -298,6 +298,18 @@
     function rule(ic, txt, val) { return el("div", { class: "coin-rule" }, [ el("span", { class: "coin-rule-ic", text: ic }), el("span", { class: "coin-rule-tx", text: txt }), el("span", { class: "coin-rule-v", text: val }) ]); }
   });
 
+  // bloco completo de administração (dar coins + diretório de contas) para
+  // embutir em qualquer tela. Fica no Perfil, sem precisar abrir outra tela.
+  coins.adminBlock = function () {
+    if (!coins.isAdmin()) return null;
+    var wrap = el("div", { class: "coin-admin-wrap" });
+    var adm = adminPanel();
+    wrap.appendChild(adm);
+    var acc = accountsPanel(adm._numIn, adm._info, adm._setFound);
+    wrap.appendChild(acc);
+    setTimeout(function () { var lb = acc.querySelector(".btn"); if (lb) lb.click(); }, 50);  // carrega a lista sozinho
+    return wrap;
+  };
   function adminPanel() {
     var box = el("div", { class: "coin-admin" });
     box.appendChild(el("div", { class: "list-head", text: "👑 Administrador · dar Total Coins" }));

@@ -7,10 +7,10 @@
   var el = TM.ui.el;
   var N = function () { return TM.net; };
 
-  var SYNC_KEYS = ["coach", "player", "compmode", "saves", "buildchallenge", "settings"];
+  var SYNC_KEYS = ["coach", "player", "rae", "compmode", "saves", "buildchallenge", "settings"];
   var EDS = ["public", "pro"];
-  function profile() { return TM.storage.read("profile", null); }        // { email, name, photo }
-  function setProfile(p) { if (p) TM.storage.write("profile", p); else TM.storage.remove("profile"); }
+  function profile() { return TM.storage.accountProfile(); }             // { email, name, photo }
+  function setProfile(p) { TM.storage.saveAccountProfile(p || null); }
   // conta excluída pelo administrador em outro aparelho: derruba o login local ao abrir o jogo
   function verifyProfile() {
     var p = profile(); if (!p || !p.email) return;
@@ -124,11 +124,50 @@
     try { TM.ui.toast(careers ? "☁️ Progresso atualizado de outro aparelho" : "☁️ Configurações sincronizadas"); } catch (e) {}
     try { var cur = TM.ui.current && TM.ui.current(); if (cur && LIVE_SCREENS.indexOf(cur) >= 0) TM.ui.go(cur); } catch (e) {}
   }
-  function syncNow(cb) { pull(function (n) { push(true, function (ok) { watch(); cb && cb(n, ok); }); }, false); }
+  /* ---- perfil em tempo real: foto, nome e moldura chegam sozinhos ----
+     Antes a foto só vinha no momento do login: trocar a foto no celular
+     nunca aparecia no computador que já estava logado. Escuta cada campo
+     separado de propósito — ouvir a conta inteira baixaria as carreiras
+     junto a cada mudança. */
+  var watchingProf = null, profRefs = [];
+  function aplicaCampoPerfil(campo, valor) {
+    var cur = profile(); if (!cur) return;
+    var novo = (valor === undefined || valor === "") ? null : valor;
+    if (campo === "name" && !novo) return;                 // nome vazio na nuvem não apaga o local
+    if ((cur[campo] || null) === novo) return;
+    cur[campo] = novo;
+    setProfile(cur);
+    try { var atual = TM.ui.current && TM.ui.current(); if (atual && LIVE_SCREENS.indexOf(atual) >= 0) TM.ui.go(atual); } catch (e) {}
+  }
+  function watchProfile() {
+    var p = profile(); if (!p || !p.email) return;
+    var n = N(); if (!n || !n.ready || !n._db || !n.acctKey) return;
+    if (watchingProf === p.email) return;
+    unwatchProfile();
+    watchingProf = p.email;
+    var base = n._db.ref("accounts/" + n.acctKey(p.email));
+    ["photo", "name", "frame"].forEach(function (campo) {
+      var ref = base.child(campo);
+      var h = function (snap) { aplicaCampoPerfil(campo, snap.val()); };
+      ref.on("value", h);
+      profRefs.push(ref);
+    });
+  }
+  function unwatchProfile() {
+    profRefs.forEach(function (r) { try { r.off(); } catch (e) {} });
+    profRefs = []; watchingProf = null;
+  }
+  function syncNow(cb) { pull(function (n) { push(true, function (ok) { watch(); watchProfile(); cb && cb(n, ok); }); }, false); }
   // ao abrir o jogo (logado): baixa o que está mais novo na nuvem, sobe o que está mais novo aqui e fica ouvindo
   try { if (N()) N().onReady(function () { setTimeout(verifyProfile, 800); setTimeout(function () { syncNow(); }, 300); }); } catch (e) {}
-  try { document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && profile()) pull(function () { watch(); }); }); } catch (e) {}
-  TM.account = { profile: profile, sync: syncNow, pull: pull, push: push };
+  try { document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible" || !profile()) return;
+    pull(function () { watch(); watchProfile(); if (Object.keys(dirty).length) push(false); });
+  }); } catch (e) {}
+  // rede de segurança: a cada minuto sobe o que ficou pendente (aba aberta o dia todo,
+  // conexão que caiu e voltou, push que falhou mais de 4 vezes)
+  try { setInterval(function () { if (profile() && N().ready && Object.keys(dirty).length) { pushFails = 0; push(false); } }, 60000); } catch (e) {}
+  TM.account = { profile: profile, sync: syncNow, pull: pull, push: push, watchProfile: watchProfile };
   function snapshot() { var o = {}; SYNC_KEYS.forEach(function (k) { var v = TM.storage.read(k, null); if (v != null) o[k] = v; }); return o; }
   function lastSyncTxt() { if (!lastSync) return "ainda não sincronizado nesta sessão"; var d = new Date(lastSync); return "última sincronização " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
 
@@ -248,9 +287,12 @@
     body.appendChild(pcard);
     body.appendChild(el("div", { class: "setting-hint", text: "Seu número é como os outros te encontram: para adicionar como amigo e para receber Total Coins." }));
 
-    // administrador: atalho para gerenciar contas e coins
+    // administrador: o gerenciamento de contas fica AQUI dentro, não numa tela
+    // à parte — é onde ele é procurado e funciona em qualquer aparelho logado
     if (TM.coins && TM.coins.isAdmin && TM.coins.isAdmin()) {
-      body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("👑 Gerenciar contas e coins", function () { TM.ui.go("coins"); }, "btn primary") ]));
+      var bloco = TM.coins.adminBlock ? TM.coins.adminBlock() : null;
+      if (bloco) body.appendChild(bloco);
+      else body.appendChild(el("div", { class: "actions" }, [ TM.ui.button("👑 Gerenciar contas e coins", function () { TM.ui.go("coins"); }, "btn primary") ]));
     }
     // moldura dourada (compra com Total Coins)
     if (TM.coins) {
