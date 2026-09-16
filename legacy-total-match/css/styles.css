@@ -3028,6 +3028,58 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .fcmenu .fc-stat b { color: #86efac; font-weight: 800; }
 .fcmenu .fc-top-right { position: static; display: flex; align-items: center; gap: 9px; }
 @media (max-width: 430px) { .fcmenu .fc-logo { height: 50px; } .fcmenu .fc-brand-title { font-size: 13px; } .fcmenu .fc-brand-stats { gap: 8px; } .fcmenu .fc-stat { font-size: 9.5px; } .fcmenu .fc-brand { gap: 9px; } }
+/* ====== topo do menu: cabe em qualquer tela ======
+   Eram 5 botões de largura fixa (moedas, mensagens, coroa, perfil, engrenagem)
+   somando 335px ao lado de uma marca de 226px: num iPhone de 390px o perfil e a
+   engrenagem ficavam fora da tela e a coroa cortada ao meio. Agora a marca
+   encolhe e os botões ficam compactos conforme a largura. */
+.fcmenu .fc-top { gap: 10px; }
+.fcmenu .fc-brand { flex: 1 1 auto; min-width: 0; }
+.fcmenu .fc-brand-txt { min-width: 0; }
+.fcmenu .fc-brand-title,
+.fcmenu .fc-brand-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcmenu .fc-brand-stats { flex-wrap: wrap; row-gap: 2px; }
+.fcmenu .fc-top-right { flex: 0 0 auto; }
+
+@media (max-width: 480px) {
+  /* orçamento medido num iPhone de 390px: 358px úteis = 166 para a marca
+     (logo 44 + "TOTAL MATCH" 107) + 192 para os cinco botões + 8 de respiro */
+  .fcmenu .fc-top { padding: 14px 12px 10px; gap: 8px; }
+  .fcmenu .fc-logo { height: 42px; }
+  .fcmenu .fc-brand { gap: 7px; }
+  /* "TOTAL MATCH" nunca pode ser cortado; quem encolhe é o subtítulo */
+  .fcmenu .fc-brand-title { font-size: 12px; letter-spacing: .2px; }
+  .fcmenu .fc-brand-stats { gap: 7px; }
+  .fcmenu .fc-stat { font-size: 9px; }
+  .fcmenu .fc-top-right { gap: 4px; }
+  .fcmenu .fc-top-right .fc-gear,
+  .fcmenu .fc-top-right .fc-admin,
+  .fcmenu .fc-top-right .msg-badge { width: 31px; height: 31px; font-size: 14px; }
+  .fcmenu .fc-top-right .coin-badge { padding: 4px 8px 4px 6px; font-size: 11.5px; gap: 3px; }
+  .fcmenu .fc-top-right .coin-badge .coin-ic { font-size: 11px; }
+  /* o perfil vira só o avatar: o nome já aparece dentro da tela de perfil */
+  .fcmenu .fc-top-right .fc-prof { padding: 3px; border-radius: 50%; gap: 0; }
+  .fcmenu .fc-top-right .fc-prof.ghost { padding: 0; width: 31px; height: 31px; justify-content: center; }
+  .fcmenu .fc-top-right .fc-prof-name { display: none; }
+  .fcmenu .fc-top-right .fc-prof-ava { width: 25px; height: 25px; }
+  .fcmenu .fc-top-right .fc-prof-ic { font-size: 15px; }
+}
+
+@media (max-width: 360px) {
+  .fcmenu .fc-top { padding: 12px 10px 8px; }
+  .fcmenu .fc-logo { height: 40px; }
+  .fcmenu .fc-top-right { gap: 3px; }
+  .fcmenu .fc-top-right .fc-gear,
+  .fcmenu .fc-top-right .fc-admin,
+  .fcmenu .fc-top-right .msg-badge,
+  .fcmenu .fc-top-right .fc-prof.ghost { width: 29px; height: 29px; font-size: 13px; }
+  .fcmenu .fc-top-right .coin-badge { padding: 3px 7px 3px 5px; font-size: 11px; }
+  .fcmenu .fc-stat { font-size: 8.5px; }
+  .fcmenu .fc-brand-title { font-size: 12px; letter-spacing: .2px; }
+  .fcmenu .fc-ver { display: none; }   /* a versão continua no rodapé das configurações */
+}
+
+
 /* a stage começa mais abaixo pra não colar na logo maior */
 .fcmenu .fc2-stage { padding-top: 120px; }
 @media (max-width: 430px) { .fcmenu .fc2-stage { padding-top: 100px; } }
