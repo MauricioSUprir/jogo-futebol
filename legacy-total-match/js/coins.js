@@ -232,8 +232,20 @@
       if (!coins.isAdmin()) { cb([], "Só o administrador."); return; }
       if (!cloudReady()) { cb([], "Sem conexão com a nuvem."); return; }
       var n = net(), db = n._db;
-      Promise.all([db.ref("accounts").once("value"), db.ref("users").once("value")]).then(function (r) {
+      Promise.all([db.ref("accounts").once("value"), db.ref("users").once("value"),
+                   db.ref("bannedUids").once("value"), db.ref("banned").once("value")]).then(function (r) {
         var accts = r[0].val() || {}, users = r[1].val() || {}, out = [], seen = {};
+        // contas já excluídas não voltam para a lista. E se o aparelho da
+        // pessoa tiver recriado o nó antes de ver o bloqueio, ele é varrido aqui
+        var banUid = r[2].val() || {}, banMail = r[3].val() || {};
+        Object.keys(banUid).forEach(function (uid) {
+          if (!users[uid]) return;
+          delete users[uid];
+          try { db.ref("users/" + uid).remove(); } catch (e) {}
+        });
+        Object.keys(accts).forEach(function (k) {
+          if (banMail[k]) { delete accts[k]; try { db.ref("accounts/" + k).remove(); } catch (e) {} }
+        });
         Object.keys(accts).forEach(function (k) {
           var a = accts[k] || {}; var u = (a.onlineUid && users[a.onlineUid]) || {};
           var num = a.onlineNumber || u.number || null;
@@ -253,23 +265,57 @@
     deleteAccount: function (entry, cb) {
       if (!coins.isAdmin()) { cb(false, "Só o administrador."); return; }
       if (!cloudReady()) { cb(false, "Sem conexão com a nuvem."); return; }
-      var n = net(), db = n._db, upd = {};
+      var n = net(), db = n._db;
       if (entry.uid && n.me && entry.uid === n.me.uid) { cb(false, "Não dá para excluir a própria conta por aqui."); return; }
-      var key = entry.email ? n.acctKey(entry.email) : null;
-      if (key) { upd["accounts/" + key] = null; upd["banned/" + key] = { email: entry.email, number: entry.number || null, uid: entry.uid || null, t: Date.now(), by: n.me.number || null }; }
-      if (entry.uid) { upd["users/" + entry.uid] = null; upd["ranking/" + entry.uid] = null; upd["bannedUids/" + entry.uid] = true; }
-      if (entry.number) { upd["numbers/" + entry.number] = null; upd["bannedNumbers/" + entry.number] = true; }
-      var keys = Object.keys(upd);
-      db.ref().update(upd).then(function () { cb(true, "Conta excluída para sempre" + (entry.email ? " e e-mail bloqueado" : "") + ". O aparelho dela é desconectado na próxima abertura."); }).catch(function (err) {
-        // regras do banco podem barrar a gravação em bloco: tenta caminho por caminho e informa o que falhou
-        var fails = [], done = 0;
-        keys.forEach(function (k) {
-          db.ref(k).set(upd[k]).catch(function (e2) { fails.push(k + ": " + (e2 && e2.message ? e2.message : e2)); }).then(function () {
-            done++;
-            if (done === keys.length) { if (!fails.length) cb(true, "Conta excluída para sempre."); else if (fails.length < keys.length) cb(true, "Conta excluída, mas parte falhou (" + fails.join(" | ").slice(0, 200) + ")."); else cb(false, "Falha ao excluir: " + fails.join(" | ").slice(0, 300)); }
+      // Lê os usuários ANTES de apagar: é preciso saber quem tem esta conta na
+      // lista de amigos ou num pedido pendente, senão sobram pontas apontando
+      // para um fantasma — e o número real fica de fora do bloqueio.
+      db.ref("users").once("value").then(function (s) { exclui(s.val() || {}); }).catch(function () { exclui({}); });
+
+      function exclui(todos) {
+        var upd = {}, eu = (entry.uid && todos[entry.uid]) || {};
+        var key = entry.email ? n.acctKey(entry.email) : null;
+        if (key) {
+          upd["accounts/" + key] = null;
+          upd["banned/" + key] = { email: entry.email, number: entry.number || null, uid: entry.uid || null, t: Date.now(), by: n.me.number || null };
+        }
+        if (entry.uid) {
+          // o bloqueio vem PRIMEIRO: com ele gravado, o aparelho da pessoa se
+          // derruba sozinho em vez de recriar a conta na abertura seguinte
+          upd["bannedUids/" + entry.uid] = true;
+          upd["users/" + entry.uid] = null;
+          upd["ranking/" + entry.uid] = null;
+          upd["utrank/" + entry.uid] = null;
+          upd["utsquads/" + entry.uid] = null;
+          upd["matchmaking/assign/" + entry.uid] = null;
+          // some das listas de amigos e dos pedidos de amizade de todo mundo
+          Object.keys(todos).forEach(function (uid) {
+            if (uid === entry.uid) return;
+            var u = todos[uid] || {};
+            if (u.friends && u.friends[entry.uid]) upd["users/" + uid + "/friends/" + entry.uid] = null;
+            if (u.requests && u.requests[entry.uid]) upd["users/" + uid + "/requests/" + entry.uid] = null;
+            if (u.invite && u.invite.from === entry.uid) upd["users/" + uid + "/invite"] = null;
+          });
+        }
+        var numeros = [];
+        if (entry.number) numeros.push(entry.number);
+        if (eu.number && numeros.indexOf(eu.number) < 0) numeros.push(eu.number);
+        numeros.forEach(function (num) { upd["numbers/" + num] = null; upd["bannedNumbers/" + num] = true; });
+
+        var keys = Object.keys(upd);
+        db.ref().update(upd).then(function () {
+          cb(true, "Conta excluída para sempre" + (entry.email ? " e e-mail bloqueado" : "") + ". O aparelho dela cai sozinho na hora, ou na próxima abertura.");
+        }).catch(function (err) {
+          // regras do banco podem barrar a gravação em bloco: tenta caminho por caminho e informa o que falhou
+          var fails = [], done = 0;
+          keys.forEach(function (k) {
+            db.ref(k).set(upd[k]).catch(function (e2) { fails.push(k + ": " + (e2 && e2.message ? e2.message : e2)); }).then(function () {
+              done++;
+              if (done === keys.length) { if (!fails.length) cb(true, "Conta excluída para sempre."); else if (fails.length < keys.length) cb(true, "Conta excluída, mas parte falhou (" + fails.join(" | ").slice(0, 200) + ")."); else cb(false, "Falha ao excluir: " + fails.join(" | ").slice(0, 300)); }
+            });
           });
         });
-      });
+      }
     },
     // mensagens que o administrador mandou junto com coins
     adminMsgs: function () {
