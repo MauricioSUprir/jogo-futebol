@@ -84,10 +84,28 @@
     } catch (e) { net.available = false; net.error = e.message; }
   };
 
+  // Ao abrir o jogo NADA é escrito antes de saber se a identidade foi excluída.
+  // Escrever primeiro ressuscitava a conta apagada: o aparelho recriava
+  // users/<uid> com nome e número, e ela voltava a aparecer na lista do admin.
   function onSignedIn(uid) {
+    var link = linkedIdentity();
+    var alvo = (link && link.uid) ? link.uid : uid;
+    checaBanido(alvo, function (ban) {
+      if (!ban) { adotaIdentidade(link, uid); return; }
+      esqueceConta();
+      avisaExcluida();
+      limpaRastro(alvo);
+      if (alvo === uid) return;            // o próprio aparelho foi excluído: fica sem identidade online
+      checaBanido(uid, function (ban2) {
+        if (ban2) { limpaRastro(uid); return; }
+        adotaIdentidade(null, uid);
+      });
+    });
+  }
+
+  function adotaIdentidade(link, uid) {
     var db = net._db;
     // se há uma conta vinculada, adota a identidade dela (número/amigos portáteis)
-    var link = linkedIdentity();
     if (link && link.uid) {
       var lname = link.name || localName() || "Jogador";
       db.ref("users/" + link.uid).update({ name: lname, number: link.number || null });
@@ -114,6 +132,13 @@
     tries = tries || 0;
     if (tries > 8) { cb(genNumber()); return; }
     var number = genNumber();
+    // número de conta excluída não volta a circular
+    net._db.ref("bannedNumbers/" + number).once("value").then(function (bs) {
+      if (bs.val()) { claimNumber(uid, cb, tries + 1); return; }
+      reservaNumero(uid, number, cb, tries);
+    }).catch(function () { reservaNumero(uid, number, cb, tries); });
+  }
+  function reservaNumero(uid, number, cb, tries) {
     var nref = net._db.ref("numbers/" + number);
     nref.transaction(function (cur) {
       if (cur === null) return uid;
@@ -126,18 +151,70 @@
 
   function firebaseNow() { return global.firebase.database.ServerValue.TIMESTAMP; }
 
+  /* ---- conta excluída pelo administrador ("excluir para sempre") ----
+     O administrador apaga os dados no banco, mas quem manda no aparelho é o
+     próprio aparelho: sem estas travas ele reescrevia users/<uid> na abertura
+     seguinte (e a presença reescrevia online/lastSeen ao desconectar), e a
+     conta voltava do zero. Aqui a identidade excluída é checada ANTES de
+     qualquer escrita, vigiada enquanto o jogo está aberto e, quando cai,
+     o aparelho apaga o próprio rastro e volta a ser um aparelho sem conta. */
+  function checaBanido(uid, cb) {
+    if (!uid || !net._db) { cb(false); return; }
+    try {
+      net._db.ref("bannedUids/" + uid).once("value")
+        .then(function (s) { cb(!!s.val()); })
+        .catch(function () { cb(false); });
+    } catch (e) { cb(false); }
+  }
+  // esquece a conta neste aparelho (vínculo online + perfil das DUAS edições)
+  function esqueceConta() {
+    saveLink(null);
+    try { TM.storage.saveAccountProfile(null); } catch (e) {}
+    try { TM.storage.removeRaw("public", "profile"); TM.storage.removeRaw("pro", "profile"); } catch (e) {}
+  }
+  // apaga o que este aparelho pode ter recriado da identidade excluída
+  function limpaRastro(uid) {
+    if (!uid || !net._db) return;
+    pararPresenca();
+    try { net._db.ref("users/" + uid).remove(); } catch (e) {}
+    try { net._db.ref("utsquads/" + uid).remove(); } catch (e) {}
+    try { net._db.ref("matchmaking/assign/" + uid).remove(); } catch (e) {}
+  }
+  var _avisou = false;
+  function avisaExcluida() {
+    net.banned = true;
+    net.me = null; net.ready = false;
+    if (_avisou) return;
+    _avisou = true;
+    try { TM.ui.toast("Esta conta foi excluída pelo administrador."); } catch (e) {}
+    try { var tela = TM.ui.current && TM.ui.current(); if (tela === "profile" || tela === "coins") TM.ui.go(tela); } catch (e) {}
+  }
+  // enquanto o jogo está aberto: se a conta for excluída agora, cai na hora
+  function vigiaBanimento(uid) {
+    if (!uid || !net._db) return;
+    pararVigia();
+    try {
+      var r = net._db.ref("bannedUids/" + uid);
+      var h = r.on("value", function (s) {
+        if (!s.val()) return;
+        pararVigia();
+        esqueceConta();
+        avisaExcluida();
+        limpaRastro(uid);
+      });
+      net._banRef = { ref: r, h: h };
+    } catch (e) {}
+  }
+  function pararVigia() {
+    if (!net._banRef) return;
+    try { net._banRef.ref.off("value", net._banRef.h); } catch (e) {}
+    net._banRef = null;
+  }
+
   function finishReady(uid, number, name) {
     net.me = { uid: uid, number: number, name: name, photo: null, favClub: null, bio: null };
     net.ready = true;
-    // identidade excluída pelo administrador: derruba a conta local deste aparelho
-    try {
-      net._db.ref("bannedUids/" + uid).once("value").then(function (s) {
-        if (!s.val()) return;
-        net.banned = true;
-        try { TM.storage.remove("profile"); } catch (e) {}
-        try { TM.ui.toast("Esta conta foi excluída pelo administrador."); } catch (e) {}
-      });
-    } catch (e) {}
+    vigiaBanimento(uid);
     setupPresence(uid);
     listenInvites(uid);
     // carrega extras do perfil (foto/clube favorito/bio) sem bloquear o ready
@@ -153,17 +230,29 @@
   };
 
   // ---- presença online ----
+  var _pres = null;
   function setupPresence(uid) {
     var db = net._db;
     var st = db.ref("users/" + uid + "/online");
     var last = db.ref("users/" + uid + "/lastSeen");
-    db.ref(".info/connected").on("value", function (snap) {
+    var conn = db.ref(".info/connected");
+    var h = function (snap) {
       if (snap.val() === true) {
         st.onDisconnect().set(false);
         last.onDisconnect().set(firebaseNow());
         st.set(true);
       }
-    });
+    };
+    conn.on("value", h);
+    _pres = { st: st, last: last, conn: conn, h: h };
+  }
+  // sem isto, o onDisconnect recriava users/<uid> depois da exclusão
+  function pararPresenca() {
+    if (!_pres) return;
+    try { _pres.conn.off("value", _pres.h); } catch (e) {}
+    try { _pres.st.onDisconnect().cancel(); } catch (e) {}
+    try { _pres.last.onDisconnect().cancel(); } catch (e) {}
+    _pres = null;
   }
 
   // ---- perfil ----
@@ -189,21 +278,27 @@
   // adota a identidade online da conta neste aparelho (mesmo número + amigos + chats)
   net.linkAccount = function (link) {
     if (!link || !link.uid) return;
-    try { net._db && net._db.ref("bannedUids/" + link.uid).once("value").then(function (s) { if (s.val()) { net.banned = true; try { TM.storage.remove("profile"); } catch (e) {} try { TM.ui.toast("Esta conta foi excluída pelo administrador."); } catch (e) {} } }); } catch (e) {}
-    saveLink(link);
-    if (!net._db) return;
-    var name = link.name || localName() || "Jogador";
-    net._db.ref("users/" + link.uid).update({ name: name, number: link.number || null }).catch(function () {});
-    net.me = { uid: link.uid, number: link.number, name: name };
-    net.ready = true;
-    setupPresence(link.uid);
-    listenInvites(link.uid);
+    checaBanido(link.uid, function (ban) {
+      if (ban) { esqueceConta(); avisaExcluida(); limpaRastro(link.uid); return; }
+      saveLink(link);
+      if (!net._db) return;
+      var name = link.name || localName() || "Jogador";
+      net._db.ref("users/" + link.uid).update({ name: name, number: link.number || null }).catch(function () {});
+      net.me = { uid: link.uid, number: link.number, name: name };
+      net.ready = true;
+      setupPresence(link.uid);
+      listenInvites(link.uid);
+      vigiaBanimento(link.uid);
+    });
   };
   // desvincula (logout) e volta à identidade anônima deste aparelho
   net.unlinkAccount = function () {
     saveLink(null);
+    pararPresenca();
+    pararVigia();
     if (net._auth && net._auth.currentUser) onSignedIn(net._auth.currentUser.uid);
   };
+  net.contaExcluida = function () { return !!net.banned; };
   net.currentOnline = function () { return net.me ? { uid: net.me.uid, number: net.me.number, name: net.me.name } : null; };
 
   // ---- amigos ----
