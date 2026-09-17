@@ -130,16 +130,43 @@
       setTimeout(function () { cargaInicial = false; }, 2500);
     } catch (er) {}
   }
-  // aplica um delta: a NUVEM é a verdade (transação); local só espelha (e serve offline)
+  // Teto de um ganho por vez. O maior prêmio do jogo é 100 (campeão do Draft),
+  // então 250 é folgado — e impede que alguém escreva um saldo gigante de uma vez.
+  var TETO_GANHO = 250;
+
+  // aplica um delta: a NUVEM é a verdade; local só espelha (e serve offline).
+  // GASTO continua por transação. GANHO grava, na MESMA operação, um carimbo de
+  // tempo do servidor (coinGate) — é isso que deixa a regra de segurança do
+  // Firebase limitar quanto e de quanto em quanto tempo alguém pode ganhar.
   function applyDelta(delta) {
     var s = load();
     s.bal = Math.max(0, s.bal + delta); save(); refreshBadges();      // resposta imediata na tela
     if (!cloudReady() || !hasAccount()) return;
+    var n = net();
+    if (delta < 0) {
+      try {
+        pending++;
+        n._db.ref("users/" + n.me.uid + "/coins").transaction(function (cur) { return Math.max(0, (typeof cur === "number" ? cur : START) + delta); }, function (err, committed, snap) {
+          pending = Math.max(0, pending - 1);
+          if (!err && committed && snap && typeof snap.val() === "number") { var st = load(); st.bal = snap.val(); save(); refreshBadges(); }
+        });
+      } catch (e) { pending = Math.max(0, pending - 1); }
+      return;
+    }
     try {
-      var n = net(); pending++;
-      n._db.ref("users/" + n.me.uid + "/coins").transaction(function (cur) { return Math.max(0, (typeof cur === "number" ? cur : START) + delta); }, function (err, committed, snap) {
+      pending++;
+      var base = "users/" + n.me.uid + "/";
+      var atual = (typeof lastCloud === "number") ? lastCloud : s.bal;
+      var upd = {};
+      upd[base + "coins"] = Math.max(0, atual + Math.min(delta, TETO_GANHO));
+      upd[base + "coinGate"] = global.firebase.database.ServerValue.TIMESTAMP;
+      n._db.ref().update(upd, function (err) {
         pending = Math.max(0, pending - 1);
-        if (!err && committed && snap && typeof snap.val() === "number") { var st = load(); st.bal = snap.val(); save(); refreshBadges(); }
+        if (err) {
+          // a regra recusou (ganho grande demais ou rápido demais): o saldo da
+          // nuvem continua valendo, e o espelho local volta para ele
+          if (typeof lastCloud === "number") { var st = load(); st.bal = lastCloud; save(); refreshBadges(); }
+        }
       });
     } catch (e) { pending = Math.max(0, pending - 1); }
   }
