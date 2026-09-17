@@ -6,6 +6,27 @@
   var TM = global.TM;
   var el = TM.ui.el;
   var KEY = "ultimate";
+  /* O clube do Total Ultimate é UM SÓ, não um por edição.
+     Antes ele era gravado com o prefixo da edição ativa: quem montava o clube
+     na Season Update e depois entrava na edição pública caía na tela de "criar
+     clube" e achava que tinha perdido tudo. Agora ele mora sempre no mesmo
+     lugar (prefixo base) e guarda em `ed` de qual edição são as cartas —
+     porque o id dos jogadores muda de uma edição para a outra. */
+  function lerClube() {
+    var s = TM.storage.readRaw("public", KEY);
+    if (s && s.squad) return s;
+    // migração: clube antigo que ficou preso na Season Update
+    var antigo = TM.storage.readRaw("pro", KEY);
+    if (antigo && antigo.squad) {
+      if (!antigo.ed) antigo.ed = "pro";
+      TM.storage.writeRaw("public", KEY, antigo);
+      TM.storage.removeRaw("pro", KEY);
+      return antigo;
+    }
+    return null;
+  }
+  function gravarClube(s) { TM.storage.writeRaw("public", KEY, s); }
+  function apagarClube() { TM.storage.removeRaw("public", KEY); TM.storage.removeRaw("pro", KEY); }
 
   /* ================= utilidades ================= */
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -52,6 +73,8 @@
 
   /* ================= pool de jogadores ================= */
   var _pool = null, _byPos = null;
+  // trocou de edição? o elenco de onde as cartas são sorteadas muda inteiro
+  try { TM.storage.onEditionChange(function () { _pool = null; _byPos = null; }); } catch (e) {}
   function pool() {
     if (_pool) return _pool;
     var out = [];
@@ -226,7 +249,7 @@
   var S = null;
   function blank() {
     return {
-      v: 1, club: "", coins: 9000, cards: [],
+      v: 2, club: "", ed: "", apelido: "", sigla: "", escudo: "", coins: 9000, cards: [],
       squad: { f: "4-3-3", xi: [null, null, null, null, null, null, null, null, null, null, null], sub: [] },
       mkt: { day: -1, buy: [], sell: [] },
       riv: { div: 10, pts: 0, pl: 0, w: 0, d: 0, l: 0, seas: 1, best: 10, wk: 0, wkDay: -1 },
@@ -237,12 +260,12 @@
   }
   function st() {
     if (S) return S;
-    S = TM.storage.read(KEY, null);
+    S = lerClube();
     if (!S || !S.squad) S = null;
     return S;
   }
-  function save() { if (S) TM.storage.write(KEY, S); }
-  function reset() { S = null; TM.storage.remove(KEY); }
+  function save() { if (S) gravarClube(S); }
+  function reset() { S = null; apagarClube(); }
   function cardMap(s) {
     var m = {};
     (s.cards || []).forEach(function (c) { m[c.i] = c; });
@@ -538,11 +561,38 @@
   TM.ui.register("ut", function (screen) {
     var s = st();
     if (!s) { renderIntro(screen); return; }
+    // O Total Ultimate é com JOGADOR REAL: ele roda sempre nos dados da Season
+    // Update. As cartas guardam o id do jogador, que muda de uma edição para a
+    // outra, então ao entrar aqui a edição é acertada sozinha, sem perguntar.
+    if (s.ed && s.ed !== TM.storage.edition()) {
+      if (s.ed !== "pro" || TM.storage.suUnlocked()) { TM.storage.switchEdition(s.ed); goUT("ut"); return; }
+      renderEdicaoErrada(screen, s); return;      // clube de cartas reais sem a Season Update liberada
+    }
     seedMarket(s); objRefresh(s); tickSales(s);
     renderHub(screen, s);
   });
 
+  function nomeEdicao(e) { return e === "pro" ? "Season Update" : "edição pública"; }
+  // só cai aqui quem tem um clube de cartas reais mas perdeu o acesso à Season Update
+  function renderEdicaoErrada(screen, s) {
+    screen.classList.add("ut-screen");
+    screen.appendChild(TM.ui.topbar("Total Ultimate", function () { goUT("modes"); }));
+    screen.appendChild(el("div", { class: "ut-intro" }, [
+      el("div", { class: "ut-intro-logo", text: "🔒" }),
+      el("h1", { class: "ut-intro-title", text: s.club || "Seu clube" }),
+      el("p", { class: "ut-intro-tx", text: "Suas cartas são de jogadores reais e precisam da Season Update para aparecer." }),
+      el("p", { class: "ut-intro-tx", text: (s.cards || []).length + " cartas · " + fmtC(s.coins || 0) + " moedas · Divisão " + ((s.riv && s.riv.div) || 10) + " — nada foi perdido, está tudo guardado." }),
+      TM.ui.button("Voltar ao menu", function () { goUT("modes"); }, "btn primary wide")
+    ]));
+  }
+
   function renderIntro(screen) {
+    // carta do Ultimate é de jogador REAL: se a Season Update está liberada,
+    // entra nela antes de sortear o elenco inicial
+    if (TM.storage.suUnlocked() && TM.storage.edition() !== "pro") {
+      TM.storage.switchEdition("pro"); _pool = null; _byPos = null;
+      goUT("ut"); return;
+    }
     screen.classList.add("ut-screen");
     screen.appendChild(TM.ui.topbar("Total Ultimate", function () { goUT("modes"); }));
     var input = el("input", { class: "ut-input", type: "text", maxlength: "22", placeholder: "Nome do seu clube" });
@@ -559,6 +609,7 @@
       TM.ui.button("Criar meu clube", function () {
         var nm = (input.value || "").trim() || "Meu Ultimate";
         S = blank(); S.club = nm;
+        S.ed = TM.storage.edition();          // de qual edição são as cartas
         // pacote inicial: um elenco jogável para começar
         var start = packById("prata");
         openPack(S, { n: 16, lo: 60, hi: 73, rare: 0.25 });
