@@ -1352,6 +1352,52 @@
     for (var k = 0; k < pool.length; k++) { r -= pool[k].w; if (r <= 0) return pool[k].p; }
     return pool[pool.length - 1].p;
   }
+  // alvo de um PEDIDO DE EMPRÉSTIMO: ninguém pede o seu titular emprestado.
+  // Quem interessa é reserva, garoto que precisa de rodagem ou quem você listou.
+  function pickLoanTarget(career) {
+    var mine = rosterPlayers(career).filter(function (p) { return !(career.loanedIn && career.loanedIn[p.id]); });
+    if (mine.length < 16) return null;                 // elenco curto: ninguém empresta
+    var jogos = (career.stats && career.stats.p) || 0;
+    var lista = career.transferList || [];
+    var hoje = career.currentDay || 0;
+    var esfria = career.loanCooldown || {};
+    // posição no elenco por nota: serve de titular presumido no começo da
+    // temporada, quando ainda não há jogos disputados para olhar
+    var ordem = mine.slice().sort(function (a, b) { return b.overall - a.overall; });
+    var posto = {};
+    ordem.forEach(function (p, i) { posto[p.id] = i; });
+    var pool = [];
+    mine.forEach(function (p) {
+      if ((esfria[p.id] || 0) > hoje) return;          // recusado há pouco: o clube não insiste
+      var st = career.pstats && career.pstats[p.id];
+      var apps = (st && st.apps) || 0;
+      var uso = jogos > 0 ? apps / jogos : 0;          // fração dos jogos em que atuou
+      var idade = p.age || 25;
+      var listado = lista.indexOf(p.id) >= 0;
+      var w = 0;
+      if (listado) w += 2.5;                           // você mesmo colocou na lista
+      if (posto[p.id] < 11 && !listado) w -= 3.0;      // provável titular pela nota
+      else if (posto[p.id] < 16 && !listado) w -= 0.8; // banco imediato
+      if (jogos >= 3) {
+        if (uso <= 0.20) w += 1.8;                     // praticamente não joga
+        else if (uso <= 0.45) w += 0.9;                // reserva
+        else if (uso >= 0.70) w -= 3.0;                // titular: fora
+      }
+      if (idade <= 20) w += 1.5;                       // garoto precisando de rodagem
+      else if (idade <= 23) w += 0.8;
+      else if (idade >= 33) w -= 0.6;
+      if (w > 0) pool.push({ p: p, w: w });
+    });
+    if (!pool.length) return null;
+    var tot = pool.reduce(function (a, x) { return a + x.w; }, 0), r = Math.random() * tot;
+    for (var k = 0; k < pool.length; k++) { r -= pool[k].w; if (r <= 0) return pool[k].p; }
+    return pool[pool.length - 1].p;
+  }
+  // quantos pedidos de empréstimo já estão esperando resposta
+  function pedidosDeEmprestimo(career) {
+    return (career.notifications || []).filter(function (n) { return n.loanOffer; }).length;
+  }
+
   // clubes que podem comprar o jogador: nível parecido ou maior; sem candidatos, os grandes do mundo
   function offerBuyers(career, target) {
     var all = TM.data.world().clubs.filter(function (cl) { return cl.id !== career.teamId; });
@@ -1379,8 +1425,13 @@
     if (!target) return false;
     career.offerDrought = 0;
     var val = TM.data.marketValue(target), mult = career.money ? career.money.mult : 1;
-    var kind = opts.force ? Math.random() * 0.55 : Math.random(); // 0.62 compra · 0.24 empréstimo · 0.14 empréstimo c/ opção
-    if (kind < 0.62) {
+    // Fora da janela o clube só pode demonstrar interesse em COMPRAR (fica para a
+    // próxima janela); pedido de empréstimo com o mercado fechado não existe.
+    // Com a janela aberta, ~1/3 dos contatos é empréstimo.
+    var janela = windowOpenNow(career);
+    var corteCompra = janela ? 0.66 : 1;
+    var kind = opts.force ? Math.random() * 0.55 : Math.random();
+    if (kind < corteCompra) {
       var buyers = offerBuyers(career, target);
       if (!buyers.length) return false;
       var buyer = buyers[Math.floor(Math.random() * buyers.length)];
@@ -1410,7 +1461,15 @@
         offer: { playerId: target.id, buyerId: buyer.id, fee: fee }
       });
     } else {
-      // clubes de porte parecido ou menor pedem por empréstimo
+      // com o mercado fechado ninguém pode ser emprestado: nem pedem
+      if (!windowOpenNow(career)) return false;
+      // no máximo 2 pedidos de empréstimo esperando (3 se você listou alguém)
+      var teto = (career.transferList || []).length ? 3 : 2;
+      if (pedidosDeEmprestimo(career) >= teto) return false;
+      // empréstimo tem alvo PRÓPRIO: reserva, garoto ou listado — nunca o titular
+      target = pickLoanTarget(career);
+      if (!target) return false;
+      val = TM.data.marketValue(target);   // o alvo mudou: a taxa tem que ser sobre ELE
       var lbuyers = TM.data.world().clubs.filter(function (cl) {
         var r = TM.data.clubRating(cl.id);
         return cl.id !== career.teamId && r >= target.overall - 12 && r <= target.overall + 4;
@@ -1418,7 +1477,7 @@
       if (!lbuyers.length) return false;
       var lb = lbuyers[Math.floor(Math.random() * lbuyers.length)];
       var loanFee = Math.max(0.02, Math.round(Math.max(0.1, val * 0.08) * mult * 100) / 100);
-      var withOption = kind >= 0.83;
+      var withOption = kind >= 0.88;
       var termYears = [0.5, 1, 1, 1.5][Math.floor(Math.random() * 4)];
       var buyPrice = withOption ? Math.max(0.05, Math.round(val * (1.1 + Math.random() * 0.4) * mult * 100) / 100) : 0;
       TM.notify.push(career, {
@@ -1617,6 +1676,9 @@
     var player = resolvePlayer(career, lo.playerId);
     TM.notify.remove(career, note.id);
     if (!accept) {
+      // carência: ninguém volta a pedir o mesmo jogador emprestado nos próximos ~40 dias
+      if (!career.loanCooldown) career.loanCooldown = {};
+      career.loanCooldown[lo.playerId] = (career.currentDay || 0) + 40;
       TM.notify.push(career, { icon: "🚫", title: "Empréstimo recusado", text: "Você recusou emprestar " + (player ? player.name : "o jogador") + "." });
       return "recusada";
     }
