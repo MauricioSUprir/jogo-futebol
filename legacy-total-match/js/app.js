@@ -6,6 +6,11 @@
     TM.ui.init();
     // pré-gera o mundo (assíncrono leve, evita travar a splash)
     setTimeout(function () { TM.data.world(); }, 0);
+    // confere se este aparelho está mesmo na versão publicada
+    setTimeout(function () { try { TM.ui.conferirVersao(); } catch (e) {} }, 1500);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) { try { TM.ui.conferirVersao(); } catch (e) {} }
+    });
     // link de convite (?join=CÓDIGO) → entra direto na sala online
     var joinCode = null, joinGc = null;
     try { var q = new URLSearchParams(location.search); joinCode = q.get("join"); joinGc = q.get("joingc"); } catch (e) {}
