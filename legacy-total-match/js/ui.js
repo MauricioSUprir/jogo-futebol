@@ -441,8 +441,43 @@
     return el("button", { class: "fc-admin", title: "Administração", on: { click: function () { go("admin"); } } }, [ el("span", { text: "👑" }) ]);
   }
 
+  /* ---- aviso de versão nova ----
+     Já aconteceu de alguém olhar uma tela antiga achando que era a de agora.
+     O aparelho pergunta ao servidor qual é a versão publicada e, se estiver
+     atrás, mostra uma faixa que limpa o cache e recarrega de verdade. */
+  function barraVersao(noAr) {
+    if (document.querySelector(".ver-bar")) return;
+    var bar = el("div", { class: "ver-bar" }, [
+      el("span", { class: "ver-bar-tx", text: "Tem versão nova (v" + noAr + "). Você está na " + (TM.versao() || "antiga") + "." }),
+      el("button", { class: "ver-bar-bt", text: "Atualizar", on: { click: function () {
+        bar.querySelector(".ver-bar-bt").textContent = "Atualizando…";
+        var fim = function () { location.reload(true); };
+        var tarefas = [];
+        try { if (global.caches) tarefas.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+        try { if (navigator.serviceWorker) tarefas.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })); } catch (e) {}
+        (tarefas.length ? Promise.all(tarefas) : Promise.resolve()).then(fim, fim);
+      } } }),
+      el("button", { class: "ver-bar-x", text: "✕", title: "Agora não", on: { click: function () { bar.remove(); } } })
+    ]);
+    document.body.appendChild(bar);
+  }
+  // compara a versão que está rodando com a que está publicada no servidor
+  function conferirVersao() {
+    var aqui = parseInt((versaoAtual() || "v0").slice(1), 10);
+    if (!aqui) return;
+    try {
+      global.fetch("sw.js?cb=" + Date.now(), { cache: "no-store" })
+        .then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (t) {
+          var m = String(t).match(/total-match-v(\d+)/);
+          if (m && parseInt(m[1], 10) > aqui) barraVersao(parseInt(m[1], 10));
+        }).catch(function () {});
+    } catch (e) {}
+  }
+
   TM.ui = {
     init: function () { app = document.getElementById("app"); applyTheme(); },
+    conferirVersao: conferirVersao,
     el: el, clear: clear, register: register, go: go,
     topbar: topbar, sectorBar: sectorBar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
