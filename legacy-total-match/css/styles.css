@@ -4601,3 +4601,15 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .ver-bar-x { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
   border: 1px solid var(--line-2); background: transparent; color: var(--text-dim); font-size: 12px; }
 @media (max-width: 380px) { .ver-bar { flex-wrap: wrap; } .ver-bar-tx { flex: 1 1 100%; } }
+
+/* disposição do jogador na negociação (ele pode simplesmente não querer vir) */
+.vont-line { display: flex; align-items: center; gap: 10px; margin: 8px 0 2px; padding: 9px 11px;
+  border-radius: 11px; background: var(--black-soft); border: 1px solid var(--line); }
+.vont-dot { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; background: var(--text-dim); }
+.vont-info { min-width: 0; }
+.vont-t { font-size: 13px; font-weight: 800; color: var(--text); }
+.vont-s { font-size: 11.5px; color: var(--text-dim); line-height: 1.35; margin-top: 2px; }
+.vont-line.v-sim { border-color: rgba(34,197,94,.45); } .vont-line.v-sim .vont-dot { background: #22c55e; }
+.vont-line.v-talvez { border-color: rgba(120,200,150,.3); } .vont-line.v-talvez .vont-dot { background: #7fd39b; }
+.vont-line.v-duvida { border-color: rgba(240,160,0,.45); } .vont-line.v-duvida .vont-dot { background: #f0a000; }
+.vont-line.v-nao { border-color: rgba(220,60,60,.5); } .vont-line.v-nao .vont-dot { background: #dc3c3c; }

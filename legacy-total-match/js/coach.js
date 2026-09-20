@@ -3740,6 +3740,69 @@
   // taxa de transferência ~30% acima do valor de mercado; salário ~15% do valor/ano
   function askingPrice(p) { return Math.max(0.1, r2(TM.data.marketValue(p) * 1.3)); }
   function wageDemand(p) { return Math.max(0.05, r2(TM.data.marketValue(p) * 0.15)); }
+
+  /* ---- VONTADE DO JOGADOR ----
+     Acertar o salário não bastava: bastava bater o pedido e ele assinava
+     sempre. Na vida real o cara olha o projeto, o tamanho do clube, a
+     competição que vai disputar e de onde está saindo. Aqui isso vira um
+     número de 0 a 100 (determinístico por jogador e temporada, não é sorteio
+     a cada clique) e o jogador PODE dizer não. */
+  function vontadeDe(c, p, nego) {
+    var meuClube = TM.data.club(c.teamId) || {};
+    var meuNivel = 70; try { meuNivel = TM.data.clubRating(c.teamId); } catch (e) {}
+    var ov = p.overall || 70;
+    var n = 58, por = [];
+    var d = meuNivel - ov;
+    if (d >= 6) { n += 24; por.push("subir de patamar"); }
+    else if (d >= 1) { n += 12; }
+    else if (d >= -4) { n += 2; }
+    else if (d >= -8) { n -= 16; por.push("o clube é pequeno para ele"); }
+    else { n -= 34; por.push("ele se vê num clube maior"); }
+    // de onde ele sai
+    if (nego && nego.oldClubId) {
+      var ant = 70; try { ant = TM.data.clubRating(nego.oldClubId); } catch (e) {}
+      if (ant - meuNivel >= 6) { n -= 20; por.push("sair de um clube maior pesa"); }
+      else if (meuNivel - ant >= 6) { n += 12; }
+      try {
+        if (TM.data.areRivals && TM.data.areRivals(c.teamId, nego.oldClubId)) { n -= 40; por.push("vestir a camisa do maior rival"); }
+      } catch (e) {}
+    }
+    // idade e momento: veterano aceita mais fácil, jovem promissor quer projeto
+    var idade = p.age || 25;
+    if (idade >= 31) n += 10;
+    else if (idade <= 21 && (p.potential || ov) >= ov + 8) { n -= 8; por.push("é jovem e quer jogar"); }
+    // livre no mercado: quer clube
+    if (!nego || !nego.oldClubId) n += 16;
+    if (nego && nego.type === "loan") n += 10;
+    // humor próprio do jogador nesta temporada (mesmo valor a cada visita)
+    n += (phash(p.id + ":vont:" + (c.season || 1)) % 21) - 10;
+    n = Math.max(0, Math.min(100, Math.round(n)));
+    return { n: n, por: por };
+  }
+  // o que a sua proposta soma na vontade dele
+  function bonusProposta(c, p, terms, demand) {
+    var b = 0;
+    if (demand > 0) {
+      var acima = terms.wage / demand;
+      if (acima >= 1.6) b += 26; else if (acima >= 1.3) b += 16; else if (acima >= 1.1) b += 8;
+      else if (acima < 0.95) b -= 10;
+    }
+    if (terms.role === "estrela") b += 14;
+    else if (terms.role === "titular") b += 6;
+    else if (terms.role === "rodizio") b -= 10;
+    else if (terms.role === "promessa") b -= (p.age || 25) <= 21 ? 0 : 14;
+    if (terms.years >= 4) b += 4; else if (terms.years <= 1) b -= 6;
+    return b;
+  }
+  function fraseRecusa(p, v) {
+    var m = v.por.length ? v.por[0] : null;
+    if (m === "vestir a camisa do maior rival") return "“Não vou vestir essa camisa. Torci contra esse clube a vida toda.”";
+    if (m === "ele se vê num clube maior") return "“Agradeço o interesse, mas o meu momento pede um clube maior.”";
+    if (m === "o clube é pequeno para ele") return "“Não é o projeto que eu imaginei para agora.”";
+    if (m === "sair de um clube maior pesa") return "“Sair de onde estou para aí seria um passo atrás.”";
+    if (m === "é jovem e quer jogar") return "“Preciso jogar. Não quero ficar no banco.”";
+    return "“Obrigado, mas não me convenceu. Não vou assinar.”";
+  }
   // EMPRESÁRIOS: cada jogador tem um agente que influencia salário e cobra comissão
   var AGENT_NAMES = ["Jorge Vendas", "R. Pimenta", "V. Struth", "K. Joorab", "F. Pastorello", "G. Bertolucci", "C. Leão", "André Cury", "Mino R.", "P. Zorc"];
   var AGENT_TYPES = [
@@ -3863,8 +3926,17 @@
       var pn = TM.disp.panel(c, "⚔️ Concorrência por " + p.name, BRACE.suitors, { hint: BRACE.lost ? "Você perdeu a disputa." : "Se demorar ou oferecer pouco, outro clube pode fechar antes." });
       if (pn) braceBox.appendChild(pn);
     }
-    var negTension = stance.isKey ? "high" : (stance.willSell ? "low" : "mid");
-    var negTLbl = negTension === "low" ? "Aberto a negociar" : negTension === "high" ? "Peça-chave — difícil" : "Vai resistir";
+    // O selo do topo tem que dizer a MESMA coisa que a tela mostra embaixo.
+    // Antes ele saía só da postura do clube e ignorava os três bloqueios reais
+    // (intransferível, só pela cláusula, rival), então dava para ler
+    // "Aberto a negociar" em cima e "não negocia" logo abaixo.
+    var bloqueio = null;
+    if (isUntransferable(p)) bloqueio = "Intransferível";
+    else if (clauseMode === "only") bloqueio = "Só pela cláusula";
+    else if (rivalInfo) bloqueio = "Não negocia com rival";
+    if (bloqueio) { stance.willSell = false; stance.isKey = true; }
+    var negTension = bloqueio ? "high" : (stance.isKey ? "high" : (stance.willSell ? "low" : "mid"));
+    var negTLbl = bloqueio ? bloqueio : (negTension === "low" ? "Aberto a negociar" : negTension === "high" ? "Peça-chave — difícil" : "Vai resistir");
     screen.appendChild(el("div", { class: "nego2-call" }, [
       (TM.img && TM.img.clubImg ? TM.img.clubImg(sellClub, "nego2-crest") : el("span", { class: "nego2-crest" })),
       el("div", { class: "nego2-callinfo" }, [
@@ -4260,6 +4332,18 @@
     screen.appendChild(panel);
     var quote = el("div", { class: "nego-quote", text: p.name + ": “Quero cerca de " + money(c, demand) + " por ano e um papel de destaque.”" });
     panel.appendChild(quote);
+    // disposição dele: aparece antes de você propor, para a recusa nunca ser um susto
+    var VONT = vontadeDe(c, p, NEGO);
+    NEGO.tentativas = NEGO.tentativas || 0;
+    var vFaixa = VONT.n >= 70 ? "sim" : VONT.n >= 50 ? "talvez" : VONT.n >= 32 ? "duvida" : "nao";
+    var vTxt = { sim: "Quer vir", talvez: "Disposto a ouvir", duvida: "Em dúvida", nao: "Difícil convencer" }[vFaixa];
+    panel.appendChild(el("div", { class: "vont-line v-" + vFaixa }, [
+      el("span", { class: "vont-dot" }),
+      el("div", { class: "vont-info" }, [
+        el("div", { class: "vont-t", text: "Disposição: " + vTxt }),
+        el("div", { class: "vont-s", text: VONT.por.length ? "Pesa contra: " + VONT.por.join(" · ") : "Salário e função decidem." })
+      ])
+    ]));
     if (NEGO.viaClause) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📜 Cláusula de rescisão depositada" }), el("span", { class: "deal-val", text: money(c, NEGO.fee || 0) }) ]));
     var isPre = NEGO.type === "pre", luvas = isPre ? r2(demand * 0.5) : 0;
     if (isPre) panel.appendChild(el("div", { class: "deal-line" }, [ el("span", { class: "deal-lbl", text: "📝 Pré-contrato — chega na próxima temporada, sem taxa · luvas (bônus de assinatura)" }), el("span", { class: "deal-val", text: money(c, luvas) }) ]));
@@ -4318,6 +4402,23 @@
       var clFactor = clMult ? (clMult <= 1.5 ? 0.85 : clMult >= 4 ? 1.1 : 1) : 1;
       var wageOk = terms.wage >= demand * (terms.role === "promessa" || terms.role === "rodizio" ? 1.15 : 0.9) * clFactor;
       var roleOk = !((p.overall >= 80 && (terms.role === "rodizio" || terms.role === "promessa")));
+      // dinheiro não compra tudo: ele ainda precisa querer vir
+      var quer = VONT.n + bonusProposta(c, p, terms, demand);
+      if (wageOk && roleOk && quer < 55) {
+        NEGO.tentativas++;
+        quote.className = "nego-quote angry";
+        if (NEGO.tentativas >= 3) {
+          quote.textContent = p.name + ": “Já disse que não. Vamos parar por aqui.”";
+          actionWrap.innerHTML = "";
+          actionWrap.appendChild(TM.ui.button("← Voltar ao mercado", function () { NEGO = null; TM.ui.go("coach-market"); }, "btn"));
+          TM.notify.push(c, { icon: "🚪", title: "Negociação fracassada", text: p.name + " recusou a proposta do " + (TM.data.club(c.teamId) || {}).name + " e encerrou a conversa." });
+          TM.storage.saveCoachCareer(c);
+          return;
+        }
+        var falta = 55 - quer;
+        quote.textContent = p.name + ": " + fraseRecusa(p, VONT) + (falta <= 14 ? " (um salário melhor ou um papel maior ainda podem virar isso)" : "");
+        return;
+      }
       if (wageOk && roleOk) {
         // fechado!
         var isLoan = NEGO.type === "loan" || NEGO.type === "loanBuy";
