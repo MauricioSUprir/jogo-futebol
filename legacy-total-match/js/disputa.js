@@ -21,6 +21,19 @@
   function hash(s) { var h = 2166136261; s = String(s); for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function budgetOf(id) { var r = rating(id); return r >= 87 ? 180 : r >= 84 ? 120 : r >= 81 ? 80 : r >= 78 ? 50 : r >= 75 ? 30 : r >= 72 ? 16 : r >= 68 ? 8 : 4; }
   function leagueOf(id) { var cl = TM.data.club(id); return cl ? cl.leagueId : null; }
+  // o clube precisa MESMO de alguém nessa posição? Sem necessidade, ninguém
+  // entra numa disputa só para atrapalhar.
+  var ALVO_SETOR = { GK: 3, DF: 8, MF: 8, FW: 5 };
+  function setorDe(p) { var g = p && p.pos; return (g === "GK" || g === "DF" || g === "MF" || g === "FW") ? g : "MF"; }
+  function precisaDe(clubId, p) {
+    try {
+      var g = setorDe(p), elenco = TM.data.clubPlayers(clubId);
+      var qtd = 0, melhor = 0;
+      elenco.forEach(function (x) { if (setorDe(x) === g) { qtd++; if (x.overall > melhor) melhor = x.overall; } });
+      if (qtd < ALVO_SETOR[g]) return true;                 // falta gente no setor
+      return (p.overall || 0) > melhor + 1;                 // ou ele é melhor que o que eles têm
+    } catch (e) { return false; }
+  }
 
   /* ---------- quem se interessa por um jogador ---------- */
   // Lista estável (mesma semente por jogador+temporada). Rival do dono quase nunca aparece.
@@ -128,13 +141,22 @@
   // st.race = { suitors:[...], round, lost }
   function buyRace(c, p, sellClub) {
     var val = cur(c, TM.data.marketValue(p));
+    var valEur = TM.data.marketValue(p);
     var list = suitorsFor(c, p, { ownerId: sellClub ? sellClub.id : p.clubId, exclude: [c.teamId], max: 3 });
     var suitors = list.map(function (s, i) {
       var h = s.h;
-      var teto = R(val * (1.0 + ((h >>> 5) % 80) / 100));
-      var ativo = (h % 100) < (i === 0 ? 58 : 34);
-      return { id: s.id, name: s.name, ceil: teto, bid: ativo ? R(Math.min(teto, val * (0.85 + ((h >>> 9) % 30) / 100))) : 0,
-        stance: ativo ? "in" : "watch", noAuction: ((h >>> 13) % 100) < 25, rival: isRival(c, s.id) };
+      // TETO: ninguém paga qualquer coisa. Quem tem caixa de sobra estica mais;
+      // clube apertado para logo acima do valor de mercado.
+      var folga = budgetOf(s.id) / Math.max(1, valEur / 1000000);
+      var teto = R(val * (1.04 + Math.min(0.5, folga * 0.06) + ((h >>> 5) % 22) / 100));
+      // QUEM ENTRA: a maioria só observa. Entra de cara quem precisa do setor
+      // e tem dinheiro — e mesmo assim não é sempre.
+      var precisa = precisaDe(s.id, p);
+      var chance = (i === 0 ? 26 : 12) + (precisa ? 18 : 0) + (folga >= 3 ? 8 : 0);
+      var ativo = (h % 100) < chance;
+      return { id: s.id, name: s.name, ceil: teto, precisa: precisa,
+        bid: ativo ? R(Math.min(teto, val * (0.85 + ((h >>> 9) % 30) / 100))) : 0,
+        stance: ativo ? "in" : "watch", noAuction: ((h >>> 13) % 100) < 40, rival: isRival(c, s.id) };
     });
     return { suitors: suitors, round: 0, lost: null };
   }
@@ -146,20 +168,37 @@
       if (s.stance === "out" || race.lost) return;
       var h = hash("br" + p.id + s.id + race.round + Math.floor(myBid * 100));
       if (s.stance === "watch") {
-        if (myBid <= s.ceil * 0.85 && (h % 100) < 30) { s.stance = "in"; s.bid = R(Math.min(s.ceil, myBid * 1.05)); news.push(s.name + " entrou na disputa e ofereceu " + money(c, s.bid) + "."); }
+        // entrar no meio da disputa é raro: só quem precisa do setor e vê preço baixo
+        var chEnt = (s.precisa ? 14 : 5);
+        if (myBid <= s.ceil * 0.8 && (h % 100) < chEnt) { s.stance = "in"; s.bid = R(Math.min(s.ceil, myBid * 1.05)); news.push(s.name + " entrou na disputa e ofereceu " + money(c, s.bid) + "."); }
+        else if ((h % 100) > 92) { s.stance = "out"; news.push(s.name + " avisou que não vai entrar na disputa."); }
         return;
       }
       if (myBid > s.ceil) { s.stance = "out"; news.push(s.name + " desistiu: a disputa passou do teto deles."); return; }
       if (s.noAuction) { s.stance = "final"; news.push(s.name + " avisou que não entra em leilão e manteve " + money(c, s.bid) + "."); return; }
-      if ((h % 100) < 55) { var novo = R(Math.min(s.ceil, Math.max(s.bid * 1.1, myBid * 1.04))); if (novo > s.bid) { s.bid = novo; news.push(s.name + " cobriu a sua proposta: " + money(c, s.bid) + "."); } }
+      // cobrir custa caro: quanto mais perto do teto, menos vontade de subir
+      var espaco = (s.ceil - s.bid) / Math.max(0.01, s.ceil);
+      var chCob = Math.round(18 + espaco * 45) + (s.precisa ? 10 : 0);
+      if ((h % 100) < chCob) { var novo = R(Math.min(s.ceil, Math.max(s.bid * 1.08, myBid * 1.04))); if (novo > s.bid) { s.bid = novo; news.push(s.name + " cobriu a sua proposta: " + money(c, s.bid) + "."); } }
+      else if (race.round >= 3 && (h % 100) > 88) { s.stance = "out"; news.push(s.name + " saiu da disputa e foi atrás de outro nome."); }
     });
     // o clube dono pode fechar com quem pagar bem mais que você
     var best = null;
     race.suitors.forEach(function (s) { if (s.stance !== "out" && s.bid > 0 && (!best || s.bid > best.bid)) best = s; });
-    if (best && best.bid > myBid * 1.22 && race.round >= 2 && !race.lost) {
+    if (best && best.bid > myBid * 1.15 && race.round >= 2 && !race.lost) {
       race.lost = best;
+      // quem ganhou a disputa LEVA o jogador de verdade: ele muda de clube no
+      // mundo. Antes a notícia dizia que tinha perdido e o jogador continuava lá.
+      var mudou = false;
+      try { mudou = !!C().executeWorldTransfer(c, p.id, best.id); } catch (e) {}
       news.push("O " + (sellClub ? sellClub.name : "clube") + " fechou com o " + best.name + " por " + money(c, best.bid) + ".");
-      TM.notify.push(c, { icon: "❌", title: "Alvo perdido", news: true, text: best.name + " levou " + p.name + " por " + money(c, best.bid) + ". Você ficou para trás na disputa." });
+      TM.notify.push(c, { icon: "❌", title: "Alvo perdido", news: true,
+        text: best.name + " levou " + p.name + " por " + money(c, best.bid) + ". Você ficou para trás na disputa" + (mudou ? " — ele já foi anunciado pelo novo clube." : ".") });
+      try {
+        if (mudou && TM.social && TM.social.marketPost) {
+          TM.social.marketPost(c, { icon: "✍️", title: "Fechado", text: best.name + " anuncia " + p.name + " (" + (p.overall || "") + ") por " + money(c, best.bid) + "." });
+        }
+      } catch (e) {}
     }
     return news;
   }
