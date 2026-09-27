@@ -144,11 +144,12 @@
   }
   function penWin(s, a, b) { var ra = ratingFor(s, a), rb = ratingFor(s, b); return Math.random() < ra / (ra + rb) ? a : b; }
   function resolveTie(s, tie) { var r = simTeams(s, tie[0], tie[1]); var hs = r.score[0], as = r.score[1]; tie[2] = hs; tie[3] = as; tie[4] = hs > as ? tie[0] : as > hs ? tie[1] : penWin(s, tie[0], tie[1]); return r; }
+  // Empatou no agregado, vai para prorrogação e pênaltis. A regra do gol fora
+  // acabou em 2021 e estava decidindo confronto às escondidas.
   function decideTwoLeg(s, tie, forced) {
     var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7]; tie[2] = aggA; tie[3] = aggB;
     if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
-    var awayA = tie[8], awayB = tie[6];
-    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : (forced || penWin(s, tie[0], tie[1]));
+    tie[4] = forced || penWin(s, tie[0], tie[1]);
   }
   // pênaltis na competição avulsa? { aId, bId } ou null
   function userPenContextComp(s, hs, as) {
@@ -157,8 +158,7 @@
       if (s.twoLeg) {
         if (tie[9] !== 1) return null;
         var aggA = tie[5] + as, aggB = tie[6] + hs;
-        if (aggA !== aggB) return null;
-        return as === tie[6] ? { aId: tie[0], bId: tie[1] } : null;
+        return aggA === aggB ? { aId: tie[0], bId: tie[1], agg: [aggA, aggB] } : null;
       }
       return hs === as ? { aId: tie[0], bId: tie[1] } : null;
     }
@@ -523,17 +523,34 @@
       onBack: function () { TM.ui.go("compmode-hub"); },
       onDone: function () {
         var hs = result.score[0], as = result.score[1];
-        var penCtx = hs === as ? userPenContextComp(s, hs, as) : null;
-        function finish(penWinnerId) {
-          applyUser(s, hs, as, penWinnerId); save(s);
-          TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: hs, as: as, ko: nx.ko, penWinName: penWinnerId ? (penWinnerId === nx.homeId ? teamA.name : teamB.name) : null });
+        function finish(fh, fa, penWinnerId, prorrog) {
+          applyUser(s, fh, fa, penWinnerId); save(s);
+          TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: fh, as: fa, ko: nx.ko, prorrog: !!prorrog,
+            penWinName: penWinnerId ? (penWinnerId === nx.homeId ? teamA.name : teamB.name) : null });
         }
-        if (penCtx) {
-          var tA = teamFor(s, penCtx.aId), tB = teamFor(s, penCtx.bId);
-          var shoot = TM.engine.shootout(tA, tB);
-          var winId = shoot.winner === 0 ? penCtx.aId : penCtx.bId;
-          TM.ui.go("pen-shootout", { teamA: tA, teamB: tB, shoot: shoot, title: "Pênaltis · " + s.name, onDone: function () { finish(winId); } });
-        } else { finish(null); }
+        // Empatou (na partida ou no AGREGADO): prorrogação e, se persistir, pênaltis.
+        // Antes isso só era conferido quando a partida em si empatava, então um
+        // 1x0 na volta que igualava o agregado passava batido e o confronto era
+        // decidido por baixo dos panos.
+        var ctx = userPenContextComp(s, hs, as);
+        if (!ctx) { finish(hs, as, null); return; }
+        var etOpts = {}; Object.keys(simOpts).forEach(function (k) { etOpts[k] = simOpts[k]; });
+        etOpts.startMinute = 91; etOpts.endMinute = 120; etOpts.startScore = [hs, as];
+        var et = TM.engine.simulate(teamA, teamB, etOpts);
+        var hs2 = et.score[0], as2 = et.score[1];
+        var ctx2 = userPenContextComp(s, hs2, as2);     // ainda empatado depois da prorrogação?
+        TM.ui.go("prorrogacao", {
+          a: teamA.name, b: teamB.name, de: [hs, as], para: [hs2, as2], ev: et.events, title: s.name,
+          agg: ctx.agg || null, pen: !!ctx2,
+          onDone: function () {
+            if (!ctx2) { finish(hs2, as2, null, true); return; }
+            var tA = teamFor(s, ctx2.aId), tB = teamFor(s, ctx2.bId);
+            var shoot = TM.engine.shootout(tA, tB);
+            var winId = shoot.winner === 0 ? ctx2.aId : ctx2.bId;
+            TM.ui.go("pen-shootout", { teamA: tA, teamB: tB, shoot: shoot, title: "Pênaltis · " + s.name,
+              onDone: function () { finish(hs2, as2, winId, true); } });
+          }
+        });
       }
     });
   });
@@ -545,7 +562,7 @@
     var win = p.hs > p.as ? p.a : p.as > p.hs ? p.b : null;
     screen.appendChild(E("div", { class: "result-hero" }, [
       E("div", { class: "result-score" }, [ E("span", { class: "rs-team", text: p.a }), E("span", { class: "rs-num", text: p.hs + " × " + p.as }), E("span", { class: "rs-team", text: p.b }) ]),
-      E("div", { class: "result-tag", text: win ? "🏆 " + win + " venceu" : p.penWinName ? "🎯 " + p.penWinName + " venceu nos pênaltis" : (p.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate") })
+      E("div", { class: "result-tag", text: p.penWinName ? "🎯 " + p.penWinName + " venceu nos pênaltis" : win ? "🏆 " + win + " venceu" + (p.prorrog ? " na prorrogação" : "") : (p.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate") })
     ]));
     screen.appendChild(E("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("compmode-hub"); }, "btn primary") ]));
   });

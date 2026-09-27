@@ -251,8 +251,8 @@
     var aggA = tie[5] + tie[8], aggB = tie[6] + tie[7];   // a: ga1+ga2 · b: gb1+gb2
     tie[2] = aggA; tie[3] = aggB;
     if (aggA !== aggB) { tie[4] = aggA > aggB ? tie[0] : tie[1]; return; }
-    var awayA = tie[8], awayB = tie[6];                   // gols fora: a marcou na volta; b marcou na ida
-    tie[4] = awayA > awayB ? tie[0] : awayB > awayA ? tie[1] : (forcedPenWinner || penWin(ctx, tie[0], tie[1]));
+    // agregado empatado -> prorrogação e pênaltis (a regra do gol fora acabou em 2021)
+    tie[4] = forcedPenWinner || penWin(ctx, tie[0], tie[1]);
   }
   function resolveTieTwoLeg(ctx, tie) {
     var l1 = ctx.sim(tie[0], tie[1]); tie[5] = l1.score[0]; tie[6] = l1.score[1];   // a em casa
@@ -325,8 +325,7 @@
     if (duasMaos(state, state.ko.rounds[state.ko.roundIndex].length)) {
       if (tie[9] !== 1) return null;
       var aggA = tie[5] + as, aggB = tie[6] + hs;
-      if (aggA !== aggB) return null;
-      return as === tie[6] ? { aId: tie[0], bId: tie[1] } : null;
+      return aggA === aggB ? { aId: tie[0], bId: tie[1], agg: [aggA, aggB] } : null;
     }
     return hs === as ? { aId: tie[0], bId: tie[1] } : null;
   }

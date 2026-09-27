@@ -60,7 +60,7 @@
     // jogos ativos (em andamento) — atalho pra continuar
     var active = [];
     if (TM.storage.coachCareer()) active.push({ type: "coach", data: TM.storage.coachCareer() });
-    if (TM.storage.playerCareer()) active.push({ type: "player", data: TM.storage.playerCareer() });
+    // "Carreira de Jogador" saiu: virou o Rumo ao Estrelato, que faz a mesma coisa
     if (TM.storage.read("compmode", null)) active.push({ type: "comp", data: TM.storage.read("compmode", null) });
 
     if (active.length) {

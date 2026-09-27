@@ -135,7 +135,6 @@
   }
 
   TM.ui.register("coach-news", function (screen) { renderNews(screen, "coach"); });
-  TM.ui.register("player-news", function (screen) { renderNews(screen, "player"); });
 
   TM.news = { feed: feed };
 })(window);
