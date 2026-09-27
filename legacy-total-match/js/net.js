@@ -623,6 +623,68 @@
     ref.once("value").then(function (s) { var v = s.val(); if (v && v.host === net.me.uid) ref.remove(); else ref.child("players/" + net.me.uid).remove(); });
   };
 
+  /* ---- Copa Online: entra por código, sorteia o mata-mata, bot preenche vaga ---- */
+  net.criarCopa = function (size, meuTimeId, cb, tries) {
+    if (!net.me) { cb(null, "sem conexão"); return; }
+    tries = tries || 0;
+    var code = genCode();
+    var ref = net._db.ref("copas/" + code);
+    ref.transaction(function (cur) {
+      if (cur === null) return { host: net.me.uid, hostName: net.me.name, size: size, status: "lobby", createdAt: firebaseNow() };
+      return;
+    }, function (err, committed) {
+      if (!err && committed) {
+        ref.child("players/" + net.me.uid).set({ name: net.me.name, num: net.me.number || null, teamId: meuTimeId || null })
+          .then(function () { cb(code, null); });
+      } else if (tries < 6) net.criarCopa(size, meuTimeId, cb, tries + 1);
+      else cb(null, "não consegui criar a sala");
+    });
+  };
+  net.entrarCopa = function (code, cb) {
+    if (!net.me) { cb(null, "sem conexão"); return; }
+    code = (code || "").trim().toUpperCase();
+    var ref = net._db.ref("copas/" + code);
+    ref.once("value").then(function (snap) {
+      var v = snap.val();
+      if (!v) { cb(null, "Competição não encontrada."); return; }
+      var jaEstou = !!(v.players && v.players[net.me.uid]);
+      if (v.status !== "lobby" && !jaEstou) { cb(null, "O sorteio já foi feito."); return; }
+      var n = v.players ? Object.keys(v.players).length : 0;
+      if (n >= v.size && !jaEstou) { cb(null, "Sala cheia (" + n + "/" + v.size + ")."); return; }
+      ref.child("players/" + net.me.uid).update({ name: net.me.name, num: net.me.number || null })
+        .then(function () { cb(code, null); }).catch(function (e) { cb(null, e.message); });
+    }).catch(function (e) { cb(null, e.message); });
+  };
+  net.copaTime = function (code, teamId) {
+    if (!net.me) return;
+    net._db.ref("copas/" + code + "/players/" + net.me.uid + "/teamId").set(teamId || null);
+  };
+  net.ouvirCopa = function (code, cb) {
+    var ref = net._db.ref("copas/" + code);
+    var h = ref.on("value", function (s) { cb(s.val()); });
+    return function parar() { ref.off("value", h); };
+  };
+  net.sortearCopa = function (code, chave, cb) {
+    net._db.ref("copas/" + code).update({ status: "sorteado", chave: chave, sorteioAt: firebaseNow() })
+      .then(function () { cb && cb(true); }).catch(function () { cb && cb(false); });
+  };
+  // resultado de um confronto: o primeiro a gravar manda (evita dois donos do mesmo jogo)
+  net.gravarResultadoCopa = function (code, chaveId, res, cb) {
+    var ref = net._db.ref("copas/" + code + "/res/" + chaveId);
+    ref.transaction(function (cur) { return cur === null ? res : undefined; }, function (err, committed, snap) {
+      cb && cb(!err && committed, snap ? snap.val() : null);
+    });
+  };
+  net.sairCopa = function (code) {
+    if (!net.me || !code) return;
+    var ref = net._db.ref("copas/" + code);
+    ref.once("value").then(function (s) {
+      var v = s.val(); if (!v) return;
+      if (v.host === net.me.uid && v.status === "lobby") ref.remove();
+      else if (v.status === "lobby") ref.child("players/" + net.me.uid).remove();
+    });
+  };
+
   // ---- Partida Aleatória (matchmaking): acha um oponente na fila ----
   // fila de 1 vaga: quem chega e acha alguém esperando, "pega" e cria a sala;
   // quem chega e a vaga está vazia, espera até ser pego.

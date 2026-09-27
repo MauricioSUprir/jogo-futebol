@@ -63,6 +63,7 @@
       body.appendChild(el("div", { class: "hub-actions" }, [
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-friends"); } } }, [ el("span", { class: "hub-ic", text: "👥" }), el("span", { text: "Central de amigos" }), reqBadge ]),
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-play"); } } }, [ el("span", { class: "hub-ic", text: "⚔️" }), el("span", { text: "Partida online" }) ]),
+        el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("copa"); } } }, [ el("span", { class: "hub-ic", text: "🏆" }), el("span", { text: "Copa Online" }) ]),
         el("button", { class: "hub-btn", on: { click: function () { TM.ui.go("online-ranking"); } } }, [ el("span", { class: "hub-ic", text: "🏅" }), el("span", { text: "Ranking global" }) ])
       ]));
       // badge de solicitações pendentes (atualiza ao vivo enquanto o hub estiver aberto)
