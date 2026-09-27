@@ -7,7 +7,7 @@
   var el = TM.ui.el;
   var N = function () { return TM.net; };
 
-  var SYNC_KEYS = ["coach", "player", "rae", "compmode", "saves", "buildchallenge", "settings"];
+  var SYNC_KEYS = ["coach", "rae", "compmode", "saves", "buildchallenge", "settings"];
   var EDS = ["public", "pro"];
   function profile() { return TM.storage.accountProfile(); }             // { email, name, photo }
   function setProfile(p) { TM.storage.saveAccountProfile(p || null); }
@@ -123,7 +123,7 @@
     try { EDS.forEach(function (ed) { N().syncRef(watching, ed).off(); }); } catch (e) {}
     watching = null;
   }
-  var LIVE_SCREENS = ["modes", "coach", "coach-hub", "profile", "saves", "player", "player-hub", "compmode"];
+  var LIVE_SCREENS = ["modes", "coach", "coach-hub", "profile", "saves", "rae", "rae-hub", "compmode"];
   function notifyChanged(list) {
     var careers = list.some(function (x) { return /\/(coach|player|compmode|saves|buildchallenge)$/.test(x); });
     try { TM.ui.toast(careers ? "☁️ Progresso atualizado de outro aparelho" : "☁️ Configurações sincronizadas"); } catch (e) {}

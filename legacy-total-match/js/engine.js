@@ -138,6 +138,8 @@
     }
 
     var startMinute = opts.startMinute || 1;
+    // prorrogação: o mesmo motor roda os minutos 91-120 quando pedido
+    var endMinute = opts.endMinute || 90;
     var events = startMinute <= 1 ? [{ minute: 0, type: "kickoff", text: teamA.name + " x " + teamB.name }] : [];
     var score = opts.startScore ? opts.startScore.slice() : [0, 0];
     var shots = [0, 0], onTarget = [0, 0];
@@ -242,8 +244,9 @@
     if (uSide !== 1) planSubs(teamB, 1);
     subPlan.sort(function (a, b) { return a.minute - b.minute; });
 
-    for (var m = startMinute; m <= 90; m++) {
+    for (var m = startMinute; m <= endMinute; m++) {
       if (m === 45) events.push({ minute: 45, type: "half", score: score.slice(), text: "Fim do 1º tempo" });
+      if (m === 105) events.push({ minute: 105, type: "half", score: score.slice(), text: "Fim do 1º tempo da prorrogação" });
       // subs agendadas p/ este minuto
       for (var si = 0; si < subPlan.length; si++) {
         if (subPlan[si].minute === m) {
@@ -308,7 +311,8 @@
     }
 
     var possA = Math.max(30, Math.min(70, Math.round(50 + (A.midfield - B.midfield) * 0.8)));
-    events.push({ minute: 90, type: "full", score: score.slice(), text: "Fim de jogo!" });
+    events.push({ minute: endMinute, type: "full", score: score.slice(),
+                  text: endMinute > 90 ? "Fim da prorrogação!" : "Fim de jogo!" });
 
     var focusRating = null;
     if (focusId) {

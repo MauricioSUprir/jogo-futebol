@@ -747,8 +747,7 @@
     var MB = "assets/menu/";
     var SLIDES = [];
     SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Jogador", desc: "Crie o seu jogador e viva a carreira dele: clubes, seleção e aposentadoria.", cta: "JOGAR", route: "player", bg: MB + "match.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Rumo ao Estrelato", desc: "A semana é o jogo: energia, um concorrente com nome e um técnico com opinião.", cta: "JOGAR", route: "rae", bg: MB + "trophy.jpg" });
+    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Rumo ao Estrelato", desc: "Carreira de jogador: a semana é o jogo, com energia, concorrente e um técnico de opinião.", cta: "JOGAR", route: "rae", bg: MB + "trophy.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
     SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: MB + "trophy.jpg" });
     SLIDES.push({ key: "ut", eyebrow: "CARTAS", name: "Total Ultimate", desc: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", cta: "JOGAR", route: "ut", bg: MB + "director.jpg" });
@@ -759,7 +758,7 @@
       { icon: "⬤", name: "Total Ultimate", route: "ut" }, { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
       { icon: "🏆", name: "Copa Online", route: "copa" }, { icon: "🪙", name: "Arena Coins", route: "arena" },
       { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
-      { icon: "🌟", name: "Carreira de Jogador", route: "player" }, { icon: "⭐", name: "Rumo ao Estrelato", route: "rae" },
+      { icon: "🌟", name: "Rumo ao Estrelato", route: "rae" },
       { icon: "💾", name: "Carreiras", route: "saves" }, { icon: "🎖️", name: "Info", route: "competicoes" },
       { icon: "⚙️", name: "Config", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
     ] });

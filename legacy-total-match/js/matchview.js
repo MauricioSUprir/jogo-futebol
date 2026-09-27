@@ -317,12 +317,26 @@
           var slot = slots[i] || [null, 50, 50];
           var isOff = !!sentOffIds()[pl.id];
           pitch.appendChild(el("button", { class: "pl-chip" + (selOut.idx === i ? " picked" : "") + (isOff ? " sent-off" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%",
-            on: { click: function () { if (isOff) { TM.ui.toast("🟥 " + pl.name + " foi expulso: não pode ser substituído (o time segue com um a menos)."); return; } selOut.idx = (selOut.idx === i ? null : i); renderSubs(); } } },
+            on: { click: function () {
+              if (isOff) { TM.ui.toast("🟥 " + pl.name + " foi expulso: não pode ser substituído (o time segue com um a menos)."); return; }
+              // dois titulares selecionados = TROCA DE POSIÇÃO. Não gasta substituição:
+              // ninguém sai do jogo, eles só trocam de lugar em campo.
+              if (selOut.idx != null && selOut.idx !== i) {
+                var j = selOut.idx;
+                var tmp = team.players[j]; team.players[j] = team.players[i]; team.players[i] = tmp;
+                selOut.idx = null; renderSubs();
+                TM.ui.toast("↔ " + shortP(team.players[i].name) + " e " + shortP(team.players[j].name) + " trocaram de posição");
+                return;
+              }
+              selOut.idx = (selOut.idx === i ? null : i); renderSubs();
+            } } },
             TM.ui.chipKids(pl, slot, { name: shortP(pl.name) + (isOff ? " 🟥" : ""), age: pl.age ? true : false })
           ));
         });
         subArea.appendChild(pitch);
-        subArea.appendChild(el("div", { class: "lineup-hint", text: selOut.idx != null ? "Toque num reserva para colocá-lo no lugar do titular." : "Toque num titular e depois num reserva para trocar." }));
+        subArea.appendChild(el("div", { class: "lineup-hint", text: selOut.idx != null
+          ? "Toque em OUTRO titular para trocarem de posição (não gasta substituição), ou num reserva para substituir."
+          : "Toque num titular. Depois: outro titular troca de posição com ele; um reserva entra no lugar dele." }));
         var benchWrap = el("div", { class: "pause-bench" }, [ el("div", { class: "sub-col-h", text: "Reservas" }) ]);
         team.players.slice(11, 24).forEach(function (pl, bi) {
           var row = TM.ui.playerRow(pl, {});
@@ -565,6 +579,37 @@
     if (!params || !params.shoot) { TM.ui.go((params && params.back) || "modes"); return; }
     if (params.compId) TM.ui.applyCompTheme(screen, params.compId);
     playShootout(screen, params);
+  });
+
+  /* ---- PRORROGAÇÃO: os 30 minutos a mais, antes dos pênaltis ---- */
+  TM.ui.register("prorrogacao", function (screen, params) {
+    if (!params) { TM.ui.go("modes"); return; }
+    var p = params, de = p.de || [0, 0], para = p.para || de;
+    var golsNovos = (p.ev || []).filter(function (e) { return e.type === "goal" && e.minute > 90; });
+    screen.appendChild(el("div", { class: "pror-wrap" }, [
+      el("div", { class: "pror-t", text: "⏱ PRORROGAÇÃO" }),
+      el("div", { class: "pror-s", text: "Empate no tempo normal — mais 30 minutos." }),
+      el("div", { class: "pror-placar" }, [
+        el("span", { class: "pror-time", text: p.a }),
+        el("span", { class: "pror-num", text: para[0] + " × " + para[1] }),
+        el("span", { class: "pror-time", text: p.b })
+      ]),
+      el("div", { class: "pror-antes", text: "no fim dos 90: " + de[0] + " × " + de[1]
+        + (p.agg ? "  ·  agregado " + p.agg[0] + " × " + p.agg[1] : "") }),
+      golsNovos.length
+        ? el("div", { class: "pror-lances" }, golsNovos.map(function (e) {
+            return el("div", { class: "pror-lance" }, [
+              el("span", { class: "pror-min", text: e.minute + "'" }),
+              el("span", { class: "pror-txt", text: e.text || "Gol!" })
+            ]);
+          }))
+        : el("div", { class: "pror-vazio", text: "Ninguém balançou a rede nos 30 minutos." })
+    ]));
+    screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button(p.pen ? "Ir para os pênaltis →" : "Continuar", function () {
+        if (p.onDone) p.onDone();
+      }, "btn primary big")
+    ]));
   });
 
   TM.matchview = { play: play, playShootout: playShootout };

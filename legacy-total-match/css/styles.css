@@ -4662,3 +4662,19 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .copa-dono { font-size: 10.5px; color: var(--text-dim); }
 .copa-gols { flex: 0 0 auto; font-size: 17px; font-weight: 900; color: var(--text); min-width: 18px; text-align: right; }
 .copa-pen { padding: 5px 11px; font-size: 11px; color: var(--text-dim); border-top: 1px solid var(--line); }
+
+/* prorrogação (os 30 minutos antes dos pênaltis) */
+.pror-wrap { max-width: 620px; margin: 24px auto 0; padding: 20px 16px; text-align: center;
+  border-radius: 16px; background: linear-gradient(160deg, var(--panel), var(--black-soft));
+  border: 1px solid var(--gold); }
+.pror-t { font-size: 15px; font-weight: 900; letter-spacing: 2px; color: var(--gold-light); }
+.pror-s { font-size: 12px; color: var(--text-dim); margin-top: 3px; }
+.pror-placar { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 16px 0 4px; flex-wrap: wrap; }
+.pror-time { font-size: 14px; font-weight: 700; color: var(--text); }
+.pror-num { font-size: 34px; font-weight: 900; color: var(--text); letter-spacing: 1px; }
+.pror-antes { font-size: 11.5px; color: var(--text-dim); }
+.pror-lances { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.pror-lance { display: flex; gap: 9px; padding: 8px 10px; border-radius: 10px; background: var(--black-soft); border: 1px solid var(--line); }
+.pror-min { flex: 0 0 auto; font-weight: 900; color: var(--gold-light); font-size: 12.5px; }
+.pror-txt { font-size: 12.5px; color: var(--text); line-height: 1.35; }
+.pror-vazio { margin-top: 14px; font-size: 12.5px; color: var(--text-dim); }
