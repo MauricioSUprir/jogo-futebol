@@ -2345,67 +2345,71 @@
     "ar/Argentinos Juniors": [
       {n:"Luciano Sánchez",num:3,p:"DF",q:"LD",a:32,o:69,t:69,v:50000,nat:"Argentina"},
       {n:"Érik Godoy",num:4,p:"DF",q:"ZAG",a:33,o:70,t:70,v:800000,nat:"Argentina"},
-      {n:"Lucas Gómez",num:8,p:"MF",q:"VOL",a:22,o:61,t:67,v:950000,nat:"Argentina"},
       {n:"Gastón Verón",num:9,p:"FW",q:"CA",a:25,o:71,t:75,v:1000000,nat:"Argentina"},
-      {n:"Alan Lescano",num:10,p:"MF",q:"MEI",a:25,o:73,t:76,v:5000000,nat:"Argentina"},
       {n:"Nicolás Oroz",num:11,p:"MF",q:"MEI",a:32,o:73,t:74,v:1000000,nat:"Argentina"},
       {n:"Gonzalo Siri",num:12,p:"GK",q:"GOL",a:23,o:62,t:66,v:250000,nat:"Argentina"},
       {n:"Kevin Coronel",num:14,p:"DF",q:"LD",a:22,o:62,t:68,v:200000,nat:"Argentina"},
       {n:"Francisco Álvarez",num:16,p:"DF",q:"ZAG",a:26,o:74,t:77,v:4500000,nat:"Argentina"},
       {n:"Franco Paredes",num:17,p:"DF",q:"ZAG",a:27,o:68,t:72,v:2500000,nat:"Argentina"},
-      {n:"Leandro Fernández",num:18,p:"FW",q:"CA",a:35,o:73,t:73,v:1000000,nat:"Argentina"},
       {n:"Sebastián Prieto",num:20,p:"DF",q:"LE",a:33,o:69,t:71,v:275000,nat:"Argentina"},
-      {n:"Gabriel Florentín",num:21,p:"MF",q:"MEI",a:27,o:68,t:68,v:500000,nat:"Argentina"},
-      {n:"Hernán López Muñoz",num:23,p:"MF",q:"MEI",a:26,o:73,t:75,v:5000000,nat:"Argentina"},
+      {n:"Gabriel Florentín",num:10,p:"MF",q:"MEI",a:27,o:68,t:68,v:500000,nat:"Argentina"},
+      {n:"Hernán López Muñoz",num:8,p:"MF",q:"MEI",a:26,o:73,t:75,v:5000000,nat:"Argentina"},
       {n:"Brayan Cortés",num:25,p:"GK",q:"GOL",a:31,o:72,t:72,v:2000000,nat:"Chile"},
       {n:"Claudio Bravo",num:26,p:"DF",q:"LE",a:29,o:68,t:69,v:600000,nat:"Argentina"},
       {n:"Tomás Molina",num:27,p:"FW",q:"CA",a:31,o:71,t:71,v:2500000,nat:"Argentina"},
       {n:"Joaquín Gho",num:28,p:"MF",q:"MC",a:23,o:67,t:71,v:2500000,nat:"Argentina"},
       {n:"Emiliano Viveros",num:29,p:"FW",q:"PE",a:24,o:62,t:69,v:800000,nat:"Argentina"},
-      {n:"Iván Morales",num:30,p:"FW",q:"CA",a:27,o:63,t:71,v:2000000,nat:"Chile"},
       {n:"Gino Infantino",num:32,p:"MF",q:"MC",a:23,o:71,t:75,v:350000,nat:"Argentina"},
-      {n:"Enzo Pérez",num:33,p:"MF",q:"VOL",a:40,o:74,t:74,v:1500000,nat:"Argentina"},
-      {n:"Matías Giménez",num:34,p:"FW",q:"CA",a:27,o:70,t:71,v:1700000,nat:"Argentina"},
-      {n:"Diego Porcel",num:47,p:"FW",q:"CA",a:21,o:54,t:61,v:800000,nat:"Argentina"},
+      {n:"Matías Giménez",num:19,p:"FW",q:"CA",a:27,o:70,t:71,v:1700000,nat:"Argentina"},
+      {n:"Diego Porcel",num:7,p:"FW",q:"CA",a:21,o:54,t:61,v:800000,nat:"Argentina"},
       {n:"Facundo Jainikoski",num:48,p:"FW",q:"CA",a:20,o:62,t:70,v:1200000,nat:"Argentina"},
       {n:"Ryōga Kida",num:49,p:"FW",q:"CA",a:21,o:56,t:63,v:100000,nat:"Japan"},
-      {n:"Diego Rodríguez",num:50,p:"GK",q:"GOL",a:37,o:74,t:74,v:900000,nat:"Argentina"},
-      {n:"Facundo Gutiérrez",num:0,p:"MF",q:"VOL",a:29,o:68,t:70,v:2500000,nat:"Argentina"},
-      {n:"Damián Batallini",num:0,p:"FW",q:"CA",a:30,o:71,t:71,v:2000000,nat:"Argentina"}
+      {n:"Facundo Gutiérrez",num:15,p:"MF",q:"VOL",a:29,o:68,t:70,v:2500000,nat:"Argentina"},
+      {n:"Damián Batallini",num:99,p:"FW",q:"CA",a:30,o:71,t:71,v:2000000,nat:"Argentina"},
+      {n:"Franco Vázquez",num:6,p:"MF",q:"MEI",a:37,o:74,t:74,v:600000,nat:"Argentina"},
+      {n:"Alan Núñez",num:30,p:"DF",q:"ZAG",a:21,o:60,t:66,v:800000,nat:"Paraguay"},
+      {n:"Federico Mancuello",num:11,p:"MF",q:"MEI",a:37,o:72,t:72,v:6500000,nat:"Argentina"},
+      {n:"Agustín Mangiaut",num:1,p:"GK",q:"GOL",a:25,o:71,t:73,v:2800000},
+      {n:"Facundo Carrizo",num:5,p:"MF",q:"ME",a:28,o:71,t:73,v:1500000},
+      {n:"Santino Gianini",num:13,p:"DF",q:"LE",a:24,o:68,t:73,v:1400000},
+      {n:"Alan Alcaraz",num:35,p:"FW",q:"SA",a:20,o:68,t:76,v:1500000},
+      {n:"Gastón Bouhier",num:36,p:"MF",q:"ME",a:22,o:63,t:68,v:1000000},
+      {n:"Santiago Silveira",num:41,p:"DF",q:"ZAG",a:23,o:68,t:73,v:2000000},
+      {n:"Mateo Mendoza",p:"DF",q:"LE",a:28,o:68,t:70,v:1000000}
     ],
     "ar/Banfield": [
-      {n:"Facundo Sanguinetti",num:1,p:"GK",q:"GOL",a:25,o:70,t:71,v:2500000,nat:"Argentina"},
-      {n:"Danilo Arboleda",num:2,p:"DF",q:"ZAG",a:31,o:70,t:71,v:1500000,nat:"Colombia"},
       {n:"Juan Luis Alfaro",num:4,p:"DF",q:"LD",a:27,o:66,t:69,v:200000,nat:"Argentina"},
-      {n:"Santiago Esquivel",num:5,p:"MF",q:"MC",a:26,o:65,t:67,v:350000,nat:"Argentina"},
+      {n:"Santiago Esquivel",num:15,p:"MF",q:"MC",a:26,o:65,t:67,v:350000,nat:"Argentina"},
       {n:"Nicolás Meriano",num:6,p:"DF",q:"ZAG",a:26,o:69,t:71,v:400000,nat:"Argentina"},
       {n:"Lisandro Piñero",num:7,p:"FW",q:"PE",a:19,o:60,t:69,v:400000,nat:"Argentina"},
       {n:"Lautaro Ríos",num:8,p:"MF",q:"VOL",a:26,o:67,t:71,v:450000,nat:"Argentina"},
-      {n:"Bruno Sepúlveda",num:9,p:"FW",q:"CA",a:33,o:69,t:70,v:700000,nat:"Argentina"},
       {n:"Lautaro Gómez",num:10,p:"MF",q:"MEI",a:27,o:68,t:70,v:400000,nat:"Argentina"},
       {n:"Favio Álvarez",num:11,p:"MF",q:"MEI",a:33,o:70,t:70,v:50000,nat:"Argentina"},
       {n:"Marcos López",num:12,p:"MF",q:"PD",a:28,o:68,t:69,v:2000000,nat:"Argentina"},
       {n:"Brandon Oviedo",num:13,p:"DF",q:"ZAG",a:26,o:64,t:66,v:150000,nat:"Argentina"},
-      {n:"Sergio Vittor",num:14,p:"DF",q:"LD",a:37,o:70,t:70,v:800000,nat:"Argentina"},
-      {n:"Mauro Méndez",num:16,p:"FW",q:"CA",a:27,o:69,t:71,v:2500000,nat:"Uruguay"},
-      {n:"Tiziano Perrotta",num:17,p:"FW",q:"PE",a:20,o:66,t:74,v:3000000,nat:"Argentina"},
       {n:"Federico Medina",num:18,p:"FW",q:"PD",a:22,o:62,t:68,v:200000,nat:"Argentina"},
-      {n:"Nicolás Colazo",num:19,p:"DF",q:"LE",a:36,o:67,t:67,v:500000,nat:"Argentina"},
       {n:"Tomás Adoryán",num:20,p:"MF",q:"PD",a:24,o:65,t:67,v:350000,nat:"Armenia"},
       {n:"Lautaro Villegas",num:21,p:"MF",q:"MC",a:26,o:65,t:67,v:325000,nat:"Argentina"},
       {n:"Lucas Palavecino",num:23,p:"MF",q:"MC",a:26,o:65,t:67,v:25000,nat:"Argentina"},
       {n:"Santiago López García",num:24,p:"MF",q:"PD",a:28,o:62,t:68,v:1800000,nat:"Argentina"},
       {n:"Gino Santilli",num:25,p:"GK",q:"GOL",a:25,o:66,t:70,v:800000,nat:"Argentina"},
-      {n:"Mateo Mendizabal",num:26,p:"DF",q:"ZAG",a:22,o:61,t:67,v:950000,nat:"Argentina"},
       {n:"Ignacio Abraham",num:27,p:"DF",q:"LE",a:28,o:66,t:70,v:1500000,nat:"Argentina"},
-      {n:"Thiago Cano",num:28,p:"GK",q:"GOL",a:22,o:60,t:66,v:550000,nat:"Argentina"},
       {n:"Juan Iribarren",num:29,p:"DF",q:"LD",a:23,o:67,t:71,v:50000,nat:"Argentina"},
       {n:"Federico Anselmo",num:30,p:"FW",q:"CA",a:32,o:59,t:67,v:100000,nat:"Argentina"},
       {n:"Joaquín Molina",num:31,p:"GK",q:"GOL",a:20,o:57,t:65,v:350000,nat:"Argentina"},
-      {n:"Valentín González",num:32,p:"MF",q:"MC",a:20,o:58,t:66,v:600000,nat:"Argentina"},
       {n:"Neyder Moreno",num:33,p:"MF",q:"MEI",a:29,o:69,t:69,v:450000,nat:"Colombia"},
       {n:"Santiago Daniele",num:34,p:"DF",q:"ZAG",a:20,o:57,t:65,v:50000,nat:"Argentina"},
-      {n:"Nacho Pais",num:35,p:"MF",q:"MC",a:26,o:58,t:66,v:800000,nat:"Argentina"}
+      {n:"Nacho Pais",num:35,p:"MF",q:"MC",a:26,o:58,t:66,v:800000,nat:"Argentina"},
+      {n:"Alexander Machado",num:22,p:"FW",q:"CA",a:24,o:68,t:73,v:3000000,nat:"Uruguay"},
+      {n:"Diego Rodríguez",num:50,p:"GK",q:"GOL",a:37,o:74,t:74,v:900000,nat:"Argentina"},
+      {n:"Adrián Balboa",num:9,p:"FW",q:"SA",a:26,o:68,t:70,v:1400000},
+      {n:"Nehuén Paz",num:14,p:"DF",q:"LD",a:24,o:66,t:71,v:1000000},
+      {n:"Lautaro Cano",num:19,p:"DF",q:"LE",a:29,o:66,t:68,v:800000},
+      {n:"Matías Hernández",num:28,p:"FW",q:"CA",a:23,o:62,t:67,v:800000},
+      {n:"Renzo Malanca",num:37,p:"DF",q:"ZAG",a:22,o:62,t:67,v:800000},
+      {n:"David Zalazar",num:40,p:"MF",q:"MC",a:22,o:58,t:63,v:400000},
+      {n:"Manuel Arteaga",num:70,p:"MF",q:"MEI",a:19,o:61,t:69,v:1000000},
+      {n:"Thomas Rodríguez",num:77,p:"MF",q:"MC",a:24,o:64,t:69,v:1000000}
     ],
     "ar/Belgrano": [
       {n:"Alexis Maldonado",num:2,p:"DF",q:"ZAG",a:29,o:70,t:72,v:1000000,nat:"Argentina"},
@@ -2418,7 +2422,6 @@
       {n:"Leonardo Morales",num:14,p:"DF",q:"ZAG",a:35,o:74,t:74,v:600000,nat:"Argentina"},
       {n:"Federico Ricca",num:16,p:"DF",q:"ZAG",a:31,o:69,t:69,v:800000,nat:"Uruguay"},
       {n:"Lisandro López",num:17,p:"DF",q:"ZAG",a:37,o:71,t:71,v:300000,nat:"Argentina"},
-      {n:"Franco Vázquez",num:20,p:"MF",q:"MEI",a:37,o:74,t:74,v:600000,nat:"Argentina"},
       {n:"Adrián Sánchez",num:21,p:"MF",q:"MC",a:27,o:70,t:72,v:3000000,nat:"Argentina"},
       {n:"Nicolás Fernández",num:22,p:"FW",q:"CA",a:30,o:75,t:75,v:3000000,nat:"Argentina"},
       {n:"Manuel Vicentini",num:23,p:"GK",q:"GOL",a:36,o:64,t:66,v:75000,nat:"Argentina"},
@@ -2428,12 +2431,10 @@
       {n:"Matías Daniele",num:28,p:"GK",q:"GOL",a:22,o:54,t:60,v:100000,nat:"Argentina"},
       {n:"Agustín Melano",num:29,p:"FW",q:"PD",a:23,o:68,t:72,v:3000000,nat:"Argentina"},
       {n:"Gonzalo Zelarayán",num:30,p:"MF",q:"MEI",a:22,o:50,t:56,v:25000,nat:"Argentina"},
-      {n:"Julián Mavilla",num:32,p:"MF",q:"MC",a:26,o:59,t:67,v:600000,nat:"Argentina"},
       {n:"Lautaro Gutiérrez",num:37,p:"FW",q:"CA",a:20,o:57,t:65,v:250000,nat:"Argentina"},
-      {n:"Jeremías Lucco",num:42,p:"FW",q:"CA",a:20,o:60,t:67,v:950000,nat:"Argentina"},
       {n:"Ramiro Hernandes",num:51,p:"MF",q:"MEI",a:22,o:58,t:64,v:300000,nat:"Argentina"},
       {n:"Juan Velázquez",num:53,p:"DF",q:"LE",a:22,o:65,t:71,v:1700000,nat:"Argentina"},
-      {n:"Tomás Castro",num:59,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Argentina"}
+      {n:"Agustín Falcón",num:45,p:"DF",q:"ZAG",a:21,o:64,t:72,v:1000000}
     ],
     "ar/Boca Juniors": [
       {n:"Álvaro Montero",num:1,p:"GK",q:"GOL",a:31,o:75,t:75,v:2500000,nat:"Colombia"},
@@ -2455,7 +2456,6 @@
       {n:"Milton Delgado",num:18,p:"MF",q:"MC",a:21,o:65,t:72,v:2500000,nat:"Argentina"},
       {n:"Leonel Flores",num:19,p:"FW",q:"PD",a:26,o:69,t:71,v:2500000,nat:"Argentina"},
       {n:"Alan Velasco",num:20,p:"FW",q:"PE",a:24,o:74,t:77,v:2800000,nat:"Argentina"},
-      {n:"Kevin Zenón",num:21,p:"FW",q:"PE",a:25,o:75,t:78,v:3500000,nat:"Argentina"},
       {n:"Sebastián Villa",num:22,p:"FW",q:"PE",a:30,o:75,t:75,v:6000000,nat:"Colombia"},
       {n:"Camilo Rey Domenech",num:23,p:"MF",q:"VOL",a:20,o:64,t:72,v:400000,nat:"Argentina"},
       {n:"Dylan Gorosito",num:24,p:"DF",q:"LD",a:20,o:59,t:67,v:200000,nat:"Argentina"},
@@ -2470,34 +2470,31 @@
     "ar/Defensa y Justicia": [
       {n:"Samuel Lucero",num:2,p:"DF",q:"ZAG",a:21,o:56,t:63,v:250000,nat:"Argentina"},
       {n:"Julián López",num:5,p:"MF",q:"VOL",a:26,o:70,t:75,v:800000,nat:"Argentina"},
-      {n:"Emiliano Amor",num:6,p:"DF",q:"ZAG",a:31,o:69,t:69,v:1500000,nat:"Argentina"},
       {n:"César Pérez",num:8,p:"MF",q:"MC",a:24,o:68,t:69,v:3000000,nat:"Chile"},
       {n:"Aarón Molinas",num:10,p:"MF",q:"MEI",a:26,o:73,t:74,v:3500000,nat:"Argentina"},
-      {n:"Santiago Toloza",num:11,p:"MF",q:"MEI",a:23,o:70,t:73,v:3500000,nat:"Argentina"},
-      {n:"Facundo Quintana",num:12,p:"GK",q:"GOL",a:28,o:69,t:71,v:2000000,nat:"Argentina"},
       {n:"Santiago Sosa",num:15,p:"MF",q:"MC",a:27,o:76,t:78,v:2000000,nat:"Argentina"},
       {n:"Ayrton Portillo",num:16,p:"DF",q:"LD",a:26,o:62,t:66,v:1000000,nat:"Argentina"},
       {n:"Agustín Hausch",num:17,p:"FW",q:"PD",a:23,o:61,t:65,v:400000,nat:"Argentina"},
       {n:"David Barbona",num:19,p:"FW",q:"PD",a:31,o:70,t:70,v:450000,nat:"Argentina"},
-      {n:"Rubén Botta",num:20,p:"MF",q:"MEI",a:36,o:76,t:76,v:1500000,nat:"Argentina"},
-      {n:"David Martínez",num:21,p:"DF",q:"ZAG",a:28,o:71,t:73,v:900000,nat:"Paraguay"},
       {n:"Mateo Aguiar",num:23,p:"MF",q:"MEI",a:19,o:50,t:59,v:225000,nat:"Argentina"},
       {n:"Juan Gutiérrez",num:24,p:"FW",q:"CA",a:24,o:69,t:72,v:2000000,nat:"Uruguay"},
       {n:"Facundo Altamira",num:25,p:"FW",q:"PD",a:25,o:69,t:75,v:750000,nat:"Argentina"},
-      {n:"Darío Cáceres",num:26,p:"DF",q:"ZAG",a:28,o:69,t:70,v:2500000,nat:"Paraguay"},
       {n:"Domingo Blanco",num:27,p:"FW",q:"PD",a:31,o:70,t:70,v:1000000,nat:"Argentina"},
       {n:"Damián Fernández",num:29,p:"DF",q:"ZAG",a:25,o:71,t:74,v:1800000,nat:"Argentina"},
-      {n:"David Fernández",num:30,p:"FW",q:"CA",a:20,o:61,t:69,v:1000000,nat:"Paraguay"},
-      {n:"Alan Coria",num:31,p:"FW",q:"PE",a:22,o:66,t:72,v:2500000,nat:"Argentina"},
       {n:"Nazareno Roselli",num:32,p:"DF",q:"ZAG",a:24,o:68,t:73,v:150000,nat:"Argentina"},
       {n:"Lucas Souto",num:33,p:"DF",q:"LD",a:27,o:67,t:72,v:400000,nat:"Argentina"},
       {n:"Lautaro Amadé",num:36,p:"GK",q:"GOL",a:22,o:66,t:72,v:300000,nat:"Argentina"},
-      {n:"Fernando Román",num:0,p:"DF",q:"LE",a:27,o:64,t:66,v:450000,nat:"Paraguay"},
-      {n:"Nicolás Palavecino",num:0,p:"MF",q:"MEI",a:23,o:62,t:66,v:150000,nat:"Argentina"},
-      {n:"Facundo Echevarría",num:0,p:"FW",q:"CA",a:24,o:67,t:69,v:2000000,nat:"Argentina"},
-      {n:"Luciano González",num:9,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Uruguay"},
+      {n:"Fernando Román",num:3,p:"DF",q:"LE",a:27,o:64,t:66,v:450000,nat:"Paraguay"},
       {n:"Éver Banega",num:11,p:"MF",q:"MC",a:38,o:77,t:77,v:400000,nat:"Argentina"},
-      {n:"Tomás Escalante",num:34,p:"MF",q:"MC",a:27,o:60,t:68,v:1000000,nat:"Argentina"}
+      {n:"Tomás Escalante",num:34,p:"MF",q:"MC",a:27,o:60,t:68,v:1000000,nat:"Argentina"},
+      {n:"Matías Borgogno",num:1,p:"GK",q:"GOL",a:28,o:70,t:70,v:1000000,nat:"Argentina"},
+      {n:"Leandro Fernández",num:9,p:"FW",q:"CA",a:35,o:73,t:73,v:1000000,nat:"Argentina"},
+      {n:"Jeremías Lucco",num:26,p:"FW",q:"CA",a:20,o:60,t:67,v:950000,nat:"Argentina"},
+      {n:"Ezequiel Burdín",num:6,p:"DF",q:"ZAG",a:28,o:69,t:71,v:1200000},
+      {n:"Maximiliano Porcel",num:22,p:"MF",q:"MC",a:25,o:68,t:70,v:1400000},
+      {n:"Valentín Loza",num:28,p:"DF",q:"ZAG",a:22,o:66,t:71,v:1500000},
+      {n:"Demián Domínguez",num:30,p:"DF",q:"ZAG",a:20,o:67,t:75,v:2500000},
+      {n:"Máximo Rodríguez",num:40,p:"DF",q:"LE",a:19,o:62,t:70,v:1500000}
     ],
     "ar/Estudiantes": [
       {n:"Fabricio Iacovich",num:1,p:"GK",q:"GOL",a:24,o:67,t:71,v:500000,nat:"Argentina"},
@@ -2529,7 +2526,7 @@
       {n:"Joaquín Pereyra",num:36,p:"DF",q:"LE",a:21,o:61,t:68,v:25000,nat:"Argentina"},
       {n:"Eros Mancuso",num:40,p:"DF",q:"LD",a:27,o:71,t:72,v:3000000,nat:"Argentina"},
       {n:"Bautista Kociubinski",num:52,p:"MF",q:"MC",a:22,o:65,t:71,v:350000,nat:"Argentina"},
-      {n:"Jalil Elías",num:0,p:"MF",q:"VOL",a:30,o:70,t:70,v:1800000,nat:"Argentina"}
+      {n:"Jalil Elías",num:39,p:"MF",q:"VOL",a:30,o:70,t:70,v:1800000,nat:"Argentina"}
     ],
     "ar/Gimnasia LP": [
       {n:"Máximo Cabrera",num:1,p:"GK",q:"GOL",a:25,o:68,t:72,v:2000000,nat:"Argentina"},
@@ -2562,7 +2559,13 @@
       {n:"Bautista Barros Schelotto",num:31,p:"DF",q:"LD",a:26,o:66,t:70,v:150000,nat:"Argentina"},
       {n:"Marcelo Torres",num:32,p:"FW",q:"PD",a:28,o:70,t:70,v:3000000,nat:"Argentina"},
       {n:"Pablo Aguiar",num:33,p:"MF",q:"MC",a:20,o:58,t:66,v:600000,nat:"Paraguay"},
-      {n:"Fabricio Corbalán",num:28,p:"DF",q:"LD",a:22,o:61,t:67,v:75000,nat:"Argentina"}
+      {n:"Fabricio Corbalán",num:28,p:"DF",q:"LD",a:22,o:61,t:67,v:75000,nat:"Argentina"},
+      {n:"Ignacio Miramón",num:5,p:"MF",q:"MC",a:23,o:69,t:73,v:6000000,nat:"Argentina"},
+      {n:"Leandro Mamut",num:34,p:"MF",q:"MC",a:22,o:61,t:66,v:900000},
+      {n:"Juan Cortazzo",num:35,p:"DF",q:"LE",a:21,o:64,t:72,v:1000000},
+      {n:"Facundo Di Biasi",num:39,p:"MF",q:"VOL",a:20,o:63,t:71,v:2000000},
+      {n:"Santiago Villarreal",num:42,p:"MF",q:"ME",a:19,o:63,t:71,v:2000000},
+      {n:"Maximiliano Zalazar",num:43,p:"FW",q:"PE",a:23,o:63,t:68,v:1000000}
     ],
     "ar/Huracán": [
       {n:"Hernán Galíndez",num:1,p:"GK",q:"GOL",a:39,o:74,t:74,v:900000,nat:"Ecuador"},
@@ -2574,15 +2577,12 @@
       {n:"Leonardo Gil",num:8,p:"MF",q:"MC",a:35,o:70,t:70,v:375000,nat:"Chile"},
       {n:"Jordy Caicedo",num:9,p:"FW",q:"CA",a:28,o:66,t:67,v:2000000,nat:"Ecuador"},
       {n:"Óscar Romero",num:10,p:"MF",q:"MEI",a:34,o:72,t:72,v:700000,nat:"Paraguay"},
-      {n:"Eric Ramírez",num:11,p:"FW",q:"CA",a:29,o:68,t:69,v:1000000,nat:"Argentina"},
-      {n:"Alejandro Martínez",num:14,p:"FW",q:"CA",a:29,o:66,t:68,v:1500000,nat:"Argentina"},
       {n:"Juan Bisanz",num:17,p:"FW",q:"PD",a:25,o:68,t:70,v:1500000,nat:"Argentina"},
-      {n:"Luciano Giménez",num:18,p:"FW",q:"PE",a:26,o:69,t:73,v:3000000,nat:"Argentina"},
       {n:"Leandro Lescano",num:19,p:"DF",q:"LE",a:23,o:63,t:67,v:175000,nat:"Argentina"},
       {n:"Emmanuel Ojeda",num:20,p:"MF",q:"VOL",a:28,o:67,t:69,v:600000,nat:"Argentina"},
       {n:"Hugo Nervo",num:21,p:"DF",q:"ZAG",a:35,o:70,t:70,v:225000,nat:"Argentina"},
       {n:"Daniel Zabala",num:22,p:"DF",q:"ZAG",a:23,o:66,t:70,v:100000,nat:"Argentina"},
-      {n:"Thaiel Peralta",num:23,p:"MF",q:"MEI",a:17,o:66,t:68,v:1000000,nat:"Argentina"},
+      {n:"Thaiel Peralta",num:11,p:"MF",q:"MEI",a:17,o:66,t:68,v:1000000,nat:"Argentina"},
       {n:"César Ibáñez",num:25,p:"DF",q:"LE",a:27,o:69,t:69,v:2500000,nat:"Argentina"},
       {n:"Leonardo Sequeira",num:26,p:"FW",q:"CA",a:31,o:70,t:73,v:1500000,nat:"Argentina"},
       {n:"Nazareno Durán",num:27,p:"GK",q:"GOL",a:22,o:58,t:64,v:350000,nat:"Argentina"},
@@ -2592,7 +2592,11 @@
       {n:"Máximo Palazzo",num:35,p:"DF",q:"ZAG",a:20,o:58,t:66,v:125000,nat:"Argentina"},
       {n:"Milton Ríos",num:36,p:"MF",q:"MC",a:22,o:55,t:61,v:200000,nat:"Argentina"},
       {n:"Lautaro Mora",num:41,p:"MF",q:"VOL",a:20,o:59,t:67,v:25000,nat:"Argentina"},
-      {n:"Facundo Kalinger",num:52,p:"MF",q:"PD",a:20,o:59,t:67,v:350000,nat:"Argentina"}
+      {n:"Facundo Kalinger",num:52,p:"MF",q:"PD",a:20,o:59,t:67,v:350000,nat:"Argentina"},
+      {n:"Rodrigo Fernández Cedrés",num:5,p:"MF",q:"MC",a:27,o:70,t:72,v:2000000},
+      {n:"Ignacio Pussetto",num:23,p:"FW",q:"CA",a:29,o:68,t:70,v:1000000},
+      {n:"Bruno Barticciotto",num:33,p:"FW",q:"PD",a:23,o:59,t:64,v:500000},
+      {n:"Tomás Uribe",num:49,p:"FW",q:"PD",a:25,o:66,t:68,v:1000000}
     ],
     "ar/Independiente": [
       {n:"Joaquín Blázquez",num:1,p:"GK",q:"GOL",a:25,o:65,t:68,v:8500000,nat:"Argentina"},
@@ -2603,16 +2607,14 @@
       {n:"Santiago Montiel",num:7,p:"FW",q:"PD",a:25,o:75,t:77,v:36000000,nat:"Argentina"},
       {n:"Maximiliano Meza",num:8,p:"FW",q:"CA",a:33,o:75,t:75,v:9500000,nat:"Argentina"},
       {n:"Luciano Cabral",num:10,p:"MF",q:"MEI",a:31,o:70,t:70,v:10000000,nat:"Chile"},
-      {n:"Federico Mancuello",num:11,p:"MF",q:"MEI",a:37,o:72,t:72,v:6500000,nat:"Argentina"},
       {n:"Juan Fedorco",num:13,p:"DF",q:"ZAG",a:25,o:69,t:71,v:18000000,nat:"Argentina"},
       {n:"Lautaro Millán",num:14,p:"MF",q:"MEI",a:21,o:63,t:70,v:11000000,nat:"Chile"},
       {n:"Imanol Machuca",num:15,p:"FW",q:"PE",a:26,o:71,t:73,v:23000000,nat:"Argentina"},
       {n:"Mateo Pérez Curci",num:16,p:"MF",q:"MC",a:20,o:67,t:75,v:22000000,nat:"Argentina"},
-      {n:"Facundo Valdez",num:18,p:"FW",q:"CA",a:26,o:69,t:71,v:18000000,nat:"Argentina"},
+      {n:"Facundo Valdez",num:16,p:"FW",q:"CA",a:26,o:69,t:71,v:18000000,nat:"Argentina"},
       {n:"Matías Abaldo",num:19,p:"FW",q:"CA",a:22,o:71,t:77,v:30000000,nat:"Uruguay"},
       {n:"Facundo Zabala",num:22,p:"DF",q:"LE",a:27,o:71,t:72,v:22000000,nat:"Argentina"},
       {n:"Iván Marcone",num:23,p:"MF",q:"VOL",a:36,o:76,t:76,v:10000000,nat:"Argentina"},
-      {n:"Maximiliano Gutiérrez",num:28,p:"FW",q:"CA",a:22,o:68,t:74,v:20000000,nat:"Chile"},
       {n:"Leonardo Godoy",num:29,p:"DF",q:"LD",a:31,o:74,t:74,v:17000000,nat:"Argentina"},
       {n:"Tomás Parmo",num:30,p:"MF",q:"MC",a:18,o:64,t:74,v:15000000,nat:"Argentina"},
       {n:"Rodrigo Rey",num:33,p:"GK",q:"GOL",a:35,o:78,t:78,v:9000000,nat:"Argentina"},
@@ -2620,7 +2622,11 @@
       {n:"Sebastián Valdez",num:36,p:"DF",q:"ZAG",a:30,o:68,t:71,v:100000,nat:"Argentina"},
       {n:"Joel Medina",num:37,p:"MF",q:"MC",a:20,o:63,t:71,v:12000000,nat:"Argentina"},
       {n:"Ignacio Malcorra",num:40,p:"MF",q:"MEI",a:39,o:76,t:76,v:10000000,nat:"Argentina"},
-      {n:"Santiago Mele",num:77,p:"GK",q:"GOL",a:29,o:71,t:73,v:16000000,nat:"Uruguay"}
+      {n:"Santiago Mele",num:77,p:"GK",q:"GOL",a:29,o:71,t:73,v:16000000,nat:"Uruguay"},
+      {n:"David Martínez",num:32,p:"DF",q:"ZAG",a:28,o:71,t:73,v:900000,nat:"Paraguay"},
+      {n:"Iván Morales",num:30,p:"FW",q:"CA",a:27,o:63,t:71,v:2000000,nat:"Chile"},
+      {n:"Rodrigo Márquez",num:20,p:"FW",q:"PE",a:26,o:71,t:73,v:2800000},
+      {n:"Juan Miguel Arrayago",num:35,p:"DF",q:"ZAG",a:19,o:64,t:72,v:2500000}
     ],
     "ar/Instituto": [
       {n:"Hernán de la Fuente",num:2,p:"DF",q:"LD",a:29,o:71,t:72,v:300000,nat:"Argentina"},
@@ -2634,27 +2640,23 @@
       {n:"Matias Fonseca",num:11,p:"FW",q:"CA",a:25,o:66,t:68,v:350000,nat:"Uruguay"},
       {n:"Juan Ignacio Méndez",num:13,p:"MF",q:"VOL",a:29,o:69,t:71,v:400000,nat:"Argentina"},
       {n:"Matías Gallardo",num:15,p:"MF",q:"MEI",a:22,o:64,t:68,v:75000,nat:"Argentina"},
-      {n:"Lautaro Maldonado",num:16,p:"GK",q:"GOL",a:24,o:66,t:70,v:1500000,nat:"Argentina"},
       {n:"Matías Tissera",num:17,p:"FW",q:"CA",a:30,o:68,t:69,v:600000,nat:"Argentina"},
-      {n:"Gastón Lodico",num:19,p:"MF",q:"MEI",a:28,o:75,t:75,v:5000000,nat:"Argentina"},
       {n:"Jhon Córdoba",num:20,p:"FW",q:"PD",a:33,o:74,t:74,v:1200000,nat:"Colombia"},
       {n:"Jeremías Lázaro",num:21,p:"MF",q:"MEI",a:22,o:60,t:66,v:200000,nat:"Argentina"},
       {n:"Agustín Massaccesi",num:22,p:"DF",q:"ZAG",a:26,o:63,t:65,v:200000,nat:"Argentina"},
       {n:"Andrés Meli",num:23,p:"DF",q:"LE",a:30,o:68,t:68,v:350000,nat:"Argentina"},
-      {n:"Manuel Romero",num:24,p:"FW",q:"CA",a:25,o:62,t:66,v:1000000,nat:"Paraguay"},
       {n:"Lorenzo Albarracín",num:25,p:"FW",q:"CA",a:22,o:62,t:68,v:1000000,nat:"Argentina"},
       {n:"Leonel Mosevich",num:26,p:"DF",q:"ZAG",a:29,o:68,t:68,v:750000,nat:"Argentina"},
-      {n:"Ignacio Rossi",num:27,p:"MF",q:"MC",a:22,o:61,t:67,v:950000,nat:"Argentina"},
-      {n:"Manuel Roffo",num:28,p:"GK",q:"GOL",a:26,o:74,t:76,v:3500000,nat:"Argentina"},
-      {n:"Franco Jara",num:29,p:"FW",q:"CA",a:38,o:72,t:72,v:1000000,nat:"Argentina"},
       {n:"Jonatan Galván",num:30,p:"DF",q:"ZAG",a:34,o:55,t:63,v:325000,nat:"Argentina"},
       {n:"Agustín Bravo",num:32,p:"DF",q:"ZAG",a:25,o:62,t:70,v:50000,nat:"Argentina"},
-      {n:"Iván Erquiaga",num:33,p:"DF",q:"ZAG",a:28,o:55,t:63,v:250000,nat:"Argentina"},
       {n:"Emanuel Sittaro",num:35,p:"GK",q:"GOL",a:27,o:60,t:68,v:25000,nat:"Argentina"},
       {n:"Giuliano Cerato",num:44,p:"DF",q:"LD",a:28,o:55,t:63,v:1200000,nat:"Argentina"},
       {n:"Gustavo Abregú",num:55,p:"MF",q:"VOL",a:20,o:56,t:64,v:600000,nat:"Argentina"},
       {n:"Joaquín Medina",num:61,p:"MF",q:"VOL",a:20,o:56,t:64,v:350000,nat:"Argentina"},
-      {n:"Luca Rafaelli",num:72,p:"FW",q:"CA",a:20,o:57,t:65,v:500000,nat:"Argentina"}
+      {n:"Luca Rafaelli",num:72,p:"FW",q:"CA",a:20,o:57,t:65,v:500000,nat:"Argentina"},
+      {n:"Wilder Viera",num:14,p:"MF",q:"VOL",a:28,o:67,t:69,v:900000},
+      {n:"Lucas Sanseviero",num:19,p:"FW",q:"SA",a:29,o:67,t:69,v:900000},
+      {n:"Marcos Ledesma",num:29,p:"GK",q:"GOL",a:27,o:56,t:58,v:600000}
     ],
     "ar/Lanús": [
       {n:"Franco Petroli",num:1,p:"GK",q:"GOL",a:28,o:74,t:77,v:1800000,nat:"Argentina"},
@@ -2673,7 +2675,6 @@
       {n:"Matías Sepúlveda",num:16,p:"MF",q:"PE",a:27,o:69,t:71,v:1200000,nat:"Chile"},
       {n:"Agustín Medina",num:17,p:"MF",q:"VOL",a:19,o:58,t:66,v:4500000,nat:"Argentina"},
       {n:"Yoshan Valois",num:19,p:"FW",q:"CA",a:21,o:68,t:68,v:1300000,nat:"Colombia"},
-      {n:"Bruno Cabrera",num:20,p:"FW",q:"CA",a:29,o:62,t:66,v:1000000,nat:"Argentina"},
       {n:"Alexis González",num:22,p:"DF",q:"ZAG",a:26,o:66,t:68,v:1500000,nat:"Argentina"},
       {n:"Ramiro Carrera",num:23,p:"MF",q:"PD",a:32,o:74,t:74,v:1000000,nat:"Argentina"},
       {n:"Carlos Izquierdoz",num:24,p:"DF",q:"ZAG",a:37,o:74,t:74,v:1500000,nat:"Argentina"},
@@ -2684,8 +2685,11 @@
       {n:"Tomás Guidara",num:33,p:"DF",q:"LD",a:30,o:69,t:69,v:1200000,nat:"Argentina"},
       {n:"Ronaldo Dejesús",num:35,p:"DF",q:"ZAG",a:25,o:66,t:73,v:1300000,nat:"Paraguay"},
       {n:"Thomás De Martis",num:37,p:"FW",q:"CA",a:18,o:64,t:72,v:2000000,nat:"Argentina"},
-      {n:"Lucas Acosta",num:42,p:"GK",q:"GOL",a:31,o:58,t:65,v:50000,nat:"Argentina"},
-      {n:"Lucas Besozzi",num:77,p:"FW",q:"PE",a:23,o:68,t:72,v:350000,nat:"Argentina"}
+      {n:"Lucas Acosta",num:38,p:"GK",q:"GOL",a:31,o:58,t:65,v:50000,nat:"Argentina"},
+      {n:"Lucas Besozzi",num:77,p:"FW",q:"PE",a:23,o:68,t:72,v:350000,nat:"Argentina"},
+      {n:"Allan Wlk",num:20,p:"FW",q:"SA",a:23,o:66,t:70,v:14000000,nat:"Paraguay"},
+      {n:"Jeremías Chavero",num:18,p:"FW",q:"PD",a:24,o:67,t:72,v:1200000},
+      {n:"Thiago Laplace",num:39,p:"MF",q:"MC",a:24,o:62,t:67,v:500000}
     ],
     "ar/Newell's Old Boys": [
       {n:"Ian Glavinovich",num:2,p:"DF",q:"ZAG",a:24,o:64,t:68,v:1200000,nat:"Argentina"},
@@ -2713,7 +2717,9 @@
       {n:"Walter Núñez",num:33,p:"FW",q:"PE",a:20,o:61,t:69,v:900000,nat:"Argentina"},
       {n:"Francisco Scarpeccio",num:36,p:"FW",q:"CA",a:20,o:61,t:69,v:150000,nat:"Argentina"},
       {n:"Thomas Rios",num:39,p:"FW",q:"PE",a:20,o:61,t:69,v:1000000,nat:"Argentina"},
-      {n:"Ignacio Ramírez",num:99,p:"FW",q:"CA",a:29,o:72,t:72,v:1500000,nat:"Uruguay"}
+      {n:"Ignacio Ramírez",num:99,p:"FW",q:"CA",a:29,o:72,t:72,v:1500000,nat:"Uruguay"},
+      {n:"Bruno Cabrera",num:25,p:"FW",q:"CA",a:29,o:62,t:66,v:1000000,nat:"Argentina"},
+      {n:"Lucas Gómez",num:27,p:"MF",q:"VOL",a:22,o:61,t:67,v:950000,nat:"Argentina"}
     ],
     "ar/Platense": [
       {n:"Brian Bustos",num:1,p:"GK",q:"GOL",a:26,o:67,t:70,v:500000,nat:"Argentina"},
@@ -2722,18 +2728,13 @@
       {n:"Iván Gómez",num:5,p:"MF",q:"VOL",a:29,o:70,t:70,v:1000000,nat:"Argentina"},
       {n:"Eugenio Raggio",num:6,p:"DF",q:"ZAG",a:26,o:69,t:72,v:1200000,nat:"Argentina"},
       {n:"Guido Mainero",num:7,p:"FW",q:"PD",a:31,o:69,t:69,v:2000000,nat:"Argentina"},
-      {n:"Marcos Portillo",num:8,p:"MF",q:"MC",a:26,o:63,t:64,v:1000000,nat:"Argentina"},
       {n:"Tomás Nasif",num:9,p:"FW",q:"CA",a:22,o:68,t:72,v:3000000,nat:"Argentina"},
       {n:"Franco Zapiola",num:10,p:"MF",q:"MEI",a:25,o:70,t:74,v:1500000,nat:"Argentina"},
-      {n:"Agustín Ocampo",num:11,p:"FW",q:"SA",a:28,o:62,t:68,v:1000000,nat:"Uruguay"},
-      {n:"Jonathan Bay",num:12,p:"DF",q:"LE",a:33,o:69,t:69,v:700000,nat:"Argentina"},
       {n:"Ignacio Vázquez",num:13,p:"DF",q:"ZAG",a:29,o:72,t:76,v:4000000,nat:"Argentina"},
       {n:"Maximiliano Amarfil",num:15,p:"MF",q:"MC",a:25,o:65,t:67,v:1500000,nat:"Argentina"},
-      {n:"Mauro Luna Diale",num:16,p:"MF",q:"MEI",a:27,o:69,t:71,v:2500000,nat:"Argentina"},
       {n:"Felipe Bussio",num:17,p:"MF",q:"VOL",a:22,o:60,t:66,v:400000,nat:"Argentina"},
       {n:"Bautista Merlini",num:18,p:"FW",q:"PE",a:31,o:66,t:73,v:400000,nat:"Argentina"},
       {n:"Héctor Bobadilla",num:19,p:"FW",q:"CA",a:26,o:64,t:66,v:450000,nat:"Paraguay"},
-      {n:"Matías Borgogno",num:20,p:"GK",q:"GOL",a:28,o:70,t:70,v:1000000,nat:"Argentina"},
       {n:"Augusto Lotti",num:21,p:"FW",q:"PD",a:30,o:71,t:71,v:2000000,nat:"Argentina"},
       {n:"Nicolás Sumavil",num:22,p:"GK",q:"GOL",a:26,o:62,t:64,v:400000,nat:"Argentina"},
       {n:"Leonardo Heredia",num:23,p:"MF",q:"MEI",a:30,o:71,t:71,v:1200000,nat:"Argentina"},
@@ -2747,7 +2748,16 @@
       {n:"Santiago Quirós",num:32,p:"DF",q:"ZAG",a:23,o:68,t:72,v:600000,nat:"Argentina"},
       {n:"Juan Carlos Gauto",num:33,p:"FW",q:"PD",a:22,o:66,t:72,v:1000000,nat:"Argentina"},
       {n:"Mateo Mendía",num:34,p:"DF",q:"ZAG",a:22,o:58,t:64,v:300000,nat:"Argentina"},
-      {n:"Benjamín Bosch",num:47,p:"FW",q:"CA",a:21,o:64,t:71,v:2000000,nat:"Argentina"}
+      {n:"Luciano Giménez",num:20,p:"FW",q:"PE",a:26,o:69,t:73,v:3000000,nat:"Argentina"},
+      {n:"Bruno Sepúlveda",num:79,p:"FW",q:"CA",a:33,o:69,t:70,v:700000,nat:"Argentina"},
+      {n:"Nicolás López",num:11,p:"FW",q:"SA",a:29,o:69,t:71,v:1200000},
+      {n:"Gastón Togni",num:16,p:"FW",q:"CA",a:23,o:68,t:73,v:2000000},
+      {n:"Juan Pablo Cozzani",num:30,p:"GK",q:"GOL",a:19,o:62,t:70,v:1500000},
+      {n:"Celías Ingenthron",num:38,p:"DF",q:"LD",a:20,o:62,t:70,v:1500000},
+      {n:"Gonzalo Goñi",num:42,p:"DF",q:"ZAG",a:25,o:62,t:64,v:500000},
+      {n:"Nicolás Retamar",num:43,p:"FW",q:"PD",a:22,o:63,t:68,v:1000000},
+      {n:"Gonzalo Lencina",num:99,p:"FW",q:"PE",a:25,o:62,t:64,v:500000},
+      {n:"Fabricio López",p:"DF",q:"ZAG",a:25,o:64,t:66,v:1000000}
     ],
     "ar/Racing Club": [
       {n:"Francisco Gómez",num:1,p:"GK",q:"GOL",a:26,o:69,t:71,v:2000000,nat:"Argentina"},
@@ -2776,7 +2786,8 @@
       {n:"Leonel Pérez",num:33,p:"MF",q:"VOL",a:22,o:62,t:68,v:6000000,nat:"Argentina"},
       {n:"Tobías Rubio",num:34,p:"DF",q:"ZAG",a:22,o:68,t:74,v:3000000,nat:"Argentina"},
       {n:"Gonzalo Escudero",num:43,p:"DF",q:"ZAG",a:19,o:53,t:62,v:50000,nat:"Argentina"},
-      {n:"Alejandro Tello",num:46,p:"MF",q:"MEI",a:20,o:64,t:72,v:2000000,nat:"Argentina"}
+      {n:"Alejandro Tello",num:46,p:"MF",q:"MEI",a:20,o:64,t:72,v:2000000,nat:"Argentina"},
+      {n:"Gastón Lodico",num:20,p:"MF",q:"MEI",a:28,o:75,t:75,v:5000000,nat:"Argentina"}
     ],
     "ar/River Plate": [
       {n:"Tobías Ramírez",num:2,p:"DF",q:"ZAG",a:19,o:70,t:73,v:3500000,nat:"Argentina"},
@@ -2802,9 +2813,9 @@
       {n:"Facundo González",num:31,p:"DF",q:"ZAG",a:20,o:70,t:74,v:75000,nat:"Argentina"},
       {n:"Agustín Ruberto",num:32,p:"FW",q:"CA",a:20,o:68,t:76,v:4500000,nat:"Argentina"},
       {n:"Ezequiel Centurión",num:33,p:"GK",q:"GOL",a:29,o:72,t:73,v:1500000,nat:"Argentina"},
-      {n:"Santiago Beltrán",num:41,p:"GK",q:"GOL",a:21,o:63,t:69,v:9000000,nat:"Argentina"},
+      {n:"Santiago Beltrán",num:41,p:"GK",q:"GOL",a:21,o:64,t:69,v:9000000,nat:"Argentina"},
       {n:"Lucas Silva",num:44,p:"MF",q:"VOL",a:19,o:73,t:73,v:300000,nat:"Argentina"},
-      {n:"Tobías Andrada",num:50,p:"MF",q:"MC",a:19,o:60,t:69,v:9000000,nat:"Argentina"},
+      {n:"Tobías Andrada",num:50,p:"MF",q:"MC",a:19,o:64,t:69,v:9000000,nat:"Argentina"},
       {n:"Jeremías Martinet",num:57,p:"GK",q:"GOL",a:21,o:64,t:72,v:1500000,nat:"Argentina"}
     ],
     "ar/Rosario Central": [
@@ -2828,7 +2839,7 @@
       {n:"Giovanni Cantizano",num:26,p:"FW",q:"PE",a:19,o:57,t:66,v:1000000,nat:"Argentina"},
       {n:"Gaspar Duarte",num:27,p:"FW",q:"PD",a:23,o:65,t:69,v:900000,nat:"Argentina"},
       {n:"Pol Fernández",num:28,p:"MF",q:"MC",a:34,o:75,t:75,v:350000,nat:"Argentina"},
-      {n:"Marco Ruben",num:29,p:"FW",q:"CA",a:39,o:65,t:71,v:25000,nat:"Argentina"},
+      {n:"Marco Ruben",num:9,p:"FW",q:"CA",a:39,o:65,t:71,v:25000,nat:"Argentina"},
       {n:"Federico Navarro",num:31,p:"MF",q:"VOL",a:26,o:71,t:72,v:2000000,nat:"Argentina"},
       {n:"Emanuel Coronel",num:32,p:"DF",q:"LD",a:29,o:71,t:78,v:2700000,nat:"Argentina"},
       {n:"Alexis Soto",num:33,p:"DF",q:"LE",a:32,o:69,t:69,v:1200000,nat:"Argentina"},
@@ -2836,7 +2847,8 @@
       {n:"Fabricio Oviedo",num:39,p:"FW",q:"CA",a:22,o:62,t:68,v:1000000,nat:"Argentina"},
       {n:"Ignacio Ovando",num:46,p:"DF",q:"ZAG",a:20,o:60,t:68,v:6000000,nat:"Argentina"},
       {n:"Luca Raffin",num:47,p:"DF",q:"ZAG",a:20,o:60,t:68,v:150000,nat:"Argentina"},
-      {n:"Alan Rodríguez",num:88,p:"MF",q:"MC",a:26,o:72,t:74,v:2300000,nat:"Uruguay"}
+      {n:"Alan Rodríguez",num:88,p:"MF",q:"MC",a:26,o:72,t:74,v:2300000,nat:"Uruguay"},
+      {n:"Sebastián Zaracho",num:2,p:"DF",q:"LD",a:28,o:69,t:71,v:2500000,nat:"Paraguay"}
     ],
     "ar/San Lorenzo": [
       {n:"Mateo Clemente",num:1,p:"GK",q:"GOL",a:24,o:59,t:67,v:450000,nat:"Argentina"},
@@ -2868,7 +2880,9 @@
       {n:"Alejo Córdoba",num:35,p:"DF",q:"ZAG",a:22,o:67,t:73,v:2500000,nat:"Argentina"},
       {n:"Daniel Herrera",num:36,p:"DF",q:"LD",a:22,o:60,t:66,v:2500000,nat:"Argentina"},
       {n:"Franco Lorenzón",num:42,p:"DF",q:"ZAG",a:20,o:62,t:70,v:225000,nat:"Argentina"},
-      {n:"Facundo Farías",num:0,p:"MF",q:"MEI",a:24,o:72,t:76,v:2500000,nat:"Argentina"}
+      {n:"Facundo Farías",num:38,p:"MF",q:"MEI",a:24,o:72,t:76,v:2500000,nat:"Argentina"},
+      {n:"Danilo Arboleda",num:2,p:"DF",q:"ZAG",a:31,o:70,t:71,v:1500000,nat:"Colombia"},
+      {n:"Emiliano Amor",num:19,p:"DF",q:"ZAG",a:31,o:69,t:69,v:1500000,nat:"Argentina"}
     ],
     "ar/Talleres": [
       {n:"Santino Barbi",num:1,p:"GK",q:"GOL",a:21,o:69,t:75,v:200000,nat:"Argentina"},
@@ -2907,7 +2921,6 @@
       {n:"Nahuel Banegas",num:3,p:"DF",q:"LE",a:29,o:70,t:72,v:750000,nat:"Argentina"},
       {n:"Valentín Moreno",num:4,p:"DF",q:"LD",a:23,o:63,t:67,v:500000,nat:"Argentina"},
       {n:"Bruno Leyes",num:5,p:"MF",q:"VOL",a:24,o:70,t:72,v:3500000,nat:"Argentina"},
-      {n:"Germán Guiffrey",num:6,p:"DF",q:"ZAG",a:28,o:69,t:69,v:1500000,nat:"Argentina"},
       {n:"Simón Rivero",num:7,p:"MF",q:"MC",a:23,o:66,t:70,v:2000000,nat:"Argentina"},
       {n:"Martín Garay",num:8,p:"DF",q:"LD",a:27,o:69,t:71,v:800000,nat:"Argentina"},
       {n:"Jabes Saralegui",num:10,p:"MF",q:"MC",a:23,o:67,t:71,v:3000000,nat:"Argentina"},
@@ -2920,18 +2933,19 @@
       {n:"Alan Barrionuevo",num:20,p:"DF",q:"ZAG",a:29,o:66,t:71,v:1800000,nat:"Argentina"},
       {n:"Sebastián Medina",num:21,p:"MF",q:"PE",a:26,o:68,t:73,v:350000,nat:"Argentina"},
       {n:"Santiago López",num:22,p:"FW",q:"PE",a:20,o:66,t:68,v:2000000,nat:"Argentina"},
-      {n:"Gonzalo Piñeiro",num:23,p:"DF",q:"ZAG",a:26,o:65,t:67,v:1500000,nat:"Argentina"},
       {n:"Federico Álvarez",num:24,p:"DF",q:"LE",a:32,o:63,t:66,v:500000,nat:"Argentina"},
-      {n:"Tomás Sultani",num:26,p:"GK",q:"GOL",a:28,o:67,t:71,v:1500000,nat:"Argentina"},
       {n:"Santiago González",num:27,p:"MF",q:"MC",a:23,o:67,t:71,v:2300000,nat:"Argentina"},
       {n:"Gonzalo Martínez",num:28,p:"MF",q:"MEI",a:33,o:67,t:71,v:500000,nat:"Argentina"},
       {n:"Ignacio Russo",num:29,p:"FW",q:"CA",a:25,o:67,t:71,v:4000000,nat:"Argentina"},
-      {n:"Jalil Elías",num:30,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Argentina"},
       {n:"Juan Villalba",num:32,p:"DF",q:"LE",a:20,o:61,t:69,v:300000,nat:"Argentina"},
-      {n:"Elías Cabrera",num:33,p:"MF",q:"MC",a:23,o:68,t:72,v:3000000,nat:"Argentina"},
       {n:"Tomás Fernández",num:38,p:"DF",q:"ZAG",a:20,o:57,t:65,v:25000,nat:"Argentina"},
       {n:"Ramón Arias",num:42,p:"DF",q:"ZAG",a:34,o:66,t:66,v:450000,nat:"Uruguay"},
-      {n:"Joaquín Mosqueira",num:55,p:"MF",q:"MC",a:21,o:70,t:76,v:4000000,nat:"Argentina"}
+      {n:"Mauro Méndez",num:33,p:"FW",q:"CA",a:27,o:69,t:71,v:2500000,nat:"Uruguay"},
+      {n:"Nicolás Dubersarsky",num:16,p:"MF",q:"ME",a:24,o:66,t:71,v:1000000},
+      {n:"Gonzalo Requena",num:23,p:"DF",q:"LE",a:24,o:66,t:71,v:1000000},
+      {n:"Ian Subiabre",num:25,p:"MF",q:"MC",a:24,o:66,t:71,v:1000000},
+      {n:"Lautaro Morales",num:26,p:"GK",q:"GOL",a:26,o:64,t:66,v:1000000},
+      {n:"Luciano Minniti",num:40,p:"DF",q:"LE",a:24,o:64,t:69,v:1000000}
     ],
     "ar/Vélez Sarsfield": [
       {n:"Tomás Marchiori",num:1,p:"GK",q:"GOL",a:31,o:75,t:75,v:2000000,nat:"Argentina"},
@@ -2954,7 +2968,10 @@
       {n:"Álvaro Busso",num:34,p:"GK",q:"GOL",a:29,o:68,t:69,v:100000,nat:"Argentina"},
       {n:"Matías Arias",num:35,p:"MF",q:"MEI",a:20,o:62,t:70,v:50000,nat:"Argentina"},
       {n:"Thiago Aguirre",num:39,p:"FW",q:"CA",a:20,o:66,t:74,v:3000000,nat:"Argentina"},
-      {n:"Luca Feler",num:48,p:"MF",q:"MEI",a:20,o:62,t:70,v:25000,nat:"Argentina"}
+      {n:"Luca Feler",num:48,p:"MF",q:"MEI",a:20,o:62,t:70,v:25000,nat:"Argentina"},
+      {n:"Facundo Sanguinetti",num:25,p:"GK",q:"GOL",a:25,o:70,t:71,v:2500000,nat:"Argentina"},
+      {n:"Juan Cruz Policella",num:37,p:"FW",q:"CA",a:20,o:68,t:76,v:1500000},
+      {n:"Ronaldo Martínez",num:77,p:"FW",q:"PE",a:25,o:63,t:65,v:600000}
     ],
     "be/Anderlecht": [
       {n:"Zoumana Keita",num:2,p:"DF",q:"ZAG",a:20,o:59,t:66,v:400000,nat:"Germany"},
@@ -2988,7 +3005,9 @@
       {n:"Basile Vroninks",num:62,p:"DF",q:"ZAG",a:19,o:60,t:69,v:1000000,nat:"Belgium"},
       {n:"Michiel Haentjens",num:66,p:"GK",q:"GOL",a:18,o:57,t:67,v:200000,nat:"Belgium"},
       {n:"Noah Kalonji",num:68,p:"MF",q:"VOL",a:18,o:58,t:68,v:500000,nat:"Belgium"},
-      {n:"Adriano Bertaccini",num:91,p:"FW",q:"CA",a:26,o:75,t:75,v:4000000,nat:"Belgium"}
+      {n:"Adriano Bertaccini",num:91,p:"FW",q:"CA",a:26,o:75,t:75,v:4000000,nat:"Belgium"},
+      {n:"Ali Maamar",num:79,p:"DF",q:"LD",a:23,o:58,t:63,v:400000},
+      {n:"Tristan Degreef",num:83,p:"FW",q:"SA",a:22,o:62,t:67,v:800000}
     ],
     "be/Antwerp": [
       {n:"Yuto Tsunashima",num:4,p:"DF",q:"ZAG",a:26,o:62,t:66,v:1500000,nat:"Japan"},
@@ -3022,7 +3041,8 @@
       {n:"Niels Devalckeneer",num:81,p:"GK",q:"GOL",a:22,o:58,t:64,v:150000,nat:"Belgium"},
       {n:"Gabriel David",num:92,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Nigeria"},
       {n:"Luis Narh",num:99,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Ghana"},
-      {n:"Álvaro Cortés",num:0,p:"DF",q:"ZAG",a:21,o:65,t:69,v:4000000,nat:"Spain"}
+      {n:"Álvaro Cortés",num:3,p:"DF",q:"ZAG",a:21,o:65,t:69,v:4000000,nat:"Spain"},
+      {n:"Bahmed Deuff",num:6,p:"MF",q:"MD",a:24,o:64,t:69,v:1000000}
     ],
     "be/Beveren": [
       {n:"Johannes Schenk",num:1,p:"GK",q:"GOL",a:23,o:71,t:75,v:1500000,nat:"Germany"},
@@ -3052,8 +3072,9 @@
       {n:"Tibe S'Jongers",num:75,p:"MF",q:"MC",a:19,o:58,t:67,v:650000,nat:"Belgium"},
       {n:"Josua Lusamba",num:84,p:"GK",q:"GOL",a:19,o:57,t:66,v:50000,nat:"DR Congo"},
       {n:"Lennart Mertens",num:92,p:"FW",q:"CA",a:34,o:60,t:68,v:300000,nat:"Belgium"},
-      {n:"Stephane Keller",num:0,p:"DF",q:"ZAG",a:25,o:62,t:65,v:400000,nat:"Cameroon"},
-      {n:"Victor Olatunji",num:0,p:"FW",q:"CA",a:27,o:73,t:74,v:2000000,nat:"Nigeria"}
+      {n:"Stephane Keller",num:77,p:"DF",q:"ZAG",a:25,o:62,t:65,v:400000,nat:"Cameroon"},
+      {n:"Victor Olatunji",num:0,p:"FW",q:"CA",a:27,o:73,t:74,v:2000000,nat:"Nigeria"},
+      {n:"Arno Verschueren",num:24,p:"MF",q:"MC",a:29,o:70,t:71,v:3000000,nat:"Belgium"}
     ],
     "be/Cercle Brugge": [
       {n:"Gaëtan Coucke",num:1,p:"GK",q:"GOL",a:27,o:68,t:69,v:800000,nat:"Belgium"},
@@ -3070,7 +3091,6 @@
       {n:"Joel Ndala",num:17,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"England"},
       {n:"Abdoulie Manneh",num:20,p:"MF",q:"MC",a:20,o:64,t:68,v:1500000,nat:"The Gambia"},
       {n:"Lucas Michal",num:22,p:"FW",q:"PE",a:21,o:64,t:71,v:3500000,nat:"France"},
-      {n:"Heriberto Jurado",num:23,p:"FW",q:"PE",a:21,o:65,t:72,v:700000,nat:"Mexico"},
       {n:"Geoffrey Kondo",num:24,p:"DF",q:"ZAG",a:24,o:62,t:67,v:3000000,nat:"France"},
       {n:"Hannes Van der Bruggen",num:28,p:"MF",q:"MC",a:33,o:70,t:70,v:800000,nat:"Belgium"},
       {n:"Tunde Akinsola",num:30,p:"FW",q:"PE",a:23,o:58,t:67,v:800000,nat:"Belgium"},
@@ -3079,7 +3099,12 @@
       {n:"Lukas Mondele",num:42,p:"MF",q:"VOL",a:22,o:58,t:67,v:400000,nat:"Belgium"},
       {n:"Tayo Adaramola",num:45,p:"DF",q:"LE",a:22,o:63,t:67,v:1500000,nat:"Ireland"},
       {n:"Viggo Martens",num:71,p:"MF",q:"MEI",a:19,o:58,t:67,v:400000,nat:"Belgium"},
-      {n:"Bas Langenbick",num:84,p:"GK",q:"GOL",a:23,o:57,t:61,v:50000,nat:"Belgium"}
+      {n:"Bas Langenbick",num:84,p:"GK",q:"GOL",a:23,o:57,t:61,v:50000,nat:"Belgium"},
+      {n:"Dante Vanzeir",num:13,p:"FW",q:"CA",a:28,o:72,t:72,v:3500000,nat:"Belgium"},
+      {n:"Yann Lienard",num:21,p:"GK",q:"GOL",a:23,o:65,t:69,v:2000000,nat:"France"},
+      {n:"Luke Le Roux",num:18,p:"MF",q:"VOL",a:25,o:62,t:64,v:500000},
+      {n:"Sebbe Gheerardyns",num:75,p:"DF",q:"ZAG",a:19,o:60,t:68,v:900000},
+      {n:"Tiemen De Bel",num:91,p:"GK",q:"GOL",a:21,o:58,t:66,v:400000}
     ],
     "be/Charleroi": [
       {n:"Martin Delavallée",num:1,p:"GK",q:"GOL",a:22,o:70,t:76,v:1500000,nat:"Belgium"},
@@ -3088,7 +3113,6 @@
       {n:"Amine Boukamir",num:6,p:"MF",q:"VOL",a:20,o:57,t:65,v:500000,nat:"Morocco"},
       {n:"Jakob Romsaas",num:8,p:"MF",q:"MEI",a:22,o:63,t:69,v:1200000,nat:"Norway"},
       {n:"Adama Bojang",num:9,p:"FW",q:"CA",a:22,o:66,t:72,v:1200000,nat:"The Gambia"},
-      {n:"Parfait Guiagon",num:10,p:"MF",q:"VOL",a:25,o:72,t:78,v:5000000,nat:"Ivory Coast"},
       {n:"Gaku Nawata",num:13,p:"FW",q:"SA",a:20,o:62,t:68,v:150000,nat:"Japan"},
       {n:"Patrick Pflücke",num:14,p:"MF",q:"PD",a:29,o:73,t:73,v:1800000,nat:"Germany"},
       {n:"Arthur Cremer",num:16,p:"GK",q:"GOL",a:26,o:60,t:64,v:450000,nat:"Belgium"},
@@ -3106,7 +3130,8 @@
       {n:"Mory Kera",num:51,p:"MF",q:"VOL",a:19,o:58,t:67,v:150000,nat:"Belgium"},
       {n:"Naël Piron",num:54,p:"DF",q:"ZAG",a:19,o:58,t:67,v:650000,nat:"Belgium"},
       {n:"Rafaël Teugels",num:65,p:"DF",q:"LE",a:19,o:58,t:67,v:650000,nat:"Belgium"},
-      {n:"Cheick Keita",num:95,p:"DF",q:"ZAG",a:23,o:66,t:70,v:3500000,nat:"Mali"}
+      {n:"Cheick Keita",num:95,p:"DF",q:"ZAG",a:23,o:66,t:70,v:3500000,nat:"Mali"},
+      {n:"Triston Rowe",num:2,p:"DF",q:"ZAG",a:27,o:66,t:68,v:1000000}
     ],
     "be/Club Brugge": [
       {n:"Yann Sommer",num:1,p:"GK",q:"GOL",a:37,o:87,t:87,v:2000000,nat:"Switzerland"},
@@ -3120,7 +3145,6 @@
       {n:"Cheveyo Tsawa",num:16,p:"MF",q:"MC",a:19,o:62,t:70,v:6000000,nat:"Switzerland"},
       {n:"Romeo Vermant",num:17,p:"FW",q:"CA",a:22,o:71,t:77,v:9000000,nat:"Belgium"},
       {n:"Hans Vanaken",num:20,p:"MF",q:"MEI",a:34,o:80,t:80,v:4000000,nat:"Belgium"},
-      {n:"Wisdom Mike",num:27,p:"FW",q:"PE",a:17,o:65,t:72,v:5000000,nat:"Germany"},
       {n:"Nordin Jackers",num:29,p:"GK",q:"GOL",a:29,o:68,t:69,v:1200000,nat:"Belgium"},
       {n:"Matteo Dams",num:32,p:"DF",q:"LE",a:22,o:68,t:74,v:3500000,nat:"Belgium"},
       {n:"Hugo Siquet",num:41,p:"DF",q:"LD",a:24,o:70,t:72,v:4000000,nat:"Belgium"},
@@ -3202,7 +3226,29 @@
       {n:"Matties Volckaert",num:57,p:"DF",q:"ZAG",a:19,o:58,t:67,v:2000000,nat:"Belgium"},
       {n:"El Hadji Seck",num:59,p:"FW",q:"PE",a:19,o:58,t:67,v:700000,nat:"Senegal"},
       {n:"Abubakar Abdullahi",num:61,p:"FW",q:"CA",a:20,o:60,t:68,v:700000,nat:"Nigeria"},
-      {n:"Dante Vanzeir",num:0,p:"FW",q:"CA",a:28,o:72,t:72,v:3500000,nat:"Belgium"}
+      {n:"Ibrahima Cissé",num:75,p:"FW",q:"SA",a:19,o:61,t:69,v:1000000},
+      {n:"Pieter Gerkens",p:"MF",q:"MC",a:26,o:61,t:63,v:800000},
+      {n:"Hatim Es-Saoubi",p:"DF",q:"LD",a:29,o:63,t:65,v:600000},
+      {n:"Wout Asselman",num:62,p:"MF",q:"VOL",a:25,o:60,t:62,v:500000},
+      {n:"René Vanden Borre",num:50,p:"GK",q:"GOL",a:21,o:61,t:69,v:900000},
+      {n:"Ferre Van Herrewege",num:52,p:"GK",q:"GOL",a:21,o:60,t:68,v:600000},
+      {n:"Hannes Vernemmen",num:54,p:"DF",q:"LE",a:20,o:61,t:69,v:1000000},
+      {n:"Joachim Djamba-Shango",num:58,p:"MF",q:"MC",a:21,o:61,t:69,v:900000},
+      {n:"Simon Buggea",num:60,p:"FW",q:"CA",a:22,o:58,t:63,v:400000},
+      {n:"Briek Morel",num:65,p:"DF",q:"LD",a:20,o:58,t:66,v:500000},
+      {n:"Oleksandr Soroka",num:67,p:"MF",q:"VOL",a:25,o:60,t:62,v:500000},
+      {n:"Jassim Mazouz",num:70,p:"MF",q:"MEI",a:22,o:60,t:65,v:600000},
+      {n:"Preben Blondeel",num:71,p:"DF",q:"LE",a:19,o:60,t:68,v:900000},
+      {n:"Alexandre Chaidron",num:72,p:"MF",q:"VOL",a:24,o:61,t:66,v:800000},
+      {n:"Ali Donny Sylla",num:73,p:"FW",q:"CA",a:20,o:60,t:68,v:900000},
+      {n:"Trey Kongolo",num:74,p:"DF",q:"LD",a:23,o:60,t:65,v:600000},
+      {n:"Victor Vandenbroucke",num:76,p:"DF",q:"LD",a:22,o:60,t:65,v:600000},
+      {n:"Gyano Vanderdonck",num:77,p:"MF",q:"ME",a:24,o:61,t:66,v:800000},
+      {n:"David Mukuna-Trouet",num:78,p:"FW",q:"CA",a:25,o:60,t:62,v:500000},
+      {n:"Ruslan Vydysh",num:79,p:"FW",q:"CA",a:22,o:58,t:63,v:400000},
+      {n:"Briek Van Hoorick",num:80,p:"MF",q:"ME",a:20,o:60,t:68,v:900000},
+      {n:"Michiel Cauwel",num:90,p:"DF",q:"ZAG",a:21,o:61,t:69,v:900000},
+      {n:"Daniel James Wisdom",p:"FW",q:"PD",a:28,o:62,t:64,v:800000}
     ],
     "be/Kortrijk": [
       {n:"Patrik Gunnarsson",num:1,p:"GK",q:"GOL",a:25,o:65,t:68,v:400000,nat:"Iceland"},
@@ -3229,7 +3275,8 @@
       {n:"Ken Masui",num:71,p:"MF",q:"PE",a:23,o:62,t:66,v:900000,nat:"Japan"},
       {n:"Sixtus Ogbuehi",num:90,p:"FW",q:"CA",a:23,o:58,t:67,v:200000,nat:"Belgium"},
       {n:"Kyan Himpe",num:0,p:"FW",q:"CA",a:24,o:60,t:64,v:750000,nat:"Belgium"},
-      {n:"Bryan Adinany",num:39,p:"FW",q:"CA",a:26,o:58,t:67,v:650000,nat:"Madagascar"}
+      {n:"Bryan Adinany",num:39,p:"FW",q:"CA",a:26,o:58,t:67,v:650000,nat:"Madagascar"},
+      {n:"Jamie Roche",num:24,p:"MF",q:"VOL",a:25,o:70,t:74,v:4000000,nat:"Sweden"}
     ],
     "be/La Louvière": [
       {n:"Nolan Gillot",num:3,p:"DF",q:"LE",a:24,o:63,t:66,v:500000,nat:"France"},
@@ -3241,9 +3288,7 @@
       {n:"Mame Wade",num:10,p:"MF",q:"MC",a:26,o:64,t:66,v:300000,nat:"Senegal"},
       {n:"Mustapha Isah",num:11,p:"FW",q:"CA",a:22,o:62,t:66,v:700000,nat:"Belgium"},
       {n:"Mouhamed Belkheir",num:14,p:"FW",q:"CA",a:27,o:70,t:70,v:3000000,nat:"Algeria"},
-      {n:"Sami Lahssaini",num:15,p:"MF",q:"MC",a:27,o:64,t:66,v:1500000,nat:"Belgium"},
       {n:"Tiago Pereira Cardoso",num:16,p:"GK",q:"GOL",a:20,o:67,t:75,v:1500000,nat:"Luxembourg"},
-      {n:"Mohamed Guindo",num:17,p:"FW",q:"CA",a:23,o:65,t:69,v:2000000,nat:"Mali"},
       {n:"Shaquil Delos",num:18,p:"DF",q:"LD",a:27,o:68,t:70,v:500000,nat:"France"},
       {n:"Noah Makembo-Ntemo",num:20,p:"MF",q:"MEI",a:19,o:62,t:65,v:100000,nat:"Belgium"},
       {n:"Marcos Peano",num:21,p:"GK",q:"GOL",a:27,o:67,t:67,v:1500000,nat:"Argentina"},
@@ -3261,7 +3306,8 @@
       {n:"Anas Tajaouart",num:78,p:"MF",q:"MC",a:21,o:54,t:61,v:400000,nat:"Morocco"},
       {n:"Léandro Rousseau",num:90,p:"FW",q:"CA",a:19,o:58,t:67,v:1000000,nat:"Belgium"},
       {n:"Théo Radelet",num:91,p:"GK",q:"GOL",a:19,o:57,t:66,v:50000,nat:"Belgium"},
-      {n:"Yllan Okou",num:99,p:"DF",q:"ZAG",a:23,o:65,t:70,v:2000000,nat:"France"}
+      {n:"Yllan Okou",num:99,p:"DF",q:"ZAG",a:23,o:65,t:70,v:2000000,nat:"France"},
+      {n:"Timéo Kerckhofs",num:89,p:"MF",q:"ME",a:21,o:62,t:70,v:800000}
     ],
     "be/Lommel": [
       {n:"Nikola Ivezić",num:1,p:"GK",q:"GOL",a:24,o:62,t:67,v:200000,nat:"Montenegro"},
@@ -3288,11 +3334,12 @@
       {n:"Tristan Gooijer",num:47,p:"DF",q:"LD",a:22,o:63,t:69,v:1500000,nat:"Netherlands"},
       {n:"Alexander Reumers",num:73,p:"FW",q:"CA",a:19,o:58,t:67,v:150000,nat:"Belgium"},
       {n:"Sam de Grand",num:79,p:"DF",q:"LE",a:21,o:57,t:66,v:1000000,nat:"Netherlands"},
-      {n:"Elijah Odede",num:0,p:"FW",q:"PE",a:19,o:60,t:65,v:600000,nat:"Belgium"},
-      {n:"Filip Krastev",num:0,p:"MF",q:"MC",a:24,o:66,t:70,v:2000000,nat:"Bulgaria"},
+      {n:"Elijah Odede",num:12,p:"FW",q:"PE",a:19,o:60,t:65,v:600000,nat:"Belgium"},
       {n:"John Montaño",num:0,p:"FW",q:"CA",a:23,o:63,t:67,v:1500000,nat:"Colombia"},
       {n:"Théo Mununga",num:0,p:"MF",q:"MC",a:24,o:60,t:65,v:750000,nat:"Belgium"},
-      {n:"Faniel Tewelde",num:0,p:"FW",q:"CA",a:20,o:61,t:66,v:950000,nat:"Norway"}
+      {n:"Faniel Tewelde",num:0,p:"FW",q:"CA",a:20,o:61,t:66,v:950000,nat:"Norway"},
+      {n:"Sverre Nypan",num:41,p:"MF",q:"MEI",a:19,o:69,t:77,v:30000000,nat:"Norway"},
+      {n:"Ethan Kohler",p:"DF",q:"ZAG",a:25,o:60,t:62,v:500000}
     ],
     "be/Mechelen": [
       {n:"Ortwin De Wolf",num:1,p:"GK",q:"GOL",a:29,o:75,t:75,v:500000,nat:"Belgium"},
@@ -3318,14 +3365,18 @@
       {n:"Dennis Praet",num:26,p:"MF",q:"MC",a:32,o:73,t:73,v:1500000,nat:"Belgium"},
       {n:"Keano Vanrafelghem",num:27,p:"FW",q:"CA",a:23,o:63,t:67,v:1500000,nat:"Belgium"},
       {n:"Bouke Boersma",num:28,p:"FW",q:"CA",a:22,o:62,t:68,v:2500000,nat:"Netherlands"},
-      {n:"Noah Makanza",num:30,p:"MF",q:"MC",a:19,o:58,t:67,v:50000,nat:"DR Congo"},
       {n:"Axel Willockx",num:32,p:"GK",q:"GOL",a:19,o:55,t:64,v:50000,nat:"Belgium"},
       {n:"Tommy St. Jago",num:33,p:"DF",q:"LD",a:26,o:66,t:68,v:1500000,nat:"Curaçao"},
-      {n:"Ryan Teague",num:34,p:"MF",q:"VOL",a:24,o:69,t:72,v:600000,nat:"Australia"},
-      {n:"Bill Antonio",num:38,p:"FW",q:"PD",a:24,o:62,t:66,v:1200000,nat:"Belgium"},
+      {n:"Ryan Teague",num:43,p:"MF",q:"VOL",a:24,o:69,t:72,v:600000,nat:"Australia"},
+      {n:"Bill Antonio",num:29,p:"FW",q:"PD",a:24,o:62,t:66,v:1200000,nat:"Belgium"},
       {n:"Massimo Decoene",num:39,p:"MF",q:"VOL",a:19,o:58,t:67,v:400000,nat:"Belgium"},
       {n:"Amine Ouahabi",num:40,p:"MF",q:"MC",a:18,o:55,t:65,v:100000,nat:"Morocco"},
-      {n:"Simion Michez",num:0,p:"MF",q:"PD",a:24,o:64,t:67,v:600000,nat:"Cameroon"}
+      {n:"Simion Michez",num:23,p:"MF",q:"PD",a:24,o:64,t:67,v:600000,nat:"Cameroon"},
+      {n:"Adeshina Adoyele",num:16,p:"FW",q:"SA",a:26,o:64,t:66,v:1000000},
+      {n:"Marco Decherf",num:30,p:"MF",q:"ME",a:20,o:58,t:66,v:500000},
+      {n:"Mike Eerdhuijzen",num:44,p:"DF",q:"ZAG",a:22,o:60,t:65,v:600000},
+      {n:"Mats Van Helden",num:49,p:"MF",q:"MC",a:19,o:58,t:66,v:500000},
+      {n:"Yanis Asghir",p:"MF",q:"MC",a:25,o:62,t:64,v:500000}
     ],
     "be/OH Leuven": [
       {n:"Noë Dussenne",num:3,p:"DF",q:"ZAG",a:34,o:73,t:73,v:300000,nat:"Belgium"},
@@ -3339,18 +3390,14 @@
       {n:"Henok Teklab",num:11,p:"FW",q:"PE",a:28,o:65,t:66,v:1500000,nat:"Germany"},
       {n:"Kiany Vroman",num:13,p:"GK",q:"GOL",a:23,o:60,t:64,v:500000,nat:"Belgium"},
       {n:"Viktor Damjanić",num:15,p:"DF",q:"ZAG",a:21,o:66,t:73,v:300000,nat:"Croatia"},
-      {n:"Dani van den Heuvel",num:16,p:"GK",q:"GOL",a:23,o:60,t:64,v:800000,nat:"Netherlands"},
+      {n:"Dani van den Heuvel",num:1,p:"GK",q:"GOL",a:23,o:60,t:64,v:800000,nat:"Netherlands"},
       {n:"Kyan Vaesen",num:17,p:"FW",q:"CA",a:25,o:66,t:73,v:700000,nat:"Belgium"},
-      {n:"Robin Mirisola",num:18,p:"FW",q:"CA",a:22,o:62,t:68,v:4000000,nat:"Belgium"},
       {n:"Chukwubuikem Ikwuemesi",num:19,p:"FW",q:"CA",a:25,o:68,t:70,v:1200000,nat:"Nigeria"},
-      {n:"Shin Yamada",num:20,p:"FW",q:"CA",a:26,o:69,t:71,v:800000,nat:"Japan"},
       {n:"William Balikwisha",num:21,p:"MF",q:"MEI",a:27,o:68,t:72,v:300000,nat:"DR Congo"},
       {n:"Łukasz Łakomy",num:24,p:"MF",q:"MC",a:25,o:70,t:72,v:2000000,nat:"Poland"},
       {n:"Manuel Osifo",num:25,p:"MF",q:"VOL",a:22,o:62,t:68,v:400000,nat:"Belgium"},
-      {n:"Takuya Ogiwara",num:26,p:"DF",q:"LE",a:26,o:66,t:69,v:600000,nat:"Japan"},
       {n:"Óscar Gil",num:27,p:"DF",q:"LD",a:28,o:69,t:69,v:800000,nat:"Spain"},
       {n:"Ewoud Pletinckx",num:28,p:"DF",q:"ZAG",a:26,o:70,t:71,v:1800000,nat:"Belgium"},
-      {n:"Alessandro Fontanarosa",num:30,p:"DF",q:"ZAG",a:23,o:65,t:69,v:1400000,nat:"Italy"},
       {n:"Roggerio Nyakossi",num:34,p:"DF",q:"ZAG",a:22,o:61,t:67,v:5000000,nat:"Switzerland"},
       {n:"Hasan Bulut",num:42,p:"MF",q:"MEI",a:19,o:58,t:67,v:650000,nat:"Turkey"},
       {n:"Bryang Kayo",num:48,p:"MF",q:"MC",a:24,o:64,t:70,v:300000,nat:"USA"},
@@ -3359,7 +3406,9 @@
       {n:"Sebastian Murru",num:72,p:"MF",q:"MC",a:19,o:58,t:67,v:650000,nat:"Belgium"},
       {n:"Thibault Vlietinck",num:77,p:"DF",q:"LD",a:29,o:65,t:65,v:450000,nat:"Belgium"},
       {n:"Matteo Heremans",num:80,p:"MF",q:"MEI",a:19,o:58,t:67,v:650000,nat:"Belgium"},
-      {n:"Marcel Van Dijck",num:81,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Belgium"}
+      {n:"Marcel Van Dijck",num:81,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Belgium"},
+      {n:"Chike Van De Ven",num:89,p:"FW",q:"PE",a:25,o:60,t:62,v:500000},
+      {n:"Davis Opoku",num:99,p:"DF",q:"ZAG",a:19,o:61,t:69,v:1000000}
     ],
     "be/Sint-Truiden": [
       {n:"Taiga Hata",num:3,p:"DF",q:"LE",a:24,o:62,t:65,v:2500000,nat:"Japan"},
@@ -3389,7 +3438,8 @@
       {n:"Shion Shinkawa",num:99,p:"FW",q:"CA",a:19,o:58,t:67,v:800000,nat:"Japan"},
       {n:"Hugo Lambotte",num:0,p:"DF",q:"ZAG",a:24,o:60,t:65,v:750000,nat:"Belgium"},
       {n:"Adam Nhaili",num:0,p:"MF",q:"MC",a:21,o:57,t:64,v:450000,nat:"Belgium"},
-      {n:"Andrés Ferrari",num:0,p:"FW",q:"CA",a:23,o:67,t:71,v:2500000,nat:"Uruguay"}
+      {n:"Andrés Ferrari",num:0,p:"FW",q:"CA",a:23,o:67,t:71,v:2500000,nat:"Uruguay"},
+      {n:"Kōta Takai",num:4,p:"DF",q:"ZAG",a:22,o:72,t:78,v:17000000,nat:"Japan"}
     ],
     "be/Standard Liège": [
       {n:"Matthieu Epolo",num:1,p:"GK",q:"GOL",a:21,o:73,t:80,v:100000,nat:"DR Congo"},
@@ -3463,7 +3513,6 @@
       {n:"Isa Sakamoto",num:13,p:"MF",q:"MEI",a:23,o:54,t:58,v:4000000,nat:"Japan"},
       {n:"Cisse Sandra",num:14,p:"MF",q:"MEI",a:22,o:65,t:69,v:2000000,nat:"Belgium"},
       {n:"David Amegnaglo",num:17,p:"FW",q:"PD",a:21,o:60,t:66,v:175000,nat:"France"},
-      {n:"Karol Borys",num:18,p:"MF",q:"MEI",a:19,o:65,t:73,v:600000,nat:"Poland"},
       {n:"Cameron Congreve",num:20,p:"FW",q:"PD",a:22,o:62,t:68,v:450000,nat:"Wales"},
       {n:"Jahnilo Wiegel-Triebel",num:21,p:"GK",q:"GOL",a:22,o:60,t:66,v:550000,nat:"Suriname"},
       {n:"Emmanuel Tsimba",num:22,p:"FW",q:"CA",a:22,o:62,t:68,v:600000,nat:"Switzerland"},
@@ -3479,11 +3528,11 @@
       {n:"Fabio Ferraro",num:88,p:"DF",q:"LE",a:24,o:58,t:67,v:1200000,nat:"Belgium"},
       {n:"Andreas Jungdal",num:99,p:"GK",q:"GOL",a:24,o:64,t:65,v:3500000,nat:"Denmark"},
       {n:"Oskar Annell",num:0,p:"GK",q:"GOL",a:21,o:55,t:62,v:200000,nat:"Belgium"},
-      {n:"Kyano Delaporte",num:0,p:"DF",q:"ZAG",a:22,o:60,t:66,v:800000,nat:"Belgium"}
+      {n:"Kyano Delaporte",num:0,p:"DF",q:"ZAG",a:22,o:60,t:66,v:800000,nat:"Belgium"},
+      {n:"Yang Min-hyeok",num:47,p:"FW",q:"PE",a:20,o:70,t:78,v:16000000,nat:"South Korea"}
     ],
     "be/Zulte Waregem": [
       {n:"Louis Bostyn",num:1,p:"GK",q:"GOL",a:32,o:64,t:64,v:150000,nat:"Belgium"},
-      {n:"Anton Tanghe",num:3,p:"DF",q:"ZAG",a:27,o:67,t:72,v:700000,nat:"Belgium"},
       {n:"Laurent Lemoine",num:4,p:"DF",q:"ZAG",a:28,o:65,t:65,v:800000,nat:"Belgium"},
       {n:"Jakob Kiilerich",num:5,p:"DF",q:"ZAG",a:26,o:67,t:69,v:1000000,nat:"Denmark"},
       {n:"Enrique Lofolomo",num:6,p:"MF",q:"VOL",a:26,o:66,t:68,v:1000000,nat:"Germany"},
@@ -3504,17 +3553,17 @@
       {n:"Dirk Asare",num:40,p:"MF",q:"MC",a:21,o:60,t:67,v:1000000,nat:"Belgium"},
       {n:"Arnaud Dobbels",num:42,p:"GK",q:"GOL",a:21,o:56,t:63,v:50000,nat:"Belgium"},
       {n:"Benoit De Jaegere",num:45,p:"DF",q:"ZAG",a:28,o:63,t:63,v:500000,nat:"Belgium"},
-      {n:"Franz Tangala",num:49,p:"DF",q:"ZAG",a:19,o:58,t:67,v:650000,nat:"Belgium"},
-      {n:"Kewan Vemba",num:53,p:"MF",q:"MC",a:19,o:58,t:67,v:650000,nat:"Belgium"},
       {n:"Yannick Cappelle",num:55,p:"DF",q:"LE",a:23,o:60,t:64,v:650000,nat:"Belgium"},
       {n:"Hemsley Akpa-Chukwu",num:90,p:"FW",q:"CA",a:19,o:58,t:67,v:400000,nat:"Belgium"},
       {n:"Maliq Musa",num:0,p:"FW",q:"CA",a:24,o:62,t:66,v:1000000,nat:"Nigeria"},
-      {n:"Moussa Seck",num:0,p:"DF",q:"ZAG",a:24,o:63,t:66,v:1500000,nat:"Senegal"}
+      {n:"Moussa Seck",num:0,p:"DF",q:"ZAG",a:24,o:63,t:66,v:1500000,nat:"Senegal"},
+      {n:"Ousseynou Niang",num:22,p:"FW",q:"CA",a:27,o:63,t:65,v:600000},
+      {n:"Mouhamadou Sall",num:24,p:"DF",q:"LE",a:28,o:62,t:64,v:800000},
+      {n:"Florian Van Bever",num:41,p:"GK",q:"GOL",a:23,o:60,t:65,v:600000}
     ],
     "br/Athletico Paranaense": [
       {n:"Mycael",num:1,p:"GK",q:"GOL",a:22,o:74,t:80,v:2000000,nat:"Brazil"},
       {n:"Gilberto dos Santos",num:2,p:"DF",q:"LD",a:21,o:70,t:72,v:2000000,nat:"Brazil"},
-      {n:"Léo",num:3,p:"DF",q:"ZAG",a:30,o:70,t:72,v:1200000,nat:"Brazil"},
       {n:"Arthur Dias",num:4,p:"DF",q:"ZAG",a:19,o:70,t:72,v:3000000,nat:"Brazil"},
       {n:"Felipinho",num:5,p:"MF",q:"MC",a:24,o:73,t:77,v:1000000,nat:"Brazil"},
       {n:"Léo Derik",num:6,p:"DF",q:"ZAG",a:21,o:72,t:73,v:3500000,nat:"Brazil"},
@@ -3543,7 +3592,8 @@
       {n:"Renan Viana",num:50,p:"FW",q:"CA",a:20,o:64,t:72,v:225000,nat:"Brazil"},
       {n:"Dudu Kogitzki",num:53,p:"MF",q:"MEI",a:20,o:64,t:72,v:5000000,nat:"Brazil"},
       {n:"Riquelme",num:63,p:"MF",q:"MC",a:21,o:64,t:72,v:2000000,nat:"Brazil"},
-      {n:"Renan Peixoto",num:70,p:"FW",q:"CA",a:26,o:69,t:75,v:1500000,nat:"Brazil"}
+      {n:"Renan Peixoto",num:70,p:"FW",q:"CA",a:26,o:69,t:75,v:1500000,nat:"Brazil"},
+      {n:"Léo Pelé",num:3,p:"DF",q:"ZAG",a:27,o:73,t:75,v:4500000}
     ],
     "br/Atlético Mineiro": [
       {n:"Gabriel Delfim",num:1,p:"GK",q:"GOL",a:24,o:72,t:76,v:300000,nat:"Brazil"},
@@ -3577,7 +3627,8 @@
       {n:"Índio",num:38,p:"MF",q:"MC",a:19,o:67,t:76,v:3500000,nat:"Brazil"},
       {n:"Mamady Cissé",num:39,p:"MF",q:"MC",a:19,o:67,t:75,v:1000000,nat:"Guinea"},
       {n:"Vitão",num:40,p:"DF",q:"ZAG",a:26,o:77,t:80,v:7000000,nat:"Brazil"},
-      {n:"Dudu",num:92,p:"FW",q:"PE",a:34,o:76,t:76,v:800000,nat:"Brazil"}
+      {n:"Dudu",num:92,p:"FW",q:"PE",a:34,o:76,t:76,v:800000,nat:"Brazil"},
+      {n:"Pedro Cobra",num:46,p:"GK",q:"GOL",a:20,o:73,t:81,v:2500000}
     ],
     "br/Bahia": [
       {n:"Ronaldo",num:1,p:"GK",q:"GOL",a:30,o:77,t:79,v:2000000,nat:"Brazil"},
@@ -3595,7 +3646,6 @@
       {n:"Michel Araújo",num:15,p:"FW",q:"PD",a:29,o:75,t:75,v:2500000,nat:"Uruguay"},
       {n:"Erick Pulga",num:16,p:"FW",q:"PE",a:25,o:76,t:79,v:11000000,nat:"Brazil"},
       {n:"Guido Herrera",num:17,p:"GK",q:"GOL",a:34,o:78,t:78,v:1500000,nat:"Argentina"},
-      {n:"Santiago Ramos Mingo",num:21,p:"DF",q:"ZAG",a:24,o:74,t:77,v:12000000,nat:"Argentina"},
       {n:"Léo Vieira",num:22,p:"GK",q:"GOL",a:35,o:67,t:72,v:2000000,nat:"Brazil"},
       {n:"Mateo Sanabria",num:23,p:"FW",q:"CA",a:22,o:71,t:77,v:4500000,nat:"Argentina"},
       {n:"Everaldo",num:27,p:"FW",q:"SA",a:35,o:75,t:75,v:1500000,nat:"Brazil"},
@@ -3607,7 +3657,10 @@
       {n:"Zé Guilherme",num:66,p:"DF",q:"LE",a:21,o:68,t:76,v:400000,nat:"Brazil"},
       {n:"Ruan Pablo",num:77,p:"FW",q:"PE",a:18,o:70,t:80,v:8000000,nat:"Brazil"},
       {n:"Dell",num:89,p:"FW",q:"CA",a:18,o:69,t:77,v:4000000,nat:"Brazil"},
-      {n:"Kike Olivera",num:99,p:"FW",q:"PD",a:24,o:74,t:77,v:5000000,nat:"Uruguay"}
+      {n:"Kike Olivera",num:99,p:"FW",q:"PD",a:24,o:74,t:77,v:5000000,nat:"Uruguay"},
+      {n:"Lautaro López",num:18,p:"MF",q:"VOL",a:29,o:75,t:77,v:3500000},
+      {n:"Kauê Furquim",num:57,p:"FW",q:"SA",a:20,o:69,t:77,v:2500000},
+      {n:"David Martins",num:63,p:"MF",q:"VOL",a:23,o:72,t:77,v:4000000}
     ],
     "br/Botafogo": [
       {n:"Vitinho",num:2,p:"DF",q:"LD",a:27,o:75,t:76,v:9000000,nat:"Brazil"},
@@ -3627,7 +3680,6 @@
       {n:"Marçal",num:21,p:"DF",q:"LE",a:37,o:72,t:72,v:200000,nat:"Brazil"},
       {n:"Allan",num:25,p:"MF",q:"VOL",a:35,o:77,t:77,v:1000000,nat:"Brazil"},
       {n:"Anthony",num:26,p:"DF",q:"ZAG",a:21,o:72,t:78,v:300000,nat:"Brazil"},
-      {n:"Caio Roque",num:27,p:"DF",q:"ZAG",a:24,o:71,t:77,v:4500000,nat:"Brazil"},
       {n:"Paulinho",num:29,p:"DF",q:"ZAG",a:31,o:73,t:75,v:4500000,nat:"Brazil"},
       {n:"Kaio Pantaleão",num:31,p:"DF",q:"ZAG",a:30,o:73,t:73,v:2000000,nat:"Brazil"},
       {n:"Lucas Monzón",num:33,p:"DF",q:"ZAG",a:24,o:69,t:73,v:550000,nat:"Uruguay"},
@@ -3641,7 +3693,11 @@
       {n:"Huguinho",num:75,p:"MF",q:"VOL",a:19,o:69,t:77,v:300000,nat:"Brazil"},
       {n:"Lucas Villalba",num:77,p:"FW",q:"PD",a:25,o:70,t:78,v:1500000,nat:"Uruguay"},
       {n:"Edenilson",num:88,p:"MF",q:"MC",a:20,o:69,t:77,v:250000,nat:"Brazil"},
-      {n:"Danilo Pereira",num:90,p:"FW",q:"CA",a:27,o:78,t:78,v:1500000,nat:"Brazil"}
+      {n:"Danilo Pereira",num:90,p:"FW",q:"CA",a:27,o:78,t:78,v:1500000,nat:"Brazil"},
+      {n:"Hakim Ziyech",num:22,p:"FW",q:"PE",a:33,o:75,t:75,v:1500000,nat:"Morocco"},
+      {n:"Matheus Martins",num:11,p:"FW",q:"PD",a:23,o:75,t:80,v:15000000},
+      {n:"Lucas Emanuel",num:79,p:"FW",q:"PD",a:19,o:69,t:77,v:2500000},
+      {n:"Domingos Andrade",num:91,p:"MF",q:"VOL",a:23,o:69,t:74,v:2500000}
     ],
     "br/Chapecoense": [
       {n:"Rafael Santos",num:1,p:"GK",q:"GOL",a:37,o:66,t:67,v:75000,nat:"Brazil"},
@@ -3657,7 +3713,6 @@
       {n:"Rafael Thyere",num:15,p:"DF",q:"ZAG",a:33,o:73,t:73,v:250000,nat:"Brazil"},
       {n:"Bruno Matias",num:16,p:"MF",q:"MC",a:27,o:72,t:73,v:500000,nat:"Brazil"},
       {n:"Vinicius Balieiro",num:17,p:"MF",q:"MC",a:27,o:71,t:73,v:3500000,nat:"Brazil"},
-      {n:"Neto Pessoa",num:18,p:"FW",q:"CA",a:32,o:72,t:72,v:350000,nat:"Brazil"},
       {n:"David Antunes",num:19,p:"MF",q:"MC",a:21,o:72,t:73,v:200000,nat:"Brazil"},
       {n:"Bruno Tubarão",num:20,p:"DF",q:"ZAG",a:31,o:71,t:73,v:3500000,nat:"Brazil"},
       {n:"Kauan Faria",num:21,p:"DF",q:"ZAG",a:26,o:70,t:72,v:3000000,nat:"Brazil"},
@@ -3674,7 +3729,12 @@
       {n:"Yago Felipe",num:88,p:"MF",q:"MC",a:31,o:72,t:72,v:1200000,nat:"Brazil"},
       {n:"Bruno Pacheco",num:91,p:"DF",q:"LE",a:34,o:70,t:70,v:800000,nat:"Brazil"},
       {n:"Kevin Ramírez",num:94,p:"FW",q:"PE",a:24,o:69,t:75,v:400000,nat:"Uruguay"},
-      {n:"Ênio",num:97,p:"FW",q:"PE",a:25,o:70,t:74,v:4000000,nat:"Brazil"}
+      {n:"Gabriel Werner",num:14,p:"GK",q:"GOL",a:26,o:70,t:72,v:2000000},
+      {n:"Rosivan",num:55,p:"MF",q:"VOL",a:22,o:65,t:70,v:1500000},
+      {n:"Dylan Borrero",num:77,p:"FW",q:"PE",a:22,o:69,t:74,v:2500000},
+      {n:"Miguel Carvalho",num:80,p:"MF",q:"VOL",a:19,o:67,t:75,v:2500000},
+      {n:"Anderson",num:98,p:"GK",q:"GOL",a:19,o:69,t:77,v:2500000},
+      {n:"Rafael Carvalheira",num:99,p:"MF",q:"VOL",a:24,o:66,t:71,v:1000000}
     ],
     "br/Corinthians": [
       {n:"Hugo Souza",num:1,p:"GK",q:"GOL",a:27,o:81,t:83,v:7000000,nat:"Brazil"},
@@ -3708,7 +3768,8 @@
       {n:"Gui Negão",num:56,p:"FW",q:"CA",a:19,o:73,t:81,v:7000000,nat:"Brazil"},
       {n:"Dieguinho",num:61,p:"FW",q:"PD",a:18,o:73,t:74,v:4000000,nat:"Brazil"},
       {n:"Jesse Lingard",num:77,p:"MF",q:"MEI",a:33,o:76,t:76,v:2000000,nat:"England"},
-      {n:"Alex Santana",num:80,p:"MF",q:"MC",a:31,o:67,t:75,v:1000000,nat:"Brazil"}
+      {n:"Alex Santana",num:80,p:"MF",q:"MC",a:31,o:67,t:75,v:1000000,nat:"Brazil"},
+      {n:"Iago Machado",num:55,p:"DF",q:"ZAG",a:20,o:69,t:77,v:2500000}
     ],
     "br/Coritiba": [
       {n:"Pedro Morisco",num:1,p:"GK",q:"GOL",a:22,o:71,t:74,v:5000000,nat:"Brazil"},
@@ -3733,13 +3794,16 @@
       {n:"Fabinho",num:28,p:"FW",q:"PD",a:27,o:72,t:72,v:1000000,nat:"Brazil"},
       {n:"Pedro Rocha",num:32,p:"FW",q:"CA",a:31,o:72,t:72,v:1500000,nat:"Brazil"},
       {n:"Vini Paulista",num:36,p:"MF",q:"VOL",a:25,o:64,t:72,v:1000000,nat:"Brazil"},
-      {n:"JP Chermont",num:44,p:"DF",q:"LD",a:20,o:63,t:71,v:4000000,nat:"Brazil"},
       {n:"Vitor Tissi",num:50,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Brazil"},
       {n:"Jacy Maranhão",num:55,p:"DF",q:"ZAG",a:29,o:63,t:71,v:2500000,nat:"Brazil"},
       {n:"Benassi",num:67,p:"GK",q:"GOL",a:20,o:62,t:70,v:50000,nat:"Brazil"},
       {n:"Breno Lopes",num:77,p:"FW",q:"PE",a:30,o:74,t:74,v:3000000,nat:"Brazil"},
       {n:"Renato Marques",num:78,p:"FW",q:"CA",a:22,o:73,t:77,v:1000000,nat:"Brazil"},
-      {n:"Lucas Taverna",num:86,p:"DF",q:"ZAG",a:19,o:63,t:71,v:2000000,nat:"Brazil"}
+      {n:"Lucas Taverna",num:86,p:"DF",q:"ZAG",a:19,o:63,t:71,v:2000000,nat:"Brazil"},
+      {n:"Rodrigo Gelado",num:66,p:"DF",q:"LE",a:22,o:64,t:67,v:300000,nat:"Brazil"},
+      {n:"Nicolás Fonseca",num:5,p:"MF",q:"ME",a:23,o:72,t:77,v:4000000},
+      {n:"Fabricio Bustos",num:14,p:"DF",q:"LE",a:23,o:70,t:75,v:3500000},
+      {n:"Richard",num:25,p:"MF",q:"VOL",a:26,o:70,t:72,v:2000000}
     ],
     "br/Cruzeiro": [
       {n:"Cássio",num:1,p:"GK",q:"GOL",a:39,o:79,t:79,v:250000,nat:"Brazil"},
@@ -3770,9 +3834,11 @@
       {n:"Rayan Lelis",num:57,p:"FW",q:"CA",a:19,o:71,t:80,v:6000000,nat:"Brazil"},
       {n:"João Costa",num:67,p:"FW",q:"PD",a:21,o:71,t:79,v:2500000,nat:"Portugal"},
       {n:"Gabriel Pec",num:77,p:"FW",q:"PD",a:25,o:78,t:81,v:9000000,nat:"Brazil"},
-      {n:"Chico da Costa",num:91,p:"FW",q:"CA",a:31,o:73,t:76,v:1000000,nat:"Brazil"},
       {n:"Wanderson",num:94,p:"FW",q:"PE",a:31,o:76,t:76,v:3000000,nat:"Belgium"},
-      {n:"Luciano Rodríguez",num:97,p:"FW",q:"CA",a:23,o:76,t:80,v:9000000,nat:"Uruguay"}
+      {n:"Luciano Rodríguez",num:97,p:"FW",q:"CA",a:23,o:76,t:80,v:9000000,nat:"Uruguay"},
+      {n:"Matías Viña",num:6,p:"DF",q:"LD",a:25,o:76,t:78,v:10000000},
+      {n:"Kaique Kenji",num:70,p:"FW",q:"CA",a:22,o:73,t:78,v:6000000},
+      {n:"Keny Arroyo",num:99,p:"FW",q:"PE",a:25,o:71,t:73,v:2800000}
     ],
     "br/Flamengo": [
       {n:"Agustín Rossi",num:1,p:"GK",q:"GOL",a:31,o:82,t:82,v:10000000,nat:"Argentina"},
@@ -3785,14 +3851,13 @@
       {n:"Saúl Ñíguez",num:8,p:"MF",q:"MC",a:31,o:77,t:77,v:1000000,nat:"Spain"},
       {n:"Pedro",num:9,p:"FW",q:"CA",a:29,o:83,t:83,v:20000000,nat:"Brazil"},
       {n:"Giorgian de Arrascaeta",num:10,p:"MF",q:"MEI",a:32,o:82,t:82,v:14000000,nat:"Uruguay"},
-      {n:"Everton",num:11,p:"FW",q:"PE",a:30,o:79,t:79,v:7000000,nat:"Brazil"},
       {n:"Danilo",num:13,p:"DF",q:"ZAG",a:35,o:80,t:80,v:2000000,nat:"Brazil"},
       {n:"Anthony Valencia",num:14,p:"FW",q:"PD",a:23,o:76,t:80,v:1800000,nat:"Ecuador"},
       {n:"Jorge Carrascal",num:15,p:"MF",q:"MEI",a:28,o:79,t:80,v:13000000,nat:"Colombia"},
       {n:"Samuel Lino",num:16,p:"FW",q:"PE",a:26,o:80,t:82,v:15000000,nat:"Brazil"},
       {n:"Nicolás de la Cruz",num:18,p:"MF",q:"MC",a:29,o:78,t:78,v:8000000,nat:"Uruguay"},
       {n:"Gonzalo Plata",num:19,p:"FW",q:"PD",a:25,o:80,t:82,v:9000000,nat:"Ecuador"},
-      {n:"Lucas Paquetá",num:20,p:"MF",q:"MEI",a:29,o:82,t:82,v:32000000,nat:"Brazil"},
+      {n:"Lucas Paquetá",num:11,p:"MF",q:"MEI",a:29,o:82,t:82,v:32000000,nat:"Brazil"},
       {n:"Jorginho",num:21,p:"MF",q:"VOL",a:34,o:81,t:81,v:4000000,nat:"Italy"},
       {n:"Emerson Royal",num:22,p:"DF",q:"LD",a:27,o:78,t:78,v:5000000,nat:"Brazil"},
       {n:"Alex Sandro",num:26,p:"DF",q:"LE",a:35,o:77,t:77,v:2000000,nat:"Brazil"},
@@ -3802,15 +3867,13 @@
       {n:"Vitão",num:44,p:"DF",q:"ZAG",a:26,o:76,t:79,v:7500000,nat:"Brazil"},
       {n:"Dyogo Alves",num:49,p:"GK",q:"GOL",a:22,o:70,t:76,v:400000,nat:"Brazil"},
       {n:"Evertton Araújo",num:52,p:"MF",q:"MC",a:23,o:71,t:79,v:6500000,nat:"Brazil"},
-      {n:"João Victor",num:61,p:"DF",q:"ZAG",a:19,o:72,t:79,v:800000,nat:"Brazil"},
-      {n:"Lorran",num:99,p:"MF",q:"MEI",a:20,o:72,t:80,v:4500000,nat:"Brazil"}
+      {n:"João Victor",num:61,p:"DF",q:"ZAG",a:19,o:72,t:79,v:800000,nat:"Brazil"}
     ],
     "br/Fluminense": [
       {n:"Fábio",num:1,p:"GK",q:"GOL",a:45,o:79,t:79,v:75000,nat:"Brazil"},
       {n:"Samuel Xavier",num:2,p:"DF",q:"LD",a:36,o:75,t:75,v:1500000,nat:"Brazil"},
       {n:"Thiago Silva",num:3,p:"DF",q:"ZAG",a:41,o:80,t:80,v:500000,nat:"Brazil"},
       {n:"Ignácio",num:4,p:"DF",q:"ZAG",a:29,o:75,t:76,v:2000000,nat:"Brazil"},
-      {n:"Renê",num:6,p:"DF",q:"LE",a:33,o:75,t:75,v:400000,nat:"Brazil"},
       {n:"Hulk",num:7,p:"FW",q:"CA",a:40,o:79,t:79,v:1000000,nat:"Brazil"},
       {n:"Matheus Martinelli",num:8,p:"MF",q:"VOL",a:25,o:77,t:78,v:16000000,nat:"Brazil"},
       {n:"John Kennedy",num:9,p:"FW",q:"SA",a:24,o:74,t:78,v:6000000,nat:"Brazil"},
@@ -3832,12 +3895,11 @@
       {n:"Yeferson Soteldo",num:30,p:"FW",q:"PE",a:29,o:76,t:76,v:3500000,nat:"Venezuela"},
       {n:"Lucho Acosta",num:32,p:"MF",q:"MEI",a:32,o:79,t:79,v:5000000,nat:"Argentina"},
       {n:"Hércules",num:35,p:"MF",q:"MC",a:25,o:77,t:80,v:15000000,nat:"Brazil"},
-      {n:"Davi Schuindt",num:40,p:"DF",q:"ZAG",a:22,o:67,t:75,v:3500000,nat:"Brazil"},
       {n:"Jemmes",num:44,p:"DF",q:"ZAG",a:26,o:72,t:76,v:3000000,nat:"Brazil"},
       {n:"Júlio Fidelis",num:46,p:"DF",q:"LD",a:19,o:67,t:75,v:300000,nat:"Brazil"},
-      {n:"David Terans",num:80,p:"MF",q:"MEI",a:32,o:74,t:74,v:1000000,nat:"Uruguay"},
       {n:"Kevin Serna",num:90,p:"FW",q:"PD",a:28,o:76,t:78,v:5000000,nat:"Colombia"},
-      {n:"Otávio",num:94,p:"MF",q:"VOL",a:32,o:76,t:76,v:1200000,nat:"Brazil"}
+      {n:"Otávio",num:94,p:"MF",q:"VOL",a:32,o:76,t:76,v:1200000,nat:"Brazil"},
+      {n:"Vitor Eudes",num:98,p:"GK",q:"GOL",a:20,o:72,t:80,v:4200000}
     ],
     "br/Grêmio": [
       {n:"Weverton",num:1,p:"GK",q:"GOL",a:38,o:78,t:78,v:700000,nat:"Brazil"},
@@ -3871,7 +3933,8 @@
       {n:"Riquelme",num:65,p:"MF",q:"MEI",a:20,o:66,t:74,v:2000000,nat:"Brazil"},
       {n:"Jovane Cabral",num:77,p:"FW",q:"CA",a:28,o:72,t:74,v:4000000,nat:"Cape Verde"},
       {n:"Carlos Vinícius",num:95,p:"FW",q:"CA",a:31,o:76,t:76,v:7000000,nat:"Brazil"},
-      {n:"José Enamorado",num:99,p:"FW",q:"PD",a:27,o:75,t:77,v:3000000,nat:"Colombia"}
+      {n:"José Enamorado",num:99,p:"FW",q:"PD",a:27,o:75,t:77,v:3000000,nat:"Colombia"},
+      {n:"Athos",num:42,p:"DF",q:"ZAG",a:24,o:71,t:76,v:2800000}
     ],
     "br/Internacional": [
       {n:"Sergio Rochet",num:1,p:"GK",q:"GOL",a:33,o:78,t:78,v:1500000,nat:"Uruguay"},
@@ -3924,7 +3987,6 @@
       {n:"Eduardo",num:33,p:"MF",q:"MEI",a:36,o:72,t:74,v:600000,nat:"Brazil"},
       {n:"João Victor",num:34,p:"DF",q:"ZAG",a:29,o:73,t:74,v:4000000,nat:"Brazil"},
       {n:"Gabriel Knesowitsch",num:44,p:"DF",q:"ZAG",a:22,o:63,t:71,v:700000,nat:"Brazil"},
-      {n:"Cauã Victor",num:45,p:"DF",q:"ZAG",a:20,o:63,t:71,v:2000000,nat:"Brazil"},
       {n:"Marcelinho",num:53,p:"DF",q:"LD",a:26,o:71,t:73,v:3500000,nat:"Brazil"},
       {n:"Gustavo Cazonatti",num:55,p:"MF",q:"VOL",a:20,o:64,t:72,v:450000,nat:"Brazil"},
       {n:"Alesson",num:77,p:"FW",q:"PE",a:27,o:66,t:74,v:2500000,nat:"Brazil"},
@@ -3932,7 +3994,10 @@
       {n:"Thomazella",num:90,p:"GK",q:"GOL",a:36,o:63,t:71,v:1000000,nat:"Brazil"},
       {n:"Luiz Silva",num:35,p:"DF",q:"ZAG",a:20,o:63,t:71,v:2000000,nat:"Brazil"},
       {n:"Renato Marques",num:0,p:"FW",q:"PD",a:22,o:72,t:77,v:5000000,nat:"Brazil"},
-      {n:"Rodrigo Rodrigues",num:0,p:"FW",q:"CA",a:26,o:70,t:70,v:3000000,nat:"Brazil"}
+      {n:"Rodrigo Rodrigues",num:0,p:"FW",q:"CA",a:26,o:70,t:70,v:3000000,nat:"Brazil"},
+      {n:"Zé Roberto",num:9,p:"FW",q:"CA",a:32,o:65,t:68,v:14000000,nat:"Brazil"},
+      {n:"André Luis",num:99,p:"FW",q:"PD",a:29,o:65,t:65,v:550000,nat:"Brazil"},
+      {n:"Edson Carioca",num:95,p:"FW",q:"CA",a:23,o:65,t:70,v:1500000}
     ],
     "br/Palmeiras": [
       {n:"Carlos Miguel",num:1,p:"GK",q:"GOL",a:27,o:79,t:81,v:7000000,nat:"Brazil"},
@@ -3990,7 +4055,9 @@
       {n:"Fabrício",num:37,p:"GK",q:"GOL",a:26,o:68,t:76,v:2500000,nat:"Brazil"},
       {n:"Cauê Nascimento",num:51,p:"DF",q:"LE",a:19,o:68,t:76,v:500000,nat:"Brazil"},
       {n:"Gustavo Reis",num:56,p:"GK",q:"GOL",a:20,o:68,t:76,v:2500000,nat:"Brazil"},
-      {n:"Marcelinho Braz",num:57,p:"MF",q:"MEI",a:20,o:69,t:77,v:400000,nat:"Brazil"}
+      {n:"Marcelinho Braz",num:57,p:"MF",q:"MEI",a:20,o:69,t:77,v:400000,nat:"Brazil"},
+      {n:"Bruno Gonçalves",num:19,p:"FW",q:"PD",a:25,o:74,t:76,v:6000000},
+      {n:"Wallace Yan",num:47,p:"FW",q:"PE",a:24,o:70,t:75,v:2000000}
     ],
     "br/Remo": [
       {n:"Alexandre",num:1,p:"DF",q:"LD",a:26,o:69,t:71,v:900000,nat:"Brazil"},
@@ -4023,7 +4090,8 @@
       {n:"Mayk",num:77,p:"DF",q:"LE",a:27,o:62,t:70,v:500000,nat:"Brazil"},
       {n:"Marcelo Rangel",num:88,p:"GK",q:"GOL",a:38,o:71,t:71,v:50000,nat:"Brazil"},
       {n:"Ygor Vinhas",num:94,p:"GK",q:"GOL",a:32,o:69,t:71,v:50000,nat:"Brazil"},
-      {n:"Ivan",num:97,p:"GK",q:"GOL",a:29,o:62,t:70,v:1000000,nat:"Brazil"}
+      {n:"Ivan",num:97,p:"GK",q:"GOL",a:29,o:62,t:70,v:1000000,nat:"Brazil"},
+      {n:"João Lucas",p:"DF",q:"LD",a:27,o:71,t:73,v:2800000}
     ],
     "br/Santos": [
       {n:"Diógenes",num:1,p:"GK",q:"GOL",a:25,o:71,t:73,v:200000,nat:"Brazil"},
@@ -4034,7 +4102,7 @@
       {n:"Gabriel Bontempo",num:8,p:"MF",q:"MC",a:21,o:73,t:80,v:9000000,nat:"Brazil"},
       {n:"Gabriel Barbosa",num:9,p:"FW",q:"PE",a:30,o:78,t:78,v:4000000,nat:"Brazil"},
       {n:"Neymar",num:10,p:"FW",q:"PD",a:34,o:83,t:83,v:3000000,nat:"Brazil"},
-      {n:"Rony",num:11,p:"FW",q:"PD",a:31,o:76,t:76,v:3000000,nat:"Brazil"},
+      {n:"Rony",num:33,p:"FW",q:"PD",a:31,o:76,t:76,v:3000000,nat:"Brazil"},
       {n:"Luan Peres",num:14,p:"DF",q:"ZAG",a:32,o:75,t:75,v:700000,nat:"Brazil"},
       {n:"Willian Arão",num:15,p:"MF",q:"VOL",a:33,o:74,t:74,v:800000,nat:"Brazil"},
       {n:"Thaciano",num:16,p:"MF",q:"MEI",a:31,o:75,t:75,v:1000000,nat:"Brazil"},
@@ -4056,7 +4124,13 @@
       {n:"Mateus Xavier",num:47,p:"FW",q:"PE",a:19,o:66,t:74,v:400000,nat:"Brazil"},
       {n:"Gustavo Henrique",num:48,p:"MF",q:"MC",a:21,o:73,t:73,v:1000000,nat:"Brazil"},
       {n:"Nadson",num:57,p:"FW",q:"CA",a:17,o:66,t:74,v:3000000,nat:"Brazil"},
-      {n:"Gabriel Brazão",num:77,p:"GK",q:"GOL",a:25,o:77,t:80,v:12000000,nat:"Brazil"}
+      {n:"Gabriel Brazão",num:77,p:"GK",q:"GOL",a:25,o:77,t:80,v:12000000,nat:"Brazil"},
+      {n:"Everton Cebolinha",num:7,p:"FW",q:"SA",a:28,o:75,t:77,v:3500000},
+      {n:"Philippe Coutinho",num:11,p:"MF",q:"ME",a:26,o:75,t:77,v:7500000},
+      {n:"Rodinei",num:23,p:"DF",q:"LD",a:25,o:73,t:75,v:4500000},
+      {n:"Rafael Gonzaga",num:38,p:"DF",q:"ZAG",a:25,o:66,t:68,v:1000000},
+      {n:"Rodrigo Falcão",num:67,p:"GK",q:"GOL",a:21,o:69,t:77,v:2500000},
+      {n:"Samuel Pierri",num:81,p:"MF",q:"MC",a:22,o:69,t:74,v:2500000}
     ],
     "br/São Paulo": [
       {n:"Rafael Tolói",num:2,p:"DF",q:"ZAG",a:35,o:77,t:77,v:800000,nat:"Italy"},
@@ -4088,7 +4162,10 @@
       {n:"Young",num:50,p:"GK",q:"GOL",a:24,o:69,t:77,v:100000,nat:"Brazil"},
       {n:"Felipe Preis",num:52,p:"GK",q:"GOL",a:20,o:69,t:77,v:3000000,nat:"Brazil"},
       {n:"Isac",num:53,p:"DF",q:"ZAG",a:20,o:69,t:77,v:4500000,nat:"Brazil"},
-      {n:"Luis Osorio",num:54,p:"DF",q:"ZAG",a:20,o:69,t:77,v:4500000,nat:"Brazil"}
+      {n:"Luis Osorio",num:54,p:"DF",q:"ZAG",a:20,o:69,t:77,v:4500000,nat:"Brazil"},
+      {n:"Enzo Díaz",num:13,p:"DF",q:"LD",a:23,o:76,t:81,v:19000000},
+      {n:"Cédric Soares",num:21,p:"DF",q:"ZAG",a:23,o:75,t:80,v:15000000},
+      {n:"Cauly",num:80,p:"MF",q:"VOL",a:22,o:69,t:74,v:2500000}
     ],
     "br/Vasco da Gama": [
       {n:"Léo Jardim",num:1,p:"GK",q:"GOL",a:31,o:79,t:79,v:7000000,nat:"Brazil"},
@@ -4114,13 +4191,16 @@
       {n:"Lucas Freitas",num:43,p:"DF",q:"ZAG",a:25,o:73,t:77,v:1000000,nat:"Brazil"},
       {n:"Carlos Cuesta",num:46,p:"DF",q:"ZAG",a:27,o:76,t:78,v:8000000,nat:"Colombia"},
       {n:"João Vitor",num:60,p:"DF",q:"ZAG",a:21,o:65,t:73,v:2500000,nat:"Brazil"},
-      {n:"Walace Fernandes",num:64,p:"DF",q:"ZAG",a:20,o:65,t:73,v:2500000,nat:"Brazil"},
+      {n:"Walace Fernandes",num:74,p:"DF",q:"ZAG",a:20,o:65,t:73,v:2500000,nat:"Brazil"},
       {n:"Cuiabano",num:66,p:"DF",q:"ZAG",a:23,o:72,t:76,v:5000000,nat:"Brazil"},
       {n:"Claudio Spinelli",num:77,p:"FW",q:"CA",a:29,o:72,t:72,v:3000000,nat:"Argentina"},
       {n:"Ramon Rique",num:83,p:"MF",q:"MC",a:18,o:66,t:74,v:1000000,nat:"Brazil"},
       {n:"Mateus Carvalho",num:85,p:"MF",q:"MC",a:24,o:70,t:74,v:4000000,nat:"Brazil"},
       {n:"Cauan Barros",num:88,p:"MF",q:"VOL",a:22,o:70,t:76,v:5000000,nat:"Brazil"},
-      {n:"Paulo Henrique",num:96,p:"DF",q:"LD",a:30,o:75,t:77,v:6000000,nat:"Brazil"}
+      {n:"Paulo Henrique",num:96,p:"DF",q:"LD",a:30,o:75,t:77,v:6000000,nat:"Brazil"},
+      {n:"Alan Lescano",num:22,p:"MF",q:"MEI",a:25,o:73,t:76,v:5000000,nat:"Argentina"},
+      {n:"Gabriel Pereira",num:55,p:"DF",q:"ZAG",a:24,o:70,t:75,v:2000000},
+      {n:"Walace Falcão",num:64,p:"DF",q:"LE",a:20,o:72,t:80,v:4200000}
     ],
     "br/Vitória": [
       {n:"Lucas Arcanjo",num:1,p:"GK",q:"GOL",a:28,o:74,t:75,v:2500000,nat:"Brazil"},
@@ -4154,7 +4234,12 @@
       {n:"Yuri Sena",num:71,p:"GK",q:"GOL",a:25,o:62,t:70,v:1000000,nat:"Brazil"},
       {n:"Renato Kayzer",num:79,p:"FW",q:"CA",a:30,o:74,t:74,v:1000000,nat:"Brazil"},
       {n:"Jamerson",num:83,p:"DF",q:"LE",a:20,o:62,t:70,v:800000,nat:"Brazil"},
-      {n:"Zé Vitor",num:88,p:"MF",q:"MC",a:26,o:63,t:71,v:500000,nat:"Brazil"}
+      {n:"Zé Vitor",num:88,p:"MF",q:"MC",a:26,o:63,t:71,v:500000,nat:"Brazil"},
+      {n:"Darlan",num:3,p:"DF",q:"ZAG",a:22,o:64,t:67,v:1500000,nat:"Brazil"},
+      {n:"Renê",num:91,p:"DF",q:"LE",a:33,o:75,t:75,v:400000,nat:"Brazil"},
+      {n:"Mateus Silva",num:98,p:"DF",q:"ZAG",a:31,o:70,t:70,v:150000,nat:"Brazil"},
+      {n:"Caíque Gonçalves",num:95,p:"MF",q:"VOL",a:24,o:63,t:68,v:600000},
+      {n:"Ignacio Laquintana",p:"FW",q:"CA",a:28,o:71,t:73,v:1500000}
     ],
     "ch/Basel": [
       {n:"Jonas Omlin",num:1,p:"GK",q:"GOL",a:32,o:76,t:76,v:2000000,nat:"Switzerland"},
@@ -4171,7 +4256,6 @@
       {n:"Andrej Bačanin",num:14,p:"MF",q:"VOL",a:19,o:65,t:72,v:3000000,nat:"Serbia"},
       {n:"Aaron Malouda",num:17,p:"FW",q:"PD",a:20,o:63,t:68,v:900000,nat:"France"},
       {n:"Asane Sow",num:18,p:"FW",q:"PE",a:20,o:62,t:68,v:400000,nat:"Italy"},
-      {n:"Albian Ajeti",num:23,p:"FW",q:"CA",a:29,o:68,t:68,v:2000000,nat:"Switzerland"},
       {n:"Flavius Daniliuc",num:24,p:"DF",q:"ZAG",a:25,o:70,t:72,v:5000000,nat:"Austria"},
       {n:"Coleen Louis",num:25,p:"DF",q:"ZAG",a:21,o:61,t:68,v:1000000,nat:"France"},
       {n:"Gabriel Sigua",num:26,p:"MF",q:"MC",a:21,o:60,t:67,v:950000,nat:"Georgia"},
@@ -4183,7 +4267,7 @@
       {n:"Bennett Hoch",num:48,p:"GK",q:"GOL",a:19,o:58,t:67,v:450000,nat:"Switzerland"},
       {n:"Renato",num:49,p:"GK",q:"GOL",a:19,o:58,t:67,v:450000,nat:"Brazil"},
       {n:"Akpe Victory",num:55,p:"DF",q:"ZAG",a:20,o:60,t:68,v:2000000,nat:"Nigeria"},
-      {n:"Clément Michelin",num:0,p:"DF",q:"LD",a:29,o:69,t:69,v:600000,nat:"France"}
+      {n:"Clément Michelin",num:22,p:"DF",q:"LD",a:29,o:69,t:69,v:600000,nat:"France"}
     ],
     "ch/Grasshopper": [
       {n:"Marvin Hübel",num:1,p:"GK",q:"GOL",a:26,o:64,t:67,v:500000,nat:"Switzerland"},
@@ -4202,7 +4286,7 @@
       {n:"Diego Ferrazza",num:20,p:"FW",q:"CA",a:24,o:62,t:66,v:10000,nat:"Italy"},
       {n:"Pantaleo Creti",num:22,p:"DF",q:"ZAG",a:18,o:60,t:66,v:800000,nat:"Italy"},
       {n:"Samuel Marques",num:23,p:"MF",q:"PD",a:25,o:63,t:66,v:500000,nat:"Switzerland"},
-      {n:"Kenzo Goudmijn",num:25,p:"MF",q:"MC",a:24,o:68,t:72,v:700000,nat:"Netherlands"},
+      {n:"Kenzo Goudmijn",num:24,p:"MF",q:"MC",a:24,o:68,t:72,v:700000,nat:"Netherlands"},
       {n:"John Hilton",num:25,p:"DF",q:"LE",a:25,o:60,t:66,v:350000,nat:"USA"},
       {n:"Simone Stroscio",num:28,p:"DF",q:"LD",a:23,o:56,t:60,v:1200000,nat:"Switzerland"},
       {n:"Maximilian Ullmann",num:31,p:"DF",q:"LE",a:30,o:66,t:66,v:350000,nat:"Austria"},
@@ -4226,7 +4310,6 @@
       {n:"Dircssi Ngonzo",num:5,p:"DF",q:"ZAG",a:23,o:62,t:66,v:400000,nat:"Switzerland"},
       {n:"Theo Bergvall",num:6,p:"DF",q:"LD",a:21,o:64,t:70,v:800000,nat:"Sweden"},
       {n:"Alban Ajdini",num:7,p:"FW",q:"PD",a:27,o:69,t:71,v:500000,nat:"Kosovo"},
-      {n:"Jamie Roche",num:8,p:"MF",q:"VOL",a:25,o:70,t:74,v:4000000,nat:"Sweden"},
       {n:"Enzo Molebe",num:9,p:"FW",q:"CA",a:18,o:64,t:73,v:800000,nat:"France"},
       {n:"Olivier Custodio",num:10,p:"MF",q:"MC",a:31,o:67,t:67,v:1000000,nat:"Switzerland"},
       {n:"Nathan Butler-Oyedeji",num:11,p:"FW",q:"CA",a:23,o:59,t:63,v:800000,nat:"England"},
@@ -4246,7 +4329,9 @@
       {n:"Sékou Koné",num:80,p:"MF",q:"VOL",a:20,o:60,t:68,v:400000,nat:"Mali"},
       {n:"Melvin Mastil",num:90,p:"GK",q:"GOL",a:26,o:60,t:66,v:250000,nat:"Algeria"},
       {n:"Florent Mollet",num:91,p:"MF",q:"MEI",a:34,o:70,t:70,v:300000,nat:"France"},
-      {n:"Nicolas Cozza",num:0,p:"DF",q:"ZAG",a:27,o:73,t:73,v:2500000,nat:"France"}
+      {n:"Nicolas Cozza",num:31,p:"DF",q:"ZAG",a:27,o:73,t:73,v:2500000,nat:"France"},
+      {n:"Étienne Youté Kinkoué",num:4,p:"DF",q:"ZAG",a:25,o:67,t:69,v:1200000},
+      {n:"Koba Koindredi",num:88,p:"MF",q:"VOL",a:21,o:58,t:66,v:400000}
     ],
     "ch/Lugano": [
       {n:"Bekhruz Karimov",num:2,p:"DF",q:"LD",a:19,o:62,t:68,v:1000000,nat:"Uzbekistan"},
@@ -4278,7 +4363,8 @@
       {n:"Carbone",num:44,p:"DF",q:"ZAG",a:19,o:58,t:67,v:300000,nat:"Brazil"},
       {n:"Mattia Zanotti",num:46,p:"DF",q:"LD",a:23,o:73,t:77,v:5500000,nat:"Italy"},
       {n:"Kevin Behrens",num:91,p:"FW",q:"CA",a:35,o:71,t:71,v:900000,nat:"Germany"},
-      {n:"Diego Mina",num:99,p:"GK",q:"GOL",a:21,o:56,t:63,v:100000,nat:"Switzerland"}
+      {n:"Diego Mina",num:99,p:"GK",q:"GOL",a:21,o:56,t:63,v:100000,nat:"Switzerland"},
+      {n:"Albian Ajeti",num:9,p:"FW",q:"CA",a:29,o:68,t:68,v:2000000,nat:"Switzerland"}
     ],
     "ch/Luzern": [
       {n:"Simon Simoni",num:1,p:"GK",q:"GOL",a:22,o:62,t:68,v:600000,nat:"Albania"},
@@ -4310,7 +4396,8 @@
       {n:"Sascha Meyer",num:71,p:"FW",q:"CA",a:19,o:58,t:67,v:150000,nat:"Switzerland"},
       {n:"Erblin Sadikaj",num:77,p:"DF",q:"ZAG",a:24,o:62,t:66,v:100000,nat:"Switzerland"},
       {n:"Mio Zimmermann",num:80,p:"MF",q:"MC",a:19,o:51,t:60,v:200000,nat:"Switzerland"},
-      {n:"Karlo Letica",num:30,p:"GK",q:"GOL",a:29,o:69,t:69,v:1500000,nat:"Croatia"}
+      {n:"Karlo Letica",num:30,p:"GK",q:"GOL",a:29,o:69,t:69,v:1500000,nat:"Croatia"},
+      {n:"Jérôme Bieler",num:33,p:"GK",q:"GOL",a:21,o:62,t:70,v:800000}
     ],
     "ch/Servette": [
       {n:"Edvinas Gertmonas",num:1,p:"GK",q:"GOL",a:30,o:68,t:68,v:1400000,nat:"Lithuania"},
@@ -4342,7 +4429,9 @@
       {n:"Louis Rieder",num:44,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Switzerland"},
       {n:"Tiemoko Ouattara",num:77,p:"FW",q:"PE",a:21,o:62,t:69,v:600000,nat:"Switzerland"},
       {n:"Léo Besson",num:78,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Kosovo"},
-      {n:"Samuel Mráz",num:90,p:"FW",q:"CA",a:29,o:68,t:68,v:1000000,nat:"Slovakia"}
+      {n:"Samuel Mráz",num:90,p:"FW",q:"CA",a:29,o:68,t:68,v:1000000,nat:"Slovakia"},
+      {n:"Jesper Karlsson",num:21,p:"FW",q:"CA",a:28,o:68,t:70,v:1000000},
+      {n:"Benoît Sida",num:38,p:"FW",q:"PD",a:22,o:63,t:68,v:1000000}
     ],
     "ch/Sion": [
       {n:"Anthony Racioppi",num:1,p:"GK",q:"GOL",a:27,o:69,t:70,v:1500000,nat:"Switzerland"},
@@ -4398,9 +4487,10 @@
       {n:"Enoch Owusu",num:47,p:"FW",q:"PD",a:21,o:55,t:62,v:300000,nat:"Italy"},
       {n:"Corsin Konietzke",num:63,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Switzerland"},
       {n:"Mihailo Stevanović",num:64,p:"MF",q:"MC",a:24,o:66,t:71,v:800000,nat:"Serbia"},
-      {n:"Pascal Büttiker",num:71,p:"DF",q:"ZAG",a:19,o:58,t:67,v:650000,nat:"Switzerland"},
       {n:"Joel Ruiz",num:74,p:"DF",q:"ZAG",a:19,o:58,t:67,v:400000,nat:"Switzerland"},
-      {n:"Yannick Bujard",num:81,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Switzerland"}
+      {n:"Yannick Bujard",num:81,p:"GK",q:"GOL",a:19,o:57,t:66,v:350000,nat:"Switzerland"},
+      {n:"Jorge Rans",num:67,p:"FW",q:"PD",a:20,o:58,t:66,v:500000},
+      {n:"Nevio Scherrer",num:70,p:"FW",q:"PD",a:22,o:61,t:66,v:900000}
     ],
     "ch/Thun": [
       {n:"Niklas Steffen",num:1,p:"GK",q:"GOL",a:25,o:65,t:69,v:2500000,nat:"Switzerland"},
@@ -4460,7 +4550,8 @@
       {n:"Mattia Walker",num:30,p:"MF",q:"VOL",a:20,o:57,t:65,v:200000,nat:"Switzerland"},
       {n:"Luca Celentano",num:37,p:"DF",q:"ZAG",a:22,o:58,t:64,v:100000,nat:"Switzerland"},
       {n:"Nico Föllmi",num:38,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Switzerland"},
-      {n:"Dejan Sorgić",num:39,p:"FW",q:"CA",a:36,o:63,t:63,v:300000,nat:"Serbia"}
+      {n:"Dejan Sorgić",num:39,p:"FW",q:"CA",a:36,o:63,t:63,v:300000,nat:"Serbia"},
+      {n:"Lutfi Dalipi",num:11,p:"MF",q:"MC",a:26,o:62,t:63,v:850000,nat:"Switzerland"}
     ],
     "ch/Young Boys": [
       {n:"Marvin Keller",num:1,p:"GK",q:"GOL",a:24,o:72,t:76,v:6000000,nat:"Switzerland"},
@@ -4472,7 +4563,6 @@
       {n:"Armin Gigović",num:8,p:"MF",q:"MC",a:24,o:72,t:74,v:2500000,nat:"Bosnia"},
       {n:"Kaly Sène",num:9,p:"FW",q:"CA",a:25,o:69,t:71,v:2000000,nat:"Senegal"},
       {n:"Alvyn Sanches",num:10,p:"MF",q:"MEI",a:23,o:73,t:77,v:10000000,nat:"Switzerland"},
-      {n:"Joël Monteiro",num:11,p:"MF",q:"MC",a:27,o:73,t:74,v:4000000,nat:"Switzerland"},
       {n:"Dominik Pech",num:13,p:"MF",q:"MC",a:20,o:68,t:76,v:3000000,nat:"Czech Republic"},
       {n:"Cédric Zesiger",num:15,p:"DF",q:"ZAG",a:28,o:76,t:76,v:5500000,nat:"Switzerland"},
       {n:"Christian Fassnacht",num:16,p:"MF",q:"PD",a:32,o:72,t:72,v:2000000,nat:"Switzerland"},
@@ -4490,10 +4580,9 @@
       {n:"Samuel Essende",num:99,p:"FW",q:"CA",a:28,o:74,t:74,v:2500000,nat:"DR Congo"},
       {n:"Ruben Salchli",num:0,p:"GK",q:"GOL",a:22,o:58,t:64,v:350000,nat:"Switzerland"},
       {n:"Stevan Raicevic",num:0,p:"DF",q:"ZAG",a:22,o:60,t:66,v:800000,nat:"Switzerland"},
-      {n:"Tanguy Zoukrou",num:0,p:"DF",q:"ZAG",a:23,o:65,t:69,v:2000000,nat:"France"},
       {n:"Ebrima Colley",num:0,p:"MF",q:"MC",a:26,o:66,t:66,v:1500000,nat:"The Gambia"},
-      {n:"Lutfi Dalipi",num:0,p:"MF",q:"MC",a:26,o:62,t:63,v:850000,nat:"Switzerland"},
-      {n:"Elio Rufener",num:0,p:"MF",q:"MC",a:22,o:58,t:64,v:500000,nat:"Switzerland"}
+      {n:"Elio Rufener",num:0,p:"MF",q:"MC",a:22,o:58,t:64,v:500000,nat:"Switzerland"},
+      {n:"Herba Guirassy",num:12,p:"MF",q:"MC",a:25,o:68,t:70,v:1400000}
     ],
     "ch/Zürich": [
       {n:"Silas Huber",num:1,p:"GK",q:"GOL",a:21,o:56,t:63,v:1500000,nat:"Switzerland"},
@@ -4516,7 +4605,7 @@
       {n:"Ilan Sauter",num:27,p:"DF",q:"ZAG",a:25,o:56,t:58,v:1500000,nat:"Switzerland"},
       {n:"Mario Greco",num:28,p:"FW",q:"CA",a:22,o:60,t:66,v:5000000,nat:"Switzerland"},
       {n:"Damienus Reverson",num:29,p:"FW",q:"CA",a:23,o:60,t:64,v:5000000,nat:"Netherlands"},
-      {n:"Cosimo Fiorini",num:34,p:"MF",q:"MC",a:20,o:55,t:63,v:2000000,nat:"Italy"},
+      {n:"Cosimo Fiorini",num:6,p:"MF",q:"MC",a:20,o:55,t:63,v:2000000,nat:"Italy"},
       {n:"Miguel Reichmuth",num:38,p:"MF",q:"MC",a:22,o:58,t:62,v:3000000,nat:"Switzerland"},
       {n:"Alexander Hack",num:42,p:"DF",q:"ZAG",a:33,o:71,t:71,v:6000000,nat:"Germany"},
       {n:"Neil Volken",num:43,p:"DF",q:"ZAG",a:19,o:56,t:65,v:2500000,nat:"Switzerland"},
@@ -4527,7 +4616,9 @@
       {n:"Yuro Bohon Diet",num:0,p:"DF",q:"ZAG",a:22,o:58,t:64,v:3500000,nat:"Switzerland"},
       {n:"Marlon Schwarz",num:0,p:"DF",q:"ZAG",a:22,o:58,t:64,v:3500000,nat:"Switzerland"},
       {n:"Mihael Cavar",num:0,p:"MF",q:"MC",a:24,o:60,t:65,v:5000000,nat:"Switzerland"},
-      {n:"Damien Odera",num:0,p:"FW",q:"CA",a:24,o:60,t:65,v:5000000,nat:"Kenya"}
+      {n:"Damien Odera",num:0,p:"FW",q:"CA",a:24,o:60,t:65,v:5000000,nat:"Kenya"},
+      {n:"Doron Lichtenstein",num:47,p:"DF",q:"LD",a:24,o:56,t:61,v:600000},
+      {n:"Tyrese Pinthus",num:60,p:"GK",q:"GOL",a:19,o:56,t:64,v:400000}
     ],
     "co/Águilas Doradas": [
       {n:"Jorge Soto",num:1,p:"GK",q:"GOL",a:27,o:68,t:71,v:300000,nat:"Colombia"},
@@ -4537,13 +4628,11 @@
       {n:"Iván Rojas",num:6,p:"MF",q:"VOL",a:29,o:70,t:73,v:450000,nat:"Colombia"},
       {n:"Eduar Arizalas",num:7,p:"FW",q:"PD",a:26,o:65,t:67,v:450000,nat:"Colombia"},
       {n:"Andrés Ricaurte",num:8,p:"MF",q:"MC",a:34,o:71,t:71,v:150000,nat:"Colombia"},
-      {n:"Anthony Vásquez",num:9,p:"FW",q:"CA",a:25,o:67,t:71,v:450000,nat:"Colombia"},
+      {n:"Anthony Vásquez",num:5,p:"FW",q:"CA",a:25,o:67,t:71,v:450000,nat:"Colombia"},
       {n:"Junior Noguera",num:10,p:"FW",q:"PE",a:24,o:68,t:71,v:200000,nat:"Paraguay"},
       {n:"Jhon Meléndez",num:13,p:"FW",q:"PD",a:26,o:64,t:66,v:200000,nat:"Colombia"},
       {n:"Fabián Charales",num:15,p:"FW",q:"PD",a:26,o:64,t:66,v:300000,nat:"Colombia"},
       {n:"Matías Ramírez",num:16,p:"FW",q:"PE",a:27,o:65,t:67,v:450000,nat:"Argentina"},
-      {n:"Emanuel Betancur",num:17,p:"DF",q:"ZAG",a:25,o:66,t:70,v:2000000,nat:"Colombia"},
-      {n:"Andrés Álvarez",num:18,p:"DF",q:"LE",a:24,o:66,t:70,v:100000,nat:"Colombia"},
       {n:"Frank Lozano",num:19,p:"MF",q:"VOL",a:28,o:67,t:69,v:2000000,nat:"Colombia"},
       {n:"Alberto Higgins",num:20,p:"DF",q:"ZAG",a:23,o:65,t:69,v:50000,nat:"Colombia"},
       {n:"Ricardo Márquez",num:21,p:"FW",q:"CA",a:28,o:68,t:68,v:400000,nat:"Colombia"},
@@ -4556,9 +4645,10 @@
       {n:"Javier Mena",num:32,p:"DF",q:"LE",a:20,o:57,t:65,v:1200000,nat:"Colombia"},
       {n:"Héctor Arango",num:34,p:"GK",q:"GOL",a:23,o:64,t:68,v:1000000,nat:"Colombia"},
       {n:"Royner Benítez",num:90,p:"FW",q:"PD",a:24,o:65,t:70,v:2000000,nat:"Colombia"},
-      {n:"Tomás Blandón",num:0,p:"MF",q:"MC",a:26,o:64,t:66,v:1500000,nat:"Colombia"},
-      {n:"Juan Sebastián Quintero",num:0,p:"FW",q:"CA",a:26,o:64,t:66,v:1500000,nat:"Colombia"},
-      {n:"Carlos Rojas",num:0,p:"FW",q:"CA",a:24,o:65,t:70,v:25000,nat:"Colombia"}
+      {n:"Tomás Blandón",num:17,p:"MF",q:"MC",a:26,o:64,t:66,v:1500000,nat:"Colombia"},
+      {n:"Juan Sebastián Quintero",num:33,p:"FW",q:"CA",a:26,o:64,t:66,v:1500000,nat:"Colombia"},
+      {n:"Carlos Rojas",num:0,p:"FW",q:"CA",a:24,o:65,t:70,v:25000,nat:"Colombia"},
+      {n:"Andrés Carreño",num:18,p:"FW",q:"SA",a:27,o:65,t:67,v:800000}
     ],
     "co/Alianza FC": [
       {n:"Johan Wallens",num:1,p:"GK",q:"GOL",a:34,o:66,t:69,v:50000,nat:"Colombia"},
@@ -4592,7 +4682,10 @@
       {n:"Wiston Fernández",num:55,p:"MF",q:"VOL",a:28,o:66,t:68,v:400000,nat:"Uruguay"},
       {n:"Yilson Rosales",num:60,p:"DF",q:"LD",a:20,o:57,t:65,v:400000,nat:"Colombia"},
       {n:"Leyner Palacios",num:88,p:"FW",q:"PD",a:20,o:57,t:65,v:100000,nat:"Colombia"},
-      {n:"Kevin Aponzá",num:0,p:"DF",q:"ZAG",a:26,o:62,t:64,v:900000,nat:"Colombia"}
+      {n:"Joseb Mosquera",num:4,p:"DF",q:"ZAG",a:27,o:64,t:66,v:1000000},
+      {n:"Lucas Valencia",num:20,p:"FW",q:"SA",a:25,o:62,t:64,v:500000},
+      {n:"Misael Martínez",num:77,p:"FW",q:"CA",a:20,o:60,t:68,v:900000},
+      {n:"Samuel Nieto",p:"FW",q:"SA",a:24,o:61,t:66,v:800000}
     ],
     "co/América de Cali": [
       {n:"Jean Fernandes",num:1,p:"GK",q:"GOL",a:30,o:71,t:72,v:550000,nat:"Brazil"},
@@ -4641,7 +4734,6 @@
       {n:"Juan Rengifo",num:19,p:"MF",q:"MEI",a:26,o:69,t:71,v:5000000,nat:"Colombia"},
       {n:"Milton Casco",num:20,p:"DF",q:"LE",a:38,o:74,t:74,v:75000,nat:"Argentina"},
       {n:"Jorman Campuzano",num:21,p:"MF",q:"VOL",a:30,o:73,t:73,v:1500000,nat:"Colombia"},
-      {n:"Juan José Arias",num:23,p:"DF",q:"ZAG",a:26,o:69,t:71,v:2500000,nat:"Colombia"},
       {n:"Juan Rosa",num:24,p:"MF",q:"MEI",a:24,o:70,t:75,v:4000000,nat:"Colombia"},
       {n:"Luis Marquinez",num:25,p:"GK",q:"GOL",a:23,o:67,t:71,v:300000,nat:"Colombia"},
       {n:"Elkin Rivero",num:26,p:"MF",q:"VOL",a:20,o:62,t:70,v:250000,nat:"Colombia"},
@@ -4654,7 +4746,10 @@
       {n:"Luis Landázuri",num:37,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Colombia"},
       {n:"Edimer Zea",num:44,p:"GK",q:"GOL",a:20,o:62,t:70,v:1000000,nat:"Colombia"},
       {n:"Juan Manuel Zapata",num:80,p:"MF",q:"MC",a:26,o:69,t:77,v:900000,nat:"Colombia"},
-      {n:"Ian Poveda",num:99,p:"FW",q:"PD",a:26,o:69,t:71,v:1200000,nat:"Colombia"}
+      {n:"Ian Poveda",num:99,p:"FW",q:"PD",a:26,o:69,t:71,v:1200000,nat:"Colombia"},
+      {n:"Elías Cabrera",num:22,p:"MF",q:"MC",a:23,o:68,t:72,v:3000000,nat:"Argentina"},
+      {n:"James Rodríguez",num:23,p:"MF",q:"VOL",a:23,o:69,t:74,v:2500000},
+      {n:"Xavi Ríos",num:31,p:"DF",q:"ZAG",a:22,o:67,t:72,v:1800000}
     ],
     "co/Boyacá Chicó": [
       {n:"David Agudelo",num:1,p:"GK",q:"GOL",a:27,o:65,t:68,v:150000,nat:"Colombia"},
@@ -4670,7 +4765,6 @@
       {n:"Delio Ramírez",num:11,p:"MF",q:"MC",a:25,o:65,t:70,v:350000,nat:"Colombia"},
       {n:"Branndon Zapata",num:12,p:"GK",q:"GOL",a:29,o:64,t:66,v:900000,nat:"Colombia"},
       {n:"Yaliston Martínez",num:13,p:"DF",q:"LE",a:24,o:64,t:69,v:50000,nat:"Colombia"},
-      {n:"Jesús Campo",num:14,p:"DF",q:"LD",a:23,o:63,t:67,v:1500000,nat:"Colombia"},
       {n:"Sander Navarro",num:15,p:"DF",q:"LD",a:24,o:64,t:69,v:200000,nat:"Colombia"},
       {n:"Santiago Mera",num:16,p:"FW",q:"PD",a:23,o:64,t:68,v:150000,nat:"Colombia"},
       {n:"Oscar Caicedo",num:17,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Colombia"},
@@ -4679,16 +4773,16 @@
       {n:"Jacobo Pimentel",num:21,p:"FW",q:"PE",a:26,o:62,t:64,v:50000,nat:"Colombia"},
       {n:"Cristian Mosquera",num:24,p:"DF",q:"ZAG",a:22,o:57,t:63,v:400000,nat:"Colombia"},
       {n:"Juan Palma",num:25,p:"DF",q:"ZAG",a:27,o:57,t:63,v:300000,nat:"Colombia"},
-      {n:"Diego Ruiz",num:29,p:"DF",q:"ZAG",a:22,o:57,t:63,v:400000,nat:"Colombia"},
-      {n:"Luis Segura",num:77,p:"FW",q:"PD",a:23,o:63,t:67,v:1500000,nat:"Colombia"},
       {n:"Rogerio Caicedo",num:0,p:"GK",q:"GOL",a:26,o:60,t:62,v:50000,nat:"Colombia"},
       {n:"David Quintero",num:0,p:"GK",q:"GOL",a:26,o:60,t:62,v:400000,nat:"Colombia"},
       {n:"Arlen Banguero",num:0,p:"DF",q:"ZAG",a:26,o:60,t:62,v:100000,nat:"Colombia"},
-      {n:"Cristian Blanco",num:0,p:"DF",q:"LE",a:26,o:60,t:62,v:50000,nat:"Colombia"},
+      {n:"Cristian Blanco",num:14,p:"DF",q:"LE",a:26,o:60,t:62,v:50000,nat:"Colombia"},
       {n:"Andrés Aedo",num:0,p:"MF",q:"VOL",a:26,o:61,t:63,v:200000,nat:"Colombia"},
       {n:"Juan Peñaloza",num:0,p:"FW",q:"PD",a:26,o:61,t:63,v:50000,nat:"Colombia"},
       {n:"Jhon Romaña",num:0,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Colombia"},
-      {n:"Estiven Sarria",num:0,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Colombia"}
+      {n:"Estiven Sarria",num:17,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Colombia"},
+      {n:"Sebastián Viveros",num:20,p:"MF",q:"MC",a:20,o:62,t:70,v:500000,nat:"Colombia"},
+      {n:"Alejandro Maya",num:22,p:"MF",q:"MC",a:28,o:64,t:66,v:800000}
     ],
     "co/Bucaramanga": [
       {n:"Martín Rea",num:3,p:"DF",q:"ZAG",a:28,o:70,t:70,v:400000,nat:"Uruguay"},
@@ -4716,7 +4810,8 @@
       {n:"Félix Charrupí",num:70,p:"MF",q:"MC",a:25,o:65,t:73,v:450000,nat:"Colombia"},
       {n:"Omar Albornoz",num:80,p:"FW",q:"PE",a:20,o:59,t:67,v:250000,nat:"Colombia"},
       {n:"Luis Vásquez",num:0,p:"GK",q:"GOL",a:30,o:66,t:71,v:100000,nat:"Colombia"},
-      {n:"Víctor Cantillo",num:0,p:"MF",q:"VOL",a:32,o:72,t:72,v:300000,nat:"Colombia"}
+      {n:"Víctor Cantillo",num:30,p:"MF",q:"VOL",a:32,o:72,t:72,v:300000,nat:"Colombia"},
+      {n:"Nilzo Ramírez",num:32,p:"MF",q:"MC",a:23,o:65,t:70,v:1500000}
     ],
     "co/Cúcuta Deportivo": [
       {n:"Juan David Ramírez",num:1,p:"GK",q:"GOL",a:27,o:66,t:69,v:150000,nat:"Colombia"},
@@ -4744,10 +4839,10 @@
       {n:"Sebastián Támara",num:33,p:"MF",q:"MC",a:30,o:64,t:68,v:200000,nat:"Colombia"},
       {n:"Hassler Beltrán",num:77,p:"FW",q:"CA",a:20,o:58,t:66,v:600000,nat:"Colombia"},
       {n:"Diego Muñoz",num:0,p:"GK",q:"GOL",a:26,o:63,t:65,v:750000,nat:"Colombia"},
-      {n:"Carlos Rentería",num:0,p:"MF",q:"MC",a:31,o:64,t:66,v:1500000,nat:"Colombia"},
-      {n:"Cristian Córdoba",num:0,p:"FW",q:"CA",a:26,o:65,t:67,v:1500000,nat:"Colombia"},
-      {n:"Jader Manyoma",num:0,p:"FW",q:"PD",a:26,o:65,t:67,v:100000,nat:"Colombia"},
-      {n:"Gustavo Torres",num:0,p:"FW",q:"PD",a:30,o:67,t:67,v:175000,nat:"Colombia"}
+      {n:"Carlos Rentería",num:77,p:"MF",q:"MC",a:31,o:64,t:66,v:1500000,nat:"Colombia"},
+      {n:"Jader Manyoma",num:7,p:"FW",q:"PD",a:26,o:65,t:67,v:100000,nat:"Colombia"},
+      {n:"Gustavo Torres",num:11,p:"FW",q:"PD",a:30,o:67,t:67,v:175000,nat:"Colombia"},
+      {n:"Kevin Tamayo",num:14,p:"DF",q:"LE",a:26,o:64,t:66,v:1000000}
     ],
     "co/Deportes Tolima": [
       {n:"Neto Volpi",num:1,p:"GK",q:"GOL",a:34,o:72,t:72,v:250000,nat:"Brazil"},
@@ -4781,7 +4876,8 @@
       {n:"Sebastián Guzmán",num:32,p:"MF",q:"VOL",a:20,o:59,t:67,v:700000,nat:"Colombia"},
       {n:"Jherson Mosquera",num:33,p:"DF",q:"LD",a:26,o:58,t:66,v:450000,nat:"Colombia"},
       {n:"Yordan Osorio",num:71,p:"DF",q:"ZAG",a:32,o:72,t:72,v:550000,nat:"Venezuela"},
-      {n:"Brayan Rovira",num:80,p:"MF",q:"VOL",a:30,o:70,t:70,v:700000,nat:"Colombia"}
+      {n:"Brayan Rovira",num:80,p:"MF",q:"VOL",a:30,o:70,t:70,v:700000,nat:"Colombia"},
+      {n:"Sergio Aguayo",num:15,p:"FW",q:"SA",a:29,o:66,t:68,v:800000}
     ],
     "co/Deportivo Cali": [
       {n:"Pedro Gallese",num:1,p:"GK",q:"GOL",a:36,o:72,t:72,v:700000,nat:"Peru"},
@@ -4812,7 +4908,8 @@
       {n:"Mateo Benítez",num:41,p:"DF",q:"ZAG",a:20,o:60,t:68,v:1000000,nat:"Colombia"},
       {n:"Santiago Martínez",num:43,p:"MF",q:"MC",a:20,o:61,t:69,v:1000000,nat:"Colombia"},
       {n:"Carlos Bacca",num:70,p:"FW",q:"CA",a:40,o:71,t:71,v:50000,nat:"Colombia"},
-      {n:"Santiago Colonia",num:0,p:"MF",q:"MC",a:26,o:67,t:69,v:2000000,nat:"Colombia"}
+      {n:"Alexis Manyoma",num:14,p:"FW",q:"PE",a:23,o:72,t:76,v:6000000,nat:"Colombia"},
+      {n:"Santiago Vallecilla",num:35,p:"DF",q:"ZAG",a:20,o:64,t:72,v:2500000}
     ],
     "co/Deportivo Pasto": [
       {n:"Ederson Cabezas",num:1,p:"GK",q:"GOL",a:26,o:66,t:70,v:250000,nat:"Colombia"},
@@ -4844,7 +4941,10 @@
       {n:"Julián Quiñones",num:36,p:"DF",q:"ZAG",a:29,o:66,t:67,v:50000,nat:"Colombia"},
       {n:"Ramiro Morales",num:0,p:"DF",q:"LE",a:29,o:65,t:67,v:1500000,nat:"Colombia"},
       {n:"Gian Cabezas",num:0,p:"GK",q:"GOL",a:26,o:62,t:64,v:250000,nat:"Colombia"},
-      {n:"Willian Ordóñez",num:0,p:"MF",q:"MEI",a:26,o:62,t:64,v:50000,nat:"Colombia"}
+      {n:"Willian Ordóñez",num:0,p:"MF",q:"MEI",a:26,o:62,t:64,v:50000,nat:"Colombia"},
+      {n:"Derik Osede",num:4,p:"DF",q:"LE",a:28,o:66,t:68,v:800000},
+      {n:"Franco Leys",num:25,p:"MF",q:"MC",a:24,o:65,t:70,v:800000},
+      {n:"Heiler Moreno",num:26,p:"DF",q:"ZAG",a:24,o:63,t:68,v:600000}
     ],
     "co/Deportivo Pereira": [
       {n:"Yimmy Gómez",num:1,p:"GK",q:"GOL",a:28,o:68,t:70,v:150000,nat:"Colombia"},
@@ -4878,7 +4978,8 @@
       {n:"Jared Rodríguez",num:40,p:"DF",q:"ZAG",a:20,o:57,t:65,v:500000,nat:"Guatemala"},
       {n:"Jorge Martínez",num:0,p:"GK",q:"GOL",a:26,o:64,t:66,v:150000,nat:"Colombia"},
       {n:"Jhonny Jordán",num:0,p:"FW",q:"PE",a:26,o:64,t:66,v:100000,nat:"Colombia"},
-      {n:"Josseph Mosquera",num:0,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Colombia"}
+      {n:"Josseph Mosquera",num:0,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Colombia"},
+      {n:"Richard Rentería",p:"DF",q:"LE",a:24,o:65,t:70,v:800000}
     ],
     "co/Fortaleza CEIF": [
       {n:"Williams Barlasina",num:1,p:"GK",q:"GOL",a:28,o:66,t:66,v:250000,nat:"Argentina"},
@@ -4890,15 +4991,13 @@
       {n:"Sebastián Navarro",num:8,p:"MF",q:"MC",a:26,o:69,t:71,v:700000,nat:"Colombia"},
       {n:"Juan Sebastián Herrera",num:9,p:"FW",q:"CA",a:31,o:65,t:70,v:175000,nat:"Colombia"},
       {n:"Jhon Velásquez",num:10,p:"MF",q:"MEI",a:24,o:65,t:70,v:100000,nat:"Colombia"},
-      {n:"Andrés Amaya",num:11,p:"FW",q:"PD",a:25,o:65,t:69,v:200000,nat:"Colombia"},
       {n:"Cristian Santander",num:12,p:"GK",q:"GOL",a:24,o:63,t:68,v:150000,nat:"Colombia"},
       {n:"Leonardo Pico",num:14,p:"MF",q:"VOL",a:34,o:67,t:67,v:150000,nat:"Colombia"},
       {n:"Santiago Cuero",num:15,p:"DF",q:"LE",a:23,o:64,t:68,v:350000,nat:"Colombia"},
       {n:"Joan Cajares",num:16,p:"DF",q:"LD",a:26,o:61,t:63,v:400000,nat:"Colombia"},
-      {n:"Harold Balanta",num:18,p:"DF",q:"ZAG",a:26,o:61,t:63,v:450000,nat:"Colombia"},
+      {n:"Harold Balanta",num:17,p:"DF",q:"ZAG",a:26,o:61,t:63,v:450000,nat:"Colombia"},
       {n:"Franco Pulicastro",num:19,p:"FW",q:"CA",a:28,o:67,t:69,v:50000,nat:"Argentina"},
       {n:"Jhonier Blanco",num:20,p:"FW",q:"CA",a:26,o:63,t:65,v:150000,nat:"Colombia"},
-      {n:"Sebastián Palacios",num:22,p:"FW",q:"CA",a:26,o:63,t:65,v:1000000,nat:"Colombia"},
       {n:"Juan Castillo",num:23,p:"DF",q:"LE",a:24,o:64,t:69,v:300000,nat:"Colombia"},
       {n:"Jhonier Salas",num:24,p:"FW",q:"CA",a:22,o:60,t:66,v:50000,nat:"Colombia"},
       {n:"Jerónimo Barrera",num:25,p:"MF",q:"MC",a:22,o:59,t:65,v:50000,nat:"Colombia"},
@@ -4906,12 +5005,15 @@
       {n:"Santiago Vivas",num:28,p:"MF",q:"MC",a:22,o:59,t:65,v:650000,nat:"Colombia"},
       {n:"Teun Wilke",num:29,p:"FW",q:"CA",a:24,o:61,t:67,v:500000,nat:"Mexico"},
       {n:"Jhon Solís",num:30,p:"MF",q:"MC",a:27,o:71,t:77,v:200000,nat:"Colombia"},
-      {n:"Michael Barragán",num:32,p:"GK",q:"GOL",a:20,o:57,t:65,v:350000,nat:"Colombia"},
+      {n:"Michael Barragán",num:22,p:"GK",q:"GOL",a:20,o:57,t:65,v:350000,nat:"Colombia"},
       {n:"Jader Martínez",num:35,p:"FW",q:"PD",a:23,o:65,t:69,v:2000000,nat:"Colombia"},
-      {n:"Víctor Lasso",num:0,p:"DF",q:"LE",a:25,o:64,t:68,v:1500000,nat:"Colombia"},
       {n:"Jonathan Marulanda",num:0,p:"DF",q:"LD",a:26,o:64,t:68,v:100000,nat:"Colombia"},
-      {n:"José Guzmán",num:0,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Colombia"},
-      {n:"Andy Batioja",num:0,p:"FW",q:"PE",a:26,o:63,t:65,v:50000,nat:"Colombia"}
+      {n:"Andy Batioja",num:11,p:"FW",q:"PE",a:26,o:63,t:65,v:50000,nat:"Colombia"},
+      {n:"Juan Ignacio García",num:25,p:"MF",q:"VOL",a:20,o:62,t:70,v:150000,nat:"Uruguay"},
+      {n:"Jeferson Medina",num:5,p:"DF",q:"ZAG",a:29,o:65,t:67,v:800000},
+      {n:"Brandon Mejía",num:13,p:"MF",q:"VOL",a:28,o:63,t:65,v:600000},
+      {n:"Julio Sinisterra",num:27,p:"FW",q:"SA",a:25,o:62,t:64,v:500000},
+      {n:"Mariano Vázquez",num:32,p:"MF",q:"VOL",a:22,o:60,t:65,v:600000}
     ],
     "co/Independiente Medellín": [
       {n:"Salvador Ichazo",num:1,p:"GK",q:"GOL",a:34,o:71,t:71,v:200000,nat:"Uruguay"},
@@ -4943,7 +5045,9 @@
       {n:"Luis Escorcia",num:39,p:"DF",q:"ZAG",a:20,o:59,t:67,v:200000,nat:"Colombia"},
       {n:"Juan José Córdoba",num:70,p:"FW",q:"PD",a:23,o:61,t:69,v:600000,nat:"Colombia"},
       {n:"Alexis Serna",num:0,p:"MF",q:"MC",a:26,o:67,t:69,v:400000,nat:"Colombia"},
-      {n:"Enzo Larrosa",num:0,p:"FW",q:"CA",a:25,o:68,t:70,v:400000,nat:"Uruguay"}
+      {n:"Enzo Larrosa",num:33,p:"FW",q:"CA",a:25,o:68,t:70,v:400000,nat:"Uruguay"},
+      {n:"Jeison Medina",num:9,p:"FW",q:"CA",a:31,o:70,t:70,v:1500000,nat:"Colombia"},
+      {n:"Jackson Martínez",num:15,p:"FW",q:"PE",a:25,o:68,t:70,v:1400000}
     ],
     "co/Internacional de Bogotá": [
       {n:"Wuilker Faríñez",num:1,p:"GK",q:"GOL",a:28,o:73,t:74,v:800000,nat:"Venezuela"},
@@ -5006,9 +5110,9 @@
       {n:"Carlos Henao",num:29,p:"DF",q:"ZAG",a:25,o:64,t:68,v:50000,nat:"Colombia"},
       {n:"Ronal Pérez",num:30,p:"MF",q:"MC",a:24,o:64,t:69,v:1500000,nat:"Colombia"},
       {n:"Elio López",num:0,p:"GK",q:"GOL",a:26,o:62,t:64,v:600000,nat:"Colombia"},
-      {n:"Juan Arcila",num:0,p:"DF",q:"LE",a:26,o:62,t:64,v:50000,nat:"Colombia"},
+      {n:"Juan Arcila",num:23,p:"DF",q:"LE",a:26,o:62,t:64,v:50000,nat:"Colombia"},
       {n:"Faber Gracia",num:0,p:"MF",q:"MC",a:26,o:63,t:65,v:1000000,nat:"Colombia"},
-      {n:"Duván Rodríguez",num:0,p:"FW",q:"PD",a:26,o:64,t:66,v:200000,nat:"Colombia"}
+      {n:"Duván Rodríguez",num:8,p:"FW",q:"PD",a:26,o:64,t:66,v:200000,nat:"Colombia"}
     ],
     "co/Junior": [
       {n:"Mauro Silveira",num:1,p:"GK",q:"GOL",a:26,o:72,t:72,v:1000000,nat:"Uruguay"},
@@ -5032,7 +5136,6 @@
       {n:"Jean Pestaña",num:24,p:"DF",q:"ZAG",a:23,o:67,t:71,v:900000,nat:"Colombia"},
       {n:"Déiber Caicedo",num:25,p:"FW",q:"PE",a:22,o:66,t:72,v:700000,nat:"Colombia"},
       {n:"Yeison Suárez",num:26,p:"DF",q:"LE",a:26,o:69,t:72,v:800000,nat:"Colombia"},
-      {n:"Jhon Navia",num:27,p:"DF",q:"LE",a:22,o:64,t:70,v:50000,nat:"Colombia"},
       {n:"Guillermo Celis",num:28,p:"MF",q:"VOL",a:33,o:72,t:72,v:300000,nat:"Colombia"},
       {n:"Teófilo Gutiérrez",num:29,p:"FW",q:"CA",a:41,o:71,t:71,v:50000,nat:"Colombia"},
       {n:"Jefersson Martínez",num:30,p:"GK",q:"GOL",a:33,o:67,t:72,v:250000,nat:"Colombia"},
@@ -5046,7 +5149,6 @@
     ],
     "co/Llaneros": [
       {n:"Howell Mena",num:2,p:"DF",q:"ZAG",a:23,o:63,t:67,v:300000,nat:"Colombia"},
-      {n:"Víctor Vidal",num:3,p:"DF",q:"ZAG",a:24,o:63,t:69,v:1500000,nat:"Colombia"},
       {n:"Juan David Pertúz",num:4,p:"DF",q:"LD",a:25,o:64,t:69,v:250000,nat:"Colombia"},
       {n:"Eyder Restrepo",num:5,p:"MF",q:"VOL",a:25,o:64,t:69,v:50000,nat:"Colombia"},
       {n:"Marlon Sierra",num:6,p:"MF",q:"MC",a:31,o:64,t:69,v:50000,nat:"Colombia"},
@@ -5055,27 +5157,27 @@
       {n:"Carlos Cortés",num:9,p:"FW",q:"CA",a:24,o:65,t:69,v:1500000,nat:"Colombia"},
       {n:"Néider Ospina",num:10,p:"FW",q:"PD",a:26,o:65,t:69,v:450000,nat:"Colombia"},
       {n:"Juan Camilo Loaiza",num:12,p:"GK",q:"GOL",a:26,o:65,t:68,v:50000,nat:"Colombia"},
-      {n:"Edwin Laszo",num:14,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Colombia"},
       {n:"Jhojan Escobar",num:16,p:"DF",q:"LE",a:24,o:63,t:69,v:150000,nat:"Colombia"},
       {n:"Daniel Mantilla",num:19,p:"FW",q:"PE",a:26,o:61,t:63,v:200000,nat:"Colombia"},
       {n:"Francisco Meza",num:21,p:"DF",q:"ZAG",a:35,o:65,t:65,v:750000,nat:"Colombia"},
       {n:"Roameth Romaña",num:22,p:"GK",q:"GOL",a:24,o:63,t:69,v:100000,nat:"Colombia"},
       {n:"Alejandro Moralez",num:23,p:"DF",q:"ZAG",a:26,o:60,t:62,v:250000,nat:"Colombia"},
       {n:"Dennys Quintero",num:26,p:"DF",q:"ZAG",a:22,o:57,t:63,v:200000,nat:"Ecuador"},
-      {n:"Andrés López",num:27,p:"MF",q:"MC",a:22,o:58,t:64,v:500000,nat:"Colombia"},
       {n:"Léider Riascos",num:29,p:"DF",q:"LD",a:22,o:57,t:63,v:150000,nat:"Colombia"},
       {n:"Julián Beltrán",num:30,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Colombia"},
       {n:"Emilio Pardo",num:31,p:"DF",q:"ZAG",a:20,o:57,t:65,v:500000,nat:"Colombia"},
       {n:"Kelvin Osorio",num:33,p:"MF",q:"MEI",a:32,o:57,t:65,v:250000,nat:"Colombia"},
-      {n:"Anderson Garay",num:34,p:"FW",q:"CA",a:23,o:64,t:68,v:1500000,nat:"Colombia"},
-      {n:"Luis Marimón",num:43,p:"FW",q:"CA",a:24,o:63,t:69,v:200000,nat:"Colombia"},
+      {n:"Luis Marimón",num:11,p:"FW",q:"CA",a:24,o:63,t:69,v:200000,nat:"Colombia"},
       {n:"Jimmy Medranda",num:94,p:"DF",q:"LE",a:32,o:67,t:67,v:200000,nat:"Colombia"},
       {n:"Jhon Vásquez",num:95,p:"FW",q:"PD",a:31,o:64,t:70,v:200000,nat:"Colombia"},
-      {n:"Daniel Quiñones",num:0,p:"DF",q:"LD",a:26,o:60,t:62,v:100000,nat:"Colombia"},
-      {n:"Frank Castañeda",num:0,p:"FW",q:"PE",a:32,o:61,t:63,v:400000,nat:"Colombia"},
-      {n:"Juan Castilla",num:0,p:"MF",q:"MC",a:22,o:61,t:63,v:350000,nat:"Colombia"},
-      {n:"Joel Contreras",num:0,p:"FW",q:"PE",a:26,o:62,t:64,v:300000,nat:"Colombia"},
-      {n:"Yorleys Mena",num:0,p:"FW",q:"CA",a:35,o:62,t:64,v:200000,nat:"Colombia"}
+      {n:"Daniel Quiñones",num:99,p:"DF",q:"LD",a:26,o:60,t:62,v:100000,nat:"Colombia"},
+      {n:"Frank Castañeda",num:32,p:"FW",q:"PE",a:32,o:61,t:63,v:400000,nat:"Colombia"},
+      {n:"Juan Castilla",num:13,p:"MF",q:"MC",a:22,o:61,t:63,v:350000,nat:"Colombia"},
+      {n:"Joel Contreras",num:70,p:"FW",q:"PE",a:26,o:62,t:64,v:300000,nat:"Colombia"},
+      {n:"Yorleys Mena",num:17,p:"FW",q:"CA",a:35,o:62,t:64,v:200000,nat:"Colombia"},
+      {n:"Kevin Rincón",num:14,p:"FW",q:"PE",a:29,o:61,t:63,v:800000},
+      {n:"Brandon Chury",num:20,p:"MF",q:"MC",a:25,o:62,t:64,v:500000},
+      {n:"Kevin Caicedo",num:35,p:"MF",q:"ME",a:23,o:60,t:65,v:600000}
     ],
     "co/Millonarios": [
       {n:"Javier Burrai",num:1,p:"GK",q:"GOL",a:35,o:72,t:72,v:175000,nat:"Ecuador"},
@@ -5103,13 +5205,13 @@
       {n:"Rodrigo Contreras",num:27,p:"FW",q:"CA",a:30,o:73,t:73,v:1200000,nat:"Argentina"},
       {n:"Stiven Vega",num:28,p:"MF",q:"VOL",a:28,o:73,t:73,v:550000,nat:"Colombia"},
       {n:"Alex Moreno",num:29,p:"DF",q:"ZAG",a:22,o:65,t:71,v:50000,nat:"Colombia"},
-      {n:"Sebastián Viveros",num:30,p:"MF",q:"MC",a:20,o:62,t:70,v:500000,nat:"Colombia"},
       {n:"Santiago Giordana",num:32,p:"FW",q:"CA",a:31,o:72,t:72,v:100000,nat:"Argentina"},
       {n:"Jhomier Guerrero",num:34,p:"DF",q:"LD",a:20,o:61,t:69,v:800000,nat:"Colombia"},
       {n:"Sebastián Mosquera",num:35,p:"FW",q:"CA",a:20,o:63,t:71,v:2000000,nat:"Colombia"},
       {n:"Jhostin Díaz",num:38,p:"GK",q:"GOL",a:23,o:66,t:70,v:1500000,nat:"Colombia"},
       {n:"Cristian Uparela",num:43,p:"DF",q:"ZAG",a:20,o:61,t:69,v:1000000,nat:"Colombia"},
-      {n:"Leonai",num:55,p:"MF",q:"VOL",a:31,o:62,t:70,v:700000,nat:"Brazil"}
+      {n:"Leonai",num:55,p:"MF",q:"VOL",a:31,o:62,t:70,v:700000,nat:"Brazil"},
+      {n:"Juan Cuadrado",num:7,p:"MF",q:"MC",a:29,o:70,t:72,v:1500000}
     ],
     "co/Once Caldas": [
       {n:"Jorge Cardona",num:2,p:"DF",q:"ZAG",a:26,o:68,t:71,v:500000,nat:"Colombia"},
@@ -5137,10 +5239,11 @@
       {n:"Hian Rincón",num:39,p:"DF",q:"ZAG",a:20,o:58,t:66,v:600000,nat:"Colombia"},
       {n:"Jader Quiñónes",num:42,p:"MF",q:"MC",a:25,o:59,t:67,v:500000,nat:"Colombia"},
       {n:"Joan Parra",num:99,p:"GK",q:"GOL",a:23,o:65,t:69,v:800000,nat:"Colombia"},
-      {n:"Jesús Camargo",num:0,p:"GK",q:"GOL",a:26,o:65,t:67,v:550000,nat:"Venezuela"},
+      {n:"Jesús Camargo",num:12,p:"GK",q:"GOL",a:26,o:65,t:67,v:550000,nat:"Venezuela"},
       {n:"Jhon Pájaro",num:0,p:"DF",q:"ZAG",a:26,o:65,t:67,v:1500000,nat:"Colombia"},
-      {n:"Juan Pablo Nieto",num:0,p:"MF",q:"MC",a:33,o:66,t:68,v:300000,nat:"Colombia"},
-      {n:"Jorman Beltrán",num:0,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Colombia"}
+      {n:"Juan Pablo Nieto",num:5,p:"MF",q:"MC",a:33,o:66,t:68,v:300000,nat:"Colombia"},
+      {n:"Jorman Beltrán",num:31,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Colombia"},
+      {n:"John Deiby Araujo",p:"FW",q:"SA",a:24,o:66,t:71,v:1000000}
     ],
     "co/Santa Fe": [
       {n:"Andrés Mosquera",num:1,p:"GK",q:"GOL",a:35,o:72,t:75,v:300000,nat:"Colombia"},
@@ -5166,15 +5269,15 @@
       {n:"Jeison Angulo",num:24,p:"DF",q:"LE",a:30,o:63,t:69,v:50000,nat:"Colombia"},
       {n:"Kevin Cortés",num:30,p:"MF",q:"VOL",a:26,o:68,t:71,v:2500000,nat:"Colombia"},
       {n:"Christian Mafla",num:32,p:"DF",q:"LE",a:33,o:69,t:69,v:250000,nat:"Colombia"},
-      {n:"Carlos Nemocón",num:33,p:"GK",q:"GOL",a:20,o:59,t:67,v:550000,nat:"Colombia"},
       {n:"Marlon Balanta",num:34,p:"FW",q:"CA",a:20,o:61,t:69,v:1000000,nat:"Colombia"},
       {n:"Kevin Balanta",num:35,p:"MF",q:"MC",a:29,o:67,t:68,v:2000000,nat:"Colombia"},
       {n:"Jhon Rentería",num:37,p:"DF",q:"ZAG",a:25,o:67,t:72,v:2500000,nat:"Colombia"},
       {n:"Martín Palacios",num:40,p:"FW",q:"CA",a:20,o:61,t:69,v:1000000,nat:"Colombia"},
-      {n:"Jean Carlos Caicedo",num:43,p:"DF",q:"ZAG",a:20,o:59,t:67,v:800000,nat:"Colombia"},
       {n:"Jáder Obrian",num:77,p:"FW",q:"PD",a:31,o:68,t:68,v:700000,nat:"Colombia"},
-      {n:"Juan Espitia",num:0,p:"GK",q:"GOL",a:26,o:66,t:68,v:250000,nat:"Colombia"},
-      {n:"Emerson Rodríguez",num:0,p:"FW",q:"PE",a:26,o:70,t:73,v:1000000,nat:"Colombia"}
+      {n:"Juan Espitia",num:31,p:"GK",q:"GOL",a:26,o:66,t:68,v:250000,nat:"Colombia"},
+      {n:"Emerson Rodríguez",num:25,p:"FW",q:"PE",a:26,o:70,t:73,v:1000000,nat:"Colombia"},
+      {n:"Andrés Amaya",num:11,p:"FW",q:"PD",a:25,o:65,t:69,v:200000,nat:"Colombia"},
+      {n:"Christian Portocarrero",num:39,p:"MF",q:"MEI",a:22,o:66,t:71,v:1500000}
     ],
     "de/1. FC Köln": [
       {n:"Marvin Schwäbe",num:1,p:"GK",q:"GOL",a:31,o:77,t:77,v:2500000,nat:"Germany"},
@@ -5277,24 +5380,36 @@
       {n:"Jonathan Tah",num:4,p:"DF",q:"ZAG",a:30,o:87,t:87,v:28000000,nat:"Germany"},
       {n:"Joshua Kimmich",num:6,p:"MF",q:"VOL",a:31,o:89,t:89,v:35000000,nat:"Germany"},
       {n:"Serge Gnabry",num:7,p:"FW",q:"PD",a:31,o:82,t:82,v:23000000,nat:"Germany"},
-      {n:"Tom Bischof",num:8,p:"MF",q:"MC",a:21,o:76,t:83,v:40000000,nat:"Germany"},
+      {n:"Tom Bischof",num:20,p:"MF",q:"MC",a:21,o:76,t:83,v:40000000,nat:"Germany"},
       {n:"Harry Kane",num:9,p:"FW",q:"CA",a:33,o:89,t:89,v:60000000,nat:"England"},
       {n:"Jamal Musiala",num:10,p:"MF",q:"MEI",a:23,o:88,t:92,v:100000000,nat:"Germany"},
-      {n:"Nathaniel Brown",num:11,p:"DF",q:"LE",a:23,o:77,t:81,v:50000000,nat:"Germany"},
       {n:"Luis Díaz",num:14,p:"FW",q:"PE",a:29,o:85,t:85,v:70000000,nat:"Colombia"},
       {n:"Michael Olise",num:17,p:"FW",q:"PD",a:24,o:86,t:89,v:170000000,nat:"France"},
       {n:"Alphonso Davies",num:19,p:"DF",q:"LE",a:25,o:84,t:85,v:40000000,nat:"Canada"},
       {n:"Hiroki Itō",num:21,p:"DF",q:"ZAG",a:27,o:78,t:80,v:18000000,nat:"Japan"},
-      {n:"Sacha Boey",num:23,p:"DF",q:"LD",a:25,o:77,t:79,v:10000000,nat:"France"},
       {n:"Sven Ulreich",num:26,p:"GK",q:"GOL",a:38,o:73,t:73,v:500000,nat:"Germany"},
       {n:"Konrad Laimer",num:27,p:"DF",q:"LD",a:29,o:82,t:82,v:32000000,nat:"Austria"},
-      {n:"Ismael Saibari",num:34,p:"MF",q:"MEI",a:25,o:79,t:83,v:55000000,nat:"Morocco"},
       {n:"Bara Sapoko Ndiaye",num:39,p:"MF",q:"MC",a:18,o:61,t:69,v:4000000,nat:"Senegal"},
       {n:"Jonas Urbig",num:40,p:"GK",q:"GOL",a:23,o:74,t:78,v:18000000,nat:"Germany"},
-      {n:"Lennart Karl",num:42,p:"MF",q:"MEI",a:18,o:63,t:73,v:60000000,nat:"Germany"},
+      {n:"Lennart Karl",num:42,p:"MF",q:"MEI",a:18,o:69,t:73,v:60000000,nat:"Germany"},
       {n:"Josip Stanišić",num:44,p:"DF",q:"LD",a:26,o:78,t:80,v:40000000,nat:"Croatia"},
       {n:"Aleksandar Pavlović",num:45,p:"MF",q:"VOL",a:22,o:79,t:85,v:90000000,nat:"Germany"},
-      {n:"David Santos Daiber",num:47,p:"MF",q:"MC",a:19,o:59,t:68,v:3500000,nat:"Portugal"}
+      {n:"David Santos Daiber",num:47,p:"MF",q:"MC",a:19,o:59,t:68,v:3500000,nat:"Portugal"},
+      {n:"Leon Goretzka",num:8,p:"MF",q:"MC",a:31,o:82,t:82,v:16000000,nat:"Germany"},
+      {n:"Nicolas Jackson",num:11,p:"FW",q:"CA",a:25,o:80,t:83,v:40000000,nat:"Senegal"},
+      {n:"Deniz Ofli",num:34,p:"DF",q:"LE",a:19,o:72,t:77,v:2000000,nat:"Turkey"},
+      {n:"Wisdom Mike",num:36,p:"FW",q:"PE",a:17,o:65,t:72,v:5000000,nat:"Germany"},
+      {n:"Raphaël Guerreiro",num:22,p:"DF",q:"ZAG",a:27,o:79,t:81,v:28000000},
+      {n:"Cassiano Kiala",num:30,p:"DF",q:"LD",a:22,o:76,t:81,v:19000000},
+      {n:"Guido Della Rovere",num:31,p:"MF",q:"VOL",a:22,o:73,t:78,v:6000000},
+      {n:"Bastian Assomo",num:33,p:"FW",q:"CA",a:22,o:74,t:79,v:8500000},
+      {n:"Jannis Bärtl",num:35,p:"GK",q:"GOL",a:19,o:78,t:86,v:42500000},
+      {n:"Leonard Prescott",num:37,p:"GK",q:"GOL",a:24,o:74,t:79,v:6000000},
+      {n:"Erblin Osmani",num:38,p:"MF",q:"VOL",a:21,o:77,t:85,v:26000000},
+      {n:"Vincent Manuba",num:41,p:"DF",q:"ZAG",a:24,o:74,t:79,v:6000000},
+      {n:"Filip Pavić",num:43,p:"DF",q:"LE",a:21,o:74,t:82,v:8500000},
+      {n:"Leon Klanac",num:48,p:"GK",q:"GOL",a:21,o:78,t:86,v:28000000},
+      {n:"Maycon Cardozo",num:49,p:"FW",q:"PE",a:21,o:74,t:82,v:8500000}
     ],
     "de/Borussia Dortmund": [
       {n:"Gregor Kobel",num:1,p:"GK",q:"GOL",a:28,o:86,t:87,v:40000000,nat:"Switzerland"},
@@ -5325,7 +5440,8 @@
       {n:"Enzo dos Santos",num:44,p:"MF",q:"MC",a:17,o:59,t:67,v:2500000,nat:"Luxembourg"},
       {n:"Giannis Konstantelias",num:45,p:"MF",q:"MEI",a:23,o:77,t:81,v:27000000,nat:"Greece"},
       {n:"Mussa Kaba",num:48,p:"MF",q:"MC",a:17,o:59,t:67,v:2500000,nat:"Germany"},
-      {n:"Luca Reggiani",num:49,p:"DF",q:"ZAG",a:18,o:59,t:67,v:10000000,nat:"Italy"}
+      {n:"Luca Reggiani",num:49,p:"DF",q:"ZAG",a:18,o:59,t:67,v:10000000,nat:"Italy"},
+      {n:"Ethan Nwaneri",num:18,p:"FW",q:"CA",a:19,o:76,t:85,v:48000000,nat:"England"}
     ],
     "de/Eintracht Frankfurt": [
       {n:"Noah Atubolu",num:1,p:"GK",q:"GOL",a:24,o:77,t:82,v:25000000,nat:"Germany"},
@@ -5365,7 +5481,6 @@
       {n:"Łukasz Poręba",num:8,p:"MF",q:"VOL",a:26,o:68,t:70,v:2500000,nat:"Poland"},
       {n:"Noel Futkeu",num:9,p:"FW",q:"CA",a:23,o:70,t:76,v:7500000,nat:"Germany"},
       {n:"Noah Darvich",num:10,p:"MF",q:"MEI",a:19,o:62,t:70,v:4000000,nat:"Germany"},
-      {n:"Jason Çeka",num:11,p:"MF",q:"MC",a:26,o:65,t:67,v:1500000,nat:"Germany"},
       {n:"Elias Etringer",num:12,p:"GK",q:"GOL",a:23,o:63,t:67,v:900000,nat:"Germany"},
       {n:"Raif Adam",num:15,p:"FW",q:"PD",a:21,o:68,t:71,v:500000,nat:"Germany"},
       {n:"Luca Pfeiffer",num:16,p:"FW",q:"CA",a:30,o:67,t:67,v:500000,nat:"Germany"},
@@ -5411,8 +5526,8 @@
       {n:"Jordy Makengo",num:33,p:"DF",q:"LE",a:25,o:72,t:78,v:6000000,nat:"France"},
       {n:"Max Rosenfelder",num:37,p:"DF",q:"ZAG",a:23,o:74,t:78,v:6000000,nat:"Germany"},
       {n:"Rouven Tarnutzer",num:39,p:"MF",q:"MC",a:20,o:59,t:67,v:400000,nat:"Switzerland"},
-      {n:"Keisuke Gotō",num:42,p:"FW",q:"CA",a:21,o:56,t:63,v:10000000,nat:"Japan"},
-      {n:"Bruno Ogbus",num:43,p:"DF",q:"ZAG",a:20,o:59,t:66,v:15000000,nat:"Switzerland"}
+      {n:"Keisuke Gotō",num:42,p:"FW",q:"CA",a:21,o:61,t:65,v:10000000,nat:"Japan"},
+      {n:"Bruno Ogbus",num:43,p:"DF",q:"ZAG",a:20,o:61,t:66,v:15000000,nat:"Switzerland"}
     ],
     "de/Hamburger SV": [
       {n:"Daniel Heuer Fernandes",num:1,p:"GK",q:"GOL",a:33,o:74,t:74,v:1200000,nat:"Portugal"},
@@ -5500,7 +5615,7 @@
       {n:"Dominik Kohr",num:31,p:"DF",q:"ZAG",a:32,o:77,t:77,v:3500000,nat:"Germany"},
       {n:"Alynho Haïdara",num:39,p:"FW",q:"CA",a:18,o:61,t:69,v:1000000,nat:"Ivory Coast"},
       {n:"Maximilian Kinzig",num:40,p:"GK",q:"GOL",a:20,o:59,t:67,v:150000,nat:"Germany"},
-      {n:"Kacper Potulski",num:48,p:"DF",q:"ZAG",a:18,o:64,t:72,v:18000000,nat:"Poland"}
+      {n:"Kacper Potulski",num:48,p:"DF",q:"ZAG",a:18,o:66,t:72,v:18000000,nat:"Poland"}
     ],
     "de/Mönchengladbach": [
       {n:"Moritz Nicolas",num:1,p:"GK",q:"GOL",a:28,o:75,t:76,v:8000000,nat:"Germany"},
@@ -5583,7 +5698,6 @@
       {n:"Christoph Baumgartner",num:14,p:"MF",q:"MEI",a:27,o:77,t:78,v:14000000,nat:"Austria"},
       {n:"Lukas Klostermann",num:16,p:"DF",q:"ZAG",a:30,o:78,t:78,v:3500000,nat:"Germany"},
       {n:"Ridle Baku",num:17,p:"DF",q:"LD",a:28,o:78,t:78,v:12000000,nat:"Germany"},
-      {n:"Suleman Sani",num:18,p:"FW",q:"CA",a:20,o:65,t:72,v:5000000,nat:"Nigeria"},
       {n:"Rocco Reitz",num:20,p:"MF",q:"MC",a:24,o:77,t:81,v:18000000,nat:"Germany"},
       {n:"Neil El Aynaoui",num:21,p:"MF",q:"MC",a:25,o:77,t:80,v:30000000,nat:"Morocco"},
       {n:"David Raum",num:22,p:"DF",q:"LE",a:28,o:82,t:82,v:22000000,nat:"Germany"},
@@ -5724,7 +5838,10 @@
       {n:"Mick Schmetgens",num:33,p:"DF",q:"ZAG",a:19,o:56,t:65,v:700000,nat:"Germany"},
       {n:"Darwin Soylu",num:34,p:"MF",q:"MEI",a:20,o:59,t:67,v:850000,nat:"Turkey"},
       {n:"Luca Höcker",num:35,p:"DF",q:"ZAG",a:20,o:59,t:67,v:850000,nat:"Germany"},
-      {n:"Mats Heitmann",num:36,p:"DF",q:"ZAG",a:20,o:59,t:67,v:850000,nat:"Germany"}
+      {n:"Mats Heitmann",num:36,p:"DF",q:"ZAG",a:20,o:59,t:67,v:850000,nat:"Germany"},
+      {n:"Stefan Smarkalev",num:37,p:"GK",q:"GOL",a:25,o:61,t:63,v:800000},
+      {n:"Paul Erevbenagie",num:38,p:"FW",q:"SA",a:22,o:63,t:68,v:1000000},
+      {n:"Youri Regeer",num:44,p:"MF",q:"MC",a:23,o:61,t:66,v:900000}
     ],
     "ec/Aucas": [
       {n:"Iván Chaves",num:1,p:"GK",q:"GOL",a:31,o:68,t:68,v:100000,nat:"Argentina"},
@@ -5751,24 +5868,17 @@
       {n:"Alexander Sosa",num:89,p:"FW",q:"CA",a:25,o:59,t:67,v:800000,nat:"Argentina"},
       {n:"Danny Luna",num:91,p:"MF",q:"MC",a:26,o:67,t:70,v:2000000,nat:"Ecuador"},
       {n:"Erick Japa",num:99,p:"FW",q:"CA",a:27,o:59,t:67,v:800000,nat:"Ecuador"},
-      {n:"Michael Carcelén",num:0,p:"MF",q:"VOL",a:29,o:67,t:68,v:800000,nat:"Ecuador"}
+      {n:"Michael Carcelén",num:0,p:"MF",q:"VOL",a:29,o:67,t:68,v:800000,nat:"Ecuador"},
+      {n:"Andrés Mena",num:18,p:"MF",q:"MC",a:26,o:67,t:70,v:2500000,nat:"Ecuador"}
     ],
     "ec/Barcelona SC": [
       {n:"José Contreras",num:1,p:"GK",q:"GOL",a:31,o:72,t:72,v:1000000,nat:"Venezuela"},
-      {n:"Luca Sosa",num:3,p:"DF",q:"LD",a:32,o:70,t:70,v:1500000,nat:"Argentina"},
       {n:"Gustavo Vallecilla",num:4,p:"DF",q:"ZAG",a:27,o:68,t:70,v:1000000,nat:"Ecuador"},
-      {n:"Carlos Montaño",num:5,p:"MF",q:"VOL",a:26,o:67,t:69,v:2000000,nat:"Ecuador"},
-      {n:"Jandry Gómez",num:7,p:"MF",q:"PD",a:20,o:60,t:68,v:450000,nat:"Ecuador"},
-      {n:"Milton Céliz",num:8,p:"MF",q:"MC",a:34,o:67,t:69,v:2000000,nat:"Argentina"},
       {n:"Darío Benedetto",num:9,p:"FW",q:"CA",a:36,o:71,t:71,v:100000,nat:"Argentina"},
-      {n:"Joao Rojas",num:10,p:"FW",q:"PE",a:29,o:64,t:64,v:600000,nat:"Ecuador"},
-      {n:"Miguel Parrales",num:11,p:"FW",q:"CA",a:30,o:70,t:70,v:3000000,nat:"Ecuador"},
-      {n:"Jonnathan Mina",num:12,p:"DF",q:"ZAG",a:31,o:69,t:69,v:1500000,nat:"Ecuador"},
       {n:"Alex Rangel",num:14,p:"DF",q:"ZAG",a:24,o:67,t:70,v:1500000,nat:"Ecuador"},
       {n:"Jonathan Perlaza",num:15,p:"DF",q:"LE",a:28,o:68,t:69,v:700000,nat:"Ecuador"},
       {n:"Luis Cano",num:16,p:"FW",q:"CA",a:27,o:67,t:69,v:2000000,nat:"Ecuador"},
       {n:"Bryan Carabalí",num:18,p:"DF",q:"LD",a:28,o:68,t:70,v:800000,nat:"Ecuador"},
-      {n:"Richard Borja",num:19,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Ecuador"},
       {n:"Héctor Villalba",num:21,p:"FW",q:"PD",a:32,o:67,t:67,v:650000,nat:"Paraguay"},
       {n:"José Gabriel Cevallos",num:22,p:"GK",q:"GOL",a:25,o:69,t:74,v:500000,nat:"Ecuador"},
       {n:"Tomás Martínez",num:23,p:"MF",q:"MEI",a:31,o:71,t:71,v:500000,nat:"Argentina"},
@@ -5780,12 +5890,17 @@
       {n:"Matías Lugo",num:32,p:"MF",q:"VOL",a:25,o:70,t:73,v:900000,nat:"Argentina"},
       {n:"Javier Báez",num:33,p:"DF",q:"ZAG",a:36,o:61,t:69,v:250000,nat:"Paraguay"},
       {n:"Jefferson Intriago",num:35,p:"MF",q:"VOL",a:30,o:69,t:69,v:1200000,nat:"Ecuador"},
-      {n:"Jhonnier Chalá",num:44,p:"DF",q:"ZAG",a:20,o:61,t:69,v:250000,nat:"Ecuador"},
+      {n:"Jhonnier Chalá",num:6,p:"DF",q:"ZAG",a:20,o:61,t:69,v:250000,nat:"Ecuador"},
       {n:"Johan García",num:50,p:"MF",q:"MC",a:44,o:61,t:69,v:1000000,nat:"Ecuador"},
       {n:"Klever Caicedo",num:63,p:"FW",q:"CA",a:20,o:62,t:70,v:50000,nat:"Ecuador"},
       {n:"Marcos Mejía",num:70,p:"FW",q:"PD",a:20,o:61,t:69,v:350000,nat:"Ecuador"},
-      {n:"Kleber Pinargote",num:77,p:"GK",q:"GOL",a:23,o:61,t:65,v:150000,nat:"Ecuador"},
-      {n:"Sergio Núñez",num:80,p:"FW",q:"PD",a:26,o:68,t:70,v:2500000,nat:"Uruguay"}
+      {n:"Sergio Díaz",num:8,p:"FW",q:"CA",a:28,o:65,t:66,v:1500000,nat:"Paraguay"},
+      {n:"José Enrique Angulo",num:13,p:"FW",q:"CA",a:31,o:62,t:62,v:250000,nat:"Ecuador"},
+      {n:"Damián Díaz",num:10,p:"MF",q:"MEI",a:27,o:69,t:71,v:1500000},
+      {n:"Tomás Rodríguez",num:11,p:"FW",q:"PE",a:28,o:69,t:71,v:1200000},
+      {n:"Jefferson Wila",num:51,p:"FW",q:"CA",a:20,o:64,t:72,v:2500000},
+      {n:"Yordi Vernaza",num:77,p:"FW",q:"CA",a:24,o:64,t:69,v:1000000},
+      {n:"Eduardo Esterilla",num:93,p:"FW",q:"CA",a:23,o:64,t:69,v:1000000}
     ],
     "ec/Delfín": [
       {n:"Juan José Ortíz",num:1,p:"GK",q:"GOL",a:26,o:63,t:65,v:750000,nat:"Ecuador"},
@@ -5813,7 +5928,9 @@
       {n:"Marcos Mejia",num:70,p:"FW",q:"CA",a:20,o:58,t:66,v:600000,nat:"Ecuador"},
       {n:"Bryan Hernandez",num:77,p:"DF",q:"LD",a:20,o:56,t:64,v:100000,nat:"Ecuador"},
       {n:"Kevin Ushiña",num:78,p:"FW",q:"PE",a:20,o:57,t:65,v:350000,nat:"Ecuador"},
-      {n:"Leao Tenorio",num:99,p:"FW",q:"CA",a:20,o:58,t:66,v:25000,nat:"Ecuador"}
+      {n:"Leao Tenorio",num:99,p:"FW",q:"CA",a:20,o:58,t:66,v:25000,nat:"Ecuador"},
+      {n:"Anthony Bedoya",num:32,p:"DF",q:"LD",a:25,o:66,t:69,v:2000000,nat:"Ecuador"},
+      {n:"Edilson Cabeza",num:33,p:"DF",q:"LE",a:21,o:62,t:69,v:9500000,nat:"Ecuador"}
     ],
     "ec/Deportivo Cuenca": [
       {n:"Facundo Ferrero",num:1,p:"GK",q:"GOL",a:30,o:68,t:68,v:500000,nat:"Argentina"},
@@ -5857,19 +5974,13 @@
       {n:"Jonathan Borja",num:10,p:"MF",q:"MEI",a:32,o:67,t:69,v:100000,nat:"Ecuador"},
       {n:"Vilington Branda",num:11,p:"FW",q:"PD",a:26,o:63,t:65,v:1000000,nat:"Ecuador"},
       {n:"Adrian Cela",num:15,p:"MF",q:"VOL",a:24,o:65,t:69,v:2000000,nat:"Ecuador"},
-      {n:"Jhon Cifuente",num:16,p:"FW",q:"CA",a:34,o:62,t:64,v:900000,nat:"Ecuador"},
       {n:"Charles Vélez",num:17,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Ecuador"},
       {n:"Bryan Rivera",num:18,p:"DF",q:"LE",a:24,o:65,t:69,v:2000000,nat:"Ecuador"},
-      {n:"Jawer Guisamano",num:20,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Ecuador"},
       {n:"Fernando Mora",num:24,p:"MF",q:"MC",a:22,o:59,t:65,v:650000,nat:"Ecuador"},
       {n:"Marco Montano",num:25,p:"DF",q:"ZAG",a:24,o:66,t:70,v:2000000,nat:"Ecuador"},
-      {n:"Andrés Mena",num:26,p:"MF",q:"MC",a:26,o:67,t:70,v:2500000,nat:"Ecuador"},
-      {n:"Franklin Carabalí",num:30,p:"DF",q:"ZAG",a:30,o:65,t:69,v:2000000,nat:"Ecuador"},
-      {n:"Anthony Bedoya",num:32,p:"DF",q:"LD",a:25,o:66,t:69,v:2000000,nat:"Ecuador"},
       {n:"Fricson Borja",num:59,p:"FW",q:"CA",a:20,o:56,t:64,v:350000,nat:"Ecuador"},
       {n:"Jhoel Maya",num:60,p:"MF",q:"MEI",a:20,o:56,t:64,v:100000,nat:"Ecuador"},
-      {n:"Bryan Hernández",num:77,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Ecuador"},
-      {n:"Djorkaeff Reasco",num:99,p:"FW",q:"PE",a:27,o:71,t:73,v:3500000,nat:"Ecuador"}
+      {n:"Bryan Hernández",num:77,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Ecuador"}
     ],
     "ec/Emelec": [
       {n:"Mario Valero",num:1,p:"GK",q:"GOL",a:23,o:63,t:67,v:300000,nat:"Ecuador"},
@@ -5901,13 +6012,11 @@
     "ec/Imbabura": [
       {n:"Mario Valero",num:1,p:"GK",q:"GOL",a:23,o:63,t:67,v:6000000,nat:"Ecuador"},
       {n:"Guillermo Coronel",num:2,p:"DF",q:"ZAG",a:26,o:60,t:62,v:75000,nat:"Paraguay"},
-      {n:"Edilson Cabeza",num:3,p:"DF",q:"LE",a:21,o:62,t:69,v:9500000,nat:"Ecuador"},
       {n:"Alexander Medina",num:4,p:"MF",q:"VOL",a:26,o:60,t:62,v:4000000,nat:"Ecuador"},
       {n:"Gilmar Cevallos",num:5,p:"MF",q:"VOL",a:26,o:64,t:67,v:8500000,nat:"Ecuador"},
       {n:"Jonathan Benitez",num:6,p:"MF",q:"MC",a:25,o:66,t:69,v:14000000,nat:"Paraguay"},
       {n:"Leandro Pantoja",num:7,p:"MF",q:"MC",a:26,o:60,t:62,v:4000000,nat:"Ecuador"},
       {n:"Rony Caicedo",num:8,p:"MF",q:"MC",a:24,o:63,t:68,v:9000000,nat:"Ecuador"},
-      {n:"Federico Paz",num:9,p:"FW",q:"CA",a:31,o:66,t:66,v:6000000,nat:"Argentina"},
       {n:"Tono Espinoza",num:10,p:"FW",q:"PD",a:26,o:61,t:63,v:5000000,nat:"Ecuador"},
       {n:"Danny Burbano",num:11,p:"MF",q:"MC",a:26,o:60,t:62,v:4000000,nat:"Ecuador"},
       {n:"Micheal Chala",num:13,p:"MF",q:"MC",a:26,o:60,t:62,v:4000000,nat:"Ecuador"},
@@ -5925,8 +6034,7 @@
       {n:"Edisson Recalde",num:33,p:"GK",q:"GOL",a:20,o:56,t:64,v:1500000,nat:"Ecuador"},
       {n:"Juan Alcivar",num:34,p:"MF",q:"MC",a:25,o:64,t:68,v:10000000,nat:"Ecuador"},
       {n:"Edu Pineda",num:80,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ecuador"},
-      {n:"Patrik Minda",num:90,p:"GK",q:"GOL",a:20,o:56,t:64,v:1500000,nat:"Ecuador"},
-      {n:"Cristian Tobar",num:99,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ecuador"}
+      {n:"Patrik Minda",num:90,p:"GK",q:"GOL",a:20,o:56,t:64,v:1500000,nat:"Ecuador"}
     ],
     "ec/Independiente del Valle": [
       {n:"Aldair Quintana",num:1,p:"GK",q:"GOL",a:32,o:72,t:72,v:900000,nat:"Colombia"},
@@ -5955,16 +6063,15 @@
       {n:"Jhegson Méndez",num:32,p:"MF",q:"VOL",a:29,o:70,t:70,v:900000,nat:"Ecuador"},
       {n:"Andy Velasco",num:33,p:"DF",q:"ZAG",a:20,o:61,t:69,v:500000,nat:"Ecuador"},
       {n:"Deinner Ordóñez",num:51,p:"DF",q:"ZAG",a:20,o:70,t:78,v:5000000,nat:"Ecuador"},
-      {n:"Yandri Vásquez",num:52,p:"FW",q:"CA",a:19,o:68,t:77,v:250000,nat:"Ecuador"}
+      {n:"Yandri Vásquez",num:52,p:"FW",q:"CA",a:19,o:68,t:77,v:250000,nat:"Ecuador"},
+      {n:"Djorkaeff Reasco",num:99,p:"FW",q:"PE",a:27,o:71,t:73,v:3500000,nat:"Ecuador"}
     ],
     "ec/LDU Quito": [
       {n:"Gonzalo Valle",num:1,p:"GK",q:"GOL",a:30,o:70,t:70,v:1800000,nat:"Ecuador"},
       {n:"Richard Mina",num:3,p:"DF",q:"ZAG",a:27,o:68,t:71,v:800000,nat:"Ecuador"},
       {n:"Ricardo Adé",num:4,p:"DF",q:"ZAG",a:36,o:71,t:71,v:300000,nat:"Ecuador"},
       {n:"Sebastián González",num:5,p:"MF",q:"MC",a:23,o:69,t:73,v:250000,nat:"Ecuador"},
-      {n:"Rodney Redes",num:7,p:"FW",q:"PD",a:26,o:70,t:72,v:3000000,nat:"Paraguay"},
       {n:"Jesús Pretell",num:8,p:"MF",q:"VOL",a:27,o:69,t:71,v:500000,nat:"Peru"},
-      {n:"Jeison Medina",num:9,p:"FW",q:"CA",a:31,o:70,t:70,v:1500000,nat:"Colombia"},
       {n:"Alexander Alvarado",num:10,p:"FW",q:"PE",a:27,o:70,t:71,v:1200000,nat:"Ecuador"},
       {n:"Michael Estrada",num:11,p:"FW",q:"CA",a:30,o:69,t:69,v:600000,nat:"Ecuador"},
       {n:"Alexis Villa",num:12,p:"GK",q:"GOL",a:25,o:61,t:63,v:150000,nat:"Ecuador"},
@@ -5984,17 +6091,17 @@
       {n:"Luis Segovia",num:44,p:"DF",q:"ZAG",a:28,o:71,t:71,v:1000000,nat:"Ecuador"},
       {n:"José Carabalí",num:67,p:"DF",q:"LE",a:29,o:60,t:68,v:850000,nat:"Ecuador"},
       {n:"Kevin Velasco",num:77,p:"FW",q:"PE",a:29,o:69,t:69,v:300000,nat:"Ecuador"},
-      {n:"Marcelo Weigandt",num:0,p:"DF",q:"LD",a:26,o:69,t:71,v:1700000,nat:"Argentina"},
+      {n:"Marcelo Weigandt",num:57,p:"DF",q:"LD",a:26,o:69,t:71,v:1700000,nat:"Argentina"},
       {n:"Kevin Minda",num:5,p:"MF",q:"MC",a:28,o:69,t:73,v:3000000,nat:"Ecuador"},
-      {n:"Michael Bermúdez",num:19,p:"FW",q:"CA",a:20,o:67,t:69,v:2000000,nat:"Ecuador"},
       {n:"Madison Julio",num:25,p:"MF",q:"MC",a:22,o:65,t:71,v:2000000,nat:"Ecuador"},
       {n:"Daniel de la Cruz",num:32,p:"DF",q:"LD",a:22,o:69,t:72,v:3000000,nat:"Ecuador"},
-      {n:"Jairón Charcopa",num:0,p:"FW",q:"PD",a:24,o:67,t:70,v:2500000,nat:"Ecuador"}
+      {n:"Jairón Charcopa",num:0,p:"FW",q:"PD",a:24,o:67,t:70,v:2500000,nat:"Ecuador"},
+      {n:"Cristian Tobar",num:99,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ecuador"}
     ],
     "ec/Libertad": [
       {n:"Ivan Zambrano",num:7,p:"MF",q:"VOL",a:25,o:67,t:70,v:2500000,nat:"Ecuador"},
       {n:"Stick Castro",num:8,p:"DF",q:"LD",a:27,o:57,t:59,v:50000,nat:"Ecuador"},
-      {n:"Enrique Caicedo",num:9,p:"MF",q:"MC",a:26,o:62,t:64,v:75000,nat:"Ecuador"},
+      {n:"Enrique Caicedo",num:6,p:"MF",q:"MC",a:26,o:62,t:64,v:75000,nat:"Ecuador"},
       {n:"Gabriel Cortez",num:10,p:"MF",q:"MEI",a:30,o:70,t:70,v:600000,nat:"Ecuador"},
       {n:"Hancel Batalla",num:11,p:"FW",q:"PD",a:26,o:62,t:64,v:200000,nat:"Ecuador"},
       {n:"David Cabezas",num:12,p:"GK",q:"GOL",a:31,o:65,t:68,v:600000,nat:"Ecuador"},
@@ -6011,7 +6118,10 @@
       {n:"Wagner Bardales",num:54,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Ecuador"},
       {n:"Cristian Valencia",num:63,p:"MF",q:"VOL",a:20,o:56,t:64,v:200000,nat:"Ecuador"},
       {n:"Johan Estacio",num:66,p:"MF",q:"VOL",a:20,o:56,t:64,v:250000,nat:"Ecuador"},
-      {n:"Vilington Branda",num:70,p:"FW",q:"PD",a:24,o:62,t:65,v:400000,nat:"Ecuador"}
+      {n:"Vilington Branda",num:70,p:"FW",q:"PD",a:24,o:62,t:65,v:400000,nat:"Ecuador"},
+      {n:"Carlos Gruezo",num:5,p:"MF",q:"VOL",a:31,o:72,t:72,v:1000000,nat:"Ecuador"},
+      {n:"Jhon Cifuente",num:16,p:"FW",q:"CA",a:34,o:62,t:64,v:900000,nat:"Ecuador"},
+      {n:"Jawer Guisamano",num:23,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Ecuador"}
     ],
     "ec/Macará": [
       {n:"Rodrigo Rodríguez",num:1,p:"GK",q:"GOL",a:30,o:67,t:68,v:400000,nat:"Uruguay"},
@@ -6037,7 +6147,8 @@
       {n:"Juan Macías",num:28,p:"MF",q:"MC",a:21,o:58,t:64,v:500000,nat:"Ecuador"},
       {n:"Tommy Chamba",num:30,p:"MF",q:"MEI",a:20,o:56,t:64,v:150000,nat:"Ecuador"},
       {n:"Jeison Chala",num:77,p:"FW",q:"PD",a:20,o:56,t:64,v:150000,nat:"Ecuador"},
-      {n:"José Klinger",num:87,p:"FW",q:"PE",a:21,o:56,t:64,v:500000,nat:"Ecuador"}
+      {n:"José Klinger",num:87,p:"FW",q:"PE",a:21,o:56,t:64,v:500000,nat:"Ecuador"},
+      {n:"Federico Paz",num:7,p:"FW",q:"CA",a:31,o:66,t:66,v:6000000,nat:"Argentina"}
     ],
     "ec/Manta FC": [
       {n:"Wálter Chávez",num:1,p:"GK",q:"GOL",a:26,o:59,t:61,v:150000,nat:"Ecuador"},
@@ -6052,7 +6163,6 @@
       {n:"Felix Zambrano",num:12,p:"GK",q:"GOL",a:26,o:67,t:70,v:600000,nat:"Ecuador"},
       {n:"Jeremy Mina",num:14,p:"DF",q:"LD",a:26,o:59,t:61,v:200000,nat:"Ecuador"},
       {n:"Dagner Quintero",num:16,p:"DF",q:"ZAG",a:26,o:59,t:61,v:300000,nat:"Ecuador"},
-      {n:"José Enrique Angulo",num:17,p:"FW",q:"CA",a:31,o:62,t:62,v:250000,nat:"Ecuador"},
       {n:"Exequiel Beltramone",num:18,p:"FW",q:"PE",a:27,o:67,t:68,v:25000,nat:"Argentina"},
       {n:"Jostin Alman",num:19,p:"FW",q:"CA",a:26,o:61,t:63,v:300000,nat:"Ecuador"},
       {n:"Josué Chalá",num:20,p:"DF",q:"LE",a:26,o:59,t:61,v:200000,nat:"Ecuador"},
@@ -6086,7 +6196,8 @@
       {n:"Jeremy Cusme",num:50,p:"DF",q:"ZAG",a:22,o:64,t:70,v:50000,nat:"Ecuador"},
       {n:"Elvis Velasco",num:77,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Ecuador"},
       {n:"Facundo Castelli",num:81,p:"FW",q:"CA",a:31,o:57,t:65,v:500000,nat:"Argentina"},
-      {n:"Cristopher Angulo",num:99,p:"DF",q:"LD",a:24,o:65,t:69,v:250000,nat:"Ecuador"}
+      {n:"Cristopher Angulo",num:99,p:"DF",q:"LD",a:24,o:65,t:69,v:250000,nat:"Ecuador"},
+      {n:"Franklin Carabalí",num:12,p:"DF",q:"ZAG",a:30,o:65,t:69,v:2000000,nat:"Ecuador"}
     ],
     "ec/Orense": [
       {n:"Bryan Quiñónez",num:2,p:"DF",q:"ZAG",a:24,o:66,t:70,v:100000,nat:"Ecuador"},
@@ -6112,7 +6223,8 @@
       {n:"Óscar Quiñónez",num:45,p:"DF",q:"ZAG",a:25,o:66,t:69,v:500000,nat:"Ecuador"},
       {n:"Erick Zambrano",num:54,p:"FW",q:"CA",a:18,o:58,t:66,v:600000,nat:"Ecuador"},
       {n:"Ariel Suárez",num:57,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Ecuador"},
-      {n:"Bryan Viñán",num:77,p:"DF",q:"LE",a:20,o:56,t:64,v:500000,nat:"Ecuador"}
+      {n:"Bryan Viñán",num:77,p:"DF",q:"LE",a:20,o:56,t:64,v:500000,nat:"Ecuador"},
+      {n:"Michael Bermúdez",num:19,p:"FW",q:"CA",a:20,o:67,t:69,v:2000000,nat:"Ecuador"}
     ],
     "ec/Técnico Universitario": [
       {n:"Santiago Razzeto",num:1,p:"GK",q:"GOL",a:24,o:67,t:71,v:350000,nat:"Argentina"},
@@ -6165,7 +6277,8 @@
       {n:"Mauricio Alonso",num:32,p:"FW",q:"PD",a:32,o:65,t:73,v:450000,nat:"Uruguay"},
       {n:"Luis Cangá",num:33,p:"DF",q:"ZAG",a:31,o:70,t:70,v:800000,nat:"Ecuador"},
       {n:"Carlos Medina",num:37,p:"DF",q:"ZAG",a:25,o:65,t:73,v:350000,nat:"Ecuador"},
-      {n:"Eric Valencia",num:44,p:"DF",q:"LE",a:34,o:68,t:68,v:900000,nat:"Ecuador"}
+      {n:"Eric Valencia",num:44,p:"DF",q:"LE",a:34,o:68,t:68,v:900000,nat:"Ecuador"},
+      {n:"José Juan Manríquez",p:"DF",q:"ZAG",a:24,o:65,t:70,v:800000}
     ],
     "en/Arsenal": [
       {n:"David Raya",num:1,p:"GK",q:"GOL",a:30,o:87,t:87,v:30000000,nat:"Spain"},
@@ -6185,13 +6298,12 @@
       {n:"Noni Madueke",num:20,p:"FW",q:"PD",a:24,o:80,t:83,v:50000000,nat:"England"},
       {n:"Mikel Merino",num:23,p:"MF",q:"MC",a:30,o:83,t:83,v:25000000,nat:"Spain"},
       {n:"Kai Havertz",num:29,p:"FW",q:"CA",a:27,o:82,t:83,v:55000000,nat:"Germany"},
-      {n:"Illan Meslier",num:30,p:"GK",q:"GOL",a:26,o:72,t:74,v:8000000,nat:"France"},
+      {n:"Illan Meslier",num:30,p:"GK",q:"GOL",a:26,o:74,t:78,v:8000000,nat:"France"},
       {n:"Riccardo Calafiori",num:33,p:"DF",q:"LE",a:24,o:78,t:81,v:55000000,nat:"Italy"},
       {n:"Martín Zubimendi",num:36,p:"MF",q:"VOL",a:27,o:83,t:84,v:75000000,nat:"Spain"},
       {n:"Bruno Guimarães",num:39,p:"MF",q:"MC",a:28,o:86,t:86,v:70000000,nat:"Brazil"},
       {n:"Declan Rice",num:41,p:"MF",q:"MC",a:27,o:87,t:88,v:120000000,nat:"England"},
       {n:"Myles Lewis-Skelly",num:49,p:"MF",q:"VOL",a:19,o:78,t:86,v:45000000,nat:"England"},
-      {n:"Ethan Nwaneri",num:22,p:"FW",q:"CA",a:19,o:76,t:85,v:48000000,nat:"England"},
       {n:"Tommy Setford",num:35,p:"GK",q:"GOL",a:20,o:62,t:70,v:5000000,nat:"England"}
     ],
     "en/Aston Villa": [
@@ -6204,7 +6316,6 @@
       {n:"John McGinn",num:7,p:"MF",q:"MC",a:31,o:81,t:81,v:15000000,nat:"Scotland"},
       {n:"Boubacar Kamara",num:8,p:"MF",q:"VOL",a:26,o:83,t:85,v:40000000,nat:"France"},
       {n:"Emiliano Buendía",num:10,p:"MF",q:"MEI",a:29,o:77,t:77,v:16000000,nat:"Argentina"},
-      {n:"Nicolas Jackson",num:11,p:"FW",q:"CA",a:25,o:80,t:83,v:40000000,nat:"Senegal"},
       {n:"Matteo Ruggeri",num:13,p:"DF",q:"LE",a:24,o:75,t:78,v:28000000,nat:"Italy"},
       {n:"Pau Torres",num:14,p:"DF",q:"ZAG",a:29,o:80,t:80,v:20000000,nat:"Spain"},
       {n:"Alejandro Garnacho",num:17,p:"FW",q:"PE",a:22,o:77,t:83,v:28000000,nat:"Argentina"},
@@ -6214,7 +6325,6 @@
       {n:"Ian Maatsen",num:22,p:"DF",q:"LE",a:24,o:79,t:83,v:30000000,nat:"Netherlands"},
       {n:"Amadou Onana",num:24,p:"MF",q:"VOL",a:25,o:79,t:82,v:29000000,nat:"Belgium"},
       {n:"Lamare Bogarde",num:26,p:"MF",q:"VOL",a:22,o:71,t:77,v:18000000,nat:"Netherlands"},
-      {n:"Leon Goretzka",num:27,p:"MF",q:"MC",a:31,o:82,t:82,v:16000000,nat:"Germany"},
       {n:"Aaron Wan-Bissaka",num:29,p:"DF",q:"LD",a:28,o:80,t:80,v:15000000,nat:"DR Congo"},
       {n:"João Gomes",num:35,p:"MF",q:"VOL",a:25,o:78,t:81,v:26000000,nat:"Brazil"},
       {n:"Brian Madjo",num:39,p:"FW",q:"CA",a:17,o:63,t:72,v:5500000,nat:"England"},
@@ -6255,8 +6365,7 @@
       {n:"Rayan",num:37,p:"FW",q:"PD",a:20,o:73,t:81,v:60000000,nat:"Brazil"},
       {n:"Veljko Milosavljević",num:44,p:"DF",q:"ZAG",a:19,o:67,t:76,v:20000000,nat:"Serbia"},
       {n:"Alex Paulsen",num:13,p:"GK",q:"GOL",a:24,o:71,t:77,v:8500000,nat:"New Zealand"},
-      {n:"Álex Jiménez",num:0,p:"DF",q:"ZAG",a:21,o:71,t:78,v:15000000,nat:"Spain"},
-      {n:"Romain Faivre",num:0,p:"MF",q:"MEI",a:28,o:76,t:76,v:15000000,nat:"France"}
+      {n:"Álex Jiménez",num:0,p:"DF",q:"ZAG",a:21,o:71,t:78,v:15000000,nat:"Spain"}
     ],
     "en/Brentford": [
       {n:"Caoimhín Kelleher",num:1,p:"GK",q:"GOL",a:27,o:79,t:81,v:28000000,nat:"Ireland"},
@@ -6301,7 +6410,7 @@
       {n:"Yankuba Minteh",num:11,p:"MF",q:"MC",a:22,o:77,t:83,v:59000000,nat:"The Gambia"},
       {n:"Promise David",num:12,p:"FW",q:"CA",a:25,o:75,t:79,v:45000000,nat:"Canada"},
       {n:"Pascal Groß",num:13,p:"MF",q:"MC",a:35,o:80,t:80,v:15000000,nat:"Germany"},
-      {n:"Chema Andrés",num:14,p:"MF",q:"MC",a:21,o:63,t:70,v:11000000,nat:"Spain"},
+      {n:"Chema Andrés",num:14,p:"MF",q:"MC",a:21,o:64,t:70,v:11000000,nat:"Spain"},
       {n:"Ibrahim Osman",num:15,p:"MF",q:"MC",a:21,o:72,t:78,v:34000000,nat:"Ghana"},
       {n:"Charalampos Kostoulas",num:19,p:"FW",q:"CA",a:19,o:72,t:81,v:44000000,nat:"Greece"},
       {n:"Costinha",num:20,p:"DF",q:"ZAG",a:26,o:72,t:76,v:32000000,nat:"Portugal"},
@@ -6367,7 +6476,7 @@
       {n:"Ben Wilson",num:13,p:"GK",q:"GOL",a:34,o:68,t:68,v:300000,nat:"England"},
       {n:"Taiwo Awoniyi",num:14,p:"FW",q:"CA",a:29,o:75,t:75,v:8000000,nat:"Nigeria"},
       {n:"Frank Onyeka",num:16,p:"MF",q:"MC",a:28,o:74,t:74,v:8000000,nat:"Nigeria"},
-      {n:"Loum Tchaouna",num:18,p:"FW",q:"PD",a:23,o:69,t:73,v:13000000,nat:"France"},
+      {n:"Loum Tchaouna",num:17,p:"FW",q:"PD",a:23,o:69,t:73,v:13000000,nat:"France"},
       {n:"Carl Rushworth",num:19,p:"GK",q:"GOL",a:25,o:72,t:76,v:16000000,nat:"England"},
       {n:"Kaine Kesler-Hayden",num:20,p:"DF",q:"LD",a:23,o:72,t:75,v:3000000,nat:"England"},
       {n:"Jake Bidwell",num:21,p:"DF",q:"LE",a:33,o:68,t:68,v:600000,nat:"England"},
@@ -6379,10 +6488,11 @@
       {n:"Milan van Ewijk",num:27,p:"DF",q:"LD",a:26,o:74,t:76,v:22000000,nat:"Netherlands"},
       {n:"Josh Eccles",num:28,p:"MF",q:"MC",a:26,o:70,t:72,v:9000000,nat:"England"},
       {n:"Victor Torp",num:29,p:"MF",q:"MC",a:27,o:70,t:72,v:14000000,nat:"Denmark"},
-      {n:"Stephen Mfuni",num:30,p:"DF",q:"ZAG",a:18,o:60,t:69,v:1500000,nat:"England"},
+      {n:"Stephen Mfuni",num:12,p:"DF",q:"ZAG",a:18,o:60,t:69,v:1500000,nat:"England"},
       {n:"Yann Gboho",num:34,p:"FW",q:"PE",a:25,o:75,t:77,v:18000000,nat:"France"},
       {n:"Gustavo Hamer",num:38,p:"MF",q:"MC",a:29,o:77,t:77,v:14000000,nat:"Netherlands"},
-      {n:"Sidiki Cherif",num:49,p:"FW",q:"CA",a:19,o:63,t:71,v:18000000,nat:"Guinea"}
+      {n:"Sidiki Cherif",num:49,p:"FW",q:"CA",a:19,o:64,t:71,v:18000000,nat:"Guinea"},
+      {n:"Oliver Dovin",num:1,p:"GK",q:"GOL",a:24,o:73,t:78,v:4500000}
     ],
     "en/Crystal Palace": [
       {n:"Dean Henderson",num:1,p:"GK",q:"GOL",a:29,o:81,t:81,v:17000000,nat:"England"},
@@ -6401,7 +6511,7 @@
       {n:"Daichi Kamada",num:18,p:"MF",q:"MC",a:30,o:77,t:77,v:10000000,nat:"Japan"},
       {n:"Will Hughes",num:19,p:"MF",q:"MC",a:31,o:77,t:77,v:5000000,nat:"England"},
       {n:"Adam Wharton",num:20,p:"MF",q:"VOL",a:22,o:79,t:85,v:70000000,nat:"England"},
-      {n:"Honest Ahanor",num:21,p:"DF",q:"ZAG",a:18,o:66,t:76,v:30000000,nat:"Italy"},
+      {n:"Honest Ahanor",num:21,p:"DF",q:"ZAG",a:18,o:68,t:76,v:30000000,nat:"Italy"},
       {n:"Jørgen Strand Larsen",num:22,p:"FW",q:"CA",a:26,o:78,t:80,v:40000000,nat:"Norway"},
       {n:"Quinten Timber",num:23,p:"MF",q:"MC",a:25,o:80,t:82,v:25000000,nat:"Netherlands"},
       {n:"Darío Osorio",num:24,p:"FW",q:"PD",a:22,o:72,t:78,v:15000000,nat:"Chile"},
@@ -6434,7 +6544,8 @@
       {n:"Tom King",num:31,p:"GK",q:"GOL",a:31,o:64,t:64,v:100000,nat:"Wales"},
       {n:"Merlin Röhl",num:34,p:"MF",q:"MC",a:24,o:74,t:78,v:16000000,nat:"Germany"},
       {n:"James Garner",num:37,p:"MF",q:"VOL",a:25,o:76,t:78,v:45000000,nat:"England"},
-      {n:"Harrison Armstrong",num:45,p:"MF",q:"MC",a:19,o:67,t:76,v:12000000,nat:"England"}
+      {n:"Harrison Armstrong",num:45,p:"MF",q:"MC",a:19,o:68,t:76,v:12000000,nat:"England"},
+      {n:"Jack Grealish",num:10,p:"FW",q:"PE",a:31,o:80,t:80,v:30000000,nat:"England"}
     ],
     "en/Fulham": [
       {n:"Bernd Leno",num:1,p:"GK",q:"GOL",a:34,o:80,t:80,v:6000000,nat:"Germany"},
@@ -6484,7 +6595,7 @@
       {n:"Konstantinos Tzolakis",num:19,p:"GK",q:"GOL",a:23,o:79,t:85,v:18000000,nat:"Greece"},
       {n:"Óscar Zambrano",num:20,p:"MF",q:"VOL",a:22,o:69,t:75,v:1500000,nat:"Ecuador"},
       {n:"Elliot Stroud",num:21,p:"FW",q:"PE",a:24,o:71,t:80,v:8000000,nat:"Sweden"},
-      {n:"Lucas Herrington",num:22,p:"DF",q:"ZAG",a:19,o:59,t:68,v:8000000,nat:"Australia"},
+      {n:"Lucas Herrington",num:22,p:"DF",q:"ZAG",a:19,o:62,t:68,v:8000000,nat:"Australia"},
       {n:"Matt Targett",num:23,p:"DF",q:"LE",a:30,o:71,t:71,v:3000000,nat:"England"},
       {n:"Darko Gyabi",num:24,p:"MF",q:"MC",a:22,o:66,t:72,v:4000000,nat:"England"},
       {n:"Matt Crooks",num:25,p:"MF",q:"MC",a:32,o:69,t:69,v:700000,nat:"England"},
@@ -6492,11 +6603,12 @@
       {n:"Regan Slater",num:27,p:"MF",q:"VOL",a:26,o:70,t:71,v:5500000,nat:"England"},
       {n:"Ilyas Ansah",num:28,p:"FW",q:"CA",a:21,o:69,t:75,v:12000000,nat:"Germany"},
       {n:"Lucas Gourna-Douath",num:29,p:"MF",q:"VOL",a:23,o:72,t:76,v:6000000,nat:"France"},
-      {n:"David Akintola",num:30,p:"FW",q:"PD",a:30,o:69,t:69,v:1000000,nat:"Nigeria"},
       {n:"Nobel Mendy",num:32,p:"DF",q:"ZAG",a:22,o:65,t:72,v:7500000,nat:"Senegal"},
       {n:"Abdülkadir Ömür",num:33,p:"MF",q:"PD",a:27,o:73,t:74,v:1500000,nat:"Turkey"},
       {n:"Christos Mouzakitis",num:36,p:"MF",q:"MC",a:19,o:71,t:79,v:25000000,nat:"Greece"},
-      {n:"Mohamed-Ali Cho",num:50,p:"FW",q:"PD",a:22,o:76,t:82,v:15000000,nat:"France"}
+      {n:"Mohamed-Ali Cho",num:50,p:"FW",q:"PD",a:22,o:76,t:82,v:15000000,nat:"France"},
+      {n:"Tim Iroegbunam",num:42,p:"MF",q:"VOL",a:24,o:66,t:71,v:1000000},
+      {n:"Robinio Vaz",num:47,p:"FW",q:"CA",a:25,o:70,t:72,v:2000000}
     ],
     "en/Ipswich Town": [
       {n:"Alex Palmer",num:1,p:"GK",q:"GOL",a:30,o:73,t:73,v:1000000,nat:"England"},
@@ -6529,8 +6641,7 @@
       {n:"Jack Clarke",num:47,p:"FW",q:"PE",a:25,o:74,t:76,v:20000000,nat:"England"},
       {n:"Ben Johnson",num:18,p:"DF",q:"ZAG",a:26,o:72,t:73,v:10000000,nat:"England"},
       {n:"Chiedozie Ogbene",num:21,p:"MF",q:"MC",a:29,o:74,t:74,v:12000000,nat:"Ireland"},
-      {n:"Cameron Humphreys",num:30,p:"MF",q:"MC",a:22,o:67,t:71,v:6500000,nat:"England"},
-      {n:"Kayne van Oevelen",num:31,p:"GK",q:"GOL",a:23,o:66,t:70,v:4000000,nat:"Netherlands"}
+      {n:"Cameron Humphreys",num:30,p:"MF",q:"MC",a:22,o:67,t:71,v:6500000,nat:"England"}
     ],
     "en/Leeds United": [
       {n:"James Trafford",num:1,p:"GK",q:"GOL",a:23,o:76,t:81,v:25000000,nat:"England"},
@@ -6587,9 +6698,11 @@
       {n:"Vítězslav Jaroš",num:56,p:"GK",q:"GOL",a:25,o:70,t:74,v:12000000,nat:"Czech Republic"},
       {n:"Rio Ngumoha",num:73,p:"FW",q:"PE",a:18,o:68,t:78,v:30000000,nat:"England"},
       {n:"Harvey Davies",num:95,p:"GK",q:"GOL",a:22,o:61,t:65,v:500000,nat:"England"},
-      {n:"Harvey Elliott",num:19,p:"FW",q:"CA",a:23,o:78,t:82,v:41000000,nat:"England"},
       {n:"Ármin Pécsi",num:41,p:"GK",q:"GOL",a:21,o:64,t:71,v:6500000,nat:"Hungary"},
-      {n:"Calvin Ramsay",num:47,p:"DF",q:"ZAG",a:23,o:65,t:69,v:8000000,nat:"Scotland"}
+      {n:"Calvin Ramsay",num:47,p:"DF",q:"ZAG",a:23,o:65,t:69,v:8000000,nat:"Scotland"},
+      {n:"Luke Chambers",num:44,p:"DF",q:"LE",a:21,o:65,t:73,v:1500000},
+      {n:"Lewis Koumas",num:67,p:"FW",q:"PD",a:25,o:65,t:67,v:800000},
+      {n:"Jayden Danns",num:76,p:"FW",q:"CA",a:21,o:71,t:79,v:3800000}
     ],
     "en/Manchester City": [
       {n:"Gianluigi Donnarumma",num:1,p:"GK",q:"GOL",a:27,o:89,t:90,v:45000000,nat:"Italy"},
@@ -6614,16 +6727,14 @@
       {n:"Antoine Semenyo",num:42,p:"FW",q:"PD",a:26,o:80,t:81,v:80000000,nat:"Ghana"},
       {n:"Abdukodir Khusanov",num:45,p:"DF",q:"ZAG",a:22,o:77,t:83,v:50000000,nat:"Uzbekistan"},
       {n:"Phil Foden",num:47,p:"MF",q:"MEI",a:26,o:85,t:86,v:70000000,nat:"England"},
-      {n:"Ryan McAidoo",num:56,p:"FW",q:"PD",a:18,o:58,t:68,v:8000000,nat:"England"},
+      {n:"Ryan McAidoo",num:56,p:"FW",q:"PD",a:18,o:61,t:68,v:8000000,nat:"England"},
       {n:"Josh Wilson-Esbrand",num:59,p:"DF",q:"LE",a:23,o:68,t:72,v:2500000,nat:"England"},
       {n:"Kaden Braithwaite",num:61,p:"DF",q:"ZAG",a:18,o:65,t:73,v:16000000,nat:"England"},
-      {n:"Jack Grealish",num:18,p:"FW",q:"PE",a:31,o:80,t:80,v:30000000,nat:"England"},
-      {n:"Claudio Echeverri",num:30,p:"MF",q:"MEI",a:20,o:74,t:82,v:54000000,nat:"Argentina"},
       {n:"Jeremy Monga",num:40,p:"MF",q:"MC",a:17,o:62,t:73,v:11000000,nat:"England"},
-      {n:"Sverre Nypan",num:41,p:"MF",q:"MEI",a:19,o:69,t:77,v:30000000,nat:"Norway"},
       {n:"Kalvin Phillips",num:44,p:"MF",q:"MC",a:30,o:74,t:74,v:17000000,nat:"England"},
       {n:"Max Alleyne",num:68,p:"DF",q:"ZAG",a:21,o:64,t:71,v:14000000,nat:"England"},
-      {n:"Omar Marmoush",num:0,p:"FW",q:"CA",a:27,o:84,t:85,v:81000000,nat:"Egypt"}
+      {n:"Floyd Samba",num:75,p:"MF",q:"MD",a:20,o:74,t:82,v:7500000},
+      {n:"Rico Lewis",num:82,p:"DF",q:"LD",a:20,o:69,t:77,v:2500000}
     ],
     "en/Manchester United": [
       {n:"Senne Lammens",num:1,p:"GK",q:"GOL",a:24,o:78,t:83,v:35000000,nat:"Belgium"},
@@ -6641,7 +6752,6 @@
       {n:"Patrick Dorgu",num:13,p:"FW",q:"PE",a:21,o:74,t:80,v:35000000,nat:"Denmark"},
       {n:"Leny Yoro",num:15,p:"DF",q:"ZAG",a:20,o:78,t:85,v:50000000,nat:"France"},
       {n:"Amad Diallo",num:16,p:"FW",q:"PD",a:24,o:79,t:82,v:34000000,nat:"Ivory Coast"},
-      {n:"Andrey Santos",num:17,p:"MF",q:"VOL",a:22,o:80,t:86,v:40000000,nat:"Brazil"},
       {n:"Youri Tielemans",num:18,p:"MF",q:"MC",a:29,o:85,t:85,v:40000000,nat:"Belgium"},
       {n:"Bryan Mbeumo",num:19,p:"FW",q:"PD",a:27,o:85,t:86,v:75000000,nat:"Cameroon"},
       {n:"Carlos Baleba",num:20,p:"MF",q:"VOL",a:22,o:81,t:87,v:45000000,nat:"Cameroon"},
@@ -6655,9 +6765,7 @@
       {n:"Jack Fletcher",num:38,p:"MF",q:"MEI",a:19,o:62,t:71,v:1500000,nat:"England"},
       {n:"Tyler Fletcher",num:39,p:"MF",q:"MC",a:19,o:61,t:70,v:1500000,nat:"Scotland"},
       {n:"Harry Amass",num:41,p:"DF",q:"LE",a:19,o:68,t:77,v:7000000,nat:"England"},
-      {n:"Dermot Mee",num:45,p:"GK",q:"GOL",a:23,o:60,t:64,v:2000000,nat:"Northern Ireland"},
-      {n:"André Onana",num:24,p:"GK",q:"GOL",a:30,o:80,t:80,v:11000000,nat:"Cameroon"},
-      {n:"Altay Bayındır",num:0,p:"GK",q:"GOL",a:28,o:75,t:75,v:12000000,nat:"Turkey"}
+      {n:"Dermot Mee",num:45,p:"GK",q:"GOL",a:23,o:60,t:64,v:2000000,nat:"Northern Ireland"}
     ],
     "en/Newcastle": [
       {n:"Nick Pope",num:1,p:"GK",q:"GOL",a:34,o:81,t:81,v:5000000,nat:"England"},
@@ -6667,7 +6775,7 @@
       {n:"Fabian Schär",num:5,p:"DF",q:"ZAG",a:34,o:82,t:82,v:4000000,nat:"Switzerland"},
       {n:"Nico González",num:6,p:"MF",q:"VOL",a:24,o:79,t:83,v:40000000,nat:"Spain"},
       {n:"Joelinton",num:7,p:"FW",q:"PE",a:30,o:82,t:82,v:21000000,nat:"Brazil"},
-      {n:"Aladji Bamba",num:8,p:"MF",q:"VOL",a:20,o:63,t:71,v:18000000,nat:"France"},
+      {n:"Aladji Bamba",num:8,p:"MF",q:"VOL",a:20,o:64,t:71,v:18000000,nat:"France"},
       {n:"Yoane Wissa",num:9,p:"FW",q:"CA",a:30,o:82,t:82,v:25000000,nat:"DR Congo"},
       {n:"William Osula",num:10,p:"FW",q:"CA",a:23,o:68,t:72,v:11000000,nat:"Denmark"},
       {n:"Harvey Barnes",num:11,p:"FW",q:"PE",a:28,o:80,t:80,v:32000000,nat:"England"},
@@ -6740,7 +6848,8 @@
       {n:"Malick Fofana",num:39,p:"FW",q:"PE",a:21,o:78,t:85,v:30000000,nat:"Belgium"},
       {n:"Aji Alese",num:42,p:"DF",q:"ZAG",a:25,o:68,t:70,v:700000,nat:"England"},
       {n:"Abdoullah Ba",num:46,p:"MF",q:"PD",a:23,o:66,t:70,v:1500000,nat:"France"},
-      {n:"Juan Riquelme Angulo",num:0,p:"FW",q:"CA",a:18,o:64,t:70,v:350000,nat:"Ecuador"}
+      {n:"Juan Riquelme Angulo",num:50,p:"FW",q:"CA",a:18,o:64,t:70,v:350000,nat:"Ecuador"},
+      {n:"Kevin Danso",num:4,p:"DF",q:"ZAG",a:27,o:79,t:80,v:25000000,nat:"Austria"}
     ],
     "en/Tottenham": [
       {n:"Andy Robertson",num:3,p:"DF",q:"LE",a:32,o:81,t:81,v:7000000,nat:"Scotland"},
@@ -6769,11 +6878,10 @@
       {n:"Micky van de Ven",num:37,p:"DF",q:"ZAG",a:25,o:82,t:84,v:40000000,nat:"Netherlands"},
       {n:"Martin Dúbravka",num:39,p:"GK",q:"GOL",a:37,o:77,t:77,v:500000,nat:"Slovakia"},
       {n:"Guglielmo Vicario",num:1,p:"GK",q:"GOL",a:29,o:82,t:82,v:12000000,nat:"Italy"},
-      {n:"Kōta Takai",num:25,p:"DF",q:"ZAG",a:22,o:72,t:78,v:17000000,nat:"Japan"},
-      {n:"Pape Matar Sarr",num:29,p:"MF",q:"MC",a:23,o:79,t:83,v:33000000,nat:"Senegal"},
-      {n:"Kevin Danso",num:0,p:"DF",q:"ZAG",a:27,o:79,t:80,v:25000000,nat:"Austria"},
       {n:"Radu Drăgușin",num:0,p:"DF",q:"ZAG",a:24,o:75,t:78,v:21000000,nat:"Romania"},
-      {n:"Yang Min-hyeok",num:0,p:"FW",q:"PE",a:20,o:70,t:78,v:16000000,nat:"South Korea"}
+      {n:"Omar Marmoush",num:22,p:"FW",q:"CA",a:27,o:84,t:85,v:81000000,nat:"Egypt"},
+      {n:"Ben Davies",num:33,p:"DF",q:"ZAG",a:31,o:66,t:66,v:800000,nat:"England"},
+      {n:"Brandon Austin",num:40,p:"GK",q:"GOL",a:20,o:77,t:85,v:5800000}
     ],
     "es/Alavés": [
       {n:"Antonio Sivera",num:1,p:"GK",q:"GOL",a:30,o:76,t:76,v:2000000,nat:"Spain"},
@@ -6911,7 +7019,8 @@
       {n:"Hugo Álvarez",num:23,p:"FW",q:"PE",a:23,o:76,t:80,v:8000000,nat:"Spain"},
       {n:"Couhaib Driouech",num:24,p:"FW",q:"PE",a:24,o:70,t:73,v:7500000,nat:"Morocco"},
       {n:"Iván Villar",num:25,p:"GK",q:"GOL",a:29,o:73,t:73,v:900000,nat:"Spain"},
-      {n:"Jones El-Abdellaoui",num:39,p:"FW",q:"PD",a:20,o:64,t:72,v:8000000,nat:"Morocco"}
+      {n:"Jones El-Abdellaoui",num:39,p:"FW",q:"PD",a:20,o:64,t:72,v:8000000,nat:"Morocco"},
+      {n:"Altay Bayındır",num:1,p:"GK",q:"GOL",a:28,o:75,t:75,v:12000000,nat:"Turkey"}
     ],
     "es/Deportivo La Coruña": [
       {n:"Germán Parreño",num:1,p:"GK",q:"GOL",a:33,o:64,t:64,v:250000,nat:"Spain"},
@@ -6966,11 +7075,11 @@
       {n:"Matía Barzić",num:26,p:"DF",q:"ZAG",a:22,o:62,t:68,v:1000000,nat:"Croatia"},
       {n:"Ali Houary",num:29,p:"FW",q:"SA",a:20,o:62,t:69,v:300000,nat:"Morocco"},
       {n:"Adam Boayar",num:32,p:"FW",q:"SA",a:20,o:61,t:68,v:800000,nat:"Morocco"},
-      {n:"Alejandro Iturbe",num:43,p:"GK",q:"GOL",a:23,o:66,t:70,v:1400000,nat:"Spain"},
+      {n:"Alejandro Iturbe",num:13,p:"GK",q:"GOL",a:23,o:66,t:70,v:1400000,nat:"Spain"},
       {n:"Javi Morcillo",num:47,p:"MF",q:"MC",a:20,o:58,t:67,v:500000,nat:"Spain"},
-      {n:"Kevin Lomónaco",num:0,p:"DF",q:"ZAG",a:24,o:70,t:73,v:8000000,nat:"Argentina"},
-      {n:"Rubén Sánchez",num:0,p:"DF",q:"LD",a:25,o:62,t:70,v:1800000,nat:"Spain"},
-      {n:"Thomas Lemar",num:0,p:"MF",q:"MEI",a:30,o:77,t:77,v:1800000,nat:"France"},
+      {n:"Kevin Lomónaco",num:15,p:"DF",q:"ZAG",a:24,o:70,t:73,v:8000000,nat:"Argentina"},
+      {n:"Rubén Sánchez",num:22,p:"DF",q:"LD",a:25,o:62,t:70,v:1800000,nat:"Spain"},
+      {n:"Thomas Lemar",num:18,p:"MF",q:"MEI",a:30,o:77,t:77,v:1800000,nat:"France"},
       {n:"Álvaro Padilla",num:30,p:"FW",q:"CA",a:19,o:60,t:69,v:1000000,nat:"Spain"},
       {n:"Axel Werner",num:0,p:"GK",q:"GOL",a:30,o:67,t:67,v:700000,nat:"Argentina"},
       {n:"John Chetauya",num:0,p:"DF",q:"ZAG",a:25,o:70,t:74,v:4000000,nat:"Spain"},
@@ -6988,7 +7097,6 @@
       {n:"Roberto Fernández",num:9,p:"FW",q:"CA",a:24,o:73,t:76,v:10000000,nat:"Spain"},
       {n:"Pol Lozano",num:10,p:"MF",q:"MC",a:26,o:75,t:76,v:6000000,nat:"Spain"},
       {n:"Pere Milla",num:11,p:"FW",q:"PE",a:33,o:71,t:71,v:1000000,nat:"Spain"},
-      {n:"Carlos Serrano",num:12,p:"FW",q:"CA",a:24,o:68,t:72,v:3000000,nat:"Argentina"},
       {n:"Marko Dmitrović",num:13,p:"GK",q:"GOL",a:34,o:79,t:79,v:700000,nat:"Serbia"},
       {n:"Unai Nuñez",num:14,p:"DF",q:"ZAG",a:29,o:76,t:76,v:3500000,nat:"Spain"},
       {n:"Bryan Zaragoza",num:15,p:"FW",q:"PE",a:25,o:77,t:80,v:8000000,nat:"Spain"},
@@ -7001,12 +7109,9 @@
       {n:"Álex Calatrava",num:22,p:"MF",q:"MEI",a:26,o:62,t:70,v:4000000,nat:"Spain"},
       {n:"Omar El Hilali",num:23,p:"DF",q:"LD",a:23,o:77,t:81,v:15000000,nat:"Morocco"},
       {n:"Tyrhys Dolan",num:24,p:"FW",q:"PD",a:24,o:69,t:72,v:10000000,nat:"England"},
-      {n:"Marcelo Standardo",num:25,p:"MF",q:"MC",a:22,o:65,t:71,v:2000000,nat:"Argentina"},
       {n:"Rafel Bauzà",num:26,p:"MF",q:"MC",a:21,o:66,t:73,v:1200000,nat:"Spain"},
       {n:"Adama Timera",num:27,p:"DF",q:"ZAG",a:21,o:64,t:71,v:2500000,nat:"France"},
       {n:"Javi Hernández",num:28,p:"MF",q:"MEI",a:22,o:68,t:74,v:1500000,nat:"Spain"},
-      {n:"Patricio Quentarós",num:29,p:"DF",q:"ZAG",a:21,o:64,t:71,v:2500000,nat:"Argentina"},
-      {n:"Cristián Mantorrás",num:30,p:"GK",q:"GOL",a:19,o:58,t:67,v:500000,nat:"Argentina"},
       {n:"Llorenç Serred",num:31,p:"GK",q:"GOL",a:19,o:57,t:66,v:400000,nat:"Spain"},
       {n:"José Ángel López",num:32,p:"DF",q:"ZAG",a:19,o:58,t:67,v:700000,nat:"Spain"}
     ],
@@ -7033,7 +7138,7 @@
       {n:"Orel Mangala",num:23,p:"MF",q:"VOL",a:28,o:77,t:77,v:9000000,nat:"Belgium"},
       {n:"Zaid Romero",num:24,p:"DF",q:"ZAG",a:26,o:72,t:75,v:2500000,nat:"Argentina"},
       {n:"Jean Ives Valou",num:26,p:"DF",q:"ZAG",a:20,o:62,t:70,v:600000,nat:"Ivory Coast"},
-      {n:"Iván Azón",num:0,p:"FW",q:"CA",a:23,o:69,t:73,v:5000000,nat:"Spain"}
+      {n:"Iván Azón",num:20,p:"FW",q:"CA",a:23,o:69,t:73,v:5000000,nat:"Spain"}
     ],
     "es/Levante": [
       {n:"Pablo Campos",num:1,p:"GK",q:"GOL",a:24,o:69,t:74,v:1500000,nat:"Spain"},
@@ -7091,7 +7196,6 @@
       {n:"Rafita",num:31,p:"DF",q:"LD",a:21,o:58,t:67,v:1000000,nat:"Spain"},
       {n:"Aarón Ochoa",num:35,p:"MF",q:"MEI",a:19,o:65,t:74,v:800000,nat:"Ireland"},
       {n:"Adam Aznou",num:39,p:"DF",q:"LE",a:20,o:66,t:74,v:6000000,nat:"Morocco"},
-      {n:"Moussa Diarra",num:0,p:"DF",q:"ZAG",a:24,o:63,t:67,v:1500000,nat:"Mali"},
       {n:"Otu",num:28,p:"MF",q:"MC",a:21,o:63,t:70,v:1500000,nat:"Nigeria"},
       {n:"Juani",num:32,p:"MF",q:"MC",a:19,o:60,t:69,v:1000000,nat:"Spain"},
       {n:"Pablo Arriaza",num:0,p:"DF",q:"ZAG",a:20,o:61,t:69,v:1000000,nat:"Spain"}
@@ -7192,8 +7296,7 @@
       {n:"Sergio Lozano",num:27,p:"DF",q:"ZAG",a:21,o:63,t:70,v:1500000,nat:"Spain"},
       {n:"Adrián Molina",num:30,p:"GK",q:"GOL",a:20,o:58,t:66,v:450000,nat:"Spain"},
       {n:"Marco Román",num:31,p:"MF",q:"MC",a:19,o:60,t:69,v:1000000,nat:"Spain"},
-      {n:"Iván Alonso",num:34,p:"MF",q:"MC",a:19,o:60,t:69,v:1000000,nat:"Spain"},
-      {n:"Miguel Ángel Morro",num:0,p:"GK",q:"GOL",a:25,o:62,t:69,v:1000000,nat:"Spain"}
+      {n:"Iván Alonso",num:34,p:"MF",q:"MC",a:19,o:60,t:69,v:1000000,nat:"Spain"}
     ],
     "es/Real Betis": [
       {n:"Álvaro Valles",num:1,p:"GK",q:"GOL",a:29,o:79,t:80,v:7000000,nat:"Spain"},
@@ -7244,14 +7347,14 @@
       {n:"Ibrahima Konaté",num:16,p:"DF",q:"ZAG",a:27,o:86,t:87,v:45000000,nat:"France"},
       {n:"Marc Cucurella",num:17,p:"DF",q:"LE",a:28,o:84,t:84,v:60000000,nat:"Spain"},
       {n:"Álvaro Carreras",num:18,p:"DF",q:"LE",a:23,o:80,t:84,v:50000000,nat:"Spain"},
-      {n:"Carlos Espí",num:19,p:"FW",q:"CA",a:21,o:68,t:75,v:20000000,nat:"Spain"},
+      {n:"Carlos Espí",num:19,p:"FW",q:"CA",a:21,o:73,t:77,v:20000000,nat:"Spain"},
       {n:"Bernardo Silva",num:20,p:"MF",q:"MEI",a:32,o:84,t:84,v:22000000,nat:"Portugal"},
       {n:"Brahim Díaz",num:21,p:"FW",q:"PD",a:27,o:82,t:83,v:35000000,nat:"Morocco"},
       {n:"Antonio Rüdiger",num:22,p:"DF",q:"ZAG",a:33,o:86,t:86,v:6000000,nat:"Germany"},
       {n:"Ferland Mendy",num:23,p:"DF",q:"ZAG",a:31,o:81,t:81,v:22000000,nat:"France"},
       {n:"Denzel Dumfries",num:24,p:"DF",q:"LD",a:30,o:84,t:84,v:25000000,nat:"Netherlands"},
-      {n:"Yan Diomande",num:25,p:"FW",q:"PD",a:19,o:66,t:74,v:90000000,nat:"Ivory Coast"},
-      {n:"Thiago Pitarch",num:27,p:"MF",q:"MC",a:19,o:66,t:74,v:20000000,nat:"Spain"}
+      {n:"Yan Diomande",num:25,p:"FW",q:"PD",a:19,o:73,t:77,v:90000000,nat:"Ivory Coast"},
+      {n:"Thiago Pitarch",num:27,p:"MF",q:"MC",a:19,o:73,t:77,v:20000000,nat:"Spain"}
     ],
     "es/Real Sociedad": [
       {n:"Álex Remiro",num:1,p:"GK",q:"GOL",a:31,o:83,t:83,v:9000000,nat:"Spain"},
@@ -7330,7 +7433,9 @@
       {n:"Arnau Martínez",num:22,p:"DF",q:"LD",a:23,o:79,t:83,v:10000000,nat:"Spain"},
       {n:"Filip Ugrinić",num:23,p:"MF",q:"MC",a:27,o:75,t:76,v:6000000,nat:"Switzerland"},
       {n:"Pablo Maffeo",num:24,p:"DF",q:"LD",a:29,o:78,t:78,v:3000000,nat:"Argentina"},
-      {n:"Ryūnosuke Satō",num:39,p:"FW",q:"PE",a:19,o:66,t:74,v:2000000,nat:"Japan"}
+      {n:"Ryūnosuke Satō",num:39,p:"FW",q:"PE",a:19,o:66,t:74,v:2000000,nat:"Japan"},
+      {n:"Harvey Elliott",num:10,p:"FW",q:"CA",a:23,o:78,t:82,v:41000000,nat:"England"},
+      {n:"Kayne van Oevelen",num:25,p:"GK",q:"GOL",a:23,o:66,t:70,v:4000000,nat:"Netherlands"}
     ],
     "es/Villarreal": [
       {n:"Luiz Júnior",num:1,p:"GK",q:"GOL",a:25,o:77,t:81,v:12000000,nat:"Brazil"},
@@ -7389,7 +7494,6 @@
       {n:"Rémy Labeau Lascary",num:3,p:"FW",q:"CA",a:23,o:72,t:76,v:4000000,nat:"France"},
       {n:"Francisco Sierralta",num:4,p:"DF",q:"ZAG",a:29,o:70,t:70,v:5000000,nat:"Chile"},
       {n:"Kévin Danois",num:5,p:"MF",q:"MC",a:22,o:74,t:80,v:20000000,nat:"France"},
-      {n:"Josué Casimir",num:7,p:"FW",q:"PD",a:24,o:71,t:75,v:3000000,nat:"France"},
       {n:"Naouirou Ahamada",num:8,p:"MF",q:"MC",a:24,o:68,t:72,v:3000000,nat:"France"},
       {n:"Cameron Archer",num:9,p:"FW",q:"CA",a:24,o:72,t:75,v:7000000,nat:"England"},
       {n:"Eros Maddy",num:11,p:"FW",q:"PD",a:25,o:64,t:71,v:150000,nat:"Netherlands"},
@@ -7415,7 +7519,9 @@
       {n:"Wei Xiangxin",num:49,p:"FW",q:"CA",a:18,o:60,t:69,v:300000,nat:"China"},
       {n:"Aristide Zossou",num:77,p:"FW",q:"PE",a:21,o:61,t:68,v:2500000,nat:"Ivory Coast"},
       {n:"Clément Akpa",num:92,p:"DF",q:"ZAG",a:24,o:74,t:77,v:9000000,nat:"Ivory Coast"},
-      {n:"Axel Tuanzebe",num:0,p:"DF",q:"ZAG",a:28,o:73,t:73,v:5000000,nat:"DR Congo"}
+      {n:"Axel Tuanzebe",num:4,p:"DF",q:"ZAG",a:28,o:73,t:73,v:5000000,nat:"DR Congo"},
+      {n:"Romain Faivre",num:28,p:"MF",q:"MEI",a:28,o:76,t:76,v:15000000,nat:"France"},
+      {n:"Sékou Fofana",num:93,p:"DF",q:"LD",a:21,o:62,t:70,v:800000}
     ],
     "fr/Brest": [
       {n:"Egil Selvik",num:1,p:"GK",q:"GOL",a:29,o:70,t:70,v:1500000,nat:"Norway"},
@@ -7469,7 +7575,8 @@
       {n:"Lionel Mpasi",num:77,p:"GK",q:"GOL",a:32,o:67,t:67,v:700000,nat:"DR Congo"},
       {n:"Daren Mosengo",num:78,p:"MF",q:"VOL",a:20,o:60,t:68,v:300000,nat:"France"},
       {n:"Gauthier Gallon",num:93,p:"GK",q:"GOL",a:33,o:73,t:73,v:600000,nat:"France"},
-      {n:"Élysée Logbo",num:0,p:"FW",q:"CA",a:22,o:65,t:71,v:200000,nat:"France"}
+      {n:"Élysée Logbo",num:0,p:"FW",q:"CA",a:22,o:65,t:71,v:200000,nat:"France"},
+      {n:"Arnaud Bodart",num:16,p:"GK",q:"GOL",a:28,o:73,t:74,v:1500000,nat:"Belgium"}
     ],
     "fr/Le Mans": [
       {n:"Ewan Hatfout",num:1,p:"GK",q:"GOL",a:26,o:60,t:60,v:150000,nat:"France"},
@@ -7547,7 +7654,6 @@
       {n:"Orlando Gill",num:12,p:"GK",q:"GOL",a:26,o:62,t:68,v:7500000,nat:"Paraguay"},
       {n:"Maurits Kjærgaard",num:14,p:"MF",q:"MC",a:23,o:75,t:79,v:8000000,nat:"Denmark"},
       {n:"Romain Perraud",num:15,p:"DF",q:"LE",a:28,o:74,t:75,v:7000000,nat:"France"},
-      {n:"Arnaud Bodart",num:16,p:"GK",q:"GOL",a:28,o:73,t:74,v:1500000,nat:"Belgium"},
       {n:"Ngal'ayel Mukau",num:17,p:"MF",q:"VOL",a:21,o:74,t:80,v:15000000,nat:"DR Congo"},
       {n:"Ayase Ueda",num:18,p:"FW",q:"CA",a:28,o:74,t:75,v:20000000,nat:"Japan"},
       {n:"Başar Önal",num:19,p:"FW",q:"PE",a:22,o:67,t:73,v:7000000,nat:"Turkey"},
@@ -7563,8 +7669,6 @@
       {n:"Rafael Fernandes",num:0,p:"DF",q:"ZAG",a:24,o:63,t:68,v:2500000,nat:"Portugal"},
       {n:"Stéphane Noumbissie",num:0,p:"DF",q:"ZAG",a:21,o:65,t:72,v:4000000,nat:"Cameroon"},
       {n:"Ousmane Touré",num:0,p:"DF",q:"ZAG",a:21,o:64,t:71,v:3500000,nat:"France"},
-      {n:"Ignacio Miramón",num:0,p:"MF",q:"MC",a:23,o:69,t:73,v:6000000,nat:"Argentina"},
-      {n:"Marius Broholm",num:0,p:"FW",q:"CA",a:21,o:69,t:75,v:6000000,nat:"Norway"},
       {n:"Félix Correia",num:0,p:"FW",q:"PD",a:25,o:75,t:78,v:11000000,nat:"Portugal"}
     ],
     "fr/Lorient": [
@@ -7618,12 +7722,12 @@
       {n:"Justin Bengui",num:25,p:"GK",q:"GOL",a:21,o:65,t:73,v:250000,nat:"France"},
       {n:"Kaïl Boudache",num:26,p:"FW",q:"PD",a:20,o:63,t:72,v:5000000,nat:"Algeria"},
       {n:"Alejandro Gomes Rodríguez",num:32,p:"FW",q:"CA",a:18,o:62,t:72,v:800000,nat:"England"},
-      {n:"Mathys De Carvalho",num:39,p:"MF",q:"MC",a:21,o:68,t:75,v:8000000,nat:"Portugal"},
       {n:"Rémy Descamps",num:40,p:"GK",q:"GOL",a:30,o:73,t:73,v:1500000,nat:"France"},
       {n:"Lassine Diarra",num:50,p:"GK",q:"GOL",a:23,o:62,t:71,v:2000000,nat:"Mali"},
       {n:"Mohamed Ouédraogo",num:76,p:"DF",q:"LE",a:23,o:65,t:69,v:1200000,nat:"Burkina Faso"},
       {n:"Noham Kamara",num:85,p:"DF",q:"ZAG",a:19,o:62,t:71,v:3000000,nat:"France"},
-      {n:"Noah Nartey",num:99,p:"MF",q:"MEI",a:20,o:67,t:74,v:15000000,nat:"Denmark"}
+      {n:"Noah Nartey",num:99,p:"MF",q:"MEI",a:20,o:67,t:74,v:15000000,nat:"Denmark"},
+      {n:"Rémi Himbert",num:45,p:"FW",q:"CA",a:20,o:67,t:75,v:2500000}
     ],
     "fr/Marseille": [
       {n:"Jeffrey de Lange",num:1,p:"GK",q:"GOL",a:28,o:73,t:74,v:2500000,nat:"Netherlands"},
@@ -7652,16 +7756,16 @@
     "fr/Monaco": [
       {n:"Lukas Hradecky",num:1,p:"GK",q:"GOL",a:36,o:81,t:81,v:1500000,nat:"Finland"},
       {n:"Vanderson",num:2,p:"DF",q:"LD",a:25,o:77,t:80,v:18000000,nat:"Brazil"},
-      {n:"Eric Dier",num:3,p:"DF",q:"ZAG",a:32,o:79,t:79,v:4000000,nat:"England"},
+      {n:"Eric Dier",num:15,p:"DF",q:"ZAG",a:32,o:79,t:79,v:4000000,nat:"England"},
       {n:"Jordan Teze",num:4,p:"DF",q:"LD",a:26,o:76,t:78,v:15000000,nat:"Netherlands"},
       {n:"Denis Zakaria",num:6,p:"MF",q:"VOL",a:29,o:82,t:82,v:9000000,nat:"Switzerland"},
-      {n:"Mathys Detourbet",num:7,p:"FW",q:"PE",a:19,o:58,t:67,v:15000000,nat:"France"},
+      {n:"Mathys Detourbet",num:7,p:"FW",q:"PE",a:19,o:61,t:67,v:15000000,nat:"France"},
       {n:"Folarin Balogun",num:9,p:"FW",q:"CA",a:25,o:77,t:80,v:50000000,nat:"USA"},
       {n:"Aleksandr Golovin",num:10,p:"MF",q:"MEI",a:30,o:81,t:81,v:18000000,nat:"Russia"},
       {n:"Matthis Abline",num:11,p:"FW",q:"CA",a:23,o:76,t:80,v:20000000,nat:"France"},
       {n:"Christian Mawissa",num:13,p:"DF",q:"ZAG",a:21,o:75,t:82,v:15000000,nat:"France"},
       {n:"Mika Biereth",num:14,p:"FW",q:"CA",a:23,o:78,t:82,v:15000000,nat:"Denmark"},
-      {n:"Lamine Camara",num:15,p:"MF",q:"MC",a:22,o:77,t:83,v:40000000,nat:"Senegal"},
+      {n:"Lamine Camara",num:8,p:"MF",q:"MC",a:22,o:77,t:83,v:40000000,nat:"Senegal"},
       {n:"Philipp Köhn",num:16,p:"GK",q:"GOL",a:28,o:77,t:78,v:3500000,nat:"Switzerland"},
       {n:"Stanis Idumbo",num:17,p:"MF",q:"MEI",a:21,o:67,t:74,v:4000000,nat:"Belgium"},
       {n:"Takumi Minamino",num:18,p:"MF",q:"MEI",a:31,o:78,t:78,v:6000000,nat:"Japan"},
@@ -7674,8 +7778,12 @@
       {n:"Edan Diop",num:37,p:"MF",q:"MC",a:22,o:66,t:72,v:3000000,nat:"France"},
       {n:"Jules Stawiecki",num:40,p:"GK",q:"GOL",a:20,o:63,t:71,v:150000,nat:"France"},
       {n:"Samuel Nibombé",num:44,p:"DF",q:"ZAG",a:19,o:65,t:73,v:1000000,nat:"Belgium"},
-      {n:"Yann Lienard",num:50,p:"GK",q:"GOL",a:23,o:65,t:69,v:2000000,nat:"France"},
-      {n:"Sadibou Sané",num:72,p:"DF",q:"ZAG",a:22,o:70,t:76,v:7000000,nat:"Senegal"}
+      {n:"Sadibou Sané",num:72,p:"DF",q:"ZAG",a:22,o:70,t:76,v:7000000,nat:"Senegal"},
+      {n:"Aymen Assab",num:41,p:"MF",q:"VOL",a:19,o:67,t:75,v:2500000},
+      {n:"Oumar Konaté",num:42,p:"FW",q:"PD",a:24,o:66,t:71,v:1000000},
+      {n:"Anis Soubeir",num:46,p:"MF",q:"MEI",a:20,o:65,t:73,v:2000000},
+      {n:"Safouane Benzahra",num:47,p:"FW",q:"CA",a:22,o:67,t:72,v:1800000},
+      {n:"Ilane Touré",num:49,p:"DF",q:"LE",a:20,o:66,t:74,v:2500000}
     ],
     "fr/Nice": [
       {n:"Ali Abdi",num:2,p:"DF",q:"LE",a:32,o:76,t:76,v:2000000,nat:"Tunisia"},
@@ -7707,7 +7815,8 @@
       {n:"Hamza Koutoune",num:84,p:"DF",q:"LD",a:19,o:60,t:68,v:150000,nat:"Morocco"},
       {n:"Everton Pereira",num:87,p:"MF",q:"MC",a:22,o:64,t:72,v:2500000,nat:"France"},
       {n:"Jonathan Clauss",num:92,p:"DF",q:"LD",a:33,o:80,t:80,v:4000000,nat:"France"},
-      {n:"Salis Abdul Samed",num:99,p:"MF",q:"VOL",a:26,o:73,t:75,v:4000000,nat:"Ghana"}
+      {n:"Salis Abdul Samed",num:99,p:"MF",q:"VOL",a:26,o:73,t:75,v:4000000,nat:"Ghana"},
+      {n:"Alidu Seidu",num:36,p:"DF",q:"ZAG",a:26,o:74,t:76,v:33000000,nat:"Ghana"}
     ],
     "fr/Paris FC": [
       {n:"Kevin Trapp",num:1,p:"GK",q:"GOL",a:36,o:81,t:81,v:1800000,nat:"Germany"},
@@ -7734,8 +7843,7 @@
       {n:"Samir Chergui",num:31,p:"DF",q:"ZAG",a:27,o:60,t:68,v:3000000,nat:"Algeria"},
       {n:"Pierre Lees-Melou",num:33,p:"MF",q:"VOL",a:33,o:78,t:78,v:4500000,nat:"France"},
       {n:"Diego Coppola",num:42,p:"DF",q:"ZAG",a:22,o:74,t:78,v:18000000,nat:"Italy"},
-      {n:"Jonathan Ikoné",num:93,p:"FW",q:"PD",a:28,o:76,t:76,v:9000000,nat:"France"},
-      {n:"Andria Kvirikadze",num:0,p:"MF",q:"MC",a:24,o:66,t:70,v:3500000,nat:"Georgia"}
+      {n:"Jonathan Ikoné",num:93,p:"FW",q:"PD",a:28,o:76,t:76,v:9000000,nat:"France"}
     ],
     "fr/Paris Saint-Germain": [
       {n:"Achraf Hakimi",num:2,p:"DF",q:"LD",a:27,o:89,t:89,v:80000000,nat:"Morocco"},
@@ -7782,11 +7890,10 @@
       {n:"Adrien Thomasson",num:28,p:"MF",q:"MEI",a:32,o:77,t:77,v:12000000,nat:"France"},
       {n:"Brice Samba",num:30,p:"GK",q:"GOL",a:32,o:80,t:80,v:21000000,nat:"France"},
       {n:"Elías Legendre",num:35,p:"FW",q:"CA",a:18,o:64,t:72,v:14000000,nat:"Ecuador"},
-      {n:"Alidu Seidu",num:36,p:"DF",q:"ZAG",a:26,o:74,t:76,v:33000000,nat:"Ghana"},
       {n:"Mahdi Camara",num:45,p:"MF",q:"MC",a:28,o:78,t:78,v:46000000,nat:"France"},
       {n:"Abdelhamid Aït Boudlal",num:48,p:"DF",q:"ZAG",a:20,o:66,t:74,v:19000000,nat:"Morocco"},
       {n:"Kilian Belazzoug",num:60,p:"GK",q:"GOL",a:20,o:62,t:70,v:7000000,nat:"Algeria"},
-      {n:"Jonathan Do Marcolino",num:64,p:"DF",q:"ZAG",a:20,o:63,t:71,v:12000000,nat:"Gabon"},
+      {n:"Jonathan Do Marcolino",num:65,p:"DF",q:"ZAG",a:20,o:63,t:71,v:12000000,nat:"Gabon"},
       {n:"Arnaud Nordin",num:70,p:"FW",q:"PE",a:28,o:73,t:73,v:27000000,nat:"France"},
       {n:"Issa Soumaré",num:90,p:"FW",q:"PE",a:25,o:72,t:74,v:26000000,nat:"Senegal"},
       {n:"Przemysław Frankowski",num:95,p:"MF",q:"MC",a:31,o:75,t:75,v:18000000,nat:"Poland"},
@@ -7821,7 +7928,8 @@
       {n:"Benjamin Brantlind",num:45,p:"MF",q:"MC",a:18,o:57,t:67,v:3500000,nat:"Sweden"},
       {n:"Gessime Yassine",num:80,p:"FW",q:"CA",a:20,o:67,t:74,v:22000000,nat:"Morocco"},
       {n:"Sékou Mara",num:0,p:"FW",q:"CA",a:24,o:70,t:73,v:24000000,nat:"France"},
-      {n:"Hermann Malonga",num:0,p:"DF",q:"ZAG",a:18,o:65,t:71,v:13000000,nat:"France"}
+      {n:"Hermann Malonga",num:0,p:"DF",q:"ZAG",a:18,o:65,t:71,v:13000000,nat:"France"},
+      {n:"Ghianny Kodia",num:37,p:"FW",q:"SA",a:23,o:65,t:70,v:1500000}
     ],
     "fr/Toulouse": [
       {n:"Rasmus Nicolaisen",num:2,p:"DF",q:"ZAG",a:29,o:76,t:76,v:7000000,nat:"Denmark"},
@@ -7846,7 +7954,6 @@
       {n:"Naïme Saïd Mchindra",num:30,p:"GK",q:"GOL",a:21,o:62,t:70,v:1500000,nat:"Comoros"},
       {n:"Niklas Schmidt",num:31,p:"MF",q:"MC",a:28,o:72,t:72,v:1500000,nat:"Germany"},
       {n:"Ilyas Azizi",num:37,p:"FW",q:"PE",a:18,o:62,t:70,v:250000,nat:"France"},
-      {n:"Gaëtan Bakhouche",num:44,p:"DF",q:"ZAG",a:20,o:63,t:71,v:2000000,nat:"France"},
       {n:"Aymen Amaaouch",num:49,p:"MF",q:"MC",a:20,o:64,t:72,v:2500000,nat:"France"},
       {n:"Mathys Niflore",num:60,p:"GK",q:"GOL",a:19,o:63,t:72,v:2500000,nat:"France"},
       {n:"Ismaïl Diallo",num:94,p:"DF",q:"LD",a:20,o:63,t:71,v:900000,nat:"France"}
@@ -7864,7 +7971,7 @@
       {n:"Iron Gomis",num:11,p:"MF",q:"MC",a:26,o:69,t:71,v:1400000,nat:"France"},
       {n:"Ismaël Boura",num:14,p:"DF",q:"ZAG",a:26,o:68,t:70,v:2500000,nat:"Comoros"},
       {n:"Antoine Mille",num:17,p:"MF",q:"MC",a:29,o:69,t:72,v:2500000,nat:"France"},
-      {n:"Ibrahim Traoré",num:19,p:"FW",q:"CA",a:20,o:59,t:67,v:50000,nat:"France"},
+      {n:"Ibrahim Traoré",num:34,p:"FW",q:"CA",a:20,o:59,t:67,v:50000,nat:"France"},
       {n:"Renaud Ripart",num:20,p:"FW",q:"CA",a:33,o:68,t:68,v:350000,nat:"France"},
       {n:"Hugo Picard",num:22,p:"MF",q:"PE",a:23,o:71,t:75,v:3000000,nat:"France"},
       {n:"Alexandre Phliponeau",num:26,p:"MF",q:"VOL",a:26,o:64,t:69,v:350000,nat:"France"},
@@ -7876,8 +7983,10 @@
       {n:"Yacouba Koné",num:39,p:"FW",q:"CA",a:20,o:63,t:71,v:100000,nat:"Ivory Coast"},
       {n:"Hillel Konaté",num:40,p:"GK",q:"GOL",a:31,o:62,t:70,v:400000,nat:"Burkina Faso"},
       {n:"Yvann Titi",num:44,p:"DF",q:"ZAG",a:20,o:63,t:71,v:2000000,nat:"France"},
-      {n:"Timothé Nkada",num:0,p:"FW",q:"CA",a:27,o:70,t:71,v:2000000,nat:"France"},
-      {n:"Jérémy Le Douaron",num:0,p:"FW",q:"CA",a:28,o:74,t:74,v:3000000,nat:"France"}
+      {n:"Timothé Nkada",num:23,p:"FW",q:"CA",a:27,o:70,t:71,v:2000000,nat:"France"},
+      {n:"Jérémy Le Douaron",num:9,p:"FW",q:"CA",a:28,o:74,t:74,v:3000000,nat:"France"},
+      {n:"Christ Batola",num:37,p:"FW",q:"CA",a:20,o:63,t:71,v:2000000},
+      {n:"Enisio Carneiro",num:41,p:"DF",q:"ZAG",a:20,o:62,t:70,v:1500000}
     ],
     "it/Atalanta": [
       {n:"Odilon Kossounou",num:3,p:"DF",q:"ZAG",a:25,o:80,t:84,v:15000000,nat:"Ivory Coast"},
@@ -7963,7 +8072,7 @@
       {n:"Alieu Fadera",num:39,p:"FW",q:"PE",a:24,o:69,t:73,v:4500000,nat:"The Gambia"},
       {n:"Daniel Maldini",num:70,p:"MF",q:"MEI",a:24,o:74,t:78,v:9000000,nat:"Italy"},
       {n:"Yanis Massolin",num:79,p:"MF",q:"MEI",a:23,o:59,t:67,v:4500000,nat:"France"},
-      {n:"Yukinari Sugawara",num:0,p:"DF",q:"LD",a:26,o:74,t:76,v:5500000,nat:"Japan"}
+      {n:"Yukinari Sugawara",num:28,p:"DF",q:"LD",a:26,o:74,t:76,v:5500000,nat:"Japan"}
     ],
     "it/Como": [
       {n:"Jean Butez",num:1,p:"GK",q:"GOL",a:31,o:76,t:76,v:8000000,nat:"France"},
@@ -7978,7 +8087,7 @@
       {n:"Nico Paz",num:10,p:"MF",q:"MEI",a:22,o:79,t:85,v:80000000,nat:"Argentina"},
       {n:"Assane Diao",num:11,p:"FW",q:"PE",a:21,o:76,t:83,v:30000000,nat:"Senegal"},
       {n:"Alberto Dossena",num:13,p:"DF",q:"ZAG",a:27,o:73,t:74,v:6000000,nat:"Italy"},
-      {n:"Samuele Ricci",num:14,p:"MF",q:"VOL",a:25,o:78,t:82,v:22000000,nat:"Italy"},
+      {n:"Samuele Ricci",num:21,p:"MF",q:"VOL",a:25,o:78,t:82,v:22000000,nat:"Italy"},
       {n:"Adrian Lahdo",num:15,p:"MF",q:"MC",a:18,o:57,t:66,v:1500000,nat:"Sweden"},
       {n:"Kaiki Bruno",num:16,p:"DF",q:"LE",a:23,o:69,t:75,v:14000000,nat:"Brazil"},
       {n:"Jesús Rodríguez",num:17,p:"FW",q:"PE",a:20,o:74,t:81,v:30000000,nat:"Spain"},
@@ -8086,7 +8195,7 @@
     ],
     "it/Inter de Milão": [
       {n:"Josep Martínez",num:1,p:"GK",q:"GOL",a:28,o:75,t:76,v:10000000,nat:"Spain"},
-      {n:"Aleksandar Stanković",num:5,p:"MF",q:"VOL",a:21,o:66,t:73,v:32000000,nat:"Serbia"},
+      {n:"Aleksandar Stanković",num:5,p:"MF",q:"VOL",a:21,o:70,t:74,v:32000000,nat:"Serbia"},
       {n:"John Stones",num:6,p:"DF",q:"ZAG",a:32,o:82,t:82,v:12000000,nat:"England"},
       {n:"Piotr Zieliński",num:7,p:"MF",q:"MC",a:32,o:80,t:80,v:10000000,nat:"Poland"},
       {n:"Petar Sučić",num:8,p:"MF",q:"MC",a:22,o:74,t:78,v:45000000,nat:"Croatia"},
@@ -8126,7 +8235,7 @@
       {n:"Jérémie Boga",num:13,p:"MF",q:"MC",a:29,o:76,t:76,v:14000000,nat:"Ivory Coast"},
       {n:"Arkadiusz Milik",num:14,p:"FW",q:"CA",a:32,o:79,t:79,v:1500000,nat:"Poland"},
       {n:"Pierre Kalulu",num:15,p:"DF",q:"ZAG",a:26,o:80,t:82,v:32000000,nat:"France"},
-      {n:"Kerim Alajbegović",num:17,p:"FW",q:"PE",a:18,o:61,t:70,v:25000000,nat:"Bosnia"},
+      {n:"Kerim Alajbegović",num:17,p:"FW",q:"PE",a:18,o:70,t:74,v:25000000,nat:"Bosnia"},
       {n:"Jeff Ekhator",num:18,p:"FW",q:"CA",a:19,o:61,t:69,v:3000000,nat:"Italy"},
       {n:"Khéphren Thuram",num:19,p:"MF",q:"MC",a:25,o:81,t:84,v:29000000,nat:"France"},
       {n:"Andrea Cambiaso",num:20,p:"DF",q:"LE",a:26,o:79,t:81,v:20000000,nat:"Italy"},
@@ -8137,7 +8246,9 @@
       {n:"Jhon Lucumí",num:26,p:"DF",q:"ZAG",a:28,o:76,t:77,v:22000000,nat:"Colombia"},
       {n:"Nick Woltemade",num:27,p:"FW",q:"CA",a:24,o:79,t:83,v:55000000,nat:"Germany"},
       {n:"Nico González",num:31,p:"FW",q:"PE",a:28,o:78,t:78,v:22000000,nat:"Argentina"},
-      {n:"Juan Cabal",num:32,p:"DF",q:"ZAG",a:25,o:74,t:78,v:15000000,nat:"Colombia"}
+      {n:"Juan Cabal",num:32,p:"DF",q:"ZAG",a:25,o:74,t:78,v:15000000,nat:"Colombia"},
+      {n:"Pape Matar Sarr",num:29,p:"MF",q:"MC",a:23,o:79,t:83,v:33000000,nat:"Senegal"},
+      {n:"Augusto Owusu",num:41,p:"MF",q:"MC",a:23,o:78,t:83,v:28000000}
     ],
     "it/Lazio": [
       {n:"Diogo Leite",num:2,p:"DF",q:"ZAG",a:27,o:78,t:80,v:12000000,nat:"Portugal"},
@@ -8169,7 +8280,9 @@
       {n:"Valerio Farcomeni",num:71,p:"MF",q:"MC",a:20,o:60,t:68,v:100000,nat:"Italy"},
       {n:"Filipe Bordon",num:76,p:"DF",q:"ZAG",a:21,o:61,t:69,v:200000,nat:"Brazil"},
       {n:"Adam Marušić",num:77,p:"DF",q:"LD",a:33,o:78,t:78,v:3000000,nat:"Montenegro"},
-      {n:"Albert Guðmundsson",num:80,p:"FW",q:"SA",a:29,o:79,t:79,v:12000000,nat:"Iceland"}
+      {n:"Albert Guðmundsson",num:80,p:"FW",q:"SA",a:29,o:79,t:79,v:12000000,nat:"Iceland"},
+      {n:"Luca Pellegrini",num:3,p:"DF",q:"LD",a:23,o:76,t:81,v:19000000},
+      {n:"Patric",num:4,p:"DF",q:"LE",a:27,o:77,t:79,v:12500000}
     ],
     "it/Lecce": [
       {n:"Marco Bleve",num:1,p:"GK",q:"GOL",a:31,o:66,t:66,v:300000,nat:"Italy"},
@@ -8264,7 +8377,7 @@
     ],
     "it/Napoli": [
       {n:"Alex Meret",num:1,p:"GK",q:"GOL",a:29,o:82,t:82,v:46000000,nat:"Italy"},
-      {n:"Costantino Favasuli",num:2,p:"DF",q:"LD",a:22,o:65,t:71,v:13000000,nat:"Italy"},
+      {n:"Costantino Favasuli",num:2,p:"DF",q:"LD",a:22,o:66,t:71,v:13000000,nat:"Italy"},
       {n:"Alessandro Buongiorno",num:4,p:"DF",q:"ZAG",a:27,o:82,t:84,v:71000000,nat:"Italy"},
       {n:"Benoît Badiashile",num:5,p:"DF",q:"ZAG",a:25,o:76,t:79,v:48000000,nat:"France"},
       {n:"Billy Gilmour",num:6,p:"MF",q:"MC",a:25,o:74,t:77,v:39000000,nat:"Scotland"},
@@ -8280,7 +8393,7 @@
       {n:"Matteo Politano",num:21,p:"FW",q:"PD",a:33,o:81,t:81,v:17000000,nat:"Italy"},
       {n:"Giovanni Di Lorenzo",num:22,p:"DF",q:"LD",a:33,o:83,t:83,v:20000000,nat:"Italy"},
       {n:"Giovane",num:23,p:"FW",q:"CA",a:22,o:71,t:75,v:28000000,nat:"Brazil"},
-      {n:"Antonio Vergara",num:26,p:"MF",q:"MC",a:23,o:65,t:69,v:12000000,nat:"Italy"},
+      {n:"Antonio Vergara",num:26,p:"MF",q:"MC",a:23,o:66,t:70,v:12000000,nat:"Italy"},
       {n:"Alisson Santos",num:27,p:"FW",q:"CA",a:23,o:70,t:74,v:25000000,nat:"Brazil"},
       {n:"Sam Beukema",num:31,p:"DF",q:"ZAG",a:27,o:78,t:79,v:47000000,nat:"Netherlands"},
       {n:"Vanja Milinković-Savić",num:32,p:"GK",q:"GOL",a:29,o:79,t:79,v:35000000,nat:"Serbia"},
@@ -8305,7 +8418,7 @@
       {n:"Matija Frigan",num:20,p:"FW",q:"CA",a:23,o:73,t:77,v:7000000,nat:"Croatia"},
       {n:"Nesta Elphege",num:23,p:"FW",q:"CA",a:25,o:64,t:71,v:4000000,nat:"France"},
       {n:"Thomás de Martis",num:25,p:"FW",q:"CA",a:18,o:64,t:71,v:125000,nat:"Argentina"},
-      {n:"Sascha Britschgi",num:27,p:"DF",q:"LD",a:20,o:52,t:60,v:10000000,nat:"Switzerland"},
+      {n:"Sascha Britschgi",num:27,p:"DF",q:"LD",a:20,o:57,t:61,v:10000000,nat:"Switzerland"},
       {n:"Franco Carboni",num:29,p:"DF",q:"LE",a:23,o:63,t:67,v:900000,nat:"Argentina"},
       {n:"Giovanni Daffara",num:30,p:"GK",q:"GOL",a:21,o:61,t:67,v:3500000,nat:"Italy"},
       {n:"Christian Ordóñez",num:32,p:"MF",q:"MC",a:22,o:72,t:78,v:6500000,nat:"Argentina"},
@@ -8316,9 +8429,8 @@
       {n:"Dominik Drobnič",num:72,p:"DF",q:"ZAG",a:20,o:59,t:67,v:800000,nat:"Slovenia"},
       {n:"Simone Lontani",num:76,p:"FW",q:"CA",a:18,o:59,t:67,v:2500000,nat:"Italy"},
       {n:"Giovanni Fabbian",num:80,p:"MF",q:"MEI",a:23,o:74,t:78,v:10000000,nat:"Italy"},
-      {n:"Simone Ghidotti",num:0,p:"GK",q:"GOL",a:26,o:69,t:72,v:400000,nat:"Italy"},
-      {n:"Diego Carlos",num:0,p:"DF",q:"ZAG",a:33,o:78,t:78,v:5000000,nat:"Brazil"},
-      {n:"Vincent Sierro",num:0,p:"MF",q:"MC",a:30,o:75,t:75,v:3500000,nat:"Switzerland"}
+      {n:"Diego Carlos",num:34,p:"DF",q:"ZAG",a:33,o:78,t:78,v:5000000,nat:"Brazil"},
+      {n:"Vincent Sierro",num:4,p:"MF",q:"MC",a:30,o:75,t:75,v:3500000,nat:"Switzerland"}
     ],
     "it/Roma": [
       {n:"Devyne Rensch",num:2,p:"DF",q:"LD",a:23,o:74,t:78,v:8500000,nat:"Netherlands"},
@@ -8343,7 +8455,8 @@
       {n:"Rodrigo Mora",num:86,p:"MF",q:"MEI",a:19,o:76,t:85,v:38000000,nat:"Portugal"},
       {n:"Daniele Ghilardi",num:87,p:"DF",q:"ZAG",a:23,o:72,t:76,v:18000000,nat:"Italy"},
       {n:"Pierluigi Gollini",num:95,p:"GK",q:"GOL",a:31,o:74,t:74,v:800000,nat:"Italy"},
-      {n:"Mile Svilar",num:99,p:"GK",q:"GOL",a:27,o:82,t:84,v:35000000,nat:"Serbia"}
+      {n:"Mile Svilar",num:99,p:"GK",q:"GOL",a:27,o:82,t:84,v:35000000,nat:"Serbia"},
+      {n:"Antonio Arena",num:68,p:"FW",q:"CA",a:23,o:74,t:79,v:8500000}
     ],
     "it/Sassuolo": [
       {n:"Josh Doig",num:3,p:"DF",q:"LE",a:24,o:73,t:77,v:4500000,nat:"Scotland"},
@@ -8377,7 +8490,9 @@
       {n:"Ibrahim Sulemana",num:55,p:"MF",q:"VOL",a:23,o:71,t:75,v:6000000,nat:"Ghana"},
       {n:"Stefano Turati",num:80,p:"GK",q:"GOL",a:25,o:74,t:78,v:3000000,nat:"Italy"},
       {n:"Ismaël Koné",num:90,p:"MF",q:"MC",a:24,o:72,t:76,v:5500000,nat:"Canada"},
-      {n:"Sebastiano Esposito",num:94,p:"FW",q:"SA",a:24,o:75,t:78,v:15000000,nat:"Italy"}
+      {n:"Sebastiano Esposito",num:94,p:"FW",q:"SA",a:24,o:75,t:78,v:15000000,nat:"Italy"},
+      {n:"Nicholas Pierini",num:77,p:"FW",q:"CA",a:24,o:65,t:70,v:800000},
+      {n:"Edoardo Pieragnolo",p:"DF",q:"ZAG",a:28,o:69,t:71,v:1200000}
     ],
     "it/Torino": [
       {n:"Nathan Patterson",num:2,p:"DF",q:"LD",a:25,o:71,t:74,v:10000000,nat:"Scotland"},
@@ -8413,7 +8528,6 @@
     "it/Udinese": [
       {n:"Sandi Lovrić",num:4,p:"MF",q:"MC",a:28,o:75,t:75,v:3500000,nat:"Slovenia"},
       {n:"Oier Zarraga",num:6,p:"MF",q:"MC",a:27,o:71,t:72,v:1500000,nat:"Spain"},
-      {n:"Idrissa Gueye",num:7,p:"FW",q:"CA",a:19,o:79,t:79,v:8000000,nat:"Senegal"},
       {n:"Jesper Karlström",num:8,p:"MF",q:"VOL",a:31,o:75,t:75,v:3000000,nat:"Sweden"},
       {n:"Keinan Davis",num:9,p:"FW",q:"CA",a:28,o:72,t:72,v:10000000,nat:"England"},
       {n:"Nicolò Zaniolo",num:10,p:"MF",q:"MC",a:27,o:76,t:77,v:6500000,nat:"Italy"},
@@ -8438,7 +8552,8 @@
       {n:"Enzo Ebosse",num:77,p:"DF",q:"ZAG",a:27,o:69,t:70,v:2800000,nat:"Cameroon"},
       {n:"David Pejičić",num:79,p:"MF",q:"MC",a:19,o:64,t:72,v:2500000,nat:"Slovenia"},
       {n:"Lazar Jovanović",num:91,p:"FW",q:"PD",a:19,o:64,t:72,v:3500000,nat:"Serbia"},
-      {n:"Daniele Padelli",num:93,p:"GK",q:"GOL",a:40,o:65,t:65,v:150000,nat:"Italy"}
+      {n:"Daniele Padelli",num:93,p:"GK",q:"GOL",a:40,o:65,t:65,v:150000,nat:"Italy"},
+      {n:"David Alaba",num:5,p:"DF",q:"ZAG",a:28,o:74,t:76,v:3000000}
     ],
     "it/Venezia": [
       {n:"Filip Stanković",num:1,p:"GK",q:"GOL",a:24,o:74,t:78,v:8000000,nat:"Serbia"},
@@ -8472,7 +8587,10 @@
       {n:"Simone Panada",num:55,p:"MF",q:"VOL",a:24,o:65,t:70,v:800000,nat:"Italy"},
       {n:"Kornel Lisman",num:56,p:"FW",q:"PE",a:20,o:61,t:69,v:600000,nat:"Poland"},
       {n:"Pasquale Mazzocchi",num:70,p:"DF",q:"LD",a:31,o:72,t:72,v:1500000,nat:"Italy"},
-      {n:"Kike Pérez",num:71,p:"MF",q:"MC",a:29,o:74,t:74,v:2500000,nat:"Spain"}
+      {n:"Kike Pérez",num:71,p:"MF",q:"MC",a:29,o:74,t:74,v:2500000,nat:"Spain"},
+      {n:"Toni Fernández",num:77,p:"MF",q:"MEI",a:19,o:64,t:72,v:2500000},
+      {n:"Ale Gomes",num:95,p:"DF",q:"LD",a:23,o:65,t:70,v:1500000},
+      {n:"Lorenzo Montipò",num:96,p:"GK",q:"GOL",a:19,o:65,t:73,v:2000000}
     ],
     "jp/Avispa Fukuoka": [
       {n:"Takumi Nagaishi",num:1,p:"GK",q:"GOL",a:27,o:71,t:73,v:250000,nat:"Japan"},
@@ -8506,7 +8624,15 @@
       {n:"Daiki Miya",num:38,p:"DF",q:"ZAG",a:20,o:56,t:64,v:300000,nat:"Japan"},
       {n:"Kazuki Fujita",num:41,p:"GK",q:"GOL",a:20,o:56,t:64,v:225000,nat:"Japan"},
       {n:"Kazuki Fukushima",num:46,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Japan"},
-      {n:"Yu Hashimoto",num:47,p:"DF",q:"LD",a:20,o:56,t:64,v:400000,nat:"Japan"}
+      {n:"Yu Hashimoto",num:47,p:"DF",q:"LD",a:20,o:56,t:64,v:400000,nat:"Japan"},
+      {n:"Ichika Maeda",num:49,p:"FW",q:"PD",a:21,o:58,t:66,v:400000},
+      {n:"Shohei Takemoto",num:52,p:"MF",q:"MEI",a:22,o:61,t:66,v:900000},
+      {n:"Hikaru Maeda",num:53,p:"MF",q:"MC",a:25,o:60,t:62,v:500000},
+      {n:"Kokoro Maeda DSP",num:55,p:"FW",q:"CA",a:21,o:60,t:68,v:600000},
+      {n:"Yuhi Sakai DSP",num:56,p:"DF",q:"ZAG",a:22,o:61,t:66,v:900000},
+      {n:"Ryusei Kitahama DSP",num:57,p:"FW",q:"PE",a:24,o:56,t:61,v:600000},
+      {n:"Takezo Fujikawa Type 2",num:58,p:"MF",q:"MC",a:23,o:56,t:61,v:400000},
+      {n:"Powell Obinna Obi",num:99,p:"GK",q:"GOL",a:20,o:60,t:68,v:900000}
     ],
     "jp/Cerezo Osaka": [
       {n:"Go Kambayashi",num:1,p:"GK",q:"GOL",a:26,o:69,t:72,v:2000000,nat:"Japan"},
@@ -8538,11 +8664,11 @@
       {n:"Masaya Shibayama",num:48,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Japan"},
       {n:"Ayumu Ōhata",num:66,p:"DF",q:"LE",a:20,o:58,t:66,v:450000,nat:"Japan"},
       {n:"Lucas Fernandes",num:77,p:"MF",q:"PD",a:30,o:72,t:72,v:1000000,nat:"Brazil"},
-      {n:"Travis Takahashi",num:97,p:"DF",q:"ZAG",a:20,o:58,t:66,v:300000,nat:"Japan"}
+      {n:"Travis Takahashi",num:97,p:"DF",q:"ZAG",a:20,o:58,t:66,v:300000,nat:"Japan"},
+      {n:"Pablo Sabbag",num:19,p:"FW",q:"PE",a:25,o:69,t:71,v:1500000}
     ],
     "jp/Fagiano Okayama": [
       {n:"Lennart Moser",num:1,p:"GK",q:"GOL",a:26,o:70,t:73,v:600000,nat:"Germany"},
-      {n:"Ryoya Ogawa",num:4,p:"DF",q:"ZAG",a:28,o:70,t:71,v:3000000,nat:"Japan"},
       {n:"Shu Ikedo",num:5,p:"DF",q:"LD",a:28,o:68,t:69,v:2000000,nat:"Japan"},
       {n:"Hiroshi Omori",num:6,p:"DF",q:"ZAG",a:24,o:68,t:68,v:200000,nat:"Japan"},
       {n:"Ryō Takeuchi",num:7,p:"MF",q:"VOL",a:35,o:69,t:70,v:2500000,nat:"Japan"},
@@ -8572,7 +8698,10 @@
       {n:"Yōta Fujii",num:55,p:"DF",q:"LE",a:20,o:56,t:64,v:100000,nat:"Japan"},
       {n:"Jun Nishikawa",num:66,p:"FW",q:"PD",a:24,o:56,t:64,v:650000,nat:"Japan"},
       {n:"Oberdan",num:80,p:"MF",q:"MC",a:31,o:70,t:71,v:3000000,nat:"Brazil"},
-      {n:"Lucão",num:99,p:"FW",q:"CA",a:30,o:69,t:70,v:350000,nat:"Brazil"}
+      {n:"Lucão",num:99,p:"FW",q:"CA",a:30,o:69,t:70,v:350000,nat:"Brazil"},
+      {n:"Goro Kawanami",num:77,p:"GK",q:"GOL",a:20,o:56,t:64,v:400000},
+      {n:"Noah Kenshin Browne",num:79,p:"MF",q:"MD",a:25,o:59,t:61,v:500000},
+      {n:"Towa Yamane",num:88,p:"MF",q:"VOL",a:25,o:59,t:61,v:500000}
     ],
     "jp/FC Tokyo": [
       {n:"Hayate Tanaka",num:1,p:"GK",q:"GOL",a:25,o:68,t:72,v:500000,nat:"Japan"},
@@ -8637,7 +8766,7 @@
       {n:"Shinya Nakano",num:47,p:"DF",q:"LE",a:20,o:58,t:66,v:300000,nat:"Japan"},
       {n:"Asahi Uenaka",num:55,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Japan"},
       {n:"Shogo Sasaki",num:67,p:"DF",q:"ZAG",a:20,o:58,t:66,v:200000,nat:"Japan"},
-      {n:"Juanpe",num:0,p:"MF",q:"MC",a:35,o:68,t:68,v:600000,nat:"Spain"}
+      {n:"Welton",num:97,p:"FW",q:"CA",a:21,o:63,t:71,v:1000000}
     ],
     "jp/JEF United Chiba": [
       {n:"Ryota Kuboniwa",num:3,p:"DF",q:"ZAG",a:28,o:68,t:69,v:200000,nat:"Japan"},
@@ -8671,7 +8800,9 @@
       {n:"Zain Issaka",num:42,p:"FW",q:"PD",a:20,o:56,t:64,v:600000,nat:"Japan"},
       {n:"Manato Shinada",num:44,p:"MF",q:"VOL",a:20,o:56,t:64,v:400000,nat:"Japan"},
       {n:"Leonardo Rocha",num:45,p:"FW",q:"CA",a:26,o:69,t:71,v:800000,nat:"Portugal"},
-      {n:"Erison",num:99,p:"FW",q:"CA",a:26,o:71,t:72,v:2000000,nat:"Brazil"}
+      {n:"Erison",num:99,p:"FW",q:"CA",a:26,o:71,t:72,v:2000000,nat:"Brazil"},
+      {n:"Dan Hall",num:66,p:"DF",q:"ZAG",a:20,o:56,t:64,v:400000},
+      {n:"Masaru Hidaka",num:67,p:"MF",q:"ME",a:20,o:60,t:68,v:900000}
     ],
     "jp/Kashima Antlers": [
       {n:"Tomoki Hayakawa",num:1,p:"GK",q:"GOL",a:28,o:73,t:74,v:2000000,nat:"Japan"},
@@ -8704,7 +8835,13 @@
       {n:"Yuwa Fukuoka",num:43,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Japan"},
       {n:"Daigo Hirashima",num:44,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Japan"},
       {n:"Naomichi Ueda",num:55,p:"DF",q:"ZAG",a:32,o:73,t:73,v:1000000,nat:"Japan"},
-      {n:"Aleksandar Čavrić",num:77,p:"FW",q:"PD",a:31,o:71,t:71,v:1200000,nat:"Slovakia"}
+      {n:"Aleksandar Čavrić",num:77,p:"FW",q:"PD",a:31,o:71,t:71,v:1200000,nat:"Slovakia"},
+      {n:"Ryoya Ogawa",num:7,p:"DF",q:"ZAG",a:28,o:70,t:71,v:3000000,nat:"Japan"},
+      {n:"Sho Omori",num:19,p:"DF",q:"ZAG",a:27,o:68,t:69,v:600000,nat:"Japan"},
+      {n:"Koki Kurahashi",num:45,p:"DF",q:"ZAG",a:23,o:61,t:66,v:900000},
+      {n:"Sora Iwatsuchi",num:46,p:"MF",q:"MC",a:20,o:64,t:72,v:2500000},
+      {n:"Eito Takaki",num:47,p:"FW",q:"PD",a:19,o:63,t:71,v:2000000},
+      {n:"Shu Takisawa",num:48,p:"FW",q:"PE",a:21,o:60,t:68,v:600000}
     ],
     "jp/Kashiwa Reysol": [
       {n:"Haruki Saruta",num:1,p:"GK",q:"GOL",a:27,o:68,t:70,v:50000,nat:"Japan"},
@@ -8738,7 +8875,13 @@
       {n:"Nobuteru Nakagawa",num:39,p:"MF",q:"MC",a:20,o:56,t:64,v:650000,nat:"Japan"},
       {n:"Riki Harakawa",num:40,p:"MF",q:"MC",a:33,o:69,t:69,v:300000,nat:"Japan"},
       {n:"Wataru Harada",num:42,p:"DF",q:"LD",a:20,o:56,t:64,v:600000,nat:"Japan"},
-      {n:"Makoto Mitsuta",num:51,p:"MF",q:"MEI",a:25,o:70,t:73,v:800000,nat:"Japan"}
+      {n:"Makoto Mitsuta",num:51,p:"MF",q:"MEI",a:25,o:70,t:73,v:800000,nat:"Japan"},
+      {n:"Shōta Fujio",num:15,p:"FW",q:"PD",a:25,o:69,t:72,v:3000000,nat:"Japan"},
+      {n:"Kenshin Yuba",num:44,p:"MF",q:"MD",a:19,o:57,t:65,v:400000},
+      {n:"Kenta Matsumoto",num:46,p:"GK",q:"GOL",a:22,o:60,t:65,v:600000},
+      {n:"Tomoya Wakahara",num:77,p:"GK",q:"GOL",a:22,o:62,t:67,v:800000},
+      {n:"Hinata Yamauchi",num:87,p:"MF",q:"MC",a:19,o:63,t:71,v:2000000},
+      {n:"Seiya Baba",num:88,p:"DF",q:"LE",a:21,o:59,t:67,v:500000}
     ],
     "jp/Kawasaki Frontale": [
       {n:"Louis Yamaguchi",num:1,p:"GK",q:"GOL",a:24,o:71,t:76,v:400000,nat:"Japan"},
@@ -8772,7 +8915,13 @@
       {n:"Lee Keun-hyeong",num:33,p:"GK",q:"GOL",a:20,o:60,t:68,v:700000,nat:"South Korea"},
       {n:"Ryuki Osa",num:34,p:"FW",q:"PE",a:20,o:61,t:69,v:200000,nat:"Japan"},
       {n:"Akihiro Ienaga",num:41,p:"MF",q:"MEI",a:40,o:68,t:68,v:600000,nat:"Japan"},
-      {n:"Svend Brodersen",num:49,p:"GK",q:"GOL",a:29,o:71,t:71,v:850000,nat:"Germany"}
+      {n:"Svend Brodersen",num:49,p:"GK",q:"GOL",a:29,o:71,t:71,v:850000,nat:"Germany"},
+      {n:"Tetsuya Takahashi",num:35,p:"DF",q:"LD",a:25,o:64,t:66,v:1000000},
+      {n:"Rin Honma",num:36,p:"FW",q:"CA",a:19,o:66,t:74,v:2500000},
+      {n:"Hiroto Ogawa",num:37,p:"MF",q:"VOL",a:23,o:63,t:68,v:1000000},
+      {n:"Asuto Fujita",num:39,p:"DF",q:"LD",a:20,o:64,t:72,v:2500000},
+      {n:"Kayke Queiroz",num:93,p:"FW",q:"CA",a:24,o:61,t:66,v:800000},
+      {n:"Derik Lacerda",num:97,p:"FW",q:"CA",a:21,o:63,t:71,v:1000000}
     ],
     "jp/Kyoto Sanga": [
       {n:"Gakuji Ota",num:1,p:"GK",q:"GOL",a:29,o:71,t:71,v:50000,nat:"Japan"},
@@ -8806,7 +8955,14 @@
       {n:"Weverton",num:43,p:"DF",q:"ZAG",a:23,o:70,t:71,v:300000,nat:"Brazil"},
       {n:"Ryosuke Yamanaka",num:66,p:"DF",q:"LE",a:32,o:69,t:69,v:125000,nat:"Japan"},
       {n:"Shun Nagasawa",num:93,p:"FW",q:"CA",a:38,o:67,t:67,v:50000,nat:"Japan"},
-      {n:"Masaaki Murakami",num:94,p:"GK",q:"GOL",a:29,o:68,t:68,v:250000,nat:"Japan"}
+      {n:"Masaaki Murakami",num:94,p:"GK",q:"GOL",a:29,o:68,t:68,v:250000,nat:"Japan"},
+      {n:"Haruto Tatsukawa",num:41,p:"MF",q:"MC",a:19,o:61,t:69,v:1000000},
+      {n:"Kyo Sato",num:44,p:"MF",q:"ME",a:24,o:59,t:64,v:500000},
+      {n:"Ryuma Nakano",num:48,p:"MF",q:"ME",a:20,o:66,t:74,v:2500000},
+      {n:"Yoshinori Suzuki",num:50,p:"DF",q:"ZAG",a:20,o:65,t:73,v:2000000},
+      {n:"Haruki Arai",num:77,p:"MF",q:"VOL",a:22,o:66,t:71,v:1500000},
+      {n:"Halls",num:90,p:"GK",q:"GOL",a:22,o:62,t:67,v:800000},
+      {n:"Fuchi Honda",num:99,p:"MF",q:"ME",a:23,o:61,t:66,v:900000}
     ],
     "jp/Machida Zelvia": [
       {n:"Kosei Tani",num:1,p:"GK",q:"GOL",a:25,o:73,t:76,v:1700000,nat:"Japan"},
@@ -8816,7 +8972,6 @@
       {n:"Henry Heroki Mochizuki",num:6,p:"DF",q:"LD",a:24,o:63,t:65,v:750000,nat:"Japan"},
       {n:"Yūki Sōma",num:7,p:"FW",q:"PE",a:29,o:71,t:71,v:2000000,nat:"Japan"},
       {n:"Keiya Sento",num:8,p:"MF",q:"MC",a:31,o:72,t:76,v:500000,nat:"Japan"},
-      {n:"Shōta Fujio",num:9,p:"FW",q:"PD",a:25,o:69,t:72,v:3000000,nat:"Japan"},
       {n:"Asahi Masuyama",num:11,p:"MF",q:"PD",a:29,o:64,t:66,v:500000,nat:"Japan"},
       {n:"Tatsuya Morita",num:13,p:"GK",q:"GOL",a:36,o:68,t:68,v:75000,nat:"Japan"},
       {n:"Yusuke Matsuo",num:14,p:"MF",q:"PE",a:29,o:72,t:72,v:750000,nat:"Japan"},
@@ -8836,14 +8991,14 @@
       {n:"Aki Koch-Kobayashi",num:66,p:"GK",q:"GOL",a:20,o:56,t:64,v:100000,nat:"Japan"},
       {n:"Hotaka Nakamura",num:88,p:"DF",q:"LD",a:29,o:56,t:64,v:250000,nat:"Japan"},
       {n:"Nicholas Guimarães",num:89,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Japan"},
-      {n:"Tete Yengi",num:99,p:"FW",q:"CA",a:25,o:59,t:61,v:450000,nat:"Australia"}
+      {n:"Tete Yengi",num:99,p:"FW",q:"CA",a:25,o:59,t:61,v:450000,nat:"Australia"},
+      {n:"Thomas Ouwejan",num:2,p:"DF",q:"LE",a:29,o:69,t:69,v:1500000,nat:"Netherlands"}
     ],
     "jp/Mito HollyHock": [
       {n:"Malick Fofana",num:2,p:"DF",q:"LD",a:21,o:66,t:73,v:3000000,nat:"Japan"},
       {n:"Koshi Osaki",num:3,p:"DF",q:"LE",a:28,o:68,t:69,v:650000,nat:"Japan"},
       {n:"Akinari Kawazura",num:4,p:"DF",q:"ZAG",a:32,o:68,t:69,v:250000,nat:"Japan"},
       {n:"Hiroshi Iwasaki",num:5,p:"DF",q:"ZAG",a:26,o:60,t:62,v:600000,nat:"Japan"},
-      {n:"Sho Omori",num:7,p:"DF",q:"ZAG",a:27,o:68,t:69,v:600000,nat:"Japan"},
       {n:"Chihiro Kato",num:8,p:"MF",q:"MEI",a:27,o:68,t:70,v:450000,nat:"Japan"},
       {n:"Ryō Nemoto",num:9,p:"FW",q:"CA",a:26,o:69,t:70,v:150000,nat:"Japan"},
       {n:"Arata Watanabe",num:10,p:"FW",q:"CA",a:31,o:68,t:70,v:700000,nat:"Japan"},
@@ -8870,7 +9025,12 @@
       {n:"Rei Ieizumi",num:50,p:"DF",q:"ZAG",a:26,o:56,t:64,v:550000,nat:"Japan"},
       {n:"Shota Yamashita",num:53,p:"FW",q:"PE",a:20,o:56,t:64,v:100000,nat:"Japan"},
       {n:"Matheus Leiria",num:70,p:"FW",q:"PD",a:27,o:69,t:70,v:150000,nat:"Brazil"},
-      {n:"Uwabright Hayakawa",num:77,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Japan"}
+      {n:"Uwabright Hayakawa",num:77,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Japan"},
+      {n:"Yuri Tamura",num:16,p:"DF",q:"LE",a:29,o:60,t:62,v:400000},
+      {n:"Jin Okumura",num:30,p:"MF",q:"VOL",a:21,o:59,t:67,v:500000},
+      {n:"Hugo",num:38,p:"MF",q:"ME",a:19,o:58,t:66,v:500000},
+      {n:"Kotatsu Kawakami",num:82,p:"MF",q:"MEI",a:25,o:56,t:58,v:600000},
+      {n:"Kishin Gokita",num:87,p:"FW",q:"CA",a:25,o:58,t:60,v:600000}
     ],
     "jp/Nagoya Grampus": [
       {n:"Daniel Schmidt",num:1,p:"GK",q:"GOL",a:34,o:73,t:73,v:450000,nat:"Japan"},
@@ -8996,7 +9156,12 @@
       {n:"Soma Kanda",num:38,p:"FW",q:"CA",a:20,o:58,t:66,v:150000,nat:"Japan"},
       {n:"Yuta Arai",num:40,p:"MF",q:"PE",a:20,o:57,t:65,v:350000,nat:"Japan"},
       {n:"Keisuke Nakamura",num:41,p:"GK",q:"GOL",a:20,o:56,t:64,v:50000,nat:"Japan"},
-      {n:"Kento Imai Type 2",num:42,p:"MF",q:"VOL",a:20,o:57,t:65,v:500000,nat:"Japan"}
+      {n:"Kento Imai Type 2",num:42,p:"MF",q:"VOL",a:20,o:57,t:65,v:500000,nat:"Japan"},
+      {n:"Shimon Teranuma",num:45,p:"FW",q:"PD",a:19,o:60,t:68,v:900000},
+      {n:"Sota Ofuji Type 2",num:51,p:"FW",q:"PE",a:23,o:61,t:66,v:900000},
+      {n:"Taiju Yoshida",num:55,p:"DF",q:"LE",a:25,o:60,t:62,v:500000},
+      {n:"Hayato Hirao",num:71,p:"FW",q:"CA",a:22,o:58,t:63,v:400000},
+      {n:"Masahiro Iida",p:"GK",q:"GOL",a:23,o:61,t:66,v:900000}
     ],
     "jp/Urawa Red Diamonds": [
       {n:"Shūsaku Nishikawa",num:1,p:"GK",q:"GOL",a:40,o:70,t:70,v:100000,nat:"Japan"},
@@ -9060,7 +9225,9 @@
       {n:"Motoki Hasegawa",num:41,p:"MF",q:"MEI",a:27,o:56,t:64,v:900000,nat:"Japan"},
       {n:"Harumu Nabeshima",num:44,p:"MF",q:"VOL",a:20,o:56,t:64,v:350000,nat:"Japan"},
       {n:"Tsubasa Kasayanagi",num:33,p:"MF",q:"MC",a:23,o:56,t:64,v:350000,nat:"Japan"},
-      {n:"Naru Sasaki",num:37,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Japan"}
+      {n:"Naru Sasaki",num:37,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Japan"},
+      {n:"Roh Hyeong-Jun",num:45,p:"DF",q:"ZAG",a:21,o:58,t:66,v:400000},
+      {n:"Ryosuke Shindo",num:50,p:"DF",q:"ZAG",a:21,o:56,t:64,v:400000}
     ],
     "jp/Vissel Kobe": [
       {n:"Daiya Maekawa",num:1,p:"GK",q:"GOL",a:30,o:75,t:75,v:800000,nat:"Japan"},
@@ -9094,7 +9261,16 @@
       {n:"Katsuya Nagato",num:41,p:"DF",q:"LE",a:29,o:70,t:70,v:800000,nat:"Japan"},
       {n:"Justin Homma",num:42,p:"DF",q:"LD",a:20,o:60,t:68,v:75000,nat:"Japan"},
       {n:"Kaito Yamada",num:43,p:"DF",q:"ZAG",a:20,o:60,t:68,v:200000,nat:"Japan"},
-      {n:"Shūichi Gonda",num:71,p:"GK",q:"GOL",a:37,o:70,t:70,v:100000,nat:"Japan"}
+      {n:"Shūichi Gonda",num:71,p:"GK",q:"GOL",a:37,o:70,t:70,v:100000,nat:"Japan"},
+      {n:"Mitsuki Hidaka",num:44,p:"MF",q:"ME",a:23,o:66,t:71,v:1500000},
+      {n:"Sota Ito Type 2",num:46,p:"FW",q:"CA",a:22,o:66,t:71,v:1500000},
+      {n:"Taiga Seguchi Type 2",num:51,p:"MF",q:"MD",a:25,o:66,t:68,v:1000000},
+      {n:"Hayato Watanabe Type 2",num:53,p:"FW",q:"PE",a:19,o:68,t:76,v:1500000},
+      {n:"Yuta Miyahara",num:55,p:"FW",q:"CA",a:24,o:68,t:73,v:1400000},
+      {n:"Tafuku Satomi Type 2",num:56,p:"MF",q:"MD",a:24,o:65,t:70,v:800000},
+      {n:"Ryosuke Irie",num:57,p:"DF",q:"LE",a:19,o:61,t:69,v:1000000},
+      {n:"Sota Onishi Type 2",num:58,p:"MF",q:"ME",a:24,o:65,t:70,v:800000},
+      {n:"Boniface Nduka",num:80,p:"DF",q:"ZAG",a:22,o:62,t:67,v:800000}
     ],
     "jp/Yokohama F. Marinos": [
       {n:"Park Il-gyu",num:1,p:"GK",q:"GOL",a:36,o:72,t:72,v:250000,nat:"Japan"},
@@ -9128,7 +9304,8 @@
       {n:"Kosuke Matsumura",num:41,p:"MF",q:"VOL",a:20,o:61,t:69,v:1000000,nat:"Japan"},
       {n:"Rio Nitta",num:43,p:"FW",q:"CA",a:23,o:62,t:70,v:200000,nat:"Japan"},
       {n:"Thomas Deng",num:44,p:"DF",q:"ZAG",a:29,o:71,t:71,v:450000,nat:"Australia"},
-      {n:"Hiroto Asada",num:46,p:"FW",q:"PD",a:20,o:62,t:70,v:200000,nat:"Japan"}
+      {n:"Hiroto Asada",num:46,p:"FW",q:"PD",a:20,o:62,t:70,v:200000,nat:"Japan"},
+      {n:"Shin Miidera",num:47,p:"MF",q:"MD",a:25,o:61,t:63,v:800000}
     ],
     "ma/AS FAR": [
       {n:"Ayoub El Khayati",num:1,p:"GK",q:"GOL",a:26,o:65,t:67,v:350000,nat:"Morocco"},
@@ -9159,7 +9336,8 @@
       {n:"Yazid Faffa",num:0,p:"FW",q:"PE",a:26,o:66,t:68,v:500000,nat:"Morocco"},
       {n:"Achref Habbassi",num:0,p:"FW",q:"CA",a:24,o:70,t:70,v:3000000,nat:"Tunisia"},
       {n:"Jephte Kitambala",num:0,p:"FW",q:"CA",a:26,o:66,t:68,v:1500000,nat:"Morocco"},
-      {n:"Marouane Oujeddou",num:0,p:"FW",q:"PD",a:26,o:66,t:68,v:325000,nat:"Morocco"}
+      {n:"Marouane Oujeddou",num:0,p:"FW",q:"PD",a:26,o:66,t:68,v:325000,nat:"Morocco"},
+      {n:"Mohamed Jemjami",p:"DF",q:"LD",a:25,o:64,t:68,v:10000000,nat:"Morocco"}
     ],
     "ma/Chabab Mohammédia": [
       {n:"Jaafar By",num:2,p:"DF",q:"LD",a:26,o:63,t:66,v:7500000,nat:"Morocco"},
@@ -9218,7 +9396,6 @@
       {n:"Achraf Al Idrissi",num:99,p:"MF",q:"VOL",a:20,o:55,t:63,v:250000,nat:"Morocco"}
     ],
     "ma/FUS Rabat": [
-      {n:"Rachid Ghanimi",num:1,p:"GK",q:"GOL",a:25,o:68,t:68,v:400000,nat:"Morocco"},
       {n:"Ayoub Mouddane",num:3,p:"DF",q:"LD",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
       {n:"Anas Serrhat",num:5,p:"MF",q:"VOL",a:29,o:68,t:69,v:700000,nat:"Morocco"},
       {n:"Mouad Bahsain",num:6,p:"DF",q:"LE",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
@@ -9230,22 +9407,23 @@
       {n:"Amine Souane",num:14,p:"FW",q:"PD",a:26,o:64,t:66,v:900000,nat:"Jordan"},
       {n:"Anas El Makkaoui",num:16,p:"MF",q:"VOL",a:26,o:63,t:65,v:100000,nat:"Morocco"},
       {n:"Hodifa El Mahssani",num:18,p:"DF",q:"ZAG",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
-      {n:"Hamza Hannouri",num:19,p:"FW",q:"CA",a:29,o:70,t:70,v:3000000,nat:"Morocco"},
-      {n:"Salaheddine Benyachou",num:20,p:"FW",q:"CA",a:26,o:69,t:70,v:2500000,nat:"Morocco"},
       {n:"El Mehdi El Bassil",num:22,p:"DF",q:"ZAG",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
       {n:"Zouheir El Hachemi",num:23,p:"DF",q:"ZAG",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
       {n:"Oussama Raoui",num:26,p:"DF",q:"LD",a:25,o:66,t:70,v:200000,nat:"Morocco"},
-      {n:"Amine El Msane",num:30,p:"FW",q:"CA",a:28,o:68,t:69,v:2000000,nat:"Morocco"},
       {n:"Moncef Amri",num:33,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Morocco"},
       {n:"Oussama Soukhane",num:34,p:"DF",q:"LE",a:20,o:55,t:63,v:700000,nat:"Morocco"},
-      {n:"Achraf Hilali",num:90,p:"GK",q:"GOL",a:20,o:55,t:63,v:200000,nat:"Morocco"}
+      {n:"Mohamed Bakhkhach",num:7,p:"FW",q:"PE",a:26,o:64,t:66,v:1500000,nat:"Morocco"},
+      {n:"Déo Bassinga",num:28,p:"FW",q:"SA",a:21,o:63,t:71,v:1000000},
+      {n:"Ali El Harrak",num:30,p:"FW",q:"CA",a:20,o:63,t:71,v:2000000},
+      {n:"Chamboco",num:31,p:"DF",q:"LD",a:24,o:63,t:68,v:600000},
+      {n:"Arthur Gitego",num:66,p:"FW",q:"CA",a:25,o:55,t:57,v:200000},
+      {n:"Ayoub Lakred",num:97,p:"GK",q:"GOL",a:22,o:62,t:67,v:800000}
     ],
     "ma/Hassania Agadir": [
       {n:"Abderrahmane Qassaq",num:2,p:"MF",q:"MEI",a:26,o:63,t:65,v:400000,nat:"Morocco"},
       {n:"Badreddine Octobre",num:3,p:"MF",q:"VOL",a:26,o:63,t:65,v:10000,nat:"Morocco"},
       {n:"Jalal Tachtach",num:5,p:"MF",q:"MC",a:33,o:67,t:67,v:450000,nat:"Morocco"},
       {n:"Mouad Bahsain",num:6,p:"DF",q:"ZAG",a:26,o:62,t:64,v:500000,nat:"Morocco"},
-      {n:"Mohamed Bakhkhach",num:7,p:"FW",q:"PE",a:26,o:64,t:66,v:1500000,nat:"Morocco"},
       {n:"Zakaria Ami",num:8,p:"MF",q:"MC",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
       {n:"Walid Jarmouni",num:9,p:"FW",q:"CA",a:26,o:64,t:66,v:200000,nat:"France"},
       {n:"Abdallah Boukhanfer",num:10,p:"MF",q:"MC",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
@@ -9266,7 +9444,6 @@
       {n:"Fahd Bendahmane",num:33,p:"FW",q:"CA",a:20,o:56,t:64,v:275000,nat:"Morocco"},
       {n:"Younes El Amali",num:36,p:"DF",q:"LE",a:20,o:55,t:63,v:50000,nat:"Morocco"},
       {n:"Adil Garnan",num:44,p:"DF",q:"ZAG",a:29,o:67,t:68,v:2000000,nat:"Morocco"},
-      {n:"Badreddine Abyir",num:61,p:"GK",q:"GOL",a:29,o:66,t:68,v:1000000,nat:"Morocco"},
       {n:"Hicham El Majhad",num:65,p:"GK",q:"GOL",a:35,o:67,t:67,v:350000,nat:"Morocco"},
       {n:"Fred Dembi",num:95,p:"MF",q:"MC",a:31,o:55,t:63,v:250000,nat:"Congo"}
     ],
@@ -9292,17 +9469,16 @@
       {n:"Ibrahima Dieng",num:31,p:"FW",q:"CA",a:20,o:58,t:66,v:50000,nat:"Senegal"},
       {n:"Saad Karouat",num:36,p:"DF",q:"ZAG",a:20,o:56,t:64,v:350000,nat:"Morocco"},
       {n:"Achraf El Quaraoui",num:48,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Morocco"},
-      {n:"Akram Tali",num:61,p:"MF",q:"MEI",a:20,o:58,t:66,v:600000,nat:"Morocco"},
+      {n:"Akram Tali",num:16,p:"MF",q:"MEI",a:20,o:58,t:66,v:600000,nat:"Morocco"},
       {n:"Ousama Siddiki",num:77,p:"FW",q:"PD",a:28,o:58,t:66,v:250000,nat:"Morocco"},
       {n:"Senad Jarović",num:99,p:"FW",q:"CA",a:28,o:58,t:66,v:700000,nat:"Germany"},
       {n:"Mohamed El Guartit",num:34,p:"MF",q:"MEI",a:20,o:57,t:65,v:500000,nat:"Morocco"},
       {n:"Haytham Bakhlakh",num:67,p:"FW",q:"PD",a:20,o:58,t:66,v:600000,nat:"England"},
-      {n:"Yassine Kermadi",num:0,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Morocco"}
+      {n:"Yassine Kermadi",num:0,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Morocco"},
+      {n:"Badreddine Abyir",num:61,p:"GK",q:"GOL",a:29,o:66,t:68,v:1000000,nat:"Morocco"}
     ],
     "ma/MAS Fez": [
       {n:"Hamza Afsal",num:2,p:"MF",q:"VOL",a:26,o:65,t:67,v:10000000,nat:"Morocco"},
-      {n:"Zakaria Hamadi",num:3,p:"DF",q:"LD",a:26,o:64,t:66,v:8000000,nat:"Italy"},
-      {n:"Saad Ait Khorsa",num:4,p:"DF",q:"LE",a:32,o:64,t:66,v:8000000,nat:"Morocco"},
       {n:"Aymane Chbani",num:5,p:"DF",q:"ZAG",a:26,o:64,t:66,v:8000000,nat:"Morocco"},
       {n:"Oussama Noureddine",num:6,p:"MF",q:"MEI",a:26,o:65,t:67,v:10000000,nat:"Morocco"},
       {n:"Achraf Harmach",num:8,p:"MF",q:"MC",a:26,o:65,t:67,v:10000000,nat:"Morocco"},
@@ -9310,21 +9486,29 @@
       {n:"Oussama Errahmany",num:12,p:"GK",q:"GOL",a:27,o:66,t:68,v:8000000,nat:"Morocco"},
       {n:"Adil Rhaili",num:13,p:"DF",q:"ZAG",a:35,o:68,t:68,v:8000000,nat:"Morocco"},
       {n:"Salaheddine Chihab",num:16,p:"GK",q:"GOL",a:33,o:69,t:69,v:6000000,nat:"Morocco"},
-      {n:"Kevin Yamga",num:17,p:"FW",q:"PE",a:30,o:69,t:70,v:17000000,nat:"France"},
       {n:"Anas Tahiri",num:19,p:"MF",q:"MEI",a:31,o:70,t:70,v:10000000,nat:"Morocco"},
       {n:"Marouane Ouhrou",num:21,p:"DF",q:"ZAG",a:27,o:66,t:68,v:12000000,nat:"Morocco"},
-      {n:"Nizar Guessous",num:23,p:"MF",q:"MC",a:26,o:66,t:69,v:12000000,nat:"Morocco"},
-      {n:"Mohamed Loumim",num:24,p:"MF",q:"MC",a:28,o:68,t:69,v:15000000,nat:"Morocco"},
       {n:"Adam Brika",num:26,p:"MF",q:"MC",a:22,o:61,t:67,v:6000000,nat:"Morocco"},
       {n:"El Habib Brija",num:27,p:"MF",q:"MC",a:22,o:61,t:67,v:6000000,nat:"Morocco"},
-      {n:"Hamza Ait Allal",num:31,p:"DF",q:"ZAG",a:20,o:56,t:64,v:2000000,nat:"Morocco"},
-      {n:"Driss El Jabli",num:32,p:"DF",q:"ZAG",a:20,o:56,t:64,v:2000000,nat:"Morocco"},
+      {n:"Hamza Ait Allal",num:22,p:"DF",q:"ZAG",a:20,o:56,t:64,v:2000000,nat:"Morocco"},
       {n:"Zakaria Allaoui",num:36,p:"FW",q:"CA",a:20,o:58,t:66,v:4000000,nat:"Morocco"},
       {n:"Khalid Baba",num:68,p:"MF",q:"MC",a:27,o:69,t:70,v:17000000,nat:"Morocco"},
-      {n:"Youssef Dalouzi",num:77,p:"FW",q:"CA",a:20,o:58,t:66,v:4000000,nat:"Morocco"},
-      {n:"Privat Djéssan Bi",num:90,p:"FW",q:"CA",a:20,o:58,t:66,v:4000000,nat:"Ivory Coast"},
-      {n:"Amine Oudrhiri",num:95,p:"MF",q:"MC",a:33,o:57,t:65,v:3000000,nat:"Morocco"},
-      {n:"Walid Laghrissi",num:99,p:"GK",q:"GOL",a:20,o:56,t:64,v:2000000,nat:"Morocco"}
+      {n:"Walid Laghrissi",num:99,p:"GK",q:"GOL",a:20,o:56,t:64,v:2000000,nat:"Morocco"},
+      {n:"Salaheddine Ghedamsi",num:20,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1000000},
+      {n:"Akram Khlifi",num:30,p:"DF",q:"LD",a:19,o:58,t:66,v:500000},
+      {n:"Diogo Calila",p:"DF",q:"ZAG",a:25,o:65,t:67,v:800000},
+      {n:"Mohamed Jaouab",p:"DF",q:"ZAG",a:29,o:61,t:63,v:800000},
+      {n:"Abdellah Khafifi",p:"DF",q:"ZAG",a:28,o:64,t:66,v:800000},
+      {n:"Ismail Laghzali",p:"DF",q:"ZAG",a:27,o:64,t:66,v:1000000},
+      {n:"Samba Mbengue",p:"DF",q:"ZAG",a:24,o:64,t:69,v:1000000},
+      {n:"Amine El Farissi",p:"MF",q:"MEI",a:23,o:65,t:70,v:1500000},
+      {n:"Mounir El Gouje",p:"MF",q:"MC",a:23,o:65,t:70,v:1500000},
+      {n:"Anas El Mahraoui",p:"FW",q:"CA",a:25,o:64,t:66,v:1000000},
+      {n:"Youssef Hafidi",p:"FW",q:"PD",a:28,o:64,t:66,v:800000},
+      {n:"Christopher Ibayi",p:"FW",q:"CA",a:26,o:64,t:66,v:1000000},
+      {n:"Tshegofatso Mabaso",p:"FW",q:"PE",a:25,o:65,t:67,v:800000},
+      {n:"Abdoul Kabir Ouédraogo",p:"FW",q:"SA",a:29,o:64,t:66,v:800000},
+      {n:"Devin Titus",p:"FW",q:"PE",a:27,o:64,t:66,v:1000000}
     ],
     "ma/Olympic Safi": [
       {n:"Abderrahmane Kernane",num:1,p:"GK",q:"GOL",a:26,o:62,t:64,v:25000,nat:"Morocco"},
@@ -9347,7 +9531,6 @@
       {n:"Mohamed Chemlal",num:21,p:"MF",q:"MEI",a:31,o:63,t:65,v:350000,nat:"France"},
       {n:"Anass Eddaou",num:22,p:"FW",q:"PE",a:26,o:64,t:66,v:225000,nat:"Morocco"},
       {n:"Yasser Ezzine",num:24,p:"DF",q:"LE",a:22,o:59,t:65,v:150000,nat:"Morocco"},
-      {n:"Youssef El Motie",num:25,p:"GK",q:"GOL",a:32,o:59,t:65,v:450000,nat:"Morocco"},
       {n:"Imad Askar",num:26,p:"GK",q:"GOL",a:28,o:66,t:68,v:25000,nat:"Morocco"},
       {n:"Saad El Morsli",num:27,p:"FW",q:"CA",a:22,o:61,t:67,v:950000,nat:"Morocco"},
       {n:"Achref Habbassi",num:28,p:"FW",q:"CA",a:24,o:70,t:71,v:3000000,nat:"Tunisia"},
@@ -9359,56 +9542,55 @@
     "ma/Raja CA": [
       {n:"El Mehdi Al Harrar",num:1,p:"GK",q:"GOL",a:25,o:71,t:72,v:1000000,nat:"Morocco"},
       {n:"Marian Huja",num:2,p:"DF",q:"ZAG",a:27,o:68,t:70,v:1500000,nat:"Portugal"},
-      {n:"Amine Khammas",num:3,p:"DF",q:"LE",a:27,o:70,t:71,v:450000,nat:"Morocco"},
+      {n:"Amine Khammas",num:24,p:"DF",q:"LE",a:27,o:70,t:71,v:450000,nat:"Morocco"},
       {n:"Ismael Mokadem",num:4,p:"DF",q:"ZAG",a:31,o:66,t:68,v:600000,nat:"Morocco"},
       {n:"Aymen Barkok",num:6,p:"MF",q:"MEI",a:28,o:72,t:72,v:550000,nat:"Morocco"},
       {n:"Mohamed Boulacsoute",num:7,p:"DF",q:"LD",a:27,o:70,t:71,v:700000,nat:"Morocco"},
       {n:"Ismail Khafi",num:9,p:"FW",q:"CA",a:31,o:67,t:69,v:400000,nat:"Morocco"},
       {n:"Felipinho",num:10,p:"FW",q:"PE",a:23,o:70,t:74,v:4000000,nat:"Brazil"},
-      {n:"Bilal Ould-Chikh",num:11,p:"FW",q:"PD",a:29,o:69,t:69,v:650000,nat:"Morocco"},
+      {n:"Bilal Ould-Chikh",num:45,p:"FW",q:"PD",a:29,o:69,t:69,v:650000,nat:"Morocco"},
       {n:"Khalid Kbiri Alaoui",num:12,p:"GK",q:"GOL",a:30,o:67,t:67,v:550000,nat:"Morocco"},
       {n:"Badr Benoun",num:13,p:"DF",q:"ZAG",a:32,o:71,t:71,v:750000,nat:"Morocco"},
       {n:"Sharara",num:15,p:"FW",q:"CA",a:28,o:67,t:69,v:2000000,nat:"Jordan"},
       {n:"Ayoub El Amloud",num:17,p:"DF",q:"LD",a:32,o:69,t:69,v:600000,nat:"Morocco"},
       {n:"Yahya Iguiz",num:18,p:"FW",q:"CA",a:26,o:67,t:69,v:10000,nat:"Morocco"},
       {n:"Othmane Chraibi",num:19,p:"MF",q:"VOL",a:26,o:66,t:68,v:250000,nat:"Morocco"},
-      {n:"Youness Dahmani",num:20,p:"FW",q:"PE",a:26,o:67,t:69,v:650000,nat:"Morocco"},
+      {n:"Youness Dahmani",num:11,p:"FW",q:"PE",a:26,o:67,t:69,v:650000,nat:"Morocco"},
       {n:"Mohamed Al Makahasi",num:23,p:"MF",q:"MC",a:31,o:67,t:67,v:750000,nat:"Morocco"},
       {n:"Mathias Oyewusi",num:27,p:"FW",q:"CA",a:27,o:69,t:70,v:450000,nat:"Morocco"},
-      {n:"Bouchaib Arrassi",num:28,p:"DF",q:"ZAG",a:26,o:67,t:72,v:250000,nat:"Morocco"},
+      {n:"Bouchaib Arrassi",num:5,p:"DF",q:"ZAG",a:26,o:67,t:72,v:250000,nat:"Morocco"},
       {n:"Michael Agbekpornu",num:30,p:"MF",q:"MC",a:28,o:59,t:67,v:300000,nat:"Ghana"},
       {n:"Yassine Zoubir",num:32,p:"GK",q:"GOL",a:20,o:58,t:66,v:10000,nat:"Morocco"},
-      {n:"Mehdi Mchakhchekh",num:33,p:"DF",q:"ZAG",a:22,o:67,t:71,v:325000,nat:"Morocco"},
       {n:"Adam Ennafati",num:77,p:"FW",q:"CA",a:32,o:60,t:68,v:1000000,nat:"Morocco"},
-      {n:"Pape Ousmane Sakho",num:79,p:"FW",q:"PE",a:29,o:71,t:72,v:175000,nat:"Senegal"},
-      {n:"Chemseddine Knaidil",num:0,p:"DF",q:"LE",a:27,o:67,t:69,v:450000,nat:"Morocco"},
-      {n:"Ishak Zidani",num:0,p:"MF",q:"VOL",a:26,o:66,t:68,v:375000,nat:"Morocco"},
-      {n:"Adel Bettaieb",num:0,p:"FW",q:"CA",a:29,o:61,t:63,v:900000,nat:"Tunisia"},
-      {n:"Mounaïm El Idrissy",num:0,p:"FW",q:"CA",a:27,o:68,t:70,v:500000,nat:"Morocco"}
+      {n:"Chemseddine Knaidil",num:3,p:"DF",q:"LE",a:27,o:67,t:69,v:450000,nat:"Morocco"},
+      {n:"Ishak Zidani",num:8,p:"MF",q:"VOL",a:26,o:66,t:68,v:375000,nat:"Morocco"},
+      {n:"Adel Bettaieb",num:26,p:"FW",q:"CA",a:29,o:61,t:63,v:900000,nat:"Tunisia"},
+      {n:"Mounaïm El Idrissy",num:21,p:"FW",q:"CA",a:27,o:68,t:70,v:500000,nat:"Morocco"},
+      {n:"Younes Bakiz",num:14,p:"MF",q:"VOL",a:24,o:67,t:72,v:1200000}
     ],
     "ma/RS Berkane": [
-      {n:"Amine El Maswab",num:2,p:"DF",q:"LD",a:26,o:66,t:68,v:1500000,nat:"Morocco"},
       {n:"Mohamed Aymen Sadil",num:3,p:"DF",q:"LE",a:26,o:66,t:68,v:250000,nat:"Morocco"},
       {n:"Oussama Haddadi",num:4,p:"DF",q:"ZAG",a:34,o:70,t:70,v:150000,nat:"Tunisia"},
       {n:"Ayoub Khairi",num:8,p:"MF",q:"MC",a:26,o:67,t:69,v:1200000,nat:"Morocco"},
       {n:"Oussama Lamlioui",num:9,p:"FW",q:"CA",a:30,o:72,t:72,v:850000,nat:"Morocco"},
-      {n:"Mohamed El Morabit",num:10,p:"FW",q:"PD",a:26,o:68,t:70,v:2500000,nat:"Morocco"},
       {n:"Youssef Mehri",num:11,p:"FW",q:"PE",a:28,o:71,t:71,v:1200000,nat:"Morocco"},
       {n:"Rayane Aabid",num:14,p:"MF",q:"MC",a:34,o:70,t:73,v:75000,nat:"France"},
-      {n:"Abdelhak Assal",num:15,p:"DF",q:"ZAG",a:28,o:70,t:70,v:1500000,nat:"Morocco"},
       {n:"Kamal Bilal",num:16,p:"GK",q:"GOL",a:26,o:65,t:67,v:10000,nat:"Morocco"},
       {n:"Yassine Labhiri",num:17,p:"MF",q:"MEI",a:26,o:67,t:69,v:600000,nat:"Morocco"},
-      {n:"Imad Riahi",num:18,p:"FW",q:"CA",a:26,o:68,t:70,v:2500000,nat:"Morocco"},
       {n:"Hamza El Moussaoui",num:19,p:"DF",q:"ZAG",a:33,o:68,t:68,v:2000000,nat:"Morocco"},
-      {n:"Amine Azri",num:21,p:"FW",q:"PD",a:26,o:68,t:70,v:400000,nat:"Morocco"},
-      {n:"Anas Zniti",num:22,p:"GK",q:"GOL",a:37,o:71,t:71,v:650000,nat:"Morocco"},
       {n:"Youness El Kaabi",num:24,p:"FW",q:"CA",a:22,o:64,t:70,v:200000,nat:"Morocco"},
       {n:"Ismaël Kandouss",num:27,p:"DF",q:"ZAG",a:28,o:71,t:71,v:1600000,nat:"Morocco"},
-      {n:"Paul Bassène",num:28,p:"FW",q:"CA",a:28,o:70,t:71,v:3000000,nat:"Senegal"},
       {n:"Zinédine Machach",num:29,p:"MF",q:"MEI",a:30,o:66,t:66,v:550000,nat:"France"},
       {n:"Mohamed Ouyahia",num:32,p:"MF",q:"MC",a:20,o:60,t:68,v:25000,nat:"Morocco"},
       {n:"Et-Tayeb Boukhriss",num:33,p:"DF",q:"LD",a:25,o:69,t:72,v:550000,nat:"Morocco"},
-      {n:"Reda Hajji",num:35,p:"MF",q:"MEI",a:20,o:60,t:68,v:75000,nat:"Morocco"}
+      {n:"Reda Hajji",num:35,p:"MF",q:"MEI",a:20,o:60,t:68,v:75000,nat:"Morocco"},
+      {n:"Youssef El Motie",num:25,p:"GK",q:"GOL",a:32,o:59,t:65,v:450000,nat:"Morocco"},
+      {n:"Mohamed Amine Essahel",num:10,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Morocco"},
+      {n:"Abdelghafour Lamirat",num:15,p:"MF",q:"VOL",a:30,o:70,t:70,v:1500000,nat:"Morocco"},
+      {n:"Jamal Harkass",p:"DF",q:"LD",a:27,o:68,t:70,v:1400000},
+      {n:"Adil Tahif",p:"DF",q:"LE",a:25,o:68,t:70,v:1400000},
+      {n:"Youssef Aït Bennasser",p:"MF",q:"MEI",a:23,o:68,t:73,v:2000000},
+      {n:"Ryan Mendes",p:"FW",q:"CA",a:29,o:68,t:70,v:1000000}
     ],
     "ma/Union Touarga": [
       {n:"Reda Asmama",num:1,p:"GK",q:"GOL",a:26,o:61,t:63,v:50000,nat:"Morocco"},
@@ -9420,7 +9602,6 @@
       {n:"Youness Dahmani",num:7,p:"FW",q:"PE",a:26,o:63,t:65,v:1000000,nat:"Morocco"},
       {n:"Hossam Essadak",num:8,p:"MF",q:"VOL",a:27,o:66,t:68,v:1500000,nat:"Morocco"},
       {n:"Yacine Bammou",num:9,p:"FW",q:"CA",a:34,o:67,t:67,v:200000,nat:"Morocco"},
-      {n:"Mohamed Amine Essahel",num:10,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Morocco"},
       {n:"Ahmed Aboulfath",num:11,p:"FW",q:"PD",a:26,o:63,t:65,v:10000,nat:"Morocco"},
       {n:"Youssef Kajai",num:13,p:"DF",q:"ZAG",a:26,o:65,t:68,v:400000,nat:"Morocco"},
       {n:"Abdelkabir El Ouadi",num:14,p:"FW",q:"PE",a:33,o:63,t:65,v:225000,nat:"Morocco"},
@@ -9442,35 +9623,42 @@
       {n:"Zoubir Housni",num:34,p:"FW",q:"CA",a:20,o:55,t:63,v:250000,nat:"Morocco"},
       {n:"Salim Ghazzani",num:37,p:"FW",q:"PD",a:20,o:55,t:63,v:25000,nat:"Morocco"},
       {n:"Yassine Zraa",num:39,p:"FW",q:"CA",a:26,o:65,t:68,v:1500000,nat:"Morocco"},
-      {n:"Walid Hasbi",num:50,p:"GK",q:"GOL",a:26,o:64,t:67,v:900000,nat:"Morocco"}
+      {n:"Walid Hasbi",num:50,p:"GK",q:"GOL",a:26,o:64,t:67,v:900000,nat:"Morocco"},
+      {n:"Adam Chakir",num:40,p:"MF",q:"MD",a:24,o:56,t:61,v:600000},
+      {n:"Mehdi Ashabi",num:41,p:"DF",q:"ZAG",a:25,o:56,t:58,v:600000},
+      {n:"Fouad Zahouani",num:52,p:"DF",q:"LE",a:25,o:56,t:58,v:600000},
+      {n:"Abderahmane El Houasli",num:55,p:"GK",q:"GOL",a:22,o:56,t:61,v:400000}
     ],
     "ma/Wydad AC": [
       {n:"Mohamed Moufid",num:2,p:"DF",q:"LD",a:26,o:70,t:71,v:1000000,nat:"Morocco"},
-      {n:"Amine Aboulfath",num:4,p:"DF",q:"ZAG",a:28,o:69,t:69,v:1500000,nat:"Morocco"},
       {n:"Ayman El Wafi",num:5,p:"DF",q:"ZAG",a:22,o:67,t:69,v:2200000,nat:"Morocco"},
-      {n:"Hakim Ziyech",num:7,p:"FW",q:"PE",a:33,o:75,t:75,v:1500000,nat:"Morocco"},
       {n:"Ramiro Vaca",num:10,p:"MF",q:"MEI",a:27,o:69,t:71,v:600000,nat:"Bolivia"},
       {n:"Sallah Moussaddaq",num:13,p:"DF",q:"ZAG",a:26,o:67,t:69,v:400000,nat:"Morocco"},
       {n:"Guilherme Ferreira",num:14,p:"DF",q:"ZAG",a:28,o:70,t:70,v:3000000,nat:"Brazil"},
-      {n:"Abdelghafour Lamirat",num:15,p:"MF",q:"VOL",a:30,o:70,t:70,v:1500000,nat:"Morocco"},
       {n:"Mehdi Benabid",num:16,p:"GK",q:"GOL",a:28,o:68,t:70,v:1500000,nat:"Morocco"},
       {n:"Rayane Mahtou",num:17,p:"MF",q:"VOL",a:26,o:68,t:70,v:10000,nat:"Morocco"},
       {n:"Hamza Elowasti",num:18,p:"FW",q:"PE",a:26,o:68,t:70,v:375000,nat:"Morocco"},
       {n:"Moises Paniagua",num:20,p:"FW",q:"PE",a:19,o:69,t:73,v:900000,nat:"Bolivia"},
       {n:"Joseph Bakasu",num:27,p:"MF",q:"MC",a:22,o:64,t:70,v:650000,nat:"Morocco"},
       {n:"Walid Nassi",num:28,p:"FW",q:"PD",a:26,o:65,t:71,v:350000,nat:"Morocco"},
-      {n:"Nabil Khali",num:29,p:"DF",q:"LD",a:25,o:65,t:69,v:2000000,nat:"Morocco"},
-      {n:"Naïm Byar",num:32,p:"MF",q:"MC",a:21,o:61,t:69,v:450000,nat:"Morocco"},
+      {n:"Naïm Byar",num:6,p:"MF",q:"MC",a:21,o:61,t:69,v:450000,nat:"Morocco"},
       {n:"Pedrinho",num:33,p:"MF",q:"MEI",a:22,o:71,t:72,v:250000,nat:"Brazil"},
-      {n:"Mohamed Bouchouari",num:34,p:"DF",q:"ZAG",a:25,o:59,t:67,v:800000,nat:"Morocco"},
       {n:"Omar Aqzdaou",num:40,p:"GK",q:"GOL",a:20,o:59,t:67,v:25000,nat:"Morocco"},
       {n:"Zouhair El Moutaraji",num:77,p:"FW",q:"PE",a:30,o:70,t:70,v:200000,nat:"Morocco"},
-      {n:"Yahya Attiyat Allah",num:0,p:"DF",q:"LE",a:31,o:71,t:71,v:800000,nat:"Morocco"},
-      {n:"Salaheddine Cofi",num:0,p:"DF",q:"ZAG",a:26,o:67,t:69,v:350000,nat:"Morocco"},
-      {n:"Hamza Jananallah",num:0,p:"DF",q:"LE",a:26,o:67,t:69,v:325000,nat:"Morocco"},
+      {n:"Yahya Attiyat Allah",num:14,p:"DF",q:"LE",a:31,o:71,t:71,v:800000,nat:"Morocco"},
+      {n:"Salaheddine Cofi",num:32,p:"DF",q:"ZAG",a:26,o:67,t:69,v:350000,nat:"Morocco"},
+      {n:"Hamza Jananallah",num:3,p:"DF",q:"LE",a:26,o:67,t:69,v:325000,nat:"Morocco"},
       {n:"Nizar Al-Rashdan",num:0,p:"MF",q:"VOL",a:27,o:68,t:68,v:600000,nat:"Jordan"},
-      {n:"Ayman El Hassouni",num:0,p:"MF",q:"MEI",a:31,o:69,t:69,v:500000,nat:"Morocco"},
-      {n:"Yahya Jabrane",num:0,p:"MF",q:"VOL",a:35,o:70,t:70,v:800000,nat:"Morocco"}
+      {n:"Ayman El Hassouni",num:10,p:"MF",q:"MEI",a:31,o:69,t:69,v:500000,nat:"Morocco"},
+      {n:"Yahya Jabrane",num:5,p:"MF",q:"VOL",a:35,o:70,t:70,v:800000,nat:"Morocco"},
+      {n:"Silvère Ganvoula",num:15,p:"FW",q:"CA",a:30,o:69,t:69,v:1500000,nat:"Congo"},
+      {n:"Hamza Hannouri",num:19,p:"FW",q:"CA",a:29,o:70,t:70,v:3000000,nat:"Morocco"},
+      {n:"Rachid Ghanimi",num:1,p:"GK",q:"GOL",a:25,o:68,t:68,v:400000,nat:"Morocco"},
+      {n:"Mouad Aounzou",num:22,p:"FW",q:"SA",a:25,o:68,t:70,v:1400000},
+      {n:"Oussama Zemraoui",num:23,p:"MF",q:"VOL",a:23,o:69,t:74,v:2500000},
+      {n:"Issoufou Dayo",num:25,p:"DF",q:"ZAG",a:27,o:68,t:70,v:1400000},
+      {n:"Adil Khalloufi",num:33,p:"MF",q:"VOL",a:22,o:65,t:70,v:1500000},
+      {n:"Soufiane Hetli",p:"FW",q:"PD",a:24,o:68,t:73,v:1400000}
     ],
     "mx/América": [
       {n:"Luis Malagón",num:1,p:"GK",q:"GOL",a:29,o:77,t:78,v:5500000,nat:"Mexico"},
@@ -9491,14 +9679,16 @@
       {n:"Raphael Veiga",num:23,p:"MF",q:"MEI",a:31,o:78,t:78,v:7000000,nat:"Brazil"},
       {n:"Franco Rossano",num:24,p:"DF",q:"LE",a:21,o:69,t:72,v:2000000,nat:"Mexico"},
       {n:"Cristian Borja",num:26,p:"DF",q:"LE",a:33,o:74,t:74,v:1500000,nat:"Colombia"},
-      {n:"Ícaro",num:27,p:"MF",q:"VOL",a:19,o:68,t:74,v:3500000,nat:"Brazil"},
+      {n:"Ícaro",num:217,p:"MF",q:"VOL",a:19,o:68,t:74,v:3500000,nat:"Brazil"},
       {n:"Érick Sánchez",num:28,p:"MF",q:"MC",a:26,o:74,t:75,v:6000000,nat:"Mexico"},
       {n:"Ramón Juárez",num:29,p:"DF",q:"ZAG",a:25,o:73,t:75,v:4500000,nat:"Mexico"},
       {n:"Rodolfo Cota",num:30,p:"GK",q:"GOL",a:39,o:69,t:69,v:200000,nat:"Mexico"},
       {n:"César Lugo",num:31,p:"GK",q:"GOL",a:20,o:60,t:68,v:800000,nat:"Mexico"},
       {n:"Miguel Vázquez",num:32,p:"DF",q:"ZAG",a:22,o:61,t:70,v:1500000,nat:"Mexico"},
       {n:"Dagoberto Espinoza",num:34,p:"DF",q:"LD",a:21,o:65,t:72,v:3000000,nat:"Mexico"},
-      {n:"Miguel Borja",num:93,p:"FW",q:"CA",a:33,o:76,t:76,v:1800000,nat:"Colombia"}
+      {n:"Miguel Borja",num:93,p:"FW",q:"CA",a:33,o:76,t:76,v:1800000,nat:"Colombia"},
+      {n:"Santiago Bueno",num:14,p:"DF",q:"ZAG",a:27,o:74,t:74,v:10000000,nat:"Uruguay"},
+      {n:"Santiago Ramos Mingo",num:15,p:"DF",q:"ZAG",a:24,o:74,t:77,v:12000000,nat:"Argentina"}
     ],
     "mx/Atlante": [
       {n:"Óscar Jiménez",num:1,p:"GK",q:"GOL",a:37,o:67,t:67,v:50000,nat:"Mexico"},
@@ -9530,7 +9720,8 @@
       {n:"Jordan García",num:33,p:"GK",q:"GOL",a:21,o:63,t:63,v:2500000,nat:"Colombia"},
       {n:"Édgar Jiménez",num:34,p:"FW",q:"PD",a:20,o:55,t:63,v:500000,nat:"Mexico"},
       {n:"Walter Clar",num:37,p:"DF",q:"LE",a:31,o:65,t:65,v:500000,nat:"Paraguay"},
-      {n:"Aarón Quirós",num:44,p:"DF",q:"ZAG",a:24,o:70,t:72,v:1800000,nat:"Argentina"}
+      {n:"Aarón Quirós",num:44,p:"DF",q:"ZAG",a:24,o:70,t:72,v:1800000,nat:"Argentina"},
+      {n:"Martín Fernández",num:25,p:"MF",q:"MEI",a:23,o:69,t:73,v:450000,nat:"Uruguay"}
     ],
     "mx/Atlas": [
       {n:"Jorge Sánchez",num:3,p:"DF",q:"LD",a:28,o:73,t:73,v:2000000,nat:"Mexico"},
@@ -9547,14 +9738,15 @@
       {n:"Milton Valenzuela",num:16,p:"DF",q:"LE",a:28,o:68,t:68,v:550000,nat:"Argentina"},
       {n:"Rivaldo Lozano",num:17,p:"DF",q:"LE",a:28,o:66,t:70,v:1200000,nat:"Mexico"},
       {n:"Adonis Frías",num:19,p:"DF",q:"ZAG",a:28,o:71,t:71,v:3000000,nat:"Argentina"},
-      {n:"Rodrigo Schlegel",num:21,p:"DF",q:"ZAG",a:29,o:65,t:65,v:2500000,nat:"Argentina"},
       {n:"Antonio Sánchez",num:22,p:"GK",q:"GOL",a:26,o:63,t:67,v:400000,nat:"Mexico"},
       {n:"Sergio Hernández",num:23,p:"MF",q:"PE",a:22,o:67,t:71,v:1500000,nat:"Mexico"},
       {n:"Aldo Rocha",num:26,p:"MF",q:"VOL",a:33,o:71,t:71,v:900000,nat:"Mexico"},
       {n:"Víctor Ríos",num:27,p:"MF",q:"VOL",a:22,o:67,t:71,v:2000000,nat:"Mexico"},
       {n:"Manuel Capasso",num:28,p:"DF",q:"ZAG",a:30,o:61,t:67,v:600000,nat:"Argentina"},
       {n:"Juanjo Purata",num:44,p:"DF",q:"ZAG",a:28,o:70,t:70,v:3500000,nat:"Mexico"},
-      {n:"Alfonso González",num:58,p:"MF",q:"MEI",a:32,o:65,t:72,v:2000000,nat:"Mexico"}
+      {n:"Alfonso González",num:58,p:"MF",q:"MEI",a:32,o:65,t:72,v:2000000,nat:"Mexico"},
+      {n:"Elías Montiel",num:18,p:"MF",q:"VOL",a:20,o:72,t:79,v:6000000,nat:"Mexico"},
+      {n:"Kevin Zenón",num:20,p:"FW",q:"PE",a:25,o:75,t:78,v:3500000,nat:"Argentina"}
     ],
     "mx/Atlético San Luis": [
       {n:"Andrés Sánchez",num:1,p:"GK",q:"GOL",a:28,o:69,t:70,v:2000000,nat:"Mexico"},
@@ -9580,7 +9772,8 @@
       {n:"Jesús Medina",num:28,p:"FW",q:"PD",a:29,o:69,t:69,v:2000000,nat:"Paraguay"},
       {n:"Benjamín Galindo",num:30,p:"DF",q:"ZAG",a:27,o:65,t:66,v:800000,nat:"Mexico"},
       {n:"Eduardo Águila",num:31,p:"DF",q:"ZAG",a:24,o:64,t:68,v:3500000,nat:"Mexico"},
-      {n:"Felipe Mora",num:99,p:"FW",q:"CA",a:33,o:71,t:71,v:1800000,nat:"Chile"}
+      {n:"Felipe Mora",num:99,p:"FW",q:"CA",a:33,o:71,t:71,v:1800000,nat:"Chile"},
+      {n:"Juanpe",num:6,p:"MF",q:"MC",a:35,o:68,t:68,v:600000,nat:"Spain"}
     ],
     "mx/Cruz Azul": [
       {n:"Andrés Gudiño",num:1,p:"GK",q:"GOL",a:29,o:69,t:69,v:2500000,nat:"Mexico"},
@@ -9610,7 +9803,23 @@
       {n:"Carlos Rotondi",num:29,p:"FW",q:"PE",a:29,o:74,t:74,v:3000000,nat:"Argentina"},
       {n:"Emmanuel Ochoa",num:30,p:"GK",q:"GOL",a:21,o:63,t:70,v:1000000,nat:"Mexico"},
       {n:"Cristian Jiménez",num:32,p:"MF",q:"VOL",a:24,o:63,t:71,v:100000,nat:"Mexico"},
-      {n:"Gonzalo Piovi",num:33,p:"DF",q:"ZAG",a:32,o:73,t:73,v:2000000,nat:"Argentina"}
+      {n:"Gonzalo Piovi",num:33,p:"DF",q:"ZAG",a:32,o:73,t:73,v:2000000,nat:"Argentina"},
+      {n:"Mauro Zaleta",num:14,p:"MF",q:"PE",a:24,o:66,t:72,v:1000000,nat:"Mexico"},
+      {n:"Ralph Orquin",num:15,p:"DF",q:"LD",a:26,o:72,t:74,v:3500000},
+      {n:"Jorge García",num:42,p:"DF",q:"ZAG",a:19,o:69,t:77,v:2500000},
+      {n:"Josué Díaz",num:49,p:"DF",q:"LE",a:19,o:69,t:77,v:2500000},
+      {n:"Rogelio González",num:55,p:"MF",q:"MC",a:20,o:69,t:77,v:2500000},
+      {n:"Diego Valdéz",num:57,p:"MF",q:"VOL",a:24,o:66,t:71,v:1000000},
+      {n:"Emmanuel Sánchez",num:58,p:"MF",q:"VOL",a:25,o:69,t:71,v:1500000},
+      {n:"Ariel Castro",num:60,p:"MF",q:"MD",a:21,o:66,t:74,v:1500000},
+      {n:"Javier Suárez",num:66,p:"DF",q:"LD",a:21,o:66,t:74,v:1500000},
+      {n:"Jaziel Mendoza",num:67,p:"DF",q:"LD",a:24,o:67,t:72,v:1200000},
+      {n:"Christian Valdivia",num:68,p:"MF",q:"ME",a:24,o:68,t:73,v:1400000},
+      {n:"Iván Silva",num:70,p:"DF",q:"LE",a:21,o:69,t:77,v:2500000},
+      {n:"Amaury Morales",num:194,p:"MF",q:"MD",a:25,o:69,t:71,v:1500000},
+      {n:"Jeyson Durán",num:213,p:"MF",q:"ME",a:19,o:68,t:76,v:1500000},
+      {n:"Mateo Levy",num:214,p:"FW",q:"SA",a:24,o:69,t:74,v:1500000},
+      {n:"Emiliano Castañeda",num:258,p:"FW",q:"PE",a:25,o:66,t:68,v:1000000}
     ],
     "mx/Guadalajara": [
       {n:"Raúl Rangel",num:1,p:"GK",q:"GOL",a:26,o:75,t:77,v:8000000,nat:"Mexico"},
@@ -9664,7 +9873,8 @@
       {n:"Guillermo Ruiz",num:27,p:"GK",q:"GOL",a:22,o:58,t:64,v:350000,nat:"Spain"},
       {n:"Ettson Ayón",num:29,p:"FW",q:"CA",a:25,o:66,t:68,v:1000000,nat:"Mexico"},
       {n:"Francisco Nevárez",num:33,p:"DF",q:"LD",a:25,o:64,t:67,v:1000000,nat:"Mexico"},
-      {n:"Bryan Romero",num:35,p:"DF",q:"ZAG",a:23,o:64,t:68,v:100000,nat:"Mexico"}
+      {n:"Bryan Romero",num:35,p:"DF",q:"ZAG",a:23,o:64,t:68,v:100000,nat:"Mexico"},
+      {n:"Daniel Piña",num:26,p:"DF",q:"LD",a:25,o:63,t:65,v:600000}
     ],
     "mx/León": [
       {n:"Juan Guevara",num:3,p:"DF",q:"ZAG",a:23,o:68,t:72,v:1200000,nat:"Colombia"},
@@ -9683,7 +9893,6 @@
       {n:"Alfonso Alvarado",num:19,p:"FW",q:"CA",a:26,o:68,t:71,v:1800000,nat:"Mexico"},
       {n:"Rodrigo Echeverría",num:20,p:"MF",q:"VOL",a:31,o:71,t:71,v:2500000,nat:"Chile"},
       {n:"Santiago Londoño",num:21,p:"FW",q:"CA",a:18,o:67,t:71,v:700000,nat:"Colombia"},
-      {n:"Sebastián Santos",num:22,p:"DF",q:"LD",a:23,o:67,t:69,v:1500000,nat:"Mexico"},
       {n:"Óscar García",num:23,p:"GK",q:"GOL",a:23,o:66,t:70,v:4000000,nat:"Mexico"},
       {n:"Paul Bellón",num:25,p:"DF",q:"ZAG",a:29,o:67,t:71,v:1000000,nat:"Mexico"},
       {n:"Salvador Reyes",num:26,p:"DF",q:"LE",a:28,o:70,t:70,v:1500000,nat:"Mexico"},
@@ -9700,10 +9909,8 @@
       {n:"Gerardo Arteaga",num:3,p:"DF",q:"LE",a:28,o:75,t:75,v:2000000,nat:"Mexico"},
       {n:"Víctor Guzmán",num:4,p:"DF",q:"ZAG",a:31,o:74,t:74,v:5000000,nat:"Mexico"},
       {n:"Fidel Ambríz",num:5,p:"MF",q:"VOL",a:23,o:74,t:78,v:3500000,nat:"Mexico"},
-      {n:"Lucas Ocampos",num:7,p:"FW",q:"PE",a:32,o:75,t:75,v:4000000,nat:"Argentina"},
       {n:"Óliver Torres",num:8,p:"MF",q:"MC",a:31,o:74,t:74,v:3000000,nat:"Spain"},
       {n:"Diego Rossi",num:9,p:"FW",q:"CA",a:28,o:75,t:75,v:7500000,nat:"Uruguay"},
-      {n:"Luca Orellano",num:10,p:"FW",q:"PD",a:26,o:73,t:75,v:8000000,nat:"Argentina"},
       {n:"Iker Fimbres",num:11,p:"MF",q:"MC",a:22,o:71,t:77,v:4500000,nat:"Mexico"},
       {n:"Carlos Salcedo",num:13,p:"DF",q:"ZAG",a:33,o:72,t:72,v:900000,nat:"Mexico"},
       {n:"Érick Aguirre",num:14,p:"DF",q:"LD",a:29,o:73,t:73,v:2000000,nat:"Mexico"},
@@ -9737,7 +9944,6 @@
       {n:"Juan Pablo Torres",num:11,p:"MF",q:"MEI",a:24,o:67,t:71,v:1500000,nat:"Colombia"},
       {n:"Luis Jiménez",num:12,p:"GK",q:"GOL",a:31,o:66,t:66,v:100000,nat:"Mexico"},
       {n:"Owen González",num:13,p:"FW",q:"PD",a:23,o:66,t:72,v:1000000,nat:"Mexico"},
-      {n:"Mauro Zaleta",num:14,p:"MF",q:"PE",a:24,o:66,t:72,v:1000000,nat:"Mexico"},
       {n:"Diego Ochoa",num:15,p:"DF",q:"ZAG",a:21,o:65,t:72,v:75000,nat:"Mexico"},
       {n:"Pedro Pedraza",num:16,p:"MF",q:"VOL",a:26,o:64,t:66,v:2500000,nat:"Mexico"},
       {n:"Rogelio Cortéz",num:17,p:"MF",q:"MEI",a:22,o:65,t:71,v:600000,nat:"Mexico"},
@@ -9756,7 +9962,6 @@
       {n:"Rodolfo Pizarro",num:7,p:"MF",q:"MEI",a:32,o:70,t:70,v:800000,nat:"Mexico"},
       {n:"Alexéi Domínguez",num:8,p:"FW",q:"PD",a:21,o:70,t:73,v:6000000,nat:"Mexico"},
       {n:"Adrián Alcaraz",num:9,p:"FW",q:"CA",a:22,o:66,t:72,v:1000000,nat:"Paraguay"},
-      {n:"Elías Montiel",num:10,p:"MF",q:"VOL",a:20,o:72,t:79,v:6000000,nat:"Mexico"},
       {n:"Oussama Idrissi",num:11,p:"FW",q:"PE",a:30,o:74,t:74,v:6000000,nat:"Morocco"},
       {n:"Jorge Berlanga",num:13,p:"DF",q:"ZAG",a:23,o:68,t:71,v:1500000,nat:"Mexico"},
       {n:"Carlos Sánchez",num:14,p:"DF",q:"LD",a:24,o:65,t:72,v:3000000,nat:"Mexico"},
@@ -9771,7 +9976,8 @@
       {n:"Kenedy",num:29,p:"FW",q:"PE",a:30,o:72,t:72,v:700000,nat:"Brazil"},
       {n:"Lenin Rodríguez",num:30,p:"MF",q:"VOL",a:22,o:59,t:67,v:800000,nat:"Mexico"},
       {n:"José Eulogio",num:31,p:"GK",q:"GOL",a:24,o:64,t:69,v:200000,nat:"Mexico"},
-      {n:"Pedro Budib",num:32,p:"DF",q:"ZAG",a:22,o:66,t:72,v:100000,nat:"Mexico"}
+      {n:"Pedro Budib",num:32,p:"DF",q:"ZAG",a:22,o:66,t:72,v:100000,nat:"Mexico"},
+      {n:"Sebastián Santos",num:12,p:"DF",q:"LD",a:23,o:67,t:69,v:1500000,nat:"Mexico"}
     ],
     "mx/Puebla": [
       {n:"Ángel Leyva",num:2,p:"DF",q:"ZAG",a:19,o:67,t:67,v:100000,nat:"Mexico"},
@@ -9783,7 +9989,6 @@
       {n:"Omar Moreno",num:8,p:"MF",q:"MEI",a:21,o:68,t:68,v:1000000,nat:"Mexico"},
       {n:"Luifer Hernández",num:9,p:"FW",q:"CA",a:25,o:69,t:70,v:550000,nat:"Venezuela"},
       {n:"Mathías Tomás",num:10,p:"MF",q:"MEI",a:31,o:69,t:69,v:1300000,nat:"Uruguay"},
-      {n:"Emiliano Gómez",num:11,p:"FW",q:"SA",a:24,o:67,t:68,v:2500000,nat:"Uruguay"},
       {n:"Iker Moreno",num:12,p:"DF",q:"LD",a:22,o:65,t:69,v:1000000,nat:"Mexico"},
       {n:"Eduardo Navarro",num:13,p:"DF",q:"ZAG",a:22,o:64,t:68,v:1500000,nat:"Mexico"},
       {n:"Óscar Villa",num:15,p:"DF",q:"LE",a:25,o:62,t:64,v:250000,nat:"Mexico"},
@@ -9799,7 +10004,9 @@
       {n:"Ricardo Gutiérrez",num:28,p:"GK",q:"GOL",a:29,o:64,t:69,v:1000000,nat:"Mexico"},
       {n:"Eduardo Mustre",num:29,p:"FW",q:"CA",a:23,o:61,t:67,v:25000,nat:"Mexico"},
       {n:"Jesús Rodríguez",num:33,p:"GK",q:"GOL",a:33,o:67,t:67,v:350000,nat:"Mexico"},
-      {n:"Lucas Camilo",num:34,p:"MF",q:"VOL",a:25,o:66,t:69,v:2000000,nat:"Brazil"}
+      {n:"Lucas Camilo",num:34,p:"MF",q:"VOL",a:25,o:66,t:69,v:2000000,nat:"Brazil"},
+      {n:"Heriberto Jurado",num:25,p:"FW",q:"PE",a:21,o:65,t:72,v:700000,nat:"Mexico"},
+      {n:"Eduardo Armenta",num:14,p:"MF",q:"MC",a:28,o:65,t:67,v:800000}
     ],
     "mx/Pumas UNAM": [
       {n:"Keylor Navas",num:1,p:"GK",q:"GOL",a:39,o:76,t:76,v:1000000,nat:"Costa Rica"},
@@ -9808,7 +10015,6 @@
       {n:"Nathan",num:6,p:"DF",q:"ZAG",a:30,o:72,t:72,v:4000000,nat:"Brazil"},
       {n:"Rodrigo López",num:7,p:"MF",q:"MC",a:24,o:70,t:70,v:3500000,nat:"Mexico"},
       {n:"Adalberto Carrasquilla",num:8,p:"MF",q:"MC",a:27,o:74,t:75,v:4000000,nat:"Panama"},
-      {n:"Guillermo Martínez",num:9,p:"FW",q:"CA",a:31,o:72,t:72,v:1500000,nat:"Mexico"},
       {n:"César Huerta",num:10,p:"FW",q:"PE",a:25,o:73,t:75,v:3500000,nat:"Mexico"},
       {n:"José Juan Macías",num:11,p:"FW",q:"CA",a:26,o:70,t:72,v:3000000,nat:"Mexico"},
       {n:"Cristian Calderón",num:12,p:"DF",q:"LE",a:29,o:70,t:70,v:1500000,nat:"Mexico"},
@@ -9868,7 +10074,6 @@
       {n:"Salvador Mariscal",num:8,p:"MF",q:"VOL",a:23,o:67,t:71,v:1200000,nat:"Mexico"},
       {n:"Lucas Di Yorio",num:9,p:"FW",q:"CA",a:29,o:73,t:73,v:2000000,nat:"Argentina"},
       {n:"Ezequiel Bullaude",num:10,p:"MF",q:"MEI",a:25,o:69,t:72,v:4000000,nat:"Argentina"},
-      {n:"Carlos Gruezo",num:11,p:"MF",q:"VOL",a:31,o:72,t:72,v:1000000,nat:"Ecuador"},
       {n:"Efraín Orona",num:14,p:"DF",q:"ZAG",a:27,o:68,t:68,v:1000000,nat:"Mexico"},
       {n:"Joshua Mancha",num:15,p:"MF",q:"MEI",a:21,o:66,t:68,v:1500000,nat:"Mexico"},
       {n:"Emmanuel Echeverría",num:17,p:"DF",q:"LE",a:22,o:66,t:72,v:1500000,nat:"Mexico"},
@@ -9884,7 +10089,7 @@
       {n:"Tahiel Jiménez",num:29,p:"FW",q:"CA",a:20,o:65,t:71,v:1000000,nat:"Mexico"},
       {n:"Héctor Holguín",num:33,p:"GK",q:"GOL",a:25,o:64,t:68,v:350000,nat:"Mexico"},
       {n:"Kevin Palacios",num:77,p:"FW",q:"PE",a:26,o:68,t:70,v:800000,nat:"Colombia"},
-      {n:"Facundo Cáseres",num:0,p:"MF",q:"MC",a:25,o:69,t:71,v:2500000,nat:"Argentina"}
+      {n:"Facundo Cáseres",num:23,p:"MF",q:"MC",a:25,o:69,t:71,v:2500000,nat:"Argentina"}
     ],
     "mx/Tigres UANL": [
       {n:"Nahuel Guzmán",num:1,p:"GK",q:"GOL",a:40,o:74,t:74,v:900000,nat:"Argentina"},
@@ -9912,7 +10117,10 @@
       {n:"Rafael Guerrero",num:33,p:"DF",q:"ZAG",a:23,o:61,t:69,v:1000000,nat:"Mexico"},
       {n:"Henrique Simeone",num:34,p:"MF",q:"VOL",a:19,o:62,t:70,v:25000,nat:"Mexico"},
       {n:"Osvaldo Rodríguez",num:35,p:"DF",q:"LE",a:30,o:61,t:69,v:1500000,nat:"Mexico"},
-      {n:"Ozziel Herrera",num:77,p:"FW",q:"PD",a:25,o:71,t:73,v:6500000,nat:"Mexico"}
+      {n:"Ozziel Herrera",num:77,p:"FW",q:"PD",a:25,o:71,t:73,v:6500000,nat:"Mexico"},
+      {n:"Emiliano Gómez",num:9,p:"FW",q:"SA",a:24,o:67,t:68,v:2500000,nat:"Uruguay"},
+      {n:"Guillermo Martínez",num:22,p:"FW",q:"CA",a:31,o:72,t:72,v:1500000,nat:"Mexico"},
+      {n:"Jaidyn Contreras",num:29,p:"MF",q:"VOL",a:22,o:62,t:67,v:800000}
     ],
     "mx/Tijuana": [
       {n:"José Antonio Rodríguez",num:2,p:"GK",q:"GOL",a:34,o:71,t:71,v:650000,nat:"Mexico"},
@@ -9996,7 +10204,8 @@
       {n:"Matěj Šín",num:33,p:"MF",q:"MC",a:22,o:62,t:68,v:1000000,nat:"Czech Republic"},
       {n:"Sanyika Bergtop",num:35,p:"DF",q:"LD",a:20,o:55,t:63,v:50000,nat:"Suriname"},
       {n:"Yannick Eduardo",num:46,p:"FW",q:"CA",a:20,o:57,t:65,v:2500000,nat:"Czech Republic"},
-      {n:"Donát Bárány",num:77,p:"FW",q:"CA",a:26,o:63,t:65,v:800000,nat:"Hungary"}
+      {n:"Donát Bárány",num:77,p:"FW",q:"CA",a:26,o:63,t:65,v:800000,nat:"Hungary"},
+      {n:"Álex Pozo",num:24,p:"FW",q:"PE",a:25,o:61,t:63,v:800000}
     ],
     "nl/Ajax": [
       {n:"Marc-André ter Stegen",num:1,p:"GK",q:"GOL",a:34,o:86,t:86,v:3000000,nat:"Germany"},
@@ -10025,7 +10234,8 @@
       {n:"Marcos Leonardo",num:38,p:"FW",q:"CA",a:23,o:79,t:83,v:20000000,nat:"Brazil"},
       {n:"Rayane Bounida",num:43,p:"FW",q:"CA",a:20,o:67,t:75,v:5000000,nat:"Morocco"},
       {n:"Abdellah Ouazane",num:68,p:"MF",q:"MEI",a:17,o:65,t:74,v:1500000,nat:"Morocco"},
-      {n:"Tolu Arokodare",num:99,p:"FW",q:"CA",a:25,o:73,t:76,v:20000000,nat:"Nigeria"}
+      {n:"Tolu Arokodare",num:99,p:"FW",q:"CA",a:25,o:73,t:76,v:20000000,nat:"Nigeria"},
+      {n:"Yves Bissouma",num:28,p:"MF",q:"VOL",a:23,o:72,t:77,v:4000000}
     ],
     "nl/AZ Alkmaar": [
       {n:"Rome-Jayden Owusu-Oduro",num:1,p:"GK",q:"GOL",a:22,o:71,t:77,v:6000000,nat:"Netherlands"},
@@ -10071,7 +10281,6 @@
       {n:"Jan Plug",num:14,p:"DF",q:"ZAG",a:21,o:63,t:65,v:700000,nat:"Netherlands"},
       {n:"Simon Janssen",num:15,p:"DF",q:"ZAG",a:25,o:66,t:69,v:2000000,nat:"Netherlands"},
       {n:"Celton Biai",num:16,p:"GK",q:"GOL",a:26,o:64,t:67,v:550000,nat:"Guinea-Bissau"},
-      {n:"Nolan Martens",num:17,p:"DF",q:"ZAG",a:26,o:63,t:65,v:1000000,nat:"Belgium"},
       {n:"Valentin Sulzbacher",num:18,p:"MF",q:"MC",a:21,o:64,t:66,v:1000000,nat:"Austria"},
       {n:"David Garden",num:19,p:"FW",q:"CA",a:22,o:65,t:71,v:350000,nat:"Netherlands"},
       {n:"Lennard Hartjes",num:20,p:"MF",q:"MC",a:23,o:64,t:68,v:800000,nat:"Netherlands"},
@@ -10080,12 +10289,12 @@
       {n:"Guilliano Cairo",num:24,p:"DF",q:"ZAG",a:22,o:64,t:70,v:75000,nat:"Netherlands"},
       {n:"Marlon van de Wetering",num:25,p:"DF",q:"LD",a:18,o:61,t:67,v:175000,nat:"Jamaica"},
       {n:"Nesto Groen",num:28,p:"FW",q:"CA",a:22,o:59,t:65,v:100000,nat:"Netherlands"},
-      {n:"Alireza Jahanbakhsh",num:30,p:"FW",q:"PD",a:33,o:70,t:70,v:500000,nat:"Iran"},
+      {n:"Alireza Jahanbakhsh",num:11,p:"FW",q:"PD",a:33,o:70,t:70,v:500000,nat:"Iran"},
       {n:"Tijmen Holla",num:40,p:"GK",q:"GOL",a:22,o:63,t:69,v:75000,nat:"Netherlands"},
-      {n:"Eric da Silva Moreira",num:0,p:"DF",q:"LD",a:20,o:61,t:69,v:800000,nat:"Germany"},
-      {n:"Mathijs Tielemans",num:0,p:"MF",q:"MC",a:24,o:68,t:70,v:2500000,nat:"Netherlands"},
+      {n:"Eric da Silva Moreira",num:2,p:"DF",q:"LD",a:20,o:61,t:69,v:800000,nat:"Germany"},
       {n:"Zach Booth",num:0,p:"MF",q:"MC",a:22,o:63,t:69,v:1500000,nat:"USA"},
-      {n:"Jerolldino Bergraaf",num:0,p:"FW",q:"CA",a:20,o:65,t:67,v:1500000,nat:"Netherlands"}
+      {n:"Jerolldino Bergraaf",num:0,p:"FW",q:"CA",a:20,o:65,t:67,v:1500000,nat:"Netherlands"},
+      {n:"Ágúst Orri Þorsteinsson",num:30,p:"FW",q:"CA",a:23,o:63,t:68,v:1000000}
     ],
     "nl/Feyenoord": [
       {n:"Tjark Ernst",num:1,p:"GK",q:"GOL",a:23,o:69,t:73,v:4000000,nat:"Germany"},
@@ -10138,10 +10347,10 @@
       {n:"Lequincio Zeefuik",num:25,p:"FW",q:"CA",a:21,o:64,t:70,v:850000,nat:"Netherlands"},
       {n:"Justin Hubner",num:28,p:"DF",q:"ZAG",a:22,o:70,t:76,v:1000000,nat:"Netherlands"},
       {n:"Mattijs Branderhorst",num:31,p:"GK",q:"GOL",a:32,o:71,t:71,v:800000,nat:"Netherlands"},
-      {n:"Kaylen",num:33,p:"GK",q:"GOL",a:20,o:58,t:66,v:450000,nat:"Germany"},
       {n:"Moussa Gbemou",num:38,p:"MF",q:"MC",a:20,o:59,t:67,v:200000,nat:"Belgium"},
       {n:"Iván Márquez",num:44,p:"DF",q:"ZAG",a:32,o:69,t:69,v:1500000,nat:"Spain"},
-      {n:"Mohamed Ihattaren",num:52,p:"MF",q:"MEI",a:24,o:71,t:75,v:3000000,nat:"Morocco"}
+      {n:"Mohamed Ihattaren",num:52,p:"MF",q:"MEI",a:24,o:71,t:75,v:3000000,nat:"Morocco"},
+      {n:"Kaylen Reitmaier",num:33,p:"GK",q:"GOL",a:24,o:65,t:70,v:800000}
     ],
     "nl/Go Ahead Eagles": [
       {n:"Kjetil Haug",num:1,p:"GK",q:"GOL",a:28,o:70,t:71,v:400000,nat:"Norway"},
@@ -10169,7 +10378,10 @@
       {n:"Ofosu Boakye",num:32,p:"FW",q:"CA",a:19,o:57,t:66,v:75000,nat:"Ghana"},
       {n:"Nando Verdoni",num:33,p:"GK",q:"GOL",a:23,o:58,t:62,v:25000,nat:"Netherlands"},
       {n:"Yassir Salah Rahmouni",num:34,p:"MF",q:"MC",a:20,o:61,t:69,v:450000,nat:"Netherlands"},
-      {n:"Tino Jukić",num:0,p:"DF",q:"ZAG",a:26,o:67,t:69,v:500000,nat:"Croatia"}
+      {n:"Tino Jukić",num:6,p:"DF",q:"ZAG",a:26,o:67,t:69,v:500000,nat:"Croatia"},
+      {n:"Thomas Hulleman",num:30,p:"GK",q:"GOL",a:24,o:64,t:69,v:1000000},
+      {n:"Dani Tijman",num:31,p:"DF",q:"ZAG",a:25,o:61,t:63,v:800000},
+      {n:"Terence Lantveld",num:35,p:"DF",q:"ZAG",a:22,o:61,t:66,v:900000}
     ],
     "nl/Groningen": [
       {n:"Etienne Vaessen",num:1,p:"GK",q:"GOL",a:31,o:70,t:70,v:2500000,nat:"Suriname"},
@@ -10196,7 +10408,8 @@
       {n:"Tyrique Mercera",num:29,p:"DF",q:"ZAG",a:22,o:62,t:68,v:1000000,nat:"Netherlands"},
       {n:"Rijk Janse",num:31,p:"GK",q:"GOL",a:20,o:58,t:66,v:450000,nat:"Netherlands"},
       {n:"Ryan Metu",num:34,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Netherlands"},
-      {n:"Noam Emeran",num:0,p:"FW",q:"CA",a:23,o:67,t:70,v:2500000,nat:"Netherlands"}
+      {n:"Pelle Boevink",num:30,p:"GK",q:"GOL",a:21,o:65,t:73,v:1500000},
+      {n:"Hans Hateboer",num:33,p:"DF",q:"ZAG",a:20,o:65,t:73,v:2000000}
     ],
     "nl/Heerenveen": [
       {n:"Mees Hilgers",num:2,p:"DF",q:"ZAG",a:25,o:73,t:76,v:5000000,nat:"Netherlands"},
@@ -10226,10 +10439,8 @@
     ],
     "nl/NEC Nijmegen": [
       {n:"Gonzalo Crettaz",num:1,p:"GK",q:"GOL",a:26,o:70,t:71,v:4000000,nat:"Spain"},
-      {n:"Brayann Pereira",num:2,p:"DF",q:"LD",a:23,o:67,t:71,v:2500000,nat:"France"},
       {n:"Philippe Sandler",num:3,p:"DF",q:"ZAG",a:29,o:74,t:74,v:2000000,nat:"Netherlands"},
       {n:"Perr Schuurs",num:4,p:"DF",q:"ZAG",a:26,o:77,t:79,v:850000,nat:"Netherlands"},
-      {n:"Thomas Ouwejan",num:5,p:"DF",q:"LE",a:29,o:69,t:69,v:1500000,nat:"Netherlands"},
       {n:"Darko Nejašmić",num:6,p:"MF",q:"VOL",a:27,o:71,t:72,v:3500000,nat:"Croatia"},
       {n:"Emre Mor",num:7,p:"FW",q:"PD",a:29,o:73,t:73,v:4000000,nat:"Turkey"},
       {n:"Isak Hansen-Aarøen",num:8,p:"MF",q:"MEI",a:22,o:62,t:68,v:1000000,nat:"Norway"},
@@ -10239,21 +10450,24 @@
       {n:"Nikolas Polster",num:12,p:"GK",q:"GOL",a:24,o:68,t:73,v:2000000,nat:"Austria"},
       {n:"Kaj Sierhuis",num:14,p:"FW",q:"SA",a:28,o:69,t:69,v:2500000,nat:"Netherlands"},
       {n:"Bram Nuytinck",num:17,p:"DF",q:"ZAG",a:36,o:69,t:69,v:700000,nat:"Netherlands"},
-      {n:"Kōki Ogawa",num:18,p:"FW",q:"CA",a:29,o:68,t:68,v:2000000,nat:"Japan"},
       {n:"Adam Tahaui",num:19,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Morocco"},
       {n:"Noé Lebreton",num:20,p:"MF",q:"MEI",a:22,o:67,t:69,v:4000000,nat:"France"},
       {n:"Tobias Storm",num:21,p:"DF",q:"ZAG",a:22,o:66,t:68,v:1200000,nat:"Denmark"},
       {n:"Deveron Fonville",num:24,p:"DF",q:"MD",a:23,o:68,t:70,v:2500000,nat:"Curaçao"},
       {n:"Sam de Laat",num:26,p:"MF",q:"MC",a:20,o:59,t:67,v:75000,nat:"Netherlands"},
       {n:"Bryan Linssen",num:30,p:"FW",q:"CA",a:35,o:69,t:69,v:700000,nat:"Netherlands"},
-      {n:"Vito van Crooij",num:32,p:"MF",q:"MC",a:30,o:69,t:69,v:1500000,nat:"Netherlands"},
       {n:"Kevin Kers",num:34,p:"FW",q:"PE",a:20,o:60,t:68,v:1000000,nat:"Netherlands"},
       {n:"Jamiro Monteiro",num:35,p:"MF",q:"MC",a:32,o:69,t:69,v:650000,nat:"Cape Verde"},
       {n:"Freek Entius",num:36,p:"GK",q:"GOL",a:20,o:58,t:66,v:450000,nat:"Netherlands"},
       {n:"Merijn van de Wiel",num:37,p:"MF",q:"VOL",a:20,o:60,t:68,v:100000,nat:"Netherlands"},
       {n:"Almugera Kabar",num:66,p:"DF",q:"ZAG",a:20,o:64,t:72,v:3000000,nat:"Germany"},
       {n:"Clement Bischoff",num:99,p:"FW",q:"PE",a:20,o:68,t:75,v:3000000,nat:"Denmark"},
-      {n:"Dennis Geiger",num:0,p:"MF",q:"MC",a:28,o:73,t:73,v:1000000,nat:"Germany"}
+      {n:"Dennis Geiger",num:18,p:"MF",q:"MC",a:28,o:73,t:73,v:1000000,nat:"Germany"},
+      {n:"Ahmetcan Kaplan",num:22,p:"DF",q:"LE",a:24,o:68,t:73,v:1400000},
+      {n:"Joep Geneste",num:38,p:"GK",q:"GOL",a:23,o:66,t:71,v:1500000},
+      {n:"Yassin Moslih",num:42,p:"DF",q:"LE",a:24,o:67,t:72,v:1200000},
+      {n:"Gabriel Brás",num:73,p:"DF",q:"LE",a:25,o:60,t:62,v:500000},
+      {n:"Ayodele Thomas",num:77,p:"FW",q:"SA",a:21,o:62,t:70,v:800000}
     ],
     "nl/PEC Zwolle": [
       {n:"Jasper Schendelaar",num:1,p:"GK",q:"GOL",a:26,o:72,t:75,v:1500000,nat:"Netherlands"},
@@ -10278,7 +10492,10 @@
       {n:"Damian van der Haar",num:33,p:"DF",q:"LE",a:22,o:65,t:71,v:400000,nat:"Netherlands"},
       {n:"Nick Fichtinger",num:34,p:"MF",q:"VOL",a:22,o:65,t:71,v:350000,nat:"Netherlands"},
       {n:"Givaro Rahajaän",num:38,p:"MF",q:"MC",a:18,o:59,t:69,v:100000,nat:"Netherlands"},
-      {n:"Duke Verduin",num:41,p:"GK",q:"GOL",a:23,o:57,t:61,v:25000,nat:"Netherlands"}
+      {n:"Duke Verduin",num:41,p:"GK",q:"GOL",a:23,o:57,t:61,v:25000,nat:"Netherlands"},
+      {n:"Filip Krastev",num:50,p:"MF",q:"MC",a:24,o:66,t:70,v:2000000,nat:"Bulgaria"},
+      {n:"Sydney van Hooijdonk",num:17,p:"FW",q:"CA",a:23,o:66,t:71,v:1500000},
+      {n:"Gilles van der Wal",num:37,p:"MF",q:"VOL",a:23,o:63,t:68,v:1000000}
     ],
     "nl/PSV": [
       {n:"Nick Olij",num:1,p:"GK",q:"GOL",a:31,o:77,t:77,v:2000000,nat:"Netherlands"},
@@ -10337,7 +10554,10 @@
       {n:"Wiebe Kooistra",num:27,p:"DF",q:"LD",a:20,o:58,t:64,v:200000,nat:"Netherlands"},
       {n:"Morgan Costarelli",num:28,p:"DF",q:"LE",a:22,o:58,t:64,v:300000,nat:"France"},
       {n:"Iwan Henstra",num:29,p:"FW",q:"PD",a:19,o:60,t:66,v:225000,nat:"Netherlands"},
-      {n:"Mathieu Maertens",num:33,p:"MF",q:"MEI",a:31,o:69,t:69,v:600000,nat:"Belgium"}
+      {n:"Mathieu Maertens",num:33,p:"MF",q:"MEI",a:31,o:69,t:69,v:600000,nat:"Belgium"},
+      {n:"Jason Çeka",num:30,p:"MF",q:"MC",a:26,o:65,t:67,v:1500000,nat:"Germany"},
+      {n:"Wout Asselman",num:5,p:"MF",q:"VOL",a:26,o:62,t:64,v:500000},
+      {n:"Luca Plogmann",num:22,p:"GK",q:"GOL",a:26,o:61,t:63,v:800000}
     ],
     "nl/Sparta Rotterdam": [
       {n:"Filip Bednarek",num:0,p:"GK",q:"GOL",a:33,o:65,t:65,v:200000,nat:"Poland"},
@@ -10364,7 +10584,8 @@
       {n:"Nökkvi Þeyr Þórisson",num:0,p:"FW",q:"CA",a:27,o:69,t:70,v:2500000,nat:"Iceland"},
       {n:"Mitchell van Bergen",num:0,p:"FW",q:"PD",a:27,o:69,t:70,v:1500000,nat:"Netherlands"},
       {n:"Milan Zonneveld",num:0,p:"FW",q:"CA",a:22,o:68,t:70,v:450000,nat:"Netherlands"},
-      {n:"Andrej Kostić",num:0,p:"FW",q:"CA",a:19,o:67,t:75,v:5000000,nat:"Montenegro"}
+      {n:"Andrej Kostić",num:0,p:"FW",q:"CA",a:19,o:67,t:75,v:5000000,nat:"Montenegro"},
+      {n:"Isaac Babadi",p:"MF",q:"VOL",a:28,o:67,t:69,v:900000}
     ],
     "nl/Telstar": [
       {n:"Ronald Koeman Jr.",num:1,p:"GK",q:"GOL",a:31,o:65,t:65,v:700000,nat:"Netherlands"},
@@ -10391,8 +10612,9 @@
       {n:"Patrick Brouwer",num:27,p:"MF",q:"MEI",a:25,o:61,t:64,v:750000,nat:"Netherlands"},
       {n:"Rojendro Oudsten",num:28,p:"MF",q:"MC",a:22,o:60,t:66,v:100000,nat:"Suriname"},
       {n:"Marvin Peersman",num:43,p:"DF",q:"ZAG",a:35,o:68,t:68,v:250000,nat:"Belgium"},
-      {n:"Nökkvi Þeyr Þórisson",num:0,p:"FW",q:"CA",a:27,o:67,t:68,v:2000000,nat:"Iceland"},
-      {n:"Ar'jany Martha",num:0,p:"FW",q:"PD",a:23,o:64,t:68,v:700000,nat:"Curaçao"}
+      {n:"Nökkvi Þeyr Þórisson",num:11,p:"FW",q:"CA",a:27,o:67,t:68,v:2000000,nat:"Iceland"},
+      {n:"Ar'jany Martha",num:42,p:"FW",q:"PD",a:23,o:64,t:68,v:700000,nat:"Curaçao"},
+      {n:"Harrie Kuster",num:14,p:"MF",q:"MEI",a:24,o:64,t:68,v:1500000,nat:"Netherlands"}
     ],
     "nl/Twente": [
       {n:"Lars Unnerstall",num:1,p:"GK",q:"GOL",a:36,o:78,t:78,v:1000000,nat:"Germany"},
@@ -10406,8 +10628,7 @@
       {n:"Kristian Hlynsson",num:14,p:"MF",q:"MC",a:22,o:68,t:74,v:3000000,nat:"Iceland"},
       {n:"Joël Drommel",num:16,p:"GK",q:"GOL",a:29,o:72,t:72,v:4000000,nat:"Netherlands"},
       {n:"Filip Thorvaldsen",num:17,p:"FW",q:"PD",a:20,o:67,t:73,v:2000000,nat:"Norway"},
-      {n:"Harrie Kuster",num:18,p:"MF",q:"MEI",a:24,o:64,t:68,v:1500000,nat:"Netherlands"},
-      {n:"Younes Taha",num:19,p:"FW",q:"PD",a:23,o:67,t:71,v:4000000,nat:"Morocco"},
+      {n:"Younes Taha",num:10,p:"FW",q:"PD",a:23,o:67,t:71,v:4000000,nat:"Morocco"},
       {n:"Thomas van den Belt",num:20,p:"MF",q:"MC",a:25,o:70,t:72,v:4500000,nat:"Netherlands"},
       {n:"Remko Pasveer",num:22,p:"GK",q:"GOL",a:42,o:75,t:75,v:100000,nat:"Netherlands"},
       {n:"Stav Lemkin",num:23,p:"DF",q:"ZAG",a:23,o:68,t:72,v:3000000,nat:"Israel"},
@@ -10417,14 +10638,14 @@
       {n:"Bart van Rooij",num:28,p:"DF",q:"LD",a:25,o:74,t:76,v:10000000,nat:"Netherlands"},
       {n:"Aske Adelgaard",num:29,p:"DF",q:"LE",a:22,o:65,t:69,v:1000000,nat:"Denmark"},
       {n:"Yannick Gerritsen",num:31,p:"GK",q:"GOL",a:20,o:62,t:70,v:50000,nat:"Netherlands"},
-      {n:"Arno Verschueren",num:32,p:"MF",q:"MC",a:29,o:70,t:71,v:3000000,nat:"Belgium"},
       {n:"Naci Ünüvar",num:37,p:"FW",q:"PE",a:23,o:68,t:72,v:1000000,nat:"Turkey"},
       {n:"Max Bruns",num:38,p:"DF",q:"ZAG",a:23,o:69,t:72,v:1500000,nat:"Netherlands"},
       {n:"Gijs Besselink",num:41,p:"MF",q:"MC",a:22,o:63,t:71,v:600000,nat:"Netherlands"},
-      {n:"Daouda Weidmann",num:42,p:"MF",q:"MC",a:23,o:65,t:71,v:750000,nat:"France"},
-      {n:"Ruud Nijstad",num:43,p:"DF",q:"ZAG",a:18,o:62,t:70,v:10000000,nat:"Netherlands"},
-      {n:"Issam El Maach",num:52,p:"GK",q:"GOL",a:26,o:63,t:67,v:800000,nat:"Morocco"},
-      {n:"Sayfallah Ltaief",num:0,p:"FW",q:"CA",a:26,o:69,t:71,v:2500000,nat:"Tunisia"}
+      {n:"Daouda Weidmann",num:8,p:"MF",q:"MC",a:23,o:65,t:71,v:750000,nat:"France"},
+      {n:"Ruud Nijstad",num:4,p:"DF",q:"ZAG",a:18,o:62,t:70,v:10000000,nat:"Netherlands"},
+      {n:"Michał Rosiak",num:2,p:"DF",q:"ZAG",a:26,o:73,t:75,v:4500000},
+      {n:"Jordy Bawuah",num:18,p:"MF",q:"VOL",a:23,o:68,t:73,v:2000000},
+      {n:"Juliën Mesbahi",num:44,p:"MF",q:"MC",a:23,o:67,t:72,v:1800000}
     ],
     "nl/Utrecht": [
       {n:"Vasilis Barkas",num:1,p:"GK",q:"GOL",a:32,o:73,t:73,v:3000000,nat:"Greece"},
@@ -10454,7 +10675,9 @@
       {n:"Oualid Agougil",num:38,p:"MF",q:"VOL",a:21,o:62,t:70,v:500000,nat:"Morocco"},
       {n:"Nordin Amrabat",num:39,p:"FW",q:"PD",a:39,o:66,t:66,v:100000,nat:"Morocco"},
       {n:"Emmanuel Chigozie Owen",num:47,p:"FW",q:"PD",a:20,o:63,t:71,v:350000,nat:"Germany"},
-      {n:"Arthur Zagré",num:92,p:"DF",q:"LE",a:24,o:62,t:70,v:2000000,nat:"Burkina Faso"}
+      {n:"Arthur Zagré",num:92,p:"DF",q:"LE",a:24,o:62,t:70,v:2000000,nat:"Burkina Faso"},
+      {n:"Marius Broholm",num:80,p:"FW",q:"CA",a:21,o:69,t:75,v:6000000,nat:"Norway"},
+      {n:"Sergio Padt",num:22,p:"GK",q:"GOL",a:25,o:68,t:70,v:1400000}
     ],
     "nl/Willem II": [
       {n:"Thomas Didillon-Hödl",num:1,p:"GK",q:"GOL",a:30,o:69,t:69,v:950000,nat:"France"},
@@ -10480,7 +10703,12 @@
       {n:"Amine Lachkar",num:34,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Netherlands"},
       {n:"Eser Gürbüz",num:50,p:"FW",q:"PD",a:19,o:60,t:69,v:600000,nat:"Netherlands"},
       {n:"Mats Lemmens",num:83,p:"DF",q:"ZAG",a:20,o:56,t:64,v:500000,nat:"Belgium"},
-      {n:"Tonny Vilhena",num:0,p:"MF",q:"MC",a:31,o:72,t:72,v:500000,nat:"Netherlands"}
+      {n:"Tonny Vilhena",num:52,p:"MF",q:"MC",a:31,o:72,t:72,v:500000,nat:"Netherlands"},
+      {n:"Vito van Crooij",num:32,p:"MF",q:"MC",a:30,o:69,t:69,v:1500000,nat:"Netherlands"},
+      {n:"Calvin Twigt",num:6,p:"MF",q:"MC",a:24,o:67,t:72,v:1200000},
+      {n:"Chido Obi",num:17,p:"FW",q:"PE",a:28,o:66,t:68,v:800000},
+      {n:"Thijs Muller",num:20,p:"MF",q:"VOL",a:28,o:67,t:69,v:900000},
+      {n:"Maxime Delanghe",num:26,p:"GK",q:"GOL",a:22,o:60,t:65,v:600000}
     ],
     "pt/Académico de Viseu": [
       {n:"Marcos Lavín",num:1,p:"GK",q:"GOL",a:30,o:65,t:67,v:200000,nat:"Spain"},
@@ -10492,7 +10720,6 @@
       {n:"Cihan Kahraman",num:8,p:"MF",q:"MEI",a:27,o:63,t:65,v:800000,nat:"Turkey"},
       {n:"Mohamed Bouldini",num:9,p:"FW",q:"CA",a:30,o:66,t:66,v:400000,nat:"Morocco"},
       {n:"Álvaro Zamora",num:10,p:"FW",q:"PE",a:24,o:65,t:68,v:1600000,nat:"Costa Rica"},
-      {n:"Dominik Steczyk",num:11,p:"FW",q:"CA",a:27,o:63,t:65,v:1000000,nat:"Poland"},
       {n:"Juan Soriano",num:12,p:"GK",q:"GOL",a:29,o:75,t:75,v:800000,nat:"Spain"},
       {n:"Soufiane Messeguem",num:14,p:"MF",q:"MC",a:25,o:65,t:68,v:1500000,nat:"Germany"},
       {n:"Valery Fernández",num:17,p:"FW",q:"PD",a:26,o:66,t:68,v:600000,nat:"Spain"},
@@ -10514,7 +10741,7 @@
       {n:"Paulinho",num:77,p:"FW",q:"CA",a:26,o:65,t:67,v:300000,nat:"Portugal"},
       {n:"Raphael Nunes",num:80,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Brazil"},
       {n:"Ewerton",num:98,p:"GK",q:"GOL",a:20,o:56,t:64,v:250000,nat:"Brazil"},
-      {n:"Hugo Gambor",num:0,p:"DF",q:"ZAG",a:23,o:64,t:67,v:1200000,nat:"Portugal"}
+      {n:"Hugo Gambor",num:82,p:"DF",q:"ZAG",a:23,o:64,t:67,v:1200000,nat:"Portugal"}
     ],
     "pt/Alverca": [
       {n:"Noah Raveyre",num:1,p:"GK",q:"GOL",a:21,o:59,t:66,v:1500000,nat:"France"},
@@ -10548,7 +10775,9 @@
       {n:"Tiago Octávio",num:90,p:"MF",q:"MC",a:20,o:61,t:69,v:1000000,nat:"Portugal"},
       {n:"Jhonatan",num:91,p:"GK",q:"GOL",a:35,o:60,t:68,v:150000,nat:"Brazil"},
       {n:"Zé Rafael",num:93,p:"MF",q:"MC",a:33,o:68,t:68,v:1500000,nat:"Brazil"},
-      {n:"Matheus França",num:0,p:"FW",q:"SA",a:22,o:67,t:69,v:6000000,nat:"Brazil"}
+      {n:"Matheus França",num:26,p:"FW",q:"SA",a:22,o:67,t:69,v:6000000,nat:"Brazil"},
+      {n:"Dawda Camara",num:19,p:"FW",q:"CA",a:27,o:66,t:68,v:1000000},
+      {n:"Óscar Torrellas",num:77,p:"DF",q:"LE",a:22,o:64,t:69,v:1000000}
     ],
     "pt/Arouca": [
       {n:"Jakub Vinarčík",num:1,p:"GK",q:"GOL",a:21,o:60,t:67,v:300000,nat:"Slovakia"},
@@ -10575,9 +10804,8 @@
       {n:"Mario Climent",num:37,p:"DF",q:"LE",a:24,o:59,t:67,v:800000,nat:"Spain"},
       {n:"Martim Duarte",num:71,p:"GK",q:"GOL",a:20,o:59,t:67,v:550000,nat:"Portugal"},
       {n:"Park Si-hoo",num:77,p:"FW",q:"PE",a:20,o:61,t:69,v:175000,nat:"South Korea"},
-      {n:"Batata",num:87,p:"FW",q:"CA",a:27,o:68,t:69,v:2000000,nat:"Portugal"},
       {n:"Pedro Santos",num:89,p:"MF",q:"MC",a:25,o:60,t:68,v:600000,nat:"Portugal"},
-      {n:"Gabriel Rukavina",num:0,p:"FW",q:"PE",a:22,o:66,t:68,v:500000,nat:"Croatia"}
+      {n:"Gabriel Rukavina",num:20,p:"FW",q:"PE",a:22,o:66,t:68,v:500000,nat:"Croatia"}
     ],
     "pt/Benfica": [
       {n:"Anatoliy Trubin",num:1,p:"GK",q:"GOL",a:25,o:80,t:82,v:25000000,nat:"Ukraine"},
@@ -10585,7 +10813,6 @@
       {n:"Alessandro Circati",num:3,p:"DF",q:"ZAG",a:22,o:71,t:75,v:18000000,nat:"Australia"},
       {n:"Enzo Barrenechea",num:5,p:"MF",q:"VOL",a:25,o:77,t:80,v:12000000,nat:"Argentina"},
       {n:"Alexander Bah",num:6,p:"DF",q:"LD",a:28,o:78,t:79,v:7000000,nat:"Denmark"},
-      {n:"Bruma",num:7,p:"FW",q:"PE",a:31,o:78,t:78,v:3000000,nat:"Portugal"},
       {n:"Fredrik Aursnes",num:8,p:"MF",q:"MC",a:30,o:80,t:80,v:15000000,nat:"Norway"},
       {n:"Heorhiy Sudakov",num:10,p:"MF",q:"MEI",a:24,o:80,t:84,v:25000000,nat:"Ukraine"},
       {n:"Dodi Lukébakio",num:11,p:"FW",q:"PD",a:28,o:82,t:82,v:15000000,nat:"Belgium"},
@@ -10606,7 +10833,8 @@
       {n:"Diogo Ferreira",num:50,p:"GK",q:"GOL",a:19,o:64,t:73,v:3500000,nat:"Portugal"},
       {n:"Daniel Banjaqui",num:58,p:"DF",q:"LD",a:18,o:63,t:71,v:5000000,nat:"Portugal"},
       {n:"José Neto",num:62,p:"DF",q:"LE",a:18,o:63,t:71,v:3000000,nat:"Portugal"},
-      {n:"Anísio Cabral",num:72,p:"FW",q:"CA",a:18,o:67,t:75,v:5000000,nat:"Portugal"}
+      {n:"Anísio Cabral",num:72,p:"FW",q:"CA",a:18,o:67,t:75,v:5000000,nat:"Portugal"},
+      {n:"Claudio Echeverri",num:30,p:"MF",q:"MEI",a:20,o:74,t:82,v:54000000,nat:"Argentina"}
     ],
     "pt/Braga": [
       {n:"Víctor Gómez",num:2,p:"DF",q:"LD",a:26,o:76,t:78,v:10000000,nat:"Spain"},
@@ -10629,14 +10857,11 @@
       {n:"Denis Huseinbašić",num:23,p:"MF",q:"MC",a:25,o:72,t:74,v:2000000,nat:"Bosnia"},
       {n:"Bright Arrey-Mbi",num:26,p:"DF",q:"ZAG",a:23,o:71,t:75,v:6000000,nat:"Germany"},
       {n:"Jean-Baptiste Gorby",num:29,p:"MF",q:"MC",a:24,o:71,t:74,v:9000000,nat:"France"},
-      {n:"Bernardo Fontes",num:31,p:"GK",q:"GOL",a:22,o:66,t:72,v:5000000,nat:"Brazil"},
       {n:"João Marques",num:33,p:"MF",q:"MC",a:24,o:64,t:72,v:3000000,nat:"Portugal"},
       {n:"Demir Ege Tıknaz",num:34,p:"MF",q:"VOL",a:22,o:72,t:78,v:8000000,nat:"Turkey"},
       {n:"Adrian Barišić",num:37,p:"DF",q:"ZAG",a:25,o:72,t:75,v:4000000,nat:"Bosnia"},
-      {n:"Yanis da Rocha",num:41,p:"DF",q:"ZAG",a:20,o:64,t:72,v:3000000,nat:"Portugal"},
       {n:"Adrian Bajrami",num:44,p:"DF",q:"ZAG",a:24,o:68,t:72,v:2500000,nat:"Switzerland"},
       {n:"Diego Rodrigues",num:50,p:"MF",q:"MC",a:21,o:64,t:71,v:5000000,nat:"Portugal"},
-      {n:"Jonatás Noro",num:53,p:"DF",q:"ZAG",a:20,o:63,t:71,v:2500000,nat:"Portugal"},
       {n:"João Aragão",num:73,p:"FW",q:"CA",a:18,o:65,t:73,v:3500000,nat:"Portugal"},
       {n:"Gabri Martínez",num:77,p:"MF",q:"PE",a:23,o:73,t:77,v:7000000,nat:"Spain"},
       {n:"João Carvalho",num:78,p:"GK",q:"GOL",a:22,o:61,t:67,v:1500000,nat:"Portugal"},
@@ -10670,8 +10895,7 @@
       {n:"Lawrence Ofori",num:80,p:"MF",q:"MC",a:28,o:71,t:72,v:1500000,nat:"Ghana"},
       {n:"Cassiano",num:90,p:"FW",q:"CA",a:37,o:62,t:70,v:150000,nat:"Brazil"},
       {n:"Ivan Mandić",num:95,p:"GK",q:"GOL",a:20,o:60,t:68,v:300000,nat:"Croatia"},
-      {n:"JP",num:98,p:"MF",q:"MC",a:21,o:61,t:69,v:2000000,nat:"Brazil"},
-      {n:"Lipe",num:0,p:"DF",q:"ZAG",a:24,o:67,t:69,v:2000000,nat:"Brazil"}
+      {n:"Lipe",num:44,p:"DF",q:"ZAG",a:24,o:67,t:69,v:2000000,nat:"Brazil"}
     ],
     "pt/Estoril": [
       {n:"Joel Robles",num:1,p:"GK",q:"GOL",a:36,o:73,t:73,v:350000,nat:"Spain"},
@@ -10701,10 +10925,11 @@
       {n:"Tiago Brito",num:90,p:"MF",q:"VOL",a:22,o:62,t:70,v:300000,nat:"Portugal"},
       {n:"Fabrício Garcia",num:98,p:"FW",q:"PD",a:25,o:60,t:68,v:400000,nat:"Cape Verde"},
       {n:"Rafik Guitane",num:99,p:"FW",q:"PD",a:27,o:73,t:74,v:5000000,nat:"Algeria"},
-      {n:"Axel Camblan",num:0,p:"FW",q:"PD",a:23,o:63,t:67,v:600000,nat:"France"},
-      {n:"Roko Jurišić",num:0,p:"DF",q:"LE",a:24,o:67,t:69,v:650000,nat:"Croatia"},
-      {n:"Xavi Sintes",num:0,p:"DF",q:"ZAG",a:25,o:68,t:70,v:400000,nat:"Spain"},
-      {n:"Nail Omerović",num:0,p:"FW",q:"PE",a:23,o:68,t:70,v:2000000,nat:"Bosnia"}
+      {n:"Axel Camblan",num:9,p:"FW",q:"PD",a:23,o:63,t:67,v:600000,nat:"France"},
+      {n:"Roko Jurišić",num:21,p:"DF",q:"LE",a:24,o:67,t:69,v:650000,nat:"Croatia"},
+      {n:"Xavi Sintes",num:6,p:"DF",q:"ZAG",a:25,o:68,t:70,v:400000,nat:"Spain"},
+      {n:"Nail Omerović",num:11,p:"FW",q:"PE",a:23,o:68,t:70,v:2000000,nat:"Bosnia"},
+      {n:"Israel Salazar",num:38,p:"FW",q:"SA",a:25,o:63,t:65,v:600000}
     ],
     "pt/Estrela Amadora": [
       {n:"Lucas Mincarelli",num:3,p:"DF",q:"LE",a:22,o:71,t:77,v:800000,nat:"France"},
@@ -10765,13 +10990,11 @@
       {n:"Patricio Salas",num:33,p:"FW",q:"CA",a:22,o:65,t:72,v:4000000,nat:"Mexico"},
       {n:"Matheus Mattara",num:36,p:"DF",q:"ZAG",a:20,o:62,t:70,v:1500000,nat:"Brazil"},
       {n:"Gonzalo Pastor",num:47,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Spain"},
-      {n:"Lamine Beye",num:54,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Senegal"},
       {n:"Georgios Koutsias",num:70,p:"FW",q:"CA",a:22,o:66,t:72,v:2000000,nat:"Greece"},
       {n:"Rudi Almeida",num:91,p:"FW",q:"CA",a:20,o:64,t:72,v:2000000,nat:"Portugal"}
     ],
     "pt/Gil Vicente": [
       {n:"André Picornell",num:1,p:"GK",q:"GOL",a:22,o:57,t:63,v:250000,nat:"Sweden"},
-      {n:"Ghislain Konan",num:3,p:"DF",q:"LE",a:30,o:72,t:72,v:2000000,nat:"Ivory Coast"},
       {n:"Marvin Elimbi",num:4,p:"DF",q:"ZAG",a:23,o:64,t:68,v:4000000,nat:"France"},
       {n:"Tidjany Touré",num:7,p:"FW",q:"PE",a:24,o:68,t:72,v:500000,nat:"France"},
       {n:"Mohamed Bamba",num:8,p:"MF",q:"VOL",a:21,o:70,t:74,v:4000000,nat:"Ivory Coast"},
@@ -10779,26 +11002,27 @@
       {n:"Santi García",num:10,p:"MF",q:"MEI",a:25,o:69,t:71,v:4000000,nat:"Spain"},
       {n:"Joelson Fernandes",num:11,p:"FW",q:"PE",a:23,o:69,t:73,v:1000000,nat:"Portugal"},
       {n:"Andreas Lausen",num:12,p:"MF",q:"MC",a:23,o:69,t:71,v:700000,nat:"Denmark"},
-      {n:"Gui Beleza",num:16,p:"MF",q:"MC",a:26,o:69,t:71,v:2500000,nat:"Portugal"},
       {n:"Sergio Bermejo",num:17,p:"FW",q:"PD",a:29,o:68,t:68,v:600000,nat:"Spain"},
       {n:"Héctor Hernández",num:23,p:"FW",q:"CA",a:30,o:70,t:70,v:800000,nat:"Spain"},
       {n:"Weverson",num:26,p:"DF",q:"LE",a:26,o:68,t:69,v:800000,nat:"Brazil"},
       {n:"Agustín Moreira",num:27,p:"FW",q:"PD",a:25,o:67,t:73,v:1000000,nat:"Uruguay"},
       {n:"Carlos Eduardo",num:29,p:"FW",q:"CA",a:24,o:67,t:73,v:2500000,nat:"Brazil"},
       {n:"Lucão",num:30,p:"GK",q:"GOL",a:25,o:67,t:71,v:1200000,nat:"Brazil"},
-      {n:"Martín Fernández",num:32,p:"MF",q:"MEI",a:23,o:69,t:73,v:450000,nat:"Uruguay"},
       {n:"Jonathan Buatu",num:39,p:"DF",q:"ZAG",a:32,o:69,t:69,v:700000,nat:"Angola"},
-      {n:"Madou Camara",num:41,p:"DF",q:"ZAG",a:20,o:62,t:70,v:1500000,nat:"Spain"},
       {n:"David Moreira",num:45,p:"DF",q:"ZAG",a:22,o:67,t:71,v:1700000,nat:"Cape Verde"},
       {n:"Ricardo Esgaio",num:47,p:"DF",q:"LD",a:33,o:73,t:73,v:700000,nat:"Portugal"},
-      {n:"Antonio Espigares",num:48,p:"DF",q:"ZAG",a:22,o:66,t:72,v:500000,nat:"Spain"},
+      {n:"Antonio Espigares",num:3,p:"DF",q:"ZAG",a:22,o:66,t:72,v:500000,nat:"Spain"},
       {n:"Murilo Costa",num:77,p:"FW",q:"PD",a:31,o:64,t:72,v:800000,nat:"Brazil"},
       {n:"Gonçalo Maia",num:82,p:"MF",q:"MC",a:20,o:63,t:71,v:100000,nat:"Portugal"},
       {n:"Diogo Prioste",num:86,p:"MF",q:"MC",a:22,o:66,t:72,v:2000000,nat:"Portugal"},
       {n:"Bassco Soyer",num:88,p:"MF",q:"MEI",a:19,o:63,t:71,v:250000,nat:"Peru"},
       {n:"Samuel Portugal",num:94,p:"GK",q:"GOL",a:32,o:70,t:70,v:800000,nat:"Brazil"},
       {n:"Arthur Tchaptchet",num:95,p:"DF",q:"ZAG",a:25,o:67,t:71,v:100000,nat:"France"},
-      {n:"Mohamed Kaba",num:99,p:"FW",q:"CA",a:24,o:64,t:72,v:2000000,nat:"France"}
+      {n:"Mohamed Kaba",num:99,p:"FW",q:"CA",a:24,o:64,t:72,v:2000000,nat:"France"},
+      {n:"José Silva",num:2,p:"DF",q:"ZAG",a:24,o:69,t:74,v:1500000},
+      {n:"Guilherme Gomes",num:19,p:"MF",q:"MC",a:25,o:67,t:69,v:1200000},
+      {n:"Gil Martins",num:20,p:"MF",q:"MD",a:24,o:68,t:73,v:1400000},
+      {n:"Tiago Ferreira",num:44,p:"GK",q:"GOL",a:20,o:64,t:72,v:2500000}
     ],
     "pt/Marítimo": [
       {n:"Gonçalo Tabuaço",num:1,p:"GK",q:"GOL",a:25,o:68,t:71,v:350000,nat:"Portugal"},
@@ -10831,7 +11055,8 @@
       {n:"Israel Ayuma",num:66,p:"MF",q:"MC",a:21,o:59,t:67,v:300000,nat:"Nigeria"},
       {n:"Nélio Batista",num:68,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Portugal"},
       {n:"Pedro Teixeira",num:77,p:"GK",q:"GOL",a:26,o:64,t:67,v:900000,nat:"Portugal"},
-      {n:"Maurice Boakye",num:90,p:"FW",q:"CA",a:22,o:66,t:70,v:300000,nat:"Germany"}
+      {n:"Maurice Boakye",num:90,p:"FW",q:"CA",a:22,o:66,t:70,v:300000,nat:"Germany"},
+      {n:"Mons Bassouamina",num:12,p:"FW",q:"CA",a:27,o:66,t:68,v:1000000}
     ],
     "pt/Moreirense": [
       {n:"Aranha",num:1,p:"GK",q:"GOL",a:26,o:69,t:71,v:2000000,nat:"Brazil"},
@@ -10861,7 +11086,8 @@
       {n:"Dinis Pinto",num:76,p:"DF",q:"ZAG",a:26,o:62,t:70,v:1500000,nat:"Portugal"},
       {n:"Koby Mottoh",num:77,p:"DF",q:"LD",a:19,o:64,t:72,v:2000000,nat:"England"},
       {n:"Leonardo Vonić",num:79,p:"FW",q:"CA",a:23,o:64,t:72,v:900000,nat:"Croatia"},
-      {n:"Yan Maranhão",num:99,p:"FW",q:"CA",a:20,o:64,t:72,v:600000,nat:"Brazil"}
+      {n:"Yan Maranhão",num:99,p:"FW",q:"CA",a:20,o:64,t:72,v:600000,nat:"Brazil"},
+      {n:"Afonso Vieira",num:89,p:"FW",q:"CA",a:25,o:67,t:69,v:1200000}
     ],
     "pt/Nacional": [
       {n:"Renato Marin",num:1,p:"GK",q:"GOL",a:20,o:62,t:70,v:1000000,nat:"Italy"},
@@ -10892,8 +11118,10 @@
       {n:"Zé Vitor",num:38,p:"DF",q:"ZAG",a:25,o:57,t:65,v:2500000,nat:"Brazil"},
       {n:"Kevyn",num:50,p:"GK",q:"GOL",a:20,o:57,t:65,v:200000,nat:"Brazil"},
       {n:"Wesley Gasolina",num:52,p:"DF",q:"LD",a:26,o:57,t:65,v:600000,nat:"Brazil"},
-      {n:"Deivison Souza",num:88,p:"MF",q:"MC",a:20,o:58,t:66,v:200000,nat:"Brazil"},
-      {n:"Pablo Ruan",num:99,p:"FW",q:"PD",a:20,o:59,t:67,v:500000,nat:"Brazil"}
+      {n:"Pablo Ruan",num:99,p:"FW",q:"PD",a:20,o:59,t:67,v:500000,nat:"Brazil"},
+      {n:"Ulisses",num:4,p:"DF",q:"LD",a:26,o:67,t:69,v:1200000},
+      {n:"Deivison",num:88,p:"MF",q:"MD",a:20,o:58,t:66,v:500000},
+      {n:"Josué",p:"MF",q:"MD",a:26,o:66,t:68,v:1000000}
     ],
     "pt/Porto": [
       {n:"Jakub Kiwior",num:4,p:"DF",q:"ZAG",a:26,o:77,t:79,v:35000000,nat:"Poland"},
@@ -10954,10 +11182,10 @@
       {n:"Miguel Patrício",num:79,p:"MF",q:"MEI",a:20,o:61,t:69,v:1000000,nat:"Portugal"},
       {n:"Diogo Nascimento",num:90,p:"MF",q:"MC",a:23,o:68,t:73,v:4000000,nat:"Portugal"},
       {n:"Ennio van der Gouw",num:99,p:"GK",q:"GOL",a:25,o:66,t:67,v:400000,nat:"Netherlands"},
-      {n:"Vítor Hugo",num:0,p:"GK",q:"GOL",a:34,o:70,t:70,v:650000,nat:"Brazil"},
-      {n:"Simón García",num:0,p:"DF",q:"ZAG",a:26,o:67,t:69,v:1200000,nat:"Colombia"},
-      {n:"Sebastian Clemmensen",num:0,p:"FW",q:"PD",a:23,o:64,t:68,v:500000,nat:"Denmark"},
-      {n:"Radek Šiler",num:0,p:"FW",q:"CA",a:22,o:68,t:70,v:850000,nat:"Czech Republic"}
+      {n:"Vítor Hugo",num:32,p:"GK",q:"GOL",a:34,o:70,t:70,v:650000,nat:"Brazil"},
+      {n:"Simón García",num:3,p:"DF",q:"ZAG",a:26,o:67,t:69,v:1200000,nat:"Colombia"},
+      {n:"Sebastian Clemmensen",num:80,p:"FW",q:"PD",a:23,o:64,t:68,v:500000,nat:"Denmark"},
+      {n:"Radek Šiler",num:21,p:"FW",q:"CA",a:22,o:68,t:70,v:850000,nat:"Czech Republic"}
     ],
     "pt/Santa Clara": [
       {n:"Lucas França",num:1,p:"GK",q:"GOL",a:30,o:75,t:75,v:600000,nat:"Brazil"},
@@ -10976,16 +11204,15 @@
       {n:"Emanuel Moreira",num:21,p:"DF",q:"ZAG",a:26,o:64,t:66,v:700000,nat:"Portugal"},
       {n:"Vitinho",num:22,p:"MF",q:"MC",a:22,o:70,t:72,v:500000,nat:"Brazil"},
       {n:"Fredy",num:25,p:"MF",q:"MEI",a:24,o:68,t:71,v:3000000,nat:"Portugal"},
-      {n:"MT",num:32,p:"DF",q:"ZAG",a:25,o:58,t:66,v:600000,nat:"Brazil"},
       {n:"Rildo",num:37,p:"MF",q:"MEI",a:26,o:68,t:72,v:500000,nat:"Brazil"},
       {n:"Dani Borges",num:41,p:"MF",q:"VOL",a:23,o:58,t:66,v:700000,nat:"Brazil"},
       {n:"Lucas Soares",num:42,p:"DF",q:"LD",a:28,o:57,t:65,v:1500000,nat:"Brazil"},
-      {n:"Cadu Neves",num:55,p:"GK",q:"GOL",a:20,o:57,t:65,v:350000,nat:"Brazil"},
       {n:"Vinícius Lopes",num:70,p:"FW",q:"PD",a:27,o:73,t:74,v:2500000,nat:"Brazil"},
       {n:"Léo Jacó",num:73,p:"FW",q:"CA",a:21,o:67,t:71,v:400000,nat:"Brazil"},
       {n:"Kamika",num:85,p:"MF",q:"PE",a:20,o:57,t:65,v:500000,nat:"Portugal"},
       {n:"Sorriso",num:99,p:"FW",q:"PE",a:25,o:68,t:70,v:2500000,nat:"Brazil"},
-      {n:"Ythallo",num:0,p:"DF",q:"ZAG",a:22,o:68,t:71,v:300000,nat:"Brazil"}
+      {n:"Ythallo",num:19,p:"DF",q:"ZAG",a:22,o:68,t:71,v:300000,nat:"Brazil"},
+      {n:"Henrique Silva",num:3,p:"MF",q:"VOL",a:32,o:66,t:66,v:6000000,nat:"Brazil"}
     ],
     "pt/Sporting": [
       {n:"Rui Silva",num:1,p:"GK",q:"GOL",a:32,o:81,t:81,v:7000000,nat:"Portugal"},
@@ -11043,10 +11270,14 @@
       {n:"Santi Verdi",num:56,p:"MF",q:"MC",a:20,o:64,t:72,v:2000000,nat:"Portugal"},
       {n:"Rica Rocha",num:80,p:"MF",q:"VOL",a:20,o:64,t:72,v:200000,nat:"Portugal"},
       {n:"Francisco Dias",num:82,p:"DF",q:"LE",a:20,o:63,t:71,v:200000,nat:"Portugal"},
-      {n:"Lucas Furtado",num:98,p:"GK",q:"GOL",a:20,o:63,t:71,v:100000,nat:"Brazil"}
+      {n:"Lucas Furtado",num:98,p:"GK",q:"GOL",a:20,o:63,t:71,v:100000,nat:"Brazil"},
+      {n:"Arnel Jakupović",num:9,p:"FW",q:"PD",a:25,o:71,t:73,v:2800000},
+      {n:"Alan",num:10,p:"MF",q:"VOL",a:27,o:71,t:73,v:2800000},
+      {n:"Toni Borevković",num:21,p:"DF",q:"LD",a:23,o:66,t:71,v:1500000},
+      {n:"Fabio Blanco",num:35,p:"MF",q:"VOL",a:20,o:63,t:71,v:2000000},
+      {n:"Marco Cruz",num:45,p:"MF",q:"MC",a:21,o:63,t:71,v:1000000}
     ],
     "py/2 de Mayo": [
-      {n:"Ángel Martínez",num:1,p:"GK",q:"GOL",a:26,o:59,t:61,v:350000,nat:"Paraguay"},
       {n:"Miguel Barreto",num:2,p:"DF",q:"LD",a:28,o:67,t:68,v:2000000,nat:"Paraguay"},
       {n:"Wilson Ibarrola",num:3,p:"DF",q:"LD",a:30,o:66,t:66,v:900000,nat:"Paraguay"},
       {n:"René Rodríguez",num:4,p:"DF",q:"LD",a:24,o:65,t:68,v:2000000,nat:"Paraguay"},
@@ -11072,7 +11303,10 @@
       {n:"Henry Riquelme",num:31,p:"MF",q:"MEI",a:20,o:55,t:63,v:350000,nat:"Paraguay"},
       {n:"Hosue Díaz",num:32,p:"FW",q:"PD",a:20,o:55,t:63,v:75000,nat:"Paraguay"},
       {n:"Alvaro Montiel",num:0,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Paraguay"},
-      {n:"Félix Triñanes",num:0,p:"MF",q:"MEI",a:26,o:61,t:63,v:150000,nat:"Argentina"}
+      {n:"Félix Triñanes",num:0,p:"MF",q:"MEI",a:26,o:61,t:63,v:150000,nat:"Argentina"},
+      {n:"Víctor Dávalos",num:15,p:"FW",q:"CA",a:35,o:65,t:65,v:2500000,nat:"Paraguay"},
+      {n:"Alberto Espínola",num:16,p:"DF",q:"LE",a:35,o:66,t:66,v:450000,nat:"Paraguay"},
+      {n:"Alexis Fariña",num:30,p:"MF",q:"MC",a:21,o:65,t:71,v:2000000,nat:"Paraguay"}
     ],
     "py/Cerro Porteño": [
       {n:"Manuel Roffo",num:1,p:"GK",q:"GOL",a:26,o:74,t:76,v:2500000,nat:"Argentina"},
@@ -11090,7 +11324,6 @@
       {n:"Agustín Almendra",num:20,p:"MF",q:"MC",a:26,o:73,t:75,v:2000000,nat:"Argentina"},
       {n:"Sergio Araujo",num:21,p:"FW",q:"CA",a:34,o:68,t:68,v:100000,nat:"Argentina"},
       {n:"Gustavo Velázquez",num:23,p:"DF",q:"ZAG",a:35,o:73,t:74,v:1000000,nat:"Paraguay"},
-      {n:"Alan Núñez",num:24,p:"DF",q:"ZAG",a:21,o:60,t:66,v:800000,nat:"Paraguay"},
       {n:"Gatito Fernández",num:25,p:"GK",q:"GOL",a:38,o:63,t:69,v:100000,nat:"Paraguay"},
       {n:"Robert Piris Da Motta",num:26,p:"MF",q:"VOL",a:32,o:69,t:69,v:600000,nat:"Paraguay"},
       {n:"Jonathan Torres",num:27,p:"FW",q:"CA",a:29,o:65,t:71,v:800000,nat:"Argentina"},
@@ -11099,11 +11332,11 @@
       {n:"Marcelo Chaparro",num:35,p:"DF",q:"LE",a:20,o:59,t:67,v:900000,nat:"Paraguay"},
       {n:"Amín Cristaldo",num:38,p:"MF",q:"MC",a:20,o:60,t:68,v:200000,nat:"Paraguay"},
       {n:"Gastón Giménez",num:0,p:"MF",q:"VOL",a:35,o:70,t:70,v:800000,nat:"Paraguay"},
-      {n:"Alexis Fariña",num:3,p:"MF",q:"MC",a:21,o:65,t:71,v:2000000,nat:"Paraguay"},
-      {n:"Luis Amarilla",num:9,p:"FW",q:"CA",a:31,o:69,t:69,v:1500000,nat:"Paraguay"},
-      {n:"Héctor Bobadilla",num:24,p:"FW",q:"CA",a:22,o:64,t:70,v:1500000,nat:"Paraguay"},
-      {n:"Víctor Cabañas",num:32,p:"DF",q:"ZAG",a:23,o:59,t:67,v:800000,nat:"Paraguay"},
-      {n:"Rodrigo Gómez",num:33,p:"DF",q:"ZAG",a:20,o:60,t:68,v:1000000,nat:"Paraguay"}
+      {n:"Alexis Cañete",num:4,p:"DF",q:"ZAG",a:23,o:69,t:73,v:3500000,nat:"Paraguay"},
+      {n:"Derlis Rodríguez",num:7,p:"FW",q:"PD",a:28,o:66,t:68,v:1500000,nat:"Paraguay"},
+      {n:"Iván Ramírez",num:16,p:"FW",q:"PE",a:32,o:71,t:71,v:2000000,nat:"Paraguay"},
+      {n:"Ángel Martínez",num:1,p:"GK",q:"GOL",a:26,o:59,t:61,v:350000,nat:"Paraguay"},
+      {n:"Mateo Klimowicz",num:40,p:"MF",q:"VOL",a:24,o:60,t:65,v:500000}
     ],
     "py/General Caballero JLM": [
       {n:"Blas Hermosilla",num:1,p:"GK",q:"GOL",a:26,o:60,t:62,v:3000000,nat:"Paraguay"},
@@ -11120,7 +11353,6 @@
       {n:"Rubén Escobar",num:12,p:"GK",q:"GOL",a:26,o:58,t:60,v:2000000,nat:"Paraguay"},
       {n:"Adilson Ruiz",num:13,p:"MF",q:"MC",a:26,o:59,t:61,v:3000000,nat:"Paraguay"},
       {n:"Jorge Quintana",num:14,p:"FW",q:"PD",a:26,o:60,t:62,v:4000000,nat:"Paraguay"},
-      {n:"Víctor Dávalos",num:15,p:"FW",q:"CA",a:35,o:65,t:65,v:2500000,nat:"Paraguay"},
       {n:"Jesús Araujo",num:16,p:"MF",q:"MC",a:26,o:59,t:61,v:3000000,nat:"Paraguay"},
       {n:"Anibal Martinez",num:17,p:"MF",q:"MC",a:26,o:59,t:61,v:3000000,nat:"Paraguay"},
       {n:"Jorge Colman",num:17,p:"FW",q:"SA",a:26,o:60,t:62,v:4000000,nat:"Paraguay"},
@@ -11143,18 +11375,14 @@
       {n:"Gaspar Servio",num:1,p:"GK",q:"GOL",a:34,o:70,t:70,v:200000,nat:"Argentina"},
       {n:"Imanol Segovia",num:2,p:"DF",q:"ZAG",a:26,o:64,t:66,v:400000,nat:"Argentina"},
       {n:"Alcides Barbotte",num:3,p:"DF",q:"ZAG",a:24,o:61,t:63,v:750000,nat:"Paraguay"},
-      {n:"Sebastián Zaracho",num:4,p:"DF",q:"LD",a:28,o:69,t:71,v:2500000,nat:"Paraguay"},
       {n:"Patricio Tanda",num:5,p:"MF",q:"VOL",a:24,o:65,t:67,v:500000,nat:"Argentina"},
       {n:"Bruno Díaz",num:6,p:"MF",q:"MEI",a:26,o:65,t:67,v:1500000,nat:"Paraguay"},
       {n:"Agustín Manzur",num:7,p:"MF",q:"MC",a:25,o:68,t:70,v:2500000,nat:"Paraguay"},
       {n:"Matías López",num:8,p:"MF",q:"MC",a:26,o:65,t:67,v:750000,nat:"Paraguay"},
-      {n:"Iván Ramírez",num:9,p:"FW",q:"PE",a:32,o:71,t:71,v:2000000,nat:"Paraguay"},
-      {n:"Derlis Rodríguez",num:10,p:"FW",q:"PD",a:28,o:66,t:68,v:1500000,nat:"Paraguay"},
       {n:"Jhon Sánchez",num:11,p:"FW",q:"CA",a:27,o:66,t:68,v:1500000,nat:"Venezuela"},
       {n:"Mariano Ramos",num:14,p:"DF",q:"LE",a:22,o:64,t:70,v:1500000,nat:"Argentina"},
       {n:"Thiago Servín",num:15,p:"DF",q:"ZAG",a:23,o:62,t:66,v:800000,nat:"Paraguay"},
       {n:"Richard Torales",num:17,p:"FW",q:"CA",a:25,o:65,t:67,v:1500000,nat:"Paraguay"},
-      {n:"César Miño",num:18,p:"FW",q:"CA",a:19,o:60,t:69,v:50000,nat:"Paraguay"},
       {n:"César Ramírez",num:19,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Paraguay"},
       {n:"Ricardo Quiñónez",num:20,p:"MF",q:"MEI",a:26,o:65,t:67,v:50000,nat:"Paraguay"},
       {n:"Giovanni Gómez",num:25,p:"MF",q:"MC",a:22,o:61,t:67,v:500000,nat:"Paraguay"},
@@ -11200,7 +11428,6 @@
     ],
     "py/Nacional": [
       {n:"Gerardo Ortiz",num:1,p:"GK",q:"GOL",a:37,o:69,t:69,v:25000,nat:"Paraguay"},
-      {n:"Alexis Cañete",num:3,p:"DF",q:"ZAG",a:23,o:69,t:73,v:3500000,nat:"Paraguay"},
       {n:"Thomas Gutiérrez",num:4,p:"DF",q:"ZAG",a:26,o:62,t:64,v:500000,nat:"Venezuela"},
       {n:"Gastón Benítez",num:5,p:"DF",q:"ZAG",a:26,o:62,t:64,v:400000,nat:"Paraguay"},
       {n:"Silvio Torales",num:6,p:"MF",q:"MC",a:34,o:68,t:68,v:25000,nat:"Paraguay"},
@@ -11251,7 +11478,7 @@
       {n:"Juan Vera",num:22,p:"DF",q:"ZAG",a:27,o:65,t:67,v:600000,nat:"Paraguay"},
       {n:"Esteban Matus",num:23,p:"DF",q:"LE",a:24,o:65,t:67,v:1000000,nat:"Chile"},
       {n:"Tiago Caballero",num:24,p:"FW",q:"CA",a:22,o:64,t:70,v:800000,nat:"Paraguay"},
-      {n:"Sebastián Lentinelly",num:25,p:"GK",q:"GOL",a:29,o:69,t:70,v:500000,nat:"Uruguay"},
+      {n:"Sebastián Lentinelly",num:12,p:"GK",q:"GOL",a:29,o:69,t:70,v:500000,nat:"Uruguay"},
       {n:"Richard Sánchez",num:26,p:"MF",q:"MC",a:30,o:75,t:75,v:2000000,nat:"Paraguay"},
       {n:"Raúl Cáceres",num:27,p:"DF",q:"LD",a:34,o:62,t:68,v:150000,nat:"Paraguay"},
       {n:"Iván Leguizamón",num:29,p:"FW",q:"PE",a:24,o:72,t:76,v:1500000,nat:"Paraguay"},
@@ -11260,7 +11487,9 @@
       {n:"Pedro Zarza",num:33,p:"FW",q:"PE",a:20,o:60,t:68,v:1000000,nat:"Paraguay"},
       {n:"Hugo Sandoval",num:34,p:"FW",q:"CA",a:20,o:60,t:68,v:250000,nat:"Paraguay"},
       {n:"Franco Alfonso",num:35,p:"FW",q:"PD",a:24,o:60,t:68,v:275000,nat:"Argentina"},
-      {n:"Romeo Benítez",num:37,p:"FW",q:"PE",a:24,o:60,t:68,v:500000,nat:"Paraguay"}
+      {n:"Romeo Benítez",num:37,p:"FW",q:"PE",a:24,o:60,t:68,v:500000,nat:"Paraguay"},
+      {n:"Rodney Redes",num:17,p:"FW",q:"PD",a:26,o:70,t:72,v:3000000,nat:"Paraguay"},
+      {n:"César Miño",num:18,p:"FW",q:"CA",a:19,o:60,t:69,v:50000,nat:"Paraguay"}
     ],
     "py/Rubio Ñu": [
       {n:"Tomás Canteros",num:1,p:"GK",q:"GOL",a:25,o:65,t:68,v:150000,nat:"Argentina"},
@@ -11288,7 +11517,6 @@
       {n:"Octavio Alfonso",num:29,p:"MF",q:"MEI",a:21,o:60,t:67,v:150000,nat:"Paraguay"},
       {n:"Pablo Ayala",num:30,p:"MF",q:"MC",a:20,o:55,t:63,v:25000,nat:"Paraguay"},
       {n:"Brian Blasi",num:31,p:"DF",q:"ZAG",a:30,o:66,t:66,v:150000,nat:"Argentina"},
-      {n:"Rodrigo Alborno",num:33,p:"DF",q:"ZAG",a:33,o:63,t:63,v:300000,nat:"Paraguay"},
       {n:"Carlos Giménez",num:36,p:"FW",q:"PE",a:20,o:55,t:63,v:250000,nat:"Paraguay"},
       {n:"Mauricio Roldán",num:37,p:"FW",q:"CA",a:20,o:55,t:63,v:100000,nat:"Argentina"},
       {n:"Gustavo Manzur",num:38,p:"MF",q:"MC",a:20,o:55,t:63,v:250000,nat:"Paraguay"},
@@ -11320,7 +11548,8 @@
       {n:"Ángel Sánchez",num:35,p:"GK",q:"GOL",a:20,o:55,t:63,v:50000,nat:"Paraguay"},
       {n:"Mathias León",num:36,p:"FW",q:"PD",a:20,o:56,t:64,v:150000,nat:"Paraguay"},
       {n:"Tomás Lezcano",num:37,p:"DF",q:"LE",a:20,o:55,t:63,v:75000,nat:"Paraguay"},
-      {n:"Alberto Contrera",num:40,p:"MF",q:"MEI",a:33,o:55,t:63,v:75000,nat:"Paraguay"}
+      {n:"Alberto Contrera",num:40,p:"MF",q:"MEI",a:33,o:55,t:63,v:75000,nat:"Paraguay"},
+      {n:"Walter Rodríguez",num:15,p:"MF",q:"MEI",a:30,o:67,t:67,v:1000000,nat:"Paraguay"}
     ],
     "py/Sportivo Luqueño": [
       {n:"Francisco Mongelos",num:1,p:"GK",q:"GOL",a:21,o:59,t:66,v:100000,nat:"Paraguay"},
@@ -11328,9 +11557,7 @@
       {n:"Mathías Suárez",num:4,p:"DF",q:"LE",a:21,o:64,t:71,v:2000000,nat:"Paraguay"},
       {n:"Alexis Villalba",num:5,p:"DF",q:"ZAG",a:28,o:65,t:66,v:1500000,nat:"Paraguay"},
       {n:"Kevin Pereira",num:7,p:"FW",q:"PD",a:22,o:65,t:71,v:175000,nat:"Paraguay"},
-      {n:"Walter Rodríguez",num:8,p:"MF",q:"MEI",a:30,o:67,t:67,v:1000000,nat:"Paraguay"},
       {n:"Federico Santander",num:9,p:"FW",q:"CA",a:35,o:68,t:68,v:600000,nat:"Paraguay"},
-      {n:"Sergio Díaz",num:10,p:"FW",q:"CA",a:28,o:65,t:66,v:1500000,nat:"Paraguay"},
       {n:"Walter González",num:11,p:"FW",q:"CA",a:31,o:68,t:68,v:200000,nat:"Paraguay"},
       {n:"Alfredo Aguilar",num:12,p:"GK",q:"GOL",a:38,o:67,t:67,v:350000,nat:"Paraguay"},
       {n:"Hugo Dorrego",num:13,p:"MF",q:"MEI",a:33,o:62,t:64,v:900000,nat:"Uruguay"},
@@ -11341,7 +11568,6 @@
       {n:"Sebastián Quintana",num:18,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Paraguay"},
       {n:"Rubén Darío Ríos",num:20,p:"DF",q:"ZAG",a:31,o:66,t:68,v:950000,nat:"Argentina"},
       {n:"Santiago Ocampos",num:22,p:"DF",q:"LD",a:24,o:60,t:62,v:225000,nat:"Paraguay"},
-      {n:"Alberto Espínola",num:23,p:"DF",q:"LE",a:35,o:66,t:66,v:450000,nat:"Paraguay"},
       {n:"Aldo Parra",num:24,p:"FW",q:"CA",a:24,o:60,t:64,v:750000,nat:"Paraguay"},
       {n:"Jonathan Ramos",num:25,p:"FW",q:"PE",a:19,o:58,t:67,v:350000,nat:"Paraguay"},
       {n:"Lucas Monzón",num:26,p:"DF",q:"LE",a:23,o:65,t:69,v:2000000,nat:"Argentina"},
@@ -11350,7 +11576,9 @@
       {n:"Thiago Cáceres",num:30,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Paraguay"},
       {n:"Hugo Gaona",num:35,p:"GK",q:"GOL",a:20,o:55,t:63,v:200000,nat:"Paraguay"},
       {n:"Lautaro Comas",num:37,p:"MF",q:"MC",a:31,o:66,t:74,v:1000000,nat:"Argentina"},
-      {n:"Angel Espinola",num:40,p:"GK",q:"GOL",a:20,o:55,t:63,v:100000,nat:"Paraguay"}
+      {n:"Angel Espinola",num:40,p:"GK",q:"GOL",a:20,o:55,t:63,v:100000,nat:"Paraguay"},
+      {n:"Marcelo Pérez",num:19,p:"MF",q:"MC",a:25,o:63,t:66,v:350000,nat:"Paraguay"},
+      {n:"Rodrigo Alborno",num:33,p:"DF",q:"ZAG",a:33,o:63,t:63,v:300000,nat:"Paraguay"}
     ],
     "py/Sportivo Trinidense": [
       {n:"Matías Dufour",num:1,p:"GK",q:"GOL",a:27,o:67,t:69,v:500000,nat:"Uruguay"},
@@ -11412,7 +11640,8 @@
       {n:"Herman Penkov",num:94,p:"GK",q:"GOL",a:32,o:59,t:65,v:200000,nat:"Ukraine"},
       {n:"Petro Stasyuk",num:95,p:"DF",q:"LE",a:31,o:57,t:65,v:400000,nat:"Ukraine"},
       {n:"Oleh Ilyin",num:97,p:"MF",q:"PD",a:29,o:57,t:65,v:250000,nat:"Ukraine"},
-      {n:"Ivan Tyshchenko",num:27,p:"MF",q:"MC",a:28,o:61,t:67,v:950000,nat:"Ukraine"}
+      {n:"Ivan Tyshchenko",num:27,p:"MF",q:"MC",a:28,o:61,t:67,v:950000,nat:"Ukraine"},
+      {n:"Renat Dadaşov",num:9,p:"FW",q:"PE",a:25,o:63,t:65,v:600000}
     ],
     "ru/Dynamo Kyiv": [
       {n:"Heorhiy Bushchan",num:1,p:"GK",q:"GOL",a:32,o:74,t:74,v:2000000,nat:"Ukraine"},
@@ -11446,43 +11675,43 @@
       {n:"Aliou Thiaré",num:66,p:"DF",q:"ZAG",a:23,o:64,t:68,v:1000000,nat:"Senegal"},
       {n:"Bohdan Redushko",num:70,p:"FW",q:"CA",a:20,o:62,t:70,v:1500000,nat:"Ukraine"},
       {n:"Tomasz Kędziora",num:94,p:"DF",q:"LD",a:32,o:75,t:75,v:2000000,nat:"Poland"},
-      {n:"Pierre Mounguengue",num:99,p:"FW",q:"CA",a:19,o:66,t:74,v:2000000,nat:"France"}
+      {n:"Pierre Mounguengue",num:99,p:"FW",q:"CA",a:19,o:66,t:74,v:2000000,nat:"France"},
+      {n:"Denys Ihnatenko",num:74,p:"GK",q:"GOL",a:20,o:54,t:62,v:150000,nat:"Ukraine"},
+      {n:"Vyacheslav Surkis",num:71,p:"GK",q:"GOL",a:22,o:65,t:70,v:1500000},
+      {n:"Mykola Mykhaylenko",num:91,p:"MF",q:"MC",a:23,o:65,t:70,v:1500000}
     ],
     "ru/Epitsentr K-P": [
-      {n:"Serhiy Chernobay",num:1,p:"GK",q:"GOL",a:27,o:64,t:66,v:900000,nat:"Ukraine"},
-      {n:"Alagy Oliveira",num:2,p:"DF",q:"ZAG",a:25,o:63,t:67,v:1500000,nat:"Spain"},
       {n:"Stepan Hryhorashchuk",num:3,p:"DF",q:"ZAG",a:24,o:63,t:67,v:400000,nat:"Ukraine"},
       {n:"Vladyslav Moroz",num:4,p:"DF",q:"ZAG",a:25,o:62,t:66,v:400000,nat:"Ukraine"},
       {n:"Yevhen Zaporozhets",num:5,p:"MF",q:"MC",a:31,o:63,t:65,v:250000,nat:"Ukraine"},
       {n:"Kyrylo Kovalets",num:6,p:"MF",q:"MEI",a:33,o:63,t:66,v:150000,nat:"Ukraine"},
-      {n:"Andriy Matkevych",num:7,p:"FW",q:"PE",a:21,o:63,t:70,v:1500000,nat:"Ukraine"},
       {n:"Mykola Myronyuk",num:8,p:"MF",q:"MC",a:24,o:63,t:65,v:400000,nat:"Ukraine"},
-      {n:"Andriy Bezhenar",num:10,p:"MF",q:"MC",a:28,o:64,t:64,v:350000,nat:"Ukraine"},
       {n:"Stanislav Krystin",num:11,p:"MF",q:"MC",a:25,o:63,t:65,v:1000000,nat:"Ukraine"},
       {n:"Serjan Repaj",num:13,p:"DF",q:"ZAG",a:26,o:63,t:66,v:250000,nat:"Albania"},
-      {n:"Yehor Demchenko",num:17,p:"MF",q:"MC",a:26,o:62,t:64,v:900000,nat:"Ukraine"},
       {n:"Vadym Sydun",num:20,p:"FW",q:"CA",a:26,o:63,t:65,v:400000,nat:"Ukraine"},
-      {n:"Vladyslav Supryaha",num:21,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Ukraine"},
-      {n:"Vladyslav Krystin",num:22,p:"DF",q:"ZAG",a:25,o:62,t:64,v:900000,nat:"Ukraine"},
-      {n:"Andriy Boryachuk",num:23,p:"FW",q:"CA",a:30,o:64,t:64,v:650000,nat:"Ukraine"},
+      {n:"Vladyslav Krystin",num:11,p:"DF",q:"ZAG",a:25,o:62,t:64,v:900000,nat:"Ukraine"},
       {n:"Daniil Vashchenko",num:27,p:"MF",q:"VOL",a:20,o:60,t:66,v:400000,nat:"Ukraine"},
       {n:"Andriy Lipovuz",num:28,p:"MF",q:"VOL",a:28,o:60,t:66,v:250000,nat:"Ukraine"},
       {n:"Oleh Bilyk",num:31,p:"GK",q:"GOL",a:28,o:61,t:66,v:400000,nat:"Ukraine"},
-      {n:"Volodymyr Tanchyk",num:34,p:"MF",q:"MC",a:34,o:63,t:63,v:300000,nat:"Ukraine"},
-      {n:"Arseniy Vavshko",num:37,p:"GK",q:"GOL",a:20,o:55,t:63,v:50000,nat:"Ukraine"},
-      {n:"Jon Ceberio",num:39,p:"MF",q:"MC",a:25,o:63,t:67,v:350000,nat:"Spain"},
-      {n:"Valeriy Luchkevych",num:67,p:"DF",q:"LD",a:30,o:65,t:65,v:250000,nat:"Ukraine"},
+      {n:"Arseniy Vavshko",num:22,p:"GK",q:"GOL",a:20,o:55,t:63,v:50000,nat:"Ukraine"},
+      {n:"Jon Ceberio",num:10,p:"MF",q:"MC",a:25,o:63,t:67,v:350000,nat:"Spain"},
+      {n:"Valeriy Luchkevych",num:7,p:"DF",q:"LD",a:30,o:65,t:65,v:250000,nat:"Ukraine"},
       {n:"Ihor Kyryukhantsev",num:70,p:"DF",q:"LD",a:30,o:55,t:63,v:400000,nat:"Ukraine"},
       {n:"Nikita Fedotov",num:71,p:"GK",q:"GOL",a:20,o:55,t:63,v:100000,nat:"Ukraine"},
       {n:"Nil Coch",num:77,p:"DF",q:"ZAG",a:24,o:62,t:67,v:400000,nat:"Spain"},
       {n:"Oleksandr Klymets",num:97,p:"DF",q:"LE",a:26,o:56,t:64,v:400000,nat:"Ukraine"},
       {n:"Carlos Rojas",num:99,p:"FW",q:"PD",a:24,o:63,t:67,v:250000,nat:"Spain"},
-      {n:"Ivan Bendera",num:0,p:"FW",q:"PE",a:26,o:63,t:65,v:150000,nat:"Ukraine"},
-      {n:"Geovane",num:12,p:"MF",q:"MC",a:27,o:63,t:65,v:1000000,nat:"Brazil"}
+      {n:"Ivan Bendera",num:17,p:"FW",q:"PE",a:26,o:63,t:65,v:150000,nat:"Ukraine"},
+      {n:"Geovane",num:12,p:"MF",q:"MC",a:27,o:63,t:65,v:1000000,nat:"Brazil"},
+      {n:"Raúl Tavares",num:14,p:"MF",q:"VOL",a:26,o:63,t:65,v:600000},
+      {n:"Maksym Yevpak",num:15,p:"FW",q:"PE",a:27,o:63,t:65,v:600000},
+      {n:"Nene",num:21,p:"FW",q:"PD",a:25,o:63,t:65,v:600000},
+      {n:"Vitaliy Horin",num:25,p:"DF",q:"LE",a:28,o:63,t:65,v:600000},
+      {n:"Artem Kozak",num:59,p:"DF",q:"ZAG",a:19,o:62,t:70,v:1500000}
     ],
     "ru/FC Kharkiv": [
       {n:"Oleksandr Myzyuk",num:2,p:"DF",q:"LD",a:31,o:62,t:64,v:6000000,nat:"Ukraine"},
-      {n:"Denys Pidruchnyi",num:5,p:"MF",q:"VOL",a:25,o:63,t:65,v:7000000,nat:"Ukraine"},
+      {n:"Denys Pidruchnyi",num:22,p:"MF",q:"VOL",a:25,o:63,t:65,v:7000000,nat:"Ukraine"},
       {n:"Daniil Teplyakov",num:6,p:"FW",q:"PE",a:26,o:63,t:65,v:7000000,nat:"Ukraine"},
       {n:"Petro Lutsiv",num:7,p:"MF",q:"MEI",a:26,o:62,t:64,v:6000000,nat:"Ukraine"},
       {n:"Kyrylo Dihtyar",num:8,p:"FW",q:"PD",a:18,o:63,t:65,v:7000000,nat:"Ukraine"},
@@ -11493,9 +11722,6 @@
       {n:"Daniil Prykhodko",num:17,p:"DF",q:"ZAG",a:26,o:61,t:63,v:5000000,nat:"Ukraine"},
       {n:"Danylo Kaydalov",num:19,p:"FW",q:"CA",a:20,o:63,t:65,v:7000000,nat:"Ukraine"},
       {n:"Daniel Vernattus",num:20,p:"DF",q:"ZAG",a:26,o:61,t:63,v:5000000,nat:"Ukraine"},
-      {n:"Oleksiy Horyainov",num:21,p:"MF",q:"MC",a:26,o:62,t:64,v:6000000,nat:"Ukraine"},
-      {n:"Vitaliy Fedoriv",num:24,p:"DF",q:"ZAG",a:38,o:59,t:65,v:4000000,nat:"Ukraine"},
-      {n:"Vladyslav Rybak",num:25,p:"GK",q:"GOL",a:25,o:60,t:66,v:3500000,nat:"Ukraine"},
       {n:"Yevhen Isayenko",num:27,p:"FW",q:"CA",a:26,o:60,t:66,v:5000000,nat:"Ukraine"},
       {n:"Yehor Abramov",num:29,p:"MF",q:"MC",a:22,o:59,t:65,v:4000000,nat:"Ukraine"},
       {n:"Bohdan Porokh",num:31,p:"DF",q:"ZAG",a:26,o:55,t:63,v:2000000,nat:"Ukraine"},
@@ -11503,9 +11729,15 @@
       {n:"Yehor Sherstyuk",num:33,p:"DF",q:"ZAG",a:20,o:55,t:63,v:2000000,nat:"Ukraine"},
       {n:"Pavlo Pletnyov",num:35,p:"GK",q:"GOL",a:20,o:55,t:63,v:1000000,nat:"Ukraine"},
       {n:"Yehor Krasnikov",num:37,p:"FW",q:"CA",a:20,o:57,t:65,v:3000000,nat:"Ukraine"},
-      {n:"Kyrylo Palyanychka",num:38,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ukraine"},
+      {n:"Kyrylo Palyanychka",num:45,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ukraine"},
       {n:"Ilya Gryshchenko",num:39,p:"FW",q:"CA",a:20,o:57,t:65,v:3000000,nat:"Ukraine"},
-      {n:"Maksym Orikhovskyi",num:98,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ukraine"}
+      {n:"Maksym Orikhovskyi",num:98,p:"MF",q:"MC",a:20,o:56,t:64,v:2500000,nat:"Ukraine"},
+      {n:"Anton Zhdankov",num:21,p:"DF",q:"ZAG",a:23,o:59,t:64,v:500000},
+      {n:"Ivan Shapovalov",num:30,p:"MF",q:"VOL",a:21,o:57,t:65,v:400000},
+      {n:"Heorhiy Polyakov",num:43,p:"GK",q:"GOL",a:19,o:57,t:65,v:400000},
+      {n:"Matviy Kolotay",num:46,p:"FW",q:"SA",a:23,o:56,t:61,v:400000},
+      {n:"Roman Andreev",num:47,p:"DF",q:"ZAG",a:20,o:56,t:64,v:400000},
+      {n:"Danil Prymak",num:48,p:"MF",q:"MC",a:25,o:56,t:58,v:600000}
     ],
     "ru/Karpaty Lviv": [
       {n:"Denys Marchenko",num:1,p:"GK",q:"GOL",a:26,o:66,t:69,v:600000,nat:"Ukraine"},
@@ -11651,7 +11883,6 @@
       {n:"Roman Heresh",num:37,p:"FW",q:"CA",a:20,o:54,t:62,v:100000,nat:"Ukraine"},
       {n:"Artem Chelyadin",num:38,p:"MF",q:"VOL",a:26,o:54,t:62,v:250000,nat:"Ukraine"},
       {n:"Yevhen Banada",num:44,p:"MF",q:"MC",a:34,o:64,t:64,v:100000,nat:"Ukraine"},
-      {n:"Denys Ihnatenko",num:74,p:"GK",q:"GOL",a:20,o:54,t:62,v:150000,nat:"Ukraine"},
       {n:"Nicholas Osei Bonsu",num:90,p:"DF",q:"LE",a:23,o:61,t:65,v:100000,nat:"Ghana"},
       {n:"Andriy Yakymiv",num:97,p:"DF",q:"ZAG",a:29,o:54,t:62,v:350000,nat:"Ukraine"}
     ],
@@ -11683,7 +11914,8 @@
       {n:"Cody David",num:99,p:"FW",q:"CA",a:25,o:65,t:69,v:400000,nat:"Nigeria"},
       {n:"Illya Putrya",num:0,p:"DF",q:"ZAG",a:28,o:59,t:61,v:500000,nat:"Ukraine"},
       {n:"Vyacheslav Tankovskyi",num:0,p:"MF",q:"MC",a:31,o:63,t:63,v:550000,nat:"Ukraine"},
-      {n:"Jewison Bennette",num:0,p:"FW",q:"CA",a:22,o:64,t:70,v:1500000,nat:"Costa Rica"}
+      {n:"Jewison Bennette",num:0,p:"FW",q:"CA",a:22,o:64,t:70,v:1500000,nat:"Costa Rica"},
+      {n:"Bohdan Slyubyk",num:92,p:"DF",q:"LE",a:22,o:60,t:65,v:600000}
     ],
     "ru/Obolon Kyiv": [
       {n:"Nazariy Fedorivskyi",num:1,p:"GK",q:"GOL",a:25,o:65,t:68,v:300000,nat:"Ukraine"},
@@ -11713,7 +11945,8 @@
       {n:"Serhiy Sukhanov",num:55,p:"FW",q:"CA",a:31,o:62,t:68,v:250000,nat:"Ukraine"},
       {n:"Kirill Korkh",num:70,p:"MF",q:"MC",a:20,o:54,t:62,v:200000,nat:"Ukraine"},
       {n:"Taras Lyakh",num:90,p:"FW",q:"CA",a:20,o:54,t:62,v:150000,nat:"Ukraine"},
-      {n:"Denys Teslyuk",num:99,p:"FW",q:"CA",a:23,o:54,t:62,v:200000,nat:"Ukraine"}
+      {n:"Denys Teslyuk",num:99,p:"FW",q:"CA",a:23,o:54,t:62,v:200000,nat:"Ukraine"},
+      {n:"Andriy Matkevych",num:7,p:"FW",q:"PE",a:21,o:63,t:70,v:1500000,nat:"Ukraine"}
     ],
     "ru/Polissya": [
       {n:"Oleh Kudryk",num:1,p:"GK",q:"GOL",a:29,o:70,t:72,v:400000,nat:"Ukraine"},
@@ -11741,7 +11974,6 @@
       {n:"Serhiy Chobotenko",num:44,p:"DF",q:"ZAG",a:29,o:68,t:69,v:1500000,nat:"Ukraine"},
       {n:"Maksym Braharu",num:45,p:"FW",q:"PE",a:24,o:56,t:64,v:1500000,nat:"Ukraine"},
       {n:"Borys Krushynskyi",num:55,p:"DF",q:"ZAG",a:24,o:54,t:62,v:200000,nat:"Ukraine"},
-      {n:"Maksym Melnychenko",num:60,p:"MF",q:"MC",a:21,o:54,t:62,v:200000,nat:"Ukraine"},
       {n:"Nazar Makarenko",num:77,p:"GK",q:"GOL",a:20,o:54,t:62,v:500000,nat:"Ukraine"},
       {n:"Mykola Hayduchyk",num:89,p:"FW",q:"CA",a:26,o:56,t:64,v:1000000,nat:"Ukraine"},
       {n:"Ihor Krasnopir",num:95,p:"FW",q:"CA",a:23,o:56,t:64,v:1500000,nat:"Ukraine"}
@@ -11801,7 +12033,8 @@
       {n:"Vladyslav Sharay",num:77,p:"FW",q:"PE",a:29,o:54,t:62,v:500000,nat:"Ukraine"},
       {n:"Guilherme Bahia",num:80,p:"FW",q:"PE",a:20,o:55,t:63,v:200000,nat:"Brazil"},
       {n:"Rostyslav Baran",num:88,p:"MF",q:"MC",a:20,o:54,t:62,v:50000,nat:"Ukraine"},
-      {n:"Valentyn Horokh",num:91,p:"GK",q:"GOL",a:25,o:63,t:65,v:500000,nat:"Ukraine"}
+      {n:"Valentyn Horokh",num:91,p:"GK",q:"GOL",a:25,o:63,t:65,v:500000,nat:"Ukraine"},
+      {n:"Andrey Santos",num:53,p:"MF",q:"VOL",a:22,o:80,t:86,v:40000000,nat:"Brazil"}
     ],
     "ru/Zorya Luhansk": [
       {n:"Oleksandr Saputin",num:1,p:"GK",q:"GOL",a:22,o:69,t:73,v:900000,nat:"Ukraine"},
@@ -11829,7 +12062,8 @@
       {n:"Bohdan Kushnirenko",num:77,p:"MF",q:"VOL",a:30,o:59,t:67,v:500000,nat:"Ukraine"},
       {n:"Vladlen Yurchenko",num:80,p:"MF",q:"MEI",a:32,o:69,t:69,v:250000,nat:"Ukraine"},
       {n:"Sallieu Bah",num:88,p:"MF",q:"MEI",a:20,o:59,t:67,v:300000,nat:"Sierra Leone"},
-      {n:"Artem Serdyuk",num:99,p:"FW",q:"CA",a:20,o:60,t:68,v:10000,nat:"Ukraine"}
+      {n:"Artem Serdyuk",num:99,p:"FW",q:"CA",a:20,o:60,t:68,v:10000,nat:"Ukraine"},
+      {n:"Gerson Rodrigues",num:7,p:"FW",q:"PE",a:23,o:67,t:72,v:1800000}
     ],
     "rus/Akhmat Grozny": [
       {n:"Vadim Ulyanov",num:1,p:"GK",q:"GOL",a:24,o:69,t:70,v:800000,nat:"Russia"},
@@ -11861,7 +12095,6 @@
     ],
     "rus/Akron Tolyatti": [
       {n:"Yomar Rocha",num:2,p:"DF",q:"LD",a:23,o:67,t:69,v:900000,nat:"Bolivia"},
-      {n:"Paulo Vitor",num:3,p:"DF",q:"LE",a:29,o:68,t:68,v:2000000,nat:"Brazil"},
       {n:"Aleksa Đurasović",num:5,p:"MF",q:"VOL",a:23,o:64,t:66,v:1500000,nat:"Serbia"},
       {n:"Karlen Hovhannisyan",num:6,p:"MF",q:"MC",a:21,o:67,t:70,v:250000,nat:"Armenia"},
       {n:"Benchimol",num:7,p:"FW",q:"CA",a:24,o:69,t:72,v:1200000,nat:"Cape Verde"},
@@ -11891,7 +12124,11 @@
       {n:"Vitali Gudiyev",num:88,p:"GK",q:"GOL",a:31,o:67,t:67,v:800000,nat:"Russia"},
       {n:"Denis Popenkov",num:89,p:"DF",q:"LE",a:19,o:56,t:64,v:200000,nat:"Russia"},
       {n:"Aleksandr Morozov",num:90,p:"FW",q:"CA",a:20,o:57,t:65,v:500000,nat:"Russia"},
-      {n:"Maksim Boldyrev",num:91,p:"MF",q:"MC",a:22,o:56,t:64,v:350000,nat:"Russia"}
+      {n:"Maksim Boldyrev",num:91,p:"MF",q:"MC",a:22,o:56,t:64,v:350000,nat:"Russia"},
+      {n:"Artyom Shumansky",num:99,p:"FW",q:"CA",a:21,o:71,t:75,v:4500000,nat:"Belarus"},
+      {n:"Artyom Sidorenko",num:17,p:"MF",q:"MEI",a:28,o:64,t:66,v:800000},
+      {n:"Milutin Vidosavljević",num:55,p:"MF",q:"VOL",a:21,o:57,t:65,v:400000},
+      {n:"Roman Volochay",num:98,p:"GK",q:"GOL",a:22,o:56,t:61,v:400000}
     ],
     "rus/Baltika": [
       {n:"Yevgeni Latyshonok",num:1,p:"GK",q:"GOL",a:28,o:70,t:70,v:1500000,nat:"Russia"},
@@ -11903,7 +12140,6 @@
       {n:"Andrei Mendel",num:8,p:"MF",q:"MC",a:31,o:66,t:68,v:1500000,nat:"Russia"},
       {n:"Chinonso Offor",num:9,p:"FW",q:"CA",a:26,o:69,t:70,v:1000000,nat:"Nigeria"},
       {n:"Ilya Petrov",num:10,p:"MF",q:"MC",a:31,o:69,t:70,v:1200000,nat:"Russia"},
-      {n:"Nikolai Titkov",num:11,p:"MF",q:"MC",a:26,o:66,t:68,v:1200000,nat:"Russia"},
       {n:"Stefan Kovač",num:14,p:"MF",q:"MC",a:27,o:69,t:69,v:1000000,nat:"Bosnia"},
       {n:"Kirill Nikishin",num:17,p:"FW",q:"CA",a:22,o:67,t:71,v:200000,nat:"Russia"},
       {n:"Fahd Moufi",num:18,p:"DF",q:"LD",a:30,o:68,t:68,v:900000,nat:"Morocco"},
@@ -11924,7 +12160,10 @@
       {n:"Maksim Petrov",num:73,p:"MF",q:"MEI",a:25,o:58,t:66,v:2800000,nat:"Russia"},
       {n:"Eldar Ćivić",num:77,p:"DF",q:"LE",a:30,o:68,t:68,v:750000,nat:"Bosnia"},
       {n:"Ivan Kukushkin",num:81,p:"GK",q:"GOL",a:24,o:65,t:69,v:300000,nat:"Russia"},
-      {n:"Brayan Gil",num:91,p:"FW",q:"CA",a:25,o:68,t:71,v:3500000,nat:"El Salvador"}
+      {n:"Brayan Gil",num:91,p:"FW",q:"CA",a:25,o:68,t:71,v:3500000,nat:"El Salvador"},
+      {n:"Yegor Golenkov",num:69,p:"FW",q:"PD",a:27,o:71,t:72,v:3500000,nat:"Russia"},
+      {n:"Ilya Porokhov",num:11,p:"FW",q:"SA",a:24,o:67,t:72,v:1200000},
+      {n:"Dmitry Begun",num:66,p:"DF",q:"ZAG",a:24,o:62,t:67,v:500000}
     ],
     "rus/CSKA Moscou": [
       {n:"Matheus Reis",num:2,p:"DF",q:"LE",a:31,o:77,t:77,v:2500000,nat:"Brazil"},
@@ -11932,7 +12171,6 @@
       {n:"João Victor",num:4,p:"DF",q:"ZAG",a:28,o:75,t:76,v:3000000,nat:"Brazil"},
       {n:"Dmitri Barinov",num:6,p:"MF",q:"VOL",a:29,o:74,t:74,v:2500000,nat:"Russia"},
       {n:"Matheus Alves",num:7,p:"MF",q:"MEI",a:21,o:72,t:79,v:6000000,nat:"Brazil"},
-      {n:"Artyom Shumansky",num:8,p:"FW",q:"CA",a:21,o:71,t:75,v:4500000,nat:"Belarus"},
       {n:"Ivan Oblyakov",num:10,p:"MF",q:"MC",a:28,o:76,t:76,v:10000000,nat:"Russia"},
       {n:"Tamerlan Musayev",num:11,p:"FW",q:"CA",a:25,o:72,t:74,v:2500000,nat:"Russia"},
       {n:"Kirill Glebov",num:17,p:"FW",q:"PD",a:20,o:75,t:83,v:10000000,nat:"Russia"},
@@ -11951,12 +12189,11 @@
       {n:"Vladislav Torop",num:49,p:"GK",q:"GOL",a:22,o:74,t:78,v:1500000,nat:"Russia"},
       {n:"Artyom Bandikyan",num:52,p:"MF",q:"VOL",a:20,o:63,t:71,v:750000,nat:"Armenia"},
       {n:"Kirill Danilov",num:79,p:"DF",q:"ZAG",a:19,o:62,t:70,v:2500000,nat:"Russia"},
-      {n:"Aleksandr Vakulich",num:84,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Russia"},
-      {n:"Yegor Besayev",num:85,p:"GK",q:"GOL",a:20,o:62,t:70,v:1000000,nat:"Russia"},
-      {n:"Artyom Ponomarchuk",num:87,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Russia"},
       {n:"Matvey Lukin",num:90,p:"DF",q:"ZAG",a:22,o:72,t:76,v:4000000,nat:"Russia"},
       {n:"Maksim Voronov",num:97,p:"FW",q:"CA",a:18,o:64,t:72,v:2000000,nat:"Russia"},
-      {n:"Nikolay Barovsky",num:99,p:"GK",q:"GOL",a:20,o:62,t:70,v:1000000,nat:"Russia"}
+      {n:"Ivan Oleynikov",num:19,p:"MF",q:"MC",a:28,o:69,t:70,v:2500000,nat:"Russia"},
+      {n:"Imran Firov",num:62,p:"FW",q:"SA",a:25,o:64,t:66,v:1000000},
+      {n:"Mingiyan Badmayev",num:67,p:"DF",q:"ZAG",a:19,o:63,t:71,v:2000000}
     ],
     "rus/Dínamo Makhachkala": [
       {n:"David Volk",num:1,p:"GK",q:"GOL",a:25,o:69,t:71,v:900000,nat:"Russia"},
@@ -11982,7 +12219,9 @@
       {n:"Aleksandr Sandrachuk",num:72,p:"DF",q:"LD",a:24,o:66,t:68,v:400000,nat:"Russia"},
       {n:"Temirkan Sundukov",num:77,p:"DF",q:"LE",a:24,o:58,t:66,v:1000000,nat:"Russia"},
       {n:"Daniil Lesovoy",num:88,p:"FW",q:"PE",a:28,o:68,t:69,v:1200000,nat:"Russia"},
-      {n:"Mutalip Alibekov",num:99,p:"DF",q:"ZAG",a:29,o:66,t:69,v:2000000,nat:"Russia"}
+      {n:"Mutalip Alibekov",num:99,p:"DF",q:"ZAG",a:29,o:66,t:69,v:2000000,nat:"Russia"},
+      {n:"Idar Shumakhov",num:4,p:"DF",q:"ZAG",a:23,o:67,t:72,v:1800000},
+      {n:"Daler Kuzyayev",num:14,p:"MF",q:"MC",a:26,o:66,t:68,v:1000000}
     ],
     "rus/Dínamo Moscou": [
       {n:"Kurban Rasulov",num:1,p:"GK",q:"GOL",a:20,o:69,t:73,v:15000000,nat:"Russia"},
@@ -11995,14 +12234,12 @@
       {n:"Bitello",num:10,p:"MF",q:"MC",a:26,o:76,t:78,v:40000000,nat:"Brazil"},
       {n:"Arthur Gomes",num:11,p:"FW",q:"PE",a:28,o:73,t:74,v:28000000,nat:"Brazil"},
       {n:"Danil Glebov",num:15,p:"MF",q:"VOL",a:26,o:73,t:74,v:28000000,nat:"Russia"},
-      {n:"Ulvi Babayev",num:17,p:"FW",q:"PD",a:22,o:68,t:75,v:25000000,nat:"Russia"},
       {n:"Bakhtiyar Zaynutdinov",num:19,p:"MF",q:"MC",a:28,o:71,t:72,v:22000000,nat:"Kazakhstan"},
       {n:"Anton Miranchuk",num:21,p:"MF",q:"MEI",a:30,o:75,t:75,v:18000000,nat:"Russia"},
       {n:"Luis Chávez",num:24,p:"MF",q:"VOL",a:30,o:74,t:74,v:17000000,nat:"Mexico"},
       {n:"Igor Leshchuk",num:31,p:"GK",q:"GOL",a:30,o:71,t:71,v:8000000,nat:"Russia"},
       {n:"Ivan Sergeyev",num:33,p:"FW",q:"CA",a:31,o:63,t:71,v:12000000,nat:"Russia"},
       {n:"Aleksandr Kutitsky",num:50,p:"MF",q:"MC",a:24,o:62,t:70,v:10000000,nat:"Russia"},
-      {n:"Ruslan Dzhioyev",num:51,p:"GK",q:"GOL",a:20,o:61,t:69,v:6000000,nat:"Russia"},
       {n:"Maksim Osipenko",num:55,p:"DF",q:"ZAG",a:32,o:73,t:73,v:15000000,nat:"Russia"},
       {n:"Leon Zaydenzal",num:56,p:"DF",q:"ZAG",a:22,o:62,t:70,v:10000000,nat:"Russia"},
       {n:"David Ricardo",num:57,p:"DF",q:"ZAG",a:23,o:62,t:70,v:10000000,nat:"Brazil"},
@@ -12011,7 +12248,10 @@
       {n:"Daniil Fomin",num:74,p:"MF",q:"MC",a:29,o:72,t:72,v:24000000,nat:"Russia"},
       {n:"Viktor Okishor",num:88,p:"MF",q:"MC",a:19,o:64,t:71,v:13000000,nat:"Russia"},
       {n:"Yaroslav Gladyshev",num:91,p:"FW",q:"SA",a:23,o:72,t:76,v:32000000,nat:"Russia"},
-      {n:"Andrey Lunyov",num:99,p:"GK",q:"GOL",a:34,o:71,t:71,v:4000000,nat:"Russia"}
+      {n:"Andrey Lunyov",num:99,p:"GK",q:"GOL",a:34,o:71,t:71,v:4000000,nat:"Russia"},
+      {n:"Maximiliano Gutiérrez",num:28,p:"FW",q:"CA",a:22,o:68,t:74,v:20000000,nat:"Chile"},
+      {n:"Josué Casimir",num:77,p:"FW",q:"PD",a:24,o:71,t:75,v:3000000,nat:"France"},
+      {n:"Luka Gagnidze",num:34,p:"MF",q:"MD",a:19,o:64,t:72,v:2500000}
     ],
     "rus/Fakel": [
       {n:"Daniil Frolkin",num:1,p:"GK",q:"GOL",a:25,o:65,t:68,v:700000,nat:"Russia"},
@@ -12036,7 +12276,6 @@
       {n:"Matvey Bardachyov",num:53,p:"DF",q:"ZAG",a:20,o:55,t:63,v:800000,nat:"Russia"},
       {n:"Darko Todorović",num:55,p:"DF",q:"LD",a:29,o:68,t:68,v:700000,nat:"Bosnia"},
       {n:"Aleksandr Koksharov",num:90,p:"FW",q:"CA",a:21,o:66,t:72,v:500000,nat:"Russia"},
-      {n:"Merabi Uridia",num:93,p:"FW",q:"CA",a:33,o:57,t:65,v:350000,nat:"Russia"},
       {n:"Igor Obukhov",num:96,p:"GK",q:"GOL",a:30,o:67,t:67,v:600000,nat:"Russia"},
       {n:"Butta Magomedov",num:97,p:"MF",q:"MEI",a:28,o:56,t:64,v:550000,nat:"Russia"},
       {n:"Nikolai Giorgobiani",num:99,p:"MF",q:"MEI",a:29,o:56,t:64,v:700000,nat:"Russia"},
@@ -12082,7 +12321,6 @@
       {n:"Nikolai Rasskazov",num:15,p:"DF",q:"LD",a:28,o:68,t:69,v:1200000,nat:"Russia"},
       {n:"Islam Chesnokov",num:17,p:"FW",q:"PD",a:26,o:67,t:69,v:1200000,nat:"Kazakhstan"},
       {n:"Ivan Lepsky",num:18,p:"DF",q:"ZAG",a:21,o:67,t:69,v:800000,nat:"Russia"},
-      {n:"Ivan Oleynikov",num:19,p:"MF",q:"MC",a:28,o:69,t:70,v:2500000,nat:"Russia"},
       {n:"Kirill Stolbov",num:20,p:"MF",q:"MC",a:22,o:70,t:74,v:600000,nat:"Russia"},
       {n:"Fernando Costanza",num:22,p:"MF",q:"VOL",a:27,o:70,t:70,v:2500000,nat:"Brazil"},
       {n:"Nikita Chernov",num:23,p:"DF",q:"ZAG",a:30,o:71,t:71,v:1500000,nat:"Russia"},
@@ -12098,10 +12336,11 @@
       {n:"Denis Makarov",num:77,p:"FW",q:"PD",a:28,o:72,t:72,v:1200000,nat:"Russia"},
       {n:"Denis Malikov",num:78,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Russia"},
       {n:"Nikita Kokarev",num:80,p:"GK",q:"GOL",a:23,o:60,t:67,v:800000,nat:"Russia"},
-      {n:"Vladimir Ignatenko",num:91,p:"FW",q:"CA",a:20,o:61,t:69,v:400000,nat:"Russia"},
       {n:"Dmytro Ivanisenya",num:0,p:"MF",q:"MC",a:32,o:68,t:68,v:1000000,nat:"Ukraine"},
       {n:"Nikita Pershin",num:0,p:"MF",q:"MC",a:24,o:67,t:69,v:2000000,nat:"Russia"},
-      {n:"Yegor Karpitsky",num:0,p:"FW",q:"CA",a:22,o:68,t:70,v:2500000,nat:"Belarus"}
+      {n:"Yegor Karpitsky",num:0,p:"FW",q:"CA",a:22,o:68,t:70,v:2500000,nat:"Belarus"},
+      {n:"Nikita Saltykov",num:14,p:"FW",q:"PE",a:22,o:72,t:75,v:1500000,nat:"Russia"},
+      {n:"Ilzat Akhmetov",num:97,p:"MF",q:"MD",a:20,o:61,t:69,v:1000000}
     ],
     "rus/Lokomotiv Moscou": [
       {n:"Anton Mitryushkin",num:1,p:"GK",q:"GOL",a:30,o:74,t:74,v:1500000,nat:"Russia"},
@@ -12115,7 +12354,6 @@
       {n:"Vadim Rakov",num:11,p:"FW",q:"CA",a:21,o:73,t:80,v:3000000,nat:"Russia"},
       {n:"Georgi Dzhikiya",num:14,p:"DF",q:"ZAG",a:32,o:72,t:72,v:1000000,nat:"Russia"},
       {n:"Daniil Veselov",num:16,p:"GK",q:"GOL",a:21,o:68,t:75,v:200000,nat:"Russia"},
-      {n:"Nikita Saltykov",num:17,p:"FW",q:"PE",a:22,o:72,t:75,v:1500000,nat:"Russia"},
       {n:"Aleksandr Rudenko",num:19,p:"FW",q:"CA",a:27,o:70,t:72,v:3000000,nat:"Russia"},
       {n:"Ilya Lantratov",num:22,p:"GK",q:"GOL",a:30,o:71,t:71,v:1500000,nat:"Russia"},
       {n:"César Montes",num:23,p:"DF",q:"ZAG",a:29,o:76,t:76,v:7500000,nat:"Mexico"},
@@ -12131,7 +12369,8 @@
       {n:"Andrei Mostovoy",num:77,p:"FW",q:"PE",a:28,o:76,t:76,v:3500000,nat:"Russia"},
       {n:"Yevgeny Morozov",num:85,p:"DF",q:"ZAG",a:25,o:68,t:71,v:2500000,nat:"Russia"},
       {n:"Mikhail Shchetinin",num:88,p:"MF",q:"VOL",a:21,o:62,t:70,v:350000,nat:"Russia"},
-      {n:"Ruslan Myalkovsky",num:99,p:"FW",q:"PE",a:20,o:63,t:71,v:350000,nat:"Belarus"}
+      {n:"Ruslan Myalkovsky",num:99,p:"FW",q:"PE",a:20,o:63,t:71,v:350000,nat:"Belarus"},
+      {n:"Nikolai Titkov",num:18,p:"MF",q:"MC",a:26,o:66,t:68,v:1200000,nat:"Russia"}
     ],
     "rus/Orenburg": [
       {n:"Bogdan Ovsyannikov",num:1,p:"GK",q:"GOL",a:27,o:68,t:72,v:900000,nat:"Russia"},
@@ -12165,7 +12404,11 @@
       {n:"Mikhail Pykhcheyev",num:80,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Russia"},
       {n:"Maksim Rudakov",num:88,p:"GK",q:"GOL",a:30,o:66,t:66,v:600000,nat:"Russia"},
       {n:"Andrey Khodanovich",num:95,p:"GK",q:"GOL",a:22,o:56,t:64,v:100000,nat:"Russia"},
-      {n:"Kirill Dudarin",num:96,p:"MF",q:"MC",a:20,o:57,t:65,v:225000,nat:"Russia"}
+      {n:"Kirill Dudarin",num:96,p:"MF",q:"MC",a:20,o:57,t:65,v:225000,nat:"Russia"},
+      {n:"Aleksandr Dyogtev",num:35,p:"GK",q:"GOL",a:21,o:62,t:70,v:800000,nat:"Russia"},
+      {n:"Anton Lukashov",num:22,p:"DF",q:"ZAG",a:26,o:65,t:67,v:800000},
+      {n:"João Silva",num:44,p:"DF",q:"LD",a:21,o:57,t:65,v:400000},
+      {n:"Aleksey Baranovsky",num:94,p:"MF",q:"MC",a:22,o:57,t:62,v:400000}
     ],
     "rus/Rodina Moscou": [
       {n:"Sergey Aydarov",num:1,p:"GK",q:"GOL",a:28,o:66,t:68,v:25000,nat:"Russia"},
@@ -12194,7 +12437,9 @@
       {n:"Stanislav Bessmertny",num:80,p:"DF",q:"LD",a:22,o:64,t:64,v:600000,nat:"Russia"},
       {n:"Artyom Sokol",num:88,p:"DF",q:"LD",a:29,o:56,t:64,v:800000,nat:"Russia"},
       {n:"Kerfala Cissoko",num:95,p:"FW",q:"CA",a:27,o:57,t:65,v:300000,nat:"Guinea"},
-      {n:"Ivan Timoshenko",num:99,p:"FW",q:"CA",a:27,o:66,t:70,v:1200000,nat:"Russia"}
+      {n:"Ivan Timoshenko",num:99,p:"FW",q:"CA",a:27,o:66,t:70,v:1200000,nat:"Russia"},
+      {n:"Deiver Machado",num:20,p:"DF",q:"LD",a:29,o:65,t:67,v:800000},
+      {n:"Rodrigo Becão",num:50,p:"DF",q:"LD",a:21,o:64,t:72,v:1000000}
     ],
     "rus/Rostov": [
       {n:"Rustam Yatimov",num:1,p:"GK",q:"GOL",a:28,o:71,t:72,v:2500000,nat:"Russia"},
@@ -12208,7 +12453,6 @@
       {n:"Ibraheem Mahfus Ajasa",num:11,p:"FW",q:"PE",a:21,o:68,t:70,v:150000,nat:"Nigeria"},
       {n:"Denis Titow",num:13,p:"FW",q:"PE",a:26,o:67,t:69,v:2000000,nat:"Russia"},
       {n:"Maksim Mukhin",num:16,p:"MF",q:"VOL",a:24,o:72,t:76,v:1200000,nat:"Russia"},
-      {n:"Yegor Golenkov",num:17,p:"FW",q:"PD",a:27,o:71,t:72,v:3500000,nat:"Russia"},
       {n:"Konstantin Kuchayev",num:18,p:"MF",q:"MC",a:28,o:70,t:71,v:3000000,nat:"Russia"},
       {n:"Daniil Shantaly",num:21,p:"MF",q:"MC",a:22,o:67,t:69,v:750000,nat:"Russia"},
       {n:"David Semenchuk",num:22,p:"DF",q:"ZAG",a:21,o:69,t:73,v:900000,nat:"Russia"},
@@ -12225,7 +12469,8 @@
       {n:"Artyom Petrov",num:84,p:"GK",q:"GOL",a:18,o:59,t:67,v:250000,nat:"Russia"},
       {n:"Andrei Langovich",num:87,p:"DF",q:"LD",a:23,o:67,t:71,v:1500000,nat:"Russia"},
       {n:"Anton Shamonin",num:91,p:"FW",q:"CA",a:21,o:61,t:69,v:350000,nat:"Russia"},
-      {n:"Timur Suleymanov",num:99,p:"FW",q:"CA",a:26,o:70,t:71,v:1500000,nat:"Russia"}
+      {n:"Timur Suleymanov",num:99,p:"FW",q:"CA",a:26,o:70,t:71,v:1500000,nat:"Russia"},
+      {n:"Daniil Khlusevich",num:26,p:"DF",q:"LD",a:25,o:72,t:74,v:2000000,nat:"Russia"}
     ],
     "rus/Rubin Kazan": [
       {n:"Yegor Teslenko",num:2,p:"DF",q:"ZAG",a:25,o:70,t:74,v:2800000,nat:"Russia"},
@@ -12239,7 +12484,6 @@
       {n:"Jakhongir Urozov",num:13,p:"DF",q:"ZAG",a:26,o:67,t:69,v:1200000,nat:"Uzbekistan"},
       {n:"Ignacio Saavedra",num:14,p:"MF",q:"VOL",a:27,o:72,t:73,v:2500000,nat:"Chile"},
       {n:"Maksim Ignatyev",num:18,p:"DF",q:"LE",a:26,o:67,t:69,v:600000,nat:"Russia"},
-      {n:"Veldin Hodža",num:22,p:"MF",q:"MC",a:23,o:68,t:70,v:2500000,nat:"Kosovo"},
       {n:"Ruslan Bezrukov",num:23,p:"MF",q:"PE",a:24,o:70,t:74,v:1000000,nat:"Russia"},
       {n:"Artur Nigmatullin",num:25,p:"GK",q:"GOL",a:35,o:70,t:70,v:300000,nat:"Russia"},
       {n:"Aleksei Gritsayenko",num:27,p:"DF",q:"ZAG",a:31,o:68,t:68,v:1000000,nat:"Russia"},
@@ -12253,7 +12497,11 @@
       {n:"Aleksandar Jukić",num:77,p:"MF",q:"MC",a:26,o:71,t:73,v:700000,nat:"Austria"},
       {n:"Nikita Korets",num:86,p:"GK",q:"GOL",a:20,o:60,t:68,v:200000,nat:"Russia"},
       {n:"Nikita Lobov",num:98,p:"DF",q:"ZAG",a:21,o:60,t:68,v:1000000,nat:"Russia"},
-      {n:"Dardan Shabanhaxhaj",num:99,p:"FW",q:"CA",a:25,o:72,t:72,v:2000000,nat:"Kosovo"}
+      {n:"Dardan Shabanhaxhaj",num:99,p:"FW",q:"CA",a:25,o:72,t:72,v:2000000,nat:"Kosovo"},
+      {n:"Ulvi Babayev",num:7,p:"FW",q:"PD",a:22,o:68,t:75,v:25000000,nat:"Russia"},
+      {n:"Eddie Salcedo",num:10,p:"FW",q:"SA",a:26,o:70,t:72,v:2000000},
+      {n:"Veldin Hoxha",num:22,p:"MF",q:"MC",a:28,o:69,t:71,v:1200000},
+      {n:"Matvey Ivanov",num:89,p:"MF",q:"MC",a:23,o:67,t:72,v:1800000}
     ],
     "rus/Spartak Moscou": [
       {n:"Ilya Pomazun",num:1,p:"GK",q:"GOL",a:30,o:70,t:70,v:1000000,nat:"Russia"},
@@ -12262,7 +12510,7 @@
       {n:"Esequiel Barco",num:5,p:"MF",q:"MEI",a:27,o:77,t:77,v:6500000,nat:"Argentina"},
       {n:"Srđan Babić",num:6,p:"DF",q:"ZAG",a:30,o:72,t:72,v:4000000,nat:"Serbia"},
       {n:"Pablo Solari",num:7,p:"FW",q:"PD",a:25,o:75,t:77,v:8000000,nat:"Argentina"},
-      {n:"Anton Zinkovsky",num:8,p:"FW",q:"PE",a:30,o:71,t:71,v:2000000,nat:"Russia"},
+      {n:"Anton Zinkovsky",num:77,p:"FW",q:"PE",a:30,o:71,t:71,v:2000000,nat:"Russia"},
       {n:"Manfred Ugalde",num:9,p:"FW",q:"CA",a:24,o:78,t:81,v:12000000,nat:"Costa Rica"},
       {n:"Marquinhos",num:10,p:"FW",q:"PE",a:26,o:74,t:78,v:7000000,nat:"Brazil"},
       {n:"Vladislav Saus",num:17,p:"MF",q:"PD",a:23,o:64,t:72,v:2000000,nat:"Russia"},
@@ -12280,7 +12528,6 @@
       {n:"Pavel Polekh",num:62,p:"FW",q:"PE",a:16,o:63,t:71,v:250000,nat:"Russia"},
       {n:"Ruslan Litvinov",num:68,p:"DF",q:"ZAG",a:25,o:73,t:76,v:5500000,nat:"Russia"},
       {n:"Aleksandr Dobroditsky",num:71,p:"DF",q:"ZAG",a:20,o:62,t:70,v:1500000,nat:"Russia"},
-      {n:"Daniil Khlusevich",num:82,p:"DF",q:"LD",a:25,o:72,t:74,v:2000000,nat:"Russia"},
       {n:"Gedson Fernandes",num:83,p:"MF",q:"MC",a:27,o:76,t:77,v:16000000,nat:"Portugal"},
       {n:"Artyom Bykovsky",num:84,p:"FW",q:"CA",a:20,o:63,t:71,v:2000000,nat:"Russia"},
       {n:"Daniil Denisov",num:97,p:"DF",q:"LD",a:23,o:72,t:74,v:4000000,nat:"Russia"},
@@ -12303,7 +12550,6 @@
       {n:"Nuraly Alip",num:28,p:"DF",q:"ZAG",a:26,o:74,t:76,v:2000000,nat:"Kazakhstan"},
       {n:"Gustavo Mantuan",num:31,p:"DF",q:"LD",a:25,o:74,t:76,v:5000000,nat:"Brazil"},
       {n:"Nino",num:33,p:"DF",q:"ZAG",a:29,o:77,t:77,v:10000000,nat:"Brazil"},
-      {n:"Aleksandr Dyogtev",num:35,p:"GK",q:"GOL",a:21,o:62,t:70,v:800000,nat:"Russia"},
       {n:"Amir Musayev",num:38,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Russia"},
       {n:"Vadim Shilov",num:51,p:"FW",q:"PD",a:18,o:66,t:75,v:800000,nat:"Russia"},
       {n:"Bogdan Moskvichyov",num:57,p:"GK",q:"GOL",a:22,o:62,t:70,v:600000,nat:"Russia"},
@@ -12341,8 +12587,10 @@
       {n:"Nawaf Al-Ghulaimish",num:66,p:"DF",q:"LD",a:21,o:54,t:61,v:175000,nat:"Saudi Arabia"},
       {n:"Safwan Al-Johani",num:80,p:"DF",q:"LE",a:20,o:54,t:62,v:175000,nat:"Saudi Arabia"},
       {n:"Ali Mubarki",num:95,p:"MF",q:"MC",a:20,o:55,t:63,v:10000,nat:"Saudi Arabia"},
-      {n:"Mateo Borrell",num:0,p:"MF",q:"VOL",a:26,o:62,t:64,v:175000,nat:"Argentina"},
-      {n:"Kévin Nkoudou",num:0,p:"FW",q:"PD",a:31,o:68,t:68,v:2500000,nat:"Cameroon"}
+      {n:"Mateo Borrell",num:55,p:"MF",q:"VOL",a:26,o:62,t:64,v:175000,nat:"Argentina"},
+      {n:"Kévin Nkoudou",num:14,p:"FW",q:"PD",a:31,o:68,t:68,v:2500000,nat:"Cameroon"},
+      {n:"Basil Al-Sayyali",num:4,p:"MF",q:"MC",a:24,o:66,t:70,v:2000000,nat:"Saudi Arabia"},
+      {n:"Abdulkarim Darisi",num:17,p:"MF",q:"MC",a:23,o:57,t:61,v:550000,nat:"Saudi Arabia"}
     ],
     "sa/Al-Ahli": [
       {n:"Abdulrahman Al-Sanbi",num:1,p:"GK",q:"GOL",a:25,o:60,t:62,v:300000,nat:"Saudi Arabia"},
@@ -12375,7 +12623,8 @@
       {n:"Naif Masoud",num:66,p:"MF",q:"MC",a:25,o:58,t:66,v:350000,nat:"Saudi Arabia"},
       {n:"Salman Al-Jadani",num:72,p:"GK",q:"GOL",a:20,o:60,t:68,v:700000,nat:"Saudi Arabia"},
       {n:"Ramez Al-Attar",num:87,p:"MF",q:"MC",a:20,o:61,t:69,v:1000000,nat:"Saudi Arabia"},
-      {n:"Ibrahima Diaby",num:0,p:"MF",q:"VOL",a:24,o:71,t:75,v:1500000,nat:"France"}
+      {n:"Ibrahima Diaby",num:4,p:"MF",q:"VOL",a:24,o:71,t:75,v:1500000,nat:"France"},
+      {n:"Faisal Fallatah",num:25,p:"MF",q:"MC",a:25,o:68,t:70,v:1400000}
     ],
     "sa/Al-Diriyah": [
       {n:"Abdulaziz Al-Faraj",num:2,p:"DF",q:"LD",a:27,o:68,t:70,v:250000,nat:"Saudi Arabia"},
@@ -12387,7 +12636,6 @@
       {n:"Hattan Bahebri",num:11,p:"FW",q:"PE",a:34,o:63,t:63,v:350000,nat:"Saudi Arabia"},
       {n:"Taher Wadi",num:12,p:"DF",q:"LD",a:26,o:67,t:70,v:125000,nat:"Saudi Arabia"},
       {n:"Óscar Rodríguez",num:14,p:"MF",q:"MC",a:28,o:71,t:72,v:3500000,nat:"Spain"},
-      {n:"Omar Colley",num:15,p:"DF",q:"ZAG",a:34,o:71,t:71,v:900000,nat:"The Gambia"},
       {n:"Hussain Al-Sibyani",num:16,p:"DF",q:"ZAG",a:25,o:60,t:62,v:700000,nat:"Saudi Arabia"},
       {n:"Clayton Diandy",num:17,p:"FW",q:"PD",a:24,o:69,t:73,v:1000000,nat:"Senegal"},
       {n:"Berat Djimsiti",num:19,p:"DF",q:"ZAG",a:33,o:79,t:79,v:4000000,nat:"Albania"},
@@ -12405,11 +12653,13 @@
       {n:"Amin Bukhari",num:97,p:"GK",q:"GOL",a:29,o:66,t:68,v:125000,nat:"Saudi Arabia"},
       {n:"Chancel Mbemba",num:99,p:"DF",q:"ZAG",a:32,o:74,t:74,v:2000000,nat:"DR Congo"},
       {n:"Abdulelah Al-Jaafari",num:0,p:"DF",q:"ZAG",a:26,o:62,t:64,v:75000,nat:"Saudi Arabia"},
-      {n:"Mathys De Carvalho",num:0,p:"MF",q:"VOL",a:26,o:63,t:65,v:3000000,nat:"Portugal"}
+      {n:"Mathys De Carvalho",num:0,p:"MF",q:"VOL",a:26,o:63,t:65,v:3000000,nat:"Portugal"},
+      {n:"Idrissa Gueye",num:5,p:"FW",q:"CA",a:19,o:79,t:79,v:8000000,nat:"Senegal"},
+      {n:"Lovro Chelfi",p:"MF",q:"MC",a:23,o:66,t:71,v:1500000}
     ],
     "sa/Al-Ettifaq": [
       {n:"Marek Rodák",num:1,p:"GK",q:"GOL",a:29,o:74,t:75,v:2800000,nat:"Slovakia"},
-      {n:"Abdullah Al-Bishi",num:2,p:"DF",q:"LD",a:26,o:67,t:69,v:2000000,nat:"Saudi Arabia"},
+      {n:"Abdullah Al-Bishi",num:15,p:"DF",q:"LD",a:26,o:67,t:69,v:2000000,nat:"Saudi Arabia"},
       {n:"Abdullah Madu",num:3,p:"DF",q:"ZAG",a:33,o:65,t:65,v:450000,nat:"Saudi Arabia"},
       {n:"Jack Hendry",num:4,p:"DF",q:"ZAG",a:31,o:74,t:74,v:2500000,nat:"Scotland"},
       {n:"Khalid Al-Ghannam",num:7,p:"FW",q:"PE",a:25,o:60,t:63,v:2500000,nat:"Saudi Arabia"},
@@ -12438,8 +12688,10 @@
       {n:"Ali Al-Eisa",num:88,p:"FW",q:"CA",a:20,o:62,t:70,v:1500000,nat:"Saudi Arabia"},
       {n:"Turki Ba Al-Jawsh",num:92,p:"GK",q:"GOL",a:20,o:60,t:68,v:175000,nat:"Saudi Arabia"},
       {n:"Pedro Henrique",num:0,p:"DF",q:"ZAG",a:30,o:70,t:71,v:3500000,nat:"Brazil"},
-      {n:"Marzouq Tambakti",num:0,p:"DF",q:"ZAG",a:26,o:69,t:71,v:225000,nat:"Saudi Arabia"},
-      {n:"Riyadh Sharahili",num:0,p:"MF",q:"VOL",a:33,o:68,t:70,v:150000,nat:"Saudi Arabia"}
+      {n:"Marzouq Tambakti",num:78,p:"DF",q:"ZAG",a:26,o:69,t:71,v:225000,nat:"Saudi Arabia"},
+      {n:"Riyadh Sharahili",num:26,p:"MF",q:"VOL",a:33,o:68,t:70,v:150000,nat:"Saudi Arabia"},
+      {n:"Talal Haji",p:"FW",q:"CA",a:29,o:65,t:67,v:800000},
+      {n:"Sultan Harun",p:"FW",q:"CA",a:29,o:66,t:68,v:800000}
     ],
     "sa/Al-Faisaly": [
       {n:"Fernando Pacheco",num:1,p:"GK",q:"GOL",a:34,o:71,t:71,v:600000,nat:"Spain"},
@@ -12463,7 +12715,6 @@
       {n:"Dayo Joyce",num:28,p:"FW",q:"CA",a:24,o:67,t:72,v:2500000,nat:"Saudi Arabia"},
       {n:"Meshari Shetaimi",num:30,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Saudi Arabia"},
       {n:"Wael Kedan",num:37,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Saudi Arabia"},
-      {n:"Fawaz Rabee",num:44,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Saudi Arabia"},
       {n:"Mohammed Al-Shanqiti",num:50,p:"DF",q:"LE",a:20,o:55,t:63,v:50000,nat:"Saudi Arabia"},
       {n:"Mohammed Jahfali",num:70,p:"DF",q:"ZAG",a:35,o:68,t:68,v:75000,nat:"Saudi Arabia"},
       {n:"Ahmed Abdu Jaber",num:71,p:"FW",q:"CA",a:20,o:57,t:65,v:500000,nat:"Saudi Arabia"},
@@ -12473,7 +12724,12 @@
       {n:"Saoud Haddad",num:88,p:"DF",q:"LD",a:20,o:55,t:63,v:50000,nat:"Saudi Arabia"},
       {n:"Ahmed Al-Badah",num:8,p:"MF",q:"MC",a:26,o:63,t:65,v:1000000,nat:"Saudi Arabia"},
       {n:"Mishal Haddad",num:22,p:"DF",q:"ZAG",a:26,o:62,t:64,v:900000,nat:"Saudi Arabia"},
-      {n:"Rayan Fallatah",num:91,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Saudi Arabia"}
+      {n:"Rayan Fallatah",num:95,p:"DF",q:"ZAG",a:20,o:55,t:63,v:250000,nat:"Saudi Arabia"},
+      {n:"Abdulaziz Al-Bishi",num:24,p:"MF",q:"MD",a:27,o:63,t:65,v:600000},
+      {n:"Fawaz Rabie",num:44,p:"DF",q:"ZAG",a:22,o:56,t:61,v:400000},
+      {n:"Ahmed Al Muhaimeed",num:99,p:"DF",q:"LD",a:25,o:56,t:58,v:600000},
+      {n:"Abdullah Al-Rashidi",p:"DF",q:"LD",a:25,o:60,t:62,v:500000},
+      {n:"Malik Hamza",p:"MF",q:"MD",a:23,o:63,t:68,v:1000000}
     ],
     "sa/Al-Fateh": [
       {n:"Adrian Šemper",num:1,p:"GK",q:"GOL",a:28,o:71,t:73,v:1800000,nat:"Croatia"},
@@ -12507,7 +12763,9 @@
       {n:"Sattam Al-Tumbukti",num:87,p:"DF",q:"LD",a:20,o:58,t:66,v:150000,nat:"Saudi Arabia"},
       {n:"Othman Al-Othman",num:88,p:"FW",q:"PD",a:23,o:59,t:63,v:125000,nat:"Saudi Arabia"},
       {n:"Waleed Al-Enezi",num:94,p:"GK",q:"GOL",a:20,o:58,t:66,v:75000,nat:"Saudi Arabia"},
-      {n:"Ali Al-Hassan",num:0,p:"MF",q:"VOL",a:29,o:66,t:68,v:450000,nat:"Saudi Arabia"}
+      {n:"Ali Al-Hassan",num:6,p:"MF",q:"VOL",a:29,o:66,t:68,v:450000,nat:"Saudi Arabia"},
+      {n:"Houssam Essadak",num:20,p:"MF",q:"ME",a:23,o:66,t:71,v:1500000},
+      {n:"Ali Alamine",p:"DF",q:"LE",a:29,o:63,t:65,v:600000}
     ],
     "sa/Al-Fayha": [
       {n:"Abdulraouf Al-Duqayl",num:1,p:"GK",q:"GOL",a:26,o:67,t:70,v:75000,nat:"Saudi Arabia"},
@@ -12526,22 +12784,23 @@
       {n:"Mohammed Al-Baqawi",num:22,p:"DF",q:"LD",a:31,o:62,t:64,v:275000,nat:"Saudi Arabia"},
       {n:"Jason",num:23,p:"MF",q:"MEI",a:32,o:73,t:73,v:2000000,nat:"Spain"},
       {n:"Ahmed Bamsaud",num:24,p:"DF",q:"LE",a:31,o:61,t:65,v:600000,nat:"Saudi Arabia"},
-      {n:"Danyal Al Habib",num:27,p:"MF",q:"MEI",a:24,o:66,t:70,v:2000000,nat:"Saudi Arabia"},
+      {n:"Danyal Al Habib",num:67,p:"MF",q:"MEI",a:24,o:66,t:70,v:2000000,nat:"Saudi Arabia"},
       {n:"Alfa Semedo",num:30,p:"MF",q:"VOL",a:29,o:70,t:71,v:900000,nat:"Guinea-Bissau"},
       {n:"Osama Al-Thumairy",num:31,p:"GK",q:"GOL",a:20,o:58,t:66,v:450000,nat:"Saudi Arabia"},
-      {n:"Silvère Ganvoula",num:35,p:"FW",q:"CA",a:30,o:69,t:69,v:1500000,nat:"Congo"},
       {n:"Ammar Al-Khaibari",num:41,p:"FW",q:"PD",a:20,o:60,t:68,v:100000,nat:"Saudi Arabia"},
       {n:"Ali Al Harshan",num:42,p:"DF",q:"LE",a:25,o:66,t:69,v:2000000,nat:"Saudi Arabia"},
       {n:"Fahad Al-Hubaishi",num:43,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Saudi Arabia"},
       {n:"Ali Al-Nakhli",num:44,p:"DF",q:"ZAG",a:20,o:58,t:66,v:600000,nat:"Saudi Arabia"},
       {n:"Mohammed Al-Dowaish",num:47,p:"DF",q:"LD",a:20,o:58,t:66,v:50000,nat:"Saudi Arabia"},
       {n:"Orlando Mosquera",num:52,p:"GK",q:"GOL",a:32,o:70,t:70,v:700000,nat:"Panama"},
-      {n:"Abdullah Al-Anazi",num:55,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Saudi Arabia"},
-      {n:"Saikou Secka",num:59,p:"FW",q:"PD",a:24,o:67,t:71,v:2500000,nat:"The Gambia"},
       {n:"Mohammed Hakami",num:72,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
-      {n:"Albaraa Addawi",num:74,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Saudi Arabia"},
       {n:"Ryan Enad",num:77,p:"FW",q:"PD",a:20,o:59,t:67,v:800000,nat:"Saudi Arabia"},
-      {n:"Moath Al-Habib",num:92,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"}
+      {n:"Moath Al-Habib",num:92,p:"FW",q:"CA",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
+      {n:"Turki Al-Jaadi",num:12,p:"DF",q:"ZAG",a:26,o:67,t:69,v:2000000,nat:"Saudi Arabia"},
+      {n:"Omar Colley",num:25,p:"DF",q:"ZAG",a:34,o:71,t:71,v:900000,nat:"The Gambia"},
+      {n:"Yago Souza",num:40,p:"MF",q:"MC",a:26,o:68,t:69,v:2000000,nat:"Brazil"},
+      {n:"Sultan Al-Jabri",num:27,p:"FW",q:"CA",a:24,o:60,t:65,v:500000},
+      {n:"Albaraa Adawi",num:29,p:"MF",q:"MC",a:24,o:59,t:64,v:500000}
     ],
     "sa/Al-Hazem": [
       {n:"Yazan Al-Ruwaili",num:1,p:"GK",q:"GOL",a:27,o:66,t:69,v:1500000,nat:"Saudi Arabia"},
@@ -12549,7 +12808,6 @@
       {n:"Mohamed Amine Ben Hamida",num:3,p:"DF",q:"LE",a:29,o:68,t:69,v:1000000,nat:"Tunisia"},
       {n:"Sultan Tunkar",num:4,p:"DF",q:"ZAG",a:27,o:66,t:69,v:300000,nat:"Saudi Arabia"},
       {n:"Mohammed Issa",num:5,p:"MF",q:"VOL",a:26,o:64,t:66,v:150000,nat:"Saudi Arabia"},
-      {n:"Youssouf Oumarou",num:6,p:"MF",q:"MC",a:26,o:64,t:66,v:600000,nat:"Saudi Arabia"},
       {n:"Elton Acolatse",num:7,p:"FW",q:"PE",a:31,o:68,t:68,v:700000,nat:"Netherlands"},
       {n:"Mory Konaté",num:8,p:"MF",q:"VOL",a:27,o:68,t:70,v:500000,nat:"Guinea"},
       {n:"Afimico Pululu",num:9,p:"FW",q:"CA",a:27,o:70,t:72,v:4000000,nat:"Angola"},
@@ -12575,7 +12833,11 @@
       {n:"Ahmed Al-Shamrani",num:70,p:"FW",q:"PE",a:20,o:57,t:65,v:200000,nat:"Saudi Arabia"},
       {n:"Khalid Al-Subaie",num:77,p:"FW",q:"PD",a:27,o:65,t:67,v:1500000,nat:"Saudi Arabia"},
       {n:"Abdulaziz Al-Harbi",num:82,p:"DF",q:"LD",a:20,o:56,t:64,v:150000,nat:"Saudi Arabia"},
-      {n:"Mohammed Al-Hamdani",num:77,p:"FW",q:"PD",a:20,o:57,t:65,v:150000,nat:"Saudi Arabia"}
+      {n:"Mohammed Al-Hamdani",num:77,p:"FW",q:"PD",a:20,o:57,t:65,v:150000,nat:"Saudi Arabia"},
+      {n:"Khalid Abduljawad",num:88,p:"MF",q:"VOL",a:20,o:57,t:65,v:400000},
+      {n:"Hassan Idris",num:90,p:"MF",q:"MEI",a:21,o:59,t:67,v:500000},
+      {n:"Jaser Ateeq",num:95,p:"MF",q:"MC",a:21,o:57,t:65,v:400000},
+      {n:"Ayman Al-Hujaili",num:98,p:"MF",q:"MC",a:24,o:57,t:62,v:400000}
     ],
     "sa/Al-Hilal": [
       {n:"Mohammed Mahzari",num:2,p:"DF",q:"LD",a:24,o:58,t:63,v:600000,nat:"Saudi Arabia"},
@@ -12607,8 +12869,10 @@
       {n:"Nawaf Al-Habashi",num:77,p:"FW",q:"PE",a:28,o:60,t:69,v:275000,nat:"Saudi Arabia"},
       {n:"Ali Lajami",num:78,p:"DF",q:"ZAG",a:30,o:70,t:70,v:2500000,nat:"Saudi Arabia"},
       {n:"Hassan Al-Tambakti",num:87,p:"DF",q:"ZAG",a:27,o:74,t:75,v:1800000,nat:"Saudi Arabia"},
-      {n:"Abdulkarim Darisi",num:14,p:"MF",q:"MC",a:23,o:57,t:61,v:550000,nat:"Saudi Arabia"},
-      {n:"Abdullah Al-Zaid",num:32,p:"MF",q:"MC",a:20,o:64,t:72,v:3000000,nat:"Saudi Arabia"}
+      {n:"Abdullah Al-Zaid",num:32,p:"MF",q:"MC",a:20,o:64,t:72,v:3000000,nat:"Saudi Arabia"},
+      {n:"Abdullah Al-Anazi",num:93,p:"MF",q:"MC",a:20,o:59,t:67,v:800000,nat:"Saudi Arabia"},
+      {n:"Hamad Al-Yami",num:88,p:"DF",q:"ZAG",a:19,o:62,t:70,v:1500000},
+      {n:"Suhayb Al-Zaid",num:96,p:"MF",q:"MD",a:19,o:63,t:71,v:2000000}
     ],
     "sa/Al-Ittihad": [
       {n:"Predrag Rajković",num:1,p:"GK",q:"GOL",a:30,o:80,t:80,v:7000000,nat:"Serbia"},
@@ -12627,7 +12891,6 @@
       {n:"Ahmed Sharahili",num:20,p:"DF",q:"LD",a:32,o:71,t:72,v:2000000,nat:"Saudi Arabia"},
       {n:"Youssef En-Nesyri",num:21,p:"FW",q:"CA",a:29,o:82,t:82,v:17000000,nat:"Morocco"},
       {n:"Marwan Al-Sahafi",num:22,p:"FW",q:"PE",a:22,o:63,t:69,v:1000000,nat:"Saudi Arabia"},
-      {n:"Nawaf Al-Jadaani",num:23,p:"MF",q:"MC",a:26,o:70,t:72,v:3000000,nat:"Saudi Arabia"},
       {n:"Faris Abdi",num:25,p:"DF",q:"LE",a:27,o:66,t:72,v:500000,nat:"Saudi Arabia"},
       {n:"Ahmed Al-Ghamdi",num:27,p:"FW",q:"PE",a:24,o:65,t:69,v:500000,nat:"Saudi Arabia"},
       {n:"Farhah Al-Shamrani",num:29,p:"MF",q:"MEI",a:20,o:67,t:73,v:450000,nat:"Saudi Arabia"},
@@ -12639,8 +12902,12 @@
       {n:"Stephane Keller",num:3,p:"DF",q:"ZAG",a:25,o:69,t:71,v:2500000,nat:"Cameroon"},
       {n:"Fawaz Al-Sqoor",num:37,p:"DF",q:"ZAG",a:30,o:62,t:70,v:1500000,nat:"Saudi Arabia"},
       {n:"Mohammed Fallatah",num:41,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Saudi Arabia"},
-      {n:"Hamed Al-Shanqiti",num:47,p:"GK",q:"GOL",a:21,o:67,t:70,v:1500000,nat:"Saudi Arabia"},
-      {n:"Unai Hernández",num:0,p:"MF",q:"MEI",a:21,o:66,t:72,v:2500000,nat:"Spain"}
+      {n:"Unai Hernández",num:0,p:"MF",q:"MEI",a:21,o:66,t:72,v:2500000,nat:"Spain"},
+      {n:"Rakan Al-Kaabi",num:60,p:"MF",q:"MC",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
+      {n:"Georginio Wijnaldum",num:23,p:"MF",q:"VOL",a:28,o:70,t:72,v:1500000},
+      {n:"Mohammed Barnawi",num:66,p:"DF",q:"ZAG",a:20,o:66,t:74,v:2500000},
+      {n:"Yaseen Al-Jaber",num:87,p:"DF",q:"ZAG",a:23,o:66,t:71,v:1500000},
+      {n:"Osama Al-Mermesh",num:88,p:"GK",q:"GOL",a:23,o:67,t:72,v:1800000}
     ],
     "sa/Al-Khaleej": [
       {n:"Mohammed Al Ibrahim",num:1,p:"GK",q:"GOL",a:26,o:64,t:64,v:800000,nat:"Saudi Arabia"},
@@ -12661,7 +12928,6 @@
       {n:"Nawaf Al-Sadi",num:18,p:"FW",q:"PD",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
       {n:"Miguel Crespo",num:19,p:"MF",q:"MC",a:26,o:64,t:64,v:2000000,nat:"Portugal"},
       {n:"Witcha",num:20,p:"FW",q:"PE",a:26,o:64,t:64,v:1000000,nat:"Cape Verde"},
-      {n:"Rakan Al-Kaabi",num:23,p:"MF",q:"MC",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
       {n:"Ali Abdulrouf",num:24,p:"MF",q:"MEI",a:26,o:64,t:64,v:50000,nat:"Saudi Arabia"},
       {n:"Abdullah Al Zaynaldeen",num:27,p:"MF",q:"MC",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
       {n:"Hussain Al-Eisa",num:28,p:"FW",q:"PE",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
@@ -12675,9 +12941,9 @@
       {n:"Abdulmajeed Al-Khathami",num:92,p:"FW",q:"CA",a:26,o:64,t:64,v:1000000,nat:"Saudi Arabia"},
       {n:"Marwan Al-Haidari",num:96,p:"GK",q:"GOL",a:30,o:60,t:60,v:125000,nat:"Saudi Arabia"},
       {n:"Musa Barrow",num:99,p:"FW",q:"PE",a:26,o:64,t:64,v:6000000,nat:"The Gambia"},
-      {n:"Fawaz Al-Sqoor",num:0,p:"DF",q:"LD",a:26,o:64,t:64,v:450000,nat:"Saudi Arabia"},
+      {n:"Fawaz Al-Sqoor",num:27,p:"DF",q:"LD",a:26,o:64,t:64,v:450000,nat:"Saudi Arabia"},
       {n:"Abdullah Al-Ammar",num:0,p:"DF",q:"LE",a:26,o:64,t:64,v:325000,nat:"Saudi Arabia"},
-      {n:"Fahad Al-Rashidi",num:0,p:"FW",q:"PD",a:26,o:64,t:64,v:225000,nat:"Saudi Arabia"},
+      {n:"Fahad Al-Rashidi",num:97,p:"FW",q:"PD",a:26,o:64,t:64,v:225000,nat:"Saudi Arabia"},
       {n:"Mohammed Al-Abdullah",num:0,p:"MF",q:"MEI",a:24,o:53,t:55,v:25000,nat:"Saudi Arabia"},
       {n:"Mateo Benegas",num:0,p:"FW",q:"CA",a:26,o:64,t:64,v:275000,nat:"Argentina"}
     ],
@@ -12707,8 +12973,8 @@
       {n:"Mohammed Al-Rashidi",num:67,p:"MF",q:"MC",a:20,o:57,t:65,v:50000,nat:"Saudi Arabia"},
       {n:"Muhammad Sawan",num:70,p:"MF",q:"MC",a:20,o:57,t:65,v:500000,nat:"Saudi Arabia"},
       {n:"Guga",num:99,p:"FW",q:"CA",a:26,o:68,t:71,v:400000,nat:"Brazil"},
-      {n:"Mohammed Fallatah",num:0,p:"MF",q:"MC",a:26,o:64,t:66,v:1500000,nat:"Saudi Arabia"},
-      {n:"Antoin Essomba",num:0,p:"FW",q:"CA",a:26,o:65,t:67,v:1500000,nat:"Cameroon"}
+      {n:"Antoin Essomba",num:77,p:"FW",q:"CA",a:26,o:65,t:67,v:1500000,nat:"Cameroon"},
+      {n:"Hamed Al-Shanqiti",num:1,p:"GK",q:"GOL",a:21,o:67,t:70,v:1500000,nat:"Saudi Arabia"}
     ],
     "sa/Al-Nassr": [
       {n:"Nawaf Al-Aqidi",num:1,p:"GK",q:"GOL",a:26,o:72,t:76,v:650000,nat:"Saudi Arabia"},
@@ -12742,12 +13008,12 @@
       {n:"João Félix",num:79,p:"FW",q:"SA",a:26,o:79,t:81,v:8000000,nat:"Portugal"},
       {n:"Salem Al-Najdi",num:83,p:"DF",q:"LE",a:23,o:63,t:67,v:500000,nat:"Saudi Arabia"},
       {n:"Bassam Hazazi",num:88,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Saudi Arabia"},
-      {n:"Abdulrahaman Sufyani",num:94,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Saudi Arabia"}
+      {n:"Abdulrahaman Sufyani",num:94,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Saudi Arabia"},
+      {n:"Sultan Almas",num:66,p:"GK",q:"GOL",a:21,o:63,t:71,v:1000000}
     ],
     "sa/Al-Qadsiah": [
       {n:"Koen Casteels",num:1,p:"GK",q:"GOL",a:34,o:82,t:82,v:3500000,nat:"Belgium"},
       {n:"Mohammed Abu Al-Shamat",num:2,p:"DF",q:"LD",a:24,o:67,t:69,v:1800000,nat:"Saudi Arabia"},
-      {n:"Mohammed Al-Shammari",num:3,p:"DF",q:"LD",a:26,o:69,t:72,v:3000000,nat:"Saudi Arabia"},
       {n:"Jehad Thakri",num:4,p:"DF",q:"ZAG",a:25,o:68,t:72,v:1200000,nat:"Saudi Arabia"},
       {n:"Julian Weigl",num:5,p:"MF",q:"VOL",a:31,o:78,t:78,v:4500000,nat:"Germany"},
       {n:"Nacho",num:6,p:"DF",q:"ZAG",a:36,o:75,t:75,v:1500000,nat:"Spain"},
@@ -12776,7 +13042,12 @@
       {n:"Cameron Puertas",num:88,p:"MF",q:"MEI",a:28,o:74,t:75,v:4500000,nat:"Switzerland"},
       {n:"Souffian El Karouani",num:16,p:"DF",q:"ZAG",a:25,o:75,t:78,v:5500000,nat:"Morocco"},
       {n:"Gabriel Carvalho",num:20,p:"FW",q:"CA",a:19,o:66,t:75,v:3000000,nat:"Brazil"},
-      {n:"Otávio",num:25,p:"MF",q:"MC",a:31,o:82,t:82,v:5500000,nat:"Portugal"}
+      {n:"Otávio",num:25,p:"MF",q:"MC",a:31,o:82,t:82,v:5500000,nat:"Portugal"},
+      {n:"Suleman Sani",num:18,p:"FW",q:"CA",a:20,o:65,t:72,v:5000000,nat:"Nigeria"},
+      {n:"Abdulmalik Al-Jaber",num:18,p:"MF",q:"MC",a:27,o:67,t:69,v:1200000},
+      {n:"Ali Badra Diabaté",num:26,p:"DF",q:"ZAG",a:26,o:62,t:64,v:500000},
+      {n:"Meshari Sunyur",num:50,p:"GK",q:"GOL",a:20,o:65,t:73,v:2000000},
+      {n:"Wafi Al-Aklabi",num:60,p:"GK",q:"GOL",a:21,o:65,t:73,v:1500000}
     ],
     "sa/Al-Riyadh": [
       {n:"Sultan Al-Essa",num:2,p:"DF",q:"LD",a:26,o:66,t:69,v:75000,nat:"Saudi Arabia"},
@@ -12805,11 +13076,15 @@
       {n:"Milan Borjan",num:82,p:"GK",q:"GOL",a:39,o:78,t:78,v:1500000,nat:"Canada"},
       {n:"Cheikh Fall",num:96,p:"FW",q:"CA",a:26,o:68,t:71,v:2500000,nat:"Senegal"},
       {n:"Emad Al-Feda",num:97,p:"GK",q:"GOL",a:29,o:52,t:60,v:50000,nat:"Saudi Arabia"},
-      {n:"Mohammed Al-Shammari",num:0,p:"DF",q:"ZAG",a:26,o:69,t:71,v:2500000,nat:"Saudi Arabia"},
-      {n:"Ahmed Khatir",num:0,p:"DF",q:"ZAG",a:26,o:64,t:66,v:1500000,nat:"Morocco"},
+      {n:"Mohammed Al-Shammari",num:4,p:"DF",q:"ZAG",a:26,o:69,t:71,v:2500000,nat:"Saudi Arabia"},
       {n:"Suwailem Al-Manhali",num:25,p:"DF",q:"ZAG",a:22,o:61,t:67,v:950000,nat:"Saudi Arabia"},
       {n:"Saud Al-Tumbukti",num:44,p:"MF",q:"MC",a:20,o:58,t:66,v:600000,nat:"Saudi Arabia"},
-      {n:"Nawaf Hawsawi",num:50,p:"DF",q:"ZAG",a:20,o:57,t:65,v:500000,nat:"Saudi Arabia"}
+      {n:"Nawaf Hawsawi",num:50,p:"DF",q:"ZAG",a:20,o:57,t:65,v:500000,nat:"Saudi Arabia"},
+      {n:"Hassan Al-Ali",num:11,p:"FW",q:"PE",a:24,o:58,t:62,v:450000,nat:"Saudi Arabia"},
+      {n:"Yasser Al-Mousa",num:3,p:"DF",q:"ZAG",a:24,o:68,t:73,v:1400000},
+      {n:"Battal Al-Harthi",num:20,p:"FW",q:"CA",a:29,o:66,t:68,v:800000},
+      {n:"Awad Dahal",num:21,p:"DF",q:"LE",a:29,o:64,t:66,v:800000},
+      {n:"Hussain Qassem",num:23,p:"DF",q:"LE",a:28,o:64,t:66,v:800000}
     ],
     "sa/Al-Shabab": [
       {n:"Mory Diaw",num:1,p:"GK",q:"GOL",a:33,o:70,t:70,v:900000,nat:"Senegal"},
@@ -12833,7 +13108,7 @@
       {n:"Amjad Haraj",num:26,p:"DF",q:"ZAG",a:22,o:64,t:70,v:1500000,nat:"Saudi Arabia"},
       {n:"Yacine Adli",num:29,p:"MF",q:"VOL",a:26,o:78,t:80,v:7500000,nat:"France"},
       {n:"Mohammed Al-Mahasneh",num:33,p:"GK",q:"GOL",a:27,o:67,t:69,v:125000,nat:"Saudi Arabia"},
-      {n:"Sultan Al-Anize",num:34,p:"DF",q:"ZAG",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
+      {n:"Sultan Al-Anize",num:12,p:"DF",q:"ZAG",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
       {n:"Abdullah Matuq",num:37,p:"FW",q:"PE",a:23,o:54,t:58,v:150000,nat:"Saudi Arabia"},
       {n:"Mohammed Harbush",num:38,p:"DF",q:"ZAG",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
       {n:"Ali Al-Asmari",num:40,p:"MF",q:"VOL",a:20,o:61,t:69,v:325000,nat:"Saudi Arabia"},
@@ -12841,8 +13116,17 @@
       {n:"Emad Qaysi",num:46,p:"MF",q:"MC",a:20,o:61,t:69,v:1000000,nat:"Saudi Arabia"},
       {n:"Ali Al-Bulaihi",num:55,p:"DF",q:"ZAG",a:36,o:70,t:70,v:250000,nat:"Saudi Arabia"},
       {n:"Hamad Al-Khorayef",num:99,p:"FW",q:"PD",a:21,o:53,t:60,v:150000,nat:"Saudi Arabia"},
-      {n:"Ricardo Mathias",num:0,p:"FW",q:"CA",a:20,o:68,t:76,v:7500000,nat:"Brazil"},
-      {n:"Basil Al-Sayyali",num:20,p:"MF",q:"MC",a:24,o:66,t:70,v:2000000,nat:"Saudi Arabia"}
+      {n:"Ricardo Mathias",num:49,p:"FW",q:"CA",a:20,o:68,t:76,v:7500000,nat:"Brazil"},
+      {n:"Abdullah Hawsawi",num:27,p:"DF",q:"ZAG",a:23,o:61,t:66,v:900000},
+      {n:"Yazeed Al-Mehallel",num:56,p:"DF",q:"ZAG",a:22,o:61,t:66,v:900000},
+      {n:"Mohammed Al-Otaibi",num:60,p:"GK",q:"GOL",a:20,o:61,t:69,v:1000000},
+      {n:"Abdullah Al-Jamaan",num:63,p:"MF",q:"VOL",a:22,o:61,t:66,v:900000},
+      {n:"Muqrin Abanumay",num:66,p:"MF",q:"VOL",a:24,o:60,t:65,v:500000},
+      {n:"Nasser Al-Bishi",num:72,p:"DF",q:"ZAG",a:25,o:60,t:62,v:500000},
+      {n:"Abdulaziz Al-Hadhood",num:74,p:"MF",q:"MC",a:21,o:60,t:68,v:600000},
+      {n:"Murad Khadhari",num:97,p:"FW",q:"PD",a:19,o:66,t:74,v:2500000},
+      {n:"Talal Al-Shubili",p:"MF",q:"MC",a:24,o:68,t:73,v:1400000},
+      {n:"Abdulaziz Masnom",p:"FW",q:"SA",a:25,o:68,t:70,v:1400000}
     ],
     "sa/Al-Taawoun": [
       {n:"Mailson",num:1,p:"GK",q:"GOL",a:30,o:74,t:74,v:3800000,nat:"Brazil"},
@@ -12873,9 +13157,11 @@
       {n:"Abdulrahman Hindi",num:70,p:"MF",q:"MC",a:20,o:60,t:68,v:275000,nat:"Saudi Arabia"},
       {n:"Marin Petkov",num:88,p:"FW",q:"PD",a:22,o:70,t:74,v:3200000,nat:"Bulgaria"},
       {n:"Awn Al-Saluli",num:93,p:"DF",q:"ZAG",a:28,o:67,t:70,v:225000,nat:"Saudi Arabia"},
-      {n:"Turki Al-Jaadi",num:12,p:"DF",q:"ZAG",a:26,o:67,t:69,v:2000000,nat:"Saudi Arabia"},
       {n:"Turki Al-Shaifan",num:28,p:"MF",q:"MC",a:22,o:65,t:71,v:2000000,nat:"Saudi Arabia"},
-      {n:"Abdulmalik Al-Marwani",num:44,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"}
+      {n:"Abdulmalik Al-Marwani",num:44,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Saudi Arabia"},
+      {n:"Nasser Al-Hulayel",num:4,p:"DF",q:"LD",a:26,o:67,t:69,v:1200000},
+      {n:"Faris Al-Ghamdi",num:16,p:"MF",q:"MEI",a:26,o:62,t:64,v:500000},
+      {n:"Jair Collahuazo",num:55,p:"DF",q:"LD",a:25,o:60,t:62,v:500000}
     ],
     "sa/Neom": [
       {n:"Marcin Bułka",num:1,p:"GK",q:"GOL",a:27,o:79,t:82,v:12000000,nat:"Poland"},
@@ -12899,17 +13185,19 @@
       {n:"Abdulrahman Dagriri",num:33,p:"GK",q:"GOL",a:20,o:61,t:69,v:50000,nat:"Saudi Arabia"},
       {n:"Mohammed Dakhilallah",num:38,p:"DF",q:"ZAG",a:20,o:61,t:69,v:125000,nat:"Saudi Arabia"},
       {n:"Nathan Zézé",num:44,p:"DF",q:"ZAG",a:21,o:73,t:80,v:20000000,nat:"France"},
-      {n:"Raed Ozaybi",num:50,p:"GK",q:"GOL",a:20,o:61,t:69,v:100000,nat:"Saudi Arabia"},
       {n:"Mohammed Waleed",num:55,p:"DF",q:"ZAG",a:20,o:61,t:69,v:300000,nat:"Saudi Arabia"},
       {n:"Haroune Camara",num:70,p:"FW",q:"CA",a:22,o:67,t:73,v:300000,nat:"Saudi Arabia"},
       {n:"Amadou Koné",num:72,p:"MF",q:"VOL",a:21,o:69,t:76,v:7000000,nat:"Ivory Coast"},
       {n:"Luís Maximiano",num:81,p:"GK",q:"GOL",a:27,o:72,t:74,v:3200000,nat:"Portugal"},
       {n:"Alexandre Lacazette",num:91,p:"FW",q:"CA",a:35,o:79,t:79,v:3500000,nat:"France"},
-      {n:"Hassan Al-Ali",num:11,p:"FW",q:"PE",a:24,o:58,t:62,v:450000,nat:"Saudi Arabia"},
       {n:"Thamer Al-Khaibari",num:20,p:"FW",q:"PE",a:21,o:56,t:63,v:350000,nat:"Saudi Arabia"},
       {n:"Riyadh Sharahili",num:26,p:"MF",q:"MC",a:22,o:66,t:72,v:2500000,nat:"Saudi Arabia"},
       {n:"Ali Al-Asmari",num:40,p:"MF",q:"MC",a:29,o:63,t:71,v:1500000,nat:"Saudi Arabia"},
-      {n:"Luciano Rodríguez",num:0,p:"FW",q:"CA",a:23,o:72,t:76,v:5000000,nat:"Uruguay"}
+      {n:"Luciano Rodríguez",num:0,p:"FW",q:"CA",a:23,o:72,t:76,v:5000000,nat:"Uruguay"},
+      {n:"Yahya Gharawi",num:61,p:"MF",q:"MD",a:20,o:61,t:69,v:1000000},
+      {n:"Khalid Al-Rammah",num:75,p:"DF",q:"ZAG",a:21,o:62,t:70,v:800000},
+      {n:"Muhannad Al-Saad",num:77,p:"MF",q:"MC",a:24,o:61,t:66,v:800000},
+      {n:"Mohammed Al-Hakim",num:88,p:"GK",q:"GOL",a:25,o:61,t:63,v:800000}
     ],
     "tr/Alanyaspor": [
       {n:"Nuno Lima",num:3,p:"DF",q:"ZAG",a:25,o:67,t:68,v:2000000,nat:"Portugal"},
@@ -13032,7 +13320,8 @@
       {n:"Sami Bircan",num:70,p:"FW",q:"CA",a:18,o:59,t:69,v:100000,nat:"Turkey"},
       {n:"Doğan Alemdar",num:80,p:"GK",q:"GOL",a:23,o:70,t:74,v:1500000,nat:"Turkey"},
       {n:"Semih Kılıçsoy",num:90,p:"FW",q:"CA",a:21,o:70,t:77,v:11000000,nat:"Turkey"},
-      {n:"Emir Yaşar",num:96,p:"GK",q:"GOL",a:23,o:64,t:68,v:100000,nat:"Turkey"}
+      {n:"Emir Yaşar",num:96,p:"GK",q:"GOL",a:23,o:64,t:68,v:100000,nat:"Turkey"},
+      {n:"Can Keleş",num:77,p:"FW",q:"PD",a:25,o:65,t:67,v:800000}
     ],
     "tr/Çaykur Rizespor": [
       {n:"Husniddin Aliqulov",num:2,p:"DF",q:"LD",a:27,o:69,t:71,v:2500000,nat:"Uzbekistan"},
@@ -13064,8 +13353,8 @@
       {n:"Emrecan Bulut",num:99,p:"FW",q:"PE",a:23,o:61,t:67,v:600000,nat:"Turkey"},
       {n:"Habib Özbakır",num:0,p:"DF",q:"ZAG",a:24,o:65,t:67,v:1500000,nat:"Turkey"},
       {n:"Muhammed Baltacı",num:0,p:"FW",q:"CA",a:24,o:64,t:66,v:1500000,nat:"Turkey"},
-      {n:"Can Bozdoğan",num:0,p:"MF",q:"MC",a:25,o:67,t:68,v:2000000,nat:"Germany"},
-      {n:"Gennaro Borrelli",num:0,p:"FW",q:"CA",a:26,o:64,t:65,v:3000000,nat:"Italy"}
+      {n:"Can Bozdoğan",num:70,p:"MF",q:"MC",a:25,o:67,t:68,v:2000000,nat:"Germany"},
+      {n:"Gennaro Borrelli",num:29,p:"FW",q:"CA",a:26,o:64,t:65,v:3000000,nat:"Italy"}
     ],
     "tr/Çorum FK": [
       {n:"Marcos Felipe",num:1,p:"GK",q:"GOL",a:30,o:67,t:67,v:1500000,nat:"Brazil"},
@@ -13085,7 +13374,7 @@
       {n:"Ylber Ramadani",num:20,p:"MF",q:"VOL",a:30,o:70,t:70,v:1800000,nat:"Albania"},
       {n:"Göktan Gürpüz",num:21,p:"MF",q:"MEI",a:23,o:62,t:66,v:2000000,nat:"Turkey"},
       {n:"Hüseyin Bulut",num:22,p:"DF",q:"LD",a:26,o:63,t:66,v:450000,nat:"Turkey"},
-      {n:"Cengiz Ünder",num:23,p:"FW",q:"PD",a:29,o:76,t:76,v:4000000,nat:"Turkey"},
+      {n:"Cengiz Ünder",num:7,p:"FW",q:"PD",a:29,o:76,t:76,v:4000000,nat:"Turkey"},
       {n:"Andrei Borza",num:24,p:"DF",q:"LE",a:20,o:67,t:75,v:2500000,nat:"Turkey"},
       {n:"Ermin Mahmić",num:26,p:"MF",q:"MEI",a:21,o:64,t:70,v:7000000,nat:"Bosnia"},
       {n:"Ahmed Ildız",num:30,p:"MF",q:"MC",a:29,o:64,t:72,v:350000,nat:"Turkey"},
@@ -13093,10 +13382,9 @@
       {n:"Arif Şimşir",num:54,p:"GK",q:"GOL",a:19,o:59,t:68,v:200000,nat:"Turkey"},
       {n:"Cemali Sertel",num:88,p:"DF",q:"LE",a:26,o:61,t:69,v:500000,nat:"Turkey"},
       {n:"Alexandros Kyziridis",num:89,p:"FW",q:"PE",a:25,o:67,t:67,v:3500000,nat:"Greece"},
-      {n:"Atakan Akkaynak",num:0,p:"MF",q:"MC",a:27,o:67,t:68,v:400000,nat:"Turkey"},
-      {n:"Hasanege Akdoğan",num:0,p:"FW",q:"CA",a:22,o:61,t:67,v:400000,nat:"Turkey"},
-      {n:"Youssoufa Moukoko",num:0,p:"FW",q:"CA",a:21,o:73,t:79,v:5000000,nat:"Germany"},
-      {n:"Çağlar Söyüncü",num:0,p:"DF",q:"ZAG",a:30,o:77,t:77,v:3500000,nat:"Turkey"},
+      {n:"Hasanege Akdoğan",num:23,p:"FW",q:"CA",a:22,o:61,t:67,v:400000,nat:"Turkey"},
+      {n:"Youssoufa Moukoko",num:14,p:"FW",q:"CA",a:21,o:73,t:79,v:5000000,nat:"Germany"},
+      {n:"Çağlar Söyüncü",num:2,p:"DF",q:"ZAG",a:30,o:77,t:77,v:3500000,nat:"Turkey"},
       {n:"Hasan Emre Yeşilyurt",num:0,p:"MF",q:"MC",a:26,o:63,t:67,v:1500000,nat:"Turkey"},
       {n:"Eren Karadağ",num:0,p:"MF",q:"MC",a:26,o:62,t:66,v:1000000,nat:"Turkey"},
       {n:"Hasan Abdulkareem",num:0,p:"FW",q:"CA",a:27,o:63,t:69,v:1500000,nat:"Turkey"}
@@ -13126,7 +13414,7 @@
       {n:"Kerem Erener",num:97,p:"FW",q:"CA",a:26,o:63,t:66,v:1000000,nat:"Turkey"},
       {n:"Mustafa Fettahoğlu",num:99,p:"FW",q:"PE",a:19,o:59,t:68,v:1400000,nat:"Turkey"},
       {n:"Taha Rençber",num:0,p:"DF",q:"ZAG",a:24,o:61,t:65,v:50000,nat:"Turkey"},
-      {n:"Lawrence Agyekum",num:0,p:"MF",q:"MC",a:23,o:62,t:66,v:1500000,nat:"Ghana"},
+      {n:"Lawrence Agyekum",num:77,p:"MF",q:"MC",a:23,o:62,t:66,v:1500000,nat:"Ghana"},
       {n:"Emirhan Acar",num:0,p:"MF",q:"MC",a:24,o:61,t:65,v:650000,nat:"Turkey"}
     ],
     "tr/Eyüpspor": [
@@ -13186,8 +13474,7 @@
       {n:"Dorgeles Nene",num:45,p:"FW",q:"PD",a:23,o:75,t:79,v:20000000,nat:"Mali"},
       {n:"Oğuz Aydın",num:70,p:"FW",q:"PE",a:25,o:77,t:79,v:7000000,nat:"Turkey"},
       {n:"Ognjen Mimović",num:77,p:"DF",q:"LD",a:22,o:69,t:77,v:2700000,nat:"Serbia"},
-      {n:"N'Golo Kanté",num:91,p:"MF",q:"VOL",a:35,o:85,t:85,v:4000000,nat:"France"},
-      {n:"Çağrı Balta",num:99,p:"FW",q:"CA",a:18,o:59,t:69,v:1500000,nat:"Turkey"}
+      {n:"N'Golo Kanté",num:91,p:"MF",q:"VOL",a:35,o:85,t:85,v:4000000,nat:"France"}
     ],
     "tr/Galatasaray": [
       {n:"Uğurcan Çakır",num:1,p:"GK",q:"GOL",a:30,o:80,t:80,v:15000000,nat:"Turkey"},
@@ -13246,16 +13533,13 @@
       {n:"Ogün Özçiçek",num:61,p:"MF",q:"VOL",a:27,o:66,t:74,v:500000,nat:"Turkey"},
       {n:"Sabahattin Destici",num:77,p:"DF",q:"LD",a:20,o:61,t:69,v:275000,nat:"Turkey"},
       {n:"Cemilhan Aslan",num:81,p:"GK",q:"GOL",a:20,o:59,t:67,v:550000,nat:"Turkey"},
-      {n:"Florin Ștefan",num:96,p:"DF",q:"ZAG",a:30,o:66,t:66,v:900000,nat:"Romania"},
       {n:"Fuat Bavuk",num:97,p:"FW",q:"CA",a:19,o:59,t:68,v:800000,nat:"Turkey"},
-      {n:"Nazım Sangaré",num:0,p:"DF",q:"LD",a:32,o:69,t:69,v:1500000,nat:"Turkey"},
       {n:"Burak Enes Yıkıcı",num:0,p:"FW",q:"CA",a:24,o:61,t:66,v:950000,nat:"Turkey"},
       {n:"Taha Güneş",num:0,p:"FW",q:"CA",a:24,o:61,t:65,v:900000,nat:"Turkey"},
-      {n:"Karamba Gassama",num:0,p:"MF",q:"MC",a:21,o:63,t:67,v:500000,nat:"The Gambia"},
-      {n:"İbrahim Kağan Alkış",num:0,p:"GK",q:"GOL",a:26,o:63,t:65,v:750000,nat:"Turkey"},
-      {n:"Muhammet Akmelek",num:0,p:"FW",q:"CA",a:24,o:61,t:65,v:50000,nat:"Turkey"},
-      {n:"Ataberk Dadakdeniz",num:0,p:"GK",q:"GOL",a:27,o:66,t:69,v:250000,nat:"Turkey"},
-      {n:"Abakar Sylla",num:0,p:"DF",q:"ZAG",a:23,o:72,t:74,v:2500000,nat:"Ivory Coast"}
+      {n:"Karamba Gassama",num:17,p:"MF",q:"MC",a:21,o:63,t:67,v:500000,nat:"The Gambia"},
+      {n:"Ataberk Dadakdeniz",num:35,p:"GK",q:"GOL",a:27,o:66,t:69,v:250000,nat:"Turkey"},
+      {n:"Abakar Sylla",num:21,p:"DF",q:"ZAG",a:23,o:72,t:74,v:2500000,nat:"Ivory Coast"},
+      {n:"Efe Sarıkaya",num:5,p:"DF",q:"LE",a:26,o:69,t:71,v:1500000}
     ],
     "tr/Gençlerbirliği": [
       {n:"Thalisson",num:2,p:"DF",q:"ZAG",a:28,o:69,t:70,v:700000,nat:"Brazil"},
@@ -13283,12 +13567,12 @@
       {n:"Fıratcan Üzüm",num:88,p:"DF",q:"LD",a:27,o:63,t:63,v:200000,nat:"Turkey"},
       {n:"Metehan Baltacı",num:90,p:"DF",q:"ZAG",a:24,o:66,t:70,v:1500000,nat:"Turkey"},
       {n:"Ayaz Özcan",num:99,p:"FW",q:"CA",a:19,o:59,t:68,v:50000,nat:"Turkey"},
-      {n:"Kévin Rodrigues",num:0,p:"DF",q:"ZAG",a:32,o:75,t:75,v:3000000,nat:"Portugal"},
+      {n:"Kévin Rodrigues",num:11,p:"DF",q:"ZAG",a:32,o:75,t:75,v:3000000,nat:"Portugal"},
       {n:"Dilhan Demir",num:0,p:"MF",q:"MC",a:22,o:63,t:69,v:1500000,nat:"Germany"},
       {n:"Arda Akgül",num:0,p:"FW",q:"CA",a:22,o:61,t:67,v:950000,nat:"Turkey"},
-      {n:"Victor Orakpo",num:0,p:"FW",q:"CA",a:20,o:61,t:69,v:400000,nat:"Turkey"},
-      {n:"Pedro Mendes",num:0,p:"FW",q:"CA",a:27,o:70,t:70,v:1200000,nat:"Portugal"},
-      {n:"Rafael Luís",num:0,p:"MF",q:"VOL",a:21,o:65,t:72,v:5000000,nat:"Portugal"}
+      {n:"Victor Orakpo",num:12,p:"FW",q:"CA",a:20,o:61,t:69,v:400000,nat:"Turkey"},
+      {n:"Pedro Mendes",num:9,p:"FW",q:"CA",a:27,o:70,t:70,v:1200000,nat:"Portugal"},
+      {n:"Rafael Luís",num:83,p:"MF",q:"VOL",a:21,o:65,t:72,v:5000000,nat:"Portugal"}
     ],
     "tr/Göztepe": [
       {n:"Arda Özçimen",num:1,p:"GK",q:"GOL",a:24,o:63,t:69,v:450000,nat:"Turkey"},
@@ -13350,7 +13634,9 @@
       {n:"Emirhan Boz",num:66,p:"MF",q:"VOL",a:19,o:59,t:68,v:100000,nat:"Turkey"},
       {n:"Muhammed Emin Bektaş",num:99,p:"FW",q:"CA",a:19,o:59,t:68,v:800000,nat:"Turkey"},
       {n:"Godfried Frimpong",num:0,p:"DF",q:"ZAG",a:27,o:70,t:73,v:3000000,nat:"Netherlands"},
-      {n:"Emirhan Yiğit",num:0,p:"FW",q:"PD",a:22,o:61,t:67,v:100000,nat:"Turkey"}
+      {n:"Emirhan Yiğit",num:0,p:"FW",q:"PD",a:22,o:61,t:67,v:100000,nat:"Turkey"},
+      {n:"Jesurun Rak-Sakyi",num:17,p:"FW",q:"SA",a:29,o:62,t:64,v:800000},
+      {n:"Ömer Bayram",p:"DF",q:"ZAG",a:27,o:62,t:64,v:500000}
     ],
     "tr/Kocaelispor": [
       {n:"Anfernee Dijksteel",num:2,p:"DF",q:"ZAG",a:30,o:69,t:69,v:1200000,nat:"Suriname"},
@@ -13377,11 +13663,9 @@
       {n:"Bedirhan Yıldız",num:89,p:"FW",q:"PD",a:19,o:59,t:68,v:800000,nat:"Turkey"},
       {n:"Florian Ayé",num:97,p:"FW",q:"CA",a:29,o:70,t:70,v:2000000,nat:"France"},
       {n:"Rigoberto Rivas",num:99,p:"FW",q:"PE",a:28,o:66,t:66,v:1200000,nat:"Honduras"},
-      {n:"Bruno Petković",num:0,p:"FW",q:"CA",a:32,o:76,t:76,v:3000000,nat:"Croatia"},
-      {n:"Aleksandar Jovanović",num:0,p:"GK",q:"GOL",a:34,o:66,t:66,v:300000,nat:"Serbia"},
-      {n:"Mikdat Çil",num:0,p:"DF",q:"ZAG",a:24,o:61,t:65,v:900000,nat:"Turkey"},
-      {n:"Talha Polat",num:0,p:"GK",q:"GOL",a:24,o:61,t:64,v:600000,nat:"Turkey"},
-      {n:"Hulusi Destici",num:0,p:"MF",q:"VOL",a:24,o:61,t:65,v:900000,nat:"Turkey"}
+      {n:"Bruno Petković",num:9,p:"FW",q:"CA",a:32,o:76,t:76,v:3000000,nat:"Croatia"},
+      {n:"Aleksandar Jovanović",num:1,p:"GK",q:"GOL",a:34,o:66,t:66,v:300000,nat:"Serbia"},
+      {n:"Tanguy Zoukrou",num:4,p:"DF",q:"ZAG",a:23,o:65,t:69,v:2000000,nat:"France"}
     ],
     "tr/Konyaspor": [
       {n:"Deniz Ertaş",num:1,p:"GK",q:"GOL",a:21,o:62,t:69,v:3500000,nat:"Turkey"},
@@ -13421,7 +13705,6 @@
       {n:"Celil Yüksel",num:5,p:"MF",q:"MC",a:28,o:65,t:66,v:800000,nat:"Turkey"},
       {n:"Elayis Tavsan",num:7,p:"FW",q:"PE",a:25,o:70,t:71,v:3500000,nat:"Turkey"},
       {n:"Samed Onur",num:8,p:"MF",q:"MC",a:24,o:60,t:65,v:700000,nat:"Turkey"},
-      {n:"Marius Mouandilmadji",num:9,p:"FW",q:"CA",a:28,o:73,t:73,v:4000000,nat:"Turkey"},
       {n:"Tanguy Coulibaly",num:10,p:"FW",q:"PD",a:25,o:71,t:72,v:1200000,nat:"France"},
       {n:"Emre Kılınç",num:11,p:"MF",q:"MC",a:32,o:73,t:73,v:2000000,nat:"Turkey"},
       {n:"Efe Yiğit Üstün",num:13,p:"GK",q:"GOL",a:24,o:64,t:69,v:1000000,nat:"Turkey"},
@@ -13437,12 +13720,11 @@
       {n:"Saikuba Jarju",num:30,p:"FW",q:"PD",a:20,o:64,t:72,v:1000000,nat:"The Gambia"},
       {n:"Gabriele Guarino",num:34,p:"DF",q:"ZAG",a:22,o:65,t:71,v:3500000,nat:"Italy"},
       {n:"Anto Sekongo",num:42,p:"MF",q:"MC",a:22,o:63,t:69,v:4000000,nat:"Mali"},
-      {n:"Mustafa Tan",num:72,p:"DF",q:"LD",a:19,o:59,t:68,v:175000,nat:"Turkey"},
+      {n:"Mustafa Tan",num:29,p:"DF",q:"LD",a:19,o:59,t:68,v:175000,nat:"Turkey"},
       {n:"Afonso Sousa",num:77,p:"MF",q:"MEI",a:26,o:74,t:75,v:4500000,nat:"Portugal"},
       {n:"Bedirhan Çetin",num:96,p:"DF",q:"ZAG",a:20,o:57,t:65,v:100000,nat:"Turkey"},
-      {n:"Efe Berat Töruz",num:0,p:"GK",q:"GOL",a:24,o:61,t:65,v:650000,nat:"Turkey"},
-      {n:"Kerem Fidan",num:0,p:"DF",q:"ZAG",a:24,o:61,t:65,v:900000,nat:"Turkey"},
-      {n:"Mohamed Bayo",num:0,p:"FW",q:"CA",a:28,o:73,t:73,v:4500000,nat:"Guinea"}
+      {n:"Mohamed Bayo",num:18,p:"FW",q:"CA",a:28,o:73,t:73,v:4500000,nat:"Guinea"},
+      {n:"Muhammet Talha Akyüz",p:"MF",q:"MEI",a:29,o:64,t:66,v:800000}
     ],
     "tr/Trabzonspor": [
       {n:"Ahmet Doğan Yıldırım",num:1,p:"GK",q:"GOL",a:19,o:61,t:68,v:200000,nat:"Turkey"},
@@ -13465,7 +13747,6 @@
       {n:"Chibuike Nwaiwu",num:27,p:"DF",q:"ZAG",a:23,o:63,t:69,v:2500000,nat:"Turkey"},
       {n:"Paul Onuachu",num:30,p:"FW",q:"CA",a:32,o:74,t:74,v:6000000,nat:"Nigeria"},
       {n:"Cenk Özkacar",num:39,p:"DF",q:"ZAG",a:25,o:70,t:71,v:4000000,nat:"Turkey"},
-      {n:"Arseniy Batagov",num:44,p:"DF",q:"ZAG",a:24,o:72,t:76,v:8000000,nat:"Ukraine"},
       {n:"Sidny Lopes Cabral",num:55,p:"DF",q:"ZAG",a:23,o:65,t:74,v:4000000,nat:"Cape Verde"},
       {n:"Melih Kabasakal",num:57,p:"MF",q:"MC",a:30,o:61,t:67,v:1500000,nat:"Turkey"},
       {n:"Aral Şimşir",num:58,p:"FW",q:"PE",a:24,o:73,t:81,v:10000000,nat:"Turkey"},
@@ -13473,7 +13754,9 @@
       {n:"Metehan Mimaroğlu",num:77,p:"MF",q:"MC",a:32,o:63,t:69,v:2500000,nat:"Turkey"},
       {n:"Erol Can Çolak",num:96,p:"GK",q:"GOL",a:19,o:59,t:68,v:900000,nat:"Turkey"},
       {n:"Ali Habeşoğlu",num:99,p:"MF",q:"MC",a:19,o:59,t:68,v:1500000,nat:"Turkey"},
-      {n:"Cihan Çanak",num:0,p:"MF",q:"MC",a:21,o:66,t:73,v:4500000,nat:"Turkey"}
+      {n:"Cihan Çanak",num:61,p:"MF",q:"MC",a:21,o:66,t:73,v:4500000,nat:"Turkey"},
+      {n:"André Onana",num:24,p:"GK",q:"GOL",a:30,o:80,t:80,v:11000000,nat:"Cameroon"},
+      {n:"Arseniy Batahov",num:44,p:"DF",q:"ZAG",a:21,o:61,t:69,v:900000}
     ],
     "us/Atlanta United": [
       {n:"Lucas Hoyos",num:1,p:"GK",q:"GOL",a:36,o:64,t:68,v:150000,nat:"Argentina"},
@@ -13500,7 +13783,7 @@
       {n:"Dominik Chong-Qui",num:50,p:"DF",q:"LE",a:18,o:52,t:61,v:150000,nat:"USA"},
       {n:"Tomás Jacob",num:55,p:"DF",q:"ZAG",a:22,o:66,t:70,v:4000000,nat:"Argentina"},
       {n:"Aleksei Miranchuk",num:59,p:"MF",q:"MEI",a:30,o:72,t:72,v:7500000,nat:"Russia"},
-      {n:"Giuliano Galoppo",num:0,p:"MF",q:"MC",a:27,o:74,t:76,v:3500000,nat:"Argentina"}
+      {n:"Giuliano Galoppo",num:11,p:"MF",q:"MC",a:27,o:74,t:76,v:3500000,nat:"Argentina"}
     ],
     "us/Austin FC": [
       {n:"Brad Stuver",num:1,p:"GK",q:"GOL",a:35,o:69,t:69,v:300000,nat:"USA"},
@@ -13525,7 +13808,14 @@
       {n:"Micah Burton",num:32,p:"MF",q:"MEI",a:20,o:53,t:61,v:100000,nat:"USA"},
       {n:"Mateja Đorđević",num:35,p:"DF",q:"ZAG",a:23,o:54,t:62,v:1000000,nat:"Serbia"},
       {n:"Ervin Torres",num:38,p:"MF",q:"MC",a:18,o:64,t:70,v:100000,nat:"USA"},
-      {n:"Przemysław Płacheta",num:77,p:"FW",q:"PE",a:28,o:69,t:69,v:1000000,nat:"Poland"}
+      {n:"Przemysław Płacheta",num:77,p:"FW",q:"PE",a:28,o:69,t:69,v:1000000,nat:"Poland"},
+      {n:"Mo Badawiya",p:"MF",q:"MEI",a:28,o:65,t:67,v:800000},
+      {n:"Batuhan Arıcı",p:"DF",q:"LE",a:25,o:65,t:67,v:800000},
+      {n:"Djakaria Barro",p:"MF",q:"ME",a:24,o:67,t:72,v:1200000},
+      {n:"Diego Abarca",p:"MF",q:"ME",a:29,o:64,t:66,v:800000},
+      {n:"Marcel Ruszel",p:"MF",q:"ME",a:24,o:65,t:70,v:800000},
+      {n:"Adrián González",p:"MF",q:"MC",a:23,o:64,t:69,v:1000000},
+      {n:"Daniel Martens",p:"DF",q:"ZAG",a:24,o:64,t:69,v:1000000}
     ],
     "us/Colorado Rapids": [
       {n:"Zack Steffen",num:1,p:"GK",q:"GOL",a:31,o:73,t:73,v:2000000,nat:"USA"},
@@ -13536,7 +13826,6 @@
       {n:"Morgan Whittaker",num:7,p:"FW",q:"PD",a:25,o:73,t:74,v:18000000,nat:"England"},
       {n:"Hamzat Ojediran",num:8,p:"MF",q:"VOL",a:22,o:67,t:69,v:3000000,nat:"USA"},
       {n:"Paxten Aaronson",num:10,p:"MF",q:"MEI",a:23,o:70,t:74,v:6000000,nat:"USA"},
-      {n:"Alexis Manyoma",num:11,p:"FW",q:"PE",a:23,o:72,t:76,v:6000000,nat:"Colombia"},
       {n:"Josh Atencio",num:12,p:"MF",q:"VOL",a:24,o:64,t:68,v:2000000,nat:"USA"},
       {n:"Wayne Frederick",num:13,p:"MF",q:"MC",a:22,o:59,t:61,v:600000,nat:"USA"},
       {n:"Ali Fadal",num:15,p:"MF",q:"MC",a:22,o:59,t:65,v:100000,nat:"Ghana"},
@@ -13555,8 +13844,9 @@
       {n:"Youssef Maziz",num:88,p:"MF",q:"MEI",a:28,o:54,t:62,v:1000000,nat:"France"},
       {n:"Georgi Minoungou",num:93,p:"FW",q:"PD",a:24,o:55,t:63,v:1500000,nat:"Burkina Faso"},
       {n:"Jackson Travis",num:99,p:"DF",q:"LE",a:20,o:53,t:61,v:800000,nat:"USA"},
-      {n:"Sayed Abu Farchi",num:0,p:"FW",q:"CA",a:20,o:63,t:63,v:1500000,nat:"Israel"},
-      {n:"Ibrahim Sadiq",num:0,p:"FW",q:"PD",a:26,o:72,t:74,v:2000000,nat:"Ghana"}
+      {n:"Ibrahim Sadiq",num:0,p:"FW",q:"PD",a:26,o:72,t:74,v:2000000,nat:"Ghana"},
+      {n:"Sayed Abu Farkhi",num:9,p:"FW",q:"SA",a:23,o:63,t:68,v:1000000},
+      {n:"Bryan Dowd",num:61,p:"GK",q:"GOL",a:25,o:58,t:60,v:600000}
     ],
     "us/Columbus Crew": [
       {n:"Nicholas Hagen",num:1,p:"GK",q:"GOL",a:30,o:64,t:66,v:200000,nat:"Guatemala"},
@@ -13589,7 +13879,7 @@
       {n:"Tarun Karumanchi",num:50,p:"MF",q:"VOL",a:20,o:58,t:66,v:75000,nat:"USA"},
       {n:"Luke Pruter",num:54,p:"GK",q:"GOL",a:20,o:57,t:65,v:25000,nat:"USA"},
       {n:"Josef Martínez",num:77,p:"FW",q:"CA",a:33,o:59,t:67,v:1500000,nat:"Venezuela"},
-      {n:"Anass Zaroury",num:0,p:"FW",q:"PE",a:25,o:74,t:76,v:7000000,nat:"Morocco"}
+      {n:"Anass Zaroury",num:21,p:"FW",q:"PE",a:25,o:74,t:76,v:7000000,nat:"Morocco"}
     ],
     "us/FC Cincinnati": [
       {n:"Alvas Powell",num:2,p:"DF",q:"LD",a:32,o:65,t:65,v:300000,nat:"Jamaica"},
@@ -13607,7 +13897,6 @@
       {n:"Roman Celentano",num:18,p:"GK",q:"GOL",a:25,o:72,t:76,v:2500000,nat:"USA"},
       {n:"Ștefan Chirilă",num:19,p:"FW",q:"CA",a:19,o:54,t:63,v:150000,nat:"Romania"},
       {n:"Pavel Bucha",num:20,p:"MF",q:"MC",a:28,o:75,t:76,v:4000000,nat:"Czech Republic"},
-      {n:"Matt Miazga",num:21,p:"DF",q:"ZAG",a:31,o:72,t:72,v:1800000,nat:"USA"},
       {n:"Gerardo Valenzuela",num:22,p:"MF",q:"MEI",a:21,o:56,t:62,v:1800000,nat:"USA"},
       {n:"Kyle Smith",num:24,p:"DF",q:"LD",a:34,o:65,t:65,v:300000,nat:"USA"},
       {n:"Brian Anunga",num:27,p:"MF",q:"MC",a:30,o:63,t:66,v:800000,nat:"Cameroon"},
@@ -13619,8 +13908,10 @@
       {n:"Andrei Chirilă",num:88,p:"DF",q:"ZAG",a:18,o:57,t:65,v:500000,nat:"Romania"},
       {n:"Fabian Mrozek",num:93,p:"GK",q:"GOL",a:22,o:59,t:63,v:150000,nat:"Poland"},
       {n:"Ayoub Jabbari",num:99,p:"FW",q:"CA",a:26,o:65,t:73,v:1500000,nat:"Morocco"},
-      {n:"Julián Malatini",num:0,p:"DF",q:"ZAG",a:25,o:69,t:74,v:2000000,nat:"Argentina"},
-      {n:"David Douděra",num:0,p:"MF",q:"PD",a:28,o:74,t:74,v:3500000,nat:"Czech Republic"}
+      {n:"Julián Malatini",num:6,p:"DF",q:"ZAG",a:25,o:69,t:74,v:2000000,nat:"Argentina"},
+      {n:"David Douděra",num:23,p:"MF",q:"PD",a:28,o:74,t:74,v:3500000,nat:"Czech Republic"},
+      {n:"Connor Dale",num:89,p:"GK",q:"GOL",a:19,o:57,t:65,v:400000},
+      {n:"Tyrell Malacia",p:"DF",q:"ZAG",a:27,o:66,t:68,v:1000000}
     ],
     "us/Houston Dynamo": [
       {n:"Jimmy Maurer",num:1,p:"GK",q:"GOL",a:38,o:63,t:63,v:200000,nat:"USA"},
@@ -13646,7 +13937,8 @@
       {n:"Agustin Resch",num:34,p:"DF",q:"ZAG",a:20,o:53,t:61,v:500000,nat:"Argentina"},
       {n:"Felipe Andrade",num:36,p:"DF",q:"LE",a:20,o:54,t:62,v:2000000,nat:"Brazil"},
       {n:"Mattheo Dimareli",num:48,p:"FW",q:"CA",a:20,o:54,t:62,v:200000,nat:"USA"},
-      {n:"Lyle Foster",num:0,p:"FW",q:"CA",a:26,o:72,t:75,v:8000000,nat:"South Africa"}
+      {n:"Lyle Foster",num:9,p:"FW",q:"CA",a:26,o:72,t:75,v:8000000,nat:"South Africa"},
+      {n:"Gilberto Rivera",num:37,p:"MF",q:"MEI",a:22,o:62,t:67,v:800000}
     ],
     "us/Inter Miami": [
       {n:"Gonzalo Luján",num:2,p:"DF",q:"ZAG",a:25,o:69,t:72,v:2000000,nat:"Argentina"},
@@ -13678,8 +13970,8 @@
       {n:"Cesar Abadia",num:76,p:"DF",q:"LE",a:20,o:56,t:64,v:100000,nat:"USA"},
       {n:"Alexander Shaw",num:88,p:"MF",q:"MC",a:20,o:56,t:64,v:100000,nat:"USA"},
       {n:"Dayne St. Clair",num:97,p:"GK",q:"GOL",a:29,o:73,t:74,v:3500000,nat:"Canada"},
-      {n:"Matías Galarza",num:0,p:"MF",q:"MC",a:24,o:68,t:74,v:4000000,nat:"USA"},
-      {n:"Riquelme Fillipi",num:0,p:"FW",q:"PE",a:19,o:66,t:70,v:1000000,nat:"Brazil"}
+      {n:"Matías Galarza",num:80,p:"MF",q:"MC",a:24,o:68,t:74,v:4000000,nat:"USA"},
+      {n:"Riquelme Fillipi",num:11,p:"FW",q:"PE",a:19,o:66,t:70,v:1000000,nat:"Brazil"}
     ],
     "us/LA Galaxy": [
       {n:"Novak Mićović",num:1,p:"GK",q:"GOL",a:24,o:63,t:67,v:500000,nat:"Serbia"},
@@ -13736,10 +14028,9 @@
       {n:"Tommy Mihalić",num:90,p:"FW",q:"PE",a:20,o:59,t:67,v:150000,nat:"Croatia"},
       {n:"Nkosi Tafari",num:91,p:"DF",q:"ZAG",a:29,o:67,t:68,v:2000000,nat:"USA"},
       {n:"Denis Bouanga",num:99,p:"FW",q:"PE",a:31,o:79,t:79,v:8000000,nat:"Gabon"},
-      {n:"Sergio Vázquez",num:0,p:"MF",q:"MC",a:26,o:65,t:68,v:1500000,nat:"Ecuador"},
+      {n:"Sergio Vázquez",num:20,p:"MF",q:"MC",a:26,o:65,t:68,v:1500000,nat:"Ecuador"},
       {n:"Thayllon Roberth",num:0,p:"FW",q:"CA",a:26,o:65,t:68,v:1500000,nat:"Brazil"},
-      {n:"Leo Walta",num:0,p:"MF",q:"MEI",a:23,o:69,t:73,v:3000000,nat:"Finland"},
-      {n:"Million Manhoef",num:0,p:"FW",q:"CA",a:24,o:67,t:71,v:2500000,nat:"USA"}
+      {n:"Leo Walta",num:81,p:"MF",q:"MEI",a:23,o:69,t:73,v:3000000,nat:"Finland"}
     ],
     "us/Minnesota United": [
       {n:"Alec Smir",num:1,p:"GK",q:"GOL",a:27,o:52,t:55,v:150000,nat:"USA"},
@@ -13769,7 +14060,8 @@
       {n:"Carlos Harvey",num:67,p:"MF",q:"VOL",a:26,o:65,t:67,v:600000,nat:"Panama"},
       {n:"Darius Randell",num:98,p:"FW",q:"PD",a:20,o:55,t:63,v:150000,nat:"USA"},
       {n:"Jordan Adebayo-Smith",num:99,p:"FW",q:"CA",a:25,o:59,t:61,v:100000,nat:"USA"},
-      {n:"Cherrion Valerius",num:0,p:"DF",q:"LD",a:22,o:59,t:61,v:650000,nat:"Curaçao"}
+      {n:"Cherrion Valerius",num:52,p:"DF",q:"LD",a:22,o:59,t:61,v:650000,nat:"Curaçao"},
+      {n:"Kayne Rizvanovich",num:94,p:"GK",q:"GOL",a:21,o:61,t:69,v:900000}
     ],
     "us/Nashville SC": [
       {n:"Joe Willis",num:1,p:"GK",q:"GOL",a:38,o:69,t:69,v:125000,nat:"USA"},
@@ -13833,7 +14125,8 @@
       {n:"Matt Freese",num:49,p:"GK",q:"GOL",a:28,o:69,t:70,v:2000000,nat:"USA"},
       {n:"Keaton Parks",num:55,p:"MF",q:"VOL",a:29,o:72,t:72,v:3000000,nat:"USA"},
       {n:"Arnau Farnós",num:87,p:"FW",q:"CA",a:20,o:57,t:65,v:550000,nat:"Spain"},
-      {n:"Malachi Jones",num:88,p:"FW",q:"PE",a:23,o:57,t:61,v:400000,nat:"Sierra Leone"}
+      {n:"Malachi Jones",num:88,p:"FW",q:"PE",a:23,o:57,t:61,v:400000,nat:"Sierra Leone"},
+      {n:"Matt Miazga",num:3,p:"DF",q:"ZAG",a:31,o:72,t:72,v:1800000,nat:"USA"}
     ],
     "us/New York Red Bulls": [
       {n:"AJ Marcucci",num:1,p:"GK",q:"GOL",a:27,o:53,t:55,v:350000,nat:"USA"},
@@ -13852,7 +14145,6 @@
       {n:"Julian Hall",num:16,p:"FW",q:"PE",a:18,o:54,t:64,v:1000000,nat:"USA"},
       {n:"Cameron Harper",num:17,p:"FW",q:"CA",a:24,o:66,t:68,v:13000000,nat:"USA"},
       {n:"Juan José Mina",num:20,p:"DF",q:"ZAG",a:22,o:64,t:70,v:11000000,nat:"Colombia"},
-      {n:"Joyeux Masanka Bungi",num:23,p:"DF",q:"ZAG",a:19,o:61,t:70,v:8000000,nat:"Belgium"},
       {n:"Tim Parker",num:26,p:"DF",q:"ZAG",a:33,o:67,t:67,v:3000000,nat:"USA"},
       {n:"Ethan Horvath",num:34,p:"GK",q:"GOL",a:31,o:69,t:69,v:6000000,nat:"USA"},
       {n:"Mohammed Sofo",num:37,p:"MF",q:"MC",a:21,o:64,t:70,v:11000000,nat:"Ghana"},
@@ -13863,7 +14155,8 @@
       {n:"Andy Rojas",num:70,p:"FW",q:"CA",a:20,o:61,t:68,v:8000000,nat:"Costa Rica"},
       {n:"John McCarthy",num:77,p:"GK",q:"GOL",a:34,o:68,t:68,v:3000000,nat:"USA"},
       {n:"Rafael Mosquera",num:79,p:"MF",q:"MC",a:21,o:61,t:68,v:8000000,nat:"Panama"},
-      {n:"Mijahir Jiménez",num:91,p:"FW",q:"CA",a:20,o:58,t:66,v:4000000,nat:"Panama"}
+      {n:"Mijahir Jiménez",num:91,p:"FW",q:"CA",a:20,o:58,t:66,v:4000000,nat:"Panama"},
+      {n:"Dennis Nelich",num:92,p:"FW",q:"PE",a:23,o:61,t:66,v:900000}
     ],
     "us/Orlando City": [
       {n:"Adrián Marín",num:3,p:"DF",q:"LE",a:29,o:71,t:71,v:1500000,nat:"Spain"},
@@ -13894,7 +14187,6 @@
       {n:"Maxime Crépeau",num:71,p:"GK",q:"GOL",a:32,o:69,t:69,v:1800000,nat:"Canada"},
       {n:"Iván Angulo",num:77,p:"FW",q:"PE",a:27,o:69,t:70,v:3000000,nat:"Colombia"},
       {n:"Marco Pašalić",num:87,p:"FW",q:"PD",a:25,o:71,t:74,v:6500000,nat:"Croatia"},
-      {n:"Colin Guske",num:25,p:"MF",q:"MC",a:19,o:54,t:63,v:200000,nat:"USA"},
       {n:"Yutaro Tsukada",num:34,p:"FW",q:"CA",a:25,o:49,t:57,v:50000,nat:"Japan"},
       {n:"Issah Haruna",num:38,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Ghana"},
       {n:"Ignacio Gómez",num:80,p:"MF",q:"MC",a:20,o:56,t:64,v:350000,nat:"Argentina"}
@@ -13954,7 +14246,8 @@
       {n:"Joao Ortiz",num:80,p:"MF",q:"VOL",a:30,o:71,t:71,v:1500000,nat:"Ecuador"},
       {n:"Gage Guerra",num:88,p:"FW",q:"CA",a:23,o:59,t:66,v:400000,nat:"USA"},
       {n:"Kristoffer Velde",num:99,p:"FW",q:"PE",a:27,o:72,t:73,v:5000000,nat:"Norway"},
-      {n:"Ronald Hernández",num:0,p:"DF",q:"LD",a:28,o:67,t:68,v:450000,nat:"Venezuela"}
+      {n:"Ronald Hernández",num:12,p:"DF",q:"LD",a:28,o:67,t:68,v:450000,nat:"Venezuela"},
+      {n:"Eric Izoita",num:73,p:"MF",q:"MD",a:22,o:64,t:69,v:1000000}
     ],
     "us/Real Salt Lake": [
       {n:"Rafael Cabral",num:1,p:"GK",q:"GOL",a:36,o:68,t:68,v:450000,nat:"Brazil"},
@@ -13973,7 +14266,7 @@
       {n:"Ariath Piol",num:19,p:"FW",q:"CA",a:22,o:58,t:64,v:500000,nat:"Australia"},
       {n:"Juan José Arias",num:21,p:"DF",q:"ZAG",a:26,o:60,t:62,v:1200000,nat:"Colombia"},
       {n:"Sergi Solans",num:22,p:"FW",q:"CA",a:26,o:62,t:64,v:2000000,nat:"Spain"},
-      {n:"Zach Booth",num:23,p:"FW",q:"PE",a:26,o:61,t:63,v:350000,nat:"USA"},
+      {n:"Zach Booth",num:18,p:"FW",q:"PE",a:26,o:61,t:63,v:350000,nat:"USA"},
       {n:"Max Kerkvliet",num:24,p:"GK",q:"GOL",a:22,o:57,t:63,v:300000,nat:"USA"},
       {n:"Philip Quinton",num:26,p:"DF",q:"ZAG",a:27,o:61,t:66,v:800000,nat:"USA"},
       {n:"Griffin Dillon",num:27,p:"MF",q:"MC",a:22,o:58,t:64,v:600000,nat:"USA"},
@@ -13986,7 +14279,15 @@
       {n:"Luis Rivera",num:37,p:"DF",q:"LE",a:22,o:66,t:72,v:50000,nat:"USA"},
       {n:"Antonio Riquelme",num:38,p:"MF",q:"MC",a:20,o:54,t:62,v:200000,nat:"Chile"},
       {n:"Aiden Hezarkhani",num:39,p:"FW",q:"PD",a:20,o:54,t:62,v:3000000,nat:"USA"},
-      {n:"Luc de Fougerolles",num:0,p:"DF",q:"ZAG",a:21,o:58,t:65,v:5000000,nat:"Canada"}
+      {n:"Luc de Fougerolles",num:44,p:"DF",q:"ZAG",a:21,o:58,t:65,v:5000000,nat:"Canada"},
+      {n:"Colin Guske",num:25,p:"MF",q:"MC",a:19,o:54,t:63,v:200000,nat:"USA"},
+      {n:"Chance Cowell",num:32,p:"FW",q:"CA",a:24,o:58,t:63,v:600000},
+      {n:"Omar Marquez",num:40,p:"MF",q:"MD",a:20,o:55,t:63,v:200000},
+      {n:"Juan Gio Villa",num:41,p:"DF",q:"ZAG",a:25,o:55,t:57,v:200000},
+      {n:"Lineker Rodrigues",num:70,p:"FW",q:"CA",a:21,o:58,t:66,v:400000},
+      {n:"Noel Caliskan",num:92,p:"MF",q:"ME",a:23,o:55,t:60,v:200000},
+      {n:"Alexandros Katranis",num:98,p:"DF",q:"ZAG",a:22,o:55,t:60,v:200000},
+      {n:"Dušan Žagar",p:"FW",q:"CA",a:23,o:60,t:65,v:600000}
     ],
     "us/Seattle Sounders": [
       {n:"Ryan Sailor",num:4,p:"DF",q:"ZAG",a:27,o:63,t:64,v:200000,nat:"USA"},
@@ -14006,7 +14307,7 @@
       {n:"Andrew Thomas",num:26,p:"GK",q:"GOL",a:28,o:61,t:63,v:800000,nat:"USA"},
       {n:"Jesús Ferreira",num:27,p:"FW",q:"CA",a:25,o:72,t:74,v:4500000,nat:"USA"},
       {n:"Yeimar Gómez Andrade",num:28,p:"DF",q:"ZAG",a:34,o:75,t:75,v:1500000,nat:"Colombia"},
-      {n:"Caden Clark",num:30,p:"MF",q:"MEI",a:23,o:66,t:70,v:1000000,nat:"USA"},
+      {n:"Caden Clark",num:8,p:"MF",q:"MEI",a:23,o:66,t:70,v:1000000,nat:"USA"},
       {n:"Hassani Dotson",num:31,p:"MF",q:"MC",a:29,o:66,t:66,v:3000000,nat:"USA"},
       {n:"Antino Lopez",num:35,p:"DF",q:"ZAG",a:20,o:57,t:65,v:300000,nat:"USA"},
       {n:"Snyder Brunell",num:37,p:"MF",q:"VOL",a:19,o:58,t:66,v:1500000,nat:"USA"},
@@ -14025,7 +14326,7 @@
       {n:"Or Blorian",num:5,p:"DF",q:"ZAG",a:26,o:61,t:63,v:2000000,nat:"Israel"},
       {n:"Capita",num:7,p:"FW",q:"PE",a:24,o:61,t:63,v:2000000,nat:"Angola"},
       {n:"Jake Davis",num:8,p:"DF",q:"LD",a:24,o:67,t:69,v:1800000,nat:"USA"},
-      {n:"Calvin Harris",num:11,p:"FW",q:"PD",a:26,o:57,t:59,v:800000,nat:"England"},
+      {n:"Calvin Harris",num:14,p:"FW",q:"PD",a:26,o:57,t:59,v:800000,nat:"England"},
       {n:"Jack Kortkamp",num:12,p:"GK",q:"GOL",a:22,o:58,t:64,v:450000,nat:"USA"},
       {n:"Justin Reynolds",num:13,p:"DF",q:"LD",a:22,o:54,t:60,v:200000,nat:"USA"},
       {n:"Jansen Miller",num:15,p:"DF",q:"ZAG",a:24,o:59,t:64,v:800000,nat:"USA"},
@@ -14039,10 +14340,12 @@
       {n:"Stefan Cleveland",num:30,p:"GK",q:"GOL",a:32,o:64,t:64,v:150000,nat:"USA"},
       {n:"Owen Wolff",num:33,p:"MF",q:"MC",a:22,o:65,t:71,v:2500000,nat:"USA"},
       {n:"Ryan Schewe",num:36,p:"GK",q:"GOL",a:24,o:53,t:61,v:100000,nat:"USA"},
-      {n:"André Luiz",num:38,p:"FW",q:"PD",a:24,o:71,t:72,v:6000000,nat:"Brazil"},
+      {n:"André Luiz",num:11,p:"FW",q:"PD",a:24,o:71,t:72,v:6000000,nat:"Brazil"},
       {n:"Diego Borges",num:57,p:"DF",q:"ZAG",a:21,o:53,t:61,v:1000000,nat:"Brazil"},
       {n:"Shapi Suleymanov",num:93,p:"FW",q:"PD",a:26,o:69,t:70,v:2500000,nat:"Russia"},
-      {n:"Jayden Reid",num:99,p:"DF",q:"LE",a:25,o:53,t:61,v:600000,nat:"USA"}
+      {n:"Jayden Reid",num:99,p:"DF",q:"LE",a:25,o:53,t:61,v:600000,nat:"USA"},
+      {n:"Rubén Ramos Jr.",num:24,p:"MF",q:"MD",a:29,o:59,t:61,v:300000},
+      {n:"Seymour Reid",num:29,p:"FW",q:"CA",a:21,o:57,t:65,v:400000}
     ],
     "us/St. Louis City": [
       {n:"Roman Bürki",num:1,p:"GK",q:"GOL",a:36,o:77,t:77,v:1000000,nat:"Switzerland"},
@@ -14075,7 +14378,8 @@
       {n:"Jeong Sang-bin",num:77,p:"FW",q:"CA",a:24,o:64,t:68,v:1500000,nat:"South Korea"},
       {n:"Brendan McSorley",num:80,p:"FW",q:"CA",a:20,o:53,t:61,v:400000,nat:"USA"},
       {n:"Zach Zengue",num:91,p:"FW",q:"PE",a:20,o:54,t:62,v:200000,nat:"USA"},
-      {n:"Jaziel Orozco",num:99,p:"DF",q:"LD",a:22,o:53,t:59,v:500000,nat:"Mexico"}
+      {n:"Jaziel Orozco",num:99,p:"DF",q:"LD",a:22,o:53,t:59,v:500000,nat:"Mexico"},
+      {n:"Zack Campagnolo",p:"GK",q:"GOL",a:25,o:58,t:60,v:600000}
     ],
     "uy/Boston River": [
       {n:"Bruno Antúnez",num:1,p:"GK",q:"GOL",a:25,o:68,t:72,v:700000,nat:"Uruguay"},
@@ -14106,7 +14410,8 @@
       {n:"Martín González",num:30,p:"GK",q:"GOL",a:32,o:63,t:71,v:100000,nat:"Uruguay"},
       {n:"Juan Acosta",num:31,p:"DF",q:"LD",a:32,o:68,t:76,v:250000,nat:"Uruguay"},
       {n:"Yair González",num:32,p:"MF",q:"MEI",a:24,o:58,t:66,v:450000,nat:"Argentina"},
-      {n:"Gonzalo Reyna",num:99,p:"FW",q:"CA",a:20,o:59,t:67,v:800000,nat:"Argentina"}
+      {n:"Gonzalo Reyna",num:99,p:"FW",q:"CA",a:20,o:59,t:67,v:800000,nat:"Argentina"},
+      {n:"Gastón Ramírez",num:11,p:"MF",q:"MEI",a:35,o:71,t:71,v:900000,nat:"Uruguay"}
     ],
     "uy/Cerro Largo": [
       {n:"Juan Moreno",num:1,p:"GK",q:"GOL",a:29,o:70,t:71,v:2000000,nat:"Colombia"},
@@ -14117,8 +14422,6 @@
       {n:"Mateo Monserrat",num:6,p:"DF",q:"LE",a:24,o:67,t:72,v:25000,nat:"Uruguay"},
       {n:"Gustavo Viera",num:7,p:"FW",q:"CA",a:25,o:65,t:69,v:175000,nat:"Uruguay"},
       {n:"Mario García",num:8,p:"MF",q:"MC",a:27,o:65,t:67,v:250000,nat:"Uruguay"},
-      {n:"Tiziano Correa",num:9,p:"FW",q:"CA",a:20,o:67,t:75,v:3500000,nat:"Uruguay"},
-      {n:"Axel Pandiani",num:10,p:"MF",q:"MEI",a:26,o:69,t:72,v:3000000,nat:"Uruguay"},
       {n:"Maximiliano Añasco",num:11,p:"FW",q:"CA",a:25,o:64,t:67,v:1500000,nat:"Uruguay"},
       {n:"Pedro González",num:12,p:"GK",q:"GOL",a:27,o:66,t:69,v:300000,nat:"Paraguay"},
       {n:"Borys Barone",num:13,p:"FW",q:"CA",a:26,o:65,t:67,v:50000,nat:"Uruguay"},
@@ -14132,7 +14435,6 @@
       {n:"Julián Pou",num:21,p:"DF",q:"LD",a:26,o:64,t:66,v:150000,nat:"Uruguay"},
       {n:"Nicolás Bertocchi",num:22,p:"MF",q:"VOL",a:37,o:67,t:72,v:25000,nat:"Argentina"},
       {n:"Thomas González",num:23,p:"FW",q:"CA",a:22,o:57,t:63,v:400000,nat:"Uruguay"},
-      {n:"Lukas González",num:24,p:"GK",q:"GOL",a:24,o:66,t:71,v:1500000,nat:"Uruguay"},
       {n:"Emiliano Jourdan",num:25,p:"MF",q:"VOL",a:22,o:62,t:68,v:200000,nat:"Uruguay"},
       {n:"Facundo Alvez",num:27,p:"DF",q:"LD",a:22,o:61,t:67,v:950000,nat:"Uruguay"},
       {n:"Nicolás Ramos",num:28,p:"DF",q:"ZAG",a:22,o:61,t:67,v:250000,nat:"Uruguay"},
@@ -14150,7 +14452,6 @@
       {n:"Brahian Alemán",num:10,p:"MF",q:"MEI",a:37,o:68,t:68,v:600000,nat:"Uruguay"},
       {n:"Yonatan Irrazábal",num:12,p:"GK",q:"GOL",a:38,o:67,t:67,v:350000,nat:"Uruguay"},
       {n:"Brian Quinteros",num:13,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Uruguay"},
-      {n:"Nahuel Soria",num:14,p:"FW",q:"PD",a:24,o:64,t:70,v:1500000,nat:"Uruguay"},
       {n:"Alan Zamurio",num:15,p:"FW",q:"CA",a:26,o:62,t:64,v:900000,nat:"Uruguay"},
       {n:"Juan Guasone",num:16,p:"DF",q:"ZAG",a:25,o:66,t:68,v:2000000,nat:"Argentina"},
       {n:"Gianni Rodríguez",num:17,p:"DF",q:"ZAG",a:32,o:66,t:70,v:2000000,nat:"Uruguay"},
@@ -14171,7 +14472,8 @@
       {n:"Tiago Rijo",num:33,p:"FW",q:"CA",a:20,o:58,t:66,v:600000,nat:"Uruguay"},
       {n:"Pablo Nongoy",num:35,p:"MF",q:"MC",a:20,o:58,t:66,v:600000,nat:"Uruguay"},
       {n:"Diego Capdevila",num:40,p:"GK",q:"GOL",a:25,o:64,t:69,v:1000000,nat:"Uruguay"},
-      {n:"Emanuel Carlos",num:44,p:"DF",q:"ZAG",a:20,o:58,t:66,v:600000,nat:"Uruguay"}
+      {n:"Emanuel Carlos",num:44,p:"DF",q:"ZAG",a:20,o:58,t:66,v:600000,nat:"Uruguay"},
+      {n:"Emiliano Rodríguez",num:14,p:"FW",q:"CA",a:23,o:70,t:71,v:3500000,nat:"Uruguay"}
     ],
     "uy/Danubio": [
       {n:"Mauro Goicoechea",num:1,p:"GK",q:"GOL",a:38,o:71,t:71,v:650000,nat:"Uruguay"},
@@ -14208,7 +14510,6 @@
       {n:"Mauricio Amaro",num:6,p:"MF",q:"VOL",a:26,o:70,t:72,v:3000000,nat:"Uruguay"},
       {n:"Brian Lozano",num:7,p:"FW",q:"PD",a:32,o:72,t:72,v:2000000,nat:"Uruguay"},
       {n:"Nicolás Wunsch",num:8,p:"MF",q:"MC",a:25,o:69,t:72,v:500000,nat:"Uruguay"},
-      {n:"Alexander Machado",num:9,p:"FW",q:"CA",a:24,o:68,t:73,v:3000000,nat:"Uruguay"},
       {n:"Xavier Biscayzacú",num:10,p:"MF",q:"MEI",a:21,o:69,t:74,v:3500000,nat:"Mexico"},
       {n:"Lucas Agazzi",num:11,p:"FW",q:"PD",a:21,o:69,t:71,v:1800000,nat:"Uruguay"},
       {n:"Kevin Dawson",num:12,p:"GK",q:"GOL",a:34,o:71,t:71,v:250000,nat:"Uruguay"},
@@ -14237,7 +14538,6 @@
       {n:"Agustín Pérez",num:6,p:"DF",q:"LE",a:26,o:62,t:64,v:50000,nat:"Uruguay"},
       {n:"Agustín Alaníz",num:7,p:"FW",q:"PD",a:24,o:68,t:73,v:300000,nat:"Uruguay"},
       {n:"Mateo Izaguirre",num:8,p:"MF",q:"MC",a:23,o:66,t:70,v:2000000,nat:"Uruguay"},
-      {n:"Marcelo Pérez",num:9,p:"MF",q:"MC",a:25,o:63,t:66,v:350000,nat:"Paraguay"},
       {n:"Bruno Larregui",num:10,p:"FW",q:"CA",a:26,o:66,t:70,v:500000,nat:"Uruguay"},
       {n:"Pablo Lago",num:11,p:"FW",q:"PD",a:26,o:62,t:64,v:300000,nat:"Uruguay"},
       {n:"Nicolás Rossi",num:12,p:"GK",q:"GOL",a:25,o:65,t:70,v:300000,nat:"Uruguay"},
@@ -14294,7 +14594,6 @@
       {n:"Pablo López",num:4,p:"DF",q:"ZAG",a:27,o:64,t:68,v:1500000,nat:"Uruguay"},
       {n:"Santiago Corbo",num:6,p:"DF",q:"LD",a:25,o:65,t:70,v:100000,nat:"Uruguay"},
       {n:"Ignacio Yepez",num:7,p:"FW",q:"PD",a:27,o:66,t:71,v:2000000,nat:"Colombia"},
-      {n:"Gastón Ramírez",num:10,p:"MF",q:"MEI",a:35,o:71,t:71,v:900000,nat:"Uruguay"},
       {n:"Anthony Sosa",num:11,p:"MF",q:"MEI",a:30,o:65,t:70,v:2000000,nat:"Uruguay"},
       {n:"Camilo Sánchez",num:13,p:"DF",q:"LD",a:24,o:65,t:70,v:2000000,nat:"Uruguay"},
       {n:"Guzmán Pereira",num:14,p:"MF",q:"VOL",a:35,o:67,t:67,v:500000,nat:"Uruguay"},
@@ -14313,7 +14612,8 @@
       {n:"Silvio López",num:27,p:"DF",q:"ZAG",a:22,o:58,t:64,v:500000,nat:"Uruguay"},
       {n:"Jorge Ayala",num:29,p:"DF",q:"ZAG",a:31,o:58,t:64,v:500000,nat:"Uruguay"},
       {n:"Juan Moreno",num:30,p:"GK",q:"GOL",a:29,o:70,t:71,v:2000000,nat:"Colombia"},
-      {n:"Sebastián da Silva",num:31,p:"FW",q:"CA",a:21,o:63,t:70,v:1500000,nat:"Uruguay"}
+      {n:"Axel Pandiani",num:8,p:"MF",q:"MEI",a:26,o:69,t:72,v:3000000,nat:"Uruguay"},
+      {n:"Lukas González",num:12,p:"GK",q:"GOL",a:24,o:66,t:71,v:1500000,nat:"Uruguay"}
     ],
     "uy/Montevideo City Torque": [
       {n:"Franco Torgnascioli",num:1,p:"GK",q:"GOL",a:36,o:70,t:74,v:2500000,nat:"Uruguay"},
@@ -14403,9 +14703,10 @@
       {n:"Rodrigo Martínez",num:31,p:"FW",q:"PE",a:20,o:63,t:71,v:300000,nat:"Uruguay"},
       {n:"Tomás Viera",num:32,p:"DF",q:"ZAG",a:20,o:61,t:69,v:350000,nat:"Uruguay"},
       {n:"Bruno Zuculini",num:36,p:"MF",q:"VOL",a:33,o:72,t:72,v:400000,nat:"Argentina"},
-      {n:"Juan Ignacio García",num:56,p:"MF",q:"VOL",a:20,o:62,t:70,v:150000,nat:"Uruguay"},
       {n:"Paolo Calione",num:0,p:"DF",q:"ZAG",a:20,o:64,t:72,v:2000000,nat:"Uruguay"},
-      {n:"Alejandro Martínez",num:0,p:"FW",q:"PE",a:29,o:70,t:72,v:600000,nat:"Argentina"}
+      {n:"Alejandro Martínez",num:0,p:"FW",q:"PE",a:29,o:70,t:72,v:600000,nat:"Argentina"},
+      {n:"Rubén Botta",num:20,p:"MF",q:"MEI",a:36,o:76,t:76,v:1500000,nat:"Argentina"},
+      {n:"Tiziano Correa",num:29,p:"FW",q:"CA",a:20,o:67,t:75,v:3500000,nat:"Uruguay"}
     ],
     "uy/Peñarol": [
       {n:"Sebastián Britos",num:1,p:"GK",q:"GOL",a:38,o:72,t:72,v:50000,nat:"Uruguay"},
@@ -14439,7 +14740,14 @@
       {n:"Leandro Umpiérrez",num:32,p:"MF",q:"MEI",a:22,o:64,t:70,v:800000,nat:"Uruguay"},
       {n:"Jonathan Rodríguez",num:33,p:"FW",q:"CA",a:33,o:76,t:76,v:1500000,nat:"Uruguay"},
       {n:"Nahuel Herrera",num:34,p:"DF",q:"ZAG",a:21,o:67,t:73,v:2500000,nat:"Uruguay"},
-      {n:"Brian Barboza",num:36,p:"DF",q:"LD",a:20,o:62,t:70,v:125000,nat:"Uruguay"}
+      {n:"Brian Barboza",num:36,p:"DF",q:"LD",a:20,o:62,t:70,v:125000,nat:"Uruguay"},
+      {n:"Luciano González",num:42,p:"FW",q:"CA",a:26,o:67,t:69,v:2000000,nat:"Uruguay"},
+      {n:"Brandon Álvarez",num:40,p:"FW",q:"CA",a:22,o:68,t:73,v:2000000},
+      {n:"Lorenzo Couture",num:55,p:"MF",q:"VOL",a:23,o:68,t:73,v:2000000},
+      {n:"Luis Angulo",num:77,p:"FW",q:"CA",a:24,o:67,t:72,v:1200000},
+      {n:"Franco González",num:80,p:"MF",q:"MC",a:25,o:68,t:70,v:1400000},
+      {n:"Diego Laxalt",num:93,p:"DF",q:"LD",a:24,o:68,t:73,v:1400000},
+      {n:"Andrés Madruga",p:"DF",q:"ZAG",a:23,o:69,t:74,v:2500000}
     ],
     "uy/Plaza Colonia": [
       {n:"Máximo Lorenzi",num:2,p:"DF",q:"ZAG",a:25,o:66,t:71,v:300000,nat:"Uruguay"},
@@ -14525,7 +14833,8 @@
       {n:"Álex Vázquez",num:39,p:"MF",q:"MC",a:20,o:60,t:68,v:1000000,nat:"Uruguay"},
       {n:"Axel Atum",num:40,p:"MF",q:"MC",a:20,o:63,t:71,v:2000000,nat:"Argentina"},
       {n:"Bautista Tomatis",num:77,p:"FW",q:"CA",a:20,o:61,t:69,v:1000000,nat:"Argentina"},
-      {n:"Iván Manzur",num:81,p:"FW",q:"CA",a:20,o:61,t:69,v:300000,nat:"Argentina"}
+      {n:"Iván Manzur",num:81,p:"FW",q:"CA",a:20,o:61,t:69,v:300000,nat:"Argentina"},
+      {n:"Sebastián da Silva",num:26,p:"FW",q:"CA",a:21,o:63,t:70,v:1500000,nat:"Uruguay"}
     ],
     "uy/River Plate": [
       {n:"Damián Frascarelli",num:1,p:"GK",q:"GOL",a:25,o:67,t:72,v:2000000,nat:"Uruguay"},
@@ -14547,30 +14856,44 @@
       {n:"Matías Alfonso",num:22,p:"MF",q:"MC",a:26,o:61,t:63,v:750000,nat:"Paraguay"},
       {n:"Emilio Crespo",num:23,p:"DF",q:"ZAG",a:26,o:60,t:62,v:600000,nat:"Uruguay"},
       {n:"Matías Mier",num:24,p:"FW",q:"CA",a:22,o:59,t:65,v:650000,nat:"Uruguay"},
-      {n:"Fabrizio Correa",num:25,p:"GK",q:"GOL",a:23,o:64,t:68,v:25000,nat:"Uruguay"},
+      {n:"Fabrizio Correa",num:9,p:"GK",q:"GOL",a:23,o:64,t:68,v:25000,nat:"Uruguay"},
       {n:"Guillermo Oroño",num:26,p:"MF",q:"MC",a:24,o:64,t:70,v:1500000,nat:"Uruguay"},
       {n:"Ian López",num:27,p:"MF",q:"MEI",a:22,o:64,t:70,v:1500000,nat:"Italy"},
       {n:"Lorenzo González",num:28,p:"DF",q:"ZAG",a:22,o:58,t:64,v:100000,nat:"Uruguay"},
       {n:"Lucas Camejo",num:29,p:"DF",q:"LE",a:22,o:58,t:64,v:150000,nat:"Uruguay"}
     ],
     "ru/Chornomorets": [
-      {n:"Maksym Koval",p:"GK",q:"GOL",a:33,o:68,t:68,v:3000000,nat:"Ukraine"},
-      {n:"Nazar Bayda",p:"GK",q:"GOL",a:23,o:65,t:69,v:9000000,nat:"Ukraine"},
-      {n:"Vasyl Kurko",p:"DF",q:"ZAG",a:31,o:66,t:67,v:11000000,nat:"Ukraine"},
-      {n:"Serhiy Korniychuk",p:"DF",q:"ZAG",a:26,o:67,t:70,v:14000000,nat:"Ukraine"},
-      {n:"Oleksiy Husyev",p:"DF",q:"LD",a:21,o:65,t:71,v:13000000,nat:"Ukraine"},
-      {n:"Moses Jarju",p:"DF",q:"LE",a:22,o:64,t:69,v:11000000,nat:"The Gambia"},
-      {n:"Mahomed Kratov",p:"DF",q:"ZAG",a:22,o:64,t:67,v:10000000,nat:"Ukraine"},
-      {n:"Svyatoslav Kozyr",p:"DF",q:"LD",a:23,o:63,t:67,v:9000000,nat:"Ukraine"},
-      {n:"Artur Avahimyan",p:"MF",q:"MC",a:29,o:65,t:67,v:10000000,nat:"Ukraine"},
-      {n:"Vitaliy Farasyeyenko",p:"MF",q:"VOL",a:23,o:64,t:68,v:10000000,nat:"Ukraine"},
-      {n:"Ivan Kohut",p:"MF",q:"MC",a:28,o:64,t:67,v:10000000,nat:"Ukraine"},
-      {n:"Giorgi Robakidze",p:"MF",q:"MEI",a:24,o:66,t:70,v:14000000,nat:"Georgia"},
-      {n:"Vladyslav Klymenko",p:"MF",q:"PE",a:32,o:64,t:67,v:10000000,nat:"Ukraine"},
-      {n:"Danyil Alefirenko",p:"FW",q:"CA",a:26,o:64,t:68,v:10000000,nat:"Ukraine"},
-      {n:"Andriy Khoma",p:"FW",q:"PD",a:24,o:64,t:66,v:8000000,nat:"Ukraine"},
-      {n:"Kiril Popov",p:"FW",q:"CA",a:23,o:63,t:69,v:9000000,nat:"Ukraine"},
-      {n:"Oleh Pushkaryov",p:"FW",q:"PE",a:24,o:64,t:69,v:11000000,nat:"Ukraine"}
+      {n:"Maksym Koval",num:35,p:"GK",q:"GOL",a:33,o:68,t:68,v:3000000,nat:"Ukraine"},
+      {n:"Nazar Bayda",num:16,p:"GK",q:"GOL",a:23,o:65,t:69,v:9000000,nat:"Ukraine"},
+      {n:"Vasyl Kurko",num:5,p:"DF",q:"ZAG",a:31,o:66,t:67,v:11000000,nat:"Ukraine"},
+      {n:"Serhiy Korniychuk",num:22,p:"DF",q:"ZAG",a:26,o:67,t:70,v:14000000,nat:"Ukraine"},
+      {n:"Oleksiy Husyev",num:23,p:"DF",q:"LD",a:21,o:65,t:71,v:13000000,nat:"Ukraine"},
+      {n:"Moses Jarju",num:24,p:"DF",q:"LE",a:22,o:64,t:69,v:11000000,nat:"The Gambia"},
+      {n:"Mahomed Kratov",num:4,p:"DF",q:"ZAG",a:22,o:64,t:67,v:10000000,nat:"Ukraine"},
+      {n:"Svyatoslav Kozyr",num:42,p:"DF",q:"LD",a:23,o:63,t:67,v:9000000,nat:"Ukraine"},
+      {n:"Artur Avahimyan",num:10,p:"MF",q:"MC",a:29,o:65,t:67,v:10000000,nat:"Ukraine"},
+      {n:"Vitaliy Farasyeyenko",num:13,p:"MF",q:"VOL",a:23,o:64,t:68,v:10000000,nat:"Ukraine"},
+      {n:"Ivan Kohut",num:17,p:"MF",q:"MC",a:28,o:64,t:67,v:10000000,nat:"Ukraine"},
+      {n:"Giorgi Robakidze",num:18,p:"MF",q:"MEI",a:24,o:66,t:70,v:14000000,nat:"Georgia"},
+      {n:"Vladyslav Klymenko",num:21,p:"MF",q:"PE",a:32,o:64,t:67,v:10000000,nat:"Ukraine"},
+      {n:"Danyil Alefirenko",num:7,p:"FW",q:"CA",a:26,o:64,t:68,v:10000000,nat:"Ukraine"},
+      {n:"Andriy Khoma",num:9,p:"FW",q:"PD",a:24,o:64,t:66,v:8000000,nat:"Ukraine"},
+      {n:"Kiril Popov",num:11,p:"FW",q:"CA",a:23,o:63,t:69,v:9000000,nat:"Ukraine"},
+      {n:"Oleh Pushkaryov",num:27,p:"FW",q:"PE",a:24,o:64,t:69,v:11000000,nat:"Ukraine"},
+      {n:"Maksym Melnychenko",num:60,p:"MF",q:"MC",a:21,o:54,t:62,v:200000,nat:"Ukraine"},
+      {n:"Dmytro Klyots",num:8,p:"MF",q:"VOL",a:23,o:65,t:70,v:1500000},
+      {n:"Chijioke Aniagboso",num:12,p:"GK",q:"GOL",a:24,o:64,t:69,v:1000000},
+      {n:"Nikita Stepovyi",num:20,p:"MF",q:"ME",a:26,o:64,t:66,v:1000000},
+      {n:"Muhammed Jobe",num:30,p:"MF",q:"ME",a:20,o:64,t:72,v:2500000},
+      {n:"Artem Prysyazhnyuk",num:32,p:"MF",q:"MEI",a:21,o:64,t:72,v:1000000},
+      {n:"Oleksandr Pshenychnyuk",num:33,p:"MF",q:"MC",a:22,o:64,t:69,v:1000000},
+      {n:"Stanislav Yarmola",num:52,p:"DF",q:"ZAG",a:21,o:64,t:72,v:1000000},
+      {n:"Timerlan Hryhorchuk",num:55,p:"FW",q:"PD",a:22,o:64,t:69,v:1000000},
+      {n:"Jerry Yoka",num:70,p:"FW",q:"PD",a:25,o:64,t:66,v:1000000},
+      {n:"Maryan Faryna",num:74,p:"DF",q:"ZAG",a:19,o:64,t:72,v:2500000},
+      {n:"Maksym Nabyt",num:75,p:"GK",q:"GOL",a:21,o:64,t:72,v:1000000},
+      {n:"Vladyslav Herych",num:77,p:"FW",q:"CA",a:25,o:64,t:66,v:1000000},
+      {n:"Christian Mba",num:99,p:"MF",q:"ME",a:20,o:64,t:72,v:2500000}
     ],
     "ma/COD Meknès": [
       {n:"Aymane Majid",p:"GK",q:"GOL",a:26,o:67,t:70,v:10000000,nat:"Morocco"},
@@ -14616,7 +14939,6 @@
       {n:"Hamza El Janati",p:"DF",q:"LD",a:27,o:65,t:67,v:10000000,nat:"Morocco"},
       {n:"Youssef Zghoudi",p:"DF",q:"LE",a:26,o:65,t:68,v:10000000,nat:"Morocco"},
       {n:"Khalil Tamrani",p:"DF",q:"ZAG",a:24,o:64,t:69,v:11000000,nat:"Morocco"},
-      {n:"Mohamed Jemjami",p:"DF",q:"LD",a:25,o:64,t:68,v:10000000,nat:"Morocco"},
       {n:"Abdelilah Hafidi",p:"MF",q:"MEI",a:34,o:68,t:68,v:4000000,nat:"Morocco"},
       {n:"Yassir Mghazli",p:"MF",q:"VOL",a:26,o:65,t:67,v:10000000,nat:"Morocco"},
       {n:"Ilyas Chorafi",p:"MF",q:"MC",a:25,o:64,t:69,v:11000000,nat:"Morocco"},
@@ -14660,7 +14982,6 @@
       {n:"Wilfrido Báez",p:"MF",q:"VOL",a:32,o:65,t:65,v:5000000,nat:"Paraguay"},
       {n:"Richart Ortiz",p:"FW",q:"PD",a:31,o:67,t:67,v:7000000,nat:"Paraguay"},
       {n:"Claudio Garay",p:"FW",q:"CA",a:30,o:66,t:66,v:6000000,nat:"Paraguay"},
-      {n:"Allan Wlk",p:"FW",q:"SA",a:23,o:66,t:70,v:14000000,nat:"Paraguay"},
       {n:"Yuneiker Ríos",p:"FW",q:"PE",a:25,o:65,t:68,v:12000000,nat:"Venezuela"}
     ],
     "br2/América Mineiro": [
@@ -14672,7 +14993,6 @@
       {n:"Guilherme Parede",num:7,p:"FW",q:"PD",a:30,o:66,t:66,v:900000,nat:"Brazil"},
       {n:"Felipe Amaral",num:8,p:"MF",q:"MC",a:23,o:64,t:67,v:500000,nat:"Brazil"},
       {n:"Willian Bigode",num:9,p:"FW",q:"SA",a:39,o:64,t:64,v:100000,nat:"Brazil"},
-      {n:"Yago Souza",num:10,p:"MF",q:"MC",a:26,o:68,t:69,v:2000000,nat:"Brazil"},
       {n:"Gabriel Barros",num:11,p:"FW",q:"CA",a:24,o:70,t:70,v:1500000,nat:"Brazil"},
       {n:"Samuel Alves",num:12,p:"DF",q:"ZAG",a:26,o:66,t:67,v:1500000,nat:"Brazil"},
       {n:"Alex Silva",num:15,p:"DF",q:"LD",a:32,o:64,t:64,v:250000,nat:"Brazil"},
@@ -14716,7 +15036,6 @@
       {n:"Enzo Santos",num:0,p:"MF",q:"MC",a:24,o:70,t:70,v:1500000,nat:"Brazil"},
       {n:"Felipe Vieira",num:0,p:"DF",q:"ZAG",a:21,o:64,t:67,v:2000000,nat:"Brazil"},
       {n:"Marcelo Henrique",num:0,p:"DF",q:"LE",a:21,o:68,t:71,v:250000,nat:"Brazil"},
-      {n:"Rodrigo Gelado",num:0,p:"DF",q:"LE",a:22,o:64,t:67,v:300000,nat:"Brazil"},
       {n:"Zeca",num:0,p:"DF",q:"ZAG",a:32,o:65,t:68,v:2000000,nat:"Brazil"},
       {n:"Alexandre Pena",num:0,p:"MF",q:"MEI",a:21,o:71,t:74,v:5000000,nat:"Brazil"},
       {n:"Fabrício Isidoro",num:0,p:"MF",q:"MC",a:34,o:65,t:65,v:50000,nat:"Brazil"},
@@ -14735,8 +15054,7 @@
       {n:"Leandro Alves",num:0,p:"FW",q:"CA",a:27,o:71,t:71,v:900000,nat:"Brazil"},
       {n:"Léo Chú",num:0,p:"FW",q:"CA",a:26,o:67,t:70,v:3000000,nat:"Brazil"},
       {n:"Ronaldo Tavares",num:0,p:"FW",q:"CA",a:29,o:71,t:71,v:900000,nat:"Portugal"},
-      {n:"Ruan Assis",num:0,p:"FW",q:"CA",a:22,o:68,t:68,v:2000000,nat:"Brazil"},
-      {n:"Samuel Otusanya",num:0,p:"FW",q:"CA",a:28,o:66,t:66,v:1500000,nat:"Nigeria"}
+      {n:"Ruan Assis",num:0,p:"FW",q:"CA",a:22,o:68,t:68,v:2000000,nat:"Brazil"}
     ],
     "br2/Atlético Goianiense": [
       {n:"Léo Rosa",num:0,p:"GK",q:"GOL",a:25,o:69,t:70,v:2000000,nat:"Brazil"},
@@ -14769,13 +15087,13 @@
       {n:"Gustavo Coutinho",num:0,p:"FW",q:"CA",a:27,o:69,t:69,v:1500000,nat:"Brazil"},
       {n:"Bruno José",num:0,p:"FW",q:"PD",a:28,o:67,t:67,v:400000,nat:"Brazil"},
       {n:"Kahiser Lenis",num:0,p:"FW",q:"PE",a:25,o:70,t:71,v:200000,nat:"Panama"},
-      {n:"Lima",num:0,p:"FW",q:"CA",a:26,o:67,t:68,v:2000000,nat:"Portugal"},
       {n:"Daniel Lima",num:0,p:"FW",q:"CA",a:21,o:68,t:71,v:500000,nat:"Brazil"},
       {n:"Gustavo Maia",num:0,p:"FW",q:"PE",a:25,o:66,t:67,v:500000,nat:"Brazil"},
       {n:"Marrony",num:0,p:"FW",q:"PD",a:27,o:69,t:69,v:700000,nat:"Brazil"},
       {n:"João Pedro",num:0,p:"FW",q:"CA",a:29,o:68,t:68,v:800000,nat:"Guinea-Bissau"},
       {n:"Geovany Soares",num:0,p:"FW",q:"CA",a:26,o:68,t:69,v:2000000,nat:"Brazil"},
-      {n:"Léo Tocantins",num:0,p:"FW",q:"PD",a:27,o:66,t:66,v:1500000,nat:"Brazil"}
+      {n:"Léo Tocantins",num:0,p:"FW",q:"PD",a:27,o:66,t:66,v:1500000,nat:"Brazil"},
+      {n:"David Terans",num:80,p:"MF",q:"MEI",a:32,o:74,t:74,v:1000000,nat:"Uruguay"}
     ],
     "br2/Avaí": [
       {n:"Igor Bohn",num:1,p:"GK",q:"GOL",a:30,o:68,t:68,v:250000,nat:"Brazil"},
@@ -14819,7 +15137,6 @@
       {n:"Victor Souza",num:0,p:"GK",q:"GOL",a:34,o:69,t:69,v:100000,nat:"Brazil"},
       {n:"Badaró",num:0,p:"DF",q:"ZAG",a:21,o:64,t:67,v:2000000,nat:"Brazil"},
       {n:"Carlos Eduardo",num:0,p:"DF",q:"ZAG",a:25,o:69,t:70,v:3000000,nat:"Brazil"},
-      {n:"Darlan",num:0,p:"DF",q:"ZAG",a:22,o:64,t:67,v:1500000,nat:"Brazil"},
       {n:"Ericson",num:0,p:"DF",q:"LD",a:27,o:67,t:67,v:50000,nat:"Brazil"},
       {n:"Gui Mariano",num:0,p:"DF",q:"ZAG",a:28,o:66,t:66,v:1500000,nat:"Brazil"},
       {n:"Gustavo Vilar",num:0,p:"DF",q:"ZAG",a:26,o:69,t:72,v:3000000,nat:"Brazil"},
@@ -14858,11 +15175,11 @@
       {n:"Thalisson",num:3,p:"DF",q:"ZAG",a:24,o:70,t:70,v:1500000,nat:"Brazil"},
       {n:"Luizão",num:4,p:"DF",q:"ZAG",a:33,o:68,t:68,v:550000,nat:"Brazil"},
       {n:"Sávio",num:6,p:"DF",q:"LE",a:31,o:69,t:69,v:350000,nat:"Brazil"},
-      {n:"Giovanni Pavani",num:7,p:"MF",q:"MC",a:29,o:70,t:70,v:350000,nat:"Brazil"},
+      {n:"Giovanni Pavani",num:21,p:"MF",q:"MC",a:29,o:70,t:70,v:350000,nat:"Brazil"},
       {n:"Matheus Araújo",num:8,p:"MF",q:"MEI",a:24,o:66,t:67,v:1500000,nat:"Brazil"},
       {n:"Wendel Silva",num:9,p:"FW",q:"CA",a:26,o:71,t:71,v:2000000,nat:"Brazil"},
-      {n:"Lucas Mugni",num:10,p:"MF",q:"MEI",a:34,o:71,t:71,v:200000,nat:"Argentina"},
-      {n:"Nicolás Ferreira",num:11,p:"FW",q:"PE",a:24,o:64,t:65,v:600000,nat:"Uruguay"},
+      {n:"Lucas Mugni",num:11,p:"MF",q:"MEI",a:34,o:71,t:71,v:200000,nat:"Argentina"},
+      {n:"Nicolás Ferreira",num:20,p:"FW",q:"PE",a:24,o:64,t:65,v:600000,nat:"Uruguay"},
       {n:"Sanchez",num:12,p:"DF",q:"LE",a:30,o:71,t:71,v:25000,nat:"Brazil"},
       {n:"Luiz Otávio",num:13,p:"DF",q:"ZAG",a:37,o:66,t:67,v:2000000,nat:"Brazil"},
       {n:"Júlio César",num:18,p:"DF",q:"ZAG",a:22,o:68,t:71,v:400000,nat:"Brazil"},
@@ -14870,16 +15187,17 @@
       {n:"Vinicius Zanocelo",num:25,p:"MF",q:"VOL",a:25,o:64,t:65,v:2000000,nat:"Brazil"},
       {n:"Richardson",num:26,p:"MF",q:"VOL",a:35,o:68,t:68,v:100000,nat:"Brazil"},
       {n:"Vina",num:29,p:"MF",q:"MEI",a:35,o:71,t:71,v:250000,nat:"Brazil"},
-      {n:"Bryan",num:31,p:"DF",q:"LD",a:30,o:71,t:71,v:300000,nat:"Brazil"},
       {n:"Éder",num:33,p:"DF",q:"ZAG",a:31,o:64,t:64,v:250000,nat:"Brazil"},
       {n:"Melk",num:40,p:"MF",q:"MEI",a:20,o:69,t:74,v:350000,nat:"Brazil"},
       {n:"Pedro Gilmar",num:63,p:"DF",q:"ZAG",a:20,o:69,t:74,v:4000000,nat:"Brazil"},
       {n:"Saulo Mineiro",num:73,p:"FW",q:"CA",a:29,o:65,t:65,v:1000000,nat:"Brazil"},
       {n:"Lenny Lobato",num:77,p:"FW",q:"PE",a:25,o:70,t:71,v:800000,nat:"Brazil"},
-      {n:"João Gabriel",num:81,p:"MF",q:"VOL",a:20,o:70,t:75,v:4500000,nat:"Brazil"},
       {n:"Kauã Ziegler",num:90,p:"FW",q:"PE",a:23,o:67,t:70,v:2500000,nat:"Brazil"},
-      {n:"Renzo López",num:94,p:"FW",q:"CA",a:32,o:65,t:65,v:650000,nat:"Uruguay"},
-      {n:"Lucca",num:99,p:"FW",q:"CA",a:23,o:70,t:73,v:600000,nat:"Brazil"}
+      {n:"Renzo López",num:7,p:"FW",q:"CA",a:32,o:65,t:65,v:650000,nat:"Uruguay"},
+      {n:"Lucca",num:99,p:"FW",q:"CA",a:23,o:70,t:73,v:600000,nat:"Brazil"},
+      {n:"Caíque França",num:23,p:"GK",q:"GOL",a:31,o:65,t:66,v:6500000,nat:"Brazil"},
+      {n:"Rian Santana",num:16,p:"FW",q:"SA",a:27,o:69,t:71,v:1500000},
+      {n:"Bryan Borges",num:31,p:"DF",q:"ZAG",a:25,o:68,t:70,v:1400000}
     ],
     "br2/CRB": [
       {n:"Vitor Caetano",num:1,p:"GK",q:"GOL",a:27,o:64,t:69,v:9000000,nat:"Brazil"},
@@ -14915,13 +15233,11 @@
     ],
     "br2/Criciúma": [
       {n:"Alisson",num:1,p:"GK",q:"GOL",a:33,o:67,t:67,v:500000,nat:"Brazil"},
-      {n:"Léo Mana",num:2,p:"DF",q:"ZAG",a:22,o:66,t:66,v:1500000,nat:"Brazil"},
       {n:"Rodrigo",num:3,p:"DF",q:"ZAG",a:39,o:72,t:72,v:2000000,nat:"Brazil"},
       {n:"Luciano Castán",num:4,p:"DF",q:"ZAG",a:36,o:71,t:71,v:100000,nat:"Brazil"},
       {n:"Eduardo",num:5,p:"MF",q:"VOL",a:29,o:71,t:71,v:375000,nat:"Brazil"},
       {n:"Marcinho",num:6,p:"DF",q:"LD",a:30,o:71,t:71,v:400000,nat:"Brazil"},
       {n:"Fellipe Mateus",num:7,p:"MF",q:"MEI",a:35,o:72,t:72,v:100000,nat:"Brazil"},
-      {n:"Gui Lobo",num:8,p:"MF",q:"MC",a:27,o:73,t:73,v:400000,nat:"Brazil"},
       {n:"Nicolas",num:9,p:"FW",q:"CA",a:36,o:73,t:73,v:75000,nat:"Brazil"},
       {n:"Jhonata Robert",num:10,p:"FW",q:"PD",a:26,o:71,t:72,v:2000000,nat:"Brazil"},
       {n:"Romarinho",num:11,p:"FW",q:"PD",a:32,o:72,t:72,v:550000,nat:"Brazil"},
@@ -14929,37 +15245,36 @@
       {n:"Steven Nufour",num:18,p:"MF",q:"MC",a:26,o:70,t:71,v:3000000,nat:"Ghana"},
       {n:"João Carlos",num:21,p:"FW",q:"PD",a:25,o:72,t:73,v:350000,nat:"Brazil"},
       {n:"Marcelo Hermes",num:22,p:"DF",q:"LE",a:31,o:69,t:69,v:1000000,nat:"Brazil"},
-      {n:"Octávio",num:30,p:"DF",q:"ZAG",a:21,o:71,t:74,v:5000000,nat:"Brazil"},
       {n:"Hiago Alves",num:31,p:"DF",q:"LE",a:21,o:70,t:73,v:200000,nat:"Brazil"},
       {n:"Airton",num:32,p:"GK",q:"GOL",a:31,o:69,t:69,v:500000,nat:"Brazil"},
       {n:"Bruno Alves",num:34,p:"DF",q:"ZAG",a:35,o:72,t:72,v:200000,nat:"Brazil"},
       {n:"Heitor Roca",num:36,p:"DF",q:"ZAG",a:21,o:73,t:76,v:6000000,nat:"Brazil"},
       {n:"César Martins",num:37,p:"DF",q:"ZAG",a:33,o:69,t:69,v:400000,nat:"Brazil"},
-      {n:"Thales",num:39,p:"FW",q:"CA",a:19,o:67,t:72,v:250000,nat:"Brazil"},
+      {n:"Thales",num:19,p:"FW",q:"CA",a:19,o:67,t:72,v:250000,nat:"Brazil"},
       {n:"Jean Irmer",num:41,p:"MF",q:"VOL",a:31,o:66,t:66,v:250000,nat:"Brazil"},
       {n:"Ruan Carvalho",num:43,p:"DF",q:"ZAG",a:19,o:71,t:76,v:200000,nat:"Brazil"},
       {n:"Thiaguinho",num:50,p:"MF",q:"VOL",a:20,o:67,t:72,v:200000,nat:"Brazil"},
       {n:"Pedro Santos",num:70,p:"GK",q:"GOL",a:21,o:68,t:71,v:2500000,nat:"Brazil"},
       {n:"Diego Gonçalves",num:77,p:"FW",q:"PE",a:31,o:69,t:69,v:400000,nat:"Brazil"},
       {n:"Cauê",num:88,p:"FW",q:"CA",a:24,o:69,t:72,v:700000,nat:"Brazil"},
-      {n:"Yuri Tanque",num:90,p:"FW",q:"CA",a:28,o:71,t:71,v:350000,nat:"Brazil"},
+      {n:"Yuri Tanque",num:33,p:"FW",q:"CA",a:28,o:71,t:71,v:350000,nat:"Brazil"},
       {n:"Rómulo Otero",num:91,p:"MF",q:"MEI",a:33,o:70,t:70,v:200000,nat:"Venezuela"},
       {n:"Willean Lepo",num:97,p:"DF",q:"LD",a:29,o:68,t:68,v:700000,nat:"Brazil"},
-      {n:"Ronald",num:0,p:"MF",q:"VOL",a:29,o:68,t:68,v:700000,nat:"Brazil"}
+      {n:"Ronald",num:14,p:"MF",q:"VOL",a:29,o:68,t:68,v:700000,nat:"Brazil"},
+      {n:"Guilherme Lobo",num:8,p:"MF",q:"ME",a:23,o:71,t:76,v:3800000},
+      {n:"Octávio Henrique",num:15,p:"DF",q:"ZAG",a:26,o:71,t:73,v:2800000},
+      {n:"Kauã Moroso",num:73,p:"GK",q:"GOL",a:25,o:67,t:69,v:1200000},
+      {n:"Eliel Costa",p:"MF",q:"MC",a:24,o:69,t:74,v:1500000}
     ],
     "br2/Cuiabá": [
       {n:"João Carlos",num:1,p:"GK",q:"GOL",a:38,o:68,t:68,v:850000,nat:"Brazil"},
       {n:"Vitor Mendes",num:4,p:"DF",q:"ZAG",a:27,o:67,t:67,v:200000,nat:"Brazil"},
       {n:"Calebe",num:5,p:"MF",q:"VOL",a:29,o:70,t:70,v:300000,nat:"Brazil"},
       {n:"Marlon",num:6,p:"DF",q:"ZAG",a:32,o:65,t:66,v:1500000,nat:"Brazil"},
-      {n:"Yamil Asad",num:7,p:"FW",q:"CA",a:32,o:68,t:69,v:2500000,nat:"Argentina"},
       {n:"Pepê",num:8,p:"MF",q:"MC",a:28,o:68,t:68,v:1200000,nat:"Brazil"},
-      {n:"Hernandes",num:10,p:"FW",q:"CA",a:27,o:70,t:73,v:4500000,nat:"Brazil"},
       {n:"Eliel",num:11,p:"FW",q:"PE",a:23,o:68,t:71,v:450000,nat:"Brazil"},
       {n:"João Basso",num:13,p:"DF",q:"ZAG",a:29,o:68,t:68,v:700000,nat:"Brazil"},
       {n:"Eric Melo",num:14,p:"DF",q:"LE",a:26,o:69,t:74,v:200000,nat:"Brazil"},
-      {n:"Victor Barbara",num:17,p:"FW",q:"CA",a:21,o:72,t:75,v:5500000,nat:"Brazil"},
-      {n:"Mateus Santos",num:19,p:"FW",q:"CA",a:27,o:69,t:72,v:3000000,nat:"Brazil"},
       {n:"Gabriel Mineiro",num:21,p:"FW",q:"CA",a:26,o:67,t:68,v:2000000,nat:"Brazil"},
       {n:"Rodrigo Rodrigues",num:27,p:"FW",q:"CA",a:26,o:71,t:72,v:700000,nat:"Brazil"},
       {n:"Vinicius Peixoto",num:29,p:"FW",q:"CA",a:22,o:66,t:69,v:250000,nat:"Brazil"},
@@ -14970,20 +15285,23 @@
       {n:"Kauan Cristtyan",num:41,p:"FW",q:"PE",a:20,o:71,t:76,v:250000,nat:"Brazil"},
       {n:"João Araújo",num:49,p:"MF",q:"VOL",a:21,o:66,t:69,v:2500000,nat:"Brazil"},
       {n:"Weverson",num:53,p:"MF",q:"VOL",a:23,o:69,t:72,v:200000,nat:"Brazil"},
-      {n:"Jadson",num:77,p:"FW",q:"CA",a:21,o:69,t:74,v:4000000,nat:"Brazil"},
-      {n:"David Miguel",num:88,p:"MF",q:"MEI",a:19,o:67,t:72,v:400000,nat:"Brazil"},
+      {n:"David Miguel",num:20,p:"MF",q:"MEI",a:19,o:67,t:72,v:400000,nat:"Brazil"},
       {n:"Luis Soares",num:91,p:"DF",q:"ZAG",a:21,o:66,t:69,v:200000,nat:"Brazil"},
       {n:"Luiz Otávio",num:97,p:"MF",q:"VOL",a:29,o:67,t:67,v:250000,nat:"Brazil"},
-      {n:"Jean Carlos",num:0,p:"GK",q:"GOL",a:29,o:71,t:71,v:2000000,nat:"Brazil"},
-      {n:"Gustavo Busatto",num:0,p:"GK",q:"GOL",a:35,o:67,t:67,v:350000,nat:"Brazil"},
-      {n:"Tarcísio",num:0,p:"DF",q:"LE",a:23,o:71,t:74,v:4000000,nat:"Brazil"},
-      {n:"Wesley Dias",num:0,p:"MF",q:"VOL",a:31,o:67,t:67,v:1000000,nat:"Brazil"},
-      {n:"Jean Dias",num:0,p:"FW",q:"PD",a:35,o:65,t:65,v:75000,nat:"Brazil"},
-      {n:"Pedro Henrique",num:0,p:"FW",q:"CA",a:29,o:71,t:71,v:1500000,nat:"Brazil"}
+      {n:"Jean Carlos",num:34,p:"GK",q:"GOL",a:29,o:71,t:71,v:2000000,nat:"Brazil"},
+      {n:"Gustavo Busatto",num:12,p:"GK",q:"GOL",a:35,o:67,t:67,v:350000,nat:"Brazil"},
+      {n:"Tarcísio",num:59,p:"DF",q:"LE",a:23,o:71,t:74,v:4000000,nat:"Brazil"},
+      {n:"Wesley Dias",num:70,p:"MF",q:"VOL",a:31,o:67,t:67,v:1000000,nat:"Brazil"},
+      {n:"Jean Dias",num:77,p:"FW",q:"PD",a:35,o:65,t:65,v:75000,nat:"Brazil"},
+      {n:"Pedro Henrique",num:96,p:"FW",q:"CA",a:29,o:71,t:71,v:1500000,nat:"Brazil"},
+      {n:"Igor Inocêncio",num:2,p:"DF",q:"ZAG",a:28,o:70,t:72,v:1500000},
+      {n:"Lorenzo",num:36,p:"DF",q:"ZAG",a:20,o:67,t:75,v:2500000},
+      {n:"Pedro Mello",num:78,p:"GK",q:"GOL",a:19,o:66,t:74,v:2500000},
+      {n:"Fábio Gomes",num:90,p:"FW",q:"CA",a:21,o:66,t:74,v:1500000},
+      {n:"Nathan Cruz",num:99,p:"FW",q:"CA",a:19,o:67,t:75,v:2500000}
     ],
     "br2/Fortaleza": [
       {n:"João Ricardo",num:1,p:"GK",q:"GOL",a:38,o:68,t:68,v:300000,nat:"Brazil"},
-      {n:"Lucas Gazal",num:3,p:"DF",q:"ZAG",a:27,o:69,t:69,v:1200000,nat:"Brazil"},
       {n:"Luan Freitas",num:4,p:"DF",q:"ZAG",a:25,o:66,t:67,v:500000,nat:"Brazil"},
       {n:"Pierre",num:5,p:"MF",q:"MC",a:24,o:66,t:67,v:1000000,nat:"Brazil"},
       {n:"Tomás Cardona",num:6,p:"DF",q:"ZAG",a:30,o:65,t:65,v:900000,nat:"Argentina"},
@@ -15012,7 +15330,11 @@
       {n:"Rodriguinho",num:75,p:"FW",q:"PE",a:23,o:65,t:68,v:900000,nat:"Brazil"},
       {n:"Paulo Baya",num:77,p:"FW",q:"PE",a:27,o:72,t:72,v:800000,nat:"Brazil"},
       {n:"Lucas Sasha",num:88,p:"MF",q:"VOL",a:36,o:65,t:65,v:150000,nat:"Brazil"},
-      {n:"Kaio Henrique",num:0,p:"DF",q:"LE",a:20,o:69,t:74,v:1300000,nat:"Brazil"}
+      {n:"Kaio Henrique",num:12,p:"DF",q:"LE",a:20,o:69,t:74,v:1300000,nat:"Brazil"},
+      {n:"Chico da Costa",num:91,p:"FW",q:"CA",a:31,o:73,t:76,v:1000000,nat:"Brazil"},
+      {n:"Jaílson",num:20,p:"MF",q:"VOL",a:23,o:69,t:74,v:2500000},
+      {n:"Juan Cantillo",num:21,p:"MF",q:"ME",a:26,o:69,t:71,v:1500000},
+      {n:"Bastos",num:34,p:"DF",q:"ZAG",a:21,o:66,t:74,v:1500000}
     ],
     "br2/Goiás": [
       {n:"Thiago Rodrigues",num:1,p:"GK",q:"GOL",a:37,o:68,t:68,v:25000,nat:"Brazil"},
@@ -15025,7 +15347,6 @@
       {n:"Anselmo Ramon",num:9,p:"FW",q:"CA",a:38,o:65,t:65,v:25000,nat:"Brazil"},
       {n:"Lucas Lima",num:10,p:"MF",q:"MEI",a:36,o:67,t:67,v:300000,nat:"Brazil"},
       {n:"Felipe Clemente",num:11,p:"FW",q:"CA",a:27,o:68,t:68,v:2000000,nat:"Brazil"},
-      {n:"Lucas Ribeiro",num:14,p:"DF",q:"ZAG",a:27,o:64,t:64,v:750000,nat:"Brazil"},
       {n:"Esli García",num:15,p:"FW",q:"PE",a:26,o:66,t:67,v:500000,nat:"Venezuela"},
       {n:"Pedrinho",num:17,p:"FW",q:"PD",a:22,o:70,t:73,v:600000,nat:"Brazil"},
       {n:"Cadu",num:18,p:"FW",q:"CA",a:22,o:68,t:71,v:600000,nat:"Brazil"},
@@ -15055,11 +15376,8 @@
       {n:"Pablo Roberto",num:7,p:"MF",q:"MC",a:26,o:71,t:72,v:600000,nat:"Brazil"},
       {n:"Lucas Mineiro",num:8,p:"MF",q:"VOL",a:30,o:67,t:67,v:900000,nat:"Brazil"},
       {n:"Alan Kardec",num:9,p:"FW",q:"CA",a:37,o:66,t:66,v:100000,nat:"Brazil"},
-      {n:"Marcos Paulo",num:10,p:"DF",q:"ZAG",a:23,o:72,t:73,v:300000,nat:"Portugal"},
       {n:"Fábio Lima",num:11,p:"FW",q:"PE",a:29,o:73,t:73,v:300000,nat:"Brazil"},
       {n:"Pedro Rocha",num:12,p:"GK",q:"GOL",a:28,o:67,t:67,v:1500000,nat:"Brazil"},
-      {n:"Mateus Schaffer",num:14,p:"DF",q:"ZAG",a:22,o:66,t:69,v:2000000,nat:"Brazil"},
-      {n:"Leo Índio",num:15,p:"MF",q:"MC",a:29,o:73,t:73,v:4000000,nat:"Brazil"},
       {n:"Mateus Schaffer",num:14,p:"DF",q:"ZAG",a:22,o:66,t:69,v:2000000,nat:"Brazil"},
       {n:"Diogo Barbosa",num:16,p:"DF",q:"LE",a:34,o:66,t:66,v:200000,nat:"Brazil"},
       {n:"Allanzinho",num:20,p:"FW",q:"PE",a:26,o:72,t:73,v:400000,nat:"Brazil"},
@@ -15074,22 +15392,23 @@
       {n:"Rodrigo Sam",num:34,p:"DF",q:"ZAG",a:31,o:73,t:73,v:350000,nat:"Brazil"},
       {n:"Bernardo",num:43,p:"DF",q:"ZAG",a:21,o:71,t:71,v:2000000,nat:"Brazil"},
       {n:"Luis Mandaca",num:44,p:"MF",q:"MC",a:24,o:66,t:66,v:2200000,nat:"Brazil"},
-      {n:"Marcos Paulo",num:47,p:"DF",q:"ZAG",a:23,o:72,t:73,v:300000,nat:"Brazil"},
       {n:"Kaynan",num:53,p:"MF",q:"MC",a:27,o:71,t:71,v:3000000,nat:"Brazil"},
       {n:"Raí Silva",num:75,p:"MF",q:"MEI",a:24,o:73,t:76,v:700000,nat:"Brazil"},
-      {n:"Luiz Henrique",num:77,p:"MF",q:"MC",a:31,o:73,t:73,v:2000000,nat:"Brazil"},
-      {n:"João Scatolin",num:79,p:"FW",q:"CA",a:26,o:72,t:73,v:3500000,nat:"Brazil"},
       {n:"Davi Góes",num:88,p:"MF",q:"VOL",a:21,o:71,t:74,v:250000,nat:"Brazil"},
       {n:"Jandrei",num:93,p:"GK",q:"GOL",a:33,o:69,t:69,v:200000,nat:"Brazil"},
       {n:"Gabriel Pinheiro",num:97,p:"DF",q:"ZAG",a:29,o:68,t:68,v:250000,nat:"Brazil"},
-      {n:"Gabriel Borges",num:0,p:"DF",q:"ZAG",a:26,o:68,t:69,v:2000000,nat:"Brazil"},
       {n:"Luiz Eduardo",num:0,p:"DF",q:"ZAG",a:25,o:69,t:70,v:3000000,nat:"Brazil"},
-      {n:"João Trevisol",num:0,p:"MF",q:"MC",a:25,o:67,t:68,v:2000000,nat:"Brazil"}
+      {n:"Luis Amarilla",num:18,p:"FW",q:"CA",a:31,o:69,t:69,v:1500000,nat:"Paraguay"},
+      {n:"Marcos Paulo Costa",num:10,p:"FW",q:"SA",a:24,o:72,t:77,v:3500000},
+      {n:"Aderlan",num:13,p:"DF",q:"LD",a:27,o:69,t:71,v:1500000},
+      {n:"Manuel Castro",num:17,p:"FW",q:"PE",a:28,o:68,t:70,v:1000000},
+      {n:"Gabriel Pires",num:29,p:"MF",q:"VOL",a:25,o:66,t:68,v:1000000},
+      {n:"Marcos Paulo Lima",num:47,p:"DF",q:"ZAG",a:19,o:66,t:74,v:2500000},
+      {n:"Lucas Alves",num:72,p:"FW",q:"CA",a:21,o:66,t:74,v:1500000},
+      {n:"Juan Christian",num:73,p:"FW",q:"PE",a:22,o:67,t:72,v:1800000}
     ],
     "br2/Londrina": [
       {n:"Luan Ribeiro",num:1,p:"GK",q:"GOL",a:29,o:67,t:67,v:1500000,nat:"Brazil"},
-      {n:"Weverton",num:2,p:"DF",q:"LD",a:27,o:67,t:67,v:250000,nat:"Brazil"},
-      {n:"Yago Lincoln",num:3,p:"DF",q:"ZAG",a:33,o:67,t:67,v:500000,nat:"Brazil"},
       {n:"Wallace",num:4,p:"DF",q:"ZAG",a:38,o:64,t:64,v:350000,nat:"Brazil"},
       {n:"André Luiz",num:5,p:"MF",q:"MC",a:25,o:71,t:72,v:4000000,nat:"Brazil"},
       {n:"Rafael Monteiro",num:6,p:"DF",q:"LE",a:22,o:64,t:67,v:1500000,nat:"Brazil"},
@@ -15103,9 +15422,6 @@
       {n:"Gabriel Lacerda",num:15,p:"DF",q:"ZAG",a:27,o:69,t:69,v:250000,nat:"Brazil"},
       {n:"André Cardoso",num:17,p:"MF",q:"VOL",a:23,o:69,t:72,v:3000000,nat:"Brazil"},
       {n:"Paulinho Moccelin",num:18,p:"FW",q:"PE",a:32,o:71,t:71,v:200000,nat:"Brazil"},
-      {n:"Emiliano Rodríguez",num:19,p:"FW",q:"CA",a:23,o:70,t:71,v:3500000,nat:"Uruguay"},
-      {n:"Fabiano",num:20,p:"MF",q:"VOL",a:21,o:70,t:73,v:150000,nat:"Brazil"},
-      {n:"Murilo Chico",num:27,p:"MF",q:"VOL",a:21,o:65,t:68,v:2000000,nat:"Brazil"},
       {n:"Caio Maia",num:28,p:"FW",q:"PE",a:21,o:70,t:73,v:100000,nat:"Brazil"},
       {n:"Maurício Kozlinski",num:30,p:"GK",q:"GOL",a:35,o:67,t:67,v:100000,nat:"Brazil"},
       {n:"João Tavares",num:32,p:"MF",q:"VOL",a:22,o:65,t:68,v:2000000,nat:"Brazil"},
@@ -15116,13 +15432,16 @@
       {n:"Caio Rafael",num:55,p:"MF",q:"MC",a:27,o:71,t:71,v:3000000,nat:"Brazil"},
       {n:"Cainã",num:57,p:"MF",q:"MC",a:20,o:70,t:75,v:4500000,nat:"Brazil"},
       {n:"Gilberto",num:70,p:"FW",q:"CA",a:37,o:71,t:71,v:150000,nat:"Brazil"},
-      {n:"Juninho",num:77,p:"FW",q:"CA",a:29,o:65,t:65,v:1500000,nat:"Brazil"},
       {n:"Thalis",num:96,p:"MF",q:"MEI",a:30,o:70,t:70,v:600000,nat:"Brazil"},
-      {n:"William Pottker",num:99,p:"FW",q:"PD",a:32,o:68,t:68,v:400000,nat:"Brazil"},
+      {n:"William Pottker",num:23,p:"FW",q:"PD",a:32,o:68,t:68,v:400000,nat:"Brazil"},
       {n:"Thiago Parente",num:0,p:"GK",q:"GOL",a:21,o:66,t:69,v:1500000,nat:"Brazil"},
       {n:"William Hartmann",num:0,p:"GK",q:"GOL",a:30,o:67,t:67,v:700000,nat:"Brazil"},
-      {n:"João Vitor",num:0,p:"MF",q:"MC",a:28,o:66,t:66,v:900000,nat:"Brazil"},
-      {n:"Fernando Asafe",num:0,p:"FW",q:"CA",a:23,o:69,t:72,v:3000000,nat:"Brazil"}
+      {n:"João Vitor",num:20,p:"MF",q:"MC",a:28,o:66,t:66,v:900000,nat:"Brazil"},
+      {n:"Fernando Asafe",num:0,p:"FW",q:"CA",a:23,o:69,t:72,v:3000000,nat:"Brazil"},
+      {n:"Guilherme Cachoeira",num:27,p:"FW",q:"CA",a:24,o:64,t:65,v:8000000,nat:"Brazil"},
+      {n:"Nino Paraíba",num:2,p:"DF",q:"LD",a:25,o:70,t:72,v:2000000},
+      {n:"Guilherme Portuga",num:77,p:"FW",q:"CA",a:20,o:67,t:75,v:2500000},
+      {n:"Igor Bahia",num:99,p:"FW",q:"CA",a:24,o:66,t:71,v:1000000}
     ],
     "br2/Náutico": [
       {n:"Muriel",num:1,p:"GK",q:"GOL",a:39,o:63,t:63,v:50000,nat:"Brazil"},
@@ -15143,7 +15462,6 @@
       {n:"Patricio Núñez",num:22,p:"MF",q:"MEI",a:27,o:65,t:65,v:1500000,nat:"Argentina"},
       {n:"Igor Fernandes",num:23,p:"DF",q:"LE",a:34,o:65,t:65,v:150000,nat:"Brazil"},
       {n:"Benjamín Borasi",num:24,p:"FW",q:"PD",a:28,o:68,t:68,v:250000,nat:"Argentina"},
-      {n:"Mateus Silva",num:25,p:"DF",q:"ZAG",a:31,o:70,t:70,v:150000,nat:"Brazil"},
       {n:"Luiz Felipe",num:27,p:"DF",q:"LD",a:28,o:66,t:66,v:150000,nat:"Brazil"},
       {n:"Júnior Todinho",num:29,p:"FW",q:"CA",a:32,o:66,t:66,v:200000,nat:"Brazil"},
       {n:"Wanderson",num:34,p:"DF",q:"ZAG",a:31,o:67,t:67,v:1000000,nat:"Brazil"},
@@ -15158,7 +15476,6 @@
       {n:"Danielzinho",num:0,p:"FW",q:"PD",a:25,o:67,t:68,v:2000000,nat:"Brazil"}
     ],
     "br2/Novorizontino": [
-      {n:"Lucas Pereira",num:1,p:"GK",q:"GOL",a:21,o:69,t:72,v:2500000,nat:"Brazil"},
       {n:"Madson",num:2,p:"DF",q:"LD",a:34,o:70,t:70,v:175000,nat:"Brazil"},
       {n:"Carlinhos",num:3,p:"DF",q:"ZAG",a:31,o:65,t:65,v:200000,nat:"Brazil"},
       {n:"Patrick",num:4,p:"DF",q:"ZAG",a:27,o:65,t:65,v:500000,nat:"Brazil"},
@@ -15190,37 +15507,31 @@
       {n:"Hector",num:35,p:"FW",q:"PD",a:30,o:67,t:67,v:1000000,nat:"Brazil"},
       {n:"Luiz Gabriel",num:38,p:"MF",q:"VOL",a:21,o:65,t:68,v:2000000,nat:"Brazil"},
       {n:"Jardiel",num:40,p:"FW",q:"CA",a:21,o:68,t:71,v:500000,nat:"Brazil"},
-      {n:"Hélio Borges",num:41,p:"FW",q:"PD",a:26,o:66,t:67,v:1500000,nat:"Brazil"},
+      {n:"Hélio Borges",num:77,p:"FW",q:"PD",a:26,o:66,t:67,v:1500000,nat:"Brazil"},
       {n:"Juninho",num:50,p:"MF",q:"MEI",a:25,o:67,t:68,v:1200000,nat:"Brazil"},
       {n:"Maykon Jesus",num:66,p:"DF",q:"LE",a:21,o:66,t:71,v:500000,nat:"Brazil"},
       {n:"Arthur Barbosa",num:78,p:"DF",q:"ZAG",a:28,o:65,t:65,v:1500000,nat:"Brazil"},
       {n:"Jordi",num:93,p:"GK",q:"GOL",a:33,o:69,t:69,v:350000,nat:"Brazil"},
-      {n:"Paulo Henrique",num:0,p:"GK",q:"GOL",a:35,o:71,t:71,v:650000,nat:"Brazil"},
-      {n:"Bruno Santana",num:0,p:"DF",q:"ZAG",a:23,o:68,t:71,v:3000000,nat:"Brazil"}
+      {n:"Paulo Henrique",num:29,p:"GK",q:"GOL",a:35,o:71,t:71,v:650000,nat:"Brazil"},
+      {n:"Bruno Santana",num:0,p:"DF",q:"ZAG",a:23,o:68,t:71,v:3000000,nat:"Brazil"},
+      {n:"Lucas Ribeiro",num:1,p:"DF",q:"ZAG",a:27,o:64,t:64,v:750000,nat:"Brazil"},
+      {n:"Miguel Contiero",num:36,p:"MF",q:"MD",a:23,o:67,t:72,v:1800000},
+      {n:"Reidiney",num:41,p:"FW",q:"PD",a:19,o:67,t:75,v:2500000}
     ],
     "br2/Operário Ferroviário": [
       {n:"Elias Curzel",num:1,p:"GK",q:"GOL",a:31,o:69,t:69,v:100000,nat:"Brazil"},
       {n:"Mikael Doka",num:2,p:"DF",q:"LD",a:26,o:69,t:70,v:750000,nat:"Brazil"},
-      {n:"Charles Almeida",num:3,p:"DF",q:"ZAG",a:31,o:67,t:68,v:2000000,nat:"Brazil"},
-      {n:"André Dantas",num:4,p:"DF",q:"ZAG",a:30,o:65,t:65,v:750000,nat:"Brazil"},
       {n:"Índio",num:5,p:"MF",q:"VOL",a:33,o:71,t:71,v:100000,nat:"Brazil"},
       {n:"Moraes Júnior",num:6,p:"DF",q:"LE",a:28,o:70,t:73,v:250000,nat:"Brazil"},
-      {n:"Felipe Augusto",num:7,p:"FW",q:"CA",a:33,o:66,t:67,v:250000,nat:"Brazil"},
       {n:"Juan Zuluaga",num:8,p:"MF",q:"MC",a:33,o:72,t:72,v:400000,nat:"Colombia"},
       {n:"Vinícius Mingotti",num:9,p:"FW",q:"CA",a:26,o:70,t:71,v:500000,nat:"Brazil"},
       {n:"Gabriel Boschilia",num:10,p:"MF",q:"MEI",a:30,o:72,t:72,v:1500000,nat:"Brazil"},
       {n:"Aylon",num:11,p:"FW",q:"CA",a:34,o:69,t:69,v:225000,nat:"Brazil"},
       {n:"Talles",num:12,p:"GK",q:"GOL",a:29,o:64,t:64,v:100000,nat:"Brazil"},
-      {n:"Hildeberto Pereira",num:14,p:"FW",q:"CA",a:30,o:72,t:75,v:4500000,nat:"Cape Verde"},
       {n:"Miranda",num:16,p:"DF",q:"ZAG",a:26,o:66,t:67,v:900000,nat:"Brazil"},
-      {n:"Matheus Galdino",num:17,p:"FW",q:"CA",a:24,o:65,t:66,v:1500000,nat:"Brazil"},
-      {n:"Jhan Pool Torres",num:18,p:"DF",q:"ZAG",a:24,o:71,t:72,v:4000000,nat:"Colombia"},
-      {n:"Kauã Gomes",num:19,p:"FW",q:"CA",a:27,o:72,t:72,v:3500000,nat:"Brazil"},
       {n:"Vinícius Diniz",num:20,p:"MF",q:"MEI",a:27,o:69,t:69,v:600000,nat:"Brazil"},
-      {n:"Henrique",num:21,p:"MF",q:"MC",a:33,o:70,t:70,v:800000,nat:"Brazil"},
       {n:"José Cuenú",num:22,p:"DF",q:"ZAG",a:31,o:65,t:65,v:300000,nat:"Colombia"},
-      {n:"João Botão",num:23,p:"DF",q:"LD",a:28,o:67,t:67,v:2000000,nat:"Brazil"},
-      {n:"Caio Dantas",num:25,p:"FW",q:"CA",a:33,o:70,t:70,v:250000,nat:"Brazil"},
+      {n:"Caio Dantas",num:99,p:"FW",q:"CA",a:33,o:70,t:70,v:250000,nat:"Brazil"},
       {n:"Gabriel Feliciano",num:27,p:"DF",q:"LE",a:25,o:65,t:66,v:500000,nat:"Brazil"},
       {n:"Dudu Mosconi",num:28,p:"MF",q:"MC",a:31,o:72,t:72,v:2000000,nat:"Brazil"},
       {n:"Edwin Torres",num:29,p:"FW",q:"CA",a:31,o:72,t:72,v:2000000,nat:"Colombia"},
@@ -15230,7 +15541,15 @@
       {n:"Diego Monteiro",num:41,p:"GK",q:"GOL",a:26,o:69,t:70,v:2000000,nat:"Brazil"},
       {n:"Neto Paraíba",num:88,p:"MF",q:"MC",a:34,o:67,t:67,v:50000,nat:"Brazil"},
       {n:"Pablo",num:92,p:"FW",q:"CA",a:34,o:67,t:67,v:350000,nat:"Brazil"},
-      {n:"William Klaus",num:0,p:"DF",q:"ZAG",a:32,o:68,t:68,v:250000,nat:"Brazil"}
+      {n:"William Klaus",num:44,p:"DF",q:"ZAG",a:32,o:68,t:68,v:250000,nat:"Brazil"},
+      {n:"João Gabriel",num:23,p:"MF",q:"VOL",a:20,o:70,t:75,v:4500000,nat:"Brazil"},
+      {n:"Ángel Torres",num:7,p:"FW",q:"CA",a:25,o:69,t:71,v:1500000},
+      {n:"Berto",num:14,p:"FW",q:"PD",a:25,o:69,t:71,v:1500000},
+      {n:"Maguinho",num:26,p:"DF",q:"ZAG",a:23,o:66,t:71,v:1500000},
+      {n:"Charles Raphael",num:32,p:"MF",q:"MD",a:21,o:66,t:74,v:1500000},
+      {n:"Renan Gustavo",num:34,p:"DF",q:"ZAG",a:22,o:65,t:70,v:1500000},
+      {n:"Joseph",num:43,p:"DF",q:"LD",a:23,o:65,t:70,v:1500000},
+      {n:"Maxwell",num:77,p:"FW",q:"SA",a:25,o:66,t:68,v:1000000}
     ],
     "br2/Ponte Preta": [
       {n:"Guilherme Viana",num:1,p:"GK",q:"GOL",a:23,o:68,t:71,v:2000000,nat:"Brazil"},
@@ -15302,12 +15621,10 @@
       {n:"Hyoran",num:42,p:"MF",q:"MEI",a:33,o:70,t:70,v:500000,nat:"Brazil"},
       {n:"Marcão",num:77,p:"MF",q:"VOL",a:35,o:69,t:69,v:50000,nat:"Brazil"},
       {n:"Daniel Amorim",num:89,p:"FW",q:"CA",a:36,o:64,t:64,v:350000,nat:"Brazil"},
-      {n:"Luizão",num:90,p:"DF",q:"ZAG",a:24,o:64,t:65,v:400000,nat:"Brazil"},
       {n:"Augusto",num:97,p:"DF",q:"ZAG",a:29,o:70,t:70,v:500000,nat:"Brazil"}
     ],
     "br2/Sport": [
       {n:"Marcelo Ajul",num:3,p:"DF",q:"ZAG",a:27,o:65,t:65,v:9000000,nat:"Brazil"},
-      {n:"Zé Marcos",num:4,p:"DF",q:"ZAG",a:28,o:71,t:74,v:32000000,nat:"Brazil"},
       {n:"Marcelo Benevenuto",num:5,p:"DF",q:"ZAG",a:30,o:65,t:65,v:3000000,nat:"Brazil"},
       {n:"Biel",num:6,p:"MF",q:"MC",a:24,o:66,t:71,v:17000000,nat:"Brazil"},
       {n:"Patrick de Paula",num:7,p:"MF",q:"MC",a:27,o:70,t:70,v:10000000,nat:"Brazil"},
@@ -15336,17 +15653,17 @@
       {n:"Rafinha",num:66,p:"DF",q:"ZAG",a:20,o:64,t:64,v:4000000,nat:"Brazil"},
       {n:"Augusto Pucci",num:68,p:"DF",q:"ZAG",a:21,o:65,t:68,v:14000000,nat:"Brazil"},
       {n:"Dudu Teodora",num:77,p:"FW",q:"CA",a:26,o:64,t:65,v:8000000,nat:"Brazil"},
-      {n:"Iury Castilho",num:95,p:"FW",q:"CA",a:31,o:69,t:69,v:16000000,nat:"Brazil"},
       {n:"Edson Lucas",num:96,p:"DF",q:"ZAG",a:28,o:68,t:68,v:14000000,nat:"Brazil"},
-      {n:"Zé Roberto",num:99,p:"FW",q:"CA",a:32,o:65,t:68,v:14000000,nat:"Brazil"}
+      {n:"Neto Pessoa",num:19,p:"FW",q:"CA",a:32,o:72,t:72,v:350000,nat:"Brazil"},
+      {n:"Raí Lopes",num:76,p:"DF",q:"ZAG",a:20,o:65,t:73,v:2000000},
+      {n:"Fernando Sobral",num:88,p:"MF",q:"ME",a:19,o:65,t:73,v:2000000},
+      {n:"Kervin Andrade",p:"MF",q:"VOL",a:27,o:66,t:68,v:1000000}
     ],
     "br2/Vila Nova": [
       {n:"Helton Leite",num:1,p:"GK",q:"GOL",a:35,o:68,t:68,v:200000,nat:"Brazil"},
       {n:"Tiago Pagnussat",num:3,p:"DF",q:"ZAG",a:36,o:67,t:67,v:100000,nat:"Brazil"},
-      {n:"Pedro Romano",num:4,p:"DF",q:"ZAG",a:31,o:70,t:70,v:1500000,nat:"Brazil"},
       {n:"João Vieira",num:5,p:"MF",q:"VOL",a:28,o:72,t:72,v:700000,nat:"Brazil"},
       {n:"Higor Luiz",num:6,p:"DF",q:"LE",a:30,o:71,t:71,v:400000,nat:"Brazil"},
-      {n:"André Luis",num:7,p:"FW",q:"PD",a:29,o:65,t:65,v:550000,nat:"Brazil"},
       {n:"Willian Maranhão",num:8,p:"MF",q:"VOL",a:30,o:71,t:71,v:750000,nat:"Brazil"},
       {n:"Rafa Silva",num:9,p:"FW",q:"CA",a:34,o:71,t:71,v:3000000,nat:"Brazil"},
       {n:"Marquinhos Gabriel",num:10,p:"MF",q:"MC",a:36,o:65,t:70,v:2000000,nat:"Brazil"},
@@ -15354,18 +15671,25 @@
       {n:"Willian Formiga",num:13,p:"DF",q:"LE",a:31,o:68,t:68,v:200000,nat:"Brazil"},
       {n:"Anderson Jesus",num:14,p:"DF",q:"ZAG",a:31,o:65,t:65,v:300000,nat:"Brazil"},
       {n:"Dudu",num:15,p:"MF",q:"VOL",a:24,o:71,t:72,v:400000,nat:"Brazil"},
-      {n:"Ruan Ribeiro",num:17,p:"FW",q:"CA",a:23,o:66,t:66,v:450000,nat:"Brazil"},
       {n:"Enzo",num:18,p:"MF",q:"VOL",a:23,o:67,t:70,v:150000,nat:"Brazil"},
       {n:"Nathan Camargo",num:20,p:"MF",q:"VOL",a:21,o:70,t:73,v:200000,nat:"Brazil"},
-      {n:"Dodô",num:21,p:"FW",q:"PE",a:32,o:68,t:68,v:75000,nat:"Brazil"},
+      {n:"Dodô",num:31,p:"FW",q:"PE",a:32,o:68,t:68,v:75000,nat:"Brazil"},
       {n:"Hayner",num:22,p:"DF",q:"LD",a:30,o:71,t:71,v:350000,nat:"Brazil"},
       {n:"Dalberson",num:29,p:"GK",q:"GOL",a:29,o:70,t:70,v:2000000,nat:"Brazil"},
       {n:"Gabriel Átila",num:30,p:"GK",q:"GOL",a:23,o:66,t:69,v:300000,nat:"Brazil"},
       {n:"Bruno Xavier",num:33,p:"MF",q:"MEI",a:29,o:67,t:67,v:250000,nat:"Brazil"},
-      {n:"Caio Marcelo",num:38,p:"DF",q:"ZAG",a:28,o:65,t:66,v:1500000,nat:"Brazil"},
       {n:"Dellatorre",num:49,p:"FW",q:"CA",a:34,o:72,t:72,v:350000,nat:"Brazil"},
       {n:"Emerson Urso",num:70,p:"FW",q:"PE",a:25,o:68,t:69,v:400000,nat:"Brazil"},
-      {n:"Janderson",num:99,p:"FW",q:"PD",a:27,o:72,t:72,v:900000,nat:"Brazil"}
+      {n:"Janderson",num:99,p:"FW",q:"PD",a:27,o:72,t:72,v:900000,nat:"Brazil"},
+      {n:"Jonathan Costa",num:23,p:"FW",q:"CA",a:28,o:68,t:68,v:150000,nat:"Brazil"},
+      {n:"Douglas Mendes",num:4,p:"DF",q:"ZAG",a:23,o:71,t:76,v:3800000},
+      {n:"Lincoln",num:9,p:"FW",q:"CA",a:27,o:71,t:73,v:2800000},
+      {n:"Samuel Lucas",num:14,p:"DF",q:"ZAG",a:23,o:67,t:72,v:1800000},
+      {n:"Igor Cariús",num:16,p:"DF",q:"ZAG",a:26,o:68,t:70,v:1400000},
+      {n:"Everton Galdino",num:17,p:"FW",q:"PE",a:27,o:68,t:70,v:1400000},
+      {n:"Higor Meritão",num:21,p:"MF",q:"MC",a:28,o:68,t:70,v:1000000},
+      {n:"Breno Bora",p:"DF",q:"LD",a:25,o:68,t:70,v:1400000},
+      {n:"Gustavo Puskas",p:"FW",q:"CA",a:23,o:68,t:73,v:2000000}
     ],
     "br3/Botafogo-PB": [
       {n:"Saulo",num:1,p:"GK",q:"GOL",a:41,o:67,t:67,v:5000000,nat:"Brazil"},
@@ -15427,7 +15751,6 @@
       {n:"Lucas de Sá",num:0,p:"MF",q:"MC",a:22,o:66,t:69,v:14000000,nat:"Brazil"},
       {n:"João Pedro",num:0,p:"FW",q:"PE",a:26,o:68,t:69,v:15000000,nat:"Brazil"},
       {n:"João Prado",num:0,p:"MF",q:"MC",a:20,o:64,t:69,v:13000000,nat:"Brazil"},
-      {n:"João Pedro",num:0,p:"FW",q:"PE",a:26,o:68,t:69,v:15000000,nat:"Brazil"},
       {n:"Adrianinho",num:0,p:"FW",q:"CA",a:22,o:67,t:67,v:12000000,nat:"Brazil"},
       {n:"Udeh Clinton",num:0,p:"FW",q:"PD",a:24,o:62,t:63,v:6500000,nat:"Nigeria"},
       {n:"Olávio",num:0,p:"FW",q:"CA",a:33,o:63,t:64,v:8000000,nat:"Brazil"},
@@ -15640,17 +15963,15 @@
       {n:"Silvinho",num:88,p:"FW",q:"PD",a:36,o:69,t:69,v:700000,nat:"Brazil"},
       {n:"Emerson Galego",num:99,p:"FW",q:"PD",a:27,o:66,t:66,v:150000,nat:"Brazil"},
       {n:"Vinícius Barreta",num:0,p:"GK",q:"GOL",a:27,o:68,t:68,v:850000,nat:"Brazil"},
-      {n:"Douglas Bacelar",num:0,p:"DF",q:"ZAG",a:20,o:64,t:69,v:2000000,nat:"Brazil"},
       {n:"Zé Luiz",num:0,p:"DF",q:"ZAG",a:26,o:66,t:67,v:1500000,nat:"Brazil"},
       {n:"Ezequiel",num:0,p:"DF",q:"LD",a:33,o:62,t:62,v:250000,nat:"Brazil"},
-      {n:"Nicolas Porto",num:0,p:"MF",q:"MC",a:22,o:62,t:65,v:1000000,nat:"Brazil"}
+      {n:"Nicolas Porto",num:0,p:"MF",q:"MC",a:22,o:62,t:65,v:1000000,nat:"Brazil"},
+      {n:"Wesley Costa",num:66,p:"DF",q:"ZAG",a:19,o:63,t:71,v:2000000}
     ],
     "br3/Guarani": [
-      {n:"Caíque França",num:0,p:"GK",q:"GOL",a:31,o:65,t:66,v:6500000,nat:"Brazil"},
       {n:"Mateus Claus",num:0,p:"GK",q:"GOL",a:32,o:62,t:62,v:2000000,nat:"Brazil"},
       {n:"Fred Conte",num:0,p:"GK",q:"GOL",a:23,o:67,t:70,v:11000000,nat:"Brazil"},
       {n:"Edson Rogério",num:0,p:"DF",q:"ZAG",a:23,o:67,t:70,v:16000000,nat:"Brazil"},
-      {n:"Jonathan Costa",num:0,p:"FW",q:"CA",a:28,o:68,t:68,v:150000,nat:"Brazil"},
       {n:"Maurício Antônio",num:0,p:"DF",q:"ZAG",a:34,o:67,t:67,v:3500000,nat:"Brazil"},
       {n:"Rafael Donato",num:0,p:"DF",q:"ZAG",a:37,o:66,t:66,v:3000000,nat:"Brazil"},
       {n:"Raphael Rodrigues",num:0,p:"DF",q:"ZAG",a:27,o:69,t:70,v:20000000,nat:"Brazil"},
@@ -15669,7 +15990,6 @@
       {n:"Kauã Jesus",num:0,p:"MF",q:"MEI",a:23,o:67,t:70,v:16000000,nat:"Brazil"},
       {n:"João Paulo",num:0,p:"MF",q:"MEI",a:36,o:63,t:63,v:2000000,nat:"Brazil"},
       {n:"Dentinho",num:0,p:"FW",q:"CA",a:29,o:62,t:67,v:9000000,nat:"Brazil"},
-      {n:"Guilherme Cachoeira",num:0,p:"FW",q:"CA",a:24,o:64,t:65,v:8000000,nat:"Brazil"},
       {n:"Guilherme Parede",num:0,p:"FW",q:"CA",a:29,o:63,t:63,v:6500000,nat:"Brazil"},
       {n:"Hebert",num:0,p:"FW",q:"CA",a:20,o:64,t:69,v:13000000,nat:"Brazil"},
       {n:"Kewen",num:0,p:"FW",q:"CA",a:21,o:66,t:69,v:16000000,nat:"Brazil"},
@@ -15907,7 +16227,6 @@
       {n:"Dener",num:18,p:"MF",q:"MC",a:34,o:61,t:61,v:1500000,nat:"Brazil"},
       {n:"Igor Morais",num:19,p:"DF",q:"ZAG",a:32,o:61,t:61,v:2500000,nat:"Brazil"},
       {n:"Marquinhos",num:20,p:"FW",q:"PE",a:28,o:64,t:64,v:8000000,nat:"Brazil"},
-      {n:"Henrique Silva",num:21,p:"MF",q:"VOL",a:32,o:66,t:66,v:6000000,nat:"Brazil"},
       {n:"Juninho",num:22,p:"MF",q:"VOL",a:24,o:64,t:65,v:9500000,nat:"Brazil"},
       {n:"Matheus Lucas",num:23,p:"FW",q:"CA",a:28,o:63,t:63,v:6500000,nat:"Brazil"},
       {n:"Lucas Chávez",num:24,p:"MF",q:"MC",a:23,o:62,t:62,v:3000000,nat:"Bolivia"},
@@ -16014,7 +16333,7 @@
       {n:"Roko Šimić",num:9,p:"FW",q:"CA",a:23,o:67,t:70,v:1500000,nat:"Croatia"},
       {n:"Moritz-Broni Kwarteng",num:10,p:"MF",q:"MEI",a:28,o:67,t:67,v:750000,nat:"Germany"},
       {n:"Felipe Chávez",num:11,p:"MF",q:"MC",a:19,o:68,t:73,v:4000000,nat:"Peru"},
-      {n:"Tony Reitz",num:15,p:"MF",q:"VOL",a:22,o:68,t:71,v:400000,nat:"Germany"},
+      {n:"Tony Reitz",num:14,p:"MF",q:"VOL",a:22,o:68,t:71,v:400000,nat:"Germany"},
       {n:"Daniel Heber",num:15,p:"DF",q:"ZAG",a:32,o:68,t:68,v:400000,nat:"Germany"},
       {n:"Alexander Nollenberger",num:17,p:"DF",q:"LE",a:29,o:69,t:69,v:800000,nat:"Germany"},
       {n:"Lee Chung-hyun",num:18,p:"FW",q:"PE",a:30,o:70,t:70,v:1500000,nat:"South Korea"},
@@ -16126,7 +16445,8 @@
       {n:"Max Pfister",num:45,p:"DF",q:"ZAG",a:19,o:69,t:74,v:4000000,nat:"Germany"},
       {n:"Milian Herbst",num:47,p:"MF",q:"MEI",a:18,o:73,t:78,v:6500000,nat:"Germany"},
       {n:"Manolo Merx",num:48,p:"FW",q:"PD",a:18,o:68,t:73,v:300000,nat:"Germany"},
-      {n:"Yannik Lührs",num:49,p:"DF",q:"ZAG",a:23,o:70,t:73,v:600000,nat:"Germany"}
+      {n:"Yannik Lührs",num:49,p:"DF",q:"ZAG",a:23,o:70,t:73,v:600000,nat:"Germany"},
+      {n:"Marco Richter",num:5,p:"MF",q:"VOL",a:28,o:70,t:72,v:1500000}
     ],
     "de2/Dynamo Dresden": [
       {n:"Tim Schreiber",num:1,p:"GK",q:"GOL",a:24,o:68,t:69,v:900000,nat:"Germany"},
@@ -16374,7 +16694,6 @@
     "de2/Karlsruher SC": [
       {n:"Hans Christian Bernat",num:1,p:"GK",q:"GOL",a:25,o:65,t:66,v:1000000,nat:"Denmark"},
       {n:"Sebastian Jung",num:2,p:"DF",q:"LD",a:36,o:70,t:70,v:300000,nat:"Germany"},
-      {n:"Deniz Ofli",num:3,p:"DF",q:"LE",a:19,o:72,t:77,v:2000000,nat:"Turkey"},
       {n:"Héliton",num:4,p:"DF",q:"ZAG",a:30,o:69,t:69,v:1000000,nat:"Brazil"},
       {n:"Kwon Hyeok-kyu",num:5,p:"MF",q:"VOL",a:25,o:67,t:68,v:2000000,nat:"South Korea"},
       {n:"Santeri Väänänen",num:6,p:"MF",q:"VOL",a:24,o:69,t:70,v:900000,nat:"Finland"},
@@ -16427,8 +16746,7 @@
       {n:"Luis Pick",num:36,p:"FW",q:"CA",a:18,o:73,t:78,v:6500000,nat:"Germany"},
       {n:"Alessandro Crimaldi",num:37,p:"FW",q:"PE",a:19,o:59,t:64,v:150000,nat:"Italy"},
       {n:"Hugo Rölleke",num:38,p:"GK",q:"GOL",a:21,o:60,t:63,v:50000,nat:"Germany"},
-      {n:"Lasse Isbruch",num:39,p:"MF",q:"VOL",a:18,o:75,t:80,v:500000,nat:"Germany"},
-      {n:"Aurel Wagbe",num:40,p:"FW",q:"CA",a:30,o:68,t:68,v:1000000,nat:"Germany"}
+      {n:"Lasse Isbruch",num:39,p:"MF",q:"VOL",a:18,o:75,t:80,v:500000,nat:"Germany"}
     ],
     "de2/VfL Osnabrück": [
       {n:"Niklas Sauter",num:1,p:"GK",q:"GOL",a:23,o:67,t:70,v:150000,nat:"Germany"},
@@ -16470,7 +16788,6 @@
       {n:"Pavao Pervan",num:12,p:"GK",q:"GOL",a:38,o:71,t:71,v:300000,nat:"Austria"},
       {n:"Rogério",num:13,p:"DF",q:"LE",a:28,o:73,t:73,v:4000000,nat:"Brazil"},
       {n:"Pharell Hensel",num:14,p:"MF",q:"MC",a:19,o:73,t:78,v:3000000,nat:"Germany"},
-      {n:"Moritz Jenz",num:15,p:"DF",q:"ZAG",a:27,o:76,t:76,v:5500000,nat:"Germany"},
       {n:"Alexander Bernhardsson",num:17,p:"FW",q:"PD",a:28,o:71,t:71,v:3000000,nat:"Sweden"},
       {n:"Jonas Adjetey",num:18,p:"DF",q:"ZAG",a:22,o:68,t:71,v:6000000,nat:"Ghana"},
       {n:"Robert Glatzel",num:19,p:"FW",q:"CA",a:32,o:71,t:71,v:1500000,nat:"Germany"},
@@ -16478,7 +16795,6 @@
       {n:"Joakim Mæhle",num:21,p:"DF",q:"LE",a:29,o:78,t:78,v:7000000,nat:"Denmark"},
       {n:"Mathys Angély",num:22,p:"DF",q:"ZAG",a:19,o:61,t:66,v:1000000,nat:"France"},
       {n:"Alessio Besio",num:23,p:"FW",q:"PE",a:22,o:69,t:72,v:2000000,nat:"Switzerland"},
-      {n:"Christian Eriksen",num:24,p:"MF",q:"MC",a:34,o:73,t:73,v:1000000,nat:"Denmark"},
       {n:"Aaron Zehnter",num:25,p:"DF",q:"PE",a:21,o:72,t:75,v:4500000,nat:"Germany"},
       {n:"Saël Kumbedi",num:26,p:"DF",q:"LD",a:21,o:72,t:75,v:5500000,nat:"France"},
       {n:"Maximilian Arnold",num:27,p:"MF",q:"VOL",a:32,o:79,t:79,v:4000000,nat:"Germany"},
@@ -16514,7 +16830,6 @@
       {n:"Tomoki Iwata",num:24,p:"MF",q:"VOL",a:29,o:72,t:72,v:2000000,nat:"Japan"},
       {n:"Kristoffer Lund",num:25,p:"DF",q:"LE",a:24,o:69,t:70,v:4000000,nat:"USA"},
       {n:"Bright Osayi-Samuel",num:26,p:"DF",q:"LD",a:28,o:76,t:76,v:4000000,nat:"Nigeria"},
-      {n:"Kanya Fujimoto",num:27,p:"MF",q:"MEI",a:27,o:74,t:74,v:2000000,nat:"Japan"},
       {n:"Jay Stansfield",num:28,p:"FW",q:"CA",a:23,o:69,t:70,v:18000000,nat:"England"},
       {n:"Brad Mayo",num:30,p:"GK",q:"GOL",a:22,o:54,t:57,v:50000,nat:"England"},
       {n:"Luis Vázquez",num:32,p:"FW",q:"CA",a:25,o:74,t:75,v:2500000,nat:"Argentina"},
@@ -16564,7 +16879,6 @@
       {n:"Chris Forino-Joseph",num:3,p:"DF",q:"ZAG",a:26,o:71,t:71,v:350000,nat:"England"},
       {n:"Xavier Simons",num:4,p:"MF",q:"VOL",a:23,o:67,t:70,v:800000,nat:"England"},
       {n:"Lewis Brunt",num:5,p:"DF",q:"ZAG",a:25,o:67,t:68,v:800000,nat:"England"},
-      {n:"Ben Davies",num:6,p:"DF",q:"ZAG",a:31,o:66,t:66,v:800000,nat:"England"},
       {n:"Kyliane Dong",num:7,p:"FW",q:"PE",a:21,o:65,t:68,v:900000,nat:"France"},
       {n:"Josh Sheehan",num:8,p:"MF",q:"MC",a:31,o:68,t:68,v:400000,nat:"Wales"},
       {n:"Theo Bair",num:9,p:"FW",q:"CA",a:27,o:69,t:69,v:1500000,nat:"Canada"},
@@ -16597,10 +16911,10 @@
       {n:"Lucas Kirkpatrick",num:0,p:"MF",q:"MC",a:22,o:69,t:72,v:3000000,nat:"England"},
       {n:"Harry Leigh",num:0,p:"MF",q:"MC",a:23,o:66,t:69,v:2000000,nat:"England"},
       {n:"Max Lott",num:0,p:"MF",q:"MC",a:27,o:70,t:70,v:3000000,nat:"England"},
-      {n:"Andrew Tutte",num:0,p:"MF",q:"MC",a:35,o:68,t:69,v:2500000,nat:"England"},
       {n:"Tom King",num:0,p:"FW",q:"CA",a:19,o:66,t:67,v:2000000,nat:"England"},
       {n:"Daeshon Lawrence",num:0,p:"FW",q:"CA",a:20,o:54,t:59,v:150000,nat:"England"},
-      {n:"Conor Lewis",num:0,p:"FW",q:"CA",a:23,o:72,t:75,v:4500000,nat:"England"}
+      {n:"Conor Lewis",num:0,p:"FW",q:"CA",a:23,o:72,t:75,v:4500000,nat:"England"},
+      {n:"David Harrington",num:23,p:"GK",q:"GOL",a:29,o:67,t:69,v:900000}
     ],
     "en2/Bristol City": [
       {n:"Sam Tickle",num:1,p:"GK",q:"GOL",a:24,o:73,t:74,v:1200000,nat:"England"},
@@ -16666,11 +16980,7 @@
       {n:"Shurandy Sambo",num:20,p:"DF",q:"LD",a:25,o:71,t:72,v:1300000,nat:"Curaçao"},
       {n:"Mike Trésor",num:31,p:"MF",q:"MEI",a:27,o:73,t:73,v:2000000,nat:"Belgium"},
       {n:"Ashley Barnes",num:35,p:"FW",q:"CA",a:36,o:70,t:70,v:150000,nat:"England"},
-      {n:"Michael Obafemi",num:45,p:"FW",q:"CA",a:26,o:69,t:70,v:600000,nat:"Ireland"},
-      {n:"Quilindschy Hartman",num:0,p:"DF",q:"LE",a:24,o:77,t:78,v:10000000,nat:"Netherlands"},
-      {n:"Lesley Ugochukwu",num:0,p:"MF",q:"VOL",a:22,o:73,t:76,v:7000000,nat:"France"},
-      {n:"Oluwaseun Adewumi",num:0,p:"FW",q:"CA",a:21,o:65,t:68,v:2500000,nat:"Austria"},
-      {n:"Lyle Foster",num:0,p:"FW",q:"CA",a:26,o:72,t:73,v:5000000,nat:"South Africa"}
+      {n:"Michael Obafemi",num:45,p:"FW",q:"CA",a:26,o:69,t:70,v:600000,nat:"Ireland"}
     ],
     "en2/Cardiff City": [
       {n:"Nathan Trott",num:1,p:"GK",q:"GOL",a:28,o:70,t:70,v:1500000,nat:"England"},
@@ -16762,7 +17072,7 @@
       {n:"Corey Blackett-Taylor",num:33,p:"FW",q:"PE",a:28,o:68,t:68,v:450000,nat:"England"},
       {n:"Charlie Smith",num:41,p:"MF",q:"MC",a:26,o:70,t:71,v:3000000,nat:"England"},
       {n:"Eiran Cashin",num:44,p:"DF",q:"ZAG",a:24,o:70,t:71,v:5000000,nat:"Ireland"},
-      {n:"Nicholas Bilokapic",num:0,p:"GK",q:"GOL",a:24,o:72,t:73,v:200000,nat:"Australia"}
+      {n:"Nicholas Bilokapic",num:39,p:"GK",q:"GOL",a:24,o:72,t:73,v:200000,nat:"Australia"}
     ],
     "en2/Lincoln City": [
       {n:"George Wickens",num:1,p:"GK",q:"GOL",a:24,o:63,t:64,v:1000000,nat:"England"},
@@ -16823,7 +17133,7 @@
       {n:"Jon McLaughlin",num:33,p:"GK",q:"GOL",a:39,o:70,t:70,v:50000,nat:"Scotland"},
       {n:"Cruz Ibeh",num:44,p:"MF",q:"MC",a:17,o:75,t:78,v:8000000,nat:"England"},
       {n:"Micah Hamilton",num:0,p:"FW",q:"PE",a:22,o:64,t:67,v:1800000,nat:"England"},
-      {n:"Connor Barron",num:0,p:"MF",q:"VOL",a:24,o:71,t:72,v:2500000,nat:"Scotland"}
+      {n:"Connor Barron",num:18,p:"MF",q:"VOL",a:24,o:71,t:72,v:2500000,nat:"Scotland"}
     ],
     "en2/Millwall": [
       {n:"Lukas Jensen",num:1,p:"GK",q:"GOL",a:27,o:69,t:69,v:700000,nat:"Denmark"},
@@ -17043,10 +17353,7 @@
       {n:"James Ward-Prowse",num:30,p:"MF",q:"MC",a:31,o:73,t:73,v:5000000,nat:"England"},
       {n:"Jamie Jones",num:31,p:"GK",q:"GOL",a:37,o:71,t:71,v:750000,nat:"England"},
       {n:"Aaron Ramsdale",num:32,p:"GK",q:"GOL",a:28,o:68,t:68,v:12000000,nat:"England"},
-      {n:"Welington",num:34,p:"DF",q:"LE",a:25,o:72,t:73,v:3000000,nat:"Brazil"},
-      {n:"Joachim Kayi Sanda",num:39,p:"DF",q:"ZAG",a:19,o:69,t:74,v:1200000,nat:"France"},
-      {n:"Princewill Ehibhatiomhan",num:40,p:"FW",q:"CA",a:20,o:69,t:70,v:3500000,nat:"England"},
-      {n:"Barnaby Williams",num:53,p:"MF",q:"MC",a:19,o:68,t:68,v:1500000,nat:"England"}
+      {n:"Welington",num:34,p:"DF",q:"LE",a:25,o:72,t:73,v:3000000,nat:"Brazil"}
     ],
     "en2/Stoke City": [
       {n:"Viktor Johansson",num:1,p:"GK",q:"GOL",a:27,o:74,t:74,v:12000000,nat:"Sweden"},
@@ -17113,7 +17420,7 @@
       {n:"Kévin Keben",num:4,p:"DF",q:"ZAG",a:22,o:69,t:72,v:3500000,nat:"Cameroon"},
       {n:"Hector Kyprianou",num:5,p:"MF",q:"VOL",a:25,o:68,t:69,v:1500000,nat:"England"},
       {n:"Mattie Pollock",num:6,p:"DF",q:"ZAG",a:24,o:71,t:72,v:4000000,nat:"England"},
-      {n:"Othmane Maamma",num:7,p:"FW",q:"PD",a:20,o:61,t:64,v:8000000,nat:"Morocco"},
+      {n:"Othmane Maamma",num:7,p:"FW",q:"PD",a:20,o:63,t:67,v:8000000,nat:"Morocco"},
       {n:"Edoardo Bove",num:8,p:"MF",q:"MC",a:24,o:71,t:72,v:4000000,nat:"Italy"},
       {n:"Luca Kjerrumgaard",num:9,p:"FW",q:"CA",a:23,o:65,t:68,v:8000000,nat:"Denmark"},
       {n:"Myron Boadu",num:10,p:"FW",q:"CA",a:25,o:73,t:74,v:4000000,nat:"Netherlands"},
@@ -17132,7 +17439,8 @@
       {n:"Jordan Zemura",num:33,p:"DF",q:"LE",a:26,o:71,t:72,v:5000000,nat:"England"},
       {n:"Edo Kayembe",num:39,p:"MF",q:"MC",a:28,o:71,t:71,v:4000000,nat:"DR Congo"},
       {n:"Jack Grieves",num:43,p:"MF",q:"MC",a:21,o:57,t:60,v:200000,nat:"England"},
-      {n:"Stephy Mavididi",num:45,p:"FW",q:"PE",a:28,o:71,t:71,v:5000000,nat:"England"}
+      {n:"Stephy Mavididi",num:45,p:"FW",q:"PE",a:28,o:71,t:71,v:5000000,nat:"England"},
+      {n:"Michail Antonio",num:18,p:"FW",q:"PD",a:28,o:69,t:71,v:1200000}
     ],
     "en2/West Bromwich Albion": [
       {n:"Max O'Leary",num:1,p:"GK",q:"GOL",a:29,o:72,t:72,v:2000000,nat:"Ireland"},
@@ -17192,7 +17500,6 @@
       {n:"José Sá",num:1,p:"GK",q:"GOL",a:33,o:72,t:72,v:3500000,nat:"Portugal"},
       {n:"Kieran Trippier",num:2,p:"DF",q:"LD",a:35,o:75,t:75,v:1500000,nat:"England"},
       {n:"Hugo Bueno",num:3,p:"DF",q:"LE",a:23,o:72,t:75,v:12000000,nat:"Spain"},
-      {n:"Santiago Bueno",num:4,p:"DF",q:"ZAG",a:27,o:74,t:74,v:10000000,nat:"Uruguay"},
       {n:"Marshall Munetsi",num:5,p:"MF",q:"MC",a:30,o:74,t:74,v:15000000,nat:"England"},
       {n:"André",num:7,p:"MF",q:"VOL",a:25,o:73,t:74,v:25000000,nat:"Brazil"},
       {n:"Jordan James",num:8,p:"MF",q:"MC",a:22,o:72,t:75,v:12000000,nat:"Wales"},
@@ -17447,7 +17754,7 @@
       {n:"Marcos González",num:25,p:"GK",q:"GOL",a:33,o:66,t:66,v:2000000,nat:"Spain"},
       {n:"Jones El-Abdellaoui",num:39,p:"FW",q:"PD",a:20,o:64,t:69,v:13000000,nat:"Morocco"},
       {n:"Anthony Khayat",num:0,p:"DF",q:"ZAG",a:23,o:65,t:68,v:12000000,nat:"Spain"},
-      {n:"Stefan Bajcetic",num:0,p:"MF",q:"MC",a:21,o:70,t:73,v:24000000,nat:"Spain"}
+      {n:"Stefan Bajcetic",num:22,p:"MF",q:"MC",a:21,o:70,t:73,v:24000000,nat:"Spain"}
     ],
     "es2/Ceuta": [
       {n:"Pedro López",num:1,p:"GK",q:"GOL",a:31,o:63,t:63,v:200000,nat:"Spain"},
@@ -17476,7 +17783,7 @@
       {n:"Umaru Konare",num:27,p:"FW",q:"CA",a:22,o:64,t:67,v:100000,nat:"Spain"},
       {n:"Omar Sadik",num:29,p:"FW",q:"CA",a:22,o:62,t:65,v:800000,nat:"Morocco"},
       {n:"Gabriel Okoro",num:32,p:"MF",q:"MC",a:32,o:64,t:64,v:650000,nat:"Nigeria"},
-      {n:"Josema",num:0,p:"MF",q:"MC",a:23,o:66,t:66,v:900000,nat:"Spain"}
+      {n:"Josema",num:30,p:"MF",q:"MC",a:23,o:66,t:66,v:900000,nat:"Spain"}
     ],
     "es2/Córdoba": [
       {n:"Iker Álvarez",num:1,p:"GK",q:"GOL",a:25,o:62,t:63,v:1000000,nat:"Spain"},
@@ -17704,7 +18011,6 @@
       {n:"Miguel Narváez",num:1,p:"GK",q:"GOL",a:24,o:63,t:64,v:200000,nat:"Spain"},
       {n:"Aisar Ahmed",num:2,p:"DF",q:"LD",a:25,o:70,t:71,v:700000,nat:"Spain"},
       {n:"Juan Cruz",num:3,p:"DF",q:"LE",a:34,o:68,t:68,v:1000000,nat:"Spain"},
-      {n:"David CostasF",num:4,p:"DF",q:"ZAG",a:31,o:70,t:70,v:1200000,nat:"Spain"},
       {n:"Youness Lachhab",num:5,p:"MF",q:"MC",a:27,o:68,t:68,v:700000,nat:"Morocco"},
       {n:"Dani Villahermosa",num:6,p:"MF",q:"MC",a:25,o:70,t:71,v:1500000,nat:"Spain"},
       {n:"Ilyas Chaira",num:7,p:"FW",q:"PE",a:25,o:72,t:73,v:4000000,nat:"Morocco"},
@@ -17725,7 +18031,8 @@
       {n:"Carlos Domínguez",num:23,p:"DF",q:"ZAG",a:25,o:66,t:67,v:2000000,nat:"Spain"},
       {n:"Alexandru Ișfan",num:24,p:"FW",q:"CA",a:26,o:63,t:64,v:750000,nat:"Spain"},
       {n:"Brandon Domingues",num:25,p:"FW",q:"PE",a:26,o:70,t:71,v:500000,nat:"France"},
-      {n:"Dieguito Menéndez",num:28,p:"MF",q:"MC",a:30,o:65,t:65,v:150000,nat:"Spain"}
+      {n:"Dieguito Menéndez",num:28,p:"MF",q:"MC",a:30,o:65,t:65,v:150000,nat:"Spain"},
+      {n:"David Costas",num:4,p:"DF",q:"ZAG",a:24,o:70,t:75,v:2000000}
     ],
     "es2/Sabadell": [
       {n:"Diego Fuoli",num:1,p:"GK",q:"GOL",a:28,o:70,t:70,v:300000,nat:"Spain"},
@@ -17753,7 +18060,7 @@
       {n:"Marc Vidal",num:25,p:"GK",q:"GOL",a:26,o:70,t:71,v:300000,nat:"Spain"},
       {n:"José Luis Catalá",num:27,p:"DF",q:"ZAG",a:22,o:67,t:70,v:150000,nat:"Spain"},
       {n:"Xavi Moreno",num:30,p:"FW",q:"PD",a:21,o:68,t:71,v:300000,nat:"Spain"},
-      {n:"Patrick Nuamah",num:0,p:"FW",q:"PE",a:20,o:72,t:77,v:1600000,nat:"Italy"},
+      {n:"Patrick Nuamah",num:29,p:"FW",q:"PE",a:20,o:72,t:77,v:1600000,nat:"Italy"},
       {n:"Yussif Owusu",num:0,p:"MF",q:"VOL",a:20,o:67,t:72,v:3000000,nat:"Ghana"}
     ],
     "es2/Sporting Gijón": [
@@ -17990,7 +18297,8 @@
       {n:"Maedine Makhloufi",num:42,p:"DF",q:"LE",a:21,o:72,t:75,v:250000,nat:"France"},
       {n:"Moha Ramos",num:73,p:"GK",q:"GOL",a:26,o:71,t:72,v:2500000,nat:"Spain"},
       {n:"Alex Daho",num:93,p:"FW",q:"CA",a:22,o:72,t:75,v:4500000,nat:"France"},
-      {n:"Enzo Mayilla",num:94,p:"FW",q:"CA",a:20,o:73,t:78,v:350000,nat:"France"}
+      {n:"Enzo Mayilla",num:94,p:"FW",q:"CA",a:20,o:73,t:78,v:350000,nat:"France"},
+      {n:"M'Baye Niang",num:99,p:"FW",q:"SA",a:22,o:67,t:72,v:1800000}
     ],
     "fr2/FC Sochaux": [
       {n:"Mohamed Touré",num:2,p:"DF",q:"ZAG",a:21,o:67,t:70,v:3000000,nat:"Guinea"},
@@ -18052,7 +18360,7 @@
       {n:"Kyliann Fofana",num:47,p:"FW",q:"CA",a:20,o:67,t:72,v:100000,nat:"France"},
       {n:"Sakhalou Niakaté",num:48,p:"DF",q:"LD",a:20,o:64,t:69,v:400000,nat:"France"},
       {n:"Jean-Guy Akpa Akpro",num:92,p:"FW",q:"PD",a:21,o:67,t:70,v:275000,nat:"France"},
-      {n:"Yvann Maçon",num:0,p:"DF",q:"LD",a:27,o:71,t:71,v:800000,nat:"France"}
+      {n:"Yvann Maçon",num:97,p:"DF",q:"LD",a:27,o:71,t:71,v:800000,nat:"France"}
     ],
     "fr2/Guingamp": [
       {n:"Teddy Bartouche",num:1,p:"GK",q:"GOL",a:29,o:64,t:64,v:250000,nat:"France"},
@@ -18131,7 +18439,6 @@
       {n:"Alassane Sy",num:27,p:"MF",q:"VOL",a:21,o:70,t:73,v:250000,nat:"Senegal"},
       {n:"Édouard Soumah-Abbad",num:29,p:"FW",q:"PE",a:23,o:68,t:71,v:500000,nat:"France"},
       {n:"Adam Marchal",num:32,p:"DF",q:"ZAG",a:33,o:71,t:71,v:900000,nat:"France"},
-      {n:"Abdourahmane Mbodji",num:33,p:"FW",q:"CA",a:18,o:70,t:75,v:700000,nat:"Senegal"},
       {n:"Hamza Kadamani",num:38,p:"FW",q:"PE",a:16,o:69,t:74,v:100000,nat:"Luxembourg"},
       {n:"Bryan Song",num:39,p:"DF",q:"ZAG",a:31,o:75,t:75,v:3000000,nat:"Cameroon"},
       {n:"Ousmane Ba",num:40,p:"GK",q:"GOL",a:24,o:68,t:69,v:100000,nat:"Senegal"},
@@ -18139,7 +18446,11 @@
       {n:"Pape Sy",num:61,p:"GK",q:"GOL",a:29,o:63,t:63,v:600000,nat:"Senegal"},
       {n:"Bouna Sarr",num:70,p:"DF",q:"LD",a:34,o:73,t:73,v:350000,nat:"Senegal"},
       {n:"Abdoulaye Ba",num:77,p:"FW",q:"CA",a:22,o:68,t:71,v:3000000,nat:"Senegal"},
-      {n:"Idris Mohamed",num:98,p:"DF",q:"ZAG",a:22,o:68,t:71,v:350000,nat:"Comoros"}
+      {n:"Idris Mohamed",num:98,p:"DF",q:"ZAG",a:22,o:68,t:71,v:350000,nat:"Comoros"},
+      {n:"Vincent Gomis",num:16,p:"GK",q:"GOL",a:24,o:69,t:74,v:1500000},
+      {n:"Abdoulaye Nassoko",num:26,p:"DF",q:"ZAG",a:22,o:68,t:73,v:2000000},
+      {n:"Tahirys dos Santos",num:30,p:"DF",q:"ZAG",a:19,o:68,t:76,v:1500000},
+      {n:"Abdourahmane Mbodj",num:33,p:"FW",q:"CA",a:19,o:63,t:71,v:2000000}
     ],
     "fr2/Montpellier": [
       {n:"Mathieu Michel",num:1,p:"GK",q:"GOL",a:35,o:66,t:66,v:100000,nat:"France"},
@@ -18377,7 +18688,6 @@
       {n:"Andrea Silipo",num:7,p:"FW",q:"PD",a:25,o:71,t:72,v:300000,nat:"Italy"},
       {n:"Giovanni Corradini",num:8,p:"MF",q:"VOL",a:23,o:67,t:70,v:300000,nat:"Italy"},
       {n:"Mohammed Chakir",num:9,p:"FW",q:"CA",a:25,o:66,t:69,v:200000,nat:"Italy"},
-      {n:"Ferdinando Del Sole",num:10,p:"FW",q:"CA",a:28,o:72,t:72,v:2000000,nat:"Italy"},
       {n:"Sergiu Perciun",num:11,p:"MF",q:"MEI",a:20,o:70,t:75,v:1500000,nat:"Moldova"},
       {n:"Gennaro Acampora",num:13,p:"MF",q:"MC",a:32,o:66,t:66,v:250000,nat:"Italy"},
       {n:"Andrea Oliveri",num:14,p:"MF",q:"PD",a:23,o:68,t:71,v:750000,nat:"Italy"},
@@ -18399,7 +18709,9 @@
       {n:"Tommaso Milanese",num:62,p:"MF",q:"MC",a:24,o:69,t:70,v:600000,nat:"Italy"},
       {n:"Don Bolsius",num:77,p:"FW",q:"PD",a:27,o:71,t:71,v:150000,nat:"Netherlands"},
       {n:"Matteo Raffaelli",num:0,p:"GK",q:"GOL",a:21,o:65,t:68,v:75000,nat:"Italy"},
-      {n:"Damiano Menna",num:0,p:"DF",q:"ZAG",a:31,o:69,t:69,v:100000,nat:"Italy"}
+      {n:"Damiano Menna",num:0,p:"DF",q:"ZAG",a:31,o:69,t:69,v:100000,nat:"Italy"},
+      {n:"Antonio Russo",num:16,p:"MF",q:"MEI",a:26,o:69,t:71,v:1500000},
+      {n:"Matteo Brunori",num:99,p:"FW",q:"CA",a:25,o:66,t:68,v:1000000}
     ],
     "it2/Benevento": [
       {n:"Antonio Prisco",num:4,p:"MF",q:"MC",a:27,o:66,t:66,v:1500000,nat:"Italy"},
@@ -18434,10 +18746,9 @@
       {n:"Simone Verdi",num:90,p:"MF",q:"MEI",a:34,o:63,t:63,v:400000,nat:"Italy"},
       {n:"Marco Tumminello",num:93,p:"FW",q:"CA",a:27,o:65,t:65,v:500000,nat:"Italy"},
       {n:"Alioune Sylla",num:96,p:"GK",q:"GOL",a:22,o:68,t:71,v:25000,nat:"Senegal"},
-      {n:"Antonio Ferrara",num:0,p:"DF",q:"ZAG",a:32,o:63,t:63,v:550000,nat:"Italy"}
+      {n:"Mattia Mannini",num:16,p:"MF",q:"MC",a:28,o:66,t:68,v:800000}
     ],
     "it2/Carrarese": [
-      {n:"Marco Imperiale",num:3,p:"DF",q:"ZAG",a:27,o:67,t:67,v:2000000,nat:"Italy"},
       {n:"David Vujević",num:4,p:"DF",q:"ZAG",a:19,o:68,t:73,v:1200000,nat:"Croatia"},
       {n:"Filippo Oliana",num:6,p:"DF",q:"ZAG",a:27,o:67,t:67,v:750000,nat:"Italy"},
       {n:"Niccolò Belloni",num:7,p:"MF",q:"PE",a:32,o:64,t:64,v:150000,nat:"Italy"},
@@ -18448,18 +18759,28 @@
       {n:"Giovanni Garofani",num:12,p:"GK",q:"GOL",a:24,o:63,t:64,v:75000,nat:"Italy"},
       {n:"Fabio Andrea Ruggeri",num:13,p:"DF",q:"ZAG",a:21,o:69,t:72,v:1200000,nat:"Italy"},
       {n:"Nicolás Schiavi",num:18,p:"MF",q:"VOL",a:31,o:71,t:71,v:450000,nat:"Argentina"},
-      {n:"Vincenzo Fiorillo",num:19,p:"GK",q:"GOL",a:36,o:68,t:68,v:400000,nat:"Italy"},
       {n:"Filippo Liberati",num:25,p:"MF",q:"MC",a:26,o:65,t:66,v:1500000,nat:"Italy"},
       {n:"Mattia Finotto",num:32,p:"FW",q:"CA",a:33,o:68,t:68,v:200000,nat:"Italy"},
       {n:"Filippo Reale",num:33,p:"DF",q:"ZAG",a:20,o:68,t:73,v:750000,nat:"Italy"},
       {n:"Lorenzo Romani",num:41,p:"DF",q:"ZAG",a:21,o:67,t:70,v:400000,nat:"Italy"},
       {n:"Pietro Pinelli",num:66,p:"MF",q:"VOL",a:20,o:67,t:72,v:75000,nat:"Italy"},
-      {n:"Filippo Melegoni",num:72,p:"MF",q:"MEI",a:27,o:65,t:65,v:1500000,nat:"Italy"},
       {n:"Jonas Rouhi",num:73,p:"DF",q:"LE",a:22,o:70,t:73,v:2000000,nat:"Sweden"},
       {n:"Gabriele Parlanti",num:77,p:"MF",q:"MC",a:22,o:67,t:70,v:750000,nat:"Italy"},
       {n:"Tommaso Guercio",num:78,p:"MF",q:"PD",a:21,o:68,t:71,v:400000,nat:"Poland"},
       {n:"Stefano Mazzini",num:87,p:"GK",q:"GOL",a:27,o:59,t:59,v:50000,nat:"Italy"},
-      {n:"Giacomo Marconi",num:91,p:"FW",q:"CA",a:21,o:64,t:67,v:125000,nat:"Italy"}
+      {n:"Giacomo Marconi",num:91,p:"FW",q:"CA",a:21,o:64,t:67,v:125000,nat:"Italy"},
+      {n:"Nicholas Bonfanti",num:21,p:"FW",q:"CA",a:24,o:71,t:71,v:21000000,nat:"Italy"},
+      {n:"Semuel Pizzignacco",num:1,p:"GK",q:"GOL",a:27,o:68,t:70,v:1400000},
+      {n:"Colin Dagba",num:2,p:"DF",q:"ZAG",a:23,o:68,t:73,v:2000000},
+      {n:"Tommaso Macchioni",num:5,p:"DF",q:"LD",a:23,o:68,t:73,v:2000000},
+      {n:"Luka Topalović",num:17,p:"MF",q:"MD",a:24,o:67,t:72,v:1200000},
+      {n:"Gonçalo Esteves",num:20,p:"DF",q:"LD",a:24,o:67,t:72,v:1200000},
+      {n:"Matthias Braunöder",num:23,p:"MF",q:"MEI",a:27,o:67,t:69,v:1200000},
+      {n:"Giulio Cianti",num:27,p:"DF",q:"ZAG",a:24,o:64,t:69,v:1000000},
+      {n:"Jacopo Martini",num:28,p:"MF",q:"MC",a:27,o:67,t:69,v:1200000},
+      {n:"Nicola Ravaglia",num:30,p:"GK",q:"GOL",a:23,o:65,t:70,v:1500000},
+      {n:"Nicolò Cudrig",num:70,p:"MF",q:"MC",a:21,o:65,t:73,v:1500000},
+      {n:"Giulio Baroncelli",num:71,p:"MF",q:"MD",a:19,o:67,t:75,v:2500000}
     ],
     "it2/Catanzaro": [
       {n:"Christian Marietta",num:1,p:"GK",q:"GOL",a:24,o:57,t:58,v:250000,nat:"Italy"},
@@ -18467,11 +18788,9 @@
       {n:"Ervin Bashi",num:5,p:"DF",q:"ZAG",a:21,o:65,t:68,v:2000000,nat:"Albania"},
       {n:"Niccolò Postiglione",num:6,p:"DF",q:"ZAG",a:21,o:64,t:67,v:600000,nat:"Italy"},
       {n:"Nicolò Buso",num:7,p:"FW",q:"SA",a:26,o:67,t:68,v:800000,nat:"Italy"},
-      {n:"Filippo Pittarello",num:8,p:"FW",q:"CA",a:30,o:67,t:67,v:1000000,nat:"Italy"},
       {n:"Pietro Iemmello",num:9,p:"FW",q:"CA",a:34,o:72,t:72,v:1000000,nat:"Italy"},
       {n:"Jacopo Petriccione",num:10,p:"MF",q:"VOL",a:31,o:69,t:69,v:500000,nat:"Italy"},
       {n:"Samuel Giovane",num:14,p:"MF",q:"MC",a:23,o:63,t:66,v:1200000,nat:"Italy"},
-      {n:"Giovanni Volpe",num:17,p:"FW",q:"CA",a:29,o:58,t:58,v:350000,nat:"Italy"},
       {n:"Alejo Garnica",num:18,p:"FW",q:"PD",a:22,o:60,t:63,v:125000,nat:"Argentina"},
       {n:"Simone Pafundi",num:20,p:"MF",q:"MEI",a:20,o:60,t:65,v:4500000,nat:"Italy"},
       {n:"Mirko Pigliacelli",num:22,p:"GK",q:"GOL",a:33,o:72,t:72,v:400000,nat:"Italy"},
@@ -18483,16 +18802,19 @@
       {n:"Federico Di Francesco",num:29,p:"FW",q:"PE",a:32,o:74,t:74,v:600000,nat:"Italy"},
       {n:"Gabriele Alesi",num:30,p:"MF",q:"MEI",a:22,o:59,t:62,v:1400000,nat:"Italy"},
       {n:"Emanuele Pecorino",num:31,p:"FW",q:"CA",a:25,o:61,t:62,v:600000,nat:"Italy"},
-      {n:"N'dri Philippe Koffi",num:39,p:"FW",q:"CA",a:27,o:62,t:62,v:400000,nat:"Ivory Coast"},
+      {n:"N'dri Philippe Koffi",num:19,p:"FW",q:"CA",a:27,o:62,t:62,v:400000,nat:"Ivory Coast"},
       {n:"Sayha Seha",num:61,p:"MF",q:"MC",a:25,o:58,t:59,v:400000,nat:"Madagascar"},
       {n:"Ruggero Frosinini",num:62,p:"DF",q:"LD",a:25,o:58,t:59,v:500000,nat:"Italy"},
       {n:"Marco D'Alessandro",num:77,p:"FW",q:"PD",a:35,o:70,t:70,v:150000,nat:"Italy"},
       {n:"Francesco Reita",num:80,p:"FW",q:"SA",a:17,o:58,t:63,v:550000,nat:"Italy"},
       {n:"Gabriel Arditi",num:91,p:"FW",q:"CA",a:19,o:58,t:63,v:250000,nat:"Italy"},
       {n:"Mehdi Dorval",num:93,p:"DF",q:"LE",a:25,o:62,t:63,v:1800000,nat:"Algeria"},
-      {n:"Raul Tassoni",num:94,p:"DF",q:"ZAG",a:19,o:64,t:69,v:125000,nat:"Italy"},
       {n:"Nicola Mosti",num:98,p:"MF",q:"MEI",a:28,o:58,t:58,v:600000,nat:"Italy"},
-      {n:"Edoardo Borrelli",num:99,p:"GK",q:"GOL",a:22,o:60,t:63,v:50000,nat:"Italy"}
+      {n:"Edoardo Borrelli",num:99,p:"GK",q:"GOL",a:22,o:60,t:63,v:50000,nat:"Italy"},
+      {n:"Marco Imperiale",num:3,p:"DF",q:"ZAG",a:27,o:67,t:67,v:2000000,nat:"Italy"},
+      {n:"Andrej Pogačar",num:8,p:"MF",q:"ME",a:29,o:65,t:67,v:800000},
+      {n:"Federico Cassa",num:21,p:"MF",q:"MD",a:25,o:61,t:63,v:800000},
+      {n:"Solomon Loubao",num:44,p:"FW",q:"CA",a:23,o:58,t:63,v:400000}
     ],
     "it2/Cesena": [
       {n:"Alessandro Siano",num:1,p:"GK",q:"GOL",a:25,o:56,t:57,v:250000,nat:"Italy"},
@@ -18515,18 +18837,18 @@
       {n:"Dimitri Bisoli",num:25,p:"MF",q:"MC",a:32,o:72,t:72,v:400000,nat:"Italy"},
       {n:"Matteo Piacentini",num:26,p:"DF",q:"ZAG",a:27,o:64,t:64,v:250000,nat:"Italy"},
       {n:"Jonathan Klinsmann",num:33,p:"GK",q:"GOL",a:29,o:67,t:67,v:1500000,nat:"USA"},
-      {n:"Davide Zamagni",num:35,p:"MF",q:"MC",a:21,o:67,t:70,v:3000000,nat:"Italy"},
       {n:"Niccolò Fontana",num:39,p:"GK",q:"GOL",a:18,o:70,t:75,v:100000,nat:"Italy"},
       {n:"Filippo Bertaccini",num:43,p:"MF",q:"MEI",a:19,o:67,t:72,v:300000,nat:"Italy"},
-      {n:"Simone Gianfanti",num:48,p:"GK",q:"GOL",a:19,o:68,t:73,v:2500000,nat:"Italy"},
-      {n:"Maurizio Rossetti",num:71,p:"FW",q:"CA",a:28,o:66,t:66,v:1500000,nat:"Italy"},
       {n:"Simone Pieraccini",num:73,p:"DF",q:"ZAG",a:24,o:68,t:69,v:2500000,nat:"Italy"},
       {n:"Antonio Fiori",num:80,p:"FW",q:"PE",a:23,o:69,t:72,v:1500000,nat:"Italy"},
       {n:"Alessandro Debenedetti",num:91,p:"FW",q:"CA",a:22,o:70,t:73,v:700000,nat:"Italy"},
       {n:"Marco Olivieri",num:99,p:"FW",q:"CA",a:27,o:65,t:65,v:1500000,nat:"Italy"},
       {n:"Ibrahima Papa Wade",num:0,p:"FW",q:"CA",a:22,o:68,t:71,v:3000000,nat:"Senegal"},
-      {n:"Marco Dalla Vecchia",num:0,p:"MF",q:"MC",a:21,o:67,t:70,v:500000,nat:"Italy"},
-      {n:"Emil Bohinen",num:0,p:"MF",q:"VOL",a:27,o:69,t:69,v:1000000,nat:"Norway"}
+      {n:"Marco Dalla Vecchia",num:27,p:"MF",q:"MC",a:21,o:67,t:70,v:500000,nat:"Italy"},
+      {n:"Emil Bohinen",num:32,p:"MF",q:"VOL",a:27,o:69,t:69,v:1000000,nat:"Norway"},
+      {n:"Luca Ferretti",num:13,p:"GK",q:"GOL",a:28,o:68,t:70,v:1000000},
+      {n:"Matteo Casadei",num:20,p:"MF",q:"MC",a:23,o:68,t:73,v:2000000},
+      {n:"Tommaso Mazzi",num:90,p:"GK",q:"GOL",a:19,o:66,t:74,v:2500000}
     ],
     "it2/Empoli": [
       {n:"Samuele Perisan",num:1,p:"GK",q:"GOL",a:29,o:69,t:69,v:400000,nat:"Italy"},
@@ -18542,22 +18864,19 @@
       {n:"Salvatore Monaco",num:17,p:"FW",q:"CA",a:19,o:66,t:71,v:300000,nat:"Italy"},
       {n:"Filippo Distefano",num:20,p:"FW",q:"SA",a:23,o:68,t:71,v:1200000,nat:"Italy"},
       {n:"Gerard Yepes",num:21,p:"MF",q:"VOL",a:24,o:71,t:72,v:750000,nat:"Spain"},
-      {n:"Federico Brancolini",num:22,p:"GK",q:"GOL",a:25,o:69,t:70,v:2000000,nat:"Italy"},
       {n:"Marco Curto",num:25,p:"DF",q:"ZAG",a:27,o:69,t:69,v:600000,nat:"Italy"},
       {n:"Gabriele Indragoli",num:28,p:"DF",q:"ZAG",a:22,o:65,t:68,v:300000,nat:"Italy"},
       {n:"Lorenzo Tosto",num:29,p:"DF",q:"ZAG",a:32,o:70,t:70,v:1500000,nat:"Italy"},
       {n:"Cristian Cauz",num:33,p:"DF",q:"ZAG",a:30,o:66,t:66,v:300000,nat:"Italy"},
       {n:"Matteo Egan",num:35,p:"MF",q:"PD",a:18,o:64,t:69,v:50000,nat:"Ireland"},
-      {n:"Dawid Bembnista",num:36,p:"DF",q:"ZAG",a:33,o:71,t:71,v:900000,nat:"Poland"},
-      {n:"Danilo Busiello",num:37,p:"MF",q:"MEI",a:18,o:64,t:69,v:500000,nat:"Italy"},
-      {n:"Andrea Sodero",num:40,p:"FW",q:"CA",a:28,o:64,t:64,v:1000000,nat:"Italy"},
       {n:"Lapo Deli",num:44,p:"MF",q:"VOL",a:20,o:69,t:74,v:250000,nat:"Italy"},
       {n:"Luca Belardinelli",num:57,p:"MF",q:"MC",a:25,o:66,t:67,v:400000,nat:"Italy"},
       {n:"Bohdan Popov",num:77,p:"FW",q:"CA",a:19,o:65,t:65,v:2800000,nat:"Ukraine"},
       {n:"Thomas Campaniello",num:89,p:"FW",q:"CA",a:18,o:56,t:61,v:350000,nat:"Italy"},
-      {n:"Andrea Orlandi",num:96,p:"MF",q:"MC",a:20,o:64,t:69,v:2000000,nat:"Italy"},
       {n:"Karim Zedadka",num:98,p:"MF",q:"PE",a:26,o:64,t:65,v:400000,nat:"Algeria"},
-      {n:"Niccolò Corrado",num:0,p:"DF",q:"LE",a:26,o:69,t:70,v:800000,nat:"Italy"}
+      {n:"Niccolò Corrado",num:91,p:"DF",q:"LE",a:26,o:69,t:70,v:800000,nat:"Italy"},
+      {n:"Filippo Bandinelli",num:23,p:"MF",q:"ME",a:27,o:65,t:67,v:800000},
+      {n:"Edoardo Biondini",num:39,p:"MF",q:"MD",a:21,o:64,t:72,v:1000000}
     ],
     "it2/F.C. Südtirol": [
       {n:"Davide Veroli",num:3,p:"DF",q:"ZAG",a:29,o:73,t:73,v:27000000,nat:"Italy"},
@@ -18587,15 +18906,13 @@
       {n:"Salvatore Molina",num:79,p:"MF",q:"MC",a:27,o:73,t:73,v:27000000,nat:"Italy"},
       {n:"Alvin Okoro",num:90,p:"FW",q:"CA",a:24,o:70,t:71,v:22000000,nat:"Italy"},
       {n:"Hamza El Kaouakibi",num:94,p:"DF",q:"ZAG",a:32,o:66,t:66,v:6000000,nat:"Morocco"},
-      {n:"Lorenzo Anghelè",num:0,p:"FW",q:"CA",a:33,o:69,t:69,v:5000000,nat:"Italy"}
+      {n:"Lorenzo Anghelè",num:17,p:"FW",q:"CA",a:33,o:69,t:69,v:5000000,nat:"Italy"}
     ],
     "it2/Hellas Verona": [
       {n:"Nicola Leali",num:1,p:"GK",q:"GOL",a:33,o:66,t:66,v:1000000,nat:"Italy"},
-      {n:"Daniel Oyegoke",num:2,p:"DF",q:"ZAG",a:23,o:62,t:65,v:1000000,nat:"England"},
       {n:"Martin Frese",num:3,p:"DF",q:"LE",a:28,o:69,t:69,v:2500000,nat:"Denmark"},
       {n:"Andrias Edmundsson",num:5,p:"DF",q:"ZAG",a:25,o:67,t:70,v:2500000,nat:"Italy"},
       {n:"Domagoj Bradarić",num:6,p:"DF",q:"LE",a:26,o:71,t:71,v:1500000,nat:"Croatia"},
-      {n:"Rafik Belghali",num:7,p:"DF",q:"LD",a:24,o:66,t:67,v:2000000,nat:"Algeria"},
       {n:"Suat Serdar",num:8,p:"MF",q:"MC",a:29,o:76,t:76,v:5500000,nat:"Germany"},
       {n:"Amin Sarr",num:9,p:"FW",q:"CA",a:25,o:71,t:72,v:2400000,nat:"Sweden"},
       {n:"Tomáš Suslov",num:10,p:"MF",q:"MEI",a:24,o:72,t:73,v:4000000,nat:"Slovakia"},
@@ -18612,7 +18929,6 @@
       {n:"Daniel Mosquera",num:25,p:"FW",q:"CA",a:26,o:71,t:71,v:1800000,nat:"Colombia"},
       {n:"Paweł Dawidowicz",num:27,p:"DF",q:"ZAG",a:31,o:69,t:69,v:500000,nat:"Poland"},
       {n:"Tobias Slotsager",num:28,p:"DF",q:"ZAG",a:20,o:69,t:74,v:3000000,nat:"Denmark"},
-      {n:"Charlys",num:31,p:"MF",q:"MC",a:23,o:69,t:72,v:3000000,nat:"Brazil"},
       {n:"Noe Mael Tagne",num:33,p:"DF",q:"ZAG",a:18,o:69,t:74,v:500000,nat:"France"},
       {n:"Simone Perilli",num:34,p:"GK",q:"GOL",a:31,o:67,t:67,v:400000,nat:"Italy"},
       {n:"Salvatore Cerbone",num:35,p:"FW",q:"PE",a:18,o:71,t:76,v:300000,nat:"Italy"},
@@ -18623,8 +18939,9 @@
       {n:"Fallou Cham",num:70,p:"DF",q:"LD",a:20,o:65,t:70,v:1000000,nat:"The Gambia"},
       {n:"Davide De Battisti",num:71,p:"DF",q:"LE",a:20,o:70,t:75,v:250000,nat:"Italy"},
       {n:"Kacper Sezonienko",num:79,p:"FW",q:"PE",a:23,o:68,t:71,v:600000,nat:"Poland"},
-      {n:"Ioan Vermeșan",num:90,p:"FW",q:"CA",a:19,o:66,t:71,v:1000000,nat:"Romania"},
-      {n:"Juan Manuel Cruz",num:0,p:"FW",q:"CA",a:27,o:64,t:64,v:1000000,nat:"Argentina"}
+      {n:"Gabriele Zappa",num:4,p:"DF",q:"ZAG",a:29,o:70,t:72,v:1500000},
+      {n:"Edoardo Iannoni",num:44,p:"MF",q:"VOL",a:24,o:66,t:71,v:1000000},
+      {n:"Caleb Ekuban",num:81,p:"FW",q:"PE",a:21,o:67,t:75,v:1800000}
     ],
     "it2/L.R. Vicenza": [
       {n:"Mattia Basso",num:1,p:"GK",q:"GOL",a:27,o:67,t:67,v:1500000,nat:"Italy"},
@@ -18783,20 +19100,17 @@
       {n:"Simone Canestrelli",num:5,p:"DF",q:"ZAG",a:25,o:70,t:71,v:20000000,nat:"Italy"},
       {n:"Mehdi Léris",num:7,p:"MF",q:"PD",a:28,o:68,t:68,v:14000000,nat:"Algeria"},
       {n:"Malthe Højholt",num:8,p:"MF",q:"VOL",a:25,o:66,t:67,v:13000000,nat:"Denmark"},
-      {n:"Henrik Meister",num:9,p:"FW",q:"CA",a:22,o:67,t:70,v:16000000,nat:"Denmark"},
       {n:"Mattéo Tramoni",num:10,p:"MF",q:"MEI",a:26,o:74,t:75,v:31000000,nat:"France"},
       {n:"Ichem Ferrah",num:11,p:"FW",q:"CA",a:20,o:64,t:65,v:9000000,nat:"France"},
       {n:"Andrea Primasso",num:13,p:"DF",q:"ZAG",a:24,o:68,t:69,v:17000000,nat:"Italy"},
       {n:"Felipe Loyola",num:14,p:"MF",q:"MC",a:25,o:65,t:65,v:5000000,nat:"Chile"},
       {n:"Louis Buffon",num:16,p:"FW",q:"CA",a:18,o:67,t:70,v:16000000,nat:"Czech Republic"},
       {n:"Emanuele Rao",num:17,p:"MF",q:"MC",a:20,o:68,t:73,v:23000000,nat:"Italy"},
-      {n:"Nicholas Bonfanti",num:18,p:"FW",q:"CA",a:24,o:71,t:71,v:21000000,nat:"Italy"},
       {n:"Tomás Esteves",num:19,p:"MF",q:"LD",a:24,o:67,t:68,v:15000000,nat:"Portugal"},
       {n:"İsak Vural",num:21,p:"MF",q:"MC",a:20,o:62,t:67,v:9000000,nat:"Turkey"},
       {n:"Leonardo Loria",num:22,p:"GK",q:"GOL",a:27,o:64,t:67,v:8000000,nat:"Italy"},
       {n:"Tommaso Marras",num:23,p:"FW",q:"CA",a:25,o:71,t:72,v:25000000,nat:"Italy"},
       {n:"Francesco Coppola",num:26,p:"DF",q:"ZAG",a:21,o:65,t:68,v:14000000,nat:"Italy"},
-      {n:"Jeremy Mbambi",num:27,p:"DF",q:"ZAG",a:20,o:70,t:75,v:30000000,nat:"Belgium"},
       {n:"Omar Correia",num:29,p:"MF",q:"MC",a:23,o:67,t:70,v:16000000,nat:"France"},
       {n:"Stefano Moreo",num:32,p:"FW",q:"MEI",a:33,o:71,t:71,v:6000000,nat:"Italy"},
       {n:"Arturo Calabresi",num:33,p:"DF",q:"ZAG",a:30,o:68,t:68,v:8000000,nat:"Italy"},
@@ -18807,9 +19121,8 @@
       {n:"Giuseppe Leone",num:55,p:"MF",q:"MC",a:25,o:67,t:67,v:12000000,nat:"Italy"},
       {n:"Simone Zanon",num:72,p:"DF",q:"ZAG",a:21,o:71,t:74,v:32000000,nat:"Italy"},
       {n:"Alessandro Confente",num:98,p:"GK",q:"GOL",a:28,o:66,t:66,v:4000000,nat:"Italy"},
-      {n:"Simone Scuffet",num:0,p:"GK",q:"GOL",a:30,o:72,t:72,v:9000000,nat:"Italy"},
-      {n:"Elia Giani",num:0,p:"FW",q:"CA",a:25,o:67,t:67,v:7000000,nat:"Italy"},
-      {n:"Emanuel Vignato",num:0,p:"FW",q:"MEI",a:26,o:70,t:71,v:20000000,nat:"Italy"}
+      {n:"Simone Scuffet",num:1,p:"GK",q:"GOL",a:30,o:72,t:72,v:9000000,nat:"Italy"},
+      {n:"Elia Giani",num:73,p:"FW",q:"CA",a:25,o:67,t:67,v:7000000,nat:"Italy"}
     ],
     "it2/S.S. Arezzo": [
       {n:"Luca Trombini",num:1,p:"GK",q:"GOL",a:20,o:62,t:67,v:6000000,nat:"Italy"},
@@ -18912,8 +19225,8 @@
       {n:"Antoine Makoumbou",num:45,p:"MF",q:"MC",a:28,o:70,t:70,v:19000000,nat:"Congo"},
       {n:"Salvatore Esposito",num:94,p:"MF",q:"MC",a:25,o:65,t:65,v:5000000,nat:"Italy"},
       {n:"Gennaro Tutino",num:99,p:"FW",q:"CA",a:30,o:63,t:63,v:4000000,nat:"Italy"},
-      {n:"Samuele Massolo",num:0,p:"GK",q:"GOL",a:30,o:67,t:67,v:5000000,nat:"Italy"},
-      {n:"Filippo Delli Carri",num:0,p:"DF",q:"ZAG",a:27,o:66,t:69,v:16000000,nat:"Italy"}
+      {n:"Samuele Massolo",num:96,p:"GK",q:"GOL",a:30,o:67,t:67,v:5000000,nat:"Italy"},
+      {n:"Filippo Delli Carri",num:15,p:"DF",q:"ZAG",a:27,o:66,t:69,v:16000000,nat:"Italy"}
     ],
     "it2/U.S. Avellino 1912": [
       {n:"Antony Iannarilli",num:1,p:"GK",q:"GOL",a:35,o:67,t:67,v:2000000,nat:"Italy"},
@@ -18922,7 +19235,6 @@
       {n:"Luca Palmiero",num:6,p:"MF",q:"VOL",a:30,o:66,t:66,v:6000000,nat:"Italy"},
       {n:"Luca Pandolfi",num:7,p:"FW",q:"CA",a:28,o:69,t:72,v:21000000,nat:"Italy"},
       {n:"Luca Di Maggio",num:8,p:"MF",q:"MC",a:21,o:66,t:67,v:13000000,nat:"Italy"},
-      {n:"Cosimo Patierno",num:9,p:"FW",q:"CA",a:35,o:72,t:72,v:13000000,nat:"Italy"},
       {n:"Raffaele Russo",num:10,p:"FW",q:"CA",a:27,o:66,t:69,v:14000000,nat:"Italy"},
       {n:"Daniel Fila",num:11,p:"FW",q:"CA",a:24,o:71,t:71,v:21000000,nat:"Czech Republic"},
       {n:"Tommaso Biasci",num:14,p:"FW",q:"CA",a:31,o:68,t:68,v:8000000,nat:"Italy"},
@@ -18933,17 +19245,17 @@
       {n:"Michael Venturi",num:23,p:"DF",q:"ZAG",a:27,o:66,t:66,v:6000000,nat:"Italy"},
       {n:"Dimitris Sounas",num:24,p:"MF",q:"MC",a:32,o:71,t:72,v:22000000,nat:"Greece"},
       {n:"Brando Moruzzi",num:27,p:"DF",q:"ZAG",a:31,o:72,t:72,v:13000000,nat:"Italy"},
-      {n:"Francesco Maisto",num:28,p:"MF",q:"MC",a:24,o:69,t:70,v:20000000,nat:"Italy"},
       {n:"Tommaso Cancellotti",num:29,p:"DF",q:"LD",a:34,o:66,t:66,v:3000000,nat:"Italy"},
       {n:"Michele Besaggio",num:39,p:"MF",q:"MC",a:24,o:65,t:66,v:11000000,nat:"Italy"},
       {n:"Lorenco Šimić",num:44,p:"DF",q:"ZAG",a:30,o:68,t:68,v:8000000,nat:"Croatia"},
       {n:"Tommaso Martinelli",num:50,p:"GK",q:"GOL",a:20,o:66,t:66,v:4000000,nat:"Italy"},
       {n:"Patrick Enrici",num:56,p:"DF",q:"ZAG",a:25,o:66,t:69,v:16000000,nat:"Italy"},
-      {n:"Alessandro Fontanarosa",num:63,p:"DF",q:"ZAG",a:23,o:65,t:68,v:12000000,nat:"Italy"},
-      {n:"Roberto Insigne",num:94,p:"FW",q:"PD",a:32,o:72,t:72,v:13000000,nat:"Italy"},
       {n:"Andrea Favilli",num:99,p:"FW",q:"CA",a:29,o:67,t:67,v:12000000,nat:"Italy"},
-      {n:"Donato Solaro",num:0,p:"DF",q:"ZAG",a:31,o:70,t:70,v:10000000,nat:"Italy"},
-      {n:"Mattia Della Rocca",num:0,p:"MF",q:"MC",a:31,o:68,t:68,v:8000000,nat:"Italy"}
+      {n:"Filippo Missori",num:2,p:"DF",q:"ZAG",a:29,o:70,t:72,v:1500000},
+      {n:"Alessandro Di Bitonto",num:5,p:"DF",q:"LE",a:24,o:68,t:73,v:1400000},
+      {n:"Walid Cheddira",num:9,p:"FW",q:"CA",a:26,o:70,t:72,v:2000000},
+      {n:"Emanuele Adamo",num:30,p:"MF",q:"MD",a:22,o:66,t:71,v:1500000},
+      {n:"Sebastiano Di Paolo",num:77,p:"FW",q:"CA",a:25,o:66,t:68,v:1000000}
     ],
     "it2/U.S. Cremonese": [
       {n:"Andrea Fulignati",num:1,p:"GK",q:"GOL",a:31,o:62,t:62,v:4000000,nat:"Italy"},
@@ -18975,9 +19287,7 @@
       {n:"Eddy Cabianca",num:35,p:"DF",q:"ZAG",a:28,o:63,t:63,v:7000000,nat:"Italy"},
       {n:"Alessandro Vogliacco",num:38,p:"DF",q:"ZAG",a:27,o:64,t:64,v:2000000,nat:"Italy"},
       {n:"Salvatore Elia",num:71,p:"MF",q:"MC",a:27,o:67,t:67,v:12000000,nat:"Italy"},
-      {n:"Federico Bonazzoli",num:90,p:"FW",q:"CA",a:29,o:70,t:70,v:19000000,nat:"Italy"},
-      {n:"Alessio Brambilla",num:0,p:"MF",q:"MC",a:31,o:70,t:70,v:10000000,nat:"Italy"},
-      {n:"Nouroudine Faye",num:0,p:"FW",q:"CA",a:27,o:68,t:68,v:14000000,nat:"Italy"}
+      {n:"Federico Bonazzoli",num:90,p:"FW",q:"CA",a:29,o:70,t:70,v:19000000,nat:"Italy"}
     ],
     "it2/Virtus Entella": [
       {n:"Nicolas Previtali",num:3,p:"DF",q:"LD",a:21,o:70,t:73,v:250000,nat:"Italy"},
