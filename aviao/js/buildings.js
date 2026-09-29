@@ -6,7 +6,20 @@ import { registerMaterial } from './materials.js';
 const CHUNK = 2000;
 
 export async function loadBuildings(url) {
-  const buf = await (await fetch(url)).arrayBuffer();
+  // os bytes vêm empacotados num PNG RGB sem perdas (3 bytes por pixel; os 4 primeiros = tamanho)
+  const blob = await (await fetch(url)).blob();
+  const bmp = await createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' });
+  const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+  const ctx = cv.getContext('2d', { willReadFrequently: true }); ctx.drawImage(bmp, 0, 0);
+  const rgba = ctx.getImageData(0, 0, bmp.width, bmp.height).data;
+  const bytes = new Uint8Array(bmp.width * bmp.height * 3);
+  for (let i = 0, j = 0; i < rgba.length; i += 4) { bytes[j++] = rgba[i]; bytes[j++] = rgba[i + 1]; bytes[j++] = rgba[i + 2]; }
+  const len = new DataView(bytes.buffer).getUint32(0, true);
+  const buf = bytes.slice(4, 4 + len).buffer;
+  return parseBuildings(buf);
+}
+
+function parseBuildings(buf) {
   const n = new Uint32Array(buf, 0, 1)[0];
   let o = 4;
   const x = new Int16Array(buf.slice(o, o + n * 2)); o += n * 2;

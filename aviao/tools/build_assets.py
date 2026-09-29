@@ -217,7 +217,11 @@ buf.write(np.clip(np.round(recs[:, 2] * 4), 0, 255).astype(np.uint8).tobytes());
 buf.write(np.clip(np.round(recs[:, 4] * 10), 0, 65535).astype(np.uint16).tobytes())
 buf.write(np.round(recs[:, 5] / math.pi * 255).astype(np.uint8).tobytes())
 buf.write(np.clip(recs[:, 7:10], 0, 255).astype(np.uint8).tobytes())
-open(os.path.join(OUT, 'assets/terrain/buildings.bin'), 'wb').write(buf.getvalue())
+raw = buf.getvalue()
+# empacota os bytes num PNG RGB sem perdas (3 bytes por pixel; 4 primeiros = tamanho)
+Wb = 1024; npx = math.ceil((len(raw) + 4) / 3); Hb = math.ceil(npx / Wb)
+pk = np.zeros(Wb * Hb * 3, np.uint8); pk[:4] = np.frombuffer(np.array([len(raw)], np.uint32).tobytes(), np.uint8); pk[4:4 + len(raw)] = np.frombuffer(raw, np.uint8)
+Image.fromarray(pk.reshape(Hb, Wb, 3)).save(os.path.join(OUT, 'assets/terrain/buildings.png'), optimize=True)
 
 landmarks = dict(
     cristo=dict(lat=-22.95192, lon=-43.21048),

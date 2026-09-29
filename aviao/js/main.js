@@ -69,7 +69,7 @@ async function main() {
   const [sat, satFar, detailLum, detailN, waterN, asphalt, bList] = await Promise.all([
     tex(A + `textures/sat_near${tier.sat}.jpg`, true, { clamp: true }), tex(A + 'textures/sat_far.jpg', true, { clamp: true }),
     tex(A + 'textures/detail_lum.jpg', false), tex(A + 'textures/detail_normal.jpg', false), tex(A + 'textures/water_normal.jpg', false),
-    tex(A + 'textures/asphalt.jpg', true), loadBuildings(A + 'terrain/buildings.bin'),
+    tex(A + 'textures/asphalt.jpg', true), loadBuildings(A + 'terrain/buildings.png'),
   ]);
   // a imagem tem a linha 0 ao norte (z = −metade), igual às máscaras: sem inverter o eixo vertical
   sat.flipY = false; satFar.flipY = false; sat.needsUpdate = true; satFar.needsUpdate = true;
