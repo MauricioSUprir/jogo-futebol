@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Céu do Rio</title>
+<meta name="theme-color" content="#0d1a2b">
+<meta name="description" content="Simulador de voo de Cessna 172 sobre o Rio de Janeiro com relevo e imagem de satélite reais.">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="Visão do simulador"></canvas>
+
+<div id="loading" class="screen">
+  <div class="brand">CÉU DO RIO</div>
+  <div class="load-bar"><i id="load-fill"></i></div>
+  <p id="load-text">Preparando o voo…</p>
+  <p class="load-note">Relevo Copernicus 30 m · imagem Sentinel-2 · Cessna 172S</p>
+</div>
+
+<div id="menu" class="screen hidden">
+  <div class="menu-box">
+    <div class="brand big">CÉU DO RIO</div>
+    <p class="tagline">Cessna 172 · Rio de Janeiro</p>
+    <div class="form">
+      <label class="set">Partida
+        <select id="m-start">
+          <option value="sdu20">Santos Dumont, pista 20L (rumo ao Pão de Açúcar)</option>
+          <option value="sdu02">Santos Dumont, pista 02R (rumo à Ponte)</option>
+          <option value="gig10">Galeão, pista 10</option>
+          <option value="air-copa">Em voo sobre Copacabana, 1.500 pés</option>
+          <option value="final-sdu">Aproximação final no Santos Dumont 20L, 3 milhas</option>
+          <option value="cristo">Em voo perto do Cristo Redentor, 2.500 pés</option>
+        </select>
+      </label>
+      <label class="set">Horário
+        <select id="m-time">
+          <option value="manha">Manhã (08:30)</option>
+          <option value="meio">Meio-dia (12:00)</option>
+          <option value="tarde">Tarde (15:30)</option>
+          <option value="por">Pôr do sol (17:40)</option>
+          <option value="noite">Noite (20:00)</option>
+          <option value="agora">Agora (hora do Rio)</option>
+        </select>
+      </label>
+      <label class="set">Tempo
+        <select id="m-weather">
+          <option value="limpo">Céu limpo</option>
+          <option value="poucas">Poucas nuvens</option>
+          <option value="nublado">Nublado</option>
+        </select>
+      </label>
+      <label class="set">Vento
+        <select id="m-wind">
+          <option value="calmo">Calmo</option>
+          <option value="moderado">Moderado, 10 kt de sudeste</option>
+          <option value="forte">Forte, 20 kt com rajadas</option>
+        </select>
+      </label>
+      <label class="set">Assistência
+        <select id="m-assist">
+          <option value="off">Desligada (realista)</option>
+          <option value="basic">Básica (leme automático)</option>
+          <option value="full">Total (nivela as asas sozinho)</option>
+        </select>
+      </label>
+    </div>
+    <div class="menu-buttons">
+      <button id="btn-fly" class="btn primary">Voar</button>
+      <div class="row2">
+        <button id="btn-settings-menu" class="btn">Configurações</button>
+        <button id="btn-credits" class="btn ghost">Créditos</button>
+      </div>
+    </div>
+    <p class="phase-tag">Fase 1 · protótipo de voo</p>
+  </div>
+</div>
+
+<div id="credits" class="screen hidden">
+  <div class="menu-box scroll">
+    <h2>Créditos e dados reais</h2>
+    <ul class="credits">
+      <li><b>Relevo</b>: Copernicus GLO-30 DEM, © DLR e Airbus, fornecido pela ESA (resolução de 30 m).</li>
+      <li><b>Imagem de satélite</b>: Sentinel-2 cloudless 2020, de EOX IT Services GmbH (s2maps.eu), com dados Copernicus Sentinel modificados. Licença CC BY-NC-SA 4.0, uso não comercial.</li>
+      <li><b>Pistas</b>: OurAirports (domínio público). Santos Dumont (SBRJ) e Galeão (SBGL) com posição, rumo e comprimento reais.</li>
+      <li><b>Texturas de detalhe</b>: ambientCG (CC0). Ondas da água: three.js (MIT).</li>
+      <li><b>Prédios</b>: gerados sobre a mancha urbana da imagem de satélite. As posições e as alturas são aproximadas, e cada prédio não é um prédio real.</li>
+      <li><b>Avião</b>: Cessna 172S modelado por procedimento. Física de 6 graus de liberdade com derivadas aerodinâmicas típicas.</li>
+    </ul>
+    <button class="btn" data-close>Fechar</button>
+  </div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="flightdata" class="panel">
+    <div class="fd"><span class="lbl">VEL</span><b id="h-ias">0</b><small>kt</small></div>
+    <div class="fd"><span class="lbl">ALT</span><b id="h-alt">0</b><small>ft</small></div>
+    <div class="fd"><span class="lbl">V/S</span><b id="h-vs">0</b><small>ft/min</small></div>
+    <div class="fd"><span class="lbl">RUMO</span><b id="h-hdg">000</b><small>°</small></div>
+  </div>
+  <div id="systems" class="panel">
+    <div class="sys"><span class="lbl">MANETE</span><i class="bar"><i id="h-thr"></i></i><b id="h-thr-t">0%</b></div>
+    <div class="sys"><span class="lbl">FLAPES</span><b id="h-flaps">0°</b></div>
+    <div class="sys"><span class="lbl">COMP</span><b id="h-trim">0</b></div>
+    <div class="sys"><span class="lbl">RPM</span><b id="h-rpm">0</b></div>
+  </div>
+  <div id="warn" class="hidden">ESTOL</div>
+  <div id="camlabel"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="fps" class="hidden"></div>
+  <button id="btn-pause" class="icon-btn" aria-label="Pausar">❚❚</button>
+  <div id="touch" class="hidden">
+    <div id="throttle-bar" aria-label="Manete"><i id="throttle-fill"></i><span>MANETE</span></div>
+    <div id="stick-zone"><div id="stick-base"><div id="stick-knob"></div></div></div>
+    <div id="touch-buttons">
+      <button class="tbtn" data-act="flapdn">FLAPE +</button>
+      <button class="tbtn" data-act="flapup">FLAPE −</button>
+      <button class="tbtn" data-act="brake">FREIO</button>
+      <button class="tbtn" data-act="cam">CÂM</button>
+      <button class="tbtn" data-act="rudl">◀ LEME</button>
+      <button class="tbtn" data-act="rudr">LEME ▶</button>
+    </div>
+  </div>
+</div>
+
+<div id="crash" class="screen hidden">
+  <div class="menu-box">
+    <h2>Acidente</h2>
+    <p id="crash-text"></p>
+    <div class="row2">
+      <button id="crash-retry" class="btn primary">Tentar de novo</button>
+      <button id="crash-menu" class="btn">Menu</button>
+    </div>
+  </div>
+</div>
+
+<div id="settings" class="screen hidden">
+  <div class="menu-box scroll">
+    <h2 id="set-title">Configurações</h2>
+    <div class="set-group">
+      <h3>Gráficos</h3>
+      <label class="set">Qualidade
+        <select id="set-quality">
+          <option value="auto">Automática</option>
+          <option value="low">Baixa</option>
+          <option value="medium">Média</option>
+          <option value="high">Alta</option>
+          <option value="ultra">Ultra (4K)</option>
+        </select>
+      </label>
+      <p class="hint" id="set-quality-info"></p>
+      <label class="set check"><input type="checkbox" id="set-fps"> Mostrar FPS</label>
+    </div>
+    <div class="set-group">
+      <h3>Controles</h3>
+      <label class="set">Sensibilidade da câmera <input type="range" id="set-sens" min="0.3" max="2.5" step="0.05"></label>
+      <label class="set check"><input type="checkbox" id="set-invert"> Inverter profundor</label>
+      <label class="set check"><input type="checkbox" id="set-tilt"> Pilotar inclinando o celular</label>
+      <button id="set-recenter" class="btn small">Recentrar inclinação</button>
+    </div>
+    <div class="set-group">
+      <h3>Acessibilidade</h3>
+      <label class="set">Tamanho do texto <input type="range" id="set-ui" min="0.85" max="1.5" step="0.05"></label>
+      <label class="set check"><input type="checkbox" id="set-contrast"> Interface de alto contraste</label>
+    </div>
+    <div class="set-group">
+      <h3>Som</h3>
+      <label class="set">Volume <input type="range" id="set-vol" min="0" max="1" step="0.05"></label>
+    </div>
+    <div class="row2">
+      <button id="set-restart" class="btn ghost">Reiniciar voo</button>
+      <button id="set-menu" class="btn ghost">Menu</button>
+      <button id="set-close" class="btn primary">Voltar</button>
+    </div>
+  </div>
+</div>
+
+<div id="help" class="hidden panel" role="dialog" aria-label="Comandos">
+  <h3>Comandos</h3>
+  <div id="help-body"></div>
+  <button class="btn primary" id="help-ok">Entendi</button>
+</div>
+
+<div id="error" class="screen hidden"><div class="menu-box"><h2>Algo deu errado</h2><pre id="error-text"></pre><button class="btn" onclick="location.reload()">Recarregar</button></div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

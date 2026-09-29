@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a0f0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Jezero</title>
+<meta name="description" content="Sobrevivência em Marte, na cratera Jezero, com relevo real da NASA.">
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "rapier": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="Visão do jogo"></canvas>
+
+<!-- carregamento -->
+<div id="loading" class="screen">
+  <div class="brand"><span class="brand-mark"></span>JEZERO</div>
+  <div class="load-bar"><i id="load-fill"></i></div>
+  <p id="load-text">Preparando o pouso…</p>
+  <p class="load-note">Relevo real: HiRISE 1 m/px · cratera Jezero, 18,6° N 77,3° L</p>
+</div>
+
+<!-- menu principal -->
+<div id="menu" class="screen hidden">
+  <div class="menu-box">
+    <div class="brand big"><span class="brand-mark"></span>JEZERO</div>
+    <p class="tagline">Sobrevivência em Marte</p>
+    <div class="menu-buttons">
+      <button id="btn-continue" class="btn primary hidden">Continuar missão</button>
+      <button id="btn-new" class="btn primary">Nova missão</button>
+      <button id="btn-settings-menu" class="btn">Configurações</button>
+      <button id="btn-credits" class="btn ghost">Créditos e dados reais</button>
+    </div>
+    <p class="phase-tag">Fase 1 · protótipo jogável</p>
+  </div>
+</div>
+
+<!-- nova missão -->
+<div id="newgame" class="screen hidden">
+  <div class="menu-box">
+    <h2>Nova missão</h2>
+    <label class="field">Nome do astronauta
+      <input id="ng-name" maxlength="16" autocomplete="off" value="">
+    </label>
+    <div class="field">Cor do traje
+      <div id="ng-colors" class="swatches" role="radiogroup" aria-label="Cor do traje"></div>
+    </div>
+    <div class="row">
+      <button id="ng-back" class="btn ghost">Voltar</button>
+      <button id="ng-start" class="btn primary">Descer em Jezero</button>
+    </div>
+  </div>
+</div>
+
+<!-- créditos -->
+<div id="credits" class="screen hidden">
+  <div class="menu-box scroll">
+    <h2>Créditos e dados reais</h2>
+    <ul class="credits">
+      <li><b>Relevo</b>: HiRISE DTM 1 m/px da cratera Jezero (Mars 2020 Terrain Relative Navigation) e CTX DTM 20 m/px. NASA / JPL-Caltech / University of Arizona / USGS Astrogeology. Domínio público.</li>
+      <li><b>Crateras pequenas</b>: algumas crateras de 4 a 45 m foram adicionadas por procedimento, porque o DTM suaviza as menores.</li>
+      <li><b>Texturas</b>: ambientCG.com (CC0): Ground079S, Ground096B e Rocks011, recoloridas para o regolito marciano.</li>
+      <li><b>Motores</b>: three.js (MIT) e Rapier (Apache-2.0).</li>
+      <li><b>Física</b>: gravidade de 3,71 m/s², sol de 24 h 39 min 35 s, Sol com 0,35° de diâmetro aparente e cerca de 43% da luz que chega à Terra, e Fobos e Deimos com órbitas reais.</li>
+    </ul>
+    <button class="btn" data-close>Fechar</button>
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud" class="hidden">
+  <div id="visor" class="hidden" aria-hidden="true"></div>
+  <div id="compass" aria-hidden="true"><div id="compass-strip"></div><i class="compass-needle"></i></div>
+  <div id="status" class="panel">
+    <div class="st-row st-time"><span id="st-sol">SOL 1</span><span id="st-clock">06:00</span><small>LMST</small></div>
+    <div class="st-row"><span class="lbl">Ar</span><span id="st-temp">−60 °C</span></div>
+    <div class="st-row"><span class="lbl">Pressão</span><span id="st-press">0,72 kPa</span></div>
+    <div class="st-row"><span class="lbl">Vento</span><span id="st-wind">4 m/s</span></div>
+    <div class="st-row"><span class="lbl">Altitude</span><span id="st-alt">−2 280 m</span></div>
+  </div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="fps" class="hidden"></div>
+  <button id="btn-pause" class="icon-btn" aria-label="Pausar e configurações">❚❚</button>
+  <!-- controles de toque -->
+  <div id="touch" class="hidden">
+    <div id="stick-zone"><div id="stick-base"><div id="stick-knob"></div></div></div>
+    <div id="touch-buttons">
+      <button class="tbtn big" data-act="jump" aria-label="Pular">PULO</button>
+      <button class="tbtn" data-act="run" aria-label="Correr">CORRER</button>
+      <button class="tbtn" data-act="lamp" aria-label="Lanterna do capacete">LUZ</button>
+      <button class="tbtn" data-act="cam" aria-label="Trocar câmera">CÂM</button>
+    </div>
+  </div>
+</div>
+
+<!-- pausa / configurações -->
+<div id="settings" class="screen hidden">
+  <div class="menu-box scroll">
+    <h2>Configurações</h2>
+    <div class="set-group">
+      <h3>Gráficos</h3>
+      <label class="set">Qualidade
+        <select id="set-quality">
+          <option value="auto">Automática</option>
+          <option value="low">Baixa</option>
+          <option value="medium">Média</option>
+          <option value="high">Alta</option>
+          <option value="ultra">Ultra (4K)</option>
+        </select>
+      </label>
+      <p class="hint" id="set-quality-info"></p>
+      <label class="set check"><input type="checkbox" id="set-fps"> Mostrar FPS</label>
+    </div>
+    <div class="set-group">
+      <h3>Controles</h3>
+      <label class="set">Sensibilidade da câmera <input type="range" id="set-sens" min="0.2" max="2.5" step="0.05"></label>
+      <label class="set check"><input type="checkbox" id="set-invert"> Inverter eixo vertical</label>
+      <label class="set check"><input type="checkbox" id="set-firstperson"> Começar em primeira pessoa</label>
+    </div>
+    <div class="set-group">
+      <h3>Acessibilidade</h3>
+      <label class="set">Tamanho do texto <input type="range" id="set-ui" min="0.85" max="1.5" step="0.05"></label>
+      <label class="set check"><input type="checkbox" id="set-shake"> Reduzir balanço da câmera</label>
+      <label class="set check"><input type="checkbox" id="set-contrast"> Interface de alto contraste</label>
+    </div>
+    <div class="set-group">
+      <h3>Som</h3>
+      <label class="set">Volume <input type="range" id="set-vol" min="0" max="1" step="0.05"></label>
+    </div>
+    <div class="row">
+      <button id="set-menu" class="btn ghost">Menu principal</button>
+      <button id="set-close" class="btn primary">Voltar ao jogo</button>
+    </div>
+    <p class="hint">Teclado: WASD mover · Shift correr · Espaço pular · V câmera · L luz · T acelera o tempo · Esc pausa · F3 FPS</p>
+  </div>
+</div>
+
+<div id="help" class="hidden panel" role="dialog" aria-label="Controles">
+  <h3>Controles</h3>
+  <div id="help-body"></div>
+  <button class="btn primary" id="help-ok">Entendi</button>
+</div>
+
+<div id="error" class="screen hidden"><div class="menu-box"><h2>Algo deu errado</h2><pre id="error-text"></pre><button class="btn" onclick="location.reload()">Recarregar</button></div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

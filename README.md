@@ -18,6 +18,8 @@ Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 >   estúdio de cartazes e ingressos e um conselheiro estratégico). O servidor que guarda a
 >   chave de IA dele é o [`katseye-server/`](./katseye-server/).
 > - [`financas-casa/`](./financas-casa/) — **NEXO**, painel de finanças da casa.
+> - [`aviao/`](./aviao/) — **Céu do Rio**, simulador de voo de Cessna 172 sobre o Rio de Janeiro com relevo e imagem de satélite reais.
+> - [`marte/`](./marte/) — **Jezero**, jogo 3D de sobrevivência em Marte com relevo real da NASA.
 > - [`legacy-total-match/`](./legacy-total-match/) — o jogo _Total Match_, preservado.
 
 ---
