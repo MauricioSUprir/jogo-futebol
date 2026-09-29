@@ -43,10 +43,14 @@ jobs:
           mkdir -p _site/marte
           cp -r marte/. _site/marte/
           rm -rf _site/marte/tools
+          # Céu do Rio (simulador de voo) fica em /aviao/
+          mkdir -p _site/aviao
+          cp -r aviao/. _site/aviao/
+          rm -rf _site/aviao/tools
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match.
-          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/ e /marte/.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/ e /aviao/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment
