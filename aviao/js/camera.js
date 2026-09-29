@@ -41,7 +41,7 @@ export class CameraRig {
         const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(q);
         const hdg = Math.atan2(-fwd.x, -fwd.z);
         if (!look.active) { this.orbYaw = damp(this.orbYaw, 0, 1.2, dt); this.orbPitch = damp(this.orbPitch, 0.14, 1.2, dt); }
-        this._hdg = this._hdg === undefined ? hdg : this._hdg + Math.atan2(Math.sin(hdg - this._hdg), Math.cos(hdg - this._hdg)) * (1 - Math.exp(-3 * dt));
+        this._hdg = this._hdg === undefined ? hdg : this._hdg + Math.atan2(Math.sin(hdg - this._hdg), Math.cos(hdg - this._hdg)) * (1 - Math.exp(-1.4 * dt));   // segue o rumo com atraso: sensação de avião pesado
         yaw = this._hdg + this.orbYaw;
       } else yaw = this.orbYaw;
       const d = this.dist;
