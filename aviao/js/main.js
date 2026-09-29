@@ -276,7 +276,7 @@ async function main() {
         ? 'Barra à esquerda: potência. Suba toda para decolar: o avião sai do chão sozinho<br>Manche à direita: para cima sobe, para baixo desce, para os lados faz curva<br>Soltou o manche, o avião se nivela sozinho<br>FLAPE +/−, FREIO e CÂM na parte de baixo · arraste no céu para olhar'
         : 'Manche à direita: puxe para subir, para os lados para inclinar<br>Barra à esquerda: potência (manete)<br>FLAPE +/−, FREIO, LEME e CÂM na parte de baixo<br>Arraste no céu para olhar em volta')
       : (simple
-        ? '<b>Controle Simples (WASD)</b><br><kbd>W</kbd>: acelerar · <kbd>S</kbd>: desacelerar e frear · <kbd>A</kbd>/<kbd>D</kbd>: curva para a esquerda ou direita<br><kbd>↑</kbd>: subir · <kbd>↓</kbd>: descer. Soltou tudo, o avião voa nivelado sozinho<br><b>Para decolar: segure W.</b> A 55 nós o avião levanta o nariz sozinho<br><kbd>F</kbd>/<kbd>V</kbd>: flape · <kbd>Espaço</kbd>: freio · <kbd>C</kbd>: câmera · <kbd>R</kbd>: reiniciar · <kbd>Esc</kbd>: pausa<br>Quer o modo realista? Mude para "Simulador" em Controles, no menu.'
+        ? '<b>Controle Simples (WASD)</b><br><kbd>W</kbd>/<kbd>S</kbd>: mais ou menos velocidade (no chão, acelerar e frear) · <kbd>A</kbd>/<kbd>D</kbd>: curva<br><kbd>↑</kbd>: subir · <kbd>↓</kbd>: descer. Soltou as teclas, o avião trava a altitude, o rumo e a velocidade<br>Para pousar: <kbd>S</kbd> até a velocidade mínima e <kbd>↓</kbd> até a pista; perto do chão ele arredonda sozinho<br><b>Para decolar: segure W.</b> A 55 nós o avião levanta o nariz sozinho<br><kbd>F</kbd>/<kbd>V</kbd>: flape · <kbd>Espaço</kbd>: freio · <kbd>C</kbd>: câmera · <kbd>R</kbd>: reiniciar · <kbd>Esc</kbd>: pausa<br>Quer o modo realista? Mude para "Simulador" em Controles, no menu.'
         : '<kbd>W</kbd>/<kbd>S</kbd> ou <kbd>↑</kbd>/<kbd>↓</kbd>: empurrar ou puxar o manche · <kbd>A</kbd>/<kbd>D</kbd>: inclinar<br><kbd>Q</kbd>/<kbd>E</kbd>: leme · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>: potência · <kbd>1</kbd>, <kbd>9</kbd> e <kbd>0</kbd>: marcha lenta, 75% e máxima<br><kbd>F</kbd>/<kbd>V</kbd>: baixar ou subir o flape · <kbd>B</kbd>: freio · <kbd>[</kbd>/<kbd>]</kbd>: compensador<br><kbd>C</kbd>: câmera · arrastar o mouse: olhar · roda: zoom · <kbd>L</kbd>: luzes · <kbd>R</kbd>: reiniciar · <kbd>T</kbd>: acelerar o tempo · <kbd>Esc</kbd>: pausa<br>Gamepad e manche USB também funcionam.');
     $('help').classList.remove('hidden');
     $('help-ok').onclick = () => { $('help').classList.add('hidden'); cb?.(); };
@@ -441,7 +441,9 @@ async function main() {
         $('h-alt').textContent = Math.round((o.alt || 0) * FT).toLocaleString('pt-BR');
         $('h-vs').textContent = Math.round(((o.vs || 0) * FPM) / 10) * 10;
         $('h-hdg').textContent = String(((Math.round((o.heading || 0) / D2R) % 360) + 360) % 360).padStart(3, '0');
-        $('h-thr').style.width = Math.round(fm.ctl.throttle * 100) + '%'; $('h-thr-t').textContent = Math.round(fm.ctl.throttle * 100) + '%';
+        $('h-thr').style.width = Math.round(fm.ctl.throttle * 100) + '%';
+        if (input.simple && !fm.onGround) { $('h-thr-l').textContent = 'VEL. ALVO'; $('h-thr-t').textContent = Math.round(assist.targetKt) + ' kt'; }
+        else { $('h-thr-l').textContent = 'MANETE'; $('h-thr-t').textContent = Math.round(fm.ctl.throttle * 100) + '%'; }
         $('h-flaps').textContent = Math.round(fm.flapDeg) + '°';
         $('h-trim').textContent = (fm.ctl.trim > 0 ? '+' : '') + Math.round(fm.ctl.trim * 100);
         $('h-rpm').textContent = Math.round(o.rpm || 0);

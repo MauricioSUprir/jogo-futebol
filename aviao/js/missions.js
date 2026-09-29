@@ -15,11 +15,11 @@ export const MISSIONS = [
   },
   {
     id: 'orla', name: 'Argolas na orla', level: 'Médio',
-    desc: 'Voo rasante sobre o mar, do Leme ao Leblon, passando por dentro das argolas. Cuidado com os prédios da orla.',
-    start: 'orla', time: 'tarde', par: 150,
+    desc: 'Voo baixo sobre o mar, do Leme ao Leblon, passando por dentro das argolas. Cuidado com os prédios da orla. Dica: tire um pouco de velocidade (S) para fazer as curvas mais fechadas.',
+    start: 'orla', time: 'tarde', par: 200,
     radio: ['Tráfego Copacabana, Papa Romeo Juliet Zulu Romeo iniciando passagem baixa na orla, sentido Leblon.'],
-    rings: [[-22.9668, -43.1690, 140], [-22.9730, -43.1770, 130], [-22.9800, -43.1845, 120], [-22.9895, -43.1905, 120], [-22.9930, -43.2000, 120], [-22.9918, -43.2120, 120], [-22.9910, -43.2240, 130]],
-    ringRadius: 45,
+    rings: [[-22.9682, -43.1690, 175], [-22.9744, -43.1770, 170], [-22.9814, -43.1845, 165], [-22.9955, -43.1960, 170], [-22.9952, -43.2060, 165], [-22.9940, -43.2155, 165], [-22.9928, -43.2240, 170]],
+    ringRadius: 70,
     finish: 'Passagem completa na orla de Copacabana, Ipanema e Leblon!',
   },
   {
@@ -49,7 +49,7 @@ export const MISSIONS = [
   {
     id: 'cristo', name: 'Volta ao Cristo', level: 'Difícil',
     desc: 'Dê uma volta completa em torno do Cristo Redentor passando pelas argolas, e depois volte para o Santos Dumont.',
-    start: 'cristo-volta', time: 'por', par: 170, ringsAround: 'cristo', ringRadius: 70,
+    start: 'cristo-volta', time: 'por', par: 170, ringsAround: 'cristo', ringRadius: 85,
     radio: ['Tráfego Corcovado, Papa Romeo Juliet Zulu Romeo circulando o Cristo Redentor a três mil pés.'],
     finish: 'Volta completa no Cristo Redentor!',
   },
@@ -80,7 +80,7 @@ export class MissionRunner {
       const x0 = fromLe ? r.x1 : r.x2, z0 = fromLe ? r.z1 : r.z2, ux = fromLe ? r.ux : -r.ux, uz = fromLe ? r.uz : -r.uz;
       const lx = uz, lz = -ux, L = r.length, h = r.elev;
       const at = (a, c, alt) => new THREE.Vector3(x0 + ux * a + lx * c, h + alt, z0 + uz * a + lz * c);
-      pts.push(at(L + 1400, 0, 230), at(L + 1600, 1500, 300), at(L * 0.5, 1700, 310), at(-1600, 1500, 260), at(-2300, 0, 160));
+      pts.push(at(L + 1400, 0, 260), at(L + 1700, 1500, 330), at(L * 0.5, 1700, 340), at(-1700, 1500, 300), at(-2600, 0, 220));
     }
     if (def.ringsAround === 'cristo') {
       const c = meta.landmarks.cristo.world;
