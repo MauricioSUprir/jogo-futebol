@@ -102,17 +102,24 @@ export class FlightInput {
 
   poll(dt) {
     const k = this.keys, s = this.settings;
-    let tp = (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) - (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0);
+    // "simple": W/S = potência, A/D = curva, ↑/↓ = sobe/desce (nariz para cima com ↑)
+    // "sim": como num simulador de verdade, W/S = empurrar/puxar o manche e Shift/Ctrl = potência
+    const simple = s.scheme !== 'sim';
+    this.simple = simple;
+    let tp = simple
+      ? (k.has('ArrowUp') ? 1 : 0) - (k.has('ArrowDown') ? 1 : 0)
+      : (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0) - (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0);
     let tr = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
     let ty = (k.has('KeyE') ? 1 : 0) - (k.has('KeyQ') ? 1 : 0);
-    const thrUp = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('PageUp') || k.has('Equal') || k.has('NumpadAdd');
-    const thrDn = k.has('ControlLeft') || k.has('ControlRight') || k.has('PageDown') || k.has('Minus') || k.has('NumpadSubtract');
-    if (thrUp) this.throttle = clamp(this.throttle + dt * 0.45, 0, 1);
-    if (thrDn) this.throttle = clamp(this.throttle - dt * 0.45, 0, 1);
+    const thrUp = k.has('ShiftLeft') || k.has('ShiftRight') || k.has('PageUp') || k.has('Equal') || k.has('NumpadAdd') || (simple && k.has('KeyW'));
+    const thrDn = k.has('ControlLeft') || k.has('ControlRight') || k.has('PageDown') || k.has('Minus') || k.has('NumpadSubtract') || (simple && k.has('KeyS'));
+    const thrRate = simple ? 0.7 : 0.45;
+    if (thrUp) this.throttle = clamp(this.throttle + dt * thrRate, 0, 1);
+    if (thrDn) this.throttle = clamp(this.throttle - dt * thrRate, 0, 1);
     if (k.has('BracketRight')) this.trim = clamp(this.trim + dt * 0.25, -1, 1);
     if (k.has('BracketLeft')) this.trim = clamp(this.trim - dt * 0.25, -1, 1);
     this.timeWarp = k.has('KeyT');
-    let brake = k.has('KeyB') || k.has('Space') ? 1 : 0;
+    let brake = k.has('KeyB') || k.has('Space') || (simple && k.has('KeyS') && this.throttle === 0) ? 1 : 0;
     // teclado é digital: suaviza como um manche de verdade
     const rate = (cur, tgt, up, back) => { const r = tgt === 0 ? back : up; return cur + clamp(tgt - cur, -r * dt, r * dt); };
     let analog = false;
@@ -153,6 +160,8 @@ export class FlightInput {
     if (this._touchRud) ty = this._touchRud;
     if (this.throttleFill) this.throttleFill.style.height = Math.round(this.throttle * 100) + '%';
 
+    // no modo simples, manche para cima (gamepad/toque) = subir
+    if (analog && simple) this.pitch = -this.pitch;
     if (!analog) { this.pitch = rate(this.pitch, tp, 2.2, 3.0); this.roll = rate(this.roll, tr, 2.6, 3.5); }
     this.yaw = rate(this.yaw, ty, 3, 4);
     this.brake = brake;

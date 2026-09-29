@@ -16,6 +16,8 @@ import { Panel } from './instruments.js';
 import { CameraRig, MODE_LABEL } from './camera.js';
 import { FlightInput } from './input.js';
 import { FlightAudio } from './audio.js';
+import { SimpleAssist } from './assist.js';
+import { MISSIONS, MissionRunner, Radio, fmtTime } from './missions.js';
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -119,6 +121,8 @@ async function main() {
     throttleBar: $('throttle-bar'), throttleFill: $('throttle-fill'), buttons: [...document.querySelectorAll('.tbtn')],
   }, settings);
   const audio = new FlightAudio(); audio.setVolume(settings.volume);
+  const assist = new SimpleAssist();
+  const radio = new Radio(settings);
 
   // pré-compila shaders
   $('load-text').textContent = 'Compilando shaders…';
@@ -158,9 +162,25 @@ async function main() {
       towerFor(r);
     } else if (key === 'cristo') {
       const c = meta.landmarks.cristo.world || meta.landmarks.cristo;
-      fm.reset(new THREE.Vector3(c.x - 200, 762, c.z + 1600), -5 * D2R, 50, false); input.throttle = 0.66; input.trim = 0.05;
+      fm.reset(new THREE.Vector3(c.x - 200, Math.max(762, c.y + 160), c.z + 1600), -5 * D2R, 50, false); input.throttle = 0.66; input.trim = 0.05;
       towerFor(runways.list.find((r) => r.le === '02R'));
+    } else if (key === 'cristo-volta') {
+      // alinhado com a volta: 1,5 km a oeste da primeira argola, rumo leste
+      const c = meta.landmarks.cristo.world;
+      fm.reset(new THREE.Vector3(c.x - 1500, c.y + 190, c.z + 1000), 90 * D2R, 50, false); input.throttle = 0.7; input.trim = 0.05;
+      towerFor(runways.list.find((r) => r.le === '02R'));
+    } else if (key === 'orla') {
+      // sobre o mar, a leste do Leme, apontando para a primeira argola da orla
+      const p = ll(-22.9655, -43.1540), t = ll(...MISSIONS.find((m) => m.id === 'orla').rings[0].slice(0, 2));
+      fm.reset(new THREE.Vector3(p.x, 150, p.z), Math.atan2(t.x - p.x, -(t.z - p.z)), 50, false); input.throttle = 0.66; input.trim = 0.05;
+      towerFor(runways.list.find((r) => r.le === '02R'));
+    } else if (key === 'pane') {
+      // 5 km ao norte da cabeceira 20L, a 2.500 pés, alinhado com a pista
+      const r = runways.list.find((q) => q.he === '20L'), d = 5000;
+      fm.reset(new THREE.Vector3(r.x2 + r.ux * d, 762, r.z2 + r.uz * d), r.heading + Math.PI, 50, false); input.throttle = 0.66; input.trim = 0.05;
+      towerFor(r);
     }
+    assist.reset();
     fm.ctl.trim = input.trim;
     const w = { calmo: [0, 0], moderado: [10, 0.4], forte: [20, 1.2] }[settings.wind] || [0, 0];
     // vento de sudeste (vem de 135°): sopra para noroeste
@@ -188,34 +208,80 @@ async function main() {
 
   // ---------------------------------------------------------------- UI
   let playing = false, paused = false, lightsOn = settings.lights, crashTimer = -1;
-  const screens = ['menu', 'credits', 'settings', 'crash'];
+  const screens = ['menu', 'credits', 'settings', 'crash', 'missions', 'mission-end'];
   const show = (id) => screens.forEach((s) => $(s).classList.toggle('hidden', s !== id));
   const hideAll = () => screens.forEach((s) => $(s).classList.add('hidden'));
   const bindSel = (id, key) => { const el = $(id); el.value = settings[key]; el.onchange = () => { settings[key] = el.value; saveSettings(settings); }; };
-  bindSel('m-start', 'start'); bindSel('m-time', 'time'); bindSel('m-weather', 'weather'); bindSel('m-wind', 'wind'); bindSel('m-assist', 'assist');
+  bindSel('m-start', 'start'); bindSel('m-scheme', 'scheme'); bindSel('m-time', 'time'); bindSel('m-weather', 'weather'); bindSel('m-wind', 'wind'); bindSel('m-assist', 'assist');
   let toastT = 0;
   const toast = (m, s = 4) => { $('toast').textContent = m; $('toast').classList.add('show'); toastT = s; };
 
-  function startFlight() {
-    hideAll(); applyTime(); placeStart(settings.start);
+  // ---------------------------------------------------------------- missões (Fase 2)
+  const missions = new MissionRunner(scene, { ll, runways, terrain, meta });
+  let mission = null, missionEndT = -1;
+  function renderMissionList() {
+    const best = missions.loadBest();
+    $('mission-list').innerHTML = MISSIONS.map((m, i) => `
+      <button class="mcard" data-i="${i}">
+        <span class="mtop"><b>${m.name}</b><span class="lvl">${m.level}</span></span>
+        <span class="mdesc">${m.desc}</span>
+        <span class="stars" aria-label="${best[m.id] || 0} de 3 estrelas">${'★'.repeat(best[m.id] || 0)}<i>${'★'.repeat(3 - (best[m.id] || 0))}</i></span>
+      </button>`).join('');
+    $('mission-list').querySelectorAll('.mcard').forEach((b) => { b.onclick = () => startMission(MISSIONS[+b.dataset.i]); });
+  }
+  function startMission(def) {
+    mission = def;
+    const saved = settings.time; settings.time = def.time || settings.time;
+    startFlight(def.start, true);
+    settings.time = saved;
+    missions.start(def, fm);
+    missionEndT = -1;
+    $('nav').classList.remove('hidden');
+    toast(`${def.name}: ${def.desc}`, 7);
+    radio.stop(); if (def.radio?.[0]) setTimeout(() => radio.say(def.radio[0]), 600);
+  }
+  function endMissionScreen(res) {
+    $('me-title').textContent = res.ok ? 'Missão cumprida' : 'Missão não concluída';
+    $('me-stars').innerHTML = res.ok ? `${'★'.repeat(res.stars)}<i>${'★'.repeat(3 - res.stars)}</i>` : '';
+    $('me-stars').setAttribute('aria-label', res.ok ? `${res.stars} de 3 estrelas` : 'sem estrelas');
+    $('me-lines').innerHTML = [res.ok ? mission.finish : '', ...res.lines].filter(Boolean).map((l) => `<li>${l}</li>`).join('');
+    const i = MISSIONS.indexOf(mission);
+    $('me-next').classList.toggle('hidden', !res.ok || i >= MISSIONS.length - 1);
+    paused = true; show('mission-end');
+  }
+  $('me-retry').onclick = () => startMission(mission);
+  $('me-next').onclick = () => startMission(MISSIONS[MISSIONS.indexOf(mission) + 1]);
+  $('me-menu').onclick = () => location.reload();
+  $('btn-missions').onclick = () => { renderMissionList(); show('missions'); };
+  $('missions-back').onclick = () => show('menu');
+
+  function startFlight(startKey = settings.start, isMission = false) {
+    if (!isMission) { mission = null; missions.stop(); $('nav').classList.add('hidden'); }
+    hideAll(); applyTime(); placeStart(startKey);
+    document.activeElement?.blur?.(); canvas.focus();
     playing = true; paused = false; input.enabled = true; crashTimer = -1;
     $('hud').classList.remove('hidden');
     $('touch').classList.toggle('hidden', !isTouch());
     audio.start();
     if (settings.tilt) input.enableTilt();
     const names = { sdu20: 'Santos Dumont, pista 20L. Potência máxima e puxe a 55 nós.', sdu02: 'Santos Dumont, pista 02R. Potência máxima e puxe a 55 nós.', gig10: 'Galeão, pista 10. Pista longa, bom para treinar.', 'air-copa': 'Sobre Copacabana a 1.500 pés.', 'final-sdu': 'Final para a pista 20L, 3 milhas. Siga as luzes PAPI: duas brancas e duas vermelhas.', cristo: 'Perto do Corcovado a 2.500 pés.' };
-    toast(names[settings.start] || '', 6);
+    if (!isMission) toast((names[startKey] || '') + (input.simple !== false && settings.scheme !== 'sim' && ['sdu20', 'sdu02', 'gig10'].includes(startKey) ? ' Segure W para acelerar: o avião decola sozinho.' : ''), 7);
     $('camlabel').textContent = MODE_LABEL[rig.mode];
-    if (!settings.helpSeen && !params.has('autostart')) { paused = true; showHelp(() => { paused = false; settings.helpSeen = true; saveSettings(settings); }); }
+    if (!settings.helpSeenV2 && !params.has('autostart')) { paused = true; showHelp(() => { paused = false; settings.helpSeenV2 = true; saveSettings(settings); }); }
   }
   function showHelp(cb) {
+    const simple = settings.scheme !== 'sim';
     $('help-body').innerHTML = isTouch()
-      ? 'Manche à direita: puxe para subir, para os lados para inclinar<br>Barra à esquerda: potência (manete)<br>FLAPE +/−, FREIO, LEME e CÂM na parte de baixo<br>Arraste no céu para olhar em volta'
-      : '<kbd>W</kbd>/<kbd>S</kbd> ou <kbd>↑</kbd>/<kbd>↓</kbd>: empurrar ou puxar o manche · <kbd>A</kbd>/<kbd>D</kbd>: inclinar<br><kbd>Q</kbd>/<kbd>E</kbd>: leme · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>: potência · <kbd>1</kbd>, <kbd>9</kbd> e <kbd>0</kbd>: marcha lenta, 75% e máxima<br><kbd>F</kbd>/<kbd>V</kbd>: baixar ou subir o flape · <kbd>B</kbd>: freio · <kbd>[</kbd>/<kbd>]</kbd>: compensador<br><kbd>C</kbd>: câmera · arrastar o mouse: olhar · roda: zoom · <kbd>L</kbd>: luzes · <kbd>R</kbd>: reiniciar · <kbd>T</kbd>: acelerar o tempo · <kbd>Esc</kbd>: pausa<br>Gamepad e manche USB também funcionam.';
+      ? (simple
+        ? 'Barra à esquerda: potência. Suba toda para decolar: o avião sai do chão sozinho<br>Manche à direita: para cima sobe, para baixo desce, para os lados faz curva<br>Soltou o manche, o avião se nivela sozinho<br>FLAPE +/−, FREIO e CÂM na parte de baixo · arraste no céu para olhar'
+        : 'Manche à direita: puxe para subir, para os lados para inclinar<br>Barra à esquerda: potência (manete)<br>FLAPE +/−, FREIO, LEME e CÂM na parte de baixo<br>Arraste no céu para olhar em volta')
+      : (simple
+        ? '<b>Controle Simples (WASD)</b><br><kbd>W</kbd>: acelerar · <kbd>S</kbd>: desacelerar e frear · <kbd>A</kbd>/<kbd>D</kbd>: curva para a esquerda ou direita<br><kbd>↑</kbd>: subir · <kbd>↓</kbd>: descer. Soltou tudo, o avião voa nivelado sozinho<br><b>Para decolar: segure W.</b> A 55 nós o avião levanta o nariz sozinho<br><kbd>F</kbd>/<kbd>V</kbd>: flape · <kbd>Espaço</kbd>: freio · <kbd>C</kbd>: câmera · <kbd>R</kbd>: reiniciar · <kbd>Esc</kbd>: pausa<br>Quer o modo realista? Mude para "Simulador" em Controles, no menu.'
+        : '<kbd>W</kbd>/<kbd>S</kbd> ou <kbd>↑</kbd>/<kbd>↓</kbd>: empurrar ou puxar o manche · <kbd>A</kbd>/<kbd>D</kbd>: inclinar<br><kbd>Q</kbd>/<kbd>E</kbd>: leme · <kbd>Shift</kbd>/<kbd>Ctrl</kbd>: potência · <kbd>1</kbd>, <kbd>9</kbd> e <kbd>0</kbd>: marcha lenta, 75% e máxima<br><kbd>F</kbd>/<kbd>V</kbd>: baixar ou subir o flape · <kbd>B</kbd>: freio · <kbd>[</kbd>/<kbd>]</kbd>: compensador<br><kbd>C</kbd>: câmera · arrastar o mouse: olhar · roda: zoom · <kbd>L</kbd>: luzes · <kbd>R</kbd>: reiniciar · <kbd>T</kbd>: acelerar o tempo · <kbd>Esc</kbd>: pausa<br>Gamepad e manche USB também funcionam.');
     $('help').classList.remove('hidden');
     $('help-ok').onclick = () => { $('help').classList.add('hidden'); cb?.(); };
   }
-  $('btn-fly').onclick = startFlight;
+  $('btn-fly').onclick = () => startFlight(settings.start);
   $('btn-credits').onclick = () => show('credits');
   document.querySelector('#credits [data-close]').onclick = () => show('menu');
   let settingsFrom = 'menu';
@@ -223,9 +289,10 @@ async function main() {
   $('btn-settings-menu').onclick = () => openSettings('menu');
   $('btn-pause').onclick = () => { if (playing) { paused = true; openSettings('game'); } };
   $('set-close').onclick = () => { if (settingsFrom === 'game') { hideAll(); paused = false; } else show('menu'); };
-  $('set-restart').onclick = () => { hideAll(); placeStart(lastStart || settings.start); paused = false; };
+  const restart = () => { hideAll(); crashTimer = -1; if (mission) startMission(mission); else { placeStart(lastStart || settings.start); paused = false; } };
+  $('set-restart').onclick = restart;
   $('set-menu').onclick = () => location.reload();
-  $('crash-retry').onclick = () => { hideAll(); placeStart(lastStart || settings.start); paused = false; crashTimer = -1; };
+  $('crash-retry').onclick = restart;
   $('crash-menu').onclick = () => location.reload();
   const q = $('set-quality');
   const qInfo = () => { const t = settings.quality === 'auto' ? detected.tier : settings.quality; $('set-quality-info').textContent = `Em uso: ${TIERS[t].label}${settings.quality === 'auto' ? ' (automática)' : ''}. GPU: ${detected.gpu || 'desconhecida'}. Trocar recarrega o jogo.`; };
@@ -239,6 +306,7 @@ async function main() {
   const applyUi = () => { document.documentElement.style.setProperty('--ui', settings.uiScale); document.documentElement.classList.toggle('contrast', settings.contrast); };
   bind('set-ui', 'uiScale', 'value', applyUi); bind('set-contrast', 'contrast', 'checked', applyUi); applyUi();
   bind('set-vol', 'volume', 'value', () => audio.setVolume(settings.volume));
+  bind('set-voice', 'voice', 'checked', () => { if (!settings.voice) radio.stop(); });
   $('fps').classList.toggle('hidden', !(settings.showFps || params.has('fps')));
 
   function resize() {
@@ -262,6 +330,12 @@ async function main() {
     input.poll(dt);
     const fl = input.consumeFlaps();
     if (fl) { fm.ctl.flaps = THREE.MathUtils.clamp(fm.ctl.flaps + fl, 0, 3); audio.beep(fl > 0 ? 500 : 700, 0.12); toast(`Flapes ${[0, 10, 20, 30][fm.ctl.flaps]}°`, 1.5); }
+    if (input.simple) {
+      // Simples (WASD): o piloto de apoio transforma "subir/virar" em comandos reais
+      assist.apply(fm, { pitch: input.pitch, roll: input.roll, throttle: input.throttle, brake: input.brake }, dt);
+      if (Math.abs(input.yaw) > 0.05) fm.ctl.rudder = THREE.MathUtils.clamp(fm.ctl.rudder + input.yaw, -1, 1);
+      return;
+    }
     let pitch = input.pitchCmd, roll = input.roll, yaw = input.yaw;
     const o = fm.out;
     const air = !fm.onGround || (o.ias || 0) > 25;
@@ -282,8 +356,9 @@ async function main() {
     while (acc >= FIXED) { fm.step(FIXED); acc -= FIXED; }
   }
 
-  function handleEvents() {
-    for (const e of fm.events) {
+  function handleEvents(dt) {
+    const evs = fm.events.slice();
+    for (const e of evs) {
       if (e.type === 'touchdown') {
         const f = Math.round(e.fpm);
         const grade = f > -120 ? 'Manteiga! Pouso perfeito' : f > -300 ? 'Pouso suave' : f > -500 ? 'Pouso firme' : 'Pouso duro';
@@ -291,12 +366,20 @@ async function main() {
         audio.burst('chirp', Math.min(1.5, -f / 300 + 0.3));
         rig.shake(Math.min(0.6, -f / 900));
       } else if (e.type === 'crash') {
-        audio.burst('crash'); rig.shake(1); crashTimer = 1.4;
+        audio.burst('crash'); rig.shake(1); crashTimer = mission ? -1 : 1.4;
         $('crash-text').textContent = e.reason + ` Velocidade no impacto: ${Math.round(e.speed * KT)} nós.`;
       }
     }
     fm.events.length = 0;
+    if (!mission) return;
+    for (const m of missions.update(dt, fm, evs)) {
+      if (m.type === 'ring') { audio.beep(880, 0.08); setTimeout(() => audio.beep(1320, 0.1), 90); toast(`Argola ${m.i + 1} de ${m.n}`, 1.8); }
+      else if (m.type === 'miss') { audio.beep(300, 0.25); toast('Argola perdida. Siga para a próxima.', 2.5); }
+      else if (m.type === 'engine') { audio.beep(400, 0.4); toast('PANE NO MOTOR! Mantenha ~65 nós e plane até a pista.', 7); if (mission.radio?.[1]) { radio.say(mission.radio[1]); } }
+      else if (m.type === 'complete' || m.type === 'fail') { missionEndT = m.type === 'fail' ? 1.6 : 1.2; missionEndRes = m.result; if (m.type === 'complete') { audio.beep(660, 0.12); setTimeout(() => audio.beep(990, 0.18), 130); } }
+    }
   }
+  let missionEndRes = null;
 
   // ---------------------------------------------------------------- laço
   const clock = new THREE.Clock();
@@ -314,11 +397,12 @@ async function main() {
       controls(dt);
       if (input.take('cam')) { const m = rig.next(); $('camlabel').textContent = MODE_LABEL[m]; }
       if (input.take('lights')) { lightsOn = !lightsOn; settings.lights = lightsOn; saveSettings(settings); toast(lightsOn ? 'Luzes ligadas' : 'Luzes desligadas', 1.5); }
-      if (input.take('reset')) { placeStart(lastStart || settings.start); crashTimer = -1; hideAll(); }
+      if (input.take('reset')) restart();
       if (input.take('engine')) { fm.engineOn = !fm.engineOn; toast(fm.engineOn ? 'Motor ligado' : 'Motor desligado (simulação de pane)', 2.5); }
       env.timeScale = input.timeWarp ? 120 : 1;
       step(dt);
-      handleEvents();
+      handleEvents(dt);
+      if (missionEndT > 0) { missionEndT -= dt; if (missionEndT <= 0) endMissionScreen(missionEndRes); }
       if (crashTimer > 0) { crashTimer -= dt; if (crashTimer <= 0) { paused = true; show('crash'); } }
     }
     // avião na cena
@@ -356,12 +440,24 @@ async function main() {
         $('h-ias').textContent = Math.round((o.ias || 0) * KT);
         $('h-alt').textContent = Math.round((o.alt || 0) * FT).toLocaleString('pt-BR');
         $('h-vs').textContent = Math.round(((o.vs || 0) * FPM) / 10) * 10;
-        $('h-hdg').textContent = String(Math.round((o.heading || 0) / D2R) % 360).padStart(3, '0');
+        $('h-hdg').textContent = String(((Math.round((o.heading || 0) / D2R) % 360) + 360) % 360).padStart(3, '0');
         $('h-thr').style.width = Math.round(fm.ctl.throttle * 100) + '%'; $('h-thr-t').textContent = Math.round(fm.ctl.throttle * 100) + '%';
         $('h-flaps').textContent = Math.round(fm.flapDeg) + '°';
         $('h-trim').textContent = (fm.ctl.trim > 0 ? '+' : '') + Math.round(fm.ctl.trim * 100);
         $('h-rpm').textContent = Math.round(o.rpm || 0);
         $('warn').classList.toggle('hidden', !(o.stallWarn && !fm.crashed));
+        if (mission) {
+          const tg = missions.target();
+          if (tg) {
+            const dx = tg.pos.x - fm.pos.x, dz = tg.pos.z - fm.pos.z, dist = Math.hypot(dx, dz);
+            const brg = Math.atan2(dx, -dz), rel = brg - (o.heading || 0);
+            $('nav-arrow').style.transform = `rotate(${rel}rad)`;
+            const dAlt = Math.round((tg.pos.y - fm.pos.y) * FT / 50) * 50;
+            const altTxt = tg.runway ? '' : Math.abs(dAlt) < 150 ? ' · altitude certa' : dAlt > 0 ? ` · suba ${dAlt} pés` : ` · desça ${-dAlt} pés`;
+            $('nav-text').textContent = `${tg.label} · ${(dist / 1000).toFixed(dist < 10000 ? 1 : 0).replace('.', ',')} km${altTxt}`;
+          } else $('nav-text').textContent = 'Missão concluída';
+          $('nav-time').textContent = fmtTime(missions.active?.t || 0);
+        }
       }
       if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('show'); }
     }
@@ -388,6 +484,19 @@ async function main() {
   window.__cr = {
     ready: true, THREE, fm, terrain, buildings, runways, env, rig, camera, renderer, scene, meta, input, tierName, clouds,
     placeStart: (k) => placeStart(k),
+    assist, missions, MISSIONS,
+    startMission: (id) => startMission(MISSIONS.find((m) => m.id === id)),
+    // simula a missão sem renderizar: auto(fm, t) mexe nos comandos; devolve os eventos da missão
+    simMission(seconds, auto) {
+      const evs = [];
+      for (let i = 0; i < Math.round(seconds * 60) && !(missions.active?.done); i++) {
+        if (auto) auto(fm, i / 60);
+        for (let k = 0; k < 4; k++) fm.step(FIXED);
+        const fe = fm.events.slice(); fm.events.length = 0;
+        evs.push(...missions.update(1 / 60, fm, fe));
+      }
+      return { evs, done: missions.active?.done, result: missions.active?.result, t: missions.active?.t, idx: missions.active?.idx, crashed: fm.crashed, pos: fm.pos.clone() };
+    },
     pause: (v) => { paused = v; },
     setCam: (m) => { rig.mode = m; $('camlabel').textContent = MODE_LABEL[m]; },
     setHour: (h) => env.setLocalTime(h),

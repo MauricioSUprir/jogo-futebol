@@ -22,8 +22,8 @@ export const TIERS = {
 
 const DEFAULTS = {
   quality: 'auto', showFps: false, sensitivity: 1, invertPitch: false, assist: 'basic', tilt: false,
-  uiScale: 1, contrast: false, volume: 0.8, helpSeen: false, lights: true,
-  start: 'sdu20', time: 'manha', weather: 'poucas', wind: 'calmo',
+  uiScale: 1, contrast: false, volume: 0.8, helpSeen: false, lights: true, scheme: 'simple', voice: true,
+  start: 'sdu02', time: 'manha', weather: 'poucas', wind: 'calmo',
 };
 
 export function loadSettings() {
