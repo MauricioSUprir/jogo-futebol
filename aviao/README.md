@@ -30,6 +30,28 @@ Usa three.js (WebGL 2) e não tem etapa de build: são arquivos estáticos, publ
 - **Pousos e acidentes.** Nota do pouso pela razão de descida no toque. Acidentes detectados contra o chão, a água, os prédios, os marcos e por excesso de carga.
 - **Qualidade.** Automática ou manual (Baixa, Média, Alta e Ultra) com resolução dinâmica. O som do motor, do vento e da buzina de estol é gerado por procedimento.
 
+## Fase 2: missões e controle simples (esta entrega)
+
+- **Controle Simples (WASD), o padrão:**
+  - W acelera, S desacelera e freia, A/D fazem curva e ↑/↓ sobem e descem;
+  - o avião decola sozinho a 55 nós, sobe até 500 pés e voa nivelado quando o jogador solta as teclas;
+  - por baixo continua a mesma física realista.
+- **Controle Simulador:** o modo realista da Fase 1 continua disponível no menu.
+- **Seis missões com até 3 estrelas:**
+  - Primeiro voo;
+  - Argolas na orla (do Leme ao Leblon);
+  - Pouso no Santos Dumont;
+  - Circuito no Galeão;
+  - Pane no motor;
+  - Volta ao Cristo.
+- **Durante a missão:**
+  - argolas 3D;
+  - seta de navegação com distância e altitude;
+  - cronômetro;
+  - avaliação do pouso pela razão de descida no toque e pela distância ao eixo;
+  - voz da torre pelo sintetizador de voz do navegador;
+  - recorde de estrelas salvo no aparelho.
+
 ## Rodar localmente
 
 ```bash

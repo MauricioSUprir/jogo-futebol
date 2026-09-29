@@ -65,7 +65,7 @@ export class FlightModel {
     this.engineOn = true;
     for (const w of this.wheels) { w.contact = w.wasContact = onGround; w.comp = 0; }
     this.events.length = 0;
-    this.out = { ias: speed, tas: speed, alpha: 0, beta: 0, pitch: 0, roll: 0, heading: headingRad, alt: pos.y, vs: 0, rpm: this.rpm, flapDeg: this.flapDeg, gload: 1, turnRate: 0, slip: 0, gs: speed, agl: 0, onGround, p: 0, r: 0 };
+    this.out = { ias: speed, tas: speed, alpha: 0, beta: 0, pitch: 0, roll: 0, heading: ((headingRad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI), alt: pos.y, vs: 0, rpm: this.rpm, flapDeg: this.flapDeg, gload: 1, turnRate: 0, slip: 0, gs: speed, agl: 0, onGround, p: 0, r: 0 };
   }
 
   step(dt) {

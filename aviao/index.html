@@ -41,6 +41,12 @@
           <option value="cristo">Em voo perto do Cristo Redentor, 2.500 pés</option>
         </select>
       </label>
+      <label class="set">Controles
+        <select id="m-scheme">
+          <option value="simple">Simples (WASD): W acelera, setas sobem e descem</option>
+          <option value="sim">Simulador (realista)</option>
+        </select>
+      </label>
       <label class="set">Horário
         <select id="m-time">
           <option value="manha">Manhã (08:30)</option>
@@ -74,13 +80,37 @@
       </label>
     </div>
     <div class="menu-buttons">
-      <button id="btn-fly" class="btn primary">Voar</button>
+      <div class="row2">
+        <button id="btn-fly" class="btn primary">Voo livre</button>
+        <button id="btn-missions" class="btn primary alt">Missões</button>
+      </div>
       <div class="row2">
         <button id="btn-settings-menu" class="btn">Configurações</button>
         <button id="btn-credits" class="btn ghost">Créditos</button>
       </div>
     </div>
-    <p class="phase-tag">Fase 1 · protótipo de voo</p>
+    <p class="phase-tag">Fase 2 · missões</p>
+  </div>
+</div>
+
+<div id="missions" class="screen hidden">
+  <div class="menu-box scroll wide">
+    <h2>Missões</h2>
+    <div id="mission-list"></div>
+    <button id="missions-back" class="btn ghost">Voltar</button>
+  </div>
+</div>
+
+<div id="mission-end" class="screen hidden">
+  <div class="menu-box">
+    <h2 id="me-title">Missão cumprida</h2>
+    <div id="me-stars" class="stars big"></div>
+    <ul id="me-lines" class="me-lines"></ul>
+    <div class="row2">
+      <button id="me-retry" class="btn">Tentar de novo</button>
+      <button id="me-next" class="btn primary">Próxima missão</button>
+      <button id="me-menu" class="btn ghost">Menu</button>
+    </div>
   </div>
 </div>
 
@@ -113,6 +143,7 @@
     <div class="sys"><span class="lbl">RPM</span><b id="h-rpm">0</b></div>
   </div>
   <div id="warn" class="hidden">ESTOL</div>
+  <div id="nav" class="panel hidden" aria-live="polite"><i id="nav-arrow">➤</i><span id="nav-text"></span><b id="nav-time">0:00</b></div>
   <div id="camlabel"></div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="fps" class="hidden"></div>
@@ -174,6 +205,7 @@
     <div class="set-group">
       <h3>Som</h3>
       <label class="set">Volume <input type="range" id="set-vol" min="0" max="1" step="0.05"></label>
+      <label class="set check"><input type="checkbox" id="set-voice"> Voz da torre (rádio)</label>
     </div>
     <div class="row2">
       <button id="set-restart" class="btn ghost">Reiniciar voo</button>
