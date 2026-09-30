@@ -622,7 +622,8 @@ const KB = [
   [['W', 'A', 'S', 'D'], 'Mover', '(ou setas)'], [['Shift'], 'Correr'],
   [['Espaço'], 'Passe', 'Defendendo: desarme / pressão'], [['K'], 'Chute', 'Segure para mais força · Defendendo: carrinho'],
   [['L'], 'Passe longo / cruzamento'], [['I'], 'Enfiada'], [['O'], 'Chute colocado'], [['P'], 'Cavadinha'],
-  [['Q'], 'Trocar jogador'], [['F'], 'Drible / finta'], [['E'], 'Proteger a bola'], [['Esc'], 'Pausa'],
+  [['Q'], 'Trocar jogador'], [['F'], 'Drible / finta'], [['E'], 'Proteger a bola'], [['C'], 'Contenção (defesa)'], [['Esc'], 'Pausa'],
+  [['Mouse E'], 'Passe', 'Botão esquerdo'], [['Mouse D'], 'Chute', 'Botão direito · segure para força'],
 ];
 const GP = [
   ['LS', 'Mover', 'Analógico esquerdo'], ['A', 'Passe', 'Defendendo: pressão'], ['B', 'Chute', 'Segure para força · Defendendo: carrinho'],

@@ -48,6 +48,15 @@ export class Input {
       this.taps[k] = performance.now() / 1000 - (this.kDown[k] || performance.now() / 1000);
     });
     addEventListener('blur', () => this.keys.clear());
+    // mouse no PC: esquerdo = passe, direito = chute, meio = passe longo (segure para força)
+    this.mouse = {};
+    const MB = { 0: 'pass', 2: 'shoot', 1: 'long' };
+    const canvas = document.getElementById('c');
+    if (canvas) {
+      canvas.addEventListener('mousedown', (e) => { if (!this.enabled || !MB[e.button]) return; e.preventDefault(); this.mouse[MB[e.button]] = true; this.kDown[MB[e.button]] = performance.now() / 1000; this.lastDevice = 'keyboard'; this.onAny && this.onAny(); });
+      addEventListener('mouseup', (e) => { const k = MB[e.button]; if (!k || !this.mouse[k]) return; this.mouse[k] = false; this.taps[k] = performance.now() / 1000 - (this.kDown[k] || 0); });
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
     addEventListener('gamepadconnected', (e) => { this.padIndex = e.gamepad.index; this.lastDevice = 'gamepad'; });
     addEventListener('gamepaddisconnected', () => { this.padIndex = null; });
   }
@@ -148,7 +157,7 @@ export class Input {
     const pad = this.padIndex !== null && navigator.getGamepads ? navigator.getGamepads()[this.padIndex] : null;
     const b = {};
     const k = this.keys;
-    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n];
+    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
     // botões de toque que mudam de função com o contexto
     if (this.context === 'attack' && this.touchBtn.switch) { b.shield = true; b.switch = k.has('switch'); }
     if (this.context === 'defend' && this.touchBtn.skill) { b.jockey = true; b.skill = k.has('skill'); }

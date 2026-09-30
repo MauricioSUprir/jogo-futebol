@@ -1,0 +1,30 @@
+// Controle simulado: verifica o mapeamento de botões e analógicos da classe Input.
+import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import { routeCDN } from './cdn-route.mjs';
+const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const ctx = await b.newContext({ ignoreHTTPSErrors: true, viewport: { width: 400, height: 240 } });
+await routeCDN(ctx); const p = await ctx.newPage();
+await p.goto('http://localhost:8790/index.html'); await p.waitForTimeout(2000);
+const r = await p.evaluate(() => {
+  const I = window.__golaco.input;
+  const btns = Array.from({ length: 17 }, () => ({ pressed: false, value: 0 }));
+  const pad = { axes: [0, 0, 0, 0], buttons: btns };
+  navigator.getGamepads = () => [pad];
+  I.padIndex = 0;
+  const right = { x: -1, z: 0 }, fwd = { x: 0, z: 1 };
+  const out = {};
+  const tryB = (name, set) => { btns.forEach(b => { b.pressed = false; b.value = 0; }); pad.axes = [0, 0, 0, 0]; I.poll(right, fwd); I.consume(); set(); const c = I.poll(right, fwd); out[name] = Object.keys(c.held).filter(k => c.held[k]).join('+') + ` move(${c.mx.toFixed(1)},${c.mz.toFixed(1)})`; I.consume(); };
+  tryB('A', () => { btns[0].pressed = true; });
+  tryB('B', () => { btns[1].pressed = true; });
+  tryB('RB+B', () => { btns[5].pressed = true; btns[1].pressed = true; });
+  tryB('LT+B', () => { btns[6].pressed = true; btns[6].value = 1; btns[1].pressed = true; });
+  tryB('X', () => { btns[2].pressed = true; });
+  tryB('Y', () => { btns[3].pressed = true; });
+  tryB('LB', () => { btns[4].pressed = true; });
+  tryB('RT', () => { btns[7].pressed = true; });
+  tryB('stick direita', () => { pad.axes = [1, 0, 0, 0]; });
+  tryB('stick cima', () => { pad.axes = [0, -1, 0, 0]; });
+  return out;
+});
+console.log(JSON.stringify(r, null, 1));
+await b.close();
