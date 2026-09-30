@@ -33,7 +33,13 @@ function fail(err) {
   $('error-text').textContent = String(err && (err.stack || err.message) || err);
   $('error').classList.remove('hidden'); $('loading').classList.add('hidden');
 }
-addEventListener('error', (e) => { if (!window.__cr?.ready) fail(e.error || e.message); });
+// "Script error." sem detalhes vem de scripts de outra origem (ex.: o navegador embutido de apps
+// injeta os seus). Não é do jogo: só registra no console, sem derrubar o carregamento.
+window.addEventListener('error', (e) => {
+  if (window.__cr?.ready) return;
+  if (!e.error) { console.warn('erro externo ignorado:', e.message, e.filename); return; }
+  fail(e.error);
+});
 addEventListener('unhandledrejection', (e) => { if (!window.__cr?.ready) fail(e.reason); });
 
 let loaded = 0; const TOTAL = 12;
