@@ -28,6 +28,7 @@ Usa three.js (WebGL 2) e não tem etapa de build: são arquivos estáticos, publ
 - **Céu e clima.** Sol na posição astronômica real sobre o Rio, céu de dispersão atmosférica, estrelas, nuvens cúmulo, névoa de perspectiva aérea e luzes da cidade à noite.
 - **Controles.** Teclado e mouse, gamepad, manche USB, e no celular manche virtual com manete ou inclinação do aparelho. Há três níveis de assistência.
 - **Pousos e acidentes.** Nota do pouso pela razão de descida no toque. Acidentes detectados contra o chão, a água, os prédios, os marcos e por excesso de carga.
+- **Ícone na tela de início.** No celular, use "Adicionar à tela de início": o jogo ganha o próprio logo e abre em tela cheia.
 - **Qualidade.** Automática ou manual (Baixa, Média, Alta e Ultra) com resolução dinâmica. O som do motor, do vento e da buzina de estol é gerado por procedimento.
 
 ## Fase 2: missões e controle simples (esta entrega)
