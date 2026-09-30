@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste dos efeitos de gol</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #fff; background: rgba(0,0,0,.5); padding: 6px 9px; border-radius: 6px; line-height: 1.5; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+// Estádio completo + StadiumFX. ?tod=dia|tarde|noite &q=baixa|media|alta &cam=tv|curva|visit|baixo|lateral
+// &side=home|away &auto=0 &hud=0 &cp=x,y,z &ct=x,y,z &fov=
+// Teclas: G gol da casa, A gol visitante, C chance. API p/ Playwright: __goal(side), __adv(seg), __info()
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { QUALITY } from '../js/config.js';
+import { buildStadium } from '../js/stadium.js';
+import { StadiumFX } from '../js/fx.js';
+
+const qs = new URLSearchParams(location.search);
+const tod = qs.get('tod') || 'noite';
+const qn = qs.get('q') || 'alta';
+const quality = QUALITY[qn] || QUALITY.alta;
+const HOME = qs.get('home') || '#1db954', AWAY = qs.get('away') || '#e8e8e8';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(44, innerWidth / innerHeight, 0.1, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+const VIEWS = {
+  tv: { pos: [0, 24, -66], tgt: [0, 3, 4], fov: 44 },
+  curva: { pos: [-30, 6, -8], tgt: [-75, 12, 4], fov: 55 },
+  visit: { pos: [30, 5, 8], tgt: [75, 8, -2], fov: 55 },
+  baixo: { pos: [-10, 1.7, -22], tgt: [-40, 26, 30], fov: 70 },
+  lateral: { pos: [-20, 5, -20], tgt: [-30, 12, 50], fov: 60 },
+};
+const v = { ...(VIEWS[qs.get('cam') || 'tv'] || VIEWS.tv) };
+if (qs.get('cp')) v.pos = qs.get('cp').split(',').map(Number);
+if (qs.get('ct')) v.tgt = qs.get('ct').split(',').map(Number);
+if (qs.get('fov')) v.fov = +qs.get('fov');
+camera.position.fromArray(v.pos); controls.target.fromArray(v.tgt); camera.fov = v.fov; camera.updateProjectionMatrix();
+controls.update();
+
+const stadium = buildStadium(renderer, scene, { quality, timeOfDay: tod, homeColor: HOME, awayColor: AWAY, wind: { x: 2.5, z: 1.0 } });
+const fx = new StadiumFX(scene, { quality, isNight: stadium.isNight, homeColor: HOME, awayColor: AWAY, sunDir: stadium.sunDir, wind: { x: 2.5, z: 1.0 } });
+window.__fx = fx;
+
+let t = 0;
+const hud = document.getElementById('hud');
+if (qs.get('hud') === '0') hud.style.display = 'none';
+function info() {
+  const i = renderer.info.render;
+  return { tod, q: qn, t: +t.toFixed(2), calls: i.calls, tris: i.triangles, fx: fx.stats() };
+}
+function drawHud() {
+  const f = info();
+  hud.innerHTML = `${tod} · ${qn} · ${f.calls} draws · ${(f.tris / 1000).toFixed(0)}k tri · t=${f.t}<br>` +
+    Object.entries(f.fx).map(([k, s]) => s ? `${k} ${s.count}${s.visible ? '*' : ''}` : `${k} –`).join(' · ') + '<br>teclas G (casa) A (visitante) C (chance)';
+}
+function goal(side) {
+  fx.goal(side, side === 'away' ? [AWAY, '#1f3f9a'] : [HOME, '#111111'], side === 'away' ? -1 : 1);
+  stadium.crowdReact('goal', side);
+}
+function frame(dt) {
+  t += dt;
+  stadium.update(dt, t, 0.9, camera);
+  fx.update(dt, camera);
+}
+window.__goal = goal;
+window.__chance = () => fx.chance();
+window.__adv = (sec, dt = 1 / 30) => { const n = Math.round(sec / dt); for (let i = 0; i < n; i++) frame(dt); controls.update(); renderer.render(scene, camera); drawHud(); return info(); };
+window.__info = info;
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'g') goal('home');
+  if (k === 'a') goal('away');
+  if (k === 'c') { fx.chance(); stadium.crowdReact('chance', 'home'); }
+});
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+(stadium.ready || Promise.resolve()).then(() => {
+  frame(0.016);
+  renderer.render(scene, camera);
+  drawHud();
+  window.__ready = true;
+  if (qs.get('auto') === '0') return;
+  const clock = new THREE.Clock();
+  let next = 1;
+  (function loop() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    next -= dt;
+    if (next <= 0) { goal(qs.get('side') || 'home'); next = 22; }
+    frame(dt);
+    controls.update();
+    renderer.render(scene, camera);
+    drawHud();
+    requestAnimationFrame(loop);
+  })();
+});
+</script>
+</body>
+</html>

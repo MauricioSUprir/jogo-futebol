@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste dos escudos</title>
+<link rel="stylesheet" href="../css/menus.css">
+<style>
+  html, body { margin: 0; background: #050605; color: #e8eee9; font: 13px Inter, system-ui, sans-serif; }
+  .row { display: flex; flex-wrap: wrap; gap: 18px; padding: 18px; align-items: flex-end; }
+  .cell { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .cell small { color: #8a978f; }
+  .strip { display: flex; gap: 10px; padding: 8px 18px; align-items: center; }
+  .light { background: #e9ecea; }
+  .kits { display: flex; gap: 12px; padding: 12px 18px; flex-wrap: wrap; }
+  h2 { font: 800 16px 'Barlow Condensed', sans-serif; letter-spacing: .2em; text-transform: uppercase; color: #1ee37a; margin: 12px 18px 0; }
+</style>
+</head>
+<body>
+<!-- página de teste: todos os escudos em 256 px, 64 px, 32 px e 24 px (fundo escuro e claro) e as miniaturas de uniforme -->
+<h2>256 px</h2><div class="row" id="big"></div>
+<h2>64 / 32 / 24 px</h2><div class="strip" id="mid"></div><div class="strip" id="s32"></div><div class="strip light" id="s24"></div>
+<h2>Uniformes</h2><div class="kits" id="kits"></div>
+<script type="module">
+import { TEAMS, crestSVG, kitSVG } from '../js/teams.js';
+const $ = (id) => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+const big = +(Q.get('big') || 256);
+for (const t of TEAMS) {
+  $('big').insertAdjacentHTML('beforeend', `<div class="cell">${crestSVG(t, big)}<small>${t.name}</small></div>`);
+  $('mid').insertAdjacentHTML('beforeend', crestSVG(t, 64));
+  $('s32').insertAdjacentHTML('beforeend', crestSVG(t, 32));
+  $('s24').insertAdjacentHTML('beforeend', crestSVG(t, 24));
+  $('kits').insertAdjacentHTML('beforeend', `<div class="cell">${['home', 'away', 'gk'].map(k => kitSVG(t.kits[k], 70)).join('')}<small>${t.short}</small></div>`);
+}
+// ids únicos em todo o documento
+const ids = [...document.querySelectorAll('[id]')].map(e => e.id);
+window.__dupIds = ids.filter((x, i) => ids.indexOf(x) !== i);
+window.__ready = true;
+</script>
+</body>
+</html>

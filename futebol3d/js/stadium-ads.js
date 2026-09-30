@@ -1,6 +1,8 @@
 // Placas de LED em volta do gramado + fita de LED no anel superior, com anúncios
 // fictícios desenhados em canvas (uma vez). Troca com "rolagem", alguns rolam na
 // horizontal, e piscam "GOOOL" após um gol. Emissivo: brilha à noite (bloom).
+// Inclui o anel de LED na borda interna da cobertura (cores do clube, "corrida"
+// de luz e pisca-pisca no gol) — tudo numa só malha.
 import * as THREE from 'three';
 import { BOWL } from './stadium-bowl.js';
 
@@ -103,6 +105,9 @@ uniform float uTime;
 uniform float uFlash;
 uniform float uBright;
 uniform vec3 uFrameLight;
+uniform vec3 uRingA;
+uniform vec3 uRingB;
+uniform float uRingBright;
 varying vec2 vUv;
 varying float vLed;
 varying float vH;
@@ -116,6 +121,20 @@ void main() {
     // estrutura (verso/topo) cinza-escura
     float l = 0.35 + 0.65 * max( vN.y, 0.0 );
     gl_FragColor = vec4( vec3( 0.03 ) * uFrameLight * l + vec3( 0.004 ), 1.0 );
+  } else if ( vLed > 1.5 ) {
+    // anel de LED da cobertura: cor do clube com uma "corrida" de luz branca
+    float u = vUv.x;
+    float run = exp( -pow( fract( u / 90.0 - uTime * 0.09 ) - 0.5, 2.0 ) * 60.0 );
+    vec3 c = uRingA * ( 0.75 + 0.25 * sin( u * 0.07 - uTime * 0.8 ) ) + uRingB * run * 0.9;
+    // frisos horizontais (três fitas), somem de longe
+    float fy = vUv.y * 3.0;
+    float fwy = fwidth( fy );
+    float strip = mix( 1.0, 0.35 + 0.65 * smoothstep( 0.15, 0.3, abs( fract( fy ) - 0.5 ) ), 1.0 - clamp( fwy * 2.0, 0.0, 1.0 ) );
+    c *= strip;
+    if ( uFlash > 0.0 ) c = mix( uRingA, uRingB, step( 0.5, fract( uTime * 3.0 + u * 0.01 ) ) ) * 1.6;
+    vec3 V = normalize( cameraPosition - vW );
+    c *= mix( 0.5, 1.0, abs( dot( V, vN ) ) );
+    gl_FragColor = vec4( c * uRingBright, 1.0 );
   } else {
     // u em unidades de anúncio (largura = 16 × altura)
     float u = vUv.x / ( vH * ${ASPECT.toFixed(1)} );
@@ -216,6 +235,24 @@ export function buildAds(ctx) {
       u += len;
     }
   }
+  // anel de LED na borda interna da cobertura (face para o campo)
+  {
+    const d = BOWL.roofIn - 0.03, y0r = BOWL.roofY - 0.95, hr = 1.5;
+    let u = 0;
+    for (let i = 0; i < samples.length; i++) {
+      const s0 = samples[i], s1 = samples[(i + 1) % samples.length];
+      const p0 = [s0.cx + s0.nx * d, s0.cz + s0.nz * d], p1 = [s1.cx + s1.nx * d, s1.cz + s1.nz * d];
+      const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      if (len < 1e-3) continue;
+      const base = out.pos.length / 3;
+      for (const s of [s0, s1, s1, s0]) out.nor.push(-s.nx, 0, -s.nz);
+      out.pos.push(p0[0], y0r, p0[1], p1[0], y0r, p1[1], p1[0], y0r + hr, p1[1], p0[0], y0r + hr, p0[1]);
+      out.uv.push(u, 0, u + len, 0, u + len, 1, u, 1);
+      out.led.push(2, 2, 2, 2); out.h.push(hr, hr, hr, hr);
+      out.idx.push(base, base + 1, base + 2, base, base + 2, base + 3);
+      u += len;
+    }
+  }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(out.pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(out.nor, 3));
@@ -227,6 +264,8 @@ export function buildAds(ctx) {
   const uniforms = {
     uAds: { value: atlas }, uTime: U.uTime, uFlash: { value: 0 },
     uBright: { value: isNight ? 2.1 : 1.35 }, uFrameLight: { value: new THREE.Color(1, 1, 1).multiplyScalar(isNight ? 3 : 5) },
+    uRingA: { value: new THREE.Color(ctx.accent || homeColor) }, uRingB: { value: new THREE.Color(1, 1, 1) },
+    uRingBright: { value: isNight ? 2.4 : 1.1 },
   };
   const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(g, mat);

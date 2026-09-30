@@ -22,11 +22,16 @@
 <body>
 <div id="hud"></div>
 <script type="module">
-// Página de teste: ?tod=dia|tarde|noite &q=baixa|media|alta|ultra &cam=tv|goal|high|net|low
-// &exc=0..1 &react=goal|chance|foul|save &hud=0
-// Teclas: G gol (casa), A gol (visitante), C chance, F falta, S defesa, N bola na rede.
+// Página de teste: ?tod=dia|tarde|noite &q=baixa|media|alta|ultra
+// &cam=tv|goal|high|net|low|stand|tunnel|screen|close|roof &exc=0..1 &react=goal|chance|foul|save &hud=0
+// &screen=goal|replay (animação nos telões) &home=#hex &home2=#hex
+// Teclas: G gol (casa), A gol (visitante), C chance, F falta, S defesa, N bola na rede, R replay.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { QUALITY } from '../js/config.js';
 import { buildStadium } from '../js/stadium.js';
 
@@ -55,6 +60,12 @@ const VIEWS = {
   high: { pos: [0, 80, -48], tgt: [0, 0, 2], fov: 50 },
   net: { pos: [44, 1.9, -9], tgt: [53, 1.1, 0], fov: 45 },
   low: { pos: [-20, 1.6, -30], tgt: [10, 6, 20], fov: 60 },
+  stand: { pos: [-30, 3, -30], tgt: [-10, 14, 45], fov: 60 },
+  close: { pos: [-40, 9, 25], tgt: [-50, 7, 47], fov: 55 },
+  tunnel: { pos: [-7, 2.2, -28], tgt: [0, 2.5, -42], fov: 55 },
+  screen: { pos: [20, 6, 10], tgt: [64, 24, 38], fov: 45 },
+  roof: { pos: [0, 150, -170], tgt: [0, 0, 0], fov: 40 },
+  grass: { pos: [3, 1.7, 3], tgt: [9, 0, 7], fov: 55 },
 };
 const v = VIEWS[camMode] || VIEWS.tv;
 if (qs.get('cp')) v.pos = qs.get('cp').split(',').map(Number);
@@ -66,10 +77,29 @@ camera.fov = v.fov;
 camera.updateProjectionMatrix();
 
 const stadium = buildStadium(renderer, scene, {
-  quality, timeOfDay: tod, homeColor: qs.get('home') || '#c8102e', awayColor: qs.get('away') || '#1f5fd6',
+  quality, timeOfDay: tod, homeColor: qs.get('home') || '#101010', homeColor2: qs.get('home2') || '#0fa33a',
+  awayColor: qs.get('away') || '#1f5fd6', mowPattern: qs.get('mow') || undefined,
   stadiumName: qs.get('name') || undefined, wind: { x: 3, z: 1.5 },
 });
 window.__stadium = stadium;
+window.__three = { renderer, scene, camera };
+// &crowd=0 esconde a torcida (acelera as capturas no SwiftShader)
+// &hide=nome1,nome2 esconde objetos pelo nome (depuração)
+if (qs.get('hide')) { const hs = qs.get('hide').split(','); stadium.root.traverse((o) => { if (hs.includes(o.name)) o.visible = false; }); }
+if (qs.get('crowd') === '0') stadium.root.traverse((o) => { if (/torc|cachec/.test(o.name)) o.visible = false; });
+stadium.setScoreboard?.({ home: 'GOL', away: 'TUB', homeScore: 2, awayScore: 1, clock: "67'", homeColor: '#101010', awayColor: '#1f5fd6' });
+
+// pós-processamento como no main.js (bloom nas qualidades altas)
+let composer = null;
+if (quality.post) {
+  const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: quality.msaa ? 4 : 0 });
+  composer = new EffectComposer(renderer, rt);
+  composer.addPass(new RenderPass(scene, camera));
+  if (quality.bloom) composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), stadium.isNight ? 0.55 : 0.22, 0.45, stadium.isNight ? 0.82 : 0.92));
+  composer.addPass(new OutputPass());
+}
+renderer.info.autoReset = false;
 
 // jogadores de teste: cápsulas de 1,80 m
 const capGeo = new THREE.CapsuleGeometry(0.28, 1.8 - 0.56, 6, 16);
@@ -98,6 +128,8 @@ addEventListener('keydown', (e) => {
   if (k === 'f') stadium.crowdReact('foul', 'home');
   if (k === 's') stadium.crowdReact('save', 'home');
   if (k === 'n') stadium.netImpact(1, new THREE.Vector3(54.3, 1.0, 0.8), 1);
+  if (k === 'r') stadium.showOnScreens?.('replay', 'REPLAY');
+  if (k === 'g') stadium.showOnScreens?.('goal', 'GOL!');
 });
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
@@ -108,7 +140,9 @@ const hud = document.getElementById('hud');
 if (qs.get('hud') === '0') hud.style.display = 'none';
 function info() {
   const i = renderer.info.render;
-  hud.innerHTML = `${tod} · ${qn} · ${stadium.crowdCount} torcedores · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tri<br>` +
+  window.__info = { ...(window.__stats || {}), crowd: stadium.crowdCount, programs: renderer.info.programs.length };
+  const st = window.__stats || { calls: i.calls, triangles: i.triangles };
+  hud.innerHTML = `${tod} · ${qn} · ${stadium.crowdCount} torcedores · ${st.calls} draws · ${(st.triangles / 1000).toFixed(0)}k tri<br>` +
     ['dia', 'tarde', 'noite'].map((x) => `<a href="?tod=${x}&q=${qn}&cam=${camMode}">${x}</a>`).join('') + ' | ' +
     Object.keys(VIEWS).map((x) => `<a href="?tod=${tod}&q=${qn}&cam=${x}">${x}</a>`).join('') + ' | teclas G A C F S N';
 }
@@ -118,10 +152,17 @@ stadium.ready.then(() => {
     const dt = Math.min(clock.getDelta(), 0.05);
     t += dt;
     if (react && frames === 20) stadium.crowdReact(react, 'home');
+    if (qs.get('screen') && frames === 25) stadium.showOnScreens(qs.get('screen'), qs.get('screen') === 'goal' ? 'GOL!' : 'REPLAY');
     if (qs.get('netimpact') && frames === 37) stadium.netImpact(1, new THREE.Vector3(54.2, 1.1, 0.6), 1);
     stadium.update(dt, t, exc, camera);
     controls.update();
-    renderer.render(scene, camera);
+    stadium.updateBall?.(dt, ball.position, new THREE.Vector3());
+    renderer.info.reset();
+    // no quadro 38 desenha sem pós-processamento para contar só a cena
+    if (composer && frames !== 38) composer.render();
+    else renderer.render(scene, camera);
+    if (frames === 38) window.__stats = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+    window.__frames = frames + 1;
     if (++frames === 40) { info(); window.__ready = true; }
     if (frames % 60 === 0) info();
     requestAnimationFrame(loop);

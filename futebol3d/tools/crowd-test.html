@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste da torcida 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #fff; background: rgba(0,0,0,.5); padding: 6px 9px; border-radius: 6px; line-height: 1.5; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+// Teste da torcida 3D com o estádio inteiro.
+// ?tod=dia|tarde|noite &q=baixa|media|alta|ultra &cam=tv|close|stand|end|away|high
+// &react=goal|chance|save|foul &side=home|away &at=segundos após a reação
+// &exc=0..1 &pose=0..8 (força uma pose — depuração) &home=#hex &away=#hex &live=1 (animação contínua)
+// Teclas (live): G gol casa, A gol visitante, C chance, F falta, S defesa.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { QUALITY } from '../js/config.js';
+import { buildStadium } from '../js/stadium.js';
+
+const qs = new URLSearchParams(location.search);
+const tod = qs.get('tod') || 'noite';
+const qn = qs.get('q') || 'alta';
+const quality = QUALITY[qn] || QUALITY.alta;
+const camMode = qs.get('cam') || 'tv';
+
+const renderer = new THREE.WebGLRenderer({ antialias: quality.msaa, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio * quality.pixelRatio, quality.maxPR));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+
+// tv = mesma câmera de transmissão do jogo; close = ~10 m das primeiras fileiras
+const VIEWS = {
+  tv: { pos: [0, 17.5, -56], tgt: [0, 0, 4], fov: 21 },
+  tvwide: { pos: [0, 24, -66], tgt: [0, 3, 4], fov: 44 },
+  close: { pos: [6, 2.4, 31], tgt: [2, 4.2, 46], fov: 42 },
+  stand: { pos: [-44, 2.2, -14], tgt: [-63, 5.5, 2], fov: 46 },
+  end: { pos: [-40, 4, 0], tgt: [-66, 7, 0], fov: 48 },
+  away: { pos: [42, 2.5, 6], tgt: [64, 5, -2], fov: 46 },
+  macro: { pos: [1.5, 4.2, 38.5], tgt: [0, 3.2, 45], fov: 40 },
+  seat: { pos: [10, 6.8, -51], tgt: [10, 2, 0], fov: 55 },
+  upper: { pos: [10, 12, 30], tgt: [0, 20, 62], fov: 50 },
+  high: { pos: [0, 80, -48], tgt: [0, 0, 2], fov: 50 },
+};
+const v = VIEWS[camMode] || VIEWS.tv;
+if (qs.get('cp')) v.pos = qs.get('cp').split(',').map(Number);
+if (qs.get('ct')) v.tgt = qs.get('ct').split(',').map(Number);
+if (qs.get('fov')) v.fov = +qs.get('fov');
+camera.position.fromArray(v.pos);
+controls.target.fromArray(v.tgt);
+camera.fov = v.fov;
+camera.updateProjectionMatrix();
+controls.update();
+
+// padrão: Atlético Serrano (preto e verde) x Porto Aurora; ?home=/?away= aceitam id do clube ou #hex
+const { TEAMS } = await import('../js/teams.js');
+const kitOf = (v, def) => {
+  const t = TEAMS.find((x) => x.id === v);
+  return t ? t.kits.home.shirt : v || def;
+};
+const homeColor = kitOf(qs.get('home') || 'serrano');
+const awayColor = kitOf(qs.get('away') || 'aurora');
+const stadium = buildStadium(renderer, scene, { quality, timeOfDay: tod, homeColor, awayColor, wind: { x: 3, z: 1.5 } });
+window.__stadium = stadium;
+const crowd = stadium.root.getObjectByName('torcida');
+if (qs.get('pose')) crowd.userData.debugPose(+qs.get('pose'));
+
+// galeria: uma fileira dupla por pose (0 repouso … 8 gol), no gramado, de frente para a câmera
+if (qs.get('gallery')) {
+  const { buildCrowd } = await import('../js/stadium-crowd.js');
+  const names = ['repouso', 'tensão', 'canto', 'palmas', 'falta', 'aplauso', 'mão na cabeça', 'desânimo', 'gol'];
+  const seed0 = +(qs.get('seed') || 0);
+  for (let k = 0; k < 9; k++) {
+    const seats = [];
+    for (let r = 0; r < 2; r++) {
+      seats.push(-7.2 + k * 1.8 + r * 0.3, r * 0.42, r * 0.8, 6, 0, 1, ((k * 7 + r * 3 + seed0) * 0.0937) % 1, 0);
+    }
+    const g = buildCrowd({ ...crowd.userData.ctx, seats: new Float32Array(seats), quality: QUALITY[qn], rngSeed: 77 + k * 13 + seed0 });
+    g.userData.debugPose(qs.get('gpose') ? +qs.get('gpose') : k);
+    scene.add(g);
+  }
+  crowd.visible = false;
+  const gx = +(qs.get('gx') || 0), gf = +(qs.get('gfov') || 50);
+  camera.position.set(gx, 1.9, -10); controls.target.set(gx, 1.0, 0.4); camera.fov = gf; camera.updateProjectionMatrix(); controls.update();
+}
+
+const exc = parseFloat(qs.get('exc') ?? '0.3');
+const react = qs.get('react'), side = qs.get('side') || 'home';
+const at = parseFloat(qs.get('at') ?? '1.5');
+const T0 = parseFloat(qs.get('t') ?? '20');
+
+window.renderAt = (time) => {
+  stadium.update(1, time, exc, camera);
+  renderer.render(scene, camera);
+};
+
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'g') stadium.crowdReact('goal', 'home');
+  if (k === 'a') stadium.crowdReact('goal', 'away');
+  if (k === 'c') stadium.crowdReact('chance', 'home');
+  if (k === 'f') stadium.crowdReact('foul', 'home');
+  if (k === 's') stadium.crowdReact('save', 'home');
+});
+
+const hud = document.getElementById('hud');
+if (qs.get('hud') === '0') hud.style.display = 'none';
+
+stadium.ready.then(() => {
+  let t = T0;
+  if (react) { stadium.update(1, t, exc, camera); stadium.crowdReact(react, side); t += at; }
+  window.renderAt(t);
+  const i = renderer.info.render;
+  window.__info = {
+    quality: crowd.userData.quality, people: crowd.userData.count, crowdTris: crowd.userData.tris,
+    meshes: crowd.children.map((m) => [m.name, m.userData.tris, m.geometry.instanceCount]),
+    calls: i.calls, frameTris: i.triangles,
+  };
+  hud.textContent = `${tod} · ${qn} · ${crowd.userData.count} torcedores · torcida ${(crowd.userData.tris / 1e3).toFixed(0)}k tri · quadro ${(i.triangles / 1e3).toFixed(0)}k tri · ${i.calls} draws`;
+  window.__ready = true;
+  if (qs.get('live')) {
+    const clock = new THREE.Clock();
+    (function loop() {
+      t += Math.min(clock.getDelta(), 0.05);
+      controls.update();
+      stadium.update(0.016, t, exc, camera);
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    })();
+  }
+});
+</script>
+</body>
+</html>

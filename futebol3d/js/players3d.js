@@ -9,15 +9,24 @@
 // Cabelos (um InstancedMesh por estilo) e barba só desenham os jogadores que os usam
 // (instâncias compactadas; mesh.count = quantos usam). Nível de detalhe pela qualidade:
 // quality.grassDetail 0 (baixa) / 1 (média) / 2 (alta, ultra) muda a densidade das malhas.
+//
+// Uniforme: gola (kit.collar 'crew'|'v'|'polo'), listras nos punhos e meiões, laterais
+// (kit.panel), escudo do clube no peito (kit.club -> atlas de escudos desenhado com crestSVG),
+// patrocinador fictício (kit.sponsor -> atlas de letreiros), número nas costas com contorno
+// (kit.numberOutline) e número pequeno no calção. Tudo no mesmo material e nos mesmos
+// InstancedMesh: os atlas são texturas compartilhadas e o índice de cada jogador vai na
+// textura de dados, então o número de draw calls não muda. Na qualidade baixa a trama do
+// tecido (normal/rugosidade procedurais) fica desligada.
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { computePose, createPose, bonePoint } from './anim.js';
 import { PLAYER } from './config.js';
+import { teamById, crestSVG } from './teams.js';
 
 // ---------------------------------------------------------------- materiais (ids por vértice)
 const M = { SKIN: 0, SHIRT: 1, SLEEVE: 2, SHORTS: 3, SOCK: 4, TRIM: 5, BOOT: 6, HAIR: 7, EYEW: 8, IRIS: 9, LIPS: 10, BROW: 11, HAND: 12, FOREARM: 13, SOLE: 14, ACCENT: 15 };
 const HAIR = { bald: 0, short: 1, buzz: 2, curly: 3, long: 4, afro: 5, bun: 6 };
-const KW = 12;   // texels por jogador na textura de dados
+const KW = 15;   // texels por jogador na textura de dados
 // densidade das malhas por nível (0 baixa, 1 média, 2 alta/ultra)
 // F = segmentos das feições do rosto [largura, altura] (null = omitida)
 const LODS = [
@@ -296,36 +305,84 @@ function buildParts(L) {
 // ---------------------------------------------------------------- shader do corpo
 const VERT_DECL = /* glsl */`
 attribute float aMat; attribute vec3 aRest; attribute float aPid;
-varying float vMat; varying vec3 vRest; flat varying float vPid;
+uniform float uCount;
+varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 `;
 const FRAG_DECL = /* glsl */`
-uniform highp sampler2D uKit; uniform sampler2D uDigits;
-varying float vMat; varying vec3 vRest; flat varying float vPid;
+uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor;
+varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 vec4 K(int i) { return texelFetch(uKit, ivec2(i, int(vPid + 0.5)), 0); }
 float aa(float d) { float w = max(fwidth(d), 1e-4); return smoothstep(-w, w, d); }
+float band(float x, float c, float hw) { float w = max(fwidth(x), 1e-4); return smoothstep(-w, w, hw - abs(x - c)); }
+float inside(vec2 u) { return step(0.0, u.x) * step(u.x, 1.0) * step(0.0, u.y) * step(u.y, 1.0); }
+// número (1 ou 2 algarismos) centrado em c, altura h; mirror = visto de costas
+vec4 numAt(vec2 p, vec2 c, float h, bool mirror, float num, vec2 dpx, vec2 dpy, out float inBox) {
+  float nd = num >= 9.5 ? 2.0 : 1.0;
+  const float CROP = 0.74;                       // só o miolo da célula: algarismos mais juntos
+  float Wd = h * 0.6 * CROP * nd, sx = mirror ? -1.0 : 1.0;
+  float uu = sx * (p.x - c.x) / Wd + 0.5, vv = (p.y - c.y) / h + 0.5;
+  float dig = nd > 1.5 ? (uu < 0.5 ? floor(num / 10.0) : mod(num, 10.0)) : num;
+  vec2 gu = vec2((dig + (1.0 - CROP) * 0.5 + CROP * clamp(fract(uu * nd), 0.0, 1.0)) / 10.0, clamp(vv, 0.0, 1.0));
+  vec2 gx = vec2(sx * dpx.x / Wd * nd * CROP / 10.0, dpx.y / h), gy = vec2(sx * dpy.x / Wd * nd * CROP / 10.0, dpy.y / h);
+  inBox = inside(vec2(uu, vv)) * step(0.5, num);
+  return textureGrad(uDigits, gu, gx, gy);
+}
+// relevo a partir das derivadas da altura (igual ao bump do three, sem textura)
+vec3 kitBump(vec3 pos, vec3 n, vec2 dh, float fd) {
+  vec3 sx = normalize(dFdx(pos)), sy = normalize(dFdy(pos));
+  vec3 r1 = cross(sy, n), r2 = cross(n, sx);
+  float det = dot(sx, r1) * fd;
+  vec3 g = sign(det) * (dh.x * r1 + dh.y * r2);
+  return normalize(abs(det) * n - g);
+}
 `;
 const FRAG_COLOR = /* glsl */`
 float matRough = 0.82;
+float fabH = 0.0;
 {
   vec3 r = vRest;
-  // números (amostrados fora dos desvios para as derivadas valerem)
-  float num = floor(K(3).a + 0.5);
-  bool back = r.z < 0.0;
-  float h = back ? 0.2 : 0.085, cy = back ? 1.33 : 1.395, cx = back ? 0.0 : -0.075;
-  float nd = num >= 9.5 ? 2.0 : 1.0;
-  float gw = h * 0.6, Wd = gw * nd;
-  float uu = (back ? (cx - r.x) : (r.x - cx)) / Wd + 0.5, vv = (r.y - cy) / h + 0.5;
-  float dig = nd > 1.5 ? (uu < 0.5 ? floor(num / 10.0) : mod(num, 10.0)) : num;
-  vec2 gu = vec2((dig + clamp(fract(uu * nd), 0.0, 1.0)) / 10.0, clamp(vv, 0.0, 1.0));
-  vec2 gc = vec2(uu * nd / 10.0, vv);
-  vec4 dg = textureGrad(uDigits, gu, dFdx(gc), dFdy(gc));
-  float inBox = step(0.0, uu) * step(uu, 1.0) * step(0.0, vv) * step(vv, 1.0) * step(0.035, abs(r.z)) * step(0.5, num);
   int m = int(vMat + 0.5);
+  vec2 dpx = dFdx(r.xy), dpy = dFdy(r.xy);     // derivadas fora dos desvios
+  bool gk = K(1).a > 0.5;
+  float num = floor(K(3).a + 0.5);
+  // número das costas (grande, com contorno) e do calção (pequeno, perna esquerda)
+  float bIn; vec4 dg = numAt(r.xy, vec2(0.0, 1.33), 0.2, true, num, dpx, dpy, bIn);
+  bIn *= step(r.z, -0.035);
+  // (coordenadas locais da coxa; vSide > 0 = perna esquerda)
+  float sIn; vec4 ds = numAt(r.xy, vec2(0.012, -0.135), 0.052, false, num, dpx, dpy, sIn);
+  sIn *= step(0.03, r.z) * step(0.5, vSide);
+  // escudo no peito esquerdo (atlas 8 x 2 de células 128 px)
+  float crSlot = K(13).a;
+  const float CS = 0.084;
+  vec2 cu = vec2((r.x - 0.084) / CS + 0.5, (r.y - 1.408) / CS + 0.5);
+  float cIn = inside(cu) * step(0.03, r.z) * step(-0.5, crSlot);
+  float cs = max(crSlot, 0.0);
+  vec2 cuv = vec2((mod(cs, 8.0) + cu.x) / 8.0, (floor(cs / 8.0) + 1.0 - clamp(cu.y, 0.0, 1.0)) / 2.0);
+  vec4 crest = textureGrad(uCrest, cuv, vec2(dpx.x / CS / 8.0, -dpx.y / CS / 2.0), vec2(dpy.x / CS / 8.0, -dpy.y / CS / 2.0));
+  // patrocinador no centro do peito (atlas 2 x 4 de células 512 x 128)
+  float spSlot = K(12).a;
+  const float SW = 0.215, SH = 0.054;
+  vec2 su = vec2(r.x / SW + 0.5, (r.y - 1.283) / SH + 0.5);
+  float spIn = inside(su) * step(0.03, r.z) * step(-0.5, spSlot);
+  float ss = max(spSlot, 0.0);
+  vec2 suv = vec2((mod(ss, 2.0) + clamp(su.x, 0.0, 1.0)) / 2.0, (floor(ss / 2.0) + 1.0 - clamp(su.y, 0.0, 1.0)) / 4.0);
+  vec4 sp = textureGrad(uSponsor, suv, vec2(dpx.x / SW / 2.0, -dpx.y / SH / 4.0), vec2(dpy.x / SW / 2.0, -dpy.y / SH / 4.0));
+  // faixas de gola, punhos, meiões e laterais (larguras em metros, antisserrilhadas)
+  float collar = floor(K(5).a + 0.5);
+  float yv = 1.452 + abs(r.x) * 1.25;
+  float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, 1.53);
+  float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
+  float crew = aa(r.y - 1.501);
+  float polo = aa(r.y - 1.488) + band(r.x, 0.0, 0.011) * step(0.0, r.z) * aa(r.y - 1.43) * aa(1.5 - r.y);
+  float btn = step(0.0, r.z) * ((1.0 - aa(length(vec2(r.x, r.y - 1.475)) - 0.0038)) + (1.0 - aa(length(vec2(r.x, r.y - 1.448)) - 0.0038)));
+  float panel = aa(0.034 - abs(r.z)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
+  float pipe = (band(r.z, 0.034, 0.0035) + band(r.z, -0.034, 0.0035)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
+  float fk = 0.0;
   vec3 c = vec3(1.0);
   if (m == 0) { c = K(0).rgb; matRough = 0.5; }
   else if (m == 1) {
     int pat = int(K(0).a + 0.5);
-    vec3 c1 = K(1).rgb, c2 = K(5).rgb;
+    vec3 c1 = K(1).rgb, c2 = K(5).rgb, tr = K(6).rgb;
     float s = 0.0;
     if (pat == 1) s = aa(abs(fract(r.x / 0.1 + 0.5) - 0.5) - 0.25);
     else if (pat == 2) s = aa(abs(fract((r.y - 1.0) / 0.14) - 0.5) - 0.25);
@@ -333,42 +390,91 @@ float matRough = 0.82;
     else if (pat == 4) s = aa(0.055 - abs(r.x * 0.85 * sign(r.z + 1e-4) + (r.y - 1.24)));
     else if (pat == 5) s = aa(0.0045 - abs(fract(r.x / 0.04 + 0.5) - 0.5) * 0.04);
     c = mix(c1, c2, s);
-    c = mix(c, K(6).rgb, dg.g * inBox);
-    c = mix(c, K(7).rgb, dg.r * inBox);
+    c = mix(c, K(13).rgb, panel);
+    c = mix(c, tr, pipe);
+    // gola
+    if (collar > 1.5) { c = mix(c, tr, min(polo, 1.0)); c = mix(c, c1 * 0.6, min(btn, 1.0)); }
+    else if (collar > 0.5) { c = mix(c, K(0).rgb * 0.9, vIn * step(r.y, 1.53)); c = mix(c, tr, vBand); }
+    else c = mix(c, tr, crew);
+    // escudo (pré-multiplicado), patrocinador e número
+    c = c * (1.0 - crest.a * cIn) + crest.rgb * cIn;
+    float spo = step(0.5, K(7).a) * spIn;
+    c = mix(c, K(14).rgb, sp.g * spo);
+    c = mix(c, K(12).rgb, sp.r * spIn);
+    c = mix(c, K(14).rgb, dg.g * bIn);
+    c = mix(c, K(7).rgb, dg.r * bIn);
+    fk = 1.0;
   }
-  else if (m == 2) c = K(2).rgb;
-  else if (m == 3) c = K(3).rgb;
-  else if (m == 4) c = K(4).rgb;
-  else if (m == 5) c = K(6).rgb;
+  else if (m == 2) {
+    c = K(2).rgb;
+    c = mix(c, K(6).rgb, max(band(r.y, -0.109, 0.0045), band(r.y, -0.121, 0.0028)));
+    fk = 1.0;
+  }
+  else if (m == 3) {
+    c = K(3).rgb;
+    float side = aa(0.011 - abs(r.z)) * step(0.1, abs(r.x)) + aa(0.011 - abs(r.z)) * step(0.06, r.x * vSide) * step(r.y, 0.1);
+    c = mix(c, K(6).rgb, min(side, 1.0));
+    c = mix(c, K(14).rgb, ds.g * sIn);
+    c = mix(c, K(7).rgb, ds.r * sIn);
+    fk = 2.0;
+  }
+  else if (m == 4) {
+    c = K(4).rgb;
+    c = mix(c, K(6).rgb, max(band(r.y, -0.124, 0.006), band(r.y, -0.142, 0.003)));
+    fk = 3.0;
+  }
+  else if (m == 5) { c = K(6).rgb; fk = 1.0; }
   else if (m == 6) { c = K(9).rgb; matRough = 0.32; }
   else if (m == 7) { c = K(8).rgb; matRough = 0.7; }
   else if (m == 8) { c = vec3(0.78, 0.76, 0.72); matRough = 0.2; }
   else if (m == 9) { c = vec3(0.025, 0.018, 0.014); matRough = 0.15; }
   else if (m == 10) { c = K(0).rgb * vec3(0.74, 0.5, 0.48); matRough = 0.4; }
   else if (m == 11) { c = K(8).rgb * 0.75; matRough = 0.8; }
-  else if (m == 12) { bool gk = K(1).a > 0.5; c = gk ? K(10).rgb : K(0).rgb; matRough = gk ? 0.65 : 0.5; }
-  else if (m == 13) { bool gk = K(1).a > 0.5; c = gk ? K(2).rgb : K(0).rgb; matRough = gk ? 0.82 : 0.5; }
+  else if (m == 12) { c = gk ? K(10).rgb : K(0).rgb; matRough = gk ? 0.65 : 0.5; }
+  else if (m == 13) {
+    c = gk ? K(2).rgb : K(0).rgb; matRough = gk ? 0.82 : 0.5;
+    if (gk) { c = mix(c, K(6).rgb, band(r.y, -0.205, 0.006)); fk = 1.0; }
+  }
   else if (m == 14) { c = K(11).rgb * 0.6 + 0.02; matRough = 0.45; }
   else if (m == 15) { c = K(11).rgb; matRough = 0.3; }
+#ifdef KIT_FABRIC
+  // trama do tecido: malha (camisa), sarja (calção), canelado (meião); some com a distância
+  vec3 q = vRest;
+  float hMesh = smoothstep(-1.3, 0.3, cos(q.x * 820.0) + cos(q.y * 820.0) + cos(q.z * 820.0));
+  float hTwill = 0.5 + 0.5 * sin((q.x + q.y - q.z) * 1300.0);
+  float hRib = 0.5 + 0.5 * sin(atan(q.z, q.x) * 44.0);
+  float fh = fk < 0.5 ? 0.0 : fk < 1.5 ? hMesh : fk < 2.5 ? hTwill : hRib;
+  float fw = length(fwidth(q)) * 820.0;
+  fabH = fh * (1.0 - smoothstep(0.7, 2.0, fw));
+  c *= 1.0 - 0.07 * (1.0 - fabH) * step(0.5, fk) * (1.0 - smoothstep(0.7, 2.0, fw));
+  if (fk > 0.5) matRough = 0.86 - 0.1 * fabH;
+#endif
   diffuseColor.rgb = c;
 }
 `;
+const FRAG_NORMAL = /* glsl */`
+#ifdef KIT_FABRIC
+normal = kitBump(-vViewPosition, normal, vec2(dFdx(fabH), dFdy(fabH)) * 0.55, faceDirection);
+#endif
+`;
 
-function bodyMaterial(uniforms) {
+function bodyMaterial(uniforms, fabric) {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
+  if (fabric) mat.defines = { KIT_FABRIC: '' };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_DECL)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest;');
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest; vSide = float(gl_InstanceID) >= uCount ? -1.0 : 1.0;');
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FRAG_DECL)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_COLOR)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = matRough;')
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_NORMAL)
       // leve brilho de borda na pele (sheen barato)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);');
   };
-  mat.customProgramCacheKey = () => 'golaco-body-v2';
+  mat.customProgramCacheKey = () => 'golaco-body-v3' + (fabric ? '-f' : '');
   return mat;
 }
 
@@ -392,6 +498,51 @@ function digitAtlas() {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.NoColorSpace; t.anisotropy = 4;
   return t;
+}
+
+// atlas de escudos: 8 x 2 células de 128 px (RGBA pré-multiplicado, sRGB). Cada clube
+// entra na primeira vez que um uniforme dele aparece; o SVG é rasterizado de forma assíncrona.
+function crestAtlas() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 256;
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace; t.flipY = false; t.premultiplyAlpha = true; t.anisotropy = 4;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  return t;
+}
+function drawCrest(tex, slot, team) {
+  if (typeof Image === 'undefined') return;
+  const img = new Image();
+  img.onload = () => {
+    const g = tex.image.getContext('2d'), x = (slot % 8) * 128, y = Math.floor(slot / 8) * 128;
+    const h = 122, w = h * 200 / 224;
+    g.clearRect(x, y, 128, 128);
+    g.drawImage(img, x + (128 - w) / 2, y + 3, w, h);
+    tex.needsUpdate = true;
+  };
+  // versão simplificada do escudo (lê melhor nos ~7 cm do peito)
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(crestSVG(team, 72));
+}
+// atlas de patrocinadores: 2 x 4 células de 512 x 128; R = letras, G = contorno
+function sponsorAtlas() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 512;
+  const g = c.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, c.width, c.height);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.NoColorSpace; t.flipY = false; t.anisotropy = 4;
+  return t;
+}
+function drawSponsor(tex, slot, text) {
+  const g = tex.image.getContext('2d'), x = (slot % 2) * 512, y = Math.floor(slot / 2) * 128;
+  g.save();
+  g.beginPath(); g.rect(x, y, 512, 128); g.clip();
+  g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.fillRect(x, y, 512, 128);
+  g.font = 'italic 800 100px "Barlow Condensed", "Arial Narrow", "Roboto Condensed", Impact, sans-serif';
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+  const w = g.measureText(text).width, k = Math.min(1, 460 / Math.max(w, 1));
+  g.translate(x + 256, y + 68); g.scale(k, 1);
+  g.strokeStyle = '#00ff00'; g.lineWidth = 16; g.strokeText(text, 0, 0);
+  g.globalCompositeOperation = 'lighter'; g.fillStyle = '#ff0000'; g.fillText(text, 0, 0);
+  g.restore();
+  tex.needsUpdate = true;
 }
 
 // ---------------------------------------------------------------- sombras, anel e seta
@@ -454,8 +605,15 @@ export class PlayerMeshes {
     this.kitTex.minFilter = this.kitTex.magFilter = THREE.NearestFilter;
     this.kitTex.needsUpdate = true;
     this.digits = digitAtlas();
-    const uni = { uKit: { value: this.kitTex }, uDigits: { value: this.digits } };
-    this.material = bodyMaterial(uni);
+    this.crestTex = crestAtlas(); this.sponsorTex = sponsorAtlas();
+    this.crestSlots = new Map(); this.sponsorSlots = new Map();
+    const uni = { uKit: { value: this.kitTex }, uDigits: { value: this.digits }, uCrest: { value: this.crestTex },
+      uSponsor: { value: this.sponsorTex }, uCount: { value: count } };
+    this.material = bodyMaterial(uni, lod > 0);
+    // redesenha os letreiros quando a fonte condensada terminar de carregar
+    document.fonts?.load?.('italic 800 100px "Barlow Condensed"').then(() => {
+      for (const [txt, sl] of this.sponsorSlots) drawSponsor(this.sponsorTex, sl, txt);
+    }).catch(() => {});
     const shadows = quality ? quality.shadows !== false : true;
     this.group = new THREE.Group(); this.group.name = 'jogadores';
     this.parts = [];   // { mesh, bones: [b] ou [bL, bR], kind }
@@ -515,19 +673,42 @@ export class PlayerMeshes {
     put(2, kit.sleeves || kit.shirt, HAIR[look.hair] ?? 1);
     put(3, kit.shorts, number | 0);
     put(4, kit.socks, look.beard ? 1 : 0);
-    put(5, kit.second || kit.shirt);
-    put(6, kit.trim || kit.second || '#ffffff');
-    put(7, kit.number || '#ffffff');
+    const collar = { crew: 0, v: 1, polo: 2 }[kit.collar] ?? 0;
+    put(5, kit.second || kit.shirt, collar);
+    put(6, kit.trim || kit.second || '#ffffff', kit.panel ? 1 : 0);
+    put(7, kit.number || '#ffffff', kit.sponsorOutline ? 1 : 0);
     put(8, look.hairColor || '#1a120c');
     put(9, look.boots || BOOTS[seed]);
     put(10, kit.gloves || kit.trim || '#e8f040');
     put(11, look.bootAccent || ACC[seed]);
+    put(12, kit.sponsorColor || kit.number || '#ffffff', kit.sponsor ? this._sponsorSlot(kit.sponsor) : -1);
+    put(13, kit.panel || kit.shirt, kit.club ? this._crestSlot(kit.club) : -1);
+    put(14, kit.numberOutline || kit.trim || kit.second || '#111111');
     this.kitTex.needsUpdate = true;
     this.style[i] = HAIR[look.hair] ?? 1; this.beard[i] = look.beard ? 1 : 0;
     this._packHair();
     this.hs[i] = (look.height || PLAYER.height) / 1.8;
     this.bw[i] = 0.92 + 0.16 * (look.build ?? 0.5);
     this.gk[i] = isGK ? 1 : 0;
+  }
+
+  // vaga do escudo do clube no atlas (-1 = clube desconhecido)
+  _crestSlot(id) {
+    if (this.crestSlots.has(id)) return this.crestSlots.get(id);
+    const team = teamById(id);
+    if (!team || this.crestSlots.size >= 16) return -1;
+    const sl = this.crestSlots.size;
+    this.crestSlots.set(id, sl);
+    drawCrest(this.crestTex, sl, team);
+    return sl;
+  }
+  _sponsorSlot(text) {
+    if (this.sponsorSlots.has(text)) return this.sponsorSlots.get(text);
+    if (this.sponsorSlots.size >= 8) return -1;
+    const sl = this.sponsorSlots.size;
+    this.sponsorSlots.set(text, sl);
+    drawSponsor(this.sponsorTex, sl, text);
+    return sl;
   }
 
   // redistribui as instâncias de cabelo/barba: cada estilo desenha só os seus jogadores
@@ -663,7 +844,7 @@ export class PlayerMeshes {
     for (const p of this.parts) { p.mesh.geometry.dispose(); p.mesh.dispose(); }
     for (let st = 1; st <= 7; st++) { this.hair[st].geometry.dispose(); this.hair[st].dispose(); }
     for (const m of [this.blob, this.streaks, this.ring, this.arrow]) { m.geometry.dispose(); m.material.dispose(); m.dispose(); }
-    this.material.dispose(); this.kitTex.dispose(); this.digits.dispose();
+    this.material.dispose(); this.kitTex.dispose(); this.digits.dispose(); this.crestTex.dispose(); this.sponsorTex.dispose();
   }
 }
 
