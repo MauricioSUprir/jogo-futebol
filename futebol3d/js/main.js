@@ -46,7 +46,7 @@ function autoPreset() {
   const small = Math.min(screen.width, screen.height) < 500;
   // iOS não informa memória; celulares atuais aguentam bem o preset alto com
   // resolução dinâmica. Só aparelhos claramente fracos caem para média/baixa.
-  if (touch || small) return (navigator.deviceMemory && navigator.deviceMemory < 3) || cores <= 4 ? 'media' : 'alta';
+  if (touch || small) return (navigator.deviceMemory && navigator.deviceMemory < 3) || cores <= 4 ? 'baixa' : 'media';
   return cores >= 8 && mem >= 8 ? 'ultra' : 'alta';
 }
 let presetKey = settings.quality === 'auto' ? autoPreset() : settings.quality;
