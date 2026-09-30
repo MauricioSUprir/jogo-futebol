@@ -274,7 +274,7 @@ function handleEvents(g) {
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
       case 'card': hud.card(e.color, e.name); break;
-      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#22e07a' : null); break;
+      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); break;
       case 'goal': {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);

@@ -90,12 +90,12 @@ export class BallMesh {
     const shape = new THREE.Shape();
     shape.moveTo(0.5, -0.06); shape.lineTo(3.6, -0.05); shape.lineTo(3.6, -0.22); shape.lineTo(4.3, 0); shape.lineTo(3.6, 0.22); shape.lineTo(3.6, 0.05); shape.lineTo(0.5, 0.06);
     const ag = new THREE.ShapeGeometry(shape); ag.rotateX(-Math.PI / 2);
-    this.arrow = new THREE.Mesh(ag, new THREE.MeshBasicMaterial({ color: 0x22e07a, transparent: true, opacity: 0.6, depthWrite: false }));
+    this.arrow = new THREE.Mesh(ag, new THREE.MeshBasicMaterial({ color: 0x1ee37a, transparent: true, opacity: 0.6, depthWrite: false }));
     this.arrow.renderOrder = 3; this.arrow.visible = false;
     scene.add(this.arrow);
     // alvo no gol (cobrança direta)
     const rg = new THREE.RingGeometry(0.22, 0.32, 32);
-    this.reticle = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x22e07a, transparent: true, opacity: 0.85, depthTest: false, side: THREE.DoubleSide }));
+    this.reticle = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x1ee37a, transparent: true, opacity: 0.85, depthTest: false, side: THREE.DoubleSide }));
     this.reticle.renderOrder = 10; this.reticle.visible = false;
     scene.add(this.reticle);
   }

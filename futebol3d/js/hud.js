@@ -179,7 +179,7 @@ export class Hud {
       c.fillStyle = this.colors[i];
       c.strokeStyle = this.colors2[i];
       c.beginPath(); c.arc(X(p.x), Z(p.z), p === m.controlled ? 4.2 : 3, 0, Math.PI * 2); c.fill(); c.stroke();
-      if (p === m.controlled) { c.strokeStyle = '#22e07a'; c.lineWidth = 2; c.beginPath(); c.arc(X(p.x), Z(p.z), 6.5, 0, Math.PI * 2); c.stroke(); c.lineWidth = 1; }
+      if (p === m.controlled) { c.strokeStyle = '#1ee37a'; c.lineWidth = 2; c.beginPath(); c.arc(X(p.x), Z(p.z), 6.5, 0, Math.PI * 2); c.stroke(); c.lineWidth = 1; }
     }
     c.fillStyle = '#fff';
     c.beginPath(); c.arc(X(m.ball.p.x), Z(m.ball.p.z), 2.6, 0, Math.PI * 2); c.fill();

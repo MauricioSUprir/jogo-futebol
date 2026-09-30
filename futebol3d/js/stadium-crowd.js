@@ -17,8 +17,8 @@ import { buildFlags } from './stadium-crowd-flags.js';
 
 // quantidade por qualidade: anel inferior (malha mais detalhada) e superior
 const CFG = {
-  ultra: { lower: ['ultra', 15200], upper: ['media', 12700], scarf: 0.22, scarfSeg: 6, flags: 56 },
-  alta: { lower: ['alta', 14700], upper: ['media', 11500], scarf: 0.2, scarfSeg: 6, flags: 50 },
+  ultra: { lower: ['ultra', 13500], upper: ['media', 10000], scarf: 0.22, scarfSeg: 6, flags: 56 },
+  alta: { lower: ['alta', 13500], upper: ['media', 9000], scarf: 0.2, scarfSeg: 6, flags: 50 },
   media: { lower: ['media', 8600], upper: ['baixa', 3500], scarf: 0.12, scarfSeg: 4, flags: 34 },
   baixa: { lower: ['baixa', 5500], upper: ['baixa', 2000], scarf: 0.06, scarfSeg: 3, flags: 20 },
 };
@@ -168,8 +168,9 @@ export function buildCrowd(ctx) {
   const cfg = CFG[qk];
   const group = new THREE.Group();
   group.name = 'torcida';
-  const rng = mulberry(1234);
-  const seats = crowdSeats(1, rng);           // todas as vagas (pares de 1,1 m)
+  const rng = mulberry(ctx.rngSeed ?? 1234);
+  // todas as vagas (pares de 1,1 m); ctx.seats (mesmo formato) só nas páginas de teste
+  const seats = ctx.seats || crowdSeats(1, rng);
   const palH = clubPalette(homeColor), palA = clubPalette(awayColor);
 
   // ---- escolhe quem ocupa cada vaga: mais gente perto do meio-campo e nas
@@ -188,6 +189,7 @@ export function buildCrowd(ctx) {
   }
   const chosen = [[], []];
   for (let tier = 0; tier < 2; tier++) {
+    if (ctx.seats) { chosen[tier] = slots[tier]; continue; }
     const target = (tier ? cfg.upper : cfg.lower)[1];
     const sl = slots[tier];
     let lo = 0, hi = 5;
@@ -223,8 +225,8 @@ export function buildCrowd(ctx) {
       P[j * 8 + 2] = seats[i + 2] + tz * off + nz * rad;
       P[j * 8 + 3] = seats[i + 3] + rad;
       P[j * 8 + 4] = nx; P[j * 8 + 5] = nz;
-      P[j * 8 + 6] = rng();
-      const scarf = rng() < (o.ultra ? 0.55 : cfg.scarf) ? 1 : 0;
+      P[j * 8 + 6] = (seats[i + 6] + rng()) % 1;
+      const scarf = rng() < (o.ultra ? 0.55 : ctx.seats ? 0.5 : cfg.scarf) ? 1 : 0;
       const stander = rng() < 0.05 ? 1 : 0;
       const ultra = o.ultra && rng() < 0.9 ? 1 : 0;
       P[j * 8 + 7] = o.away + (seats[i + 7] >= 2 ? 2 : 0) + ultra * 4 + scarf * 8 + stander * 16;
@@ -295,14 +297,14 @@ export function buildCrowd(ctx) {
   }
 
   // ---- bandeiras
-  const flags = buildFlags({ U, seats, rng, count: cfg.flags, palH, palA, isNight });
-  group.add(flags);
+  if (!ctx.seats) group.add(buildFlags({ U, seats, rng, count: cfg.flags, palH, palA, isNight }));
 
   const people = chosen[0].length + chosen[1].length;
   group.userData.count = people;
   group.userData.quality = qk;
   group.userData.tris = group.children.reduce((a, m) => a + (m.userData.tris || 0), 0);
   group.userData.uniforms = uniforms;
+  group.userData.ctx = ctx;
   group.userData.debugPose = (k) => { uniforms.uDebugPose.value = k; };   // página de teste
   return group;
 }

@@ -112,7 +112,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   cw = max( cw, smoothstep( 0.5, 0.8, exc ) * step( 0.72, r3 ) * ( 1.0 - chant ) );
   float co = sin( t * ( 11.0 + r4 * 3.0 ) + r1 * 6.0 );
   Pose pcl = p;
-  pcl.armA = vec4( 1.05 + 0.15 * r2, -0.22 + 0.2 * co, 1.25, -1.3 ); pcl.armB = pcl.armA;
+  pcl.armA = vec4( 1.2 + 0.15 * r2, -0.12 + 0.14 * co, 1.7, -0.95 ); pcl.armB = pcl.armA;
   p = mixPose( p, pcl, cw * ( 1.0 - chant ) );
 
   // ------------------------------------------------ falta: protesto, braços agitando
@@ -130,7 +130,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   Pose pa = p;
   pa.body.x = max( p.body.x, step( 0.45, r4 ) );
   pa.body.z = 0.05;
-  pa.armA = vec4( 1.25 + 0.25 * r2, -0.22 + 0.22 * ca, 1.2, -1.3 ); pa.armB = pa.armA;
+  pa.armA = vec4( 1.35 + 0.25 * r2, -0.12 + 0.15 * ca, 1.65, -0.95 ); pa.armB = pa.armA;
   p = mixPose( p, pa, applause );
 
   // ------------------------------------------------ quase gol: mãos na cabeça
@@ -139,7 +139,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   ph.body.z = -0.06;
   ph.head.y = -0.12 + 0.3 * step( 0.7, r3 );
   ph.head.z = ( r7 - 0.5 ) * 0.5;
-  ph.armA = vec4( 2.5, 0.72, 2.35, -1.5 ); ph.armB = ph.armA;
+  ph.armA = vec4( 2.35, 0.85, 2.3, -1.45 ); ph.armB = ph.armA;
   if ( r8 < 0.2 ) ph.armB = vec4( 1.6, 0.15, 0.1, 0.0 );          // aponta para o lance
   p = mixPose( p, ph, onHead );
 
@@ -168,10 +168,10 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   } else if ( st < 0.42 ) {
     pg.armA = vec4( 2.8, 0.42, 0.2 + 1.2 * pump, 0.0 );              // punhos para cima
     pg.armB = vec4( 2.8, 0.42, 0.2 + 1.2 * ( 1.0 - pump ), 0.0 );
-  } else if ( st < 0.62 ) {
+  } else if ( st < 0.56 ) {
     // abraçado com os vizinhos, balançando junto
     float sw = sin( t * 3.0 + bk * 6.0 );
-    pg.armA = vec4( 0.5, 1.35, 0.45, -0.7 ); pg.armB = pg.armA;
+    pg.armA = vec4( 0.3, 1.15, 1.2, 1.2 ); pg.armB = pg.armA;
     pg.body.w = 0.2 * sw;
     pg.body.y = pow( max( sin( t * 5.5 + bk * 3.0 ), 0.0 ), 2.0 ) * 0.14 * ( 1.0 - smoothstep( 5.0, 9.0, tg ) );
   } else if ( st < 0.82 ) {
@@ -204,6 +204,7 @@ const vec3 J_SH = ${v3(J.shoulder)};
 const vec3 J_EL = ${v3(J.elbow)};
 const vec3 J_NECK = ${v3(J.neck)};
 const vec3 J_HIP = ${v3(J.hip)};
+const vec3 J_KNEE = ${v3(J.knee)};
 const vec3 J_HAND = ${v3([J.handTip[0], J.handTip[1] + 0.04, J.handTip[2]])};
 const vec3 J_HEAD = ${v3(J.head)};
 const vec3 J_HEADR = ${v3(J.headR)};
@@ -211,20 +212,25 @@ const float PELVIS_Y = ${J.pelvisY.toFixed(3)};
 
 // Leva um vértice da pose de referência para a pose P (espaço local do torcedor,
 // pés na origem). part: 1 tronco, 2 cabeça, 3 aba, 4/5 braço/antebraço +x,
-// 6/7 braço/antebraço -x, 8/9 coxas. seg = 1 se o braço é um segmento só (baixa).
+// 6/7 braço/antebraço -x, 8/9 coxas, 10/11 canelas. seg = 1 se o braço é um segmento só (baixa).
 void bodyXform( Pose P, vec3 rest, vec3 nrm, float part, float seg, out vec3 pos, out vec3 n ) {
   float st = P.body.x;
-  float mir = ( ( part > 5.5 && part < 7.5 ) || part > 8.5 ) ? -1.0 : 1.0;
+  float mir = ( ( part > 5.5 && part < 7.5 ) || ( part > 8.5 && part < 9.5 ) || part > 10.5 ) ? -1.0 : 1.0;
   vec3 r = rest, nr = nrm;
   r.x *= mir; nr.x *= mir;
   // pelve: sentado (0,47 m, encostado) ou de pé (0,93 m, um passo à frente)
   vec3 pel = vec3( 0.0, mix( 0.47, PELVIS_Y, st ) + P.body.y, mix( -0.04, 0.08, st ) );
   vec3 q, qn;
   if ( part > 7.5 ) {
+    // coxa: horizontal sentado, vertical de pé (encolhe no pulo); canela sempre caindo
     float a = mix( 1.5, 0.05, st ) + P.body.y * 1.6;
     mat3 R = rX( -a ) * rZ( 0.05 + 0.07 * ( 1.0 - st ) );
-    q = R * ( r - J_HIP ) + vec3( J_HIP.x, 0.0, 0.0 );
-    qn = R * nr;
+    if ( part < 9.5 ) { q = R * ( r - J_HIP ); qn = R * nr; }
+    else {
+      mat3 Rk = R * rX( a * 0.97 + P.body.y * 1.2 );
+      q = R * ( J_KNEE - J_HIP ) + Rk * ( r - J_KNEE ); qn = Rk * nr;
+    }
+    q += vec3( J_HIP.x, 0.0, 0.0 );
     q.x *= mir; qn.x *= mir;
     pos = pel + q; n = qn;
     return;
@@ -333,7 +339,7 @@ export const BODY_VERT_MAIN = /* glsl */`
       float sl = floor( aSecond.w * 255.0 / 32.0 + 0.5 );
       vColA = shirt; vColB = skin;
       style = sl < 0.5 ? 1.24 : sl < 1.5 ? 0.9 : 1.42;
-    } else { vColA = pants; vColB = pants; }
+    } else { vColA = pants; vColB = h11( seed * 5.1 ) < 0.4 ? vec3( 0.75 ) : vec3( 0.025 ); style = 0.13; }   // calça e tênis
     // oclusão: parte de baixo do corpo fica no escuro entre as fileiras
     float ao = mix( 0.42, 1.0, smoothstep( 0.35, 1.45, lp.y ) );
     vInfo = vec4( part, style, ao * ( 0.9 + 0.2 * h11( seed * 9.1 ) ), roofLit( aP.w, crowdPos.y, aN.xy ) * uDirScale );
@@ -378,7 +384,7 @@ export const SCARF_VERT_MAIN = /* glsl */`
     objectNormal = normalize( X * ln.x + vec3( 0.0, ln.y, 0.0 ) + F * ln.z );
     vRest = vec3( u, side, 0.0 );
     vColA = s2l( aShirt.rgb ); vColB = s2l( aSecond.rgb );
-    vInfo = vec4( 10.0, 0.0, 1.0, roofLit( aP.w, crowdPos.y, aN.xy ) * uDirScale );
+    vInfo = vec4( 20.0, 0.0, 1.0, roofLit( aP.w, crowdPos.y, aN.xy ) * uDirScale );
     if ( vis < 0.01 ) crowdPos = aP.xyz;
   }
 `;
@@ -402,7 +408,7 @@ export const FRAG_COLOR = /* glsl */`
   if ( part == 2.0 ) {
     vec3 hd = normalize( ( vRest - J_HEAD ) / J_HEADR );
     float hs = floor( style + 0.5 );
-    float thr = hs == 0.0 ? 0.3 : hs == 1.0 ? 0.42 : hs == 2.0 ? 0.2 : hs == 3.0 ? 9.0 : hs == 4.0 ? 0.3 : 0.0;
+    float thr = hs == 0.0 ? 0.12 : hs == 1.0 ? 0.3 : hs == 2.0 ? 0.05 : hs == 3.0 ? 9.0 : hs == 4.0 ? 0.25 : -0.1;
     float len = hs == 2.0 ? 1.4 : hs == 5.0 ? 0.9 : 0.5;
     float lvl = hd.y + max( -hd.z, 0.0 ) * len - max( hd.z, 0.0 ) * 0.3;
     float hair = smoothstep( thr - 0.06, thr + 0.06, lvl );
@@ -424,10 +430,10 @@ export const FRAG_COLOR = /* glsl */`
     if ( ps == 7.0 || ps == 0.0 ) m = step( 1.43, vRest.y ) * step( 0.5, ps / 7.0 );      // gola
     alb = mix( vColA, vColB, m );
     rough = 0.55;
-  } else if ( part >= 4.0 && part < 8.0 ) {
-    alb = mix( vColA, vColB, step( vRest.y, style ) );   // abaixo da manga: pele
-    rough = 0.6;
-  } else if ( part == 10.0 ) {
+  } else if ( part >= 4.0 && part < 12.0 ) {
+    alb = mix( vColA, vColB, step( vRest.y, style ) );   // abaixo da manga: pele; pés: tênis
+    rough = part < 8.0 ? 0.6 : 0.85;
+  } else if ( part == 20.0 ) {
     float u = vRest.x;
     alb = mix( vColA, vColB, step( 0.5, fract( u * 5.0 ) ) );
     alb *= 1.0 - 0.35 * ( step( u, 0.04 ) + step( 0.96, u ) );          // franjas

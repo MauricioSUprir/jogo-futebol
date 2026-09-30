@@ -202,7 +202,7 @@ const DEFS = [
     formation: '3-5-2', rating: 73, style: { press: 0.4, width: 0.7, tempo: 0.45, directness: 0.6 },
     colors: { primary: '#5fb4e8', secondary: '#1b2a3f' }, collar: 'v', sponsor: 'COSTAVIVA',
     crest: { shape: 'scallop', motif: 'stripes', emblem: 'palm', metal: 'silver', stars: 2, founded: 1927, initials: 'UBS',
-      field: '#5fb4e8', motifColor: '#ffffff', disc: '#1b2a3f', ink: '#ffffff', accent: '#f5c542', chief: '#1b2a3f', ribbon: '#1b2a3f', ribbonText: '#ffffff' },
+      field: '#5fb4e8', motifColor: '#ffffff', disc: '#1b2a3f', ink: '#ffffff', accent: '#f5c542', chief: '#1b2a3f', chiefText: '#ffffff', ribbon: '#1b2a3f', ribbonText: '#ffffff' },
     kits: { home: K('#5fb4e8', '#5fb4e8', '#1b2a3f', '#ffffff', 'stripes', '#ffffff', '#1b2a3f', '#1b2a3f', { numberOutline: '#ffffff', sponsorColor: '#1b2a3f', sponsorOutline: true }),
       away: K('#1b2a3f', '#1b2a3f', '#1b2a3f', '#1b2a3f', 'sash', '#5fb4e8', '#5fb4e8', '#ffffff', { sponsorColor: '#ffffff', collar: 'crew' }),
       gk: K('#c9e83a', '#c9e83a', '#c9e83a', '#c9e83a', 'plain', '#1a1a1a', '#1a1a1a', '#1a1a1a'),

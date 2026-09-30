@@ -21,7 +21,13 @@ for (const s of shots) {
   const query = s.slice(0, k), name = s.slice(k + 1);
   const t0 = Date.now();
   await page.goto(`http://localhost:${port}/tools/crowd-test.html?${query}&hud=${process.env.HUD ?? '1'}`, { timeout: 240000 });
-  await page.waitForFunction(() => window.__ready === true, null, { timeout: 240000, polling: 500 });
+  try {
+    await page.waitForFunction(() => window.__ready === true, null, { timeout: +(process.env.TIMEOUT ?? 240000), polling: 500 });
+  } catch (e) {
+    console.log('FALHOU', name, e.message.split('\n')[0]);
+    console.log(errors.join('\n').slice(0, 6000));
+    continue;
+  }
   const info = await page.evaluate(() => window.__info);
   const file = join(outDir, `crowd3d-${name}.png`);
   await page.screenshot({ path: file, timeout: 240000 });

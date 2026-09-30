@@ -25,7 +25,9 @@
 //
 // Onde fica a torcida (igual ao stadium-crowd.js): visitante = anel inferior atrás do
 // gol leste (x > A, |z| < 22); casa = todo o resto (fundo oeste + laterais + anel
-// superior leste). Sinalizadores da casa: 60% na "curva" oeste, 40% nas laterais.
+// superior leste). Sinalizadores da casa: 50% na "curva" oeste, o resto na lateral
+// norte (lado do gol marcado) e no anel superior leste. O lado sul (z < 0) fica livre
+// porque é onde a câmera de TV do jogo fica (camera.js).
 //
 // Custo: 5 malhas instanciadas (fumaça, núcleo dos sinalizadores, papel, flashes,
 // fogos) → no máximo 5 chamadas de desenho, e 0 quando nada está ativo (ficam
@@ -88,17 +90,22 @@ function smokeTexture() {
   g.fillStyle = '#000'; g.fillRect(0, 0, S, S);
   const rnd = mulberry(7);
   g.globalCompositeOperation = 'lighter';
-  for (let i = 0; i < 70; i++) {
-    const a = rnd() * Math.PI * 2, r = Math.pow(rnd(), 0.7) * S * 0.26;
+  for (let i = 0; i < 140; i++) {
+    const a = rnd() * Math.PI * 2, r = Math.pow(rnd(), 0.9) * S * 0.24;
     const x = S / 2 + Math.cos(a) * r, y = S / 2 + Math.sin(a) * r;
-    const rad = S * (0.08 + rnd() * 0.16);
+    const rad = S * (0.06 + rnd() * 0.16) * (1 - r / (S * 0.4));
     const gr = g.createRadialGradient(x, y, 0, x, y, rad);
-    const v = 0.10 + rnd() * 0.12;
+    const v = 0.05 + rnd() * 0.08;
     gr.addColorStop(0, `rgba(255,255,255,${v})`);
     gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr;
     g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill();
   }
+  // borda bem suave: multiplica por um degradê radial
+  g.globalCompositeOperation = 'multiply';
+  const rg = g.createRadialGradient(S / 2, S / 2, S * 0.08, S / 2, S / 2, S * 0.5);
+  rg.addColorStop(0, '#fff'); rg.addColorStop(0.55, '#aaa'); rg.addColorStop(1, '#000');
+  g.fillStyle = rg; g.fillRect(0, 0, S, S);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.NoColorSpace;
   return t;
@@ -143,8 +150,10 @@ void main() {
   float t = uTime - aA.w, life = aB.w;
   if ( t < 0.0 || t > life ) { ${HIDE} }
   float age = t / life;
-  vec3 p = aA.xyz + aB.xyz * ( 1.0 - exp( -0.9 * t ) ) / 0.9
-         + vec3( uWind.x, 0.0, uWind.y ) * t * 0.55 + vec3( 0.0, 0.22 * t, 0.0 );
+  float s = aC.w;
+  vec3 p = aA.xyz + aB.xyz * ( 1.0 - exp( -0.6 * t ) ) / 0.6
+         + vec3( uWind.x, 0.0, uWind.y ) * t * 0.5 + vec3( 0.0, 0.3 * t, 0.0 )
+         + vec3( sin( t * 0.8 + s * 31.0 ), 0.25 * sin( t * 1.1 + s * 7.0 ), cos( t * 0.7 + s * 17.0 ) ) * 0.7 * sqrt( t );
   float size = mix( aD.x, aD.y, 1.0 - ( 1.0 - age ) * ( 1.0 - age ) );
   float ang = aC.w * 6.2831 + t * ( aC.w - 0.5 ) * 0.6;
   vec2 q = position.xy;
@@ -155,7 +164,7 @@ void main() {
   gl_Position = projectionMatrix * mv;
   vCol = aC.rgb;
   vAlpha = smoothstep( 0.0, 0.5, t ) * ( 1.0 - smoothstep( 0.45, 1.0, age ) );
-  vGlow = aD.z * exp( -t * 0.9 );
+  vGlow = aD.z * exp( -t * 2.6 );
   vL = normalize( ( viewMatrix * vec4( uLightDir, 0.0 ) ).xyz );
 }`;
 const smokeFrag = /* glsl */`
@@ -179,8 +188,8 @@ void main() {
   vec3 col = vCol * ( uAmb + uSun * lit * ( 1.0 - 0.35 * thick ) );
   // brilho do sinalizador por baixo da fumaça
   float below = smoothstep( 0.6, -1.0, vQ.y ) * ( 1.0 - smoothstep( 0.2, 1.0, r2 ) );
-  col += uFlareCol * vGlow * ( 0.35 + below * 1.4 ) * thick;
-  float a = clamp( d * 1.6, 0.0, 1.0 ) * vAlpha * 0.82;
+  col += uFlareCol * vGlow * ( 0.1 + below * 1.1 ) * thick;
+  float a = clamp( d * 2.3, 0.0, 1.0 ) * vAlpha * 0.85;
   if ( a < 0.004 ) discard;
   gl_FragColor = vec4( col, a );
   #include <tonemapping_fragment>
@@ -205,7 +214,7 @@ void main() {
   vec3 p = aA.xyz + vec3( sin( t * 3.1 + s * 20.0 ), 0.0, cos( t * 2.7 + s * 11.0 ) ) * 0.12; // o torcedor agita o braço
   vec4 mv = viewMatrix * vec4( p, 1.0 );
   float size = aC.y * ( 0.8 + 0.35 * flick ) * mix( 0.55, 1.0, uNight );
-  size = max( size, -mv.z * 0.006 );
+  size = max( size, -mv.z * 0.011 );
   mv.xy += position.xy * size;
   gl_Position = projectionMatrix * mv;
   vQ = position.xy * 2.0;
@@ -220,7 +229,7 @@ void main() {
   float r2 = dot( vQ, vQ );
   float core = exp( -r2 * 60.0 ) * 7.0;
   float mid = exp( -r2 * 9.0 ) * 1.6;
-  float halo = exp( -sqrt( r2 ) * 4.0 ) * mix( 0.25, 0.8, uNight );
+  float halo = exp( -sqrt( r2 ) * 3.5 ) * mix( 0.35, 1.1, uNight );
   vec3 col = vCol * ( mid + halo ) + vec3( 1.0, 0.93, 0.85 ) * core;
   gl_FragColor = vec4( col * vI * ( 1.0 - smoothstep( 0.85, 1.0, sqrt( r2 ) ) ), 1.0 );
   #include <tonemapping_fragment>
@@ -253,9 +262,13 @@ void main() {
   p.x += sin( t * 2.3 + sd * 40.0 ) * 0.28 * fl;
   p.z += cos( t * 1.9 + sd * 23.0 ) * 0.28 * fl;
   float shrink = 1.0 - smoothstep( aD.w - 1.5, aD.w, t );
-  vec3 v = vec3( position.x * aD.x, position.y * aD.y, 0.0 ) * shrink;
+  // de longe, cresce até ~1,5 px para não sumir (vira o "brilho" de papel no ar);
+  // serpentina só engrossa, não estica
+  float grow = max( 1.0, length( cameraPosition - p ) * 0.0024 / max( aD.x, 0.05 ) );
+  bool strm = aD.y > 0.3;
+  vec3 v = vec3( position.x * aD.x * grow, position.y * aD.y * ( strm ? 1.0 : grow ), 0.0 ) * shrink;
   vec3 n = vec3( 0.0, 0.0, 1.0 );
-  if ( aD.y > 0.3 ) v.z += sin( position.y * 9.0 + t * 8.0 + sd * 30.0 ) * 0.06;   // serpentina ondulando
+  if ( strm ) v.z += sin( position.y * 9.0 + t * 8.0 + sd * 30.0 ) * 0.06;   // serpentina ondulando
   if ( t < tl ) {
     vec3 k = normalize( vec3( sin( sd * 91.0 ), cos( sd * 57.0 ), sin( sd * 33.0 + 1.0 ) ) );
     float ang = t * ( 5.0 + 9.0 * fract( sd * 13.0 ) );
@@ -306,15 +319,16 @@ void main() {
   float I;
   if ( kind < 0.5 ) {
     float ph = fract( uTime * aB.x + s * 17.0 );
-    I = smoothstep( 0.0, 0.012, ph ) * ( 1.0 - smoothstep( 0.012, 0.06, ph ) ) * 5.0;
+    I = smoothstep( 0.0, 0.015, ph ) * ( 1.0 - smoothstep( 0.015, 0.08, ph ) ) * 6.0;
     I *= step( fract( s * 11.3 ), e * 1.1 );            // no auge, quase todo mundo fotografa
   } else {
     I = 0.55 * smoothstep( 0.2, 0.6, e ) * mix( 0.35, 1.0, uNight );   // tela acesa filmando
   }
   if ( I < 0.01 ) { ${HIDE} }
-  vec4 mv = viewMatrix * vec4( aA.xyz, 1.0 );
-  float size = kind < 0.5 ? 0.45 : 0.16;
-  size = max( size, -mv.z * ( kind < 0.5 ? 0.0055 : 0.0026 ) );
+  vec3 wp = aA.xyz + normalize( cameraPosition - aA.xyz ) * 0.6;   // à frente do torcedor
+  vec4 mv = viewMatrix * vec4( wp, 1.0 );
+  float size = kind < 0.5 ? 0.5 : 0.16;
+  size = max( size, -mv.z * ( kind < 0.5 ? 0.009 : 0.0035 ) );
   mv.xy += position.xy * size;
   gl_Position = projectionMatrix * mv;
   vQ = position.xy * 2.0; vI = I; vKind = kind;
@@ -348,7 +362,7 @@ void main() {
     float t = uTime - aA.w - lag;
     if ( t < 0.0 || t > aB.w ) { ${HIDE} }
     float u = t / aB.w;
-    p = aA.xyz + aB.xyz * ( 1.0 - exp( -1.9 * t ) ) / 1.9 - vec3( 0.0, 1.6 * t * t, 0.0 );
+    p = aA.xyz + aB.xyz * ( 1.0 - exp( -1.6 * t ) ) / 1.6 - vec3( 0.0, 1.4 * t * t, 0.0 );
     float crackle = u > 0.62 ? step( 0.45, fract( t * 13.0 + aC.w * 9.0 ) ) : 1.0;
     I = pow( 1.0 - u, 1.4 ) * crackle * ( lag > 0.0 ? 0.4 - lag * 2.0 : 1.0 ) * 3.2;
   } else if ( kind < 1.5 ) {
@@ -363,10 +377,10 @@ void main() {
     float t = uTime - aA.w;
     if ( t < 0.0 || t > 0.35 ) { ${HIDE} }
     p = aA.xyz;
-    I = ( 1.0 - t / 0.35 ) * 1.4;
+    I = ( 1.0 - t / 0.35 ) * 0.9;
   }
   vec4 mv = viewMatrix * vec4( p, 1.0 );
-  size = max( size, -mv.z * 0.0035 * ( kind > 1.5 ? 8.0 : 1.0 ) );
+  size = max( size, -mv.z * 0.004 * ( kind > 1.5 ? 6.0 : 1.0 ) );
   mv.xy += position.xy * size;
   gl_Position = projectionMatrix * mv;
   vQ = position.xy * 2.0; vCol = aC.rgb; vI = I;
@@ -499,14 +513,12 @@ export class StadiumFX {
         s = 'E'; along = (rng() * 2 - 1) * 18; tier = 0;
         d = BOWL.lower.d0 + 1.5 + rng() * (Lend - BOWL.lower.d0 - 3);
       } else {
-        const curva = rng() < 0.6;
+        // o lado sul (z < 0) fica livre: é onde está a câmera de TV do jogo
+        const r = rng(), sg = goalSign || -1;
         tier = rng() < (tierPref ?? 0.3) ? 1 : 0;
-        if (curva) { s = 'W'; along = (rng() * 2 - 1) * 26; }
-        else {
-          s = rng() < 0.5 ? 'S' : 'N';
-          const sg = goalSign || -1;
-          along = sg * (8 + rng() * (A - 14));
-        }
+        if (r < 0.5) { s = 'W'; along = (rng() * 2 - 1) * (tier ? 30 : 21); }   // curva / ultras
+        else if (r < 0.85 || sg < 0) { s = 'N'; along = sg * (4 + rng() * (A - 10)); }
+        else { s = 'E'; along = (rng() * 2 - 1) * 28; tier = 1; }               // anel superior leste (casa)
         d = tier ? BOWL.upper.d0 + 1 + rng() * (Uend - BOWL.upper.d0 - 3) : BOWL.lower.d0 + 1.5 + rng() * (Lend - BOWL.lower.d0 - 3);
       }
       const p = standPoint(s, along, d);
@@ -550,13 +562,13 @@ export class StadiumFX {
       for (let j = 0; j < perSrc; j++) {
         const k = this.cursor.smoke++ % S.count;
         const birth = t0 + j * every + rng() * every * 0.5;
-        const life = 5 + rng() * 4;
+        const life = 6 + rng() * 4;
         const c = base.clone().lerp(new THREE.Color(0.5, 0.5, 0.5), 0.08 + rng() * 0.12).multiplyScalar(0.85 + rng() * 0.3);
         const out = 0.3 + rng() * 0.5; // derrama em direção ao campo
         S.a.aA.array.set([hand.x + (rng() - 0.5) * 0.3, hand.y + 0.1, hand.z + (rng() - 0.5) * 0.3, birth], k * 4);
-        S.a.aB.array.set([(rng() - 0.5) * 0.9 - sp.nx * out, 1.1 + rng() * 0.9, (rng() - 0.5) * 0.9 - sp.nz * out, life], k * 4);
+        S.a.aB.array.set([(rng() - 0.5) * 2.4 - sp.nx * out, 0.9 + rng() * 1.6, (rng() - 0.5) * 2.4 - sp.nz * out, life], k * 4);
         S.a.aC.array.set([c.r, c.g, c.b, rng()], k * 4);
-        S.a.aD.array.set([0.7 + rng() * 0.4, 4.2 + rng() * 3.5, this.isNight ? 1 : 0.5, 0], k * 4);
+        S.a.aD.array.set([0.6 + rng() * 0.5, 6 + rng() * 6, this.isNight ? 1 : 0.5, 0], k * 4);
       }
       this.until.smoke = Math.max(this.until.smoke, t0 + dur + 9.5);
       this.until.flares = Math.max(this.until.flares, t0 + dur);
@@ -567,7 +579,9 @@ export class StadiumFX {
     const C = this.conf;
     if (C) {
       const white = new THREE.Color(0.95, 0.95, 0.93), silver = new THREE.Color(0.8, 0.82, 0.86);
-      const palette = [cols[0], cols[0], cols[1], white, white, silver];
+      // papel preto some de longe: cor quase preta vira prateado
+      const dark = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b < 0.04;
+      const palette = [cols[0], cols[0], dark(cols[1]) ? silver : cols[1], white, white, silver];
       const n = C.count;
       // "chuva" em rajadas a partir da borda do anel superior (casa) ou do setor visitante
       const nSrc = side === 'away' ? 6 : 14;
@@ -577,7 +591,7 @@ export class StadiumFX {
           const along = (rng() * 2 - 1) * 16, d = lowerEnd() - 2 - rng() * 6;
           srcs.push({ ...standPoint('E', along, d), y0: lowerY(d) + 2.0, d0: d, up: true });
         } else {
-          const sd = rng() < 0.45 ? 'W' : (rng() < 0.5 ? 'S' : 'N');
+          const sd = rng() < 0.45 ? 'W' : 'N';
           const along = sd === 'W' ? (rng() * 2 - 1) * 28 : (goalSign || -1) * (6 + rng() * (BOWL.A - 12));
           const d = BOWL.upper.d0 + 0.3 + rng() * 2.5;
           srcs.push({ ...standPoint(sd, along, d), y0: upperY(d) + 1.9, d0: d, up: false });
@@ -630,9 +644,9 @@ export class StadiumFX {
         const sd = side === 'away' ? 'E' : ['W', 'N', 'S', 'W', 'N'][s % 5];
         const along = sd === 'W' || sd === 'E' ? (rng() * 2 - 1) * 30 : (rng() * 2 - 1) * 50;
         const p = standPoint(sd, along, BOWL.roofIn + rng() * (BOWL.roofOut - BOWL.roofIn));
-        const cy = BOWL.roofY + 16 + rng() * 14;
+        const cy = BOWL.roofY + 22 + rng() * 16;
         const col = fwCols[s % fwCols.length];
-        const speed = 9 + rng() * 5;
+        const speed = 20 + rng() * 8;
         const nRocket = 10, nFlash = 1;
         let spark = [0, 0, 0, 1];
         for (let i = 0; i < per; i++) {
@@ -648,7 +662,7 @@ export class StadiumFX {
               // direção uniforme na esfera
               const u = rng() * 2 - 1, a = rng() * Math.PI * 2, r = Math.sqrt(1 - u * u);
               const sp = speed * (0.85 + rng() * 0.3);
-              spark = [r * Math.cos(a) * sp, u * sp, r * Math.sin(a) * sp, 1.6 + rng() * 0.9];
+              spark = [r * Math.cos(a) * sp, u * sp, r * Math.sin(a) * sp, 1.9 + rng() * 1.0];
             }
             [vx, vy, vz, life] = spark;
           }
@@ -656,7 +670,7 @@ export class StadiumFX {
           W.a.aA.array.set([p.x, cy, p.z, tb], k * 4);
           W.a.aB.array.set([vx, vy, vz, life], k * 4);
           W.a.aC.array.set([c.r, c.g, c.b, rng()], k * 4);
-          W.a.aD.array.set([kind, lag, BOWL.roofY + 0.5, kind === 2 ? 3.5 : kind === 1 ? 0.35 : 0.45], k * 4);
+          W.a.aD.array.set([kind, lag, BOWL.roofY + 0.5, kind === 2 ? 9 : kind === 1 ? 0.5 : 0.8], k * 4);
         }
         this.until.fw = Math.max(this.until.fw, tb + 3);
       }

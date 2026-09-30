@@ -19,8 +19,8 @@ const errors = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') errors.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => errors.push('[pageerror] ' + e.message));
 for (const p of plan) {
-  await page.goto(`http://localhost:${port}/tools/fx-test.html?tod=${p.tod}&q=${p.q || 'alta'}&cam=${p.cam}&auto=0&hud=${p.hud ?? 0}${p.extra || ''}`, { timeout: 240000 });
-  await page.waitForFunction(() => window.__ready === true, null, { timeout: 240000 });
+  await page.goto(`http://localhost:${port}/tools/fx-test.html?tod=${p.tod}&q=${p.q || 'alta'}&cam=${p.cam}&auto=0&hud=${p.hud ?? 0}${p.extra || ''}`, { timeout: 500000 });
+  await page.waitForFunction(() => window.__ready === true, null, { timeout: 500000 });
   await page.evaluate(() => window.__adv(0.5));
   await page.evaluate((s) => window.__goal(s), p.side);
   let done = 0;

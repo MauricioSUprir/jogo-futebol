@@ -157,6 +157,7 @@ stadium.ready.then(() => {
     if (composer && frames !== 38) composer.render();
     else renderer.render(scene, camera);
     if (frames === 38) window.__stats = { calls: renderer.info.render.calls, triangles: renderer.info.render.triangles };
+    window.__frames = frames + 1;
     if (++frames === 40) { info(); window.__ready = true; }
     if (frames % 60 === 0) info();
     requestAnimationFrame(loop);

@@ -6,7 +6,7 @@
 // shader de vértice qual articulação o move:
 //   1 tronco   2 cabeça   3 aba do boné
 //   4 braço D  5 antebraço D   6 braço E  7 antebraço E
-//   8 coxa D   9 coxa E
+//   8 coxa +x  9 coxa -x  10 canela +x  11 canela -x
 // As medidas abaixo (J) são repetidas no GLSL (stadium-crowd-glsl.js).
 import * as THREE from 'three';
 
@@ -20,6 +20,7 @@ export const J = {
   handTip: [0.222, 0.815, 0.015],
   hip: [0.093, 0.93, 0.0],
   knee: [0.1, 0.5, 0.01],
+  ankle: [0.1, 0.06, 0.0],
 };
 
 class Builder {
@@ -136,7 +137,7 @@ export function buildBodyGeometry(lod = 'alta') {
   // ---- aba do boné (fica colapsada em quem não usa boné)
   if (!min) {
     const y = J.head[1] + 0.045, z0 = J.head[2] + 0.07, z1 = J.head[2] + 0.19;
-    B.plate([[-0.085, y, z0], [0.085, y, z0], [0.08, y - 0.02, z1], [-0.08, y - 0.02, z1]], 3, hi);
+    B.plate([[-0.085, y, z0], [0.085, y, z0], [0.08, y - 0.02, z1], [-0.08, y - 0.02, z1]], 3, false);
   }
 
   // ---- tronco (quadril → peito → ombros → pescoço)
@@ -171,31 +172,35 @@ export function buildBodyGeometry(lod = 'alta') {
     if (min) {
       // braço inteiro num segmento só (sem cotovelo)
       B.prism([
-        { y: S[1] + 0.02, x: sx(S), z: S[2], rx: 0.055, rz: 0.055 },
-        { y: H[1] + 0.03, x: sx(H), z: H[2], rx: 0.04, rz: 0.04 },
+        { y: S[1] + 0.02, x: sx(S), z: S[2], rx: 0.07, rz: 0.07 },
+        { y: H[1] + 0.03, x: sx(H), z: H[2], rx: 0.05, rz: 0.05 },
       ], 3, up, { a0: side > 0 ? 0 : Math.PI });
       continue;
     }
     const sides = hi ? 4 : 3, a0 = hi ? Math.PI / 4 : (side > 0 ? 0 : Math.PI);
     B.prism([
-      { y: S[1] + 0.03, x: sx(S), z: S[2], rx: 0.056, rz: 0.056 },
-      { y: E[1], x: sx(E), z: E[2], rx: 0.046, rz: 0.046 },
+      { y: S[1] + 0.03, x: sx(S), z: S[2], rx: 0.066, rz: 0.064 },
+      { y: E[1], x: sx(E), z: E[2], rx: 0.054, rz: 0.054 },
     ], sides, up, { a0 });
     B.prism([
-      { y: E[1] + 0.02, x: sx(E), z: E[2], rx: 0.044, rz: 0.044 },
-      { y: H[1], x: sx(H), z: H[2], rx: 0.036, rz: 0.03 },
+      { y: E[1] + 0.02, x: sx(E), z: E[2], rx: 0.052, rz: 0.05 },
+      { y: H[1], x: sx(H), z: H[2], rx: 0.042, rz: 0.034 },
     ], sides, fo, { a0, capBot: hi || mid });
   }
 
-  // ---- coxas (visíveis de pé e na primeira fila sentada)
+  // ---- pernas: coxa (gira no quadril) + canela (gira no joelho)
   if (!min) {
     for (const side of [1, -1]) {
-      const part = side > 0 ? 8 : 9;
-      const Hp = J.hip, K = J.knee;
+      const Hp = J.hip, K = J.knee, A = J.ankle;
+      const a0 = hi ? Math.PI / 4 : Math.PI / 2, sides = hi ? 4 : 3;
       B.prism([
-        { y: Hp[1], x: Hp[0] * side, z: Hp[2], rx: 0.078, rz: 0.08 },
-        { y: K[1], x: K[0] * side, z: K[2], rx: 0.06, rz: 0.062 },
-      ], hi ? 4 : 3, part, { a0: hi ? Math.PI / 4 : Math.PI / 2, capBot: hi });
+        { y: Hp[1], x: Hp[0] * side, z: Hp[2], rx: 0.088, rz: 0.09 },
+        { y: K[1] - 0.03, x: K[0] * side, z: K[2], rx: 0.066, rz: 0.07 },
+      ], sides, side > 0 ? 8 : 9, { a0 });
+      B.prism([
+        { y: K[1] + 0.02, x: K[0] * side, z: K[2], rx: 0.06, rz: 0.064 },
+        { y: A[1], x: A[0] * side, z: A[2] + 0.03, rx: 0.05, rz: 0.085 },
+      ], 3, side > 0 ? 10 : 11, { a0: Math.PI / 2 });
     }
   }
   return B.build();

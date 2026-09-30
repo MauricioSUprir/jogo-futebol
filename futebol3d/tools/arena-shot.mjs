@@ -18,7 +18,8 @@ for (const s of shots) {
   const [query, name] = s.split(':');
   const t0 = Date.now();
   await page.goto(`http://localhost:${process.env.PORT ?? 8795}/tools/stadium-test.html?${query}&hud=${process.env.HUD ?? '0'}`, { timeout: 240000 });
-  await page.waitForFunction(() => window.__ready === true, null, { timeout: 240000 });
+  try { await page.waitForFunction(() => window.__ready === true, null, { timeout: +(process.env.TO ?? 240000) }); }
+  catch (e) { console.log('TIMEOUT', name, errors.join('\n')); continue; }
   await page.waitForTimeout(Number(process.env.WAIT ?? 1500));
   const info = await page.evaluate(() => window.__info);
   const file = join(outDir, `arena-${name}.png`);

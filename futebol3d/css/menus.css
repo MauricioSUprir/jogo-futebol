@@ -548,3 +548,4 @@ kbd, .gm-root kbd { font: 600 .72em/1 var(--ui); display: inline-flex; align-ite
 .gm-top { border-bottom: 1px solid var(--line); padding-bottom: .9em; }
 .gm-top-title h1 { background: linear-gradient(180deg, #fff 40%, #c4d2ca); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .gm-logo-bar { background: linear-gradient(90deg, var(--lime), var(--lime-d) 55%, rgba(30, 227, 122, 0)); box-shadow: 0 0 .6em rgba(30, 227, 122, .35); }
+.gm-logo-c { padding-right: .08em; margin-right: -.08em; }
