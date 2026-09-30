@@ -6,6 +6,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
+import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
@@ -41,13 +43,15 @@ const touch = isTouchDevice();
 function autoPreset() {
   const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4;
   const small = Math.min(screen.width, screen.height) < 500;
-  if (touch || small) return mem >= 6 && cores >= 8 ? 'media' : 'baixa';
+  // iOS não informa memória; celulares atuais aguentam bem o preset alto com
+  // resolução dinâmica. Só aparelhos claramente fracos caem para média/baixa.
+  if (touch || small) return (navigator.deviceMemory && navigator.deviceMemory < 3) || cores <= 4 ? 'media' : 'alta';
   return cores >= 8 && mem >= 8 ? 'ultra' : 'alta';
 }
 let presetKey = settings.quality === 'auto' ? autoPreset() : settings.quality;
 let Q = QUALITY[presetKey];
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', stencil: false });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -85,10 +89,38 @@ function buildPost() {
     g.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), night ? 0.55 : 0.22, 0.45, night ? 0.82 : 0.92);
     comp.addPass(g.bloom);
   }
+  // oclusão de ambiente (contato dos pés, arquibancada com profundidade): só no PC
+  if (Q.ao && !touch) {
+    const ao = new GTAOPass(g.scene, g.camera, size.x, size.y);
+    ao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.4, thickness: 1.2, scale: 1.0, samples: 12 });
+    ao.blendIntensity = 0.85;
+    comp.addPass(ao);
+  }
+  if (Q.bloom) {
+    const night = g.stadium && g.stadium.isNight;
+    g.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), night ? 0.32 : 0.14, 0.45, night ? 0.97 : 0.98);
+    comp.addPass(g.bloom);
+  }
   comp.addPass(new OutputPass());
+  comp.addPass(new ShaderPass(GRADE));
   if (!Q.msaa) comp.addPass(new SMAAPass(size.x, size.y));
   g.composer = comp;
 }
+
+// Correção de cor de transmissão: contraste, saturação leve e vinheta.
+const GRADE = {
+  uniforms: { tDiffuse: { value: null }, uSat: { value: 1.08 }, uCon: { value: 1.06 }, uVig: { value: 0.22 } },
+  vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.); }',
+  fragmentShader: `uniform sampler2D tDiffuse; uniform float uSat, uCon, uVig; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv);
+      float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+      c.rgb = mix(vec3(l), c.rgb, uSat);
+      c.rgb = (c.rgb - 0.5) * uCon + 0.5;
+      vec2 d = vUv - 0.5; c.rgb *= 1.0 - uVig * dot(d, d) * 2.2;
+      gl_FragColor = vec4(clamp(c.rgb, 0.0, 1.0), c.a);
+    }`,
+};
 
 // ------------------------------------------------------------ áudio e menus
 const audio = new GameAudio();
@@ -450,10 +482,10 @@ function measure(g, dt) {
   g.fps = fps; g.frames = 0; g.fpsT = 0;
   if (window.__fps) window.__fps(fps);
   const old = dynScale;
-  if (fps < 50 && dynScale > 0.6) dynScale = Math.max(0.6, dynScale - 0.1);
+  if (fps < 45 && dynScale > 0.7) dynScale = Math.max(0.7, dynScale - 0.1);
   else if (fps > 58 && dynScale < 1) dynScale = Math.min(1, dynScale + 0.05);
   // auto: cai de preset se nem com resolução menor aguenta
-  if (settings.quality === 'auto' && fps < 40 && dynScale <= 0.6) {
+  if (settings.quality === 'auto' && fps < 38 && dynScale <= 0.7) {
     const order = ['ultra', 'alta', 'media', 'baixa'];
     const i = order.indexOf(presetKey);
     if (i < order.length - 1) { presetKey = order[i + 1]; dynScale = 0.85; applyQuality(true); return; }

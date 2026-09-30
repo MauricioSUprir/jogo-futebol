@@ -69,14 +69,17 @@ export class CameraRig {
       lx = tx; ly = 0; lz = b.z * 0.4;
       fov = portrait ? 58 : 36;
     } else {
-      // TV: lateral, alta, teleobjetiva; acompanha a bola com folga
-      const tx = clamp(b.x + (ctx.lead || 0) * 4, -HL + 12, HL - 12);
+      // TV dinâmica: lateral, acompanha a bola de perto (mais perto no celular)
+      const mobile = this.aspect > 1.2 && innerHeight < 560;
+      const tx = clamp(b.x + (ctx.lead || 0) * 5, -HL + 10, HL - 10);
+      const tz = clamp(b.z * 0.8, -26, 26);
       const zoomIn = ctx.zoom ?? 0;
-      px = tx * 0.9; py = 17.5 - zoomIn * 2; pz = -56 + zoomIn * 5;
-      lx = tx; ly = 0; lz = clamp(b.z * 0.7 + 1, -20, 22);
-      fov = (portrait ? 40 : 21) - zoomIn * 2;
-      // mais perto da lateral de baixo, abre um pouco
-      fov += clamp((-b.z - 10) / 24, 0, 1) * 4;
+      const dist = (mobile ? 30 : 36) - zoomIn * 4 + clamp((-tz - 5) / 20, 0, 1) * 4;
+      const h = (mobile ? 13.5 : 15.5) - zoomIn * 1.5;
+      px = tx * 0.94; py = h; pz = Math.max(tz - dist, -50);   // não entra na arquibancada
+      lx = tx; ly = 0.4; lz = tz + 2;
+      fov = (portrait ? 55 : mobile ? 33 : 30) - zoomIn * 2;
+      lam = 2.6;
     }
     const k = this.cine ? lam : lam;
     this.pos.x = damp(this.pos.x, px, k, dt); this.pos.y = damp(this.pos.y, py, k, dt); this.pos.z = damp(this.pos.z, pz, k, dt);

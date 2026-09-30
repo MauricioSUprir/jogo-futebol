@@ -23,7 +23,7 @@ export class Input {
     this.touchStick = { x: 0, y: 0, id: null };
     this.touchBtn = {};
     this.padIndex = null;
-    this.lastDevice = 'keyboard';
+    this.lastDevice = (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window) ? 'touch' : 'keyboard';
     this.enabled = false;
     this.onPause = null;
     this.onAny = null;
@@ -71,17 +71,19 @@ export class Input {
     const knob = document.createElement('div'); knob.className = 'tc-knob';
     base.appendChild(knob); zone.appendChild(base);
     root.appendChild(zone);
-    const R = 56;
+    let R = 60;
     const setKnob = (dx, dy) => { knob.style.transform = `translate(${dx}px, ${dy}px)`; };
     let ox = 0, oy = 0;
+    const home = () => { base.style.left = ''; base.style.top = ''; base.style.bottom = ''; };
     zone.addEventListener('pointerdown', (e) => {
       if (this.touchStick.id !== null) return;
       e.preventDefault();
       zone.setPointerCapture(e.pointerId);
       this.touchStick.id = e.pointerId;
       const r = zone.getBoundingClientRect();
+      R = base.offsetWidth * 0.42;
       ox = e.clientX; oy = e.clientY;
-      base.style.left = (e.clientX - r.left) + 'px'; base.style.top = (e.clientY - r.top) + 'px';
+      base.style.left = (e.clientX - r.left) + 'px'; base.style.top = (e.clientY - r.top - base.offsetHeight / 2) + 'px'; base.style.bottom = 'auto';
       base.classList.add('on');
       this.lastDevice = 'touch';
       this.onAny && this.onAny();
@@ -90,16 +92,22 @@ export class Input {
       if (e.pointerId !== this.touchStick.id) return;
       let dx = e.clientX - ox, dy = e.clientY - oy;
       const d = Math.hypot(dx, dy);
-      if (d > R) { ox += dx - dx / d * R; oy += dy - dy / d * R; dx = dx / d * R; dy = dy / d * R; }
-      const r = zone.getBoundingClientRect();
-      base.style.left = (ox - r.left) + 'px'; base.style.top = (oy - r.top) + 'px';
-      setKnob(dx, dy);
-      this.touchStick.x = dx / R; this.touchStick.y = -dy / R;
+      // a base acompanha o dedo quando ele passa do limite
+      if (d > R * 1.25) { ox += dx - dx / d * R * 1.25; oy += dy - dy / d * R * 1.25; const r = zone.getBoundingClientRect(); base.style.left = (ox - r.left) + 'px'; base.style.top = (oy - r.top - base.offsetHeight / 2) + 'px'; }
+      const k = Math.min(1, d / R);
+      const nx = d > 0 ? dx / d : 0, ny = d > 0 ? dy / d : 0;
+      setKnob(nx * Math.min(d, R), ny * Math.min(d, R));
+      // zona morta + curva suave
+      const m = k < 0.12 ? 0 : (k - 0.12) / 0.88;
+      this.touchStick.x = nx * m; this.touchStick.y = -ny * m;
+      // empurrou até a borda: corre (como no futebol de celular)
+      this.touchStick.sprint = d > R * 1.05;
+      base.classList.toggle('sprint', this.touchStick.sprint);
     });
     const end = (e) => {
       if (e.pointerId !== this.touchStick.id) return;
-      this.touchStick = { x: 0, y: 0, id: null };
-      setKnob(0, 0); base.classList.remove('on');
+      this.touchStick = { x: 0, y: 0, id: null, sprint: false };
+      setKnob(0, 0); base.classList.remove('on', 'sprint'); home();
     };
     zone.addEventListener('pointerup', end); zone.addEventListener('pointercancel', end);
 
@@ -164,7 +172,7 @@ export class Input {
     let sx = (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0);
     let sy = (k.has('up') ? 1 : 0) - (k.has('down') ? 1 : 0);
     if (sx && sy) { sx *= 0.7071; sy *= 0.7071; }
-    if (this.touchStick.id !== null) { sx = this.touchStick.x; sy = this.touchStick.y; }
+    if (this.touchStick.id !== null) { sx = this.touchStick.x; sy = this.touchStick.y; if (this.touchStick.sprint) b.sprint = true; }
     let rx = 0, ry = 0;
     if (pad) {
       const dz = (v) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);

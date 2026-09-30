@@ -8,6 +8,6 @@ const errs = [];
 p.on('console', m => { if (m.type() !== 'log') errs.push(m.type() + ': ' + m.text()); });
 p.on('pageerror', e => errs.push('pageerror: ' + e.message + '\n' + e.stack));
 p.on('requestfailed', r => errs.push('falhou: ' + r.url()));
-await p.goto(url); await p.waitForTimeout(3000);
+await p.goto(url); await p.waitForTimeout(4000); console.log('título:', await p.title(), '| menu:', await p.locator('.gm-root').count());
 console.log(errs.join('\n') || 'sem erros');
 await b.close();
