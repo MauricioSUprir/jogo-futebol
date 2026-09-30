@@ -32,7 +32,13 @@ function fail(err) {
   $('error').classList.remove('hidden');
   $('loading').classList.add('hidden');
 }
-window.addEventListener('error', (e) => { if (!window.__jz?.ready) fail(e.error || e.message); });
+// "Script error." sem detalhes vem de scripts de outra origem (ex.: o navegador embutido de apps
+// injeta os seus). Não é do jogo: só registra no console, sem derrubar o carregamento.
+window.addEventListener('error', (e) => {
+  if (window.__jz?.ready) return;
+  if (!e.error) { console.warn('erro externo ignorado:', e.message, e.filename); return; }
+  fail(e.error);
+});
 window.addEventListener('unhandledrejection', (e) => { if (!window.__jz?.ready) fail(e.reason); });
 
 // ---------------------------------------------------------------- carregamento
