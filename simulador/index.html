@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e0c">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>LANCE A LANCE · Simulador de partidas</title>
+<meta name="description" content="Simulador de partidas de futebol no navegador: a bolinha corre no campo, você acompanha e comanda táticas e substituições. Clubes fictícios.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<main id="app"></main>
+<section id="boot" class="screen" aria-label="Carregando">
+  <div class="brand"><span class="ball"></span><span>LANCE <em>A</em> LANCE</span></div>
+  <div class="loadbar"><i></i></div>
+  <p style="color:#98a69d;margin:0">Preparando o gramado…</p>
+</section>
+<noscript><p style="padding:24px">O LANCE A LANCE precisa de JavaScript ativado.</p></noscript>
+<script>
+  // Aviso se os módulos não carregarem (navegador muito antigo ou falha de rede)
+  window.__lalBootTimer = setTimeout(function () {
+    var b = document.getElementById('boot');
+    if (b) b.querySelector('p').textContent = 'Demorando mais que o normal… verifique a conexão ou atualize o navegador.';
+  }, 8000);
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

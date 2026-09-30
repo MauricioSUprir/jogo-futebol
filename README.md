@@ -21,6 +21,7 @@ Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 > - [`aviao/`](./aviao/) — **Céu do Rio**, simulador de voo de Cessna 172 sobre o Rio de Janeiro com relevo e imagem de satélite reais.
 > - [`marte/`](./marte/) — **Jezero**, jogo 3D de sobrevivência em Marte com relevo real da NASA.
 > - [`futebol3d/`](./futebol3d/) — **GOLAÇO**, futebol 3D 11 contra 11 com física real da bola, times fictícios, Copa e Liga.
+> - [`simulador/`](./simulador/) — **LANCE A LANCE**, simulador de partidas (a bolinha correndo no campo) com táticas, substituições e campeonato.
 > - [`legacy-total-match/`](./legacy-total-match/) — o jogo _Total Match_, preservado.
 
 ---
