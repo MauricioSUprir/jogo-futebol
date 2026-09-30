@@ -33,7 +33,7 @@ for (const p of plan) {
     const inf = await page.evaluate((n) => window.__adv(n), f - done);
     done = f;
     const file = join(out, `net-${p.cam}-s${p.shot + 1}-f${String(f).padStart(3, '0')}${p.night ? '-noite' : ''}.png`);
-    await page.screenshot({ path: file });
+    await page.screenshot({ path: file, timeout: 300000 });
     console.log(file, JSON.stringify(inf));
   }
 }

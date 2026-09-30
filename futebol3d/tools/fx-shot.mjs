@@ -22,7 +22,7 @@ for (const p of plan) {
   await page.goto(`http://localhost:${port}/tools/fx-test.html?tod=${p.tod}&q=${p.q || 'alta'}&cam=${p.cam}&auto=0&hud=${p.hud ?? 0}${p.extra || ''}`, { timeout: 500000 });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 500000 });
   await page.evaluate(() => window.__adv(0.5));
-  await page.evaluate((s) => window.__goal(s), p.side);
+  if (p.side === 'chance') await page.evaluate(() => window.__chance()); else await page.evaluate((s) => window.__goal(s), p.side);
   let done = 0;
   for (const a of p.at) {
     const inf = await page.evaluate((s) => window.__adv(s), a - done);

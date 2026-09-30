@@ -22,7 +22,8 @@
 <div id="hud"></div>
 <script type="module">
 // Teste da rede simulada: close no gol leste, chutes com a física real (ball.js).
-// ?cam=front|side|behind|tv|top &night=1 &hud=0 &auto=0 (sem laço automático)
+// ?cam=front|side|behind|tv|top &night=1 &hud=0 &auto=0 (sem laço automático) &legacy=1 (sem update)
+// &cp=x,y,z &ct=x,y,z &fov=
 // Teclas 1..7: chutes; R: reinicia. API p/ Playwright: __shot(k), __adv(frames), __info()
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -132,7 +133,8 @@ function frame(dt) {
   }
   ball.events.length = 0;
   const a = performance.now();
-  const o = goals.userData.update(dt, t, ball.p, ball.v);
+  // ?legacy=1: como o stadium.js de hoje (só impact(), sem update) → testa o modo de compatibilidade
+  const o = qs.get('legacy') === '1' ? { x: 0, y: 0, z: 0 } : goals.userData.update(dt, t, ball.p, ball.v);
   simMs += performance.now() - a; simFrames++;
   off.set(o.x, o.y, o.z);
   const q = goals.userData.netInfo().proxy[1];
@@ -153,7 +155,7 @@ function drawHud() {
     `sim ${f.simMsPerFrame} ms/quadro · montagem ${f.buildMs} ms · teclas 1–7 chutes`;
 }
 window.__shot = (k) => shot(k);
-window.__adv = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(dt); controls.update(); renderer.render(scene, camera); drawHud(); return info(); };
+window.__adv = (n, dt = 1 / 60) => { const lg = qs.get('legacy') === '1'; for (let i = 0; i < n; i++) { frame(dt); if (lg) renderer.render(scene, camera); } controls.update(); renderer.render(scene, camera); drawHud(); return info(); };
 window.__info = info;
 window.__reset = () => { simMs = 0; simFrames = 0; };
 addEventListener('keydown', (e) => { const k = +e.key; if (k >= 1 && k <= SHOTS.length) shot(k - 1); });

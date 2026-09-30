@@ -270,17 +270,25 @@ function standMaterial(ctx) {
           float gap = min( gu, 1.0 - gu );
           float nearF = 1.0 - smoothstep( 0.12, 0.3, fw );
           if ( nearF > 0.5 && gap < 0.05 ) discard;
-          float row = floor( dB / 0.8 );
-          float hs = bh( vec2( floor( su ), row * 1.37 ) );
-          float p;
-          if ( yB < 12.0 ) p = 0.5 + 0.47 * sin( S * 0.0873 + yB * 0.3 );        // ondas diagonais
-          else p = smoothstep( 14.5, 24.0, yB ) * 0.9 + 0.05;                         // degradê vertical
-          vec3 sc = hs < p ? uSeatB : uSeatA;
-          // de longe, média suave em vez do sorteio por cadeira (sem cintilação)
-          sc = mix( sc, mix( uSeatA, uSeatB, p ), smoothstep( 0.35, 0.9, fw ) );
+          // desenho nas cores do clube: anel inferior na cor secundária com duas
+          // faixas da principal; anel superior na principal com uma "onda" da secundária
+          float pB;
+          float rowL = floor( ( dB - ${f(L.d0)} ) / ${f(L.depth)} + 0.01 );
+          float aaR = clamp( fwidth( dB ) * 1.5, 0.02, 1.0 );
+          if ( yB < 12.0 ) {
+            float band = step( 7.0, rowL ) * step( rowL, 8.0 ) + step( 15.0, rowL ) * step( rowL, 15.0 );
+            pB = 1.0 - band;
+          } else {
+            float wave = 17.5 + 2.2 * sin( S * ${f(2 * Math.PI / 72)} ) + 1.2 * sin( S * ${f(2 * Math.PI / 23)} + 1.3 );
+            pB = 1.0 - smoothstep( wave - aaR * 8.0, wave + aaR * 8.0, yB );
+          }
+          vec3 sc = mix( uSeatA, uSeatB, pB );
+          // plástico: menos saturado e mais escuro que a cor pura do clube
+          float sl = dot( sc, vec3( 0.2126, 0.7152, 0.0722 ) );
+          sc = mix( vec3( sl ), sc, 0.8 ) * 0.62;
           float edge = smoothstep( 0.05, 0.14, gap );
-          diffuseColor.rgb = sc * mix( 0.45, 1.0, mix( 0.8, edge, nearF ) );
-          kRough = 0.38;
+          diffuseColor.rgb = sc * mix( 0.5, 1.0, mix( 0.8, edge, nearF ) );
+          kRough = 0.36;
         } else if ( kind > 1.5 && kind < 3.5 ) {
           // ---- piso e espelho das fileiras
           diffuseColor.rgb *= 0.82 + 0.3 * grime;
@@ -309,14 +317,16 @@ function standMaterial(ctx) {
           float hb = bh( vec2( box, 3.1 ) );
           float on = step( 0.14, hb );
           vec3 warm = mix( vec3( 1.0, 0.72, 0.45 ), vec3( 0.85, 0.9, 1.0 ), step( 0.8, hb ) );
-          // interior: teto claro, fundo com gente/mesas (faixas escuras)
-          float inside = 0.35 + 0.65 * smoothstep( 0.2, 0.95, hy ) + 0.5 * ( 1.0 - smoothstep( 0.0, 0.05, abs( hy - 0.88 ) ) );
-          float ppl = step( 0.55, bn( vec2( u * 1.6, 0.0 ) ) ) * step( 0.13, hy ) * step( hy, 0.5 );
-          inside *= 1.0 - 0.75 * ppl;
-          diffuseColor.rgb = mix( vec3( 0.07, 0.085, 0.1 ), vec3( 0.025 ), frame );
-          kRough = mix( 0.06, 0.45, frame );
-          kMetal = mix( 0.85, 0.6, frame );
-          kEmis += warm * inside * ( 0.35 + 0.9 * hb ) * on * ( 1.0 - frame ) * ( 0.05 + 1.3 * uNight );
+          // interior: linha de luz no teto, brilho quente difuso e silhuetas de gente
+          float ceil = 1.0 - smoothstep( 0.0, 0.035, abs( hy - 0.9 ) );
+          float lamps = ceil * ( 0.5 + 0.5 * step( 0.5, fract( u / 1.25 ) ) );
+          float glow = 0.1 + 0.3 * smoothstep( 0.15, 0.9, hy );
+          float ppl = step( 0.52, bn( vec2( u * 1.7, box ) ) ) * smoothstep( 0.12, 0.16, hy ) * ( 1.0 - smoothstep( 0.5, 0.56, hy + 0.08 * bn( vec2( u * 5.0, 1.0 ) ) ) );
+          float inside = ( glow + 2.2 * lamps ) * ( 1.0 - 0.85 * ppl );
+          diffuseColor.rgb = mix( vec3( 0.05, 0.06, 0.07 ), vec3( 0.02 ), frame );
+          kRough = mix( 0.05, 0.45, frame );
+          kMetal = mix( 0.9, 0.6, frame );
+          kEmis += warm * inside * ( 0.35 + 0.8 * hb ) * on * ( 1.0 - frame ) * ( 0.04 + 0.7 * uNight );
         } else if ( kind > 8.5 ) {
           // passarela dos camarotes: piso claro com linha de luz na borda
           diffuseColor.rgb *= 0.9 + 0.2 * grime;
@@ -443,7 +453,7 @@ function buildStructure(st, glass, samples, detail) {
 // corrimãos das escadas e dos vomitórios (geometria real, poucos triângulos)
 function buildRails(st, detail) {
   if (detail === 0) return;
-  const rail = new THREE.Color(0.66, 0.68, 0.72);
+  const rail = new THREE.Color(0.36, 0.37, 0.4);
   const Pt = (S, d, y) => { const p = ringPoint(S, d); return new THREE.Vector3(p.x, y, p.z); };
   const total = 4 * (BOWL.A + BOWL.B) + 2 * Math.PI * BOWL.rRef;
   for (const T of [BOWL.lower, BOWL.upper]) {

@@ -121,17 +121,13 @@ export function buildBodyGeometry(lod = 'alta') {
   const hi = lod === 'ultra', mid = lod === 'alta', lo = lod === 'media', min = lod === 'baixa';
 
   // ---- cabeça
-  if (min) B.blob(new THREE.OctahedronGeometry(1, 0), J.head, J.headR.map((v) => v * 1.12), 2);
-  else if (lo) {
-    // bipirâmide hexagonal arredondada (12 triângulos)
-    const [cx, cy, cz] = J.head, [rx, ry, rz] = J.headR;
-    const ring = [];
-    for (let k = 0; k < 6; k++) {
-      const a = (k / 6) * Math.PI * 2 + Math.PI / 6;
-      ring.push(B.v([cx + Math.cos(a) * rx * 1.05, cy, cz + Math.sin(a) * rz * 1.05], [Math.cos(a), 0, Math.sin(a)], 2));
-    }
-    const t = B.v([cx, cy + ry * 1.1, cz], [0, 1, 0], 2), b = B.v([cx, cy - ry * 1.05, cz], [0, -1, 0], 2);
-    for (let k = 0; k < 6; k++) { B.tri(ring[k], t, ring[(k + 1) % 6]); B.tri(ring[k], ring[(k + 1) % 6], b); }
+  if (min) {
+    // octaedro achatado em cima (menos "diamante"), 8 triângulos
+    const o = new THREE.OctahedronGeometry(1, 0);
+    const p = o.attributes.position;
+    for (let i = 0; i < p.count; i++) if (p.getY(i) > 0.5) p.setY(i, 0.62);
+    o.rotateY(Math.PI / 4);
+    B.blob(o, J.head, J.headR.map((v) => v * 1.18), 2);
   } else B.blob(new THREE.IcosahedronGeometry(1, 0), J.head, J.headR, 2);
 
   // ---- aba do boné (fica colapsada em quem não usa boné)

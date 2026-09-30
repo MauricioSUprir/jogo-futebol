@@ -8,7 +8,9 @@
 //   root.add(goals)
 //
 //   goals.userData.update(dt, time, ballPos, ballVel) -> ballOffset {x,y,z}
-//       Chamar TODO quadro (depois da física, antes de renderizar).
+//       Chamar TODO quadro (depois da física, antes de renderizar). Se não for chamada,
+//       a rede ainda anima os impactos de impact() sozinha (via onBeforeRender e U.uTime),
+//       mas sem a bola "afundar" nem encostar nela — por isso vale a pena ligar.
 //       dt       = segundos do quadro (é limitado internamente a 1/20 s)
 //       time     = relógio da cena (o mesmo de U.uTime)
 //       ballPos  = {x,y,z} posição da bola (pode ser null → só simula a rede)
@@ -28,11 +30,14 @@
 //
 //   goals.userData.netInfo()   // diagnóstico: { nodes, springs, awake:[bool,bool], steps }
 //
-// Custo: 2 panos de ~900 nós (teto+fundo contínuos 35×18 e duas laterais 11×12),
-// ~3,6 mil molas cada. Cada gol "dorme" quando a rede para (≈ 1–3 s depois do
-// último distúrbio); dormindo, o custo de CPU é só um teste de caixa com a bola, e a
-// geometria não é reenviada à GPU. Acordado: 120 Hz, 4–6 iterações (≈0,2 ms/quadro
-// por gol em JS) + reenvio de posições/normais (~1,8 mil vértices).
+// Custo: 2 panos de 894 nós (teto+fundo contínuos 35×18 e duas laterais 11×12),
+// 3285 molas cada (estruturais + cisalhamento, só de tração). Cada gol "dorme" quando
+// a rede para (≈ 3–3,7 s depois de um chute forte: impacto + 1–3 s de balanço);
+// dormindo, o custo de CPU é só um teste de caixa com a bola (~0,001 ms) e nada é
+// reenviado à GPU. Acordado: passos de 1/120 s, 4 iterações (3 na qualidade baixa),
+// normais recalculadas só no gol ativo; medido ≈0,6 ms/quadro por gol ativo num
+// contêiner lento e disputado (SwiftShader) — bem menos num PC/celular comum.
+// Montagem: ~0,15–0,3 s (a rede assenta sob a gravidade uma vez, com folga nas cordas).
 // O balanço leve do vento quando parada é feito no shader (custo zero de CPU).
 // ============================================================================
 import * as THREE from 'three';
@@ -42,7 +47,7 @@ import { mergeSimple } from './stadium-bowl.js';
 const R = BALL.radius;
 const H = 1 / 120;                 // passo da simulação do pano
 const GRAV = 9.81;
-const DAMP = 0.988;                // amortecimento por passo (ar + atrito das cordas)
+const DAMP = 0.985;                // amortecimento por passo (ar + atrito das cordas)
 const RC = 0.17;                   // raio de colisão bola↔nós (malha de simulação ≈ 22 cm)
 const Y_TOP = GOAL.height + 0.03;  // altura em que o teto da rede prende no travessão
 const HW = GOAL.halfWidth + GOAL.postRadius;
@@ -207,6 +212,25 @@ class NetCloth {
     this.bx = 0; this.by = -100; this.bz = 0; this.pbx = 0; this.pby = -100; this.pbz = 0;
   }
 
+  // normais suaves (média das faces) só deste pano
+  normals() {
+    const p = this.pos, n = this.nrm, t = this.tri;
+    n.fill(0);
+    for (let i = 0; i < t.length; i += 3) {
+      const a = t[i] * 3, b = t[i + 1] * 3, c = t[i + 2] * 3;
+      const ex = p[c] - p[b], ey = p[c + 1] - p[b + 1], ez = p[c + 2] - p[b + 2];
+      const fx = p[a] - p[b], fy = p[a + 1] - p[b + 1], fz = p[a + 2] - p[b + 2];
+      const nx = ey * fz - ez * fy, ny = ez * fx - ex * fz, nz = ex * fy - ey * fx;
+      n[a] += nx; n[a + 1] += ny; n[a + 2] += nz;
+      n[b] += nx; n[b + 1] += ny; n[b + 2] += nz;
+      n[c] += nx; n[c + 1] += ny; n[c + 2] += nz;
+    }
+    for (let i = 0; i < n.length; i += 3) {
+      const l = Math.hypot(n[i], n[i + 1], n[i + 2]) || 1;
+      n[i] /= l; n[i + 1] /= l; n[i + 2] /= l;
+    }
+  }
+
   wake() { if (!this.awake) { this.awake = true; this.awakeT = 0; } this.quiet = 0; }
 
   // Assenta a rede sob a gravidade (feito uma vez na montagem) e guarda a pose de repouso.
@@ -249,7 +273,7 @@ class NetCloth {
         p[a] += dx * c * wa; p[a + 1] += dy * c * wa; p[a + 2] += dz * c * wa;
         p[b] -= dx * c * wb; p[b + 1] -= dy * c * wb; p[b + 2] -= dz * c * wb;
       }
-      if (!collide) continue;
+      if (!collide || it < this.iters - 2) continue;   // colisão nas 2 últimas iterações
       for (let i = 0; i < n; i++) {
         if (inv[i] === 0) continue;
         const k = i * 3;
@@ -353,7 +377,7 @@ export function buildGoals(ctx) {
   const cloths = ranges.map((rg, gi) => {
     const [s0, s1] = springsBy[gi];
     const sp = L.springs.slice(s0, s1).map(([a, b, l, k]) => [a - rg.first, b - rg.first, l, k]);
-    const c = new NetCloth(gi === 0 ? -1 : 1, posArr.subarray(rg.first * 3, (rg.first + rg.count) * 3), L.nodes.slice(rg.first, rg.first + rg.count), sp, low ? 3 : 5);
+    const c = new NetCloth(gi === 0 ? -1 : 1, posArr.subarray(rg.first * 3, (rg.first + rg.count) * 3), L.nodes.slice(rg.first, rg.first + rg.count), sp, low ? 3 : 4);
     c.first = rg.first;
     c.settle();
     return c;
@@ -367,7 +391,18 @@ export function buildGoals(ctx) {
   ng.setAttribute('aFree', new THREE.BufferAttribute(freeArr, 1));
   ng.setIndex(L.tris);
   ng.computeVertexNormals();
-  ng.attributes.normal.setUsage(THREE.DynamicDrawUsage);
+  const nrmAttr = ng.attributes.normal;
+  nrmAttr.setUsage(THREE.DynamicDrawUsage);
+  // normais só da fatia do gol que se mexeu (triângulos em índices locais)
+  cloths.forEach((c, gi2) => {
+    const lo = c.first, hi = c.first + c.n, tri = [];
+    for (let i = 0; i < L.tris.length; i += 3) {
+      const a = L.tris[i];
+      if (a >= lo && a < hi) tri.push(a - lo, L.tris[i + 1] - lo, L.tris[i + 2] - lo);
+    }
+    c.tri = new Uint16Array(tri);
+    c.nrm = nrmAttr.array.subarray(lo * 3, hi * 3);
+  });
   ng.boundingSphere = new THREE.Sphere(new THREE.Vector3(), PITCH.halfL + 6);
   const netTex = netTexture();
   netTex.anisotropy = anisotropy;
@@ -497,7 +532,9 @@ diffuseColor.a = min( 1.0, diffuseColor.a * ( 1.0 + 1.3 * mipK ) );`);
   }
 
   const OM = 15, ZETA = 0.5;   // frequência (rad/s) e amortecimento da "mola" rede+bola
+  let calledThisFrame = false, fbT = null;
   function update(dt, time, bp, bv) {
+    calledThisFrame = true;
     dt = Math.min(Math.max(dt || 0, 0), 0.05);
     lastTime = time ?? lastTime + dt;
     offset.x = offset.y = offset.z = 0;
@@ -573,14 +610,15 @@ diffuseColor.a = min( 1.0, diffuseColor.a * ( 1.0 + 1.3 * mipK ) );`);
       }
       if (n >= 4) c.acc = 0;
       c.awakeT += dt;
-      if (c.maxMove < 0.0007) c.quiet += dt; else c.quiet = Math.max(0, c.quiet - dt * 0.5);
-      if (!px.on && (c.quiet > 0.5 || c.awakeT > 7)) { c.awake = false; c.acc = 0; }
-      dirty = true;
+      if (c.maxMove < 0.0011) c.quiet += dt; else c.quiet = Math.max(0, c.quiet - dt * 0.5);
+      if (!px.on && (c.quiet > 0.35 || c.awakeT > 6)) { c.awake = false; c.acc = 0; }
+      c.dirty = true; dirty = true;
     }
     if (bv) { pv.x = bv.x; pv.y = bv.y; pv.z = bv.z; pv.set = true; }
     if (dirty) {
       posAttr.needsUpdate = true;
-      ng.computeVertexNormals();
+      for (const c of cloths) if (c.dirty) { c.normals(); c.dirty = false; }
+      nrmAttr.needsUpdate = true;
     }
     return offset;
   }
@@ -649,6 +687,16 @@ vec3 transformed = aPole - vec3( 0.0, ( 1.0 - v ) * 0.36, 0.0 ) + dir * u * 0.46
   flagMesh.castShadow = false;
   flagMesh.name = 'bandeirinhas';
   group.add(flagMesh);
+
+  // Compatibilidade: se ninguém chamar update() no quadro, a rede ainda simula
+  // (sem colisão com a bola, só os impactos de impact()) usando o relógio U.uTime.
+  netMesh.onBeforeRender = () => {
+    const now = U.uTime.value;
+    if (calledThisFrame) { calledThisFrame = false; fbT = now; return; }
+    if (fbT === null || now < fbT) fbT = now;
+    const dt = now - fbT;
+    if (dt > 0) { fbT = now; update(dt, now, null, null); calledThisFrame = false; }
+  };
 
   group.userData.impact = impact;
   group.userData.update = update;

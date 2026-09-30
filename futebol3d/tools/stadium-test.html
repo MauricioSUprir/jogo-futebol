@@ -82,6 +82,9 @@ const stadium = buildStadium(renderer, scene, {
   stadiumName: qs.get('name') || undefined, wind: { x: 3, z: 1.5 },
 });
 window.__stadium = stadium;
+window.__three = { renderer, scene, camera };
+// &crowd=0 esconde a torcida (acelera as capturas no SwiftShader)
+if (qs.get('crowd') === '0') stadium.root.traverse((o) => { if (/torc|cachec/.test(o.name)) o.visible = false; });
 stadium.setScoreboard?.({ home: 'GOL', away: 'TUB', homeScore: 2, awayScore: 1, clock: "67'", homeColor: '#101010', awayColor: '#1f5fd6' });
 
 // pós-processamento como no main.js (bloom nas qualidades altas)

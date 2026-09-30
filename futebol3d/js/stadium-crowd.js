@@ -13,14 +13,14 @@ import { buildBodyGeometry, buildScarfGeometry, triCount } from './stadium-crowd
 import {
   BODY_VERT_HEAD, BODY_VERT_MAIN, SCARF_VERT_HEAD, SCARF_VERT_MAIN, FRAG_HEAD, FRAG_COLOR,
 } from './stadium-crowd-glsl.js';
-import { buildFlags } from './stadium-crowd-flags.js';
+import { buildFlags, buildBanners } from './stadium-crowd-flags.js';
 
 // quantidade por qualidade: anel inferior (malha mais detalhada) e superior
 const CFG = {
-  ultra: { lower: ['ultra', 13500], upper: ['media', 10000], scarf: 0.22, scarfSeg: 6, flags: 56 },
-  alta: { lower: ['alta', 13500], upper: ['media', 9000], scarf: 0.2, scarfSeg: 6, flags: 50 },
-  media: { lower: ['media', 8600], upper: ['baixa', 3500], scarf: 0.12, scarfSeg: 4, flags: 34 },
-  baixa: { lower: ['baixa', 5500], upper: ['baixa', 2000], scarf: 0.06, scarfSeg: 3, flags: 20 },
+  ultra: { lower: ['ultra', 13500], upper: ['media', 9500], scarf: 0.22, scarfSeg: 6, flags: 56, banners: 10 },
+  alta: { lower: ['alta', 13500], upper: ['media', 9000], scarf: 0.2, scarfSeg: 6, flags: 50, banners: 10 },
+  media: { lower: ['media', 8600], upper: ['baixa', 3500], scarf: 0.12, scarfSeg: 4, flags: 34, banners: 8 },
+  baixa: { lower: ['baixa', 5500], upper: ['baixa', 2000], scarf: 0.06, scarfSeg: 3, flags: 20, banners: 6 },
 };
 
 function qualityKey(q) {
@@ -161,6 +161,18 @@ function crowdMaterial(uniforms, vertHead, vertMain, key, side = THREE.FrontSide
   return mat;
 }
 
+// Passes com material de substituição (ex.: normais do GTAOPass) não conhecem os
+// atributos por instância: desenhariam milhares de cópias na origem. Pula esses passes.
+function skipOverride(mesh) {
+  let saved = 0;
+  mesh.onBeforeRender = (r, s, c, geo, mat) => {
+    if (mat !== mesh.material) { saved = geo.instanceCount; geo.instanceCount = 0; }
+  };
+  mesh.onAfterRender = (r, s, c, geo, mat) => {
+    if (mat !== mesh.material) geo.instanceCount = saved;
+  };
+}
+
 // ---------------------------------------------------------------- montagem
 export function buildCrowd(ctx) {
   const { U, quality, homeColor, awayColor, isNight } = ctx;
@@ -297,7 +309,12 @@ export function buildCrowd(ctx) {
   }
 
   // ---- bandeiras
-  if (!ctx.seats) group.add(buildFlags({ U, seats, rng, count: cfg.flags, palH, palA, isNight }));
+  if (!ctx.seats) {
+    group.add(buildFlags({ U, seats, rng, count: cfg.flags, palH, palA }));
+    group.add(buildBanners({ U, seats, rng, palH, palA, count: cfg.banners }));
+  }
+
+  for (const m of group.children) skipOverride(m);
 
   const people = chosen[0].length + chosen[1].length;
   group.userData.count = people;

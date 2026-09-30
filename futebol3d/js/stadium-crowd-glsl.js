@@ -56,6 +56,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   float applause = react( evM.w + dl, 3.4 + r6 * 1.5 );
   float foul = react( evM.z + dl, 3.0 + r7 );
   float exc = uExc;
+  bool dbg = uDebugPose > -0.5;
 
   // ------------------------------------------------ repouso
   float breath = sin( t * ( 1.1 + r3 * 0.5 ) + r1 * 30.0 );
@@ -79,111 +80,127 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   float thr = 0.42 + 0.5 * r1;
   float up = smoothstep( thr, thr + 0.1, exc );
   Pose pt = p;
-  pt.body.x = max( p.body.x, up );
-  pt.body.z = mix( p.body.z + 0.2 + 0.12 * r2, 0.08, up );
-  pt.head.y = 0.02;
-  if ( r6 < 0.45 ) { pt.armA = vec4( 0.8, -0.06, 2.4, -1.15 ); pt.armB = pt.armA; }  // mãos na boca
-  p = mixPose( p, pt, smoothstep( 0.3, 0.8, exc ) );
+  if ( exc > 0.3 || dbg ) {
+    pt.body.x = max( p.body.x, up );
+    pt.body.z = mix( p.body.z + 0.2 + 0.12 * r2, 0.08, up );
+    pt.head.y = 0.02;
+    if ( r6 < 0.45 ) { pt.armA = vec4( 0.8, -0.06, 2.4, -1.15 ); pt.armB = pt.armA; }  // mãos na boca
+    p = mixPose( p, pt, smoothstep( 0.3, 0.8, exc ) );
+  }
 
   // ------------------------------------------------ canto da organizada / jogo quente
   float beat = t * 2.1 + bk * 0.2;                         // ~126 bpm, quase em sincronia no bloco
   float bOn = pow( max( sin( beat * TAU ), 0.0 ), 2.0 );
   float chant = max( ultra, smoothstep( 0.7, 0.9, exc ) * step( 0.45, bk ) * step( 0.25, r3 ) );
   Pose pc = p;
-  pc.body.x = 1.0;
-  pc.body.y = ( 0.05 + 0.05 * ultra ) * bOn * step( 0.3, r4 );
-  pc.body.z = 0.02;
-  pc.head.y = -0.1;
-  if ( scarf > 0.5 && r6 < 0.75 ) {
-    pc.armA = vec4( 2.75, 0.52, 0.12, 0.0 ); pc.armB = pc.armA; pc.head.w = 1.0;
-  } else if ( r6 < 0.55 ) {
-    // soco no ar no ritmo
-    pc.armA = vec4( 2.2 + 0.5 * bOn, 0.28, 1.1 - 0.9 * bOn, 0.0 );
-    pc.armB = vec4( 0.25, 0.12, 0.5, -0.3 );
-  } else {
-    // palmas acima da cabeça
-    float cl = abs( sin( beat * 3.14159 ) );
-    pc.armA = vec4( 2.55, -0.02 + 0.3 * cl, 0.75, -1.25 ); pc.armB = pc.armA;
+  if ( chant > 0.001 || goal > 0.001 || dbg ) {
+    pc.body.x = 1.0;
+    pc.body.y = ( 0.05 + 0.05 * ultra ) * bOn * step( 0.3, r4 );
+    pc.body.z = 0.02;
+    pc.head.y = -0.1;
+    if ( scarf > 0.5 && r6 < 0.75 ) {
+      pc.armA = vec4( 2.75, 0.52, 0.12, 0.0 ); pc.armB = pc.armA; pc.head.w = 1.0;
+    } else if ( r6 < 0.55 ) {
+      // soco no ar no ritmo
+      pc.armA = vec4( 2.2 + 0.5 * bOn, 0.28, 1.1 - 0.9 * bOn, 0.0 );
+      pc.armB = vec4( 0.25, 0.12, 0.5, -0.3 );
+    } else {
+      // palmas acima da cabeça
+      float cl = abs( sin( beat * 3.14159 ) );
+      pc.armA = vec4( 2.55, -0.02 + 0.3 * cl, 0.75, -1.25 ); pc.armB = pc.armA;
+    }
+    p = mixPose( p, pc, chant * ( 1.0 - sad ) );
   }
-  p = mixPose( p, pc, chant * ( 1.0 - sad ) );
 
   // ------------------------------------------------ palmas espontâneas (por bloco)
   float cw = smoothstep( 0.8, 0.9, sin( t * 0.08 + bk * 30.0 ) ) * step( 0.3, r2 );
   cw = max( cw, smoothstep( 0.5, 0.8, exc ) * step( 0.72, r3 ) * ( 1.0 - chant ) );
   float co = sin( t * ( 11.0 + r4 * 3.0 ) + r1 * 6.0 );
   Pose pcl = p;
-  pcl.armA = vec4( 1.2 + 0.15 * r2, -0.12 + 0.14 * co, 1.7, -0.95 ); pcl.armB = pcl.armA;
-  p = mixPose( p, pcl, cw * ( 1.0 - chant ) );
+  if ( cw > 0.001 || dbg ) {
+    pcl.armA = vec4( 0.7 + 0.12 * r2, 0.02, 1.62, -0.78 + 0.45 * max( co, 0.0 ) ); pcl.armB = pcl.armA;
+    p = mixPose( p, pcl, cw * ( 1.0 - chant ) );
+  }
 
   // ------------------------------------------------ falta: protesto, braços agitando
   float w1 = sin( t * ( 6.0 + 3.0 * r2 ) + r1 * 9.0 );
   Pose pf = p;
-  pf.body.x = max( p.body.x, step( 0.3, r3 ) );
-  pf.body.z = 0.18;
-  pf.head.y = -0.05;
-  pf.armA = vec4( 2.0 + 0.45 * w1, 0.5 + 0.3 * w1, 0.5 + 0.4 * sin( t * 5.0 + r3 * 7.0 ), 0.0 );
-  pf.armB = r6 < 0.5 ? vec4( 1.6, 0.05, 0.05, 0.0 ) : vec4( 2.0 - 0.45 * w1, 0.5 - 0.3 * w1, 0.6, 0.0 );
-  p = mixPose( p, pf, foul );
+  if ( foul > 0.001 || dbg ) {
+    pf.body.x = max( p.body.x, step( 0.3, r3 ) );
+    pf.body.z = 0.18;
+    pf.head.y = -0.05;
+    pf.armA = vec4( 2.0 + 0.45 * w1, 0.5 + 0.3 * w1, 0.5 + 0.4 * sin( t * 5.0 + r3 * 7.0 ), 0.0 );
+    pf.armB = r6 < 0.5 ? vec4( 1.6, 0.05, 0.05, 0.0 ) : vec4( 2.0 - 0.45 * w1, 0.5 - 0.3 * w1, 0.6, 0.0 );
+    p = mixPose( p, pf, foul );
+  }
 
   // ------------------------------------------------ defesa do nosso goleiro: aplausos
   float ca = sin( t * ( 12.0 + 4.0 * r4 ) + r1 * 6.0 );
   Pose pa = p;
-  pa.body.x = max( p.body.x, step( 0.45, r4 ) );
-  pa.body.z = 0.05;
-  pa.armA = vec4( 1.35 + 0.25 * r2, -0.12 + 0.15 * ca, 1.65, -0.95 ); pa.armB = pa.armA;
-  p = mixPose( p, pa, applause );
+  if ( applause > 0.001 || dbg ) {
+    pa.body.x = max( p.body.x, step( 0.45, r4 ) );
+    pa.body.z = 0.05;
+    pa.armA = vec4( 0.95 + 0.25 * r2, 0.02, 1.7, -0.8 + 0.45 * max( ca, 0.0 ) ); pa.armB = pa.armA;
+    p = mixPose( p, pa, applause );
+  }
 
   // ------------------------------------------------ quase gol: mãos na cabeça
   Pose ph = p;
-  ph.body.x = max( p.body.x, step( 0.25, r1 ) );
-  ph.body.z = -0.06;
-  ph.head.y = -0.12 + 0.3 * step( 0.7, r3 );
-  ph.head.z = ( r7 - 0.5 ) * 0.5;
-  ph.armA = vec4( 2.35, 0.85, 2.3, -1.45 ); ph.armB = ph.armA;
-  if ( r8 < 0.2 ) ph.armB = vec4( 1.6, 0.15, 0.1, 0.0 );          // aponta para o lance
-  p = mixPose( p, ph, onHead );
+  if ( onHead > 0.001 || dbg ) {
+    ph.body.x = max( p.body.x, step( 0.25, r1 ) );
+    ph.body.z = -0.06;
+    ph.head.y = -0.12 + 0.3 * step( 0.7, r3 );
+    ph.head.z = ( r7 - 0.5 ) * 0.5;
+    ph.armA = vec4( 3.0, 0.95, 2.1, -1.6 ); ph.armB = ph.armA;
+    if ( r8 < 0.2 ) ph.armB = vec4( 1.6, 0.15, 0.1, 0.0 );          // aponta para o lance
+    p = mixPose( p, ph, onHead );
+  }
 
   // ------------------------------------------------ gol do adversário: desânimo
   Pose ps = p;
-  ps.body.x = stand0 * 0.4 * step( 0.75, r2 );
-  ps.body.y = 0.0;
-  ps.body.z = 0.42 + 0.12 * r3;
-  ps.head = vec4( p.head.x * 0.3, 0.5 + 0.1 * r4, p.head.z * 0.3, 0.0 );
-  if ( r6 < 0.4 ) { ps.armA = vec4( 1.05, 0.25, 2.55, -1.1 ); ps.armB = ps.armA; }   // mãos no rosto
-  else { ps.armA = vec4( 0.2, 0.06, 0.5, -0.2 ); ps.armB = ps.armA; }
-  p = mixPose( p, ps, sad );
+  if ( sad > 0.001 || dbg ) {
+    ps.body.x = stand0 * 0.4 * step( 0.75, r2 );
+    ps.body.y = 0.0;
+    ps.body.z = 0.42 + 0.12 * r3;
+    ps.head = vec4( p.head.x * 0.3, 0.5 + 0.1 * r4, p.head.z * 0.3, 0.0 );
+    if ( r6 < 0.4 ) { ps.armA = vec4( 1.05, 0.25, 2.55, -1.1 ); ps.armB = ps.armA; }   // mãos no rosto
+    else { ps.armA = vec4( 0.2, 0.06, 0.5, -0.2 ); ps.armB = ps.armA; }
+    p = mixPose( p, ps, sad );
+  }
 
   // ------------------------------------------------ gol: explosão
   float gph = t * ( 2.0 + 0.9 * r3 ) * 3.14159 + r1 * TAU;
   float pump = 0.5 + 0.5 * sin( gph * 2.0 );
   Pose pg = p;
-  pg.body = vec4( 1.0, pow( abs( sin( gph ) ), 1.4 ) * ( 0.14 + 0.2 * r4 ) * ( 1.0 - smoothstep( 4.0, 8.0, tg ) ), -0.1, 0.0 );
-  pg.head = vec4( ( r7 - 0.5 ) * 0.4, -0.35, ( r8 - 0.5 ) * 0.3, 0.0 );
-  float st = r6;
-  if ( scarf > 0.5 && st < 0.6 ) {
-    // gira o cachecol acima da cabeça
-    pg.armA = vec4( 2.95, 0.12, 0.15, 0.0 );
-    pg.armB = vec4( 2.5, 0.45, 0.4 + 1.0 * pump, 0.0 );
-    pg.head.w = 2.0;
-  } else if ( st < 0.42 ) {
-    pg.armA = vec4( 2.8, 0.42, 0.2 + 1.2 * pump, 0.0 );              // punhos para cima
-    pg.armB = vec4( 2.8, 0.42, 0.2 + 1.2 * ( 1.0 - pump ), 0.0 );
-  } else if ( st < 0.56 ) {
-    // abraçado com os vizinhos, balançando junto
-    float sw = sin( t * 3.0 + bk * 6.0 );
-    pg.armA = vec4( 0.3, 1.15, 1.2, 1.2 ); pg.armB = pg.armA;
-    pg.body.w = 0.2 * sw;
-    pg.body.y = pow( max( sin( t * 5.5 + bk * 3.0 ), 0.0 ), 2.0 ) * 0.14 * ( 1.0 - smoothstep( 5.0, 9.0, tg ) );
-  } else if ( st < 0.82 ) {
-    pg.armA = vec4( 1.85, 1.05, 0.2, 0.0 ); pg.armB = pg.armA;        // braços abertos, gritando
-    pg.head.y = -0.5;
-  } else {
-    float cl = abs( sin( t * 9.0 + r1 * 5.0 ) );                     // palmas acima da cabeça
-    pg.armA = vec4( 2.6, -0.02 + 0.3 * cl, 0.7, -1.25 ); pg.armB = pg.armA;
+  if ( goal > 0.001 || dbg ) {
+    pg.body = vec4( 1.0, pow( abs( sin( gph ) ), 1.4 ) * ( 0.14 + 0.2 * r4 ) * ( 1.0 - smoothstep( 4.0, 8.0, tg ) ), -0.1, 0.0 );
+    pg.head = vec4( ( r7 - 0.5 ) * 0.4, -0.35, ( r8 - 0.5 ) * 0.3, 0.0 );
+    float st = r6;
+    if ( scarf > 0.5 && st < 0.6 ) {
+      // gira o cachecol acima da cabeça
+      pg.armA = vec4( 2.95, 0.12, 0.15, 0.0 );
+      pg.armB = vec4( 2.5, 0.45, 0.4 + 1.0 * pump, 0.0 );
+      pg.head.w = 2.0;
+    } else if ( st < 0.42 ) {
+      pg.armA = vec4( 2.8, 0.42, 0.2 + 1.2 * pump, 0.0 );              // punhos para cima
+      pg.armB = vec4( 2.8, 0.42, 0.2 + 1.2 * ( 1.0 - pump ), 0.0 );
+    } else if ( st < 0.56 ) {
+      // abraçado com os vizinhos, balançando junto
+      float sw = sin( t * 3.0 + bk * 6.0 );
+      pg.armA = vec4( 0.3, 1.15, 1.2, 1.2 ); pg.armB = pg.armA;
+      pg.body.w = 0.2 * sw;
+      pg.body.y = pow( max( sin( t * 5.5 + bk * 3.0 ), 0.0 ), 2.0 ) * 0.14 * ( 1.0 - smoothstep( 5.0, 9.0, tg ) );
+    } else if ( st < 0.82 ) {
+      pg.armA = vec4( 1.85, 1.05, 0.2, 0.0 ); pg.armB = pg.armA;        // braços abertos, gritando
+      pg.head.y = -0.5;
+    } else {
+      float cl = abs( sin( t * 9.0 + r1 * 5.0 ) );                     // palmas acima da cabeça
+      pg.armA = vec4( 2.6, -0.02 + 0.3 * cl, 0.7, -1.25 ); pg.armB = pg.armA;
+    }
+    // depois da explosão, vira canto/palmas
+    pg = mixPose( pg, pc, smoothstep( 5.5, 8.0, tg - r2 * 2.0 ) * 0.8 );
+    p = mixPose( p, pg, goal );
   }
-  // depois da explosão, vira canto/palmas
-  pg = mixPose( pg, pc, smoothstep( 5.5, 8.0, tg - r2 * 2.0 ) * 0.8 );
-  p = mixPose( p, pg, goal );
 
   // ------------------------------------------------ depuração (página de teste)
   if ( uDebugPose > -0.5 ) {
