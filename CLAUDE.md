@@ -35,3 +35,18 @@ node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```
 O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
 (cache via curl) para o jsdelivr e o Google Fonts.
+
+## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
+- Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.
+- `js/engine.js` (motor), `teams.js`, `league.js`, `rng.js`, `commentary.js` **não podem depender de DOM** —
+  rodam nos testes em Node. Motor determinístico: toda aleatoriedade pelo RNG com semente.
+- Coordenadas: x = comprimento (±52,5), y = largura (±34); cada time tem `dir` ±1 (u = x·dir).
+- Ao mexer no motor, rodar `node tools/stats-report.mjs 200` e comparar com a tabela do README.
+
+### Testes (rodar antes de todo commit do simulador)
+```bash
+cd simulador
+node tools/engine-test.mjs
+# navegador (servidor: python3 -m http.server 8791 em simulador/):
+node tools/ui-shot.mjs --out /tmp/lal && node tools/e2e.mjs
+```

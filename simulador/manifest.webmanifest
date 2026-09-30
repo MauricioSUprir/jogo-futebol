@@ -1,0 +1,14 @@
+{
+  "name": "LANCE A LANCE — Simulador de partidas",
+  "short_name": "Lance a Lance",
+  "description": "Simulador de partidas de futebol com táticas e substituições. Clubes fictícios.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e0c",
+  "theme_color": "#0a0e0c",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
