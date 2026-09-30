@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste do estádio</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #fff; background: rgba(0,0,0,.45); padding: 6px 9px; border-radius: 6px; line-height: 1.5; }
+  #hud a { color: #9cf; margin-right: 6px; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+// Página de teste: ?tod=dia|tarde|noite &q=baixa|media|alta|ultra &cam=tv|goal|high|net|low
+// &exc=0..1 &react=goal|chance|foul|save &hud=0
+// Teclas: G gol (casa), A gol (visitante), C chance, F falta, S defesa, N bola na rede.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { QUALITY } from '../js/config.js';
+import { buildStadium } from '../js/stadium.js';
+
+const qs = new URLSearchParams(location.search);
+const tod = qs.get('tod') || 'noite';
+const qn = qs.get('q') || 'alta';
+const quality = QUALITY[qn] || QUALITY.alta;
+const camMode = qs.get('cam') || 'tv';
+
+const renderer = new THREE.WebGLRenderer({ antialias: quality.msaa, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio * quality.pixelRatio, quality.maxPR));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 2000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+const VIEWS = {
+  tv: { pos: [0, 24, -66], tgt: [0, 3, 4], fov: 44 },
+  goal: { pos: [-74, 11, 0], tgt: [0, 0, 0], fov: 38 },
+  high: { pos: [0, 80, -48], tgt: [0, 0, 2], fov: 50 },
+  net: { pos: [44, 1.9, -9], tgt: [53, 1.1, 0], fov: 45 },
+  low: { pos: [-20, 1.6, -30], tgt: [10, 6, 20], fov: 60 },
+};
+const v = VIEWS[camMode] || VIEWS.tv;
+if (qs.get('cp')) v.pos = qs.get('cp').split(',').map(Number);
+if (qs.get('ct')) v.tgt = qs.get('ct').split(',').map(Number);
+if (qs.get('fov')) v.fov = +qs.get('fov');
+camera.position.fromArray(v.pos);
+controls.target.fromArray(v.tgt);
+camera.fov = v.fov;
+camera.updateProjectionMatrix();
+
+const stadium = buildStadium(renderer, scene, {
+  quality, timeOfDay: tod, homeColor: qs.get('home') || '#c8102e', awayColor: qs.get('away') || '#1f5fd6',
+  stadiumName: qs.get('name') || undefined, wind: { x: 3, z: 1.5 },
+});
+window.__stadium = stadium;
+
+// jogadores de teste: cápsulas de 1,80 m
+const capGeo = new THREE.CapsuleGeometry(0.28, 1.8 - 0.56, 6, 16);
+capGeo.translate(0, 0.9, 0);
+const spots = [[0, 0], [-8, 5], [6, -10], [20, 12], [-30, -18], [46, 2], [50, -1], [-50, 0], [48.5, 3.4], [12, 30], [-12, -30], [30, -20], [44.5, -7.5]];
+spots.forEach(([x, z], i) => {
+  const m = new THREE.Mesh(capGeo, new THREE.MeshStandardMaterial({ color: i % 2 ? 0x1f5fd6 : 0xc8102e, roughness: 0.6 }));
+  m.position.set(x, 0, z);
+  m.castShadow = m.receiveShadow = true;
+  scene.add(m);
+});
+const ball = new THREE.Mesh(new THREE.SphereGeometry(0.11, 24, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 }));
+ball.position.set(2, 0.11, 1.5); ball.castShadow = true;
+scene.add(ball);
+
+const exc = parseFloat(qs.get('exc') ?? '0.3');
+const clock = new THREE.Clock();
+let t = 0, frames = 0;
+const react = qs.get('react');
+
+addEventListener('keydown', (e) => {
+  const k = e.key.toLowerCase();
+  if (k === 'g') stadium.crowdReact('goal', 'home');
+  if (k === 'a') stadium.crowdReact('goal', 'away');
+  if (k === 'c') stadium.crowdReact('chance', 'home');
+  if (k === 'f') stadium.crowdReact('foul', 'home');
+  if (k === 's') stadium.crowdReact('save', 'home');
+  if (k === 'n') stadium.netImpact(1, new THREE.Vector3(54.3, 1.0, 0.8), 1);
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+const hud = document.getElementById('hud');
+if (qs.get('hud') === '0') hud.style.display = 'none';
+function info() {
+  const i = renderer.info.render;
+  hud.innerHTML = `${tod} · ${qn} · ${stadium.crowdCount} torcedores · ${i.calls} draws · ${(i.triangles / 1000).toFixed(0)}k tri<br>` +
+    ['dia', 'tarde', 'noite'].map((x) => `<a href="?tod=${x}&q=${qn}&cam=${camMode}">${x}</a>`).join('') + ' | ' +
+    Object.keys(VIEWS).map((x) => `<a href="?tod=${tod}&q=${qn}&cam=${x}">${x}</a>`).join('') + ' | teclas G A C F S N';
+}
+
+stadium.ready.then(() => {
+  function loop() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    t += dt;
+    if (react && frames === 20) stadium.crowdReact(react, 'home');
+    if (qs.get('netimpact') && frames === 37) stadium.netImpact(1, new THREE.Vector3(54.2, 1.1, 0.6), 1);
+    stadium.update(dt, t, exc, camera);
+    controls.update();
+    renderer.render(scene, camera);
+    if (++frames === 40) { info(); window.__ready = true; }
+    if (frames % 60 === 0) info();
+    requestAnimationFrame(loop);
+  }
+  loop();
+});
+</script>
+</body>
+</html>

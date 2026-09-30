@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste de áudio</title>
+<style>
+  :root { color-scheme: dark; }
+  body { font: 14px system-ui, sans-serif; background: #10161c; color: #e6edf3; margin: 0; padding: 16px; }
+  h1 { font-size: 18px; margin: 0 0 12px; }
+  fieldset { border: 1px solid #2c3a47; border-radius: 8px; margin: 0 0 12px; padding: 8px 10px; }
+  legend { color: #8fb3cf; padding: 0 4px; }
+  button { background: #1f6f43; color: #fff; border: 0; border-radius: 6px; padding: 7px 10px; margin: 3px; cursor: pointer; font: inherit; }
+  button.alt { background: #2c4a66; }
+  button:active { filter: brightness(1.3); }
+  label { display: inline-flex; align-items: center; gap: 6px; margin: 4px 12px 4px 0; }
+  input[type=range] { width: 140px; }
+  #log { font: 12px ui-monospace, monospace; white-space: pre-wrap; background: #0a0e12; padding: 8px; border-radius: 6px; max-height: 180px; overflow: auto; }
+</style>
+</head>
+<body>
+<h1>GOLAÇO — teste de áudio</h1>
+<fieldset><legend>Contexto</legend>
+  <button id="unlock">unlock()</button>
+  <button class="alt" id="suspend">suspend()</button>
+  <button class="alt" id="resume">resume()</button>
+  <button class="alt" id="offline">render offline → WAV</button>
+</fieldset>
+<fieldset><legend>Volumes</legend>
+  <label>master <input type="range" id="vMaster" min="0" max="1" step="0.01" value="0.9"></label>
+  <label>torcida <input type="range" id="vCrowd" min="0" max="1" step="0.01" value="0.8"></label>
+  <label>efeitos <input type="range" id="vSfx" min="0" max="1" step="0.01" value="0.9"></label>
+</fieldset>
+<fieldset><legend>Clima — update(dt, {excitement, attackThreat})</legend>
+  <label>excitement <input type="range" id="ex" min="0" max="1" step="0.01" value="0.3"> <span id="exV">0.30</span></label>
+  <label>attackThreat <input type="range" id="th" min="0" max="1" step="0.01" value="0"> <span id="thV">0.00</span></label>
+  <label><input type="checkbox" id="chant"> chant()</label>
+</fieldset>
+<fieldset><legend>Torcida — crowd(kind, strength)</legend>
+  <label>strength <input type="range" id="cs" min="0" max="1" step="0.01" value="1"></label><br>
+  <span id="crowdBtns"></span>
+</fieldset>
+<fieldset><legend>Bola — kick(power, kind)</legend>
+  <label>power <input type="range" id="kp" min="0" max="1" step="0.01" value="0.7"></label><br>
+  <span id="kickBtns"></span>
+</fieldset>
+<fieldset><legend>Contato / apito</legend>
+  <label>strength <input type="range" id="hs" min="0" max="1" step="0.01" value="0.7"></label><br>
+  <span id="hitBtns"></span><br>
+  <span id="whBtns"></span>
+</fieldset>
+<div id="log"></div>
+
+<script type="module">
+import { GameAudio } from '../js/audio.js';
+
+const $ = (id) => document.getElementById(id);
+const audio = window.audio = new GameAudio();
+const log = (m) => { $('log').textContent = m + '\n' + $('log').textContent; };
+const val = (id) => parseFloat($(id).value);
+const btn = (parent, label, fn) => {
+  const b = document.createElement('button'); b.textContent = label;
+  b.onclick = () => { try { fn(); log(label); } catch (e) { log('ERRO ' + label + ': ' + e.message); throw e; } };
+  $(parent).appendChild(b);
+};
+
+$('unlock').onclick = () => { audio.unlock(); log('unlock() — estado: ' + (audio.ctx && audio.ctx.state)); };
+$('suspend').onclick = () => { audio.suspend(); log('suspend()'); };
+$('resume').onclick = () => { audio.resume(); log('resume()'); };
+const vols = () => audio.setVolumes({ master: val('vMaster'), crowd: val('vCrowd'), sfx: val('vSfx') });
+for (const id of ['vMaster', 'vCrowd', 'vSfx']) $(id).oninput = vols;
+$('chant').onchange = (e) => { audio.chant(e.target.checked); log('chant(' + e.target.checked + ')'); };
+
+for (const k of ['goal', 'ooh', 'save', 'boo', 'cheer', 'groan']) btn('crowdBtns', k, () => audio.crowd(k, val('cs')));
+for (const k of ['pass', 'shot', 'long', 'header', 'volley', 'chip', 'throw', 'gk']) btn('kickBtns', k, () => audio.kick(val('kp'), k));
+for (const k of ['bounce', 'post', 'net', 'tackle', 'bodyHit']) btn('hitBtns', k, () => audio[k](val('hs')));
+btn('hitBtns', 'catchBall', () => audio.catchBall());
+for (const k of ['short', 'foul', 'long', 'half', 'end']) btn('whBtns', 'apito ' + k, () => audio.whistle(k));
+
+// laço de update
+let last = performance.now();
+function frame(now) {
+  const dt = (now - last) / 1000; last = now;
+  $('exV').textContent = val('ex').toFixed(2); $('thV').textContent = val('th').toFixed(2);
+  audio.update(dt, { excitement: val('ex'), attackThreat: val('th') });
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- render offline (usado também pelo teste automático) ----------
+// roteiro: [tempo, função(a)] — o relógio do GameAudio é fixado em cada tempo
+const SCRIPT = [
+  [0.5, (a) => a.whistle('short')], [1.2, (a) => a.kick(0.4, 'pass')], [1.6, (a) => a.bounce(0.5)],
+  [2.0, (a) => a.kick(0.8, 'long')], [2.6, (a) => a.kick(0.5, 'header')], [3.0, (a) => a.tackle(0.8)],
+  [3.2, (a) => a.bodyHit(0.7)], [3.5, (a) => a.whistle('foul')], [4.5, (a) => a.kick(0.9, 'gk')],
+  [5.0, (a) => a.catchBall()], [5.5, (a) => a.kick(0.5, 'throw')], [6.0, (a) => a.kick(0.6, 'chip')],
+  [7.0, (a) => a.kick(1, 'shot')], [7.3, (a) => a.post(1)], [7.5, (a) => a.crowd('ooh', 1)],
+  [10, (a) => a.kick(0.9, 'volley')], [10.3, (a) => a.catchBall()], [10.4, (a) => a.crowd('save', 1)],
+  [12, (a) => a.crowd('boo', 1)], [14, (a) => a.crowd('groan', 1)], [15, (a) => a.chant(true)],
+  [17, (a) => a.crowd('cheer', 1)], [19, (a) => a.kick(1, 'shot')], [19.25, (a) => a.net(1)],
+  [19.3, (a) => a.crowd('goal', 1)], [22, (a) => a.whistle('long')], [23.5, (a) => a.chant(false)],
+  [25, (a) => a.whistle('half')], [27.5, (a) => a.whistle('end')],
+];
+window.renderOffline = async (dur = 30, sr = 48000) => {
+  const off = new OfflineAudioContext(2, Math.round(dur * sr), sr);
+  const a = new GameAudio();
+  a._clock = 0; a._attach(off); a._ensureBuffers(); a._ensureChant();
+  a.setVolumes({ master: 1, crowd: 1, sfx: 1 });
+  let si = 0; const dt = 1 / 30;
+  for (let t = 0; t < dur - 0.5; t += dt) {
+    a._clock = t;
+    // ameaça de ataque sobe antes do gol e dos chutes
+    const th = (t > 16 && t < 19.3) ? (t - 16) / 3.3 : (t > 5 && t < 7) ? 0.6 : 0;
+    a.update(dt, { excitement: t > 19.3 && t < 26 ? 1 : 0.35, attackThreat: th });
+    while (si < SCRIPT.length && SCRIPT[si][0] <= t) SCRIPT[si++][1](a);
+  }
+  const buf = await off.startRendering();
+  const L = buf.getChannelData(0), R = buf.getChannelData(1);
+  let peak = 0, sum = 0; const seg = []; const W = sr;
+  for (let i = 0; i < L.length; i++) {
+    const m = Math.max(Math.abs(L[i]), Math.abs(R[i])); if (m > peak) peak = m;
+    sum += L[i] * L[i] + R[i] * R[i];
+  }
+  // WAV 16 bits
+  const n = L.length, ab = new ArrayBuffer(44 + n * 4), v = new DataView(ab);
+  const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  ws(0, 'RIFF'); v.setUint32(4, 36 + n * 4, true); ws(8, 'WAVEfmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 2, true); v.setUint32(24, sr, true); v.setUint32(28, sr * 4, true);
+  v.setUint16(32, 4, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * 4, true);
+  for (let i = 0; i < n; i++) {
+    v.setInt16(44 + i * 4, Math.max(-1, Math.min(1, L[i])) * 32767, true);
+    v.setInt16(46 + i * 4, Math.max(-1, Math.min(1, R[i])) * 32767, true);
+  }
+  return { peak, rms: Math.sqrt(sum / (2 * n)), wav: new Blob([ab], { type: 'audio/wav' }) };
+};
+window.renderOfflineB64 = async (dur) => {
+  const r = await window.renderOffline(dur);
+  const bytes = new Uint8Array(await r.wav.arrayBuffer()); let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return { peak: r.peak, rms: r.rms, b64: btoa(s) };
+};
+$('offline').onclick = async () => {
+  log('renderizando…');
+  const r = await window.renderOffline();
+  log(`pico ${(20 * Math.log10(r.peak)).toFixed(2)} dBFS, RMS ${(20 * Math.log10(r.rms)).toFixed(2)} dBFS`);
+  const u = URL.createObjectURL(r.wav), el = document.createElement('a'); el.href = u; el.download = 'golaco-audio.wav'; el.click();
+};
+</script>
+</body>
+</html>
