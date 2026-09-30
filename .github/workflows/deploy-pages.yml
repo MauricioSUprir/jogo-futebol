@@ -43,6 +43,10 @@ jobs:
           mkdir -p _site/marte
           cp -r marte/. _site/marte/
           rm -rf _site/marte/tools
+          # GOLAÇO (futebol 3D) fica em /futebol3d/
+          mkdir -p _site/futebol3d
+          cp -r futebol3d/. _site/futebol3d/
+          rm -rf _site/futebol3d/tools
           # Céu do Rio (simulador de voo) fica em /aviao/
           mkdir -p _site/aviao
           cp -r aviao/. _site/aviao/
@@ -50,7 +54,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match.
-          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/ e /aviao/.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/ e /futebol3d/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment

@@ -20,6 +20,7 @@ Sugestões de roteiro via **Claude API** (chamada só no servidor). Timezone
 > - [`financas-casa/`](./financas-casa/) — **NEXO**, painel de finanças da casa.
 > - [`aviao/`](./aviao/) — **Céu do Rio**, simulador de voo de Cessna 172 sobre o Rio de Janeiro com relevo e imagem de satélite reais.
 > - [`marte/`](./marte/) — **Jezero**, jogo 3D de sobrevivência em Marte com relevo real da NASA.
+> - [`futebol3d/`](./futebol3d/) — **GOLAÇO**, futebol 3D 11 contra 11 com física real da bola, times fictícios, Copa e Liga.
 > - [`legacy-total-match/`](./legacy-total-match/) — o jogo _Total Match_, preservado.
 
 ---
