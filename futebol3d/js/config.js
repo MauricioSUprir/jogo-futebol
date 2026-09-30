@@ -116,10 +116,11 @@ export const FORMATIONS = {
 
 // Presets de qualidade gráfica.
 export const QUALITY = {
-  baixa: { label: 'Baixa', pixelRatio: 0.75, maxPR: 1,   shadows: false, shadowSize: 1024, crowd: 0.30, post: false, bloom: false, msaa: false, grassDetail: 0, anisotropy: 2 },
-  media: { label: 'Média', pixelRatio: 1.0,  maxPR: 1.25, shadows: true,  shadowSize: 2048, crowd: 0.60, post: false, bloom: false, msaa: true,  grassDetail: 1, anisotropy: 4 },
-  alta:  { label: 'Alta',  pixelRatio: 1.0,  maxPR: 1.75, shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true,  grassDetail: 2, anisotropy: 8 },
-  ultra: { label: 'Ultra', pixelRatio: 1.0,  maxPR: 3,    shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true,  grassDetail: 2, anisotropy: 16 },
+  // pixelRatio = fração da densidade da tela; maxPR limita a densidade (celular 3x → até maxPR)
+  baixa: { label: 'Baixa', pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 0, anisotropy: 4 },
+  media: { label: 'Média', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 2048, crowd: 0.70, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 8 },
+  alta:  { label: 'Alta',  pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
+  ultra: { label: 'Ultra', pixelRatio: 1.0, maxPR: 3,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
 };
 
 export const DIFFICULTY = {

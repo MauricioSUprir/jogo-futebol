@@ -123,40 +123,47 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 
 .hud-radar { position: absolute; left: 50%; bottom: calc(.9em + var(--safe-b)); transform: translateX(-50%); width: 13em; height: 8.4em; border-radius: .35em; }
 
-/* ------------------------------------------------------------ toque */
-#touch { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-size: clamp(11px, calc(1.3vh + .55vw), 22px); }
-.tc-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 78%; pointer-events: auto; touch-action: none; }
-.tc-base { position: absolute; left: 22%; top: 62%; width: 7.5em; height: 7.5em; margin: -3.75em 0 0 -3.75em; border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.03)); border: .15em solid rgba(255,255,255,.22); transition: opacity .2s; opacity: .55; }
-.tc-base.on { opacity: 1; }
-.tc-knob { position: absolute; left: 50%; top: 50%; width: 3.2em; height: 3.2em; margin: -1.6em 0 0 -1.6em; border-radius: 50%;
-  background: rgba(200,255,46,.85); box-shadow: 0 0 1.2em rgba(200,255,46,.45); }
-.tc-pad { position: absolute; right: calc(.8em + var(--safe-r)); bottom: calc(.8em + var(--safe-b)); width: 21.5em; height: 16.5em; pointer-events: none; }
-.tc-btn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; border: .14em solid rgba(255,255,255,.35);
-  background: rgba(10,20,40,.55); color: #fff; font: 700 .95em/1 var(--disp); letter-spacing: .03em; text-transform: uppercase; width: 4.6em; height: 4.6em;
-  display: grid; place-items: center; overflow: hidden; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: transform .08s, background .08s; }
-.tc-btn span { position: relative; z-index: 1; text-align: center; padding: 0 .2em; }
-.tc-btn .tc-charge { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--charge, 0) * 100%); background: rgba(200,255,46,.55); }
-.tc-btn.on { transform: scale(.92); background: rgba(200,255,46,.35); border-color: var(--lime); }
-.tc-btn.off { opacity: .25; }
-.tc-btn.big { width: 6.4em; height: 6.4em; font-size: 1.1em; border-color: var(--lime); }
-.tc-btn.sm { width: 4em; height: 4em; font-size: .7em; letter-spacing: 0; }
-.tc-btn.wide { border-radius: 2em; width: 8em; height: 3.2em; }
-.tc-shoot { right: .5em; bottom: 4.2em; }
-.tc-pass { right: 7.6em; bottom: 1.4em; }
-.tc-long { right: 7.6em; bottom: 7em; }
-.tc-through { right: 3.2em; bottom: 11.4em; }
-.tc-finesse { right: 8.8em; bottom: 12.4em; }
-.tc-chip { right: 13.2em; bottom: 9.6em; }
-.tc-skill { right: 13.2em; bottom: 5.2em; }
-.tc-sprint { right: 13em; bottom: .6em; }
-.tc-switch { right: 1.8em; bottom: .3em; }
+/* ------------------------------------------------------------ toque
+   Tudo em vh: no celular deitado a altura é a medida que limita. */
+#touch { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-family: var(--disp); }
+.tc-zone { position: absolute; left: 0; bottom: 0; width: 48%; height: 82%; pointer-events: auto; touch-action: none; }
+.tc-base { position: absolute; left: calc(20vh + var(--safe-l)); top: auto; bottom: 4vh; width: 32vh; height: 32vh; margin: 0 0 0 -16vh; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.10), rgba(255,255,255,.03) 70%); border: .5vh solid rgba(255,255,255,.28); opacity: .75; transition: opacity .2s; }
+.tc-base.on { opacity: 1; border-color: rgba(34,224,122,.8); }
+.tc-knob { position: absolute; left: 50%; top: 50%; width: 14vh; height: 14vh; margin: -7vh 0 0 -7vh; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #6ff0ae, #18b865); box-shadow: 0 0 3vh rgba(34,224,122,.55), inset 0 -.8vh 1.5vh rgba(0,0,0,.25); }
+.tc-base.sprint .tc-knob { background: radial-gradient(circle at 40% 35%, #fff, #22e07a); box-shadow: 0 0 5vh rgba(34,224,122,.9); }
+.tc-pad { position: absolute; right: var(--safe-r); bottom: 0; width: 90vh; height: 60vh; pointer-events: none; }
+.tc-btn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; border: .45vh solid rgba(255,255,255,.35);
+  background: radial-gradient(circle at 50% 35%, rgba(30,40,34,.72), rgba(6,10,8,.72)); color: #fff; font: 700 3.4vh/1 var(--disp);
+  letter-spacing: .04em; text-transform: uppercase; width: 17vh; height: 17vh; display: grid; place-items: center; overflow: hidden;
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: transform .06s, background .06s; }
+.tc-btn span { position: relative; z-index: 1; text-align: center; padding: 0 .4vh; white-space: nowrap; }
+.tc-btn .tc-charge { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--charge, 0) * 100%); background: rgba(34,224,122,.55); }
+.tc-btn.on { transform: scale(.93); background: rgba(34,224,122,.4); border-color: #22e07a; }
+.tc-btn.off { opacity: .22; }
+.tc-btn.big { width: 23vh; height: 23vh; font-size: 4.2vh; border-color: #22e07a; box-shadow: 0 0 2.5vh rgba(34,224,122,.25); }
+.tc-btn.sm { width: 12vh; height: 12vh; font-size: 2.3vh; letter-spacing: 0; }
+.tc-btn.wide { border-radius: 8vh; width: 26vh; height: 11vh; font-size: 3vh; }
+/* posições (right/bottom em vh) — sem sobreposição */
+.tc-shoot { right: 3vh; bottom: 6vh; }
+.tc-pass { right: 28vh; bottom: 3vh; }
+.tc-long { right: 26vh; bottom: 22vh; }
+.tc-through { right: 7vh; bottom: 31vh; }
+.tc-finesse { right: 27vh; bottom: 41vh; }
+.tc-chip { right: 40vh; bottom: 36vh; }
+.tc-skill { right: 45vh; bottom: 21vh; }
+.tc-switch { right: 47vh; bottom: 4vh; }
+.tc-sprint { right: 62vh; bottom: 4vh; }
 #touch[data-ctx="defend"] .tc-shoot { border-color: var(--red); }
-.tc-pause { position: absolute; right: calc(1.2em + var(--safe-r)); top: calc(1.2em + var(--safe-t)); pointer-events: auto; width: 2.8em; height: 2.8em; border-radius: 50%;
-  border: .14em solid rgba(255,255,255,.4); background: rgba(4,7,14,.55); display: flex; align-items: center; justify-content: center; gap: .3em; }
-.tc-pause i { width: .3em; height: 1em; background: #fff; border-radius: .1em; }
+.tc-pause { position: absolute; right: calc(3vh + var(--safe-r)); top: calc(3vh + var(--safe-t)); pointer-events: auto; width: 11vh; height: 11vh; border-radius: 50%;
+  border: .4vh solid rgba(255,255,255,.4); background: rgba(4,7,6,.55); display: flex; align-items: center; justify-content: center; gap: 1.2vh; }
+.tc-pause i { width: 1.2vh; height: 4vh; background: #fff; border-radius: .3vh; }
 body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--safe-t)); }
 @media (pointer: coarse) {
-  .hud-radar { width: 10.5em; height: 6.8em; }
+  #hud { font-size: clamp(8px, 2.4vh, 16px); }
+  .hud-banner b { font-size: 1.9em; } .hud-banner.period b { font-size: 2.2em; }
+  .hud-hint { bottom: calc(26vh + var(--safe-b)); }
+  .hud-radar { width: 9.5em; height: 6.2em; bottom: auto; top: calc(1em + var(--safe-t)); left: auto; right: calc(15vh + var(--safe-r)); transform: none; opacity: .85; }
   .hud-wind { right: auto; bottom: auto; left: calc(1.4em + var(--safe-l)); top: calc(5.4em + var(--safe-t)); }
 }
