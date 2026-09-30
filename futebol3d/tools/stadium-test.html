@@ -78,12 +78,14 @@ camera.updateProjectionMatrix();
 
 const stadium = buildStadium(renderer, scene, {
   quality, timeOfDay: tod, homeColor: qs.get('home') || '#101010', homeColor2: qs.get('home2') || '#0fa33a',
-  awayColor: qs.get('away') || '#1f5fd6',
+  awayColor: qs.get('away') || '#1f5fd6', mowPattern: qs.get('mow') || undefined,
   stadiumName: qs.get('name') || undefined, wind: { x: 3, z: 1.5 },
 });
 window.__stadium = stadium;
 window.__three = { renderer, scene, camera };
 // &crowd=0 esconde a torcida (acelera as capturas no SwiftShader)
+// &hide=nome1,nome2 esconde objetos pelo nome (depuração)
+if (qs.get('hide')) { const hs = qs.get('hide').split(','); stadium.root.traverse((o) => { if (hs.includes(o.name)) o.visible = false; }); }
 if (qs.get('crowd') === '0') stadium.root.traverse((o) => { if (/torc|cachec/.test(o.name)) o.visible = false; });
 stadium.setScoreboard?.({ home: 'GOL', away: 'TUB', homeScore: 2, awayScore: 1, clock: "67'", homeColor: '#101010', awayColor: '#1f5fd6' });
 

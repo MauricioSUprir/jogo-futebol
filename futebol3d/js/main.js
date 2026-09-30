@@ -158,7 +158,7 @@ async function startMatch(cfg) {
   const match = new Match(cfg);
   const stadium = buildStadium(renderer, scene, {
     quality: Q, timeOfDay: settings.timeOfDay || 'noite',
-    homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt,
+    homeColor: cfg.home.colors?.primary || cfg.homeKit.shirt, homeColor2: cfg.home.colors?.secondary, awayColor: cfg.awayKit.shirt,
     stadiumName: cfg.home.stadium || `Arena ${cfg.home.city || cfg.home.name}`, wind: match.wind,
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';

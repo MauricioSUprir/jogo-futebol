@@ -215,6 +215,8 @@ export function sweepInto(parts, samples, profile, colorOf, closed = true) {
 function standMaterial(ctx) {
   const { U } = ctx;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.0 });
+  const noSeats = (ctx.detail ?? 2) === 0;
+  if (noSeats) mat.defines = { NO_SEATS: '' };
   const uni = {
     uSeatA: { value: new THREE.Color(ctx.seatA) }, uSeatB: { value: new THREE.Color(ctx.seatB) },
     uNight: { value: ctx.isNight ? 1 : 0 }, uAccent: { value: new THREE.Color(ctx.accent) },
@@ -244,6 +246,24 @@ function standMaterial(ctx) {
           vec2 i = floor( p ), u = fract( p ); u = u * u * ( 3.0 - 2.0 * u );
           return mix( mix( bh( i ), bh( i + vec2( 1, 0 ) ), u.x ), mix( bh( i + vec2( 0, 1 ) ), bh( i + vec2( 1, 1 ) ), u.x ), u.y );
         }
+        // desenho nas cores do clube: anel inferior na cor secundária com duas
+        // faixas da principal; anel superior na principal com uma "onda" da secundária
+        vec3 seatColor( float S, float dB, float yB ) {
+          float pB;
+          float rowL = floor( ( dB - ${f(L.d0)} ) / ${f(L.depth)} + 0.01 );
+          float aaR = clamp( fwidth( dB ) * 1.5, 0.02, 1.0 );
+          if ( yB < 12.0 ) {
+            float band = step( 7.0, rowL ) * step( rowL, 8.0 ) + step( 15.0, rowL ) * step( rowL, 15.0 );
+            pB = 1.0 - band;
+          } else {
+            float wave = 17.5 + 2.2 * sin( S * ${f(2 * Math.PI / 72)} ) + 1.2 * sin( S * ${f(2 * Math.PI / 23)} + 1.3 );
+            pB = 1.0 - smoothstep( wave - aaR * 8.0, wave + aaR * 8.0, yB );
+          }
+          vec3 sc = mix( uSeatA, uSeatB, pB );
+          // plástico: menos saturado e mais escuro que a cor pura do clube
+          float sl = dot( sc, vec3( 0.2126, 0.7152, 0.0722 ) );
+          return mix( vec3( sl ), sc, 0.8 ) * 0.62;
+        }
         ${ROOF_GLSL}`)
       .replace('#include <color_fragment>', /* glsl */`
         #include <color_fragment>
@@ -270,28 +290,18 @@ function standMaterial(ctx) {
           float gap = min( gu, 1.0 - gu );
           float nearF = 1.0 - smoothstep( 0.12, 0.3, fw );
           if ( nearF > 0.5 && gap < 0.05 ) discard;
-          // desenho nas cores do clube: anel inferior na cor secundária com duas
-          // faixas da principal; anel superior na principal com uma "onda" da secundária
-          float pB;
-          float rowL = floor( ( dB - ${f(L.d0)} ) / ${f(L.depth)} + 0.01 );
-          float aaR = clamp( fwidth( dB ) * 1.5, 0.02, 1.0 );
-          if ( yB < 12.0 ) {
-            float band = step( 7.0, rowL ) * step( rowL, 8.0 ) + step( 15.0, rowL ) * step( rowL, 15.0 );
-            pB = 1.0 - band;
-          } else {
-            float wave = 17.5 + 2.2 * sin( S * ${f(2 * Math.PI / 72)} ) + 1.2 * sin( S * ${f(2 * Math.PI / 23)} + 1.3 );
-            pB = 1.0 - smoothstep( wave - aaR * 8.0, wave + aaR * 8.0, yB );
-          }
-          vec3 sc = mix( uSeatA, uSeatB, pB );
-          // plástico: menos saturado e mais escuro que a cor pura do clube
-          float sl = dot( sc, vec3( 0.2126, 0.7152, 0.0722 ) );
-          sc = mix( vec3( sl ), sc, 0.8 ) * 0.62;
+          vec3 sc = seatColor( S, dB, yB );
           float edge = smoothstep( 0.05, 0.14, gap );
           diffuseColor.rgb = sc * mix( 0.5, 1.0, mix( 0.8, edge, nearF ) );
           kRough = 0.36;
         } else if ( kind > 1.5 && kind < 3.5 ) {
           // ---- piso e espelho das fileiras
           diffuseColor.rgb *= 0.82 + 0.3 * grime;
+          #ifdef NO_SEATS
+          // sem geometria de cadeiras (qualidade baixa): pinta as fileiras com o desenho
+          diffuseColor.rgb = seatColor( S, dB, yB ) * ( kind < 2.5 ? 1.0 : 0.7 );
+          kRough = 0.5;
+          #endif
           vec3 aisleCol = vec3( 0.36, 0.36, 0.35 ) * ( 0.85 + 0.25 * grime );
           // faixa amarela antiderrapante na borda do degrau da escada
           float nose = ( 1.0 - smoothstep( 0.06, 0.09, rowF ) ) * step( kind, 2.5 );
@@ -320,9 +330,9 @@ function standMaterial(ctx) {
           // interior: linha de luz no teto, brilho quente difuso e silhuetas de gente
           float ceil = 1.0 - smoothstep( 0.0, 0.035, abs( hy - 0.9 ) );
           float lamps = ceil * ( 0.5 + 0.5 * step( 0.5, fract( u / 1.25 ) ) );
-          float glow = 0.1 + 0.3 * smoothstep( 0.15, 0.9, hy );
+          float glow = 0.03 + 0.1 * smoothstep( 0.15, 0.9, hy );
           float ppl = step( 0.52, bn( vec2( u * 1.7, box ) ) ) * smoothstep( 0.12, 0.16, hy ) * ( 1.0 - smoothstep( 0.5, 0.56, hy + 0.08 * bn( vec2( u * 5.0, 1.0 ) ) ) );
-          float inside = ( glow + 2.2 * lamps ) * ( 1.0 - 0.85 * ppl );
+          float inside = ( glow + 1.8 * lamps ) * ( 1.0 - 0.85 * ppl );
           diffuseColor.rgb = mix( vec3( 0.05, 0.06, 0.07 ), vec3( 0.02 ), frame );
           kRough = mix( 0.05, 0.45, frame );
           kMetal = mix( 0.9, 0.6, frame );
@@ -357,7 +367,7 @@ function standMaterial(ctx) {
         'getDirectionalLightInfo( directionalLight, directLight );',
         'getDirectionalLightInfo( directionalLight, directLight );\n\t\tdirectLight.color *= sunLit;'));
   };
-  mat.customProgramCacheKey = () => 'golaco-arquibancada';
+  mat.customProgramCacheKey = () => 'golaco-arquibancada' + (noSeats ? '-sem-cadeiras' : '');
   return mat;
 }
 

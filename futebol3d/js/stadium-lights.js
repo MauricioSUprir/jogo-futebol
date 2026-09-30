@@ -29,10 +29,10 @@ varying vec2 vUv;
 varying float vI;
 void main() {
   float r = length( vUv );
-  float core = exp( -r * r * 70.0 ) * 6.0;
-  float halo = exp( -r * 4.2 ) * 0.32;
+  float core = exp( -r * r * 80.0 ) * 4.5;
+  float halo = exp( -r * 5.0 ) * 0.16;
   // rastro horizontal (anamórfico) e 6 raios finos
-  float streak = exp( -abs( vUv.y ) * 42.0 ) * exp( -abs( vUv.x ) * 1.6 ) * 0.55;
+  float streak = exp( -abs( vUv.y ) * 42.0 ) * exp( -abs( vUv.x ) * 1.8 ) * 0.4;
   float a6 = atan( vUv.y, vUv.x );
   float rays = pow( abs( cos( a6 * 3.0 ) ), 40.0 ) * exp( -r * 5.0 ) * 0.6;
   float a = ( core + halo + ( streak + rays ) * vI ) * vI * uOn * ( 1.0 - smoothstep( 1.8, 2.6, r ) );
@@ -84,7 +84,7 @@ export function buildFloodlights(ctx) {
   box.translate(0, 0, 0.1);
   const mat = new THREE.MeshStandardMaterial({
     color: 0x2a2c30, roughness: 0.45, metalness: 0.6,
-    emissive: isNight ? 0xfff6e8 : 0x000000, emissiveIntensity: isNight ? 4.5 : 0,
+    emissive: isNight ? 0xfff6e8 : 0x000000, emissiveIntensity: isNight ? 2.4 : 0,
   });
   const inst = new THREE.InstancedMesh(box, mat, spots.length);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
