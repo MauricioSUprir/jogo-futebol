@@ -76,7 +76,10 @@ export class Hud {
     this.cardT = 2.8;
   }
 
-  setReplay(on) { this.replayEl.classList.toggle('show', on); this.root.classList.toggle('replaying', on); }
+  setReplay(on) {
+    this.replayEl.classList.toggle('show', on); this.root.classList.toggle('replaying', on);
+    if (on) { this.goalEl.classList.remove('show'); this.bannerEl.classList.remove('show'); this.goalT = this.bannerT = 0; }
+  }
 
   shootout(so, teams) {
     if (!so) { this.shoot.classList.remove('show'); return; }

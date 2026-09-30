@@ -230,6 +230,7 @@ function save(m, gk, edge) {
   const diving = gk.action && gk.action.type === 'gk_dive';
   const catchable = sp < (diving ? 17 : 23) && edge < (diving ? 0.75 : 0.9) && b.p.y < 2.2 && Math.random() < 0.35 + sk * 0.6;
   m.lastShotSaved = { t: m.time, gk };
+  m.shotOnTarget(t.opp);
   if (catchable) {
     m.gkCatch(gk);
     m.emit('save', { kind: 'catch', side: t.i });

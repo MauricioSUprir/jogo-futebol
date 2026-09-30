@@ -129,7 +129,7 @@ export class Input {
     this.context = ctx;
     const L = {
       attack: { shoot: 'Chute', pass: 'Passe', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: 'Drible', switch: 'Proteger' },
-      defend: { shoot: 'Carrinho', pass: 'Pressão', long: 'Dobrar', through: 'Goleiro sai', finesse: '—', chip: '—', skill: 'Contenção', switch: 'Trocar' },
+      defend: { shoot: 'Carrinho', pass: 'Pressão', long: 'Dobrar', through: 'Goleiro', finesse: '—', chip: '—', skill: 'Conter', switch: 'Trocar' },
       loose: { shoot: 'Chute', pass: 'Passe', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: 'Drible', switch: 'Trocar' },
       setpiece: { shoot: 'Chute', pass: 'Curto', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: '—', switch: '—' },
       gk: { shoot: 'Chutão', pass: 'Repor', long: 'Chutão', through: 'Rolar', finesse: '—', chip: '—', skill: '—', switch: '—' },

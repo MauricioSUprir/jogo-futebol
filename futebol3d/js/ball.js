@@ -205,6 +205,10 @@ export class Ball {
 
   collideBoards() {
     const p = this.p, v = this.v;
+    // arquibancada: a bola que passa por cima das placas bate no degrau e cai
+    const SX = BOARD_X + 3, SZ = BOARD_Z + 3;
+    if (Math.abs(p.x) > SX) { p.x = Math.sign(p.x) * SX; v.x = -v.x * 0.2; v.z *= 0.4; }
+    if (Math.abs(p.z) > SZ) { p.z = Math.sign(p.z) * SZ; v.z = -v.z * 0.2; v.x *= 0.4; }
     if (p.y > BOARD_H) return;
     if (Math.abs(p.x) > BOARD_X) { p.x = Math.sign(p.x) * BOARD_X; if (v.x * p.x > 0) { v.x = -v.x * 0.35; this.emit('board', Math.min(1, Math.abs(v.x) / 8)); } }
     if (Math.abs(p.z) > BOARD_Z) { p.z = Math.sign(p.z) * BOARD_Z; if (v.z * p.z > 0) { v.z = -v.z * 0.35; this.emit('board', Math.min(1, Math.abs(v.z) / 8)); } }

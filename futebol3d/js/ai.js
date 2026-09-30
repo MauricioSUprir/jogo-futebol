@@ -105,7 +105,7 @@ export function teamThink(m, t, dt) {
     if (p === press1) { pressCarrier(m, p, owner, dt, 1); continue; }
     if (p === press2 && (t.style.press > 0.55 || m.lx(t, owner.x) < -20 || m.teamPressCall === t)) { pressCarrier(m, p, owner, dt, 2); continue; }
     if (p.runUntil > m.time && attacking) {
-      const tgx = Math.min(p.target.x * t.dir, offLine - 0.4) * t.dir;
+      const tgx = Math.min(p.target.x * t.dir, offLine - 0.4 + (p.runLate || 0)) * t.dir;
       p.moveTo(tgx, p.target.z, 1, true);
       continue;
     }
@@ -208,6 +208,9 @@ function support(m, t, outfield, owner, offLine, dt) {
         p.runZ = clamp(p.z * 0.6, -14, 14);
       }
       if (p.runUntil > m.time) { p.target.x = Math.min(HL - 8, offLine + 12) * t.dir; p.target.z = p.runZ ?? p.z; }
+      // às vezes o atacante erra o tempo da corrida e fica impedido
+      if (p.runUntil > m.time && p.runLate === undefined) p.runLate = Math.random() < 0.18 * (1.1 - m.diff.aiSkill + 0.2) ? rand(0.6, 2) : 0;
+      if (p.runUntil <= m.time) p.runLate = undefined;
     }
   }
 }
@@ -422,7 +425,7 @@ export function bestReceiver(m, p, mode, dirx, dirz) {
     const lq = m.lx(t, q.x);
     if (mode === 'through' && (lq < lxP - 2 || d > 45 || q.isGK)) continue;
     // impedido não recebe (a IA respeita a linha)
-    if (lq > 0 && lq > offLine + 0.2 && lq > m.lx(t, m.ball.p.x)) continue;
+    if (lq > 0 && lq > offLine + 0.2 && lq > m.lx(t, m.ball.p.x) && (dirx !== undefined || Math.random() > 0.25 * (1.15 - m.diff.aiSkill))) continue;
     if (q.isGK && (m.pressure(q) > 0.3 || mode !== 'ground')) continue;
     let s;
     const progress = (lq - lxP);

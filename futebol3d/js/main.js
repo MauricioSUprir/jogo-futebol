@@ -243,7 +243,7 @@ function handleEvents(g) {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
         input.vibrate(300);
-        g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(), follow: m.goalInfo.scorer, a0: Math.random() * 6 });
+        g.celebCutT = 1.3;   // deixa a bola entrar na rede e corta para a comemoração
         g.stadium.crowdReact('goal', e.side === 0 ? 'home' : 'away');
         break;
       }
@@ -374,7 +374,15 @@ function render(g, dt) {
   const userTaking = sp && m.userTeam && sp.team === m.userTeam && m.phase === 'setpiece';
   g.ball.aim(m, sp, userTaking);
 
-  // câmera
+  // câmera: corte para a comemoração pouco depois do gol
+  if (g.celebCutT > 0 && !g.replaying) {
+    g.celebCutT -= dt;
+    if (g.celebCutT <= 0 && m.phase === 'goal' && m.goalInfo) {
+      const sc = m.goalInfo.scorer;
+      g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(sc.x, 0, sc.z), follow: sc, a0: Math.atan2(-sc.z, -sc.x) + 0.6 });
+      g.rig.snap = true;
+    }
+  }
   const c = g.rig.cine;
   if (c) {
     if (c.type === 'celebrate' && c.follow) { c.target.set(c.follow.x, 0, c.follow.z); if (m.phase !== 'goal') g.rig.setCinematic(null); }
@@ -467,4 +475,4 @@ function advance(sec, cmdFn) {
   }
   return { phase: g.match.phase, clock: g.match.clock, score: g.match.teams.map(t => t.score) };
 }
-window.__golaco = { get game() { return game; }, startMatch, settings: () => settings, advance, renderer, input };
+window.__golaco = { get game() { return game; }, startMatch, settings: () => settings, advance, renderer, input, replayNow: () => startReplay(game) };

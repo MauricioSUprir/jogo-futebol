@@ -44,8 +44,8 @@ export class CameraRig {
         lx = T.x; ly = 1.2; lz = T.z; fov = 38; lam = 6;
       } else if (c.type === 'goal') {
         // atrás do gol, alto
-        px = c.sign * (HL + 14); py = 6.5; pz = T.z * 0.3 - 3;
-        lx = T.x - c.sign * 4; ly = 0.8; lz = T.z; fov = 42; lam = 5;
+        px = c.sign * (HL + 5.2); py = 4.2; pz = T.z * 0.3 - 2;
+        lx = T.x - c.sign * 4; ly = 0.9; lz = T.z; fov = 50; lam = 5;
       } else if (c.type === 'low') {
         px = c.sign * (HL - 3); py = 0.6; pz = c.side * 12;
         lx = T.x; ly = Math.max(0.6, T.y); lz = T.z; fov = 34; lam = 8;
@@ -54,8 +54,8 @@ export class CameraRig {
         lx = c.sign * HL; ly = 1.1; lz = 0; fov = 40; lam = 6;
       } else if (c.type === 'celebrate') {
         const a = c.a0 + c.t * 0.18;
-        px = T.x + Math.cos(a) * 6; pz = T.z + Math.sin(a) * 6; py = 2.2;
-        lx = T.x; ly = 1.3; lz = T.z; fov = 40; lam = 3;
+        px = T.x + Math.cos(a) * 7.5; pz = T.z + Math.sin(a) * 7.5; py = 2.0;
+        lx = T.x; ly = 1.0; lz = T.z; fov = 38; lam = 3;
       }
     } else if (this.mode === 'pro' && ctx.player) {
       const p = ctx.player, dir = ctx.attackDir;
@@ -91,6 +91,7 @@ export class CameraRig {
     }
     cam.lookAt(this.look);
     if (Math.abs(cam.fov - this.fov) > 0.01) { cam.fov = this.fov; cam.updateProjectionMatrix(); }
+    cam.updateMatrixWorld();
     // base para o analógico: direita e frente da câmera no chão
     const fx = this.look.x - this.pos.x, fz = this.look.z - this.pos.z;
     const fl = Math.hypot(fx, fz) || 1;

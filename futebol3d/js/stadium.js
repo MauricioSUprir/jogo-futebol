@@ -39,7 +39,7 @@ const TOD = {
     sky: { turbidity: 6, rayleigh: 2.4, mieCoefficient: 0.006, mieDirectionalG: 0.86, gain: 0.5 },
   },
   noite: {
-    dir: [0.16, 1, -0.3],
+    dir: [0.3, 1, -0.42],
     sun: 0xeef3ff, sunI: 2.9, hemiSky: 0xa9bbdc, hemiGround: 0x2a3a24, hemiI: 0.55,
     envI: 0.55, amb: [0.2, 0.21, 0.24], crowdSun: 0.5,
   },

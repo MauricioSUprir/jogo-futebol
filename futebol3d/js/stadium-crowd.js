@@ -154,6 +154,8 @@ void main() {
   vLight = uAmb + uSunCol * lam * lit;
 
   gl_Position = projectionMatrix * viewMatrix * vec4( p, 1.0 );
+  // some com torcedores colados na câmera (câmera de TV dentro da arquibancada)
+  if ( length( toCam ) < 5.0 ) gl_Position = vec4( 0.0, 0.0, 2.0, 1.0 );
 }`;
 
 const crowdFrag = /* glsl */`
@@ -214,6 +216,7 @@ void main() {
     p = top - up * ( 1.0 - v ) * 0.95 + tang * u * 1.5;
     p += n * sin( ph ) * 0.22 * u + up * cos( ph * 0.7 ) * 0.06 * u;
   }
+  float camD = length( cameraPosition - aPos.xyz );
   vUv = vec2( u, v );
   vPart = aPart;
   vCol = aInfo.w > 0.5 ? uAwayCol : uHomeCol;
@@ -222,6 +225,7 @@ void main() {
   float lit = roofLit( aPos.w, p.y, aInfo.xy );
   vLight = uAmb + uSunCol * ( 0.4 + 0.6 * max( dot( normalize( n * sign( dot( n, toCam ) ) ), uSunDir ), 0.0 ) ) * lit;
   gl_Position = projectionMatrix * viewMatrix * vec4( p, 1.0 );
+  if ( camD < 7.0 ) gl_Position = vec4( 0.0, 0.0, 2.0, 1.0 );
 }`;
 
 const flagFrag = /* glsl */`

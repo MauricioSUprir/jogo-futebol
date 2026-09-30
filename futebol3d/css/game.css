@@ -64,7 +64,8 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .hud-banner.period b { font-size: 3em; }
 .hud-banner span { font: 600 1.05em var(--ui); background: rgba(4,7,14,.75); padding: .25em .8em; }
 
-.hud-goal { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; opacity: 0; transition: opacity .4s; }
+.hud-goal { position: absolute; inset: 0; display: grid; place-content: start center; padding-top: 11vh; text-align: center; opacity: 0; transition: opacity .4s; }
+.hud-goal .g-word { font-size: 8em; }
 .hud-goal.show { opacity: 1; }
 .g-word { font: 800 italic 11em/0.85 var(--disp); color: #fff; letter-spacing: -.01em; text-shadow: 0 .06em 0 var(--ink), 0 0 .4em rgba(200,255,46,.5); }
 .g-word span { display: inline-block; animation: gpop .6s cubic-bezier(.2,1.8,.4,1) both; }
@@ -123,14 +124,14 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .hud-radar { position: absolute; left: 50%; bottom: calc(.9em + var(--safe-b)); transform: translateX(-50%); width: 13em; height: 8.4em; border-radius: .35em; }
 
 /* ------------------------------------------------------------ toque */
-#touch { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-size: var(--u); }
+#touch { position: fixed; inset: 0; z-index: 20; pointer-events: none; font-size: clamp(11px, calc(1.3vh + .55vw), 22px); }
 .tc-zone { position: absolute; left: 0; bottom: 0; width: 46%; height: 78%; pointer-events: auto; touch-action: none; }
 .tc-base { position: absolute; left: 22%; top: 62%; width: 7.5em; height: 7.5em; margin: -3.75em 0 0 -3.75em; border-radius: 50%;
   background: radial-gradient(circle, rgba(255,255,255,.08), rgba(255,255,255,.03)); border: .15em solid rgba(255,255,255,.22); transition: opacity .2s; opacity: .55; }
 .tc-base.on { opacity: 1; }
 .tc-knob { position: absolute; left: 50%; top: 50%; width: 3.2em; height: 3.2em; margin: -1.6em 0 0 -1.6em; border-radius: 50%;
   background: rgba(200,255,46,.85); box-shadow: 0 0 1.2em rgba(200,255,46,.45); }
-.tc-pad { position: absolute; right: calc(1em + var(--safe-r)); bottom: calc(1em + var(--safe-b)); width: 21em; height: 17em; pointer-events: none; }
+.tc-pad { position: absolute; right: calc(.8em + var(--safe-r)); bottom: calc(.8em + var(--safe-b)); width: 21.5em; height: 16.5em; pointer-events: none; }
 .tc-btn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; border: .14em solid rgba(255,255,255,.35);
   background: rgba(10,20,40,.55); color: #fff; font: 700 .95em/1 var(--disp); letter-spacing: .03em; text-transform: uppercase; width: 4.6em; height: 4.6em;
   display: grid; place-items: center; overflow: hidden; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); transition: transform .08s, background .08s; }
@@ -138,18 +139,18 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .tc-btn .tc-charge { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--charge, 0) * 100%); background: rgba(200,255,46,.55); }
 .tc-btn.on { transform: scale(.92); background: rgba(200,255,46,.35); border-color: var(--lime); }
 .tc-btn.off { opacity: .25; }
-.tc-btn.big { width: 6.4em; height: 6.4em; font-size: 1.1em; right: .6em; bottom: 3.2em; border-color: var(--lime); }
-.tc-btn.sm { width: 3.7em; height: 3.7em; font-size: .78em; }
+.tc-btn.big { width: 6.4em; height: 6.4em; font-size: 1.1em; border-color: var(--lime); }
+.tc-btn.sm { width: 4em; height: 4em; font-size: .7em; letter-spacing: 0; }
 .tc-btn.wide { border-radius: 2em; width: 8em; height: 3.2em; }
-.tc-shoot { right: .6em; bottom: 3.2em; }
-.tc-pass { right: 8.2em; bottom: 1.2em; }
-.tc-long { right: 8.6em; bottom: 6.6em; }
-.tc-through { right: 4.8em; bottom: 10.6em; }
-.tc-finesse { right: .2em; bottom: 11.4em; }
-.tc-chip { right: 11.4em; bottom: 11.8em; }
-.tc-sprint { right: 13em; bottom: .2em; }
-.tc-skill { right: 13.4em; bottom: 5em; }
-.tc-switch { right: 1.2em; bottom: -.6em; }
+.tc-shoot { right: .5em; bottom: 4.2em; }
+.tc-pass { right: 7.6em; bottom: 1.4em; }
+.tc-long { right: 7.6em; bottom: 7em; }
+.tc-through { right: 3.2em; bottom: 11.4em; }
+.tc-finesse { right: 8.8em; bottom: 12.4em; }
+.tc-chip { right: 13.2em; bottom: 9.6em; }
+.tc-skill { right: 13.2em; bottom: 5.2em; }
+.tc-sprint { right: 13em; bottom: .6em; }
+.tc-switch { right: 1.8em; bottom: .3em; }
 #touch[data-ctx="defend"] .tc-shoot { border-color: var(--red); }
 .tc-pause { position: absolute; right: calc(1.2em + var(--safe-r)); top: calc(1.2em + var(--safe-t)); pointer-events: auto; width: 2.8em; height: 2.8em; border-radius: 50%;
   border: .14em solid rgba(255,255,255,.4); background: rgba(4,7,14,.55); display: flex; align-items: center; justify-content: center; gap: .3em; }
@@ -157,5 +158,5 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--safe-t)); }
 @media (pointer: coarse) {
   .hud-radar { width: 10.5em; height: 6.8em; }
-  .hud-wind { bottom: auto; top: calc(4.8em + var(--safe-t)); }
+  .hud-wind { right: auto; bottom: auto; left: calc(1.4em + var(--safe-l)); top: calc(5.4em + var(--safe-t)); }
 }

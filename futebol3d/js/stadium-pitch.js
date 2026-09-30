@@ -67,7 +67,11 @@ float aaLine( float d, float hw ) {
 const MAP_FRAG = /* glsl */`
   vec2 wp = vPW.xz;
   vec3 g1 = texture2D( map, wp / ${f(TILE)} ).rgb;
+  #ifdef GRASS_LOW
+  vec3 g2 = g1;
+  #else
   vec3 g2 = texture2D( map, mat2( 0.8, -0.6, 0.6, 0.8 ) * wp / ${f(TILE * 2.9)} + 0.37 ).rgb;
+  #endif
   float nBig = fbm( wp * 0.035 );
   float nMid = fbm( wp * 0.18 + 7.0 );
   vec3 grass = mix( g1, g2, 0.3 + 0.35 * nMid );
@@ -95,7 +99,7 @@ const MAP_FRAG = /* glsl */`
   wear += exp( -pow( ( abs( wp.y ) - 35.3 ) / 0.6, 2.0 ) ) * step( aw.x, 50.0 ) * 0.25;
   float wn = vnoise( wp * 1.7 ) * 0.6 + vnoise( wp * 5.3 ) * 0.4;
   wear = clamp( wear * ( 0.35 + 1.1 * wn ), 0.0, 1.0 );
-  vec3 dirt = vec3( 0.16, 0.10, 0.05 ) * ( 0.5 + 1.2 * lum );
+  vec3 dirt = vec3( 0.12, 0.095, 0.06 ) * ( 0.5 + 1.2 * lum );
   vec3 tired = grass * vec3( 1.15, 0.9, 0.6 );
   grass = mix( grass, tired, smoothstep( 0.0, 0.5, wear ) * 0.8 );
   grass = mix( grass, dirt, smoothstep( 0.45, 1.0, wear ) * 0.75 );
@@ -129,11 +133,14 @@ export function buildPitch(ctx) {
     return t;
   };
   const map = load('grass_color.jpg', true);
-  const normalMap = load('grass_normal.jpg', false);
 
+  // grassDetail 0 (celulares fracos): sem normal map e uma amostra só da textura
+  const low = (ctx.quality.grassDetail ?? 2) === 0;
+  const normalMap = low ? null : load('grass_normal.jpg', false);
   const mat = new THREE.MeshStandardMaterial({
     map, normalMap, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.92, metalness: 0,
   });
+  if (low) mat.defines = { GRASS_LOW: '' };
   const lineBright = { value: isNight ? 1.0 : 0.95 };
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uLineBright = lineBright;
@@ -146,7 +153,7 @@ export function buildPitch(ctx) {
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = mix( roughnessFactor, 0.75, lineMask );')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\nnormal = normalize( mix( normal, nonPerturbedNormal, lineMask * 0.8 ) );');
   };
-  mat.customProgramCacheKey = () => 'golaco-gramado';
+  mat.customProgramCacheKey = () => 'golaco-gramado' + (low ? '-low' : '');
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'gramado';
   mesh.receiveShadow = true;

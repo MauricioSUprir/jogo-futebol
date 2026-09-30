@@ -534,6 +534,7 @@ export class Match {
       return;
     }
     team.score++;
+    this.shotOnTarget(team);
     const lt = this.lastTouch;
     const own = lt && lt.team !== team;
     const scorer = own ? lt : (lt || team.players[9]);
@@ -887,9 +888,7 @@ export class Match {
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);
       team.stats.shots++;
-      const onT = Math.abs(target.z) < GOAL.halfWidth - 0.05 && target.y < GOAL.height - 0.05;
-      if (onT) team.stats.onTarget++;
-      this.lastShot = { p, t: this.time, onTarget: onT, speed };
+      this.lastShot = { p, t: this.time, speed, counted: false };
       this.emit('shot', { side: team.i, power });
       kindOut = 'shot';
     } else if (kind === 'chip') {
@@ -899,8 +898,7 @@ export class Match {
       const e = errBase(a.sho) * 0.03;
       v.vx *= 1 + gauss() * e; v.vz *= 1 + gauss() * e;
       team.stats.shots++;
-      team.stats.onTarget++;
-      this.lastShot = { p, t: this.time, onTarget: true, speed: 14 };
+      this.lastShot = { p, t: this.time, speed: 14, counted: false };
       kindOut = 'chip';
     } else if (kind === 'pass' || kind === 'gk_pass') {
       tg = this.leadTarget(p, data.receiver, tg, 'ground');
@@ -991,8 +989,7 @@ export class Match {
       const target = { x: tg.x, y: clamp(0.3 + gauss() * 0.4, 0.1, 2.8), z: tg.z + gauss() * (1.3 - p.a.sho / 99) * 1.4 };
       v = solveAim(b.p, target, clamp(11 + incoming * 0.35 + p.a.phy * 0.05, 11, 22), { top: 4 }, this.wind);
       team.stats.shots++;
-      if (Math.abs(target.z) < GOAL.halfWidth && target.y < GOAL.height) team.stats.onTarget++;
-      this.lastShot = { p, t: this.time, onTarget: true, speed: 15 };
+      this.lastShot = { p, t: this.time, speed: 15, counted: false };
       this.emit('shot', { side: team.i, power: 0.6 });
     } else {
       tg = tg || { x: p.x + p.fx * 14, z: p.z + p.fz * 14 };
@@ -1159,6 +1156,14 @@ export class Match {
   }
 
   // --------------------------------------------------------------- utilidades
+  // finalização no alvo = virou gol ou exigiu defesa do goleiro
+  shotOnTarget(team) {
+    const ls = this.lastShot;
+    if (!ls || ls.counted || this.time - ls.t > 4 || ls.p.team !== team) return;
+    ls.counted = true;
+    team.stats.onTarget++;
+  }
+
   // o humano sempre controla alguém: o mais perto da bola
   controlNearest() {
     const t = this.userTeam;
