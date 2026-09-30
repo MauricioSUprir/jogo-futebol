@@ -19,6 +19,7 @@ import { GameAudio } from './audio.js';
 import { buildStadium } from './stadium.js';
 import { PlayerMeshes } from './players3d.js';
 import { rootOffset } from './anim.js';
+import { StadiumFX } from './fx.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
@@ -168,6 +169,8 @@ async function startMatch(cfg) {
     const kit = p.isGK ? (t.i === 0 ? cfg.homeGK : cfg.awayGK) : (t.i === 0 ? cfg.homeKit : cfg.awayKit);
     players.setPlayer(p.idx, { kit, isGK: p.isGK, number: p.data.num, look: p.data.look });
   }
+  let fx = null;
+  try { fx = new StadiumFX(scene, { quality: Q, isNight: stadium.isNight, homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt, sunDir: stadium.sunDir, wind: match.wind }); } catch (e) { console.warn('efeitos indisponíveis', e); }
   const ball = new BallMesh(scene, Q);
   const rig = new CameraRig(camera);
   rig.setMode(settings.camera);
@@ -175,7 +178,7 @@ async function startMatch(cfg) {
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, acc: 0, paused: false, t: 0,
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20 };
   applyQuality(true);
 
@@ -205,6 +208,7 @@ function endGame(silent) {
   if (!g) return;
   input.enabled = false;
   audio.chant(false);
+  g.fx?.dispose?.();
   g.stadium.dispose?.();
   g.players.dispose?.();
   g.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt => { mt.map?.dispose(); mt.dispose(); }); });
@@ -270,17 +274,20 @@ function handleEvents(g) {
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
       case 'card': hud.card(e.color, e.name); break;
-      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#c8ff2e' : null); break;
+      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#22e07a' : null); break;
       case 'goal': {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
         input.vibrate(300);
         g.celebCutT = 1.3;   // deixa a bola entrar na rede e corta para a comemoração
         g.stadium.crowdReact('goal', e.side === 0 ? 'home' : 'away');
+        const kit = e.side === 0 ? g.cfg.homeKit : g.cfg.awayKit;
+        g.fx?.goal(e.side === 0 ? 'home' : 'away', [kit.shirt, kit.second && kit.second !== kit.shirt ? kit.second : '#111111'], e.sign);
+        g.stadium.showOnScreens?.('goal', 'GOL!');
         break;
       }
       case 'replay': startReplay(g); break;
-      case 'shot': break;
+      case 'shot': if (Math.random() < 0.5) g.fx?.chance(); break;
       case 'vibrate': input.vibrate(e.ms); break;
       case 'penaltyGoal': case 'penaltyMiss': hud.shootout(m.shootout, m.teams); break;
       case 'setpiece':
@@ -301,12 +308,14 @@ function startReplay(g) {
   g.rig.setCinematic({ type: Math.random() < 0.5 ? 'goal' : 'low', target: new THREE.Vector3(), sign, side: Math.random() < 0.5 ? 1 : -1 });
   g.rig.snap = true;
   hud.setReplay(true);
+  g.stadium.showOnScreens?.('replay', 'REPLAY');
 }
 function finishReplay() {
   const g = game;
   if (!g || !g.replaying) return;
   g.replaying = false; g.replay.stop();
   hud.setReplay(false);
+  g.stadium.showOnScreens?.('none');
   g.rig.setCinematic(null); g.rig.snap = true;
   g.match.replayFinished();
 }
@@ -398,7 +407,9 @@ function render(g, dt) {
       placePlayer(g, p.idx, p.px + (p.x - p.px) * alpha, p.y, p.pz + (p.z - p.pz) * alpha, p.ph + dh * alpha, p.pose, p.data.look.height);
     }
     const b = m.ball.p;
-    g.ball.set(b.x + m.ball.v.x * g.acc * (m.ball.held ? 0 : 1), b.y, b.z + m.ball.v.z * g.acc * (m.ball.held ? 0 : 1));
+    const off = g.stadium.updateBall ? g.stadium.updateBall(dt, b, m.ball.v) : null;
+    const ox = off ? off.x || 0 : 0, oy = off ? off.y || 0 : 0, oz = off ? off.z || 0 : 0;
+    g.ball.set(b.x + ox + m.ball.v.x * g.acc * (m.ball.held ? 0 : 1), b.y + oy, b.z + oz + m.ball.v.z * g.acc * (m.ball.held ? 0 : 1));
     _t.set(b.x, b.y, b.z);
   }
   g.players.commit();
@@ -429,8 +440,14 @@ function render(g, dt) {
   if (c && c.pen && (!sp || m.phase !== 'setpiece') && (!m.shootout || !m.shootout.active || m.time - (m.lastKick?.t || 0) > 1.6)) g.rig.setCinematic(null);
   g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0 });
 
-  // estádio e HUD
+  // estádio (telões com o placar), efeitos e HUD
   g.stadium.update(dt, g.t, m.excitement, g.camera);
+  if (g.stadium.setScoreboard) {
+    const mm = Math.floor(m.clock / 60), ss = Math.floor(m.clock % 60);
+    g.stadium.setScoreboard({ home: m.teams[0].data.short, away: m.teams[1].data.short, homeScore: m.teams[0].score, awayScore: m.teams[1].score,
+      clock: m.shootout ? 'PÊN' : `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`, homeColor: g.cfg.homeKit.shirt, awayColor: g.cfg.awayKit.shirt });
+  }
+  g.fx?.update(dt, g.camera);
   hud.update(dt, m, g.camera, {
     replay: g.replaying, names: settings.names !== false, radar: settings.radar !== false, charging: input.charging,
     right: g.rig.right, fwd: g.rig.fwd, hint: hintFor(g),

@@ -1,6 +1,6 @@
 /* GOLAÇO — tela de jogo: HUD de transmissão e controles de toque. */
 :root {
-  --lime: #c8ff2e; --navy: #0a1428; --ink: #04070e; --red: #ff4d5e; --yellow: #ffd23f;
+  --lime: #22e07a; --navy: #0a1428; --ink: #04070e; --red: #ff4d5e; --yellow: #ffd23f;
   --disp: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
@@ -16,7 +16,7 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 /* carregamento */
 #loading { position: fixed; inset: 0; z-index: 60; display: grid; place-content: center; gap: 1.2em; text-align: center;
   background: radial-gradient(ellipse at 50% 40%, #13254a, #04070e 70%); font-size: var(--u); }
-.ld-brand { font: 800 italic 6em/0.9 var(--disp); letter-spacing: .02em; color: #fff; text-shadow: 0 0 .5em rgba(200,255,46,.25); }
+.ld-brand { font: 800 italic 6em/0.9 var(--disp); letter-spacing: .02em; color: #fff; text-shadow: 0 0 .5em rgba(34,224,122,.25); }
 .ld-brand::after { content: ''; display: block; height: .08em; margin: .12em auto 0; width: 60%; background: var(--lime); transform: skewX(-20deg); }
 .ld-bar { width: 18em; height: .35em; margin: 0 auto; background: rgba(255,255,255,.1); border-radius: 1em; overflow: hidden; }
 .ld-bar i { display: block; height: 100%; width: 40%; background: var(--lime); border-radius: 1em; animation: ld 1.1s ease-in-out infinite; }
@@ -67,7 +67,7 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .hud-goal { position: absolute; inset: 0; display: grid; place-content: start center; padding-top: 11vh; text-align: center; opacity: 0; transition: opacity .4s; }
 .hud-goal .g-word { font-size: 8em; }
 .hud-goal.show { opacity: 1; }
-.g-word { font: 800 italic 11em/0.85 var(--disp); color: #fff; letter-spacing: -.01em; text-shadow: 0 .06em 0 var(--ink), 0 0 .4em rgba(200,255,46,.5); }
+.g-word { font: 800 italic 11em/0.85 var(--disp); color: #fff; letter-spacing: -.01em; text-shadow: 0 .06em 0 var(--ink), 0 0 .4em rgba(34,224,122,.5); }
 .g-word span { display: inline-block; animation: gpop .6s cubic-bezier(.2,1.8,.4,1) both; }
 .g-word .g-ex { color: var(--lime); animation-delay: .2s; }
 @keyframes gpop { 0% { transform: translateY(.4em) scale(.4); opacity: 0; } 100% { transform: none; opacity: 1; } }

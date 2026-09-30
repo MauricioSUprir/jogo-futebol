@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLAÇO — teste da rede</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font: 13px system-ui, sans-serif; }
+  canvas { display: block; }
+  #hud { position: fixed; left: 8px; top: 8px; color: #fff; background: rgba(0,0,0,.5); padding: 6px 9px; border-radius: 6px; line-height: 1.5; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="hud"></div>
+<script type="module">
+// Teste da rede simulada: close no gol leste, chutes com a física real (ball.js).
+// ?cam=front|side|behind|tv|top &night=1 &hud=0 &auto=0 (sem laço automático)
+// Teclas 1..7: chutes; R: reinicia. API p/ Playwright: __shot(k), __adv(frames), __info()
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { QUALITY, BALL, PHYS_HZ } from '../js/config.js';
+import { Ball, solveAim } from '../js/ball.js';
+import { buildGoals } from '../js/stadium-goals.js';
+import { BallMesh } from '../js/ballmesh.js';
+
+const qs = new URLSearchParams(location.search);
+const night = qs.get('night') === '1';
+const quality = QUALITY[qs.get('q') || 'alta'];
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(1);
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(night ? 0x05070c : 0x8fb4dc);
+scene.fog = new THREE.Fog(scene.background, 60, 160);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 500);
+const controls = new OrbitControls(camera, renderer.domElement);
+const VIEWS = {
+  front: { pos: [45.5, 1.5, -3.2], tgt: [54, 1.2, 0.3], fov: 42 },
+  side: { pos: [54.2, 1.3, -11.5], tgt: [54.2, 1.1, 0], fov: 32 },
+  behind: { pos: [59.5, 1.7, 2.5], tgt: [52, 1.1, 0], fov: 50 },
+  tv: { pos: [20, 15, -42], tgt: [52, 1, 0], fov: 12 },
+  top: { pos: [49, 6.5, -6], tgt: [54, 0.8, 0], fov: 45 },
+};
+const v = { ...(VIEWS[qs.get('cam')] || VIEWS.front) };
+if (qs.get('cp')) v.pos = qs.get('cp').split(',').map(Number);
+if (qs.get('ct')) v.tgt = qs.get('ct').split(',').map(Number);
+if (qs.get('fov')) v.fov = +qs.get('fov');
+camera.position.fromArray(v.pos); controls.target.fromArray(v.tgt); camera.fov = v.fov; camera.updateProjectionMatrix();
+controls.update();
+
+// luzes
+const sun = new THREE.DirectionalLight(night ? 0xeef3ff : 0xfff4e6, night ? 2.6 : 3.2);
+sun.position.set(night ? 30 : -40, 80, night ? -40 : -60);
+sun.target.position.set(52, 0, 0);
+sun.castShadow = true;
+Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 200 });
+sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0004;
+scene.add(sun, sun.target);
+scene.add(new THREE.HemisphereLight(0xbcd4ff, 0x3a5a2a, night ? 0.5 : 0.8));
+// gramado listrado e linhas
+const gc = document.createElement('canvas'); gc.width = gc.height = 256;
+const g2 = gc.getContext('2d');
+for (let i = 0; i < 8; i++) { g2.fillStyle = i % 2 ? '#3f7a2c' : '#468532'; g2.fillRect(0, i * 32, 256, 32); }
+const gt = new THREE.CanvasTexture(gc); gt.colorSpace = THREE.SRGBColorSpace; gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(6, 6);
+const grass = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ map: gt, roughness: 0.95 }));
+grass.rotation.x = -Math.PI / 2; grass.position.set(40, 0, 0); grass.receiveShadow = true;
+scene.add(grass);
+const line = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 70), new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.8 }));
+line.rotation.x = -Math.PI / 2; line.position.set(52.5, 0.005, 0); scene.add(line);
+// muro de fundo para dar contraste
+const wall = new THREE.Mesh(new THREE.BoxGeometry(1, 3, 60), new THREE.MeshStandardMaterial({ color: night ? 0x151820 : 0x2b3440 }));
+wall.position.set(62, 1.5, 0); scene.add(wall);
+
+const U = { uTime: { value: 0 }, uWind: { value: new THREE.Vector2(2.5, 1.2) } };
+const t0 = performance.now();
+const goals = buildGoals({ U, anisotropy: 8, shadows: true, quality });
+const buildMs = performance.now() - t0;
+scene.add(goals);
+window.__goals = goals;
+const bm = new BallMesh(scene, quality);
+const ball = new Ball();
+ball.events = [];
+ball.place(40, BALL.radius, 0);
+
+// chutes: origem, alvo (o ponto por onde a bola passa na linha do gol / rede), velocidade
+const SHOTS = [
+  { o: [40, 0.11, -1.5], tg: [53.6, 1.15, 0.4], v: 30, name: 'bomba no meio' },
+  { o: [38, 0.11, -4], tg: [53.2, 2.05, 2.9], v: 29, name: 'ângulo alto' },
+  { o: [41, 0.11, 3], tg: [53.5, 0.35, -2.8], v: 22, name: 'rasteiro no canto' },
+  { o: [46, 0.11, 0], tg: [53.5, 1.0, -0.6], v: 11, name: 'fraco (rola/encosta)' },
+  { o: [44, 0.11, 13], tg: [53.4, 0.9, 3.95], v: 22, name: 'rede lateral por fora' },
+  { o: [41, 0.11, 1], tg: [54.0, 2.2, -1.2], v: 26, name: 'no alto, rente ao teto' },
+  { o: [36, 0.11, -2], tg: [53.8, 1.6, -1.8], v: 34, name: 'petardo' },
+];
+let shotName = '', maxQ = 0, events = [];
+function shot(k) {
+  const S = SHOTS[k];
+  ball.place(...S.o);
+  const a = solveAim({ x: S.o[0], y: S.o[1], z: S.o[2] }, { x: S.tg[0], y: S.tg[1], z: S.tg[2] }, S.v, { side: 0, top: 0 });
+  ball.kick(a.vx, a.vy, a.vz, a.wx, a.wy, a.wz);
+  shotName = `${k + 1}: ${S.name} (${S.v} m/s)`; maxQ = 0; events = [];
+}
+
+let t = 0, acc = 0;
+const off = new THREE.Vector3();
+const hud = document.getElementById('hud');
+if (qs.get('hud') === '0') hud.style.display = 'none';
+let simMs = 0, simFrames = 0;
+function frame(dt) {
+  t += dt; U.uTime.value = t;
+  acc += dt;
+  const h = 1 / PHYS_HZ;
+  while (acc >= h) { acc -= h; ball.step(h); }
+  for (const e of ball.events) {
+    events.push(e.type);
+    // como o main.js faz hoje: evento 'net' → impact (deve ser ignorado quando update detecta)
+    if (e.type === 'net' || e.type === 'sidenet') goals.userData.impact(e.goalSign, e, e.strength * (e.type === 'sidenet' ? 0.5 : 1), t);
+  }
+  ball.events.length = 0;
+  const a = performance.now();
+  const o = goals.userData.update(dt, t, ball.p, ball.v);
+  simMs += performance.now() - a; simFrames++;
+  off.set(o.x, o.y, o.z);
+  const q = goals.userData.netInfo().proxy[1];
+  if (q != null) maxQ = Math.max(maxQ, q);
+  bm.set(ball.p.x + off.x, ball.p.y + off.y, ball.p.z + off.z);
+  bm.spin(ball.w, dt);
+}
+function info() {
+  const ni = goals.userData.netInfo();
+  const i = renderer.info.render;
+  return { shot: shotName, ball: [ball.p.x, ball.p.y, ball.p.z].map((x) => +x.toFixed(2)), off: off.toArray().map((x) => +x.toFixed(2)),
+    maxQ, events, awake: ni.awake, proxy: ni.proxy, nodes: ni.nodes, springs: ni.springs, calls: i.calls,
+    simMsPerFrame: +(simMs / Math.max(1, simFrames)).toFixed(3), buildMs: +buildMs.toFixed(1) };
+}
+function drawHud() {
+  const f = info();
+  hud.innerHTML = `${f.shot}<br>rede: ${f.nodes} nós · ${f.springs} molas · acordada ${f.awake} · bola virtual ${f.proxy} · máx ${f.maxQ.toFixed(2)} m<br>` +
+    `sim ${f.simMsPerFrame} ms/quadro · montagem ${f.buildMs} ms · teclas 1–7 chutes`;
+}
+window.__shot = (k) => shot(k);
+window.__adv = (n, dt = 1 / 60) => { for (let i = 0; i < n; i++) frame(dt); controls.update(); renderer.render(scene, camera); drawHud(); return info(); };
+window.__info = info;
+window.__reset = () => { simMs = 0; simFrames = 0; };
+addEventListener('keydown', (e) => { const k = +e.key; if (k >= 1 && k <= SHOTS.length) shot(k - 1); });
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+renderer.render(scene, camera);
+drawHud();
+window.__ready = true;
+if (qs.get('auto') !== '0') {
+  const clock = new THREE.Clock();
+  let k = 0, tNext = 0.5;
+  (function loop() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    tNext -= dt;
+    if (tNext <= 0) { shot(k++ % SHOTS.length); tNext = 3.2; }
+    frame(dt);
+    controls.update();
+    renderer.render(scene, camera);
+    if ((t * 10 | 0) % 3 === 0) drawHud();
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>

@@ -537,7 +537,7 @@ function scrChampion() {
   if (!st || !st.champion) { queueMicrotask(() => reset([scrMain])); return h('section', {}); }
   const c = teamById(st.champion), you = st.champion === st.user;
   return h('section', { class: 'gm-champ', style: { '--tc': c.colors.primary, '--tc2': c.colors.secondary } },
-    confetti([c.colors.primary, c.colors.secondary, '#c8ff2e', '#ffffff', '#ffd23f']),
+    confetti([c.colors.primary, c.colors.secondary, '#1ee37a', '#ffffff', '#ffd23f']),
     h('div', { class: 'gm-champ-inner' },
       h('p', { class: 'gm-kicker' }, TNAME[st.type]),
       h('div', { class: 'gm-champ-crest' }, crest(c, 170)),
@@ -583,7 +583,7 @@ function scrResult(res, cfg, { cont, rematch, st }) {
         const tot = a + b || 1;
         return h('div', { class: 'gm-stat' },
           h('b', {}, a + unit), h('span', {}, label), h('b', {}, b + unit),
-          h('div', { class: 'gm-stat-bar' }, h('i', { class: 'a', style: { '--w': `${(a / tot) * 100}%`, '--c': cfg?.homeKit?.shirt || '#c8ff2e' } }),
+          h('div', { class: 'gm-stat-bar' }, h('i', { class: 'a', style: { '--w': `${(a / tot) * 100}%`, '--c': cfg?.homeKit?.shirt || '#1ee37a' } }),
             h('i', { class: 'b', style: { '--w': `${(b / tot) * 100}%`, '--c': cfg?.awayKit?.shirt || '#fff' } })));
       })),
       h('div', { class: 'gm-actions gm-actions-center' },
@@ -631,27 +631,27 @@ const GP = [
   ['LB', 'Trocar jogador'], ['RT', 'Correr'], ['RS', 'Drible / finta', 'Analógico direito'], ['☰', 'Pausa', 'Start'],
 ];
 const PAD_SVG = `<svg viewBox="0 0 320 200" fill="none">
-<path d="M88 40h144c34 0 52 22 60 60l14 58c6 26-22 42-40 22l-30-32H84l-30 32c-18 20-46 4-40-22l14-58c8-38 26-60 60-60z" fill="#111a2e" stroke="#2c3a58" stroke-width="3"/>
-<rect x="70" y="24" width="50" height="12" rx="6" fill="#26324a"/><rect x="200" y="24" width="50" height="12" rx="6" fill="#26324a"/>
-<text x="95" y="20" fill="#8d9ab3" font-size="11" text-anchor="middle" font-family="Inter,sans-serif">LB · LT</text><text x="225" y="20" fill="#8d9ab3" font-size="11" text-anchor="middle" font-family="Inter,sans-serif">RB · RT</text>
-<circle cx="96" cy="86" r="20" fill="#0a1120" stroke="#c8ff2e" stroke-width="2"/><text x="96" y="90" fill="#c8ff2e" font-size="11" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">LS</text>
-<circle cx="196" cy="130" r="20" fill="#0a1120" stroke="#3a4a6c" stroke-width="2"/><text x="196" y="134" fill="#8d9ab3" font-size="11" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">RS</text>
-<path d="M118 118h12v-12h12v12h12v12h-12v12h-12v-12h-12z" fill="#26324a"/>
+<path d="M88 40h144c34 0 52 22 60 60l14 58c6 26-22 42-40 22l-30-32H84l-30 32c-18 20-46 4-40-22l14-58c8-38 26-60 60-60z" fill="#141816" stroke="#2c3530" stroke-width="3"/>
+<rect x="70" y="24" width="50" height="12" rx="6" fill="#262b28"/><rect x="200" y="24" width="50" height="12" rx="6" fill="#262b28"/>
+<text x="95" y="20" fill="#8b988f" font-size="11" text-anchor="middle" font-family="Inter,sans-serif">LB · LT</text><text x="225" y="20" fill="#8b988f" font-size="11" text-anchor="middle" font-family="Inter,sans-serif">RB · RT</text>
+<circle cx="96" cy="86" r="20" fill="#050706" stroke="#1ee37a" stroke-width="2"/><text x="96" y="90" fill="#1ee37a" font-size="11" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">LS</text>
+<circle cx="196" cy="130" r="20" fill="#050706" stroke="#3a443e" stroke-width="2"/><text x="196" y="134" fill="#8b988f" font-size="11" text-anchor="middle" font-family="Inter,sans-serif" font-weight="700">RS</text>
+<path d="M118 118h12v-12h12v12h12v12h-12v12h-12v-12h-12z" fill="#262b28"/>
 <circle cx="236" cy="104" r="11" fill="#2fbf5a"/><text x="236" y="108" fill="#08120a" font-size="12" text-anchor="middle" font-weight="800" font-family="Inter,sans-serif">A</text>
 <circle cx="258" cy="82" r="11" fill="#e8413c"/><text x="258" y="86" fill="#fff" font-size="12" text-anchor="middle" font-weight="800" font-family="Inter,sans-serif">B</text>
 <circle cx="214" cy="82" r="11" fill="#2f7de8"/><text x="214" y="86" fill="#fff" font-size="12" text-anchor="middle" font-weight="800" font-family="Inter,sans-serif">X</text>
 <circle cx="236" cy="60" r="11" fill="#f2c21b"/><text x="236" y="64" fill="#1a1400" font-size="12" text-anchor="middle" font-weight="800" font-family="Inter,sans-serif">Y</text>
-<rect x="170" y="66" width="18" height="9" rx="4.5" fill="#3a4a6c"/><rect x="132" y="66" width="18" height="9" rx="4.5" fill="#3a4a6c"/></svg>`;
+<rect x="170" y="66" width="18" height="9" rx="4.5" fill="#3a443e"/><rect x="132" y="66" width="18" height="9" rx="4.5" fill="#3a443e"/></svg>`;
 const TOUCH_SVG = `<svg viewBox="0 0 340 170" fill="none" font-family="Inter,sans-serif">
-<rect x="4" y="4" width="332" height="162" rx="22" fill="#0b1324" stroke="#2c3a58" stroke-width="3"/>
+<rect x="4" y="4" width="332" height="162" rx="22" fill="#0c0f0d" stroke="#2c3530" stroke-width="3"/>
 <rect x="18" y="16" width="304" height="138" rx="10" fill="#10331f" opacity=".55"/>
 <path d="M170 16v138M18 85h304" stroke="#fff" stroke-opacity=".12"/><circle cx="170" cy="85" r="22" stroke="#fff" stroke-opacity=".12"/>
-<circle cx="70" cy="110" r="32" fill="#fff" fill-opacity=".08" stroke="#c8ff2e" stroke-opacity=".7" stroke-width="2"/><circle cx="78" cy="104" r="13" fill="#c8ff2e" fill-opacity=".85"/>
-<text x="70" y="160" fill="#c8ff2e" font-size="10" text-anchor="middle">Joystick</text>
-<circle cx="292" cy="118" r="20" fill="#c8ff2e" fill-opacity=".9"/><text x="292" y="122" fill="#0a1120" font-size="10" font-weight="800" text-anchor="middle">CHUTE</text>
-<circle cx="250" cy="130" r="16" fill="#fff" fill-opacity=".85"/><text x="250" y="134" fill="#0a1120" font-size="9" font-weight="800" text-anchor="middle">PASSE</text>
-<circle cx="252" cy="88" r="16" fill="#fff" fill-opacity=".6"/><text x="252" y="91" fill="#0a1120" font-size="7.5" font-weight="800" text-anchor="middle">LONGO</text>
-<circle cx="294" cy="72" r="18" fill="#fff" fill-opacity=".6"/><text x="294" y="75" fill="#0a1120" font-size="7" font-weight="800" text-anchor="middle">ENFIADA</text>
+<circle cx="70" cy="110" r="32" fill="#fff" fill-opacity=".08" stroke="#1ee37a" stroke-opacity=".7" stroke-width="2"/><circle cx="78" cy="104" r="13" fill="#1ee37a" fill-opacity=".85"/>
+<text x="70" y="160" fill="#1ee37a" font-size="10" text-anchor="middle">Joystick</text>
+<circle cx="292" cy="118" r="20" fill="#1ee37a" fill-opacity=".9"/><text x="292" y="122" fill="#050706" font-size="10" font-weight="800" text-anchor="middle">CHUTE</text>
+<circle cx="250" cy="130" r="16" fill="#fff" fill-opacity=".85"/><text x="250" y="134" fill="#050706" font-size="9" font-weight="800" text-anchor="middle">PASSE</text>
+<circle cx="252" cy="88" r="16" fill="#fff" fill-opacity=".6"/><text x="252" y="91" fill="#050706" font-size="7.5" font-weight="800" text-anchor="middle">LONGO</text>
+<circle cx="294" cy="72" r="18" fill="#fff" fill-opacity=".6"/><text x="294" y="75" fill="#050706" font-size="7" font-weight="800" text-anchor="middle">ENFIADA</text>
 <circle cx="210" cy="136" r="16" fill="#fff" fill-opacity=".35"/><text x="210" y="139" fill="#fff" font-size="7" font-weight="800" text-anchor="middle">CORRER</text>
 <rect x="150" y="22" width="40" height="14" rx="7" fill="#fff" fill-opacity=".2"/><text x="170" y="32" fill="#fff" font-size="8" text-anchor="middle">❚❚</text></svg>`;
 
