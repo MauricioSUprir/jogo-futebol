@@ -31,6 +31,10 @@ void main() {
   float cov = smoothstep( 0.52, 0.8, c ) * smoothstep( 0.02, 0.25, h );
   col += vec3( 0.9, 0.93, 1.0 ) * st * ( 0.4 + 2.0 * h3( i + 7.1 ) ) * smoothstep( 0.05, 0.35, h ) * ( 1.0 - cov );
   col = mix( col, vec3( 0.05, 0.05, 0.055 ) * ( 1.0 + 1.5 * exp( -h * 4.0 ) ), cov * 0.8 );
+  // abaixo do horizonte: cidade escura com pontinhos de luz
+  float below = smoothstep( 0.0, -0.08, d.y );
+  vec3 city = vec3( 0.006, 0.006, 0.008 ) + vec3( 1.0, 0.8, 0.5 ) * step( 0.985, h3( floor( d * 260.0 ) ) ) * 0.25;
+  col = mix( col, city, below );
   gl_FragColor = vec4( col, 1.0 );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>

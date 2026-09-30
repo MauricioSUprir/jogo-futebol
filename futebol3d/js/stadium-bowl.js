@@ -341,7 +341,8 @@ function standMaterial(ctx) {
         } else if ( kind > 5.5 ) {
           // fachada externa: aletas verticais de metal, lavadas de luz à noite
           float fin = abs( fract( vSeatS / 1.6 ) - 0.5 ) * 2.0;
-          diffuseColor.rgb *= mix( 0.55, 1.1, smoothstep( 0.3, 0.9, fin ) );
+          float ffw = clamp( fwidth( vSeatS / 1.6 ) * 2.0, 0.0, 1.0 );
+          diffuseColor.rgb *= mix( mix( 0.55, 1.1, smoothstep( 0.3, 0.9, fin ) ), 0.85, ffw );
           kRough = 0.45; kMetal = 0.5;
           kEmis += uAccent * smoothstep( 22.0, 0.0, yB ) * 0.12 * uNight;
         } else {
@@ -386,7 +387,7 @@ function roofProfile() {
 }
 
 // guarda-corpos, corrimãos, passarela técnica e treliças: tudo no acumulador `st`
-function buildStructure(st, glass, samples, detail) {
+function buildStructure(st, glass, samples, detail, isNight) {
   const steel = new THREE.Color(0.5, 0.52, 0.56);
   const dark = new THREE.Color(0.08, 0.085, 0.095);
   const rail = new THREE.Color(0.62, 0.64, 0.68);
@@ -394,7 +395,7 @@ function buildStructure(st, glass, samples, detail) {
 
   // cobertura (opaca)
   sweepInto(st, samples, roofProfile(), (kind, c) => {
-    if (kind === 0) c.setRGB(0.52, 0.54, 0.57);        // painéis do telhado
+    if (kind === 0) { if (isNight) c.setRGB(0.1, 0.105, 0.115); else c.setRGB(0.52, 0.54, 0.57); } // painéis do telhado
     else if (kind === 1) c.setRGB(0.07, 0.075, 0.085); // bordas
     else c.setRGB(0.26, 0.27, 0.29);                   // forro
   });
@@ -459,12 +460,13 @@ function buildRails(st, detail) {
   for (const T of [BOWL.lower, BOWL.upper]) {
     for (let S = 0; S < total - 1; S += BOWL.aisleSp) {
       const Sc = S + BOWL.aisleW / 2;
-      const dA = T.d0 + T.depth * 1.5, dB = T.d0 + T.depth * (T.rows - 0.5);
-      const yA = T.y0 + T.rise * 1 + 0.95, yB = T.y0 + T.rise * (T.rows - 1) + 0.95;
-      st.beam(Pt(Sc, dA, yA), Pt(Sc, dB, yB), 0.05, 0.05, rail);
-      for (let r = 1; r < T.rows; r += 3) {
-        const d = T.d0 + T.depth * (r + 0.5), y = T.y0 + T.rise * r;
-        st.beam(Pt(Sc, d, y), Pt(Sc, d, y + 0.95 + (T.rise / T.depth) * 0), 0.045, 0.045, rail);
+      // corrimão central em lances de 3 fileiras, com vãos para passar
+      for (let r = 1; r + 2 < T.rows; r += 4) {
+        const d0 = T.d0 + T.depth * (r + 0.5), y0 = T.y0 + T.rise * r;
+        const d1 = d0 + T.depth * 2.4, y1 = y0 + T.rise * 2.4;
+        st.beam(Pt(Sc, d0, y0 + 0.9), Pt(Sc, d1, y1 + 0.9), 0.045, 0.045, rail);
+        st.beam(Pt(Sc, d0, y0), Pt(Sc, d0, y0 + 0.9), 0.04, 0.04, rail);
+        st.beam(Pt(Sc, d1, y1 - T.rise * 0.4), Pt(Sc, d1, y1 + 0.9), 0.04, 0.04, rail);
       }
     }
   }
@@ -506,7 +508,7 @@ export function buildBowl(ctx, st, glass) {
   stands.name = 'arquibancada';
   group.add(stands);
 
-  buildStructure(st, glass, samples, detail);
+  buildStructure(st, glass, samples, detail, ctx.isNight);
   buildRails(st, detail);
 
   group.userData.stands = stands;

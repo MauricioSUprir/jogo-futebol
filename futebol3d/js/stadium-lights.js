@@ -62,7 +62,7 @@ varying vec3 vW;
 void main() {
   vec3 V = normalize( cameraPosition - vW );
   float edge = pow( abs( dot( normalize( vN ), V ) ), 2.2 );
-  float fall = mix( 1.0, 0.12, vT );
+  float fall = mix( 1.0, 0.1, vT ) * smoothstep( 0.0, 0.25, vT );
   float ground = smoothstep( 0.5, 9.0, vW.y );
   // poeira/umidade no ar (ruído barato que se move devagar)
   float dust = 0.8 + 0.2 * sin( vW.x * 0.35 + uTime * 0.3 ) * sin( vW.z * 0.31 - uTime * 0.2 + vW.y * 0.2 );
@@ -134,7 +134,7 @@ export function buildFloodlights(ctx) {
       for (const s of list) { p.add(s.p); aim.add(s.aim); }
       p.divideScalar(list.length); aim.normalize();
       const len = -p.y / aim.y;                       // até o gramado
-      const cg = new THREE.CylinderGeometry(1.0, len * Math.tan(0.2), len, 18, 1, true);
+      const cg = new THREE.CylinderGeometry(1.0, len * Math.tan(0.16), len, 18, 1, true);
       const ty = [];
       const cp = cg.attributes.position;
       for (let i = 0; i < cp.count; i++) ty.push(0.5 - cp.getY(i) / len);
@@ -152,7 +152,7 @@ export function buildFloodlights(ctx) {
     cgeo.setAttribute('aT', new THREE.Float32BufferAttribute(tt, 1));
     cgeo.setIndex(idx);
     const cm = new THREE.ShaderMaterial({
-      uniforms: { uI: { value: 0.03 }, uTime: U.uTime }, vertexShader: coneVert, fragmentShader: coneFrag,
+      uniforms: { uI: { value: 0.011 }, uTime: U.uTime }, vertexShader: coneVert, fragmentShader: coneFrag,
       blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide,
     });
     const cones = new THREE.Mesh(cgeo, cm);
