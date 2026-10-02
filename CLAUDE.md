@@ -27,6 +27,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - **Urgente:** melhora extrema dos gráficos no celular (qualidade baixa/média).
 - **PRIMEIRA COISA na próxima sessão:** gerar os rostos com o dono pelo ChatGPT (pedido em
   `tools/rostos/pedido-chatgpt.txt`, lotes 02–35, pasta do Drive "GOLAÇO – rostos") e colocar no jogo.
+- **Jogador tem que ser um modelo humano 3D realista inteiro** (corpo e cabeça com formato de
+  verdade, esqueleto, mocap). Nada de foto "colada" em cabeça/corpo de peças geométricas — o dono
+  achou péssimo. O rosto é a pele da cabeça do modelo (UV), não um adesivo.
 - Rostos: escolhido **retrato por IA de pessoa fictícia** projetado na cabeça 3D (opção B);
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
