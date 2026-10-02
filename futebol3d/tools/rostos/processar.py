@@ -12,7 +12,7 @@ AQUI = os.path.dirname(os.path.abspath(__file__))
 SAIDA = os.path.join(AQUI, '..', '..', 'assets', 'rostos')
 SFHQ = '/tmp/claude-0/-home-user-jogo-futebol/9805b587-e422-5403-9106-8bf9d9184706/scratchpad/sfhq/'
 os.makedirs(SAIDA, exist_ok=True)
-C = 192; EX, EY, ED = 0.5, 0.42, 0.27; COLS = 12
+C = 384; EX, EY, ED = 0.5, 0.42, 0.27; COLS = 12
 def alinha(im, m):
     oe, od = m['oe'], m['od']
     if oe[0] > od[0]: oe, od = od, oe
@@ -30,26 +30,35 @@ def alinha(im, m):
     ov = [inv(x, y) for x, y in m['oval']]
     cx0, cy0 = np.mean(ov, axis=0)
     ov = [(cx0 + (x - cx0) * 1.03, cy0 + (y - cy0) * 1.03) for x, y in ov]
+    # o cabelo da foto entra: a metade de cima do contorno sobe até o topo da célula
+    ey = EY * C
+    ov = [(cx0 + (x - cx0) * (1.10 if y < ey else 1.0), (y - (y - 0) * 0.92) if y < ey - 0.05 * C else y) for x, y in ov]
     from PIL import ImageDraw, ImageFilter
-    mk = Image.new('L', (C, C), 0); ImageDraw.Draw(mk).polygon(ov, fill=255); mk = mk.filter(ImageFilter.GaussianBlur(C * 0.02))
+    mk = Image.new('L', (C, C), 0); ImageDraw.Draw(mk).polygon(ov, fill=255); mk = mk.filter(ImageFilter.GaussianBlur(C * 0.015))
     y0, y1 = int(C * 0.55), int(C * 0.63)
     pele = np.concatenate([arr[y0:y1, int(C * .28):int(C * .36)].reshape(-1, 3), arr[y0:y1, int(C * .64):int(C * .72)].reshape(-1, 3)])
     pele = np.median(pele, axis=0)
-    fundo = Image.new('RGB', (C, C), tuple(int(x) for x in pele))
+    cab = np.median(arr[int(C * .05):int(C * .12), int(C * .42):int(C * .58)].reshape(-1, 3), axis=0)
+    # fora: acima dos olhos = cor do cabelo, abaixo = pele (em degradê)
+    g = np.linspace(0, 1, C)[:, None, None]
+    t = np.clip((g - (EY - 0.04)) / 0.12, 0, 1)
+    fundo = Image.fromarray((cab[None, None, :] * (1 - t) + pele[None, None, :] * t).repeat(C, axis=1).astype(np.uint8))
     out = Image.composite(out, fundo, mk)
+    alinha.cab = [int(x) for x in cab]
     return out, [int(x) for x in pele]
 banco = []   # (img, pele, origem)
+CABS = []
 for f in sorted(glob.glob(os.path.join(AQUI, 'brutos', 'g*.png'))):
     im = Image.open(f).convert('RGB'); W, H = im.size
     for m in sorted(marcos(im), key=lambda m: (int((m['oe'][1] > H / 2)), m['oe'][0])):
-        o, p = alinha(im, m); banco.append((o, p, 'ia:' + os.path.basename(f)))
+        o, p = alinha(im, m); banco.append((o, p, 'ia:' + os.path.basename(f))); CABS.append(alinha.cab)
 im = Image.open(os.path.join(AQUI, '..', 'rosto', 'ia1sq.jpg')).convert('RGB')
-o, p = alinha(im, marcos(im)[0]); banco.append((o, p, 'ia:ia1'))
+o, p = alinha(im, marcos(im)[0]); banco.append((o, p, 'ia:ia1')); CABS.append(alinha.cab)
 fr = json.load(open(SFHQ + 'frontais.json'))
 for i in json.load(open(os.path.join(AQUI, 'escolhidos.json')))['sfhq']:
     im = Image.open(SFHQ + fr[i]).convert('RGB'); ms = marcos(im)
     if not ms: print('sem rosto', i); continue
-    o, p = alinha(im, ms[0]); banco.append((o, p, 'sfhq:' + os.path.basename(fr[i])))
+    o, p = alinha(im, ms[0]); banco.append((o, p, 'sfhq:' + os.path.basename(fr[i]))); CABS.append(alinha.cab)
 N = len(banco); rows = math.ceil(N / COLS)
 atl = Image.new('RGB', (C * COLS, C * rows), (120, 90, 70))
 for k, (o, p, s) in enumerate(banco): atl.paste(o, ((k % COLS) * C, (k // COLS) * C))
@@ -77,6 +86,6 @@ for t in looks:
         k = min(livres, key=lambda j: abs(rank_b[j] - r) + 0.04 * usos[j])
         livres.discard(k); usos[k] += 1; esc.append(int(k))
     times.append(esc)
-json.dump({'cell': C, 'cols': COLS, 'rows': rows, 'n': N, 'eye': [EX, EY, ED], 'pele': [p for _, p, _ in banco],
+json.dump({'cell': C, 'cols': COLS, 'rows': rows, 'n': N, 'eye': [EX, EY, ED], 'pele': [p for _, p, _ in banco], 'cabelo': CABS,
            'origem': [s for _, _, s in banco], 'times': times}, open(os.path.join(SAIDA, 'rostos.json'), 'w'))
 print('rostos no banco:', N, '| atlas', atl.size, '| bytes', os.path.getsize(os.path.join(SAIDA, 'rostos.jpg')))

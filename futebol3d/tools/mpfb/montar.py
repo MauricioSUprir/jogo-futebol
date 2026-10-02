@@ -76,22 +76,60 @@ nb = [[] for _ in range(len(P))]
 for f in F:
     for i in range(3): nb[f[i]] += [f[(i + 1) % 3], f[(i + 2) % 3]]
 for _ in range(3): infl = np.array([0.5 * infl[i] + 0.5 * (infl[nb[i]].mean() if nb[i] else infl[i]) for i in range(len(P))])
+infl *= np.clip((1.47 - Rr[:, 1]) / 0.05, 0, 1)      # sem folga na gola (evita pontas da camisa no pescoço)
 P = P + N * infl[:, None]
 Rr = rest_pos(P, idx, w)
 
+# --- cabeça: escaneamento 3D (Lee Perry-Smith, Infinite-Realities, CC BY 3.0) com o UV dele
+# (para o mapa de relevo da pele); o rosto é a foto do jogador projetada (aFace) — o mesmo
+# visual do teste "B" aprovado pelo dono. Substitui a cabeça do MakeHuman.
+import trimesh
+sc = trimesh.load(os.path.join(AQUI, '..', 'rosto', 'LeePerrySmith.glb'), force='mesh', process=False)
+SV, SF, SUV = np.asarray(sc.vertices).copy(), np.asarray(sc.faces).copy(), np.asarray(sc.visual.uv).copy()
+OE, OD = np.array([-0.716, 1.632]), np.array([0.49, 1.647]); smid = (OE + OD) / 2; kk = 0.060 / np.linalg.norm(OD - OE)
+near = np.linalg.norm(SV[:, :2] - smid, axis=1) < 0.5; zeye = np.percentile(SV[near, 2], 70)
+# corpo do MakeHuman sem a cabeça: corta acima do pescoço
+keepB = Rr[:, 1] < 1.545
+neckB = P[(Rr[:, 1] > 1.50) & (Rr[:, 1] < 1.545)]
+ncx, ncz = neckB[:, 0].mean(), neckB[:, 2].mean()
+VH = np.stack([(SV[:, 0] - smid[0]) * kk + ncx, (SV[:, 1] - smid[1]) * kk + 1.684, (SV[:, 2] - zeye) * kk + 0.125], axis=1)
+def cutm(V, F, keep, *extra):
+    F = F[np.all(keep[F], axis=1)]; u = np.unique(F); r = -np.ones(len(V), np.int64); r[u] = np.arange(len(u))
+    return (V[u], r[F]) + tuple(e[u] for e in extra)
+VH, FH, SUV = cutm(VH, SF, VH[:, 1] > 1.53, SUV)
+def raio(V, y, cx, cz):
+    sel = V[np.abs(V[:, 1] - y) < 0.006]; return np.median(np.hypot(sel[:, 0] - cx, sel[:, 2] - cz))
+rb = raio(neckB, 1.53, ncx, ncz)
+hn = VH[(VH[:, 1] > 1.53) & (VH[:, 1] < 1.56)]; hcx, hcz = hn[:, 0].mean(), hn[:, 2].mean()
+VH[:, 0] += ncx - hcx; VH[:, 2] += ncz - hcz
+for y0 in np.arange(1.53, 1.61, 0.004):
+    sel = np.abs(VH[:, 1] - y0) < 0.0021
+    if not sel.any(): continue
+    f = 1 + (rb / raio(VH, y0, ncx, ncz) - 1) * np.clip((1.61 - y0) / 0.08, 0, 1)
+    VH[sel, 0] = ncx + (VH[sel, 0] - ncx) * f; VH[sel, 2] = ncz + (VH[sel, 2] - ncz) * f
+rr = np.hypot(VH[:, 0] - ncx, VH[:, 2] - ncz); lim = rb * 0.98 + np.clip(VH[:, 1] - 1.55, 0, None) * 1.2
+over = (VH[:, 1] < 1.61) & (rr > lim)
+VH[over, 0] = ncx + (VH[over, 0] - ncx) * lim[over] / rr[over]; VH[over, 2] = ncz + (VH[over, 2] - ncz) * lim[over] / rr[over]
+# projeção da foto (olhos da malha em y 1,6951, ±0,0297 → olhos da célula em 0,42, 0,5 ± 0,135)
+FACEUV = np.stack([0.5 + (VH[:, 0] - ncx) * 4.545, 0.42 + (1.6951 - VH[:, 1]) * 4.545], axis=1).astype(np.float32)
+# pesos: cabeça; a base do pescoço divide com o osso do pescoço
+th = np.clip((VH[:, 1] - 1.545) / 0.06, 0, 1)
+IH = np.tile(np.array([4, 3, 0, 0], np.uint8), (len(VH), 1)); WH = np.stack([th, 1 - th, 0 * th, 0 * th], axis=1)
+HEAD = 16
+print('cabeça escaneada:', len(VH), 'vértices', len(FH), 'tris | pescoço r', round(rb, 3))
 # --- olhos e sobrancelhas presos à cabeça (com os mesmos morphs)
 def acc(key, m):
     p = D[key + '_p_eu'] * 1.0; a = D[key + '_p_af'] * ka - p; s = D[key + '_p_as'] * ks - p
     return p, D[key + '_uv'], D[key + '_f'], a, s, np.full(len(p), m, np.uint8)
-parts = [(P, UV, F, MA, MS, mat, idx, w)]
-for key, m in [('eyes', EYE), ('brows', BROW)]:
-    p, uv, f, a, s, mm = acc(key, m)
-    i4 = np.tile(np.array([4, 0, 0, 0], np.uint8), (len(p), 1)); w4 = np.tile(np.array([1, 0, 0, 0], np.float64), (len(p), 1))
-    parts.append((p, uv, f, a, s, mm, i4, w4))
-Pa = []; UVa = []; Fa = []; Aa = []; Sa = []; Ma = []; Ia = []; Wa = []; o = 0
-for p, uv, f, a, s, mm, i4, w4 in parts:
-    Pa.append(p); UVa.append(uv); Fa.append(f + o); Aa.append(a); Sa.append(s); Ma.append(mm); Ia.append(i4); Wa.append(w4); o += len(p)
-P, UV, F, MA, MS, MAT, IDX, WW = [np.concatenate(x) for x in (Pa, UVa, Fa, Aa, Sa, Ma, Ia, Wa)]
+Pb, Fb, UVb, MAb, MSb, matb, idxb, wb = cutm(P, F, keepB, UV, MA, MS, mat, idx, w)
+FUb = np.zeros((len(Pb), 2), np.float32)
+parts = [(Pb, UVb, Fb, MAb, MSb, matb, idxb, wb, FUb),
+         (VH, SUV.astype(np.float32), FH, VH * 0, VH * 0, np.full(len(VH), HEAD, np.uint8), IH, WH, FACEUV)]
+cols = [[] for _ in range(9)]; o = 0
+for part in parts:
+    for k, x in enumerate(part): cols[k].append(x + o if k == 2 else x)
+    o += len(part[0])
+P, UV, F, MA, MS, MAT, IDX, WW, FU = [np.concatenate(x) for x in cols]
 REST = rest_pos(P, IDX, WW)
 
 # --- cabelos (presos à cabeça; um por estilo)
@@ -126,6 +164,7 @@ for k, h in enumerate(HAIRS):
     f = [x for x in glob.glob(DATA + 'hair/' + h + '/*diffuse*.png')][0]
     hat.paste(Image.open(f).convert('RGBA').resize((512, 512), Image.LANCZOS), ((k % 4) * 512, (k // 4) * 512))
 hat.save(os.path.join(OUT, 'cabelos.png'), optimize=True)
+Image.open(os.path.join(AQUI, '..', 'rosto', 'Infinite-Level_02_Tangent_SmoothUV.jpg')).convert('RGB').save(os.path.join(OUT, 'cabeca-normal.jpg'), quality=90)
 
 # --- binário
 blob = bytearray(); meta = {'fonte': 'MakeHuman / MPFB 2 (CC0): corpo, peles, olhos, sobrancelhas e cabelos', 'skins': SKINS, 'skinLum': lum, 'hairs': HAIRS}
@@ -134,7 +173,7 @@ def put(name, arr, ent):
     ent[name] = len(blob); blob.extend(arr.tobytes())
 ent = {'nv': len(P), 'ni': int(F.size)}
 for name, arr in [('pos', P.astype(np.float32)), ('rest', REST.astype(np.float32)), ('uv', UV.astype(np.float32)),
-                  ('ma', MA.astype(np.float32)), ('ms', MS.astype(np.float32)), ('w', WW.astype(np.float32)),
+                  ('ma', MA.astype(np.float32)), ('ms', MS.astype(np.float32)), ('w', WW.astype(np.float32)), ('face', FU.astype(np.float32)),
                   ('idx', IDX.astype(np.uint8)), ('mat', MAT.astype(np.uint8)), ('index', F.astype(np.uint32))]:
     put(name, arr, ent)
 meta['body'] = ent; meta['hair'] = []
