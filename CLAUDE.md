@@ -20,7 +20,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Fila atual (GOLAÇO): condução natural → animação do gol → escalação no campinho com fotos
   → sombras/gráficos de dia + rostos/texturas + torcida fervorosa → **fotógrafos atrás do gol
   (hoje péssimos)** → **torcida vibrando de verdade** (pular, braços, ondas no gol/chance)
-  → **cantos de torcida ao fundo** o jogo todo.
+  → **cantos de torcida ao fundo** o jogo todo → **animação por captura de movimento (mocap)**
+  (modelos com esqueleto + animações reais CMU/Mixamo; aprovado pelo dono, fim da fila).
+- Rostos: **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
 
