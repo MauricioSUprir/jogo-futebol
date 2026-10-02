@@ -360,7 +360,7 @@ export class Match {
     const dri = o.a.dri / 99;
     const rx = -o.fz, rz = o.fx;
     const L = cycleLength(sp, o.pose.moveAngle || 0);
-    const st = o.pose.stride, want = o.foot > 0 ? 0.35 : 0.85;
+    const st = o.pose.stride, want = o.foot > 0 ? 0.45 : 0.95;
     let dSt = st - (o.lastStride ?? st);
     if (dSt < -512) dSt += 1024;
     if (dSt < 0 || dSt > 0.25) dSt = 0;
@@ -374,7 +374,7 @@ export class Match {
     let ph = st - o.dribSt; if (ph < 0) ph += 1024;
     const u = Math.min(ph / per, 1.15);
     // alcance do pé no toque e abertura máxima da bola entre toques
-    const base = o.shielding ? 0.3 : 0.36 + Math.min(sp, 8) * 0.022;
+    const base = o.shielding ? 0.3 : 0.29 + Math.min(sp, 8) * 0.022;
     const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (per > 1 ? 0.085 : 0.045)) * (1.3 - dri * 0.55);
     const gap = sp > 0.8 ? open * 4 * u * (1 - Math.min(u, 1)) : 0;
     const lead = base + gap;
@@ -429,7 +429,8 @@ export class Match {
         if (!q.canPlay() || q.action) continue;
         const d = Math.hypot(b.p.x - q.footX(), b.p.z - q.footZ());
         const dOwner = Math.hypot(b.p.x - o.x, b.p.z - o.z);
-        if (d < 0.55 && dOwner > 0.75 && b.p.y < 0.5) {
+        // bola entre um toque e outro (longe do pé do dono) e o pé do defensor mais perto dela
+        if (d < 0.55 && dOwner > 0.5 && d < dOwner && b.p.y < 0.5) {
           const chance = 0.9 * dt * 8 * (q.a.def / 99) * (1.2 - o.a.dri / 150);
           if (Math.random() < chance) { this.takeBall(q, 'intercept'); break; }
         }
@@ -492,7 +493,7 @@ export class Match {
     const lead = 0.35 + p.speed * 0.045;
     const tx = p.x + p.fx * lead, tz = p.z + p.fz * lead;
     b.v.x = p.vx + (tx - b.p.x) * 2.4; b.v.z = p.vz + (tz - b.p.z) * 2.4;
-    p.cushion = 0.5;
+    p.cushion = 0.3;   // domínio emenda logo na condução (FC 26: "first touch responsiveness")
     p.dribSt = undefined;
     if (b.p.y < R + 0.05) { b.v.y = 0; b.rolling = true; }
     this.touch(p, how);
