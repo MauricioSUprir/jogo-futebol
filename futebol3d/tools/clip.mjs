@@ -21,7 +21,7 @@ const errs = []; p.on('pageerror', e => errs.push(e.message));
 await p.goto(`http://localhost:${arg('port', '8790')}/index.html`); await p.waitForTimeout(2000);
 await p.evaluate(async (q) => {
   const T = await import('./js/teams.js'); const k = T.resolveKits(T.TEAMS[0], T.TEAMS[1]);
-  await window.__golaco.startMatch({ mode: 'amistoso', home: T.TEAMS[0], away: T.TEAMS[1], ...k, userSide: 'none', settings: { ...window.__golaco.settings(), quality: q, timeOfDay: 'dia' } });
+  await window.__golaco.startMatch({ mode: 'amistoso', home: T.TEAMS[0], away: T.TEAMS[1], ...k, userSide: 'none', noIntro: true, settings: { ...window.__golaco.settings(), quality: q, timeOfDay: 'dia', intro: false } });
 }, arg('q', 'baixa'));
 await p.waitForFunction(() => window.__golaco.game, null, { timeout: 60000 });
 // aquece até alguém conduzir a bola correndo

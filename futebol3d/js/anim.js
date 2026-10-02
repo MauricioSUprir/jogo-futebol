@@ -615,10 +615,10 @@ export function cycleLength(v, moveAngle = 0) {
   return L * (1 - 0.3 * lat - 0.25 * back);
 }
 
-const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1, drib: 0, bx: 0, bz: 0, tf: 1 };
+const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1, drib: 0, bx: 0, bz: 0, tf: 1, mw: 0, tw0: 0, tw1: 0 };
 const FT = new Float32Array(8); // alvo por pé: x, y, z, pitch
 function gaitReset() {
-  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1;
+  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1; G.mw = 0; G.tw0 = 0; G.tw1 = 0;
 }
 function gait() {
   const v = Math.max(G.v, 0), ma = G.ma, t = G.t;
@@ -684,6 +684,7 @@ function gait() {
     if (G.drib > 0 && sd === (G.tf > 0 ? 1 : 0) && u >= duty) {
       const bz = G.bz, reachK = clamp((1.05 - bz) / 0.3, 0, 1) * clamp((bz - 0.05) / 0.15, 0, 1);
       const w = G.drib * mv * reachK * Math.exp(-(((u - 0.86) / 0.1) ** 2));
+      if (sd === 0) G.tw0 = w; else G.tw1 = w;
       if (w > 0.001) {
         tx = lerp(tx, clamp(G.bx, -0.35, 0.35) + sg * 0.02, w);
         tz = lerp(tz, bz - 0.22, w);
@@ -727,7 +728,7 @@ function hash(n) { const x = Math.sin((n | 0) * 127.1 + 311.7) * 43758.5453; ret
 const DV2 = new Float32Array(NB * 3);
 
 function evalState(s, P) {
-  R.fill(0); W.rx = 0; W.rz = 0; W.lift = 0; W.mode = M_FEET; W.mirror = false; W.sup = 0;
+  R.fill(0); W.rx = 0; W.rz = 0; W.lift = 0; W.mode = M_FEET; W.mirror = false; W.sup = 0; W.mocap = false;
   const t = s.t || 0, anim = s.anim || 'idle';
   const pw = s.power == null ? 0.7 : clamp(s.power, 0, 1);
   const foot = s.foot === -1 ? -1 : 1;
@@ -740,6 +741,13 @@ function evalState(s, P) {
       G.drib = anim === 'idle' ? 0 : clamp(s.drib || 0, 0, 1); G.bx = s.bx || 0; G.bz = s.bz || 0; G.tf = foot;
       // conduzindo: base um pouco mais baixa, braços abertos para equilíbrio
       G.crouch = 0.03 * G.drib;
+      // captura de movimento: corrida/caminhada para a frente; de lado, de costas ou parado
+      // fica a passada procedural (o mocap só tem corrida reta)
+      if (MOCAP && anim === 'locomotion') {
+        const v = G.v, am = Math.abs(G.ma);
+        G.mw = smooth(clamp((v - 0.45) / 0.55, 0, 1)) * (1 - smooth(clamp((am - 0.3) / 0.45, 0, 1)))
+          * (v > 5.5 ? lerp(1, 0.45, clamp((v - 5.5) / 2.5, 0, 1)) : 1);
+      }
       gait();
       break;
     case 'jockey': {
@@ -824,9 +832,51 @@ function evalState(s, P) {
     }
     qEuler(q, b * 4, x, y, z, b < 5 ? 0 : 1);
   }
+  if (G.mw > 0.001) applyMocap(q);
   if (mir) W.rx = -W.rx;
   fk(P, W.rx, 0, W.rz);
   ground(P);
+}
+
+// ---------------------------------------------------------------- captura de movimento
+// Ciclos de passada reais (CMU, ver tools/mocap/retarget.py) indexados pela fase s.stride
+// (0 = pouso do pé esquerdo, igual à passada procedural) e misturados pela velocidade.
+let MOCAP = null;
+export function setMocap(d) {
+  if (!d || !d.clips?.length) { MOCAP = null; return; }
+  MOCAP = { n: d.n, clips: d.clips.map(c => ({ speed: c.speed, Q: Float32Array.from(c.frames.flatMap(f => f.q)), Y: Float32Array.from(c.frames.map(f => f.y)) })) };
+}
+const MQ = new Float32Array(NB * 4), MQB = new Float32Array(NB * 4), QB = new Float32Array(4);
+// amostra um clipe na fase ph (0..1) — interpola quadros vizinhos (nlerp com sinal coerente)
+function mocapClip(c, ph, out) {
+  const n = MOCAP.n, u = frac(ph) * n, i0 = Math.floor(u) % n, i1 = (i0 + 1) % n, a = u - Math.floor(u);
+  const Q = c.Q, o0 = i0 * NB * 4, o1 = i1 * NB * 4;
+  for (let b = 0; b < NB; b++) {
+    const k = b * 4;
+    let x1 = Q[o1 + k], y1 = Q[o1 + k + 1], z1 = Q[o1 + k + 2], w1 = Q[o1 + k + 3];
+    const x0 = Q[o0 + k], y0 = Q[o0 + k + 1], z0 = Q[o0 + k + 2], w0 = Q[o0 + k + 3];
+    if (x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1 < 0) { x1 = -x1; y1 = -y1; z1 = -z1; w1 = -w1; }
+    const x = x0 + (x1 - x0) * a, y = y0 + (y1 - y0) * a, z = z0 + (z1 - z0) * a, w = w0 + (w1 - w0) * a, nn = 1 / Math.hypot(x, y, z, w);
+    out[k] = x * nn; out[k + 1] = y * nn; out[k + 2] = z * nn; out[k + 3] = w * nn;
+  }
+  return c.Y[i0] + (c.Y[i1] - c.Y[i0]) * a;
+}
+function applyMocap(q) {
+  const C = MOCAP.clips, v = G.v, ph = G.stride;
+  let i = 0; while (i < C.length - 2 && v > C[i + 1].speed) i++;
+  const t = clamp((v - C[i].speed) / (C[i + 1].speed - C[i].speed), 0, 1);
+  let y = mocapClip(C[i], ph, MQ);
+  if (t > 0) { const y2 = mocapClip(C[i + 1], ph, MQB); for (let b = 0; b < NB; b++) qSlerp(MQ, MQB, b * 4, t, MQ); y = lerp(y, y2, t); }
+  for (let b = 0; b < NB; b++) {
+    // pescoço/cabeça dividem com o olhar; a perna que toca a bola segue a passada procedural
+    let w = G.mw * (b === 3 || b === 4 ? 0.45 : 1);
+    if (b >= 11 && b <= 13) w *= 1 - G.tw0; else if (b >= 14) w *= 1 - G.tw1;
+    if (w > 0) qSlerp(q, MQ, b * 4, w, q);
+  }
+  // inclinação nas curvas (procedural) por cima da pelve do mocap
+  if (G.bank) { qEuler(QB, 0, 0, 0, G.bank * 0.8 * G.mw, 0); qMul(QB, 0, q, 0, q, 0); }
+  W.lift = lerp(W.lift, y - G.crouch, G.mw);
+  W.mocap = true;
 }
 
 function fk(P, rx, ry, rz) {
@@ -856,7 +906,7 @@ const QX = new Float32Array(4), QT = new Float32Array(4);
 function ground(P) {
   let y;
   const mode = W.mode;
-  if (mode === M_IK) y = W.lift;
+  if (mode === M_IK) y = W.mocap ? Math.max(W.lift, -Math.min(footMin(P, 0), footMin(P, 1))) : W.lift;
   else if (mode === M_SUPPORT) y = -footMin(P, W.sup) + W.lift;
   else if (mode === M_FEET) y = -Math.min(footMin(P, 0), footMin(P, 1)) + W.lift;
   else {

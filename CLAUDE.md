@@ -43,6 +43,14 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   que rodar em celular médio.
 - Pasta `tools/` não vai para o site.
 
+- Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
+  retratos por IA em `tools/rostos/brutos/gNN.png` + banco SFHQ CC0) projetadas na cabeça escaneada
+  (`assets/cabeca/`, só a forma; `tools/rostos/cabeca.py`). Pedido para o ChatGPT gerar os lotes:
+  `tools/rostos/pedido-chatgpt.txt` → imagens na pasta do Drive "GOLAÇO – rostos" → copiar para
+  `brutos/` como `gNN.png` e rodar `processar.py`.
+- Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
+  `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos).
+
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
 cd futebol3d
