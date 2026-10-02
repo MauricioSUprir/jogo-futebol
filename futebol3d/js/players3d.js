@@ -433,7 +433,7 @@ attribute vec3 aMA; attribute vec3 aMS;
 #ifdef HAIR_TEX
 attribute float aCell; flat varying float vCell;
 #endif
-varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
+flat varying float vMat; varying vec3 vRest; varying vec3 vSphN; flat varying float vPid; flat varying float vSide;
 `;
 const FRAG_DECL = /* glsl */`
 #if defined(BODY_SKIN) || defined(HAIR_TEX)
@@ -446,7 +446,7 @@ varying vec2 vFaceUv;
 flat varying float vCell;
 #endif
 uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor; uniform sampler2D uFace; uniform vec4 uFaceA; uniform vec2 uFaceB; uniform vec3 uFaceC;
-varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
+flat varying float vMat; varying vec3 vRest; varying vec3 vSphN; flat varying float vPid; flat varying float vSide;
 vec4 K(int i) { return texelFetch(uKit, ivec2(i, int(vPid + 0.5)), 0); }
 float aa(float d) { float w = max(fwidth(d), 1e-4); return smoothstep(-w, w, d); }
 float band(float x, float c, float hw) { float w = max(fwidth(x), 1e-4); return smoothstep(-w, w, hw - abs(x - c)); }
@@ -498,6 +498,8 @@ float fabH = 0.0;
   // gola do corpo realista decidida por pixel (os vértices misturam pele/camisa em dente de serra)
   if (r.y > 1.36 && abs(r.x) < 0.24 && (m == 0 || m == 1 || m == 2 || m == 13) && r.y < 1.56)
     m = r.y > 1.522 + 0.7 * max(0.0, abs(r.x) - 0.06) - 0.18 * max(0.0, r.z - 0.03) ? 0 : 1;
+  // acima da gola quem aparece é o pescoço escaneado (a borda de cima do pescoço do corpo é serrilhada)
+  if (m == 0 && r.y > 1.512 && abs(r.x) < 0.12 && K(14).a > 0.5) discard;
   // limites do uniforme por pixel (os vértices só dizem a "parte": braço, tronco/pernas, cabeça)
   bool armP = m == 2 || m == 13 || m == 12;
   bool bodyP = m == 1 || m == 3 || m == 4 || m == 6 || m == 14 || (m == 0 && r.y < 1.0);
@@ -638,20 +640,26 @@ float fabH = 0.0;
     float front = smoothstep(0.02, 0.42, dd.z) * (1.0 - smoothstep(0.9, 0.96, vFaceUv.y)) * (1.0 - smoothstep(0.44, 0.49, abs(vFaceUv.x - 0.5)));
     vec2 cell0 = vec2(mod(vPid, 8.0), floor(vPid / 8.0));
     vec3 ph = texture(uFace, vec2((cell0.x + fu.x) / 8.0, 1.0 - (cell0.y + fu.y) / 4.0)).rgb;
+    // a foto já traz luz de estúdio e contraste: como cor da pele ela precisa de menos
+    // contraste (escuros levantados, claros contidos), senão o sol estoura a testa e o
+    // tone mapping afunda órbitas e barba em manchas
+    ph = pow(ph, vec3(0.8)) * 0.78;
     // superfície virada para baixo (sob o queixo/mandíbula) não recebe a foto: ela escorreria em riscos
-    vec3 gn = cross(dFdx(r), dFdy(r));
-    float gny = gn.y / max(length(gn), 1e-12);
-    front *= smoothstep(-0.55, -0.25, gny);
+    // (só abaixo da boca: sob a sobrancelha a superfície também olha para baixo e precisa da foto)
+    float gny = normalize(vNormal).y;   // normal suave (espaço da câmera, quase horizontal)
+    front *= 1.0 - (1.0 - smoothstep(-0.6, -0.3, gny)) * (1.0 - smoothstep(1.6, 1.625, r.y));
     // pele das laterais/pescoço = a própria foto (bochechas e testa), para o tom bater com o rosto
     vec3 sk0 = vec3(0.0);
     for (int i = 0; i < 4; i++) {
       vec2 q = i == 0 ? vec2(0.27, 0.6) : i == 1 ? vec2(0.71, 0.6) : i == 2 ? vec2(0.5, 0.3) : vec2(0.33, 0.68);
       sk0 += texture(uFace, vec2((cell0.x + q.x) / 8.0, 1.0 - (cell0.y + q.y) / 4.0), 3.0).rgb;
     }
-    sk0 *= 0.25;
+    sk0 = pow(sk0 * 0.25, vec3(0.8)) * 0.78;
     float g2 = fract(sin(dot(floor(r.xz * 900.0 + r.y * 300.0), vec2(12.9898, 78.233))) * 43758.5453);
-    float hairZ = (1.0 - sk.w) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
+    float hairZ = (1.0 - sk.w) * (1.0 - smoothstep(0.25, 0.45, dd.z)) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
     vec3 back = mix(sk0, K(8).rgb * (0.8 + 0.35 * g2), hairZ);
+    // pescoço: fica na sombra da cabeça e puxa o verde do gramado; um pouco mais claro e quente
+    back *= mix(vec3(1.32, 1.24, 1.18), vec3(1.0), smoothstep(1.56, 1.6, r.y));
     c = mix(back, ph, front);
     matRough = mix(0.62, 0.5, front);
     if (uDbgN > 0.5) c = texture(uHeadN, vUv2).rgb;
@@ -691,7 +699,7 @@ const FRAG_NORMAL = /* glsl */`
 if (int(vMat + 0.5) == 16) {     // relevo da pele do escaneamento (poros, rugas) — base tangente por derivadas
   vec3 mapN = texture(uHeadN, vUv2).xyz * 2.0 - 1.0; mapN.xy *= 0.6;
   vec3 q0 = dFdx(-vViewPosition), q1 = dFdy(-vViewPosition); vec2 st0 = dFdx(vUv2), st1 = dFdy(vUv2);
-  vec3 N = normal, q1p = cross(q1, N), q0p = cross(N, q0);
+  vec3 N = normalize(mix(normal, normalize(vSphN) * faceDirection, 0.5)), q1p = cross(q1, N), q0p = cross(N, q0);
   vec3 T = q1p * st0.x + q0p * st1.x, B = q1p * st0.y + q0p * st1.y;
   float det = max(dot(T, T), dot(B, B)), sc = det == 0.0 ? 0.0 : faceDirection * inversesqrt(det);
   normal = normalize(T * (mapN.x * sc) + B * (mapN.y * sc) + N * mapN.z);
@@ -706,6 +714,13 @@ const SKIN_NORMAL = /* glsl */`#include <beginnormal_vertex>
 #ifdef BODY_SKIN
 mat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);
 objectNormal = normalize(mat3(skinM) * objectNormal);
+{ // normal "de esfera" da cabeça (luz suave no rosto: a foto já traz a sombra das órbitas)
+  vec3 sn = mat3(skinM) * normalize(aRest - vec3(0.0, 1.665, 0.035));
+#ifdef USE_INSTANCING
+  sn = mat3(instanceMatrix) * sn;
+#endif
+  vSphN = normalMatrix * sn;
+}
 #endif`;
 const SKIN_POS = /* glsl */`
 #if defined(BODY_SKIN) || defined(HAIR_TEX)
@@ -966,6 +981,14 @@ export class PlayerMeshes {
     this.arrow = fxMesh(tri, ARROW_VERT, ARROW_FRAG, count, THREE.NormalBlending, { depthTest: false });
     this.arrow.renderOrder = 10;
     this.group.add(this.blob, this.streaks, this.ring, this.arrow);
+    // passes com material de substituição (normais do GTAO) não sabem deformar o esqueleto:
+    // calculariam a oclusão sobre o corpo em pose de repouso (olheiras e manchas). Pula.
+    this.group.traverse(o => {
+      if (!o.isInstancedMesh || o === this.blob || o === this.streaks || o === this.ring || o === this.arrow) return;
+      let saved = 0;
+      o.onBeforeRender = (r, sc, c, geo, mat) => { if (mat !== o.material && mat !== o.customDepthMaterial && !mat.isMeshDepthMaterial && !mat.isMeshDistanceMaterial) { saved = o.count; o.count = 0; } };
+      o.onAfterRender = (r, sc, c, geo, mat) => { if (mat !== o.material && mat !== o.customDepthMaterial && !mat.isMeshDepthMaterial && !mat.isMeshDistanceMaterial) o.count = saved; };
+    });
     scene.add(this.group);
     // estado por jogador
     this.poses = []; for (let i = 0; i < count; i++) this.poses.push(createPose());

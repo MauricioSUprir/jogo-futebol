@@ -57,6 +57,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Human Base Meshes do Blender Studio, CC0, exportado por `tools/humano/exportar.py` com bpy; cabeça
   com a forma do escaneamento Lee Perry-Smith, CC BY 3.0). Deformado por 17 ossos no shader
   (`players3d.js`, BODY_SKIN); a malha procedural antiga só entra se o arquivo faltar.
+- Condução híbrida (`match.js`, controlBall): "bola animada" presa à passada (sai do pé no toque,
+  volta a ele no próximo) e a bola física é puxada para ela; medir com `tools/drible-medida.mjs`,
+  `tools/drible-clip.mjs` (clipe controlado) e `tools/gols-media.mjs` (equilíbrio: ~8 gols/partida IA x IA).
+- Rostos encaixados por 478 pontos (MediaPipe) nos marcos da cabeça 3D (`tools/rostos/marcos_cabeca.py`
+  → `cabeca-marcos.json`; `processar.py` deforma cada foto por triângulos e tira a luz lateral).
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
   `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos).
 
