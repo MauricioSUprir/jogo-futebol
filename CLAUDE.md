@@ -16,6 +16,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (clipes em `futebol3d/tools/clip.mjs`, números com as ferramentas `*-dbg.mjs`).
 - Pontos que o dono já apontou e precisam de atenção contínua: condução de bola natural
   (nada robótico), animação/comemoração do gol, movimentação dos jogadores.
+- Fila de tarefas: **só começar uma tarefa nova depois de terminar a atual** (anotar aqui as novas).
+  Fila atual (GOLAÇO): condução natural → animação do gol → escalação no campinho com fotos
+  → sombras/gráficos de dia + rostos/texturas + torcida fervorosa → **fotógrafos atrás do gol
+  (hoje péssimos)** → **torcida vibrando de verdade** (pular, braços, ondas no gol/chance)
+  → **cantos de torcida ao fundo** o jogo todo.
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
 

@@ -2,8 +2,9 @@
 // ações com tempo de contato (chute, cabeceio, carrinho…) e estado de pose
 // que o módulo de animação transforma em esqueleto.
 import { PLAYER, ANIM, clamp, lerp, angDiff } from './config.js';
+import { cycleLength } from './anim.js';
 
-const POSE_KEYS = ['anim', 't', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch'];
+const POSE_KEYS = ['anim', 't', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
 
 // ação de jogo → animação
 const ACTION_ANIM = {
@@ -15,7 +16,7 @@ const ACTION_ANIM = {
 
 export function newPose() {
   return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5,
-    diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, blendFrom: null, blendW: 1 };
+    diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, blendFrom: null, blendW: 1 };
 }
 
 export class Player {
@@ -254,9 +255,19 @@ export class Player {
     }
     p.speed = sp;
     p.moveAngle = sp > 0.2 ? angDiff(this.heading, Math.atan2(this.vz, this.vx)) : 0;
-    p.stride += sp * dt;
+    // fase da passada em ciclos (contínua quando a velocidade muda; % 1024 mantém a precisão)
+    p.stride = (p.stride + sp * dt / cycleLength(sp, p.moveAngle)) % 1024;
     const lean = clamp((this.turnVel || 0) * sp * 0.025, -0.35, 0.35);
     p.lean += (lean - p.lean) * Math.min(1, dt * 8);
+    // condução: posição da bola no espaço do modelo (x = esquerda, z = frente, escala de 1,80 m)
+    // para o pé de toque buscar a bola na passada (anim.js)
+    p.drib += ((this.hasBall && !act ? 1 : 0) - p.drib) * Math.min(1, dt * 6);
+    if (this.watch && p.drib > 0.01) {
+      const hs = (this.data.look?.height || PLAYER.height) / 1.8;
+      const rx = this.watch.x - this.x, rz = this.watch.z - this.z;
+      p.bz = (rx * this.fx + rz * this.fz) / hs;
+      p.bx = (rx * this.fz - rz * this.fx) / hs;
+    }
     if (p.blendW < 1) p.blendW = Math.min(1, p.blendW + dt / 0.16);
     if (p.blendW >= 1) p.blendFrom = null;
   }

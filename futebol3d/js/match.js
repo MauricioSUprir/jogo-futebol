@@ -360,22 +360,25 @@ export class Match {
     const ex = tx - b.p.x, ez = tz - b.p.z;
     // fase da passada: pé direito à frente em ~0,35; esquerdo em ~0,85
     const L = cycleLength(sp, o.pose.moveAngle || 0);
-    const ph = ((o.pose.stride / L) % 1 + 1) % 1;
-    const want = o.foot > 0 ? 0.35 : 0.85;
-    const prev = o.lastPhase ?? ph;
-    const crossed = sp > 0.8 && ((prev < want && ph >= want) || (prev > ph && (prev < want || ph >= want)));
-    o.lastPhase = ph;
+    const st = o.pose.stride, want = o.foot > 0 ? 0.35 : 0.85;
+    // quanto a fase andou desde a última checagem (descarta valores velhos de outra posse)
+    let dSt = st - (o.lastStride ?? st);
+    if (dSt < -512) dSt += 1024;
+    if (dSt < 0 || dSt > 0.25) dSt = 0;
+    const crossed = sp > 0.8 && dSt > 0 && Math.floor(st - want) !== Math.floor(st - dSt - want);
+    o.lastStride = st;
     o.touchTimer -= dt;
     const relx = b.p.x - o.x, relz = b.p.z - o.z;
     const ahead = relx * o.fx + relz * o.fz;
     const angOff = Math.abs(Math.atan2(relx * rx + relz * rz, Math.max(0.05, ahead)));
-    const needTurn = angOff > 0.7 && sp > 1;      // virou: a bola precisa ser redirecionada já
+    const needTurn = angOff > 1.0 && sp > 1;      // virou: a bola precisa ser redirecionada já
     if ((crossed && o.touchTimer <= 0) || needTurn && o.touchTimer <= 0 || (sp <= 0.8 && Math.hypot(ex, ez) > 0.25 && o.touchTimer <= 0)) {
       // toque: a bola sai com a velocidade do jogador + o que falta para chegar ao ponto à frente
       const T = sp > 0.8 ? Math.max(0.22, L / Math.max(sp, 1)) : 0.35;
       const noise = (1 - dri) * 0.25 * (o.sprint ? 1.5 : 1);
       b.kick(o.vx + ex / T * 1.15 + gauss() * noise, 0, o.vz + ez / T * 1.15 + gauss() * noise);
-      o.touchTimer = needTurn ? 0.12 : 0.18;
+      this.dbgWhy = crossed ? 'fase' : needTurn ? 'giro' : 'lento';
+      o.touchTimer = needTurn && !crossed ? 0.22 : 0.18;
       this.touch(o, 'dribble');
       if (sp > 3 && Math.random() < 0.3) this.emit('dribble', {});
     } else {
