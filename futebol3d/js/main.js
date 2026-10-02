@@ -288,7 +288,7 @@ function handleEvents(g) {
         if (e.kind === 'parry') hud.banner('QUE DEFESA!', m.teams[e.side].gk.data.name, 'chance');
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
-      case 'card': hud.card(e.color, e.name); break;
+      case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); break;
       case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); break;
       case 'goal': {
         const t = m.teams[e.side];
