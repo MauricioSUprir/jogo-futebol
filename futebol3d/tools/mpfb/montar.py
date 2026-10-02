@@ -80,6 +80,12 @@ def construir(LEVE):
     # roupa um pouco solta (suavizada entre vizinhos)
     N = normals(P, F)
     infl = np.where(np.isin(mat, [SHIRT, SLEEVE]), 0.008, np.where(mat == SHORTS, 0.014, np.where(mat == SOCK, 0.003, np.where(mat == BOOT, 0.006, 0.0))))
+    # físico de jogador profissional: volume de músculo por osso (coxas, panturrilhas,
+    # deltoides/braços, peito e glúteos) somado à folga da roupa
+    AMT = np.zeros(17); AMT[[11, 14]] = 0.012; AMT[[12, 15]] = 0.006; AMT[[5, 8]] = 0.007; AMT[[6, 9]] = 0.004
+    AMT[2] = 0.005; AMT[0] = 0.004; AMT[1] = 0.002
+    musc = (W17[:, :17] * AMT[None, :]).sum(1) * np.clip((1.47 - Rr[:, 1]) / 0.04, 0, 1) * np.clip((Rr[:, 1] - 0.16) / 0.06, 0, 1)
+    infl = infl + musc
     nb = [[] for _ in range(len(P))]
     for f in F:
         for i in range(3): nb[f[i]] += [f[(i + 1) % 3], f[(i + 2) % 3]]
