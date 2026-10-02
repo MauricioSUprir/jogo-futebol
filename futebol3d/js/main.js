@@ -23,6 +23,8 @@ let mocapLoaded = false;
 import { StadiumFX } from './fx.js';
 import { loadFacePool, matchFaces, portrait } from './faces.js';
 import { CameraBlurPass } from './motionblur.js';
+import { MobilePost, installMaterialGrade } from './mobilepost.js';
+import { SunShadowFit } from './sunshadow.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
@@ -62,6 +64,17 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.info.autoReset = false;
 let dynScale = 1;
+// correção de cor dentro do tonemapping dos materiais (qualidade baixa, sem passe extra)
+installMaterialGrade();
+// vinheta da qualidade baixa: gradiente CSS sobre o canvas (o compositor do navegador
+// desenha de graça; nada de passe de tela cheia no WebGL)
+const vignette = document.createElement('div');
+vignette.id = 'vinheta';
+vignette.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;background:radial-gradient(ellipse 75% 85% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.30) 100%)';
+canvas.after(vignette);
+{ const st = document.createElement('style'); st.textContent = 'body:not(.in-game) #vinheta{display:none!important}'; document.head.appendChild(st); }
+let vignetteOn = false;
+function setVignette(on) { if (on !== vignetteOn) { vignetteOn = on; vignette.style.display = on ? 'block' : 'none'; } }
 
 function applyQuality(rebuildPost) {
   presetKey = settings.quality === 'auto' ? presetKey : settings.quality;
@@ -70,7 +83,17 @@ function applyQuality(rebuildPost) {
   renderer.setPixelRatio(pr);
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = Q.shadows;
+  // baixa: ACES + cor no próprio material; demais: ACES (a cor vem do pós)
+  renderer.toneMapping = Q.grade === 'material' ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
+  // PCF simples = 9 leituras (vs 17 do PCFSoft): bem mais barato no celular
+  renderer.shadowMap.type = Q.shadowSoft === false ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  setVignette(!!game && Q.grade === 'material');
   if (game) {
+    // sombra do sol/refletores seguindo o enquadramento (texel estável)
+    const L = game.stadium.mainLight;
+    if (!game.sunFit && L && L.castShadow) game.sunFit = new SunShadowFit(L, game.stadium.sunDir, { halfL: PITCH.halfL + 4, halfW: PITCH.halfW + 4 });
+    if (L && L.castShadow && L.shadow.mapSize.x !== Q.shadowSize) { L.shadow.mapSize.set(Q.shadowSize, Q.shadowSize); L.shadow.map?.dispose(); L.shadow.map = null; }
+    if (L && L.castShadow) L.shadow.radius = Q.shadowSoft === false ? 1 : 2;
     game.camera.aspect = innerWidth / innerHeight; game.camera.updateProjectionMatrix();
     game.rig.aspect = game.camera.aspect;
     if (rebuildPost) buildPost();
@@ -83,6 +106,14 @@ addEventListener('orientationchange', () => setTimeout(() => applyQuality(false)
 function buildPost() {
   const g = game;
   if (g.composer) { g.composer.dispose?.(); g.composer = null; }
+  g.mblur = null;
+  // celular (média): um passe final só (ACES + cor + vinheta + nitidez + bloom barato)
+  if (Q.lite && !Q.post) {
+    g.composer = new MobilePost(renderer, g.scene, g.camera, {
+      night: !!(g.stadium && g.stadium.isNight), bloom: !!Q.liteBloom, sharpen: Q.sharpen || 0, msaa: Q.msaa,
+    });
+    return;
+  }
   if (!Q.post) return;
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const blur = !touch && settings.motionBlur !== false;
@@ -570,6 +601,7 @@ function render(g, dt) {
   g.chantT -= dt;
   if (g.chantT <= 0) { g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15; }
 
+  g.sunFit?.update(g.camera);
   renderer.info.reset();
   if (g.composer) g.composer.render(dt);
   else renderer.render(g.scene, g.camera);
@@ -611,10 +643,17 @@ function measure(g, dt) {
   g.fps = fps; g.frames = 0; g.fpsT = 0;
   if (window.__fps) window.__fps(fps);
   const old = dynScale;
-  if (fps < 45 && dynScale > 0.7) dynScale = Math.max(0.7, dynScale - 0.1);
+  // prioridade à nitidez: antes de baixar a resolução, desliga o bloom barato (celular)
+  const pc = g.composer;
+  if (pc && pc.setBloom) {
+    if (fps < 45 && pc.bloomOn) { pc.setBloom(false); return; }
+    if (fps > 58 && dynScale >= 1 && !pc.bloomOn) pc.setBloom(true);
+  }
+  const minDyn = Q.minDyn ?? 0.7;
+  if (fps < 45 && dynScale > minDyn) dynScale = Math.max(minDyn, dynScale - 0.1);
   else if (fps > 58 && dynScale < 1) dynScale = Math.min(1, dynScale + 0.05);
   // auto: cai de preset se nem com resolução menor aguenta
-  if (settings.quality === 'auto' && fps < 38 && dynScale <= 0.7) {
+  if (settings.quality === 'auto' && fps < 38 && dynScale <= minDyn) {
     const order = ['ultra', 'alta', 'media', 'baixa'];
     const i = order.indexOf(presetKey);
     if (i < order.length - 1) { presetKey = order[i + 1]; dynScale = 0.85; applyQuality(true); return; }

@@ -118,8 +118,12 @@ export const FORMATIONS = {
 // Presets de qualidade gráfica.
 export const QUALITY = {
   // pixelRatio = fração da densidade da tela; maxPR limita a densidade (celular 3x → até maxPR)
-  baixa: { label: 'Baixa', pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 0, anisotropy: 4 },
-  media: { label: 'Média', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 2048, crowd: 0.70, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 8 },
+  // baixa: nenhum passe de pós — a correção de cor vai no tonemapping de cada material
+  //   (grade: 'material') e a vinheta é um gradiente CSS; sombra PCF simples (9 amostras).
+  // media: um único passe final (lite) com ACES + cor + vinheta + nitidez + bloom barato
+  //   (1/4 de resolução, 3 passes minúsculos). A sombra das duas segue o enquadramento.
+  baixa: { label: 'Baixa', pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 0, anisotropy: 8, grade: 'material', shadowSoft: false, minDyn: 0.75 },
+  media: { label: 'Média', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 2048, crowd: 0.70, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 8, lite: true, liteBloom: true, sharpen: 0.3, minDyn: 0.75 },
   alta:  { label: 'Alta',  pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
   ultra: { label: 'Ultra', pixelRatio: 1.0, maxPR: 3,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
 };

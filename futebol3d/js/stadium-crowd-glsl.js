@@ -10,6 +10,8 @@ uniform float uTime;
 uniform float uExc;
 uniform vec4 uEvHome;   // instante (s) do último: gol, chance, falta, defesa
 uniform vec4 uEvAway;
+uniform vec4 uChant;    // x = canto da casa (0..1), y = canto visitante, z = bpm casa, w = bpm visitante
+uniform vec4 uWave;     // ola: x = início (s), y = sentido (±1), z = velocidade (m/s), w = voltas
 uniform float uDebugPose;
 
 float h11( float n ) { return fract( sin( n * 91.3458 ) * 47453.5453 ); }
@@ -49,10 +51,10 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   vec4 evO = away > 0.5 ? uEvHome : uEvAway;
   if ( uDebugPose > -0.5 ) { evM = vec4( -1e4 ); evO = vec4( -1e4 ); }
   float dl = r2 * 0.6;                                     // tempo de reação de cada um
-  float goal = react( evM.x + dl, 11.0 + r3 * 4.0 );
+  float goal = react( evM.x + dl * 0.6, 17.0 + r3 * 5.0 );
   float tg = t - evM.x - dl;                               // segundos desde o gol
   float sad = react( evO.x + dl * 1.6, 9.0 + r4 * 5.0 );
-  float onHead = max( react( evM.y + dl * 0.5, 3.4 + r5 ), react( evO.w + dl * 0.5, 3.0 + r5 ) * 0.9 );
+  float onHead = max( react( evM.y + dl * 0.5, 4.6 + r5 * 1.4 ), react( evO.w + dl * 0.5, 3.4 + r5 ) * 0.9 );
   float applause = react( evM.w + dl, 3.4 + r6 * 1.5 );
   float foul = react( evM.z + dl, 3.0 + r7 );
   float exc = uExc;
@@ -88,28 +90,69 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
     p = mixPose( p, pt, smoothstep( 0.3, 0.8, exc ) );
   }
 
-  // ------------------------------------------------ canto da organizada / jogo quente
-  float beat = t * 2.1 + bk * 0.2;                         // ~126 bpm, quase em sincronia no bloco
-  float bOn = pow( max( sin( beat * TAU ), 0.0 ), 2.0 );
-  float chant = max( ultra, smoothstep( 0.7, 0.9, exc ) * step( 0.45, bk ) * step( 0.25, r3 ) );
+  // ------------------------------------------------ canto (~130 bpm casa, ~120 visitante)
+  // Os blocos de ~8 m ficam quase em fase (atraso de até 0,08 batida): de longe a
+  // arquibancada inteira "pulsa" junto, que é o que a câmera de TV consegue mostrar.
+  float bpm = away > 0.5 ? uChant.w : uChant.z;
+  float beat = t * bpm / 60.0 + bk * 0.08 + r1 * 0.03;
+  float bOn = pow( max( sin( beat * TAU ), 0.0 ), 1.6 );          // impulso em cada batida
+  float bSw = sin( beat * 3.14159 );                               // balanço: um lado por batida
+  float lvl = away > 0.5 ? uChant.y : uChant.x;
+  float joinC = smoothstep( r3 - 0.12, r3 + 0.05, lvl * 1.12 ) * step( 0.06, r5 );
+  float chant = max( ultra, joinC );
+  chant = max( chant, smoothstep( 0.7, 0.9, exc ) * step( 0.45, bk ) * step( 0.25, r3 ) );
   Pose pc = p;
   if ( chant > 0.001 || goal > 0.001 || dbg ) {
     pc.body.x = 1.0;
-    pc.body.y = ( 0.05 + 0.05 * ultra ) * bOn * step( 0.3, r4 );
     pc.body.z = 0.02;
-    pc.head.y = -0.1;
-    if ( scarf > 0.5 && r6 < 0.75 ) {
-      pc.armA = vec4( 2.75, 0.52, 0.12, 0.0 ); pc.armB = pc.armA; pc.head.w = 1.0;
-    } else if ( r6 < 0.55 ) {
-      // soco no ar no ritmo
-      pc.armA = vec4( 2.2 + 0.5 * bOn, 0.28, 1.1 - 0.9 * bOn, 0.0 );
-      pc.armB = vec4( 0.25, 0.12, 0.5, -0.3 );
+    pc.head.y = -0.12;
+    if ( away > 0.5 ) {
+      // visitante: braços erguidos balançando de um lado para o outro, corpo junto
+      pc.body.w = 0.16 * bSw;
+      pc.body.y = 0.05 * bOn * step( 0.4, r4 );
+      if ( scarf > 0.5 && r6 < 0.6 ) { pc.armA = vec4( 2.75, 0.5 + 0.1 * bSw, 0.12, 0.0 ); pc.armB = pc.armA; pc.head.w = 1.0; }
+      else if ( r6 < 0.75 ) {
+        pc.armA = vec4( 2.65, 0.25 + 0.35 * bSw, 0.25, 0.0 );
+        pc.armB = vec4( 2.65, 0.25 - 0.35 * bSw, 0.25, 0.0 );
+      } else {
+        float cl = pow( abs( sin( beat * 3.14159 ) ), 3.0 );       // palmas acima da cabeça
+        pc.armA = vec4( 2.5, -0.02 + 0.32 * ( 1.0 - cl ), 0.75, -1.25 ); pc.armB = pc.armA;
+      }
     } else {
-      // palmas acima da cabeça
-      float cl = abs( sin( beat * 3.14159 ) );
-      pc.armA = vec4( 2.55, -0.02 + 0.3 * cl, 0.75, -1.25 ); pc.armB = pc.armA;
+      // casa: pula em cada batida (organizada pula mais), soco no ar, cachecol esticado
+      pc.body.y = ( 0.1 + 0.12 * ultra ) * bOn * step( 0.22, r4 );
+      if ( scarf > 0.5 && r6 < 0.7 ) {
+        pc.armA = vec4( 2.75 + 0.2 * bOn, 0.52, 0.12, 0.0 ); pc.armB = pc.armA; pc.head.w = 1.0;
+      } else if ( r6 < 0.6 ) {
+        pc.armA = vec4( 1.9 + 1.05 * bOn, 0.28, 1.3 - 1.15 * bOn, 0.0 );
+        pc.armB = r7 < 0.5 ? vec4( 0.3, 0.14, 0.6, -0.3 ) : pc.armA;
+      } else {
+        float cl = pow( abs( sin( beat * 3.14159 ) ), 3.0 );
+        pc.armA = vec4( 2.55, -0.02 + 0.32 * ( 1.0 - cl ), 0.75, -1.25 ); pc.armB = pc.armA;
+      }
     }
     p = mixPose( p, pc, chant * ( 1.0 - sad ) );
+  }
+
+  // ------------------------------------------------ ola (onda que corre o estádio)
+  // Farkas et al. (Nature, 2002): ~12 m/s (≈20 cadeiras/s), largura de 6-12 m, gira
+  // no sentido horário. Cada um levanta rápido quando a frente chega e senta devagar.
+  float ola = 0.0;
+  if ( uWave.x > -1e3 && !dbg ) {
+    float th = atan( wp.z / 1.5, -wp.x );                          // 0 no fundo oeste
+    float sArc = mod( th * uWave.y, TAU ) * 66.0;                  // ~perímetro do anel (m)
+    float run = ( t - uWave.x ) * uWave.z - sArc - r2 * 1.6;
+    if ( run > -3.0 && run < uWave.w * TAU * 66.0 + 9.0 ) {
+      float x = run - TAU * 66.0 * floor( ( run + 3.0 ) / ( TAU * 66.0 ) );
+      ola = smoothstep( -3.0, 0.0, x ) * ( 1.0 - smoothstep( 2.5, 8.0, x ) );
+    }
+  }
+  if ( ola > 0.001 ) {
+    Pose po = p;
+    po.body = vec4( 1.0, 0.08 * ola, -0.05, 0.0 );
+    po.head = vec4( 0.0, -0.3, 0.0, scarf > 0.5 ? 1.0 : 0.0 );
+    po.armA = vec4( 3.05, 0.22 + 0.1 * r7, 0.12, 0.0 ); po.armB = po.armA;
+    p = mixPose( p, po, ola * ( 1.0 - sad ) );
   }
 
   // ------------------------------------------------ palmas espontâneas (por bloco)
@@ -147,7 +190,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   // ------------------------------------------------ quase gol: mãos na cabeça
   Pose ph = p;
   if ( onHead > 0.001 || dbg ) {
-    ph.body.x = max( p.body.x, step( 0.25, r1 ) );
+    ph.body.x = max( p.body.x, step( 0.15, r1 ) );
     ph.body.z = -0.06;
     ph.head.y = -0.12 + 0.3 * step( 0.7, r3 );
     ph.head.z = ( r7 - 0.5 ) * 0.5;
@@ -169,11 +212,12 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
   }
 
   // ------------------------------------------------ gol: explosão
-  float gph = t * ( 2.0 + 0.9 * r3 ) * 3.14159 + r1 * TAU;
+  // pulos da explosão: ~150 bpm, blocos em fase (de longe vira a arquibancada "fervendo")
+  float gph = t * 2.5 * 3.14159 + bk * 1.2 + r1 * 0.5 + step( 0.8, r3 ) * 1.5;
   float pump = 0.5 + 0.5 * sin( gph * 2.0 );
   Pose pg = p;
   if ( goal > 0.001 || dbg ) {
-    pg.body = vec4( 1.0, pow( abs( sin( gph ) ), 1.4 ) * ( 0.14 + 0.2 * r4 ) * ( 1.0 - smoothstep( 4.0, 8.0, tg ) ), -0.1, 0.0 );
+    pg.body = vec4( 1.0, pow( abs( sin( gph ) ), 1.4 ) * ( 0.22 + 0.2 * r4 ) * ( 1.0 - 0.6 * smoothstep( 6.0, 11.0, tg ) ), -0.1, 0.0 );
     pg.head = vec4( ( r7 - 0.5 ) * 0.4, -0.35, ( r8 - 0.5 ) * 0.3, 0.0 );
     float st = r6;
     if ( scarf > 0.5 && st < 0.6 ) {
@@ -198,7 +242,7 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
       pg.armA = vec4( 2.6, -0.02 + 0.3 * cl, 0.7, -1.25 ); pg.armB = pg.armA;
     }
     // depois da explosão, vira canto/palmas
-    pg = mixPose( pg, pc, smoothstep( 5.5, 8.0, tg - r2 * 2.0 ) * 0.8 );
+    pg = mixPose( pg, pc, smoothstep( 8.0, 11.0, tg - r2 * 2.0 ) * 0.85 );
     p = mixPose( p, pg, goal );
   }
 

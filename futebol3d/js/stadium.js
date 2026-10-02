@@ -30,6 +30,7 @@ import { buildAds } from './stadium-ads.js';
 import { buildCrowd } from './stadium-crowd.js';
 import { Parts } from './stadium-geo.js';
 import { buildDetails } from './stadium-details.js';
+import { buildPhotographers } from './stadium-photogs.js';
 import { buildScreens, screenFrames } from './stadium-screens.js';
 import { buildFloodlights } from './stadium-lights.js';
 import { buildSky, buildEnv } from './stadium-sky.js';
@@ -205,6 +206,8 @@ export function buildStadium(renderer, scene, opts = {}) {
 
   const goals = buildGoals(ctx);
   root.add(goals);
+  const photogs = buildPhotographers(ctx);
+  root.add(photogs);
   const crowd = buildCrowd(ctx);
   root.add(crowd);
   root.add(buildFloodlights(ctx));
@@ -246,6 +249,7 @@ export function buildStadium(renderer, scene, opts = {}) {
 
     // rede de pano (se o módulo dos gols expuser update): física com a bola
     updateBall(dt, ballPos, ballVel) {
+      if (ballPos) photogs.userData.uniforms.uBall.value.set(ballPos.x, ballPos.y, ballPos.z);
       if (typeof goals.userData.update === 'function') goals.userData.update(dt, lastTime, ballPos, ballVel);
     },
 

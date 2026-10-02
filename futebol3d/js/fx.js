@@ -18,7 +18,7 @@
 //                (opcional: usa homeColor/awayColor + preto)
 //     goalSign : -1 | 1 — gol em que a bola entrou (−1 oeste, +1 leste); a festa
 //                nas laterais se concentra desse lado
-//   fx.chance()               // lance de perigo: alguns flashes
+//   fx.chance()               // lance de perigo: alguns flashes + rajadas dos fotógrafos
 //   fx.setWind({x,z}), fx.setLightDir(vec3)
 //   fx.update(dt, camera)     // todo quadro (dt em s). camera não é obrigatória.
 //   fx.dispose()
@@ -35,10 +35,11 @@
 // cada partícula; a CPU só escreve os atributos uma vez por gol.
 // Limites por qualidade (baixa / média / alta+):
 //   fumaça 160 / 600 / 1100 · sinalizadores 6 / 14 / 22 · papel 0 / 1500 / 3200
-//   flashes 300 / 700 / 1400 · fogos (só à noite) 0 / 1100 / 2400
+//   flashes 300 / 700 / 1400 (+12 / 22 / 30 câmeras dos fotógrafos) · fogos (só à noite) 0 / 1100 / 2400
 // ============================================================================
 import * as THREE from 'three';
 import { BOWL, crowdSeats } from './stadium-bowl.js';
+import { photogFlashPoints } from './stadium-photogs.js';
 
 const TIERS = {
   baixa: { smoke: 160, flares: 6, confetti: 0, flashes: 300, fw: 0 },
@@ -317,7 +318,13 @@ void main() {
   float e = env( uGoalT + fract( s * 3.7 ) * 0.8, 0.4, 13.0 ) + 0.4 * env( uChanceT, 0.2, 3.0 );
   float kind = aB.y;
   float I;
-  if ( kind < 0.5 ) {
+  if ( kind > 1.5 ) {
+    // fotógrafo: rajadas (~9 quadros/s) de ~0,6 s, a cada 1-2 s, no gol e nos lances de perigo
+    float ePh = env( uGoalT + fract( s * 5.3 ) * 0.3, 0.1, 16.0 ) + env( uChanceT + fract( s * 2.9 ) * 0.4, 0.05, 3.2 );
+    float burst = step( fract( uTime * ( 0.55 + 0.4 * fract( s * 7.1 ) ) + s * 13.0 ), 0.38 );
+    float ph = fract( uTime * aB.x + s * 17.0 );
+    I = smoothstep( 0.0, 0.03, ph ) * ( 1.0 - smoothstep( 0.03, 0.22, ph ) ) * 5.0 * burst * step( 0.05, ePh );
+  } else if ( kind < 0.5 ) {
     float ph = fract( uTime * aB.x + s * 17.0 );
     I = smoothstep( 0.0, 0.015, ph ) * ( 1.0 - smoothstep( 0.015, 0.08, ph ) ) * 6.0;
     I *= step( fract( s * 11.3 ), e * 1.1 );            // no auge, quase todo mundo fotografa
@@ -325,10 +332,10 @@ void main() {
     I = 0.55 * smoothstep( 0.2, 0.6, e ) * mix( 0.35, 1.0, uNight );   // tela acesa filmando
   }
   if ( I < 0.01 ) { ${HIDE} }
-  vec3 wp = aA.xyz + normalize( cameraPosition - aA.xyz ) * 0.6;   // à frente do torcedor
+  vec3 wp = aA.xyz + normalize( cameraPosition - aA.xyz ) * ( kind > 1.5 ? 0.12 : 0.6 );   // à frente do torcedor
   vec4 mv = viewMatrix * vec4( wp, 1.0 );
-  float size = kind < 0.5 ? 0.5 : 0.16;
-  size = max( size, -mv.z * ( kind < 0.5 ? 0.009 : 0.0035 ) );
+  float size = kind > 1.5 ? 0.42 : kind < 0.5 ? 0.5 : 0.16;
+  size = max( size, -mv.z * ( abs( kind - 1.0 ) < 0.5 ? 0.0035 : 0.009 ) );
   mv.xy += position.xy * size;
   gl_Position = projectionMatrix * mv;
   vQ = position.xy * 2.0; vI = I; vKind = kind;
@@ -339,8 +346,9 @@ varying float vI;
 varying float vKind;
 void main() {
   float r2 = dot( vQ, vQ );
-  float g = vKind < 0.5 ? exp( -r2 * 7.0 ) + exp( -r2 * 40.0 ) * 2.0 : exp( -r2 * 5.0 );
-  vec3 col = vKind < 0.5 ? vec3( 1.0, 0.98, 0.95 ) : vec3( 0.75, 0.85, 1.0 );
+  bool cel = vKind > 0.5 && vKind < 1.5;
+  float g = !cel ? exp( -r2 * 7.0 ) + exp( -r2 * 40.0 ) * 2.0 : exp( -r2 * 5.0 );
+  vec3 col = !cel ? vec3( 1.0, 0.98, 0.95 ) : vec3( 0.75, 0.85, 1.0 );
   gl_FragColor = vec4( col * g * vI, 1.0 );
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -463,7 +471,9 @@ export class StadiumFX {
       depthWrite: true, renderOrder: 5,
       uniforms: { uLight: { value: P ? new THREE.Vector3(0.9, 0.9, 0.95) : new THREE.Vector3(1.05, 1.02, 0.98) } },
     }, 6);
-    this.flash = mk('fx-flashes', this.tier.flashes, { aA: 4, aB: 4 }, flashVert, flashFrag, {
+    // flashes da torcida + rajadas das câmeras dos fotógrafos atrás dos gols (mesma malha)
+    this.photogPts = photogFlashPoints(qKey === 'ultra' ? 'alta' : qKey);
+    this.flash = mk('fx-flashes', this.tier.flashes + this.photogPts.length / 4, { aA: 4, aB: 4 }, flashVert, flashFrag, {
       transparent: true, blending: THREE.AdditiveBlending, renderOrder: 8,
     });
     this.fw = mk('fx-fogos', this.tier.fw, { aA: 4, aB: 4, aC: 4, aD: 4 }, fwVert, fwFrag, {
@@ -480,7 +490,14 @@ export class StadiumFX {
     const seats = crowdSeats(1, rng);
     const n = seats.length / 8;
     const A = F.a.aA.array, B = F.a.aB.array;
-    for (let i = 0; i < F.count; i++) {
+    const nCrowd = F.count - this.photogPts.length / 4;
+    for (let i = nCrowd; i < F.count; i++) {
+      // fotógrafos: tipo 2 (rajada do motor da câmera), frequência própria
+      A.set(this.photogPts.subarray((i - nCrowd) * 4, (i - nCrowd) * 4 + 4), i * 4);
+      B[i * 4] = 7 + rng() * 4;
+      B[i * 4 + 1] = 2;
+    }
+    for (let i = 0; i < nCrowd; i++) {
       const k = Math.floor(rng() * n) * 8;
       const side = rng() < 0.5 ? -0.27 : 0.27;
       const tx = -seats[k + 5], tz = seats[k + 4];
