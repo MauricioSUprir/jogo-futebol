@@ -17,7 +17,7 @@ void main() {
   float dist = length( cameraPosition - aPos );
   // tamanho em mundo cresce com a distância (mínimo aparente) e com o alinhamento
   float size = ( 0.8 + 3.0 * pow( f, 3.0 ) ) * clamp( dist / 90.0, 0.6, 1.6 );
-  vI = ( 0.3 + 0.95 * pow( f, 2.0 ) ) * ( 0.94 + 0.06 * sin( uTime * 50.0 + aSeed * 40.0 ) );
+  vI = ( 0.3 + 0.95 * ( f * f ) ) * ( 0.94 + 0.06 * sin( uTime * 50.0 + aSeed * 40.0 ) );
   vUv = position.xy * vec2( 2.6, 1.0 );
   vec4 mv = viewMatrix * vec4( aPos, 1.0 );
   mv.xy += position.xy * vec2( 2.6, 1.0 ) * size;

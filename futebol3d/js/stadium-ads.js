@@ -124,7 +124,7 @@ void main() {
   } else if ( vLed > 1.5 ) {
     // anel de LED da cobertura: cor do clube com uma "corrida" de luz branca
     float u = vUv.x;
-    float run = exp( -pow( fract( u / 90.0 - uTime * 0.09 ) - 0.5, 2.0 ) * 60.0 );
+    float run = exp( -( ( fract( u / 90.0 - uTime * 0.09 ) - 0.5 ) * ( fract( u / 90.0 - uTime * 0.09 ) - 0.5 ) ) * 60.0 );
     vec3 c = uRingA * ( 0.75 + 0.25 * sin( u * 0.07 - uTime * 0.8 ) ) + uRingB * run * 0.9;
     // frisos horizontais (três fitas), somem de longe
     float fy = vUv.y * 3.0;

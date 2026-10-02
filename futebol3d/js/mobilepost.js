@@ -85,7 +85,7 @@ uniform float uSat; uniform float uCon; uniform float uVig; uniform vec3 uTint; 
 varying vec2 vUv;
 ${GRADE_GLSL}
 float lum( vec3 c ) { return dot( c, vec3( 0.2126, 0.7152, 0.0722 ) ); }
-vec3 toSRGB( vec3 c ) { return mix( c * 12.92, 1.055 * pow( c, vec3( 0.41666 ) ) - 0.055, step( 0.0031308, c ) ); }
+vec3 toSRGB( vec3 c ) { return mix( c * 12.92, 1.055 * pow( max( c, vec3( 0.0 ) ), vec3( 0.41666 ) ) - 0.055, step( 0.0031308, c ) ); }
 void main() {
   vec3 c = texture2D( tScene, vUv ).rgb;
   #ifdef SHARPEN

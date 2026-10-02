@@ -140,13 +140,13 @@ const MAP_FRAG = /* glsl */`
 
   // desgaste: pequenas áreas, marca do pênalti, círculo central e corredores dos assistentes
   vec2 aw = vec2( abs( wp.x ), wp.y );
-  float wear = exp( -pow( ( aw.x - 50.6 ) / 2.6, 2.0 ) - pow( aw.y / 3.6, 2.0 ) ) * 0.95;
-  wear += exp( -pow( ( aw.x - 52.2 ) / 0.8, 2.0 ) - pow( aw.y / 3.2, 2.0 ) ) * 0.7;
+  float wear = exp( -( ( ( aw.x - 50.6 ) / 2.6 ) * ( ( aw.x - 50.6 ) / 2.6 ) ) - ( ( aw.y / 3.6 ) * ( aw.y / 3.6 ) ) ) * 0.95;
+  wear += exp( -( ( ( aw.x - 52.2 ) / 0.8 ) * ( ( aw.x - 52.2 ) / 0.8 ) ) - ( ( aw.y / 3.2 ) * ( aw.y / 3.2 ) ) ) * 0.7;
   wear += exp( -dot( aw - vec2( 41.5, 0.0 ), aw - vec2( 41.5, 0.0 ) ) / 2.0 ) * 0.6;
   wear += exp( -dot( wp, wp ) / 20.0 ) * 0.45;
   wear += exp( -pow( ( abs( wp.y ) - 35.3 ) / 0.6, 2.0 ) ) * step( aw.x, 50.0 ) * 0.25;
   // aquecimento dos goleiros e marcas de trave na frente dos gols
-  wear += exp( -pow( ( aw.x - 46.0 ) / 4.0, 2.0 ) - pow( aw.y / 7.0, 2.0 ) ) * 0.18;
+  wear += exp( -( ( ( aw.x - 46.0 ) / 4.0 ) * ( ( aw.x - 46.0 ) / 4.0 ) ) - ( ( aw.y / 7.0 ) * ( aw.y / 7.0 ) ) ) * 0.18;
   float wn = vnoise( wp * 1.7 ) * 0.6 + vnoise( wp * 5.3 ) * 0.4;
   wear = clamp( wear * ( 0.35 + 1.1 * wn ), 0.0, 1.0 );
   vec3 dirt = vec3( 0.12, 0.095, 0.06 ) * ( 0.5 + 1.2 * lum );

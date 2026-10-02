@@ -372,7 +372,7 @@ void main() {
     float u = t / aB.w;
     p = aA.xyz + aB.xyz * ( 1.0 - exp( -1.6 * t ) ) / 1.6 - vec3( 0.0, 1.4 * t * t, 0.0 );
     float crackle = u > 0.62 ? step( 0.45, fract( t * 13.0 + aC.w * 9.0 ) ) : 1.0;
-    I = pow( 1.0 - u, 1.4 ) * crackle * ( lag > 0.0 ? 0.4 - lag * 2.0 : 1.0 ) * 3.2;
+    I = pow( max( 1.0 - u, 0.0 ), 1.4 ) * crackle * ( lag > 0.0 ? 0.4 - lag * 2.0 : 1.0 ) * 3.2;
   } else if ( kind < 1.5 ) {
     float rise = 1.15;
     float t = uTime - ( aA.w - rise ) - lag;
