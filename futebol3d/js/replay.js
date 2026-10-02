@@ -76,6 +76,8 @@ export class Replay {
     const L = (k) => B[f0 + k] + (B[f1 + k] - B[f0 + k]) * a;
     const bl = this.ball;
     bl.x = L(0); bl.y = L(1); bl.z = L(2);
+    this.ballVel = this.ballVel || { x: 0, y: 0, z: 0 };
+    this.ballVel.x = (B[f1] - B[f0]) * 60; this.ballVel.y = (B[f1 + 1] - B[f0 + 1]) * 60; this.ballVel.z = (B[f1 + 2] - B[f0 + 2]) * 60;
     bl.qx = B[f1 + 3]; bl.qy = B[f1 + 4]; bl.qz = B[f1 + 5]; bl.qw = B[f1 + 6];
     for (let i = 0; i < this.n; i++) {
       const r = this.poses[i];

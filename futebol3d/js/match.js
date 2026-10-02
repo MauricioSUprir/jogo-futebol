@@ -7,6 +7,7 @@ import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, clamp, lerp, angDiff
 import { teamThink, setpieceAI } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
 import { humanStep } from './human.js';
+import { cycleLength } from './anim.js';
 
 const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
@@ -72,6 +73,7 @@ export class Match {
       t.opp = null;
     }
     this.teams[0].opp = this.teams[1]; this.teams[1].opp = this.teams[0];
+    for (const p of this.players) p.watch = this.ball.p;   // quase parado, olha a bola
     this.controlled = null;
     this.firstKickoff = Math.random() < 0.5 ? 0 : 1;
     this.setupKickoff(this.teams[this.firstKickoff]);
@@ -117,6 +119,7 @@ export class Match {
 
     for (const p of this.players) {
       if (p.sentOff) continue;
+      p.hasBall = this.owner === p;
       p.step(dt, this.onContact, this.onActionEnd);
     }
     this.bodies(dt);
@@ -264,22 +267,52 @@ export class Match {
     }
     if (act) return;
     if (b.p.y > 0.5) return;
-    // condução: toques curtos que deixam a bola à frente (mais longe em arrancada)
+    // Condução: a bola fica perto do pé bom (35 cm parado, ~55 cm trotando, ~85 cm
+    // em arrancada) e recebe um toque no instante em que o pé passa à frente na
+    // passada (fase sincronizada com anim.js), então o toque aparece na animação.
     const sp = o.speed;
-    const lead = o.shielding ? 0.45 : 0.5 + sp * (o.sprint ? 0.13 : 0.09) * (1.15 - o.a.dri / 250);
-    const tx = o.x + o.fx * lead, tz = o.z + o.fz * lead;
+    const dri = o.a.dri / 99;
+    const lead = o.shielding ? 0.3 : 0.32 + sp * (o.sprint ? 0.068 : 0.042) * (1.25 - dri * 0.4);
+    const side = 0.11 * o.foot;                    // levemente para o lado do pé bom
+    const rx = -o.fz, rz = o.fx;
+    const tx = o.x + o.fx * lead + rx * side, tz = o.z + o.fz * lead + rz * side;
     const ex = tx - b.p.x, ez = tz - b.p.z;
-    const err = Math.hypot(ex, ez);
+    // fase da passada: pé direito à frente em ~0,35; esquerdo em ~0,85
+    const L = cycleLength(sp, o.pose.moveAngle || 0);
+    const ph = ((o.pose.stride / L) % 1 + 1) % 1;
+    const want = o.foot > 0 ? 0.35 : 0.85;
+    const prev = o.lastPhase ?? ph;
+    const crossed = sp > 0.8 && ((prev < want && ph >= want) || (prev > ph && (prev < want || ph >= want)));
+    o.lastPhase = ph;
     o.touchTimer -= dt;
-    const bvx = b.v.x - o.vx, bvz = b.v.z - o.vz;
-    const drift = Math.hypot(bvx, bvz);
-    if (o.touchTimer <= 0 && (err > 0.28 || drift > 1.5)) {
-      const k = sp < 1 ? 3.5 : 2.6;
-      const noise = (1 - o.a.dri / 99) * 0.35 * (o.sprint ? 1.6 : 1);
-      b.kick(o.vx + ex * k + gauss() * noise, 0, o.vz + ez * k + gauss() * noise);
-      o.touchTimer = o.sprint ? 0.32 : 0.2;
+    const relx = b.p.x - o.x, relz = b.p.z - o.z;
+    const ahead = relx * o.fx + relz * o.fz;
+    const angOff = Math.abs(Math.atan2(relx * rx + relz * rz, Math.max(0.05, ahead)));
+    const needTurn = angOff > 0.7 && sp > 1;      // virou: a bola precisa ser redirecionada já
+    if ((crossed && o.touchTimer <= 0) || needTurn && o.touchTimer <= 0 || (sp <= 0.8 && Math.hypot(ex, ez) > 0.25 && o.touchTimer <= 0)) {
+      // toque: a bola sai com a velocidade do jogador + o que falta para chegar ao ponto à frente
+      const T = sp > 0.8 ? Math.max(0.22, L / Math.max(sp, 1)) : 0.35;
+      const noise = (1 - dri) * 0.25 * (o.sprint ? 1.5 : 1);
+      b.kick(o.vx + ex / T * 1.15 + gauss() * noise, 0, o.vz + ez / T * 1.15 + gauss() * noise);
+      o.touchTimer = needTurn ? 0.12 : 0.18;
       this.touch(o, 'dribble');
-      if (sp > 3 && Math.random() < 0.25) this.emit('dribble', {});
+      if (sp > 3 && Math.random() < 0.3) this.emit('dribble', {});
+    } else {
+      // entre os toques a bola rola livre; só um leve "domínio" corrige a deriva
+      // lateral, como o jogador ajeitando o corpo (sem grudar)
+      if (o.cushion > 0) o.cushion -= dt;
+      const strong = o.cushion > 0 || sp < 1.2;   // domínio ou parado: a bola assenta no pé
+      const k = Math.min(1, dt * (strong ? 7 : 2 + dri * 2.5));
+      if (strong) {
+        b.v.x += (o.vx + ex * 5 - b.v.x) * k; b.v.z += (o.vz + ez * 5 - b.v.z) * k;
+        return;
+      }
+      const lat = ex * rx + ez * rz;
+      b.v.x += rx * lat * 2.2 * k; b.v.z += rz * lat * 2.2 * k;
+      const relV = (b.v.x - o.vx) * o.fx + (b.v.z - o.vz) * o.fz;
+      const lon = ex * o.fx + ez * o.fz;
+      if (lon < -0.15 && relV < 0) { b.v.x -= o.fx * relV * k; b.v.z -= o.fz * relV * k; }   // ficou para trás: alcança
+      if (lon > 0.35 && relV > 0) { b.v.x -= o.fx * relV * k * 0.8; b.v.z -= o.fz * relV * k * 0.8; } // escapou à frente
     }
   }
 
@@ -358,8 +391,11 @@ export class Match {
     this.owner = p;
     p.gotBall = this.time;
     p.touchTimer = 0.12;
-    // primeiro toque amortece
-    b.v.x = p.vx * 0.9 + p.fx * 0.6; b.v.z = p.vz * 0.9 + p.fz * 0.6;
+    // primeiro toque amortece e traz a bola para a frente do pé
+    const lead = 0.35 + p.speed * 0.045;
+    const tx = p.x + p.fx * lead, tz = p.z + p.fz * lead;
+    b.v.x = p.vx + (tx - b.p.x) * 2.4; b.v.z = p.vz + (tz - b.p.z) * 2.4;
+    p.cushion = 0.5;
     if (b.p.y < R + 0.05) { b.v.y = 0; b.rolling = true; }
     this.touch(p, how);
     this.emit('touch', { strength: 0.25 });

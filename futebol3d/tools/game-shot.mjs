@@ -34,7 +34,7 @@ for (let i = 0; i < shots; i++) {
   else await page.waitForTimeout(secs * 1000);
   const st = await page.evaluate(() => { const g = window.__golaco.game; if (!g) return null; const m = g.match; return { calls: window.__golaco.renderer.info.render.calls, tris: window.__golaco.renderer.info.render.triangles, phase: m.phase, clock: m.clock.toFixed(0), score: m.teams.map(t => t.score), fps: g.fps.toFixed(1), ball: [m.ball.p.x.toFixed(1), m.ball.p.z.toFixed(1)] }; });
   console.log('estado', JSON.stringify(st));
-  await page.screenshot({ path: `${out}-${i}.png` });
+  await page.screenshot({ path: `${out}-${i}.png`, timeout: 300000 });
 }
 console.log('erros', errors.length ? errors.slice(0, 20).join('\n') : 'nenhum');
 await b.close();

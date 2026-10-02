@@ -239,6 +239,11 @@ export function buildStadium(renderer, scene, opts = {}) {
       goals.userData.impact(goalSign, point, strength, lastTime);
     },
 
+    // bola na trave/travessão: vibração da armação + rede sacudindo
+    postHit(goalSign, point, strength = 1) {
+      goals.userData.shake?.(goalSign, point, strength, lastTime);
+    },
+
     // rede de pano (se o módulo dos gols expuser update): física com a bola
     updateBall(dt, ballPos, ballVel) {
       if (typeof goals.userData.update === 'function') goals.userData.update(dt, lastTime, ballPos, ballVel);

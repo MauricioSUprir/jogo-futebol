@@ -62,7 +62,7 @@ export const PLAYER = {
   decel: 9.0,
   turnRateStill: 14,     // rad/s parado
   turnRateSprint: 3.2,   // rad/s em arrancada
-  controlRange: 0.95,    // distância em que pode tocar na bola com o pé
+  controlRange: 0.75,    // distância em que pode tocar na bola com o pé
   headerReach: 2.55,     // altura máxima de cabeceio com salto
 };
 
