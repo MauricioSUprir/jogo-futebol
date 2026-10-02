@@ -235,6 +235,85 @@ export async function preloadHeads() {
     SCAN[0] = SCAN[1] = a; SCAN[2] = b;
   } catch (e) { console.warn('cabeça escaneada indisponível', e); }
 }
+// ---------------------------------------------------------------- corpo realista
+// Malha humana inteira (Human Base Meshes, Blender Studio, CC0) com pesos para os 17 ossos
+// do jogo — ver tools/humano/rig.py. Desenhada como UMA InstancedMesh deformada no shader.
+let BODY = null;
+export async function preloadBody() {
+  if (BODY) return;
+  try {
+    const [meta, bin] = await Promise.all([fetch('assets/jogador/corpo.json').then(r => r.json()), fetch('assets/jogador/corpo.bin').then(r => r.arrayBuffer())]);
+    BODY = { meta, bin, inv: meta.invBind.map(a => new THREE.Matrix4().fromArray(a)) };
+  } catch (e) { console.warn('corpo realista indisponível', e); }
+}
+function bodyData(lod) {
+  const L = BODY.meta.lods[lod], b = BODY.bin, n = L.nv;
+  return { n, pos: new Float32Array(b, L.pos, n * 3), rest: new Float32Array(b, L.rest, n * 3), w: new Float32Array(b, L.w, n * 4),
+    idx: new Uint8Array(b, L.idx, n * 4), mat: new Uint8Array(b, L.mat, n), index: new Uint32Array(b, L.index, L.ni) };
+}
+function bodyGeometry(lod) {
+  const d = bodyData(lod), g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(d.pos, 3));
+  g.setAttribute('aRest', new THREE.BufferAttribute(d.rest, 3));
+  g.setAttribute('aMat', new THREE.BufferAttribute(Float32Array.from(d.mat), 1));
+  g.setAttribute('aSkinI', new THREE.BufferAttribute(Float32Array.from(d.idx), 4));
+  g.setAttribute('aSkinW', new THREE.BufferAttribute(d.w, 4));
+  g.setIndex(new THREE.BufferAttribute(d.index, 1));
+  g.computeVertexNormals();
+  return g;
+}
+// Cabelo do corpo realista: casca tirada da própria cabeça (repouso), acima da linha do
+// cabelo, empurrada para fora pela espessura do estilo. Fica preso ao osso da cabeça.
+function bodyHair(lod, st) {
+  const d = bodyData(lod), R = d.rest, n = d.n, I = d.index;
+  const N = new Float32Array(n * 3);
+  for (let k = 0; k < I.length; k += 3) {
+    const a = I[k] * 3, b = I[k + 1] * 3, c = I[k + 2] * 3;
+    const ux = R[b] - R[a], uy = R[b + 1] - R[a + 1], uz = R[b + 2] - R[a + 2], vx = R[c] - R[a], vy = R[c + 1] - R[a + 1], vz = R[c + 2] - R[a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    for (const o of [a, b, c]) { N[o] += nx; N[o + 1] += ny; N[o + 2] += nz; }
+  }
+  const T = [0, 0.006, 0.0025, 0.012, 0.01, 0.03, 0.006][st];
+  const Mk = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    if (d.idx[v * 4] !== 4 || d.mat[v] !== 0) continue;      // só pele da cabeça
+    const x = R[v * 3], y = R[v * 3 + 1], z = R[v * 3 + 2];
+    let hl = 1.605 + 0.17 * sst(-0.03, 0.13, z);              // nuca baixa → testa alta (≈2,5 cm acima das sobrancelhas)
+    if (st === 4) hl -= 0.06 * sst(0.05, -0.05, z);           // longo: cobre a nuca
+    let m = sst(hl - 0.004, hl + 0.012, y);
+    if (Math.abs(x) > 0.068 && y < 1.715 && z > -0.035 && z < 0.1 && st !== 4) m *= sst(1.70, 1.715, y);   // orelhas
+    Mk[v] = m;
+  }
+  const pos = [], idx = [], map = new Int32Array(n).fill(-1);
+  for (let k = 0; k < I.length; k += 3) {
+    const a = I[k], b = I[k + 1], c = I[k + 2];
+    if (Math.max(Mk[a], Mk[b], Mk[c]) < 0.05 || d.idx[a * 4] !== 4 || d.idx[b * 4] !== 4 || d.idx[c * 4] !== 4) continue;
+    for (const v of [a, b, c]) {
+      if (map[v] < 0) {
+        map[v] = pos.length / 3;
+        const nl = Math.hypot(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]) || 1;
+        let th = T * Mk[v] - 0.0025 * (1 - Mk[v]);
+        if (st === 3) th += 0.005 * Mk[v] * (Math.sin(R[v * 3] * 160) * Math.sin(R[v * 3 + 1] * 140) * Math.sin(R[v * 3 + 2] * 150) + 0.3);
+        if (st === 5) th += 0.02 * Mk[v] * Math.max(0, (R[v * 3 + 1] - 1.7) / 0.1);
+        pos.push(R[v * 3] + N[v * 3] / nl * th, R[v * 3 + 1] + N[v * 3 + 1] / nl * th - 1.6, R[v * 3 + 2] + N[v * 3 + 2] / nl * th);
+      }
+      idx.push(map[v]);
+    }
+  }
+  let geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  if (st === 6) {     // coque
+    const bun = new THREE.SphereGeometry(0.036, 12, 9); bun.deleteAttribute('uv'); bun.deleteAttribute('normal'); bun.translate(0, 0.19, -0.045);
+    geo = mergeGeometries([geo, bun]);
+  }
+  geo.computeVertexNormals();
+  const p2 = geo.attributes.position.array, r2 = new Float32Array(p2.length);
+  for (let k = 0; k < p2.length; k += 3) { r2[k] = p2[k]; r2[k + 1] = p2[k + 1] + 1.6; r2[k + 2] = p2[k + 2]; }
+  geo.setAttribute('aRest', new THREE.BufferAttribute(r2, 3));
+  return withMat(geo, M.HAIR);
+}
+
 function scanHead(d) {
   const p = Float32Array.from(d.p);
   for (let i = 1; i < p.length; i += 3) p[i] -= 1.6;     // relativo ao osso da cabeça
@@ -369,10 +448,16 @@ function faceAtlas() {
 const VERT_DECL = /* glsl */`
 attribute float aMat; attribute vec3 aRest; attribute float aPid;
 uniform float uCount;
+#ifdef BODY_SKIN
+// corpo realista: 17 ossos por jogador numa textura (4 texels = 1 matriz, coluna-maior)
+attribute vec4 aSkinI; attribute vec4 aSkinW; uniform highp sampler2D uBones;
+mat4 boneM(float b) { int x = int(b + 0.5) * 4, y = int(aPid + 0.5);
+  return mat4(texelFetch(uBones, ivec2(x, y), 0), texelFetch(uBones, ivec2(x + 1, y), 0), texelFetch(uBones, ivec2(x + 2, y), 0), texelFetch(uBones, ivec2(x + 3, y), 0)); }
+#endif
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 `;
 const FRAG_DECL = /* glsl */`
-uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor; uniform sampler2D uFace; uniform vec4 uFaceA; uniform vec2 uFaceB;
+uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor; uniform sampler2D uFace; uniform vec4 uFaceA; uniform vec2 uFaceB; uniform vec3 uFaceC;
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 vec4 K(int i) { return texelFetch(uKit, ivec2(i, int(vPid + 0.5)), 0); }
 float aa(float d) { float w = max(fwidth(d), 1e-4); return smoothstep(-w, w, d); }
@@ -395,11 +480,11 @@ vec4 numAt(vec2 p, vec2 c, float h, bool mirror, float num, vec2 dpx, vec2 dpy, 
 // boca (1,659) → 0,71 e queixo (1,586) → 0,89. Devolve cor e peso (0 = pele lisa).
 vec4 facePhoto(vec3 r) {
   if (K(14).a < 0.5 || r.y < 1.5) return vec4(0.0);
-  vec3 d = normalize(r - vec3(0.0, 1.694, 0.014));
+  vec3 d = normalize(r - uFaceC);
   // uFaceA = (escala u, y dos olhos, y da boca, inclinação acima da boca); uFaceB.x = abaixo
-  float u = 0.5 + r.x * uFaceA.x;
+  float u = 0.5 + (r.x - uFaceB.y) * uFaceA.x;
   float t = r.y >= uFaceA.z ? 0.42 + (uFaceA.y - r.y) * uFaceA.w : 0.717 + (uFaceA.z - r.y) * uFaceB.x;
-  float w = smoothstep(0.12, 0.45, d.z) * smoothstep(0.16, 0.3, t) * (1.0 - smoothstep(0.9, 0.97, t))
+  float w = smoothstep(0.12, 0.45, d.z) * smoothstep(0.17, 0.34, t) * (1.0 - smoothstep(0.9, 0.97, t))
           * (1.0 - smoothstep(0.33, 0.43, abs(u - 0.5)));
   if (w <= 0.0) return vec4(0.0);
   float cell = vPid;
@@ -421,6 +506,16 @@ float fabH = 0.0;
 {
   vec3 r = vRest;
   int m = int(vMat + 0.5);
+#ifdef BODY_SKIN
+  // gola do corpo realista decidida por pixel (os vértices misturam pele/camisa em dente de serra)
+  if (r.y > 1.40 && abs(r.x) < 0.14 && (m == 0 || m == 1 || m == 2 || m == 13) && r.y < 1.56)
+    m = r.y > 1.488 + 0.9 * max(0.0, abs(r.x) - 0.045) - 0.12 * max(0.0, r.z - 0.02) ? 0 : 1;
+  // limites do uniforme por pixel (os vértices só dizem a "parte": braço, tronco/pernas, cabeça)
+  bool armP = m == 2 || m == 13 || m == 12;
+  bool bodyP = m == 1 || m == 3 || m == 4 || m == 6 || m == 14 || (m == 0 && r.y < 1.0);
+  if (armP) m = r.y > 1.27 ? 2 : r.y > 0.885 ? 13 : 12;
+  else if (bodyP && r.y < 1.40) m = r.y > 0.975 ? 1 : r.y > 0.70 ? 3 : r.y > 0.44 ? 0 : r.y > 0.13 ? 4 : r.y > 0.018 ? 6 : 14;
+#endif
   vec2 dpx = dFdx(r.xy), dpy = dFdy(r.xy);     // derivadas fora dos desvios
   bool gk = K(1).a > 0.5;
   float num = floor(K(3).a + 0.5);
@@ -448,11 +543,21 @@ float fabH = 0.0;
   vec4 sp = textureGrad(uSponsor, suv, vec2(dpx.x / SW / 2.0, -dpx.y / SH / 4.0), vec2(dpy.x / SW / 2.0, -dpy.y / SH / 4.0));
   // faixas de gola, punhos, meiões e laterais (larguras em metros, antisserrilhadas)
   float collar = floor(K(5).a + 0.5);
+#ifdef BODY_SKIN
+  // corpo realista: golas medidas a partir da linha do pescoço (não da altura fixa do boneco antigo)
+  float neckL = 1.488 + 0.9 * max(0.0, abs(r.x) - 0.045) - 0.12 * max(0.0, r.z - 0.02);
+  float yv = neckL - 0.07 + abs(r.x) * 1.25;
+  float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, neckL);
+  float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
+  float crew = aa(r.y - (neckL - 0.014));
+  float polo = aa(r.y - (neckL - 0.02)) + band(r.x, 0.0, 0.011) * step(0.0, r.z) * aa(r.y - (neckL - 0.08)) * aa(neckL - r.y);
+#else
   float yv = 1.452 + abs(r.x) * 1.25;
   float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, 1.53);
   float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
   float crew = aa(r.y - 1.501);
   float polo = aa(r.y - 1.488) + band(r.x, 0.0, 0.011) * step(0.0, r.z) * aa(r.y - 1.43) * aa(1.5 - r.y);
+#endif
   float btn = step(0.0, r.z) * ((1.0 - aa(length(vec2(r.x, r.y - 1.475)) - 0.0038)) + (1.0 - aa(length(vec2(r.x, r.y - 1.448)) - 0.0038)));
   float panel = aa(0.034 - abs(r.z)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
   float pipe = (band(r.z, 0.034, 0.0035) + band(r.z, -0.034, 0.0035)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
@@ -539,14 +644,41 @@ normal = kitBump(-vViewPosition, normal, vec2(dFdx(fabH), dFdy(fabH)) * 0.55, fa
 #endif
 `;
 
-function bodyMaterial(uniforms, fabric) {
+const SKIN_NORMAL = /* glsl */`#include <beginnormal_vertex>
+#ifdef BODY_SKIN
+mat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);
+objectNormal = normalize(mat3(skinM) * objectNormal);
+#endif`;
+const SKIN_POS = /* glsl */`
+#ifdef BODY_SKIN
+transformed = (skinM * vec4(transformed, 1.0)).xyz;
+vSide = aRest.x >= 0.0 ? 1.0 : -1.0;
+#endif`;
+// sombra do corpo realista: mesma deformação no material de profundidade
+function skinDepthMaterial(uniforms) {
+  const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  m.defines = { BODY_SKIN: '' };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, uniforms);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPid;\n' + VERT_DECL.split('uniform float uCount;')[1])
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nmat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;');
+  };
+  m.customProgramCacheKey = () => 'golaco-body-depth';
+  return m;
+}
+
+function bodyMaterial(uniforms, fabric, skinned = false) {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
-  if (fabric) mat.defines = { KIT_FABRIC: '' };
+  mat.defines = {};
+  if (fabric) mat.defines.KIT_FABRIC = '';
+  if (skinned) mat.defines.BODY_SKIN = '';
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_DECL)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest; vSide = float(gl_InstanceID) >= uCount ? -1.0 : 1.0;');
+      .replace('#include <beginnormal_vertex>', SKIN_NORMAL)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest; vSide = float(gl_InstanceID) >= uCount ? -1.0 : 1.0;\n' + SKIN_POS);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FRAG_DECL)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_COLOR)
@@ -555,7 +687,7 @@ function bodyMaterial(uniforms, fabric) {
       // leve brilho de borda na pele (sheen barato)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);');
   };
-  mat.customProgramCacheKey = () => 'golaco-body-v4' + (fabric ? '-f' : '');
+  mat.customProgramCacheKey = () => 'golaco-body-v5' + (fabric ? '-f' : '') + (skinned ? '-s' : '');
   return mat;
 }
 
@@ -673,6 +805,7 @@ const LIMB = [[5, 8, 'upperArm'], [6, 9, 'foreArm'], [7, 10, 'hand'], [11, 14, '
 const SINGLE = [[4, 'head'], [3, 'neck'], [2, 'chest'], [1, 'spine'], [0, 'pelvis']];
 const GEO = [];   // geometrias por nível de detalhe (compartilhadas entre instâncias da classe)
 const GEO_SCAN = [];
+const GEO_BODY = [];
 const pidAttr = (n, per) => { const a = new Float32Array(n * per); for (let k = 0; k < a.length; k++) a[k] = k % n; return new THREE.InstancedBufferAttribute(a, 1); };
 
 export class PlayerMeshes {
@@ -680,9 +813,17 @@ export class PlayerMeshes {
     this.scene = scene; this.count = count; this.night = night;
     const lod = quality ? Math.max(0, Math.min(2, quality.grassDetail ?? 2)) : 2;
     this.lod = lod;
-    const cache = SCAN[LODS[lod].feat] ? GEO_SCAN : GEO;
-    if (!cache[lod]) cache[lod] = buildParts(LODS[lod]);
-    const geos = cache[lod];
+    this.realBody = !!BODY;
+    let geos;
+    if (this.realBody) {
+      // corpo realista: uma malha só; cabelo tirado da própria cabeça
+      if (!GEO_BODY[lod]) { GEO_BODY[lod] = { body: bodyGeometry(lod) }; for (let st = 1; st <= 6; st++) GEO_BODY[lod]['hair' + st] = bodyHair(lod, st); GEO_BODY[lod].hair7 = withMat(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)).setAttribute('aRest', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)), M.HAIR); }
+      geos = GEO_BODY[lod];
+    } else {
+      const cache = SCAN[LODS[lod].feat] ? GEO_SCAN : GEO;
+      if (!cache[lod]) cache[lod] = buildParts(LODS[lod]);
+      geos = cache[lod];
+    }
     this.kitData = new Float32Array(KW * count * 4);
     this.kitTex = new THREE.DataTexture(this.kitData, KW, count, THREE.RGBAFormat, THREE.FloatType);
     this.kitTex.minFilter = this.kitTex.magFilter = THREE.NearestFilter;
@@ -693,8 +834,16 @@ export class PlayerMeshes {
     const uni = { uKit: { value: this.kitTex }, uDigits: { value: this.digits }, uCrest: { value: this.crestTex },
       uSponsor: { value: this.sponsorTex }, uCount: { value: count }, uFace: { value: this.faceTex = faceAtlas() },
       // olhos/boca/queixo da cabeça escaneada (y 1,7149 / 1,6602 / 1,6192; olhos ±0,0272) ou da procedural
-      uFaceA: { value: SCAN[LODS[lod].feat] ? new THREE.Vector4(4.963, 1.7149, 1.6602, 5.43) : new THREE.Vector4(4.47, 1.7154, 1.6586, 5.22) },
-      uFaceB: { value: new THREE.Vector2(SCAN[LODS[lod].feat] ? 4.76 : 2.67, 0) } };
+      uFaceA: { value: this.realBody ? new THREE.Vector4(4.545, 1.6951, 1.6313, 4.655) : SCAN[LODS[lod].feat] ? new THREE.Vector4(4.963, 1.7149, 1.6602, 5.43) : new THREE.Vector4(4.47, 1.7154, 1.6586, 5.22) },
+      uFaceB: { value: this.realBody ? new THREE.Vector2(4.248, 0.0006) : new THREE.Vector2(SCAN[LODS[lod].feat] ? 4.76 : 2.67, 0) },
+      // centro da cabeça (para saber o que é "frente do rosto")
+      uFaceC: { value: this.realBody ? new THREE.Vector3(0, 1.67, 0.04) : new THREE.Vector3(0, 1.694, 0.014) } };
+    if (this.realBody) {
+      this.boneData = new Float32Array(17 * 4 * 4 * count);
+      this.boneTex = new THREE.DataTexture(this.boneData, 17 * 4, count, THREE.RGBAFormat, THREE.FloatType);
+      this.boneTex.minFilter = this.boneTex.magFilter = THREE.NearestFilter;
+      uni.uBones = { value: this.boneTex };
+    }
     this.material = bodyMaterial(uni, lod > 0);
     // redesenha os letreiros quando a fonte condensada terminar de carregar
     document.fonts?.load?.('italic 800 100px "Barlow Condensed"').then(() => {
@@ -717,8 +866,18 @@ export class PlayerMeshes {
       this.group.add(m);
       return m;
     };
-    for (const [b, name] of SINGLE) this.parts.push({ mesh: mk(name, 1), bones: [b], kind: name });
-    for (const [bl, br, name] of LIMB) this.parts.push({ mesh: mk(name, 2), bones: [bl, br], kind: name });
+    if (this.realBody) {
+      const g = geos.body.clone(); g.setAttribute('aPid', pidAttr(count, 1));
+      const m = new THREE.InstancedMesh(g, bodyMaterial(uni, lod > 0, true), count);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceMatrix.array.fill(0);
+      m.customDepthMaterial = skinDepthMaterial(uni);
+      m.castShadow = shadows; m.receiveShadow = true; m.frustumCulled = false; m.name = 'jog-corpo';
+      this.group.add(m); this.bodyMesh = m;
+      this._hm = new Float32Array(16);
+    } else {
+      for (const [b, name] of SINGLE) this.parts.push({ mesh: mk(name, 1), bones: [b], kind: name });
+      for (const [bl, br, name] of LIMB) this.parts.push({ mesh: mk(name, 2), bones: [bl, br], kind: name });
+    }
     // cabelos por estilo (1..6) e barba (7): instâncias compactadas, só quem usa é desenhado
     this.hair = [null];
     for (let st = 1; st <= 7; st++) { const m = mk('hair' + st, 1); m.count = 0; this.hair.push(m); }
@@ -862,6 +1021,7 @@ export class PlayerMeshes {
     }
     for (let k = 0; k < 2; k++) { const sl = this.slot[i * 2 + k]; if (sl >= 0) this.hair[k ? 7 : this.style[i]].instanceMatrix.array.fill(0, sl * 16, sl * 16 + 16); }
     this.blob.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
+    if (this.realBody) { this.bodyMesh.instanceMatrix.array.fill(0, i * 16, i * 16 + 16); this.bodyMesh.instanceMatrix.needsUpdate = true; }
     this.streaks.instanceMatrix.array.fill(0, i * 64, i * 64 + 64);
     this.ring.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
     this.arrow.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
@@ -895,7 +1055,31 @@ export class PlayerMeshes {
         }
       }
     }
+    if (this.realBody) this._skin(i, x, y, z, qy, qw, c, s, hs, bw, P);
     this._ground(i, x, y, z, th, hs, P);
+  }
+
+  // matrizes dos 17 ossos (mundo × inversa da ligação) para a deformação no shader
+  _skin(i, x, y, z, qy, qw, c, s, hs, bw, P) {
+    // matriz da instância = posição/giro/escala do jogador; ossos no espaço do modelo
+    // (passes que trocam o material, como o AO, ao menos põem o corpo no lugar certo)
+    writeMat(this.bodyMesh.instanceMatrix.array, i * 16, 0, qy, 0, qw, x, y, z, hs * bw, hs, hs * bw);
+    const mq = P.mq, mp = P.mp, D = this.boneData, o0 = i * 17 * 16, M = _M, inv = BODY.inv;
+    for (let b = 0; b < 17; b++) {
+      writeMat(M.elements, 0, mq[b * 4], mq[b * 4 + 1], mq[b * 4 + 2], mq[b * 4 + 3], mp[b * 3], mp[b * 3 + 1], mp[b * 3 + 2], 1, 1, 1);
+      M.multiply(inv[b]);
+      D.set(M.elements, o0 + b * 16);
+      if (b === 4) {     // cabelo segue a cabeça
+        const bx = mq[16], by = mq[17], bz = mq[18], bw4 = mq[19];
+        const X = qw * bx + qy * bz, Y = qw * by + qy * bw4, Z = qw * bz - qy * bx, Wq = qw * bw4 - qy * by;
+        const px = mp[12] * hs, py = mp[13] * hs, pz = mp[14] * hs;
+        writeMat(this._hm, 0, X, Y, Z, Wq, x + c * px + s * pz, y + py, z - s * px + c * pz, hs, hs, hs);
+        const s0 = this.slot[i * 2];
+        if (s0 >= 0) this.hair[this.style[i]].instanceMatrix.array.set(this._hm, s0 * 16);
+      }
+    }
+    this.bodyMesh.instanceMatrix.needsUpdate = true;
+    this.boneTex.needsUpdate = true;
   }
 
   _ground(i, x, y, z, th, hs, P) {
@@ -969,6 +1153,7 @@ export class PlayerMeshes {
 }
 
 // matriz T·R·S (coluna principal) direto no array da instância
+const _M = new THREE.Matrix4();
 function writeMat(a, o, x, y, z, w, px, py, pz, sx, sy, sz) {
   const x2 = x + x, y2 = y + y, z2 = z + z;
   const xx = x * x2, xy = x * y2, xz = x * z2, yy = y * y2, yz = y * z2, zz = z * z2, wx = w * x2, wy = w * y2, wz = w * z2;

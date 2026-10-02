@@ -17,7 +17,7 @@ import { Replay } from './replay.js';
 import { BallMesh } from './ballmesh.js';
 import { GameAudio } from './audio.js';
 import { buildStadium } from './stadium.js';
-import { PlayerMeshes, preloadHeads } from './players3d.js';
+import { PlayerMeshes, preloadHeads, preloadBody } from './players3d.js';
 import { rootOffset, setMocap } from './anim.js';
 let mocapLoaded = false;
 import { StadiumFX } from './fx.js';
@@ -174,7 +174,7 @@ async function startMatch(cfg) {
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';
   await new Promise(r => setTimeout(r, 20));
-  await preloadHeads();
+  await preloadHeads(); await preloadBody();
   // passadas de captura de movimento (CMU) — sem elas a passada procedural continua valendo
   if (!mocapLoaded) { mocapLoaded = true; try { setMocap(await (await fetch('assets/mocap/locomocao.json')).json()); } catch (e) { console.warn('mocap indisponível', e); } }
   const players = new PlayerMeshes(scene, { count: 22, quality: Q, night: stadium.isNight });

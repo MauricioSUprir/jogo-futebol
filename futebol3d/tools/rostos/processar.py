@@ -24,9 +24,19 @@ def alinha(im, m):
     c = cx - a * EX * C - b * EY * C; f = cy - d * EX * C - e * EY * C
     out = im.transform((C, C), Image.AFFINE, (a, b, c, d, e, f), resample=Image.BICUBIC)
     arr = np.asarray(out).astype(float)
+    # fora do contorno do rosto vira pele (o fundo da foto não vaza para as laterais da cabeça)
+    det = a * e - b * d
+    inv = lambda x, y: ((e * (x - c) - b * (y - f)) / det, (-d * (x - c) + a * (y - f)) / det)
+    ov = [inv(x, y) for x, y in m['oval']]
+    cx0, cy0 = np.mean(ov, axis=0)
+    ov = [(cx0 + (x - cx0) * 1.03, cy0 + (y - cy0) * 1.03) for x, y in ov]
+    from PIL import ImageDraw, ImageFilter
+    mk = Image.new('L', (C, C), 0); ImageDraw.Draw(mk).polygon(ov, fill=255); mk = mk.filter(ImageFilter.GaussianBlur(C * 0.02))
     y0, y1 = int(C * 0.55), int(C * 0.63)
     pele = np.concatenate([arr[y0:y1, int(C * .28):int(C * .36)].reshape(-1, 3), arr[y0:y1, int(C * .64):int(C * .72)].reshape(-1, 3)])
     pele = np.median(pele, axis=0)
+    fundo = Image.new('RGB', (C, C), tuple(int(x) for x in pele))
+    out = Image.composite(out, fundo, mk)
     return out, [int(x) for x in pele]
 banco = []   # (img, pele, origem)
 for f in sorted(glob.glob(os.path.join(AQUI, 'brutos', 'g*.png'))):
