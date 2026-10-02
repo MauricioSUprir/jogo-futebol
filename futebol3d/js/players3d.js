@@ -769,7 +769,7 @@ function bodyMaterial(uniforms, fabric, skinned = false, hairTex = false) {
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = matRough;')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_NORMAL)
       // leve brilho de borda na pele (sheen barato)
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0); if (int(vMat + 0.5) == 8) totalEmissiveRadiance += diffuseColor.rgb * 0.25;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0); if (int(vMat + 0.5) == 8) totalEmissiveRadiance += diffuseColor.rgb * 0.25; if (int(vMat + 0.5) == 16) totalEmissiveRadiance += diffuseColor.rgb * vec3(0.42, 0.3, 0.24) * (1.0 - smoothstep(1.56, 1.6, vRest.y));');
   };
   mat.customProgramCacheKey = () => 'golaco-body-v6' + (fabric ? '-f' : '') + (skinned ? '-s' : '') + (hairTex ? '-h' : '');
   return mat;
