@@ -31,6 +31,8 @@
 //        escudo + patrocinador + gola (front), número (back), goleiros (gk), visão de transmissão (far)
 //   ?sheet=nome&f=0,0.2,0.42  mesma animação congelada em várias frações, lado a lado, vista de lado
 //        (+ &foot=-1 &power= &dh= &ds= — listas '0,0.5,1' dão um valor por quadro; &variant= &speed= &ma=rad &lean=rad &heading=graus)
+//   ?faces=6&turn=0|90  close de rostos lado a lado (tons de pele, cabelos, barba), de frente (turn=0) ou de perfil (turn=90)
+//        &off=k desloca a escolha de pele/cabelo; &row=1 uma fileira só
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PlayerMeshes } from '../js/players3d.js';
@@ -116,7 +118,10 @@ const players = [];
 const SHEET = Q.get('sheet');
 const CLUBS = Q.get('clubs') ? Q.get('clubs').split(',').map(teamById).filter(Boolean) : null;
 const VIEW = Q.get('view') || 'front';
-if (CLUBS) {
+const FACES = Q.has('faces') ? Math.max(1, qn('faces', 6) | 0) : 0;
+if (FACES) {
+  for (let i = 0; i < FACES; i++) players.push({ anim: 'idle', frac: 0.0, face: true, variant: 0, foot: 1, power: 1, speed: 0 });
+} else if (CLUBS) {
   for (const t of CLUBS) {
     const dirs = VIEW === 'both' ? [1, -1] : [VIEW === 'back' ? -1 : 1];
     for (const d of dirs) {
@@ -145,23 +150,30 @@ players.forEach((p, i) => {
   let look = { skin: SKINS[(i * 3) % 8], hair: HAIRS[i % 7], hairColor: HCOL[(i * 5) % 7], height: 1.7 + ((i * 37) % 25) / 100, build: ((i * 53) % 10) / 9, beard: i % 3 === 1 };
   let number = isGK ? 1 : [9, 10, 7, 4, 23, 11, 5, 8, 19, 3, 14, 6, 17][i % 13];
   if (p.club) { kit = p.gkv ? p.club.kits.gk : p.club.kits[Q.get('kit') || 'home']; look = p.pl.look; number = p.pl.num; }
+  if (p.face) {
+    const k = i + qn('off', 0);
+    look = { skin: SKINS[(k * 3) % 8], hair: ['short', 'buzz', 'curly', 'long', 'bald', 'afro', 'bun', 'short'][k % 8], hairColor: HCOL[(k * 5) % 7],
+      height: 1.8, build: 0.5, beard: k % 3 === 1 || k % 5 === 4 };
+    kit = [HOME, AWAY, EXTRA[0], EXTRA[1]][k % 4]; number = [9, 10, 7, 4, 23, 11, 5, 8][k % 8];
+  }
   pm.setPlayer(i, { kit, isGK: !!p.gkv || isGK, number, look });
   const cols = ONLY ? 4 : 5;
-  if (CLUBS) { p.x = (i - (N - 1) / 2) * qn('gap', VIEW === 'far' ? 2.5 : 0.95); p.z = 0; }
+  if (FACES) { p.x = (i - (N - 1) / 2) * qn('gap', 0.36); p.z = 0; }
+  else if (CLUBS) { p.x = (i - (N - 1) / 2) * qn('gap', VIEW === 'far' ? 2.5 : 0.95); p.z = 0; }
   else if (SHEET) { p.x = (i - (N - 1) / 2) * qn('gap', 2.3); p.z = 0; }
   else if (p.loco) { p.x = 8.5 + (i - GRID.length) * 1.5; p.z = -4; }
   else { p.x = (i % cols - (cols - 1) / 2) * 2.7; p.z = -Math.floor(i / cols) * 2.9 + (ONLY ? 3 : 4); }
-  p.heading = CLUBS ? (p.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : SHEET ? THREE.MathUtils.degToRad(qn('heading', 0)) : Math.PI / 2;     // grade olha para a câmera; folha: de lado
+  p.heading = FACES ? Math.PI / 2 + THREE.MathUtils.degToRad(qn('turn', 0)) : CLUBS ? (p.dir > 0 ? Math.PI / 2 : -Math.PI / 2) : SHEET ? THREE.MathUtils.degToRad(qn('heading', 0)) : Math.PI / 2;     // grade olha para a câmera; folha: de lado
   p.stride = 0; p.dist = 0;
   p.state = { anim: p.anim, t: 0, speed: p.speed || 0, moveAngle: p.ma || 0, stride: 0, lean: p.lean || 0, foot: p.foot || 1, power: p.power ?? 1,
     diveSide: p.diveSide || 1, diveHeight: p.diveHeight || 0, variant: p.variant || 0, lookYaw: 0, lookPitch: 0, blendFrom: null, blendW: 1 };
 });
 if (Q.has('ind')) { pm.setIndicator(+Q.get('ind'), '#ffe14a'); pm.setIndicator((+Q.get('ind') + 1) % N, '#39d0ff'); }
-else if (!SHEET && !CLUBS) { pm.setIndicator(0, '#ffe14a'); pm.setIndicator(4, '#39d0ff'); }
+else if (!SHEET && !CLUBS && !FACES) { pm.setIndicator(0, '#ffe14a'); pm.setIndicator(4, '#39d0ff'); }
 
 // rótulos
 const labels = players.map((p) => {
-  if (p.club) { const d = document.createElement('div'); d.style.display = 'none'; return d; }
+  if (p.club || p.face) { const d = document.createElement('div'); d.style.display = 'none'; return d; }
   const d = document.createElement('div'); d.className = 'lbl';
   d.textContent = p.frac != null ? `${p.anim} ${p.frac}` : p.loco ? `${p.speed} m/s` : p.anim + (p.anim === 'celebrate' || p.anim === 'dejected' ? ' ' + p.variant : '');
   if (Q.get('labels') === '0') d.style.display = 'none';
@@ -172,9 +184,10 @@ const labels = players.map((p) => {
 const camera = new THREE.PerspectiveCamera(CAM === 'far' ? 22 : 40, innerWidth / innerHeight, 0.05, 400);
 const controls = new OrbitControls(camera, renderer.domElement);
 const P0 = players[qn('p', 0) | 0] || players[0];
-const yaw = THREE.MathUtils.degToRad(qn('yaw', CAM === 'close' || SHEET ? 0 : 15));
+const yaw = THREE.MathUtils.degToRad(qn('yaw', CAM === 'close' || SHEET || FACES ? 0 : 15));
 let target, dist, h;
-if (CLUBS) { target = new THREE.Vector3(0, qn('ty', VIEW === 'far' ? 1 : 1.22), 0); dist = qn('dist', VIEW === 'far' ? 32 : N * 0.62 + 0.7); h = qn('h', VIEW === 'far' ? 14 : 1.4); }
+if (FACES) { target = new THREE.Vector3(0, qn('ty', 1.7), 0); dist = qn('dist', N * 0.27 + 0.25); h = qn('h', 1.72); }
+else if (CLUBS) { target = new THREE.Vector3(0, qn('ty', VIEW === 'far' ? 1 : 1.22), 0); dist = qn('dist', VIEW === 'far' ? 32 : N * 0.62 + 0.7); h = qn('h', VIEW === 'far' ? 14 : 1.4); }
 else if (CAM === 'close') { target = new THREE.Vector3(P0.x, qn('ty', 1.45), P0.z); dist = qn('dist', 1.7); h = qn('h', 1.55); }
 else if (CAM === 'far') { target = new THREE.Vector3(0, 0.9, 0); dist = qn('dist', 40); h = qn('h', 16); }
 else if (SHEET) { target = new THREE.Vector3(0, qn('ty', 0.95), 0); dist = qn('dist', N * 1.55 + 1.5); h = qn('h', 1.5); }
@@ -223,7 +236,11 @@ function step() {
     info.textContent = `jogadores: ${N}  update+FK: ${(upd / frames).toFixed(2)} ms/quadro  draw calls: ${renderer.info.render.calls}  triângulos: ${renderer.info.render.triangles}`;
     window.__perf = upd / frames; upd = 0; frames = 0;
   }
-  if (frames === 3 || (window.__ready !== true && frames > 3)) { window.__calls = renderer.info.render.calls; window.__ready = true; }
+  if (frames === 3 || (window.__ready !== true && frames > 3)) {
+    window.__calls = renderer.info.render.calls; window.__tris = renderer.info.render.triangles; window.__ready = true;
+    info.textContent = `jogadores: ${N}  draw calls: ${renderer.info.render.calls}  triângulos: ${renderer.info.render.triangles}`;
+    if (Q.get('labels') === '0') info.style.display = 'none';
+  }
   if ((FREEZE != null || SHEET) && window.__ready) return;   // quadro congelado: para de renderizar
   requestAnimationFrame(step);
 }

@@ -134,6 +134,8 @@ const audio = new GameAudio();
 audio.setVolumes({ master: settings.volMaster, crowd: settings.volCrowd, sfx: settings.volSfx });
 const unlockAudio = () => audio.unlock();
 addEventListener('pointerdown', unlockAudio);
+// tocar/clicar em qualquer lugar pula a abertura
+addEventListener('pointerdown', () => { if (game && game.match.phase === 'intro' && game.t > 0.8) game.match.skipIntro(); });
 addEventListener('keydown', unlockAudio);
 
 const input = new Input();
@@ -161,6 +163,7 @@ async function startMatch(cfg) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.1, 1200);
+  cfg.intro = settings.intro !== false && !cfg.noIntro;
   const match = new Match(cfg);
   const stadium = buildStadium(renderer, scene, {
     quality: Q, timeOfDay: settings.timeOfDay || 'noite',
@@ -193,11 +196,15 @@ async function startMatch(cfg) {
   if (touch) { tc.classList.remove('hidden'); input.buildTouch(tc); } else tc.classList.add('hidden');
   input.enabled = true;
   input.onPause = () => togglePause();
-  input.onAny = () => { if (game && game.replaying && game.replayT > 0.6) finishReplay(); };
+  input.onAny = () => {
+    if (!game) return;
+    if (game.match.phase === 'intro' && game.t > 0.8) { game.match.skipIntro(); return; }
+    if (game.replaying && game.replayT > 0.6) finishReplay();
+  };
   document.body.classList.remove('in-menu');
   document.body.classList.add('in-game');
   load.classList.add('hidden');
-  hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
+  if (match.phase !== 'intro') hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
   audio.chant(true);
   last = performance.now();
   // compila shaders antes do primeiro quadro para não engasgar
@@ -281,7 +288,7 @@ function handleEvents(g) {
         if (e.kind === 'parry') hud.banner('QUE DEFESA!', m.teams[e.side].gk.data.name, 'chance');
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
-      case 'card': hud.card(e.color, e.name); break;
+      case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); break;
       case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); break;
       case 'goal': {
         const t = m.teams[e.side];
@@ -303,9 +310,73 @@ function handleEvents(g) {
         if (m.shootout) hud.shootout(m.shootout, m.teams);
         break;
       case 'ended': endMatch(g, e.result); break;
+      case 'intro': introEvent(g, e.stage); break;
     }
   }
   m.events.length = 0;
+}
+
+// --------------------------------------------------------- abertura (entrada em campo)
+function introEvent(g, stage) {
+  const m = g.match, cfg = g.cfg;
+  const colors = (kit) => [kit.shirt, kit.second && kit.second !== kit.shirt ? kit.second : '#111111'];
+  if (stage === 'start') {
+    audio.prematch?.(true);
+    audio.chant(true);
+    hud.intro(true);
+  } else if (stage === 'enter') {
+    audio.teamsEnter?.();
+    audio.crowd('cheer', 1);
+    g.stadium.crowdReact('goal', 'home');
+    g.fx?.goal('home', colors(cfg.homeKit), -1);
+    g.stadium.showOnScreens?.('goal', 'BEM-VINDOS!');
+  } else if (stage === 'lineup') {
+    audio.anthem?.(true);
+    hud.lineup(m.teams, cfg);
+  } else if (stage === 'break') {
+    audio.anthem?.(false);
+    hud.lineup(null);
+    audio.crowd('cheer', 0.8);
+  } else if (stage === 'end') {
+    audio.anthem?.(false); audio.prematch?.(false);
+    hud.lineup(null); hud.intro(false);
+    g.stadium.showOnScreens?.('none');
+    g.rig.setCinematic(null); g.rig.snap = true;
+    g.mblur?.reset();
+    hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
+  }
+}
+
+// Câmeras da abertura: túnel → grua acompanhando a fila → perfilamento de perto → aérea.
+const _ip = new THREE.Vector3(), _il = new THREE.Vector3();
+function introCamera(g) {
+  const m = g.match, it = m.intro;
+  if (!it) return;
+  const t = it.t;
+  let fov = 40, lam = 3;
+  if (t < 6) {
+    _ip.set(4.2, 1.6, -28.5); _il.set(0, 1.4, -36.5); fov = 42; lam = 6;
+  } else if (t < 13) {
+    // centro de quem já está andando
+    let cx = 0, cz = 0, n = 0;
+    for (const p of m.players) if (t >= p.introStart && p.introStage >= 0) { cx += p.x; cz += p.z; n++; }
+    cx /= n || 1; cz /= n || 1;
+    _ip.set(cx - 11, 5.5, cz - 6); _il.set(cx, 1.2, cz + 2); fov = 38; lam = 2;
+  } else if (t < 19) {
+    _ip.set(0, 4.2, -31); _il.set(0, 1.1, -14); fov = 60; lam = 1.5;
+  } else if (t < 25) {
+    // passeia de perto pelos rostos do perfilamento
+    const u = (t - 19) / 6, x = 15 - u * 30;
+    _ip.set(x, 1.62, -20.5); _il.set(x - 0.8, 1.4, -14); fov = 30; lam = 5;
+  } else {
+    // aérea por cima do gramado (fora da cobertura), abrindo o estádio
+    const u = t - 25;
+    _ip.set(-18 + u * 4, 46, -30 + u * 2); _il.set(0, 0, 4); fov = 55; lam = 2;
+  }
+  if (!g.rig.cine || g.rig.cine.type !== 'manual') { g.rig.setCinematic({ type: 'manual', pos: _ip, look: _il, fov, lam }); g.rig.snap = true; }
+  const c = g.rig.cine;
+  if (c.stage !== (t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4)) { c.stage = t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4; g.rig.snap = true; g.mblur?.reset(); }
+  c.fov = fov; c.lam = lam;
 }
 
 function startReplay(g) {
@@ -439,7 +510,7 @@ function render(g, dt) {
   const c = g.rig.cine;
   if (c) {
     if (c.type === 'celebrate' && c.follow) { c.target.set(c.follow.x, 0, c.follow.z); if (m.phase !== 'goal') g.rig.setCinematic(null); }
-    else c.target.copy(_t);
+    else if (c.target && c.target.copy) c.target.copy(_t);
   }
   const ctl = m.controlled;
   const attackDir = m.userTeam ? m.userTeam.dir : 1;
@@ -448,6 +519,7 @@ function render(g, dt) {
   // pênalti: câmera atrás do cobrador
   if (!c && sp && sp.type === 'penalty' && m.phase === 'setpiece') g.rig.setCinematic({ type: 'penalty', target: new THREE.Vector3(sp.x, 0, sp.z), sign: Math.sign(m.goalX(sp.team)), pen: true });
   if (c && c.pen && (!sp || m.phase !== 'setpiece') && (!m.shootout || !m.shootout.active || m.time - (m.lastKick?.t || 0) > 1.6)) g.rig.setCinematic(null);
+  if (m.phase === 'intro') introCamera(g);
   if (g.rig.snap && g.mblur) g.mblur.reset();
   g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0 });
 

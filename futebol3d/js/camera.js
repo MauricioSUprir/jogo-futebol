@@ -38,7 +38,10 @@ export class CameraRig {
     if (this.cine) {
       const c = this.cine; c.t += dt;
       const T = c.target;
-      if (c.type === 'orbit') {
+      if (c.type === 'manual') {
+        // roteiro externo (abertura): posição/alvo/fov dados a cada quadro
+        px = c.pos.x; py = c.pos.y; pz = c.pos.z; lx = c.look.x; ly = c.look.y; lz = c.look.z; fov = c.fov || 40; lam = c.lam || 4;
+      } else if (c.type === 'orbit') {
         const a = c.a0 + c.t * 0.25;
         px = T.x + Math.cos(a) * 7; pz = T.z + Math.sin(a) * 7; py = 1.9;
         lx = T.x; ly = 1.2; lz = T.z; fov = 38; lam = 6;

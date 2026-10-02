@@ -167,3 +167,27 @@ body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--sa
   .hud-radar { width: 9.5em; height: 6.2em; bottom: auto; top: calc(1em + var(--safe-t)); left: auto; right: calc(15vh + var(--safe-r)); transform: none; opacity: .85; }
   .hud-wind { right: auto; bottom: auto; left: calc(1.4em + var(--safe-l)); top: calc(5.4em + var(--safe-t)); }
 }
+
+/* ---------------------------------------------------------- abertura */
+#hud.in-intro .hud-board, #hud.in-intro .hud-radar, #hud.in-intro .hud-wind, #hud.in-intro .hud-tag { opacity: 0; }
+.hud-intro { position: absolute; left: 50%; bottom: calc(2.2em + var(--safe-b)); transform: translateX(-50%); opacity: 0; transition: opacity .4s;
+  background: rgba(4,7,6,.72); border: .1em solid rgba(30,227,122,.6); padding: .5em 1.2em; border-radius: 2em; font: 600 1em var(--ui); white-space: nowrap; }
+.hud-intro.show { opacity: 1; animation: pulse 1.8s ease-in-out infinite; }
+@keyframes pulse { 50% { border-color: rgba(30,227,122,.15); } }
+.hud-lineup { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 calc(2em + var(--safe-l)); pointer-events: none; }
+.lu-team { width: 17em; background: linear-gradient(180deg, rgba(8,12,10,.9), rgba(4,7,6,.82)); border-top: .25em solid var(--lime);
+  transform: translateX(-120%); opacity: 0; transition: transform .7s cubic-bezier(.2,.9,.3,1), opacity .5s; }
+.lu-team + .lu-team { transform: translateX(120%); }
+.hud-lineup.show .lu-team { transform: none; opacity: 1; }
+.hud-lineup.show .lu-team + .lu-team { transition-delay: .15s; }
+.lu-team header { display: flex; align-items: center; gap: .6em; padding: .6em .8em; position: relative; }
+.lu-team header b { display: block; font: 800 1.35em/1 var(--disp); letter-spacing: .02em; }
+.lu-team header small { color: #9fb3a6; font-size: .8em; }
+.lu-team header i { position: absolute; right: 0; top: 0; bottom: 0; width: .4em; }
+.lu-crest { width: 2.6em; height: 2.6em; display: grid; place-items: center; }
+.lu-crest svg { width: 100%; height: 100%; }
+.lu-team ol { list-style: none; margin: 0; padding: 0 0 .4em; }
+.lu-team li { display: grid; grid-template-columns: 2em 1fr auto; align-items: center; padding: .22em .8em; font: 600 .95em var(--ui); border-top: .06em solid rgba(255,255,255,.06); }
+.lu-team li em { font: 800 1.1em var(--disp); font-style: normal; color: var(--lime); }
+.lu-team li small { color: #8fa598; font: 700 .75em var(--disp); letter-spacing: .06em; }
+@media (pointer: coarse) { .lu-team { width: 14em; font-size: .82em; } .lu-team li { padding: .12em .7em; } }

@@ -54,6 +54,7 @@ export function humanStep(m, cmd, dt) {
     // ---------------------------------------------------------------- ataque
     if (cmd.held.shield) { p.shielding = true; p.slow = 0.55; const o = nearestOpp(m, p); if (o) p.face = { x: 2 * p.x - o.x, z: 2 * p.z - o.z }; }
     moveInput(p, mx, mz, sprint, 1);
+    keepBall(m, p);
     if (p.action) return;
     const dirx = mag > 0.15 ? mx : p.fx, dirz = mag > 0.15 ? mz : p.fz;
     if (cmd.release.shoot) return shoot(m, p, 'shot', power(cmd.hold.shoot), mx, mz);
@@ -71,6 +72,7 @@ export function humanStep(m, cmd, dt) {
   if (!oppHas) {
     // bola solta ou com companheiro: comandos de primeira ficam guardados
     moveInput(p, mx, mz, sprint, 1);
+    autoReceive(m, p, mx, mz);
     for (const k of ['shoot', 'finesse', 'chip', 'pass', 'through', 'long']) {
       if (cmd.release[k]) p.queued = { kind: k, power: power(cmd.hold[k]), until: m.time + 0.9, dx: mx, dz: mz };
     }
@@ -109,6 +111,50 @@ function moveInput(p, mx, mz, sprint, scale) {
   const s = (sprint ? p.sprintSpd : p.jog) * scale;
   p.dx = mx * s; p.dz = mz * s;
   p.sprint = sprint;
+}
+
+// Como nos jogos de futebol atuais: com a bola no pé o jogador não foge dela. O
+// analógico dá a direção, mas se a bola ficou para trás/de lado ou longe o corpo
+// vai até ela primeiro, e logo após o domínio a velocidade é limitada.
+function keepBall(m, p) {
+  const b = m.ball;
+  if (p.action || b.held || b.p.y > 0.6) return;
+  const rx = b.p.x + b.v.x * 0.12 - p.x, rz = b.p.z + b.v.z * 0.12 - p.z;
+  const d = Math.hypot(rx, rz) || 1e-6;
+  let dx = p.dx, dz = p.dz;
+  let s = Math.hypot(dx, dz);
+  const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
+  const ahead = (rx * ux + rz * uz);            // bola à frente na direção pedida?
+  // peso do "ir até a bola": cresce com a distância e quando ela não está à frente
+  const k = clamp((d - 0.45) / 0.4, 0, 1) + clamp((0.25 - ahead) / 0.35, 0, 1) * 0.7 * clamp((d - 0.35) / 0.3, 0, 1);
+  const bs = Math.hypot(b.v.x, b.v.z);
+  if (k > 0) {
+    const w = Math.min(1, k);
+    const gx = ux * (1 - w) + rx / d * w, gz = uz * (1 - w) + rz / d * w, gl = Math.hypot(gx, gz) || 1;
+    const want = Math.max(s, Math.min(p.sprintSpd, bs + d * 2.5));
+    dx = gx / gl * want; dz = gz / gl * want; s = want;
+  }
+  // logo após o domínio (amortecendo) ou com a bola atrás: não arranca na frente dela
+  const along = (b.v.x * dx + b.v.z * dz) / (s || 1);
+  if ((p.cushion > 0 || ahead < 0.2) && s > 0.01) {
+    const cap = Math.max(p.jog * 0.45, along + 1.6);
+    if (s > cap) { dx *= cap / s; dz *= cap / s; }
+  }
+  p.dx = dx; p.dz = dz;
+}
+
+// Passe vindo para o jogador controlado (ou bola solta que ele alcança primeiro):
+// ele vai ao encontro da bola sozinho; o analógico só ajusta um pouco.
+function autoReceive(m, p, mx, mz) {
+  if (m.owner || m.ball.held || p.action) return;
+  const pt = m.passTarget;
+  const mine = pt && pt.p === p;
+  const bs = m.ball.hspeed();
+  const coming = !pt && bs > 4 && p.interceptT < 1.2 && p.interceptT <= Math.min(...p.team.players.filter(q => q !== p && !q.sentOff).map(q => q.interceptT ?? 99));
+  if (!mine && !coming) return;
+  if (p.ix === undefined) return;
+  p.moveTo(p.ix + mx * 0.8, p.iz + mz * 0.8, 1, p.interceptT > 0.6);
+  p.face = m.ball.p;
 }
 
 function nearestOpp(m, p) {

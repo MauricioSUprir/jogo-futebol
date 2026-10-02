@@ -2,10 +2,12 @@
 // de Float32Array e reproduz com câmeras de cinema. A pose é função pura do
 // estado gravado, então o replay mostra exatamente o lance.
 
+import { cycleLength } from './anim.js';
+
 const ANIMS = ['locomotion', 'idle', 'jockey', 'kick', 'pass', 'chip', 'volley', 'header', 'slide', 'tackle', 'throwin',
   'gk_ready', 'gk_dive', 'gk_catch', 'gk_hold', 'gk_throw', 'gk_kick', 'fall', 'getup', 'celebrate', 'dejected', 'shield'];
 const AIDX = Object.fromEntries(ANIMS.map((a, i) => [a, i]));
-const PF = ['t', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch'];
+const PF = ['t', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
 const PSZ = 1 + PF.length;                 // anim + campos
 const PL = 5 + PSZ * 2 + 1;                 // x y z heading visible + pose + blendFrom + blendW
 const BALLSZ = 7;                           // pos + quaternion
@@ -94,13 +96,13 @@ export class Replay {
       if (w < 1) { r.pose.blendFrom = r.from; r.pose.blendW = w; } else { r.pose.blendFrom = null; r.pose.blendW = 1; }
       // tempo contínuo para suavizar animação
       if (a >= 0.5) continue;
-      r.pose.t += a / 60; r.pose.stride += r.pose.speed * a / 60;
+      r.pose.t += a / 60; r.pose.stride += r.pose.speed / cycleLength(r.pose.speed, r.pose.moveAngle) * a / 60;
     }
   }
 }
 
 function newPose() {
-  return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5, diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, blendFrom: null, blendW: 1 };
+  return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5, diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, blendFrom: null, blendW: 1 };
 }
 function writePose(B, o, p) {
   B[o++] = AIDX[p.anim] ?? 0;

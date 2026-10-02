@@ -1,0 +1,47 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#0b0f0c;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+// Teste de rosto com textura fotográfica: ?modo=scan (escaneamento livre) | ia (retrato por IA projetado)
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search);
+const modo = q.get('modo') || 'scan', ang = +(q.get('ang') || 0);
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.setPixelRatio(1);
+r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color(0x0b0f0c);
+const cam = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.1, 100);
+sc.add(new THREE.HemisphereLight(0xdfefff, 0x2a3a22, 1.1));
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.4); sun.position.set(3, 5, 6); sc.add(sun);
+const tl = new THREE.TextureLoader();
+const g = await new GLTFLoader().loadAsync('LeePerrySmith.glb');
+const mesh = g.scene.children[0];
+const geo = mesh.geometry; geo.computeBoundingBox();
+const bb = geo.boundingBox, c = bb.getCenter(new THREE.Vector3()), sz = bb.getSize(new THREE.Vector3());
+let mat;
+if (modo === 'scan') {
+  const map = tl.load('Map-COL.jpg'); map.colorSpace = THREE.SRGBColorSpace;
+  const nm = tl.load('Infinite-Level_02_Tangent_SmoothUV.jpg');
+  mat = new THREE.MeshStandardMaterial({ map, normalMap: nm, roughness: 0.6 });
+} else {
+  // projeção frontal do retrato: calibração dos olhos/queixo (fração da caixa do modelo → fração da imagem)
+  const img = q.get('img') || 'ia1.png';
+  const E = { my0: +(q.get('my0') || 0.62), iy0: +(q.get('iy0') || 0.56), my1: +(q.get('my1') || 0.12), iy1: +(q.get('iy1') || 0.13), su: +(q.get('su') || 0.62) };
+  const map = tl.load(img); map.colorSpace = THREE.SRGBColorSpace;
+  const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) {
+    const fy = (pos.getY(i) - bb.min.y) / sz.y, fx = (pos.getX(i) - c.x) / sz.x;
+    const v = E.iy1 + (fy - E.my1) * (E.iy0 - E.iy1) / (E.my0 - E.my1);
+    uv[i * 2] = 0.5 + fx * E.su; uv[i * 2 + 1] = v;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  const nm = tl.load('Infinite-Level_02_Tangent_SmoothUV.jpg');
+  mat = new THREE.MeshStandardMaterial({ map, roughness: 0.6 });
+}
+mesh.material = mat; sc.add(g.scene);
+const d = sz.y * 2.3;
+cam.position.set(c.x + Math.sin(ang) * d, c.y + sz.y * 0.05, c.z + Math.cos(ang) * d); cam.lookAt(c.x, c.y + sz.y * 0.05, c.z);
+await new Promise(r0 => setTimeout(r0, 800));
+r.render(sc, cam); window.pronto = { bb: [bb.min.toArray(), bb.max.toArray()] };
+setInterval(() => r.render(sc, cam), 200);
+</script></body></html>

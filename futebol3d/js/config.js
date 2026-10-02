@@ -143,6 +143,7 @@ export const DEFAULT_SETTINGS = {
   radar: true,
   passAssist: true,
   names: true,           // nome acima do jogador controlado
+  intro: true,           // entrada em campo antes da partida (pode pular)
 };
 
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

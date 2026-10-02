@@ -30,7 +30,8 @@
 //     diveHeight 1   -> lateral ≈ 2,21 m, up ≈ 2,09 m  (ângulo, corpo na diagonal)
 //   O corpo (pelve) termina o mergulho ~2,2 m para o lado (rootOffset).
 //   (os números saem da própria pose: chame gkReach uma vez por altura e guarde.)
-//   cycleLength(speed, moveAngle) -> metros por ciclo de passada (fase = stride / cycleLength).
+//   cycleLength(speed, moveAngle) -> metros por ciclo de passada; s.stride é a fase acumulada em ciclos
+//   (stride += speed·dt / cycleLength), contínua mesmo quando a velocidade muda.
 //   Esqueleto exportado (BONE, PARENT, OFFSET, NB) e bonePoint(pose, osso, x, y, z, out).
 //
 // CONVENÇÕES DO PoseState: moveAngle + = andando para a direita; lean + = inclina à
@@ -599,10 +600,10 @@ export function cycleLength(v, moveAngle = 0) {
   return L * (1 - 0.3 * lat - 0.25 * back);
 }
 
-const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1 };
+const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1, drib: 0, bx: 0, bz: 0, tf: 1 };
 const FT = new Float32Array(8); // alvo por pé: x, y, z, pitch
 function gaitReset() {
-  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1;
+  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1;
 }
 function gait() {
   const v = Math.max(G.v, 0), ma = G.ma, t = G.t;
@@ -619,7 +620,7 @@ function gait() {
   let duty = Math.min(lerp(lerp(0.58, 0.4, run), 0.27, spr), dMax / L);
   duty = Math.max(duty, lerp(0.53, 0.2, run));
   const d = duty * L;
-  const ph = G.stride / L;
+  const ph = G.stride;
   const uL = frac(ph), uR = frac(ph + 0.5);
   const dirX = -sM, dirZ = cM;
   // inclinação para a frente
@@ -663,6 +664,18 @@ function gait() {
     let tz = lerp(iz, dirZ * m, mv);
     pitch = lerp(G.heel, pitch, mv);
     y *= mv;
+    // toque de condução: o pé bom busca a bola no fim do balanço (u ≈ 0,85, o mesmo
+    // instante em que match.js dá o toque) e a empurra com o peito do pé
+    if (G.drib > 0 && sd === (G.tf > 0 ? 1 : 0) && u >= duty) {
+      const bz = G.bz, reachK = clamp((1.05 - bz) / 0.3, 0, 1) * clamp((bz - 0.05) / 0.15, 0, 1);
+      const w = G.drib * mv * reachK * Math.exp(-(((u - 0.86) / 0.1) ** 2));
+      if (w > 0.001) {
+        tx = lerp(tx, clamp(G.bx, -0.35, 0.35) + sg * 0.02, w);
+        tz = lerp(tz, bz - 0.22, w);
+        y = lerp(y, 0.06, w);
+        pitch = lerp(pitch, 0.4, w);
+      }
+    }
     // no apoio o pé gira sobre a bola/calcanhar; no balanço o efeito some aos poucos
     pivot(pitch);
     const fade = u < duty ? 1 : lerp(1, Math.max(1 - (u - duty) / (1 - duty) * 3, 0), mv);
@@ -688,7 +701,7 @@ function gait() {
   for (let sd = 0; sd < 2; sd++) {
     const u = sd === 0 ? uL : uR, sw = Math.cos(TAU * u);
     const ua = sd === 0 ? 5 : 8;
-    set(ua, off + A * sw + 0.04 * (1 - mv), (0.15 * run) * mv, lerp(0.1, 0.16, run) + 0.03 * sway * (sd === 0 ? 1 : -1));
+    set(ua, off + A * sw * (1 - 0.25 * G.drib) + 0.04 * (1 - mv), (0.15 * run) * mv, lerp(0.1, 0.16, run) + 0.03 * sway * (sd === 0 ? 1 : -1) + 0.2 * G.drib * mv);
     set(ua + 1, -lerp(0.22, lerp(1.35, 1.55, spr), run * mv) - mv * run * 0.3 * Math.max(0, -sw), 0, 0);
     set(ua + 2, -lerp(0.1, 0.25, run), 0, 0);
   }
@@ -709,6 +722,9 @@ function evalState(s, P) {
     case 'locomotion': case 'idle':
       G.v = anim === 'idle' ? 0 : s.speed || 0; G.ma = s.moveAngle || 0; G.stride = s.stride || 0;
       G.bank = clamp(s.lean || 0, -0.5, 0.5);
+      G.drib = anim === 'idle' ? 0 : clamp(s.drib || 0, 0, 1); G.bx = s.bx || 0; G.bz = s.bz || 0; G.tf = foot;
+      // conduzindo: base um pouco mais baixa, braços abertos para equilíbrio
+      G.crouch = 0.03 * G.drib;
       gait();
       break;
     case 'jockey': {
@@ -760,7 +776,7 @@ function evalState(s, P) {
     case 'celebrate': {
       const v = ((s.variant || 0) % 4 + 4) % 4;
       if (v === 0) {        // aviãozinho: corre de braços abertos inclinando como asa
-        G.v = Math.max(s.speed || 0, 5.2); G.stride = (s.speed || 0) > 1 ? s.stride || 0 : t * 5.2;
+        G.v = Math.max(s.speed || 0, 5.2); G.stride = (s.speed || 0) > 1 ? s.stride || 0 : t * 5.2 / cycleLength(5.2);
         G.bank = 0.28 * Math.sin(t * 1.7); G.armA = 0;
         gait();
         for (let sd = 0; sd < 2; sd++) { const ua = sd ? 8 : 5, sg = sd ? -1 : 1; set(ua, 0.1, 0, 1.45 - 0.2 * sg * G.bank); set(ua + 1, -0.12, 0, 0); set(ua + 2, 0, 0, 0.1); }
