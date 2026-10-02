@@ -618,7 +618,7 @@ export function cycleLength(v, moveAngle = 0) {
 const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1, drib: 0, bx: 0, bz: 0, tf: 1, mw: 0, tw0: 0, tw1: 0 };
 const FT = new Float32Array(8); // alvo por pé: x, y, z, pitch
 function gaitReset() {
-  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1; G.mw = 0; G.tw0 = 0; G.tw1 = 0;
+  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1; G.mw = 0; G.tw0 = 0; G.tw1 = 0; G.kw = 0; G.kickU = 0;
 }
 function gait() {
   const v = Math.max(G.v, 0), ma = G.ma, t = G.t;
@@ -773,7 +773,9 @@ function evalState(s, P) {
       for (let sd = 0; sd < 2; sd++) { const ua = sd ? 8 : 5; set(ua, -0.6, 0.2, 0.42); set(ua + 1, -0.85, 0, 0); set(ua + 2, -0.35, 0, 0); }
       break;
     }
-    case 'kick': useClip(KICK, t / ANIM.kick.dur, 0.45 + 0.55 * pw); W.mirror = foot === -1; break;
+    case 'kick': useClip(KICK, t / ANIM.kick.dur, 0.45 + 0.55 * pw); W.mirror = foot === -1;
+      if (MOCAP?.kick) { G.kickU = t / ANIM.kick.dur; G.kw = 0.55 + 0.45 * pw; }
+      break;
     case 'pass': useClip(PASS, t / ANIM.pass.dur, 0.6 + 0.4 * pw); W.mirror = foot === -1; break;
     case 'chip': useClip(CHIP, t / ANIM.chip.dur, 0.6 + 0.4 * pw); W.mirror = foot === -1; break;
     case 'volley': useClip(VOLLEY, t / ANIM.volley.dur, 0.7 + 0.3 * pw); W.mirror = foot === -1; break;
@@ -833,6 +835,7 @@ function evalState(s, P) {
     qEuler(q, b * 4, x, y, z, b < 5 ? 0 : 1);
   }
   if (G.mw > 0.001) applyMocap(q);
+  if (G.kw > 0.001) applyKick(q, mir);
   if (mir) W.rx = -W.rx;
   fk(P, W.rx, 0, W.rz);
   ground(P);
@@ -845,6 +848,8 @@ let MOCAP = null;
 export function setMocap(d) {
   if (!d || !d.clips?.length) { MOCAP = null; return; }
   MOCAP = { n: d.n, clips: d.clips.map(c => ({ speed: c.speed, Q: Float32Array.from(c.frames.flatMap(f => f.q)), Y: Float32Array.from(c.frames.map(f => f.y)) })) };
+  const k = d.kick;
+  MOCAP.kick = k ? { n: k.frames.length, contact: k.contact, Q: Float32Array.from(k.frames.flatMap(f => f.q)) } : null;
 }
 const MQ = new Float32Array(NB * 4), MQB = new Float32Array(NB * 4), QB = new Float32Array(4);
 // amostra um clipe na fase ph (0..1) — interpola quadros vizinhos (nlerp com sinal coerente)
@@ -877,6 +882,25 @@ function applyMocap(q) {
   if (G.bank) { qEuler(QB, 0, 0, 0, G.bank * 0.8 * G.mw, 0); qMul(QB, 0, q, 0, q, 0); }
   W.lift = lerp(W.lift, y - G.crouch, G.mw);
   W.mocap = true;
+}
+
+// chute com captura de movimento (CMU 10_01, pé direito; espelhado para o canhoto):
+// o contato do mocap coincide com o de ANIM.kick
+function applyKick(q, mir) {
+  const K = MOCAP.kick, n = K.n, u = clamp(G.kickU, 0, 1) * (n - 1), i0 = Math.min(Math.floor(u), n - 2), a = u - i0;
+  const o0 = i0 * NB * 4, o1 = o0 + NB * 4;
+  for (let b = 0; b < NB; b++) {
+    const src = (mir ? MIRROR[b] : b) * 4, sy = mir ? -1 : 1;
+    let x1 = K.Q[o1 + src], y1 = K.Q[o1 + src + 1] * sy, z1 = K.Q[o1 + src + 2] * sy, w1 = K.Q[o1 + src + 3];
+    const x0 = K.Q[o0 + src], y0 = K.Q[o0 + src + 1] * sy, z0 = K.Q[o0 + src + 2] * sy, w0 = K.Q[o0 + src + 3];
+    if (x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1 < 0) { x1 = -x1; y1 = -y1; z1 = -z1; w1 = -w1; }
+    const x = x0 + (x1 - x0) * a, y = y0 + (y1 - y0) * a, z = z0 + (z1 - z0) * a, w = w0 + (w1 - w0) * a, nn = 1 / Math.hypot(x, y, z, w);
+    MQ[b * 4] = x * nn; MQ[b * 4 + 1] = y * nn; MQ[b * 4 + 2] = z * nn; MQ[b * 4 + 3] = w * nn;
+    qSlerp(q, MQ, b * 4, G.kw * (b === 3 || b === 4 ? 0.5 : 1), q);
+  }
+  // no mocap o pé de chute bate a ~53 cm do lado da pelve; o jogo deixa a bola a ~32 cm:
+  // desloca o corpo para o pé chegar na bola
+  W.rx += 0.21 * G.kw; W.rz += 0.08 * G.kw;
 }
 
 function fk(P, rx, ry, rz) {

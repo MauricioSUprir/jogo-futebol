@@ -122,9 +122,14 @@ def process(path):
     dur = (f1 - f0) * ft; speed = np.linalg.norm(travel) * scale / dur
     yaw = math.atan2(travel[0], travel[1])           # direção da corrida (do eixo +z)
     Ry = rot('Y', -math.degrees(yaw))                 # tira a direção: corre para +z
+    out = sample(P, J, head_end, Ry, ground, scale, f0, f1, N)
+    return {'speed': round(float(speed), 3), 'cycle': round(float(speed * dur), 3), 'dur': round(dur, 3), 'frames': out}
+
+def sample(P, J, head_end, Ry, ground, scale, f0, f1, N, closed=True):
     out = []
+    pos = lambda n: P[:, J[n]]
     for s in range(N):
-        u = f0 + (f1 - f0) * s / N; fa = int(u); w = u - fa; fb = min(fa + 1, len(P) - 1)
+        u = f0 + (f1 - f0) * s / (N if closed else N - 1); fa = int(u); w = u - fa; fb = min(fa + 1, len(P) - 1)
         L = lambda n: Ry @ (pos(n)[fa] * (1 - w) + pos(n)[fb] * w)
         G = {n: L(n) for n in J}; G['@Head'] = Ry @ (head_end[fa] * (1 - w) + head_end[fb] * w)
         Wd = [None] * 17; Q = [None] * 17
@@ -144,15 +149,37 @@ def process(path):
         # altura da pelve do jogo: quadris (coxas) do BVH acima do chão + 3 cm
         hipY = ((G['LeftUpLeg'][1] + G['RightUpLeg'][1]) / 2 - ground) * scale + 0.03 + 0.07
         out.append({'q': [round(v, 4) for qq in Q for v in qq], 'y': round(float(hipY), 4)})
-    # fecha o laço: aproxima as últimas amostras da primeira
-    return {'speed': round(float(speed), 3), 'cycle': round(float(speed * dur), 3), 'dur': round(dur, 3), 'frames': out}
+    return out
 
-clips = {}
+# chute (não cíclico): janela em volta do contato (pico de velocidade do bico direito),
+# com o contato em u = CONTATO e duração DUR — iguais a ANIM.kick do jogo
+def kick(path, DUR=0.5, CONTATO=0.42, NK=30):
+    joints, data, ft = parse(path)
+    P, W = fk(joints, data)
+    J = {j['name']: k for k, j in enumerate(joints)}
+    hk = J['Head']; head_end = np.array([P[f, hk] + W[f, hk] @ joints[hk].get('end', np.array([0, 2, 0])) for f in range(len(P))])
+    leg = np.linalg.norm(joints[J['LeftLeg']]['offset']) + np.linalg.norm(joints[J['LeftFoot']]['offset'])
+    scale = 0.86 / leg
+    toe = P[:, J['RightToeBase']]
+    v = np.linalg.norm(np.diff(toe, axis=0), axis=1); c = int(np.argmax(v))
+    # direção do corpo no contato (frente da pelve), não a do pé: o chute vem na diagonal
+    lft = P[c, J['LeftUpLeg']] - P[c, J['RightUpLeg']]
+    fwd = np.cross(lft, np.array([0.0, 1.0, 0.0]))     # esquerda × cima = frente
+    yaw = math.atan2(fwd[0], fwd[2])
+    Ry = rot('Y', -math.degrees(yaw))
+    ground = P[:, J['LeftFoot'], 1][c - 60:c + 60].min()
+    f0 = c - CONTATO * DUR / ft; f1 = c + (1 - CONTATO) * DUR / ft
+    fr = sample(P, J, head_end, Ry, ground, scale, f0, f1, NK, closed=False)
+    print('chute', path.split('/')[-1], 'contato no quadro', c, '| bico', round(float(v[c] / ft * scale), 1), 'm/s')
+    return {'dur': DUR, 'contact': CONTATO, 'frames': fr}
+
+clips = {}; chute = None
 for a in sys.argv[1:]:
     f, name = a.split(':')
+    if name == 'chute': chute = kick(f); continue
     c = process(f); clips[name] = c
     print(name, 'velocidade', c['speed'], 'm/s | ciclo', c['cycle'], 'm em', c['dur'], 's | pelve', min(x['y'] for x in c['frames']), '-', max(x['y'] for x in c['frames']))
 dst = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'assets', 'mocap', 'locomocao.json')
 json.dump({'fonte': 'CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), uso livre', 'n': N,
-           'clips': sorted(clips.values(), key=lambda c: c['speed'])}, open(dst, 'w'), separators=(',', ':'))
+           'clips': sorted(clips.values(), key=lambda c: c['speed']), 'kick': chute}, open(dst, 'w'), separators=(',', ':'))
 print('salvo', dst, os.path.getsize(dst), 'bytes')
