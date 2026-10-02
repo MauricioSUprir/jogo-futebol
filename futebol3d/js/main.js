@@ -24,7 +24,7 @@ import { StadiumFX } from './fx.js';
 import { loadFacePool, matchFaces, portrait } from './faces.js';
 import { CameraBlurPass } from './motionblur.js';
 import { MobilePost, installMaterialGrade } from './mobilepost.js';
-import { SunShadowFit } from './sunshadow.js';
+import { SunShadowFit, aimDaySun } from './sunshadow.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
@@ -91,6 +91,7 @@ function applyQuality(rebuildPost) {
   if (game) {
     // sombra do sol/refletores seguindo o enquadramento (texel estável)
     const L = game.stadium.mainLight;
+    if (!game.sunFit && L && !game.stadium.isNight && (settings.timeOfDay || 'noite') === 'dia' && !game.sunAimed) { game.sunAimed = true; aimDaySun(game.stadium, game.scene); }
     if (!game.sunFit && L && L.castShadow) game.sunFit = new SunShadowFit(L, game.stadium.sunDir, { halfL: PITCH.halfL + 4, halfW: PITCH.halfW + 4 });
     if (L && L.castShadow && L.shadow.mapSize.x !== Q.shadowSize) { L.shadow.mapSize.set(Q.shadowSize, Q.shadowSize); L.shadow.map?.dispose(); L.shadow.map = null; }
     if (L && L.castShadow) L.shadow.radius = Q.shadowSoft === false ? 1 : 2;
@@ -599,7 +600,11 @@ function render(g, dt) {
   audio.update(dt, { excitement: m.excitement, attackThreat: m.threat });
   // torcida cantando de tempos em tempos
   g.chantT -= dt;
-  if (g.chantT <= 0) { g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15; }
+  if (g.chantT <= 0) {
+    g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15;
+    // a arquibancada canta junto com o som (pulo/braços no compasso)
+    if (g.chantOn && m.phase !== 'goal') g.stadium.crowdChant?.('home', 1, g.chantT);
+  }
 
   g.sunFit?.update(g.camera);
   renderer.info.reset();

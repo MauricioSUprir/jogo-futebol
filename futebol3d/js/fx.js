@@ -321,9 +321,9 @@ void main() {
   if ( kind > 1.5 ) {
     // fotógrafo: rajadas (~9 quadros/s) de ~0,6 s, a cada 1-2 s, no gol e nos lances de perigo
     float ePh = env( uGoalT + fract( s * 5.3 ) * 0.3, 0.1, 16.0 ) + env( uChanceT + fract( s * 2.9 ) * 0.4, 0.05, 3.2 );
-    float burst = step( fract( uTime * ( 0.55 + 0.4 * fract( s * 7.1 ) ) + s * 13.0 ), 0.38 );
+    float burst = step( fract( uTime * ( 0.55 + 0.4 * fract( s * 7.1 ) ) + s * 13.0 ), 0.5 );
     float ph = fract( uTime * aB.x + s * 17.0 );
-    I = smoothstep( 0.0, 0.03, ph ) * ( 1.0 - smoothstep( 0.03, 0.22, ph ) ) * 5.0 * burst * step( 0.05, ePh );
+    I = smoothstep( 0.0, 0.03, ph ) * ( 1.0 - smoothstep( 0.05, 0.32, ph ) ) * 5.0 * burst * step( 0.05, ePh );
   } else if ( kind < 0.5 ) {
     float ph = fract( uTime * aB.x + s * 17.0 );
     I = smoothstep( 0.0, 0.015, ph ) * ( 1.0 - smoothstep( 0.015, 0.08, ph ) ) * 6.0;

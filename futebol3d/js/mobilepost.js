@@ -112,8 +112,8 @@ void main() {
 // quente no dia e frio à noite).
 export function gradeParams(isNight) {
   return isNight
-    ? { sat: 1.1, con: 1.08, vig: 0.42, tint: [0.98, 1.0, 1.03], bloom: 0.55, thr: 1.1, knee: 0.5 }
-    : { sat: 1.12, con: 1.07, vig: 0.38, tint: [1.03, 1.0, 0.96], bloom: 0.3, thr: 1.6, knee: 0.6 };
+    ? { sat: 1.06, con: 1.1, vig: 0.42, tint: [0.99, 1.0, 1.02], bloom: 0.55, thr: 1.1, knee: 0.5 }
+    : { sat: 1.05, con: 1.08, vig: 0.38, tint: [1.02, 1.0, 0.97], bloom: 0.3, thr: 1.6, knee: 0.6 };
 }
 
 export class MobilePost {
@@ -144,15 +144,16 @@ export class MobilePost {
     }, defs);
     this.quad = new FullScreenQuad(null);
     this.bloomOn = !!opts.bloom;
+    this.bloomI = G.bloom;
     this.setSize(sz.x / this.pr, sz.y / this.pr);
   }
 
+  // liga/desliga sem recompilar (evita engasgo): zera a soma e pula os 3 passes
   setBloom(on) {
     on = !!on && !!this.opts.bloom;
     if (on === this.bloomOn) return;
     this.bloomOn = on;
-    if (on) this.mFinal.defines.BLOOM = ''; else delete this.mFinal.defines.BLOOM;
-    this.mFinal.needsUpdate = true;
+    this.mFinal.uniforms.uBloom.value = on ? this.bloomI : 0;
   }
 
   setPixelRatio(pr) { this.pr = pr; }
@@ -204,7 +205,7 @@ let installed = false;
 export function installMaterialGrade() {
   if (installed) return;
   installed = true;
-  const G = gradeParams(false);
+  const G = { sat: 1.0, con: 1.08, tint: [1.0, 1.0, 0.985] }; // neutro: vale p/ dia e noite
   const chunk = THREE.ShaderChunk.tonemapping_pars_fragment;
   THREE.ShaderChunk.tonemapping_pars_fragment = chunk.replace(
     'vec3 CustomToneMapping( vec3 color ) { return color; }',

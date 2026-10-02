@@ -4,7 +4,8 @@
 // preta, monopé, segunda câmera pendurada e mochila. Três posturas: sentado no
 // banquinho dobrável, ajoelhado num joelho só e de pé.
 //
-// Desempenho: todos numa ÚNICA malha mesclada (1 chamada de desenho, +1 na sombra).
+// Desempenho: todos numa ÚNICA malha mesclada (1 chamada de desenho, +1 na sombra;
+// na qualidade baixa não projetam sombra). 12 / 22 / 30 fotógrafos (baixa/média/alta).
 // Cada vértice leva o "pivô" do seu fotógrafo (x, z, rumo, semente) e se pertence à
 // parte de cima (tronco, braços, cabeça, câmera): o shader de vértice gira essa parte
 // em volta do eixo vertical para seguir a bola (uBall) — panorâmica de verdade, sem
@@ -12,7 +13,7 @@
 // GPU Gems 3, cap. 2: instância barata + pose resolvida na GPU).
 //
 // API (usada por stadium.js e fx.js):
-//   buildPhotographers(ctx) -> THREE.Mesh   (userData.uniforms: uTime, uBall, uGoalT)
+//   buildPhotographers(ctx) -> THREE.Mesh   (userData.uniforms: uTime, uBall)
 //   photogFlashPoints(quality) -> Float32Array [x, y, z, semente, ...] (posição do flash
 //     de cada câmera na pose de repouso) — o fx.js acende os flashes nesses pontos.
 import * as THREE from 'three';
@@ -51,8 +52,10 @@ function layout(qk) {
     const r = rng();
     // de pé fica mais atrás (não tapa quem está sentado); perto da quina, mais em pé
     const pose = r < 0.5 - s.k * 0.02 ? 0 : r < 0.78 ? 1 : 2;   // 0 banquinho, 1 ajoelhado, 2 de pé
-    const back = pose === 2 ? 1.5 + rng() * 0.4 : 0.15 + rng() * 0.6;
-    const x = s.sx * (PITCH.halfL + 2.25 + back);
+    // atrás da linha dos fotógrafos pintada no gramado (halfL + 2,6, stadium-pitch.js):
+    // os pés de quem está sentado/ajoelhado ficam ~0,5 m à frente do corpo
+    const back = pose === 2 ? 1.0 + rng() * 0.6 : rng() * 0.4;
+    const x = s.sx * (PITCH.halfL + 3.4 + back);
     const z = s.z + (rng() - 0.5) * 0.5;
     // mira: área do gol mais próximo, puxando para o meio-campo
     const tx = s.sx * (PITCH.halfL - 14 - rng() * 12), tz = z * 0.25;
@@ -122,6 +125,17 @@ function domeGeo(c, rx, ry, rz, tilt, w = 9, h = 4) {
   g.rotateX(-tilt);
   g.translate(c.x, c.y, c.z);
   return g;
+}
+// cotovelo: ponto a l1 do ombro e l2 da mão, no plano que contém a direção "pole"
+function ik2(sh, hand, l1, l2, pole) {
+  const d = new THREE.Vector3().subVectors(hand, sh);
+  const len = Math.min(d.length(), l1 + l2 - 1e-3);
+  const dir = d.clone().normalize();
+  const a = (l1 * l1 - l2 * l2 + len * len) / (2 * len);
+  const h = Math.sqrt(Math.max(l1 * l1 - a * a, 0));
+  const pn = pole.clone().normalize();
+  const perp = pn.sub(dir.clone().multiplyScalar(pn.dot(dir))).normalize();
+  return sh.clone().addScaledVector(dir, a).addScaledVector(perp, h);
 }
 function boxGeo(w, h, d, c, rx = 0, ry = 0) {
   const g = new THREE.BoxGeometry(w, h, d);
@@ -217,7 +231,10 @@ function addPhotographer(A, P, lod) {
   // mochila / case no chão (fixa), ao lado
   if (rng() < 0.75) {
     const bx = (rng() < 0.5 ? -1 : 1) * (0.45 + rng() * 0.15);
-    add(boxGeo(0.34, 0.24, 0.24, V(bx, 0.12, -0.1 - rng() * 0.2), 0, rng() * 0.8), rng() < 0.5 ? '#1a1c20' : '#2b3a2a', 0);
+    const bz = -0.1 - rng() * 0.2, br = rng() * 0.8, bc = rng() < 0.5 ? '#1a1c20' : '#2b3a2a';
+    add(boxGeo(0.3, 0.17, 0.2, V(bx, 0.085, bz), 0, br), bc, 0);
+    add(boxGeo(0.26, 0.04, 0.17, V(bx, 0.185, bz), 0, br), '#0f1012', 0);                 // tampa
+    add(boxGeo(0.12, 0.02, 0.025, V(bx, 0.215, bz), 0, br), '#5b5f66', 0);                // alça
   }
 
   // ---- parte de cima (gira com a panorâmica): tronco, colete, braços, cabeça, câmera
@@ -269,9 +286,10 @@ function addPhotographer(A, P, lod) {
   // braços: direito (−x) na empunhadura, esquerdo (+x) por baixo da lente
   const handR = V(c.x - 0.085, c.y - 0.03, c.z + 0.0);
   const handL = V(lc.x + 0.02, lc.y - 0.07, lc.z + 0.05 + lensLen * 0.38);
-  const elR = V(-0.27, (shR.y + handR.y) / 2 - 0.16, (shR.z + handR.z) / 2 - 0.05);
-  const elL = V(0.17, (shL.y + handL.y) / 2 - 0.18, (shL.z + handL.z) / 2 + 0.02);
-  if (S.stool) elL.set(0.16, S.legs[0][1].y + 0.12, S.legs[0][1].z - 0.06);   // cotovelo apoiado no joelho
+  // cotovelos por IK de dois ossos (braço 0,29 m, antebraço 0,27 m), "puxados" para
+  // baixo e para fora — no banquinho o cotovelo esquerdo desce até o joelho
+  const elR = ik2(shR, handR, 0.29, 0.27, V(-0.55, -1, -0.15));
+  const elL = S.stool ? ik2(shL, handL, 0.29, 0.27, V(0.35, -1, 0.5)) : ik2(shL, handL, 0.29, 0.27, V(0.45, -1, 0.1));
   const sleeve = shirt;
   for (const [sh, el, hand] of [[shR, elR, handR], [shL, elL, handL]]) {
     add(segGeo(sh, el, 0.058, 0.048, rad), sleeve, 1);
@@ -294,7 +312,6 @@ attribute vec4 aPiv;     // x, z do fotógrafo, rumo de repouso, semente
 attribute vec4 aAux;     // parte de cima (1) ou fixa (0), altura no colete, costas, tipo
 uniform float uTime;
 uniform vec3 uBall;
-uniform float uGoalT;
 varying vec4 vAux;
 vec3 pgYaw( vec3 p, float a ) {
   vec2 d = p.xz - aPiv.xy;
@@ -302,14 +319,14 @@ vec3 pgYaw( vec3 p, float a ) {
   return vec3( aPiv.x + c * d.x + s * d.y, p.y, aPiv.y - s * d.x + c * d.y );
 }
 float pgAngle() {
-  // panorâmica seguindo a bola (com folga e limite), respiração e "conferir a foto"
+  // panorâmica seguindo a bola (com limite de giro; cada um acompanha um pouco
+  // diferente) e um leve balanço de respiração
   vec2 to = uBall.xz - aPiv.xy;
   float want = atan( to.x, to.y ) - aPiv.z;
   want = mod( want + 3.14159265, 6.2831853 ) - 3.14159265;
   float seed = aPiv.w;
   float a = clamp( want, -1.15, 1.15 ) * ( 0.75 + 0.25 * seed );
   a += 0.02 * sin( uTime * ( 0.9 + seed ) + seed * 40.0 );
-  // depois do gol: todos viram para a comemoração (a bola está na rede, perto)
   return a;
 }
 `;
@@ -322,7 +339,8 @@ float pgA = aAux.x > 0.5 ? pgAngle() : 0.0;
 }
 `;
 const VERT_POS = /* glsl */`
-vec3 transformed = aAux.x > 0.5 ? pgYaw( position, pgA ) : position;
+// (o material de sombra não inclui o bloco das normais: recalcula o ângulo aqui)
+vec3 transformed = aAux.x > 0.5 ? pgYaw( position, pgAngle() ) : position;
 vAux = aAux;
 `;
 
@@ -335,21 +353,47 @@ function patchVertex(sh, U) {
 }
 
 // colete: faixa refletiva (verde-limão) ou faixa verde (preto) e "IMPRENSA" nas costas
+const FRAG_HEAD = /* glsl */`
+varying vec4 vAux;
+varying float vWorldPg;
+// "IMPRENSA" numa fonte 3x5 (bits da linha de cima para baixo)
+float pgText( vec2 uv ) {
+  if ( uv.x < 0.0 || uv.x >= 1.0 || uv.y < 0.0 || uv.y >= 1.0 ) return 0.0;
+  int col = int( floor( uv.x * 31.0 ) );
+  int i = col / 4, cx = col - i * 4;
+  if ( cx == 3 ) return 0.0;
+  int row = int( floor( ( 1.0 - uv.y ) * 5.0 ) );
+  int g = 0;
+  if ( i == 0 ) g = 29847;
+  else if ( i == 1 ) g = 24557;
+  else if ( i == 2 ) g = 27556;
+  else if ( i == 3 ) g = 27565;
+  else if ( i == 4 ) g = 31143;
+  else if ( i == 5 ) g = 24573;
+  else if ( i == 6 ) g = 14478;
+  else if ( i == 7 ) g = 11245;
+  return float( ( g >> ( ( 4 - row ) * 3 + ( 2 - cx ) ) ) & 1 );
+}
+`;
 const FRAG = /* glsl */`
 {
   float kind = floor( vAux.w + 0.5 );
   if ( kind > 0.5 && kind < 2.5 ) {
     float v = vAux.y;
-    float band = step( 0.5, v ) * step( v, 0.6 );
+    float band = step( 0.36, v ) * step( v, 0.45 );
     vec3 bandC = kind < 1.5 ? vec3( 0.72, 0.74, 0.74 ) : vec3( 0.08, 0.75, 0.2 );
     diffuseColor.rgb = mix( diffuseColor.rgb, bandC, band );
-    // costas: tarja escura com letras claras (fictício, só a impressão de texto)
     if ( vAux.z > 0.5 ) {
-      float tag = step( 0.66, v ) * step( v, 0.88 );
-      vec3 tagC = kind < 1.5 ? vec3( 0.02 ) : vec3( 0.25, 0.9, 0.12 );
-      float letters = step( 0.7, v ) * step( v, 0.84 ) * step( 0.45, fract( vWorldPg * 26.0 ) );
+      // costas: tarja com o texto (lido da esquerda para a direita por quem está atrás)
+      float tag = step( 0.58, v ) * step( v, 0.93 ) * step( abs( vWorldPg ), 0.16 );
+      vec3 tagC = kind < 1.5 ? vec3( 0.02 ) : vec3( 0.2, 0.85, 0.1 );
+      float letters = pgText( vec2( ( 0.14 - vWorldPg ) / 0.28, ( v - 0.64 ) / 0.23 ) );
       diffuseColor.rgb = mix( diffuseColor.rgb, tagC, tag );
-      diffuseColor.rgb = mix( diffuseColor.rgb, kind < 1.5 ? vec3( 0.75 ) : vec3( 0.02 ), letters * tag );
+      diffuseColor.rgb = mix( diffuseColor.rgb, kind < 1.5 ? vec3( 0.8 ) : vec3( 0.02 ), letters * tag );
+    } else {
+      // frente: crachá pequeno no peito
+      float badge = step( 0.62, v ) * step( v, 0.78 ) * step( 0.03, vWorldPg ) * step( vWorldPg, 0.11 );
+      diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 0.9 ), badge );
     }
   }
 }
@@ -364,7 +408,6 @@ export function buildPhotographers(ctx) {
   const U = {
     uTime: ctx.U?.uTime || { value: 0 },
     uBall: { value: new THREE.Vector3(0, 0, 0) },
-    uGoalT: { value: -1e4 },
   };
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.75, metalness: 0.0 });
   mat.onBeforeCompile = (sh) => {
@@ -373,7 +416,7 @@ export function buildPhotographers(ctx) {
       .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWorldPg = cos( aPiv.z ) * ( position.x - aPiv.x ) - sin( aPiv.z ) * ( position.z - aPiv.y );')
       .replace('varying vec4 vAux;', 'varying vec4 vAux;\nvarying float vWorldPg;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying vec4 vAux;\nvarying float vWorldPg;')
+      .replace('#include <common>', '#include <common>\n' + FRAG_HEAD)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nif ( vAux.w > 2.5 ) roughnessFactor = 0.08;');
   };
@@ -381,8 +424,10 @@ export function buildPhotographers(ctx) {
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'fotografos';
   mesh.receiveShadow = !!ctx.shadows;
-  mesh.castShadow = !!ctx.shadows;
-  if (ctx.shadows) {
+  // na baixa não projetam sombra (economiza a passada de sombra no celular)
+  const cast = !!ctx.shadows && qk !== 'baixa';
+  mesh.castShadow = cast;
+  if (cast) {
     const dm = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     dm.onBeforeCompile = (sh) => patchVertex(sh, U);
     dm.customProgramCacheKey = () => 'golaco-fotografos-sombra';

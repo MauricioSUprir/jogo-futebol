@@ -134,7 +134,7 @@ const MAP_FRAG = /* glsl */`
   // As folhas deitam para +z/-z: o contraste é máximo olhando ao longo de z (câmera de
   // TV, ±12%) e some olhando ao longo de x (atrás do gol) — sem termo fixo, que antes
   // anulava o efeito na câmera de TV e deixava as faixas quase invisíveis.
-  stripe = parX * ( 0.008 - 0.15 * vxz.y * grazing ) + parZ * 0.018;
+  stripe = parX * ( 0.006 - 0.12 * vxz.y * grazing ) + parZ * 0.018;
   #endif
   grass *= 1.0 + stripe;
 

@@ -144,14 +144,15 @@ Pose crowdPose( vec3 wp, float seed, float flags ) {
     float run = ( t - uWave.x ) * uWave.z - sArc - r2 * 1.6;
     if ( run > -3.0 && run < uWave.w * TAU * 66.0 + 9.0 ) {
       float x = run - TAU * 66.0 * floor( ( run + 3.0 ) / ( TAU * 66.0 ) );
-      ola = smoothstep( -3.0, 0.0, x ) * ( 1.0 - smoothstep( 2.5, 8.0, x ) );
+      ola = smoothstep( -3.5, 0.0, x ) * ( 1.0 - smoothstep( 3.5, 10.0, x ) );
     }
   }
   if ( ola > 0.001 ) {
     Pose po = p;
-    po.body = vec4( 1.0, 0.08 * ola, -0.05, 0.0 );
-    po.head = vec4( 0.0, -0.3, 0.0, scarf > 0.5 ? 1.0 : 0.0 );
-    po.armA = vec4( 3.05, 0.22 + 0.1 * r7, 0.12, 0.0 ); po.armB = po.armA;
+    // no pico: salto curto com os braços em "V" bem abertos (silhueta muda muito de longe)
+    po.body = vec4( 1.0, 0.26 * smoothstep( 0.75, 1.0, ola ), -0.08, 0.0 );
+    po.head = vec4( 0.0, -0.35, 0.0, scarf > 0.5 ? 1.0 : 0.0 );
+    po.armA = vec4( 2.95, 0.45 + 0.12 * r7, 0.1, 0.0 ); po.armB = po.armA;
     p = mixPose( p, po, ola * ( 1.0 - sad ) );
   }
 

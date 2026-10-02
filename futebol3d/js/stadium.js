@@ -13,13 +13,15 @@
 //   stadium.ready (Promise das texturas do gramado), stadium.root (grupo raiz),
 //   stadium.setScoreboard({ home, away, homeScore, awayScore, clock, homeColor, awayColor }),
 //   stadium.showOnScreens('goal'|'replay'|'none', texto),
-//   stadium.updateBall(dt, ballPos, ballVel) (repassa à rede, se ela tiver update).
+//   stadium.updateBall(dt, ballPos, ballVel) (repassa à rede, se ela tiver update;
+//     também aponta as câmeras dos fotógrafos para a bola),
+//   stadium.crowdChant(side, nivel, segundos) (força um canto), stadium.crowdWave(voltas) (ola).
 // opts extras: homeColor2 (cor secundária do clube: cadeiras, LED), mowPattern
 //   ('faixas' | 'xadrez' | 'diagonal').
 //
 // Chamadas de desenho do estádio (≈15 + gols/torcida): céu, gramado, arquibancada,
-// estrutura (cobertura, treliças, passarela, corrimãos, bancos, túnel, fotógrafos,
-// molduras dos telões), vidros, placas/fitas de LED, telões, refletores (caixas,
+// estrutura (cobertura, treliças, passarela, corrimãos, bancos, túnel, molduras dos
+// telões), fotógrafos (1 malha animada), vidros, placas/fitas de LED, telões, refletores (caixas,
 // brilho, cones), gols (traves, armação, redes, mastros, bandeirinhas), torcida.
 import * as THREE from 'three';
 import { PITCH } from './config.js';
@@ -108,6 +110,9 @@ export function buildStadium(renderer, scene, opts = {}) {
     uSunCol: { value: sunColor.clone().multiplyScalar(P.sunI / Math.PI * (P.crowdSun ?? 1)) },
     uAmbCrowd: { value: new THREE.Color().fromArray(P.amb) },
     uWind: { value: new THREE.Vector2(opts.wind?.x ?? 2.5, opts.wind?.z ?? 1.2) },
+    // cantos: nível da casa/visitante (0..1) e andamento (bpm); ola: início, sentido, m/s, voltas
+    uChant: { value: new THREE.Vector4(0, 0, 130, 120) },
+    uWave: { value: new THREE.Vector4(-1e4, -1, 14, 1) },
   };
 
   const root = new THREE.Group();
@@ -214,6 +219,22 @@ export function buildStadium(renderer, scene, opts = {}) {
 
   // ---- estado
   let lastTime = 0, goalAt = -1e4;
+  // agendador da torcida: cada lado alterna cantos (12-22 s) e pausas; depois do gol a
+  // torcida que comemorou canta forte; a ola aparece de vez em quando em jogo morno
+  let rs = 917;
+  const rnd = () => { rs = (rs * 16807) % 2147483647; return rs / 2147483647; };
+  const chant = {
+    home: { on: false, until: 8, lvl: 0, force: -1e4, forceLvl: 0 },
+    away: { on: false, until: 14, lvl: 0, force: -1e4, forceLvl: 0 },
+  };
+  const wave = { next: 70 + rnd() * 60, end: -1e4 };
+  let prevT = null;
+  const startWave = (t, laps = 1 + (rnd() < 0.35 ? 1 : 0), dir = rnd() < 0.75 ? -1 : 1) => {
+    const w = U.uWave.value;
+    w.set(t, dir, 14, laps);
+    wave.end = t + (laps * 2 * Math.PI * 66) / 14 + 10;
+    wave.next = wave.end + 90 + rnd() * 120;
+  };
   const wind = U.uWind.value;
 
   const stadium = {
@@ -226,17 +247,48 @@ export function buildStadium(renderer, scene, opts = {}) {
       U.uTime.value = time;
       const e = THREE.MathUtils.clamp(excitement, 0, 1);
       U.uExc.value += (e - U.uExc.value) * Math.min(1, dt * 1.5);
+      // cantos e ola (usa o relógio do estádio, que pode pular no replay)
+      const dts = prevT === null ? 0 : THREE.MathUtils.clamp(time - prevT, 0, 0.5);
+      prevT = time;
+      const ex = U.uExc.value;
+      for (const k of ['home', 'away']) {
+        const c = chant[k];
+        if (time > c.until || time < c.until - 60) {
+          c.on = !c.on;
+          c.until = time + (c.on ? 12 + rnd() * 10 : (14 + rnd() * 16) * (1.2 - 0.6 * ex));
+        }
+        let target = c.on ? 0.5 + 0.45 * ex : 0.04;
+        if (time - c.force < 0) target = c.forceLvl;
+        c.lvl += (target - c.lvl) * Math.min(1, dts * 0.8);
+      }
+      U.uChant.value.x = chant.home.lvl;
+      U.uChant.value.y = chant.away.lvl;
+      if (time > wave.next && ex < 0.5 && time - goalAt > 40) startWave(time);
       ads.userData.uniforms.uFlash.value = time - goalAt < 7 ? 1 : 0;
       screens.userData.update(time);
     },
 
     crowdReact(kind, side = 'home') {
       const v = (side === 'away' ? U.uEvAway : U.uEvHome).value;
-      if (kind === 'goal') { v.x = lastTime; goalAt = lastTime; }
+      if (kind === 'goal') {
+        v.x = lastTime; goalAt = lastTime;
+        // depois da explosão, a torcida que comemorou emenda o canto com tudo
+        const c = chant[side === 'away' ? 'away' : 'home'];
+        c.force = lastTime + 50; c.forceLvl = 1;
+        U.uWave.value.x = -1e4; wave.next = Math.max(wave.next, lastTime + 60);
+      }
       else if (kind === 'chance') v.y = lastTime;
       else if (kind === 'foul') v.z = lastTime;
       else if (kind === 'save') v.w = lastTime;
     },
+
+    // extras (fora do contrato): força um canto ('home'|'away', nível 0..1, segundos) —
+    // ex.: sincronizar com audio.chant — e dispara a ola na hora
+    crowdChant(side = 'home', level = 1, secs = 15) {
+      const c = chant[side === 'away' ? 'away' : 'home'];
+      c.force = lastTime + secs; c.forceLvl = level;
+    },
+    crowdWave(laps, dir) { startWave(lastTime, laps || 1, dir === 1 || dir === -1 ? dir : undefined); },
 
     netImpact(goalSign, point, strength = 1) {
       goals.userData.impact(goalSign, point, strength, lastTime);
