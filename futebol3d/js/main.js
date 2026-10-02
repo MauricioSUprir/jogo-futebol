@@ -125,11 +125,6 @@ function buildPost() {
   // desfoque de movimento da câmera (lê a profundidade da cena recém-desenhada)
   g.mblur = null;
   if (blur) { g.mblur = new CameraBlurPass(g.camera, 0.55); comp.addPass(g.mblur); }
-  if (Q.bloom) {
-    const night = g.stadium && g.stadium.isNight;
-    g.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), night ? 0.55 : 0.22, 0.45, night ? 0.82 : 0.92);
-    comp.addPass(g.bloom);
-  }
   // oclusão de ambiente (contato dos pés, arquibancada com profundidade): só no PC
   if (Q.ao && !touch) {
     const ao = new GTAOPass(g.scene, g.camera, size.x, size.y);

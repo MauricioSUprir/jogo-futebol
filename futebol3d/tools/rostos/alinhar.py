@@ -21,7 +21,7 @@ def marcos(im):
     W, H = im.size
     for lm in r.face_landmarks:
         P = lambda ids: np.mean([[lm[i].x * W, lm[i].y * H] for i in ids], axis=0)
-        out.append({'oe': P(OLHO_E), 'od': P(OLHO_D), 'boca': P(BOCA), 'queixo': P([QUEIXO]), 'testa': P([TESTA]), 'oval': np.array([[lm[i].x * W, lm[i].y * H] for i in OVAL])})
+        out.append({'oe': P(OLHO_E), 'od': P(OLHO_D), 'boca': P(BOCA), 'queixo': P([QUEIXO]), 'testa': P([TESTA]), 'oval': np.array([[lm[i].x * W, lm[i].y * H] for i in OVAL]), 'todos': np.array([[p.x * W, p.y * H] for p in lm])})
     return out
 if __name__ == '__main__':
     import sys
