@@ -738,112 +738,135 @@
   }
 
   // ===== MENU estilo FC: um card compacto por vez; avança só pela seta =====
+  /* ---------- MENU INICIAL: vitrine ----------
+     Carrossel circular: sempre tem carta dos dois lados, a do meio em
+     destaque. Arrasta com o dedo ou toca nas laterais. */
   register("modes", function (screen) {
     screen.id = "screen-modes";
-    screen.classList.add("fcmenu");
-    var SB = "assets/estadios/";
-    var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
-
+    screen.classList.add("vit");
     var MB = "assets/menu/";
-    var SLIDES = [];
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Carreira de Treinador", desc: "Do banco ao topo do mundo. Comande o clube e a seleção.", cta: "JOGAR", route: "coach", bg: MB + "coach.jpg" });
-    SLIDES.push({ key: "car", eyebrow: "CARREIRA", name: "Rumo ao Estrelato", desc: "Carreira de jogador: a semana é o jogo, com energia, concorrente e um técnico de opinião.", cta: "JOGAR", route: "rae", bg: MB + "trophy.jpg" });
-    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Partida Rápida", desc: "Escolha dois times e jogue agora, sem compromisso.", cta: "JOGAR", route: "quick", bg: MB + "match.jpg" });
-    SLIDES.push({ key: "play", eyebrow: "JOGAR", name: "Competições", desc: "Dispute ligas, copas e torneios de seleções.", cta: "JOGAR", route: "compmode", bg: MB + "trophy.jpg" });
-    SLIDES.push({ key: "ut", eyebrow: "CARTAS", name: "Total Ultimate", desc: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", cta: "JOGAR", route: "ut", bg: MB + "director.jpg" });
-    SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Online", desc: "Desafie amigos em tempo real pelo seu número.", cta: "ENTRAR", route: "online", bg: MB + "online.jpg" });
-    SLIDES.push({ key: "net", eyebrow: "MULTIPLAYER", name: "Copa Online", desc: "Todo mundo entra com o código, o mata-mata é sorteado e bot completa as vagas.", cta: "ENTRAR", route: "copa", bg: MB + "online.jpg" });
-    // passo final "diferente": explorar mais modos (com a logo do Total Match)
-    SLIDES.push({ key: "more", eyebrow: "EXPLORAR", name: "Mais modos", desc: "Total Ultimate, Dream Team, Draft, Editor, Grupo e mais.", logo: true, more: [
-      { icon: "⬤", name: "Total Ultimate", route: "ut" }, { icon: "💎", name: "Dream Team", route: "dream" }, { icon: "🎲", name: "Draft", route: "draft" },
-      { icon: "🏆", name: "Copa Online", route: "copa" }, { icon: "🪙", name: "Arena Coins", route: "arena" },
-      { icon: "🏟️", name: "Grupo", route: "groupcomp" }, { icon: "✏️", name: "Editor", route: "editor" },
-      { icon: "🌟", name: "Rumo ao Estrelato", route: "rae" },
-      { icon: "💾", name: "Carreiras", route: "saves" }, { icon: "🎖️", name: "Info", route: "competicoes" },
-      { icon: "⚙️", name: "Config", route: "settings" }, { icon: "👤", name: "Perfil", route: "profile" }
-    ] });
+    var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
+    var saveName = ""; try { var _cc = TM.storage.coachCareer(); if (_cc && _cc.teamName) saveName = _cc.teamName; } catch (e) {}
 
-    // overlay: logo (esq) + perfil e engrenagem (canto sup. direito)
+    // só existem 5 fotos para 7 modos: cada carta usa um recorte e um tom
+    // diferentes, para que duas que dividem a mesma foto não pareçam iguais.
+    var MODOS = [
+      { cat: "CARREIRA", nome: "Carreira de Treinador", tag: "Do banco ao topo do mundo. Comande o clube e a seleção.", rota: "coach",    bg: MB + "coach.jpg",    pos: "76% 50%", cor: "34,197,94" },
+      { cat: "CARREIRA", nome: "Rumo ao Estrelato",     tag: "A semana é o jogo: energia, concorrente e um técnico de opinião.", rota: "rae", bg: MB + "trophy.jpg", pos: "48% 50%", cor: "250,204,21" },
+      { cat: "JOGAR",    nome: "Partida Rápida",        tag: "Escolha dois times e jogue agora, sem compromisso.", rota: "quick",    bg: MB + "match.jpg",    pos: "70% 50%", cor: "34,197,94" },
+      { cat: "JOGAR",    nome: "Competições",           tag: "Dispute ligas, copas e torneios de seleções.",       rota: "compmode", bg: MB + "match.jpg",    pos: "16% 50%", cor: "56,189,248" },
+      { cat: "CARTAS",   nome: "Total Ultimate",        tag: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", rota: "ut",  bg: MB + "director.jpg", pos: "52% 50%", cor: "168,85,247" },
+      { cat: "ONLINE",   nome: "Online",                tag: "Desafie amigos em tempo real pelo seu número.",      rota: "online",   bg: MB + "online.jpg",   pos: "24% 50%", cor: "56,189,248" },
+      { cat: "ONLINE",   nome: "Copa Online",           tag: "Todos entram com o código, o mata-mata é sorteado e bot completa.", rota: "copa", bg: MB + "online.jpg", pos: "74% 50%", cor: "244,114,182" }
+    ];
+    var MAIS = [
+      { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
+      { ic: "🪙", nome: "Arena", rota: "arena" },      { ic: "🏟️", nome: "Grupo", rota: "groupcomp" },
+      { ic: "✏️", nome: "Editor", rota: "editor" },    { ic: "💾", nome: "Carreiras", rota: "saves" },
+      { ic: "🎖️", nome: "Info", rota: "competicoes" }, { ic: "⚙️", nome: "Config", rota: "settings" },
+      { ic: "👤", nome: "Perfil", rota: "profile" }
+    ];
+    function entrar(rota) { return function () { if (TM.license && TM.license.enter) TM.license.enter(rota); else go(rota); }; }
+
+    // ---- topo ----
     var prof = (TM.account && TM.account.profile) ? TM.account.profile() : null;
     var profBtn = prof
-      ? el("button", { class: "fc-prof", title: "Perfil", on: { click: function () { go("profile"); } } }, [
-          (TM.account.avatar ? TM.account.avatar(prof, "fc-prof-ava") : el("span")),
-          el("span", { class: "fc-prof-name", text: prof.name })
+      ? el("button", { class: "vit-prof", title: "Perfil", on: { click: function () { go("profile"); } } }, [
+          (TM.account.avatar ? TM.account.avatar(prof, "vit-prof-ava") : el("span", { class: "vit-ic-tx", text: "👤" }))
         ])
-      : el("button", { class: "fc-prof ghost", on: { click: function () { go("profile"); } } }, [ el("span", { class: "fc-prof-ic", text: "👤" }), el("span", { text: "Entrar" }) ]);
-    // info do mundo (nº de clubes, jogadores, ligas) para preencher o canto
+      : el("button", { class: "vit-ic", title: "Entrar", text: "👤", on: { click: function () { go("profile"); } } });
     var wInfo = { clubs: 0, players: 0, leagues: 0 };
     try { var W = TM.data.world(); wInfo.clubs = (W.clubs || []).length; wInfo.players = Object.keys(W.playersById || {}).length; wInfo.leagues = (W.leagues || []).length; } catch (e) {}
-    var saveName = ""; try { var _cc = TM.storage.coachCareer(); if (_cc && _cc.teamName) saveName = _cc.teamName; } catch (e) {}
-    screen.appendChild(el("div", { class: "fc-top" }, [
-      el("div", { class: "fc-brand" }, [
-        el("img", { class: "fc-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
-        el("div", { class: "fc-brand-txt" }, [
-          el("div", { class: "fc-brand-title", text: "TOTAL MATCH" }),
-          el("div", { class: "fc-brand-sub", text: saveName ? "Carreira: " + saveName : "Simulador de futebol" }),
-          el("div", { class: "fc-brand-stats" }, [
-            el("span", { class: "fc-stat", html: "<b>" + wInfo.leagues + "</b> ligas" }),
-            el("span", { class: "fc-stat", html: "<b>" + wInfo.clubs + "</b> clubes" }),
-            el("span", { class: "fc-stat", html: "<b>" + (wInfo.players >= 1000 ? Math.round(wInfo.players / 1000) + "k" : wInfo.players) + "</b> jogadores" }),
-            el("span", { class: "fc-stat fc-ver", text: versaoAtual() })
-          ])
+    screen.appendChild(el("div", { class: "vit-topo" }, [
+      el("div", { class: "vit-marca" }, [
+        el("img", { class: "vit-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
+        el("div", { class: "vit-marca-tx" }, [
+          el("div", { class: "vit-nome", text: "TOTAL MATCH" }),
+          el("div", { class: "vit-sub", text: wInfo.leagues + " ligas · " + wInfo.clubs + " clubes · " + versaoAtual() })
         ])
       ]),
-      el("div", { class: "fc-top-right" }, [
-        (TM.coins ? TM.coins.badge("fc-coins") : el("span")),
-        (TM.coins && TM.coins.msgBadge ? TM.coins.msgBadge("fc-msgs") : el("span")),
+      el("div", { class: "vit-acoes" }, [
+        (TM.coins ? TM.coins.badge("vit-coins") : el("span")),
+        (TM.coins && TM.coins.msgBadge ? TM.coins.msgBadge("vit-msgs") : el("span")),
         adminBtn(),
         profBtn,
-        el("button", { class: "fc-gear", title: "Configurações", on: { click: function () { go("settings"); } } }, [ el("span", { text: "⚙️" }) ])
+        el("button", { class: "vit-ic", title: "Configurações", text: "⚙️", on: { click: function () { go("settings"); } } })
       ])
     ]));
 
-    // chip discreto num cantinho: retomar a carreira salva (só aparece se houver save)
+    // ---- retomar a carreira ----
     if (hasCoachSave) {
-      var contName = ""; try { var _cc = TM.storage.coachCareer(); contName = (_cc && _cc.teamName) ? " · " + _cc.teamName : ""; } catch (e) {}
-      screen.appendChild(el("button", { class: "fc-continue", title: "Continuar carreira", on: { click: function () { go("coach-hub"); } } }, [
-        el("span", { class: "fc-continue-ic", text: "▶" }),
-        el("span", { class: "fc-continue-tx", text: "Continuar carreira" + contName })
+      screen.appendChild(el("button", { class: "vit-retomar", on: { click: function () { go("coach-hub"); } } }, [
+        el("span", { class: "vit-ret-ic", text: "▶" }),
+        el("span", { class: "vit-ret-tx" }, [
+          el("span", { class: "vit-ret-t", text: "Continuar carreira" }),
+          el("span", { class: "vit-ret-s", text: saveName || "de onde você parou" })
+        ]),
+        el("span", { class: "vit-ret-ar", text: "›" })
       ]));
     }
 
-    function goFn(rt) { return function () { if (TM.license && TM.license.enter) TM.license.enter(rt); else go(rt); }; }
+    // ---- vitrine ----
+    var i = 0, N = MODOS.length;
+    var palco = el("div", { class: "vit-palco" });
+    var trilho = el("div", { class: "vit-trilho" });
+    palco.appendChild(trilho);
+    var legenda = el("div", { class: "vit-legenda" });
+    screen.appendChild(palco);
+    screen.appendChild(legenda);
 
-    // ---- grade de cards (todos os modos visíveis) ----
-    var mains = SLIDES.filter(function (s) { return !s.more; });
-    var moreSlide = SLIDES.filter(function (s) { return s.more; })[0];
+    function desenha() {
+      clear(trilho); clear(legenda);
+      for (var d = -2; d <= 2; d++) {
+        var k = ((i + d) % N + N) % N, m = MODOS[k];
+        var ad = Math.abs(d);
+        var esc = d === 0 ? 1 : ad === 1 ? 0.84 : 0.68;
+        // o trilho tem transform-style: preserve-3d, entao quem manda na ordem e o
+        // translateZ (o z-index e ignorado). Sem ele a carta do lado cobria o texto
+        // da carta central.
+        var prof = d === 0 ? 0 : ad === 1 ? -90 : -180;
+        var carta = el("button", { class: "vit-carta" + (d === 0 ? " centro" : "") + (ad === 2 ? " longe" : ""),
+          style: "transform:translateX(" + (d * 64) + "%) translateZ(" + prof + "px) rotateY("
+               + (d * -18) + "deg) scale(" + esc + ");"
+               + "z-index:" + (20 - ad) + ";opacity:" + (ad === 2 ? 0.45 : 1),
+          on: { click: (function (dd, rota) { return function () { if (dd === 0) entrar(rota)(); else { i = ((i + dd) % N + N) % N; desenha(); } }; })(d, m.rota) } }, [
+          el("span", { class: "vit-foto", style: "background-image:url('" + m.bg + "');background-position:" + m.pos }),
+          el("span", { class: "vit-veu", style: "background:linear-gradient(to top, rgba(0,0,0,.93) 2%, rgba(" + m.cor + ",.2) 58%, rgba(0,0,0,.5) 100%)" }),
+          el("span", { class: "vit-faixa" }, [
+            el("span", { class: "vit-f-cat", text: m.cat, style: "color:rgb(" + m.cor + ")" }),
+            el("span", { class: "vit-f-nome", text: m.nome })
+          ])
+        ]);
+        trilho.appendChild(carta);
+      }
+      var m0 = MODOS[i];
+      legenda.appendChild(el("div", { class: "vit-tag", text: m0.tag }));
+      legenda.appendChild(el("button", { class: "vit-cta", text: "ENTRAR", on: { click: entrar(m0.rota) } }));
+      legenda.appendChild(el("div", { class: "vit-pontos" }, MODOS.map(function (_, k) {
+        return el("button", { class: "vit-ponto" + (k === i ? " on" : ""), title: MODOS[k].nome,
+          on: { click: function () { i = k; desenha(); } } });
+      })));
+    }
+    function anda(p) { i = ((i + p) % N + N) % N; desenha(); }
+    desenha();
 
-    var grid = el("div", { class: "mg-grid" });
-    mains.forEach(function (s, i) {
-      var card = el("button", { class: "mg-card acc-" + s.key + (i < 2 ? " feat" : ""), style: "--i:" + i, on: { click: goFn(s.route) } });
-      var img = el("span", { class: "mg-img", "aria-hidden": "true" });
-      if (s.bg) img.style.backgroundImage = "url('" + s.bg + "')";
-      card.appendChild(img);
-      card.appendChild(el("span", { class: "mg-shade", "aria-hidden": "true" }));
-      card.appendChild(el("div", { class: "mg-info" }, [
-        el("div", { class: "mg-eyebrow", text: s.eyebrow }),
-        el("div", { class: "mg-name", text: s.name }),
-        el("div", { class: "mg-desc", text: s.desc }),
-        el("span", { class: "mg-cta" }, [ el("span", { text: s.cta }), el("span", { class: "mg-cta-ar", text: "▶" }) ])
-      ]));
-      grid.appendChild(card);
+    // arrastar com o dedo
+    var x0 = null;
+    palco.addEventListener("pointerdown", function (e) { x0 = e.clientX; });
+    palco.addEventListener("pointerup", function (e) {
+      if (x0 == null) return;
+      var dx = e.clientX - x0; x0 = null;
+      if (Math.abs(dx) > 42) anda(dx < 0 ? 1 : -1);
     });
-    screen.appendChild(grid);
+    palco.addEventListener("pointercancel", function () { x0 = null; });
 
-    // ---- faixa "mais modos" (extras compactos) ----
-    if (moreSlide && moreSlide.more) {
-      var strip = el("div", { class: "mg-more" });
-      moreSlide.more.forEach(function (m) {
-        strip.appendChild(el("button", { class: "mg-more-tile", on: { click: goFn(m.route) } }, [
-          el("span", { class: "mg-more-ic", text: m.icon }),
-          el("span", { class: "mg-more-lb", text: m.name })
-        ]));
-      });
-      screen.appendChild(el("div", { class: "mg-more-wrap" }, [
-        el("div", { class: "mg-more-h", text: "Mais modos" }),
-        strip
-      ]));
-    }
+    // ---- mais modos ----
+    screen.appendChild(el("div", { class: "vit-mais-h", text: "Mais modos" }));
+    screen.appendChild(el("div", { class: "vit-mais" }, MAIS.map(function (x) {
+      return el("button", { class: "vit-mais-b", on: { click: entrar(x.rota) } }, [
+        el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
+      ]);
+    })));
   });
 
   register("modes-min-unused", function (screen) {
