@@ -13,6 +13,9 @@ const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
+// roteiro da abertura (segundos)
+const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 19, breakT: 25, end: 30, walk: 3.0 };
+export const INTRO_TIMES = INTRO;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
 
 export class Match {
@@ -77,6 +80,78 @@ export class Match {
     this.controlled = null;
     this.firstKickoff = Math.random() < 0.5 ? 0 : 1;
     this.setupKickoff(this.teams[this.firstKickoff]);
+    if (cfg.intro) this.startIntro();
+  }
+
+  // ------------------------------------------------- protocolo de entrada em campo
+  // Os times saem do túnel (meio-campo, lado da câmera), perfilam diante da
+  // tribuna, cumprimentam a torcida e correm para as posições. Pode ser pulado.
+  startIntro() {
+    this.phase = 'intro';
+    this.intro = { t: 0, end: INTRO.end };
+    this.ball.place(0, BALL.radius, 0);
+    this.owner = null;
+    const order = [];
+    for (let k = 0; k < 11; k++) for (const t of this.teams) order.push(t.players[k]);
+    order.forEach((p, k) => {
+      const side = p.team.i === 0 ? -1 : 1;
+      p.introSide = side;
+      p.introStart = INTRO.firstOut + Math.floor(k / 2) * INTRO.gap;
+      p.introStage = 0;
+      // fila dentro do túnel (z negativo, atrás da boca)
+      p.teleport(side * 0.75, INTRO.tunnelZ - 2 - Math.floor(k / 2) * 1.25, Math.PI / 2);
+      // lugar no perfilamento: lado a lado, de frente para a câmera de TV
+      const slot = p.slot;
+      p.introLine = { x: side * (2.2 + (10 - slot) * 1.35), z: INTRO.lineZ };
+    });
+    this.excitement = 0.85;
+    this.events.length = 0;            // sem apito do pontapé durante a abertura
+    this.emit('intro', { stage: 'start' });
+  }
+
+  introStep(dt) {
+    const it = this.intro;
+    const prevT = it.t;
+    it.t += dt;
+    if (prevT < INTRO.firstOut + 0.3 && it.t >= INTRO.firstOut + 0.3) this.emit('intro', { stage: 'enter' });
+    if (prevT < INTRO.lineDone && it.t >= INTRO.lineDone) this.emit('intro', { stage: 'lineup' });
+    if (prevT < INTRO.breakT && it.t >= INTRO.breakT) this.emit('intro', { stage: 'break' });
+    this.excitement += (0.85 - this.excitement) * Math.min(1, dt);
+    // caminhada de cerimônia: velocidade fixa, freando na chegada
+    const walk = (p, x, z, v) => {
+      const ex = x - p.x, ez = z - p.z, d = Math.hypot(ex, ez);
+      if (d < 0.15) { p.dx = p.dz = 0; return d; }
+      const s = Math.min(v, d * 1.6);
+      p.dx = ex / d * s; p.dz = ez / d * s;
+      return d;
+    };
+    for (const p of this.players) {
+      if (p.sentOff) continue;
+      p.face = null; p.jockey = false; p.sprint = false;
+      if (it.t < p.introStart) { p.dx = p.dz = 0; continue; }
+      if (it.t < INTRO.breakT) {
+        // anda até a boca do túnel e depois até o lugar no perfilamento
+        const mouth = { x: p.introSide * 0.9, z: INTRO.tunnelZ + 2.5 };
+        if (p.introStage === 0) { if (walk(p, mouth.x, mouth.z, INTRO.walk) < 0.8) p.introStage = 1; }
+        else {
+          const d = walk(p, p.introLine.x, p.introLine.z, INTRO.walk);
+          if (d < 0.6) p.face = { x: p.introLine.x, z: INTRO.lineZ - 30 };
+        }
+      } else {
+        // corre para a posição do pontapé inicial
+        walk(p, p.kickX ?? p.x, p.kickZ ?? p.z, 4.5);
+      }
+    }
+    if (it.t >= it.end) this.endIntro();
+  }
+
+  skipIntro() { if (this.phase === 'intro') this.endIntro(); }
+
+  endIntro() {
+    this.intro = null;
+    this.phase = 'stopped';
+    this.setupKickoff(this.teams[this.firstKickoff]);
+    this.emit('intro', { stage: 'end' });
   }
 
   emit(type, data = {}) { this.events.push({ type, ...data }); }
@@ -109,6 +184,12 @@ export class Match {
     if (this.shootout) { this.shootoutStep(dt); this.shootoutAdvance(dt); }
     if (this.phase === 'setpiece') this.setpieceRun(dt);
 
+    if (this.phase === 'intro') {
+      this.introStep(dt);
+      for (const p of this.players) if (!p.sentOff) p.step(dt, this.onContact, this.onActionEnd);
+      this.bodies(dt);
+      return;
+    }
     // IA e humano definem velocidades desejadas e ações
     if (this.phase !== 'ended') {
       for (const t of this.teams) teamThink(this, t, dt);
@@ -645,6 +726,7 @@ export class Match {
           if (d < PITCH.centerRadius + 0.6) { const f = (PITCH.centerRadius + 0.8) / Math.max(0.1, d); x *= f; z *= f; if (x > -0.5) x = -0.5; }
         }
         p.teleport(x * t.dir, z * t.dir, t.dir > 0 ? 0 : Math.PI);
+        p.kickX = x * t.dir; p.kickZ = z * t.dir;
         p.holdingBall = false;
         p.celebTarget = null;
       });

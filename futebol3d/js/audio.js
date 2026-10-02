@@ -1,16 +1,25 @@
 // Som procedural do GOLAÇO (Web Audio). Nada de amostras gravadas: a torcida é
 // feita de centenas de "vozes" sintetizadas (fonte glotal + formantes) pré-renderizadas
-// em buffers que tocam em loop, somadas a faixas de ruído rosa, gritos e assobios
-// esporádicos. A bateria de samba e o canto da torcida também são sintetizados.
+// em buffers que tocam em loop, somadas a faixas de ruído rosa, gritos, assobios,
+// rojões e sinalizadores. A bateria (surdo, caixa, repique, tamborim, ganzá, bumbo) e
+// os cantos da torcida (samba, "olê", palmas com "uh!", hino) também são sintetizados.
 //
-// Cadeia: fontes → barramento torcida / efeitos → master → compressor → limitador
-// → clipador suave → saída. Um reverb de convolução (resposta gerada) simula o estádio.
+// Cadeia: fontes → barramento torcida (compressor próprio) / efeitos → master
+// → compressor → limitador → clipador suave → saída. Um reverb de convolução
+// (resposta gerada) e dois ecos (arquibancadas opostas) simulam o estádio.
+//
+// Camadas contínuas: ruído rosa em 3 faixas, murmúrio em 2 cópias (esquerda/direita),
+// rugido em 2 cópias + uma camada "distante", aplauso e vaia (humor da casa).
+// Um único "tocador de canto" (_song) faz crossfade entre os cantos longos: hino >
+// festa do gol > pré-jogo > diretor de cantos da partida. O canto do jogo (chant())
+// tem fonte própria e é abafado quando outro canto está tocando.
 //
 // Tudo é no-op antes de unlock(). Para testes, _attach(ctx) aceita um OfflineAudioContext
-// e _clock fixa o relógio usado no agendamento.
+// (constrói tudo de forma síncrona) e _clock fixa o relógio usado no agendamento.
 
 const VOWELS = { a: [800, 1200], e: [450, 1900], i: [320, 2250], o: [480, 820], u: [330, 700] };
 const VSR = 16000;                     // taxa das vozes pré-sintetizadas (formantes < 3 kHz)
+const CSR = 24000;                     // taxa dos cantos com bateria (economiza memória no celular)
 const rand = (a, b) => a + Math.random() * (b - a);
 // ruído rápido (xorshift) para os laços por amostra: -1..1
 let _seed = (Math.random() * 0xffffffff) | 1;
@@ -115,6 +124,27 @@ function shoutNotes(dur, base) {
   return out;
 }
 
+// vaia: "uuuuu" grave e longo, cada torcedor no seu fôlego
+function booNotes(dur, base) {
+  const out = []; let t = Math.random() * 0.4;
+  while (t < dur) {
+    const d = rand(1.2, 2.8);
+    out.push({ t, d, f: base * rand(0.95, 1.06), vw: pick('uuuo'), a: rand(0.6, 1) });
+    t += d + rand(0.05, 0.4);
+  }
+  return out;
+}
+
+// "uhhhh" de chance perdida: sobe junto com a bola e cai em lamento
+function oohNotes(base) {
+  const j = rand(0, 0.15);
+  return [
+    { t: j, d: 0.5, f: base * 0.85, vw: 'o', a: 0.5 },
+    { t: j + 0.5, d: 0.75, f: base * 1.3, vw: 'o', a: 1 },
+    { t: j + 1.25, d: rand(1.2, 1.8), f: base * 0.68, vw: 'u', a: 0.6 },
+  ];
+}
+
 // os construtores pesados são geradores: cada yield é uma fatia de ~10-30 ms
 function* crowdVoices(ctx, dur, count, gen, lo, hi, opts) {
   const x = Math.round(0.5 * VSR), n = Math.round(dur * VSR);
@@ -122,16 +152,27 @@ function* crowdVoices(ctx, dur, count, gen, lo, hi, opts) {
   for (let k = 0; k < count; k++) {
     const base = rand(lo, hi);
     renderVoice(L, R, VSR, { notes: gen(dur + 0.5, base), pan: rand(-0.95, 0.95), ...opts });
-    if (k % 4 === 3) yield;
+    if (k & 1) yield;
   }
   const l = loopify(L, n, x), r = loopify(R, n, x);
   normalize([l, r], 0.9);
   return toBuffer(ctx, VSR, l, r);
 }
 
+// evento único (sem loop) cantado por 'count' vozes
+function* renderShot(ctx, dur, count, gen, lo, hi, opts) {
+  const n = Math.round(dur * VSR), L = new Float32Array(n), R = new Float32Array(n);
+  for (let k = 0; k < count; k++) {
+    renderVoice(L, R, VSR, { notes: gen(rand(lo, hi)), pan: rand(-0.95, 0.95), ...opts });
+    if (k & 1) yield;
+  }
+  normalize([L, R], 0.9);
+  return toBuffer(ctx, VSR, L, R);
+}
+
 // aplauso: centenas de palmas (ruído em passa-banda com decaimento rápido)
 function* renderApplause(ctx, dur, density) {
-  const sr = ctx.sampleRate, x = Math.round(0.3 * sr), n = Math.round(dur * sr);
+  const sr = Math.min(ctx.sampleRate, 32000), x = Math.round(0.3 * sr), n = Math.round(dur * sr);
   const chs = [new Float32Array(n + x), new Float32Array(n + x)];
   for (const c of chs) {
     const total = Math.round((dur + 0.3) * density);
@@ -154,70 +195,175 @@ function* renderApplause(ctx, dur, density) {
   return toBuffer(ctx, sr, l, r);
 }
 
-// bateria de samba + torcida cantando, 8 compassos a 130 bpm, loop perfeito
-function* renderChant(ctx) {
-  const sr = Math.min(ctx.sampleRate, 48000);
-  const beat = 60 / 130, bar = beat * 4, bars = 8, dur = bar * bars, s16 = beat / 4;
-  const n = Math.round(dur * sr), tail = Math.round(0.8 * sr);
-  const L = new Float32Array(n + tail), R = new Float32Array(n + tail);
+// ---------- bateria da torcida (um kit, reaproveitado por todos os cantos) ----------
+
+function* makeKit(sr) {
   const TAU = Math.PI * 2;
-  // cada instrumento: 3 variações pré-renderizadas; as batidas só somam cópias com ganho
+  // 3 variações de cada instrumento, normalizadas para pico 1
   const inst = (len, fn) => {
     const m = Math.round(len * sr);
-    return [0, 1, 2].map(() => {
+    const v = [0, 1, 2].map(() => {
       const o = new Float32Array(m); let p = 0;
       for (let i = 0; i < m; i++) { const w = frnd(), nz = (w - p) * 0.5; p = w; o[i] = fn(i / sr, nz); }
       return o;
     });
+    normalize(v, 1); return v;
   };
-  const hit = (t, smp, a, pan) => {
-    const s = smp[(Math.random() * 3) | 0], i0 = Math.round(t * sr), pl = Math.cos((pan + 1) * Math.PI / 4) * a, pr = Math.sin((pan + 1) * Math.PI / 4) * a;
-    for (let i = 0; i < s.length && i0 + i < L.length; i++) { L[i0 + i] += s[i] * pl; R[i0 + i] += s[i] * pr; }
-  };
+  // surdo: pele grave com queda de afinação no ataque
   const surdoS = (f, dec) => inst(dec * 4.5, (tt, nz) =>
     Math.sin(TAU * (f * tt + f * 0.6 * 0.03 * (1 - Math.exp(-tt / 0.03)))) * Math.exp(-tt / dec) + nz * 0.5 * Math.exp(-tt / 0.004));
-  const SEG = surdoS(76, 0.14), TER = surdoS(64, 0.2); yield;
-  const PRI = surdoS(55, 0.5); yield;
-  const CX = inst(0.16, (tt, nz) => nz * 1.6 * Math.exp(-tt / 0.045) + Math.sin(TAU * 205 * tt) * 0.35 * Math.exp(-tt / 0.02));
-  const TB = inst(0.12, (tt, nz) => Math.sin(TAU * 910 * tt) * 0.6 * Math.exp(-tt / 0.03) + Math.sin(TAU * 1370 * tt) * 0.25 * Math.exp(-tt / 0.018) + nz * Math.exp(-tt / 0.006));
-  const RP = inst(0.4, (tt, nz) => Math.sin(TAU * 470 * tt) * Math.exp(-tt / 0.09) + Math.sin(TAU * 760 * tt) * 0.4 * Math.exp(-tt / 0.05) + nz * 0.7 * Math.exp(-tt / 0.005));
-  const GZ = inst(0.09, (tt, nz) => nz * Math.min(1, tt / 0.012) * Math.exp(-tt / 0.03));
+  const K = { sr };
+  K.SEG = surdoS(76, 0.14); K.TER = surdoS(64, 0.2); yield;
+  K.PRI = surdoS(55, 0.5); yield;
+  K.BUMBO = inst(0.5, (tt, nz) => Math.sin(TAU * (48 * tt + 48 * 1.5 * 0.02 * (1 - Math.exp(-tt / 0.02)))) * Math.exp(-tt / 0.16) + nz * 0.8 * Math.exp(-tt / 0.003));
+  K.CX = inst(0.18, (tt, nz) => nz * 1.8 * Math.exp(-tt / 0.05) + Math.sin(TAU * 205 * tt) * 0.4 * Math.exp(-tt / 0.02));
+  K.TB = inst(0.12, (tt, nz) => Math.sin(TAU * 910 * tt) * 0.6 * Math.exp(-tt / 0.03) + Math.sin(TAU * 1370 * tt) * 0.25 * Math.exp(-tt / 0.018) + nz * Math.exp(-tt / 0.006));
+  K.RP = inst(0.4, (tt, nz) => Math.sin(TAU * 470 * tt) * Math.exp(-tt / 0.09) + Math.sin(TAU * 760 * tt) * 0.45 * Math.exp(-tt / 0.05) + nz * 1.1 * Math.exp(-tt / 0.006));
+  K.GZ = inst(0.09, (tt, nz) => nz * Math.min(1, tt / 0.012) * Math.exp(-tt / 0.03));
   yield;
-  const surdo = (t, which, a, pan) => hit(t, which, a, pan);
-  const caixa = (t, a, pan) => hit(t, CX, a, pan);
-  const tamborim = (t, a, pan) => hit(t, TB, a, pan);
-  const repique = (t, a, pan) => hit(t, RP, a, pan);
-  const ganza = (t, a, pan) => hit(t, GZ, a, pan);
-  const tel = [0, 2, 4, 5, 7, 9, 11, 12, 14];            // teleco-teco do tamborim
-  const call = [0, 3, 6, 8, 10, 12, 13, 14];              // chamada do repique
-  for (let b = 0; b < bars; b++) for (let s = 0; s < 16; s++) {
-    const t = b * bar + s * s16 + (s & 1 ? s16 * 0.1 : 0) + rand(-0.004, 0.004);   // leve "ginga"
-    if (s === 0 || s === 8) surdo(t, SEG, 0.55, -0.3);               // segunda (abafado)
-    if (s === 4 || s === 12) surdo(t, PRI, 1.0, 0.25);               // primeira (aberto)
-    if ((s === 6 || s === 14) && b % 2) surdo(t, TER, 0.5, 0.05);    // terceira
-    const roll = (b === 3 || b === 7) && s >= 12;
-    caixa(t, [3, 6, 11, 14].includes(s) ? 0.34 : 0.13, 0.35);
-    if (roll) caixa(t + s16 / 2, 0.2, 0.35);
-    if (tel.includes(s)) tamborim(t, s === 0 || s === 7 ? 0.32 : 0.22, -0.55);
-    ganza(t, s % 4 === 2 ? 0.2 : 0.1, 0.6);
-    if (b === 0 ? call.includes(s) : s === 7 || s === 15) repique(t, 0.36, -0.1);
-    if (s === 15 && b % 3 === 2) yield;
+  // palma coletiva: dezenas de palmas quase juntas (a arquibancada inteira batendo junto)
+  K.CLAP = [0, 1, 2].map(() => {
+    const m = Math.round(0.22 * sr), o = new Float32Array(m);
+    for (let c = 0; c < 70; c++) {
+      const t0 = Math.round(Math.pow(Math.random(), 1.6) * 0.045 * sr), dec = rand(0.004, 0.011), a = rand(0.3, 1);
+      const [b0, a1, a2] = bpCoef(rand(800, 2600), rand(1, 2.2), sr);
+      const de = Math.exp(-1 / (dec * sr)), len = Math.min(m - t0, Math.round(dec * 6 * sr));
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0, e = 1;
+      for (let i = 0; i < len; i++) {
+        const s = frnd() * e; e *= de;
+        const y = b0 * (s - x2) - a1 * y1 - a2 * y2; y2 = y1; y1 = y; x2 = x1; x1 = s;
+        o[t0 + i] += y * a;
+      }
+    }
+    return o;
+  });
+  normalize(K.CLAP, 1);
+  yield;
+  return K;
+}
+
+// soma uma batida (variação aleatória) em L/R com pan de potência constante
+function mixer(L, R, sr) {
+  return (t, smp, a, pan) => {
+    const s = smp[(Math.random() * smp.length) | 0], i0 = Math.round(t * sr); if (i0 < 0) return;
+    const pl = Math.cos((pan + 1) * Math.PI / 4) * a, pr = Math.sin((pan + 1) * Math.PI / 4) * a;
+    const m = Math.min(s.length, L.length - i0);
+    for (let i = 0; i < m; i++) { L[i0 + i] += s[i] * pl; R[i0 + i] += s[i] * pr; }
+  };
+}
+
+// ---------- cantos (melodias originais) ----------
+// tune: um array por compasso com [início (batidas), duração (batidas), midi, vogal]
+const TEL = [0, 2, 4, 5, 7, 9, 11, 12, 14];             // teleco-teco do tamborim
+const CALL = [0, 3, 6, 8, 10, 12, 13, 14];               // chamada do repique
+const SAMBA_A = [[0, 1, 62, 'o'], [1, 1, 66, 'e'], [2, 0.5, 69, 'o'], [2.5, 0.5, 69, 'e'], [3, 1, 66, 'o']];
+const SAMBA_B = [[0, 1, 64, 'o'], [1, 1, 67, 'e'], [2, 2, 64, 'o']];
+const SAMBA_C = [[0, 1, 64, 'o'], [1, 0.5, 62, 'e'], [1.5, 0.5, 62, 'o'], [2, 1.9, 62, 'a']];
+const OLE = [
+  [[0, 0.5, 69, 'o'], [0.5, 1.5, 71, 'e'], [2, 0.5, 69, 'o'], [2.5, 1.5, 71, 'e']],
+  [[0, 0.5, 69, 'o'], [0.5, 0.5, 71, 'e'], [1, 0.5, 73, 'e'], [1.5, 0.5, 71, 'e'], [2, 2, 69, 'a']],
+  [[0, 1, 66, 'o'], [1, 1, 69, 'e'], [2, 1, 71, 'o'], [3, 1, 69, 'e']],
+  [[0, 0.5, 66, 'o'], [0.5, 0.5, 64, 'e'], [1, 2.5, 62, 'a']],
+];
+const HINO = [
+  [[0, 1, 57, 'o'], [1, 1, 60, 'o'], [2, 1.5, 64, 'e'], [3.5, 0.5, 62, 'e']],
+  [[0, 1, 60, 'a'], [1, 1, 59, 'o'], [2, 1.8, 57, 'o']],
+  [[0, 1, 60, 'e'], [1, 1, 64, 'o'], [2, 1.5, 67, 'a'], [3.5, 0.5, 65, 'e']],
+  [[0, 1, 64, 'o'], [1, 1, 62, 'e'], [2, 1.8, 64, 'o']],
+  [[0, 1, 65, 'a'], [1, 1, 64, 'o'], [2, 1, 62, 'e'], [3, 1, 60, 'o']],
+  [[0, 1, 62, 'e'], [1, 1, 64, 'o'], [2, 1.8, 67, 'a']],
+  [[0, 1.5, 69, 'o'], [1.5, 0.5, 67, 'e'], [2, 1, 64, 'o'], [3, 1, 62, 'e']],
+  [[0, 1, 60, 'a'], [1, 1, 59, 'e'], [2, 1.8, 57, 'o']],
+];
+const UH = [[3, 0.4, 50, 'u']];                           // "UH!" coletivo no 4º tempo
+
+const SONGS = {
+  // samba da torcida organizada: bateria cheia + canto
+  chant: {
+    bpm: 130, bars: 8, swing: 0.1, voices: 22, oct: (k) => (k < 14 ? -12 : 0), dg: 0.8, vg: 0.6,
+    voice: { att: 0.03, glide: 0.035, vib: 0.01, breath: 0.3 },
+    tune: [SAMBA_A, SAMBA_B, SAMBA_A, SAMBA_C, SAMBA_A, SAMBA_B, SAMBA_A, SAMBA_C],
+    drums(hit, K, b, s, t, s16) {
+      if (s === 0 || s === 8) hit(t, K.SEG, 0.6, -0.3, true);              // segunda (abafado)
+      if (s === 4 || s === 12) hit(t, K.PRI, 1.0, 0.25, true);             // primeira (aberto)
+      if ((s === 6 || s === 14) && b % 2) hit(t, K.TER, 0.55, 0.05);       // terceira
+      const roll = (b === 3 || b === 7) && s >= 12;
+      hit(t, K.CX, [3, 6, 11, 14].includes(s) ? 0.42 : 0.15, 0.35, true);
+      if (roll) hit(t + s16 / 2, K.CX, 0.26, 0.35);
+      if (TEL.includes(s)) hit(t, K.TB, s === 0 || s === 7 ? 0.36 : 0.25, -0.6);
+      hit(t, K.GZ, s % 4 === 2 ? 0.2 : 0.1, 0.65);
+      if ((b === 0 || b === 4) ? CALL.includes(s) : (s === 7 || s === 10 || s === 15)) hit(t, K.RP, 0.5, -0.15);
+    },
+  },
+  // "olê, olê": palmas sincronizadas em todo tempo
+  ole: {
+    bpm: 112, bars: 8, swing: 0, voices: 24, oct: (k) => (k < 16 ? -12 : 0), dg: 0.75, vg: 0.65,
+    voice: { att: 0.03, glide: 0.04, vib: 0.012, breath: 0.32 },
+    tune: [...OLE, ...OLE],
+    drums(hit, K, b, s, t) {
+      if (s === 0 || s === 8) hit(t, K.PRI, 0.9, 0.2, true);
+      if (s === 4 || s === 12) hit(t, K.SEG, 0.55, -0.25, true);
+      hit(t, K.CX, s % 4 === 0 ? 0.3 : s % 2 ? 0.07 : 0.13, 0.3);
+      const fim = b % 4 === 3;                                            // virada de palmas no 4º compasso
+      if (fim ? [0, 2, 4, 8, 10, 12].includes(s) : s % 4 === 0) hit(t, K.CLAP, 0.95, 0, true);
+      if (s % 2 === 0) hit(t, K.GZ, 0.1, 0.6);
+    },
+  },
+  // palmas ritmadas "pá pá pápápá" + "UH!" coletivo com bumbo
+  palmas: {
+    bpm: 104, bars: 4, swing: 0, voices: 28, oct: (k) => (k < 20 ? 0 : 12), spread: 2, loose: 0.03, legato: 1,
+    dg: 0.85, vg: 0.6, voice: { att: 0.012, glide: 0.02, vib: 0.02, breath: 0.5 },
+    tune: [[], UH, [], UH],
+    drums(hit, K, b, s, t) {
+      if (s === 0) hit(t, K.PRI, 1, 0.2, true);
+      if (s === 8) hit(t, K.SEG, 0.6, -0.2, true);
+      if ((b % 2 ? [0, 4, 8] : [0, 4, 8, 10, 12]).includes(s)) hit(t, K.CLAP, 1, 0, true);
+      if (b % 2 && s === 12) { hit(t, K.BUMBO, 1, 0, true); hit(t, K.PRI, 0.8, 0, true); }
+      hit(t, K.CX, s % 4 === 0 ? 0.18 : 0.06, 0.3);
+    },
+  },
+  // hino da torcida: lento, épico, milhares de vozes e marcha de surdos
+  anthem: {
+    bpm: 92, bars: 8, swing: 0, voices: 36, oct: (k) => (k < 24 ? -12 : 0), spread: 0.35, loose: 0.05, legato: 0.94,
+    dg: 0.6, vg: 0.8, voice: { att: 0.05, glide: 0.06, vib: 0.015, breath: 0.3 },
+    tune: HINO,
+    drums(hit, K, b, s, t, s16) {
+      if (s === 0) { hit(t, K.BUMBO, 0.9, 0, true); hit(t, K.PRI, 0.9, 0.2, true); }
+      if (s === 8) hit(t, K.PRI, 0.75, -0.2, true);
+      if (s === 4 || s === 12) hit(t, K.SEG, 0.6, 0.1, true);
+      if (s === 14 && b % 2) hit(t, K.TER, 0.5, 0);
+      hit(t, K.CX, s % 4 === 0 ? 0.32 : 0.1, 0.35, s % 4 === 0);
+      if ((b === 3 || b === 7) && s >= 8) hit(t + s16 / 2, K.CX, 0.2, 0.35);
+      if (b >= 4 && (s === 4 || s === 12)) hit(t, K.CLAP, 0.75, 0, true);
+    },
+  },
+};
+
+// canto completo em loop perfeito: bateria + coro, mixados num buffer estéreo a CSR
+function* renderSong(ctx, K, sp) {
+  const sr = K.sr, beat = 60 / sp.bpm, bar = beat * 4, dur = bar * sp.bars, s16 = beat / 4;
+  const n = Math.round(dur * sr), tail = Math.round(1.2 * sr);
+  const L = new Float32Array(n + tail), R = new Float32Array(n + tail), h = mixer(L, R, sr);
+  // 'dbl': dois instrumentistas (pan aberto, levemente fora de tempo) = bateria larga
+  const hit = (t, smp, a, pan, dbl) => {
+    if (dbl) { h(t, smp, a * 0.62, pan - 0.35); h(t + rand(0.004, 0.014), smp, a * 0.55, pan + 0.35); } else h(t, smp, a, pan);
+  };
+  for (let b = 0; b < sp.bars; b++) {
+    for (let s = 0; s < 16; s++) {
+      const t = b * bar + s * s16 + (s & 1 ? s16 * sp.swing : 0) + rand(-0.004, 0.004);   // leve "ginga"
+      sp.drums(hit, K, b, s, t, s16);
+    }
+    if (b & 1) yield;
   }
-  yield;
-  const drums = [L.slice(), R.slice()];
-  normalize(drums, 0.8);
-  // melodia (em batidas): [início, duração, midi, vogal]
-  const A = [[0, 1, 62, 'o'], [1, 1, 66, 'e'], [2, 0.5, 69, 'o'], [2.5, 0.5, 69, 'e'], [3, 1, 66, 'o']];
-  const B = [[0, 1, 64, 'o'], [1, 1, 67, 'e'], [2, 2, 64, 'o']];
-  const C = [[0, 1, 64, 'o'], [1, 0.5, 62, 'e'], [1.5, 0.5, 62, 'o'], [2, 1.9, 62, 'a']];
-  const tune = [A, B, A, C, A, B, A, C];
-  const vn = Math.round(dur * VSR), vt = Math.round(0.8 * VSR);
-  const vL = new Float32Array(vn + vt), vR = new Float32Array(vn + vt);
-  for (let k = 0; k < 10; k++) {
-    const oct = k < 7 ? -12 : 0, det = rand(-0.25, 0.25), notes = [];
-    tune.forEach((ph, b) => ph.forEach(([st, d, m, vw]) => notes.push({
-      t: b * bar + st * beat + rand(-0.02, 0.035), d: d * beat * 0.9, f: midiHz(m + oct + det), vw, a: rand(0.7, 1) })));
-    renderVoice(vL, vR, VSR, { notes, pan: rand(-0.9, 0.9), att: 0.03, glide: 0.035, vib: 0.01, breath: 0.3 });
+  normalize([L, R], 0.8);
+  const vn = Math.round(dur * VSR), vt = Math.round(1.2 * VSR);
+  const vL = new Float32Array(vn + vt), vR = new Float32Array(vn + vt), lo = sp.loose ?? 0.03, sp2 = sp.spread ?? 0.25;
+  for (let k = 0; k < sp.voices; k++) {
+    const oct = sp.oct(k), det = rand(-sp2, sp2), ak = rand(0.6, 1), notes = [];
+    sp.tune.forEach((ph, b) => ph.forEach(([st, d, m, vw]) => notes.push({
+      t: Math.max(0, b * bar + st * beat + rand(-lo * 0.6, lo)), d: d * beat * (sp.legato ?? 0.9), f: midiHz(m + oct + det), vw, a: ak * rand(0.8, 1) })));
+    notes.sort((x, y) => x.t - y.t);
+    renderVoice(vL, vR, VSR, { notes, pan: rand(-0.95, 0.95), ...sp.voice });
     yield;
   }
   normalize([vL, vR], 0.8);
@@ -227,7 +373,7 @@ function* renderChant(ctx) {
     const p = i * q, j = p | 0, fr = p - j;
     const vl = j + 1 < vL.length ? vL[j] + (vL[j + 1] - vL[j]) * fr : 0, vr = j + 1 < vR.length ? vR[j] + (vR[j + 1] - vR[j]) * fr : 0;
     const k = i % n;
-    oL[k] += drums[0][i] * 0.62 + vl * 0.55; oR[k] += drums[1][i] * 0.62 + vr * 0.55;
+    oL[k] += L[i] * sp.dg + vl * sp.vg; oR[k] += R[i] * sp.dg + vr * sp.vg;
   }
   normalize([oL, oR], 0.9);
   return toBuffer(ctx, sr, oL, oR);
@@ -254,21 +400,31 @@ function stadiumIR(ctx) {
   return b;
 }
 
+// ordem de construção depois do unlock (o hino só quando pedido)
+const BASE_QUEUE = ['ir', 'babble', 'roar', 'applause', 'chant', 'ooh', 'boo', 'palmas', 'ole'];
+
 export class GameAudio {
   constructor() {
     this.ctx = null;
     this.vol = { master: 0.9, crowd: 0.8, sfx: 0.9 };
-    this.ex = 0.3; this.threat = 0; this.boost = 0;
+    this.ex = 0.3; this.threat = 0; this.boost = 0; this._I = 0.3;
+    this.mood = 0; this._moodT = 0;           // humor da torcida da casa (-1 vaia .. 1 empolgada)
     this._clock = null;          // relógio fixo (render offline); null = ctx.currentTime
+    this._sync = false;          // true: constrói buffers na hora (offline)
     this._ends = [];             // fim das vozes ativas (limite de polifonia)
-    this.maxVoices = 42;
+    this.maxVoices = 48;
     this._chantOn = false; this._chantOffAt = 0;
+    this._pre = null;            // pré-jogo: { t0 }
+    this._anthemOn = false;
+    this._partyA = -1; this._partyB = -1;   // festa do gol: canto entre A e B
+    this._song = null;           // tocador de cantos longos { key, src, g }
+    this._dir = { key: null, until: 0, next: 6 };   // diretor de cantos da partida
     this._last = {};
     this._paused = false;
     this._acc = 0;
-    this._next = { shout: 1, whistle: 3, swell: 0 };
+    this._next = { shout: 1, whistle: 3, swell: 0, rojao: 5, flare: 8, clap: 4 };
     this._sw = [1, 1, 1, 1, 1, 1];
-    this._jobs = {}; this._queue = [];
+    this._jobs = {}; this._queue = []; this._ticking = false;
   }
 
   // ---------- ciclo de vida ----------
@@ -284,8 +440,9 @@ export class GameAudio {
       const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);
       this._resumeCtx();
       // buffers pesados em etapas, fora do gesto
-      this._queue = ['ir', 'babble', 'applause', 'roar', 'chant'];
-      setTimeout(() => this._tick(), 30);
+      this._queue = BASE_QUEUE.slice();
+      if (this._anthemOn) this._want('anthem');
+      this._startTick();
     } catch (e) { console.warn('GameAudio.unlock', e); }
   }
 
@@ -315,6 +472,7 @@ export class GameAudio {
   // monta o grafo num contexto (real ou offline)
   _attach(ctx, lazyIR = false) {
     this.ctx = ctx;
+    this._sync = !lazyIR;
     const sr = ctx.sampleRate, g = (v) => { const n = ctx.createGain(); n.gain.value = v; return n; };
     // ruídos reaproveitados
     const white = ctx.createBuffer(1, sr * 2, sr), wd = white.getChannelData(0);
@@ -352,10 +510,22 @@ export class GameAudio {
     const conv = ctx.createConvolver(); if (!lazyIR) conv.buffer = stadiumIR(ctx);
     const ret = g(0.7); conv.connect(ret); ret.connect(this.masterG);
 
-    // barramentos
-    this.crowdIn = g(1); this.crowdG = g(this.vol.crowd);
-    this.crowdIn.connect(this.crowdG); this.crowdG.connect(this.masterG);
+    // barramento da torcida: compressor próprio (segura o gol sem esmagar os efeitos)
+    this.crowdIn = g(1);
+    const cc = ctx.createDynamicsCompressor();
+    cc.threshold.value = -20; cc.knee.value = 12; cc.ratio.value = 3; cc.attack.value = 0.02; cc.release.value = 0.4;
+    const cmk = g(1.35);
+    this.crowdG = g(this.vol.crowd);
+    this.crowdIn.connect(cc); cc.connect(cmk); cmk.connect(this.crowdG); this.crowdG.connect(this.masterG);
     const cs = g(0.4); this.crowdG.connect(cs); cs.connect(conv);
+    // eco das arquibancadas opostas (sem realimentação: estável)
+    const eIn = g(0.13), elp = ctx.createBiquadFilter(); elp.type = 'lowpass'; elp.frequency.value = 2200;
+    const d1 = ctx.createDelay(1.5), d2 = ctx.createDelay(1.5); d1.delayTime.value = 0.31; d2.delayTime.value = 0.53;
+    const x12 = g(0.3);
+    this.crowdG.connect(eIn); eIn.connect(elp); elp.connect(d1); elp.connect(d2); d1.connect(x12); x12.connect(d2);
+    this._chain(d1, this._pan(-0.75), g(1), this.masterG);
+    this._chain(d2, this._pan(0.75), g(0.7), this.masterG);
+
     this.sfxIn = g(1); this.sfxG = g(this.vol.sfx);
     this.sfxIn.connect(this.sfxG); this.sfxG.connect(this.masterG);
     this.hitIn = g(4.5); this.hitIn.connect(this.sfxIn);                 // impactos (bola, corpos)
@@ -375,38 +545,59 @@ export class GameAudio {
     this.bed.rumble = band('lowpass', 260, 0.5, 0, 0.12);
     this.bed.mid = band('bandpass', 750, 0.7, 1.3, 0.1);
     this.bed.hi = band('bandpass', 2300, 0.9, 2.7, 0.03);
-    // canto (volume próprio)
+    // canto do jogo (volume próprio) e tocador dos cantos longos
     this.chantG = g(0); this.chantG.connect(this.crowdIn);
     this.chantSrc = null;
+    this.songIn = g(1); this.songIn.connect(this.crowdIn);
+    this._dir.next = (this._clock ?? ctx.currentTime) + rand(4, 8);
     this.setVolumes({});
   }
 
   // gerador que constrói o recurso 'key'
   _gen(key) {
     const c = this.ctx;
-    if (key === 'babble') return crowdVoices(c, 6, 18, talkNotes, 95, 230, { breath: 0.25, vib: 0.01 });
-    if (key === 'roar') return crowdVoices(c, 6, 22, shoutNotes, 170, 400, { breath: 0.4, vib: 0.02, att: 0.08, glide: 0.12 });
-    if (key === 'applause') return renderApplause(c, 4, 90);
-    if (key === 'chant') return renderChant(c);
+    if (key === 'babble') return crowdVoices(c, 6, 28, talkNotes, 95, 230, { breath: 0.25, vib: 0.01 });
+    if (key === 'roar') return crowdVoices(c, 6, 30, shoutNotes, 170, 400, { breath: 0.4, vib: 0.02, att: 0.08, glide: 0.12 });
+    if (key === 'boo') return crowdVoices(c, 5, 28, booNotes, 100, 175, { breath: 0.4, vib: 0.025, att: 0.18, glide: 0.4 });
+    if (key === 'ooh') return renderShot(c, 3.8, 28, oohNotes, 150, 300, { breath: 0.35, vib: 0.02, att: 0.22, glide: 0.3 });
+    if (key === 'applause') return renderApplause(c, 4, 110);
+    if (SONGS[key]) {
+      const self = this;
+      return (function* () {
+        if (!self._kit) self._kit = yield* makeKit(Math.min(c.sampleRate, CSR));
+        return yield* renderSong(c, self._kit, SONGS[key]);
+      })();
+    }
     return (function* () { return stadiumIR(c); })();
   }
 
   _has(key) { return key === 'ir' ? !!this.conv.buffer : !!this.bufs[key]; }
 
+  // camada contínua em loop (buffer da torcida) ligada ao barramento
+  _loop(name, buf, gain, lp, pan, rate) {
+    const ctx = this.ctx, s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
+    if (rate) s.playbackRate.value = rate;
+    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = 0.5;
+    const g = ctx.createGain(); g.gain.value = gain;
+    this._chain(s, f, g, pan != null ? this._pan(pan) : null, this.crowdIn);
+    s.start(this._t(), Math.random() * buf.duration);
+    this.bed[name] = { g, f };
+  }
+
   // recurso pronto: guarda e liga as camadas contínuas da torcida
   _install(key, buf) {
-    const ctx = this.ctx;
     if (key === 'ir') { this.conv.buffer = buf; return; }
     this.bufs[key] = buf;
     if (key === 'chant' && this._chantOn) this.chant(true);
-    const L = { babble: ['murmur', 0.22, 2200], applause: ['claps', 0, 5000], roar: ['roar', 0.05, 1500] }[key];
-    if (!L) return;
-    const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
-    const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = L[2]; f.Q.value = 0.5;
-    const g = ctx.createGain(); g.gain.value = L[1];
-    s.connect(f); f.connect(g); g.connect(this.crowdIn);
-    s.start(this._t(), Math.random() * buf.duration);
-    this.bed[L[0]] = { g, f };
+    if (key === 'babble') {                     // duas cópias defasadas, abertas no estéreo
+      this._loop('murmur', buf, 0.16, 2200, -0.55);
+      this._loop('murmur2', buf, 0.16, 2200, 0.55, 0.96);
+    } else if (key === 'roar') {
+      this._loop('roar', buf, 0.04, 1500, -0.45);
+      this._loop('roar2', buf, 0.03, 1500, 0.45, 1.04);
+      this._loop('far', buf, 0.06, 700, null, 0.82);   // o estádio inteiro, ao longe
+    } else if (key === 'applause') this._loop('claps', buf, 0, 5000);
+    else if (key === 'boo') this._loop('boo', buf, 0, 2400);
   }
 
   // termina já (síncrono) o que faltar de 'key'
@@ -417,27 +608,50 @@ export class GameAudio {
     this._install(key, r.value);
   }
 
+  // pede um recurso: offline constrói na hora; ao vivo passa na frente da fila
+  _want(...keys) {
+    if (!this.ctx) return;
+    for (const k of keys) {
+      if (this._has(k)) continue;
+      if (this._sync) { this._need(k); continue; }
+      const i = this._queue.indexOf(k);
+      if (i === 0) continue;
+      if (i > 0) this._queue.splice(i, 1);
+      this._queue.splice(Math.min(1, this._queue.length), 0, k);
+    }
+    this._startTick();
+  }
+
+  _startTick() {
+    if (this._ticking || this._sync || !this._queue.length) return;
+    this._ticking = true;
+    setTimeout(() => this._tick(), 30);
+  }
+
   // uma fatia da fila de construção por vez (não trava o quadro)
   _tick() {
     while (this._queue.length && this._has(this._queue[0])) this._queue.shift();
-    const key = this._queue[0]; if (!key) return;
+    const key = this._queue[0];
+    if (!key) { this._ticking = false; return; }
     try {
       const g = this._jobs[key] || (this._jobs[key] = this._gen(key)), r = g.next();
       if (r.done) { delete this._jobs[key]; this._queue.shift(); this._install(key, r.value); }
-    } catch (e) { console.warn('GameAudio', e); this._queue.shift(); }
+    } catch (e) { console.warn('GameAudio', e); delete this._jobs[key]; this._queue.shift(); }
     setTimeout(() => this._tick(), 20);
   }
 
   _ensureBuffers(which) { for (const k of which ? [which] : ['babble', 'applause', 'roar']) this._need(k); }
   _ensureChant() { this._need('chant'); }
+  _ensureAll() { for (const k of [...BASE_QUEUE, 'anthem']) this._need(k); }
 
   // ---------- utilitários ----------
 
+  _now() { return this._clock ?? this.ctx.currentTime; }
   _t() { return this.ctx ? (this._clock ?? this.ctx.currentTime) + 0.005 : null; }
 
   // reserva uma voz até 'end'; false se a polifonia estourou (prio alta passa com folga)
   _voice(end, prio = 1) {
-    const now = this._clock ?? this.ctx.currentTime;
+    const now = this._now();
     if (this._ends.length > 16) this._ends = this._ends.filter((e) => e > now);
     const lim = prio > 1 ? this.maxVoices + 24 : prio < 1 ? this.maxVoices * 0.6 : this.maxVoices;
     if (this._ends.length >= lim) return false;
@@ -445,7 +659,7 @@ export class GameAudio {
   }
 
   _throttle(key, gap) {
-    const now = this._clock ?? this.ctx.currentTime;
+    const now = this._now();
     if (now - (this._last[key] ?? -1) < gap) return true;
     this._last[key] = now; return false;
   }
@@ -466,6 +680,13 @@ export class GameAudio {
     param.setValueAtTime(0.0001, t);
     param.linearRampToValueAtTime(Math.max(0.0002, peak), t + a);
     param.exponentialRampToValueAtTime(0.0001, t + a + d);
+  }
+
+  // processo de Poisson: true quando o próximo evento de 'key' chegou (taxa em eventos/s)
+  _poisson(key, rate, dt) {
+    if ((this._next[key] -= dt) > 0) return false;
+    this._next[key] = -Math.log(1 - Math.random()) / Math.max(0.05, rate);
+    return rate >= 0.05 || Math.random() < rate / 0.05;
   }
 
   // rajada de ruído filtrado
@@ -495,22 +716,24 @@ export class GameAudio {
     return g;
   }
 
-  // trecho de um buffer em loop com envelope por pontos [[t, v], ...] e passa-baixa automatizado
+  // trecho de um buffer com envelope por pontos [[t, v], ...] e passa-baixa automatizado
+  // o.loop=false + o.offset: evento único tocado do começo (ooh, vaia)
   _bufEvent(t, buf, pts, lpPts, o = {}) {
     const ctx = this.ctx, end = t + pts[pts.length - 1][0];
-    if (!buf || !this._voice(end, 2)) return;
-    const s = ctx.createBufferSource(); s.buffer = buf; s.loop = true;
+    if (!buf || !this._voice(end, 2)) return false;
+    const s = ctx.createBufferSource(); s.buffer = buf; s.loop = o.loop !== false;
     if (o.rate) s.playbackRate.value = o.rate;
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.6;
     f.frequency.setValueAtTime(lpPts[0][1], t);
     for (const [dt, v] of lpPts) f.frequency.linearRampToValueAtTime(v, t + dt);
     const g = ctx.createGain(); g.gain.setValueAtTime(0, t);
     for (const [dt, v] of pts) g.gain.linearRampToValueAtTime(v, t + dt);
-    this._chain(s, f, g, this.crowdIn);
-    s.start(t, Math.random() * buf.duration); s.stop(end + 0.05);
+    this._chain(s, f, g, o.pan != null ? this._pan(o.pan) : null, this.crowdIn);
+    s.start(t, o.offset ?? Math.random() * buf.duration); s.stop(end + 0.05);
+    return true;
   }
 
-  // coro de vozes com osciladores (uuuh, ôôô): pitch e vogal automatizados
+  // coro de vozes com osciladores (reserva enquanto os buffers não ficam prontos)
   // pitch: [[dt, fatorDaFreq]], env: [[dt, ganho]], vowels: [[dt, 'o']]
   _choir(t, n, f0, pitch, env, vowels) {
     const ctx = this.ctx, end = t + env[env.length - 1][0];
@@ -587,6 +810,76 @@ export class GameAudio {
     o.start(t); o.stop(end); vib.start(t); vib.stop(end);
   }
 
+  // rojão: (assobio subindo) + estouro grave + eco da arquibancada do outro lado
+  _rojao(t, a, whoosh) {
+    const pan = rand(-0.9, 0.9);
+    if (whoosh && this._voice(t + 0.8, 0)) {
+      const ctx = this.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.setValueAtTime(rand(600, 900), t); o.frequency.exponentialRampToValueAtTime(rand(2200, 3000), t + 0.7);
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a * 0.05, t + 0.5); g.gain.linearRampToValueAtTime(0, t + 0.72);
+      this._chain(o, g, this._pan(pan), this.crowdIn); o.start(t); o.stop(t + 0.75);
+      t += 0.75;
+    }
+    this._noise(t, { buf: 'brown', type: 'lowpass', f: 1100, q: 0.5, peak: a, a: 0.002, d: 0.35, pan, out: this.crowdIn, prio: 0 });
+    this._noise(t, { f: 1800, q: 0.5, peak: a * 0.45, a: 0.001, d: 0.07, pan, out: this.crowdIn, prio: 0 });
+    this._tone(t, { f0: 95, f1: 38, sweep: 0.15, peak: a * 0.7, a: 0.002, d: 0.3, out: this.crowdIn, prio: 0 });
+    this._noise(t + rand(0.3, 0.45), { buf: 'brown', type: 'lowpass', f: 600, q: 0.5, peak: a * 0.3, a: 0.01, d: 0.5, pan: -pan, out: this.crowdIn, prio: 0 });
+  }
+
+  // sinalizador aceso: chiado com estalos
+  _flare(t, a, d) {
+    const ctx = this.ctx, end = t + d + 0.3;
+    if (!this._voice(end, 0)) return;
+    const s = ctx.createBufferSource(); s.buffer = this.bufs.white; s.loop = true;
+    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = rand(2500, 4200); f.Q.value = 0.6;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(a, t + 0.15);
+    for (let tt = t + 0.15; tt < t + d; tt += rand(0.03, 0.09)) g.gain.setValueAtTime(a * rand(0.35, 1.3), tt);
+    g.gain.linearRampToValueAtTime(0, end);
+    this._chain(s, f, g, this._pan(rand(-0.9, 0.9)), this.crowdIn);
+    s.start(t, Math.random()); s.stop(end + 0.05);
+  }
+
+  // ---------- tocador dos cantos longos (um por vez, com crossfade) ----------
+
+  _songTo(key, gain, t) {
+    const S = this._song;
+    if (S && S.key === key) { S.g.gain.setTargetAtTime(gain, t, 0.4); return; }
+    if (S) {
+      S.g.gain.cancelScheduledValues(t); S.g.gain.setTargetAtTime(0, t, 0.6);
+      try { S.src.stop(t + 4); } catch (e) { /* já parou */ }
+      this._song = null;
+    }
+    if (!key) return;
+    const buf = this.bufs[key];
+    if (!buf) { this._want(key); return; }
+    const ctx = this.ctx, src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.setTargetAtTime(gain, t, 0.35);
+    src.connect(g); g.connect(this.songIn); src.start(t);
+    this._song = { key, src, g };
+  }
+
+  // qual canto longo deve tocar agora: [chave, ganho]
+  _pickSong(now) {
+    const md = this.mood, mk = md < 0 ? Math.max(0.2, 1 + 0.8 * md) : 1 + 0.3 * md, I = this._I;
+    if (this._anthemOn) return ['anthem', 1];
+    if (now < this._partyB) return now >= this._partyA ? ['chant', 1] : [null, 0];
+    if (this._pre) {
+      const e = now - this._pre.t0;
+      return [(Math.floor(e / 16) & 1) ? 'ole' : 'chant', (0.55 + 0.4 * clamp01(e / 20)) * mk];
+    }
+    const d = this._dir;
+    if (this._chantOn) { d.key = null; return [null, 0]; }           // o canto do jogo manda
+    if (d.key && now >= d.until) { d.key = null; d.next = now + rand(6, 14) / (1 + Math.max(0, md)); }
+    if (!d.key && now >= d.next) {
+      if (md < -0.35) d.next = now + rand(4, 8);                      // torcida irritada: sem canto
+      else {
+        const key = this.threat > 0.55 || Math.random() < 0.4 ? 'palmas' : 'ole', b = this.bufs[key];
+        if (!b) { this._want(key); d.next = now + 2; } else { d.key = key; d.until = now + b.duration * (key === 'palmas' ? 2 : 1) - 0.3; }
+      }
+    }
+    return [d.key, (0.4 + 0.45 * I) * mk];
+  }
+
   // ---------- torcida ----------
 
   update(dt, s = {}) {
@@ -597,9 +890,15 @@ export class GameAudio {
       this.ex += (ex - this.ex) * (1 - Math.exp(-dt / 0.9));
       this.threat += (th - this.threat) * (1 - Math.exp(-dt / (th > this.threat ? 0.5 : 1.4)));
       this.boost *= Math.exp(-dt / 5);
-      const I = clamp01(0.15 + 0.5 * this.ex + 0.4 * this.threat * (0.6 + 0.4 * this.ex) + 0.3 * this.boost);
+      this.mood += (this._moodT - this.mood) * (1 - Math.exp(-dt / 2));
+      const now = this._now(), t = now + 0.005, md = this.mood, mp = Math.max(0, md), mn = Math.max(0, -md);
+      if (this._pre && this._pre.t0 == null) this._pre.t0 = now;
+      const preK = this._pre ? clamp01((now - this._pre.t0) / 30) : 0;
+      const party = now >= this._partyA - 2.4 && now < this._partyB;
+      let I = clamp01(0.15 + 0.5 * this.ex + 0.4 * this.threat * (0.6 + 0.4 * this.ex) + 0.3 * this.boost + 0.08 * mp);
+      if (this._pre) I = Math.max(I, clamp01(0.3 + 0.45 * preK + 0.25 * this.boost));   // rumor crescente
+      if (this._anthemOn) I = Math.max(I, 0.55);
       this._I = I;
-      const now = this._clock ?? ctx.currentTime, t = now + 0.005;
       // oscilações lentas e aleatórias de cada camada
       if ((this._next.swell -= dt) <= 0) {
         this._next.swell = rand(0.8, 2.2);
@@ -609,25 +908,44 @@ export class GameAudio {
       this._acc += dt;
       if (this._acc >= 0.1) {
         this._acc = 0;
+        const [sk, sg] = this._pickSong(now);
+        this._songTo(sk, sg, t);
+        const sing = this._song || (this._chantOn && this.chantSrc) ? 1 : 0;
         const b = this.bed, sw = this._sw, set = (p, v, tc = 0.6) => p.setTargetAtTime(v, t, tc);
-        set(b.rumble.g.gain, (0.07 + 0.18 * I) * sw[0]);
-        set(b.mid.g.gain, (0.04 + 0.14 * I) * sw[1]);
-        set(b.hi.g.gain, (0.015 + 0.08 * I * I) * sw[2]);
-        set(b.hi.f.frequency, 1900 + 1200 * I);
-        const chant = this._chantOn ? 0.5 : 1;
-        if (b.murmur) { set(b.murmur.g.gain, (0.19 - 0.06 * I) * sw[3] * chant); set(b.murmur.f.frequency, 1600 + 1400 * I); }
-        if (b.roar) { set(b.roar.g.gain, (0.02 + 0.55 * I * I * I) * sw[4], 0.5); set(b.roar.f.frequency, 800 + 3600 * I, 0.5); }
-        if (b.claps) set(b.claps.g.gain, (0.015 + 0.05 * this.ex) * sw[5] * (this._chantOn ? 0.4 : 1), 1);
-        if (this.chantSrc) set(this.chantG.gain, this._chantOn ? 0.35 + 0.25 * I : 0, this._chantOn ? 1.2 : 1.5);
+        set(b.rumble.g.gain, (0.08 + 0.2 * I) * sw[0]);
+        set(b.mid.g.gain, (0.05 + 0.15 * I) * sw[1]);
+        set(b.hi.g.gain, (0.015 + 0.09 * I * I) * sw[2]);
+        set(b.hi.f.frequency, 1900 + 1300 * I);
+        const mur = (0.17 - 0.05 * I) * (sing ? 0.6 : 1) * (this._anthemOn ? 0.5 : 1);
+        if (b.murmur) {
+          set(b.murmur.g.gain, mur * sw[3]); set(b.murmur2.g.gain, mur * sw[5]);
+          set(b.murmur.f.frequency, 1600 + 1400 * I); set(b.murmur2.f.frequency, 1500 + 1500 * I);
+        }
+        if (b.roar) {
+          const r = 0.02 + 0.6 * I * I * I;
+          set(b.roar.g.gain, r * sw[4], 0.5); set(b.roar2.g.gain, r * 0.8 * sw[1], 0.5);
+          set(b.roar.f.frequency, 800 + 3600 * I, 0.5); set(b.roar2.f.frequency, 900 + 3400 * I, 0.5);
+          set(b.far.g.gain, 0.05 + 0.12 * I, 1);
+        }
+        if (b.claps) set(b.claps.g.gain, (0.012 + 0.045 * this.ex + 0.06 * preK * (this._pre ? 1 : 0)) * (sing ? 0.4 : 1), 1);
+        if (b.boo) set(b.boo.g.gain, 0.55 * Math.pow(mn, 1.4) * (0.6 + 0.4 * I), 1);
+        if (this.chantSrc) {
+          const mk = md < 0 ? Math.max(0.2, 1 + 0.8 * md) : 1 + 0.3 * md;
+          set(this.chantG.gain, this._chantOn && !this._song ? (0.45 + 0.3 * I) * mk : 0, this._chantOn && !this._song ? 1.2 : 0.8);
+        }
       }
-      // gritos e assobios esporádicos (processo de Poisson)
-      if ((this._next.shout -= dt) <= 0) {
-        this._next.shout = -Math.log(1 - Math.random()) / (0.4 + 2.6 * I);
-        this._shout(t + Math.random() * 0.05, rand(0.02, 0.06) * (0.6 + I), Math.random() < 0.25 * I);
+      // gritos, assobios, rojões e sinalizadores esporádicos (processos de Poisson)
+      if (this._poisson('shout', 0.5 + 3.2 * I + (this._pre ? 1 : 0), dt)) {
+        const hi = Math.random() < 0.25 * I + 0.1 * mp, a = rand(0.02, 0.06) * (0.6 + I);
+        this._shout(t + Math.random() * 0.05, a, hi);
+        if (Math.random() < 0.3) this._shout(t + rand(0.25, 0.4), a * 0.9, hi);   // "vai! vai!"
       }
-      if ((this._next.whistle -= dt) <= 0) {
-        this._next.whistle = -Math.log(1 - Math.random()) / (0.06 + 0.7 * this.threat * this.threat + 0.2 * this.boost);
-        this._fanWhistle(t, rand(0.012, 0.03) * (0.6 + I), Math.random() < 0.3);
+      const whRate = 0.06 + 0.7 * this.threat * this.threat + 0.2 * this.boost + 1.3 * mn + (this._pre ? 0.6 : 0) + (party ? 0.6 : 0);
+      if (this._poisson('whistle', whRate, dt)) this._fanWhistle(t, rand(0.012, 0.03) * (0.6 + I + mn), Math.random() < 0.3 + 0.5 * mn);
+      if (this._poisson('rojao', this._pre ? 0.08 + 0.15 * preK : party ? 0.35 : 0, dt)) this._rojao(t, rand(0.15, 0.4), Math.random() < 0.35);
+      if (this._poisson('flare', this._pre ? 0.05 : party ? 0.08 : 0, dt)) this._flare(t, rand(0.012, 0.03), rand(2.5, 5));
+      if (this._poisson('clap', this._pre ? 0.12 : 0, dt) && this.bufs.applause) {   // ondas de aplauso no pré-jogo
+        this._bufEvent(t, this.bufs.applause, [[0, 0], [0.6, 0.35], [2.2, 0.3], [3.5, 0]], [[0, 6000], [3.5, 5000]]);
       }
       // canto desligado há um tempo: libera a fonte
       if (!this._chantOn && this.chantSrc && now - this._chantOffAt > 8) {
@@ -637,54 +955,77 @@ export class GameAudio {
     } catch (e) { console.warn('GameAudio.update', e); }
   }
 
-  crowd(kind, strength = 1) {
+  // side (opcional): 0 = casa, 1 = visitante (gol do visitante: festa pequena e lamento da casa)
+  crowd(kind, strength = 1, side) {
     const ctx = this.ctx; if (!ctx) return;
     try {
       const t = this._t(), s = 0.3 + 0.7 * clamp01(num(strength, 1));
       if (kind === 'goal' || kind === 'cheer' || kind === 'save') this._ensureBuffers();
       const b = this.bufs;
+      if (kind === 'goal' && side === 1) {
+        this.boost = Math.max(this.boost, 0.3);
+        this._bufEvent(t, b.roar, [[0, 0], [0.3, 0.45 * s], [3, 0.35 * s], [5, 0]], [[0, 900], [0.4, 2200], [5, 900]], { pan: 0.7 });
+        this._bufEvent(t + 0.4, b.ooh, [[0, 0.8 * s], [3.4, 0.8 * s]], [[0, 2600], [3.4, 1800]], { loop: false, offset: 0, rate: 0.9 });
+        for (let k = 0; k < 2; k++) this._rojao(t + rand(0.3, 2), 0.15 * s, false);
+        return;
+      }
       if (kind === 'goal') {
         this.boost = 1;
-        const P = [[0, 0], [0.35, 0.95 * s], [1.2, 1.0 * s], [4, 0.8 * s], [6.5, 0.6 * s], [8.5, 0]];
-        this._bufEvent(t, b.roar, P, [[0, 1500], [0.4, 5200], [6, 3800], [8.5, 1800]]);
-        this._bufEvent(t + 0.05, b.roar, P.map(([a, v]) => [a, v * 0.7]), [[0, 1200], [0.5, 4500], [8.5, 1500]], { rate: 1.07 });
+        this._partyA = t + 2.4; this._partyB = t + 15;                  // canto de festa até ~15 s
+        this._want('chant');
+        const P = [[0, 0], [0.3, 1.0 * s], [1.2, 1.05 * s], [4, 0.85 * s], [6.5, 0.6 * s], [9, 0]];
+        this._bufEvent(t, b.roar, P, [[0, 1800], [0.3, 5600], [6, 3800], [9, 1800]]);
+        this._bufEvent(t + 0.05, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1400], [0.4, 4800], [9, 1500]], { rate: 1.07 });
+        this._bufEvent(t + 0.1, b.roar, P.map(([a, v]) => [a, v * 0.5]), [[0, 900], [0.5, 2400], [9, 900]], { rate: 0.85 });
         this._bufEvent(t, b.babble, [[0, 0], [0.5, 0.5 * s], [5, 0.4 * s], [8, 0]], [[0, 3000], [8, 2000]], { rate: 1.3 });
-        this._bufEvent(t + 1.2, b.applause, [[0, 0], [0.8, 0.35 * s], [5, 0.3 * s], [7.5, 0]], [[0, 6000], [7.5, 5000]]);
-        // pisadas/estrondo grave na arquibancada
-        this._noise(t, { buf: 'brown', type: 'lowpass', f: 160, q: 0.6, peak: 0.7 * s, a: 0.3, d: 4, out: this.crowdIn, prio: 2 });
-        for (let k = 0; k < 12; k++) this._fanWhistle(t + rand(0.3, 6.5), rand(0.02, 0.05) * s, Math.random() < 0.4);
-        for (let k = 0; k < 10; k++) this._shout(t + rand(0.1, 6), rand(0.05, 0.1) * s, Math.random() < 0.7);
+        this._bufEvent(t + 1.2, b.applause, [[0, 0], [0.8, 0.4 * s], [6, 0.35 * s], [9, 0]], [[0, 6000], [9, 5000]]);
+        // estrondo: a arquibancada inteira pulando
+        this._noise(t, { buf: 'brown', type: 'lowpass', f: 160, q: 0.6, peak: 0.8 * s, a: 0.25, d: 4.5, out: this.crowdIn, prio: 2 });
+        this._noise(t, { buf: 'pink', type: 'bandpass', f: 1200, q: 0.4, peak: 0.25 * s, a: 0.15, d: 2.5, out: this.crowdIn, prio: 2 });
+        for (let k = 0; k < 6; k++) this._rojao(t + rand(0.4, 9), rand(0.2, 0.4) * s, Math.random() < 0.4);
+        for (let k = 0; k < 2; k++) this._flare(t + rand(0.5, 3), rand(0.015, 0.03), rand(3, 6));
+        for (let k = 0; k < 14; k++) this._fanWhistle(t + rand(0.3, 8), rand(0.02, 0.05) * s, Math.random() < 0.4);
+        for (let k = 0; k < 12; k++) this._shout(t + rand(0.1, 7), rand(0.05, 0.1) * s, Math.random() < 0.7);
         return;
       }
-      if (kind === 'ooh') {
-        const d = 2.3;
-        this._choir(t, 8, rand(150, 200), [[0, 0.85], [0.5, 1.3], [d, 0.72]], [[0, 0], [0.45, 0.5 * s], [1.1, 0.35 * s], [d, 0]], [[0, 'o'], [0.6, 'o'], [d, 'u']]);
-        this._bufEvent(t, b.roar, [[0, 0], [0.45, 0.35 * s], [d, 0]], [[0, 600], [0.5, 1500], [d, 500]], { rate: 0.95 });
+      if (kind === 'ooh') {                                             // "uhhhh" longo da chance perdida
+        if (!this._bufEvent(t, b.ooh, [[0, 0.95 * s], [3.8, 0.95 * s]], [[0, 2600], [0.6, 3800], [3.8, 2000]], { loop: false, offset: 0, rate: rand(0.95, 1.05) })) {
+          const d = 2.3;
+          this._choir(t, 8, rand(150, 200), [[0, 0.85], [0.5, 1.3], [d, 0.72]], [[0, 0], [0.45, 0.5 * s], [1.1, 0.35 * s], [d, 0]], [[0, 'o'], [0.6, 'o'], [d, 'u']]);
+        }
+        this._bufEvent(t, b.roar, [[0, 0], [0.5, 0.4 * s], [2.6, 0]], [[0, 600], [0.6, 1800], [2.6, 500]], { rate: 0.95 });
+        for (let k = 0; k < 3; k++) this._shout(t + rand(0.8, 2), rand(0.03, 0.06) * s, false);
         return;
       }
-      if (kind === 'groan') {
-        const d = 2;
-        this._choir(t, 8, rand(200, 250), [[0, 1], [0.2, 1.05], [d, 0.6]], [[0, 0], [0.15, 0.45 * s], [0.8, 0.25 * s], [d, 0]], [[0, 'a'], [0.5, 'o'], [d, 'u']]);
-        this._bufEvent(t, b.roar, [[0, 0], [0.12, 0.28 * s], [d, 0]], [[0, 1400], [d, 400]], { rate: 0.9 });
+      if (kind === 'groan') {                                           // lamento curto
+        if (!this._bufEvent(t, b.ooh, [[0, 0], [0.05, 0.7 * s], [1.8, 0.5 * s], [2.6, 0]], [[0, 2000], [2.6, 900]], { loop: false, offset: 1.0, rate: 1.1 })) {
+          const d = 2;
+          this._choir(t, 8, rand(200, 250), [[0, 1], [0.2, 1.05], [d, 0.6]], [[0, 0], [0.15, 0.45 * s], [0.8, 0.25 * s], [d, 0]], [[0, 'a'], [0.5, 'o'], [d, 'u']]);
+        }
+        this._bufEvent(t, b.roar, [[0, 0], [0.12, 0.28 * s], [2, 0]], [[0, 1400], [2, 400]], { rate: 0.9 });
         return;
       }
-      if (kind === 'boo') {
-        const d = 3.2;
-        this._choir(t, 10, rand(110, 150), [[0, 0.95], [1, 1.05], [2, 0.95], [d, 0.85]], [[0, 0], [0.4, 0.45 * s], [2.6, 0.4 * s], [d, 0]], [[0, 'u'], [d, 'u']]);
-        for (let k = 0; k < 10; k++) this._fanWhistle(t + rand(0, 2), rand(0.03, 0.055) * s, true);
+      if (kind === 'boo') {                                             // vaia forte (falta contra a casa)
+        if (!this._bufEvent(t, b.boo, [[0, 0], [0.35, 1.0 * s], [3, 0.9 * s], [4.4, 0]], [[0, 1200], [0.4, 2800], [4.4, 1400]])) {
+          const d = 3.2;
+          this._choir(t, 10, rand(110, 150), [[0, 0.95], [1, 1.05], [2, 0.95], [d, 0.85]], [[0, 0], [0.4, 0.45 * s], [2.6, 0.4 * s], [d, 0]], [[0, 'u'], [d, 'u']]);
+        }
+        this._bufEvent(t, b.roar, [[0, 0], [0.3, 0.3 * s], [2.5, 0]], [[0, 900], [2.5, 600]], { rate: 0.8 });
+        for (let k = 0; k < 14; k++) this._fanWhistle(t + rand(0, 2.5), rand(0.03, 0.06) * s, Math.random() < 0.75);
+        for (let k = 0; k < 4; k++) this._shout(t + rand(0.2, 2), rand(0.05, 0.08) * s, false);
         return;
       }
       if (kind === 'save') {
-        this._bufEvent(t, b.applause, [[0, 0], [0.25, 0.55 * s], [2, 0.45 * s], [3.5, 0]], [[0, 7000], [3.5, 5000]]);
-        this._bufEvent(t, b.roar, [[0, 0], [0.3, 0.3 * s], [1.6, 0]], [[0, 1200], [1.6, 800]]);
-        for (let k = 0; k < 3; k++) this._fanWhistle(t + rand(0.1, 1.5), 0.03 * s, false);
+        this._bufEvent(t, b.applause, [[0, 0], [0.25, 0.6 * s], [2, 0.5 * s], [3.5, 0]], [[0, 7000], [3.5, 5000]]);
+        this._bufEvent(t, b.roar, [[0, 0], [0.3, 0.35 * s], [1.6, 0]], [[0, 1200], [1.6, 800]]);
+        for (let k = 0; k < 4; k++) this._fanWhistle(t + rand(0.1, 1.5), 0.03 * s, false);
         return;
       }
       if (kind === 'cheer') {
         this.boost = Math.max(this.boost, 0.4);
-        this._bufEvent(t, b.roar, [[0, 0], [0.25, 0.6 * s], [1, 0.5 * s], [2.2, 0]], [[0, 1500], [0.3, 4200], [2.2, 1500]]);
-        this._bufEvent(t + 0.2, b.applause, [[0, 0], [0.4, 0.3 * s], [2.5, 0]], [[0, 6000], [2.5, 5000]]);
-        for (let k = 0; k < 3; k++) this._shout(t + rand(0, 1), 0.07 * s, true);
+        this._bufEvent(t, b.roar, [[0, 0], [0.25, 0.65 * s], [1, 0.55 * s], [2.4, 0]], [[0, 1500], [0.3, 4400], [2.4, 1500]]);
+        this._bufEvent(t + 0.2, b.applause, [[0, 0], [0.4, 0.35 * s], [2.5, 0]], [[0, 6000], [2.5, 5000]]);
+        for (let k = 0; k < 4; k++) this._shout(t + rand(0, 1), 0.07 * s, true);
       }
     } catch (e) { console.warn('GameAudio.crowd', e); }
   }
@@ -695,23 +1036,64 @@ export class GameAudio {
     try {
       const t = this._t();
       if (on) {
-        if (!this.bufs.chant && this._queue.includes('chant')) {   // ainda construindo: adianta na fila
-          this._queue = ['chant', ...this._queue.filter((k) => k !== 'chant')];
-          return;                                                  // _install liga quando ficar pronto
-        }
+        if (!this.bufs.chant && !this._sync) { this._want('chant'); return; }   // _install liga quando ficar pronto
         this._ensureChant();
         if (!this.chantSrc) {
           const s = ctx.createBufferSource(); s.buffer = this.bufs.chant; s.loop = true;
           s.connect(this.chantG); s.start(t); this.chantSrc = s;
         }
         this.chantG.gain.cancelScheduledValues(t);
-        this.chantG.gain.setTargetAtTime(0.35 + 0.25 * (this._I || 0.3), t, 1.2);
+        this.chantG.gain.setTargetAtTime(this._song ? 0 : 0.45 + 0.3 * (this._I || 0.3), t, 1.2);
       } else {
         this._chantOffAt = t;
         this.chantG.gain.cancelScheduledValues(t);
         this.chantG.gain.setTargetAtTime(0, t, 1.5);
       }
     } catch (e) { console.warn('GameAudio.chant', e); }
+  }
+
+  // clima de entrada em campo: rumor crescente, cantos fortes, apitos, rojões, sinalizadores
+  prematch(on) {
+    try {
+      if (on) {
+        if (!this._pre) this._pre = { t0: this.ctx ? this._now() : null };
+        if (this.ctx) this._want('chant', 'ole');
+      } else this._pre = null;
+    } catch (e) { console.warn('GameAudio.prematch', e); }
+  }
+
+  // os times saem do túnel: explosão de festa
+  teamsEnter() {
+    const ctx = this.ctx; if (!ctx) return;
+    try {
+      this._ensureBuffers();
+      const t = this._t(), b = this.bufs;
+      this.boost = 1;
+      if (this._pre && this._pre.t0 != null) this._pre.t0 = Math.min(this._pre.t0, this._now() - 30);
+      const P = [[0, 0], [0.5, 1.0], [3, 0.95], [6, 0.75], [9.5, 0]];
+      this._bufEvent(t, b.roar, P, [[0, 1500], [0.6, 5400], [9.5, 2500]]);
+      this._bufEvent(t + 0.08, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1200], [0.6, 4600], [9.5, 2000]], { rate: 1.06 });
+      this._bufEvent(t + 0.3, b.applause, [[0, 0], [0.6, 0.7], [6, 0.55], [9.5, 0]], [[0, 7000], [9.5, 5000]]);
+      this._noise(t, { buf: 'brown', type: 'lowpass', f: 170, q: 0.6, peak: 0.55, a: 0.4, d: 4, out: this.crowdIn, prio: 2 });
+      for (let k = 0; k < 8; k++) this._rojao(t + rand(0, 5), rand(0.25, 0.45), Math.random() < 0.4);
+      for (let k = 0; k < 3; k++) this._flare(t + rand(0, 2), rand(0.015, 0.03), rand(3, 6));
+      for (let k = 0; k < 16; k++) this._fanWhistle(t + rand(0.2, 6), rand(0.02, 0.05), Math.random() < 0.4);
+      for (let k = 0; k < 12; k++) this._shout(t + rand(0.1, 6), rand(0.05, 0.1), Math.random() < 0.7);
+    } catch (e) { console.warn('GameAudio.teamsEnter', e); }
+  }
+
+  // hino/canto da torcida com a bateria (melodia original)
+  anthem(on) {
+    try {
+      this._anthemOn = !!on;
+      if (on && this.ctx) this._want('anthem');
+    } catch (e) { console.warn('GameAudio.anthem', e); }
+  }
+
+  // humor da torcida da casa: -1 (vaiando) .. 1 (empolgada)
+  setHomeMood(v) {
+    const x = num(v, 0);
+    this._moodT = x < -1 ? -1 : x > 1 ? 1 : x;
   }
 
   // ---------- bola e contato ----------

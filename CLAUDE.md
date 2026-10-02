@@ -11,6 +11,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Fluxo de entrega: branch → PR → merge na `main` (o link só atualiza depois do merge).
 - Times, jogadores, marcas e anúncios dos jogos são **fictícios** (nada licenciado).
 - **Falar sempre em português**, inclusive nas mensagens de andamento.
+- **Sempre pesquisar melhorias** (sites, artigos, GDC, docs do three.js) antes de mexer em
+  jogabilidade/animação/gráficos, citar o que foi aproveitado e **medir antes e depois**
+  (clipes em `futebol3d/tools/clip.mjs`, números com as ferramentas `*-dbg.mjs`).
+- Pontos que o dono já apontou e precisam de atenção contínua: condução de bola natural
+  (nada robótico), animação/comemoração do gol, movimentação dos jogadores.
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
 

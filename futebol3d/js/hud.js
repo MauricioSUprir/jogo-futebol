@@ -76,6 +76,27 @@ export class Hud {
     this.cardT = 2.8;
   }
 
+  // abertura: aviso de pular + escalações
+  intro(on) {
+    if (!this.introEl) {
+      this.introEl = el('div', 'hud-intro', '<span>Toque ou aperte qualquer botão para pular</span>');
+      this.root.appendChild(this.introEl);
+    }
+    this.introEl.classList.toggle('show', on);
+    this.root.classList.toggle('in-intro', on);
+  }
+
+  lineup(teams, cfg) {
+    if (!this.lineEl) { this.lineEl = el('div', 'hud-lineup'); this.root.appendChild(this.lineEl); }
+    if (!teams) { this.lineEl.classList.remove('show'); return; }
+    const card = (t, kit) => `<div class="lu-team">
+      <header><span class="lu-crest">${crestSVG(t.data, 44)}</span><div><b>${t.data.name}</b><small>${t.data.formation} · ${t.data.city || ''}</small></div><i style="background:${kit.shirt}"></i></header>
+      <ol>${t.players.map(p => `<li><em>${p.data.num}</em><span>${p.data.name}</span><small>${p.data.pos}</small></li>`).join('')}</ol></div>`;
+    this.lineEl.innerHTML = card(teams[0], cfg.homeKit) + card(teams[1], cfg.awayKit);
+    void this.lineEl.offsetWidth;
+    this.lineEl.classList.add('show');
+  }
+
   setReplay(on) {
     this.replayEl.classList.toggle('show', on); this.root.classList.toggle('replaying', on);
     if (on) { this.goalEl.classList.remove('show'); this.bannerEl.classList.remove('show'); this.goalT = this.bannerT = 0; }
