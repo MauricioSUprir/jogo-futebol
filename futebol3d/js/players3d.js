@@ -252,8 +252,8 @@ export async function preloadBody() {
     BODY = { meta, bin, skins, hairs, browA, headN, inv: meta.invBind.map(a => new THREE.Matrix4().fromArray(a)) };
   } catch (e) { console.warn('corpo realista indisponível', e); }
 }
-function bodyGeometry() {
-  const L = BODY.meta.body, b = BODY.bin, n = L.nv, g = new THREE.BufferGeometry();
+function bodyGeometry(leve = false) {
+  const L = (leve && BODY.meta.bodyLo) || BODY.meta.body, b = BODY.bin, n = L.nv, g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(b, L.pos, n * 3), 3));
   g.setAttribute('aRest', new THREE.BufferAttribute(new Float32Array(b, L.rest, n * 3), 3));
   g.setAttribute('aUv', new THREE.BufferAttribute(new Float32Array(b, L.uv, n * 2), 2));
@@ -497,7 +497,7 @@ float fabH = 0.0;
 #ifdef BODY_SKIN
   // gola do corpo realista decidida por pixel (os vértices misturam pele/camisa em dente de serra)
   if (r.y > 1.36 && abs(r.x) < 0.24 && (m == 0 || m == 1 || m == 2 || m == 13) && r.y < 1.56)
-    m = r.y > 1.488 + 0.9 * max(0.0, abs(r.x) - 0.045) - 0.12 * max(0.0, r.z - 0.02) ? 0 : 1;
+    m = r.y > 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02) ? 0 : 1;
   // limites do uniforme por pixel (os vértices só dizem a "parte": braço, tronco/pernas, cabeça)
   bool armP = m == 2 || m == 13 || m == 12;
   bool bodyP = m == 1 || m == 3 || m == 4 || m == 6 || m == 14 || (m == 0 && r.y < 1.0);
@@ -533,7 +533,7 @@ float fabH = 0.0;
   float collar = floor(K(5).a + 0.5);
 #ifdef BODY_SKIN
   // corpo realista: golas medidas a partir da linha do pescoço (não da altura fixa do boneco antigo)
-  float neckL = 1.488 + 0.9 * max(0.0, abs(r.x) - 0.045) - 0.12 * max(0.0, r.z - 0.02);
+  float neckL = 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02);
   float yv = neckL - 0.07 + abs(r.x) * 1.25;
   float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, neckL);
   float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
@@ -631,8 +631,9 @@ float fabH = 0.0;
     // cabeça escaneada: a foto do jogador projetada de frente (como o teste "B");
     // laterais/costas: cabelo acima da linha do cabelo, pele abaixo
     vec3 dd = normalize(r - vec3(0.0, 1.665, 0.035));
-    float front = smoothstep(0.02, 0.42, dd.z);
-    vec2 fu = clamp(vFaceUv, vec2(0.002), vec2(0.998));
+    vec2 fu = clamp(vFaceUv, vec2(0.004), vec2(0.996));
+    // abaixo do queixo e fora da célula: pele lisa (sem vazar bordas/vizinhos da foto)
+    float front = smoothstep(0.02, 0.42, dd.z) * (1.0 - smoothstep(0.9, 0.96, vFaceUv.y)) * (1.0 - smoothstep(0.44, 0.49, abs(vFaceUv.x - 0.5)));
     vec3 ph = texture(uFace, vec2((mod(vPid, 8.0) + fu.x) / 8.0, 1.0 - (floor(vPid / 8.0) + fu.y) / 4.0)).rgb;
     float g2 = fract(sin(dot(floor(r.xz * 900.0 + r.y * 300.0), vec2(12.9898, 78.233))) * 43758.5453);
     float hairZ = (1.0 - sk.w) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
@@ -871,7 +872,7 @@ export class PlayerMeshes {
     let geos;
     if (this.realBody) {
       // corpo realista: uma malha só; cabelo tirado da própria cabeça
-      if (!GEO_BODY[lod]) { GEO_BODY[lod] = { body: bodyGeometry() }; for (let st = 1; st <= 6; st++) GEO_BODY[lod]['hair' + st] = mhHair(st); GEO_BODY[lod].hair7 = withMat(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)).setAttribute('aRest', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)), M.HAIR); }
+      if (!GEO_BODY[lod]) { GEO_BODY[lod] = { body: bodyGeometry(lod <= 1) }; for (let st = 1; st <= 6; st++) GEO_BODY[lod]['hair' + st] = mhHair(st); GEO_BODY[lod].hair7 = withMat(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)).setAttribute('aRest', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)), M.HAIR); }
       geos = GEO_BODY[lod];
     } else {
       const cache = SCAN[LODS[lod].feat] ? GEO_SCAN : GEO;

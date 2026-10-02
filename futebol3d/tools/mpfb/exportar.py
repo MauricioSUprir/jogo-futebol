@@ -81,10 +81,23 @@ for rk, race in races.items():
         if rk == 'eu': out[key + '_uv'] = UVa; out[key + '_f'] = Fa
         bpy.data.objects.remove(new)
     if rk == 'eu':
+        # versão leve (celular): mesmo corpo com Decimate (mantém UV e pesos)
+        dm = b.modifiers.new('leve', 'DECIMATE'); dm.ratio = 0.33
+        Pl, UVl, Fl, Wl = mesh_data(b)
+        out['lo_p'] = Pl; out['lo_uv'] = UVl; out['lo_f'] = Fl; out['lo_w'] = Wl
+        b.modifiers.remove(dm)
         out['uv'] = UV; out['faces'] = F; out['w'] = W
         arm = [o for o in bpy.data.objects if o.type == 'ARMATURE'][0]
         out['bones'] = np.array([[*G(np.array([arm.matrix_world @ bn.head_local]))[0]] for bn in arm.data.bones])
         out['bone_names'] = np.array([bn.name for bn in arm.data.bones])
     print(rk, P.shape, F.shape if rk == 'eu' else '')
+# cabeça escaneada: completa e leve (Decimate mantém o UV do mapa de relevo)
+for o in list(bpy.data.objects): bpy.data.objects.remove(o)
+bpy.ops.import_scene.gltf(filepath='/home/user/jogo-futebol/futebol3d/tools/rosto/LeePerrySmith.glb')
+hm = [o for o in bpy.data.objects if o.type == 'MESH'][0]
+for tag, ratio in [('hd', 1.0), ('hl', 0.3)]:
+    if ratio < 1: dm = hm.modifiers.new('leve', 'DECIMATE'); dm.ratio = ratio
+    Ph, UVh, Fh, _ = mesh_data(hm, groups=False)
+    out[tag + '_p'] = Ph; out[tag + '_uv'] = UVh; out[tag + '_f'] = Fh
 np.savez(OUT, **out)
 print('salvo', OUT, sorted(out.keys()))
