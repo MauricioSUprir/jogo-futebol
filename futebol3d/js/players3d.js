@@ -26,7 +26,7 @@ import { teamById, crestSVG } from './teams.js';
 // ---------------------------------------------------------------- materiais (ids por vértice)
 const M = { SKIN: 0, SHIRT: 1, SLEEVE: 2, SHORTS: 3, SOCK: 4, TRIM: 5, BOOT: 6, HAIR: 7, EYEW: 8, IRIS: 9, LIPS: 10, BROW: 11, HAND: 12, FOREARM: 13, SOLE: 14, ACCENT: 15 };
 const HAIR = { bald: 0, short: 1, buzz: 2, curly: 3, long: 4, afro: 5, bun: 6 };
-const KW = 15;   // texels por jogador na textura de dados
+const KW = 17;   // texels por jogador na textura de dados (15: morphs/pele, 16: tom da pele)
 // densidade das malhas por nível (0 baixa, 1 média, 2 alta/ultra)
 // F = segmentos das feições do rosto [largura, altura] (null = omitida)
 const LODS = [
@@ -161,11 +161,43 @@ function surf(x, y, z, out = 0, o = [0, 0, 0]) {
   o[0] += nx / nl * out; o[1] += ny / nl * out; o[2] += nz / nl * out;
   return o;
 }
-function hairFn(style) {
+// raio da cabeça escaneada por direção (a partir de HC), em células de 48 × 24 — o cabelo
+// procedural é empurrado para fora dele, senão o crânio do escaneamento fura o cabelo
+const RADIAL = [];
+function scanRadial(feat) {
+  if (RADIAL[feat] !== undefined) return RADIAL[feat];
+  const d = SCAN[feat]; if (!d) return (RADIAL[feat] = null);
+  const NA = 48, NB = 24, R = new Float32Array(NA * NB);
+  for (let i = 0; i < d.p.length; i += 3) {
+    const x = d.p[i] - HC[0], y = d.p[i + 1] - 1.6 - HC[1], z = d.p[i + 2] - HC[2], l = Math.hypot(x, y, z);
+    const a = Math.floor(((Math.atan2(z, x) / (2 * Math.PI)) + 1) % 1 * NA), b = Math.min(NB - 1, Math.floor(Math.acos(Math.max(-1, Math.min(1, y / l))) / Math.PI * NB));
+    R[b * NA + a] = Math.max(R[b * NA + a], l);
+  }
+  // preenche buracos e suaviza (máximo dos vizinhos)
+  const S = new Float32Array(NA * NB);
+  for (let b = 0; b < NB; b++) for (let a = 0; a < NA; a++) {
+    let m = 0;
+    for (let db = -1; db <= 1; db++) for (let da = -1; da <= 1; da++) { const bb = b + db; if (bb < 0 || bb >= NB) continue; m = Math.max(m, R[bb * NA + (a + da + NA) % NA]); }
+    S[b * NA + a] = m;
+  }
+  return (RADIAL[feat] = { S, NA, NB });
+}
+function scanR(rad, x, y, z) {
+  const a = Math.floor(((Math.atan2(z, x) / (2 * Math.PI)) + 1) % 1 * rad.NA), b = Math.min(rad.NB - 1, Math.floor(Math.acos(Math.max(-1, Math.min(1, y))) / Math.PI * rad.NB));
+  return rad.S[b * rad.NA + a];
+}
+function hairFn(style, L) {
+  const rad = L ? scanRadial(L.feat) : null;
   const t = [0, 0.011, 0.0035, 0.017, 0.014, 0.04, 0.011][style];
   return (x, y, z, o) => {
     headPt(x, y, z, o);
-    let hl = z > 0 ? 0.13 + 0.3 * z * z : 0.13 - 0.63 * (-z) ** 1.3;
+    if (rad) {     // casca por fora do crânio escaneado
+      const nx = o[0] - HC[0], ny = o[1] - HC[1], nz = o[2] - HC[2], nl = Math.hypot(nx, ny, nz);
+      const rs = scanR(rad, nx / nl, ny / nl, nz / nl) + 0.002;
+      if (rs > nl) { o[0] = HC[0] + nx / nl * rs; o[1] = HC[1] + ny / nl * rs; o[2] = HC[2] + nz / nl * rs; }
+    }
+    // linha do cabelo: com a cabeça escaneada (rosto em foto) ela sobe para mostrar a testa
+    let hl = z > 0 ? 0.13 + (rad ? 1.2 : 0.3) * z * z : 0.13 - 0.63 * (-z) ** 1.3;
     if (style === 5) hl = z > 0 ? 0.12 + 0.28 * z * z : 0.1 - 0.55 * (-z) ** 1.3;
     if (style === 4) hl = z > 0 ? 0.13 + 0.3 * z * z : 0.13 - 1.1 * (-z) ** 0.8;       // longo: cobre a nuca
     if (style === 4 && z < 0.35 && z > -0.2) hl = Math.min(hl, -0.15);                 // e as orelhas
@@ -192,14 +224,82 @@ function beardFn(x, y, z, o) {
   const d = m * 0.005 - (1 - m) * 0.006;
   o[0] += nx / nl * d; o[1] += ny / nl * d; o[2] += nz / nl * d; o[3] = m;
 }
+// Cabeça escaneada (só a forma; ver tools/rostos/cabeca.py). Carregada antes de criar os
+// jogadores; sem ela, cai na cabeça procedural.
+const SCAN = [null, null, null];
+export async function preloadHeads() {
+  if (SCAN[0]) return;
+  try {
+    const ld = async (n) => (await fetch(`assets/cabeca/cabeca-${n}.json`)).json();
+    const [a, b] = await Promise.all([ld(1), ld(2)]);
+    SCAN[0] = SCAN[1] = a; SCAN[2] = b;
+  } catch (e) { console.warn('cabeça escaneada indisponível', e); }
+}
+// ---------------------------------------------------------------- corpo realista
+// Malha humana inteira (Human Base Meshes, Blender Studio, CC0) com pesos para os 17 ossos
+// do jogo — ver tools/humano/rig.py. Desenhada como UMA InstancedMesh deformada no shader.
+let BODY = null;
+export async function preloadBody() {
+  if (BODY) return;
+  try {
+    const ld = (f) => fetch('assets/jogador/' + f);
+    const img = (f) => new Promise((ok, err) => { const t = new THREE.TextureLoader().load('assets/jogador/' + f, ok, undefined, err); });
+    const [meta, bin, skins, hairs, browA, headN] = await Promise.all([ld('mh.json').then(r => r.json()), ld('mh.bin').then(r => r.arrayBuffer()),
+      img('peles.jpg'), img('cabelos.png'), img('sobrancelha-alfa.png'), img('cabeca-normal.jpg')]);
+    headN.anisotropy = 4;
+    skins.colorSpace = THREE.SRGBColorSpace; hairs.colorSpace = THREE.SRGBColorSpace;
+    for (const t of [skins, hairs]) { t.anisotropy = 4; t.generateMipmaps = true; }
+    BODY = { meta, bin, skins, hairs, browA, headN, inv: meta.invBind.map(a => new THREE.Matrix4().fromArray(a)) };
+  } catch (e) { console.warn('corpo realista indisponível', e); }
+}
+function bodyGeometry(leve = false) {
+  const L = (leve && BODY.meta.bodyLo) || BODY.meta.body, b = BODY.bin, n = L.nv, g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(b, L.pos, n * 3), 3));
+  g.setAttribute('aRest', new THREE.BufferAttribute(new Float32Array(b, L.rest, n * 3), 3));
+  g.setAttribute('aUv', new THREE.BufferAttribute(new Float32Array(b, L.uv, n * 2), 2));
+  g.setAttribute('aFace', new THREE.BufferAttribute(new Float32Array(b, L.face, n * 2), 2));
+  g.setAttribute('aMat', new THREE.BufferAttribute(Float32Array.from(new Uint8Array(b, L.mat, n)), 1));
+  g.setAttribute('aSkinI', new THREE.BufferAttribute(Float32Array.from(new Uint8Array(b, L.idx, n * 4)), 4));
+  g.setAttribute('aSkinW', new THREE.BufferAttribute(new Float32Array(b, L.w, n * 4), 4));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(b, L.index, L.ni), 1));
+  g.computeVertexNormals();
+  return g;
+}
+// estilo do jogo → cabelo do MakeHuman (1 curto, 2 raspado, 3 cacheado, 4 longo, 5 black, 6 coque)
+const HAIR_MH = [null, 'short02', 'short04', 'short03', 'long01', 'afro01', 'ponytail01'];
+function mhHair(st) {
+  const k = BODY.meta.hair.findIndex(h => h.name === HAIR_MH[st]);
+  const L = BODY.meta.hair[k], b = BODY.bin, n = L.nv, g = new THREE.BufferGeometry();
+  const pos = new Float32Array(b, L.pos, n * 3).slice();
+  for (let i = 1; i < pos.length; i += 3) pos[i] += 0;       // já relativo à cabeça
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('aRest', new THREE.BufferAttribute(new Float32Array(b, L.rest, n * 3), 3));
+  g.setAttribute('aUv', new THREE.BufferAttribute(new Float32Array(b, L.uv, n * 2), 2));
+  g.setAttribute('aMA', new THREE.BufferAttribute(new Float32Array(b, L.ma, n * 3), 3));
+  g.setAttribute('aMS', new THREE.BufferAttribute(new Float32Array(b, L.ms, n * 3), 3));
+  g.setAttribute('aCell', new THREE.BufferAttribute(new Float32Array(n).fill(k), 1));
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(b, L.index, L.ni), 1));
+  g.computeVertexNormals();
+  return withMat(g, M.HAIR);
+}
+function scanHead(d) {
+  const p = Float32Array.from(d.p);
+  for (let i = 1; i < p.length; i += 3) p[i] -= 1.6;     // relativo ao osso da cabeça
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setIndex(d.i);
+  g.computeVertexNormals();
+  return finish([withMat(g, M.SKIN)], [0, 1.6, 0]);
+}
 function buildHead(L) {
+  if (SCAN[L.feat]) return scanHead(SCAN[L.feat]);
   const parts = [deformed(L.head[0], L.head[1], headPt, M.SKIN)];
   const o = [0, 0, 0], F = L.F;
   for (const s of [1, -1]) {
-    let p = surf(s * 0.34, 0.2, 0.92, F.iris ? -0.0068 : -0.004);
+    let p = surf(s * 0.4, 0.2, 0.92, F.iris ? -0.0068 : -0.004);
     parts.push(blob(p[0], p[1], p[2], 0.0115, 0.0062, 0.0085, F.iris ? M.EYEW : M.IRIS, 0, 0, ...F.eye));
-    if (F.iris) { p = surf(s * 0.335, 0.2, 0.93, 0.0006); parts.push(blob(p[0], p[1], p[2], 0.0047, 0.0049, 0.003, M.IRIS, 0, 0, ...F.iris)); }
-    p = surf(s * 0.35, 0.37, 0.88, 0.0015);
+    if (F.iris) { p = surf(s * 0.395, 0.2, 0.93, 0.0006); parts.push(blob(p[0], p[1], p[2], 0.0047, 0.0049, 0.003, M.IRIS, 0, 0, ...F.iris)); }
+    p = surf(s * 0.41, 0.37, 0.88, 0.0015);
     parts.push(blob(p[0], p[1], p[2], 0.019, 0.0042, 0.0055, M.BROW, 0, -s * 0.18, ...F.brow));
     p = surf(s * 1, 0.06, -0.1, -0.004);
     parts.push(blob(p[0], p[1], p[2], 0.0085, 0.029, 0.018, M.SKIN, 0.15, s * 0.1, ...F.ear));
@@ -215,7 +315,7 @@ function buildHead(L) {
 // cabelo por estilo (1..6) e barba (7): só a casca da região com cabelo
 function buildHair(st, L) {
   if (st === 7) return finish([deformed(Math.round(L.hair[0] * 1.25), Math.round(L.hair[1] * 1.25), beardFn, M.HAIR, true)], [0, 1.6, 0]);
-  const parts = [deformed(L.hair[0], L.hair[1], hairFn(st), M.HAIR, true)];
+  const parts = [deformed(L.hair[0], L.hair[1], hairFn(st, L), M.HAIR, true)];
   if (st === 6) parts.push(blob(0, HC[1] + 0.085, HC[2] - 0.075, 0.038, 0.034, 0.036, M.HAIR, 0, 0, ...L.F.bun));
   return finish(parts, [0, 1.6, 0]);
 }
@@ -302,14 +402,50 @@ function buildParts(L) {
   return G;
 }
 
+// atlas dos rostos da partida (8 × 4 células de 192 px; vaga = índice do jogador)
+const SKIN_K = 0.92;   // pele lisa um pouco mais escura que a foto (que já traz luz de estúdio)
+function faceAtlas(cell = 192) {
+  const cv = document.createElement('canvas'); cv.width = cell * 8; cv.height = cell * 4;
+  const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#9a7056'; g.fillRect(0, 0, cv.width, cv.height);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+
 // ---------------------------------------------------------------- shader do corpo
 const VERT_DECL = /* glsl */`
 attribute float aMat; attribute vec3 aRest; attribute float aPid;
 uniform float uCount;
+#ifdef BODY_SKIN
+// corpo realista: 17 ossos por jogador numa textura (4 texels = 1 matriz, coluna-maior)
+attribute vec4 aSkinI; attribute vec4 aSkinW; uniform highp sampler2D uBones;
+attribute vec2 aFace; varying vec2 vFaceUv;
+mat4 boneM(float b) { int x = int(b + 0.5) * 4, y = int(aPid + 0.5);
+  return mat4(texelFetch(uBones, ivec2(x, y), 0), texelFetch(uBones, ivec2(x + 1, y), 0), texelFetch(uBones, ivec2(x + 2, y), 0), texelFetch(uBones, ivec2(x + 3, y), 0)); }
+#endif
+#if defined(BODY_SKIN) || defined(HAIR_TEX)
+// MakeHuman: UV da pele/cabelo e morphs de rosto/corpo (pesos por jogador no texel 15)
+attribute vec2 aUv; varying vec2 vUv2; uniform highp sampler2D uKit;
+#endif
+#ifdef HAIR_TEX
+attribute vec3 aMA; attribute vec3 aMS;
+#endif
+#ifdef HAIR_TEX
+attribute float aCell; flat varying float vCell;
+#endif
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 `;
 const FRAG_DECL = /* glsl */`
-uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor;
+#if defined(BODY_SKIN) || defined(HAIR_TEX)
+varying vec2 vUv2; uniform sampler2D uSkins; uniform sampler2D uHairs; uniform sampler2D uBrowA; uniform sampler2D uHeadN; uniform float uDbgN;
+#endif
+#ifdef BODY_SKIN
+varying vec2 vFaceUv;
+#endif
+#ifdef HAIR_TEX
+flat varying float vCell;
+#endif
+uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor; uniform sampler2D uFace; uniform vec4 uFaceA; uniform vec2 uFaceB; uniform vec3 uFaceC;
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 vec4 K(int i) { return texelFetch(uKit, ivec2(i, int(vPid + 0.5)), 0); }
 float aa(float d) { float w = max(fwidth(d), 1e-4); return smoothstep(-w, w, d); }
@@ -327,6 +463,22 @@ vec4 numAt(vec2 p, vec2 c, float h, bool mirror, float num, vec2 dpx, vec2 dpy, 
   inBox = inside(vec2(uu, vv)) * step(0.5, num);
   return textureGrad(uDigits, gu, gx, gy);
 }
+// Rosto fotográfico: projeção frontal da foto (atlas 8 × 4, célula = jogador) na cabeça.
+// Alinhamento: olhos da malha (y 1,715; ±0,030) → olhos da foto (v 0,42; u 0,5 ± 0,135),
+// boca (1,659) → 0,71 e queixo (1,586) → 0,89. Devolve cor e peso (0 = pele lisa).
+vec4 facePhoto(vec3 r) {
+  if (K(14).a < 0.5 || r.y < 1.5) return vec4(0.0);
+  vec3 d = normalize(r - uFaceC);
+  // uFaceA = (escala u, y dos olhos, y da boca, inclinação acima da boca); uFaceB.x = abaixo
+  float u = 0.5 + (r.x - uFaceB.y) * uFaceA.x;
+  float t = r.y >= uFaceA.z ? 0.42 + (uFaceA.y - r.y) * uFaceA.w : 0.717 + (uFaceA.z - r.y) * uFaceB.x;
+  float w = smoothstep(0.12, 0.45, d.z) * smoothstep(0.17, 0.34, t) * (1.0 - smoothstep(0.9, 0.97, t))
+          * (1.0 - smoothstep(0.33, 0.43, abs(u - 0.5)));
+  if (w <= 0.0) return vec4(0.0);
+  float cell = vPid;
+  vec2 uv = vec2((mod(cell, 8.0) + clamp(u, 0.01, 0.99)) / 8.0, 1.0 - (floor(cell / 8.0) + clamp(t, 0.01, 0.99)) / 4.0);
+  return vec4(texture(uFace, uv).rgb, w);
+}
 // relevo a partir das derivadas da altura (igual ao bump do three, sem textura)
 vec3 kitBump(vec3 pos, vec3 n, vec2 dh, float fd) {
   vec3 sx = normalize(dFdx(pos)), sy = normalize(dFdy(pos));
@@ -342,6 +494,16 @@ float fabH = 0.0;
 {
   vec3 r = vRest;
   int m = int(vMat + 0.5);
+#ifdef BODY_SKIN
+  // gola do corpo realista decidida por pixel (os vértices misturam pele/camisa em dente de serra)
+  if (r.y > 1.36 && abs(r.x) < 0.24 && (m == 0 || m == 1 || m == 2 || m == 13) && r.y < 1.56)
+    m = r.y > 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02) ? 0 : 1;
+  // limites do uniforme por pixel (os vértices só dizem a "parte": braço, tronco/pernas, cabeça)
+  bool armP = m == 2 || m == 13 || m == 12;
+  bool bodyP = m == 1 || m == 3 || m == 4 || m == 6 || m == 14 || (m == 0 && r.y < 1.0);
+  if (armP) m = r.y > 1.27 ? 2 : r.y > 0.885 ? 13 : 12;
+  else if (bodyP && r.y < 1.40) m = r.y > 0.975 ? 1 : r.y > 0.70 ? 3 : r.y > 0.44 ? 0 : r.y > 0.13 ? 4 : r.y > 0.018 ? 6 : 14;
+#endif
   vec2 dpx = dFdx(r.xy), dpy = dFdy(r.xy);     // derivadas fora dos desvios
   bool gk = K(1).a > 0.5;
   float num = floor(K(3).a + 0.5);
@@ -369,16 +531,27 @@ float fabH = 0.0;
   vec4 sp = textureGrad(uSponsor, suv, vec2(dpx.x / SW / 2.0, -dpx.y / SH / 4.0), vec2(dpy.x / SW / 2.0, -dpy.y / SH / 4.0));
   // faixas de gola, punhos, meiões e laterais (larguras em metros, antisserrilhadas)
   float collar = floor(K(5).a + 0.5);
+#ifdef BODY_SKIN
+  // corpo realista: golas medidas a partir da linha do pescoço (não da altura fixa do boneco antigo)
+  float neckL = 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02);
+  float yv = neckL - 0.07 + abs(r.x) * 1.25;
+  float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, neckL);
+  float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
+  float crew = aa(r.y - (neckL - 0.014));
+  float polo = aa(r.y - (neckL - 0.02)) + band(r.x, 0.0, 0.011) * step(0.0, r.z) * aa(r.y - (neckL - 0.08)) * aa(neckL - r.y);
+#else
   float yv = 1.452 + abs(r.x) * 1.25;
   float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, 1.53);
   float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
   float crew = aa(r.y - 1.501);
   float polo = aa(r.y - 1.488) + band(r.x, 0.0, 0.011) * step(0.0, r.z) * aa(r.y - 1.43) * aa(1.5 - r.y);
+#endif
   float btn = step(0.0, r.z) * ((1.0 - aa(length(vec2(r.x, r.y - 1.475)) - 0.0038)) + (1.0 - aa(length(vec2(r.x, r.y - 1.448)) - 0.0038)));
   float panel = aa(0.034 - abs(r.z)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
   float pipe = (band(r.z, 0.034, 0.0035) + band(r.z, -0.034, 0.0035)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
   float fk = 0.0;
   vec3 c = vec3(1.0);
+  vec4 fph = (m == 0 || (m >= 8 && m <= 11)) ? facePhoto(r) : vec4(0.0);
   if (m == 0) { c = K(0).rgb; matRough = 0.5; }
   else if (m == 1) {
     int pat = int(K(0).a + 0.5);
@@ -437,6 +610,53 @@ float fabH = 0.0;
   }
   else if (m == 14) { c = K(11).rgb * 0.6 + 0.02; matRough = 0.45; }
   else if (m == 15) { c = K(11).rgb; matRough = 0.3; }
+  if (fph.a > 0.0) { c = mix(c, fph.rgb, fph.a); matRough = mix(matRough, 0.55, fph.a); }
+#ifdef BODY_SKIN
+  // pele real do MakeHuman (atlas 4×2): célula escolhida pelo tom do jogador e tingida para ele
+  vec4 sk = K(15), tn = K(16);
+  if (m == 0 || m == 12 || m == 13) {
+    float cl = floor(sk.z + 0.5);
+    c = texture(uSkins, vec2((mod(cl, 4.0) + vUv2.x) / 4.0, 0.5 * (1.0 - floor(cl / 4.0)) + 0.5 * vUv2.y)).rgb * tn.rgb;
+    // pescoço: funde com a cor da pele da foto (a cabeça)
+    if (K(14).a > 0.5) c = mix(c, K(0).rgb * (0.9 + 0.2 * (c.r + c.g + c.b) / max(tn.r + tn.g + tn.b, 0.1)), smoothstep(1.40, 1.53, r.y));
+    // barba rala (quem tem barba): queixo, mandíbula e bigode, com granulado
+    if (m == 0 && K(4).a > 0.5 && r.y > 1.565 && r.y < 1.655 && r.z > 0.0) {
+      float lip = (1.0 - smoothstep(0.004, 0.012, abs(r.y - 1.627))) * (1.0 - smoothstep(0.02, 0.028, abs(r.x)));
+      float face = smoothstep(1.565, 1.59, r.y) * (1.0 - smoothstep(1.64, 1.655, r.y)) * smoothstep(0.0, 0.05, r.z);
+      float g = fract(sin(dot(floor(r.xy * 2600.0), vec2(12.9898, 78.233))) * 43758.5453);
+      c = mix(c, K(8).rgb * 0.55, face * (1.0 - lip) * (0.55 + 0.35 * g));
+    }
+    matRough = 0.55;
+  } else if (m == 16) {
+    // cabeça escaneada: a foto do jogador projetada de frente (como o teste "B");
+    // laterais/costas: cabelo acima da linha do cabelo, pele abaixo
+    vec3 dd = normalize(r - vec3(0.0, 1.665, 0.035));
+    vec2 fu = clamp(vFaceUv, vec2(0.004), vec2(0.996));
+    // abaixo do queixo e fora da célula: pele lisa (sem vazar bordas/vizinhos da foto)
+    float front = smoothstep(0.02, 0.42, dd.z) * (1.0 - smoothstep(0.9, 0.96, vFaceUv.y)) * (1.0 - smoothstep(0.44, 0.49, abs(vFaceUv.x - 0.5)));
+    vec3 ph = texture(uFace, vec2((mod(vPid, 8.0) + fu.x) / 8.0, 1.0 - (floor(vPid / 8.0) + fu.y) / 4.0)).rgb;
+    float g2 = fract(sin(dot(floor(r.xz * 900.0 + r.y * 300.0), vec2(12.9898, 78.233))) * 43758.5453);
+    float hairZ = (1.0 - sk.w) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
+    vec3 back = mix(K(0).rgb, K(8).rgb * (0.8 + 0.35 * g2), hairZ);
+    c = mix(back, ph, front);
+    matRough = mix(0.62, 0.5, front);
+    if (uDbgN > 0.5) c = texture(uHeadN, vUv2).rgb;
+  } else if (m == 8) {
+    c = texture(uSkins, vec2(0.75 + vUv2.x * 0.25, 0.25 + vUv2.y * 0.25)).rgb; matRough = 0.15;
+  } else if (m == 11) {
+    if (texture(uBrowA, vUv2).r < 0.4) discard;
+    c = K(8).rgb * 0.7; matRough = 0.8;
+  }
+#endif
+#ifdef HAIR_TEX
+  if (m == 7) {
+    float cl = floor(vCell + 0.5);
+    vec4 h = texture(uHairs, vec2((mod(cl, 4.0) + fract(vUv2.x)) / 4.0, 0.5 * (1.0 - floor(cl / 4.0)) + 0.5 * fract(vUv2.y)));
+    if (h.a < 0.45) discard;
+    float l = dot(h.rgb, vec3(0.299, 0.587, 0.114));
+    c = K(8).rgb * (0.45 + 1.4 * l); matRough = 0.6;
+  }
+#endif
 #ifdef KIT_FABRIC
   // trama do tecido: malha (camisa), sarja (calção), canelado (meião); some com a distância
   vec3 q = vRest;
@@ -453,28 +673,76 @@ float fabH = 0.0;
 }
 `;
 const FRAG_NORMAL = /* glsl */`
+#ifdef BODY_SKIN
+if (int(vMat + 0.5) == 16) {     // relevo da pele do escaneamento (poros, rugas) — base tangente por derivadas
+  vec3 mapN = texture(uHeadN, vUv2).xyz * 2.0 - 1.0; mapN.xy *= 0.6;
+  vec3 q0 = dFdx(-vViewPosition), q1 = dFdy(-vViewPosition); vec2 st0 = dFdx(vUv2), st1 = dFdy(vUv2);
+  vec3 N = normal, q1p = cross(q1, N), q0p = cross(N, q0);
+  vec3 T = q1p * st0.x + q0p * st1.x, B = q1p * st0.y + q0p * st1.y;
+  float det = max(dot(T, T), dot(B, B)), sc = det == 0.0 ? 0.0 : faceDirection * inversesqrt(det);
+  normal = normalize(T * (mapN.x * sc) + B * (mapN.y * sc) + N * mapN.z);
+}
+#endif
 #ifdef KIT_FABRIC
 normal = kitBump(-vViewPosition, normal, vec2(dFdx(fabH), dFdy(fabH)) * 0.55, faceDirection);
 #endif
 `;
 
-function bodyMaterial(uniforms, fabric) {
+const SKIN_NORMAL = /* glsl */`#include <beginnormal_vertex>
+#ifdef BODY_SKIN
+mat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);
+objectNormal = normalize(mat3(skinM) * objectNormal);
+#endif`;
+const SKIN_POS = /* glsl */`
+#if defined(BODY_SKIN) || defined(HAIR_TEX)
+vUv2 = aUv;
+#endif
+#ifdef HAIR_TEX
+{ vec4 km = texelFetch(uKit, ivec2(15, int(aPid + 0.5)), 0); transformed += aMA * km.x + aMS * km.y; }
+#endif
+#ifdef HAIR_TEX
+vCell = aCell;
+#endif
+#ifdef BODY_SKIN
+vFaceUv = aFace;
+transformed = (skinM * vec4(transformed, 1.0)).xyz;
+vSide = aRest.x >= 0.0 ? 1.0 : -1.0;
+#endif`;
+// sombra do corpo realista: mesma deformação no material de profundidade
+function skinDepthMaterial(uniforms) {
+  const m = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+  m.defines = { BODY_SKIN: '' };
+  m.onBeforeCompile = (sh) => {
+    Object.assign(sh.uniforms, uniforms);
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPid;\n' + VERT_DECL.split('uniform float uCount;')[1])
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nmat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);\ntransformed = (skinM * vec4(transformed, 1.0)).xyz;');
+  };
+  m.customProgramCacheKey = () => 'golaco-body-depth';
+  return m;
+}
+
+function bodyMaterial(uniforms, fabric, skinned = false, hairTex = false) {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.8, metalness: 0 });
-  if (fabric) mat.defines = { KIT_FABRIC: '' };
+  mat.defines = {};
+  if (fabric) mat.defines.KIT_FABRIC = '';
+  if (skinned) mat.defines.BODY_SKIN = '';
+  if (hairTex) { mat.defines.HAIR_TEX = ''; mat.side = THREE.DoubleSide; }
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + VERT_DECL)
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest; vSide = float(gl_InstanceID) >= uCount ? -1.0 : 1.0;');
+      .replace('#include <beginnormal_vertex>', SKIN_NORMAL)
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPid = aPid; vMat = aMat; vRest = aRest; vSide = float(gl_InstanceID) >= uCount ? -1.0 : 1.0;\n' + SKIN_POS);
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\n' + FRAG_DECL)
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_COLOR)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = matRough;')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_NORMAL)
       // leve brilho de borda na pele (sheen barato)
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0); if (int(vMat + 0.5) == 8) totalEmissiveRadiance += diffuseColor.rgb * 0.25;');
   };
-  mat.customProgramCacheKey = () => 'golaco-body-v3' + (fabric ? '-f' : '');
+  mat.customProgramCacheKey = () => 'golaco-body-v6' + (fabric ? '-f' : '') + (skinned ? '-s' : '') + (hairTex ? '-h' : '');
   return mat;
 }
 
@@ -591,6 +859,8 @@ const ACC = ['#f2f2f2', '#141414', '#141414', '#f2f2f2', '#f2f2f2', '#141414', '
 const LIMB = [[5, 8, 'upperArm'], [6, 9, 'foreArm'], [7, 10, 'hand'], [11, 14, 'thigh'], [12, 15, 'shin'], [13, 16, 'foot']];
 const SINGLE = [[4, 'head'], [3, 'neck'], [2, 'chest'], [1, 'spine'], [0, 'pelvis']];
 const GEO = [];   // geometrias por nível de detalhe (compartilhadas entre instâncias da classe)
+const GEO_SCAN = [];
+const GEO_BODY = [];
 const pidAttr = (n, per) => { const a = new Float32Array(n * per); for (let k = 0; k < a.length; k++) a[k] = k % n; return new THREE.InstancedBufferAttribute(a, 1); };
 
 export class PlayerMeshes {
@@ -598,8 +868,17 @@ export class PlayerMeshes {
     this.scene = scene; this.count = count; this.night = night;
     const lod = quality ? Math.max(0, Math.min(2, quality.grassDetail ?? 2)) : 2;
     this.lod = lod;
-    if (!GEO[lod]) GEO[lod] = buildParts(LODS[lod]);
-    const geos = GEO[lod];
+    this.realBody = !!BODY;
+    let geos;
+    if (this.realBody) {
+      // corpo realista: uma malha só; cabelo tirado da própria cabeça
+      if (!GEO_BODY[lod]) { GEO_BODY[lod] = { body: bodyGeometry(lod <= 1) }; for (let st = 1; st <= 6; st++) GEO_BODY[lod]['hair' + st] = mhHair(st); GEO_BODY[lod].hair7 = withMat(new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)).setAttribute('aRest', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, 0, 0, 0, 0], 3)), M.HAIR); }
+      geos = GEO_BODY[lod];
+    } else {
+      const cache = SCAN[LODS[lod].feat] ? GEO_SCAN : GEO;
+      if (!cache[lod]) cache[lod] = buildParts(LODS[lod]);
+      geos = cache[lod];
+    }
     this.kitData = new Float32Array(KW * count * 4);
     this.kitTex = new THREE.DataTexture(this.kitData, KW, count, THREE.RGBAFormat, THREE.FloatType);
     this.kitTex.minFilter = this.kitTex.magFilter = THREE.NearestFilter;
@@ -608,7 +887,20 @@ export class PlayerMeshes {
     this.crestTex = crestAtlas(); this.sponsorTex = sponsorAtlas();
     this.crestSlots = new Map(); this.sponsorSlots = new Map();
     const uni = { uKit: { value: this.kitTex }, uDigits: { value: this.digits }, uCrest: { value: this.crestTex },
-      uSponsor: { value: this.sponsorTex }, uCount: { value: count } };
+      uSponsor: { value: this.sponsorTex }, uCount: { value: count }, uFace: { value: this.faceTex = faceAtlas(BODY ? (lod >= 2 ? 384 : 256) : 192) },
+      // olhos/boca/queixo da cabeça escaneada (y 1,7149 / 1,6602 / 1,6192; olhos ±0,0272) ou da procedural
+      uFaceA: { value: this.realBody ? new THREE.Vector4(4.545, 1.6951, 1.6313, 4.655) : SCAN[LODS[lod].feat] ? new THREE.Vector4(4.963, 1.7149, 1.6602, 5.43) : new THREE.Vector4(4.47, 1.7154, 1.6586, 5.22) },
+      uFaceB: { value: this.realBody ? new THREE.Vector2(4.248, 0.0006) : new THREE.Vector2(SCAN[LODS[lod].feat] ? 4.76 : 2.67, 0) },
+      // centro da cabeça (para saber o que é "frente do rosto")
+      uFaceC: { value: this.realBody ? new THREE.Vector3(0, 1.67, 0.04) : new THREE.Vector3(0, 1.694, 0.014) } };
+    if (this.realBody) {
+      this.boneData = new Float32Array(17 * 4 * 4 * count);
+      this.boneTex = new THREE.DataTexture(this.boneData, 17 * 4, count, THREE.RGBAFormat, THREE.FloatType);
+      this.boneTex.minFilter = this.boneTex.magFilter = THREE.NearestFilter;
+      uni.uBones = { value: this.boneTex };
+      uni.uSkins = { value: BODY.skins }; uni.uHairs = { value: BODY.hairs }; uni.uBrowA = { value: BODY.browA }; uni.uHeadN = { value: BODY.headN }; uni.uDbgN = { value: 0 }; this.uni = uni;
+      this.hairMat = bodyMaterial(uni, false, false, true);
+    }
     this.material = bodyMaterial(uni, lod > 0);
     // redesenha os letreiros quando a fonte condensada terminar de carregar
     document.fonts?.load?.('italic 800 100px "Barlow Condensed"').then(() => {
@@ -623,7 +915,7 @@ export class PlayerMeshes {
       for (const k in geos[name].attributes) g.setAttribute(k, geos[name].attributes[k]);
       g.setIndex(geos[name].index);
       g.setAttribute('aPid', pidAttr(count, per));
-      const m = new THREE.InstancedMesh(g, this.material, count * per);
+      const m = new THREE.InstancedMesh(g, this.realBody && name.startsWith('hair') ? this.hairMat : this.material, count * per);
       m.castShadow = shadows; m.receiveShadow = true; m.frustumCulled = false;
       m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       m.instanceMatrix.array.fill(0);
@@ -631,8 +923,18 @@ export class PlayerMeshes {
       this.group.add(m);
       return m;
     };
-    for (const [b, name] of SINGLE) this.parts.push({ mesh: mk(name, 1), bones: [b], kind: name });
-    for (const [bl, br, name] of LIMB) this.parts.push({ mesh: mk(name, 2), bones: [bl, br], kind: name });
+    if (this.realBody) {
+      const g = geos.body.clone(); g.setAttribute('aPid', pidAttr(count, 1));
+      const m = new THREE.InstancedMesh(g, bodyMaterial(uni, lod > 0, true), count);
+      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceMatrix.array.fill(0);
+      m.customDepthMaterial = skinDepthMaterial(uni);
+      m.castShadow = shadows; m.receiveShadow = true; m.frustumCulled = false; m.name = 'jog-corpo';
+      this.group.add(m); this.bodyMesh = m;
+      this._hm = new Float32Array(16);
+    } else {
+      for (const [b, name] of SINGLE) this.parts.push({ mesh: mk(name, 1), bones: [b], kind: name });
+      for (const [bl, br, name] of LIMB) this.parts.push({ mesh: mk(name, 2), bones: [bl, br], kind: name });
+    }
     // cabelos por estilo (1..6) e barba (7): instâncias compactadas, só quem usa é desenhado
     this.hair = [null];
     for (let st = 1; st <= 7; st++) { const m = mk('hair' + st, 1); m.count = 0; this.hair.push(m); }
@@ -684,12 +986,86 @@ export class PlayerMeshes {
     put(12, kit.sponsorColor || kit.number || '#ffffff', kit.sponsor ? this._sponsorSlot(kit.sponsor) : -1);
     put(13, kit.panel || kit.shirt, kit.club ? this._crestSlot(kit.club) : -1);
     put(14, kit.numberOutline || kit.trim || kit.second || '#111111');
+    if (this.realBody) {
+      // pele MakeHuman: célula do atlas pelo tom (escuras 0–1, claras 2–6), tinta para o tom exato
+      // e morphs de rosto/corpo (africano / asiático) variando por jogador
+      const sc = new THREE.Color(look.skin || '#c68c5a'), Ls = (0.299 * sc.r + 0.587 * sc.g + 0.114 * sc.b);
+      const hh = (k) => { const x = Math.sin((number * 13.7 + (look.height || 1.8) * 91 + (look.build || 0.5) * 57 + k * 7.3)) * 43758.5; return x - Math.floor(x); };
+      const lumL = BODY.meta.skinLum.map(v => Math.pow(v / 255, 2.2));
+      const dark = Ls < 0.12;
+      const cell = dark ? (hh(1) < 0.6 ? 0 : 1) : 2 + Math.floor(hh(2) * 5);
+      const t = Math.min(1.45, Math.max(0.5, Ls / lumL[cell] * 0.82));
+      const o15 = o + 15 * 4, o16 = o + 16 * 4;
+      d[o15] = dark ? 0.55 + 0.45 * hh(3) : 0.12 * hh(3);
+      d[o15 + 1] = !dark && hh(4) > 0.72 ? 0.45 + 0.55 * hh(5) : 0;
+      d[o15 + 2] = cell;
+      d[o16] = t * (1 + (sc.r - sc.g) * 0.25); d[o16 + 1] = t; d[o16 + 2] = t * (1 - (sc.g - sc.b) * 0.2);
+    }
     this.kitTex.needsUpdate = true;
-    this.style[i] = HAIR[look.hair] ?? 1; this.beard[i] = look.beard ? 1 : 0;
+    this.style[i] = HAIR[look.hair] ?? 1; this.beard[i] = this.realBody ? 0 : look.beard ? 1 : 0;
     this._packHair();
     this.hs[i] = (look.height || PLAYER.height) / 1.8;
     this.bw[i] = 0.92 + 0.16 * (look.build ?? 0.5);
     this.gk[i] = isGK ? 1 : 0;
+  }
+
+  // Rostos fotográficos: copia a célula do banco (faces.js) para a vaga do jogador i
+  // (atlas 8 × 4) e acerta a cor da pele do corpo pela foto.
+  setFaces(fp, cells) {
+    const cv = this.faceTex.image, g = cv.getContext('2d'), F = cv.width / 8, d = this.kitData;
+    if (this.realBody) {
+      // foto do jogador como pele da cabeça escaneada; corpo do MakeHuman tingido com a cor da pele da foto
+      const lumL = BODY.meta.skinLum.map(v => Math.pow(v / 255, 2.2));
+      for (let i = 0; i < cells.length && i < 32; i++) {
+        const c = cells[i], o = i * KW * 4;
+        if (!fp || c < 0) continue;
+        const C = fp.meta.cell;
+        g.drawImage(fp.img, (c % fp.meta.cols) * C, Math.floor(c / fp.meta.cols) * C, C, C, (i % 8) * F, Math.floor(i / 8) * F, F, F);
+        const pk = fp.meta.pele[c], hk = fp.meta.cabelo?.[c] || pk;
+        const sc = new THREE.Color().setRGB(pk[0] / 255, pk[1] / 255, pk[2] / 255, THREE.SRGBColorSpace);
+        const hc = new THREE.Color().setRGB(hk[0] / 255, hk[1] / 255, hk[2] / 255, THREE.SRGBColorSpace);
+        const Ls = 0.299 * sc.r + 0.587 * sc.g + 0.114 * sc.b, Lh = 0.299 * hc.r + 0.587 * hc.g + 0.114 * hc.b;
+        d[o] = sc.r * 0.92; d[o + 1] = sc.g * 0.92; d[o + 2] = sc.b * 0.92;          // pele (costas da cabeça, pescoço)
+        d[o + 32] = hc.r; d[o + 33] = hc.g; d[o + 34] = hc.b;                        // cabelo
+        const cell = Ls < 0.12 ? 0 : 2 + (i % 5);
+        const t = Math.min(1.6, Math.max(0.45, Ls / lumL[cell] * 0.95));
+        d[o + 60] = 0; d[o + 61] = 0; d[o + 62] = cell; d[o + 63] = Lh > Ls * 0.72 ? 1 : 0;   // morphs 0; careca?
+        const hue = (x) => 1 + 0.45 * (x / Math.max(Ls, 1e-3) - 1);
+        d[o + 64] = t * hue(sc.r); d[o + 65] = t * hue(sc.g); d[o + 66] = t * hue(sc.b);
+        d[o + 59] = 1; this.style[i] = 0; this.beard[i] = 0;
+      }
+      this._packHair();
+      this.faceTex.needsUpdate = true; this.kitTex.needsUpdate = true;
+      return;
+    }
+    for (let i = 0; i < cells.length && i < 32; i++) {
+      const c = cells[i], o = i * KW * 4 + 14 * 4 + 3;
+      if (!fp || c < 0) { d[o] = 0; continue; }
+      const C = fp.meta.cell;
+      g.drawImage(fp.img, (c % fp.meta.cols) * C, Math.floor(c / fp.meta.cols) * C, C, C, (i % 8) * F, Math.floor(i / 8) * F, F, F);
+      d[o] = 1;
+      // pele do corpo = média das bochechas da foto (a barba já vem na foto: sem barba 3D)
+      const x0 = (i % 8) * F, y0 = Math.floor(i / 8) * F;
+      let r = 0, gg = 0, bb = 0, n = 0;
+      // testa + bochechas + queixo (média ampla: a luz da foto varia pelo rosto)
+      for (const [cx, cy] of [[0.5, 0.3], [0.3, 0.58], [0.66, 0.58], [0.5, 0.82]]) {
+        const px = g.getImageData(x0 + cx * F, y0 + cy * F, 0.08 * F, 0.06 * F).data;
+        for (let k = 0; k < px.length; k += 4) { r += px[k]; gg += px[k + 1]; bb += px[k + 2]; n++; }
+      }
+      const col = new THREE.Color().setRGB(r / n / 255, gg / n / 255, bb / n / 255, THREE.SRGBColorSpace);
+      d[i * KW * 4] = col.r * SKIN_K; d[i * KW * 4 + 1] = col.g * SKIN_K; d[i * KW * 4 + 2] = col.b * SKIN_K;
+      // cabelo 3D com a cor do cabelo da foto (topo da célula), se for bem mais escuro que a pele
+      const hp = g.getImageData(x0 + 0.42 * F, y0 + 0.07 * F, 0.16 * F, 0.05 * F).data;
+      let hr = 0, hg = 0, hb = 0, hn = 0;
+      for (let k = 0; k < hp.length; k += 4) { hr += hp[k]; hg += hp[k + 1]; hb += hp[k + 2]; hn++; }
+      if ((hr + hg + hb) / hn < (r + gg + bb) / n * 0.7) {
+        const hc = new THREE.Color().setRGB(hr / hn / 255, hg / hn / 255, hb / hn / 255, THREE.SRGBColorSpace);
+        const o8 = i * KW * 4 + 8 * 4; d[o8] = hc.r * 0.8; d[o8 + 1] = hc.g * 0.8; d[o8 + 2] = hc.b * 0.8;
+      }
+      this.beard[i] = 0;
+    }
+    this._packHair();
+    this.faceTex.needsUpdate = true; this.kitTex.needsUpdate = true;
   }
 
   // vaga do escudo do clube no atlas (-1 = clube desconhecido)
@@ -742,6 +1118,7 @@ export class PlayerMeshes {
     }
     for (let k = 0; k < 2; k++) { const sl = this.slot[i * 2 + k]; if (sl >= 0) this.hair[k ? 7 : this.style[i]].instanceMatrix.array.fill(0, sl * 16, sl * 16 + 16); }
     this.blob.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
+    if (this.realBody) { this.bodyMesh.instanceMatrix.array.fill(0, i * 16, i * 16 + 16); this.bodyMesh.instanceMatrix.needsUpdate = true; }
     this.streaks.instanceMatrix.array.fill(0, i * 64, i * 64 + 64);
     this.ring.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
     this.arrow.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
@@ -775,7 +1152,31 @@ export class PlayerMeshes {
         }
       }
     }
+    if (this.realBody) this._skin(i, x, y, z, qy, qw, c, s, hs, bw, P);
     this._ground(i, x, y, z, th, hs, P);
+  }
+
+  // matrizes dos 17 ossos (mundo × inversa da ligação) para a deformação no shader
+  _skin(i, x, y, z, qy, qw, c, s, hs, bw, P) {
+    // matriz da instância = posição/giro/escala do jogador; ossos no espaço do modelo
+    // (passes que trocam o material, como o AO, ao menos põem o corpo no lugar certo)
+    writeMat(this.bodyMesh.instanceMatrix.array, i * 16, 0, qy, 0, qw, x, y, z, hs * bw, hs, hs * bw);
+    const mq = P.mq, mp = P.mp, D = this.boneData, o0 = i * 17 * 16, M = _M, inv = BODY.inv;
+    for (let b = 0; b < 17; b++) {
+      writeMat(M.elements, 0, mq[b * 4], mq[b * 4 + 1], mq[b * 4 + 2], mq[b * 4 + 3], mp[b * 3], mp[b * 3 + 1], mp[b * 3 + 2], 1, 1, 1);
+      M.multiply(inv[b]);
+      D.set(M.elements, o0 + b * 16);
+      if (b === 4) {     // cabelo segue a cabeça
+        const bx = mq[16], by = mq[17], bz = mq[18], bw4 = mq[19];
+        const X = qw * bx + qy * bz, Y = qw * by + qy * bw4, Z = qw * bz - qy * bx, Wq = qw * bw4 - qy * by;
+        const px = mp[12] * hs, py = mp[13] * hs, pz = mp[14] * hs;
+        writeMat(this._hm, 0, X, Y, Z, Wq, x + c * px + s * pz, y + py, z - s * px + c * pz, hs, hs, hs);
+        const s0 = this.slot[i * 2];
+        if (s0 >= 0) this.hair[this.style[i]].instanceMatrix.array.set(this._hm, s0 * 16);
+      }
+    }
+    this.bodyMesh.instanceMatrix.needsUpdate = true;
+    this.boneTex.needsUpdate = true;
   }
 
   _ground(i, x, y, z, th, hs, P) {
@@ -849,6 +1250,7 @@ export class PlayerMeshes {
 }
 
 // matriz T·R·S (coluna principal) direto no array da instância
+const _M = new THREE.Matrix4();
 function writeMat(a, o, x, y, z, w, px, py, pz, sx, sy, sz) {
   const x2 = x + x, y2 = y + y, z2 = z + z;
   const xx = x * x2, xy = x * y2, xz = x * z2, yy = y * y2, yz = y * z2, zz = z * z2, wx = w * x2, wy = w * y2, wz = w * z2;

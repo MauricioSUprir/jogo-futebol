@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;background:#0b0f0c;overflow:hidden}</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script></head><body>
+<script type="module">
+// Visualizador de teste dos jogadores do MPFB: ?glb=arquivo&ang=0&foco=corpo|rosto
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+const q = new URLSearchParams(location.search), ang = +(q.get('ang') || 0), foco = q.get('foco') || 'corpo';
+const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, innerHeight); r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(r.domElement);
+const sc = new THREE.Scene(); sc.background = new THREE.Color(0x1d2a22);
+sc.environment = new THREE.PMREMGenerator(r).fromScene(new RoomEnvironment(), 0.04).texture;
+const sun = new THREE.DirectionalLight(0xfff2dd, 2.2); sun.position.set(2, 4, 3); sc.add(sun);
+const g = await new GLTFLoader().loadAsync(q.get('glb') || 'teste.glb');
+// pele opaca (o MPFB exporta com mistura alfa → buracos de ordenação); pelos com recorte
+g.scene.traverse(o => { if (!o.isMesh) return; const m = o.material;
+  if (/eyebrow|eyelash|hair|short|afro|long/i.test(o.name)) { m.transparent = false; m.alphaTest = 0.5; m.depthWrite = true; m.side = THREE.DoubleSide; }
+  else { m.transparent = false; m.alphaTest = 0; m.depthWrite = true; m.opacity = 1; }
+});
+sc.add(g.scene);
+const box = new THREE.Box3().setFromObject(g.scene), h = box.max.y - box.min.y;
+const cam = new THREE.PerspectiveCamera(foco === 'rosto' ? 14 : 30, innerWidth / innerHeight, 0.05, 50);
+const ty = foco === 'rosto' ? box.max.y - 0.12 * h / 1.8 : box.min.y + h * 0.5, d = foco === 'rosto' ? 1.6 : 4.2;
+cam.position.set(Math.sin(ang) * d, ty, Math.cos(ang) * d); cam.lookAt(0, ty, 0);
+r.render(sc, cam); window.pronto = { h, tris: r.info.render.triangles, names: [] };
+g.scene.traverse(o => { if (o.isMesh) window.pronto.names.push(o.name + ':' + o.geometry.attributes.position.count); });
+</script></body></html>

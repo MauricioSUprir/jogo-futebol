@@ -17,10 +17,14 @@ import { Replay } from './replay.js';
 import { BallMesh } from './ballmesh.js';
 import { GameAudio } from './audio.js';
 import { buildStadium } from './stadium.js';
-import { PlayerMeshes } from './players3d.js';
-import { rootOffset } from './anim.js';
+import { PlayerMeshes, preloadHeads, preloadBody } from './players3d.js';
+import { rootOffset, setMocap } from './anim.js';
+let mocapLoaded = false;
 import { StadiumFX } from './fx.js';
+import { loadFacePool, matchFaces, portrait } from './faces.js';
 import { CameraBlurPass } from './motionblur.js';
+import { MobilePost, installMaterialGrade } from './mobilepost.js';
+import { SunShadowFit, aimDaySun } from './sunshadow.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
@@ -60,6 +64,17 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.info.autoReset = false;
 let dynScale = 1;
+// correção de cor dentro do tonemapping dos materiais (qualidade baixa, sem passe extra)
+installMaterialGrade();
+// vinheta da qualidade baixa: gradiente CSS sobre o canvas (o compositor do navegador
+// desenha de graça; nada de passe de tela cheia no WebGL)
+const vignette = document.createElement('div');
+vignette.id = 'vinheta';
+vignette.style.cssText = 'position:fixed;inset:0;pointer-events:none;display:none;background:radial-gradient(ellipse 75% 85% at 50% 50%, rgba(0,0,0,0) 55%, rgba(0,0,0,.30) 100%)';
+canvas.after(vignette);
+{ const st = document.createElement('style'); st.textContent = 'body:not(.in-game) #vinheta{display:none!important}'; document.head.appendChild(st); }
+let vignetteOn = false;
+function setVignette(on) { if (on !== vignetteOn) { vignetteOn = on; vignette.style.display = on ? 'block' : 'none'; } }
 
 function applyQuality(rebuildPost) {
   presetKey = settings.quality === 'auto' ? presetKey : settings.quality;
@@ -68,7 +83,18 @@ function applyQuality(rebuildPost) {
   renderer.setPixelRatio(pr);
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.shadowMap.enabled = Q.shadows;
+  // baixa: ACES + cor no próprio material; demais: ACES (a cor vem do pós)
+  renderer.toneMapping = Q.grade === 'material' ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
+  // PCF simples = 9 leituras (vs 17 do PCFSoft): bem mais barato no celular
+  renderer.shadowMap.type = Q.shadowSoft === false ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  setVignette(!!game && Q.grade === 'material');
   if (game) {
+    // sombra do sol/refletores seguindo o enquadramento (texel estável)
+    const L = game.stadium.mainLight;
+    if (!game.sunFit && L && !game.stadium.isNight && (settings.timeOfDay || 'noite') === 'dia' && !game.sunAimed) { game.sunAimed = true; aimDaySun(game.stadium, game.scene); }
+    if (!game.sunFit && L && L.castShadow) game.sunFit = new SunShadowFit(L, game.stadium.sunDir, { halfL: PITCH.halfL + 4, halfW: PITCH.halfW + 4 });
+    if (L && L.castShadow && L.shadow.mapSize.x !== Q.shadowSize) { L.shadow.mapSize.set(Q.shadowSize, Q.shadowSize); L.shadow.map?.dispose(); L.shadow.map = null; }
+    if (L && L.castShadow) L.shadow.radius = Q.shadowSoft === false ? 1 : 2;
     game.camera.aspect = innerWidth / innerHeight; game.camera.updateProjectionMatrix();
     game.rig.aspect = game.camera.aspect;
     if (rebuildPost) buildPost();
@@ -81,6 +107,14 @@ addEventListener('orientationchange', () => setTimeout(() => applyQuality(false)
 function buildPost() {
   const g = game;
   if (g.composer) { g.composer.dispose?.(); g.composer = null; }
+  g.mblur = null;
+  // celular (média): um passe final só (ACES + cor + vinheta + nitidez + bloom barato)
+  if (Q.lite && !Q.post) {
+    g.composer = new MobilePost(renderer, g.scene, g.camera, {
+      night: !!(g.stadium && g.stadium.isNight), bloom: !!Q.liteBloom, sharpen: Q.sharpen || 0, msaa: Q.msaa,
+    });
+    return;
+  }
   if (!Q.post) return;
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
   const blur = !touch && settings.motionBlur !== false;
@@ -172,12 +206,19 @@ async function startMatch(cfg) {
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';
   await new Promise(r => setTimeout(r, 20));
+  await preloadHeads(); await preloadBody();
+  // passadas de captura de movimento (CMU) — sem elas a passada procedural continua valendo
+  if (!mocapLoaded) { mocapLoaded = true; try { setMocap(await (await fetch('assets/mocap/locomocao.json')).json()); } catch (e) { console.warn('mocap indisponível', e); } }
   const players = new PlayerMeshes(scene, { count: 22, quality: Q, night: stadium.isNight });
   for (const p of match.players) {
     const t = p.team;
     const kit = p.isGK ? (t.i === 0 ? cfg.homeGK : cfg.awayGK) : (t.i === 0 ? cfg.homeKit : cfg.awayKit);
     players.setPlayer(p.idx, { kit, isGK: p.isGK, number: p.data.num, look: p.data.look });
   }
+  // rostos com foto (pessoas que não existem) — também usados nas fotos da escalação
+  const facePool = await loadFacePool();
+  const faceCells = facePool ? matchFaces(facePool.meta, match) : [];
+  if (facePool) players.setFaces(facePool, faceCells);
   let fx = null;
   try { fx = new StadiumFX(scene, { quality: Q, isNight: stadium.isNight, homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt, sunDir: stadium.sunDir, wind: match.wind }); } catch (e) { console.warn('efeitos indisponíveis', e); }
   const ball = new BallMesh(scene, Q);
@@ -187,7 +228,7 @@ async function startMatch(cfg) {
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, acc: 0, paused: false, t: 0,
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, facePool, faceCells, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20 };
   applyQuality(true);
 
@@ -294,7 +335,8 @@ function handleEvents(g) {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
         input.vibrate(300);
-        g.celebCutT = 1.3;   // deixa a bola entrar na rede e corta para a comemoração
+        g.celebCutT = 1.6;   // deixa a bola entrar na rede (em câmera lenta) e corta para a comemoração
+        g.slowmo = 1.1;
         g.stadium.crowdReact('goal', e.side === 0 ? 'home' : 'away');
         const kit = e.side === 0 ? g.cfg.homeKit : g.cfg.awayKit;
         g.fx?.goal(e.side === 0 ? 'home' : 'away', [kit.shirt, kit.second && kit.second !== kit.shirt ? kit.second : '#111111'], e.sign);
@@ -327,12 +369,13 @@ function introEvent(g, stage) {
   } else if (stage === 'enter') {
     audio.teamsEnter?.();
     audio.crowd('cheer', 1);
-    g.stadium.crowdReact('goal', 'home');
+    // festa na entrada (sem o 'goal', que acende os LEDs de GOOOOL)
+    g.stadium.crowdReact('chance', 'home'); g.stadium.crowdReact('chance', 'away');
     g.fx?.goal('home', colors(cfg.homeKit), -1);
     g.stadium.showOnScreens?.('goal', 'BEM-VINDOS!');
   } else if (stage === 'lineup') {
     audio.anthem?.(true);
-    hud.lineup(m.teams, cfg);
+    hud.lineup(m.teams, cfg, (p) => portrait(g.facePool, g.faceCells?.[p.idx] ?? -1, 96));
   } else if (stage === 'break') {
     audio.anthem?.(false);
     hud.lineup(null);
@@ -364,18 +407,27 @@ function introCamera(g) {
     _ip.set(cx - 11, 5.5, cz - 6); _il.set(cx, 1.2, cz + 2); fov = 38; lam = 2;
   } else if (t < 19) {
     _ip.set(0, 4.2, -31); _il.set(0, 1.1, -14); fov = 60; lam = 1.5;
-  } else if (t < 25) {
+  } else if (t < 24) {
     // passeia de perto pelos rostos do perfilamento
-    const u = (t - 19) / 6, x = 15 - u * 30;
+    const u = (t - 19) / 5, x = 15 - u * 30;
     _ip.set(x, 1.62, -20.5); _il.set(x - 0.8, 1.4, -14); fov = 30; lam = 5;
+  } else if (t < 27.5) {
+    // torcida da lateral oposta (fundo da escalação): câmera baixa olhando a arquibancada
+    const u = (t - 24) / 3.5;
+    _ip.set(-22 + u * 9, 1.7, 33); _il.set(-14 + u * 9, 7.5, 52); fov = 42; lam = 4;
+  } else if (t < 31) {
+    // torcida atrás do gol da casa
+    const u = (t - 27.5) / 3.5;
+    _ip.set(-49, 1.8, 8 + u * 9); _il.set(-70, 7.5, 13 + u * 9); fov = 44; lam = 4;
   } else {
     // aérea por cima do gramado (fora da cobertura), abrindo o estádio
-    const u = t - 25;
+    const u = t - 31;
     _ip.set(-18 + u * 4, 46, -30 + u * 2); _il.set(0, 0, 4); fov = 55; lam = 2;
   }
   if (!g.rig.cine || g.rig.cine.type !== 'manual') { g.rig.setCinematic({ type: 'manual', pos: _ip, look: _il, fov, lam }); g.rig.snap = true; }
   const c = g.rig.cine;
-  if (c.stage !== (t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4)) { c.stage = t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4; g.rig.snap = true; g.mblur?.reset(); }
+  const st = t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 24 ? 3 : t < 27.5 ? 4 : t < 31 ? 5 : 6;
+  if (c.stage !== st) { c.stage = st; g.rig.snap = true; g.mblur?.reset(); }
   c.fov = fov; c.lam = lam;
 }
 
@@ -427,7 +479,10 @@ function frame(now) {
       g.replayT += dt;
       if (!g.replay.update(dt)) finishReplay();
     } else {
-      g.acc += dt;
+      // câmera lenta curta quando a bola estufa a rede
+      const ts = g.slowmo > 0 ? 0.32 : 1;
+      if (g.slowmo > 0) g.slowmo -= dt;
+      g.acc += dt * ts;
       let steps = 0;
       while (g.acc >= STEP && steps < 4) {
         m.step(STEP, cmd);
@@ -503,13 +558,19 @@ function render(g, dt) {
     g.celebCutT -= dt;
     if (g.celebCutT <= 0 && m.phase === 'goal' && m.goalInfo) {
       const sc = m.goalInfo.scorer;
-      g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(sc.x, 0, sc.z), follow: sc, a0: Math.atan2(-sc.z, -sc.x) + 0.6 });
+      g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(sc.x, 0, sc.z), follow: sc, side: sc.z > 0 ? -1 : 1 });
       g.rig.snap = true;
     }
   }
   const c = g.rig.cine;
   if (c) {
-    if (c.type === 'celebrate' && c.follow) { c.target.set(c.follow.x, 0, c.follow.z); if (m.phase !== 'goal') g.rig.setCinematic(null); }
+    if (c.type === 'celebrate' && c.follow) {
+      // mira no grupo do abraço (autor + quem já chegou)
+      let x = c.follow.x * 2, z = c.follow.z * 2, n = 2;
+      for (const q of c.follow.team.players) if (q !== c.follow && Math.hypot(q.x - c.follow.x, q.z - c.follow.z) < 2.5) { x += q.x; z += q.z; n++; }
+      c.target.set(x / n, 0, z / n);
+      if (m.phase !== 'goal') g.rig.setCinematic(null);
+    }
     else if (c.target && c.target.copy) c.target.copy(_t);
   }
   const ctl = m.controlled;
@@ -539,8 +600,13 @@ function render(g, dt) {
   audio.update(dt, { excitement: m.excitement, attackThreat: m.threat });
   // torcida cantando de tempos em tempos
   g.chantT -= dt;
-  if (g.chantT <= 0) { g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15; }
+  if (g.chantT <= 0) {
+    g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15;
+    // a arquibancada canta junto com o som (pulo/braços no compasso)
+    if (g.chantOn && m.phase !== 'goal') g.stadium.crowdChant?.('home', 1, g.chantT);
+  }
 
+  g.sunFit?.update(g.camera);
   renderer.info.reset();
   if (g.composer) g.composer.render(dt);
   else renderer.render(g.scene, g.camera);
@@ -582,10 +648,17 @@ function measure(g, dt) {
   g.fps = fps; g.frames = 0; g.fpsT = 0;
   if (window.__fps) window.__fps(fps);
   const old = dynScale;
-  if (fps < 45 && dynScale > 0.7) dynScale = Math.max(0.7, dynScale - 0.1);
+  // prioridade à nitidez: antes de baixar a resolução, desliga o bloom barato (celular)
+  const pc = g.composer;
+  if (pc && pc.setBloom) {
+    if (fps < 45 && pc.bloomOn) { pc.setBloom(false); return; }
+    if (fps > 58 && dynScale >= 1 && !pc.bloomOn) pc.setBloom(true);
+  }
+  const minDyn = Q.minDyn ?? 0.7;
+  if (fps < 45 && dynScale > minDyn) dynScale = Math.max(minDyn, dynScale - 0.1);
   else if (fps > 58 && dynScale < 1) dynScale = Math.min(1, dynScale + 0.05);
   // auto: cai de preset se nem com resolução menor aguenta
-  if (settings.quality === 'auto' && fps < 38 && dynScale <= 0.7) {
+  if (settings.quality === 'auto' && fps < 38 && dynScale <= minDyn) {
     const order = ['ultra', 'alta', 'media', 'baixa'];
     const i = order.indexOf(presetKey);
     if (i < order.length - 1) { presetKey = order[i + 1]; dynScale = 0.85; applyQuality(true); return; }

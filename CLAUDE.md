@@ -22,7 +22,16 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (hoje péssimos)** → **torcida vibrando de verdade** (pular, braços, ondas no gol/chance)
   → **cantos de torcida ao fundo** o jogo todo → **animação por captura de movimento (mocap)**
   (modelos com esqueleto + animações reais CMU/Mixamo; aprovado pelo dono, fim da fila).
-- Rostos: **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
+- **Entrega em lote** (pedido do dono): fazer a fila inteira e só entregar (PR + merge + link)
+  quando tudo estiver pronto; nas mensagens de andamento, só estimativa.
+- **Urgente:** melhora extrema dos gráficos no celular (qualidade baixa/média).
+- **PRIMEIRA COISA na próxima sessão:** gerar os rostos com o dono pelo ChatGPT (pedido em
+  `tools/rostos/pedido-chatgpt.txt`, lotes 02–35, pasta do Drive "GOLAÇO – rostos") e colocar no jogo.
+- **Jogador tem que ser um modelo humano 3D realista inteiro** (corpo e cabeça com formato de
+  verdade, esqueleto, mocap). Nada de foto "colada" em cabeça/corpo de peças geométricas — o dono
+  achou péssimo. O rosto é a pele da cabeça do modelo (UV), não um adesivo.
+- Rostos: escolhido **retrato por IA de pessoa fictícia** projetado na cabeça 3D (opção B);
+  **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
 
@@ -38,6 +47,18 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Desempenho: jogadores e torcida instanciados; poucos draw calls; qualidade `baixa` tem
   que rodar em celular médio.
 - Pasta `tools/` não vai para o site.
+
+- Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
+  retratos por IA em `tools/rostos/brutos/gNN.png` + banco SFHQ CC0) projetadas na cabeça escaneada
+  (`assets/cabeca/`, só a forma; `tools/rostos/cabeca.py`). Pedido para o ChatGPT gerar os lotes:
+  `tools/rostos/pedido-chatgpt.txt` → imagens na pasta do Drive "GOLAÇO – rostos" → copiar para
+  `brutos/` como `gNN.png` e rodar `processar.py`.
+- Jogador realista: `assets/jogador/corpo.{json,bin}` gerado por `tools/humano/rig.py` (corpo dos
+  Human Base Meshes do Blender Studio, CC0, exportado por `tools/humano/exportar.py` com bpy; cabeça
+  com a forma do escaneamento Lee Perry-Smith, CC BY 3.0). Deformado por 17 ossos no shader
+  (`players3d.js`, BODY_SKIN); a malha procedural antiga só entra se o arquivo faltar.
+- Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
+  `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos).
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash

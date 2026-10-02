@@ -14,6 +14,7 @@ import {
   BODY_VERT_HEAD, BODY_VERT_MAIN, SCARF_VERT_HEAD, SCARF_VERT_MAIN, FRAG_HEAD, FRAG_COLOR,
 } from './stadium-crowd-glsl.js';
 import { buildFlags, buildBanners } from './stadium-crowd-flags.js';
+import { buildTifo } from './stadium-crowd-tifo.js';
 
 // quantidade por qualidade: anel inferior (malha mais detalhada) e superior
 const CFG = {
@@ -217,6 +218,8 @@ export function buildCrowd(ctx) {
   // ---- atributos por instância
   const uniforms = {
     uTime: U.uTime, uExc: U.uExc, uEvHome: U.uEvHome, uEvAway: U.uEvAway,
+    uChant: U.uChant || { value: new THREE.Vector4(0, 0, 130, 120) },
+    uWave: U.uWave || { value: new THREE.Vector4(-1e4, -1, 14, 1) },
     uSunDir: U.uSunDir, uShadeOn: U.uShadeOn,
     uDirScale: { value: isNight ? 0.75 : 1.0 },
     uRim: { value: isNight ? new THREE.Color(0.1, 0.11, 0.13) : new THREE.Color(0.07, 0.075, 0.08) },
@@ -312,6 +315,7 @@ export function buildCrowd(ctx) {
   if (!ctx.seats) {
     group.add(buildFlags({ U, seats, rng, count: cfg.flags, palH, palA }));
     group.add(buildBanners({ U, seats, rng, palH, palA, count: cfg.banners }));
+    group.add(buildTifo({ U, palH }));
   }
 
   for (const m of group.children) skipOverride(m);

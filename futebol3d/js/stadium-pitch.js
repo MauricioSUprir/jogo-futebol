@@ -130,8 +130,11 @@ const MAP_FRAG = /* glsl */`
   float parD = clamp( sin( bd * 3.14159265 ) / ( fwidth( bd ) * 3.3 + 0.12 ), -1.0, 1.0 );
   stripe = parD * ( 0.06 + 0.1 * dot( vxz, vec2( -0.7071, 0.7071 ) ) * grazing );
   #else
-  // faixas transversais (cortador andando ao longo de z) + corte cruzado leve
-  stripe = parX * ( 0.035 + 0.1 * vxz.y * grazing ) + parZ * 0.018;
+  // faixas transversais (cortador andando ao longo de z) + corte cruzado leve.
+  // As folhas deitam para +z/-z: o contraste é máximo olhando ao longo de z (câmera de
+  // TV, ±12%) e some olhando ao longo de x (atrás do gol) — sem termo fixo, que antes
+  // anulava o efeito na câmera de TV e deixava as faixas quase invisíveis.
+  stripe = parX * ( 0.006 - 0.12 * vxz.y * grazing ) + parZ * 0.018;
   #endif
   grass *= 1.0 + stripe;
 

@@ -1,10 +1,10 @@
 // Estádio: detalhes à beira do campo — bancos de reservas com cadeiras, túnel dos
-// jogadores com cobertura telescópica, mesa do 4º árbitro e fotógrafos atrás dos gols.
+// jogadores com cobertura telescópica e mesa do 4º árbitro (os fotógrafos ficam em
+// stadium-photogs.js, numa malha própria animada).
 // Tudo vai para os acumuladores de estrutura (opaco) e vidro (translúcido) do estádio.
 import * as THREE from 'three';
 import { PITCH } from './config.js';
 import { BOWL } from './stadium-bowl.js';
-import { mulberry } from './stadium-geo.js';
 
 const M = (x, y, z, ry = 0) => new THREE.Matrix4().makeRotationY(ry).setPosition(x, y, z);
 
@@ -94,36 +94,7 @@ function tunnel(st, glass, ctx) {
   st.box(4.6, 0.08, 0.06, accent, M(0, 2.72, z0 + 0.12));
 }
 
-// fotógrafos agachados atrás das linhas de fundo (coletes laranja, lentes longas)
-function photographers(st, ctx) {
-  const rng = mulberry(77);
-  const vest = [0xff7a1a, 0xffc21a, 0x19c6ff];
-  const skin = [0x8a5a3c, 0x5a3a26, 0xc79a7a, 0x3a2418];
-  for (const sx of [-1, 1]) {
-    for (const z of [-21, -17.5, -14, -10.5, -7.5, 7.5, 10.5, 14, 17.5, 21]) {
-      if (rng() < 0.15) continue;
-      const x = sx * (PITCH.halfL + 3.2 + rng() * 0.8);
-      const zz = z + (rng() - 0.5) * 1.2;
-      const ry = sx > 0 ? -Math.PI / 2 : Math.PI / 2;      // olhando para o campo
-      const base = new THREE.Matrix4().makeRotationY(ry + (rng() - 0.5) * 0.5).setPosition(x, 0, zz);
-      const add = (w, h, d, col, lx, ly, lz, rx = 0) => {
-        const m = new THREE.Matrix4().makeRotationX(rx).setPosition(lx, ly, lz);
-        st.box(w, h, d, col, base.clone().multiply(m));
-      };
-      add(0.34, 0.3, 0.34, 0x202326, 0, 0.18, 0);                 // banquinho/case
-      add(0.42, 0.5, 0.3, 0x15171a, 0, 0.58, -0.02, 0.35);        // tronco curvado
-      add(0.44, 0.34, 0.32, vest[Math.floor(rng() * 3)], 0, 0.64, 0.0, 0.35); // colete
-      add(0.19, 0.22, 0.2, skin[Math.floor(rng() * 4)], 0, 0.98, 0.14);       // cabeça
-      add(0.2, 0.08, 0.21, 0x111111, 0, 1.1, 0.13);                // boné
-      add(0.13, 0.13, 0.55, 0x1a1a1a, 0.05, 0.9, 0.5);             // teleobjetiva
-      add(0.14, 0.14, 0.12, 0xe8e8e2, 0.05, 0.9, 0.75);            // lente branca
-      add(0.36, 0.14, 0.4, 0x15171a, 0, 0.1, 0.25);                // pernas dobradas
-    }
-  }
-}
-
 export function buildDetails(ctx, st, glass) {
   dugouts(st, glass, ctx);
   tunnel(st, glass, ctx);
-  photographers(st, ctx);
 }

@@ -11,7 +11,7 @@ const ACTION_ANIM = {
   pass: 'pass', long: 'kick', cross: 'kick', shot: 'kick', finesse: 'kick', through: 'pass', chip: 'chip',
   clear: 'kick', volley: 'volley', header: 'header', slide: 'slide', tackle: 'tackle', throwin: 'throwin',
   gk_dive: 'gk_dive', gk_catch: 'gk_catch', gk_throw: 'gk_throw', gk_kick: 'gk_kick', gk_pass: 'pass',
-  fall: 'fall', getup: 'getup', celebrate: 'celebrate', dejected: 'dejected', penalty: 'kick', freekick: 'kick',
+  fall: 'fall', getup: 'getup', celebrate: 'celebrate', dejected: 'dejected', hug: 'hug', penalty: 'kick', freekick: 'kick',
 };
 
 export function newPose() {
@@ -119,7 +119,7 @@ export class Player {
   }
 
   busy() { return !!this.action || this.stun > 0; }
-  canPlay() { return !this.sentOff && this.stun <= 0 && this.cooldown <= 0 && !(this.action && ['slide', 'fall', 'getup', 'gk_dive', 'celebrate', 'dejected', 'throwin'].includes(this.action.type)); }
+  canPlay() { return !this.sentOff && this.stun <= 0 && this.cooldown <= 0 && !(this.action && ['slide', 'fall', 'getup', 'gk_dive', 'celebrate', 'dejected', 'hug', 'throwin'].includes(this.action.type)); }
 
   // Integra movimento. onContact(player, action) é chamado no quadro do contato.
   step(dt, onContact, onEnd) {
@@ -151,7 +151,12 @@ export class Player {
         this.x += rx * du; this.z += rz * du;
         this.vx = this.vz = 0; dx = dz = 0;
       } else if (k === 'celebrate') {
-        // corre na direção escolhida no começo da comemoração
+        // aviãozinho: segue correndo (a IA dirige); joelhada: desliza e para; demais: para
+        const v = act.data.variant || 0;
+        if (v === 1) { dx = dz = 0; const f = Math.exp(-1.1 * dt); this.vx *= f; this.vz *= f; }
+        else if (v !== 0) { dx = dz = 0; const f = Math.exp(-5 * dt); this.vx *= f; this.vz *= f; }
+      } else if (k === 'hug') {
+        dx = dz = 0; const f = Math.exp(-6 * dt); this.vx *= f; this.vz *= f;
       } else {
         // chutes/passes/cabeceios: desacelera um pouco
         dx *= 0.45; dz *= 0.45;
@@ -165,7 +170,7 @@ export class Player {
 
     if (this.stun > 0) { this.stun -= dt; dx = dz = 0; }
 
-    const locked = act && ['slide', 'gk_dive', 'fall', 'getup'].includes(act.type);
+    const locked = act && (['slide', 'gk_dive', 'fall', 'getup'].includes(act.type) || (act.type === 'celebrate' && act.data.variant === 1));
     // intenção suavizada: tira a "tremedeira" de alvos que mudam a cada quadro
     const sm = Math.min(1, dt * (this.human ? 16 : 7));
     this.sdx = (this.sdx ?? dx) + (dx - (this.sdx ?? dx)) * sm;

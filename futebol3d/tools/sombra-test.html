@@ -1,0 +1,23 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Teste de sombra</title>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
+<style>body{margin:0;background:#000}</style></head><body>
+<script type="module">
+// Cena mínima: chão + caixa + luz direcional com sombra (PCF ou PCFSoft pelo ?tipo=)
+import * as THREE from 'three';
+const tipo = new URLSearchParams(location.search).get('tipo') || 'pcf';
+const r = new THREE.WebGLRenderer({ antialias: true });
+r.setSize(600, 400); document.body.appendChild(r.domElement);
+r.shadowMap.enabled = true;
+r.shadowMap.type = { basic: THREE.BasicShadowMap, pcf: THREE.PCFShadowMap, soft: THREE.PCFSoftShadowMap, vsm: THREE.VSMShadowMap }[tipo];
+const s = new THREE.Scene(); s.background = new THREE.Color(0x335577);
+const cam = new THREE.PerspectiveCamera(40, 1.5, 0.1, 100); cam.position.set(0, 6, -10); cam.lookAt(0, 0, 0);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x55aa55 }));
+chao.rotation.x = -Math.PI / 2; chao.receiveShadow = true; s.add(chao);
+const cx = new THREE.Mesh(new THREE.BoxGeometry(1, 2, 1), new THREE.MeshStandardMaterial({ color: 0xff0000 }));
+cx.position.y = 1; cx.castShadow = true; s.add(cx);
+const L = new THREE.DirectionalLight(0xffffff, 3); L.position.set(-3, 8, -5); L.castShadow = true;
+L.shadow.camera.left = L.shadow.camera.bottom = -8; L.shadow.camera.right = L.shadow.camera.top = 8;
+s.add(L, new THREE.HemisphereLight(0xffffff, 0x444444, 0.4));
+r.render(s, cam);
+window.__ok = true;
+</script></body></html>

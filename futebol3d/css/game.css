@@ -175,19 +175,30 @@ body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--sa
 .hud-intro.show { opacity: 1; animation: pulse 1.8s ease-in-out infinite; }
 @keyframes pulse { 50% { border-color: rgba(30,227,122,.15); } }
 .hud-lineup { position: absolute; inset: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 calc(2em + var(--safe-l)); pointer-events: none; }
-.lu-team { width: 17em; background: linear-gradient(180deg, rgba(8,12,10,.9), rgba(4,7,6,.82)); border-top: .25em solid var(--lime);
-  transform: translateX(-120%); opacity: 0; transition: transform .7s cubic-bezier(.2,.9,.3,1), opacity .5s; }
+.lu-team { width: 19em; background: linear-gradient(180deg, rgba(8,12,10,.86), rgba(4,7,6,.72)); border-top: .25em solid var(--lime);
+  backdrop-filter: blur(3px); transform: translateX(-120%); opacity: 0; transition: transform .7s cubic-bezier(.2,.9,.3,1), opacity .5s; }
 .lu-team + .lu-team { transform: translateX(120%); }
 .hud-lineup.show .lu-team { transform: none; opacity: 1; }
 .hud-lineup.show .lu-team + .lu-team { transition-delay: .15s; }
-.lu-team header { display: flex; align-items: center; gap: .6em; padding: .6em .8em; position: relative; }
+.lu-team header { display: flex; align-items: center; gap: .6em; padding: .55em .8em; position: relative; }
 .lu-team header b { display: block; font: 800 1.35em/1 var(--disp); letter-spacing: .02em; }
 .lu-team header small { color: #9fb3a6; font-size: .8em; }
 .lu-team header i { position: absolute; right: 0; top: 0; bottom: 0; width: .4em; }
 .lu-crest { width: 2.6em; height: 2.6em; display: grid; place-items: center; }
 .lu-crest svg { width: 100%; height: 100%; }
-.lu-team ol { list-style: none; margin: 0; padding: 0 0 .4em; }
-.lu-team li { display: grid; grid-template-columns: 2em 1fr auto; align-items: center; padding: .22em .8em; font: 600 .95em var(--ui); border-top: .06em solid rgba(255,255,255,.06); }
-.lu-team li em { font: 800 1.1em var(--disp); font-style: normal; color: var(--lime); }
-.lu-team li small { color: #8fa598; font: 700 .75em var(--disp); letter-spacing: .06em; }
-@media (pointer: coarse) { .lu-team { width: 14em; font-size: .82em; } .lu-team li { padding: .12em .7em; } }
+/* campinho: listras de corte, linhas brancas finas, ataque para cima */
+.lu-pitch { position: relative; margin: 0 .7em .7em; height: 24em; border: .1em solid rgba(255,255,255,.55);
+  background: repeating-linear-gradient(180deg, rgba(20,110,55,.78) 0 2.4em, rgba(14,92,45,.78) 2.4em 4.8em); overflow: hidden; }
+.lu-pitch > i { position: absolute; border: .1em solid rgba(255,255,255,.5); }
+.lu-box { left: 25%; right: 25%; bottom: -.1em; height: 14%; }
+.lu-arc { left: 38%; right: 38%; top: -1.6em; height: 3.2em; border-radius: 50%; }
+.lu-mid { left: -.1em; right: -.1em; top: -.1em; height: 0; }
+.lu-p { position: absolute; transform: translate(-50%, -50%) scale(.6); opacity: 0; display: flex; flex-direction: column; align-items: center; width: 4.6em;
+  transition: transform .45s cubic-bezier(.2,1.4,.4,1) var(--d), opacity .3s var(--d); }
+.hud-lineup.show .lu-p { transform: translate(-50%, -50%); opacity: 1; }
+.lu-ph { position: relative; width: 2.7em; height: 2.7em; border-radius: 50%; border: .16em solid; background: #233 center/cover; box-shadow: 0 .2em .6em rgba(0,0,0,.6); }
+.lu-ph img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.lu-ph em { position: absolute; right: -.45em; bottom: -.25em; min-width: 1.35em; padding: 0 .2em; border-radius: .7em; font: 800 .72em/1.35em var(--disp); font-style: normal; text-align: center; box-shadow: 0 0 0 .12em rgba(0,0,0,.6); }
+.lu-p b { margin-top: .2em; font: 700 .72em/1.1 var(--ui); text-shadow: 0 .1em .3em #000, 0 0 .2em #000; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+@media (pointer: coarse) { .lu-team { width: 15em; font-size: .78em; } .lu-pitch { height: 21em; } }
+@media (max-height: 460px) { .lu-team { font-size: .68em; } .lu-team header { padding: .35em .7em; } }

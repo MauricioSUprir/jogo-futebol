@@ -8,6 +8,7 @@ uniform float uTime;
 uniform float uExc;
 uniform vec4 uEvHome;
 uniform vec4 uEvAway;
+uniform vec4 uChant;
 uniform vec3 uSunCol;
 uniform vec3 uAmb;
 ${ROOF_GLSL}
@@ -32,9 +33,16 @@ void main() {
   vec3 n = vec3( aInfo.x, 0.0, aInfo.y );
   vec3 tang = vec3( -aInfo.y, 0.0, aInfo.x ) * ( seed > 0.5 ? 1.0 : -1.0 );
   vec4 evMine = aInfo.w > 0.5 ? uEvAway : uEvHome;
-  float wave = 1.0 + react( evMine.x, 10.0 ) * 1.6 + uExc * 0.8;
-  // mastro em arco: a pessoa agita a bandeira de um lado para o outro
-  float swing = sin( uTime * ( 1.3 + seed ) * wave + seed * 30.0 ) * ( 0.25 + 0.2 * uExc + 0.3 * react( evMine.x, 10.0 ) );
+  // agito: só a AMPLITUDE varia (multiplicar a frequência pelo tempo fazia a fase
+  // saltar quando a excitação mudava). No canto, o mastro vai e volta no compasso.
+  float gR = react( evMine.x, 16.0 );
+  float lvl = aInfo.w > 0.5 ? uChant.y : uChant.x;
+  float bpm = aInfo.w > 0.5 ? uChant.w : uChant.z;
+  float wave = 1.0 + gR * 1.6 + uExc * 0.8;
+  float free = sin( uTime * ( 1.3 + seed ) + seed * 30.0 ) * 0.7 + sin( uTime * ( 3.1 + seed ) + seed * 11.0 ) * 0.3 * gR;
+  float onBeat = sin( uTime * bpm / 120.0 * 6.2831853 + seed * 0.6 );
+  float sync = clamp( lvl * 1.3, 0.0, 1.0 ) * ( 1.0 - gR );
+  float swing = mix( free, onBeat, sync ) * ( 0.25 + 0.2 * uExc + 0.45 * gR + 0.3 * lvl );
   vec3 up = normalize( vec3( 0.0, 1.0, 0.0 ) + tang * swing - n * 0.12 );
   float mast = 2.4 * size;
   vec3 p;
@@ -45,11 +53,11 @@ void main() {
   } else {
     vec3 top = base + up * mast;
     float fl = 1.5 * size, fh = 0.95 * size;
-    float ph = uTime * 5.5 * wave + seed * 20.0 - u * 5.5;
+    float ph = uTime * 5.5 + seed * 20.0 - u * 5.5;
     // o pano cai um pouco quando o vento/agito diminui
     vec3 along = normalize( tang - up * ( 0.35 - 0.25 * min( wave - 1.0, 1.0 ) ) );
     p = top - up * ( 1.0 - v ) * fh + along * u * fl;
-    p += n * ( sin( ph ) * 0.22 * u + sin( ph * 1.7 + v * 2.0 ) * 0.06 * u ) + up * cos( ph * 0.7 ) * 0.06 * u;
+    p += n * ( sin( ph ) * 0.22 * u * min( wave, 2.2 ) + sin( ph * 1.7 + v * 2.0 ) * 0.06 * u ) + up * cos( ph * 0.7 ) * 0.06 * u;
   }
   float camD = length( cameraPosition - aPos.xyz );
   vUv = vec2( u, v );
@@ -134,6 +142,7 @@ export function buildFlags({ U, seats, rng, count, palH, palA }) {
   fb.instanceCount = fl.length / 8;
   const uniforms = {
     uTime: U.uTime, uExc: U.uExc, uEvHome: U.uEvHome, uEvAway: U.uEvAway,
+    uChant: U.uChant || { value: new THREE.Vector4(0, 0, 130, 120) },
     uSunDir: U.uSunDir, uShadeOn: U.uShadeOn, uSunCol: U.uSunCol, uAmb: U.uAmbCrowd,
   };
   const fmat = new THREE.ShaderMaterial({ uniforms, vertexShader: flagVert, fragmentShader: flagFrag, side: THREE.DoubleSide });
@@ -172,6 +181,7 @@ uniform float uTime;
 uniform float uExc;
 uniform vec4 uEvHome;
 uniform vec4 uEvAway;
+uniform vec4 uChant;
 uniform vec3 uSunCol;
 uniform vec3 uAmb;
 uniform float uRows;
@@ -198,8 +208,9 @@ void main() {
   // erguida um pouco mais alto e sacudida no gol
   float lift = 1.05 + 0.25 * g + 0.04 * sin( uTime * 1.3 + seed * 30.0 );
   vec3 p = aPos.xyz + tang * ( u - 0.5 ) * w + vec3( 0.0, lift + v * 1.1, 0.0 );
-  float ph = uTime * ( 2.2 + 2.5 * g ) + seed * 20.0 - u * w * 0.9;
-  p -= n * ( sin( ph ) * ( 0.06 + 0.1 * g ) * ( 0.4 + v ) + 0.12 * sin( 3.14159 * u ) * ( 1.0 - v ) );
+  float ph = uTime * 2.2 + seed * 20.0 - u * w * 0.9;
+  float ph2 = uTime * 5.1 + seed * 7.0 - u * w * 1.4;
+  p -= n * ( ( sin( ph ) * 0.06 + sin( ph2 ) * 0.1 * g ) * ( 0.4 + v ) + 0.12 * sin( 3.14159 * u ) * ( 1.0 - v ) );
   p.y -= 0.12 * sin( 3.14159 * u ) * v * ( 1.0 - g );   // pano cede no meio
   vUv = vec2( u, 1.0 - ( aColA.w * 255.0 + 1.0 - v ) / uRows );
   vColA = pow( aColA.rgb, vec3( 2.2 ) );
@@ -267,6 +278,7 @@ export function buildBanners({ U, seats, rng, palH, palA, count = 8 }) {
   g.instanceCount = inst.length / 8;
   const uniforms = {
     uTime: U.uTime, uExc: U.uExc, uEvHome: U.uEvHome, uEvAway: U.uEvAway,
+    uChant: U.uChant || { value: new THREE.Vector4(0, 0, 130, 120) },
     uSunDir: U.uSunDir, uShadeOn: U.uShadeOn, uSunCol: U.uSunCol, uAmb: U.uAmbCrowd,
     uTex: { value: sloganTexture() }, uRows: { value: SLOGANS.length },
   };

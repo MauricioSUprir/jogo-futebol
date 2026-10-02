@@ -10,7 +10,8 @@ const r = new THREE.WebGLRenderer({ antialias: true }); r.setSize(innerWidth, in
 r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(r.domElement);
 const sc = new THREE.Scene(); sc.background = new THREE.Color(0x0b0f0c);
-const cam = new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.1, 100);
+const orto = q.get('orto');
+const cam = orto ? new THREE.OrthographicCamera(-4.3, 4.3, 4.3, -4.3, 0.1, 100) : new THREE.PerspectiveCamera(28, innerWidth / innerHeight, 0.1, 100);
 sc.add(new THREE.HemisphereLight(0xdfefff, 0x2a3a22, 1.1));
 const sun = new THREE.DirectionalLight(0xfff2dd, 2.4); sun.position.set(3, 5, 6); sc.add(sun);
 const tl = new THREE.TextureLoader();
@@ -40,7 +41,8 @@ if (modo === 'scan') {
 }
 mesh.material = mat; sc.add(g.scene);
 const d = sz.y * 2.3;
-cam.position.set(c.x + Math.sin(ang) * d, c.y + sz.y * 0.05, c.z + Math.cos(ang) * d); cam.lookAt(c.x, c.y + sz.y * 0.05, c.z);
+if (orto) { cam.position.set(0, 0, 20); cam.lookAt(0, 0, 0); sun.position.set(0, 0, 10); }
+else { cam.position.set(c.x + Math.sin(ang) * d, c.y + sz.y * 0.05, c.z + Math.cos(ang) * d); cam.lookAt(c.x, c.y + sz.y * 0.05, c.z); }
 await new Promise(r0 => setTimeout(r0, 800));
 r.render(sc, cam); window.pronto = { bb: [bb.min.toArray(), bb.max.toArray()] };
 setInterval(() => r.render(sc, cam), 200);

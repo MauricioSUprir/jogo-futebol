@@ -86,13 +86,28 @@ export class Hud {
     this.root.classList.toggle('in-intro', on);
   }
 
-  lineup(teams, cfg) {
+  // Escalação num campinho (posições da formação), com a foto de cada titular. A câmera
+  // mostra a torcida por trás enquanto o cartão está na tela.
+  lineup(teams, cfg, photo) {
     if (!this.lineEl) { this.lineEl = el('div', 'hud-lineup'); this.root.appendChild(this.lineEl); }
     if (!teams) { this.lineEl.classList.remove('show'); return; }
-    const card = (t, kit) => `<div class="lu-team">
-      <header><span class="lu-crest">${crestSVG(t.data, 44)}</span><div><b>${t.data.name}</b><small>${t.data.formation} · ${t.data.city || ''}</small></div><i style="background:${kit.shirt}"></i></header>
-      <ol>${t.players.map(p => `<li><em>${p.data.num}</em><span>${p.data.name}</span><small>${p.data.pos}</small></li>`).join('')}</ol></div>`;
-    this.lineEl.innerHTML = card(teams[0], cfg.homeKit) + card(teams[1], cfg.awayKit);
+    const pitch = (t, kit) => {
+      const ring = kit.shirt, num = kit.number || '#fff';
+      const dots = t.players.map((p, k) => {
+        const [, x, z] = t.formation[p.slot] || ['', -20, 0];
+        // ataque para cima: x do time (−52 = próprio gol … +10) → altura; z → lateral
+        const top = 6 + (10 - x) / 62 * 86, left = 50 + z / 34 * 44;
+        const src = photo?.(p);
+        const sur = p.data.name.split(' ').slice(-1)[0];
+        return `<div class="lu-p" style="top:${top.toFixed(1)}%;left:${left.toFixed(1)}%;--d:${(0.25 + k * 0.06).toFixed(2)}s">
+          <span class="lu-ph" style="border-color:${ring}">${src ? `<img src="${src}" alt="">` : ''}<em style="background:${ring};color:${num}">${p.data.num}</em></span>
+          <b>${sur}</b></div>`;
+      }).join('');
+      return `<div class="lu-team">
+        <header><span class="lu-crest">${crestSVG(t.data, 44)}</span><div><b>${t.data.name}</b><small>${t.data.formation} · ${t.data.city || ''}</small></div><i style="background:${kit.shirt}"></i></header>
+        <div class="lu-pitch"><i class="lu-box"></i><i class="lu-arc"></i><i class="lu-mid"></i>${dots}</div></div>`;
+    };
+    this.lineEl.innerHTML = pitch(teams[0], cfg.homeKit) + pitch(teams[1], cfg.awayKit);
     void this.lineEl.offsetWidth;
     this.lineEl.classList.add('show');
   }
