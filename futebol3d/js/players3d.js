@@ -643,10 +643,10 @@ float fabH = 0.0;
     // a foto já traz luz de estúdio e contraste: como cor da pele ela precisa de menos
     // contraste (escuros levantados, claros contidos), senão o sol estoura a testa e o
     // tone mapping afunda órbitas e barba em manchas
-    ph = pow(ph, vec3(0.8)) * 0.78;
+    ph = pow(max(ph, vec3(1e-4)), vec3(0.8)) * 0.78;
     // superfície virada para baixo (sob o queixo/mandíbula) não recebe a foto: ela escorreria em riscos
     // (só abaixo da boca: sob a sobrancelha a superfície também olha para baixo e precisa da foto)
-    float gny = normalize(vNormal).y;   // normal suave (espaço da câmera, quase horizontal)
+    float gny = vNormal.y / max(length(vNormal), 1e-6);   // normal suave (espaço da câmera, quase horizontal)
     front *= 1.0 - (1.0 - smoothstep(-0.6, -0.3, gny)) * (1.0 - smoothstep(1.6, 1.625, r.y));
     // pele das laterais/pescoço = a própria foto (bochechas e testa), para o tom bater com o rosto
     vec3 sk0 = vec3(0.0);
@@ -654,7 +654,7 @@ float fabH = 0.0;
       vec2 q = i == 0 ? vec2(0.27, 0.6) : i == 1 ? vec2(0.71, 0.6) : i == 2 ? vec2(0.5, 0.3) : vec2(0.33, 0.68);
       sk0 += texture(uFace, vec2((cell0.x + q.x) / 8.0, 1.0 - (cell0.y + q.y) / 4.0), 3.0).rgb;
     }
-    sk0 = pow(sk0 * 0.25, vec3(0.8)) * 0.78;
+    sk0 = pow(max(sk0 * 0.25, vec3(1e-4)), vec3(0.8)) * 0.78;
     float g2 = fract(sin(dot(floor(r.xz * 900.0 + r.y * 300.0), vec2(12.9898, 78.233))) * 43758.5453);
     float hairZ = (1.0 - sk.w) * (1.0 - smoothstep(0.25, 0.45, dd.z)) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
     vec3 back = mix(sk0, K(8).rgb * (0.8 + 0.35 * g2), hairZ);
@@ -699,10 +699,16 @@ const FRAG_NORMAL = /* glsl */`
 if (int(vMat + 0.5) == 16) {     // relevo da pele do escaneamento (poros, rugas) — base tangente por derivadas
   vec3 mapN = texture(uHeadN, vUv2).xyz * 2.0 - 1.0; mapN.xy *= 0.6;
   vec3 q0 = dFdx(-vViewPosition), q1 = dFdy(-vViewPosition); vec2 st0 = dFdx(vUv2), st1 = dFdy(vUv2);
-  vec3 N = normalize(mix(normal, normalize(vSphN) * faceDirection, 0.5)), q1p = cross(q1, N), q0p = cross(N, q0);
+  // (protegido: nas faces internas a normal e a da esfera se anulam; normalize(0) vira NaN na GPU
+  // e o bloom/GTAO espalham o NaN pela tela inteira — tela preta no PC)
+  float sl = length(vSphN);
+  vec3 Nm = mix(normal, (sl > 1e-5 ? vSphN / sl : normal) * faceDirection, 0.5);
+  float nl = length(Nm);
+  vec3 N = nl > 1e-4 ? Nm / nl : normal, q1p = cross(q1, N), q0p = cross(N, q0);
   vec3 T = q1p * st0.x + q0p * st1.x, B = q1p * st0.y + q0p * st1.y;
   float det = max(dot(T, T), dot(B, B)), sc = det == 0.0 ? 0.0 : faceDirection * inversesqrt(det);
-  normal = normalize(T * (mapN.x * sc) + B * (mapN.y * sc) + N * mapN.z);
+  vec3 nn = T * (mapN.x * sc) + B * (mapN.y * sc) + N * mapN.z;
+  normal = dot(nn, nn) > 1e-10 ? normalize(nn) : N;
 }
 #endif
 #ifdef KIT_FABRIC
@@ -715,7 +721,7 @@ const SKIN_NORMAL = /* glsl */`#include <beginnormal_vertex>
 mat4 skinM = aSkinW.x * boneM(aSkinI.x) + aSkinW.y * boneM(aSkinI.y) + aSkinW.z * boneM(aSkinI.z) + aSkinW.w * boneM(aSkinI.w);
 objectNormal = normalize(mat3(skinM) * objectNormal);
 { // normal "de esfera" da cabeça (luz suave no rosto: a foto já traz a sombra das órbitas)
-  vec3 sn = mat3(skinM) * normalize(aRest - vec3(0.0, 1.665, 0.035));
+  vec3 sn = mat3(skinM) * (aRest - vec3(0.0, 1.665, 0.035));
 #ifdef USE_INSTANCING
   sn = mat3(instanceMatrix) * sn;
 #endif
@@ -768,10 +774,12 @@ function bodyMaterial(uniforms, fabric, skinned = false, hairTex = false) {
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_COLOR)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\nroughnessFactor = matRough;')
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_NORMAL)
+      // trava: um pixel inválido (NaN/inf) apagaria a tela inteira pelo bloom/GTAO
+      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\nif (any(isnan(gl_FragColor)) || any(isinf(gl_FragColor))) gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);')
       // leve brilho de borda na pele (sheen barato)
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0); if (int(vMat + 0.5) == 8) totalEmissiveRadiance += diffuseColor.rgb * 0.25; if (int(vMat + 0.5) == 16) totalEmissiveRadiance += diffuseColor.rgb * vec3(0.42, 0.3, 0.24) * (1.0 - smoothstep(1.56, 1.6, vRest.y));');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(max(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 0.0), 3.0); if (int(vMat + 0.5) == 8) totalEmissiveRadiance += diffuseColor.rgb * 0.25; if (int(vMat + 0.5) == 16) totalEmissiveRadiance += diffuseColor.rgb * vec3(0.42, 0.3, 0.24) * (1.0 - smoothstep(1.56, 1.6, vRest.y));');
   };
-  mat.customProgramCacheKey = () => 'golaco-body-v6' + (fabric ? '-f' : '') + (skinned ? '-s' : '') + (hairTex ? '-h' : '');
+  mat.customProgramCacheKey = () => 'golaco-body-v7' + (fabric ? '-f' : '') + (skinned ? '-s' : '') + (hairTex ? '-h' : '');
   return mat;
 }
 
@@ -853,7 +861,7 @@ void main() { vec2 p = (vUv - 0.5) * 2.0; float r = dot(p, p);
 const STREAK_FRAG = /* glsl */`
 varying vec2 vUv; varying vec4 vFx;
 void main() { float x = vUv.x, y = abs(vUv.y - 0.5) * 2.0;
-  float a = smoothstep(0.0, 0.12, x) * pow(1.0 - x, 1.6) * (1.0 - y * y); gl_FragColor = vec4(0.0, 0.0, 0.0, a * vFx.a); }`;
+  float a = smoothstep(0.0, 0.12, x) * pow(clamp(1.0 - x, 0.0, 1.0), 1.6) * max(1.0 - y * y, 0.0); gl_FragColor = vec4(0.0, 0.0, 0.0, a * vFx.a); }`;
 const RING_FRAG = /* glsl */`
 varying vec2 vUv; varying vec4 vFx;
 void main() { float r = length(vUv - 0.5) * 2.0;

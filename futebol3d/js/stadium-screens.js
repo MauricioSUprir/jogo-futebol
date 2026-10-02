@@ -167,7 +167,7 @@ export function buildScreens(ctx) {
         vec3 scr = texture2D( emissiveMap, suv ).rgb;
         // brilho que atravessa o placar de tempos em tempos
         float sw = fract( uTime / 7.0 ) * 3.0 - 1.0;
-        scr *= 1.0 + 0.35 * exp( -pow( ( suv.x + suv.y * 0.4 - sw ) * 9.0, 2.0 ) );
+        scr *= 1.0 + 0.35 * exp( -( ( ( suv.x + suv.y * 0.4 - sw ) * 9.0 ) * ( ( suv.x + suv.y * 0.4 - sw ) * 9.0 ) ) );
         float t = uTime - uStart;
         if ( uMode > 0.5 && uMode < 1.5 ) {
           // GOL: raios girando nas cores do clube + texto com "soco" de zoom e pulso

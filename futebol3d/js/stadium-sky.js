@@ -19,7 +19,7 @@ float n2( vec2 p ) { vec2 i = floor( p ), f = fract( p ); f = f * f * ( 3.0 - 2.
 void main() {
   vec3 d = normalize( vDir );
   float h = max( d.y, 0.0 );
-  vec3 col = mix( vec3( 0.03, 0.034, 0.05 ), vec3( 0.003, 0.005, 0.013 ), pow( h, 0.45 ) );
+  vec3 col = mix( vec3( 0.03, 0.034, 0.05 ), vec3( 0.003, 0.005, 0.013 ), pow( max( h, 0.0 ), 0.45 ) );
   col += vec3( 0.07, 0.058, 0.05 ) * exp( -h * 6.0 );            // halo da cidade/estádio
   vec3 p = d * 320.0;
   vec3 i = floor( p );
