@@ -22,7 +22,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (hoje péssimos)** → **torcida vibrando de verdade** (pular, braços, ondas no gol/chance)
   → **cantos de torcida ao fundo** o jogo todo → **animação por captura de movimento (mocap)**
   (modelos com esqueleto + animações reais CMU/Mixamo; aprovado pelo dono, fim da fila).
-- Rostos: **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
+- **Entrega em lote** (pedido do dono): fazer a fila inteira e só entregar (PR + merge + link)
+  quando tudo estiver pronto; nas mensagens de andamento, só estimativa.
+- **Urgente:** melhora extrema dos gráficos no celular (qualidade baixa/média).
+- Rostos: escolhido **retrato por IA de pessoa fictícia** projetado na cabeça 3D (opção B);
+  **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
 
