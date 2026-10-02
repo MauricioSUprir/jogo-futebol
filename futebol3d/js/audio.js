@@ -145,6 +145,17 @@ function oohNotes(base) {
   ];
 }
 
+// "GOOOOOL" coletivo: arranca de baixo, sobe e sustenta o "ô" até perder o fôlego,
+// respira e emenda um "ÉÉÉ" mais agudo (cada torcedor no seu tempo)
+function golNotes(base) {
+  const j = rand(0, 0.25), d = rand(3, 4.6), r = j + 0.35 + d + rand(0.15, 0.5);
+  return [
+    { t: j, d: 0.38, f: base * 0.8, vw: 'o', a: 0.7 },
+    { t: j + 0.36, d, f: base * rand(1.12, 1.22), vw: 'o', a: 1 },
+    { t: r, d: rand(1.2, 2.2), f: base * rand(1.25, 1.4), vw: pick('eea'), a: rand(0.6, 0.9) },
+  ];
+}
+
 // os construtores pesados são geradores: cada yield é uma fatia de ~10-30 ms
 function* crowdVoices(ctx, dur, count, gen, lo, hi, opts) {
   const x = Math.round(0.5 * VSR), n = Math.round(dur * VSR);
@@ -276,6 +287,11 @@ const HINO = [
   [[0, 1, 60, 'a'], [1, 1, 59, 'e'], [2, 1.8, 57, 'o']],
 ];
 const UH = [[3, 0.4, 50, 'u']];                           // "UH!" coletivo no 4º tempo
+// festa (melodia original, pergunta e resposta "ê-ô")
+const FESTA_A = [[0, 1, 64, 'e'], [1, 1, 67, 'o'], [2, 1, 64, 'e'], [3, 1, 67, 'o']];
+const FESTA_B = [[0, 0.5, 69, 'o'], [0.5, 0.5, 67, 'o'], [1, 0.5, 64, 'o'], [1.5, 0.5, 62, 'e'], [2, 1.8, 64, 'o']];
+const FESTA_C = [[0, 1, 67, 'e'], [1, 1, 69, 'o'], [2, 1, 71, 'e'], [3, 1, 69, 'o']];
+const FESTA_D = [[0, 0.5, 67, 'o'], [0.5, 0.5, 64, 'e'], [1, 2.6, 62, 'a']];
 
 const SONGS = {
   // samba da torcida organizada: bateria cheia + canto
@@ -293,6 +309,25 @@ const SONGS = {
       if (TEL.includes(s)) hit(t, K.TB, s === 0 || s === 7 ? 0.36 : 0.25, -0.6);
       hit(t, K.GZ, s % 4 === 2 ? 0.2 : 0.1, 0.65);
       if ((b === 0 || b === 4) ? CALL.includes(s) : (s === 7 || s === 10 || s === 15)) hit(t, K.RP, 0.5, -0.15);
+      if (b >= 2 && (s === 4 || s === 12)) hit(t, K.CLAP, 0.7, 0, true);   // arquibancada batendo palma junto
+    },
+  },
+  // festa da arquibancada: "ê-ô" de pergunta e resposta, batucada cheia e palma em todo tempo
+  festa: {
+    bpm: 138, bars: 8, swing: 0.08, voices: 26, oct: (k) => (k < 16 ? -12 : 0), dg: 0.85, vg: 0.62, spread: 0.3,
+    voice: { att: 0.025, glide: 0.03, vib: 0.012, breath: 0.34 },
+    tune: [FESTA_A, FESTA_B, FESTA_A, FESTA_B, FESTA_C, FESTA_D, FESTA_C, FESTA_D],
+    drums(hit, K, b, s, t, s16) {
+      if (s === 0) hit(t, K.BUMBO, 0.85, 0, true);
+      if (s === 0 || s === 8) hit(t, K.SEG, 0.6, -0.3, true);
+      if (s === 4 || s === 12) hit(t, K.PRI, 1.0, 0.25, true);
+      if ([6, 10, 14].includes(s) && b % 2) hit(t, K.TER, 0.5, 0.05);
+      hit(t, K.CX, s % 4 === 2 ? 0.4 : s % 2 ? 0.14 : 0.22, 0.35, s % 4 === 2);
+      if ((b & 3) === 3 && s >= 8) hit(t + s16 / 2, K.CX, 0.28, 0.35);   // virada
+      if (TEL.includes(s)) hit(t, K.TB, 0.3, -0.6);
+      if ((b & 3) === 0 ? CALL.includes(s) : s === 7 || s === 15) hit(t, K.RP, 0.5, -0.15);
+      if (s % 4 === 0) hit(t, K.CLAP, 0.9, 0, true);                   // palma em todo tempo
+      hit(t, K.GZ, s % 2 ? 0.08 : 0.14, 0.65);
     },
   },
   // "olê, olê": palmas sincronizadas em todo tempo
@@ -401,14 +436,15 @@ function stadiumIR(ctx) {
 }
 
 // ordem de construção depois do unlock (o hino só quando pedido)
-const BASE_QUEUE = ['ir', 'babble', 'roar', 'applause', 'chant', 'ooh', 'boo', 'palmas', 'ole'];
+const BASE_QUEUE = ['ir', 'babble', 'roar', 'applause', 'chant', 'ooh', 'gol', 'boo', 'festa', 'palmas', 'ole'];
 
 export class GameAudio {
   constructor() {
     this.ctx = null;
     this.vol = { master: 0.9, crowd: 0.8, sfx: 0.9 };
     this.ex = 0.3; this.threat = 0; this.boost = 0; this._I = 0.3;
-    this.mood = 0; this._moodT = 0;           // humor da torcida da casa (-1 vaia .. 1 empolgada)
+    this.duck = 0;               // abafamento dos cantos durante reações (uhhh, vaia, defesa)
+    this.mood = 0; this._moodT = 0;           // humor interno da casa (-1 vaia .. 1 em festa); setHomeMood(0..1) → 2v-1
     this._clock = null;          // relógio fixo (render offline); null = ctx.currentTime
     this._sync = false;          // true: constrói buffers na hora (offline)
     this._ends = [];             // fim das vozes ativas (limite de polifonia)
@@ -422,8 +458,8 @@ export class GameAudio {
     this._last = {};
     this._paused = false;
     this._acc = 0;
-    this._next = { shout: 1, whistle: 3, swell: 0, rojao: 5, flare: 8, clap: 4 };
-    this._sw = [1, 1, 1, 1, 1, 1];
+    this._next = { shout: 1, whistle: 3, swell: 0, rojao: 5, flare: 8, clap: 4, section: 3 };
+    this._sw = [1, 1, 1, 1, 1, 1, 1, 1];      // oscilação lenta de cada camada (variação "viva")
     this._jobs = {}; this._queue = []; this._ticking = false;
   }
 
@@ -493,7 +529,7 @@ export class GameAudio {
 
     // saída: master → compressor (cola) → limitador → clipador suave
     const comp = ctx.createDynamicsCompressor();
-    comp.threshold.value = -14; comp.knee.value = 10; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
+    comp.threshold.value = -10; comp.knee.value = 10; comp.ratio.value = 2.5; comp.attack.value = 0.01; comp.release.value = 0.3;
     const lim = ctx.createDynamicsCompressor();
     lim.threshold.value = -6; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.12;
     const trim = g(0.8);
@@ -510,11 +546,13 @@ export class GameAudio {
     const conv = ctx.createConvolver(); if (!lazyIR) conv.buffer = stadiumIR(ctx);
     const ret = g(0.7); conv.connect(ret); ret.connect(this.masterG);
 
-    // barramento da torcida: compressor próprio (segura o gol sem esmagar os efeitos)
+    // barramento da torcida: compressor próprio (segura o gol sem esmagar os efeitos).
+    // Limiar mais alto e razão menor que antes: o ambiente calmo fica abaixo do limiar e
+    // sobra contraste (calmo ~-19 dB RMS, ataque ~-15, gol ~-10) em vez de tudo "chapado".
     this.crowdIn = g(1);
     const cc = ctx.createDynamicsCompressor();
-    cc.threshold.value = -20; cc.knee.value = 12; cc.ratio.value = 3; cc.attack.value = 0.02; cc.release.value = 0.4;
-    const cmk = g(1.35);
+    cc.threshold.value = -13; cc.knee.value = 12; cc.ratio.value = 2.2; cc.attack.value = 0.03; cc.release.value = 0.5;
+    const cmk = g(1.1);
     this.crowdG = g(this.vol.crowd);
     this.crowdIn.connect(cc); cc.connect(cmk); cmk.connect(this.crowdG); this.crowdG.connect(this.masterG);
     const cs = g(0.4); this.crowdG.connect(cs); cs.connect(conv);
@@ -534,12 +572,15 @@ export class GameAudio {
     const ws = g(0.35); this.whIn.connect(ws); ws.connect(conv);
     this.conv = conv;
 
+    // ambiente contínuo (cama, murmúrio, rugido, palmas soltas, vaia, crescendo) passa por um
+    // ganho único que acompanha a intensidade: é ele que dá o "respiro" entre calmaria e pressão
+    this.ambG = g(0.6); this.ambG.connect(this.crowdIn);
     // cama da torcida: faixas de ruído rosa (massa de gente ao longe)
     this.bed = {};
     const band = (type, f, q, off, v) => {
       const s = ctx.createBufferSource(); s.buffer = pink; s.loop = true;
       const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
-      const gg = g(v); s.connect(fl); fl.connect(gg); gg.connect(this.crowdIn); s.start(0, off);
+      const gg = g(v); s.connect(fl); fl.connect(gg); gg.connect(this.ambG); s.start(0, off);
       return { g: gg, f: fl };
     };
     this.bed.rumble = band('lowpass', 260, 0.5, 0, 0.12);
@@ -560,6 +601,7 @@ export class GameAudio {
     if (key === 'roar') return crowdVoices(c, 6, 30, shoutNotes, 170, 400, { breath: 0.4, vib: 0.02, att: 0.08, glide: 0.12 });
     if (key === 'boo') return crowdVoices(c, 5, 28, booNotes, 100, 175, { breath: 0.4, vib: 0.025, att: 0.18, glide: 0.4 });
     if (key === 'ooh') return renderShot(c, 3.8, 28, oohNotes, 150, 300, { breath: 0.35, vib: 0.02, att: 0.22, glide: 0.3 });
+    if (key === 'gol') return renderShot(c, 7.5, 34, golNotes, 165, 390, { breath: 0.42, vib: 0.022, att: 0.06, glide: 0.18 });
     if (key === 'applause') return renderApplause(c, 4, 110);
     if (SONGS[key]) {
       const self = this;
@@ -579,9 +621,9 @@ export class GameAudio {
     if (rate) s.playbackRate.value = rate;
     const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; f.Q.value = 0.5;
     const g = ctx.createGain(); g.gain.value = gain;
-    this._chain(s, f, g, pan != null ? this._pan(pan) : null, this.crowdIn);
+    this._chain(s, f, g, pan != null ? this._pan(pan) : null, this.ambG);
     s.start(this._t(), Math.random() * buf.duration);
-    this.bed[name] = { g, f };
+    this.bed[name] = { g, f, s };
   }
 
   // recurso pronto: guarda e liga as camadas contínuas da torcida
@@ -592,10 +634,13 @@ export class GameAudio {
     if (key === 'babble') {                     // duas cópias defasadas, abertas no estéreo
       this._loop('murmur', buf, 0.16, 2200, -0.55);
       this._loop('murmur2', buf, 0.16, 2200, 0.55, 0.96);
+      this._loop('murmur3', buf, 0.1, 1100, 0, 1.05);   // arquibancada do fundo (mais escura)
     } else if (key === 'roar') {
       this._loop('roar', buf, 0.04, 1500, -0.45);
       this._loop('roar2', buf, 0.03, 1500, 0.45, 1.04);
       this._loop('far', buf, 0.06, 700, null, 0.82);   // o estádio inteiro, ao longe
+      // crescendo de ataque perigoso: o "ôôôô" que sobe de volume E de altura com a ameaça
+      this._loop('rise', buf, 0, 900, null, 0.92);
     } else if (key === 'applause') this._loop('claps', buf, 0, 5000);
     else if (key === 'boo') this._loop('boo', buf, 0, 2400);
   }
@@ -861,23 +906,29 @@ export class GameAudio {
   // qual canto longo deve tocar agora: [chave, ganho]
   _pickSong(now) {
     const md = this.mood, mk = md < 0 ? Math.max(0.2, 1 + 0.8 * md) : 1 + 0.3 * md, I = this._I;
-    if (this._anthemOn) return ['anthem', 1];
-    if (now < this._partyB) return now >= this._partyA ? ['chant', 1] : [null, 0];
-    if (this._pre) {
-      const e = now - this._pre.t0;
-      return [(Math.floor(e / 16) & 1) ? 'ole' : 'chant', (0.55 + 0.4 * clamp01(e / 20)) * mk];
+    if (this._anthemOn) return ['anthem', 1.15];
+    if (now < this._partyB) {                                         // festa do gol
+      if (now < this._partyA) return [null, 0];
+      if (!this.bufs.festa) { this._want('festa'); return ['chant', 1.05]; }
+      return ['festa', 1.05];
+    }
+    if (this._pre) {                                                  // pré-jogo: a torcida canta alto, um canto atrás do outro
+      const e = now - this._pre.t0, k = ['chant', 'festa', 'ole'][Math.floor(e / 16) % 3];
+      return [this.bufs[k] ? k : 'chant', (0.75 + 0.35 * clamp01(e / 20)) * mk];
     }
     const d = this._dir;
     if (this._chantOn) { d.key = null; return [null, 0]; }           // o canto do jogo manda
-    if (d.key && now >= d.until) { d.key = null; d.next = now + rand(6, 14) / (1 + Math.max(0, md)); }
+    // pausas curtas entre cantos: a arquibancada canta o jogo todo (torcida irritada canta menos)
+    if (d.key && now >= d.until) { d.key = null; d.next = now + rand(2, 5) / (1 + Math.max(0, md)) + 6 * Math.max(0, -md); }
     if (!d.key && now >= d.next) {
       if (md < -0.35) d.next = now + rand(4, 8);                      // torcida irritada: sem canto
       else {
-        const key = this.threat > 0.55 || Math.random() < 0.4 ? 'palmas' : 'ole', b = this.bufs[key];
+        const r = Math.random();
+        const key = this.threat > 0.55 ? 'palmas' : r < 0.2 + 0.3 * Math.max(0, md) ? 'festa' : r < 0.6 ? 'palmas' : 'ole', b = this.bufs[key];
         if (!b) { this._want(key); d.next = now + 2; } else { d.key = key; d.until = now + b.duration * (key === 'palmas' ? 2 : 1) - 0.3; }
       }
     }
-    return [d.key, (0.4 + 0.45 * I) * mk];
+    return [d.key, (0.35 + 0.4 * I + 0.25 * this.threat) * mk * (1 - 0.65 * this.duck)];
   }
 
   // ---------- torcida ----------
@@ -890,6 +941,7 @@ export class GameAudio {
       this.ex += (ex - this.ex) * (1 - Math.exp(-dt / 0.9));
       this.threat += (th - this.threat) * (1 - Math.exp(-dt / (th > this.threat ? 0.5 : 1.4)));
       this.boost *= Math.exp(-dt / 5);
+      this.duck *= Math.exp(-dt / 1.6);
       this.mood += (this._moodT - this.mood) * (1 - Math.exp(-dt / 2));
       const now = this._now(), t = now + 0.005, md = this.mood, mp = Math.max(0, md), mn = Math.max(0, -md);
       if (this._pre && this._pre.t0 == null) this._pre.t0 = now;
@@ -911,7 +963,9 @@ export class GameAudio {
         const [sk, sg] = this._pickSong(now);
         this._songTo(sk, sg, t);
         const sing = this._song || (this._chantOn && this.chantSrc) ? 1 : 0;
-        const b = this.bed, sw = this._sw, set = (p, v, tc = 0.6) => p.setTargetAtTime(v, t, tc);
+        const b = this.bed, sw = this._sw, set = (p, v, tc = 0.6) => p.setTargetAtTime(v, t, tc), th = this.threat;
+        // volume geral do ambiente acompanha a intensidade (curva convexa: a calmaria é calma)
+        set(this.ambG.gain, (0.55 + 0.9 * Math.pow(I, 1.8)) * (this._anthemOn ? 0.75 : 1), 0.5);
         set(b.rumble.g.gain, (0.08 + 0.2 * I) * sw[0]);
         set(b.mid.g.gain, (0.05 + 0.15 * I) * sw[1]);
         set(b.hi.g.gain, (0.015 + 0.09 * I * I) * sw[2]);
@@ -920,19 +974,32 @@ export class GameAudio {
         if (b.murmur) {
           set(b.murmur.g.gain, mur * sw[3]); set(b.murmur2.g.gain, mur * sw[5]);
           set(b.murmur.f.frequency, 1600 + 1400 * I); set(b.murmur2.f.frequency, 1500 + 1500 * I);
+          set(b.murmur3.g.gain, mur * 0.7 * sw[6]); set(b.murmur3.f.frequency, 900 + 900 * I);
         }
         if (b.roar) {
           const r = 0.02 + 0.6 * I * I * I;
           set(b.roar.g.gain, r * sw[4], 0.5); set(b.roar2.g.gain, r * 0.8 * sw[1], 0.5);
           set(b.roar.f.frequency, 800 + 3600 * I, 0.5); set(b.roar2.f.frequency, 900 + 3400 * I, 0.5);
-          set(b.far.g.gain, 0.05 + 0.12 * I, 1);
+          set(b.far.g.gain, (this._anthemOn ? 0.24 : 0.05 + 0.12 * I) * sw[7], 1);
+          // crescendo: ganho e altura sobem com a ameaça (a torcida "puxa" o ataque)
+          const rg = 0.45 * Math.pow(th, 1.5) * (0.7 + 0.3 * this.ex) * (1 + 0.3 * mp);
+          set(b.rise.g.gain, rg, th > 0.2 ? 0.35 : 0.9);
+          set(b.rise.f.frequency, 900 + 4200 * th, 0.4);
+          set(b.rise.s.playbackRate, 0.9 + 0.26 * th, 0.6);
         }
         if (b.claps) set(b.claps.g.gain, (0.012 + 0.045 * this.ex + 0.06 * preK * (this._pre ? 1 : 0)) * (sing ? 0.4 : 1), 1);
-        if (b.boo) set(b.boo.g.gain, 0.55 * Math.pow(mn, 1.4) * (0.6 + 0.4 * I), 1);
+        // vaia contínua só com a torcida bem irritada (setHomeMood < ~0,3)
+        if (b.boo) set(b.boo.g.gain, 0.5 * Math.pow(clamp01((mn - 0.35) / 0.65), 1.3) * (0.6 + 0.4 * I), 1);
         if (this.chantSrc) {
           const mk = md < 0 ? Math.max(0.2, 1 + 0.8 * md) : 1 + 0.3 * md;
-          set(this.chantG.gain, this._chantOn && !this._song ? (0.45 + 0.3 * I) * mk : 0, this._chantOn && !this._song ? 1.2 : 0.8);
+          set(this.chantG.gain, this._chantOn && !this._song ? (0.45 + 0.3 * I + 0.15 * th) * mk * (1 - 0.65 * this.duck) : 0, this._chantOn && !this._song ? 1.2 : 0.8);
         }
+      }
+      // ondas de um setor: um lado da arquibancada levanta um "ôôô" e o outro responde
+      if (this._poisson('section', this._anthemOn ? 0 : (0.05 + 0.25 * I + 0.3 * this.threat) * (1 + 0.5 * mp), dt) && this.bufs.roar) {
+        const d = rand(1.6, 3.2), a = rand(0.12, 0.28) * (0.5 + I), pan = (Math.random() < 0.5 ? -1 : 1) * rand(0.45, 0.9);
+        this._bufEvent(t, this.bufs.roar, [[0, 0], [d * 0.45, a], [d, 0]], [[0, 900], [d * 0.45, 2200 + 1600 * I], [d, 900]], { pan, rate: rand(0.92, 1.1) });
+        if (Math.random() < 0.35) this._bufEvent(t + d * 0.7, this.bufs.roar, [[0, 0], [d * 0.4, a * 0.8], [d, 0]], [[0, 900], [d * 0.4, 2000], [d, 800]], { pan: -pan, rate: rand(0.92, 1.1) });
       }
       // gritos, assobios, rojões e sinalizadores esporádicos (processos de Poisson)
       if (this._poisson('shout', 0.5 + 3.2 * I + (this._pre ? 1 : 0), dt)) {
@@ -959,8 +1026,12 @@ export class GameAudio {
   crowd(kind, strength = 1, side) {
     const ctx = this.ctx; if (!ctx) return;
     try {
-      const t = this._t(), s = 0.3 + 0.7 * clamp01(num(strength, 1));
+      const t = this._t(); let s = 0.3 + 0.7 * clamp01(num(strength, 1));
       if (kind === 'goal' || kind === 'cheer' || kind === 'save') this._ensureBuffers();
+      if (kind === 'goal') this._want('gol', 'festa');
+      const fv = 0.85 + 0.3 * Math.max(0, this.mood);                  // torcida empolgada reage mais forte
+      // hierarquia da mixagem (como no FIFA): a reação abafa o canto, o canto abafa a cama
+      if (kind !== 'goal') this.duck = Math.max(this.duck, kind === 'cheer' ? 0.5 : 0.9);
       const b = this.bufs;
       if (kind === 'goal' && side === 1) {
         this.boost = Math.max(this.boost, 0.3);
@@ -970,22 +1041,31 @@ export class GameAudio {
         return;
       }
       if (kind === 'goal') {
+        // explosão longa (~16 s): estouro → "GOOOOL" coletivo sustentado → segunda onda
+        // (o replay/comemoração) → a festa com batucada e palmas emenda até ~26 s
+        const S = s * fv;
         this.boost = 1;
-        this._partyA = t + 2.4; this._partyB = t + 15;                  // canto de festa até ~15 s
-        this._want('chant');
-        const P = [[0, 0], [0.3, 1.0 * s], [1.2, 1.05 * s], [4, 0.85 * s], [6.5, 0.6 * s], [9, 0]];
-        this._bufEvent(t, b.roar, P, [[0, 1800], [0.3, 5600], [6, 3800], [9, 1800]]);
-        this._bufEvent(t + 0.05, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1400], [0.4, 4800], [9, 1500]], { rate: 1.07 });
-        this._bufEvent(t + 0.1, b.roar, P.map(([a, v]) => [a, v * 0.5]), [[0, 900], [0.5, 2400], [9, 900]], { rate: 0.85 });
-        this._bufEvent(t, b.babble, [[0, 0], [0.5, 0.5 * s], [5, 0.4 * s], [8, 0]], [[0, 3000], [8, 2000]], { rate: 1.3 });
-        this._bufEvent(t + 1.2, b.applause, [[0, 0], [0.8, 0.4 * s], [6, 0.35 * s], [9, 0]], [[0, 6000], [9, 5000]]);
-        // estrondo: a arquibancada inteira pulando
-        this._noise(t, { buf: 'brown', type: 'lowpass', f: 160, q: 0.6, peak: 0.8 * s, a: 0.25, d: 4.5, out: this.crowdIn, prio: 2 });
-        this._noise(t, { buf: 'pink', type: 'bandpass', f: 1200, q: 0.4, peak: 0.25 * s, a: 0.15, d: 2.5, out: this.crowdIn, prio: 2 });
-        for (let k = 0; k < 6; k++) this._rojao(t + rand(0.4, 9), rand(0.2, 0.4) * s, Math.random() < 0.4);
-        for (let k = 0; k < 2; k++) this._flare(t + rand(0.5, 3), rand(0.015, 0.03), rand(3, 6));
-        for (let k = 0; k < 14; k++) this._fanWhistle(t + rand(0.3, 8), rand(0.02, 0.05) * s, Math.random() < 0.4);
-        for (let k = 0; k < 12; k++) this._shout(t + rand(0.1, 7), rand(0.05, 0.1) * s, Math.random() < 0.7);
+        this._partyA = t + 7; this._partyB = t + 26;
+        const P = [[0, 0], [0.25, 1.0 * S], [1.5, 1.05 * S], [5, 0.9 * S], [8, 0.75 * S], [11, 0.55 * S], [16, 0]];
+        this._bufEvent(t, b.roar, P, [[0, 1800], [0.3, 5800], [6, 4200], [11, 3000], [16, 1500]]);
+        this._bufEvent(t + 0.05, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1400], [0.4, 5000], [16, 1400]], { rate: 1.07, pan: -0.4 });
+        this._bufEvent(t + 0.1, b.roar, P.map(([a, v]) => [a, v * 0.7]), [[0, 1400], [0.4, 4600], [16, 1300]], { rate: 0.95, pan: 0.4 });
+        this._bufEvent(t + 0.1, b.roar, P.map(([a, v]) => [a, v * 0.5]), [[0, 900], [0.5, 2400], [16, 900]], { rate: 0.82 });
+        this._bufEvent(t, b.babble, [[0, 0], [0.5, 0.5 * S], [8, 0.4 * S], [12, 0]], [[0, 3000], [12, 2000]], { rate: 1.3 });
+        // "GOOOOL" de milhares de vozes (buffer próprio) e um eco dele do outro lado do estádio
+        this._bufEvent(t + 0.3, b.gol, [[0, 0], [0.4, 1.0 * S], [5.5, 0.9 * S], [7.5, 0]], [[0, 1600], [0.6, 4200], [7.5, 2400]], { loop: false, offset: 0 });
+        this._bufEvent(t + 0.62, b.gol, [[0, 0], [0.6, 0.35 * S], [7, 0]], [[0, 1200], [7, 900]], { loop: false, offset: 0, rate: 0.94, pan: 0.6 });
+        // segunda onda: quem viu o replay grita de novo
+        this._bufEvent(t + 6.5, b.roar, [[0, 0], [0.6, 0.55 * S], [3, 0.4 * S], [5.5, 0]], [[0, 1500], [0.7, 4400], [5.5, 1600]], { rate: 1.02 });
+        this._bufEvent(t + 1.2, b.applause, [[0, 0], [0.8, 0.45 * S], [10, 0.35 * S], [14, 0]], [[0, 6000], [14, 5000]]);
+        // estrondo: a arquibancada inteira pulando (e de novo na segunda onda)
+        this._noise(t, { buf: 'brown', type: 'lowpass', f: 160, q: 0.6, peak: 0.85 * S, a: 0.25, d: 6, out: this.crowdIn, prio: 2 });
+        this._noise(t + 6.5, { buf: 'brown', type: 'lowpass', f: 150, q: 0.6, peak: 0.45 * S, a: 0.3, d: 3.5, out: this.crowdIn, prio: 2 });
+        this._noise(t, { buf: 'pink', type: 'bandpass', f: 1200, q: 0.4, peak: 0.28 * S, a: 0.15, d: 3, out: this.crowdIn, prio: 2 });
+        for (let k = 0; k < 9; k++) this._rojao(t + rand(0.4, 14), rand(0.2, 0.4) * s, Math.random() < 0.4);
+        for (let k = 0; k < 3; k++) this._flare(t + rand(0.5, 6), rand(0.015, 0.03), rand(3, 6));
+        for (let k = 0; k < 18; k++) this._fanWhistle(t + rand(0.3, 12), rand(0.02, 0.05) * s, Math.random() < 0.4);
+        for (let k = 0; k < 16; k++) this._shout(t + rand(0.1, 11), rand(0.05, 0.1) * s, Math.random() < 0.7);
         return;
       }
       if (kind === 'ooh') {                                             // "uhhhh" longo da chance perdida
@@ -994,7 +1074,10 @@ export class GameAudio {
           this._choir(t, 8, rand(150, 200), [[0, 0.85], [0.5, 1.3], [d, 0.72]], [[0, 0], [0.45, 0.5 * s], [1.1, 0.35 * s], [d, 0]], [[0, 'o'], [0.6, 'o'], [d, 'u']]);
         }
         this._bufEvent(t, b.roar, [[0, 0], [0.5, 0.4 * s], [2.6, 0]], [[0, 600], [0.6, 1800], [2.6, 500]], { rate: 0.95 });
+        // mãos na cabeça e depois aplauso de incentivo pela tentativa
+        this._bufEvent(t + 2.3, b.applause, [[0, 0], [0.5, 0.3 * s * fv], [1.8, 0.22 * s], [3, 0]], [[0, 5500], [3, 4500]]);
         for (let k = 0; k < 3; k++) this._shout(t + rand(0.8, 2), rand(0.03, 0.06) * s, false);
+        for (let k = 0; k < 3; k++) this._shout(t + rand(2.4, 3.6), rand(0.04, 0.07) * s, true);   // "vamo!"
         return;
       }
       if (kind === 'groan') {                                           // lamento curto
@@ -1005,7 +1088,9 @@ export class GameAudio {
         this._bufEvent(t, b.roar, [[0, 0], [0.12, 0.28 * s], [2, 0]], [[0, 1400], [2, 400]], { rate: 0.9 });
         return;
       }
+      if (kind === 'card') { this.crowd('boo', Math.max(0.85, num(strength, 1))); return; }   // cartão: vaia cheia
       if (kind === 'boo') {                                             // vaia forte (falta contra a casa)
+        s = Math.min(1.2, s * fv);
         if (!this._bufEvent(t, b.boo, [[0, 0], [0.35, 1.0 * s], [3, 0.9 * s], [4.4, 0]], [[0, 1200], [0.4, 2800], [4.4, 1400]])) {
           const d = 3.2;
           this._choir(t, 10, rand(110, 150), [[0, 0.95], [1, 1.05], [2, 0.95], [d, 0.85]], [[0, 0], [0.4, 0.45 * s], [2.6, 0.4 * s], [d, 0]], [[0, 'u'], [d, 'u']]);
@@ -1066,34 +1151,46 @@ export class GameAudio {
   teamsEnter() {
     const ctx = this.ctx; if (!ctx) return;
     try {
-      this._ensureBuffers();
+      this._ensureBuffers(); this._want('gol', 'festa');
       const t = this._t(), b = this.bufs;
       this.boost = 1;
-      if (this._pre && this._pre.t0 != null) this._pre.t0 = Math.min(this._pre.t0, this._now() - 30);
-      const P = [[0, 0], [0.5, 1.0], [3, 0.95], [6, 0.75], [9.5, 0]];
-      this._bufEvent(t, b.roar, P, [[0, 1500], [0.6, 5400], [9.5, 2500]]);
-      this._bufEvent(t + 0.08, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1200], [0.6, 4600], [9.5, 2000]], { rate: 1.06 });
-      this._bufEvent(t + 0.3, b.applause, [[0, 0], [0.6, 0.7], [6, 0.55], [9.5, 0]], [[0, 7000], [9.5, 5000]]);
-      this._noise(t, { buf: 'brown', type: 'lowpass', f: 170, q: 0.6, peak: 0.55, a: 0.4, d: 4, out: this.crowdIn, prio: 2 });
-      for (let k = 0; k < 8; k++) this._rojao(t + rand(0, 5), rand(0.25, 0.45), Math.random() < 0.4);
+      // o pré-jogo pula direto para o rumor máximo e para o canto de festa (ciclo chant/festa/ole)
+      if (this._pre && this._pre.t0 != null) this._pre.t0 = Math.min(this._pre.t0, this._now() - 64);
+      const P = [[0, 0], [0.5, 1.0], [3, 0.95], [7, 0.75], [12, 0]];
+      this._bufEvent(t, b.roar, P, [[0, 1500], [0.6, 5400], [12, 2500]]);
+      this._bufEvent(t + 0.08, b.roar, P.map(([a, v]) => [a, v * 0.75]), [[0, 1200], [0.6, 4600], [12, 2000]], { rate: 1.06, pan: -0.4 });
+      this._bufEvent(t + 0.12, b.roar, P.map(([a, v]) => [a, v * 0.65]), [[0, 1200], [0.6, 4200], [12, 1800]], { rate: 0.96, pan: 0.4 });
+      // "ÊÊÊÊ" coletivo (o mesmo coro do gol, mais agudo)
+      this._bufEvent(t + 0.2, b.gol, [[0, 0], [0.5, 0.75], [5.5, 0.6], [7.5, 0]], [[0, 1800], [0.6, 4400], [7.5, 2400]], { loop: false, offset: 0, rate: 1.1 });
+      this._bufEvent(t + 0.3, b.applause, [[0, 0], [0.6, 0.75], [8, 0.55], [12, 0]], [[0, 7000], [12, 5000]]);
+      this._noise(t, { buf: 'brown', type: 'lowpass', f: 170, q: 0.6, peak: 0.6, a: 0.4, d: 5, out: this.crowdIn, prio: 2 });
+      for (let k = 0; k < 10; k++) this._rojao(t + rand(0, 7), rand(0.25, 0.45), Math.random() < 0.4);
       for (let k = 0; k < 3; k++) this._flare(t + rand(0, 2), rand(0.015, 0.03), rand(3, 6));
-      for (let k = 0; k < 16; k++) this._fanWhistle(t + rand(0.2, 6), rand(0.02, 0.05), Math.random() < 0.4);
-      for (let k = 0; k < 12; k++) this._shout(t + rand(0.1, 6), rand(0.05, 0.1), Math.random() < 0.7);
+      for (let k = 0; k < 18; k++) this._fanWhistle(t + rand(0.2, 8), rand(0.02, 0.05), Math.random() < 0.4);
+      for (let k = 0; k < 14; k++) this._shout(t + rand(0.1, 8), rand(0.05, 0.1), Math.random() < 0.7);
     } catch (e) { console.warn('GameAudio.teamsEnter', e); }
   }
 
-  // hino/canto da torcida com a bateria (melodia original)
+  // hino da torcida (melodia original, coro sustentado + marcha de surdos). Ao ligar, a
+  // arquibancada aplaude e "abre" o coro; o murmúrio baixa para o canto aparecer.
   anthem(on) {
     try {
+      const was = this._anthemOn;
       this._anthemOn = !!on;
-      if (on && this.ctx) this._want('anthem');
+      if (!on || !this.ctx) return;
+      this._want('anthem');
+      if (!was && this.bufs.applause) {
+        const t = this._t();
+        this._bufEvent(t, this.bufs.applause, [[0, 0], [0.8, 0.45], [3, 0.3], [5, 0]], [[0, 6000], [5, 4500]]);
+      }
     } catch (e) { console.warn('GameAudio.anthem', e); }
   }
 
-  // humor da torcida da casa: -1 (vaiando) .. 1 (empolgada)
+  // empolgação da torcida da casa: 0 (frustrada, vaia contínua leve abaixo de ~0,3)
+  // .. 0,5 (neutra, padrão) .. 1 (em festa: canta mais, mais alto e reage mais forte).
   setHomeMood(v) {
-    const x = num(v, 0);
-    this._moodT = x < -1 ? -1 : x > 1 ? 1 : x;
+    const x = clamp01(num(v, 0.5));
+    this._moodT = 2 * x - 1;
   }
 
   // ---------- bola e contato ----------
