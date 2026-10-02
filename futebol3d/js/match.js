@@ -14,7 +14,9 @@ const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
 // roteiro da abertura (segundos)
-const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 19, breakT: 25, end: 30, walk: 3.0 };
+// lineDone: todos perfilados (câmera passa pelos rostos); card: escalação no campinho
+// (com a torcida ao fundo); breakT: vão para o pontapé; end: fim da abertura
+const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 19, card: 24, breakT: 31, end: 36, walk: 3.0 };
 export const INTRO_TIMES = INTRO;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
 
@@ -114,7 +116,7 @@ export class Match {
     const prevT = it.t;
     it.t += dt;
     if (prevT < INTRO.firstOut + 0.3 && it.t >= INTRO.firstOut + 0.3) this.emit('intro', { stage: 'enter' });
-    if (prevT < INTRO.lineDone && it.t >= INTRO.lineDone) this.emit('intro', { stage: 'lineup' });
+    if (prevT < INTRO.card && it.t >= INTRO.card) this.emit('intro', { stage: 'lineup' });
     if (prevT < INTRO.breakT && it.t >= INTRO.breakT) this.emit('intro', { stage: 'break' });
     this.excitement += (0.85 - this.excitement) * Math.min(1, dt);
     // caminhada de cerimônia: velocidade fixa, freando na chegada
@@ -669,15 +671,18 @@ export class Match {
     this.emit('goal', { side: team.i, name: scorer.data.name, own, minute, sign });
     this.emit('crowd', { kind: 'goal', strength: 1, side: team.i });
     this.emit('netImpact', { sign, strength: 1 });
-    // comemoração
-    const cornerX = sign * (HL - 1), cornerZ = scorer.z > 0 ? HW - 2 : -HW + 2;
+    // comemoração: o autor corre até a torcida (perto da bandeirinha) e só lá faz o gesto;
+    // os companheiros vão atrás e fecham um abraço em volta dele (ai.js: celebrate)
+    const cornerX = sign * (HL - 3.5), cornerZ = (scorer.z > 0 ? 1 : -1) * (HW - 3.5);
+    const variant = Math.floor(Math.random() * 4);
     for (const p of team.players) {
       if (p.sentOff) continue;
-      p.action = null;
+      p.action = null; p.celebDone = false;
       if (p === scorer && !own) {
-        p.startAction('celebrate', { variant: Math.floor(Math.random() * 4), dur: 6 });
-        p.celebTarget = { x: cornerX * 0.92, z: cornerZ };
-      } else p.celebTarget = !own ? { x: cornerX * 0.9, z: cornerZ * 0.8 } : null;
+        p.celebVariant = variant;
+        p.celebTarget = { x: cornerX, z: cornerZ };
+        if (variant === 0) p.startAction('celebrate', { variant: 0, dur: 7 });     // aviãozinho já correndo
+      } else p.celebTarget = !own ? { x: cornerX, z: cornerZ, mate: true, delay: 0.3 + Math.random() * 0.6 } : null;
     }
     for (const p of scoredOn.players) {
       if (p.sentOff) continue;
@@ -689,9 +694,9 @@ export class Match {
   goalStep(dt) {
     const g = this.goalInfo;
     g.t += dt;
-    if (g.t > 4.2 && !g.replayAsked) { g.replayAsked = true; this.emit('replay', { kind: 'goal' }); }
+    if (g.t > 7.5 && !g.replayAsked) { g.replayAsked = true; this.emit('replay', { kind: 'goal' }); }
     // main.js avisa quando o replay acabar (replayFinished); sem gráficos segue direto
-    if (g.replayAsked && (g.replayDone || this.headless) && g.t > 4.5) {
+    if (g.replayAsked && (g.replayDone || this.headless) && g.t > 7.8) {
       this.phase = 'stopped';
       this.setupKickoff(g.team.opp);
     }

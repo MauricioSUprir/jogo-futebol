@@ -5,7 +5,7 @@
 import { cycleLength } from './anim.js';
 
 const ANIMS = ['locomotion', 'idle', 'jockey', 'kick', 'pass', 'chip', 'volley', 'header', 'slide', 'tackle', 'throwin',
-  'gk_ready', 'gk_dive', 'gk_catch', 'gk_hold', 'gk_throw', 'gk_kick', 'fall', 'getup', 'celebrate', 'dejected', 'shield'];
+  'gk_ready', 'gk_dive', 'gk_catch', 'gk_hold', 'gk_throw', 'gk_kick', 'fall', 'getup', 'celebrate', 'dejected', 'shield', 'hug'];
 const AIDX = Object.fromEntries(ANIMS.map((a, i) => [a, i]));
 const PF = ['t', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
 const PSZ = 1 + PF.length;                 // anim + campos

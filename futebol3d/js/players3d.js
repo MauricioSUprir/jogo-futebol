@@ -161,11 +161,43 @@ function surf(x, y, z, out = 0, o = [0, 0, 0]) {
   o[0] += nx / nl * out; o[1] += ny / nl * out; o[2] += nz / nl * out;
   return o;
 }
-function hairFn(style) {
+// raio da cabeça escaneada por direção (a partir de HC), em células de 48 × 24 — o cabelo
+// procedural é empurrado para fora dele, senão o crânio do escaneamento fura o cabelo
+const RADIAL = [];
+function scanRadial(feat) {
+  if (RADIAL[feat] !== undefined) return RADIAL[feat];
+  const d = SCAN[feat]; if (!d) return (RADIAL[feat] = null);
+  const NA = 48, NB = 24, R = new Float32Array(NA * NB);
+  for (let i = 0; i < d.p.length; i += 3) {
+    const x = d.p[i] - HC[0], y = d.p[i + 1] - 1.6 - HC[1], z = d.p[i + 2] - HC[2], l = Math.hypot(x, y, z);
+    const a = Math.floor(((Math.atan2(z, x) / (2 * Math.PI)) + 1) % 1 * NA), b = Math.min(NB - 1, Math.floor(Math.acos(Math.max(-1, Math.min(1, y / l))) / Math.PI * NB));
+    R[b * NA + a] = Math.max(R[b * NA + a], l);
+  }
+  // preenche buracos e suaviza (máximo dos vizinhos)
+  const S = new Float32Array(NA * NB);
+  for (let b = 0; b < NB; b++) for (let a = 0; a < NA; a++) {
+    let m = 0;
+    for (let db = -1; db <= 1; db++) for (let da = -1; da <= 1; da++) { const bb = b + db; if (bb < 0 || bb >= NB) continue; m = Math.max(m, R[bb * NA + (a + da + NA) % NA]); }
+    S[b * NA + a] = m;
+  }
+  return (RADIAL[feat] = { S, NA, NB });
+}
+function scanR(rad, x, y, z) {
+  const a = Math.floor(((Math.atan2(z, x) / (2 * Math.PI)) + 1) % 1 * rad.NA), b = Math.min(rad.NB - 1, Math.floor(Math.acos(Math.max(-1, Math.min(1, y))) / Math.PI * rad.NB));
+  return rad.S[b * rad.NA + a];
+}
+function hairFn(style, L) {
+  const rad = L ? scanRadial(L.feat) : null;
   const t = [0, 0.011, 0.0035, 0.017, 0.014, 0.04, 0.011][style];
   return (x, y, z, o) => {
     headPt(x, y, z, o);
-    let hl = z > 0 ? 0.13 + 0.3 * z * z : 0.13 - 0.63 * (-z) ** 1.3;
+    if (rad) {     // casca por fora do crânio escaneado
+      const nx = o[0] - HC[0], ny = o[1] - HC[1], nz = o[2] - HC[2], nl = Math.hypot(nx, ny, nz);
+      const rs = scanR(rad, nx / nl, ny / nl, nz / nl) + 0.002;
+      if (rs > nl) { o[0] = HC[0] + nx / nl * rs; o[1] = HC[1] + ny / nl * rs; o[2] = HC[2] + nz / nl * rs; }
+    }
+    // linha do cabelo: com a cabeça escaneada (rosto em foto) ela sobe para mostrar a testa
+    let hl = z > 0 ? 0.13 + (rad ? 1.2 : 0.3) * z * z : 0.13 - 0.63 * (-z) ** 1.3;
     if (style === 5) hl = z > 0 ? 0.12 + 0.28 * z * z : 0.1 - 0.55 * (-z) ** 1.3;
     if (style === 4) hl = z > 0 ? 0.13 + 0.3 * z * z : 0.13 - 1.1 * (-z) ** 0.8;       // longo: cobre a nuca
     if (style === 4 && z < 0.35 && z > -0.2) hl = Math.min(hl, -0.15);                 // e as orelhas
@@ -192,14 +224,35 @@ function beardFn(x, y, z, o) {
   const d = m * 0.005 - (1 - m) * 0.006;
   o[0] += nx / nl * d; o[1] += ny / nl * d; o[2] += nz / nl * d; o[3] = m;
 }
+// Cabeça escaneada (só a forma; ver tools/rostos/cabeca.py). Carregada antes de criar os
+// jogadores; sem ela, cai na cabeça procedural.
+const SCAN = [null, null, null];
+export async function preloadHeads() {
+  if (SCAN[0]) return;
+  try {
+    const ld = async (n) => (await fetch(`assets/cabeca/cabeca-${n}.json`)).json();
+    const [a, b] = await Promise.all([ld(1), ld(2)]);
+    SCAN[0] = SCAN[1] = a; SCAN[2] = b;
+  } catch (e) { console.warn('cabeça escaneada indisponível', e); }
+}
+function scanHead(d) {
+  const p = Float32Array.from(d.p);
+  for (let i = 1; i < p.length; i += 3) p[i] -= 1.6;     // relativo ao osso da cabeça
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3));
+  g.setIndex(d.i);
+  g.computeVertexNormals();
+  return finish([withMat(g, M.SKIN)], [0, 1.6, 0]);
+}
 function buildHead(L) {
+  if (SCAN[L.feat]) return scanHead(SCAN[L.feat]);
   const parts = [deformed(L.head[0], L.head[1], headPt, M.SKIN)];
   const o = [0, 0, 0], F = L.F;
   for (const s of [1, -1]) {
-    let p = surf(s * 0.34, 0.2, 0.92, F.iris ? -0.0068 : -0.004);
+    let p = surf(s * 0.4, 0.2, 0.92, F.iris ? -0.0068 : -0.004);
     parts.push(blob(p[0], p[1], p[2], 0.0115, 0.0062, 0.0085, F.iris ? M.EYEW : M.IRIS, 0, 0, ...F.eye));
-    if (F.iris) { p = surf(s * 0.335, 0.2, 0.93, 0.0006); parts.push(blob(p[0], p[1], p[2], 0.0047, 0.0049, 0.003, M.IRIS, 0, 0, ...F.iris)); }
-    p = surf(s * 0.35, 0.37, 0.88, 0.0015);
+    if (F.iris) { p = surf(s * 0.395, 0.2, 0.93, 0.0006); parts.push(blob(p[0], p[1], p[2], 0.0047, 0.0049, 0.003, M.IRIS, 0, 0, ...F.iris)); }
+    p = surf(s * 0.41, 0.37, 0.88, 0.0015);
     parts.push(blob(p[0], p[1], p[2], 0.019, 0.0042, 0.0055, M.BROW, 0, -s * 0.18, ...F.brow));
     p = surf(s * 1, 0.06, -0.1, -0.004);
     parts.push(blob(p[0], p[1], p[2], 0.0085, 0.029, 0.018, M.SKIN, 0.15, s * 0.1, ...F.ear));
@@ -215,7 +268,7 @@ function buildHead(L) {
 // cabelo por estilo (1..6) e barba (7): só a casca da região com cabelo
 function buildHair(st, L) {
   if (st === 7) return finish([deformed(Math.round(L.hair[0] * 1.25), Math.round(L.hair[1] * 1.25), beardFn, M.HAIR, true)], [0, 1.6, 0]);
-  const parts = [deformed(L.hair[0], L.hair[1], hairFn(st), M.HAIR, true)];
+  const parts = [deformed(L.hair[0], L.hair[1], hairFn(st, L), M.HAIR, true)];
   if (st === 6) parts.push(blob(0, HC[1] + 0.085, HC[2] - 0.075, 0.038, 0.034, 0.036, M.HAIR, 0, 0, ...L.F.bun));
   return finish(parts, [0, 1.6, 0]);
 }
@@ -302,6 +355,16 @@ function buildParts(L) {
   return G;
 }
 
+// atlas dos rostos da partida (8 × 4 células de 192 px; vaga = índice do jogador)
+const SKIN_K = 0.92;   // pele lisa um pouco mais escura que a foto (que já traz luz de estúdio)
+function faceAtlas() {
+  const cv = document.createElement('canvas'); cv.width = 1536; cv.height = 768;
+  const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#9a7056'; g.fillRect(0, 0, cv.width, cv.height);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  return t;
+}
+
 // ---------------------------------------------------------------- shader do corpo
 const VERT_DECL = /* glsl */`
 attribute float aMat; attribute vec3 aRest; attribute float aPid;
@@ -309,7 +372,7 @@ uniform float uCount;
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 `;
 const FRAG_DECL = /* glsl */`
-uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor;
+uniform highp sampler2D uKit; uniform sampler2D uDigits; uniform sampler2D uCrest; uniform sampler2D uSponsor; uniform sampler2D uFace; uniform vec4 uFaceA; uniform vec2 uFaceB;
 varying float vMat; varying vec3 vRest; flat varying float vPid; flat varying float vSide;
 vec4 K(int i) { return texelFetch(uKit, ivec2(i, int(vPid + 0.5)), 0); }
 float aa(float d) { float w = max(fwidth(d), 1e-4); return smoothstep(-w, w, d); }
@@ -326,6 +389,22 @@ vec4 numAt(vec2 p, vec2 c, float h, bool mirror, float num, vec2 dpx, vec2 dpy, 
   vec2 gx = vec2(sx * dpx.x / Wd * nd * CROP / 10.0, dpx.y / h), gy = vec2(sx * dpy.x / Wd * nd * CROP / 10.0, dpy.y / h);
   inBox = inside(vec2(uu, vv)) * step(0.5, num);
   return textureGrad(uDigits, gu, gx, gy);
+}
+// Rosto fotográfico: projeção frontal da foto (atlas 8 × 4, célula = jogador) na cabeça.
+// Alinhamento: olhos da malha (y 1,715; ±0,030) → olhos da foto (v 0,42; u 0,5 ± 0,135),
+// boca (1,659) → 0,71 e queixo (1,586) → 0,89. Devolve cor e peso (0 = pele lisa).
+vec4 facePhoto(vec3 r) {
+  if (K(14).a < 0.5 || r.y < 1.5) return vec4(0.0);
+  vec3 d = normalize(r - vec3(0.0, 1.694, 0.014));
+  // uFaceA = (escala u, y dos olhos, y da boca, inclinação acima da boca); uFaceB.x = abaixo
+  float u = 0.5 + r.x * uFaceA.x;
+  float t = r.y >= uFaceA.z ? 0.42 + (uFaceA.y - r.y) * uFaceA.w : 0.717 + (uFaceA.z - r.y) * uFaceB.x;
+  float w = smoothstep(0.12, 0.45, d.z) * smoothstep(0.16, 0.3, t) * (1.0 - smoothstep(0.9, 0.97, t))
+          * (1.0 - smoothstep(0.33, 0.43, abs(u - 0.5)));
+  if (w <= 0.0) return vec4(0.0);
+  float cell = vPid;
+  vec2 uv = vec2((mod(cell, 8.0) + clamp(u, 0.01, 0.99)) / 8.0, 1.0 - (floor(cell / 8.0) + clamp(t, 0.01, 0.99)) / 4.0);
+  return vec4(texture(uFace, uv).rgb, w);
 }
 // relevo a partir das derivadas da altura (igual ao bump do three, sem textura)
 vec3 kitBump(vec3 pos, vec3 n, vec2 dh, float fd) {
@@ -379,6 +458,7 @@ float fabH = 0.0;
   float pipe = (band(r.z, 0.034, 0.0035) + band(r.z, -0.034, 0.0035)) * step(0.09, abs(r.x)) * step(r.y, 1.46) * step(0.5, K(6).a);
   float fk = 0.0;
   vec3 c = vec3(1.0);
+  vec4 fph = (m == 0 || (m >= 8 && m <= 11)) ? facePhoto(r) : vec4(0.0);
   if (m == 0) { c = K(0).rgb; matRough = 0.5; }
   else if (m == 1) {
     int pat = int(K(0).a + 0.5);
@@ -437,6 +517,7 @@ float fabH = 0.0;
   }
   else if (m == 14) { c = K(11).rgb * 0.6 + 0.02; matRough = 0.45; }
   else if (m == 15) { c = K(11).rgb; matRough = 0.3; }
+  if (fph.a > 0.0) { c = mix(c, fph.rgb, fph.a); matRough = mix(matRough, 0.55, fph.a); }
 #ifdef KIT_FABRIC
   // trama do tecido: malha (camisa), sarja (calção), canelado (meião); some com a distância
   vec3 q = vRest;
@@ -474,7 +555,7 @@ function bodyMaterial(uniforms, fabric) {
       // leve brilho de borda na pele (sheen barato)
       .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (int(vMat + 0.5) == 0 || int(vMat + 0.5) == 12) totalEmissiveRadiance += diffuseColor.rgb * 0.06 * pow(1.0 - abs(dot(normalize(vNormal), normalize(vViewPosition))), 3.0);');
   };
-  mat.customProgramCacheKey = () => 'golaco-body-v3' + (fabric ? '-f' : '');
+  mat.customProgramCacheKey = () => 'golaco-body-v4' + (fabric ? '-f' : '');
   return mat;
 }
 
@@ -591,6 +672,7 @@ const ACC = ['#f2f2f2', '#141414', '#141414', '#f2f2f2', '#f2f2f2', '#141414', '
 const LIMB = [[5, 8, 'upperArm'], [6, 9, 'foreArm'], [7, 10, 'hand'], [11, 14, 'thigh'], [12, 15, 'shin'], [13, 16, 'foot']];
 const SINGLE = [[4, 'head'], [3, 'neck'], [2, 'chest'], [1, 'spine'], [0, 'pelvis']];
 const GEO = [];   // geometrias por nível de detalhe (compartilhadas entre instâncias da classe)
+const GEO_SCAN = [];
 const pidAttr = (n, per) => { const a = new Float32Array(n * per); for (let k = 0; k < a.length; k++) a[k] = k % n; return new THREE.InstancedBufferAttribute(a, 1); };
 
 export class PlayerMeshes {
@@ -598,8 +680,9 @@ export class PlayerMeshes {
     this.scene = scene; this.count = count; this.night = night;
     const lod = quality ? Math.max(0, Math.min(2, quality.grassDetail ?? 2)) : 2;
     this.lod = lod;
-    if (!GEO[lod]) GEO[lod] = buildParts(LODS[lod]);
-    const geos = GEO[lod];
+    const cache = SCAN[LODS[lod].feat] ? GEO_SCAN : GEO;
+    if (!cache[lod]) cache[lod] = buildParts(LODS[lod]);
+    const geos = cache[lod];
     this.kitData = new Float32Array(KW * count * 4);
     this.kitTex = new THREE.DataTexture(this.kitData, KW, count, THREE.RGBAFormat, THREE.FloatType);
     this.kitTex.minFilter = this.kitTex.magFilter = THREE.NearestFilter;
@@ -608,7 +691,10 @@ export class PlayerMeshes {
     this.crestTex = crestAtlas(); this.sponsorTex = sponsorAtlas();
     this.crestSlots = new Map(); this.sponsorSlots = new Map();
     const uni = { uKit: { value: this.kitTex }, uDigits: { value: this.digits }, uCrest: { value: this.crestTex },
-      uSponsor: { value: this.sponsorTex }, uCount: { value: count } };
+      uSponsor: { value: this.sponsorTex }, uCount: { value: count }, uFace: { value: this.faceTex = faceAtlas() },
+      // olhos/boca/queixo da cabeça escaneada (y 1,7149 / 1,6602 / 1,6192; olhos ±0,0272) ou da procedural
+      uFaceA: { value: SCAN[LODS[lod].feat] ? new THREE.Vector4(4.963, 1.7149, 1.6602, 5.43) : new THREE.Vector4(4.47, 1.7154, 1.6586, 5.22) },
+      uFaceB: { value: new THREE.Vector2(SCAN[LODS[lod].feat] ? 4.76 : 2.67, 0) } };
     this.material = bodyMaterial(uni, lod > 0);
     // redesenha os letreiros quando a fonte condensada terminar de carregar
     document.fonts?.load?.('italic 800 100px "Barlow Condensed"').then(() => {
@@ -690,6 +776,40 @@ export class PlayerMeshes {
     this.hs[i] = (look.height || PLAYER.height) / 1.8;
     this.bw[i] = 0.92 + 0.16 * (look.build ?? 0.5);
     this.gk[i] = isGK ? 1 : 0;
+  }
+
+  // Rostos fotográficos: copia a célula do banco (faces.js) para a vaga do jogador i
+  // (atlas 8 × 4) e acerta a cor da pele do corpo pela foto.
+  setFaces(fp, cells) {
+    const cv = this.faceTex.image, g = cv.getContext('2d'), F = cv.width / 8, d = this.kitData;
+    for (let i = 0; i < cells.length && i < 32; i++) {
+      const c = cells[i], o = i * KW * 4 + 14 * 4 + 3;
+      if (!fp || c < 0) { d[o] = 0; continue; }
+      const C = fp.meta.cell;
+      g.drawImage(fp.img, (c % fp.meta.cols) * C, Math.floor(c / fp.meta.cols) * C, C, C, (i % 8) * F, Math.floor(i / 8) * F, F, F);
+      d[o] = 1;
+      // pele do corpo = média das bochechas da foto (a barba já vem na foto: sem barba 3D)
+      const x0 = (i % 8) * F, y0 = Math.floor(i / 8) * F;
+      let r = 0, gg = 0, bb = 0, n = 0;
+      // testa + bochechas + queixo (média ampla: a luz da foto varia pelo rosto)
+      for (const [cx, cy] of [[0.5, 0.3], [0.3, 0.58], [0.66, 0.58], [0.5, 0.82]]) {
+        const px = g.getImageData(x0 + cx * F, y0 + cy * F, 0.08 * F, 0.06 * F).data;
+        for (let k = 0; k < px.length; k += 4) { r += px[k]; gg += px[k + 1]; bb += px[k + 2]; n++; }
+      }
+      const col = new THREE.Color().setRGB(r / n / 255, gg / n / 255, bb / n / 255, THREE.SRGBColorSpace);
+      d[i * KW * 4] = col.r * SKIN_K; d[i * KW * 4 + 1] = col.g * SKIN_K; d[i * KW * 4 + 2] = col.b * SKIN_K;
+      // cabelo 3D com a cor do cabelo da foto (topo da célula), se for bem mais escuro que a pele
+      const hp = g.getImageData(x0 + 0.42 * F, y0 + 0.07 * F, 0.16 * F, 0.05 * F).data;
+      let hr = 0, hg = 0, hb = 0, hn = 0;
+      for (let k = 0; k < hp.length; k += 4) { hr += hp[k]; hg += hp[k + 1]; hb += hp[k + 2]; hn++; }
+      if ((hr + hg + hb) / hn < (r + gg + bb) / n * 0.7) {
+        const hc = new THREE.Color().setRGB(hr / hn / 255, hg / hn / 255, hb / hn / 255, THREE.SRGBColorSpace);
+        const o8 = i * KW * 4 + 8 * 4; d[o8] = hc.r * 0.8; d[o8 + 1] = hc.g * 0.8; d[o8 + 2] = hc.b * 0.8;
+      }
+      this.beard[i] = 0;
+    }
+    this._packHair();
+    this.faceTex.needsUpdate = true; this.kitTex.needsUpdate = true;
   }
 
   // vaga do escudo do clube no atlas (-1 = clube desconhecido)

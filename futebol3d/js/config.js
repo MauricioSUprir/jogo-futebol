@@ -85,6 +85,7 @@ export const ANIM = {
   getup:     { dur: 0.80, contact: 0.00 },
   celebrate: { dur: 3.00, contact: 0.00 },
   dejected:  { dur: 3.00, contact: 0.00 },
+  hug:       { dur: 4.00, contact: 0.00 },
 };
 
 // Formações para o time que ataca para +x, com a bola no meio-campo.

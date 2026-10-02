@@ -17,9 +17,10 @@ import { Replay } from './replay.js';
 import { BallMesh } from './ballmesh.js';
 import { GameAudio } from './audio.js';
 import { buildStadium } from './stadium.js';
-import { PlayerMeshes } from './players3d.js';
+import { PlayerMeshes, preloadHeads } from './players3d.js';
 import { rootOffset } from './anim.js';
 import { StadiumFX } from './fx.js';
+import { loadFacePool, matchFaces, portrait } from './faces.js';
 import { CameraBlurPass } from './motionblur.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
@@ -172,12 +173,17 @@ async function startMatch(cfg) {
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';
   await new Promise(r => setTimeout(r, 20));
+  await preloadHeads();
   const players = new PlayerMeshes(scene, { count: 22, quality: Q, night: stadium.isNight });
   for (const p of match.players) {
     const t = p.team;
     const kit = p.isGK ? (t.i === 0 ? cfg.homeGK : cfg.awayGK) : (t.i === 0 ? cfg.homeKit : cfg.awayKit);
     players.setPlayer(p.idx, { kit, isGK: p.isGK, number: p.data.num, look: p.data.look });
   }
+  // rostos com foto (pessoas que não existem) — também usados nas fotos da escalação
+  const facePool = await loadFacePool();
+  const faceCells = facePool ? matchFaces(facePool.meta, match) : [];
+  if (facePool) players.setFaces(facePool, faceCells);
   let fx = null;
   try { fx = new StadiumFX(scene, { quality: Q, isNight: stadium.isNight, homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt, sunDir: stadium.sunDir, wind: match.wind }); } catch (e) { console.warn('efeitos indisponíveis', e); }
   const ball = new BallMesh(scene, Q);
@@ -187,7 +193,7 @@ async function startMatch(cfg) {
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, acc: 0, paused: false, t: 0,
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, facePool, faceCells, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20 };
   applyQuality(true);
 
@@ -294,7 +300,8 @@ function handleEvents(g) {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
         input.vibrate(300);
-        g.celebCutT = 1.3;   // deixa a bola entrar na rede e corta para a comemoração
+        g.celebCutT = 1.6;   // deixa a bola entrar na rede (em câmera lenta) e corta para a comemoração
+        g.slowmo = 1.1;
         g.stadium.crowdReact('goal', e.side === 0 ? 'home' : 'away');
         const kit = e.side === 0 ? g.cfg.homeKit : g.cfg.awayKit;
         g.fx?.goal(e.side === 0 ? 'home' : 'away', [kit.shirt, kit.second && kit.second !== kit.shirt ? kit.second : '#111111'], e.sign);
@@ -327,12 +334,13 @@ function introEvent(g, stage) {
   } else if (stage === 'enter') {
     audio.teamsEnter?.();
     audio.crowd('cheer', 1);
-    g.stadium.crowdReact('goal', 'home');
+    // festa na entrada (sem o 'goal', que acende os LEDs de GOOOOL)
+    g.stadium.crowdReact('chance', 'home'); g.stadium.crowdReact('chance', 'away');
     g.fx?.goal('home', colors(cfg.homeKit), -1);
     g.stadium.showOnScreens?.('goal', 'BEM-VINDOS!');
   } else if (stage === 'lineup') {
     audio.anthem?.(true);
-    hud.lineup(m.teams, cfg);
+    hud.lineup(m.teams, cfg, (p) => portrait(g.facePool, g.faceCells?.[p.idx] ?? -1, 96));
   } else if (stage === 'break') {
     audio.anthem?.(false);
     hud.lineup(null);
@@ -364,18 +372,27 @@ function introCamera(g) {
     _ip.set(cx - 11, 5.5, cz - 6); _il.set(cx, 1.2, cz + 2); fov = 38; lam = 2;
   } else if (t < 19) {
     _ip.set(0, 4.2, -31); _il.set(0, 1.1, -14); fov = 60; lam = 1.5;
-  } else if (t < 25) {
+  } else if (t < 24) {
     // passeia de perto pelos rostos do perfilamento
-    const u = (t - 19) / 6, x = 15 - u * 30;
+    const u = (t - 19) / 5, x = 15 - u * 30;
     _ip.set(x, 1.62, -20.5); _il.set(x - 0.8, 1.4, -14); fov = 30; lam = 5;
+  } else if (t < 27.5) {
+    // torcida da lateral oposta (fundo da escalação): câmera baixa olhando a arquibancada
+    const u = (t - 24) / 3.5;
+    _ip.set(-22 + u * 9, 1.7, 33); _il.set(-14 + u * 9, 7.5, 52); fov = 42; lam = 4;
+  } else if (t < 31) {
+    // torcida atrás do gol da casa
+    const u = (t - 27.5) / 3.5;
+    _ip.set(-49, 1.8, 8 + u * 9); _il.set(-70, 7.5, 13 + u * 9); fov = 44; lam = 4;
   } else {
     // aérea por cima do gramado (fora da cobertura), abrindo o estádio
-    const u = t - 25;
+    const u = t - 31;
     _ip.set(-18 + u * 4, 46, -30 + u * 2); _il.set(0, 0, 4); fov = 55; lam = 2;
   }
   if (!g.rig.cine || g.rig.cine.type !== 'manual') { g.rig.setCinematic({ type: 'manual', pos: _ip, look: _il, fov, lam }); g.rig.snap = true; }
   const c = g.rig.cine;
-  if (c.stage !== (t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4)) { c.stage = t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 25 ? 3 : 4; g.rig.snap = true; g.mblur?.reset(); }
+  const st = t < 6 ? 0 : t < 13 ? 1 : t < 19 ? 2 : t < 24 ? 3 : t < 27.5 ? 4 : t < 31 ? 5 : 6;
+  if (c.stage !== st) { c.stage = st; g.rig.snap = true; g.mblur?.reset(); }
   c.fov = fov; c.lam = lam;
 }
 
@@ -427,7 +444,10 @@ function frame(now) {
       g.replayT += dt;
       if (!g.replay.update(dt)) finishReplay();
     } else {
-      g.acc += dt;
+      // câmera lenta curta quando a bola estufa a rede
+      const ts = g.slowmo > 0 ? 0.32 : 1;
+      if (g.slowmo > 0) g.slowmo -= dt;
+      g.acc += dt * ts;
       let steps = 0;
       while (g.acc >= STEP && steps < 4) {
         m.step(STEP, cmd);
@@ -503,13 +523,19 @@ function render(g, dt) {
     g.celebCutT -= dt;
     if (g.celebCutT <= 0 && m.phase === 'goal' && m.goalInfo) {
       const sc = m.goalInfo.scorer;
-      g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(sc.x, 0, sc.z), follow: sc, a0: Math.atan2(-sc.z, -sc.x) + 0.6 });
+      g.rig.setCinematic({ type: 'celebrate', target: new THREE.Vector3(sc.x, 0, sc.z), follow: sc, side: sc.z > 0 ? -1 : 1 });
       g.rig.snap = true;
     }
   }
   const c = g.rig.cine;
   if (c) {
-    if (c.type === 'celebrate' && c.follow) { c.target.set(c.follow.x, 0, c.follow.z); if (m.phase !== 'goal') g.rig.setCinematic(null); }
+    if (c.type === 'celebrate' && c.follow) {
+      // mira no grupo do abraço (autor + quem já chegou)
+      let x = c.follow.x * 2, z = c.follow.z * 2, n = 2;
+      for (const q of c.follow.team.players) if (q !== c.follow && Math.hypot(q.x - c.follow.x, q.z - c.follow.z) < 2.5) { x += q.x; z += q.z; n++; }
+      c.target.set(x / n, 0, z / n);
+      if (m.phase !== 'goal') g.rig.setCinematic(null);
+    }
     else if (c.target && c.target.copy) c.target.copy(_t);
   }
   const ctl = m.controlled;

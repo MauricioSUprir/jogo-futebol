@@ -481,13 +481,28 @@ function laneRisk(m, p, tx, tz, mode) {
 }
 
 function celebrate(m, p) {
-  const c = p.celebTarget;
-  if (c) {
+  const c = p.celebTarget, gi = m.goalInfo;
+  if (c && !c.mate) {
+    // autor: corre até a torcida; perto dela faz o gesto (a joelhada começa antes, deslizando)
+    if (p.celebDone) { p.dx = p.dz = 0; if (!p.action) p.face = { x: c.x * 1.2, z: c.z * 1.2 }; return; }
+    const v = p.celebVariant || 0;
     const d = p.moveTo(c.x, c.z, 1, true);
-    if (d < 2) { p.dx = p.dz = 0; }
-    // companheiros vão até o autor do gol
-    const sc = m.goalInfo?.scorer;
-    if (sc && sc !== p && sc.team === p.team && m.goalInfo.t > 1.5) p.moveTo(sc.x + (p.idx % 3 - 1) * 1.2, sc.z + (p.idx % 2 ? 1 : -1), 1, true);
+    if (v !== 0 && d < (v === 1 ? 5.5 : 1.6) && (!p.action || p.action.type !== 'celebrate')) {
+      p.startAction('celebrate', { variant: v, dur: v === 1 ? 3.2 : 3.6 });
+      p.celebDone = true;
+    } else if (v === 0 && d < 1.2) { p.celebDone = true; p.dx = p.dz = 0; }
+  } else if (c && c.mate) {
+    // companheiros: reagem, correm até o autor e fecham o abraço em roda
+    const sc = gi?.scorer;
+    if (!sc || gi.t < c.delay) { p.dx = p.dz = 0; return; }
+    if (p.action && p.action.type === 'hug') return;
+    if (p.isGK) { p.moveTo(p.x + Math.sign(c.x) * 0.5, p.z, 0.4, false); if (!p.action && gi.t > 1.5) p.startAction('celebrate', { variant: 2, dur: 3 }); return; }
+    const k = p.team.players.indexOf(p), ang = k * 2.4 + 0.7;
+    const sx = sc.x + sc.vx * 0.35, sz = sc.z + sc.vz * 0.35;
+    const tx = sx + Math.cos(ang) * 0.62, tz = sz + Math.sin(ang) * 0.62;
+    const d = p.moveTo(tx, tz, 1, true);
+    const scStill = Math.hypot(sc.vx, sc.vz) < 1.2;
+    if (d < 1.0 && scStill) p.startAction('hug', { dur: 6, variant: k, face: Math.atan2(sc.z - p.z, sc.x - p.x) });
   } else {
     p.moveTo(p.x * 0.98, p.z * 0.98, 0.15, false);
     p.face = m.ball.p;

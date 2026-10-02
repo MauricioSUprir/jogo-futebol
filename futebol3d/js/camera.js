@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { PITCH, clamp, lerp } from './config.js';
 
-const HL = PITCH.halfL;
+const HL = PITCH.halfL, HW = PITCH.halfW;
 
 function damp(cur, target, lambda, dt) { return lerp(cur, target, 1 - Math.exp(-lambda * dt)); }
 
@@ -56,9 +56,29 @@ export class CameraRig {
         px = T.x - c.sign * 9; py = 2.4; pz = T.z + 0.8;
         lx = c.sign * HL; ly = 1.1; lz = 0; fov = 40; lam = 6;
       } else if (c.type === 'celebrate') {
-        const a = c.a0 + c.t * 0.18;
-        px = T.x + Math.cos(a) * 7.5; pz = T.z + Math.sin(a) * 7.5; py = 2.0;
-        lx = T.x; ly = 1.0; lz = T.z; fov = 38; lam = 3;
+        // câmera de mão na comemoração: teleobjetiva baixa, à frente e para dentro do campo,
+        // vendo o autor de 3/4 com a torcida atrás; acompanha a corrida e abre quando o abraço fecha
+        const f = c.follow, cx = -T.x, cz = -T.z, cl = Math.hypot(cx, cz) || 1;
+        let vx = f ? f.vx : 0, vz = f ? f.vz : 0; const vl = Math.hypot(vx, vz);
+        if (vl > 1) { c.vx = vx / vl; c.vz = vz / vl; }
+        vx = c.vx || 0; vz = c.vz || 0;
+        let dx = cx / cl + 0.9 * vx, dz = cz / cl + 0.9 * vz; const dl = Math.hypot(dx, dz) || 1; dx /= dl; dz /= dl;
+        const side = Math.sin(c.t * 0.3) * 1.2;
+        const dist = 6.2 + Math.min(c.t, 6) * 0.3;
+        px = T.x + dx * dist - dz * side; pz = T.z + dz * dist + dx * side; py = 1.4 + 0.06 * Math.sin(c.t * 1.7);
+        // ninguém na frente da lente: empurra a câmera para longe de quem estiver perto
+        for (const q of m.players) {
+          const ex = px - q.x, ez = pz - q.z, e = Math.hypot(ex, ez);
+          if (e < 1.8 && e > 1e-3) { px += ex / e * (1.8 - e); pz += ez / e * (1.8 - e); py += (1.8 - e) * 0.6; }
+        }
+        // não sai do gramado (atrás das placas e bandeirinhas a lente bateria em objetos)
+        px = clamp(px, -HL + 0.8, HL - 0.8); pz = clamp(pz, -HW + 0.8, HW - 0.8);
+        // tremor de câmera na mão (somas de senos: suave e sem padrão óbvio)
+        const sh = 0.03;
+        lx = T.x + sh * (Math.sin(c.t * 7.1) + 0.6 * Math.sin(c.t * 12.7));
+        ly = 1.15 + sh * (Math.sin(c.t * 8.3 + 1) + 0.5 * Math.sin(c.t * 14.1));
+        lz = T.z + sh * Math.sin(c.t * 6.4 + 2);
+        fov = 30 + Math.min(c.t, 6) * 1.5; lam = 3.5;
       }
     } else if (this.mode === 'pro' && ctx.player) {
       const p = ctx.player, dir = ctx.attackDir;

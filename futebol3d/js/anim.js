@@ -70,7 +70,7 @@ const L1 = LEG.thigh, L2 = LEG.shin;
 
 export const ANIM_LIST = ['locomotion', 'idle', 'jockey', 'shield', 'kick', 'pass', 'chip', 'volley', 'header',
   'slide', 'tackle', 'throwin', 'gk_ready', 'gk_dive', 'gk_catch', 'gk_hold', 'gk_throw', 'gk_kick',
-  'fall', 'getup', 'celebrate', 'dejected'];
+  'fall', 'getup', 'celebrate', 'dejected', 'hug'];
 
 export function createPose() {
   const p = { q: new Float32Array(NB * 4), mq: new Float32Array(NB * 4), mp: new Float32Array(NB * 3), root: new Float32Array(3) };
@@ -529,6 +529,21 @@ const POINTSKY = clip({
     [1, { spine: [-0.12, 0, 0], neck: [-0.35, 0, 0], uaL: [-2.6, 0.3, 0.45], uaR: [-2.6, 0.3, 0.45] }],
   ],
 });
+// abraço coletivo: braços por cima dos ombros dos companheiros, pulando juntos
+const HUG = clip({
+  mode: M_FEET, loop: true,
+  keys: [
+    [0, { pelvis: [0.15, 0, 0], spine: [0.12, 0, 0], chest: [0.1, 0, 0], neck: [-0.1, 0, 0],
+      thL: [-0.35, 0, 0.06], shL: [0.7], ftL: [-0.3], thR: [-0.35, 0, 0.06], shR: [0.7], ftR: [-0.3],
+      uaL: [-1.5, 0.5, 0.35], faL: [-1.1], hL: [0.2], uaR: [-1.5, 0.5, 0.35], faR: [-1.1], hR: [0.2] }],
+    [0.3, { pelvis: [0.02, 0, 0], spine: [0.04, 0, 0], thL: [-0.08, 0, 0.06], shL: [0.25], ftL: [0.45], thR: [-0.08, 0, 0.06], shR: [0.25], ftR: [0.45],
+      uaL: [-1.7, 0.5, 0.3], faL: [-0.9], uaR: [-1.7, 0.5, 0.3], faR: [-0.9], root: [0, 0, 0.18] }],
+    [0.6, { pelvis: [0.18, 0, 0], spine: [0.14, 0, 0], thL: [-0.4, 0, 0.06], shL: [0.8], ftL: [-0.35], thR: [-0.4, 0, 0.06], shR: [0.8], ftR: [-0.35],
+      uaL: [-1.45, 0.5, 0.38], faL: [-1.2], uaR: [-1.45, 0.5, 0.38], faR: [-1.2], root: [0, 0, 0] }],
+    [1, { pelvis: [0.15, 0, 0], spine: [0.12, 0, 0], thL: [-0.35, 0, 0.06], shL: [0.7], ftL: [-0.3], thR: [-0.35, 0, 0.06], shR: [0.7], ftR: [-0.3],
+      uaL: [-1.5, 0.5, 0.35], faL: [-1.1], uaR: [-1.5, 0.5, 0.35], faR: [-1.1] }],
+  ],
+});
 const HANDS_HEAD = clip({
   mode: M_FEET,
   keys: [
@@ -787,6 +802,7 @@ function evalState(s, P) {
       W.mirror = hash((s.variant || 0) + 7) > 0.5;
       break;
     }
+    case 'hug': useClip(HUG, (t + hash(s.variant || 0) * 0.3) / 0.62, 1); break;
     case 'dejected':
       useClip(((s.variant || 0) & 1) ? HANDS_HIPS : HANDS_HEAD, t / ANIM.dejected.dur, 1);
       add(2, 0.012 * Math.sin(t * 2.2), 0, 0);
