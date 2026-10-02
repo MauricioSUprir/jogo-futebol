@@ -497,7 +497,7 @@ float fabH = 0.0;
 #ifdef BODY_SKIN
   // gola do corpo realista decidida por pixel (os vértices misturam pele/camisa em dente de serra)
   if (r.y > 1.36 && abs(r.x) < 0.24 && (m == 0 || m == 1 || m == 2 || m == 13) && r.y < 1.56)
-    m = r.y > 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02) ? 0 : 1;
+    m = r.y > 1.522 + 0.7 * max(0.0, abs(r.x) - 0.06) - 0.18 * max(0.0, r.z - 0.03) ? 0 : 1;
   // limites do uniforme por pixel (os vértices só dizem a "parte": braço, tronco/pernas, cabeça)
   bool armP = m == 2 || m == 13 || m == 12;
   bool bodyP = m == 1 || m == 3 || m == 4 || m == 6 || m == 14 || (m == 0 && r.y < 1.0);
@@ -533,7 +533,7 @@ float fabH = 0.0;
   float collar = floor(K(5).a + 0.5);
 #ifdef BODY_SKIN
   // corpo realista: golas medidas a partir da linha do pescoço (não da altura fixa do boneco antigo)
-  float neckL = 1.488 + 0.9 * max(0.0, abs(r.x) - 0.078) - 0.12 * max(0.0, r.z - 0.02);
+  float neckL = 1.522 + 0.7 * max(0.0, abs(r.x) - 0.06) - 0.18 * max(0.0, r.z - 0.03);
   float yv = neckL - 0.07 + abs(r.x) * 1.25;
   float vBand = band(r.y, yv, 0.0085) * step(0.0, r.z) * step(r.y, neckL);
   float vIn = aa(r.y - yv - 0.0085) * step(0.0, r.z);
@@ -630,14 +630,28 @@ float fabH = 0.0;
   } else if (m == 16) {
     // cabeça escaneada: a foto do jogador projetada de frente (como o teste "B");
     // laterais/costas: cabelo acima da linha do cabelo, pele abaixo
+    // a base do pescoço escaneado fica dentro da gola: o que escapar abaixo dela some
+    if (r.y < 1.505) discard;
     vec3 dd = normalize(r - vec3(0.0, 1.665, 0.035));
     vec2 fu = clamp(vFaceUv, vec2(0.004), vec2(0.996));
     // abaixo do queixo e fora da célula: pele lisa (sem vazar bordas/vizinhos da foto)
     float front = smoothstep(0.02, 0.42, dd.z) * (1.0 - smoothstep(0.9, 0.96, vFaceUv.y)) * (1.0 - smoothstep(0.44, 0.49, abs(vFaceUv.x - 0.5)));
-    vec3 ph = texture(uFace, vec2((mod(vPid, 8.0) + fu.x) / 8.0, 1.0 - (floor(vPid / 8.0) + fu.y) / 4.0)).rgb;
+    vec2 cell0 = vec2(mod(vPid, 8.0), floor(vPid / 8.0));
+    vec3 ph = texture(uFace, vec2((cell0.x + fu.x) / 8.0, 1.0 - (cell0.y + fu.y) / 4.0)).rgb;
+    // superfície virada para baixo (sob o queixo/mandíbula) não recebe a foto: ela escorreria em riscos
+    vec3 gn = cross(dFdx(r), dFdy(r));
+    float gny = gn.y / max(length(gn), 1e-12);
+    front *= smoothstep(-0.55, -0.25, gny);
+    // pele das laterais/pescoço = a própria foto (bochechas e testa), para o tom bater com o rosto
+    vec3 sk0 = vec3(0.0);
+    for (int i = 0; i < 4; i++) {
+      vec2 q = i == 0 ? vec2(0.27, 0.6) : i == 1 ? vec2(0.71, 0.6) : i == 2 ? vec2(0.5, 0.3) : vec2(0.33, 0.68);
+      sk0 += texture(uFace, vec2((cell0.x + q.x) / 8.0, 1.0 - (cell0.y + q.y) / 4.0), 3.0).rgb;
+    }
+    sk0 *= 0.25;
     float g2 = fract(sin(dot(floor(r.xz * 900.0 + r.y * 300.0), vec2(12.9898, 78.233))) * 43758.5453);
     float hairZ = (1.0 - sk.w) * smoothstep(1.638, 1.668, r.y - 0.02 * dd.z) * (1.0 - smoothstep(0.065, 0.08, abs(r.x)) * (1.0 - smoothstep(1.70, 1.72, r.y)));
-    vec3 back = mix(K(0).rgb, K(8).rgb * (0.8 + 0.35 * g2), hairZ);
+    vec3 back = mix(sk0, K(8).rgb * (0.8 + 0.35 * g2), hairZ);
     c = mix(back, ph, front);
     matRough = mix(0.62, 0.5, front);
     if (uDbgN > 0.5) c = texture(uHeadN, vUv2).rgb;
@@ -1048,7 +1062,7 @@ export class PlayerMeshes {
       const x0 = (i % 8) * F, y0 = Math.floor(i / 8) * F;
       let r = 0, gg = 0, bb = 0, n = 0;
       // testa + bochechas + queixo (média ampla: a luz da foto varia pelo rosto)
-      for (const [cx, cy] of [[0.5, 0.3], [0.3, 0.58], [0.66, 0.58], [0.5, 0.82]]) {
+      for (const [cx, cy] of [[0.46, 0.3], [0.27, 0.6], [0.65, 0.6], [0.46, 0.86]]) {
         const px = g.getImageData(x0 + cx * F, y0 + cy * F, 0.08 * F, 0.06 * F).data;
         for (let k = 0; k < px.length; k += 4) { r += px[k]; gg += px[k + 1]; bb += px[k + 2]; n++; }
       }

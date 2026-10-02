@@ -119,14 +119,17 @@ function moveInput(p, mx, mz, sprint, scale) {
 function keepBall(m, p) {
   const b = m.ball;
   if (p.action || b.held || b.p.y > 0.6) return;
-  const rx = b.p.x + b.v.x * 0.12 - p.x, rz = b.p.z + b.v.z * 0.12 - p.z;
+  // posição relativa prevista (descontando o próprio movimento do jogador)
+  const rx = b.p.x + (b.v.x - p.vx) * 0.12 - p.x, rz = b.p.z + (b.v.z - p.vz) * 0.12 - p.z;
   const d = Math.hypot(rx, rz) || 1e-6;
   let dx = p.dx, dz = p.dz;
   let s = Math.hypot(dx, dz);
   const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
   const ahead = (rx * ux + rz * uz);            // bola à frente na direção pedida?
   // peso do "ir até a bola": cresce com a distância e quando ela não está à frente
-  const k = clamp((d - 0.45) / 0.4, 0, 1) + clamp((0.25 - ahead) / 0.35, 0, 1) * 0.7 * clamp((d - 0.35) / 0.3, 0, 1);
+  // (a condução em match.js já mantém a bola no pé; aqui só quando ela ficou longe ou
+  // para trás — sem puxar para o lado do pé bom, senão a corrida entorta)
+  const k = clamp((d - 0.95) / 0.5, 0, 1) + clamp((0.1 - ahead) / 0.35, 0, 1) * 0.7 * clamp((d - 0.45) / 0.3, 0, 1);
   const bs = Math.hypot(b.v.x, b.v.z);
   if (k > 0) {
     const w = Math.min(1, k);
