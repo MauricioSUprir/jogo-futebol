@@ -78,7 +78,9 @@ export class Player {
   moveTo(x, z, urgency = 0.6, sprintOk = false) {
     const ex = x - this.x, ez = z - this.z;
     const d = Math.hypot(ex, ez);
-    if (d < 0.25) { this.dx = this.dz = 0; this.sprint = false; return d; }
+    // histerese: parado, só sai do lugar se o alvo estiver a mais de ~1 m
+    const arrive = this.speed < 0.6 ? 0.95 : 0.3;
+    if (d < arrive) { this.dx = this.dz = 0; this.sprint = false; return d; }
     const maxS = sprintOk && d > 6 ? this.sprintSpd : this.jog;
     // frenagem: v² = 2·a·d
     const brake = Math.sqrt(2 * PLAYER.decel * 0.55 * d);
@@ -163,7 +165,11 @@ export class Player {
     if (this.stun > 0) { this.stun -= dt; dx = dz = 0; }
 
     const locked = act && ['slide', 'gk_dive', 'fall', 'getup'].includes(act.type);
-    if (!locked) this.integrate(dt, dx, dz);
+    // intenção suavizada: tira a "tremedeira" de alvos que mudam a cada quadro
+    const sm = Math.min(1, dt * (this.human ? 16 : 7));
+    this.sdx = (this.sdx ?? dx) + (dx - (this.sdx ?? dx)) * sm;
+    this.sdz = (this.sdz ?? dz) + (dz - (this.sdz ?? dz)) * sm;
+    if (!locked) this.integrate(dt, this.sdx, this.sdz);
     this.x += this.vx * dt; this.z += this.vz * dt;
 
     // fôlego
@@ -182,7 +188,9 @@ export class Player {
   }
 
   integrate(dt, dx, dz) {
-    const maxS = (this.sprint ? this.sprintSpd * (0.86 + 0.14 * this.stamina) : this.jog) * (this.slow || 1);
+    // com a bola no pé: um pouco mais lento e menos ágil (depende do drible)
+    const ballK = this.hasBall ? (this.sprint ? 0.9 : 0.95) + this.a.dri / 99 * 0.05 : 1;
+    const maxS = (this.sprint ? this.sprintSpd * (0.86 + 0.14 * this.stamina) : this.jog) * (this.slow || 1) * ballK;
     let ds = Math.hypot(dx, dz);
     if (ds > maxS) { dx *= maxS / ds; dz *= maxS / ds; ds = maxS; }
     const sp = Math.hypot(this.vx, this.vz);
@@ -195,7 +203,7 @@ export class Player {
     const cur = Math.atan2(this.vz, this.vx);
     const tgt = ds > 0.1 ? Math.atan2(dz, dx) : cur;
     const diff = angDiff(cur, tgt);
-    const turnRate = lerp(PLAYER.turnRateStill, PLAYER.turnRateSprint, clamp(sp / PLAYER.sprintMax, 0, 1)) * this.agility;
+    const turnRate = lerp(PLAYER.turnRateStill, PLAYER.turnRateSprint, clamp(sp / PLAYER.sprintMax, 0, 1)) * this.agility * (this.hasBall ? 0.85 : 1);
     let nsp, nang;
     if (Math.abs(diff) > 1.9 && ds > 0.1) {
       // mudança brusca de sentido: planta o pé e freia antes de virar
@@ -210,17 +218,23 @@ export class Player {
     this.vx = Math.cos(nang) * nsp; this.vz = Math.sin(nang) * nsp;
   }
 
+  // Giro do corpo com velocidade angular suavizada (sem estalos). Quase parado,
+  // o jogador acompanha a bola com o olhar/corpo devagar em vez de girar à toa.
   updateHeading(dt, act) {
-    if (act && ['slide', 'gk_dive', 'fall', 'getup', 'throwin'].includes(act.type)) return;
-    let tgt = null;
+    if (act && ['slide', 'gk_dive', 'fall', 'getup', 'throwin'].includes(act.type)) { this.angVel = 0; return; }
+    let tgt = null, maxRate = 11;
     const sp = this.speed;
-    if (act && act.data.face !== undefined) tgt = act.data.face;
-    else if (this.face) tgt = Math.atan2(this.face.z - this.z, this.face.x - this.x);
-    else if (sp > 0.35) tgt = Math.atan2(this.vz, this.vx);
-    if (tgt === null) return;
+    if (act && act.data.face !== undefined) { tgt = act.data.face; maxRate = 9; }
+    else if (this.face) { tgt = Math.atan2(this.face.z - this.z, this.face.x - this.x); maxRate = 6.5; }
+    else if (sp > 0.9) { tgt = Math.atan2(this.vz, this.vx); maxRate = lerp(12, 7, clamp(sp / 9, 0, 1)); }
+    else if (this.watch) { tgt = Math.atan2(this.watch.z - this.z, this.watch.x - this.x); maxRate = 3.5; }
+    if (tgt === null) { this.angVel = (this.angVel || 0) * Math.exp(-10 * dt); return; }
     const d = angDiff(this.heading, tgt);
-    const rate = (act ? 8 : this.face ? 9 : 13) * dt;
-    const turn = clamp(d, -rate, rate);
+    // zona morta pequena para não ficar "corrigindo" alguns graus o tempo todo
+    const want = Math.abs(d) < 0.06 && sp < 0.9 ? 0 : clamp(d * 9, -maxRate, maxRate);
+    this.angVel = (this.angVel || 0) + (want - (this.angVel || 0)) * Math.min(1, dt * 16);
+    let turn = this.angVel * dt;
+    if (Math.abs(turn) > Math.abs(d)) turn = d;
     this.heading += turn;
     if (this.heading > Math.PI) this.heading -= Math.PI * 2;
     if (this.heading < -Math.PI) this.heading += Math.PI * 2;

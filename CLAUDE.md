@@ -10,6 +10,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Testar antes de avançar; corrigir todo bug encontrado.
 - Fluxo de entrega: branch → PR → merge na `main` (o link só atualiza depois do merge).
 - Times, jogadores, marcas e anúncios dos jogos são **fictícios** (nada licenciado).
+- **Falar sempre em português**, inclusive nas mensagens de andamento.
+- **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
+  mensagem de andamento (ex.: "faltam ~40 min").
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.

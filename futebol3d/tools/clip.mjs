@@ -10,7 +10,6 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ?
 const cam = arg('cam', 'close'), N = +arg('frames', 12), step = +arg('step', 0.1), warm = +arg('warm', 12);
 const out = arg('out', '/tmp/claude-0/-home-user-jogo-futebol/9805b587-e422-5403-9106-8bf9d9184706/scratchpad/clip');
 const W = +arg('w', 960), H = +arg('h', 540);
-const FF = '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux';
 const dir = out + '-frames';
 rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
 
@@ -23,7 +22,7 @@ await p.goto(`http://localhost:${arg('port', '8790')}/index.html`); await p.wait
 await p.evaluate(async (q) => {
   const T = await import('./js/teams.js'); const k = T.resolveKits(T.TEAMS[0], T.TEAMS[1]);
   await window.__golaco.startMatch({ mode: 'amistoso', home: T.TEAMS[0], away: T.TEAMS[1], ...k, userSide: 'none', settings: { ...window.__golaco.settings(), quality: q, timeOfDay: 'dia' } });
-}, arg('q', 'media'));
+}, arg('q', 'baixa'));
 await p.waitForFunction(() => window.__golaco.game, null, { timeout: 60000 });
 // aquece até alguém conduzir a bola correndo
 await p.evaluate((warm) => {
@@ -31,6 +30,8 @@ await p.evaluate((warm) => {
   g.paused = true; G.advance(warm);
   for (let i = 0; i < 600; i++) { if (m.owner && m.owner.speed > 4 && m.phase === 'play') break; G.advance(1 / 60); }
   document.getElementById('hud').style.display = 'none';
+  // a torcida pesa demais no renderizador por software: some no clipe
+  g.stadium.root.traverse(o => { if (o.userData && o.userData.count) o.visible = false; });
 }, warm);
 const raf = () => p.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 const log = [];
@@ -49,12 +50,10 @@ for (let i = 0; i < N; i++) {
     return { who: o.data.name, owner: !!m.owner, speed: o.speed.toFixed(1), dist: d.toFixed(2), ballY: m.ball.p.y.toFixed(2), anim: o.pose.anim };
   }, { cam, step });
   await raf(); await raf();
-  await p.screenshot({ path: `${dir}/f${String(i).padStart(3, '0')}.png` });
+  await p.screenshot({ path: `${dir}/f${String(i).padStart(3, '0')}.png`, timeout: 180000 });
   log.push(`${i}: ${info.who} vel ${info.speed} bola a ${info.dist} m (y ${info.ballY}) ${info.owner ? 'com posse' : 'solta'} ${info.anim}`);
 }
 console.log(log.join('\n'));
-const cols = Math.min(4, N), rows = Math.ceil(N / cols);
-execFileSync(FF, ['-y', '-loglevel', 'error', '-i', `${dir}/f%03d.png`, '-vf', `scale=480:-1,tile=${cols}x${rows}`, '-frames:v', '1', `${out}-sheet.png`]);
-execFileSync(FF, ['-y', '-loglevel', 'error', '-framerate', String(Math.round(1 / Math.max(step, 1 / 30))), '-i', `${dir}/f%03d.png`, '-pix_fmt', 'yuv420p', '-vf', 'scale=960:-2', `${out}.mp4`]);
-console.log('folha', `${out}-sheet.png`, '| vídeo', `${out}.mp4`, '| erros', errs.join('; ') || 'nenhum');
+execFileSync('python3', [new URL('./sheet.py', import.meta.url).pathname, dir, out, '4', String(Math.round(step * 1000) || 100)]);
+console.log('folha', `${out}-sheet.png`, '| gif', `${out}.gif`, '| erros', errs.join('; ') || 'nenhum');
 await b.close();

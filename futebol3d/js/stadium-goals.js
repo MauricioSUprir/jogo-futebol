@@ -355,12 +355,38 @@ export function buildGoals(ctx) {
   for (const nd of L.nodes) if (nd.pin) hookGeos.push(ball(V(nd.x, nd.y, nd.z), 0.014, 6, 4));
 
   const postMat = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.28, metalness: 0.15 });
+  // Vibração da trave/travessão quando a bola bate: modo de vibração amortecido,
+  // preso no chão (traves) e com barriga no meio do travessão. Por gol (oeste/leste).
+  const uShakeW = { value: new THREE.Vector4(-100, 0, 0, 0) };   // t0, força, z do impacto, altura
+  const uShakeE = { value: new THREE.Vector4(-100, 0, 0, 0) };
+  const shakeGLSL = (sh) => {
+    sh.uniforms.uShakeW = uShakeW; sh.uniforms.uShakeE = uShakeE; sh.uniforms.uTimeS = U.uTime;
+    sh.vertexShader = 'uniform vec4 uShakeW; uniform vec4 uShakeE; uniform float uTimeS;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      {
+        vec4 S = position.x < 0.0 ? uShakeW : uShakeE;
+        float dt = uTimeS - S.x;
+        if (dt > 0.0 && dt < 2.5) {
+          float env = S.y * exp(-dt * 2.6);
+          float hy = clamp(position.y / ${GOAL.height.toFixed(2)}, 0.0, 1.0);
+          float bar = smoothstep(${(GOAL.height - 0.05).toFixed(2)}, ${GOAL.height.toFixed(2)}, position.y);
+          // traves: dobram a partir da base; travessão: barriga no meio
+          float mode = pow(hy, 1.6) * (1.0 - bar) + bar * (0.35 + 0.65 * cos(clamp(position.z / ${GOAL.halfWidth.toFixed(2)}, -1.0, 1.0) * 1.5708));
+          float near = exp(-abs(position.z - S.z) * 0.35);
+          float w = sin(dt * 58.0) * 0.6 + sin(dt * 31.0 + 1.3) * 0.4;
+          transformed.x += env * mode * near * w * 0.045 * sign(position.x);
+          transformed.y += env * bar * mode * w * 0.02;
+        }
+      }`);
+  };
+  postMat.onBeforeCompile = shakeGLSL;
   const postMesh = new THREE.Mesh(mergeSimple(posts), postMat);
   posts.forEach((g) => g.dispose());
   postMesh.castShadow = shadows; postMesh.receiveShadow = true;
   postMesh.name = 'traves';
   group.add(postMesh);
-  const frameMesh = new THREE.Mesh(mergeSimple(frame.concat(hookGeos)), new THREE.MeshStandardMaterial({ color: 0xc4c8ce, roughness: 0.4, metalness: 0.55 }));
+  const frameMat = new THREE.MeshStandardMaterial({ color: 0xc4c8ce, roughness: 0.4, metalness: 0.55 });
+  frameMat.onBeforeCompile = shakeGLSL;
+  const frameMesh = new THREE.Mesh(mergeSimple(frame.concat(hookGeos)), frameMat);
   frame.forEach((g) => g.dispose()); hookGeos.forEach((g) => g.dispose());
   frameMesh.castShadow = shadows;
   frameMesh.name = 'armacao';
@@ -699,6 +725,12 @@ vec3 transformed = aPole - vec3( 0.0, ( 1.0 - v ) * 0.36, 0.0 ) + dir * u * 0.46
   };
 
   group.userData.impact = impact;
+  // bola na trave/travessão: o gol treme e a rede sacode junto
+  group.userData.shake = (goalSign, point, strength, time) => {
+    const u = goalSign < 0 ? uShakeW : uShakeE;
+    u.value.set(time, Math.min(1.2, 0.35 + strength * 1.2), point ? point.z : 0, point ? point.y : 1);
+    if (point) impact(goalSign, { x: goalSign * (PITCH.halfL + 0.3), y: Math.min(2.3, point.y), z: point.z * 0.9 }, strength * 0.45, time);
+  };
   group.userData.update = update;
   group.userData.netInfo = () => ({
     nodes: N, springs: L.springs.length, awake: cloths.map((c) => c.awake), steps: cloths.map((c) => c.steps),

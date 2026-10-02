@@ -20,6 +20,7 @@ import { buildStadium } from './stadium.js';
 import { PlayerMeshes } from './players3d.js';
 import { rootOffset } from './anim.js';
 import { StadiumFX } from './fx.js';
+import { CameraBlurPass } from './motionblur.js';
 import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
 
 const $ = (id) => document.getElementById(id);
@@ -82,9 +83,14 @@ function buildPost() {
   if (g.composer) { g.composer.dispose?.(); g.composer = null; }
   if (!Q.post) return;
   const size = renderer.getDrawingBufferSize(new THREE.Vector2());
+  const blur = !touch && settings.motionBlur !== false;
   const rt = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples: Q.msaa ? 4 : 0 });
+  if (blur) rt.depthTexture = new THREE.DepthTexture(size.x, size.y);
   const comp = new EffectComposer(renderer, rt);
   comp.addPass(new RenderPass(g.scene, g.camera));
+  // desfoque de movimento da câmera (lê a profundidade da cena recém-desenhada)
+  g.mblur = null;
+  if (blur) { g.mblur = new CameraBlurPass(g.camera, 0.55); comp.addPass(g.mblur); }
   if (Q.bloom) {
     const night = g.stadium && g.stadium.isNight;
     g.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), night ? 0.55 : 0.22, 0.45, night ? 0.82 : 0.92);
@@ -257,7 +263,9 @@ function handleEvents(g) {
       case 'bounce': if (g.t - g.lastBounce > 0.08) { audio.bounce(e.strength); g.lastBounce = g.t; } break;
       case 'board': audio.bounce(e.strength * 0.8); break;
       case 'post': case 'bar':
-        audio.post(e.strength); audio.crowd('ooh', 0.9); g.stadium.crowdReact('chance', m.lastTouch?.team.i === 0 ? 'home' : 'away');
+        audio.post(e.strength); audio.crowd('ooh', 0.9);
+        g.stadium.postHit?.(e.goalSign, new THREE.Vector3(e.x, e.y, e.z), e.strength);
+        g.rig.kick(0.35 + e.strength * 0.6); g.stadium.crowdReact('chance', m.lastTouch?.team.i === 0 ? 'home' : 'away');
         hud.banner(e.type === 'post' ? 'NA TRAVE!' : 'NO TRAVESSÃO!', '', 'chance'); input.vibrate(60);
         break;
       case 'net': audio.net(e.strength); g.stadium.netImpact(e.goalSign, new THREE.Vector3(e.x, e.y, e.z), e.strength); break;
@@ -397,6 +405,7 @@ function render(g, dt) {
     }
     const b = g.replay.ball;
     g.ball.set(b.x, b.y, b.z, new THREE.Quaternion(b.qx, b.qy, b.qz, b.qw));
+    g.ball.trail(g.replay.ballVel || null);
     _t.set(b.x, b.y, b.z);
   } else {
     for (const p of m.players) {
@@ -410,6 +419,7 @@ function render(g, dt) {
     const off = g.stadium.updateBall ? g.stadium.updateBall(dt, b, m.ball.v) : null;
     const ox = off ? off.x || 0 : 0, oy = off ? off.y || 0 : 0, oz = off ? off.z || 0 : 0;
     g.ball.set(b.x + ox + m.ball.v.x * g.acc * (m.ball.held ? 0 : 1), b.y + oy, b.z + oz + m.ball.v.z * g.acc * (m.ball.held ? 0 : 1));
+    g.ball.trail(m.ball.held ? null : m.ball.v);
     _t.set(b.x, b.y, b.z);
   }
   g.players.commit();
@@ -438,6 +448,7 @@ function render(g, dt) {
   // pênalti: câmera atrás do cobrador
   if (!c && sp && sp.type === 'penalty' && m.phase === 'setpiece') g.rig.setCinematic({ type: 'penalty', target: new THREE.Vector3(sp.x, 0, sp.z), sign: Math.sign(m.goalX(sp.team)), pen: true });
   if (c && c.pen && (!sp || m.phase !== 'setpiece') && (!m.shootout || !m.shootout.active || m.time - (m.lastKick?.t || 0) > 1.6)) g.rig.setCinematic(null);
+  if (g.rig.snap && g.mblur) g.mblur.reset();
   g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0 });
 
   // estádio (telões com o placar), efeitos e HUD

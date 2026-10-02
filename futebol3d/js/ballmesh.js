@@ -82,6 +82,19 @@ export class BallMesh {
     this.blob.rotation.x = -Math.PI / 2;
     this.blob.renderOrder = 2;
     scene.add(this.blob);
+    // rastro de movimento: tubo afinando para trás, aparece acima de ~12 m/s
+    const tg = new THREE.CylinderGeometry(BALL.radius * 0.95, BALL.radius * 0.25, 1, 14, 1, true);
+    tg.translate(0, -0.5, 0);                // topo na bola, cauda para trás (−y)
+    const tm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthWrite: false });
+    tm.onBeforeCompile = (sh) => {
+      sh.vertexShader = 'varying float vAlong;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vAlong = -position.y;');
+      sh.fragmentShader = 'varying float vAlong;\n' + sh.fragmentShader.replace('#include <dithering_fragment>', '#include <dithering_fragment>\n gl_FragColor.a *= pow(1.0 - clamp(vAlong, 0.0, 1.0), 1.6);');
+    };
+    this.trailMesh = new THREE.Mesh(tg, tm);
+    this.trailMesh.renderOrder = 4; this.trailMesh.visible = false; this.trailMesh.frustumCulled = false;
+    scene.add(this.trailMesh);
+    this._dir = new THREE.Vector3();
+    this._up = new THREE.Vector3(0, 1, 0);
     this.q = new THREE.Quaternion();
     this._axis = new THREE.Vector3();
     this._dq = new THREE.Quaternion();
@@ -118,6 +131,20 @@ export class BallMesh {
     this.blob.position.set(x, 0.012, z);
     this.blob.scale.set(s, s, 1);
     this.blob.material.opacity = Math.max(0, 1 - h / 3);
+  }
+
+  // Rastro proporcional à velocidade (≈ obturador de 1/30 s), alinhado ao movimento.
+  trail(v) {
+    const t = this.trailMesh;
+    const s = v ? Math.hypot(v.x, v.y, v.z) : 0;
+    if (s < 12) { t.visible = false; return; }
+    t.visible = true;
+    const len = Math.min(1.6, s * 0.035);
+    this._dir.set(-v.x / s, -v.y / s, -v.z / s);
+    t.quaternion.setFromUnitVectors(this._up, this._dir).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI));
+    t.position.copy(this.mesh.position);
+    t.scale.set(1, len, 1);
+    t.material.opacity = Math.min(0.42, (s - 12) / 30);
   }
 
   aim(m, sp, userTaking) {
