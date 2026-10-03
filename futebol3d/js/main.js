@@ -9,6 +9,7 @@ import { SMAAPass } from 'three/addons/postprocessing/SMAAPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
+import { PerfHud } from './perfhud.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -65,6 +66,8 @@ renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.info.autoReset = false;
+// painel de desempenho: ?perf no link ou F3
+const perf = new PerfHud(renderer);
 let dynScale = 1;
 // correção de cor dentro do tonemapping dos materiais (qualidade baixa, sem passe extra)
 installMaterialGrade();
@@ -468,6 +471,7 @@ function frame(now) {
   let dt = clamp((now - last) / 1000, 0, 0.25);
   last = now;
   if (!g) return;
+  perf.begin();
   const m = g.match;
   g.t += dt;
   const cmd = input.poll(g.rig.right, g.rig.fwd);
@@ -497,6 +501,7 @@ function frame(now) {
   if (!game) return;
   render(g, dt);
   measure(g, dt);
+  perf.end({ dt, preset: presetKey, dyn: dynScale });
 }
 requestAnimationFrame(frame);
 
@@ -605,6 +610,7 @@ function render(g, dt) {
   }
 
   g.sunFit?.update(g.camera);
+  g.players.lodUpdate?.(g.camera);
   renderer.info.reset();
   if (g.composer) g.composer.render(dt);
   else renderer.render(g.scene, g.camera);

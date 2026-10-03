@@ -244,6 +244,7 @@ export function buildStadium(renderer, scene, opts = {}) {
 
     update(dt, time, excitement = 0, camera) {
       lastTime = time;
+      crowd.userData.updateLOD?.(camera);
       U.uTime.value = time;
       const e = THREE.MathUtils.clamp(excitement, 0, 1);
       U.uExc.value += (e - U.uExc.value) * Math.min(1, dt * 1.5);

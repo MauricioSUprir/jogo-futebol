@@ -65,6 +65,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
   `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos).
 
+- Desempenho: torcida em 16 setores por anel com recorte pela câmera e malha leve ao longe
+  (`stadium-crowd.js`, updateLOD); jogadores em alta/ultra com malha detalhada só para quem aparece
+  grande na tela (`players3d.js`, lodUpdate). Painel `?perf` no link (ou F3): FPS, 1% pior, CPU/GPU ms,
+  draw calls, triângulos. Medir com `tools/perf-bench.mjs` (antes/depois) e `tools/lod-check.mjs` (prints).
+
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
 cd futebol3d

@@ -24,6 +24,11 @@ const CFG = {
   baixa: { lower: ['baixa', 5500], upper: ['baixa', 2000], scarf: 0.06, scarfSeg: 3, flags: 20, banners: 6 },
 };
 
+// fatias do anel para o recorte pela câmera e o nível de detalhe por distância
+const SECTORS = 16;
+// abaixo desta fração da altura da tela (≈ 20 px em 720p) o torcedor usa a malha leve
+const FAR_FRAC = 0.028;
+
 function qualityKey(q) {
   const l = (q?.label || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   if (CFG[l]) return l;
@@ -249,30 +254,68 @@ export function buildCrowd(ctx) {
       dressFan(rng, pal, C, j * 20, o.ultra);
       if (scarf) scarfList.push({ j, P, C, pal });
     });
-    const g = new THREE.InstancedBufferGeometry();
-    const body = buildBodyGeometry(lod);
-    g.index = body.index;
-    for (const k of ['position', 'normal', 'aPart']) g.setAttribute(k, body.attributes[k]);
-    const ib = new THREE.InstancedInterleavedBuffer(P, 8, 1);
-    g.setAttribute('aP', new THREE.InterleavedBufferAttribute(ib, 4, 0));
-    g.setAttribute('aN', new THREE.InterleavedBufferAttribute(ib, 4, 4));
-    const cb = new THREE.InstancedInterleavedBuffer(C, 20, 1);
-    ['aShirt', 'aSecond', 'aSkin', 'aHair', 'aPants'].forEach((k, q) => {
-      g.setAttribute(k, new THREE.InterleavedBufferAttribute(cb, 4, q * 4, true));
-    });
-    g.instanceCount = n;
-    g.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 12, 0), 140);
-    const u = { ...uniforms, uSegArm: { value: lod === 'baixa' ? 1 : 0 } };
-    const mesh = new THREE.Mesh(g, crowdMaterial(u, BODY_VERT_HEAD, BODY_VERT_MAIN, 'torcida3d-corpo'));
-    mesh.frustumCulled = false;
-    mesh.name = 'torcedores-' + lod;
-    mesh.userData.tris = triCount(body) * n;
-    group.add(mesh);
-    return mesh;
+    // ---- setores (fatias do anel em volta do campo): cada um com esfera envolvente
+    // própria, então o recorte pelo campo de visão (frustum culling) do three.js
+    // descarta o que está fora da tela — antes o anel inteiro era UMA malha sem
+    // recorte e a torcida atrás da câmera era desenhada de graça. Cada setor tem
+    // duas malhas que dividem os mesmos atributos por instância: a detalhada (lod)
+    // e a leve ('baixa'), escolhida pela altura que um torcedor ocupa na tela.
+    const bySec = Array.from({ length: SECTORS }, () => []);
+    for (let j = 0; j < n; j++) {
+      const a = Math.atan2(P[j * 8 + 2], P[j * 8]);
+      bySec[Math.min(SECTORS - 1, Math.floor((a + Math.PI) / (2 * Math.PI) * SECTORS))].push(j);
+    }
+    const near = bodyFor(lod), far = lod === 'baixa' ? null : bodyFor('baixa');
+    let tris = 0;
+    for (const js of bySec) {
+      if (!js.length) continue;
+      const m = js.length, Ps = new Float32Array(m * 8), Cs = new Uint8Array(m * 20);
+      const box = new THREE.Box3(), v = new THREE.Vector3();
+      js.forEach((j, k) => {
+        Ps.set(P.subarray(j * 8, j * 8 + 8), k * 8); Cs.set(C.subarray(j * 20, j * 20 + 20), k * 20);
+        box.expandByPoint(v.set(P[j * 8], P[j * 8 + 1], P[j * 8 + 2]));
+      });
+      // folga para quem pula / ergue os braços / gira o cachecol
+      box.min.y -= 0.5; box.max.y += 2.6; box.expandByScalar(0.8);
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      const ib = new THREE.InstancedInterleavedBuffer(Ps, 8, 1);
+      const cb = new THREE.InstancedInterleavedBuffer(Cs, 20, 1);
+      const mk = (B) => {
+        const g = new THREE.InstancedBufferGeometry();
+        g.index = B.geo.index;
+        for (const k of ['position', 'normal', 'aPart']) g.setAttribute(k, B.geo.attributes[k]);
+        g.setAttribute('aP', new THREE.InterleavedBufferAttribute(ib, 4, 0));
+        g.setAttribute('aN', new THREE.InterleavedBufferAttribute(ib, 4, 4));
+        ['aShirt', 'aSecond', 'aSkin', 'aHair', 'aPants'].forEach((k, q) => {
+          g.setAttribute(k, new THREE.InterleavedBufferAttribute(cb, 4, q * 4, true));
+        });
+        g.instanceCount = m;
+        g.boundingSphere = sphere;
+        const mesh = new THREE.Mesh(g, B.mat);
+        mesh.name = 'torcedores-' + B.lod;
+        mesh.userData.tris = B.tris * m;
+        group.add(mesh);
+        return mesh;
+      };
+      const sec = { c: sphere.center, r: sphere.radius, near: mk(near), far: far ? mk(far) : null, useFar: false };
+      // as duas ficam visíveis até o primeiro updateLOD: assim o compileAsync do início
+      // já compila o shader da malha leve (sem engasgo na primeira troca)
+      sectors.push(sec);
+      tris += sec.near.userData.tris;
+    }
+    return tris;
   };
-  const meshes = [];
-  if (cfg.lower[0] === cfg.upper[0]) meshes.push(makeSet(chosen[0].concat(chosen[1]), cfg.lower[0]));
-  else { meshes.push(makeSet(chosen[0], cfg.lower[0])); meshes.push(makeSet(chosen[1], cfg.upper[0])); }
+  // geometria + material compartilhados por todos os setores de um nível
+  const bodies = {};
+  const bodyFor = (lod) => {
+    if (bodies[lod]) return bodies[lod];
+    const geo = buildBodyGeometry(lod);
+    const u = { ...uniforms, uSegArm: { value: lod === 'baixa' ? 1 : 0 } };
+    return (bodies[lod] = { lod, geo, tris: triCount(geo), mat: crowdMaterial(u, BODY_VERT_HEAD, BODY_VERT_MAIN, 'torcida3d-corpo') });
+  };
+  const sectors = [];
+  if (cfg.lower[0] === cfg.upper[0]) makeSet(chosen[0].concat(chosen[1]), cfg.lower[0]);
+  else { makeSet(chosen[0], cfg.lower[0]); makeSet(chosen[1], cfg.upper[0]); }
 
   // ---- cachecóis (só de quem tem)
   if (scarfList.length) {
@@ -323,7 +366,23 @@ export function buildCrowd(ctx) {
   const people = chosen[0].length + chosen[1].length;
   group.userData.count = people;
   group.userData.quality = qk;
-  group.userData.tris = group.children.reduce((a, m) => a + (m.userData.tris || 0), 0);
+  group.userData.tris = group.children.reduce((a, m) => a + (m.userData.tris || 0), 0)
+    - sectors.reduce((a, sc) => a + (sc.far ? sc.far.userData.tris : 0), 0);
+  // nível de detalhe por setor: malha leve quando um torcedor ocupa menos que
+  // FAR_FRAC da altura da tela (com folga para não ficar trocando na divisa)
+  group.userData.updateLOD = (camera) => {
+    if (!camera || !camera.isPerspectiveCamera) return;
+    const k = 1.7 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2)) * (camera.zoom || 1);
+    const cp = camera.position;
+    for (const sc of sectors) {
+      if (!sc.far) continue;
+      const d = Math.max(1, cp.distanceTo(sc.c) - sc.r * 0.6);
+      const frac = k / d;
+      if (sc.useFar ? frac > FAR_FRAC * 1.15 : frac < FAR_FRAC) sc.useFar = !sc.useFar;
+      sc.near.visible = !sc.useFar; sc.far.visible = sc.useFar;
+    }
+  };
+  group.userData.sectors = sectors;
   group.userData.uniforms = uniforms;
   group.userData.ctx = ctx;
   group.userData.debugPose = (k) => { uniforms.uDebugPose.value = k; };   // página de teste
