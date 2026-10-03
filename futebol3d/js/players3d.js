@@ -898,6 +898,8 @@ const SINGLE = [[4, 'head'], [3, 'neck'], [2, 'chest'], [1, 'spine'], [0, 'pelvi
 const GEO = [];   // geometrias por nível de detalhe (compartilhadas entre instâncias da classe)
 const GEO_SCAN = [];
 const GEO_BODY = [];
+// acima desta fração da altura da tela o jogador usa a malha detalhada (alta/ultra)
+const HI_FRAC = 0.2;
 const pidAttr = (n, per) => { const a = new Float32Array(n * per); for (let k = 0; k < a.length; k++) a[k] = k % n; return new THREE.InstancedBufferAttribute(a, 1); };
 
 export class PlayerMeshes {
@@ -961,12 +963,27 @@ export class PlayerMeshes {
       return m;
     };
     if (this.realBody) {
-      const g = geos.body.clone(); g.setAttribute('aPid', pidAttr(count, 1));
-      const m = new THREE.InstancedMesh(g, bodyMaterial(uni, lod > 0, true), count);
-      m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceMatrix.array.fill(0);
-      m.customDepthMaterial = skinDepthMaterial(uni);
-      m.castShadow = shadows; m.receiveShadow = true; m.frustumCulled = false; m.name = 'jog-corpo';
-      this.group.add(m); this.bodyMesh = m;
+      const mat = bodyMaterial(uni, lod > 0, true), depth = skinDepthMaterial(uni);
+      const mkBody = (geo, name) => {
+        const g = geo.clone(); g.setAttribute('aPid', pidAttr(count, 1));
+        g.attributes.aPid.setUsage(THREE.DynamicDrawUsage);
+        const m = new THREE.InstancedMesh(g, mat, count);
+        m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.instanceMatrix.array.fill(0);
+        m.customDepthMaterial = depth;
+        m.castShadow = shadows; m.receiveShadow = true; m.frustumCulled = false; m.name = name;
+        this.group.add(m);
+        return m;
+      };
+      this.bodyMesh = mkBody(geos.body, 'jog-corpo');
+      // alta/ultra: malha detalhada (35 mil triângulos) só para quem aparece grande na
+      // tela; o resto usa a leve (11 mil), inclusive na passada de sombra. As matrizes
+      // ficam em _bm e lodUpdate() distribui os jogadores entre as duas a cada quadro.
+      if (lod >= 2) {
+        if (!GEO_BODY.leve) GEO_BODY.leve = bodyGeometry(true);
+        this.bodyLo = mkBody(GEO_BODY.leve, 'jog-corpo-leve');
+        this._bm = new Float32Array(count * 16);
+        this._hiOn = new Uint8Array(count);
+      }
       this._hm = new Float32Array(16);
     } else {
       for (const [b, name] of SINGLE) this.parts.push({ mesh: mk(name, 1), bones: [b], kind: name });
@@ -1163,7 +1180,7 @@ export class PlayerMeshes {
     }
     for (let k = 0; k < 2; k++) { const sl = this.slot[i * 2 + k]; if (sl >= 0) this.hair[k ? 7 : this.style[i]].instanceMatrix.array.fill(0, sl * 16, sl * 16 + 16); }
     this.blob.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
-    if (this.realBody) { this.bodyMesh.instanceMatrix.array.fill(0, i * 16, i * 16 + 16); this.bodyMesh.instanceMatrix.needsUpdate = true; }
+    if (this.realBody) { (this._bm || this.bodyMesh.instanceMatrix.array).fill(0, i * 16, i * 16 + 16); this.bodyMesh.instanceMatrix.needsUpdate = true; }
     this.streaks.instanceMatrix.array.fill(0, i * 64, i * 64 + 64);
     this.ring.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
     this.arrow.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
@@ -1205,7 +1222,7 @@ export class PlayerMeshes {
   _skin(i, x, y, z, qy, qw, c, s, hs, bw, P) {
     // matriz da instância = posição/giro/escala do jogador; ossos no espaço do modelo
     // (passes que trocam o material, como o AO, ao menos põem o corpo no lugar certo)
-    writeMat(this.bodyMesh.instanceMatrix.array, i * 16, 0, qy, 0, qw, x, y, z, hs * bw, hs, hs * bw);
+    writeMat(this._bm || this.bodyMesh.instanceMatrix.array, i * 16, 0, qy, 0, qw, x, y, z, hs * bw, hs, hs * bw);
     const mq = P.mq, mp = P.mp, D = this.boneData, o0 = i * 17 * 16, M = _M, inv = BODY.inv;
     for (let b = 0; b < 17; b++) {
       writeMat(M.elements, 0, mq[b * 4], mq[b * 4 + 1], mq[b * 4 + 2], mq[b * 4 + 3], mp[b * 3], mp[b * 3 + 1], mp[b * 3 + 2], 1, 1, 1);
@@ -1222,6 +1239,27 @@ export class PlayerMeshes {
     }
     this.bodyMesh.instanceMatrix.needsUpdate = true;
     this.boneTex.needsUpdate = true;
+  }
+
+  // nível de detalhe do corpo (só alta/ultra): chamado uma vez por quadro, antes de desenhar
+  lodUpdate(camera) {
+    if (!this.bodyLo || !camera) return;
+    const hi = this.bodyMesh, lo = this.bodyLo, t = this.tr, cp = camera.position;
+    const k = 1.8 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov || 50) / 2)) * (camera.zoom || 1);
+    const ha = hi.instanceMatrix.array, la = lo.instanceMatrix.array;
+    const hp = hi.geometry.attributes.aPid.array, lp = lo.geometry.attributes.aPid.array;
+    let nh = 0, nl = 0;
+    for (let i = 0; i < this.count; i++) {
+      if (!this.vis[i]) continue;
+      const d = Math.max(0.5, Math.hypot(t[i * 5] - cp.x, t[i * 5 + 1] + 1 - cp.y, t[i * 5 + 2] - cp.z));
+      const frac = k * t[i * 5 + 4] / d;          // fração da altura da tela ocupada pelo jogador
+      if (this._hiOn[i] ? frac < HI_FRAC * 0.85 : frac > HI_FRAC) this._hiOn[i] ^= 1;
+      const src = this._bm.subarray(i * 16, i * 16 + 16);
+      if (this._hiOn[i]) { ha.set(src, nh * 16); hp[nh++] = i; } else { la.set(src, nl * 16); lp[nl++] = i; }
+    }
+    hi.count = nh; lo.count = nl;
+    hi.instanceMatrix.needsUpdate = lo.instanceMatrix.needsUpdate = true;
+    hi.geometry.attributes.aPid.needsUpdate = lo.geometry.attributes.aPid.needsUpdate = true;
   }
 
   _ground(i, x, y, z, th, hs, P) {
