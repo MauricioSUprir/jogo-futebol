@@ -685,7 +685,9 @@ export class GameAudio {
     setTimeout(() => this._tick(), 20);
   }
 
-  _ensureBuffers(which) { for (const k of which ? [which] : ['babble', 'applause', 'roar']) this._need(k); }
+  // offline: constrói na hora; ao vivo só pede (fatias em segundo plano) — construir
+  // de uma vez congelava o jogo na primeira chance/defesa/gol
+  _ensureBuffers(which) { const ks = which ? [which] : ['babble', 'applause', 'roar']; if (this._sync) for (const k of ks) this._need(k); else this._want(...ks); }
   _ensureChant() { this._need('chant'); }
   _ensureAll() { for (const k of [...BASE_QUEUE, 'anthem']) this._need(k); }
 

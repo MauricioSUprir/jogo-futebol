@@ -52,7 +52,9 @@ function autoPreset() {
   // iOS não informa memória; celulares atuais aguentam bem o preset alto com
   // resolução dinâmica. Só aparelhos claramente fracos caem para média/baixa.
   if (touch || small) return (navigator.deviceMemory && navigator.deviceMemory < 3) || cores <= 4 ? 'baixa' : 'media';
-  return cores >= 8 && mem >= 8 ? 'ultra' : 'alta';
+  // ultra (GTAO, sombra 4096) só quando o jogador escolhe: em muitas placas de PC ela
+  // derrubava o jogo para poucos quadros por segundo
+  return cores >= 6 && mem >= 8 ? 'alta' : 'media';
 }
 let presetKey = settings.quality === 'auto' ? autoPreset() : settings.quality;
 let Q = QUALITY[presetKey];
@@ -237,14 +239,15 @@ async function startMatch(cfg) {
     if (game.match.phase === 'intro' && game.t > 0.8) { game.match.skipIntro(); return; }
     if (game.replaying && game.replayT > 0.6) finishReplay();
   };
+  $('load-text').textContent = 'Preparando os gráficos…';
+  try { if (renderer.compileAsync) await renderer.compileAsync(scene, camera); else renderer.compile(scene, camera); } catch { /* opcional */ }
+  last = performance.now();
   document.body.classList.remove('in-menu');
   document.body.classList.add('in-game');
   load.classList.add('hidden');
   if (match.phase !== 'intro') hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
   audio.chant(true);
   last = performance.now();
-  // compila shaders antes do primeiro quadro para não engasgar
-  try { renderer.compile(scene, camera); } catch { /* opcional */ }
 }
 
 function stadiumLabel(cfg) {
@@ -462,7 +465,7 @@ let last = performance.now();
 function frame(now) {
   requestAnimationFrame(frame);
   const g = game;
-  let dt = clamp((now - last) / 1000, 0, 0.1);
+  let dt = clamp((now - last) / 1000, 0, 0.25);
   last = now;
   if (!g) return;
   const m = g.match;
@@ -479,7 +482,7 @@ function frame(now) {
       if (g.slowmo > 0) g.slowmo -= dt;
       g.acc += dt * ts;
       let steps = 0;
-      while (g.acc >= STEP && steps < 4) {
+      while (g.acc >= STEP && steps < 15) {
         m.step(STEP, cmd);
         input.consume();
         handleEvents(g);
@@ -488,7 +491,7 @@ function frame(now) {
         g.acc -= STEP; steps++;
         if (g.replaying || !game) break;
       }
-      if (steps >= 4) g.acc = 0;
+      if (steps >= 15) g.acc = 0;
     }
   }
   if (!game) return;
@@ -638,7 +641,7 @@ function hintFor(g) {
 // Resolução dinâmica: mantém ~60 fps (ou 30 no mínimo em aparelhos fracos).
 function measure(g, dt) {
   g.frames++; g.fpsT += dt;
-  if (g.fpsT < 2) return;
+  if (g.fpsT < 1) return;
   const fps = g.frames / g.fpsT;
   g.fps = fps; g.frames = 0; g.fpsT = 0;
   if (window.__fps) window.__fps(fps);
@@ -652,8 +655,8 @@ function measure(g, dt) {
   const minDyn = Q.minDyn ?? 0.7;
   if (fps < 45 && dynScale > minDyn) dynScale = Math.max(minDyn, dynScale - 0.1);
   else if (fps > 58 && dynScale < 1) dynScale = Math.min(1, dynScale + 0.05);
-  // auto: cai de preset se nem com resolução menor aguenta
-  if (settings.quality === 'auto' && fps < 38 && dynScale <= minDyn) {
+  // auto: cai de preset se nem com resolução menor aguenta (ou na hora, se estiver muito lento)
+  if (settings.quality === 'auto' && (fps < 38 && dynScale <= minDyn || fps < 24)) {
     const order = ['ultra', 'alta', 'media', 'baixa'];
     const i = order.indexOf(presetKey);
     if (i < order.length - 1) { presetKey = order[i + 1]; dynScale = 0.85; applyQuality(true); return; }
