@@ -1032,7 +1032,8 @@ export class Match {
       // força demais: a bola sobe
       const over = Math.max(0, power - 0.88);
       const ty = clamp(tg.y + over * 6 + (dist > 25 ? 0.2 : 0), 0.15, 5);
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.05;
+      // chute travado (marcador colado) espalha bem mais que o chute livre
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6);
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);
@@ -1051,7 +1052,10 @@ export class Match {
       kindOut = 'chip';
     } else if (kind === 'pass' || kind === 'gk_pass') {
       tg = this.leadTarget(p, data.receiver, tg, 'ground');
-      const arrive = lerp(4.5, 11, power);
+      // passe rasteiro firme: a força mínima já sobe com a distância (assistência do FC);
+      // segurar o botão deixa mais forte. 15 m ≈ 1,1 s (antes 2,1 s com um toque)
+      const D = Math.hypot(tg.x - o.x, tg.z - o.z);
+      const arrive = Math.min(14, Math.max(lerp(7.5, 13, power), 6.5 + D * 0.22));
       v = solveGround(o, tg, arrive);
       err = errBase(a.pas) * 0.03;
       rot(v, gauss() * err);
