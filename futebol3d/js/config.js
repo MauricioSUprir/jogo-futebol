@@ -58,8 +58,8 @@ export const PLAYER = {
   // velocidades em m/s; o atributo de velocidade (0..99) interpola entre min e max
   jogMin: 4.6, jogMax: 5.8,
   sprintMin: 7.4, sprintMax: 9.3,
-  accelMin: 4.2, accelMax: 6.8,
-  decel: 9.0,
+  accelMin: 7.2, accelMax: 10.8,  // primeira passada explosiva (FC 26: "more agility")
+  decel: 11.5,
   turnRateStill: 14,     // rad/s parado
   turnRateSprint: 3.2,   // rad/s em arrancada
   controlRange: 0.75,    // distância em que pode tocar na bola com o pé

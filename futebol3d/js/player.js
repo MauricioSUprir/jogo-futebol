@@ -32,7 +32,7 @@ export class Player {
     const f = a.pac / 99;
     this.jog = lerp(PLAYER.jogMin, PLAYER.jogMax, f);
     this.sprintSpd = lerp(PLAYER.sprintMin, PLAYER.sprintMax, f);
-    this.accel = lerp(PLAYER.accelMin, PLAYER.accelMax, (a.pac * 0.6 + a.dri * 0.4) / 99);
+    this.accel = lerp(PLAYER.accelMin, PLAYER.accelMax, clamp(((a.pac * 0.7 + a.dri * 0.3) / 99 - 0.45) / 0.5, 0, 1));
     this.agility = 0.8 + 0.35 * (a.dri / 99);
     this.foot = data.foot === 'E' ? -1 : 1;
     this.x = 0; this.z = 0; this.y = 0;
@@ -224,7 +224,8 @@ export class Player {
     } else {
       nang = cur + clamp(diff, -turnRate * dt, turnRate * dt);
       const want = ds * Math.max(0.35, Math.cos(Math.min(Math.abs(diff), 1.4)));
-      const rate = (want > sp ? this.accel * (1 - 0.45 * sp / PLAYER.sprintMax) : PLAYER.decel) * dt;
+      // arranque forte e ganho decrescente perto do máximo (o rápido chega antes ao topo)
+      const rate = (want > sp ? this.accel * (1 - 0.8 * (sp / PLAYER.sprintMax) ** 2) : PLAYER.decel) * dt;
       nsp = sp + clamp(want - sp, -rate, rate);
     }
     this.vx = Math.cos(nang) * nsp; this.vz = Math.sin(nang) * nsp;
