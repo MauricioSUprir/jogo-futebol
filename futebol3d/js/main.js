@@ -10,6 +10,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
 import { PerfHud } from './perfhud.js';
+import { switchCandidate } from './human.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -229,7 +230,7 @@ async function startMatch(cfg) {
   const replay = new Replay(22, 12, 60);
 
   game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, facePool, faceCells, acc: 0, paused: false, t: 0,
-    replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20 };
+    replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0 };
   applyQuality(true);
 
   hud.init(match, cfg, { touch });
@@ -331,7 +332,7 @@ function handleEvents(g) {
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
       case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); break;
-      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); break;
+      case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); g.hintIdx = -1; g.hintT = 0; break;
       case 'goal': {
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
@@ -611,9 +612,26 @@ function render(g, dt) {
 
   g.sunFit?.update(g.camera);
   g.players.lodUpdate?.(g.camera);
+  switchHint(g);
   renderer.info.reset();
   if (g.composer) g.composer.render(dt);
   else renderer.render(g.scene, g.camera);
+}
+
+// anel amarelo em quem o TROCAR pegaria (só sem a bola, como no FC)
+function switchHint(g) {
+  const m = g.match;
+  g.hintT = (g.hintT || 0) - 1;
+  if (g.hintT > 0) return;
+  g.hintT = 6;   // a cada ~0,1 s
+  const t = m.userTeam;
+  const show = t && !g.replaying && m.phase === 'play' && !(m.owner && m.owner.team === t) && !(t.gk.holdingBall);
+  const c = show ? switchCandidate(m) : null;
+  const idx = c ? c.idx : -1;
+  if (idx === g.hintIdx) return;
+  if (g.hintIdx >= 0 && g.hintIdx !== m.controlled?.idx) g.players.setIndicator(g.hintIdx, null);
+  if (idx >= 0 && idx !== m.controlled?.idx) g.players.setIndicator(idx, '#ffd23c', true);
+  g.hintIdx = idx;
 }
 
 function touchContext(m) {

@@ -295,18 +295,29 @@ function firstTime(m, p) {
 }
 
 // Troca: o companheiro que chega primeiro na bola (ou no portador adversário).
-export function switchPlayer(m, manual) {
+function switchList(m) {
   const team = m.userTeam;
   const cur = m.controlled;
   const b = m.ball.p;
-  const list = team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
+  return team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
     .map(q => ({ q, s: q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
     .sort((a, c) => a.s - c.s);
+}
+function switchIndex(m, n, manual) {
+  return manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9 ? (m.switchIdx + 1) % Math.min(3, n) : 0;
+}
+export function switchPlayer(m, manual) {
+  const list = switchList(m);
   if (!list.length) return;
-  let idx = 0;
-  if (manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9) idx = (m.switchIdx + 1) % Math.min(3, list.length);
+  const idx = switchIndex(m, list.length, manual);
   m.switchIdx = idx; m.lastSwitchT = m.time;
   m.setControlled(list[idx].q);
+}
+// Quem o botão TROCAR pegaria agora (para o indicador amarelo na tela)
+export function switchCandidate(m) {
+  if (!m.userTeam || m.phase !== 'play') return null;
+  const list = switchList(m);
+  return list.length ? list[switchIndex(m, list.length, true)].q : null;
 }
 
 function autoSwitch(m) {
