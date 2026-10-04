@@ -145,16 +145,18 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .tc-btn.big { width: 23vh; height: 23vh; font-size: 4.2vh; border-color: #1ee37a; box-shadow: 0 0 2.5vh rgba(30,227,122,.25); }
 .tc-btn.sm { width: 12vh; height: 12vh; font-size: 2.3vh; letter-spacing: 0; }
 .tc-btn.wide { border-radius: 8vh; width: 26vh; height: 11vh; font-size: 3vh; }
-/* posições (right/bottom em vh) — sem sobreposição */
-.tc-shoot { right: 3vh; bottom: 6vh; }
-.tc-pass { right: 28vh; bottom: 3vh; }
-.tc-long { right: 26vh; bottom: 22vh; }
-.tc-through { right: 7vh; bottom: 31vh; }
-.tc-finesse { right: 27vh; bottom: 41vh; }
-.tc-chip { right: 40vh; bottom: 36vh; }
-.tc-skill { right: 45vh; bottom: 21vh; }
-.tc-switch { right: 47vh; bottom: 4vh; }
-.tc-sprint { right: 62vh; bottom: 4vh; }
+/* 4 botões em arco no canto (polegar direito); posições em vh, sem sobreposição */
+.tc-shoot { right: 4vh; bottom: 7vh; width: 26vh; height: 26vh; }
+.tc-pass { right: 33vh; bottom: 4vh; width: 20vh; height: 20vh; }
+.tc-third { right: 13vh; bottom: 36vh; width: 20vh; height: 20vh; }
+.tc-sprint { right: 56vh; bottom: 6vh; width: 22vh; height: 11vh; }
+.tc-btn em { position: absolute; left: 0; right: 0; bottom: 14%; font: 600 1.7vh/1 var(--disp); font-style: normal; letter-spacing: 0;
+  text-transform: none; opacity: .7; z-index: 1; white-space: nowrap; }
+.tc-btn[data-g="long"], .tc-btn[data-g="chip"], .tc-btn[data-g="finesse"] { background: rgba(255,210,60,.35); border-color: #ffd23c; }
+/* TROCAR em destaque (defesa / bola solta) */
+.tc-btn.tc-troca { border-color: #ffd23c; box-shadow: 0 0 2.5vh rgba(255,210,60,.35); }
+/* área livre da direita: deslizar = drible */
+.tc-swipe { position: absolute; right: 0; bottom: 0; width: 50%; height: 82%; pointer-events: auto; touch-action: none; }
 #touch[data-ctx="defend"] .tc-shoot { border-color: var(--red); }
 .tc-pause { position: absolute; right: calc(3vh + var(--safe-r)); top: calc(3vh + var(--safe-t)); pointer-events: auto; width: 11vh; height: 11vh; border-radius: 50%;
   border: .4vh solid rgba(255,255,255,.4); background: rgba(4,7,6,.55); display: flex; align-items: center; justify-content: center; gap: 1.2vh; }

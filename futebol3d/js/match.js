@@ -368,14 +368,16 @@ export class Match {
     o.lastStride = st;
     o.touchTimer -= dt;
     if (o.cushion > 0) o.cushion -= dt;
-    // ciclos de passada entre toques: 1 conduzindo; 2 em arrancada (bola mais longa)
-    const per = o.sprint && sp > 6.5 ? 2 : 1;
+    // um toque por ciclo de passada sempre (condução curta, como no EA FC: a bola não
+    // "anda na frente" nem em arrancada — só abre um pouco mais)
+    const per = 1;
     if (o.dribSt === undefined) o.dribSt = st;
     let ph = st - o.dribSt; if (ph < 0) ph += 1024;
     const u = Math.min(ph / per, 1.15);
     // alcance do pé no toque e abertura máxima da bola entre toques
-    const base = o.shielding ? 0.3 : 0.29 + Math.min(sp, 8) * 0.022;
-    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (per > 1 ? 0.085 : 0.045)) * (1.3 - dri * 0.55);
+    // (medido do centro do corpo: o bico da chuteira fica a ~0,25 m)
+    const base = o.shielding ? 0.28 : 0.27 + Math.min(sp, 8) * 0.01;
+    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (o.sprint && sp > 6.5 ? 0.028 : 0.022)) * (1.3 - dri * 0.55);
     const gap = sp > 0.8 ? open * 4 * u * (1 - Math.min(u, 1)) : 0;
     const lead = base + gap;
     const side = (sp > 0.8 ? 0.1 : 0.12) * o.foot;
@@ -404,7 +406,7 @@ export class Match {
     // limitada, para não "teleportar"); amortecendo o domínio, assenta mais devagar
     const dGap = sp > 0.8 && u < 1 ? open * 4 * (1 - 2 * u) * sp / (L * per) : 0;
     const vtx = o.vx + o.fx * dGap, vtz = o.vz + o.fz * dGap;
-    const kc = o.cushion > 0 ? 5 : 9;
+    const kc = o.cushion > 0 ? 5 : 11;
     let cx = ex * kc, cz = ez * kc;
     const cmax = o.cushion > 0 ? 3 : 2.2 + sp * 0.35, cl = Math.hypot(cx, cz);
     if (cl > cmax) { cx *= cmax / cl; cz *= cmax / cl; }
