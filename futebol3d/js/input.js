@@ -6,7 +6,7 @@
 const KEYMAP = {
   KeyW: 'up', ArrowUp: 'up', KeyS: 'down', ArrowDown: 'down', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
   ShiftLeft: 'sprint', ShiftRight: 'sprint',
-  Space: 'pass', KeyJ: 'pass', KeyK: 'shoot', KeyL: 'long', KeyI: 'through', KeyO: 'finesse', KeyP: 'chip',
+  Space: 'pass', KeyJ: 'tackle', KeyK: 'shoot', KeyL: 'long', KeyI: 'through', KeyO: 'finesse', KeyP: 'chip',
   KeyQ: 'switch', KeyF: 'skill', KeyE: 'shield', KeyC: 'jockey', Escape: 'pause', Enter: 'confirm',
 };
 const CHARGE = ['pass', 'shoot', 'long', 'through', 'finesse', 'chip'];
@@ -136,7 +136,8 @@ export class Input {
     this.touchKey = {};              // botão → tecla lógica atual (o 3º muda com o contexto)
     this.swapRelease = {};           // gesto: soltar o botão X vira a ação Y
     this.swipeMs = 700;              // deslize mais lento que isso não conta como drible
-    const defs = [['shoot', 'Chute', 'big'], ['pass', 'Passe', ''], ['third', 'Enfiada', ''], ['sprint', 'Correr', 'wide']];
+    // 'tackle' (DIVIDIDA) só aparece na defesa
+    const defs = [['shoot', 'Chute', 'big'], ['pass', 'Passe', ''], ['third', 'Enfiada', ''], ['tackle', 'Dividida', ''], ['sprint', 'Correr', 'wide']];
     for (const [id, label, cls] of defs) {
       const b = document.createElement('button');
       b.className = 'tc-btn tc-' + id + (cls ? ' ' + cls : '');
@@ -181,7 +182,7 @@ export class Input {
     // [rótulo, dica do gesto] por botão; third = [rótulo, tecla lógica]
     const L = {
       attack: { shoot: ['Chute', '↑ cavadinha · → colocado'], pass: ['Passe', '↑ lançar'], third: ['Enfiada', 'through'] },
-      defend: { shoot: ['Carrinho', ''], pass: ['Pressão', ''], third: ['Trocar', 'switch'] },
+      defend: { shoot: ['Carrinho', ''], pass: ['Pressão', ''], third: ['Trocar', 'switch'], tackle: ['Dividida', ''] },
       loose: { shoot: ['Chute', ''], pass: ['Passe', '↑ lançar'], third: ['Trocar', 'switch'] },
       setpiece: { shoot: ['Chute', '↑ cavadinha · → colocado'], pass: ['Curto', ''], third: ['Longo', 'long'] },
       gk: { shoot: ['Chutão', ''], pass: ['Repor', ''], third: ['Rolar', 'through'] },
@@ -195,6 +196,7 @@ export class Input {
       if (id === 'third') { this.touchKey.third = v[1]; b.classList.toggle('tc-troca', v[1] === 'switch'); }
       else b.querySelector('em').textContent = v[1];
     }
+    this.touchButtons.tackle.classList.toggle('hide', ctx !== 'defend');
     this.touchRoot.dataset.ctx = ctx;
   }
 
@@ -203,7 +205,7 @@ export class Input {
     const pad = this.padIndex !== null && navigator.getGamepads ? navigator.getGamepads()[this.padIndex] : null;
     const b = {};
     const k = this.keys;
-    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
+    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'tackle', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
     let sx = (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0);
     let sy = (k.has('up') ? 1 : 0) - (k.has('down') ? 1 : 0);
     if (sx && sy) { sx *= 0.7071; sy *= 0.7071; }
@@ -222,6 +224,7 @@ export class Input {
       if (pb(2)) b.long = true;
       if (pb(3)) b.through = true;
       if (pb(4)) b.switch = true;
+      if (rb && !pb(1)) b.tackle = true;     // RB sozinho = dividida
       if (pb(7)) b.sprint = true;
       if (lt && !pb(1)) b.jockey = true;
       if (pb(10) || pb(11)) b.skill = true;

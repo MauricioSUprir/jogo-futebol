@@ -34,7 +34,7 @@ async function drag(sel, dx, dy) {
 await setCtx('attack');
 // a GPU simulada deixa cada quadro com segundos: o limite de tempo do deslize não vale aqui
 await p.evaluate(() => { window.__golaco.input.swipeMs = 1e6; });
-check('4 botões', (await p.locator('.tc-btn').count()) === 4, await p.locator('.tc-btn span').allTextContents());
+check('4 botões no ataque', (await p.locator('.tc-btn:visible').count()) === 4, await p.locator('.tc-btn span').allTextContents());
 let e = await drag('.tc-pass', 0, 0); check('toque no passe = passe', e.release.includes('pass'), e);
 e = await drag('.tc-pass', 0, -60); check('passe arrastado ↑ = lançamento', e.release.includes('long') && !e.release.includes('pass'), e);
 e = await drag('.tc-shoot', 0, -60); check('chute ↑ = cavadinha', e.release.includes('chip') && !e.release.includes('shoot'), e);
@@ -46,7 +46,8 @@ e = await edges(); check('deslizar à direita = drible', e.press.includes('skill
 await p.screenshot({ path: `${out}-ataque.png` });
 await setCtx('defend');
 e = await drag('.tc-third', 0, 0); check('3º botão na defesa = TROCAR', e.press.includes('switch'), e);
-check('rótulos da defesa', true, await p.locator('.tc-btn span').allTextContents());
+check('5 botões na defesa (com DIVIDIDA)', (await p.locator('.tc-btn:visible').count()) === 5, await p.locator('.tc-btn:visible span').allTextContents());
+e = await drag('.tc-tackle', 0, 0); check('DIVIDIDA', e.press.includes('tackle'), e);
 await p.screenshot({ path: `${out}-defesa.png` });
 await setCtx('loose');
 e = await drag('.tc-third', 0, 0); check('bola solta: 3º = TROCAR', e.press.includes('switch'), e);
