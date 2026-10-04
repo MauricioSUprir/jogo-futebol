@@ -155,6 +155,12 @@ export class Player {
         const v = act.data.variant || 0;
         if (v === 1) { dx = dz = 0; const f = Math.exp(-1.1 * dt); this.vx *= f; this.vz *= f; }
         else if (v !== 0) { dx = dz = 0; const f = Math.exp(-5 * dt); this.vx *= f; this.vz *= f; }
+      } else if (k === 'tackle' && act.data.lunge) {
+        // dividida: bote curto rumo à bola (perde força até o contato)
+        // velocidade cheia até o contato do pé, depois freia
+        const s = act.t < act.contactT ? act.data.lunge : act.data.lunge * clamp(1 - (act.t - act.contactT) / 0.12, 0, 1) * 0.5;
+        dx = act.data.lx * s; dz = act.data.lz * s;
+        this.vx = dx; this.vz = dz;
       } else if (k === 'hug') {
         dx = dz = 0; const f = Math.exp(-6 * dt); this.vx *= f; this.vz *= f;
       } else {
@@ -170,7 +176,7 @@ export class Player {
 
     if (this.stun > 0) { this.stun -= dt; dx = dz = 0; }
 
-    const locked = act && (['slide', 'gk_dive', 'fall', 'getup'].includes(act.type) || (act.type === 'celebrate' && act.data.variant === 1));
+    const locked = act && (['slide', 'gk_dive', 'fall', 'getup'].includes(act.type) || (act.type === 'celebrate' && act.data.variant === 1) || (act.type === 'tackle' && act.data.lunge));
     // intenção suavizada: tira a "tremedeira" de alvos que mudam a cada quadro
     const sm = Math.min(1, dt * (this.human ? 16 : 7));
     this.sdx = (this.sdx ?? dx) + (dx - (this.sdx ?? dx)) * sm;

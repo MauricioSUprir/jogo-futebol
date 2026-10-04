@@ -100,6 +100,23 @@ export function humanStep(m, cmd, dt) {
     moveInput(p, mx, mz, sprint, 1);
     if (cmd.held.jockey) { p.face = carrier; p.jockey = true; p.slow = 0.7; }
   }
+  // dividida (desarme em pé): o comando fica guardado ~0,4 s, então apertar um pouco
+  // antes de chegar já sai na hora certa; perto da bola dá um bote curto até ela
+  if (cmd.press.tackle) p.wantTackle = m.time + 0.4;
+  if (p.wantTackle > m.time && !p.action && (m.tackleCd || 0) <= m.time) {
+    const b = m.ball, lead = 0.22;
+    const bx = b.p.x + b.v.x * lead, bz = b.p.z + b.v.z * lead;
+    const d = Math.hypot(bx - p.x, bz - p.z);
+    if (d < 2.3 && b.p.y < 0.6) {
+      p.wantTackle = 0; m.tackleCd = m.time + 0.55;
+      const lx = (bx - p.x) / (d || 1), lz = (bz - p.z) / (d || 1);
+      p.startAction('tackle', { face: Math.atan2(lz, lx), lunge: clamp((d - 0.55) / 0.2, 0, 7.5), lx, lz });
+      p.heading = Math.atan2(lz, lx);
+    } else {
+      // longe: corre até o portador enquanto o comando estiver guardado
+      p.moveTo(carrier.x + carrier.vx * 0.3, carrier.z + carrier.vz * 0.3, 1, true);
+    }
+  }
   if (cmd.press.shoot && !p.action && p.speed > 1.5) {
     p.startAction('slide', { speed: Math.max(6.5, p.speed * 1.08) });
   }

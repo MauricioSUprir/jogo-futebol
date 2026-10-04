@@ -620,14 +620,14 @@ function scrSettings() {
 // ---------- controles ----------
 const KB = [
   [['W', 'A', 'S', 'D'], 'Mover', '(ou setas)'], [['Shift'], 'Correr'],
-  [['Espaço'], 'Passe', 'Defendendo: desarme / pressão'], [['K'], 'Chute', 'Segure para mais força · Defendendo: carrinho'],
+  [['Espaço'], 'Passe', 'Defendendo: segure para pressionar'], [['J'], 'Dividida', 'Desarme em pé (defesa)'], [['K'], 'Chute', 'Segure para mais força · Defendendo: carrinho'],
   [['L'], 'Passe longo / cruzamento'], [['I'], 'Enfiada'], [['O'], 'Chute colocado'], [['P'], 'Cavadinha'],
   [['Q'], 'Trocar jogador'], [['F'], 'Drible / finta'], [['E'], 'Proteger a bola'], [['C'], 'Contenção (defesa)'], [['Esc'], 'Pausa'],
   [['Mouse E'], 'Passe', 'Botão esquerdo'], [['Mouse D'], 'Chute', 'Botão direito · segure para força'],
 ];
 const GP = [
   ['LS', 'Mover', 'Analógico esquerdo'], ['A', 'Passe', 'Defendendo: pressão'], ['B', 'Chute', 'Segure para força · Defendendo: carrinho'],
-  ['X', 'Passe longo / cruzamento'], ['Y', 'Enfiada'], ['RB', 'Chute colocado', 'Com B'], ['LT', 'Cavadinha', 'Com B'],
+  ['X', 'Passe longo / cruzamento'], ['Y', 'Enfiada'], ['RB', 'Dividida', 'Sozinho, na defesa · com B: chute colocado'], ['LT', 'Cavadinha', 'Com B'],
   ['LB', 'Trocar jogador'], ['RT', 'Correr'], ['RS', 'Drible / finta', 'Analógico direito'], ['☰', 'Pausa', 'Start'],
 ];
 const PAD_SVG = `<svg viewBox="0 0 320 200" fill="none">
@@ -675,7 +675,8 @@ function controlsBody() {
       body = h('div', { class: 'gm-ctrl-pad' }, svgEl(TOUCH_SVG, 'gm-pad-art gm-touch-art'),
         h('div', { class: 'gm-touch-notes' },
           h('p', {}, h('b', {}, 'Joystick esquerdo'), ' — arraste no lado esquerdo da tela para mover o jogador.'),
-          h('p', {}, h('b', {}, 'Botões contextuais'), ' — com a bola: Passe, Chute (segure para força), Longo e Enfiada. Sem a bola: Pressão, Carrinho e Trocar.'),
+          h('p', {}, h('b', {}, 'Com a bola'), ' — Passe, Chute (segure para força), Enfiada e Correr. Arraste o Passe para cima para lançar; o Chute para cima é cavadinha e para o lado, colocado. Deslize na área livre da direita para driblar.'),
+          h('p', {}, h('b', {}, 'Sem a bola'), ' — Dividida (desarme em pé), Carrinho, Pressão (segure) e TROCAR jogador.'),
           h('p', {}, h('b', {}, 'Pausa'), ' — botão no topo da tela.')));
     }
     content.replaceChildren(body);

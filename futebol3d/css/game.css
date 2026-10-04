@@ -150,6 +150,8 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
 .tc-pass { right: 33vh; bottom: 4vh; width: 20vh; height: 20vh; }
 .tc-third { right: 13vh; bottom: 36vh; width: 20vh; height: 20vh; }
 .tc-sprint { right: 56vh; bottom: 6vh; width: 22vh; height: 11vh; }
+.tc-tackle { right: 35vh; bottom: 27vh; width: 18vh; height: 18vh; border-color: #ff8a3c; }
+.tc-btn.hide { display: none; }
 .tc-btn em { position: absolute; left: 0; right: 0; bottom: 14%; font: 600 1.7vh/1 var(--disp); font-style: normal; letter-spacing: 0;
   text-transform: none; opacity: .7; z-index: 1; white-space: nowrap; }
 .tc-btn[data-g="long"], .tc-btn[data-g="chip"], .tc-btn[data-g="finesse"] { background: rgba(255,210,60,.35); border-color: #ffd23c; }

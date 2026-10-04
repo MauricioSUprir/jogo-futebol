@@ -954,9 +954,10 @@ export class Match {
       return;
     }
     if (t === 'tackle') {
-      const d = Math.hypot(b.p.x - (p.x + p.fx * 0.8), b.p.z - (p.z + p.fz * 0.8));
+      // alcance real da perna: ~1,35 m do corpo (o bote da dividida aproxima antes)
+      const d = Math.hypot(b.p.x - (p.x + p.fx * 0.6), b.p.z - (p.z + p.fz * 0.6));
       const o = this.owner;
-      if (d < 1.15 && b.p.y < 0.6) {
+      if (d < 0.75 && b.p.y < 0.6) {
         const skill = p.a.def / 99, drib = o ? o.a.dri / 99 : 0.3;
         const behind = o && Math.cos(angDiff(p.heading, o.heading)) > 0.6;
         const chance = clamp(0.55 + (skill - drib) * 0.8 - (o && o.shielding ? 0.2 : 0) - (behind ? 0.25 : 0), 0.12, 0.92);
@@ -966,11 +967,18 @@ export class Match {
           if (Math.random() < 0.55 + skill * 0.3) this.takeBall(p, 'tackle');
           else { const a = p.heading + rand(-0.8, 0.8); b.kick(Math.cos(a) * 5, 0.3, Math.sin(a) * 5); this.touch(p, 'tackle'); }
           this.emit('tackle', { strength: 0.6 });
-        } else if (o && behind && Math.random() < 0.45) {
+        } else if (o && Math.random() < (behind ? 0.45 : 0.3 * (1.2 - skill))) {
+          // errou o tempo: chegou no tornozelo (por trás é mais grave)
           o.startAction('fall', {}); o.stun = 1.4;
-          this.foul(p, o, Math.random() < 0.15 ? 2 : 1);
+          this.foul(p, o, Math.random() < (behind ? 0.15 : 0.04) ? 2 : 1);
         } else { p.stun = 0.35; }
-      } else p.stun = 0.25;
+      } else {
+        // furou: se a perna pegou o corpo do atacante em vez da bola, pode ser falta
+        if (o && o.team !== p.team && Math.hypot(o.x - (p.x + p.fx * 0.6), o.z - (p.z + p.fz * 0.6)) < 0.7 && Math.random() < 0.4) {
+          o.startAction('fall', {}); o.stun = 1.2;
+          this.foul(p, o, Math.random() < 0.06 ? 2 : 1);
+        } else p.stun = 0.3;
+      }
       return;
     }
     if (t === 'header') { this.doHeader(p, act); return; }
