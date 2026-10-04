@@ -1027,7 +1027,7 @@ export class Match {
       if (kind === 'finesse') { speed = 17 + 9 * power; spin = { side: (data.foot ?? p.foot) * 42, top: 4 }; }
       else if (kind === 'penalty') { speed = 17 + 10 * power; spin = { side: 0, top: 3 }; }
       else if (kind === 'freekick') { speed = 19 + 9 * power; spin = { side: (data.foot ?? p.foot) * 55, top: 16 }; }
-      else { speed = 19 + 14 * power; spin = { side: gauss() * 6, top: 6 + 12 * power }; }
+      else { speed = 16 + 14 * power; spin = { side: gauss() * 6, top: 6 + 12 * power }; }   // 100+ km/h só com força máxima
       if (kind === 'volley') speed *= 0.92;
       // força demais: a bola sobe
       const over = Math.max(0, power - 0.88);

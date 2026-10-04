@@ -6,7 +6,7 @@ import { carrierThink, bestReceiver } from './ai.js';
 
 const HL = PITCH.halfL;
 const rand = (a, b) => a + Math.random() * (b - a);
-const DIVE_DUR = 1.3, DIVE_CONTACT = 0.35 * 1.3;
+const DIVE_DUR = 1.05, DIVE_CONTACT = 0.35 * 1.05;
 
 function skillOf(m, gk) {
   const base = gk.a.gk / 99;

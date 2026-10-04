@@ -77,7 +77,7 @@ export const ANIM = {
   slide:     { dur: 1.10, contact: 0.25 },
   tackle:    { dur: 0.45, contact: 0.45 },
   throwin:   { dur: 1.00, contact: 0.62 },
-  gk_dive:   { dur: 1.30, contact: 0.35 },
+  gk_dive:   { dur: 1.05, contact: 0.35 },
   gk_catch:  { dur: 0.50, contact: 0.30 },
   gk_throw:  { dur: 0.80, contact: 0.60 },
   gk_kick:   { dur: 0.90, contact: 0.55 },
