@@ -232,7 +232,13 @@ function pressCarrier(m, p, o, dt, n) {
   const bd = Math.hypot(m.ball.p.x - p.x, m.ball.p.z - p.z);
   if (bd < 1.35) {
     p.aiTimer = rand(0.25, 0.6) + m.diff.aiReaction;
-    if (Math.random() < 0.55 + skill * 0.3) p.startAction('tackle', { face: Math.atan2(m.ball.p.z - p.z, m.ball.p.x - p.x) });
+    if (Math.random() < 0.55 + skill * 0.3) {
+      // mesma dividida do humano: bote curto até onde a bola vai estar no contato
+      const bx = m.ball.p.x + m.ball.v.x * 0.22, bz = m.ball.p.z + m.ball.v.z * 0.22;
+      const bl = Math.hypot(bx - p.x, bz - p.z) || 1, lx = (bx - p.x) / bl, lz = (bz - p.z) / bl;
+      p.startAction('tackle', { face: Math.atan2(lz, lx), lunge: Math.min(7.5, Math.max(0, (bl - 0.55) / 0.2)), lx, lz });
+      p.heading = Math.atan2(lz, lx);
+    }
   } else if (bd < 3.2 && bd > 1.8 && o.speed > 5 && Math.random() < 0.06 * (0.5 + t.style.press)) {
     // carrinho quando o atacante escapa
     p.heading = Math.atan2(m.ball.p.z + m.ball.v.z * 0.25 - p.z, m.ball.p.x + m.ball.v.x * 0.25 - p.x);

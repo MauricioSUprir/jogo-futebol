@@ -1165,11 +1165,12 @@ export class PlayerMeshes {
   }
 
   setVisible(i, v) { this.vis[i] = v ? 1 : 0; if (!v) this._hide(i); this.dirty = true; }
-  setIndicator(i, color) {
+  // weak = só o anel, mais transparente (candidato da troca)
+  setIndicator(i, color, weak = false) {
     const o = i * 4;
     if (!color) { this.ind[o + 3] = 0; return; }
     const c = new THREE.Color(color);
-    this.ind[o] = c.r; this.ind[o + 1] = c.g; this.ind[o + 2] = c.b; this.ind[o + 3] = 1;
+    this.ind[o] = c.r; this.ind[o + 1] = c.g; this.ind[o + 2] = c.b; this.ind[o + 3] = weak ? 0.5 : 1;
   }
 
   _hide(i) {
@@ -1291,11 +1292,13 @@ export class PlayerMeshes {
     const io = i * 4, on = this.ind[io + 3] > 0;
     const rf = this.ring.geometry.attributes.aFx.array, af = this.arrow.geometry.attributes.aFx.array;
     if (on) {
-      writeMat(this.ring.instanceMatrix.array, i * 16, 0, 0, 0, 1, pX, y + 0.02, pZ, 1.25 * hs, 1, 1.25 * hs);
+      const weak = this.ind[io + 3] < 1;
+      writeMat(this.ring.instanceMatrix.array, i * 16, 0, 0, 0, 1, pX, y + 0.02, pZ, (weak ? 1.1 : 1.25) * hs, 1, (weak ? 1.1 : 1.25) * hs);
       const hy = (mp[4 * 3 + 1] + 0.62) * hs + y;
-      writeMat(this.arrow.instanceMatrix.array, i * 16, 0, 0, 0, 1, hx, hy, hz, 0.26, 0.26, 0.26);
+      if (weak) this.arrow.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
+      else writeMat(this.arrow.instanceMatrix.array, i * 16, 0, 0, 0, 1, hx, hy, hz, 0.26, 0.26, 0.26);
       for (let k = 0; k < 3; k++) { rf[io + k] = this.ind[io + k]; af[io + k] = this.ind[io + k]; }
-      rf[io + 3] = 0.85; af[io + 3] = 0.95;
+      rf[io + 3] = weak ? 0.6 : 0.85; af[io + 3] = 0.95;
     } else {
       this.ring.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);
       this.arrow.instanceMatrix.array.fill(0, i * 16, i * 16 + 16);

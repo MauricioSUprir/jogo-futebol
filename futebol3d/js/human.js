@@ -1,7 +1,7 @@
 // Controle do jogador humano: movimento relativo à câmera, passe/chute com
 // força pelo tempo segurando o botão, mira pelo analógico, drible, proteção,
 // desarme, carrinho, pressão, troca de jogador (manual e automática) e bolas paradas.
-import { PITCH, GOAL, clamp, angDiff } from './config.js';
+import { PITCH, GOAL, ANIM, clamp, angDiff } from './config.js';
 import { bestReceiver } from './ai.js';
 import { userDistribute } from './gk.js';
 
@@ -279,13 +279,26 @@ function firstTime(m, p) {
     p.queued = null;
     return;
   }
+  // gatilho por TEMPO (FC 26: sair de primeira em vez de um toque extra): começa a ação
+  // quando a bola vai chegar ao pé exatamente no momento do contato da animação.
+  // Só pela distância, bola firme (10+ m/s) passava antes do pé encostar.
   const d = Math.hypot(b.x - p.footX(), b.z - p.footZ());
-  if (d < 1.25 && b.y < 1.3) {
-    const shot = ['shoot', 'finesse', 'chip'].includes(q.kind);
+  const shotQ = ['shoot', 'finesse', 'chip'].includes(q.kind);
+  const anim = shotQ ? (b.y > 0.45 ? ANIM.volley : q.kind === 'chip' ? ANIM.chip : ANIM.kick) : ANIM.pass;
+  const ct = anim.dur * anim.contact;
+  const bv = m.ball.v, rx = b.x - p.footX(), rz = b.z - p.footZ(), vx = bv.x - p.vx, vz = bv.z - p.vz;
+  const vv = vx * vx + vz * vz;
+  const tc = vv > 1 ? -(rx * vx + rz * vz) / vv : 99;               // tempo até a maior aproximação
+  const dmin = tc < 99 ? Math.hypot(rx + vx * tc, rz + vz * tc) : d;
+  const due = tc > 0 && tc <= ct + 1 / 60 && dmin < 1.0;
+  if ((due || (d < 1.25 && vv <= 1)) && b.y < 1.3) {
+    const shot = shotQ;
     if (shot) {
       const kind = b.y > 0.45 ? 'volley' : q.kind === 'shoot' ? 'shot' : q.kind;
       const tg = shotTarget(m, p, q.power, q.dx, q.dz);
-      p.startAction(kind, { target: tg, power: q.power, face: Math.atan2(tg.z - p.z, tg.x - p.x) });
+      // de primeira o corpo fica entre a bola que chega e o gol (o pé não sai da linha da bola)
+      const aT = Math.atan2(tg.z - p.z, tg.x - p.x), aB = Math.atan2(b.z - p.z, b.x - p.x);
+      p.startAction(kind, { target: tg, power: q.power, face: aB + angDiff(aB, aT) * 0.5 });
     } else {
       const dirx = Math.hypot(q.dx, q.dz) > 0.15 ? q.dx : p.fx, dirz = Math.hypot(q.dx, q.dz) > 0.15 ? q.dz : p.fz;
       pass(m, p, q.kind === 'pass' ? 'pass' : q.kind, q.power * 0.85, dirx, dirz);
@@ -295,18 +308,29 @@ function firstTime(m, p) {
 }
 
 // Troca: o companheiro que chega primeiro na bola (ou no portador adversário).
-export function switchPlayer(m, manual) {
+function switchList(m) {
   const team = m.userTeam;
   const cur = m.controlled;
   const b = m.ball.p;
-  const list = team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
+  return team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
     .map(q => ({ q, s: q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
     .sort((a, c) => a.s - c.s);
+}
+function switchIndex(m, n, manual) {
+  return manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9 ? (m.switchIdx + 1) % Math.min(3, n) : 0;
+}
+export function switchPlayer(m, manual) {
+  const list = switchList(m);
   if (!list.length) return;
-  let idx = 0;
-  if (manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9) idx = (m.switchIdx + 1) % Math.min(3, list.length);
+  const idx = switchIndex(m, list.length, manual);
   m.switchIdx = idx; m.lastSwitchT = m.time;
   m.setControlled(list[idx].q);
+}
+// Quem o botão TROCAR pegaria agora (para o indicador amarelo na tela)
+export function switchCandidate(m) {
+  if (!m.userTeam || m.phase !== 'play') return null;
+  const list = switchList(m);
+  return list.length ? list[switchIndex(m, list.length, true)].q : null;
 }
 
 function autoSwitch(m) {

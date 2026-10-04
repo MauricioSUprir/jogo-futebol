@@ -58,8 +58,8 @@ export const PLAYER = {
   // velocidades em m/s; o atributo de velocidade (0..99) interpola entre min e max
   jogMin: 4.6, jogMax: 5.8,
   sprintMin: 7.4, sprintMax: 9.3,
-  accelMin: 4.2, accelMax: 6.8,
-  decel: 9.0,
+  accelMin: 7.2, accelMax: 10.8,  // primeira passada explosiva (FC 26: "more agility")
+  decel: 11.5,
   turnRateStill: 14,     // rad/s parado
   turnRateSprint: 3.2,   // rad/s em arrancada
   controlRange: 0.75,    // distância em que pode tocar na bola com o pé
@@ -77,7 +77,7 @@ export const ANIM = {
   slide:     { dur: 1.10, contact: 0.25 },
   tackle:    { dur: 0.45, contact: 0.45 },
   throwin:   { dur: 1.00, contact: 0.62 },
-  gk_dive:   { dur: 1.30, contact: 0.35 },
+  gk_dive:   { dur: 1.05, contact: 0.35 },
   gk_catch:  { dur: 0.50, contact: 0.30 },
   gk_throw:  { dur: 0.80, contact: 0.60 },
   gk_kick:   { dur: 0.90, contact: 0.55 },

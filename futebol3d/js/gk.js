@@ -6,7 +6,7 @@ import { carrierThink, bestReceiver } from './ai.js';
 
 const HL = PITCH.halfL;
 const rand = (a, b) => a + Math.random() * (b - a);
-const DIVE_DUR = 1.3, DIVE_CONTACT = 0.35 * 1.3;
+const DIVE_DUR = 1.05, DIVE_CONTACT = 0.35 * 1.05;
 
 function skillOf(m, gk) {
   const base = gk.a.gk / 99;
@@ -131,14 +131,17 @@ export function keeperThink(m, gk, dt) {
   let tx = gx + dx / d * out, tz = dz / d * out;
   if (Math.abs(tx) > HL - 0.4) tx = s * (HL - 0.4);
   tz = clamp(tz, -GOAL.halfWidth, GOAL.halfWidth);
-  gk.moveTo(tx, tz, d < 30 ? 1 : 0.5, false);
+  // bola perto e goleiro fora da posição: acelera para chegar antes do chute (com passe
+  // rápido de um lado para o outro, só trotar deixava o canto aberto)
+  const off = Math.hypot(tx - gk.x, tz - gk.z);
+  gk.moveTo(tx, tz, d < 30 ? 1 : 0.5, d < 25 && off > 1.2);
   gk.face = b.p;
   gk.gkReady = d < 40;
 }
 
 function reaction(m, gk) {
   const sk = skillOf(m, gk);
-  return lerp(0.3, 0.1, sk) + rand(0, 0.06);
+  return lerp(0.26, 0.08, sk) + rand(0, 0.05);
 }
 
 // Onde a bola cruza a "linha do goleiro" (ou a linha do gol), se estiver indo para o gol.

@@ -70,6 +70,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   grande na tela (`players3d.js`, lodUpdate). Painel `?perf` no link (ou F3): FPS, 1% pior, CPU/GPU ms,
   draw calls, triângulos. Medir com `tools/perf-bench.mjs` (antes/depois) e `tools/lod-check.mjs` (prints).
 
+- Jogabilidade (medidas): condução `tools/drible-medida.mjs` (alvo ~0,45 m correndo / ~0,6 m arrancada);
+  dividida `tools/dividida-test.mjs`; primeira `tools/primeira-test.mjs`; agilidade `tools/agilidade.mjs`;
+  chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/gols-media.mjs 12` (~9–10 gols/partida).
+  Celular: 4 botões (+ DIVIDIDA na defesa) e gestos — conferir com `tools/gesture-test.mjs`.
+
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
 cd futebol3d
