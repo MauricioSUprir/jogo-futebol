@@ -114,23 +114,57 @@ export class Input {
     const pad = document.createElement('div');
     pad.className = 'tc-pad';
     root.appendChild(pad);
+    // Só 4 botões (como no futebol de celular). O resto é gesto:
+    //  - arrastar o PASSE para cima = lançamento/cruzamento (na defesa: dobrar a marcação)
+    //  - arrastar o CHUTE para cima = cavadinha; para o lado/baixo = colocado
+    //  - o 3º botão muda com o lance: ENFIADA no ataque, TROCAR na defesa e com bola solta
+    //  - deslizar o dedo na área livre da direita = drible (finta)
+    // O gesto é decidido ao soltar (as ações saem no soltar, com a força do tempo segurado).
+    const swipe = document.createElement('div');
+    swipe.className = 'tc-swipe';
+    root.insertBefore(swipe, pad);
+    let sw = null;
+    swipe.addEventListener('pointerdown', (e) => { e.preventDefault(); swipe.setPointerCapture(e.pointerId); sw = { x: e.clientX, y: e.clientY, t: performance.now() }; this.lastDevice = 'touch'; });
+    swipe.addEventListener('pointerup', (e) => {
+      if (!sw) return;
+      const d = Math.hypot(e.clientX - sw.x, e.clientY - sw.y);
+      if (d > 30 && performance.now() - sw.t < this.swipeMs) this.taps.skill = 0.05;
+      sw = null;
+    });
+    swipe.addEventListener('pointercancel', () => { sw = null; });
     this.touchButtons = {};
-    const defs = [
-      ['shoot', 'Chute', 'big'], ['pass', 'Passe', ''], ['long', 'Longo', ''], ['through', 'Enfiada', ''],
-      ['finesse', 'Colocado', 'sm'], ['chip', 'Cavadinha', 'sm'], ['sprint', 'Correr', 'wide'], ['skill', 'Drible', 'sm'], ['switch', 'Trocar', 'sm'],
-    ];
-    for (const [k, label, cls] of defs) {
+    this.touchKey = {};              // botão → tecla lógica atual (o 3º muda com o contexto)
+    this.swapRelease = {};           // gesto: soltar o botão X vira a ação Y
+    this.swipeMs = 700;              // deslize mais lento que isso não conta como drible
+    const defs = [['shoot', 'Chute', 'big'], ['pass', 'Passe', ''], ['third', 'Enfiada', ''], ['sprint', 'Correr', 'wide']];
+    for (const [id, label, cls] of defs) {
       const b = document.createElement('button');
-      b.className = 'tc-btn tc-' + k + (cls ? ' ' + cls : '');
+      b.className = 'tc-btn tc-' + id + (cls ? ' ' + cls : '');
       b.type = 'button';
-      b.innerHTML = `<span>${label}</span><i class="tc-charge"></i>`;
+      b.innerHTML = `<span>${label}</span><em></em><i class="tc-charge"></i>`;
       b.setAttribute('aria-label', label);
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); b.setPointerCapture(e.pointerId); this.touchBtn[k] = true; b.classList.add('on'); this.lastDevice = 'touch'; this.onAny && this.onAny(); });
-      const up = () => { this.touchBtn[k] = false; b.classList.remove('on'); };
+      this.touchKey[id] = id === 'third' ? 'through' : id;
+      let st = null;
+      b.addEventListener('pointerdown', (e) => {
+        e.preventDefault(); b.setPointerCapture(e.pointerId);
+        st = { x: e.clientX, y: e.clientY, key: this.touchKey[id] };
+        this.touchBtn[st.key] = true; b.classList.add('on'); this.lastDevice = 'touch'; this.onAny && this.onAny();
+      });
+      b.addEventListener('pointermove', (e) => {
+        if (!st) return;
+        const g = gestureFor(id, st.key, e.clientX - st.x, e.clientY - st.y);
+        b.dataset.g = g || '';
+      });
+      const up = (e) => {
+        if (!st) return;
+        const g = e && e.type === 'pointerup' ? gestureFor(id, st.key, e.clientX - st.x, e.clientY - st.y) : null;
+        if (g) this.swapRelease[st.key] = g;
+        this.touchBtn[st.key] = false; b.classList.remove('on'); b.dataset.g = ''; st = null;
+      };
       b.addEventListener('pointerup', up); b.addEventListener('pointercancel', up); b.addEventListener('lostpointercapture', up);
       b.addEventListener('contextmenu', (e) => e.preventDefault());
       pad.appendChild(b);
-      this.touchButtons[k] = b;
+      this.touchButtons[id] = b;
     }
     const pause = document.createElement('button');
     pause.className = 'tc-pause'; pause.type = 'button'; pause.setAttribute('aria-label', 'Pausar');
@@ -140,22 +174,26 @@ export class Input {
     this.context = '';
   }
 
-  // Troca os rótulos conforme a situação (ataque, defesa, bola parada, goleiro).
+  // Troca os rótulos (e a função do 3º botão) conforme a situação.
   setContext(ctx) {
     if (!this.touchButtons || ctx === this.context) return;
     this.context = ctx;
+    // [rótulo, dica do gesto] por botão; third = [rótulo, tecla lógica]
     const L = {
-      attack: { shoot: 'Chute', pass: 'Passe', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: 'Drible', switch: 'Proteger' },
-      defend: { shoot: 'Carrinho', pass: 'Pressão', long: 'Dobrar', through: 'Goleiro', finesse: '—', chip: '—', skill: 'Conter', switch: 'Trocar' },
-      loose: { shoot: 'Chute', pass: 'Passe', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: 'Drible', switch: 'Trocar' },
-      setpiece: { shoot: 'Chute', pass: 'Curto', long: 'Longo', through: 'Enfiada', finesse: 'Colocado', chip: 'Cavadinha', skill: '—', switch: '—' },
-      gk: { shoot: 'Chutão', pass: 'Repor', long: 'Chutão', through: 'Rolar', finesse: '—', chip: '—', skill: '—', switch: '—' },
-      penaltyDef: { shoot: '—', pass: '—', long: '—', through: '—', finesse: '—', chip: '—', skill: '—', switch: '—' },
+      attack: { shoot: ['Chute', '↑ cavadinha · → colocado'], pass: ['Passe', '↑ lançar'], third: ['Enfiada', 'through'] },
+      defend: { shoot: ['Carrinho', ''], pass: ['Pressão', ''], third: ['Trocar', 'switch'] },
+      loose: { shoot: ['Chute', ''], pass: ['Passe', '↑ lançar'], third: ['Trocar', 'switch'] },
+      setpiece: { shoot: ['Chute', '↑ cavadinha · → colocado'], pass: ['Curto', ''], third: ['Longo', 'long'] },
+      gk: { shoot: ['Chutão', ''], pass: ['Repor', ''], third: ['Rolar', 'through'] },
+      penaltyDef: { shoot: ['—', ''], pass: ['—', ''], third: ['—', 'through'] },
     }[ctx] || {};
-    for (const [k, b] of Object.entries(this.touchButtons)) {
-      if (!L[k]) continue;
-      b.querySelector('span').textContent = L[k];
-      b.classList.toggle('off', L[k] === '—');
+    for (const [id, b] of Object.entries(this.touchButtons)) {
+      const v = L[id];
+      if (!v) continue;
+      b.querySelector('span').textContent = v[0];
+      b.classList.toggle('off', v[0] === '—');
+      if (id === 'third') { this.touchKey.third = v[1]; b.classList.toggle('tc-troca', v[1] === 'switch'); }
+      else b.querySelector('em').textContent = v[1];
     }
     this.touchRoot.dataset.ctx = ctx;
   }
@@ -166,9 +204,6 @@ export class Input {
     const b = {};
     const k = this.keys;
     for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
-    // botões de toque que mudam de função com o contexto
-    if (this.context === 'attack' && this.touchBtn.switch) { b.shield = true; b.switch = k.has('switch'); }
-    if (this.context === 'defend' && this.touchBtn.skill) { b.jockey = true; b.skill = k.has('skill'); }
     let sx = (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0);
     let sy = (k.has('up') ? 1 : 0) - (k.has('down') ? 1 : 0);
     if (sx && sy) { sx *= 0.7071; sy *= 0.7071; }
@@ -203,6 +238,12 @@ export class Input {
       if (!b[n] && this.prev[n]) { release[n] = true; hold[n] = now - (this.downAt[n] || now); }
       this.prev[n] = b[n];
     }
+    // gesto no botão de toque: o soltar vira outra ação, com a mesma força
+    for (const n in this.swapRelease) {
+      const to = this.swapRelease[n];
+      if (release[n]) { delete release[n]; release[to] = true; hold[to] = hold[n]; delete hold[n]; }
+      delete this.swapRelease[n];
+    }
     // teclas apertadas e soltas entre dois quadros
     for (const n in this.taps) {
       if (!press[n] && !release[n] && !b[n] && !this.edges.release[n]) { press[n] = true; release[n] = true; hold[n] = this.taps[n]; }
@@ -219,9 +260,9 @@ export class Input {
     // analógico → mundo (relativo à câmera)
     const mx = camRight.x * sx + camFwd.x * sy, mz = camRight.z * sx + camFwd.z * sy;
     const wrx = camRight.x * rx + camFwd.x * ry, wrz = camRight.z * rx + camFwd.z * ry;
-    if (this.touchButtons) for (const n of CHARGE) {
-      const el = this.touchButtons[n];
-      if (el) el.style.setProperty('--charge', b[n] ? Math.min(1, (now - (this.downAt[n] || now)) / 0.95).toFixed(2) : 0);
+    if (this.touchButtons) for (const [id, el] of Object.entries(this.touchButtons)) {
+      const n = this.touchKey[id];
+      if (CHARGE.includes(n)) el.style.setProperty('--charge', b[n] ? Math.min(1, (now - (this.downAt[n] || now)) / 0.95).toFixed(2) : 0);
     }
     this.cmd = { mx, mz, rx: wrx, rz: wrz, held: b, press: this.edges.press, release: this.edges.release, hold: this.edges.hold, sx, sy };
     return this.cmd;
@@ -236,6 +277,14 @@ export class Input {
       else if (this.lastDevice === 'touch' && navigator.vibrate) navigator.vibrate(ms);
     } catch { /* sem vibração */ }
   }
+}
+
+// gesto ao arrastar um botão de toque (null = toque normal)
+function gestureFor(id, key, dx, dy) {
+  if (Math.hypot(dx, dy) < 34) return null;
+  if (id === 'pass' && dy < -Math.abs(dx) * 0.6) return 'long';
+  if (id === 'shoot' && key === 'shoot') return dy < -Math.abs(dx) * 0.6 ? 'chip' : 'finesse';
+  return null;
 }
 
 export const isTouchDevice = () => matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
