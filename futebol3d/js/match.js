@@ -206,10 +206,14 @@ export class Match {
       if (this.userTeam) humanStep(this, cmd, dt);
     }
 
+    // desgaste da partida: esforço (cresce com o quadrado da velocidade) × fôlego do jogador,
+    // escalado pela duração para chegar a ~0,3 (bom fôlego) – ~0,5 (fraco) no fim do jogo
+    const fk = this.phase === 'play' ? 0.75 * dt / (2 * this.halfReal) : 0;
     for (const p of this.players) {
       if (p.sentOff) continue;
       p.hasBall = this.owner === p;
       p.step(dt, this.onContact, this.onActionEnd);
+      if (fk) { const e = 0.3 + 1.6 * (p.speed / PLAYER.sprintMax) ** 2; p.fatigue = Math.min(0.75, p.fatigue + fk * e * (1.45 - (p.a.sta ?? p.a.phy) / 99) * (p.isGK ? 0.3 : 1)); }
     }
     this.bodies(dt);
     this.slideChecks();
@@ -454,7 +458,8 @@ export class Match {
         const contested = d < dOwner - 0.05;
         if (contested) state = 'disputada';
         const A = o.a, Q = q.a;
-        const duel = ((Q.tkl ?? Q.def) * 0.6 + (Q.ant ?? Q.def) * 0.4) - ((A.ctl ?? A.dri) * 0.45 + A.dri * 0.25 + (A.bal ?? A.phy) * 0.15 + (A.str ?? A.phy) * 0.15);
+        const duel = ((Q.tkl ?? Q.def) * 0.6 + (Q.ant ?? Q.def) * 0.4) * (1 - 0.2 * q.fatigue)
+          - ((A.ctl ?? A.dri) * 0.45 + A.dri * 0.25 + (A.bal ?? A.phy) * 0.15 * (1 - 0.3 * o.fatigue) + (A.str ?? A.phy) * 0.15);
         // roubos por segundo: quase nada com a bola protegida, muito com ela exposta
         const rate = (contested ? 1.8 + 7 * expo : 0.25 + 3 * expo) * clamp(1 + duel / 40, 0.35, 1.8);
         if (Math.random() < rate * dt) {
@@ -506,7 +511,7 @@ export class Match {
     const toP = Math.atan2(p.z - b.p.z, p.x - b.p.x);                     // de onde a bola vem
     const back = (1 + Math.cos(angDiff(p.heading, toP))) / 2;               // 1 = de costas
     const diffc = rel + Math.max(0, b.p.y - 0.2) * 5 + this.pressure(p) * 3.5 + back * 3;
-    const comfort = 4 + ctl * 15 + (p.human ? 1.5 : 0);
+    const comfort = 4 + ctl * 15 + (p.human ? 1.5 : 0) - p.fatigue * 2.5;
     const q = clamp(1 - (diffc - comfort) / 9, 0, 1);
     p.lastTouchQ = q;
     if (q < 0.85 && q >= 0.35 && b.p.y < 0.9) {
@@ -1069,7 +1074,8 @@ export class Match {
     let v, tg = data.target, err = 0, kindOut = kind;
     const skill = p.team.human ? 1 : this.diff.aiSkill;
 
-    const errBase = (attr) => (1.12 - attr / 99) * (1 + press * 0.8) * (weak ? 1.5 : 1) * (1 + moving * 0.3) / (0.75 + 0.25 * skill);
+    const tired = 1 + 0.6 * p.fatigue + 0.35 * (1 - p.stamina);   // cansaço tira precisão
+    const errBase = (attr) => (1.12 - attr / 99) * (1 + press * 0.8) * (weak ? 1.5 : 1) * (1 + moving * 0.3) * tired / (0.75 + 0.25 * skill);
 
     if (kind === 'shot' || kind === 'finesse' || kind === 'volley' || kind === 'penalty' || kind === 'freekick') {
       const gx = this.goalX(team);
@@ -1263,7 +1269,7 @@ export class Match {
     if (this.half === 2) this.clock = 45 * 60;
     if (this.half === 4) this.clock = 105 * 60;
     for (const t of this.teams) t.dir = -t.dir;
-    for (const p of this.players) p.stamina = Math.min(1, p.stamina + (this.half === 2 ? 0.35 : 0.15));
+    for (const p of this.players) { p.fatigue *= this.half === 2 ? 0.85 : 0.95; p.stamina = Math.min(1 - 0.55 * p.fatigue, p.stamina + (this.half === 2 ? 0.35 : 0.15)); }
     const kick = this.half % 2 === 0 ? this.teams[1 - this.firstKickoff] : this.teams[this.firstKickoff];
     this.setupKickoff(kick);
     this.emit('banner', { text: ['', '1º TEMPO', '2º TEMPO', '1º TEMPO DA PRORROGAÇÃO', '2º TEMPO DA PRORROGAÇÃO'][this.half], kind: 'period' });

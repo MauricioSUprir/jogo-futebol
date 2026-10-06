@@ -38,3 +38,10 @@ for (const [nome, at] of [['médio (acc 72, agi 70)', { pac: 75, dri: 75, acc: 7
     console.log(`${nome.padEnd(24)} ${bola ? 'com bola' : 'sem bola'} | 0→90% trote ${f(r[0])} | 0→90% arrancada ${f(r[1])} | 90° trote ${f(r[2])} | 180° trote ${f(r[3])} | 90° arrancada ${f(r[4])}`);
   }
 }
+// cansado (fim de jogo): desgaste 0,4 e fôlego 0,5 — ainda chega alto, mas acelera mais devagar
+{
+  const at = { pac: 75, dri: 75, acc: 72, agi: 70 };
+  const tired = (bola) => { const p = mk(at, bola); p.fatigue = 0.4; p.stamina = 0.5; return p; };
+  const top = (() => { const p = tired(false); p.sprint = true; for (let i = 0; i < 400; i++) { p.dx = p.sprintSpd; p.dz = 0; p.step(dt); } return p.speed / p.sprintSpd; })();
+  console.log(`${'médio CANSADO'.padEnd(24)} sem bola | 0→90% trote ${f(arranque(tired(false), false))} | 0→90% arrancada ${f(arranque(tired(false), true))} | velocidade máxima ${(100 * top).toFixed(0)}% da descansada`);
+}

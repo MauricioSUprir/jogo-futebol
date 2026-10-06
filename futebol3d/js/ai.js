@@ -383,7 +383,8 @@ function applyDribble(m, p, intent) {
   if (Math.abs(p.z) > HW - 4) az -= Math.sign(p.z) * 1.5;
   const al = Math.hypot(ax, az) || 1;
   const space = spaceAhead(m, p);
-  const sprint = space > 7 && p.stamina > 0.25;
+  // cansado arranca menos (seção 34: frequência de sprint)
+  const sprint = space > 7 + p.fatigue * 8 && p.stamina > 0.25 + p.fatigue * 0.3;
   const s = sprint ? p.sprintSpd : p.jog;
   p.dx = ax / al * s; p.dz = az / al * s; p.sprint = sprint;
   // protege a bola se muito pressionado
