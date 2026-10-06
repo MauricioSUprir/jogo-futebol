@@ -3,7 +3,7 @@
 // intervalo, prorrogação e disputa de pênaltis. Não depende de three.js.
 import { Ball, BallPredictor, solveAim, solveLob, solveGround } from './ball.js';
 import { Player } from './player.js';
-import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, clamp, lerp, angDiff } from './config.js';
+import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, MODES, clamp, lerp, angDiff } from './config.js';
 import { teamThink, setpieceAI } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
 import { humanStep } from './human.js';
@@ -60,6 +60,7 @@ export class Match {
     this.shootout = null;
     this.extraTime = false;
     this.halfReal = this.settings.halfMinutes * 60;
+    this.mode = MODES[this.settings.gameMode] || MODES.authentic;
     const w = this.settings.wind ? rand(0, 4.5) : 0, wa = rand(0, Math.PI * 2);
     this.wind = { x: Math.cos(wa) * w, z: Math.sin(wa) * w };
     this.ball.wind = this.wind;
@@ -214,7 +215,7 @@ export class Match {
 
     // desgaste da partida: esforço (cresce com o quadrado da velocidade) × fôlego do jogador,
     // escalado pela duração para chegar a ~0,3 (bom fôlego) – ~0,5 (fraco) no fim do jogo
-    const fk = this.phase === 'play' ? 0.75 * dt / (2 * this.halfReal) : 0;
+    const fk = this.phase === 'play' ? 0.75 * this.mode.fatigue * dt / (2 * this.halfReal) : 0;
     for (const p of this.players) {
       if (p.sentOff) continue;
       p.hasBall = this.owner === p;
@@ -488,7 +489,7 @@ export class Match {
         const duel = ((Q.tkl ?? Q.def) * 0.6 + (Q.ant ?? Q.def) * 0.4) * (1 - 0.2 * q.fatigue)
           - ((A.ctl ?? A.dri) * 0.45 + A.dri * 0.25 + (A.bal ?? A.phy) * 0.15 * (1 - 0.3 * o.fatigue) + (A.str ?? A.phy) * 0.15);
         // roubos por segundo: quase nada com a bola protegida, muito com ela exposta
-        const rate = (contested ? 1.8 + 7 * expo : 0.25 + 3 * expo) * clamp(1 + duel / 40, 0.35, 1.8);
+        const rate = (contested ? 1.8 + 7 * expo : 0.25 + 3 * expo) * clamp(1 + duel / 40, 0.35, 1.8) * this.mode.tackle;
         if (Math.random() < rate * dt) {
           // bom antecipador fica com ela; senão só cutuca e a bola sai solta
           if (Math.random() < 0.45 + (Q.ant ?? Q.def) / 99 * 0.4) this.takeBall(q, 'intercept');
@@ -539,7 +540,7 @@ export class Match {
     const back = (1 + Math.cos(angDiff(p.heading, toP))) / 2;               // 1 = de costas
     const diffc = rel + Math.max(0, b.p.y - 0.2) * 5 + this.pressure(p) * 3.5 + back * 3;
     const comfort = 4 + ctl * 15 + (p.human ? 1.5 : 0) - p.fatigue * 2.5;
-    const q = clamp(1 - (diffc - comfort) / 9, 0, 1);
+    const q = clamp(1 - (diffc - comfort) * this.mode.touch / 9, 0, 1);
     p.lastTouchQ = q;
     if (q < 0.85 && q >= 0.35 && b.p.y < 0.9) {
       // toque longo: a bola segue 1–4 m à frente — vulnerável, precisa ir buscar
@@ -1122,7 +1123,7 @@ export class Match {
       const ty = clamp(tg.y + over * 6 + (dist > 25 ? 0.2 : 0), 0.15, 5);
       // chute travado (marcador colado) espalha bem mais que o chute livre
       const inBox = Math.abs(gx - o.x) < 17 && Math.abs(o.z) < 20;
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1);
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * this.mode.shot;
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);

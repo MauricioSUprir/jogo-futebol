@@ -134,6 +134,15 @@ export const DIFFICULTY = {
   lenda:        { label: 'Lenda',        aiReaction: 0.16, aiSkill: 1.00, gkSkill: 0.95 },
 };
 
+// Modos de jogo (§40 da especificação). speed = ritmo; touch = erro do primeiro toque;
+// shot = erro do chute; fatigue = desgaste; tackle = chance de roubo nas disputas.
+export const MODES = {
+  authentic:   { label: 'Authentic',   desc: 'Experiência GOLAÇO recomendada', speed: 0.93, touch: 1,    shot: 1,    fatigue: 1,    tackle: 1 },
+  competitive: { label: 'Competitivo', desc: 'Resposta máxima, menos interferência', speed: 1.0, touch: 0.75, shot: 0.9, fatigue: 0.75, tackle: 1 },
+  simulation:  { label: 'Simulação',   desc: 'Mais peso, mais erros, ritmo menor', speed: 0.85, touch: 1.25, shot: 1.12, fatigue: 1.25, tackle: 1.1 },
+  arcade:      { label: 'Arcade',      desc: 'Mais rápido, mais chances', speed: 1.08, touch: 0.6,  shot: 0.8,  fatigue: 0.6,  tackle: 0.85 },
+};
+
 export const DEFAULT_SETTINGS = {
   difficulty: 'profissional',
   halfMinutes: 4,        // minutos reais por tempo
@@ -147,7 +156,12 @@ export const DEFAULT_SETTINGS = {
   vibration: true,
   radar: true,
   passAssist: true,
-  gameSpeed: 0.93,       // ritmo da partida (GOLAÇO Authentic: 0,93×)
+  gameMode: 'authentic', // authentic | competitive | simulation | arcade (MODES)
+  gameSpeed: 0.93,       // ritmo da partida (vem do modo)
+  touchScale: 1,         // tamanho dos botões de toque (0,7–1,4)
+  touchOpacity: 0.85,    // opacidade dos botões de toque
+  touchLayout: {},       // deslocamento de cada botão, em vh: { shoot: [dx, dy], ... }
+  tapSelect: true,       // tocar num companheiro (sem a bola) seleciona ele
   names: true,           // nome acima do jogador controlado
   intro: true,           // entrada em campo antes da partida (pode pular)
 };

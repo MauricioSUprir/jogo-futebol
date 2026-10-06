@@ -174,6 +174,29 @@ addEventListener('pointerdown', () => { if (game && game.match.phase === 'intro'
 addEventListener('keydown', unlockAudio);
 
 const input = new Input();
+// controles de toque ajustáveis (configurações)
+input.settings = settings;
+addEventListener('golaco:touch-layout', () => input.applyTouchLayout(settings));
+addEventListener('golaco:edit-touch', () => {
+  input.editTouchLayout($('touch'), settings, (layout) => { settings.touchLayout = layout; saveSettings(settings); }, () => { if (game) input.setContext('attack'); });
+});
+// tocar num companheiro (sem a bola) seleciona ele (§14)
+input.onTapScreen = (x, y) => {
+  const g = game;
+  if (!g || !settings.tapSelect || g.paused) return;
+  const m = g.match, t = m.userTeam;
+  if (!t || m.phase !== 'play' || (m.owner && m.owner.team === t)) return;
+  let best = null, bd = 70;
+  const v = new THREE.Vector3();
+  for (const p of t.players) {
+    if (p.sentOff || p.isGK) continue;
+    v.set(p.x, 1, p.z).project(g.camera);
+    const sx = (v.x + 1) / 2 * innerWidth, sy = (1 - v.y) / 2 * innerHeight;
+    const d = Math.hypot(sx - x, sy - y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (best && best !== m.controlled) { m.setControlled(best); m.lastSwitchT = m.time; }
+};
 const hud = new Hud($('hud'));
 let game = null;
 
@@ -236,6 +259,7 @@ async function startMatch(cfg) {
   hud.init(match, cfg, { touch });
   const tc = $('touch');
   if (touch) { tc.classList.remove('hidden'); input.buildTouch(tc); } else tc.classList.add('hidden');
+  input.settings = settings; input.applyTouchLayout(settings);
   input.enabled = true;
   input.onPause = () => togglePause();
   input.onAny = () => {
