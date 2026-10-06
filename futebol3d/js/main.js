@@ -11,6 +11,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
 import { PerfHud } from './perfhud.js';
 import { switchCandidate } from './human.js';
+import { ChantEngine } from './chants.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -274,7 +275,7 @@ async function startMatch(cfg) {
   document.body.classList.add('in-game');
   load.classList.add('hidden');
   if (match.phase !== 'intro') hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
-  audio.chant(true);
+  game.chants = new ChantEngine(cfg.home.id, cfg.away.id);
   last = performance.now();
 }
 
@@ -287,7 +288,7 @@ function endGame(silent) {
   const g = game;
   if (!g) return;
   input.enabled = false;
-  audio.chant(false);
+  audio.chant(false); audio.chantSectors(null);
   g.fx?.dispose?.();
   g.stadium.dispose?.();
   g.players.dispose?.();
@@ -478,7 +479,7 @@ function finishReplay() {
 }
 
 function endMatch(g, result) {
-  audio.chant(false);
+  audio.chant(false); audio.chantSectors(null);
   const cfg = g.cfg;
   setTimeout(() => {
     endGame(true);
@@ -626,13 +627,22 @@ function render(g, dt) {
   });
   if (touch) input.setContext(touchContext(m));
   audio.update(dt, { excitement: m.excitement, attackThreat: m.threat });
-  // torcida cantando de tempos em tempos
-  g.chantT -= dt;
-  if (g.chantT <= 0) {
-    g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15;
+  // motor de cantos (§31): nasce num setor, espalha, cai no perigo, "UUUH!", palmas…
+  if (g.chants && m.phase !== 'intro' && !g.replaying) {
+    const hs = m.teams[0].score, as = m.teams[1].score;
+    const goal = g.lastScore && (hs > g.lastScore[0] ? 'home' : as > g.lastScore[1] ? 'away' : null);
+    g.lastScore = [hs, as];
+    const co = g.chants.update(dt, { phase: m.phase, threat: m.threat, homeScore: hs, awayScore: as, minute: m.clock / 60, homeIntensity: m.teams[0].intensity, goal });
+    audio.chantSectors(co);
+    if (co.event === 'ooh') audio.crowd('ooh', 0.9);
+    else if (co.event === 'applause') audio.crowd('cheer', 0.5);
     // a arquibancada canta junto com o som (pulo/braços no compasso)
-    if (g.chantOn && m.phase !== 'goal') g.stadium.crowdChant?.('home', 1, g.chantT);
+    const singing = co.sectors[0] + co.sectors[1] + co.sectors[3] > 1.2;
+    if (singing && !g.crowdSinging) g.stadium.crowdChant?.('home', 1, 20);
+    g.crowdSinging = singing;
   }
+  // áudio espacial: ouvinte na câmera, impactos na bola
+  { const c = g.camera, f = g.rig.fwd; audio.setListener(c.position.x, c.position.y, c.position.z, f.x, f.y ?? 0, f.z); audio.setSfxPos(m.ball.p.x, m.ball.p.y, m.ball.p.z); }
 
   g.sunFit?.update(g.camera);
   g.players.lodUpdate?.(g.camera);
