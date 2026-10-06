@@ -8,6 +8,7 @@ import { teamThink, setpieceAI } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
 import { humanStep } from './human.js';
 import { cycleLength } from './anim.js';
+import { pickLeader } from './tactics.js';
 
 const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
@@ -86,6 +87,7 @@ export class Match {
       });
       t.gk = t.players[0];
       t.opp = null;
+      pickLeader(t.players);
     }
     this.teams[0].opp = this.teams[1]; this.teams[1].opp = this.teams[0];
     for (const p of this.players) p.watch = this.ball.p;   // quase parado, olha a bola
@@ -217,7 +219,11 @@ export class Match {
       if (p.sentOff) continue;
       p.hasBall = this.owner === p;
       p.step(dt, this.onContact, this.onActionEnd);
-      if (fk) { const e = 0.3 + 1.6 * (p.speed / PLAYER.sprintMax) ** 2; p.fatigue = Math.min(0.75, p.fatigue + fk * e * (1.45 - (p.a.sta ?? p.a.phy) / 99) * (p.isGK ? 0.3 : 1)); }
+      if (fk) {
+        // intensidade alta cobra energia; o 'Motor' cansa menos
+        const e = (0.3 + 1.6 * (p.speed / PLAYER.sprintMax) ** 2) * (0.8 + 0.45 * (p.team.intensity ?? 0.5)) * (p.traits.includes('motor') ? 0.78 : 1);
+        p.fatigue = Math.min(0.75, p.fatigue + fk * e * (1.45 - (p.a.sta ?? p.a.phy) / 99) * (p.isGK ? 0.3 : 1));
+      }
     }
     this.bodies(dt);
     this.slideChecks();
@@ -1088,7 +1094,7 @@ export class Match {
     const power = clamp(data.power ?? 0.6, 0.05, 1.1);
     const a = p.a;
     const weak = (data.foot ?? p.foot) !== p.foot;
-    const press = this.pressure(p);
+    const press0 = this.pressure(p);
     const moving = p.speed / PLAYER.sprintMax;
     const o = { x: b.p.x, y: b.p.y, z: b.p.z };
     const team = p.team;
@@ -1096,6 +1102,9 @@ export class Match {
     const skill = p.team.human ? 1 : this.diff.aiSkill;
 
     const tired = 1 + 0.6 * p.fatigue + 0.35 * (1 - p.stamina);   // cansaço tira precisão
+    // 'Frio' não treme sob pressão; 'Finalizador' erra menos dentro da área
+    const cold = p.traits.includes('frio') ? 0.55 : 1;
+    const press = press0 * cold;
     const errBase = (attr) => (1.12 - attr / 99) * (1 + press * 0.8) * (weak ? 1.5 : 1) * (1 + moving * 0.3) * tired / (0.75 + 0.25 * skill);
 
     if (kind === 'shot' || kind === 'finesse' || kind === 'volley' || kind === 'penalty' || kind === 'freekick') {
@@ -1112,7 +1121,8 @@ export class Match {
       const over = Math.max(0, power - 0.88);
       const ty = clamp(tg.y + over * 6 + (dist > 25 ? 0.2 : 0), 0.15, 5);
       // chute travado (marcador colado) espalha bem mais que o chute livre
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6);
+      const inBox = Math.abs(gx - o.x) < 17 && Math.abs(o.z) < 20;
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1);
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);

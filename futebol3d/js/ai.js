@@ -2,6 +2,7 @@
 // marcação, apoio ao portador, infiltrações sem ficar impedido, decisão de quem
 // conduz (chutar, passar, enfiar, cruzar, driblar, afastar) e bolas paradas.
 import { PITCH, GOAL, PLAYER, clamp, lerp, angDiff } from './config.js';
+import { updateIntensity, roleUtility } from './tactics.js';
 
 const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -46,6 +47,8 @@ function offsideLine(m, t) {
 
 export function teamThink(m, t, dt) {
   intercepts(m, t);
+  updateIntensity(m, t, dt);
+  const inten = t.intensity ?? 0.5;
   const b = m.ball.p;
   const owner = m.owner;
   const attacking = owner ? owner.team === t : (m.lastTouch ? m.lastTouch.team === t : false);
@@ -71,7 +74,11 @@ export function teamThink(m, t, dt) {
   for (const p of outfield) shapeTarget(m, t, p, attacking, offLine);
   flattenLine(m, t, outfield, attacking);
   if (!attacking) mark(m, t, outfield, press1, press2);
-  else if (owner && owner.team === t) support(m, t, outfield, owner, offLine, dt);
+  else if (owner && owner.team === t) {
+    support(m, t, outfield, owner, offLine, dt);
+    // utilidade individual por função (§18): os que não estão no apoio imediato
+    for (const p of outfield) if (!p.supportNow) roleUtility(m, t, p, owner, offLine);
+  }
 
   for (const p of t.players) {
     if (p.sentOff || p.isGK) continue;
@@ -104,7 +111,8 @@ export function teamThink(m, t, dt) {
       continue;
     }
     if (p === press1) { pressCarrier(m, p, owner, dt, 1); continue; }
-    if (p === press2 && (t.style.press > 0.55 || m.lx(t, owner.x) < -20 || m.teamPressCall === t)) { pressCarrier(m, p, owner, dt, 2); continue; }
+    // 2º pressionador: estilo do time, intensidade alta ou o Motor que não para
+    if (p === press2 && (t.style.press > 0.55 || inten > 0.66 || p.traits.includes('motor') && inten > 0.5 || m.lx(t, owner.x) < -20 || m.teamPressCall === t)) { pressCarrier(m, p, owner, dt, 2); continue; }
     if (p.runUntil > m.time && attacking) {
       const tgx = Math.min(p.target.x * t.dir, offLine - 0.4 + (p.runLate || 0)) * t.dir;
       p.moveTo(tgx, p.target.z, 1, true);
@@ -125,12 +133,13 @@ function shapeTarget(m, t, p, attacking, offLine) {
   const wide = 0.9 + t.style.width * 0.3;
   let x, z;
   if (attacking) {
-    x = bx + 12 + bl * 0.6;
+    x = bx + 12 + bl * 0.6 + ((t.intensity ?? 0.5) - 0.5) * 10;
     z = bz * wide * 1.08 + bzl * 0.22;
     if (role === 'DEF') { x = Math.min(x, bl - 6, 22); if (Math.abs(bz) > 15) x += 4 * t.style.width; }
     if (role === 'ATT' || role === 'MID') x = Math.min(x, Math.max(offLine, bl) - 0.8);
   } else {
-    x = bx * 0.92 + bl * 0.55 - 3;
+    // bloco mais alto com intensidade alta (pressão) — deixa espaço nas costas (§17)
+    x = bx * 0.92 + bl * 0.55 - 3 + ((t.intensity ?? 0.5) - 0.5) * 16;
     z = bz * 0.78 + bzl * 0.4;
     if (role === 'DEF') { x = Math.max(x, -HL + 5); x = Math.min(x, bl - 3); }
     if (role === 'MID') x = Math.min(x, bl + 1);
@@ -184,6 +193,7 @@ function mark(m, t, outfield, press1, press2) {
 // Apoio: dois companheiros oferecem linhas de passe; atacantes infiltram.
 function support(m, t, outfield, owner, offLine, dt) {
   const near = outfield.filter(p => p !== owner && !p.human).sort((a, c) => dist(a, owner) - dist(c, owner)).slice(0, 2);
+  for (const p of outfield) p.supportNow = near.includes(p);
   const angs = [0.8, -0.8, 1.9, -1.9, 0];
   for (const p of near) {
     let best = null, bs = -1e9;
@@ -204,13 +214,14 @@ function support(m, t, outfield, owner, offLine, dt) {
   if (m.lx(t, owner.x) > -15) {
     for (const p of outfield) {
       if (p === owner || p.human || (p.role !== 'ATT' && !(p.role === 'MID' && Math.random() < 0.3))) continue;
-      if (p.runUntil < m.time && Math.random() < dt * 0.35 * (0.6 + t.style.directness)) {
+      const hunter = p.traits.includes('explosivo') || p.traits.includes('cacador') ? 1.8 : 1;
+      if (p.runUntil < m.time && Math.random() < dt * 0.35 * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
         p.runUntil = m.time + rand(2, 3.5);
         p.runZ = clamp(p.z * 0.6, -14, 14);
       }
       if (p.runUntil > m.time) { p.target.x = Math.min(HL - 8, offLine + 12) * t.dir; p.target.z = p.runZ ?? p.z; }
       // às vezes o atacante erra o tempo da corrida e fica impedido
-      if (p.runUntil > m.time && p.runLate === undefined) p.runLate = Math.random() < 0.18 * (1.1 - m.diff.aiSkill + 0.2) ? rand(0.6, 2) : 0;
+      if (p.runUntil > m.time && p.runLate === undefined) p.runLate = Math.random() < 0.18 * (1.1 - m.diff.aiSkill + 0.2) * (p.traits.includes('cacador') ? 0.5 : 1) ? rand(0.6, 2) : 0;
       if (p.runUntil <= m.time) p.runLate = undefined;
     }
   }
@@ -250,7 +261,10 @@ function pressCarrier(m, p, o, dt, n) {
   }
   // bola exposta (toque longo do atacante): o bom antecipador ataca na hora
   const expo = Math.hypot(bx0 - o.x, bz0 - o.z) > 0.75;
-  if (bd < 1.35) {
+  // Agressivo dá o bote mais cedo; Muralha espera a bola se expor
+  const reach = p.traits.includes('agressivo') ? 1.6 : 1.35;
+  if (p.traits.includes('muralha') && !expo && bd < 1.35 && Math.random() < 0.6) { p.aiTimer = 0.15; return; }
+  if (bd < reach) {
     p.aiTimer = rand(0.25, 0.6) * (expo ? 0.4 : 1) + m.diff.aiReaction * (1.2 - (p.a.ant ?? p.a.def) / 99 * 0.6);
     if (Math.random() < (expo ? 0.85 : 0.45) + skill * 0.15) {
       // mesma dividida do humano: bote curto até onde a bola vai estar no contato
@@ -320,16 +334,20 @@ export function carrierThink(m, p, dt) {
   const options = [];
   const dGoal = Math.hypot(gx - p.x, p.z);
   const xg = shotQuality(m, p);
-  const shotBias = 0.7 + p.a.sho / 99 * 0.6;
+  const tr = p.traits;
+  const shotBias = (0.7 + p.a.sho / 99 * 0.6) * (tr.includes('finalizador') && dGoal < 18 ? 1.25 : 1);
   if (dGoal < 32) options.push({ kind: dGoal > 16 && Math.abs(p.z) > 6 && Math.random() < 0.5 ? 'finesse' : 'shot', s: xg * 3.4 * shotBias + (dGoal < 12 ? 0.3 : 0) });
 
   const lx = m.lx(t, p.x);
   for (const mode of ['ground', 'through', 'air']) {
     const r = bestReceiver(m, p, mode);
-    if (r) options.push({ kind: mode === 'ground' ? 'pass' : mode === 'through' ? 'through' : (lx > 25 && Math.abs(p.z) > 16 ? 'cross' : 'long'), s: r.s, q: r.q });
+    // Maestro prefere o passe certo; Criativo arrisca o que quebra linhas
+    const bonus = (tr.includes('maestro') && mode === 'ground' ? 0.1 : 0) + (tr.includes('criativo') && mode === 'through' ? 0.14 : 0) + (tr.includes('maestro') && mode === 'through' ? 0.06 : 0);
+    if (r) options.push({ kind: mode === 'ground' ? 'pass' : mode === 'through' ? 'through' : (lx > 25 && Math.abs(p.z) > 16 ? 'cross' : 'long'), s: r.s + bonus, q: r.q });
   }
   const space = spaceAhead(m, p);
-  options.push({ kind: 'dribble', s: 0.28 + Math.min(space, 12) * 0.04 + p.a.dri / 99 * 0.22 - press * 0.5 + (lx < -30 ? -0.3 : 0) });
+  const dribK = (tr.includes('driblador') ? 0.16 : 0) + (tr.includes('explosivo') && space > 6 ? 0.1 : 0) - (tr.includes('maestro') ? 0.05 : 0);
+  options.push({ kind: 'dribble', s: 0.28 + Math.min(space, 12) * 0.04 + p.a.dri / 99 * 0.22 - press * (tr.includes('driblador') ? 0.3 : 0.5) + (lx < -30 ? -0.3 : 0) + dribK });
   if (lx < -28 && press > 0.5) options.push({ kind: 'clear', s: 0.55 + press * 0.3 });
 
   // ruído conforme a dificuldade
@@ -337,7 +355,8 @@ export function carrierThink(m, p, dt) {
   options.sort((a, c) => c.s - a.s);
   let pick = options[0];
   // segura um instante depois de dominar
-  if (pick.kind !== 'dribble' && held < 0.35 && press < 0.6) pick = { kind: 'dribble', s: 0 };
+  // segura um instante depois de dominar (o Maestro segura um pouco mais e escolhe)
+  if (pick.kind !== 'dribble' && held < (tr.includes('maestro') ? 0.55 : 0.35) && press < 0.6) pick = { kind: 'dribble', s: 0 };
 
   p.aiTimer = rand(0.2, 0.45) + m.diff.aiReaction * 0.5;
   if (pick.kind === 'dribble') { p.intent = { kind: 'dribble' }; applyDribble(m, p, p.intent); return; }
