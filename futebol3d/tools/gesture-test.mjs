@@ -48,6 +48,7 @@ await setCtx('defend');
 e = await drag('.tc-third', 0, 0); check('3º botão na defesa = TROCAR', e.press.includes('switch'), e);
 check('5 botões na defesa (com DIVIDIDA)', (await p.locator('.tc-btn:visible').count()) === 5, await p.locator('.tc-btn:visible span').allTextContents());
 e = await drag('.tc-tackle', 0, 0); check('DIVIDIDA', e.press.includes('tackle'), e);
+e = await drag('.tc-third', -70, 0); check('TROCAR arrastado = troca direcional', e.press.includes('switchdir') && !e.press.includes('switch'), e);
 await p.screenshot({ path: `${out}-defesa.png` });
 await setCtx('loose');
 e = await drag('.tc-third', 0, 0); check('bola solta: 3º = TROCAR', e.press.includes('switch'), e);

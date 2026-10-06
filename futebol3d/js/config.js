@@ -147,6 +147,7 @@ export const DEFAULT_SETTINGS = {
   vibration: true,
   radar: true,
   passAssist: true,
+  gameSpeed: 0.93,       // ritmo da partida (GOLAÇO Authentic: 0,93×)
   names: true,           // nome acima do jogador controlado
   intro: true,           // entrada em campo antes da partida (pode pular)
 };

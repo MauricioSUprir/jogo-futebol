@@ -483,7 +483,7 @@ function frame(now) {
       if (!g.replay.update(dt)) finishReplay();
     } else {
       // câmera lenta curta quando a bola estufa a rede
-      const ts = g.slowmo > 0 ? 0.32 : 1;
+      const ts = (g.slowmo > 0 ? 0.32 : 1) * (settings.gameSpeed || 1);
       if (g.slowmo > 0) g.slowmo -= dt;
       g.acc += dt * ts;
       let steps = 0;
