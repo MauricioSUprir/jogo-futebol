@@ -40,6 +40,7 @@ export function humanStep(m, cmd, dt) {
 
   // troca manual
   if (cmd.press.switch) switchPlayer(m, true);
+  else if (cmd.press.switchdir && (cmd.swx || cmd.swz)) switchDirectional(m, cmd.swx, cmd.swz);
   autoSwitch(m);
   p = m.controlled;
   if (!p || p.sentOff) { switchPlayer(m, false); p = m.controlled; if (!p) return; }
@@ -326,6 +327,23 @@ export function switchPlayer(m, manual) {
   m.switchIdx = idx; m.lastSwitchT = m.time;
   m.setControlled(list[idx].q);
 }
+// Troca direcional (arrastar o TROCAR / analógico direito): o companheiro mais alinhado
+// com a direção pedida a partir do jogador atual, preferindo os mais perto.
+export function switchDirectional(m, dx, dz) {
+  const team = m.userTeam, cur = m.controlled;
+  if (!team || !cur) return;
+  let best = null, bs = -1e9;
+  for (const q of team.players) {
+    if (q === cur || q.sentOff || q.isGK) continue;
+    const vx = q.x - cur.x, vz = q.z - cur.z, d = Math.hypot(vx, vz) || 1;
+    const c = (vx * dx + vz * dz) / d;
+    if (c < 0.45) continue;
+    const sc = c * 1.6 - d / 40;
+    if (sc > bs) { bs = sc; best = q; }
+  }
+  if (best) { m.lastSwitchT = m.time; m.switchIdx = 0; m.setControlled(best); }
+}
+
 // Quem o botão TROCAR pegaria agora (para o indicador amarelo na tela)
 export function switchCandidate(m) {
   if (!m.userTeam || m.phase !== 'play') return null;

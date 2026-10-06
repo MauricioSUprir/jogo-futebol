@@ -12,6 +12,12 @@ import { cycleLength } from './anim.js';
 const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
+// distância do ponto (px,pz) ao segmento a→b no chão
+function segPointDist(ax, az, bx, bz, px, pz) {
+  const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-6;
+  const u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+  return Math.hypot(ax + dx * u - px, az + dz * u - pz);
+}
 const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
 // roteiro da abertura (segundos)
 // lineDone: todos perfilados (câmera passa pelos rostos); card: escalação no campinho
@@ -358,6 +364,8 @@ export class Match {
     // e a bola se encontram na tela. Viradas fortes geram um "toque de esforço".
     const sp = o.speed;
     const dri = o.a.dri / 99;
+    // controle de bola (primeiro toque / proximidade) é separado do drible (seção 6)
+    const ctl = (o.a.ctl ?? o.a.dri) / 99;
     const rx = -o.fz, rz = o.fx;
     const L = cycleLength(sp, o.pose.moveAngle || 0);
     const st = o.pose.stride, want = o.foot > 0 ? 0.45 : 0.95;
@@ -368,16 +376,17 @@ export class Match {
     o.lastStride = st;
     o.touchTimer -= dt;
     if (o.cushion > 0) o.cushion -= dt;
-    // um toque por ciclo de passada sempre (condução curta, como no EA FC: a bola não
-    // "anda na frente" nem em arrancada — só abre um pouco mais)
-    const per = 1;
+    // trote/corrida: um toque por passada, bola curta. Sprint: toque a cada duas passadas e
+    // a bola abre mais (≈0,9–1,3 m) — é o momento vulnerável para o defensor (seções 5, 10, 12)
+    const sprinting = o.sprint && sp > 6.5;
+    const per = sprinting ? 2 : 1;
     if (o.dribSt === undefined) o.dribSt = st;
     let ph = st - o.dribSt; if (ph < 0) ph += 1024;
     const u = Math.min(ph / per, 1.15);
     // alcance do pé no toque e abertura máxima da bola entre toques
     // (medido do centro do corpo: o bico da chuteira fica a ~0,25 m)
     const base = o.shielding ? 0.28 : 0.27 + Math.min(sp, 8) * 0.01;
-    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (o.sprint && sp > 6.5 ? 0.028 : 0.022)) * (1.3 - dri * 0.55);
+    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (sprinting ? 0.09 : 0.022)) * (1.35 - ctl * 0.6);
     const gap = sp > 0.8 ? open * 4 * u * (1 - Math.min(u, 1)) : 0;
     const lead = base + gap;
     const side = (sp > 0.8 ? 0.1 : 0.12) * o.foot;
@@ -396,7 +405,7 @@ export class Match {
       this.dbgWhy = effort ? 'giro' : due ? 'fase' : 'lento';
       // velocidade de saída da bola animada logo após o toque (+ o que falta corrigir)
       const v0 = sp > 0.8 ? open * 4 / Math.max(0.25, L * per / Math.max(sp, 1)) : 0;
-      const noise = (1 - dri) * 0.18 * (o.sprint ? 1.5 : 1);
+      const noise = (1 - ctl) * 0.18 * (o.sprint ? 1.5 : 1);
       b.kick(o.vx + o.fx * v0 + ex * 3 + gauss() * noise, 0, o.vz + o.fz * v0 + ez * 3 + gauss() * noise);
       this.touch(o, 'dribble');
       if (sp > 3 && Math.random() < 0.3) this.emit('dribble', {});
@@ -425,20 +434,40 @@ export class Match {
     if (pt) pt.stats.possession += dt;
 
     if (this.owner) {
-      // adversário cutuca uma bola exposta
+      // Disputa pela bola (seções 9–11 da especificação). Estado da posse:
+      //  protegida  — bola no pé e nenhum pé adversário mais perto dela
+      //  vulnerável — bola longe do pé (toque longo / sprint)
+      //  disputada  — algum pé adversário alcança a bola tanto quanto o dono
+      // Encostar não rouba: se o corpo do atacante está entre o defensor e a bola, ele
+      // não atravessa — precisa contornar. O roubo depende de desarme+antecipação contra
+      // controle+drible+equilíbrio+força e, principalmente, de quão exposta está a bola.
       const o = this.owner;
+      const dOwner = Math.hypot(b.p.x - o.x, b.p.z - o.z);
+      const expo = clamp((dOwner - 0.45) / 0.7, 0, 1);      // 0 colada … 1 longe
+      let state = expo > 0.35 ? 'vulneravel' : 'protegida';
       for (const q of o.team.opp.players) {
-        if (!q.canPlay() || q.action) continue;
+        if (!q.canPlay() || q.action || b.p.y >= 0.5) continue;
         const d = Math.hypot(b.p.x - q.footX(), b.p.z - q.footZ());
-        const dOwner = Math.hypot(b.p.x - o.x, b.p.z - o.z);
-        // bola entre um toque e outro (longe do pé do dono) e o pé do defensor mais perto dela
-        if (d < 0.55 && dOwner > 0.5 && d < dOwner && b.p.y < 0.5) {
-          const chance = 0.9 * dt * 8 * (q.a.def / 99) * (1.2 - o.a.dri / 150);
-          if (Math.random() < chance) { this.takeBall(q, 'intercept'); break; }
+        if (d > 0.6) continue;
+        // corpo do atacante no caminho (segmento defensor→bola passa pelo tronco dele)
+        if (segPointDist(q.x, q.z, b.p.x, b.p.z, o.x, o.z) < 0.4 && dOwner < 1.0) continue;
+        const contested = d < dOwner - 0.05;
+        if (contested) state = 'disputada';
+        const A = o.a, Q = q.a;
+        const duel = ((Q.tkl ?? Q.def) * 0.6 + (Q.ant ?? Q.def) * 0.4) - ((A.ctl ?? A.dri) * 0.45 + A.dri * 0.25 + (A.bal ?? A.phy) * 0.15 + (A.str ?? A.phy) * 0.15);
+        // roubos por segundo: quase nada com a bola protegida, muito com ela exposta
+        const rate = (contested ? 1.8 + 7 * expo : 0.25 + 3 * expo) * clamp(1 + duel / 40, 0.35, 1.8);
+        if (Math.random() < rate * dt) {
+          // bom antecipador fica com ela; senão só cutuca e a bola sai solta
+          if (Math.random() < 0.45 + (Q.ant ?? Q.def) / 99 * 0.4) this.takeBall(q, 'intercept');
+          else { o.cooldown = 0.25; this.owner = null; const a = Math.atan2(b.p.z - q.z, b.p.x - q.x) + rand(-0.6, 0.6); b.kick(Math.cos(a) * 3.5 + o.vx * 0.4, 0.2, Math.sin(a) * 3.5 + o.vz * 0.4); this.touch(q, 'tackle'); this.emit('touch', { strength: 0.35 }); state = 'solta'; }
+          break;
         }
       }
+      this.possState = this.owner ? state : 'solta';
       return;
     }
+    this.possState = 'solta';
     // bola solta: quem pode dominar?
     let best = null, bestD = 1e9;
     const hs = b.hspeed();
@@ -470,8 +499,29 @@ export class Match {
     // pegar com as mãos: goleiro dentro da área (sem recuo proposital de pé)
     if (p.isGK && this.inOwnBox(p, b.p.x, b.p.z) && !this.isBackPass(p)) { this.gkCatch(p); return; }
     const rel = Math.hypot(b.v.x - p.vx, b.v.z - p.vz);
-    const limit = 12 + p.a.dri * 0.08 + (p.human ? 2 : 0);
-    if (rel > limit && Math.random() < 0.7) {
+    // Primeiro toque com qualidade contínua (seção 8): dificuldade = velocidade relativa
+    // + altura + pressão + receber de costas; conforto = controle de bola. Craque mata
+    // um passe simples na hora; jogador limitado com passe muito forte pode soltar.
+    const ctl = (p.a.ctl ?? p.a.dri) / 99;
+    const toP = Math.atan2(p.z - b.p.z, p.x - b.p.x);                     // de onde a bola vem
+    const back = (1 + Math.cos(angDiff(p.heading, toP))) / 2;               // 1 = de costas
+    const diffc = rel + Math.max(0, b.p.y - 0.2) * 5 + this.pressure(p) * 3.5 + back * 3;
+    const comfort = 4 + ctl * 15 + (p.human ? 1.5 : 0);
+    const q = clamp(1 - (diffc - comfort) / 9, 0, 1);
+    p.lastTouchQ = q;
+    if (q < 0.85 && q >= 0.35 && b.p.y < 0.9) {
+      // toque longo: a bola segue 1–4 m à frente — vulnerável, precisa ir buscar
+      const vx = b.v.x - p.vx, vz = b.v.z - p.vz, vl = Math.hypot(vx, vz) || 1;
+      const mv = Math.hypot(p.vx, p.vz) > 1 ? Math.atan2(p.vz, p.vx) : Math.atan2(vz, vx);
+      const a = mv + angDiff(mv, Math.atan2(vz, vx)) * 0.35 + rand(-0.25, 0.25);
+      const sp = 2.2 + (1 - q) * Math.min(rel, 20) * 0.32;
+      b.kick(p.vx * 0.6 + Math.cos(a) * sp, 0, p.vz * 0.6 + Math.sin(a) * sp);
+      p.cooldown = 0.12;
+      this.touch(p, 'heavy');
+      this.emit('touch', { strength: 0.35 });
+      return;
+    }
+    if (q < 0.35) {
       // dominada ruim: a bola espirra
       const ang = Math.atan2(b.v.z, b.v.x) + rand(-1.2, 1.2);
       const s = rel * rand(0.2, 0.4);
@@ -530,7 +580,7 @@ export class Match {
       this.lastKick.counted = true;
       if (p.team === this.lastKick.p.team) this.lastKick.p.team.stats.passOk++;
     }
-    if (how !== 'dribble' && p.team.human && p !== this.controlled && (how === 'control' || how === 'intercept' || how === 'chest')) this.setControlled(p);
+    if (how !== 'dribble' && p.team.human && p !== this.controlled && (how === 'control' || how === 'heavy' || how === 'intercept' || how === 'chest')) this.setControlled(p);
     if (prevTouch && prevTouch.team !== p.team) this.passTarget = null;
     if (this.passTarget && this.passTarget.p === p) this.passTarget = null;
     this.indirectTouches = (this.indirectTouches || 0) + 1;
@@ -957,8 +1007,10 @@ export class Match {
       // alcance real da perna: ~1,35 m do corpo (o bote da dividida aproxima antes)
       const d = Math.hypot(b.p.x - (p.x + p.fx * 0.6), b.p.z - (p.z + p.fz * 0.6));
       const o = this.owner;
-      if (d < 0.75 && b.p.y < 0.6) {
-        const skill = p.a.def / 99, drib = o ? o.a.dri / 99 : 0.3;
+      // corpo do atacante entre o defensor e a bola: a perna pega o atacante, não a bola
+      const through = o && o !== p && segPointDist(p.x, p.z, b.p.x, b.p.z, o.x, o.z) < 0.38 && Math.hypot(b.p.x - o.x, b.p.z - o.z) < 1.0;
+      if (d < 0.75 && b.p.y < 0.6 && !through) {
+        const skill = (p.a.tkl ?? p.a.def) / 99, drib = o ? ((o.a.ctl ?? o.a.dri) * 0.6 + o.a.dri * 0.4) / 99 : 0.3;
         const behind = o && Math.cos(angDiff(p.heading, o.heading)) > 0.6;
         const chance = clamp(0.55 + (skill - drib) * 0.8 - (o && o.shielding ? 0.2 : 0) - (behind ? 0.25 : 0), 0.12, 0.92);
         if (Math.random() < chance) {
@@ -974,7 +1026,7 @@ export class Match {
         } else { p.stun = 0.35; }
       } else {
         // furou: se a perna pegou o corpo do atacante em vez da bola, pode ser falta
-        if (o && o.team !== p.team && Math.hypot(o.x - (p.x + p.fx * 0.6), o.z - (p.z + p.fz * 0.6)) < 0.7 && Math.random() < 0.4) {
+        if (o && o.team !== p.team && (through || Math.hypot(o.x - (p.x + p.fx * 0.6), o.z - (p.z + p.fz * 0.6)) < 0.7) && Math.random() < (through ? 0.55 : 0.4)) {
           o.startAction('fall', {}); o.stun = 1.2;
           this.foul(p, o, Math.random() < 0.06 ? 2 : 1);
         } else p.stun = 0.3;

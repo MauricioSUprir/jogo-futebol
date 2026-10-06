@@ -597,6 +597,7 @@ function settingsBody(inPause) {
   return h('div', { class: 'gm-set-grid' },
     sec('Partida', ...matchOptionsBody(inPause), row('Vento', 'Afeta a bola em chutes longos', toggle('wind', 'Vento'))),
     sec('Jogo', row('Câmera', null, seg('camera', [['tv', 'TV'], ['pro', 'Pro'], ['aerea', 'Aérea']])),
+      row('Velocidade do jogo', 'Ritmo da partida (Authentic = 0,93×)', seg('gameSpeed', [[0.85, 'Simulação'], [0.93, 'Authentic'], [1, 'Competitivo'], [1.08, 'Arcade']], { small: true })),
       row('Assistência de passe', 'Corrige a mira dos passes', toggle('passAssist', 'Assistência de passe')),
       row('Radar', 'Minimapa na parte de baixo', toggle('radar', 'Radar')),
       row('Nomes dos jogadores', 'Nome sobre o jogador controlado', toggle('names', 'Nomes dos jogadores')),

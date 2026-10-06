@@ -149,7 +149,9 @@ export class Input {
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault(); b.setPointerCapture(e.pointerId);
         st = { x: e.clientX, y: e.clientY, key: this.touchKey[id] };
-        this.touchBtn[st.key] = true; b.classList.add('on'); this.lastDevice = 'touch'; this.onAny && this.onAny();
+        // TROCAR decide no soltar: toque = troca inteligente; arrastar = troca direcional
+        if (st.key !== 'switch') this.touchBtn[st.key] = true;
+        b.classList.add('on'); this.lastDevice = 'touch'; this.onAny && this.onAny();
       });
       b.addEventListener('pointermove', (e) => {
         if (!st) return;
@@ -158,6 +160,15 @@ export class Input {
       });
       const up = (e) => {
         if (!st) return;
+        if (st.key === 'switch') {
+          if (e && e.type === 'pointerup') {
+            const dx = e.clientX - st.x, dy = e.clientY - st.y;
+            if (Math.hypot(dx, dy) >= 34) { this.switchDir = { dx, dy }; this.taps.switchdir = 0.05; }
+            else this.taps.switch = 0.05;
+          }
+          b.classList.remove('on'); st = null;
+          return;
+        }
         const g = e && e.type === 'pointerup' ? gestureFor(id, st.key, e.clientX - st.x, e.clientY - st.y) : null;
         if (g) this.swapRelease[st.key] = g;
         this.touchBtn[st.key] = false; b.classList.remove('on'); b.dataset.g = ''; st = null;
@@ -205,7 +216,7 @@ export class Input {
     const pad = this.padIndex !== null && navigator.getGamepads ? navigator.getGamepads()[this.padIndex] : null;
     const b = {};
     const k = this.keys;
-    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'skill', 'shield', 'jockey', 'tackle', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
+    for (const n of ['sprint', 'pass', 'shoot', 'long', 'through', 'finesse', 'chip', 'switch', 'switchdir', 'skill', 'shield', 'jockey', 'tackle', 'pause']) b[n] = k.has(n) || !!this.touchBtn[n] || !!this.mouse[n];
     let sx = (k.has('right') ? 1 : 0) - (k.has('left') ? 1 : 0);
     let sy = (k.has('up') ? 1 : 0) - (k.has('down') ? 1 : 0);
     if (sx && sy) { sx *= 0.7071; sy *= 0.7071; }
@@ -267,7 +278,15 @@ export class Input {
       const n = this.touchKey[id];
       if (CHARGE.includes(n)) el.style.setProperty('--charge', b[n] ? Math.min(1, (now - (this.downAt[n] || now)) / 0.95).toFixed(2) : 0);
     }
-    this.cmd = { mx, mz, rx: wrx, rz: wrz, held: b, press: this.edges.press, release: this.edges.release, hold: this.edges.hold, sx, sy };
+    // troca direcional: arrasto na tela → direção no campo (relativa à câmera)
+    let swx = 0, swz = 0;
+    if (this.switchDir) {
+      const { dx, dy } = this.switchDir;
+      swx = camRight.x * dx - camFwd.x * dy; swz = camRight.z * dx - camFwd.z * dy;
+      const l = Math.hypot(swx, swz) || 1; swx /= l; swz /= l;
+      if (!this.edges.press.switchdir) this.switchDir = null;
+    }
+    this.cmd = { mx, mz, rx: wrx, rz: wrz, held: b, press: this.edges.press, release: this.edges.release, hold: this.edges.hold, sx, sy, swx, swz };
     return this.cmd;
   }
 

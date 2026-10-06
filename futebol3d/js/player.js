@@ -32,8 +32,10 @@ export class Player {
     const f = a.pac / 99;
     this.jog = lerp(PLAYER.jogMin, PLAYER.jogMax, f);
     this.sprintSpd = lerp(PLAYER.sprintMin, PLAYER.sprintMax, f);
-    this.accel = lerp(PLAYER.accelMin, PLAYER.accelMax, clamp(((a.pac * 0.7 + a.dri * 0.3) / 99 - 0.45) / 0.5, 0, 1));
-    this.agility = 0.8 + 0.35 * (a.dri / 99);
+    // atributos detalhados (teams.js, detailAttrs); valores antigos se faltarem
+    const acc = a.acc ?? (a.pac * 0.7 + a.dri * 0.3), agi = a.agi ?? a.dri;
+    this.accel = lerp(PLAYER.accelMin, PLAYER.accelMax, clamp((acc / 99 - 0.45) / 0.5, 0, 1));
+    this.agility = 0.78 + 0.4 * (agi / 99);
     this.foot = data.foot === 'E' ? -1 : 1;
     this.x = 0; this.z = 0; this.y = 0;
     this.vx = 0; this.vz = 0;
@@ -215,9 +217,16 @@ export class Player {
     const cur = Math.atan2(this.vz, this.vx);
     const tgt = ds > 0.1 ? Math.atan2(dz, dx) : cur;
     const diff = angDiff(cur, tgt);
-    const turnRate = lerp(PLAYER.turnRateStill, PLAYER.turnRateSprint, clamp(sp / PLAYER.sprintMax, 0, 1)) * this.agility * (this.hasBall ? 0.85 : 1);
+    const fs = clamp(sp / PLAYER.sprintMax, 0, 1);
+    // giro limitado pela aceleração lateral que o corpo aguenta (ω ≤ a_lat / v): em alta
+    // velocidade a curva abre, a menos que o jogador freie — o freio vem do 'want' abaixo
+    const aLat = (8 + 14 * (this.a.agi ?? this.a.dri) / 99) * (this.hasBall ? 0.9 : 1);
+    const turnRate = Math.min(lerp(PLAYER.turnRateStill, PLAYER.turnRateSprint, Math.pow(fs, 0.8)) * this.agility * (this.hasBall ? 0.85 : 1), aLat / Math.max(sp, 0.5));
+    // quanto mais rápido, menor o ângulo que já exige plantar o pé e frear antes de virar
+    // (a 30+ km/h não existe curva de 90° instantânea: desacelera → apoia → gira → acelera)
+    const plant = lerp(1.9, 0.85, fs * fs) * (0.85 + 0.3 * (this.agility - 0.78) / 0.4);
     let nsp, nang;
-    if (Math.abs(diff) > 1.9 && ds > 0.1) {
+    if (Math.abs(diff) > plant && ds > 0.1) {
       // mudança brusca de sentido: planta o pé e freia antes de virar
       nsp = Math.max(0, sp - PLAYER.decel * 1.15 * dt);
       nang = cur + clamp(diff, -turnRate * dt * 0.4, turnRate * dt * 0.4);
