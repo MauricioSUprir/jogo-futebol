@@ -16,7 +16,8 @@ function intercepts(m, t) {
   const pr = m.pred;
   for (const p of t.players) {
     if (p.sentOff) { p.interceptT = 99; continue; }
-    const react = p.human ? 0.1 : m.diff.aiReaction * 0.6;
+    // quem antecipa bem lê a bola mais cedo (seção 7: "esse zagueiro antecipa")
+    const react = p.human ? 0.1 : m.diff.aiReaction * 0.6 * (1.3 - (p.a.ant ?? p.a.def) / 99 * 0.6);
     const v = p.sprintSpd * 0.92;
     let found = -1;
     for (let k = 0; k < pr.n; k++) {

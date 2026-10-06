@@ -12,6 +12,10 @@ import { cycleLength } from './anim.js';
 const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
+// massa aproximada pelo corpo do jogador (altura e porte do visual): ~68–94 kg
+const massOf = (p) => p._mass ?? (p._mass = 62 + ((p.data.look?.height ?? 1.8) - 1.7) * 95 + (p.data.look?.build ?? 0.55) * 14);
+// firmeza no contato: massa × força × equilíbrio (cansaço tira); plantado ganha um pouco
+const stability = (p, m) => m * (0.55 + 0.45 * (p.a.str ?? p.a.phy) / 99) * (0.75 + 0.25 * (p.a.bal ?? p.a.phy) / 99) * (1 - 0.15 * p.fatigue) * (p.speed < 2 ? 1.15 : 1);
 // distância do ponto (px,pz) ao segmento a→b no chão
 function segPointDist(ax, az, bx, bz, px, pz) {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-6;
@@ -245,8 +249,11 @@ export class Match {
         const d2 = dx * dx + dz * dz;
         if (d2 >= rr * rr || d2 < 1e-6) continue;
         const d = Math.sqrt(d2), nx = dx / d, nz = dz / d, over = rr - d;
-        // o mais forte empurra mais (físico + velocidade)
-        const sa = a.a.phy + a.speed * 4, sb = b.a.phy + b.speed * 4;
+        // Contato (seção 25): massa + força + equilíbrio + momento + quem já está plantado.
+        // Força maior não é vitória automática: o menor bem posicionado e firme pode ganhar.
+        const ma = massOf(a), mb = massOf(b);
+        const va = a.vx * nx + a.vz * nz, vb = -(b.vx * nx + b.vz * nz);   // velocidade de cada um rumo ao outro
+        const sa = stability(a, ma) + ma * Math.max(0, va) * 0.12, sb = stability(b, mb) + mb * Math.max(0, vb) * 0.12;
         const wa = sb / (sa + sb), wb = 1 - wa;
         a.x -= nx * over * wa; a.z -= nz * over * wa;
         b.x += nx * over * wb; b.z += nz * over * wb;
@@ -254,14 +261,28 @@ export class Match {
         if (rel > 0) {
           a.vx -= nx * rel * wa * 0.8; a.vz -= nz * rel * wa * 0.8;
           b.vx += nx * rel * wb * 0.8; b.vz += nz * rel * wb * 0.8;
-          if (rel > 2.5 && a.team !== b.team && this.phase === 'play') {
+          if (rel > 1.8 && a.team !== b.team && this.phase === 'play') {
             if (rel > 3.5) this.emit('bodyHit', { strength: Math.min(1, rel / 7) });
-            // choque com quem conduz: pode desequilibrar
+            // choque com quem conduz
             const carrier = this.owner === a ? a : this.owner === b ? b : null;
-            if (carrier) {
+            // uma disputa de corpo a cada ~0,4 s (não um sorteio por quadro de contato)
+            if (carrier && this.time - (carrier.duelT || -9) > 0.4) {
+              carrier.duelT = this.time;
               const other = carrier === a ? b : a;
-              const k = (other.a.phy - carrier.a.phy) / 99 + rel / 12 - (carrier.shielding ? 0.35 : 0);
-              if (Math.random() < k * 0.5) this.looseBall(carrier, 3);
+              const mo = other === a ? ma : mb, mc = carrier === a ? ma : mb;
+              // de onde veio o choque, em relação à frente do condutor (1 = por trás)
+              const ox = other.x - carrier.x, oz = other.z - carrier.z, ol = Math.hypot(ox, oz) || 1;
+              const fromBack = -(ox * carrier.fx + oz * carrier.fz) / ol;
+              if (fromBack > 0.55 && rel > 2.2 && Math.random() < 0.45) {
+                // trombada por trás em quem conduz: falta, não roubo
+                carrier.startAction('fall', {}); carrier.stun = 1.2;
+                this.foul(other, carrier, rel > 5.5 && Math.random() < 0.2 ? 2 : 1);
+              } else {
+                // impulso de quem chega × estabilidade de quem conduz (protegendo, de lado: mais firme)
+                const imp = mo * rel, res = stability(carrier, mc) * 6.5 * (carrier.shielding ? 1.35 : 1) * (fromBack < -0.3 ? 0.85 : 1);
+                const k = (imp / res - 0.35) * 0.6;
+                if (Math.random() < k) this.looseBall(carrier, 3);
+              }
             }
           }
         }
