@@ -215,6 +215,12 @@ function support(m, t, outfield, owner, offLine, dt) {
   }
 }
 
+function segDist2(ax, az, bx, bz, px, pz) {
+  const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-6;
+  const u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+  return Math.hypot(ax + dx * u - px, az + dz * u - pz);
+}
+
 function pressCarrier(m, p, o, dt, n) {
   const t = p.team;
   const gx = m.ownGoalX(t);
@@ -230,9 +236,22 @@ function pressCarrier(m, p, o, dt, n) {
   p.aiTimer -= dt;
   if (p.aiTimer > 0) return;
   const bd = Math.hypot(m.ball.p.x - p.x, m.ball.p.z - p.z);
+  // corpo do atacante entre mim e a bola (ele protege): não atravessa — contorna pelo lado
+  // em que já está e espera a bola se expor (seção 9/10 da especificação)
+  const bx0 = m.ball.p.x, bz0 = m.ball.p.z;
+  const blocked = segDist2(p.x, p.z, bx0, bz0, o.x, o.z) < 0.45 && Math.hypot(bx0 - o.x, bz0 - o.z) < 1.0;
+  if (blocked && bd < 2.5) {
+    const ux = bx0 - o.x, uz = bz0 - o.z, ul = Math.hypot(ux, uz) || 1;
+    const side = ((p.x - o.x) * -uz + (p.z - o.z) * ux) >= 0 ? 1 : -1;
+    p.moveTo(o.x + ux / ul * 0.5 + (-uz / ul) * side * 0.95, o.z + uz / ul * 0.5 + (ux / ul) * side * 0.95, 1, false);
+    p.face = m.ball.p; p.aiTimer = 0.12;
+    return;
+  }
+  // bola exposta (toque longo do atacante): o bom antecipador ataca na hora
+  const expo = Math.hypot(bx0 - o.x, bz0 - o.z) > 0.75;
   if (bd < 1.35) {
-    p.aiTimer = rand(0.25, 0.6) + m.diff.aiReaction;
-    if (Math.random() < 0.55 + skill * 0.3) {
+    p.aiTimer = rand(0.25, 0.6) * (expo ? 0.4 : 1) + m.diff.aiReaction * (1.2 - (p.a.ant ?? p.a.def) / 99 * 0.6);
+    if (Math.random() < (expo ? 0.85 : 0.45) + skill * 0.15) {
       // mesma dividida do humano: bote curto até onde a bola vai estar no contato
       const bx = m.ball.p.x + m.ball.v.x * 0.22, bz = m.ball.p.z + m.ball.v.z * 0.22;
       const bl = Math.hypot(bx - p.x, bz - p.z) || 1, lx = (bx - p.x) / bl, lz = (bz - p.z) / bl;
