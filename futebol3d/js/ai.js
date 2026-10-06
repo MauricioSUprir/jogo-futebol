@@ -16,7 +16,8 @@ function intercepts(m, t) {
   const pr = m.pred;
   for (const p of t.players) {
     if (p.sentOff) { p.interceptT = 99; continue; }
-    const react = p.human ? 0.1 : m.diff.aiReaction * 0.6;
+    // quem antecipa bem lê a bola mais cedo (seção 7: "esse zagueiro antecipa")
+    const react = p.human ? 0.1 : m.diff.aiReaction * 0.6 * (1.3 - (p.a.ant ?? p.a.def) / 99 * 0.6);
     const v = p.sprintSpd * 0.92;
     let found = -1;
     for (let k = 0; k < pr.n; k++) {
@@ -383,7 +384,8 @@ function applyDribble(m, p, intent) {
   if (Math.abs(p.z) > HW - 4) az -= Math.sign(p.z) * 1.5;
   const al = Math.hypot(ax, az) || 1;
   const space = spaceAhead(m, p);
-  const sprint = space > 7 && p.stamina > 0.25;
+  // cansado arranca menos (seção 34: frequência de sprint)
+  const sprint = space > 7 + p.fatigue * 8 && p.stamina > 0.25 + p.fatigue * 0.3;
   const s = sprint ? p.sprintSpd : p.jog;
   p.dx = ax / al * s; p.dz = az / al * s; p.sprint = sprint;
   // protege a bola se muito pressionado

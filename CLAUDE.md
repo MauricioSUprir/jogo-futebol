@@ -72,7 +72,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 
 - Jogabilidade (medidas): condução `tools/drible-medida.mjs` (alvo ~0,45 m correndo / ~0,6 m arrancada);
   dividida `tools/dividida-test.mjs`; primeira `tools/primeira-test.mjs`; agilidade `tools/agilidade.mjs`;
-  chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/gols-media.mjs 12` (~9–10 gols/partida).
+  chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/gols-media.mjs 24` (~8–10 gols/partida;
+  varia ±1,5 entre execuções — usar 24 partidas); proteção `tools/protecao-test.mjs`; contato de corpo
+  `tools/contato-test.mjs`; fadiga `tools/fadiga.mjs`.
+- Especificação "Master Gameplay & Visual Spec" (dono): Fase A (posse/proteção/primeiro toque/giro/0,93×/troca
+  direcional) e Fase B (fadiga em 2 camadas, contato por massa/força/equilíbrio, antecipação) feitas.
+  Próximas: C (IA: intensidade, utilidade, traços), D (modos, controles móveis ajustáveis), E (cantos/áudio
+  espacial), F (clima, câmeras, presets). Atributos detalhados em `teams.js` (detailAttrs).
   Celular: 4 botões (+ DIVIDIDA na defesa) e gestos — conferir com `tools/gesture-test.mjs`.
 
 ### Testes (rodar antes de todo commit do futebol3d)

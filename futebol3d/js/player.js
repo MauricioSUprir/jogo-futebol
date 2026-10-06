@@ -48,7 +48,8 @@ export class Player {
     this.blendFrom = newPose();
     this.action = null;
     this.stun = 0;
-    this.stamina = 1;
+    this.stamina = 1;            // fôlego de curto prazo (gasta no sprint, recupera andando)
+    this.fatigue = 0;            // desgaste da partida (0..~0,6), cresce com o esforço
     this.cooldown = 0;                      // não pode tocar na bola
     this.lastTouch = 0;
     this.touchTimer = 0;
@@ -188,8 +189,10 @@ export class Player {
 
     // fôlego
     const sp = this.speed;
-    if (this.sprint && sp > this.jog) this.stamina = Math.max(0, this.stamina - dt * 0.012);
-    else this.stamina = Math.min(1, this.stamina + dt * (sp < 2 ? 0.02 : 0.008));
+    // fadiga (seção 34): o desgaste baixa o teto do fôlego e deixa a recuperação lenta
+    const cap = 1 - 0.55 * this.fatigue;
+    if (this.sprint && sp > this.jog) this.stamina = Math.max(0, this.stamina - dt * 0.012 * (1 + this.fatigue));
+    else this.stamina = Math.min(cap, this.stamina + dt * (sp < 2 ? 0.02 : 0.008) * (1 - 0.5 * this.fatigue));
 
     // salto do cabeceio / barreira
     const hAct = this.action && this.action.type === 'header' ? this.action : null;
@@ -234,7 +237,9 @@ export class Player {
       nang = cur + clamp(diff, -turnRate * dt, turnRate * dt);
       const want = ds * Math.max(0.35, Math.cos(Math.min(Math.abs(diff), 1.4)));
       // arranque forte e ganho decrescente perto do máximo (o rápido chega antes ao topo)
-      const rate = (want > sp ? this.accel * (1 - 0.8 * (sp / PLAYER.sprintMax) ** 2) : PLAYER.decel) * dt;
+      // cansado ainda chega à velocidade alta, mas demora mais para acelerar
+      const tired = (0.72 + 0.28 * this.stamina) * (1 - 0.25 * this.fatigue);
+      const rate = (want > sp ? this.accel * tired * (1 - 0.8 * (sp / PLAYER.sprintMax) ** 2) : PLAYER.decel) * dt;
       nsp = sp + clamp(want - sp, -rate, rate);
     }
     this.vx = Math.cos(nang) * nsp; this.vz = Math.sin(nang) * nsp;
