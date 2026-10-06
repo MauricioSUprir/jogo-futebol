@@ -358,6 +358,8 @@ export class Match {
     // e a bola se encontram na tela. Viradas fortes geram um "toque de esforço".
     const sp = o.speed;
     const dri = o.a.dri / 99;
+    // controle de bola (primeiro toque / proximidade) é separado do drible (seção 6)
+    const ctl = (o.a.ctl ?? o.a.dri) / 99;
     const rx = -o.fz, rz = o.fx;
     const L = cycleLength(sp, o.pose.moveAngle || 0);
     const st = o.pose.stride, want = o.foot > 0 ? 0.45 : 0.95;
@@ -368,16 +370,17 @@ export class Match {
     o.lastStride = st;
     o.touchTimer -= dt;
     if (o.cushion > 0) o.cushion -= dt;
-    // um toque por ciclo de passada sempre (condução curta, como no EA FC: a bola não
-    // "anda na frente" nem em arrancada — só abre um pouco mais)
-    const per = 1;
+    // trote/corrida: um toque por passada, bola curta. Sprint: toque a cada duas passadas e
+    // a bola abre mais (≈0,9–1,3 m) — é o momento vulnerável para o defensor (seções 5, 10, 12)
+    const sprinting = o.sprint && sp > 6.5;
+    const per = sprinting ? 2 : 1;
     if (o.dribSt === undefined) o.dribSt = st;
     let ph = st - o.dribSt; if (ph < 0) ph += 1024;
     const u = Math.min(ph / per, 1.15);
     // alcance do pé no toque e abertura máxima da bola entre toques
     // (medido do centro do corpo: o bico da chuteira fica a ~0,25 m)
     const base = o.shielding ? 0.28 : 0.27 + Math.min(sp, 8) * 0.01;
-    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (o.sprint && sp > 6.5 ? 0.028 : 0.022)) * (1.3 - dri * 0.55);
+    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (sprinting ? 0.09 : 0.022)) * (1.35 - ctl * 0.6);
     const gap = sp > 0.8 ? open * 4 * u * (1 - Math.min(u, 1)) : 0;
     const lead = base + gap;
     const side = (sp > 0.8 ? 0.1 : 0.12) * o.foot;
@@ -396,7 +399,7 @@ export class Match {
       this.dbgWhy = effort ? 'giro' : due ? 'fase' : 'lento';
       // velocidade de saída da bola animada logo após o toque (+ o que falta corrigir)
       const v0 = sp > 0.8 ? open * 4 / Math.max(0.25, L * per / Math.max(sp, 1)) : 0;
-      const noise = (1 - dri) * 0.18 * (o.sprint ? 1.5 : 1);
+      const noise = (1 - ctl) * 0.18 * (o.sprint ? 1.5 : 1);
       b.kick(o.vx + o.fx * v0 + ex * 3 + gauss() * noise, 0, o.vz + o.fz * v0 + ez * 3 + gauss() * noise);
       this.touch(o, 'dribble');
       if (sp > 3 && Math.random() < 0.3) this.emit('dribble', {});

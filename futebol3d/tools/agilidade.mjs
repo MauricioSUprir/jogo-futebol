@@ -32,7 +32,7 @@ function virada(p, graus, sprint) {
   return NaN;
 }
 const f = (v) => v.toFixed(2) + ' s';
-for (const [nome, at] of [['médio (pac 75, dri 75)', { pac: 75, dri: 75 }], ['rápido (pac 90, dri 88)', { pac: 90, dri: 88 }]]) {
+for (const [nome, at] of [['médio (acc 72, agi 70)', { pac: 75, dri: 75, acc: 72, agi: 70 }], ['ágil (acc 90, agi 90)', { pac: 90, dri: 88, acc: 90, agi: 90 }], ['pesado (acc 60, agi 55)', { pac: 65, dri: 60, acc: 60, agi: 55 }]]) {
   for (const bola of [false, true]) {
     const r = [arranque(mk(at, bola), false), arranque(mk(at, bola), true), virada(mk(at, bola), 90, false), virada(mk(at, bola), 180, false), virada(mk(at, bola), 90, true)];
     console.log(`${nome.padEnd(24)} ${bola ? 'com bola' : 'sem bola'} | 0→90% trote ${f(r[0])} | 0→90% arrancada ${f(r[1])} | 90° trote ${f(r[2])} | 180° trote ${f(r[3])} | 90° arrancada ${f(r[4])}`);

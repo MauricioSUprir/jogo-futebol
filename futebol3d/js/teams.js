@@ -91,6 +91,28 @@ const PROFILE = {
 const CLASSIC_NUM = { GOL: [1], LD: [2], ZAG: [3, 4, 14], LE: [6], VOL: [5, 15], MC: [8, 16], MEI: [10], MD: [7], ME: [11],
   ALD: [2, 13], ALE: [6], PD: [7], PE: [11], CA: [9], ATA: [9, 19, 11] };
 
+// Atributos detalhados (seção 21 da especificação), derivados dos 6 básicos com uma
+// semente própria do jogador — não consome o sorteio do time (nomes e visual seguem iguais).
+// ctl = controle de bola / primeiro toque (separado do drible), agi = agilidade,
+// bal = equilíbrio, str = força, tkl = desarme em pé, sld = carrinho, ant = antecipação,
+// acc = aceleração, sta = fôlego.
+function detailAttrs(a, pos, key) {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const r = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+  const n = (s) => (r() + r() - 1) * s;           // ruído triangular ±s
+  const def = ['ZAG', 'VOL', 'LD', 'LE'].includes(pos), tec = ['MEI', 'MC', 'PD', 'PE', 'ATA', 'MD', 'ME'].includes(pos);
+  a.ctl = clampI(a.dri * 0.5 + a.pas * 0.4 + 6 + (tec ? 3 : def ? -3 : 0) + n(9), 20, 97);
+  a.agi = clampI(a.dri * 0.45 + a.pac * 0.45 - (a.phy - 65) * 0.25 + 7 + n(9), 20, 97);
+  a.bal = clampI(a.phy * 0.45 + a.dri * 0.35 + 14 + n(9), 25, 97);
+  a.str = clampI(a.phy * 0.95 + (def || pos === 'CA' ? 4 : 0) + n(8), 25, 97);
+  a.tkl = clampI(a.def * 0.95 + 3 + n(7), 10, 97);
+  a.sld = clampI(a.def * 0.9 + n(9), 10, 95);
+  a.ant = clampI(a.def * 0.6 + (a.pas + a.dri) * 0.18 + 6 + n(9), 15, 97);
+  a.acc = clampI(a.pac * 0.75 + a.agi * 0.25 + n(6), 20, 97);
+  a.sta = clampI(a.phy * 0.55 + 32 + n(10), 35, 97);
+}
+
 function makePlayer(r, team, pos, ovr, used, usedNums, isSub) {
   // nome
   let name;
@@ -114,6 +136,7 @@ function makePlayer(r, team, pos, ovr, used, usedNums, isSub) {
   const attrs = {};
   k.forEach((key, i) => { attrs[key] = clampI(ovr + prof[i] + (r() - 0.5) * 9, 18, 97); });
   attrs.gk = pos === 'GOL' ? clampI(ovr + 2 + (r() - 0.5) * 4, 40, 97) : clampI(6 + r() * 14, 5, 25);
+  detailAttrs(attrs, pos, team.id + '|' + name + '|' + num);
   return { name, num, pos, attrs, foot: pos === 'LE' || pos === 'ALE' || pos === 'PD' ? (r() < 0.75 ? 'E' : 'D') : (r() < 0.2 ? 'E' : 'D'), look: makeLook(r, team.flavour, pos) };
 }
 
