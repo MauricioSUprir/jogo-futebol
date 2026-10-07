@@ -5,7 +5,7 @@ import { PLAYER, ANIM, clamp, lerp, angDiff } from './config.js';
 import { cycleLength } from './anim.js';
 import { traitsOf } from './tactics.js';
 
-const POSE_KEYS = ['anim', 't', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
+const POSE_KEYS = ['anim', 't', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz', 'acc', 'tat'];
 
 // ação de jogo → animação
 const ACTION_ANIM = {
@@ -17,7 +17,7 @@ const ACTION_ANIM = {
 
 export function newPose() {
   return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5,
-    diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, blendFrom: null, blendW: 1 };
+    diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, acc: 0, tat: -1, blendFrom: null, blendW: 1 };
 }
 
 export class Player {
@@ -168,6 +168,9 @@ export class Player {
         this.vx = dx; this.vz = dz;
       } else if (k === 'hug') {
         dx = dz = 0; const f = Math.exp(-6 * dt); this.vx *= f; this.vz *= f;
+      } else if (this.kickChase && !act.fired) {
+        // chute/passe com a bola rolando: a corrida se ajusta para o pé chegar nela no contato
+        dx = this.kickChase.x; dz = this.kickChase.z;
       } else {
         // chutes/passes/cabeceios: desacelera um pouco
         dx *= 0.45; dz *= 0.45;
@@ -186,7 +189,12 @@ export class Player {
     const sm = Math.min(1, dt * (this.human ? 16 : 7));
     this.sdx = (this.sdx ?? dx) + (dx - (this.sdx ?? dx)) * sm;
     this.sdz = (this.sdz ?? dz) + (dz - (this.sdz ?? dz)) * sm;
-    if (!locked) this.integrate(dt, this.sdx, this.sdz);
+    // humano: a virada brusca é detectada pelo comando CRU (a suavização atrasava o apoio e a
+    // virada de 180° "pelo lado" do direcional virava uma curva aberta)
+    const pvx = this.vx, pvz = this.vz;
+    if (!locked) this.integrate(dt, this.sdx, this.sdz, this.human ? dx : null, dz);
+    // aceleração ao longo do corpo (para a pose: tronco à frente ao arrancar, para trás ao frear)
+    this.accL = ((this.vx - pvx) * this.fx + (this.vz - pvz) * this.fz) / dt;
     this.x += this.vx * dt; this.z += this.vz * dt;
 
     // fôlego
@@ -206,10 +214,15 @@ export class Player {
     this.updatePose(dt, act);
   }
 
-  integrate(dt, dx, dz) {
+  // velocidade máxima agora (arrancada ou não, fôlego, bola no pé)
+  topSpeed() {
     // com a bola no pé: um pouco mais lento e menos ágil (depende do drible)
     const ballK = this.hasBall ? (this.sprint ? 0.9 : 0.95) + this.a.dri / 99 * 0.05 : 1;
-    const maxS = (this.sprint ? this.sprintSpd * (0.86 + 0.14 * this.stamina) : this.jog) * (this.slow || 1) * ballK;
+    return (this.sprint ? this.sprintSpd * (0.86 + 0.14 * this.stamina) : this.jog) * (this.slow || 1) * ballK;
+  }
+
+  integrate(dt, dx, dz, rawx = null, rawz = 0) {
+    const maxS = this.topSpeed();
     let ds = Math.hypot(dx, dz);
     if (ds > maxS) { dx *= maxS / ds; dz *= maxS / ds; ds = maxS; }
     const sp = Math.hypot(this.vx, this.vz);
@@ -231,10 +244,27 @@ export class Player {
     // (a 30+ km/h não existe curva de 90° instantânea: desacelera → apoia → gira → acelera)
     const plant = lerp(1.9, 0.85, fs * fs) * (0.85 + 0.3 * (this.agility - 0.78) / 0.4);
     let nsp, nang;
-    if (Math.abs(diff) > plant && ds > 0.1) {
-      // mudança brusca de sentido: planta o pé e freia antes de virar
-      nsp = Math.max(0, sp - PLAYER.decel * 1.15 * dt);
-      nang = cur + clamp(diff, -turnRate * dt * 0.4, turnRate * dt * 0.4);
+    const rl = rawx === null ? 0 : Math.hypot(rawx, rawz);
+    if (rl > 0.1 && Math.abs(angDiff(cur, Math.atan2(rawz, rawx))) > plant) {
+      // comando cru pede virada brusca: usa a direção dele (módulo limitado como acima)
+      const k = Math.min(rl, maxS) / rl;
+      dx = rawx * k; dz = rawz * k; ds = Math.hypot(dx, dz);
+    }
+    if ((Math.abs(diff) > plant || (rl > 0.1 && Math.abs(angDiff(cur, Math.atan2(rawz, rawx))) > plant)) && ds > 0.1) {
+      // mudança brusca de sentido: planta o pé. A força do apoio é um VETOR limitado: primeiro
+      // anula a velocidade de lado (em relação ao rumo novo), o resto freia e arranca ao longo
+      // do rumo. Antes o vetor girava enquanto freava e o jogador desenhava um "U" (deriva de
+      // ~1 m numa virada de 180°); agora para na linha, gira o corpo e sai de volta.
+      const ux = dx / ds, uz = dz / ds;
+      const vpar = this.vx * ux + this.vz * uz;
+      let px = this.vx - vpar * ux, pz = this.vz - vpar * uz;
+      let budget = PLAYER.decel * 1.15 * dt;
+      const pl = Math.hypot(px, pz), cut = Math.min(pl, budget * 0.75);
+      if (pl > 1e-6) { px -= px / pl * cut; pz -= pz / pl * cut; }
+      budget -= cut;
+      const np = vpar + clamp(ds - vpar, -budget, budget * (vpar < 0 ? 1 : 0.6));
+      this.vx = px + np * ux; this.vz = pz + np * uz;
+      return;
     } else {
       nang = cur + clamp(diff, -turnRate * dt, turnRate * dt);
       const want = ds * Math.max(0.35, Math.cos(Math.min(Math.abs(diff), 1.4)));
@@ -285,11 +315,14 @@ export class Player {
     p.moveAngle = sp > 0.2 ? angDiff(this.heading, Math.atan2(this.vz, this.vx)) : 0;
     // fase da passada em ciclos (contínua quando a velocidade muda; % 1024 mantém a precisão)
     p.stride = (p.stride + sp * dt / cycleLength(sp, p.moveAngle)) % 1024;
+    p.acc += (clamp(this.accL || 0, -14, 12) - p.acc) * Math.min(1, dt * 9);
     const lean = clamp((this.turnVel || 0) * sp * 0.025, -0.35, 0.35);
     p.lean += (lean - p.lean) * Math.min(1, dt * 8);
     // condução: posição da bola no espaço do modelo (x = esquerda, z = frente, escala de 1,80 m)
     // para o pé de toque buscar a bola na passada (anim.js)
     p.drib += ((this.hasBall && !act ? 1 : 0) - p.drib) * Math.min(1, dt * 6);
+    // passada do próximo toque planejado (o pé só vai na bola nela; -1 = sem plano)
+    p.tat = this.hasBall && this.touchSt != null ? this.touchSt : -1;
     if (this.watch && p.drib > 0.01) {
       const hs = (this.data.look?.height || PLAYER.height) / 1.8;
       const rx = this.watch.x - this.x, rz = this.watch.z - this.z;

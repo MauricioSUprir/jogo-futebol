@@ -7,7 +7,7 @@ import { cycleLength } from './anim.js';
 const ANIMS = ['locomotion', 'idle', 'jockey', 'kick', 'pass', 'chip', 'volley', 'header', 'slide', 'tackle', 'throwin',
   'gk_ready', 'gk_dive', 'gk_catch', 'gk_hold', 'gk_throw', 'gk_kick', 'fall', 'getup', 'celebrate', 'dejected', 'shield', 'hug'];
 const AIDX = Object.fromEntries(ANIMS.map((a, i) => [a, i]));
-const PF = ['t', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
+const PF = ['t', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz', 'acc', 'tat'];
 const PSZ = 1 + PF.length;                 // anim + campos
 const PL = 5 + PSZ * 2 + 1;                 // x y z heading visible + pose + blendFrom + blendW
 const BALLSZ = 7;                           // pos + quaternion
@@ -102,7 +102,7 @@ export class Replay {
 }
 
 function newPose() {
-  return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5, diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, blendFrom: null, blendW: 1 };
+  return { anim: 'locomotion', t: 0, speed: 0, moveAngle: 0, stride: 0, lean: 0, foot: 1, power: 0.5, diveSide: 1, diveHeight: 0, variant: 0, lookYaw: 0, lookPitch: 0, drib: 0, bx: 0, bz: 0, acc: 0, tat: -1, blendFrom: null, blendW: 1 };
 }
 function writePose(B, o, p) {
   B[o++] = AIDX[p.anim] ?? 0;

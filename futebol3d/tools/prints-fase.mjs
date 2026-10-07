@@ -7,6 +7,8 @@
 import { openGame, startMatch, pumpOn, stepFrame } from './pump.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const port = arg('port', '8790'), out = arg('out', '/tmp/print'), pular = +arg('pular', 8);
+// --url https://mauriciosuprir.github.io/jogo-futebol/futebol3d/ → prints da versão publicada
+const url = arg('url', null);
 const casos = [
   { nome: 'pc-dia', w: 1280, h: 720, dpr: 1, mobile: false, q: 'alta', tod: 'dia' },
   { nome: 'pc-noite', w: 1280, h: 720, dpr: 1, mobile: false, q: 'alta', tod: 'noite' },
@@ -17,7 +19,7 @@ const casos = [
 const so = arg('so', null);
 for (const c of casos) {
   if (so && !so.split(',').includes(c.nome)) continue;
-  const { browser, page, errors } = await openGame({ w: c.w, h: c.h, dpr: c.dpr, mobile: c.mobile, port });
+  const { browser, page, errors } = await openGame({ w: c.w, h: c.h, dpr: c.dpr, mobile: c.mobile, port, url });
   await startMatch(page, { quality: c.q, timeOfDay: c.tod, userSide: c.mobile ? 'home' : 'none' });
   await pumpOn(page);
   if (c.mobile) {
@@ -27,6 +29,14 @@ for (const c of casos) {
     await page.evaluate(() => window.__golaco.advance(0.3, () => ({ mx: 0, mz: 0, held: {}, press: {}, release: { pass: true }, hold: { pass: 0.1 }, rx: 0, rz: 0 })));
   }
   await page.evaluate((s) => window.__golaco.advance(s), pular);
+  // mesma regra nas duas versões: espera a bola sair da lateral de baixo. A câmera de TV fica do
+  // lado de z negativo; com a bola colada nessa lateral ela olha para baixo e a arquibancada sai
+  // do quadro (a torcida tem que aparecer no print)
+  for (let k = 0; k < 48; k++) {
+    const ok = await page.evaluate(() => { const m = window.__golaco.game.match; return m.phase === 'play' && m.ball.p.z > -4; });
+    if (ok) break;
+    await page.evaluate(() => window.__golaco.advance(0.25));
+  }
   await stepFrame(page, 1000 / 60, 20);
   if (c.rosto) {
     await page.evaluate(() => {

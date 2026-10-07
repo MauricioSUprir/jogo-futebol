@@ -131,35 +131,39 @@ function moveInput(p, mx, mz, sprint, scale) {
   p.sprint = sprint;
 }
 
-// Como nos jogos de futebol atuais: com a bola no pé o jogador não foge dela. O
-// analógico dá a direção, mas se a bola ficou para trás/de lado ou longe o corpo
-// vai até ela primeiro, e logo após o domínio a velocidade é limitada.
-function keepBall(m, p) {
+// Condução sem ímã (auditoria, Fase 2): a bola só muda de rumo num TOQUE (match.js,
+// controlBall/dribbleTouch). Entre os toques o condutor "monta" na bola: se ela não está ao
+// alcance do pé, ele corre até o ponto atrás dela na trajetória (arrancando se precisar). O
+// rumo pedido (analógico ou IA) fica guardado em p.intentX/Z e vira o próximo toque assim que
+// a bola chega ao pé.
+export function keepBall(m, p) {
   const b = m.ball;
   if (p.action || b.held || b.p.y > 0.6) return;
-  // posição relativa prevista (descontando o próprio movimento do jogador)
-  const rx = b.p.x + (b.v.x - p.vx) * 0.12 - p.x, rz = b.p.z + (b.v.z - p.vz) * 0.12 - p.z;
-  const d = Math.hypot(rx, rz) || 1e-6;
-  let dx = p.dx, dz = p.dz;
-  let s = Math.hypot(dx, dz);
-  const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
-  const ahead = (rx * ux + rz * uz);            // bola à frente na direção pedida?
-  // peso do "ir até a bola": cresce com a distância e quando ela não está à frente
-  // (a condução em match.js já mantém a bola no pé; aqui só quando ela ficou longe ou
-  // para trás — sem puxar para o lado do pé bom, senão a corrida entorta)
-  const k = clamp((d - 0.95) / 0.5, 0, 1) + clamp((0.1 - ahead) / 0.35, 0, 1) * 0.7 * clamp((d - 0.45) / 0.3, 0, 1);
+  // rumo pedido: o humano vale na hora; o da IA é suavizado (o desvio de marcadores oscila
+  // quadro a quadro e viraria uma série de cortes)
+  if (p.human || p.intentX == null) { p.intentX = p.dx; p.intentZ = p.dz; }
+  else { const k = Math.min(1, m.dt60 ?? 0.2); p.intentX += (p.dx - p.intentX) * k; p.intentZ += (p.dz - p.intentZ) * k; }
+  const sp = p.speed, ctl = (p.a.ctl ?? p.a.dri) / 99;
+  const base = 0.27 + Math.min(sp, 8) * 0.01, side = 0.1 * p.foot;
+  const rx = -p.fz, rz = p.fx;
+  const fx = p.x + p.fx * base + rx * side, fz = p.z + p.fz * base + rz * side;
+  const footErr = Math.hypot(b.p.x - fx, b.p.z - fz);
+  const reach = 0.3 + 0.12 * ctl;
+  let dx = p.dx, dz = p.dz, s = Math.hypot(dx, dz);
   const bs = Math.hypot(b.v.x, b.v.z);
-  if (k > 0) {
-    const w = Math.min(1, k);
-    const gx = ux * (1 - w) + rx / d * w, gz = uz * (1 - w) + rz / d * w, gl = Math.hypot(gx, gz) || 1;
-    const want = Math.max(s, Math.min(p.sprintSpd, bs + d * 2.5));
-    dx = gx / gl * want; dz = gz / gl * want; s = want;
-  }
-  // logo após o domínio (amortecendo) ou com a bola atrás: não arranca na frente dela
-  const along = (b.v.x * dx + b.v.z * dz) / (s || 1);
-  if ((p.cushion > 0 || ahead < 0.2) && s > 0.01) {
-    const cap = Math.max(p.jog * 0.45, along + 1.6);
-    if (s > cap) { dx *= cap / s; dz *= cap / s; }
+  if (footErr > reach + 0.05) {
+    // monta na bola: ponto atrás dela (um pé de distância) na trajetória prevista
+    const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
+    const hx = bs > 1 ? b.v.x / bs : ux, hz = bs > 1 ? b.v.z / bs : uz;
+    const px = b.p.x + b.v.x * 0.12 - hx * base + hz * side, pz = b.p.z + b.v.z * 0.12 - hz * base - hx * side;
+    const ex = px - p.x, ez = pz - p.z, d = Math.hypot(ex, ez) || 1e-6;
+    // chega na bola com vontade (e não desacelera atrás de uma bola lenta que está à frente:
+    // ele a alcança e o próximo toque já a empurra no ritmo pedido)
+    const frente = (ex * (s > 0.01 ? dx / s : p.fx) + ez * (s > 0.01 ? dz / s : p.fz)) / d;
+    const want = Math.min(p.sprintSpd, Math.max(bs + d * 3.5, frente > 0.7 ? Math.min(s, sp) : 0));
+    dx = ex / d * want; dz = ez / d * want; s = want;
+    // a bola abriu (toque longo): arranca para alcançá-la, se tiver fôlego
+    if (want > p.jog + 0.2 && p.stamina > 0.15) p.sprint = true;
   }
   p.dx = dx; p.dz = dz;
 }

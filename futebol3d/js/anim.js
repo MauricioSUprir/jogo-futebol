@@ -136,6 +136,7 @@ function crs(T, Y, x) {
   const u2 = u * u, u3 = u2 * u;
   return (2 * u3 - 3 * u2 + 1) * y0 + (u3 - 2 * u2 + u) * m0 + (-2 * u3 + 3 * u2) * y1 + (u3 - u2) * m1;
 }
+const herm = (p0, m0, p1, m1, t) => { const t2 = t * t, t3 = t2 * t; return (2 * t3 - 3 * t2 + 1) * p0 + (t3 - 2 * t2 + t) * m0 + (-2 * t3 + 3 * t2) * p1 + (t3 - t2) * m1; };
 const bump = (x, c, w) => { const d = Math.abs(x - c) / w; return d >= 1 ? 0 : 0.5 + 0.5 * Math.cos(d * Math.PI); };
 
 // ---------------------------------------------------------------- estado de trabalho
@@ -597,7 +598,8 @@ function reachY(side, px, pz, tx, ty, tz) {
 // deslocamento do tornozelo quando o pé gira sobre a bola (φ>0) ou o calcanhar (φ<0)
 const PV = { dy: 0, dz: 0 };
 function pivot(phi) {
-  const py = -0.066, pz = phi >= 0 ? 0.125 : -0.055;
+  // pouso: gira sobre o calcanhar; saída: sobre a PONTA (o ponto que fica no chão por último)
+  const py = phi >= 0 ? -0.058 : -0.068, pz = phi >= 0 ? 0.19 : -0.055;
   const c = Math.cos(phi), s = Math.sin(phi);
   PV.dy = -(py * c - pz * s) + py;       // tornozelo sobe
   PV.dz = pz - (py * s + pz * c);
@@ -618,7 +620,7 @@ export function cycleLength(v, moveAngle = 0) {
 const G = { v: 0, ma: 0, stride: 0, t: 0, crouch: 0, width: 0.12, lean: 0, yaw: 0, Lmul: 1, heel: 0, bank: 0, seed: 0, armA: 1, drib: 0, bx: 0, bz: 0, tf: 1, mw: 0, tw0: 0, tw1: 0 };
 const FT = new Float32Array(8); // alvo por pé: x, y, z, pitch
 function gaitReset() {
-  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1; G.mw = 0; G.tw0 = 0; G.tw1 = 0; G.kw = 0; G.kickU = 0;
+  G.v = 0; G.ma = 0; G.stride = 0; G.t = 0; G.crouch = 0; G.width = 0.12; G.lean = 0; G.yaw = 0; G.Lmul = 1; G.heel = 0; G.bank = 0; G.seed = 0; G.armA = 1; G.drib = 0; G.bx = 0; G.bz = 0; G.tf = 1; G.mw = 0; G.tw0 = 0; G.tw1 = 0; G.kw = 0; G.kickU = 0; G.footFix = false; G.mSampled = false; G.my = 0; G.lw0 = 1; G.lw1 = 1; G.pelvisDone = false; G.acc = 0; G.accLean = 0; G.tat = -1;
 }
 function gait() {
   const v = Math.max(G.v, 0), ma = G.ma, t = G.t;
@@ -639,6 +641,9 @@ function gait() {
   const uL = frac(ph), uR = frac(ph + 0.5);
   const dirX = -sM, dirZ = cM;
   // inclinação para a frente
+  // aceleração: tronco à frente na arrancada, para trás na frenagem (apoio), em proporção
+  // (aplicada depois da captura de movimento, na coluna e no peito: ver evalState)
+  G.accLean = clamp(G.acc * 0.032, -0.34, 0.24) * smooth(clamp(v / 1.2, 0, 1));
   const leanF = mv * (lerp(lerp(0.05, 0.14, run), 0.32, spr) * fwd + 0.06 * back + 0.06 * lat) + G.lean;
   const breath = Math.sin(t * TAU / lerp(3.4, 1.4, mv * run)) * lerp(0.018, 0.01, mv);
   const sway = Math.sin(t * 0.9 + G.seed * 5.1) * (1 - mv);
@@ -651,6 +656,14 @@ function gait() {
   set(3, -leanF * 0.35 + G.crouch * 0.3, -G.yaw * 0.4, 0);
   set(4, -leanF * 0.3 - 0.02 + G.crouch * 0.2, -G.yaw * 0.3 + (1 - mv) * 0.06 * Math.sin(t * 0.37 + G.seed * 3.3), 0);
   qEuler(QP, 0, R[0], R[1], R[2], 0);
+  // com captura de movimento, o IK das pernas usa a pelve FINAL (mistura com a do mocap)
+  const useM = G.mw > 0.001 && MOCAP;
+  if (useM) {
+    sampleMocap(); qSlerp(QP, MQ, 0, G.mw, QP);
+    // inclinação nas curvas por cima da pelve do mocap (antes entrava depois do IK)
+    if (G.bank) { qEuler(QB, 0, 0, 0, G.bank * 0.8 * G.mw, 0); qMul(QB, 0, QP, 0, QP, 0); }
+    G.pelvisDone = true;
+  }
   // alvos dos pés
   let flight = 1e9, anyStance = false;
   const bankX = Math.sin(G.bank) * 0.8;
@@ -667,9 +680,29 @@ function gait() {
     } else {
       const b = (u - duty) / (1 - duty);
       const hk = lerp(0.2, 0.52, spr);
-      m = d * (lerp(crs(SW_T, SWW_Z, b), crs(SW_T, SWR_Z, b), run) - 0.08) - run * 0.06 * Math.sin(Math.PI * b);
-      y = lerp(crs(SW_T, SWW_Y, b), crs(SW_T, SWR_Y, b) * hk, run);
+      const swZ = (x) => d * (lerp(crs(SW_T, SWW_Z, x), crs(SW_T, SWR_Z, x), run) - 0.08) - run * 0.06 * Math.sin(Math.PI * x);
+      const swY = (x) => lerp(crs(SW_T, SWW_Y, x), crs(SW_T, SWR_Y, x) * hk, run);
+      m = swZ(b); y = swY(b);
+      // saída e pouso sem patinar: nos 15% iniciais e finais do balanço o pé segue uma curva de
+      // Hermite que casa posição E velocidade com o apoio (-v no chão: sai e pousa "puxando
+      // para trás", como os corredores) e pousa com velocidade vertical ~0
+      const vz = -L * (1 - duty);                       // dm/db no apoio (por unidade de b)
+      const B0 = 0.15, B1 = 0.85, h = 1e-3;
+      if (b < B0) {
+        const t = b / B0, m1 = (swZ(B0 + h) - swZ(B0 - h)) / (2 * h) * B0, y1 = (swY(B0 + h) - swY(B0 - h)) / (2 * h) * B0;
+        // fica na linha do apoio (ponto travado andando a -v) até o pé subir, depois segue a curva
+        m = lerp(-0.58 * d + vz * b, herm(-0.58 * d, vz * B0, swZ(B0), m1, t), smooth(clamp((t - 0.25) / 0.6, 0, 1)));
+        y = herm(0, 0.04 * B0 * 4, swY(B0), y1, t);
+      } else if (b > B1) {
+        const t = (b - B1) / (1 - B1), S = 1 - B1;
+        const m0 = (swZ(B1 + h) - swZ(B1 - h)) / (2 * h) * S, y0 = (swY(B1 + h) - swY(B1 - h)) / (2 * h) * S;
+        // converge para a linha do apoio ANTES de o pé chegar perto do chão
+        m = lerp(herm(swZ(B1), m0, 0.42 * d, vz * S, t), 0.42 * d + vz * (b - 1), smooth(clamp(t / 0.65, 0, 1)));
+        y = herm(swY(B1), y0, 0, 0, t);
+      }
       pitch = lerp(crs(SW_T, SWW_P, b), crs(SW_T, SWR_P, b), run);
+      // pouso: a inclinação converge para a do primeiro instante do apoio (e o pivô entra junto)
+      if (b > B1) pitch = lerp(pitch, -lerp(0.22, 0.02, run), smooth((b - B1) / (1 - B1)));
       flight = Math.min(flight, y);
     }
     // postura parada (idle / prontidão) — pés afastados, levemente desencontrados
@@ -683,7 +716,10 @@ function gait() {
     // instante em que match.js dá o toque) e a empurra com o peito do pé
     if (G.drib > 0 && sd === (G.tf > 0 ? 1 : 0) && u >= duty) {
       const bz = G.bz, reachK = clamp((1.05 - bz) / 0.3, 0, 1) * clamp((bz - 0.05) / 0.15, 0, 1);
-      const w = G.drib * mv * reachK * Math.exp(-(((u - 0.86) / 0.1) ** 2));
+      // com toque planejado (condução sem ímã), só na passada do toque; sem plano, a cada passada
+      let near = Math.exp(-(((u - 0.86) / 0.1) ** 2));
+      if (G.tat >= 0) { let dS = G.stride - G.tat; if (dS > 512) dS -= 1024; if (dS < -512) dS += 1024; near = Math.exp(-(((dS + 0.09) / 0.1) ** 2)); }
+      const w = G.drib * mv * reachK * near;
       if (sd === 0) G.tw0 = w; else G.tw1 = w;
       if (w > 0.001) {
         tx = lerp(tx, clamp(G.bx, -0.35, 0.35) + sg * 0.02, w);
@@ -694,7 +730,8 @@ function gait() {
     }
     // no apoio o pé gira sobre a bola/calcanhar; no balanço o efeito some aos poucos
     pivot(pitch);
-    const fade = u < duty ? 1 : lerp(1, Math.max(1 - (u - duty) / (1 - duty) * 3, 0), mv);
+    const bs = (u - duty) / (1 - duty);
+    const fade = u < duty ? 1 : lerp(1, Math.max(1 - bs * 3, 0, smooth(clamp((bs - 0.85) / 0.15, 0, 1))), mv);
     FT[sd * 4] = tx;
     FT[sd * 4 + 1] = LEG.ankle + y + PV.dy * fade;
     FT[sd * 4 + 2] = tz + PV.dz * fade;
@@ -704,13 +741,31 @@ function gait() {
   let py = pyNom;
   py -= mv * (1 - run) * 0.012 * Math.cos(TAU * 2 * uL) + run * 0.025 * Math.cos(TAU * 2 * (uL - duty * 0.5));
   if (!anyStance) py += Math.min(flight, 0.12) * 0.5;
+  if (useM) py = lerp(py, G.my - G.crouch, G.mw);
   const rx = sway * 0.025, rz = -G.crouch * 0.35;
   for (let sd = 0; sd < 2; sd++) {
     const u = sd === 0 ? uL : uR;
     if (u < duty || mv < 0.99) py = Math.min(py, reachY(sd, rx, rz, FT[sd * 4], FT[sd * 4 + 1], FT[sd * 4 + 2]));
+    else {
+      // pé quase pousando: a pelve já desce para ele alcançar o ponto de apoio (senão a perna
+      // esticada fica curta e o pé "anda" no instante do pouso)
+      const b = (u - duty) / (1 - duty);
+      if (b > 0.7) py = Math.min(py, reachY(sd, rx, rz, FT[sd * 4], FT[sd * 4 + 1], FT[sd * 4 + 2]) + smooth((1 - b) / 0.3) * 0.08);
+    }
   }
   W.rx = rx; W.rz = rz; W.lift = py; W.mode = M_IK;
   for (let sd = 0; sd < 2; sd++) legIK(sd, rx, py, rz, FT[sd * 4], FT[sd * 4 + 1], FT[sd * 4 + 2], FT[sd * 4 + 3] + R[0] * 0, 0.06 - R[1] * (sd === 0 ? 1 : -1));
+  G.footFix = G.yaw === 0;
+  // peso do mocap em cada perna: zero no apoio e perto dele (pé travado pelo IK), cheio no
+  // meio do balanço; acima de ~6 m/s as pernas são só a passada por velocidade (o clipe mais
+  // rápido é de ~15 km/h e não é acelerado)
+  const legM = 1 - smooth(clamp((v - 4.5) / 1.5, 0, 1));
+  for (let sd = 0; sd < 2; sd++) {
+    const u = sd === 0 ? uL : uR;
+    let lk = 1;
+    if (u >= duty) { const b = (u - duty) / (1 - duty); lk = Math.max(1 - smooth(clamp((b - 0.2) / 0.2, 0, 1)), smooth(clamp((b - 0.5) / 0.25, 0, 1))); }
+    if (sd === 0) G.lw0 = (1 - lk) * legM; else G.lw1 = (1 - lk) * legM;
+  }
   // braços opostos às pernas
   const A = mv * lerp(lerp(0.32, 0.62, run), 1.0, spr) * (1 - 0.65 * lat) * G.armA;
   const off = -mv * lerp(0.02, 0.18, run) - 0.1 * spr;
@@ -738,15 +793,21 @@ function evalState(s, P) {
     case 'locomotion': case 'idle':
       G.v = anim === 'idle' ? 0 : s.speed || 0; G.ma = s.moveAngle || 0; G.stride = s.stride || 0;
       G.bank = clamp(s.lean || 0, -0.5, 0.5);
+      G.acc = anim === 'idle' ? 0 : clamp(s.acc || 0, -14, 12);
+      // frenagem forte: base mais baixa (joelhos dobram no apoio)
+      G.crouch = 0.05 * smooth(clamp((-G.acc - 4) / 6, 0, 1));
       G.drib = anim === 'idle' ? 0 : clamp(s.drib || 0, 0, 1); G.bx = s.bx || 0; G.bz = s.bz || 0; G.tf = foot;
+      G.tat = s.tat == null ? -1 : s.tat;
       // conduzindo: base um pouco mais baixa, braços abertos para equilíbrio
-      G.crouch = 0.03 * G.drib;
+      G.crouch += 0.03 * G.drib;
       // captura de movimento: corrida/caminhada para a frente; de lado, de costas ou parado
       // fica a passada procedural (o mocap só tem corrida reta)
       if (MOCAP && anim === 'locomotion') {
         const v = G.v, am = Math.abs(G.ma);
+        // acima de ~6 m/s não há captura (o clipe mais rápido é de ~15 km/h e não pode ser
+        // acelerado): a passada é por comprimento conforme a velocidade + IK dos pés
         G.mw = smooth(clamp((v - 0.45) / 0.55, 0, 1)) * (1 - smooth(clamp((am - 0.3) / 0.45, 0, 1)))
-          * (v > 5.5 ? lerp(1, 0.45, clamp((v - 5.5) / 2.5, 0, 1)) : 1);
+          * (1 - smooth(clamp((v - 4.6) / 1.4, 0, 1)));
       }
       gait();
       break;
@@ -834,8 +895,28 @@ function evalState(s, P) {
     }
     qEuler(q, b * 4, x, y, z, b < 5 ? 0 : 1);
   }
+  // locomoção: orientação do pé no espaço do MODELO (inclinação da passada, guinada fixa).
+  // A compensação por ângulos de Euler não era exata e o pé de apoio torcia com a pelve,
+  // arrastando calcanhar/ponta para o lado (~0,1 m/s de patinação lateral)
+  if (G.pelvisDone) q.set(QP, 0);
+  if (G.footFix && !mir) {
+    fk(P, W.rx, 0, W.rz);
+    for (let sd = 0; sd < 2; sd++) {
+      const fb = sd === 0 ? 13 : 16, sh = fb - 1;
+      qEuler(QD, 0, FT[sd * 4 + 3], sd === 0 ? 0.06 : -0.06, 0, 1);
+      QC[0] = -P.mq[sh * 4]; QC[1] = -P.mq[sh * 4 + 1]; QC[2] = -P.mq[sh * 4 + 2]; QC[3] = P.mq[sh * 4 + 3];
+      qMul(QC, 0, QD, 0, q, fb * 4);
+    }
+  }
   if (G.mw > 0.001) applyMocap(q);
   if (G.kw > 0.001) applyKick(q, mir);
+  // inclinação pela aceleração por cima de tudo (mocap incluído): coluna e peito giram para a
+  // frente/trás; pescoço e cabeça compensam metade para o olhar seguir o jogo
+  if (G.accLean) {
+    const L = G.accLean;
+    const rot = (b, a) => { qEuler(QB, 0, a, 0, 0, 0); qMul(QB, 0, q, b * 4, q, b * 4); };
+    rot(1, L * 0.55); rot(2, L * 0.45); rot(3, -L * 0.3); rot(4, -L * 0.2);
+  }
   if (mir) W.rx = -W.rx;
   fk(P, W.rx, 0, W.rz);
   ground(P);
@@ -866,21 +947,27 @@ function mocapClip(c, ph, out) {
   }
   return c.Y[i0] + (c.Y[i1] - c.Y[i0]) * a;
 }
-function applyMocap(q) {
+// amostra a captura na fase/velocidade atuais (MQ = rotações, G.my = altura da pelve)
+function sampleMocap() {
   const C = MOCAP.clips, v = G.v, ph = G.stride;
   let i = 0; while (i < C.length - 2 && v > C[i + 1].speed) i++;
   const t = clamp((v - C[i].speed) / (C[i + 1].speed - C[i].speed), 0, 1);
   let y = mocapClip(C[i], ph, MQ);
   if (t > 0) { const y2 = mocapClip(C[i + 1], ph, MQB); for (let b = 0; b < NB; b++) qSlerp(MQ, MQB, b * 4, t, MQ); y = lerp(y, y2, t); }
+  G.my = y; G.mSampled = true;
+}
+function applyMocap(q) {
+  if (!G.mSampled) sampleMocap();
   for (let b = 0; b < NB; b++) {
-    // pescoço/cabeça dividem com o olhar; a perna que toca a bola segue a passada procedural
+    // pescoço/cabeça dividem com o olhar; a perna que toca a bola segue a passada procedural;
+    // e as pernas no apoio (e perto dele) ficam com o IK de travamento do pé (G.lw0/lw1)
+    if (b === 0 && G.pelvisDone) continue;
     let w = G.mw * (b === 3 || b === 4 ? 0.45 : 1);
-    if (b >= 11 && b <= 13) w *= 1 - G.tw0; else if (b >= 14) w *= 1 - G.tw1;
+    if (b >= 11 && b <= 13) w *= (1 - G.tw0) * G.lw0; else if (b >= 14) w *= (1 - G.tw1) * G.lw1;
     if (w > 0) qSlerp(q, MQ, b * 4, w, q);
   }
   // inclinação nas curvas (procedural) por cima da pelve do mocap
-  if (G.bank) { qEuler(QB, 0, 0, 0, G.bank * 0.8 * G.mw, 0); qMul(QB, 0, q, 0, q, 0); }
-  W.lift = lerp(W.lift, y - G.crouch, G.mw);
+  if (G.bank && !G.pelvisDone) { qEuler(QB, 0, 0, 0, G.bank * 0.8 * G.mw, 0); qMul(QB, 0, q, 0, q, 0); }
   W.mocap = true;
 }
 
@@ -925,7 +1012,7 @@ function footMin(P, side) {
   for (let k = side * 3; k < side * 3 + 3; k++) m = Math.min(m, pointY(P, k));
   return m;
 }
-const QX = new Float32Array(4), QT = new Float32Array(4);
+const QX = new Float32Array(4), QT = new Float32Array(4), QF = new Float32Array(4), QD = new Float32Array(4), QC = new Float32Array(4);
 // ajusta a altura da raiz ao chão conforme o modo e evita que um pé livre atravesse o gramado
 function ground(P) {
   let y;
@@ -949,14 +1036,15 @@ function ground(P) {
     // qual ponto está mais baixo? ponta -> gira a ponta para cima (δ<0), calcanhar -> δ>0
     const heel = pointY(P, sd * 3), toe = pointY(P, sd * 3 + 2);
     const dir = toe < heel ? -1 : 1;
-    let dl = 0;
-    for (let it = 0; it < 12 && m < 0; it++) {
-      dl += dir * 0.1;
-      qEuler(QX, 0, dl, 0, 0, 1);
-      qMul(P.q, fb * 4, QX, 0, QT, 0);
-      qMul(P.mq, PARENT[fb] * 4, QT, 0, P.mq, fb * 4);
-      m = footMin(P, sd);
-    }
+    // menor giro que tira o pé do chão, por bissecção (antes ia em degraus de 0,1 rad e o
+    // pé "pulava" de um quadro para o outro)
+    const Q0 = QF; Q0.set(P.q.subarray(fb * 4, fb * 4 + 4));
+    const tryRot = (dl) => { qEuler(QX, 0, dl, 0, 0, 1); qMul(Q0, 0, QX, 0, QT, 0); qMul(P.mq, PARENT[fb] * 4, QT, 0, P.mq, fb * 4); return footMin(P, sd); };
+    // (girar uma ponta para cima abaixa a outra: se nem 0,6 rad resolve, não gira — a altura
+    // do corpo resolve abaixo)
+    let lo = 0, hi = 0.6;
+    if (tryRot(dir * hi) < 0) m = tryRot(0);
+    else { for (let it = 0; it < 14; it++) { const mid = (lo + hi) / 2; if (tryRot(dir * mid) < 0) lo = mid; else hi = mid; } m = tryRot(dir * hi); }
     P.q.set(QT, fb * 4);
     // se ainda atravessa (tornozelo baixo demais), sobe o corpo o necessário
     if (m < 0 && mode !== M_SUPPORT) { for (let b = 0; b < NB; b++) mp[b * 3 + 1] -= m; P.root[1] -= m; }
