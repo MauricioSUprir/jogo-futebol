@@ -775,8 +775,8 @@
           (TM.account.avatar ? TM.account.avatar(prof, "vit-prof-ava") : el("span", { class: "vit-ic-tx", text: "👤" }))
         ])
       : el("button", { class: "vit-ic", title: "Entrar", text: "👤", on: { click: function () { go("profile"); } } });
-    var wInfo = { clubs: 0, players: 0, leagues: 0 };
-    try { var W = TM.data.world(); wInfo.clubs = (W.clubs || []).length; wInfo.players = Object.keys(W.playersById || {}).length; wInfo.leagues = (W.leagues || []).length; } catch (e) {}
+    var wInfo = { clubs: 0, leagues: 0 };   // so o que a linha do topo mostra
+    try { var W = TM.data.world(); wInfo.clubs = (W.clubs || []).length; wInfo.leagues = (W.leagues || []).length; } catch (e) {}
     screen.appendChild(el("div", { class: "vit-topo" }, [
       el("div", { class: "vit-marca" }, [
         el("img", { class: "vit-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
@@ -845,11 +845,17 @@
       on: { click: function () { entrar(MODOS[i].rota)(); } } });
     var pontos = MODOS.map(function (m, k) {
       return el("button", { class: "vit-ponto", type: "button", title: m.nome,
+        "aria-label": "Ir para " + m.nome,
         on: { click: function () { vaiPara(k); } } });
     });
+    // quem usa leitor de tela nao ve a carta mudar: o nome do modo e anunciado aqui
+    var aviso = el("div", { class: "vit-aviso", "aria-live": "polite", "aria-atomic": "true" });
     legenda.appendChild(tag);
     legenda.appendChild(cta);
     legenda.appendChild(el("div", { class: "vit-pontos" }, pontos));
+    legenda.appendChild(aviso);
+    palco.setAttribute("role", "group");
+    palco.setAttribute("aria-roledescription", "carrossel de modos de jogo");
 
     // ---- geometria ----
     // distancia circular de k ate a referencia, no intervalo [-N/2, +N/2]
@@ -858,6 +864,10 @@
       return d > N / 2 ? d - N : d;
     }
     var PASSO_PC = 64;        // deslocamento de uma carta, em % da largura da carta
+    // A carta que da a volta no anel esta a |d| = floor(N/2) do centro. Ela so
+    // pode dar a volta se ja estiver invisivel la, entao o sumico e amarrado ao
+    // tamanho da lista: com 7 modos some em 2,8; com 5 modos, em 2.
+    var SOME_EM = Math.max(1.6, Math.min(2.8, Math.floor(N / 2)));
     // o passo fica guardado: ler offsetWidth a cada quadro do arraste obriga o
     // navegador a recalcular o layout toda hora
     // O passo que importa e a distancia REAL na tela entre duas cartas vizinhas,
@@ -894,10 +904,10 @@
     function poe(c, d) {
       var ad = Math.abs(d), lim = Math.min(ad, 2);
       var esc = 1 - 0.16 * lim;                       // 1 · 0,84 · 0,68
-      var prof = -90 * lim;                           // 0 · -90 · -180 (afunda a carta no fundo)
+      var fundo = -90 * lim;                          // 0 · -90 · -180 (afunda a carta)
       var giro = Math.max(-3, Math.min(3, d)) * -18;
-      var op = ad <= 1 ? 1 : Math.max(0, 1 - (ad - 1) * 0.55);
-      c.style.transform = "translateX(" + (d * PASSO_PC) + "%) translateZ(" + prof.toFixed(1)
+      var op = ad <= 1 ? 1 : Math.max(0, 1 - (ad - 1) / (SOME_EM - 1));
+      c.style.transform = "translateX(" + (d * PASSO_PC) + "%) translateZ(" + fundo.toFixed(1)
         + "px) rotateY(" + giro.toFixed(1) + "deg) scale(" + esc.toFixed(3) + ")";
       c.style.opacity = op.toFixed(3);
       var z = 20 - Math.round(lim);
@@ -912,8 +922,16 @@
       c._faixa.style.opacity = Math.max(0, Math.min(1, (1.8 - ad) / 0.55)).toFixed(3);
       var centro = ad < 0.5;
       if (centro !== c._centro) { c._centro = centro; c.classList.toggle("centro", centro); }
-      c.setAttribute("aria-hidden", ad > 1.5 ? "true" : "false");
-      c.tabIndex = ad > 1.5 ? -1 : 0;
+      var oculto = ad > 1.5;
+      if (oculto !== c._oculto) {
+        c._oculto = oculto;
+        c.setAttribute("aria-hidden", oculto ? "true" : "false");
+        c.tabIndex = oculto ? -1 : 0;
+        // se o foco estava nesta carta e ela saiu de cena, traz o foco de volta
+        if (oculto && global.document.activeElement === c) {
+          try { cartas[i].focus({ preventScroll: true }); } catch (e) {}
+        }
+      }
     }
 
     // desvio em cartas: 0 = encaixado, 0,5 = meio caminho para a carta da esquerda
@@ -945,12 +963,37 @@
       }
     }
 
+    // ---- ritmo da animacao ----
+    // A duracao vai numa custom property do trilho e desce por heranca para as
+    // 7 cartas (e para as sombras e faixas): uma escrita no lugar de 21. Tem que
+    // ser escrita ANTES do transform — a duracao e lida quando a transicao comeca.
+    var CURVA_SOLTA = "cubic-bezier(.05,.7,.1,1)";   // chega desacelerando (M3 emphasized decelerate)
+    var CURVA_TOQUE = "cubic-bezier(.2,0,0,1)";      // sai e chega (M3 standard)
+    function ritmo(ms, curva) {
+      trilho.style.setProperty("--vit-dur", ms + "ms");
+      trilho.style.setProperty("--vit-curva", curva || CURVA_SOLTA);
+    }
+    // quanto falta percorrer manda na duracao: encaixe curto e rapido, viagem
+    // longa e mais demorada. Peteleco forte encurta — mas so se for para o lado
+    // em que a carta ja esta indo.
+    function duracaoEncaixe(falta, vel, salto) {
+      var ms = 220 + 200 * Math.min(1, Math.abs(falta) * 2);
+      if (salto && vel && (vel > 0) === (salto > 0) && Math.abs(vel) > LIMITE_FLICK) {
+        ms -= 110 * Math.min(1, Math.abs(vel));
+      }
+      return Math.round(Math.max(200, Math.min(520, ms)));
+    }
+
     // ---- legenda / botao / pontinhos ----
     function pintaLegenda() {
       var m = MODOS[i];
       tag.textContent = m.tag;
       cta.setAttribute("aria-label", "Entrar em " + m.nome);
-      for (var k = 0; k < N; k++) pontos[k].classList.toggle("on", k === i);
+      for (var k = 0; k < N; k++) {
+        pontos[k].classList.toggle("on", k === i);
+        pontos[k].setAttribute("aria-current", k === i ? "true" : "false");
+      }
+      aviso.textContent = m.nome + ", " + (i + 1) + " de " + N;
       if (!menosMovimento) {   // reinicia a animacao de entrada do texto
         tag.classList.remove("troca"); void tag.offsetWidth; tag.classList.add("troca");
       }
@@ -959,6 +1002,8 @@
     function vaiPara(k, semAnimar) {
       k = ((k % N) + N) % N;
       if (k === i) return;
+      var passos = Math.abs(dist(k, i));
+      ritmo(passos >= 2 ? 500 : 400, CURVA_TOQUE);
       i = k;
       posiciona(0, !semAnimar && !menosMovimento);
       pintaLegenda();
@@ -981,7 +1026,7 @@
     var MIN_FLICK_PX = 10;    // abaixo disso e toque tremido, nao peteleco
     var JANELA_VEL = 170;     // ms: so o fim do gesto conta para a velocidade
     var MAX_ARRASTO = 2;      // nao deixa arrastar mais do que duas cartas de uma vez
-    var pid = null, xIni = 0, yIni = 0, xUlt = 0;
+    var pid = null, pidLargado = null, xIni = 0, yIni = 0, xUlt = 0;
     var vxIni = 0, vtIni = 0, tUltMove = 0;
     var arrastando = false, decidiu = false, bloqueiaClique = false, pedido = 0, xAtual = 0, travaTempo = 0;
 
@@ -1009,7 +1054,7 @@
     }
 
     palco.addEventListener("pointerdown", function (e) {
-      if (pid !== null || e.button > 0) return;
+      if (pid !== null || e.button > 0 || e.isPrimary === false) return;
       pid = e.pointerId;
       xIni = xUlt = xAtual = vxIni = e.clientX; yIni = e.clientY;
       vtIni = tUltMove = e.timeStamp;
@@ -1022,8 +1067,10 @@
       if (!decidiu) {
         if (Math.abs(dx) < LIMITE_EIXO && Math.abs(dy) < LIMITE_EIXO) return;
         decidiu = true;
-        // gesto mais vertical do que horizontal: deixa a pagina rolar
-        if (Math.abs(dx) <= Math.abs(dy)) { pid = null; return; }
+        // gesto mais vertical do que horizontal: deixa a pagina rolar.
+        // O dedo fica marcado ate levantar: zerar pid aqui deixava um segundo
+        // dedo (pinca de zoom, por exemplo) virar arraste no meio da rolagem.
+        if (Math.abs(dx) <= Math.abs(dy)) { pidLargado = pid; pid = null; return; }
         arrastando = true;
         trilho.classList.add("arrastando");
         try { palco.setPointerCapture(pid); } catch (err) {}
@@ -1049,6 +1096,7 @@
         travaTempo = setTimeout(function () { bloqueiaClique = false; travaTempo = 0; }, 400);
       }
       limpa();
+      ritmo(duracaoEncaixe(f - salto, vel, salto), CURVA_SOLTA);
       // arrastar para a direita traz a carta da esquerda para o meio
       i = ((i - salto) % N + N) % N;
       posiciona(0, !menosMovimento);
@@ -1063,10 +1111,13 @@
       e.stopPropagation(); e.preventDefault();
     }, true);
 
-    palco.addEventListener("pointerup", solta);
+    function largou(e) { if (e.pointerId === pidLargado) pidLargado = null; }
+    palco.addEventListener("pointerup", function (e) { largou(e); solta(e); });
     palco.addEventListener("pointercancel", function (e) {
+      largou(e);
       if (e.pointerId !== pid) return;
       limpa();
+      ritmo(320);
       posiciona(0, !menosMovimento);
     });
 
