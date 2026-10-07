@@ -75,10 +75,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/gols-media.mjs 24` (~8–10 gols/partida;
   varia ±1,5 entre execuções — usar 24 partidas); proteção `tools/protecao-test.mjs`; contato de corpo
   `tools/contato-test.mjs`; fadiga `tools/fadiga.mjs`.
-- Especificação "Master Gameplay & Visual Spec" (dono): Fase A (posse/proteção/primeiro toque/giro/0,93×/troca
-  direcional) e Fase B (fadiga em 2 camadas, contato por massa/força/equilíbrio, antecipação) feitas.
-  Próximas: C (IA: intensidade, utilidade, traços), D (modos, controles móveis ajustáveis), E (cantos/áudio
-  espacial), F (clima, câmeras, presets). Atributos detalhados em `teams.js` (detailAttrs).
+- Especificação "Master Gameplay & Visual Spec" (dono): fases A–F feitas. A posse/proteção/primeiro toque/giro/
+  0,93×/troca direcional; B fadiga em 2 camadas, contato por massa/força/equilíbrio, antecipação; C IA em
+  `js/tactics.js` (intensidade contextual, utilidade por função, traços de personalidade — `tools/intensidade-test.mjs`);
+  D modos (`MODES` em config.js) e controles de toque ajustáveis (tamanho/transparência/editor de posição,
+  tocar no jogador); E cantos por setor `js/chants.js` (`tools/cantos-test.mjs`) + áudio espacial (PannerNode
+  por setor e na bola); F clima (`WEATHER`, `ball.js` SURFACE, `js/rain.js`, `tools/clima-test.mjs`), câmera TV
+  adaptativa (camera.js), preset gráfico Competitivo. Atributos detalhados em `teams.js` (detailAttrs).
   Celular: 4 botões (+ DIVIDIDA na defesa) e gestos — conferir com `tools/gesture-test.mjs`.
 
 ### Testes (rodar antes de todo commit do futebol3d)
