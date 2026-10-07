@@ -121,6 +121,14 @@ export function buildStadium(renderer, scene, opts = {}) {
 
   // ---- céu e ambiente
   const { sky, skyMat } = buildSky(isNight, P, detail);
+  // clima (§33): céu fechado e luz mais baixa com nuvens/chuva (antes do ambiente PMREM)
+  const W = opts.weather || { rain: 0, cloud: 0 };
+  if (skyMat && W.cloud) {
+    const su = skyMat.uniforms;
+    su.uCloud.value = Math.max(su.uCloud.value, 0.45 + 0.5 * W.cloud);
+    su.skyGain.value *= 1 - 0.4 * W.cloud;
+    su.turbidity.value += 7 * W.cloud;
+  }
   root.add(sky);
   const envRT = buildEnv(renderer, isNight, skyMat, { home: homeColor, accent });
   const envMap = envRT.texture;
@@ -158,14 +166,15 @@ export function buildStadium(renderer, scene, opts = {}) {
     sh.radius = 2;
   }
   scene.add(mainLight, mainLight.target);
-  const hemi = new THREE.HemisphereLight(P.hemiSky, P.hemiGround, P.hemiI);
+  if (W.cloud && !isNight) mainLight.intensity *= 1 - 0.5 * W.cloud;        // sol encoberto
+  const hemi = new THREE.HemisphereLight(P.hemiSky, P.hemiGround, P.hemiI * (1 + 0.25 * W.cloud * (isNight ? 0 : 1)));
   hemi.name = 'luz-hemisferio';
   scene.add(hemi);
 
   // ---- peças
   const ctx = {
     U, quality, homeColor, homeColor2, awayColor, stadiumName, isNight, anisotropy, shadows, detail,
-    accent, seatA: seatCol(homeColor), seatB: seatCol(homeColor2), mow: opts.mowPattern || 'faixas', tod,
+    accent, seatA: seatCol(homeColor), seatB: seatCol(homeColor2), mow: opts.mowPattern || 'faixas', tod, rain: W.rain || 0,
   };
   const pitch = buildPitch(ctx);
   root.add(pitch);

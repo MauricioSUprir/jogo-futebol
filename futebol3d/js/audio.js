@@ -590,8 +590,22 @@ export class GameAudio {
     this.chantG = g(0); this.chantG.connect(this.crowdIn);
     this.chantSrc = null;
     this.songIn = g(1); this.songIn.connect(this.crowdIn);
+    // ---- áudio espacial (§32): 4 setores da arquibancada posicionados no estádio e os
+    // impactos da bola saindo de onde a bola está; o ouvinte acompanha a câmera.
+    const mkPan = (x, y, z) => {
+      const p = ctx.createPanner();
+      p.panningModel = 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = 25; p.rolloffFactor = 0.6; p.maxDistance = 400;
+      if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
+      return p;
+    };
+    this.secPos = [[-62, 9, 0], [0, 11, 47], [62, 9, 0], [0, 11, -47]];
+    this.secG = this.secPos.map(([x, y, z]) => { const gg = g(0), pn = mkPan(x, y, z); gg.connect(pn); pn.connect(this.crowdIn); return gg; });
+    this.secSrc = null; this._secSong = null;
+    this.sfxPan = mkPan(0, 0, 0); this.sfxPan.refDistance = 18; this.sfxPan.rolloffFactor = 0.35;
+    this.hitIn.disconnect(); this.hitIn.connect(this.sfxPan); this.sfxPan.connect(this.sfxIn);
     this._dir.next = (this._clock ?? ctx.currentTime) + rand(4, 8);
     this.setVolumes({});
+    if (this._rainLvl) setTimeout(() => this.setRain(this._rainLvl), 0);
   }
 
   // gerador que constrói o recurso 'key'
@@ -919,7 +933,7 @@ export class GameAudio {
       return [this.bufs[k] ? k : 'chant', (0.75 + 0.35 * clamp01(e / 20)) * mk];
     }
     const d = this._dir;
-    if (this._chantOn) { d.key = null; return [null, 0]; }           // o canto do jogo manda
+    if (this._chantOn || this._engineOn) { d.key = null; return [null, 0]; }   // o canto do jogo / motor de cantos manda
     // pausas curtas entre cantos: a arquibancada canta o jogo todo (torcida irritada canta menos)
     if (d.key && now >= d.until) { d.key = null; d.next = now + rand(2, 5) / (1 + Math.max(0, md)) + 6 * Math.max(0, -md); }
     if (!d.key && now >= d.next) {
@@ -1115,6 +1129,67 @@ export class GameAudio {
         for (let k = 0; k < 4; k++) this._shout(t + rand(0, 1), 0.07 * s, true);
       }
     } catch (e) { console.warn('GameAudio.crowd', e); }
+  }
+
+  // Motor de cantos (chants.js): o: { song, rate, sectors[4], state } ou null para desligar.
+  chantSectors(o) {
+    const ctx = this.ctx; if (!ctx) return;
+    try {
+      const t = this._t();
+      this._engineOn = !!o;
+      const party = this._now() < this._partyB;          // a festa do gol tem tocador próprio
+      const song = o && !party ? o.song : null;
+      if (song !== this._secSong || (o && this.secSrc && Math.abs(o.rate - this._secRate) > 1e-3)) {
+        if (this.secSrc) { const old = this.secSrc; for (const gg of this.secG) { gg.gain.cancelScheduledValues(t); gg.gain.setTargetAtTime(0, t, 0.4); } setTimeout(() => old.forEach(x => { try { x.stop(); } catch (e) { /* já parou */ } }), 1600); }
+        this.secSrc = null; this._secSong = song;
+        if (song) {
+          if (!this.bufs[song]) this._want(song);                 // offline gera na hora; online chega depois
+          if (!this.bufs[song]) { this._secSong = null; return; }
+          // as 4 cópias começam juntas (mesmo canto), cada uma no seu setor
+          this.secSrc = this.secG.map((gg) => { const x = ctx.createBufferSource(); x.buffer = this.bufs[song]; x.loop = true; x.playbackRate.value = o.rate || 1; x.connect(gg); x.start(t + 0.05); return x; });
+          this._secRate = o.rate || 1;
+        }
+      }
+      if (!this.secSrc) return;
+      const md = this.mood, mk = md < 0 ? Math.max(0.25, 1 + 0.8 * md) : 1 + 0.3 * md;
+      const vol = (0.42 + 0.3 * (this._I || 0.3)) * mk * (1 - 0.6 * this.duck);
+      o.sectors.forEach((v, i) => this.secG[i].gain.setTargetAtTime(v * vol, t, o.state === 'interrompido' ? 0.25 : 0.9));
+    } catch (e) { console.warn('GameAudio.chantSectors', e); }
+  }
+
+  // chuva (§33): chiado agudo das gotas + grave do aguaceiro, volume pelo nível 0..1
+  setRain(level = 0) {
+    const ctx = this.ctx; if (!ctx) { this._rainLvl = level; return; }
+    try {
+      const t = this._t();
+      if (!this._rain && level > 0 && this.bufs.pink) {
+        const mk = (type, f, q) => { const s = ctx.createBufferSource(); s.buffer = this.bufs.pink; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(this.masterG); s.start(t, Math.random() * 2); return g; };
+        this._rain = { hi: mk('highpass', 3800, 0.4), lo: mk('bandpass', 900, 0.5) };
+      }
+      if (this._rain) {
+        this._rain.hi.gain.setTargetAtTime(0.05 * level, t, 1.5);
+        this._rain.lo.gain.setTargetAtTime(0.035 * level * level, t, 1.5);
+      }
+    } catch (e) { console.warn('GameAudio.setRain', e); }
+  }
+
+  // ouvinte = câmera (posição, frente, cima)
+  setListener(px, py, pz, fx, fy, fz) {
+    const L = this.ctx && this.ctx.listener; if (!L) return;
+    try {
+      if (L.positionX) {
+        const t = this._t();
+        L.positionX.setTargetAtTime(px, t, 0.05); L.positionY.setTargetAtTime(py, t, 0.05); L.positionZ.setTargetAtTime(pz, t, 0.05);
+        L.forwardX.setTargetAtTime(fx, t, 0.05); L.forwardY.setTargetAtTime(fy, t, 0.05); L.forwardZ.setTargetAtTime(fz, t, 0.05);
+        L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0;
+      } else { L.setPosition(px, py, pz); L.setOrientation(fx, fy, fz, 0, 1, 0); }
+    } catch (e) { /* navegador sem ouvinte 3D */ }
+  }
+
+  // de onde saem os impactos (chute, quique, corpos): a posição da bola
+  setSfxPos(x, y, z) {
+    const p = this.sfxPan; if (!p) return;
+    if (p.positionX) { p.positionX.value = x; p.positionY.value = y; p.positionZ.value = z; } else p.setPosition(x, y, z);
   }
 
   chant(on) {

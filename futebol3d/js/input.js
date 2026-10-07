@@ -129,6 +129,7 @@ export class Input {
       if (!sw) return;
       const d = Math.hypot(e.clientX - sw.x, e.clientY - sw.y);
       if (d > 30 && performance.now() - sw.t < this.swipeMs) this.taps.skill = 0.05;
+      else if (d < 14 && performance.now() - sw.t < 350) this.onTapScreen?.(e.clientX, e.clientY);   // toque curto: selecionar jogador
       sw = null;
     });
     swipe.addEventListener('pointercancel', () => { sw = null; });
@@ -148,6 +149,7 @@ export class Input {
       let st = null;
       b.addEventListener('pointerdown', (e) => {
         e.preventDefault(); b.setPointerCapture(e.pointerId);
+        if (this.editing) return;
         st = { x: e.clientX, y: e.clientY, key: this.touchKey[id] };
         // TROCAR decide no soltar: toque = troca inteligente; arrastar = troca direcional
         if (st.key !== 'switch') this.touchBtn[st.key] = true;
@@ -178,12 +180,61 @@ export class Input {
       pad.appendChild(b);
       this.touchButtons[id] = b;
     }
+    if (this.settings) this.applyTouchLayout(this.settings);
     const pause = document.createElement('button');
     pause.className = 'tc-pause'; pause.type = 'button'; pause.setAttribute('aria-label', 'Pausar');
     pause.innerHTML = '<i></i><i></i>';
     pause.addEventListener('click', () => this.onPause && this.onPause());
     root.appendChild(pause);
     this.context = '';
+  }
+
+  // Tamanho, transparência e posição dos botões (configurações; §15 "redimensionável").
+  applyTouchLayout(st) {
+    if (!this.touchRoot) return;
+    this.touchRoot.style.setProperty('--tc-scale', st.touchScale ?? 1);
+    this.touchRoot.style.setProperty('--tc-alpha', st.touchOpacity ?? 0.85);
+    for (const [id, b] of Object.entries(this.touchButtons || {})) {
+      const o = (st.touchLayout || {})[id] || [0, 0];
+      b.style.setProperty('--dx', o[0] + 'vh'); b.style.setProperty('--dy', o[1] + 'vh');
+    }
+  }
+
+  // Editor: arrasta os botões para onde quiser; "Concluir" salva, "Padrão" volta ao original.
+  editTouchLayout(root, st, save, onClose) {
+    const wasHidden = root.classList.contains('hidden');
+    if (!this.touchButtons) this.buildTouch(root);
+    root.classList.remove('hidden');
+    root.classList.add('tc-editing');
+    this.editing = true;
+    const layout = { ...(st.touchLayout || {}) };
+    const bar = document.createElement('div');
+    bar.className = 'tc-editbar';
+    bar.innerHTML = '<b>Arraste os botões</b><button type="button" data-a="reset">Padrão</button><button type="button" data-a="ok">Concluir</button>';
+    root.appendChild(bar);
+    const vh = innerHeight / 100;
+    const offs = [];
+    for (const [id, b] of Object.entries(this.touchButtons)) {
+      b.classList.remove('hide');
+      let d = null;
+      const down = (e) => { if (!this.editing) return; e.stopPropagation(); const o = layout[id] || [0, 0]; d = { x: e.clientX, y: e.clientY, o }; b.classList.add('on'); };
+      const move = (e) => { if (!d) return; const o = [d.o[0] + (e.clientX - d.x) / vh * -1, d.o[1] + (e.clientY - d.y) / vh]; layout[id] = [Math.round(o[0] * 10) / 10, Math.round(o[1] * 10) / 10]; this.applyTouchLayout({ ...st, touchLayout: layout }); };
+      const up = () => { d = null; b.classList.remove('on'); };
+      b.addEventListener('pointerdown', down); b.addEventListener('pointermove', move); b.addEventListener('pointerup', up);
+      offs.push(() => { b.removeEventListener('pointerdown', down); b.removeEventListener('pointermove', move); b.removeEventListener('pointerup', up); });
+    }
+    const close = (keep) => {
+      offs.forEach(f => f());
+      bar.remove(); root.classList.remove('tc-editing'); this.editing = false;
+      if (keep) save(layout); else this.applyTouchLayout(st);
+      if (wasHidden) root.classList.add('hidden');
+      this.context = ''; onClose?.();
+    };
+    bar.addEventListener('click', (e) => {
+      const a = e.target.dataset.a;
+      if (a === 'reset') { for (const k in layout) delete layout[k]; this.applyTouchLayout({ ...st, touchLayout: layout }); }
+      if (a === 'ok') close(true);
+    });
   }
 
   // Troca os rótulos (e a função do 3º botão) conforme a situação.

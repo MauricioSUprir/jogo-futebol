@@ -11,6 +11,8 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
 import { PerfHud } from './perfhud.js';
 import { switchCandidate } from './human.js';
+import { ChantEngine } from './chants.js';
+import { Rain } from './rain.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -174,6 +176,29 @@ addEventListener('pointerdown', () => { if (game && game.match.phase === 'intro'
 addEventListener('keydown', unlockAudio);
 
 const input = new Input();
+// controles de toque ajustáveis (configurações)
+input.settings = settings;
+addEventListener('golaco:touch-layout', () => input.applyTouchLayout(settings));
+addEventListener('golaco:edit-touch', () => {
+  input.editTouchLayout($('touch'), settings, (layout) => { settings.touchLayout = layout; saveSettings(settings); }, () => { if (game) input.setContext('attack'); });
+});
+// tocar num companheiro (sem a bola) seleciona ele (§14)
+input.onTapScreen = (x, y) => {
+  const g = game;
+  if (!g || !settings.tapSelect || g.paused) return;
+  const m = g.match, t = m.userTeam;
+  if (!t || m.phase !== 'play' || (m.owner && m.owner.team === t)) return;
+  let best = null, bd = 70;
+  const v = new THREE.Vector3();
+  for (const p of t.players) {
+    if (p.sentOff || p.isGK) continue;
+    v.set(p.x, 1, p.z).project(g.camera);
+    const sx = (v.x + 1) / 2 * innerWidth, sy = (1 - v.y) / 2 * innerHeight;
+    const d = Math.hypot(sx - x, sy - y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (best && best !== m.controlled) { m.setControlled(best); m.lastSwitchT = m.time; }
+};
 const hud = new Hud($('hud'));
 let game = null;
 
@@ -203,7 +228,7 @@ async function startMatch(cfg) {
   const stadium = buildStadium(renderer, scene, {
     quality: Q, timeOfDay: settings.timeOfDay || 'noite',
     homeColor: cfg.home.colors?.primary || cfg.homeKit.shirt, homeColor2: cfg.home.colors?.secondary, awayColor: cfg.awayKit.shirt,
-    stadiumName: cfg.home.stadium || `Arena ${cfg.home.city || cfg.home.name}`, wind: match.wind,
+    stadiumName: cfg.home.stadium || `Arena ${cfg.home.city || cfg.home.name}`, wind: match.wind, weather: match.weather,
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';
   await new Promise(r => setTimeout(r, 20));
@@ -223,19 +248,22 @@ async function startMatch(cfg) {
   let fx = null;
   try { fx = new StadiumFX(scene, { quality: Q, isNight: stadium.isNight, homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt, sunDir: stadium.sunDir, wind: match.wind }); } catch (e) { console.warn('efeitos indisponíveis', e); }
   const ball = new BallMesh(scene, Q);
+  let rain = null;
+  if (match.weather.rain > 0) try { rain = new Rain(scene, { level: match.weather.rain, quality: presetKey, night: stadium.isNight }); } catch (e) { console.warn('chuva indisponível', e); }
   const rig = new CameraRig(camera);
   rig.setMode(settings.camera);
   rig.aspect = camera.aspect;
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, facePool, faceCells, acc: 0, paused: false, t: 0,
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, rain, facePool, faceCells, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0 };
   applyQuality(true);
 
   hud.init(match, cfg, { touch });
   const tc = $('touch');
   if (touch) { tc.classList.remove('hidden'); input.buildTouch(tc); } else tc.classList.add('hidden');
+  input.settings = settings; input.applyTouchLayout(settings);
   input.enabled = true;
   input.onPause = () => togglePause();
   input.onAny = () => {
@@ -250,12 +278,15 @@ async function startMatch(cfg) {
   document.body.classList.add('in-game');
   load.classList.add('hidden');
   if (match.phase !== 'intro') hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
-  audio.chant(true);
+  game.chants = new ChantEngine(cfg.home.id, cfg.away.id);
+  audio.setRain(match.weather.rain);
   last = performance.now();
 }
 
 function stadiumLabel(cfg) {
-  const tod = { dia: 'Tarde de sol', tarde: 'Fim de tarde', noite: 'Noite de refletores' }[cfg.settings.timeOfDay] || '';
+  const wk = game?.match?.weatherKey || 'seco';
+  const tod = wk === 'seco' ? ({ dia: 'Tarde de sol', tarde: 'Fim de tarde', noite: 'Noite de refletores' }[cfg.settings.timeOfDay] || '')
+    : ({ nublado: 'Tempo nublado', chuva: 'Chuva', temporal: 'Temporal' }[wk] + ({ dia: ' à tarde', tarde: ' no fim de tarde', noite: ' à noite' }[cfg.settings.timeOfDay] || ''));
   return `${cfg.home.stadium || 'Arena ' + (cfg.home.city || '')} · ${tod}`;
 }
 
@@ -263,8 +294,8 @@ function endGame(silent) {
   const g = game;
   if (!g) return;
   input.enabled = false;
-  audio.chant(false);
-  g.fx?.dispose?.();
+  audio.chant(false); audio.chantSectors(null);
+  g.fx?.dispose?.(); g.rain?.dispose(); audio.setRain?.(0);
   g.stadium.dispose?.();
   g.players.dispose?.();
   g.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt => { mt.map?.dispose(); mt.dispose(); }); });
@@ -454,7 +485,7 @@ function finishReplay() {
 }
 
 function endMatch(g, result) {
-  audio.chant(false);
+  audio.chant(false); audio.chantSectors(null);
   const cfg = g.cfg;
   setTimeout(() => {
     endGame(true);
@@ -586,7 +617,13 @@ function render(g, dt) {
   if (c && c.pen && (!sp || m.phase !== 'setpiece') && (!m.shootout || !m.shootout.active || m.time - (m.lastKick?.t || 0) > 1.6)) g.rig.setCinematic(null);
   if (m.phase === 'intro') introCamera(g);
   if (g.rig.snap && g.mblur) g.mblur.reset();
-  g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0 });
+  // lançamento: onde a bola vai cair (a câmera antecipa)
+  let land = null;
+  if (!m.ball.held && m.ball.p.y > 1.5 && m.pred && Math.hypot(m.ball.v.x, m.ball.v.z) > 8) {
+    const pr = m.pred;
+    for (let k = 1; k < pr.n; k++) if (pr.y(k) < 0.4) { land = { x: pr.x(k), z: pr.z(k), t: pr.t(k) }; break; }
+  }
+  g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0, ballVel: g.replaying ? null : m.ball.v, land: g.replaying ? null : land });
 
   // estádio (telões com o placar), efeitos e HUD
   g.stadium.update(dt, g.t, m.excitement, g.camera);
@@ -596,19 +633,29 @@ function render(g, dt) {
       clock: m.shootout ? 'PÊN' : `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`, homeColor: g.cfg.homeKit.shirt, awayColor: g.cfg.awayKit.shirt });
   }
   g.fx?.update(dt, g.camera);
+  g.rain?.update(dt, g.camera);
   hud.update(dt, m, g.camera, {
     replay: g.replaying, names: settings.names !== false, radar: settings.radar !== false, charging: input.charging,
     right: g.rig.right, fwd: g.rig.fwd, hint: hintFor(g),
   });
   if (touch) input.setContext(touchContext(m));
   audio.update(dt, { excitement: m.excitement, attackThreat: m.threat });
-  // torcida cantando de tempos em tempos
-  g.chantT -= dt;
-  if (g.chantT <= 0) {
-    g.chantOn = !g.chantOn; audio.chant(g.chantOn && m.phase !== 'goal'); g.chantT = g.chantOn ? 25 + Math.random() * 20 : 12 + Math.random() * 15;
+  // motor de cantos (§31): nasce num setor, espalha, cai no perigo, "UUUH!", palmas…
+  if (g.chants && m.phase !== 'intro' && !g.replaying) {
+    const hs = m.teams[0].score, as = m.teams[1].score;
+    const goal = g.lastScore && (hs > g.lastScore[0] ? 'home' : as > g.lastScore[1] ? 'away' : null);
+    g.lastScore = [hs, as];
+    const co = g.chants.update(dt, { phase: m.phase, threat: m.threat, homeScore: hs, awayScore: as, minute: m.clock / 60, homeIntensity: m.teams[0].intensity, goal });
+    audio.chantSectors(co);
+    if (co.event === 'ooh') audio.crowd('ooh', 0.9);
+    else if (co.event === 'applause') audio.crowd('cheer', 0.5);
     // a arquibancada canta junto com o som (pulo/braços no compasso)
-    if (g.chantOn && m.phase !== 'goal') g.stadium.crowdChant?.('home', 1, g.chantT);
+    const singing = co.sectors[0] + co.sectors[1] + co.sectors[3] > 1.2;
+    if (singing && !g.crowdSinging) g.stadium.crowdChant?.('home', 1, 20);
+    g.crowdSinging = singing;
   }
+  // áudio espacial: ouvinte na câmera, impactos na bola
+  { const c = g.camera, f = g.rig.fwd; audio.setListener(c.position.x, c.position.y, c.position.z, f.x, f.y ?? 0, f.z); audio.setSfxPos(m.ball.p.x, m.ball.p.y, m.ball.p.z); }
 
   g.sunFit?.update(g.camera);
   g.players.lodUpdate?.(g.camera);

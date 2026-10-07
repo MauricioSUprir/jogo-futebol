@@ -87,7 +87,7 @@ export class Ball {
       ay = 0; v.y = 0;
       const hs = Math.hypot(v.x, v.z);
       if (hs > 1e-4) {
-        const dec = BALL.rollResistance + BALL.grassDrag * hs;
+        const dec = BALL.rollResistance * SURFACE.roll + BALL.grassDrag * SURFACE.drag * hs;
         const f = Math.max(0, hs - dec * dt) / hs;
         v.x *= f; v.z *= f;
         // efeito lateral residual faz a bola "fechar" levemente rolando
@@ -109,9 +109,9 @@ export class Ball {
       if (!this.rolling) {
         const vin = -v.y;
         if (vin > 0.55) {
-          const e = BALL.restitution * (vin > 12 ? 0.9 : 1);
+          const e = BALL.restitution * SURFACE.rest * (vin > 12 ? 0.9 : 1);
           v.y = vin * e;
-          this.frictionImpulse(vin * (1 + e));
+          this.frictionImpulse(vin * (1 + e) * SURFACE.fric);
           if (vin > 1.2) this.emit('bounce', Math.min(1, vin / 14));
         } else {
           v.y = 0;
@@ -351,6 +351,17 @@ function landDistance(o, vx, vy, vz, w, dirx, dirz, targetY, wind) {
 }
 
 // Passe rasteiro: velocidade inicial para chegar ao alvo com `arrive` m/s.
+// Superfície do gramado (clima, §33): multiplicadores aplicados a TODAS as bolas, inclusive
+// as de previsão — o passe já é calculado para o gramado molhado.
+//  roll: resistência ao rolar · drag: arrasto da grama · rest: quique · fric: atrito no quique
+export const SURFACE = { roll: 1, drag: 1, rest: 1, fric: 1 };
+export function setSurface(rain = 0) {
+  SURFACE.roll = 1 - 0.28 * rain;     // molhado: a bola "corre" mais rente
+  SURFACE.drag = 1 - 0.15 * rain;
+  SURFACE.rest = 1 - 0.2 * rain;      // quica menos e escorrega
+  SURFACE.fric = 1 - 0.45 * rain;
+}
+
 export function solveGround(o, tg, arrive) {
   const dx = tg.x - o.x, dz = tg.z - o.z;
   const D = Math.hypot(dx, dz) || 0.1;

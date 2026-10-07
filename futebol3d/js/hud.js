@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { PITCH, GOAL, clamp } from './config.js';
 import { crestSVG } from './teams.js';
+import { TRAITS } from './tactics.js';
 
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
 const _v = new THREE.Vector3();
@@ -101,7 +102,7 @@ export class Hud {
         const sur = p.data.name.split(' ').slice(-1)[0];
         return `<div class="lu-p" style="top:${top.toFixed(1)}%;left:${left.toFixed(1)}%;--d:${(0.25 + k * 0.06).toFixed(2)}s">
           <span class="lu-ph" style="border-color:${ring}">${src ? `<img src="${src}" alt="">` : ''}<em style="background:${ring};color:${num}">${p.data.num}</em></span>
-          <b>${sur}</b></div>`;
+          <b>${sur}${(p.traits || []).length ? `<i class="lu-tr" title="${p.traits.map(k => TRAITS[k]?.nome).join(' · ')}">${p.traits.map(k => TRAITS[k]?.ic || '').join('')}</i>` : ''}</b></div>`;
       }).join('');
       return `<div class="lu-team">
         <header><span class="lu-crest">${crestSVG(t.data, 44)}</span><div><b>${t.data.name}</b><small>${t.data.formation} · ${t.data.city || ''}</small></div><i style="background:${kit.shirt}"></i></header>

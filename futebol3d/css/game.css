@@ -140,7 +140,16 @@ body { font-family: var(--ui); color: #fff; -webkit-font-smoothing: antialiased;
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); transition: transform .06s, background .06s; }
 .tc-btn span { position: relative; z-index: 1; text-align: center; padding: 0 .4vh; white-space: nowrap; }
 .tc-btn .tc-charge { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--charge, 0) * 100%); background: rgba(30,227,122,.55); }
-.tc-btn.on { transform: scale(.93); background: rgba(30,227,122,.4); border-color: #1ee37a; }
+.tc-btn { transform: translate(calc(var(--dx, 0vh) * -1), var(--dy, 0vh)) scale(calc(var(--tc-scale, 1) * var(--press, 1))); opacity: var(--tc-alpha, .85); }
+.tc-btn.on { --press: .93; background: rgba(30,227,122,.4); border-color: #1ee37a; }
+/* editor de posição dos botões */
+#touch.tc-editing { z-index: 500; background: rgba(0,0,0,.78); pointer-events: auto; }
+#touch.tc-editing .tc-btn { outline: .4vh dashed rgba(255,210,60,.8); cursor: grab; }
+#touch.tc-editing .tc-zone, #touch.tc-editing .tc-swipe { pointer-events: none; }
+.tc-editbar { position: absolute; left: 50%; top: 4vh; transform: translateX(-50%); display: flex; gap: 1.5vh; align-items: center; pointer-events: auto;
+  background: rgba(6,10,8,.9); border: .3vh solid #1ee37a; border-radius: 2vh; padding: 1.2vh 2vh; color: #fff; font: 600 2.6vh/1 var(--disp); }
+.tc-editbar button { font: 700 2.4vh/1 var(--disp); padding: 1vh 2.2vh; border-radius: 1.4vh; border: .3vh solid #1ee37a; background: #0b1f14; color: #fff; text-transform: uppercase; }
+.tc-editbar button[data-a="ok"] { background: #1ee37a; color: #04130a; }
 .tc-btn.off { opacity: .22; }
 .tc-btn.big { width: 23vh; height: 23vh; font-size: 4.2vh; border-color: #1ee37a; box-shadow: 0 0 2.5vh rgba(30,227,122,.25); }
 .tc-btn.sm { width: 12vh; height: 12vh; font-size: 2.3vh; letter-spacing: 0; }
@@ -206,3 +215,6 @@ body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--sa
 .lu-p b { margin-top: .2em; font: 700 .72em/1.1 var(--ui); text-shadow: 0 .1em .3em #000, 0 0 .2em #000; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 @media (pointer: coarse) { .lu-team { width: 15em; font-size: .78em; } .lu-pitch { height: 21em; } }
 @media (max-height: 460px) { .lu-team { font-size: .68em; } .lu-team header { padding: .35em .7em; } }
+
+/* traços de personalidade na escalação (§20) */
+.lu-p b .lu-tr { font-style: normal; margin-left: .25em; font-size: .9em; filter: drop-shadow(0 0 2px rgba(0,0,0,.8)); }

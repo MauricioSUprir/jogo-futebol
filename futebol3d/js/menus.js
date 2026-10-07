@@ -8,7 +8,7 @@
 // Pausa: showPause({ onResume, onRestart, onQuit, onSettings }). "Configurações" abre o painel dentro
 // da pausa; ao fechá-lo chamamos onSettings(settings) para o núcleo aplicar o que mudou.
 // "Sair" chama onQuit() e volta ao menu (ou ao painel do torneio, se era jogo de torneio).
-import { DIFFICULTY, QUALITY, DEFAULT_SETTINGS, FORMATIONS } from './config.js';
+import { DIFFICULTY, QUALITY, DEFAULT_SETTINGS, FORMATIONS, MODES, WEATHER } from './config.js';
 import { TEAMS, teamById, crestSVG, kitSVG, resolveKits, teamStars, playerOverall } from './teams.js';
 import * as TT from './tournament.js';
 
@@ -243,6 +243,17 @@ function slider(key, label) {
   const inp = h('input', { type: 'range', min: 0, max: 100, step: 5, value: Math.round(S.settings[key] * 100), 'data-key': key, 'aria-label': label });
   const paint = () => { out.textContent = inp.value; inp.style.setProperty('--p', inp.value + '%'); };
   inp.addEventListener('input', () => { setSetting(key, +inp.value / 100); paint(); });
+  paint();
+  return h('div', { class: 'gm-slider' }, inp, out);
+}
+
+// slider com faixa própria (ex.: tamanho dos botões 70–140%)
+function sliderRange(key, label, min, max) {
+  const v0 = Math.round((S.settings[key] ?? 1) * 100);
+  const out = h('output', {}, v0 + '%');
+  const inp = h('input', { type: 'range', min, max, step: 5, value: v0, 'data-key': key, 'aria-label': label });
+  const paint = () => { out.textContent = inp.value + '%'; inp.style.setProperty('--p', ((inp.value - min) / (max - min) * 100) + '%'); };
+  inp.addEventListener('input', () => { setSetting(key, +inp.value / 100); paint(); dispatchEvent(new CustomEvent('golaco:touch-layout')); });
   paint();
   return h('div', { class: 'gm-slider' }, inp, out);
 }
@@ -595,13 +606,21 @@ function scrResult(res, cfg, { cont, rematch, st }) {
 function settingsBody(inPause) {
   const sec = (title, ...rows) => h('div', { class: 'gm-panel gm-set-sec' }, h('h3', {}, title), rows);
   return h('div', { class: 'gm-set-grid' },
-    sec('Partida', ...matchOptionsBody(inPause), row('Vento', 'Afeta a bola em chutes longos', toggle('wind', 'Vento'))),
+    sec('Partida', ...matchOptionsBody(inPause), row('Vento', 'Afeta a bola em chutes longos', toggle('wind', 'Vento')),
+      row('Clima', 'A chuva muda a bola (escorrega, quica menos) e o gramado', seg('weather', [...Object.entries(WEATHER).map(([k, w]) => [k, w.label]), ['aleatorio', 'Aleatório']], { small: true }))),
     sec('Jogo', row('Câmera', null, seg('camera', [['tv', 'TV'], ['pro', 'Pro'], ['aerea', 'Aérea']])),
-      row('Velocidade do jogo', 'Ritmo da partida (Authentic = 0,93×)', seg('gameSpeed', [[0.85, 'Simulação'], [0.93, 'Authentic'], [1, 'Competitivo'], [1.08, 'Arcade']], { small: true })),
+      row('Modo de jogo', 'Authentic 0,93× (recomendado) · Competitivo 1,0× resposta máxima · Simulação 0,85× mais peso e erros · Arcade 1,08× mais chances',
+        seg('gameMode', Object.entries(MODES).map(([k, mo]) => [k, mo.label]), { small: true, onChange: (v) => setSetting('gameSpeed', MODES[v].speed) })),
       row('Assistência de passe', 'Corrige a mira dos passes', toggle('passAssist', 'Assistência de passe')),
       row('Radar', 'Minimapa na parte de baixo', toggle('radar', 'Radar')),
       row('Nomes dos jogadores', 'Nome sobre o jogador controlado', toggle('names', 'Nomes dos jogadores')),
       row('Vibração', 'Controle e celular', toggle('vibration', 'Vibração'))),
+    sec('Toque (celular)',
+      row('Tamanho dos botões', null, sliderRange('touchScale', 'Tamanho dos botões', 70, 140)),
+      row('Transparência', 'Opacidade dos botões', sliderRange('touchOpacity', 'Opacidade dos botões', 30, 100)),
+      row('Tocar no jogador', 'Sem a bola, tocar num companheiro seleciona ele', toggle('tapSelect', 'Tocar no jogador')),
+      row('Posição dos botões', 'Arraste cada botão para onde preferir',
+        h('button', { class: 'gm-btn gm-btn-sm', 'data-key': 'edit-touch', onclick: () => dispatchEvent(new CustomEvent('golaco:edit-touch')) }, h('span', {}, 'Ajustar')))),
     sec('Vídeo', row('Qualidade gráfica', 'Automático ajusta pelo desempenho', seg('quality', [['auto', 'Auto'], ...Object.entries(QUALITY).map(([k, q]) => [k, q.label])], { small: true }))),
     sec('Áudio', row('Volume geral', null, slider('volMaster', 'Volume geral')), row('Torcida', null, slider('volCrowd', 'Volume da torcida')),
       row('Efeitos', null, slider('volSfx', 'Volume dos efeitos'))),

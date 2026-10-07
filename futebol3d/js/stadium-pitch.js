@@ -202,17 +202,19 @@ export function buildPitch(ctx) {
   if (gd >= 2) mat.defines.GRASS_DETAIL_N = '';
   const lineBright = { value: isNight ? 1.0 : 0.95 };
   // gramado regado: à noite o brilho especular fica mais fechado e aparece nos refletores
-  const wet = { value: isNight ? 1 : ctx.tod === 'tarde' ? 0.35 : 0 };
+  const wet = { value: Math.max(isNight ? 1 : ctx.tod === 'tarde' ? 0.35 : 0, ctx.rain ? 0.7 + 0.3 * ctx.rain : 0) };
+  const rainU = { value: ctx.rain || 0 };    // chuva: grama mais escura e brilhante
   mat.onBeforeCompile = (sh) => {
     sh.uniforms.uLineBright = lineBright;
     sh.uniforms.uWet = wet;
+    sh.uniforms.uRain = rainU;
     sh.uniforms.uDetail = { value: detailTex };
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vPW;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvPW = ( modelMatrix * vec4( transformed, 1.0 ) ).xyz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + PITCH_GLSL)
-      .replace('#include <map_fragment>', MAP_FRAG)
+      .replace('#include <common>', '#include <common>\nuniform float uRain;\n' + PITCH_GLSL)
+      .replace('#include <map_fragment>', MAP_FRAG + '\n diffuseColor.rgb *= 1.0 - 0.3 * uRain;')
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
         roughnessFactor = mix( roughnessFactor, mix( 0.8, 0.55, grassVar ) , uWet * 0.9 );
         roughnessFactor = mix( roughnessFactor, 0.75, lineMask );`)
@@ -222,7 +224,7 @@ export function buildPitch(ctx) {
         #endif
         normal = normalize( mix( normal, nonPerturbedNormal, lineMask * 0.8 ) );`);
   };
-  mat.customProgramCacheKey = () => `golaco-gramado-${gd}-${mow}`;
+  mat.customProgramCacheKey = () => `golaco-gramado-${gd}-${mow}-r`;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'gramado';
   mesh.receiveShadow = true;

@@ -3,6 +3,7 @@
 // que o módulo de animação transforma em esqueleto.
 import { PLAYER, ANIM, clamp, lerp, angDiff } from './config.js';
 import { cycleLength } from './anim.js';
+import { traitsOf } from './tactics.js';
 
 const POSE_KEYS = ['anim', 't', 'speed', 'moveAngle', 'stride', 'lean', 'foot', 'power', 'diveSide', 'diveHeight', 'variant', 'lookYaw', 'lookPitch', 'drib', 'bx', 'bz'];
 
@@ -37,6 +38,7 @@ export class Player {
     this.accel = lerp(PLAYER.accelMin, PLAYER.accelMax, clamp((acc / 99 - 0.45) / 0.5, 0, 1));
     this.agility = 0.78 + 0.4 * (agi / 99);
     this.foot = data.foot === 'E' ? -1 : 1;
+    this.traits = traitsOf(a, data.pos || role);     // personalidade (§20): muda decisões da IA
     this.x = 0; this.z = 0; this.y = 0;
     this.vx = 0; this.vz = 0;
     this.heading = 0;

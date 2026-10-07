@@ -125,6 +125,8 @@ export const QUALITY = {
   baixa: { label: 'Baixa', pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 0, anisotropy: 8, grade: 'material', shadowSoft: false, minDyn: 0.75 },
   media: { label: 'Média', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 2048, crowd: 0.70, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 8, lite: true, liteBloom: true, sharpen: 0.3, minDyn: 0.75 },
   alta:  { label: 'Alta',  pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 2048, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: false },
+  // §37: máximo de FPS / menor latência para jogar sério (sem pós, sombra simples, 1:1)
+  competitivo: { label: 'Competitivo', pixelRatio: 1.0, maxPR: 1, shadows: true, shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 4, grade: 'material', shadowSoft: false, minDyn: 0.85 },
   ultra: { label: 'Ultra', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
 };
 
@@ -134,12 +136,30 @@ export const DIFFICULTY = {
   lenda:        { label: 'Lenda',        aiReaction: 0.16, aiSkill: 1.00, gkSkill: 0.95 },
 };
 
+// Modos de jogo (§40 da especificação). speed = ritmo; touch = erro do primeiro toque;
+// shot = erro do chute; fatigue = desgaste; tackle = chance de roubo nas disputas.
+export const MODES = {
+  authentic:   { label: 'Authentic',   desc: 'Experiência GOLAÇO recomendada', speed: 0.93, touch: 1,    shot: 1,    fatigue: 1,    tackle: 1 },
+  competitive: { label: 'Competitivo', desc: 'Resposta máxima, menos interferência', speed: 1.0, touch: 0.75, shot: 0.9, fatigue: 0.75, tackle: 1 },
+  simulation:  { label: 'Simulação',   desc: 'Mais peso, mais erros, ritmo menor', speed: 0.85, touch: 1.25, shot: 1.12, fatigue: 1.25, tackle: 1.1 },
+  arcade:      { label: 'Arcade',      desc: 'Mais rápido, mais chances', speed: 1.08, touch: 0.6,  shot: 0.8,  fatigue: 0.6,  tackle: 0.85 },
+};
+
+// Clima (§33): chuva 0..1 altera bola (ball.js SURFACE), primeiro toque, visual e som.
+export const WEATHER = {
+  seco: { label: 'Seco', rain: 0, cloud: 0 },
+  nublado: { label: 'Nublado', rain: 0, cloud: 0.7 },
+  chuva: { label: 'Chuva', rain: 0.5, cloud: 0.85 },
+  temporal: { label: 'Temporal', rain: 1, cloud: 1 },
+};
+
 export const DEFAULT_SETTINGS = {
   difficulty: 'profissional',
   halfMinutes: 4,        // minutos reais por tempo
   camera: 'tv',          // tv | pro | aerea
   quality: 'auto',       // auto | baixa | media | alta | ultra
   timeOfDay: 'noite',    // dia | tarde | noite
+  weather: 'seco',       // seco | nublado | chuva | temporal | aleatorio (§33)
   wind: true,
   volMaster: 0.9,
   volCrowd: 0.8,
@@ -147,7 +167,12 @@ export const DEFAULT_SETTINGS = {
   vibration: true,
   radar: true,
   passAssist: true,
-  gameSpeed: 0.93,       // ritmo da partida (GOLAÇO Authentic: 0,93×)
+  gameMode: 'authentic', // authentic | competitive | simulation | arcade (MODES)
+  gameSpeed: 0.93,       // ritmo da partida (vem do modo)
+  touchScale: 1,         // tamanho dos botões de toque (0,7–1,4)
+  touchOpacity: 0.85,    // opacidade dos botões de toque
+  touchLayout: {},       // deslocamento de cada botão, em vh: { shoot: [dx, dy], ... }
+  tapSelect: true,       // tocar num companheiro (sem a bola) seleciona ele
   names: true,           // nome acima do jogador controlado
   intro: true,           // entrada em campo antes da partida (pode pular)
 };
