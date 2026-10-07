@@ -197,7 +197,7 @@ input.onTapScreen = (x, y) => {
     const d = Math.hypot(sx - x, sy - y);
     if (d < bd) { bd = d; best = p; }
   }
-  if (best && best !== m.controlled) { m.setControlled(best); m.lastSwitchT = m.time; }
+  if (best && best !== m.controlled) { m.setControlled(best); m.lastSwitchT = m.time; m.switchIdx = 0; }
 };
 const hud = new Hud($('hud'));
 let game = null;

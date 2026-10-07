@@ -318,7 +318,8 @@ function switchList(m) {
     .sort((a, c) => a.s - c.s);
 }
 function switchIndex(m, n, manual) {
-  return manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9 ? (m.switchIdx + 1) % Math.min(3, n) : 0;
+  // switchIdx pode faltar (troca automática só grava o horário): conta a partir do primeiro
+  return manual && m.lastSwitchT && m.time - m.lastSwitchT < 0.9 ? ((m.switchIdx | 0) + 1) % Math.min(3, n) : 0;
 }
 export function switchPlayer(m, manual) {
   const list = switchList(m);
@@ -368,7 +369,7 @@ function autoSwitch(m) {
   if (!owner && cur && !m.passTarget && m.time - (m.lastSwitchT || 0) > 1.2) {
     const best = team.chaser;
     if (best && best !== cur && cur.interceptT - best.interceptT > 1.2 && Math.hypot(cur.x - m.ball.p.x, cur.z - m.ball.p.z) > 14) {
-      m.setControlled(best); m.lastSwitchT = m.time;
+      m.setControlled(best); m.lastSwitchT = m.time; m.switchIdx = 0;
     }
   }
 }
