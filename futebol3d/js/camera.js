@@ -121,8 +121,11 @@ export class CameraRig {
     cam.position.copy(this.pos);
     if (this.shake > 0.001) {
       this.shake *= Math.exp(-6 * dt);
-      cam.position.x += (Math.random() - 0.5) * this.shake;
-      cam.position.y += (Math.random() - 0.5) * this.shake;
+      // ruído suave e dependente do TEMPO (não do FPS): soma de senos incomensuráveis —
+      // parece um impacto que balança, não uma falha de imagem
+      const t = this.t;
+      cam.position.x += (Math.sin(t * 17.3 + 1.3) * 0.6 + Math.sin(t * 23.9 + 4.1) * 0.4) * this.shake * 0.5;
+      cam.position.y += (Math.sin(t * 14.1 + 2.2) * 0.6 + Math.sin(t * 21.7 + 0.7) * 0.4) * this.shake * 0.5;
     }
     cam.lookAt(this.look);
     if (Math.abs(cam.fov - this.fov) > 0.01) { cam.fov = this.fov; cam.updateProjectionMatrix(); }

@@ -84,12 +84,22 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   adaptativa (camera.js), preset gráfico Competitivo. Atributos detalhados em `teams.js` (detailAttrs).
   Celular: 4 botões (+ DIVIDIDA na defesa) e gestos — conferir com `tools/gesture-test.mjs`.
 
+- Auditoria "reforma com provas obrigatórias" (dono): fases 1–5, uma de cada vez, cada item com teste que
+  REPROVA antes e passa depois, tabela antes→depois, prints com torcida+HUD e vídeos MP4 de ≥20 s gravados
+  quadro a quadro com relógio controlado (`tools/pump.mjs`: `__pump.on()`/`step(ms)`). Ferramentas:
+  `tools/fase1-test.mjs` (bola interpolada a 60/120/144 Hz, zona morta radial, tremor por tempo),
+  `tools/piscada-test.mjs` (300 quadros a 30 qps forçando a resolução dinâmica; reprova com canvas apagado
+  ou quadro vazio), `tools/gravar.mjs --cena tv|cel|dia|noite` (vídeos), `tools/prints-fase.mjs` (PC Alta
+  1280×720 e celular 844×390 dpr2 Média, dia/noite + close do rosto). Fase 1 feita (piscada, interpolação,
+  analógico, tremor).
+
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
 cd futebol3d
 node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-test.mjs 3 home \
   && node tools/shootout-test.mjs && node tools/pen-test.mjs && node tools/offside-test.mjs \
-  && node tools/tournament-test.mjs
+  && node tools/tournament-test.mjs && node tools/troca-test.mjs
+# Fase 1 da auditoria (navegador): node tools/fase1-test.mjs && node tools/piscada-test.mjs
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```

@@ -274,10 +274,12 @@ export class Input {
     if (this.touchStick.id !== null) { sx = this.touchStick.x; sy = this.touchStick.y; if (this.touchStick.sprint) b.sprint = true; }
     let rx = 0, ry = 0;
     if (pad) {
-      const dz = (v) => (Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82);
-      const ax = dz(pad.axes[0] || 0), ay = dz(pad.axes[1] || 0);
-      if (Math.hypot(ax, ay) > 0.05) { sx = ax; sy = -ay; this.lastDevice = 'gamepad'; }
-      rx = dz(pad.axes[2] || 0); ry = -dz(pad.axes[3] || 0);
+      // zona morta RADIAL com curva de resposta (a direção é preservada; antes era por eixo e
+      // o direcional "grudava" nos eixos, sumindo com diagonais sutis)
+      const [ax, ay] = radialStick(pad.axes[0] || 0, pad.axes[1] || 0);
+      if (ax || ay) { sx = ax; sy = -ay; this.lastDevice = 'gamepad'; }
+      const [r2x, r2y] = radialStick(pad.axes[2] || 0, pad.axes[3] || 0);
+      rx = r2x; ry = -r2y;
       const pb = (i) => !!(pad.buttons[i] && (pad.buttons[i].pressed || pad.buttons[i].value > 0.4));
       const rb = pb(5), lt = pb(6);
       // B com RB = colocado; B com LT = cavadinha
@@ -350,6 +352,16 @@ export class Input {
       else if (this.lastDevice === 'touch' && navigator.vibrate) navigator.vibrate(ms);
     } catch { /* sem vibração */ }
   }
+}
+
+// Analógico: zona morta radial (0,15) + curva de resposta suave (mais precisão no começo do
+// curso, 100% na borda). Devolve [x, y] com a mesma direção da entrada.
+export function radialStick(x, y, dead = 0.12, expo = 1.35) {
+  const m = Math.hypot(x, y);
+  if (m < dead) return [0, 0];
+  const k = Math.min(1, (m - dead) / (1 - dead));
+  const out = Math.pow(k, expo);
+  return [x / m * out, y / m * out];
 }
 
 // gesto ao arrastar um botão de toque (null = toque normal)
