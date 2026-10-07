@@ -4706,33 +4706,59 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-ret-s { font-size: 11px; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vit-ret-ar { font-size: 19px; font-weight: 900; opacity: .6; }
 
-.vit-palco { height: 318px; perspective: 1000px; position: relative; overflow: hidden;
+.vit-palco { height: 318px; position: relative; overflow: hidden;
   margin-top: 6px; touch-action: pan-y; }
+/* A perspectiva fica NO TRILHO (e nao no palco) de proposito: com
+   transform-style: preserve-3d o Chromium so deixa clicar na carta da frente —
+   tocar nas cartas laterais nao fazia nada. Com a perspectiva no proprio trilho,
+   cada carta e projetada sozinha: o desenho fica igualzinho, o z-index volta a
+   valer para a ordem e todas as cartas voltam a receber o toque. */
 .vit-trilho { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  transform-style: preserve-3d; }
+  perspective: 1000px; }
+/* 420ms com desaceleracao forte ("emphasized decelerate"): a carta chega pesada.
+   So transform e opacity animam — as duas rodam no compositor. */
 .vit-carta { position: absolute; width: 186px; height: 268px; padding: 0; border-radius: 18px; overflow: hidden;
   cursor: pointer; border: 2px solid rgba(255,255,255,.12); background: #0c0f12;
-  transition: transform .3s cubic-bezier(.22,.8,.3,1), opacity .3s ease, border-color .25s ease; }
-.vit-carta.longe .vit-faixa { opacity: 0; }
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  transition: transform .4s cubic-bezier(.05,.7,.1,1), opacity .4s cubic-bezier(.05,.7,.1,1),
+              border-color .25s ease; }
+/* box-shadow NAO entra na lista do transition: medido, anima-la multiplica o
+   trabalho de rasterizacao por ~20x. Ela troca de uma vez, junto com a borda. */
+/* enquanto o dedo esta na tela a carta segue o dedo: sem transition, senao atrasa */
+.vit-trilho.arrastando .vit-carta { transition: none; }
+/* a carta que da a volta no anel reaparece do outro lado sem atravessar a tela */
+.vit-carta.pula { transition: none; }
 .vit-carta.centro { border-color: var(--gold); box-shadow: 0 18px 44px rgba(0,0,0,.65), 0 0 28px rgba(34,197,94,.22); }
 .vit-foto { position: absolute; inset: 0; background-size: cover; background-position: center; }
-.vit-carta:not(.centro) .vit-foto { filter: grayscale(.45) brightness(.6); }
+/* escurecer as laterais por opacidade de uma camada preta, e nao por filter:
+   opacity roda no compositor, filter repinta a carta inteira a cada quadro */
+.vit-sombra { position: absolute; inset: 0; background: #05070a; opacity: 0; pointer-events: none;
+  transition: opacity .4s cubic-bezier(.05,.7,.1,1); }
+.vit-trilho.arrastando .vit-sombra { transition: none; }
 .vit-veu { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.92) 2%, rgba(0,0,0,.15) 55%); }
 .vit-faixa { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 13px 14px;
-  display: flex; flex-direction: column; gap: 2px; text-align: left; }
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  transition: opacity .4s cubic-bezier(.05,.7,.1,1); }
+.vit-trilho.arrastando .vit-faixa { transition: none; }
 .vit-f-cat { font-size: 9px; letter-spacing: 2.4px; font-weight: 800; color: var(--gold-light); }
 .vit-f-nome { font-size: 15px; font-weight: 900; color: #fff; line-height: 1.12; }
 
 .vit-legenda { text-align: center; padding: 10px 24px 0; }
 .vit-tag { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; min-height: 36px; }
+/* a frase do modo entra junto com a carta, so que um tiquinho depois */
+.vit-tag.troca { animation: vit-entra .34s cubic-bezier(.05,.7,.1,1) 60ms both; }
+@keyframes vit-entra { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
 .vit-cta { margin-top: 10px; padding: 13px 44px; border: none; border-radius: 999px; cursor: pointer;
   background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: #06130b;
   font-weight: 900; letter-spacing: 2.4px; font-size: 14px; box-shadow: 0 8px 24px rgba(34,197,94,.26); }
 .vit-cta:active { transform: translateY(1px); }
 .vit-pontos { display: flex; gap: 6px; justify-content: center; margin-top: 14px; }
-.vit-ponto { width: 7px; height: 7px; padding: 0; border-radius: 50%; border: none;
-  background: rgba(255,255,255,.22); cursor: pointer; transition: all .2s ease; }
-.vit-ponto.on { background: var(--gold); width: 20px; border-radius: 4px; }
+/* largura fixa e scaleX: animar width obriga o navegador a refazer o layout a
+   cada quadro; transform nao sai do compositor */
+.vit-ponto { width: 20px; height: 7px; padding: 0; border-radius: 4px; border: none;
+  background: rgba(255,255,255,.22); cursor: pointer; transform: scaleX(.35);
+  transition: transform .34s cubic-bezier(.05,.7,.1,1), background-color .2s ease; }
+.vit-ponto.on { background: var(--gold); transform: scaleX(1); }
 
 .vit-mais-h { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--text-dim);
   text-transform: uppercase; padding: 20px 16px 8px; }
@@ -4747,4 +4773,10 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
   .vit-carta { width: 158px; height: 232px; }
   .vit-palco { height: 282px; }
   .vit-logo { height: 38px; }
+}
+
+/* quem pediu menos movimento no sistema nao ve animacao nenhuma aqui */
+@media (prefers-reduced-motion: reduce) {
+  .vit-carta, .vit-sombra, .vit-faixa, .vit-ponto { transition: none !important; }
+  .vit-tag.troca { animation: none !important; }
 }
