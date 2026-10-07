@@ -11,7 +11,7 @@ import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
 const PORTA = arg('porta', '8793'), TROCAS = +arg('trocas', 8), CPU = +arg('cpu', 4), DPR = +arg('dpr', 3);
-const ESPERA = 380; // um pouco mais que a transition de 300ms
+const ESPERA = 560; // um pouco mais que a transition mais longa (520ms)
 
 const NOMES = /^(Paint|PaintSetup|Layout|UpdateLayerTree|UpdateLayer|RasterTask|Rasterize|CompositeLayers|Layerize|PrePaint|Commit)$/;
 
@@ -40,7 +40,9 @@ const camadas = await pg.evaluate(() => {
   // quanta memória de textura as cartas pedem se cada uma virar camada
   const d = window.devicePixelRatio || 1; let mb = 0, n = 0;
   document.querySelectorAll('.vit-carta').forEach(c => {
-    const r = c.getBoundingClientRect(); mb += (r.width * d) * (r.height * d) * 4 / 1048576; n++;
+    // tamanho de LAYOUT, nao o rect: o rect e pos-transform (as cartas laterais
+    // estao em escala e perspectiva) e subestima a textura que a camada aloca
+    mb += (c.offsetWidth * d) * (c.offsetHeight * d) * 4 / 1048576; n++;
   });
   return { n, mb: +mb.toFixed(1) };
 });
@@ -62,10 +64,16 @@ const medida = pg.evaluate((ms) => new Promise(function (ok) {
   requestAnimationFrame(volta);
 }), TROCAS * ESPERA + 400);
 
-const cx = 195, cy = 160;
+// Arraste de verdade: 12 passos com ~16ms entre eles, para o trecho em que a
+// carta segue o dedo durar ~200ms. Sem a pausa, os movimentos chegam todos no
+// mesmo quadro, o rAF os junta num so e a medicao acaba medindo so os encaixes.
+const cx = 195, cy = 160, PASSOS = 12;
 for (let k = 0; k < TROCAS; k++) {
   await pg.mouse.move(cx + 70, cy); await pg.mouse.down();
-  for (let s = 1; s <= 6; s++) { await pg.mouse.move(cx + 70 - s * 20, cy); }
+  for (let s = 1; s <= PASSOS; s++) {
+    await pg.mouse.move(cx + 70 - s * 10, cy);
+    await pg.waitForTimeout(16);
+  }
   await pg.mouse.up();
   await pg.waitForTimeout(ESPERA);
 }

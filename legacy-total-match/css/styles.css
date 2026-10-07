@@ -4714,13 +4714,15 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
    cada carta e projetada sozinha: o desenho fica igualzinho, o z-index volta a
    valer para a ordem e todas as cartas voltam a receber o toque. */
 .vit-trilho { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  perspective: 1000px; }
+  perspective: 1000px;
+  /* o ritmo e escrito aqui uma vez e desce por heranca para as 7 cartas */
+  --vit-dur: 400ms; --vit-curva: cubic-bezier(.05,.7,.1,1); }
 /* 420ms com desaceleracao forte ("emphasized decelerate"): a carta chega pesada.
    So transform e opacity animam — as duas rodam no compositor. */
 .vit-carta { position: absolute; width: 186px; height: 268px; padding: 0; border-radius: 18px; overflow: hidden;
   cursor: pointer; border: 2px solid rgba(255,255,255,.12); background: #0c0f12;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  transition: transform .4s cubic-bezier(.05,.7,.1,1), opacity .4s cubic-bezier(.05,.7,.1,1),
+  transition: transform var(--vit-dur) var(--vit-curva), opacity var(--vit-dur) var(--vit-curva),
               border-color .25s ease; }
 /* box-shadow NAO entra na lista do transition: medido, anima-la multiplica o
    trabalho de rasterizacao por ~20x. Ela troca de uma vez, junto com a borda. */
@@ -4733,12 +4735,12 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 /* escurecer as laterais por opacidade de uma camada preta, e nao por filter:
    opacity roda no compositor, filter repinta a carta inteira a cada quadro */
 .vit-sombra { position: absolute; inset: 0; background: #05070a; opacity: 0; pointer-events: none;
-  transition: opacity .4s cubic-bezier(.05,.7,.1,1); }
+  transition: opacity var(--vit-dur) var(--vit-curva); }
 .vit-trilho.arrastando .vit-sombra { transition: none; }
 .vit-veu { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,.92) 2%, rgba(0,0,0,.15) 55%); }
 .vit-faixa { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 13px 14px;
   display: flex; flex-direction: column; gap: 2px; text-align: left;
-  transition: opacity .4s cubic-bezier(.05,.7,.1,1); }
+  transition: opacity var(--vit-dur) var(--vit-curva); }
 .vit-trilho.arrastando .vit-faixa { transition: none; }
 .vit-f-cat { font-size: 9px; letter-spacing: 2.4px; font-weight: 800; color: var(--gold-light); }
 .vit-f-nome { font-size: 15px; font-weight: 900; color: #fff; line-height: 1.12; }
@@ -4760,6 +4762,10 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
   transition: transform .34s cubic-bezier(.05,.7,.1,1), background-color .2s ease; }
 .vit-ponto.on { background: var(--gold); transform: scaleX(1); }
 
+/* so para leitor de tela: anuncia o modo que entrou no meio */
+.vit-aviso { position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
 .vit-mais-h { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: var(--text-dim);
   text-transform: uppercase; padding: 20px 16px 8px; }
 .vit-mais { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 0 14px; }
@@ -4773,6 +4779,19 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
   .vit-carta { width: 158px; height: 232px; }
   .vit-palco { height: 282px; }
   .vit-logo { height: 38px; }
+}
+
+/* celular deitado: a tela tem pouca altura, entao a carta encolhe para o
+   botao ENTRAR continuar visivel */
+@media (max-height: 520px) and (orientation: landscape) {
+  .vit-palco { height: 196px; }
+  .vit-carta { width: 116px; height: 168px; }
+  .vit-f-nome { font-size: 12px; }
+  .vit-f-cat { font-size: 8px; letter-spacing: 1.6px; }
+  .vit-faixa { padding: 8px 9px 9px; }
+  .vit-tag { min-height: 0; font-size: 11.5px; }
+  .vit-cta { margin-top: 7px; padding: 10px 36px; font-size: 13px; }
+  .vit-pontos { margin-top: 9px; }
 }
 
 /* quem pediu menos movimento no sistema nao ve animacao nenhuma aqui */
