@@ -1,12 +1,12 @@
 // Motor da partida: regras (gol, lateral, escanteio, tiro de meta, falta, pênalti,
 // impedimento, cartões), posse de bola, chutes/passes com física real, relógio,
 // intervalo, prorrogação e disputa de pênaltis. Não depende de three.js.
-import { Ball, BallPredictor, solveAim, solveLob, solveGround, setSurface } from './ball.js';
+import { Ball, BallPredictor, solveAim, solveLob, solveGround, setSurface, SURFACE } from './ball.js';
 import { Player } from './player.js';
 import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, MODES, WEATHER, clamp, lerp, angDiff } from './config.js';
 import { teamThink, setpieceAI } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
-import { humanStep } from './human.js';
+import { humanStep, keepBall } from './human.js';
 import { cycleLength } from './anim.js';
 import { pickLeader } from './tactics.js';
 
@@ -29,7 +29,23 @@ const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
 // (com a torcida ao fundo); breakT: vão para o pontapé; end: fim da abertura
 const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 19, card: 24, breakT: 31, end: 36, walk: 3.0 };
 export const INTRO_TIMES = INTRO;
+// ângulo entre o rumo pedido e o caminho da bola a partir do qual o toque vira um corte
+const TURN_CUT = 0.8;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
+
+// Velocidade inicial para a bola rolar a distância D em T segundos (T = 0: rolar até parar
+// em D), com o mesmo modelo e passo de ball.js (desaceleração a0 + k·v, 120 Hz).
+function rollDist(v0, T, a0, k) {
+  const dt = 1 / 120, n = T > 0 ? Math.round(T / dt) : 2400;
+  let v = v0, x = 0;
+  for (let i = 0; i < n && v > 0; i++) { v = Math.max(0, v - (a0 + k * v) * dt); x += v * dt; }
+  return x;
+}
+export function rollSpeedFor(D, T, a0, k) {
+  let lo = 0, hi = 40;
+  for (let it = 0; it < 28; it++) { const mid = (lo + hi) / 2; if (rollDist(mid, T, a0, k) < D) lo = mid; else hi = mid; }
+  return (lo + hi) / 2;
+}
 
 export class Match {
   constructor(cfg) {
@@ -216,6 +232,22 @@ export class Match {
       for (const t of this.teams) keeperThink(this, t.gk, dt);
       if (this.phase === 'setpiece') setpieceAI(this, dt);
       if (this.userTeam) humanStep(this, cmd, dt);
+      // condução sem ímã: o condutor da IA também vai até a bola quando ela não está no pé
+      // (o humano já passa por isso em humanStep)
+      const o = this.owner;
+      if (o && !o.human && !o.isGK && this.phase === 'play') keepBall(this, o);
+      // chute/passe sendo preparado com a bola rolando (sem ímã): a corrida leva o pé até
+      // onde a bola estará no instante do contato
+      for (const p of this.players) p.kickChase = null;
+      const ka = o && o.action;
+      if (ka && KICKS.has(ka.type) && !ka.fired && !this.ball.held && this.ball.p.y < 0.5) {
+        const b = this.ball, tc = Math.max(0.05, ka.contactT - ka.t);
+        const bx = b.p.x + b.v.x * tc, bz = b.p.z + b.v.z * tc;
+        let vx = (bx - o.fx * 0.45 - o.x) / tc, vz = (bz - o.fz * 0.45 - o.z) / tc;
+        const vl = Math.hypot(vx, vz), cap = o.sprintSpd;
+        if (vl > cap) { vx *= cap / vl; vz *= cap / vl; }
+        o.kickChase = { x: vx, z: vz };
+      }
     }
 
     // desgaste da partida: esforço (cresce com o quadrado da velocidade) × fôlego do jogador,
@@ -384,24 +416,18 @@ export class Match {
     const dist = Math.hypot(b.p.x - o.x, b.p.z - o.z);
     if (dist > 2.4 || o.sentOff || o.stun > 0) { this.owner = null; this.dbgLost = (this.dbgLost || 0) + 1; return; }
     const act = o.action;
-    if (act && KICKS.has(act.type) && !act.fired) {
-      // preparando o chute: a bola desacelera à frente do pé
-      const tx = o.x + o.fx * 0.55, tz = o.z + o.fz * 0.55;
-      b.v.x += (tx - b.p.x) * 6 * dt + (o.vx - b.v.x) * 4 * dt;
-      b.v.z += (tz - b.p.z) * 6 * dt + (o.vz - b.v.z) * 4 * dt;
-      return;
-    }
+    // preparando o chute: quem se ajusta é o JOGADOR (kickChase, no passo da partida); a
+    // bola segue rolando livre (sem ímã)
     if (act) return;
     if (b.p.y > 0.5) return;
-    // Condução híbrida (como nos jogos de futebol de console): existe uma "bola
-    // animada" presa à passada — sai do pé no toque, abre um pouco à frente e volta a
-    // encontrar o pé exatamente no próximo toque (curva 4u(1-u), a de uma bola que
-    // desacelera em relação ao jogador) — e a bola física é puxada para ela. O toque
-    // acontece quando o pé bom chega à frente na passada (fase de anim.js), então o pé
-    // e a bola se encontram na tela. Viradas fortes geram um "toque de esforço".
+    // Condução SEM ímã (auditoria, Fase 2): todo o controle está no impulso do toque; entre
+    // os toques a bola é física pura (rola e desacelera como qualquer bola). No toque, o
+    // impulso é calculado com o mesmo modelo de rolagem de ball.js para a bola reencontrar o
+    // pé bom exatamente n passadas depois, se o jogador mantiver o ritmo — n sai da distância
+    // que a bola pode abrir (≈0,3 m correndo, até ≈0,9 m à frente do pé numa arrancada longa).
+    // Mudou o ritmo ou o rumo? O próximo toque só sai quando a bola estiver ao alcance do pé
+    // (toque de ajuste); se ela fugir, é preciso correr atrás. Erro de controle = toque pior.
     const sp = o.speed;
-    const dri = o.a.dri / 99;
-    // controle de bola (primeiro toque / proximidade) é separado do drible (seção 6)
     const ctl = (o.a.ctl ?? o.a.dri) / 99;
     const rx = -o.fz, rz = o.fx;
     const L = cycleLength(sp, o.pose.moveAngle || 0);
@@ -413,52 +439,154 @@ export class Match {
     o.lastStride = st;
     o.touchTimer -= dt;
     if (o.cushion > 0) o.cushion -= dt;
-    // trote/corrida: um toque por passada, bola curta. Sprint: toque a cada duas passadas e
-    // a bola abre mais (≈0,9–1,3 m) — é o momento vulnerável para o defensor (seções 5, 10, 12)
     const sprinting = o.sprint && sp > 6.5;
-    const per = sprinting ? 2 : 1;
-    if (o.dribSt === undefined) o.dribSt = st;
-    let ph = st - o.dribSt; if (ph < 0) ph += 1024;
-    const u = Math.min(ph / per, 1.15);
-    // alcance do pé no toque e abertura máxima da bola entre toques
-    // (medido do centro do corpo: o bico da chuteira fica a ~0,25 m)
+    // ponto do toque: bico da chuteira do pé bom, à frente do corpo
     const base = o.shielding ? 0.28 : 0.27 + Math.min(sp, 8) * 0.01;
-    const open = (o.shielding ? 0.03 : Math.min(sp, 9) * (sprinting ? 0.09 : 0.022)) * (1.35 - ctl * 0.6);
-    const gap = sp > 0.8 ? open * 4 * u * (1 - Math.min(u, 1)) : 0;
-    const lead = base + gap;
     const side = (sp > 0.8 ? 0.1 : 0.12) * o.foot;
-    const tx = o.x + o.fx * lead + rx * side, tz = o.z + o.fz * lead + rz * side;
-    const ex = tx - b.p.x, ez = tz - b.p.z, err = Math.hypot(ex, ez);
-    this.dbgErr = err;
-    // virada: a bola ficou fora da direção do corpo
+    const fx = o.x + o.fx * base + rx * side, fz = o.z + o.fz * base + rz * side;
+    const footErr = Math.hypot(b.p.x - fx, b.p.z - fz);
+    const reach = 0.3 + 0.12 * ctl;
     const relx = b.p.x - o.x, relz = b.p.z - o.z;
     const ahead = relx * o.fx + relz * o.fz;
     const angOff = Math.abs(Math.atan2(relx * rx + relz * rz, Math.max(0.05, ahead)));
-    const effort = angOff > 0.75 && sp > 1 && err > 0.3;
-    const due = crossed && ph / per > 0.6;
-    if (o.touchTimer <= 0 && (due || effort || (sp <= 0.8 && err > 0.3))) {
-      o.dribSt = st;
-      o.touchTimer = effort ? 0.3 : 0.2;
-      this.dbgWhy = effort ? 'giro' : due ? 'fase' : 'lento';
-      // velocidade de saída da bola animada logo após o toque (+ o que falta corrigir)
-      const v0 = sp > 0.8 ? open * 4 / Math.max(0.25, L * per / Math.max(sp, 1)) : 0;
-      const noise = (1 - ctl) * 0.18 * (o.sprint ? 1.5 : 1);
-      b.kick(o.vx + o.fx * v0 + ex * 3 + gauss() * noise, 0, o.vz + o.fz * v0 + ez * 3 + gauss() * noise);
-      this.touch(o, 'dribble');
-      if (sp > 3 && Math.random() < 0.3) this.emit('dribble', {});
-      return;
+    this.dbgErr = footErr;
+    if (o.touchTimer > 0) return;
+    let why = null;
+    // rumo pedido (analógico/IA) — keepBall guarda antes de mandar o corpo "montar" na bola
+    const ix = o.intentX ?? o.dx, iz = o.intentZ ?? o.dz, il = Math.hypot(ix, iz);
+    const bsp = Math.hypot(b.v.x, b.v.z);
+    const pathX = bsp > 1 ? b.v.x / bsp : o.fx, pathZ = bsp > 1 ? b.v.z / bsp : o.fz;
+    const turnWanted = il > 0.5 ? Math.acos(clamp((ix * pathX + iz * pathZ) / il, -1, 1)) : 0;
+    const dBody = Math.hypot(relx, relz);
+    if (sp > 2.5) {
+      if (footErr < reach) {
+        // passada do toque com a bola no pé
+        if (crossed) why = 'fase';
+        // pediu outro rumo e a bola está no pé → corte
+        else if (turnWanted > TURN_CUT) why = 'giro';
+        // o corpo alcançou a bola (acelerou): toque de ajuste para ela não ficar para trás
+        else if (ahead < base - 0.08) why = 'ajuste';
+      } else if (angOff > 0.75 && footErr < reach + 0.12 && turnWanted > TURN_CUT) why = 'giro';
+    } else {
+      // devagar: com a bola perto do corpo e pedindo velocidade, empurra a bola no rumo pedido
+      // (quase parado, o pé alcança a bola de qualquer lado) e arranca atrás dela; girando ou
+      // protegendo, a sola arrasta a bola para junto do pé
+      const perto = dBody < 0.75;
+      if (perto && il > sp + 0.8) why = 'arranque';
+      else if (perto && footErr > 0.25 && dBody > 0.12) why = 'arraste';
+      else if (footErr < reach && crossed && sp > 0.8) why = 'fase';
     }
-    // entre os toques: a bola física segue a bola animada (velocidade da curva + correção
-    // limitada, para não "teleportar"); amortecendo o domínio, assenta mais devagar
-    const dGap = sp > 0.8 && u < 1 ? open * 4 * (1 - 2 * u) * sp / (L * per) : 0;
-    const vtx = o.vx + o.fx * dGap, vtz = o.vz + o.fz * dGap;
-    const kc = o.cushion > 0 ? 5 : 11;
-    let cx = ex * kc, cz = ez * kc;
-    const cmax = o.cushion > 0 ? 3 : 2.2 + sp * 0.35, cl = Math.hypot(cx, cz);
-    if (cl > cmax) { cx *= cmax / cl; cz *= cmax / cl; }
-    const k = Math.min(1, dt * (o.cushion > 0 ? 8 : 14));
-    b.v.x += (vtx + cx - b.v.x) * k;
-    b.v.z += (vtz + cz - b.v.z) * k;
+    if (!why) return;
+    o.touchTimer = why === 'giro' ? 0.3 : why === 'arraste' ? 0.12 : why === 'arranque' ? 0.35 : 0.2;
+    this.dbgWhy = why;
+    this.dribbleTouch(o, why);
+    if (sp > 3 && why !== 'arraste' && Math.random() < 0.3) this.emit('dribble', {});
+  }
+
+  // Toque de condução: impulso único calculado pela física de rolagem (sem ímã depois). O
+  // ponto de encontro sai de uma PREVISÃO do próprio jogador: a mesma física de movimento
+  // (integrate: apoio, giro limitado pela velocidade, aceleração) rodada T segundos com o rumo
+  // pedido — a bola vai para onde o pé vai estar. Em alta velocidade, um corte fechado vira
+  // naturalmente um toque que segura a bola à frente enquanto ele freia.
+  //  'fase'/'ajuste': reencontro n passadas depois (abertura ~0,45 m; ~0,9 m em arrancada)
+  //  'arranque': saindo devagar, empurra no rumo pedido e acelera atrás
+  //  'giro': corte no rumo pedido · 'amortece': domínio curto · 'arraste': sola, junto do pé
+  dribbleTouch(o, modo = 'fase', silencioso = false) {
+    const b = this.ball;
+    const sp = o.speed, ctl = (o.a.ctl ?? o.a.dri) / 99;
+    const a0 = BALL.rollResistance * SURFACE.roll, kd = BALL.grassDrag * SURFACE.drag;
+    const ix = o.intentX ?? o.dx ?? 0, iz = o.intentZ ?? o.dz ?? 0, il = Math.hypot(ix, iz);
+    const base = 0.27 + Math.min(sp, 8) * 0.01, side = 0.1 * o.foot;
+    if (modo === 'dominio') modo = 'amortece';
+    if ((modo === 'fase' || modo === 'ajuste') && il > 0.3 && sp > 0.8) {
+      const c = (ix * o.vx + iz * o.vz) / (il * sp);
+      if (c < Math.cos(TURN_CUT)) modo = 'giro';
+      else if (sp < 2.5) modo = 'arranque';
+    }
+    let T = 0, tx, tz;
+    if (modo === 'amortece') {
+      const ux = sp > 1 ? o.vx / sp : il > 0.3 ? ix / il : o.fx, uz = sp > 1 ? o.vz / sp : il > 0.3 ? iz / il : o.fz;
+      const far = 0.08 + 0.12 * Math.min(sp, 8);
+      tx = o.x + ux * (base + far) - uz * side; tz = o.z + uz * (base + far) + ux * side;
+      o.touchSt = -1;
+    } else if (modo === 'arraste' || (sp < 0.8 && il < 0.5)) {
+      // sola: para junto do pé, do lado para onde ele quer ir (ou para a frente do corpo)
+      let hx, hz;
+      if (il > 0.5) { hx = ix / il; hz = iz / il; }
+      else { const h = o.heading + clamp(o.turnVel || 0, -8, 8) * 0.2; hx = Math.cos(h); hz = Math.sin(h); }
+      tx = o.x + o.vx * 0.25 + hx * (base + 0.03) - hz * side; tz = o.z + o.vz * 0.25 + hz * (base + 0.03) + hx * side;
+      o.touchSt = -1;
+    } else {
+      // previsão do jogador com a física de movimento dele, comando = rumo pedido
+      const top = Math.max(sp, o.topSpeed());
+      const cx = il > 0.3 ? ix / il * Math.min(il, top) : o.vx, cz = il > 0.3 ? iz / il * Math.min(il, top) : o.vz;
+      const sim = Object.create(o);
+      sim.vx = o.vx; sim.vz = o.vz;
+      const DT = 1 / 60, path = [[o.x, o.z, o.vx, o.vz]];
+      let px = o.x, pz = o.z;
+      for (let k = 0; k < 150; k++) {
+        sim.integrate(DT, cx, cz, o.human ? cx : null, cz);
+        px += sim.vx * DT; pz += sim.vz * DT;
+        path.push([px, pz, sim.vx, sim.vz]);
+      }
+      const at = (t) => path[Math.min(path.length - 1, Math.max(0, Math.round(t / DT)))];
+      // ponto do pé no instante t (à frente do corpo, no rumo em que ele estará indo)
+      const foot = (t) => {
+        const q = at(t), v = Math.hypot(q[2], q[3]);
+        const hx = v > 0.5 ? q[2] / v : il > 0.3 ? ix / il : o.fx, hz = v > 0.5 ? q[3] / v : il > 0.3 ? iz / il : o.fz;
+        const bb = 0.27 + Math.min(v, 8) * 0.01;
+        return [q[0] + hx * bb - hz * side, q[1] + hz * bb + hx * side, hx, hz];
+      };
+      const sprinting = o.sprint && top > 6.5;
+      // abertura máxima da bola à frente do pé entre os toques (≈0,45 m correndo; ≈0,9 m em
+      // arrancada; humano muda de rumo a toda hora: toques mais curtos)
+      const gLim = (sprinting ? 0.9 : 0.45) * (o.human ? 0.72 : 1);
+      // maior abertura da bola (rolando reta até o ponto do pé em T) à frente do pé
+      const gapMax = (T) => {
+        const f = foot(T), D = Math.hypot(f[0] - b.p.x, f[1] - b.p.z);
+        if (D < 1e-3) return 0;
+        const v0 = rollSpeedFor(D, T, a0, kd), ux = (f[0] - b.p.x) / D, uz = (f[1] - b.p.z) / D;
+        let g = 0;
+        for (let k = 1; k < 8; k++) {
+          const t = T * k / 8, d = rollDist(v0, t, a0, kd), ft = foot(t);
+          g = Math.max(g, (b.p.x + ux * d - ft[0]) * ft[2] + (b.p.z + uz * d - ft[1]) * ft[3]);
+        }
+        return g;
+      };
+      const want = o.foot > 0 ? 0.45 : 0.95, st = o.pose.stride;
+      if (modo === 'arranque' || modo === 'giro') {
+        // saindo/virando: o tempo até o pé chegar na bola no rumo novo
+        T = modo === 'giro' ? clamp(0.35 + 0.07 * sp, 0.35, 0.9) : (o.human ? 0.42 : 0.55);
+        while (T > 0.3 && gapMax(T) > gLim) T -= 0.05;
+        o.touchSt = -1;
+      } else {
+        const sTop = il > 0.3 ? Math.min(il, top) : sp;
+        const v = Math.max(0.8, (sp + sTop) / 2);              // ritmo médio previsto
+        const L = cycleLength(v, o.pose.moveAngle || 0);
+        // quantas passadas até o próximo toque: a bola abre G = aRel·T²/8 à frente do pé
+        const gMax = sprinting ? 0.6 : lerp(0.2, 0.36, clamp((v - 1.5) / 4, 0, 1));
+        const aRel = a0 + kd * v, Tc = L / v;
+        let n = Math.max(1, Math.round(Math.sqrt(8 * gMax / aRel) / Tc));
+        if (n > 1 && aRel * (n * Tc) ** 2 / 8 > gMax * 1.2) n--;
+        // fase: do ponto atual da passada até o toque daqui a n ciclos
+        let frac = want - (st - Math.floor(st));
+        if (frac < 0.15) frac += 1;
+        while (n > 1 && gapMax((n - 1 + frac) * Tc) > gLim) n--;
+        T = Math.min(2.4, (n - 1 + frac) * Tc);
+        o.touchSt = (st + n - 1 + frac) % 1024;
+      }
+      const f = foot(T);
+      tx = f[0]; tz = f[1];
+    }
+    const dx = tx - b.p.x, dz = tz - b.p.z, D = Math.hypot(dx, dz);
+    let v0 = D > 1e-3 ? rollSpeedFor(D, T, a0, kd) : 0;
+    // imprecisão do toque (controle): sai um pouco mais forte/fraco e torto
+    const noise = (1 - ctl) * (o.sprint ? 0.14 : 0.09) * (modo === 'arraste' ? 0.4 : 1);
+    v0 *= 1 + gauss() * noise;
+    const ang = Math.atan2(dz, dx) + gauss() * noise * 0.35;
+    b.kick(Math.cos(ang) * v0, 0, Math.sin(ang) * v0);
+    o.dribSt = o.pose.stride;
+    if (!silencioso) this.touch(o, 'dribble');
   }
 
   possession(dt) {
@@ -579,13 +707,17 @@ export class Match {
     this.owner = p;
     p.gotBall = this.time;
     p.touchTimer = 0.12;
-    // primeiro toque amortece e traz a bola para a frente do pé
-    const lead = 0.35 + p.speed * 0.045;
-    const tx = p.x + p.fx * lead, tz = p.z + p.fz * lead;
-    b.v.x = p.vx + (tx - b.p.x) * 2.4; b.v.z = p.vz + (tz - b.p.z) * 2.4;
     p.cushion = 0.3;   // domínio emenda logo na condução (FC 26: "first touch responsiveness")
     p.dribSt = undefined;
-    if (b.p.y < R + 0.05) { b.v.y = 0; b.rolling = true; }
+    if (b.p.y < R + 0.05) {
+      // primeiro toque = um toque de condução planejado (a bola vai ao pé no próximo toque)
+      this.dribbleTouch(p, 'dominio', true);
+    } else {
+      // bola alta: amortece e traz para a frente do pé
+      const lead = 0.35 + p.speed * 0.045;
+      const tx = p.x + p.fx * lead, tz = p.z + p.fz * lead;
+      b.v.x = p.vx + (tx - b.p.x) * 2.4; b.v.z = p.vz + (tz - b.p.z) * 2.4;
+    }
     this.touch(p, how);
     this.emit('touch', { strength: 0.25 });
   }

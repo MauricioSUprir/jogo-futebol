@@ -57,13 +57,19 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Human Base Meshes do Blender Studio, CC0, exportado por `tools/humano/exportar.py` com bpy; cabeça
   com a forma do escaneamento Lee Perry-Smith, CC BY 3.0). Deformado por 17 ossos no shader
   (`players3d.js`, BODY_SKIN); a malha procedural antiga só entra se o arquivo faltar.
-- Condução híbrida (`match.js`, controlBall): "bola animada" presa à passada (sai do pé no toque,
-  volta a ele no próximo) e a bola física é puxada para ela; medir com `tools/drible-medida.mjs`,
-  `tools/drible-clip.mjs` (clipe controlado) e `tools/gols-media.mjs` (equilíbrio: ~8 gols/partida IA x IA).
+- Condução SEM ímã (auditoria Fase 2; `match.js` controlBall/dribbleTouch): entre os toques a bola é física
+  pura. No toque, o impulso é calculado pela rolagem de ball.js (`rollSpeedFor`) para a bola chegar ao pé
+  no próximo toque, prevendo o caminho do próprio jogador com `integrate` (apoio, giro, aceleração). Modos:
+  fase (n passadas), ajuste, arranque, giro (corte), amortece (domínio), arraste (sola). Entre toques o
+  condutor "monta" na bola (`human.js` keepBall, também para a IA). Medir: `tools/ima-test.mjs` (0% de ímã,
+  ~0,5 m correndo, p95 ≤ ~1,2 m na arrancada), `tools/keepball-test.mjs`, `tools/protecao-test.mjs`.
 - Rostos encaixados por 478 pontos (MediaPipe) nos marcos da cabeça 3D (`tools/rostos/marcos_cabeca.py`
   → `cabeca-marcos.json`; `processar.py` deforma cada foto por triângulos e tira a luz lateral).
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
-  `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos).
+  `tools/mocap/retarget.py`; `anim.js` mistura pela fase da passada (`s.stride` em ciclos). Pés travados por
+  IK no apoio (passada procedural sem patinar; a captura só no meio do balanço e só até ~6 m/s — acima é
+  passada por comprimento conforme a velocidade). Medir: `tools/patinacao-test.mjs` (< 0,05 m/s),
+  `tools/inclinacao-test.mjs` (tronco pela aceleração, `pose.acc`), `tools/giro-test.mjs` (180° ≤ 0,25 m).
 
 - Desempenho: torcida em 16 setores por anel com recorte pela câmera e malha leve ao longe
   (`stadium-crowd.js`, updateLOD); jogadores em alta/ultra com malha detalhada só para quem aparece
@@ -91,7 +97,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   `tools/piscada-test.mjs` (300 quadros a 30 qps forçando a resolução dinâmica; reprova com canvas apagado
   ou quadro vazio), `tools/gravar.mjs --cena tv|cel|dia|noite` (vídeos), `tools/prints-fase.mjs` (PC Alta
   1280×720 e celular 844×390 dpr2 Média, dia/noite + close do rosto). Fase 1 feita (piscada, interpolação,
-  analógico, tremor).
+  analógico, tremor). Fase 2 (movimento): `patinacao-test`, `giro-test`, `inclinacao-test`,
+  `velocidades-test` (IA longe da jogada anda/trota: ≥35% < 7 km/h, ≤5% > 25 km/h; `ai.js` shapeMove),
+  `ima-test`; vídeos de movimento `tools/cenas.mjs --cena a|b|c`.
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
@@ -100,6 +108,8 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
   && node tools/shootout-test.mjs && node tools/pen-test.mjs && node tools/offside-test.mjs \
   && node tools/tournament-test.mjs && node tools/troca-test.mjs
 # Fase 1 da auditoria (navegador): node tools/fase1-test.mjs && node tools/piscada-test.mjs
+# Fase 2 (Node): node tools/patinacao-test.mjs && node tools/giro-test.mjs && node tools/inclinacao-test.mjs \
+#   && node tools/velocidades-test.mjs 3 && node tools/ima-test.mjs 600
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```

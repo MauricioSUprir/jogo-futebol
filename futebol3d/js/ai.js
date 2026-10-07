@@ -96,30 +96,43 @@ export function teamThink(m, t, dt) {
     if (phase === 'setpiece') continue;   // setpieceAI cuida
     if (p.stun > 0 || (p.action && ['slide', 'fall', 'getup', 'dejected'].includes(p.action.type))) continue;
 
-    if (owner === p) { carrierThink(m, p, dt); continue; }
+    if (owner === p) { p.aiMode = 'condutor'; carrierThink(m, p, dt); continue; }
+    p.aiMode = 'outro';
     if (tryAerial(m, p)) continue;
 
     const pt = m.passTarget;
     if (pt && pt.p === p && !owner) {
       // vai ao encontro do passe
+      p.aiMode = 'recebe';
       p.moveTo(p.ix, p.iz, 1, true);
       p.face = b;
       continue;
     }
     if (p === chaser && !owner && !m.ball.held) {
+      p.aiMode = 'perseguidor';
       p.moveTo(p.ix, p.iz, 1, p.interceptT > 0.6);
       continue;
     }
-    if (p === press1) { pressCarrier(m, p, owner, dt, 1); continue; }
+    if (p === press1) { p.aiMode = 'pressao1'; pressCarrier(m, p, owner, dt, 1); continue; }
     // 2º pressionador: estilo do time, intensidade alta ou o Motor que não para
-    if (p === press2 && (t.style.press > 0.55 || inten > 0.66 || p.traits.includes('motor') && inten > 0.5 || m.lx(t, owner.x) < -20 || m.teamPressCall === t)) { pressCarrier(m, p, owner, dt, 2); continue; }
+    if (p === press2 && (t.style.press > 0.55 || inten > 0.66 || p.traits.includes('motor') && inten > 0.5 || m.lx(t, owner.x) < -20 || m.teamPressCall === t)) { p.aiMode = 'pressao2'; pressCarrier(m, p, owner, dt, 2); continue; }
     if (p.runUntil > m.time && attacking) {
+      p.aiMode = 'infiltracao';
       const tgx = Math.min(p.target.x * t.dir, offLine - 0.4 + (p.runLate || 0)) * t.dir;
       p.moveTo(tgx, p.target.z, 1, true);
       continue;
     }
     const far = Math.hypot(p.target.x - p.x, p.target.z - p.z);
-    p.moveTo(p.target.x, p.target.z, attacking ? 0.55 : 0.7, far > 12);
+    // alvo "preguiçoso": o desenho tático anda com a bola a cada passe; quem está longe da
+    // jogada acompanha a média (filtro de ~2 s), sem correr atrás de cada oscilação
+    {
+      const dbl = Math.hypot(b.x - p.x, b.z - p.z), tau = lerp(0.4, 2.2, clamp((dbl - 10) / 25, 0, 1));
+      const k = 1 - Math.exp(-dt / tau);
+      if (p.lazyT === undefined || Math.abs(m.time - p.lazyT) > 0.5) { p.lazyX = p.target.x; p.lazyZ = p.target.z; }
+      else { p.lazyX += (p.target.x - p.lazyX) * k; p.lazyZ += (p.target.z - p.lazyZ) * k; }
+      p.lazyT = m.time;
+    }
+    p.aiMode = 'posicao'; shapeMove(m, p, p.lazyX, p.lazyZ, attacking ? 0.55 : 0.7, inten);
     if (far < 3) p.face = b;
   }
 }
@@ -409,6 +422,28 @@ function applyDribble(m, p, intent) {
   p.dx = ax / al * s; p.dz = az / al * s; p.sprint = sprint;
   // protege a bola se muito pressionado
   if (m.pressure(p) > 0.85 && space < 2) { p.shielding = true; p.slow = 0.5; }
+}
+
+// Reposicionamento sem a bola (auditoria Fase 2: velocidades reais). A marcha sai da
+// distância ao alvo e à jogada: velocidade ≈ distância / 2,5 s (o alvo anda com a bola e
+// quem está perto dele só caminha), teto de trote longe da bola, de corrida perto dela;
+// arrancada só num recuo/avanço longo perto da jogada. Referência: em jogos reais ~40% do
+// tempo é caminhando/parado e ~5% em alta intensidade (>25 km/h).
+function shapeMove(m, p, x, z, urg, inten = 0.5) {
+  const ex = x - p.x, ez = z - p.z, d = Math.hypot(ex, ez);
+  const b = m.ball.p, db = Math.hypot(b.x - p.x, b.z - p.z);
+  // parado fica parado até o alvo se afastar (mais folga longe da bola)
+  const arrive = p.speed < 0.6 ? lerp(1.5, 3.5, clamp((db - 10) / 25, 0, 1)) : 0.5;
+  if (d < arrive) { p.dx = p.dz = 0; p.sprint = false; return d; }
+  const near = 1 - clamp((db - 10) / 20, 0, 1);              // 1 perto da jogada, 0 longe
+  const cap = lerp(lerp(2.6, 3.4, inten), p.jog, near * near);
+  const sprintOk = d > 14 && near > 0.6 && p.stamina > 0.35;
+  const want = d / lerp(4, 2, urg * near);
+  const brake = Math.sqrt(2 * PLAYER.decel * 0.55 * d);
+  const s = Math.min(sprintOk ? p.sprintSpd : cap, want, brake);
+  p.dx = ex / d * s; p.dz = ez / d * s;
+  p.sprint = sprintOk && s > p.jog + 0.2;
+  return d;
 }
 
 function spaceAhead(m, p) {

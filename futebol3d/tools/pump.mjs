@@ -22,16 +22,32 @@ export const INIT_PUMP = () => {
   };
 };
 
-export async function openGame({ w = 1280, h = 720, dpr = 1, mobile = false, port = 8790, swiftshader = true } = {}) {
+// site publicado (GitHub Pages): o Chromium headless não passa pelo proxy — busca com curl,
+// sem cache entre execuções (sempre a versão no ar)
+const TIPOS = { html: 'text/html', js: 'application/javascript', mjs: 'application/javascript', json: 'application/json', css: 'text/css', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', svg: 'image/svg+xml', bin: 'application/octet-stream', ktx2: 'image/ktx2', glb: 'model/gltf-binary', woff2: 'font/woff2', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav', webmanifest: 'application/manifest+json' };
+async function routeSite(ctx) {
+  const { execFileSync } = await import('node:child_process');
+  await ctx.route(/github\.io/, async (route) => {
+    const url = route.request().url();
+    let body;
+    try { body = execFileSync('curl', ['-sSL', '--fail', '-A', 'Mozilla/5.0 Chrome/120', url], { maxBuffer: 256 * 1024 * 1024 }); }
+    catch { return route.fulfill({ status: 404, body: '' }); }
+    const ext = (new URL(url).pathname.split('.').pop() || 'html').toLowerCase();
+    await route.fulfill({ body, contentType: TIPOS[ext] || (url.endsWith('/') ? 'text/html' : 'application/octet-stream') });
+  });
+}
+
+export async function openGame({ w = 1280, h = 720, dpr = 1, mobile = false, port = 8790, swiftshader = true, url = null } = {}) {
   const args = swiftshader ? ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : [];
   const browser = await chromium.launch({ args });
   const context = await browser.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: dpr, isMobile: mobile, hasTouch: mobile, ignoreHTTPSErrors: true });
   await routeCDN(context);
+  if (url) await routeSite(context);
   await context.addInitScript(INIT_PUMP);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
-  await page.goto(`http://localhost:${port}/index.html`, { waitUntil: 'load' });
+  await page.goto(url || `http://localhost:${port}/index.html`, { waitUntil: 'load', timeout: 180000 });
   await page.waitForTimeout(2500);
   return { browser, context, page, errors };
 }
