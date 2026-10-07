@@ -21,10 +21,10 @@ for (const c of casos) {
   await startMatch(page, { quality: c.q, timeOfDay: c.tod, userSide: c.mobile ? 'home' : 'none' });
   await pumpOn(page);
   if (c.mobile) {
-    // o time do jogador espera o toque para dar a saída
-    await page.evaluate(() => { window.__golaco.input.touchBtn.pass = true; });
-    await stepFrame(page, 1000 / 60, 3);
-    await page.evaluate(() => { window.__golaco.input.touchBtn.pass = false; });
+    // o time do jogador espera o passe para dar a saída: aperta pelo comando da partida
+    await page.evaluate(() => window.__golaco.advance(1));
+    await page.evaluate(() => window.__golaco.advance(0.1, () => ({ mx: 0, mz: 0, held: { pass: true }, press: { pass: true }, release: {}, hold: {}, rx: 0, rz: 0 })));
+    await page.evaluate(() => window.__golaco.advance(0.3, () => ({ mx: 0, mz: 0, held: {}, press: {}, release: { pass: true }, hold: { pass: 0.1 }, rx: 0, rz: 0 })));
   }
   await page.evaluate((s) => window.__golaco.advance(s), pular);
   await stepFrame(page, 1000 / 60, 20);

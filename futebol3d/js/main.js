@@ -758,6 +758,8 @@ function measure(g, dt) {
 // segue no preset atual; só quando ficam prontos a troca entra, no começo de um quadro.
 function prepPreset(g, key) {
   if (g.pendingQuality) return;
+  // sem compilação paralela no navegador, não adianta pré-compilar: troca no próximo quadro
+  if (!renderer.extensions.has('KHR_parallel_shader_compile')) { g.pendingQuality = { rebuild: true, preset: key }; return; }
   const N = QUALITY[key], pq = { rebuild: true, preset: key, ready: false };
   g.pendingQuality = pq;
   const old = { tm: renderer.toneMapping, st: renderer.shadowMap.type, se: renderer.shadowMap.enabled };

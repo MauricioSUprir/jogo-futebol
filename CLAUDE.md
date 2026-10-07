@@ -98,7 +98,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 cd futebol3d
 node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-test.mjs 3 home \
   && node tools/shootout-test.mjs && node tools/pen-test.mjs && node tools/offside-test.mjs \
-  && node tools/tournament-test.mjs
+  && node tools/tournament-test.mjs && node tools/troca-test.mjs
+# Fase 1 da auditoria (navegador): node tools/fase1-test.mjs && node tools/piscada-test.mjs
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```
