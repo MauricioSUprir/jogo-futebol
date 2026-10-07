@@ -605,6 +605,7 @@ export class GameAudio {
     this.hitIn.disconnect(); this.hitIn.connect(this.sfxPan); this.sfxPan.connect(this.sfxIn);
     this._dir.next = (this._clock ?? ctx.currentTime) + rand(4, 8);
     this.setVolumes({});
+    if (this._rainLvl) setTimeout(() => this.setRain(this._rainLvl), 0);
   }
 
   // gerador que constrói o recurso 'key'
@@ -1154,6 +1155,22 @@ export class GameAudio {
       const vol = (0.42 + 0.3 * (this._I || 0.3)) * mk * (1 - 0.6 * this.duck);
       o.sectors.forEach((v, i) => this.secG[i].gain.setTargetAtTime(v * vol, t, o.state === 'interrompido' ? 0.25 : 0.9));
     } catch (e) { console.warn('GameAudio.chantSectors', e); }
+  }
+
+  // chuva (§33): chiado agudo das gotas + grave do aguaceiro, volume pelo nível 0..1
+  setRain(level = 0) {
+    const ctx = this.ctx; if (!ctx) { this._rainLvl = level; return; }
+    try {
+      const t = this._t();
+      if (!this._rain && level > 0 && this.bufs.pink) {
+        const mk = (type, f, q) => { const s = ctx.createBufferSource(); s.buffer = this.bufs.pink; s.loop = true; const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q; const g = ctx.createGain(); g.gain.value = 0; s.connect(fl); fl.connect(g); g.connect(this.masterG); s.start(t, Math.random() * 2); return g; };
+        this._rain = { hi: mk('highpass', 3800, 0.4), lo: mk('bandpass', 900, 0.5) };
+      }
+      if (this._rain) {
+        this._rain.hi.gain.setTargetAtTime(0.05 * level, t, 1.5);
+        this._rain.lo.gain.setTargetAtTime(0.035 * level * level, t, 1.5);
+      }
+    } catch (e) { console.warn('GameAudio.setRain', e); }
   }
 
   // ouvinte = câmera (posição, frente, cima)

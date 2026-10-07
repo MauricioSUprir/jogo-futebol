@@ -8,7 +8,7 @@
 // Pausa: showPause({ onResume, onRestart, onQuit, onSettings }). "Configurações" abre o painel dentro
 // da pausa; ao fechá-lo chamamos onSettings(settings) para o núcleo aplicar o que mudou.
 // "Sair" chama onQuit() e volta ao menu (ou ao painel do torneio, se era jogo de torneio).
-import { DIFFICULTY, QUALITY, DEFAULT_SETTINGS, FORMATIONS, MODES } from './config.js';
+import { DIFFICULTY, QUALITY, DEFAULT_SETTINGS, FORMATIONS, MODES, WEATHER } from './config.js';
 import { TEAMS, teamById, crestSVG, kitSVG, resolveKits, teamStars, playerOverall } from './teams.js';
 import * as TT from './tournament.js';
 
@@ -606,7 +606,8 @@ function scrResult(res, cfg, { cont, rematch, st }) {
 function settingsBody(inPause) {
   const sec = (title, ...rows) => h('div', { class: 'gm-panel gm-set-sec' }, h('h3', {}, title), rows);
   return h('div', { class: 'gm-set-grid' },
-    sec('Partida', ...matchOptionsBody(inPause), row('Vento', 'Afeta a bola em chutes longos', toggle('wind', 'Vento'))),
+    sec('Partida', ...matchOptionsBody(inPause), row('Vento', 'Afeta a bola em chutes longos', toggle('wind', 'Vento')),
+      row('Clima', 'A chuva muda a bola (escorrega, quica menos) e o gramado', seg('weather', [...Object.entries(WEATHER).map(([k, w]) => [k, w.label]), ['aleatorio', 'Aleatório']], { small: true }))),
     sec('Jogo', row('Câmera', null, seg('camera', [['tv', 'TV'], ['pro', 'Pro'], ['aerea', 'Aérea']])),
       row('Modo de jogo', 'Authentic 0,93× (recomendado) · Competitivo 1,0× resposta máxima · Simulação 0,85× mais peso e erros · Arcade 1,08× mais chances',
         seg('gameMode', Object.entries(MODES).map(([k, mo]) => [k, mo.label]), { small: true, onChange: (v) => setSetting('gameSpeed', MODES[v].speed) })),

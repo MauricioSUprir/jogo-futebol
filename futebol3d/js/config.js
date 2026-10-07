@@ -125,6 +125,8 @@ export const QUALITY = {
   baixa: { label: 'Baixa', pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 0, anisotropy: 8, grade: 'material', shadowSoft: false, minDyn: 0.75 },
   media: { label: 'Média', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 2048, crowd: 0.70, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 8, lite: true, liteBloom: true, sharpen: 0.3, minDyn: 0.75 },
   alta:  { label: 'Alta',  pixelRatio: 1.0, maxPR: 1.5, shadows: true,  shadowSize: 2048, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: false },
+  // §37: máximo de FPS / menor latência para jogar sério (sem pós, sombra simples, 1:1)
+  competitivo: { label: 'Competitivo', pixelRatio: 1.0, maxPR: 1, shadows: true, shadowSize: 1024, crowd: 0.45, post: false, bloom: false, msaa: true, grassDetail: 1, anisotropy: 4, grade: 'material', shadowSoft: false, minDyn: 0.85 },
   ultra: { label: 'Ultra', pixelRatio: 1.0, maxPR: 2,   shadows: true,  shadowSize: 4096, crowd: 1.00, post: true,  bloom: true,  msaa: true, grassDetail: 2, anisotropy: 16, ao: true },
 };
 
@@ -143,12 +145,21 @@ export const MODES = {
   arcade:      { label: 'Arcade',      desc: 'Mais rápido, mais chances', speed: 1.08, touch: 0.6,  shot: 0.8,  fatigue: 0.6,  tackle: 0.85 },
 };
 
+// Clima (§33): chuva 0..1 altera bola (ball.js SURFACE), primeiro toque, visual e som.
+export const WEATHER = {
+  seco: { label: 'Seco', rain: 0, cloud: 0 },
+  nublado: { label: 'Nublado', rain: 0, cloud: 0.7 },
+  chuva: { label: 'Chuva', rain: 0.5, cloud: 0.85 },
+  temporal: { label: 'Temporal', rain: 1, cloud: 1 },
+};
+
 export const DEFAULT_SETTINGS = {
   difficulty: 'profissional',
   halfMinutes: 4,        // minutos reais por tempo
   camera: 'tv',          // tv | pro | aerea
   quality: 'auto',       // auto | baixa | media | alta | ultra
   timeOfDay: 'noite',    // dia | tarde | noite
+  weather: 'seco',       // seco | nublado | chuva | temporal | aleatorio (§33)
   wind: true,
   volMaster: 0.9,
   volCrowd: 0.8,

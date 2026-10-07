@@ -215,3 +215,6 @@ body.in-game #touch:not(.hidden) ~ #hud .hud-replay { top: calc(4.6em + var(--sa
 .lu-p b { margin-top: .2em; font: 700 .72em/1.1 var(--ui); text-shadow: 0 .1em .3em #000, 0 0 .2em #000; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 @media (pointer: coarse) { .lu-team { width: 15em; font-size: .78em; } .lu-pitch { height: 21em; } }
 @media (max-height: 460px) { .lu-team { font-size: .68em; } .lu-team header { padding: .35em .7em; } }
+
+/* traços de personalidade na escalação (§20) */
+.lu-p b .lu-tr { font-style: normal; margin-left: .25em; font-size: .9em; filter: drop-shadow(0 0 2px rgba(0,0,0,.8)); }

@@ -94,14 +94,23 @@ export class CameraRig {
     } else {
       // TV dinâmica: lateral, acompanha a bola de perto (mais perto no celular)
       const mobile = this.aspect > 1.2 && innerHeight < 560;
-      const tx = clamp(b.x + (ctx.lead || 0) * 5, -HL + 10, HL - 10);
-      const tz = clamp(b.z * 0.8, -26, 26);
+      // câmera adaptativa (§26): abre no contra-ataque (bola rápida no comprimento),
+      // antecipa o lançamento (olha para onde a bola vai cair) e aproxima perto da área
+      const bv = ctx.ballVel || { x: 0, z: 0 };
+      const fast = clamp((Math.abs(bv.x) - 6) / 10, 0, 1);
+      this.open = damp(this.open || 0, fast, fast > (this.open || 0) ? 2.5 : 0.8, dt);
+      const nearBox = clamp((Math.abs(b.x) - (HL - 24)) / 10, 0, 1) * (1 - this.open);
+      this.boxK = damp(this.boxK || 0, nearBox, 1.2, dt);
+      let ax = b.x, az = b.z;
+      if (ctx.land) { const w = clamp(ctx.land.t / 1.5, 0, 0.65); ax = lerp(b.x, ctx.land.x, w); az = lerp(b.z, ctx.land.z, w * 0.6); }
+      const tx = clamp(ax + (ctx.lead || 0) * 5 + bv.x * 0.35 * this.open, -HL + 10, HL - 10);
+      const tz = clamp(az * 0.8, -26, 26);
       const zoomIn = ctx.zoom ?? 0;
-      const dist = (mobile ? 30 : 36) - zoomIn * 4 + clamp((-tz - 5) / 20, 0, 1) * 4;
-      const h = (mobile ? 13.5 : 15.5) - zoomIn * 1.5;
+      const dist = (mobile ? 30 : 36) - zoomIn * 4 + clamp((-tz - 5) / 20, 0, 1) * 4 + this.open * 5 - this.boxK * 3;
+      const h = (mobile ? 13.5 : 15.5) - zoomIn * 1.5 + this.open * 1.5;
       px = tx * 0.94; py = h; pz = Math.max(tz - dist, -50);   // não entra na arquibancada
       lx = tx; ly = 0.4; lz = tz + 2;
-      fov = (portrait ? 55 : mobile ? 33 : 30) - zoomIn * 2;
+      fov = (portrait ? 55 : mobile ? 33 : 30) - zoomIn * 2 + this.open * 5 - this.boxK * 2;
       lam = 2.6;
     }
     const k = this.cine ? lam : lam;

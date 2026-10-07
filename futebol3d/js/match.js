@@ -1,9 +1,9 @@
 // Motor da partida: regras (gol, lateral, escanteio, tiro de meta, falta, pênalti,
 // impedimento, cartões), posse de bola, chutes/passes com física real, relógio,
 // intervalo, prorrogação e disputa de pênaltis. Não depende de three.js.
-import { Ball, BallPredictor, solveAim, solveLob, solveGround } from './ball.js';
+import { Ball, BallPredictor, solveAim, solveLob, solveGround, setSurface } from './ball.js';
 import { Player } from './player.js';
-import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, MODES, clamp, lerp, angDiff } from './config.js';
+import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, MODES, WEATHER, clamp, lerp, angDiff } from './config.js';
 import { teamThink, setpieceAI } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
 import { humanStep } from './human.js';
@@ -61,6 +61,11 @@ export class Match {
     this.extraTime = false;
     this.halfReal = this.settings.halfMinutes * 60;
     this.mode = MODES[this.settings.gameMode] || MODES.authentic;
+    // clima: 'aleatorio' sorteia (chuva é mais rara)
+    let wk = this.settings.weather || 'seco';
+    if (wk === 'aleatorio' || !WEATHER[wk]) { const r = Math.random(); wk = r < 0.55 ? 'seco' : r < 0.8 ? 'nublado' : r < 0.94 ? 'chuva' : 'temporal'; }
+    this.weatherKey = wk; this.weather = WEATHER[wk];
+    setSurface(this.weather.rain);
     const w = this.settings.wind ? rand(0, 4.5) : 0, wa = rand(0, Math.PI * 2);
     this.wind = { x: Math.cos(wa) * w, z: Math.sin(wa) * w };
     this.ball.wind = this.wind;
@@ -538,7 +543,7 @@ export class Match {
     const ctl = (p.a.ctl ?? p.a.dri) / 99;
     const toP = Math.atan2(p.z - b.p.z, p.x - b.p.x);                     // de onde a bola vem
     const back = (1 + Math.cos(angDiff(p.heading, toP))) / 2;               // 1 = de costas
-    const diffc = rel + Math.max(0, b.p.y - 0.2) * 5 + this.pressure(p) * 3.5 + back * 3;
+    const diffc = rel + Math.max(0, b.p.y - 0.2) * 5 + this.pressure(p) * 3.5 + back * 3 + this.weather.rain * 1.6;   // chuva: bola escorrega
     const comfort = 4 + ctl * 15 + (p.human ? 1.5 : 0) - p.fatigue * 2.5;
     const q = clamp(1 - (diffc - comfort) * this.mode.touch / 9, 0, 1);
     p.lastTouchQ = q;

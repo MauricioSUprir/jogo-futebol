@@ -12,6 +12,7 @@ import { QUALITY, DEFAULT_SETTINGS, PITCH, clamp } from './config.js';
 import { PerfHud } from './perfhud.js';
 import { switchCandidate } from './human.js';
 import { ChantEngine } from './chants.js';
+import { Rain } from './rain.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -227,7 +228,7 @@ async function startMatch(cfg) {
   const stadium = buildStadium(renderer, scene, {
     quality: Q, timeOfDay: settings.timeOfDay || 'noite',
     homeColor: cfg.home.colors?.primary || cfg.homeKit.shirt, homeColor2: cfg.home.colors?.secondary, awayColor: cfg.awayKit.shirt,
-    stadiumName: cfg.home.stadium || `Arena ${cfg.home.city || cfg.home.name}`, wind: match.wind,
+    stadiumName: cfg.home.stadium || `Arena ${cfg.home.city || cfg.home.name}`, wind: match.wind, weather: match.weather,
   });
   $('load-text').textContent = 'Aquecendo os jogadores…';
   await new Promise(r => setTimeout(r, 20));
@@ -247,13 +248,15 @@ async function startMatch(cfg) {
   let fx = null;
   try { fx = new StadiumFX(scene, { quality: Q, isNight: stadium.isNight, homeColor: cfg.homeKit.shirt, awayColor: cfg.awayKit.shirt, sunDir: stadium.sunDir, wind: match.wind }); } catch (e) { console.warn('efeitos indisponíveis', e); }
   const ball = new BallMesh(scene, Q);
+  let rain = null;
+  if (match.weather.rain > 0) try { rain = new Rain(scene, { level: match.weather.rain, quality: presetKey, night: stadium.isNight }); } catch (e) { console.warn('chuva indisponível', e); }
   const rig = new CameraRig(camera);
   rig.setMode(settings.camera);
   rig.aspect = camera.aspect;
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, facePool, faceCells, acc: 0, paused: false, t: 0,
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, rain, facePool, faceCells, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0 };
   applyQuality(true);
 
@@ -276,11 +279,14 @@ async function startMatch(cfg) {
   load.classList.add('hidden');
   if (match.phase !== 'intro') hud.banner(`${cfg.home.name} x ${cfg.away.name}`, stadiumLabel(cfg), 'period');
   game.chants = new ChantEngine(cfg.home.id, cfg.away.id);
+  audio.setRain(match.weather.rain);
   last = performance.now();
 }
 
 function stadiumLabel(cfg) {
-  const tod = { dia: 'Tarde de sol', tarde: 'Fim de tarde', noite: 'Noite de refletores' }[cfg.settings.timeOfDay] || '';
+  const wk = game?.match?.weatherKey || 'seco';
+  const tod = wk === 'seco' ? ({ dia: 'Tarde de sol', tarde: 'Fim de tarde', noite: 'Noite de refletores' }[cfg.settings.timeOfDay] || '')
+    : ({ nublado: 'Tempo nublado', chuva: 'Chuva', temporal: 'Temporal' }[wk] + ({ dia: ' à tarde', tarde: ' no fim de tarde', noite: ' à noite' }[cfg.settings.timeOfDay] || ''));
   return `${cfg.home.stadium || 'Arena ' + (cfg.home.city || '')} · ${tod}`;
 }
 
@@ -289,7 +295,7 @@ function endGame(silent) {
   if (!g) return;
   input.enabled = false;
   audio.chant(false); audio.chantSectors(null);
-  g.fx?.dispose?.();
+  g.fx?.dispose?.(); g.rain?.dispose(); audio.setRain?.(0);
   g.stadium.dispose?.();
   g.players.dispose?.();
   g.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt => { mt.map?.dispose(); mt.dispose(); }); });
@@ -611,7 +617,13 @@ function render(g, dt) {
   if (c && c.pen && (!sp || m.phase !== 'setpiece') && (!m.shootout || !m.shootout.active || m.time - (m.lastKick?.t || 0) > 1.6)) g.rig.setCinematic(null);
   if (m.phase === 'intro') introCamera(g);
   if (g.rig.snap && g.mblur) g.mblur.reset();
-  g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0 });
+  // lançamento: onde a bola vai cair (a câmera antecipa)
+  let land = null;
+  if (!m.ball.held && m.ball.p.y > 1.5 && m.pred && Math.hypot(m.ball.v.x, m.ball.v.z) > 8) {
+    const pr = m.pred;
+    for (let k = 1; k < pr.n; k++) if (pr.y(k) < 0.4) { land = { x: pr.x(k), z: pr.z(k), t: pr.t(k) }; break; }
+  }
+  g.rig.update(dt, m, { ball: _t, player: ctl, attackDir, lead, zoom: m.phase === 'setpiece' && sp && sp.type === 'corner' ? 1 : 0, ballVel: g.replaying ? null : m.ball.v, land: g.replaying ? null : land });
 
   // estádio (telões com o placar), efeitos e HUD
   g.stadium.update(dt, g.t, m.excitement, g.camera);
@@ -621,6 +633,7 @@ function render(g, dt) {
       clock: m.shootout ? 'PÊN' : `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`, homeColor: g.cfg.homeKit.shirt, awayColor: g.cfg.awayKit.shirt });
   }
   g.fx?.update(dt, g.camera);
+  g.rain?.update(dt, g.camera);
   hud.update(dt, m, g.camera, {
     replay: g.replaying, names: settings.names !== false, radar: settings.radar !== false, charging: input.charging,
     right: g.rig.right, fwd: g.rig.fwd, hint: hintFor(g),
