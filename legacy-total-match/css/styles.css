@@ -4706,7 +4706,7 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-ret-s { font-size: 11px; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vit-ret-ar { font-size: 19px; font-weight: 900; opacity: .6; }
 
-.vit-palco { height: 318px; position: relative; overflow: hidden;
+.vit-palco { height: 368px; position: relative; overflow: hidden;
   margin-top: 6px; touch-action: pan-y; }
 /* A perspectiva fica NO TRILHO (e nao no palco) de proposito: com
    transform-style: preserve-3d o Chromium so deixa clicar na carta da frente —
@@ -4719,7 +4719,8 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
   --vit-dur: 400ms; --vit-curva: cubic-bezier(.05,.7,.1,1); }
 /* 420ms com desaceleracao forte ("emphasized decelerate"): a carta chega pesada.
    So transform e opacity animam — as duas rodam no compositor. */
-.vit-carta { position: absolute; width: 186px; height: 268px; padding: 0; border-radius: 18px; overflow: hidden;
+/* 180x320 = 9:16, o formato das capas: a arte aparece inteira, sem corte */
+.vit-carta { position: absolute; width: 180px; height: 320px; padding: 0; border-radius: 18px; overflow: hidden;
   cursor: pointer; border: 2px solid rgba(255,255,255,.12); background: #0c0f12;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   transition: transform var(--vit-dur) var(--vit-curva), opacity var(--vit-dur) var(--vit-curva),
@@ -4732,6 +4733,9 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-carta.pula { transition: none; }
 .vit-carta.centro { border-color: var(--gold); box-shadow: 0 18px 44px rgba(0,0,0,.65), 0 0 28px rgba(34,197,94,.22); }
 .vit-foto { position: absolute; inset: 0; background-size: cover; background-position: center; }
+/* carta com capa: a arte ja traz o nome do modo, entao o veu e o texto saem */
+.vit-carta.com-capa .vit-veu,
+.vit-carta.com-capa .vit-faixa { display: none; }
 /* escurecer as laterais por opacidade de uma camada preta, e nao por filter:
    opacity roda no compositor, filter repinta a carta inteira a cada quadro */
 .vit-sombra { position: absolute; inset: 0; background: #05070a; opacity: 0; pointer-events: none;
@@ -4776,16 +4780,16 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-mais-ic { font-size: 18px; }
 
 @media (max-width: 360px) {
-  .vit-carta { width: 158px; height: 232px; }
-  .vit-palco { height: 282px; }
+  .vit-carta { width: 152px; height: 270px; }
+  .vit-palco { height: 314px; }
   .vit-logo { height: 38px; }
 }
 
 /* celular deitado: a tela tem pouca altura, entao a carta encolhe para o
    botao ENTRAR continuar visivel */
 @media (max-height: 520px) and (orientation: landscape) {
-  .vit-palco { height: 196px; }
-  .vit-carta { width: 116px; height: 168px; }
+  .vit-palco { height: 206px; }
+  .vit-carta { width: 104px; height: 185px; }
   .vit-f-nome { font-size: 12px; }
   .vit-f-cat { font-size: 8px; letter-spacing: 1.6px; }
   .vit-faixa { padding: 8px 9px 9px; }
