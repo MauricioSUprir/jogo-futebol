@@ -748,16 +748,17 @@
     var hasCoachSave = false; try { hasCoachSave = !!TM.storage.coachCareer(); } catch (e) {}
     var saveName = ""; try { var _cc = TM.storage.coachCareer(); if (_cc && _cc.teamName) saveName = _cc.teamName; } catch (e) {}
 
-    // só existem 5 fotos para 7 modos: cada carta usa um recorte e um tom
-    // diferentes, para que duas que dividem a mesma foto não pareçam iguais.
+    // capa = arte 9:16 de cada modo, com o nome ja desenhado nela. bg/pos/cor
+    // ficam como reserva: se a capa nao carregar, a carta volta a ser a foto
+    // com o nome escrito por cima.
     var MODOS = [
-      { cat: "CARREIRA", nome: "Carreira de Treinador", tag: "Do banco ao topo do mundo. Comande o clube e a seleção.", rota: "coach",    bg: MB + "coach.jpg",    pos: "76% 50%", cor: "34,197,94" },
-      { cat: "CARREIRA", nome: "Rumo ao Estrelato",     tag: "A semana é o jogo: energia, concorrente e um técnico de opinião.", rota: "rae", bg: MB + "trophy.jpg", pos: "48% 50%", cor: "250,204,21" },
-      { cat: "JOGAR",    nome: "Partida Rápida",        tag: "Escolha dois times e jogue agora, sem compromisso.", rota: "quick",    bg: MB + "match.jpg",    pos: "70% 50%", cor: "34,197,94" },
-      { cat: "JOGAR",    nome: "Competições",           tag: "Dispute ligas, copas e torneios de seleções.",       rota: "compmode", bg: MB + "match.jpg",    pos: "16% 50%", cor: "56,189,248" },
-      { cat: "CARTAS",   nome: "Total Ultimate",        tag: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", rota: "ut",  bg: MB + "director.jpg", pos: "52% 50%", cor: "168,85,247" },
-      { cat: "ONLINE",   nome: "Online",                tag: "Desafie amigos em tempo real pelo seu número.",      rota: "online",   bg: MB + "online.jpg",   pos: "24% 50%", cor: "56,189,248" },
-      { cat: "ONLINE",   nome: "Copa Online",           tag: "Todos entram com o código, o mata-mata é sorteado e bot completa.", rota: "copa", bg: MB + "online.jpg", pos: "74% 50%", cor: "244,114,182" }
+      { cat: "CARREIRA", nome: "Carreira de Treinador", tag: "Do banco ao topo do mundo. Comande o clube e a seleção.", rota: "coach",    capa: MB + "capa-treinador.jpg",   bg: MB + "coach.jpg",    pos: "76% 50%", cor: "34,197,94" },
+      { cat: "CARREIRA", nome: "Rumo ao Estrelato",     tag: "A semana é o jogo: energia, concorrente e um técnico de opinião.", rota: "rae", capa: MB + "capa-estrelato.jpg", bg: MB + "trophy.jpg", pos: "48% 50%", cor: "250,204,21" },
+      { cat: "JOGAR",    nome: "Partida Rápida",        tag: "Escolha dois times e jogue agora, sem compromisso.", rota: "quick",    capa: MB + "capa-rapida.jpg",      bg: MB + "match.jpg",    pos: "70% 50%", cor: "34,197,94" },
+      { cat: "JOGAR",    nome: "Competições",           tag: "Dispute ligas, copas e torneios de seleções.",       rota: "compmode", capa: MB + "capa-competicoes.jpg", bg: MB + "match.jpg",    pos: "16% 50%", cor: "56,189,248" },
+      { cat: "CARTAS",   nome: "Total Ultimate",        tag: "Abra pacotes, monte a química e suba da Divisão 10 à 1.", rota: "ut",  capa: MB + "capa-ultimate.jpg", bg: MB + "director.jpg", pos: "52% 50%", cor: "168,85,247" },
+      { cat: "ONLINE",   nome: "Online",                tag: "Desafie amigos em tempo real pelo seu número.",      rota: "online",   capa: MB + "capa-online.jpg",      bg: MB + "online.jpg",   pos: "24% 50%", cor: "56,189,248" },
+      { cat: "ONLINE",   nome: "Copa Online",           tag: "Todos entram com o código, o mata-mata é sorteado e bot completa.", rota: "copa", capa: MB + "capa-copa.jpg", bg: MB + "online.jpg", pos: "74% 50%", cor: "244,114,182" }
     ];
     var MAIS = [
       { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
@@ -822,8 +823,10 @@
     try { menosMovimento = !!(global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches); } catch (e) {}
 
     var cartas = MODOS.map(function (m, k) {
-      var foto = el("span", { class: "vit-foto", style: "background-image:url('" + m.bg + "');background-position:" + m.pos });
-      var c = el("button", { class: "vit-carta", type: "button", "aria-label": m.cat + ": " + m.nome,
+      var foto = el("span", { class: "vit-foto", style: m.capa
+        ? "background-image:url('" + m.capa + "');background-position:center"
+        : "background-image:url('" + m.bg + "');background-position:" + m.pos });
+      var c = el("button", { class: "vit-carta" + (m.capa ? " com-capa" : ""), type: "button", "aria-label": m.cat + ": " + m.nome,
         on: { click: function () { toca(k); } } }, [
         foto,
         el("span", { class: "vit-veu", style: "background:linear-gradient(to top, rgba(0,0,0,.93) 2%, rgba(" + m.cor + ",.2) 58%, rgba(0,0,0,.5) 100%)" }),
@@ -835,6 +838,16 @@
       ]);
       c._faixa = c.lastChild;
       c._sombra = c.lastChild.previousSibling;
+      if (m.capa) {
+        // se a capa falhar (arquivo fora do ar, cache velho), devolve o nome escrito
+        var teste = new Image();
+        teste.onerror = function () {
+          c.classList.remove("com-capa");
+          foto.style.backgroundImage = "url('" + m.bg + "')";
+          foto.style.backgroundPosition = m.pos;
+        };
+        teste.src = m.capa;
+      }
       trilho.appendChild(c);
       return c;
     });
@@ -906,7 +919,10 @@
       var esc = 1 - 0.16 * lim;                       // 1 · 0,84 · 0,68
       var fundo = -90 * lim;                          // 0 · -90 · -180 (afunda a carta)
       var giro = Math.max(-3, Math.min(3, d)) * -18;
-      var op = ad <= 1 ? 1 : Math.max(0, 1 - (ad - 1) / (SOME_EM - 1));
+      // as capas trazem o nome desenhado: a carta do fundo some mais rapido,
+      // senao aparece um pedaco de palavra cortado na beirada da tela
+      var t = Math.max(0, Math.min(1, (ad - 1) / (SOME_EM - 1)));
+      var op = 1 - Math.pow(t, 0.55);
       c.style.transform = "translateX(" + (d * PASSO_PC) + "%) translateZ(" + fundo.toFixed(1)
         + "px) rotateY(" + giro.toFixed(1) + "deg) scale(" + esc.toFixed(3) + ")";
       c.style.opacity = op.toFixed(3);
