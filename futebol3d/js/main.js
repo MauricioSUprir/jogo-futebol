@@ -257,7 +257,8 @@ async function startMatch(cfg) {
   const replay = new Replay(22, 12, 60);
 
   game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, rain, facePool, faceCells, acc: 0, paused: false, t: 0,
-    replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0 };
+    replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0,
+    bPrev: { ...match.ball.p }, qPrev: new THREE.Quaternion() };
   applyQuality(true);
 
   hud.init(match, cfg, { touch });
@@ -504,6 +505,10 @@ function frame(now) {
   last = now;
   if (!g) return;
   perf.begin();
+  // mudança de resolução/preset decidida no quadro anterior: aplica AGORA, antes de desenhar.
+  // (redimensionar o canvas depois do render apaga o quadro e o navegador mostra o fundo
+  // da página — a "piscada" da auditoria)
+  if (g.pendingQuality && g.pendingQuality.ready !== false) { const pq = g.pendingQuality; g.pendingQuality = null; if (pq.preset) presetKey = pq.preset; applyQuality(pq.rebuild); }
   const m = g.match;
   g.t += dt;
   const cmd = input.poll(g.rig.right, g.rig.fwd);
@@ -519,6 +524,8 @@ function frame(now) {
       g.acc += dt * ts;
       let steps = 0;
       while (g.acc >= STEP && steps < 15) {
+        // estado da bola ANTES do passo (para desenhar interpolado, como os jogadores)
+        const bp = m.ball.p; g.bPrev.x = bp.x; g.bPrev.y = bp.y; g.bPrev.z = bp.z; g.qPrev.copy(g.ball.q);
         m.step(STEP, cmd);
         input.consume();
         handleEvents(g);
@@ -537,7 +544,7 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-const _t = new THREE.Vector3();
+const _t = new THREE.Vector3(), _bi = new THREE.Vector3(), _qi = new THREE.Quaternion();
 const _ro = { right: 0, forward: 0, up: 0 };
 const _up = { x: 0, y: 0, z: 0, heading: 0, pose: null };
 // O mergulho do goleiro é movido pela jogabilidade (alcance real); a translação
@@ -576,12 +583,17 @@ function render(g, dt) {
       if (dh > Math.PI) dh -= Math.PI * 2; if (dh < -Math.PI) dh += Math.PI * 2;
       placePlayer(g, p.idx, p.px + (p.x - p.px) * alpha, p.y, p.pz + (p.z - p.pz) * alpha, p.ph + dh * alpha, p.pose, p.data.look.height);
     }
-    const b = m.ball.p;
-    const off = g.stadium.updateBall ? g.stadium.updateBall(dt, b, m.ball.v) : null;
+    // bola no MESMO instante dos jogadores: interpola entre o passo anterior e o atual com o
+    // mesmo alpha (antes era extrapolada para a frente — ficava ~v/60 m à frente do pé)
+    const b = m.ball.p, bp = g.bPrev;
+    const bx = bp.x + (b.x - bp.x) * alpha, by = bp.y + (b.y - bp.y) * alpha, bz = bp.z + (b.z - bp.z) * alpha;
+    _bi.set(bx, by, bz);
+    const off = g.stadium.updateBall ? g.stadium.updateBall(dt, _bi, m.ball.v) : null;
     const ox = off ? off.x || 0 : 0, oy = off ? off.y || 0 : 0, oz = off ? off.z || 0 : 0;
-    g.ball.set(b.x + ox + m.ball.v.x * g.acc * (m.ball.held ? 0 : 1), b.y + oy, b.z + oz + m.ball.v.z * g.acc * (m.ball.held ? 0 : 1));
+    _qi.slerpQuaternions(g.qPrev, g.ball.q, alpha);
+    g.ball.set(bx + ox, by + oy, bz + oz, _qi);
     g.ball.trail(m.ball.held ? null : m.ball.v);
-    _t.set(b.x, b.y, b.z);
+    _t.set(bx, by, bz);
   }
   g.players.commit();
   const sp = m.sp;
@@ -724,15 +736,38 @@ function measure(g, dt) {
     if (fps > 58 && dynScale >= 1 && !pc.bloomOn) pc.setBloom(true);
   }
   const minDyn = Q.minDyn ?? 0.7;
-  if (fps < 45 && dynScale > minDyn) dynScale = Math.max(minDyn, dynScale - 0.1);
-  else if (fps > 58 && dynScale < 1) dynScale = Math.min(1, dynScale + 0.05);
-  // auto: cai de preset se nem com resolução menor aguenta (ou na hora, se estiver muito lento)
-  if (settings.quality === 'auto' && (fps < 38 && dynScale <= minDyn || fps < 24)) {
+  // histerese: só mexe depois de 3 s SEGUIDOS fora da faixa (oscilação de FPS não fica
+  // trocando a resolução a cada segundo)
+  g.lowS = fps < 45 ? (g.lowS || 0) + 1 : 0;
+  g.highS = fps > 58 ? (g.highS || 0) + 1 : 0;
+  if (g.lowS >= 3 && dynScale > minDyn) { dynScale = Math.max(minDyn, dynScale - 0.1); g.lowS = 0; }
+  else if (g.highS >= 3 && dynScale < 1) { dynScale = Math.min(1, dynScale + 0.05); g.highS = 0; }
+  // auto: cai de preset se nem com resolução menor aguenta (ou se estiver muito lento por 3 s)
+  g.slowS = (settings.quality === 'auto' && (fps < 38 && dynScale <= minDyn || fps < 24)) ? (g.slowS || 0) + 1 : 0;
+  if (g.slowS >= 3) {
     const order = ['ultra', 'alta', 'media', 'baixa'];
     const i = order.indexOf(presetKey);
-    if (i < order.length - 1) { presetKey = order[i + 1]; dynScale = 0.85; applyQuality(true); return; }
+    g.slowS = 0;
+    if (i >= 0 && i < order.length - 1) { dynScale = 0.85; prepPreset(g, order[i + 1]); return; }
   }
-  if (old !== dynScale) applyQuality(false);
+  if (old !== dynScale) g.pendingQuality = { rebuild: false };
+}
+
+// Troca de preset sem travar a partida: os shaders do preset novo (sombra/tom diferentes)
+// são compilados em paralelo (compileAsync, KHR_parallel_shader_compile) enquanto o jogo
+// segue no preset atual; só quando ficam prontos a troca entra, no começo de um quadro.
+function prepPreset(g, key) {
+  if (g.pendingQuality) return;
+  const N = QUALITY[key], pq = { rebuild: true, preset: key, ready: false };
+  g.pendingQuality = pq;
+  const old = { tm: renderer.toneMapping, st: renderer.shadowMap.type, se: renderer.shadowMap.enabled };
+  renderer.toneMapping = N.grade === 'material' ? THREE.CustomToneMapping : THREE.ACESFilmicToneMapping;
+  renderer.shadowMap.type = N.shadowSoft === false ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = N.shadows;
+  let p;
+  try { p = renderer.compileAsync(g.scene, g.camera); } catch { p = Promise.resolve(); }
+  renderer.toneMapping = old.tm; renderer.shadowMap.type = old.st; renderer.shadowMap.enabled = old.se;
+  p.catch(() => {}).then(() => { pq.ready = true; });
 }
 
 // Depuração/testes automatizados: avança a simulação sem desenhar
@@ -741,6 +776,7 @@ function advance(sec, cmdFn) {
   if (!g) return null;
   for (let i = 0; i < sec * 60 && game; i++) {
     const cmd = cmdFn ? cmdFn(g.match) : { mx: 0, mz: 0, held: {}, press: {}, release: {}, hold: {}, rx: 0, rz: 0 };
+    const bp = g.match.ball.p; g.bPrev.x = bp.x; g.bPrev.y = bp.y; g.bPrev.z = bp.z; g.qPrev.copy(g.ball.q);
     g.match.step(STEP, cmd);
     handleEvents(g);
     g.ball.spin(g.match.ball.w, STEP);
@@ -749,4 +785,4 @@ function advance(sec, cmdFn) {
   }
   return { phase: g.match.phase, clock: g.match.clock, score: g.match.teams.map(t => t.score) };
 }
-window.__golaco = { get game() { return game; }, startMatch, settings: () => settings, advance, renderer, input, replayNow: () => startReplay(game) };
+window.__golaco = { get game() { return game; }, startMatch, settings: () => settings, preset: () => presetKey, setPreset: (k) => { presetKey = k; applyQuality(true); }, advance, renderer, input, replayNow: () => startReplay(game) };
