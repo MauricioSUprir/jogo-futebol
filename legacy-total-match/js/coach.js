@@ -149,10 +149,11 @@
     function close() { overlay.classList.remove("show"); setTimeout(function () { overlay.remove(); }, 220); }
     var grid = el("div", { class: "sheet-grid" });
     coachSectors(c, active).forEach(function (s) {
-      var tile = TM.ui.miniCena(TM.cenas ? TM.cenas.mini(s.route) : null, s.label,
-        function () { close(); if (!s.active) TM.ui.go(s.route); }, "sheet-tile" + (s.active ? " on" : ""), s.ic);
-      if (s.badge) tile.appendChild(el("span", { class: "sheet-badge", text: s.badge > 9 ? "9+" : s.badge }));
-      grid.appendChild(tile);
+      grid.appendChild(el("button", { class: "sheet-tile" + (s.active ? " on" : ""), on: { click: function () { close(); if (!s.active) TM.ui.go(s.route); } } }, [
+        el("span", { class: "sheet-ic", text: s.ic }),
+        el("span", { class: "sheet-lb", text: s.label }),
+        s.badge ? el("span", { class: "sheet-badge", text: s.badge > 9 ? "9+" : s.badge }) : null
+      ]));
     });
     var sheet = el("div", { class: "sheet" }, [
       el("div", { class: "sheet-handle" }),
@@ -1305,7 +1306,7 @@
           });
         });
       }),
-      hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }, TM.img.stadiumUrl ? TM.img.stadiumUrl(club) : null),
+      hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }),
       hubBtn("🏋️", "CT", function () { TM.ui.go("club-ct", { from: "coach-hub" }); }),
       hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
@@ -1315,12 +1316,8 @@
       hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
       hubBtn("📱", "Redes Sociais", function () { TM.ui.go("coach-social"); })
     ]));
-    // atalho do início: mini cena quando há uma (recorte das capas), ícone quando não há;
-    // "foto" (ex.: o estádio do clube) entra por cima da cena, que fica de reserva
-    function hubBtn(icon, label, fn, foto) {
-      var cena = TM.cenas ? TM.cenas.miniPorRotulo(label) : null;
-      return TM.ui.miniCena(foto ? [foto].concat(cena || []) : cena, label, fn, "hub-btn", icon, !!foto);
-    }
+    // atalho do início: ícone + nome (o emoji vira o ícone de traço fino)
+    function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
 
     // ---- rail lateral direito (SÓ desktop): elenco, moral e torcida preenchendo a tela ----
     try { buildHubRail(screen, c); screen.classList.add("has-rightrail"); } catch (e) {}

@@ -5115,9 +5115,6 @@ body.theme-light .scout-tip-tx { color: var(--text); }
   text-shadow: 0 1px 8px rgba(0,0,0,.75); }
 .com-cena::after { content: ""; position: absolute; left: 9px; bottom: 0; width: 22px; height: 3px; border-radius: 3px 3px 0 0;
   background: var(--gold); opacity: .9; }
-/* foto de verdade (estádio do clube): tratada em verde e preto como as capas */
-.cena-foto .mini-img { filter: grayscale(.35) contrast(1.06) brightness(.8); }
-.cena-foto .mini-tinta { position: absolute; inset: 0; z-index: -2; background: #0f7a3a; mix-blend-mode: color; opacity: .55; pointer-events: none; }
 /* sem cena: ícone verde num fundo escuro com as faixas, para a grade ficar uniforme */
 .sem-cena { position: relative; overflow: hidden; isolation: isolate; aspect-ratio: 1 / .86;
   display: flex !important; flex-direction: column; align-items: center; justify-content: center !important; gap: 7px;
@@ -5127,21 +5124,8 @@ body.theme-light .scout-tip-tx { color: var(--text); }
 .sem-cena .mini-ic { display: inline-flex; font-size: 24px; color: var(--gold); }
 .sem-cena .mini-ic .tm-ic { stroke-width: 1.6; }
 .sem-cena .mini-nome { font-size: 11.5px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.15; padding: 0 4px; }
-/* nas grades: menu, início da carreira e "todas as seções" */
+/* na grade "Mais modos" do menu (os atalhos da carreira ficam com ícone + nome) */
 .vit-mais { gap: 8px; }
-.hub-actions.six { gap: 8px; }
-/* PC: atalhos menores e mais colunas (no celular continuam 3 por linha) */
-@media (min-width: 900px) {
-  .hub-actions.six { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); max-width: 760px; }
-  .hub-actions.six .com-cena .mini-nome { font-size: 11.5px; }
-}
-.sheet-grid { gap: 8px; }
-.sheet-tile.com-cena, .sheet-tile.sem-cena { aspect-ratio: 1 / 1; border-radius: 13px; }
-.sheet-tile.com-cena .mini-nome { font-size: 10.5px; padding: 0 7px 7px; }
-.sheet-tile.sem-cena .mini-ic { font-size: 21px; }
-.sheet-tile.sem-cena .mini-nome { font-size: 10.5px; }
-.sheet-tile.on { border-color: var(--gold) !important; box-shadow: 0 0 0 1px var(--gold) inset; }
-.sheet-badge { z-index: 2; }
 body.theme-light .sem-cena { background: linear-gradient(160deg, #e3efe6 0%, #f4f8f5 72%) !important; }
 body.theme-light .sem-cena .mini-nome { color: #16241b; }
 

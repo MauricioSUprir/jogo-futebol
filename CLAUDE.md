@@ -123,12 +123,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   `ferramentas/gerar-icones.py`. Ícone direto no código: `TM.ic("nome")`.
 - Fonte Inter em `assets/fontes/` (OFL). Cores pelas variáveis de `:root` em `css/styles.css`
   (`--gold*` = verde da marca; `--ok/--erro/--alerta` só para estado).
-- **Cenas com a cara do jogo** (pedido do dono: "menos emojis, mais mini imagens"): recortes das capas
-  dos modos (artes do dono, originais em `ferramentas/capas-originais/`) feitos por
-  `ferramentas/gerar-cenas.py` → `assets/cenas/m-*.jpg` (atalhos) e `b-*.jpg` (topo das telas). Qual cena vai
-  em qual tela: `js/cenas.js` (`TOPO`, `MINI`, `ROTULO`); atalho novo = `TM.ui.miniCena(...)`. Foto de verdade
-  (estádio do clube) entra com a camada verde (`cena-foto`). Pôsteres: próximo jogo no início da carreira
-  (`TM.coachUI.posterJogo`) e fim de jogo nas telas de resultado (`TM.ui.posterFim`).
+- **Cenas com a cara do jogo**: recortes das capas dos modos (artes do dono, originais em
+  `ferramentas/capas-originais/`) feitos por `ferramentas/gerar-cenas.py` → `b-*.jpg` (topo das telas) e
+  `m-*.jpg` (só a grade "Mais modos" do menu). Qual cena vai em qual tela: `js/cenas.js` (`TOPO`, `MINI`).
+  **Atalhos do início da carreira e de "Todas as seções" ficam com ícone + nome** — o dono não gostou das
+  mini imagens neles e pediu de volta o jeito de antes (sem emoji). Pôsteres: próximo jogo no início da
+  carreira (`TM.coachUI.posterJogo`) e fim de jogo nas telas de resultado (`TM.ui.posterFim`).
 - **Cartas do Total Ultimate** (`ultimate.js` cardEl, CSS "A CARTA (Total Match)"): estilo da referência do
   dono — moldura chanfrada e brilho na cor da raridade (Base = bronze, Elite = prata, Craque = ouro, Lenda =
   **verde**; versões especiais com cor própria), nota/nome em Barlow Condensed (`assets/fontes`, OFL), faixa com

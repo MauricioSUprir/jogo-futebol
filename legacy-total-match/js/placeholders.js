@@ -417,8 +417,6 @@
       }
       return imgWithFallback(flag(nation), flag(nation), nation.name, cls);
     },
-    // só o endereço da foto REAL do estádio (null quando não há) — usado nas mini cenas
-    stadiumUrl: function (club) { var sf = clubFile("estadios", club, ".jpg"); return sf ? "assets/estadios/" + sf : null; },
     stadiumImg: function (club, cls) {
       // foto REAL do estádio (licença livre, Commons) quando existir; senão foto genérica; senão SVG gerado
       var sf = clubFile("estadios", club, ".jpg");
