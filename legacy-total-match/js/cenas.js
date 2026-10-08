@@ -1,9 +1,8 @@
 /* ================= TOTAL MATCH — cenas =================
    Imagens com a cara do jogo, recortadas das capas dos modos (artes do dono)
-   por ferramentas/gerar-cenas.py:
-   - faixas largas (b-*.jpg) para o topo das telas principais;
-   - mini cenas (m-*.jpg) para os atalhos do menu ("Mais modos").
-   Onde não há cena, o atalho fica com o ícone num fundo no mesmo estilo. */
+   por ferramentas/gerar-cenas.py: faixas largas (b-*.jpg) para o topo das telas
+   principais. Os atalhos (menu e carreira) ficam com ícone + nome — o dono
+   preferiu assim às mini imagens. */
 (function (global) {
   "use strict";
   var TM = (global.TM = global.TM || {});
@@ -28,21 +27,9 @@
     "rae-mercado": ["escritorio", "Rumo ao Estrelato"], "rae-trajetoria": ["tunel", "Rumo ao Estrelato"]
   };
 
-  // mini cenas do menu ("Mais modos"): rota -> recorte. Os atalhos da carreira ficam
-  // com ícone + nome: o dono preferiu assim.
-  var MINI = {
-    "dream": "cartas", "draft": "cartas-lado", "arena": "moedas", "groupcomp": "gamer", "editor": "mesa",
-    "saves": "tunel", "competicoes": "trofeu"
-  };
-
   function topo(rota) {
     var t = TOPO[rota];
     return t ? { img: DIR + "b-" + t[0] + ".jpg", sobre: t[1] } : null;
   }
-  function mini(rota) {
-    var m = MINI[rota];
-    return m ? DIR + "m-" + m + ".jpg" : null;
-  }
-
-  TM.cenas = { topo: topo, mini: mini };
+  TM.cenas = { topo: topo };
 })(window);

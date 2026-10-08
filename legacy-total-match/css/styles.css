@@ -5096,36 +5096,9 @@ body.theme-light .scout-tip-tx { color: var(--text); }
   letter-spacing: -.015em; text-shadow: 0 2px 18px rgba(0,0,0,.65); }
 @media (max-width: 360px) { .topbar.cena { height: 132px; } .topbar.cena .tb-title { font-size: 23px; } }
 
-/* ---- atalhos em forma de mini cena ---- */
-.com-cena { position: relative; overflow: hidden; isolation: isolate; padding: 0 !important; aspect-ratio: 1 / .86;
-  display: flex !important; flex-direction: column; justify-content: flex-end !important; align-items: flex-start !important;
-  background: #050807 !important; border: 1px solid rgba(34,197,94,.18) !important; text-align: left; }
-.com-cena .mini-img { position: absolute; inset: 0; z-index: -2; background-size: cover; background-position: center;
-  transition: transform .45s cubic-bezier(.05,.7,.1,1); }
-.com-cena:hover .mini-img, .com-cena:active .mini-img { transform: scale(1.07); }
-.com-cena .mini-veu { position: absolute; inset: 0; z-index: -1;
-  background: linear-gradient(180deg, rgba(5,8,7,0) 26%, rgba(5,8,7,.55) 58%, rgba(5,8,7,.94) 100%); }
-.com-cena .mini-nome { position: relative; padding: 0 9px 8px; font-size: 12px; font-weight: 800; color: #fff; line-height: 1.12;
-  text-shadow: 0 1px 8px rgba(0,0,0,.75); }
-.com-cena::after { content: ""; position: absolute; left: 9px; bottom: 0; width: 22px; height: 3px; border-radius: 3px 3px 0 0;
-  background: var(--gold); opacity: .9; }
-/* sem cena: ícone verde num fundo escuro com as faixas, para a grade ficar uniforme */
-.sem-cena { position: relative; overflow: hidden; isolation: isolate; aspect-ratio: 1 / .86;
-  display: flex !important; flex-direction: column; align-items: center; justify-content: center !important; gap: 7px;
-  background: linear-gradient(160deg, #0f1d15 0%, #070b09 72%) !important; border: 1px solid rgba(34,197,94,.14) !important; }
-.sem-cena::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
-  background: repeating-linear-gradient(118deg, transparent 0 16px, rgba(34,197,94,.055) 16px 22px, transparent 22px 36px); }
-.sem-cena .mini-ic { display: inline-flex; font-size: 24px; color: var(--gold); }
-.sem-cena .mini-ic .tm-ic { stroke-width: 1.6; }
-.sem-cena .mini-nome { font-size: 11.5px; font-weight: 700; color: var(--text); text-align: center; line-height: 1.15; padding: 0 4px; }
-/* na grade "Mais modos" do menu (os atalhos da carreira ficam com ícone + nome) */
-.vit-mais { gap: 8px; }
-body.theme-light .sem-cena { background: linear-gradient(160deg, #e3efe6 0%, #f4f8f5 72%) !important; }
-body.theme-light .sem-cena .mini-nome { color: #16241b; }
 
 @media (prefers-reduced-motion: reduce) {
   .cena-img { animation: none; }
-  .com-cena .mini-img { transition: none; }
 }
 
 /* ---- PÔSTER DO JOGO (início da carreira) ----
@@ -5192,7 +5165,6 @@ body.theme-light .vit-ponto { background: rgba(0,0,0,.18); }
 body.theme-light .vit-ponto.on { background: var(--gold); }
 body.theme-light .vit-cta { box-shadow: 0 8px 22px rgba(15,122,58,.28); }
 body.theme-light .vit-rod-marca { color: rgba(22,36,27,.55); }
-body.theme-light .vit-mais-b.com-cena { border-color: rgba(0,0,0,.08) !important; box-shadow: 0 6px 16px rgba(15,60,30,.12); }
 
 /* ---- AVISO no meio da tela (toast) ---- */
 .toast { position: fixed; left: 50%; top: 50%; z-index: 20000; transform: translate(-50%, -50%) scale(.88); opacity: 0;
