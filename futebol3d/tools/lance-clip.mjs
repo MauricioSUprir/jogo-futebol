@@ -22,6 +22,9 @@ async function semear(page, s) {
     const rng = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
     const real = Math.random, step = m.step.bind(m);
     m.step = (dt, cmd) => { Math.random = rng; try { return step(dt, cmd); } finally { Math.random = real; } };
+    // o fim do replay de gol recomeça a partida fora do passo (saída de bola): semente nele também
+    const fim = m.replayFinished.bind(m);
+    m.replayFinished = () => { Math.random = rng; try { return fim(); } finally { Math.random = real; } };
     // defesas do goleiro contadas no próprio evento do jogo
     const L = window.__lances = { defesa: 0, espalmada: 0 };
     const emit = m.emit.bind(m);
@@ -43,10 +46,20 @@ const conta = (page) => page.evaluate((ev) => {
   return { n, t: m.time, clock: m.clock };
 }, EV);
 
+// assinatura do estado da partida (posições, velocidades, bola, placar): as duas passadas têm de bater
+const assinatura = (page) => page.evaluate(() => {
+  const m = window.__golaco.game.match;
+  let h = m.ball.p.x * 7 + m.ball.p.z * 13 + m.teams[0].score * 101 + m.teams[1].score * 103;
+  for (const p of m.players) h += (p.x * 3.1 + p.z * 5.3 + p.vx * 0.7 + p.vz * 1.1) * (p.idx + 1);
+  return h.toFixed(4);
+});
+
 async function partida() {
   const g = await openGame(opts);
-  await startMatch(g.page, { quality: arg('q', 'alta'), timeOfDay: arg('tod', 'noite'), userSide: 'none' });
+  // relógio manual ANTES de a partida existir: nenhum quadro roda em tempo real antes da semente (os
+  // quadros da compilação dos shaders mexiam na partida e cada execução começava de um estado diferente)
   await pumpOn(g.page);
+  await startMatch(g.page, { quality: arg('q', 'alta'), timeOfDay: arg('tod', 'noite'), userSide: 'none' });
   await semear(g.page, SEM);
   return g;
 }
@@ -54,8 +67,10 @@ async function partida() {
 // 1ª passada: onde acontece o 1º lance (tempo de simulação da partida)
 let g = await partida();
 let tEv = null;
+const marcas = [];
 for (let s = 0; s < 900 && tEv === null; s++) {
   await g.page.evaluate(() => window.__golaco.advance(1));
+  marcas[s + 1] = await assinatura(g.page);
   const r = await conta(g.page);
   if (r.n > 0) tEv = r.t;
 }
@@ -67,6 +82,11 @@ console.log(`1ª passada: ${EV} perto de t=${tEv.toFixed(1)} s`);
 g = await partida();
 const ini = Math.max(0, tEv - (SEG - 5));
 await g.page.evaluate((s) => window.__golaco.advance(s), Math.floor(ini));
+if (Math.floor(ini) > 0) {
+  const a = await assinatura(g.page), b = marcas[Math.floor(ini)];
+  if (a !== b) { console.log(`as passadas divergiram antes de gravar (assinatura ${a} ≠ ${b}): nada gravado`); await g.browser.close(); process.exit(1); }
+  console.log(`2ª passada: mesmo estado da 1ª em t=${Math.floor(ini)} s (assinatura ${a}) — gravando`);
+}
 rmSync(out, { recursive: true, force: true }); mkdirSync(out, { recursive: true });
 const N = Math.round(SEG * FPS);
 let visto = null;
