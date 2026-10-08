@@ -134,7 +134,7 @@ export function roleUtility(m, t, p, owner, offLine) {
   let anchorX = m.lx(t, p.target.x), anchorZ = p.target.z * t.dir;
   // função de cada um (coordenadas "do time": x para o gol rival, z no lado do time)
   let kind = 'manter';
-  if (role === 'ATT' && !wide) { kind = 'profundidade'; anchorX = Math.min(offLine - 0.7, Math.max(anchorX, lines.def - 1)); }
+  if (role === 'ATT' && !wide) { kind = 'profundidade'; anchorX = Math.min(offLine - 1, Math.max(anchorX, Math.min(offLine - 1, blx + 25))); }
   else if (role === 'ATT' || (role === 'MID' && wide)) { kind = 'amplitude'; anchorZ = Math.sign(bz || 1) * (HW - 4); }
   else if (role === 'MID' && Math.abs(bz) < 6 && p.slot === t.formation.findIndex(f => f[0] === 'MID')) { kind = 'cobertura'; anchorX = Math.min(anchorX, blx - 6); }
   else if (role === 'MID') { kind = 'entrelinhas'; anchorX = clamp((lines.def + lines.mid) / 2, blx - 4, offLine - 1.5); }
@@ -146,14 +146,16 @@ export function roleUtility(m, t, p, owner, offLine) {
   let best = null, bs = -1e9;
   const ox = owner.x, oz = owner.z;
   for (let i = 0; i < 9; i++) {
-    const ddx = i === 0 ? 0 : Math.cos(i * 0.785) * (kind === 'entrelinhas' ? 4 : 6);
+    // profundidade: só desliza na linha (não recua)
+    const ddx = i === 0 ? 0 : Math.cos(i * 0.785) * (kind === 'entrelinhas' ? 4 : kind === 'profundidade' ? 1.2 : 6);
     const ddz = i === 0 ? 0 : Math.sin(i * 0.785) * (kind === 'amplitude' ? 3 : 6);
     let lx = anchorX + ddx, lz = anchorZ + ddz;
     lx = clamp(lx, -HL + 3, HL - 3); lz = clamp(lz, -HW + 1.5, HW - 1.5);
     const x = lx * t.dir, z = lz * t.dir;
     let u = space(m, t, x, z) * 0.55 + laneOpen(t, ox, oz, x, z) * 0.45;
     u -= Math.hypot(lx - anchorX, lz - anchorZ) * 0.12;                         // fidelidade à função
-    if (lx > offLine - 0.4) u -= (tr.includes('cacador') ? 1.5 : 4);             // risco de impedimento
+    // risco de impedimento (o centroavante de profundidade vive na linha: pune menos)
+    if (lx > offLine - 0.4) u -= kind === 'profundidade' ? (tr.includes('cacador') ? 0.6 : 1.2) : (tr.includes('cacador') ? 1.5 : 4);
     if (kind === 'profundidade') u += (lx - blx) * 0.05 * (tr.includes('explosivo') || tr.includes('cacador') ? 1.6 : 1);
     for (const o of t.players) if (o !== p && !o.sentOff) u -= Math.max(0, 5 - Math.hypot(o.target.x - x, o.target.z - z)) * 0.35;
     if (u > bs) { bs = u; best = { x, z }; }

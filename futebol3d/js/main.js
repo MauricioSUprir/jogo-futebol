@@ -13,6 +13,7 @@ import { PerfHud } from './perfhud.js';
 import { switchCandidate } from './human.js';
 import { ChantEngine } from './chants.js';
 import { Rain } from './rain.js';
+import { OffsideLine } from './offside-line.js';
 import { Match } from './match.js';
 import { Input, isTouchDevice } from './input.js';
 import { CameraRig } from './camera.js';
@@ -256,7 +257,8 @@ async function startMatch(cfg) {
   rig.snap = true;
   const replay = new Replay(22, 12, 60);
 
-  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, rain, facePool, faceCells, acc: 0, paused: false, t: 0,
+  const offsideLine = new OffsideLine(scene);
+  game = { cfg, scene, camera, match, stadium, players, ball, rig, replay, fx, rain, offsideLine, facePool, faceCells, acc: 0, paused: false, t: 0,
     replaying: false, fps: 60, frames: 0, fpsT: 0, lastBounce: 0, chantT: 20, hintIdx: -1, hintT: 0,
     bPrev: { ...match.ball.p }, qPrev: new THREE.Quaternion() };
   applyQuality(true);
@@ -296,7 +298,7 @@ function endGame(silent) {
   if (!g) return;
   input.enabled = false;
   audio.chant(false); audio.chantSectors(null);
-  g.fx?.dispose?.(); g.rain?.dispose(); audio.setRain?.(0);
+  g.fx?.dispose?.(); g.rain?.dispose(); g.offsideLine?.dispose(); audio.setRain?.(0);
   g.stadium.dispose?.();
   g.players.dispose?.();
   g.scene.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(mt => { mt.map?.dispose(); mt.dispose(); }); });
@@ -363,6 +365,7 @@ function handleEvents(g) {
         if (e.kind === 'parry') hud.banner('QUE DEFESA!', m.teams[e.side].gk.data.name, 'chance');
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
+      case 'offside': g.offsideLine?.show(e.lineX, e.x, e.z); break;
       case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); break;
       case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); g.hintIdx = -1; g.hintT = 0; break;
       case 'goal': {
@@ -646,6 +649,7 @@ function render(g, dt) {
   }
   g.fx?.update(dt, g.camera);
   g.rain?.update(dt, g.camera);
+  g.offsideLine?.update(dt);
   hud.update(dt, m, g.camera, {
     replay: g.replaying, names: settings.names !== false, radar: settings.radar !== false, charging: input.charging,
     right: g.rig.right, fwd: g.rig.fwd, hint: hintFor(g),
