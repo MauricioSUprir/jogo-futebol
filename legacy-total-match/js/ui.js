@@ -119,7 +119,7 @@
   // barra de topo com título e botão voltar
   function topbar(title, onBack, right) {
     return el("header", { class: "topbar" }, [
-      onBack ? el("button", { class: "tb-back", text: "←", on: { click: onBack } }) : el("span", { class: "tb-back-spacer" }),
+      onBack ? el("button", { class: "tb-back", "aria-label": "Voltar", on: { click: onBack } }, [ TM.ic ? TM.ic("chevron-left") : "←" ]) : el("span", { class: "tb-back-spacer" }),
       el("h2", { class: "tb-title", text: title }),
       right || el("span", { class: "tb-right" })
     ]);
@@ -783,15 +783,14 @@
         el("img", { class: "vit-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "Total Match" }),
         el("div", { class: "vit-marca-tx" }, [
           el("div", { class: "vit-nome", text: "TOTAL MATCH" }),
-          el("div", { class: "vit-sub", text: wInfo.leagues + " ligas · " + wInfo.clubs + " clubes · " + versaoAtual() })
+          el("div", { class: "vit-sub", text: versaoAtual() })
         ])
       ]),
       el("div", { class: "vit-acoes" }, [
         (TM.coins ? TM.coins.badge("vit-coins") : el("span")),
         (TM.coins && TM.coins.msgBadge ? TM.coins.msgBadge("vit-msgs") : el("span")),
         adminBtn(),
-        profBtn,
-        el("button", { class: "vit-ic", title: "Configurações", text: "⚙️", on: { click: function () { go("settings"); } } })
+        profBtn
       ])
     ]));
 
@@ -1149,6 +1148,11 @@
         el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
       ]);
     })));
+    // rodape: o tamanho do mundo do jogo e a versao (para conferir se o aparelho atualizou)
+    screen.appendChild(el("div", { class: "vit-rodape" }, [
+      el("span", { class: "vit-rod-marca", text: "TOTAL MATCH" }),
+      el("span", { text: wInfo.leagues + " ligas · " + wInfo.clubs + " clubes · " + versaoAtual() })
+    ]));
   });
 
   register("modes-min-unused", function (screen) {

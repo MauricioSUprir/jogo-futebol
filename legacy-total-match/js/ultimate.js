@@ -774,7 +774,7 @@
     screen.appendChild(TM.ui.topbar("Total Ultimate", function () { goUT("modes"); }));
     var input = el("input", { class: "ut-input", type: "text", maxlength: "22", placeholder: "Nome do seu clube" });
     screen.appendChild(el("div", { class: "ut-intro" }, [
-      el("div", { class: "ut-intro-logo", text: "⬤" }),
+      el("img", { class: "ut-intro-logo", src: "assets/logo.png", alt: "" }),
       el("h1", { class: "ut-intro-title", text: "TOTAL ULTIMATE" }),
       el("p", { class: "ut-intro-tx", text: "Abra pacotes, monte seu elenco dos sonhos com química, negocie no mercado e suba da Divisão 10 até a 1." }),
       el("div", { class: "ut-intro-feats" }, [

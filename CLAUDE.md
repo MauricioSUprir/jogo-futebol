@@ -116,6 +116,16 @@ node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
 (cache via curl) para o jsdelivr e o Google Fonts.
 
+## TOTAL MATCH (`legacy-total-match/`) — jogo de gestão (JS puro, sem build)
+- Identidade **verde e preto, profissional, sem emoji** (pedido do dono): emoji NÃO é ícone. O
+  conversor de `js/icones.js` troca qualquer emoji da interface pelo ícone (Lucide, ISC) ou tira;
+  emoji só fica em conteúdo (post, comentário, chat — `MANTER`). Para mudar o mapa:
+  `ferramentas/gerar-icones.py`. Ícone direto no código: `TM.ic("nome")`.
+- Fonte Inter em `assets/fontes/` (OFL). Cores pelas variáveis de `:root` em `css/styles.css`
+  (`--gold*` = verde da marca; `--ok/--erro/--alerta` só para estado).
+- Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
+  navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
+
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.
 - `js/engine.js` (motor), `teams.js`, `league.js`, `rng.js`, `commentary.js` **não podem depender de DOM** —

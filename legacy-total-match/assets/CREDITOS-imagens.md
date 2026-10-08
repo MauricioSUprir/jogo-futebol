@@ -2,6 +2,11 @@
 
 Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças livres (CC BY, CC BY-SA, domínio público). Cada linha: arquivo (jogador, clube) — autor — licença — página do arquivo no Commons — item do Wikidata que confirma a identidade — artigo da Wikipedia (link da tabela de elenco do clube).
 
+## Interface (ícones, fonte e capas)
+- Ícones da interface (`js/icones.js`) — **Lucide** (https://lucide.dev), licença **ISC** (aviso completo no topo de `js/icones.js`); parte deles vem do **Feather** (MIT, Cole Bemis). Bola, estádio, moeda, gol, cartão e ponto foram desenhados para o jogo no mesmo traço. Gerados por `ferramentas/gerar-icones.py`.
+- Fonte **Inter** (`assets/fontes/`) — The Inter Project Authors (https://github.com/rsms/inter), **SIL Open Font License 1.1** (`assets/fontes/LICENCA-Inter-OFL.txt`).
+- Capas dos modos do menu (`assets/menu/capa-*.jpg`) — artes do dono do jogo; a da Copa Online é provisória, montada a partir da capa da Partida Rápida e do logo.
+
 ## Jogadores
 - `ar-argentinos-juniors__brayan-cortes.jpg` (Brayan Cortés, ar/Argentinos Juniors) — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Uni%C3%B3n_La_Calera_-_Colo-Colo_20190506_35.jpg — identidade: https://www.wikidata.org/wiki/Q5733453
 - `ar-argentinos-juniors__claudio-bravo.jpg` (Claudio Bravo, ar/Argentinos Juniors) — Voltmetro — CC0 — https://commons.wikimedia.org/wiki/File%3A2017_Confederations_Cup_-_Final_-_Claudio_Bravo_wins_the_Golden_Glove.jpg — identidade: https://www.wikidata.org/wiki/Q52418850 — artigo: https://en.wikipedia.org/wiki/Claudio_Bravo_(footballer,_born_1997)
