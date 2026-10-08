@@ -34,15 +34,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
-- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (FEITA e enviada: plano em
-  6 etapas — corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/
-  pivô, IA sem vai-e-volta, intensidade) → **próximo PR:** botão de sair com o goleiro na defesa (ele ataca a bola),
-  bola parada e organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO —
-  hoje flutua, escanteio organizado, cabeceio e disputa pelo alto, organização tática), **divididas mais efetivas**
-  (desde a Fase 3 o bote de frente no atacante que protege vira falta), **troca de jogador mais rápida e inteligente**,
-  **goleiro defendendo mais** (~70% de defesas, espalmando) e **mais intensidade e movimentação dos dois times (MUITO
-  importante para o dono**: fechar o lado da bola, pressão em gatilhos, apoio e corridas) → giro com bola natural e
-  condução mais no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise da movimentação (FEITA e enviada: plano em 6 etapas —
+  corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/pivô, IA sem
+  vai-e-volta, intensidade); botão GOLEIRO, bolas paradas, bola na mão, disputa pelo alto, divididas, troca de jogador,
+  goleiro na bissetriz e intensidade dos dois times (FEITOS no PR depois da Fase 3) → **agora:** giro com bola natural e
+  condução mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+  Pendente da intensidade: apoio e corridas no ataque (o bloco mais fechado tirou ~15% dos chutes; o placar foi
+  recalibrado, mas o ataque precisa aprender a sair da pressão).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
@@ -120,6 +118,18 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   espalmada para escanteio (`parryOut`) e rebote na área; chute de média distância, finalização de primeira,
   cruzamento com ataque à área, pressão alta, decisão mais rápida no último terço; passe com risco por zona.
   Vídeo de lance natural IA×IA com semente (nada roteirizado): `tools/lance-clip.mjs --evento impedimento|defesa|espalmada`.
+- Pedidos do dono de 08/10 (PR depois da Fase 3): botão GOLEIRO na defesa (`gk.js` gkRush; `human.js` userGKRush; tecla G/Y;
+  `tools/goleiro-sai-test.mjs`, `tools/goleiro-botao-test.mjs` no celular, vídeo `tools/goleiro-clip.mjs`); bolas paradas
+  (`ai.js` alvosBolaParada/setpieceAI: tiro de meta com o adversário fora da área — Regra 16 —, lateral com 3 opções, escanteio
+  com zona + individual; `match.js` handsPoint: a bola fica NAS mãos no lateral e com o goleiro; `tools/bola-parada-test.mjs`,
+  prints `tools/bola-parada-prints.mjs`); disputa pelo alto perto das áreas (`ai.js` pontoAereo, `match.js` doHeader com duelo
+  por altura/impulsão/força; `tools/disputa-aerea-test.mjs`); dividida que vale de lado (perna sai do quadril; `match.js`
+  ajustaBote; `tools/dividida-test.mjs --alvo` e `--natural --alvo`); troca automática NO PASSE do adversário e com o marcador
+  batido (`human.js` autoSwitch; `tools/troca-auto-test.mjs`); intensidade (pressão a dois nos gatilhos — perdeu a bola, condutor
+  de costas, preso na lateral —, bloco fecha o lado da bola; `tools/intensidade-jogo-test.mjs`); goleiro na bissetriz e IA mirando
+  longe dele, chute de longe menos preciso (`tools/defesas-test.mjs`: ~67% de defesas, ~2/3 espalmadas). Equilíbrio recalibrado
+  com tudo isso (192 partidas: 2,53 gols, 12,5%, 77,6% de passe, 1,8 impedimento; o de 24 reprova ~1 em 4 por
+  sorteio). Bola parada com o time todo atordoado não trava mais (`tools/cobrador-test.mjs`).
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
@@ -131,6 +141,11 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
 # Fase 2 (Node): node tools/patinacao-test.mjs && node tools/giro-test.mjs && node tools/inclinacao-test.mjs \
 #   && node tools/velocidades-test.mjs 3 && node tools/ima-test.mjs 600
 # Fase 3 (Node): node tools/equilibrio-test.mjs 24 --par 4 && node tools/linha-test.mjs && node tools/espalmada-test.mjs
+# Pedidos de 08/10 (Node): node tools/dividida-test.mjs 200 --alvo && node tools/dividida-test.mjs 400 --natural --alvo \
+#   && node tools/troca-auto-test.mjs && node tools/intensidade-jogo-test.mjs && node tools/defesas-test.mjs 36 --par 3 \
+#   && node tools/goleiro-sai-test.mjs && node tools/bola-parada-test.mjs && node tools/disputa-aerea-test.mjs \
+#   && node tools/cobrador-test.mjs
+#   (navegador, celular: node tools/goleiro-botao-test.mjs)
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```

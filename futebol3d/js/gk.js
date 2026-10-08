@@ -98,17 +98,28 @@ export function keeperThink(m, gk, dt) {
     return;
   }
 
-  // 1 contra 1: sai para fechar o ângulo (ou o jogador mandou o goleiro sair)
+  // SAIR COM O GOLEIRO (botão do humano na defesa): ele corre e ATACA a bola enquanto o botão estiver
+  // apertado — vai no portador ou na bola solta, abafa nos pés dentro da área, dá o bote fora dela.
+  // O risco é de quem manda: gol vazio, cavadinha, drible no goleiro caído.
   const o = m.owner;
-  const called = m.userGKRush && t.human && o && o.team !== t && Math.abs(o.x - gx) < 30;
-  if (o && o.team !== t && (m.inOwnBox(gk, o.x, o.z) || called)) {
+  if (m.userGKRush && t.human && m.phase === 'play' && !b.held && (!o || o.team !== t)) { gkRush(m, gk, dt); return; }
+
+  // 1 contra 1: sai para fechar o ângulo
+  if (o && o.team !== t && m.inOwnBox(gk, o.x, o.z)) {
     const d = Math.hypot(o.x - gk.x, o.z - gk.z);
     const defendersBetween = t.players.some(p => !p.isGK && !p.sentOff && Math.abs(p.x - gx) < Math.abs(o.x - gx) && Math.hypot(p.x - o.x, p.z - o.z) < 4);
-    if (!defendersBetween || called) {
+    if (!defendersBetween) {
       // fecha o ângulo SEM colar no atacante (colado, ele tocava por cima/ao lado sem chance de
       // reação): ~40% do caminho até o gol; avança mais só se a bola escapar do pé dele
       const solta = Math.hypot(b.p.x - o.x, b.p.z - o.z) > 0.9;
-      const tx = o.x + (gx - o.x) * (solta ? 0.2 : 0.42), tz = o.z * 0.82;
+      // na BISSETRIZ do ângulo bola–traves (onde o goleiro de verdade fica): antes ficava em z = 0,82·z do
+      // atacante, ~0,7 m para o lado da primeira trave, e os gols de perto passavam a ~2,2 m dele pelo lado
+      // de fora. Sai até ~45% do caminho (antes 58% da distância da linha: a 8 m ficava a 4,6 m da linha e
+      // o chute chegava nele antes de ele reagir)
+      const dl = Math.abs(gx - o.x);
+      const out = solta ? dl * 0.8 : clamp(dl * 0.45, 1.5, 6);
+      const bs = bissetriz(gx, o.x, o.z, out);
+      const tx = bs.x, tz = bs.z;
       gk.moveTo(tx, tz, 1, true);
       gk.face = b.p;
       // abafa nos pés (melhor quando a bola está longe do pé do atacante)
@@ -140,7 +151,10 @@ export function keeperThink(m, gk, dt) {
   const d = Math.hypot(dx, dz) || 1;
   // fecha o ângulo: com a bola a 10 m sai ~2 m da linha (antes 1,5 m)
   const out = d > 45 ? clamp(4 + (d - 45) * 0.25, 4, 14) : clamp(0.8 + d * 0.12, 0.8, 4);
-  let tx = gx + dx / d * out, tz = dz / d * out;
+  // na bissetriz do ângulo bola–traves (antes na linha bola–centro do gol: com a bola aberta, o canto de
+  // fora ficava mais longe que o de dentro)
+  const bs = bissetriz(gx, b.p.x, b.p.z, out * Math.abs(dx) / d);
+  let tx = bs.x, tz = bs.z;
   if (Math.abs(tx) > HL - 0.4) tx = s * (HL - 0.4);
   tz = clamp(tz, -GOAL.halfWidth, GOAL.halfWidth);
   // bola perto e goleiro fora da posição: acelera para chegar antes do chute (com passe
@@ -149,6 +163,65 @@ export function keeperThink(m, gk, dt) {
   gk.moveTo(tx, tz, d < 30 ? 1 : 0.5, d < 25 && off > 1.2);
   gk.face = b.p;
   gk.gkReady = d < 40;
+}
+
+// Saída do goleiro comandada pelo humano: corre na bola (no ponto onde ela vai estar quando ele chegar),
+// até ~35 m da própria linha. Perto da bola no chão: dentro da área, mergulho nos pés — o corpo vira de
+// lado para o mergulho ir NA bola (de frente, o mergulho lateral passava ao lado dela); fora da área,
+// bote em pé como um jogador de linha. Bola solta: vai buscar (na área agarra; fora, domina com o pé).
+function gkRush(m, gk, dt) {
+  const b = m.ball, t = gk.team, o = m.owner;
+  const gx = m.ownGoalX(t), s = Math.sign(gx);
+  const bd = Math.hypot(b.p.x - gk.x, b.p.z - gk.z);
+  let tx, tz;
+  if (!o && gk.ix !== undefined && gk.interceptT < 3) { tx = gk.ix; tz = gk.iz; }
+  else {
+    const vx = o ? o.vx : b.v.x, vz = o ? o.vz : b.v.z;
+    const lead = clamp(bd / 8, 0, 0.5);
+    tx = b.p.x + vx * lead; tz = b.p.z + vz * lead;
+  }
+  if (Math.abs(gx - tx) > 35) tx = gx - s * 35;
+  gk.moveTo(tx, tz, 1, true);
+  gk.face = b.p;
+  if (!o || b.p.y > 0.6) return;
+  const naArea = m.inOwnBox(gk, b.p.x, b.p.z);
+  const perto = naArea ? 2.4 : 1.9;
+  if (bd > perto || bd < 0.35 || Math.random() > dt * 9 * (0.55 + skillOf(m, gk) * 0.6)) return;
+  const ang = Math.atan2(b.p.z - gk.z, b.p.x - gk.x);
+  if (naArea) {
+    const side = angDiff(gk.heading, ang) >= 0 ? 1 : -1;
+    gk.heading = ang - side * Math.PI / 2;
+    gk.startAction('gk_dive', { diveSide: side, diveHeight: 0, lateral: clamp(bd - 0.35, 0.4, 2.0), face: gk.heading });
+    // o atacante da IA vê o goleiro se jogar e tira a bola do lado (drible no goleiro): o bom
+    // driblador consegue mais; se der certo, o gol fica vazio
+    if (!o.human && o.touchTimer <= 0.1 && Math.random() < 0.15 + o.a.dri / 99 * 0.45) {
+      const px = -Math.sin(ang), pz = Math.cos(ang);           // perpendicular à linha goleiro→bola
+      const lado = (px * (o.x - gk.x) + pz * (o.z - gk.z)) >= 0 ? 1 : -1;
+      const gxs = Math.sign(m.ownGoalX(t));
+      const ix = px * lado * 0.8 + gxs * 0.6, iz = pz * lado * 0.8;       // para o lado e na direção do gol
+      const il = Math.hypot(ix, iz) || 1;
+      o.intentX = ix / il * o.jog; o.intentZ = iz / il * o.jog;
+      o.dx = o.intentX; o.dz = o.intentZ;
+      m.dribbleTouch(o, 'giro');
+      o.touchTimer = 0.3;
+    }
+  } else if ((m.tackleCd || 0) <= m.time) {
+    m.tackleCd = m.time + 0.55;
+    const lx = (b.p.x - gk.x) / bd, lz = (b.p.z - gk.z) / bd;
+    gk.heading = ang;
+    gk.startAction('tackle', { face: ang, lunge: clamp((bd - 0.55) / 0.2, 0, 7.5), lx, lz });
+  }
+}
+
+// Ponto na bissetriz do ângulo formado pela bola e as duas traves, a `out` metros da linha do gol (o goleiro
+// ali deixa os dois cantos igualmente longe). gx = x da linha do gol.
+function bissetriz(gx, bx, bz, out) {
+  const ax = gx - bx, z1 = GOAL.halfWidth - bz, z2 = -GOAL.halfWidth - bz;
+  const l1 = Math.hypot(ax, z1) || 1, l2 = Math.hypot(ax, z2) || 1;
+  let ux = ax / l1 + ax / l2, uz = z1 / l1 + z2 / l2;
+  const ul = Math.hypot(ux, uz) || 1; ux /= ul; uz /= ul;
+  const k = Math.max(0, (Math.abs(ax) - out) / Math.max(0.15, Math.abs(ux)));
+  return { x: bx + ux * k, z: bz + uz * k };
 }
 
 function reaction(m, gk) {
@@ -260,7 +333,11 @@ function save(m, gk, edge) {
   const sk = skillOf(m, gk);
   // alcançou a bola: no corpo quase sempre defende (~95%); na ponta dos dedos, num mergulho
   // longo, ~60%; bomba acima de ~22 m/s pesa. Antes era ~80% fixo — até bola no peito passava
-  const pSave = clamp(0.97 - edge * 0.35 - Math.max(0, sp - 22) * 0.015 + (sk - 0.6) * 0.25, 0.3, 0.98);
+  // (0,97 → 0,87: com o goleiro na bissetriz ele chega em bem mais bolas; nem toda bola que ele toca fica fora).
+  // De perto a defesa é reflexo e a bola escapa mais; de longe ele chega arrumado e segura/espalma limpo
+  const ls = m.lastShot && m.lastShot.p ? Math.hypot(m.ownGoalX(gk.team) - m.lastShot.p.x, m.lastShot.p.z) : 16;
+  const pDist = ls < 12 ? -0.06 : ls > 20 ? 0.05 : 0;
+  const pSave = clamp(0.87 + pDist - edge * 0.35 - Math.max(0, sp - 22) * 0.015 + (sk - 0.6) * 0.25, 0.3, 0.96);
   gk.saveCd = 0.35;
   if (Math.random() > pSave) {
     // só raspa: a bola perde força e muda de rumo (às vezes ainda entra)

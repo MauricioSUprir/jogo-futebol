@@ -27,6 +27,9 @@ export function humanStep(m, cmd, dt) {
 
   if (m.phase === 'setpiece' && m.sp && m.sp.team === team && m.sp.taker === p) { setpiece(m, p, cmd, mx, mz, dt); return; }
   if (m.phase !== 'play') return;
+  // sair com o goleiro: botão GOLEIRO (toque), G (teclado) ou Y segurado (controle). Lido sempre, mesmo
+  // com o jogador controlado caído ou num carrinho: quem sai é o goleiro
+  m.userGKRush = !!(cmd.held.gkrush || cmd.held.through);
 
   // goleiro com a bola na mão: humano repõe
   if (team.gk.holdingBall && m.holder === team.gk) {
@@ -122,7 +125,7 @@ export function humanStep(m, cmd, dt) {
     p.startAction('slide', { speed: Math.max(6.5, p.speed * 1.08) });
   }
   m.teamPressCall = cmd.held.long ? team : null;
-  m.userGKRush = cmd.held.through;
+
 }
 
 function moveInput(p, mx, mz, sprint, scale) {
@@ -312,13 +315,16 @@ function firstTime(m, p) {
   }
 }
 
-// Troca: o companheiro que chega primeiro na bola (ou no portador adversário).
+// Troca: o companheiro que chega primeiro na bola (ou no portador adversário). Com a bola no pé do
+// adversário, vale quem chega antes no caminho dele (onde ele vai estar em 0,5 s) estando entre ele e o
+// nosso gol — quem vem por trás chega, mas não defende
 function switchList(m) {
   const team = m.userTeam;
   const cur = m.controlled;
-  const b = m.ball.p;
+  const b = m.ball.p, o = m.owner, adv = o && o.team !== team;
+  const x = adv ? o.x + o.vx * 0.5 : b.x, z = adv ? o.z + o.vz * 0.5 : b.z;
   return team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
-    .map(q => ({ q, s: q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
+    .map(q => ({ q, s: adv ? notaMarcador(m, q, x, z) : q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
     .sort((a, c) => a.s - c.s);
 }
 function switchIndex(m, n, manual) {
@@ -356,14 +362,52 @@ export function switchCandidate(m) {
   return list.length ? list[switchIndex(m, list.length, true)].q : null;
 }
 
+// Tempo aproximado para um jogador chegar a um ponto (arrancada + o giro que ele precisa dar).
+function tempoAte(q, x, z) {
+  const dx = x - q.x, dz = z - q.z, d = Math.hypot(dx, dz);
+  const giro = d > 0.5 ? (1 - (dx * q.fx + dz * q.fz) / d) * 0.25 : 0;
+  return d / (q.sprintSpd || 8) + giro;
+}
+// Nota de um marcador para um ponto: quem chega antes, com desconto para quem já está entre o ponto e o
+// nosso gol (quem vem por trás chega, mas não defende)
+function notaMarcador(m, q, x, z) {
+  return tempoAte(q, x, z) + (m.lx(q.team, q.x) < m.lx(q.team, x) + 1 ? 0 : 0.6);
+}
+function melhorMarcador(m, x, z) {
+  let best = null, bs = 1e9;
+  for (const q of m.userTeam.players) {
+    if (q.sentOff || q.isGK) continue;
+    const s = notaMarcador(m, q, x, z);
+    if (s < bs) { bs = s; best = q; }
+  }
+  return best ? { q: best, s: bs } : null;
+}
+
 function autoSwitch(m) {
   const team = m.userTeam;
   const owner = m.owner;
   const cur = m.controlled;
+  const troca = (q) => { m.setControlled(q); m.lastSwitchT = m.time; m.switchIdx = 0; };
+  // passe do adversário: troca NO PASSE para quem chega antes ao recebedor (FC: "auto switching" no passe).
+  // Antes só trocava quando o recebedor dominava (~1 s depois) e se o controlado estivesse a > 12 m.
+  // Só troca com vantagem clara (0,35 s): se o controlado já é quem chega, ele continua.
+  const lk = m.lastKick, pt = m.passTarget;
+  if (lk && lk.t !== m.trocaPasseT && lk.p.team !== team && !owner && cur && pt && pt.p && pt.p.team !== team && m.time - pt.t < 0.2) {
+    m.trocaPasseT = lk.t;
+    const b = melhorMarcador(m, pt.x, pt.z);
+    if (b && b.q !== cur && notaMarcador(m, cur, pt.x, pt.z) - b.s > 0.35) troca(b.q);
+  }
+  // marcador batido: o condutor passou do controlado rumo ao nosso gol e há um companheiro entre ele e o
+  // gol que chega antes ao caminho dele — troca para esse (antes ficava no batido até apertar TROCAR)
+  if (owner && owner.team !== team && cur && m.time - (m.lastSwitchT || 0) > 0.6 && m.lx(team, cur.x) - m.lx(team, owner.x) > 2.5) {
+    const x = owner.x + owner.vx * 0.6, z = owner.z + owner.vz * 0.6;
+    const b = melhorMarcador(m, x, z);
+    if (b && b.q !== cur && m.lx(team, b.q.x) < m.lx(team, owner.x) + 1 && b.s < notaMarcador(m, cur, x, z) - 0.2) troca(b.q);
+  }
   const key = owner ? owner.idx : -1;
   if (key !== m.lastOwnerKey) {
     m.lastOwnerKey = key;
-    if (owner && owner.team !== team && cur) {
+    if (owner && owner.team !== team && cur && m.time - (m.lastSwitchT || 0) > 0.3) {
       const d = Math.hypot(cur.x - owner.x, cur.z - owner.z);
       if (d > 12) switchPlayer(m, false);
     }

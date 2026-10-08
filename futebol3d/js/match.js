@@ -3,16 +3,33 @@
 // intervalo, prorrogação e disputa de pênaltis. Não depende de three.js.
 import { Ball, BallPredictor, solveAim, solveLob, solveGround, setSurface, SURFACE } from './ball.js';
 import { Player } from './player.js';
-import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, DIFFICULTY, MODES, WEATHER, clamp, lerp, angDiff } from './config.js';
-import { teamThink, setpieceAI } from './ai.js';
+import { FORMATIONS, PITCH, GOAL, BALL, PLAYER, ANIM, DIFFICULTY, MODES, WEATHER, clamp, lerp, angDiff } from './config.js';
+import { teamThink, setpieceAI, areaOcupada } from './ai.js';
 import { keeperThink, keeperSaveCheck } from './gk.js';
 import { humanStep, keepBall } from './human.js';
-import { cycleLength } from './anim.js';
+import { cycleLength, computePose, createPose, bonePoint } from './anim.js';
 import { pickLeader } from './tactics.js';
 
 const R = BALL.radius;
 const HL = PITCH.halfL, HW = PITCH.halfW;
 const rand = (a, b) => a + Math.random() * (b - a);
+// Ponto entre as palmas das mãos, pela pose do jogo (anim.js é função pura do estado): a bola segurada
+// (lateral, goleiro) fica NAS mãos. Antes ficava num ponto fixo na frente do corpo e "flutuava":
+// no lateral a 0,95 m das mãos, com o goleiro a 0,34 m (tools/bola-parada-test.mjs).
+const _PH = createPose(), _ph = [0, 0, 0], _hp = { x: 0, y: 0, z: 0 };
+function handsPoint(p, out = _hp) {
+  computePose(p.pose, _PH);
+  const hs = (p.data.look?.height || PLAYER.height) / 1.8;
+  const th = Math.PI / 2 - p.heading, c = Math.cos(th), s = Math.sin(th);
+  let x = 0, y = 0, z = 0;
+  for (const bn of [7, 10]) {
+    bonePoint(_PH, bn, 0, -0.08, 0, _ph);
+    const px = _ph[0] * hs, py = _ph[1] * hs, pz = _ph[2] * hs;
+    x += p.x + c * px + s * pz; y += py; z += p.z - s * px + c * pz;
+  }
+  out.x = x / 2; out.y = y / 2 + (p.y || 0); out.z = z / 2;
+  return out;
+}
 // massa aproximada pelo corpo do jogador (altura e porte do visual): ~68–94 kg
 const massOf = (p) => p._mass ?? (p._mass = 62 + ((p.data.look?.height ?? 1.8) - 1.7) * 95 + (p.data.look?.build ?? 0.55) * 14);
 // firmeza no contato: massa × força × equilíbrio (cansaço tira); plantado ganha um pouco
@@ -31,7 +48,9 @@ const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 
 export const INTRO_TIMES = INTRO;
 // dispersão do chute (rad por unidade de erro): calibrada para ~35–40% dos chutes no alvo
 // e conversão de 9–14% (auditoria, Fase 3)
-const SHOT_ERR = 0.2;
+// (0,2 → 0,09 com o goleiro novo na bissetriz e a pressão em bloco: sem isso o placar caía para ~1,5 gol e só
+// ~25% dos chutes iam no gol; no futebol real ~1/3)
+const SHOT_ERR = 0.09;
 // ângulo entre o rumo pedido e o caminho da bola a partir do qual o toque vira um corte
 const TURN_CUT = 0.8;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
@@ -259,6 +278,7 @@ export class Match {
     for (const p of this.players) {
       if (p.sentOff) continue;
       p.hasBall = this.owner === p;
+      if (p.action && p.action.type === 'tackle') this.ajustaBote(p);
       p.step(dt, this.onContact, this.onActionEnd);
       if (fk) {
         // intensidade alta cobra energia; o 'Motor' cansa menos
@@ -407,11 +427,20 @@ export class Match {
       // bola nas mãos (goleiro ou lateral)
       const h = this.holder;
       if (h) {
-        if (h.isGK) {
-          const lying = h.action && (h.action.type === 'gk_dive' || h.action.type === 'getup');
-          b.hold(h.x + h.fx * (lying ? 0.1 : 0.35), lying ? 0.4 : 1.15, h.z + h.fz * (lying ? 0.1 : 0.35));
+        const act = h.action;
+        // deitado depois do mergulho: a translação da animação é descontada no desenho, então a bola
+        // fica junto do corpo, perto do chão
+        if (h.isGK && act && (act.type === 'gk_dive' || act.type === 'getup')) b.hold(h.x + h.fx * 0.1, 0.4, h.z + h.fz * 0.1);
+        // (nunca atrás da linha de fundo: com o goleiro em cima da linha, as mãos no alto do arremesso
+        // ficavam atrás dela e a bola solta ali contava gol contra)
+        else { const c = handsPoint(h); b.hold(clamp(c.x, -HL + 0.45, HL - 0.45), c.y, c.z); }
+        // chutão do goleiro: larga a bola das mãos ~0,2 s antes do chute e ela cai até o pé (antes ela
+        // "pulava" da mão para o pé no instante do chute)
+        if (act && act.type === 'gk_kick' && !act.data.dropped && act.t >= act.contactT - 0.2) {
+          act.data.dropped = true;
+          b.release(); b.v.x = h.vx; b.v.y = 0; b.v.z = h.vz;
+          this.holder = null; h.holdingBall = false; this.owner = null;
         }
-        else b.hold(h.x - h.fx * 0.15, 2.25, h.z - h.fz * 0.15);
       }
       return;
     }
@@ -1021,7 +1050,10 @@ export class Match {
     for (const p of this.players) { p.holdingBall = false; if (p.action && p.action.type !== 'fall') p.action = null; }
     let x = r.x ?? 0, z = r.z ?? 0;
     let taker;
-    const pool = team.players.filter(p => !p.sentOff && !p.isGK && p.stun <= 0);
+    // quem pode cobrar: de linha e em pé; se todos estiverem atordoados (falta seguida de trombada), qualquer um
+    // de linha — antes a lista ficava vazia e o jogo travava ao montar a cobrança (achado no vídeo do botão GOLEIRO)
+    const deLinha = team.players.filter(p => !p.sentOff && !p.isGK);
+    const pool = deLinha.some(p => p.stun <= 0) ? deLinha.filter(p => p.stun <= 0) : deLinha;
     const nearest = (px, pz, list = pool) => list.reduce((a, p) => (Math.hypot(p.x - px, p.z - pz) < Math.hypot(a.x - px, a.z - pz) ? p : a), list[0]);
     const tgx = this.goalX(team);
     let aim = Math.atan2(-z * 0.3, tgx - x);
@@ -1108,12 +1140,18 @@ export class Match {
 
   // Cobrança efetuada (humano ou IA). kind: pass | long | shot | finesse | chip | cross | throw
   takeSetpiece(kind, params = {}) {
+    // tiro de meta com adversário ainda na área (Regra 16): a cobrança espera a área esvaziar
+    if (this.sp && this.sp.type === 'goalkick' && !this.sp.taken && this.sp.t < 6 && areaOcupada(this, this.sp)) { this.sp.pendente = { kind, params }; return; }
+    // escanteio: na cobrança, quem ataca a bola corre para a zona e quem marca vai junto
+    if (this.sp && this.sp.type === 'corner') for (const q of this.players) { if (q.spRun) q.spRun.ate = this.time + 1.7; if (q.spMarca) q.spMarca.ate = this.time + 1.7; }
     const sp = this.sp;
     if (!sp || this.phase !== 'setpiece') return;
     const p = sp.taker;
     if (sp.type === 'throwin') {
       p.action = null;
       p.startAction('throwin', { face: sp.aim, ...params, kind });
+      // o arremesso continua da pose em que ele segurava a bola (braços no alto), sem voltar ao começo
+      p.action.t = 0.3 * ANIM.throwin.dur; p.pose.t = p.action.t;
       p.action.data.setpiece = true;
     } else {
       const type = sp.type === 'penalty' ? (kind === 'chip' ? 'chip' : kind === 'finesse' ? 'finesse' : 'penalty') : kind;
@@ -1151,6 +1189,7 @@ export class Match {
 
   // chamado no quadro do contato do chute de bola parada
   endSetpiece() {
+    for (const q of this.players) q.spAlvo = null;
     const sp = this.sp;
     this.phase = 'play';
     for (const p of this.wall || []) { p.inWall = false; if (Math.random() < 0.8) p.jumpT = 0.35; }
@@ -1169,8 +1208,10 @@ export class Match {
       if (!act.data.kind) return;
       const tg = act.data.target || { x: p.x + Math.cos(act.data.face) * 12, z: p.z + Math.sin(act.data.face) * 12 };
       const long = act.data.kind === 'long';
+      // sai das mãos (acima da cabeça, no ponto da pose no instante do arremesso)
+      const c = handsPoint(p);
       b.release(); this.holder = null;
-      b.place(p.x + p.fx * 0.2, 2.1, p.z + p.fz * 0.2);
+      b.place(c.x, c.y, c.z);
       const v = solveLob(b.p, { x: tg.x, y: 0.5, z: tg.z }, long ? 0.45 : 0.3, null, this.wind);
       b.kick(v.vx, v.vy, v.vz);
       if (this.phase === 'setpiece') this.endSetpiece();
@@ -1179,16 +1220,19 @@ export class Match {
       return;
     }
     if (t === 'gk_throw' || t === 'gk_kick') {
-      if (!this.ball.held || this.holder !== p) return;
+      const largou = t === 'gk_kick' && act.data.dropped && !b.held && Math.hypot(b.p.x - p.x, b.p.z - p.z) < 1.6;
+      if (!largou && (!this.ball.held || this.holder !== p)) return;
+      const c = handsPoint(p, { x: 0, y: 0, z: 0 });
       b.release(); this.holder = null; p.holdingBall = false;
       const tg = act.data.target;
       if (t === 'gk_throw') {
-        b.place(p.x + p.fx * 0.5, 1.6, p.z + p.fz * 0.5);
+        b.place(clamp(c.x, -HL + 0.45, HL - 0.45), c.y, c.z);
         const v = solveLob(b.p, { x: tg.x, y: R, z: tg.z }, 0.12, null, this.wind);
         b.kick(v.vx, v.vy, v.vz);
         this.emit('kick', { power: 0.3, kind: 'throw' });
       } else {
-        b.place(p.x + p.fx * 0.6, 0.5, p.z + p.fz * 0.6);
+        // chutão: a bola que ele largou chega ao pé (se não largou, sai do pé como antes)
+        if (!largou) b.place(p.x + p.fx * 0.6, 0.5, p.z + p.fz * 0.6);
         const v = solveLob(b.p, { x: tg.x, y: R, z: tg.z }, 0.62, { top: -6 }, this.wind);
         b.kick(v.vx, v.vy, v.vz, v.wx, v.wy, v.wz);
         this.emit('kick', { power: 0.9, kind: 'gk' });
@@ -1200,19 +1244,27 @@ export class Match {
       return;
     }
     if (t === 'tackle') {
-      // alcance real da perna: ~1,35 m do corpo (o bote da dividida aproxima antes)
+      // alcance real da perna esticada no bote: ~1,45 m do corpo (o bote da dividida aproxima antes)
       const d = Math.hypot(b.p.x - (p.x + p.fx * 0.6), b.p.z - (p.z + p.fz * 0.6));
       const o = this.owner;
-      // corpo do atacante entre o defensor e a bola: a perna pega o atacante, não a bola
-      const through = o && o !== p && segPointDist(p.x, p.z, b.p.x, b.p.z, o.x, o.z) < 0.38 && Math.hypot(b.p.x - o.x, b.p.z - o.z) < 1.0;
-      if (d < 0.75 && b.p.y < 0.6 && !through) {
+      // corpo do atacante entre o defensor e a bola: a perna pega o atacante, não a bola. A perna sai do
+      // quadril (não do centro do corpo) e o que bloqueia é o quadril/pernas dele (~0,24 m de meia largura):
+      // de lado, o pé alcança a bola na frente dele (desarme normal); de trás ou de trás-lado, passa pelo corpo.
+      // (antes 0,38 m do centro: de lado já contava como "através do corpo" e virava falta)
+      const hx = p.x + p.fx * 0.15, hz = p.z + p.fz * 0.15;
+      const through = o && o !== p && segPointDist(hx, hz, b.p.x, b.p.z, o.x, o.z) < 0.24 && Math.hypot(b.p.x - o.x, b.p.z - o.z) < 1.0;
+      if (d < 0.85 && b.p.y < 0.6 && !through) {
         const skill = (p.a.tkl ?? p.a.def) / 99, drib = o ? ((o.a.ctl ?? o.a.dri) * 0.6 + o.a.dri * 0.4) / 99 : 0.3;
         const behind = o && Math.cos(angDiff(p.heading, o.heading)) > 0.6;
-        const chance = clamp(0.55 + (skill - drib) * 0.8 - (o && o.shielding ? 0.2 : 0) - (behind ? 0.25 : 0), 0.12, 0.92);
+        // bola exposta (longe do pé de quem conduz, entre dois toques) é bem mais fácil de tirar
+        const expo = o ? clamp((Math.hypot(b.p.x - o.x, b.p.z - o.z) - 0.4) / 0.5, 0, 1) : 1;
+        // bote que chega na bola no tempo certo ganha na maioria das vezes (no futebol real ~60–70% dos
+        // desarmes dão a bola ao time de quem desarma); antes 0,55 de base e só ~1/3 terminava com ele
+        const chance = clamp(0.64 + (skill - drib) * 0.8 + expo * 0.15 - (o && o.shielding ? 0.2 : 0) - (behind ? 0.25 : 0), 0.15, 0.93);
         if (Math.random() < chance) {
           if (o) { o.cooldown = 0.5; o.stun = 0.25; }
           this.owner = null;
-          if (Math.random() < 0.55 + skill * 0.3) this.takeBall(p, 'tackle');
+          if (Math.random() < 0.68 + skill * 0.28) this.takeBall(p, 'tackle');
           else { const a = p.heading + rand(-0.8, 0.8); b.kick(Math.cos(a) * 5, 0.3, Math.sin(a) * 5); this.touch(p, 'tackle'); }
           this.emit('tackle', { strength: 0.6 });
         } else if (o && Math.random() < (behind ? 0.45 : 0.3 * (1.2 - skill))) {
@@ -1222,7 +1274,8 @@ export class Match {
         } else { p.stun = 0.35; }
       } else {
         // furou: se a perna pegou o corpo do atacante em vez da bola, pode ser falta
-        if (o && o.team !== p.team && (through || Math.hypot(o.x - (p.x + p.fx * 0.6), o.z - (p.z + p.fz * 0.6)) < 0.7) && Math.random() < (through ? 0.55 : 0.4)) {
+        // (de frente, a perna que não pega a bola costuma passar pelo atacante sem derrubá-lo)
+        if (o && o.team !== p.team && (through || Math.hypot(o.x - (p.x + p.fx * 0.6), o.z - (p.z + p.fz * 0.6)) < 0.7) && Math.random() < (through ? 0.5 : 0.25)) {
           o.startAction('fall', {}); o.stun = 1.2;
           this.foul(p, o, Math.random() < 0.06 ? 2 : 1);
         } else p.stun = 0.3;
@@ -1294,7 +1347,7 @@ export class Match {
       // bola vem em relação ao pé: até +60% de erro num passe forte
       const relV = this.owner === p ? 0 : Math.hypot(b.v.x - p.vx, b.v.z - p.vz);
       const primeira = 1 + clamp((relV - 3) / 14, 0, 0.6);
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : kind === 'volley' ? 1.8 : 1) * (0.8 + power * 0.5) * SHOT_ERR * (1 + press * 1.0) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * primeira * this.mode.shot;
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : kind === 'volley' ? 1.8 : 1) * (0.8 + power * 0.5) * SHOT_ERR * (1 + press * 0.75) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * primeira * this.mode.shot;
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);
@@ -1333,7 +1386,13 @@ export class Match {
       const side = kind === 'cross' ? -(data.foot ?? p.foot) * 12 : 0;
       err = errBase(a.pas) * (kind === 'clear' ? 0.09 : 0.045);
       const d = Math.hypot(tg.x - o.x, tg.z - o.z);
-      const t2 = { x: tg.x + gauss() * err * d, y: R, z: tg.z + gauss() * err * d };
+      // cruzamento para alguém: a bola passa por ele na altura da cabeça (antes caía no pé dele, e o
+      // cabeceio acontecia 2–3 m antes, onde ninguém estava)
+      // (só no cruzamento pelo alto: o da IA vai pelo alto para quem cabeceia bem e no resto das vezes rasteiro/na
+      // meia-altura, no pé — no futebol real ~1/3 dos cruzamentos é rasteiro ou cortado para trás; todo cruzamento na
+      // cabeça tirou os voleios e os chutes de primeira da área e o placar caiu de ~3 para ~2 gols por partida)
+      const rec = data.receiver, alto = kind === 'cross' && rec && (data.alto ?? (p.human || (rec.data.look?.height || 1.8) >= 1.85 || Math.random() < 0.45));
+      const t2 = { x: tg.x + gauss() * err * d, y: alto ? 1.9 : R, z: tg.z + gauss() * err * d };
       v = solveLob(o, t2, pitch, { side, top: -5 }, this.wind);
       if (kind !== 'clear') team.stats.passes++;
     }
@@ -1393,7 +1452,30 @@ export class Match {
     const jump = act.data.jump ?? 0.35;
     const hx = p.x + p.fx * 0.15, hz = p.z + p.fz * 0.15, hy = 1.72 + jump;
     const d = Math.hypot(b.p.x - hx, b.p.y - hy, b.p.z - hz);
-    if (d > 0.85) return;
+    if (d > 0.85 || act.duelo) return;
+    // DISPUTA PELO ALTO: quem também saltou nessa bola (cabeça perto dela agora) disputa. Ganha quem tem
+    // mais alcance (altura, impulsão, força), tempo de bola (antecipação), está mais perto e vem
+    // correndo para a bola; os outros sobem sem tocar nela
+    const rivais = this.players.filter(q => q !== p && !q.sentOff && q.action && q.action.type === 'header' && !q.action.duelo && !q.action.fired &&
+      Math.hypot(b.p.x - (q.x + q.fx * 0.15), b.p.z - (q.z + q.fz * 0.15)) < 1.2);
+    if (rivais.length) {
+      const nota = (q) => {
+        const a = q.a, alt = q.data.look?.height || PLAYER.height;
+        const vem = (q.vx * (b.p.x - q.x) + q.vz * (b.p.z - q.z)) / Math.max(0.3, Math.hypot(b.p.x - q.x, b.p.z - q.z));
+        return alt * 1.4 + (a.phy ?? 60) / 99 * 0.22 + (a.str ?? a.phy ?? 60) / 99 * 0.12 + (a.ant ?? a.def ?? 60) / 99 * 0.14 +
+          clamp(vem, 0, 6) * 0.025 - Math.hypot(b.p.x - q.x, b.p.z - q.z) * 0.35 + Math.random() * 0.3;
+      };
+      let best = p, bn = nota(p);
+      for (const q of rivais) { const n = nota(q); if (n > bn) { bn = n; best = q; } }
+      for (const q of [p, ...rivais]) q.action.duelo = true;
+      this.emit('duel', { kind: 'air', n: rivais.length + 1 });
+      if (best !== p) { best.action.fired = true; this.cabecear(best, best.action); return; }
+    }
+    this.cabecear(p, act);
+  }
+
+  cabecear(p, act) {
+    const b = this.ball;
     const team = p.team;
     const incoming = b.speed();
     let tg = act.data.target;
@@ -1579,6 +1661,24 @@ export class Match {
     if (!ls || ls.counted || this.time - ls.t > 4 || ls.p.team !== team) return;
     ls.counted = true;
     team.stats.onTarget++;
+  }
+
+  // Dividida: o bote se ajusta à bola até o contato — o pé vai onde a bola VAI estar no instante do contato
+  // (antes mirava a bola 0,22 s à frente uma vez só, e 45% dos botes chegavam fora do alcance da perna).
+  // A correção é limitada a ~50° do rumo inicial do bote e à velocidade de um bote (8 m/s): se o atacante
+  // tirou a bola para o lado, o bote segue reto e erra
+  ajustaBote(p) {
+    const act = p.action, b = this.ball;
+    if (act.data.lx === undefined || act.fired || b.held || b.p.y > 0.6) return;
+    if (act.data.lx0 === undefined) { act.data.lx0 = act.data.lx; act.data.lz0 = act.data.lz; }
+    const tr = Math.max(0.03, act.contactT - act.t);
+    const bx = b.p.x + b.v.x * tr, bz = b.p.z + b.v.z * tr;
+    const ex = bx - p.x, ez = bz - p.z, e = Math.hypot(ex, ez) || 1e-6;
+    const ux = ex / e, uz = ez / e;
+    if (ux * act.data.lx0 + uz * act.data.lz0 < Math.cos(0.85)) return;
+    act.data.lx = ux; act.data.lz = uz;
+    act.data.lunge = Math.min(8, Math.max(0, e - 0.6) / tr);
+    p.heading = Math.atan2(uz, ux);
   }
 
   // o humano sempre controla alguém: o mais perto da bola
