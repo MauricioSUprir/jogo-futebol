@@ -175,13 +175,15 @@
              ct: contratoDe(ver), fit: FIT_CHEIA };
   }
   // dados completos de uma carta (jogador + nota efetiva da versão)
+  // a Evolução guarda os ganhos na própria carta (card.evo.b: ov e atributos)
   function cardData(card) {
     var p = TM.data.player(card.p);
     if (!p) return null;
-    var ov = clamp(p.overall + verBonus(card.v), 1, 99);
+    var evo = card.evo && card.evo.b ? card.evo.b : null;
+    var ov = clamp(p.overall + verBonus(card.v) + ((evo && evo.ov) || 0), 1, 99);
     return {
-      card: card, p: p, ov: ov, pos: p.pos, pos2: card.pos2 || p.pos2 || p.pos,
-      name: p.name, rar: card.r, ver: card.v,
+      card: card, p: p, ov: ov, pos: p.pos, pos2: principal(p), posicoes: posicoesDe(p, card),
+      name: p.name, rar: evo ? rarOf(ov) : card.r, ver: card.v, evo: evo,
       club: clubOf(p), lg: leagueOf(p), nat: p.nationId,
       attrs: p.attrs || {}
     };
@@ -203,7 +205,16 @@
   }
   function quickSell(ov, ver) { return Math.max(100, Math.round(basePrice(ov, ver) * 0.14)); }
 
-  /* ================= química ================= */
+  /* ================= química (modelo do Ultimate atual) =================
+     Cada titular soma de 0 a 3 pontos e o time vai até 33. Só conta quem está
+     NA POSIÇÃO (a principal ou uma alternativa): fora dela o jogador fica com 0
+     e não ajuda ninguém. Os pontos vêm de quantos titulares em posição dividem
+     o mesmo clube (2/5/8 → 1/2/3), a mesma liga (3/5/8) e o mesmo país (2/5/8).
+     Ícone e Herói já entram com 3 na posição; o Ícone vale 2 para o país dele e
+     o Herói vale 2 para a liga. A química não tira nota de ninguém: ela LIBERA
+     o estilo de química (atributos) e dá o embalo do time em campo. */
+  var LIM = { club: [2, 5, 8], lg: [3, 5, 8], nat: [2, 5, 8] };
+  function ptsPor(n, lim) { return n >= lim[2] ? 3 : n >= lim[1] ? 2 : n >= lim[0] ? 1 : 0; }
   // papel específico de cada casa da formação (a partir das coordenadas)
   function slotRole(slot) {
     var pos = slot[0], x = slot[1], y = slot[2];
@@ -218,81 +229,87 @@
   }
   var SECTOR = { GOL: "GK", ZAG: "DF", LD: "DF", LE: "DF", VOL: "MF", MC: "MF", MEI: "MF", MD: "MF", ME: "MF", CA: "FW", PD: "FW", PE: "FW", SA: "FW" };
   var NEAR = { GK: ["DF"], DF: ["MF"], MF: ["DF", "FW"], FW: ["MF"] };
-  // quanto a carta se encaixa na casa: 1 = posição exata
+  var ROLES_SETOR = { GK: ["GOL"], DF: ["ZAG", "LD", "LE"], MF: ["VOL", "MC", "MEI", "MD", "ME"], FW: ["CA", "SA", "PD", "PE"] };
+  // de onde saem as posições alternativas de cada função
+  var ALT_CAND = { GOL: [], ZAG: ["VOL", "LD", "LE"], LD: ["MD", "ZAG"], LE: ["ME", "ZAG"], VOL: ["MC", "ZAG"], MC: ["VOL", "MEI"],
+                   MEI: ["MC", "SA"], MD: ["PD", "LD", "MC"], ME: ["PE", "LE", "MC"], PD: ["MD", "PE", "SA"], PE: ["ME", "PD", "SA"],
+                   CA: ["SA"], SA: ["CA", "MEI"] };
+  function principal(p) { var r = p && p.pos2; if (!r || !SECTOR[r]) r = (ROLES_SETOR[p && p.pos] || ["MC"])[0]; return r; }
+  // alternativas fixas por jogador (sorteadas pelo id): 20% nenhuma, 50% uma, 30% duas
+  var _alt = {};
+  function altsDe(p) {
+    if (!p) return [];
+    if (_alt[p.id]) return _alt[p.id];
+    var prim = principal(p), h = hashStr("alt" + p.id), k = h % 10 < 2 ? 0 : h % 10 < 7 ? 1 : 2;
+    var cand = (ALT_CAND[prim] || []).slice().sort(function (a, b) { return (hashStr(p.id + a) % 97) - (hashStr(p.id + b) % 97); });
+    _alt[p.id] = cand.slice(0, Math.min(k, cand.length));
+    return _alt[p.id];
+  }
+  try { TM.storage.onEditionChange(function () { _alt = {}; }); } catch (e) {}
+  function posicoesDe(p, card) {
+    var out = [principal(p)];
+    altsDe(p).concat((card && card.posx) || []).forEach(function (r) { if (SECTOR[r] && out.indexOf(r) < 0) out.push(r); });
+    return out;
+  }
+  function emPosicao(d, role) { return !!d && (d.posicoes || [d.pos2]).indexOf(role) >= 0; }
+  // quanto a carta se encaixa na casa (para montar o time sozinho): 1 = na posição
   function posFit(d, role) {
     if (!d) return 0;
-    if (d.pos2 === role) return 1;
+    if (emPosicao(d, role)) return 1;
     var sec = SECTOR[role] || role;
-    if (d.pos === sec) return 0.72;
-    if ((NEAR[d.pos] || []).indexOf(sec) >= 0) return 0.34;
-    return 0.08;
+    if (d.pos === sec) return 0.6;
+    if ((NEAR[d.pos] || []).indexOf(sec) >= 0) return 0.3;
+    return 0.05;
   }
-  // ligações da formação: cada casa liga nas vizinhas mais próximas
-  var _linkCache = {};
-  try { TM.storage.onEditionChange(function () { _linkCache = {}; }); } catch (e) {}
-  function linksOf(fname) {
-    if (_linkCache[fname]) return _linkCache[fname];
-    var F = TM.comp.FORMATIONS[fname] || TM.comp.FORMATIONS["4-3-3"];
-    var pairs = [], seen = {};
-    F.forEach(function (a, i) {
-      var ds = [];
-      F.forEach(function (b, j) {
-        if (i === j) return;
-        var dx = a[1] - b[1], dy = (a[2] - b[2]) * 1.25;
-        ds.push({ j: j, d: Math.sqrt(dx * dx + dy * dy) });
-      });
-      ds.sort(function (m, n) { return m.d - n.d; });
-      ds.slice(0, 3).forEach(function (o) {
-        if (o.d > 42) return;
-        var k = Math.min(i, o.j) + "-" + Math.max(i, o.j);
-        if (seen[k]) return; seen[k] = 1; pairs.push([Math.min(i, o.j), Math.max(i, o.j)]);
-      });
-    });
-    _linkCache[fname] = pairs;
-    return pairs;
-  }
-  // força da ligação entre duas cartas: 0 nada · 1 fraca · 2 boa · 3 perfeita
-  function linkVal(a, b) {
-    if (!a || !b) return 0;
-    var n = 0;
-    if (a.club && b.club && a.club.id === b.club.id) n += 1;
-    if (a.lg && b.lg && a.lg === b.lg) n += 1;
-    if (a.nat && b.nat && a.nat === b.nat) n += 1;
-    return n;
-  }
-  // química completa do time: por jogador (0-10) e do time (0-100)
   // quem está sem contrato não pode entrar em campo
   function podeJogar(c) { return !!c && temContrato(c); }
 
-  function chemistry(s) {
-    var F = s.squad.f, links = linksOf(F), F0 = TM.comp.FORMATIONS[F] || TM.comp.FORMATIONS["4-3-3"];
-    var byId = cardMap(s);
-    var ds = s.squad.xi.map(function (cid) { return cid && byId[cid] ? cardData(byId[cid]) : null; });
-    var acc = ds.map(function () { return { n: 0, t: 0 }; });
-    links.forEach(function (L) {
-      var v = linkVal(ds[L[0]], ds[L[1]]);
-      acc[L[0]].n++; acc[L[0]].t += v;
-      acc[L[1]].n++; acc[L[1]].t += v;
+  // química de 11 cartas numa formação (serve para o time, DME e Draft)
+  function chemDe(ds, F0) {
+    var emPos = ds.map(function (d, i) { return !!d && !!F0[i] && emPosicao(d, slotRole(F0[i])); });
+    var nClub = {}, nLg = {}, nNat = {};
+    ds.forEach(function (d, i) {
+      if (!d || !emPos[i]) return;
+      var ic = d.ver === "icone", he = d.ver === "heroi";
+      if (d.club) nClub[d.club.id] = (nClub[d.club.id] || 0) + 1;
+      if (d.lg) nLg[d.lg] = (nLg[d.lg] || 0) + (he ? 2 : 1);
+      if (d.nat) nNat[d.nat] = (nNat[d.nat] || 0) + (ic ? 2 : 1);
     });
     var per = ds.map(function (d, i) {
-      if (!d) return 0;
-      var fit = posFit(d, slotRole(F0[i]));
-      var avg = acc[i].n ? acc[i].t / acc[i].n : 0;      // 0..3
-      var loyal = d.card.ut ? 1 : 0;                       // veio de pacote: lealdade
-      return clamp(Math.round(fit * (3 + 6 * (avg / 3)) + loyal), 0, 10);
+      if (!d || !emPos[i]) return 0;
+      if (d.ver === "icone" || d.ver === "heroi") return 3;
+      var pt = 0;
+      if (d.club) pt += ptsPor(nClub[d.club.id] || 0, LIM.club);
+      if (d.lg) pt += ptsPor(nLg[d.lg] || 0, LIM.lg);
+      if (d.nat) pt += ptsPor(nNat[d.nat] || 0, LIM.nat);
+      return Math.min(3, pt);
     });
-    var filled = ds.filter(Boolean).length;
-    var team = filled ? Math.round(per.reduce(function (a, b) { return a + b; }, 0) / 11 * 10) : 0;
-    return { per: per, team: clamp(team, 0, 100), ds: ds, links: links };
+    var team = per.reduce(function (a, b) { return a + b; }, 0);
+    return { per: per, team: team, max: 33, ds: ds, emPos: emPos, nClub: nClub, nLg: nLg, nNat: nNat };
   }
-  // nota efetiva com química: −4 (química 0) a +4 (química 10)
-  function effOv(ov, chem) { return clamp(ov + Math.round((chem - 5) * 0.8), 1, 99); }
+  function chemistry(s) {
+    var F0 = TM.comp.FORMATIONS[s.squad.f] || TM.comp.FORMATIONS["4-3-3"];
+    var byId = cardMap(s);
+    return chemDe(s.squad.xi.map(function (cid) { return cid && byId[cid] ? cardData(byId[cid]) : null; }), F0);
+  }
+  // embalo em campo pela química do jogador (0..3): sem química rende menos
+  var CHEM_OV = [-2, 0, 1, 2];
+  function effOv(ov, chem) { return clamp(ov + CHEM_OV[clamp(Math.round(chem || 0), 0, 3)], 1, 99); }
+  /* Nota da equipe do jeito do Ultimate: média dos 11 mais a "correção" de quem
+     está acima da média (um craque puxa o time mais do que a média simples diz). */
+  function notaEquipe(ovs) {
+    var v = ovs.filter(function (x) { return x > 0; });
+    if (!v.length) return 0;
+    var S = 0; ovs.forEach(function (x) { S += x || 0; });
+    var med = S / 11, E = 0;
+    ovs.forEach(function (x) { if (x > med) E += x - med; });
+    return Math.floor((S + E) / 11 + 1e-6);
+  }
   function squadRating(s) {
     var c = chemistry(s);
     var vals = c.ds.map(function (d) { return d ? d.ov : 0; });
-    var n = vals.filter(function (v) { return v > 0; }).length;
-    if (!n) return { ov: 0, chem: 0 };
-    return { ov: Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / 11), chem: c.team };
+    if (!vals.filter(Boolean).length) return { ov: 0, chem: 0 };
+    return { ov: notaEquipe(vals), chem: c.team };
   }
 
   /* ================= estado salvo ================= */
@@ -396,6 +413,42 @@
     { id: "mega",     name: "Mega Pacote",    desc: "24 itens · 1 jogador 83+ · boa chance de especial",   price: 540000, n: 24, lo: 78, hi: 99, rare: 1, floor: 83, esp: 3.5, cons: 6 },
     { id: "premium",  name: "Pacote Lendário", desc: "24 itens · 1 jogador 84+ · a melhor chance de Ícone", tc: 15, n: 24, lo: 80, hi: 99, rare: 1, floor: 84, esp: 6, cons: 6 }
   ];
+  /* Probabilidades publicadas: simula 600 aberturas do pacote e conta a chance de
+     vir PELO MENOS uma carta de cada faixa (como as odds que o Ultimate mostra). */
+  var _odds = {};
+  function oddsDe(pk) {
+    if (_odds[pk.id]) return _odds[pk.id];
+    var N = pk.n >= 20 ? 320 : 500, rnd = mulberry(hashStr("odds" + pk.id)), faixas = [
+      { k: "75+", f: function (o) { return o.ov >= 75; } }, { k: "80+", f: function (o) { return o.ov >= 80; } },
+      { k: "83+", f: function (o) { return o.ov >= 83; } }, { k: "85+ (Lenda)", f: function (o) { return o.ov >= 85; } },
+      { k: "88+", f: function (o) { return o.ov >= 88; } },
+      { k: "Versão especial", f: function (o) { return o.ver !== "base" && o.ver !== "rare"; } },
+      { k: "Ícone", f: function (o) { return o.ver === "icone"; } }
+    ], cont = faixas.map(function () { return 0; }), media = 0;
+    for (var i = 0; i < N; i++) {
+      var itens = sorteiaPacote(pk, rnd).map(function (o) { return { ov: clamp(o.p.overall + verBonus(o.ver), 1, 99), ver: o.ver }; });
+      media += itens.reduce(function (a, o) { return Math.max(a, o.ov); }, 0);
+      faixas.forEach(function (fx, j) { if (itens.some(fx.f)) cont[j]++; });
+    }
+    _odds[pk.id] = { faixas: faixas.map(function (fx, j) { return { k: fx.k, p: cont[j] / N }; }), melhorMedia: Math.round(media / N) };
+    return _odds[pk.id];
+  }
+  try { TM.storage.onEditionChange(function () { _odds = {}; }); } catch (e) {}
+  function pctTxt(p) { return p >= 0.995 ? "100%" : p < 0.001 ? "<0,1%" : p < 0.1 ? (Math.round(p * 1000) / 10).toString().replace(".", ",") + "%" : Math.round(p * 100) + "%"; }
+  function mostraOdds(pk) {
+    var o = oddsDe(pk), ov = el("div", { class: "ut-sheet" });
+    ov.appendChild(el("div", { class: "ut-sheet-in" }, [
+      el("div", { class: "ut-sheet-h" }, [el("span", { text: "Probabilidades · " + pk.name }), el("button", { class: "ut-x", text: "✕", on: { click: fecha } })]),
+      el("div", { class: "ut-note", text: "Chance de vir pelo menos uma carta de cada faixa neste pacote (" + pk.n + " itens). Calculado abrindo " + (pk.n >= 20 ? 320 : 500) + " pacotes de teste com o mesmo sorteio da loja." }),
+      el("div", { class: "utp-odds" }, o.faixas.map(function (f) {
+        return el("div", { class: "utp-odd" }, [el("span", { text: f.k }), el("div", { class: "utm-bar" }, [el("i", { style: "width:" + Math.max(1.5, f.p * 100) + "%" })]), el("b", { text: pctTxt(f.p) })]);
+      })),
+      el("div", { class: "ut-note", text: "Melhor carta, em média: " + o.melhorMedia + " de nota." })
+    ]));
+    ov.addEventListener("click", function (e) { if (e.target === ov) fecha(); });
+    document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add("show"); });
+    function fecha() { ov.classList.remove("show"); setTimeout(function () { ov.remove(); }, 200); }
+  }
   function packById(id) { for (var i = 0; i < PACKS.length; i++) if (PACKS[i].id === id) return PACKS[i]; return null; }
 
   // sorteio ponderado: quanto maior a nota, muito mais raro (igual a abrir pacote de verdade)
@@ -411,9 +464,9 @@
     var f = src.filter(function (p) { return p.overall >= lo && p.overall <= hi; });
     return f.length ? f[Math.floor(rnd() * f.length)] : src[Math.floor(rnd() * src.length)];
   }
-  function openPack(s, pk) {
-    var rnd = Math.random, out = [];
-    var n = pk.n;
+  // sorteia o conteúdo de um pacote sem mexer no clube: [{ p, ver }]
+  function sorteiaPacote(pk, rnd) {
+    var out = [], n = pk.n;
     for (var i = 0; i < n; i++) {
       var p = drawPlayer(pk.lo, pk.hi, rnd, i === 0 ? "GK" : null);
       if (!p) continue;
@@ -434,6 +487,10 @@
       }
     }
     if (pk.up && rnd() < pk.up) { var u = drawPlayer(75, 82, rnd); if (u) out[1] = { p: u, ver: "rare" }; }
+    return out;
+  }
+  function openPack(s, pk) {
+    var rnd = Math.random, out = sorteiaPacote(pk, rnd);
     var cards = out.map(function (o) {
       var c = mkCard(o.p, o.ver);
       c.ut = 1;   // veio de pacote: conta lealdade na química
@@ -448,6 +505,7 @@
     }
     s.stats.opened = (s.stats.opened || 0) + 1;
     save();
+    emit("pacote", { s: s, pk: pk, cards: cards });
     return { cards: cards, itens: itens };
   }
 
@@ -460,16 +518,29 @@
   var CT_INICIAL = { base: 7, rare: 10 };     // especiais vêm com 12
   var FIT_CHEIA = 100, FIT_JOGO = 9, FIT_DESCANSO = 6, FIT_ALERTA = 60;
 
+  /* Estilos de química: mexem nos atributos conforme a química do jogador
+     (inteiro com 3, nada com 0). Sem estilo aplicado vale o Básico. GOL usa os
+     mesmos campos (VEL, CHU, MAN, POS, ELA, REF). */
+  var BASICO = { pac: 2, sho: 2, pas: 2, dri: 2, def: 2, phy: 2 };
   var ESTILOS = [
-    { id: "cacador",  n: "Caçador",        ic: "🏹", b: { pac: 3, sho: 3 } },
-    { id: "sniper",   n: "Sniper",         ic: "🎯", b: { sho: 4, dri: 2 } },
-    { id: "motor",    n: "Motor",          ic: "⚙️", b: { pac: 2, pas: 2, dri: 2 } },
-    { id: "maestro",  n: "Maestro",        ic: "🎼", b: { pas: 4, dri: 2 } },
-    { id: "sombra",   n: "Sombra",         ic: "🌑", b: { pac: 3, def: 3 } },
-    { id: "muralha",  n: "Muralha",        ic: "🧱", b: { def: 4, phy: 2 } },
-    { id: "titan",    n: "Titã",           ic: "🛡️", b: { phy: 4, def: 2 } },
-    { id: "luvas",    n: "Luvas de Ouro",  ic: "🧤", b: { def: 3, phy: 3 } }
+    { id: "cacador",   n: "Caçador",       ic: "zap",            b: { pac: 5, sho: 4 },          setor: "FW" },
+    { id: "artilheiro",n: "Artilheiro",    ic: "flame",          b: { sho: 6, phy: 3 },          setor: "FW" },
+    { id: "sniper",    n: "Sniper",        ic: "target",         b: { sho: 4, dri: 4 },          setor: "FW" },
+    { id: "falcao",    n: "Falcão",        ic: "eye",            b: { pac: 3, sho: 3, phy: 3 },  setor: "FW" },
+    { id: "artista",   n: "Artista",       ic: "brush",          b: { pas: 4, dri: 5 },          setor: "MF" },
+    { id: "maestro",   n: "Maestro",       ic: "music",          b: { pas: 5, dri: 3, sho: 1 },  setor: "MF" },
+    { id: "motor",     n: "Motor",         ic: "settings",       b: { pac: 3, pas: 3, dri: 3 },  setor: "MF" },
+    { id: "arquiteto", n: "Arquiteto",     ic: "ruler",          b: { pas: 5, phy: 4 },          setor: "MF" },
+    { id: "catalisador",n: "Catalisador",  ic: "sparkles",       b: { pac: 4, pas: 5 },          setor: "MF" },
+    { id: "sombra",    n: "Sombra",        ic: "moon",           b: { pac: 4, def: 5 },          setor: "DF" },
+    { id: "ancora",    n: "Âncora",        ic: "anchor",         b: { pac: 3, def: 3, phy: 3 },  setor: "DF" },
+    { id: "sentinela", n: "Sentinela",     ic: "shield",         b: { def: 5, phy: 4 },          setor: "DF" },
+    { id: "muralha",   n: "Muralha",       ic: "brick-wall",     b: { def: 6, phy: 2 },          setor: "DF" },
+    { id: "titan",     n: "Titã",          ic: "biceps-flexed",  b: { phy: 6, def: 3 },          setor: "DF" },
+    { id: "luvas",     n: "Luvas de Ouro", ic: "tm-luva",        b: { def: 4, dri: 3, phy: 2 },  setor: "GK" },
+    { id: "felino",    n: "Felino",        ic: "hand",           b: { phy: 6, pac: 3 },          setor: "GK" }
   ];
+  var SETOR_NOME = { GK: "gol", DF: "defesa", MF: "meio-campo", FW: "ataque" };
   function estiloPor(id) { for (var i = 0; i < ESTILOS.length; i++) if (ESTILOS[i].id === id) return ESTILOS[i]; return null; }
 
   var _itemSeq = 0;
@@ -480,15 +551,14 @@
     if (it.t === "contrato") return "Contrato +" + it.n + " jogos";
     if (it.t === "forma") return "Recuperação física";
     if (it.t === "quimica") { var e = estiloPor(it.e); return "Estilo: " + (e ? e.n : it.e); }
-    if (it.t === "posicao") return "Posição alternativa: " + it.p;
+    if (it.t === "posicao") return "Nova posição: " + (SETOR_NOME[it.p] || it.p);
     return "Item";
   }
+  // ícone (traço, sem emoji) de cada consumível
   function itemIcone(it) {
-    if (it.t === "contrato") return "📄";
-    if (it.t === "forma") return "💚";
-    if (it.t === "quimica") { var e = estiloPor(it.e); return e ? e.ic : "🧪"; }
-    if (it.t === "posicao") return "🔀";
-    return "📦";
+    var nm = it.t === "contrato" ? "file-text" : it.t === "forma" ? "heart" : it.t === "posicao" ? "shuffle"
+      : it.t === "quimica" ? ((estiloPor(it.e) || {}).ic || "flask-conical") : "package";
+    return TM.ic(nm);
   }
   function sorteiaItem(rnd, pk) {
     var r = rnd();
@@ -514,6 +584,9 @@
     (s.cards || []).forEach(function (c) {
       if (c.ct == null) { c.ct = contratoDe(c.v); mudou = true; }
       if (c.fit == null) { c.fit = FIT_CHEIA; mudou = true; }
+      // o item antigo de posição gravava só o setor e não mudava nada em campo:
+      // devolve o item para o jogador aplicar do jeito novo (escolhendo a função)
+      if (c.pos2 && ROLES_SETOR[c.pos2]) { s.itens = s.itens || []; s.itens.push(novoItem({ t: "posicao", p: c.pos2 })); delete c.pos2; mudou = true; }
     });
     if (!s.itens) { s.itens = []; mudou = true; }
     if (mudou) save();
@@ -626,83 +699,20 @@
       n++;
       return false;
     });
-    if (got) { earn(s, got, "Vendas"); s.stats.sold = (s.stats.sold || 0) + n; }
+    if (got) { earn(s, got, "Vendas"); s.stats.sold = (s.stats.sold || 0) + n; emit("venda", { s: s, n: n }); }
     return { coins: got, n: n };
   }
 
-  /* ================= DME (desafios de construção) ================= */
-  var SBCS = [
-    { id: "start", name: "Primeiros Passos", tip: "Um time inteiro, sem exigência de nota.", req: [{ t: "chem", v: 25 }], rew: { coins: 2500, pack: "prata" } },
-    { id: "liga", name: "Liga Doméstica", tip: "Onze jogadores da mesma liga.", req: [{ t: "sameLeague", v: 11 }, { t: "ov", v: 68 }], rew: { coins: 4000, pack: "ouro" } },
-    { id: "nacao", name: "Time Nacional", tip: "Onze jogadores do mesmo país.", req: [{ t: "sameNation", v: 11 }, { t: "ov", v: 70 }], rew: { coins: 6000, pack: "ouro" } },
-    { id: "ouro", name: "Elenco de Ouro", tip: "Só cartas de ouro e química alta.", req: [{ t: "rar", r: "g", v: 11 }, { t: "chem", v: 65 }], rew: { coins: 15000, pack: "ourorare" } },
-    { id: "raros", name: "Coleção de Raros", tip: "Onze cartas raras no elenco.", req: [{ t: "rare", v: 11 }, { t: "ov", v: 76 }], rew: { coins: 15000, pack: "ourorare" } },
-    { id: "elite", name: "Elite Continental", tip: "Nota 82 e química quase perfeita.", req: [{ t: "ov", v: 82 }, { t: "chem", v: 80 }], rew: { coins: 35000, pack: "jumbo" } },
-    { id: "clube", name: "Base do Clube", tip: "Quatro jogadores do mesmo clube.", req: [{ t: "sameClub", v: 4 }, { t: "ov", v: 74 }], rew: { coins: 8000, pack: "ouro" } },
-    { id: "semana", name: "Time da Semana", tip: "Uma carta do Time da Semana no elenco.", req: [{ t: "totw", v: 1 }, { t: "ov", v: 78 }], rew: { coins: 25000, pack: "mega" } },
-    { id: "lenda", name: "Elenco Lendário", tip: "O desafio mais duro do modo.", req: [{ t: "ov", v: 86 }, { t: "chem", v: 90 }], rew: { coins: 120000, pack: "premium" } }
-  ];
-  function sbcById(id) { for (var i = 0; i < SBCS.length; i++) if (SBCS[i].id === id) return SBCS[i]; return null; }
-  // avalia um conjunto de 11 cartas contra os requisitos
-  function checkSbc(sbc, cards, formation) {
-    var ds = cards.map(function (c) { return c ? cardData(c) : null; });
-    var filled = ds.filter(Boolean);
-    var fake = { squad: { f: formation || "4-3-3", xi: cards.map(function (c) { return c ? c.i : null; }) }, cards: cards.filter(Boolean) };
-    var ch = filled.length === 11 ? chemistry(fake) : { team: 0 };
-    var ov = filled.length ? Math.round(filled.reduce(function (a, d) { return a + d.ov; }, 0) / 11) : 0;
-    function countBy(keyFn) {
-      var m = {}, best = 0;
-      filled.forEach(function (d) { var k = keyFn(d); if (!k) return; m[k] = (m[k] || 0) + 1; if (m[k] > best) best = m[k]; });
-      return best;
-    }
-    return sbc.req.map(function (r) {
-      var have = 0, label = "";
-      if (r.t === "ov") { have = ov; label = "Nota do elenco " + r.v + "+"; }
-      else if (r.t === "chem") { have = ch.team; label = "Química " + r.v + "+"; }
-      else if (r.t === "sameLeague") { have = countBy(function (d) { return d.lg; }); label = "Jogadores da mesma liga: " + r.v; }
-      else if (r.t === "sameNation") { have = countBy(function (d) { return d.nat; }); label = "Jogadores do mesmo país: " + r.v; }
-      else if (r.t === "sameClub") { have = countBy(function (d) { return d.club ? d.club.id : null; }); label = "Jogadores do mesmo clube: " + r.v; }
-      else if (r.t === "rar") {
-        var mi = RAR_ORDER.indexOf(r.r);
-        have = filled.filter(function (d) { return RAR_ORDER.indexOf(d.rar) >= mi; }).length;
-        label = "Cartas " + RAR_NAME[r.r] + " (" + RAR_COR[r.r] + ") ou melhor: " + r.v;
-      }
-      else if (r.t === "rare") { have = filled.filter(function (d) { return d.ver === "rare" || d.ver === "totw"; }).length; label = "Cartas raras: " + r.v; }
-      else if (r.t === "totw") { have = filled.filter(function (d) { return d.ver === "totw"; }).length; label = "Cartas do Time da Semana: " + r.v; }
-      return { label: label, have: have, need: r.v, ok: have >= r.v };
-    });
-  }
+  /* ================= DME =================
+     Os Desafios de Montagem de Elenco moram em js/ut-dme.js (categorias,
+     melhorias repetíveis, DME de jogador e o "montar com as mais baratas"). */
 
-  /* ================= objetivos diários ================= */
-  var OBJ_POOL = [
-    { id: "riv3", tx: "Jogue 3 partidas nos Rivais", n: 3, c: 2400 },
-    { id: "win2", tx: "Vença 2 partidas nos Rivais", n: 2, c: 4000 },
-    { id: "pack2", tx: "Abra 2 pacotes", n: 2, c: 1900 },
-    { id: "sell3", tx: "Venda 3 jogadores no mercado", n: 3, c: 2900 },
-    { id: "buy1", tx: "Compre 1 jogador no mercado", n: 1, c: 1600 },
-    { id: "goal5", tx: "Marque 5 gols nos Rivais", n: 5, c: 3200 },
-    { id: "chem70", tx: "Tenha um elenco com 70 de química", n: 1, c: 3500 },
-    { id: "sbc1", tx: "Complete 1 DME", n: 1, c: 4800 }
-  ];
-  function objRefresh(s) {
-    var d = today();
-    if (s.obj.day === d && s.obj.list && s.obj.list.length) return;
-    var rnd = mulberry(hashStr("obj" + d + "" + s.seed));
-    var pick = shuffle(OBJ_POOL, rnd).slice(0, 4);
-    s.obj = { day: d, list: pick.map(function (o) { return { id: o.id, tx: o.tx, n: o.n, c: o.c, p: 0, done: 0 }; }) };
-    save();
-  }
-  function objBump(s, id, by) {
-    objRefresh(s);
-    var hit = false;
-    s.obj.list.forEach(function (o) {
-      if (o.id !== id || o.done) return;
-      o.p = Math.min(o.n, o.p + (by || 1));
-      if (o.p >= o.n) { o.done = 1; earn(s, o.c, "Objetivo"); hit = true; }
-    });
-    save();
-    if (hit) TM.ui.toast("🎯 Objetivo concluído!");
-  }
+  /* ================= objetivos =================
+     Os objetivos (diários, semanais, da temporada e Fundamentos) e o passe da
+     temporada moram em js/ut-temporada.js e contam pelos eventos (partida,
+     pacote, venda, compra, dme, item...). objBump ficou só por compatibilidade. */
+  function objRefresh() {}
+  function objBump() {}
 
   /* ================= Rivais (divisões) ================= */
   var DIVS = [
@@ -713,35 +723,23 @@
     { d: 2, need: 36, ov: 85, win: 16000 }, { d: 1, need: 999, ov: 88, win: 24000 }
   ];
   function divInfo(d) { for (var i = 0; i < DIVS.length; i++) if (DIVS[i].d === d) return DIVS[i]; return DIVS[0]; }
-  // adversário dos Rivais: clube real com nota próxima da divisão
-  function rivalOpp(s) {
-    var info = divInfo(s.riv.div);
-    var W = TM.data.world();
-    var best = null, bd = 1e9;
-    var tries = shuffle(W.clubs).slice(0, 90);
-    tries.forEach(function (c) {
-      var r = TM.data.clubRating(c.id);
-      var dist = Math.abs(r - info.ov) + Math.random() * 2;
-      if (dist < bd) { bd = dist; best = c; }
-    });
-    return best || W.clubs[0];
-  }
-
   /* ================= a carta (visual) ================= */
   var ST_LABEL = { pac: "RIT", sho: "FIN", pas: "PAS", dri: "DRI", def: "DEF", phy: "FÍS" };
   var GK_LABEL = { pac: "VEL", sho: "CHU", pas: "MAN", dri: "POS", def: "ELA", phy: "REF" };
   var ORDER = ["pac", "sho", "pas", "dri", "def", "phy"];
-  // chem = química do jogador (0..10). O estilo rende proporcional à química,
-  // igual ao Ultimate Team: sem química, o estilo quase não vale nada.
+  // chem = química do jogador (0..3). O estilo rende proporcional à química, igual
+  // ao Ultimate Team: com 0 não vale nada, com 3 vale inteiro. Sem estilo aplicado
+  // vale o Básico (um pouco em tudo). Sem chem (fora de campo) mostra o atributo puro.
   function statsOf(d, chem) {
     var a = d.attrs || {}, isGk = d.pos === "GK";
-    var bump = verBonus(d.ver);
+    var bump = verBonus(d.ver), evo = d.evo || {};
     var est = d.card && d.card.sty ? estiloPor(d.card.sty) : null;
-    var forca = chem == null ? 1 : clamp(chem / 10, 0, 1);
+    var forca = chem == null ? 0 : clamp(chem / 3, 0, 1);
     var pen = penFisica(d.card ? d.card.fit : null);
     return ORDER.map(function (k) {
-      var ganho = est && est.b[k] ? Math.round(est.b[k] * forca) : 0;
-      return { k: k, l: (isGk ? GK_LABEL : ST_LABEL)[k], v: clamp(Math.round((a[k] || 50) + bump + ganho - pen), 1, 99), ganho: ganho, pen: pen };
+      var b = est ? (est.b[k] || 0) : BASICO[k];
+      var ganho = Math.round(b * forca);
+      return { k: k, l: (isGk ? GK_LABEL : ST_LABEL)[k], v: clamp(Math.round((a[k] || 50) + bump + (evo[k] || 0) + ganho - pen), 1, 99), ganho: ganho, pen: pen };
     });
   }
   var SVGNS = "http://www.w3.org/2000/svg";
@@ -794,10 +792,12 @@
       opts.price != null ? null : el("div", { class: "utc-tier" + (esp ? " esp" : ""), text: esp ? VI.sel : "Total Match" })
     ]);
     var kids = [ el("div", { class: "utc-moldura" }, [ miolo ]) ];
+    // química do jogador (0..3) em losangos, como no Ultimate
     if (opts.chem != null) {
-      var lv = opts.chem >= 9 ? "c3" : opts.chem >= 7 ? "c2" : opts.chem >= 4 ? "c1" : "c0";
-      kids.push(el("div", { class: "utc-chem " + lv, text: opts.chem }));
+      var nq = clamp(opts.chem | 0, 0, 3);
+      kids.push(el("div", { class: "utc-chem c" + nq, title: "Química " + nq + " de 3" }, [0, 1, 2].map(function (k) { return el("i", { class: k < nq ? "on" : "" }); })));
     }
+    if (d.evo) kids.push(el("div", { class: "utc-evo", title: "Evoluída" }, [TM.ic("dna")]));
     if (opts.price != null) kids.push(el("div", { class: "utc-price" }, [coinsEl(opts.price)]));
     var cls = "ut-card r-" + d.rar + " v-" + d.ver + (esp ? " especial" : "") + (opts.cls ? " " + opts.cls : "");
     var node = el("div", { class: cls, title: d.name + " · " + d.ov + " · " + (esp ? VI.n : RAR_NAME[d.rar] + " (" + RAR_COR[d.rar] + ")") }, kids);
@@ -829,7 +829,8 @@
       if (s.ed !== "pro" || TM.storage.suUnlocked()) { TM.storage.switchEdition(s.ed); goUT("ut"); return; }
       renderEdicaoErrada(screen, s); return;      // clube de cartas reais sem a Season Update liberada
     }
-    migraCartas(s); seedMarket(s); objRefresh(s); tickSales(s);
+    migraCartas(s);
+    if (!TM.utMercado) { seedMarket(s); tickSales(s); }       // o mercado novo (ut-mercado.js) cuida disso sozinho
     var lim = limpaRepetidos(s);
     if (lim) TM.ui.toast(lim.n + (lim.n > 1 ? " cartas repetidas viraram" : " carta repetida virou") + " venda rápida: +" + fmtC(lim.ganho) + " moedas.", "ok");
     renderHub(screen, s);
@@ -859,52 +860,88 @@
     screen.classList.add("ut-screen");
     screen.appendChild(TM.ui.topbar("Total Ultimate", function () { goUT("modes"); }));
     var input = el("input", { class: "ut-input", type: "text", maxlength: "22", placeholder: "Nome do seu clube" });
+    // liga do elenco inicial: os 11 titulares vêm dela, encaixados na formação (química cheia)
+    var ligaEsc = LIGAS_INICIAIS[Math.floor(Math.random() * 3)][0];
+    var ligas = el("div", { class: "ut-chips ut-ligas-ini" });
+    function pintaLigas() {
+      TM.ui.clear(ligas);
+      LIGAS_INICIAIS.forEach(function (L) {
+        ligas.appendChild(el("button", { class: "ut-chip" + (ligaEsc === L[0] ? " on" : ""), text: L[1], on: { click: function () { ligaEsc = L[0]; pintaLigas(); } } }));
+      });
+    }
+    pintaLigas();
     screen.appendChild(el("div", { class: "ut-intro" }, [
       el("img", { class: "ut-intro-logo", src: "assets/logo.png", alt: "" }),
       el("h1", { class: "ut-intro-title", text: "TOTAL ULTIMATE" }),
-      el("p", { class: "ut-intro-tx", text: "Abra pacotes, monte seu elenco dos sonhos com química, negocie no mercado e suba da Divisão 10 até a 1." }),
-      el("div", { class: "ut-intro-feats" }, [
-        el("span", { class: "ut-feat", text: "📦 Pacotes" }), el("span", { class: "ut-feat", text: "🔗 Química" }),
-        el("span", { class: "ut-feat", text: "💱 Mercado" }), el("span", { class: "ut-feat", text: "🧩 DME" }),
-        el("span", { class: "ut-feat", text: "🏆 Rivais" })
-      ]),
+      el("p", { class: "ut-intro-tx", text: "Abra pacotes, monte seu elenco dos sonhos com química, negocie no mercado, suba da Divisão 10 até a 1 e dispute Batalhas, Champions e Draft." }),
+      el("div", { class: "ut-intro-feats" }, [["package", "Pacotes"], ["link", "Química"], ["arrow-left-right", "Mercado"], ["puzzle", "DME"], ["trophy", "Rivais"],
+         ["swords", "Batalhas"], ["crown", "Champions"], ["layers", "Draft"], ["dna", "Evoluções"], ["star", "Temporada"]].map(function (f) {
+          return el("span", { class: "ut-feat" }, [TM.ic(f[0]), document.createTextNode(" " + f[1])]);
+        })),
       input,
+      el("div", { class: "ut-intro-l", text: "Liga do seu elenco inicial" }),
+      ligas,
       TM.ui.button("Criar meu clube", function () {
         var nm = (input.value || "").trim() || "Meu Ultimate";
         S = blank(); S.club = nm;
         S.ed = TM.storage.edition();          // de qual edição são as cartas
-        // pacote inicial: um elenco jogável para começar
-        var start = packById("prata");
-        openPack(S, { n: 16, lo: 60, hi: 73, rare: 0.25 });
-        autoFill(S);
+        elencoInicial(S, ligaEsc);
         save();
-        TM.ui.toast("Clube criado! Seu elenco inicial está pronto.");
+        TM.ui.toast("Clube criado! Seu elenco inicial está pronto.", "ok");
         goUT("ut");
       }, "btn primary wide")
     ]));
   }
 
-  /* ---------- hub ---------- */
+  /* ---------- elenco inicial ----------
+     Como no Ultimate: você escolhe uma liga e recebe um time inteiro dela, cada um
+     na sua posição (química alta desde o começo, nota baixa — a graça é subir). */
+  var LIGAS_INICIAIS = [["br", "Brasileirão"], ["en", "Premier League"], ["es", "LaLiga"], ["it", "Serie A"],
+                        ["de", "Bundesliga"], ["fr", "Ligue 1"], ["pt", "Liga Portugal"], ["ar", "Argentina"]];
+  function elencoInicial(s, lg) {
+    var F = TM.comp.FORMATIONS["4-3-3"], usados = {};
+    var daLiga = pool().filter(function (p) { return leagueOf(p) === lg && p.overall >= 60 && p.overall <= 71; });
+    if (daLiga.length < 30) daLiga = pool().filter(function (p) { return p.overall >= 60 && p.overall <= 71; });
+    function pega(filtro) {
+      var c = shuffle(daLiga.filter(function (p) { return !usados[p.id] && filtro(p); }));
+      var p = c[0]; if (p) usados[p.id] = 1; return p;
+    }
+    function nova(p, ver) { var c = mkCard(p, ver); c.ut = 1; addCard(s, c); return c; }
+    var xi = F.map(function (slot) {
+      var role = slotRole(slot);
+      var p = pega(function (q) { return posicoesDe(q).indexOf(role) >= 0; }) || pega(function (q) { return q.pos === slot[0]; });
+      return p ? nova(p, Math.random() < 0.2 ? "rare" : "base").i : null;
+    });
+    var sub = [];
+    // reservas: um goleiro e mais seis da mesma liga
+    var g = pega(function (q) { return q.pos === "GK"; }); if (g) sub.push(nova(g, "base").i);
+    for (var k = 0; k < 6; k++) { var q = pega(function () { return true; }); if (q) sub.push(nova(q, "base").i); }
+    s.squad.f = "4-3-3"; s.squad.xi = xi; s.squad.sub = sub;
+    s.ligaIni = lg;
+  }
+
+  /* ---------- hub ----------
+     Como a tela inicial do Ultimate: cabeçalho do clube com a temporada, o que pede
+     ação (prêmios, escolhas, vendas, contratos), destaques da semana, os modos de
+     jogo com o progresso de cada um e o resto do clube agrupado. */
   function renderHub(screen, s) {
     screen.classList.add("ut-screen", "ut-hub");
     screen.appendChild(utTop(nomeExibido(s), function () { goUT("modes"); }, s));
-    var r = squadRating(s);
-    var pend = (s.mkt.sell || []).filter(function (L) { return L.sold; }).length;
-    var objDone = (s.obj.list || []).filter(function (o) { return o.done; }).length;
-    var objTot = (s.obj.list || []).length;
-    var info = divInfo(s.riv.div);
+    var r = squadRating(s), info = divInfo(s.riv.div);
+    var pend = 0; try { pend = TM.utMercado && TM.utMercado.pendentes ? TM.utMercado.pendentes(s) : (s.mkt.sell || []).filter(function (L) { return L.sold; }).length; } catch (e) {}
     var itens = (s.itens || []).length;
     var empr = (s.cards || []).filter(function (c) { return c.ln != null; }).length;
     var semCt = (s.cards || []).filter(function (c) { return !temContrato(c); }).length;
     var ofer = emprestimoDoDia(s);
     var temEmpr = ofer && s.emprDia !== ofer.dia;
-    var melhor = (s.cards || []).map(cardData).filter(Boolean).sort(function (a, b) { return b.ov - a.ov; })[0];
+    var T = TM.utTemp, Mo = TM.utModos;
+    var tp = T ? T.estado(s) : null, nv = tp ? T.nivelDe(tp.xp) : 0, tPend = T ? T.pendentes(s) : 0;
 
-    /* ---- cabeçalho: escudo, nome, divisão e o craque do elenco ---- */
+    /* ---- cabeçalho ---- */
     var cab = el("div", { class: "ut-hero" }, [
       el("div", { class: "ut-hero-bg" }),
       el("div", { class: "ut-hero-in" }, [
-        el("div", { class: "ut-escudo grande", style: "--c:" + (s.cor || "#22c55e") }, [el("span", { text: s.escudo || "🛡️" })]),
+        escudoDe(s, "grande"),
         el("div", { class: "ut-hero-txt" }, [
           el("div", { class: "ut-hero-nm", text: nomeExibido(s) }),
           el("div", { class: "ut-hero-sub" }, [
@@ -912,80 +949,117 @@
             el("span", { text: "Divisão " + s.riv.div }),
             el("span", { text: s.cards.length + " cartas" })
           ]),
-          el("div", { class: "ut-hero-rec", text: s.riv.w + "V · " + s.riv.d + "E · " + s.riv.l + "D  ·  " + s.riv.pts + "/" + (info.need === 999 ? "—" : info.need) + " pts para subir" })
+          el("div", { class: "ut-hero-rec", text: s.riv.w + "V · " + s.riv.d + "E · " + s.riv.l + "D nos Rivais" })
         ]),
         el("div", { class: "ut-hero-nums" }, [
           el("div", { class: "ut-hc-box" }, [el("b", { text: r.ov || "—" }), el("i", { text: "NOTA" })]),
-          el("div", { class: "ut-hc-box chem" }, [el("b", { text: r.chem }), el("i", { text: "QUÍMICA" })])
+          el("div", { class: "ut-hc-box chem" }, [el("b", { text: r.chem + "/33" }), el("i", { text: "QUÍMICA" })])
         ])
-      ])
+      ]),
+      tp ? el("button", { class: "uth-temp", on: { click: function () { goUT("ut-temporada"); } } }, [
+        el("span", { class: "uth-temp-ic" }, [TM.ic("star")]),
+        el("span", { class: "uth-temp-t", text: T.tempNome(tp.id) + " · Nível " + nv }),
+        el("span", { class: "uth-temp-bar" }, [el("i", { style: "width:" + (nv >= T.NIVEIS ? 100 : Math.round((tp.xp - nv * T.XP_NIVEL) / T.XP_NIVEL * 100)) + "%" })]),
+        el("span", { class: "uth-temp-d", text: tPend ? tPend + " prêmio" + (tPend > 1 ? "s" : "") + "!" : T.diasRestantes() + " dias" })
+      ]) : null
     ]);
-    if (info.need !== 999) {
-      cab.querySelector(".ut-hero-in").appendChild(el("div", { class: "ut-hero-bar" }, [
-        el("div", { class: "ut-hero-bar-f", style: "width:" + clamp(Math.round(s.riv.pts / info.need * 100), 0, 100) + "%" })
-      ]));
-    }
     screen.appendChild(cab);
 
-    /* ---- avisos que pedem ação ---- */
+    /* ---- o que pede ação ---- */
     var avisos = [];
-    if (semCt) avisos.push({ ic: "📄", tx: semCt + (semCt > 1 ? " cartas sem contrato" : " carta sem contrato"), r: "ut-club", cls: "alerta" });
-    if (pend) avisos.push({ ic: "💰", tx: pend + (pend > 1 ? " vendas concluídas" : " venda concluída"), r: "ut-market", cls: "bom" });
-    if (s.packs && s.packs.length) avisos.push({ ic: "📦", tx: s.packs.length + " pacote(s) guardado(s)", r: "ut-store", cls: "bom" });
-    if (temEmpr) avisos.push({ ic: "🤝", tx: "Empréstimo do dia disponível", r: "ut-store", cls: "" });
-    if (objDone && objDone === objTot && objTot) avisos.push({ ic: "🎯", tx: "Todos os objetivos do dia concluídos", r: "ut-obj", cls: "bom" });
+    if (tPend) avisos.push({ ic: "gift", tx: tPend + (tPend > 1 ? " prêmios da temporada para resgatar" : " prêmio da temporada para resgatar"), r: "ut-temporada", cls: "bom" });
+    if (s.picks && s.picks.length) avisos.push({ ic: "user-search", tx: s.picks.length + (s.picks.length > 1 ? " escolhas de jogador esperando" : " escolha de jogador esperando"), r: "ut-store", cls: "bom" });
+    if (s.batAntiga) avisos.push({ ic: "swords", tx: "Recompensa das Batalhas da semana passada", r: "ut-batalhas", cls: "bom" });
+    if (s.champAntiga || (s.champ && s.champ.fase === "fim" && !s.champ.pago)) avisos.push({ ic: "crown", tx: "Recompensa da Champions para resgatar", r: "ut-champions", cls: "bom" });
+    if (Mo) { var sem = Mo.rivSemana(s), marcosOk = [2, 4, 7].filter(function (m) { return sem.v >= m && !sem.ok[m]; }).length; if (marcosOk) avisos.push({ ic: "trophy", tx: "Recompensa semanal dos Rivais liberada", r: "ut-rivals", cls: "bom" }); }
+    if (semCt) avisos.push({ ic: "file-text", tx: semCt + (semCt > 1 ? " cartas sem contrato" : " carta sem contrato"), r: "ut-club", cls: "alerta" });
+    if (pend) avisos.push({ ic: "tm-moeda", tx: pend + (pend > 1 ? " vendas concluídas" : " venda concluída"), r: "ut-market", cls: "bom" });
+    if (s.packs && s.packs.length) avisos.push({ ic: "package", tx: s.packs.length + (s.packs.length > 1 ? " pacotes guardados" : " pacote guardado"), r: "ut-store", cls: "bom" });
+    if (temEmpr) avisos.push({ ic: "handshake", tx: "Empréstimo do dia disponível", r: "ut-store", cls: "" });
     if (avisos.length) {
-      screen.appendChild(el("div", { class: "ut-avisos" }, avisos.map(function (a) {
+      screen.appendChild(el("div", { class: "ut-avisos" }, avisos.slice(0, 5).map(function (a) {
         return el("button", { class: "ut-aviso " + a.cls, on: { click: function () { goUT(a.r); } } }, [
-          el("span", { class: "ut-av-ic", text: a.ic }), el("span", { text: a.tx }), el("span", { class: "ut-av-go", text: "›" })
+          el("span", { class: "ut-av-ic" }, [TM.ic(a.ic)]), el("span", { text: a.tx }), el("span", { class: "ut-av-go" }, [TM.ic("chevron-right")])
         ]);
       })));
     }
 
-    /* ---- o craque do elenco em destaque ---- */
-    if (melhor) {
-      screen.appendChild(el("div", { class: "ut-estrela" }, [
-        cardEl(melhor, { cls: "mini", on: function () { showCard(melhor, s, function () { goUT("ut"); }); } }),
-        el("div", { class: "ut-estrela-i" }, [
-          el("div", { class: "ut-estrela-l", text: "Craque do elenco" }),
-          el("div", { class: "ut-estrela-n", text: melhor.name }),
-          el("div", { class: "ut-estrela-d", text: verInfo(melhor.ver).n + " · " + (melhor.club ? melhor.club.name : "") }),
-          el("div", { class: "ut-estrela-d", text: "vale ~" + fmtC(basePrice(melhor.ov, melhor.ver)) })
-        ])
+    /* ---- destaques da semana ---- */
+    var dest = [];
+    try {
+      var jog = TM.utDme && TM.utDme.catalogo()[2].lista[0];
+      if (jog) {
+        var pj = TM.data.player(jog.destaque.p);
+        var dj = pj && cardData({ i: "hubj", p: pj.id, v: jog.destaque.v, r: rarOf(pj.overall + verBonus(jog.destaque.v)) });
+        if (dj) dest.push(el("button", { class: "uth-dest jog", on: { click: function () { goUT("ut-sbc", { aba: "jog" }); } } }, [
+          cardEl(dj, { cls: "mini" }),
+          el("div", { class: "uth-dest-i" }, [el("div", { class: "uth-dest-k", text: "DME DE JOGADOR" }), el("div", { class: "uth-dest-t", text: shortNm(pj.name) + " · " + verInfo(jog.destaque.v).n }), el("div", { class: "uth-dest-s", text: "Monte elenco e leve a carta" })])
+        ]));
+      }
+    } catch (e) {}
+    try {
+      var tw = (totwSet().__list || []).map(function (pid) { var p = TM.data.player(pid); return p ? cardData({ i: "hubt" + pid, p: pid, v: "totw", r: rarOf(p.overall + 2) }) : null; })
+        .filter(Boolean).sort(function (a, b) { return b.ov - a.ov; }).slice(0, 3);
+      if (tw.length) dest.push(el("button", { class: "uth-dest totw", on: { click: function () { goUT("ut-store"); } } }, [
+        el("div", { class: "uth-dest-cartas" }, tw.map(function (d) { return cardEl(d, { cls: "mini" }); })),
+        el("div", { class: "uth-dest-i" }, [el("div", { class: "uth-dest-k", text: "SELEÇÃO DA SEMANA" }), el("div", { class: "uth-dest-t", text: "+2 de nota, nos pacotes" }), el("div", { class: "uth-dest-s", text: "Troca toda semana" })])
       ]));
+    } catch (e) {}
+    if (dest.length) {
+      screen.appendChild(el("div", { class: "ut-grupo-t", text: "Em destaque" }));
+      screen.appendChild(el("div", { class: "uth-dests" }, dest));
     }
 
-    /* ---- abas agrupadas ---- */
-    function tile(ic, name, sub, route, badge, acc) {
-      return el("button", { class: "ut-tile" + (acc ? " a-" + acc : ""), on: { click: function () { goUT(route); } } }, [
-        el("span", { class: "ut-t-ic", text: ic }),
-        el("span", { class: "ut-t-nm", text: name }),
-        el("span", { class: "ut-t-sub", text: sub }),
-        badge ? el("span", { class: "ut-t-badge", text: badge }) : null
+    /* ---- jogar ---- */
+    function modo(icone, nome, linha, prog, rota, cor) {
+      return el("button", { class: "uth-modo a-" + cor, on: { click: function () { goUT(rota); } } }, [
+        el("span", { class: "uth-modo-ic" }, [TM.ic(icone)]),
+        el("span", { class: "uth-modo-n", text: nome }),
+        el("span", { class: "uth-modo-l", text: linha }),
+        prog != null ? el("span", { class: "uth-modo-bar" }, [el("i", { style: "width:" + Math.max(3, Math.min(100, prog)) + "%" })]) : null
       ]);
     }
-    function grupo(titulo, tiles) {
-      screen.appendChild(el("div", { class: "ut-grupo-t", text: titulo }));
-      screen.appendChild(el("div", { class: "ut-tiles" }, tiles));
-    }
+    var semR = Mo ? Mo.rivSemana(s) : { v: 0 }, prox = [2, 4, 7].filter(function (m) { return m > semR.v; })[0];
+    var bat = Mo ? Mo.batEstado(s) : null, rk = bat && Mo.rankDe(bat.pts);
+    var ch = Mo ? Mo.chEstado(s) : null;
+    var chTx = !ch ? "" : ch.fase === "qual" ? "Classificação: " + Math.min(4, semR.v) + "/4 vitórias nos Rivais"
+      : ch.fase === "elim" ? "Eliminatórias: " + ch.ev + " vitórias" : ch.fase === "finais" ? "Finais: " + ch.fv + " vitórias em " + ch.fj.length
+      : ch.fase === "fim" ? "Finais encerradas: " + ch.fv + " vitórias" : "Volta na semana que vem";
+    screen.appendChild(el("div", { class: "ut-grupo-t", text: "Jogar" }));
+    screen.appendChild(el("div", { class: "uth-modos" }, [
+      modo("trophy", "Rivais", "Divisão " + s.riv.div + " · " + semR.v + " vitória" + (semR.v === 1 ? "" : "s") + " na semana", info.need === 999 ? 100 : s.riv.pts / info.need * 100, "ut-rivals", "riv"),
+      modo("swords", "Batalhas de Elenco", rk ? rk.n + " · " + bat.pts + " pts" : "Contra elencos da CPU", bat ? Math.min(100, bat.pts / 44) : null, "ut-batalhas", "bat"),
+      modo("crown", "Champions", chTx, ch ? (ch.fase === "qual" ? semR.v / 4 * 100 : ch.fase === "elim" ? ch.ev / 3 * 100 : ch.fj.length * 10) : null, "ut-champions", "ch"),
+      modo("layers", "Draft", (s.fichas ? s.fichas + " ficha" + (s.fichas > 1 ? "s" : "") + " · " : "") + (s.draft ? "em andamento" : "monte e vença 4 seguidas"), null, "ut-draft", "dr")
+    ]));
+    screen.appendChild(el("div", { class: "ut-tiles" }, [
+      tile("globe", "Online", "Enfrente elencos de outros jogadores", "ut-online", null, "onl"),
+      tile("dna", "Evoluções", TM.utEvo && TM.utEvo.ativas ? (TM.utEvo.ativas(s).length ? TM.utEvo.ativas(s).length + " em andamento" : "Melhore suas cartas jogando") : "Melhore suas cartas jogando", "ut-evolucoes", null, "evo")
+    ]));
 
-    grupo("Jogar", [
-      tile("🏆", "Rivais", "Divisão " + s.riv.div + " · suba até a 1ª", "ut-rivals", null, "riv"),
-      tile("🌐", "Online", "Enfrente elencos de verdade", "ut-online", null, "onl"),
-      tile("🧩", "DME", "Desafios de construção", "ut-sbc", null, "dme"),
-      tile("🎯", "Objetivos", objDone + "/" + objTot + " concluídos", "ut-obj", objTot && objDone < objTot ? String(objTot - objDone) : null, "obj")
-    ]);
-    grupo("Elenco", [
-      tile("⚽", "Escalação", "Time, química e formação", "ut-squad", null, "esc"),
-      tile("👥", "Meu Clube", s.cards.length + " cartas" + (empr ? " · " + empr + " emprestada(s)" : ""), "ut-club", semCt ? String(semCt) : null, "clb"),
-      tile("🧪", "Itens", itens ? itens + " consumíveis" : "Contratos, forma e estilos", "ut-itens", itens ? String(itens) : null, "itn"),
-      tile("🛡️", "Identidade", "Apelido, sigla e escudo", "ut-identidade", null, "idt")
-    ]);
-    grupo("Mercado", [
-      tile("📦", "Loja", "Pacotes e empréstimo do dia", "ut-store", s.packs && s.packs.length ? String(s.packs.length) : (temEmpr ? "!" : null), "loj"),
-      tile("💱", "Mercado", "Compre e venda cartas", "ut-market", pend ? String(pend) : null, "mkt"),
-      tile("📊", "Estatísticas", "Sua caminhada no Ultimate", "ut-stats", null, "est")
-    ]);
+    /* ---- progresso ---- */
+    var gs = T ? T.grupos(s) : [];
+    function falta(id) { var g = gs.filter(function (x) { return x.id === id; })[0]; return g ? g.lista.filter(function (o) { return !g.ok[o.id]; }).length : 0; }
+    var dmeAb = TM.utDme && TM.utDme.abertos ? TM.utDme.abertos(s) : 0;
+    screen.appendChild(el("div", { class: "ut-grupo-t", text: "Progresso" }));
+    screen.appendChild(el("div", { class: "ut-tiles" }, [
+      tile("star", "Temporada", tp ? "Nível " + nv + " de " + T.NIVEIS : "Caminho de recompensas", "ut-temporada", tPend ? String(tPend) : null, "tmp"),
+      tile("target", "Objetivos", T ? falta("d") + " diários · " + falta("s") + " semanais" : "Diários e semanais", "ut-obj", T && falta("d") ? String(falta("d")) : null, "obj"),
+      tile("puzzle", "DME", "Melhorias, jogadores e ligas", "ut-sbc", dmeAb ? String(dmeAb) : null, "dme"),
+      tile("chart-column", "Estatísticas", "Sua caminhada no Ultimate", "ut-stats", null, "est")
+    ]));
+    screen.appendChild(el("div", { class: "ut-grupo-t", text: "Clube" }));
+    screen.appendChild(el("div", { class: "ut-tiles" }, [
+      tile("tm-bola", "Escalação", "Time, química e formação", "ut-squad", null, "esc"),
+      tile("users", "Meu Clube", s.cards.length + " cartas" + (empr ? " · " + empr + " emprestada" + (empr > 1 ? "s" : "") : ""), "ut-club", semCt ? String(semCt) : null, "clb"),
+      tile("flask-conical", "Itens", itens ? itens + " consumíveis" : "Contratos, forma e estilos", "ut-itens", itens ? String(itens) : null, "itn"),
+      tile("shield", "Identidade", "Nome, sigla e escudo", "ut-identidade", null, "idt")
+    ]));
+    screen.appendChild(el("div", { class: "ut-grupo-t", text: "Mercado" }));
+    screen.appendChild(el("div", { class: "ut-tiles" }, [
+      tile("package", "Loja", "Pacotes, escolhas e empréstimo", "ut-store", (s.packs && s.packs.length) || (s.picks && s.picks.length) ? String((s.packs || []).length + (s.picks || []).length) : (temEmpr ? "!" : null), "loj"),
+      tile("arrow-left-right", "Mercado", "Leilão, compre já e observação", "ut-market", pend ? String(pend) : null, "mkt")
+    ]));
 
     screen.appendChild(el("div", { class: "ut-foot" }, [
       TM.ui.button("Reiniciar clube", function () {
@@ -994,6 +1068,15 @@
         }, true);
       }, "btn ghost small")
     ]));
+
+    function tile(icone, name, sub, route, badge, acc) {
+      return el("button", { class: "ut-tile" + (acc ? " a-" + acc : ""), on: { click: function () { goUT(route); } } }, [
+        el("span", { class: "ut-t-ic" }, [TM.ic(icone)]),
+        el("span", { class: "ut-t-nm", text: name }),
+        el("span", { class: "ut-t-sub", text: sub }),
+        badge ? el("span", { class: "ut-t-badge", text: badge }) : null
+      ]);
+    }
   }
 
   /* ---------- estatísticas do clube ---------- */
@@ -1025,6 +1108,19 @@
       linha("Derrotas", s.riv.l || 0),
       linha("Aproveitamento", jogos ? Math.round(((s.riv.w * 3 + s.riv.d) / (jogos * 3)) * 100) + "%" : "—")
     ]));
+    // modos novos: temporada, batalhas, champions, draft e DME
+    var T = TM.utTemp, Mo = TM.utModos, tp = T ? T.estado(s) : null, bat = Mo ? Mo.batEstado(s) : null, rk = bat && Mo.rankDe(bat.pts);
+    var dmes = Object.keys(s.sbc || {}).length + Object.keys(s.sbcRep || {}).reduce(function (a, k) { var r = s.sbcRep[k]; return a + (r && r.n ? r.n : 1); }, 0);
+    body.appendChild(el("div", { class: "ut-sec-t", text: "Modos" }));
+    body.appendChild(el("div", { class: "ut-statbox" }, [
+      linha("Partidas (todos os modos)", s.stats.jogos || 0),
+      tp ? linha(T.tempNome(tp.id), "Nível " + T.nivelDe(tp.xp) + " · " + fmtC(tp.xp) + " XP") : null,
+      bat ? linha("Batalhas na semana", fmtC(bat.pts) + " pts" + (rk ? " · " + rk.n : "")) : null,
+      s.champ ? linha("Champions na semana", s.champ.fase === "qual" ? "classificação" : s.champ.fase === "elim" ? "eliminatórias (" + s.champ.ev + "V)" : (s.champ.fv || 0) + " vitórias nas finais") : null,
+      s.draftRec ? linha("Draft", (s.draftRec.titulos || 0) + " título(s) · melhor nota " + (s.draftRec.nota || "—")) : null,
+      linha("DME enviados", dmes),
+      linha("Repetidos vendidos sozinhos", s.stats.repetidos || 0)
+    ]));
     body.appendChild(el("div", { class: "ut-sec-t", text: "Coleção por versão" }));
     var linhas = VER_ORDEM.filter(function (v) { return porVer[v]; }).map(function (v) {
       return el("div", { class: "ut-dl" }, [el("i", { text: verInfo(v).n }), el("b", { text: porVer[v] })]);
@@ -1052,11 +1148,72 @@
       });
       if (best) { used[best.card.i] = 1; xi.push(best.card.i); } else xi.push(null);
     });
+    // segunda passada: troca um por um enquanto o time render mais em campo
+    // (nota com o embalo da química; fora de posição pesa bastante)
+    var byI = {}; all.forEach(function (d) { byI[d.card.i] = d; });
+    function valor(ids) {
+      var ds = ids.map(function (id) { return id ? byI[id] : null; }), c = chemDe(ds, F), v = 0;
+      // fora de posição pesa pelo encaixe: meia em outra função do meio perde pouco,
+      // goleiro na zaga perde muito (ninguém quer isso em campo)
+      ds.forEach(function (d, i) { if (d) v += effOv(d.ov, c.per[i]) - (1 - posFit(d, slotRole(F[i]))) * 25; });
+      return v;
+    }
+    var atual = valor(xi);
+    for (var volta = 0; volta < 3; volta++) {
+      var melhorou = false;
+      for (var i = 0; i < xi.length; i++) {
+        var achou = null, alvo = atual;
+        all.forEach(function (d) {
+          if (used[d.card.i]) return;
+          var tenta = xi.slice(); tenta[i] = d.card.i;
+          var v = valor(tenta);
+          if (v > alvo + 0.01) { alvo = v; achou = d; }
+        });
+        if (achou) { if (xi[i]) delete used[xi[i]]; xi[i] = achou.card.i; used[achou.card.i] = 1; atual = alvo; melhorou = true; }
+      }
+      if (!melhorou) break;
+    }
     s.squad.xi = xi;
     // banco: os 7 melhores que sobraram
     var rest = all.filter(function (d) { return !used[d.card.i]; }).sort(function (a, b) { return b.ov - a.ov; });
     s.squad.sub = rest.slice(0, 7).map(function (d) { return d.card.i; });
     save();
+  }
+
+  /* ---------- vínculos da química: quantos de cada clube/liga/país e o próximo degrau ---------- */
+  function nomeClube(id) { var c = TM.data.club(id); return c ? c.name : "—"; }
+  function nomeLiga(id) { try { var L = TM.data.league(id); return L ? L.name : "—"; } catch (e) { return "—"; } }
+  function nomePais(id) { try { var n = TM.data.nation(id); return n ? n.name : "—"; } catch (e) { return "—"; } }
+  function painelVinculos(ch) {
+    function coluna(titulo, mapa, lim, nome) {
+      var lin = Object.keys(mapa).map(function (k) { return { k: k, n: mapa[k] }; })
+        .filter(function (x) { return x.n >= 2; }).sort(function (a, b) { return b.n - a.n; }).slice(0, 4);
+      return el("div", { class: "ut-vin-col" }, [
+        el("div", { class: "ut-vin-t", text: titulo + " · " + lim.join("/") }),
+        lin.length ? null : el("div", { class: "ut-vin-vazio", text: "nenhum vínculo ainda" })
+      ].concat(lin.map(function (x) {
+        var pts = ptsPor(x.n, lim), prox = lim.filter(function (v) { return v > x.n; })[0];
+        return el("div", { class: "ut-vin-l" + (pts ? " on" : "") }, [
+          el("span", { class: "ut-vin-n", text: nome(x.k) }),
+          el("span", { class: "ut-vin-c", text: x.n + (prox ? "/" + prox : "") }),
+          el("b", { text: pts ? "+" + pts : "0" })
+        ]);
+      })));
+    }
+    var fora = ch.emPos.filter(function (v, i) { return ch.ds[i] && !v; }).length;
+    return el("div", { class: "ut-vin" }, [
+      el("div", { class: "ut-vin-h" }, [
+        el("span", { text: "Química do time" }),
+        el("b", { text: ch.team + " de 33" })
+      ]),
+      fora ? el("div", { class: "ut-vin-alerta", text: fora + (fora > 1 ? " jogadores fora de posição: ficam" : " jogador fora de posição: fica") + " com química 0 e não somam vínculo." }) : null,
+      el("div", { class: "ut-vin-cols" }, [
+        coluna("Clubes", ch.nClub, LIM.club, nomeClube),
+        coluna("Ligas", ch.nLg, LIM.lg, nomeLiga),
+        coluna("Países", ch.nNat, LIM.nat, nomePais)
+      ]),
+      el("div", { class: "ut-vin-dica", text: "Cada jogador soma até 3: clube, liga e país dão pontos quando o time junta 2/5/8 do mesmo clube, 3/5/8 da mesma liga e 2/5/8 do mesmo país. Ícone e Herói já entram com 3." })
+    ]);
   }
 
   /* ---------- escalação ---------- */
@@ -1075,8 +1232,7 @@
 
       body.appendChild(el("div", { class: "ut-sq-head" }, [
         el("div", { class: "ut-sq-stat" }, [el("b", { text: r.ov || "—" }), el("i", { text: "NOTA" })]),
-        el("div", { class: "ut-sq-stat chem" }, [el("b", { text: ch.team }), el("i", { text: "QUÍMICA" })]),
-        TM.ui.dropdown ? null : null,
+        el("div", { class: "ut-sq-stat chem" }, [el("b", { text: ch.team + "/33" }), el("i", { text: "QUÍMICA" })]),
         el("button", {
           class: "ut-sq-form", text: s.squad.f + " ▾", on: {
             click: function () {
@@ -1095,26 +1251,13 @@
       pitch.appendChild(el("div", { class: "ut-pmark circ" }));
       pitch.appendChild(el("div", { class: "ut-pmark meio" }));
       pitch.appendChild(el("div", { class: "ut-pmark area" }));
-      var NS = "http://www.w3.org/2000/svg";
-      var svg = document.createElementNS(NS, "svg");
-      svg.setAttribute("class", "ut-links"); svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("preserveAspectRatio", "none");
-      ch.links.forEach(function (L) {
-        var a = F[L[0]], b = F[L[1]];
-        var v = linkVal(ch.ds[L[0]], ch.ds[L[1]]);
-        var has = ch.ds[L[0]] && ch.ds[L[1]];
-        var ln = document.createElementNS(NS, "line");
-        ln.setAttribute("x1", a[1]); ln.setAttribute("y1", a[2]);
-        ln.setAttribute("x2", b[1]); ln.setAttribute("y2", b[2]);
-        ln.setAttribute("class", "utl " + (!has ? "l-none" : v >= 3 ? "l3" : v === 2 ? "l2" : v === 1 ? "l1" : "l0"));
-        svg.appendChild(ln);
-      });
-      pitch.appendChild(svg);
-
       F.forEach(function (slot, i) {
         var d = ch.ds[i], role = slotRole(slot);
         var holder = el("div", { class: "ut-slot", style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
           cardEl(d, { chem: d ? ch.per[i] : null, role: role, cls: "mini" })
         ]);
+        // função da casa: verde na posição, vermelho fora dela (fora = química 0)
+        if (d) holder.appendChild(el("span", { class: "ut-slot-role" + (ch.emPos[i] ? " ok" : " fora"), text: role, title: ch.emPos[i] ? "Na posição" : "Fora de posição: química 0" }));
         if (d && !podeJogar(d.card)) holder.appendChild(el("span", { class: "ut-sem-contrato", text: "SEM CONTRATO" }));
         arrastavel(holder, i);
         pitch.appendChild(holder);
@@ -1132,6 +1275,7 @@
           return cardEl(d, { cls: "tiny", on: function () { showCard(d, s, draw); } });
         }) : [el("div", { class: "ut-empty-tx", text: "Nenhum reserva. Use o Auto ou escolha no Meu Clube." })])
       ]));
+      body.appendChild(painelVinculos(ch));
     }
 
     /* Arrastar uma carta em cima de outra troca as duas de posição, igual à
@@ -1244,16 +1388,21 @@
       el("b", { text: fit + "%" + (penFisica(fit) ? " (−" + penFisica(fit) + ")" : "") })
     ]));
     linhas.push(el("div", { class: "ut-gest-l" }, [
-      el("i", { text: (est ? est.ic : "🧪") + " Estilo" }),
-      el("div", { class: "ut-gest-txt", text: est ? est.n : "nenhum" }),
-      el("b", { text: est ? "+" + ORDER.filter(function (k) { return est.b[k]; }).map(function (k) { return ST_LABEL[k]; }).join(" +") : "" })
+      el("i", {}, [TM.ic("shuffle"), document.createTextNode(" Posições")]),
+      el("div", { class: "ut-gest-txt", text: d.posicoes.join(" · ") }),
+      el("b", { text: d.posicoes.length > 1 ? (d.posicoes.length - 1) + " alternativa" + (d.posicoes.length > 2 ? "s" : "") : "só a principal" })
+    ]));
+    linhas.push(el("div", { class: "ut-gest-l" }, [
+      el("i", {}, [TM.ic(est ? est.ic : "flask-conical"), document.createTextNode(" Estilo")]),
+      el("div", { class: "ut-gest-txt", text: est ? est.n : "Básico" }),
+      el("b", { text: est ? ORDER.filter(function (k) { return est.b[k]; }).map(function (k) { return "+" + est.b[k] + " " + (d.pos === "GK" ? GK_LABEL : ST_LABEL)[k]; }).join(" ") : "+2 em tudo" })
     ]));
 
     var itens = (s.itens || []).filter(function (it) {
       if (it.t === "contrato") return true;
       if (it.t === "forma") return fit < FIT_CHEIA;
       if (it.t === "quimica") return true;
-      if (it.t === "posicao") return it.p !== d.pos && it.p !== c.pos2;
+      if (it.t === "posicao") return (c.posx || []).length < 2 && ROLES_SETOR[it.p].some(function (r) { return d.posicoes.indexOf(r) < 0; });
       return false;
     });
     var acoes = el("div", { class: "ut-gest-acts" });
@@ -1261,8 +1410,16 @@
       acoes.appendChild(el("div", { class: "ut-note", text: "Você não tem itens que sirvam para esta carta. Eles saem dos pacotes." }));
     } else {
       itens.slice(0, 14).forEach(function (it) {
-        acoes.appendChild(el("button", { class: "ut-item-bt", on: { click: function () { aplicaItem(s, c, it); TM.ui.toast(itemNome(it) + " aplicado"); if (refresh) refresh(); } } }, [
-          el("i", { text: itemIcone(it) }), el("span", { text: itemNome(it) })
+        acoes.appendChild(el("button", { class: "ut-item-bt", on: { click: function () {
+          if (it.t === "posicao") {      // escolhe a função dentro do setor do item
+            var livres = ROLES_SETOR[it.p].filter(function (r) { return d.posicoes.indexOf(r) < 0; });
+            TM.ui.optionsMenu("Nova posição para " + shortNm(d.name), livres.map(function (r) {
+              return { label: r, fn: function () { c.posx = (c.posx || []).concat([r]); removeItem(s, it.i); save(); TM.ui.toast(shortNm(d.name) + " agora joga de " + r, "ok"); if (refresh) refresh(); } };
+            }));
+            return;
+          }
+          aplicaItem(s, c, it); TM.ui.toast(itemNome(it) + " aplicado", "ok"); if (refresh) refresh(); } } }, [
+          el("i", {}, [itemIcone(it)]), el("span", { text: itemNome(it) })
         ]));
       });
     }
@@ -1272,9 +1429,9 @@
     if (it.t === "contrato") c.ct = (c.ct == null ? contratoDe(c.v) : c.ct) + it.n;
     else if (it.t === "forma") c.fit = FIT_CHEIA;
     else if (it.t === "quimica") c.sty = it.e;
-    else if (it.t === "posicao") c.pos2 = it.p;
     removeItem(s, it.i);
     save();
+    emit("item", { s: s, it: it, card: c });
   }
 
   function showCard(d, s, after) {
@@ -1307,7 +1464,7 @@
       el("div", { class: "ut-detail-acts" }, [
         ehEmprestimo(d.card) ? el("div", { class: "ut-note", text: "Jogador emprestado: não pode ser vendido nem usado em DME." }) : null,
         listed ? el("div", { class: "ut-note", text: "Esta carta já está à venda no mercado." }) : (sq[d.card.i] ? el("div", { class: "ut-note", text: "Está no elenco. Tire do time para vender." }) : null),
-        (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Vender no mercado", function () { close(); listCard(d, s, after); }, "btn primary wide") : null,
+        (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Vender no mercado", function () { close(); if (TM.utMercado && TM.utMercado.anunciar) TM.utMercado.anunciar(d, s, after); else listCard(d, s, after); }, "btn primary wide") : null,
         (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Venda rápida (" + fmtC(quickSell(d.ov, d.ver)) + ")", function () {
           TM.ui.confirm("Venda rápida?", d.name + " some da sua coleção por " + fmtC(quickSell(d.ov, d.ver)) + " moedas. Costuma valer bem menos que o mercado.", "Vender", function () {
             earn(s, quickSell(d.ov, d.ver), "Venda rápida"); removeCard(s, d.card.i); save(); close(); if (after) after();
@@ -1382,6 +1539,18 @@
       })));
     }
 
+    // escolhas de jogador ganhas (Temporada, Rivais, Champions, DME...)
+    if (s.picks && s.picks.length) {
+      body.appendChild(el("div", { class: "ut-sec-t", text: "Escolhas de jogador" }));
+      body.appendChild(el("div", { class: "ut-owned" }, s.picks.map(function (pk) {
+        return el("button", { class: "ut-owned-it escolha", on: { click: function () { goUT("ut-escolha", { id: pk.id }); } } }, [
+          el("span", { class: "ut-o-ic" }, [TM.ic("user-search")]),
+          el("span", { text: "1 de " + (pk.n || 3) + " · " + pk.lo + "+" + (pk.ver ? " " + verInfo(pk.ver).n : "") }),
+          el("span", { class: "ut-o-go", text: "ESCOLHER" })
+        ]);
+      })));
+    }
+
     body.appendChild(el("div", { class: "ut-sec-t", text: "Pacotes" }));
     PACKS.forEach(function (pk) {
       var isTC = !!pk.tc;
@@ -1389,7 +1558,8 @@
         el("div", { class: "ut-pk-ic", text: isTC ? "🎁" : "📦" }),
         el("div", { class: "ut-pk-i" }, [
           el("div", { class: "ut-pk-n", text: pk.name }),
-          el("div", { class: "ut-pk-d", text: pk.desc })
+          el("div", { class: "ut-pk-d", text: pk.desc }),
+          el("button", { class: "utp-odds-bt", on: { click: function (e) { e.stopPropagation(); mostraOdds(pk); } } }, [TM.ic("chart-column"), document.createTextNode(" Probabilidades")])
         ]),
         el("button", {
           class: "ut-pk-buy" + (isTC ? " tc" : ""),
@@ -1465,9 +1635,55 @@
   });
 
 
-  /* ---------- identidade do clube: apelido, sigla e escudo ---------- */
-  var ESCUDOS = ["🦁","🦅","🐺","🐂","🦈","🐉","⚓","⚡","👑","🔥","⭐","🛡️","🏹","🐍","🐆","🌋","⚔️","💎"];
-  var CORES = ["#22c55e","#ef4444","#3b82f6","#f59e0b","#a855f7","#14b8a6","#ec4899","#64748b","#d4af37"];
+  /* ---------- identidade do clube: apelido, sigla e escudo ----------
+     O escudo é DESENHADO (forma + símbolo em traço + cor + sigla), sem emoji:
+     o emoji de bicho o conversor de ícones tirava e o escudo ficava vazio. */
+  var ESCUDOS_ANTIGOS = ["🦁","🦅","🐺","🐂","🦈","🐉","⚓","⚡","👑","🔥","⭐","🛡️","🏹","🐍","🐆","🌋","⚔️","💎"];
+  var CORES = ["#22c55e","#ef4444","#3b82f6","#f59e0b","#a855f7","#14b8a6","#ec4899","#64748b","#d4af37","#111827","#ffffff","#0ea5e9"];
+  var FORMAS = {
+    classico: "M50 3 L93 15 V52 C93 80 73 99 50 109 C27 99 7 80 7 52 V15 Z",
+    moderno:  "M15 6 H85 Q93 6 93 14 V58 C93 85 71 101 50 109 C29 101 7 85 7 58 V14 Q7 6 15 6 Z",
+    redondo:  "M50 6 A47 47 0 1 1 49.99 6 Z",
+    diamante: "M50 3 L95 54 L50 109 L5 54 Z",
+    hexagono: "M50 3 L93 28 V82 L50 108 L7 82 V28 Z",
+    flamula:  "M8 5 H92 V72 L50 109 L8 72 Z"
+  };
+  var FORMA_ORDEM = ["classico", "moderno", "redondo", "diamante", "hexagono", "flamula"];
+  var SIMBOLOS = ["tm-bola", "star", "crown", "flame", "zap", "anchor", "swords", "trophy", "gem", "target", "rocket", "shield", "sparkles", "sun", "moon", "flag", "medal", "award"];
+  function escudoCfg(s) {
+    var e = (s && s.escudo) || "", m = /^([a-z]+)\|([a-z0-9-]+)$/.exec(e);
+    if (m && FORMAS[m[1]]) return { forma: m[1], simb: m[2] };
+    var i = ESCUDOS_ANTIGOS.indexOf(e);          // escudo antigo (emoji): vira o clássico
+    return { forma: "classico", simb: SIMBOLOS[i >= 0 ? i % SIMBOLOS.length : 0] };
+  }
+  var _escSeq = 0;
+  function claro(cor) { var h = String(cor || "").replace("#", ""); if (h.length !== 6) return false; var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16); return (r * 299 + g * 587 + b * 114) / 1000 > 170; }
+  function escudoEl(cfg, cor, sigla, cls) {
+    var NS = "http://www.w3.org/2000/svg", id = "utx" + (_escSeq++);
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 100 112"); svg.setAttribute("class", "utx-forma"); svg.setAttribute("aria-hidden", "true");
+    function no(tag, at) { var n = document.createElementNS(NS, tag); Object.keys(at).forEach(function (k) { n.setAttribute(k, at[k]); }); return n; }
+    var d = FORMAS[cfg.forma] || FORMAS.classico;
+    var defs = no("defs", {}), clip = no("clipPath", { id: id });
+    clip.appendChild(no("path", { d: d })); defs.appendChild(clip);
+    var grad = no("linearGradient", { id: id + "g", x1: "0", y1: "0", x2: "0", y2: "1" });
+    grad.appendChild(no("stop", { offset: "0", "stop-color": "#fff", "stop-opacity": ".28" }));
+    grad.appendChild(no("stop", { offset: ".55", "stop-color": "#fff", "stop-opacity": "0" }));
+    grad.appendChild(no("stop", { offset: "1", "stop-color": "#000", "stop-opacity": ".28" }));
+    defs.appendChild(grad); svg.appendChild(defs);
+    svg.appendChild(no("path", { d: d, fill: cor || "#22c55e" }));
+    var g = no("g", { "clip-path": "url(#" + id + ")" });
+    g.appendChild(no("rect", { x: "38", y: "0", width: "24", height: "112", fill: "#000", "fill-opacity": ".16" }));
+    g.appendChild(no("rect", { x: "0", y: "0", width: "100", height: "112", fill: "url(#" + id + "g)" }));
+    svg.appendChild(g);
+    svg.appendChild(no("path", { d: d, fill: "none", stroke: "rgba(255,255,255,.6)", "stroke-width": "3.5" }));
+    var tinta = claro(cor) ? " escuro" : "";
+    return el("div", { class: "utx-escudo" + tinta + (cls ? " " + cls : "") }, [
+      svg, el("div", { class: "utx-simb" }, [TM.ic(cfg.simb)]),
+      sigla ? el("div", { class: "utx-sig", text: sigla }) : null
+    ]);
+  }
+  function escudoDe(s, cls) { return escudoEl(escudoCfg(s), s && s.cor || "#22c55e", siglaDe(s), cls); }
   function siglaAuto(nome) {
     var ps = String(nome || "").trim().split(/\s+/).filter(Boolean);
     if (!ps.length) return "TUC";
@@ -1487,63 +1703,54 @@
     var nome = el("input", { class: "ut-input", type: "text", maxlength: "22", value: s.club || "", placeholder: "Nome do clube" });
     var apelido = el("input", { class: "ut-input", type: "text", maxlength: "18", value: s.apelido || "", placeholder: "Apelido (como o time é chamado)" });
     var sigla = el("input", { class: "ut-input sigla", type: "text", maxlength: "3", value: siglaDe(s), placeholder: "SIG" });
-    var escolhido = s.escudo || ESCUDOS[0];
-    var cor = s.cor || CORES[0];
+    var cfg = escudoCfg(s), cor = s.cor || CORES[0];
 
     var previa = el("div", { class: "ut-id-previa" });
-    function desenhaPrevia() {
+    var formas = el("div", { class: "ut-escudos" }), simbs = el("div", { class: "ut-escudos simbs" }), cores = el("div", { class: "ut-cores" });
+    function sig() { return (sigla.value || siglaAuto(apelido.value || nome.value)).toUpperCase(); }
+    function desenha() {
       TM.ui.clear(previa);
-      previa.appendChild(el("div", { class: "ut-escudo grande", style: "--c:" + cor }, [el("span", { text: escolhido })]));
+      previa.appendChild(escudoEl(cfg, cor, sig(), "grande"));
       previa.appendChild(el("div", { class: "ut-id-txt" }, [
         el("div", { class: "ut-id-nome", text: (apelido.value || nome.value || "Meu Ultimate") }),
-        el("div", { class: "ut-id-sig", text: (sigla.value || siglaAuto(nome.value)).toUpperCase() })
+        el("div", { class: "ut-id-sig", text: sig() })
       ]));
+      TM.ui.clear(formas);
+      FORMA_ORDEM.forEach(function (f) {
+        formas.appendChild(el("button", { class: "ut-esc-op" + (cfg.forma === f ? " sel" : ""), on: { click: function () { cfg.forma = f; desenha(); } } }, [escudoEl({ forma: f, simb: cfg.simb }, cor, "")]));
+      });
+      TM.ui.clear(simbs);
+      SIMBOLOS.forEach(function (ic) {
+        simbs.appendChild(el("button", { class: "ut-esc-op simb" + (cfg.simb === ic ? " sel" : ""), on: { click: function () { cfg.simb = ic; desenha(); } } }, [TM.ic(ic)]));
+      });
+      TM.ui.clear(cores);
+      CORES.forEach(function (c) {
+        cores.appendChild(el("button", { class: "ut-cor" + (c === cor ? " sel" : ""), style: "background:" + c, on: { click: function () { cor = c; desenha(); } } }));
+      });
     }
-    [nome, apelido, sigla].forEach(function (i) { i.addEventListener("input", desenhaPrevia); });
-    desenhaPrevia();
+    [nome, apelido, sigla].forEach(function (i) { i.addEventListener("input", function () { previa.firstChild && previa.replaceChild(escudoEl(cfg, cor, sig(), "grande"), previa.firstChild); previa.lastChild.firstChild.textContent = apelido.value || nome.value || "Meu Ultimate"; previa.lastChild.lastChild.textContent = sig(); }); });
+    desenha();
 
     body.appendChild(previa);
     body.appendChild(el("div", { class: "ut-sec-t", text: "Nome e apelido" }));
     body.appendChild(nome);
     body.appendChild(apelido);
-    body.appendChild(el("div", { class: "ut-sec-t", text: "Abreviação (3 letras, aparece no placar)" }));
+    body.appendChild(el("div", { class: "ut-sec-t", text: "Abreviação (3 letras, aparece no placar e no escudo)" }));
     body.appendChild(sigla);
-
-    body.appendChild(el("div", { class: "ut-sec-t", text: "Escudo" }));
-    var grade = el("div", { class: "ut-escudos" });
-    ESCUDOS.forEach(function (e) {
-      var b = el("button", { class: "ut-escudo" + (e === escolhido ? " sel" : ""), style: "--c:" + cor }, [el("span", { text: e })]);
-      b.addEventListener("click", function () {
-        escolhido = e;
-        grade.querySelectorAll(".ut-escudo").forEach(function (x) { x.classList.remove("sel"); });
-        b.classList.add("sel"); desenhaPrevia();
-      });
-      grade.appendChild(b);
-    });
-    body.appendChild(grade);
-
+    body.appendChild(el("div", { class: "ut-sec-t", text: "Forma do escudo" }));
+    body.appendChild(formas);
+    body.appendChild(el("div", { class: "ut-sec-t", text: "Símbolo" }));
+    body.appendChild(simbs);
     body.appendChild(el("div", { class: "ut-sec-t", text: "Cor" }));
-    var cores = el("div", { class: "ut-cores" });
-    CORES.forEach(function (c) {
-      var b = el("button", { class: "ut-cor" + (c === cor ? " sel" : ""), style: "background:" + c });
-      b.addEventListener("click", function () {
-        cor = c;
-        cores.querySelectorAll(".ut-cor").forEach(function (x) { x.classList.remove("sel"); });
-        b.classList.add("sel");
-        grade.querySelectorAll(".ut-escudo").forEach(function (x) { x.style.setProperty("--c", cor); });
-        desenhaPrevia();
-      });
-      cores.appendChild(b);
-    });
     body.appendChild(cores);
 
     body.appendChild(TM.ui.button("Salvar", function () {
       s.club = (nome.value || "").trim() || s.club || "Meu Ultimate";
       s.apelido = (apelido.value || "").trim();
       s.sigla = ((sigla.value || "").trim() || siglaAuto(s.apelido || s.club)).toUpperCase().slice(0, 3);
-      s.escudo = escolhido; s.cor = cor;
+      s.escudo = cfg.forma + "|" + cfg.simb; s.cor = cor;
       save();
-      TM.ui.toast("Identidade salva");
+      TM.ui.toast("Identidade salva", "ok");
       goUT("ut");
     }, "btn primary wide"));
   });
@@ -1563,7 +1770,7 @@
     Object.keys(grupos).sort().forEach(function (k) {
       var g = grupos[k];
       body.appendChild(el("div", { class: "ut-item-lin" }, [
-        el("span", { class: "ut-item-ic", text: itemIcone(g[0]) }),
+        el("span", { class: "ut-item-ic" }, [itemIcone(g[0])]),
         el("span", { class: "ut-item-nm", text: k }),
         el("span", { class: "ut-item-qt", text: "x" + g.length })
       ]));
@@ -1584,12 +1791,19 @@
     screen.classList.add("ut-screen", "ut-packscreen");
     var stage = el("div", { class: "ut-stage" });
     screen.appendChild(stage);
+    // walkout (bandeira → posição → clube → carta) para a melhor carta, se for 84+ ou versão especial forte
+    var temWalk = !!best && (best.ov >= 84 || ["mes", "joia", "heroi", "tots", "icone"].indexOf(best.ver) >= 0);
+    var walkFeito = false;
     showNext();
 
     function showNext() {
       TM.ui.clear(stage);
-      if (idx >= ds.length) { summary(); return; }
+      if (idx >= ds.length) {
+        if (temWalk && !walkFeito) { walkFeito = true; idx = ds.length - 1; walkout(best, function () { idx = ds.length; showNext(); }); return; }
+        summary(); return;
+      }
       var d = ds[idx];
+      if (temWalk && !walkFeito && d === best) { walkFeito = true; walkout(d, showNext); return; }
       var walk = d.ov >= 84;
       var wrap = el("div", { class: "ut-reveal" + (walk ? " walkout" : "") }, [
         el("div", { class: "ut-rev-count", text: (idx + 1) + " de " + ds.length }),
@@ -1603,6 +1817,34 @@
         el("button", { class: "btn ghost small", text: "Revelar tudo", on: { click: function () { idx = ds.length; showNext(); } } })
       ]);
       stage.appendChild(wrap);
+    }
+    function walkout(d, depois) {
+      TM.ui.clear(stage);
+      var VI = verInfo(d.ver), esp = !!VI.sel;
+      var passo = el("div", { class: "utw-passo" });
+      var pular = el("button", { class: "utw-pular", text: "Pular" });
+      var cena = el("div", { class: "utw" + (esp ? " esp" : "") + (d.ov >= 88 ? " top" : "") }, [
+        el("div", { class: "utw-raios" }), el("div", { class: "utw-luz" }), passo, pular
+      ]);
+      stage.appendChild(cena);
+      var etapas = [
+        function () { return el("div", { class: "utw-item" }, [TM.img.flagImg(TM.data.nation(d.nat), "utw-flag"), el("div", { class: "utw-lbl", text: nomePais(d.nat) })]); },
+        function () { return el("div", { class: "utw-item" }, [el("div", { class: "utw-pos", text: d.pos2 }), el("div", { class: "utw-lbl", text: "Posição" })]); },
+        function () { return el("div", { class: "utw-item" }, [d.club ? TM.img.clubImg(d.club, "utw-crest") : el("span"), el("div", { class: "utw-lbl", text: d.club ? d.club.name : "" })]); }
+      ];
+      var k = 0, fim = false, tm = null;
+      function prox() {
+        if (fim) return;
+        clearTimeout(tm);
+        if (k >= etapas.length) { acaba(); return; }
+        var no; try { no = etapas[k](); } catch (e) { no = el("span"); }
+        TM.ui.clear(passo); no.classList.add("entra"); passo.appendChild(no);
+        k++; tm = setTimeout(prox, 1100);
+      }
+      function acaba() { if (fim) return; fim = true; clearTimeout(tm); depois(); }
+      pular.addEventListener("click", function (e) { e.stopPropagation(); acaba(); });
+      cena.addEventListener("click", function () { prox(); });     // tocar adianta a próxima etapa
+      tm = setTimeout(prox, 450);
     }
     function summary() {
       TM.ui.clear(stage);
@@ -1620,7 +1862,7 @@
         })(),
         itensGanhos.length ? el("div", { class: "ut-sum-b", text: "Itens: " + itensGanhos.length }) : null,
         itensGanhos.length ? el("div", { class: "ut-itens-lin" }, itensGanhos.map(function (it) {
-          return el("span", { class: "ut-item-chip" }, [ el("i", { text: itemIcone(it) }), el("b", { text: itemNome(it) }) ]);
+          return el("span", { class: "ut-item-chip" }, [ el("i", {}, [itemIcone(it)]), el("b", { text: itemNome(it) }) ]);
         })) : null,
         TM.ui.button("Ir para o Meu Clube", function () { goUT("ut-club"); }, "btn primary wide"),
         TM.ui.button("Voltar à loja", function () { goUT("ut-store"); }, "btn ghost wide")
@@ -1769,6 +2011,7 @@
         s.mkt.buy = s.mkt.buy.filter(function (L) { return L.k !== x.L.k; });
         s.stats.bought = (s.stats.bought || 0) + 1;
         save();
+        emit("compra", { s: s });
         objBump(s, "buy1", 1);
         TM.ui.toast(shortNm(x.d.name) + " comprado!");
         paint();
@@ -1856,246 +2099,42 @@
     return { id: "utteam", name: nomeExibido(s), short: siglaDe(s), players: players };
   }
 
-  TM.ui.register("ut-rivals", function (screen) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    screen.classList.add("ut-screen");
-    screen.appendChild(utTop("Rivais", function () { goUT("ut"); }, s));
-    var body = el("div", { class: "ut-body" });
-    screen.appendChild(body);
-    draw();
-
-    function draw() {
-      TM.ui.clear(body);
-      var info = divInfo(s.riv.div), r = squadRating(s);
-      var pct = clamp(Math.round(s.riv.pts / info.need * 100), 0, 100);
-      body.appendChild(el("div", { class: "ut-div" }, [
-        el("div", { class: "ut-div-n", text: "DIVISÃO " + s.riv.div }),
-        el("div", { class: "ut-div-bar" }, [el("div", { class: "ut-div-f", style: "width:" + pct + "%" })]),
-        el("div", { class: "ut-div-s", text: s.riv.div > 1 ? (s.riv.pts + " / " + info.need + " pontos para subir") : (s.riv.pts + " pontos · divisão máxima") }),
-        el("div", { class: "ut-div-rec", text: s.riv.w + "V " + s.riv.d + "E " + s.riv.l + "D · melhor divisão: " + s.riv.best })
-      ]));
-
-      var filled = s.squad.xi.filter(Boolean).length;
-      body.appendChild(el("div", { class: "ut-sq-mini" }, [
-        el("div", { class: "ut-sq-mini-i" }, [el("b", { text: r.ov || "—" }), el("i", { text: "NOTA" })]),
-        el("div", { class: "ut-sq-mini-i" }, [el("b", { text: r.chem }), el("i", { text: "QUÍMICA" })]),
-        el("button", { class: "btn ghost small", text: "Editar elenco", on: { click: function () { goUT("ut-squad"); } } })
-      ]));
-
-      if (filled < 11) {
-        body.appendChild(el("div", { class: "ut-warn", text: "Você precisa de 11 titulares para jogar. Faltam " + (11 - filled) + "." }));
-        body.appendChild(TM.ui.button("Montar automaticamente", function () { autoFill(s); draw(); }, "btn primary wide"));
-        return;
-      }
-
-      var opp = rivalOpp(s);
-      body.appendChild(el("div", { class: "ut-next" }, [
-        el("div", { class: "ut-next-t", text: "PRÓXIMO ADVERSÁRIO" }),
-        el("div", { class: "ut-next-c" }, [
-          (function () { try { return TM.img.clubImg(opp, "ut-next-crest"); } catch (e) { return el("span"); } })(),
-          el("div", {}, [
-            el("div", { class: "ut-next-n", text: opp.name }),
-            el("div", { class: "ut-next-s", text: "Nota " + TM.data.clubRating(opp.id) })
-          ])
-        ]),
-        el("div", { class: "ut-next-rew", text: "Vitória: " + fmtC(info.win) + " moedas · Empate: " + fmtC(Math.round(info.win * 0.4)) })
-      ]));
-      body.appendChild(TM.ui.button("Jogar partida", function () { goUT("ut-play", { opp: opp.id }); }, "btn primary wide"));
-    }
-  });
-
-  TM.ui.register("ut-play", function (screen, params) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    var oppId = (params || {}).opp;
-    var opp = TM.data.club(oppId) || rivalOpp(s);
-    var teamA = utTeam(s), teamB = TM.engine.teamFromClub(opp.id);
-    if (teamA.players.length < 11) { TM.ui.toast("Elenco incompleto"); goUT("ut-rivals"); return; }
-    var settings = TM.storage.settings();
-    var simOpts = { realism: settings.realism, neutral: true };
-    var result = TM.engine.simulate(teamA, teamB, simOpts);
-    TM.matchview.play(screen, {
-      teamA: teamA, teamB: teamB, result: result, settings: settings, title: "Rivais · Divisão " + s.riv.div,
-      pauseSide: 0, simOpts: simOpts, formation: s.squad.f,
-      onBack: function () { goUT("ut-rivals"); },
-      onDone: function () {
-        var hs = result.score[0], as = result.score[1];
-        var info = divInfo(s.riv.div);
-        var foram = gastaJogo(s);        // contrato -1, forma -9, empréstimo -1
-        s.riv.pl++;
-        objBump(s, "riv3", 1);
-        if (hs > as) {
-          s.riv.w++; s.riv.pts += 3; earn(s, info.win, "Vitória Rivais");
-          objBump(s, "win2", 1);
-        } else if (hs === as) {
-          s.riv.d++; s.riv.pts += 1; earn(s, Math.round(info.win * 0.4), "Empate Rivais");
-        } else {
-          s.riv.l++; earn(s, Math.round(info.win * 0.18), "Derrota Rivais");
-        }
-        if (hs > 0) objBump(s, "goal5", hs);
-        var promoted = false;
-        if (s.riv.div > 1 && s.riv.pts >= info.need) {
-          s.riv.div--; s.riv.pts = 0; promoted = true;
-          if (s.riv.div < s.riv.best) s.riv.best = s.riv.div;
-          // subir de divisão é o caminho mais confiável para uma Lenda
-          s.packs = s.packs || []; s.packs.push(s.riv.div <= 2 ? "mega" : s.riv.div <= 4 ? "jumbo" : s.riv.div <= 7 ? "ourorare" : "ouro");
-        }
-        var r = squadRating(s);
-        if (r.chem >= 70) objBump(s, "chem70", 1);
-        save();
-        if (foram.length) {
-          var nomes = foram.map(function (c) { var pp = TM.data.player(c.p); return pp ? pp.name : "Jogador"; }).join(", ");
-          TM.ui.toast("Empréstimo encerrado: " + nomes);
-        }
-        if (promoted) {
-          TM.ui.confirm("🏆 Subiu de divisão!", "Bem-vindo à Divisão " + s.riv.div + ". Um pacote de recompensa foi guardado na Loja.", "Boa!", function () { goUT("ut-rivals"); });
-        } else {
-          goUT("ut-rivals");
-        }
-      }
-    });
-  });
-
-  /* ---------- DME ---------- */
-  TM.ui.register("ut-sbc", function (screen) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    screen.classList.add("ut-screen");
-    screen.appendChild(utTop("DME", function () { goUT("ut"); }, s));
-    var body = el("div", { class: "ut-body" });
-    screen.appendChild(body);
-    body.appendChild(el("p", { class: "ut-tip", text: "Desafios de Montagem de Elenco: monte um time que cumpra os requisitos. As cartas usadas são consumidas." }));
-    SBCS.forEach(function (sbc) {
-      var done = !!s.sbc[sbc.id];
-      body.appendChild(el("button", {
-        class: "ut-sbc" + (done ? " done" : ""), on: { click: function () { if (!done) goUT("ut-sbc-build", { id: sbc.id }); } }
-      }, [
-        el("div", { class: "ut-sbc-i" }, [
-          el("div", { class: "ut-sbc-n", text: sbc.name }),
-          el("div", { class: "ut-sbc-d", text: sbc.tip }),
-          el("div", { class: "ut-sbc-r", text: "Prêmio: " + (sbc.rew.coins ? fmtC(sbc.rew.coins) + " moedas" : "") + (sbc.rew.pack ? (sbc.rew.coins ? " + " : "") + (packById(sbc.rew.pack) || {}).name : "") })
-        ]),
-        el("span", { class: "ut-sbc-go", text: done ? "✓" : "›" })
-      ]));
-    });
-  });
-
-  TM.ui.register("ut-sbc-build", function (screen, params) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    var sbc = sbcById((params || {}).id); if (!sbc) { goUT("ut-sbc"); return; }
-    var slots = [null, null, null, null, null, null, null, null, null, null, null];
-    var F = "4-3-3";
-    screen.classList.add("ut-screen");
-    screen.appendChild(utTop(sbc.name, function () { goUT("ut-sbc"); }, s));
-    var body = el("div", { class: "ut-body" });
-    screen.appendChild(body);
-    draw();
-
-    function draw() {
-      TM.ui.clear(body);
-      var checks = checkSbc(sbc, slots, F);
-      var allOk = checks.every(function (c) { return c.ok; }) && slots.filter(Boolean).length === 11;
-      body.appendChild(el("div", { class: "ut-reqs" }, checks.map(function (c) {
-        return el("div", { class: "ut-req " + (c.ok ? "ok" : "no") }, [
-          el("span", { class: "ut-req-ic", text: c.ok ? "✓" : "•" }),
-          el("span", { class: "ut-req-l", text: c.label }),
-          el("span", { class: "ut-req-v", text: c.have + "/" + c.need })
-        ]);
-      })));
-      var FF = TM.comp.FORMATIONS[F];
-      var pitch = el("div", { class: "ut-pitch small" });
-      FF.forEach(function (slot, i) {
-        var c = slots[i], d = c ? cardData(c) : null;
-        pitch.appendChild(el("div", { class: "ut-slot", style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
-          cardEl(d, { role: slotRole(slot), cls: "mini", on: function () { pickFor(i); } })
-        ]));
-      });
-      body.appendChild(pitch);
-      body.appendChild(el("div", { class: "ut-sbc-acts" }, [
-        TM.ui.button("Preencher automático", function () {
-          var used = {}; var all = s.cards.map(cardData).filter(Boolean).sort(function (a, b) { return b.ov - a.ov; });
-          slots = FF.map(function (slot) {
-            var role = slotRole(slot), best = null, bs = -1;
-            all.forEach(function (d) {
-              if (used[d.card.i]) return;
-              var sc = d.ov * (0.45 + 0.55 * posFit(d, role));
-              if (sc > bs) { bs = sc; best = d; }
-            });
-            if (best) { used[best.card.i] = 1; return best.card; }
-            return null;
-          });
-          draw();
-        }, "btn ghost wide"),
-        el("button", {
-          class: "btn primary wide" + (allOk ? "" : " off"), text: allOk ? "Enviar elenco" : "Requisitos não cumpridos",
-          on: {
-            click: function () {
-              if (!allOk) return;
-              TM.ui.confirm("Enviar?", "As 11 cartas usadas serão consumidas e você recebe o prêmio.", "Enviar", function () {
-                slots.forEach(function (c) { if (c) removeCard(s, c.i); });
-                s.sbc[sbc.id] = 1;
-                if (sbc.rew.coins) earn(s, sbc.rew.coins, "DME " + sbc.name);
-                if (sbc.rew.pack) { s.packs = s.packs || []; s.packs.push(sbc.rew.pack); }
-                save(); objBump(s, "sbc1", 1);
-                TM.ui.confirm("🧩 DME concluído!", "Prêmio creditado." + (sbc.rew.pack ? " O pacote está guardado na Loja." : ""), "Beleza", function () { goUT("ut-sbc"); });
-              });
-            }
-          }
-        })
-      ]));
-    }
-
-    function pickFor(idx) {
-      var used = {};
-      slots.forEach(function (c, i) { if (c && i !== idx) used[c.i] = 1; });
-      var sq = inSquad(s);
-      var list = s.cards.map(cardData).filter(Boolean).filter(function (d) { return !used[d.card.i]; });
-      list.sort(function (a, b) { return b.ov - a.ov; });
-      var sheet = el("div", { class: "ut-sheet" });
-      sheet.appendChild(el("div", { class: "ut-sheet-in" }, [
-        el("div", { class: "ut-sheet-h" }, [el("span", { text: "Escolher carta" }), el("button", { class: "ut-x", text: "✕", on: { click: close } })]),
-        slots[idx] ? el("button", { class: "btn ghost small wide", text: "Remover", on: { click: function () { slots[idx] = null; close(); draw(); } } }) : null,
-        el("div", { class: "ut-pick-grid" }, list.slice(0, 80).map(function (d) {
-          return el("div", { class: "ut-pick-it" }, [
-            cardEl(d, { cls: "tiny" + (sq[d.card.i] ? " insquad" : ""), on: function () { slots[idx] = d.card; close(); draw(); } }),
-            sq[d.card.i] ? el("span", { class: "ut-pick-fit bad", text: "no time" }) : null
-          ]);
-        }))
-      ]));
-      sheet.addEventListener("click", function (e) { if (e.target === sheet) close(); });
-      document.body.appendChild(sheet); requestAnimationFrame(function () { sheet.classList.add("show"); });
-      function close() { sheet.classList.remove("show"); setTimeout(function () { sheet.remove(); }, 200); }
-    }
-  });
-
-  /* ---------- objetivos ---------- */
-  TM.ui.register("ut-obj", function (screen) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    objRefresh(s);
-    screen.classList.add("ut-screen");
-    screen.appendChild(utTop("Objetivos", function () { goUT("ut"); }, s));
-    var body = el("div", { class: "ut-body" });
-    screen.appendChild(body);
-    body.appendChild(el("p", { class: "ut-tip", text: "Os objetivos trocam todo dia. Cumpra e receba moedas na hora." }));
-    (s.obj.list || []).forEach(function (o) {
-      var pct = clamp(Math.round(o.p / o.n * 100), 0, 100);
-      body.appendChild(el("div", { class: "ut-obj" + (o.done ? " done" : "") }, [
-        el("div", { class: "ut-obj-t" }, [
-          el("span", { class: "ut-obj-x", text: o.tx }),
-          el("span", { class: "ut-obj-c", text: o.done ? "✓" : fmtC(o.c) })
-        ]),
-        el("div", { class: "ut-obj-bar" }, [el("div", { class: "ut-obj-f", style: "width:" + pct + "%" })]),
-        el("div", { class: "ut-obj-p", text: o.p + " / " + o.n })
-      ]));
-    });
-  });
+  /* ================= eventos (para os módulos: temporada, evoluções, modos) =================
+     "partida" { s, modo, gf, ga, venceu, empate, perdeu, golsPor{pid:n}, xi[cid], dif }
+     "pacote" { s, pk, cards } · "dme" { s, sbc } · "venda" { s, n } · "compra" { s } */
+  var _ouv = {};
+  function on(ev, fn) { (_ouv[ev] = _ouv[ev] || []).push(fn); }
+  function emit(ev, dado) { (_ouv[ev] || []).forEach(function (fn) { try { fn(dado); } catch (e) { try { console.warn("ut evento " + ev, e); } catch (e2) {} } }); }
 
   /* ================= API ================= */
   TM.ut = {
     state: st, save: save, reset: reset,
     chemistry: chemistry, squadRating: squadRating, cardData: cardData, cardEl: cardEl,
-    basePrice: basePrice, openPack: openPack, PACKS: PACKS, SBCS: SBCS, DIVS: DIVS,
-    autoFill: autoFill, slotRole: slotRole, posFit: posFit, linkVal: linkVal, isTotw: isTotw,
+    basePrice: basePrice, openPack: openPack, PACKS: PACKS, DIVS: DIVS,
+    autoFill: autoFill, slotRole: slotRole, posFit: posFit, isTotw: isTotw, notaEquipe: notaEquipe, chemDe: chemDe,
     effOv: effOv, earn: earn, statsOf: statsOf, quickSell: quickSell, packById: packById,
     addCard: addCard, limpaRepetidos: limpaRepetidos, resolveRepetido: resolveRepetido,
     _new: function (name) { S = blank(); S.club = name || "Meu Ultimate"; save(); return S; }
+  };
+  // API interna para os módulos do Ultimate (ut-modos, ut-temporada, ut-evolucoes, ut-dme, ut-draft...)
+  TM.ut._i = {
+    st: st, save: save, el: el, clamp: clamp, fmtC: fmtC, coinsEl: coinsEl, shuffle: shuffle, mulberry: mulberry, hashStr: hashStr,
+    today: today, weekOf: weekOf, shortNm: shortNm,
+    pool: pool, poolByPos: poolByPos, leagueOf: leagueOf, clubOf: clubOf, drawPlayer: drawPlayer,
+    rarOf: rarOf, RAR_NAME: RAR_NAME, RAR_COR: RAR_COR, VERSOES: VERSOES, verInfo: verInfo, verBonus: verBonus,
+    sorteiaVersao: sorteiaVersao, isTotw: isTotw, totwSet: totwSet,
+    mkCard: mkCard, cardData: cardData, basePrice: basePrice, quickSell: quickSell, addCard: addCard, removeCard: removeCard,
+    cardMap: cardMap, inSquad: inSquad,
+    chemistry: chemistry, chemDe: chemDe, effOv: effOv, notaEquipe: notaEquipe, squadRating: squadRating, LIM: LIM, ptsPor: ptsPor,
+    slotRole: slotRole, posFit: posFit, posicoesDe: posicoesDe, principal: principal, emPosicao: emPosicao, ROLES_SETOR: ROLES_SETOR, SECTOR: SECTOR,
+    earn: earn, pay: pay, faltaMoedas: faltaMoedas, faltaTC: faltaTC,
+    PACKS: PACKS, packById: packById, openPack: openPack, novoItem: novoItem, addItem: addItem, ESTILOS: ESTILOS, estiloPor: estiloPor,
+    itemNome: itemNome, itemIcone: itemIcone,
+    statsOf: statsOf, cardEl: cardEl, showCard: showCard, autoFill: autoFill, gastaJogo: gastaJogo, penFisica: penFisica,
+    podeJogar: podeJogar, temContrato: temContrato, ehEmprestimo: ehEmprestimo, podeVender: podeVender,
+    objBump: objBump, utTeam: utTeam, goUT: goUT, utTop: utTop, wallet: wallet,
+    escudoDe: escudoDe, escudoEl: escudoEl, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos,
+    DIVS: DIVS, divInfo: divInfo, nomeClube: nomeClube, nomeLiga: nomeLiga, nomePais: nomePais,
+    on: on, emit: emit
   };
 })(window);
