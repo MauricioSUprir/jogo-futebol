@@ -97,8 +97,9 @@
   // preço médio dos últimos 7 dias: passeio por semente que termina no preço justo de hoje
   function tendencia(d) {
     var j = justo(d), rnd = rndDe("utk-tend:" + d.p.id + ":" + d.ver + ":" + U().today());
-    var drift = (rnd() - 0.5) * 0.06, pts = [j];
-    for (var i = 1; i < 7; i++) pts.unshift(Math.max(50, pts[0] * (1 - drift + (rnd() - 0.5) * 0.07)));
+    var k = j < 1000 ? 0.35 : j < 10000 ? 0.75 : 1;          // carta barata quase não mexe (fica no piso)
+    var drift = (rnd() - 0.5) * 0.06 * k, pts = [j];
+    for (var i = 1; i < 7; i++) pts.unshift(Math.max(PRECO_MIN_INI, pts[0] * (1 - drift + (rnd() - 0.5) * 0.07 * k)));
     return pts.map(function (v) { return Math.round(v); });
   }
   // "comparar preço": os menores compre já desta carta agora (os do mercado + a referência da hora)
@@ -116,9 +117,9 @@
     var tx = r <= 0.85 ? "Compre já abaixo do mercado: deve sair em instantes."
       : r <= 1.0 ? "Compre já no preço de mercado: deve vender em poucos minutos."
       : r <= 1.05 ? "Compre já perto do mercado: deve vender logo."
-      : r <= 1.15 ? "Compre já um pouco acima: pode levar até uma hora."
-      : r <= 1.3 ? "Compre já acima do mercado: pode levar horas."
-      : r <= 1.6 ? "Compre já caro: dificilmente sai por ele." : "Compre já muito caro: só o leilão deve andar.";
+      : r <= 1.15 ? "Compre já um pouco acima: pode levar uma hora ou mais."
+      : r <= 1.25 ? "Compre já acima do mercado: pode levar horas."
+      : r <= 1.4 ? "Compre já caro: dificilmente sai por ele." : "Compre já muito caro: ninguém paga; só o leilão anda.";
     var cls = r <= 1.05 ? "bom" : r <= 1.3 ? "medio" : "ruim";
     var leilao = ini > j * 1.05 ? "Lance inicial acima do que os técnicos pagam: o leilão deve ficar sem lances."
       : "No leilão, os lances costumam fechar entre " + fmtC(arred(j * 0.85)) + " e " + fmtC(arred(j * 1.05)) + ".";
@@ -154,7 +155,7 @@
     if (ov >= 84) f *= 1.12; else if (ov >= 80) f *= 1.05;   // carta boa: pedem mais
     var bin = Math.max(PRECO_MIN_BIN, arred(j * f));
     var ini = Math.max(PRECO_MIN_INI, Math.min(arred(j * (0.32 + rnd() * 0.45)), abaixo(bin)));
-    var teto = j * (0.78 + rnd() * 0.32);               // até onde os outros técnicos vão neste leilão
+    var teto = j * (0.8 + rnd() * 0.28);                // até onde os outros técnicos vão neste leilão
     var dur = sorteiaDur(rnd) * MIN;
     // 40% chega na virada da hora (o lote novo); o resto pinga ao longo dela
     var t0 = H * HORA + Math.floor(rnd() < 0.4 ? rnd() * 2 * MIN : rnd() * HORA);
@@ -163,8 +164,10 @@
     if (bin <= teto) tc = t0 + Math.round((0.6 + rc * 11) * MIN);
     else if (bin <= j * 1.02 && rc < 0.35) tc = t0 + Math.round((5 + rnd() * 90) * MIN);
     if (tc >= fim) tc = 0;
-    return { id: "m" + H + "_" + idx, p: p.id, v: ver, vend: vendedor(rnd), ini: ini, bin: bin, t0: t0, fim: fim, j: j,
-             teto: Math.round(Math.min(teto, abaixo(bin))), tc: tc };
+    var vend = vendedor(rnd), ri = rnd();
+    var it = ri < 0.18 ? 0.3 : ri < 0.82 ? 1 : 1.3;     // interesse: frio (pechincha possível), normal, disputado
+    return { id: "m" + H + "_" + idx, p: p.id, v: ver, vend: vend, ini: ini, bin: bin, t0: t0, fim: fim, j: j,
+             teto: Math.round(Math.min(teto, abaixo(bin))), tc: tc, it: it };
   }
   var _lotes = {}, _nLotes = 0;
   function lote(s, H) {
@@ -207,7 +210,7 @@
     return d;
   }
   function snap(A) {
-    return { id: A.id, p: A.p, v: A.v, vend: A.vend, ini: A.ini, bin: A.bin, t0: A.t0, fim: A.fim, j: A.j, teto: A.teto, tc: A.tc || 0 };
+    return { id: A.id, p: A.p, v: A.v, vend: A.vend, ini: A.ini, bin: A.bin, t0: A.t0, fim: A.fim, j: A.j, teto: A.teto, tc: A.tc || 0, it: A.it || 1 };
   }
 
   /* ================= o leilão (a IA) ================= */
@@ -218,7 +221,7 @@
     if (_vis[k]) return _vis[k];
     if (++_nVis > 4000) { _vis = {}; _nVis = 1; }
     var rnd = rndDe("utk-vis:" + k), D = Math.max(MIN, A.fim - A.t0);
-    var n = Math.round(4 + Math.min(14, D / HORA * 3) + rnd() * 5), v = [];
+    var n = Math.max(2, Math.round((5 + Math.min(16, D / HORA * 3) + rnd() * 6) * (A.it || 1))), v = [];
     for (var i = 0; i < n; i++) {
       var t = A.fim - D * Math.pow(rnd(), 2.3);
       v.push({ t: Math.round(Math.min(t, A.fim - 1)), r1: rnd(), r2: rnd(), r3: rnd() });
@@ -233,14 +236,16 @@
   function lanceIA(A, E, r1, r2, r3, t, reacao) {
     var prox = minLance(A, E);
     if (prox > A.teto || prox >= A.bin) return 0;
-    var rem = A.fim - t, ratio = prox / Math.max(1, A.j);
+    var rem = A.fim - t, ratio = prox / Math.max(1, A.j), fimPerto = rem < 2 * MIN;
     var p = 0.42 + (1 - ratio) * 0.75;
     if (rem < 10 * MIN) p += 0.12;
-    if (rem < 2 * MIN) p += 0.15;
+    if (fimPerto) p += 0.15;
+    p *= Math.min(1.15, A.it || 1);
     if (reacao) p = E.quem === "eu" ? p * 0.85 : 0;
-    if (r1 >= clamp(p, 0.1, 0.95)) return 0;
+    if (r1 >= clamp(p, 0.05, 0.95)) return 0;
     var v = prox, folga = A.teto - prox;
-    if (r2 < 0.45 && folga > 3 * passo(prox)) v = Math.max(prox, arredBaixo(prox + folga * (0.1 + r3 * 0.4)));
+    // no fim a disputa esquenta: o lance pula para perto do teto
+    if (r2 < (fimPerto ? 0.75 : 0.45) && folga > 2 * passo(prox)) v = Math.max(prox, arredBaixo(prox + folga * (fimPerto ? 0.45 + r3 * 0.5 : 0.1 + r3 * 0.4)));
     if (v >= A.bin) v = abaixo(A.bin);
     return v >= prox ? v : 0;
   }
@@ -293,10 +298,10 @@
     L.teto = Math.round(W);
     var q = L.bin / Math.max(1, L.j);
     // compre já perto do justo vende rápido; caro demora ou não sai (minutos, média)
-    var media = q <= 0.85 ? 1.5 : q <= 1.0 ? 5 : q <= 1.05 ? 12 : q <= 1.15 ? 45 : q <= 1.3 ? 180 : q <= 1.6 ? 720 : 4320;
-    if (L.bin <= W) media = Math.min(media, 4);
-    var tb = L.t0 + Math.round(-Math.log(1 - r() * 0.999) * media * MIN);
-    L.tb = tb < L.fim ? tb : 0;
+    var media = q <= 0.85 ? 1.5 : q <= 1.0 ? 5 : q <= 1.05 ? 12 : q <= 1.15 ? 60 : q <= 1.25 ? 240 : q <= 1.4 ? 900 : 0;
+    if (L.bin <= W) media = Math.min(media || 4, 4);
+    var tb = media ? L.t0 + Math.round(-Math.log(1 - r() * 0.999) * media * MIN) : 0;   // acima de 1,4x ninguém paga o compre já
+    L.tb = tb && tb < L.fim ? tb : 0;
   }
   // estado de um anúncio meu em `ate` (função pura: lances da IA, compre já e o fim)
   function simulaVenda(s, L, ate) {
@@ -669,7 +674,12 @@
       node: el("div", { class: "utk-step" }, [menos, inp, mais]),
       get: function () { return v; },
       set: function (n) { set(n, true); },
-      limites: function (a, b) { mn = a; mx = b; set(v, true); }
+      limites: function (a, b) {
+        if (a === mn && b === mx) return;
+        mn = a; mx = b;
+        if (v < mn || v > mx) set(v, true);
+        else { menos.disabled = v <= mn; mais.disabled = v >= mx; }
+      }
     };
   }
   // folha (bottom sheet) no estilo das outras do Ultimate
@@ -726,7 +736,7 @@
       lL.textContent = E.n ? (E.quem === "eu" ? "Seu lance" : "Lance atual") : "Lance inicial";
       vL.set(E.n ? E.lance : A.ini);
       nb.textContent = E.n ? E.n + (E.n > 1 ? " lances" : " lance") : "sem lances";
-      tTx.textContent = vivo ? fmtTempo(rest) : (ROT[sit] || "Encerrado");
+      tTx.textContent = vivo ? fmtTempo(rest) : (sit === "vendido" || sit === "meu" ? "Fora do ar" : "Encerrado");
       tempo.className = "utk-tempo " + (vivo ? clsTempo(rest) : "fim");
       var chave = sit + "|" + !!s.mkt.obs[A.id];
       if (chave !== ult) {
@@ -1103,6 +1113,8 @@
       badges.obs.textContent = bo ? String(bo) : ""; badges.obs.hidden = !bo;
       badges.vendas.textContent = bv ? String(bv) : ""; badges.vendas.hidden = !bv;
       badges.buscar.hidden = true;
+      badges.obs.parentNode.classList.toggle("tem-badge", !!bo);
+      badges.vendas.parentNode.classList.toggle("tem-badge", !!bv);
       Array.prototype.forEach.call(abas.children, function (b) { var on = b.getAttribute("data-aba") === _aba; b.classList.toggle("on", on); b.setAttribute("aria-selected", on ? "true" : "false"); });
       if (s.coins !== _moedas) {             // saldo mudou: atualiza a carteira do topo
         _moedas = s.coins;
@@ -1127,7 +1139,7 @@
       var chips = el("div", { class: "ut-chips utk-chips" });
       var nF = el("span", { class: "utk-nf" });
       var btF = el("button", { class: "ut-chip utk-btf", type: "button", on: { click: function () { _painel = !_painel; pintaControles(); } } }, [ic("sliders-horizontal"), el("span", { text: "Filtros" }), nF]);
-      corpo.appendChild(chips);
+      corpo.appendChild(el("div", { class: "utk-linha-f" }, [chips, btF]));
       // painel de filtros
       function sel(rot, ops, k) {
         var x = el("select", { class: "utk-sel", "aria-label": rot }, ops.map(function (o) { return el("option", { value: o[0], text: o[1] }); }));
@@ -1143,25 +1155,26 @@
         return el("label", { class: "utk-campo" }, [el("span", { text: rot }), x]);
       }
       var w = TM.data.world();
-      var ligas = [["", "Todas as ligas"]].concat((w.leagues || []).map(function (L) { return [L.id, L.name]; }));
+      var ligas = [["", "Todas"]].concat((w.leagues || []).map(function (L) { return [L.id, L.name]; }));
       var paises = (w.nations || []).map(function (n) { return [n.id, n.name]; }).sort(function (a, b) { return a[1].localeCompare(b[1], "pt-BR"); });
-      var versoes = [["", "Todas as versões"], ["base", "Comum"], ["rare", "Rara"], ["esp", "Qualquer especial"]];
+      var versoes = [["", "Todas"], ["base", "Comum"], ["rare", "Rara"], ["esp", "Qualquer especial"]];
       ["totw", "rodada", "mes", "joia", "heroi", "tots", "icone"].forEach(function (v) { versoes.push([v, I.verInfo(v).n]); });
       var painel = el("div", { class: "utk-painel" }, [
         el("div", { class: "utk-grade" }, [
-          sel("Função", [["", "Todas as funções"]].concat(FUNCOES.map(function (o) { return [o[0], o[0] + " · " + o[1]]; })), "fun"),
+          sel("Função", [["", "Todas"]].concat(FUNCOES.map(function (o) { return [o[0], o[0] + " · " + o[1]]; })), "fun"),
           sel("Raridade", [["", "Todas"], ["b", "Base (bronze)"], ["s", "Elite (prata)"], ["g", "Craque (ouro)"], ["l", "Lenda (verde)"]], "rar"),
           sel("Versão", versoes, "ver"),
           sel("Liga", ligas, "lg"),
-          sel("País", [["", "Todos os países"]].concat(paises), "nat"),
+          sel("País", [["", "Todos"]].concat(paises), "nat"),
           el("div", { class: "utk-par" }, [num("Nota mín.", "ovMin", "45"), num("Nota máx.", "ovMax", "99")]),
           el("div", { class: "utk-par" }, [num("Lance máx.", "lanceMax", "qualquer"), num("Compre já máx.", "binMax", "qualquer")])
         ]),
-        el("button", { class: "btn ghost small utk-limpa", type: "button", on: { click: function () { var o = f.ord; _f = filtrosVazios(); _f.ord = o; desenha(); nova(); } } }, [ic("x"), el("span", { text: "Limpar filtros" })])
+        el("button", { class: "btn ghost small utk-limpa", type: "button", on: { click: function () { var o = f.ord; _f = filtrosVazios(); _f.ord = o; _res = null; desenha(); } } }, [ic("x"), el("span", { text: "Limpar filtros" })])
       ]);
       corpo.appendChild(painel);
       var ordem = el("div", { class: "utk-ordem" });
-      corpo.appendChild(ordem);
+      var btAt = el("button", { class: "utk-atualiza", type: "button", title: "Buscar de novo", "aria-label": "Buscar de novo", on: { click: function () { nova(); toast("Mercado atualizado.", "info"); } } }, [ic("refresh-cw")]);
+      corpo.appendChild(el("div", { class: "utk-linha-o" }, [ordem, btAt]));
       var conta = el("div", { class: "utk-conta" });
       corpo.appendChild(conta);
       var lista = el("div", { class: "utk-lista" });
@@ -1176,14 +1189,12 @@
         var n = nFiltros(f);
         nF.textContent = n ? String(n) : ""; nF.hidden = !n;
         btF.classList.toggle("on", _painel || n > 0);
-        chips.appendChild(btF);
         painel.classList.toggle("on", _painel);
         TM.ui.clear(ordem);
         ordem.appendChild(el("span", { class: "utk-ordem-l", text: "Ordenar" }));
         ORDENS.forEach(function (o) {
           ordem.appendChild(el("button", { class: "utk-ord" + (f.ord === o[0] ? " on" : ""), type: "button", text: o[1], on: { click: function () { f.ord = o[0]; nova(); } } }));
         });
-        ordem.appendChild(el("button", { class: "utk-atualiza", type: "button", title: "Buscar de novo", "aria-label": "Buscar de novo", on: { click: function () { nova(); toast("Mercado atualizado.", "info"); } } }, [ic("refresh-cw")]));
       }
       function nova() { _res = { lista: filtra(s, agora(), f), n: 30 }; pintaControles(); pintaLista(); }
       function pintaLista() {

@@ -1030,7 +1030,7 @@
       modo("trophy", "Rivais", "Divisão " + s.riv.div + " · " + semR.v + " vitória" + (semR.v === 1 ? "" : "s") + " na semana", info.need === 999 ? 100 : s.riv.pts / info.need * 100, "ut-rivals", "riv"),
       modo("swords", "Batalhas de Elenco", rk ? rk.n + " · " + bat.pts + " pts" : "Contra elencos da CPU", bat ? Math.min(100, bat.pts / 44) : null, "ut-batalhas", "bat"),
       modo("crown", "Champions", chTx, ch ? (ch.fase === "qual" ? semR.v / 4 * 100 : ch.fase === "elim" ? ch.ev / 3 * 100 : ch.fj.length * 10) : null, "ut-champions", "ch"),
-      modo("layers", "Draft", (s.fichas ? s.fichas + " ficha" + (s.fichas > 1 ? "s" : "") + " · " : "") + (s.draft ? "em andamento" : "monte e vença 4 seguidas"), null, "ut-draft", "dr")
+      modo("layers", "Draft", TM.utDraft && TM.utDraft.resumo ? TM.utDraft.resumo(s).sub : "Monte e vença 4 seguidas", null, "ut-draft", "dr")
     ]));
     screen.appendChild(el("div", { class: "ut-tiles" }, [
       tile("globe", "Online", "Enfrente elencos de outros jogadores", "ut-online", null, "onl"),

@@ -753,7 +753,8 @@
             // a carta mostra a posição principal; se ele entra pela alternativa, avisa
             if (x.emPos && x.dd.pos2 !== role) chips.push(el("span", { class: "utd-q alt", text: "joga de " + role }));
           }
-          row.appendChild(el("div", { class: "utd-op" + (sel === k ? " sel" : ""), on: { click: function () { escolhe(k); } } }, [
+          row.appendChild(el("div", { class: "utd-op" + (sel === k ? " sel" : ""), role: "button", tabindex: "0", "aria-pressed": sel === k ? "true" : "false",
+            on: { click: function () { escolhe(k); }, keydown: function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); escolhe(k); } } } }, [
             el("span", { class: "utd-op-ok" }, [ic("check")]),
             U.cardEl(x.dd, { cls: "big", chem: d.fase === "casas" ? x.per : null }),
             el("div", { class: "utd-op-chips" }, chips),
