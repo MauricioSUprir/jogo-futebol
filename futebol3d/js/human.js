@@ -414,6 +414,9 @@ function setpiece(m, p, cmd, mx, mz, dt) {
     m.takeSetpiece(k, { target: tg, power: pw, foot: p.foot });
     return;
   }
+  // pênalti só se cobra chutando: passe/enfiada aqui virava um "pênalti" com alvo de passe, sem
+  // altura, e a bola ia para NaN (achado pelo sim-test com humano aleatório)
+  if (sp.type === 'penalty') return;
   for (const k of ['pass', 'long', 'through', 'shoot']) {
     if (!rel[k]) continue;
     const pw = power(cmd.hold[k]);
