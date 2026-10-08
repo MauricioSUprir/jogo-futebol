@@ -1167,6 +1167,35 @@
     ]);
   }
 
+  /* ---------- campo sem nada encostando (pedido do dono: "nada sobre nada") ----------
+     Depois que o campo entra na tela, mede as cartas e afasta na vertical as que
+     ficariam a menos de 4 px uma da outra (formações apertadas no celular, como a
+     4-1-2-1-2). Fica tudo dentro do campo. */
+  function separaCampo(pitch) {
+    function roda() {
+      if (!pitch.isConnected) return;
+      var hs = [].slice.call(pitch.querySelectorAll(".ut-slot")), H = pitch.clientHeight;
+      if (!H || hs.length < 2) return;
+      for (var volta = 0; volta < 8; volta++) {
+        var mexeu = false;
+        for (var a = 0; a < hs.length; a++) for (var b = a + 1; b < hs.length; b++) {
+          var ra = hs[a].getBoundingClientRect(), rb = hs[b].getBoundingClientRect();
+          var ix = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+          var iy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+          if (ix > 0 && iy > -4) {
+            var cima = ra.top <= rb.top ? hs[a] : hs[b], baixo = cima === hs[a] ? hs[b] : hs[a];
+            var dy = (iy + 4) / 2 / H * 100;
+            cima.style.top = Math.max(7, parseFloat(cima.style.top) - dy).toFixed(2) + "%";
+            baixo.style.top = Math.min(93, parseFloat(baixo.style.top) + dy).toFixed(2) + "%";
+            mexeu = true;
+          }
+        }
+        if (!mexeu) break;
+      }
+    }
+    requestAnimationFrame(roda);
+  }
+
   /* ---------- escalação ---------- */
   TM.ui.register("ut-squad", function (screen) {
     var s = st(); if (!s) { goUT("ut"); return; }
@@ -1204,16 +1233,18 @@
       pitch.appendChild(el("div", { class: "ut-pmark area" }));
       F.forEach(function (slot, i) {
         var d = ch.ds[i], role = slotRole(slot);
-        var holder = el("div", { class: "ut-slot", style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
-          cardEl(d, { chem: d ? ch.per[i] : null, role: role, cls: "mini" })
+        // fora de posição aparece DENTRO da carta (borda vermelha + a função da casa no
+        // lugar da posição): rótulo pendurado embaixo encostava na carta de baixo
+        var fora = d && !ch.emPos[i];
+        var holder = el("div", { class: "ut-slot", title: d ? (fora ? "Fora de posição em " + role + ": química 0" : "Na posição: " + role) : role, style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
+          cardEl(d, { chem: d ? ch.per[i] : null, role: role, cls: "mini" + (fora ? " fora" : "") + (d && !podeJogar(d.card) ? " semct" : "") })
         ]);
-        // função da casa: verde na posição, vermelho fora dela (fora = química 0)
-        if (d) holder.appendChild(el("span", { class: "ut-slot-role" + (ch.emPos[i] ? " ok" : " fora"), text: role, title: ch.emPos[i] ? "Na posição" : "Fora de posição: química 0" }));
-        if (d && !podeJogar(d.card)) holder.appendChild(el("span", { class: "ut-sem-contrato", text: "SEM CONTRATO" }));
+        if (fora) { var pz = holder.querySelector(".utc-pos"); if (pz) pz.textContent = role; }
         arrastavel(holder, i);
         pitch.appendChild(holder);
       });
       body.appendChild(pitch);
+      separaCampo(pitch);
 
       // banco de reservas
       var subs = (s.squad.sub || []).map(function (cid) {
@@ -1905,7 +1936,7 @@
     statsOf: statsOf, cardEl: cardEl, showCard: showCard, autoFill: autoFill, gastaJogo: gastaJogo, penFisica: penFisica,
     podeJogar: podeJogar, temContrato: temContrato, ehEmprestimo: ehEmprestimo, podeVender: podeVender,
     objBump: objBump, utTeam: utTeam, goUT: goUT, utTop: utTop, wallet: wallet,
-    escudoDe: escudoDe, escudoEl: escudoEl, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos,
+    escudoDe: escudoDe, escudoEl: escudoEl, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos, separaCampo: separaCampo,
     DIVS: DIVS, divInfo: divInfo, nomeClube: nomeClube, nomeLiga: nomeLiga, nomePais: nomePais,
     on: on, emit: emit
   };

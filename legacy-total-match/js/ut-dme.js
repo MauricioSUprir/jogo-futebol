@@ -417,6 +417,7 @@
         pitch.appendChild(h);
       });
       body.appendChild(pitch);
+      U.separaCampo(pitch);
       var usadosNoTime = slots.filter(function (c) { return c && s.squad.xi.indexOf(c.i) >= 0; }).length;
       var valor = slots.reduce(function (t, c) { var d = c && U.cardData(c); return t + (d ? U.basePrice(d.ov, d.ver) : 0); }, 0);
       body.appendChild(el("div", { class: "utm-nota-l", text: "Valor das cartas: ~" + U.fmtC(valor) + " moedas" + (usadosNoTime ? " · " + usadosNoTime + " titular(es) do seu time — vão sair do elenco" : "") }));

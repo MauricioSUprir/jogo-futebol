@@ -970,16 +970,9 @@
       var d = ((k - ref) % N + N) % N;
       return d > N / 2 ? d - N : d;
     }
-    var PASSO_PC = 64;        // deslocamento de uma carta, em % da largura da carta
-    // A carta que da a volta no anel esta a |d| = floor(N/2) do centro. Ela so
-    // pode dar a volta se ja estiver invisivel la, entao o sumico e amarrado ao
-    // tamanho da lista: com 7 modos some em 2,8; com 5 modos, em 2.
-    var SOME_EM = Math.max(1.6, Math.min(2.8, Math.floor(N / 2)));
-    // o passo fica guardado: ler offsetWidth a cada quadro do arraste obriga o
-    // navegador a recalcular o layout toda hora
-    // O passo que importa e a distancia REAL na tela entre duas cartas vizinhas,
-    // nao os 64% do transform: a perspectiva encolhe a carta de tras e a distancia
-    // aparente fica ~8% menor. Usando os 64% direto, a carta escorregava do dedo.
+    // o passo do arraste (px por carta) fica guardado: ler offsetWidth a cada
+    // quadro obriga o navegador a recalcular o layout toda hora. É a distância
+    // REAL na tela entre a carta do meio e a vizinha (medida depois de posicionar).
     var passo = 111;
     function medePasso() {
       var c0 = null, c1 = null;
@@ -992,7 +985,7 @@
         var med = (r1.left + r1.width / 2) - (r0.left + r0.width / 2);
         if (med > 40) { passo = med; return; }
       }
-      passo = Math.max(60, (cartas[0].offsetWidth || 186) * (PASSO_PC / 100) * 0.93);
+      passo = Math.max(60, desloc || 120);
     }
     function aoRedimensionar() {
       // a tela e remontada a cada visita ao menu: quando a antiga sai do
@@ -1002,23 +995,53 @@
         global.removeEventListener("orientationchange", aoRedimensionar);
         return;
       }
-      medePasso(); posiciona(0, false);
+      geo(); posiciona(0, false); medePasso();
     }
     global.addEventListener("resize", aoRedimensionar);
     global.addEventListener("orientationchange", aoRedimensionar);
 
+    /* ---- geometria SEM sobreposição (pedido do dono: "nada sobre nada") ----
+       No celular: a carta do meio inteira e as vizinhas menores, sempre com um vão
+       entre elas. A posição é contínua em d e o vão continua o mesmo no meio do
+       arraste: do centro à vizinha anda W/2 + VAO + lado/2; da vizinha à próxima
+       anda lado + VAO (a conta fecha e as bordas nunca se encostam).
+       No PC/tablet (>= 760 px) não há carrossel: as 7 cartas ficam lado a lado
+       numa grade (classe .grade) e o transform é limpo. */
+    var ESC_LADO = 0.48, VAO = 10, W = 180, desloc = 0, desloc2 = 0, grade = false;
+    function ehGrade() { try { return !!(global.matchMedia && global.matchMedia("(min-width: 760px)").matches); } catch (e) { return false; } }
+    function geo() {
+      grade = ehGrade();
+      palco.classList.toggle("grade", grade);
+      if (grade) { palco.style.removeProperty("--vit-w"); return; }
+      // a carta encolhe até caber: meio + 2 vizinhas + 2 vãos + margem nas bordas
+      var larg = palco.clientWidth || (global.innerWidth || 390);
+      W = Math.max(96, Math.min(180, Math.floor((larg - 16 - 2 * VAO) / (1 + 2 * ESC_LADO))));
+      // celular deitado: a carta também não pode passar da metade da altura (o ENTRAR tem que aparecer)
+      W = Math.min(W, Math.max(96, Math.floor((global.innerHeight || 800) * 0.5 * 9 / 16)));
+      palco.style.setProperty("--vit-w", W + "px");
+      var lado = W * ESC_LADO;
+      desloc = W / 2 + VAO + lado / 2;
+      desloc2 = lado + VAO;
+    }
     // aplica a posicao de UMA carta a partir do deslocamento continuo d
     function poe(c, d) {
-      var ad = Math.abs(d), lim = Math.min(ad, 2);
-      var esc = 1 - 0.16 * lim;                       // 1 · 0,84 · 0,68
-      var fundo = -90 * lim;                          // 0 · -90 · -180 (afunda a carta)
-      var giro = Math.max(-3, Math.min(3, d)) * -18;
-      // as capas trazem o nome desenhado: a carta do fundo some mais rapido,
-      // senao aparece um pedaco de palavra cortado na beirada da tela
-      var t = Math.max(0, Math.min(1, (ad - 1) / (SOME_EM - 1)));
-      var op = 1 - Math.pow(t, 0.55);
-      c.style.transform = "translateX(" + (d * PASSO_PC) + "%) translateZ(" + fundo.toFixed(1)
-        + "px) rotateY(" + giro.toFixed(1) + "deg) scale(" + esc.toFixed(3) + ")";
+      var ad = Math.abs(d), lim = Math.min(ad, 1), sinal = d < 0 ? -1 : 1;
+      if (grade) {
+        if (c._grade !== true) {
+          c._grade = true; c.style.transform = ""; c.style.opacity = ""; c.style.zIndex = ""; c._z = null;
+          c.style.pointerEvents = ""; c._toca = true; c._sombra.style.opacity = "0"; c._faixa.style.opacity = "1";
+          c.setAttribute("aria-hidden", "false"); c.tabIndex = 0; c._oculto = false;
+        }
+        var sel = c === cartas[i];
+        if (sel !== c._centro) { c._centro = sel; c.classList.toggle("centro", sel); }
+        return;
+      }
+      c._grade = false;
+      var x = sinal * (lim * desloc + Math.max(0, ad - 1) * desloc2);
+      var esc = 1 - (1 - ESC_LADO) * lim;
+      // além da vizinha a carta já está saindo da tela: some rápido
+      var op = ad <= 1 ? 1 : Math.max(0, 1 - (ad - 1) / 0.45);
+      c.style.transform = "translateX(" + x.toFixed(1) + "px) scale(" + esc.toFixed(3) + ")";
       c.style.opacity = op.toFixed(3);
       var z = 20 - Math.round(lim);
       if (z !== c._z) { c._z = z; c.style.zIndex = String(z); }
@@ -1026,10 +1049,8 @@
       var toca_ = op > 0.02;
       if (toca_ !== c._toca) { c._toca = toca_; c.style.pointerEvents = toca_ ? "" : "none"; }
       // escurecer as laterais por opacidade (roda no compositor; filter nao roda)
-      c._sombra.style.opacity = (lim * 0.42).toFixed(3);
-      // o nome do modo some antes da carta, senao a carta do fundo mostra um
-      // pedaco de texto cortado na beirada da tela
-      c._faixa.style.opacity = Math.max(0, Math.min(1, (1.8 - ad) / 0.55)).toFixed(3);
+      c._sombra.style.opacity = (lim * 0.38).toFixed(3);
+      c._faixa.style.opacity = Math.max(0, Math.min(1, (1.3 - ad) / 0.3)).toFixed(3);
       var centro = ad < 0.5;
       if (centro !== c._centro) { c._centro = centro; c.classList.toggle("centro", centro); }
       var oculto = ad > 1.5;
@@ -1121,12 +1142,16 @@
     function anda(p) { vaiPara(i + p); }
     function toca(k) {
       if (k === i) entrar(MODOS[k].rota)();
+      else if (grade) { i = k; posiciona(0, false); pintaLegenda(); }
       else vaiPara(i + dist(k, i));
     }
 
+    geo();
     posiciona(0, false);   // precisa estar posicionado para medir o passo real
     medePasso();
     pintaLegenda();
+    // a largura do palco só existe depois que a tela entra no documento
+    global.requestAnimationFrame(function () { if (trilho.isConnected) { geo(); posiciona(0, false); medePasso(); } });
 
     // ---- arrastar com o dedo ----
     // A carta acompanha o dedo (1:1). Ao soltar: encaixa na mais proxima, e um
@@ -1164,7 +1189,7 @@
     }
 
     palco.addEventListener("pointerdown", function (e) {
-      if (pid !== null || e.button > 0 || e.isPrimary === false) return;
+      if (grade || pid !== null || e.button > 0 || e.isPrimary === false) return;
       pid = e.pointerId;
       xIni = xUlt = xAtual = vxIni = e.clientX; yIni = e.clientY;
       vtIni = tUltMove = e.timeStamp;
