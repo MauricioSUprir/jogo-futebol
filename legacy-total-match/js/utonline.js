@@ -72,7 +72,7 @@
       el("div", { class: "ut-onl-row" }, [
         el("div", {}, [
           el("div", { class: "ut-onl-club", text: s.club || "Meu Ultimate" }),
-          el("div", { class: "ut-onl-sub", text: "Nota " + (r.ov || "—") + " · Química " + r.chem + " · Divisão " + s.riv.div })
+          el("div", { class: "ut-onl-sub", text: "Nota " + (r.ov || "—") + " · Química " + r.chem + "/33 · Divisão " + s.riv.div })
         ]),
         el("div", { class: "ut-onl-badge", id: "utPubState", text: "…" })
       ])

@@ -143,6 +143,17 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   estilo; propostas de compra/empréstimo/fim de contrato/renovação com negociação; clube pode segurar (pedir para
   sair = −15 de confiança); apresentação em 5 passos (exames, assinatura, camisa, coletiva, boas-vindas);
   trajetória. O clube mais fraco do jogo tem força ~62: a faixa de clubes alarga até ter opções.
+- **Total Ultimate 2.0** (pedido do dono: "algo profissional, nível muito maior", inspirado no Ultimate Team atual):
+  núcleo em `js/ultimate.js` (cartas, química, pacotes, loja, escalação, clube) + módulos que conversam pela API interna
+  `TM.ut._i` e pelos eventos `TM.ut._i.on/emit` ("partida", "pacote", "venda", "compra", "dme", "item", "evolucao",
+  "divisao", "nivel"): `ut-modos.js` (executor de partida, elencos CPU, Rivais com prêmios da semana, Batalhas de Elenco,
+  Champions, recompensas e escolha de jogador), `ut-temporada.js` (passe de 40 níveis + objetivos diários/semanais/
+  temporada/Fundamentos), `ut-dme.js` (DME por categorias, melhorias repetíveis, DME de jogador, "montar com as mais
+  baratas"), `ut-draft.js`, `ut-evolucoes.js`, `ut-mercado.js` (leilão, observação, lista de transferências).
+  **Química** do modelo atual: 0–3 por jogador, 33 no time; clube 2/5/8, liga 3/5/8, país 2/5/8; fora de posição = 0;
+  posições alternativas fixas por jogador; Ícone/Herói entram com 3. **Nota da equipe** com a correção de quem está acima
+  da média (`notaEquipe`). Escudo do clube é desenhado (forma + símbolo + sigla), sem emoji. Teste de ponta a ponta:
+  `node ferramentas/testar-ultimate.mjs http://localhost:8207 <pasta>` (servidor na pasta do jogo).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 
