@@ -163,7 +163,7 @@
     var S = 0; ovs.forEach(function (x) { S += x || 0; });
     var med = S / 11, E = 0;
     ovs.forEach(function (x) { if (x > med) E += x - med; });
-    return (S + E) / 11;
+    return Math.round(S + E) / 11;
   }
   function filtroReq(r) {
     if (r.t === "liga") return function (d) { return d.lg === r.lg; };
