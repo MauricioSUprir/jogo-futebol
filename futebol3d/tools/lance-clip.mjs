@@ -1,15 +1,18 @@
-// Vídeo de um impedimento NATURAL (IA x IA, nada montado): a simulação da partida usa um sorteio
-// fixo (semente) só dentro de match.step — o desenho continua igual. 1ª passada: avança sem desenhar
-// até o 1º impedimento marcado e anota o instante. 2ª passada, mesma semente: avança até ~SEG-5 s
-// antes e grava quadro a quadro (relógio controlado, 1/FPS por quadro) até 5 s depois do apito.
-// node tools/impedimento-clip.mjs [--semente 7] [--seg 25] [--fps 30] [--w 960 --h 540] [--q alta]
-//      [--tod noite] [--port 8790] [--out /pasta]
+// Vídeo de um lance NATURAL (IA x IA, nada montado): impedimento marcado ou defesa do goleiro.
+// A simulação da partida usa um sorteio fixo (semente) só dentro de match.step — o desenho continua
+// igual. 1ª passada: avança sem desenhar até o 1º lance e anota o instante. 2ª passada, mesma semente:
+// avança até ~SEG-5 s antes e grava quadro a quadro (relógio controlado, 1/FPS por quadro) até ~5 s depois.
+// node tools/lance-clip.mjs [--evento impedimento|defesa|espalmada] [--semente 7] [--seg 25] [--fps 30]
+//      [--w 960 --h 540] [--q alta] [--tod noite] [--port 8790] [--out /pasta]
+//   impedimento = impedimento marcado; defesa = goleiro defende (agarra ou espalma); espalmada = só espalmada
 import { mkdirSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { openGame, startMatch, pumpOn, stepFrame } from './pump.mjs';
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > 0 ? process.argv[i + 1] : d; };
-const SEM = +arg('semente', 7), SEG = +arg('seg', 25), FPS = +arg('fps', 30), out = arg('out', '/tmp/impedimento');
+const EV = arg('evento', 'impedimento'), SEM = +arg('semente', 7), SEG = +arg('seg', 25), FPS = +arg('fps', 30);
+const out = arg('out', '/tmp/' + EV);
 const opts = { w: +arg('w', 960), h: +arg('h', 540), dpr: 1, port: arg('port', '8790') };
+if (!['impedimento', 'defesa', 'espalmada'].includes(EV)) { console.log('evento desconhecido: ' + EV); process.exit(2); }
 
 // sorteio com semente só na simulação (mulberry32) — instalado antes do 1º passo da partida
 async function semear(page, s) {
@@ -19,6 +22,10 @@ async function semear(page, s) {
     const rng = () => { st = (st + 0x6D2B79F5) >>> 0; let t = st; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
     const real = Math.random, step = m.step.bind(m);
     m.step = (dt, cmd) => { Math.random = rng; try { return step(dt, cmd); } finally { Math.random = real; } };
+    // defesas do goleiro contadas no próprio evento do jogo
+    const L = window.__lances = { defesa: 0, espalmada: 0 };
+    const emit = m.emit.bind(m);
+    m.emit = (type, d = {}) => { if (type === 'save') { L.defesa++; if (d.kind === 'parry') L.espalmada++; } return emit(type, d); };
     // o que a criação da partida sorteou fora do passo (pontapé inicial, vento, tempo de reação)
     // também vira semente — as duas passadas começam idênticas
     Math.random = rng;
@@ -30,7 +37,11 @@ async function semear(page, s) {
     } finally { Math.random = real; }
   }, s);
 }
-const imped = (page) => page.evaluate(() => { const m = window.__golaco.game.match; return { n: m.teams[0].stats.offsides + m.teams[1].stats.offsides, t: m.time, clock: m.clock }; });
+const conta = (page) => page.evaluate((ev) => {
+  const m = window.__golaco.game.match;
+  const n = ev === 'impedimento' ? m.teams[0].stats.offsides + m.teams[1].stats.offsides : window.__lances[ev];
+  return { n, t: m.time, clock: m.clock };
+}, EV);
 
 async function partida() {
   const g = await openGame(opts);
@@ -40,21 +51,21 @@ async function partida() {
   return g;
 }
 
-// 1ª passada: onde acontece o 1º impedimento (tempo de simulação da partida)
+// 1ª passada: onde acontece o 1º lance (tempo de simulação da partida)
 let g = await partida();
-let tImp = null;
-for (let s = 0; s < 900 && tImp === null; s++) {
+let tEv = null;
+for (let s = 0; s < 900 && tEv === null; s++) {
   await g.page.evaluate(() => window.__golaco.advance(1));
-  const r = await imped(g.page);
-  if (r.n > 0) tImp = r.t;
+  const r = await conta(g.page);
+  if (r.n > 0) tEv = r.t;
 }
 await g.browser.close();
-if (tImp === null) { console.log('nenhum impedimento em 15 min de jogo com esta semente'); process.exit(1); }
-console.log(`1ª passada: impedimento perto de t=${tImp.toFixed(1)} s`);
+if (tEv === null) { console.log(`nenhum lance "${EV}" em 15 min de jogo com esta semente`); process.exit(1); }
+console.log(`1ª passada: ${EV} perto de t=${tEv.toFixed(1)} s`);
 
 // 2ª passada: mesma semente, avança até SEG-5 s antes e grava
 g = await partida();
-const ini = Math.max(0, tImp - (SEG - 5));
+const ini = Math.max(0, tEv - (SEG - 5));
 await g.page.evaluate((s) => window.__golaco.advance(s), Math.floor(ini));
 rmSync(out, { recursive: true, force: true }); mkdirSync(out, { recursive: true });
 const N = Math.round(SEG * FPS);
@@ -62,9 +73,9 @@ let visto = null;
 for (let i = 0; i < N; i++) {
   await stepFrame(g.page, 1000 / FPS);
   await g.page.screenshot({ path: `${out}/f${String(i).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 88, timeout: 300000 });
-  if (visto === null) { const r = await imped(g.page); if (r.n > 0) visto = i / FPS; }
+  if (visto === null) { const r = await conta(g.page); if (r.n > 0) visto = i / FPS; }
 }
 await g.browser.close();
 execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', `${out}/f%04d.jpg`, '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '20', `${out}.mp4`]);
-console.log(`2ª passada: impedimento marcado em ${visto === null ? 'NÃO APARECEU (a simulação divergiu)' : visto.toFixed(1) + ' s do vídeo'} | ${N} quadros a ${FPS} qps → ${out}.mp4`);
+console.log(`2ª passada: ${EV} em ${visto === null ? 'NÃO APARECEU (a simulação divergiu)' : visto.toFixed(1) + ' s do vídeo'} | ${N} quadros a ${FPS} qps → ${out}.mp4`);
 process.exit(visto === null ? 1 : 0);

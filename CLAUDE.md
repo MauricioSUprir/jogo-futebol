@@ -84,7 +84,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   conversão 9–14%, passe 75–88%, ≥ 1 impedimento/partida; 24 partidas variam ±0,3 gol e ±1,2 ponto de
   conversão entre execuções — para calibrar use 192; `--base pasta` mede outra versão); linha de defesa
   `tools/linha-test.mjs` (alinhada, acompanha a bola, sobe em bloco); espalmada para escanteio nunca entra
-  `tools/espalmada-test.mjs`; diagnósticos `tools/chutes-diag.mjs` e `tools/passes-diag.mjs`);
+  `tools/espalmada-test.mjs`; diagnósticos `tools/chutes-diag.mjs` e `tools/passes-diag.mjs`;
   proteção `tools/protecao-test.mjs`; contato de corpo
   `tools/contato-test.mjs`; fadiga `tools/fadiga.mjs`.
 - Especificação "Master Gameplay & Visual Spec" (dono): fases A–F feitas. A posse/proteção/primeiro toque/giro/
@@ -110,6 +110,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   que disputa a bola), linha de impedimento desenhada (`js/offside-line.js`); goleiro por dificuldade,
   espalmada para escanteio (`parryOut`) e rebote na área; chute de média distância, finalização de primeira,
   cruzamento com ataque à área, pressão alta, decisão mais rápida no último terço; passe com risco por zona.
+  Vídeo de lance natural IA×IA com semente (nada roteirizado): `tools/lance-clip.mjs --evento impedimento|defesa|espalmada`.
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
