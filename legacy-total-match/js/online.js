@@ -1142,10 +1142,11 @@
       } catch (e) {}
     }
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("online"); }));
-    screen.appendChild(el("div", { class: "result-hero" }, [
-      el("div", { class: "result-score" }, [ el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: hs + " × " + as }), el("span", { class: "rs-team", text: b.name }) ]),
-      el("div", { class: "result-tag", text: winner ? (pen ? "🎯 " + winner + " venceu nos pênaltis!" : "🏆 " + winner + " venceu!") : "🤝 Empate!" })
-    ]));
+    var meuLado = params.side === "host" ? 0 : params.side === "guest" ? 1 : null;
+    screen.appendChild(TM.ui.posterFim({ a: a, b: b, hs: hs, as: as, events: r.events,
+      titulo: (params.hostName || a.name) + " × " + (params.guestName || b.name),
+      res: TM.ui.resultadoDe(hs, as, meuLado, pen ? params.penWinnerSide : null),
+      nota: winner ? (pen ? winner + " venceu nos pênaltis" : winner + " venceu") : "Empate", neutro: !!(a.nation || b.nation) }));
     // revanche imediata: recria a partida com o mesmo adversário (via convite)
     var oppUid = params.side === "host" ? params.guestUid : params.hostUid;
     var oppName = params.side === "host" ? (params.guestName || b.name) : (params.hostName || a.name);

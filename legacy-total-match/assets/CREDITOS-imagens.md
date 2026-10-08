@@ -6,6 +6,7 @@ Fotos de jogadores e estádios obtidas do **Wikimedia Commons**, sob licenças l
 - Ícones da interface (`js/icones.js`) — **Lucide** (https://lucide.dev), licença **ISC** (aviso completo no topo de `js/icones.js`); parte deles vem do **Feather** (MIT, Cole Bemis). Bola, estádio, moeda, gol, cartão e ponto foram desenhados para o jogo no mesmo traço. Gerados por `ferramentas/gerar-icones.py`.
 - Fonte **Inter** (`assets/fontes/`) — The Inter Project Authors (https://github.com/rsms/inter), **SIL Open Font License 1.1** (`assets/fontes/LICENCA-Inter-OFL.txt`).
 - Capas dos modos do menu (`assets/menu/capa-*.jpg`) — artes do dono do jogo; a da Copa Online é provisória, montada a partir da capa da Partida Rápida e do logo.
+- Cenas (`assets/cenas/m-*.jpg` nos atalhos e `b-*.jpg` no topo das telas) — recortes dessas mesmas capas do dono, feitos por `ferramentas/gerar-cenas.py` (originais em `ferramentas/capas-originais/`). Nenhuma imagem de fora.
 
 ## Jogadores
 - `ar-argentinos-juniors__brayan-cortes.jpg` (Brayan Cortés, ar/Argentinos Juniors) — Carlos Figueroa Rojas — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:Uni%C3%B3n_La_Calera_-_Colo-Colo_20190506_35.jpg — identidade: https://www.wikidata.org/wiki/Q5733453

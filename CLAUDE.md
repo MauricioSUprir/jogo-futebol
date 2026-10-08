@@ -123,6 +123,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   `ferramentas/gerar-icones.py`. Ícone direto no código: `TM.ic("nome")`.
 - Fonte Inter em `assets/fontes/` (OFL). Cores pelas variáveis de `:root` em `css/styles.css`
   (`--gold*` = verde da marca; `--ok/--erro/--alerta` só para estado).
+- **Cenas com a cara do jogo** (pedido do dono: "menos emojis, mais mini imagens"): recortes das capas
+  dos modos (artes do dono, originais em `ferramentas/capas-originais/`) feitos por
+  `ferramentas/gerar-cenas.py` → `assets/cenas/m-*.jpg` (atalhos) e `b-*.jpg` (topo das telas). Qual cena vai
+  em qual tela: `js/cenas.js` (`TOPO`, `MINI`, `ROTULO`); atalho novo = `TM.ui.miniCena(...)`. Foto de verdade
+  (estádio do clube) entra com a camada verde (`cena-foto`). Pôsteres: próximo jogo no início da carreira
+  (`TM.coachUI.posterJogo`) e fim de jogo nas telas de resultado (`TM.ui.posterFim`).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 

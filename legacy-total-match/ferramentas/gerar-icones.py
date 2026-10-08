@@ -236,8 +236,23 @@ MODELO = r'''/* ================= TOTAL MATCH — ícones da interface =========
   /* ---------- onde trocar, onde só tirar, onde deixar ---------- */
   // conteúdo escrito por alguém: o emoji fica
   var MANTER = ".post-text, .pc-txt, .tm-bub-tx, .chat-bubble, [data-emoji]";
-  // título de tela e lugares que não aceitam SVG: o emoji só some
+  // título de tela e lugares que não aceitam SVG: o emoji só some (até status)
   var SO_TIRA = ".tb-title, h1, title, option, select, textarea";
+  // Menos ícones (pedido do dono, e o que a NN/g recomenda: ícone redundante só
+  // vira ruído). Ícone só onde ajuda a achar as coisas: botões, abas, barra de
+  // baixo, avisos, legendas e os espaços próprios de ícone (classes "...-ic").
+  // Em filtro (chip), título de seção, linha de lista e texto, o emoji sai.
+  var ICONE_EM = "button, .btn, [class*='-ic'], [class*='emoji'], .toast, .cal-legend, .mode-icon, .bc-badge, .placeholder";
+  // filtros e etiquetas (chips): só texto, todos iguais
+  var SEM_ICONE = "[class*='chip']";
+  // status é informação, não enfeite: vira ícone mesmo fora dos lugares de ícone.
+  // Os "fortes" (cartão, lesão, gol) valem até dentro de etiqueta — é o jogador
+  // expulso no campinho, por exemplo.
+  var STATUS = {}, FORTE = {};
+  ["✅", "❌", "⚠", "✔", "✖", "☑", "⛔", "🚫", "🔴", "🟢", "🟡", "🟠", "🔵", "⚪", "🟩",
+   "🥇", "🥈", "🥉", "⭐", "🔄", "📈", "📉", "🔒"].forEach(function (e) { STATUS[e] = 1; });
+  // a moeda é unidade ("15 🪙"): fica como ícone em qualquer lugar, até nas etiquetas
+  ["🟥", "🟨", "🚑", "⚽", "🪙"].forEach(function (e) { STATUS[e] = 1; FORTE[e] = 1; });
 
   var inseridos = new WeakMap();   // nó de texto -> nós que o conversor pôs logo depois dele
 
@@ -255,6 +270,8 @@ MODELO = r'''/* ================= TOTAL MATCH — ícones da interface =========
     if (tag === "SCRIPT" || tag === "STYLE") return;
     if (pai.closest && pai.closest(MANTER)) return;
     var soTira = !!(pai.closest && pai.closest(SO_TIRA));
+    var emEtiqueta = !!(pai.closest && pai.closest(SEM_ICONE));
+    var aceitaIcone = !soTira && !emEtiqueta && !!(pai.closest && pai.closest(ICONE_EM));
 
     // quebra em pedaços: texto, emoji, texto...
     var pedacos = [], ult = 0, m;
@@ -275,6 +292,10 @@ MODELO = r'''/* ================= TOTAL MATCH — ícones da interface =========
       var p = pedacos[i];
       if (typeof p === "string") { nos.push(p); continue; }
       var alvo = soTira ? null : achaIcone(p.e);
+      if (alvo && !aceitaIcone) {
+        var k = chave(p.e);
+        if (!(emEtiqueta ? FORTE[k] : STATUS[k])) alvo = null;
+      }
       if (alvo) { nos.push(ic(alvo[0], alvo[1] ? "ic-" + alvo[1] : "")); continue; }
       var antes = nos.length ? nos[nos.length - 1] : "";
       var depois = pedacos[i + 1];
