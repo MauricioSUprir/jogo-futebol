@@ -327,11 +327,61 @@
     (s.squad.sub || []).forEach(function (c) { if (c) m[c] = 1; });
     return m;
   }
-  function addCard(s, card) { s.cards.push(card); return card; }
+  function addCard(s, card) { s.cards.push(card); resolveRepetido(s, card); return card; }
+
+  /* ---------- repetidos: o clube fica com a melhor carta de cada jogador ----------
+     Pedido do dono: o mesmo jogador duas vezes no clube vira venda rápida sozinho.
+     A carta pior sai em venda rápida automática (empréstimo repetido só é dispensado,
+     e empréstimo nunca derruba carta própria). Carta à venda no mercado não conta:
+     ela já está de saída. Quem sai cede o lugar no time para quem fica. */
+  function ovCarta(c) { var d = cardData(c); return d ? d.ov : 0; }
+  function resolveRepetido(s, novo) {
+    var listadas = {};
+    ((s.mkt && s.mkt.sell) || []).forEach(function (L) { if (L && L.card) listadas[L.card.i] = 1; });
+    if (listadas[novo.i]) return null;
+    var velho = (s.cards || []).filter(function (c) { return c !== novo && c.p === novo.p && !listadas[c.i]; })[0];
+    if (!velho) return null;
+    var fica, sai;
+    if (ehEmprestimo(novo) !== ehEmprestimo(velho)) { fica = ehEmprestimo(novo) ? velho : novo; }
+    else fica = ovCarta(novo) > ovCarta(velho) ? novo : velho;
+    sai = fica === novo ? velho : novo;
+    var ganho = ehEmprestimo(sai) ? 0 : quickSell(ovCarta(sai), sai.v);
+    var noTime = s.squad.xi.indexOf(fica.i) >= 0 || (s.squad.sub || []).indexOf(fica.i) >= 0;
+    function lugar(cid) { if (cid !== sai.i) return cid; if (noTime) return null; noTime = true; return fica.i; }
+    s.squad.xi = s.squad.xi.map(lugar);
+    s.squad.sub = (s.squad.sub || []).map(lugar).filter(Boolean);
+    removeCard(s, sai.i);
+    if (ganho) earn(s, ganho, "Venda rápida automática (repetido)");
+    sai.rep = ganho;                                   // a tela do pacote mostra o aviso
+    if (fica === novo) fica.repTroca = ganho;          // a nova é melhor: a antiga saiu
+    s.stats.repetidos = (s.stats.repetidos || 0) + 1;
+    return { sai: sai, fica: fica, ganho: ganho };
+  }
+  // repetidos que já estavam no clube (antes da regra): limpa uma vez ao entrar
+  function limpaRepetidos(s) {
+    var n = 0, total = 0;
+    (s.cards || []).slice().forEach(function (c) {
+      if (s.cards.indexOf(c) < 0) return;
+      var r = resolveRepetido(s, c);
+      if (r) { n++; total += r.ganho; delete r.fica.repTroca; }
+    });
+    if (n) save();
+    return n ? { n: n, ganho: total } : null;
+  }
   function removeCard(s, cid) {
     s.cards = s.cards.filter(function (c) { return c.i !== cid; });
     s.squad.xi = s.squad.xi.map(function (c) { return c === cid ? null : c; });
     s.squad.sub = (s.squad.sub || []).filter(function (c) { return c !== cid; });
+  }
+  // faltou moeda: avisa quanto falta e leva direto para a compra (pedido do dono)
+  function faltaMoedas(s, precisa) {
+    TM.ui.toast("Moedas insuficientes: faltam " + fmtC(Math.max(0, precisa - (s.coins || 0))) + ".", "erro");
+    goUT("ut-store", { secao: "moedas" });
+  }
+  function faltaTC(precisa) {
+    var tem = 0; try { tem = TM.coins.balance(); } catch (e) {}
+    TM.ui.toast("Total Coins insuficientes: faltam " + Math.max(0, precisa - tem) + ".", "erro");
+    TM.ui.go("coins");
   }
   function earn(s, n, why) { s.coins = Math.round((s.coins || 0) + n); s.stats.earned = (s.stats.earned || 0) + Math.max(0, n); save(); }
   function pay(s, n) { if ((s.coins || 0) < n) return false; s.coins = Math.round(s.coins - n); save(); return true; }
@@ -780,6 +830,8 @@
       renderEdicaoErrada(screen, s); return;      // clube de cartas reais sem a Season Update liberada
     }
     migraCartas(s); seedMarket(s); objRefresh(s); tickSales(s);
+    var lim = limpaRepetidos(s);
+    if (lim) TM.ui.toast(lim.n + (lim.n > 1 ? " cartas repetidas viraram" : " carta repetida virou") + " venda rápida: +" + fmtC(lim.ganho) + " moedas.", "ok");
     renderHub(screen, s);
   });
 
@@ -1311,7 +1363,7 @@
   }
 
   /* ---------- loja de pacotes ---------- */
-  TM.ui.register("ut-store", function (screen) {
+  TM.ui.register("ut-store", function (screen, params) {
     var s = st(); if (!s) { goUT("ut"); return; }
     screen.classList.add("ut-screen");
     screen.appendChild(utTop("Loja", function () { goUT("ut"); }, s));
@@ -1346,12 +1398,12 @@
             click: function () {
               if (isTC) {
                 if (!TM.coins) return;
-                if (!TM.coins.canPay(pk.tc)) { TM.ui.toast("Total Coins insuficientes"); return; }
+                if (!TM.coins.canPay(pk.tc)) { faltaTC(pk.tc); return; }
                 TM.ui.confirm("Comprar " + pk.name + "?", "Custa " + pk.tc + " Total Coins.", "Comprar", function () {
                   TM.coins.pay(pk.tc, pk.name + " · Ultimate", function () { goUT("ut-pack", { pack: pk.id }); });
                 });
               } else {
-                if ((s.coins || 0) < pk.price) { TM.ui.toast("Moedas insuficientes"); return; }
+                if ((s.coins || 0) < pk.price) { faltaMoedas(s, pk.price); return; }
                 pay(s, pk.price);
                 goUT("ut-pack", { pack: pk.id });
               }
@@ -1387,7 +1439,12 @@
 
     /* ----- trocar Total Coins por moedas do Ultimate (caro de propósito) ----- */
     if (TM.coins) {
-      body.appendChild(el("div", { class: "ut-sec-t", text: "Moedas do Ultimate" }));
+      var secMoedas = el("div", { class: "ut-sec-t", id: "ut-sec-moedas", text: "Moedas do Ultimate" });
+      body.appendChild(secMoedas);
+      if (params && params.secao === "moedas") {
+        secMoedas.classList.add("destaque");
+        setTimeout(function () { try { secMoedas.scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) { secMoedas.scrollIntoView(); } }, 120);
+      }
       body.appendChild(el("div", { class: "ut-note", text: "Dá para trocar Total Coins por moedas, mas o câmbio é duro: o caminho barato é jogar os Rivais e cumprir objetivos." }));
       [{ tc: 5, m: 20000 }, { tc: 12, m: 60000 }, { tc: 30, m: 180000 }].forEach(function (op) {
         body.appendChild(el("div", { class: "ut-pack r-g" }, [
@@ -1397,7 +1454,7 @@
             el("div", { class: "ut-pk-d", text: "Custa " + op.tc + " Total Coins" })
           ]),
           el("button", { class: "ut-pk-buy tc", text: op.tc + " 🪙", on: { click: function () {
-            if (!TM.coins.canPay(op.tc)) { TM.ui.toast("Total Coins insuficientes"); return; }
+            if (!TM.coins.canPay(op.tc)) { faltaTC(op.tc); return; }
             TM.ui.confirm("Trocar " + op.tc + " Total Coins?", "Você recebe " + fmtC(op.m) + " moedas do Ultimate.", "Trocar", function () {
               TM.coins.pay(op.tc, "Moedas do Ultimate", function () { earn(s, op.m, "Troca de Total Coins"); goUT("ut-store"); });
             });
@@ -1540,6 +1597,8 @@
         cardEl(d, { cls: "big pop" }),
         el("div", { class: "ut-rev-nm", text: d.name }),
         el("div", { class: "ut-rev-sub", text: (d.club ? d.club.name : "") + " · vale ~" + fmtC(basePrice(d.ov, d.ver)) }),
+        d.card.rep != null ? el("div", { class: "ut-rep", text: "Repetido: você já tem " + d.name + (d.card.rep ? ". Venda rápida automática: +" + fmtC(d.card.rep) + " moedas." : ". Empréstimo dispensado.") }) : null,
+        d.card.repTroca != null ? el("div", { class: "ut-rep melhor", text: "Melhor que a sua: a carta antiga virou venda rápida (+" + fmtC(d.card.repTroca) + ")." }) : null,
         TM.ui.button(idx === ds.length - 1 ? "Ver resumo" : "Próximo", function () { idx++; showNext(); }, "btn primary wide"),
         el("button", { class: "btn ghost small", text: "Revelar tudo", on: { click: function () { idx = ds.length; showNext(); } } })
       ]);
@@ -1549,10 +1608,16 @@
       TM.ui.clear(stage);
       stage.appendChild(el("div", { class: "ut-sum" }, [
         el("div", { class: "ut-sum-t", text: pk.name + " aberto" }),
-        el("div", { class: "ut-sum-b", text: "Melhor carta: " + (best ? best.name + " (" + best.ov + ")" : "—") }),
+        el("div", { class: "ut-sum-b", text: "Melhor carta: " + (best ? best.name + " (" + best.ov + ")" + (best.card.rep != null ? " · repetida, virou moedas" : "") : "—") }),
         el("div", { class: "ut-sum-grid" }, ds.slice().reverse().map(function (d) {
+          if (d.card.rep != null) return cardEl(d, { cls: "tiny vendida" });     // já foi vendida: só mostra
           return cardEl(d, { cls: "tiny", on: function () { showCard(d, s, null); } });
         })),
+        (function () {
+          var reps = ds.filter(function (d) { return d.card.rep != null; }), tot = reps.reduce(function (a, d) { return a + (d.card.rep || 0); }, 0);
+          cards.forEach(function (c) { delete c.repTroca; }); save();
+          return reps.length ? el("div", { class: "ut-rep", text: reps.length + (reps.length > 1 ? " repetidos viraram" : " repetido virou") + " venda rápida: +" + fmtC(tot) + " moedas." }) : null;
+        })(),
         itensGanhos.length ? el("div", { class: "ut-sum-b", text: "Itens: " + itensGanhos.length }) : null,
         itensGanhos.length ? el("div", { class: "ut-itens-lin" }, itensGanhos.map(function (it) {
           return el("span", { class: "ut-item-chip" }, [ el("i", { text: itemIcone(it) }), el("b", { text: itemNome(it) }) ]);
@@ -1691,13 +1756,13 @@
             ]),
             el("button", {
               class: "ut-buy" + (can ? "" : " off"), text: can ? "Comprar" : "Sem moedas",
-              on: { click: function () { if (can) buyIt(x); } }
+              on: { click: function () { if (can) buyIt(x); else faltaMoedas(s, x.L.bin); } }
             })
           ]));
         });
       }
       function buyIt(x) {
-        if (!pay(s, x.L.bin)) { TM.ui.toast("Moedas insuficientes"); return; }
+        if (!pay(s, x.L.bin)) { faltaMoedas(s, x.L.bin); return; }
         var c = mkCard(x.d.p, x.d.ver === "base" ? "base" : x.d.ver);
         c.ut = 0;   // comprado: sem bônus de lealdade
         addCard(s, c);
@@ -2030,6 +2095,7 @@
     basePrice: basePrice, openPack: openPack, PACKS: PACKS, SBCS: SBCS, DIVS: DIVS,
     autoFill: autoFill, slotRole: slotRole, posFit: posFit, linkVal: linkVal, isTotw: isTotw,
     effOv: effOv, earn: earn, statsOf: statsOf, quickSell: quickSell, packById: packById,
+    addCard: addCard, limpaRepetidos: limpaRepetidos, resolveRepetido: resolveRepetido,
     _new: function (name) { S = blank(); S.club = name || "Meu Ultimate"; save(); return S; }
   };
 })(window);

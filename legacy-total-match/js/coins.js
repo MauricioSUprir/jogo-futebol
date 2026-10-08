@@ -198,7 +198,9 @@
     pay: function (n, reason, onOk) {
       if (!hasAccount()) { needAccount(); return false; }
       if (coins.spend(n, reason)) { onOk && onOk(); return true; }
-      TM.ui.confirm("Total Coins insuficientes", "Você tem " + fmt(load().bal) + " e precisa de " + fmt(n) + ". Ganhe coins vencendo desafios (Draft, Dream Team e Arena Coins).", "Ver meus coins", function () { TM.ui.go("coins"); });
+      // faltou: avisa e leva direto para a tela de coins (pedido do dono)
+      TM.ui.toast("Total Coins insuficientes: você tem " + fmt(load().bal) + " e precisa de " + fmt(n) + ".", "erro");
+      TM.ui.go("coins");
       return false;
     },
     noteStreak: function (n) { var s = load(); if (n > (s.best || 0)) { s.best = n; save(); } },
