@@ -209,11 +209,12 @@
      Cada titular soma de 0 a 3 pontos e o time vai até 33. Só conta quem está
      NA POSIÇÃO (a principal ou uma alternativa): fora dela o jogador fica com 0
      e não ajuda ninguém. Os pontos vêm de quantos titulares em posição dividem
-     o mesmo clube (2/5/8 → 1/2/3), a mesma liga (3/5/8) e o mesmo país (2/5/8).
-     Ícone e Herói já entram com 3 na posição; o Ícone vale 2 para o país dele e
-     o Herói vale 2 para a liga. A química não tira nota de ninguém: ela LIBERA
-     o estilo de química (atributos) e dá o embalo do time em campo. */
-  var LIM = { club: [2, 5, 8], lg: [3, 5, 8], nat: [2, 5, 8] };
+     o mesmo clube (2/4/7 → 1/2/3), a mesma liga (3/5/8) e o mesmo país (2/5/8),
+     como nas notas oficiais da EA (Pitch Notes de química). Ícone e Herói já
+     entram com 3 na posição; o Ícone vale 2 para o país dele e 1 para cada liga
+     do time (não liga por clube); o Herói vale 2 para a liga. A química não tira
+     nota de ninguém: ela LIBERA o estilo de química e dá o embalo em campo. */
+  var LIM = { club: [2, 4, 7], lg: [3, 5, 8], nat: [2, 5, 8] };
   function ptsPor(n, lim) { return n >= lim[2] ? 3 : n >= lim[1] ? 2 : n >= lim[0] ? 1 : 0; }
   // papel específico de cada casa da formação (a partir das coordenadas)
   function slotRole(slot) {
@@ -267,14 +268,16 @@
   // química de 11 cartas numa formação (serve para o time, DME e Draft)
   function chemDe(ds, F0) {
     var emPos = ds.map(function (d, i) { return !!d && !!F0[i] && emPosicao(d, slotRole(F0[i])); });
-    var nClub = {}, nLg = {}, nNat = {};
+    var nClub = {}, nLg = {}, nNat = {}, icones = 0;
     ds.forEach(function (d, i) {
       if (!d || !emPos[i]) return;
       var ic = d.ver === "icone", he = d.ver === "heroi";
-      if (d.club) nClub[d.club.id] = (nClub[d.club.id] || 0) + 1;
-      if (d.lg) nLg[d.lg] = (nLg[d.lg] || 0) + (he ? 2 : 1);
+      if (ic) icones++;
+      if (d.club && !ic) nClub[d.club.id] = (nClub[d.club.id] || 0) + 1;
+      if (d.lg && !ic) nLg[d.lg] = (nLg[d.lg] || 0) + (he ? 2 : 1);
       if (d.nat) nNat[d.nat] = (nNat[d.nat] || 0) + (ic ? 2 : 1);
     });
+    if (icones) Object.keys(nLg).forEach(function (k) { nLg[k] += icones; });   // Ícone soma 1 em cada liga
     var per = ds.map(function (d, i) {
       if (!d || !emPos[i]) return 0;
       if (d.ver === "icone" || d.ver === "heroi") return 3;
@@ -303,7 +306,7 @@
     var S = 0; ovs.forEach(function (x) { S += x || 0; });
     var med = S / 11, E = 0;
     ovs.forEach(function (x) { if (x > med) E += x - med; });
-    return Math.floor((S + E) / 11 + 1e-6);
+    return Math.floor(Math.round(S + E) / 11);
   }
   function squadRating(s) {
     var c = chemistry(s);
@@ -1160,7 +1163,7 @@
         coluna("Ligas", ch.nLg, LIM.lg, nomeLiga),
         coluna("Países", ch.nNat, LIM.nat, nomePais)
       ]),
-      el("div", { class: "ut-vin-dica", text: "Cada jogador soma até 3: clube, liga e país dão pontos quando o time junta 2/5/8 do mesmo clube, 3/5/8 da mesma liga e 2/5/8 do mesmo país. Ícone e Herói já entram com 3." })
+      el("div", { class: "ut-vin-dica", text: "Cada jogador soma até 3: clube, liga e país dão pontos quando o time junta 2/4/7 do mesmo clube, 3/5/8 da mesma liga e 2/5/8 do mesmo país. Ícone e Herói já entram com 3 (o Ícone vale 2 para o país e 1 para cada liga; o Herói vale 2 para a liga)." })
     ]);
   }
 
@@ -1709,7 +1712,7 @@
     var stage = el("div", { class: "ut-stage" });
     screen.appendChild(stage);
     // walkout (bandeira → posição → clube → carta) para a melhor carta, se for 84+ ou versão especial forte
-    var temWalk = !!best && (best.ov >= 84 || ["mes", "joia", "heroi", "tots", "icone"].indexOf(best.ver) >= 0);
+    var temWalk = !!best && (best.ov >= 85 || ["mes", "heroi", "tots", "icone"].indexOf(best.ver) >= 0);
     var walkFeito = false;
     showNext();
 

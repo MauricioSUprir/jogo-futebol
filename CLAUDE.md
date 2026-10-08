@@ -150,8 +150,8 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   Champions, recompensas e escolha de jogador), `ut-temporada.js` (passe de 40 níveis + objetivos diários/semanais/
   temporada/Fundamentos), `ut-dme.js` (DME por categorias, melhorias repetíveis, DME de jogador, "montar com as mais
   baratas"), `ut-draft.js`, `ut-evolucoes.js`, `ut-mercado.js` (leilão, observação, lista de transferências).
-  **Química** do modelo atual: 0–3 por jogador, 33 no time; clube 2/5/8, liga 3/5/8, país 2/5/8; fora de posição = 0;
-  posições alternativas fixas por jogador; Ícone/Herói entram com 3. **Nota da equipe** com a correção de quem está acima
+  **Química** do modelo atual: 0–3 por jogador, 33 no time; clube 2/4/7, liga 3/5/8, país 2/5/8 (Pitch Notes da EA); fora de posição = 0;
+  posições alternativas fixas por jogador; Ícone/Herói entram com 3 (Ícone: 2 no país e 1 em cada liga; Herói: 2 na liga). **Nota da equipe** com a correção de quem está acima
   da média (`notaEquipe`). Escudo do clube é desenhado (forma + símbolo + sigla), sem emoji. Teste de ponta a ponta:
   `node ferramentas/testar-ultimate.mjs http://localhost:8207 <pasta>` (servidor na pasta do jogo).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
