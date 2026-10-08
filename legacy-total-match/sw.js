@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v355";
+var CACHE = "total-match-v356";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",
@@ -9,7 +9,7 @@ var SHELL = [
   "assets/fontes/inter-400.woff2", "assets/fontes/inter-500.woff2", "assets/fontes/inter-600.woff2",
   "assets/fontes/inter-700.woff2", "assets/fontes/inter-800.woff2", "assets/fontes/inter-900.woff2",
   "js/vendor/qrcode.js",
-  "js/icones.js", "js/rng.js", "js/data.js", "js/placeholders.js", "js/storage.js", "js/notify.js",
+  "js/icones.js", "js/cenas.js", "js/rng.js", "js/data.js", "js/placeholders.js", "js/storage.js", "js/notify.js",
   "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js",
   "js/competitions.js", "js/coach.js", "js/carreira.js", "js/desempregado.js", "js/selecao.js", "js/rae.js", "js/director.js", "js/saf.js", "js/finance.js", "js/preseason.js", "js/disputa.js", "js/offers.js", "js/worldleagues.js", "js/build.js", "js/ultimate.js", "js/utonline.js", "js/arena.js",
   "js/compmode.js", "js/tournament.js", "js/groupcomp.js", "js/matchview.js", "js/pitch2d.js", "js/scout.js",

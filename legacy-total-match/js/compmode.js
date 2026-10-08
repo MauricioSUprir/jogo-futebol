@@ -526,6 +526,7 @@
         function finish(fh, fa, penWinnerId, prorrog) {
           applyUser(s, fh, fa, penWinnerId); save(s);
           TM.ui.go("compmode-result", { a: teamA.name, b: teamB.name, hs: fh, as: fa, ko: nx.ko, prorrog: !!prorrog,
+            ta: teamA, tb: teamB, events: result.events, lado: userSide, titulo: s.name, neutro: !!s.isNation,
             penWinName: penWinnerId ? (penWinnerId === nx.homeId ? teamA.name : teamB.name) : null });
         }
         // Empatou (na partida ou no AGREGADO): prorrogação e, se persistir, pênaltis.
@@ -560,10 +561,12 @@
     var sT = load(); if (sT) TM.ui.applyCompTheme(screen, themeId(sT));
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("compmode-hub"); }));
     var win = p.hs > p.as ? p.a : p.as > p.hs ? p.b : null;
-    screen.appendChild(E("div", { class: "result-hero" }, [
-      E("div", { class: "result-score" }, [ E("span", { class: "rs-team", text: p.a }), E("span", { class: "rs-num", text: p.hs + " × " + p.as }), E("span", { class: "rs-team", text: p.b }) ]),
-      E("div", { class: "result-tag", text: p.penWinName ? "🎯 " + p.penWinName + " venceu nos pênaltis" : win ? "🏆 " + win + " venceu" + (p.prorrog ? " na prorrogação" : "") : (p.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate") })
-    ]));
+    var penLado = p.penWinName ? (p.penWinName === p.a ? 0 : 1) : null;
+    var res = TM.ui.resultadoDe(p.hs, p.as, p.lado, penLado);
+    if (res && p.prorrog && res.cls !== "e" && !p.penWinName) res.txt += " na prorrogação";
+    screen.appendChild(TM.ui.posterFim({ a: p.ta || { name: p.a }, b: p.tb || { name: p.b }, hs: p.hs, as: p.as, events: p.events, titulo: p.titulo || null,
+      res: res, neutro: !!p.neutro,
+      nota: res ? null : p.penWinName ? p.penWinName + " venceu nos pênaltis" : win ? win + " venceu" + (p.prorrog ? " na prorrogação" : "") : (p.ko ? "Empate — decidido nos pênaltis" : "Empate") }));
     screen.appendChild(E("div", { class: "actions" }, [ TM.ui.button("Continuar", function () { TM.ui.go("compmode-hub"); }, "btn primary") ]));
   });
 

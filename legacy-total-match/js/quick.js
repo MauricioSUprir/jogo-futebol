@@ -262,15 +262,11 @@
     screen.appendChild(TM.ui.topbar("Resultado", function () { TM.ui.go("quick"); }));
 
     var winner = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
-    screen.appendChild(el("div", { class: "result-hero" }, [
-      el("div", { class: "result-score" }, [
-        el("span", { class: "rs-team", text: a.name }),
-        el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }),
-        el("span", { class: "rs-team", text: b.name })
-      ]),
-      el("div", { class: "result-tag", text: winner ? "🏆 Vitória do " + winner : "🤝 Empate" }),
-      params.penWinner != null ? el("div", { class: "result-tag pen", text: "🎯 " + (params.penWinner === 0 ? a.name : b.name) + " venceu nos pênaltis" }) : null
-    ]));
+    var penNome = params.penWinner != null ? (params.penWinner === 0 ? a.name : b.name) : null;
+    // aqui os dois times são escolhidos por quem joga: o pôster diz quem venceu, sem "vitória/derrota"
+    screen.appendChild(TM.ui.posterFim({ a: a, b: b, hs: r.score[0], as: r.score[1], events: r.events, titulo: "Partida rápida",
+      res: penNome ? { cls: "v", txt: penNome + " venceu nos pênaltis" } : winner ? { cls: "v", txt: winner + " venceu" } : { cls: "e", txt: "Empate" },
+      neutro: !!(a.nation || b.nation) }));
 
     function statRow(label, va, vb) {
       var total = va + vb || 1;

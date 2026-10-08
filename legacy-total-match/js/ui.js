@@ -118,11 +118,96 @@
   /* ---------- componentes reutilizáveis ---------- */
   // barra de topo com título e botão voltar
   function topbar(title, onBack, right) {
-    return el("header", { class: "topbar" }, [
-      onBack ? el("button", { class: "tb-back", "aria-label": "Voltar", on: { click: onBack } }, [ TM.ic ? TM.ic("chevron-left") : "←" ]) : el("span", { class: "tb-back-spacer" }),
-      el("h2", { class: "tb-title", text: title }),
-      right || el("span", { class: "tb-right" })
+    var voltar = onBack ? el("button", { class: "tb-back", "aria-label": "Voltar", on: { click: onBack } }, [ TM.ic ? TM.ic("chevron-left") : "←" ]) : el("span", { class: "tb-back-spacer" });
+    var direita = right || el("span", { class: "tb-right" });
+    // telas principais: o topo vira uma CENA (recorte das capas dos modos), com o
+    // sobretítulo em verde espaçado e o título grande — a mesma linguagem das capas
+    var cena = (TM.cenas && TM.cenas.topo) ? TM.cenas.topo(current) : null;
+    if (cena) {
+      return el("header", { class: "topbar cena" }, [
+        el("span", { class: "cena-img", style: "background-image:url('" + cena.img + "')" }),
+        el("span", { class: "cena-veu" }),
+        el("span", { class: "cena-faixas" }),
+        el("div", { class: "cena-barra" }, [ voltar, direita ]),
+        el("div", { class: "cena-txt" }, [
+          el("span", { class: "cena-sobre", text: cena.sobre }),
+          el("h2", { class: "tb-title", text: title })
+        ])
+      ]);
+    }
+    return el("header", { class: "topbar" }, [ voltar, el("h2", { class: "tb-title", text: title }), direita ]);
+  }
+
+  // atalho em forma de mini cena (imagem + nome por cima). Sem cena, fica o ícone
+  // num fundo do mesmo estilo, para a grade continuar uniforme.
+  function miniCena(img, nome, onClick, cls, ic, foto) {
+    // img pode ser uma lista: a primeira fica por cima e as outras aparecem se ela não carregar
+    var camadas = [].concat(img || []).map(function (u) { return "url('" + u + "')"; }).join(", ");
+    return el("button", { class: (cls || "") + (img ? " com-cena" : " sem-cena") + (foto ? " cena-foto" : ""), on: { click: onClick } }, img ? [
+      el("span", { class: "mini-img", style: "background-image:" + camadas }),
+      foto ? el("span", { class: "mini-tinta" }) : null,   // foto de verdade: camada verde, igual ao pôster
+      el("span", { class: "mini-veu" }),
+      el("span", { class: "mini-nome", text: nome })
+    ] : [
+      el("span", { class: "mini-ic", text: ic || "" }),
+      el("span", { class: "mini-nome", text: nome })
     ]);
+  }
+
+  // ----- pôster de FIM DE JOGO (telas de resultado) -----
+  // Mesma linguagem do pôster do próximo jogo: foto do estádio do mandante em verde
+  // e preto, faixas das capas, escudos grandes, placar no meio e os autores dos gols.
+  // o: { a, b (times com club/nation), hs, as, events?, titulo?, res?: {cls: "v"|"d"|"e", txt}, nota?, neutro? }
+  function escudoDe(t, cls) {
+    t = t || {};
+    if (t.club) return TM.img.clubImg(t.club, cls);
+    if (t.nation) return TM.img.nationImg(t.nation, cls);
+    var c = null, n = null;
+    try { c = t.id ? TM.data.club(t.id) : null; } catch (e) {}
+    if (c) return TM.img.clubImg(c, cls);
+    try { n = t.id ? TM.data.nation(t.id) : null; } catch (e) {}
+    return n ? TM.img.nationImg(n, cls) : el("span", { class: cls });
+  }
+  function posterFim(o) {
+    var a = o.a || {}, b = o.b || {};
+    // autores dos gols por lado ("Fulano 23', 67'"); só aparecem se baterem com o placar
+    // (prorrogação vem em outro resultado, e aí a lista ficaria pela metade)
+    var nomes = [[], []], mins = [{}, {}], qtd = [0, 0];
+    (o.events || []).forEach(function (e) {
+      if ((e.type !== "goal" && e.type !== "pengoal") || (e.team !== 0 && e.team !== 1)) return;
+      var n = e.player || "Gol", m = mins[e.team];
+      if (!m[n]) { m[n] = []; nomes[e.team].push(n); }
+      m[n].push(e.minute + "'" + (e.type === "pengoal" ? " (pên.)" : ""));
+      qtd[e.team]++;
+    });
+    var comGols = qtd[0] === o.hs && qtd[1] === o.as && (qtd[0] + qtd[1]) > 0;
+    function lado(t) {
+      return el("div", { class: "mdp-time" }, [ escudoDe(t, "mdp-escudo"), el("span", { class: "mdp-nome", text: t.name || "" }) ]);
+    }
+    // como na TV: autores do mandante à esquerda, do visitante à direita (minutos não quebram)
+    function gols(i) {
+      return el("div", { class: "mdp-gols " + (i ? "b" : "a") }, nomes[i].map(function (n) {
+        return el("span", { class: "mdp-gol" }, [ n + " ", el("b", { text: mins[i][n].join(", ") }) ]);
+      }));
+    }
+    var foto = !o.neutro && a.club ? TM.img.stadiumImg(a.club, "mdp-foto") : el("span", { class: "mdp-foto mdp-neutro" });
+    return el("div", { class: "md-poster fim" + (o.res ? " res-" + o.res.cls : "") }, [
+      foto, el("span", { class: "mdp-tinta" }), el("span", { class: "mdp-veu" }), el("span", { class: "mdp-faixas" }),
+      el("div", { class: "mdp-topo" }, [ el("span", { class: "mdp-sobre", text: "Fim de jogo" }), o.titulo ? el("span", { class: "mdp-data", text: o.titulo }) : null ]),
+      el("div", { class: "mdp-versus" }, [ lado(a), el("div", { class: "mdp-placar", text: o.hs + " × " + o.as }), lado(b) ]),
+      comGols ? el("div", { class: "mdp-autores" }, [ gols(0), gols(1) ]) : null,
+      o.res ? el("div", { class: "mdp-res " + o.res.cls, text: o.res.txt }) : null,
+      o.nota ? el("div", { class: "mdp-local", text: o.nota }) : null
+    ]);
+  }
+  // resultado do ponto de vista de quem joga: lado 0/1 (null = sem lado), vencedor nos pênaltis 0/1
+  function resultadoDe(hs, as, lado, penLado) {
+    if (lado !== 0 && lado !== 1) return null;
+    var meu = lado === 0 ? hs : as, deles = lado === 0 ? as : hs;
+    if (meu > deles) return { cls: "v", txt: "Vitória" };
+    if (meu < deles) return { cls: "d", txt: "Derrota" };
+    if (penLado === 0 || penLado === 1) return penLado === lado ? { cls: "v", txt: "Vitória nos pênaltis" } : { cls: "d", txt: "Derrota nos pênaltis" };
+    return { cls: "e", txt: "Empate" };
   }
 
   // ----- barra de SETORES (abas deslizáveis: emoji + nome) -----
@@ -482,7 +567,7 @@
     topbar: topbar, sectorBar: sectorBar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
+    stadiumBanner: stadiumBanner, miniCena: miniCena, posterFim: posterFim, resultadoDe: resultadoDe, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
     current: function () { return current; }
   };
 
@@ -1144,9 +1229,7 @@
     // ---- mais modos ----
     screen.appendChild(el("div", { class: "vit-mais-h", text: "Mais modos" }));
     screen.appendChild(el("div", { class: "vit-mais" }, MAIS.map(function (x) {
-      return el("button", { class: "vit-mais-b", on: { click: entrar(x.rota) } }, [
-        el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
-      ]);
+      return miniCena(TM.cenas ? TM.cenas.mini(x.rota) : null, x.nome, entrar(x.rota), "vit-mais-b", x.ic);
     })));
     // rodape: o tamanho do mundo do jogo e a versao (para conferir se o aparelho atualizou)
     screen.appendChild(el("div", { class: "vit-rodape" }, [

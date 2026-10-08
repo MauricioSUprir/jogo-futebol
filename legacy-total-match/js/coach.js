@@ -149,11 +149,10 @@
     function close() { overlay.classList.remove("show"); setTimeout(function () { overlay.remove(); }, 220); }
     var grid = el("div", { class: "sheet-grid" });
     coachSectors(c, active).forEach(function (s) {
-      grid.appendChild(el("button", { class: "sheet-tile" + (s.active ? " on" : ""), on: { click: function () { close(); if (!s.active) TM.ui.go(s.route); } } }, [
-        el("span", { class: "sheet-ic", text: s.ic }),
-        el("span", { class: "sheet-lb", text: s.label }),
-        s.badge ? el("span", { class: "sheet-badge", text: s.badge > 9 ? "9+" : s.badge }) : null
-      ]));
+      var tile = TM.ui.miniCena(TM.cenas ? TM.cenas.mini(s.route) : null, s.label,
+        function () { close(); if (!s.active) TM.ui.go(s.route); }, "sheet-tile" + (s.active ? " on" : ""), s.ic);
+      if (s.badge) tile.appendChild(el("span", { class: "sheet-badge", text: s.badge > 9 ? "9+" : s.badge }));
+      grid.appendChild(tile);
     });
     var sheet = el("div", { class: "sheet" }, [
       el("div", { class: "sheet-handle" }),
@@ -894,6 +893,31 @@
   });
 
   /* ---------- hub ---------- */
+  // PÔSTER DO JOGO: o card do próximo jogo com a cara das capas — foto do estádio
+  // do mandante tratada em verde e preto, faixas diagonais, escudos grandes.
+  // Conteúdo na ordem que um cartaz de jogo pede: times, data e hora, local.
+  function posterJogo(o) {
+    var foto = o.estadio ? TM.img.stadiumImg(o.estadio, "mdp-foto") : el("span", { class: "mdp-foto mdp-neutro" });
+    return el("div", { class: "md-poster" }, [
+      foto,
+      el("span", { class: "mdp-tinta" }),
+      el("span", { class: "mdp-veu" }),
+      el("span", { class: "mdp-faixas" }),
+      el("div", { class: "mdp-topo" }, [
+        el("span", { class: "mdp-sobre", text: o.sobre }),
+        el("span", { class: "mdp-data", text: o.data })
+      ]),
+      el("div", { class: "mdp-versus" }, [
+        el("div", { class: "mdp-time" }, [ TM.img.clubImg(o.home, "mdp-escudo"), el("span", { class: "mdp-nome", text: o.home.name }), o.homeKit || null ]),
+        el("div", { class: "mdp-vs", text: "VS" }),
+        el("div", { class: "mdp-time" }, [ TM.img.clubImg(o.away, "mdp-escudo"), el("span", { class: "mdp-nome", text: o.away.name }), o.awayKit || null ])
+      ]),
+      el("div", { class: "mdp-local", text: o.local })
+    ]);
+  }
+  TM.coachUI = TM.coachUI || {};
+  TM.coachUI.posterJogo = posterJogo;
+
   TM.ui.register("coach-hub", function (screen) {
     try { var _c0 = TM.storage.coachCareer(); if (_c0 && _c0.unemployed && TM.free) { TM.ui.go("coach-free"); return; } } catch (e) {}
     var c = TM.storage.coachCareer();
@@ -1138,14 +1162,17 @@
       var homeVar = kitPick ? kitPick.home : 0, awayVar = kitPick ? kitPick.away : 1;
       var homeKitImg = TM.img.kitImg(homeClub, "md-kit", homeVar);
       var awayKitImg = TM.img.kitImg(awayClub, "md-kit", awayVar);
+      // informações do dia do jogo: horário, clima e lotação do estádio
+      var md = matchDayInfo(c, homeClub, c.matchNo, pending);
+      var emCasa = !pending.ko || pending.homeId;
       var kids = [
-        el("div", { class: "nm-date", text: "🗓️ " + matchDate.full + (daysLeft > 0 ? " · faltam " + daysLeft + " dia(s)" : " · é hoje!") }),
-        // confronto com escudo + uniforme de cada time
-        el("div", { class: "md-versus" }, [
-          el("div", { class: "md-team" }, [ TM.img.clubImg(homeClub, "md-crest"), homeKitImg, el("div", { class: "md-name", text: homeClub.name }) ]),
-          el("div", { class: "md-vs", text: "VS" }),
-          el("div", { class: "md-team" }, [ TM.img.clubImg(awayClub, "md-crest"), awayKitImg, el("div", { class: "md-name", text: awayClub.name }) ])
-        ])
+        posterJogo({
+          home: homeClub, away: awayClub, homeKit: homeKitImg, awayKit: awayKitImg,
+          sobre: daysLeft > 0 ? "Próximo jogo" : "Dia de jogo",
+          data: matchDate.full + " · " + md.time + (daysLeft > 1 ? " · faltam " + daysLeft + " dias" : daysLeft === 1 ? " · é amanhã" : " · é hoje!"),
+          local: emCasa ? (TM.data.stadium(homeClub).name || homeClub.name) : "Campo neutro",
+          estadio: emCasa ? homeClub : null
+        })
       ];
       // jogo de VOLTA: resultado da ida e placar agregado
       var _leg = null; try { _leg = C().legInfo(c, pending); } catch (e) {}
@@ -1170,8 +1197,6 @@
           el("span", { class: "cr-sub", text: "Jogo de rivalidade — clima quente nas arquibancadas" })
         ]));
       }
-      // informações do dia do jogo: horário, clima e lotação do estádio
-      var md = matchDayInfo(c, homeClub, c.matchNo, pending);
       kids.push(el("div", { class: "matchday-info" }, [
         el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: "🕐" }), el("span", { class: "mdi-v", text: md.time }), el("span", { class: "mdi-l", text: "horário" }) ]),
         el("div", { class: "mdi-item" }, [ el("span", { class: "mdi-ic", text: md.wIcon }), el("span", { class: "mdi-v", text: md.wTemp + "°" }), el("span", { class: "mdi-l", text: md.wLabel }) ]),
@@ -1232,7 +1257,6 @@
         render();
       })();
 
-      if (!pending.ko || pending.homeId) { var sbn = TM.ui.stadiumBanner(homeClub, { compact: true, label: "Mandante: " + homeClub.name }); if (sbn) kids.push(sbn); }
       var oppId = pending.homeId === c.teamId ? pending.awayId : pending.homeId;
       // contexto do jogo (o que pesa além dos elencos)
       try { var ctxL = C().contextLabels(c, pending.homeId, pending.awayId, pending.ko); if (ctxL.length) kids.push(el("div", { class: "ctx-line" }, ctxL.map(function (t) { return el("span", { class: "ctx-chip", text: t }); }))); } catch (e) {}
@@ -1281,18 +1305,22 @@
           });
         });
       }),
-      hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }),
+      hubBtn("🏟️", "Estádio", function () { TM.ui.go("club-stadium", { from: "coach-hub" }); }, TM.img.stadiumUrl ? TM.img.stadiumUrl(club) : null),
       hubBtn("🏋️", "CT", function () { TM.ui.go("club-ct", { from: "coach-hub" }); }),
       hubBtn("📜", "Meu contrato", function () { TM.ui.go("coach-contract"); }),
       hubBtn("🔄", "Movimentações", function () { TM.ui.go("coach-transfers"); }),
       hubBtn("📅", "Calendário", function () { TM.ui.go("coach-calendar"); }),
-      hubBtn("🌍", "Mundo", function () { TM.ui.go("coach-world"); }),
       hubBtn("🗂️", "Títulos", function () { TM.ui.go("coach-honours"); }),
       hubBtn("🌟", "Seleção da Semana", function () { TM.ui.go("coach-totw"); }),
       hubBtn("📰", "Notícias", function () { TM.ui.go("coach-news"); }),
       hubBtn("📱", "Redes Sociais", function () { TM.ui.go("coach-social"); })
     ]));
-    function hubBtn(icon, label, fn) { return el("button", { class: "hub-btn", on: { click: fn } }, [ el("span", { class: "hub-ic", text: icon }), el("span", { text: label }) ]); }
+    // atalho do início: mini cena quando há uma (recorte das capas), ícone quando não há;
+    // "foto" (ex.: o estádio do clube) entra por cima da cena, que fica de reserva
+    function hubBtn(icon, label, fn, foto) {
+      var cena = TM.cenas ? TM.cenas.miniPorRotulo(label) : null;
+      return TM.ui.miniCena(foto ? [foto].concat(cena || []) : cena, label, fn, "hub-btn", icon, !!foto);
+    }
 
     // ---- rail lateral direito (SÓ desktop): elenco, moral e torcida preenchendo a tela ----
     try { buildHubRail(screen, c); screen.classList.add("has-rightrail"); } catch (e) {}
@@ -2096,7 +2124,7 @@
         if (c.nation) { c.nation.pressDone = false; c.nation.pressEdge = 0; }
         TM.notify.push(c, { icon: "🏆", title: "Copa do Mundo · " + label, text: res + " " + us + "x" + them + " de " + c.nation.name + "." });
         TM.storage.saveCoachCareer(c);
-        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: m.phase === "ko", back: "coach-nation" });
+        TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: m.phase === "ko", back: "coach-nation", title: "Copa do Mundo · " + label, userSide: userSide });
       }
     });
   });
@@ -2396,7 +2424,8 @@
           try { if (TM.job && TM.job.tickSond) TM.job.tickSond(c); } catch (e) {}
           c.pressEdge = 0; // consome o efeito da coletiva
           TM.storage.saveCoachCareer(c);
-          TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId, leg: legI, userSide: userSide });
+          TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result, ko: p.ko, compId: compId, penWinnerId: penWinnerId, leg: legI, userSide: userSide,
+            title: p.name, neutro: !!(p.ko && !p.homeId) });
         }
         if (penCtx) {
           var tA = C().anyTeam(c, penCtx.aId), tB = C().anyTeam(c, penCtx.bId);
@@ -2418,13 +2447,13 @@
     var legR = params.leg || null;
     var win = r.score[0] > r.score[1] ? a.name : r.score[1] > r.score[0] ? b.name : null;
     var penName = params.penWinnerId ? (params.penWinnerId === a.id ? a.name : b.name) : null;
-    var tag = win ? "🏆 " + win + " venceu" : penName ? "🎯 " + penName + " venceu nos pênaltis" : (params.ko ? "Empate — decidido nos pênaltis" : "🤝 Empate");
-    screen.appendChild(el("div", { class: "result-hero" }, [
-      el("div", { class: "result-score" }, [
-        el("span", { class: "rs-team", text: a.name }), el("span", { class: "rs-num", text: r.score[0] + " × " + r.score[1] }), el("span", { class: "rs-team", text: b.name })
-      ]),
-      el("div", { class: "result-tag", text: tag })
-    ]));
+    // de que lado está o treinador (clube ou seleção); sem lado, o pôster só diz quem venceu
+    var cc0 = TM.storage.coachCareer() || {}, meus = [cc0.teamId, cc0.nation && cc0.nation.id];
+    var lado = params.userSide != null ? params.userSide : (a.id && meus.indexOf(a.id) >= 0) ? 0 : (b.id && meus.indexOf(b.id) >= 0) ? 1 : null;
+    var penLado = params.penWinnerId ? (params.penWinnerId === a.id ? 0 : 1) : null;
+    var nota = lado != null ? null : penName ? penName + " venceu nos pênaltis" : win ? win + " venceu" : (params.ko ? "Empate — decidido nos pênaltis" : "Empate");
+    screen.appendChild(TM.ui.posterFim({ a: a, b: b, hs: r.score[0], as: r.score[1], events: r.events, titulo: params.title || null,
+      res: TM.ui.resultadoDe(r.score[0], r.score[1], lado, penLado), nota: nota, neutro: !!params.neutro }));
     if (legR) {
       var meNow = (params.userSide != null) ? params.userSide : (a.id === (TM.storage.coachCareer() || {}).teamId ? 0 : 1);
       var meuTotal = legR.meuGol + r.score[meNow], delesTotal = legR.delesGol + r.score[1 - meNow];
