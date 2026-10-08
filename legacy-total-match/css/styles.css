@@ -3031,7 +3031,7 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
    No PC (>=1024px) essa mesma barra vira a sidebar e continua aparecendo. */
 @media (max-width: 1023px) {
   .has-sidebar .sector-bar { display: none !important; }
-  .screen.has-sidebar { padding-top: 0; }
+  .screen.has-sidebar { padding-top: env(safe-area-inset-top, 0px); }   /* sem a barra de setores, mas ainda embaixo do relógio */
 }
 
 /* logo do jogo em destaque no topo ESQUERDO do menu, maior, com uma linha de info */
@@ -4754,7 +4754,7 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .pror-vazio { margin-top: 14px; font-size: 12.5px; color: var(--text-dim); }
 
 /* ===================== MENU INICIAL — VITRINE ===================== */
-.screen.vit { padding: 0 0 36px; align-items: stretch; }
+.screen.vit { padding: env(safe-area-inset-top, 0px) 0 36px; align-items: stretch; }   /* desce o topo (coins, conta) para baixo do relógio do iPhone */
 .vit > * { width: 100%; }
 
 .vit-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 14px 8px; }
