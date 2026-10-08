@@ -1434,8 +1434,16 @@
     emit("item", { s: s, it: it, card: c });
   }
 
+  // Evolução em andamento desta carta (para avisar antes de vender)
+  function evoDaCarta(s, cid) {
+    try {
+      if (!TM.utEvo || !TM.utEvo.emEvolucao(s, cid)) return null;
+      var a = TM.utEvo.ativas(s).filter(function (x) { return x.c === cid; })[0], E = a && TM.utEvo.evo(a.id);
+      return E ? { n: E.nome || E.n || "Evolução", nv: (a.nv || 0) + 1, tot: (E.niveis || []).length || 1 } : null;
+    } catch (e) { return null; }
+  }
   function showCard(d, s, after) {
-    var sq = inSquad(s);
+    var sq = inSquad(s), evoAtiva = evoDaCarta(s, d.card.i);
     var listed = (s.mkt.sell || []).some(function (L) { return L.card.i === d.card.i; });
     var overlay = el("div", { class: "ut-sheet" });
     var stats = statsOf(d);
@@ -1463,10 +1471,11 @@
       painelCarta(d, s, function () { close(); if (after) after(); }),
       el("div", { class: "ut-detail-acts" }, [
         ehEmprestimo(d.card) ? el("div", { class: "ut-note", text: "Jogador emprestado: não pode ser vendido nem usado em DME." }) : null,
+        evoAtiva ? el("div", { class: "ut-note evo" }, [TM.ic("dna"), document.createTextNode(" Em Evolução: " + evoAtiva.n + " (nível " + evoAtiva.nv + " de " + evoAtiva.tot + "). Vender ou usar em DME cancela a Evolução.")]) : null,
         listed ? el("div", { class: "ut-note", text: "Esta carta já está à venda no mercado." }) : (sq[d.card.i] ? el("div", { class: "ut-note", text: "Está no elenco. Tire do time para vender." }) : null),
         (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Vender no mercado", function () { close(); if (TM.utMercado && TM.utMercado.anunciar) TM.utMercado.anunciar(d, s, after); else listCard(d, s, after); }, "btn primary wide") : null,
         (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Venda rápida (" + fmtC(quickSell(d.ov, d.ver)) + ")", function () {
-          TM.ui.confirm("Venda rápida?", d.name + " some da sua coleção por " + fmtC(quickSell(d.ov, d.ver)) + " moedas. Costuma valer bem menos que o mercado.", "Vender", function () {
+          TM.ui.confirm("Venda rápida?", d.name + " some da sua coleção por " + fmtC(quickSell(d.ov, d.ver)) + " moedas. Costuma valer bem menos que o mercado." + (evoAtiva ? " A Evolução " + evoAtiva.n + " será cancelada." : ""), "Vender", function () {
             earn(s, quickSell(d.ov, d.ver), "Venda rápida"); removeCard(s, d.card.i); save(); close(); if (after) after();
           }, true);
         }, "btn ghost wide") : null

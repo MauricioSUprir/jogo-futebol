@@ -28,10 +28,10 @@
   // rodadas do mata-mata: nome, nome curto (chave), com artigo, e quanto o rival
   // fica acima/abaixo da nota do Draft (limitado a 70–92)
   var RODADAS = [
-    { n: "Rodada 1",         c: "Rodada 1", em: "na Rodada 1",  para: "a Rodada 1",          dif: -3 },
-    { n: "Quartas de final", c: "Quartas",  em: "nas Quartas",  para: "as Quartas de final", dif: -1 },
-    { n: "Semifinal",        c: "Semi",     em: "na Semifinal", para: "a Semifinal",         dif: 1 },
-    { n: "Final",            c: "Final",    em: "na Final",     para: "a Final",             dif: 3 }
+    { n: "Rodada 1",         t: "Rodada 1",  c: "Rodada 1", em: "na Rodada 1",  para: "a Rodada 1",          dif: -3 },
+    { n: "Quartas de final", t: "Quartas",   c: "Quartas",  em: "nas Quartas",  para: "as Quartas de final", dif: -1 },
+    { n: "Semifinal",        t: "Semifinal", c: "Semi",     em: "na Semifinal", para: "a Semifinal",         dif: 1 },
+    { n: "Final",            t: "Final",     c: "Final",    em: "na Final",     para: "a Final",             dif: 3 }
   ];
   // prêmio pelo número de vitórias (0 a 4)
   var PREMIOS = [
@@ -68,8 +68,23 @@
   function dadosXi(d) { var U = I(); return (d.xi || []).map(function (c) { return c ? U.cardData(c) : null; }); }
   function dadosBanco(d) { var U = I(); return (d.sub || []).map(function (c) { return c ? U.cardData(c) : null; }).filter(Boolean); }
   function notaDe(ds) { return I().notaEquipe(ds.map(function (x) { return x ? x.ov : 0; })); }
+  // nota durante a montagem: a mesma conta do notaEquipe, só com quem já foi escolhido
+  // (com os 11 dá exatamente o notaEquipe; antes disso mostra o nível das escolhas)
+  function notaParcial(ds) {
+    var v = ds.filter(Boolean).map(function (x) { return x.ov; });
+    if (!v.length) return 0;
+    if (v.length >= 11) return notaDe(ds);
+    var S = 0, E = 0;
+    v.forEach(function (x) { S += x; });
+    var med = S / v.length;
+    v.forEach(function (x) { if (x > med) E += x - med; });
+    return Math.floor((S + E) / v.length + 1e-6);
+  }
   function idxEtapa(fase) { for (var i = 0; i < ETAPAS.length; i++) if (ETAPAS[i][0] === fase) return i; return ETAPAS.length; }
   function edicaoErrada(s) { return !!(s.ed && s.ed !== TM.storage.edition()); }
+  function valido(d) { return !!(d && d.v === 1 && d.xi && d.xi.length === 11 && d.sub && d.ofs && d.jogos && RODADAS[d.rodada || 0]); }
+  // Draft salvo que não dá para continuar (versão antiga, dado faltando): sai do caminho
+  function limpaInvalido(s) { if (s.draft && !valido(s.draft)) { delete s.draft; I().save(); } }
   // carta do Draft a partir de uma oferta ({ p, v }): temporária, nunca vai para o clube
   function cartaDe(o, id) {
     var U = I(), p = o && TM.data.player(o.p);
@@ -222,6 +237,7 @@
   function entrar(s, modo) {
     var U = I();
     if (!s) return false;
+    limpaInvalido(s);
     if (s.draft && s.draft.fase !== "fim") { TM.ui.toast("Você já tem um Draft em andamento.", "alerta"); return false; }
     if (s.draft) arquiva(s);
     if (modo === "ficha") {
@@ -286,7 +302,7 @@
     d.emJogo = { r: r, t: Date.now() };      // fechou o app no meio? conta W.O. ao voltar
     U.save();
     M().jogar({
-      modo: "draft", titulo: "Draft · " + R.n, adv: adv, time: time, formacao: d.f,
+      modo: "draft", titulo: "Draft · " + R.t, adv: adv, time: time, formacao: d.f,
       voltar: "ut-draft-run", mataMata: true,
       onFim: function (res) { return fimJogo(I().st(), res); }
     });
@@ -363,7 +379,7 @@
     if (d.fase !== "torneio") { d.emJogo = null; I().save(); return false; }
     var R = RODADAS[d.rodada] || RODADAS[0];
     fimJogo(s, { venceu: false, perdeu: true, empate: false, gf: 0, ga: 3, wo: true, penaltis: null, adv: adversario(d, d.rodada) });
-    TM.ui.toast("A partida " + (d.rodada === 1 ? "das " : "da ") + R.c + " ficou no meio e contou como derrota por W.O. (0 × 3).", "alerta");
+    TM.ui.toast("A partida " + (d.rodada === 1 ? "das " : "da ") + R.t + " ficou no meio e contou como derrota por W.O. (0 × 3).", "alerta");
     return true;
   }
   function desistir(s, d) {
@@ -378,7 +394,7 @@
   function resumoHub(s) {
     s = s || I().st();
     if (!s) return { sub: "", badge: null };
-    var d = s.draft, f = s.fichas || 0;
+    var d = valido(s.draft) ? s.draft : null, f = s.fichas || 0;
     if (d && d.fase === "torneio") return { sub: "Próximo: " + RODADAS[d.rodada].n + " · " + vitTx(d.vit), badge: "!" };
     if (d && d.fase !== "fim") return { sub: "Montando o time: " + (d.xi || []).filter(Boolean).length + "/11", badge: "!" };
     return { sub: (f ? plural(f, "ficha", "fichas") + " · " : "") + "1 de 5 por posição · 4 jogos", badge: f ? String(f) : null };
@@ -529,6 +545,7 @@
     var U = I(), s = U.st();
     if (!s) { U.goUT("ut"); return; }
     if (edicaoErrada(s)) { U.goUT("ut"); return; }
+    limpaInvalido(s);
     if (s.draft && woInterrompido(s, s.draft)) { U.goUT("ut-draft-run"); return; }
     if (s.draft && s.draft.fase === "fim") arquiva(s);
     var d = s.draft, rec = recDe(s), fichas = s.fichas || 0;
@@ -540,7 +557,7 @@
     // topo: nome do modo, explicação curta e o leque de cartas
     body.appendChild(el("div", { class: "utd-hero" }, [
       el("div", { class: "utd-hero-i" }, [
-        el("div", { class: "utd-hero-k", text: "TOTAL ULTIMATE · MATA-MATA" }),
+        el("div", { class: "utd-hero-k", text: "ULTIMATE · MATA-MATA" }),
         el("div", { class: "utd-hero-t", text: "Draft" }),
         el("div", { class: "utd-hero-s", text: "Escolha 1 de 5 cartas em cada posição, monte a química e vença 4 jogos seguidos." })
       ]),
@@ -635,8 +652,9 @@
     var U = I(), s = U.st();
     if (!s) { U.goUT("ut"); return; }
     if (edicaoErrada(s)) { U.goUT("ut"); return; }
+    limpaInvalido(s);
     var d = s.draft;
-    if (!d || d.v !== 1) { if (d) { delete s.draft; U.save(); } U.goUT("ut-draft"); return; }
+    if (!d) { U.goUT("ut-draft"); return; }
     woInterrompido(s, d);
     screen.classList.add("ut-screen", "utd-screen");
     screen.appendChild(U.utTop("Draft", function () { U.goUT("ut-draft"); }, s));
@@ -667,7 +685,7 @@
         x.casa = d.fase === "capitao" ? o.casa : d.alvo;
         var ds2 = ds.slice(); ds2[x.casa] = dd;
         var ch2 = U.chemDe(ds2, F);
-        x.ds = ds2; x.ch = ch2; x.quim = ch2.team; x.delta = ch2.team - ch.team; x.per = ch2.per[x.casa]; x.nota = notaDe(ds2);
+        x.ds = ds2; x.ch = ch2; x.quim = ch2.team; x.delta = ch2.team - ch.team; x.per = ch2.per[x.casa]; x.nota = notaParcial(ds2);
         x.emPos = ch2.emPos[x.casa];
         return x;
       });
@@ -681,7 +699,7 @@
       var ch = F ? U.chemDe(ds, F) : null;
       var ops = opcoes(ds, F, ch);
       var op = sel >= 0 ? ops[sel] : null;
-      var nota = F ? notaDe(ds) : 0;
+      var nota = F ? notaParcial(ds) : 0;
 
       /* ---- etapas + nota e química ao vivo ---- */
       var ie = idxEtapa(d.fase), nTit = d.xi.filter(Boolean).length;
@@ -726,15 +744,19 @@
         var row = el("div", { class: "utd-ops" });
         ops.forEach(function (x, k) {
           if (!x) return;
-          var chip;
-          if (d.fase === "reservas") chip = el("span", { class: "utd-q res", text: (x.dd.posicoes || [x.dd.pos2]).join(" · ") });
-          else if (d.fase === "capitao") chip = el("span", { class: "utd-q cap" }, [ic("crown"), tx(" Joga de " + U.slotRole(F[x.casa]))]);
-          else if (!x.emPos) chip = el("span", { class: "utd-q fora", text: "fora de posição" });
-          else chip = el("span", { class: "utd-q" + (x.delta > 0 ? " mais" : " zero"), text: "+" + x.delta + " química" });
+          var chips = [];
+          if (d.fase === "reservas") chips.push(el("span", { class: "utd-q res", text: (x.dd.posicoes || [x.dd.pos2]).join(" · ") }));
+          else if (d.fase === "capitao") chips.push(el("span", { class: "utd-q cap" }, [ic("crown"), tx(" Joga de " + U.slotRole(F[x.casa]))]));
+          else {
+            chips.push(!x.emPos ? el("span", { class: "utd-q fora", text: "fora de posição" })
+              : el("span", { class: "utd-q" + (x.delta > 0 ? " mais" : " zero"), text: "+" + x.delta + " química" }));
+            // a carta mostra a posição principal; se ele entra pela alternativa, avisa
+            if (x.emPos && x.dd.pos2 !== role) chips.push(el("span", { class: "utd-q alt", text: "joga de " + role }));
+          }
           row.appendChild(el("div", { class: "utd-op" + (sel === k ? " sel" : ""), on: { click: function () { escolhe(k); } } }, [
             el("span", { class: "utd-op-ok" }, [ic("check")]),
-            U.cardEl(x.dd, { cls: "big", chem: d.fase === "reservas" ? null : x.per }),
-            chip,
+            U.cardEl(x.dd, { cls: "big", chem: d.fase === "casas" ? x.per : null }),
+            el("div", { class: "utd-op-chips" }, chips),
             el("span", { class: "utd-op-nm", text: x.dd.name }),
             el("span", { class: "utd-op-cl", text: x.dd.club ? x.dd.club.name : "" })
           ]));
@@ -747,7 +769,7 @@
         : d.fase === "capitao" ? "Capitão: " + U.shortNm(op.dd.name)
         : d.fase === "reservas" ? "Levar " + U.shortNm(op.dd.name) + " para o banco"
         : "Escolher " + U.shortNm(op.dd.name);
-      esc.appendChild(el("button", { class: "btn primary wide utd-confirma" + (op ? "" : " off"), on: { click: confirmar } }, [op ? ic("check") : null, tx((op ? " " : "") + rotulo)]));
+      esc.appendChild(el("button", { class: "btn wide utd-confirma" + (op ? " primary" : " off"), on: { click: confirmar } }, [ic(op ? "check" : "hand"), tx(" " + rotulo)]));
 
       /* ---- campo, banco e vínculos ---- */
       var lado = el("div", { class: "utd-lado" });
@@ -833,10 +855,9 @@
     a.appendChild(el("div", { class: "ut-sec-t", text: "Chaveamento" }));
     a.appendChild(chave(d));
     a.appendChild(el("div", { class: "ut-sec-t", text: "Próximo jogo · " + R.n }));
-    var alvo = U.clamp(Math.round((d.nota || 75) + R.dif), 70, 92);
     a.appendChild(M().cartaoAdv(adv, {
       cls: "utd-adv",
-      sub: R.n + " · " + M().temaTexto(adv) + " · nota alvo " + alvo,
+      sub: "de " + adv.tag + " · " + M().temaTexto(adv),
       rodape: el("button", { class: "btn primary wide utd-jogar", on: { click: function () { jogarRodada(s, d); } } }, [ic("play"), tx(" Jogar " + R.n)])
     }));
     a.appendChild(el("div", { class: "utd-nota" }, [ic("info"), tx(" Mata-mata: empate vai para os pênaltis; perdeu, acabou. Sair no meio da partida conta como derrota por W.O.")]));
@@ -882,9 +903,11 @@
     acoes.appendChild(el("button", { class: "btn wide", on: { click: function () { arquiva(s); U.goUT("ut-store"); } } }, [ic("package"), tx(" Ver pacotes na Loja")]));
     acoes.appendChild(el("button", { class: "btn ghost wide", on: { click: function () { arquiva(s); U.goUT("ut"); } } }, [tx("Voltar ao Ultimate")]));
     body.appendChild(acoes);
-    body.appendChild(el("div", { class: "ut-sec-t", text: "Seu time do Draft · " + d.f }));
-    body.appendChild(campoEl(F, ds, ch, { cap: d.cap }));
-    body.appendChild(bancoEl(d, null));
+    if (d.f && ds.some(Boolean)) {          // desistiu antes de ter time: não há o que mostrar
+      body.appendChild(el("div", { class: "ut-sec-t", text: "Seu time do Draft · " + d.f }));
+      body.appendChild(campoEl(F, ds, ch, { cap: d.cap }));
+      if ((d.sub || []).length) body.appendChild(bancoEl(d, null));
+    }
   }
 
   /* ================= API ================= */
@@ -892,7 +915,7 @@
     CUSTO: CUSTO, PREMIOS: PREMIOS, RODADAS: RODADAS,
     abrir: function () { I().goUT("ut-draft"); },
     entrar: entrar,
-    ativo: function (s) { s = s || I().st(); return !!(s && s.draft && s.draft.fase !== "fim"); },
+    ativo: function (s) { s = s || I().st(); return !!(s && valido(s.draft) && s.draft.fase !== "fim"); },
     recorde: function (s) { s = s || I().st(); return s ? recDe(s) : null; },
     resumo: resumoHub,
     premio: function (v) { return PREMIOS[I().clamp(v || 0, 0, 4)]; },

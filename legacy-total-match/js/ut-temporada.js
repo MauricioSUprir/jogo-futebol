@@ -201,7 +201,6 @@
     ["pacote", "venda", "compra", "dme", "item", "evolucao", "divisao"].forEach(function (ev) {
       U.on(ev, function (d) {
         if (ev === "dme" && d && d.s) ganhaXp(d.s, 300, "DME");
-        if (ev === "evolucao" && d && d.s) ganhaXp(d.s, 600, "Evolução");
         processa(ev, d);
       });
     });

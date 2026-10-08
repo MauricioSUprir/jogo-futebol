@@ -4,8 +4,9 @@
    nível a nível, conforme cumpre objetivos jogando como TITULAR.
      - até 3 Evoluções em andamento ao mesmo tempo;
      - cada Evolução vale uma vez por clube (s.evo.usadas[id]). Se a carta sair
-       do clube no meio (venda, DME, repetido) ou você desistir, a Evolução volta
-       a ficar livre — mas a mesma carta não repete a mesma Evolução;
+       do clube no meio (venda, DME, repetido), a Evolução volta a ficar livre;
+       se você desistir, a carta devolve o que ganhou nela e a Evolução também
+       volta a ficar livre (assim ninguém repete os ganhos em várias cartas);
      - os ganhos ficam na própria carta (card.evo.b: ov e atributos), que o núcleo
        já soma na nota, nos atributos, na raridade e no selo de DNA da carta;
        uma carta pode fazer outra Evolução depois de concluir a anterior (soma);
@@ -15,7 +16,8 @@
    Estado em s.evo:
      ativas: [{ id, c (carta), p (jogador), nv (nível atual, 0..), prog: [por objetivo], g: {ganho até agora}, t, ov0 }]
      usadas: { id: { c, t, fim? } }   feitas: [{ id, c, p, nome, gk, ov0, ov1, g, t0, t }]
-     hist: { idCarta: [ids das Evoluções que ela já começou] }   avisos: [textos pendentes]
+     avisos: [Evoluções canceladas porque a carta saiu do clube, ainda não mostradas]
+   Na carta: card.evo = { b: {ov, pac...} (soma de todas), id, nv (última Evolução), feitas: [ids], fim }.
    Rotas: "ut-evolucoes" (Disponíveis · Em andamento · Concluídas) e "ut-evo-escolha"
    (cartas elegíveis → prévia antes/depois → confirmar). API: TM.utEvo. */
 (function (global) {
@@ -54,10 +56,12 @@
   /* ================= requisitos ================= */
   function rq(tx, fn) { return { tx: tx, ok: fn }; }
   function notaAte(n) { return rq("Nota até " + n, function (d) { return d.ov <= n; }); }
-  function funcoes(lista, tx) { return rq(tx, function (d) { return lista.indexOf(d.pos2) >= 0; }); }
-  function setores(lista, tx) { return rq(tx, function (d) { return lista.indexOf(d.pos) >= 0; }); }
+  // requisito de perfil (posição, idade): a lista "quase lá" não sugere carta de outro perfil
+  function perfil(r) { r.perfil = true; return r; }
+  function funcoes(lista, tx) { return perfil(rq(tx, function (d) { return lista.indexOf(d.pos2) >= 0; })); }
+  function setores(lista, tx) { return perfil(rq(tx, function (d) { return lista.indexOf(d.pos) >= 0; })); }
   function attrAte(k, n) { return rq(ST_LABEL[k] + " até " + n, function (d) { return valorAttr(d, k) <= n; }); }
-  function idadeAte(n) { return rq("Até " + n + " anos", function (d) { return ((d.p && d.p.age) || 99) <= n; }); }
+  function idadeAte(n) { return perfil(rq("Até " + n + " anos", function (d) { return ((d.p && d.p.age) || 99) <= n; })); }
 
   /* ================= as Evoluções =================
      obj (objetivos de partida, todos do nível precisam fechar):
@@ -159,7 +163,6 @@
     if (!Array.isArray(e.ativas)) e.ativas = [];
     if (!e.usadas || typeof e.usadas !== "object") e.usadas = {};
     if (!Array.isArray(e.feitas)) e.feitas = [];
-    if (!e.hist || typeof e.hist !== "object") e.hist = {};
     if (!Array.isArray(e.avisos)) e.avisos = [];
     return e;
   }
@@ -221,7 +224,6 @@
     else if (d.ver === "heroi") falhas.push("Herói não entra em Evolução");
     if (U.ehEmprestimo(card)) falhas.push("Jogador emprestado");
     if (emAtiva(s, card.i)) falhas.push("Já está em outra Evolução");
-    if ((estado(s).hist[card.i] || []).indexOf(E.id) >= 0) falhas.push("Já passou por esta Evolução");
     E.req.forEach(function (r) { if (!r.ok(d)) falhas.push(r.tx); });
     return { ok: !falhas.length, falhas: falhas, d: d };
   }
@@ -284,20 +286,21 @@
     var t = tipoObj(o, d);
     return t === "j" ? "jogos" : t === "v" ? "vitórias" : t === "g" ? "gols" : t === "cs" ? "sem sofrer gol" : "objetivo";
   }
+  var NB = "\u00a0";                // espaço que não quebra: "+1 DEF" nunca se divide entre linhas
   // ganho já resolvido: "+1 nota, +2 RIT"
   function textoGanho(g, gk) {
     var p = [];
-    if (g && g.ov) p.push("+" + g.ov + " nota");
-    ORDER.forEach(function (k) { if (g && g[k]) p.push("+" + g[k] + " " + lbl(k, gk)); });
+    if (g && g.ov) p.push("+" + g.ov + NB + "nota");
+    ORDER.forEach(function (k) { if (g && g[k]) p.push("+" + g[k] + NB + lbl(k, gk)); });
     return p.length ? p.join(", ") : "sem ganho (já no teto)";
   }
   // ganho do catálogo (pode ter "fun" e "tudo")
   function textoNominal(g, gk) {
     var p = [];
-    if (g.ov) p.push("+" + g.ov + " nota");
-    ORDER.forEach(function (k) { if (g[k]) p.push("+" + g[k] + " " + lbl(k, gk)); });
-    if (g.fun) p.push("+" + g.fun + " nos atributos da função");
-    if (g.tudo) p.push("+" + g.tudo + " em todos os atributos");
+    if (g.ov) p.push("+" + g.ov + NB + "nota");
+    ORDER.forEach(function (k) { if (g[k]) p.push("+" + g[k] + NB + lbl(k, gk)); });
+    if (g.fun) p.push("+" + g.fun + NB + "nos atributos da função");
+    if (g.tudo) p.push("+" + g.tudo + NB + "em todos os atributos");
     return p.join(" · ");
   }
   function premioDe(E, d) {
@@ -342,17 +345,26 @@
     var a = { id: id, c: cid, p: card.p, nv: 0, prog: [], g: {}, t: Date.now(), ov0: ck.d.ov, pago: E.custo || 0 };
     e.ativas.push(a);
     e.usadas[id] = { c: cid, t: a.t };
-    e.hist[cid] = (e.hist[cid] || []).concat([id]);
     U.save();
     U.emit("evolucao-inicio", { s: s, card: card, id: id, evo: E });
     return { ok: true, a: a };
   }
+  // desistir: a carta devolve o que ganhou nesta Evolução (volta a ser como era) e ela fica livre de novo
   function desistir(s, cid) {
-    var e = estado(s), a = e.ativas.filter(function (x) { return x.c === cid; })[0];
+    var U = I(), e = estado(s), a = e.ativas.filter(function (x) { return x.c === cid; })[0];
     if (!a) return false;
+    var card = cartaDe(s, a);
+    if (card && card.evo && card.evo.b && !vazio(a.g)) {
+      var b = card.evo.b, fe = card.evo.feitas || [];
+      ["ov"].concat(ORDER).forEach(function (k) { if (a.g[k]) { b[k] = (b[k] || 0) - a.g[k]; if (!b[k] && k !== "ov") delete b[k]; } });
+      if (vazio(b)) delete card.evo.b;
+      if (fe.length) { card.evo.id = fe[fe.length - 1]; var E0 = evoPor(card.evo.id); if (E0) card.evo.nv = E0.niveis.length; }
+      else { delete card.evo.id; delete card.evo.nv; }
+      if (!card.evo.b && !fe.length) delete card.evo;
+    }
     e.ativas = e.ativas.filter(function (x) { return x !== a; });
     libera(e, a);
-    I().save();
+    U.save();
     return true;
   }
   // aplica o ganho do nível atual na carta (card.evo.b) e passa para o próximo nível
@@ -404,9 +416,14 @@
     if (!res || !s) return;
     var e = estado(s);
     limpa(s);
+    res.notas = res.notas || [];
+    if (e.avisos.length) {                               // carta que saiu do clube: avisa aqui mesmo
+      e.avisos.forEach(function (tx) { res.notas.push({ ic: "dna", tx: tx, cls: "ute-nota" }); });
+      e.avisos = [];
+      U.save();
+    }
     if (!e.ativas.length) return;
     if (!res.xi || !res.xi.length) return;              // Draft (elenco de fora): não conta
-    res.notas = res.notas || [];
     if (res.wo) { res.notas.push({ ic: "dna", tx: "Partida abandonada não conta para as Evoluções.", cls: "ute-nota" }); return; }
     var m = U.cardMap(s), parados = [], fim = [];
     e.ativas.slice().forEach(function (a) {
@@ -593,8 +610,10 @@
       el("div", { class: "ute-and-rod" }, [
         el("span", { class: "ute-ganhou", text: vazio(a.g) ? "Ainda sem ganhos" : "Já ganhou: " + textoGanho(a.g, gk) }),
         el("button", { class: "ute-desistir", text: "Desistir", on: { click: function () {
+          var nm = U.shortNm(d.name);
           TM.ui.confirm("Desistir de " + E.n + "?",
-            U.shortNm(d.name) + " fica com o que já ganhou. A Evolução volta para as Disponíveis, mas esta carta não pode repeti-la" + (E.custo ? " e as " + U.fmtC(E.custo) + " moedas não voltam." : "."),
+            (vazio(a.g) ? nm + " ainda não ganhou nada nesta Evolução." : nm + " devolve o que ganhou nela (" + textoGanho(a.g, gk) + ") e volta a ter nota " + a.ov0 + ".") +
+            " A Evolução volta para as Disponíveis" + (E.custo ? ", mas as " + U.fmtC(E.custo) + " moedas não voltam." : "."),
             "Desistir", function () { desistir(s, a.c); TM.ui.toast("Você desistiu da Evolução " + E.n + ".", "alerta"); pinta(); }, true);
         } } })
       ])
@@ -701,7 +720,7 @@
     }
     if (e.ativas.length >= MAX_ATIVAS) body.appendChild(el("div", { class: "ut-warn", text: "Você já tem " + MAX_ATIVAS + " Evoluções em andamento. Conclua uma para começar esta." }));
     var lista = elegiveis(s, E), xi = (s.squad && s.squad.xi) || [];
-    body.appendChild(el("div", { class: "ut-sec-t", text: "Escolha a carta · " + (lista.length === 1 ? "1 cumpre" : lista.length + " cumprem") }));
+    body.appendChild(el("div", { class: "ut-sec-t", text: "Escolha a carta · " + (!lista.length ? "nenhuma cumpre" : lista.length === 1 ? "1 cumpre" : lista.length + " cumprem") }));
     if (!lista.length) {
       body.appendChild(el("div", { class: "ute-vazio" }, [
         el("span", { class: "ute-vazio-ic" }, [ic("user-search")]),
@@ -719,16 +738,18 @@
         ]);
       })));
     }
-    // quase lá: cartas que falham em um requisito só (ajuda a saber o que procurar)
+    // quase lá: cartas do perfil certo que falham em um requisito só (nota alta, já em outra Evolução...)
+    var dePerfil = E.req.filter(function (r) { return r.perfil; }).map(function (r) { return r.tx; });
+    var reqTx = E.req.map(function (r) { return r.tx; });
     var quase = (s.cards || []).map(function (c) { return checa(s, E, c); })
-      .filter(function (x) { return !x.ok && x.d && x.falhas.length === 1; })
+      .filter(function (x) { return !x.ok && x.d && x.falhas.length === 1 && dePerfil.indexOf(x.falhas[0]) < 0; })
       .sort(function (a, b) { return b.d.ov - a.d.ov; }).slice(0, 8);
     if (quase.length) {
       body.appendChild(el("div", { class: "ut-sec-t", text: "Quase lá · falta um requisito" }));
       body.appendChild(el("div", { class: "ute-quase" }, quase.map(function (x) {
         return el("div", { class: "ute-quase-l" }, [
           U.cardEl(x.d, { cls: "mini" }),
-          el("div", { class: "ute-quase-i" }, [el("b", { text: x.d.name }), el("span", { text: x.falhas[0] })])
+          el("div", { class: "ute-quase-i" }, [el("b", { text: x.d.name }), el("span", { text: (reqTx.indexOf(x.falhas[0]) >= 0 ? "Não cumpre: " : "") + x.falhas[0] })])
         ]);
       })));
     }

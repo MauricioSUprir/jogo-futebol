@@ -214,6 +214,7 @@
     if (xi[c.i]) v = v * 2.5 + 3000;
     if (d.ver !== "base" && d.ver !== "rare") v *= 1.6;
     if (c.evo) v = v * 3 + 20000;
+    try { if (TM.utEvo && TM.utEvo.emEvolucao(s, c.i)) v = v * 3 + 40000; } catch (e) {}
     return v;
   }
   /* busca local ("montar com as mais baratas"):

@@ -11,7 +11,7 @@ var SHELL = [
   "js/vendor/qrcode.js",
   "js/icones.js", "js/cenas.js", "js/rng.js", "js/data.js", "js/placeholders.js", "js/storage.js", "js/notify.js",
   "js/engine.js", "js/ui.js", "js/settings.js", "js/saves.js", "js/quick.js",
-  "js/competitions.js", "js/coach.js", "js/carreira.js", "js/desempregado.js", "js/selecao.js", "js/rae.js", "js/rae-mercado.js", "js/director.js", "js/saf.js", "js/finance.js", "js/preseason.js", "js/disputa.js", "js/offers.js", "js/worldleagues.js", "js/build.js", "js/ultimate.js", "js/ut-modos.js", "js/ut-temporada.js", "js/ut-dme.js", "js/utonline.js", "js/arena.js",
+  "js/competitions.js", "js/coach.js", "js/carreira.js", "js/desempregado.js", "js/selecao.js", "js/rae.js", "js/rae-mercado.js", "js/director.js", "js/saf.js", "js/finance.js", "js/preseason.js", "js/disputa.js", "js/offers.js", "js/worldleagues.js", "js/build.js", "js/ultimate.js", "js/ut-modos.js", "js/ut-evolucoes.js", "js/ut-temporada.js", "js/ut-dme.js", "js/utonline.js", "js/arena.js",
   "js/compmode.js", "js/tournament.js", "js/groupcomp.js", "js/matchview.js", "js/pitch2d.js", "js/scout.js",
   "js/net.js", "js/fairplay.js", "js/online.js", "js/copa.js", "js/account.js", "js/coins.js", "js/news.js", "js/newsroom.js", "js/messenger.js", "js/social.js", "js/editor.js", "js/app.js",
   "assets/estadios/st-10287243.jpg", "assets/estadios/st-10463656.jpg", "assets/estadios/st-1171084.jpg",
