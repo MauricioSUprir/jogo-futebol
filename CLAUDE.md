@@ -39,8 +39,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   vai-e-volta, intensidade); botão GOLEIRO, bolas paradas, bola na mão, disputa pelo alto, divididas, troca de jogador,
   goleiro na bissetriz e intensidade dos dois times (FEITOS no PR depois da Fase 3) → **agora:** giro com bola natural e
   condução mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
-  Pendente da intensidade: apoio e corridas no ataque (o bloco mais fechado tirou ~15% dos chutes; o placar foi
-  recalibrado, mas o ataque precisa aprender a sair da pressão).
+  Pendente da intensidade: apoio e corridas no ataque (o bloco mais fechado tirou ~20% dos chutes: 25 → 20 por partida;
+  o placar foi recalibrado pela mira e pelo chute de fora, e por isso ~48% dos gols saem de fora da área — real ~15–20% —
+  e o pênalti não erra mais o gol; quando o ataque gerar chances de perto, devolver a precisão de longe e do pênalti).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
