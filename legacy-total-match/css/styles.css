@@ -4780,7 +4780,7 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-ret-s { font-size: 11px; opacity: .78; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .vit-ret-ar { font-size: 19px; font-weight: 900; opacity: .6; }
 
-.vit-palco { height: 368px; position: relative; overflow: hidden;
+.vit-palco { height: calc(var(--vit-w, 180px) * 16 / 9 + 48px); position: relative; overflow: hidden;
   margin-top: 6px; touch-action: pan-y; }
 /* A perspectiva fica NO TRILHO (e nao no palco) de proposito: com
    transform-style: preserve-3d o Chromium so deixa clicar na carta da frente —
@@ -4794,7 +4794,7 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 /* 420ms com desaceleracao forte ("emphasized decelerate"): a carta chega pesada.
    So transform e opacity animam — as duas rodam no compositor. */
 /* 180x320 = 9:16, o formato das capas: a arte aparece inteira, sem corte */
-.vit-carta { position: absolute; width: 180px; height: 320px; padding: 0; border-radius: 18px; overflow: hidden;
+.vit-carta { position: absolute; width: var(--vit-w, 180px); height: calc(var(--vit-w, 180px) * 16 / 9); padding: 0; border-radius: 18px; overflow: hidden;
   cursor: pointer; border: 2px solid rgba(255,255,255,.12); background: #0c0f12;
   backface-visibility: hidden; -webkit-backface-visibility: hidden;
   transition: transform var(--vit-dur) var(--vit-curva), opacity var(--vit-dur) var(--vit-curva),
@@ -4854,16 +4854,12 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .vit-mais-ic { font-size: 18px; }
 
 @media (max-width: 360px) {
-  .vit-carta { width: 152px; height: 270px; }
-  .vit-palco { height: 314px; }
   .vit-logo { height: 38px; }
 }
 
 /* celular deitado: a tela tem pouca altura, entao a carta encolhe para o
    botao ENTRAR continuar visivel */
 @media (max-height: 520px) and (orientation: landscape) {
-  .vit-palco { height: 206px; }
-  .vit-carta { width: 104px; height: 185px; }
   .vit-f-nome { font-size: 12px; }
   .vit-f-cat { font-size: 8px; letter-spacing: 1.6px; }
   .vit-faixa { padding: 8px 9px 9px; }
@@ -6532,3 +6528,61 @@ body.theme-light .utk-est.ruim{color:#b91c1c}
 body.theme-light .utk-star.on{color:#ca8a04}
 body.theme-light .utk-hist-l.c .utk-hist-ic{color:#1d4ed8}
 body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
+
+/* ================= TELA DE INÍCIO: nada sobre nada + PC =================
+   Celular: carrossel com a carta do meio e as vizinhas menores, sempre com vão
+   (a conta fica em ui.js, geo/poe). PC e tablet (>= 760 px): sem carrossel — os
+   7 modos lado a lado (4 por linha até 1099 px), "Mais modos" numa faixa compacta,
+   tudo numa coluna central de até 1400 px. */
+@media (min-width: 760px) {
+  .screen.vit > .vit-topo, .screen.vit > .vit-retomar, .screen.vit > .vit-palco, .screen.vit > .vit-legenda,
+  .screen.vit > .vit-mais-h, .screen.vit > .vit-mais, .screen.vit > .vit-rodape {
+    width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  .screen.vit > .vit-topo { padding: 16px 24px 10px; }
+  .screen.vit > .vit-retomar { max-width: 560px; }
+  .vit-palco.grade { height: auto; overflow: visible; padding: 18px 24px 6px; margin-top: 4px; touch-action: auto; }
+  /* flex com quebra e centralizado: linha incompleta fica no meio, sem buraco no fim */
+  .vit-palco.grade .vit-trilho { --cols: 7; --gap: 16px; position: static; display: flex; flex-wrap: wrap; justify-content: center; gap: var(--gap); perspective: none; }
+  .vit-palco.grade .vit-carta { position: relative; flex: 0 0 calc((100% - (var(--cols) - 1) * var(--gap)) / var(--cols)); width: auto; height: auto; aspect-ratio: 9 / 16; transform: none; opacity: 1;
+    transition: border-color .2s ease, box-shadow .2s ease; }
+  .vit-palco.grade .vit-carta:hover { border-color: rgba(34,197,94,.6); }
+  .vit-palco.grade .vit-carta.centro { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 18px 40px rgba(0,0,0,.55), 0 0 30px rgba(34,197,94,.22); }
+  .vit-palco.grade .vit-sombra { opacity: 0 !important; }
+  .vit-palco.grade ~ .vit-legenda { padding-top: 16px; }
+  .vit-palco.grade ~ .vit-legenda .vit-pontos { display: none; }
+  .vit-palco.grade ~ .vit-legenda .vit-tag { min-height: 0; font-size: 14px; }
+  .screen.vit > .vit-mais-h { padding: 28px 24px 10px; }
+  .screen.vit > .vit-mais { --cols: 5; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 0 24px; }
+  .screen.vit > .vit-mais > .vit-mais-b { flex: 0 0 calc((100% - (var(--cols) - 1) * 10px) / var(--cols)); box-sizing: border-box; }
+}
+@media (min-width: 760px) and (max-width: 1099px) {
+  .vit-palco.grade .vit-trilho { --cols: 4; }
+}
+@media (min-width: 1100px) {
+  .screen.vit > .vit-mais { --cols: 9; }
+  .vit-mais-b { padding: 16px 6px 14px; font-size: 12.5px; }
+}
+/* celular deitado (pouca altura): todos na mesma linha, com cartas menores para caber o ENTRAR */
+@media (min-width: 760px) and (max-height: 520px) {
+  .vit-palco.grade .vit-trilho { --cols: 7; --gap: 10px; max-width: 760px; margin: 0 auto; }
+}
+/* nada sobre nada (pedido do dono): no celular o campo da escalação fica um pouco
+   mais alto para o goleiro não encostar nos zagueiros; reservas e destaques quebram
+   em linhas em vez de rolar de lado (nada cortado na borda) */
+@media (max-width: 759px) {
+  .ut-pitch { aspect-ratio: .62; }
+  .ut-pitch.small { aspect-ratio: .70; }
+  .ut-bench-row { flex-wrap: wrap; overflow: visible; }
+  .uth-dests { flex-direction: column; overflow: visible; }
+  .uth-dest { flex: none; width: 100%; max-width: none; }
+}
+/* carta fora de posição: borda vermelha e a função da casa (em vermelho) no lugar da posição */
+.ut-card.fora .utc-moldura{box-shadow:0 0 0 .2em #ef4444,0 0 .8em rgba(239,68,68,.55)}
+.ut-card.fora .utc-pos{color:#fca5a5}
+/* sem contrato: carta apagada e faixa vermelha DENTRO da carta (nada pendurado para fora) */
+.ut-card.semct{filter:grayscale(.85) brightness(.75)}
+.ut-card.semct::before{content:"SEM CONTRATO";position:absolute;left:0;right:0;top:44%;z-index:6;background:#b91c1c;color:#fff;text-align:center;
+  font:800 .62em/1.7 var(--font);letter-spacing:.04em}
+@media (max-width: 759px) {
+  .ut-pitch .ut-card.mini { --w: clamp(40px, 12.6vw, 60px); }
+}

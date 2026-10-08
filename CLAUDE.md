@@ -154,6 +154,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   posições alternativas fixas por jogador; Ícone/Herói entram com 3 (Ícone: 2 no país e 1 em cada liga; Herói: 2 na liga). **Nota da equipe** com a correção de quem está acima
   da média (`notaEquipe`). Escudo do clube é desenhado (forma + símbolo + sigla), sem emoji. Teste de ponta a ponta:
   `node ferramentas/testar-ultimate.mjs http://localhost:8207 <pasta>` (servidor na pasta do jogo).
+- **Nada sobre nada** (pedido do dono): nenhum botão/cartão pode encostar em outro nem ficar cortado na borda, em
+  celular, tablet e PC. Tela de início: celular = carrossel com vão fixo (ui.js `geo`/`poe`); >= 760 px = os 7 modos
+  lado a lado (grade, `.vit-palco.grade`). Campos de escalação usam `separaCampo` (afasta cartas que encostariam);
+  "fora de posição" fica DENTRO da carta (`.ut-card.fora`). Conferir com `node ferramentas/testar-sobreposicao.mjs <pasta> [rota]`
+  (7 larguras; tem que dar 0).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 

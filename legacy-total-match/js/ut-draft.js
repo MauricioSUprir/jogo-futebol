@@ -457,9 +457,9 @@
       var dd = ds[i] || null, role = U.slotRole(slot);
       var cls = "ut-slot utd-casa" + (dd ? "" : " vazia") + (i === o.alvo ? " alvo" : "") + (i === o.prev ? " previa" : "") + (!dd && o.onVazia ? " livre" : "");
       var holder = el("div", { class: cls, style: "left:" + slot[1] + "%;top:" + slot[2] + "%" }, [
-        U.cardEl(dd, { cls: "mini" + (i === o.pop ? " pop" : ""), chem: dd && ch ? ch.per[i] : null, role: role })
+        U.cardEl(dd, { cls: "mini" + (i === o.pop ? " pop" : "") + (dd && ch && !ch.emPos[i] ? " fora" : ""), chem: dd && ch ? ch.per[i] : null, role: role })
       ]);
-      if (dd) holder.appendChild(el("span", { class: "ut-slot-role" + (ch && ch.emPos[i] ? " ok" : " fora"), text: role }));
+      if (dd && ch && !ch.emPos[i]) { var pz = holder.querySelector(".utc-pos"); if (pz) pz.textContent = role; }
       if (dd && i === o.cap) holder.appendChild(el("span", { class: "utd-cap", title: "Capitão", text: "C" }));
       if (i === o.alvo && !dd) holder.appendChild(el("span", { class: "utd-casa-tx", text: "AGORA" }));
       holder.addEventListener("click", function () {
@@ -468,6 +468,7 @@
       });
       pitch.appendChild(holder);
     });
+    if (U.separaCampo) U.separaCampo(pitch);     // nada encostando no campo (formações apertadas no celular)
     return pitch;
   }
   function bancoEl(d, prev) {
