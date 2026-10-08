@@ -190,7 +190,7 @@
     var primary = { "coach-hub": 1, "coach-squad": 1, "coach-lineup": 1, "coach-market": 1, "coach-scouting": 1, "coach-world": 1, "coach-messenger": 1 };
     var moreActive = !primary[active];
     nav.appendChild(el("button", { class: "bn-item bn-more" + (moreActive ? " on" : ""), on: { click: function () { openSectorSheet(c, active); } } }, [
-      el("span", { class: "bn-ic", text: "⋯" }),
+      el("span", { class: "bn-ic" }, [ TM.ic ? TM.ic("ellipsis") : "⋯" ]),
       el("span", { class: "bn-lb", text: "Mais" }),
       extra ? el("span", { class: "bn-badge", text: extra > 9 ? "9+" : extra }) : null
     ]));

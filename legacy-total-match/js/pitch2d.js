@@ -224,7 +224,7 @@
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(PAD, PAD, W * 0.19, H * 0.07);
       ctx.fillStyle = "#fff"; ctx.font = "800 " + Math.round(W * 0.028) + "px system-ui, sans-serif";
-      ctx.fillText("🔁 REPLAY", PAD + W * 0.012, PAD + H * 0.018);
+      ctx.fillText("● REPLAY", PAD + W * 0.012, PAD + H * 0.018);   // canvas: emoji nao vira icone aqui
       ctx.restore();
     }
     function dot(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); }

@@ -1,21 +1,37 @@
 /* ================= TOTAL MATCH — estilos base ================= */
+/* Inter: a mesma família das capas dos modos. Fica dentro do jogo (assets/fontes,
+   licença OFL), entao funciona offline e nao depende de site de fora. */
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/fontes/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fontes/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fontes/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fontes/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/fontes/inter-800.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 900; font-display: swap; src: url('../assets/fontes/inter-900.woff2') format('woff2'); }
+
 :root {
-  --black:      #0a0a0a;
-  --black-soft: #141414;
-  --panel:      #1a1a1a;
-  /* Esquema preto + ROXO. As variáveis "gold*"/"green" carregam tons de ROXO
-     (identidade própria, para não confundir com jogos verdes). */
+  /* Preto com um fio de verde (o preto das capas) + o verde da marca.
+     As variaveis "gold*" carregam o VERDE desde que o jogo trocou de cor;
+     o nome ficou para nao mexer em centenas de regras. */
+  --black:      #050807;
+  --black-soft: #0b110e;
+  --panel:      #0f1612;
   --gold:       #22c55e;
   --gold-light: #4ade80;
   --gold-dark:  #12a150;
-  --green:      #0f7a3a;   /* roxo profundo, para acentos secundários */
-  --text:       #eaf2ec;
-  --text-dim:   #8ea394;
-  --line:       rgba(255,255,255,.08);   /* traços/hairlines */
-  --line-2:     rgba(255,255,255,.15);   /* bordas mais fortes */
-  --fill:       rgba(255,255,255,.04);   /* preenchimentos sutis */
+  --green:      #0f7a3a;   /* verde profundo: fundos e acentos secundarios */
+  --text:       #eef5f0;
+  --text-dim:   #8a9d90;
+  --line:       rgba(255,255,255,.07);   /* traços/hairlines */
+  --line-2:     rgba(255,255,255,.13);   /* bordas mais fortes */
+  --fill:       rgba(255,255,255,.035);  /* preenchimentos sutis */
+  --bg:         #050807;
   --radius:     14px;
-  --font: 'Segoe UI', system-ui, -apple-system, Roboto, Arial, sans-serif;
+  /* cores de estado (as unicas fora do verde e preto) */
+  --ok:         #22c55e;
+  --erro:       #f05252;
+  --alerta:     #f5b83d;
+  --info:       #5eb8ff;
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
 /* ---- Tema claro (branco + verde) ---- */
@@ -32,6 +48,7 @@ body.theme-light {
   --line:       rgba(0,0,0,.10);
   --line-2:     rgba(0,0,0,.16);
   --fill:       rgba(0,0,0,.03);
+  --bg:         #eef2ee;
 }
 /* superfícies com fundo escuro fixo → clareia no tema claro */
 body.theme-light .side-item { background: #ffffff; }
@@ -4803,3 +4820,206 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
   .vit-carta, .vit-sombra, .vit-faixa, .vit-ponto { transition: none !important; }
   .vit-tag.troca { animation: none !important; }
 }
+
+
+/* =====================================================================
+   IDENTIDADE TM — verde e preto, sem emoji, com cara de produto
+   (a mesma linguagem das capas dos modos: preto profundo, verde da marca,
+   faixas diagonais, tipografia Inter pesada nos títulos)
+   ===================================================================== */
+
+/* ---- tipografia ---- */
+html, body { font-family: var(--font); font-feature-settings: "cv11", "ss03"; }
+h1, h2, h3, .tb-title { letter-spacing: -.01em; }
+.tb-title { font-size: 18px; font-weight: 800; }
+/* números alinhados em tabelas, placares e notas */
+.ov, .tile-val, .chip-ov, table, .standings, .score, .scoreline, .fin-cat-h b, .vit-sub { font-variant-numeric: tabular-nums; }
+
+/* ---- fundo: brilho verde e as faixas diagonais das capas, bem discretos ---- */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(120% 60% at 0% -10%, rgba(34,197,94,.13), transparent 60%),
+    radial-gradient(90% 50% at 110% 115%, rgba(34,197,94,.07), transparent 60%),
+    repeating-linear-gradient(118deg, transparent 0 46px, rgba(34,197,94,.05) 46px 58px, transparent 58px 92px);
+  -webkit-mask-image: linear-gradient(160deg, #000 0%, rgba(0,0,0,.35) 32%, transparent 60%);
+          mask-image: linear-gradient(160deg, #000 0%, rgba(0,0,0,.35) 32%, transparent 60%);
+}
+body.theme-light::before { opacity: .55; }
+
+/* ---- barra do iPhone (relógio e bateria) ----
+   Com o jogo instalado na tela inicial, a página começa embaixo do relógio.
+   O conteúdo desce o tamanho da barra e uma faixa escura fica fixa atrás dela,
+   para o texto não passar por baixo do relógio quando a tela rola. */
+.screen { padding-top: calc(20px + env(safe-area-inset-top, 0px)); }
+body::after {
+  content: ""; position: fixed; left: 0; right: 0; top: 0; z-index: 1000; pointer-events: none;
+  height: env(safe-area-inset-top, 0px);
+  background: rgba(5,8,7,.9); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+}
+body.theme-light::after { background: rgba(238,242,238,.9); }
+
+/* ---- ícones (js/icones.js) ---- */
+.tm-ic { width: 1.12em; height: 1.12em; display: inline-block; vertical-align: -0.2em; flex-shrink: 0;
+  fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.tm-ic.cheio { fill: currentColor; stroke: none; }
+.tm-ic.ic-ok, .ic-ok { color: var(--ok); }
+.tm-ic.ic-erro { color: var(--erro); }
+.tm-ic.ic-alerta { color: var(--alerta); }
+.tm-ic.ic-info { color: var(--info); }
+.tm-ic.ic-ouro { color: #e9bd4c; }
+.tm-ic.ic-prata { color: #c3cbd3; }
+.tm-ic.ic-bronze { color: #cd8a55; }
+.tm-ic.ic-tm-ponto { width: .8em; height: .8em; vertical-align: -0.05em; }
+/* ícone sozinho num "slot" de ícone: verde da marca, tamanho do slot */
+.st-ic, .bn-ic, .hub-ic, .sheet-ic, .vit-mais-ic, .chip-ic, .tile-ic, .side-ic { display: inline-flex; align-items: center; justify-content: center; }
+.hub-ic .tm-ic, .sheet-ic .tm-ic, .vit-mais-ic .tm-ic, .tile-ic .tm-ic { color: var(--gold); }
+/* títulos de seção: ícone pequeno no verde da marca */
+.block-title .tm-ic, .list-head .tm-ic, .xray-h .tm-ic, .section-title .tm-ic, h3 .tm-ic { color: var(--gold); width: 1em; height: 1em; }
+
+/* ---- topo das telas ---- */
+.tb-back, .tb-menu, .tb-bell { display: inline-flex; align-items: center; justify-content: center; background: var(--black-soft); color: var(--text); }
+.tb-back .tm-ic { width: 20px; height: 20px; stroke-width: 2.2; }
+
+/* ---- navegação de baixo (carreira) ---- */
+.bottom-nav { background: rgba(5,8,7,.94); border-top: 1px solid rgba(34,197,94,.14); }
+.bn-item .bn-ic { filter: none; font-size: 22px; height: 24px; }
+.bn-item .bn-ic .tm-ic { width: 22px; height: 22px; stroke-width: 1.8; }
+.bn-item .bn-lb { font-size: 10px; font-weight: 600; letter-spacing: .01em; }
+.bn-item.on { color: var(--gold-light); }
+.bn-item.on .bn-ic .tm-ic { stroke-width: 2.2; }
+.bn-item.on::before { background: var(--gold); }
+
+/* ---- abas de setor (topo da carreira) ---- */
+.sector-bar { background: rgba(5,8,7,.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.sector-tab { background: var(--black-soft); border-color: var(--line); }
+.sector-tab .st-ic { font-size: 18px; height: 20px; }
+.sector-tab .st-lb { font-weight: 600; }
+.sector-tab.on { background: linear-gradient(180deg, #1c9e4d, #12803d); border-color: rgba(74,222,128,.45); box-shadow: 0 6px 18px rgba(34,197,94,.22); }
+
+/* ---- grade de atalhos (hub) ---- */
+.hub-btn { background: var(--black-soft); border: 1px solid var(--line); font-weight: 600; }
+.hub-btn:hover, .hub-btn:active { border-color: rgba(34,197,94,.55); }
+.hub-ic { font-size: 22px; height: 24px; }
+
+/* ---- folha "todas as seções" ---- */
+.sheet { background: #0b110e; border-color: rgba(34,197,94,.18); }
+.sheet-ic { font-size: 22px; height: 24px; }
+
+/* ---- botões ---- */
+.btn { font-weight: 700; letter-spacing: .01em; background: var(--black-soft); }
+.btn .tm-ic { margin-right: .1em; }
+.btn.primary { background: linear-gradient(120deg, #34d572, #1fae55); color: #04130a; }
+.btn.primary .tm-ic { color: #04130a; }
+
+/* ---- painéis ---- */
+.setting, .panel, .card, .tile { border-color: var(--line); }
+
+/* ---- aviso flutuante ---- */
+.toast { font-family: var(--font); font-weight: 600; }
+.toast .tm-ic { margin-right: .15em; }
+
+/* ---- menu inicial: cabeçalho enxuto e rodapé ---- */
+.vit-topo { padding: 12px 16px 6px; }
+.vit-nome { font-size: 13px; font-weight: 900; letter-spacing: .08em; }
+.vit-sub { font-size: 10px; letter-spacing: .04em; color: var(--text-dim); white-space: nowrap; }
+.vit-marca-tx { white-space: nowrap; }
+.vit-acoes { gap: 8px; }
+.vit-ic, .vit-prof { width: 36px; height: 36px; background: var(--black-soft); border-color: var(--line-2); display: inline-flex; align-items: center; justify-content: center; }
+.vit-ic .tm-ic { width: 18px; height: 18px; }
+@media (max-width: 380px) { .vit-marca-tx { display: none; } }
+.vit-mais-h { font-size: 11px; font-weight: 800; letter-spacing: .16em; color: var(--gold); }
+.vit-mais-b { background: var(--black-soft); border-color: var(--line); color: var(--text); font-weight: 600; font-size: 12px; gap: 7px; padding: 14px 4px 12px; }
+.vit-mais-b:hover, .vit-mais-b:active { border-color: rgba(34,197,94,.55); }
+.vit-mais-ic { font-size: 22px; height: 24px; }
+.vit-rodape { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 26px 16px 8px;
+  font-size: 11px; color: var(--text-dim); letter-spacing: .02em; }
+.vit-rod-marca { font-weight: 900; letter-spacing: .2em; font-size: 10px; color: rgba(238,245,240,.55); }
+
+/* ---- correções que os ícones revelaram ----
+   1) <button> sem cor própria pinta o texto de PRETO (padrão do navegador). Com
+      emoji ninguém via, porque o emoji tem cor própria; o ícone usa a cor do
+      texto e sumia. Botão sem cor herda a do lugar onde está. */
+button { color: inherit; }
+/* 2) o espaço reservado para a barra de baixo da carreira entrava no TOPO da
+      tela (é inserido antes do conteúdo) e deixava uma faixa vazia de 72px sob o
+      título — e nenhum espaço no fim, onde a barra cobria o último item.
+      A tela é uma coluna flexível: order manda o espaçador para o fim. */
+.bottom-nav-spacer { order: 9999; height: calc(76px + env(safe-area-inset-bottom, 0px)); }
+/* 3) barras de força por setor no verde da marca (vermelho só quando é fraco) */
+.xsec-fill.hi  { background: linear-gradient(90deg, #1c9e4d, #4ade80); }
+.xsec-fill.mid { background: linear-gradient(90deg, #12632f, #23a352); }
+.xsec-fill.lo  { background: linear-gradient(90deg, #8f2b23, #e0483a); }
+.msg-badge { color: var(--text); background: var(--black-soft); border-color: var(--line-2); }
+.msg-badge .tm-ic { width: 18px; height: 18px; }
+
+/* ---- roxo que sobrou de um tema antigo -> verde da marca ----
+   Várias regras usavam var(--accent, #a06bd4) e --accent nunca foi definido:
+   caíam sempre no roxo (Rumo ao Estrelato, versão do jogo, mensageiro...). */
+:root { --accent: var(--gold); }
+#screen-splash { background:
+    radial-gradient(110% 80% at 50% 38%, rgba(34,197,94,.16), transparent 52%),
+    radial-gradient(140% 100% at 50% 120%, rgba(18,128,61,.30), transparent 60%),
+    linear-gradient(180deg, #050807 0%, #060a08 55%, #07100b 100%); }
+.prof-scout-btn, .sim-tag.match, .btn.sim-analise { background: linear-gradient(120deg, #12803d, #22c55e); color: #04130a; }
+/* continental: um verde-água, para se distinguir da liga (verde) e da copa (ouro) */
+.comp-badge.cont { background: rgba(45,212,191,.14); color: #5eead4; }
+.fc-cell.cont { background: linear-gradient(160deg, rgba(45,212,191,.24), rgba(45,212,191,.06)); border-color: rgba(45,212,191,.45); }
+.cal-legend .leg.cont { color: #5eead4; }
+.nation-switch { background: linear-gradient(120deg, rgba(34,197,94,.16), rgba(34,197,94,.04)); border-color: rgba(34,197,94,.35); }
+.nation-switch:hover { border-color: var(--gold-light); }
+.ys-pros.jewel { border-color: rgba(233,189,76,.55); background: rgba(233,189,76,.08); }
+.tm-hub { border-color: rgba(34,197,94,.45); }
+.tm-row.unread { border-color: rgba(34,197,94,.55); background: rgba(34,197,94,.06); }
+.tm-kind { color: var(--gold-light); border-color: rgba(34,197,94,.45); }
+.tm-dot { background: var(--gold); box-shadow: 0 0 8px rgba(34,197,94,.8); }
+.tb-chat .bell-badge { background: var(--gold); color: #04130a; }
+.rae-bar-fill.rae-st-alt { background: linear-gradient(90deg, #12803d, #4ade80); }
+.rae-status.rae-st-alt, .rae-flash.rae-st-alt { background: rgba(34,197,94,.14); color: var(--gold-light); }
+.rae-inst { background: rgba(34,197,94,.06); border-color: rgba(34,197,94,.22); }
+.rae-ativ.pedido, .rae-fila.eu { border-color: rgba(34,197,94,.5); background: rgba(34,197,94,.07); }
+.rae-esc.alt { background: rgba(34,197,94,.08); border-color: rgba(34,197,94,.28); }
+.ed-opt.on { border-color: var(--gold); background: rgba(34,197,94,.08); }
+.ct-chip { background: rgba(34,197,94,.14); color: var(--gold-light); }
+.ut-tile.a-dme { --acc: #4ade80; } .ut-tile.a-obj { --acc: #f87171; }
+/* Total Ultimate: o "logo" era um ⬤ amarelo */
+.ut-intro-logo { width: 76px; height: 76px; object-fit: contain; display: block; margin: 0 auto 4px;
+  filter: drop-shadow(0 6px 22px rgba(34,197,94,.35)); }
+
+/* ---- ícones grandes (onde antes ficava um emoji de 26 a 60px) ----
+   Traço mais fino, para não ficar pesado, e o verde da marca. */
+.mode-icon, .side-ic, .cc-ic, .moment-emoji, .press-sum-emoji, .route-error .re-emoji, .awl-ic, .mood-emoji,
+.cf-injury, .gf-ball, .mode-tile.big .mt-orb, .nl-thumb.nl-emoji, .news-item .ni-emoji, .rh-emoji,
+.prof-empty .pe-ic, .offers-empty .oe-ic, .style-hero-ic, .ut-ic, .arena-ic, .pre-opt-ic, .nw-emoji,
+.idol-ic, .ut-pk-ic { display: inline-flex; align-items: center; justify-content: center; }
+.mode-icon .tm-ic, .side-ic .tm-ic, .cc-ic .tm-ic, .moment-emoji .tm-ic, .press-sum-emoji .tm-ic, .route-error .re-emoji .tm-ic,
+.awl-ic .tm-ic, .mood-emoji .tm-ic, .cf-injury .tm-ic, .gf-ball .tm-ic, .mode-tile.big .mt-orb .tm-ic, .nl-thumb.nl-emoji .tm-ic,
+.news-item .ni-emoji .tm-ic, .rh-emoji .tm-ic, .prof-empty .pe-ic .tm-ic, .offers-empty .oe-ic .tm-ic, .style-hero-ic .tm-ic,
+.ut-ic .tm-ic, .arena-ic .tm-ic, .pre-opt-ic .tm-ic, .nw-emoji .tm-ic, .idol-ic .tm-ic, .ut-pk-ic .tm-ic { stroke-width: 1.5; }
+.mode-icon .tm-ic:not([class*="ic-ok"]):not([class*="ic-erro"]):not([class*="ic-alerta"]),
+.side-ic .tm-ic, .cc-ic .tm-ic, .awl-ic .tm-ic, .nl-thumb.nl-emoji .tm-ic, .news-item .ni-emoji .tm-ic, .rh-emoji .tm-ic,
+.prof-empty .pe-ic .tm-ic, .offers-empty .oe-ic .tm-ic, .style-hero-ic .tm-ic, .ut-ic .tm-ic, .arena-ic .tm-ic,
+.pre-opt-ic .tm-ic, .nw-emoji .tm-ic, .idol-ic .tm-ic, .ut-pk-ic .tm-ic, .gf-ball .tm-ic { color: var(--gold); }
+.cf-injury .tm-ic { color: #fff; }
+
+/* ---- avisos da carreira: o botão ia para a coluna da direita e espremia o
+   texto numa faixa estreita. Agora o botão desce para baixo do texto. ---- */
+.note { flex-wrap: wrap; }
+.note-actions { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; justify-content: flex-end; }
+.note-ic { display: inline-flex; color: var(--gold); }
+.note-ic .tm-ic { stroke-width: 1.7; }
+
+/* ---- tema claro ---- */
+/* o menu inicial é sempre escuro (é a vitrine das capas): fixa as cores escuras
+   nele, senão o texto do tema claro (escuro) some no fundo preto */
+body.theme-light .screen.vit {
+  --text: #eef5f0; --text-dim: #8a9d90; --black-soft: #0b110e; --panel: #0f1612;
+  --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.13); --gold: #22c55e; --gold-light: #4ade80;
+  color: var(--text); background: #050807; }
+body.theme-light .scout-tip { color: var(--text); }
+body.theme-light .bottom-nav { background: rgba(255,255,255,.96); border-top-color: rgba(0,0,0,.08); }
+body.theme-light .bn-item { color: #5c6f62; }
+body.theme-light .bn-item.on { color: #0f7a3a; }
+body.theme-light .sector-bar { background: rgba(238,242,238,.94); }
+
+body.theme-light .scout-tip-tx { color: var(--text); }

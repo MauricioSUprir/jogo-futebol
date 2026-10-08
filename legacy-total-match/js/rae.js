@@ -429,12 +429,12 @@
       el("div", { class: "rae-intro-d", text: "A semana é o jogo. Você tem energia limitada, um concorrente com nome e um técnico que forma uma opinião sua — e ela sobe e desce." })
     ]));
     if (c) {
-      body.appendChild(TM.ui.button("▶ Continuar — " + c.name + " · " + c.clubName, function () { TM.ui.go("rae-hub"); }, "primary"));
+      body.appendChild(TM.ui.button("▶ Continuar — " + c.name + " · " + c.clubName, function () { TM.ui.go("rae-hub"); }, "btn primary"));
       body.appendChild(TM.ui.button("🗑️ Apagar e começar outra", function () {
         TM.ui.confirm("Apagar a carreira?", "Todo o progresso de " + c.name + " será perdido.", "Apagar", function () { limpa(); TM.ui.go("rae"); }, true);
       }));
     } else {
-      body.appendChild(TM.ui.button("✨ Nova carreira", function () { TM.ui.go("rae-create"); }, "primary"));
+      body.appendChild(TM.ui.button("✨ Nova carreira", function () { TM.ui.go("rae-create"); }, "btn primary"));
     }
   });
 
@@ -490,7 +490,7 @@
     body.appendChild(TM.ui.button("Começar", function () {
       if (!f.nome.trim()) { TM.ui.toast("Escolha um nome."); return; }
       cria(f);
-    }, "primary"));
+    }, "btn primary"));
   });
 
   function cria(f) {
@@ -602,7 +602,7 @@
     var dias = (c.semana && (c.semana.dias - c.semana.plano.length)) || 0;
     body.appendChild(TM.ui.button(dias > 0 ? "📅 Treinar a semana — " + dias + " dia(s)" : "⚽ Dia de jogo", function () {
       TM.ui.go(dias > 0 ? "rae-semana" : "rae-jogo");
-    }, "primary"));
+    }, "btn primary"));
     body.appendChild(TM.ui.button("👔 " + tecnico(c).nome, function () { TM.ui.go("rae-tecnico"); }));
     body.appendChild(TM.ui.button("👥 Elenco e concorrência", function () { TM.ui.go("rae-elenco"); }));
     body.appendChild(TM.ui.button("📈 Histórico da barra", function () { TM.ui.go("rae-log"); }));
@@ -644,7 +644,7 @@
         el("div", { text: "Média de treino: " + (mediaTreino(c) || "—") }),
         el("div", { class: "setting-hint", text: "É o que o técnico leva em conta pra montar a escalação." })
       ]));
-      body.appendChild(TM.ui.button("⚽ Ir para o jogo", function () { fechaSemana(c); TM.ui.go("rae-jogo"); }, "primary"));
+      body.appendChild(TM.ui.button("⚽ Ir para o jogo", function () { fechaSemana(c); TM.ui.go("rae-jogo"); }, "btn primary"));
       return;
     }
 
@@ -708,7 +708,7 @@
     body.appendChild(TM.ui.button("▶ Jogar a partida", function () {
       var out = jogaPartida(c);
       TM.ui.go("rae-resultado", { out: out });
-    }, "primary"));
+    }, "btn primary"));
   });
 
   TM.ui.register("rae-resultado", function (screen, params) {
@@ -760,7 +760,7 @@
     }
     if (out.trocouTecnico) body.appendChild(el("div", { class: "rae-flash rae-st-out", text: "👔 Técnico demitido. " + tecnico(c).nome + " assumiu e a barra recomeçou." }));
 
-    body.appendChild(TM.ui.button("📅 Próxima semana", function () { TM.ui.go("rae-semana"); }, "primary"));
+    body.appendChild(TM.ui.button("📅 Próxima semana", function () { TM.ui.go("rae-semana"); }, "btn primary"));
   });
 
   /* ---------- técnico ---------- */
