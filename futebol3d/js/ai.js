@@ -648,6 +648,11 @@ export function carrierThink(m, p, dt) {
   const caraACara = dGoal > 13 && dGoal < 34 && Math.abs(p.z) < 18 &&
     !t.opp.players.some(q => !q.isGK && !q.sentOff && Math.hypot(q.x - p.x, q.z - p.z) < 7 && m.lx(t, q.x) > m.lx(t, p.x) - 2);
   const levaAtePerto = caraACara && foraGk < 6;
+  // goleiro saindo em disparada de longe (botão GOLEIRO): o atacante segue com a bola para driblá-lo ou tocar
+  // por cima quando ele chegar, em vez de bater de 25 m logo que o vê sair (com a vontade de chutar desta versão,
+  // o chute de longe cedo deixava o goleiro do humano sem chegar na bola em ~1/4 dos lances)
+  const gkDisparada = gkO && !gkO.sentOff && foraGk > 4 && dGk > 9 &&
+    ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
   if (dGoal < 32) {
     let sS = xg * 4.6 * shotBias + (dGoal < 12 ? 0.3 : 0);
     // dentro da área o atacante finaliza mesmo com zagueiro na frente (no futebol real ~60% dos
@@ -659,13 +664,13 @@ export function carrierThink(m, p, dt) {
     // partida, quase sempre conduzindo marcado) e antes quase nunca chutava dali
     // Marcado também chuta (no futebol real ~1/4 dos chutes é travado), só que com menos vontade
     if (dGoal > 16 && dGoal < 33 && Math.abs(p.z) < 18 && press < 0.95 && xg > 0.006 && !levaAtePerto &&
-      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.15 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((33 - dGoal) / 8, 0, 1) * (1.3 - press * 0.45);
+      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.15 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((33 - dGoal) / 8, 0, 1) * (1.3 - press * 0.45) * (gkDisparada ? 0.4 : 1);
     // goleiro vindo em cima (saiu do gol e está a 3–9 m): finaliza antes de ele chegar, colocado
     const vemGk = gkO && !gkO.sentOff && foraGk > 5 && dGk > 3 && dGk < 9 && dGoal < 24 &&
       ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
-    // (+0,3: com a vontade de chutar maior desta versão, +0,5 fazia o atacante chutar quase sempre antes de o
+    // (+0,15: com a vontade de chutar maior desta versão, +0,5 fazia o atacante chutar quase sempre antes de o
     // goleiro chegar — o botão GOLEIRO deixava de 'atacar a bola')
-    if (vemGk) sS += 0.3;
+    if (vemGk) sS += 0.15;
     options.push({ kind: vemGk || (dGoal > 16 && Math.abs(p.z) > 6 && Math.random() < 0.5) ? 'finesse' : 'shot', s: sS });
   }
   // cavadinha no goleiro que saiu do gol
