@@ -34,6 +34,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
+- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (pesquisar em VÁRIOS
+  lugares primeiro e mandar a análise) → botão de sair com o goleiro na defesa (ele ataca a bola) → bola parada e
+  organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO — hoje flutua,
+  escanteio organizado, cabeceio e disputa pelo alto, organização tática) → giro com bola natural e condução mais
+  no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
@@ -81,8 +86,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   dividida `tools/dividida-test.mjs`; primeira `tools/primeira-test.mjs`; agilidade `tools/agilidade.mjs`;
   chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/equilibrio-test.mjs 24 --par 4`
   (auditoria Fase 3, configurações PADRÃO = tempos de 4 min, como a auditoria mediu: 2,3–3,5 gols/partida,
-  conversão 9–14%, passe 75–88%, ≥ 1 impedimento/partida; 24 partidas variam ±0,3 gol e ±1,2 ponto de
-  conversão entre execuções — para calibrar use 192; `--base pasta` mede outra versão); linha de defesa
+  conversão 9–14%, passe 75–88%, ≥ 1 impedimento/partida; 24 partidas variam ±0,4 gol e ±1,7 ponto de
+  conversão entre execuções (8 rodadas medidas: ~1 em 4 reprova por sorteio) — para calibrar use 192; `--base pasta` mede outra versão); linha de defesa
   `tools/linha-test.mjs` (alinhada, acompanha a bola, sobe em bloco); espalmada para escanteio nunca entra
   `tools/espalmada-test.mjs`; diagnósticos `tools/chutes-diag.mjs` e `tools/passes-diag.mjs`;
   proteção `tools/protecao-test.mjs`; contato de corpo
