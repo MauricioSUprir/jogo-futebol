@@ -377,6 +377,8 @@
       out.trocouTecnico = true;
     }
 
+    // o mercado anda junto com a rodada: olheiros, janela, propostas, fim da temporada
+    try { out.mercado = TM.raeMercado ? TM.raeMercado.aposRodada(c, out) : []; } catch (e) { out.mercado = []; }
     comecaSemana(c);
     save(c);
     return out;
@@ -518,6 +520,7 @@
       notifications: []
     };
     tecnico(c);
+    if (TM.raeMercado) TM.raeMercado.m(c);    // contrato, empresário e a primeira janela
     // garoto chegando: a barra começa baixa e o limiar já diz o tamanho da briga
     c.conf = Math.round(clamp(18 + (c.overall - base) * 2, 8, 40));
     recalcStatus(c);
@@ -590,6 +593,9 @@
       ]));
     }
 
+    // o mercado: janela, propostas e a última mensagem do empresário
+    if (TM.raeMercado) body.appendChild(TM.raeMercado.cartaoHub(c));
+
     // números da temporada
     function tile(l, v) { return el("div", { class: "tile" }, [ el("div", { class: "tile-val", text: v }), el("div", { class: "tile-lbl", text: l }) ]); }
     var media = (c.ratings || []).length ? (c.ratings.reduce(function (a, b) { return a + b; }, 0) / c.ratings.length).toFixed(1) : "—";
@@ -600,7 +606,10 @@
 
     // ações
     var dias = (c.semana && (c.semana.dias - c.semana.plano.length)) || 0;
-    body.appendChild(TM.ui.button(dias > 0 ? "📅 Treinar a semana — " + dias + " dia(s)" : "⚽ Dia de jogo", function () {
+    var Mc = TM.raeMercado ? TM.raeMercado.m(c) : {};
+    if (Mc.fimPendente) body.appendChild(TM.ui.button("🏁 Fim da temporada", function () { TM.ui.go("rae-temporada"); }, "btn primary"));
+    else if (Mc.livre) body.appendChild(TM.ui.button("✍️ Escolher o novo clube", function () { TM.ui.go("rae-mercado"); }, "btn primary"));
+    else body.appendChild(TM.ui.button(dias > 0 ? "📅 Treinar a semana — " + dias + (dias > 1 ? " dias" : " dia") : "⚽ Dia de jogo", function () {
       TM.ui.go(dias > 0 ? "rae-semana" : "rae-jogo");
     }, "btn primary"));
     body.appendChild(TM.ui.button("👔 " + tecnico(c).nome, function () { TM.ui.go("rae-tecnico"); }));
@@ -612,6 +621,7 @@
   TM.ui.register("rae-semana", function (screen) {
     var c = car();
     if (!c) { TM.ui.go("rae"); return; }
+    if (TM.raeMercado && TM.raeMercado.travado(c)) { TM.ui.go(c.mercado.fimPendente ? "rae-temporada" : "rae-mercado"); return; }
     if (!c.semana) comecaSemana(c);
     screen.appendChild(TM.ui.topbar("📅 A semana", function () { TM.ui.go("rae-hub"); }));
     var body = el("div", { class: "rae-body" });
@@ -686,6 +696,7 @@
   TM.ui.register("rae-jogo", function (screen) {
     var c = car();
     if (!c) { TM.ui.go("rae"); return; }
+    if (TM.raeMercado && TM.raeMercado.travado(c)) { TM.ui.go(c.mercado.fimPendente ? "rae-temporada" : "rae-mercado"); return; }
     if (c.semana && c.semana.plano.length < c.semana.dias) { TM.ui.go("rae-semana"); return; }
     screen.appendChild(TM.ui.topbar("⚽ Dia de jogo", function () { TM.ui.go("rae-hub"); }));
     var body = el("div", { class: "rae-body" });
@@ -760,7 +771,11 @@
     }
     if (out.trocouTecnico) body.appendChild(el("div", { class: "rae-flash rae-st-out", text: "👔 Técnico demitido. " + tecnico(c).nome + " assumiu e a barra recomeçou." }));
 
-    body.appendChild(TM.ui.button("📅 Próxima semana", function () { TM.ui.go("rae-semana"); }, "btn primary"));
+    if (TM.raeMercado && out.mercado && out.mercado.length) {
+      body.appendChild(el("div", { class: "rm-noticias" }, [ el("div", { class: "rm-h", text: "Mercado" }) ].concat(out.mercado.map(TM.raeMercado.linhaNoticia))));
+    }
+    var fim = TM.raeMercado && TM.raeMercado.m(c).fimPendente;
+    body.appendChild(TM.ui.button(fim ? "🏁 Fim da temporada" : "📅 Próxima semana", function () { TM.ui.go(fim ? "rae-temporada" : "rae-semana"); }, "btn primary"));
   });
 
   /* ---------- técnico ---------- */

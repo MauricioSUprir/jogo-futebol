@@ -24,7 +24,8 @@
     "online": ["gamer", "Online"], "copa": ["chave", "Online"], "groupcomp": ["estadio", "Online"],
     "dream": ["cartas", "Modo"], "draft": ["cartas", "Modo"], "arena": ["moedas", "Total Coins"],
     "coins": ["moedas", "Total Coins"], "saves": ["tunel", "Modo"], "competicoes": ["trofeu", "Informações"],
-    "editor": ["mesa", "Modo"], "rae": ["tunel", "Carreira"], "ut-store": ["moedas", "Total Ultimate"]
+    "editor": ["mesa", "Modo"], "rae": ["tunel", "Carreira"], "ut-store": ["moedas", "Total Ultimate"],
+    "rae-mercado": ["escritorio", "Rumo ao Estrelato"], "rae-trajetoria": ["tunel", "Rumo ao Estrelato"]
   };
 
   // mini cenas do menu ("Mais modos"): rota -> recorte. Os atalhos da carreira ficam

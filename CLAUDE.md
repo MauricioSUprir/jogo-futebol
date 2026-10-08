@@ -137,6 +137,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
 - **Modo claro vale também na tela inicial** (vitrine; bloco "MENU no tema claro" no CSS). **Avisos**
   (`TM.ui.toast(msg, tipo?)`) aparecem no MEIO da tela, um por vez, com selo ok/erro/alerta — o dono não quer
   aviso escondido lá embaixo.
+- **Rumo ao Estrelato — mercado** (`js/rae-mercado.js`, estado em `c.mercado`; ganchos em `rae.js`: `aposRodada`
+  no fim de cada jogo, cartão "Seu futuro" no centro, travas no fim de temporada/sem clube): temporada com fim
+  (`(clubes-1)*2` rodadas, 30–38) e 2 janelas (4 primeiras rodadas e meio); olheiros/rumores; empresário com
+  estilo; propostas de compra/empréstimo/fim de contrato/renovação com negociação; clube pode segurar (pedir para
+  sair = −15 de confiança); apresentação em 5 passos (exames, assinatura, camisa, coletiva, boas-vindas);
+  trajetória. O clube mais fraco do jogo tem força ~62: a faixa de clubes alarga até ter opções.
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 
