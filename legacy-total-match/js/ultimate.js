@@ -31,9 +31,19 @@
   /* ================= utilidades ================= */
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  // nome curto da carta: o sobrenome, mas "Vinícius Júnior" vira "Vinícius Jr." (não "Júnior")
+  // e partículas ficam junto ("van Dijk", "De Bruyne", "Mac Allister", "Di María")
+  var SUFIXO = { "júnior": "Jr.", "junior": "Jr.", "jr": "Jr.", "jr.": "Jr.", "neto": "Neto", "filho": "Filho", "sobrinho": "Sobrinho", "ii": "II", "iii": "III" };
+  var PARTICULA = { van: 1, von: 1, de: 1, da: 1, "do": 1, dos: 1, das: 1, di: 1, del: 1, della: 1, der: 1, den: 1, le: 1, la: 1, el: 1, al: 1, mac: 1, ter: 1, ten: 1, du: 1 };
   function shortNm(name) {
     var a = String(name || "").trim().split(/\s+/);
-    return a.length > 1 ? a[a.length - 1] : (a[0] || "—");
+    if (a.length < 2) return a[0] || "—";
+    var ult = a[a.length - 1], suf = SUFIXO[ult.toLowerCase()];
+    if (suf) return a[a.length - 2] + " " + suf;
+    var pen = a[a.length - 2];
+    if (a.length > 2 && PARTICULA[pen.toLowerCase()]) return pen + " " + ult;
+    if (a.length === 2 && PARTICULA[pen.toLowerCase()] && pen[0] === pen[0].toUpperCase()) return pen + " " + ult;   // "De Bruyne"
+    return ult;
   }
   function fullShort(name) {
     var a = String(name || "").trim().split(/\s+/);
@@ -103,6 +113,8 @@
   // patamares do Total Match (em vez de bronze/prata/ouro): o topo é raro de verdade
   function rarOf(ov) { return ov >= 85 ? "l" : ov >= 75 ? "g" : ov >= 65 ? "s" : "b"; }
   var RAR_NAME = { b: "Base", s: "Elite", g: "Craque", l: "Lenda" };
+  // cor da carta de cada patamar: bronze, prata, ouro e, no topo, o verde do Total Match
+  var RAR_COR = { b: "bronze", s: "prata", g: "ouro", l: "verde" };
   var RAR_ORDER = ["b", "s", "g", "l"];
 
   /* ---------- versões de carta ----------
@@ -603,7 +615,7 @@
       else if (r.t === "rar") {
         var mi = RAR_ORDER.indexOf(r.r);
         have = filled.filter(function (d) { return RAR_ORDER.indexOf(d.rar) >= mi; }).length;
-        label = "Cartas " + RAR_NAME[r.r] + " ou melhor: " + r.v;
+        label = "Cartas " + RAR_NAME[r.r] + " (" + RAR_COR[r.r] + ") ou melhor: " + r.v;
       }
       else if (r.t === "rare") { have = filled.filter(function (d) { return d.ver === "rare" || d.ver === "totw"; }).length; label = "Cartas raras: " + r.v; }
       else if (r.t === "totw") { have = filled.filter(function (d) { return d.ver === "totw"; }).length; label = "Cartas do Time da Semana: " + r.v; }
@@ -682,7 +694,21 @@
       return { k: k, l: (isGk ? GK_LABEL : ST_LABEL)[k], v: clamp(Math.round((a[k] || 50) + bump + ganho - pen), 1, 99), ganho: ganho, pen: pen };
     });
   }
-  // cartão estilo Ultimate Team
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function silhueta() {
+    var svg = document.createElementNS(SVGNS, "svg");
+    svg.setAttribute("viewBox", "0 0 100 120"); svg.setAttribute("class", "utc-sil"); svg.setAttribute("aria-hidden", "true");
+    [["ellipse", { cx: 50, cy: 43, rx: 18.5, ry: 22.5 }], ["path", { d: "M6 120C8 93 27 81 50 81S92 93 94 120Z" }]].forEach(function (f) {
+      var n = document.createElementNS(SVGNS, f[0]);
+      Object.keys(f[1]).forEach(function (k) { n.setAttribute(k, f[1][k]); });
+      n.setAttribute("fill", "currentColor"); svg.appendChild(n);
+    });
+    return svg;
+  }
+  // A CARTA do Total Match: moldura chanfrada e brilho na cor da raridade (bronze,
+  // prata, ouro e, no topo, verde; as versões especiais têm cor própria), nota grande,
+  // faixa com bandeira e escudo, foto que se funde no fundo de triângulos, nome,
+  // barra de força (pela nota) e a assinatura TOTAL MATCH no rodapé.
   function cardEl(d, opts) {
     opts = opts || {};
     if (!d) {
@@ -691,32 +717,40 @@
         opts.role ? el("div", { class: "utc-slot", text: opts.role }) : null
       ]);
     }
-    var kids = [];
-    kids.push(el("div", { class: "utc-l" }, [
-      el("div", { class: "utc-ov", text: d.ov }),
-      el("div", { class: "utc-pos", text: (d.pos2 || d.pos) }),
-      el("div", { class: "utc-sep" }),
-      (function () { try { return TM.img.nationImg(TM.data.nation(d.nat), "utc-flag"); } catch (e) { return el("span"); } })(),
-      (function () { try { return d.club ? TM.img.clubImg(d.club, "utc-crest") : el("span"); } catch (e) { return el("span"); } })()
-    ]));
-    kids.push(el("div", { class: "utc-face-wrap" }, [
-      (function () { try { return TM.img.playerImg(d.p, "utc-face"); } catch (e) { return el("span"); } })()
-    ]));
-    kids.push(el("div", { class: "utc-name", text: shortNm(d.name).toUpperCase() }));
-    var stats = statsOf(d);
-    kids.push(el("div", { class: "utc-stats" }, stats.map(function (s) {
-      return el("span", { class: "utc-st" }, [el("b", { text: s.v }), el("i", { text: s.l })]);
-    })));
+    function seguro(fn) { try { return fn(); } catch (e) { return el("span"); } }
+    var VI = verInfo(d.ver), esp = !!VI.sel;
+    var temFoto = false; try { temFoto = !TM.img.playerPhotoUrl || !!TM.img.playerPhotoUrl(d.p); } catch (e) {}
+    var forca = Math.max(0.12, Math.min(1, (d.ov - 45) / 50));
+    var miolo = el("div", { class: "utc-miolo" }, [
+      el("span", { class: "utc-tri" }),
+      el("span", { class: "utc-luz" }),
+      // sem foto real: silhueta na cor da carta (em vez do avatar de iniciais)
+      el("div", { class: "utc-face-wrap" }, [ temFoto ? seguro(function () { return TM.img.playerImg(d.p, "utc-face"); }) : silhueta() ]),
+      el("span", { class: "utc-tm" }),
+      el("div", { class: "utc-l" }, [
+        el("div", { class: "utc-ov", text: d.ov }),
+        el("div", { class: "utc-pos", text: (d.pos2 || d.pos) }),
+        el("div", { class: "utc-fita" }, [
+          seguro(function () { return TM.img.flagImg(TM.data.nation(d.nat), "utc-flag"); }),
+          d.club ? seguro(function () { return TM.img.clubImg(d.club, "utc-crest"); }) : null
+        ])
+      ]),
+      el("div", { class: "utc-name", text: shortNm(d.name).toUpperCase() }),
+      el("div", { class: "utc-barra" }, [ el("i", { style: "width:" + Math.round(forca * 100) + "%" }) ]),
+      el("div", { class: "utc-stats" }, statsOf(d).map(function (s) {
+        return el("span", { class: "utc-st" }, [el("b", { text: s.v }), el("i", { text: s.l })]);
+      })),
+      // rodapé: a assinatura do jogo, ou o selo da versão especial (o preço, no mercado)
+      opts.price != null ? null : el("div", { class: "utc-tier" + (esp ? " esp" : ""), text: esp ? VI.sel : "Total Match" })
+    ]);
+    var kids = [ el("div", { class: "utc-moldura" }, [ miolo ]) ];
     if (opts.chem != null) {
       var lv = opts.chem >= 9 ? "c3" : opts.chem >= 7 ? "c2" : opts.chem >= 4 ? "c1" : "c0";
       kids.push(el("div", { class: "utc-chem " + lv, text: opts.chem }));
     }
-    // um selo só no rodapé: a versão manda, senão o patamar
-    var VI = verInfo(d.ver);
-    kids.push(el("div", { class: "utc-tier" + (VI.sel ? " esp" : ""), text: VI.sel || (RAR_NAME[d.rar] || "") }));
     if (opts.price != null) kids.push(el("div", { class: "utc-price" }, [coinsEl(opts.price)]));
-    var cls = "ut-card r-" + d.rar + " v-" + d.ver + (opts.cls ? " " + opts.cls : "");
-    var node = el("div", { class: cls }, kids);
+    var cls = "ut-card r-" + d.rar + " v-" + d.ver + (esp ? " especial" : "") + (opts.cls ? " " + opts.cls : "");
+    var node = el("div", { class: cls, title: d.name + " · " + d.ov + " · " + (esp ? VI.n : RAR_NAME[d.rar] + " (" + RAR_COR[d.rar] + ")") }, kids);
     if (opts.on) node.addEventListener("click", opts.on);
     return node;
   }
@@ -1208,6 +1242,7 @@
           el("div", { class: "ut-dl" }, [el("i", { text: "País" }), el("b", { text: d.p.nationName || "—" })]),
           el("div", { class: "ut-dl" }, [el("i", { text: "Idade" }), el("b", { text: (d.p.age || "—") + " anos" })]),
           el("div", { class: "ut-dl" }, [el("i", { text: "Versão" }), el("b", { text: verInfo(d.ver).n })]),
+          el("div", { class: "ut-dl" }, [el("i", { text: "Raridade" }), el("b", { text: RAR_NAME[d.rar] + " · " + RAR_COR[d.rar] })]),
           el("div", { class: "ut-dl" }, [el("i", { text: "Preço médio" }), el("b", { text: fmtC(basePrice(d.ov, d.ver)) })])
         ])
       ]),

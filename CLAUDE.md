@@ -129,6 +129,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   em qual tela: `js/cenas.js` (`TOPO`, `MINI`, `ROTULO`); atalho novo = `TM.ui.miniCena(...)`. Foto de verdade
   (estádio do clube) entra com a camada verde (`cena-foto`). Pôsteres: próximo jogo no início da carreira
   (`TM.coachUI.posterJogo`) e fim de jogo nas telas de resultado (`TM.ui.posterFim`).
+- **Cartas do Total Ultimate** (`ultimate.js` cardEl, CSS "A CARTA (Total Match)"): estilo da referência do
+  dono — moldura chanfrada e brilho na cor da raridade (Base = bronze, Elite = prata, Craque = ouro, Lenda =
+  **verde**; versões especiais com cor própria), nota/nome em Barlow Condensed (`assets/fontes`, OFL), faixa com
+  bandeira (`assets/bandeiras`, flag-icons MIT, `ferramentas/gerar-bandeiras.mjs`) e escudo, triângulos e marca
+  TM (`assets/cartas`, `ferramentas/gerar-cartas.py`), silhueta quando o jogador não tem foto real.
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 

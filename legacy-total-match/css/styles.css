@@ -3783,67 +3783,124 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ut-coin.net{color:#7be2a0}
 .ut-w-item.tc{font-size:12px;color:var(--text-dim);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:3px 9px}
 
-/* ---------- A CARTA ---------- */
-.ut-card{--w:112px;position:relative;width:var(--w);aspect-ratio:.70;font-size:calc(var(--w)/10);border-radius:.9em;overflow:hidden;flex:0 0 auto;
-  --acc:#7d8a93;--acc2:#b9c6cf;--ink:#eaf2ec;
-  color:var(--ink);background:linear-gradient(168deg,#232a2e 0%,#141a1d 46%,#0b0e10 100%);
-  box-shadow:0 .3em .8em rgba(0,0,0,.5),inset 0 0 0 .09em rgba(255,255,255,.07);
-  cursor:pointer;user-select:none;transition:transform .12s ease}
+/* ---------- A CARTA (Total Match) ----------
+   Moldura chanfrada na cor da raridade (bronze, prata, ouro e verde no topo; versões
+   especiais com cor própria), miolo escuro com triângulos e a marca TM, foto que se
+   funde no fundo, nota e nome em letra condensada (Barlow Condensed, OFL).
+   Tudo em "em": a carta escala pelo tamanho (--w) — big, tiny e mini. */
+@font-face{font-family:"TM Cond";font-style:normal;font-weight:700;font-display:swap;src:url("../assets/fontes/barlow-condensed-latin-700.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"TM Cond";font-style:normal;font-weight:700;font-display:swap;src:url("../assets/fontes/barlow-condensed-latin-ext-700.woff2") format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"TM Cond";font-style:normal;font-weight:800;font-display:swap;src:url("../assets/fontes/barlow-condensed-latin-800.woff2") format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"TM Cond";font-style:normal;font-weight:800;font-display:swap;src:url("../assets/fontes/barlow-condensed-latin-ext-800.woff2") format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+.ut-card{--w:112px;--c:1.45em;--b:.15em;position:relative;width:var(--w);aspect-ratio:.70;font-size:calc(var(--w)/10);flex:0 0 auto;
+  --f1:#ffffff;--f2:#7d8894;--f3:#e6ebf0;--f4:#4d5762;--acc:#b8c3cd;--acc2:#f1f5f8;--fundo:#0c0f12;--brilho:rgba(225,233,240,.4);--ink:#fff;
+  color:var(--ink);cursor:pointer;user-select:none;transition:transform .12s ease;-webkit-tap-highlight-color:transparent}
 .ut-card:active{transform:scale(.96)}
-/* faixa diagonal na cor do patamar + emblema do Total Match marcado na carta */
-.ut-card::before{content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(152deg,color-mix(in srgb,var(--acc) 42%,transparent) 0%,transparent 38%),
-             radial-gradient(120% 70% at 50% 108%,color-mix(in srgb,var(--acc) 30%,transparent),transparent 62%);}
-.ut-card::after{content:"";position:absolute;right:-8%;bottom:-6%;width:52%;aspect-ratio:1;pointer-events:none;
-  background:url("../assets/logo-mark.png") no-repeat center/contain;opacity:.07;filter:grayscale(1) brightness(2)}
-.ut-card.r-b{--acc:#8a6a4a;--acc2:#c79a6d}
-.ut-card.r-s{--acc:#6f8794;--acc2:#bcd2de}
-.ut-card.r-g{--acc:#1f9c52;--acc2:#6ee7a0}
-.ut-card.r-l{--acc:#c9a227;--acc2:#ffe08a;
-  background:linear-gradient(168deg,#2a2618 0%,#171410 48%,#0a0908 100%);
-  box-shadow:0 .35em 1em rgba(0,0,0,.6),inset 0 0 0 .1em rgba(255,224,138,.4)}
-.ut-card.v-rare{box-shadow:0 .3em .9em rgba(0,0,0,.55),inset 0 0 0 .1em color-mix(in srgb,var(--acc2) 55%,transparent)}
-.ut-card.v-totw{--acc:#22c55e;--acc2:#86efac;
-  background:linear-gradient(168deg,#0f2a1b 0%,#08150e 48%,#050806 100%);
-  box-shadow:0 .35em 1em rgba(0,0,0,.65),inset 0 0 0 .1em rgba(34,197,94,.55)}
-.ut-card.insquad{outline:.14em solid #22c55e;outline-offset:-.14em}
-/* selo do patamar, no rodapé da carta */
-.utc-tier{position:absolute;left:0;right:0;bottom:.3em;text-align:center;font-size:.64em;font-weight:900;
-  letter-spacing:.2em;text-transform:uppercase;color:var(--acc2);opacity:.8;z-index:3;white-space:nowrap}
-.utc-tier.tds{letter-spacing:.1em;opacity:1}
-.utc-l{position:absolute;left:7%;top:10%;width:25%;text-align:center;z-index:2;line-height:1}
-.utc-ov{font-size:2.1em;font-weight:900;letter-spacing:-.03em;color:var(--acc2)}
-.utc-pos{font-size:.88em;font-weight:800;letter-spacing:.04em;margin-top:.15em}
-.utc-sep{height:.09em;background:var(--acc2);opacity:.45;margin:.35em auto;width:74%}
-.utc-flag,.utc-crest{width:1.7em;height:1.25em;object-fit:contain;display:block;margin:.22em auto}
-.utc-face-wrap{position:absolute;right:0;top:3%;width:64%;height:55%;overflow:hidden;z-index:1}
-.utc-face{width:100%;height:100%;object-fit:cover;object-position:top center;
-  -webkit-mask-image:radial-gradient(72% 82% at 54% 38%,#000 40%,rgba(0,0,0,.62) 66%,rgba(0,0,0,.18) 85%,transparent 97%);
-  mask-image:radial-gradient(72% 82% at 54% 38%,#000 40%,rgba(0,0,0,.62) 66%,rgba(0,0,0,.18) 85%,transparent 97%)}
-.utc-name{position:absolute;top:57.5%;left:6%;right:6%;text-align:center;font-size:1.02em;font-weight:900;text-transform:uppercase;
-  letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:.3em;border-bottom:.08em solid color-mix(in srgb,var(--acc2) 55%,transparent);opacity:.97;z-index:2}
-.utc-stats{position:absolute;top:66.5%;left:9%;right:9%;display:grid;grid-auto-flow:column;grid-template-rows:repeat(3,1fr);gap:.1em .6em;z-index:2}
-.utc-st{display:flex;align-items:baseline;gap:.3em;font-size:.92em;line-height:1.15}
-.utc-st b{font-weight:900;min-width:1.6em;text-align:right;font-variant-numeric:tabular-nums}
-.utc-st i{font-style:normal;font-weight:700;opacity:.62;font-size:.85em}
+.utc-moldura{position:absolute;inset:0;
+  clip-path:polygon(var(--c) 0,100% 0,100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,0 100%,0 var(--c));
+  background:linear-gradient(135deg,var(--f1) 0%,var(--f2) 34%,var(--f3) 58%,var(--f4) 100%)}
+/* filetes de luz na moldura: cartas raras e especiais */
+.utc-moldura::before,.utc-moldura::after{content:"";position:absolute;width:var(--b);background:var(--acc2);box-shadow:0 0 .55em .1em var(--acc2);z-index:2}
+.utc-moldura::before{left:0;top:13%;height:21%}
+.utc-moldura::after{right:0;bottom:13%;height:21%}
+.ut-card.v-base .utc-moldura::before,.ut-card.v-base .utc-moldura::after{display:none}
+.utc-miolo{--c2:calc(var(--c) - .09em);position:absolute;inset:var(--b);overflow:hidden;isolation:isolate;
+  clip-path:polygon(var(--c2) 0,100% 0,100% calc(100% - var(--c2)),calc(100% - var(--c2)) 100%,0 100%,0 var(--c2));
+  background:radial-gradient(110% 62% at 80% 16%,color-mix(in srgb,var(--acc) 24%,transparent),transparent 64%),
+             linear-gradient(172deg,color-mix(in srgb,var(--fundo) 82%,var(--acc)) 0%,var(--fundo) 44%,#040506 100%)}
+.utc-tri{position:absolute;inset:0;z-index:-1;background:var(--acc);opacity:.42;pointer-events:none;
+  -webkit-mask:url("../assets/cartas/triangulos.svg") 0 0/100% 100% no-repeat;mask:url("../assets/cartas/triangulos.svg") 0 0/100% 100% no-repeat}
+.utc-luz{position:absolute;right:-12%;top:-8%;width:88%;height:66%;z-index:-1;pointer-events:none;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--acc) 60%,transparent),transparent);opacity:.5}
+/* a foto do jogador se funde no fundo (some à esquerda, na coluna da nota, e embaixo, no nome) */
+.utc-face-wrap{position:absolute;right:0;top:0;width:78%;height:63%;z-index:0}
+.utc-face{width:100%;height:100%;object-fit:cover;object-position:50% 14%;display:block;filter:contrast(1.06) saturate(.92);
+  -webkit-mask-image:linear-gradient(to right,transparent 0,#000 30%,#000 90%,transparent 100%),linear-gradient(to bottom,#000 0,#000 60%,transparent 97%);
+  -webkit-mask-composite:source-in;
+  mask-image:linear-gradient(to right,transparent 0,#000 30%,#000 90%,transparent 100%),linear-gradient(to bottom,#000 0,#000 60%,transparent 97%);
+  mask-composite:intersect}
+.utc-sil{width:100%;height:100%;display:block;color:var(--acc2);opacity:.34;
+  -webkit-mask-image:linear-gradient(to bottom,#000 0,#000 55%,transparent 96%);mask-image:linear-gradient(to bottom,#000 0,#000 55%,transparent 96%)}
+.utc-tm{position:absolute;right:.45em;top:.42em;width:3.1em;aspect-ratio:994/537;z-index:1;background:#fff;opacity:.13;pointer-events:none;
+  -webkit-mask:url("../assets/cartas/tm-mono.svg") center/contain no-repeat;mask:url("../assets/cartas/tm-mono.svg") center/contain no-repeat}
+/* coluna da esquerda: nota, posição e a fita com bandeira, escudo e liga */
+.utc-l{position:absolute;left:.4em;top:.95em;width:2.55em;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1}
+.utc-ov{font-family:"TM Cond",var(--font);font-weight:800;font-size:3.05em;letter-spacing:-.01em;line-height:.86;
+  background:linear-gradient(180deg,#fff 35%,#c4ccc8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.utc-pos{font-family:"TM Cond",var(--font);font-weight:700;font-size:1.22em;letter-spacing:.03em;margin-top:.14em;color:#fff}
+.utc-fita{margin-top:.45em;width:2.15em;padding:.4em 0 .78em;display:flex;flex-direction:column;align-items:center;gap:.36em;
+  background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.035));border-top:.08em solid color-mix(in srgb,var(--acc) 70%,transparent);
+  clip-path:polygon(0 0,100% 0,100% calc(100% - .55em),50% 100%,0 calc(100% - .55em))}
+.utc-flag{width:1.55em;height:1.16em;object-fit:cover;display:block;box-shadow:0 0 0 .05em rgba(255,255,255,.28)}
+.utc-crest{width:1.5em;height:1.5em;object-fit:contain;display:block}
+.utc-name{position:absolute;left:4%;right:4%;top:61.5%;z-index:2;text-align:center;font-family:"TM Cond",var(--font);font-weight:800;
+  font-size:1.36em;letter-spacing:.012em;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;
+  text-shadow:0 .06em .3em rgba(0,0,0,.85)}
+/* barra de força: mais cheia quanto maior a nota */
+.utc-barra{position:absolute;left:25%;right:25%;top:71.8%;height:.13em;background:rgba(255,255,255,.14);border-radius:1em;z-index:2;overflow:hidden}
+.utc-barra i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--acc),var(--acc2));box-shadow:0 0 .4em var(--acc)}
+.utc-stats{position:absolute;left:6%;right:6%;top:74.4%;display:grid;grid-template-columns:repeat(3,1fr);gap:.08em .2em;z-index:2}
+.utc-st{display:flex;align-items:baseline;justify-content:center;gap:.22em;font-family:"TM Cond",var(--font);line-height:1.04;color:#fff}
+.utc-st b{font-weight:800;font-size:1.04em;font-variant-numeric:tabular-nums}
+.utc-st i{font-style:normal;font-weight:700;font-size:.76em;opacity:.62;letter-spacing:.03em}
+.utc-tier{position:absolute;left:0;right:0;bottom:2.6%;z-index:2;text-align:center;font-family:"TM Cond",var(--font);font-weight:700;font-size:.66em;
+  letter-spacing:.34em;text-indent:.34em;text-transform:uppercase;color:var(--acc2);opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 .8em}
+.utc-tier.esp{letter-spacing:.08em;text-indent:.08em;opacity:.95;font-weight:800}
 .utc-chem{position:absolute;right:.35em;top:.35em;width:1.6em;height:1.6em;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  font-size:.9em;font-weight:900;color:#06240f;background:#22c55e;box-shadow:0 0 0 .12em rgba(0,0,0,.25);z-index:3}
+  font-size:.9em;font-weight:900;color:#06240f;background:#22c55e;box-shadow:0 0 0 .12em rgba(0,0,0,.35);z-index:4}
 .utc-chem.c2{background:#8ddb3f}.utc-chem.c1{background:#f2b100}.utc-chem.c0{background:#e0472c;color:#fff}
+.utc-price{position:absolute;left:0;right:0;bottom:3%;text-align:center;font-size:.8em;z-index:4}
+/* está no time: selo de confirmado no canto */
+.ut-card.insquad::after{content:"";position:absolute;right:.35em;top:.35em;width:1.4em;height:1.4em;border-radius:50%;z-index:4;
+  background:#22c55e url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2304240f' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/72% no-repeat;box-shadow:0 0 0 .12em rgba(0,0,0,.4)}
 
-.utc-price{position:absolute;left:0;right:0;bottom:.3em;text-align:center;font-size:.8em;z-index:3}
-.ut-card.empty{background:rgba(255,255,255,.06);border:.12em dashed rgba(255,255,255,.28);box-shadow:none;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;justify-content:center}
-.ut-card.empty::after{display:none}
+/* raridades: bronze, prata, ouro e, no topo, o verde do Total Match */
+.ut-card.r-b{--f1:#f3c9a1;--f2:#8a5733;--f3:#e2a676;--f4:#5b3820;--acc:#cd8f5c;--acc2:#f1c39a;--fundo:#140d08;--brilho:rgba(205,143,92,.45)}
+.ut-card.r-s{--f1:#ffffff;--f2:#7d8894;--f3:#e6ebf0;--f4:#4d5762;--acc:#b8c3cd;--acc2:#f1f5f8;--fundo:#0c0f12;--brilho:rgba(225,233,240,.4)}
+.ut-card.r-g{--f1:#fff3c2;--f2:#b8860b;--f3:#ffd966;--f4:#6e4f08;--acc:#e5b53a;--acc2:#ffe38c;--fundo:#130f05;--brilho:rgba(240,190,60,.5)}
+.ut-card.r-l{--f1:#c8ffe0;--f2:#14903f;--f3:#4ade80;--f4:#064d22;--acc:#22c55e;--acc2:#86efac;--fundo:#04110a;--brilho:rgba(34,197,94,.75)}
+/* versões especiais: cada uma com a sua cor (dá para reconhecer de longe) */
+.ut-card.v-totw{--f1:#ffffff;--f2:#2a2f33;--f3:#d9dee2;--f4:#0b0d0f;--acc:#e5e7eb;--acc2:#ffffff;--fundo:#060708;--brilho:rgba(255,255,255,.45)}
+.ut-card.v-rodada{--f1:#a7f3e8;--f2:#0f766e;--f3:#5eead4;--f4:#063f3a;--acc:#2dd4bf;--acc2:#99f6e4;--fundo:#03130f;--brilho:rgba(45,212,191,.55)}
+.ut-card.v-mes{--f1:#ffd2ad;--f2:#c2410c;--f3:#fb923c;--f4:#5c1d06;--acc:#fb923c;--acc2:#fed7aa;--fundo:#160904;--brilho:rgba(251,146,60,.55)}
+.ut-card.v-joia{--f1:#c7ddff;--f2:#1d4ed8;--f3:#60a5fa;--f4:#0b2a6b;--acc:#60a5fa;--acc2:#bfdbfe;--fundo:#050c1f;--brilho:rgba(96,165,250,.55)}
+.ut-card.v-heroi{--f1:#ffc4c4;--f2:#b91c1c;--f3:#f87171;--f4:#4c0808;--acc:#f87171;--acc2:#fecaca;--fundo:#170505;--brilho:rgba(248,113,113,.55)}
+.ut-card.v-tots{--f1:#fff3c2;--f2:#c99a1c;--f3:#ffe28a;--f4:#7a5a0a;--acc:#facc15;--acc2:#fde68a;--fundo:#0a1028;--brilho:rgba(250,204,21,.6)}
+.ut-card.v-icone{--f1:#ffffff;--f2:#d8c27a;--f3:#fff8dc;--f4:#9c7f2a;--acc:#d4af37;--acc2:#7a5c0c;--fundo:#efe2bd;--brilho:rgba(255,236,170,.7);--ink:#2a2100}
+.ut-card.v-icone .utc-miolo{background:radial-gradient(110% 62% at 80% 16%,rgba(212,175,55,.35),transparent 64%),linear-gradient(172deg,#fffaf0 0%,#f1e4bd 52%,#d6bd7c 100%)}
+.ut-card.v-icone .utc-ov{background:linear-gradient(180deg,#6b5108,#2a2100);-webkit-background-clip:text;background-clip:text}
+.ut-card.v-icone .utc-pos,.ut-card.v-icone .utc-st{color:#2a2100}
+.ut-card.v-icone .utc-name{color:#2a2100;text-shadow:0 .05em .25em rgba(255,250,235,.8)}
+.ut-card.v-icone .utc-tm{background:#2a2100;opacity:.1}
+.ut-card.v-icone .utc-fita{background:linear-gradient(180deg,rgba(42,33,0,.12),rgba(42,33,0,.04))}
+.ut-card.v-icone .utc-barra{background:rgba(42,33,0,.14)}
+
+/* tamanhos: grande (com brilho), tiny (clube, mercado) e mini (campinho) */
+.ut-card.big{--w:clamp(130px,42vw,168px);filter:drop-shadow(0 0 .5em var(--brilho)) drop-shadow(0 .35em .6em rgba(0,0,0,.55))}
+.ut-card.tiny{--w:clamp(64px,19vw,78px)}
+.ut-card.tiny .utc-stats,.ut-card.tiny .utc-tier,.ut-card.tiny .utc-tm{display:none}
+.ut-card.tiny .utc-face-wrap{width:80%;height:70%}
+.ut-card.tiny .utc-name{top:72%;font-size:1.6em}
+.ut-card.tiny .utc-barra{top:85.5%;left:22%;right:22%;height:.2em}
+.ut-card.tiny .utc-price{font-size:1.3em;bottom:2%}
+.ut-card.tiny:has(.utc-price) .utc-barra{display:none}
+.ut-card.mini{--w:clamp(46px,14.2vw,64px);--c:1.7em;--b:.2em}
+.ut-card.mini .utc-stats,.ut-card.mini .utc-tier,.ut-card.mini .utc-fita,.ut-card.mini .utc-tm,.ut-card.mini .utc-barra{display:none}
+.ut-card.mini .utc-face-wrap{width:86%;height:78%}
+.ut-card.mini .utc-l{top:1.25em;left:.3em}
+.ut-card.mini .utc-ov{font-size:3.4em}
+.ut-card.mini .utc-pos{font-size:1.5em}
+.ut-card.mini .utc-name{top:77%;font-size:1.8em}
+/* o brilho que passa nas cartas verdes e especiais, em tamanho grande */
+.ut-card.big.r-l .utc-miolo::after,.ut-card.big.especial .utc-miolo::after{content:"";position:absolute;inset:-30%;z-index:3;pointer-events:none;
+  background:linear-gradient(115deg,transparent 42%,rgba(255,255,255,.2) 50%,transparent 58%);transform:translateX(-110%);animation:utcBrilho 3.6s ease-in-out 1.2s infinite}
+@keyframes utcBrilho{0%{transform:translateX(-110%)}40%,100%{transform:translateX(110%)}}
+.ut-card.empty{border-radius:.9em;background:rgba(255,255,255,.06);border:.12em dashed rgba(255,255,255,.28);box-shadow:none;color:var(--text-dim);display:flex;flex-direction:column;align-items:center;justify-content:center}
 .utc-plus{font-size:2.4em;font-weight:300;opacity:.5;line-height:1}
 .utc-slot{font-size:.95em;font-weight:800;opacity:.7;margin-top:.2em}
-.ut-card.mini{--w:clamp(46px,14.2vw,64px)}
-.ut-card.mini .utc-stats{display:none}
-.ut-card.mini .utc-face-wrap{top:4%;height:66%;width:70%}
-.ut-card.mini .utc-name{top:72%;font-size:1.2em;border-bottom:none}
-.ut-card.mini .utc-l{top:13%}
-.ut-card.tiny{--w:clamp(64px,19vw,78px)}
-.ut-card.big{--w:clamp(130px,42vw,168px)}
 .ut-card.pop{animation:utPop .45s cubic-bezier(.2,1.4,.4,1)}
 @keyframes utPop{0%{transform:scale(.5) rotateY(40deg);opacity:0}100%{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ut-card .utc-miolo::after{animation:none;display:none}}
 
 /* ---------- intro ---------- */
 .ut-intro{padding:18px 16px 40px;max-width:520px;margin:0 auto;text-align:center;width:100%;box-sizing:border-box}
@@ -3984,10 +4041,10 @@ body.theme-light .fc2-more-tile { background: rgba(255,255,255,.04); color: #fff
 .ut-chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;min-width:0}
 .ut-chip{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);color:var(--text-dim);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700;font-family:inherit;cursor:pointer}
 .ut-chip.on{background:#22c55e;border-color:#22c55e;color:#04240f}
-.ut-chip.rg.on{background:#1f9c52;border-color:#1f9c52;color:#04240f}
-.ut-chip.rl.on{background:#c9a227;border-color:#c9a227;color:#221c06}
-.ut-chip.rs.on{background:#bcd2de;border-color:#bcd2de;color:#1a2429}
-.ut-chip.rb.on{background:#c79a6d;border-color:#c79a6d;color:#2a1a0c}
+.ut-chip.rg.on{background:#e5b53a;border-color:#e5b53a;color:#2a1f02}
+.ut-chip.rs.on{background:#c9d2da;border-color:#c9d2da;color:#151a1f}
+.ut-chip.rb.on{background:#cd8f5c;border-color:#cd8f5c;color:#241406}
+.ut-chip.rl.on{background:#22c55e;border-color:#22c55e;color:#04240f}
 .ut-count{font-size:11.5px;color:var(--text-dim);margin-bottom:8px}
 .ut-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:9px}
 .ut-filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
@@ -4466,16 +4523,6 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 
 /* ====== Total Ultimate: versões de carta, gestão, itens e identidade ====== */
 /* cada versão tem a sua cor: dá para reconhecer a carta de longe */
-.ut-card.v-rodada{background:linear-gradient(160deg,#0f766e,#064e3b 60%,#022c22);border-color:#2dd4bf}
-.ut-card.v-mes{background:linear-gradient(160deg,#9a3412,#7c2d12 60%,#431407);border-color:#fb923c}
-.ut-card.v-joia{background:linear-gradient(160deg,#1d4ed8,#1e3a8a 60%,#172554);border-color:#60a5fa}
-.ut-card.v-heroi{background:linear-gradient(160deg,#b45309,#7c2d12 55%,#450a0a);border-color:#fdba74}
-.ut-card.v-tots{background:linear-gradient(160deg,#a16207,#713f12 55%,#292524);border-color:#fcd34d;box-shadow:0 0 0 1px rgba(252,211,77,.35),0 10px 26px -12px rgba(252,211,77,.5)}
-.ut-card.v-icone{background:linear-gradient(160deg,#f3e3a3,#d4af37 45%,#8a6d1f);border-color:#fff3c4;color:#2a2100;
-  box-shadow:0 0 0 1px rgba(255,243,196,.6),0 12px 30px -12px rgba(212,175,55,.75)}
-.ut-card.v-icone .utc-name,.ut-card.v-icone .utc-ov,.ut-card.v-icone .utc-pos,.ut-card.v-icone .utc-st b,.ut-card.v-icone .utc-st i{color:#2a2100}
-.ut-card.v-icone .utc-tier{background:rgba(42,33,0,.18);color:#2a2100}
-.utc-tier.esp{background:rgba(255,255,255,.14);letter-spacing:.06em;font-weight:800}
 
 /* gestão da carta: contrato, forma e estilo */
 .ut-gest{margin:12px 0 4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03)}
