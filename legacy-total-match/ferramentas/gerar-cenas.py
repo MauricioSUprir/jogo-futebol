@@ -4,7 +4,7 @@
 
 Cada capa tem várias cenas dentro (o quadro tático, os armários, os livros de
 transferências, as moedas, o troféu, o mapa-múndi...). Daqui saem:
-  - mini cenas quadradas (assets/cenas/m-*.jpg) para os atalhos;
+  - mini cenas quadradas (assets/cenas/m-*.jpg) para os atalhos do menu ("Mais modos");
   - faixas largas (assets/cenas/b-*.jpg) para o topo das telas.
 Tudo no mesmo estilo das capas, sem imagem de fora.
 
@@ -21,33 +21,13 @@ SAIDA = os.path.join(RAIZ, "assets", "cenas")
 
 # mini cenas (quadradas): nome -> (capa, x0, y0, x1, y1)
 MINIS = {
-    "cadeira":     ("treinador", 270, 700, 590, 1020),   # cadeira do treinador com o TM
-    "quadro":      ("treinador", 0, 400, 350, 750),      # quadro tático na parede
-    "janela":      ("treinador", 400, 240, 800, 640),    # o estádio visto do escritório
-    "livros":      ("treinador", 630, 860, 941, 1171),   # livros "TRANSFERÊNCIAS" e o notebook
     "mesa":        ("treinador", 30, 890, 410, 1270),    # caneca e prancheta
     "tunel":       ("estrelato", 160, 320, 720, 880),    # o jogador entrando no estádio
-    "camisa10":    ("estrelato", 300, 800, 720, 1220),   # as costas da camisa 10
-    "valores":     ("estrelato", 690, 160, 941, 411),    # DISCIPLINA · EVOLUÇÃO · CONQUISTA
-    "bola":        ("rapida", 190, 700, 730, 1240),      # a bola no gramado
-    "gol":         ("rapida", 700, 430, 941, 671),       # a rede do gol
-    "arquibancada": ("rapida", 0, 250, 500, 750),        # arquibancada e refletores
     "trofeu":      ("competicoes", 200, 400, 740, 940),  # o troféu
     "cartas":      ("ultimate", 220, 580, 720, 1080),    # o leque de cartas
     "cartas-lado": ("ultimate", 0, 760, 320, 1080),      # cartas de jogador
     "moedas":      ("ultimate", 70, 880, 450, 1260),     # pilha de moedas TM
-    "pacotes":     ("ultimate", 650, 930, 941, 1221),    # pacotes
-    "mapa":        ("online", 320, 590, 700, 970),       # mapa-múndi com jogadores
     "gamer":       ("online", 180, 940, 780, 1540),      # jogando online
-    "chave":       ("copa", 20, 200, 520, 700),          # chave do mata-mata (capa de 540x960)
-    "globo":       ("competicoes", 560, 560, 820, 880),  # bandeira com o globo
-    "divisoes":    ("ultimate", 20, 380, 330, 690),      # a escada de divisões (tabela)
-    "retratos":    ("estrelato", 0, 420, 260, 900),      # retrato de jogador na parede do túnel
-    "documentos":  ("treinador", 600, 1000, 941, 1341),  # pastas PLANEJAMENTO · TRANSFERÊNCIAS
-    "placas":      ("rapida", 600, 860, 941, 1201),      # placas de publicidade TM atrás do gol
-    "refletores":  ("rapida", 470, 150, 941, 621),       # refletores acesos (dia de jogo)
-    "tv":          ("online", 600, 930, 941, 1271),      # o jogo na tela
-    "ping":        ("online", 700, 700, 941, 960),       # lista de contatos com bandeiras
 }
 # faixas largas (2,6:1) para o topo das telas
 FAIXAS = {

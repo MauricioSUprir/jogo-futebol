@@ -140,12 +140,9 @@
 
   // atalho em forma de mini cena (imagem + nome por cima). Sem cena, fica o ícone
   // num fundo do mesmo estilo, para a grade continuar uniforme.
-  function miniCena(img, nome, onClick, cls, ic, foto) {
-    // img pode ser uma lista: a primeira fica por cima e as outras aparecem se ela não carregar
-    var camadas = [].concat(img || []).map(function (u) { return "url('" + u + "')"; }).join(", ");
-    return el("button", { class: (cls || "") + (img ? " com-cena" : " sem-cena") + (foto ? " cena-foto" : ""), on: { click: onClick } }, img ? [
-      el("span", { class: "mini-img", style: "background-image:" + camadas }),
-      foto ? el("span", { class: "mini-tinta" }) : null,   // foto de verdade: camada verde, igual ao pôster
+  function miniCena(img, nome, onClick, cls, ic) {
+    return el("button", { class: (cls || "") + (img ? " com-cena" : " sem-cena"), on: { click: onClick } }, img ? [
+      el("span", { class: "mini-img", style: "background-image:url('" + img + "')" }),
       el("span", { class: "mini-veu" }),
       el("span", { class: "mini-nome", text: nome })
     ] : [
