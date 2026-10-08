@@ -3,9 +3,9 @@
 """Recorta as CENAS do jogo a partir das capas dos modos (artes do dono).
 
 Cada capa tem várias cenas dentro (o quadro tático, os armários, os livros de
-transferências, as moedas, o troféu, o mapa-múndi...). Daqui saem:
-  - mini cenas quadradas (assets/cenas/m-*.jpg) para os atalhos do menu ("Mais modos");
-  - faixas largas (assets/cenas/b-*.jpg) para o topo das telas.
+transferências, as moedas, o troféu, o mapa-múndi...). Daqui saem as faixas largas
+(assets/cenas/b-*.jpg) para o topo das telas. (As mini cenas dos atalhos saíram:
+o dono preferiu ícone + nome.)
 Tudo no mesmo estilo das capas, sem imagem de fora.
 
     python3 ferramentas/gerar-cenas.py
@@ -19,16 +19,6 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ORIG = os.path.join(RAIZ, "ferramentas", "capas-originais")
 SAIDA = os.path.join(RAIZ, "assets", "cenas")
 
-# mini cenas (quadradas): nome -> (capa, x0, y0, x1, y1)
-MINIS = {
-    "mesa":        ("treinador", 30, 890, 410, 1270),    # caneca e prancheta
-    "tunel":       ("estrelato", 160, 320, 720, 880),    # o jogador entrando no estádio
-    "trofeu":      ("competicoes", 200, 400, 740, 940),  # o troféu
-    "cartas":      ("ultimate", 220, 580, 720, 1080),    # o leque de cartas
-    "cartas-lado": ("ultimate", 0, 760, 320, 1080),      # cartas de jogador
-    "moedas":      ("ultimate", 70, 880, 450, 1260),     # pilha de moedas TM
-    "gamer":       ("online", 180, 940, 780, 1540),      # jogando online
-}
 # faixas largas (2,6:1) para o topo das telas
 FAIXAS = {
     "escritorio":  ("treinador", 0, 200, 941, 562),
@@ -45,7 +35,6 @@ FAIXAS = {
     "gamer":       ("online", 0, 980, 941, 1342),
     "chave":       ("copa", 0, 150, 540, 358),
 }
-MINI_LADO = 280
 FAIXA_TAM = (780, 300)
 
 
@@ -56,7 +45,7 @@ def abre(capa):
 def main():
     os.makedirs(SAIDA, exist_ok=True)
     cache, total = {}, 0
-    for tipo, tabela, tam in (("m", MINIS, (MINI_LADO, MINI_LADO)), ("b", FAIXAS, FAIXA_TAM)):
+    for tipo, tabela, tam in (("b", FAIXAS, FAIXA_TAM),):
         for nome, (capa, x0, y0, x1, y1) in tabela.items():
             im = cache.get(capa) or cache.setdefault(capa, abre(capa))
             corte = im.crop((x0, y0, x1, y1))
@@ -74,7 +63,7 @@ def main():
             arq = os.path.join(SAIDA, "%s-%s.jpg" % (tipo, nome))
             corte.save(arq, "JPEG", quality=82, optimize=True, progressive=True)
             total += os.path.getsize(arq)
-    print("cenas: %d mini + %d faixas = %d KB" % (len(MINIS), len(FAIXAS), total // 1024))
+    print("cenas: %d faixas = %d KB" % (len(FAIXAS), total // 1024))
 
 
 if __name__ == "__main__":

@@ -138,19 +138,6 @@
     return el("header", { class: "topbar" }, [ voltar, el("h2", { class: "tb-title", text: title }), direita ]);
   }
 
-  // atalho em forma de mini cena (imagem + nome por cima). Sem cena, fica o ícone
-  // num fundo do mesmo estilo, para a grade continuar uniforme.
-  function miniCena(img, nome, onClick, cls, ic) {
-    return el("button", { class: (cls || "") + (img ? " com-cena" : " sem-cena"), on: { click: onClick } }, img ? [
-      el("span", { class: "mini-img", style: "background-image:url('" + img + "')" }),
-      el("span", { class: "mini-veu" }),
-      el("span", { class: "mini-nome", text: nome })
-    ] : [
-      el("span", { class: "mini-ic", text: ic || "" }),
-      el("span", { class: "mini-nome", text: nome })
-    ]);
-  }
-
   // ----- pôster de FIM DE JOGO (telas de resultado) -----
   // Mesma linguagem do pôster do próximo jogo: foto do estádio do mandante em verde
   // e preto, faixas das capas, escudos grandes, placar no meio e os autores dos gols.
@@ -590,7 +577,7 @@
     topbar: topbar, sectorBar: sectorBar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, miniCena: miniCena, posterFim: posterFim, resultadoDe: resultadoDe, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
+    stadiumBanner: stadiumBanner, posterFim: posterFim, resultadoDe: resultadoDe, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
     current: function () { return current; }
   };
 
@@ -1252,7 +1239,9 @@
     // ---- mais modos ----
     screen.appendChild(el("div", { class: "vit-mais-h", text: "Mais modos" }));
     screen.appendChild(el("div", { class: "vit-mais" }, MAIS.map(function (x) {
-      return miniCena(TM.cenas ? TM.cenas.mini(x.rota) : null, x.nome, entrar(x.rota), "vit-mais-b", x.ic);
+      return el("button", { class: "vit-mais-b", on: { click: entrar(x.rota) } }, [
+        el("span", { class: "vit-mais-ic", text: x.ic }), el("span", { text: x.nome })
+      ]);
     })));
     // rodape: o tamanho do mundo do jogo e a versao (para conferir se o aparelho atualizou)
     screen.appendChild(el("div", { class: "vit-rodape" }, [
