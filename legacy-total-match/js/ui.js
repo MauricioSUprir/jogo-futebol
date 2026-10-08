@@ -275,11 +275,37 @@
   }
 
   // pequeno toast
-  function toast(msg) {
-    var t = el("div", { class: "toast", text: msg });
+  // AVISO no meio da tela, com destaque (pedido do dono — antes caía solto no fim da
+  // página, lá embaixo, e empilhava). Um por vez e sem repetir; o selo de cima diz o
+  // tipo: ok, erro, alerta (ou nenhum, se é só informação). O tipo pode vir no 2º
+  // parâmetro; sem ele, sai do emoji do começo da frase ou das palavras.
+  var avisoAtual = null, avisoTimer = null;
+  var AVISO_IC = { ok: "check", erro: "x", alerta: "triangle-alert" };
+  var AVISO_EMOJI = /^\s*(\u2705|\u2714\uFE0F?|\u2713|\u2611\uFE0F?|\u274C|\u26D4|\uD83D\uDEAB|\u2716\uFE0F?|\u26A0\uFE0F?)\s*/;
+  function tipoDoAviso(m) {
+    if (/^\s*(\u274C|\u26D4|\uD83D\uDEAB|\u2716)/.test(m) || /n[ãa]o foi poss[íi]vel|erro|inv[áa]lid|insuficiente|n[ãa]o pode|falhou|sem saldo|bloquead|recusad/i.test(m)) return "erro";
+    if (/^\s*\u26A0/.test(m) || /aten[çc][ãa]o|cuidado/i.test(m)) return "alerta";
+    if (/^\s*(\u2705|\u2714|\u2713|\u2611)/.test(m) || /salv|conclu[íi]d|confirmad|registrad|adicionad|enviad|criad|atualizad|comprad|vendid|contratad|sucesso|aceit|renovad|pronto/i.test(m)) return "ok";
+    return "info";
+  }
+  function toast(msg, tipo) {
+    var bruto = String(msg == null ? "" : msg);
+    tipo = AVISO_IC[tipo] || tipo === "info" ? tipo : tipoDoAviso(bruto);
+    var texto = bruto.replace(AVISO_EMOJI, "");          // o emoji de estado vira o selo de cima
+    function some(t) { t.classList.remove("show"); setTimeout(function () { t.remove(); if (avisoAtual === t) avisoAtual = null; }, 260); }
+    var dur = Math.min(3800, 1600 + texto.length * 30);
+    if (avisoAtual && avisoAtual._texto === texto) {     // o mesmo aviso de novo: só fica mais um pouco
+      clearTimeout(avisoTimer); var mesmo = avisoAtual; avisoTimer = setTimeout(function () { some(mesmo); }, dur); return;
+    }
+    if (avisoAtual) avisoAtual.remove();
+    var t = el("div", { class: "toast t-" + tipo, role: "status", "aria-live": "polite" }, [
+      AVISO_IC[tipo] ? el("span", { class: "toast-selo " + tipo }, [ TM.ic ? TM.ic(AVISO_IC[tipo]) : "" ]) : null,
+      el("div", { class: "toast-tx", text: texto })
+    ]);
+    t._texto = texto; avisoAtual = t;
     document.body.appendChild(t);
     requestAnimationFrame(function () { t.classList.add("show"); });
-    setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.remove(); }, 300); }, 2200);
+    clearTimeout(avisoTimer); avisoTimer = setTimeout(function () { some(t); }, dur);
   }
 
   // modal de detalhes do jogador (qualidades, potencial, valor, desenvolvimento)

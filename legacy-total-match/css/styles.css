@@ -4963,8 +4963,6 @@ body.theme-light::after { background: rgba(238,242,238,.9); }
 .setting, .panel, .card, .tile { border-color: var(--line); }
 
 /* ---- aviso flutuante ---- */
-.toast { font-family: var(--font); font-weight: 600; }
-.toast .tm-ic { margin-right: .15em; }
 
 /* ---- menu inicial: cabeçalho enxuto e rodapé ---- */
 .vit-topo { padding: 12px 16px 6px; }
@@ -5057,12 +5055,7 @@ button { color: inherit; }
 .note-ic .tm-ic { stroke-width: 1.7; }
 
 /* ---- tema claro ---- */
-/* o menu inicial é sempre escuro (é a vitrine das capas): fixa as cores escuras
-   nele, senão o texto do tema claro (escuro) some no fundo preto */
-body.theme-light .screen.vit {
-  --text: #eef5f0; --text-dim: #8a9d90; --black-soft: #0b110e; --panel: #0f1612;
-  --line: rgba(255,255,255,.07); --line-2: rgba(255,255,255,.13); --gold: #22c55e; --gold-light: #4ade80;
-  color: var(--text); background: #050807; }
+/* (a vitrine do menu também fica clara no tema claro — ver "MENU no tema claro") */
 body.theme-light .scout-tip { color: var(--text); }
 body.theme-light .bottom-nav { background: rgba(255,255,255,.96); border-top-color: rgba(0,0,0,.08); }
 body.theme-light .bn-item { color: #5c6f62; }
@@ -5182,3 +5175,41 @@ body.theme-light .sem-cena .mini-nome { color: #16241b; }
 .md-poster.res-d { border-color: rgba(220,38,38,.4); }
 @media (max-width: 360px) { .mdp-placar { font-size: 38px; } .md-poster .mdp-escudo { width: 54px; height: 54px; } }
 @media (prefers-reduced-motion: reduce) { .mdp-placar { animation: none; } }
+
+/* ---- MENU no tema claro (pedido do dono: o modo claro vale também na tela inicial) ---- */
+html:has(body.theme-light) { background: #eef2ee; }
+body.theme-light #screen-modes.vit { background:
+  radial-gradient(90% 55% at 50% 0%, rgba(18,161,80,.16), transparent 55%),
+  linear-gradient(180deg, #f5f9f6 0%, #eef3ef 60%, #e5eee7 100%); }
+/* o logo tem o T branco: no claro ele fica num selo escuro, como ícone de app */
+body.theme-light .vit-logo { background: #0b110e; border-radius: 11px; padding: 3px; filter: drop-shadow(0 3px 10px rgba(15,60,30,.25)); }
+body.theme-light .vit-carta { border-color: rgba(0,0,0,.10); }
+body.theme-light .vit-carta.centro { border-color: var(--gold); box-shadow: 0 16px 36px rgba(15,60,30,.28), 0 0 26px rgba(18,161,80,.22); }
+/* as cartas do lado "somem" no fundo claro, e não no preto */
+body.theme-light .vit-sombra { background: #eef3ef; }
+body.theme-light .vit-ponto { background: rgba(0,0,0,.18); }
+body.theme-light .vit-ponto.on { background: var(--gold); }
+body.theme-light .vit-cta { box-shadow: 0 8px 22px rgba(15,122,58,.28); }
+body.theme-light .vit-rod-marca { color: rgba(22,36,27,.55); }
+body.theme-light .vit-mais-b.com-cena { border-color: rgba(0,0,0,.08) !important; box-shadow: 0 6px 16px rgba(15,60,30,.12); }
+
+/* ---- AVISO no meio da tela (toast) ---- */
+.toast { position: fixed; left: 50%; top: 50%; z-index: 20000; transform: translate(-50%, -50%) scale(.88); opacity: 0;
+  width: max-content; min-width: 190px; max-width: min(84vw, 340px); padding: 18px 22px 17px; border-radius: 18px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; pointer-events: none;
+  background: rgba(11,17,14,.96); color: #f2f7f3; border: 1px solid rgba(34,197,94,.32);
+  box-shadow: 0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.04) inset;
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  font-family: var(--font); font-size: 15.5px; font-weight: 700; line-height: 1.35;
+  transition: opacity .18s ease, transform .26s cubic-bezier(.2,1.25,.4,1); }
+.toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.toast-selo { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; flex: none; }
+.toast-selo .tm-ic { stroke-width: 2.7; }
+.toast-selo.ok { background: #22c55e; color: #04240f; box-shadow: 0 0 26px rgba(34,197,94,.45); }
+.toast-selo.erro { background: #dc2626; color: #fff; box-shadow: 0 0 26px rgba(220,38,38,.4); }
+.toast-selo.alerta { background: #f59e0b; color: #241500; box-shadow: 0 0 26px rgba(245,158,11,.4); }
+.toast.t-erro { border-color: rgba(220,38,38,.5); }
+.toast.t-alerta { border-color: rgba(245,158,11,.5); }
+.toast-tx .tm-ic { margin-right: .2em; }
+body.theme-light .toast { background: rgba(255,255,255,.97); color: #16241b; border-color: rgba(15,122,58,.3); box-shadow: 0 24px 60px rgba(15,40,25,.22); }
+@media (prefers-reduced-motion: reduce) { .toast, .toast.show { transform: translate(-50%, -50%); transition: opacity .15s; } }

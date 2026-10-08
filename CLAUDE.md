@@ -134,6 +134,9 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   **verde**; versões especiais com cor própria), nota/nome em Barlow Condensed (`assets/fontes`, OFL), faixa com
   bandeira (`assets/bandeiras`, flag-icons MIT, `ferramentas/gerar-bandeiras.mjs`) e escudo, triângulos e marca
   TM (`assets/cartas`, `ferramentas/gerar-cartas.py`), silhueta quando o jogador não tem foto real.
+- **Modo claro vale também na tela inicial** (vitrine; bloco "MENU no tema claro" no CSS). **Avisos**
+  (`TM.ui.toast(msg, tipo?)`) aparecem no MEIO da tela, um por vez, com selo ok/erro/alerta — o dono não quer
+  aviso escondido lá embaixo.
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
 
