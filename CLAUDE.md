@@ -34,11 +34,15 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
-- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (pesquisar em VÁRIOS
-  lugares primeiro e mandar a análise) → botão de sair com o goleiro na defesa (ele ataca a bola) → bola parada e
-  organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO — hoje flutua,
-  escanteio organizado, cabeceio e disputa pelo alto, organização tática) → giro com bola natural e condução mais
-  no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (FEITA e enviada: plano em
+  6 etapas — corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/
+  pivô, IA sem vai-e-volta, intensidade) → **próximo PR:** botão de sair com o goleiro na defesa (ele ataca a bola),
+  bola parada e organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO —
+  hoje flutua, escanteio organizado, cabeceio e disputa pelo alto, organização tática), **divididas mais efetivas**
+  (desde a Fase 3 o bote de frente no atacante que protege vira falta), **troca de jogador mais rápida e inteligente**,
+  **goleiro defendendo mais** (~70% de defesas, espalmando) e **mais intensidade e movimentação dos dois times (MUITO
+  importante para o dono**: fechar o lado da bola, pressão em gatilhos, apoio e corridas) → giro com bola natural e
+  condução mais no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
