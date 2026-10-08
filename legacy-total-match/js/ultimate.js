@@ -648,60 +648,9 @@
     return c;
   }
 
-  /* ================= mercado ================= */
-  // o mercado do dia é gerado por semente: some quem foi comprado, repõe no dia seguinte
-  function seedMarket(s) {
-    var d = today();
-    if (s.mkt.day === d && s.mkt.buy && s.mkt.buy.length) return;
-    var rnd = mulberry(hashStr("mkt" + d + "" + s.seed));
-    var list = [];
-    // o mercado do dia vai até 86: quem quer Lenda (85+) precisa tirar de pacote,
-    // fechar um DME difícil ou subir de divisão — não dá para simplesmente comprar
-    var bands = [[45, 64, 16], [65, 74, 20], [75, 79, 18], [80, 83, 10], [84, 86, 3]];
-    bands.forEach(function (b) {
-      for (var i = 0; i < b[2]; i++) {
-        var p = drawPlayer(b[0], b[1], rnd);
-        if (!p) continue;
-        var ver = rnd() < 0.12 ? "rare" : "base";
-        if (isTotw(p.id) && rnd() < 0.5) ver = "totw";
-        var ov = p.overall + (ver === "totw" ? 2 : 0);
-        var base = basePrice(ov, ver);
-        // quanto melhor a carta, mais os vendedores pedem acima da média
-        var sobretaxa = ov >= 84 ? 1.6 : ov >= 80 ? 1.2 : 1;
-        var bin = Math.round(base * sobretaxa * (0.9 + rnd() * 0.5) / 50) * 50;
-        list.push({ k: "m" + d + "_" + list.length, p: p.id, v: ver, bin: Math.max(200, bin) });
-      }
-    });
-    s.mkt.day = d; s.mkt.buy = shuffle(list, rnd);
-    save();
-  }
-  // vendas do jogador: a IA compra com o tempo, dependendo do preço pedido
-  function tickSales(s) {
-    var now = Date.now(), changed = false;
-    (s.mkt.sell || []).forEach(function (L) {
-      if (L.sold) return;
-      var d = cardData(L.card); if (!d) return;
-      var fair = basePrice(d.ov, d.ver);
-      var ratio = L.bin / Math.max(1, fair);
-      // preço justo vende rápido; caro demora muito ou não vende
-      var mins = (now - L.t) / 60000;
-      var speed = ratio <= 0.8 ? 2 : ratio <= 1 ? 6 : ratio <= 1.25 ? 20 : ratio <= 1.6 ? 90 : 600;
-      var chance = 1 - Math.exp(-mins / speed);
-      if (Math.random() < chance) { L.sold = 1; L.st = now; changed = true; }
-    });
-    if (changed) save();
-  }
-  function claimSales(s) {
-    var got = 0, n = 0;
-    s.mkt.sell = (s.mkt.sell || []).filter(function (L) {
-      if (!L.sold) return true;
-      got += Math.round(L.bin * 0.95);   // taxa de 5%, igual ao mercado do FUT
-      n++;
-      return false;
-    });
-    if (got) { earn(s, got, "Vendas"); s.stats.sold = (s.stats.sold || 0) + n; emit("venda", { s: s, n: n }); }
-    return { coins: got, n: n };
-  }
+  /* ================= mercado =================
+     O Mercado de Transferências (leilão, compre já, observação, lista de
+     transferências e itens ganhos) mora em js/ut-mercado.js. */
 
   /* ================= DME =================
      Os Desafios de Montagem de Elenco moram em js/ut-dme.js (categorias,
@@ -830,7 +779,6 @@
       renderEdicaoErrada(screen, s); return;      // clube de cartas reais sem a Season Update liberada
     }
     migraCartas(s);
-    if (!TM.utMercado) { seedMarket(s); tickSales(s); }       // o mercado novo (ut-mercado.js) cuida disso sozinho
     var lim = limpaRepetidos(s);
     if (lim) TM.ui.toast(lim.n + (lim.n > 1 ? " cartas repetidas viraram" : " carta repetida virou") + " venda rápida: +" + fmtC(lim.ganho) + " moedas.", "ok");
     renderHub(screen, s);
@@ -973,7 +921,7 @@
     if (s.champAntiga || (s.champ && s.champ.fase === "fim" && !s.champ.pago)) avisos.push({ ic: "crown", tx: "Recompensa da Champions para resgatar", r: "ut-champions", cls: "bom" });
     if (Mo) { var sem = Mo.rivSemana(s), marcosOk = [2, 4, 7].filter(function (m) { return sem.v >= m && !sem.ok[m]; }).length; if (marcosOk) avisos.push({ ic: "trophy", tx: "Recompensa semanal dos Rivais liberada", r: "ut-rivals", cls: "bom" }); }
     if (semCt) avisos.push({ ic: "file-text", tx: semCt + (semCt > 1 ? " cartas sem contrato" : " carta sem contrato"), r: "ut-club", cls: "alerta" });
-    if (pend) avisos.push({ ic: "tm-moeda", tx: pend + (pend > 1 ? " vendas concluídas" : " venda concluída"), r: "ut-market", cls: "bom" });
+    if (pend) avisos.push({ ic: "tm-moeda", tx: (TM.utMercado && TM.utMercado.resumo ? TM.utMercado.resumo(s).texto : pend + " pendência(s) no mercado"), r: "ut-market", cls: "bom" });
     if (s.packs && s.packs.length) avisos.push({ ic: "package", tx: s.packs.length + (s.packs.length > 1 ? " pacotes guardados" : " pacote guardado"), r: "ut-store", cls: "bom" });
     if (temEmpr) avisos.push({ ic: "handshake", tx: "Empréstimo do dia disponível", r: "ut-store", cls: "" });
     if (avisos.length) {
@@ -1473,7 +1421,7 @@
         ehEmprestimo(d.card) ? el("div", { class: "ut-note", text: "Jogador emprestado: não pode ser vendido nem usado em DME." }) : null,
         evoAtiva ? el("div", { class: "ut-note evo" }, [TM.ic("dna"), document.createTextNode(" Em Evolução: " + evoAtiva.n + " (nível " + evoAtiva.nv + " de " + evoAtiva.tot + "). Vender ou usar em DME cancela a Evolução.")]) : null,
         listed ? el("div", { class: "ut-note", text: "Esta carta já está à venda no mercado." }) : (sq[d.card.i] ? el("div", { class: "ut-note", text: "Está no elenco. Tire do time para vender." }) : null),
-        (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Vender no mercado", function () { close(); if (TM.utMercado && TM.utMercado.anunciar) TM.utMercado.anunciar(d, s, after); else listCard(d, s, after); }, "btn primary wide") : null,
+        (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Vender no mercado", function () { close(); TM.utMercado.anunciar(d, s, after); }, "btn primary wide") : null,
         (!listed && !sq[d.card.i] && podeVender(d.card)) ? TM.ui.button("Venda rápida (" + fmtC(quickSell(d.ov, d.ver)) + ")", function () {
           TM.ui.confirm("Venda rápida?", d.name + " some da sua coleção por " + fmtC(quickSell(d.ov, d.ver)) + " moedas. Costuma valer bem menos que o mercado." + (evoAtiva ? " A Evolução " + evoAtiva.n + " será cancelada." : ""), "Vender", function () {
             earn(s, quickSell(d.ov, d.ver), "Venda rápida"); removeCard(s, d.card.i); save(); close(); if (after) after();
@@ -1482,46 +1430,6 @@
       ])
     ]);
     overlay.appendChild(inner);
-    overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
-    document.body.appendChild(overlay);
-    requestAnimationFrame(function () { overlay.classList.add("show"); });
-    function close() { overlay.classList.remove("show"); setTimeout(function () { overlay.remove(); }, 200); }
-  }
-
-  // colocar à venda: preço sugerido pelo mercado
-  function listCard(d, s, after) {
-    var fair = basePrice(d.ov, d.ver);
-    var overlay = el("div", { class: "ut-sheet" });
-    var inp = el("input", { class: "ut-input", type: "number", value: String(Math.round(fair / 50) * 50), min: "200", step: "50" });
-    var hint = el("div", { class: "ut-hint", text: "" });
-    function upd() {
-      var v = Math.max(200, Math.round(Number(inp.value) || 0));
-      var ratio = v / fair;
-      hint.textContent = ratio <= 0.85 ? "Abaixo do mercado — vende muito rápido."
-        : ratio <= 1.05 ? "Preço de mercado — deve vender logo."
-        : ratio <= 1.3 ? "Acima do mercado — pode demorar."
-        : ratio <= 1.7 ? "Caro — vai demorar bastante." : "Muito caro — talvez nem venda.";
-      hint.className = "ut-hint " + (ratio <= 1.05 ? "good" : ratio <= 1.3 ? "mid" : "bad");
-    }
-    inp.addEventListener("input", upd); upd();
-    overlay.appendChild(el("div", { class: "ut-sheet-in" }, [
-      el("div", { class: "ut-sheet-h" }, [el("span", { text: "Vender " + shortNm(d.name) }), el("button", { class: "ut-x", text: "✕", on: { click: close } })]),
-      el("div", { class: "ut-sell-box" }, [
-        cardEl(d, { cls: "mini" }),
-        el("div", { class: "ut-sell-f" }, [
-          el("label", { class: "ut-lbl", text: "Preço de compra imediata" }), inp, hint,
-          el("div", { class: "ut-fee", text: "Preço médio de mercado: " + fmtC(fair) + " · taxa de 5% na venda" })
-        ])
-      ]),
-      TM.ui.button("Colocar à venda", function () {
-        var v = Math.max(200, Math.round(Number(inp.value) || 0));
-        s.mkt.sell = s.mkt.sell || [];
-        s.mkt.sell.push({ card: d.card, bin: v, t: Date.now() });
-        s.cards = s.cards.filter(function (c) { return c.i !== d.card.i; });
-        save(); close(); TM.ui.toast("Anunciado por " + fmtC(v));
-        if (after) after();
-      }, "btn primary wide")
-    ]));
     overlay.addEventListener("click", function (e) { if (e.target === overlay) close(); });
     document.body.appendChild(overlay);
     requestAnimationFrame(function () { overlay.classList.add("show"); });
@@ -1936,154 +1844,6 @@
         });
         grid.appendChild(wrap);
       }
-    }
-  });
-
-  /* ---------- mercado ---------- */
-  TM.ui.register("ut-market", function (screen) {
-    var s = st(); if (!s) { goUT("ut"); return; }
-    seedMarket(s); tickSales(s);
-    screen.classList.add("ut-screen");
-    screen.appendChild(utTop("Mercado", function () { goUT("ut"); }, s));
-    var tab = "buy";
-    var body = el("div", { class: "ut-body" });
-    var tabs = el("div", { class: "ut-tabs" });
-    screen.appendChild(tabs); screen.appendChild(body);
-    function mkTabs() {
-      TM.ui.clear(tabs);
-      var pend = (s.mkt.sell || []).filter(function (L) { return L.sold; }).length;
-      [["buy", "Comprar"], ["sell", "Minhas vendas" + (pend ? " (" + pend + ")" : "")]].forEach(function (t) {
-        tabs.appendChild(el("button", { class: "ut-tab" + (tab === t[0] ? " on" : ""), text: t[1], on: { click: function () { tab = t[0]; draw(); } } }));
-      });
-    }
-    draw();
-
-    function draw() { mkTabs(); TM.ui.clear(body); if (tab === "buy") buyTab(); else sellTab(); }
-
-    function buyTab() {
-      var f = { pos: "", min: 0, max: 0 };
-      var chips = el("div", { class: "ut-chips" });
-      [["", "Todos"], ["GK", "GOL"], ["DF", "DEF"], ["MF", "MEI"], ["FW", "ATA"]].forEach(function (o) {
-        chips.appendChild(el("button", { class: "ut-chip" + (f.pos === o[0] ? " on" : ""), text: o[1], on: { click: function () { f.pos = o[0]; paint(); } } }));
-      });
-      body.appendChild(chips);
-      var minI = el("input", { class: "ut-input mini", type: "number", placeholder: "Nota mín." });
-      var maxI = el("input", { class: "ut-input mini", type: "number", placeholder: "Preço máx." });
-      minI.addEventListener("input", paint); maxI.addEventListener("input", paint);
-      body.appendChild(el("div", { class: "ut-filters" }, [minI, maxI]));
-      var list = el("div", { class: "ut-list" });
-      body.appendChild(list);
-      paint();
-
-      function paint() {
-        // repinta os chips de posição sem redesenhar tudo
-        Array.prototype.forEach.call(chips.children, function (b, i) {
-          var val = ["", "GK", "DF", "MF", "FW"][i];
-          b.classList.toggle("on", f.pos === val);
-        });
-        TM.ui.clear(list);
-        var mn = Number(minI.value) || 0, mx = Number(maxI.value) || 0;
-        var items = (s.mkt.buy || []).map(function (L) {
-          var p = TM.data.player(L.p); if (!p) return null;
-          var ov = p.overall + (L.v === "totw" ? 2 : 0);
-          return { L: L, d: cardData({ i: L.k, p: L.p, r: rarOf(ov), v: L.v, ut: 0 }) };
-        }).filter(function (x) {
-          if (!x || !x.d) return false;
-          if (f.pos && x.d.pos !== f.pos) return false;
-          if (mn && x.d.ov < mn) return false;
-          if (mx && x.L.bin > mx) return false;
-          return true;
-        });
-        items.sort(function (a, b) { return a.L.bin - b.L.bin; });
-        if (!items.length) { list.appendChild(el("div", { class: "ut-empty-tx", text: "Nada encontrado. O mercado renova todo dia." })); return; }
-        items.slice(0, 60).forEach(function (x) {
-          var can = (s.coins || 0) >= x.L.bin;
-          list.appendChild(el("div", { class: "ut-row" }, [
-            cardEl(x.d, { cls: "tiny", on: function () { showMarketCard(x.d, x.L); } }),
-            el("div", { class: "ut-row-i" }, [
-              el("div", { class: "ut-row-n", text: x.d.name }),
-              el("div", { class: "ut-row-s", text: (x.d.club ? x.d.club.name : "—") + " · " + (x.d.pos2 || x.d.pos) }),
-              el("div", { class: "ut-row-p" }, [coinsEl(x.L.bin)])
-            ]),
-            el("button", {
-              class: "ut-buy" + (can ? "" : " off"), text: can ? "Comprar" : "Sem moedas",
-              on: { click: function () { if (can) buyIt(x); else faltaMoedas(s, x.L.bin); } }
-            })
-          ]));
-        });
-      }
-      function buyIt(x) {
-        if (!pay(s, x.L.bin)) { faltaMoedas(s, x.L.bin); return; }
-        var c = mkCard(x.d.p, x.d.ver === "base" ? "base" : x.d.ver);
-        c.ut = 0;   // comprado: sem bônus de lealdade
-        addCard(s, c);
-        s.mkt.buy = s.mkt.buy.filter(function (L) { return L.k !== x.L.k; });
-        s.stats.bought = (s.stats.bought || 0) + 1;
-        save();
-        emit("compra", { s: s });
-        objBump(s, "buy1", 1);
-        TM.ui.toast(shortNm(x.d.name) + " comprado!");
-        paint();
-      }
-      function showMarketCard(d, L) {
-        var ov = el("div", { class: "ut-sheet" });
-        ov.appendChild(el("div", { class: "ut-sheet-in card-detail" }, [
-          el("div", { class: "ut-sheet-h" }, [el("span", { text: d.name }), el("button", { class: "ut-x", text: "✕", on: { click: cl } })]),
-          el("div", { class: "ut-detail" }, [
-            cardEl(d, { cls: "big" }),
-            el("div", { class: "ut-detail-side" }, [
-              el("div", { class: "ut-dl" }, [el("i", { text: "Clube" }), el("b", { text: d.club ? d.club.name : "—" })]),
-              el("div", { class: "ut-dl" }, [el("i", { text: "País" }), el("b", { text: d.p.nationName || "—" })]),
-              el("div", { class: "ut-dl" }, [el("i", { text: "Pedido" }), el("b", { text: fmtC(L.bin) })]),
-              el("div", { class: "ut-dl" }, [el("i", { text: "Preço médio" }), el("b", { text: fmtC(basePrice(d.ov, d.ver)) })])
-            ])
-          ]),
-          el("div", { class: "ut-bars" }, statsOf(d).map(function (x) {
-            return el("div", { class: "ut-bar" }, [el("i", { text: x.l }), el("div", { class: "ut-bar-t" }, [el("div", { class: "ut-bar-f", style: "width:" + x.v + "%" })]), el("b", { text: x.v })]);
-          }))
-        ]));
-        ov.addEventListener("click", function (e) { if (e.target === ov) cl(); });
-        document.body.appendChild(ov); requestAnimationFrame(function () { ov.classList.add("show"); });
-        function cl() { ov.classList.remove("show"); setTimeout(function () { ov.remove(); }, 200); }
-      }
-    }
-
-    function sellTab() {
-      var sold = (s.mkt.sell || []).filter(function (L) { return L.sold; });
-      if (sold.length) {
-        body.appendChild(el("div", { class: "ut-claim" }, [
-          el("div", { class: "ut-claim-t", text: sold.length + " carta(s) vendida(s)!" }),
-          TM.ui.button("Receber moedas", function () {
-            var r = claimSales(s);
-            objBump(s, "sell3", r.n);
-            TM.ui.toast("+" + fmtC(r.coins) + " moedas");
-            draw();
-          }, "btn primary wide")
-        ]));
-      }
-      var open = (s.mkt.sell || []).filter(function (L) { return !L.sold; });
-      body.appendChild(el("div", { class: "ut-sec-t", text: "À venda (" + open.length + ")" }));
-      if (!open.length) body.appendChild(el("div", { class: "ut-empty-tx", text: "Nada anunciado. Vá ao Meu Clube e coloque cartas à venda." }));
-      open.forEach(function (L) {
-        var d = cardData(L.card); if (!d) return;
-        var mins = Math.round((Date.now() - L.t) / 60000);
-        body.appendChild(el("div", { class: "ut-row" }, [
-          cardEl(d, { cls: "tiny" }),
-          el("div", { class: "ut-row-i" }, [
-            el("div", { class: "ut-row-n", text: d.name }),
-            el("div", { class: "ut-row-s", text: "há " + (mins < 60 ? mins + " min" : Math.round(mins / 60) + " h") + " · pede " + fmtC(L.bin) }),
-            el("div", { class: "ut-row-p" }, [coinsEl(Math.round(L.bin * 0.95), "net")])
-          ]),
-          el("button", {
-            class: "ut-buy ghost", text: "Retirar", on: {
-              click: function () {
-                s.mkt.sell = s.mkt.sell.filter(function (x) { return x !== L; });
-                addCard(s, L.card); save(); TM.ui.toast("Anúncio retirado"); draw();
-              }
-            }
-          })
-        ]));
-      });
     }
   });
 
