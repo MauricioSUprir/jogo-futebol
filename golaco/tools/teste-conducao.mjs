@@ -5,7 +5,8 @@
 import {
   rodarCena, taxasRumo, bolaForaDoCaminho, cortesNaoPedidos, percentil, media, DEG, tabelaTexto, fmt,
 } from './lib/medidas.mjs';
-import { PASSO } from '../js/config.js';
+import { PASSO, BOTAO } from '../js/config.js';
+import { criarMundo, passo } from '../js/sim.js';
 
 const args = process.argv.slice(2);
 const semente = +(args[args.indexOf('--semente') + 1] || 1) || 1;
@@ -85,6 +86,32 @@ for (const c of [...cenas, ...extras]) {
   if (detalhe) console.log(nome, 'tf95', fmt(percentil(tf, 0.95), 1), 'tv95', fmt(percentil(tv, 0.95), 1), 'max', fmt(Math.max(...tf), 1));
 }
 
+// Soltar o analógico conduzindo (freada com a bola): o corpo não pode passar por cima da bola
+// nem ficar tocando sem parar. Trote/corrida/arrancada por 1–4 s e analógico solto por 3 s.
+const freada = { piorFrente: Infinity, sob: 0, maxToques: 0, perdas: 0, casos: 0 };
+{
+  const andaresF = [['trote', 0.5, 0], ['corrida', 1, 0], ['arrancada', 1, BOTAO.CORRER]];
+  for (const [, mag, bot] of andaresF) {
+    for (const tCorre of [1, 2, 3, 4.3]) for (const sem of [1, 2, 3]) {
+      const m = criarMundo({ semente: sem, jogadores: [{ id: 0, x: 0, z: 0, rumo: 0 }], bola: { x: 0.4, z: 0 }, posse: 0 });
+      const j = m.jogadores[0];
+      for (let i = 0; i < Math.round(tCorre / PASSO); i++) passo(m, { 0: { x: mag, z: 0, botoes: bot } });
+      let toques = 0;
+      for (let i = 0; i < 180; i++) {
+        passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+        const dx = m.bola.p.x - j.x, dz = m.bola.p.z - j.z;
+        const fr = dx * Math.cos(j.rumo) + dz * Math.sin(j.rumo);
+        freada.piorFrente = Math.min(freada.piorFrente, fr);
+        if (Math.hypot(dx, dz) < 0.2) freada.sob++;
+        toques += m.eventos.filter(e => e.tipo === 'toque').length;
+      }
+      freada.maxToques = Math.max(freada.maxToques, toques);
+      if (m.stats.perdas > 0 || m.posse !== 0) freada.perdas++;
+      freada.casos++;
+    }
+  }
+}
+
 const cortes = cortesNaoPedidos(logs.flat(), 30);
 const pCortes = cortes.total ? (100 * cortes.n) / cortes.total : 0;
 const fora95 = percentil(foraCaminho, 0.95);
@@ -103,6 +130,8 @@ const metas = [
   ['Bola–corpo na arrancada (> 6,5 m/s)', `méd ${fmt(arMed)} · p95 ${fmt(ar95)} m`, 'p95 ≤ 1,2', ar95 <= 1.2],
   ['Toques com o pé de apoio no chão', `${totalToques - semApoio}/${totalToques}`, '100%', semApoio === 0],
   ['Toques por passada (arrancada > 7 m/s)', fmt(toquesPorPassada), '≈ 1 (0,8–1,25)', toquesPorPassada >= 0.8 && toquesPorPassada <= 1.25],
+  ['Soltar o analógico conduzindo: bola à frente do corpo (pior)', `${fmt(freada.piorFrente)} m · ${freada.sob} tick(s) com a bola embaixo do corpo`, '≥ 0,14 m · 0', freada.piorFrente >= 0.14 && freada.sob === 0],
+  ['Soltar o analógico conduzindo: toques em 3 s (pior de ' + freada.casos + ')', `${freada.maxToques} · ${freada.perdas} perda(s)`, '≤ 8 · 0', freada.maxToques <= 8 && freada.perdas === 0],
   ['Cenas com reta/curva/desvio/perda OK', `${resCenas.length - new Set(reprov.map(r => r.split(':')[0])).size}/${resCenas.length}`, 'todas', reprov.length === 0],
 ];
 console.log(tabelaTexto([['Meta', 'Medido', 'Alvo', 'Resultado'], ...metas.map(m => [m[0], m[1], m[2], m[3] ? 'PASSOU' : 'REPROVOU'])]));

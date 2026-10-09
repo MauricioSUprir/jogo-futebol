@@ -338,9 +338,12 @@ export function executarToque(m, j, pe, tipo) {
     plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom);
   }
   if (!semUltrapassar(b, plano, pc)) {
-    // nem a cada passo: marca o próximo toque antes do ponto em que o corpo alcançaria a bola
+    // nem a cada passo: marca o próximo toque antes do ponto em que o corpo alcançaria a bola.
+    // Se isso cair antes do intervalo mínimo (freada forte, soltou o analógico), marca no
+    // intervalo mínimo e mira à frente de onde o corpo vai estar: a bola sai mais rápida que o
+    // corpo freando (em vez de rolar devagar até o fim da previsão e ser atropelada).
     const iv = plano.violacao;
-    if (iv > Math.ceil(CONDUCAO.intervaloMin / DT)) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, iv, dom);
+    plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, Math.max(iv, Math.ceil(CONDUCAO.intervaloMin / DT)), dom);
   }
   let { iN, proxPe, tx, tz, dx, dz, dist, tolerancia } = plano;
   const apoio = 1 - pe;
