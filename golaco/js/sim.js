@@ -496,7 +496,9 @@ function trocarJogador(m, entradas) {
     // a borda do botão é do TIME (não do jogador): segurar TROCAR troca uma vez só
     const agora = m.botoesTimeAgora[t] ?? 0, antes = m.botoesTimeAnt[t] ?? 0;
     const apertou = (agora & BOTAO.TROCAR) && !(antes & BOTAO.TROCAR);
-    if (apertou && melhor && melhor.id !== j.id) {
+    // com a bola no pé (ou nas mãos) o TROCAR não tira o controle de quem conduz
+    const comBola = m.posse === j.id || m.naMao === j.id;
+    if (apertou && !comBola && melhor && melhor.id !== j.id) {
       assumirControle(m, t, melhor);
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }

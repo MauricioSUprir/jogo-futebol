@@ -265,6 +265,10 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (
     trocas += m.eventos.filter(e => e.tipo === 'troca').length;
   }
   reg('TROCAR segurado por 8 passos', `${trocas} troca(s)`, '1', trocas === 1);
+  // com a bola no pé, o TROCAR não tira o controle de quem conduz
+  const m3 = criarMundo({ semente: 952, jogadores: jog.map(d => ({ ...d })), bola: { x: 0.4, z: 0 }, posse: 0 });
+  for (let i = 0; i < 12; i++) passo(m3, { 0: { x: 0.3, z: 0, botoes: i < 6 ? BOTAO.TROCAR : 0 } });
+  reg('TROCAR com a bola no pé', `controle no ${m3.controlado[0]}, posse ${m3.posse}`, 'controle continua no 0', m3.controlado[0] === 0);
   // PASSE segurado quando o controle troca sozinho (o adversário ganha a bola): o novo jogador
   // não começa carga nenhuma
   const jog2 = [
