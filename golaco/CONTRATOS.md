@@ -75,9 +75,9 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
 - Tick do próximo toque forçado (antes de o corpo alcançar a bola, ou freando) cai num tick com um
   pé livre na passada prevista (nunca na fase de voo da corrida).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —
-  `cortePendente`/`corteRumo`, no máximo 0,25 s). Corte "para trás" do corpo embalado (> ~100° do
-  sentido da corrida, > 5 m/s) em que o corpo nunca alcançaria a bola na linha pedida: a bola sai
-  na direção mais perto da pedida em que o corpo ainda a alcança. Virando aos poucos (o analógico
+  `cortePendente`/`corteRumo`, no máximo 0,25 s). Corte "para trás" do corpo embalado (> ~95° do
+  sentido da corrida, > 5 m/s) em que o corpo não alcançaria a bola na linha pedida em até 0,5 s:
+  a bola sai na direção mais perto da pedida em que o corpo ainda a alcança. Virando aos poucos (o analógico
   passa pela borda), com a bola já fora do rumo pedido, o toque também sai em cima da hora.
 - **Puxada de sola** (`tipo 'sola'` no `ult`; `cond.puxada`): modificador + analógico para trás
   (> ~120° do tronco) até 3 m/s; a sola do pé do lado da bola puxa a bola para trás

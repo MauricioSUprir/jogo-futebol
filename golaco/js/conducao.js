@@ -340,10 +340,10 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
     const sv = MD.hypot(j.vx, j.vz);
     const paraTras = sv > CORTE_VEMBALO && Math.abs(difAng(MD.atan2(j.vz, j.vx), aPed)) > CORTE_ANG_MAX;
     if (melhor && !dominio && paraTras && !linhaAlcancavel(b, melhor, iN, pc)) {
-      // corte para trás do corpo embalado (mais de ~100° do sentido da corrida): o corpo nunca
-      // alcança a bola rolando na linha pedida (±20°) dentro da previsão. A bola sai na direção
-      // mais perto da pedida em que o corpo ainda a alcança — ela vira junto com o corpo nos
-      // toques seguintes, em vez de fugir dele. (Até ~100° a linha pedida vale sempre: o corte
+      // corte para trás do corpo embalado (mais de ~95° do sentido da corrida): o corpo não
+      // alcança a bola rolando na linha pedida (±20°) em até CORTE_ALCANCE_T. A bola sai na
+      // direção mais perto da pedida em que o corpo ainda a alcança — ela vira junto com o corpo
+      // nos toques seguintes, em vez de fugir dele. (Até ~95° a linha pedida vale sempre: o corte
       // de 90° correndo responde em ≤ 0,4 s — teste-cortes.)
       melhor = null;
       for (let k = 9; k <= 36 && !melhor; k++) {
@@ -392,13 +392,14 @@ function tickComPeLivre(pc, i0, iMin, iMax, antes) {
 
 /**
  * A bola, tocada na linha (ux, uz) para rolar sProj até o tick iN, entra no alcance do pé do
- * corpo previsto (pc) em algum tick depois do intervalo mínimo, dentro da previsão?
+ * corpo previsto (pc) em algum tick depois do intervalo mínimo e em até CORTE_ALCANCE_T?
  */
 function linhaAlcancavel(b, linha, iN, pc) {
   const { ux, uz, sProj } = linha;
   const minI = Math.ceil(CONDUCAO.intervaloMin / DT);
   let s = velParaDistancia(sProj, iN), d = 0;
-  for (let i = 1; i <= pc.n; i++) {
+  const nMax = Math.min(pc.n, Math.round(CORTE_ALCANCE_T / DT));
+  for (let i = 1; i <= nMax; i++) {
     for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
     if (i < minI) continue;
     if (noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], b.p.x + ux * d, b.p.z + uz * d, 0.11)) return true;
@@ -530,6 +531,7 @@ const CORTE_DESVIO = 0.2;  // rad (~11°)
 const CORTE_TRONCO = 0.6;  // rad (~34°)
 const CORTE_ANG_MAX = 1.66; // rad (~95°) — corte mais fechado que isso, embalado, é "para trás"
 const CORTE_VEMBALO = 5.0;  // m/s — embalado
+const CORTE_ALCANCE_T = 0.5; // s — o corpo tem que alcançar a bola na linha do corte em até isso
 
 /** Direção (rad) e rumo do tronco segurando o corte a partir do rumo da corrida rc. */
 function rumosCorte(rc, aPed, rumoAlvo) {
