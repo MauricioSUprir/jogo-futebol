@@ -415,6 +415,8 @@ function verificarGol(m) {
   if (m.golTick != null) return;
   const R = 0.11;
   if (Math.abs(b.p.x) < CAMPO.meioX + R) return;
+  // atrás da rede de fundo não é gol (a bola que roda por trás do gol fica lá)
+  if (Math.abs(b.p.x) > CAMPO.meioX + CAMPO.gol.profundidade) return;
   if (Math.abs(b.p.z) >= CAMPO.gol.largura / 2 || b.p.y >= CAMPO.gol.altura) return;
   const ladoGol = b.p.x > 0 ? 1 : -1;
   // marca quem ataca esse lado

@@ -33,8 +33,12 @@ podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/te
 
 ## Bola (`js/bola.js`)
 `bola = { p{x,y,z}, v{x,y,z}, w{x,y,z} (giro, rad/s), q{x,y,z,w} (orientação), rolando }`.
-`proxVelRolando`, `distRolando`, `velParaDistancia` são a mesma conta da integração: o
-planejador do toque sabe exatamente onde a bola rolando vai estar.
+`proxVelRolando`, `distRolando`, `velParaDistancia` e `velParaChegarCom` são a mesma conta da
+integração: o planejador do toque sabe exatamente onde a bola rolando vai estar (e com que
+velocidade chega). Traves, travessão, rede e placas usam colisão contínua: o segmento de cada
+subpasso é varrido contra os cilindros e os planos, e o lado de cada plano vem do início do
+subpasso — a bola parada ou lenta do lado de fora (atrás do gol, por fora da rede, além da placa)
+fica onde está, e nada atravessa em velocidade nenhuma.
 
 ## Jogador (`js/jogador.js`)
 Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, pes[2]{apoio, x, z, rumo, faseApoio}, par

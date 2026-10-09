@@ -44,16 +44,31 @@ export const BOLA = {
   // em S 0,2 a 20 m/s; satura em ~0,3–0,35).
   magnusK: 0.75,
   clMax: 0.33,
+  // Acréscimo de C_D pelo giro (PESQUISA §1.1: +0,07 a +0,10 em Sp 0,25 e +0,10 a +0,13 em
+  // Sp ≥ 0,5 — Goff & Carré 2009; Asai et al. 2007). Usa a ponta de cima da faixa, a mais
+  // perto da falta medida em vídeo (Goff & Carré 2009). Rampa de 0 até Sp 0,25, depois até 0,5.
+  cdGiro25: 0.10,
+  cdGiro50: 0.13,
   giroPorMetro: 0.006,        // 1/m — o giro cai ~10% em 18 m de voo (Tsukada & Sakurai 2008)
   // Contato com a grama.
   restituicao: 0.62,          // coeficiente de restituição vertical no quique
   atritoQuique: 0.55,         // atrito de deslizamento no impacto
+  // Restituição horizontal e_x do ponto de contato no quique (Cross 2002; PESQUISA §1.1:
+  // +0,1 a +0,4 no seco). Com 0 a bola sai rolando pura (v_x2/v_x1 = 0,60) e o quique oblíquo
+  // de 13,9 m/s a 25° devolve 60,4% — acima da faixa do ensaio FIFA (45–60%).
+  restituicaoTangencial: 0.2,
   vQuiqueMin: 0.6,            // abaixo disso o quique vira rolagem
   // Rolagem: desaceleração cresce com a velocidade, dec = c·v^n + piso (ensaio FIFA "ball
   // roll" e portões EN 12234 / UEFA-NBI): saindo a 3,2 m/s para em ~7 m; a 2,5 m/s perde
   // ~0,55 m/s no 1º metro. O arrasto do ar entra à parte.
   rolagemC: 0.33,
   rolagemN: 1.35,
+  // Teto da resistência do gramado: a lei c·v^1,35 foi ajustada entre ~3 m/s (ensaio FIFA) e
+  // ~16 m/s (Pfaff et al. 2022: passe a 16,2 m/s, perda média de 7,93 m/s²); acima disso ela
+  // passaria de 20 m/s². A grama não freia a bola rolando mais que o atrito de deslizamento
+  // (μ ≈ 0,5–0,6 no seco — Cross 2002/2008), então c·v^n fica limitado a 0,55·g (o corte cai
+  // em ~7,9 m/s; abaixo disso nada muda). O arrasto do ar continua à parte.
+  rolagemMax: 0.55 * G,
   rolagemPiso: 0.05,          // m/s² (a bola sempre acaba parando)
   atritoDeslize: 0.4,         // atrito cinético quando a bola desliza sem rolar
   giroVerticalDecai: 2.5,     // 1/s, giro em torno do eixo y no chão

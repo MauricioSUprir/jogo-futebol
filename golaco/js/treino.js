@@ -54,7 +54,9 @@ export function alternarMarcador(m, idAlvo) {
 export function cuidarBolaFora(m, idAlvo) {
   const b = m.bola;
   const fora = Math.abs(b.p.x) > CAMPO.meioX + BOLA.raio || Math.abs(b.p.z) > CAMPO.meioZ + BOLA.raio;
-  const dentroDoGol = Math.abs(b.p.x) > CAMPO.meioX && Math.abs(b.p.z) < CAMPO.gol.largura / 2 && b.p.y < CAMPO.gol.altura;
+  // dentro da caixa do gol (atrás da rede de fundo não é gol)
+  const dentroDoGol = Math.abs(b.p.x) > CAMPO.meioX && Math.abs(b.p.x) < CAMPO.meioX + CAMPO.gol.profundidade &&
+    Math.abs(b.p.z) < CAMPO.gol.largura / 2 && b.p.y < CAMPO.gol.altura;
   if (!fora) { m.foraDesde = null; return; }
   if (m.foraDesde == null) {
     m.foraDesde = m.tick;
@@ -66,13 +68,22 @@ export function cuidarBolaFora(m, idAlvo) {
   devolverBola(m, idAlvo);
 }
 
-/** Bola parada no pé do jogador (recomeçar). */
+/**
+ * Bola parada no pé do jogador (recomeçar). A bola nunca é posta além das placas; se o jogador
+ * está fora das linhas, a bola fica no pé dele, mas sem novo aviso de "fora"/"gol" (ela não saiu,
+ * foi posta lá) — o próximo aviso só vem depois que ela voltar ao campo e sair de novo.
+ */
 export function devolverBola(m, idAlvo) {
   const j = jogadorPorId(m, idAlvo);
   if (!j) return;
-  const nb = criarBola(j.x + MD.cos(j.rumo) * 0.4, j.z + MD.sin(j.rumo) * 0.4);
+  const lx = CAMPO.meioX + CAMPO.entorno - BOLA.raio - 0.01, lz = CAMPO.meioZ + CAMPO.entorno - BOLA.raio - 0.01;
+  const x = Math.max(-lx, Math.min(lx, j.x + MD.cos(j.rumo) * 0.4));
+  const z = Math.max(-lz, Math.min(lz, j.z + MD.sin(j.rumo) * 0.4));
+  const nb = criarBola(x, z);
   Object.assign(m.bola, nb);
   m.posse = j.id;
   j.cond.toque = null; j.cond.busca = false; j.cond.ref = null; j.cond.longeDesde = -1;
   m.eventos.push({ tipo: 'recomeco' });
+  const fora = Math.abs(x) > CAMPO.meioX + BOLA.raio || Math.abs(z) > CAMPO.meioZ + BOLA.raio;
+  if (fora) m.foraDesde = m.tick;
 }
