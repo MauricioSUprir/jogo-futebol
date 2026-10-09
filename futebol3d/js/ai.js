@@ -113,6 +113,7 @@ export function teamThink(m, t, dt) {
     if (lk && lk.kind === 'cross' && lk.p.team === t && m.time - lk.t < 2.2) boxRuns(m, t, outfield, null, HL);
   }
 
+  const aerea = pontoAereo(m);
   for (const p of t.players) {
     if (p.sentOff || p.isGK) continue;
     if (humanDriving(m, p)) continue;
@@ -132,8 +133,19 @@ export function teamThink(m, t, dt) {
     if (owner === p) { p.aiMode = 'condutor'; carrierThink(m, p, dt); continue; }
     p.aiMode = 'outro';
     if (tryAerial(m, p)) continue;
-
+    // escanteio recém-cobrado: quem ataca a bola corre para a sua zona; quem marca acompanha o seu homem
+    if (p.spRun && m.time < p.spRun.ate) { p.aiMode = 'escanteio'; p.moveTo(p.spRun.x, p.spRun.z, 1, true); p.face = b; continue; }
+    if (p.spMarca && m.time < p.spMarca.ate) {
+      const q = p.spMarca.q, og = m.ownGoalX(t);
+      p.aiMode = 'marca-escanteio'; p.moveTo(q.x + Math.sign(og - q.x) * 0.9, q.z * 0.95, 1, true); p.face = b; continue;
+    }
+    // bola alta chegando: os dois de cada time que alcançam o ponto onde ela desce na altura da cabeça vão
+    // lá disputar (antes ia só quem buscava a bola no chão, e chegava atrasado para o cabeceio)
+    // (o destinatário do passe/cruzamento fica no "recebe": é lá que ele decide o voleio e o chute de primeira —
+    // na disputa aérea ele só ia ao ponto da bola e os voleios da área caíram de 2,3 para 0,5 por partida)
     const pt = m.passTarget;
+    if (!owner && aerea && aerea.de(t).includes(p) && !(pt && pt.p === p)) { p.aiMode = 'disputa-aerea'; p.moveTo(aerea.x, aerea.z, 1, true); p.face = b; continue; }
+
     if (pt && pt.p === p && !owner) {
       // vai ao encontro do passe
       p.aiMode = 'recebe';
@@ -245,15 +257,18 @@ function shapeTarget(m, t, p, attacking, offLine, lineSeen = offLine) {
   } else {
     // bloco mais alto com intensidade alta (pressão) — deixa espaço nas costas (§17)
     x = bx * 0.92 + bl * 0.55 - 3 + ((t.intensity ?? 0.5) - 0.5) * 16;
-    z = bz * 0.78 + bzl * 0.4;
+    // o bloco desliza para o lado da bola e fecha por dentro (largura real ~37 m sem a bola, F40)
+    z = bz * 0.62 + bzl * 0.52;
     // altura da linha de 4 pela distância da bola ao próprio gol (bloco médio): bola no meio-campo
     // → linha a ~31 m do gol; bola a 35 m → ~20 m; na área, colada na pequena área. Antes a
     // linha média ficava a 23 m do gol (bola no meio → 21 m), funda demais: não havia espaço
     // nas costas e quase nunca impedimento (Opta/CIES: linha média real de 36 a 48 m do gol)
     if (role === 'DEF') x = -HL + clamp(0.6 * (bl + HL) - 1, 7, 42) + ((t.intensity ?? 0.5) - 0.5) * 10 + (bx + 34) * 0.5;
     if (role === 'DEF') { x = Math.max(x, -HL + 5); x = Math.min(x, bl - 3); }
-    if (role === 'MID') x = Math.min(x, bl + 1);
-    if (role === 'ATT') x = Math.min(x, bl + 6);
+    // bloco curto (meio–ataque real ~13 m sem a bola; aqui ficava a ~16 m): o meio sobe 2 m e o ataque recua 4 m.
+    // (só recuando o ataque 5,5 m ele ficava longe demais para o contra-ataque e os chutes caíam)
+    if (role === 'MID') x = Math.min(x + 2, bl + 1);
+    if (role === 'ATT') x = Math.min(x - 4, bl + 6);
   }
   x = clamp(x, -HL + 2, HL - 2);
   z = clamp(z, -HW + 1.5, HW - 1.5);
@@ -330,11 +345,12 @@ function support(m, t, outfield, owner, offLine, dt) {
     if (best) { p.target.x = lerp(p.target.x, best.x, 0.7); p.target.z = lerp(p.target.z, best.z, 0.7); }
   }
   // infiltrações
+  const deFrente = Math.cos(angDiff(owner.heading, t.dir > 0 ? 0 : Math.PI)) > 0.5 && m.pressure(owner) < 0.45;
   if (m.lx(t, owner.x) > -15) {
     for (const p of outfield) {
       if (p === owner || p.human || (p.role !== 'ATT' && !(p.role === 'MID' && Math.random() < 0.3))) continue;
       const hunter = p.traits.includes('explosivo') || p.traits.includes('cacador') ? 1.8 : 1;
-      if (p.runUntil < m.time && Math.random() < dt * 0.35 * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
+      if (p.runUntil < m.time && Math.random() < dt * (deFrente ? 0.8 : 0.35) * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
         p.runUntil = m.time + rand(2, 3.5);
         p.runZ = clamp(p.z * 0.6, -14, 14);
       }
@@ -361,7 +377,9 @@ function boxRuns(m, t, outfield, owner, offLine) {
   const ref = owner || m.lastKick?.p;
   if (!ref) return;
   if (owner) {
-    if (m.lx(t, owner.x) < 20 || Math.abs(owner.z) < 10) { for (const p of outfield) p.boxSpot = null; return; }
+    // (desde perto do meio do último terço, pelos lados: o cruzamento antecipado precisa de gente chegando na área; desde
+    // 12 m o time corria demais — tempo andando abaixo da meta da Fase 2)
+    if (m.lx(t, owner.x) < 15 || Math.abs(owner.z) < 8) { for (const p of outfield) p.boxSpot = null; return; }
   } else if (!outfield.some(p => p.boxSpot)) return;
   const sg = Math.sign(ref.z) || 1;
   if (owner) {
@@ -401,12 +419,31 @@ function crossTarget(m, p) {
     const dg = Math.hypot(gx - q.x, q.z);
     let mk = 9;
     for (const o of t.opp.players) if (!o.sentOff && !o.isGK) mk = Math.min(mk, Math.hypot(o.x - q.x, o.z - q.z));
-    const s = 0.34 - dg * 0.01 + Math.min(mk, 4) * 0.06;
+    // (base 0,34 → 0,62: o cruzamento era 5× mais raro que no futebol real em proporção aos chutes — ~7 por partida —
+    // e o ponta chutava de longe sem ângulo; contra o bloco fechado no meio, o lado é o caminho)
+    const s = 0.62 - dg * 0.01 + Math.min(mk, 4) * 0.06;
     if (!best || s > best.s) best = { q, s };
   }
   if (!best) return null;
-  best.s += 0.1 * (n - 1) - m.pressure(p) * 0.2 + (m.lx(t, p.x) > 32 ? 0.08 : 0);
+  best.s += 0.1 * (n - 1) - m.pressure(p) * 0.2 + (m.lx(t, p.x) > 32 ? 0.12 : 0);
   return best;
+}
+
+// Passe para trás da linha de fundo ("cut-back"): da ponta, já perto da linha de fundo, rasteiro e para trás para
+// quem chega de frente entre a pequena área e a marca do pênalti — a jogada que mais vira gol no futebol de hoje
+// (o finalizador chuta de primeira, de frente, com a defesa correndo para o próprio gol). Sem ela, sem os gols da
+// saída de bola roubada no tiro de meta (Regra 16), quase todo gol da IA saía de longe
+function cutbackTarget(m, p) {
+  const t = p.team, off = offsideLine(m, t);
+  let best = null;
+  for (const q of t.players) {
+    if (q === p || q.sentOff || q.isGK || !q.canPlay()) continue;
+    const lq = m.lx(t, q.x);
+    if (lq < HL - 18 || lq > HL - 6 || Math.abs(q.z) > 9 || lq > off + 0.2) continue;
+    const s = 0.55 + Math.min(openness(m, q), 5) * 0.07 - laneRisk(m, p, q.x, q.z, 'ground', q) * 1.1;
+    if (!best || s > best.s) best = { q, s };
+  }
+  return best && best.s > 0.5 ? best : null;
 }
 
 function segDist2(ax, az, bx, bz, px, pz) {
@@ -433,7 +470,7 @@ function pressCarrier(m, p, o, dt, n) {
     const ex = o.x + ux / ul * 0.5 + (-uz / ul) * ct.side * 0.95 - p.x, ez = o.z + uz / ul * 0.5 + (ux / ul) * ct.side * 0.95 - p.z, de = Math.hypot(ex, ez);
     const sv = de > 0.12 ? Math.min(3, de * 4) : 0;
     p.dx = de > 0.12 ? ex / de * sv : 0; p.dz = de > 0.12 ? ez / de * sv : 0; p.sprint = false;
-  } else p.moveTo(tx, tz, 1, d > (n === 1 ? 5 : 9));   // (o 2º marcador fecha o espaço correndo; só arranca se estiver bem longe)
+  } else p.moveTo(tx, tz, 1, d > (n === 1 ? 3 : 9));   // (o 1º homem arranca já a 3 m — antes 5 m; o 2º só se estiver bem longe)
   if (d < 4) { p.face = m.ball.p; p.jockey = d < 2.5 && n === 1; }
   if (n !== 1 || p.action || p.fooled > 0) return;
   const skill = m.diff.aiSkill;
@@ -476,6 +513,38 @@ function pressCarrier(m, p, o, dt, n) {
   } else p.aiTimer = 0.15;
 }
 
+// Ponto de cabeceio da bola alta: onde ela desce passando pela altura da cabeça (~2,2 m), daqui a 0,3–2,5 s.
+// Por time, os dois jogadores de linha que chegam lá a tempo (correndo) são os que disputam.
+function pontoAereo(m) {
+  if (m._aerea && m._aerea.t === m.time) return m._aerea.v;
+  let v = null;
+  const b = m.ball, pr = m.pred;
+  if (m.phase === 'play' && !m.owner && !b.held && b.p.y > 1.0) {
+    for (let k = 1; k < pr.n; k++) {
+      const y = pr.y(k), yp = pr.y(k - 1);
+      // só perto das áreas (cruzamento, escanteio, chutão na área): no meio-campo, dois de cada time indo em toda
+      // bola alta desmontava o time e o ataque (o placar caiu de ~3 para ~2 gols por partida)
+      if (yp > 2.2 && y <= 2.2 && pr.t(k) > 0.3) { if (Math.abs(pr.x(k)) > HL - 24 && Math.abs(pr.z(k)) < 26) v = { x: pr.x(k), z: pr.z(k), tc: pr.t(k) }; break; }
+      if (y < 1.0) break;
+    }
+  }
+  if (v) {
+    const cache = new Map();
+    v.de = (t) => {
+      if (cache.has(t)) return cache.get(t);
+      const alvo = m.passTarget && m.passTarget.p.team === t ? m.passTarget.p : null;
+      const ok = t.players.filter(q => !q.sentOff && !q.isGK && !humanDriving(m, q) && q.canPlay())
+        .map(q => ({ q, d: Math.hypot(q.x - v.x, q.z - v.z) - (q === alvo ? 3 : 0) }))
+        .filter(o => o.d < 14 && o.d / Math.max(4, o.q.sprintSpd * 0.85) <= v.tc + 0.35)
+        .sort((a, c) => a.d - c.d).slice(0, 2).map(o => o.q);
+      cache.set(t, ok);
+      return ok;
+    };
+  }
+  m._aerea = { t: m.time, v };
+  return v;
+}
+
 // Cabeceio / voleio quando a bola chega pelo alto.
 function tryAerial(m, p) {
   if (p.action || !p.canPlay() || m.owner) return false;
@@ -488,14 +557,37 @@ function tryAerial(m, p) {
   const hx = pr.x(kH), hy = pr.y(kH), hz = pr.z(kH);
   const px = p.x + p.vx * 0.31, pz = p.z + p.vz * 0.31;
   const dH = Math.hypot(hx - px, hz - pz);
-  if (hy > 1.35 && hy < 2.5 && dH < 1.0 && (p === t.chaser || (m.passTarget && m.passTarget.p === p) || dH < 0.7)) {
+  // disputa pelo alto: além de quem vai na bola, os dois mais perto do ponto de contato de cada time
+  // sobem juntos (antes só subia um, e a bola alta quase nunca era disputada pelos dois times)
+  // (só perto das áreas, como o ponto aéreo: no meio-campo, dois de cada time subindo em toda bola alta
+  // trocava o domínio por cabeçada para longe — +6 bolas perdidas por partida)
+  const areaH = Math.abs(hx) > HL - 24 && Math.abs(hz) < 26;
+  let perto = p === t.chaser || (m.passTarget && m.passTarget.p === p) || dH < 0.7;
+  if (!perto && areaH && dH < 1.6) {
+    let antes = 0;
+    for (const q of t.players) if (q !== p && !q.sentOff && !q.isGK && Math.hypot(hx - (q.x + q.vx * 0.31), hz - (q.z + q.vz * 0.31)) < dH) antes++;
+    perto = antes < 2;
+  }
+  // com adversário também chegando na bola, sobe de um pouco mais longe (estica para disputar)
+  const disputa = areaH && t.opp.players.some(q => !q.sentOff && !q.isGK && Math.hypot(hx - q.x, hz - q.z) < 2.2);
+  if (hy > 1.35 && hy < 2.5 && dH < (disputa ? 1.6 : areaH ? 1.3 : 1.0) && perto) {
     const gx = m.goalX(t);
     const dGoal = Math.hypot(gx - p.x, p.z);
     const ownBox = m.inOwnBox(p, p.x, p.z);
     const shot = dGoal < 18 && Math.abs(p.z) < 13;
     let data;
     if (shot) data = { kind: 'shot', jump: clamp(hy - 1.75, 0, 0.6) };
-    else if (ownBox || m.lx(t, p.x) < -25) data = { kind: 'pass', target: { x: p.x + t.dir * 25, z: p.z + (p.z > 0 ? 8 : -8) }, jump: clamp(hy - 1.75, 0, 0.6) };
+    else if (ownBox || m.lx(t, p.x) < -25) {
+      // corte de cabeça no cruzamento, na própria área: às vezes sai de lado, pela linha de fundo — escanteio (no
+      // futebol real boa parte dos ~10 escanteios por partida nasce assim; aqui todo corte ia para a frente e havia
+      // ~1,5 escanteio por partida). Só quando a bola passa bem longe da trave
+      const lk = m.lastKick, og = m.ownGoalX(t), sz = Math.sign(p.z) || 1;
+      const tx = og + Math.sign(og) * 4, tz = sz * rand(GOAL.halfWidth + 6, 15);
+      const zLinha = p.z + (tz - p.z) * Math.abs(og - p.x) / Math.max(0.5, Math.abs(tx - p.x));
+      if (ownBox && lk && lk.kind === 'cross' && lk.p.team !== t && Math.abs(zLinha) > GOAL.halfWidth + 2 && Math.random() < 0.3)
+        data = { kind: 'pass', target: { x: tx, z: tz }, jump: clamp(hy - 1.75, 0, 0.6) };
+      else data = { kind: 'pass', target: { x: p.x + t.dir * 25, z: p.z + (p.z > 0 ? 8 : -8) }, jump: clamp(hy - 1.75, 0, 0.6) };
+    }
     else {
       const rec = headerReceiver(m, p);
       data = { kind: 'pass', receiver: rec?.q, target: rec ? { x: rec.q.x, z: rec.q.z } : { x: p.x + t.dir * 16, z: p.z * 0.8 }, jump: clamp(hy - 1.75, 0, 0.6) };
@@ -565,20 +657,57 @@ export function carrierThink(m, p, dt) {
   const xg = shotQuality(m, p);
   const tr = p.traits;
   const shotBias = (0.7 + p.a.sho / 99 * 0.6) * (tr.includes('finalizador') && dGoal < 18 ? 1.25 : 1);
-  if (dGoal < 32) {
-    let sS = xg * 3.4 * shotBias + (dGoal < 12 ? 0.3 : 0);
+  // cara a cara (ninguém de linha perto entre ele e o gol): com o goleiro no gol, leva a bola até
+  // perto (de 25 m o chute é ruim; no futebol real a finalização do cara a cara sai de 8–14 m);
+  // com o goleiro adiantado, a resposta é a cavadinha
+  const gkO = t.opp.gk;
+  const foraGk = gkO && !gkO.sentOff ? Math.abs(m.ownGoalX(t.opp)) - Math.abs(gkO.x) : 0;
+  const dGk = gkO && !gkO.sentOff ? Math.hypot(gkO.x - p.x, gkO.z - p.z) : 99;
+  // (cara a cara de verdade: passou da última linha — nenhum defensor à frente ou na mesma altura, nenhum a 5 m.
+  // Com "ninguém a 7 m" valia também com a linha da defesa 8–10 m à frente: o condutor que tinha o chute de
+  // 20–25 m seguia conduzindo para dentro do bloco — 1/3 das decisões a 16–30 m e os chutes de 12 a 25 m caíram
+  // de ~10 para ~5 por partida)
+  const lxp = m.lx(t, p.x);
+  const caraACara = dGoal > 13 && dGoal < 34 && Math.abs(p.z) < 18 &&
+    !t.opp.players.some(q => !q.isGK && !q.sentOff && (Math.hypot(q.x - p.x, q.z - p.z) < 5 || (m.lx(t, q.x) > lxp - 1.5 && Math.abs(q.z - p.z) < 20)));
+  const levaAtePerto = caraACara && foraGk < 6;
+  // goleiro saindo em disparada de longe (botão GOLEIRO): o atacante segue com a bola para driblá-lo ou tocar
+  // por cima quando ele chegar, em vez de bater de 25 m logo que o vê sair (com a vontade de chutar desta versão,
+  // o chute de longe cedo deixava o goleiro do humano sem chegar na bola em ~1/4 dos lances)
+  const gkDisparada = gkO && !gkO.sentOff && foraGk > 4 && dGk > 9 &&
+    ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
+  // contra o botão GOLEIRO do humano (goleiro vindo a mais de 4,5 m): também dentro da área ele segue com a bola em vez
+  // de bater logo — com a vontade de chutar desta versão ele finalizava de 11–18 m com o goleiro ainda a 4–10 m em ~1/4
+  // dos lances (goleiro-sai-test: chega na bola 73–74% → 78–83% com 0,92, meta ≥ 75%; com 0,8–0,9 passava de 86% e o
+  // goleiro ganhava quase tudo). Só vale contra o humano: IA×IA não muda.
+  const contraBotao = m.userGKRush && t.opp.human && gkO && !gkO.sentOff && foraGk > 4 && dGk > 4.5 &&
+    ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 2;
+  if (dGoal < 35) {
+    let sS = xg * 4.6 * shotBias + (dGoal < 12 ? 0.3 : 0);
     // dentro da área o atacante finaliza mesmo com zagueiro na frente (no futebol real ~60% dos
     // chutes saem da área e ~1/4 dos chutes é travado); antes ele quase sempre tentava mais um passe
-    if (dGoal < 18 && Math.abs(p.z) < 17) sS += 0.18;
+    if (dGoal < 18 && Math.abs(p.z) < 17) sS += 0.4;
     // chute de fora da área quando o jogador está de frente para o gol: no futebol real ~40% dos
     // chutes saem de fora da área (convertem ~3–5%), quase todos de 17 a 28 m. O bônus é cheio até
     // 25 m e cai até 33 m: é nessa faixa (24–40 m) que o condutor da IA mais decide (~350 vezes por
     // partida, quase sempre conduzindo marcado) e antes quase nunca chutava dali
     // Marcado também chuta (no futebol real ~1/4 dos chutes é travado), só que com menos vontade
-    if (dGoal > 16 && dGoal < 33 && Math.abs(p.z) < 18 && press < 0.92 && xg > 0.006 &&
-      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.0 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((33 - dGoal) / 8, 0, 1) * (1.15 - press * 0.55);
-    options.push({ kind: dGoal > 16 && Math.abs(p.z) > 6 && Math.random() < 0.5 ? 'finesse' : 'shot', s: sS });
+    // (até 35 m, cheio até 26 m: com o chute de longe menos preciso — match.js — e o goleiro atravessando o gol, ele vira
+    // chute de baixo valor que o goleiro defende ~80% das vezes, como no futebol real)
+    if (dGoal > 16 && dGoal < 35 && Math.abs(p.z) < 18 && press < 0.95 && xg > 0.004 && !levaAtePerto &&
+      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.15 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((35 - dGoal) / 9, 0, 1) * (1.3 - press * 0.45) * (gkDisparada ? 0.4 : 1);
+    // goleiro vindo em cima (saiu do gol e está a 3–9 m): finaliza antes de ele chegar, colocado
+    const vemGk = gkO && !gkO.sentOff && foraGk > 5 && dGk > 3 && dGk < 9 && dGoal < 24 &&
+      ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
+    // (+0,15: com a vontade de chutar maior desta versão, +0,5 fazia o atacante chutar quase sempre antes de o
+    // goleiro chegar — o botão GOLEIRO deixava de 'atacar a bola')
+    if (vemGk) sS += 0.15;
+    if (contraBotao) sS *= 0.92;
+    options.push({ kind: vemGk || (dGoal > 16 && Math.abs(p.z) > 6 && Math.random() < 0.5) ? 'finesse' : 'shot', s: sS });
   }
+  // cavadinha no goleiro que saiu do gol
+  if (foraGk > 6 && dGk > 5 && dGk < 14 && dGoal > 9 && dGoal < 30 && Math.abs(p.z) < 16)
+    options.push({ kind: 'chip', s: 0.35 + clamp((foraGk - 6) / 10, 0, 0.35) + p.a.sho / 99 * 0.1 });
 
   const lx = m.lx(t, p.x);
   for (const mode of ['ground', 'through', 'air']) {
@@ -589,16 +718,21 @@ export function carrierThink(m, p, dt) {
   }
   // cruzamento: da ponta, no último terço, para quem ataca a área (no futebol real ~15–20 por
   // time por jogo, ~25% certos; aqui quase não havia)
-  if (lx > 20 && Math.abs(p.z) > 12) {
+  // (também o cruzamento antecipado, do meio do último terço, como no futebol de hoje)
+  if (lx > 12 && Math.abs(p.z) > 8) {
     const c = crossTarget(m, p);
     if (c) options.push({ kind: 'cross', s: c.s + (tr.includes('criativo') ? 0.05 : 0), q: c.q });
+  }
+  if (lx > HL - 11 && Math.abs(p.z) > 4 && Math.abs(p.z) < 24) {
+    const c = cutbackTarget(m, p);
+    if (c) options.push({ kind: 'pass', s: c.s + (tr.includes('criativo') || tr.includes('maestro') ? 0.05 : 0), q: c.q });
   }
   const space = spaceAhead(m, p);
   const dribK = (tr.includes('driblador') ? 0.16 : 0) + (tr.includes('explosivo') && space > 6 ? 0.1 : 0) - (tr.includes('maestro') ? 0.05 : 0);
   // no último terço, com espaço na frente, conduz para dentro da área (é de lá que sai a maioria
   // dos gols: no futebol real ~60% dos chutes e ~80% dos gols)
   const ataca = lx > 18 && lx < HL - 14 && space > 4 ? 0.14 : 0;
-  options.push({ kind: 'dribble', s: 0.28 + Math.min(space, 12) * 0.04 + p.a.dri / 99 * 0.22 - press * (tr.includes('driblador') ? 0.3 : 0.5) + (lx < -30 ? -0.3 : 0) + dribK + ataca });
+  options.push({ kind: 'dribble', s: 0.28 + Math.min(space, 12) * 0.04 + p.a.dri / 99 * 0.22 - press * (tr.includes('driblador') ? 0.3 : 0.5) + (lx < -30 ? -0.3 : 0) + dribK + ataca + (levaAtePerto ? 0.45 : 0) });
   if (lx < -28 && press > 0.5) options.push({ kind: 'clear', s: 0.55 + press * 0.3 });
 
   // ruído conforme a dificuldade
@@ -608,7 +742,9 @@ export function carrierThink(m, p, dt) {
   // segura um instante depois de dominar
   // segura um instante depois de dominar (o Maestro segura um pouco mais e escolhe)
   // (na área o domínio já é o ajeite para o chute: segura bem menos)
-  const segura = dGoal < 18 && (pick.kind === 'shot' || pick.kind === 'finesse') ? 0.15 : tr.includes('maestro') ? 0.55 : 0.35;
+  // (contra a pressão mais intensa o jogo fica mais rápido no meio-campo, como no futebol de alta intensidade:
+  // ~0,25 s; segurando 0,35 s a pressão chegava antes da decisão — chutes e passes para a frente caíam)
+  const segura = dGoal < 18 && (pick.kind === 'shot' || pick.kind === 'finesse') ? 0.15 : tr.includes('maestro') ? 0.45 : lx > -18 && lx < 18 ? 0.25 : 0.35;
   if (pick.kind !== 'dribble' && held < segura && press < 0.6) pick = { kind: 'dribble', s: 0 };
 
   // perto do gol a jogada é mais rápida: o condutor reavalia mais vezes (a janela de chute abre e
@@ -618,12 +754,19 @@ export function carrierThink(m, p, dt) {
   p.intent = null;
   // de perto o finalizador coloca (chapa, ~20 m/s) em vez de encher o pé; de longe, força
   const pw = pick.kind === 'shot' ? (dGoal < 12 ? rand(0.3, 0.6) : clamp(0.55 + dGoal / 60, 0.55, 0.92)) : 0.6;
-  if (pick.kind === 'shot' || pick.kind === 'finesse') {
+  if (pick.kind === 'chip') {
+    const tg = aiShotTarget(m, p, 'shot');
+    p.startAction('chip', { target: tg, power: 0.6, face: Math.atan2(tg.z - p.z, tg.x - p.x), foot: footFor(p, tg) });
+  } else if (pick.kind === 'shot' || pick.kind === 'finesse') {
     const tg = aiShotTarget(m, p, pick.kind);
     p.startAction(pick.kind, { target: tg, power: pw, face: Math.atan2(tg.z - p.z, tg.x - p.x), foot: footFor(p, tg) });
   } else if (pick.kind === 'clear') {
-    const tg = { x: p.x + t.dir * rand(35, 50), z: clamp(p.z * 1.4 + rand(-10, 10), -HW + 3, HW - 3) };
-    p.startAction('clear', { target: tg, power: 0.9, face: Math.atan2(tg.z - p.z, tg.x - p.x) });
+    // apertado na própria área, aberto: às vezes põe para escanteio (pela linha de fundo, longe da trave), como o
+    // zagueiro de verdade — no futebol real boa parte dos ~10 escanteios por partida nasce de corte assim; aqui havia ~1,5
+    const og = m.ownGoalX(t), fora = m.lx(t, p.x) < -HL + 14 && Math.abs(p.z) > 9 && press > 0.7 && Math.random() < 0.35;
+    const tg = fora ? { x: og + Math.sign(og) * 4, z: Math.sign(p.z) * rand(GOAL.halfWidth + 7, 20) }
+      : { x: p.x + t.dir * rand(35, 50), z: clamp(p.z * 1.4 + rand(-10, 10), -HW + 3, HW - 3) };
+    p.startAction('clear', { target: tg, power: fora ? 0.6 : 0.9, face: Math.atan2(tg.z - p.z, tg.x - p.x) });
   } else {
     const q = pick.q;
     if ((pick.kind === 'through' || pick.kind === 'long') && press < 0.8) {
@@ -788,8 +931,20 @@ function aiShotTarget(m, p, kind = 'shot') {
   // colocação: o finalizador frio escolhe o canto; com marcador em cima o chute sai "no gol",
   // mais perto do meio, onde o goleiro alcança. Antes todo chute ia no canto e, de perto, o
   // goleiro quase nunca chegava (conversão de 30% entre 6 e 11 m; no futebol real, ~15–20%)
-  const calma = kind === 'finesse' ? 0.85 : clamp(0.2 + p.a.sho / 99 * 0.55 - m.pressure(p) * 0.35, 0.1, 0.8);
-  const z = side * (Math.random() < calma ? rand(1.6, GOAL.halfWidth - 0.45) : rand(0.2, 1.7));
+  // de longe acertar o canto é bem mais difícil: no futebol real só ~15–20% dos gols saem de fora da área
+  const dG = Math.hypot(gx - p.x, p.z);
+  const calma = (kind === 'finesse' ? 0.85 : clamp(0.2 + p.a.sho / 99 * 0.55 - m.pressure(p) * 0.35, 0.1, 0.8)) * clamp(1 - (dG - 18) / 20, 0.45, 1);
+  // mira longe do goleiro PELO ÂNGULO DE QUEM CHUTA: o ponto da linha do gol cuja trajetória passa mais longe
+  // dele (antes valia só o lado oposto ao z do goleiro — com o goleiro na bissetriz, o "meio do outro lado"
+  // passava a ~1 m dele e virava defesa). O frio escolhe bem; pressionado, o chute sai mais "no gol"
+  const lim = GOAL.halfWidth - 0.45;
+  let melhor = side * 2, nota = -1e9;
+  if (gk && !gk.sentOff) for (let k = 0; k <= 12; k++) {
+    const zz = -lim + 2 * lim * k / 12;
+    const s = Math.min(segDist2(p.x, p.z, gx, zz, gk.x, gk.z), 2.5) - Math.abs(zz) / lim * 0.25 + rand(0, 1.2) * (1 - calma);
+    if (s > nota) { nota = s; melhor = zz; }
+  }
+  const z = Math.random() < calma ? melhor : melhor * rand(0.3, 0.8);
   return { x: gx, y: Math.random() < 0.55 ? rand(0.2, 0.6) : rand(1.2, 2.05), z };
 }
 
@@ -836,8 +991,14 @@ export function bestReceiver(m, p, mode, dirx, dirz, ponta = false) {
       // arrisca mais (no futebol real o acerto cai de ~88% no próprio campo para ~70% no último
       // terço): antes o peso do risco era o mesmo em todo o campo e quase nenhum passe entrava na área
       // (a enfiada pesa o risco quase como o passe rasteiro: cortada em 3 de cada 4 no último terço)
-      const kRisk = mode === 'ground' ? 2.2 * (lxP > 18 ? 0.8 : lxP < -18 ? 1.15 : 0.85) : mode === 'through' ? (lxP > 18 ? 1.8 : 1.5) : 1.6;
-      s = 0.36 + clamp(progress, -15, 25) * 0.022 + Math.min(open, 7) * 0.045 - risk * kRisk - (d > 30 ? 0.15 : 0);
+      // (no meio, contra a pressão a dois, o risco pesa um pouco mais: 0,85 → 0,95 no rasteiro e 1,5 → 1,65 na
+      // enfiada — sem isso o acerto de passe caía de 77% para 76%)
+      const kRisk = mode === 'ground' ? 2.2 * (lxP > 18 ? 0.8 : lxP < -18 ? 1.15 : 0.95) : mode === 'through' ? (lxP > 18 ? 1.8 : 1.65) : 1.6;
+      // progressão vale mais que recuo (para a frente 0,025/m, para trás 0,022/m): contra o bloco fechado a IA
+      // reciclava a bola para trás — 36% dos passes, ~58 por partida (no futebol real ~20–25% são para trás)
+      s = 0.36 + clamp(progress, -15, 25) * (progress > 0 && mode !== 'air' ? 0.025 : 0.022) + Math.min(open, 7) * 0.045 - risk * kRisk - (d > 30 ? 0.15 : 0);
+      // virada de jogo: o bloco que defende fecha o lado da bola, o lado de lá fica livre
+      if (mode === 'ground' && Math.abs(q.z - m.ball.p.z) > 18 && open > 6 && progress > -6 && risk < 0.15) s += 0.12;
       if (mode === 'through') {
         s += q.runUntil > m.time ? 0.35 : -0.25;
         // a enfiada boa sai quando o atacante está chegando na linha ("no ombro" do zagueiro);
@@ -854,7 +1015,11 @@ export function bestReceiver(m, p, mode, dirx, dirz, ponta = false) {
       if (lq < -35) s -= 0.2;
       // para trás só quando apertado: sem pressão o meia procura a frente ou conduz (no meio-campo
       // 45% dos passes da IA iam para trás; no futebol real ~25–30%)
-      if (progress < -4 && lxP > -20) s -= 0.18 * (1 - clamp(m.pressure(p) * 1.4, 0, 1));
+      // (apertado também: o time pressionado sai jogando para a frente ou para o lado livre; recua só sem saída —
+      // antes, sob pressão, o recuo não custava nada e com a pressão a dois virava o padrão)
+      if (progress < -4 && lxP > -30) s -= 0.18 * (1 - clamp(m.pressure(p) * 1.4, 0, 1));
+      // recuo para o goleiro só para sair de um aperto perto da própria área
+      if (q.isGK && !(lxP < -25 && m.pressure(p) > 0.7)) s -= 0.2;
     }
     if (!best || s > best.s) best = { q, s };
   }
@@ -937,6 +1102,90 @@ function celebrate(m, p) {
 }
 
 // ---------------------------------------------------------- bolas paradas
+// Organização (pedido do dono: "tiro de meta muito mal organizado, jogadores do time adversário dentro da
+// área"; escanteio, lateral). Alvos no referencial de ataque do time que cobra (lx: o próprio gol em -HL,
+// lz = z·dir), uma vez por bola parada:
+//  tiro de meta — zagueiros abertos na área, volante na entrada dela, laterais altos e abertos; o adversário
+//                 FORA da área (Regra 16), 2–3 atacantes pressionando na linha da área
+//  lateral      — 3 opções (curta na linha, curta por dentro, mais longa por dentro) e quem marca cada uma
+//  escanteio    — 5 na área partindo de trás para atacar a bola (primeiro pau, segundo pau, marca do pênalti,
+//                 em cima do goleiro, entre o primeiro pau e a marca), 2 na entrada da área, 2 atrás; quem
+//                 defende: 3 na pequena área (zona), 1 no primeiro pau, marcação nos mais fortes no alto,
+//                 1 na entrada da área e 1 na frente para o contra-ataque
+const slotOf = (p) => { const f = p.team.formation[p.slot] || []; return { role: f[0] || p.role, bx: f[1] ?? 0, bz: f[2] ?? 0 }; };
+const aereo = (q) => (q.data.look?.height || 1.8) * 100 + (q.a.phy ?? 60) * 0.6 + (q.a.str ?? 60) * 0.3;
+function alvosBolaParada(m, sp) {
+  const team = sp.team, opp = team.opp, dir = team.dir;
+  const set = (p, lx, lz) => { p.spAlvo = { x: lx * dir, z: lz * dir }; };
+  const vivos = (t) => t.players.filter(q => !q.sentOff && !q.isGK);
+  for (const q of m.players) { q.spRun = null; q.spMarca = null; q.spAlvo = null; }
+  if (sp.type === 'goalkick') {
+    const defs = vivos(team).filter(q => slotOf(q).role === 'DEF').sort((a, c) => slotOf(a).bz - slotOf(c).bz);
+    const n = defs.length, lat = n >= 4;
+    defs.forEach((q, k) => {
+      if (lat && (k === 0 || k === n - 1)) { set(q, -HL + 27, (k ? 1 : -1) * 27); return; }
+      const cen = lat ? n - 2 : n, i = lat ? k - 1 : k;
+      if (cen === 3 && i === 1) { set(q, -HL + 19, 0); return; }
+      set(q, -HL + 11.5, cen <= 1 ? 0 : (i / (cen - 1) - 0.5) * 2 * 13.5);
+    });
+    vivos(team).filter(q => slotOf(q).role === 'MID').sort((a, c) => slotOf(a).bx - slotOf(c).bx)
+      .forEach((q, k) => { if (k === 0) set(q, -HL + 21, 0); else set(q, -HL + 34, clamp(slotOf(q).bz * 1.1, -25, 25)); });
+    vivos(team).filter(q => slotOf(q).role === 'ATT').forEach(q => set(q, -HL + 50, clamp(slotOf(q).bz, -26, 26)));
+    for (const q of vivos(opp)) {
+      const s = slotOf(q);
+      let lx, lz = -s.bz;
+      if (s.role === 'ATT') { lx = -HL + 18; lz = clamp(-s.bz * 0.45, -11, 11); }
+      else if (s.role === 'MID') { lx = -HL + 31; lz = clamp(-s.bz, -24, 24); }
+      else { lx = -HL + 58; lz = clamp(-s.bz * 0.9, -24, 24); }
+      if (lx < -HL + PITCH.boxDepth + 1 && Math.abs(lz) < PITCH.boxHalfW + 1) lx = -HL + PITCH.boxDepth + 1.5;
+      set(q, lx, lz);
+    }
+  } else if (sp.type === 'throwin') {
+    const lzT = sp.z * dir, sg = Math.sign(lzT) || 1, lxT = sp.x * dir;
+    const opcoes = [[lxT + 9, sg * (HW - 5)], [lxT - 2, sg * (HW - 10)], [lxT + 4, sg * (HW - 17)]]
+      .map(([x, z]) => [clamp(x, -HL + 3, HL - 3), z]);
+    const livres = vivos(team).filter(q => q !== sp.taker), escolhidos = [];
+    for (const [ox, oz] of opcoes) {
+      let best = null, bd = 1e9;
+      for (const q of livres) { if (escolhidos.includes(q)) continue; const d = Math.hypot(q.x - ox * dir, q.z - oz * dir); if (d < bd) { bd = d; best = q; } }
+      if (best) { escolhidos.push(best); set(best, ox, oz); }
+    }
+    const usados = [], og = m.ownGoalX(opp);
+    for (const q of escolhidos) {
+      let best = null, bd = 1e9;
+      for (const o of vivos(opp)) { if (usados.includes(o)) continue; const d = Math.hypot(o.x - q.spAlvo.x, o.z - q.spAlvo.z); if (d < bd) { bd = d; best = o; } }
+      if (best) { usados.push(best); best.spAlvo = { x: q.spAlvo.x + Math.sign(og - q.spAlvo.x) * 1.5, z: q.spAlvo.z * 0.94 }; }
+    }
+  } else if (sp.type === 'corner') {
+    const lado = Math.sign(sp.z * dir) || 1;
+    const zonas = [[HL - 5, lado * 2.5], [HL - 6, -lado * 3.5], [HL - 11, lado * 0.5], [HL - 2.5, lado * 0.6], [HL - 8, lado * 6]];
+    const cand = vivos(team).filter(q => q !== sp.taker).sort((a, c) => aereo(c) - aereo(a));
+    const nArea = Math.max(0, Math.min(5, cand.length - 4));
+    cand.forEach((q, k) => {
+      if (k < nArea) {
+        const [zx, zz] = zonas[k];
+        set(q, zx - 4.5, zz * 0.5 - lado * 2);                     // parte de trás, longe da zona
+        q.spRun = { x: zx * dir, z: zz * dir, ate: 0, alvo: true };
+      } else if (k < nArea + 2) set(q, HL - 19, (k === nArea ? 1 : -1) * 7);
+      else set(q, k === nArea + 2 ? 2 : -10, (k % 2 ? 9 : -9));   // atrás, no meio-campo
+    });
+    // quem defende (no referencial de quem cobra, o gol defendido fica em lx = +HL)
+    const dfs = vivos(opp);
+    const frente = dfs.filter(q => slotOf(q).role === 'ATT').sort((a, c) => c.a.pac - a.a.pac).slice(0, 1);
+    const zona = [[HL - 4.5, lado * 3.2], [HL - 4.5, 0], [HL - 4.5, -lado * 3.2]];
+    const resto = dfs.filter(q => !frente.includes(q)).sort((a, c) => aereo(c) - aereo(a));
+    const marcados = cand.slice(0, nArea);
+    let i = 0;
+    for (const q of frente) set(q, 8, lado * -6);
+    // marcação individual nos mais fortes no alto (os mais altos de quem defende)
+    for (const a of marcados.slice(0, 3)) { const q = resto[i++]; if (!q) break; set(q, a.spAlvo.x * dir + 0.9, a.spAlvo.z * dir * 0.95); q.spMarca = { q: a, ate: 0 }; }
+    for (const [zx, zz] of zona) { const q = resto[i++]; if (!q) break; set(q, zx, zz); }
+    { const q = resto[i++]; if (q) set(q, HL - 0.9, lado * (GOAL.halfWidth + 0.3)); }        // primeiro pau
+    { const q = resto[i++]; if (q) set(q, HL - 17, 0); }                                     // entrada da área
+    while (i < resto.length) { const q = resto[i++]; const a = marcados[3 + (i % 2)]; if (a) { set(q, a.spAlvo.x * dir + 0.9, a.spAlvo.z * dir * 0.95); q.spMarca = { q: a, ate: 0 }; } else set(q, HL - 9, -lado * 6); }
+  }
+}
+
 export function setpieceAI(m, dt) {
   const sp = m.sp;
   if (!sp) return;
@@ -944,8 +1193,15 @@ export function setpieceAI(m, dt) {
   const team = sp.team, opp = team.opp;
   const b = m.ball.p;
   const gx = m.goalX(team), dir = team.dir;
-  // posicionamento
-  if (sp.type === 'corner' || ((sp.type === 'freekick' || sp.type === 'indirect') && Math.abs(gx - b.x) < 40)) {
+  if (!sp.alvos && (sp.type === 'goalkick' || sp.type === 'throwin' || sp.type === 'corner')) { sp.alvos = true; alvosBolaParada(m, sp); }
+  if (sp.type === 'goalkick' || sp.type === 'throwin' || sp.type === 'corner') {
+    for (const t of m.teams) for (const p of t.players) {
+      if (p.sentOff || p.isGK || p === sp.taker || humanDriving(m, p)) continue;
+      const a = p.spAlvo || p.target, d = Math.hypot(a.x - p.x, a.z - p.z);
+      p.moveTo(a.x, a.z, d > 3 ? 1 : 0.6, d > 9);
+      p.face = b;
+    }
+  } else if ((sp.type === 'freekick' || sp.type === 'indirect') && Math.abs(gx - b.x) < 40) {
     const spots = [
       [5.5, 3 * Math.sign(b.z || 1)], [6.5, -3 * Math.sign(b.z || 1)], [11, 0], [9, 5], [16.5, -2], [8, -8],
     ];
@@ -955,7 +1211,7 @@ export function setpieceAI(m, dt) {
       if (humanDriving(m, p)) return;
       if (k < spots.length && k < 5) {
         let x = gx - dir * spots[k][0], z = spots[k][1];
-        if (sp.type !== 'corner') x = Math.min(m.lx(team, x), line - 0.5) * dir;
+        x = Math.min(m.lx(team, x), line - 0.5) * dir;
         p.target.x = x; p.target.z = z;
       }
       p.moveTo(p.target.x, p.target.z, 0.6, false);
@@ -974,23 +1230,29 @@ export function setpieceAI(m, dt) {
       if (p.sentOff || p.isGK || p === sp.taker || p.inWall || humanDriving(m, p)) continue;
       if (sp.type === 'kickoff' || sp.type === 'penalty') { p.dx = p.dz = 0; p.face = b; continue; }
       p.moveTo(p.target.x, p.target.z, 0.5, false);
-      if (sp.type === 'throwin' && t === team) {
-        // dois se aproximam para receber
-        const near = team.players.filter(q => !q.sentOff && !q.isGK && q !== sp.taker).sort((a, c) => dist(a, sp.taker) - dist(c, sp.taker)).slice(0, 2);
-        const k = near.indexOf(p);
-        if (k >= 0) p.moveTo(clamp(sp.x + dir * (k ? 9 : -2), -HL + 2, HL - 2), sp.z * 0.72 + (k ? 0 : -Math.sign(sp.z) * 4), 0.8, false);
-      }
       p.face = b;
     }
   }
   for (const p of m.wall || []) { p.dx = p.dz = 0; p.face = b; }
   if (!sp.taken && sp.taker) { sp.taker.dx = sp.taker.dz = 0; }
 
-  // cobrador da IA
+  // tiro de meta do humano apertado com adversário ainda na área: sai assim que a área esvaziar
+  if (sp.pendente && !sp.taken && (!areaOcupada(m, sp) || sp.t > 6)) { const pd = sp.pendente; sp.pendente = null; m.takeSetpiece(pd.kind, pd.params); return; }
+  // cobrador da IA: espera o time se arrumar (tiro de meta: área vazia de adversários, Regra 16;
+  // escanteio: quem vai atacar a bola no ponto de partida; lateral: as opções chegando), no máximo ~6 s
   const human = team.human && !(m.shootout && false);
   const wait = sp.type === 'kickoff' ? 1.2 : sp.type === 'penalty' ? 1.8 : 1.6;
   if (sp.taken || (human && sp.t < 14) || sp.t < wait) return;
+  if (sp.t < 6 && sp.type === 'goalkick' && areaOcupada(m, sp)) return;
+  // (escanteio: até ~10 s — os zagueiros vêm do outro campo, como no futebol de verdade)
+  if (sp.t < (sp.type === 'corner' ? 10 : 5) && (sp.type === 'corner' || sp.type === 'throwin') &&
+    team.players.some(q => !q.sentOff && !q.isGK && q !== sp.taker && q.spAlvo && Math.hypot(q.spAlvo.x - q.x, q.spAlvo.z - q.z) > (sp.type === 'corner' ? 2.5 : 4))) return;
   aiTakeSetpiece(m, sp);
+}
+
+// algum adversário dentro da área no tiro de meta?
+export function areaOcupada(m, sp) {
+  return sp.team.opp.players.some(q => !q.sentOff && !q.isGK && m.inOwnBox(sp.team.players[0], q.x, q.z));
 }
 
 function aiTakeSetpiece(m, sp) {
@@ -1010,9 +1272,14 @@ function aiTakeSetpiece(m, sp) {
     return;
   }
   if (sp.type === 'corner') {
-    const box = team.players.filter(q => !q.sentOff && q !== p && Math.abs(gx - q.x) < 13 && Math.abs(q.z) < 12);
-    const q = box[Math.floor(Math.random() * box.length)];
-    const tg = q ? { x: q.target.x, z: q.target.z } : { x: gx - dir * 8, z: 0 };
+    // bola numa zona de ataque (primeiro pau ~35%, segundo pau ~25%, marca do pênalti ~25%, outras), no
+    // ponto onde o atacante daquela zona vai chegar correndo
+    const runners = team.players.filter(q => q.spRun && q.spRun.alvo && !q.sentOff);
+    const pesos = [0.35, 0.25, 0.25, 0.05, 0.1];
+    let r = Math.random(), k = 0;
+    while (k < runners.length - 1 && r > pesos[k]) { r -= pesos[k]; k++; }
+    const q = runners[k];
+    const tg = q ? { x: q.spRun.x, z: q.spRun.z } : { x: gx - dir * 8, z: 0 };
     sp.aim = Math.atan2(tg.z - p.z, tg.x - p.x);
     m.takeSetpiece('cross', { receiver: q, target: tg, power: 0.75 });
     return;

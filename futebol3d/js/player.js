@@ -160,7 +160,7 @@ export class Player {
         const v = act.data.variant || 0;
         if (v === 1) { dx = dz = 0; const f = Math.exp(-1.1 * dt); this.vx *= f; this.vz *= f; }
         else if (v !== 0) { dx = dz = 0; const f = Math.exp(-5 * dt); this.vx *= f; this.vz *= f; }
-      } else if (k === 'tackle' && act.data.lunge) {
+      } else if (k === 'tackle' && act.data.lx !== undefined) {
         // dividida: bote curto rumo à bola (perde força até o contato)
         // velocidade cheia até o contato do pé, depois freia
         const s = act.t < act.contactT ? act.data.lunge : act.data.lunge * clamp(1 - (act.t - act.contactT) / 0.12, 0, 1) * 0.5;
@@ -179,7 +179,11 @@ export class Player {
       if (act.t >= act.dur) {
         this.action = null;
         onEnd && onEnd(this, act);
-      } else this.pose.t = act.t;
+      } else {
+        // lateral esperando a cobrança: os braços ficam no alto, com a bola atrás da cabeça (a pose do
+        // começo do arremesso); antes o tempo da animação seguia e os braços desciam com a bola "no ar"
+        this.pose.t = act.type === 'throwin' && !act.data.kind ? Math.min(act.t, 0.3 * ANIM.throwin.dur) : act.t;
+      }
     }
 
     if (this.stun > 0) { this.stun -= dt; dx = dz = 0; }
