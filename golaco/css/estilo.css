@@ -21,8 +21,10 @@
   --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
-/* ?entalhe=1: simula o entalhe de um iPhone em paisagem (só para conferir o layout) */
+/* ?entalhe=1: simula o entalhe de um iPhone (só para conferir o layout): deitado, nas laterais
+   e a barra de início embaixo; em pé, a ilha no topo e a barra embaixo */
 html.entalhe-simulado { --sa-l: 47px; --sa-r: 47px; --sa-b: 21px; }
+@media (orientation: portrait) { html.entalhe-simulado { --sa-l: 0px; --sa-r: 0px; --sa-t: 47px; --sa-b: 34px; } }
 
 * { box-sizing: border-box; }
 html, body {
@@ -144,6 +146,12 @@ html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); widt
   html.com-toque .vel { display: none; }
   html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
 }
+/* topo apertado (celular estreito ou com entalhe; medido em js/hud.js ajustarTopo):
+   1) sai a marca do placar; 2) sai o texto do modo (fica o ponto de estado e a posição) */
+html.topo-c1 .marca-simbolo { display: none; }
+html.topo-c1 .placar { padding-left: 12px; }
+html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
+html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
 .carga {
@@ -343,10 +351,13 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 /* celular em pé: velocidade e modo descem para baixo da marca (nada lado a lado) */
 @media (max-width: 480px) {
   .painel-jogo { top: calc(var(--sa-t) + var(--m) + 48px + 10px); right: calc(var(--sa-r) + var(--m)); }
-  .aviso, html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
-  html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); }
+  .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
+  /* com o minimapa à direita na mesma altura, o aviso desce para baixo dele (aviso largo,
+     como "Defesa: espalmou", passaria por cima do minimapa) */
+  html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 186px); }
+  html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); right: auto; left: calc(var(--sa-l) + var(--m)); }
   html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
-  html.com-toque .dica-retrato { top: calc(var(--sa-t) + var(--m) + 186px); }
+  html.com-toque .dica-retrato { top: calc(var(--sa-t) + var(--m) + 236px); }
 }
 
 /* ------------------------------------------------------------------ carregando e erro */

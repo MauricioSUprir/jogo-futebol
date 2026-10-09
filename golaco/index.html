@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#07090a">
   <meta name="color-scheme" content="dark">
-  <meta name="description" content="GOLAÇO — futebol 3D 11 contra 11 no navegador: passe, enfiada, lançamento, chute e goleiro.">
+  <meta name="description" content="GOLAÇO — futebol 3D no navegador: passe, enfiada, lançamento, chute e saída do goleiro.">
   <title>GOLAÇO</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090a'/%3E%3Cpath d='M14 46 26 18h24L38 46z' fill='%2319e07a'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/estilo.css">
@@ -45,7 +45,7 @@
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
     </button>
 
-    <canvas id="minimapa" class="minimapa" data-caixa="minimapa" aria-label="Minimapa do campo"></canvas>
+    <canvas id="minimapa" class="minimapa" data-caixa="minimapa" role="img" aria-label="Minimapa do campo"></canvas>
 
     <div id="carga" class="carga" aria-hidden="true">
       <div class="carga-barra"><i id="carga-nivel"></i></div>
@@ -63,7 +63,7 @@
        ao alcance do polegar (posições calculadas em js/entrada.js, calcularLayoutToque).
        Ataque: CHUTE, PASSE, ENFIADA, LANÇAMENTO, CORRER. Defesa: TROCAR, GOLEIRO, CORRER. -->
   <div id="toque" class="toque fase-ataque" data-fase="ataque" hidden>
-    <div id="zona-analogico" class="zona-analogico"></div>
+    <div id="zona-analogico" class="zona-analogico" aria-hidden="true"></div>
     <div id="analogico" class="analogico" aria-hidden="true">
       <div class="analogico-base"></div>
       <div class="analogico-pino"></div>
@@ -167,7 +167,7 @@
             <dt><kbd>E</kbd> <kbd>E</kbd></dt><dd>Dois toques rápidos: pedalada</dd>
             <dt><kbd>Q</kbd></dt><dd>Trocar de jogador (defesa)</dd>
             <dt><kbd>G</kbd></dt><dd>Segure: o goleiro sai do gol</dd>
-            <dt><kbd>R</kbd> <kbd>M</kbd> <kbd>N</kbd></dt><dd>Recomeçar, máquina de passes, marcador de treino</dd>
+            <dt><kbd>R</kbd> <kbd>M</kbd> <kbd>N</kbd></dt><dd>Recomeçar, máquina de passes, marcador (treino de condução)</dd>
             <dt><kbd>C</kbd></dt><dd>Câmera TV / aproximada</dd>
             <dt><kbd>H</kbd> / <kbd>Esc</kbd></dt><dd>Esta ajuda / pausa e menu</dd>
           </dl>
@@ -195,7 +195,7 @@
             <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER, em arco ao alcance do polegar</dd>
             <dt>Sem a bola</dt><dd>TROCAR, GOLEIRO (segure: ele sai) e CORRER</dd>
             <dt>Segurar</dt><dd>Mais força (a barra aparece perto do jogador)</dd>
-            <dt>Botão do topo</dt><dd>Pausa e menu (máquina de passes, marcador, câmera)</dd>
+            <dt>Botão do topo</dt><dd>Pausa e menu (recomeçar, máquina de passes, câmera)</dd>
           </dl>
           <p class="nota">Tamanho e transparência dos botões: menu, "Controles de toque".</p>
         </section>

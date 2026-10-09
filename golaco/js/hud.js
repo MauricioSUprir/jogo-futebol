@@ -18,6 +18,7 @@ const TEXTO_EVENTO = {
   troca: { t: 'Troca de jogador', ms: 800 },
   saidaGoleiro: { t: 'Goleiro saiu do gol', ms: 1200 },
   recomeco: { t: 'Recomeço da jogada', ms: 1000 },
+  semMarcador: { t: 'Marcador só no treino de condução', ms: 1400 },
 };
 // subtipos (o tipo do passe/chute vem no evento ou em m.voo.tipo)
 const NOME_ACAO = {
@@ -55,7 +56,7 @@ export function criarHud(opc) {
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1;
-  const ultimoTexto = { vel: '', modo: '', posicao: null };
+  const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
   let timerAviso = null, timerGol = null;
   let prints = false;
   const placarVisto = [null, null];
@@ -94,6 +95,28 @@ export function criarHud(opc) {
       b.setAttribute('aria-pressed', String(b.dataset.valor === valor));
     });
   }
+
+  // Topo do HUD no celular deitado: placar | minimapa | painel numa linha só. Em tela estreita
+  // (ou com entalhe) eles encostariam: primeiro sai a marca do placar, depois o texto do modo
+  // (fica o ponto de estado e a posição). Medido de verdade (texto do modo muda de largura).
+  const raiz = document.documentElement;
+  const caixasTopo = [$('hud')?.querySelector('.placar'), $('hud')?.querySelector('.painel-jogo'), el.mapa];
+  function encostaTopo() {
+    const [pl, pa, mp] = caixasTopo.map(e => e?.getBoundingClientRect());
+    if (!pl || !pa || !mp || mp.width === 0) return false;
+    const enc = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
+    return enc(pl, mp) || enc(pa, mp) || enc(pl, pa);
+  }
+  function ajustarTopo() {
+    raiz.classList.remove('topo-c1', 'topo-c2');
+    if (!raiz.classList.contains('com-toque')) return;
+    if (!encostaTopo()) return;
+    raiz.classList.add('topo-c1');
+    if (!encostaTopo()) return;
+    raiz.classList.add('topo-c2');
+  }
+  window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
 
   function mostrarAviso(texto, ms, cls = '') {
     el.aviso.textContent = texto;
@@ -179,24 +202,32 @@ export function criarHud(opc) {
   }
 
   return {
-    /** Velocidade (km/h), modo e posição do controlado; atualiza o DOM no máximo a 10 Hz. */
+    /**
+     * Velocidade (km/h), modo e posição do controlado. Modo e posição mudam na hora (só escreve
+     * no DOM quando o texto muda: a troca de jogador aparece no mesmo quadro); o km/h, que muda
+     * todo quadro, no máximo a 10 Hz.
+     */
     atualizar(agoraMs, kmh, modo, forte, posicao = null) {
+      let mudouTopo = false;
+      if (modo !== ultimoTexto.modo) {
+        el.modo.textContent = modo;
+        el.modo.classList.toggle('sem-bola', modo === 'Sem bola');
+        ultimoTexto.modo = modo;
+        mudouTopo = true;
+      }
+      if (!!forte !== ultimoTexto.forte) { el.modo.classList.toggle('forte', !!forte); ultimoTexto.forte = !!forte; }
+      if (el.posicao && posicao !== ultimoTexto.posicao) {
+        el.posicao.hidden = !posicao;
+        el.posicao.textContent = posicao ?? '';
+        ultimoTexto.posicao = posicao;
+        mudouTopo = true;
+      }
+      if (mudouTopo) ajustarTopo();
       // (o relógio manual dos testes pode voltar no tempo: aí atualiza logo)
       if (agoraMs - ultimoHud < 100 && agoraMs >= ultimoHud) return;
       ultimoHud = agoraMs;
       const v = String(Math.round(kmh));
       if (v !== ultimoTexto.vel) { el.vel.textContent = v; ultimoTexto.vel = v; }
-      if (modo !== ultimoTexto.modo) {
-        el.modo.textContent = modo;
-        el.modo.classList.toggle('sem-bola', modo === 'Sem bola');
-        ultimoTexto.modo = modo;
-      }
-      el.modo.classList.toggle('forte', !!forte);
-      if (el.posicao && posicao !== ultimoTexto.posicao) {
-        el.posicao.hidden = !posicao;
-        el.posicao.textContent = posicao ?? '';
-        ultimoTexto.posicao = posicao;
-      }
     },
     /** Placar (gols do time 0 e do time 1). */
     placar(a, b) {
@@ -218,11 +249,16 @@ export function criarHud(opc) {
       mapa.ultimo = agoraMs;
       desenharMapa(mundo, idControlado, idProximo);
     },
-    /** Barra de força perto do jogador: c = null (some) ou {x, y (px CSS), forca 0–1, tipo}. */
+    /**
+     * Barra de força perto do jogador: c = null (some) ou {x, y (px CSS), forca 0–1, tipo}.
+     * Fica sempre na tela (jogador no canto: a barra encosta na borda, não some).
+     */
     carga(c) {
       if (!el.carga) return;
       if (!c) { if (el.carga.classList.contains('visivel')) el.carga.classList.remove('visivel', 'cheia'); return; }
-      el.carga.style.transform = `translate(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px)`;
+      const x = Math.min(Math.max(c.x, 40), window.innerWidth - 40);
+      const y = Math.min(Math.max(c.y, 70), window.innerHeight - 34);
+      el.carga.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
       el.cargaNivel.style.width = `${(Math.max(0, Math.min(1, c.forca)) * 100).toFixed(1)}%`;
       const rot = ROTULO_CARGA[c.tipo] ?? String(c.tipo ?? '').toUpperCase();
       if (el.cargaTipo.textContent !== rot) el.cargaTipo.textContent = rot;
@@ -262,8 +298,12 @@ export function criarHud(opc) {
     fecharMenu() { el.menu.hidden = true; },
     abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
     fecharAjuda() { el.ajuda.hidden = true; },
+    /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
+    ajustarTopo,
     /** Estado das opções no menu. */
     definirEstado(e) {
+      // marcador de treino só existe no treino de condução (no de ataque a defesa já marca)
+      if (e.modoTreino !== undefined && el.marcador) el.marcador.closest('button').hidden = e.modoTreino === 'ataque';
       if (e.qualidadeEscolha) marcarGrupo('qualidade', e.qualidadeEscolha);
       if (e.qualidadeAtual && el.infoQ) {
         el.infoQ.textContent = e.qualidadeEscolha === 'auto'

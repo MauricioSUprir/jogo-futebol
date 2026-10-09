@@ -478,7 +478,7 @@ async function iniciar() {
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao });
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => hud.ajustarTopo() });
   atualizarFase();
   redimensionar();
   window.addEventListener('resize', redimensionar);
@@ -492,6 +492,7 @@ async function iniciar() {
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade,
   });
   if (params.get('qps') === '1') hud.mostrarQps(true);
+  hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
   desenharQuadro(PASSO, performance.now());
   adapt.inicio = performance.now();
@@ -599,6 +600,8 @@ const api = {
       texturas: cena3d ? cena3d.info().memory.textures : 0,
     };
   },
+  /** Escreve um modo/posição no painel do HUD já (testes de layout com o texto mais longo). */
+  hudModo(texto, posicao = null) { hud.atualizar(performance.now(), 0, texto, false, posicao); },
   /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
   mostrarEvento(ev) { hud.evento(ev, { tipoVoo: mundo.voo?.tipo }, true); },
   /** Desenha um quadro sem avançar nada (prints). */

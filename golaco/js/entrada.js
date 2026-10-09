@@ -129,7 +129,8 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
 }
 
 /**
- * opc = {forcarToque: bool, aoAcao(acao)}. Devolve a interface da entrada.
+ * opc = {forcarToque: bool, aoAcao(acao), aoMudarLayout()}. Devolve a interface da entrada.
+ * aoMudarLayout: os controles de toque apareceram/sumiram (o HUD do topo se ajusta).
  */
 export function criarEntrada(opc = {}) {
   const teclas = new Set();
@@ -244,13 +245,30 @@ export function criarEntrada(opc = {}) {
     const r = raioBase();
     pino.style.transform = `translate(${vx * r}px, ${-vy * r}px)`;
   }
+  let ultimoPos = null;     // último layout dos botões (todas as vagas, das duas fases)
   function baseRepouso() {
-    // posição de descanso (só a dica visual): canto inferior esquerdo, dentro da área segura
+    // posição de descanso (só a dica visual; o analógico é flutuante): canto inferior esquerdo,
+    // dentro da área segura. Tela estreita em pé com botões grandes: sobe o que precisar para
+    // não encostar em nenhuma vaga do arco (das duas fases: não pula quando a posse muda)
     if (!zona) return;
     const z = zona.getBoundingClientRect();
     const r = raioBase();
     const sa = margensSeguras();
-    posicionarBase(Math.max(z.left, sa.l) + r + 26, z.bottom - sa.b - r - 22, false);
+    const x = Math.max(z.left, sa.l) + r + 26;
+    let y = z.bottom - sa.b - r - 22;
+    if (ultimoPos) {
+      for (let volta = 0, mexeu = true; mexeu && volta < 8; volta++) {
+        mexeu = false;
+        for (const k in ultimoPos) {
+          const p = ultimoPos[k], dmin = r + p.d / 2 + 8, dx = x - p.x;
+          if (Math.abs(dx) < dmin && Math.hypot(dx, y - p.y) < dmin) {
+            y = p.y - Math.sqrt(dmin * dmin - dx * dx) - 0.5;
+            mexeu = true;
+          }
+        }
+      }
+    }
+    posicionarBase(x, Math.max(y, z.top + r), false);
     posicionarPino(0, 0);
   }
   function limitarOrigem(x, y) {
@@ -355,6 +373,7 @@ export function criarEntrada(opc = {}) {
     const sa = margensSeguras();
     const vagas = [...new Set(bts.map(b => b.vaga))];
     const pos = calcularLayoutToque(W, H, sa, ajustes.tamanho, vagas);
+    ultimoPos = pos;
     for (const b of bts) {
       const p = pos[b.vaga];
       if (!p) continue;
@@ -383,7 +402,8 @@ export function criarEntrada(opc = {}) {
     if (!raizToque) return;
     raizToque.hidden = !v;
     document.documentElement.classList.toggle('com-toque', v);
-    if (v) { layout(); requestAnimationFrame(() => { layout(); baseRepouso(); }); }
+    if (v) { layout(); requestAnimationFrame(() => { layout(); baseRepouso(); if (opc.aoMudarLayout) opc.aoMudarLayout(); }); }
+    else if (opc.aoMudarLayout) opc.aoMudarLayout();
   }
   if (raizToque) { raizToque.classList.add('fase-ataque'); raizToque.dataset.fase = 'ataque'; }
   aplicarAjustes();

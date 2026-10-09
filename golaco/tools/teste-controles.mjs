@@ -7,8 +7,10 @@
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
-//    CORRER; defesa = TROCAR, GOLEIRO e CORRER; nenhum botão encosta em outro nem no HUD, todos
-//    ≥ 48 px e dentro da área segura, em 844×390 (com entalhe) e 390×844, nos tamanhos 70–140%.
+//    CORRER; defesa = TROCAR, GOLEIRO e CORRER; nenhum botão encosta em outro, no analógico em
+//    repouso nem no HUD (e as caixas do HUD não encostam entre si, com o texto de modo mais longo),
+//    todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com entalhe), 667×375 e 390×844
+//    (em pé, com a ilha no topo), nos tamanhos 70–140%.
 // Itens que dependem da lógica da Etapa 2 (m.controlado, j.carga, m.voo...) saem como
 // AGUARDANDO LÓGICA enquanto ela não existir — nunca como PASSOU.
 //   node tools/teste-controles.mjs
@@ -92,6 +94,18 @@ async function layoutToque(pagina) {
       .map(e => ({ nome: e.dataset.caixa, r: e.getBoundingClientRect() }))
       .filter(c => c.r.width > 0 && c.r.height > 0);
     const problemas = [];
+    // caixas do HUD entre si (placar, minimapa, painel, menu) e dentro da área segura
+    for (let i = 0; i < caixas.length; i++) {
+      const a = caixas[i].r;
+      if (a.left < sa.l - 0.5 || a.top < sa.t - 0.5 || a.right > W - sa.r + 0.5 || a.bottom > H - sa.b + 0.5) problemas.push(`${caixas[i].nome} fora da área segura`);
+      for (let k = i + 1; k < caixas.length; k++) {
+        const b = caixas[k].r;
+        if (a.left < b.right + 4 && b.left < a.right + 4 && a.top < b.bottom + 4 && b.top < a.bottom + 4) problemas.push(`${caixas[i].nome} encosta em ${caixas[k].nome}`);
+      }
+    }
+    // analógico em repouso (onde o polegar esquerdo descansa) não encosta em botão
+    const ba = document.querySelector('.analogico-base')?.getBoundingClientRect();
+    const analog = ba && ba.width > 0 ? { x: ba.left + ba.width / 2, y: ba.top + ba.height / 2, d: ba.width } : null;
     for (const b of bts) {
       const r = b.d / 2;
       if (b.d < 48) problemas.push(`${b.id} com ${b.d} px (< 48)`);
@@ -100,6 +114,7 @@ async function layoutToque(pagina) {
         const qx = Math.max(c.r.left, Math.min(b.x, c.r.right)), qy = Math.max(c.r.top, Math.min(b.y, c.r.bottom));
         if (Math.hypot(b.x - qx, b.y - qy) < r + 4) problemas.push(`${b.id} encosta em ${c.nome}`);
       }
+      if (analog && Math.hypot(b.x - analog.x, b.y - analog.y) - r - analog.d / 2 < 4) problemas.push(`${b.id} encosta no analógico`);
     }
     for (let i = 0; i < bts.length; i++) for (let k = i + 1; k < bts.length; k++) {
       const a = bts[i], b = bts[k];
@@ -113,6 +128,8 @@ async function layoutToque(pagina) {
 async function conferirTodosLayouts(pagina) {
   const textos = [];
   let ok = true;
+  // o texto de modo mais longo no painel (o topo se ajusta a ele)
+  await pagina.evaluate(() => window.__golaco.hudModo('Condução curta', 'MEI'));
   for (const tam of [0.7, 1, 1.4]) {
     for (const f of ['ataque', 'defesa']) {
       await pagina.evaluate(([tam, f]) => {
@@ -412,17 +429,22 @@ async function conferirTodosLayouts(pagina) {
   } finally { await navegador.close(); }
 }
 
-// ------------------------------------------------------------------ celular em pé
-{
-  const { navegador, pagina, erros } = await abrir({ largura: 390, altura: 844, dpr: 2, toque: true });
+// ------------------------------------------------------------------ outras telas de celular
+// em pé com a ilha/entalhe no topo; deitado estreito (iPhone SE, sem entalhe) e com entalhe (mini)
+for (const t of [
+  { largura: 390, altura: 844, entalhe: true, nome: '390×844 em pé, entalhe' },
+  { largura: 667, altura: 375, entalhe: false, nome: '667×375 deitado' },
+  { largura: 812, altura: 375, entalhe: true, nome: '812×375 deitado, entalhe' },
+]) {
+  const { navegador, pagina, erros } = await abrir({ largura: t.largura, altura: t.altura, dpr: 2, toque: true });
   try {
-    await pagina.goto(srv.url + '?q=baixa', { waitUntil: 'load' });
+    await pagina.goto(srv.url + '?q=baixa' + (t.entalhe ? '&entalhe=1' : ''), { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     await pagina.evaluate(() => { window.__golaco.relogio.usarManual(true); });
     await quadros(pagina, 2);
     const [okL, txtL] = await conferirTodosLayouts(pagina);
-    meta('390×844 (em pé): nenhum botão encosta, ≥ 48 px, dentro da área segura', txtL, okL);
-    meta('Em pé sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
+    meta(`${t.nome}: nada encosta (botões, analógico, HUD), ≥ 48 px, área segura`, txtL, okL);
+    meta(`${t.nome}: sem erro no console`, erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
 await srv.fechar();

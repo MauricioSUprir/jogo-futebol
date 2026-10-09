@@ -33,7 +33,8 @@ const CENAS = [
   { nome: 'celular-carga', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', prep: 'carga' },
   { nome: 'pc-aproximada', ...PC, url: 'q=alta&hora=dia&camera=aproximada&demo=1' },
   { nome: 'celular-baixa', ...CEL, url: 'q=baixa&hora=dia&toque=1&entalhe=1&demo=1' },
-  { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1&demo=1' },
+  // em pé, com a ilha no topo (?entalhe=1 em pé simula a margem segura de cima e a de baixo)
+  { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1' },
   // "GOL!" grande e verde (o aviso que aparece por 2 s quando a bola entra)
   { nome: 'celular-gol', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', depois: 'gol' },
   { nome: 'pc-menu', ...PC, url: 'q=alta&hora=dia', depois: 'menu' },
