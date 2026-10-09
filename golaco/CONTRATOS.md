@@ -44,18 +44,31 @@ subpasso — a bola parada ou lenta do lado de fora (atrás do gol, por fora da 
 fica onde está, e nada atravessa em velocidade nenhuma.
 
 ## Jogador (`js/jogador.js`)
-Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, pes[2]{apoio, x, z, rumo, faseApoio,
-faseSaida, fasePouso, lx, lz, lrumo, puxa, gx, gz}, par (parâmetros dos atributos), ix, iz, imag
-(pedido do analógico), intRumo, intW, botoes, cond, travaApoio`.
+Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, ritmo, pes[2]{apoio, x, z, rumo, faseApoio,
+faseSaida, fasePouso, lx, lz, lrumo, puxa, gx, gz, tx, ty, tz, bx, bz, k, chegou, pendente},
+par (parâmetros dos atributos), ix, iz, imag (pedido do analógico), intRumo, intW, botoes, cond,
+travaApoio, quadril`.
 - `fase` em PASSOS: o pé j pisa quando `fase` cruza um inteiro n ≡ j (mod 2) e fica no chão
   por `2·carga` passos (`infoPassada`). Pé no chão = parado no mundo (sem patinar).
-- **A fase nunca salta** (o pé no balanço é desenhado pela fase): quando um pé tem de sair antes
-  (ficou para trás/torto, ou o toque pede o pé livre), só o RITMO muda, com limite
-  (`PASSADA.ritmo*`, `velPeBalanco`). Parando, o pé no ar termina o passo (não pousa de uma vez).
-- No balanço: `faseSaida`/`fasePouso` (a animação anda entre elas) e o ponto de pouso
-  `lx, lz, lrumo` — segue o previsto com velocidade limitada e é exatamente onde o pé é plantado.
+- **A fase nunca salta**: quando um pé tem de sair antes (ficou para trás/torto, ou o toque pede
+  o pé livre), só o RITMO muda, com limite (`PASSADA.ritmo*`, `velPeBalanco`); `j.ritmo` guarda o
+  do último tick. Parando, o pé no ar termina o passo (não pousa de uma vez). Pé de apoio perto do
+  limite da perna (`alcancePlantado` → `alcanceMax`) sai depressa, até `ritmoUrgente`, mesmo no
+  gesto do toque; parado com o corpo a mais de `alcanceParado` de um pé, ele dá um passo.
+- A passada roda DEPOIS da colisão entre corpos (`sim.js`): o pouso é mirado pela velocidade que o
+  corpo tem depois do contato.
+- No balanço: `faseSaida`/`fasePouso` e o ponto de pouso `lx, lz, lrumo` — a previsão do corpo no
+  pouso + meio apoio, refeita a cada tick (tempo até o pouso contínuo, pelo ritmo) e parada quando
+  o pé desenhado chega a ele (`chegou`); é exatamente onde o pé é plantado.
+- **Pé desenhado** `tx, ty, tz` (tornozelo; `bx, bz, k` = trajetória sem o gesto): integrado no fim
+  do passo por `passoPeDesenhado(j, mundo, dt)` — trajetória do balanço até o pouso (perfil
+  `perfilBalanco`, altura do passo), gesto do toque e arco da pedalada, seguidos com no máximo
+  `PASSADA.velPeMax` (90% de 3 + 2,5·v). O pé só é plantado quando o pé desenhado está a um quadro
+  do ponto de pouso (`velPeAterrissa`); senão fica `pendente` (no ar) até chegar.
 - `puxa` (0–1) e `gx, gz`: gesto do toque (só visual, integrado pela simulação — `conducao.js`
   `atualizarGesto`): peso e ponto aonde o pé desenhado vai até a bola, com velocidade limitada.
+- `quadril`: altura do quadril da última pose (`anim.js alturaQuadril`, guardada pela simulação no
+  fim do passo).
 - Pé plantado e tronco: mais torto que 1,0 rad o pé dá um passo para se alinhar (a passada fica
   ativa mesmo parado); o tronco girando mais rápido que os passos, o pé plantado gira no lugar
   (pivô, sem sair do ponto) e nunca fica a mais de 1,2 rad do tronco.
@@ -97,10 +110,13 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
 `pose(j, mundo, saida?) → Float32Array(3·NJ)` com as posições no mundo das juntas, na ordem de
 `JUNTAS`; `SEGMENTOS` lista os pares de juntas desenhados (com raio). A pose é calculada uma
 vez por passo de simulação; o desenho interpola entre a pose anterior e a atual.
-- Pé no chão = o ponto plantado na simulação (nada o tira do lugar). Pé no ar = da saída
-  (`pe.x, pe.z`) ao pouso (`lx, lz`) pela fase, um tick adiantado (no último tick do balanço já
-  está no ponto de pouso), mais o gesto do toque (`puxa`, `gx, gz`), com desvio limitado pelo
-  tempo que o pé ainda tem no ar. `tools/teste-patinacao.mjs` mede todos os quadros.
+- Pé no chão = o ponto plantado na simulação (nada o tira do lugar). Pé no ar = o pé desenhado
+  do estado (`tx, ty, tz`, ver Jogador). `tools/teste-patinacao.mjs` mede todos os quadros.
+- Quadril: teto pelo alcance das pernas — pé no chão; pé no ar na saída (o próprio pé) e no fim
+  do balanço (o ponto de pouso visto do corpo, meio apoio à frente), e no meio do balanço até
+  `QUEDA_BALANCO` abaixo do nominal. Para cima sobe no máximo `QUADRIL_SOBE` (1,5 m/s) a partir de
+  `j.quadril`; para baixo vai direto ao teto. `alturaQuadril(j, mundo)` (usada pela simulação) e a
+  pose dão a mesma altura.
 
 ## Entrada (`js/controle.js` puro, `js/entrada.js` com DOM)
 - `processarAnalogico(x, y, zonaMorta, zonaExterna)` → `{x, y, mag}` com **zona morta radial**

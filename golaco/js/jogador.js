@@ -333,6 +333,7 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
   }
   const f1 = f0 + ritmo * dt;
   j.fase = f1;
+  j.ritmo = ritmo;
   for (let p = 0; p < 2; p++) {
     const pe = j.pes[p];
     const psi0 = faseLocal(f0, p), psi1 = faseLocal(f1, p);
@@ -366,7 +367,7 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       // desenhado é que tem a velocidade limitada (passoPeDesenhado). O tempo até o pouso é o
       // mesmo do progresso do balanço (contínuo, ao menos um tick); com o pé desenhado já no ponto
       // de pouso (chegou), o ponto fica parado até a passada plantar o pé.
-      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(f, 0.5), dt));
+      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(ritmo, 0.3), dt));
       pe.lx = pt.x; pe.lz = pt.z; pe.lrumo = pt.rumo;
     }
   }
@@ -435,12 +436,15 @@ export function progressoBalanco(j, p, comBola) {
   const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
   const { f, carga } = infoPassada(s, comBola);
   const fp = Math.max(f, 0.5);
+  // ritmo da passada no último tick (o passo acelerado — toque, pé no limite, pedalada — também
+  // adianta o balanço: o pé desenhado chega ao ponto de pouso quando a fase cruza o inteiro)
+  const r = Math.max(j.ritmo ?? fp, 0.3);
   const total = Math.max(pe.fasePouso - pe.faseSaida, 1e-3);
   const falta = Math.max(0, pe.fasePouso - j.fase);
   return {
-    u: clamp(1 - (falta - fp * PASSO) / total, 0, 1),
-    livre: Math.min(j.fase - pe.faseSaida, Math.max(0, falta - fp * PASSO)) / fp,
-    total: total / fp,
+    u: clamp(1 - (falta - r * PASSO) / total, 0, 1),
+    livre: Math.min(j.fase - pe.faseSaida, Math.max(0, falta - r * PASSO)) / r,
+    total: total / r,
     meioApoio: carga / fp, // s do pouso ao meio do apoio (o pé pousa à frente do corpo: v × isto)
     s,
   };

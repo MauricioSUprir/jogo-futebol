@@ -3,7 +3,7 @@
 // da página (sessao.js: criarTreino + passoTreino), em 18 cenas: trote, corrida, arrancada,
 // curvas, zigue-zague, giros (também em arrancada), corte em arrancada, para e sai, parado
 // girando, máquina de passes (domínio parado e andando), marcador (proteção e corrida),
-// pedaladas e a demo.
+// pedaladas e a demo — e o treino de ataque jogado pela IA (10 jogadores, duas sementes).
 //
 // Metas (todas pelo MÁXIMO, não pela média):
 //  1. Pé plantado não anda: com o pé apoiado no MESMO ponto na simulação nos dois quadros, o
@@ -41,8 +41,10 @@ const cenas = [
   ['marcador: proteção', t => ({ x: Math.cos(t * 0.5) * 0.5, z: Math.sin(t * 0.5) * 0.5, botoes: MOD }), { marcador: true }],
   ['marcador: corrida', t => ({ x: Math.cos(t * 0.6), z: Math.sin(t * 0.6), botoes: Math.floor(t / 2) % 2 ? CORRER : 0 }), { marcador: true }],
   ['demo', null, { demo: true }],
-  // Etapa 2: o treino de ataque jogado pela IA (passes, chutes, recomeços), medindo os 10 jogadores
-  ['treino de ataque (10 jogadores)', null, { ataque: true }],
+  // Etapa 2: o treino de ataque jogado pela IA (passes, chutes, recomeços, trombadas, inversões),
+  // medindo os 10 jogadores, em duas sementes
+  ['treino de ataque (10 jogadores)', null, { ataque: true, semente: 2 }],
+  ['treino de ataque (semente 7)', null, { ataque: true, semente: 7 }],
 ];
 
 const TORNOZELO = [J.tornozeloE, J.tornozeloD];
@@ -51,7 +53,7 @@ const limitePouso = v => 0.19 * v + 0.81;     // m/s
 const linhas = [['cena', 'plantado: máx (m/s)', 'maior desloc. / limite', 'pouso: máx (m/s)', 'quadros']];
 const geral = { plantado: 0, razao: 0, pouso: 0, quadros: 0, pior: null };
 for (const [nome, rot, op = {}] of cenas) {
-  const m = op.ataque ? criarTreino({ modo: 'ataque', semente: 2 })
+  const m = op.ataque ? criarTreino({ modo: 'ataque', semente: op.semente })
     : op.demo ? criarTreino({ modo: 'conducao', semente: 1, ...DEMO.inicio })
       : criarTreino({ modo: 'conducao', semente: 3, x: -20, z: 0, rumo: 0, marcador: !!op.marcador });
   const medidos = op.ataque ? m.jogadores : [m.jogadores[0]];

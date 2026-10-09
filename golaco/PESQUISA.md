@@ -242,7 +242,7 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 **Condução e movimento em jogos**
 - Reynolds 1999: integrador de steering, seek, arrive e pursuit. https://www.red3d.com/cwr/steer/gdc99/
 - Holden, Motion-Matching: mola de 0,27 s, razões de velocidade, constantes de pé travado e correção da raiz. https://github.com/orangeduck/Motion-Matching/blob/main/controller.cpp
-- Clark, Ryan, Weyand et al. 2023 (J Hum Kinet), "Horizontal Foot Speed During Submaximal and Maximal Running": pico do pé no balanço = 2,00 ± 0,15 × a velocidade (3,1–10 m/s) e velocidade do pé ao tocar o chão (GSD) = 0,19·v + 0,81 m/s — usados no limite por quadro do teste de patinação, no perfil do balanço e no limite da passada acelerada. https://pmc.ncbi.nlm.nih.gov/articles/PMC10203846/
+- Clark, Ryan, Weyand et al. 2023 (J Hum Kinet), "Horizontal Foot Speed During Submaximal and Maximal Running": pico do pé no balanço = 2,00 ± 0,15 × a velocidade (3,1–10 m/s) e velocidade do pé ao tocar o chão (GSD) = 0,19·v + 0,81 m/s — usados no limite por quadro do teste de patinação, no perfil do balanço, no limite da passada acelerada e na velocidade máxima do pé desenhado no balanço e no pouso (jogador.js passoPeDesenhado: 90% e 95% desses valores). https://pmc.ncbi.nlm.nih.gov/articles/PMC10203846/
 - van der Straaten et al. 2020 (J Appl Biomech): pé a ~4,6 m/s no meio do balanço andando — piso do limite do pé em baixa velocidade e perfil do balanço (pico ≈ 1,35 × a média).
 - Clavet/For Honor (Game Anim): previsibilidade acima de responsividade, 15 cm, taxa de reprodução de −20% a +10%. https://www.gameanim.com/?p=13538
 - Epic/Lyra: limite de 15–20% para taxa de reprodução e stride warping. https://www.unrealengine.com/tech-blog/adapting-lyra-animation-to-your-ue5-game
