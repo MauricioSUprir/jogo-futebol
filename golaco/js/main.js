@@ -151,7 +151,7 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
-const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, quadros: 0, alfa: 0 };
+const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0 };
 const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
@@ -190,6 +190,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   if (renderizar) cena3d.desenhar(cam.camera);
   render.bola.x = _bp.x; render.bola.y = _bp.y; render.bola.z = _bp.z;
   render.jogador.x = hx; render.jogador.z = hz;
+  const cp = cam.camera.position;
+  render.camera.x = cp.x; render.camera.y = cp.y; render.camera.z = cp.z;
   render.alfa = alfa;
   render.quadros++;
   // HUD

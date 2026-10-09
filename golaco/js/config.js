@@ -205,13 +205,20 @@ export const ATRIBUTOS_PADRAO = {
   altura: 180,
 };
 
-// Câmera de TV.
+// Câmera de TV. O enquadramento é pela LARGURA vista no foco (m), não pelo fov: o fov vertical
+// sai da largura e do formato da tela (render/camera.js). Celular deitado (19,5:9) mantém a
+// largura de um 16:9 e ganha jogadores maiores; em pé, perfil próprio (mais alto e inclinado,
+// sem céu); tela pequena (celular) fecha mais 12%.
 export const CAMERA = {
-  fov: 32,
-  distancia: 46,              // da linha lateral até a câmera (z)
-  altura: 21,
+  largura: 45,                // m vistos na horizontal, no foco, num 16:9 (fov vertical ~32°)
+  distancia: 40,              // do foco até a câmera, no chão (z)
+  altura: 18.3,               // inclinação ~24,6°
   rigidez: 3.2,               // 1/s — mola crítica que segue o alvo
-  aproximada: { fov: 40, distancia: 16, altura: 8 },
+  telaPequena: 0.88,          // celular (menor lado < 520 px CSS): largura × 0,88
+  aproximada: { largura: 23, distancia: 16, altura: 8 },
+  // celular em pé: câmera mais alta e inclinada (~40°), largura menor; nada de céu no quadro
+  retrato: { largura: 24, distancia: 25.3, altura: 21.2 },
+  retratoAproximada: { largura: 13, distancia: 12, altura: 9.6 },
 };
 
 // Qualidade gráfica.
