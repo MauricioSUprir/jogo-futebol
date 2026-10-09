@@ -1899,7 +1899,9 @@
       var d = cardData(c); if (!d) return;
       var p = Object.assign({}, d.p); p.overall = d.ov; players.push(p);
     });
-    return { id: "utteam", name: nomeExibido(s), short: siglaDe(s), players: players };
+    // a cor do escudo vira a cor do uniforme no 3D
+    var cor = s.cor || "#22c55e";
+    return { id: "utteam", name: nomeExibido(s), short: siglaDe(s), players: players, colors: { primary: cor, secondary: claro(cor) ? "#111111" : "#ffffff" } };
   }
 
   /* ================= eventos (para os módulos: temporada, evoluções, modos) =================

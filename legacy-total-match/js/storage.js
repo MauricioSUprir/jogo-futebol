@@ -53,7 +53,8 @@
     dynamicOverall: false,  // overall sobe/desce por confiança e desempenho (carreira/competições)
     rivalry: true,          // rivalidades: clássicos + transferências raras entre rivais
     evoRate: "media",       // taxa de evolução dos atletas: rapida | media | demorada
-    theme: "dark"           // dark (preto+verde) | light (branco+verde)
+    theme: "dark",          // dark (preto+verde) | light (branco+verde)
+    partidas3d: "perguntar" // jogos do seu time: perguntar | 3d (sempre em 3D) | simular
   };
 
   TM.storage = {

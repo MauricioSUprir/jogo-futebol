@@ -222,7 +222,7 @@
     return {
       seed: seed, alvo: alvo, nome: nome, tag: opt.tag || tagSort, sigla: sigla, f: f, ov: ov, chem: ch.team, ds: ds,
       esc: esc, cor: cor, tema: tema, ref: ref, reforco: reforco,
-      team: timeDe(ds, ch.per, nome, sigla, f, reforco, banco)
+      team: (function () { var t = timeDe(ds, ch.per, nome, sigla, f, reforco, banco); t.colors = { primary: cor, secondary: "#ffffff" }; return t; })()
     };
   }
   function temaTexto(e) {

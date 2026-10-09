@@ -73,6 +73,10 @@
         { label: "Difícil", value: "dificil" }, { label: "Lenda", value: "lenda" }
       ]),
       slider("Realismo", "realism", 1, 5, ["Arcade", "Casual", "Equilibrado", "Realista", "Simulação"]),
+      segmented("Partidas do seu time", "partidas3d", [
+        { label: "Perguntar", value: "perguntar" }, { label: "Sempre 3D", value: "3d" }, { label: "Sempre simular", value: "simular" }
+      ]),
+      el("div", { class: "setting-hint", text: "Em 3D você joga no estádio (motor 3D do Total Match); simulando, acompanha lance a lance. Partidas online contra outra pessoa são sempre simuladas." }),
       segmented("Tempo de jogo (velocidade)", "matchSpeed", [
         { label: "Instantâneo", value: "instantaneo" }, { label: "Rápido", value: "rapido" }, { label: "Normal", value: "normal" }, { label: "Lento", value: "lento" }
       ]),
