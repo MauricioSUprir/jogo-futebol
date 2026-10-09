@@ -113,9 +113,11 @@ export function rumoExtrapolado(intRumo, intW, t) {
 
 /**
  * Previsão do corpo n ticks à frente com o analógico extrapolado. Devolve arrays planos.
- * Não muda j.
+ * Não muda j. rec (opcional) = bola prevista {xs, zs}: aplica a mesma regra de
+ * movimentoRecepcao de frente (freia e vira para a bola), para o domínio marcado com esta
+ * previsão acontecer de verdade.
  */
-export function preverCorpo(m, j, n, comBola, prot) {
+export function preverCorpo(m, j, n, comBola, prot, rec) {
   const k = copiaCinematica(j);
   const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), rs = new Float64Array(n + 1);
   const ss = new Float64Array(n + 1), fs = new Float64Array(n + 1);
@@ -143,6 +145,7 @@ export function preverCorpo(m, j, n, comBola, prot) {
     } else ctx.marcador = null;
     const mv = movimentoBase(j, ix, iz, j.imag, j.botoes, comBola, k.rumo, ctx);
     if (i <= reto && s0 > 1) { mv.dx = MD.cos(rv0); mv.dz = MD.sin(rv0); mv.vel = Math.min(mv.vel, s0); }
+    if (rec) { mv.vel = Math.min(mv.vel, VEL_RECEPCAO); mv.rumoAlvo = MD.atan2(rec.zs[i] - k.z, rec.xs[i] - k.x); }
     passoCorpo(k, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, DT, comBola);
     const s = MD.hypot(k.vx, k.vz);
     const ativa = s > 0.22 || Math.abs(k.giro) > 1.6;
@@ -186,11 +189,12 @@ export function noAlcance(x, z, rumo, bx, bz, by, relaxado) {
 
 /**
  * Procura o primeiro tick (a partir de `lead`) em que um pé pode tocar a bola: o pé está no
- * balanço, o outro no chão, e a bola no alcance. Devolve {i, pe} ou null.
+ * balanço, o outro no chão, e a bola no alcance. Devolve {i, pe} ou null. recFrente: prevê o
+ * corpo com a regra da recepção de frente (preverCorpo rec).
  */
-export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado) {
-  const pc = preverCorpo(m, j, max, comBola, prot);
+export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado, recFrente) {
   const pb = preverBola(m.bola, max);
+  const pc = preverCorpo(m, j, max, comBola, prot, recFrente ? pb : null);
   for (let i = Math.max(1, lead); i <= max; i++) {
     if (!noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i], pb.ys[i], relaxado)) continue;
     const ap = apoioPrevisto(pc.fs[i], pc.ss[i], comBola);
@@ -561,45 +565,124 @@ function acompanharBola(m, j, base) {
   return base;
 }
 
+// ------------------------------------------------------------ recepção (domínio)
+// Dois jeitos de receber:
+//  - DE FRENTE (parado, ou a bola vem contra o sentido da corrida): freia e vira para a bola;
+//  - EM CORRIDA (a bola vem por trás ou de lado, mais ou menos no sentido da corrida, ou está
+//    quase parada à frente): não freia nem vira para a bola — corrige o caminho só o necessário
+//    para a bola chegar ao pé e domina em velocidade, com o primeiro toque para a frente (na
+//    direção do analógico: executarToque 'dominio').
+// O domínio é marcado com a MESMA previsão do movimento que o corpo vai fazer depois.
+
+const VEL_RECEPCAO = 1.0;          // m/s — teto de quem recebe de frente
+const REC_VMIN_CORRIDA = 2.0;      // m/s — abaixo disso recebe "parado" (de frente)
+const REC_COS_CORRIDA = MD.cos(1.92); // bola até ~110° do sentido da corrida = em corrida
+const REC_LADO = 0.35;             // m — bola ao lado do corpo no toque, depois do desvio
+const REC_ALCANCE = 0.72;          // m — distância bola–corpo no toque (no máximo)
+const REC_ACEL_LAT = 6;            // m/s² — aceleração lateral para o desvio (previsão)
+const REC_DESVIO = 0.42;           // ~seno de 25°: desvio máximo do caminho para ir na bola
+
+/** 'corrida' ou 'frente' (ver acima). */
+export function modoRecepcao(j, b) {
+  const s = MD.hypot(j.vx, j.vz);
+  if (s < REC_VMIN_CORRIDA) return 'frente';
+  const sb = MD.hypot(b.v.x, b.v.z);
+  if (sb < 1.0) return 'corrida';
+  return (b.v.x * j.vx + b.v.z * j.vz) / (sb * s) >= REC_COS_CORRIDA ? 'corrida' : 'frente';
+}
+
+/**
+ * Recepção em corrida: primeiro tick em que a bola fica ao alcance do corpo que segue o
+ * analógico, depois de um pequeno desvio do caminho para a bola passar ao lado do pé (nem
+ * longe demais, nem batendo nas pernas). O desvio respeita a aceleração lateral do corpo.
+ * Devolve também o ponto (qx, qz) onde o corpo tem que estar nesse tick.
+ */
+function oportunidadeCorrida(m, j, max) {
+  const pb = preverBola(m.bola, max);
+  const pc = preverCorpo(m, j, max, false, null);
+  for (let i = 1; i <= max; i++) {
+    if (pb.ys[i] > 0.45) continue;
+    const hx = MD.cos(pc.rs[i]), hz = MD.sin(pc.rs[i]);
+    const dx = pb.xs[i] - pc.xs[i], dz = pb.zs[i] - pc.zs[i];
+    const fr = dx * hx + dz * hz, la = -dx * hz + dz * hx;
+    if (fr < -0.25 || fr > 0.55) continue;
+    // bola ao lado do pé: entre 0,2 e REC_LADO para o lado dela
+    const lado = la >= 0 ? 1 : -1;
+    const laAlvo = lado * clamp(Math.abs(la), 0.2, REC_LADO);
+    const t = i * DT;
+    const sh = Math.min(pc.ss[i] * REC_DESVIO * t, 0.5 * REC_ACEL_LAT * t * t);
+    const corr = clamp(la - laAlvo, -sh, sh);
+    const la2 = la - corr;
+    if (Math.abs(la2) > 0.55 || fr * fr + la2 * la2 > REC_ALCANCE * REC_ALCANCE) continue;
+    return { i, pe: lado > 0 ? 1 : 0, bx: pb.xs[i], bz: pb.zs[i], qx: pc.xs[i] - hz * corr, qz: pc.zs[i] + hx * corr };
+  }
+  return null;
+}
+
 /**
  * Jogador sem a posse e bola livre: procura o primeiro toque (domínio). Devolve true se
- * marcou um domínio.
+ * marcou um domínio. primeira (opcional, Etapa 2): com uma ação pedida, bate de primeira.
  */
-export function tentarDominio(m, j) {
+export function tentarDominio(m, j, primeira) {
   const c = j.cond;
   const b = m.bola;
+  // acabou de ter a bola roubada: não recupera no tick seguinte
+  if (c.semDominioAte != null && m.tick < c.semDominioAte) return false;
   if (c.toque && c.toque.tipo === 'dominio') {
     if (m.tick >= c.toque.tick) {
       if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+        // de primeira: com uma ação pedida, bate sem dominar
+        if (primeira && primeira(m, j, c.toque.pe)) { c.toque = null; return true; }
         executarToque(m, j, c.toque.pe, 'dominio');
         return true;
       }
       c.toque = null;
-    } else return true;
+    } else {
+      // em corrida o plano é refeito de tempos em tempos (fora da janela da animação do pé)
+      if (c.toque.modo === 'corrida' && c.toque.tick - m.tick > 10 && (m.tick - c.toque.desde) % 4 === 0) {
+        const op = oportunidadeCorrida(m, j, 45);
+        if (op) Object.assign(c.toque, { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, qx: op.qx, qz: op.qz });
+      }
+      return true;
+    }
   }
   const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   const vb = MD.hypot(b.v.x, b.v.z);
-  if (d > 1.0 + vb * 0.8) return false;
-  const op = procurarOportunidade(m, j, 1, 36, false, null, true);
+  const s = MD.hypot(j.vx, j.vz);
+  if (d > 1.0 + (vb + s) * 0.8) return false;
+  const modo = modoRecepcao(j, b);
+  const op = modo === 'corrida' ? oportunidadeCorrida(m, j, 45) : procurarOportunidade(m, j, 1, 36, false, null, true, true);
   if (!op) return false;
-  c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio' };
+  c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio', modo, desde: m.tick, qx: op.qx, qz: op.qz };
   if (op.i <= 1) {
-    // a bola chega já: domina neste tick se estiver no alcance
-    if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) { executarToque(m, j, op.pe, 'dominio'); }
+    // a bola chega já: domina (ou bate de primeira) neste tick se estiver no alcance
+    if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+      if (primeira && primeira(m, j, op.pe)) c.toque = null;
+      else executarToque(m, j, op.pe, 'dominio');
+    }
   }
   return true;
 }
 
 /**
- * Movimento de quem vai receber (domínio marcado): fica de frente para a bola e quase
- * parado; o analógico decide para onde vai o primeiro toque, não para onde o corpo foge.
+ * Movimento de quem vai receber (domínio marcado). De frente: fica de frente para a bola e
+ * quase parado; o analógico decide para onde vai o primeiro toque, não para onde o corpo foge.
+ * Em corrida: segue correndo e só corrige o caminho até o ponto marcado (qx, qz).
  */
 export function movimentoRecepcao(m, j, base) {
   const c = j.cond;
   if (!c.toque || c.toque.tipo !== 'dominio') return base;
   const b = m.bola;
+  if (c.toque.modo === 'corrida') {
+    // passos de movimento até o tick do toque: este e mais n (o corpo anda antes do toque)
+    const n = c.toque.tick - m.tick + 1;
+    const dx = c.toque.qx - j.x, dz = c.toque.qz - j.z;
+    const d = MD.hypot(dx, dz);
+    if (n <= 0 || d < 0.05) return base;
+    return { dx: dx / d, dz: dz / d, vel: Math.min(d / (n * DT), j.par.vTeto), rumoAlvo: base.rumoAlvo };
+  }
   const rumo = MD.atan2(b.p.z - j.z, b.p.x - j.x);
-  return { dx: base.dx, dz: base.dz, vel: Math.min(base.vel, 1.0), rumoAlvo: rumo };
+  return { dx: base.dx, dz: base.dz, vel: Math.min(base.vel, VEL_RECEPCAO), rumoAlvo: rumo };
 }
 
 /** Verifica perda de posse (bola longe por tempo demais). */
