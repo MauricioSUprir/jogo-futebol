@@ -29,3 +29,7 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
+      - name: Controles na página (teclado no PC e toque no celular)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-controles.mjs

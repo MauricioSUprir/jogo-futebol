@@ -10,6 +10,7 @@ import { clamp, difAng, quantizar } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
 } from './conducao.js';
+import { MD } from './matdet.js';
 
 /**
  * Cria o mundo. opcoes:
@@ -48,12 +49,12 @@ export function jogadorPorId(m, id) {
 export function aplicarEntrada(j, e, tick) {
   const q = ENTRADA.quant;
   let x = quantizar(e?.x ?? 0, q), z = quantizar(e?.z ?? 0, q);
-  let mag = Math.hypot(x, z);
+  let mag = MD.hypot(x, z);
   if (mag > 1) { x /= mag; z /= mag; mag = 1; }
   j.botoesAnt = j.botoes;
   j.botoes = (e?.botoes ?? 0) | 0;
   if (mag > 0.08) {
-    const r = Math.atan2(z, x);
+    const r = MD.atan2(z, x);
     const d = difAng(j.intRumo, r);
     if (j.imag > 0.08 && Math.abs(d) < 0.12) {
       // giro contínuo do analógico: mede a velocidade angular pedida
@@ -65,7 +66,7 @@ export function aplicarEntrada(j, e, tick) {
     j.intRumo = r;
     j.ix = x / mag; j.iz = z / mag;
   } else {
-    j.intW *= Math.exp(-PASSO / 0.1);
+    j.intW *= MD.exp(-PASSO / 0.1);
   }
   j.imag = mag;
   // pedalada: dois toques no modificador
@@ -85,21 +86,21 @@ function moverMarcador(m, j) {
   let tx = b.p.x, tz = b.p.z;
   if (dono && dono !== j) {
     const dx = j.x - dono.x, dz = j.z - dono.z;
-    const d = Math.hypot(dx, dz);
+    const d = MD.hypot(dx, dz);
     if (d < 1.3) {
       // contorna: gira em volta do condutor na direção da bola
-      const aM = Math.atan2(dz, dx);
-      const aB = Math.atan2(b.p.z - dono.z, b.p.x - dono.x);
+      const aM = MD.atan2(dz, dx);
+      const aB = MD.atan2(b.p.z - dono.z, b.p.x - dono.x);
       const sentido = difAng(aM, aB) >= 0 ? 1 : -1;
       const a2 = aM + sentido * 0.9;
-      tx = dono.x + Math.cos(a2) * 0.75;
-      tz = dono.z + Math.sin(a2) * 0.75;
+      tx = dono.x + MD.cos(a2) * 0.75;
+      tz = dono.z + MD.sin(a2) * 0.75;
     }
   }
   const dx = tx - j.x, dz = tz - j.z;
-  const d = Math.hypot(dx, dz) || 1;
+  const d = MD.hypot(dx, dz) || 1;
   const vel = Math.min(TREINO.marcadorVel, 0.6 + d * 2.2);
-  return { dx: dx / d, dz: dz / d, vel, rumoAlvo: Math.atan2(b.p.z - j.z, b.p.x - j.x) };
+  return { dx: dx / d, dz: dz / d, vel, rumoAlvo: MD.atan2(b.p.z - j.z, b.p.x - j.x) };
 }
 
 function colisaoCorpos(m) {
@@ -109,7 +110,7 @@ function colisaoCorpos(m) {
     for (let c = a + 1; c < js.length; c++) {
       const p = js[a], q = js[c];
       const dx = q.x - p.x, dz = q.z - p.z;
-      const d = Math.hypot(dx, dz);
+      const d = MD.hypot(dx, dz);
       if (d >= r2 || d < 1e-9) continue;
       const nx = dx / d, nz = dz / d;
       const fp = p.par.attr.forca, fq = q.par.attr.forca;
@@ -133,7 +134,7 @@ function colisaoBolaCorpo(m) {
   for (const j of m.jogadores) {
     if (j.id === m.posse) continue;
     const dx = b.p.x - j.x, dz = b.p.z - j.z;
-    const d = Math.hypot(dx, dz);
+    const d = MD.hypot(dx, dz);
     const lim = 0.2 + b.p.y * 0 + 0.11;
     if (d >= lim || d < 1e-9) continue;
     const nx = dx / d, nz = dz / d;
@@ -152,12 +153,12 @@ function colisaoBolaCorpo(m) {
 function roubarComMarcador(m, j) {
   const b = m.bola;
   if (b.p.y > 0.5) return;
-  const d = Math.hypot(b.p.x - j.x, b.p.z - j.z);
+  const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (d > TREINO.marcadorAlcance + 0.11) return;
   const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
   // tira a bola: empurra na direção em que o marcador está virado
   const v = 3.2;
-  chutarRasteiro(b, Math.cos(j.rumo) * v, Math.sin(j.rumo) * v);
+  chutarRasteiro(b, MD.cos(j.rumo) * v, MD.sin(j.rumo) * v);
   if (dono) { dono.cond.toque = null; dono.cond.busca = false; }
   m.posse = null;
   m.stats.roubadas++;
@@ -179,7 +180,7 @@ export function passo(m, entradas) {
   for (const j of js) {
     let mv;
     if (j.papel === 'marcador') {
-      if (j.descanso > 0) { j.descanso--; mv = { dx: Math.cos(j.rumo), dz: Math.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
+      if (j.descanso > 0) { j.descanso--; mv = { dx: MD.cos(j.rumo), dz: MD.sin(j.rumo), vel: 0, rumoAlvo: j.rumo }; }
       else mv = moverMarcador(m, j);
     } else if (j.papel === 'parado') {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };

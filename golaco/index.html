@@ -20,6 +20,7 @@
 </head>
 <body>
   <canvas id="tela" class="tela" aria-label="Campo 3D"></canvas>
+  <div class="vinheta" aria-hidden="true"></div>
 
   <!-- HUD fixo: marca, velocidade e modo, avisos -->
   <div id="hud" class="hud" data-hud>
@@ -43,6 +44,7 @@
     <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
     <div id="qps" class="qps" hidden></div>
     <div id="dica" class="dica" data-caixa="dica"><kbd>H</kbd> ajuda <span class="sep"></span> <kbd>Esc</kbd> menu</div>
+    <div class="dica-retrato" data-caixa="dica-retrato">Deite o celular para jogar melhor</div>
   </div>
 
   <!-- Controles de toque (celular) -->
@@ -72,6 +74,7 @@
           <button class="btn" type="button" data-cmd="maquina">Máquina de passes</button>
           <button class="btn btn-alternar" type="button" data-cmd="marcador" aria-pressed="false">Marcador de treino <small id="estado-marcador">desligado</small></button>
           <button class="btn" type="button" data-cmd="ajuda">Ajuda e controles</button>
+          <button class="btn" type="button" data-cmd="tela-cheia" id="btn-tela-cheia" hidden>Tela cheia</button>
         </div>
         <div class="menu-opcoes">
           <div class="opcao">
@@ -123,7 +126,7 @@
           <dl>
             <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas</dt><dd>Mover / conduzir</dd>
             <dt><kbd>Shift</kbd></dt><dd>Correr (arrancada)</dd>
-            <dt><kbd>E</kbd> ou <kbd>Ctrl</kbd></dt><dd>Condução curta, proteção (com marcador perto) e drible</dd>
+            <dt><kbd>E</kbd></dt><dd>Condução curta, proteção (com marcador perto) e drible</dd>
             <dt><kbd>E</kbd> <kbd>E</kbd></dt><dd>Dois toques rápidos: pedalada</dd>
             <dt><kbd>R</kbd></dt><dd>Recomeçar (bola no pé)</dd>
             <dt><kbd>M</kbd></dt><dd>Máquina de passes</dd>
@@ -132,7 +135,7 @@
             <dt><kbd>H</kbd> ou <kbd>F1</kbd></dt><dd>Esta ajuda</dd>
             <dt><kbd>Esc</kbd></dt><dd>Pausa e menu</dd>
           </dl>
-          <p class="nota">Com WASD use <kbd>E</kbd> como modificador (Ctrl + W fecha a aba no navegador). <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>I</kbd> ficam para passe, chute, lançamento e enfiada nas próximas etapas.</p>
+          <p class="nota"><kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>I</kbd> ficam para passe, chute, lançamento e enfiada nas próximas etapas.</p>
         </section>
         <section>
           <h3>Controle</h3>

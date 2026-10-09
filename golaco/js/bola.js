@@ -10,6 +10,7 @@
 //   rolando    true quando está apoiada na grama (y = raio, vy = 0)
 
 import { BOLA, CAMPO, AR, G, PASSO, SUBPASSOS_BOLA } from './config.js';
+import { MD } from './matdet.js';
 
 const R = BOLA.raio;
 const M = BOLA.massa;
@@ -51,7 +52,7 @@ export function cdPorVel(s) {
  */
 export function proxVelRolando(s, dt) {
   if (s <= 0) return 0;
-  const a = BOLA.rolagemC * Math.pow(s, BOLA.rolagemN) + BOLA.rolagemPiso + K_AR * cdPorVel(s) * s * s;
+  const a = BOLA.rolagemC * MD.pow(s, BOLA.rolagemN) + BOLA.rolagemPiso + K_AR * cdPorVel(s) * s * s;
   const s2 = s - a * dt;
   return s2 > BOLA.vParada ? s2 : 0;
 }
@@ -159,7 +160,7 @@ function passoRolando(b, dt, ev) {
   if (slip > 1e-6) {
     const vcx = b.v.x + R * b.w.z, vcz = b.v.z - R * b.w.x;
     if (vcx * vcx + vcz * vcz > 1e-8) {
-      b.w.y *= Math.exp(-BOLA.giroVerticalDecai * dt);
+      b.w.y *= MD.exp(-BOLA.giroVerticalDecai * dt);
       b.v.y = 0; b.p.y = R;
       b.p.x += b.v.x * dt; b.p.z += b.v.z * dt;
       return;
@@ -174,7 +175,7 @@ function passoRolando(b, dt, ev) {
   } else {
     b.w.x = 0; b.w.z = 0;
   }
-  b.w.y *= Math.exp(-BOLA.giroVerticalDecai * dt);
+  b.w.y *= MD.exp(-BOLA.giroVerticalDecai * dt);
   b.v.y = 0;
   b.p.y = R;
   b.p.x += b.v.x * dt;
@@ -202,7 +203,7 @@ function passoNoAr(b, dt, ev) {
   }
   v.x += ax * dt; v.y += ay * dt; v.z += az * dt;
   b.p.x += v.x * dt; b.p.y += v.y * dt; b.p.z += v.z * dt;
-  const dec = Math.exp(-BOLA.giroPorMetro * s * dt); // o giro cai por metro percorrido
+  const dec = MD.exp(-BOLA.giroPorMetro * s * dt); // o giro cai por metro percorrido
   w.x *= dec; w.y *= dec; w.z *= dec;
 
   if (b.p.y < R) {

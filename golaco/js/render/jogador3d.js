@@ -168,7 +168,6 @@ const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
-const _c = new THREE.Color();
 
 export function criarJogadores3D(cena, qualidade) {
   const alta = qualidade === 'alta';
@@ -368,9 +367,9 @@ export function criarJogadores3D(cena, qualidade) {
         marca.visible = true;
         marca.position.set(pose[ic2], pose[ic2 + 1] + 0.42, pose[ic2 + 2]);
         if (camera) {
-          // tamanho constante na tela (~2,6% da altura)
+          // tamanho constante na tela (~2,6% do menor lado da tela)
           const d = camera.position.distanceTo(marca.position);
-          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.026;
+          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.026 * Math.min(1, camera.aspect);
           marca.scale.set(k, k, 1);
           marca.position.y += k * 0.3;
         }
@@ -378,7 +377,6 @@ export function criarJogadores3D(cena, qualidade) {
         anelTodo.visible = false;
         marca.visible = false;
       }
-      void _c;
     },
     definirSombras(ligadas) {
       segs.castShadow = cabecas.castShadow = cabelos.castShadow = ligadas;

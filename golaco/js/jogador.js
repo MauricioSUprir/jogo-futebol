@@ -13,6 +13,7 @@
 
 import { JOGADOR, PASSADA, ATRIBUTOS_PADRAO, ENTRADA, PASSO } from './config.js';
 import { clamp, difAng, normAng, tabela, porAtributo, lerp } from './mat.js';
+import { MD } from './matdet.js';
 
 /** Parâmetros derivados dos atributos (calculados uma vez). */
 export function parametros(attr) {
@@ -46,7 +47,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     pes: [criarPe(x, z, rumo, 0), criarPe(x, z, rumo, 1)],
     par,
     // intenção (já em coordenadas do mundo)
-    ix: Math.cos(rumo), iz: Math.sin(rumo), imag: 0, botoes: 0, botoesAnt: 0,
+    ix: MD.cos(rumo), iz: MD.sin(rumo), imag: 0, botoes: 0, botoesAnt: 0,
     intRumo: rumo, intW: 0,
     // controle de bola (preenchido por conducao.js)
     cond: null,
@@ -58,7 +59,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
 
 function criarPe(x, z, rumo, lado) {
   const s = lado === 0 ? -1 : 1;
-  const rx = -Math.sin(rumo), rz = Math.cos(rumo);
+  const rx = -MD.sin(rumo), rz = MD.cos(rumo);
   return {
     apoio: true,
     x: x + rx * s * PASSADA.afastamentoLateral,
@@ -114,7 +115,7 @@ export function passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt, comBola = false) {
     const nx = -hz, nz = hx;                 // perpendicular (+90°)
     const c = dx * hx + dz * hz;
     const sn = hx * dz - hz * dx;
-    const th = Math.atan2(sn, c);
+    const th = MD.atan2(sn, c);
     const ath = Math.abs(th);
     if (vel > 0.05 && (ath > JOGADOR.angInversao || (k.inv && ath > JOGADOR.angInversao - 0.35))) {
       // inversão: freia na linha (sem arco, sem deriva lateral) e só depois vira
@@ -149,7 +150,7 @@ export function passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt, comBola = false) {
   if (s3 > 2.5) {
     // correndo, o tronco não se afasta muito do sentido da corrida: no máximo ~80° a
     // 2,5 m/s e ~40° a 8 m/s (freando para inverter, até 75°). Ele vira junto com o corpo.
-    const rv = Math.atan2(k.vz, k.vx);
+    const rv = MD.atan2(k.vz, k.vx);
     const lim = k.inv ? 1.3 : lerp(1.4, 0.7, clamp((s3 - 2.5) / 5.5, 0, 1));
     const d = difAng(rv, alvo);
     alvo = rv + clamp(d, -lim, lim);
@@ -204,9 +205,9 @@ export function passoPassada(j, comBola, dt, ev) {
     const pe = j.pes[p];
     if (!pe.apoio) continue;
     const lado = p === 0 ? -1 : 1;
-    const hx = j.x + (-Math.sin(j.rumo)) * lado * PASSADA.afastamentoLateral;
-    const hz = j.z + Math.cos(j.rumo) * lado * PASSADA.afastamentoLateral;
-    const d = Math.hypot(pe.x - hx, pe.z - hz);
+    const hx = j.x + (-MD.sin(j.rumo)) * lado * PASSADA.afastamentoLateral;
+    const hz = j.z + MD.cos(j.rumo) * lado * PASSADA.afastamentoLateral;
+    const d = MD.hypot(pe.x - hx, pe.z - hz);
     const torto = Math.abs(difAng(pe.rumo, j.rumo)) > 1.2;
     if (d > PASSADA.alcancePlantado || torto) {
       const psi = faseLocal(f1, p);
@@ -244,7 +245,7 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0) {
   const lado = p === 0 ? -1 : 1;
   // rumo previsto no pouso (o tronco continua girando)
   const rumo = j.rumo + clamp(j.giro, -6, 6) * Math.min(tempoAtePouso, 0.25);
-  const rx = -Math.sin(rumo), rz = Math.cos(rumo);
+  const rx = -MD.sin(rumo), rz = MD.cos(rumo);
   return {
     x: j.x + j.vx * tm + rx * lado * PASSADA.afastamentoLateral,
     z: j.z + j.vz * tm + rz * lado * PASSADA.afastamentoLateral,

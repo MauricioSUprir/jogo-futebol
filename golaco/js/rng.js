@@ -1,6 +1,7 @@
 // Gerador de números com semente (sfc32, de Chris Doty-Humphrey / PractRand).
 // O estado são 4 inteiros de 32 bits guardados no próprio mundo, então copiar o mundo
 // copia o gerador e a partida continua igual bit a bit. Nunca use Math.random na lógica.
+import { MD } from './matdet.js';
 
 function splitmix32(a) {
   return function () {
@@ -53,7 +54,7 @@ export function normal(r) {
   let u = uniforme(r);
   if (u < 1e-12) u = 1e-12;
   const v = uniforme(r);
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  return Math.sqrt(-2 * MD.log(u)) * MD.cos(2 * Math.PI * v);
 }
 
 export function copiarRng(r) {

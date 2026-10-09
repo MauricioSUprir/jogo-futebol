@@ -16,12 +16,14 @@ const HORAS = {
     nevoa: 0xb7cbe0, nevoaPerto: 150, nevoaLonge: 560, exposicao: 1.0,
   },
   noite: {
+    // refletores: luz branca fria, alta e de dois lados; pouco ambiente (sombras mais
+    // marcadas) e névoa escura que apaga o que está longe do gramado iluminado
     topo: 0x01030a, horizonte: 0x0a1422, baixo: 0x050709, solCor: 0x000000,
-    solDir: [0.28, 0.9, 0.34],
-    hemiCeu: 0x8ea4c8, hemiChao: 0x10200f, hemiInt: 0.55,
-    luzCor: 0xeef4ff, luzInt: 3.0,
-    extraInt: 1.15, extraDir: [-0.55, 0.72, -0.42],
-    nevoa: 0x05080d, nevoaPerto: 120, nevoaLonge: 460, exposicao: 1.04,
+    solDir: [0.26, 0.9, 0.36],
+    hemiCeu: 0x7f93b8, hemiChao: 0x0c180c, hemiInt: 0.32,
+    luzCor: 0xe2ecff, luzInt: 2.9,
+    extraInt: 1.25, extraDir: [-0.5, 0.75, -0.45],
+    nevoa: 0x020407, nevoaPerto: 55, nevoaLonge: 290, exposicao: 0.98,
   },
 };
 

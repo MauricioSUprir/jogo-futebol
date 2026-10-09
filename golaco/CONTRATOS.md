@@ -4,6 +4,13 @@ Regra de ouro: **a lógica (`js/*.js` fora de `js/render/` e de `js/entrada.js`/
 usa three.js nem DOM**. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
 semente (`js/rng.js`, estado em `mundo.rng`). `Math.random` é proibido na lógica.
 
+**Matemática determinística:** na lógica, seno, cosseno, atan2, exp, log, pow, asin, acos e hypot
+saem SEMPRE de `js/matdet.js` (`MD.sin(...)` etc.), nunca do `Math`. `Math.sin/cos/pow` mudam
+no último bit entre motores e versões (Node 22 × Chromium 141 já diferem) e isso quebra o
+replay e o hash Node = navegador. `Math.sqrt/abs/floor/round/min/max/sign/imul` são exatos e
+podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/teste-carga.mjs`
+(mesmos bits no Node e no Chromium).
+
 ## Coordenadas e unidades
 - SI: metros, segundos, quilos, radianos.
 - x = comprimento (±52,5), z = largura (±34), y para cima. Linha de gol em x = ±52,5.
@@ -50,3 +57,16 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 - `processarAnalogico(x, y, zonaMorta, zonaExterna)` → `{x, y, mag}` com **zona morta radial**
   (a direção é preservada; sem travar em 8 direções).
 - `paraMundo(ax, ay, yawCamera)` converte o analógico da tela para o mundo.
+
+## Página e desenho (`index.html`, `js/main.js`, `js/render/*`, `js/hud.js`, `js/entrada.js`)
+- `js/sessao.js` (puro): `criarTreino`, `passoTreino(m, entrada, acoes)` (passo + bola fora +
+  ações `recomecar|maquina|marcador`), `entradaDemo`. A página e os testes em Node usam as
+  mesmas funções na mesma ordem.
+- `main.js`: a cada passo guarda pose/bola ANTERIOR e calcula a ATUAL (pose uma vez por passo);
+  desenha interpolando com `alfa`. `window.__golaco` = `{mundo, hash(), passos, alfa, render,
+  pausar(), rodarPassos(n, roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})},
+  forcarEntrada(e), estado(), desenhar()}`. Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador
+  ?prints ?qps ?toque ?entalhe`.
+- `render/jogador3d.js`: todas as cápsulas de todos os jogadores num `InstancedMesh` (atributos
+  por instância: raios, comprimento, achatamento, cores e padrão); cabeça e cabelo instanciados.
+- Câmera de TV: `yaw = −π/2` fixo (a entrada usa `paraMundo(ax, ay, camera.yaw)`).

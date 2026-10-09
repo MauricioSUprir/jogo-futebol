@@ -7,6 +7,7 @@ import { chutarRasteiro, criarBola, velParaChegarCom } from './bola.js';
 import { criarJogador } from './jogador.js';
 import { criarCond } from './conducao.js';
 import { jogadorPorId } from './sim.js';
+import { MD } from './matdet.js';
 
 export const ID_MARCADOR = 90;
 
@@ -17,7 +18,7 @@ export function maquinaPasse(m, idAlvo, opc = {}) {
   const ang = opc.angulo ?? entre(m.rng, -Math.PI, Math.PI);
   const dist = opc.dist ?? entre(m.rng, TREINO.maquinaDist[0], TREINO.maquinaDist[1]);
   const vel = opc.vel ?? entre(m.rng, TREINO.maquinaVel[0], TREINO.maquinaVel[1]);
-  let x = j.x + Math.cos(ang) * dist, z = j.z + Math.sin(ang) * dist;
+  let x = j.x + MD.cos(ang) * dist, z = j.z + MD.sin(ang) * dist;
   x = Math.max(-CAMPO.meioX + 1, Math.min(CAMPO.meioX - 1, x));
   z = Math.max(-CAMPO.meioZ + 1, Math.min(CAMPO.meioZ - 1, z));
   const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
@@ -27,7 +28,7 @@ export function maquinaPasse(m, idAlvo, opc = {}) {
   b.p.x = x; b.p.y = BOLA.raio; b.p.z = z;
   // mira um pouco à frente do jogador (para onde ele vai) — erro pequeno
   const dx = j.x + j.vx * 0.3 - x, dz = j.z + j.vz * 0.3 - z;
-  const d = Math.hypot(dx, dz) || 1;
+  const d = MD.hypot(dx, dz) || 1;
   // vel = velocidade de CHEGADA: a saída é maior porque a grama freia a bola
   const v0 = velParaChegarCom(Math.max(0, d - 0.5), vel);
   chutarRasteiro(b, (dx / d) * v0, (dz / d) * v0);
@@ -69,7 +70,7 @@ export function cuidarBolaFora(m, idAlvo) {
 export function devolverBola(m, idAlvo) {
   const j = jogadorPorId(m, idAlvo);
   if (!j) return;
-  const nb = criarBola(j.x + Math.cos(j.rumo) * 0.4, j.z + Math.sin(j.rumo) * 0.4);
+  const nb = criarBola(j.x + MD.cos(j.rumo) * 0.4, j.z + MD.sin(j.rumo) * 0.4);
   Object.assign(m.bola, nb);
   m.posse = j.id;
   j.cond.toque = null; j.cond.busca = false; j.cond.ref = null; j.cond.longeDesde = -1;

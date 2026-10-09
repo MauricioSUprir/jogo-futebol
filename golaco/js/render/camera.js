@@ -41,16 +41,28 @@ export function criarCamera(aspecto) {
     return o;
   }
   function posicionar(p) {
-    // fov vertical; em tela estreita (retrato) abre para manter a largura vista
+    // fov vertical: em tela larga (celular deitado, 19,5:9) fecha um pouco (meio caminho
+    // entre manter a altura e manter a largura de um 16:9 — jogadores ~10% maiores sem
+    // perder profundidade); em tela estreita (retrato) abre para manter a largura vista
     let fov = p.fov;
-    if (est.aspecto < 1.5) {
-      const t = Math.tan((fov * Math.PI) / 360) * (1.5 / est.aspecto);
+    const a = est.aspecto;
+    const ref = a > 16 / 9 ? Math.sqrt(a * 16 / 9) : a < 1.5 ? 1.5 : a;
+    if (ref !== a) {
+      const t = Math.tan((fov * Math.PI) / 360) * (ref / a);
       fov = (Math.atan(t) * 360) / Math.PI;
     }
     if (Math.abs(camera.fov - fov) > 1e-4 || camera.aspect !== est.aspecto) {
       camera.fov = fov;
       camera.aspect = est.aspecto;
       camera.updateProjectionMatrix();
+    }
+    if (est.livre) {
+      // câmera livre (prints de conferência: close do manequim, gol, linhas)
+      const l = est.livre;
+      camera.position.set(l.de[0], l.de[1], l.de[2]);
+      camera.lookAt(l.para[0], l.para[1], l.para[2]);
+      if (l.fov && Math.abs(camera.fov - l.fov) > 1e-4) { camera.fov = l.fov; camera.updateProjectionMatrix(); }
+      return;
     }
     camera.position.set(est.x, p.altura, est.z + p.distancia);
     camera.lookAt(est.x, p.olharY, est.z);
@@ -89,5 +101,7 @@ export function criarCamera(aspecto) {
     },
     /** Foco atual da câmera (para a sombra acompanhar a jogada). */
     foco() { return { x: est.x, z: est.z }; },
+    /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
+    definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };
 }

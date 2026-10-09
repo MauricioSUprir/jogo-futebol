@@ -16,6 +16,7 @@ import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, infoPassada, faseLocal, copiaCinematica, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
 import { normal } from './rng.js';
+import { MD } from './matdet.js';
 
 const DT = PASSO;
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
@@ -36,7 +37,7 @@ export function adversarioMaisPerto(m, j) {
   let melhor = null, dm = Infinity;
   for (const o of m.jogadores) {
     if (o.time === j.time) continue;
-    const d = Math.hypot(o.x - j.x, o.z - j.z);
+    const d = MD.hypot(o.x - j.x, o.z - j.z);
     if (d < dm) { dm = d; melhor = o; }
   }
   return melhor ? { o: melhor, d: dm } : null;
@@ -58,29 +59,29 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
   const correr = (botoes & BOTAO.CORRER) !== 0;
   const mod = (botoes & BOTAO.MOD) !== 0;
   let vel = velocidadeDesejada(j.par, imag, correr, mod, comBola);
-  let rumoAlvo = imag > 0.1 ? Math.atan2(iz, ix) : rumoAtual;
+  let rumoAlvo = imag > 0.1 ? MD.atan2(iz, ix) : rumoAtual;
   if (ctx && ctx.marcador) {
     if (ctx.bola) {
       // PROTEÇÃO: o corpo gira em volta da bola para ficar entre ela e o marcador, de
       // costas para ele (a bola quase não sai do lugar; o analógico a leva devagar)
       let ux = ctx.marcador.x - ctx.bola.x, uz = ctx.marcador.z - ctx.bola.z;
-      const ul = Math.hypot(ux, uz) || 1;
+      const ul = MD.hypot(ux, uz) || 1;
       ux /= ul; uz /= ul;
       const k = imag > 0.1 ? 0.35 * imag : 0;
       // gira EM VOLTA da bola (pelo círculo), nunca por cima dela
-      const aCorpo = Math.atan2(ctx.corpoZ - ctx.bola.z, ctx.corpoX - ctx.bola.x);
-      const aAlvo = Math.atan2(uz, ux);
+      const aCorpo = MD.atan2(ctx.corpoZ - ctx.bola.z, ctx.corpoX - ctx.bola.x);
+      const aAlvo = MD.atan2(uz, ux);
       const a = aCorpo + clamp(difAng(aCorpo, aAlvo), -0.9, 0.9);
       const r = CONDUCAO.protecaoOfs;
-      const px = ctx.bola.x + Math.cos(a) * r + ix * k;
-      const pz = ctx.bola.z + Math.sin(a) * r + iz * k;
+      const px = ctx.bola.x + MD.cos(a) * r + ix * k;
+      const pz = ctx.bola.z + MD.sin(a) * r + iz * k;
       const dx = px - ctx.corpoX, dz = pz - ctx.corpoZ;
-      const d = Math.hypot(dx, dz);
+      const d = MD.hypot(dx, dz);
       const v = Math.min(CONDUCAO.vProtecao * 2.4, d * 8);
-      return { dx: d > 1e-6 ? dx / d : ix, dz: d > 1e-6 ? dz / d : iz, vel: v, rumoAlvo: Math.atan2(-uz, -ux) };
+      return { dx: d > 1e-6 ? dx / d : ix, dz: d > 1e-6 ? dz / d : iz, vel: v, rumoAlvo: MD.atan2(-uz, -ux) };
     }
     vel = Math.min(vel, CONDUCAO.vProtecao);
-    rumoAlvo = Math.atan2(ctx.corpoZ - ctx.marcador.z, ctx.corpoX - ctx.marcador.x);
+    rumoAlvo = MD.atan2(ctx.corpoZ - ctx.marcador.z, ctx.corpoX - ctx.marcador.x);
   }
   if (ctx && ctx.pedalada) vel = Math.min(vel, 1.0);
   return { dx: ix, dz: iz, vel, rumoAlvo };
@@ -96,15 +97,15 @@ export function marcadorPrevisto(o, cx, cz, t) {
   const r2 = rx * rx + rz * rz;
   if (r2 < 1e-6) return { x: o.x, z: o.z };
   const w = (rx * o.vz - rz * o.vx) / r2;
-  const a = Math.atan2(rz, rx) + clamp(w * t, -1.2, 1.2);
+  const a = MD.atan2(rz, rx) + clamp(w * t, -1.2, 1.2);
   const r = Math.sqrt(r2);
-  return { x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r };
+  return { x: cx + MD.cos(a) * r, z: cz + MD.sin(a) * r };
 }
 
 /** Rumo pedido extrapolado t segundos à frente (o giro do analógico continua, amortecido). */
 export function rumoExtrapolado(intRumo, intW, t) {
   const th = CONDUCAO.meiaVidaGiroPedido;
-  let ang = intW * th * (1 - Math.exp(-t / th));
+  let ang = intW * th * (1 - MD.exp(-t / th));
   ang = clamp(ang, -0.9, 0.9);
   return intRumo + ang;
 }
@@ -117,21 +118,21 @@ export function preverCorpo(m, j, n, comBola, prot) {
   const k = copiaCinematica(j);
   const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), rs = new Float64Array(n + 1);
   const ss = new Float64Array(n + 1), fs = new Float64Array(n + 1);
-  xs[0] = k.x; zs[0] = k.z; rs[0] = k.rumo; ss[0] = Math.hypot(k.vx, k.vz); fs[0] = k.fase;
+  xs[0] = k.x; zs[0] = k.z; rs[0] = k.rumo; ss[0] = MD.hypot(k.vx, k.vz); fs[0] = k.fase;
   const mov = j.imag > 0.08;
   const ped = !!(j.cond && j.cond.pedalada);
   const ctx = { marcador: null, corpoX: 0, corpoZ: 0, pedalada: ped };
   // corte pendente: o corpo segura o rumo até o toque (só nos primeiros ticks)
   const reto = j.cond ? ticksCorteRestantes(j.cond, m.tick) : 0;
   const pbProt = prot ? preverBola(m.bola, n) : null;
-  const s0 = Math.hypot(k.vx, k.vz);
-  const rv0 = Math.atan2(k.vz, k.vx);
+  const s0 = MD.hypot(k.vx, k.vz);
+  const rv0 = MD.atan2(k.vz, k.vx);
   for (let i = 1; i <= n; i++) {
     const t = i * DT;
     let ix = j.ix, iz = j.iz;
     if (mov) {
       const r = rumoExtrapolado(j.intRumo, j.intW, t);
-      ix = Math.cos(r); iz = Math.sin(r);
+      ix = MD.cos(r); iz = MD.sin(r);
     }
     if (prot) {
       const tp = Math.min(t, 0.5);
@@ -140,9 +141,9 @@ export function preverCorpo(m, j, n, comBola, prot) {
       ctx.bola = { x: pbProt.xs[i - 1], z: pbProt.zs[i - 1] };
     } else ctx.marcador = null;
     const mv = movimentoBase(j, ix, iz, j.imag, j.botoes, comBola, k.rumo, ctx);
-    if (i <= reto && s0 > 1) { mv.dx = Math.cos(rv0); mv.dz = Math.sin(rv0); mv.vel = Math.min(mv.vel, s0); }
+    if (i <= reto && s0 > 1) { mv.dx = MD.cos(rv0); mv.dz = MD.sin(rv0); mv.vel = Math.min(mv.vel, s0); }
     passoCorpo(k, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, DT, comBola);
-    const s = Math.hypot(k.vx, k.vz);
+    const s = MD.hypot(k.vx, k.vz);
     const ativa = s > 0.22 || Math.abs(k.giro) > 1.6;
     if (ativa) k.fase += infoPassada(s, comBola).f * DT;
     xs[i] = k.x; zs[i] = k.z; rs[i] = k.rumo; ss[i] = s; fs[i] = k.fase;
@@ -172,11 +173,11 @@ function apoioPrevisto(fase, s, comBola) {
 /** A bola (bx,bz) está no alcance de um pé do corpo (x,z,rumo)? */
 export function noAlcance(x, z, rumo, bx, bz, by, relaxado) {
   if (by > 0.45) return false;
-  const hx = Math.cos(rumo), hz = Math.sin(rumo);
+  const hx = MD.cos(rumo), hz = MD.sin(rumo);
   const dx = bx - x, dz = bz - z;
   const fr = dx * hx + dz * hz;
   const la = -dx * hz + dz * hx;
-  const d = Math.hypot(dx, dz);
+  const d = MD.hypot(dx, dz);
   // no domínio vale a parte de dentro/fora do pé, de lado
   if (relaxado) return d <= CONDUCAO.alcance && fr >= -0.3 && Math.abs(la) <= 0.68;
   return d <= CONDUCAO.alcance && fr >= CONDUCAO.alcanceFrente && Math.abs(la) <= 0.55;
@@ -204,7 +205,7 @@ export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado) {
 }
 
 function ladoDaBola(x, z, rumo, bx, bz) {
-  const la = -(bx - x) * Math.sin(rumo) + (bz - z) * Math.cos(rumo);
+  const la = -(bx - x) * MD.sin(rumo) + (bz - z) * MD.cos(rumo);
   return la >= 0 ? 1 : 0; // direita (+z local) = pé direito
 }
 
@@ -244,13 +245,13 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
     if (iN < 0) iN = H; // corpo parado: a bola para no ponto e espera
   }
   const xN = pc.xs[iN], zN = pc.zs[iN], rN = pc.rs[iN], sN = pc.ss[iN];
-  const hx = Math.cos(rN), hz = Math.sin(rN);
+  const hx = MD.cos(rN), hz = MD.sin(rN);
   const lado = proxPe === 0 ? -1 : 1;
   let tx, tz;
   if (prot) {
     const mp = marcadorPrevisto(prot, j.x, j.z, Math.min(iN * DT, 0.5));
     let ux = xN - mp.x, uz = zN - mp.z;
-    const ul = Math.hypot(ux, uz) || 1;
+    const ul = MD.hypot(ux, uz) || 1;
     ux /= ul; uz /= ul;
     tx = xN + ux * CONDUCAO.protecaoOfs;
     tz = zN + uz * CONDUCAO.protecaoOfs;
@@ -260,17 +261,17 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
     tz = zN + hz * fr + hx * lado * CONDUCAO.ofsLado;
   }
   let dx = tx - b.p.x, dz = tz - b.p.z;
-  let dist = Math.hypot(dx, dz);
+  let dist = MD.hypot(dx, dz);
   // CORTE (a bola iria longe do rumo pedido, correndo): a bola sai NA DIREÇÃO PEDIDA (±20°)
   // e o próximo toque é marcado no ponto dessa linha mais perto de onde o pé vai estar. Sem
   // isso o embalo do corpo mandaria a bola na diagonal.
   let tolerancia = CONDUCAO.desvioReplanejar;
   if (!prot && (tipoCorte(j, dx, dz) || (dominio && j.imag > 0.3))) {
-    const aPed = Math.atan2(j.iz, j.ix);
+    const aPed = MD.atan2(j.iz, j.ix);
     let melhor = null;
     for (let k = -8; k <= 8; k++) {
       const a = aPed + k * 0.04363; // passos de 2,5°
-      const ux = Math.cos(a), uz = Math.sin(a);
+      const ux = MD.cos(a), uz = MD.sin(a);
       const sProj = (tx - b.p.x) * ux + (tz - b.p.z) * uz;
       if (sProj < 0.15) continue;
       const e = Math.abs(-(tx - b.p.x) * uz + (tz - b.p.z) * ux);
@@ -303,7 +304,7 @@ function semUltrapassar(b, plano, pc) {
     for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
     const bx = b.p.x + ux * d, bz = b.p.z + uz * d;
     const ex = bx - pc.xs[i], ez = bz - pc.zs[i];
-    const fr = ex * Math.cos(pc.rs[i]) + ez * Math.sin(pc.rs[i]);
+    const fr = ex * MD.cos(pc.rs[i]) + ez * MD.sin(pc.rs[i]);
     if (fr < 0.14 || ex * ex + ez * ez < 0.04) { plano.violacao = i; return false; }
     if (fr > plano.folgaMax) plano.folgaMax = fr;
   }
@@ -338,14 +339,14 @@ export function executarToque(m, j, pe, tipo) {
   }
   let { iN, proxPe, tx, tz, dx, dz, dist, tolerancia } = plano;
   const apoio = 1 - pe;
-  const hx = Math.cos(pc.rs[iN]), hz = Math.sin(pc.rs[iN]);
+  const hx = MD.cos(pc.rs[iN]), hz = MD.sin(pc.rs[iN]);
   // erro do toque: cresce com a velocidade e cai com o atributo
   const attr = tipo === 'dominio' ? j.par.attr.controle : j.par.attr.drible;
-  const sAgora = Math.hypot(j.vx, j.vz);
-  let sigAng = lerp(CONDUCAO.erroAngRuim, CONDUCAO.erroAngBase, attr / 100) * (1 + 0.3 * (sAgora / 7) ** 2) * (curta ? 0.7 : 1);
+  const sAgora = MD.hypot(j.vx, j.vz);
+  let sigAng = lerp(CONDUCAO.erroAngRuim, CONDUCAO.erroAngBase, attr / 100) * (1 + 0.3 * (sAgora / 7) * (sAgora / 7)) * (curta ? 0.7 : 1);
   let sigVel = lerp(CONDUCAO.erroVelRuim, CONDUCAO.erroVelBase, attr / 100);
   if (tipo === 'dominio') {
-    const sIn = Math.hypot(b.v.x, b.v.z);
+    const sIn = MD.hypot(b.v.x, b.v.z);
     const q = CONDUCAO;
     const pressao = (() => { const a = adversarioMaisPerto(m, j); return a && a.d < q.dominioPressaoDist ? 1.6 : 1; })();
     const dif = (1 + Math.max(0, sIn - 6) / q.dominioVRef) * pressao;
@@ -355,7 +356,7 @@ export function executarToque(m, j, pe, tipo) {
   const ea = normal(m.rng) * sigAng;
   const ev = normal(m.rng) * sigVel;
   if (dist > 1e-4) { dx /= dist; dz /= dist; } else { dx = hx; dz = hz; dist = 0; }
-  const ca = Math.cos(ea), sa = Math.sin(ea);
+  const ca = MD.cos(ea), sa = MD.sin(ea);
   const ddx = dx * ca - dz * sa, ddz = dx * sa + dz * ca;
   // protegendo, a bola é rolada de leve com a sola e para no ponto (não foge do corpo)
   let v0 = (prot ? velParaParar(dist) : velParaDistancia(dist, iN)) * Math.max(0.5, 1 + ev);
@@ -383,10 +384,10 @@ export function ticksCorteRestantes(c, tick) {
 function tipoCorte(j, dx, dz) {
   // a bola iria (dx,dz) longe demais do rumo pedido — a bola tem que seguir o analógico
   if (j.imag < 0.3) return false;
-  const s = Math.hypot(j.vx, j.vz);
+  const s = MD.hypot(j.vx, j.vz);
   if (s < 2.5) return false;
-  if (Math.hypot(dx, dz) < 0.05) return false;
-  const d = Math.abs(difAng(Math.atan2(dz, dx), Math.atan2(j.iz, j.ix)));
+  if (MD.hypot(dx, dz) < 0.05) return false;
+  const d = Math.abs(difAng(MD.atan2(dz, dx), MD.atan2(j.iz, j.ix)));
   return d > 0.35 && d < 1.92;
 }
 
@@ -405,7 +406,7 @@ function precisaReplanejar(m, j, prot) {
   }
   if (c.bolaDesviada) return true;
   // o corpo está alcançando a bola antes da hora
-  const hx = Math.cos(j.rumo), hz = Math.sin(j.rumo);
+  const hx = MD.cos(j.rumo), hz = MD.sin(j.rumo);
   const fr = (m.bola.p.x - j.x) * hx + (m.bola.p.z - j.z) * hz;
   if (fr < 0.2 && c.toque && c.toque.tick - m.tick > 4) return true;
   // onde o pé vai estar no toque marcado × onde a bola vai estar (física pura)
@@ -415,9 +416,9 @@ function precisaReplanejar(m, j, prot) {
     const pb = preverBola(m.bola, n);
     const curta = temBotao(j, BOTAO.MOD);
     const ofs = prot ? CONDUCAO.protecaoOfs : ofsFrente(pc.ss[n], curta);
-    const cx = pc.xs[n] + Math.cos(pc.rs[n]) * ofs, cz = pc.zs[n] + Math.sin(pc.rs[n]) * ofs;
+    const cx = pc.xs[n] + MD.cos(pc.rs[n]) * ofs, cz = pc.zs[n] + MD.sin(pc.rs[n]) * ofs;
     const lim = prot ? CONDUCAO.desvioReplanejar * 1.5 : (c.toque.tol ?? CONDUCAO.desvioReplanejar);
-    if (Math.hypot(cx - pb.xs[n], cz - pb.zs[n]) > lim + 0.06) return true;
+    if (MD.hypot(cx - pb.xs[n], cz - pb.zs[n]) > lim + 0.06) return true;
   }
   return false;
 }
@@ -449,8 +450,8 @@ export function controlarComBola(m, j) {
   const grande = c.ref && j.imag > 0.3 && Math.abs(difAng(c.ref.intRumo, j.intRumo)) > 0.6;
   if (grande && !prot) {
     // corte correndo: o corpo segura o rumo até o toque (planta, toca e só então vira)
-    const s = Math.hypot(j.vx, j.vz);
-    const ab = Math.atan2(m.bola.v.z, m.bola.v.x);
+    const s = MD.hypot(j.vx, j.vz);
+    const ab = MD.atan2(m.bola.v.z, m.bola.v.x);
     const d = Math.abs(difAng(ab, j.intRumo));
     if (s > 2.5 && d > 0.6 && d < 1.92) c.cortePendente = m.tick;
   }
@@ -487,10 +488,10 @@ export function movimentoComBola(m, j) {
   const ctx = prot ? { marcador: prot, corpoX: j.x, corpoZ: j.z, bola: m.bola.p, pedalada: !!c.pedalada } : { pedalada: !!c.pedalada };
   const base = movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, true, j.rumo, ctx);
   if (ticksCorteRestantes(c, m.tick) > 0 && !c.busca) {
-    const s = Math.hypot(j.vx, j.vz);
+    const s = MD.hypot(j.vx, j.vz);
     if (s > 1) {
-      const rv = Math.atan2(j.vz, j.vx);
-      return { dx: Math.cos(rv), dz: Math.sin(rv), vel: Math.min(base.vel, s), rumoAlvo: base.rumoAlvo };
+      const rv = MD.atan2(j.vz, j.vx);
+      return { dx: MD.cos(rv), dz: MD.sin(rv), vel: Math.min(base.vel, s), rumoAlvo: base.rumoAlvo };
     }
   }
   // com um toque marcado, o corpo faz o que o analógico pede (o toque já foi planejado para
@@ -499,30 +500,30 @@ export function movimentoComBola(m, j) {
   // a bola saiu do alcance: vai buscá-la. Se ela ainda está no corredor do rumo pedido
   // (±angBusca), o corpo segue o analógico e só corrige o mínimo para passar com a bola no pé.
   const b = m.bola;
-  const s = Math.hypot(j.vx, j.vz);
+  const s = MD.hypot(j.vx, j.vz);
   let dx = b.p.x - j.x, dz = b.p.z - j.z;
-  const d = Math.hypot(dx, dz);
+  const d = MD.hypot(dx, dz);
   const tp = clamp(d / Math.max(s + 1.5, 2), 0, 1.2);
   const px = b.p.x + b.v.x * tp, pz = b.p.z + b.v.z * tp;
   dx = px - j.x; dz = pz - j.z;
-  const dl = Math.hypot(dx, dz) || 1;
+  const dl = MD.hypot(dx, dz) || 1;
   // velocidade para alcançar: a da bola (no sentido dela) + o que falta fechar em ~0,8 s,
   // sem passar da chegada suave (para não atropelar a bola)
   const vbAl = (b.v.x * dx + b.v.z * dz) / dl;
   const chegar = Math.sqrt(2 * j.par.freio * Math.max(0, dl - 0.45)) + Math.max(0, vbAl);
   const alcancar = Math.max(0, vbAl) + Math.max(1.0, (dl - 0.5) / 0.8);
   const velF = clamp(Math.min(Math.max(base.vel, alcancar), chegar), 0, j.par.vArrancada * 0.95);
-  const aBola = Math.atan2(dz, dx);
+  const aBola = MD.atan2(dz, dx);
   if (j.imag > 0.08) {
-    const aPed = Math.atan2(j.iz, j.ix);
+    const aPed = MD.atan2(j.iz, j.ix);
     const alfa = difAng(aPed, aBola);
     if (Math.abs(alfa) <= CONDUCAO.angBusca) {
       // desvio mínimo: passar com a bola a ≤ 0,3 m de lado
-      const lado = dl * Math.sin(Math.abs(alfa));
+      const lado = dl * MD.sin(Math.abs(alfa));
       let beta = 0;
-      if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - Math.asin(Math.min(1, 0.3 / dl)));
+      if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - MD.asin(Math.min(1, 0.3 / dl)));
       const r = aPed + beta;
-      return { dx: Math.cos(r), dz: Math.sin(r), vel: velF, rumoAlvo: r };
+      return { dx: MD.cos(r), dz: MD.sin(r), vel: velF, rumoAlvo: r };
     }
   }
   return { dx: dx / dl, dz: dz / dl, vel: velF, rumoAlvo: aBola };
@@ -534,9 +535,9 @@ export function movimentoComBola(m, j) {
  */
 function acompanharBola(m, j, base) {
   const b = m.bola;
-  const sb = Math.hypot(b.v.x, b.v.z);
+  const sb = MD.hypot(b.v.x, b.v.z);
   if (sb < 0.8) return base;
-  const s = Math.hypot(j.vx, j.vz);
+  const s = MD.hypot(j.vx, j.vz);
   const bdx = b.v.x / sb, bdz = b.v.z / sb;
   const ex = b.p.x - j.x, ez = b.p.z - j.z;
   const fr = ex * bdx + ez * bdz;
@@ -549,7 +550,7 @@ function acompanharBola(m, j, base) {
   if (pedido <= 0.2 && folga > 0.9) {
     // soltou o analógico: vai até a bola e para com ela (chegada suave)
     const vel = Math.min(j.par.vArrancada * 0.9, Math.sqrt(2 * j.par.freio * Math.max(0, fr + dBola - 0.45)));
-    return { dx: bdx, dz: bdz, vel, rumoAlvo: Math.atan2(bdz, bdx) };
+    return { dx: bdx, dz: bdz, vel, rumoAlvo: MD.atan2(bdz, bdx) };
   }
   // pediu menos velocidade que a da bola: segura o ritmo da bola até o toque
   const vAlong = sb;
@@ -575,8 +576,8 @@ export function tentarDominio(m, j) {
       c.toque = null;
     } else return true;
   }
-  const d = Math.hypot(b.p.x - j.x, b.p.z - j.z);
-  const vb = Math.hypot(b.v.x, b.v.z);
+  const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+  const vb = MD.hypot(b.v.x, b.v.z);
   if (d > 1.0 + vb * 0.8) return false;
   const op = procurarOportunidade(m, j, 1, 36, false, null, true);
   if (!op) return false;
@@ -596,7 +597,7 @@ export function movimentoRecepcao(m, j, base) {
   const c = j.cond;
   if (!c.toque || c.toque.tipo !== 'dominio') return base;
   const b = m.bola;
-  const rumo = Math.atan2(b.p.z - j.z, b.p.x - j.x);
+  const rumo = MD.atan2(b.p.z - j.z, b.p.x - j.x);
   return { dx: base.dx, dz: base.dz, vel: Math.min(base.vel, 1.0), rumoAlvo: rumo };
 }
 
@@ -604,7 +605,7 @@ export function movimentoRecepcao(m, j, base) {
 export function verificarPerda(m, j) {
   const c = j.cond;
   const b = m.bola;
-  const d = Math.hypot(b.p.x - j.x, b.p.z - j.z);
+  const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (d > CONDUCAO.perdaDist) {
     if (c.longeDesde < 0) c.longeDesde = m.tick;
     else if ((m.tick - c.longeDesde) * DT > CONDUCAO.perdaTempo) {

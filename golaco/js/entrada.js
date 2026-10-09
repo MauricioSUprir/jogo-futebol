@@ -2,7 +2,7 @@
 // {x, z, botoes} com o analógico JÁ no mundo (paraMundo com o yaw da câmera) e a máscara BOTAO.
 // Ações de um toque só (recomeçar, máquina, marcador, câmera, ajuda, pausa) vão para uma fila.
 //
-// Teclado: WASD/setas = analógico; Shift = CORRER; Ctrl ou E = MODIFICADOR (condução curta /
+// Teclado: WASD/setas = analógico; Shift = CORRER; E = MODIFICADOR (condução curta /
 // proteção / drible; dois toques rápidos = pedalada); R recomeçar; M máquina de passes; N
 // marcador; C câmera; H ou F1 ajuda; Esc pausa. J/K/L/I ficam reservadas (passe, chute,
 // lançamento e enfiada nas próximas etapas).
@@ -39,11 +39,14 @@ function salvarAjustes(a) {
 }
 
 /**
- * opc = {forcarToque: bool}. Devolve a interface da entrada.
+ * opc = {forcarToque: bool, aoAcao(acao)}. Devolve a interface da entrada.
  */
 export function criarEntrada(opc = {}) {
   const teclas = new Set();
   const fila = [];
+  // ações saem na hora (menu, ajuda e câmera não esperam o próximo quadro); sem callback,
+  // ficam na fila para consumirAcoes()
+  const emitir = a => { if (opc.aoAcao) opc.aoAcao(a); else fila.push(a); };
   let usandoToque = !!opc.forcarToque || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   let forcada = null;      // entrada injetada pelos testes
   const ajustes = lerAjustes();
@@ -52,14 +55,14 @@ export function criarEntrada(opc = {}) {
   function ehMov(code) { return MOV.cima.includes(code) || MOV.baixo.includes(code) || MOV.esq.includes(code) || MOV.dir.includes(code); }
   window.addEventListener('keydown', e => {
     const code = e.code;
-    const usado = ehMov(code) || code.startsWith('Shift') || code.startsWith('Control') || code === 'KeyE' || ACOES_TECLA[code] || RESERVADAS.has(code);
+    const usado = ehMov(code) || code.startsWith('Shift') || code === 'KeyE' || ACOES_TECLA[code] || RESERVADAS.has(code);
     if (usado) {
       // Ctrl + tecla do jogo não pode virar atalho do navegador (salvar, favoritos...)
       if (e.ctrlKey || code.startsWith('Arrow') || code === 'F1' || code === 'F3' || code === 'Space') e.preventDefault();
     }
     if (e.repeat) return;
     teclas.add(code);
-    if (ACOES_TECLA[code]) fila.push(ACOES_TECLA[code]);
+    if (ACOES_TECLA[code]) emitir(ACOES_TECLA[code]);
   });
   window.addEventListener('keyup', e => { teclas.delete(e.code); });
   window.addEventListener('blur', () => { teclas.clear(); });
@@ -69,7 +72,8 @@ export function criarEntrada(opc = {}) {
     const a = teclasParaAnalogico(tem(MOV.cima), tem(MOV.baixo), tem(MOV.esq), tem(MOV.dir));
     let b = 0;
     if (teclas.has('ShiftLeft') || teclas.has('ShiftRight')) b |= BOTAO.CORRER;
-    if (teclas.has('ControlLeft') || teclas.has('ControlRight') || teclas.has('KeyE')) b |= BOTAO.MOD;
+    // modificador só no E: Ctrl + W fecharia a aba do navegador (o navegador não deixa impedir)
+    if (teclas.has('KeyE')) b |= BOTAO.MOD;
     return { ax: a.x, ay: a.y, mag: a.mag, botoes: b };
   }
 
@@ -89,7 +93,7 @@ export function criarEntrada(opc = {}) {
     let b = 0;
     if (bt(7)) b |= BOTAO.CORRER;
     if (bt(6)) b |= BOTAO.MOD;
-    const borda = (i, acao) => { const p = bt(i); if (p && !antes[i]) fila.push(acao); antes[i] = p; };
+    const borda = (i, acao) => { const p = bt(i); if (p && !antes[i]) emitir(acao); antes[i] = p; };
     borda(9, 'pausa'); borda(3, 'maquina'); borda(2, 'marcador'); borda(8, 'ajuda'); borda(11, 'camera');
     return { ax: a.x, ay: a.y, mag: a.mag, botoes: b };
   }
@@ -201,7 +205,7 @@ export function criarEntrada(opc = {}) {
   ligarBotao(btCorrer, 'correr', 'idCorrer');
   ligarBotao(btMod, 'mod', 'idMod');
   const btMenu = document.getElementById('btn-menu');
-  if (btMenu) btMenu.addEventListener('click', () => fila.push('pausa'));
+  if (btMenu) btMenu.addEventListener('click', () => emitir('pausa'));
   window.addEventListener('touchstart', () => { if (!usandoToque) { usandoToque = true; mostrarToque(true); } }, { passive: true });
 
   function lerToque() {
@@ -251,7 +255,7 @@ export function criarEntrada(opc = {}) {
     },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
     consumirAcoes() { return fila.splice(0); },
-    empurrarAcao(a) { fila.push(a); },
+    empurrarAcao(a) { emitir(a); },
     forcar(e) { forcada = e; },
     get usandoToque() { return usandoToque; },
     mostrarToque,

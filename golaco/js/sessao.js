@@ -5,6 +5,7 @@
 import { criarMundo, passo, jogadorPorId } from './sim.js';
 import { cuidarBolaFora, maquinaPasse, alternarMarcador, devolverBola, ID_MARCADOR } from './treino.js';
 import { BOTAO } from './config.js';
+import { MD } from './matdet.js';
 
 export const ID_HUMANO = 0;
 export { ID_MARCADOR };
@@ -21,7 +22,7 @@ export function criarTreino(opc = {}) {
   const m = criarMundo({
     semente: opc.semente ?? 1,
     jogadores: [{ id: ID_HUMANO, x, z, rumo, attr: opc.attr ?? {}, time: 0, papel: 'humano' }],
-    bola: { x: x + Math.cos(rumo) * 0.4, z: z + Math.sin(rumo) * 0.4 },
+    bola: { x: x + MD.cos(rumo) * 0.4, z: z + MD.sin(rumo) * 0.4 },
     posse: ID_HUMANO,
   });
   if (opc.marcador) alternarMarcador(m, ID_HUMANO);
@@ -62,13 +63,13 @@ export function entradaDemo(m, opc = DEMO) {
   const j = jogadorPorId(m, ID_HUMANO);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const dx = j.x - opc.cx, dz = j.z - opc.cz;
-  const d = Math.hypot(dx, dz) || 1;
+  const d = MD.hypot(dx, dz) || 1;
   const rx = dx / d, rz = dz / d;
   // tangente no sentido anti-horário visto de cima + correção para voltar ao raio
   let tx = -rz, tz = rx;
   const err = (d - opc.raio) * 0.3;
   tx -= rx * err; tz -= rz * err;
-  const l = Math.hypot(tx, tz) || 1;
+  const l = MD.hypot(tx, tz) || 1;
   // a cada ~6 s, 2 s de arrancada (para a passada e a inclinação aparecerem)
   const ciclo = m.tick % 360;
   const botoes = ciclo > 240 ? BOTAO.CORRER : 0;

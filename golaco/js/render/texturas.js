@@ -1,7 +1,6 @@
 // Texturas procedurais (CanvasTexture), todas determinísticas e pequenas (≤ 2048 px):
 // gramado com faixas de corte, grão da grama, rede, placas de publicidade (marcas FICTÍCIAS),
 // cadeiras da arquibancada, bola, sombra de contato, bandeira de escanteio e indicador.
-import * as THREE from 'three';
 import { CAMPO } from '../config.js';
 import { criarCanvas, texturaCanvas, hash2, ruido, gerador } from './util.js';
 
@@ -26,7 +25,7 @@ export function texGramado(largura, aniso) {
   const X = x => (x - GRAMA.x0) * pxm;
   const Z = z => (z - GRAMA.z0) * pzm;
   // faixas de corte (bordas levemente suaves)
-  const claro = [62, 128, 50], escuro = [47, 104, 39];
+  const claro = [96, 138, 64], escuro = [74, 114, 50];
   const n = Math.ceil(GRAMA.lx / GRAMA.faixa) + 2;
   const inicio = -Math.ceil(-GRAMA.x0 / GRAMA.faixa);
   for (let i = inicio; i < inicio + n; i++) {
@@ -49,10 +48,10 @@ export function texGramado(largura, aniso) {
       const v = ruido(x / 6, y / 6, 16, 8, 3) * 0.6 + ruido(x / 2.5, y / 2.5, 39, 20, 7) * 0.4;
       const k = (x + y * pw) * 4;
       const claro2 = v > 0.5;
-      img.data[k] = claro2 ? 210 : 10;
-      img.data[k + 1] = claro2 ? 230 : 30;
-      img.data[k + 2] = claro2 ? 140 : 10;
-      img.data[k + 3] = Math.round(Math.abs(v - 0.5) * 2 * 34);
+      img.data[k] = claro2 ? 170 : 20;
+      img.data[k + 1] = claro2 ? 205 : 40;
+      img.data[k + 2] = claro2 ? 130 : 18;
+      img.data[k + 3] = Math.round(Math.abs(v - 0.5) * 2 * 20);
     }
   }
   pg.putImageData(img, 0, 0);
@@ -202,13 +201,18 @@ export const ARQ = { fileiras: 36, assentoLarg: 0.5, comprimento: 125 };
  * Cadeiras da arquibancada: fileiras (degrau, assento, encosto), corredores e o nome
  * GOLAÇO em cadeiras verdes no meio. A faixa de cima (v > 0,95) é a cor das paredes.
  */
-export function texArquibancada(aniso, comTexto = true) {
-  const W = 2048, H = 512;
+export function texArquibancada(aniso, comTexto = true, W = 2048) {
+  const H = W / 4;
   const c = criarCanvas(W, H);
   const g = c.getContext('2d');
-  const topo = 24;                      // faixa de parede (cinza-escuro)
-  g.fillStyle = '#202426';
+  const topo = Math.round(H * 24 / 512); // faixa de parede (cinza-escuro), ~4,7% de cima
+  // paredes: cinza-escuro com um friso verde em cima (parapeito)
+  g.fillStyle = '#2b3235';
   g.fillRect(0, 0, W, topo);
+  g.fillStyle = '#12a95c';
+  g.fillRect(0, 0, W, Math.max(2, Math.round(topo / 8)));
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.fillRect(0, Math.max(2, Math.round(topo / 8)), W, 2);
   const nF = ARQ.fileiras;
   const hF = (H - topo) / nF;
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
@@ -220,10 +224,10 @@ export function texArquibancada(aniso, comTexto = true) {
   mg.fillStyle = '#fff';
   mg.textAlign = 'center'; mg.textBaseline = 'middle';
   mg.font = '900 13px system-ui, "Segoe UI", Roboto, Arial, sans-serif';
-  // largura do texto ~60 m (120 cadeiras), nas fileiras 3–14 (as que a câmera de TV vê)
+  // largura do texto ~60 m (120 cadeiras), nas fileiras 1–11 (as que a câmera de TV vê)
   const larg = mg.measureText('GOLAÇO').width;
   mg.save();
-  mg.translate(nA / 2, nF - 9.5);
+  mg.translate(nA / 2, nF - 6.2);
   mg.scale(120 / larg, 1);
   if (comTexto) mg.fillText('GOLAÇO', 0, 0);
   mg.restore();
@@ -243,6 +247,14 @@ export function texArquibancada(aniso, comTexto = true) {
         continue;
       }
       const texto = mascara[(a + f * nA) * 4] > 110;
+      if (texto) {
+        // cadeiras do mosaico: bloco cheio (as letras ficam legíveis de longe)
+        g.fillStyle = '#0d8447';
+        g.fillRect(x0, y0, wA, hF);
+        g.fillStyle = 'rgba(0,0,0,0.22)';
+        g.fillRect(x0, y0 + hF * 0.82, wA, hF * 0.18);
+        continue;
+      }
       let cor;
       if (texto) cor = '#12b866';
       else {
@@ -362,4 +374,3 @@ export function texBrilho() {
   return texturaCanvas(c, {});
 }
 
-export { THREE };

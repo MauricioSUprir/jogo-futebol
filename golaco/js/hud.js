@@ -49,6 +49,14 @@ export function criarHud(opc) {
     });
   }
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
+  // tela cheia (Android/PC; o iPhone não deixa a página pedir)
+  const btTela = $('btn-tela-cheia');
+  if (btTela && document.fullscreenEnabled) {
+    btTela.hidden = false;
+    const rotulo = () => { btTela.textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; };
+    document.addEventListener('fullscreenchange', rotulo);
+    rotulo();
+  }
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
 
   function marcarGrupo(grupo, valor) {
@@ -82,9 +90,9 @@ export function criarHud(opc) {
     },
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
-    abrirMenu() { if (prints) return; el.ajuda.hidden = true; el.menu.hidden = false; el.menu.querySelector('.btn-primario')?.focus({ preventScroll: true }); },
+    abrirMenu(forcar = false) { if (prints && !forcar) return; el.ajuda.hidden = true; el.menu.hidden = false; el.menu.querySelector('.btn-primario')?.focus({ preventScroll: true }); },
     fecharMenu() { el.menu.hidden = true; },
-    abrirAjuda() { if (prints) return; el.menu.hidden = true; el.ajuda.hidden = false; },
+    abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
     fecharAjuda() { el.ajuda.hidden = true; },
     /** Estado das opções no menu. */
     definirEstado(e) {
@@ -92,7 +100,7 @@ export function criarHud(opc) {
       if (e.qualidadeAtual && el.infoQ) {
         el.infoQ.textContent = e.qualidadeEscolha === 'auto'
           ? `Agora: ${NOMES_Q[e.qualidadeAtual]} (ajusta sozinha pelo desempenho)`
-          : `${NOMES_Q[e.qualidadeAtual]}${e.qualidadeAtual === 'alta' ? ' — antisserrilhado e sombras finas' : e.qualidadeAtual === 'baixa' ? ' — sem sombras, para celular mais simples' : ''}`;
+          : `${NOMES_Q[e.qualidadeAtual]} — ${e.qualidadeAtual === 'alta' ? 'antisserrilhado e sombras finas' : e.qualidadeAtual === 'baixa' ? 'sem sombras, para celular mais simples' : 'sombras simples, boa para celular'}`;
       }
       if (e.hora) marcarGrupo('hora', e.hora);
       if (e.camera) marcarGrupo('camera', e.camera);

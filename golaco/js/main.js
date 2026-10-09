@@ -62,6 +62,7 @@ function temWebGL2() {
 
 const hud = criarHud({ aoComando: comando });
 if (PRINTS) hud.modoPrints();
+document.documentElement.classList.toggle('noite', hora === 'noite');
 
 // ------------------------------------------------------------------ estado da simulação
 function novoMundo(opc) {
@@ -143,7 +144,8 @@ function modoDoJogador(j) {
 // ------------------------------------------------------------------ 3D
 let cena3d, campo, bola3d, jog3d, cam, entrada;
 const laco = criarLaco();
-let relogioManual = false, tempoManual = 0;
+// ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
+let relogioManual = PRINTS, tempoManual = 0;
 let pausaTeste = false;
 let ultimoQuadro = null;
 let corteCamera = true;
@@ -289,6 +291,14 @@ function comando(c, v) {
     case 'recomecar': case 'maquina': case 'marcador':
       hud.fecharMenu(); filaAcoes.push(c); if (c === 'recomecar') hud.evento('recomecar'); break;
     case 'ajuda': hud.abrirAjuda(); break;
+    case 'tela-cheia':
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else {
+        document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+          .then(() => (screen.orientation && screen.orientation.lock ? screen.orientation.lock('landscape') : null))
+          .catch(() => { /* o navegador recusou: segue sem tela cheia */ });
+      }
+      break;
     case 'fechar-ajuda': hud.fecharAjuda(); break;
     case 'qualidade':
       if (v !== 'auto' && !QUALIDADE[v]) break;
@@ -301,6 +311,7 @@ function comando(c, v) {
     case 'hora':
       if (v !== 'dia' && v !== 'noite') break;
       hora = v; cena3d.definirHora(v); campo.definirHora(v);
+      document.documentElement.classList.toggle('noite', v === 'noite');
       hud.definirEstado({ hora: v });
       prefs.hora = v; salvarPrefs(prefs);
       break;
@@ -338,7 +349,7 @@ async function iniciar() {
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1' });
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao });
   redimensionar();
   window.addEventListener('resize', redimensionar);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', redimensionar);
@@ -354,7 +365,7 @@ async function iniciar() {
   // primeiro quadro (compila os shaders) e some a tela de carregamento
   desenharQuadro(PASSO, performance.now());
   adapt.inicio = performance.now();
-  if (!PRINTS) hud.pronto();
+  hud.pronto();
   api.pronto = true;
   const aoQuadro = t => {
     requestAnimationFrame(aoQuadro);
@@ -423,9 +434,9 @@ const api = {
   definirQualidade(nome) { comando('qualidade', nome); },
   definirHora(h) { comando('hora', h); },
   definirCamera(m) { comando('camera', m); },
-  abrirMenu() { hud.abrirMenu(); },
+  abrirMenu() { hud.abrirMenu(true); },
   fecharMenu() { hud.fecharMenu(); },
-  abrirAjuda() { hud.abrirAjuda(); },
+  abrirAjuda() { hud.abrirAjuda(true); },
   fecharAjuda() { hud.fecharAjuda(); },
   estado() {
     const h = jogadorPorId(mundo, ID_HUMANO);
@@ -439,6 +450,13 @@ const api = {
   },
   /** Desenha um quadro sem avançar nada (prints). */
   desenhar() { desenharQuadro(0, relogioManual ? tempoManual : performance.now()); },
+  /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */
+  cameraLivre(l) { cam.definirLivre(l); },
+  /** Ponto do mundo → pixel CSS na tela (testes: "direita no analógico = direita na tela"). */
+  naTela(x, y, z) {
+    const v = new THREE.Vector3(x, y, z).project(cam.camera);
+    return { x: (v.x + 1) / 2 * window.innerWidth, y: (1 - v.y) / 2 * window.innerHeight };
+  },
 };
 window.__golaco = api;
 

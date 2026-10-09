@@ -17,22 +17,34 @@ const HG = 0.45;
 
 // ------------------------------------------------------------------ material da grama
 
+// 0 = dia, 1 = noite (compartilhado pelos materiais do chão): à noite a luz dos refletores
+// forma um "poço" de luz — gramado mais claro no meio e caindo para as bordas e o entorno.
+const uNoite = { value: 0 };
+const LUZ_NOITE_GLSL = `
+  float luzNoite(vec2 p) {
+    vec2 q = vec2(p.x / 62.0, p.y / 41.0);
+    float r2 = q.x * q.x * 0.75 + q.y * q.y;
+    return mix(1.04, 0.5, smoothstep(0.3, 1.35, r2));
+  }`;
+
 /** Injeta o grão (textura de detalhe em coordenadas do mundo, duas escalas) num material. */
 function comDetalhe(mat, detalhe, forca) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uForca = { value: forca };
+    sh.uniforms.uNoite = uNoite;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;')
       .replace('#include <project_vertex>', '#include <project_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nvarying vec2 vMundoXZ;')
+      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nuniform float uNoite;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL)
       .replace('#include <map_fragment>', `#include <map_fragment>
         {
           float d1 = texture2D(uDetalhe, vMundoXZ * 0.55).r;
           float d2 = texture2D(uDetalhe, vMundoXZ * 0.137 + 0.31).r;
           float d = d1 * d2 * 4.0;
           diffuseColor.rgb *= mix(1.0, d, uForca);
+          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
         }`);
   };
   mat.customProgramCacheKey = () => 'grama-detalhe-' + forca;
@@ -81,7 +93,6 @@ function criarLinhas(detalhe) {
   reta(0, -MZ + L, 0, MZ - L);
   arco(0, 0, CAMPO.raioCirculo - h, 0, Math.PI * 2, 160);
   arco(0, 0, 0.055, 0, Math.PI * 2, 20);
-  const meiaGol = CAMPO.gol.largura / 2;
   for (const s of [-1, 1]) {
     // grande área
     const ax = s * (MX - CAMPO.area.profundidade + h), az = CAMPO.area.largura / 2 - h;
@@ -110,7 +121,6 @@ function criarLinhas(detalhe) {
       while (da < -Math.PI) da += Math.PI * 2;
       arco(cx, cz, CAMPO.raioEscanteio - h, a0, a0 + da, 16);
     }
-    void meiaGol;
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -125,11 +135,12 @@ function criarLinhas(detalhe) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uMeia = { value: h };
     sh.uniforms.uDetalhe = { value: detalhe };
+    sh.uniforms.uNoite = uNoite;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aCruz;\nvarying float vCruz;\nvarying vec2 vMundoXZ;')
       .replace('#include <project_vertex>', '#include <project_vertex>\nvCruz = aCruz;\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nvarying float vCruz;\nvarying vec2 vMundoXZ;')
+      .replace('#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nuniform float uNoite;\nvarying float vCruz;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL)
       .replace('#include <alphatest_fragment>', `
         {
           // cobertura analítica da linha no pixel; abaixo de ~1,5 px a linha não afina mais,
@@ -141,6 +152,7 @@ function criarLinhas(detalhe) {
           if (diffuseColor.a < 0.004) discard;
           float d = texture2D(uDetalhe, vMundoXZ * 0.55).r * 2.0;
           diffuseColor.rgb *= mix(1.0, d, 0.35);
+          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
         }
         #include <alphatest_fragment>`);
   };
@@ -165,12 +177,10 @@ function criarGols(aniso) {
   const CEL = 0.14; // tamanho do losango da rede (m)
   function plano(p0, p1, p2, p3, n, ul, vl) {
     const o = redeGeo;
-    const i = o.pos.length / 3;
     o.pos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
     for (let k = 0; k < 6; k++) o.nrm.push(...n);
     const u = ul / CEL, v = vl / CEL;
     o.uv.push(0, 0, u, 0, u, v, 0, 0, u, v, 0, v);
-    void i;
   }
   for (const s of [-1, 1]) {
     const x = s * MX;
@@ -270,17 +280,18 @@ function criarPlacas(aniso) {
     u0 = u1;
   }
   // lado de lá (z−), lado de cá (z+) e fundos (x±), viradas para o campo
-  face(-PX, -PZ, PX, -PZ, 0, 1);
-  face(PX, PZ, -PX, PZ, 0, -1);
-  face(PX, -PZ, PX, PZ, -1, 0);
-  face(-PX, PZ, -PX, -PZ, 1, 0);
+  const d = 0.02; // a face de LED fica 2 cm à frente da caixa (sem z-fighting)
+  face(-PX, -PZ + d, PX, -PZ + d, 0, 1);
+  face(PX, PZ - d, -PX, PZ - d, 0, -1);
+  face(PX - d, -PZ, PX - d, PZ, -1, 0);
+  face(-PX + d, PZ, -PX + d, -PZ, 1, 0);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
   geo.computeBoundingSphere();
   // LED: material sem luz (a placa brilha sozinha), mais forte à noite
-  const mat = new THREE.MeshBasicMaterial({ map: texPlacas(aniso), color: 0xdddddd });
+  const mat = new THREE.MeshBasicMaterial({ map: texPlacas(aniso), color: 0xdddddd, fog: false });
   const frente = new THREE.Mesh(geo, mat);
   frente.name = 'placas';
   const E = 0.12;
@@ -297,7 +308,8 @@ function criarPlacas(aniso) {
 
 // ------------------------------------------------------------------ arquibancada e entorno
 
-function criarArquibancada(aniso) {
+function criarArquibancada(aniso, qualidade) {
+  const larg = qualidade === 'baixa' ? 1024 : 2048;
   const V_PAREDE = 0.975, vMax = 1 - 24 / 512;
   function construtor() {
     const pos = [], uv = [], nrm = [];
@@ -342,7 +354,8 @@ function criarArquibancada(aniso) {
       L1.tri([x, 0, z0], [x, yTopo + 5, z1], [x, 0, z1], [0.5, V_PAREDE], [0.6, 1], [0.6, V_PAREDE]);
     }
   }
-  const lado = L1.mesh(texArquibancada(aniso, true));
+  const g = new THREE.Group();
+  const lado = L1.mesh(texArquibancada(aniso, true, larg));
   // atrás dos gols (x±): do canto de lá (z −74,5) até o lado de cá (z +44,5)
   const L2 = construtor();
   for (const s of [-1, 1]) {
@@ -354,10 +367,10 @@ function criarArquibancada(aniso) {
     L2.quad([x0, yBase, za], [x0, yBase, zb], [x1, yT, zb], [x1, yT, za], 0, u1, 0, vMax * 0.82);
     L2.quad([x1, yT, za], [x1, yT, zb], [x1, yT + 5, zb], [x1, yT + 5, za], 0, u1, V_PAREDE, 1);
   }
-  const fundos = L2.mesh(texArquibancada(aniso, false));
+  const fundos = L2.mesh(texArquibancada(aniso, false, larg));
   lado.name = 'arquibancada-lado';
+  g.userData.materiais = [lado.material, fundos.material];
   fundos.name = 'arquibancada-fundos';
-  const g = new THREE.Group();
   g.add(lado, fundos);
   return g;
 }
@@ -414,7 +427,8 @@ export function criarCampo(opc) {
   const gf = new THREE.PlaneGeometry(420, 420, 1, 1);
   gf.rotateX(-Math.PI / 2);
   gf.translate(0, -0.02, 0);
-  const fora = new THREE.Mesh(gf, new THREE.MeshLambertMaterial({ color: 0x1b2022 }));
+  // atrás das placas a grama continua até a arquibancada (mais escura, sem faixas)
+  const fora = new THREE.Mesh(gf, comDetalhe(new THREE.MeshLambertMaterial({ color: 0x2c5a26 }), detalhe, 0.6));
   fora.name = 'chao-fora';
   grupo.add(fora);
   grupo.add(criarLinhas(detalhe));
@@ -424,13 +438,17 @@ export function criarCampo(opc) {
   grupo.add(band.mesh);
   const placas = criarPlacas(aniso);
   grupo.add(placas.frente, placas.corpo);
-  grupo.add(criarArquibancada(aniso));
+  const arq = criarArquibancada(aniso, opc.qualidade);
+  grupo.add(arq);
   const refl = criarRefletores();
   grupo.add(refl.grupo);
   return {
     grupo,
     definirHora(hora) {
       const noite = hora === 'noite';
+      uNoite.value = noite ? 1 : 0;
+      // arquibancada à noite: só a luz que escapa dos refletores
+      for (const m of arq.userData.materiais) m.color.setScalar(noite ? 0.42 : 1);
       placas.mat.color.setHex(noite ? 0xffffff : 0xd4d4d4);
       refl.matLamp.color.setHex(noite ? 0xf4f8ff : 0x3a4044);
       for (const b of refl.brilhos) b.visible = noite;

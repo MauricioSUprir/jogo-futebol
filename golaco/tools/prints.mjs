@@ -24,6 +24,7 @@ const CENAS = [
   { nome: 'celular-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&marcador=1' },
   { nome: 'pc-aproximada', ...PC, url: 'q=alta&hora=dia&camera=aproximada&marcador=1' },
   { nome: 'celular-baixa', ...CEL, url: 'q=baixa&hora=dia&toque=1&entalhe=1' },
+  { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1' },
   { nome: 'pc-menu', ...PC, url: 'q=alta&hora=dia', depois: 'menu' },
   { nome: 'celular-menu', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', depois: 'menu' },
   { nome: 'celular-ajuda', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1', depois: 'ajuda' },

@@ -23,11 +23,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 |---|---|---|---|
 | Mover | WASD / setas | analógico esquerdo | analógico à esquerda |
 | CORRER (segurar) | Shift | RT | CORRER |
-| Modificador (condução curta, proteção, drible) | Ctrl ou E | LT | CONDUÇÃO |
+| Modificador (condução curta, proteção, drible) | E | LT | CONDUÇÃO |
 | Pedalada | dois toques rápidos no modificador | | |
 | Recomeçar (bola no pé) | R | | menu |
 | Máquina de passes / marcador | M / N | Y / X | menu |
-| Câmera TV / aproximada | C | | menu |
+| Câmera TV / aproximada | C | R3 | menu |
 | Ajuda / pausa | H / Esc | View / Start | menu |
 
 ## Rodar
@@ -40,7 +40,8 @@ cd golaco && python3 -m http.server 8000   # http://localhost:8000
 
 ```bash
 node golaco/tools/rodar-testes.mjs     # lógica em Node (~30 s) — o Actions roda antes do deploy
-node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium
+node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz
+node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade
 node golaco/tools/prints.mjs           # prints PC/celular, dia/noite (tools/saida/)
 ```
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const TESTES = [
+  ['matemática determinística (igual em todo motor JS)', 'teste-matdet.mjs'],
   ['física da bola', 'teste-bola.mjs'],
   ['determinismo (semente → mesmo hash)', 'teste-determinismo.mjs'],
   ['entrada e zona morta radial', 'teste-entrada.mjs'],
