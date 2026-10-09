@@ -49,6 +49,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   um número pelo outro (decidir mais rápido no último terço dá +0,5 gol, mas o goleiro cai para 63% de defesas e 67% nos
   chutes de longe). Estado da branch em 08/10 à noite (48 partidas): ~22 chutes, ~2,4 gols, passe 77–79%, pênalti
   46–47 gols em 60 com 1–5 para fora (publicado 47/9/4), escanteios 1,5–1,6 (publicado 1,7); medir também com `defesas-test` (≥ 66% e ≥ 55%).
+  Pistas medidas em 08/10: ~45% dos chutes da IA saem de 25–33 m (real ~10%) — o bônus do chute de fora encerra o ataque
+  cedo; com ele só até ~28 m os chutes de jogada a menos de 18 m sobem ~40%, mas o total cai para ~19 e o goleiro fica
+  abaixo da meta (40% de defesas de 6 a 16,5 m) — falta volume de chance, não precisão. Bug raro a corrigir: gol contra
+  logo depois de o goleiro repor com a mão (~1 em 36 partidas no `defesas-test`; investigar com 100+ partidas).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
