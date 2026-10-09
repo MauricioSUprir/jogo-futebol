@@ -4,23 +4,36 @@
 // sombra): o afunilamento, o comprimento e o achatamento vêm de atributos por instância e são
 // aplicados no vertex shader; as cores (camisa, pele, detalhes verdes) e os padrões (manga,
 // gola, listras, meião, sola) são resolvidos no fragment shader. Cabeça e cabelo: mais dois
-// InstancedMesh. Indicador do jogador controlado: anel com seta no chão + seta acima da cabeça.
+// InstancedMesh. Indicador do jogador controlado: anel com seta no chão + seta acima da cabeça;
+// o "próximo da troca" ganha um anel menor e discreto. Qualquer número de jogadores dos dois
+// times (a capacidade cresce sozinha). Goleiro (posicao 'GOL') com uniforme próprio, manga
+// comprida e luvas.
 import * as THREE from 'three';
 import { SEGMENTOS, RAIO_CABECA, J } from '../anim.js';
 import { texMancha, texIndicador } from './texturas.js';
 
-const MAX_JOG = 24;
 const NSEG = SEGMENTOS.length;
 
-// Uniformes (cores) por time. Time 0 = GOLAÇO (preto com detalhes verdes); time 1 = marcador
-// de treino (branco/cinza). Tudo fictício.
-const KITS = [
-  { camisa: '#15191b', calcao: '#0e1112', meiao: '#15191b', chuteira: '#19e07a', acento: '#19e07a', sola: '#0b0d0e', pele: '#b9825c', cabelo: '#1c1410' },
-  { camisa: '#e7eaec', calcao: '#c4c9cd', meiao: '#e7eaec', chuteira: '#1d2123', acento: '#7b858b', sola: '#e0e3e5', pele: '#8d5d3f', cabelo: '#2a1e16' },
-];
+// Uniformes (cores) por time e função. Tudo fictício.
+// Time 0 (GOLAÇO): preto com detalhes verdes; goleiro verde-limão com preto.
+// Time 1 (visitante): branco/cinza com detalhes pretos; goleiro laranja escuro com cinza.
+const KITS = {
+  linha0: { camisa: '#15191b', calcao: '#0e1112', meiao: '#15191b', chuteira: '#19e07a', acento: '#19e07a', sola: '#0b0d0e', luva: '#19e07a' },
+  goleiro0: { camisa: '#b8f02e', calcao: '#101314', meiao: '#b8f02e', chuteira: '#101314', acento: '#101314', sola: '#0b0d0e', luva: '#101314' },
+  linha1: { camisa: '#e9ecee', calcao: '#b9bfc4', meiao: '#e9ecee', chuteira: '#15191b', acento: '#15191b', sola: '#d5d9dc', luva: '#15191b' },
+  goleiro1: { camisa: '#c4561c', calcao: '#4b5257', meiao: '#c4561c', chuteira: '#2a2e31', acento: '#8f979c', sola: '#1d2023', luva: '#8f979c' },
+};
+// Pele e cabelo variam por jogador (sorteio fixo pelo id): elenco com cara de elenco.
+const PELES = ['#f0c8a4', '#e3b088', '#c99067', '#b9825c', '#a06a46', '#8d5d3f', '#6e452c', '#5a3824'];
+const CABELOS = ['#16100c', '#1c1410', '#2a1e16', '#3b2a1c', '#5a3f26', '#7a5532', '#a07a48', '#0e0d0c'];
+function sorteio(id, s) {
+  let h = Math.imul((id | 0) + 0x9e37, 0x85ebca6b) ^ Math.imul(s, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 15), 0x27d4eb2f);
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
 
-// Padrões (ver o fragment shader).
-const P = { liso: 0, manga: 1, tronco: 3, gola: 4, coxa: 5, meiao: 6, chuteira: 7 };
+// Padrões (ver o fragment shader). 2 = antebraço do goleiro (manga comprida e luva).
+const P = { liso: 0, manga: 1, luva: 2, tronco: 3, gola: 4, coxa: 5, meiao: 6, chuteira: 7 };
 
 function nomeJ(i) { return Object.keys(J).find(k => J[k] === i) ?? ''; }
 
@@ -43,6 +56,14 @@ function estilo(seg) {
   return { achata: 1, pad: P.liso, c: [parte, 'pele', 'acento'], sup };
 }
 const ESTILOS = SEGMENTOS.map(estilo);
+/** Goleiro: manga comprida (braço inteiro na cor da camisa) e luva na mão. */
+function estiloGoleiro(seg, base) {
+  const a = nomeJ(seg[0]), b = nomeJ(seg[1]);
+  if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { ...base, pad: P.liso, c: ['camisa', 'pele', 'acento'] };
+  if (/^cotovelo/.test(a) && /^mao/.test(b)) return { ...base, pad: P.luva, c: ['camisa', 'luva', 'acento'], r: [0.046, 0.05] };
+  return base;
+}
+const ESTILOS_GOL = SEGMENTOS.map((sg, i) => estiloGoleiro(sg, ESTILOS[i]));
 
 /** Cápsula unitária: anéis do cilindro (aAnel = 1) + calotas; aFim = 0 no lado A, 1 no B. */
 function geoCapsula(nr, nc) {
@@ -138,6 +159,9 @@ function materialSegmentos() {
           if (p > 0.5 && p < 1.5) {            // manga curta: camisa, punho verde, braço
             cor = mix(cor, vC3, faixa(t, 0.54, w));
             cor = mix(cor, vC2, faixa(t, 0.63, w));
+          } else if (p > 1.5 && p < 2.5) {     // goleiro: manga comprida, punho e luva
+            cor = mix(cor, vC3, faixa(t, 0.66, w));
+            cor = mix(cor, vC2, faixa(t, 0.74, w));
           } else if (p > 2.5 && p < 3.5) {     // tronco: listras laterais
             cor = mix(cor, vC3, faixa(lado, 0.94, wl) * meio);
           } else if (p > 3.5 && p < 4.5) {     // gola e pescoço
@@ -155,7 +179,7 @@ function materialSegmentos() {
           diffuseColor.rgb = cor;
         }`);
   };
-  mat.customProgramCacheKey = () => 'manequim-v2';
+  mat.customProgramCacheKey = () => 'manequim-v3';
   return mat;
 }
 
@@ -178,58 +202,72 @@ const _s = new THREE.Vector3();
 export function criarJogadores3D(cena, qualidade) {
   const alta = qualidade === 'alta';
   const geo = geoCapsula(alta ? 14 : 9, alta ? 4 : 2);
-  const n = MAX_JOG * NSEG;
-  const ig = new THREE.InstancedBufferGeometry();
-  ig.index = geo.index;
-  for (const k of Object.keys(geo.attributes)) ig.setAttribute(k, geo.attributes[k]);
-  const aDim = new THREE.InstancedBufferAttribute(new Float32Array(n * 4), 4);
-  const aC1 = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
-  const aC2 = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
-  const aC3 = new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3);
-  const aPad = new THREE.InstancedBufferAttribute(new Float32Array(n), 1);
-  aDim.setUsage(THREE.DynamicDrawUsage);
-  ig.setAttribute('iDim', aDim);
-  ig.setAttribute('iC1', aC1);
-  ig.setAttribute('iC2', aC2);
-  ig.setAttribute('iC3', aC3);
-  ig.setAttribute('iPad', aPad);
-  const segs = new THREE.InstancedMesh(ig, materialSegmentos(), n);
-  segs.customDepthMaterial = materialSombraSegmentos();
-  segs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  segs.frustumCulled = false;
-  segs.castShadow = true;
-  segs.count = 0;
-  segs.name = 'jogadores-segmentos';
-  cena.add(segs);
-
-  // cabeça e cabelo
   const geoCab = new THREE.SphereGeometry(1, alta ? 24 : 14, alta ? 16 : 10);
-  const cabecas = new THREE.InstancedMesh(geoCab, new THREE.MeshStandardMaterial({ roughness: 0.6 }), MAX_JOG);
   const geoCabelo = new THREE.SphereGeometry(1, alta ? 20 : 12, alta ? 8 : 5, 0, Math.PI * 2, 0, Math.PI * 0.52);
-  const cabelos = new THREE.InstancedMesh(geoCabelo, new THREE.MeshStandardMaterial({ roughness: 0.9 }), MAX_JOG);
-  for (const im of [cabecas, cabelos]) {
-    im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    im.frustumCulled = false;
-    im.castShadow = true;
-    im.count = 0;
-    cena.add(im);
-  }
-  cabecas.name = 'jogadores-cabecas';
-  cabelos.name = 'jogadores-cabelos';
-
-  // sombra de contato (mancha) sob cada jogador
   const gm = new THREE.PlaneGeometry(1, 1);
   gm.rotateX(-Math.PI / 2);
+  const matSeg = materialSegmentos();
+  const matSegSombra = materialSombraSegmentos();
+  const matCab = new THREE.MeshStandardMaterial({ roughness: 0.6 });
+  const matCabelo = new THREE.MeshStandardMaterial({ roughness: 0.9 });
   const matMancha = new THREE.MeshBasicMaterial({
     map: texMancha(), color: 0x000000, transparent: true, depthWrite: false, opacity: 0.5,
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
   });
-  const manchas = new THREE.InstancedMesh(gm, matMancha, MAX_JOG);
-  manchas.frustumCulled = false;
-  manchas.count = 0;
-  manchas.renderOrder = 3;
-  manchas.name = 'jogadores-manchas';
-  cena.add(manchas);
+  let sombras = true;
+
+  // Instâncias para `cap` jogadores (recriadas maiores se entrar mais gente).
+  let cap = 0, segs, cabecas, cabelos, manchas, aDim, aC1, aC2, aC3, aPad;
+  function montar(n) {
+    if (segs) {
+      for (const im of [segs, cabecas, cabelos, manchas]) { cena.remove(im); im.dispose(); }
+      segs.geometry.dispose();
+    }
+    cap = n;
+    const ni = cap * NSEG;
+    const ig = new THREE.InstancedBufferGeometry();
+    ig.index = geo.index;
+    for (const k of Object.keys(geo.attributes)) ig.setAttribute(k, geo.attributes[k]);
+    aDim = new THREE.InstancedBufferAttribute(new Float32Array(ni * 4), 4);
+    aC1 = new THREE.InstancedBufferAttribute(new Float32Array(ni * 3), 3);
+    aC2 = new THREE.InstancedBufferAttribute(new Float32Array(ni * 3), 3);
+    aC3 = new THREE.InstancedBufferAttribute(new Float32Array(ni * 3), 3);
+    aPad = new THREE.InstancedBufferAttribute(new Float32Array(ni), 1);
+    aDim.setUsage(THREE.DynamicDrawUsage);
+    ig.setAttribute('iDim', aDim);
+    ig.setAttribute('iC1', aC1);
+    ig.setAttribute('iC2', aC2);
+    ig.setAttribute('iC3', aC3);
+    ig.setAttribute('iPad', aPad);
+    segs = new THREE.InstancedMesh(ig, matSeg, ni);
+    segs.customDepthMaterial = matSegSombra;
+    segs.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    segs.frustumCulled = false;
+    segs.count = 0;
+    segs.name = 'jogadores-segmentos';
+    cena.add(segs);
+    // cabeça e cabelo
+    cabecas = new THREE.InstancedMesh(geoCab, matCab, cap);
+    cabelos = new THREE.InstancedMesh(geoCabelo, matCabelo, cap);
+    for (const im of [cabecas, cabelos]) {
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      im.frustumCulled = false;
+      im.count = 0;
+      cena.add(im);
+    }
+    cabecas.name = 'jogadores-cabecas';
+    cabelos.name = 'jogadores-cabelos';
+    // sombra de contato (mancha) sob cada jogador
+    manchas = new THREE.InstancedMesh(gm, matMancha, cap);
+    manchas.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    manchas.frustumCulled = false;
+    manchas.count = 0;
+    manchas.renderOrder = 3;
+    manchas.name = 'jogadores-manchas';
+    cena.add(manchas);
+    segs.castShadow = cabecas.castShadow = cabelos.castShadow = sombras;
+    vagaDe.clear();
+  }
 
   // indicador do jogador controlado: anel + seta no chão, seta acima da cabeça
   const verde = 0x19e07a;
@@ -255,25 +293,45 @@ export function criarJogadores3D(cena, qualidade) {
   marca.visible = false;
   marca.renderOrder = 5;
   cena.add(marca);
+  // "próximo da troca": anel fino, menor e translúcido (discreto)
+  const matProx = new THREE.MeshBasicMaterial({
+    color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+  });
+  // largura de 9 cm: fina o bastante para ser discreta e grossa o bastante para não serrilhar
+  // (sem antisserrilhado, um anel de 5 cm vira tracejado na câmera de TV)
+  const anelProx = new THREE.Mesh(new THREE.RingGeometry(0.37, 0.46, 40), matProx);
+  anelProx.rotation.x = -Math.PI / 2;
+  anelProx.renderOrder = 4;
+  anelProx.visible = false;
+  anelProx.name = 'indicador-proximo';
+  cena.add(anelProx);
 
-  const kitsLin = KITS.map(k => Object.fromEntries(Object.entries(k).map(([nome, hex]) => [nome, new THREE.Color(hex)])));
-  const coresFeitas = new Map(); // id → time (cores escritas para esta vaga)
-  const vagaDe = new Map();
+  const kitsLin = Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, Object.fromEntries(Object.entries(kit).map(([nome, hex]) => [nome, new THREE.Color(hex)]))]));
+  const pelesLin = PELES.map(h => new THREE.Color(h));
+  const cabelosLin = CABELOS.map(h => new THREE.Color(h));
+  const vagaDe = new Map(); // vaga → chave (id, time, goleiro) das cores escritas
+  montar(24);
 
-  function escreverCores(vaga, time) {
-    const kit = kitsLin[time] ?? kitsLin[0];
+  function escreverCores(vaga, jg) {
+    const gol = !!jg.goleiro;
+    const kit = kitsLin[(gol ? 'goleiro' : 'linha') + (jg.time === 1 ? 1 : 0)];
+    const est = gol ? ESTILOS_GOL : ESTILOS;
+    const pele = pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
+    const cab = cabelosLin[Math.floor(sorteio(jg.id, 2) * cabelosLin.length)];
+    const cor = nome => (nome === 'pele' ? pele : kit[nome]);
     for (let s = 0; s < NSEG; s++) {
-      const e = ESTILOS[s];
+      const e = est[s];
       const i = vaga * NSEG + s;
-      const c1 = kit[e.c[0]] ?? kit.camisa, c2 = kit[e.c[1]] ?? kit.pele, c3 = kit[e.c[2]] ?? kit.acento;
+      const c1 = cor(e.c[0]) ?? kit.camisa, c2 = cor(e.c[1]) ?? pele, c3 = cor(e.c[2]) ?? kit.acento;
       aC1.setXYZ(i, c1.r, c1.g, c1.b);
       aC2.setXYZ(i, c2.r, c2.g, c2.b);
       aC3.setXYZ(i, c3.r, c3.g, c3.b);
       aPad.setX(i, e.pad);
     }
     aC1.needsUpdate = aC2.needsUpdate = aC3.needsUpdate = aPad.needsUpdate = true;
-    cabecas.setColorAt(vaga, kit.pele);
-    cabelos.setColorAt(vaga, kit.cabelo);
+    cabecas.setColorAt(vaga, pele);
+    cabelos.setColorAt(vaga, cab);
     if (cabecas.instanceColor) cabecas.instanceColor.needsUpdate = true;
     if (cabelos.instanceColor) cabelos.instanceColor.needsUpdate = true;
   }
@@ -289,26 +347,31 @@ export function criarJogadores3D(cena, qualidade) {
   }
 
   return {
-    segs, cabecas, cabelos,
+    get segs() { return segs; },
+    get cabecas() { return cabecas; },
+    get cabelos() { return cabelos; },
+    get capacidade() { return cap; },
     /**
-     * lista: [{id, time, pose (Float32Array já interpolada), controlado, x, z, rumo}]
+     * lista: [{id, time, goleiro, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
      * camera: para o tamanho constante da seta acima da cabeça.
      */
     atualizar(lista, camera) {
-      const nj = Math.min(lista.length, MAX_JOG);
+      if (lista.length > cap) montar(Math.ceil(lista.length * 1.25));
+      const nj = lista.length;
       const mat = segs.instanceMatrix.array;
       const dim = aDim.array;
-      let controlado = null;
+      let controlado = null, proximo = null;
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
-        // cores fixas por vaga (só reescreve quando a vaga muda de dono/time)
-        const chave = jg.id * 8 + jg.time;
-        if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg.time); }
+        // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função)
+        const chave = jg.id * 8 + (jg.time === 1 ? 1 : 0) * 2 + (jg.goleiro ? 1 : 0);
+        if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
+        const est = jg.goleiro ? ESTILOS_GOL : ESTILOS;
         const pose = jg.pose;
         frente(pose, J.ombroE, J.ombroD, fSup);
         frente(pose, J.quadrilE, J.quadrilD, fInf);
         for (let s = 0; s < NSEG; s++) {
-          const sg = SEGMENTOS[s], e = ESTILOS[s];
+          const sg = SEGMENTOS[s], e = est[s];
           const ia = sg[0] * 3, ib = sg[1] * 3;
           A.set(pose[ia], pose[ia + 1], pose[ia + 2]);
           B.set(pose[ib], pose[ib + 1], pose[ib + 2]);
@@ -349,12 +412,14 @@ export function criarJogadores3D(cena, qualidade) {
         _s.set(R * 0.98, R * 1.08, R * 1.08);
         _m.compose(_v, _q, _s);
         cabelos.setMatrixAt(p, _m);
-        // mancha de contato
+        // mancha de contato (no meio dos pés; o goleiro deitado leva a mancha junto)
         const ang = Math.atan2(fInf.z, fInf.x);
         _q.setFromAxisAngle(CIMA, -ang);
-        _m.compose(_v.set(jg.x, 0.016, jg.z), _q, _s.set(1.15, 1, 0.85));
+        const pl = J.pelve * 3;
+        _m.compose(_v.set(pose[pl], 0.016, pose[pl + 2]), _q, _s.set(1.15, 1, 0.85));
         manchas.setMatrixAt(p, _m);
         if (jg.controlado) controlado = jg;
+        else if (jg.proximo) proximo = jg;
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
@@ -383,8 +448,13 @@ export function criarJogadores3D(cena, qualidade) {
         anelTodo.visible = false;
         marca.visible = false;
       }
+      if (proximo) {
+        anelProx.visible = true;
+        anelProx.position.set(proximo.x, 0.019, proximo.z);
+      } else anelProx.visible = false;
     },
     definirSombras(ligadas) {
+      sombras = ligadas;
       segs.castShadow = cabecas.castShadow = cabelos.castShadow = ligadas;
       matMancha.opacity = ligadas ? 0.32 : 0.5;
     },

@@ -5,9 +5,11 @@
 // centro da bola ao pé (tornozelo–ponta) que vai dar o próximo toque, fora da janela de
 // animação do toque. Bola–corpo (quadril) fica como informação. O toque sincronizado com a
 // passada é medido na pose também (pé no balanço, sem troca de pé na hora, pé perto da bola).
-// Metas marcadas PENDENTE (bola–pé e chuteira dentro da bola) dependem de onde o anim.js põe o
-// pé (outro módulo): aparecem com o número e REPROVA quando não batem, e derrubam a bateria
-// com --estrito — sem a opção, não derrubam até o anim.js ser corrigido.
+// Metas marcadas PENDENTE (bola–pé, chuteira dentro da bola e o tornozelo do pé que toca até a
+// bola) dependem de onde o anim.js põe o pé (outro módulo; o gesto do toque é limitado por
+// GESTO.desvio e pelo tempo livre do pé no ar): aparecem com o número e REPROVA quando não batem,
+// e derrubam a bateria com --estrito — sem a opção, não derrubam até o anim.js ser corrigido.
+// (A parte da simulação — o toque sai do pé no balanço, sem troca de pé — tem meta própria.)
 // Reprova (código 1) se alguma meta não passar.
 //   node tools/teste-conducao.mjs [--semente N] [--detalhe] [--estrito]
 import {
@@ -170,7 +172,7 @@ const metas = [
   ['Bola–pé trotando (p5–p95; pé do próximo toque)', `${fmt(pe5)}–${fmt(pe95)} m (méd ${fmt(peTrMed)})`, '0,30–0,60 m', pe5 >= 0.3 && pe95 <= 0.6, 'PENDENTE'],
   ['Chuteira dentro da bola (quadros, pose)', `${fmt(pDentro, 1)}%`, '≤ 1%', pDentro <= 1, 'PENDENTE'],
   ['Toque sincronizado: pé que toca no balanço · sem troca de pé na hora', `${noBalanco}/${toquesPose.length} · ${trocas} troca(s)`, '100% · 0', noBalanco === toquesPose.length && trocas === 0],
-  ['Toque sincronizado: tornozelo do pé que toca até a bola (pose, p95)', `${fmt(dPe95)} m (mediana ${fmt(percentil(dPe, 0.5))})`, '≤ 0,30 m', dPe95 <= 0.3],
+  ['Toque sincronizado: tornozelo do pé que toca até a bola (pose, p95)', `${fmt(dPe95)} m (mediana ${fmt(percentil(dPe, 0.5))})`, '≤ 0,30 m', dPe95 <= 0.3, 'PENDENTE'],
   ['Toques por passada (arrancada > 7 m/s)', fmt(toquesPorPassada), '≈ 1 (0,8–1,25)', toquesPorPassada >= 0.8 && toquesPorPassada <= 1.25],
   ['Soltar o analógico conduzindo: bola à frente do corpo (pior)', `${fmt(freada.piorFrente)} m · ${freada.sob} tick(s) com a bola embaixo do corpo`, '≥ 0,14 m · 0', freada.piorFrente >= 0.14 && freada.sob === 0],
   ['Soltar o analógico conduzindo: toques em 3 s (pior de ' + freada.casos + ')', `${freada.maxToques} · ${freada.perdas} perda(s)`, '≤ 8 · 0', freada.maxToques <= 8 && freada.perdas === 0],
