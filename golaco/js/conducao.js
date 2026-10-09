@@ -423,7 +423,7 @@ export function executarToque(m, j, pe, tipo) {
   if (m.log) m.log.push({ t: m.tick, id: j.id, pe, tipo, bx: b.p.x, bz: b.p.z, dx: ddx, dz: ddz, v: v0, ir: j.intRumo, s: sAgora, apoio: j.pes[apoio].apoio });
 }
 
-const CORTE_MAX = 15; // ticks (0,25 s) no máximo segurando o rumo à espera do toque
+const CORTE_MAX = 5; // ticks (0,083 s) no máximo segurando o rumo à espera do toque
 
 export function ticksCorteRestantes(c, tick) {
   if (c.cortePendente == null) return 0;
@@ -565,16 +565,17 @@ export function movimentoComBola(m, j) {
   const velF = clamp(Math.min(Math.max(base.vel, alcancar), chegar), 0, j.par.vArrancada * 0.95);
   const aBola = MD.atan2(dz, dx);
   if (j.imag > MAG_DIR) {
-    const aPed = MD.atan2(j.iz, j.ix);
-    const alfa = difAng(aPed, aBola);
-    if (Math.abs(alfa) <= CONDUCAO.angBusca) {
-      // desvio mínimo: passar com a bola a ≤ 0,3 m de lado
-      const lado = dl * MD.sin(Math.abs(alfa));
-      let beta = 0;
-      if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - MD.asin(Math.min(1, 0.3 / dl)));
-      const r = aPed + beta;
-      return { dx: MD.cos(r), dz: MD.sin(r), vel: velF, rumoAlvo: r };
-    }
+    // o pedido fora do corredor (±angBusca em volta da bola) vale até a borda do corredor: o
+    // corpo já começa a ir para o lado pedido enquanto alcança a bola (responde ao comando)
+    let alfa = difAng(MD.atan2(j.iz, j.ix), aBola);
+    if (Math.abs(alfa) > CONDUCAO.angBusca) alfa = Math.sign(alfa) * CONDUCAO.angBusca;
+    const aPed = aBola - alfa;
+    // desvio mínimo: passar com a bola a ≤ 0,3 m de lado
+    const lado = dl * MD.sin(Math.abs(alfa));
+    let beta = 0;
+    if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - MD.asin(Math.min(1, 0.3 / dl)));
+    const r = aPed + beta;
+    return { dx: MD.cos(r), dz: MD.sin(r), vel: velF, rumoAlvo: r };
   }
   return { dx: dx / dl, dz: dz / dl, vel: velF, rumoAlvo: aBola };
 }
