@@ -1,5 +1,6 @@
 // Domínio (seção 4): primeiro toque orientado pelo analógico; a qualidade depende do
-// atributo de controle, da velocidade da bola e da pressão. Máquina de passes rasteiros
+// atributo de controle, da velocidade da bola e da pressão (esta medida PAREADA: as mesmas 400
+// sementes com e sem o marcador perto, e uma diferença mínima — não só "menor"). Máquina de passes rasteiros
 // (chegando a 6–15 m/s, de 12 m) contra um jogador parado com o analógico apontando para onde quer sair
 // (±60° da direção de onde a bola vem). "Dominou e saiu jogando" = a bola sai na direção
 // pedida (±30°) e o jogador continua com ela por 1,5 s sem ir buscá-la.
@@ -217,19 +218,27 @@ for (const controle of [90, 70, 45]) {
     lin.push(`${Math.round((100 * ok) / N)}%`);
   }
   let okp = 0;
-  for (let s = 1; s <= 40; s++) if (tentativa(controle, 15, s + 500, true).ok) okp++;
+  for (let s = 1; s <= 40; s++) if (tentativa(controle, 15, s, true).ok) okp++;
   taxa[`${controle}/15p`] = okp / 40;
   lin.push(`${Math.round((100 * okp) / 40)}%`);
   linhas.push(lin);
 }
-console.log('Domínio orientado e saída jogando (% de 40 passes):');
+console.log('Domínio orientado e saída jogando (% de 40 passes; a coluna com pressão usa as MESMAS sementes):');
 console.log(tabelaTexto(linhas));
+// pressão: comparação PAREADA (mesmas sementes com e sem o marcador parado perto), 400 passes
+const NP = 400;
+let semP = 0, comP = 0;
+for (let s = 1001; s < 1001 + NP; s++) {
+  if (tentativa(70, 15, s, false).ok) semP++;
+  if (tentativa(70, 15, s, true).ok) comP++;
+}
+taxa['70/15sp'] = semP / NP; taxa['70/15cp'] = comP / NP;
 const metas = [
   ['bom jogador (90) domina e sai jogando até 12 m/s', taxa['90/6'] >= 0.9 && taxa['90/9'] >= 0.9 && taxa['90/12'] >= 0.9, `${fmt(taxa['90/12'] * 100, 0)}% a 12 m/s`, '≥ 90%'],
   ['bom jogador (90) a 15 m/s', taxa['90/15'] >= 0.8, `${fmt(taxa['90/15'] * 100, 0)}%`, '≥ 80%'],
   ['jogador fraco (45) erra mais na bola forte', taxa['45/15'] <= taxa['90/15'] - 0.15, `${fmt(taxa['45/15'] * 100, 0)}% × ${fmt(taxa['90/15'] * 100, 0)}%`, '≥ 15 pontos abaixo'],
   ['a velocidade da bola pesa (fraco: 6 m/s > 15 m/s)', taxa['45/6'] >= taxa['45/15'] + 0.1, `${fmt(taxa['45/6'] * 100, 0)}% × ${fmt(taxa['45/15'] * 100, 0)}%`, '≥ 10 pontos'],
-  ['a pressão pesa (médio 70 a 15 m/s)', taxa['70/15p'] < taxa['70/15'], `${fmt(taxa['70/15p'] * 100, 0)}% × ${fmt(taxa['70/15'] * 100, 0)}%`, 'menor com pressão'],
+  ['a pressão pesa (médio 70 a 15 m/s, 400 passes pareados)', taxa['70/15cp'] <= taxa['70/15sp'] - 0.06, `${fmt(taxa['70/15cp'] * 100, 0)}% × ${fmt(taxa['70/15sp'] * 100, 0)}%`, '≥ 6 pontos abaixo'],
 ];
 metas.push(...metasMov);
 console.log('');
