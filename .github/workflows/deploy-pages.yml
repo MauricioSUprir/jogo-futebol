@@ -11,7 +11,27 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 jobs:
+  # GOLAÇO (golaco/): a bateria de testes roda antes de publicar; se algum reprovar, o
+  # deploy não acontece.
+  testes-golaco:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Testes em Node (lógica do jogo)
+        run: node golaco/tools/rodar-testes.mjs
+      - name: Playwright (Chromium) para o teste no navegador
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Teste no navegador (carga, erros, download, determinismo Node = Chromium)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
   deploy:
+    needs: testes-golaco
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -49,6 +69,10 @@ jobs:
           mkdir -p _site/futebol3d
           cp -r futebol3d/. _site/futebol3d/
           rm -rf _site/futebol3d/tools
+          # GOLAÇO novo (futebol 3D, projeto do zero) fica em /golaco/
+          mkdir -p _site/golaco
+          cp -r golaco/. _site/golaco/
+          rm -rf _site/golaco/tools
           # Céu do Rio (simulador de voo) fica em /aviao/
           mkdir -p _site/aviao
           cp -r aviao/. _site/aviao/
@@ -60,7 +84,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           # Raiz = jogo Total Match.
-          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/ e /simulador/.
+          # Subpastas: /financas-casa/, /looklab/, /studylab/, /katseye-central/, /marte/, /aviao/, /futebol3d/, /golaco/ e /simulador/.
           # O CreateFlow (raiz do repo) é hospedado à parte (Railway), não pelo Pages.
           path: '_site'
       - id: deployment

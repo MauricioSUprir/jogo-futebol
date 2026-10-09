@@ -1,0 +1,35 @@
+name: GOLAÇO — testes
+# Roda a bateria do GOLAÇO (golaco/) em todo PR que mexe no jogo, para o PR já mostrar se
+# passa antes do merge. O deploy (deploy-pages.yml) roda a mesma bateria e bloqueia a
+# publicação se algo reprovar.
+on:
+  pull_request:
+    paths:
+      - 'golaco/**'
+      - '.github/workflows/golaco-testes.yml'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Testes em Node (lógica do jogo)
+        run: node golaco/tools/rodar-testes.mjs
+      - name: Playwright (Chromium) para o teste no navegador
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Teste no navegador (carga, erros, download, determinismo Node = Chromium)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
+      - name: Controles na página (teclado no PC e toque no celular)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-controles.mjs
