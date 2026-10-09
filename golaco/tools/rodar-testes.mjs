@@ -26,6 +26,7 @@ const TESTES = [
   ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
+  ['treino de ataque com a IA: não trava e chega ao chute', 'teste-treino.mjs'],
 ];
 
 const res = [];
