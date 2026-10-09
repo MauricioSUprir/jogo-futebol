@@ -55,6 +55,31 @@ export function pontoInterceptacao(m, j, aPartirDe = null) {
   return melhor;
 }
 
+/**
+ * Bola livre: este jogador é o do time dele que chega primeiro nela? Não vale se a bola é um
+ * passe do próprio time para outro companheiro (ele recebe); passe do adversário vale (corta se
+ * chegar antes do recebedor).
+ */
+function vaiNaBolaLivre(m, j) {
+  if (j.posicao === 'GOL') return false;
+  const v = m.voo;
+  if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
+  const b = m.bola;
+  const t = o => MD.hypot(o.x - b.p.x, o.z - b.p.z) / o.par.vArrancada;
+  const tj = t(j);
+  for (const o of m.jogadores) {
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    const to = t(o);
+    if (to < tj || (to === tj && o.id < j.id)) return false;
+  }
+  // passe do adversário: só vai se chegar antes do recebedor
+  if (v && v.para != null && v.time !== j.time) {
+    const r = m.jogadores.find(o => o.id === v.para);
+    if (r && t(r) < tj) return false;
+  }
+  return true;
+}
+
 function dono(m) {
   return m.posse != null ? m.jogadores.find(o => o.id === m.posse) : null;
 }
@@ -102,6 +127,11 @@ export function entradaIA(m, j) {
   const d0 = dono(m);
   // com a bola (IA): conduz para o gol e chuta; passa se apertado e houver companheiro livre
   if (m.posse === j.id) return comBola(m, j, lado, extra);
+  // bola livre (ninguém com ela): quem do time chega primeiro vai buscar
+  if (m.posse == null && m.naMao == null && vaiNaBolaLivre(m, j)) {
+    const p = pontoInterceptacao(m, j);
+    return { ...para(j, p.x, p.z, 1, true), botoes: extra | BOTAO.CORRER };
+  }
   const meuTimeTem = d0 && d0.time === j.time;
   if (meuTimeTem) return apoio(m, j, d0, lado, extra);
   return defesa(m, j, d0, lado, extra);
@@ -161,10 +191,15 @@ function defesa(m, j, d0, lado, extra) {
     if (d < dm) { dm = d; maisPerto = o; }
   }
   if (maisPerto === j) {
-    // fecha entre a bola e o meu gol, encostando
+    // bola solta do pé de quem conduz (entre toques): ataca a bola
+    if (d0 && MD.hypot(b.p.x - d0.x, b.p.z - d0.z) > ACOES.boteIA.bolaSolta) {
+      return { ...para(j, b.p.x, b.p.z, 1, true), botoes: extra | BOTAO.CORRER };
+    }
+    // senão acompanha entre a bola e o meu gol, a ~1,5 m (sem virar parede colada na bola)
     const gx = meuGol - b.p.x, gz = -b.p.z;
     const g = MD.hypot(gx, gz) || 1;
-    const tx = b.p.x + (gx / g) * 0.9, tz = b.p.z + (gz / g) * 0.9;
+    const k = ACOES.boteIA.distAcompanha;
+    const tx = b.p.x + (gx / g) * k, tz = b.p.z + (gz / g) * k;
     return { ...para(j, tx, tz, 1, MD.hypot(tx - j.x, tz - j.z) > 4), botoes: extra };
   }
   // marca o atacante adversário mais perto do meu gol que ninguém marca (simples: o mais perto de mim)

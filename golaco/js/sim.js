@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './config.js';
-import { criarRng, entre } from './rng.js';
+import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
@@ -197,6 +197,35 @@ function roubarComMarcador(m, j) {
 }
 
 /**
+ * Bote da IA defensora: com a bola do adversário ao alcance do pé e solta do pé dele, tenta tirar
+ * (sorteio por passo, com descanso depois). A bola sai para longe de quem conduzia.
+ */
+function boteIA(m, j) {
+  if (j.descansoBote > 0) { j.descansoBote--; return; }
+  if (m.posse == null || m.naMao != null) return;
+  const dono = jogadorPorId(m, m.posse);
+  if (!dono || dono.time === j.time) return;
+  const b = m.bola, cfg = ACOES.boteIA;
+  if (b.p.y > 0.5) return;
+  const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+  if (dB > cfg.alcance) return;
+  const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
+  if (dD < 0.35 || dB > dD) return; // colada no pé de quem conduz: não alcança
+  if (uniforme(m.rng) >= cfg.chancePorPasso) return;
+  // tira: para longe de quem conduzia
+  let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
+  const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
+  chutarRasteiro(b, ux * cfg.vSai, uz * cfg.vSai);
+  dono.cond.toque = null; dono.cond.busca = false;
+  m.posse = null;
+  m.voo = null;
+  m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
+  m.stats.roubadas++;
+  m.eventos.push({ tipo: 'roubada', id: j.id, ia: true });
+  j.descansoBote = cfg.descanso;
+}
+
+/**
  * Um passo de simulação (1/60 s). entradas: { [time]: {x, z, botoes} } — o analógico já no
  * mundo; vai para o jogador CONTROLADO daquele time (m.controlado). Os demais são da IA.
  */
@@ -274,6 +303,7 @@ export function passo(m, entradas) {
   }
   for (const j of js) {
     if (j.papel === 'marcador' && !(j.descanso > 0) && m.posse !== j.id) roubarComMarcador(m, j);
+    else if (j.papel === 'ia' && j.posicao !== 'GOL' && !ehControlado(m, j)) boteIA(m, j);
   }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
