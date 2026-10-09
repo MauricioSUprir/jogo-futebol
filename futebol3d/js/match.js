@@ -29,6 +29,9 @@ const gauss = () => (Math.random() + Math.random() + Math.random() - 1.5) / 0.5;
 // (com a torcida ao fundo); breakT: vão para o pontapé; end: fim da abertura
 const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 19, card: 24, breakT: 31, end: 36, walk: 3.0 };
 export const INTRO_TIMES = INTRO;
+// dispersão do chute (rad por unidade de erro): calibrada para ~35–40% dos chutes no alvo
+// e conversão de 9–14% (auditoria, Fase 3)
+const SHOT_ERR = 0.2;
 // ângulo entre o rumo pedido e o caminho da bola a partir do qual o toque vira um corte
 const TURN_CUT = 0.8;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
@@ -568,6 +571,9 @@ export class Match {
         const aRel = a0 + kd * v, Tc = L / v;
         let n = Math.max(1, Math.round(Math.sqrt(8 * gMax / aRel) / Tc));
         if (n > 1 && aRel * (n * Tc) ** 2 / 8 > gMax * 1.2) n--;
+        // em plena arrancada (> 6,5 m/s) o reencontro é na passada seguinte: com duas passadas entre
+        // os toques a bola chegava a abrir 1,3–1,5 m do corpo (alvo: até ~1,2 m)
+        if (sprinting && v > 6.5) n = 1;
         // fase: do ponto atual da passada até o toque daqui a n ciclos
         let frac = want - (st - Math.floor(st));
         if (frac < 0.15) frac += 1;
@@ -740,13 +746,27 @@ export class Match {
     if (off && this.phase === 'play') {
       if (p.team === off.team && off.flagged.has(p) && how !== 'dribble') {
         this.offside = null;
-        this.callOffside(p);
+        this.callOffside(p, off);
         return;
       }
-      if (p.team !== off.team && !(p.isGK && (how === 'save' || how === 'parry'))) this.offside = null;
+      if (p.team !== off.team && !(p.isGK && (how === 'save' || how === 'parry'))) {
+        // Regra 11: o impedido que disputa a bola com o adversário "interfere no adversário" — o
+        // bandeirinha marca mesmo sem ele tocar (antes metade dos passes para o impedido era cortada
+        // pela zaga com ele em cima da jogada e não se marcava nada)
+        // (perto da bola e indo nela: o zagueiro/goleiro teve de jogar a bola por causa dele)
+        const alvo = this.passTarget?.p;
+        const bx = this.ball.p.x - (alvo?.x ?? 0), bz = this.ball.p.z - (alvo?.z ?? 0), bd = Math.hypot(bx, bz);
+        if (alvo && off.flagged.has(alvo) && how !== 'dribble' && (bd < 2 || (bd < 4 && (alvo.vx * bx + alvo.vz * bz) / bd > 2))) {
+          this.offside = null;
+          this.callOffside(alvo, off);
+          return;
+        }
+        this.offside = null;
+      }
     }
     // passe completado
-    if (this.lastKick && this.lastKick.p !== p && ['pass', 'long', 'through', 'cross', 'gk_pass', 'gk_throw', 'throwin'].includes(this.lastKick.kind) && !this.lastKick.counted) {
+    // (lateral não é passe, como no Opta; reposição do goleiro é — e conta na tentativa também)
+    if (this.lastKick && this.lastKick.p !== p && ['pass', 'long', 'through', 'cross', 'gk_pass', 'gk_throw'].includes(this.lastKick.kind) && !this.lastKick.counted) {
       this.lastKick.counted = true;
       if (p.team === this.lastKick.p.team) this.lastKick.p.team.stats.passOk++;
     }
@@ -790,18 +810,22 @@ export class Match {
     const ds = opp.players.filter(q => !q.sentOff).map(q => this.lx(t, q.x)).sort((a, b) => b - a);
     const second = ds[1] ?? HL;
     const bx = this.lx(t, this.ball.p.x);
-    const flagged = new Set();
+    const flagged = new Set(), pos = new Map();
     for (const q of t.players) {
       if (q === p || q.sentOff) continue;
       const qx = this.lx(t, q.x);
-      if (qx > 0.3 && qx > bx + 0.3 && qx > second + 0.3) flagged.add(q);
+      if (qx > 0.3 && qx > bx + 0.3 && qx > second + 0.3) { flagged.add(q); pos.set(q, { x: q.x, z: q.z }); }
     }
-    this.offside = flagged.size ? { team: t, flagged } : null;
+    // linha (penúltimo adversário) e onde cada atacante estava no instante do passe: a linha de
+    // impedimento aparece no gramado quando o lance é marcado
+    this.offside = flagged.size ? { team: t, flagged, pos, lineX: Math.max(second, bx) * t.dir } : null;
   }
 
-  callOffside(p) {
+  callOffside(p, off) {
     p.team.stats.offsides++;
     this.owner = null;
+    const at = off?.pos?.get(p);
+    if (off && at) this.emit('offside', { lineX: off.lineX, x: at.x, z: at.z, team: p.team.i });
     this.emit('banner', { text: 'IMPEDIMENTO', sub: p.data.name, kind: 'offside' });
     this.emit('crowd', { kind: 'groan', strength: 0.4 });
     this.stopPlay('foul', { type: 'indirect', team: p.team.opp, x: p.x, z: p.z });
@@ -1170,6 +1194,8 @@ export class Match {
         this.emit('kick', { power: 0.9, kind: 'gk' });
       }
       this.owner = null;
+      // reposição do goleiro é passe: antes o acerto contava a reposição certa mas não a tentativa
+      p.team.stats.passes++;
       this.afterKick(p, t === 'gk_throw' ? 'gk_throw' : 'long', tg, act.data.receiver);
       return;
     }
@@ -1253,14 +1279,22 @@ export class Match {
       if (kind === 'finesse') { speed = 17 + 9 * power; spin = { side: (data.foot ?? p.foot) * 42, top: 4 }; }
       else if (kind === 'penalty') { speed = 17 + 10 * power; spin = { side: 0, top: 3 }; }
       else if (kind === 'freekick') { speed = 19 + 9 * power; spin = { side: (data.foot ?? p.foot) * 55, top: 16 }; }
-      else { speed = 16 + 14 * power; spin = { side: gauss() * 6, top: 6 + 12 * power }; }   // 100+ km/h só com força máxima
+      // 100+ km/h só com força máxima; efeito por cima moderado (com 6+12·força o chute de fora
+      // subia a 3–4 m e caía sob o travessão por cima do goleiro — virava gol "por cobertura")
+      else { speed = 16 + 14 * power; spin = { side: gauss() * 6, top: 4 + 7 * power }; }
       if (kind === 'volley') speed *= 0.92;
       // força demais: a bola sobe
       const over = Math.max(0, power - 0.88);
-      const ty = clamp(tg.y + over * 6 + (dist > 25 ? 0.2 : 0), 0.15, 5);
+      const ty = clamp((tg.y ?? 0.5) + over * 6 + (dist > 25 ? 0.2 : 0), 0.15, 5);
       // chute travado (marcador colado) espalha bem mais que o chute livre
       const inBox = Math.abs(gx - o.x) < 17 && Math.abs(o.z) < 20;
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : 1) * (0.8 + power * 0.5) * 0.058 * (1 + press * 0.6) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * this.mode.shot;
+      // voleio é o chute mais difícil (tempo da bola no ar): espalha quase o dobro. Antes errava como
+      // um chute com a bola no chão e era 29% dos gols IA x IA (no futebol real, bem menos)
+      // de primeira (bola chegando, sem domínio) acertar o canto é mais difícil quanto mais rápida a
+      // bola vem em relação ao pé: até +60% de erro num passe forte
+      const relV = this.owner === p ? 0 : Math.hypot(b.v.x - p.vx, b.v.z - p.vz);
+      const primeira = 1 + clamp((relV - 3) / 14, 0, 0.6);
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : kind === 'volley' ? 1.8 : 1) * (0.8 + power * 0.5) * SHOT_ERR * (1 + press * 1.0) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * primeira * this.mode.shot;
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);
@@ -1382,7 +1416,8 @@ export class Match {
     if (this.owner) this.owner = null;
     b.kick(v.vx, v.vy, v.vz, v.wx || 0, v.wy || 0, v.wz || 0);
     this.emit('kick', { power: 0.5, kind: 'header' });
-    this.afterKick(p, act.data.kind === 'shot' ? 'header' : 'hpass', tg, act.data.receiver);
+    // cabeçada sem destinatário (afastar da área/do campo de defesa) é corte, não passe
+    this.afterKick(p, act.data.kind === 'shot' ? 'header' : act.data.receiver ? 'hpass' : 'hclear', tg, act.data.receiver);
   }
 
   // --------------------------------------------------------------- tempo
@@ -1390,7 +1425,9 @@ export class Match {
     const endMin = this.half === 1 ? 45 : this.half === 2 ? 90 : this.half === 3 ? 105 : 120;
     if (!this.stoppageSet && this.clock >= (endMin - 1) * 60) {
       this.stoppageSet = true;
-      this.stoppage = this.extraTime ? 1 : Math.min(6, 1 + Math.floor(Math.random() * 3) + Math.floor(this.scorers.length / 2));
+      // acréscimos como no futebol de hoje (desde 2023, ~11 min por partida: ≈4 no 1º tempo e ≈7 no
+      // 2º, mais o tempo dos gols); antes eram 1–3 min por tempo
+      this.stoppage = this.extraTime ? 1 : Math.min(10, (this.half === 1 ? 2 : 4) + Math.floor(Math.random() * (this.half === 1 ? 4 : 5)) + Math.floor(this.scorers.length / 2));
       this.emit('stoppage', { minutes: this.stoppage });
     }
     if (this.clock >= (endMin + this.stoppage) * 60) {

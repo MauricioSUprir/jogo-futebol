@@ -4,20 +4,23 @@
 // LIVRE rolando a partir do mesmo estado (mesmo modelo de ball.js). Qualquer força extra é ímã.
 // Também mede a distância bola-jogador na condução (alvo ~0,5 m; até ~1,2 m só em arrancada).
 // Reprova (saída 1) se houver ímã em > 0,5% dos passos ou distâncias fora do alvo.
-// node tools/ima-test.mjs [segundos=240]
+// Mede DUAS partidas (times diferentes): com uma só, o p95 da arrancada oscilava ±0,03 m entre
+// execuções (amostras do mesmo lance seguidas).
+// node tools/ima-test.mjs [segundos por partida=240]
 import { Match } from '../js/match.js';
 import { Ball } from '../js/ball.js';
 import { DEFAULT_SETTINGS, BALL } from '../js/config.js';
 import { TEAMS } from '../js/teams.js';
 const secs = +(process.argv[2] || 240);
-const m = new Match({ home: TEAMS[0], away: TEAMS[1], userSide: 'none', settings: { ...DEFAULT_SETTINGS, halfMinutes: 6, intro: false } });
+const livre = new Ball();
+let passos = 0, ima = 0, pior = 0;
+const dist = { corrida: [], arrancada: [] };
+for (const [h, a] of [[0, 1], [2, 3]]) {
+const m = new Match({ home: TEAMS[h], away: TEAMS[a], userSide: 'none', settings: { ...DEFAULT_SETTINGS, halfMinutes: 6, intro: false } });
 m.headless = true;
 let tocou = false;
 const orig = m.touch.bind(m);
 m.touch = (p, how) => { tocou = true; return orig(p, how); };
-const livre = new Ball();
-let passos = 0, ima = 0, pior = 0;
-const dist = { corrida: [], arrancada: [] };
 for (let i = 0; i < 60 * secs; i++) {
   const o = m.owner, b = m.ball;
   const ok = o && !o.action && m.phase === 'play' && !b.held && b.rolling && b.p.y <= BALL.radius + 0.01 && !b.inNet;
@@ -34,6 +37,7 @@ for (let i = 0; i < 60 * secs; i++) {
     const ah = (b.p.x - o.x) * o.fx + (b.p.z - o.z) * o.fz;
     (o.speed > 6.5 ? dist.arrancada : dist.corrida).push(ah);
   }
+}
 }
 const med = (a) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length), p95 = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length * 0.95)] ?? 0;
 const fr = ima / Math.max(1, passos);

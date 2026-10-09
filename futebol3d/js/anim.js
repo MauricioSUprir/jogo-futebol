@@ -850,6 +850,8 @@ function evalState(s, P) {
       useClip(DIVE_LO, u, 1);
       for (let j = 0; j < NB * 3; j++) R[j] = lerp(R[j], DV2[j], h);
       W.lift = lerp(W.lift, lh, h); W.rx = lerp(W.rx, xh, h);
+      // mergulho no ângulo: impulsão extra (até 0,3 m no pico, perto do contato) — mãos a ~2,4 m
+      W.lift += diveJump(h, u);
       W.mirror = s.diveSide === -1;
       break;
     }
@@ -1070,6 +1072,11 @@ export function computePose(s, out) {
 
 // deslocamento da pelve em relação à posição do jogador (metros canônicos, 1,80 m)
 const RO = createPose();
+// impulsão extra do mergulho alto (m) — a mesma curva vale no contato da jogabilidade (gk.js)
+export function diveJump(h, u) {
+  return 0.3 * smooth(clamp((h - 0.6) / 0.4, 0, 1)) * Math.sin(Math.PI * clamp(u / 0.7, 0, 1));
+}
+
 export function rootOffset(s, out = { right: 0, forward: 0, up: 0 }) {
   computePose(s, RO);
   out.right = -RO.root[0]; out.forward = RO.root[2]; out.up = RO.root[1] - OFFSET[1];

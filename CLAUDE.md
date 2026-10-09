@@ -34,6 +34,15 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
+- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (FEITA e enviada: plano em
+  6 etapas — corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/
+  pivô, IA sem vai-e-volta, intensidade) → **próximo PR:** botão de sair com o goleiro na defesa (ele ataca a bola),
+  bola parada e organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO —
+  hoje flutua, escanteio organizado, cabeceio e disputa pelo alto, organização tática), **divididas mais efetivas**
+  (desde a Fase 3 o bote de frente no atacante que protege vira falta), **troca de jogador mais rápida e inteligente**,
+  **goleiro defendendo mais** (~70% de defesas, espalmando) e **mais intensidade e movimentação dos dois times (MUITO
+  importante para o dono**: fechar o lado da bola, pressão em gatilhos, apoio e corridas) → giro com bola natural e
+  condução mais no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
@@ -61,8 +70,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   pura. No toque, o impulso é calculado pela rolagem de ball.js (`rollSpeedFor`) para a bola chegar ao pé
   no próximo toque, prevendo o caminho do próprio jogador com `integrate` (apoio, giro, aceleração). Modos:
   fase (n passadas), ajuste, arranque, giro (corte), amortece (domínio), arraste (sola). Entre toques o
-  condutor "monta" na bola (`human.js` keepBall, também para a IA). Medir: `tools/ima-test.mjs` (0% de ímã,
-  ~0,5 m correndo, p95 ≤ ~1,2 m na arrancada), `tools/keepball-test.mjs`, `tools/protecao-test.mjs`.
+  condutor "monta" na bola (`human.js` keepBall, também para a IA); em plena arrancada, um toque por passada.
+  Medir: `tools/ima-test.mjs` (duas partidas; 0% de ímã, ~0,5 m correndo, p95 ≤ ~1,2 m na arrancada),
+  `tools/keepball-test.mjs`, `tools/protecao-test.mjs`.
 - Rostos encaixados por 478 pontos (MediaPipe) nos marcos da cabeça 3D (`tools/rostos/marcos_cabeca.py`
   → `cabeca-marcos.json`; `processar.py` deforma cada foto por triângulos e tira a luz lateral).
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
@@ -78,8 +88,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 
 - Jogabilidade (medidas): condução `tools/drible-medida.mjs` (alvo ~0,45 m correndo / ~0,6 m arrancada);
   dividida `tools/dividida-test.mjs`; primeira `tools/primeira-test.mjs`; agilidade `tools/agilidade.mjs`;
-  chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/gols-media.mjs 24` (~8–10 gols/partida;
-  varia ±1,5 entre execuções — usar 24 partidas); proteção `tools/protecao-test.mjs`; contato de corpo
+  chutes/gols por distância `tools/chutes-mapa.mjs`; equilíbrio `tools/equilibrio-test.mjs 24 --par 4`
+  (auditoria Fase 3, configurações PADRÃO = tempos de 4 min, como a auditoria mediu: 2,3–3,5 gols/partida,
+  conversão 9–14%, passe 75–88%, ≥ 1 impedimento/partida; 24 partidas variam ±0,4 gol e ±1,7 ponto de
+  conversão entre execuções (8 rodadas medidas: ~1 em 4 reprova por sorteio) — para calibrar use 192; `--base pasta` mede outra versão); linha de defesa
+  `tools/linha-test.mjs` (alinhada, acompanha a bola, sobe em bloco); espalmada para escanteio nunca entra
+  `tools/espalmada-test.mjs`; diagnósticos `tools/chutes-diag.mjs` e `tools/passes-diag.mjs`;
+  proteção `tools/protecao-test.mjs`; contato de corpo
   `tools/contato-test.mjs`; fadiga `tools/fadiga.mjs`.
 - Especificação "Master Gameplay & Visual Spec" (dono): fases A–F feitas. A posse/proteção/primeiro toque/giro/
   0,93×/troca direcional; B fadiga em 2 camadas, contato por massa/força/equilíbrio, antecipação; C IA em
@@ -99,7 +114,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   1280×720 e celular 844×390 dpr2 Média, dia/noite + close do rosto). Fase 1 feita (piscada, interpolação,
   analógico, tremor). Fase 2 (movimento): `patinacao-test`, `giro-test`, `inclinacao-test`,
   `velocidades-test` (IA longe da jogada anda/trota: ≥35% < 7 km/h, ≤5% > 25 km/h; `ai.js` shapeMove),
-  `ima-test`; vídeos de movimento `tools/cenas.mjs --cena a|b|c`.
+  `ima-test`; vídeos de movimento `tools/cenas.mjs --cena a|b|c`. Fase 3 (jogabilidade, IA em `ai.js`/`gk.js`):
+  linha de 4 por zona que sobe em bloco, atacante na linha com erro de tempo na corrida, Regra 11 (impedido
+  que disputa a bola), linha de impedimento desenhada (`js/offside-line.js`); goleiro por dificuldade,
+  espalmada para escanteio (`parryOut`) e rebote na área; chute de média distância, finalização de primeira,
+  cruzamento com ataque à área, pressão alta, decisão mais rápida no último terço; passe com risco por zona.
+  Vídeo de lance natural IA×IA com semente (nada roteirizado): `tools/lance-clip.mjs --evento impedimento|defesa|espalmada`.
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
@@ -110,6 +130,7 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
 # Fase 1 da auditoria (navegador): node tools/fase1-test.mjs && node tools/piscada-test.mjs
 # Fase 2 (Node): node tools/patinacao-test.mjs && node tools/giro-test.mjs && node tools/inclinacao-test.mjs \
 #   && node tools/velocidades-test.mjs 3 && node tools/ima-test.mjs 600
+# Fase 3 (Node): node tools/equilibrio-test.mjs 24 --par 4 && node tools/linha-test.mjs && node tools/espalmada-test.mjs
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```
