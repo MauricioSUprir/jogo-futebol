@@ -676,6 +676,12 @@ export function carrierThink(m, p, dt) {
   // o chute de longe cedo deixava o goleiro do humano sem chegar na bola em ~1/4 dos lances)
   const gkDisparada = gkO && !gkO.sentOff && foraGk > 4 && dGk > 9 &&
     ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
+  // contra o botão GOLEIRO do humano (goleiro vindo a mais de 4,5 m): também dentro da área ele segue com a bola em vez
+  // de bater logo — com a vontade de chutar desta versão ele finalizava de 11–18 m com o goleiro ainda a 4–10 m em ~1/4
+  // dos lances (goleiro-sai-test: chega na bola 73–74% → 78–83% com 0,92, meta ≥ 75%; com 0,8–0,9 passava de 86% e o
+  // goleiro ganhava quase tudo). Só vale contra o humano: IA×IA não muda.
+  const contraBotao = m.userGKRush && t.opp.human && gkO && !gkO.sentOff && foraGk > 4 && dGk > 4.5 &&
+    ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 2;
   if (dGoal < 35) {
     let sS = xg * 4.6 * shotBias + (dGoal < 12 ? 0.3 : 0);
     // dentro da área o atacante finaliza mesmo com zagueiro na frente (no futebol real ~60% dos
@@ -696,6 +702,7 @@ export function carrierThink(m, p, dt) {
     // (+0,15: com a vontade de chutar maior desta versão, +0,5 fazia o atacante chutar quase sempre antes de o
     // goleiro chegar — o botão GOLEIRO deixava de 'atacar a bola')
     if (vemGk) sS += 0.15;
+    if (contraBotao) sS *= 0.92;
     options.push({ kind: vemGk || (dGoal > 16 && Math.abs(p.z) > 6 && Math.random() < 0.5) ? 'finesse' : 'shot', s: sS });
   }
   // cavadinha no goleiro que saiu do gol

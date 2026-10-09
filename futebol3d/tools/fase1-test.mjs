@@ -25,8 +25,12 @@ await page.evaluate(() => {
   const st = m.step.bind(m);
   m.step = (...a) => { window.__bp = { ...m.ball.p }; const r = st(...a); window.__bc = { ...m.ball.p }; return r; };
 });
+// (espera a bola rolar antes de medir: com a partida parada — falta, lateral ou tiro de meta logo no começo, ~15% das
+// partidas nas duas versões entre 4,5 e 7 s — os 90 quadros saíam sem bola em jogo e o teste reprovava por sorteio)
+const rolando = () => page.evaluate(() => { const m = window.__golaco.game.match; return m.phase === 'play' && !m.ball.held && !m.ball.inNet && Math.hypot(m.ball.v.x, m.ball.v.z) > 1; });
 for (const hz of [60, 120, 144]) {
   let worst = 0, n = 0, speed = 0, vsum = 0;
+  for (let i = 0; i < 1200 && !(await rolando()); i++) await stepFrame(page, 1000 / 60);
   for (let i = 0; i < 90; i++) {
     await stepFrame(page, 1000 / hz);
     const r = await page.evaluate(() => {

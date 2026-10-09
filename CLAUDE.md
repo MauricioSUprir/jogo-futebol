@@ -37,17 +37,18 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - **Fila nova (08/10, depois da Fase 3 da auditoria):** análise da movimentação (FEITA e enviada: plano em 6 etapas —
   corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/pivô, IA sem
   vai-e-volta, intensidade); botão GOLEIRO, bolas paradas, bola na mão, disputa pelo alto, divididas, troca de jogador,
-  goleiro na bissetriz e intensidade dos dois times (feitos na branch, PR ainda NÃO aberto) → **agora:** terminar esse PR
-  SEM RECUO (dono, 08/10: "Não pode ter recuo" — nenhum número pior que o publicado) → giro com bola natural e condução
-  mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
-  Sem recuo — estado em 09/10 de madrugada (branch, SEM PR): o dono escolheu a versão REALISTA. A versão publicada
-  tinha ~1 gol por partida (30% dos gols) de saída de bola roubada no tiro de meta com o adversário dentro da área (o
-  defeito da Regra 16, corrigido; `tools/origem-chutes.mjs` separa esses lances) e ~45% dos chutes de 25–33 m (real
-  ~10%). Branch hoje (144 partidas, `tools/painel-equilibrio.mjs`): ~24 chutes, ~2,4 gols, 10% de conversão, passe 77%,
+  goleiro na bissetriz, intensidade dos dois times e condução organizada (ENTREGUES em 09/10 num PR só; o dono escolheu a
+  versão REALISTA, sem vídeos, e o merge com o equilíbrio passando na média mas não em toda rodada) → **agora:** volume
+  de ataque na área (abaixo) → vai-e-volta da condução da IA → giro com bola natural e condução mais no pé (etapas 1–2
+  da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+  Estado entregue (144 partidas, `tools/painel-equilibrio.mjs`): ~24 chutes, ~2,4 gols, 10% de conversão, passe 77%,
   escanteios 2,2, goleiro 67–69% (80–84% nos chutes de longe no alvo), 29% dos gols de fora da área; intensidade OK
-  (largura ~39 m, meio–ataque ~13,5 m, marcador a ≤ 3 m ~45%). Falta para entregar: gols ~2,6+ (com 2,4 o teste de 24
-  partidas reprova ~1/3 das rodadas) e o goleiro de 6 a 16,5 m oscila 45–73% entre rodadas de 36 partidas (meta ≥ 55%).
-  A conta: com o goleiro na meta (≥ 66%), 2,6 gols pedem ~7,6+ chutes no alvo — falta volume de chance de verdade. Pistas
+  (largura ~39 m, meio–ataque ~13,5 m, marcador a ≤ 3 m ~45%). A versão publicada antes tinha ~1 gol por partida de
+  saída de bola roubada no tiro de meta com o adversário dentro da área (defeito da Regra 16, corrigido;
+  `tools/origem-chutes.mjs` separa esses lances); sem esses lances as duas versões empatam em gols. O teste de 24
+  partidas reprova ~1/3 das rodadas (média ~2,45, piso 2,3) e o goleiro de 6 a 16,5 m oscila 45–73% entre rodadas de 36
+  partidas (meta ≥ 55%). Próximo PR — volume de ataque: com o goleiro na meta (≥ 66%), 2,6 gols pedem ~7,6+ chutes no
+  alvo — falta volume de chance de verdade (e ~55% dos chutes ainda saem de 25 m ou mais). Pistas
   (rastro das decisões): no último terço quase todo passe fica negativo (bloco fechado = linha de passe "arriscada" no
   `laneRisk`) e o condutor dribla até perder no bote (~6 por partida) ou chutar; o cruzamento vira corte de cabeça; o
   passe para trás da linha de fundo quase nunca acha alvo. Ajuste só de peso não mudou o volume (testados: apoio por
@@ -137,7 +138,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   cruzamento com ataque à área, pressão alta, decisão mais rápida no último terço; passe com risco por zona.
   Vídeo de lance natural IA×IA com semente (nada roteirizado): `tools/lance-clip.mjs --evento impedimento|defesa|espalmada`.
 - Pedidos do dono de 08/10 (PR depois da Fase 3): botão GOLEIRO na defesa (`gk.js` gkRush; `human.js` userGKRush; tecla G/Y;
-  `tools/goleiro-sai-test.mjs`, `tools/goleiro-botao-test.mjs` no celular, vídeo `tools/goleiro-clip.mjs`); bolas paradas
+  `tools/goleiro-sai-test.mjs`, `tools/goleiro-botao-test.mjs` no celular, vídeo `tools/goleiro-clip.mjs`; contra o botão o
+  atacante da IA segue com a bola em vez de bater logo — `ai.js` contraBotao, só contra o humano, IA×IA não muda); bolas paradas
   (`ai.js` alvosBolaParada/setpieceAI: tiro de meta com o adversário fora da área — Regra 16 —, lateral com 3 opções, escanteio
   com zona + individual; `match.js` handsPoint: a bola fica NAS mãos no lateral e com o goleiro; `tools/bola-parada-test.mjs`,
   prints `tools/bola-parada-prints.mjs`); disputa pelo alto perto das áreas (`ai.js` pontoAereo, `match.js` doHeader com duelo
@@ -147,8 +149,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   ataque recua 4 m, 1º marcador arranca a 3 m; a pressão a dois nos gatilhos saiu — custava ~1 chute por partida;
   `tools/intensidade-jogo-test.mjs`); goleiro na bissetriz e IA mirando
   longe dele, chute de longe menos preciso (`tools/defesas-test.mjs`: ~67% de defesas, ~2/3 espalmadas). Equilíbrio recalibrado
-  com tudo isso (192 partidas: 2,53 gols, 12,5%, 77,6% de passe, 1,8 impedimento; o de 24 reprova ~1 em 4 por
-  sorteio). Bola parada com o time todo atordoado não trava mais (`tools/cobrador-test.mjs`).
+  com tudo isso (versão realista entregue, 8 rodadas = 192 partidas: 2,48 gols, 10,5%, 77,1% de passe, 1,75
+  impedimento; o de 24 reprova ~1 em 3 por sorteio — falta volume de ataque, ver a fila). Bola parada com o time todo
+  atordoado não trava mais (`tools/cobrador-test.mjs`). `tools/fase1-test.mjs` espera a bola rolar antes de medir a
+  interpolação (com falta/lateral logo no começo, ~15% das partidas, reprovava por sorteio).
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
