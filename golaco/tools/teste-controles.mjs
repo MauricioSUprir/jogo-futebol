@@ -251,6 +251,26 @@ async function conferirTodosLayouts(pagina) {
     await pagina.keyboard.up('KeyI');
     const i2 = await rodar(pagina, 60);
     meta('I: bola enfiada', `máscara ${i1.mask}, voos ${i2.voos.join(',') || '-'}`, (i1.mask & BIT.ENFIADA) !== 0 && sem(i2.voos.some(t => /^enfiada/.test(t))));
+    // R no treino de ataque: todos voltam às posições e a câmera CORTA para a jogada nova (sem
+    // atravessar o campo num pano de ~1 s com o jogador fora do quadro)
+    await novo();
+    const rc = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      g.forcarEntrada({ x: 1, z: 0, botoes: 1 });
+      for (let i = 0; i < 150; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.forcarEntrada(null);
+      const antes = { cam: g.render.camera.x, j: g.estado().jogador.x };
+      return antes;
+    });
+    await pagina.keyboard.press('KeyR');
+    const rc2 = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 2; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const e = g.estado();
+      return { cam: g.render.camera.x, j: e.jogador.x, bola: e.bola.x, alvo: g.naTela(e.jogador.x, 0, e.jogador.z), w: innerWidth };
+    });
+    const naTelaR = rc2.alvo.x > 0 && rc2.alvo.x < rc2.w;
+    meta('R no ataque: a câmera corta para a jogada nova (jogador no quadro já)', `antes: câmera x ${rc.cam.toFixed(1)}, jogador ${rc.j.toFixed(1)}; 2 quadros depois do R: câmera ${rc2.cam.toFixed(1)}, jogador ${rc2.j.toFixed(1)} (na tela x ${rc2.alvo.x.toFixed(0)} px)`, rc.j - rc2.j > 8 && Math.abs(rc2.cam - rc2.bola) < 4 && naTelaR);
     // Q: trocar (sem a bola: máquina tira a bola do pé)
     await novo();
     await pagina.evaluate(() => window.__golaco.acao('maquina'));

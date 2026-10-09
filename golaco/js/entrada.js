@@ -387,7 +387,9 @@ export function criarEntrada(opc = {}) {
       const fs = Math.max(8.5, Math.min(p.d * 0.15, (p.d * 0.74) / (n * 0.66)));
       s.setProperty('--fs', `${fs.toFixed(1)}px`);
       s.setProperty('--ls', longo ? '0' : '0.04em');
-      s.setProperty('--ic', `${Math.round(p.d * (b.vaga === 'grande' ? 0.36 : 0.32))}px`);
+      // palavra longa: ícone menor, para o rótulo subir para perto do centro (onde o círculo é
+      // mais largo) e não encostar na borda
+      s.setProperty('--ic', `${Math.round(p.d * (b.vaga === 'grande' ? 0.36 : longo ? 0.27 : 0.32))}px`);
     }
   }
 

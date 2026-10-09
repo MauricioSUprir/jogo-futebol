@@ -197,6 +197,9 @@ function tratarEvento(ev) {
   // a troca automática no passe já aparece como o passe
   if (SO_MEU_TIME.has(t) && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
   if (t === 'troca' && ev.auto) return;
+  // recomeço (gol, bola fora, R): todos voltam às posições — a câmera CORTA para a jogada nova
+  // (sem atravessar o campo) e o km/h não fica descendo do valor de antes
+  if (t === 'recomeco') { corteCamera = true; kmhVisto = 0; }
   hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }

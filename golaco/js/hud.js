@@ -31,9 +31,10 @@ const ROTULO_CARGA = {
   passe: 'PASSE', enfiada: 'ENFIADA', enfiadaAlta: 'ENFIADA ALTA', lancamento: 'LANÇAMENTO', cruzamento: 'CRUZAMENTO',
   chute: 'CHUTE', colocado: 'COLOCADO', cavadinha: 'CAVADINHA',
 };
-// cores do minimapa (iguais aos uniformes — fictícios)
+// cores do minimapa (pelos uniformes — fictícios). O visitante joga de branco, mas no minimapa
+// fica cinza-azulado: branco é a cor da BOLA (com o mesmo branco, bola e visitante se confundiam)
 const COR_MAPA = {
-  t0: '#19e07a', t0gol: '#c6ff3d', t1: '#dfe4e7', t1gol: '#d0631f', bola: '#ffffff',
+  t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
 // times fictícios: siglas do placar
 const TIMES = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
@@ -196,8 +197,9 @@ export function criarHud(opc) {
     }
     const b = mundo.bola?.p;
     if (b) {
-      g.fillStyle = COR_MAPA.bola; g.strokeStyle = '#07090a'; g.lineWidth = dpr;
-      g.beginPath(); g.arc(X(b.x), Z(b.z), r * 0.95, 0, Math.PI * 2); g.fill(); g.stroke();
+      // bola por cima de tudo: branca, um pouco maior, com contorno escuro
+      g.fillStyle = COR_MAPA.bola; g.strokeStyle = '#07090a'; g.lineWidth = dpr * 1.2;
+      g.beginPath(); g.arc(X(b.x), Z(b.z), r * 1.1, 0, Math.PI * 2); g.fill(); g.stroke();
     }
   }
 
