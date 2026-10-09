@@ -37,8 +37,8 @@ async function ateResultado() {
   return false;
 }
 
-// 1) clube novo com elenco inicial da liga escolhida
-await p.evaluate(() => { TM.storage.saveSettings(Object.assign(TM.storage.settings(), { matchSpeed: "instantaneo" })); localStorage.removeItem("totalmatch:ultimate"); TM.ut.reset(); TM.ui.go("ut"); });
+// 1) clube novo com elenco inicial da liga escolhida (partidas simuladas: o 3D tem teste próprio, testar-3d.mjs)
+await p.evaluate(() => { TM.storage.saveSettings(Object.assign(TM.storage.settings(), { matchSpeed: "instantaneo", partidas3d: "simular" })); localStorage.removeItem("totalmatch:ultimate"); TM.ut.reset(); TM.ui.go("ut"); });
 await p.waitForTimeout(700);
 await p.evaluate(() => { document.querySelector(".ut-input").value = "Teste FC"; });
 await clica("^Criar meu clube$");

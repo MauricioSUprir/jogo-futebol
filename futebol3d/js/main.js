@@ -30,7 +30,8 @@ import { loadFacePool, matchFaces, portrait } from './faces.js';
 import { CameraBlurPass } from './motionblur.js';
 import { MobilePost, installMaterialGrade } from './mobilepost.js';
 import { SunShadowFit, aimDaySun } from './sunshadow.js';
-import { initMenus, showMainMenu, showPause, hidePause, showMatchResult } from './menus.js';
+import { initMenus, showMainMenu, showPause, hidePause, showMatchResult, enterGame as menusEmJogo } from './menus.js';
+import { TM_ID, lerPedido, montaCfg, PonteTM } from './ponte-tm.js';
 
 const $ = (id) => document.getElementById(id);
 const canvas = $('c');
@@ -202,11 +203,48 @@ input.onTapScreen = (x, y) => {
 };
 const hud = new Hud($('hud'));
 let game = null;
+// partida pedida pelo Total Match (index.html?tm=<id>): sem menu próprio, o resultado volta para o TM
+let ponte = null;
 
 initMenus({ root: $('ui'), settings, saveSettings: (s) => saveSettings(s), onStartMatch: (cfg) => startMatch(cfg), audio });
-$('loading').classList.add('hidden');
-showMainMenu();
-document.body.classList.add('in-menu');
+if (TM_ID) iniciarTM();
+else {
+  $('loading').classList.add('hidden');
+  showMainMenu();
+  document.body.classList.add('in-menu');
+}
+
+async function iniciarTM() {
+  document.body.classList.add('tm');
+  const pedido = lerPedido(TM_ID);
+  if (!pedido) {
+    $('load-text').textContent = 'Partida não encontrada. Voltando ao Total Match…';
+    ponte = new PonteTM(TM_ID, {});
+    setTimeout(() => ponte.sair(), 1500);
+    return;
+  }
+  ponte = new PonteTM(TM_ID, pedido);
+  menusEmJogo();
+  $('load-text').textContent = 'Preparando a partida…';
+  try { await startMatch(montaCfg(pedido, settings)); }
+  catch (e) {
+    // sem 3D neste aparelho (WebGL, memória, arquivo que não baixou): o TM simula a partida
+    console.warn('partida 3D não abriu', e);
+    $('loading').classList.remove('hidden');
+    $('load-text').textContent = 'O 3D não abriu neste aparelho. Voltando ao Total Match…';
+    setTimeout(() => ponte.sair(), 1200);
+    return;
+  }
+  if (!game) return;
+  ponte.inicio(game.match);
+  // "só o meu jogador": câmera atrás dele (dá para trocar nas configurações da pausa) e sem o
+  // botão TROCAR (o 3º botão de toque na defesa), já que a troca não existe
+  if (ponte.travado) {
+    game.rig.setMode('pro');
+    const st = document.createElement('style'); st.textContent = '.tc-troca{visibility:hidden!important}'; document.head.appendChild(st);
+  }
+  ponte.pronto();
+}
 
 // ------------------------------------------------------------ partida
 async function startMatch(cfg) {
@@ -313,17 +351,53 @@ function endGame(silent) {
 
 function togglePause() {
   const g = game;
-  if (!g || g.match.phase === 'ended') return;
+  if (!g || g.match.phase === 'ended' || g.turbo) return;
   if (g.paused) { resume(); return; }
   g.paused = true;
   audio.suspend();
   $('ui').classList.remove('hidden');
+  if (ponte) { showPause({ onResume: resume, onSimRest: simularResto, onSettings: () => {}, cfg: g.cfg }); return; }
   showPause({
     onResume: resume,
     onRestart: () => { const cfg = g.cfg; hidePause(); startMatch(cfg); },
     onQuit: () => { hidePause(); endGame(); showMainMenu(); },
     onSettings: () => {},
   });
+}
+
+// "Simular o resto" (partida do Total Match): a IA assume o time do jogador e o jogo corre
+// sem desenhar até o apito final; o placar vale.
+const SEM_CMD = { mx: 0, mz: 0, held: {}, press: {}, release: {}, hold: {}, rx: 0, rz: 0 };
+function simularResto() {
+  const g = game;
+  if (!g || g.match.phase === 'ended' || g.turbo) return;
+  hidePause();
+  const m = g.match;
+  if (m.phase === 'intro') m.skipIntro();
+  if (g.replaying) finishReplay();
+  if (m.userTeam) { m.setControlled(null); m.userTeam.human = false; m.userTeam = null; }
+  for (let i = 0; i < 22; i++) g.players.setIndicator(i, null);
+  input.enabled = false;
+  hud.hide();
+  $('touch').classList.add('hidden');
+  $('loading').classList.remove('hidden');
+  $('load-text').textContent = 'Simulando o resto da partida…';
+  audio.suspend();
+  g.turbo = true; g.paused = false;
+}
+function turbo(g) {
+  const m = g.match, t0 = performance.now();
+  while (game === g && performance.now() - t0 < 30) {
+    for (let i = 0; i < 20 && game === g; i++) {
+      const bp = m.ball.p; g.bPrev.x = bp.x; g.bPrev.y = bp.y; g.bPrev.z = bp.z;
+      ponte?.antes(m);
+      m.step(STEP, SEM_CMD);
+      ponte?.depois(m);
+      handleEvents(g);
+      if (g.replaying) finishReplay();
+    }
+  }
+  if (game === g) $('load-text').textContent = `Simulando o resto da partida… ${Math.min(m.half >= 2 ? 90 : 45, m.minute())}' · ${m.teams[0].score} × ${m.teams[1].score}`;
 }
 function resume() {
   if (!game) return;
@@ -366,9 +440,10 @@ function handleEvents(g) {
         break;
       case 'banner': hud.banner(e.text, e.sub, e.kind); break;
       case 'offside': g.offsideLine?.show(e.lineX, e.x, e.z); break;
-      case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); break;
+      case 'card': hud.card(e.color, e.name); audio.crowd('card', 1); ponte?.cartao(m, e); break;
       case 'switch': for (let i = 0; i < 22; i++) g.players.setIndicator(i, i === e.idx ? '#1ee37a' : null); g.hintIdx = -1; g.hintT = 0; break;
       case 'goal': {
+        ponte?.gol(m, e);
         const t = m.teams[e.side];
         hud.goal(t.data.name, e.name, e.minute, e.own);
         input.vibrate(300);
@@ -490,6 +565,17 @@ function finishReplay() {
 
 function endMatch(g, result) {
   audio.chant(false); audio.chantSectors(null);
+  if (ponte) {
+    // partida do Total Match: o resultado volta para o TM, que fecha este quadro
+    if (g.turbo) { g.turbo = false; g.paused = true; }
+    ponte.fim(g.match, result);
+    setTimeout(() => {
+      endGame(true);
+      $('loading').classList.remove('hidden');
+      $('load-text').textContent = `Fim de jogo: ${g.cfg.home.short} ${result.homeGoals} × ${result.awayGoals} ${g.cfg.away.short}. Voltando ao Total Match…`;
+    }, 900);
+    return;
+  }
   const cfg = g.cfg;
   setTimeout(() => {
     endGame(true);
@@ -515,6 +601,7 @@ function frame(now) {
   const m = g.match;
   g.t += dt;
   const cmd = input.poll(g.rig.right, g.rig.fwd);
+  if (g.turbo) { turbo(g); perf.end({ dt, preset: presetKey, dyn: dynScale }); return; }
 
   if (!g.paused) {
     if (g.replaying) {
@@ -529,7 +616,9 @@ function frame(now) {
       while (g.acc >= STEP && steps < 15) {
         // estado da bola ANTES do passo (para desenhar interpolado, como os jogadores)
         const bp = m.ball.p; g.bPrev.x = bp.x; g.bPrev.y = bp.y; g.bPrev.z = bp.z; g.qPrev.copy(g.ball.q);
+        ponte?.antes(m);
         m.step(STEP, cmd);
+        ponte?.depois(m);
         input.consume();
         handleEvents(g);
         g.ball.spin(m.ball.w, STEP);
@@ -684,6 +773,7 @@ function render(g, dt) {
 // anel amarelo em quem o TROCAR pegaria (só sem a bola, como no FC)
 function switchHint(g) {
   const m = g.match;
+  if (ponte?.travado) return;     // "só o meu jogador": não há troca
   g.hintT = (g.hintT || 0) - 1;
   if (g.hintT > 0) return;
   g.hintT = 6;   // a cada ~0,1 s
@@ -783,7 +873,9 @@ function advance(sec, cmdFn) {
   for (let i = 0; i < sec * 60 && game; i++) {
     const cmd = cmdFn ? cmdFn(g.match) : { mx: 0, mz: 0, held: {}, press: {}, release: {}, hold: {}, rx: 0, rz: 0 };
     const bp = g.match.ball.p; g.bPrev.x = bp.x; g.bPrev.y = bp.y; g.bPrev.z = bp.z; g.qPrev.copy(g.ball.q);
+    ponte?.antes(g.match);
     g.match.step(STEP, cmd);
+    ponte?.depois(g.match);
     handleEvents(g);
     g.ball.spin(g.match.ball.w, STEP);
     g.replay.record(g.match, g.ball.q);
@@ -791,4 +883,4 @@ function advance(sec, cmdFn) {
   }
   return { phase: g.match.phase, clock: g.match.clock, score: g.match.teams.map(t => t.score) };
 }
-window.__golaco = { get game() { return game; }, startMatch, settings: () => settings, preset: () => presetKey, setPreset: (k) => { presetKey = k; applyQuality(true); }, advance, renderer, input, replayNow: () => startReplay(game) };
+window.__golaco = { get game() { return game; }, get ponte() { return ponte; }, simularResto, startMatch, settings: () => settings, preset: () => presetKey, setPreset: (k) => { presetKey = k; applyQuality(true); }, advance, renderer, input, replayNow: () => startReplay(game) };

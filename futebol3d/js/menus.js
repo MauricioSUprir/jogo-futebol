@@ -8,6 +8,8 @@
 // Pausa: showPause({ onResume, onRestart, onQuit, onSettings }). "Configurações" abre o painel dentro
 // da pausa; ao fechá-lo chamamos onSettings(settings) para o núcleo aplicar o que mudou.
 // "Sair" chama onQuit() e volta ao menu (ou ao painel do torneio, se era jogo de torneio).
+// Partida do Total Match: showPause({ onResume, onSimRest, onSettings, cfg }) — sem Reiniciar/Sair,
+// com "Simular o resto" (o computador termina o jogo e o placar vale).
 import { DIFFICULTY, QUALITY, DEFAULT_SETTINGS, FORMATIONS, MODES, WEATHER } from './config.js';
 import { TEAMS, teamById, crestSVG, kitSVG, resolveKits, teamStars, playerOverall } from './teams.js';
 import * as TT from './tournament.js';
@@ -45,6 +47,7 @@ const ICONS = {
   touch: '<rect x="3" y="6" width="18" height="12" rx="2.5"/><circle cx="7.5" cy="13" r="2"/><circle cx="16" cy="11" r="1.2"/><circle cx="18" cy="14" r="1.2"/>',
   pause: '<path d="M8 5v14M16 5v14"/>', restart: '<path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4h4"/>', exit: '<path d="M14 5h5v14h-5M10 8l-4 4 4 4M6 12h10"/>',
   whistle: '<circle cx="9" cy="14" r="5"/><path d="M13 11l8-3v4l-6.5 1.2"/>', check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  fast: '<path d="M4 6l8 6-8 6zM12 6l8 6-8 6z"/>',
 };
 const icon = (n) => svgEl(`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${ICONS[n] || ''}</svg>`, 'gm-ic');
 const crest = (t, size, cls = '') => svgEl(crestSVG(t, size), 'gm-crest ' + cls, size);
@@ -109,7 +112,8 @@ function toast(msg) {
   clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove('on'), 2600);
 }
 
-function enterGame() {
+// partida aberta sem passar pelos menus (Total Match): teclado e controle ficam com o jogo
+export function enterGame() {
   mode = 'ingame';
   document.activeElement?.blur?.();
   stage.replaceChildren();
@@ -731,7 +735,7 @@ function scrCredits() {
 function renderPause(view) {
   if (pauseView === 'settings' && view !== 'settings') pauseCb.onSettings?.(S.settings);
   pauseView = view;
-  const cfg = lastCfg;
+  const cfg = lastCfg || pauseCb.cfg;      // partida do Total Match: o cfg vem do núcleo
   const head = cfg ? h('div', { class: 'gm-pause-mu' }, crest(cfg.home, 34), h('b', {}, cfg.home.short), h('span', {}, 'x'), h('b', {}, cfg.away.short), crest(cfg.away, 34)) : null;
   const sub = (title, body) => h('div', { class: 'gm-pause-panel wide' },
     h('div', { class: 'gm-pause-head' }, h('button', { class: 'gm-back', 'data-key': 'pback', 'data-esc': '', onclick: () => renderPause('main') }, icon('back'), h('span', {}, 'Voltar'), h('kbd', {}, 'Esc')), h('h2', {}, title)),
@@ -743,14 +747,17 @@ function renderPause(view) {
   else if (view === 'controls') panel = sub('Controles', controlsBody());
   else if (view === 'restart') panel = confirm('Reiniciar partida?', 'O placar volta a 0 x 0.', 'Reiniciar', () => { const cb = pauseCb; hidePause(); cb.onRestart?.(); });
   else if (view === 'quit') panel = confirm('Sair da partida?', cfg?.fixtureId ? 'O jogo não será registrado; você poderá jogá-lo de novo.' : 'O progresso desta partida será perdido.', 'Sair', quitMatch);
+  else if (view === 'simrest') panel = confirm('Simular o resto?', 'O computador joga os minutos que faltam e o placar vale.', 'Simular', () => { const cb = pauseCb; hidePause(); cb.onSimRest?.(); });
+  // sem onRestart/onQuit (partida do Total Match) os botões somem; com onSimRest aparece "Simular o resto"
   else panel = h('div', { class: 'gm-pause-panel' },
     h('p', { class: 'gm-kicker' }, 'Partida pausada'), head,
     h('div', { class: 'gm-pause-btns' },
       btn('Continuar', resume, { cls: 'gm-btn-primary', autofocus: true, ic: 'play', key: 'resume' }),
-      btn('Reiniciar', () => renderPause('restart'), { ic: 'restart', key: 'restart' }),
+      pauseCb.onRestart ? btn('Reiniciar', () => renderPause('restart'), { ic: 'restart', key: 'restart' }) : null,
+      pauseCb.onSimRest ? btn('Simular o resto', () => renderPause('simrest'), { ic: 'fast', key: 'simrest' }) : null,
       btn('Configurações', () => renderPause('settings'), { ic: 'gear', key: 'settings' }),
       btn('Controles', () => renderPause('controls'), { ic: 'pad', key: 'controls' }),
-      btn('Sair', () => renderPause('quit'), { ic: 'exit', key: 'quit' })));
+      pauseCb.onQuit ? btn('Sair', () => renderPause('quit'), { ic: 'exit', key: 'quit' }) : null));
   pauseEl.replaceChildren(panel);
   requestAnimationFrame(() => focusIn(panel));
 }

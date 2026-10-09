@@ -3,7 +3,10 @@
 //
 // Exporta:
 //   TEAMS                      lista dos 8 clubes (formato em tools/CONTRACTS.md)
-//   teamById(id)               busca por id
+//   teamById(id)               busca por id (inclui os times registrados com registerTeam)
+//   registerTeam(team)         time de fora (Total Match) com escudo/uniformes no formato daqui
+//   allTeams()                 os 8 clubes + os registrados
+//   detailAttrs(attrs, pos, k) completa os atributos detalhados a partir dos 6 básicos
 //   crestSVG(team, size)       escudo original em SVG (string)
 //   kitSVG(kit, size)          miniatura de camisa + calção (string, usada nos menus)
 //   kitClash(kitA, kitB)       true se os uniformes se confundem (distância perceptual)
@@ -96,7 +99,7 @@ const CLASSIC_NUM = { GOL: [1], LD: [2], ZAG: [3, 4, 14], LE: [6], VOL: [5, 15],
 // ctl = controle de bola / primeiro toque (separado do drible), agi = agilidade,
 // bal = equilíbrio, str = força, tkl = desarme em pé, sld = carrinho, ant = antecipação,
 // acc = aceleração, sta = fôlego.
-function detailAttrs(a, pos, key) {
+export function detailAttrs(a, pos, key) {
   let h = 2166136261;
   for (let i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619); }
   const r = () => { h = Math.imul(h ^ (h >>> 15), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
@@ -257,7 +260,11 @@ export const TEAMS = DEFS.map(d => {
   return t;
 });
 
-export const teamById = (id) => TEAMS.find(t => t.id === id) || null;
+// times de fora (Total Match): entram na partida com escudo e uniforme próprios
+const EXTRA = [];
+export function registerTeam(t) { const i = EXTRA.findIndex(x => x.id === t.id); if (i >= 0) EXTRA[i] = t; else EXTRA.push(t); return t; }
+export const teamById = (id) => TEAMS.find(t => t.id === id) || EXTRA.find(t => t.id === id) || null;
+export const allTeams = () => TEAMS.concat(EXTRA);
 
 export function playerOverall(p) {
   const a = p.attrs;
@@ -481,7 +488,7 @@ export function crestSVG(team, size = 64) {
   const disc = busy && C.disc;
   // disposição: com fita/chefe (tamanho grande) ou emblema maior (tamanho pequeno)
   const hasChief = !ring && !small && !!C.chief && !C.crown;
-  const hasRibbon = !small && !ring;
+  const hasRibbon = !small && !ring && C.founded != null;   // sem ano de fundação (times do TM), sem fita
   let ex = CX, ey = ring ? (small ? 121 : 110) : hasRibbon ? 114 : 124, es = ring ? (small ? 1.3 : 1.02) : small ? 1.34 : 1.02;
   if (hasChief) ey = 118;
   const f = { ink: `url(#${id}i)`, inkC: ink, acc, dark, snow: '#ffffff' };
@@ -523,7 +530,8 @@ ${C.metal === 'dark' ? `<linearGradient id="${id}m2" x1="0" y1="0" x2="1" y2="1"
     out += `<path id="${id}t" d="M${CX - rt * sx} ${CY} A${rt * sx} ${rt * sy} 0 0 1 ${CX + rt * sx} ${CY}" fill="none"/>`;
     out += `<path id="${id}b" d="M${CX - rb * sx} ${CY} A${rb * sx} ${rb * sy} 0 0 0 ${CX + rb * sx} ${CY}" fill="none"/>`;
     out += `<text ${FONT} font-size="15.5" letter-spacing="1.6" fill="${col}"><textPath href="#${id}t" startOffset="50%" text-anchor="middle">${T(team.name)}</textPath></text>`;
-    out += `<text ${FONT} font-size="11.5" letter-spacing="2.2" fill="${col}"><textPath href="#${id}b" startOffset="50%" text-anchor="middle">${T((FOUNDED[team.flavour] || FOUNDED.br) + ' ' + C.founded)}</textPath></text>`;
+    const baixo = C.founded != null ? (FOUNDED[team.flavour] || FOUNDED.br) + ' ' + C.founded : (team.city || '');
+    if (baixo) out += `<text ${FONT} font-size="11.5" letter-spacing="2.2" fill="${col}"><textPath href="#${id}b" startOffset="50%" text-anchor="middle">${T(baixo)}</textPath></text>`;
     out += `<path d="${starPath(CX - 80 * sx, CY + 2, 5)}${starPath(CX + 80 * sx, CY + 2, 5)}" fill="${col}"/>`;
   }
   // emblema em relevo

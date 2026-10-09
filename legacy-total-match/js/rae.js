@@ -310,26 +310,61 @@
     return +clamp(base, 3.0, 10).toFixed(1);
   }
 
-  function jogaPartida(c) {
-    var esc = escalacao(c);
+  // adversário, mando e a decisão do técnico (a mesma mostrada na tela do dia de jogo)
+  function preparaPartida(c, esc) {
     var club = TM.data.club(c.clubId);
     var lg = TM.data.league(club.leagueId);
     var advId = pick(lg.clubIds.filter(function (id) { return id !== c.clubId; }));
-    var adv = TM.data.club(advId);
-    var casa = (c.rodada || 0) % 2 === 0;
+    return { esc: esc || escalacao(c), advId: advId, adv: TM.data.club(advId), casa: (c.rodada || 0) % 2 === 0 };
+  }
 
-    var res = TM.engine.simulate(
-      TM.engine.teamFromClub(casa ? c.clubId : advId),
-      TM.engine.teamFromClub(casa ? advId : c.clubId),
-      { realism: 3, crowd: 0.55 }
-    );
-    var gm = casa ? res.score[0] : res.score[1];
-    var gs = casa ? res.score[1] : res.score[0];
+  // partida em 3D: o seu clube escalado pelo montador do TM, com você no lugar do titular mais
+  // fraco da sua posição; no 3D você controla só o seu jogador (controle.tmId = "rae-me")
+  function timesDaPartida(c, prep) {
+    var meu = TM.engine.teamFromClub(c.clubId), adv = TM.engine.teamFromClub(prep.advId);
+    var eu = { id: "rae-me", name: c.name, pos: c.pos, attrs: c.attrs, overall: c.overall, age: c.age };
+    var ps = meu.players.slice(), lu = TM.comp.buildBestLineup(ps, "auto"), porId = {};
+    ps.forEach(function (p) { porId[p.id] = p; });
+    var tit = lu.starters.map(function (id) { return porId[id]; }).filter(Boolean);
+    var idx = -1, pior = 1e9;
+    tit.forEach(function (p, i) { if (p.pos === c.pos && p.overall < pior) { pior = p.overall; idx = i; } });
+    if (idx < 0) idx = c.pos === "GK" ? 0 : tit.length - 1;
+    var saiu = tit[idx];
+    tit[idx] = eu;
+    var banco = ps.filter(function (p) { return lu.starters.indexOf(p.id) < 0; });
+    if (saiu) banco.unshift(saiu);
+    return { meu: { id: meu.id, name: meu.name, club: meu.club, players: tit.concat(banco) }, adv: adv, formacao: lu.formation };
+  }
+
+  function jogaPartida(c, prep, r3) {
+    prep = prep || preparaPartida(c);
+    var esc = prep.esc, advId = prep.advId, adv = prep.adv, casa = prep.casa;
+    var gm, gs;
+    if (r3) {                                   // jogada em 3D: vale o placar de lá
+      gm = casa ? r3.homeGoals : r3.awayGoals;
+      gs = casa ? r3.awayGoals : r3.homeGoals;
+    } else {
+      var res = TM.engine.simulate(
+        TM.engine.teamFromClub(casa ? c.clubId : advId),
+        TM.engine.teamFromClub(casa ? advId : c.clubId),
+        { realism: 3, crowd: 0.55 }
+      );
+      gm = casa ? res.score[0] : res.score[1];
+      gs = casa ? res.score[1] : res.score[0];
+    }
     var venceu = gm > gs;
 
-    var out = { esc: esc, adv: adv.name, casa: casa, gm: gm, gs: gs, venceu: venceu, gols: 0, assist: 0, nota: 0, vermelho: false };
+    var out = { esc: esc, adv: adv.name, casa: casa, gm: gm, gs: gs, venceu: venceu, gols: 0, assist: 0, nota: 0, vermelho: false, em3d: !!r3 };
 
-    if (esc.joga === "titular" || esc.joga === "entra") {
+    if ((esc.joga === "titular" || esc.joga === "entra") && r3 && r3.jogador) {
+      // a sua partida de verdade: nota, gols, assistências e cartão vêm do 3D
+      var verm = (r3.cartoes || []).filter(function (k) { return k.tmId === "rae-me" && k.cor === "red"; })[0];
+      out.nota = +clamp(r3.jogador.nota || 6, 3, 10).toFixed(1);
+      out.gols = r3.jogador.gols || 0;
+      out.assist = r3.jogador.assist || 0;
+      out.vermelho = !!verm;
+      esc.min = verm ? Math.max(1, Math.min(90, verm.minuto || 90)) : 90;
+    } else if (esc.joga === "titular" || esc.joga === "entra") {
       out.nota = notaIndividual(c, esc, venceu);
       // gol e assistência proporcionais ao tempo em campo e à posição
       var pesoGol = c.pos === "FW" ? 0.42 : c.pos === "MF" ? 0.20 : c.pos === "DF" ? 0.07 : 0.004;
@@ -338,7 +373,8 @@
       if (Math.random() < 0.16 * (esc.min / 90) * (c.attrs.pas / 70) * gm) out.assist = 1;
       out.nota = +clamp(out.nota + out.gols * 0.9 + out.assist * 0.5, 3, 10).toFixed(1);
       if (Math.random() < 0.012 * (esc.min / 90)) out.vermelho = true;
-
+    }
+    if (esc.joga === "titular" || esc.joga === "entra") {
       c.energia = clamp(c.energia - (14 + esc.min * 0.28), 0, 100);
       c.seasonApps = (c.seasonApps || 0) + 1;
       c.seasonGoals = (c.seasonGoals || 0) + out.gols;
@@ -717,8 +753,28 @@
     body.appendChild(barraConf(c, true));
 
     body.appendChild(TM.ui.button("▶ Jogar a partida", function () {
-      var out = jogaPartida(c);
-      TM.ui.go("rae-resultado", { out: out });
+      // a decisão mostrada nesta tela é a que vale na partida
+      var prep = preparaPartida(c, esc);
+      function simula() { TM.ui.go("rae-resultado", { out: jogaPartida(c, prep) }); }
+      var t3 = TM.tm3d;
+      // titular: dá para jogar em 3D controlando só o seu jogador
+      if (!t3 || !t3.disponivel() || esc.joga !== "titular") { simula(); return; }
+      function em3d() {
+        var tm = timesDaPartida(c, prep);
+        t3.jogar3d({
+          teamA: prep.casa ? tm.meu : tm.adv, teamB: prep.casa ? tm.adv : tm.meu,
+          formation: prep.casa ? tm.formacao : null, formationB: prep.casa ? null : tm.formacao,
+          userSide: prep.casa ? 0 : 1, controle: { tmId: "rae-me" }, title: "Rumo ao Estrelato"
+        }, {
+          fim: function (r3) { TM.ui.go("rae-resultado", { out: jogaPartida(c, prep, r3) }); },
+          sair: simula
+        });
+      }
+      var pref = t3.preferencia();
+      if (pref === "simular") simula();
+      else if (pref === "3d") em3d();
+      else t3.escolha({ title: "Rumo ao Estrelato", teamA: { name: prep.casa ? c.clubName : prep.adv.name }, teamB: { name: prep.casa ? prep.adv.name : c.clubName },
+        controle: { tmId: "rae-me" } }, simula, em3d);
     }, "btn primary"));
   });
 
@@ -733,7 +789,8 @@
     var placar = out.casa ? (out.gm + " × " + out.gs) : (out.gs + " × " + out.gm);
     body.appendChild(el("div", { class: "rae-res " + (out.venceu ? "v" : out.gm === out.gs ? "e" : "d") }, [
       el("div", { class: "rae-res-p", text: placar }),
-      el("div", { class: "rae-res-s", text: (out.casa ? c.clubName + " × " + out.adv : out.adv + " × " + c.clubName) })
+      el("div", { class: "rae-res-s", text: (out.casa ? c.clubName + " × " + out.adv : out.adv + " × " + c.clubName) }),
+      out.em3d ? el("div", { class: "rae-res-s", text: "Partida jogada em 3D" }) : null
     ]));
 
     if (out.esc.joga === "titular" || out.esc.joga === "entra") {
@@ -859,7 +916,7 @@
     limiar: limiar, limiarManter: limiarManter, recalcStatus: recalcStatus, mexeConf: mexeConf,
     tecnico: tecnico, novoTecnico: novoTecnico, rival: rival, concorrentes: concorrentes,
     comecaSemana: comecaSemana, fazDia: fazDia, fechaSemana: fechaSemana, mediaTreino: mediaTreino,
-    escalacao: escalacao, jogaPartida: jogaPartida, cria: cria, atualizaRival: atualizaRival, nivelElenco: nivelElenco,
+    escalacao: escalacao, jogaPartida: jogaPartida, preparaPartida: preparaPartida, timesDaPartida: timesDaPartida, cria: cria, atualizaRival: atualizaRival, nivelElenco: nivelElenco,
     carreira: car, salva: save, ATIV: ATIV, STATUS: STATUS, TIPOS_TEC: TIPOS_TEC
   };
 })(window);
