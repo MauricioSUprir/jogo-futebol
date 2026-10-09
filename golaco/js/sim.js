@@ -85,7 +85,7 @@ function moverMarcador(m, j) {
   // marcador de treino: vai na bola; encostado no condutor, contorna pelo lado da bola
   const b = m.bola;
   const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
-  let tx = b.p.x, tz = b.p.z;
+  let tx = b.p.x, tz = b.p.z, contorna = false;
   if (dono && dono !== j) {
     const dx = j.x - dono.x, dz = j.z - dono.z;
     const d = MD.hypot(dx, dz);
@@ -93,15 +93,22 @@ function moverMarcador(m, j) {
       // contorna: gira em volta do condutor na direção da bola
       const aM = MD.atan2(dz, dx);
       const aB = MD.atan2(b.p.z - dono.z, b.p.x - dono.x);
-      const sentido = difAng(aM, aB) >= 0 ? 1 : -1;
-      const a2 = aM + sentido * 0.9;
-      tx = dono.x + MD.cos(a2) * 0.75;
-      tz = dono.z + MD.sin(a2) * 0.75;
+      const dif = difAng(aM, aB);
+      if (Math.abs(dif) < TREINO.marcadorBote) {
+        // a bola ficou do lado dele: vai nela (bote)
+        tx = b.p.x; tz = b.p.z;
+      } else {
+        const a2 = aM + (dif >= 0 ? 1 : -1) * 0.9;
+        tx = dono.x + MD.cos(a2) * 0.75;
+        tz = dono.z + MD.sin(a2) * 0.75;
+      }
+      contorna = true;
     }
   }
   const dx = tx - j.x, dz = tz - j.z;
   const d = MD.hypot(dx, dz) || 1;
-  const vel = Math.min(TREINO.marcadorVel, 0.6 + d * 2.2);
+  // contornando, corre em volta do condutor (não anda devagar até o ponto)
+  const vel = Math.min(TREINO.marcadorVel, contorna ? (j.contorno ?? TREINO.marcadorContorno) : 0.6 + d * 2.2);
   return { dx: dx / d, dz: dz / d, vel, rumoAlvo: MD.atan2(b.p.z - j.z, b.p.x - j.x) };
 }
 
@@ -154,14 +161,16 @@ function colisaoBolaCorpo(m) {
 
 function roubarComMarcador(m, j) {
   const b = m.bola;
+  if (m.posse == null) return; // bola livre não é roubada (quem chegar primeiro domina)
   if (b.p.y > 0.5) return;
   const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (d > TREINO.marcadorAlcance + 0.11) return;
-  const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
+  const dono = jogadorPorId(m, m.posse);
   // tira a bola: empurra na direção em que o marcador está virado
   const v = 3.2;
   chutarRasteiro(b, MD.cos(j.rumo) * v, MD.sin(j.rumo) * v);
-  if (dono) { dono.cond.toque = null; dono.cond.busca = false; }
+  // quem perdeu não domina de novo no tick seguinte (a bola ainda está ao alcance dele)
+  if (dono) { dono.cond.toque = null; dono.cond.busca = false; dono.cond.semDominioAte = m.tick + 30; }
   m.posse = null;
   m.stats.roubadas++;
   m.eventos.push({ tipo: 'roubada', id: j.id });

@@ -162,6 +162,9 @@ export const CONDUCAO = {
   protecaoDist: 5,            // m — marcador a menos disso ativa a proteção (com o modificador)
   protecaoOfs: 0.42,          // m — bola do lado oposto ao marcador
   vProtecao: 1.6,             // m/s máximo protegendo
+  giroProtecao: 3.5,          // rad/s — giro do corpo (e da bola, com a sola) em volta da bola
+                              // protegendo, com agilidade 50 (×0,8–1,2 pela agilidade): um marcador
+                              // que contorna mais rápido que isso chega à bola
   // Pedalada.
   pedaladaDuracao: 0.42,      // s
   pedaladaToqueDuplo: 0.3,    // s — dois toques no modificador dentro disso
@@ -238,4 +241,6 @@ export const TREINO = {
   marcadorVel: 6.2,
   marcadorAcel: 5.5,
   marcadorAlcance: 0.55,      // m — distância bola–marcador que conta como roubada
+  marcadorContorno: 2.0,      // m/s — correndo em volta de quem protege a bola
+  marcadorBote: 1.9,          // rad — bola a menos disso do lado dele (em volta do condutor): vai nela
 };

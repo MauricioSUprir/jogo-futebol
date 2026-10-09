@@ -184,10 +184,17 @@ export function faseLocal(fase, j) {
   return p;
 }
 
-/** O corpo está "andando" (a passada avança)? */
+/**
+ * O corpo está "andando" (a passada avança)? Também quando um pé ficou torto em relação ao
+ * tronco (girando devagar no lugar): o pé dá um passo de verdade para se alinhar, em vez de
+ * ficar plantado com a perna torcida.
+ */
 function passadaAtiva(k, s) {
-  return s > 0.22 || Math.abs(k.giro) > 1.6;
+  if (s > 0.22 || Math.abs(k.giro) > 1.6) return true;
+  if (k.pes) for (const pe of k.pes) if (Math.abs(difAng(pe.rumo, k.rumo)) > PE_TORTO) return true;
+  return false;
 }
+const PE_TORTO = 1.2; // rad — pé plantado mais torto que isso em relação ao tronco sai do chão
 
 /**
  * Avança a passada de um passo de simulação. Atualiza os pés (toque no chão e saída).
@@ -208,7 +215,8 @@ export function passoPassada(j, comBola, dt, ev) {
     const hx = j.x + (-MD.sin(j.rumo)) * lado * PASSADA.afastamentoLateral;
     const hz = j.z + MD.cos(j.rumo) * lado * PASSADA.afastamentoLateral;
     const d = MD.hypot(pe.x - hx, pe.z - hz);
-    const torto = Math.abs(difAng(pe.rumo, j.rumo)) > 1.2;
+    // torto só sai antes se o outro pé está no chão (nunca os dois no ar por isso)
+    const torto = Math.abs(difAng(pe.rumo, j.rumo)) > PE_TORTO && j.pes[1 - p].apoio;
     if (d > PASSADA.alcancePlantado || torto) {
       const psi = faseLocal(f1, p);
       const sair = 2 * carga;
@@ -229,6 +237,14 @@ export function passoPassada(j, comBola, dt, ev) {
       plantarPe(j, p, carga, f);
       if (ev) ev.push({ tipo: 'pisou', pe: p, id: j.id });
     }
+  }
+  // pivô: pé plantado torto que não pode sair do chão (o outro está no ar) gira no lugar com o
+  // tronco (na ponta do pé), sem deslizar — a perna nunca fica torcida além de PE_TORTO
+  for (let p = 0; p < 2; p++) {
+    const pe = j.pes[p];
+    if (!pe.apoio || j.pes[1 - p].apoio) continue;
+    const t = difAng(j.rumo, pe.rumo);
+    if (Math.abs(t) > PE_TORTO) pe.rumo = j.rumo + Math.sign(t) * PE_TORTO;
   }
   // parando: se a passada não está mais ativa, o pé no ar desce ao chão já
   if (!passadaAtiva(j, s)) {

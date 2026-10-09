@@ -10,6 +10,7 @@
 //   busca   true quando a bola saiu do alcance e o corpo vai buscá-la
 //   longeDesde  tick em que a bola ficou longe (perda)
 //   pedalada {tick0, lado} | null
+//   semDominioAte  tick até o qual não domina (acabou de ter a bola roubada)
 
 import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
@@ -19,11 +20,12 @@ import { normal } from './rng.js';
 import { MD } from './matdet.js';
 
 const DT = PASSO;
+const PROT_INTERVALO = Math.round(0.3 / PASSO); // ticks — toque de proteção mais espaçado
 const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analógico abaixo disso)
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null };
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, semDominioAte: -1 };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */
@@ -52,6 +54,23 @@ export function emProtecao(m, j) {
   return a.o;
 }
 
+/** Giro máximo (rad/s) do protetor em volta da bola, pela agilidade. */
+function giroProtecao(j) {
+  return CONDUCAO.giroProtecao * (0.8 + 0.4 * j.par.attr.agilidade / 100);
+}
+
+/**
+ * Protegendo e andando: direção (unitária ou menor) e velocidade com que o grupo corpo+bola
+ * anda pelo analógico — sem a parte na direção do marcador (ux, uz = unitário bola→marcador).
+ */
+function andarProtegendo(ix, iz, imag, vel, ux, uz) {
+  if (!(imag > MAG_DIR)) return { wx: 0, wz: 0, v: 0 };
+  let wx = ix, wz = iz;
+  const pm = wx * ux + wz * uz;
+  if (pm > 0) { wx -= pm * ux; wz -= pm * uz; }
+  return { wx, wz, v: Math.min(vel, CONDUCAO.vProtecao) };
+}
+
 /**
  * Movimento pedido sem considerar a bola (o que o analógico manda). Usado pela simulação e
  * pela previsão. ctx: {marcador:{x,z}} quando protegendo.
@@ -64,22 +83,29 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
   if (ctx && ctx.marcador) {
     if (ctx.bola) {
       // PROTEÇÃO: o corpo gira em volta da bola para ficar entre ela e o marcador, de
-      // costas para ele (a bola quase não sai do lugar; o analógico a leva devagar)
+      // costas para ele. Andando (analógico), o grupo corpo+bola anda junto devagar: o corpo
+      // ganha a velocidade do analógico por cima do giro (a sola leva a bola no toque de
+      // proteção) — sem a parte que iria na direção do marcador (não atravessa o marcador)
+      // e sem sair da linha bola–marcador.
       let ux = ctx.marcador.x - ctx.bola.x, uz = ctx.marcador.z - ctx.bola.z;
       const ul = MD.hypot(ux, uz) || 1;
       ux /= ul; uz /= ul;
-      const k = imag > MAG_DIR ? 0.35 * imag : 0;
+      const { wx, wz, v: vAnda } = andarProtegendo(ix, iz, imag, vel, ux, uz);
       // gira EM VOLTA da bola (pelo círculo), nunca por cima dela
       const aCorpo = MD.atan2(ctx.corpoZ - ctx.bola.z, ctx.corpoX - ctx.bola.x);
       const aAlvo = MD.atan2(uz, ux);
       const a = aCorpo + clamp(difAng(aCorpo, aAlvo), -0.9, 0.9);
       const r = CONDUCAO.protecaoOfs;
-      const px = ctx.bola.x + MD.cos(a) * r + ix * k;
-      const pz = ctx.bola.z + MD.sin(a) * r + iz * k;
+      const px = ctx.bola.x + MD.cos(a) * r;
+      const pz = ctx.bola.z + MD.sin(a) * r;
       const dx = px - ctx.corpoX, dz = pz - ctx.corpoZ;
       const d = MD.hypot(dx, dz);
-      const v = Math.min(CONDUCAO.vProtecao * 2.4, d * 8);
-      return { dx: d > 1e-6 ? dx / d : ix, dz: d > 1e-6 ? dz / d : iz, vel: v, rumoAlvo: MD.atan2(-uz, -ux) };
+      // o giro protegendo tem limite (a sola segura a bola): um marcador que contorna mais
+      // rápido que isso acaba chegando à bola
+      const vg = Math.min(giroProtecao(j) * r, d * 8);
+      const vx = (d > 1e-6 ? dx / d : 0) * vg + wx * vAnda, vz = (d > 1e-6 ? dz / d : 0) * vg + wz * vAnda;
+      const v = Math.min(MD.hypot(vx, vz), CONDUCAO.vProtecao * 2.4);
+      return { dx: v > 1e-6 ? vx / v : ix, dz: v > 1e-6 ? vz / v : iz, vel: v, rumoAlvo: MD.atan2(-uz, -ux) };
     }
     vel = Math.min(vel, CONDUCAO.vProtecao);
     rumoAlvo = MD.atan2(ctx.corpoZ - ctx.marcador.z, ctx.corpoX - ctx.marcador.x);
@@ -248,6 +274,9 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
       if (pc.fs[i] >= alvoFase) { iN = i; break; }
     }
     if (iN < 0) iN = H; // corpo parado: a bola para no ponto e espera
+    // protegendo, a sola mexe na bola pelo menos a cada PROT_INTERVALO (o marcador gira em
+    // volta e a bola tem que continuar do lado de lá), mesmo com o corpo quase parado
+    if (prot) iN = Math.max(minI, Math.min(iN, PROT_INTERVALO));
   }
   const xN = pc.xs[iN], zN = pc.zs[iN], rN = pc.rs[iN], sN = pc.ss[iN];
   const hx = MD.cos(rN), hz = MD.sin(rN);
@@ -258,8 +287,16 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
     let ux = xN - mp.x, uz = zN - mp.z;
     const ul = MD.hypot(ux, uz) || 1;
     ux /= ul; uz /= ul;
-    tx = xN + ux * CONDUCAO.protecaoOfs;
-    tz = zN + uz * CONDUCAO.protecaoOfs;
+    // andando protegendo: o grupo anda pelo analógico no passo de proteção até o próximo
+    // toque (a partir de onde o corpo está AGORA: sem realimentar a corrida atrás da bola)
+    const w = andarProtegendo(j.ix, j.iz, j.imag, velPedida(j, true), -ux, -uz);
+    const bx0 = w.v > 0 ? j.x + w.wx * w.v * iN * DT : xN, bz0 = w.v > 0 ? j.z + w.wz * w.v * iN * DT : zN;
+    // a sola também não gira a bola em volta do corpo mais rápido que o giro de proteção
+    const aAgora = MD.atan2(b.p.z - j.z, b.p.x - j.x);
+    const aQuer = MD.atan2(uz, ux);
+    const aBola = aAgora + clamp(difAng(aAgora, aQuer), -giroProtecao(j) * iN * DT, giroProtecao(j) * iN * DT);
+    tx = bx0 + MD.cos(aBola) * CONDUCAO.protecaoOfs;
+    tz = bz0 + MD.sin(aBola) * CONDUCAO.protecaoOfs;
   } else {
     const fr = ofsFrente(sN, curta);
     tx = xN + hx * fr + (-hz) * lado * CONDUCAO.ofsLado;
@@ -366,8 +403,13 @@ export function executarToque(m, j, pe, tipo) {
   if (dist > 1e-4) { dx /= dist; dz /= dist; } else { dx = hx; dz = hz; dist = 0; }
   const ca = MD.cos(ea), sa = MD.sin(ea);
   const ddx = dx * ca - dz * sa, ddz = dx * sa + dz * ca;
-  // protegendo, a bola é rolada de leve com a sola e para no ponto (não foge do corpo)
-  let v0 = (prot ? velParaParar(dist) : velParaDistancia(dist, iN)) * Math.max(0.5, 1 + ev);
+  // protegendo parado, a bola é rolada de leve com a sola e para no ponto (não foge do corpo);
+  // andando, chega ao ponto no próximo toque, no passo de proteção (sem disparar)
+  let vBase;
+  if (!prot) vBase = velParaDistancia(dist, iN);
+  else if (j.imag > MAG_DIR) vBase = Math.min(velParaDistancia(dist, iN), CONDUCAO.vProtecao * 1.6);
+  else vBase = velParaParar(dist);
+  let v0 = vBase * Math.max(0.5, 1 + ev);
   v0 = Math.min(v0, 14);
   chutarRasteiro(b, ddx * v0, ddz * v0);
   c.ult = { tick: m.tick, pe, bx: b.p.x, bz: b.p.z, dx: ddx, dz: ddz, v: v0, tipo };
