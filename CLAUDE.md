@@ -7,7 +7,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
-  Etapa 1 ENTREGUE (#449, #450). Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
+  Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (PR desta etapa: passe, enfiada, lançamento/cruzamento, chute,
+  goleiro, botões sem CONDUÇÃO; revisão adversarial da Etapa 1 com 30 achados corrigidos). Próxima: Etapa 3.
+  Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
   continue assim" (não mexer sem motivo medido). Quer um jogo **11×11 de alto nível, tipo FIFA**: posições,
   regras, táticas, torcida **cantando alto**, **cenas de pré-jogo**, botões de **chute, passe, enfiada,
   lançamento e saída do goleiro**, e **tirar o botão CONDUÇÃO** do celular. Ordem: Etapa 2 (ações + botões +
@@ -97,6 +99,15 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   nunca passa por cima da bola) e de folga máxima (≤ 0,8 m); corte = a bola sai na linha do analógico (±20°) com o
   corpo segurando o rumo até o toque; domínio pela linha do analógico com erro por atributo/velocidade/pressão;
   proteção = o corpo gira em volta da bola, de costas para o marcador.
+- Etapa 2 (`js/acoes.js`, `goleiro.js`, `ia.js`, `sessao.js` modo 'ataque'): botões carregam força e soltam pedido
+  (`j.carga`/`j.pedido`, mira guardada em `j.mira`); toque de ação no pé livre; troca de controle SEMPRE por
+  `assumirControle` (carga/pedido vão junto; TROCAR pela borda do time e nunca com a bola no pé). Números da
+  pesquisa em `golaco/PESQUISA-ETAPA2.md` (StatsBomb: tempos de passe, logística de defesa do goleiro, cruzamento;
+  biomecânica de chute, mergulho e cabeceio). Testes: `teste-passes`, `teste-chutes`, `teste-goleiro` (canhão de
+  bolas ±10 pontos da logística), `teste-aereo`, `teste-treino` (treino com a IA não trava), `teste-recomeco`;
+  `teste-patinacao` mede também o treino de ataque (10 jogadores). Pendências para o dono: corte de 90° a ~7 m/s em
+  2–3 apoios (PESQUISA pede 3–5); tornozelo do pé que toca até a bola p95 0,33 m (meta ≤ 0,30, só `--estrito`);
+  falta com curva chega a ~24 m/s aos 27 m (vídeo: 17–21).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
