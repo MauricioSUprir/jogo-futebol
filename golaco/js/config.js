@@ -141,6 +141,8 @@ export const CONDUCAO = {
   antecedencia: 0.1,          // s — um toque é sempre marcado com essa antecedência
   alcance: 0.78,              // m — distância máxima bola–corpo para tocar
   folgaMax: 0.8,              // m — a bola não abre mais que isso à frente entre dois toques
+  arcoMax: 0.15,              // m — curva fechada: o corpo sairia mais que isso da linha da bola
+                              // até o próximo toque → toca a cada passo
   alcanceFrente: -0.15,       // m — a bola pode estar até 15 cm atrás do centro do corpo
   intervaloMin: 0.16,         // s entre dois toques
   angReplanejar: 0.35,        // rad — mudança de rumo pedido que antecipa o toque

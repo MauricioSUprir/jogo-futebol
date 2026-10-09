@@ -358,6 +358,24 @@ function semUltrapassar(b, plano, pc) {
 }
 
 /**
+ * Quanto a bola, rolando reta até o alvo, fica de lado em relação ao corpo previsto (pelo rumo
+ * dele) até o próximo toque: numa curva fechada a bola segue reta e o corpo faz o arco.
+ */
+function desvioDoArco(b, plano, pc) {
+  const { iN, dist } = plano;
+  if (dist < 0.05) return 0;
+  const ux = plano.dx / dist, uz = plano.dz / dist;
+  let s = velParaDistancia(dist, iN), d = 0, dm = 0;
+  for (let i = 1; i < iN; i++) {
+    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    const ex = b.p.x + ux * d - pc.xs[i], ez = b.p.z + uz * d - pc.zs[i];
+    const la = Math.abs(-ex * MD.sin(pc.rs[i]) + ez * MD.cos(pc.rs[i]));
+    if (la > dm) dm = la;
+  }
+  return dm;
+}
+
+/**
  * Executa o toque agora (tick atual, antes de integrar a bola). Planeja o próximo.
  * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao' (a puxada de sola é executarPuxada)
  */
@@ -374,8 +392,11 @@ export function executarToque(m, j, pe, tipo) {
   const dom = tipo === 'dominio';
   let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom);
   // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
-  // está sempre ao alcance de um corte pedido no meio do caminho
-  if (!prot && !curta && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax)) {
+  // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
+  // bola rolando reta se afastaria demais do arco do corpo até o próximo toque
+  // (curva = o analógico girando de forma contínua; um gesto brusco não conta)
+  const curvando = Math.abs(j.intW) > 0.3;
+  if (!prot && !curta && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
     plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom);
   }
   if (!semUltrapassar(b, plano, pc)) {
