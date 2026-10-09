@@ -46,7 +46,15 @@ async function abre3d() {
   }
   return null;
 }
-async function ate(fn, n = 400) { for (let i = 0; i < n; i++) { await p.waitForTimeout(500); if (await p.evaluate(fn)) return true; } return false; }
+// espera a condição; com o 3D já fechado, avança a tela de jogo do TM ("Ver resultado"/"Pular"...)
+async function ate(fn, clica, n = 400) {
+  for (let i = 0; i < n; i++) {
+    await p.waitForTimeout(500);
+    if (await p.evaluate(fn)) return true;
+    if (clica) await p.evaluate((rx) => { if (document.querySelector(".tm3d-tela")) return; const b = [...document.querySelectorAll("button")].find(x => new RegExp(rx).test(x.textContent.trim())); b && b.click(); }, clica);
+  }
+  return false;
+}
 const timesDo3d = (fr) => fr.evaluate(() => __golaco.game.match.teams.map(t => ({ nome: t.data.name, gks: t.players.filter(q => q.isGK).length,
   xi: t.players.map(q => q.data.pos), lados: t.players.filter(q => /^(LD|LE)$/.test(q.data.pos)).map(q => q.data.pos + (q.data.slot ? ":" + q.data.slot[1] : "")), kit: t.kit.shirt })));
 
@@ -69,7 +77,7 @@ if (fr) {
   const pausa = await fr.evaluate(() => { window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true })); return [...document.querySelectorAll(".gm-pause button")].map(x => x.textContent.trim()); });
   confere("Ultimate: pausa com Simular o resto (sem Reiniciar/Sair)", pausa.includes("Simular o resto") && !pausa.includes("Reiniciar") && !pausa.includes("Sair"), pausa);
   await fr.evaluate(() => __golaco.simularResto());
-  confere("Ultimate: resultado do 3D aparece no TM", await ate(() => !!document.querySelector(".utm-res") && !document.querySelector(".tm3d-tela")));
+  confere("Ultimate: resultado do 3D aparece no TM", await ate(() => !!document.querySelector(".utm-res") && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)"));
   await print("03-ultimate-resultado");
 }
 
@@ -87,7 +95,7 @@ if (fr) {
   confere("Carreira: 1 goleiro por time", ts.every(t => t.gks === 1), ts.map(t => t.nome + " " + t.xi.join(" ")));
   await print("04-carreira-3d");
   await fr.evaluate(() => __golaco.simularResto());
-  const fim = await ate(() => TM.ui.current() === "coach-match");
+  const fim = await ate(() => TM.ui.current() === "coach-match", "^(Ver resultado|Pular|Avançar)");
   const jogos = await p.evaluate(() => (TM.storage.coachCareer() || {}).matchNo);
   confere("Carreira: partida registrada (tela de resultado e rodada nova)", fim && jogos === 1, { fim, jogos });
   await print("05-carreira-resultado");
