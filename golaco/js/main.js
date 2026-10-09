@@ -1,20 +1,26 @@
-// GOLAÇO — página da Etapa 1 (treino de condução). DOM + three.js.
+// GOLAÇO — página do jogo (treino de ataque da Etapa 2 e treino de condução). DOM + three.js.
 // Laço de passo fixo ("Fix Your Timestep!", Glenn Fiedler): a cada quadro avancarLaco diz
 // quantos passos de 1/60 s rodar; para cada passo guardamos a pose ANTERIOR e calculamos a
 // ATUAL de cada jogador (uma vez por passo) e a bola anterior/atual; o desenho INTERPOLA com
 // alfa (bola por lerp + slerp do quaternion, juntas por interpolarPose). Igual a 60/120/144 Hz.
 //
+// Entradas POR TIME: o humano é o time 0 e quem recebe a entrada é o jogador m.controlado[0]
+// (cai para o id 0 se o mundo ainda não tiver esse campo). A lógica chega aos poucos: tudo o que
+// é da Etapa 2 (m.controlado, m.voo, m.placar, j.carga, m.proximaTroca, j.posicao) é lido com
+// tolerância (?. e valor padrão).
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
-// (conduz sozinho em curva) ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1.
+// ?modo=ataque|conducao (treino; o padrão vem de sessao.js) ?marcador=1 ?prints=1 (cena limpa)
+// ?qps=1 ?toque=1 ?entalhe=1.
 // Testes: window.__golaco (ver o fim do arquivo).
 
 import * as THREE from 'three';
-import { PASSO, BOTAO, QUALIDADE, VERSAO } from './config.js';
+import * as CFG from './config.js';
 import { hashMundo, jogadorPorId } from './sim.js';
 import { pose, interpolarPose, NJ } from './anim.js';
 import { criarLaco, avancarLaco } from './laco.js';
-import { emProtecao } from './conducao.js';
-import { criarTreino, passoTreino, entradaDemo, DEMO, ID_HUMANO, marcadorLigado } from './sessao.js';
+import * as COND from './conducao.js';
+import * as S from './sessao.js';
 import { criarEntrada } from './entrada.js';
 import { criarHud } from './hud.js';
 import { criarCena } from './render/cena.js';
@@ -22,9 +28,15 @@ import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
+import { criarMarcas } from './render/marcas.js';
+
+const { PASSO, BOTAO, QUALIDADE, VERSAO } = CFG;
+const ID_HUMANO = S.ID_HUMANO ?? 0;
+const TIME_HUMANO = 0;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
+const MODO = ['ataque', 'conducao'].includes(params.get('modo')) ? params.get('modo') : undefined;
 const DEMO_ON = params.get('demo') === '1';
 const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || 1));
 const CHAVE_PREFS = 'golaco.prefs.v1';
@@ -65,9 +77,15 @@ if (PRINTS) hud.modoPrints();
 document.documentElement.classList.toggle('noite', hora === 'noite');
 
 // ------------------------------------------------------------------ estado da simulação
+const marcadorLigado = m => (S.marcadorLigado ? S.marcadorLigado(m) : false);
+function criarMundoTreino(opc = {}) {
+  const o = { semente: SEMENTE, ...opc };
+  if (MODO && o.modo === undefined) o.modo = MODO;
+  return S.criarTreino(o);
+}
 function novoMundo(opc) {
-  const ini = DEMO_ON ? DEMO.inicio : { x: 0, z: 0, rumo: 0 };
-  return criarTreino({ semente: SEMENTE, ...ini, marcador: params.get('marcador') === '1', ...opc });
+  const ini = DEMO_ON && S.DEMO ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
+  return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
 }
 let mundo = novoMundo();
 const estJ = new Map();   // id → {ant, atu, des, x0, z0, x1, z1, r0, r1}
@@ -76,6 +94,22 @@ const bolaAtu = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 let contPassos = 0;
 let alfa = 0;
 const filaAcoes = [];
+
+/** Id do jogador que o humano controla agora (Etapa 2: m.controlado[0]; Etapa 1: id 0). */
+function idControlado() { return mundo.controlado?.[TIME_HUMANO] ?? ID_HUMANO; }
+function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPorId(mundo, ID_HUMANO); }
+
+/**
+ * Entrada do humano no formato POR TIME ({0: {x, z, botoes}}). x/z/botoes também ficam no
+ * próprio objeto (não enumeráveis) para o passoTreino que recebe a entrada do jogador direto:
+ * os dois formatos leem os mesmos números (o hash não muda).
+ */
+function entradaDoTime(e) {
+  const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0;
+  const t = { [TIME_HUMANO]: { x, z, botoes } };
+  Object.defineProperties(t, { x: { value: x }, z: { value: z }, botoes: { value: botoes } });
+  return t;
+}
 
 function estadoDe(j) {
   let e = estJ.get(j.id);
@@ -97,8 +131,8 @@ function iniciarEstados() {
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
+  fase.atual = faseDoMundo(); fase.defesaDesde = null;
 }
-iniciarEstados();
 
 function rodarPasso(entrada, acoes) {
   // anterior ← atual
@@ -107,7 +141,7 @@ function rodarPasso(entrada, acoes) {
     e.ant.set(e.atu); e.x0 = e.x1; e.z0 = e.z1; e.r0 = e.r1;
   }
   bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q);
-  const eventos = passoTreino(mundo, entrada, acoes);
+  const eventos = S.passoTreino(mundo, entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
   contPassos++;
   // atual ← pose deste passo (calculada uma vez por passo); quem saiu do mundo (marcador
   // desligado) perde o estado — sem alocar nada por passo
@@ -122,26 +156,67 @@ function rodarPasso(entrada, acoes) {
   // bola teletransportada (recomeço, máquina): não desenha o rastro entre os dois pontos
   if (bolaAtu.p.distanceTo(bolaAnt.p) > 2.5) { bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q); }
   for (const ev of eventos) tratarEvento(ev);
+  atualizarFase();
+}
+
+// Ataque × defesa (botões de toque e Y do controle): ataque quando a bola é de um jogador do
+// meu time (m.posse) ou viaja de um passe do meu time (m.voo.de) ou vem para o controlado
+// (j.recebe); defesa caso contrário. Vira ataque na hora; defesa só depois de 0,25 s (uma bola
+// solta por um instante entre o passe e o domínio não pisca os botões).
+const fase = { atual: 'ataque', defesaDesde: null };
+function timeDe(id) { return id == null ? null : (jogadorPorId(mundo, id)?.time ?? null); }
+function faseDoMundo() {
+  const m = mundo;
+  if (m.posse != null) return timeDe(m.posse) === TIME_HUMANO ? 'ataque' : 'defesa';
+  if (m.voo && timeDe(m.voo.de) === TIME_HUMANO) return 'ataque';
+  const c = jogadorPorId(m, idControlado());
+  if (c && c.recebe) return 'ataque';
+  return 'defesa';
+}
+function atualizarFase() {
+  const f = faseDoMundo();
+  if (f === 'ataque') { fase.atual = 'ataque'; fase.defesaDesde = null; }
+  else if (fase.atual !== 'defesa') {
+    if (fase.defesaDesde == null) fase.defesaDesde = mundo.tick;
+    if (mundo.tick - fase.defesaDesde >= 15) { fase.atual = 'defesa'; fase.defesaDesde = null; }
+  }
+  if (entrada) entrada.definirFase(fase.atual);
 }
 
 function tratarEvento(ev) {
-  hud.evento(ev.tipo);
-  if (ev.tipo === 'marcadorLigado' || ev.tipo === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
+  const t = ev.tipo;
+  // passe e troca só do meu time (os da IA adversária encheriam a tela); a troca automática no
+  // passe já aparece como o passe
+  if ((t === 'passe' || t === 'troca') && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
+  if (t === 'troca' && ev.auto) return;
+  hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
+  if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }
 
 function modoDoJogador(j) {
+  if (j && mundo.naMao != null && mundo.naMao === j.id) return ['Bola na mão', true];
   if (!j || mundo.posse !== j.id) return ['Sem bola', false];
   if (j.cond && j.cond.pedalada) return ['Pedalada', true];
   const mod = (j.botoes & BOTAO.MOD) !== 0;
-  if (mod && emProtecao(mundo, j)) return ['Protegendo', true];
+  if (mod && COND.emProtecao && COND.emProtecao(mundo, j)) return ['Protegendo', true];
   if (mod) return ['Condução curta', false];
   const s = Math.hypot(j.vx, j.vz);
   if ((j.botoes & BOTAO.CORRER) && s > 5.5) return ['Arrancada', true];
   return ['Conduzindo', false];
 }
 
+/** Força da carga (0–1, cheia em ACOES.cargaCheia s): usa j.carga.forca se a lógica der. */
+function forcaDaCarga(cg) {
+  if (typeof cg.forca === 'number') return Math.max(0, Math.min(1, cg.forca));
+  const cheia = CFG.ACOES?.cargaCheia ?? 0.8;
+  if (typeof cg.t0 === 'number') return Math.max(0, Math.min(1, ((mundo.tick - cg.t0) + alfa) * PASSO / cheia));
+  return 0;
+}
+
+iniciarEstados();
+
 // ------------------------------------------------------------------ 3D
-let cena3d, campo, bola3d, jog3d, cam, entrada;
+let cena3d, campo, bola3d, jog3d, cam, entrada, marcas;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -155,6 +230,15 @@ const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
 const _bp = { x: 0, y: 0, z: 0 };
+const _proj = new THREE.Vector3();
+const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, bz: 0, ax: NaN, az: NaN };
+/** Ponto do mundo → px CSS (sem alocar). */
+function projetar(x, y, z, out) {
+  _proj.set(x, y, z).project(cam.camera);
+  out.x = (_proj.x + 1) / 2 * window.innerWidth; out.y = (1 - _proj.y) / 2 * window.innerHeight; out.atras = _proj.z > 1;
+  return out;
+}
+const _pt = { x: 0, y: 0, atras: false };
 
 function pausado() { return hud.menuAberto || hud.ajudaAberta; }
 
@@ -165,26 +249,37 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   _bp.z = lerp(bolaAnt.p.z, bolaAtu.p.z, alfa);
   _qd.slerpQuaternions(bolaAnt.q, bolaAtu.q, alfa);
   bola3d.atualizar(_bp, _qd);
-  // jogadores interpolados
+  // jogadores interpolados (quantos houver, dos dois times)
+  const idC = idControlado();
+  const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
   let n = 0;
-  let hx = 0, hz = 0;
+  let hx = 0, hz = 0, achou = false;
   for (const j of mundo.jogadores) {
     const e = estJ.get(j.id);
     if (!e) continue;
     interpolarPose(e.ant, e.atu, alfa, e.des);
     const it = lista[n] ?? (lista[n] = {});
-    it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === ID_HUMANO;
+    it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === idC;
+    it.goleiro = j.posicao === 'GOL'; it.proximo = idProx != null && j.id === idProx && !it.controlado;
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
-    if (it.controlado) { hx = it.x; hz = it.z; }
+    if (it.controlado) { hx = it.x; hz = it.z; achou = true; }
     n++;
   }
   lista.length = n;
-  const h = jogadorPorId(mundo, ID_HUMANO);
-  cam.atualizar(dt, { jx: hx, jz: hz, jvx: h ? h.vx : 0, jvz: h ? h.vz : 0, bx: _bp.x, bz: _bp.z }, corteCamera);
+  const h = controlado();
+  if (!achou && h) { hx = h.x; hz = h.z; }
+  // câmera: controlado + bola; com a bola no ar, antecipa a queda (m.voo.alvo)
+  const voo = mundo.voo;
+  alvoCam.jx = hx; alvoCam.jz = hz; alvoCam.jvx = h ? h.vx : 0; alvoCam.jvz = h ? h.vz : 0;
+  alvoCam.bx = _bp.x; alvoCam.bz = _bp.z;
+  const vooAtivo = voo && voo.alvo && Number.isFinite(voo.alvo.x) && (voo.tickChegada == null || mundo.tick <= voo.tickChegada);
+  alvoCam.ax = vooAtivo ? voo.alvo.x : NaN; alvoCam.az = vooAtivo ? voo.alvo.z : NaN;
+  cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
   const f = cam.foco();
   cena3d.acompanhar(f.x, f.z);
   jog3d.atualizar(lista, cam.camera);
+  marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   campo.atualizar(agoraMs / 1000);
   if (renderizar) cena3d.desenhar(cam.camera);
   render.bola.x = _bp.x; render.bola.y = _bp.y; render.bola.z = _bp.z;
@@ -198,8 +293,15 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     const kmh = Math.hypot(h.vx, h.vz) * 3.6;
     kmhVisto += (kmh - kmhVisto) * Math.min(1, dt * 8);
     const [modo, forte] = modoDoJogador(h);
-    hud.atualizar(agoraMs, kmhVisto < 0.5 ? 0 : kmhVisto, modo, forte);
-  }
+    hud.atualizar(agoraMs, kmhVisto < 0.5 ? 0 : kmhVisto, modo, forte, h.posicao ?? null);
+    // barra de força logo abaixo do anel do controlado
+    if (h.carga) {
+      projetar(hx, 0, hz + 0.8, _pt);
+      hud.carga(_pt.atras ? null : { x: _pt.x, y: _pt.y + 6, forca: forcaDaCarga(h.carga), tipo: h.carga.tipo });
+    } else hud.carga(null);
+  } else hud.carga(null);
+  hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
+  hud.minimapa(agoraMs, mundo, idC, idProx);
 }
 
 function quadro(agoraMs, desenhar = true) {
@@ -213,8 +315,10 @@ function quadro(agoraMs, desenhar = true) {
   } else {
     const r = avancarLaco(laco, agoraMs);
     for (let i = 0; i < r.passos; i++) {
-      const e = DEMO_ON ? entradaDemo(mundo) : ent;
+      const e = DEMO_ON && S.entradaDemo ? S.entradaDemo(mundo) : ent;
       rodarPasso(e, filaAcoes.length ? filaAcoes.splice(0) : null);
+      // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
+      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw).botoes; }
     }
     alfa = r.alfa;
   }
@@ -348,10 +452,12 @@ async function iniciar() {
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
+  marcas = criarMarcas(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
   entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao });
+  atualizarFase();
   redimensionar();
   window.addEventListener('resize', redimensionar);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', redimensionar);
@@ -376,6 +482,18 @@ async function iniciar() {
   requestAnimationFrame(aoQuadro);
 }
 
+function trocarMundo(m) {
+  mundo = m;
+  contPassos = 0; alfa = 0;
+  laco.acum = 0; laco.ultimo = null;
+  filaAcoes.length = 0;
+  iniciarEstados();
+  corteCamera = true;
+  if (entrada) entrada.definirFase(fase.atual);
+  hud.definirEstado({ marcador: marcadorLigado(mundo) });
+  return hashMundo(mundo);
+}
+
 // ------------------------------------------------------------------ interface para os testes
 const api = {
   versao: VERSAO,
@@ -398,23 +516,21 @@ const api = {
     for (let i = 0; i < n; i++) {
       let e, ac = null;
       if (Array.isArray(roteiro)) { e = roteiro[Math.min(i, roteiro.length - 1)]; ac = e.acoes ?? null; }
-      else if (roteiro === 'demo') e = entradaDemo(mundo);
-      else e = roteiro ?? { x: 0, z: 0, botoes: 0 };
+      else if (roteiro === 'demo') e = S.entradaDemo ? S.entradaDemo(mundo) : null;
+      else e = roteiro;
+      e = e ?? { x: 0, z: 0, botoes: 0 };
       rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
     }
     return hashMundo(mundo);
   },
-  /** Mundo novo com as opções de criarTreino (ex.: {semente: 7}). */
+  /** Mundo novo com as opções de criarTreino (ex.: {semente: 7, modo: 'conducao'}). */
   reiniciar(opc = {}) {
-    mundo = criarTreino({ semente: SEMENTE, ...opc });
-    contPassos = 0; alfa = 0;
-    laco.acum = 0; laco.ultimo = null;
-    filaAcoes.length = 0;
-    iniciarEstados();
-    corteCamera = true;
-    hud.definirEstado({ marcador: marcadorLigado(mundo) });
-    return hashMundo(mundo);
+    return trocarMundo(criarMundoTreino(opc));
   },
+  /** Troca o mundo inteiro (testes e prints de conferência montam um mundo à parte). */
+  trocarMundo(m) { return trocarMundo(m); },
+  /** Ataque × defesa vista pelos botões agora. */
+  get fase() { return fase.atual; },
   relogio: {
     /** Relógio manual: o laço usa um tempo controlado (testes a 60/120/144 Hz). */
     usarManual(v = true) {
@@ -442,11 +558,15 @@ const api = {
   abrirAjuda() { hud.abrirAjuda(true); },
   fecharAjuda() { hud.fecharAjuda(); },
   estado() {
-    const h = jogadorPorId(mundo, ID_HUMANO);
+    const h = controlado();
     const [modo] = modoDoJogador(h);
     return {
       tick: mundo.tick, posse: mundo.posse, modo, kmh: h ? Math.hypot(h.vx, h.vz) * 3.6 : 0,
-      jogador: h ? { x: h.x, z: h.z, rumo: h.rumo } : null, bola: { ...mundo.bola.p },
+      jogador: h ? { id: h.id, x: h.x, z: h.z, rumo: h.rumo, botoes: h.botoes | 0, posicao: h.posicao ?? null, carga: h.carga ? { ...h.carga } : null } : null,
+      bola: { ...mundo.bola.p },
+      controlado: idControlado(), proximaTroca: mundo.proximaTroca?.[TIME_HUMANO] ?? null, fase: fase.atual,
+      placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0], voo: mundo.voo ? { ...mundo.voo } : null,
+      jogadores: mundo.jogadores.length, modoTreino: mundo.modo ?? null, logicaEtapa2: 'controlado' in mundo,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
       desenhoChamadas: cena3d ? cena3d.info().render.calls : 0,
       // memória na GPU (vazamento = número que cresce com o tempo)

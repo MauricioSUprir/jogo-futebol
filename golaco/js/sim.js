@@ -9,8 +9,13 @@ import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
 import { clamp, difAng, quantizar } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
+  executarToque,
 } from './conducao.js';
 import { MD } from './matdet.js';
+import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca } from './acoes.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
+import { entradaIA } from './ia.js';
+import { ACOES } from './config.js';
 
 /**
  * Cria o mundo. opcoes:
@@ -29,15 +34,34 @@ export function criarMundo(opcoes = {}) {
     posse: opcoes.posse ?? null,
     eventos: [],
     log: opcoes.log ? [] : null,
-    stats: { perdas: 0, roubadas: 0 },
+    stats: { perdas: 0, roubadas: 0, passes: 0, chutes: 0, defesas: 0, gols: 0 },
+    ataca: opcoes.ataca ?? { 0: 1, 1: -1 },
+    controlado: {},
+    humanos: [],
+    placar: { 0: 0, 1: 0 },
+    voo: null,
+    naMao: null,
+    proximaTroca: {},
   };
   for (const d of opcoes.jogadores ?? [{ id: 0, x: 0, z: 0, rumo: 0 }]) {
     const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0);
     j.papel = d.papel ?? 'humano';
+    j.posicao = d.posicao ?? 'MEI';
+    if (d.vaga) j.vaga = { x: d.vaga.x, z: d.vaga.z };
     j.cond = criarCond();
     m.jogadores.push(j);
+    if (j.papel === 'humano' && m.controlado[j.time] == null) {
+      m.controlado[j.time] = j.id;
+      if (!m.humanos.includes(j.time)) m.humanos.push(j.time);
+    }
   }
+  if (opcoes.controlado) Object.assign(m.controlado, opcoes.controlado);
   return m;
+}
+
+/** O jogador j é o controlado pelo humano do time dele? */
+export function ehControlado(m, j) {
+  return m.humanos.includes(j.time) && m.controlado[j.time] === j.id;
 }
 
 export function jogadorPorId(m, id) {
@@ -167,15 +191,32 @@ function roubarComMarcador(m, j) {
 }
 
 /**
- * Um passo de simulação (1/60 s). entradas: { [id]: {x, z, botoes} } (analógico no mundo).
+ * Um passo de simulação (1/60 s). entradas: { [time]: {x, z, botoes} } — o analógico já no
+ * mundo; vai para o jogador CONTROLADO daquele time (m.controlado). Os demais são da IA.
  */
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
-  // 1) entradas
+  // 1) entradas: humano (o controlado de cada time humano) e IA (entrada virtual)
   for (const j of js) {
-    if (j.papel === 'humano') aplicarEntrada(j, entradas?.[j.id], m.tick);
+    if (j.papel === 'marcador' || j.papel === 'parado') continue;
+    const e = m.humanos.includes(j.time) ? entradas?.[j.time] : null;
+    j.botoesTime = e ? (e.botoes | 0) : 0;
+    if (ehControlado(m, j)) {
+      // recebendo um passe com o analógico solto: a assistência leva ao encontro da bola
+      const assist = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
+      if (assist) {
+        const ia = entradaIA(m, j);
+        aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
+      } else aplicarEntrada(j, e, m.tick);
+    } else if (j.posicao === 'GOL') {
+      aplicarEntrada(j, null, m.tick);
+    } else {
+      aplicarEntrada(j, entradaIA(m, j), m.tick);
+    }
+    atualizarBotoesAcao(m, j);
   }
+  trocarJogador(m, entradas);
   // 2) movimento de cada corpo
   for (const j of js) {
     let mv;
@@ -184,6 +225,8 @@ export function passo(m, entradas) {
       else mv = moverMarcador(m, j);
     } else if (j.papel === 'parado') {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
+    } else if (j.posicao === 'GOL' && !(ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id)) {
+      mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
@@ -202,27 +245,220 @@ export function passo(m, entradas) {
     passoPassada(j, m.posse === j.id, PASSO, null);
   }
   colisaoCorpos(m);
-  // 3) controle de bola
-  if (m.posse != null) {
+  // 3) ações e controle de bola
+  for (const j of js) if (j.pedido) processarPedido(m, j);
+  if (m.naMao != null) {
+    const g = jogadorPorId(m, m.naMao);
+    if (g) goleiroComBola(m, g);
+  } else if (m.posse != null) {
     const dono = jogadorPorId(m, m.posse);
-    if (dono) controlarComBola(m, dono);
-  } else {
-    for (const j of js) {
-      if (j.papel === 'humano') { if (tentarDominio(m, j)) break; }
+    if (dono) {
+      const t = dono.cond.toque;
+      if (t && t.tipo === 'acao' && m.tick >= t.tick) {
+        if (!executarAcaoMarcada(m, dono)) controlarComBola(m, dono);
+      } else controlarComBola(m, dono);
     }
+  } else {
+    bolaLivre(m);
   }
   for (const j of js) {
     if (j.papel === 'marcador' && !(j.descanso > 0) && m.posse !== j.id) roubarComMarcador(m, j);
   }
-  // 4) bola
-  passoBola(m.bola, m.eventos);
-  colisaoBolaCorpo(m);
-  // 5) posse
-  if (m.posse != null) {
+  // 4) goleiros leem o chute e defendem
+  for (const j of js) {
+    if (j.posicao !== 'GOL') continue;
+    lerChute(m, j);
+    aplicarDefesa(m, j);
+  }
+  // 5) bola
+  if (m.naMao != null) {
+    const g = jogadorPorId(m, m.naMao);
+    if (g) bolaNaMao(m, g);
+  } else {
+    passoBola(m.bola, m.eventos);
+    colisaoBolaCorpo(m);
+  }
+  verificarGol(m);
+  // 6) posse
+  if (m.posse != null && m.naMao == null) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) verificarPerda(m, dono);
   }
+  if (m.voo && m.posse != null) m.voo = null;
   m.tick++;
+}
+
+/** Executa a ação marcada para este tick (pé de apoio no chão, bola no alcance). */
+function executarAcaoMarcada(m, j) {
+  const t = j.cond.toque;
+  const b = m.bola;
+  const pe = t.pe, apoio = 1 - pe;
+  const alc = MD.hypot(b.p.x - j.x, b.p.z - j.z) <= CONDUCAO.alcance + 0.1 && b.p.y < 0.7;
+  if (!alc) { j.cond.toque = null; return false; }
+  const peFinal = j.pes[apoio].apoio ? pe : (j.pes[pe].apoio ? apoio : pe);
+  if (!j.pes[1 - peFinal].apoio && m.tick - t.tick < 8) return true; // espera o pé de apoio pisar
+  return executarAcao(m, j, peFinal, false);
+}
+
+/** Bola livre: quem vai recebê-la? Recebedor marcado primeiro; depois, os mais perto. */
+function bolaLivre(m) {
+  const b = m.bola;
+  const cands = m.jogadores.filter(j => j.papel !== 'marcador' && j.papel !== 'parado' && j.posicao !== 'GOL');
+  const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
+  cands.sort((a, c) => (a.id === alvo ? -1 : 0) - (c.id === alvo ? -1 : 0) || MD.hypot(a.x - b.p.x, a.z - b.p.z) - MD.hypot(c.x - b.p.x, c.z - b.p.z));
+  const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
+  for (const j of cands) {
+    if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    if (!b.rolando && b.p.y > 0.45) {
+      if (bolaAltaNoCorpo(m, j)) return;
+      continue;
+    }
+    const antes = m.posse;
+    if (tentarDominio(m, j, primeira)) {
+      if (m.posse === j.id && antes !== j.id) ganhouPosse(m, j);
+      return;
+    }
+  }
+  // o goleiro pega a bola solta perto dele (dentro da área)
+  for (const g of m.jogadores) {
+    if (g.posicao !== 'GOL') continue;
+    const gx = linhaDoGol(m, g);
+    const naArea = Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
+    if (naArea && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9) {
+      m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
+      b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;
+      m.eventos.push({ tipo: 'defesa', id: g.id, modo: 'pegou' });
+      ganhouPosse(m, g);
+      return;
+    }
+  }
+}
+
+/** De primeira: com uma ação pedida, bate na bola que chega em vez de dominar. */
+function primeira(m, j, pe) {
+  if (!j.pedido) return false;
+  const ok = executarAcao(m, j, pe, true);
+  return ok;
+}
+
+/** Bola alta chegando ao corpo: cabeceio (com ação pedida) ou domínio no peito/coxa. */
+function bolaAltaNoCorpo(m, j) {
+  const c = j.cond;
+  const b = m.bola;
+  if (c.toque && c.toque.tipo === 'aereo') {
+    if (m.tick < c.toque.tick) return true;
+    c.toque = null;
+    const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+    const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
+    if (d > 0.75 || b.p.y > alcanceY) return false;
+    if (b.p.y > ACOES.cabeceio.alturaPeito[1] || j.pedido) {
+      const p = j.pedido ?? { tipo: 'passe', forca: 0.5 };
+      j.pedido = null;
+      executarCabeceio(m, j, p);
+      m.eventos.push({ tipo: 'cabeceio', id: j.id });
+      return true;
+    }
+    // domínio no peito/coxa: a bola morre e cai no pé, e o toque leva para onde o analógico manda
+    b.v.x *= 0.25; b.v.z *= 0.25; b.v.y = 0; b.p.y = 0.11; b.rolando = true;
+    executarToque(m, j, j.par.attr.pePreferido, 'dominio');
+    m.eventos.push({ tipo: 'dominioAereo', id: j.id, altura: b.p.y });
+    ganhouPosse(m, j);
+    return true;
+  }
+  const r = bolaAltaPassando(m, j, 60);
+  if (!r) return false;
+  const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
+  if (r.y > alcanceY || r.y < 0.2) return false;
+  c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
+  return true;
+}
+
+/** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
+function ganhouPosse(m, j) {
+  if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
+    m.controlado[j.time] = j.id;
+    m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
+  }
+  j.recebe = null;
+  m.voo = null;
+  for (const t of m.humanos) {
+    if (t === j.time) continue;
+    // o time humano perdeu a bola: passa para o jogador de linha mais perto dela
+    let mel = null, dm = Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== t || o.posicao === 'GOL') continue;
+      const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
+      if (d < dm) { dm = d; mel = o; }
+    }
+    if (mel && m.controlado[t] !== mel.id) { m.controlado[t] = mel.id; m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+  }
+}
+
+/** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */
+function goleiroComBola(m, g) {
+  const humano = ehControlado(m, g);
+  if (!humano && !g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 90) {
+    // IA: lança para o companheiro mais adiantado ou rola para o mais perto
+    g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick };
+  }
+  if (g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 20) {
+    soltarDaMao(m, g);
+    const b = m.bola;
+    b.p.x = g.x + MD.cos(g.rumo) * 0.45; b.p.z = g.z + MD.sin(g.rumo) * 0.45;
+    executarAcao(m, g, g.par.attr.pePreferido, false);
+  }
+}
+
+/** Gol: a bola passou inteira da linha entre as traves e por baixo do travessão. */
+function verificarGol(m) {
+  const b = m.bola;
+  if (m.golTick != null) return;
+  const R = 0.11;
+  if (Math.abs(b.p.x) < CAMPO.meioX + R) return;
+  if (Math.abs(b.p.z) >= CAMPO.gol.largura / 2 || b.p.y >= CAMPO.gol.altura) return;
+  const ladoGol = b.p.x > 0 ? 1 : -1;
+  // marca quem ataca esse lado
+  let time = 0;
+  for (const t of Object.keys(m.ataca)) if (m.ataca[t] === ladoGol) time = +t;
+  m.placar[time] = (m.placar[time] ?? 0) + 1;
+  m.golTick = m.tick;
+  m.stats.gols++;
+  m.eventos.push({ tipo: 'gol', time, autor: m.ultimoToque?.id ?? null });
+}
+
+/** TROCAR (borda do botão): passa o controle para quem chega antes no caminho do condutor. */
+function trocarJogador(m, entradas) {
+  for (const t of m.humanos) {
+    const melhor = candidatoTroca(m, t);
+    m.proximaTroca[t] = melhor ? melhor.id : null;
+    const j = jogadorPorId(m, m.controlado[t]);
+    if (!j) continue;
+    const apertou = (j.botoes & BOTAO.TROCAR) && !(j.botoesAnt & BOTAO.TROCAR);
+    if (apertou && melhor && melhor.id !== j.id) {
+      m.controlado[t] = melhor.id;
+      m.eventos.push({ tipo: 'troca', id: melhor.id });
+    }
+  }
+}
+
+/** Melhor candidato à troca: quem chega antes num ponto entre a bola e o meu gol. */
+export function candidatoTroca(m, t) {
+  const b = m.bola;
+  const lado = ataca(m, t);
+  const meuGol = -lado * CAMPO.meioX;
+  const gx = meuGol - b.p.x, gz = -b.p.z;
+  const g = MD.hypot(gx, gz) || 1;
+  const px = b.p.x + (gx / g) * 2.5, pz = b.p.z + (gz / g) * 2.5;
+  let mel = null, mt = Infinity;
+  for (const o of m.jogadores) {
+    if (o.time !== t || o.posicao === 'GOL' || o.id === m.controlado[t]) continue;
+    const d = MD.hypot(o.x - px, o.z - pz);
+    // chega antes = distância / velocidade de arrancada, com bônus para quem já corre para lá
+    const v = Math.max(1, (o.vx * (px - o.x) + o.vz * (pz - o.z)) / Math.max(d, 1e-6));
+    const tt = d / o.par.vArrancada - Math.min(0.4, v * 0.04);
+    if (tt < mt) { mt = tt; mel = o; }
+  }
+  return mel;
 }
 
 // ---------------------------------------------------------------- determinismo
@@ -246,6 +482,9 @@ export function hashMundo(m) {
     for (const v of [j.x, j.z, j.vx, j.vz, j.rumo, j.giro, j.fase, j.pes[0].x, j.pes[0].z, j.pes[1].x, j.pes[1].z]) h = misturar(h, v);
   }
   h = misturar(h, m.posse ?? -1);
+  h = misturar(h, m.naMao ?? -1);
+  for (const t of Object.keys(m.placar ?? {})) h = misturar(h, m.placar[t]);
+  for (const t of Object.keys(m.controlado ?? {})) h = misturar(h, m.controlado[t]);
   h = misturar(h, m.tick);
   for (const s of m.rng.s) h = misturar(h, s);
   return h >>> 0;

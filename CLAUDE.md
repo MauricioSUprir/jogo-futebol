@@ -7,6 +7,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
+  Etapa 1 ENTREGUE (#449, #450). Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
+  continue assim" (não mexer sem motivo medido). Quer um jogo **11×11 de alto nível, tipo FIFA**: posições,
+  regras, táticas, torcida **cantando alto**, **cenas de pré-jogo**, botões de **chute, passe, enfiada,
+  lançamento e saída do goleiro**, e **tirar o botão CONDUÇÃO** do celular. Ordem: Etapa 2 (ações + botões +
+  goleiro básico) → 3 (11×11, tática, IA) → 4 (regras, goleiro, bolas paradas, equilíbrio) → 5 (modelos humanos,
+  mocap, rostos) → 6 (torcida cantando, pré-jogo, replay, comemoração) → 7.
   As filas antigas do `futebol3d/` (abaixo) ficam PARADAS; o `futebol3d/` continua publicado e intocado porque o
   Total Match usa ele nas partidas 3D, até o dono decidir aposentá-lo. Não copiar nem ler código do `futebol3d/`
   para o projeto novo.

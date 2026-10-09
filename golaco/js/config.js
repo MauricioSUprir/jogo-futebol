@@ -203,6 +203,16 @@ export const ATRIBUTOS_PADRAO = {
   controle: 75,
   forca: 70,
   altura: 180,
+  passe: 72,                  // passe curto
+  passeLongo: 68,             // lançamento e cruzamento
+  finalizacao: 70,
+  cabeceio: 65,
+  impulsao: 65,
+  peFraco: 50,                // 0 = só usa um pé; 100 = ambidestro
+  pePreferido: 1,             // 0 = esquerdo, 1 = direito
+  reflexo: 65,                // goleiro
+  posicionamento: 65,
+  mergulho: 65,
 };
 
 // Câmera de TV. O enquadramento é pela LARGURA vista no foco (m), não pelo fov: o fov vertical
@@ -235,4 +245,35 @@ export const TREINO = {
   marcadorVel: 6.2,
   marcadorAcel: 5.5,
   marcadorAlcance: 0.55,      // m — distância bola–marcador que conta como roubada
+};
+
+// Etapa 2 — ações com bola (passe, enfiada, lançamento, cruzamento, chute). Valores iniciais;
+// a calibração vem da pesquisa da Etapa 2 (PESQUISA-ETAPA2.md) e das medidas dos testes.
+export const ACOES = {
+  cargaCheia: 0.8,            // s segurando para a força máxima
+  cargaMax: 1.2,              // s — depois disso solta sozinho
+  pedidoValidade: 0.6,        // s — pedido sem toque possível expira
+  pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
+  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
+  passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 9.5], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
+  enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
+  lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.66], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
+  cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.8, colocadoErro: 0.6, giroColocado: 26 },
+  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72 },
+  cabeceio: { alcanceSalto: 2.55, alturaPeito: [0.45, 1.7], v: [9, 17] },
+  pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
+  primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
+};
+
+// Goleiro (Etapa 2: posicionamento, defesa e saída). Valores iniciais (pesquisa da Etapa 2).
+export const GOLEIRO = {
+  reacao: [0.32, 0.2],        // s (ruim → bom)
+  alcanceMergulho: 2.6,       // m do centro do corpo ao alcance da mão
+  alcanceEmPe: 0.9,
+  vMergulho: 5.2,             // m/s médio no mergulho lateral
+  alturaMax: 2.45,            // m alcançados com a mão no alto
+  distLinha: [0.6, 3.5],      // m à frente da linha (bola longe → perto)
+  saidaMax: 35,               // m da linha até onde sai com o botão
+  encaixeVMax: 20,            // m/s — acima disso tende a espalmar
 };

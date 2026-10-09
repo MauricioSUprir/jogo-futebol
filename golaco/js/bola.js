@@ -343,3 +343,90 @@ export function bolaParada(b) {
 }
 
 export const CONST_BOLA = { R, M, I, AREA, K_AR };
+
+// ------------------------------------------------------------ bola no ar: mira
+
+/** Bola de trabalho (para simular voos sem mexer na bola do jogo). */
+function bolaDeTeste(p, v, w) {
+  const b = criarBola(p.x, p.z);
+  b.p.y = p.y;
+  b.v.x = v.x; b.v.y = v.y; b.v.z = v.z;
+  b.w.x = w.x; b.w.y = w.y; b.w.z = w.z;
+  b.rolando = !(v.y > 0.01 || p.y > R + 1e-3);
+  return b;
+}
+
+/**
+ * Simula um voo até a bola tocar o chão pela 1ª vez (ou maxTicks). Devolve o ponto de queda,
+ * os ticks e a altura máxima. Mesma física do jogo (exata).
+ */
+export function simularVoo(p, v, w, maxTicks = 420) {
+  const b = bolaDeTeste(p, v, w);
+  const ev = [];
+  let apice = b.p.y;
+  for (let i = 1; i <= maxTicks; i++) {
+    passoBola(b, ev);
+    if (b.p.y > apice) apice = b.p.y;
+    if (ev.length && ev.some(e => e.tipo === 'quique') || (b.rolando && i > 1)) {
+      return { x: b.p.x, z: b.p.z, ticks: i, apice, v: { ...b.v } };
+    }
+    ev.length = 0;
+  }
+  return { x: b.p.x, z: b.p.z, ticks: maxTicks, apice, v: { ...b.v } };
+}
+
+/**
+ * Altura da bola quando ela percorre a distância horizontal D na direção (ux, uz), saindo de p
+ * com velocidade escalar s e elevação el (rad). Se cair antes, devolve a altura negativa
+ * proporcional ao que faltou (mantém a função crescente na elevação, para a busca binária).
+ */
+export function alturaNaDistancia(p, ux, uz, D, s, el, w = { x: 0, y: 0, z: 0 }, maxTicks = 300) {
+  const ce = MD.cos(el), se = MD.sin(el);
+  const b = bolaDeTeste(p, { x: ux * s * ce, y: s * se, z: uz * s * ce }, w);
+  const ev = [];
+  let dAnt = 0, yAnt = b.p.y;
+  for (let i = 1; i <= maxTicks; i++) {
+    passoBola(b, ev);
+    const d = (b.p.x - p.x) * ux + (b.p.z - p.z) * uz;
+    if (d >= D) {
+      const t = (D - dAnt) / Math.max(d - dAnt, 1e-9);
+      return { y: yAnt + (b.p.y - yAnt) * t, ticks: i, lateral: -(b.p.x - p.x) * uz + (b.p.z - p.z) * ux };
+    }
+    if (ev.some(e => e.tipo === 'quique') || (b.rolando && i > 2)) return { y: -(D - d), ticks: i, lateral: 0, caiu: true };
+    ev.length = 0;
+    dAnt = d; yAnt = b.p.y;
+  }
+  return { y: -D, ticks: maxTicks, lateral: 0, caiu: true };
+}
+
+/**
+ * Passe alto: velocidade (m/s) para a bola, saindo de p na direção (ux,uz) com elevação el,
+ * cair a D metros. Busca binária sobre a simulação.
+ */
+export function velParaPousar(p, ux, uz, D, el, w = { x: 0, y: 0, z: 0 }) {
+  const ce = MD.cos(el), se = MD.sin(el);
+  let lo = 1, hi = 45;
+  const dist = s => {
+    const r = simularVoo(p, { x: ux * s * ce, y: s * se, z: uz * s * ce }, w, 600);
+    return (r.x - p.x) * ux + (r.z - p.z) * uz;
+  };
+  if (dist(hi) < D) return hi;
+  for (let i = 0; i < 30; i++) {
+    const m = (lo + hi) / 2;
+    if (dist(m) < D) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+
+/**
+ * Chute: elevação (rad) para a bola, saindo a velocidade s na direção (ux,uz), passar a D metros
+ * na altura y. Busca binária na elevação entre −8° e 50°.
+ */
+export function elevacaoParaAltura(p, ux, uz, D, s, y, w = { x: 0, y: 0, z: 0 }) {
+  let lo = -0.14, hi = 0.87;
+  for (let i = 0; i < 28; i++) {
+    const m = (lo + hi) / 2;
+    if (alturaNaDistancia(p, ux, uz, D, s, m, w).y < y) lo = m; else hi = m;
+  }
+  return (lo + hi) / 2;
+}

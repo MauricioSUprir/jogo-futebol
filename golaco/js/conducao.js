@@ -564,12 +564,14 @@ function acompanharBola(m, j, base) {
  * Jogador sem a posse e bola livre: procura o primeiro toque (domínio). Devolve true se
  * marcou um domínio.
  */
-export function tentarDominio(m, j) {
+export function tentarDominio(m, j, primeira) {
   const c = j.cond;
   const b = m.bola;
   if (c.toque && c.toque.tipo === 'dominio') {
     if (m.tick >= c.toque.tick) {
       if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+        // de primeira: com uma ação pedida, bate sem dominar
+        if (primeira && primeira(m, j, c.toque.pe)) { c.toque = null; return true; }
         executarToque(m, j, c.toque.pe, 'dominio');
         return true;
       }
@@ -583,8 +585,11 @@ export function tentarDominio(m, j) {
   if (!op) return false;
   c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio' };
   if (op.i <= 1) {
-    // a bola chega já: domina neste tick se estiver no alcance
-    if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) { executarToque(m, j, op.pe, 'dominio'); }
+    // a bola chega já: domina (ou bate de primeira) neste tick se estiver no alcance
+    if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+      if (primeira && primeira(m, j, op.pe)) c.toque = null;
+      else executarToque(m, j, op.pe, 'dominio');
+    }
   }
   return true;
 }

@@ -49,15 +49,25 @@ html.noite .vinheta { display: block; }
 
 /* ------------------------------------------------------------------ HUD */
 .hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; }
-.marca {
+.placar {
   position: absolute; top: calc(var(--sa-t) + var(--m)); left: calc(var(--sa-l) + var(--m));
-  display: flex; align-items: center; gap: 10px; padding: 7px 14px 7px 9px; height: 48px;
+  display: flex; align-items: center; gap: 10px; padding: 0 12px 0 9px; height: 48px;
   background: var(--painel); border: 1px solid var(--linha); border-radius: 10px;
 }
-.marca-simbolo { width: 30px; height: 30px; color: var(--verde); flex: none; }
-.marca-texto { display: flex; flex-direction: column; line-height: 1; }
-.marca-texto strong { font-size: 18px; font-weight: 900; font-style: italic; letter-spacing: 0.06em; }
-.marca-texto span { margin-top: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.16em; color: var(--verde); }
+.marca-simbolo { width: 28px; height: 28px; color: var(--verde); flex: none; }
+.placar-linha { display: flex; align-items: center; gap: 8px; line-height: 1; }
+.placar-time { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; }
+.placar-time i { display: block; width: 4px; height: 18px; border-radius: 2px; }
+.placar-time.t0 i { background: var(--verde); }
+.placar-time.t1 i { background: #e7eaec; }
+.placar-gols {
+  min-width: 26px; height: 30px; display: grid; place-items: center; padding: 0 5px;
+  font-size: 19px; font-weight: 900; font-variant-numeric: tabular-nums;
+  background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 6px;
+}
+.placar-gols.mudou { animation: placar-mudou 1.2s ease-out; }
+@keyframes placar-mudou { 0%, 40% { background: var(--verde); color: var(--preto); } 100% { background: var(--preto); color: var(--texto); } }
+.placar-x { width: 6px; height: 2px; background: var(--texto-2); border-radius: 1px; }
 
 .painel-jogo {
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m) + 48px + 10px);
@@ -75,6 +85,11 @@ html.noite .vinheta { display: block; }
 .modo::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--verde); box-shadow: 0 0 8px rgba(25, 224, 122, 0.8); flex: none; }
 .modo.sem-bola::before { background: #5d6a64; box-shadow: none; }
 .modo.forte::before { background: #fff; box-shadow: 0 0 10px rgba(25, 224, 122, 1); }
+.posicao {
+  font-size: 11px; font-weight: 900; letter-spacing: 0.12em; color: var(--preto);
+  background: var(--verde); padding: 4px 7px; border-radius: 5px;
+}
+.posicao[hidden] { display: none; }
 
 .btn-menu {
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
@@ -94,6 +109,62 @@ html.noite .vinheta { display: block; }
 }
 .aviso.visivel { opacity: 1; transform: translate(-50%, 0); }
 .aviso.gol { background: var(--verde); color: var(--preto); border-color: var(--verde); font-size: 18px; letter-spacing: 0.14em; }
+.aviso.forte { border-left-color: #fff; }
+html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
+
+/* GOL! grande e verde no meio da tela (2 s) */
+.gol-tela {
+  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.6); opacity: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.gol-tela span {
+  font-size: clamp(64px, 15vmin, 150px); font-weight: 900; font-style: italic; letter-spacing: 0.04em; line-height: 0.9;
+  color: var(--verde); -webkit-text-stroke: 3px var(--preto); paint-order: stroke fill;
+  text-shadow: 0 0 40px rgba(25, 224, 122, 0.55), 0 6px 0 rgba(0, 0, 0, 0.55);
+}
+.gol-tela small {
+  font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--preto);
+  background: var(--verde); padding: 5px 12px; border-radius: 6px;
+}
+.gol-tela small:empty { display: none; }
+.gol-tela.visivel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola */
+.minimapa {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--sa-b) + var(--m)); width: 132px; height: 86px;
+  border-radius: 6px; border: 1px solid var(--linha); background: rgba(7, 9, 10, 0.72);
+  opacity: 0.92;
+}
+/* celular deitado: no topo, entre o placar e o painel (nada de dedo em cima) */
+html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); width: 92px; height: 60px; }
+/* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) e abre espaço ao minimapa */
+@media (max-width: 1000px) {
+  html.com-toque .vel { display: none; }
+  html.com-toque .modo { border-left: 0; padding-left: 0; min-width: 0; }
+}
+
+/* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
+.carga {
+  position: absolute; left: 0; top: 0; width: 64px; margin-left: -32px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  opacity: 0; transition: opacity 0.12s; will-change: transform;
+}
+.carga.visivel { opacity: 1; }
+.carga-tipo {
+  font-size: 10px; font-weight: 900; letter-spacing: 0.14em; color: var(--texto);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.7);
+}
+.carga-barra {
+  width: 64px; height: 8px; padding: 1px; border-radius: 4px;
+  background: rgba(7, 9, 10, 0.85); border: 1px solid rgba(25, 224, 122, 0.55);
+}
+.carga-barra i {
+  display: block; height: 100%; width: 0; border-radius: 3px;
+  background: linear-gradient(90deg, var(--verde-2), var(--verde) 60%, #b9ffd9);
+}
+.carga.cheia .carga-barra { border-color: #fff; box-shadow: 0 0 8px rgba(25, 224, 122, 0.9); }
 
 .qps {
   position: absolute; right: calc(var(--sa-r) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
@@ -137,27 +208,34 @@ html.modo-prints .dica-retrato { display: none; }
   background: radial-gradient(circle at 40% 35%, #5af0a3, var(--verde) 55%, var(--verde-2));
   box-shadow: 0 0 0 3px rgba(7, 9, 10, 0.55);
 }
+/* Botões do arco (posição, tamanho, --fs e --ic vêm de js/entrada.js: calcularLayoutToque).
+   Mínimo de 48 px; ataque e defesa trocam pelo estado do mundo (fase-ataque / fase-defesa). */
 .btn-toque {
-  position: absolute; pointer-events: auto; touch-action: none; padding: 0; border-radius: 50%;
-  display: grid; place-items: center; cursor: pointer;
-  font-weight: 900; letter-spacing: 0.05em; color: var(--texto);
-  background: rgba(8, 11, 12, 0.62); border: 2px solid rgba(25, 224, 122, 0.6);
+  position: absolute; left: 0; top: 0; width: 72px; height: 72px;
+  pointer-events: auto; touch-action: none; padding: 0; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
+  color: var(--texto); font-weight: 900; letter-spacing: 0.04em; line-height: 1;
+  background: radial-gradient(circle at 50% 35%, rgba(22, 30, 32, 0.78), rgba(6, 8, 9, 0.72));
+  border: 2px solid rgba(25, 224, 122, 0.6);
   opacity: var(--toque-opacidade);
-  box-shadow: inset 0 0 0 4px rgba(7, 9, 10, 0.35);
+  box-shadow: inset 0 0 0 3px rgba(7, 9, 10, 0.4), 0 2px 10px rgba(0, 0, 0, 0.35);
+  animation: bt-aparece 0.16s ease-out;
 }
-.btn-toque.ativo { background: var(--verde); color: var(--preto); border-color: #b9ffd9; }
-.btn-correr {
-  width: calc(92px * var(--toque-escala)); height: calc(92px * var(--toque-escala));
-  right: calc(var(--sa-r) + 22px); bottom: calc(var(--sa-b) + 22px);
-  font-size: calc(14px * var(--toque-escala));
+.btn-toque svg {
+  width: var(--ic, 24px); height: var(--ic, 24px); flex: none;
+  fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
 }
-.btn-mod {
-  /* "CONDUÇÃO" é a palavra mais longa: botão um pouco maior e letra mais justa, para o texto
-     não encostar na borda do círculo */
-  width: calc(86px * var(--toque-escala)); height: calc(86px * var(--toque-escala));
-  right: calc(var(--sa-r) + 22px + 92px * var(--toque-escala) + 16px); bottom: calc(var(--sa-b) + 22px + 44px * var(--toque-escala));
-  font-size: calc(10px * var(--toque-escala)); letter-spacing: 0.02em;
-}
+.btn-toque span { font-size: var(--fs, 11px); white-space: nowrap; }
+.btn-toque.ativo { background: var(--verde); color: var(--preto); border-color: #b9ffd9; box-shadow: 0 0 18px rgba(25, 224, 122, 0.55); }
+.btn-toque.ativo svg { stroke: var(--preto); }
+/* CHUTE: o maior, com o verde mais forte */
+.btn-chute { border-width: 3px; border-color: var(--verde); }
+.btn-chute span { letter-spacing: 0.08em; }
+.btn-trocar { border-width: 3px; }
+.btn-goleiro svg { stroke: #c6ff3d; }
+.btn-goleiro.ativo svg { stroke: var(--preto); }
+.toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
+@keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */
 .sobreposicao {
@@ -259,15 +337,16 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 }
 /* tela estreita: HUD do topo mais compacto para nada encostar */
 @media (max-width: 560px) {
-  .marca-texto span { display: none; }
   .modo { min-width: 0; }
   .vel { min-width: 52px; }
 }
 /* celular em pé: velocidade e modo descem para baixo da marca (nada lado a lado) */
 @media (max-width: 480px) {
   .painel-jogo { top: calc(var(--sa-t) + var(--m) + 48px + 10px); right: calc(var(--sa-r) + var(--m)); }
-  .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
+  .aviso, html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 116px); }
   html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); }
+  html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
+  html.com-toque .dica-retrato { top: calc(var(--sa-t) + var(--m) + 186px); }
 }
 
 /* ------------------------------------------------------------------ carregando e erro */
@@ -287,5 +366,5 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 @keyframes carregar { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
-html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .carregando { display: none; }
+html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando { display: none; }
 html.sem-hud .hud, html.sem-hud .toque { display: none; }

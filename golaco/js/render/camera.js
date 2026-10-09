@@ -9,6 +9,10 @@
 // maiores sem perder o que se vê dos lados; tela mais estreita (4:3) perde só metade da
 // largura; em pé (retrato) entra um perfil próprio, mais alto e inclinado, para o quadro não
 // virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena).
+//
+// Bola longe (lançamento, defesa): a bola manda — o foco nunca fica a mais de ~0,31 da largura
+// vista do "ponto da bola", e a bola nunca sai do quadro. Com a bola no ar (m.voo), o ponto da
+// bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
 import * as THREE from 'three';
 import { CAMERA, CAMPO } from '../config.js';
 import { molaCritica } from './util.js';
@@ -18,11 +22,11 @@ export const MODOS_CAMERA = ['tv', 'aproximada'];
 const PERFIS = {
   tv: {
     largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura,
-    pesoBola: 0.45, antecipa: 0.55, limX: CAMPO.meioX - 14, limZ0: -CAMPO.meioZ + 12, limZ1: CAMPO.meioZ - 11, olharY: 0,
+    pesoBola: 0.45, antecipa: 0.55, anteVoo: 0.42, limX: CAMPO.meioX - 14, limZ0: -CAMPO.meioZ + 12, limZ1: CAMPO.meioZ - 11, olharY: 0,
   },
   aproximada: {
     largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura,
-    pesoBola: 0.3, antecipa: 0.35, limX: CAMPO.meioX - 3, limZ0: -CAMPO.meioZ + 3, limZ1: CAMPO.meioZ - 2, olharY: 0.6,
+    pesoBola: 0.3, antecipa: 0.35, anteVoo: 0.3, limX: CAMPO.meioX - 3, limZ0: -CAMPO.meioZ + 3, limZ1: CAMPO.meioZ - 2, olharY: 0.6,
   },
 };
 // celular em pé: mesmos pesos, câmera mais alta/inclinada e limites que deixam chegar às linhas
@@ -97,19 +101,32 @@ export function criarCamera(aspecto) {
     /** a = largura/altura da tela; pequena = celular (fecha mais o plano). */
     redimensionar(a, pequena = false) { est.aspecto = a; est.pequena = !!pequena; },
     /**
-     * dt do quadro (s). alvo = {jx, jz, jvx, jvz, bx, bz} (posições INTERPOLADAS).
+     * dt do quadro (s). alvo = {jx, jz, jvx, jvz, bx, bz, ax?, az?} (posições INTERPOLADAS;
+     * ax/az = ponto de queda do passe/lançamento em andamento, se houver).
      * corte = true reposiciona sem mola (recomeço).
      */
     atualizar(dt, alvo, corte = false) {
       const metaMistura = est.modo === 'aproximada' ? 1 : 0;
       est.mistura += clamp(metaMistura - est.mistura, -dt / 0.6, dt / 0.6);
       const p = perfil();
-      // foco: entre jogador e bola, bola longe pesa menos (passe da máquina chegando)
-      const dbx = alvo.bx - alvo.jx, dbz = alvo.bz - alvo.jz;
+      // ponto da bola: no ar, antecipa a queda (parte do caminho até o alvo)
+      let px = alvo.bx, pz = alvo.bz;
+      if (Number.isFinite(alvo.ax) && Number.isFinite(alvo.az)) {
+        px += (alvo.ax - alvo.bx) * p.anteVoo;
+        pz += (alvo.az - alvo.bz) * p.anteVoo;
+      }
+      // foco: entre jogador e bola. Perto, a bola pesa pesoBola; um pouco longe (passe da
+      // máquina chegando) pesa menos; muito longe, a bola manda (o foco fica a ≤ R dela)
+      const dbx = px - alvo.jx, dbz = pz - alvo.jz;
       const db = Math.hypot(dbx, dbz);
-      const w = p.pesoBola * (db > 12 ? 12 / db : 1);
+      const R = p.largura * 0.31;
+      const w = db > 12 ? Math.max(p.pesoBola * 12 / db, 1 - R / db) : p.pesoBola;
       let fx = alvo.jx + dbx * w + alvo.jvx * p.antecipa;
       let fz = alvo.jz + dbz * w + alvo.jvz * p.antecipa;
+      // a bola (de verdade) nunca sai do quadro: na profundidade se vê menos que na largura
+      const mx = p.largura * 0.38, mz = p.largura * 0.24;
+      fx = clamp(fx, alvo.bx - mx, alvo.bx + mx);
+      fz = clamp(fz, alvo.bz - mz, alvo.bz + mz);
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (!est.iniciado || corte) {
