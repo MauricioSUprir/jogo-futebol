@@ -75,6 +75,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   times de fora por `teams.js` registerTeam, pausa com "Simular o resto" (sem Reiniciar/Sair) e "Controlar só o meu
   jogador" (Rumo ao Estrelato: troca bloqueada, câmera Pro, bola parada/goleiro com a IA). Mexeu em main.js/menus.js/
   teams.js? Rodar também `node legacy-total-match/ferramentas/testar-3d.mjs` (TM + 3D de ponta a ponta).
+- **Visual = a cara do Total Match** (dono, 09/10: "deixa os botões, menu, tudo com a cara do total match"):
+  `css/tm.css`, carregado por ÚLTIMO, troca a aparência de menus/pausa/configurações, HUD (placar com o logo TM,
+  faixas, gol, cartão, escalação), controles de toque e carregamento — Inter, preto #050807 + verde #22c55e, botão
+  principal em pílula com degradê verde, cartões arredondados com borda fina; nada itálico/inclinado/condensado e
+  nada de emoji como ícone. Fontes locais em `assets/fontes` (Inter; Barlow Condensed só nos números das camisas e
+  letras dos escudos), logo em `assets/tm-logo.png`. Peça nova de interface: usar as variáveis `--tm-*` desse arquivo.
 
 - Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
   retratos por IA em `tools/rostos/brutos/gNN.png` + banco SFHQ CC0) projetadas na cabeça escaneada

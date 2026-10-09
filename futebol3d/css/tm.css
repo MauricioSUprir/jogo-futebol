@@ -1,0 +1,226 @@
+/* TOTAL MATCH — a cara do Total Match no motor 3D (dono, 09/10: "deixa os botões, menu, tudo com a
+   cara do Total Match"). Mesmos tokens de legacy-total-match/css/styles.css: Inter, preto com um fio de
+   verde (#050807 / #0b110e / #0f1612), o verde da marca #22c55e, botão principal em pílula com o degradê
+   verde e texto escuro, cartões com cantos arredondados e borda fina, rótulos pequenos em verde e caixa
+   alta espaçada. Nada inclinado, itálico ou condensado (era o visual do GOLAÇO).
+   Carregado por ÚLTIMO no index.html: troca a aparência; posição e comportamento seguem em menus.css e
+   game.css. Os tamanhos de letra só mudam onde a Inter (mais larga que a Barlow Condensed) não caberia.
+   Fontes e logo locais (assets/fontes — OFL; assets/tm-logo.png), sem depender de site de fora.
+   A Barlow Condensed continua só onde é desenho de uniforme (número e nome nas camisas, letras do escudo). */
+
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 400; font-display: swap; src: url('../assets/fontes/inter-400.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 500; font-display: swap; src: url('../assets/fontes/inter-500.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/fontes/inter-600.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fontes/inter-700.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/fontes/inter-800.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 900; font-display: swap; src: url('../assets/fontes/inter-900.woff2') format('woff2'); }
+
+/* números das camisas e letras dos escudos (players3d.js / teams.js desenham com a Barlow Condensed): local */
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fontes/barlow-condensed-latin-700.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 700; font-display: swap; src: url('../assets/fontes/barlow-condensed-latin-ext-700.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/fontes/barlow-condensed-latin-800.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/fontes/barlow-condensed-latin-ext-800.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+20A0-20AB, U+20AD-20C0, U+2C60-2C7F, U+A720-A7FF; }
+
+:root {
+  --tm-preto: #050807; --tm-preto2: #0b110e; --tm-painel: #0f1612;
+  --tm-verde: #22c55e; --tm-verde-cl: #4ade80; --tm-verde-esc: #12a150; --tm-verde-fundo: #0f7a3a;
+  --tm-texto: #eef5f0; --tm-fraco: #8a9d90; --tm-linha: rgba(255, 255, 255, .07); --tm-linha2: rgba(255, 255, 255, .13);
+  --tm-erro: #f05252; --tm-alerta: #f5b83d;
+  --tm-botao: linear-gradient(120deg, #34d572, #1fae55);
+  --tm-cartao: linear-gradient(160deg, rgba(15, 22, 18, .96), rgba(11, 17, 14, .97));
+  --tm-fonte: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  /* os nomes do 3D passam a apontar para as cores e a fonte do TM */
+  --lime: var(--tm-verde); --navy: var(--tm-preto2); --ink: var(--tm-preto); --red: var(--tm-erro); --yellow: var(--tm-alerta);
+  --disp: var(--tm-fonte); --ui: var(--tm-fonte);
+}
+html, body { background: var(--tm-preto); }
+body { font-family: var(--tm-fonte); color: var(--tm-texto); }
+
+/* ------------------------------------------------------------ carregamento */
+#loading { background: radial-gradient(ellipse 70% 55% at 50% 32%, rgba(34, 197, 94, .14), transparent 62%), var(--tm-preto); gap: 1.6em; }
+.ld-logo { display: block; width: 15em; max-width: 58vw; height: auto; margin: 0 auto; filter: drop-shadow(0 .8em 2em rgba(34, 197, 94, .16)); }
+.ld-bar { width: 16em; height: .3em; background: rgba(255, 255, 255, .08); }
+.ld-bar i { background: var(--tm-botao); }
+#load-text { color: var(--tm-fraco); font-family: var(--tm-fonte); font-weight: 600; font-size: 1.1em; }
+
+/* gire o celular */
+@media (pointer: coarse) and (orientation: portrait) {
+  body.in-game #rotate { background: rgba(5, 8, 7, .97); }
+  #rotate b { font-family: var(--tm-fonte); font-weight: 800; font-size: 1.7em; margin-bottom: .2em; }
+  #rotate span { color: var(--tm-fraco); }
+  #rotate div::before { border-color: var(--tm-verde); border-radius: .8em; }
+}
+
+/* ------------------------------------------------------------ menus, pausa e configurações */
+.gm-root {
+  --bg0: var(--tm-preto); --bg1: var(--tm-preto2); --panel: rgba(15, 22, 18, .94); --panel2: rgba(11, 17, 14, .97);
+  --line: var(--tm-linha); --line2: var(--tm-linha2); --lime: var(--tm-verde); --lime-d: var(--tm-verde-esc); --lime-dd: var(--tm-verde-fundo);
+  --text: var(--tm-texto); --muted: var(--tm-fraco); --red: var(--tm-erro);
+  --disp: var(--tm-fonte); --ui: var(--tm-fonte);
+}
+/* sem itálico no TM */
+.gm-root, .gm-root * { font-style: normal !important; }
+.gm-root h1, .gm-root h2 { text-transform: none !important; letter-spacing: -.01em !important; }
+
+.gm-kicker { font-family: var(--tm-fonte); font-weight: 800; font-size: .72em; letter-spacing: .16em; color: var(--tm-verde); }
+.gm-muted { color: var(--tm-fraco); }
+.gm-panel { background: var(--tm-cartao); border: 1px solid var(--tm-linha); border-radius: .95em; box-shadow: 0 1em 2.6em rgba(0, 0, 0, .4); }
+.gm-panel h3 { font-family: var(--tm-fonte); font-weight: 800; font-size: .74em; letter-spacing: .14em; color: var(--tm-verde); }
+
+/* botões: pílula; o principal com o degradê verde do TM e texto escuro */
+.gm-btn { font-family: var(--tm-fonte) !important; font-weight: 700 !important; font-size: 1em !important; letter-spacing: .01em; text-transform: none;
+  border-radius: 999px; transform: none; background: var(--tm-preto2) !important; border: 1px solid var(--tm-linha2) !important; color: var(--tm-texto);
+  min-height: 3.1em; padding: 0 1.4em; box-shadow: none; }
+.gm-btn > * { transform: none; }
+.gm-btn:hover { transform: none; background: #111a15 !important; border-color: var(--tm-verde) !important; }
+.gm-btn:active { transform: scale(.98); }
+.gm-btn .gm-ic { color: var(--tm-verde); }
+.gm-btn-primary { background: var(--tm-botao) !important; color: #04130a !important; border-color: transparent !important; box-shadow: 0 .3em 1em rgba(34, 197, 94, .28); }
+.gm-btn-primary .gm-ic { color: #04130a; }
+.gm-btn-primary:hover { background: linear-gradient(120deg, #4ade80, #22c55e) !important; transform: translateY(-1px); box-shadow: 0 .5em 1.4em rgba(34, 197, 94, .4); }
+.gm-btn-danger { background: rgba(220, 38, 38, .12) !important; border-color: rgba(220, 38, 38, .5) !important; color: #f87171 !important; }
+.gm-btn-danger .gm-ic { color: #f87171; }
+.gm-btn-ghost { background: transparent !important; color: var(--tm-fraco); }
+/* voltar: botão redondo como o do topo das telas do TM */
+.gm-back { border-radius: 999px; background: var(--tm-preto2); border: 1px solid var(--tm-linha2) !important; font-family: var(--tm-fonte); font-weight: 700; }
+.gm-back:hover { border-color: var(--tm-verde) !important; color: var(--tm-verde); background: var(--tm-preto2); }
+
+/* controles das configurações: iguais aos do TM (segmentado, chave, régua) */
+.gm-seg { gap: .35em; padding: 0; background: transparent; border: 0; }
+.gm-seg button { font-family: var(--tm-fonte); font-weight: 600; font-size: .92em; letter-spacing: 0; text-transform: none; color: var(--tm-fraco);
+  border-radius: .6em; border: 1px solid var(--tm-linha2); background: var(--tm-preto2); }
+.gm-seg button:hover { color: var(--tm-texto); background: #111a15; }
+.gm-seg button.on { background: linear-gradient(120deg, var(--tm-verde-cl), var(--tm-verde)); color: var(--tm-preto); border-color: transparent; }
+.gm-toggle-track { background: var(--tm-preto2); border: 1px solid var(--tm-linha2); }
+.gm-toggle[aria-checked="true"] .gm-toggle-track { background: var(--tm-verde); border-color: transparent; }
+.gm-toggle[aria-checked="true"] .gm-toggle-knob { background: #fff; }
+.gm-slider output { font-family: var(--tm-fonte); font-weight: 700; font-size: 1em; color: var(--tm-verde); }
+.gm-row { border-bottom-color: var(--tm-linha); }
+.gm-row-l b { font-weight: 600; }
+.gm-row-l small { color: var(--tm-fraco); }
+kbd, .gm-root kbd { font-family: var(--tm-fonte); border-radius: .45em; }
+.gm-caps kbd { font-family: var(--tm-fonte); font-weight: 700; font-size: .9em; }
+.gm-touch-notes { color: #c3cfc7; }
+
+/* pausa: cartão do TM com o logo */
+.gm-pause { background: rgba(5, 8, 7, .76); }
+.gm-pause-panel { position: relative; background: var(--tm-cartao); border: 1px solid rgba(34, 197, 94, .25); border-top: 1px solid rgba(34, 197, 94, .25);
+  border-radius: 1.15em; box-shadow: 0 2em 5em rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04); }
+.gm-pause-panel h2 { font-family: var(--tm-fonte); font-weight: 800; font-size: 1.5em; line-height: 1.15; }
+.gm-pause-panel > .gm-kicker { display: flex; align-items: center; justify-content: space-between; gap: 1em; }
+.gm-pause-panel > .gm-kicker::after { content: ''; flex: none; width: 3.2em; height: 2.2em; background: url('../assets/tm-logo.png') right center / contain no-repeat; }
+.gm-pause-mu { font-family: var(--tm-fonte); font-weight: 800; font-size: 1.25em; letter-spacing: .02em; }
+.gm-pause-mu span { color: var(--tm-fraco); }
+.gm-pause-btns { gap: .6em; }
+
+/* aviso no meio da tela, como no TM */
+.gm-toast { top: 50%; bottom: auto; transform: translate(-50%, -50%) scale(.92); background: rgba(11, 17, 14, .96); border: 1px solid rgba(34, 197, 94, .32);
+  border-left: 1px solid rgba(34, 197, 94, .32); border-radius: 1.1em; font-family: var(--tm-fonte); font-weight: 700; padding: 1em 1.4em; }
+.gm-toast.on { transform: translate(-50%, -50%); }
+
+/* telas do menu antigo (só no desenvolvimento, ?golaco): a Inter é mais larga, os títulos encolhem */
+.gm-top-title h1 { font-weight: 800; font-size: 1.9em; }
+.gm-tile-title { font-weight: 800; font-size: 1.8em; text-transform: none; }
+.gm-tile-amistoso .gm-tile-title { font-size: 2.4em; }
+.gm-tile-small { font-family: var(--tm-fonte); font-size: .95em; text-transform: none; letter-spacing: .01em; }
+.gm-team-name, .gm-mu-team b, .gm-tc-name, .gm-rs-team b, .gm-next h2, .gm-entry-card h2, .gm-champ h2 { text-transform: none; font-weight: 800; }
+.gm-team-name { font-size: 1.5em; }
+.gm-champ-title { font-size: 3.6em; text-transform: none; }
+.gm-logo-bar, .gm-splash .gm-logo-bar { transform: none; }
+
+/* ------------------------------------------------------------ HUD */
+/* placar: um cartão escuro do TM com o logo, siglas, placar em verde e o relógio no verde da marca */
+.hud-board { grid-template-columns: auto auto auto auto auto; border-radius: .6em; overflow: hidden; background: rgba(11, 17, 14, .93);
+  border: 1px solid rgba(34, 197, 94, .3); }
+.hud-board::before { content: ''; width: 2.5em; background: url('../assets/tm-logo.png') center / 72% no-repeat, rgba(5, 8, 7, .9); border-right: 1px solid var(--tm-linha2); }
+.hb-team { background: transparent; font-family: var(--tm-fonte); font-weight: 800; font-size: 1.15em; letter-spacing: .03em; }
+.hb-score { background: rgba(34, 197, 94, .1); color: var(--tm-verde-cl); font-family: var(--tm-fonte); font-weight: 900; font-size: 1.55em; font-variant-numeric: tabular-nums; }
+.hb-score i { color: var(--tm-fraco); opacity: .7; }
+.hb-clock { background: var(--tm-botao); color: #04130a; font-family: var(--tm-fonte); font-weight: 800; font-size: 1.12em; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.hb-clock em { background: rgba(4, 19, 10, .88); color: var(--tm-verde-cl); border-radius: .35em; }
+
+/* faixas (nome da partida, falta, intervalo…) */
+.hud-banner b { font-family: var(--tm-fonte); font-style: normal; font-weight: 800; font-size: 1.85em; letter-spacing: 0; transform: none;
+  padding: .32em .9em; border-radius: .6em; background: rgba(11, 17, 14, .95); color: var(--tm-texto);
+  border: 1px solid rgba(34, 197, 94, .35); border-left: .22em solid var(--tm-verde); box-shadow: 0 .6em 1.6em rgba(0, 0, 0, .4); }
+.hud-banner.period b { font-size: 2.2em; }
+.hud-banner.foul b, .hud-banner.offside b { border-color: rgba(245, 184, 61, .45); border-left-color: var(--tm-alerta); }
+.hud-banner.penalty b { background: rgba(240, 82, 82, .94); border-color: transparent; color: #fff; }
+.hud-banner.chance b { background: var(--tm-botao); color: #04130a; border-color: transparent; }
+.hud-banner span { font-family: var(--tm-fonte); font-weight: 600; background: rgba(5, 8, 7, .84); border: 1px solid var(--tm-linha); border-radius: 2em; padding: .3em .95em; margin-top: .35em; }
+
+/* gol (enquanto o GOL! está na tela, a faixa de cima some — nada sobre nada) */
+#hud:has(.hud-goal.show) .hud-banner { opacity: 0; }
+.g-word { font-family: var(--tm-fonte); font-style: normal; font-weight: 900; letter-spacing: -.02em;
+  text-shadow: 0 .05em 0 rgba(0, 0, 0, .55), 0 0 .45em rgba(34, 197, 94, .45); }
+.hud-goal .g-word { font-size: 6.6em; }
+.g-word .g-ex { color: var(--tm-verde); }
+.g-who b { font-family: var(--tm-fonte); font-weight: 800; font-size: 2em; transform: none; border-radius: 999px; padding: .2em .9em;
+  background: var(--tm-botao); color: #04130a; box-shadow: 0 .4em 1.2em rgba(34, 197, 94, .35); }
+.g-who span { font-family: var(--tm-fonte); background: rgba(5, 8, 7, .84); border: 1px solid var(--tm-linha); border-radius: 2em; padding: .25em .9em; }
+
+/* cartão amarelo/vermelho, nome sobre o jogador, dica, replay, pênaltis, vento, abertura */
+.hud-card { background: rgba(11, 17, 14, .94); border: 1px solid var(--tm-linha2); border-radius: .7em; }
+.hud-card span { font-family: var(--tm-fonte); font-weight: 700; font-size: 1.12em; }
+.hud-card i { border-radius: .2em; background: var(--tm-alerta); box-shadow: 0 0 .8em rgba(245, 184, 61, .55); }
+.hud-card.red i { background: var(--tm-erro); box-shadow: 0 0 .8em rgba(240, 82, 82, .55); }
+.hud-tag b { font-family: var(--tm-fonte); font-weight: 700; font-size: .88em; letter-spacing: .01em; background: rgba(5, 8, 7, .84);
+  border-radius: .4em; border-bottom: .14em solid var(--tm-verde); }
+.hud-tag s { background: var(--tm-verde); }
+.hud-hint { background: rgba(11, 17, 14, .9); border: 1px solid var(--tm-linha2); font-family: var(--tm-fonte); }
+.hud-replay span { font-family: var(--tm-fonte); font-style: normal; font-weight: 800; font-size: 1.45em; letter-spacing: .06em; transform: none;
+  border-radius: 999px; padding: .25em .9em; background: var(--tm-botao); color: #04130a; }
+.hud-shootout { background: rgba(11, 17, 14, .94); border: 1px solid var(--tm-linha2); border-radius: .7em; }
+.hud-shootout b { font-family: var(--tm-fonte); font-weight: 800; font-size: 1.05em; }
+.hud-shootout i.ok { background: var(--tm-verde); border-color: var(--tm-verde); }
+.hud-shootout i.x { background: var(--tm-erro); border-color: var(--tm-erro); }
+.hud-wind { background: rgba(11, 17, 14, .82); border: 1px solid var(--tm-linha); color: var(--tm-texto); }
+.hud-wind svg { color: var(--tm-verde); }
+.hud-intro { background: rgba(11, 17, 14, .86); border-color: rgba(34, 197, 94, .55); font-family: var(--tm-fonte); }
+@keyframes pulse { 50% { border-color: rgba(34, 197, 94, .15); } }
+
+/* escalação na abertura: cartões do TM */
+.lu-team { background: var(--tm-cartao); border: 1px solid rgba(34, 197, 94, .22); border-top: .2em solid var(--tm-verde); border-radius: .8em; overflow: hidden; }
+.lu-team header b { font-family: var(--tm-fonte); font-weight: 800; font-size: 1.1em; letter-spacing: 0; }
+.lu-team header small { color: var(--tm-fraco); }
+.lu-pitch { border-radius: .5em; }
+.lu-ph em { font-family: var(--tm-fonte); font-weight: 800; font-size: .62em; }
+/* no TM emoji não é ícone: os traços de personalidade saem do campinho (seguem valendo no jogo); e o nome
+   fica mais estreito que a distância entre dois vizinhos (no 4-4-2 os do meio estão a ~3,4em) — nada sobre nada */
+.lu-p b .lu-tr { display: none; }
+.lu-p { width: 3em; }
+.lu-p b { font-size: .64em; }
+
+/* ------------------------------------------------------------ controles de toque */
+#touch { font-family: var(--tm-fonte); }
+.tc-btn { font-family: var(--tm-fonte); font-weight: 700; font-size: 2.55vh; letter-spacing: 0; text-transform: none; color: var(--tm-texto);
+  border: .4vh solid rgba(255, 255, 255, .22); background: radial-gradient(circle at 50% 30%, rgba(21, 31, 25, .8), rgba(5, 8, 7, .84));
+  box-shadow: 0 .8vh 2.2vh rgba(0, 0, 0, .35); }
+.tc-btn.big { font-size: 3.1vh; border-color: var(--tm-verde); box-shadow: 0 0 2.6vh rgba(34, 197, 94, .3), 0 .8vh 2.2vh rgba(0, 0, 0, .35); }
+.tc-btn.sm { font-size: 1.85vh; }
+.tc-btn.wide { font-size: 2.3vh; }
+.tc-btn em { font-family: var(--tm-fonte); font-weight: 600; font-size: 1.35vh; }
+.tc-btn.on { background: rgba(34, 197, 94, .42); border-color: var(--tm-verde); }
+.tc-btn .tc-charge { background: rgba(34, 197, 94, .55); }
+.tc-btn[data-g="long"], .tc-btn[data-g="chip"], .tc-btn[data-g="finesse"] { background: rgba(245, 184, 61, .3); border-color: var(--tm-alerta); }
+.tc-btn.tc-troca { border-color: var(--tm-alerta); box-shadow: 0 0 2.4vh rgba(245, 184, 61, .3); }
+.tc-gkrush { border-color: var(--tm-alerta); }
+#touch[data-ctx="defend"] .tc-shoot { border-color: var(--tm-erro); box-shadow: 0 0 2.4vh rgba(240, 82, 82, .25); }
+.tc-base { border-color: rgba(255, 255, 255, .22); }
+.tc-base.on { border-color: rgba(34, 197, 94, .8); }
+.tc-knob { background: radial-gradient(circle at 40% 35%, #86efac, #22c55e 58%, #15803d); box-shadow: 0 0 3vh rgba(34, 197, 94, .5), inset 0 -.8vh 1.5vh rgba(0, 0, 0, .25); }
+.tc-base.sprint .tc-knob { background: radial-gradient(circle at 40% 35%, #fff, #4ade80); box-shadow: 0 0 5vh rgba(34, 197, 94, .85); }
+.tc-pause { background: rgba(11, 17, 14, .72); border: .35vh solid rgba(255, 255, 255, .24); }
+.tc-editbar { background: rgba(11, 17, 14, .95); border: .25vh solid rgba(34, 197, 94, .45); border-radius: 2.2vh; font-family: var(--tm-fonte); font-size: 2.1vh; }
+.tc-editbar button { font-family: var(--tm-fonte); font-size: 1.9vh; text-transform: none; border-radius: 999px; border: .25vh solid var(--tm-linha2); background: var(--tm-preto2); }
+.tc-editbar button[data-a="ok"] { background: var(--tm-botao); color: #04130a; border-color: transparent; }
+
+/* celular: tamanhos da Inter no HUD menor */
+@media (pointer: coarse) {
+  .hud-banner b { font-size: 1.5em; }
+  .hud-banner.period b { font-size: 1.75em; }
+}
+@media (max-height: 560px) {
+  .gm-pause-panel h2 { font-size: 1.25em; }
+  .gm-pause-panel > .gm-kicker::after { width: 2.6em; height: 1.7em; }
+}

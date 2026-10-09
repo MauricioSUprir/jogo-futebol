@@ -740,14 +740,14 @@ function renderPause(view) {
   const sub = (title, body) => h('div', { class: 'gm-pause-panel wide' },
     h('div', { class: 'gm-pause-head' }, h('button', { class: 'gm-back', 'data-key': 'pback', 'data-esc': '', onclick: () => renderPause('main') }, icon('back'), h('span', {}, 'Voltar'), h('kbd', {}, 'Esc')), h('h2', {}, title)),
     h('div', { class: 'gm-pause-scroll' }, body));
-  const confirm = (title, text, yes, action) => h('div', { class: 'gm-pause-panel' }, h('h2', {}, title), h('p', { class: 'gm-muted' }, text),
-    h('div', { class: 'gm-pause-btns' }, btn(yes, action, { cls: 'gm-btn-danger', key: 'yes' }), btn('Cancelar', () => renderPause('main'), { autofocus: true, key: 'no', esc: true })));
+  const confirm = (title, text, yes, action, cls = 'gm-btn-danger') => h('div', { class: 'gm-pause-panel' }, h('h2', {}, title), h('p', { class: 'gm-muted' }, text),
+    h('div', { class: 'gm-pause-btns' }, btn(yes, action, { cls, key: 'yes' }), btn('Cancelar', () => renderPause('main'), { autofocus: true, key: 'no', esc: true })));
   let panel;
   if (view === 'settings') panel = sub('Configurações', settingsBody(true));
   else if (view === 'controls') panel = sub('Controles', controlsBody());
   else if (view === 'restart') panel = confirm('Reiniciar partida?', 'O placar volta a 0 x 0.', 'Reiniciar', () => { const cb = pauseCb; hidePause(); cb.onRestart?.(); });
   else if (view === 'quit') panel = confirm('Sair da partida?', cfg?.fixtureId ? 'O jogo não será registrado; você poderá jogá-lo de novo.' : 'O progresso desta partida será perdido.', 'Sair', quitMatch);
-  else if (view === 'simrest') panel = confirm('Simular o resto?', 'O computador joga os minutos que faltam e o placar vale.', 'Simular', () => { const cb = pauseCb; hidePause(); cb.onSimRest?.(); });
+  else if (view === 'simrest') panel = confirm('Simular o resto?', 'O computador joga os minutos que faltam e o placar vale.', 'Simular', () => { const cb = pauseCb; hidePause(); cb.onSimRest?.(); }, 'gm-btn-primary');
   // sem onRestart/onQuit (partida do Total Match) os botões somem; com onSimRest aparece "Simular o resto"
   else panel = h('div', { class: 'gm-pause-panel' },
     h('p', { class: 'gm-kicker' }, 'Partida pausada'), head,
