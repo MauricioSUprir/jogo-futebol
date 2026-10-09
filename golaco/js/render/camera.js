@@ -57,13 +57,15 @@ export function criarCamera(aspecto) {
       const ret = lerp(RETRATO.tv[k], RETRATO.aproximada[k], s);
       _p[k] = lerp(pais, ret, r);
     }
+    _p.retrato = r;
     return _p;
   }
   /** fov vertical que mostra a largura do perfil no foco, para o formato desta tela. */
   function fovPara(p) {
     const a = est.aspecto;
     let larg = p.largura;
-    if (a < ASPECTO_TV) larg *= Math.sqrt(a / ASPECTO_TV);   // 4:3: perde metade da largura
+    // paisagem mais estreita que 16:9 (4:3) perde só metade da largura; o retrato já tem a sua
+    if (a < ASPECTO_TV) larg *= lerp(Math.sqrt(Math.max(a, 1.25) / ASPECTO_TV), 1, p.retrato);
     if (est.pequena) larg *= CAMERA.telaPequena;
     const d = Math.hypot(p.distancia, p.altura - p.olharY);
     return (2 * Math.atan(larg / 2 / d / a) * 180) / Math.PI;

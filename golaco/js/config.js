@@ -217,7 +217,7 @@ export const CAMERA = {
   telaPequena: 0.88,          // celular (menor lado < 520 px CSS): largura × 0,88
   aproximada: { largura: 23, distancia: 16, altura: 8 },
   // celular em pé: câmera mais alta e inclinada (~40°), largura menor; nada de céu no quadro
-  retrato: { largura: 24, distancia: 25.3, altura: 21.2 },
+  retrato: { largura: 22, distancia: 25.3, altura: 21.2 },
   retratoAproximada: { largura: 13, distancia: 12, altura: 9.6 },
 };
 

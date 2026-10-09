@@ -63,10 +63,17 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   ações `recomecar|maquina|marcador`), `entradaDemo`. A página e os testes em Node usam as
   mesmas funções na mesma ordem.
 - `main.js`: a cada passo guarda pose/bola ANTERIOR e calcula a ATUAL (pose uma vez por passo);
-  desenha interpolando com `alfa`. `window.__golaco` = `{mundo, hash(), passos, alfa, render,
-  pausar(), rodarPassos(n, roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})},
-  forcarEntrada(e), estado(), desenhar()}`. Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador
-  ?prints ?qps ?toque ?entalhe`.
+  desenha interpolando com `alfa`. `window.__golaco` = `{mundo, hash(), passos, alfa, render
+  ({bola, jogador, camera, quadros, alfa} do último quadro desenhado), pausar(), rodarPassos(n,
+  roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})}, forcarEntrada(e),
+  estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → px CSS}`.
+  Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador ?prints ?qps ?toque ?entalhe`.
 - `render/jogador3d.js`: todas as cápsulas de todos os jogadores num `InstancedMesh` (atributos
   por instância: raios, comprimento, achatamento, cores e padrão); cabeça e cabelo instanciados.
-- Câmera de TV: `yaw = −π/2` fixo (a entrada usa `paraMundo(ax, ay, camera.yaw)`).
+  Os raios vêm de `SEGMENTOS` (anim.js); o desenho pode afinar um segmento (`estilo().r`).
+- Câmera de TV: `yaw = −π/2` fixo (a entrada usa `paraMundo(ax, ay, camera.yaw)`). Enquadramento
+  pela LARGURA vista no foco (`CAMERA.largura`), não pelo fov: tela mais larga que 16:9 mantém a
+  largura (jogador maior no celular deitado), 4:3 perde metade, em pé usa `CAMERA.retrato` (mais
+  alta e inclinada, sem céu) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
+  controle = direita na tela" (`teste-controles`, via `naTela`) e câmera sem tremor a 144 Hz
+  (`teste-carga`).

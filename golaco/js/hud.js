@@ -68,7 +68,8 @@ export function criarHud(opc) {
   return {
     /** Velocidade (km/h) e modo; atualiza o DOM no máximo a 10 Hz. */
     atualizar(agoraMs, kmh, modo, forte) {
-      if (agoraMs - ultimoHud < 100) return;
+      // (o relógio manual dos testes pode voltar no tempo: aí atualiza logo)
+      if (agoraMs - ultimoHud < 100 && agoraMs >= ultimoHud) return;
       ultimoHud = agoraMs;
       const v = String(Math.round(kmh));
       if (v !== ultimoTexto.vel) { el.vel.textContent = v; ultimoTexto.vel = v; }

@@ -152,9 +152,11 @@ html.modo-prints .dica-retrato { display: none; }
   font-size: calc(14px * var(--toque-escala));
 }
 .btn-mod {
-  width: calc(78px * var(--toque-escala)); height: calc(78px * var(--toque-escala));
-  right: calc(var(--sa-r) + 22px + 92px * var(--toque-escala) + 18px); bottom: calc(var(--sa-b) + 22px + 46px * var(--toque-escala));
-  font-size: calc(10.5px * var(--toque-escala));
+  /* "CONDUÇÃO" é a palavra mais longa: botão um pouco maior e letra mais justa, para o texto
+     não encostar na borda do círculo */
+  width: calc(86px * var(--toque-escala)); height: calc(86px * var(--toque-escala));
+  right: calc(var(--sa-r) + 22px + 92px * var(--toque-escala) + 16px); bottom: calc(var(--sa-b) + 22px + 44px * var(--toque-escala));
+  font-size: calc(10px * var(--toque-escala)); letter-spacing: 0.02em;
 }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */
@@ -169,6 +171,11 @@ html.modo-prints .dica-retrato { display: none; }
   background: linear-gradient(180deg, #0e1314, #090c0d); border: 1px solid var(--linha); border-radius: 14px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
   -webkit-user-select: none; user-select: none;
+}
+/* quando a janela rola (celular), o fim esmaece: dá para ver que tem mais embaixo */
+.janela::after {
+  content: ""; position: sticky; bottom: 0; display: block; height: 22px; margin-top: -22px;
+  background: linear-gradient(rgba(9, 12, 13, 0), #090c0d 85%); pointer-events: none;
 }
 .janela-topo {
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
@@ -232,15 +239,20 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
   .menu-corpo { grid-template-columns: 1fr; }
   .ajuda-colunas { grid-template-columns: 1fr; }
 }
+/* no celular a coluna do toque vem primeiro na ajuda */
+html.com-toque .ajuda-colunas section:last-child { order: -1; }
 /* tela baixa (celular deitado): janelas mais compactas */
 @media (max-height: 480px) {
   .janela-topo { padding: 8px 10px 7px 16px; }
   .btn-fechar { width: 36px; height: 36px; }
   .menu-corpo { padding: 10px 16px 14px; gap: 16px; }
   .menu-acoes { gap: 6px; }
-  .btn { min-height: 40px; }
-  .menu-opcoes { gap: 9px; }
+  .btn { min-height: 38px; }
   .segmentado button { height: 32px; }
+  /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
+  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 9px; }
+  .menu-opcoes .opcao:first-child, .menu-opcoes .opcao:last-child { grid-column: 1 / -1; }
+  .menu-opcoes .segmentado button { font-size: 12px; padding: 0 4px; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }
   .ajuda-colunas dt, .ajuda-colunas dd { font-size: 11.5px; }

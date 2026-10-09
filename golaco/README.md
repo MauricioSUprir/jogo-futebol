@@ -40,9 +40,9 @@ cd golaco && python3 -m http.server 8000   # http://localhost:8000
 
 ```bash
 node golaco/tools/rodar-testes.mjs     # lógica em Node (~30 s) — o Actions roda antes do deploy
-node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz
-node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade
-node golaco/tools/prints.mjs           # prints PC/celular, dia/noite (tools/saida/)
+node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz, câmera sem tremor
+node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
+node golaco/tools/prints.mjs           # prints PC/celular (deitado e em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os
