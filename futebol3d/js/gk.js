@@ -335,8 +335,10 @@ function save(m, gk, edge) {
   // longo, ~60%; bomba acima de ~22 m/s pesa. Antes era ~80% fixo — até bola no peito passava
   // (0,97 → 0,87: com o goleiro na bissetriz ele chega em bem mais bolas; nem toda bola que ele toca fica fora).
   // De perto a defesa é reflexo e a bola escapa mais; de longe ele chega arrumado e segura/espalma limpo
+  // (de fora da área, 0,97 — o mesmo da versão publicada: ~81% de defesas nos chutes de longe no alvo)
   const ls = m.lastShot && m.lastShot.p ? Math.hypot(m.ownGoalX(gk.team) - m.lastShot.p.x, m.lastShot.p.z) : 16;
-  const pDist = ls < 12 ? -0.06 : ls > 20 ? 0.05 : 0;
+  // (no pênalti o goleiro já está parado e escolheu o lado: quando chega na bola, defende como antes, 0,97)
+  const pDist = m.lastShot?.kind === 'penalty' || ls > 20 ? 0.1 : ls < 12 ? -0.06 : 0;
   const pSave = clamp(0.87 + pDist - edge * 0.35 - Math.max(0, sp - 22) * 0.015 + (sk - 0.6) * 0.25, 0.3, 0.96);
   gk.saveCd = 0.35;
   if (Math.random() > pSave) {

@@ -48,9 +48,12 @@ const INTRO = { firstOut: 2.5, gap: 0.45, tunnelZ: -37.4, lineZ: -14, lineDone: 
 export const INTRO_TIMES = INTRO;
 // dispersão do chute (rad por unidade de erro): calibrada para ~35–40% dos chutes no alvo
 // e conversão de 9–14% (auditoria, Fase 3)
-// (0,2 → 0,09 com o goleiro novo na bissetriz e a pressão em bloco: sem isso o placar caía para ~1,5 gol e só
+// (0,2 → 0,105 com o goleiro novo na bissetriz e a pressão em bloco: sem isso o placar caía para ~1,5 gol e só
 // ~25% dos chutes iam no gol; no futebol real ~1/3)
-const SHOT_ERR = 0.09;
+const SHOT_ERR = 0.105;
+// pênalti: a mesma dispersão calibrada da versão publicada (~76% gol, ~15% defesa, ~7% fora, como no futebol real);
+// a mira mais precisa da bola rolando deixava o pênalti sem nenhum chute para fora
+const PEN_ERR = 0.2;
 // ângulo entre o rumo pedido e o caminho da bola a partir do qual o toque vira um corte
 const TURN_CUT = 0.8;
 const KICKS = new Set(['pass', 'long', 'cross', 'shot', 'finesse', 'through', 'chip', 'clear', 'volley', 'penalty', 'freekick', 'gk_kick', 'gk_pass']);
@@ -1347,12 +1350,12 @@ export class Match {
       // bola vem em relação ao pé: até +60% de erro num passe forte
       const relV = this.owner === p ? 0 : Math.hypot(b.v.x - p.vx, b.v.z - p.vz);
       const primeira = 1 + clamp((relV - 3) / 14, 0, 0.6);
-      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : kind === 'volley' ? 1.8 : 1) * (0.8 + power * 0.5) * SHOT_ERR * (1 + press * 0.75) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * primeira * this.mode.shot;
+      err = errBase(a.sho) * (kind === 'finesse' ? 0.75 : kind === 'volley' ? 1.8 : 1) * (0.8 + power * 0.5) * (kind === 'penalty' ? PEN_ERR : SHOT_ERR) * (1 + press * 0.75) * (inBox && p.traits.includes('finalizador') ? 0.8 : 1) * primeira * this.mode.shot;
       const eAng = gauss() * err, eUp = gauss() * err * 0.7;
       const target = { x: tg.x, y: ty + eUp * dist, z: tg.z + eAng * dist };
       v = solveAim(o, target, speed, spin, this.wind);
       team.stats.shots++;
-      this.lastShot = { p, t: this.time, speed, counted: false };
+      this.lastShot = { p, t: this.time, speed, counted: false, kind };
       this.emit('shot', { side: team.i, power });
       kindOut = 'shot';
     } else if (kind === 'chip') {

@@ -37,11 +37,18 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - **Fila nova (08/10, depois da Fase 3 da auditoria):** análise da movimentação (FEITA e enviada: plano em 6 etapas —
   corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/pivô, IA sem
   vai-e-volta, intensidade); botão GOLEIRO, bolas paradas, bola na mão, disputa pelo alto, divididas, troca de jogador,
-  goleiro na bissetriz e intensidade dos dois times (FEITOS no PR depois da Fase 3) → **agora:** giro com bola natural e
-  condução mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
-  Pendente da intensidade: apoio e corridas no ataque (o bloco mais fechado tirou ~20% dos chutes: 25 → 20 por partida;
-  o placar foi recalibrado pela mira e pelo chute de fora, e por isso ~48% dos gols saem de fora da área — real ~15–20% —
-  e o pênalti não erra mais o gol; quando o ataque gerar chances de perto, devolver a precisão de longe e do pênalti).
+  goleiro na bissetriz e intensidade dos dois times (feitos na branch, PR ainda NÃO aberto) → **agora:** terminar esse PR
+  SEM RECUO (dono, 08/10: "Não pode ter recuo" — nenhum número pior que o publicado) → giro com bola natural e condução
+  mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+  Sem recuo — o que falta: a versão publicada tinha ~0,9 gol por partida (30% dos gols) de saída de bola roubada no tiro de
+  meta, com o adversário dentro da área (o defeito da Regra 16 que o dono pediu para corrigir; `tools/origem-chutes.mjs`
+  separa esses lances). Sem eles, quase todo gol de jogada sai de longe nas DUAS versões: o ataque não cria chance de perto
+  (só ~1,6 chute de jogada por partida a menos de 12 m). Falta o ataque criar essas chances — receber de frente/giro,
+  corrida atrasada para a marca do pênalti, passe para trás da linha de fundo que funcione (o de agora quase nunca acha
+  alvo) — até ≥ 25 chutes e ≥ 2,96 gols por partida com a Regra 16 e todos os testes passando. Ajuste de parâmetro só troca
+  um número pelo outro (decidir mais rápido no último terço dá +0,5 gol, mas o goleiro cai para 63% de defesas e 67% nos
+  chutes de longe). Estado da branch em 08/10 à noite (48 partidas): ~22 chutes, ~2,4 gols, passe 77–79%, pênalti
+  46–47 gols em 60 com 1–5 para fora (publicado 47/9/4), escanteios 1,5–1,6 (publicado 1,7); medir também com `defesas-test` (≥ 66% e ≥ 55%).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.

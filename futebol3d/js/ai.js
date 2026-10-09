@@ -267,9 +267,10 @@ function shapeTarget(m, t, p, attacking, offLine, lineSeen = offLine) {
     // nas costas e quase nunca impedimento (Opta/CIES: linha média real de 36 a 48 m do gol)
     if (role === 'DEF') x = -HL + clamp(0.6 * (bl + HL) - 1, 7, 42) + ((t.intensity ?? 0.5) - 0.5) * 10 + (bx + 34) * 0.5;
     if (role === 'DEF') { x = Math.max(x, -HL + 5); x = Math.min(x, bl - 3); }
-    if (role === 'MID') x = Math.min(x, bl + 1);
-    // atacantes colados no meio (meio–ataque real ~13 m sem a bola; aqui ficavam a ~16 m, soltos)
-    if (role === 'ATT') x = Math.min(x - 5.5, bl + 6);
+    // bloco curto (meio–ataque real ~13 m sem a bola; aqui ficava a ~16 m): o meio sobe 2 m e o ataque recua 4 m.
+    // (só recuando o ataque 5,5 m ele ficava longe demais para o contra-ataque e os chutes caíam)
+    if (role === 'MID') x = Math.min(x + 2, bl + 1);
+    if (role === 'ATT') x = Math.min(x - 4, bl + 6);
   }
   x = clamp(x, -HL + 2, HL - 2);
   z = clamp(z, -HW + 1.5, HW - 1.5);
@@ -350,11 +351,12 @@ function support(m, t, outfield, owner, offLine, dt) {
     if (best) { p.target.x = lerp(p.target.x, best.x, 0.7); p.target.z = lerp(p.target.z, best.z, 0.7); }
   }
   // infiltrações
+  const deFrente = Math.cos(angDiff(owner.heading, t.dir > 0 ? 0 : Math.PI)) > 0.5 && m.pressure(owner) < 0.45;
   if (m.lx(t, owner.x) > -15) {
     for (const p of outfield) {
       if (p === owner || p.human || (p.role !== 'ATT' && !(p.role === 'MID' && Math.random() < 0.3))) continue;
       const hunter = p.traits.includes('explosivo') || p.traits.includes('cacador') ? 1.8 : 1;
-      if (p.runUntil < m.time && Math.random() < dt * 0.35 * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
+      if (p.runUntil < m.time && Math.random() < dt * (deFrente ? 1.2 : 0.35) * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
         p.runUntil = m.time + rand(2, 3.5);
         p.runZ = clamp(p.z * 0.6, -14, 14);
       }
@@ -429,6 +431,23 @@ function crossTarget(m, p) {
   return best;
 }
 
+// Passe para trás da linha de fundo ("cut-back"): da ponta, já perto da linha de fundo, rasteiro e para trás para
+// quem chega de frente entre a pequena área e a marca do pênalti — a jogada que mais vira gol no futebol de hoje
+// (o finalizador chuta de primeira, de frente, com a defesa correndo para o próprio gol). Sem ela, sem os gols da
+// saída de bola roubada no tiro de meta (Regra 16), quase todo gol da IA saía de longe
+function cutbackTarget(m, p) {
+  const t = p.team, off = offsideLine(m, t);
+  let best = null;
+  for (const q of t.players) {
+    if (q === p || q.sentOff || q.isGK || !q.canPlay()) continue;
+    const lq = m.lx(t, q.x);
+    if (lq < HL - 18 || lq > HL - 6 || Math.abs(q.z) > 9 || lq > off + 0.2) continue;
+    const s = 0.55 + Math.min(openness(m, q), 5) * 0.07 - laneRisk(m, p, q.x, q.z, 'ground', q) * 1.1;
+    if (!best || s > best.s) best = { q, s };
+  }
+  return best && best.s > 0.5 ? best : null;
+}
+
 function segDist2(ax, az, bx, bz, px, pz) {
   const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1e-6;
   const u = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
@@ -440,7 +459,7 @@ function segDist2(ax, az, bx, bz, px, pz) {
 // lateral. No gatilho o 2º homem fecha junto com o 1º. (Com "domínio ruim" e "bola recém-dominada" também, a
 // pressão a dois virava regra e os chutes por partida caíam ~20%.)
 function gatilhoPressao(m, t, o) {
-  if (m.time - (t.tinhaBolaT ?? -9) < 3) return true;
+  if (m.time - (t.tinhaBolaT ?? -9) < 2.5) return true;
   const gx = m.ownGoalX(t), ax = gx - o.x, az = -o.z, al = Math.hypot(ax, az) || 1;
   if ((ax * o.fx + az * o.fz) / al < -0.35) return true;
   return Math.abs(o.z) > HW - 6;
@@ -554,22 +573,35 @@ function tryAerial(m, p) {
   const dH = Math.hypot(hx - px, hz - pz);
   // disputa pelo alto: além de quem vai na bola, os dois mais perto do ponto de contato de cada time
   // sobem juntos (antes só subia um, e a bola alta quase nunca era disputada pelos dois times)
+  // (só perto das áreas, como o ponto aéreo: no meio-campo, dois de cada time subindo em toda bola alta
+  // trocava o domínio por cabeçada para longe — +6 bolas perdidas por partida)
+  const areaH = Math.abs(hx) > HL - 24 && Math.abs(hz) < 26;
   let perto = p === t.chaser || (m.passTarget && m.passTarget.p === p) || dH < 0.7;
-  if (!perto && dH < 1.6) {
+  if (!perto && areaH && dH < 1.6) {
     let antes = 0;
     for (const q of t.players) if (q !== p && !q.sentOff && !q.isGK && Math.hypot(hx - (q.x + q.vx * 0.31), hz - (q.z + q.vz * 0.31)) < dH) antes++;
     perto = antes < 2;
   }
   // com adversário também chegando na bola, sobe de um pouco mais longe (estica para disputar)
-  const disputa = t.opp.players.some(q => !q.sentOff && !q.isGK && Math.hypot(hx - q.x, hz - q.z) < 2.2);
-  if (hy > 1.35 && hy < 2.5 && dH < (disputa ? 1.6 : 1.3) && perto) {
+  const disputa = areaH && t.opp.players.some(q => !q.sentOff && !q.isGK && Math.hypot(hx - q.x, hz - q.z) < 2.2);
+  if (hy > 1.35 && hy < 2.5 && dH < (disputa ? 1.6 : areaH ? 1.3 : 1.0) && perto) {
     const gx = m.goalX(t);
     const dGoal = Math.hypot(gx - p.x, p.z);
     const ownBox = m.inOwnBox(p, p.x, p.z);
     const shot = dGoal < 18 && Math.abs(p.z) < 13;
     let data;
     if (shot) data = { kind: 'shot', jump: clamp(hy - 1.75, 0, 0.6) };
-    else if (ownBox || m.lx(t, p.x) < -25) data = { kind: 'pass', target: { x: p.x + t.dir * 25, z: p.z + (p.z > 0 ? 8 : -8) }, jump: clamp(hy - 1.75, 0, 0.6) };
+    else if (ownBox || m.lx(t, p.x) < -25) {
+      // corte de cabeça no cruzamento, na própria área: às vezes sai de lado, pela linha de fundo — escanteio (no
+      // futebol real boa parte dos ~10 escanteios por partida nasce assim; aqui todo corte ia para a frente e havia
+      // ~1,5 escanteio por partida). Só quando a bola passa bem longe da trave
+      const lk = m.lastKick, og = m.ownGoalX(t), sz = Math.sign(p.z) || 1;
+      const tx = og + Math.sign(og) * 4, tz = sz * rand(GOAL.halfWidth + 6, 15);
+      const zLinha = p.z + (tz - p.z) * Math.abs(og - p.x) / Math.max(0.5, Math.abs(tx - p.x));
+      if (ownBox && lk && lk.kind === 'cross' && lk.p.team !== t && Math.abs(zLinha) > GOAL.halfWidth + 2 && Math.random() < 0.3)
+        data = { kind: 'pass', target: { x: tx, z: tz }, jump: clamp(hy - 1.75, 0, 0.6) };
+      else data = { kind: 'pass', target: { x: p.x + t.dir * 25, z: p.z + (p.z > 0 ? 8 : -8) }, jump: clamp(hy - 1.75, 0, 0.6) };
+    }
     else {
       const rec = headerReceiver(m, p);
       data = { kind: 'pass', receiver: rec?.q, target: rec ? { x: rec.q.x, z: rec.q.z } : { x: p.x + t.dir * 16, z: p.z * 0.8 }, jump: clamp(hy - 1.75, 0, 0.6) };
@@ -645,8 +677,13 @@ export function carrierThink(m, p, dt) {
   const gkO = t.opp.gk;
   const foraGk = gkO && !gkO.sentOff ? Math.abs(m.ownGoalX(t.opp)) - Math.abs(gkO.x) : 0;
   const dGk = gkO && !gkO.sentOff ? Math.hypot(gkO.x - p.x, gkO.z - p.z) : 99;
+  // (cara a cara de verdade: passou da última linha — nenhum defensor à frente ou na mesma altura, nenhum a 5 m.
+  // Com "ninguém a 7 m" valia também com a linha da defesa 8–10 m à frente: o condutor que tinha o chute de
+  // 20–25 m seguia conduzindo para dentro do bloco — 1/3 das decisões a 16–30 m e os chutes de 12 a 25 m caíram
+  // de ~10 para ~5 por partida)
+  const lxp = m.lx(t, p.x);
   const caraACara = dGoal > 13 && dGoal < 34 && Math.abs(p.z) < 18 &&
-    !t.opp.players.some(q => !q.isGK && !q.sentOff && Math.hypot(q.x - p.x, q.z - p.z) < 7 && m.lx(t, q.x) > m.lx(t, p.x) - 2);
+    !t.opp.players.some(q => !q.isGK && !q.sentOff && (Math.hypot(q.x - p.x, q.z - p.z) < 5 || (m.lx(t, q.x) > lxp - 1.5 && Math.abs(q.z - p.z) < 20)));
   const levaAtePerto = caraACara && foraGk < 6;
   // goleiro saindo em disparada de longe (botão GOLEIRO): o atacante segue com a bola para driblá-lo ou tocar
   // por cima quando ele chegar, em vez de bater de 25 m logo que o vê sair (com a vontade de chutar desta versão,
@@ -690,6 +727,10 @@ export function carrierThink(m, p, dt) {
     const c = crossTarget(m, p);
     if (c) options.push({ kind: 'cross', s: c.s + (tr.includes('criativo') ? 0.05 : 0), q: c.q });
   }
+  if (lx > HL - 11 && Math.abs(p.z) > 4 && Math.abs(p.z) < 24) {
+    const c = cutbackTarget(m, p);
+    if (c) options.push({ kind: 'pass', s: c.s + (tr.includes('criativo') || tr.includes('maestro') ? 0.05 : 0), q: c.q });
+  }
   const space = spaceAhead(m, p);
   const dribK = (tr.includes('driblador') ? 0.16 : 0) + (tr.includes('explosivo') && space > 6 ? 0.1 : 0) - (tr.includes('maestro') ? 0.05 : 0);
   // no último terço, com espaço na frente, conduz para dentro da área (é de lá que sai a maioria
@@ -705,7 +746,9 @@ export function carrierThink(m, p, dt) {
   // segura um instante depois de dominar
   // segura um instante depois de dominar (o Maestro segura um pouco mais e escolhe)
   // (na área o domínio já é o ajeite para o chute: segura bem menos)
-  const segura = dGoal < 18 && (pick.kind === 'shot' || pick.kind === 'finesse') ? 0.15 : tr.includes('maestro') ? 0.55 : 0.35;
+  // (contra a pressão mais intensa o jogo fica mais rápido no meio-campo, como no futebol de alta intensidade:
+  // ~0,25 s; segurando 0,35 s a pressão chegava antes da decisão — chutes e passes para a frente caíam)
+  const segura = dGoal < 18 && (pick.kind === 'shot' || pick.kind === 'finesse') ? 0.15 : tr.includes('maestro') ? 0.45 : lx > -18 && lx < 18 ? 0.25 : 0.35;
   if (pick.kind !== 'dribble' && held < segura && press < 0.6) pick = { kind: 'dribble', s: 0 };
 
   // perto do gol a jogada é mais rápida: o condutor reavalia mais vezes (a janela de chute abre e
@@ -948,8 +991,14 @@ export function bestReceiver(m, p, mode, dirx, dirz, ponta = false) {
       // arrisca mais (no futebol real o acerto cai de ~88% no próprio campo para ~70% no último
       // terço): antes o peso do risco era o mesmo em todo o campo e quase nenhum passe entrava na área
       // (a enfiada pesa o risco quase como o passe rasteiro: cortada em 3 de cada 4 no último terço)
-      const kRisk = mode === 'ground' ? 2.2 * (lxP > 18 ? 0.8 : lxP < -18 ? 1.15 : 0.85) : mode === 'through' ? (lxP > 18 ? 1.8 : 1.5) : 1.6;
-      s = 0.36 + clamp(progress, -15, 25) * 0.022 + Math.min(open, 7) * 0.045 - risk * kRisk - (d > 30 ? 0.15 : 0);
+      // (no meio, contra a pressão a dois, o risco pesa um pouco mais: 0,85 → 0,95 no rasteiro e 1,5 → 1,65 na
+      // enfiada — sem isso o acerto de passe caía de 77% para 76%)
+      const kRisk = mode === 'ground' ? 2.2 * (lxP > 18 ? 0.8 : lxP < -18 ? 1.15 : 0.95) : mode === 'through' ? (lxP > 18 ? 1.8 : 1.65) : 1.6;
+      // progressão vale mais que recuo (para a frente 0,025/m, para trás 0,022/m): contra o bloco fechado a IA
+      // reciclava a bola para trás — 36% dos passes, ~58 por partida (no futebol real ~20–25% são para trás)
+      s = 0.36 + clamp(progress, -15, 25) * (progress > 0 && mode !== 'air' ? 0.025 : 0.022) + Math.min(open, 7) * 0.045 - risk * kRisk - (d > 30 ? 0.15 : 0);
+      // virada de jogo: o bloco que defende fecha o lado da bola, o lado de lá fica livre
+      if (mode === 'ground' && Math.abs(q.z - m.ball.p.z) > 18 && open > 6 && progress > -6 && risk < 0.15) s += 0.12;
       if (mode === 'through') {
         s += q.runUntil > m.time ? 0.35 : -0.25;
         // a enfiada boa sai quando o atacante está chegando na linha ("no ombro" do zagueiro);
@@ -966,7 +1015,11 @@ export function bestReceiver(m, p, mode, dirx, dirz, ponta = false) {
       if (lq < -35) s -= 0.2;
       // para trás só quando apertado: sem pressão o meia procura a frente ou conduz (no meio-campo
       // 45% dos passes da IA iam para trás; no futebol real ~25–30%)
-      if (progress < -4 && lxP > -20) s -= 0.18 * (1 - clamp(m.pressure(p) * 1.4, 0, 1));
+      // (apertado também: o time pressionado sai jogando para a frente ou para o lado livre; recua só sem saída —
+      // antes, sob pressão, o recuo não custava nada e com a pressão a dois virava o padrão)
+      if (progress < -4 && lxP > -30) s -= 0.18 * (1 - clamp(m.pressure(p) * 1.4, 0, 1));
+      // recuo para o goleiro só para sair de um aperto perto da própria área
+      if (q.isGK && !(lxP < -25 && m.pressure(p) > 0.7)) s -= 0.2;
     }
     if (!best || s > best.s) best = { q, s };
   }
