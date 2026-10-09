@@ -14,7 +14,7 @@
 
 import { JOGADOR, PASSADA, PASSO, G, CONDUCAO, GESTO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
-import { infoPassada } from './jogador.js';
+import { progressoBalanco } from './jogador.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -51,43 +51,21 @@ const LMAX = (L1 + L2) * 0.998;
 const TORN = JOGADOR.alturaTornozelo;
 const MEIO_QUADRIL = JOGADOR.larguraQuadril / 2;
 const QUEDA_BALANCO = 0.12; // m — quanto o pé no balanço pode baixar o quadril
-const PERFIL_BALANCO = 0.7; // mistura suave/linear do balanço (1 = suave: pico 1,5× a média)
+const QUADRIL_SOBE = 1.5;   // m/s — o quadril sobe no máximo isto (desce direto ao alcance das pernas)
 
 function suave(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
 /**
- * Posição prevista do pé p (tornozelo) e se está no apoio. Pura. comBola = o jogador tem a
- * posse AGORA (a mesma conta da simulação: sim.js → passoPassada).
+ * Pé p (tornozelo) e se está no apoio. Pura. comBola = o jogador tem a posse AGORA (a mesma
+ * conta da simulação). No chão: o ponto plantado. No balanço: o pé desenhado que a simulação
+ * integra com a velocidade de um pé humano (jogador.js passoPeDesenhado: trajetória até o ponto
+ * de pouso, altura do passo e gesto do toque) — a pose só lê o estado.
  */
 export function pePrevisto(j, p, comBola) {
   const pe = j.pes[p];
   if (pe.apoio) return { x: pe.x, y: TORN, z: pe.z, apoio: true, rumo: pe.rumo, u: 0 };
-  const s = Math.hypot(j.vx, j.vz);
-  const { f } = infoPassada(s, comBola);
-  // balanço: de onde saiu (pe.x, pe.z) até o ponto de pouso guardado no pé (lx, lz — onde a
-  // simulação vai plantá-lo), pela fase entre a saída e o pouso (a fase nunca salta)
-  const total = Math.max(pe.fasePouso - pe.faseSaida, 1e-3);
-  const falta = Math.max(0, pe.fasePouso - j.fase);           // passos até pousar
-  const fp = Math.max(f, 0.5);                                  // ritmo natural (contínuo)
-  // o desenho vai um tick adiantado: no último tick do balanço o pé já está no ponto de pouso
-  // (a simulação planta o pé no FIM do tick em que a fase cruza o inteiro). Usa o ritmo
-  // natural, que muda devagar com a velocidade — o ritmo acelerado da passada muda de um tick
-  // para o outro e faria o pé saltar.
-  const u = clamp(1 - (falta - fp * PASSO) / total, 0, 1);
-  // perfil do balanço: pico ≈ 1,35 × a velocidade média (van der Straaten 2020: ~4,6 m/s andando a
-  // ~1,3 m/s) e o pé chega ao chão ainda andando um pouco (Clark 2023: 0,19·v + 0,81 m/s no pouso)
-  const k = lerp(u, suave(u), PERFIL_BALANCO);
-  const alt = lerp(0.07, PASSADA.alturaPasso + 0.1 * clamp((s - 4) / 4, 0, 1), clamp(s / 3, 0, 1));
-  return {
-    x: lerp(pe.x, pe.lx, k),
-    y: TORN + alt * Math.sin(Math.PI * u),
-    z: lerp(pe.z, pe.lz, k),
-    apoio: false,
-    rumo: pe.lrumo,
-    u,
-    // segundos desde que saiu do chão e até pousar (o menor): o gesto do toque cabe nisso
-    livre: Math.min(j.fase - pe.faseSaida, Math.max(0, falta - fp * PASSO)) / fp,
-  };
+  const { u, livre, meioApoio } = progressoBalanco(j, p, comBola);
+  return { x: pe.tx, y: pe.ty, z: pe.tz, apoio: false, rumo: pe.lrumo, u, livre, meioApoio };
 }
 
 /**
@@ -131,10 +109,11 @@ function ik(hx, hy, hz, tx, ty, tz, px, py, pz, out, iJoelho, iTorn) {
 function por(out, i, x, y, z) { out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z; }
 
 /**
- * Pose do jogador j no tick atual do mundo m. Escreve em out (Float32Array(3·NJ)) e devolve.
- * Também devolve em info (opcional) os alvos dos pés para o teste de patinação.
+ * Pés e quadril do jogador j no tick atual (parte comum da pose e da altura do quadril que a
+ * simulação guarda): alvos dos tornozelos e o TETO do quadril — a altura nominal com o balanço da
+ * passada, limitada pelo alcance das pernas.
  */
-export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
+function pesEQuadril(j, m) {
   const tick = m.tick;
   const s = Math.hypot(j.vx, j.vz);
   const h = j.rumo;
@@ -148,18 +127,8 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   const comBola = m.posse === j.id;
   const pes = [pePrevisto(j, 0, comBola), pePrevisto(j, 1, comBola)];
   if (c) {
-    // gesto do toque: o pé livre vai até o ponto em que encosta na bola e, logo depois do toque,
-    // acompanha a bola. O peso (puxa) e o ponto (gx, gz) estão no estado, com velocidade
-    // limitada (conducao.js atualizarGesto) → contínuo mesmo com o toque remarcado. O desvio da
-    // passada é limitado (GESTO.desvio) e encolhe com o tempo que o pé ainda tem no ar (0 no
-    // chão): a velocidade extra do pé fica limitada, sem "puxões".
+    // (o gesto do toque — o pé livre indo até a bola — já está no pé desenhado da simulação)
     const bx = m.bola.p.x, bz = m.bola.p.z;
-    // Mais rápido o corpo, maior a folga até o limite físico do pé (≈ 2,5 × a velocidade do corpo)
-    // e maior/mais rápido o gesto pode ser.
-    const ks = clamp(s / GESTO.velRef, 0, 1);
-    const dMax = lerp(GESTO.desvio[0], GESTO.desvio[1], ks);
-    const vDesvio = lerp(GESTO.velDesvio[0], GESTO.velDesvio[1], ks);
-    for (let p = 0; p < 2; p++) desviarPe(pes[p], j.pes[p].gx, TORN + 0.02, j.pes[p].gz, suave(j.pes[p].puxa), dMax, vDesvio);
     // pedalada: o pé de fora passa por cima da bola em arco (só o pé livre)
     if (c.pedalada) {
       const tp = clamp((tick - c.pedalada.tick0) * PASSO / CONDUCAO.pedaladaDuracao, 0, 1);
@@ -189,18 +158,58 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   const torcao = 0.08 * clamp(s / 5, 0.2, 1) * Math.sin(Math.PI * j.fase);
   const qh = h + torcao;
   const qrx = -Math.sin(qh), qrz = Math.cos(qh);
-  // O pé no balanço também baixa o quadril (até QUEDA_BALANCO): quando o pé pousa, o quadril
-  // já está na altura em que a perna alcança o ponto plantado (antes descia num quadro só).
+  // O pé no balanço também segura o quadril: na saída exatamente como o pé no chão (a perna
+  // alcança o pé que acabou de sair) e, no fim do balanço, pelo ponto de pouso (a perna alcança o
+  // ponto onde o pé vai ser plantado — e não o pé esticado à frente antes de recuar para o pouso).
+  // No meio do balanço a perna pode encolher: o quadril fica até QUEDA_BALANCO abaixo do nominal.
+  // O peso vai de 0 a 1 e volta a 0 pela fase do balanço: o quadril não salta quando o pé sai do
+  // chão (o pé que ficou para trás segurava o quadril baixo) nem quando pousa.
   const hyNom = hy;
+  const alcance = (x, y, z, qx, qz) => y + Math.sqrt(Math.max(0, LMAX * LMAX - (x - qx) ** 2 - (z - qz) ** 2)) - 0.002;
   for (let p = 0; p < 2; p++) {
     const pe = pes[p];
     const lado = p === 0 ? -1 : 1;
     const qx = px + qrx * lado * MEIO_QUADRIL, qz = pz + qrz * lado * MEIO_QUADRIL;
-    const dh = Math.hypot(pe.x - qx, pe.z - qz);
-    let maxY = pe.y + Math.sqrt(Math.max(0, LMAX * LMAX - dh * dh)) - 0.002;
-    if (!pe.apoio) maxY = Math.max(maxY, hyNom - QUEDA_BALANCO);
+    let maxY;
+    if (pe.apoio) maxY = alcance(pe.x, pe.y, pe.z, qx, qz);
+    else {
+      // o ponto que a perna precisa alcançar vai do pé (logo depois da saída) ao ponto de pouso
+      // visto do corpo (no fim do balanço): meio apoio à frente, como a passada planta o pé (mais
+      // um tick no fim: o pé desenhado chega ao ponto de pouso um tick antes de ser plantado).
+      // Não é o pé desenhado no fim do balanço: ele passa um pouco do pouso e recua (a perna não
+      // estica até lá, o joelho segue dobrado). Com o pé já no ponto de pouso (u = 1), o próprio pé.
+      const a = suave((pe.u - 0.25) / 0.5);
+      const tp = pe.meioApoio + PASSO * suave((pe.u - 0.8) / 0.2);
+      const m0 = pe.u >= 1 ? alcance(pe.x, pe.y, pe.z, qx, qz)
+        : alcance(lerp(pe.x, qx + j.vx * tp, a), lerp(pe.y, TORN, a), lerp(pe.z, qz + j.vz * tp, a), qx, qz);
+      const solto = hyNom - QUEDA_BALANCO;
+      maxY = solto > m0 ? m0 + suave(2 * Math.min(pe.u, 1 - pe.u)) * (solto - m0) : m0;
+    }
     if (hy > maxY) hy = maxY;
   }
+  return { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy };
+}
+
+/**
+ * Altura do quadril neste tick: o teto (alcance das pernas) e, para cima, no máximo
+ * QUADRIL_SOBE·PASSO acima da altura do tick anterior (j.quadril, guardada pela simulação). Para
+ * baixo vai direto ao teto (a perna sempre alcança o pé plantado); para cima sobe com a velocidade
+ * de um quadril humano — sem saltos quando um pé deixa de segurar o quadril (o pé no ar que
+ * passa por baixo do corpo, o pé que pousa).
+ */
+export function alturaQuadril(j, m) {
+  const { hy } = pesEQuadril(j, m);
+  return j.quadril == null ? hy : Math.min(hy, j.quadril + QUADRIL_SOBE * PASSO);
+}
+
+/**
+ * Pose do jogador j no tick atual do mundo m. Escreve em out (Float32Array(3·NJ)) e devolve.
+ * Também devolve em info (opcional) os alvos dos pés para o teste de patinação. A altura do
+ * quadril é a guardada pela simulação (alturaQuadril), nunca acima do teto deste tick.
+ */
+export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
+  const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto } = pesEQuadril(j, m);
+  const hy = j.quadril == null ? teto : Math.min(teto, j.quadril);
   por(out, J.pelve, px, hy, pz);
 
   // ---- tronco: inclinação para a frente (velocidade + aceleração) e para o lado (curva)

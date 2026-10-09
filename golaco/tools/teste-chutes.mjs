@@ -19,7 +19,7 @@ const GX = CAMPO.meioX, MEIO = CAMPO.gol.largura / 2;
  */
 function chute(semente, x, z, opc = {}) {
   const rumo = Math.atan2(-z, GX - x);
-  const jog = [{ id: 0, x, z, rumo, time: 0, papel: 'humano', posicao: 'ATA', attr: opc.attr ?? {} }];
+  const jog = [{ id: 0, x, z, rumo, time: 0, papel: 'humano', posicao: 'ATA', attr: opc.attr ?? {}, fase: opc.fase ?? 0 }];
   if (opc.goleiro) jog.push({ id: 20, x: opc.goleiro.x, z: opc.goleiro.z ?? 0, rumo: Math.PI, time: 1, papel: opc.goleiro.papel ?? 'ia', posicao: 'GOL', attr: { reflexo: 75, posicionamento: 74, mergulho: 75 } });
   if (opc.pressao) jog.push({ id: 21, x: x - 1.4, z, rumo: 0, time: 1, papel: 'parado', posicao: 'ZAG' });
   const m = criarMundo({ semente, jogadores: jog, bola: { x: x + Math.cos(rumo) * 0.4, z: z + Math.sin(rumo) * 0.4 }, posse: 0, log: true });
@@ -82,10 +82,13 @@ function chute(semente, x, z, opc = {}) {
 }
 
 // ------------------------------------------------ dispersão a 20 m: colocado, perna ruim, força máxima
+// O pé "da vez" muda de chute para chute: o batedor começa parado ora com um pé, ora com o outro
+// como o próximo a sair do chão (fase da passada). O toque sai sempre do pé livre e a passada é a
+// mesma em todos os chutes desta amostra — sem isso, todos saíam com o mesmo pé.
 function erros(semBase, opc, N = 60) {
   const bom = [], ruim = [];
   for (let s = 1; s <= N; s++) {
-    const r = chute(semBase + s, GX - 20, ((s % 7) - 3) * 1.2, { ...opc, canto: (s % 2 ? 1 : -1) * 0.3 });
+    const r = chute(semBase + s, GX - 20, ((s % 7) - 3) * 1.2, { ...opc, canto: (s % 2 ? 1 : -1) * 0.3, fase: Math.floor(s / 2) % 2 });
     if (!r || !r.mira || !r.linha) continue;
     const e = opc.soLateral ? Math.abs(r.linha.z - r.mira.z) : Math.hypot(r.linha.z - r.mira.z, r.linha.y - r.mira.y);
     (r.l.pe === (opc.attr.pePreferido ?? 1) ? bom : ruim).push(e);

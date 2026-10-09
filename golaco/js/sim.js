@@ -5,7 +5,8 @@
 import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
-import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
+import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
+import { alturaQuadril } from './anim.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
@@ -20,7 +21,8 @@ import { ACOES } from './config.js';
 /**
  * Cria o mundo. opcoes:
  *   semente      inteiro
- *   jogadores    [{id, x, z, rumo, attr, time, papel}]  papel: 'humano' | 'marcador' | 'parado'
+ *   jogadores    [{id, x, z, rumo, attr, time, papel, fase}]  papel: 'humano' | 'marcador' | 'parado';
+ *                fase = passada inicial (0 ou 1: qual pé é o próximo a sair do chão)
  *   bola         {x, z} (posição inicial); posse: id do jogador com a bola
  */
 export function criarMundo(opcoes = {}) {
@@ -46,7 +48,7 @@ export function criarMundo(opcoes = {}) {
     botoesTimeAnt: {},
   };
   for (const d of opcoes.jogadores ?? [{ id: 0, x: 0, z: 0, rumo: 0 }]) {
-    const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0);
+    const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0, d.fase ?? 0);
     j.papel = d.papel ?? 'humano';
     j.posicao = d.posicao ?? 'MEI';
     if (d.vaga) j.vaga = { x: d.vaga.x, z: d.vaga.z };
@@ -282,9 +284,11 @@ export function passo(m, entradas) {
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
-    passoPassada(j, m.posse === j.id, PASSO, null, saidaParaToque(m, j));
   }
   colisaoCorpos(m);
+  // a passada depois da trombada: o pé que sai do chão mira o pouso pela velocidade que o corpo
+  // tem DEPOIS do contato (antes mirava pela de antes e o pé caía longe do corpo)
+  for (const j of js) passoPassada(j, m.posse === j.id, PASSO, null, saidaParaToque(m, j));
   // 3) ações e controle de bola
   for (const j of js) if (j.pedido) processarPedido(m, j);
   if (m.naMao != null) {
@@ -328,7 +332,11 @@ export function passo(m, entradas) {
   if (m.voo && m.posse != null) m.voo = null;
   // 7) gesto do toque (só visual: o pé desenhado indo até a bola, com velocidade limitada)
   for (const j of js) if (j.cond) atualizarGesto(m, j);
+  // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
+  // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
+  for (const j of js) passoPeDesenhado(j, m.posse === j.id, PASSO);
   m.tick++;
+  for (const j of js) j.quadril = alturaQuadril(j, m);
 }
 
 /** Executa a ação marcada para este tick (pé de apoio no chão, bola no alcance). */

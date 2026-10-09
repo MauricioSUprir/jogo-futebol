@@ -139,6 +139,9 @@ export const PASSADA = {
   ],
   fatorComBola: 1.08,         // conduzindo, passos um pouco mais curtos e rápidos
   alcancePlantado: 0.62,      // m — além disso o pé de apoio sai do chão (passo antecipado)
+  alcanceMax: 0.8,            // m — perto disso (limite da perna) o pé de apoio sai depressa, até ritmoUrgente
+  alcanceParado: 0.3,         // m — parado, o corpo que se afasta mais que isso de um pé faz dar um passo
+  ajusteParado: 0.15,         // s — em quanto tempo esse pé sai do chão
   afastamentoLateral: 0.09,   // m — pé plantado ao lado do centro do corpo
   alturaPasso: 0.12,          // m — altura do pé no meio do balanço (corrida)
   // A fase da passada nunca salta (o pé no balanço anda pela fase: salto de fase = pé que
@@ -146,11 +149,19 @@ export const PASSADA = {
   ritmoAdiantado: 1.6,        // × o ritmo normal — pé de apoio para trás ou torto demais
   ritmoFimPasso: 4,           // passos/s — parado com um pé no ar: termina o passo (sem pousar de uma vez)
   ritmoSaidaToque: 8,         // passos/s — os dois pés no chão e o toque pede um pé livre
+  ritmoMinSaida: 0.25,        // × o ritmo normal — piso do ritmo que tira o pé do chão a pedido
+  ritmoUrgente: 8,            // passos/s — pé de apoio no limite da perna
   ritmoGestoParado: 0.6,      // passos/s — parado, com o pé no gesto do toque (o passo espera)
-  velPouso: [3, 1.5],         // m/s — o ponto de pouso do pé no ar anda no máximo [0] + [1] × velocidade
   // m/s — com a passada acelerada, o pé no ar anda no máximo [0] + [1] × velocidade do corpo
   // (85% do limite físico do teste de patinação, 3 + 2,5·v; Clark et al. 2023)
   velPeBalanco: [2.5, 2.1],
+  // Pé desenhado (jogador.js passoPeDesenhado): segue a trajetória do balanço com a velocidade de
+  // um pé humano. Correndo, o pico do pé no balanço é 2,00 ± 0,15 × v (Clark et al. 2023);
+  // andando, ~4,6 m/s a ~1,3 m/s (van der Straaten et al. 2020).
+  velPeMax: [2.7, 2.25],      // m/s — [0] + [1] × v: 90% de 3 + 2,5·v (folga para o joelho/quadril da pose)
+  velPeAterrissa: [0.77, 0.18], // m/s — no quadro do pouso: 95% de 0,81 + 0,19·v (Clark 2023, "GSD")
+  velPeVertical: 1.5,         // m/s — subida/descida do pé no balanço curto (a altura do passo encolhe)
+  perfilBalanco: 0.7,         // mistura linear/suave do caminho no balanço (1 = suave: pico 1,5× a média)
 };
 
 // Gesto do toque na bola (só visual). O peso com que o pé desenhado vai até a bola é

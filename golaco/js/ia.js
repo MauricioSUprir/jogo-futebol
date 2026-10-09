@@ -138,6 +138,13 @@ export function entradaIA(m, j) {
 }
 
 function comBola(m, j, lado, extra) {
+  // goleiro com a bola nas mãos jogado pela IA no lugar do humano (demo do treino de ataque):
+  // repõe como o goleiro da IA (sim.js goleiroComBola: lançamento depois de 1,5 s). Antes ele
+  // só soltava a bola quando um adversário chegava perto (até 6 s com a bola parada).
+  if (m.naMao === j.id) {
+    if (!j.iaAcao && !j.pedido && !j.carga && m.tick - (j.segura?.desde ?? m.tick) > 90) acaoIA(m, j, 'lancamento', 0.7);
+    return { x: 0, z: 0, botoes: j.iaAcao && m.tick < j.iaAcao.ate ? j.iaAcao.bot : 0 };
+  }
   const gx = lado * CAMPO.meioX;
   const dGol = MD.hypot(gx - j.x, j.z);
   let botoes = extra;
