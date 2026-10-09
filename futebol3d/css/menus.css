@@ -1,6 +1,6 @@
 /* GOLAÇO — menus. Identidade GOLAÇO: preto profundo, verde-gramado premium (#1ee37a) e branco.
    Tudo em "em": a fonte base escala com a tela (celular deitado até 4K). */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Inter:wght@400;500;600;700&display=swap');
+/* fonte: Inter local (css/tm.css, a cara do Total Match) — nada de Google Fonts */
 
 .gm-root {
   --bg0: #050605; --bg1: #0c100e; --panel: rgba(24, 29, 26, .78); --panel2: rgba(8, 10, 9, .9);
