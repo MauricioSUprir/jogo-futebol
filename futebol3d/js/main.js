@@ -459,6 +459,8 @@ function handleEvents(g) {
       case 'shot': if (Math.random() < 0.5) g.fx?.chance(); break;
       case 'vibrate': input.vibrate(e.ms); break;
       case 'penaltyGoal': case 'penaltyMiss': hud.shootout(m.shootout, m.teams); break;
+      // tiro de meta montado: corte de câmera, como na TV (quem estava na área já está fora dela — Regra 16)
+      case 'goalkick': g.rig.snap = true; break;
       case 'setpiece':
         if (e.type === 'setpiece') g.rig.snap = e.type === 'kickoff';
         if (m.shootout) hud.shootout(m.shootout, m.teams);
