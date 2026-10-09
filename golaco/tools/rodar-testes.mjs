@@ -1,7 +1,9 @@
 // Roda toda a bateria de testes em Node (a mesma que o GitHub Actions roda antes de publicar).
-// Sai com código 1 se algum reprovar.
+// Os testes rodam em paralelo (um processo cada, até o número de núcleos); o resultado sai na
+// ordem da lista. Sai com código 1 se algum reprovar.
 //   node tools/rodar-testes.mjs [--rapido]
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -24,18 +26,37 @@ const TESTES = [
   ['recomeço do treino (bola no pé, bola fora)', 'teste-treino.mjs'],
 ];
 
-const res = [];
+function rodar(arq) {
+  return new Promise(resolve => {
+    const ti = Date.now();
+    const p = spawn(process.execPath, [path.join(AQUI, arq)], { cwd: path.resolve(AQUI, '..') });
+    let saida = '';
+    p.stdout.on('data', d => { saida += d; });
+    p.stderr.on('data', d => { saida += d; });
+    p.on('close', codigo => resolve({ ok: codigo === 0, saida, s: (Date.now() - ti) / 1000 }));
+  });
+}
+
 const t0 = Date.now();
-for (const [nome, arq] of TESTES) {
-  const ti = Date.now();
-  const r = spawnSync(process.execPath, [path.join(AQUI, arq)], { encoding: 'utf8', cwd: path.resolve(AQUI, '..') });
-  const ok = r.status === 0;
-  res.push({ nome, arq, ok, s: (Date.now() - ti) / 1000 });
-  process.stdout.write(`${ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}  (${((Date.now() - ti) / 1000).toFixed(1)} s)\n`);
-  if (!ok) {
-    process.stdout.write((r.stdout || '') + (r.stderr || '') + '\n');
+const nPar = Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
+const res = new Array(TESTES.length);
+let prox = 0, impresso = 0;
+function imprimir() {
+  while (impresso < TESTES.length && res[impresso]) {
+    const r = res[impresso], [nome] = TESTES[impresso];
+    process.stdout.write(`${r.ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}  (${r.s.toFixed(1)} s)\n`);
+    if (!r.ok) process.stdout.write(r.saida + '\n');
+    impresso++;
   }
 }
+async function trabalhador() {
+  while (prox < TESTES.length) {
+    const i = prox++;
+    res[i] = await rodar(TESTES[i][1]);
+    imprimir();
+  }
+}
+await Promise.all(Array.from({ length: nPar }, trabalhador));
 const falhas = res.filter(r => !r.ok);
 console.log(`\n${res.length - falhas.length}/${res.length} testes passaram em ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 process.exit(falhas.length ? 1 : 0);
