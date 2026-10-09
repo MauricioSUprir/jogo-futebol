@@ -34,15 +34,26 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **textura com foto, nada desenhado por código** (o dono não quer rosto procedural).
 - **Sempre dar estimativa de tempo** ao começar uma tarefa e **atualizá-la** a cada
   mensagem de andamento (ex.: "faltam ~40 min").
-- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise completa da movimentação (FEITA e enviada: plano em
-  6 etapas — corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/
-  pivô, IA sem vai-e-volta, intensidade) → **próximo PR:** botão de sair com o goleiro na defesa (ele ataca a bola),
-  bola parada e organização (tiro de meta sem adversário na área, lateral e reposição do goleiro com a bola NA MÃO —
-  hoje flutua, escanteio organizado, cabeceio e disputa pelo alto, organização tática), **divididas mais efetivas**
-  (desde a Fase 3 o bote de frente no atacante que protege vira falta), **troca de jogador mais rápida e inteligente**,
-  **goleiro defendendo mais** (~70% de defesas, espalmando) e **mais intensidade e movimentação dos dois times (MUITO
-  importante para o dono**: fechar o lado da bola, pressão em gatilhos, apoio e corridas) → giro com bola natural e
-  condução mais no pé → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+- **Fila nova (08/10, depois da Fase 3 da auditoria):** análise da movimentação (FEITA e enviada: plano em 6 etapas —
+  corpo com peso, toque planejado no giro, pé plantado no mundo + inercialização, clipes de partida/parada/pivô, IA sem
+  vai-e-volta, intensidade); botão GOLEIRO, bolas paradas, bola na mão, disputa pelo alto, divididas, troca de jogador,
+  goleiro na bissetriz, intensidade dos dois times e condução organizada (ENTREGUES em 09/10 num PR só; o dono escolheu a
+  versão REALISTA, sem vídeos, e o merge com o equilíbrio passando na média mas não em toda rodada) → **agora:** volume
+  de ataque na área (abaixo) → vai-e-volta da condução da IA → giro com bola natural e condução mais no pé (etapas 1–2
+  da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
+  Estado entregue (144 partidas, `tools/painel-equilibrio.mjs`): ~24 chutes, ~2,4 gols, 10% de conversão, passe 77%,
+  escanteios 2,2, goleiro 67–69% (80–84% nos chutes de longe no alvo), 29% dos gols de fora da área; intensidade OK
+  (largura ~39 m, meio–ataque ~13,5 m, marcador a ≤ 3 m ~45%). A versão publicada antes tinha ~1 gol por partida de
+  saída de bola roubada no tiro de meta com o adversário dentro da área (defeito da Regra 16, corrigido;
+  `tools/origem-chutes.mjs` separa esses lances); sem esses lances as duas versões empatam em gols. O teste de 24
+  partidas reprova ~1/3 das rodadas (média ~2,45, piso 2,3) e o goleiro de 6 a 16,5 m oscila 45–73% entre rodadas de 36
+  partidas (meta ≥ 55%). Próximo PR — volume de ataque: com o goleiro na meta (≥ 66%), 2,6 gols pedem ~7,6+ chutes no
+  alvo — falta volume de chance de verdade (e ~55% dos chutes ainda saem de 25 m ou mais). Pistas
+  (rastro das decisões): no último terço quase todo passe fica negativo (bloco fechado = linha de passe "arriscada" no
+  `laneRisk`) e o condutor dribla até perder no bote (~6 por partida) ou chutar; o cruzamento vira corte de cabeça; o
+  passe para trás da linha de fundo quase nunca acha alvo. Ajuste só de peso não mudou o volume (testados: apoio por
+  linha de passe, transição, corridas, passe "para quem finaliza", finalizar sob pressão). Medir com 144+ partidas
+  (amostra de 48 varia ±0,25 gol).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
@@ -81,6 +92,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   condutor "monta" na bola (`human.js` keepBall, também para a IA); em plena arrancada, um toque por passada.
   Medir: `tools/ima-test.mjs` (duas partidas; 0% de ímã, ~0,5 m correndo, p95 ≤ ~1,2 m na arrancada),
   `tools/keepball-test.mjs`, `tools/protecao-test.mjs`.
+- Condução organizada (dono, 09/10: "melhorou, mas tá muito desorganizada"): na curva o toque manda a bola PELA curva
+  (`match.js` dribbleTouch prevê o giro do analógico, `p.intentW` medido em `human.js` keepBall) e o corpo do jogador
+  controlado segue o rumo pedido com a bola no caminho (só vai buscá-la fora de ~35° do rumo); em arrancada na curva ele
+  tira o pé (~3,2 m/s² de lado com a bola). Medir: `tools/conducao-org-test.mjs` (publicado: o rumo oscilava 60–100°/s
+  numa curva pedida de 30°/s, cortes sem pedir, bola até ~0,5 m fora do caminho). Pendente: o vai-e-volta da condução
+  da IA (rumo pedido inverte ~25×/min, o corpo ~35–40×/min; tentativas de suavizar o rumo da IA derrubaram o ataque).
 - Rostos encaixados por 478 pontos (MediaPipe) nos marcos da cabeça 3D (`tools/rostos/marcos_cabeca.py`
   → `cabeca-marcos.json`; `processar.py` deforma cada foto por triângulos e tira a luz lateral).
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
@@ -128,6 +145,22 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   espalmada para escanteio (`parryOut`) e rebote na área; chute de média distância, finalização de primeira,
   cruzamento com ataque à área, pressão alta, decisão mais rápida no último terço; passe com risco por zona.
   Vídeo de lance natural IA×IA com semente (nada roteirizado): `tools/lance-clip.mjs --evento impedimento|defesa|espalmada`.
+- Pedidos do dono de 08/10 (PR depois da Fase 3): botão GOLEIRO na defesa (`gk.js` gkRush; `human.js` userGKRush; tecla G/Y;
+  `tools/goleiro-sai-test.mjs`, `tools/goleiro-botao-test.mjs` no celular, vídeo `tools/goleiro-clip.mjs`; contra o botão o
+  atacante da IA segue com a bola em vez de bater logo — `ai.js` contraBotao, só contra o humano, IA×IA não muda); bolas paradas
+  (`ai.js` alvosBolaParada/setpieceAI: tiro de meta com o adversário fora da área — Regra 16 —, lateral com 3 opções, escanteio
+  com zona + individual; `match.js` handsPoint: a bola fica NAS mãos no lateral e com o goleiro; `tools/bola-parada-test.mjs`,
+  prints `tools/bola-parada-prints.mjs`); disputa pelo alto perto das áreas (`ai.js` pontoAereo, `match.js` doHeader com duelo
+  por altura/impulsão/força; `tools/disputa-aerea-test.mjs`); dividida que vale de lado (perna sai do quadril; `match.js`
+  ajustaBote; `tools/dividida-test.mjs --alvo` e `--natural --alvo`); troca automática NO PASSE do adversário e com o marcador
+  batido (`human.js` autoSwitch; `tools/troca-auto-test.mjs`); intensidade enxuta (bloco estreito pela forma, meio sobe 2 m e
+  ataque recua 4 m, 1º marcador arranca a 3 m; a pressão a dois nos gatilhos saiu — custava ~1 chute por partida;
+  `tools/intensidade-jogo-test.mjs`); goleiro na bissetriz e IA mirando
+  longe dele, chute de longe menos preciso (`tools/defesas-test.mjs`: ~67% de defesas, ~2/3 espalmadas). Equilíbrio recalibrado
+  com tudo isso (versão realista entregue, 8 rodadas = 192 partidas: 2,48 gols, 10,5%, 77,1% de passe, 1,75
+  impedimento; o de 24 reprova ~1 em 3 por sorteio — falta volume de ataque, ver a fila). Bola parada com o time todo
+  atordoado não trava mais (`tools/cobrador-test.mjs`). `tools/fase1-test.mjs` espera a bola rolar antes de medir a
+  interpolação (com falta/lateral logo no começo, ~15% das partidas, reprovava por sorteio).
 
 ### Testes (rodar antes de todo commit do futebol3d)
 ```bash
@@ -139,6 +172,11 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
 # Fase 2 (Node): node tools/patinacao-test.mjs && node tools/giro-test.mjs && node tools/inclinacao-test.mjs \
 #   && node tools/velocidades-test.mjs 3 && node tools/ima-test.mjs 600
 # Fase 3 (Node): node tools/equilibrio-test.mjs 24 --par 4 && node tools/linha-test.mjs && node tools/espalmada-test.mjs
+# Pedidos de 08/10 (Node): node tools/dividida-test.mjs 200 --alvo && node tools/dividida-test.mjs 400 --natural --alvo \
+#   && node tools/troca-auto-test.mjs && node tools/intensidade-jogo-test.mjs && node tools/defesas-test.mjs 36 --par 3 \
+#   && node tools/goleiro-sai-test.mjs && node tools/bola-parada-test.mjs && node tools/disputa-aerea-test.mjs \
+#   && node tools/cobrador-test.mjs && node tools/conducao-org-test.mjs
+#   (navegador, celular: node tools/goleiro-botao-test.mjs)
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
 ```

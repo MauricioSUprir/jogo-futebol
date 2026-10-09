@@ -27,6 +27,9 @@ export function humanStep(m, cmd, dt) {
 
   if (m.phase === 'setpiece' && m.sp && m.sp.team === team && m.sp.taker === p) { setpiece(m, p, cmd, mx, mz, dt); return; }
   if (m.phase !== 'play') return;
+  // sair com o goleiro: botão GOLEIRO (toque), G (teclado) ou Y segurado (controle). Lido sempre, mesmo
+  // com o jogador controlado caído ou num carrinho: quem sai é o goleiro
+  m.userGKRush = !!(cmd.held.gkrush || cmd.held.through);
 
   // goleiro com a bola na mão: humano repõe
   if (team.gk.holdingBall && m.holder === team.gk) {
@@ -122,7 +125,7 @@ export function humanStep(m, cmd, dt) {
     p.startAction('slide', { speed: Math.max(6.5, p.speed * 1.08) });
   }
   m.teamPressCall = cmd.held.long ? team : null;
-  m.userGKRush = cmd.held.through;
+
 }
 
 function moveInput(p, mx, mz, sprint, scale) {
@@ -143,6 +146,17 @@ export function keepBall(m, p) {
   // quadro a quadro e viraria uma série de cortes)
   if (p.human || p.intentX == null) { p.intentX = p.dx; p.intentZ = p.dz; }
   else { const k = Math.min(1, m.dt60 ?? 0.2); p.intentX += (p.dx - p.intentX) * k; p.intentZ += (p.dz - p.intentZ) * k; }
+  // quanto o rumo pedido está girando (rad/s, filtrado): numa curva o toque manda a bola PELA curva (dribbleTouch);
+  // antes ela ia reta para onde o pé estaria sem a curva, saía por fora e o corpo corria atrás dela em zigue-zague
+  {
+    const il = Math.hypot(p.intentX, p.intentZ), a = Math.atan2(p.intentZ, p.intentX), dtk = m.time - (p.intT ?? m.time);
+    if (il > 0.5 && p.intA !== undefined && dtk > 1e-4) {
+      let d = a - p.intA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+      const w = Math.max(-4, Math.min(4, d / dtk)), k = 1 - Math.exp(-dtk / 0.15);
+      p.intentW = (p.intentW ?? 0) + (w - (p.intentW ?? 0)) * k;
+    } else if (il <= 0.5) p.intentW = 0;
+    p.intA = a; p.intT = m.time;
+  }
   const sp = p.speed, ctl = (p.a.ctl ?? p.a.dri) / 99;
   const base = 0.27 + Math.min(sp, 8) * 0.01, side = 0.1 * p.foot;
   const rx = -p.fz, rz = p.fx;
@@ -151,6 +165,27 @@ export function keepBall(m, p) {
   const reach = 0.3 + 0.12 * ctl;
   let dx = p.dx, dz = p.dz, s = Math.hypot(dx, dz);
   const bs = Math.hypot(b.v.x, b.v.z);
+  // bola à frente, no caminho pedido (ao alcance do pé, de lado): o corpo segue o rumo pedido e só ajusta o passo — o próximo
+  // toque traz a bola para o caminho. Antes ele corria para trás da bola a cada desvio de palmos e o corpo ia em
+  // zigue-zague atrás dela (a "condução desorganizada" da curva)
+  // (só o humano: na IA o rumo pedido oscila — ver ai.js applyDribble — e o corpo seguiria a oscilação)
+  const ilk = Math.hypot(p.intentX ?? 0, p.intentZ ?? 0);
+  // curva com a bola em arrancada: quem conduz de verdade tira o pé para fazer a curva com a bola junto (aceleração de
+  // lado de ~3,2 m/s² com a bola no pé). Sem isso, a 8 m/s a bola saía por fora da curva e o corpo virava para ela
+  if (p.human && Math.abs(p.intentW || 0) > 0.25 && s > 0.5) {
+    const cap = Math.max(p.jog * 0.9, 3.2 / Math.abs(p.intentW));
+    if (s > cap) { dx *= cap / s; dz *= cap / s; s = cap; p.dx = dx; p.dz = dz; if (cap <= p.jog + 0.2) p.sprint = false; }
+  }
+  if (p.human && footErr > reach + 0.05 && ilk > 0.5) {
+    const ux = p.intentX / ilk, uz = p.intentZ / ilk, rbx = b.p.x - p.x, rbz = b.p.z - p.z;
+    const along = rbx * ux + rbz * uz, lat = Math.abs(-rbx * uz + rbz * ux);
+    if (along > base && along < base + 1.0 && lat < reach * 0.75) {
+      const want = Math.min(p.sprintSpd, Math.max(s, bs + (along - base) * 3));
+      p.dx = ux * want; p.dz = uz * want;
+      if (want > p.jog + 0.2 && p.stamina > 0.15) p.sprint = true;
+      return;
+    }
+  }
   if (footErr > reach + 0.05) {
     // monta na bola: ponto atrás dela (um pé de distância) na trajetória prevista
     const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
@@ -160,8 +195,19 @@ export function keepBall(m, p) {
     // chega na bola com vontade (e não desacelera atrás de uma bola lenta que está à frente:
     // ele a alcança e o próximo toque já a empurra no ritmo pedido)
     const frente = (ex * (s > 0.01 ? dx / s : p.fx) + ez * (s > 0.01 ? dz / s : p.fz)) / d;
-    const want = Math.min(p.sprintSpd, Math.max(bs + d * 3.5, frente > 0.7 ? Math.min(s, sp) : 0));
-    dx = ex / d * want; dz = ez / d * want; s = want;
+    let want = Math.min(p.sprintSpd, Math.max(bs + d * 3.5, frente > 0.7 ? Math.min(s, sp) : 0));
+    let cx = ex / d, cz = ez / d;
+    // humano com a bola à frente e um pouco de lado: vai buscá-la sem se afastar mais de ~35° do rumo pedido (e sem
+    // passar da velocidade da curva) — virando o corpo inteiro para ela, o rumo seguinte pedia um corte de volta
+    if (p.human && ilk > 0.5) {
+      const ux = p.intentX / ilk, uz = p.intentZ / ilk, rbx = b.p.x - p.x, rbz = b.p.z - p.z;
+      if (rbx * ux + rbz * uz > 0) {
+        const dA = Math.atan2(cz, cx) - Math.atan2(uz, ux), dd = Math.atan2(Math.sin(dA), Math.cos(dA));
+        if (Math.abs(dd) > 0.6) { const a = Math.atan2(uz, ux) + Math.sign(dd) * 0.6; cx = Math.cos(a); cz = Math.sin(a); }
+        if (Math.abs(p.intentW || 0) > 0.25) want = Math.min(want, Math.max(p.jog * 0.9, 3.2 / Math.abs(p.intentW)) + 0.6);
+      }
+    }
+    dx = cx * want; dz = cz * want; s = want;
     // a bola abriu (toque longo): arranca para alcançá-la, se tiver fôlego
     if (want > p.jog + 0.2 && p.stamina > 0.15) p.sprint = true;
   }
@@ -312,13 +358,16 @@ function firstTime(m, p) {
   }
 }
 
-// Troca: o companheiro que chega primeiro na bola (ou no portador adversário).
+// Troca: o companheiro que chega primeiro na bola (ou no portador adversário). Com a bola no pé do
+// adversário, vale quem chega antes no caminho dele (onde ele vai estar em 0,5 s) estando entre ele e o
+// nosso gol — quem vem por trás chega, mas não defende
 function switchList(m) {
   const team = m.userTeam;
   const cur = m.controlled;
-  const b = m.ball.p;
+  const b = m.ball.p, o = m.owner, adv = o && o.team !== team;
+  const x = adv ? o.x + o.vx * 0.5 : b.x, z = adv ? o.z + o.vz * 0.5 : b.z;
   return team.players.filter(q => !q.sentOff && !q.isGK && q !== cur)
-    .map(q => ({ q, s: q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
+    .map(q => ({ q, s: adv ? notaMarcador(m, q, x, z) : q.interceptT + Math.hypot(q.x - b.x, q.z - b.z) * 0.02 - (m.lx(team, q.x) < m.lx(team, b.x) ? 0.3 : 0) }))
     .sort((a, c) => a.s - c.s);
 }
 function switchIndex(m, n, manual) {
@@ -356,14 +405,52 @@ export function switchCandidate(m) {
   return list.length ? list[switchIndex(m, list.length, true)].q : null;
 }
 
+// Tempo aproximado para um jogador chegar a um ponto (arrancada + o giro que ele precisa dar).
+function tempoAte(q, x, z) {
+  const dx = x - q.x, dz = z - q.z, d = Math.hypot(dx, dz);
+  const giro = d > 0.5 ? (1 - (dx * q.fx + dz * q.fz) / d) * 0.25 : 0;
+  return d / (q.sprintSpd || 8) + giro;
+}
+// Nota de um marcador para um ponto: quem chega antes, com desconto para quem já está entre o ponto e o
+// nosso gol (quem vem por trás chega, mas não defende)
+function notaMarcador(m, q, x, z) {
+  return tempoAte(q, x, z) + (m.lx(q.team, q.x) < m.lx(q.team, x) + 1 ? 0 : 0.6);
+}
+function melhorMarcador(m, x, z) {
+  let best = null, bs = 1e9;
+  for (const q of m.userTeam.players) {
+    if (q.sentOff || q.isGK) continue;
+    const s = notaMarcador(m, q, x, z);
+    if (s < bs) { bs = s; best = q; }
+  }
+  return best ? { q: best, s: bs } : null;
+}
+
 function autoSwitch(m) {
   const team = m.userTeam;
   const owner = m.owner;
   const cur = m.controlled;
+  const troca = (q) => { m.setControlled(q); m.lastSwitchT = m.time; m.switchIdx = 0; };
+  // passe do adversário: troca NO PASSE para quem chega antes ao recebedor (FC: "auto switching" no passe).
+  // Antes só trocava quando o recebedor dominava (~1 s depois) e se o controlado estivesse a > 12 m.
+  // Só troca com vantagem clara (0,35 s): se o controlado já é quem chega, ele continua.
+  const lk = m.lastKick, pt = m.passTarget;
+  if (lk && lk.t !== m.trocaPasseT && lk.p.team !== team && !owner && cur && pt && pt.p && pt.p.team !== team && m.time - pt.t < 0.2) {
+    m.trocaPasseT = lk.t;
+    const b = melhorMarcador(m, pt.x, pt.z);
+    if (b && b.q !== cur && notaMarcador(m, cur, pt.x, pt.z) - b.s > 0.35) troca(b.q);
+  }
+  // marcador batido: o condutor passou do controlado rumo ao nosso gol e há um companheiro entre ele e o
+  // gol que chega antes ao caminho dele — troca para esse (antes ficava no batido até apertar TROCAR)
+  if (owner && owner.team !== team && cur && m.time - (m.lastSwitchT || 0) > 0.6 && m.lx(team, cur.x) - m.lx(team, owner.x) > 2.5) {
+    const x = owner.x + owner.vx * 0.6, z = owner.z + owner.vz * 0.6;
+    const b = melhorMarcador(m, x, z);
+    if (b && b.q !== cur && m.lx(team, b.q.x) < m.lx(team, owner.x) + 1 && b.s < notaMarcador(m, cur, x, z) - 0.2) troca(b.q);
+  }
   const key = owner ? owner.idx : -1;
   if (key !== m.lastOwnerKey) {
     m.lastOwnerKey = key;
-    if (owner && owner.team !== team && cur) {
+    if (owner && owner.team !== team && cur && m.time - (m.lastSwitchT || 0) > 0.3) {
       const d = Math.hypot(cur.x - owner.x, cur.z - owner.z);
       if (d > 12) switchPlayer(m, false);
     }
