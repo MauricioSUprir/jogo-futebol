@@ -92,11 +92,19 @@ export function processarPedido(m, j) {
   const c = j.cond;
   if (c.toque && c.toque.tipo === 'acao') return;
   let op = procurarOportunidade(m, j, 2, 24, true, null, true);
-  // sem pressão, ajeita o passo para bater com a perna boa (até ~0,15 s a mais)
+  // perna boa: parado (os dois pés no chão) com a bola à frente, bate com ela; sem pressão,
+  // ajeita o passo para bater com ela
   const pref = j.par.attr.pePreferido ?? 1;
-  if (op && op.pe !== pref && pressaoSobre(m, j) < 0.3) {
-    const op2 = procurarOportunidade(m, j, op.i + 1, op.i + 9, true, null, true);
-    if (op2 && op2.pe === pref) op = op2;
+  if (op && op.pe !== pref) {
+    const la = -(op.bx - j.x) * MD.sin(j.rumo) + (op.bz - j.z) * MD.cos(j.rumo);
+    const parado = MD.hypot(j.vx, j.vz) < 1 && j.pes[0].apoio && j.pes[1].apoio;
+    if (parado && Math.abs(la) < 0.35) op = { ...op, pe: pref };
+    else if (pressaoSobre(m, j) < 0.3) {
+      // andando, a passada é mais lenta: espera até um passo a mais (~0,33 s); correndo, ~0,15 s
+      const espera = MD.hypot(j.vx, j.vz) < 3 ? 20 : 9;
+      const op2 = procurarOportunidade(m, j, op.i + 1, op.i + espera, true, null, true);
+      if (op2 && op2.pe === pref) op = op2;
+    }
   }
   if (op) c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'acao' };
 }
@@ -180,10 +188,20 @@ function pressaoSobre(m, j) {
   return clamp((ACOES.pressaoDist - dm) / ACOES.pressaoDist, 0, 1);
 }
 
+/**
+ * Perna ruim: mais dispersão e menos velocidade. Pesquisa da Etapa 2: erro +40% (Carlsson 2018)
+ * e velocidade a 84% (Nunome 2006) em jogadores bons de perna ruim mediana.
+ */
 function multPeFraco(j, pe) {
   const a = j.par.attr;
   if (pe === a.pePreferido) return 1;
-  return lerp(2.0, 1.0, (a.peFraco ?? 50) / 100);
+  return lerp(1.8, 1.1, (a.peFraco ?? 50) / 100);
+}
+
+function velPeFraco(j, pe) {
+  const a = j.par.attr;
+  if (pe === a.pePreferido) return 1;
+  return lerp(0.78, 0.95, (a.peFraco ?? 50) / 100);
 }
 
 /** Tempo (ticks) para o jogador chegar correndo a (px,pz), pela mesma locomoção do jogo. */
@@ -254,6 +272,13 @@ export function executarAcao(m, j, pe, primeira = false) {
   const b = m.bola;
   if (b.p.y > 0.6 && p.tipo !== 'chute') return executarCabeceio(m, j, p);
   if (b.p.y > 1.2) return executarCabeceio(m, j, p);
+  if (p.tipo === 'chute') {
+    // no chute a pressão só pesa de perto (< 12 m) e pouco; de primeira, ×1,15 (StatsBomb)
+    const lado = ataca(m, j.time);
+    const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
+    const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe);
+    return chute(m, j, pe, p, em);
+  }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
   switch (p.tipo) {
     case 'passe': return passeRasteiro(m, j, pe, p, erroMult);
@@ -520,30 +545,38 @@ function chute(m, j, pe, p, erroMult) {
   }
   const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
-  let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100);
+  let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;
   let ux = gx - b.p.x, uz = zMira - b.p.z;
-  const D = MD.hypot(ux, uz) || 1;
-  ux /= D; uz /= D;
+  const D0 = MD.hypot(ux, uz) || 1;
+  ux /= D0; uz /= D0;
+  // a altura é medida 0,4 m antes da linha: na linha estão as traves, e um voo que bate no
+  // travessão confundiria a busca da elevação
+  const D = Math.max(1, D0 - 0.4);
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   // colocado: efeito para dentro (curva para o meio do gol)
   let w = { x: 0, y: 0, z: 0 };
   if (colocado) {
-    const sinal = (zMira * lado > 0 ? -1 : 1) * lado; // curva para o lado do centro
+    // efeito de dentro do pé: a bola sai por fora e curva para dentro do gol (Magnus ∝ ω × v,
+    // com ω no eixo y: a força lateral em z vale −ωy·vx)
+    const sinal = (zMira >= 0 ? 1 : -1) * lado;
     w = { x: 0, y: sinal * cfg.giroColocado, z: 0 };
-    // corrige o azimute pela curva medida
+    // gira a saída até a bola cruzar na mira (o desvio é medido em relação à reta original)
+    const ux0 = ux, uz0 = uz;
+    let a = 0;
     for (let k = 0; k < 3; k++) {
-      const el0 = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
-      const r0 = alturaNaDistancia(pp, ux, uz, D, s, el0, w);
-      const a = -r0.lateral / D;
-      const g = girar(ux, uz, a);
-      ux = g.x; uz = g.z;
+      const g = girar(ux0, uz0, a);
+      const el0 = elevacaoParaAltura(pp, g.x, g.z, D, s, yMira, w);
+      const r0 = alturaNaDistancia(pp, g.x, g.z, D, s, el0, w);
+      a -= (r0.lateral + D * MD.sin(a)) / D;
     }
+    const g = girar(ux0, uz0, a);
+    ux = g.x; uz = g.z;
   }
   const el = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
   const base = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100);
-  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? 1.3 : 1) * (colocado ? cfg.colocadoErro : 1);
+  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * (colocado ? cfg.colocadoErro : 1);
   const ea = normal(m.rng) * sig, ee = normal(m.rng) * sig * 0.6;
   const u = girar(ux, uz, ea);
   const ce = MD.cos(el + ee), se = MD.sin(el + ee);
@@ -557,15 +590,17 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
   const b = m.bola;
   const cfg = ACOES.cavadinha;
   const lado = ataca(m, j.time);
-  let ux = gx - lado * 1 - b.p.x, uz = -b.p.z * 0.6;
+  // cai logo depois da linha: passa nela abaixo do travessão, descendo
+  let ux = gx + lado * cfg.alemDaLinha - b.p.x, uz = -b.p.z * 0.6;
   const D = MD.hypot(ux, uz) || 1;
   ux /= D; uz /= D;
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   const w = { x: uz * 12, y: 0, z: -ux * 12 };
   const s = velParaPousar(pp, ux, uz, D, cfg.elev, w);
-  const sig = lerp(ACOES.chute.erroRuim, ACOES.chute.erroBom, j.par.attr.finalizacao / 100) * erroMult;
-  const u = girar(ux, uz, normal(m.rng) * sig);
-  const s2 = s * (1 + normal(m.rng) * sig * 0.5);
+  // a cavadinha é difícil de dosar (StatsBomb: 41,8% no alvo): erro grande na força e na direção
+  const fin = j.par.attr.finalizacao / 100;
+  const u = girar(ux, uz, normal(m.rng) * lerp(cfg.erroDir[0], cfg.erroDir[1], fin) * erroMult);
+  const s2 = s * (1 + normal(m.rng) * lerp(cfg.erroForca[0], cfg.erroForca[1], fin) * erroMult);
   const ce = MD.cos(cfg.elev), se = MD.sin(cfg.elev);
   finalizarChute(m, j, pe, 'cavadinha', { x: u.x * s2 * ce, y: s2 * se, z: u.z * s2 * ce }, w, { x: b.p.x + ux * D, z: b.p.z + uz * D }, null, { voo: { alto: true } });
   return true;

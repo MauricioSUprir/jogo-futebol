@@ -4,6 +4,9 @@
 // (um fixo e um que abre e apaga) + ponto no meio, num grupo só — 3 draw calls quando visível.
 import * as THREE from 'three';
 
+// chute pelo alto (cavadinha) não ganha marca: o alvo é o gol, não um ponto de recepção
+const SEM_MARCA = new Set(['chute', 'colocado', 'cavadinha']);
+
 export function criarMarcas(cena) {
   const verde = 0x19e07a;
   const comum = { transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 };
@@ -29,7 +32,7 @@ export function criarMarcas(cena) {
      */
     atualizar(mundo, bola, t, dt) {
       const v = mundo?.voo;
-      let ativo = !!(v && v.alto && v.alvo && Number.isFinite(v.alvo.x) && Number.isFinite(v.alvo.z));
+      let ativo = !!(v && v.alto && !SEM_MARCA.has(v.tipo) && v.alvo && Number.isFinite(v.alvo.x) && Number.isFinite(v.alvo.z));
       if (ativo && v.tickChegada != null && mundo.tick > v.tickChegada + 6) ativo = false;
       if (ativo && bola && bola.y < 0.3 && Math.hypot(bola.x - v.alvo.x, bola.z - v.alvo.z) < 1.2) ativo = false;
       if (ativo) ultimo = { x: v.alvo.x, z: v.alvo.z };

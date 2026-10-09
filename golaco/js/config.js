@@ -260,21 +260,42 @@ export const ACOES = {
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.66], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
   cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11, yAlto: 2.0, yTenso: 0.9, setor: 0.44 },
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.8, colocadoErro: 0.6, giroColocado: 26 },
-  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72 },
+  // chute (pesquisa da Etapa 2): máximo de 30–34 m/s nos melhores (Shinkai 2008; DFL); colocado
+  // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
+  // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15 },
+  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
+  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   cabeceio: { alcanceSalto: 2.55, alturaPeito: [0.45, 1.7], v: [9, 17] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
-// Goleiro (Etapa 2: posicionamento, defesa e saída). Valores iniciais (pesquisa da Etapa 2).
+// Goleiro (Etapa 2). Pesquisa da Etapa 2 (PESQUISA-ETAPA2.md): reação de 0,19–0,25 s após o
+// toque (Higueras-Herbada et al. 2020; Navia 2017); mergulho com o centro de massa a 3,6–4,0 m/s
+// no pico e ~1,5 m de deslocamento, e a mão a ~3,5 m do ponto de partida (Monteiro et al. 2022;
+// Ibrahim et al. 2019); profundidade no chute 1,2 m (pequena área), 1,8 m (área) e 2,1 m (fora),
+// e chance de defesa pela distância lateral (StatsBomb Open Data, logística ajustada).
 export const GOLEIRO = {
-  reacao: [0.32, 0.2],        // s (ruim → bom)
-  alcanceMergulho: 2.6,       // m do centro do corpo ao alcance da mão
-  alcanceEmPe: 0.9,
-  vMergulho: 5.2,             // m/s médio no mergulho lateral
+  reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
+  alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
+  bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
+  tReflexo: 0.15,             // s para o reflexo
+  bracoEsticado: 2.0,         // m: braço e corpo esticados no mergulho (somam ao deslocamento)
+  tEsticar: 0.6,              // s para esticar por completo
+  aMergulho: 9.5,             // m/s² do centro de massa na impulsão
+  vMergulho: 3.8,             // m/s: pico do centro de massa
+  deslocMax: 1.5,             // m: deslocamento máximo do centro de massa
+  folgaAlcance: 0.4,          // m: além do alcance a chance cai a zero nessa faixa
+  // logit(defesa) = c0 + cLat·lateral + cDist·distância + cAlt·altura (+ atributos)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0 },
+  // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
+  segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
-  distLinha: [0.6, 3.5],      // m à frente da linha (bola longe → perto)
+  profundidade: [1.2, 2.1],   // m da linha: bola a 6 m → a 20 m ou mais
+  profundidadeLonge: 3.5,     // m com a bola a 40 m ou mais
+  saida1x1Max: 4,             // m: contra quem domina a bola, fecha o ângulo sem passar disso
+  vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
+  recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
-  encaixeVMax: 20,            // m/s — acima disso tende a espalmar
 };

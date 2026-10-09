@@ -157,9 +157,13 @@ function colisaoBolaCorpo(m) {
   if (b.p.y > 0.9) return;
   for (const j of m.jogadores) {
     if (j.id === m.posse) continue;
+    // quem acabou de bater na bola não a rebate no próprio corpo; o goleiro com a defesa já
+    // decidida (sorteio da leitura) também não: o resultado é o da leitura
+    if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
+    if (j.defesa && !j.defesa.fora && m.tick <= j.defesa.tick + 2) continue;
     const dx = b.p.x - j.x, dz = b.p.z - j.z;
     const d = MD.hypot(dx, dz);
-    const lim = 0.2 + b.p.y * 0 + 0.11;
+    const lim = 0.2 + 0.11;
     if (d >= lim || d < 1e-9) continue;
     const nx = dx / d, nz = dz / d;
     b.p.x = j.x + nx * lim; b.p.z = j.z + nz * lim;

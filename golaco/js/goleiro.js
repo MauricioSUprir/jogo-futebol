@@ -59,6 +59,36 @@ export function comBolaNaMao(m, j) {
 }
 
 /**
+ * Alcance lateral da mão (m) τ segundos depois de reagir: o centro de massa acelera até o pico e
+ * anda até deslocMax; perna/braço esticam no reflexo (tReflexo) e o corpo inteiro até tEsticar.
+ */
+export function alcanceGoleiro(tau, fator = 1) {
+  const G = GOLEIRO;
+  if (tau <= 0) return G.alcanceEmPe;
+  const a = G.aMergulho * fator, vp = G.vMergulho * fator;
+  const tA = vp / a;
+  let x = tau <= tA ? 0.5 * a * tau * tau : 0.5 * a * tA * tA + vp * (tau - tA);
+  x = Math.min(x, G.deslocMax * fator);
+  // reflexo (perna/braço) rápido, e o resto do esticar junto com o mergulho
+  const braco = G.alcanceEmPe + (G.bracoReflexo - G.alcanceEmPe) * Math.min(1, tau / G.tReflexo)
+    + (G.bracoEsticado - G.bracoReflexo) * clamp((tau - G.tReflexo) / (G.tEsticar - G.tReflexo), 0, 1);
+  return x + braco;
+}
+
+/**
+ * Chance de defesa de uma bola no alvo: logística dos dados (lateral, distância do chute, altura),
+ * ajustada pelos atributos, e zero além do alcance físico (com folga).
+ */
+export function chanceDefesa(lateral, dChute, altura, alcance, attr) {
+  const L = GOLEIRO.logit;
+  const nivel = ((attr.reflexo + attr.mergulho + attr.posicionamento) / 3 - 72) / 100;
+  const lg = L.c0 + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  const p = 1 / (1 + MD.exp(-lg));
+  const fis = clamp((alcance + GOLEIRO.folgaAlcance - lateral) / GOLEIRO.folgaAlcance, 0, 1);
+  return p * fis;
+}
+
+/**
  * Lê um chute (bola livre vindo para o gol) e planeja a defesa. Chamar a cada tick antes de
  * integrar a bola. Decide uma vez por chute (sorteio único → determinístico).
  */
@@ -79,32 +109,52 @@ export function lerChute(m, j) {
   const plano = preverPassagem(b, xPlano, 150) ?? linha;
   const a = j.par.attr;
   const reac = Math.round(lerp(GOLEIRO.reacao[0], GOLEIRO.reacao[1], a.reflexo / 100) / DT);
-  const tDisp = (plano.ticks - reac) * DT;            // tempo para se mexer depois de reagir
+  const tau = (plano.ticks - reac) * DT;              // tempo para se mexer depois de reagir
   const lat = plano.z - j.z;
   const dist = Math.abs(lat);
-  const alcanceEmPe = GOLEIRO.alcanceEmPe;
-  const alcanceTempo = alcanceEmPe + Math.max(0, tDisp) * GOLEIRO.vMergulho * lerp(0.85, 1.12, a.mergulho / 100);
-  const alcance = Math.min(GOLEIRO.alcanceMergulho * lerp(0.9, 1.08, a.mergulho / 100), alcanceTempo);
+  const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
-  const chega = dist <= alcance && alturaOk && tDisp > -0.05;
-  // dificuldade: perto do limite do alcance, bola forte, longe do corpo no alto/baixo
-  const fracAlc = dist / Math.max(alcance, 0.1);
-  const vel = plano.v;
-  const alto = Math.max(0, plano.y - 1.9) / 0.6;
-  let pDefesa = 0;
-  if (chega) {
-    const base = lerp(0.9, 0.99, a.reflexo / 100);
-    const dif = 0.55 * fracAlc * fracAlc + 0.012 * Math.max(0, vel - 14) + 0.25 * alto + (tDisp < 0.15 ? 0.25 : 0);
-    pDefesa = clamp(base - dif, 0.03, 0.98);
-  }
+  const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a) : 0;
+  // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
+  const recuo = !alturaOk && Math.abs(j.x - gx) > 2 ? recuoBolaAlta(m, j, b, gx, reac) : null;
+  if (recuo) pDefesa = lerp(GOLEIRO.recuoDefesa[0], GOLEIRO.recuoDefesa[1], clamp(recuo.folga / 0.3, 0, 1));
   const ok = uniforme(m.rng) < pDefesa;
-  const encaixe = ok && vel < GOLEIRO.encaixeVMax && dist < 1.4 && plano.y < 1.9 && uniforme(m.rng) < lerp(0.4, 0.8, a.reflexo / 100);
-  j.defesa = {
+  // segurar ou espalmar: em pé e de longe segura mais; no mergulho e de perto, espalma
+  const mergulha = dist > GOLEIRO.alcanceEmPe;
+  const S = GOLEIRO.segurar;
+  const pSegura = (mergulha ? S.mergulho : dChute < 12 ? S.perto : S.emPe) * lerp(0.85, 1.15, a.reflexo / 100);
+  const encaixe = ok && uniforme(m.rng) < pSegura;
+  j.defesa = recuo ? {
+    chave: m.voo?.tickChave, tick: m.tick + recuo.i, inicio: m.tick + reac, x: recuo.x, z: recuo.z, y: recuo.y,
+    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha: false, recuo: true,
+    lado: Math.sign(recuo.z - j.z) || 1, xPlano: recuo.x,
+  } : {
     chave: m.voo?.tickChave, tick: m.tick + plano.ticks, inicio: m.tick + reac, z: plano.z, y: plano.y,
-    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha: dist > alcanceEmPe,
+    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha,
     lado: Math.sign(lat) || 1, xPlano,
   };
-  m.eventos.push({ tipo: 'leituraGoleiro', id: j.id, chega, p: pDefesa });
+  m.eventos.push({ tipo: 'leituraGoleiro', id: j.id, chega: dist <= alcance, p: pDefesa });
+}
+
+/**
+ * Bola alta que passa por cima do goleiro adiantado: primeiro ponto do voo, entre ele e a linha,
+ * em que ela desce ao alcance da mão e ele chega a tempo voltando. {i, x, z, y, folga} ou null.
+ */
+function recuoBolaAlta(m, j, b, gx, reac) {
+  const t = criarBola(b.p.x, b.p.z);
+  Object.assign(t.p, b.p); Object.assign(t.v, b.v); Object.assign(t.w, b.w); t.rolando = b.rolando;
+  const sentido = Math.sign(gx);
+  for (let i = 1; i <= 150; i++) {
+    passoBola(t, null);
+    if ((t.p.x - gx) * sentido > 0) return null; // entrou (ou passou da linha)
+    if (t.v.y > 0 || t.p.y > GOLEIRO.alturaMax) continue;
+    if ((t.p.x - j.x) * sentido < 0) continue; // ainda na frente dele
+    const tGoleiro = reac * DT + MD.hypot(t.p.x - j.x, t.p.z - j.z) / GOLEIRO.vRecuo;
+    const folga = i * DT - tGoleiro;
+    if (folga >= 0) return { i, x: t.p.x, z: t.p.z, y: t.p.y, folga };
+  }
+  return null;
 }
 
 /** Executa a defesa no tick planejado (antes de integrar a bola). */
@@ -140,20 +190,23 @@ export function aplicarDefesa(m, j) {
 
 /** Goleiro deve sair (1×1 da IA ou botão GOLEIRO do humano)? */
 function deveSair(m, j, humano) {
-  if (humano) return (j.botoesTime & BOTAO.GOLEIRO) !== 0;
+  if (humano) return (j.botoesTime & BOTAO.GOLEIRO) !== 0 ? 'botao' : false;
   const b = m.bola;
   const gx = linhaDoGol(m, j);
   const dBolaGol = MD.hypot(b.p.x - gx, b.p.z);
   if (dBolaGol > 17) return false;
   const dono = m.posse != null ? m.jogadores.find(o => o.id === m.posse) : null;
   if (!dono || dono.time === j.time) return false;
+  // só sai no 1×1 de verdade: o atacante vem conduzindo para o gol (parado, ele fecha o ângulo)
+  const vGol = (dono.vx * (gx - dono.x) + dono.vz * (0 - dono.z)) / (MD.hypot(gx - dono.x, dono.z) || 1);
+  if (vGol < 2.5) return false;
   // ninguém do meu time mais perto da bola do que eu
   const dg = MD.hypot(j.x - b.p.x, j.z - b.p.z);
   for (const o of m.jogadores) {
     if (o.time !== j.time || o.id === j.id) continue;
     if (MD.hypot(o.x - b.p.x, o.z - b.p.z) < dg * 0.8) return false;
   }
-  return true;
+  return '1x1';
 }
 
 /**
@@ -168,19 +221,37 @@ export function movimentoGoleiro(m, j, humano) {
   if (comBolaNaMao(m, j)) return { dx: -sentido, dz: 0, vel: 0, rumoAlvo: MD.atan2(0, -sentido) };
   const d = j.defesa;
   if (d && d.sucesso !== undefined && !d.fora && m.tick >= d.inicio && m.tick < d.tick + 6) {
-    // vai para o ponto da defesa (o mergulho é desenhado pela animação)
-    const dz = d.z - j.z;
-    const v = Math.min(GOLEIRO.vMergulho * 1.2, Math.abs(dz) / Math.max((d.tick - m.tick) * DT, 0.05));
+    if (d.recuo) {
+      // volta para o ponto em que a bola desce (batido, chega um pouco atrasado)
+      const dx = d.x - j.x, dz = d.z - j.z, dd = MD.hypot(dx, dz) || 1;
+      const v = Math.min(GOLEIRO.vRecuo * (d.sucesso ? 1 : 0.8), dd / Math.max((d.tick - m.tick) * DT, 0.05));
+      return { dx: dx / dd, dz: dz / dd, vel: v, rumoAlvo: olhar };
+    }
+    // vai para o ponto da defesa (o mergulho é desenhado pela animação); batido, o mergulho
+    // fica curto: a mão passa a ~1,2 m do corpo e não alcança
+    const alvoZ = d.sucesso ? d.z : (Math.abs(d.z - j.z) > 1.2 ? d.z - d.lado * 1.2 : j.z);
+    const dz = alvoZ - j.z;
+    const v = Math.min(GOLEIRO.vMergulho, Math.abs(dz) / Math.max((d.tick - m.tick) * DT, 0.05));
     if (d.mergulha && !j.mergulho && m.tick >= d.inicio) {
       j.mergulho = { tick0: m.tick, lado: d.lado, alt: d.y, ate: d.tick + 30 };
     }
-    return { dx: 0, dz: Math.sign(dz) || 1, vel: d.sucesso ? v : v * 0.8, rumoAlvo: MD.atan2(0, -sentido) };
+    return { dx: 0, dz: Math.sign(dz) || 1, vel: v, rumoAlvo: MD.atan2(0, -sentido) };
   }
   if (j.mergulho && m.tick > j.mergulho.ate) j.mergulho = null;
-  if (deveSair(m, j, humano)) {
-    // sai na bola (até saidaMax da linha)
-    const alvoX = clamp(b.p.x, gx - sentido * 0.5, gx - sentido * GOLEIRO.saidaMax);
-    const tx = sentido > 0 ? Math.min(alvoX, gx) : Math.max(alvoX, gx);
+  const sair = deveSair(m, j, humano);
+  if (sair === '1x1') {
+    // contra quem domina a bola: fecha o ângulo na bissetriz, sem passar de ~4 m da linha
+    const dBola = MD.hypot(b.p.x - gx, b.p.z);
+    const p = pontoBissetriz(b.p.x, b.p.z, gx, Math.min(GOLEIRO.saida1x1Max, Math.max(1.2, dBola - 3)));
+    const dx = p.x - j.x, dz = p.z - j.z;
+    const dd = MD.hypot(dx, dz);
+    if (!j.saindo) { j.saindo = true; m.eventos.push({ tipo: 'saidaGoleiro', id: j.id, modo: '1x1' }); }
+    return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel: Math.min(j.par.vArrancada * 0.8, dd * 4), rumoAlvo: olhar };
+  }
+  if (sair) {
+    // botão GOLEIRO: sai na bola (até saidaMax da linha; o campo fica do lado -sentido)
+    const x1 = gx - sentido * 0.5, x2 = gx - sentido * GOLEIRO.saidaMax;
+    const tx = clamp(b.p.x, Math.min(x1, x2), Math.max(x1, x2));
     const dx = tx - j.x, dzz = b.p.z - j.z;
     const dd = MD.hypot(dx, dzz) || 1;
     if (!j.saindo) { j.saindo = true; m.eventos.push({ tipo: 'saidaGoleiro', id: j.id }); }
@@ -189,7 +260,9 @@ export function movimentoGoleiro(m, j, humano) {
   j.saindo = false;
   // posição: bissetriz, mais adiantado com a bola longe
   const dBola = MD.hypot(b.p.x - gx, b.p.z);
-  const dLinha = lerp(GOLEIRO.distLinha[0], GOLEIRO.distLinha[1], clamp((dBola - 6) / 30, 0, 1));
+  const P = GOLEIRO.profundidade;
+  const dLinha = dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
+    : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
   const p = pontoBissetriz(b.p.x, b.p.z, gx, dLinha);
   const dx = p.x - j.x, dz = p.z - j.z;
   const dd = MD.hypot(dx, dz);
