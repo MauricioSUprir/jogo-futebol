@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#07090a">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="GOLAÇO — futebol 3D. Treino da Etapa 1: condução de bola.">
+  <title>GOLAÇO</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090a'/%3E%3Cpath d='M14 46 26 18h24L38 46z' fill='%2319e07a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/estilo.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="tela" class="tela" aria-label="Campo 3D"></canvas>
+
+  <!-- HUD fixo: marca, velocidade e modo, avisos -->
+  <div id="hud" class="hud" data-hud>
+    <header class="marca" data-caixa="marca">
+      <svg class="marca-simbolo" viewBox="0 0 40 40" aria-hidden="true"><path d="M7 31 15.5 9H34L25.5 31z" fill="currentColor"/><path d="M13 31 21.5 9h3L16 31z" fill="#07090a" opacity=".55"/></svg>
+      <div class="marca-texto">
+        <strong>GOLAÇO</strong>
+        <span>TREINO — ETAPA 1</span>
+      </div>
+    </header>
+
+    <section class="painel-jogo" data-caixa="painel">
+      <div class="vel"><b id="vel">0</b><small>km/h</small></div>
+      <div class="modo" id="modo">Sem bola</div>
+    </section>
+
+    <button id="btn-menu" class="btn-menu" data-caixa="menu" type="button" aria-label="Abrir o menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+
+    <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+    <div id="qps" class="qps" hidden></div>
+    <div id="dica" class="dica" data-caixa="dica"><kbd>H</kbd> ajuda <span class="sep"></span> <kbd>Esc</kbd> menu</div>
+  </div>
+
+  <!-- Controles de toque (celular) -->
+  <div id="toque" class="toque" hidden>
+    <div id="zona-analogico" class="zona-analogico"></div>
+    <div id="analogico" class="analogico" aria-hidden="true">
+      <div class="analogico-base"></div>
+      <div class="analogico-pino"></div>
+    </div>
+    <button id="btn-mod" class="btn-toque btn-mod" data-caixa="btn-mod" type="button">CONDUÇÃO</button>
+    <button id="btn-correr" class="btn-toque btn-correr" data-caixa="btn-correr" type="button">CORRER</button>
+  </div>
+
+  <!-- Menu de pausa -->
+  <div id="menu" class="sobreposicao" hidden>
+    <div class="janela janela-menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo">
+      <div class="janela-topo">
+        <h2 id="menu-titulo">Pausa</h2>
+        <button class="btn-fechar" type="button" data-cmd="continuar" aria-label="Fechar o menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="menu-corpo">
+        <div class="menu-acoes">
+          <button class="btn btn-primario" type="button" data-cmd="continuar">Continuar</button>
+          <button class="btn" type="button" data-cmd="recomecar">Recomeçar <small>bola no pé</small></button>
+          <button class="btn" type="button" data-cmd="maquina">Máquina de passes</button>
+          <button class="btn btn-alternar" type="button" data-cmd="marcador" aria-pressed="false">Marcador de treino <small id="estado-marcador">desligado</small></button>
+          <button class="btn" type="button" data-cmd="ajuda">Ajuda e controles</button>
+        </div>
+        <div class="menu-opcoes">
+          <div class="opcao">
+            <span class="opcao-rotulo">Qualidade</span>
+            <div class="segmentado" data-grupo="qualidade">
+              <button type="button" data-valor="baixa">Baixa</button>
+              <button type="button" data-valor="media">Média</button>
+              <button type="button" data-valor="alta">Alta</button>
+              <button type="button" data-valor="auto">Automática</button>
+            </div>
+            <small class="opcao-info" id="info-qualidade"></small>
+          </div>
+          <div class="opcao">
+            <span class="opcao-rotulo">Horário</span>
+            <div class="segmentado" data-grupo="hora">
+              <button type="button" data-valor="dia">Dia</button>
+              <button type="button" data-valor="noite">Noite</button>
+            </div>
+          </div>
+          <div class="opcao">
+            <span class="opcao-rotulo">Câmera</span>
+            <div class="segmentado" data-grupo="camera">
+              <button type="button" data-valor="tv">TV</button>
+              <button type="button" data-valor="aproximada">Aproximada</button>
+            </div>
+          </div>
+          <div class="opcao">
+            <span class="opcao-rotulo">Controles de toque</span>
+            <label class="deslizante">Tamanho <input type="range" id="toque-tamanho" min="70" max="140" step="5"><output id="saida-tamanho"></output></label>
+            <label class="deslizante">Transparência <input type="range" id="toque-opacidade" min="25" max="100" step="5"><output id="saida-opacidade"></output></label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ajuda: mapa dos botões -->
+  <div id="ajuda" class="sobreposicao" hidden>
+    <div class="janela janela-ajuda" role="dialog" aria-modal="true" aria-labelledby="ajuda-titulo">
+      <div class="janela-topo">
+        <h2 id="ajuda-titulo">Controles</h2>
+        <button class="btn-fechar" type="button" data-cmd="fechar-ajuda" aria-label="Fechar a ajuda">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="ajuda-colunas">
+        <section>
+          <h3>Teclado</h3>
+          <dl>
+            <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> ou setas</dt><dd>Mover / conduzir</dd>
+            <dt><kbd>Shift</kbd></dt><dd>Correr (arrancada)</dd>
+            <dt><kbd>E</kbd> ou <kbd>Ctrl</kbd></dt><dd>Condução curta, proteção (com marcador perto) e drible</dd>
+            <dt><kbd>E</kbd> <kbd>E</kbd></dt><dd>Dois toques rápidos: pedalada</dd>
+            <dt><kbd>R</kbd></dt><dd>Recomeçar (bola no pé)</dd>
+            <dt><kbd>M</kbd></dt><dd>Máquina de passes</dd>
+            <dt><kbd>N</kbd></dt><dd>Marcador de treino</dd>
+            <dt><kbd>C</kbd></dt><dd>Câmera TV / aproximada</dd>
+            <dt><kbd>H</kbd> ou <kbd>F1</kbd></dt><dd>Esta ajuda</dd>
+            <dt><kbd>Esc</kbd></dt><dd>Pausa e menu</dd>
+          </dl>
+          <p class="nota">Com WASD use <kbd>E</kbd> como modificador (Ctrl + W fecha a aba no navegador). <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> <kbd>I</kbd> ficam para passe, chute, lançamento e enfiada nas próximas etapas.</p>
+        </section>
+        <section>
+          <h3>Controle</h3>
+          <dl>
+            <dt>Analógico esquerdo</dt><dd>Mover / conduzir</dd>
+            <dt><kbd>RT</kbd></dt><dd>Correr (arrancada)</dd>
+            <dt><kbd>LT</kbd></dt><dd>Condução curta, proteção e drible</dd>
+            <dt><kbd>LT</kbd> <kbd>LT</kbd></dt><dd>Pedalada</dd>
+            <dt><kbd>Y</kbd></dt><dd>Máquina de passes</dd>
+            <dt><kbd>X</kbd></dt><dd>Marcador de treino</dd>
+            <dt><kbd>R3</kbd></dt><dd>Câmera</dd>
+            <dt><kbd>Start</kbd></dt><dd>Pausa e menu</dd>
+            <dt><kbd>Select</kbd> / <kbd>View</kbd></dt><dd>Esta ajuda</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Toque</h3>
+          <dl>
+            <dt>Metade esquerda</dt><dd>Analógico: encoste o dedo onde quiser e arraste</dd>
+            <dt>CORRER</dt><dd>Segure para a arrancada</dd>
+            <dt>CONDUÇÃO</dt><dd>Segure: bola colada e proteção; dois toques: pedalada</dd>
+            <dt>Botão do topo</dt><dd>Pausa e menu (máquina de passes, marcador, câmera)</dd>
+          </dl>
+          <p class="nota">Tamanho e transparência dos botões: menu, "Controles de toque".</p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="carregando" class="carregando" role="status">
+    <div class="carregando-marca">GOLAÇO</div>
+    <div class="carregando-barra"><span></span></div>
+    <p id="carregando-msg">Preparando o campo…</p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

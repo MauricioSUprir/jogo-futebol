@@ -5,6 +5,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 (Next.js, raiz) é hospedado à parte.
 
 ## Preferências do dono
+- **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
+  do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
+  As filas antigas do `futebol3d/` (abaixo) ficam PARADAS; o `futebol3d/` continua publicado e intocado porque o
+  Total Match usa ele nas partidas 3D, até o dono decidir aposentá-lo. Não copiar nem ler código do `futebol3d/`
+  para o projeto novo.
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
 - Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact, e **prints** a cada etapa.
 - Testar antes de avançar; corrigir todo bug encontrado.
@@ -55,7 +60,44 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   linha de passe, transição, corridas, passe "para quem finaliza", finalizar sob pressão). Medir com 144+ partidas
   (amostra de 48 varia ±0,25 gol).
 
-## GOLAÇO (`futebol3d/`) — futebol 3D
+## GOLAÇO NOVO (`golaco/`) — futebol 3D do zero (publicado em `/golaco/`)
+Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das regras que valem SEMPRE:
+- Jogável antes de bonito: **controle de bola, passe e tática primeiro**; gráfico/animação/estádio depois e nunca
+  podem piorar o que já funciona. **Sem recuo**: nenhuma entrega piora medida que já estava boa (mesma ferramenta,
+  mesma amostra, comparar com a versão publicada).
+- Toda mudança de jogabilidade tem teste que **reprova antes e passa depois**, com tabela antes → depois no PR.
+  O GitHub Actions roda os testes (`golaco/tools/rodar-testes.mjs` + `teste-carga.mjs`) em todo PR
+  (`.github/workflows/golaco-testes.yml`) e antes do deploy (`deploy-pages.yml`, job `testes-golaco`): reprovou,
+  não publica.
+- **Pesquisar antes de mexer** (artigos, GDC, docs do three.js, dados reais) e dizer no PR o que aproveitou de cada
+  fonte. Base da Etapa 1: `golaco/PESQUISA.md` (física da bola, biomecânica, passo fixo, jogos, three.js).
+- Prints sempre com torcida e HUD ligados (torcida só existe a partir da Etapa 6): PC 1280×720 Alta e celular
+  844×390 Média, dia e noite. Vídeo só quando o dono pedir (quadro a quadro, relógio controlado, 30 qps).
+- Honestidade nos resultados (número, quanto faltou, proposta). Decisão de produto é do dono; o resto, decidir e seguir.
+- Etapas: 1 base + controle de bola (seção 4 do pedido) → 2 passes (passe, enfiada ≥ 4 m à frente, lançamento,
+  cruzamento, chute, domínio) → 3 11×11 e tática (formações, IA com/sem bola, troca, jogo aéreo ≥ 90% troca para
+  quem disputa) → 4 goleiro, regras (IFAB), bolas paradas e equilíbrio (painel em Node, 144+ partidas) → 5 modelo
+  humano realista + mocap + rostos por IA (UV) → 6 estádio, torcida, câmera, replay, comemoração → 7 celular, menus,
+  modos e desempenho.
+- Técnica: three.js **0.170.0** por importmap (jsdelivr), ES modules, sem build. Lógica (`js/*.js` exceto `entrada.js`,
+  `main.js`, `hud.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
+  Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
+  função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
+  Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
+- Condução (Etapa 1, `js/conducao.js`): sem ímã — o toque calcula a velocidade da bola pela MESMA conta da rolagem
+  (`bola.js` velParaDistancia, exata) para chegar ao ponto do pé no próximo toque, prevendo o próprio corpo com a
+  mesma função de locomoção (`jogador.js` passoCorpo). Toque sincronizado com a passada (pé de apoio no chão), um
+  por passada correndo, a cada passo na condução curta/proteção/freada forte; checagem de ultrapassagem (o corpo
+  nunca passa por cima da bola) e de folga máxima (≤ 0,8 m); corte = a bola sai na linha do analógico (±20°) com o
+  corpo segurando o rumo até o toque; domínio pela linha do analógico com erro por atributo/velocidade/pressão;
+  proteção = o corpo gira em volta da bola, de costas para o marcador.
+- Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
+  laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
+  domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
+  Chromium), `prints.mjs`. O Chromium headless daqui não passa pelo proxy: `tools/lib/navegador.mjs` serve o CDN de
+  um cache baixado com curl.
+
+## GOLAÇO antigo (`futebol3d/`) — futebol 3D (fila PARADA; segue publicado para o Total Match)
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
 - Identidade visual: **preto e verde**.
 - Contratos entre módulos: `futebol3d/tools/CONTRACTS.md`; constantes em `js/config.js`.
