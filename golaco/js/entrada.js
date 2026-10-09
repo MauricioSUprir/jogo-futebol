@@ -51,7 +51,7 @@ export const BOTOES_TOQUE = [
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
-const DIAM = { grande: 104, a: 80, b: 72, c: 72, d: 68, e: 68, correr: 76 };
+const DIAM = { grande: 104, a: 80, b: 72, c: 76, d: 68, e: 68, correr: 76 };
 const MIN_ALVO = 48;
 
 function lerAjustes() {
@@ -328,8 +328,8 @@ export function criarEntrada(opc = {}) {
 
   // Ataque × defesa: troca os botões visíveis. Um botão de uma fase que está sendo segurado
   // segura a troca até ser solto (o chute carregando não some debaixo do dedo).
-  function trocarFaseSePuder() {
-    if (fase === faseVisivel) return;
+  function trocarFaseSePuder(forcar = false) {
+    if (fase === faseVisivel && !forcar) return;
     if (bts.some(b => b.dedo !== null && b.fase !== 'ambas')) return;
     faseVisivel = fase;
     if (raizToque) {
@@ -354,8 +354,10 @@ export function criarEntrada(opc = {}) {
       s.width = s.height = `${p.d}px`;
       // texto cabendo no círculo: palavra longa (LANÇAMENTO) com letra menor
       const n = b.rotulo.length;
-      const fs = Math.max(8.5, Math.min(p.d * 0.15, (p.d * 0.78) / (n * 0.66)));
+      const longo = n > 8;
+      const fs = Math.max(8.5, Math.min(p.d * 0.15, (p.d * 0.74) / (n * 0.66)));
       s.setProperty('--fs', `${fs.toFixed(1)}px`);
+      s.setProperty('--ls', longo ? '0' : '0.04em');
       s.setProperty('--ic', `${Math.round(p.d * (b.vaga === 'grande' ? 0.36 : 0.32))}px`);
     }
   }
@@ -409,6 +411,8 @@ export function criarEntrada(opc = {}) {
       trocarFaseSePuder();
     },
     get fase() { return faseVisivel; },
+    /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
+    sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
     consumirAcoes() { return fila.splice(0); },
     empurrarAcao(a) { emitir(a); },

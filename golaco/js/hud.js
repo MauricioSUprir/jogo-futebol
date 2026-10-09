@@ -17,6 +17,7 @@ const TEXTO_EVENTO = {
   defesa: { t: 'Defesa do goleiro', ms: 1500, forte: true },
   troca: { t: 'Troca de jogador', ms: 800 },
   saidaGoleiro: { t: 'Goleiro saiu do gol', ms: 1200 },
+  recomeco: { t: 'Recomeço da jogada', ms: 1000 },
 };
 // subtipos (o tipo do passe/chute vem no evento ou em m.voo.tipo)
 const NOME_ACAO = {
@@ -229,8 +230,8 @@ export function criarHud(opc) {
       el.carga.classList.toggle('cheia', c.forca >= 0.999);
     },
     /** Evento da simulação (tipo ou o objeto do evento) → aviso curto; gol → "GOL!" grande. */
-    evento(ev, extra = {}) {
-      if (prints) return;
+    evento(ev, extra = {}, forcar = false) {
+      if (prints && !forcar) return;
       const tipo = typeof ev === 'string' ? ev : ev?.tipo;
       if (tipo === 'gol') {
         const t = typeof ev === 'object' ? ev.time : undefined;

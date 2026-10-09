@@ -225,7 +225,7 @@ html.modo-prints .dica-retrato { display: none; }
   width: var(--ic, 24px); height: var(--ic, 24px); flex: none;
   fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
 }
-.btn-toque span { font-size: var(--fs, 11px); white-space: nowrap; }
+.btn-toque span { font-size: var(--fs, 11px); letter-spacing: var(--ls, 0.04em); white-space: nowrap; }
 .btn-toque.ativo { background: var(--verde); color: var(--preto); border-color: #b9ffd9; box-shadow: 0 0 18px rgba(25, 224, 122, 0.55); }
 .btn-toque.ativo svg { stroke: var(--preto); }
 /* CHUTE: o maior, com o verde mais forte */

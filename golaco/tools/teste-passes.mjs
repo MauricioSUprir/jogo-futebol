@@ -36,7 +36,9 @@ function primeiroPasse(m) { return m.log.find(l => l.acao); }
     const ang = ((s * 47) % 360) / DEG;
     const L = 8 + (s % 5) * 5;
     const tx = Math.cos(ang) * L, tz = Math.sin(ang) * L;
-    const comp = [{ id: 1, x: tx, z: tz, posicao: 'MEI' }, { id: 2, x: -tx * 0.6 + 6, z: tz * 0.4 - 12, posicao: 'MEI' }];
+    // o outro companheiro fica bem fora do cone (90° a 270° do primeiro), em outra distância
+    const ang2 = ang + (90 + ((s * 31) % 180)) / DEG, L2 = 10 + ((s * 7) % 15);
+    const comp = [{ id: 1, x: tx, z: tz, posicao: 'MEI' }, { id: 2, x: Math.cos(ang2) * L2, z: Math.sin(ang2) * L2, posicao: 'MEI' }];
     const m = cena(s, comp);
     const a0 = Math.atan2(tz, tx) + (((s * 13) % 41) - 20) / DEG; // analógico até ±20° fora
     apertar(m, BOTAO.PASSE, 10, Math.cos(a0), Math.sin(a0), 1);
@@ -65,17 +67,25 @@ function primeiroPasse(m) { return m.log.find(l => l.acao); }
     const m = cena(100 + s, comp);
     const r = jogadorPorId(m, 1);
     if (correndo) { r.corrida = { x: 45, z: rz * 0.5, ate: 9999, tipo: 'teste' }; for (let i = 0; i < 50; i++) passo(m, { 0: { x: 0.4, z: 0, botoes: 0 } }); }
-    let s0 = null, tPasse = null, tArr = null;
-    const a = Math.atan2(r.z - m.jogadores[0].z, r.x - m.jogadores[0].x);
-    apertar(m, BOTAO.ENFIADA, 12 + (s % 3) * 8, Math.cos(a), Math.sin(a), 1, false, (mm, i) => {
+    // arrancar = a velocidade NA DIREÇÃO do ponto da enfiada sobe 0,4 m/s (quem andava para o
+    // outro lado já conta ao frear e virar para lá)
+    let s0 = null, tPasse = null, tArr = null, ux = 1, uz = 0;
+    const vAlvo = () => r.vx * ux + r.vz * uz;
+    const marcar = (mm) => {
       const l = primeiroPasse(mm);
-      if (l && tPasse === null) { tPasse = mm.tick; s0 = Math.hypot(r.vx, r.vz); }
-    });
+      if (l && tPasse === null) {
+        tPasse = mm.tick;
+        const d = Math.hypot(l.alvoX - r.x, l.alvoZ - r.z) || 1;
+        ux = (l.alvoX - r.x) / d; uz = (l.alvoZ - r.z) / d;
+        s0 = vAlvo();
+      }
+    };
+    const a = Math.atan2(r.z - m.jogadores[0].z, r.x - m.jogadores[0].x);
+    apertar(m, BOTAO.ENFIADA, 12 + (s % 3) * 8, Math.cos(a), Math.sin(a), 1, false, marcar);
     for (let i = 0; i < 300; i++) {
       passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
-      const l = primeiroPasse(m);
-      if (l && tPasse === null) { tPasse = m.tick; s0 = Math.hypot(r.vx, r.vz); }
-      if (tPasse !== null && tArr === null && Math.hypot(r.vx, r.vz) > s0 + 0.4) tArr = (m.tick - tPasse) * PASSO;
+      marcar(m);
+      if (tPasse !== null && tArr === null && vAlvo() > s0 + 0.4) tArr = (m.tick - tPasse) * PASSO;
       if (m.posse === 1) break;
     }
     const l = primeiroPasse(m);
@@ -101,12 +111,13 @@ function primeiroPasse(m) { return m.log.find(l => l.acao); }
 }
 
 // ------------------------------------------------ lançamento: ±3 m a 40 m (bom lançador)
-for (const [nome, attr, meta] of [['bom (90)', 90, 0.9], ['fraco (45)', 45, null]]) {
+// bom lançador: passe longo 90 e perna ruim boa (85, como os bons lançadores); fraco: 45 e 50
+for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.9, 85], ['fraco (45)', 45, null, 50]]) {
   const erros = [];
-  for (let s = 1; s <= 40; s++) {
+  for (let s = 1; s <= 80; s++) {
     const ang = (((s * 29) % 120) - 60) / DEG;
     const tx = Math.cos(ang) * 40, tz = Math.sin(ang) * 40;
-    const m = cena(400 + s, [{ id: 1, x: tx - 10, z: tz * 0.8, posicao: 'ATA' }], { x: -10, attr: { passeLongo: attr } });
+    const m = cena(400 + s, [{ id: 1, x: tx - 10, z: tz * 0.8, posicao: 'ATA' }], { x: -10, attr: { passeLongo: attr, peFraco } });
     jogadorPorId(m, 1).papel = 'parado';
     apertar(m, BOTAO.LANCAMENTO, 30, Math.cos(ang), Math.sin(ang), 1);
     for (let i = 0; i < 30 && !primeiroPasse(m); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
@@ -119,7 +130,7 @@ for (const [nome, attr, meta] of [['bom (90)', 90, 0.9], ['fraco (45)', 45, null
     if (caiu) erros.push(Math.hypot(caiu.x - (l.rx ?? alvo.x), caiu.z - (l.rz ?? alvo.z)));
   }
   const dentro = erros.filter(e => e <= 3).length / Math.max(erros.length, 1);
-  if (meta) reg(`lançamento de 40 m — ${nome}: queda a ≤ 3 m do alvo`, `${fmt(dentro * 100, 0)}% (méd ${fmt(media(erros))} m)`, '≥ 90%', dentro >= meta && erros.length >= 30);
+  if (meta) reg(`lançamento de 40 m — ${nome}: queda a ≤ 3 m do alvo`, `${fmt(dentro * 100, 0)}% (méd ${fmt(media(erros))} m)`, '≥ 90%', dentro >= meta && erros.length >= 70);
   else reg(`lançamento de 40 m — ${nome} erra mais`, `${fmt(dentro * 100, 0)}% a ≤ 3 m (méd ${fmt(media(erros))} m)`, 'pior que o bom', dentro < 0.8);
 }
 
@@ -134,19 +145,22 @@ for (const [nome, attr, meta] of [['bom (90)', 90, 0.9], ['fraco (45)', 45, null
     const pz = { primeiroPau: lado * 2.2, segundoPau: -lado * 3.2, marcaPenalti: 0 }[alvoZona];
     const px = { primeiroPau: 47, segundoPau: 46, marcaPenalti: 41.5 }[alvoZona];
     const m = cena(500 + s, [{ id: 1, x: 40, z: 0, posicao: 'ATA' }, { id: 2, x: 44, z: -lado * 5, posicao: 'ATA' }], { x: x0, z: z0, rumo: lado > 0 ? -1.2 : 1.2, attr: { passeLongo: 85 } });
-    const a = Math.atan2(pz - z0, px - x0);
-    apertar(m, BOTAO.LANCAMENTO, 20, Math.cos(a), Math.sin(a), 1);
+    // analógico em setores: 50° para a linha de fundo = 1º pau; atravessado = 2º pau; 50° para trás = pênalti
+    const phi = { primeiroPau: 50, segundoPau: 0, marcaPenalti: -50 }[alvoZona] / DEG;
+    apertar(m, BOTAO.LANCAMENTO, 20, Math.sin(phi), -lado * Math.cos(phi), 1);
     for (let i = 0; i < 30 && !primeiroPasse(m); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
     const l = primeiroPasse(m);
     if (!l || l.tipo !== 'cruzamento') continue;
     zonas[alvoZona]++;
     const zona = m.voo?.zona;
-    // ponto em que a bola passa a 2 m de altura descendo (altura de cabeceio) ou cai
+    // ponto em que a bola passa a 2,2 m de altura descendo (altura de cabeceio) ou em que alguém
+    // a toca antes (cabeçada, domínio)
     let p = null;
     for (let i = 0; i < 240 && !p; i++) {
+      const antes = { x: m.bola.p.x, z: m.bola.p.z };
       passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
-      if (m.bola.v.y < 0 && m.bola.p.y < 2.2) p = { x: m.bola.p.x, z: m.bola.p.z };
-      if (m.posse != null) p = p ?? { x: m.bola.p.x, z: m.bola.p.z };
+      if (m.eventos.some(e => ['cabeceio', 'dominioAereo', 'toque'].includes(e.tipo) && e.id !== 0) || m.posse != null) p = antes;
+      else if (m.bola.v.y < 0 && m.bola.p.y < 2.2) p = { x: m.bola.p.x, z: m.bola.p.z };
     }
     if (zona === alvoZona && p && Math.hypot(p.x - px, p.z - pz) <= 3) acertos[alvoZona]++;
   }

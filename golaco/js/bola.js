@@ -52,7 +52,7 @@ export function cdPorVel(s) {
  */
 export function proxVelRolando(s, dt) {
   if (s <= 0) return 0;
-  const a = BOLA.rolagemC * MD.pow(s, BOLA.rolagemN) + BOLA.rolagemPiso + K_AR * cdPorVel(s) * s * s;
+  const a = Math.min(BOLA.rolagemC * MD.pow(s, BOLA.rolagemN), BOLA.rolagemMax) + BOLA.rolagemPiso + K_AR * cdPorVel(s) * s * s;
   const s2 = s - a * dt;
   return s2 > BOLA.vParada ? s2 : 0;
 }
@@ -108,7 +108,13 @@ export function velParaParar(d) {
 
 /** Velocidade de saída para a bola chegar a `dist` metros com velocidade `vChegada`. */
 export function velParaChegarCom(dist, vChegada) {
+  const sobra = (v0) => {
+    let s = v0, d = 0;
+    while (d < dist && s > 0) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    return s;
+  };
   let lo = vChegada, hi = vChegada * 2 + 10;
+  while (sobra(hi) < vChegada && hi < 80) { lo = hi; hi *= 1.5; }
   for (let i = 0; i < 40; i++) {
     const m = (lo + hi) / 2;
     // rola até percorrer dist e vê a velocidade que sobrou

@@ -10,9 +10,9 @@ export function criarMarcas(cena) {
   const matFixo = new THREE.MeshBasicMaterial({ color: verde, opacity: 0.9, ...comum });
   const matOnda = new THREE.MeshBasicMaterial({ color: 0xb9ffd9, opacity: 0.6, ...comum });
   const matPonto = new THREE.MeshBasicMaterial({ color: verde, opacity: 0.75, ...comum });
-  const fixo = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.74, 48), matFixo);
-  const onda = new THREE.Mesh(new THREE.RingGeometry(0.9, 0.98, 48), matOnda);
-  const ponto = new THREE.Mesh(new THREE.CircleGeometry(0.13, 20), matPonto);
+  const fixo = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.96, 56), matFixo);
+  const onda = new THREE.Mesh(new THREE.RingGeometry(1.08, 1.18, 56), matOnda);
+  const ponto = new THREE.Mesh(new THREE.CircleGeometry(0.17, 20), matPonto);
   const grupo = new THREE.Group();
   for (const m of [fixo, onda, ponto]) { m.rotation.x = -Math.PI / 2; m.renderOrder = 4; grupo.add(m); }
   grupo.visible = false;

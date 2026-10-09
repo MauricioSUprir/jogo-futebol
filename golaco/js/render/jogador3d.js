@@ -295,10 +295,12 @@ export function criarJogadores3D(cena, qualidade) {
   cena.add(marca);
   // "próximo da troca": anel fino, menor e translúcido (discreto)
   const matProx = new THREE.MeshBasicMaterial({
-    color: 0xd8ffe9, transparent: true, opacity: 0.5, depthWrite: false, side: THREE.DoubleSide,
+    color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
   });
-  const anelProx = new THREE.Mesh(new THREE.RingGeometry(0.4, 0.45, 40), matProx);
+  // largura de 9 cm: fina o bastante para ser discreta e grossa o bastante para não serrilhar
+  // (sem antisserrilhado, um anel de 5 cm vira tracejado na câmera de TV)
+  const anelProx = new THREE.Mesh(new THREE.RingGeometry(0.37, 0.46, 40), matProx);
   anelProx.rotation.x = -Math.PI / 2;
   anelProx.renderOrder = 4;
   anelProx.visible = false;

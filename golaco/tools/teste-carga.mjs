@@ -4,11 +4,13 @@
 //   3) download inicial (nosso servidor + CDN) ≤ 4 MB;
 //   4) laço de passo fixo: 1 s de relógio manual a 60, 120 e 144 Hz = 60 passos;
 //   5) determinismo Node = Chromium: 600 passos com o MESMO roteiro de entradas (correr,
-//      modificador, pedalada, marcador e máquina de passes) dão o mesmo hashMundo nos dois;
-//      e a matemática determinística (js/matdet.js) dá os mesmos bits nos dois motores;
+//      modificador, pedalada, passe, chute, marcador e máquina de passes) no treino padrão
+//      (Etapa 2: os dois times com a IA) dão o mesmo hashMundo nos dois; e a matemática
+//      determinística (js/matdet.js) dá os mesmos bits nos dois motores;
 //   6) interpolação: a 144 Hz o jogador desenhado anda a passos regulares (sem o "anda, para,
-//      anda" de quem desenha só o último passo de simulação);
-//   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva.
+//      anda" de quem desenha só o último passo de simulação) — modo condução;
+//   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva — modo
+//      condução (sem adversário para roubar a bola no meio da medida).
 // Saída com PASSOU/REPROVOU e código de saída 1 se reprovar.
 //   node tools/teste-carga.mjs [--url http://...]   (sem --url sobe o servidor da pasta)
 import { servidor, abrir } from './lib/navegador.mjs';
@@ -23,7 +25,17 @@ const SEMENTE = 7;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
 
-/** Roteiro determinístico: curva suave, arrancada, modificador, pedalada, marcador e máquina. */
+/**
+ * Entrada no formato POR TIME ({0: {x, z, botoes}}), com x/z/botoes também no próprio objeto
+ * (não enumeráveis) — o mesmo que main.js entrega ao passoTreino (os dois formatos valem).
+ */
+function entradaDoTime(e) {
+  const t = { 0: { x: e.x, z: e.z, botoes: e.botoes } };
+  Object.defineProperties(t, { x: { value: e.x }, z: { value: e.z }, botoes: { value: e.botoes } });
+  return t;
+}
+
+/** Roteiro determinístico: curva, arrancada, modificador, pedalada, passe, chute, marcador e máquina. */
 function roteiro(n) {
   const r = [];
   for (let i = 0; i < n; i++) {
@@ -35,6 +47,9 @@ function roteiro(n) {
     if (i >= 360 && i < 430) botoes |= BOTAO.MOD;
     // dois toques rápidos no modificador = pedalada
     if ((i >= 470 && i < 476) || (i >= 482 && i < 488)) botoes |= BOTAO.MOD;
+    // passe (segurado ~0,3 s) e chute (~0,5 s): exercitam a carga, o pedido e o voo da Etapa 2
+    if (i >= 100 && i < 118) botoes |= BOTAO.PASSE;
+    if (i >= 540 && i < 570) botoes |= BOTAO.CHUTE;
     const e = { x: Math.cos(ang) * mag, z: Math.sin(ang) * mag, botoes };
     if (i === 300) e.acoes = ['marcador'];
     if (i === 520) e.acoes = ['maquina'];
@@ -48,7 +63,7 @@ function hashesNode(rot) {
   const hs = [hashMundo(m)];
   for (let i = 0; i < rot.length; i++) {
     const e = rot[i];
-    passoTreino(m, { x: e.x, z: e.z, botoes: e.botoes }, e.acoes ?? null);
+    passoTreino(m, entradaDoTime(e), e.acoes ?? null);
     if ((i + 1) % 100 === 0) hs.push(hashMundo(m));
   }
   return { hs, posse: m.posse, tick: m.tick, eventos: m.stats };
@@ -149,14 +164,14 @@ try {
     const hs = [g.reiniciar({ semente })];
     for (let k = 0; k < rot.length; k += 100) hs.push(g.rodarPassos(100, rot.slice(k, k + 100)));
     const m = g.mundo;
-    const r = { hs, posse: m.posse, tick: m.tick, stats: { ...m.stats } };
+    const r = { hs, posse: m.posse, tick: m.tick, stats: { ...m.stats }, jogadores: m.jogadores.length };
     g.pausar(false);
     return r;
   }, { rot, semente: SEMENTE });
   let divergeEm = -1;
   for (let i = 0; i < node.hs.length; i++) if (node.hs[i] !== nav.hs[i]) { divergeEm = i * 100; break; }
   meta('Hash após 600 passos (Node = Chromium)', `Node ${hexa(node.hs.at(-1))} · Chromium ${hexa(nav.hs.at(-1))}${divergeEm >= 0 ? ` (diverge até o passo ${divergeEm})` : ''}`, 'iguais', divergeEm < 0);
-  meta('Roteiro exercitado', `tick ${nav.tick}, posse ${nav.posse}, roubadas ${nav.stats.roubadas}, perdas ${nav.stats.perdas}`, 'tick 600', nav.tick === N_PASSOS);
+  meta('Roteiro exercitado', `tick ${nav.tick}, posse ${nav.posse}, ${nav.jogadores} jogadores, passes ${nav.stats.passes ?? '-'}, chutes ${nav.stats.chutes ?? '-'}, roubadas ${nav.stats.roubadas}, perdas ${nav.stats.perdas}`, 'tick 600', nav.tick === N_PASSOS);
 
   const matNode = assinaturaMat(MD);
   const matNav = await pagina.evaluate(async src => {
@@ -168,7 +183,7 @@ try {
   // 6) interpolação a 144 Hz: deslocamento do jogador DESENHADO por quadro, correndo reto
   const interp = await pagina.evaluate(() => {
     const g = window.__golaco;
-    g.reiniciar({ semente: 3 });
+    g.reiniciar({ semente: 3, modo: 'conducao' });
     g.forcarEntrada({ x: 1, z: 0, botoes: 0 });
     g.relogio.usarManual(true);
     for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); // embala (4 s)
@@ -189,7 +204,7 @@ try {
   //    nenhum vai-e-volta curto (inversão de sentido seguida de outra em < 0,25 s)
   const tremor = await pagina.evaluate(() => {
     const g = window.__golaco;
-    g.reiniciar({ semente: 5 });
+    g.reiniciar({ semente: 5, modo: 'conducao' });
     g.relogio.usarManual(true);
     const cams = [];
     const n = 144 * 5;

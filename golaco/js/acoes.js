@@ -11,7 +11,7 @@ import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
 import {
-  chutarRasteiro, chutar, velParaChegarCom, velParaDistancia, velParaPousar, elevacaoParaAltura,
+  chutarRasteiro, chutar, velParaChegarCom, velParaDistancia, velRolandoApos, velParaPousar, elevacaoParaAltura,
   alturaNaDistancia, simularVoo, criarBola,
 } from './bola.js';
 import { procurarOportunidade } from './conducao.js';
@@ -41,10 +41,13 @@ export function atualizarBotoesAcao(m, j) {
     const soltou = !(agora & b) && (antes & b);
     if (apertou) {
       j.carga = { tipo, t0: m.tick, mod: (agora & BOTAO.MOD) !== 0 };
+      j.mira = null;
     } else if (soltou && j.carga && j.carga.tipo === tipo) {
       soltarCarga(m, j);
     }
   }
+  // guarda a mira enquanto carrega ou espera o toque
+  if ((j.carga || j.pedido) && j.imag > 0.2) j.mira = { x: j.ix, z: j.iz, mag: j.imag };
   if (j.carga && (m.tick - j.carga.t0) * DT >= ACOES.cargaMax) soltarCarga(m, j);
   if (j.pedido) {
     const idade = (m.tick - j.pedido.tick) * DT;
@@ -88,14 +91,30 @@ export function processarPedido(m, j) {
   if (!j.pedido || m.posse !== j.id) return;
   const c = j.cond;
   if (c.toque && c.toque.tipo === 'acao') return;
-  const op = procurarOportunidade(m, j, 2, 24, true, null, true);
+  let op = procurarOportunidade(m, j, 2, 24, true, null, true);
+  // sem pressão, ajeita o passo para bater com a perna boa (até ~0,15 s a mais)
+  const pref = j.par.attr.pePreferido ?? 1;
+  if (op && op.pe !== pref && pressaoSobre(m, j) < 0.3) {
+    const op2 = procurarOportunidade(m, j, op.i + 1, op.i + 9, true, null, true);
+    if (op2 && op2.pe === pref) op = op2;
+  }
   if (op) c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'acao' };
 }
 
 // ------------------------------------------------------------------ escolha do alvo
 
+/**
+ * Mira da ação: o analógico de agora ou, se ele já foi solto, o último segurado durante a carga
+ * (quem solta o botão e o analógico juntos não perde a direção). {x, z, mag} ou null.
+ */
+function mira(j) {
+  if (j.imag > 0.2) return { x: j.ix, z: j.iz, mag: j.imag };
+  return j.mira ?? null;
+}
+
 function dirPedida(j) {
-  if (j.imag > 0.2) return { x: j.ix, z: j.iz };
+  const a = mira(j);
+  if (a) return { x: a.x, z: a.z };
   return { x: MD.cos(j.rumo), z: MD.sin(j.rumo) };
 }
 
@@ -307,12 +326,25 @@ function enfiada(m, j, pe, p, erroMult) {
     rx = lado * 0.65 + d.x * 0.35; rz = d.z * 0.35;
     const l = MD.hypot(rx, rz) || 1; rx /= l; rz /= l;
   }
-  // bola no espaço: a força escolhe quanto à frente (4,5–12 m) e com que velocidade a bola passa
-  // por lá (o "peso" da enfiada); o recebedor arranca já e corre para interceptá-la
-  const lead = lerp(cfg.lead[0], cfg.lead[1], p.forca);
-  const { x: tx, z: tz } = dentroDoCampo(r.x + rx * lead, r.z + rz * lead, 1.5);
+  // bola no espaço: a força diz quanto à frente no mínimo (4,5–12 m) e com que velocidade, no
+  // máximo, a bola passa pelo ponto (o "peso"). Procura o ponto da corrida em que a bola chega um
+  // pouco antes do recebedor (ele corre para ela) sem passar forte demais; ele arranca já.
   const vNoPonto = lerp(cfg.vNoPonto[0], cfg.vNoPonto[1], p.forca);
   const alta = p.mod;
+  const reacao = sr > 3 ? 0 : Math.round(0.15 / DT);
+  const lead0 = lerp(cfg.lead[0], cfg.lead[1], p.forca);
+  let { x: tx, z: tz } = dentroDoCampo(r.x + rx * lead0, r.z + rz * lead0, 1.5);
+  // sem tempo de a bola chegar antes (corredor lançado): bate o mais forte que o peso permite
+  // no ponto mínimo, e ele ajusta a corrida para encontrá-la
+  let v0Rasteira = Math.min(cfg.vMax, velParaChegarCom(MD.hypot(tx - b.p.x, tz - b.p.z), vNoPonto));
+  for (let lead = lead0; !alta && lead <= lead0 + 10; lead += 0.75) {
+    const q = dentroDoCampo(r.x + rx * lead, r.z + rz * lead, 1.5);
+    const Lp = MD.hypot(q.x - b.p.x, q.z - b.p.z);
+    const nBola = Math.max(10, ticksAteChegar(r, q.x, q.z) + reacao - Math.round(0.1 / DT));
+    const v0 = velParaDistancia(Lp, nBola);
+    if (v0 > cfg.vMax) break; // a bola não chega antes nem indo mais longe
+    if (velRolandoApos(v0, nBola) <= vNoPonto) { tx = q.x; tz = q.z; v0Rasteira = v0; break; }
+  }
   let dx = tx - b.p.x, dz = tz - b.p.z;
   const L = MD.hypot(dx, dz) || 1;
   dx /= L; dz /= L;
@@ -329,8 +361,7 @@ function enfiada(m, j, pe, p, erroMult) {
     const ce = MD.cos(el), se = MD.sin(el);
     finalizarChute(m, j, pe, 'enfiadaAlta', { x: u.x * s * ce, y: s * se, z: u.z * s * ce }, { x: u.z * 10, y: 0, z: -u.x * 10 }, { x: b.p.x + dx * Lq, z: b.p.z + dz * Lq }, r, { voo: { alto: true } });
   } else {
-    let v0 = Math.min(cfg.vMax, velParaChegarCom(L, vNoPonto));
-    v0 *= 1 + normal(m.rng) * sig * 0.6;
+    let v0 = v0Rasteira * (1 + normal(m.rng) * sig * 0.6);
     const u = girar(dx, dz, normal(m.rng) * sig);
     finalizarChute(m, j, pe, 'enfiada', { x: u.x * v0, y: 0, z: u.z * v0 }, { x: 0, y: 0, z: 0 }, { x: tx, z: tz }, r, { voo: { alto: false } });
   }
@@ -396,14 +427,15 @@ function cruzamento(m, j, pe, p, erroMult) {
   const lado = ataca(m, j.time);
   const cc = ACOES.cruzamento;
   const zonas = zonasCruzamento(lado, j.z);
-  // a zona: para onde o analógico aponta; sem analógico, onde há companheiro mais perto
+  // a zona pelo analógico, em setores largos (vistas da ponta, as três zonas ficam a ~6° uma da
+  // outra): para a linha de fundo = 1º pau; atravessado = 2º pau; para trás = marca do pênalti.
+  // Sem analógico: a zona com o companheiro mais perto.
   let zona = zonas[2];
-  if (j.imag > 0.3) {
-    let mel = Infinity;
-    for (const zz of zonas) {
-      const a = Math.abs(difAng(MD.atan2(j.iz, j.ix), MD.atan2(zz.z - j.z, zz.x - j.x)));
-      if (a < mel) { mel = a; zona = zz; }
-    }
+  const mr = mira(j);
+  if (mr && mr.mag > 0.3) {
+    const sz = j.z >= 0 ? 1 : -1;
+    const phi = MD.atan2(mr.x * lado, -mr.z * sz); // 0 = atravessado; + = para a linha de fundo
+    zona = phi > cc.setor ? zonas[0] : phi < -cc.setor ? zonas[2] : zonas[1];
   } else {
     let mel = Infinity;
     for (const zz of zonas) for (const o of m.jogadores) {
@@ -433,8 +465,8 @@ function cruzamento(m, j, pe, p, erroMult) {
   } else {
     const el = p.mod ? cc.elevTenso : cc.elevAlto;
     w = { x: uz * 6, y: 0, z: -ux * 6 };
-    // o cruzamento alto cai na zona na altura da cabeça (a busca mira o ponto de queda um pouco além)
-    const s = velParaPousar(pp, ux, uz, Lq + (p.mod ? 2.5 : 1.2), el, w);
+    // a bola passa pela zona na altura do cabeceio (alto) ou da cintura (tenso), já descendo
+    const s = velParaAlturaEm(pp, ux, uz, Lq, el, w, p.mod ? cc.yTenso : cc.yAlto);
     const ce = MD.cos(el), se = MD.sin(el);
     v = { x: ux * s * ce, y: s * se, z: uz * s * ce };
     ticks = simularVoo(pp, v, w).ticks;
@@ -442,6 +474,16 @@ function cruzamento(m, j, pe, p, erroMult) {
   finalizarChute(m, j, pe, tipo, v, w, { x: ex, z: ez }, r, { voo: { alto: !p.rasteiro, zona: zona.nome, rasteiro: !!p.rasteiro, tenso: !!p.mod }, ticks });
   if (r) marcarRecebedor(m, r, ex, ez, 'cruzamento', m.tick + ticks);
   return true;
+}
+
+/** Velocidade para a bola (elevação el) passar a D metros na altura y. Busca binária. */
+function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
+  let lo = 3, hi = 42;
+  for (let i = 0; i < 26; i++) {
+    const s = (lo + hi) / 2;
+    if (alturaNaDistancia(pp, ux, uz, D, s, el, w).y < y) lo = s; else hi = s;
+  }
+  return (lo + hi) / 2;
 }
 
 /** Goleiro adversário (o mais perto do gol atacado). */
@@ -467,8 +509,9 @@ function chute(m, j, pe, p, erroMult) {
   // mira: o analógico escolhe o canto; sem analógico, o lado mais longe do goleiro
   const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
   let zMira;
-  if (j.imag > 0.3) {
-    const lat = MD.sin(difAng(dirGol, MD.atan2(j.iz, j.ix)));
+  const mr = mira(j);
+  if (mr && mr.mag > 0.3) {
+    const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
     zMira = clamp(lat * lado * meio * 1.4, -meio + 0.5, meio - 0.5);
     // "lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z
   } else {
@@ -540,7 +583,8 @@ export function executarCabeceio(m, j, p) {
   if (p.tipo === 'chute') {
     const gx = lado * CAMPO.meioX;
     const meio = CAMPO.gol.largura / 2;
-    const zM = j.imag > 0.3 ? clamp(j.iz * meio, -meio + 0.4, meio - 0.4) : (b.p.z > 0 ? -1.5 : 1.5);
+    const mr = mira(j);
+    const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : (b.p.z > 0 ? -1.5 : 1.5);
     ux = gx - b.p.x; uz = zM - b.p.z;
     const D = MD.hypot(ux, uz) || 1; ux /= D; uz /= D;
     s = lerp(cfg.v[0], cfg.v[1], attr / 100);

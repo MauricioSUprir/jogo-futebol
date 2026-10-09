@@ -23,14 +23,25 @@ function para(j, x, z, mag, correr = false, botoes = 0) {
  * Primeiro ponto do caminho da bola (física pura) a que o jogador chega antes ou junto com ela
  * (correndo no máximo). Recalculado a cada poucos ticks; guarda em j.intercepta.
  */
-export function pontoInterceptacao(m, j) {
+export function pontoInterceptacao(m, j, aPartirDe = null) {
   if (j.intercepta && m.tick - j.intercepta.tick < 4) return j.intercepta;
-  const n = 150;
+  const n = aPartirDe ? 240 : 150;
   const pb = preverBola(m.bola, n);
+  // enfiada: só vale encontrar a bola do ponto marcado em diante (ele corre para o espaço, não
+  // volta para buscar)
+  let i0 = 4;
+  if (aPartirDe) {
+    const vb = MD.hypot(m.bola.v.x, m.bola.v.z) || 1;
+    const ux = m.bola.v.x / vb, uz = m.bola.v.z / vb;
+    const sP = (aPartirDe.x - m.bola.p.x) * ux + (aPartirDe.z - m.bola.p.z) * uz - 1.5;
+    let k = 4;
+    while (k <= n && (pb.xs[k] - m.bola.p.x) * ux + (pb.zs[k] - m.bola.p.z) * uz < sP) k++;
+    i0 = Math.min(k, n); // a bola não passa do ponto no horizonte: vai para onde ela para
+  }
   const vmax = j.par.vArrancada;
   const s0 = MD.hypot(j.vx, j.vz);
   let melhor = null;
-  for (let i = 4; i <= n; i += 3) {
+  for (let i = i0; i <= n; i += 3) {
     if (pb.ys[i] > 2.3) continue; // alto demais para dominar ali
     const d = Math.max(0, MD.hypot(pb.xs[i] - j.x, pb.zs[i] - j.z) - 0.5);
     // tempo de corrida: aceleração até a velocidade máxima (perfil simples)
@@ -69,15 +80,17 @@ export function entradaIA(m, j) {
     if (m.tick - r.tick > 240 || (m.posse != null && m.posse !== j.id)) j.recebe = null;
     else if (r.tipo !== 'passe' && m.posse == null) {
       // enfiada/lançamento/cruzamento: corre para onde ELE e a BOLA chegam juntos
-      const p = pontoInterceptacao(m, j);
+      const p = pontoInterceptacao(m, j, r.tipo === 'enfiada' ? r : null);
       if (p) return { ...para(j, p.x, p.z, 1, true), botoes: extra | BOTAO.CORRER };
       return { ...para(j, r.x, r.z, 1, true), botoes: extra | BOTAO.CORRER };
     } else if (r.tipo === 'passe') {
-      // vem ao encontro: alguns passos na direção da bola
-      const dx = b.p.x - r.x, dz = b.p.z - r.z;
-      const d = MD.hypot(dx, dz) || 1;
-      const k = Math.min(1.5, d * 0.15);
-      return { ...para(j, r.x + (dx / d) * k, r.z + (dz / d) * k, 0.6), botoes: extra };
+      // vem ao encontro: entra na LINHA da bola (o ponto do caminho que ele alcança primeiro),
+      // trotando; o passe vem no pé, então são poucos passos
+      if (m.posse == null && MD.hypot(b.v.x, b.v.z) > 0.5) {
+        const p = pontoInterceptacao(m, j);
+        return { ...para(j, p.x, p.z, 0.7), botoes: extra };
+      }
+      return { ...para(j, r.x, r.z, 0.6), botoes: extra };
     } else {
       return { ...para(j, r.x, r.z, 1, true), botoes: extra | BOTAO.CORRER };
     }

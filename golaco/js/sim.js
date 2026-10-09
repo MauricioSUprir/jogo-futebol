@@ -352,7 +352,10 @@ function bolaAltaNoCorpo(m, j) {
     const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
     if (d > 0.75 || b.p.y > alcanceY) return false;
     if (b.p.y > ACOES.cabeceio.alturaPeito[1] || j.pedido) {
-      const p = j.pedido ?? { tipo: 'passe', forca: 0.5 };
+      // sem botão: a IA na área cabeceia para o gol; fora dela (e o humano), cabeceia de passe
+      const lado = ataca(m, j.time);
+      const naArea = (lado * CAMPO.meioX - j.x) * lado < 16.5 && Math.abs(j.z) < 20.16;
+      const p = j.pedido ?? (naArea && !ehControlado(m, j) ? { tipo: 'chute', forca: 0.7 } : { tipo: 'passe', forca: 0.5 });
       j.pedido = null;
       executarCabeceio(m, j, p);
       m.eventos.push({ tipo: 'cabeceio', id: j.id });

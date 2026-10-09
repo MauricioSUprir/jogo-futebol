@@ -225,7 +225,7 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
-const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0 };
+const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
 const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
@@ -287,6 +287,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const cp = cam.camera.position;
   render.camera.x = cp.x; render.camera.y = cp.y; render.camera.z = cp.z;
   render.alfa = alfa;
+  render.queda = marcas.grupo.visible ? { x: marcas.grupo.position.x, z: marcas.grupo.position.z } : null;
   render.quadros++;
   // HUD
   if (h) {
@@ -529,8 +530,11 @@ const api = {
   },
   /** Troca o mundo inteiro (testes e prints de conferência montam um mundo à parte). */
   trocarMundo(m) { return trocarMundo(m); },
-  /** Ataque × defesa vista pelos botões agora. */
+  /** Ataque × defesa (estado do mundo, com a espera de 0,25 s para a defesa). */
   get fase() { return fase.atual; },
+  /** Botões de toque: reaplica a fase visível e muda o tamanho (testes de layout). */
+  sincronizarFase() { entrada.definirFase(fase.atual); entrada.sincronizarFase(); },
+  toqueTamanho(v) { comando('toqueTamanho', v); },
   relogio: {
     /** Relógio manual: o laço usa um tempo controlado (testes a 60/120/144 Hz). */
     usarManual(v = true) {
@@ -574,6 +578,8 @@ const api = {
       texturas: cena3d ? cena3d.info().memory.textures : 0,
     };
   },
+  /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
+  mostrarEvento(ev) { hud.evento(ev, { tipoVoo: mundo.voo?.tipo }, true); },
   /** Desenha um quadro sem avançar nada (prints). */
   desenhar() { desenharQuadro(0, relogioManual ? tempoManual : performance.now()); },
   /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */

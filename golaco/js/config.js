@@ -55,6 +55,7 @@ export const BOLA = {
   rolagemC: 0.33,
   rolagemN: 1.35,
   rolagemPiso: 0.05,          // m/s² (a bola sempre acaba parando)
+  rolagemMax: 5.4,            // m/s² — teto da resistência do gramado (≈ μ·g, μ ≈ 0,55; Cross 2002)
   atritoDeslize: 0.4,         // atrito cinético quando a bola desliza sem rolar
   giroVerticalDecai: 2.5,     // 1/s, giro em torno do eixo y no chão
   vParada: 0.04,              // abaixo disso a bola para
@@ -258,7 +259,7 @@ export const ACOES = {
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 9.5], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.66], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
-  cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11 },
+  cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11, yAlto: 2.0, yTenso: 0.9, setor: 0.44 },
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.8, colocadoErro: 0.6, giroColocado: 26 },
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72 },
   cabeceio: { alcanceSalto: 2.55, alturaPeito: [0.45, 1.7], v: [9, 17] },
