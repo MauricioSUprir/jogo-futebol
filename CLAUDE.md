@@ -148,7 +148,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Pedidos do dono de 08/10 (PR depois da Fase 3): botão GOLEIRO na defesa (`gk.js` gkRush; `human.js` userGKRush; tecla G/Y;
   `tools/goleiro-sai-test.mjs`, `tools/goleiro-botao-test.mjs` no celular, vídeo `tools/goleiro-clip.mjs`; contra o botão o
   atacante da IA segue com a bola em vez de bater logo — `ai.js` contraBotao, só contra o humano, IA×IA não muda); bolas paradas
-  (`ai.js` alvosBolaParada/setpieceAI: tiro de meta com o adversário fora da área — Regra 16 —, lateral com 3 opções, escanteio
+  (`ai.js` alvosBolaParada/setpieceAI: tiro de meta com o adversário fora da área do começo ao fim da cobrança — Regra 16, `match.js` regra16: quem está na área
+  vai para fora na montagem, com corte de câmera, e ninguém entra até a bola rolar, nem o humano; `tools/tiro-de-meta-test.mjs`;
+  a IA espera os zagueiros abrirem e só o time de pressão alta (estilo ≥ 0,7) põe os atacantes na beira da área — com todos
+  prontos ali a saída curta era roubada bem mais que na versão antiga; medir a saída com o painel, linha "após tiro de meta" —,
+  lateral com 3 opções, escanteio
   com zona + individual; `match.js` handsPoint: a bola fica NAS mãos no lateral e com o goleiro; `tools/bola-parada-test.mjs`,
   prints `tools/bola-parada-prints.mjs`); disputa pelo alto perto das áreas (`ai.js` pontoAereo, `match.js` doHeader com duelo
   por altura/impulsão/força; `tools/disputa-aerea-test.mjs`); dividida que vale de lado (perna sai do quadril; `match.js`
@@ -175,7 +179,7 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
 # Pedidos de 08/10 (Node): node tools/dividida-test.mjs 200 --alvo && node tools/dividida-test.mjs 400 --natural --alvo \
 #   && node tools/troca-auto-test.mjs && node tools/intensidade-jogo-test.mjs && node tools/defesas-test.mjs 36 --par 3 \
 #   && node tools/goleiro-sai-test.mjs && node tools/bola-parada-test.mjs && node tools/disputa-aerea-test.mjs \
-#   && node tools/cobrador-test.mjs && node tools/conducao-org-test.mjs
+#   && node tools/cobrador-test.mjs && node tools/conducao-org-test.mjs && node tools/tiro-de-meta-test.mjs
 #   (navegador, celular: node tools/goleiro-botao-test.mjs)
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20

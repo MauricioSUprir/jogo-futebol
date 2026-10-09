@@ -292,6 +292,7 @@ export class Match {
       }
     }
     this.bodies(dt);
+    if (this.phase === 'setpiece' && this.sp && this.sp.type === 'goalkick') this.regra16(false);
     this.slideChecks();
 
     // bola: 2 subpassos por quadro de 60 Hz
@@ -827,6 +828,28 @@ export class Match {
     return k && k.p.team === gk.team && k.p !== gk && ['pass', 'long', 'through', 'clear'].includes(k.kind) && this.lastTouch === k.p;
   }
 
+  // Regra 16 (dono, 09/10: "não pode ter gente do outro time na área durante o tiro de meta, isso é regra básica"):
+  // do começo da cobrança até a bola entrar em jogo, adversário nenhum dentro da área de quem cobra. Antes só o
+  // instante do chute era garantido — eles saíam andando com a bola já posta (algum dentro em ~3/4 do tempo da
+  // cobrança). Na montagem (corte de câmera, como na TV) quem está dentro vai para fora pelo lado mais perto da
+  // área (frente ou lateral); depois, a cada passo, ninguém entra (o humano também não).
+  regra16(montagem, team = this.sp.team) {
+    const gx = this.ownGoalX(team), s = Math.sign(gx), D = PITCH.boxDepth, W = PITCH.boxHalfW;
+    const folga = montagem ? 1.2 : 0.05;
+    for (const q of team.opp.players) {
+      if (q.sentOff || q.isGK || Math.sign(q.x) !== s) continue;
+      const fundo = Math.abs(gx - q.x);
+      if (fundo >= D || Math.abs(q.z) >= W) continue;
+      const sz = Math.sign(q.z) || 1;
+      const pelaFrente = D - fundo <= W - Math.abs(q.z);
+      const x = pelaFrente ? gx - s * (D + folga) : q.x, z = pelaFrente ? q.z : sz * (W + folga);
+      if (montagem) { q.teleport(x, z, Math.atan2(this.ball.p.z - z, this.ball.p.x - x)); continue; }
+      q.x = x; q.z = z;
+      // sem velocidade para dentro da área (a corrida segue ao longo da linha)
+      if (pelaFrente) { if (q.vx * s > 0) q.vx = 0; } else if (q.vz * sz < 0) q.vz = 0;
+    }
+  }
+
   inOwnBox(p, x, z) {
     const gx = this.ownGoalX(p.team);
     return Math.abs(x - gx) < PITCH.boxDepth && Math.abs(z) < PITCH.boxHalfW && Math.sign(x) === Math.sign(gx);
@@ -1132,6 +1155,7 @@ export class Match {
         p.teleport(clamp(x + nx * (minD + 0.3), -HL + 0.5, HL - 0.5), clamp(z + nz * (minD + 0.3), -HW + 0.5, HW - 0.5), Math.atan2(-nz, -nx));
       }
     }
+    if (r.type === 'goalkick') this.regra16(true, team);
     // barreira
     this.wall = [];
     if ((r.type === 'freekick' || r.type === 'indirect') && Math.hypot(tgx - x, z) < 30) {

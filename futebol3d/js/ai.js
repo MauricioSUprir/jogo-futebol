@@ -1134,7 +1134,11 @@ function alvosBolaParada(m, sp) {
     for (const q of vivos(opp)) {
       const s = slotOf(q);
       let lx, lz = -s.bz;
-      if (s.role === 'ATT') { lx = -HL + 18; lz = clamp(-s.bz * 0.45, -11, 11); }
+      // atacantes: na beira da área só no time que pressiona alto (estilo ≥ 0,7); os outros esperam ~7 m fora dela.
+      // (com o adversário fora da área desde a montagem — match.js regra16 — todos prontos na beira da área roubavam a
+      // saída curta bem mais que na versão publicada, em que eles ainda saíam andando: posse perdida no próprio campo em
+      // até 8 s 40% → 54%)
+      if (s.role === 'ATT') { lx = -HL + ((opp.style?.press ?? 0.5) >= 0.7 ? 18 : 24); lz = clamp(-s.bz * 0.45, -11, 11); }
       else if (s.role === 'MID') { lx = -HL + 31; lz = clamp(-s.bz, -24, 24); }
       else { lx = -HL + 58; lz = clamp(-s.bz * 0.9, -24, 24); }
       if (lx < -HL + PITCH.boxDepth + 1 && Math.abs(lz) < PITCH.boxHalfW + 1) lx = -HL + PITCH.boxDepth + 1.5;
@@ -1244,6 +1248,11 @@ export function setpieceAI(m, dt) {
   const wait = sp.type === 'kickoff' ? 1.2 : sp.type === 'penalty' ? 1.8 : 1.6;
   if (sp.taken || (human && sp.t < 14) || sp.t < wait) return;
   if (sp.t < 6 && sp.type === 'goalkick' && areaOcupada(m, sp)) return;
+  // tiro de meta: espera os zagueiros abrirem na área para a saída curta, no máximo ~5 s (antes a espera pela área
+  // vazia dava esse tempo; com a área vazia desde a montagem — match.js regra16 — a cobrança saía antes de eles
+  // chegarem: zagueiros abertos 98% → 82%)
+  if (sp.t < 5 && sp.type === 'goalkick' && team.players.some(q => !q.sentOff && !q.isGK && q.spAlvo && slotOf(q).role === 'DEF' &&
+    Math.hypot(q.spAlvo.x - q.x, q.spAlvo.z - q.z) > 3)) return;
   // (escanteio: até ~10 s — os zagueiros vêm do outro campo, como no futebol de verdade)
   if (sp.t < (sp.type === 'corner' ? 10 : 5) && (sp.type === 'corner' || sp.type === 'throwin') &&
     team.players.some(q => !q.sentOff && !q.isGK && q !== sp.taker && q.spAlvo && Math.hypot(q.spAlvo.x - q.x, q.spAlvo.z - q.z) > (sp.type === 'corner' ? 2.5 : 4))) return;
