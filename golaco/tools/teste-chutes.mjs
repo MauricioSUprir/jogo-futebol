@@ -85,17 +85,20 @@ function chute(semente, x, z, opc = {}) {
 function erros(semBase, opc, N = 60) {
   const bom = [], ruim = [];
   for (let s = 1; s <= N; s++) {
-    const r = chute(semBase + s, GX - 20, ((s % 7) - 3) * 1.2, { ...opc, canto: (s % 2 ? 1 : -1) * 0.3 });
+    // a perna boa alterna entre as sementes: o pé que bate depende da passada, então assim
+    // metade dos chutes sai com a perna boa e metade com a ruim
+    const attr = { ...opc.attr, pePreferido: Math.floor(s / 2) % 2 };
+    const r = chute(semBase + s, GX - 20, ((s % 7) - 3) * 1.2, { ...opc, attr, canto: (s % 2 ? 1 : -1) * 0.3 });
     if (!r || !r.mira || !r.linha) continue;
     const e = opc.soLateral ? Math.abs(r.linha.z - r.mira.z) : Math.hypot(r.linha.z - r.mira.z, r.linha.y - r.mira.y);
-    (r.l.pe === (opc.attr.pePreferido ?? 1) ? bom : ruim).push(e);
+    (r.l.pe === attr.pePreferido ? bom : ruim).push(e);
   }
   return { bom, ruim };
 }
 {
   const attr = { finalizacao: 85, pePreferido: 1, peFraco: 50 };
   // pressão de trás (sem peso no erro de longe): o toque sai com o pé que estiver na vez
-  const col = erros(100, { attr, forca: 0.6, mod: true, pressao: true }, 400);
+  const col = erros(100, { attr, forca: 0.6, mod: true, pressao: true, varia: true }, 400);
   reg('dispersão — colocado a 20 m (bom finalizador, perna boa)', `erro médio ${fmt(media(col.bom), 2)} m (n ${col.bom.length})`, '0,48–0,88 m (Carlsson 2018: 0,68 m)', media(col.bom) >= 0.48 && media(col.bom) <= 0.88 && col.bom.length >= 120);
   const rz = media(col.ruim) / media(col.bom);
   reg('dispersão — perna ruim ÷ perna boa', `${fmt(rz, 2)} (n ${col.ruim.length})`, '1,25–1,6 (+40%)', rz >= 1.25 && rz <= 1.6 && col.ruim.length >= 120);
