@@ -249,6 +249,42 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (
   reg('tabela — o passador corre para o espaço', `x ${fmt(j0.x)} m, vel ${fmt(Math.hypot(j0.vx, j0.vz))} m/s`, 'avança > 4 m', j0.x > 4);
 }
 
+// ------------------------------------------------ TROCAR: segurar troca uma vez; botão segurado não vira carga
+{
+  // defendendo (o time 1 tem a bola): o humano do time 0 segura TROCAR por 8 passos
+  const jog = [
+    { id: 0, x: 0, z: 0, rumo: 0, time: 0, papel: 'humano', posicao: 'VOL' },
+    { id: 1, x: 8, z: 6, rumo: 0, time: 0, papel: 'ia', posicao: 'ZAG' },
+    { id: 2, x: 8, z: -6, rumo: 0, time: 0, papel: 'ia', posicao: 'ZAG' },
+    { id: 30, x: 14, z: 0, rumo: Math.PI, time: 1, papel: 'parado', posicao: 'ATA' },
+  ];
+  const m = criarMundo({ semente: 950, jogadores: jog, bola: { x: 13.6, z: 0 }, posse: 30 });
+  let trocas = 0;
+  for (let i = 0; i < 12; i++) {
+    passo(m, { 0: { x: 0, z: 0, botoes: i < 8 ? BOTAO.TROCAR : 0 } });
+    trocas += m.eventos.filter(e => e.tipo === 'troca').length;
+  }
+  reg('TROCAR segurado por 8 passos', `${trocas} troca(s)`, '1', trocas === 1);
+  // PASSE segurado quando o controle troca sozinho (o adversário ganha a bola): o novo jogador
+  // não começa carga nenhuma
+  const jog2 = [
+    { id: 0, x: -12, z: 0, rumo: 0, time: 0, papel: 'humano', posicao: 'VOL' },
+    { id: 1, x: 4, z: 2.5, rumo: 0, time: 0, papel: 'ia', posicao: 'ZAG' },
+    { id: 30, x: 7, z: 0, rumo: Math.PI, time: 1, papel: 'ia', posicao: 'ATA' },
+  ];
+  const m2 = criarMundo({ semente: 951, jogadores: jog2, bola: { x: 4, z: 0 }, posse: null });
+  m2.bola.v.x = 2.5; m2.bola.rolando = true;
+  let falsa = false, trocou = false;
+  for (let i = 0; i < 90; i++) {
+    passo(m2, { 0: { x: 0, z: 0, botoes: BOTAO.PASSE } });
+    if (m2.eventos.some(e => e.tipo === 'troca' && e.auto)) trocou = true;
+    // a carga que acompanha a troca é a do aperto original (tick 0); uma carga nova seria falsa
+    const c = jogadorPorId(m2, m2.controlado[0]);
+    if (c.id !== 0 && c.carga && c.carga.t0 !== 0) falsa = true;
+  }
+  reg('botão segurado na troca automática não cria carga nova', `${trocou ? 'trocou' : 'NÃO trocou'}; ${falsa ? 'carga falsa' : 'sem carga'}`, 'trocou; sem carga', trocou && !falsa);
+}
+
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-passes: REPROVOU (${falhas})` : '\nteste-passes: PASSOU');
 process.exit(falhas ? 1 : 0);

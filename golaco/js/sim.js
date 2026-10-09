@@ -12,7 +12,7 @@ import {
   executarToque,
 } from './conducao.js';
 import { MD } from './matdet.js';
-import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca } from './acoes.js';
+import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
 import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
@@ -42,6 +42,8 @@ export function criarMundo(opcoes = {}) {
     voo: null,
     naMao: null,
     proximaTroca: {},
+    botoesTimeAgora: {},       // botões do humano de cada time neste passo e no anterior
+    botoesTimeAnt: {},
   };
   for (const d of opcoes.jogadores ?? [{ id: 0, x: 0, z: 0, rumo: 0 }]) {
     const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0);
@@ -201,6 +203,11 @@ function roubarComMarcador(m, j) {
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
+  // botões de cada time humano (bordas de TROCAR e botões segurados na troca)
+  for (const t of m.humanos) {
+    m.botoesTimeAnt[t] = m.botoesTimeAgora[t] ?? 0;
+    m.botoesTimeAgora[t] = (entradas?.[t]?.botoes ?? 0) | 0;
+  }
   // 1) entradas: humano (o controlado de cada time humano) e IA (entrada virtual)
   for (const j of js) {
     if (j.papel === 'marcador' || j.papel === 'parado') continue;
@@ -397,7 +404,7 @@ function bolaAltaNoCorpo(m, j) {
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
   if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
-    m.controlado[j.time] = j.id;
+    assumirControle(m, j.time, j);
     m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
   }
   j.recebe = null;
@@ -411,7 +418,7 @@ function ganhouPosse(m, j) {
       const d = MD.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z);
       if (d < dm) { dm = d; mel = o; }
     }
-    if (mel && m.controlado[t] !== mel.id) { m.controlado[t] = mel.id; m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+    if (mel && m.controlado[t] !== mel.id) { assumirControle(m, t, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
   }
 }
 
@@ -456,9 +463,11 @@ function trocarJogador(m, entradas) {
     m.proximaTroca[t] = melhor ? melhor.id : null;
     const j = jogadorPorId(m, m.controlado[t]);
     if (!j) continue;
-    const apertou = (j.botoes & BOTAO.TROCAR) && !(j.botoesAnt & BOTAO.TROCAR);
+    // a borda do botão é do TIME (não do jogador): segurar TROCAR troca uma vez só
+    const agora = m.botoesTimeAgora[t] ?? 0, antes = m.botoesTimeAnt[t] ?? 0;
+    const apertou = (agora & BOTAO.TROCAR) && !(antes & BOTAO.TROCAR);
     if (apertou && melhor && melhor.id !== j.id) {
-      m.controlado[t] = melhor.id;
+      assumirControle(m, t, melhor);
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }
   }

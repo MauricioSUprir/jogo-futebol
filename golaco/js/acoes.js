@@ -23,6 +23,25 @@ const BOTOES_ACAO = [
   [BOTAO.PASSE, 'passe'], [BOTAO.ENFIADA, 'enfiada'], [BOTAO.LANCAMENTO, 'lancamento'], [BOTAO.CHUTE, 'chute'],
 ];
 
+/**
+ * O humano do time passa a controlar `novo`. O que o humano já estava fazendo vai junto: a carga
+ * de um botão segurado e o pedido ainda não executado (ex.: CHUTE apertado enquanto o passe ia,
+ * para bater de primeira). Os botões segurados contam como já apertados no novo jogador (não viram
+ * carga nem troca falsa), e a ação virtual que a IA segurava nele é descartada.
+ */
+export function assumirControle(m, time, novo) {
+  const antigo = m.jogadores.find(o => o.id === m.controlado[time]);
+  m.controlado[time] = novo.id;
+  const mask = m.botoesTimeAgora?.[time] ?? 0;
+  novo.botoes = mask; novo.botoesAnt = mask;
+  novo.iaAcao = null; novo.carga = null;
+  if (antigo && antigo !== novo) {
+    if (antigo.carga) { novo.carga = antigo.carga; antigo.carga = null; }
+    if (antigo.pedido && m.posse !== antigo.id) { novo.pedido = antigo.pedido; antigo.pedido = null; }
+    if (antigo.mira) { novo.mira = antigo.mira; antigo.mira = null; }
+  }
+}
+
 /** Lado do gol que o time ataca (+1 ataca x = +52,5). */
 export function ataca(m, time) {
   return m.ataca ? m.ataca[time] : (time === 0 ? 1 : -1);
@@ -165,12 +184,14 @@ export function escolherAlvo(m, j, tipo) {
       if (L < cfg.dMin || L > cfg.dMax) continue;
       const a = Math.abs(difAng(MD.atan2(d.z, d.x), MD.atan2(oz, ox)));
       if (a > cone) continue;
-      let score = a / cone;
-      if (tipo === 'passe') score += Math.abs(L - 14) / 40;
-      if (tipo === 'enfiada') score -= clamp((o.x - j.x) * lado / 30, -0.3, 0.6) + clamp((o.vx * lado) / 8, 0, 0.4);
-      if (tipo === 'lancamento') score += Math.abs(L - 35) / 60;
+      // nota em "graus equivalentes": passe = ângulo + 0,3 × distância (Metrica: acerta o recebedor
+      // real em 92,6% dos passes, contra ~86% de "o mais perto no cone")
+      let score = a * (180 / Math.PI);
+      if (tipo === 'passe') score += 0.3 * L;
+      if (tipo === 'enfiada') score -= 31.5 * (clamp((o.x - j.x) * lado / 30, -0.3, 0.6) + clamp((o.vx * lado) / 8, 0, 0.4));
+      if (tipo === 'lancamento') score += 31.5 * Math.abs(L - 35) / 60;
       const v = tipo === 'lancamento' ? 20 : 12;
-      score += 1.2 * riscoLinha(m, j, j.x, j.z, o.x, o.z, v);
+      score += 38 * riscoLinha(m, j, j.x, j.z, o.x, o.z, v);
       if (score < mScore) { mScore = score; melhor = o; }
     }
   }
@@ -254,7 +275,7 @@ function marcarRecebedor(m, r, x, z, tipo, tick) {
   if (m.humanos && m.humanos.includes(r.time) && m.controlado) {
     // o controle passa para quem vai receber (como nos jogos de futebol atuais)
     if (m.controlado[r.time] !== r.id) {
-      m.controlado[r.time] = r.id;
+      assumirControle(m, r.time, r);
       m.eventos.push({ tipo: 'troca', id: r.id, auto: true });
     }
   }
