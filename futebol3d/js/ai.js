@@ -85,12 +85,10 @@ export function teamThink(m, t, dt) {
   t.chaser = chaser;
 
   // pressionadores quando o adversário tem a bola
-  let press1 = null, press2 = null, gatilho = false;
-  if (owner && owner.team === t) t.tinhaBolaT = m.time;
+  let press1 = null, press2 = null;
   if (owner && owner.team !== t) {
     const sorted = outfield.filter(p => p.canPlay()).sort((a, c) => dist(a, owner) - dist(c, owner));
     press1 = sorted[0]; press2 = sorted[1];
-    gatilho = gatilhoPressao(m, t, owner);
   }
 
   // alvos de formação
@@ -161,11 +159,11 @@ export function teamThink(m, t, dt) {
       p.moveTo(p.ix, p.iz, 1, p.interceptT > 0.6);
       continue;
     }
-    if (p === press1) { p.aiMode = 'pressao1'; pressCarrier(m, p, owner, dt, 1, gatilho); continue; }
+    if (p === press1) { p.aiMode = 'pressao1'; pressCarrier(m, p, owner, dt, 1); continue; }
     // 2º pressionador: estilo do time, intensidade alta ou o Motor que não para
     // (e na saída de bola do adversário, no campo dele: pressão alta — é dali que sai o roubo de bola
     // perto da área, a jogada que mais vira chute no futebol de hoje)
-    if (p === press2 && (t.style.press > 0.55 || inten > 0.66 || p.traits.includes('motor') && inten > 0.5 || m.lx(t, owner.x) < -20 || m.lx(t, owner.x) > 24 || m.teamPressCall === t || gatilho)) { p.aiMode = 'pressao2'; pressCarrier(m, p, owner, dt, 2, gatilho); continue; }
+    if (p === press2 && (t.style.press > 0.55 || inten > 0.66 || p.traits.includes('motor') && inten > 0.5 || m.lx(t, owner.x) < -20 || m.lx(t, owner.x) > 24 || m.teamPressCall === t)) { p.aiMode = 'pressao2'; pressCarrier(m, p, owner, dt, 2); continue; }
     // enfiada ou lançamento sendo armado para ele, perto da linha: o atacante "sai no tempo do
     // passe" — segura em posição legal e arranca para cruzar a linha junto com o toque na bola.
     // O tempo dele tem erro (~0,2 s, menor no bom finalizador): quem sai cedo demais está
@@ -300,10 +298,6 @@ function mark(m, t, outfield, press1, press2) {
     .sort((a, c) => Math.abs(a.x - gx) - Math.abs(c.x - gx));
   for (const q of opps) {
     if (m.lx(t, q.x) > 5) continue;   // atacante no nosso campo
-    // lado fraco: o atacante aberto do outro lado do campo fica com a zona — o lateral fecha por dentro
-    // (bloco real: ~37 m de largura; seguindo o ponta do lado fraco o nosso ficava com ~44 m). Perto da
-    // nossa área, marca sempre
-    if (Math.abs(q.z - m.ball.p.z) > 19 && m.lx(t, q.x) > -32) continue;
     let best = null, bd = 14;
     for (const p of outfield) {
       if (taken.has(p) || p === press1 || p === press2) continue;
@@ -356,7 +350,7 @@ function support(m, t, outfield, owner, offLine, dt) {
     for (const p of outfield) {
       if (p === owner || p.human || (p.role !== 'ATT' && !(p.role === 'MID' && Math.random() < 0.3))) continue;
       const hunter = p.traits.includes('explosivo') || p.traits.includes('cacador') ? 1.8 : 1;
-      if (p.runUntil < m.time && Math.random() < dt * (deFrente ? 1.2 : 0.35) * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
+      if (p.runUntil < m.time && Math.random() < dt * (deFrente ? 0.8 : 0.35) * (0.6 + t.style.directness) * hunter * (0.8 + 0.4 * (t.intensity ?? 0.5))) {
         p.runUntil = m.time + rand(2, 3.5);
         p.runZ = clamp(p.z * 0.6, -14, 14);
       }
@@ -383,7 +377,9 @@ function boxRuns(m, t, outfield, owner, offLine) {
   const ref = owner || m.lastKick?.p;
   if (!ref) return;
   if (owner) {
-    if (m.lx(t, owner.x) < 20 || Math.abs(owner.z) < 10) { for (const p of outfield) p.boxSpot = null; return; }
+    // (desde perto do meio do último terço, pelos lados: o cruzamento antecipado precisa de gente chegando na área; desde
+    // 12 m o time corria demais — tempo andando abaixo da meta da Fase 2)
+    if (m.lx(t, owner.x) < 15 || Math.abs(owner.z) < 8) { for (const p of outfield) p.boxSpot = null; return; }
   } else if (!outfield.some(p => p.boxSpot)) return;
   const sg = Math.sign(ref.z) || 1;
   if (owner) {
@@ -423,11 +419,13 @@ function crossTarget(m, p) {
     const dg = Math.hypot(gx - q.x, q.z);
     let mk = 9;
     for (const o of t.opp.players) if (!o.sentOff && !o.isGK) mk = Math.min(mk, Math.hypot(o.x - q.x, o.z - q.z));
-    const s = 0.34 - dg * 0.01 + Math.min(mk, 4) * 0.06;
+    // (base 0,34 → 0,62: o cruzamento era 5× mais raro que no futebol real em proporção aos chutes — ~7 por partida —
+    // e o ponta chutava de longe sem ângulo; contra o bloco fechado no meio, o lado é o caminho)
+    const s = 0.62 - dg * 0.01 + Math.min(mk, 4) * 0.06;
     if (!best || s > best.s) best = { q, s };
   }
   if (!best) return null;
-  best.s += 0.1 * (n - 1) - m.pressure(p) * 0.2 + (m.lx(t, p.x) > 32 ? 0.08 : 0);
+  best.s += 0.1 * (n - 1) - m.pressure(p) * 0.2 + (m.lx(t, p.x) > 32 ? 0.12 : 0);
   return best;
 }
 
@@ -454,25 +452,13 @@ function segDist2(ax, az, bx, bz, px, pz) {
   return Math.hypot(ax + dx * u - px, az + dz * u - pz);
 }
 
-// Gatilhos de pressão (os times de verdade pressionam juntos, num momento — F41 da análise da movimentação):
-// logo depois de perder a bola (contrapressão, 3 s), condutor de costas para o nosso gol e condutor preso na
-// lateral. No gatilho o 2º homem fecha junto com o 1º. (Com "domínio ruim" e "bola recém-dominada" também, a
-// pressão a dois virava regra e os chutes por partida caíam ~20%.)
-function gatilhoPressao(m, t, o) {
-  if (m.time - (t.tinhaBolaT ?? -9) < 2.5) return true;
-  const gx = m.ownGoalX(t), ax = gx - o.x, az = -o.z, al = Math.hypot(ax, az) || 1;
-  if ((ax * o.fx + az * o.fz) / al < -0.35) return true;
-  return Math.abs(o.z) > HW - 6;
-}
-
-function pressCarrier(m, p, o, dt, n, gatilho = false) {
+function pressCarrier(m, p, o, dt, n) {
   const t = p.team;
   const gx = m.ownGoalX(t);
   // fica entre a bola e o gol; aperta quando perto
   const dx = gx - o.x, dz = -o.z, dl = Math.hypot(dx, dz) || 1;
   const d = dist(p, o);
-  // o 2º homem: no gatilho fecha a ~2,2 m (cobre o drible para dentro); fora dele, segura a 5 m
-  const ahead = n === 1 ? (d > 4 ? 0.8 : 1.2) : gatilho ? 2.2 : 5;
+  const ahead = n === 1 ? (d > 4 ? 0.8 : 1.2) : 5;
   const tx = o.x + o.vx * 0.3 + dx / dl * ahead, tz = o.z + o.vz * 0.3 + dz / dl * ahead;
   // contornando quem protege a bola: segue para o lado dele até chegar (antes a ordem de contornar
   // valia um quadro a cada 0,12 s e a de ficar entre ele e o gol a puxava de volta — com o atacante
@@ -484,7 +470,7 @@ function pressCarrier(m, p, o, dt, n, gatilho = false) {
     const ex = o.x + ux / ul * 0.5 + (-uz / ul) * ct.side * 0.95 - p.x, ez = o.z + uz / ul * 0.5 + (ux / ul) * ct.side * 0.95 - p.z, de = Math.hypot(ex, ez);
     const sv = de > 0.12 ? Math.min(3, de * 4) : 0;
     p.dx = de > 0.12 ? ex / de * sv : 0; p.dz = de > 0.12 ? ez / de * sv : 0; p.sprint = false;
-  } else p.moveTo(tx, tz, 1, d > (n === 1 ? (gatilho ? 2.5 : 3) : gatilho ? 3 : 9));   // (arranca para fechar; no gatilho, os dois)
+  } else p.moveTo(tx, tz, 1, d > (n === 1 ? 3 : 9));   // (o 1º homem arranca já a 3 m — antes 5 m; o 2º só se estiver bem longe)
   if (d < 4) { p.face = m.ball.p; p.jockey = d < 2.5 && n === 1; }
   if (n !== 1 || p.action || p.fooled > 0) return;
   const skill = m.diff.aiSkill;
@@ -690,7 +676,7 @@ export function carrierThink(m, p, dt) {
   // o chute de longe cedo deixava o goleiro do humano sem chegar na bola em ~1/4 dos lances)
   const gkDisparada = gkO && !gkO.sentOff && foraGk > 4 && dGk > 9 &&
     ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
-  if (dGoal < 32) {
+  if (dGoal < 35) {
     let sS = xg * 4.6 * shotBias + (dGoal < 12 ? 0.3 : 0);
     // dentro da área o atacante finaliza mesmo com zagueiro na frente (no futebol real ~60% dos
     // chutes saem da área e ~1/4 dos chutes é travado); antes ele quase sempre tentava mais um passe
@@ -700,8 +686,10 @@ export function carrierThink(m, p, dt) {
     // 25 m e cai até 33 m: é nessa faixa (24–40 m) que o condutor da IA mais decide (~350 vezes por
     // partida, quase sempre conduzindo marcado) e antes quase nunca chutava dali
     // Marcado também chuta (no futebol real ~1/4 dos chutes é travado), só que com menos vontade
-    if (dGoal > 16 && dGoal < 33 && Math.abs(p.z) < 18 && press < 0.95 && xg > 0.006 && !levaAtePerto &&
-      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.15 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((33 - dGoal) / 8, 0, 1) * (1.3 - press * 0.45) * (gkDisparada ? 0.4 : 1);
+    // (até 35 m, cheio até 26 m: com o chute de longe menos preciso — match.js — e o goleiro atravessando o gol, ele vira
+    // chute de baixo valor que o goleiro defende ~80% das vezes, como no futebol real)
+    if (dGoal > 16 && dGoal < 35 && Math.abs(p.z) < 18 && press < 0.95 && xg > 0.004 && !levaAtePerto &&
+      Math.cos(angDiff(p.heading, Math.atan2(-p.z, gx - p.x))) > 0.25) sS += (1.15 + p.a.sho / 99 * 0.22 + (tr.includes('finalizador') ? 0.08 : 0)) * clamp((35 - dGoal) / 9, 0, 1) * (1.3 - press * 0.45) * (gkDisparada ? 0.4 : 1);
     // goleiro vindo em cima (saiu do gol e está a 3–9 m): finaliza antes de ele chegar, colocado
     const vemGk = gkO && !gkO.sentOff && foraGk > 5 && dGk > 3 && dGk < 9 && dGoal < 24 &&
       ((gkO.vx * (p.x - gkO.x) + gkO.vz * (p.z - gkO.z)) / dGk) > 3;
@@ -723,7 +711,8 @@ export function carrierThink(m, p, dt) {
   }
   // cruzamento: da ponta, no último terço, para quem ataca a área (no futebol real ~15–20 por
   // time por jogo, ~25% certos; aqui quase não havia)
-  if (lx > 20 && Math.abs(p.z) > 12) {
+  // (também o cruzamento antecipado, do meio do último terço, como no futebol de hoje)
+  if (lx > 12 && Math.abs(p.z) > 8) {
     const c = crossTarget(m, p);
     if (c) options.push({ kind: 'cross', s: c.s + (tr.includes('criativo') ? 0.05 : 0), q: c.q });
   }
@@ -765,8 +754,12 @@ export function carrierThink(m, p, dt) {
     const tg = aiShotTarget(m, p, pick.kind);
     p.startAction(pick.kind, { target: tg, power: pw, face: Math.atan2(tg.z - p.z, tg.x - p.x), foot: footFor(p, tg) });
   } else if (pick.kind === 'clear') {
-    const tg = { x: p.x + t.dir * rand(35, 50), z: clamp(p.z * 1.4 + rand(-10, 10), -HW + 3, HW - 3) };
-    p.startAction('clear', { target: tg, power: 0.9, face: Math.atan2(tg.z - p.z, tg.x - p.x) });
+    // apertado na própria área, aberto: às vezes põe para escanteio (pela linha de fundo, longe da trave), como o
+    // zagueiro de verdade — no futebol real boa parte dos ~10 escanteios por partida nasce de corte assim; aqui havia ~1,5
+    const og = m.ownGoalX(t), fora = m.lx(t, p.x) < -HL + 14 && Math.abs(p.z) > 9 && press > 0.7 && Math.random() < 0.35;
+    const tg = fora ? { x: og + Math.sign(og) * 4, z: Math.sign(p.z) * rand(GOAL.halfWidth + 7, 20) }
+      : { x: p.x + t.dir * rand(35, 50), z: clamp(p.z * 1.4 + rand(-10, 10), -HW + 3, HW - 3) };
+    p.startAction('clear', { target: tg, power: fora ? 0.6 : 0.9, face: Math.atan2(tg.z - p.z, tg.x - p.x) });
   } else {
     const q = pick.q;
     if ((pick.kind === 'through' || pick.kind === 'long') && press < 0.8) {

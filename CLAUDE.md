@@ -40,19 +40,19 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   goleiro na bissetriz e intensidade dos dois times (feitos na branch, PR ainda NÃO aberto) → **agora:** terminar esse PR
   SEM RECUO (dono, 08/10: "Não pode ter recuo" — nenhum número pior que o publicado) → giro com bola natural e condução
   mais no pé (etapas 1–2 da análise) → Fase 4 (começando por rosto × corpo: mesmo tom, sem emenda) → Fase 5.
-  Sem recuo — o que falta: a versão publicada tinha ~0,9 gol por partida (30% dos gols) de saída de bola roubada no tiro de
-  meta, com o adversário dentro da área (o defeito da Regra 16 que o dono pediu para corrigir; `tools/origem-chutes.mjs`
-  separa esses lances). Sem eles, quase todo gol de jogada sai de longe nas DUAS versões: o ataque não cria chance de perto
-  (só ~1,6 chute de jogada por partida a menos de 12 m). Falta o ataque criar essas chances — receber de frente/giro,
-  corrida atrasada para a marca do pênalti, passe para trás da linha de fundo que funcione (o de agora quase nunca acha
-  alvo) — até ≥ 25 chutes e ≥ 2,96 gols por partida com a Regra 16 e todos os testes passando. Ajuste de parâmetro só troca
-  um número pelo outro (decidir mais rápido no último terço dá +0,5 gol, mas o goleiro cai para 63% de defesas e 67% nos
-  chutes de longe). Estado da branch em 08/10 à noite (48 partidas): ~22 chutes, ~2,4 gols, passe 77–79%, pênalti
-  46–47 gols em 60 com 1–5 para fora (publicado 47/9/4), escanteios 1,5–1,6 (publicado 1,7); medir também com `defesas-test` (≥ 66% e ≥ 55%).
-  Pistas medidas em 08/10: ~45% dos chutes da IA saem de 25–33 m (real ~10%) — o bônus do chute de fora encerra o ataque
-  cedo; com ele só até ~28 m os chutes de jogada a menos de 18 m sobem ~40%, mas o total cai para ~19 e o goleiro fica
-  abaixo da meta (40% de defesas de 6 a 16,5 m) — falta volume de chance, não precisão. Bug raro a corrigir: gol contra
-  logo depois de o goleiro repor com a mão (~1 em 36 partidas no `defesas-test`; investigar com 100+ partidas).
+  Sem recuo — estado em 09/10 de madrugada (branch, SEM PR): o dono escolheu a versão REALISTA. A versão publicada
+  tinha ~1 gol por partida (30% dos gols) de saída de bola roubada no tiro de meta com o adversário dentro da área (o
+  defeito da Regra 16, corrigido; `tools/origem-chutes.mjs` separa esses lances) e ~45% dos chutes de 25–33 m (real
+  ~10%). Branch hoje (144 partidas, `tools/painel-equilibrio.mjs`): ~24 chutes, ~2,4 gols, 10% de conversão, passe 77%,
+  escanteios 2,2, goleiro 67–69% (80–84% nos chutes de longe no alvo), 29% dos gols de fora da área; intensidade OK
+  (largura ~39 m, meio–ataque ~13,5 m, marcador a ≤ 3 m ~45%). Falta para entregar: gols ~2,6+ (com 2,4 o teste de 24
+  partidas reprova ~1/3 das rodadas) e o goleiro de 6 a 16,5 m oscila 45–73% entre rodadas de 36 partidas (meta ≥ 55%).
+  A conta: com o goleiro na meta (≥ 66%), 2,6 gols pedem ~7,6+ chutes no alvo — falta volume de chance de verdade. Pistas
+  (rastro das decisões): no último terço quase todo passe fica negativo (bloco fechado = linha de passe "arriscada" no
+  `laneRisk`) e o condutor dribla até perder no bote (~6 por partida) ou chutar; o cruzamento vira corte de cabeça; o
+  passe para trás da linha de fundo quase nunca acha alvo. Ajuste só de peso não mudou o volume (testados: apoio por
+  linha de passe, transição, corridas, passe "para quem finaliza", finalizar sob pressão). Medir com 144+ partidas
+  (amostra de 48 varia ±0,25 gol).
 
 ## GOLAÇO (`futebol3d/`) — futebol 3D
 - three.js 0.170 por importmap (jsdelivr), ES modules, **sem etapa de build**.
@@ -137,8 +137,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   prints `tools/bola-parada-prints.mjs`); disputa pelo alto perto das áreas (`ai.js` pontoAereo, `match.js` doHeader com duelo
   por altura/impulsão/força; `tools/disputa-aerea-test.mjs`); dividida que vale de lado (perna sai do quadril; `match.js`
   ajustaBote; `tools/dividida-test.mjs --alvo` e `--natural --alvo`); troca automática NO PASSE do adversário e com o marcador
-  batido (`human.js` autoSwitch; `tools/troca-auto-test.mjs`); intensidade (pressão a dois nos gatilhos — perdeu a bola, condutor
-  de costas, preso na lateral —, bloco fecha o lado da bola; `tools/intensidade-jogo-test.mjs`); goleiro na bissetriz e IA mirando
+  batido (`human.js` autoSwitch; `tools/troca-auto-test.mjs`); intensidade enxuta (bloco estreito pela forma, meio sobe 2 m e
+  ataque recua 4 m, 1º marcador arranca a 3 m; a pressão a dois nos gatilhos saiu — custava ~1 chute por partida;
+  `tools/intensidade-jogo-test.mjs`); goleiro na bissetriz e IA mirando
   longe dele, chute de longe menos preciso (`tools/defesas-test.mjs`: ~67% de defesas, ~2/3 espalmadas). Equilíbrio recalibrado
   com tudo isso (192 partidas: 2,53 gols, 12,5%, 77,6% de passe, 1,8 impedimento; o de 24 reprova ~1 em 4 por
   sorteio). Bola parada com o time todo atordoado não trava mais (`tools/cobrador-test.mjs`).

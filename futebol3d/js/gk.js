@@ -92,8 +92,11 @@ export function keeperThink(m, gk, dt) {
       gk.startAction('gk_dive', { diveSide: Math.sign(lat), diveHeight: height, lateral: clamp(need - 0.9, 0.4, 2.35), face: gk.heading });
       return;
     }
-    // desloca lateralmente enquanto espera
-    gk.moveTo(gk.x + right.x * lat * 0.4, gk.z + right.z * lat * 0.4, 1, false);
+    // desloca lateralmente enquanto espera (chute de longe: dá tempo de atravessar o gol correndo antes do mergulho —
+    // antes ele só andava e o chute de 25 m no canto passava fora do alcance do mergulho: 74% de defesas nos chutes de
+    // longe no alvo; no futebol real ~85%)
+    const longe = shot.t - (m.time - (gk.shotSeen || m.time)) > 0.55;
+    gk.moveTo(gk.x + right.x * lat * (longe ? 0.65 : 0.4), gk.z + right.z * lat * (longe ? 0.65 : 0.4), 1, longe);
     gk.face = b.p; gk.gkReady = true;
     return;
   }
@@ -337,8 +340,9 @@ function save(m, gk, edge) {
   // De perto a defesa é reflexo e a bola escapa mais; de longe ele chega arrumado e segura/espalma limpo
   // (de fora da área, 0,97 — o mesmo da versão publicada: ~81% de defesas nos chutes de longe no alvo)
   const ls = m.lastShot && m.lastShot.p ? Math.hypot(m.ownGoalX(gk.team) - m.lastShot.p.x, m.lastShot.p.z) : 16;
-  // (no pênalti o goleiro já está parado e escolheu o lado: quando chega na bola, defende como antes, 0,97)
-  const pDist = m.lastShot?.kind === 'penalty' || ls > 20 ? 0.1 : ls < 12 ? -0.06 : 0;
+  // (no pênalti o goleiro já está parado e escolheu o lado; de fora da área ele chega arrumado: quando chega na bola,
+  // defende como antes, 0,97)
+  const pDist = m.lastShot?.kind === 'penalty' || ls > 16.5 ? 0.1 : ls < 12 ? -0.06 : 0;
   const pSave = clamp(0.87 + pDist - edge * 0.35 - Math.max(0, sp - 22) * 0.015 + (sk - 0.6) * 0.25, 0.3, 0.96);
   gk.saveCd = 0.35;
   if (Math.random() > pSave) {
@@ -364,7 +368,8 @@ function save(m, gk, edge) {
   // toda espalmada voltava para o campo e quase não havia escanteio (0,6 por partida)
   const side = Math.sign(b.p.z - gk.z || (Math.random() - 0.5));
   const canto = Math.abs(b.p.z) > GOAL.halfWidth - 1.2 || b.p.y > 1.7;
-  if (Math.random() < (canto ? 0.4 : 0.15) + Math.max(0, sp - 20) * 0.02) {
+  // (0,4/0,15 → 0,5/0,25: no futebol real a espalmada de chute forte vai quase sempre para fora — escanteio)
+  if (Math.random() < (canto ? 0.5 : 0.25) + Math.max(0, sp - 20) * 0.02) {
     const v = parryOut(b.p, Math.abs(m.ownGoalX(t)), s, side);
     b.kick(v.x, v.y, v.z, 0, 0, 0);
   } else {
@@ -398,11 +403,15 @@ export function parryOut(p, gxAbs, s, side) {
   return { x: s * clamp(dxf * vz / dz * 0.85, 0, 6), y: rand(1, 3), z: lado * vz };
 }
 
+// companheiro à frente do goleiro (mais longe da própria linha de fundo): repor com a mão para quem está entre ele e o
+// gol — o zagueiro que ficou na trave no escanteio, por exemplo — mandava a bola na direção da própria linha
+const aFrente = (m, gk, q) => Math.abs(q.x - m.ownGoalX(gk.team)) > Math.abs(gk.x - m.ownGoalX(gk.team)) + 2;
+
 function distribute(m, gk) {
   const t = gk.team;
   const r = bestReceiver(m, gk, 'ground');
   // reposição curta (mão) sempre que houver companheiro razoável: o chutão do goleiro acerta ~1/3
-  if (r && r.q && Math.hypot(r.q.x - gk.x, r.q.z - gk.z) < 32 && r.s > -0.25) {
+  if (r && r.q && aFrente(m, gk, r.q) && Math.hypot(r.q.x - gk.x, r.q.z - gk.z) < 32 && r.s > -0.25) {
     gk.startAction('gk_throw', { target: { x: r.q.x, z: r.q.z }, receiver: r.q, face: Math.atan2(r.q.z - gk.z, r.q.x - gk.x) });
   } else {
     // chutão no companheiro mais livre na queda da bola (antes era um atacante sorteado: 49% de acerto);
@@ -422,7 +431,7 @@ export function userDistribute(m, gk, kind, dirx, dirz) {
     gk.startAction('gk_kick', { target: tg, face: ang });
   } else {
     const r = Math.hypot(dirx, dirz) > 0.3 ? bestReceiver(m, gk, 'ground', dirx, dirz) : bestReceiver(m, gk, 'ground');
-    const q = r?.q;
+    const q = r?.q && aFrente(m, gk, r.q) ? r.q : null;
     const tg = q ? { x: q.x, z: q.z } : { x: gk.x + t.dir * 20, z: gk.z };
     gk.startAction('gk_throw', { target: tg, receiver: q, face: Math.atan2(tg.z - gk.z, tg.x - gk.x) });
   }
