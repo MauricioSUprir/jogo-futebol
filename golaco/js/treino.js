@@ -66,12 +66,24 @@ export function cuidarBolaFora(m, idAlvo) {
   devolverBola(m, idAlvo);
 }
 
-/** Bola parada no pé do jogador (recomeçar). */
+/**
+ * Bola no pé do jogador (recomeçar). Perto das linhas, o jogador é trazido para 1 m dentro do
+ * campo (com os pés), para a bola voltar DENTRO do campo; embalado, a bola sai rolando com a
+ * velocidade do corpo (não fica parada para ele atropelar) e o próximo toque é planejado.
+ */
 export function devolverBola(m, idAlvo) {
   const j = jogadorPorId(m, idAlvo);
   if (!j) return;
+  const nx = Math.max(-CAMPO.meioX + 1, Math.min(CAMPO.meioX - 1, j.x));
+  const nz = Math.max(-CAMPO.meioZ + 1, Math.min(CAMPO.meioZ - 1, j.z));
+  if (nx !== j.x || nz !== j.z) {
+    const dx = nx - j.x, dz = nz - j.z;
+    j.x = nx; j.z = nz; j.vx = 0; j.vz = 0;
+    for (const p of j.pes) { p.x += dx; p.z += dz; }
+  }
   const nb = criarBola(j.x + MD.cos(j.rumo) * 0.4, j.z + MD.sin(j.rumo) * 0.4);
   Object.assign(m.bola, nb);
+  if (j.vx * j.vx + j.vz * j.vz > 0.25) chutarRasteiro(m.bola, j.vx, j.vz);
   m.posse = j.id;
   j.cond.toque = null; j.cond.busca = false; j.cond.ref = null; j.cond.longeDesde = -1;
   m.eventos.push({ tipo: 'recomeco' });

@@ -21,6 +21,7 @@ const TESTES = [
   ['domínio orientado', 'teste-dominio.mjs'],
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
+  ['recomeço do treino (bola no pé, bola fora)', 'teste-treino.mjs'],
 ];
 
 const res = [];
