@@ -11,7 +11,7 @@
 //   longeDesde  tick em que a bola ficou longe (perda)
 //   pedalada {tick0, lado} | null
 
-import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA } from './config.js';
+import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, infoPassada, faseLocal, copiaCinematica, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
@@ -19,6 +19,7 @@ import { normal } from './rng.js';
 import { MD } from './matdet.js';
 
 const DT = PASSO;
+const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analógico abaixo disso)
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
@@ -59,7 +60,7 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
   const correr = (botoes & BOTAO.CORRER) !== 0;
   const mod = (botoes & BOTAO.MOD) !== 0;
   let vel = velocidadeDesejada(j.par, imag, correr, mod, comBola);
-  let rumoAlvo = imag > 0.1 ? MD.atan2(iz, ix) : rumoAtual;
+  let rumoAlvo = imag > MAG_DIR ? MD.atan2(iz, ix) : rumoAtual;
   if (ctx && ctx.marcador) {
     if (ctx.bola) {
       // PROTEÇÃO: o corpo gira em volta da bola para ficar entre ela e o marcador, de
@@ -67,7 +68,7 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
       let ux = ctx.marcador.x - ctx.bola.x, uz = ctx.marcador.z - ctx.bola.z;
       const ul = MD.hypot(ux, uz) || 1;
       ux /= ul; uz /= ul;
-      const k = imag > 0.1 ? 0.35 * imag : 0;
+      const k = imag > MAG_DIR ? 0.35 * imag : 0;
       // gira EM VOLTA da bola (pelo círculo), nunca por cima dela
       const aCorpo = MD.atan2(ctx.corpoZ - ctx.bola.z, ctx.corpoX - ctx.bola.x);
       const aAlvo = MD.atan2(uz, ux);
@@ -119,7 +120,7 @@ export function preverCorpo(m, j, n, comBola, prot) {
   const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), rs = new Float64Array(n + 1);
   const ss = new Float64Array(n + 1), fs = new Float64Array(n + 1);
   xs[0] = k.x; zs[0] = k.z; rs[0] = k.rumo; ss[0] = MD.hypot(k.vx, k.vz); fs[0] = k.fase;
-  const mov = j.imag > 0.08;
+  const mov = j.imag > MAG_DIR;
   const ped = !!(j.cond && j.cond.pedalada);
   const ctx = { marcador: null, corpoX: 0, corpoZ: 0, pedalada: ped };
   // corte pendente: o corpo segura o rumo até o toque (só nos primeiros ticks)
@@ -218,7 +219,7 @@ function marcarReferencia(m, j, prot) {
   const c = j.cond;
   c.ref = {
     tick: m.tick, intRumo: j.intRumo, intW: j.intW, vel: velPedida(j, true),
-    mod: temBotao(j, BOTAO.MOD), prot: !!prot, mov: j.imag > 0.08,
+    mod: temBotao(j, BOTAO.MOD), prot: !!prot, mov: j.imag > MAG_DIR,
   };
 }
 
@@ -395,7 +396,7 @@ function tipoCorte(j, dx, dz) {
 function precisaReplanejar(m, j, prot) {
   const c = j.cond, r = c.ref;
   if (!r) return true;
-  const mov = j.imag > 0.08;
+  const mov = j.imag > MAG_DIR;
   if (mov !== r.mov) return true;
   if (temBotao(j, BOTAO.MOD) !== r.mod) return true;
   if (!!prot !== r.prot) return true;
@@ -514,7 +515,7 @@ export function movimentoComBola(m, j) {
   const alcancar = Math.max(0, vbAl) + Math.max(1.0, (dl - 0.5) / 0.8);
   const velF = clamp(Math.min(Math.max(base.vel, alcancar), chegar), 0, j.par.vArrancada * 0.95);
   const aBola = MD.atan2(dz, dx);
-  if (j.imag > 0.08) {
+  if (j.imag > MAG_DIR) {
     const aPed = MD.atan2(j.iz, j.ix);
     const alfa = difAng(aPed, aBola);
     if (Math.abs(alfa) <= CONDUCAO.angBusca) {

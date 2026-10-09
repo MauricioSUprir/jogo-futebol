@@ -58,6 +58,33 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
   const a = Math.atan2(j.vz, j.vx) * DEG;
   reg('jogador corre na diagonal sutil pedida', `${fmt(a, 2)}°`, '10° ± 0,5°', Math.abs(a - 10) < 0.5);
 }
+// analógico leve (dedo perto do centro): um limiar só para andar e para virar. Nunca anda no
+// rumo ANTIGO (pedido abaixo do limiar de direção) nem de costas/de lado sem virar o tronco.
+// Parado de frente para +x, pede 90° e 180° com módulos de 0,03 a 0,3, com e sem bola.
+{
+  let piores = [], ruins = 0, total = 0;
+  for (const comBola of [false, true]) {
+    for (const mag of [0.03, 0.05, 0.07, 0.09, 0.15, 0.3]) {
+      for (const graus of [90, 180]) {
+        const m = criarMundo({ semente: 3, jogadores: [{ id: 0, x: 0, z: 0, rumo: 0 }], bola: comBola ? { x: 0.4, z: 0 } : { x: 40, z: 30 }, posse: comBola ? 0 : null });
+        const j = m.jogadores[0];
+        for (let i = 0; i < 60; i++) passo(m, { 0: { x: 0.5, z: 0, botoes: 0 } });
+        for (let i = 0; i < 90; i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+        const ux = Math.cos(graus / DEG), uz = Math.sin(graus / DEG);
+        const x0 = j.x, z0 = j.z;
+        for (let i = 0; i < 150; i++) passo(m, { 0: { x: ux * mag, z: uz * mag, botoes: 0 } });
+        const dx = j.x - x0, dz = j.z - z0;
+        const along = dx * ux + dz * uz, perp = Math.abs(-dx * uz + dz * ux);
+        const tronco = Math.abs(((Math.atan2(Math.sin(j.rumo), Math.cos(j.rumo)) - Math.atan2(uz, ux)) * DEG + 540) % 360 - 180);
+        const ok = perp <= 0.1 && along >= -0.05 && (along <= 0.1 || tronco <= 45);
+        total++;
+        if (!ok) { ruins++; piores.push(`${comBola ? 'c/' : 's/'} bola, mag ${mag}, ${graus}°: pedido ${fmt(along)} m, fora ${fmt(perp)} m, tronco ${fmt(tronco, 0)}°`); }
+      }
+    }
+  }
+  reg('analógico leve: não anda no rumo antigo nem de costas', `${total - ruins}/${total}`, `${total}/${total}`, ruins === 0);
+  for (const p of piores) console.log('  - ' + p);
+}
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-entrada: REPROVOU (${falhas})` : '\nteste-entrada: PASSOU');
 process.exit(falhas ? 1 : 0);

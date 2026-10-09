@@ -174,6 +174,9 @@ export const ENTRADA = {
   zonaMorta: 0.16,            // radial
   zonaExterna: 0.95,          // acima disso conta como inclinação máxima
   magTrote: 0.55,             // inclinação até aqui = andar→trote; acima = corrida
+  // Limiar ÚNICO de direção: abaixo disso (depois da zona morta) o pedido vale zero — o corpo
+  // nem anda no rumo antigo nem anda sem virar o tronco (analógico leve no celular).
+  magDirecao: 0.1,
   quant: 1024,                // a entrada é quantizada (replay compacto e determinístico)
 };
 

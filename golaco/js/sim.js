@@ -51,12 +51,14 @@ export function aplicarEntrada(j, e, tick) {
   let x = quantizar(e?.x ?? 0, q), z = quantizar(e?.z ?? 0, q);
   let mag = MD.hypot(x, z);
   if (mag > 1) { x /= mag; z /= mag; mag = 1; }
+  // um limiar só para andar e para virar: abaixo dele o pedido é zero
+  if (mag <= ENTRADA.magDirecao) { x = 0; z = 0; mag = 0; }
   j.botoesAnt = j.botoes;
   j.botoes = (e?.botoes ?? 0) | 0;
-  if (mag > 0.08) {
+  if (mag > 0) {
     const r = MD.atan2(z, x);
     const d = difAng(j.intRumo, r);
-    if (j.imag > 0.08 && Math.abs(d) < 0.12) {
+    if (j.imag > 0 && Math.abs(d) < 0.12) {
       // giro contínuo do analógico: mede a velocidade angular pedida
       const w = d / PASSO;
       j.intW += (w - j.intW) * Math.min(1, PASSO / 0.12);
