@@ -112,7 +112,7 @@ function primeiroPasse(m) { return m.log.find(l => l.acao); }
 
 // ------------------------------------------------ lançamento: ±3 m a 40 m (bom lançador)
 // bom lançador: passe longo 90 e perna ruim boa (85, como os bons lançadores); fraco: 45 e 50
-for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.9, 85], ['fraco (45)', 45, null, 50]]) {
+for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.85, 85], ['fraco (45)', 45, null, 50]]) {
   const erros = [];
   for (let s = 1; s <= 80; s++) {
     const ang = (((s * 29) % 120) - 60) / DEG;
@@ -130,8 +130,54 @@ for (const [nome, attr, meta, peFraco] of [['bom (90)', 90, 0.9, 85], ['fraco (4
     if (caiu) erros.push(Math.hypot(caiu.x - (l.rx ?? alvo.x), caiu.z - (l.rz ?? alvo.z)));
   }
   const dentro = erros.filter(e => e <= 3).length / Math.max(erros.length, 1);
-  if (meta) reg(`lançamento de 40 m — ${nome}: queda a ≤ 3 m do alvo`, `${fmt(dentro * 100, 0)}% (méd ${fmt(media(erros))} m)`, '≥ 90%', dentro >= meta && erros.length >= 70);
+  // ±3 m a 40 m (especificação); erro médio ~1,6 m (Carlsson 2018: 0,82 m a 20 m, erro angular)
+  if (meta) reg(`lançamento de 40 m — ${nome}: queda perto do alvo`, `méd ${fmt(media(erros))} m; ${fmt(dentro * 100, 0)}% a ≤ 3 m`, 'méd 1,2–2,0 m e ≥ 85% a ≤ 3 m', media(erros) >= 1.2 && media(erros) <= 2.0 && dentro >= meta && erros.length >= 70);
   else reg(`lançamento de 40 m — ${nome} erra mais`, `${fmt(dentro * 100, 0)}% a ≤ 3 m (méd ${fmt(media(erros))} m)`, 'pior que o bom', dentro < 0.8);
+}
+
+// ------------------------------------------------ tempo do passe rasteiro e do lançamento
+// StatsBomb (pesquisa da Etapa 2, 101 mil passes rasteiros): velocidade média do toque à recepção
+// 8,7 / 10,8 / 12,4 / 13,6 / 14,6 / 15,0 m/s a 7,5 / 12,5 / 17,5 / 22,5 / 27,5 / 35 m (±2 m/s
+// entre p25 e p75). Lançamento: voo de 2,3 / 2,8 / 3,3 s a 35 / 45 / 55 m (±0,4 s).
+{
+  const tempoAte = (m, x0, z0, d) => {
+    for (let i = 1; i <= 400; i++) {
+      passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+      if (Math.hypot(m.bola.p.x - x0, m.bola.p.z - z0) >= d - 0.3) return i * PASSO;
+    }
+    return 99;
+  };
+  const res = [];
+  let ok = true;
+  for (const [d, vMed] of [[7.5, 8.7], [12.5, 10.8], [17.5, 12.4], [22.5, 13.6], [27.5, 14.6], [35, 15.0]]) {
+    // recebedor parado (não vem ao encontro), força do meio da barra
+    const m = cena(800 + d, [{ id: 1, x: d, z: 0, posicao: 'MEI', papel: 'parado' }]);
+    apertar(m, BOTAO.PASSE, 22, 1, 0, 0);
+    let l = null;
+    for (let i = 0; i < 40 && !(l = primeiroPasse(m)); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+    if (!l) { ok = false; res.push(`${d} m: sem passe`); continue; }
+    // distância real do toque até o recebedor (o passador anda um pouco antes de tocar); a bola
+    // para no corpo dele, então mede até 0,5 m antes
+    const dr = Math.hypot(d - l.bx, l.bz);
+    const t = tempoAte(m, l.bx, l.bz, dr - 0.2) + PASSO;
+    const tMin = dr / (vMed + 2), tMax = dr / (vMed - 2);
+    ok = ok && t >= tMin && t <= tMax;
+    res.push(`${fmt(dr, 1)} m ${fmt(t, 2)} s (${fmt(tMin, 2)}–${fmt(tMax, 2)})`);
+  }
+  reg('passe rasteiro — tempo do toque à chegada (força média)', res.join(' · '), 'na faixa p25–p75 dos dados', ok);
+  const resL = [];
+  let okL = true;
+  for (const [d, tAlvo] of [[35, 2.3], [45, 2.8], [55, 3.3]]) {
+    const m = cena(900 + d, [{ id: 1, x: d - 15, z: 0, posicao: 'ATA', papel: 'parado' }], { x: -15 });
+    apertar(m, BOTAO.LANCAMENTO, 30, 1, 0, 1);
+    let l = null;
+    for (let i = 0; i < 40 && !(l = primeiroPasse(m)); i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+    let t = null;
+    for (let i = 1; i <= 400 && t == null; i++) { passo(m, { 0: { x: 0, z: 0, botoes: 0 } }); if (m.eventos.some(e => e.tipo === 'quique')) t = i * PASSO; }
+    okL = okL && t != null && Math.abs(t - tAlvo) <= 0.4;
+    resL.push(`${d} m ${t == null ? '—' : fmt(t, 2)} s (${tAlvo})`);
+  }
+  reg('lançamento — tempo de voo', resL.join(' · '), '±0,4 s dos dados', okL);
 }
 
 // ------------------------------------------------ cruzamento: cai na zona pedida

@@ -15,7 +15,15 @@
 // bola antecipa a queda (vai parte do caminho até m.voo.alvo); a mola deixa tudo suave.
 import * as THREE from 'three';
 import { CAMERA, CAMPO } from '../config.js';
-import { molaCritica } from './util.js';
+
+/** Mola crítica exata (a mesma de util.js molaCritica), escrevendo no estado: sem alocar. */
+function mola(est, kx, kv, alvo, w, dt) {
+  const y = est[kx] - alvo;
+  const j1 = est[kv] + y * w;
+  const e = Math.exp(-w * dt);
+  est[kx] = alvo + (y + j1 * dt) * e;
+  est[kv] = (est[kv] - j1 * w * dt) * e;
+}
 
 export const MODOS_CAMERA = ['tv', 'aproximada'];
 
@@ -35,6 +43,7 @@ const RETRATO = {
   aproximada: { ...PERFIS.aproximada, ...CAMERA.retratoAproximada },
 };
 const ASPECTO_TV = 16 / 9;
+const CHAVES = Object.keys(PERFIS.tv);
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -52,11 +61,12 @@ export function criarCamera(aspecto) {
   };
   const yaw = -Math.PI / 2;
   const _p = {};
+  const _foco = { x: 0, z: 0 };
   function perfil() {
     // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
     const s = suave(est.mistura);
     const r = suave((1.25 - est.aspecto) / 0.5);
-    for (const k of Object.keys(PERFIS.tv)) {
+    for (const k of CHAVES) {
       const pais = lerp(PERFIS.tv[k], PERFIS.aproximada[k], s);
       const ret = lerp(RETRATO.tv[k], RETRATO.aproximada[k], s);
       _p[k] = lerp(pais, ret, r);
@@ -133,13 +143,13 @@ export function criarCamera(aspecto) {
         est.x = fx; est.z = fz; est.vx = 0; est.vz = 0; est.iniciado = true;
       } else {
         const wr = CAMERA.rigidez;
-        [est.x, est.vx] = molaCritica(est.x, est.vx, fx, wr, dt);
-        [est.z, est.vz] = molaCritica(est.z, est.vz, fz, wr * 0.8, dt);
+        mola(est, 'x', 'vx', fx, wr, dt);
+        mola(est, 'z', 'vz', fz, wr * 0.8, dt);
       }
       posicionar(p);
     },
     /** Foco atual da câmera (para a sombra acompanhar a jogada). */
-    foco() { return { x: est.x, z: est.z }; },
+    foco() { _foco.x = est.x; _foco.z = est.z; return _foco; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };

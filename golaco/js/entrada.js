@@ -20,6 +20,7 @@ import { processarAnalogico, teclasParaAnalogico, paraMundo } from './controle.j
 import { BOTAO, ENTRADA } from './config.js';
 
 const CHAVE_AJUSTES = 'golaco.toque.v1';
+const SEM_ACOES = Object.freeze([]);
 const ACOES_TECLA = {
   KeyR: 'recomecar', KeyM: 'maquina', KeyN: 'marcador', KeyC: 'camera',
   KeyH: 'ajuda', F1: 'ajuda', Escape: 'pausa', KeyP: 'pausa', F3: 'qps',
@@ -160,35 +161,43 @@ export function criarEntrada(opc = {}) {
   window.addEventListener('keyup', e => { teclas.delete(e.code); });
   window.addEventListener('blur', () => { teclas.clear(); });
 
+  // cada fonte escreve no próprio objeto (nada é alocado por quadro além do que controle.js devolve)
+  const fTec = { ax: 0, ay: 0, mag: 0, botoes: 0 };
+  const fPad = { ax: 0, ay: 0, mag: 0, botoes: 0 };
+  const fToq = { ax: 0, ay: 0, mag: 0, botoes: 0 };
+  function temTecla(l) { for (let i = 0; i < l.length; i++) if (teclas.has(l[i])) return true; return false; }
   function lerTeclado() {
-    const tem = l => l.some(c => teclas.has(c));
-    const a = teclasParaAnalogico(tem(MOV.cima), tem(MOV.baixo), tem(MOV.esq), tem(MOV.dir));
+    const a = teclasParaAnalogico(temTecla(MOV.cima), temTecla(MOV.baixo), temTecla(MOV.esq), temTecla(MOV.dir));
     let b = 0;
     // modificador só no E: Ctrl + W fecharia a aba do navegador (o navegador não deixa impedir)
     for (const c of teclas) if (TECLA_BIT[c]) b |= TECLA_BIT[c];
-    return { ax: a.x, ay: a.y, mag: a.mag, botoes: b };
+    fTec.ax = a.x; fTec.ay = a.y; fTec.mag = a.mag; fTec.botoes = b;
+    return fTec;
   }
 
   // ---------------------------------------------------------------- controle
   const antes = [];
   let bitY = 0;            // Y vale ENFIADA no ataque e GOLEIRO na defesa (fixado ao apertar)
+  let gp = null;           // controle lido neste quadro
+  let bPad = 0;            // máscara do controle sendo montada
+  function apertado(i) { const x = gp.buttons[i]; return x ? x.value > 0.3 || x.pressed : false; }
+  function segura(i, bit) {
+    const p = apertado(i);
+    if (p) { bPad |= bit; if (!antes[i]) pulsos |= bit; }
+    antes[i] = p;
+  }
+  function borda(i, acao) { const p = apertado(i); if (p && !antes[i]) emitir(acao); antes[i] = p; }
   function lerControle() {
-    const lista = navigator.getGamepads ? navigator.getGamepads() : [];
-    let gp = null;
-    for (const g of lista) if (g && g.connected) { gp = g; break; }
+    const lista = navigator.getGamepads ? navigator.getGamepads() : null;
+    gp = null;
+    if (lista) for (let i = 0; i < lista.length; i++) { const g = lista[i]; if (g && g.connected) { gp = g; break; } }
     if (!gp) return null;
-    const bt = i => gp.buttons[i] ? gp.buttons[i].value > 0.3 || gp.buttons[i].pressed : false;
     let ax = gp.axes[0] ?? 0, ay = -(gp.axes[1] ?? 0);
     // cruz digital como alternativa ao analógico
-    const dc = bt(12), db = bt(13), de = bt(14), dd = bt(15);
+    const dc = apertado(12), db = apertado(13), de = apertado(14), dd = apertado(15);
     if (dc || db || de || dd) { const t = teclasParaAnalogico(dc, db, de, dd); ax = t.x; ay = t.y; }
     const a = processarAnalogico(ax, ay, ENTRADA.zonaMorta, ENTRADA.zonaExterna);
-    let b = 0;
-    const segura = (i, bit) => {
-      const p = bt(i);
-      if (p) { b |= bit; if (!antes[i]) pulsos |= bit; }
-      antes[i] = p;
-    };
+    bPad = 0;
     segura(PAD.RT, BOTAO.CORRER);
     segura(PAD.LT, BOTAO.MOD);
     segura(PAD.A, BOTAO.PASSE);
@@ -196,14 +205,14 @@ export function criarEntrada(opc = {}) {
     segura(PAD.X, BOTAO.LANCAMENTO);
     segura(PAD.LB, BOTAO.TROCAR);
     // Y: o sentido é decidido no aperto e vale até soltar (a posse pode mudar no meio)
-    if (bt(PAD.Y)) {
+    if (apertado(PAD.Y)) {
       if (!antes[PAD.Y]) { bitY = fase === 'defesa' ? BOTAO.GOLEIRO : BOTAO.ENFIADA; pulsos |= bitY; }
-      b |= bitY;
+      bPad |= bitY;
       antes[PAD.Y] = true;
     } else { antes[PAD.Y] = false; bitY = 0; }
-    const borda = (i, acao) => { const p = bt(i); if (p && !antes[i]) emitir(acao); antes[i] = p; };
     borda(PAD.START, 'pausa'); borda(PAD.VIEW, 'ajuda'); borda(PAD.R3, 'camera');
-    return { ax: a.x, ay: a.y, mag: a.mag, botoes: b };
+    fPad.ax = a.x; fPad.ay = a.y; fPad.mag = a.mag; fPad.botoes = bPad;
+    return fPad;
   }
 
   // ---------------------------------------------------------------- toque
@@ -323,7 +332,8 @@ export function criarEntrada(opc = {}) {
     for (const x of bts) if (x.dedo !== null) b |= x.mask;
     if (toque.id === null && !b) return null;
     const a = processarAnalogico(toque.vx, toque.vy, ENTRADA.zonaMorta, ENTRADA.zonaExterna);
-    return { ax: a.x, ay: a.y, mag: a.mag, botoes: b };
+    fToq.ax = a.x; fToq.ay = a.y; fToq.mag = a.mag; fToq.botoes = b;
+    return fToq;
   }
 
   // Ataque × defesa: troca os botões visíveis. Um botão de uma fase que está sendo segurado
@@ -391,9 +401,10 @@ export function criarEntrada(opc = {}) {
         saida.ax = saida.ay = 0; saida.mag = Math.hypot(saida.x, saida.z);
         return saida;
       }
-      const fontes = [lerTeclado(), lerControle(), lerToque()];
+      const t = lerTeclado(), c = lerControle(), q = lerToque();
       let ax = 0, ay = 0, mag = 0, botoes = 0;
-      for (const f of fontes) {
+      for (let i = 0; i < 3; i++) {
+        const f = i === 0 ? t : i === 1 ? c : q;
         if (!f) continue;
         botoes |= f.botoes;
         if (f.mag > mag) { mag = f.mag; ax = f.ax; ay = f.ay; }
@@ -414,7 +425,7 @@ export function criarEntrada(opc = {}) {
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */
-    consumirAcoes() { return fila.splice(0); },
+    consumirAcoes() { return fila.length ? fila.splice(0) : SEM_ACOES; },
     empurrarAcao(a) { emitir(a); },
     forcar(e) { forcada = e; },
     get usandoToque() { return usandoToque; },

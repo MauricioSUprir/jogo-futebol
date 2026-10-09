@@ -21,6 +21,11 @@ const TESTES = [
   ['domínio orientado', 'teste-dominio.mjs'],
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
+  // Etapa 2
+  ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
+  ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
+  ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
+  ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
 ];
 
 const res = [];

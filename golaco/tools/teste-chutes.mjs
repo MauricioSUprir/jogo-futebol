@@ -95,10 +95,10 @@ function erros(semBase, opc, N = 60) {
 {
   const attr = { finalizacao: 85, pePreferido: 1, peFraco: 50 };
   // pressão de trás (sem peso no erro de longe): o toque sai com o pé que estiver na vez
-  const col = erros(100, { attr, forca: 0.6, mod: true, pressao: true }, 120);
-  reg('dispersão — colocado a 20 m (bom finalizador, perna boa)', `erro médio ${fmt(media(col.bom), 2)} m (n ${col.bom.length})`, '0,48–0,88 m (Carlsson 2018: 0,68 m)', media(col.bom) >= 0.48 && media(col.bom) <= 0.88 && col.bom.length >= 25);
+  const col = erros(100, { attr, forca: 0.6, mod: true, pressao: true }, 400);
+  reg('dispersão — colocado a 20 m (bom finalizador, perna boa)', `erro médio ${fmt(media(col.bom), 2)} m (n ${col.bom.length})`, '0,48–0,88 m (Carlsson 2018: 0,68 m)', media(col.bom) >= 0.48 && media(col.bom) <= 0.88 && col.bom.length >= 120);
   const rz = media(col.ruim) / media(col.bom);
-  reg('dispersão — perna ruim ÷ perna boa', `${fmt(rz, 2)} (n ${col.ruim.length})`, '1,25–1,6 (+40%)', rz >= 1.25 && rz <= 1.6 && col.ruim.length >= 20);
+  reg('dispersão — perna ruim ÷ perna boa', `${fmt(rz, 2)} (n ${col.ruim.length})`, '1,25–1,6 (+40%)', rz >= 1.25 && rz <= 1.6 && col.ruim.length >= 120);
   // força máxima × força de jogo, comparando a mesma perna (a de cada grupo com amostra)
   // (só o erro lateral: o vertical em metros depende da curva da bola, mais reta no chute forte)
   const forte = erros(400, { attr, forca: 0.73, pressao: true, soLateral: true, varia: true }, 200), max = erros(400, { attr, forca: 1.0, pressao: true, soLateral: true, varia: true }, 200);

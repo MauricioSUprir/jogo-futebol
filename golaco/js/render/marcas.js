@@ -22,7 +22,7 @@ export function criarMarcas(cena) {
   grupo.name = 'queda-da-bola';
   cena.add(grupo);
   let vis = 0;          // 0–1 (aparece e some suave)
-  let ultimo = null;    // último alvo mostrado (some no mesmo lugar)
+  const ultimo = { x: 0, z: 0, ok: false }; // último alvo mostrado (some no mesmo lugar)
 
   return {
     grupo,
@@ -35,9 +35,9 @@ export function criarMarcas(cena) {
       let ativo = !!(v && v.alto && !SEM_MARCA.has(v.tipo) && v.alvo && Number.isFinite(v.alvo.x) && Number.isFinite(v.alvo.z));
       if (ativo && v.tickChegada != null && mundo.tick > v.tickChegada + 6) ativo = false;
       if (ativo && bola && bola.y < 0.3 && Math.hypot(bola.x - v.alvo.x, bola.z - v.alvo.z) < 1.2) ativo = false;
-      if (ativo) ultimo = { x: v.alvo.x, z: v.alvo.z };
+      if (ativo) { ultimo.x = v.alvo.x; ultimo.z = v.alvo.z; ultimo.ok = true; }
       vis = Math.max(0, Math.min(1, vis + (ativo ? dt / 0.12 : -dt / 0.2)));
-      grupo.visible = vis > 0.001 && !!ultimo;
+      grupo.visible = vis > 0.001 && ultimo.ok;
       if (!grupo.visible) return;
       grupo.position.set(ultimo.x, 0.022, ultimo.z);
       // pulso: o anel fixo respira; a onda abre de 0,7 a 1,5 e apaga (1 por 0,8 s)

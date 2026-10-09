@@ -6,7 +6,7 @@ import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './confi
 import { criarRng, entre } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
-import { clamp, difAng, quantizar } from './mat.js';
+import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
   executarToque,
@@ -243,7 +243,7 @@ export function passo(m, entradas) {
       mv = movimentoComBola(m, j);
     } else {
       j.pedidoPedalada = false;
-      mv = movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null));
+      mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
     passoPassada(j, m.posse === j.id, PASSO, null);
@@ -345,6 +345,18 @@ function primeira(m, j, pe) {
   return ok;
 }
 
+/** Com cabeceio/domínio aéreo marcado: vai para o ponto marcado e chega na hora, de frente para a bola. */
+function movimentoAereo(m, j, base) {
+  const t = j.cond.toque;
+  if (!t || t.tipo !== 'aereo' || m.posse === j.id) return base;
+  const dx = t.bx - j.x, dz = t.bz - j.z, d = MD.hypot(dx, dz);
+  const resta = Math.max(1, t.tick - m.tick) * PASSO;
+  const b = m.bola;
+  const rumo = MD.atan2(b.p.z - j.z, b.p.x - j.x);
+  if (d < 0.05) return { dx: base.dx, dz: base.dz, vel: 0, rumoAlvo: rumo };
+  return { dx: dx / d, dz: dz / d, vel: Math.min(j.par.vArrancada, d / resta), rumoAlvo: rumo };
+}
+
 /** Bola alta chegando ao corpo: cabeceio (com ação pedida) ou domínio no peito/coxa. */
 function bolaAltaNoCorpo(m, j) {
   const c = j.cond;
@@ -366,9 +378,11 @@ function bolaAltaNoCorpo(m, j) {
       return true;
     }
     // domínio no peito/coxa: a bola morre e cai no pé, e o toque leva para onde o analógico manda
-    b.v.x *= 0.25; b.v.z *= 0.25; b.v.y = 0; b.p.y = 0.11; b.rolando = true;
+    const sobra = lerp(ACOES.dominioAereo.sobra[0], ACOES.dominioAereo.sobra[1], j.par.attr.controle / 100);
+    const vRel = MD.hypot(b.v.x - j.vx, b.v.y, b.v.z - j.vz);
+    b.v.x = j.vx + (b.v.x - j.vx) * sobra; b.v.z = j.vz + (b.v.z - j.vz) * sobra; b.v.y = 0; b.p.y = 0.11; b.rolando = true;
     executarToque(m, j, j.par.attr.pePreferido, 'dominio');
-    m.eventos.push({ tipo: 'dominioAereo', id: j.id, altura: b.p.y });
+    m.eventos.push({ tipo: 'dominioAereo', id: j.id, altura: b.p.y, vChegada: vRel, sobra: vRel * sobra });
     ganhouPosse(m, j);
     return true;
   }
@@ -422,6 +436,8 @@ function verificarGol(m) {
   if (m.golTick != null) return;
   const R = 0.11;
   if (Math.abs(b.p.x) < CAMPO.meioX + R) return;
+  // atrás da rede de fundo não é gol (a bola que roda por trás do gol fica lá)
+  if (Math.abs(b.p.x) > CAMPO.meioX + CAMPO.gol.profundidade) return;
   if (Math.abs(b.p.z) >= CAMPO.gol.largura / 2 || b.p.y >= CAMPO.gol.altura) return;
   const ladoGol = b.p.x > 0 ? 1 : -1;
   // marca quem ataca esse lado

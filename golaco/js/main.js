@@ -102,13 +102,19 @@ function controlado() { return jogadorPorId(mundo, idControlado()) ?? jogadorPor
 /**
  * Entrada do humano no formato POR TIME ({0: {x, z, botoes}}). x/z/botoes também ficam no
  * próprio objeto (não enumeráveis) para o passoTreino que recebe a entrada do jogador direto:
- * os dois formatos leem os mesmos números (o hash não muda).
+ * os dois formatos leem os mesmos números (o hash não muda). Um objeto só, reaproveitado a cada
+ * passo (a lógica lê os números no passo e não guarda a referência).
  */
+const _entTime = { [TIME_HUMANO]: { x: 0, z: 0, botoes: 0 } };
+Object.defineProperties(_entTime, {
+  x: { value: 0, writable: true }, z: { value: 0, writable: true }, botoes: { value: 0, writable: true },
+});
 function entradaDoTime(e) {
   const x = e?.x ?? 0, z = e?.z ?? 0, botoes = (e?.botoes ?? 0) | 0;
-  const t = { [TIME_HUMANO]: { x, z, botoes } };
-  Object.defineProperties(t, { x: { value: x }, z: { value: z }, botoes: { value: botoes } });
-  return t;
+  const d = _entTime[TIME_HUMANO];
+  d.x = x; d.z = z; d.botoes = botoes;
+  _entTime.x = x; _entTime.z = z; _entTime.botoes = botoes;
+  return _entTime;
 }
 
 function estadoDe(j) {
@@ -183,26 +189,34 @@ function atualizarFase() {
   if (entrada) entrada.definirFase(fase.atual);
 }
 
+// eventos que só fazem sentido para o MEU time (os da IA encheriam a tela de avisos sem dono:
+// "Bola perdida" de um zagueiro adversário, "Goleiro saiu do gol" do goleiro deles)
+const SO_MEU_TIME = new Set(['passe', 'troca', 'perda', 'saidaGoleiro']);
 function tratarEvento(ev) {
   const t = ev.tipo;
-  // passe e troca só do meu time (os da IA adversária encheriam a tela); a troca automática no
-  // passe já aparece como o passe
-  if ((t === 'passe' || t === 'troca') && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
+  // a troca automática no passe já aparece como o passe
+  if (SO_MEU_TIME.has(t) && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
   if (t === 'troca' && ev.auto) return;
   hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }
 
+// [texto, forte] — pares fixos (nada é alocado por quadro)
+const MODO_J = {
+  naMao: ['Bola na mão', true], semBola: ['Sem bola', false], pedalada: ['Pedalada', true],
+  protegendo: ['Protegendo', true], curta: ['Condução curta', false], arrancada: ['Arrancada', true],
+  conduzindo: ['Conduzindo', false],
+};
 function modoDoJogador(j) {
-  if (j && mundo.naMao != null && mundo.naMao === j.id) return ['Bola na mão', true];
-  if (!j || mundo.posse !== j.id) return ['Sem bola', false];
-  if (j.cond && j.cond.pedalada) return ['Pedalada', true];
+  if (j && mundo.naMao != null && mundo.naMao === j.id) return MODO_J.naMao;
+  if (!j || mundo.posse !== j.id) return MODO_J.semBola;
+  if (j.cond && j.cond.pedalada) return MODO_J.pedalada;
   const mod = (j.botoes & BOTAO.MOD) !== 0;
-  if (mod && COND.emProtecao && COND.emProtecao(mundo, j)) return ['Protegendo', true];
-  if (mod) return ['Condução curta', false];
+  if (mod && COND.emProtecao && COND.emProtecao(mundo, j)) return MODO_J.protegendo;
+  if (mod) return MODO_J.curta;
   const s = Math.hypot(j.vx, j.vz);
-  if ((j.botoes & BOTAO.CORRER) && s > 5.5) return ['Arrancada', true];
-  return ['Conduzindo', false];
+  if ((j.botoes & BOTAO.CORRER) && s > 5.5) return MODO_J.arrancada;
+  return MODO_J.conduzindo;
 }
 
 /** Força da carga (0–1, cheia em ACOES.cargaCheia s): usa j.carga.forca se a lógica der. */
@@ -239,6 +253,8 @@ function projetar(x, y, z, out) {
   return out;
 }
 const _pt = { x: 0, y: 0, atras: false };
+const _carga = { x: 0, y: 0, forca: 0, tipo: '' };
+const _queda = { x: 0, z: 0 };
 
 function pausado() { return hud.menuAberto || hud.ajudaAberta; }
 
@@ -287,7 +303,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const cp = cam.camera.position;
   render.camera.x = cp.x; render.camera.y = cp.y; render.camera.z = cp.z;
   render.alfa = alfa;
-  render.queda = marcas.grupo.visible ? { x: marcas.grupo.position.x, z: marcas.grupo.position.z } : null;
+  if (marcas.grupo.visible) { _queda.x = marcas.grupo.position.x; _queda.z = marcas.grupo.position.z; render.queda = _queda; }
+  else render.queda = null;
   render.quadros++;
   // HUD
   if (h) {
@@ -298,7 +315,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     // barra de força logo abaixo do anel do controlado
     if (h.carga) {
       projetar(hx, 0, hz + 0.8, _pt);
-      hud.carga(_pt.atras ? null : { x: _pt.x, y: _pt.y + 6, forca: forcaDaCarga(h.carga), tipo: h.carga.tipo });
+      if (_pt.atras) hud.carga(null);
+      else { _carga.x = _pt.x; _carga.y = _pt.y + 6; _carga.forca = forcaDaCarga(h.carga); _carga.tipo = h.carga.tipo; hud.carga(_carga); }
     } else hud.carga(null);
   } else hud.carga(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
@@ -386,6 +404,7 @@ function tratarAcao(a) {
   if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
   if (pausado()) return;
   if (a === 'camera') { comando('camera', cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
+  if (a === 'marcador' && mundo.modo === 'ataque') { hud.evento('semMarcador'); return; }
   if (a === 'recomecar' || a === 'maquina' || a === 'marcador') {
     filaAcoes.push(a);
     if (a === 'recomecar') hud.evento('recomecar');
@@ -396,7 +415,9 @@ function comando(c, v) {
   switch (c) {
     case 'continuar': hud.fecharMenu(); break;
     case 'recomecar': case 'maquina': case 'marcador':
-      hud.fecharMenu(); filaAcoes.push(c); if (c === 'recomecar') hud.evento('recomecar'); break;
+      hud.fecharMenu();
+      if (c === 'marcador' && mundo.modo === 'ataque') { hud.evento('semMarcador'); break; }
+      filaAcoes.push(c); if (c === 'recomecar') hud.evento('recomecar'); break;
     case 'ajuda': hud.abrirAjuda(); break;
     case 'tela-cheia':
       if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
@@ -467,7 +488,7 @@ async function iniciar() {
     else { laco.ultimo = null; ultimoQuadro = null; }
   });
   hud.definirEstado({
-    qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo),
+    qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade,
   });
   if (params.get('qps') === '1') hud.mostrarQps(true);
@@ -491,7 +512,7 @@ function trocarMundo(m) {
   iniciarEstados();
   corteCamera = true;
   if (entrada) entrada.definirFase(fase.atual);
-  hud.definirEstado({ marcador: marcadorLigado(mundo) });
+  hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo });
   return hashMundo(mundo);
 }
 

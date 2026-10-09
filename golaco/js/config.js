@@ -44,18 +44,32 @@ export const BOLA = {
   // em S 0,2 a 20 m/s; satura em ~0,3–0,35).
   magnusK: 0.75,
   clMax: 0.33,
+  // Acréscimo de C_D pelo giro (PESQUISA §1.1: +0,07 a +0,10 em Sp 0,25 e +0,10 a +0,13 em
+  // Sp ≥ 0,5 — Goff & Carré 2009; Asai et al. 2007). Usa a ponta de cima da faixa, a mais
+  // perto da falta medida em vídeo (Goff & Carré 2009). Rampa de 0 até Sp 0,25, depois até 0,5.
+  cdGiro25: 0.10,
+  cdGiro50: 0.13,
   giroPorMetro: 0.006,        // 1/m — o giro cai ~10% em 18 m de voo (Tsukada & Sakurai 2008)
   // Contato com a grama.
   restituicao: 0.62,          // coeficiente de restituição vertical no quique
   atritoQuique: 0.55,         // atrito de deslizamento no impacto
+  // Restituição horizontal e_x do ponto de contato no quique (Cross 2002; PESQUISA §1.1:
+  // +0,1 a +0,4 no seco). Com 0 a bola sai rolando pura (v_x2/v_x1 = 0,60) e o quique oblíquo
+  // de 13,9 m/s a 25° devolve 60,4% — acima da faixa do ensaio FIFA (45–60%).
+  restituicaoTangencial: 0.2,
   vQuiqueMin: 0.6,            // abaixo disso o quique vira rolagem
   // Rolagem: desaceleração cresce com a velocidade, dec = c·v^n + piso (ensaio FIFA "ball
   // roll" e portões EN 12234 / UEFA-NBI): saindo a 3,2 m/s para em ~7 m; a 2,5 m/s perde
   // ~0,55 m/s no 1º metro. O arrasto do ar entra à parte.
   rolagemC: 0.33,
   rolagemN: 1.35,
+  // Teto da resistência do gramado: a lei c·v^1,35 foi ajustada entre ~3 m/s (ensaio FIFA) e
+  // ~16 m/s (Pfaff et al. 2022: passe a 16,2 m/s, perda média de 7,93 m/s²); acima disso ela
+  // passaria de 20 m/s². A grama não freia a bola rolando mais que o atrito de deslizamento
+  // (μ ≈ 0,5–0,6 no seco — Cross 2002/2008), então c·v^n fica limitado a 0,55·g (o corte cai
+  // em ~7,9 m/s; abaixo disso nada muda). O arrasto do ar continua à parte.
+  rolagemMax: 0.55 * G,
   rolagemPiso: 0.05,          // m/s² (a bola sempre acaba parando)
-  rolagemMax: 5.4,            // m/s² — teto da resistência do gramado (≈ μ·g, μ ≈ 0,55; Cross 2002)
   atritoDeslize: 0.4,         // atrito cinético quando a bola desliza sem rolar
   giroVerticalDecai: 2.5,     // 1/s, giro em torno do eixo y no chão
   vParada: 0.04,              // abaixo disso a bola para
@@ -256,9 +270,9 @@ export const ACOES = {
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
   toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
-  passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 9.5], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
+  passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
-  lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.66], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
+  lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.72], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
   cruzamento: { terco: 17.5, faixa: 20, elevAlto: 0.42, elevTenso: 0.16, vRasteiro: 11, yAlto: 2.0, yTenso: 0.9, setor: 0.44 },
   // chute (pesquisa da Etapa 2): máximo de 30–34 m/s nos melhores (Shinkai 2008; DFL); colocado
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
@@ -266,7 +280,11 @@ export const ACOES = {
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
-  cabeceio: { alcanceSalto: 2.55, alturaPeito: [0.45, 1.7], v: [9, 17] },
+  // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
+  // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35 },
+  // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
+  dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };

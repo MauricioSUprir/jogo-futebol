@@ -51,7 +51,7 @@ export function atualizarBotoesAcao(m, j) {
   if (j.carga && (m.tick - j.carga.t0) * DT >= ACOES.cargaMax) soltarCarga(m, j);
   if (j.pedido) {
     const idade = (m.tick - j.pedido.tick) * DT;
-    const esperandoBola = j.cond && j.cond.toque && j.cond.toque.tipo === 'dominio';
+    const esperandoBola = j.cond && j.cond.toque && (j.cond.toque.tipo === 'dominio' || j.cond.toque.tipo === 'aereo');
     if (idade > (esperandoBola || bolaVindo(m, j) ? ACOES.pedidoPrimeira : ACOES.pedidoValidade) && m.posse !== j.id) j.pedido = null;
     else if (idade > ACOES.pedidoValidade * 2 && m.posse === j.id && !(j.cond.toque && j.cond.toque.tipo === 'acao')) j.pedido = null;
   }
@@ -71,10 +71,11 @@ function soltarCarga(m, j) {
   j.carga = null;
 }
 
-/** A bola (livre) está vindo para perto do jogador? */
+/** A bola (livre) está vindo para perto do jogador? (no ar: o voo passa por ele) */
 function bolaVindo(m, j) {
   if (m.posse != null) return false;
   const b = m.bola;
+  if (!b.rolando && b.p.y > 0.45 && bolaAltaPassando(m, j, 150)) return true;
   const dx = j.x - b.p.x, dz = j.z - b.p.z;
   const d = MD.hypot(dx, dz);
   const vb = MD.hypot(b.v.x, b.v.z);
@@ -313,7 +314,8 @@ function passeRasteiro(m, j, pe, p, erroMult) {
   const L = MD.hypot(dx, dz) || 1;
   dx /= L; dz /= L;
   // a força se ajusta à distância; a barra corrige (mais fraca / mais forte)
-  const vChegada = lerp(cfg.vChegada[0], cfg.vChegada[1], clamp(L / 35, 0, 1)) * lerp(0.75, 1.3, p.forca);
+  // chegada mais firme já nos passes médios (StatsBomb: 10,8 m/s de média a 12,5 m, 13,6 a 22,5 m)
+  const vChegada = lerp(cfg.vChegada[0], cfg.vChegada[1], Math.sqrt(clamp(L / 35, 0, 1))) * lerp(0.75, 1.3, p.forca);
   let v0 = Math.min(30, velParaChegarCom(Math.max(0, L - 0.3), vChegada));
   const attr = j.par.attr.passe;
   const sig = lerp(cfg.erroRuim, cfg.erroBom, attr / 100) * erroMult;
@@ -622,7 +624,9 @@ export function executarCabeceio(m, j, p) {
     const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : (b.p.z > 0 ? -1.5 : 1.5);
     ux = gx - b.p.x; uz = zM - b.p.z;
     const D = MD.hypot(ux, uz) || 1; ux /= D; uz /= D;
-    s = lerp(cfg.v[0], cfg.v[1], attr / 100);
+    // força própria do cabeceio com corrida (Becker 2021: ~8,3 m/s) + parte da bola que chega
+    const vIn = MD.hypot(b.v.x, b.v.y, b.v.z);
+    s = clamp(lerp(cfg.potencia[0], cfg.potencia[1], attr / 100) + cfg.redirecao * vIn, cfg.v[0], cfg.v[1]);
     el = -0.08; // cabeçada para baixo
   } else if (p.tipo === 'passe') {
     para = escolherAlvo(m, j, 'passe');
@@ -658,8 +662,8 @@ function tabela(m, j, p) {
 // ------------------------------------------------------------------ bola alta: domínio no corpo
 
 /**
- * Altura e ponto em que a bola (no ar) passa pelo jogador. Devolve {i, y, x, z} do primeiro
- * tick em que a bola fica a ≤ 0,6 m do corpo na horizontal, ou null.
+ * Altura e ponto em que a bola (no ar) passa pelo jogador: o tick de maior aproximação entre os
+ * que ficam a ≤ 0,6 m do corpo na horizontal (onde ela chega ao corpo). {i, y, x, z} ou null.
  */
 export function bolaAltaPassando(m, j, max = 60) {
   const b = m.bola;
@@ -667,12 +671,18 @@ export function bolaAltaPassando(m, j, max = 60) {
   const t = criarBola(b.p.x, b.p.z);
   Object.assign(t.p, b.p); Object.assign(t.v, b.v); Object.assign(t.w, b.w); t.rolando = false;
   const ev = [];
+  let melhor = null;
   for (let i = 1; i <= max; i++) {
     passoBolaTeste(t, ev);
     const d = MD.hypot(t.p.x - j.x, t.p.z - j.z);
-    if (d < 0.6) return { i, y: t.p.y, x: t.p.x, z: t.p.z };
-    if (t.rolando) return null;
+    if (d < 0.6) {
+      if (!melhor || d < melhor.d) melhor = { i, y: t.p.y, x: t.p.x, z: t.p.z, d };
+      else break; // já se afastando
+    } else if (melhor) break;
+    if (t.rolando) break;
   }
-  return null;
+  // ainda se aproximando no fim do horizonte: o ponto de contato não está visto
+  if (melhor && melhor.i >= max) return null;
+  return melhor;
 }
 
