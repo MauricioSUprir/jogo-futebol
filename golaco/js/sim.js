@@ -5,7 +5,7 @@
 import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
-import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
+import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
 import { alturaQuadril } from './anim.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
@@ -21,8 +21,7 @@ import { ACOES } from './config.js';
 /**
  * Cria o mundo. opcoes:
  *   semente      inteiro
- *   jogadores    [{id, x, z, rumo, attr, time, papel, fase}]  papel: 'humano' | 'marcador' | 'parado';
- *                fase = passada inicial (0 ou 1: qual pé é o próximo a sair do chão)
+ *   jogadores    [{id, x, z, rumo, attr, time, papel}]  papel: 'humano' | 'marcador' | 'parado'
  *   bola         {x, z} (posição inicial); posse: id do jogador com a bola
  */
 export function criarMundo(opcoes = {}) {
@@ -48,7 +47,7 @@ export function criarMundo(opcoes = {}) {
     botoesTimeAnt: {},
   };
   for (const d of opcoes.jogadores ?? [{ id: 0, x: 0, z: 0, rumo: 0 }]) {
-    const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0, d.fase ?? 0);
+    const j = criarJogador(d.id, d.x, d.z, d.rumo ?? 0, d.attr ?? {}, d.time ?? 0);
     j.papel = d.papel ?? 'humano';
     j.posicao = d.posicao ?? 'MEI';
     if (d.vaga) j.vaga = { x: d.vaga.x, z: d.vaga.z };
@@ -79,12 +78,14 @@ export function aplicarEntrada(j, e, tick) {
   let x = quantizar(e?.x ?? 0, q), z = quantizar(e?.z ?? 0, q);
   let mag = MD.hypot(x, z);
   if (mag > 1) { x /= mag; z /= mag; mag = 1; }
+  // um limiar só para andar e para virar: abaixo dele o pedido é zero
+  if (mag <= ENTRADA.magDirecao) { x = 0; z = 0; mag = 0; }
   j.botoesAnt = j.botoes;
   j.botoes = (e?.botoes ?? 0) | 0;
-  if (mag > 0.08) {
+  if (mag > 0) {
     const r = MD.atan2(z, x);
     const d = difAng(j.intRumo, r);
-    if (j.imag > 0.08 && Math.abs(d) < 0.12) {
+    if (j.imag > 0 && Math.abs(d) < 0.12) {
       // giro contínuo do analógico: mede a velocidade angular pedida
       const w = d / PASSO;
       j.intW += (w - j.intW) * Math.min(1, PASSO / 0.12);
@@ -111,7 +112,7 @@ function moverMarcador(m, j) {
   // marcador de treino: vai na bola; encostado no condutor, contorna pelo lado da bola
   const b = m.bola;
   const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
-  let tx = b.p.x, tz = b.p.z;
+  let tx = b.p.x, tz = b.p.z, contorna = false;
   if (dono && dono !== j) {
     const dx = j.x - dono.x, dz = j.z - dono.z;
     const d = MD.hypot(dx, dz);
@@ -119,15 +120,22 @@ function moverMarcador(m, j) {
       // contorna: gira em volta do condutor na direção da bola
       const aM = MD.atan2(dz, dx);
       const aB = MD.atan2(b.p.z - dono.z, b.p.x - dono.x);
-      const sentido = difAng(aM, aB) >= 0 ? 1 : -1;
-      const a2 = aM + sentido * 0.9;
-      tx = dono.x + MD.cos(a2) * 0.75;
-      tz = dono.z + MD.sin(a2) * 0.75;
+      const dif = difAng(aM, aB);
+      if (Math.abs(dif) < TREINO.marcadorBote) {
+        // a bola ficou do lado dele: vai nela (bote)
+        tx = b.p.x; tz = b.p.z;
+      } else {
+        const a2 = aM + (dif >= 0 ? 1 : -1) * 0.9;
+        tx = dono.x + MD.cos(a2) * 0.75;
+        tz = dono.z + MD.sin(a2) * 0.75;
+      }
+      contorna = true;
     }
   }
   const dx = tx - j.x, dz = tz - j.z;
   const d = MD.hypot(dx, dz) || 1;
-  const vel = Math.min(TREINO.marcadorVel, 0.6 + d * 2.2);
+  // contornando, corre em volta do condutor (não anda devagar até o ponto)
+  const vel = Math.min(TREINO.marcadorVel, contorna ? (j.contorno ?? TREINO.marcadorContorno) : 0.6 + d * 2.2);
   return { dx: dx / d, dz: dz / d, vel, rumoAlvo: MD.atan2(b.p.z - j.z, b.p.x - j.x) };
 }
 
@@ -182,16 +190,51 @@ function colisaoBolaCorpo(m) {
   }
 }
 
+/**
+ * Pedalada: o pé de fora é o pé livre do arco por cima da bola e o outro segura o corpo
+ * (travaApoio: não sai do chão até o fim do arco). Sem salto de fase nem pé teletransportado:
+ * com os dois pés no chão, a passada tira o pé de fora do chão pelo ritmo (como no toque); se o
+ * outro pé estava no ar, ele termina o passo e fica no chão. Devolve o pedido de saída para a
+ * passada (jogador.js passoPassada) ou null.
+ */
+function pesDaPedalada(m, j) {
+  const pd = j.cond.pedalada;
+  const t = (m.tick - pd.tick0) * PASSO;
+  if (t >= 0.8 * CONDUCAO.pedaladaDuracao) { j.travaApoio = null; return null; }
+  const fora = pd.lado > 0 ? 0 : 1;
+  j.travaApoio = 1 - fora;
+  // no ar, o pé de fora só pousa no fim do arco (o passo fica mais lento, sem salto de fase; o
+  // arco por cima da bola é desenhado em anim.js)
+  return { pe: fora, em: PASSO, pousoEm: PEDALADA_POUSO * CONDUCAO.pedaladaDuracao - t };
+}
+const PEDALADA_POUSO = 0.85; // fração da pedalada em que o pé de fora pousa
+
+/**
+ * Lado da pedalada: o pé de fora (o do arco por cima da bola; lado > 0 = pé 0) é o que está livre
+ * agora (no ar, com o outro no chão), ou o que a passada tira do chão primeiro (os dois no chão),
+ * ou o que pousa por último (os dois no ar). Assim o arco começa já, sem esperar o outro pé pousar.
+ */
+function ladoPedalada(j) {
+  const a0 = j.pes[0].apoio, a1 = j.pes[1].apoio;
+  let fora;
+  if (a0 !== a1) fora = a0 ? 1 : 0;
+  else if (a0) fora = faseLocal(j.fase, 1) > faseLocal(j.fase, 0) ? 1 : 0;
+  else fora = j.pes[0].fasePouso >= j.pes[1].fasePouso ? 0 : 1;
+  return fora === 0 ? 1 : -1;
+}
+
 function roubarComMarcador(m, j) {
   const b = m.bola;
+  if (m.posse == null) return; // bola livre não é roubada (quem chegar primeiro domina)
   if (b.p.y > 0.5) return;
   const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (d > TREINO.marcadorAlcance + 0.11) return;
-  const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
+  const dono = jogadorPorId(m, m.posse);
   // tira a bola: empurra na direção em que o marcador está virado
   const v = 3.2;
   chutarRasteiro(b, MD.cos(j.rumo) * v, MD.sin(j.rumo) * v);
-  if (dono) { dono.cond.toque = null; dono.cond.busca = false; }
+  // quem perdeu não domina de novo no tick seguinte (a bola ainda está ao alcance dele)
+  if (dono) { dono.cond.toque = null; dono.cond.busca = false; dono.cond.semDominioAte = m.tick + 30; }
   m.posse = null;
   m.stats.roubadas++;
   m.eventos.push({ tipo: 'roubada', id: j.id });
@@ -272,7 +315,7 @@ export function passo(m, entradas) {
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
-        j.cond.pedalada = { tick0: m.tick, lado: (j.cond.nToques % 2) ? 1 : -1 };
+        j.cond.pedalada = { tick0: m.tick, lado: ladoPedalada(j) };
         j.cond.ref = null; // replaneja: a bola para junto do corpo
       }
       if (j.cond.pedalada && (m.tick - j.cond.pedalada.tick0) * PASSO > CONDUCAO.pedaladaDuracao) {
@@ -288,7 +331,11 @@ export function passo(m, entradas) {
   colisaoCorpos(m);
   // a passada depois da trombada: o pé que sai do chão mira o pouso pela velocidade que o corpo
   // tem DEPOIS do contato (antes mirava pela de antes e o pé caía longe do corpo)
-  for (const j of js) passoPassada(j, m.posse === j.id, PASSO, null, saidaParaToque(m, j));
+  for (const j of js) {
+    const ped = j.cond && j.cond.pedalada ? pesDaPedalada(m, j) : null;
+    if (!(j.cond && j.cond.pedalada) && j.travaApoio != null) j.travaApoio = null;
+    passoPassada(j, m.posse === j.id, PASSO, null, ped || saidaParaToque(m, j));
+  }
   // 3) ações e controle de bola
   for (const j of js) if (j.pedido) processarPedido(m, j);
   if (m.naMao != null) {
@@ -334,7 +381,7 @@ export function passo(m, entradas) {
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
   // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
-  for (const j of js) passoPeDesenhado(j, m.posse === j.id, PASSO);
+  for (const j of js) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
 }

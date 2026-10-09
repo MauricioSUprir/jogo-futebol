@@ -112,6 +112,8 @@ export const JOGADOR = {
   latCorte: 11.0,             // no passo do corte (agilidade 75)
   angCorte: 0.75,             // rad — acima disso o pedido é um corte
   angInversao: 1.95,          // rad (~112°) — acima disso freia na linha antes de virar
+  angInversaoEixo: 2.3,       // rad (~132°) — invertendo, acima disso também tira a velocidade de
+                              // lado em relação ao eixo pedido (analógico que passou pela borda)
   vGiroLivre: 1.2,            // abaixo desta velocidade o corpo vira em qualquer direção
   tauVel: 0.18,               // s — constante de tempo do controle de velocidade
   // Giro do corpo (para onde o tronco aponta).
@@ -194,6 +196,8 @@ export const CONDUCAO = {
   antecedencia: 0.1,          // s — um toque é sempre marcado com essa antecedência
   alcance: 0.78,              // m — distância máxima bola–corpo para tocar
   folgaMax: 0.8,              // m — a bola não abre mais que isso à frente entre dois toques
+  arcoMax: 0.15,              // m — curva fechada: o corpo sairia mais que isso da linha da bola
+                              // até o próximo toque → toca a cada passo
   alcanceFrente: -0.15,       // m — a bola pode estar até 15 cm atrás do centro do corpo
   intervaloMin: 0.16,         // s entre dois toques
   angReplanejar: 0.35,        // rad — mudança de rumo pedido que antecipa o toque
@@ -217,11 +221,14 @@ export const CONDUCAO = {
   protecaoDist: 5,            // m — marcador a menos disso ativa a proteção (com o modificador)
   protecaoOfs: 0.42,          // m — bola do lado oposto ao marcador
   vProtecao: 1.6,             // m/s máximo protegendo
+  giroProtecao: 3.5,          // rad/s — giro do corpo (e da bola, com a sola) em volta da bola
+                              // protegendo, com agilidade 50 (×0,8–1,2 pela agilidade): um marcador
+                              // que contorna mais rápido que isso chega à bola
   // Pedalada.
   pedaladaDuracao: 0.42,      // s
   pedaladaToqueDuplo: 0.3,    // s — dois toques no modificador dentro disso
   // Puxada de sola.
-  puxadaVel: 2.4,             // m/s da bola puxada para trás
+  puxadaVel: 1.6,             // m/s da bola puxada para trás (no chão; o corpo freia junto)
 };
 
 // Entrada.
@@ -229,6 +236,9 @@ export const ENTRADA = {
   zonaMorta: 0.16,            // radial
   zonaExterna: 0.95,          // acima disso conta como inclinação máxima
   magTrote: 0.55,             // inclinação até aqui = andar→trote; acima = corrida
+  // Limiar ÚNICO de direção: abaixo disso (depois da zona morta) o pedido vale zero — o corpo
+  // nem anda no rumo antigo nem anda sem virar o tronco (analógico leve no celular).
+  magDirecao: 0.1,
   quant: 1024,                // a entrada é quantizada (replay compacto e determinístico)
 };
 
@@ -300,6 +310,8 @@ export const TREINO = {
   marcadorVel: 6.2,
   marcadorAcel: 5.5,
   marcadorAlcance: 0.55,      // m — distância bola–marcador que conta como roubada
+  marcadorContorno: 2.0,      // m/s — correndo em volta de quem protege a bola
+  marcadorBote: 1.9,          // rad — bola a menos disso do lado dele (em volta do condutor): vai nela
 };
 
 // Etapa 2 — ações com bola (passe, enfiada, lançamento, cruzamento, chute). Valores iniciais;

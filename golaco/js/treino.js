@@ -60,7 +60,8 @@ export function cuidarBolaFora(m, idAlvo) {
   if (!fora) { m.foraDesde = null; return; }
   if (m.foraDesde == null) {
     m.foraDesde = m.tick;
-    m.eventos.push({ tipo: dentroDoGol ? 'gol' : 'fora' });
+    // o gol pode já ter sido marcado pela simulação neste passo (sim.js verificarGol): um aviso só
+    if (!(dentroDoGol && m.eventos.some(e => e.tipo === 'gol'))) m.eventos.push({ tipo: dentroDoGol ? 'gol' : 'fora' });
     return;
   }
   if (m.tick - m.foraDesde < 60) return;
@@ -69,18 +70,28 @@ export function cuidarBolaFora(m, idAlvo) {
 }
 
 /**
- * Bola parada no pé do jogador (recomeçar). A bola nunca é posta além das placas; se o jogador
- * está fora das linhas, a bola fica no pé dele, mas sem novo aviso de "fora"/"gol" (ela não saiu,
- * foi posta lá) — o próximo aviso só vem depois que ela voltar ao campo e sair de novo.
+ * Bola no pé do jogador (recomeçar). Perto das linhas, o jogador é trazido para 1 m dentro do
+ * campo (com os pés), para a bola voltar DENTRO do campo; embalado, a bola sai rolando com a
+ * velocidade do corpo (não fica parada para ele atropelar) e o próximo toque é planejado.
+ * A bola nunca é posta além das placas; se ainda assim ficar fora das linhas, não há novo aviso
+ * de "fora"/"gol" (ela não saiu, foi posta lá) — o próximo só vem depois que ela voltar e sair.
  */
 export function devolverBola(m, idAlvo) {
   const j = jogadorPorId(m, idAlvo);
   if (!j) return;
+  const nx = Math.max(-CAMPO.meioX + 1, Math.min(CAMPO.meioX - 1, j.x));
+  const nz = Math.max(-CAMPO.meioZ + 1, Math.min(CAMPO.meioZ - 1, j.z));
+  if (nx !== j.x || nz !== j.z) {
+    const dx = nx - j.x, dz = nz - j.z;
+    j.x = nx; j.z = nz; j.vx = 0; j.vz = 0;
+    for (const p of j.pes) { p.x += dx; p.z += dz; p.lx += dx; p.lz += dz; p.gx += dx; p.gz += dz; p.tx += dx; p.tz += dz; p.bx += dx; p.bz += dz; }
+  }
   const lx = CAMPO.meioX + CAMPO.entorno - BOLA.raio - 0.01, lz = CAMPO.meioZ + CAMPO.entorno - BOLA.raio - 0.01;
   const x = Math.max(-lx, Math.min(lx, j.x + MD.cos(j.rumo) * 0.4));
   const z = Math.max(-lz, Math.min(lz, j.z + MD.sin(j.rumo) * 0.4));
   const nb = criarBola(x, z);
   Object.assign(m.bola, nb);
+  if (j.vx * j.vx + j.vz * j.vz > 0.25) chutarRasteiro(m.bola, j.vx, j.vz);
   m.posse = j.id;
   j.cond.toque = null; j.cond.busca = false; j.cond.ref = null; j.cond.longeDesde = -1;
   m.eventos.push({ tipo: 'recomeco' });

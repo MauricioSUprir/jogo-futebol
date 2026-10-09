@@ -6,13 +6,15 @@
 // O pé desenhado nunca salta (tools/teste-patinacao.mjs mede todos os quadros):
 //  - pé no chão = exatamente o ponto plantado na simulação (nem o toque o tira do lugar: o
 //    toque sai sempre do pé livre — conducao.js peLivre);
-//  - balanço pela fase entre a saída e o pouso guardados no pé (a fase nunca salta), mirando o
-//    ponto em que a simulação planta o pé no fim do último tick do balanço;
-//  - gesto do toque pelo peso `puxa` e o ponto `gx, gz` do estado (velocidade limitada,
-//    conducao.js atualizarGesto), com desvio que encolhe perto da saída e do pouso do pé.
+//  - pé no ar = o pé desenhado que a simulação integra com a velocidade de um pé humano
+//    (jogador.js passoPeDesenhado: trajetória do balanço até o ponto de pouso, altura do passo,
+//    gesto do toque e arco da pedalada); a simulação só planta o pé quando ele chega ao ponto;
+//  - quadril: o teto pelo alcance das pernas (pé no chão; pé no ar na saída e no fim do
+//    balanço) e, para cima, no máximo QUADRIL_SOBE (altura guardada pela simulação,
+//    alturaQuadril) — o tornozelo preso pelo joelho não salta com o quadril.
 // Sem three.js nem DOM. Saída: posições das juntas no mundo (Float32Array).
 
-import { JOGADOR, PASSADA, PASSO, G, CONDUCAO, GESTO } from './config.js';
+import { JOGADOR, PASSO, G, CONDUCAO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
 
@@ -64,25 +66,8 @@ function suave(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 export function pePrevisto(j, p, comBola) {
   const pe = j.pes[p];
   if (pe.apoio) return { x: pe.x, y: TORN, z: pe.z, apoio: true, rumo: pe.rumo, u: 0 };
-  const { u, livre, meioApoio } = progressoBalanco(j, p, comBola);
-  return { x: pe.tx, y: pe.ty, z: pe.tz, apoio: false, rumo: pe.lrumo, u, livre, meioApoio };
-}
-
-/**
- * Desvia o pé da passada na direção de (cx, cy, cz), com peso w e no máximo dMax no chão. Perto
- * da saída e do pouso o desvio máximo encolhe junto com o tempo livre do pé (GESTO.velDesvio):
- * no chão ele é 0, e a velocidade extra do pé fica limitada por construção — vale para toque
- * cedo, tarde ou remarcado.
- */
-function desviarPe(pe, cx, cy, cz, w, dMax, vDesvio) {
-  if (pe.apoio || w <= 0) return;
-  const lim = Math.min(dMax, vDesvio * pe.livre);
-  if (lim <= 0) return;
-  let dx = cx - pe.x, dz = cz - pe.z;
-  const d = Math.hypot(dx, dz);
-  if (d > lim) { dx *= lim / d; dz *= lim / d; }
-  const wy = w * lim / dMax;
-  pe.x += w * dx; pe.z += w * dz; pe.y = lerp(pe.y, cy, wy);
+  const { u, meioApoio } = progressoBalanco(j, p, comBola);
+  return { x: pe.tx, y: pe.ty, z: pe.tz, apoio: false, rumo: pe.lrumo, u, meioApoio };
 }
 
 /** IK de dois ossos: quadril H, alvo T, polo (direção para onde o joelho aponta). */
@@ -126,20 +111,8 @@ function pesEQuadril(j, m) {
   // ---- pés (alvos dos tornozelos)
   const comBola = m.posse === j.id;
   const pes = [pePrevisto(j, 0, comBola), pePrevisto(j, 1, comBola)];
-  if (c) {
-    // (o gesto do toque — o pé livre indo até a bola — já está no pé desenhado da simulação)
-    const bx = m.bola.p.x, bz = m.bola.p.z;
-    // pedalada: o pé de fora passa por cima da bola em arco (só o pé livre)
-    if (c.pedalada) {
-      const tp = clamp((tick - c.pedalada.tick0) * PASSO / CONDUCAO.pedaladaDuracao, 0, 1);
-      const lado = c.pedalada.lado;
-      const p = pes[lado > 0 ? 0 : 1];
-      const ang = Math.PI * tp;
-      const cx = bx + rx * lado * 0.22 * Math.cos(ang) - fx * 0.1;
-      const cz = bz + rz * lado * 0.22 * Math.cos(ang) - fz * 0.1;
-      desviarPe(p, cx, TORN + 0.18 * Math.sin(ang), cz, Math.sin(Math.PI * tp), GESTO.desvio[0], GESTO.velDesvio[0]);
-    }
-  }
+  // (o gesto do toque — o pé livre indo até a bola — e o arco da pedalada já estão no pé
+  // desenhado da simulação: jogador.js passoPeDesenhado)
 
   // ---- quadril: altura nominal + balanço da passada, limitada pelo alcance das pernas
   const agach = 0.03 + 0.05 * clamp(s / 7, 0, 1);

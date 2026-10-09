@@ -51,9 +51,13 @@ export function porAtributo(attr, min, max) {
   return min + (max - min) * clamp(attr, 0, 100) / 100;
 }
 
-/** Arredonda para a grade de 1/q (entrada quantizada). */
+/**
+ * Arredonda para a grade de 1/q (entrada quantizada). O "+ 0" troca −0 por +0: o zero negativo
+ * sobreviveria ao arredondamento (Math.round(−6e−14) = −0) e atan2(±0, x < 0) = ±π daria outra
+ * partida que a mesma entrada gravada em inteiros (replay) ou escrita à mão {x: −1, z: 0}.
+ */
 export function quantizar(v, q) {
-  return Math.round(v * q) / q;
+  return Math.round(v * q) / q + 0;
 }
 
 /** Distância do ponto (px,pz) ao segmento (ax,az)–(bx,bz). */

@@ -59,7 +59,8 @@ cd golaco && python3 -m http.server 8000   # http://localhost:8000
 ## Testes
 
 ```bash
-node golaco/tools/rodar-testes.mjs     # lógica em Node (~45 s): Etapa 1 + passes, chute, goleiro e jogo aéreo — o Actions roda antes do deploy
+node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo, ~30 s): Etapa 1 (com recomeço do treino) + passes, chute, goleiro e jogo aéreo — o Actions roda antes do deploy
+#   (metas que dependem só do desenho do pé no anim.js saem como "PENDENTE"; teste-conducao/teste-dribles --estrito reprovam com elas)
 node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz, câmera sem tremor
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/prints.mjs           # prints PC/celular (deitado e em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
