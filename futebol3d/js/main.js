@@ -237,8 +237,12 @@ async function iniciarTM() {
   }
   if (!game) return;
   ponte.inicio(game.match);
-  // "só o meu jogador": câmera atrás dele (dá para trocar nas configurações da pausa)
-  if (ponte.travado) game.rig.setMode('pro');
+  // "só o meu jogador": câmera atrás dele (dá para trocar nas configurações da pausa) e sem o
+  // botão TROCAR (o 3º botão de toque na defesa), já que a troca não existe
+  if (ponte.travado) {
+    game.rig.setMode('pro');
+    const st = document.createElement('style'); st.textContent = '.tc-troca{visibility:hidden!important}'; document.head.appendChild(st);
+  }
   ponte.pronto();
 }
 

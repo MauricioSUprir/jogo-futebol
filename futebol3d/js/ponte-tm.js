@@ -181,6 +181,8 @@ export class PonteTM {
   }
   depois(m) {
     if (this.guardado) { m.userTeam = this.guardado; this.guardado.human = !this.alvo?.sentOff; this.guardado = null; }
+    // só o meu jogador: o botão GOLEIRO (sair com o goleiro) não vale — o goleiro é da IA
+    if (this.alvo && this.alvo !== this.alvo.team.gk) m.userGKRush = false;
     // números do jogo para a nota do jogador e as assistências
     const lt = m.lastTouch;
     if (lt && lt !== this.ultimo) {
