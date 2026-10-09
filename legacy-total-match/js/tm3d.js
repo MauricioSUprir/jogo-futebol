@@ -11,8 +11,10 @@
    uniformes, escudo e os jogadores (11 titulares na ordem do TM + reservas) com atributos,
    posição e aparência. Cada jogador leva o tmId: o resultado volta com quem marcou de verdade.
    O 3D cuida só dos 90 minutos; prorrogação e pênaltis continuam com o Total Match.
-   resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti }],
-                 stats: { possession, shots, onTarget, ... }, jogador?: { tmId, nota, gols } }
+   Os titulares vão com a vaga da prancheta do TM (slot): o 3D põe cada um na posição mais parecida.
+   resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti, contra }],
+                 cartoes: [{ lado, tmId, nome, minuto, cor }], stats: { possession, shots, onTarget },
+                 jogador?: { tmId, nota, gols, assist } }   (o lado do 3D está em futebol3d/js/ponte-tm.js)
    Se o 3D não abrir (sem WebGL, sem internet para o three.js), a partida é simulada. */
 (function (global) {
   "use strict";
@@ -39,6 +41,10 @@
   function dist(a, b) { var x = rgb(a), y = rgb(b); return Math.sqrt(Math.pow(x[0] - y[0], 2) + Math.pow(x[1] - y[1], 2) + Math.pow(x[2] - y[2], 2)); }
   function tom(h, f) { var c = rgb(h).map(function (v) { return Math.max(0, Math.min(255, Math.round(f < 0 ? v * (1 + f) : v + (255 - v) * f))); }); return "#" + c.map(function (v) { return (v < 16 ? "0" : "") + v.toString(16); }).join(""); }
   function contraste(h) { return lum(h) > 0.55 ? "#111111" : "#ffffff"; }
+  // mesmo clarear/escurecer dos uniformes do TM (placeholders.js)
+  function soma(h, d) { var c = rgb(h).map(function (v) { v = Math.max(0, Math.min(255, Math.round(v + d))); return (v < 16 ? "0" : "") + v.toString(16); }); return "#" + c.join(""); }
+  function clareia(h, pct) { return soma(h, Math.round(255 * pct / 100)); }
+  function escurece(h, pct) { return soma(h, -Math.round(255 * pct / 100)); }
 
   /* ---------- preferência (Config) ---------- */
   function preferencia() { try { return TM.storage.settings().partidas3d || "perguntar"; } catch (e) { return "perguntar"; } }
@@ -74,58 +80,91 @@
     return { skin: PELES[si], hair: escolhe(estilos, r), hairColor: hc, height: Math.round(alt * 100) / 100,
              build: Math.max(0, Math.min(1, (imc - 20) / 6)), beard: r() < 0.3 };
   }
-  function jogador3d(p, i) {
+  function jogador3d(p, i, vaga) {
     var r = sorteio(hash("pe" + p.id)), a = p.attrs || {};
     var pos = POS_3D[p.pos2] || POS_SETOR[p.pos] || "MC", gol = p.pos === "GK";
     var esq = /^(LE|PE|ME)$/.test(pos) ? r() < 0.75 : r() < 0.2;
     var nota = p.overall || 60;
-    return {
+    var j = {
       tmId: p.id, name: nomeCurto(p.name), nomeCompleto: p.name, num: p.number || (i + 1), pos: pos,
       attrs: { pac: a.pac || nota, sho: a.sho || nota, pas: a.pas || nota, dri: a.dri || nota, def: a.def || nota, phy: a.phy || nota,
-               gk: gol ? Math.round(((a.def || nota) + (a.phy || nota) + (a.dri || nota)) / 3) : 8 + Math.floor(r() * 14) },
+               gk: gol ? nota : 8 + Math.floor(r() * 14) },
       overall: nota, foot: esq ? "E" : "D", look: aparencia(p)
     };
+    if (vaga) j.slot = [vaga[0], vaga[1], vaga[2]];   // vaga na prancheta do TM: o 3D põe cada um no lugar mais parecido
+    return j;
   }
-  function kit(shirt, sleeves, shorts, socks, pattern, second, trim, number) {
+  // 11 titulares (na ordem das vagas da formação) + reservas. Time sem escalação montada
+  // (adversário da carreira vem ordenado por nota) passa pelo montador de escalação do TM.
+  function escalacao(time, formacao) {
+    var ps = (time.players || []).filter(Boolean);
+    var F = (TM.comp && TM.comp.FORMATIONS) || {};
+    var xi = ps.slice(0, 11);
+    var gols = xi.filter(function (p) { return p.pos === "GK"; }).length;
+    var pronta = !!F[formacao] && xi.length === 11 && gols === 1 && xi[0].pos === "GK";
+    if (!pronta && TM.comp && TM.comp.buildBestLineup && ps.length >= 11) {
+      var lu = TM.comp.buildBestLineup(ps, F[formacao] ? formacao : "auto");
+      var porId = {}; ps.forEach(function (p) { porId[p.id] = p; });
+      var tit = lu.starters.map(function (id) { return porId[id]; }).filter(Boolean), usado = {};
+      tit.forEach(function (p) { usado[p.id] = 1; });
+      ps = tit.concat(ps.filter(function (p) { return !usado[p.id]; }));
+      formacao = lu.formation;
+    }
+    if (!F[formacao]) formacao = "4-4-2";
+    return { players: ps, formacao: formacao, vagas: F[formacao] || [] };
+  }
+  function kit(shirt, sleeves, shorts, socks, pattern, second, trim, number, collar) {
     return { shirt: shirt, sleeves: sleeves, shorts: shorts, socks: socks, pattern: pattern, second: second, trim: trim, number: number,
-             collar: "crew", sponsor: "TOTAL MATCH", sponsorColor: number };
+             collar: collar || "crew", sponsor: "TOTAL MATCH", sponsorColor: number };
+  }
+  // os mesmos 3 uniformes que o TM desenha (placeholders.js kit): cores, padrão e gola pelo clube
+  var PADRAO_TM = ["plain", "stripes", "halves", "sash", "hoops", "plain"];
+  function uniformeTM(chave, p1, p2, v) {
+    var p, s, semente;
+    if (v === 1) { p = p2; s = p1; semente = "away"; }
+    else if (v === 2) { p = lum(p1) < 0.28 ? clareia(p2, 26) : escurece(p1, 48); s = lum(p) < 0.32 ? clareia(p2, 22) : escurece(p1, 24); semente = "third"; }
+    else { p = p1; s = p2; semente = "home"; }
+    var h = hash(chave + semente);
+    var calcao = dist(s, p) > 70 ? s : contraste(p);
+    return kit(p, s, calcao, p, PADRAO_TM[h % 6], s, s, contraste(p), ((h >>> 4) % 2 === 0) ? "v" : "crew");
   }
   function goleiroLonge(cores, r) {
     var ops = GOLEIRO.filter(function (c) { return cores.every(function (x) { return dist(c, x) > 120; }); });
     return escolhe(ops.length ? ops : GOLEIRO, r);
   }
-  /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, formation? }) */
+  /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, colors?, kitVariant? }) */
   function time3d(time, formacao) {
     var clube = time.club || null, nac = time.nation || null;
     var base = clube || nac || {};
-    var r = sorteio(hash("time" + (base.id || time.id || time.name)));
+    var chave = base.id || base.name || time.id || time.name;
+    var r = sorteio(hash("time" + chave));
     var cores = time.colors || base.colors || null;      // times do Ultimate trazem a cor do escudo
     var p1 = (cores && cores.primary) || escolhe(["#1e6fd9", "#d62828", "#2a9d5c", "#f5a524", "#6a4c93"], r);
     var p2 = (cores && cores.secondary) || "#ffffff";
     if (dist(p1, p2) < 60) p2 = lum(p1) > 0.5 ? "#111111" : "#ffffff";
-    var shorts = dist(p2, p1) > 90 ? p2 : (lum(p1) > 0.5 ? "#111111" : "#ffffff");
-    var padrao = escolhe(["plain", "plain", "plain", "stripes", "hoops", "halves", "sash"], r);
-    var foraCor = lum(p2) > 0.8 || dist(p2, p1) > 120 ? p2 : (lum(p1) > 0.5 ? "#1a1a1a" : "#f4f4f4");
-    var gk1 = goleiroLonge([p1, p2, foraCor], r), gk2 = goleiroLonge([p1, p2, foraCor, gk1], r);
+    var casa = uniformeTM(chave, p1, p2, 0), fora = uniformeTM(chave, p1, p2, 1), terceiro = uniformeTM(chave, p1, p2, 2);
+    var gk1 = goleiroLonge([p1, p2, terceiro.shirt], r), gk2 = goleiroLonge([p1, p2, terceiro.shirt, gk1], r);
     var sigla = (base.short || time.short || String(time.name || "TME").replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3)).toUpperCase().slice(0, 3);
-    var jogs = (time.players || []).slice(0, 18).map(jogador3d);
+    var esc = escalacao(time, formacao || time.formation);
+    var jogs = esc.players.slice(0, 18).map(function (p, i) { return jogador3d(p, i, i < 11 ? esc.vagas[i] : null); });
     var xi = jogs.slice(0, 11), nota = xi.length ? Math.round(xi.reduce(function (s, p) { return s + p.overall; }, 0) / xi.length) : 70;
     var estadio = null; try { estadio = clube && TM.data.stadium ? TM.data.stadium(clube).name : null; } catch (e) {}
-    var id = "tm_" + String(base.id || time.id || hash(time.name)).replace(/[^a-zA-Z0-9_-]/g, "");
+    var id = "tm_" + String(chave || hash(time.name)).replace(/[^a-zA-Z0-9_-]/g, "");
+    var kv = time.kitVariant;
     return {
       id: id, name: time.name, short: sigla, city: "", nickname: "", stadium: estadio || ("Arena " + time.name),
-      formation: FORM_3D[formacao || time.formation] || "4-4-2", formacaoTM: formacao || time.formation || "4-4-2",
+      formation: FORM_3D[esc.formacao] || "4-4-2", formacaoTM: esc.formacao,
       rating: nota, style: { press: 0.5, width: 0.5, tempo: 0.5, directness: 0.5 },
-      colors: { primary: p1, secondary: p2 }, collar: "crew", sponsor: "TOTAL MATCH",
+      colors: { primary: p1, secondary: p2 }, collar: casa.collar, sponsor: "TOTAL MATCH",
       crest: { shape: escolhe(FORMAS, r), motif: escolhe(MOTIVOS, r), emblem: escolhe(EMBLEMAS, r), metal: r() < 0.5 ? "gold" : "silver",
                stars: 0, initials: sigla, field: p1, motifColor: p2, disc: tom(p1, -0.45), ink: contraste(p1), accent: p2,
                chief: tom(p1, -0.45), chiefText: "#ffffff", ribbon: tom(p1, -0.45), ribbonText: "#ffffff" },
       kits: {
-        home: kit(p1, p1, shorts, p1, padrao, p2, p2, contraste(p1)),
-        away: kit(foraCor, foraCor, dist(foraCor, p1) > 90 ? p1 : contraste(foraCor), foraCor, "plain", p1, p1, contraste(foraCor)),
+        home: casa, away: fora, third: terceiro,
         gk: kit(gk1, gk1, gk1, gk1, "plain", contraste(gk1), contraste(gk1), contraste(gk1)),
         gkAway: kit(gk2, gk2, gk2, gk2, "plain", contraste(gk2), contraste(gk2), contraste(gk2))
       },
+      kitEscolhido: (kv === 0 || kv === 1 || kv === 2) ? kv : null,
       players: jogs, tm: true
     };
   }
@@ -137,19 +176,31 @@
     for (var j = 0; j < ps.length; j++) if (nomeCurto(ps[j].name) === g.nome || ps[j].name === g.nome) return ps[j];
     return null;
   }
+  function minuto(m) { return Math.max(1, Math.min(90, Math.round(m || 1))); }
   function aplicaResultado(result, r3, teamA, teamB) {
     var gols = (r3.gols || []).slice().sort(function (a, b) { return (a.minuto || 0) - (b.minuto || 0); });
-    var placar = [0, 0], ev = [];
+    var placar = [0, 0], ev = [], expulsos = [];
     gols.forEach(function (g) {
-      var lado = g.lado === 1 ? 1 : 0, t = lado === 0 ? teamA : teamB, pl = achaJogador(t, g);
+      var lado = g.lado === 1 ? 1 : 0, t = lado === 0 ? teamA : teamB;
+      // gol contra: o autor é do outro time e não conta como gol dele
+      var pl = g.contra ? null : achaJogador(t, g);
+      var autor = g.contra ? achaJogador(lado === 0 ? teamB : teamA, g) : null;
       placar[lado]++;
-      var quem = pl ? pl.name : (g.nome || "Jogador");
-      ev.push({ minute: Math.max(1, Math.min(90, Math.round(g.minuto || 1))), type: g.penalti ? "pengoal" : "goal", team: lado,
+      var quem = pl ? pl.name : g.contra ? (autor ? autor.name : (g.nome || "Jogador")) + " (contra)" : (g.nome || "Jogador");
+      ev.push({ minute: minuto(g.minuto), type: g.penalti ? "pengoal" : "goal", team: lado,
                 player: quem, playerId: pl ? pl.id : null, score: placar.slice(),
-                text: (g.penalti ? "PÊNALTI CONVERTIDO! " : "GOL! ") + quem + " marca para o " + t.name + "." });
+                text: g.contra ? "GOL CONTRA! " + quem.replace(" (contra)", "") + " desvia para o próprio gol. Ponto para o " + t.name + "."
+                  : (g.penalti ? "PÊNALTI CONVERTIDO! " : "GOL! ") + quem + " marca para o " + t.name + "." });
+    });
+    (r3.cartoes || []).forEach(function (c) {
+      var lado = c.lado === 1 ? 1 : 0, t = lado === 0 ? teamA : teamB, pl = achaJogador(t, c);
+      var quem = pl ? pl.name : (c.nome || "Jogador"), verm = c.cor === "red";
+      ev.push({ minute: minuto(c.minuto), type: verm ? "red" : "yellow", team: lado, player: quem, playerId: pl ? pl.id : null,
+                text: (verm ? "Expulso: " : "Amarelo para ") + quem + " (" + t.name + ")" });
+      if (verm) expulsos.push({ id: pl ? pl.id : null, name: quem, side: lado, minute: minuto(c.minuto) });
     });
     var h = r3.homeGoals != null ? r3.homeGoals : placar[0], a = r3.awayGoals != null ? r3.awayGoals : placar[1];
-    var meio = ev.filter(function (e) { return e.minute <= 45; });
+    var meio = ev.filter(function (e) { return e.minute <= 45 && (e.type === "goal" || e.type === "pengoal"); });
     var intervalo = [meio.filter(function (e) { return e.team === 0; }).length, meio.filter(function (e) { return e.team === 1; }).length];
     ev.push({ minute: 45, type: "half", score: intervalo, text: "Fim do 1º tempo" });
     ev.sort(function (x, y) { return x.minute - y.minute || (x.type === "half" ? 1 : 0) - (y.type === "half" ? 1 : 0); });
@@ -162,10 +213,10 @@
       shots: st.shots || [Math.max(h, 1) + 4, Math.max(a, 1) + 4],
       onTarget: st.onTarget || [h + 1, a + 1]
     };
-    result.injuries = []; result.sentOff = [];
+    result.injuries = []; result.sentOff = expulsos;
     result.em3d = true;
     if (result.focus && r3.jogador) {
-      result.focus = { goals: r3.jogador.gols || 0, rating: r3.jogador.nota || result.focus.rating, injured: false };
+      result.focus = { goals: r3.jogador.gols || 0, rating: r3.jogador.nota || result.focus.rating, injured: false, assists: r3.jogador.assist || 0 };
     }
     return result;
   }
@@ -249,14 +300,24 @@
      cfg = o mesmo cfg do TM.matchview.play (teamA, teamB, result, pauseSide, formation,
      formationB, title, controle?). Ao fim, o result vira o do 3D e a tela de jogo do TM
      mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo. */
-  function jogarCfg(screen, cfg, playOrig) {
-    var lado = cfg.pauseSide === 1 ? "away" : "home";
-    var pedido = {
+  function novoPedido(o) {
+    return {
       v: 1, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
-      titulo: cfg.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
-      home: time3d(cfg.teamA, cfg.formation), away: time3d(cfg.teamB, cfg.formationB),
-      userSide: lado, controle: cfg.controle || null
+      titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
+      home: time3d(o.teamA, o.formation), away: time3d(o.teamB, o.formationB),
+      userSide: o.userSide === 1 ? "away" : "home", controle: o.controle || null
     };
+  }
+  /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
+     o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title }
+     fns.fim(resultado3d) | fns.sair() (voltou sem jogar: o modo simula como sempre) */
+  function jogar3d(o, fns) {
+    abre3d(novoPedido(o), { fim: fns.fim, sair: fns.sair,
+      falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); fns.sair(); } });
+  }
+  function jogarCfg(screen, cfg, playOrig) {
+    var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
+      userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title });
     abre3d(pedido, {
       fim: function (r3) {
         aplicaResultado(cfg.result, r3, cfg.teamA, cfg.teamB);
@@ -292,6 +353,8 @@
   api.time3d = time3d;
   api.aplicaResultado = aplicaResultado;
   api.jogarCfg = jogarCfg;
+  api.jogar3d = jogar3d;
+  api.escolha = escolha;
   api.fechar = fecha3d;
   TM.tm3d = api;
 })(window);

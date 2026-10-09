@@ -40,6 +40,9 @@ self.addEventListener("fetch", function (e) {
   var url = new URL(req.url);
   // só cuidamos do próprio site; Firebase/CDNs seguem direto pela rede
   if (url.origin !== self.location.origin) return;
+  // o motor 3D (futebol3d/) vai direto pela rede: arquivos grandes (corpo, rostos, captura de
+  // movimento) que não cabem no cache e que, sem internet, não servem (o three.js vem de CDN)
+  if (url.pathname.indexOf("/futebol3d/") >= 0) return;
 
   // Rede primeiro (fresco quando online); cache como reserva offline.
   e.respondWith(

@@ -2,13 +2,18 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<script>
+// Este 3D é o motor das partidas do Total Match: sem pedido de partida (?tm=), o endereço leva
+// ao jogo. ?golaco abre o menu antigo (desenvolvimento); os testes automatizados também o usam.
+(function () { if (!/[?&](tm|golaco)\b/.test(location.search) && !navigator.webdriver) location.replace('../index.html'); })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#070b16">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="screen-orientation" content="landscape">
-<title>GOLAÇO</title>
-<meta name="description" content="Futebol 3D no navegador: 11 contra 11, física real da bola, times fictícios, Copa e Liga.">
+<title>Total Match 3D</title>
+<meta name="description" content="Partidas do Total Match em 3D: 11 contra 11, física real da bola, estádio e torcida.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/menus.css">
@@ -27,13 +32,13 @@
 <div id="hud" class="hidden" aria-live="polite"></div>
 <div id="touch" class="hidden"></div>
 <div id="ui"></div>
-<div id="rotate" aria-hidden="true"><div><b>Gire o celular</b><span>O GOLAÇO é jogado na horizontal</span></div></div>
+<div id="rotate" aria-hidden="true"><div><b>Gire o celular</b><span>A partida 3D é jogada na horizontal</span></div></div>
 <div id="loading" class="screen">
-  <div class="ld-brand">GOLAÇO</div>
+  <div class="ld-brand" style="font-size:clamp(2.6em, 8vw, 5em)">TOTAL MATCH</div>
   <div class="ld-bar"><i></i></div>
   <p id="load-text">Carregando…</p>
 </div>
-<noscript>O GOLAÇO precisa de JavaScript e WebGL.</noscript>
+<noscript>O Total Match 3D precisa de JavaScript e WebGL.</noscript>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

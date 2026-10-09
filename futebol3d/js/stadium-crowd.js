@@ -8,7 +8,7 @@
 // analítica da cobertura (ROOF_GLSL). Inclui cachecóis e bandeiras tremulando.
 import * as THREE from 'three';
 import { BOWL, ROOF_GLSL, crowdSeats } from './stadium-bowl.js';
-import { TEAMS } from './teams.js';
+import { allTeams } from './teams.js';
 import { buildBodyGeometry, buildScarfGeometry, triCount } from './stadium-crowd-body.js';
 import {
   BODY_VERT_HEAD, BODY_VERT_MAIN, SCARF_VERT_HEAD, SCARF_VERT_MAIN, FRAG_HEAD, FRAG_COLOR,
@@ -52,11 +52,11 @@ const hex = (h) => new THREE.Color(h).getHSL({ h: 0, s: 0, l: 0 });
 const lum = (h) => { const c = new THREE.Color(h); return 0.3 * c.r + 0.59 * c.g + 0.11 * c.b; };
 const PAT = { plain: 0, stripes: 1, hoops: 2, halves: 3, sash: 4, pinstripe: 5 };
 
-// Descobre o clube pela cor da camisa (times fictícios de teams.js) para vestir a
+// Descobre o clube pela cor da camisa (times de teams.js, inclusive os do Total Match) para vestir a
 // torcida com as cores certas; se não achar, deriva uma segunda cor.
 function clubPalette(color) {
   const c = String(color).toLowerCase();
-  for (const t of TEAMS) {
+  for (const t of allTeams()) {
     for (const k of ['home', 'away']) {
       const kit = t.kits[k];
       if (kit.shirt.toLowerCase() === c) {
