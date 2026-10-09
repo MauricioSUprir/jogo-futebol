@@ -56,6 +56,14 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 - Desempenho: jogadores e torcida instanciados; poucos draw calls; qualidade `baixa` tem
   que rodar em celular médio.
 - Pasta `tools/` não vai para o site.
+- **É o motor 3D do Total Match** (dono, 09/10: "juntar tudo no Total Match"; o menu e os 8 clubes não aparecem mais
+  ao público): o TM abre `futebol3d/index.html?tm=<id>` num quadro e o resultado volta para ele (`js/ponte-tm.js`; lado
+  do TM em `legacy-total-match/js/tm3d.js`). **Sem `?tm` o endereço leva ao Total Match** — para abrir o menu antigo
+  (desenvolvimento, links de teste para o dono) use `futebol3d/index.html?golaco`; os testes automatizados (navigator.webdriver)
+  continuam abrindo o menu. Na partida do TM: titulares encaixados nas vagas pela prancheta do TM (método húngaro),
+  times de fora por `teams.js` registerTeam, pausa com "Simular o resto" (sem Reiniciar/Sair) e "Controlar só o meu
+  jogador" (Rumo ao Estrelato: troca bloqueada, câmera Pro, bola parada/goleiro com a IA). Mexeu em main.js/menus.js/
+  teams.js? Rodar também `node legacy-total-match/ferramentas/testar-3d.mjs` (TM + 3D de ponta a ponta).
 
 - Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
   retratos por IA em `tools/rostos/brutos/gNN.png` + banco SFHQ CC0) projetadas na cabeça escaneada
@@ -182,6 +190,14 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   (7 larguras; tem que dar 0).
 - Antes de publicar: `python3 ferramentas/conferir-estilos.py` (botão sem estilo = visual padrão do
   navegador) e versão nova em `index.html` (`?v=NNN`) + `sw.js` (`total-match-vNNN`).
+- **Partidas em 3D** (`js/tm3d.js`; dono, 09/10: o GOLAÇO vira o motor 3D do TM, tudo num jogo só): antes de toda
+  partida do seu time (matchview com `pauseSide`) aparece Jogar em 3D / Simular (Config → "Partidas do seu time":
+  Perguntar / Sempre 3D / Sempre simular). O 3D (`futebol3d/`, mesmo site e mesmo localStorage) recebe os dois times
+  com 18 jogadores, a vaga de cada titular na prancheta, os uniformes do TM (inclusive o do pré-jogo da carreira) e
+  devolve placar, gols (autor, minuto, pênalti, contra), cartões e estatísticas, aplicados no MESMO `result` — o modo
+  segue o fluxo normal (pênaltis/prorrogação continuam no TM). Rumo ao Estrelato: titular joga controlando só o
+  próprio jogador (`rae.js` preparaPartida/timesDaPartida; nota, gols e assistências vêm do 3D). O service worker não
+  guarda nada de `futebol3d/`. Teste de ponta a ponta: `node ferramentas/testar-3d.mjs` (como montar o site no topo do arquivo).
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

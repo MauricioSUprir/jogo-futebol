@@ -226,7 +226,15 @@ async function iniciarTM() {
   ponte = new PonteTM(TM_ID, pedido);
   menusEmJogo();
   $('load-text').textContent = 'Preparando a partida…';
-  await startMatch(montaCfg(pedido, settings));
+  try { await startMatch(montaCfg(pedido, settings)); }
+  catch (e) {
+    // sem 3D neste aparelho (WebGL, memória, arquivo que não baixou): o TM simula a partida
+    console.warn('partida 3D não abriu', e);
+    $('loading').classList.remove('hidden');
+    $('load-text').textContent = 'O 3D não abriu neste aparelho. Voltando ao Total Match…';
+    setTimeout(() => ponte.sair(), 1200);
+    return;
+  }
   if (!game) return;
   ponte.inicio(game.match);
   // "só o meu jogador": câmera atrás dele (dá para trocar nas configurações da pausa)
@@ -339,7 +347,7 @@ function endGame(silent) {
 
 function togglePause() {
   const g = game;
-  if (!g || g.match.phase === 'ended') return;
+  if (!g || g.match.phase === 'ended' || g.turbo) return;
   if (g.paused) { resume(); return; }
   g.paused = true;
   audio.suspend();
@@ -555,6 +563,7 @@ function endMatch(g, result) {
   audio.chant(false); audio.chantSectors(null);
   if (ponte) {
     // partida do Total Match: o resultado volta para o TM, que fecha este quadro
+    if (g.turbo) { g.turbo = false; g.paused = true; }
     ponte.fim(g.match, result);
     setTimeout(() => {
       endGame(true);

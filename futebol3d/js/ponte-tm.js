@@ -69,6 +69,13 @@ function ondeJoga(p) {
 export function encaixa(jogadores, formacao) {
   const vagas = FORMATIONS[formacao] || FORMATIONS['4-4-2'];
   const xi = jogadores.slice(0, 11), banco = jogadores.slice(11);
+  // elenco curto (lesões, time do Ultimate sem banco): completa com reservas genéricos
+  for (let k = 0; xi.length < 11; k++) {
+    const base = xi[xi.length - 1] || {};
+    xi.push({ name: 'Reserva ' + (k + 1), num: 90 + k, pos: 'MC', foot: 'D', overall: base.overall || 55,
+      attrs: { pac: 55, sho: 50, pas: 55, dri: 52, def: 50, phy: 55, gk: 10 },
+      look: base.look || { skin: '#c99169', hair: 'short', hairColor: '#15110e', height: 1.78, build: 0.5, beard: false } });
+  }
   const onde = xi.map(ondeJoga);
   let gi = onde.findIndex(o => o.grupo === 'GK');
   if (gi < 0) gi = xi.findIndex(p => p.pos === 'GOL');
