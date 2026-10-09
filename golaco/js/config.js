@@ -97,6 +97,8 @@ export const JOGADOR = {
   latCorte: 11.0,             // no passo do corte (agilidade 75)
   angCorte: 0.75,             // rad — acima disso o pedido é um corte
   angInversao: 1.95,          // rad (~112°) — acima disso freia na linha antes de virar
+  angInversaoEixo: 2.3,       // rad (~132°) — invertendo, acima disso também tira a velocidade de
+                              // lado em relação ao eixo pedido (analógico que passou pela borda)
   vGiroLivre: 1.2,            // abaixo desta velocidade o corpo vira em qualquer direção
   tauVel: 0.18,               // s — constante de tempo do controle de velocidade
   // Giro do corpo (para onde o tronco aponta).
@@ -169,7 +171,7 @@ export const CONDUCAO = {
   pedaladaDuracao: 0.42,      // s
   pedaladaToqueDuplo: 0.3,    // s — dois toques no modificador dentro disso
   // Puxada de sola.
-  puxadaVel: 2.4,             // m/s da bola puxada para trás
+  puxadaVel: 1.6,             // m/s da bola puxada para trás (no chão; o corpo freia junto)
 };
 
 // Entrada.

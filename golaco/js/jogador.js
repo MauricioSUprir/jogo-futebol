@@ -122,6 +122,13 @@ export function passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt, comBola = false) {
       k.inv = true;
       ax = -par.freioGiro * hx;
       az = -par.freioGiro * hz;
+      if (ath > JOGADOR.angInversaoEixo) {
+        // pedido perto de 180°: tira também a velocidade de lado em relação ao eixo pedido
+        // (a que sobrou do analógico passando pela borda), para frear na linha pedida
+        const pv = -dz * k.vx + dx * k.vz;
+        const lf = clamp(-pv / tau, -par.latCorte, par.latCorte);
+        ax += -lf * dz; az += lf * dx;
+      }
     } else {
       k.inv = false;
       let along = (vel * c - s) / tau;

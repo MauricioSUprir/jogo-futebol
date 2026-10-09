@@ -11,6 +11,7 @@
 //   longeDesde  tick em que a bola ficou longe (perda)
 //   pedalada {tick0, lado} | null
 //   semDominioAte  tick até o qual não domina (acabou de ter a bola roubada)
+//   puxada  {tick0, rumo} | null — puxada de sola em andamento (ult.tipo === 'sola')
 
 import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
@@ -25,7 +26,7 @@ const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analó
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, semDominioAte: -1 };
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */
@@ -170,7 +171,10 @@ export function preverCorpo(m, j, n, comBola, prot, rec) {
       ctx.bola = { x: pbProt.xs[i - 1], z: pbProt.zs[i - 1] };
     } else ctx.marcador = null;
     const mv = movimentoBase(j, ix, iz, j.imag, j.botoes, comBola, k.rumo, ctx);
-    if (i <= reto && s0 > 1) { mv.dx = MD.cos(rv0); mv.dz = MD.sin(rv0); mv.vel = Math.min(mv.vel, s0); }
+    if (i <= reto && s0 > 1) {
+      const rc = rumosCorte(j.cond.corteRumo ?? rv0, MD.atan2(iz, ix), mv.rumoAlvo);
+      mv.dx = MD.cos(rc.dir); mv.dz = MD.sin(rc.dir); mv.vel = Math.min(mv.vel, s0); mv.rumoAlvo = rc.tronco;
+    }
     if (rec) { mv.vel = Math.min(mv.vel, VEL_RECEPCAO); mv.rumoAlvo = MD.atan2(rec.zs[i] - k.z, rec.xs[i] - k.x); }
     passoCorpo(k, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, DT, comBola);
     const s = MD.hypot(k.vx, k.vz);
@@ -355,7 +359,7 @@ function semUltrapassar(b, plano, pc) {
 
 /**
  * Executa o toque agora (tick atual, antes de integrar a bola). Planeja o próximo.
- * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao'
+ * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao' (a puxada de sola é executarPuxada)
  */
 export function executarToque(m, j, pe, tipo) {
   const c = j.cond;
@@ -423,7 +427,20 @@ export function executarToque(m, j, pe, tipo) {
   if (m.log) m.log.push({ t: m.tick, id: j.id, pe, tipo, bx: b.p.x, bz: b.p.z, dx: ddx, dz: ddz, v: v0, ir: j.intRumo, s: sAgora, apoio: j.pes[apoio].apoio });
 }
 
-const CORTE_MAX = 5; // ticks (0,083 s) no máximo segurando o rumo à espera do toque
+const CORTE_MAX = 15; // ticks (0,25 s) no máximo segurando o rumo à espera do toque
+// Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a
+// velocidade até CORTE_DESVIO do rumo em que estava; o tronco até CORTE_TRONCO): responde ao
+// comando sem tirar a bola do alcance do pé.
+const CORTE_DESVIO = 0.2;  // rad (~11°)
+const CORTE_TRONCO = 0.6;  // rad (~34°)
+
+/** Direção (rad) e rumo do tronco segurando o corte a partir do rumo da corrida rc. */
+function rumosCorte(rc, aPed, rumoAlvo) {
+  return {
+    dir: rc + clamp(difAng(rc, aPed), -CORTE_DESVIO, CORTE_DESVIO),
+    tronco: rc + clamp(difAng(rc, rumoAlvo), -CORTE_TRONCO, CORTE_TRONCO),
+  };
+}
 
 export function ticksCorteRestantes(c, tick) {
   if (c.cortePendente == null) return 0;
@@ -481,6 +498,17 @@ export function controlarComBola(m, j) {
   const c = j.cond;
   const b = m.bola;
   const prot = emProtecao(m, j);
+  // puxada de sola em andamento: a bola volta rolando por baixo/ao lado do corpo; o próximo
+  // toque só é procurado depois (o corpo ainda está de frente para o lado antigo)
+  if (c.puxada && m.tick - c.puxada.tick0 < PUXADA_TRONCO) return;
+  if (c.puxada && m.tick - c.puxada.tick0 >= PUXADA_TRONCO + 20) c.puxada = null;
+  if (!c.puxada && !prot && puxadaPedida(j) && noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y)) {
+    // PUXADA DE SOLA: modificador + analógico para trás. A sola do pé do lado da bola puxa a
+    // bola para onde o analógico manda, com o outro pé no chão (senão espera o apoio)
+    const pe = ladoDaBola(j.x, j.z, j.rumo, b.p.x, b.p.z);
+    if (j.pes[1 - pe].apoio) { executarPuxada(m, j, pe); return; }
+    if (j.pes[pe].apoio) { executarPuxada(m, j, 1 - pe); return; }
+  }
   // toque marcado para agora
   if (c.toque && m.tick >= c.toque.tick) {
     const pe = c.toque.pe, apoio = 1 - pe;
@@ -503,7 +531,7 @@ export function controlarComBola(m, j) {
     const s = MD.hypot(j.vx, j.vz);
     const ab = MD.atan2(m.bola.v.z, m.bola.v.x);
     const d = Math.abs(difAng(ab, j.intRumo));
-    if (s > 2.5 && d > 0.6 && d < 1.92) c.cortePendente = m.tick;
+    if (s > 2.5 && d > 0.6 && d < 1.92) { c.cortePendente = m.tick; c.corteRumo = MD.atan2(j.vz, j.vx); }
   }
   const lead = grande ? 2 : Math.round(0.067 / DT);
   const op = procurarOportunidade(m, j, lead, 45, true, prot, false);
@@ -531,17 +559,54 @@ function toqueMarcadoViavel(m, j, prot) {
   return noAlcance(pc.xs[n], pc.zs[n], pc.rs[n], pb.xs[n], pb.zs[n], pb.ys[n]);
 }
 
+// ------------------------------------------------------------ puxada de sola
+const PUXADA_ANG = 2.1;      // rad (~120°) — analógico para trás em relação ao tronco
+const PUXADA_TRONCO = 12;    // ticks (0,2 s) — o tronco segura o rumo enquanto a bola volta
+
+/** Modificador segurado e o analógico pedindo para trás (fora da pedalada)? */
+function puxadaPedida(j) {
+  if (!temBotao(j, BOTAO.MOD) || !(j.imag > 0.3) || (j.cond && j.cond.pedalada)) return false;
+  return Math.abs(difAng(j.rumo, MD.atan2(j.iz, j.ix))) > PUXADA_ANG;
+}
+
+/**
+ * Puxada de sola: o pé passa por cima da bola e a puxa para onde o analógico manda (para trás
+ * ou para trás e de lado) a CONDUCAO.puxadaVel, com o tronco ainda de frente para o lado antigo;
+ * depois o corpo vira e vai com a bola (o próximo toque é planejado normalmente).
+ */
+export function executarPuxada(m, j, pe) {
+  const c = j.cond;
+  const b = m.bola;
+  const ea = normal(m.rng) * lerp(CONDUCAO.erroAngRuim, CONDUCAO.erroAngBase, j.par.attr.drible / 100);
+  const a = MD.atan2(j.iz, j.ix) + ea;
+  const dx = MD.cos(a), dz = MD.sin(a), v = CONDUCAO.puxadaVel;
+  chutarRasteiro(b, dx * v, dz * v);
+  c.ult = { tick: m.tick, pe, bx: b.p.x, bz: b.p.z, dx, dz, v, tipo: 'sola' };
+  c.toque = null; c.ref = null; c.busca = false; c.longeDesde = -1; c.cortePendente = null;
+  c.puxada = { tick0: m.tick, rumo: j.rumo };
+  c.nToques++;
+  m.posse = j.id;
+  m.eventos.push({ tipo: 'toque', id: j.id, pe, modo: 'sola', v });
+  if (m.log) m.log.push({ t: m.tick, id: j.id, pe, tipo: 'sola', bx: b.p.x, bz: b.p.z, dx, dz, v, ir: j.intRumo, s: MD.hypot(j.vx, j.vz), apoio: j.pes[1 - pe].apoio, rumo: j.rumo });
+}
+
 /** Movimento do corpo do jogador com a posse neste tick. */
 export function movimentoComBola(m, j) {
   const c = j.cond;
   const prot = emProtecao(m, j);
   const ctx = prot ? { marcador: prot, corpoX: j.x, corpoZ: j.z, bola: m.bola.p, pedalada: !!c.pedalada } : { pedalada: !!c.pedalada };
   const base = movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, true, j.rumo, ctx);
+  // puxada de sola: o corpo freia de frente para o lado antigo enquanto a bola volta (e
+  // também enquanto espera o pé de apoio pisar para puxar)
+  if (c.puxada && m.tick - c.puxada.tick0 < PUXADA_TRONCO) return { dx: base.dx, dz: base.dz, vel: 0, rumoAlvo: c.puxada.rumo };
+  if (!c.puxada && !prot && puxadaPedida(j) && noAlcance(j.x, j.z, j.rumo, m.bola.p.x, m.bola.p.z, m.bola.p.y)) {
+    return { dx: base.dx, dz: base.dz, vel: 0, rumoAlvo: j.rumo };
+  }
   if (ticksCorteRestantes(c, m.tick) > 0 && !c.busca) {
     const s = MD.hypot(j.vx, j.vz);
     if (s > 1) {
-      const rv = MD.atan2(j.vz, j.vx);
-      return { dx: MD.cos(rv), dz: MD.sin(rv), vel: Math.min(base.vel, s), rumoAlvo: base.rumoAlvo };
+      const rc = rumosCorte(c.corteRumo ?? MD.atan2(j.vz, j.vx), MD.atan2(j.iz, j.ix), base.rumoAlvo);
+      return { dx: MD.cos(rc.dir), dz: MD.sin(rc.dir), vel: Math.min(base.vel, s), rumoAlvo: rc.tronco };
     }
   }
   // com um toque marcado, o corpo faz o que o analógico pede (o toque já foi planejado para
