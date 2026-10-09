@@ -3,23 +3,39 @@
 import { BOTAO, PASSO, CAMPO } from '../../js/config.js';
 import { criarRng, entre, uniforme } from '../../js/rng.js';
 
-/** Roteiro sorteado: segmentos de 0,5–2 s com um tipo de comando cada. */
-export function criarRoteiro(semente) {
-  const r = criarRng(semente * 977 + 13);
+/**
+ * Roteiro sorteado: segmentos de 0,5–2 s com um tipo de comando cada. opc.duro: também giros de
+ * 180° de uma vez (correndo e na arrancada) e cortes fortes (69°–115°) em vez de 34°–86°.
+ */
+export function criarRoteiro(semente, opc = {}) {
+  const r = criarRng(semente * 977 + 13 + (opc.duro ? 5003 : 0));
   const segs = [];
   let t = 0, rumo = entre(r, -Math.PI, Math.PI);
   while (t < 60) {
     const u = uniforme(r);
     const dur = entre(r, 0.5, 2);
     let tipo;
-    if (u < 0.22) tipo = 'curva';
+    if (opc.duro) {
+      if (u < 0.16) tipo = 'curva';
+      else if (u < 0.3) tipo = 'zigue';
+      else if (u < 0.44) tipo = 'arrancada';
+      else if (u < 0.52) tipo = 'freia';
+      else if (u < 0.6) tipo = 'curta';
+      else if (u < 0.78) tipo = 'corte';
+      else if (u < 0.92) tipo = 'giro';
+      else tipo = 'trote';
+    } else if (u < 0.22) tipo = 'curva';
     else if (u < 0.42) tipo = 'zigue';
     else if (u < 0.56) tipo = 'arrancada';
     else if (u < 0.66) tipo = 'freia';
     else if (u < 0.78) tipo = 'curta';
     else if (u < 0.88) tipo = 'corte';
     else tipo = 'trote';
-    segs.push({ t0: t, t1: t + dur, tipo, w: entre(r, -2.2, 2.2), lado: uniforme(r) < 0.5 ? -1 : 1, ang: entre(r, 0.6, 1.5) });
+    // (mesma ordem de sorteio do roteiro original: o roteiro normal não muda)
+    const w = entre(r, -2.2, 2.2), lado = uniforme(r) < 0.5 ? -1 : 1;
+    const ang = opc.duro ? entre(r, 1.2, 2.0) : entre(r, 0.6, 1.5);
+    const correr = opc.duro ? uniforme(r) < 0.5 : false;
+    segs.push({ t0: t, t1: t + dur, tipo, w, lado, ang, correr });
     t += dur;
   }
   return { segs, rumo0: rumo };
@@ -40,6 +56,7 @@ export function entrada(rot, t, j) {
     case 'freia': mag = dt < 0.6 ? 0 : 0.5; break;
     case 'curta': r = base + s.w * dt; mag = 0.7; botoes = BOTAO.MOD; break;
     case 'corte': r = base + (dt > 0.3 ? s.lado * s.ang : 0); mag = 1; break;
+    case 'giro': r = base + (dt > 0.4 ? Math.PI : 0); mag = 1; botoes = s.correr ? BOTAO.CORRER : 0; break;
     default: mag = 0.5;
   }
   if (dt > s.t1 - s.t0 - PASSO * 1.5) rot.rumoAtual = r; // o próximo segmento continua daqui

@@ -23,6 +23,7 @@ import { MD } from './matdet.js';
 const DT = PASSO;
 const PROT_INTERVALO = Math.round(0.3 / PASSO); // ticks — toque de proteção mais espaçado
 const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analógico abaixo disso)
+const BUSCA_PEDIDO_MAX = 1.75;       // rad (~100°) — indo buscar a bola, pedido até aqui curva o corpo
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
@@ -387,6 +388,7 @@ export function executarToque(m, j, pe, tipo) {
   const curta = temBotao(j, BOTAO.MOD);
   const H = Math.round(CONDUCAO.horizonte / DT);
   const pc = preverCorpo(m, j, H, true, prot);
+  const sAgora0 = MD.hypot(j.vx, j.vz);
   // um toque por passada; se o corpo for passar a bola no meio do caminho (freada forte),
   // toca a cada passo — como quem freia com a bola
   const dom = tipo === 'dominio';
@@ -401,11 +403,13 @@ export function executarToque(m, j, pe, tipo) {
   }
   if (!semUltrapassar(b, plano, pc)) {
     // nem a cada passo: marca o próximo toque antes do ponto em que o corpo alcançaria a bola.
-    // Se isso cair antes do intervalo mínimo (freada forte, soltou o analógico), marca no
-    // intervalo mínimo e mira à frente de onde o corpo vai estar: a bola sai mais rápida que o
-    // corpo freando (em vez de rolar devagar até o fim da previsão e ser atropelada).
-    const iv = plano.violacao;
-    plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, Math.max(iv, Math.ceil(CONDUCAO.intervaloMin / DT)), dom);
+    // Se isso cair antes do intervalo mínimo FREANDO (soltou o analógico ou pediu bem menos
+    // velocidade), marca no intervalo mínimo e mira à frente de onde o corpo vai estar: a bola
+    // sai mais rápida que o corpo freando (em vez de rolar devagar até o fim da previsão e ser
+    // atropelada). Virando, não: a bola mais forte fugiria do corpo que está fazendo a curva.
+    const iv = plano.violacao, minI = Math.ceil(CONDUCAO.intervaloMin / DT);
+    if (iv > minI) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, iv, dom);
+    else if (velPedida(j, true) < sAgora0 - 1.0) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, minI, dom);
   }
   let { iN, proxPe, tx, tz, dx, dz, dist, tolerancia } = plano;
   const apoio = 1 - pe;
@@ -583,10 +587,12 @@ function toqueMarcadoViavel(m, j, prot) {
 // ------------------------------------------------------------ puxada de sola
 const PUXADA_ANG = 2.1;      // rad (~120°) — analógico para trás em relação ao tronco
 const PUXADA_TRONCO = 12;    // ticks (0,2 s) — o tronco segura o rumo enquanto a bola volta
+const PUXADA_VMAX = 3.0;     // m/s — acima disso não dá para parar puxando a bola com a sola
 
-/** Modificador segurado e o analógico pedindo para trás (fora da pedalada)? */
+/** Modificador segurado, devagar (condução curta) e o analógico pedindo para trás? */
 function puxadaPedida(j) {
   if (!temBotao(j, BOTAO.MOD) || !(j.imag > 0.3) || (j.cond && j.cond.pedalada)) return false;
+  if (j.vx * j.vx + j.vz * j.vz > PUXADA_VMAX * PUXADA_VMAX) return false;
   return Math.abs(difAng(j.rumo, MD.atan2(j.iz, j.ix))) > PUXADA_ANG;
 }
 
@@ -651,17 +657,20 @@ export function movimentoComBola(m, j) {
   const velF = clamp(Math.min(Math.max(base.vel, alcancar), chegar), 0, j.par.vArrancada * 0.95);
   const aBola = MD.atan2(dz, dx);
   if (j.imag > MAG_DIR) {
-    // o pedido fora do corredor (±angBusca em volta da bola) vale até a borda do corredor: o
-    // corpo já começa a ir para o lado pedido enquanto alcança a bola (responde ao comando)
-    let alfa = difAng(MD.atan2(j.iz, j.ix), aBola);
-    if (Math.abs(alfa) > CONDUCAO.angBusca) alfa = Math.sign(alfa) * CONDUCAO.angBusca;
-    const aPed = aBola - alfa;
-    // desvio mínimo: passar com a bola a ≤ 0,3 m de lado
-    const lado = dl * MD.sin(Math.abs(alfa));
-    let beta = 0;
-    if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - MD.asin(Math.min(1, 0.3 / dl)));
-    const r = aPed + beta;
-    return { dx: MD.cos(r), dz: MD.sin(r), vel: velF, rumoAlvo: r };
+    const aPedido = MD.atan2(j.iz, j.ix);
+    // o pedido perto do corredor (até ~100° da bola) vale até a borda do corredor (±angBusca): o
+    // corpo já começa a ir para o lado pedido enquanto alcança a bola
+    let alfa = difAng(aPedido, aBola);
+    if (Math.abs(alfa) <= BUSCA_PEDIDO_MAX) {
+      if (Math.abs(alfa) > CONDUCAO.angBusca) alfa = Math.sign(alfa) * CONDUCAO.angBusca;
+      const aPed = aBola - alfa;
+      // desvio mínimo: passar com a bola a ≤ 0,3 m de lado
+      const lado = dl * MD.sin(Math.abs(alfa));
+      let beta = 0;
+      if (lado > 0.3) beta = Math.sign(alfa) * (Math.abs(alfa) - MD.asin(Math.min(1, 0.3 / dl)));
+      const r = aPed + beta;
+      return { dx: MD.cos(r), dz: MD.sin(r), vel: velF, rumoAlvo: r };
+    }
   }
   return { dx: dx / dl, dz: dz / dl, vel: velF, rumoAlvo: aBola };
 }
