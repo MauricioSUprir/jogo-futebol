@@ -9,7 +9,7 @@ import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
 import { clamp, difAng, quantizar, lerp } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
-  executarToque,
+  executarToque, saidaParaToque, atualizarGesto, peLivre,
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
@@ -282,7 +282,7 @@ export function passo(m, entradas) {
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
-    passoPassada(j, m.posse === j.id, PASSO, null);
+    passoPassada(j, m.posse === j.id, PASSO, null, saidaParaToque(m, j));
   }
   colisaoCorpos(m);
   // 3) ações e controle de bola
@@ -326,6 +326,8 @@ export function passo(m, entradas) {
     if (dono) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
+  // 7) gesto do toque (só visual: o pé desenhado indo até a bola, com velocidade limitada)
+  for (const j of js) if (j.cond) atualizarGesto(m, j);
   m.tick++;
 }
 
@@ -418,7 +420,8 @@ function bolaAltaNoCorpo(m, j) {
     const sobra = lerp(ACOES.dominioAereo.sobra[0], ACOES.dominioAereo.sobra[1], j.par.attr.controle / 100);
     const vRel = MD.hypot(b.v.x - j.vx, b.v.y, b.v.z - j.vz);
     b.v.x = j.vx + (b.v.x - j.vx) * sobra; b.v.z = j.vz + (b.v.z - j.vz) * sobra; b.v.y = 0; b.p.y = 0.11; b.rolando = true;
-    executarToque(m, j, j.par.attr.pePreferido, 'dominio');
+    const peD = peLivre(j, j.par.attr.pePreferido, true);
+    executarToque(m, j, peD >= 0 ? peD : j.par.attr.pePreferido, 'dominio');
     m.eventos.push({ tipo: 'dominioAereo', id: j.id, altura: b.p.y, vChegada: vRel, sobra: vRel * sobra });
     ganhouPosse(m, j);
     return true;

@@ -22,6 +22,9 @@ podem ser usados. Conferido por `tools/teste-matdet.mjs` (precisão) e `tools/te
   subpassos dentro de cada passo.
 - O desenho é **interpolado** entre o estado anterior e o atual com `alfa ∈ [0,1)` vindo do
   acumulador (`js/laco.js`). No máximo `MAX_PASSOS_POR_QUADRO` passos por quadro.
+- **Encaixe do delta** (Glaiel 2019): média dos últimos 8 deltas a ≤ 0,2 ms de 1/30, 1/60, 1/120
+  ou 1/144 s → o delta é exatamente esse período (a 60 Hz, sempre 1 passo por quadro, mesmo com o
+  carimbo do rAF tremendo). Na ressincronia (`laco.ultimo = null`) o acumulador volta a meio passo.
 
 ## Mundo (`js/sim.js`)
 - `criarMundo({semente, jogadores:[{id,x,z,rumo,attr,time,papel}], bola:{x,z}, posse, log})`
@@ -41,21 +44,36 @@ subpasso — a bola parada ou lenta do lado de fora (atrás do gol, por fora da 
 fica onde está, e nada atravessa em velocidade nenhuma.
 
 ## Jogador (`js/jogador.js`)
-Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, pes[2]{apoio, x, z, rumo, faseApoio}, par
-(parâmetros dos atributos), ix, iz, imag (pedido do analógico), intRumo, intW, botoes, cond`.
+Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, pes[2]{apoio, x, z, rumo, faseApoio,
+faseSaida, fasePouso, lx, lz, lrumo, puxa, gx, gz}, par (parâmetros dos atributos), ix, iz, imag
+(pedido do analógico), intRumo, intW, botoes, cond`.
 - `fase` em PASSOS: o pé j pisa quando `fase` cruza um inteiro n ≡ j (mod 2) e fica no chão
   por `2·carga` passos (`infoPassada`). Pé no chão = parado no mundo (sem patinar).
+- **A fase nunca salta** (o pé no balanço é desenhado pela fase): quando um pé tem de sair antes
+  (ficou para trás/torto, ou o toque pede o pé livre), só o RITMO muda, com limite
+  (`PASSADA.ritmo*`, `velPeBalanco`). Parando, o pé no ar termina o passo (não pousa de uma vez).
+- No balanço: `faseSaida`/`fasePouso` (a animação anda entre elas) e o ponto de pouso
+  `lx, lz, lrumo` — segue o previsto com velocidade limitada e é exatamente onde o pé é plantado.
+- `puxa` (0–1) e `gx, gz`: gesto do toque (só visual, integrado pela simulação — `conducao.js`
+  `atualizarGesto`): peso e ponto aonde o pé desenhado vai até a bola, com velocidade limitada.
 - `passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt)` é usada pela simulação E pela previsão.
 
 ## Condução (`js/conducao.js`)
 `j.cond = { toque{tick, pe, bx, bz, tipo}, ult{tick, pe, bx, bz, dx, dz, v, tipo}, busca,
-pedalada{tick0, lado} }`. O toque é marcado com antecedência (a animação leva o pé até a bola
-no tick do toque) e o impulso é calculado no próprio tick.
+pedalada{tick0, lado} }`. O toque é marcado com antecedência e o impulso é calculado no próprio
+tick. **O toque sai sempre do pé livre** (`peLivre`: no ar desde antes deste tick, com o outro
+no chão; no domínio vale também com os dois no ar). Com os dois pés no chão, `saidaParaToque`
+pede à passada que tire o pé do toque do chão a tempo, e o toque espera por ele
+(`GESTO.esperaSaida`). `atualizarGesto` (no fim do passo) integra o gesto de cada pé.
 
 ## Animação (`js/anim.js`) — função pura do estado
 `pose(j, mundo, saida?) → Float32Array(3·NJ)` com as posições no mundo das juntas, na ordem de
 `JUNTAS`; `SEGMENTOS` lista os pares de juntas desenhados (com raio). A pose é calculada uma
 vez por passo de simulação; o desenho interpola entre a pose anterior e a atual.
+- Pé no chão = o ponto plantado na simulação (nada o tira do lugar). Pé no ar = da saída
+  (`pe.x, pe.z`) ao pouso (`lx, lz`) pela fase, um tick adiantado (no último tick do balanço já
+  está no ponto de pouso), mais o gesto do toque (`puxa`, `gx, gz`), com desvio limitado pelo
+  tempo que o pé ainda tem no ar. `tools/teste-patinacao.mjs` mede todos os quadros.
 
 ## Entrada (`js/controle.js` puro, `js/entrada.js` com DOM)
 - `processarAnalogico(x, y, zonaMorta, zonaExterna)` → `{x, y, mag}` com **zona morta radial**

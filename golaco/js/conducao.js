@@ -2,6 +2,8 @@
 // impulso é calculado para a bola chegar, rolando, ao ponto onde o pé vai estar no PRÓXIMO
 // toque — prevendo o caminho do próprio corpo com a mesma função de locomoção (jogador.js).
 // O toque é sincronizado com a passada: o pé que toca está no balanço e o outro no chão.
+// O toque SEMPRE sai do pé livre (no ar): com os dois pés no chão (parado, andando devagar), a
+// passada tira do chão o pé do toque antes (saidaParaToque) e o toque espera por ele.
 //
 // Estado em j.cond:
 //   toque   próximo toque marcado {tick, pe, bx, bz, tipo}  (bx,bz = onde a bola vai estar)
@@ -11,7 +13,7 @@
 //   longeDesde  tick em que a bola ficou longe (perda)
 //   pedalada {tick0, lado} | null
 
-import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA } from './config.js';
+import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, GESTO } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, infoPassada, faseLocal, copiaCinematica, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
@@ -194,9 +196,12 @@ export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado) {
     if (!noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i], pb.ys[i], relaxado)) continue;
     const ap = apoioPrevisto(pc.fs[i], pc.ss[i], comBola);
     let pe = -1;
-    if (ap[0] && !ap[1]) pe = 1;
-    else if (ap[1] && !ap[0]) pe = 0;
-    else if (ap[0] && ap[1]) pe = ladoDaBola(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i]);
+    if (ap[0] !== ap[1]) pe = ap[0] ? 1 : 0;
+    else if (ap[0] && ap[1]) {
+      // os dois no chão: na condução, o pé que a passada tira do chão primeiro (o de trás);
+      // no domínio, o do lado da bola
+      pe = relaxado ? ladoDaBola(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i]) : (faseLocal(pc.fs[i], 1) > faseLocal(pc.fs[i], 0) ? 1 : 0);
+    }
     else if (relaxado) pe = ladoDaBola(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i]);
     if (pe < 0) continue;
     return { i, pe, bx: pb.xs[i], bz: pb.zs[i] };
@@ -408,7 +413,10 @@ function precisaReplanejar(m, j, prot) {
   // o corpo está alcançando a bola antes da hora
   const hx = MD.cos(j.rumo), hz = MD.sin(j.rumo);
   const fr = (m.bola.p.x - j.x) * hx + (m.bola.p.z - j.z) * hz;
-  if (fr < 0.2 && c.toque && c.toque.tick - m.tick > 4) return true;
+  // (parado e sem pedir nada, a bola rolando devagar até o ponto não precisa de toque novo:
+  // antes ele tocava a cada 5 ticks com a bola embaixo do corpo)
+  const andando = MD.hypot(j.vx, j.vz) > 0.5 || mov;
+  if (andando && fr < 0.2 && c.toque && c.toque.tick - m.tick > 4) return true;
   // onde o pé vai estar no toque marcado × onde a bola vai estar (física pura)
   const n = c.toque ? c.toque.tick - m.tick : 0;
   if (n > 6 && (m.tick & 1) === 0) {
@@ -433,10 +441,11 @@ export function controlarComBola(m, j) {
   const prot = emProtecao(m, j);
   // toque marcado para agora
   if (c.toque && m.tick >= c.toque.tick) {
-    const pe = c.toque.pe, apoio = 1 - pe;
     const alc = noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y);
-    if (alc && j.pes[apoio].apoio) { executarToque(m, j, pe, 'conducao'); return; }
-    if (alc && j.pes[pe].apoio && !j.pes[apoio].apoio) { executarToque(m, j, apoio, 'conducao'); return; }
+    const pe = peLivre(j, c.toque.pe, false);
+    if (alc && pe >= 0) { executarToque(m, j, pe, 'conducao'); return; }
+    // os dois pés no chão: a passada está tirando o pé do toque do chão — espera por ele
+    if (alc && j.pes[0].apoio && j.pes[1].apoio && m.tick - c.toque.tick < GESTO.esperaSaida) return;
     // sem pé de apoio agora (fase de voo) ou fora do alcance: remarca para a próxima
     // oportunidade real (a passada de verdade pode estar uns ticks fora da prevista)
     const op = procurarOportunidade(m, j, 1, 20, true, prot, false);
@@ -570,10 +579,15 @@ export function tentarDominio(m, j, primeira) {
   if (c.toque && c.toque.tipo === 'dominio') {
     if (m.tick >= c.toque.tick) {
       if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
-        // de primeira: com uma ação pedida, bate sem dominar
-        if (primeira && primeira(m, j, c.toque.pe)) { c.toque = null; return true; }
-        executarToque(m, j, c.toque.pe, 'dominio');
-        return true;
+        const pe = peLivre(j, c.toque.pe, true);
+        if (pe >= 0) {
+          // de primeira: com uma ação pedida, bate sem dominar
+          if (primeira && primeira(m, j, pe)) { c.toque = null; return true; }
+          executarToque(m, j, pe, 'dominio');
+          return true;
+        }
+        // os dois pés no chão: espera o pé do toque sair do chão (a bola ainda está no alcance)
+        if (m.tick - c.toque.tick < GESTO.esperaSaida) return true;
       }
       c.toque = null;
     } else return true;
@@ -586,9 +600,10 @@ export function tentarDominio(m, j, primeira) {
   c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio' };
   if (op.i <= 1) {
     // a bola chega já: domina (ou bate de primeira) neste tick se estiver no alcance
-    if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
-      if (primeira && primeira(m, j, op.pe)) c.toque = null;
-      else executarToque(m, j, op.pe, 'dominio');
+    const pe = peLivre(j, op.pe, true);
+    if (pe >= 0 && noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+      if (primeira && primeira(m, j, pe)) c.toque = null;
+      else executarToque(m, j, pe, 'dominio');
     }
   }
   return true;
@@ -622,4 +637,100 @@ export function verificarPerda(m, j) {
     }
   } else c.longeDesde = -1;
   return false;
+}
+
+/**
+ * Pé que pode tocar a bola agora: o pé LIVRE (no ar) com o outro no chão — o marcado, se ele
+ * estiver no ar; senão o outro. Os dois no ar só valem no domínio (voo = true; toca o marcado).
+ * Os dois no chão: -1 (a passada tira o pé do toque do chão antes — saidaParaToque).
+ */
+export function peLivre(j, preferido, voo) {
+  // livre = no ar desde antes deste tick (o pé que acaba de sair do chão ainda não alcança a bola)
+  const livre = pe => !pe.apoio && pe.faseSaida < j.fase;
+  const a = j.pes[preferido], b = j.pes[1 - preferido];
+  if (livre(a) && b.apoio) return preferido;
+  if (livre(b) && a.apoio) return 1 - preferido;
+  if (!a.apoio && !b.apoio) return voo && livre(a) ? preferido : -1;
+  return -1;
+}
+
+/**
+ * Toque chegando: {pe, em} para a passada (jogador.js passoPassada). Com os dois pés no chão,
+ * ela tira do chão o pé do toque até `em` segundos antes dele; parado, não apressa o pouso.
+ */
+export function saidaParaToque(m, j) {
+  const c = j.cond, t = c && c.toque;
+  if (!t) return null;
+  if (m.posse !== j.id && t.tipo !== 'dominio') return null;
+  const falta = (t.tick - m.tick) * DT;
+  if (falta > GESTO.pedidoSaida) return null;
+  return { pe: t.pe, em: Math.max(DT, falta - GESTO.saidaAntes) };
+}
+
+/**
+ * Ponto em que o pé encosta na bola em (bx, bz): atrás dela, na direção do corpo até ela. Com a
+ * bola perto do corpo o recuo diminui aos poucos (sem o ponto girar em volta do jogador).
+ */
+export function pontoContato(j, bx, bz) {
+  const dx = bx - j.x, dz = bz - j.z;
+  const k = GESTO.recuo / Math.max(MD.hypot(dx, dz), GESTO.recuoPerto);
+  return { x: bx - dx * k, z: bz - dz * k };
+}
+
+/**
+ * Gesto do toque (só visual). Para cada pé: o peso `puxa` (0–1) com que o pé desenhado vai até
+ * a bola — sobe na janela antes do toque e desce depois do acompanhamento — e o ponto (gx, gz)
+ * aonde ele vai: o do toque marcado (onde a bola vai estar) e, depois do toque, a bola. Os dois
+ * mudam com velocidade limitada e ficam no estado (a pose é função pura do estado): o pé nunca
+ * salta, mesmo quando o toque é remarcado, cancelado ou sai do outro pé.
+ */
+export function atualizarGesto(m, j) {
+  const c = j.cond;
+  const t = c.toque;
+  const f = Math.max(infoPassada(MD.hypot(j.vx, j.vz), m.posse === j.id).f, 0.5);
+  const tPouso = p => (j.pes[p].apoio ? Infinity : (j.pes[p].fasePouso - j.fase) / f); // s até pousar
+  let pa = -1; // pé que vai tocar
+  const falta = t ? (t.tick - m.tick) * DT : 0;
+  if (t && (m.posse === j.id || t.tipo === 'dominio') && falta <= GESTO.janela) {
+    // o marcado se ele ficar no ar até o toque; senão o outro, se ficar; senão o marcado (no
+    // chão: o gesto só aparece quando ele sair do chão)
+    const fica = p => !j.pes[p].apoio && tPouso(p) >= falta - DT;
+    pa = fica(t.pe) ? t.pe : fica(1 - t.pe) ? 1 - t.pe : t.pe;
+  }
+  const u = c.ult;
+  const pu = u && (m.tick - u.tick) * DT < GESTO.acompanha ? u.pe : -1; // pé que acompanha a bola
+  const b = m.bola.p;
+  const naBola = pontoContato(j, b.x, b.z);
+  const noToque = pa >= 0 ? pontoContato(j, t.bx, t.bz) : null;
+  const vMax = (GESTO.velPonto[0] + GESTO.velPonto[1] * MD.hypot(j.vx, j.vz)) * DT;
+  // mais rápido o corpo, mais rápido o gesto pode subir (folga até o limite físico do pé)
+  const subida = lerp(GESTO.subida[0], GESTO.subida[1], clamp(MD.hypot(j.vx, j.vz) / GESTO.velRef, 0, 1));
+  for (let p = 0; p < 2; p++) {
+    const pe = j.pes[p];
+    const q = p === pa && p !== pu ? noToque : naBola;
+    if (pe.puxa <= 0) { pe.gx = q.x; pe.gz = q.z; } // sem peso, o ponto pode ir direto
+    else {
+      const dx = q.x - pe.gx, dz = q.z - pe.gz;
+      const d = MD.hypot(dx, dz);
+      const k = d > vMax ? vMax / d : 1;
+      pe.gx += dx * k; pe.gz += dz * k;
+    }
+    // indo tocar: sobe até 1; acompanhando a bola depois do toque: só segura o peso que tinha
+    // (se o pé não chegou à bola, ele não corre atrás dela depois)
+    let alvo = p === pa ? 1 : p === pu ? pe.puxa : 0;
+    let desce = DT / GESTO.descida;
+    if (p !== pa && pe.puxa > 0) {
+      // o pé vai pousar logo: o gesto se desfaz em todo o tempo que falta até o pouso (e não de
+      // uma vez no fim do balanço)
+      const resta = tPouso(p);
+      if (resta < GESTO.acompanha + pe.puxa * GESTO.descida) {
+        alvo = 0;
+        desce = Math.max(desce, pe.puxa * DT / Math.max(resta, 2 * DT));
+      }
+    }
+    const dp = alvo - pe.puxa;
+    pe.puxa += dp > 0 ? Math.min(dp, DT / subida) : Math.max(dp, -desce);
+    // pé no chão: o gesto acabou (no chão ele não aparece; não volta no próximo balanço)
+    if (pe.apoio && p !== pa) pe.puxa = 0;
+  }
 }

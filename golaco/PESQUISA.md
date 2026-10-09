@@ -101,6 +101,7 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 | Analógico girado 90° a 7 m/s | o rumo leva pelo menos 3 apoios para completar a volta | Dos'Santos et al. 2018 |
 | Interpolação a 60/120/144 Hz, bola a 20 m/s | deslocamento desenhado por quadro = 20/Hz m, com erro abaixo de 1% | Fiedler 2004 |
 | Encaixe do delta (vsync de 60 Hz com ruído de ±0,5 ms) | zero quadros com 0 ou 2 passos em 10.000; sem o encaixe, o teste deve reprovar | Glaiel 2019 |
+| Pé desenhado (todos os quadros) | pé plantado ≤ 0,05 m/s; nenhum quadro com o pé acima de 2,5·v + 3 m/s (correndo, o pico do pé no balanço é 2,00 ± 0,15 × v; andando, ~4,6 m/s a ~1,3 m/s); no pouso, ≤ 0,19·v + 0,81 m/s (velocidade do pé ao tocar o chão) | Clark et al. 2023; van der Straaten et al. 2020 |
 | rAF a 144 Hz e a 30 Hz durante 10 s | 600 ± 1 passos nos dois casos; a 33,33 ms, exatamente 2 passos por quadro | MDN rAF; Perry 2020 |
 | Relógio da partida | depois de 324.000 passos, tick/60 === 5400 exatamente | medição local; Glaiel 2019 |
 | Replay | mesmo hash final com render a 30, 60 e 144 Hz | Fiedler 2014 |
@@ -117,7 +118,7 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 - **Contra a espiral da morte:** frameTime limitado a 250 ms e no máximo 4 passos por quadro. O excesso é descartado: o jogo fica mais lento sob carga em vez de travar. *Fonte: Fiedler (2004 e "Deterministic Lockstep", 2014); Glaiel (2019) limita a 8/60 s.*
 - **O delta vem do carimbo do rAF**, nunca de performance.now() no meio do quadro; o lastT é marcado no primeiro callback. *Fonte: MDN rAF; Žilys (Unity, 2020): delta de 6,51–7,42 ms a 144 qps fixos; Ladavac (2018): 24,8 e 10,7 ms com a tela estável a 16,67 ms.*
 - **Encaixe do delta** em 1/30, 1/60, 1/120 ou 1/144 s com tolerância de 0,2 ms, mais média móvel de 8 deltas quando eles chegam quantizados. *Fonte: Glaiel (2019): o timer ingênuo fez 2.535 updates duplos em 10.001; MDN performance.now (resolução de 100 µs; 100 ms com resistFingerprinting no Firefox).*
-- **Ressincronia** (acumulador = 0) quando a aba volta a ficar visível, no fim do carregamento e ao sair da pausa ou do replay. *Fonte: three.js r170 Timer.js; Glaiel (2019).*
+- **Ressincronia** (acumulador = 0) quando a aba volta a ficar visível, no fim do carregamento e ao sair da pausa ou do replay. *Fonte: three.js r170 Timer.js; Glaiel (2019).* (No GOLAÇO o acumulador recomeça em meio passo: o tremor dos primeiros quadros, antes da média de 8 deltas, não muda a contagem de passos.)
 - **O relógio é um contador inteiro de ticks**: somar 1/60 sessenta vezes dá 1,0000000000000013. *Fonte: medição local no Node v22.22; Glaiel (2019) usa inteiros de 64 bits.*
 - **Euler semi-implícito basta** a 60 Hz com v ≤ 35 m/s, porque o arrasto tira menos de 0,2 m/s por passo. *Fonte: Goff & Carré (aplicação da pesquisa).*
 - **Ordem por quadro:** ler a entrada → rodar os passos → renderizar. A velocidade muda antes da posição, e o impulso sai no primeiro passo do comando, sem esperar a animação. Meta: até 3 quadros (50 ms a 60 fps). *Fonte: Mick West (2008).*
@@ -241,6 +242,8 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 **Condução e movimento em jogos**
 - Reynolds 1999: integrador de steering, seek, arrive e pursuit. https://www.red3d.com/cwr/steer/gdc99/
 - Holden, Motion-Matching: mola de 0,27 s, razões de velocidade, constantes de pé travado e correção da raiz. https://github.com/orangeduck/Motion-Matching/blob/main/controller.cpp
+- Clark, Ryan, Weyand et al. 2023 (J Hum Kinet), "Horizontal Foot Speed During Submaximal and Maximal Running": pico do pé no balanço = 2,00 ± 0,15 × a velocidade (3,1–10 m/s) e velocidade do pé ao tocar o chão (GSD) = 0,19·v + 0,81 m/s — usados no limite por quadro do teste de patinação, no perfil do balanço e no limite da passada acelerada. https://pmc.ncbi.nlm.nih.gov/articles/PMC10203846/
+- van der Straaten et al. 2020 (J Appl Biomech): pé a ~4,6 m/s no meio do balanço andando — piso do limite do pé em baixa velocidade e perfil do balanço (pico ≈ 1,35 × a média).
 - Clavet/For Honor (Game Anim): previsibilidade acima de responsividade, 15 cm, taxa de reprodução de −20% a +10%. https://www.gameanim.com/?p=13538
 - Epic/Lyra: limite de 15–20% para taxa de reprodução e stride warping. https://www.unrealengine.com/tech-blog/adapting-lyra-animation-to-your-ue5-game
 - Bollo, GDC 2018: inercialização por polinômio de grau 5. https://www.gdcvault.com/play/mediaProxy.php?sid=1025331
