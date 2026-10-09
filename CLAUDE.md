@@ -9,6 +9,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
   Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (PR desta etapa: passe, enfiada, lançamento/cruzamento, chute,
   goleiro, botões sem CONDUÇÃO; revisão adversarial da Etapa 1 com 30 achados corrigidos). Próxima: Etapa 3.
+  **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
+  goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
+  intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho (medidos antes/depois); (2) Etapa 3 —
+  11×11 com formações, tática, IA com/sem bola mais intensa e "Editar time" na pausa (formação, escalação no
+  campinho com reservas, táticas: mentalidade, pressão, largura, linha), no estilo do Gerenciar equipe do FIFA.
   Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
   continue assim" (não mexer sem motivo medido). Quer um jogo **11×11 de alto nível, tipo FIFA**: posições,
   regras, táticas, torcida **cantando alto**, **cenas de pré-jogo**, botões de **chute, passe, enfiada,
