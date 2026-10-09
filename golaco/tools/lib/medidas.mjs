@@ -1,7 +1,8 @@
 // Funções de medida compartilhadas pelos testes (Node).
 import { criarMundo, passo } from '../../js/sim.js';
-import { BOTAO, PASSO } from '../../js/config.js';
+import { BOTAO, PASSO, BOLA } from '../../js/config.js';
 import { difAng } from '../../js/mat.js';
+import { pose, J, NJ, SEGMENTOS } from '../../js/anim.js';
 
 export const DEG = 180 / Math.PI;
 
@@ -47,7 +48,10 @@ export function rodarCena(c) {
   const w = (c.curvaGrausS ?? 30) / DEG * (c.sentido ?? 1);
   const N = Math.round(total / PASSO);
   const iIni = Math.round((aquec + (c.partida === 'embalado' ? 0 : 1.5)) / PASSO);
-  const S = { x: [], z: [], vx: [], vz: [], rumo: [], bx: [], bz: [], by: [], s: [], ir: [], busca: [], posse: [], tick: [], pes: [], fase: [] };
+  const S = { x: [], z: [], vx: [], vz: [], rumo: [], bx: [], bz: [], by: [], s: [], ir: [], busca: [], posse: [], tick: [], pes: [], fase: [],
+    pe: [], peMaisPerto: [], janela: [], dentro: [], toques: [] };
+  const P = new Float32Array(NJ * 3);
+  let peMarcado = null, nLog = 0;
   for (let i = 0; i < N; i++) {
     const t = i * PASSO;
     let e;
@@ -57,7 +61,38 @@ export function rodarCena(c) {
       if (c.caminho === 'curva' && t >= aquec) r = rumo0 + w * (t - aquec);
       e = { x: Math.cos(r) * andar.mag, z: Math.sin(r) * andar.mag, botoes: andar.botoes };
     }
+    // pose ANTES do passo (o que está desenhado quando o toque acontece) e o pé marcado
+    if (c.pose) { pose(j, m, P); peMarcado = j.cond.toque ? j.cond.toque.pe : null; }
     passo(m, { 0: e });
+    if (c.pose) {
+      // toques deste passo: o pé que tocou estava no balanço? trocou de pé na hora? pé–bola na pose
+      for (; nLog < m.log.length; nLog++) {
+        const l = m.log[nLog];
+        const iT = l.pe ? J.tornozeloD : J.tornozeloE;
+        S.toques.push({ t: l.t, i, balanco: !j.pes[l.pe].apoio, trocou: peMarcado != null && peMarcado !== l.pe, dPe: Math.hypot(P[iT * 3] - l.bx, P[iT * 3 + 2] - l.bz), tipo: l.tipo, apoio: l.apoio });
+      }
+      // bola–pé na pose depois do passo: pé do próximo toque e pé mais perto (segmento tornozelo–ponta)
+      pose(j, m, P);
+      const bx = m.bola.p.x, by = m.bola.p.y, bz = m.bola.p.z;
+      const dSeg = (pp, d3) => {
+        const a = pp ? J.tornozeloD : J.tornozeloE, b = pp ? J.pontaD : J.pontaE;
+        const ax = P[a * 3], ay = P[a * 3 + 1], az = P[a * 3 + 2];
+        const ux = P[b * 3] - ax, uy = d3 ? P[b * 3 + 1] - ay : 0, uz = P[b * 3 + 2] - az;
+        const l2 = ux * ux + uy * uy + uz * uz;
+        let k = l2 > 1e-12 ? ((bx - ax) * ux + (d3 ? (by - ay) * uy : 0) + (bz - az) * uz) / l2 : 0;
+        k = k < 0 ? 0 : k > 1 ? 1 : k;
+        const qx = ax + ux * k - bx, qy = d3 ? ay + uy * k - by : 0, qz = az + uz * k - bz;
+        return Math.sqrt(qx * qx + qy * qy + qz * qz);
+      };
+      const ct = j.cond.toque, cu = j.cond.ult;
+      const mais = Math.min(dSeg(0, false), dSeg(1, false));
+      S.peMaisPerto.push(mais);
+      S.pe.push(ct ? dSeg(ct.pe, false) : mais);
+      S.janela.push(!!((ct && (ct.tick - m.tick) * PASSO >= 0 && (ct.tick - m.tick) * PASSO < 0.16) || (cu && (m.tick - cu.tick) * PASSO >= 0 && (m.tick - cu.tick) * PASSO < 0.12)));
+      // chuteira (raio da cápsula tornozelo–ponta) dentro da bola
+      const rCh = SEGMENTOS.find(sg => sg[0] === J.tornozeloE && sg[1] === J.pontaE)[2];
+      S.dentro.push(Math.min(dSeg(0, true), dSeg(1, true)) < BOLA.raio + rCh);
+    }
     S.x.push(j.x); S.z.push(j.z); S.vx.push(j.vx); S.vz.push(j.vz); S.rumo.push(j.rumo);
     S.bx.push(m.bola.p.x); S.bz.push(m.bola.p.z); S.by.push(m.bola.p.y);
     S.s.push(Math.hypot(j.vx, j.vz)); S.ir.push(j.intRumo); S.busca.push(j.cond.busca);
