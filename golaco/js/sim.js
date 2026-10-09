@@ -5,7 +5,7 @@
 import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './config.js';
 import { criarRng, entre } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
-import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
+import { criarJogador, passoCorpo, passoPassada, plantarAgora } from './jogador.js';
 import { clamp, difAng, quantizar } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
@@ -159,6 +159,20 @@ function colisaoBolaCorpo(m) {
   }
 }
 
+/**
+ * Pedalada: o pé de fora fica no ar durante o arco por cima da bola (a passada o planta depois);
+ * se o outro pé estava no ar, ele pisa já (passo apressado) para ser o apoio.
+ */
+function peDeForaNoAr(m, j) {
+  const pd = j.cond.pedalada;
+  const tp = (m.tick - pd.tick0) * PASSO / CONDUCAO.pedaladaDuracao;
+  const fora = pd.lado > 0 ? 0 : 1;
+  if (tp >= 0.8) { j.travaApoio = null; return; }
+  if (!j.pes[1 - fora].apoio) plantarAgora(j, 1 - fora);
+  j.travaApoio = 1 - fora;
+  j.pes[fora].apoio = false;
+}
+
 function roubarComMarcador(m, j) {
   const b = m.bola;
   if (m.posse == null) return; // bola livre não é roubada (quem chegar primeiro domina)
@@ -211,6 +225,8 @@ export function passo(m, entradas) {
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
     passoPassada(j, m.posse === j.id, PASSO, null);
+    if (j.cond && j.cond.pedalada) peDeForaNoAr(m, j);
+    else if (j.travaApoio != null) j.travaApoio = null;
   }
   colisaoCorpos(m);
   // 3) controle de bola

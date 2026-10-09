@@ -53,6 +53,8 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     cond: null,
     // alvo de movimento sobrescrito pelo controlador (busca da bola, proteção, treino)
     alvo: null,
+    // pé que não sai do chão agora (pedalada: o outro passa por cima da bola) | null
+    travaApoio: null,
   };
   return j;
 }
@@ -236,7 +238,8 @@ export function passoPassada(j, comBola, dt, ev) {
     const psi0 = faseLocal(f0, p), psi1 = faseLocal(f1, p);
     const virou = f1 - f0 >= 2 || psi1 < psi0; // cruzou o 0 da fase local
     if (pe.apoio) {
-      if (psi1 >= 2 * carga || virou) {
+      // travaApoio: este pé segura o corpo (pedalada: o outro passa por cima da bola)
+      if ((psi1 >= 2 * carga || virou) && j.travaApoio !== p) {
         pe.apoio = false;
         if (ev) ev.push({ tipo: 'tirou', pe: p, id: j.id });
       }
@@ -274,6 +277,13 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0) {
     z: j.z + j.vz * tm + rz * lado * PASSADA.afastamentoLateral,
     rumo,
   };
+}
+
+/** Planta o pé p agora (passo apressado: pedalada), no ponto de pouso de agora. */
+export function plantarAgora(j, p) {
+  const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
+  const { f, carga } = infoPassada(s, true);
+  plantarPe(j, p, carga, f);
 }
 
 function plantarPe(j, p, carga, f) {
