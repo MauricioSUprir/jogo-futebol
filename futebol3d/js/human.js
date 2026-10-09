@@ -146,6 +146,17 @@ export function keepBall(m, p) {
   // quadro a quadro e viraria uma série de cortes)
   if (p.human || p.intentX == null) { p.intentX = p.dx; p.intentZ = p.dz; }
   else { const k = Math.min(1, m.dt60 ?? 0.2); p.intentX += (p.dx - p.intentX) * k; p.intentZ += (p.dz - p.intentZ) * k; }
+  // quanto o rumo pedido está girando (rad/s, filtrado): numa curva o toque manda a bola PELA curva (dribbleTouch);
+  // antes ela ia reta para onde o pé estaria sem a curva, saía por fora e o corpo corria atrás dela em zigue-zague
+  {
+    const il = Math.hypot(p.intentX, p.intentZ), a = Math.atan2(p.intentZ, p.intentX), dtk = m.time - (p.intT ?? m.time);
+    if (il > 0.5 && p.intA !== undefined && dtk > 1e-4) {
+      let d = a - p.intA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+      const w = Math.max(-4, Math.min(4, d / dtk)), k = 1 - Math.exp(-dtk / 0.15);
+      p.intentW = (p.intentW ?? 0) + (w - (p.intentW ?? 0)) * k;
+    } else if (il <= 0.5) p.intentW = 0;
+    p.intA = a; p.intT = m.time;
+  }
   const sp = p.speed, ctl = (p.a.ctl ?? p.a.dri) / 99;
   const base = 0.27 + Math.min(sp, 8) * 0.01, side = 0.1 * p.foot;
   const rx = -p.fz, rz = p.fx;
@@ -154,6 +165,27 @@ export function keepBall(m, p) {
   const reach = 0.3 + 0.12 * ctl;
   let dx = p.dx, dz = p.dz, s = Math.hypot(dx, dz);
   const bs = Math.hypot(b.v.x, b.v.z);
+  // bola à frente, no caminho pedido (ao alcance do pé, de lado): o corpo segue o rumo pedido e só ajusta o passo — o próximo
+  // toque traz a bola para o caminho. Antes ele corria para trás da bola a cada desvio de palmos e o corpo ia em
+  // zigue-zague atrás dela (a "condução desorganizada" da curva)
+  // (só o humano: na IA o rumo pedido oscila — ver ai.js applyDribble — e o corpo seguiria a oscilação)
+  const ilk = Math.hypot(p.intentX ?? 0, p.intentZ ?? 0);
+  // curva com a bola em arrancada: quem conduz de verdade tira o pé para fazer a curva com a bola junto (aceleração de
+  // lado de ~3,2 m/s² com a bola no pé). Sem isso, a 8 m/s a bola saía por fora da curva e o corpo virava para ela
+  if (p.human && Math.abs(p.intentW || 0) > 0.25 && s > 0.5) {
+    const cap = Math.max(p.jog * 0.9, 3.2 / Math.abs(p.intentW));
+    if (s > cap) { dx *= cap / s; dz *= cap / s; s = cap; p.dx = dx; p.dz = dz; if (cap <= p.jog + 0.2) p.sprint = false; }
+  }
+  if (p.human && footErr > reach + 0.05 && ilk > 0.5) {
+    const ux = p.intentX / ilk, uz = p.intentZ / ilk, rbx = b.p.x - p.x, rbz = b.p.z - p.z;
+    const along = rbx * ux + rbz * uz, lat = Math.abs(-rbx * uz + rbz * ux);
+    if (along > base && along < base + 1.0 && lat < reach * 0.75) {
+      const want = Math.min(p.sprintSpd, Math.max(s, bs + (along - base) * 3));
+      p.dx = ux * want; p.dz = uz * want;
+      if (want > p.jog + 0.2 && p.stamina > 0.15) p.sprint = true;
+      return;
+    }
+  }
   if (footErr > reach + 0.05) {
     // monta na bola: ponto atrás dela (um pé de distância) na trajetória prevista
     const ux = s > 0.01 ? dx / s : p.fx, uz = s > 0.01 ? dz / s : p.fz;
@@ -163,8 +195,19 @@ export function keepBall(m, p) {
     // chega na bola com vontade (e não desacelera atrás de uma bola lenta que está à frente:
     // ele a alcança e o próximo toque já a empurra no ritmo pedido)
     const frente = (ex * (s > 0.01 ? dx / s : p.fx) + ez * (s > 0.01 ? dz / s : p.fz)) / d;
-    const want = Math.min(p.sprintSpd, Math.max(bs + d * 3.5, frente > 0.7 ? Math.min(s, sp) : 0));
-    dx = ex / d * want; dz = ez / d * want; s = want;
+    let want = Math.min(p.sprintSpd, Math.max(bs + d * 3.5, frente > 0.7 ? Math.min(s, sp) : 0));
+    let cx = ex / d, cz = ez / d;
+    // humano com a bola à frente e um pouco de lado: vai buscá-la sem se afastar mais de ~35° do rumo pedido (e sem
+    // passar da velocidade da curva) — virando o corpo inteiro para ela, o rumo seguinte pedia um corte de volta
+    if (p.human && ilk > 0.5) {
+      const ux = p.intentX / ilk, uz = p.intentZ / ilk, rbx = b.p.x - p.x, rbz = b.p.z - p.z;
+      if (rbx * ux + rbz * uz > 0) {
+        const dA = Math.atan2(cz, cx) - Math.atan2(uz, ux), dd = Math.atan2(Math.sin(dA), Math.cos(dA));
+        if (Math.abs(dd) > 0.6) { const a = Math.atan2(uz, ux) + Math.sign(dd) * 0.6; cx = Math.cos(a); cz = Math.sin(a); }
+        if (Math.abs(p.intentW || 0) > 0.25) want = Math.min(want, Math.max(p.jog * 0.9, 3.2 / Math.abs(p.intentW)) + 0.6);
+      }
+    }
+    dx = cx * want; dz = cz * want; s = want;
     // a bola abriu (toque longo): arranca para alcançá-la, se tiver fôlego
     if (want > p.jog + 0.2 && p.stamina > 0.15) p.sprint = true;
   }

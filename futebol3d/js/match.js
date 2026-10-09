@@ -556,12 +556,22 @@ export class Match {
     } else {
       // previsão do jogador com a física de movimento dele, comando = rumo pedido
       const top = Math.max(sp, o.topSpeed());
-      const cx = il > 0.3 ? ix / il * Math.min(il, top) : o.vx, cz = il > 0.3 ? iz / il * Math.min(il, top) : o.vz;
+      let cx = il > 0.3 ? ix / il * Math.min(il, top) : o.vx, cz = il > 0.3 ? iz / il * Math.min(il, top) : o.vz;
       const sim = Object.create(o);
       sim.vx = o.vx; sim.vz = o.vz;
       const DT = 1 / 60, path = [[o.x, o.z, o.vx, o.vz]];
       let px = o.x, pz = o.z;
+      // curva em andamento: o rumo pedido segue girando no ritmo de agora (sumindo em ~1 s, no máximo 90°) — a bola
+      // vai para onde o pé estará NA CURVA (antes: rumo fixo, a bola saía por fora e vinha um corte para buscá-la)
+      // (só o humano: o rumo da IA já sai suavizado de ai.js, e o giro dele quadro a quadro não é curva)
+      const w0 = il > 0.3 && o.human ? (o.intentW || 0) * 0.7 : 0;
+      let girou = 0;
       for (let k = 0; k < 150; k++) {
+        const wk = w0 * Math.exp(-k * DT / 1.0);
+        if (Math.abs(wk) > 0.05 && Math.abs(girou) < Math.PI / 2) {
+          const c = Math.cos(wk * DT), s = Math.sin(wk * DT), nx = cx * c - cz * s;
+          cz = cx * s + cz * c; cx = nx; girou += wk * DT;
+        }
         sim.integrate(DT, cx, cz, o.human ? cx : null, cz);
         px += sim.vx * DT; pz += sim.vz * DT;
         path.push([px, pz, sim.vx, sim.vz]);

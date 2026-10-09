@@ -83,6 +83,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   condutor "monta" na bola (`human.js` keepBall, também para a IA); em plena arrancada, um toque por passada.
   Medir: `tools/ima-test.mjs` (duas partidas; 0% de ímã, ~0,5 m correndo, p95 ≤ ~1,2 m na arrancada),
   `tools/keepball-test.mjs`, `tools/protecao-test.mjs`.
+- Condução organizada (dono, 09/10: "melhorou, mas tá muito desorganizada"): na curva o toque manda a bola PELA curva
+  (`match.js` dribbleTouch prevê o giro do analógico, `p.intentW` medido em `human.js` keepBall) e o corpo do jogador
+  controlado segue o rumo pedido com a bola no caminho (só vai buscá-la fora de ~35° do rumo); em arrancada na curva ele
+  tira o pé (~3,2 m/s² de lado com a bola). Medir: `tools/conducao-org-test.mjs` (publicado: o rumo oscilava 60–100°/s
+  numa curva pedida de 30°/s, cortes sem pedir, bola até ~0,5 m fora do caminho). Pendente: o vai-e-volta da condução
+  da IA (rumo pedido inverte ~25×/min, o corpo ~35–40×/min; tentativas de suavizar o rumo da IA derrubaram o ataque).
 - Rostos encaixados por 478 pontos (MediaPipe) nos marcos da cabeça 3D (`tools/rostos/marcos_cabeca.py`
   → `cabeca-marcos.json`; `processar.py` deforma cada foto por triângulos e tira a luz lateral).
 - Corrida/caminhada por captura de movimento (CMU, uso livre): `assets/mocap/locomocao.json`, gerado por
@@ -157,7 +163,7 @@ node tools/test-ball.mjs && node tools/sim-test.mjs 3 none && node tools/sim-tes
 # Pedidos de 08/10 (Node): node tools/dividida-test.mjs 200 --alvo && node tools/dividida-test.mjs 400 --natural --alvo \
 #   && node tools/troca-auto-test.mjs && node tools/intensidade-jogo-test.mjs && node tools/defesas-test.mjs 36 --par 3 \
 #   && node tools/goleiro-sai-test.mjs && node tools/bola-parada-test.mjs && node tools/disputa-aerea-test.mjs \
-#   && node tools/cobrador-test.mjs
+#   && node tools/cobrador-test.mjs && node tools/conducao-org-test.mjs
 #   (navegador, celular: node tools/goleiro-botao-test.mjs)
 # navegador (servidor: python3 -m http.server 8790 em futebol3d/):
 node tools/load-check.mjs && node tools/game-shot.mjs --advance 20
