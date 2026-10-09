@@ -109,16 +109,15 @@ function rodarPasso(entrada, acoes) {
   bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q);
   const eventos = passoTreino(mundo, entrada, acoes);
   contPassos++;
-  // atual ← pose deste passo (calculada uma vez por passo)
-  const vivos = new Set();
+  // atual ← pose deste passo (calculada uma vez por passo); quem saiu do mundo (marcador
+  // desligado) perde o estado — sem alocar nada por passo
   for (const j of mundo.jogadores) {
-    vivos.add(j.id);
     const e = estadoDe(j);
     pose(j, mundo, e.atu);
-    e.x1 = j.x; e.z1 = j.z; e.r1 = j.rumo;
+    e.x1 = j.x; e.z1 = j.z; e.r1 = j.rumo; e.visto = contPassos;
     if (Math.hypot(e.x1 - e.x0, e.z1 - e.z0) > 2) { e.ant.set(e.atu); e.x0 = e.x1; e.z0 = e.z1; e.r0 = e.r1; }
   }
-  for (const id of [...estJ.keys()]) if (!vivos.has(id)) estJ.delete(id);
+  if (estJ.size > mundo.jogadores.length) for (const [id, e] of estJ) if (e.visto !== contPassos) estJ.delete(id);
   copiarBolaDoMundo(bolaAtu);
   // bola teletransportada (recomeço, máquina): não desenha o rastro entre os dois pontos
   if (bolaAtu.p.distanceTo(bolaAnt.p) > 2.5) { bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q); }
@@ -151,7 +150,7 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
-const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, quadros: 0, alfa: 0 };
+const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0 };
 const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
@@ -190,6 +189,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   if (renderizar) cena3d.desenhar(cam.camera);
   render.bola.x = _bp.x; render.bola.y = _bp.y; render.bola.z = _bp.z;
   render.jogador.x = hx; render.jogador.z = hz;
+  const cp = cam.camera.position;
+  render.camera.x = cp.x; render.camera.y = cp.y; render.camera.z = cp.z;
   render.alfa = alfa;
   render.quadros++;
   // HUD
@@ -262,7 +263,8 @@ function aplicarQualidade(recriar) {
 function redimensionar() {
   const w = window.innerWidth, h = window.innerHeight;
   cena3d.redimensionar(w, h);
-  cam.redimensionar(w / h);
+  // celular (menor lado < 520 px CSS): a câmera fecha mais o plano (jogadores maiores)
+  cam.redimensionar(w / h, Math.min(w, h) < 520);
 }
 
 // ------------------------------------------------------------------ ações e menu
@@ -417,7 +419,8 @@ const api = {
     /** Relógio manual: o laço usa um tempo controlado (testes a 60/120/144 Hz). */
     usarManual(v = true) {
       relogioManual = !!v;
-      tempoManual = performance.now();
+      // nunca volta no tempo (o HUD e os avisos comparam com o último instante visto)
+      tempoManual = Math.max(tempoManual, performance.now());
       laco.ultimo = null; ultimoQuadro = null;
     },
     /** Avança o relógio manual em ms e roda um quadro já (simulação, câmera e desenho).
@@ -446,6 +449,9 @@ const api = {
       jogador: h ? { x: h.x, z: h.z, rumo: h.rumo } : null, bola: { ...mundo.bola.p },
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
       desenhoChamadas: cena3d ? cena3d.info().render.calls : 0,
+      // memória na GPU (vazamento = número que cresce com o tempo)
+      geometrias: cena3d ? cena3d.info().memory.geometries : 0,
+      texturas: cena3d ? cena3d.info().memory.textures : 0,
     };
   },
   /** Desenha um quadro sem avançar nada (prints). */

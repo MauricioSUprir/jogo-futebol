@@ -28,12 +28,14 @@ function nomeJ(i) { return Object.keys(J).find(k => J[k] === i) ?? ''; }
 function estilo(seg) {
   const a = nomeJ(seg[0]), b = nomeJ(seg[1]), parte = seg[4];
   const tem = (x, y) => (a === x && b === y) || (a === y && b === x);
-  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false };
+  // raios r: [A, B] substituem os de SEGMENTOS só no desenho (quadril e pelve mais enxutos: a
+  // calota da pelve e a do quadril não fazem mais um "volume" de fralda abaixo do calção)
+  if (tem('pelve', 'lombar')) return { achata: 0.74, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.118, 0.13] };
   if (tem('lombar', 'peito')) return { achata: 0.68, pad: P.tronco, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('peito', 'pescoco')) return { achata: 0.78, pad: P.gola, c: ['camisa', 'pele', 'acento'], sup: true };
   if (tem('ombroE', 'ombroD')) return { achata: 0.85, pad: P.liso, c: ['camisa', 'pele', 'acento'], sup: true };
   if (/^ombro/.test(a) && /^cotovelo/.test(b)) return { achata: 1, pad: P.manga, c: ['camisa', 'pele', 'acento'], sup: true };
-  if (tem('quadrilE', 'quadrilD')) return { achata: 0.8, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false };
+  if (tem('quadrilE', 'quadrilD')) return { achata: 0.84, pad: P.liso, c: ['calcao', 'pele', 'acento'], sup: false, r: [0.088, 0.088] };
   if (/^quadril/.test(a) && /^joelho/.test(b)) return { achata: 1, pad: P.coxa, c: ['calcao', 'pele', 'acento'], sup: false };
   if (/^joelho/.test(a) && /^tornozelo/.test(b)) return { achata: 1, pad: P.meiao, c: ['meiao', 'pele', 'acento'], sup: false };
   if (/^tornozelo/.test(a) && /^ponta/.test(b)) return { achata: 0.8, pad: P.chuteira, c: ['chuteira', 'pele', 'sola'], sup: false };
@@ -126,19 +128,23 @@ function materialSegmentos() {
           vec3 cor = vC1;
           float t = vT;
           float w = fwidth(t) * 0.75 + 0.004;
-          float lado = abs(vLocal.x);
+          // lado = |cos| do ângulo em volta do eixo (1 = bem do lado): medido pelo ângulo e não
+          // pela posição, para a listra não "rasgar" nas calotas (lá o raio diminui)
+          float lado = abs(vLocal.x) / max(length(vLocal), 1e-3);
           float wl = fwidth(lado) * 0.75 + 0.01;
+          // só no trecho cilíndrico (0 < t < 1): nas calotas a listra some com suavidade
+          float meio = faixa(t, 0.03, w) * (1.0 - faixa(t, 0.97, w));
           float p = vPad;
           if (p > 0.5 && p < 1.5) {            // manga curta: camisa, punho verde, braço
             cor = mix(cor, vC3, faixa(t, 0.54, w));
             cor = mix(cor, vC2, faixa(t, 0.63, w));
           } else if (p > 2.5 && p < 3.5) {     // tronco: listras laterais
-            cor = mix(cor, vC3, faixa(lado, 0.8, wl) * (1.0 - faixa(t, 0.97, w)));
+            cor = mix(cor, vC3, faixa(lado, 0.94, wl) * meio);
           } else if (p > 3.5 && p < 4.5) {     // gola e pescoço
             cor = mix(cor, vC3, faixa(t, 0.62, w));
             cor = mix(cor, vC2, faixa(t, 0.78, w));
           } else if (p > 4.5 && p < 5.5) {     // coxa: calção com listra, depois a pele
-            cor = mix(cor, vC3, faixa(lado, 0.84, wl) * (1.0 - faixa(t, 0.5, w)));
+            cor = mix(cor, vC3, faixa(lado, 0.95, wl) * faixa(t, 0.03, w) * (1.0 - faixa(t, 0.5, w)));
             cor = mix(cor, vC2, faixa(t, 0.5, w));
           } else if (p > 5.5 && p < 6.5) {     // meião: joelho, faixa verde, meião
             cor = mix(vC2, vC3, faixa(t, 0.06, w));
@@ -149,7 +155,7 @@ function materialSegmentos() {
           diffuseColor.rgb = cor;
         }`);
   };
-  mat.customProgramCacheKey = () => 'manequim-v1';
+  mat.customProgramCacheKey = () => 'manequim-v2';
   return mat;
 }
 
@@ -324,7 +330,7 @@ export function criarJogadores3D(cena, qualidade) {
           mat[o + 4] = Y.x; mat[o + 5] = Y.y; mat[o + 6] = Y.z; mat[o + 7] = 0;
           mat[o + 8] = Z.x; mat[o + 9] = Z.y; mat[o + 10] = Z.z; mat[o + 11] = 0;
           mat[o + 12] = A.x; mat[o + 13] = A.y; mat[o + 14] = A.z; mat[o + 15] = 1;
-          dim[i * 4] = sg[2]; dim[i * 4 + 1] = sg[3]; dim[i * 4 + 2] = len; dim[i * 4 + 3] = e.achata;
+          dim[i * 4] = e.r ? e.r[0] : sg[2]; dim[i * 4 + 1] = e.r ? e.r[1] : sg[3]; dim[i * 4 + 2] = len; dim[i * 4 + 3] = e.achata;
         }
         // cabeça: "cima" pelo pescoço, "frente" média de ombros e quadris
         const ic = J.cabeca * 3, ip = J.pescoco * 3;

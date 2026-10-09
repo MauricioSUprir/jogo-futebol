@@ -3,6 +3,12 @@
 // (jogador + bola, com antecipação pela velocidade) por uma mola crítica exata (não treme e não
 // acompanha cada passada: o alvo usa o centro do corpo e a bola interpolados, nunca a pélvis
 // que sobe e desce), limitada ao campo. Modo "aproximada" (CAMERA.aproximada) com transição.
+//
+// Enquadramento pela LARGURA vista no foco (como o diretor de TV fecha o plano), não pelo fov:
+// tela mais larga que 16:9 (celular deitado) mantém a largura e fecha na altura — jogadores
+// maiores sem perder o que se vê dos lados; tela mais estreita (4:3) perde só metade da
+// largura; em pé (retrato) entra um perfil próprio, mais alto e inclinado, para o quadro não
+// virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena).
 import * as THREE from 'three';
 import { CAMERA, CAMPO } from '../config.js';
 import { molaCritica } from './util.js';
@@ -11,46 +17,61 @@ export const MODOS_CAMERA = ['tv', 'aproximada'];
 
 const PERFIS = {
   tv: {
-    fov: CAMERA.fov, distancia: CAMERA.distancia, altura: CAMERA.altura,
-    pesoBola: 0.45, antecipa: 0.55, limX: CAMPO.meioX - 14, limZ0: -CAMPO.meioZ + 12, limZ1: CAMPO.meioZ - 16, olharY: 0,
+    largura: CAMERA.largura, distancia: CAMERA.distancia, altura: CAMERA.altura,
+    pesoBola: 0.45, antecipa: 0.55, limX: CAMPO.meioX - 14, limZ0: -CAMPO.meioZ + 12, limZ1: CAMPO.meioZ - 11, olharY: 0,
   },
   aproximada: {
-    fov: CAMERA.aproximada.fov, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura,
+    largura: CAMERA.aproximada.largura, distancia: CAMERA.aproximada.distancia, altura: CAMERA.aproximada.altura,
     pesoBola: 0.3, antecipa: 0.35, limX: CAMPO.meioX - 3, limZ0: -CAMPO.meioZ + 3, limZ1: CAMPO.meioZ - 2, olharY: 0.6,
   },
 };
+// celular em pé: mesmos pesos, câmera mais alta/inclinada e limites que deixam chegar às linhas
+const RETRATO = {
+  tv: { ...PERFIS.tv, ...CAMERA.retrato, limX: CAMPO.meioX - 8, limZ0: -CAMPO.meioZ + 6, limZ1: CAMPO.meioZ - 6 },
+  aproximada: { ...PERFIS.aproximada, ...CAMERA.retratoAproximada },
+};
+const ASPECTO_TV = 16 / 9;
 
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+function suave(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
 export function criarCamera(aspecto) {
-  const camera = new THREE.PerspectiveCamera(CAMERA.fov, aspecto, 0.5, 900);
+  const camera = new THREE.PerspectiveCamera(32, aspecto, 0.5, 900);
   const est = {
     modo: 'tv',
     mistura: 0,               // 0 = TV, 1 = aproximada (transição suave)
     x: 0, z: 0, vx: 0, vz: 0, // foco seguido pela mola
     iniciado: false,
     aspecto,
+    pequena: false,           // tela de celular (menor lado < 520 px CSS)
   };
   const yaw = -Math.PI / 2;
+  const _p = {};
   function perfil() {
-    const a = PERFIS.tv, b = PERFIS.aproximada, t = est.mistura;
-    const s = t * t * (3 - 2 * t);
-    const o = {};
-    for (const k of Object.keys(a)) o[k] = lerp(a[k], b[k], s);
-    return o;
+    // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
+    const s = suave(est.mistura);
+    const r = suave((1.25 - est.aspecto) / 0.5);
+    for (const k of Object.keys(PERFIS.tv)) {
+      const pais = lerp(PERFIS.tv[k], PERFIS.aproximada[k], s);
+      const ret = lerp(RETRATO.tv[k], RETRATO.aproximada[k], s);
+      _p[k] = lerp(pais, ret, r);
+    }
+    _p.retrato = r;
+    return _p;
+  }
+  /** fov vertical que mostra a largura do perfil no foco, para o formato desta tela. */
+  function fovPara(p) {
+    const a = est.aspecto;
+    let larg = p.largura;
+    // paisagem mais estreita que 16:9 (4:3) perde só metade da largura; o retrato já tem a sua
+    if (a < ASPECTO_TV) larg *= lerp(Math.sqrt(Math.max(a, 1.25) / ASPECTO_TV), 1, p.retrato);
+    if (est.pequena) larg *= CAMERA.telaPequena;
+    const d = Math.hypot(p.distancia, p.altura - p.olharY);
+    return (2 * Math.atan(larg / 2 / d / a) * 180) / Math.PI;
   }
   function posicionar(p) {
-    // fov vertical: em tela larga (celular deitado, 19,5:9) fecha um pouco (meio caminho
-    // entre manter a altura e manter a largura de um 16:9 — jogadores ~10% maiores sem
-    // perder profundidade); em tela estreita (retrato) abre para manter a largura vista
-    let fov = p.fov;
-    const a = est.aspecto;
-    const ref = a > 16 / 9 ? Math.sqrt(a * 16 / 9) : a < 1.5 ? 1.5 : a;
-    if (ref !== a) {
-      const t = Math.tan((fov * Math.PI) / 360) * (ref / a);
-      fov = (Math.atan(t) * 360) / Math.PI;
-    }
+    const fov = fovPara(p);
     if (Math.abs(camera.fov - fov) > 1e-4 || camera.aspect !== est.aspecto) {
       camera.fov = fov;
       camera.aspect = est.aspecto;
@@ -73,7 +94,8 @@ export function criarCamera(aspecto) {
     get modo() { return est.modo; },
     definirModo(m) { if (PERFIS[m]) est.modo = m; },
     alternarModo() { est.modo = est.modo === 'tv' ? 'aproximada' : 'tv'; return est.modo; },
-    redimensionar(a) { est.aspecto = a; },
+    /** a = largura/altura da tela; pequena = celular (fecha mais o plano). */
+    redimensionar(a, pequena = false) { est.aspecto = a; est.pequena = !!pequena; },
     /**
      * dt do quadro (s). alvo = {jx, jz, jvx, jvz, bx, bz} (posições INTERPOLADAS).
      * corte = true reposiciona sem mola (recomeço).

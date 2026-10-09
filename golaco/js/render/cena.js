@@ -49,7 +49,6 @@ function criarCeu() {
       uniform vec3 uTopo; uniform vec3 uHorizonte; uniform vec3 uBaixo;
       uniform vec3 uSolDir; uniform vec3 uSolCor; uniform float uNoite;
       varying vec3 vDir;
-      float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       void main() {
         vec3 d = normalize(vDir);
         float h = d.y;
@@ -57,10 +56,9 @@ function criarCeu() {
         c = mix(c, uBaixo, smoothstep(0.0, -0.06, h));
         float s = max(dot(d, normalize(uSolDir)), 0.0);
         c += uSolCor * (pow(s, 1200.0) * 30.0 + pow(s, 16.0) * 0.35 + pow(s, 3.0) * 0.06) * (1.0 - uNoite);
-        if (uNoite > 0.5) {
-          vec2 g = floor(vec2(atan(d.z, d.x) * 220.0, h * 220.0));
-          c += vec3(step(0.9972, h21(g))) * smoothstep(0.08, 0.5, h) * 0.9;
-        }
+        // à noite: sem estrelas (com os refletores acesos não se vê nenhuma — e pontos de
+        // 1 px piscavam como sujeira na tela); só o halo dos refletores perto do horizonte
+        c += vec3(0.035, 0.05, 0.07) * uNoite * (1.0 - smoothstep(0.0, 0.35, h));
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>

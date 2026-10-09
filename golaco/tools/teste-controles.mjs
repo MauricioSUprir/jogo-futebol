@@ -1,7 +1,9 @@
 // Controles na página (navegador): teclado no PC e toque no celular, de verdade (eventos do
-// Chromium, não chamadas diretas): o jogador anda para o lado certo da tela, arrancada,
+// Chromium, não chamadas diretas): o jogador anda para o lado certo DA TELA (o deslocamento é
+// projetado pela câmera: direita = direita, cima = para cima/longe da câmera), arrancada,
 // condução curta, menu/ajuda/câmera/máquina/marcador/recomeço pelas teclas; no celular o
-// analógico flutuante (arrastar na metade esquerda), CORRER junto (dois dedos) e o botão de menu.
+// analógico flutuante (arrastar na metade esquerda) para a direita e para cima, CORRER junto
+// (dois dedos), CONDUÇÃO segurado (condução curta) e em dois toques (pedalada), botão de menu.
 //   node tools/teste-controles.mjs
 import { servidor, abrir } from './lib/navegador.mjs';
 
@@ -12,6 +14,16 @@ const srv = await servidor();
 async function quadros(pagina, n) {
   return pagina.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 }); return g.estado(); }, n);
 }
+/** Deslocamento NA TELA (px) entre duas posições do jogador, com a câmera de agora: confere
+ *  "direita no controle = direita na tela; cima = para cima na tela (longe da câmera)". */
+async function naTela(pagina, a, b) {
+  return pagina.evaluate(([a, b]) => {
+    const g = window.__golaco;
+    const p = g.naTela(a.x, 0, a.z), q = g.naTela(b.x, 0, b.z);
+    return { dx: q.x - p.x, dy: q.y - p.y };
+  }, [a, b]);
+}
+const telaTxt = t => `tela dx ${t.dx.toFixed(0)} px, dy ${t.dy.toFixed(0)} px`;
 
 // ------------------------------------------------------------------ PC: teclado
 {
@@ -24,12 +36,14 @@ async function quadros(pagina, n) {
     const e0 = await quadros(pagina, 2);
     await pagina.keyboard.down('KeyW');
     const e1 = await quadros(pagina, 90);
-    meta('W: anda para cima na tela (z diminui)', `z ${e0.jogador.z.toFixed(2)} → ${e1.jogador.z.toFixed(2)}, ${e1.kmh.toFixed(1)} km/h, ${e1.modo}`, e1.jogador.z < e0.jogador.z - 2 && e1.kmh > 12 && e1.modo === 'Conduzindo');
+    const tW = await naTela(pagina, e0.jogador, e1.jogador);
+    meta('W: anda para cima na tela (z diminui)', `z ${e0.jogador.z.toFixed(2)} → ${e1.jogador.z.toFixed(2)}, ${telaTxt(tW)}, ${e1.kmh.toFixed(1)} km/h, ${e1.modo}`, e1.jogador.z < e0.jogador.z - 2 && tW.dy < -20 && Math.abs(tW.dx) < -tW.dy * 0.3 && e1.kmh > 12 && e1.modo === 'Conduzindo');
     await pagina.keyboard.up('KeyW');
     await pagina.keyboard.down('KeyD');
     await pagina.keyboard.down('Shift');
     const e2 = await quadros(pagina, 120);
-    meta('D + Shift: arrancada para a direita (x aumenta)', `x ${e1.jogador.x.toFixed(2)} → ${e2.jogador.x.toFixed(2)}, ${e2.kmh.toFixed(1)} km/h, ${e2.modo}`, e2.jogador.x > e1.jogador.x + 3 && e2.kmh > 24 && e2.modo === 'Arrancada');
+    const tD = await naTela(pagina, e1.jogador, e2.jogador);
+    meta('D + Shift: arrancada para a direita da tela (x aumenta)', `x ${e1.jogador.x.toFixed(2)} → ${e2.jogador.x.toFixed(2)}, ${telaTxt(tD)}, ${e2.kmh.toFixed(1)} km/h, ${e2.modo}`, e2.jogador.x > e1.jogador.x + 3 && tD.dx > 20 && e2.kmh > 24 && e2.modo === 'Arrancada');
     await pagina.keyboard.up('Shift');
     await pagina.keyboard.down('KeyE');
     const e3 = await quadros(pagina, 90);
@@ -103,7 +117,8 @@ async function quadros(pagina, n) {
     for (let k = 1; k <= 6; k++) await toque('touchMove', [{ x: 200 + k * 12, y: 260, id: 1 }]);
     const e1 = await quadros(pagina, 90);
     const ativo = await pagina.evaluate(() => document.getElementById('analogico').classList.contains('ativo'));
-    meta('Analógico flutuante: arrastar para a direita anda para +x', `x ${e0.jogador.x.toFixed(2)} → ${e1.jogador.x.toFixed(2)}, ${e1.kmh.toFixed(1)} km/h, base ativa ${ativo}`, e1.jogador.x > e0.jogador.x + 2 && e1.kmh > 12 && ativo);
+    const tt1 = await naTela(pagina, e0.jogador, e1.jogador);
+    meta('Analógico flutuante: arrastar para a direita anda para a direita da tela', `x ${e0.jogador.x.toFixed(2)} → ${e1.jogador.x.toFixed(2)}, ${telaTxt(tt1)}, ${e1.kmh.toFixed(1)} km/h, base ativa ${ativo}`, e1.jogador.x > e0.jogador.x + 2 && tt1.dx > 20 && Math.abs(tt1.dy) < tt1.dx * 0.3 && e1.kmh > 12 && ativo);
     // dedo 2 no CORRER (com o dedo 1 ainda no analógico)
     const r = await pagina.evaluate(() => { const b = document.getElementById('btn-correr').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
     await toque('touchStart', [{ x: 272, y: 260, id: 1 }, { x: r.x, y: r.y, id: 2 }]);
@@ -112,6 +127,34 @@ async function quadros(pagina, n) {
     await toque('touchEnd', []);
     const e3 = await quadros(pagina, 120);
     meta('Soltar os dedos: o jogador para', `${e3.kmh.toFixed(1)} km/h`, e3.kmh < 3);
+    // arrastar para CIMA: o jogador vai para longe da câmera (sobe na tela)
+    await toque('touchStart', [{ x: 200, y: 280, id: 3 }]);
+    for (let k = 1; k <= 6; k++) await toque('touchMove', [{ x: 200, y: 280 - k * 12, id: 3 }]);
+    const e4 = await quadros(pagina, 90);
+    const tt4 = await naTela(pagina, e3.jogador, e4.jogador);
+    meta('Analógico para cima: o jogador sobe na tela (longe da câmera)', `z ${e3.jogador.z.toFixed(2)} → ${e4.jogador.z.toFixed(2)}, ${telaTxt(tt4)}`, e4.jogador.z < e3.jogador.z - 2 && tt4.dy < -20 && Math.abs(tt4.dx) < -tt4.dy * 0.3);
+    // segurar CONDUÇÃO com o dedo no analógico: condução curta (bola colada, devagar)
+    const bm = await pagina.evaluate(() => { const b = document.getElementById('btn-mod').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
+    await toque('touchStart', [{ x: 200, y: 208, id: 3 }, { x: bm.x, y: bm.y, id: 4 }]);
+    const e5 = await quadros(pagina, 90);
+    const modAtivo = await pagina.evaluate(() => document.getElementById('btn-mod').classList.contains('ativo'));
+    meta('CONDUÇÃO segurado (com o analógico): condução curta', `${e5.kmh.toFixed(1)} km/h, ${e5.modo}, botão aceso ${modAtivo}`, e5.modo === 'Condução curta' && e5.kmh < 11 && modAtivo);
+    // dois toques rápidos no CONDUÇÃO: pedalada (no touchEnd do CDP vai o dedo que SAIU)
+    await toque('touchEnd', [{ x: bm.x, y: bm.y, id: 4 }]);
+    await quadros(pagina, 6);
+    await toque('touchStart', [{ x: 200, y: 208, id: 3 }, { x: bm.x, y: bm.y, id: 5 }]);
+    await quadros(pagina, 4);
+    await toque('touchEnd', [{ x: bm.x, y: bm.y, id: 5 }]);
+    await quadros(pagina, 4);
+    await toque('touchStart', [{ x: 200, y: 208, id: 3 }, { x: bm.x, y: bm.y, id: 6 }]);
+    const ped = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      let viu = false;
+      for (let i = 0; i < 30; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.estado().modo === 'Pedalada') viu = true; }
+      return viu;
+    });
+    await toque('touchEnd', []);
+    meta('Dois toques rápidos no CONDUÇÃO: pedalada', String(ped), ped);
     const m = await pagina.evaluate(() => { const b = document.getElementById('btn-menu').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
     await pagina.touchscreen.tap(m.x, m.y);
     const menu = await pagina.evaluate(() => !document.getElementById('menu').hidden);

@@ -1,5 +1,6 @@
 // Prints da Etapa 1 (navegador): PC 1280×720 Alta de dia e de noite; celular 844×390 dpr 2
-// Média (toque, entalhe simulado) de dia e de noite; extras: câmera aproximada, menu e ajuda.
+// Média (toque, entalhe simulado) de dia e de noite; extras: câmera aproximada, celular em pé,
+// menu e ajuda, e dois de conferência com a câmera livre (manequim de perto e o gol).
 // Roda alguns segundos de simulação com o relógio manual (?demo=1: o jogador conduz em curva
 // sozinho) e salva em tools/saida/. Confere também: erros no console e caixas do HUD que se
 // sobrepõem ou passam da área segura.
@@ -28,6 +29,10 @@ const CENAS = [
   { nome: 'pc-menu', ...PC, url: 'q=alta&hora=dia', depois: 'menu' },
   { nome: 'celular-menu', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', depois: 'menu' },
   { nome: 'celular-ajuda', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1', depois: 'ajuda' },
+  // conferência de perto (câmera livre): manequim correndo (juntas, listras, chuteira na bola)
+  // e gol/linhas da grande área
+  { nome: 'pc-manequim', ...PC, url: 'q=alta&hora=dia&marcador=1', livre: { rel: [0, 1.2, 6], fov: 22 } },
+  { nome: 'pc-gol', ...PC, url: 'q=alta&hora=noite', livre: { de: [38, 5, 14], para: [52.5, 1.2, 0], fov: 40 } },
 ];
 
 /** Caixas do HUD: nenhuma encosta em outra e todas ficam dentro da área segura. */
@@ -71,16 +76,33 @@ for (const c of CENAS) {
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 });
     }, segundos);
+    if (c.livre) {
+      await pagina.evaluate(l => {
+        const g = window.__golaco;
+        const j = g.estado().jogador;
+        const de = l.rel ? [j.x + l.rel[0], l.rel[1], j.z + l.rel[2]] : l.de;
+        const para = l.rel ? [j.x, 0.9, j.z] : l.para;
+        g.cameraLivre({ de, para, fov: l.fov });
+        g.desenhar();
+      }, c.livre);
+    }
     if (c.depois === 'menu') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirMenu(); });
     if (c.depois === 'ajuda') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirAjuda(); });
     if (c.depois) await pagina.evaluate(() => window.__golaco.desenhar());
     const arq = path.join(SAIDA, `${c.nome}.png`);
     await pagina.screenshot({ path: arq });
     const lay = c.depois ? { problemas: [], caixas: [] } : await conferirLayout(pagina);
-    const est = await pagina.evaluate(() => window.__golaco.estado());
+    const est = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      const e = g.estado();
+      // altura do jogador controlado na tela (px CSS): pés → 1,8 m
+      const j = g.render.jogador, a = g.naTela(j.x, 0, j.z), b = g.naTela(j.x, 1.8, j.z);
+      e.alturaTela = Math.hypot(a.x - b.x, a.y - b.y);
+      return e;
+    });
     const ok = erros.length === 0 && lay.problemas.length === 0;
     if (!ok) falhas++;
-    console.log(`${ok ? 'OK  ' : 'FALHA'} ${c.nome.padEnd(15)} ${path.relative(RAIZ, arq)}  (${((Date.now() - t0) / 1000).toFixed(1)} s, ${est.desenhoChamadas} chamadas, modo ${est.modo}, ${est.kmh.toFixed(1)} km/h, q=${est.qualidade})`);
+    console.log(`${ok ? 'OK  ' : 'FALHA'} ${c.nome.padEnd(15)} ${path.relative(RAIZ, arq)}  (${((Date.now() - t0) / 1000).toFixed(1)} s, ${est.desenhoChamadas} chamadas, jogador ${est.alturaTela.toFixed(0)} px, modo ${est.modo}, ${est.kmh.toFixed(1)} km/h, q=${est.qualidade})`);
     for (const e of erros) console.log('      erro no console:', e);
     for (const p of lay.problemas) console.log('      layout:', p);
     if (args.includes('--caixas')) for (const cx of lay.caixas) console.log('      caixa:', cx);

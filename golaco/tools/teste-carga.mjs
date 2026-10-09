@@ -7,7 +7,8 @@
 //      modificador, pedalada, marcador e máquina de passes) dão o mesmo hashMundo nos dois;
 //      e a matemática determinística (js/matdet.js) dá os mesmos bits nos dois motores;
 //   6) interpolação: a 144 Hz o jogador desenhado anda a passos regulares (sem o "anda, para,
-//      anda" de quem desenha só o último passo de simulação).
+//      anda" de quem desenha só o último passo de simulação);
+//   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva.
 // Saída com PASSOU/REPROVOU e código de saída 1 se reprovar.
 //   node tools/teste-carga.mjs [--url http://...]   (sem --url sobe o servidor da pasta)
 import { servidor, abrir } from './lib/navegador.mjs';
@@ -182,6 +183,42 @@ try {
   });
   const okInterp = interp.zeros === 0 && interp.min > interp.med * 0.6 && interp.max < interp.med * 1.4;
   meta('Interpolação a 144 Hz (deslocamento por quadro)', `méd ${(interp.med * 100).toFixed(2)} cm · mín ${(interp.min * 100).toFixed(2)} · máx ${(interp.max * 100).toFixed(2)} · quadros parados ${interp.zeros}`, 'sem quadro parado, ±40% da média', okInterp);
+
+  // 7) câmera sem tremor: conduzindo em curva (com arrancada no meio) a 144 Hz, a posição da
+  //    câmera tem que ser lisa — 2ª diferença por quadro pequena perto do quanto ela anda, e
+  //    nenhum vai-e-volta curto (inversão de sentido seguida de outra em < 0,25 s)
+  const tremor = await pagina.evaluate(() => {
+    const g = window.__golaco;
+    g.reiniciar({ semente: 5 });
+    g.relogio.usarManual(true);
+    const cams = [];
+    const n = 144 * 5;
+    for (let i = 0; i < n; i++) {
+      const t = i / 144;
+      const a = 0.9 * t;
+      g.forcarEntrada({ x: Math.cos(a), z: Math.sin(a), botoes: t > 1.5 && t < 3.2 ? 1 : 0 });
+      g.relogio.avancar(1000 / 144, { desenhar: false });
+      if (t > 0.5) cams.push({ ...g.render.camera });
+    }
+    g.forcarEntrada(null);
+    g.relogio.usarManual(false);
+    let d2 = 0, v = 0;
+    const inv = { x: [], z: [] };
+    for (let i = 2; i < cams.length; i++) {
+      for (const k of ['x', 'z']) {
+        d2 = Math.max(d2, Math.abs(cams[i][k] - 2 * cams[i - 1][k] + cams[i - 2][k]));
+        const a = cams[i - 1][k] - cams[i - 2][k], b = cams[i][k] - cams[i - 1][k];
+        if (Math.abs(a) > 1e-6 && Math.abs(b) > 1e-6 && Math.sign(a) !== Math.sign(b)) inv[k].push(i);
+      }
+      v += Math.hypot(cams[i].x - cams[i - 1].x, cams[i].z - cams[i - 1].z);
+    }
+    v /= cams.length - 2;
+    let vaivem = 0;
+    for (const k of ['x', 'z']) for (let i = 1; i < inv[k].length; i++) if (inv[k][i] - inv[k][i - 1] < 36) vaivem++;
+    return { d2, v, vaivem, inversoes: inv.x.length + inv.z.length };
+  });
+  const okTremor = tremor.v > 0.005 && tremor.d2 < tremor.v * 0.1 && tremor.vaivem === 0;
+  meta('Câmera sem tremor a 144 Hz (curva + arrancada)', `2ª dif. máx ${(tremor.d2 * 1000).toFixed(2)} mm/quadro² · anda ${(tremor.v * 1000).toFixed(1)} mm/quadro · vai-e-volta ${tremor.vaivem} (inversões ${tremor.inversoes})`, '2ª dif. < 10% do passo, 0 vai-e-volta', okTremor);
 
   // a página continua viva depois de tudo
   await pagina.waitForTimeout(500);
