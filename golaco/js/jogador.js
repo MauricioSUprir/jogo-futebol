@@ -65,7 +65,21 @@ function criarPe(x, z, rumo, lado) {
     x: x + rx * s * PASSADA.afastamentoLateral,
     z: z + rz * s * PASSADA.afastamentoLateral,
     rumo,
-    faseApoio: lado - 2, // fase em que tocou o chão
+    // fase em que tocou o chão: com fase 0, o pé 0 acabou de pisar e o pé 1 pisou um passo antes
+    faseApoio: lado === 0 ? 0 : -1,
+    // no balanço: fase em que saiu do chão e fase em que vai pousar (a animação anda entre elas)
+    // e o ponto onde vai pousar (lx, lz, lrumo) — a simulação planta o pé exatamente ali
+    faseSaida: 0,
+    fasePouso: 0,
+    lx: x + rx * s * PASSADA.afastamentoLateral,
+    lz: z + rz * s * PASSADA.afastamentoLateral,
+    lrumo: rumo,
+    // gesto do toque: peso (0–1) com que o pé desenhado vai até a bola e o ponto (gx, gz) aonde
+    // ele vai. Só visual, mas integrado pela simulação com velocidade limitada (conducao.js
+    // atualizarGesto) para a pose continuar função pura do estado e o pé nunca saltar.
+    puxa: 0,
+    gx: x + rx * s * PASSADA.afastamentoLateral,
+    gz: z + rz * s * PASSADA.afastamentoLateral,
   };
 }
 
@@ -192,54 +206,115 @@ function passadaAtiva(k, s) {
 /**
  * Avança a passada de um passo de simulação. Atualiza os pés (toque no chão e saída).
  * Devolve eventos de pé ('pisou' j / 'tirou' j) no array ev (opcional).
+ * saida (opcional) = {pe, em}: um toque na bola vem aí com o pé `pe` (conducao.js
+ * saidaParaToque). Com os dois pés no chão, a passada tira esse pé do chão em até `em` segundos
+ * (o toque sai sempre do pé livre); parado, o pé que vai tocar não é apressado para pousar.
+ *
+ * A fase NUNCA salta: o pé no balanço é desenhado pela fase (anim.js), então um salto de fase
+ * era um pé que teletransportava. Quando um pé precisa sair antes (ficou para trás, torto, ou
+ * vai tocar a bola), só o ritmo aumenta, com limite (PASSADA.ritmo*). Também não há mais pouso
+ * instantâneo: parando com um pé no ar, ele termina o passo (ritmoFimPasso).
  */
-export function passoPassada(j, comBola, dt, ev) {
+export function passoPassada(j, comBola, dt, ev, saida = null) {
   const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
   const { f, carga } = infoPassada(s, comBola);
   const ambosNoChao = j.pes[0].apoio && j.pes[1].apoio;
-  if (!passadaAtiva(j, s) && ambosNoChao) return; // parado com os dois pés no chão
+  const ativa = passadaAtiva(j, s);
+  const pedido = saida && ambosNoChao ? saida : null;
+  const toqueVindo = !!saida;
+  if (!ativa && ambosNoChao && !pedido) return; // parado com os dois pés no chão
   const f0 = j.fase;
-  let f1 = f0 + f * dt;
-  // pé de apoio que ficou para trás demais (ou torto demais) sai antes: adianta a fase
+  const sair = 2 * carga;
+  // o pé no ar está no gesto do toque: a passada não acelera (o gesto acabaria de uma vez)
+  const gesto = (!j.pes[0].apoio && j.pes[0].puxa > 0) || (!j.pes[1].apoio && j.pes[1].puxa > 0);
+  let ritmo = f, ritmoFim = 0, gestoParado = false;
   for (let p = 0; p < 2; p++) {
     const pe = j.pes[p];
-    if (!pe.apoio) continue;
-    const lado = p === 0 ? -1 : 1;
-    const hx = j.x + (-MD.sin(j.rumo)) * lado * PASSADA.afastamentoLateral;
-    const hz = j.z + MD.cos(j.rumo) * lado * PASSADA.afastamentoLateral;
-    const d = MD.hypot(pe.x - hx, pe.z - hz);
-    const torto = Math.abs(difAng(pe.rumo, j.rumo)) > 1.2;
-    if (d > PASSADA.alcancePlantado || torto) {
-      const psi = faseLocal(f1, p);
-      const sair = 2 * carga;
-      if (psi < sair) f1 += sair - psi + 1e-6;
+    if (pe.apoio) {
+      if (gesto) continue; // o pé de apoio gira no lugar (pivô) até o gesto acabar
+      // pé de apoio que ficou para trás demais (ou torto demais) sai antes: o passo acelera
+      const lado = p === 0 ? -1 : 1;
+      const hx = j.x + (-MD.sin(j.rumo)) * lado * PASSADA.afastamentoLateral;
+      const hz = j.z + MD.cos(j.rumo) * lado * PASSADA.afastamentoLateral;
+      const d = MD.hypot(pe.x - hx, pe.z - hz);
+      const torto = Math.abs(difAng(pe.rumo, j.rumo)) > 1.2;
+      if (d > PASSADA.alcancePlantado || torto) {
+        const psi = faseLocal(f0, p);
+        if (psi < sair) ritmo = Math.max(ritmo, Math.min((sair - psi + 1e-6) / dt, PASSADA.ritmoAdiantado * f));
+      }
+    } else if (!ativa) {
+      // parado com o pé no gesto do toque (indo até a bola ou voltando dela) ou esperando o
+      // toque que vem aí: o passo espera, para o pé não pousar antes nem voltar correndo. Os
+      // outros pés no ar terminam o passo depressa (antes desciam ao chão num quadro só) —
+      // inclusive o que não é o do toque: ajeita os pés antes de receber
+      if (pe.puxa > 0 || (toqueVindo && saida.pe === p)) gestoParado = true;
+      else ritmoFim = PASSADA.ritmoFimPasso;
     }
   }
+  ritmo = gestoParado ? Math.min(ritmo, PASSADA.ritmoGestoParado) : Math.max(ritmo, ritmoFim);
+  if (ritmo > f) {
+    // a passada pode acelerar, mas sem o pé no ar passar da velocidade de um pé humano no
+    // balanço (Clark et al. 2023: pico de 2,0 ± 0,15 × a velocidade do corpo). O pé anda pela
+    // fase (anim.js): pico ≤ 1,5 × caminho × ritmo / (fase do balanço).
+    const vMax = PASSADA.velPeBalanco[0] + PASSADA.velPeBalanco[1] * s;
+    for (let p = 0; p < 2; p++) {
+      const pe = j.pes[p];
+      if (pe.apoio) continue;
+      const caminho = MD.hypot(pe.lx - pe.x, pe.lz - pe.z);
+      if (caminho < 1e-3) continue;
+      ritmo = Math.max(f, Math.min(ritmo, vMax * (pe.fasePouso - pe.faseSaida) / (1.5 * caminho)));
+    }
+  }
+  if (pedido) {
+    // tira o pé do toque do chão a tempo (parado: no ritmo certo para sair `em` segundos depois)
+    const psi = faseLocal(f0, pedido.pe);
+    if (psi < sair) {
+      const r = Math.min((sair - psi + 1e-6) / Math.max(pedido.em, dt), PASSADA.ritmoSaidaToque);
+      ritmo = ativa ? Math.max(ritmo, r) : r;
+    }
+  }
+  const f1 = f0 + ritmo * dt;
   j.fase = f1;
+  const vPouso = (PASSADA.velPouso[0] + PASSADA.velPouso[1] * s) * dt;
   for (let p = 0; p < 2; p++) {
     const pe = j.pes[p];
     const psi0 = faseLocal(f0, p), psi1 = faseLocal(f1, p);
     const virou = f1 - f0 >= 2 || psi1 < psi0; // cruzou o 0 da fase local
+    let saiu = false;
     if (pe.apoio) {
-      if (psi1 >= 2 * carga || virou) {
+      if (virou) {
+        // fez o ciclo inteiro no chão (passada muito lenta): conta como se tivesse pisado de novo
+        pe.faseApoio = p + 2 * Math.floor((f1 - p) / 2);
+      } else if (psi1 >= sair) {
         pe.apoio = false;
+        pe.faseSaida = f1;
+        pe.fasePouso = f1 + (2 - psi1); // o próximo inteiro n ≡ p (mod 2): é quando pousa
+        saiu = true;
         if (ev) ev.push({ tipo: 'tirou', pe: p, id: j.id });
       }
     } else if (virou) {
-      plantarPe(j, p, carga, f);
+      plantarPe(j, p);
       if (ev) ev.push({ tipo: 'pisou', pe: p, id: j.id });
     }
-  }
-  // parando: se a passada não está mais ativa, o pé no ar desce ao chão já
-  if (!passadaAtiva(j, s)) {
-    for (let p = 0; p < 2; p++) if (!j.pes[p].apoio) {
-      plantarPe(j, p, carga, f);
-      if (ev) ev.push({ tipo: 'pisou', pe: p, id: j.id });
+    if (!pe.apoio) {
+      // ponto de pouso: onde o corpo vai estar no tick do pouso + meio apoio à frente. Segue o
+      // previsto com velocidade limitada — não salta quando a velocidade do corpo muda de uma
+      // vez (trombada) — e é exatamente onde o pé será plantado.
+      const nt = Math.max(1, Math.ceil((pe.fasePouso - f1) / (Math.max(f, 0.5) * dt) - 1e-9));
+      const pt = pontoPouso(j, p, carga, f, nt * dt);
+      if (saiu) { pe.lx = pt.x; pe.lz = pt.z; }
+      else {
+        const dx = pt.x - pe.lx, dz = pt.z - pe.lz;
+        const d = MD.hypot(dx, dz);
+        const k = d > vPouso ? vPouso / d : 1;
+        pe.lx += dx * k; pe.lz += dz * k;
+      }
+      pe.lrumo = pt.rumo;
     }
   }
 }
 
-/** Onde o pé p vai pousar se pousar agora (usado também pela animação no balanço). */
+/** Onde o pé p pousa se pousar daqui a tempoAtePouso segundos (o centro do apoio à frente). */
 export function pontoPouso(j, p, carga, f, tempoAtePouso = 0) {
   const tm = tempoAtePouso + carga / Math.max(f, 0.5); // meio do apoio
   const lado = p === 0 ? -1 : 1;
@@ -253,11 +328,11 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0) {
   };
 }
 
-function plantarPe(j, p, carga, f) {
-  const pt = pontoPouso(j, p, carga, f, 0);
+/** Planta o pé p no ponto de pouso guardado (o mesmo que a animação mostrou no último tick). */
+function plantarPe(j, p) {
   const pe = j.pes[p];
   pe.apoio = true;
-  pe.x = pt.x; pe.z = pt.z; pe.rumo = pt.rumo;
+  pe.x = pe.lx; pe.z = pe.lz; pe.rumo = pe.lrumo;
   pe.faseApoio = p + 2 * Math.floor((j.fase - p) / 2);
 }
 

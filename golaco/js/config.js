@@ -126,6 +126,35 @@ export const PASSADA = {
   alcancePlantado: 0.62,      // m — além disso o pé de apoio sai do chão (passo antecipado)
   afastamentoLateral: 0.09,   // m — pé plantado ao lado do centro do corpo
   alturaPasso: 0.12,          // m — altura do pé no meio do balanço (corrida)
+  // A fase da passada nunca salta (o pé no balanço anda pela fase: salto de fase = pé que
+  // teletransporta). Quando um pé precisa sair antes, só o RITMO aumenta, com estes limites.
+  ritmoAdiantado: 1.6,        // × o ritmo normal — pé de apoio para trás ou torto demais
+  ritmoFimPasso: 4,           // passos/s — parado com um pé no ar: termina o passo (sem pousar de uma vez)
+  ritmoSaidaToque: 8,         // passos/s — os dois pés no chão e o toque pede um pé livre
+  ritmoGestoParado: 0.6,      // passos/s — parado, com o pé no gesto do toque (o passo espera)
+  velPouso: [3, 1.5],         // m/s — o ponto de pouso do pé no ar anda no máximo [0] + [1] × velocidade
+  // m/s — com a passada acelerada, o pé no ar anda no máximo [0] + [1] × velocidade do corpo
+  // (85% do limite físico do teste de patinação, 3 + 2,5·v; Clark et al. 2023)
+  velPeBalanco: [2.5, 2.1],
+};
+
+// Gesto do toque na bola (só visual). O peso com que o pé desenhado vai até a bola é
+// integrado pela simulação com velocidade limitada (pé de cada jogador, `puxa`), para a pose
+// continuar função pura do estado e o pé nunca saltar quando o toque é remarcado.
+export const GESTO = {
+  janela: 0.25,               // s antes do toque em que o pé começa a ir até a bola
+  subida: [0.25, 0.2],        // s para o peso ir de 0 a 1 (o pé chega à bola): parado, a ≥ velRef
+  acompanha: 0.05,            // s em que o pé acompanha a bola depois do toque
+  descida: 0.25,              // s para o peso voltar a 0 (o pé volta à passada)
+  desvio: [0.3, 0.3],         // m — desvio máximo do pé da passada no gesto: parado, a ≥ velRef
+  velDesvio: [1.2, 2.4],      // m/s — perto da saída e do pouso o desvio encolhe com o tempo livre do pé
+  velRef: 7.5,                // m/s — velocidade do corpo em que o gesto chega aos valores [1]
+  recuo: 0.15,                // m — o pé encosta atrás da bola, na direção do corpo até ela
+  recuoPerto: 0.4,            // m — bola mais perto do corpo que isso: o recuo diminui junto
+  velPonto: [1.5, 1.2],       // m/s — o ponto do gesto anda no máximo a [0] + [1] × velocidade do corpo
+  saidaAntes: 0.25,           // s — com os dois pés no chão, o pé do toque sai do chão antes disto
+  pedidoSaida: 0.5,           // s antes do toque em que a passada começa a tirar o pé do chão
+  esperaSaida: 10,            // ticks que o toque espera o pé sair do chão (depois remarca)
 };
 
 // Condução (o toque planejado). Ver CONTRATOS.md.

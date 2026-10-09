@@ -9,6 +9,7 @@ import { criarJogador, passoCorpo, passoPassada } from './jogador.js';
 import { clamp, difAng, quantizar } from './mat.js';
 import {
   criarCond, controlarComBola, movimentoComBola, movimentoBase, movimentoRecepcao, tentarDominio, verificarPerda,
+  saidaParaToque, atualizarGesto,
 } from './conducao.js';
 import { MD } from './matdet.js';
 
@@ -199,7 +200,7 @@ export function passo(m, entradas) {
       mv = movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null));
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
-    passoPassada(j, m.posse === j.id, PASSO, null);
+    passoPassada(j, m.posse === j.id, PASSO, null, saidaParaToque(m, j));
   }
   colisaoCorpos(m);
   // 3) controle de bola
@@ -222,6 +223,8 @@ export function passo(m, entradas) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) verificarPerda(m, dono);
   }
+  // 6) gesto do toque (só visual: o pé desenhado indo até a bola, com velocidade limitada)
+  for (const j of js) if (j.cond) atualizarGesto(m, j);
   m.tick++;
 }
 
