@@ -184,7 +184,13 @@ async function preparar(pagina, prep) {
           const l = w.ataca[1], ub = w.bola.p.x * l;
           const frente = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l - ub > 3);
           // (perdeu do meio para a frente: quem passou da bola tem de voltar)
-          if (frente.length >= 4 && ub > -10) achou = { ids: frente.map(j => j.id), tick: w.tick };
+          if (frente.length >= 4 && ub > -10) {
+            // câmera fixa (a mesma nos dois quadros): sobre a bola e quem está à frente dela, na hora da perda,
+            // puxada 12 m para o gol do time 1 (para onde eles voltam)
+            const cx = (w.bola.p.x + frente.reduce((s, j) => s + j.x, 0) / frente.length) / 2 - l * 12;
+            const cz = (w.bola.p.z + frente.reduce((s, j) => s + j.z, 0) / frente.length) / 2;
+            achou = { ids: frente.map(j => j.id), tick: w.tick, cx, cz };
+          }
         }
         if (tb != null) tAnt = tb;
       }
@@ -192,8 +198,7 @@ async function preparar(pagina, prep) {
       av(Math.round(apos * 60));
       const w = m(), l = w.ataca[1], b = w.bola.p;
       const vs = achou.ids.map(id => w.jogadores.find(j => j.id === id));
-      const cx = (b.x + vs.reduce((s, j) => s + j.x, 0) / vs.length) / 2, cz = (b.z + vs.reduce((s, j) => s + j.z, 0) / vs.length) / 2;
-      g.cameraLivre({ de: [cx, 34, cz + 40], para: [cx, 0, cz], fov: 50 }); // alta, do lado da TV (+x à direita)
+      g.cameraLivre({ de: [achou.cx, 40, achou.cz + 46], para: [achou.cx, 0, achou.cz], fov: 55 }); // alta, do lado da TV (+x à direita)
       const ub = b.x * l;
       const atras = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l < ub).length;
       const vel = vs.map(j => (-j.vx * l).toFixed(1)).join(' / ');

@@ -273,14 +273,15 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   → `entradaIA`; recebe/corrida/bola livre; condutor → `condutorTatico`; fase `'com'` → `apoioTatico`; sem bola → a IA
   sem bola), `estadoIA(m, j)` (prepara `j.ia` para usar o `para()` de fora do ia.js).
   - **Papéis sem a bola, nesta ordem** (`semBola`): PRESSÃO do humano → contrapressão (janela `IA_DEFESA.contrapressao.s`
-    depois da perda: 0 / 5 / 7 s por nível de pressão) → 1º homem (aperta/contém) → 2º homem (cobre; sendo da linha de
+    depois da perda: 0 / 4 / 7 s por nível de pressão) → 1º homem (aperta/contém) → 2º homem (cobre; sendo da linha de
     defesa, no máximo `IA_DEFESA.coberturaFundo` m atrás da própria referência) → marcação individual na área →
     **recomposição** (`recompor`, `ramo 'recompoe'`) → referência (linha/zona, ponto calmo).
   - **Recomposição em disparada** (PR "IA intensa"; `TATICA.recomp`): quem está mais de `liga` m (nos `janela` s depois
     da perda; fora dela, `ligaOrganizado` m) à frente do alvo — a referência sem a bola e, para quem não é da frente
     (vaga com x ≥ 0 sem a bola), também `atras` m atrás da linha da bola (com um passe deles no ar, o ponto de chegada;
     o meio nunca a menos de `TATICA.meioAtras[3]` m do gol) — volta pelo modo pressa até ficar a menos de `desliga` m
-    dele, com CORRER (sprint) a mais de `corre` m; na janela, também quem ficou `ligaBola` m à frente da bola com a
+    dele, com CORRER (sprint) a mais de `corre` m e com urgência (bola a menos de `urgente` m além do meio para o meu
+    lado, ou vindo para o meu gol a mais de `vUrgente` m/s); na janela, também quem ficou `ligaBola` m à frente da bola com a
     referência atrás dela (depois de uma recomposição acabada, só `respiro` s depois). Caminho pelo lado do gol (o z
     anda `lateral` do caminho enquanto está à frente da bola); no máximo `max` s (depois, `pausa` s sem recomeçar). Chute
     deles no ar e bola parada desligam. Estado em `j.iaT` (`recomp, recompDesde, recompBloq, recompFim`).

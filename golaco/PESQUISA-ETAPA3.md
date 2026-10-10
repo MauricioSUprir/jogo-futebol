@@ -743,13 +743,13 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
 
 | Fonte | Número / ideia | O que virou no GOLAÇO | Confiança |
 |---|---|---|---|
-| Bauer & Anzer 2021, *Data Min Knowl Disc* 35 — contrapressão na Bundesliga | janela de **5 s**; ≥ 4 atrás da bola na perda ajuda a transição; 23% das perdas viram contrapressão | `IA_DEFESA.contrapressao.s` da pressão Média 3 → **5 s**; os outros recompõem (não vão todos na bola) | A |
+| Bauer & Anzer 2021, *Data Min Knowl Disc* 35 — contrapressão na Bundesliga | janela de **5 s**; ≥ 4 atrás da bola na perda ajuda a transição; 23% das perdas viram contrapressão | `IA_DEFESA.contrapressao.s` da pressão Média 3 → **4 s** (com 5 s o PPDA da Média caía para ~7, o dos times mais intensos da Europa, abaixo da faixa 8–16 da Equilibrada); os outros recompõem (não vão todos na bola) | A |
 | Forcher, Forcher, Altmann, Jekauc & Kempe 2023, *J Sports Sci Med* 22:707–725 — "rest defense" (153 jogos da Bundesliga 2020/21, rastreamento) | na perda: **3,70 ± 0,76** defensores × **2,01 ± 0,93** atacantes na zona da "rest defense" (superioridade de 1,69); o contra-ataque dura **10,9 s**; sucesso = retomar em **12 s** | a frente (vaga com x ≥ 0 sem a bola) fica para o contra-ataque ("rest attack") e volta sem sprint; janela de **12 s** do `teste-transicao` e a medida "contra-ataque com superioridade" | A |
 | Ju et al. 2023 (LJMU) — corridas de alta intensidade com contexto | sem a bola, "Recovery Run" (voltar para o próprio gol) e "Close Down" são categorias de corrida de **alta intensidade** (> 19,8 km/h = 5,5 m/s) | a recomposição é em disparada (CORRER) com atraso grande; o pico de velocidade para o próprio gol medido no teste | A |
-| Di Salvo et al. 2009, *Int J Sports Med* 30 — alta intensidade na Premier League | entre esforços muito intensos, **72 s** de recuperação em média: o sprint é raro e tem motivo | sprint só onde importa: na recomposição com atraso > 11 m e na bola solta **disputada** (sozinho na bola, vai correndo sem o sprint) | A |
+| Di Salvo et al. 2009, *Int J Sports Med* 30 — alta intensidade na Premier League | entre esforços muito intensos, **72 s** de recuperação em média: o sprint é raro e tem motivo | sprint só onde importa: na recomposição com atraso > 11 m **e urgência** (bola no meu campo ou vindo para o meu gol a > 4 m/s) e na bola solta **disputada**; sem urgência, volta correndo sem o sprint | A |
 | FIFA EFI 2022 (Copa do Mundo, fases sem bola) | bloco baixo = **8 de linha** no terço defensivo; "recomposição = correr para o próprio gol" | o meio fica atrás da bola no meu campo (`TATICA.meioAtras`); o alvo da recomposição é atrás da linha da bola | A |
 | Front. Sports 2026 (Copa feminina 2023) | recomposição = **4,2%** do tempo sem bola | a recomposição liga na janela da transição (6 s) e, no jogo organizado, só com atraso > 15 m (a bola longa por cima): **~9%** do tempo de quem defende (era 15% na 1ª versão, que ligava a cada passe deles) | M |
-| Jerome 2024 (1083 partidas) | m/min: defesa rápida **208**, ataque rápido **196** | meta dos lances rápidos 180–220 → **180–260** (ver 16.3) | A |
+| Jerome 2024 (1083 partidas) | m/min: defesa rápida **208**, ataque rápido **196** | meta dos lances rápidos 180–220 → **180–280** (ver 16.3) | A |
 | EA SPORTS FC 27, Pitch Notes (jul/2026) | "AI defenders will now play more of a supporting role through their on-pitch positioning" | quem não pressiona apoia pela posição: recompõe, cobre de lado e não atravessa o condutor (`desviaCondutor`) | A (oficial) |
 | FIFA 23 (FIFPlay), "pressão após perda" ~7 s | contrapressão mais longa na pressão agressiva | `contrapressao.s` da Alta 5 → **7 s** | M |
 | Buckland 2004 (Simple Soccer); Reis, Lau & Oliveira 2001 (SBSP) | papéis por estado do time, um por jogador, em ordem de prioridade | a ordem dos papéis sem a bola: PRESSÃO do humano → contrapressão → 1º homem → 2º → marcação na área → **recomposição** → referência | A |
@@ -759,15 +759,17 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
 
 | Constante | Valor | De onde |
 |---|---|---|
-| `TATICA.recomp` | liga 8 m (na janela de 6 s depois da perda; fora dela 15 m), ou ≥ 1 m à frente da bola com a referência atrás dela; desliga a 3 m; alvo 2 m atrás da bola; sprint com > 11 m de atraso; pelo lado do gol (z anda 50% enquanto à frente da bola); ≤ 10 s; respiro 1,5 s | FIFA EFI, Bauer & Anzer, Forcher 2023, Ju 2023; calibrado no `teste-transicao` e no `teste-movimento` (o "respiro" tirou o arranca-para-arranca) |
+| `TATICA.recomp` | liga 8 m (na janela de 6 s depois da perda; fora dela 15 m), ou ≥ 1 m à frente da bola com a referência atrás dela; desliga a 3 m; alvo 2 m atrás da bola; sprint com > 11 m de atraso e urgência (bola a menos de 10 m além do meio para o meu lado, ou vindo para o meu gol a > 4 m/s); pelo lado do gol (z anda 50% enquanto à frente da bola); ≤ 10 s; respiro 1,5 s | FIFA EFI, Bauer & Anzer, Forcher 2023, Ju 2023; calibrado no `teste-transicao` e no `teste-movimento` (o "respiro" tirou o arranca-para-arranca) |
 | `TATICA.meioAtras` | 2 m atrás da bola; ≥ 2,5 + 0,2 × (distância natural) m da linha de defesa; ≥ 18 m do gol | FIFA EFI (bloco baixo); Metrica (6 defensores na área no cruzamento: o meio fica na entrada dela) |
-| `IA_DEFESA.contrapressao.s` | 0 / **5** / **7** s | Bauer & Anzer 2021; FIFA 23 |
+| `IA_DEFESA.contrapressao.s` | 0 / **4** / **7** s | Bauer & Anzer 2021 (5 s é a janela da definição); FIFA 23; o PPDA da Média (8–16) |
 | `IA_DEFESA.coberturaFundo` | 1,5 m | Metrica (linha de 4 com 3,5 m de espalhamento no meu terço): quem cobre sendo da linha cobre de lado |
 | `IA_DEFESA.desvio` | 3 m / 1,4 m | EA FC 27 (apoio pela posição); erro medido no `teste-taticas` (o meio empurrava o condutor pelo corpo) |
 | `IA_DEFESA.livre.disputa` | 0,6 s | Di Salvo 2009; Metrica (sprint 0,6% do tempo) |
 | `TATICA.largura.com` | 0,90 / **1,04** / 1,18 | Metrica (48,3 m com a bola): o jogo media ~43,8 m |
 | `IA_ATAQUE.corridas.alemMax` | 0,5 s | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
 | `IA_ATAQUE.utilidade.chuteLonge` | 0,30 → 0,32 | ~40% dos chutes do futebol de elite são de fora da área (o jogo tinha ~30%); a conversão ficava em ~20%, no teto da faixa |
+| `IA_ATAQUE.utilidade.cruzamentoP` | 0 / 1 na área: 0,02 / 0,12 → **0,01 / 0,06** | Metrica (3 atacantes na área no cruzamento, p90 5): cruzar para a área vazia vale menos — atacantes na área no cruzamento 1,6 → 2,6 |
+| `IA_ATAQUE.corridas.alemMax` (com o ataque à área valendo, não corta) | 0,5 s | — |
 
 ### 16.3 Metas que mudaram
 
@@ -776,11 +778,12 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
   Metrica dão **44,1%** (`tools/pesquisa/retomada_metrica.py`, 555 perdas); os 36,5% eram de outra definição. A meta passa
   a ser a da mesma definição no jogo real ± 10 pontos, como a da agressão (68 ± 10) — e o dono pediu contrapressão mais
   forte (5 s).
-- **m/min nos lances rápidos** (`teste-intensidade`): 180–220 → **180–260**. A média real (Jerome 2024) é 196–208; o dono
-  pediu o jogo "MAIS INTENSO" com a IA voltando em disparada, e quem recompõe corre a ~415 m/min (6,9 m/s) nos lances
-  rápidos. O teto fica ~25% acima da média real (confiança B: não há fonte para o "time mais intenso" por fase); o jogo
-  organizado (120–160) e o tempo por faixa de velocidade (± 8 pontos da Metrica) continuam com a faixa real e seguram a
-  "correria sem sentido". A publicada já estava acima do teto antigo (240).
+- **m/min nos lances rápidos** (`teste-intensidade`): 180–220 → **180–280**. A média real (Jerome 2024) é 196–208; a
+  publicada já ficava em ~240 (a partida condensada tem ~5 posses por minuto, contra ~1 no jogo real); o dono pediu o
+  jogo "MAIS INTENSO" com a IA voltando em disparada, e quem recompõe corre a ~390 m/min nos lances rápidos (~21% do
+  tempo deles), somando ~25 m/min. Confiança B (não há fonte para o "time mais intenso" por fase); o jogo organizado
+  (120–160) e o tempo por faixa de velocidade (± 8 pontos da Metrica) continuam com a faixa real e seguram a "correria
+  sem sentido".
 
 ### 16.4 Incertezas
 

@@ -31,7 +31,7 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
 - **IA mais intensa** (pedido do dono, 10/10: "o jogo tem que ser MAIS INTENSO, a IA não corre para trás"): na perda da
   bola, quem ficou à frente dela volta **em disparada** para trás da linha da bola, pelo lado do gol (recomposição), e os
-  mais perto apertam por 5 s (contrapressão; 7 s na pressão Alta) — vale para a IA adversária e para os companheiros do
+  mais perto apertam por 4 s (contrapressão; 7 s na pressão Alta) — vale para a IA adversária e para os companheiros do
   humano; o meio fica atrás da bola no próprio campo, a cobertura da linha de defesa cobre de lado, ninguém dá sprint
   em bola solta sem disputa e quem volta contorna o condutor. Medido no `teste-transicao` (ver PESQUISA-ETAPA3.md §16).
 
