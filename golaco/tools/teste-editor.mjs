@@ -29,8 +29,10 @@
 //      a troca vale.
 //  E10 determinismo: mesma semente + roteiro + edição no passo 300 = mesmo hash; sem a edição ou com
 //      ela no passo 301 o hash é outro; só a tática diferente já muda o hash.
-//  E11 sem recuo: hashes do treino iguais aos da base 980b0b0 (gravados abaixo, as mesmas cenas do
-//      tools/hash-igual.mjs) e o treino sem m.times. (A prova completa é o hash-igual.)
+//  E11 sem recuo: hashes do treino iguais aos gravados (as mesmas cenas do tools/hash-igual.mjs) e o
+//      treino sem m.times. (A prova completa é o hash-igual.) Gravados de novo no pedido de 10/10 (recepção
+//      assistida, erro do domínio por atributo e goleiro que mergulha mudam o treino de propósito; antes: os
+//      da base 980b0b0 — a condução sem passe, conducao-7 até o passo 1200, continua igual).
 //
 //   node tools/teste-editor.mjs [--antes] [--js <pasta>] [--base N]
 import fs from 'node:fs';
@@ -423,11 +425,13 @@ bloco('E10', () => {
 
 // ------------------------------------------------------------------------------------ E11
 {
-  // hashes da base 980b0b0 (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600)
-  const BASE980 = {
-    'ataque-1': [3298389666, 255764296, 4082737914],
-    'ataque-2': [3929265932, 3750097417, 646006693],
-    'conducao-7': [1415330591, 986885701, 4093573822],
+  // hashes gravados (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600) — pedido de
+  // 10/10 (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914], ataque-2 [3929265932, 3750097417,
+  // 646006693], conducao-7 [1415330591, 986885701, 4093573822])
+  const GRAVADO = {
+    'ataque-1': [2811615975, 1768777365, 1390258626],
+    'ataque-2': [3194456073, 2433901321, 696346031],
+    'conducao-7': [1415330591, 986885701, 1630605632],
   };
   const R = await import(pathToFileURL(path.join(AQUI, 'lib/roteiros.mjs')).href);
   const obt = {};
@@ -450,7 +454,7 @@ bloco('E10', () => {
     obt['conducao-7'] = hs;
     if (m.times !== undefined) semTimes = false;
   }
-  const dif = Object.keys(BASE980).filter(k => JSON.stringify(obt[k]) !== JSON.stringify(BASE980[k]));
-  reg('E11 treino igual à base 980b0b0 (3 cenas × 3 hashes) e sem m.times', dif.length ? `diferem: ${dif.join(', ')}` : `9 hashes iguais${semTimes ? '' : '; treino com m.times'}`, 'iguais; sem m.times', !dif.length && semTimes);
+  const dif = Object.keys(GRAVADO).filter(k => JSON.stringify(obt[k]) !== JSON.stringify(GRAVADO[k]));
+  reg('E11 treino igual ao gravado (3 cenas × 3 hashes) e sem m.times', dif.length ? `diferem: ${dif.join(', ')}` : `9 hashes iguais${semTimes ? '' : '; treino com m.times'}`, 'iguais; sem m.times', !dif.length && semTimes);
 }
 fim();

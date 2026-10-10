@@ -184,7 +184,7 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   andamento (o desenho marca o ponto de queda no gramado quando `alto`). Tipos: `'passe' | 'enfiada' |
   'enfiadaAlta' | 'lancamento' | 'cruzamento' | 'chute' | 'colocado' | 'cavadinha' | 'cabeceio'`.
 - `j.recebe = {tick, x, z, tipo}`: o jogador que vai receber (vem ao encontro / arranca na enfiada).
-- `j.mergulho = {tick0, dx, dz, alt, lado}`: goleiro mergulhando (a animação deita o corpo nessa direção).
+- `j.mergulho`: a defesa desenhada do goleiro (mergulho, salto ou em pé) — ver a seção "Pedido de 10/10" abaixo.
 - Eventos novos: `passe`, `chute`, `defesa` ({tipo: 'encaixe'|'espalmada'}), `gol`, `troca`, `saidaGoleiro`.
 - **Troca de controle**: sempre por `assumirControle(m, time, novo)` (`acoes.js`): a carga e o pedido em andamento
   vão para o novo jogador e os botões segurados contam como já apertados (sem carga nova falsa). As bordas do
@@ -365,3 +365,47 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
 - Otimização da lógica: o hash da PARTIDA tem de ficar igual antes e depois (além do `hash-igual` do treino):
   `node tools/hash-partida.mjs` (repositório × HEAD; `--ref <commit>` ou `--base <pasta js>`): partidas inteiras IA × IA e
   com humano aleatório (botões de defesa e uma edição do time), `hashMundo` a cada 300 passos nas duas cópias da lógica.
+
+## Pedido de 10/10 — recepção que nunca sai da bola, controle de bola e goleiro que pula e espalma (contrato)
+Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md`. Constantes: `config.js` `RECEPCAO`, `CONDUCAO.dominioErroAng/Vel/Curva`,
+`GOLEIRO.espalmada`, `GOLEIRO.antecipaMergulho`, `GOLEIRO.vLado`.
+- **Recepção assistida** (`js/recepcao.js`, puro): só para o jogador **controlado pelo humano** que vai receber —
+  o passe é para ele (`j.recebe`) ou a bola livre passa perto e ele chega antes dos companheiros (`tipoRecepcao`).
+  `planejarRecepcao(m, j)` roda no passo 1 (entradas) e grava `j.recep = {ativo, tick (deste plano), alvo (tick do
+  encontro), qx, qz (onde o corpo chega), bx, bz (a bola lá), ux, uz (sentido dela), modo: 'frente'|'corrida', vmax,
+  rapido, livre}`; `recepcaoAtiva(m, j)` = plano deste tick. No passo 2 o corpo anda por `movimentoAssistido` (o
+  mesmo que `conducao.js preverCorpo` usa na previsão do domínio). O analógico decide o 1º toque (domínio orientado:
+  `conducao.js tentarDominio → dominioAssistido`, `planejarAlvo(…, orientado)`, ±20°) e abre o tronco; CORRER ou o
+  analógico para a bola apressam o encontro; nada do analógico afasta o corpo da linha da bola. Analógico solto =
+  recebe de frente como antes. A IA não muda (recebe pelo caminho de antes) e **a entrada da demo marca `ia: true`**
+  (`sessao.js entradaDemo`, `partida.js entradaDemoPartida`): a IA jogando pelo humano recebe como a IA.
+  `criarJogador` declara `recep: undefined` (o mesmo formato de objeto). `tempoAlcance(j, qx, qz, vmax, parar)`:
+  com `parar`, chega freando (embalado passa do ponto, para e volta). Embalado (> 1,2 m/s), o pedido de movimento
+  abre no máximo `RECEPCAO.angCorteMax` do sentido da corrida (corta freando; acima de `angInverte` inverte).
+- **Erro do domínio por atributo**: `σ = bom + (ruim − bom)·((100 − controle)/100)^dominioCurva` (ângulo e velocidade),
+  × velocidade da bola e pressão como antes.
+- **Goleiro — defesa desenhada** (`js/goleiro.js`, puro; matemática pelo MD — entra no estado e no hash):
+  `movimentoGoleiro` começa a defesa (`iniciarMergulho(m, j, d)`) uma vez por leitura (`j.mergulho.idDefesa =
+  d.tick`), no máximo `GOLEIRO.antecipaMergulho` s antes do contato (antes anda de lado para a linha da bola, até
+  `GOLEIRO.vLado`). Tipos pela bola no contato: `'salto'` (alta e perto), `'baixa'`/`'peito'` (em pé, perto: tronco
+  curvado sobre a bola `thC`, pé longe dá um passo curto) e `'mergulho'` (a "prancha": pés fora do chão, quadril,
+  ombros e mãos na linha da bola; cai de lado, fica no chão, levanta). Campos de `j.mergulho` no comentário do
+  módulo (`tick0, tc, tipo, sucesso, encaixe, x0, z0, fx, fz, lx, lz, sC, fC, hC, phiC, thC, v0L, v0F, h0, bx, by, bz,
+  ext, tImp, tq, vc, sFim, sLev, fim, pe0, perto, passo, pmL, pmF, pf, passa, durPasso, iniPasso, …`).
+  `mergulhoAtivo(j, tick)` (tick0 < tick ≤ fim). `quadroMergulho(g, tick, q)` é **função pura do tempo**: centro
+  (x, z), quadril h, inclinações `phi` (de lado) e `th` (para a frente), braços, fase, tornozelos `a0/a1` e apoio.
+  Na simulação (`sim.js`): passo 2 `passoMergulho` (o corpo = quadro do próximo tick, no lugar da locomoção), depois
+  das trombadas `fixarMergulho` + `pesMergulho` (pés plantados/no ar pelo quadro, no lugar da passada), passo 8 sem
+  `passoPeDesenhado`; `goleiroComBola` espera ele levantar. `bolaNaMao` usa `bolaNasMaosMergulho` (a bola nas mãos
+  do quadro, trazida ao peito em `T_ABRACA`). Na animação: `anim.js poseMergulho` (mesmo quadro, `maosMergulho`,
+  `eixosMergulho`); `alturaQuadril` devolve o h do quadro. `render/jogador3d.js frente()` em 3D (corpo deitado).
+- **Espalmada** (`aplicarDefesa → espalmar`): por cima do travessão (bola acima de `alturaTravessao`), pela linha de
+  fundo por fora da trave (contato a < `perto` m da linha) ou bem aberta (|z| ≥ `zAberta`), velocidade `fracaoV` da
+  bola (entre `vMin` e `vMax`); conferida pela física (`espalmadaSegura`): não entra no gol nem morre (abaixo de
+  `vMorre`) na zona perigosa (< `zonaX` da linha, |z| < `zonaZ`); senão abre mais o ângulo (até 6 tentativas).
+- **Testes**: `teste-recepcao` (padrão; canhão de 1000 bolas: domínio ≥ 99%, corpo nunca se afasta > 0,15 m, 1º toque
+  ±20° ≥ 95%, bola ≤ 1,2 m do pé 0,5 s depois ≥ 97%), `teste-mergulho` (padrão; 432 chutes: mergulho desenhado em 100%
+  dos chutes no alvo a > 1 m de onde o goleiro estava 0,5 s antes, mão ≤ 0,25 m da bola no contato ≥ 95%, espalmadas
+  que morrem na zona perigosa ≤ 10%, pés sem patinar), `tools/medir-controle.mjs` (informativo, minutos: domínio que
+  escapa, perdas sozinho, bola–pé por velocidade, 1º toque por atributo, "se afastou da bola vindo" do humano
+  roteirizado; `--sonda tipo,h|i,semente,tick` imprime o lance).
