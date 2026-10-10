@@ -7,12 +7,16 @@
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
-//    CORRER; defesa = TROCAR, GOLEIRO e CORRER; nenhum botão encosta em outro, no analógico em
-//    repouso nem no HUD (e as caixas do HUD não encostam entre si, com o texto de modo mais longo),
-//    todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com entalhe), 667×375 e 390×844
-//    (em pé, com a ilha no topo), nos tamanhos 70–140%.
-// Itens que dependem da lógica da Etapa 2 (m.controlado, j.carga, m.voo...) saem como
-// AGUARDANDO LÓGICA enquanto ela não existir — nunca como PASSOU.
+//    CORRER; defesa = TROCAR, GOLEIRO, CONTER, DIVIDIDA, PRESSÃO e CORRER (os três da Etapa 3 só
+//    com a entrada da Parte 4); nenhum botão encosta em outro, no analógico em repouso nem no HUD
+//    (e as caixas do HUD não encostam entre si, com o texto de modo mais longo e o placar com o
+//    relógio da partida), todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com
+//    entalhe), 667×375 e 390×844 (em pé, com a ilha no topo), nos tamanhos 70–140%.
+//  - Partida (Etapa 3; a página abre nela): menu com Editar time e Reiniciar partida, sem Recomeçar,
+//    Máquina e Marcador; placar com o relógio; R/M/N não mexem na partida; teclas da defesa (J
+//    conter, K dividida, O pressão). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
+// Itens que dependem da lógica (Etapa 2: m.controlado, j.carga, m.voo...; Etapa 3: a entrada da
+// defesa da Parte 4) saem como AGUARDANDO enquanto ela não existir — nunca como PASSOU.
 //   node tools/teste-controles.mjs
 import { servidor, abrir } from './lib/navegador.mjs';
 
@@ -21,7 +25,10 @@ const AG = 'aguardando';
 const meta = (nome, medido, ok) => res.push({ nome, medido, ok });
 const srv = await servidor();
 
-const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, TROCAR: 1024, GOLEIRO: 2048 };
+const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048 };
+const AG4 = 'aguardando4';
+/** A entrada da Parte 4 posiciona os botões da defesa da Etapa 3 (CONTER, DIVIDIDA, PRESSÃO)? */
+const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-conter'); return !!b && b.hasAttribute('style'); });
 
 async function quadros(pagina, n) {
   return pagina.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 }); return g.estado(); }, n);
@@ -128,6 +135,7 @@ async function layoutToque(pagina) {
 async function conferirTodosLayouts(pagina) {
   const textos = [];
   let ok = true;
+  const defE3 = await temDefesaE3(pagina);
   // o texto de modo mais longo no painel (o topo se ajusta a ele)
   await pagina.evaluate(() => window.__golaco.hudModo('Condução curta', 'MEI'));
   for (const tam of [0.7, 1, 1.4]) {
@@ -138,7 +146,7 @@ async function conferirTodosLayouts(pagina) {
         t.classList.toggle('fase-ataque', f === 'ataque'); t.classList.toggle('fase-defesa', f === 'defesa');
       }, [tam, f]);
       const l = await layoutToque(pagina);
-      const esperado = f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : ['correr', 'goleiro', 'trocar'];
+      const esperado = f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? ['conter', 'correr', 'dividida', 'goleiro', 'pressao', 'trocar'] : ['correr', 'goleiro', 'trocar'];
       const okIds = JSON.stringify(l.ids) === JSON.stringify(esperado);
       if (!okIds || l.problemas.length) ok = false;
       textos.push(`${Math.round(tam * 100)}% ${f}: ${l.ids.length} botões, menor ${l.menor} px${l.problemas.length ? ' — ' + l.problemas.join('; ') : ''}${okIds ? '' : ' — botões ' + l.ids.join(',')}`);
@@ -206,7 +214,7 @@ async function conferirTodosLayouts(pagina) {
     meta('R: bola no pé', `posse ${eR.posse}`, eR.posse === eR.controlado);
 
     // ações: treino de ataque (padrão da Etapa 2)
-    const novo = async (sem = 2) => pagina.evaluate(s => { const g = window.__golaco; g.reiniciar({ semente: s }); g.relogio.usarManual(true); return g.estado(); }, sem);
+    const novo = async (sem = 2) => pagina.evaluate(s => { const g = window.__golaco; g.reiniciar({ semente: s, modo: 'ataque' }); g.relogio.usarManual(true); return g.estado(); }, sem);
     const logica = (await novo()).logicaEtapa2;
     const sem = t => (logica ? t : AG);
     // J segurado: máscara, carga e barra; soltar: passe
@@ -307,18 +315,18 @@ async function conferirTodosLayouts(pagina) {
       av(120);
       const e1 = g.estado();
       // ataque: A passe, Y enfiada, B chute, X lançamento, LB trocar
-      g.reiniciar({ semente: 4 });
+      g.reiniciar({ semente: 4, modo: 'ataque' });
       eixos = [0, 0, 0, 0];
       const res = { x0, x1: e1.jogador.x, kmh: e1.kmh, modo: e1.modo };
       const testar = (i, n = 6) => { botoes = [i]; const m = av(n); botoes = []; av(2); return m; };
       res.faseAtaque = g.fase;
       res.Y_ataque = testar(3); res.B = testar(1); res.X = testar(2); res.LB = testar(4);
-      g.reiniciar({ semente: 4 });
+      g.reiniciar({ semente: 4, modo: 'ataque' });
       const p0 = g.mundo.stats?.passes ?? 0;
       botoes = [0]; av(12); botoes = []; av(50);
       res.passesA = (g.mundo.stats?.passes ?? 0) - p0;
       // defesa: Y = goleiro
-      g.reiniciar({ semente: 4 });
+      g.reiniciar({ semente: 4, modo: 'ataque' });
       g.acao('maquina');
       av(20);
       res.faseDefesa = g.fase;
@@ -330,6 +338,45 @@ async function conferirTodosLayouts(pagina) {
     meta('Controle: B chute, X lançamento, LB trocar', `B ${gp.B}, X ${gp.X}, LB ${gp.LB}`, (gp.B & BIT.CHUTE) && (gp.X & BIT.LANCAMENTO) && (gp.LB & BIT.TROCAR) ? true : false);
     meta('Controle: A = passe', `passes ${gp.passesA}`, sem(gp.passesA >= 1));
     meta('Controle: Y = enfiada no ataque e goleiro na defesa', `fase ${gp.faseAtaque}: ${gp.Y_ataque}; fase ${gp.faseDefesa}: ${gp.Y_defesa}`, gp.faseAtaque === 'ataque' && (gp.Y_ataque & BIT.ENFIADA) !== 0 && !(gp.Y_ataque & BIT.GOLEIRO) && gp.faseDefesa === 'defesa' && (gp.Y_defesa & BIT.GOLEIRO) !== 0 && !(gp.Y_defesa & BIT.ENFIADA));
+
+    // partida (Etapa 3): menu por modo, relógio, R/M/N desligados e as teclas da defesa
+    const mp = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      g.reiniciar({ modo: 'partida', semente: 3 });
+      g.relogio.usarManual(true);
+      for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.abrirMenu();
+      const vis = s => { const b = document.querySelector(s); return !!b && !b.hidden && b.offsetParent !== null; };
+      const r = {
+        editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('[data-cmd="reiniciar-partida"]'),
+        recomecar: vis('[data-cmd="recomecar"]'), maquina: vis('[data-cmd="maquina"]'), marcador: vis('[data-cmd="marcador"]'),
+        relogio: vis('#placar-relogio'), textoRelogio: document.getElementById('placar-relogio')?.textContent ?? '', siglas: document.getElementById('sigla-1')?.textContent,
+      };
+      g.fecharMenu();
+      return r;
+    });
+    meta('Partida: menu com Editar time e Reiniciar partida, sem Recomeçar, Máquina e Marcador',
+      `Editar ${mp.editar}, Reiniciar ${mp.reiniciar}, Recomeçar ${mp.recomecar}, Máquina ${mp.maquina}, Marcador ${mp.marcador}`, mp.editar && mp.reiniciar && !mp.recomecar && !mp.maquina && !mp.marcador);
+    meta('Partida: placar com o relógio e as siglas do elenco', `relógio "${mp.textoRelogio}", visitante ${mp.siglas}`, mp.relogio && /\d+'/.test(mp.textoRelogio) && mp.siglas === 'VNT');
+    const rP0 = await pagina.evaluate(() => window.__golaco.hash());
+    await pagina.keyboard.press('KeyR');
+    await pagina.keyboard.press('KeyM');
+    await pagina.keyboard.press('KeyN');
+    const rP = await pagina.evaluate(() => ({ h: window.__golaco.hash(), aviso: document.getElementById('aviso').textContent, marcador: window.__golaco.estado().marcador }));
+    meta('Partida: R, M e N não mexem no jogo (só o aviso "Só nos treinos")', `hash ${rP.h === rP0 ? 'igual' : 'mudou'}, aviso "${rP.aviso}", marcador ${rP.marcador}`, rP.h === rP0 && /treinos/i.test(rP.aviso) && !rP.marcador);
+    // teclas da defesa (plano 2.8): J segura CONTER, K = DIVIDIDA, O segura PRESSÃO (Parte 4)
+    const defE3 = await temDefesaE3(pagina);
+    const def = async tecla => {
+      await pagina.evaluate(() => { const g = window.__golaco; g.reiniciar({ semente: 4, modo: 'ataque' }); g.relogio.usarManual(true); g.acao('maquina'); for (let i = 0; i < 24; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+      await pagina.keyboard.down(tecla);
+      const r = await rodar(pagina, 8);
+      await pagina.keyboard.up(tecla);
+      await rodar(pagina, 2);
+      return { mask: r.mask, fase: r.estado.fase };
+    };
+    const dJ = await def('KeyJ'), dK = await def('KeyK'), dO = await def('KeyO');
+    const okDef = dJ.fase === 'defesa' && (dJ.mask & BIT.CONTER) && !(dJ.mask & BIT.PASSE) && (dK.mask & BIT.DIVIDIDA) && !(dK.mask & BIT.CHUTE) && (dO.mask & BIT.PRESSAO);
+    meta('Defesa: J = CONTER, K = DIVIDIDA, O = PRESSÃO (sem passe nem chute)', `fase ${dJ.fase}; J ${dJ.mask}, K ${dK.mask}, O ${dO.mask}`, defE3 ? !!okDef : AG4);
     meta('PC sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
@@ -380,7 +427,7 @@ async function conferirTodosLayouts(pagina) {
     await toque('touchEnd', []);
 
     // ações no treino de ataque
-    const novo = async (sem = 2) => pagina.evaluate(s => { const g = window.__golaco; g.reiniciar({ semente: s }); g.relogio.usarManual(true); return g.estado(); }, sem);
+    const novo = async (sem = 2) => pagina.evaluate(s => { const g = window.__golaco; g.reiniciar({ semente: s, modo: 'ataque' }); g.relogio.usarManual(true); return g.estado(); }, sem);
     const logica = (await novo()).logicaEtapa2;
     const sem = t => (logica ? t : AG);
     await quadros(pagina, 10);
@@ -417,7 +464,10 @@ async function conferirTodosLayouts(pagina) {
     await pagina.evaluate(() => window.__golaco.acao('maquina'));
     const d0 = await quadros(pagina, 20);
     const ld = await layoutToque(pagina);
-    meta('Sem a bola: TROCAR, GOLEIRO e CORRER (ataque some)', `fase ${d0.fase}, posse ${d0.posse}, botões ${ld.ids.join(', ')}`, d0.fase === 'defesa' && JSON.stringify(ld.ids) === JSON.stringify(['correr', 'goleiro', 'trocar']));
+    const defE3c = await temDefesaE3(pagina);
+    meta('Sem a bola: TROCAR, GOLEIRO e CORRER (ataque some)', `fase ${d0.fase}, posse ${d0.posse}, botões ${ld.ids.join(', ')}`, d0.fase === 'defesa' && ['correr', 'goleiro', 'trocar'].every(b => ld.ids.includes(b)) && !ld.ids.some(b => ['chute', 'passe', 'enfiada', 'lancamento'].includes(b)));
+    meta('Sem a bola: CONTER, DIVIDIDA e PRESSÃO no arco da defesa (≥ 48 px, sem encostar)', `botões ${ld.ids.join(', ')}; menor ${ld.menor} px${ld.problemas.length ? ' — ' + ld.problemas.join('; ') : ''}`,
+      defE3c ? JSON.stringify(ld.ids) === JSON.stringify(['conter', 'correr', 'dividida', 'goleiro', 'pressao', 'trocar']) && ld.problemas.length === 0 : AG4);
     const bt = await centro('btn-trocar');
     await toque('touchStart', [{ x: bt.x, y: bt.y, id: 14 }]);
     await toque('touchEnd', [{ x: bt.x, y: bt.y, id: 14 }]);
@@ -461,19 +511,20 @@ for (const t of [
     await pagina.goto(srv.url + '?q=baixa' + (t.entalhe ? '&entalhe=1' : ''), { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     await pagina.evaluate(() => { window.__golaco.relogio.usarManual(true); });
-    await quadros(pagina, 2);
+    const ep = await quadros(pagina, 2);
+    const relVis = await pagina.evaluate(() => { const r = document.getElementById('placar-relogio'); return !!r && !r.hidden && r.offsetWidth > 0; });
     const [okL, txtL] = await conferirTodosLayouts(pagina);
-    meta(`${t.nome}: nada encosta (botões, analógico, HUD), ≥ 48 px, área segura`, txtL, okL);
+    meta(`${t.nome}: nada encosta (botões, analógico, HUD com o relógio da partida), ≥ 48 px, área segura`, `modo ${ep.modoTreino}, relógio ${relVis}; ${txtL}`, okL && ep.modoTreino === 'partida' && relVis);
     meta(`${t.nome}: sem erro no console`, erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
 await srv.fechar();
 
 const larg = Math.max(...res.map(r => r.nome.length));
-const rot = ok => (ok === AG ? 'AGUARDANDO LÓGICA' : ok ? 'PASSOU  ' : 'REPROVOU');
+const rot = ok => (ok === AG ? 'AGUARDANDO LÓGICA' : ok === AG4 ? 'AGUARDANDO PARTE 4' : ok ? 'PASSOU  ' : 'REPROVOU');
 for (const r of res) console.log(`${rot(r.ok)}  ${r.nome.padEnd(larg)}  ${r.medido}`);
-const reprovou = res.filter(r => r.ok !== AG && !r.ok);
-const aguardando = res.filter(r => r.ok === AG);
+const reprovou = res.filter(r => r.ok !== AG && r.ok !== AG4 && !r.ok);
+const aguardando = res.filter(r => r.ok === AG || r.ok === AG4);
 if (reprovou.length) console.log('\nteste-controles: REPROVOU');
 else if (aguardando.length) console.log(`\nteste-controles: PASSOU na interface; ${aguardando.length} itens AGUARDANDO LÓGICA (não contam como passou)`);
 else console.log('\nteste-controles: PASSOU');
