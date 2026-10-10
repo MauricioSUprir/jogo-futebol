@@ -193,6 +193,71 @@ if (!RO) {
     reg('Bola desenhada volta ao ponto da física', `depois de ${REDE.duracao} s: ${fmt(fimOff * 1000, 2)} mm`, '0', t0 !== null && fimOff < 1e-6);
   }
 
+  // ---------------------------------------------------------------- C2) cantos: a bola desenhada não fura nenhum pano
+  // (contraprova M1: no canto o empurrão de um pano levava a bola para perto da armação do outro, que quase não se
+  // mexe, e ela furava esse outro em até 6,7 cm). Mede como a contraprova: em cada quadro (4 por passo), para cada
+  // pano em que a bola da física encosta, quanto a superfície da bola DESENHADA passa do pano deformado no ponto
+  // em frente a ela.
+  {
+    const geo = (s, k, p) => {
+      const X = s * p.x - MX, cl = (v, a, b) => Math.max(a, Math.min(b, v));
+      if (k === 0) return { dist: X - PROF, px: s * (MX + PROF), py: cl(p.y, 0, HG), pz: cl(p.z, -ZL, ZL), dentro: Math.abs(p.z) <= ZL && p.y <= HG };
+      if (k === 1) return { dist: p.y - HG, px: s * (MX + cl(X, 0, PROF)), py: HG, pz: cl(p.z, -ZL, ZL), dentro: X >= 0 && X <= PROF && Math.abs(p.z) <= ZL };
+      const tz = k === 2 ? -1 : 1;
+      return { dist: tz * p.z - ZL, px: s * (MX + cl(X, 0, PROF)), py: cl(p.y, 0, HG), pz: tz * ZL, dentro: X >= 0 && X <= PROF && p.y <= HG };
+    };
+    /** Maior furo (m) da bola desenhada numa cena com a física da bola (ini como em cena()). */
+    function furoCena(s, ini, ticks = 200) {
+      const b = criarBola(s * (MX + ini.X), ini.z);
+      b.p.y = ini.y; b.v.x = s * ini.v[0]; b.v.y = ini.v[1]; b.v.z = ini.v[2];
+      b.rolando = !(ini.v[1] > 0.01 || ini.y > R + 1e-3);
+      const est = criarOndas(), p0 = {}, v0 = {}, out = [], emp = { x: 0, y: 0, z: 0 };
+      let pior = 0, batidas = 0, quadros = 0;
+      for (let tick = 0; tick < ticks; tick++) {
+        Object.assign(p0, b.p); Object.assign(v0, b.v);
+        passoBola(b, []);
+        const n = detectarImpactos(p0, v0, b.p, b.v, out);
+        for (let k = 0; k < n; k++) if (registrarImpacto(est, out[k], (tick + 1) * PASSO - PASSO / 2)) batidas++;
+        for (const a of [0.25, 0.5, 0.75, 1]) {
+          const t = (tick + a) * PASSO;
+          const p = { x: p0.x + (b.p.x - p0.x) * a, y: p0.y + (b.p.y - p0.y) * a, z: p0.z + (b.p.z - p0.z) * a };
+          empurraoBola(est, p, t, emp);
+          const d = { x: p.x + emp.x, y: p.y + emp.y, z: p.z + emp.z };
+          for (const ss of [-1, 1]) for (let k = 0; k < 4; k++) {
+            const g0 = geo(ss, k, p);
+            if (!g0.dentro || Math.abs(g0.dist) > R + 0.05) continue;
+            const plano = (ss > 0 ? 4 : 0) + k, gd = geo(ss, k, d);
+            const def = deslocamento(est, plano, gd.px, gd.py, gd.pz, t) * fixo(plano, gd.px, gd.py, gd.pz);
+            const fura = g0.dist <= 0 ? gd.dist + R - def : def - (gd.dist - R);
+            pior = Math.max(pior, fura);
+            quadros++;
+          }
+        }
+      }
+      return { pior, batidas, quadros };
+    }
+    const CANTOS = [
+      { nome: 'rasteiro no canto (fundo × lateral)', ini: { X: -10, y: R, z: ZL - 0.45, v: [22, 0, 0.9] } },
+      { nome: 'no ângulo (fundo × teto × lateral)', ini: { X: -12, y: 1.4, z: ZL - 0.9, v: [24, vyParaAltura(-12, 1.4, 24, 1.2, 2.2), 1.2] } },
+      { nome: 'cruzando o gol rente ao fundo (lateral × fundo)', ini: { X: PROF - 0.2, y: 0.55, z: 0.5, v: [1.5, 1.2, -15] } },
+      { nome: 'diagonal forte para o canto de trás (lateral × fundo)', ini: { X: 0.4, y: 0.6, z: -1.0, v: [9, 1.0, -12] } },
+    ];
+    let piorTodos = 0, cenasOk = 0, desc = [];
+    for (const s of [1, -1]) {
+      for (const c of CANTOS) {
+        const r = furoCena(s, c.ini);
+        piorTodos = Math.max(piorTodos, r.pior);
+        if (r.batidas > 0 && r.quadros > 0) cenasOk++;
+        desc.push(`${fmt(r.pior * 100, 1)}`);
+      }
+    }
+    reg('Cantos: a bola desenhada não fura a rede (4 cenas × 2 gols, 4 quadros por passo)', `pior ${fmt(piorTodos * 100, 1)} cm (cenas: ${desc.join(' · ')} cm); ${cenasOk}/8 com batida`, '≤ 1 cm e 8/8 com batida', piorTodos <= 0.01 && cenasOk === 8);
+    // contraprova M6: bola rolando em cima do teto bate na barra de trás — não é batida "por dentro" do fundo
+    const { achadas } = cena(1, { X: 0.6, y: HG + R, z: 0.3, v: [3.2, 0, 0] }, 90);
+    const falsa = achadas.filter(a => a.plano === 4 && a.sinal > 0);
+    reg('Bola rolando em cima do teto até a barra de trás: sem bolsa por dentro', `${falsa.length} batida(s) "por dentro" no fundo (todas: ${achadas.map(a => `pano ${a.plano} ${a.sinal > 0 ? '+' : '−'}`).join(', ') || 'nenhuma'})`, '0', falsa.length === 0);
+  }
+
   // ---------------------------------------------------------------- D) impactos guardados
   {
     const est = criarOndas();

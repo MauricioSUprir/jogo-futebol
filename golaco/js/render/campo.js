@@ -254,20 +254,31 @@ function criarRede(aniso) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uRedeA = uniforms.uRedeA;
     sh.uniforms.uRedeB = uniforms.uRedeB;
+    // deslocamento pela normal do pano E a normal refeita pela inclinação da bolsa (diferença finita a 10 cm
+    // nos dois eixos do pano): a luz muda na dobra e o balanço aparece de qualquer ângulo — antes só o
+    // escurecimento mostrava a bolsa e, na câmera de TV, ela mexia 2,5% dos pixels do gol (contraprova I2).
+    // Superfície p + n·d(p): normal ∝ n − ∇d; o atributo normal aponta para DENTRO (−n), então fica normal + ∇d.
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPlano;\nattribute float aFixo;' + REDE_GLSL + `
-        vec3 redeNormal(float plano) {
-          float s = plano >= 3.5 ? 1.0 : -1.0;
-          float k = plano - (s > 0.0 ? 4.0 : 0.0);
-          if (k < 0.5) return vec3(s, 0.0, 0.0);
-          if (k < 1.5) return vec3(0.0, 1.0, 0.0);
-          return vec3(0.0, 0.0, k < 2.5 ? -1.0 : 1.0);
-        }`)
+      .replace('#include <common>', '#include <common>\nattribute float aPlano;\nattribute float aFixo;\nvarying float vRedeD;' + REDE_GLSL)
+      .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+        float redeD = 0.0;
+        if (aFixo > 0.0) {
+          redeD = redeDesloc(position, aPlano) * redeFixo(position, aPlano);
+          if (redeD != 0.0) {
+            vec3 nP = redeNormal(aPlano);
+            vec3 ta = abs(nP.x) > 0.5 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+            vec3 tb = cross(nP, ta);
+            vec3 pa = position + ta * 0.1;
+            vec3 pb = position + tb * 0.1;
+            float da = redeDesloc(pa, aPlano) * redeFixo(pa, aPlano);
+            float db = redeDesloc(pb, aPlano) * redeFixo(pb, aPlano);
+            objectNormal = normalize(objectNormal + (ta * (da - redeD) + tb * (db - redeD)) * 10.0);
+          }
+        }
+        vRedeD = redeD;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-        vRedeD = 0.0;
-        if (aFixo > 0.0) { vRedeD = redeDesloc(transformed, aPlano) * aFixo; transformed += redeNormal(aPlano) * vRedeD; }`)
-      .replace('#include <common>', '#include <common>\nvarying float vRedeD;');
-    // a bolsa escurece um pouco (a malha esticada e a sombra da dobra): o balanço aparece de qualquer ângulo
+        transformed += redeNormal(aPlano) * redeD;`);
+    // a bolsa escurece um pouco (a malha esticada e a sombra da dobra)
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nvarying float vRedeD;')
       .replace('#include <map_fragment>', `#include <map_fragment>

@@ -202,11 +202,12 @@ export function detectarImpactos(p0, v0, p1, v1, out) {
     const X1 = s * p1.x - MX;
     if (X1 < -R || X1 > PROF + R + 0.4) continue;
     const base = s > 0 ? 4 : 0;
-    // fundo
+    // fundo (por dentro só com o centro da bola abaixo da barra de trás: a bola rolando em cima do teto que
+    // bate na barra de trás não é batida "por dentro" — estufava a rede para fora, contraprova M6)
     if (Math.abs(p1.z) <= ZL + R && p1.y <= HG + R) {
       const a = s * v0.x, b = s * v1.x, tol = tolV(b);
       const yc = clamp(p1.y, 0, HG), zc = clamp(p1.z, -ZL, ZL), xc = s * (MX + PROF);
-      if (X1 >= PROF - R - tol && X1 <= PROF && a > REDE.vMin && b < 0.5 * a) poe(base, xc, yc, zc, a, 1);
+      if (X1 >= PROF - R - tol && X1 <= PROF && p1.y <= HG && a > REDE.vMin && b < 0.5 * a) poe(base, xc, yc, zc, a, 1);
       else if (X1 > PROF && X1 <= PROF + R + tol && a < -REDE.vMin && b > 0.5 * a) poe(base, xc, yc, zc, -a, -1);
     }
     if (X1 < RC || X1 > PROF + R) continue;
@@ -222,7 +223,7 @@ export function detectarImpactos(p0, v0, p1, v1, out) {
       for (let t = -1; t <= 1; t += 2) {
         const w = t * p1.z, a = t * v0.z, b = t * v1.z, tol = tolV(b), yc = clamp(p1.y, 0, HG);
         const plano = base + (t < 0 ? 2 : 3);
-        if (w >= ZL - R - tol && w <= ZL && a > REDE.vMin && b < 0.5 * a) poe(plano, xc, yc, t * ZL, a, 1);
+        if (w >= ZL - R - tol && w <= ZL && p1.y <= HG && a > REDE.vMin && b < 0.5 * a) poe(plano, xc, yc, t * ZL, a, 1);
         else if (w > ZL && w <= ZL + R + tol && a < -REDE.vMin && b > 0.5 * a) poe(plano, xc, yc, t * ZL, -a, -1);
       }
     }
@@ -231,33 +232,51 @@ export function detectarImpactos(p0, v0, p1, v1, out) {
 }
 
 const _n = { x: 0, y: 0, z: 0 };
+const _g = { px: 0, py: 0, pz: 0, dist: 0, dentro: false };
+/**
+ * Geometria do ponto p em relação ao pano k do gol do lado s: ponto do pano em frente a p (px, py, pz),
+ * distância com sinal ao plano parado (+ = do lado de fora do gol) e se p está na área do pano. Em out.
+ */
+function geoPano(s, k, p, out) {
+  const X = s * p.x - MX;
+  if (k === 0) { out.px = s * (MX + PROF); out.py = clamp(p.y, 0, HG); out.pz = clamp(p.z, -ZL, ZL); out.dist = X - PROF; out.dentro = Math.abs(p.z) <= ZL && p.y <= HG; }
+  else if (k === 1) { out.px = s * (MX + clamp(X, 0, PROF)); out.py = HG; out.pz = clamp(p.z, -ZL, ZL); out.dist = p.y - HG; out.dentro = X >= 0 && X <= PROF && Math.abs(p.z) <= ZL; }
+  else {
+    const tz = k === 2 ? -1 : 1;
+    out.px = s * (MX + clamp(X, 0, PROF)); out.py = clamp(p.y, 0, HG); out.pz = tz * ZL; out.dist = tz * p.z - ZL; out.dentro = X >= 0 && X <= PROF && p.y <= HG;
+  }
+  return out;
+}
+const _pd = { x: 0, y: 0, z: 0 };
+// panos em que a bola da física encosta (até 8 por quadro) e de que lado (dentro/fora): a restrição usa os mesmos
+const _encosta = new Int8Array(8), _ladoFora = new Uint8Array(8);
 /**
  * Empurrão da bola DESENHADA pela rede (m, no mundo), escrito em out {x, y, z}: com a bola encostada
  * (folga < ~0,35 m) a bolsa que estufa leva a bola junto; e a rede que volta nunca passa por dentro
  * dela (se a rede afunda mais que a folga, a bola vai junto). Longe da rede: zero.
+ * Depois, a RESTRIÇÃO (contraprova M1): a superfície da bola desenhada, na posição FINAL, não passa de
+ * nenhum pano deformado em que a bola da física encosta (do mesmo lado que ela está) — no canto o empurrão
+ * de um pano levava a bola para onde o outro quase não se mexe (perto da armação) e ela furava esse outro
+ * em até 6,7 cm. Três passadas de projeção (como as restrições de distância de uma malha de pano).
  */
 export function empurraoBola(est, p, t, out) {
   out.x = 0; out.y = 0; out.z = 0;
   let algum = false;
   for (const i of est.imp) if (i.ativo && t - i.t0 > 0 && t - i.t0 < REDE.duracao) { algum = true; break; }
   if (!algum) return out;
+  let nEnc = 0;
   for (let s = -1; s <= 1; s += 2) {
     const X = s * p.x - MX;
     if (X < -R || X > PROF + R + 0.8) continue;
     const base = s > 0 ? 4 : 0;
     for (let k = 0; k < 4; k++) {
       const plano = base + k;
-      // ponto do pano em frente à bola, distância com sinal (+ = bola do lado de fora) e se está na área do pano
-      let px, py, pz, dist, dentro;
-      if (k === 0) { px = s * (MX + PROF); py = clamp(p.y, 0, HG); pz = clamp(p.z, -ZL, ZL); dist = X - PROF; dentro = Math.abs(p.z) <= ZL && p.y <= HG; }
-      else if (k === 1) { px = s * (MX + clamp(X, 0, PROF)); py = HG; pz = clamp(p.z, -ZL, ZL); dist = p.y - HG; dentro = X >= 0 && X <= PROF && Math.abs(p.z) <= ZL; }
-      else {
-        const tz = k === 2 ? -1 : 1;
-        px = s * (MX + clamp(X, 0, PROF)); py = clamp(p.y, 0, HG); pz = tz * ZL; dist = tz * p.z - ZL; dentro = X >= 0 && X <= PROF && p.y <= HG;
-      }
-      if (!dentro || Math.abs(dist) > R + 0.9) continue;
-      const d = deslocamento(est, plano, px, py, pz, t) * fixo(plano, px, py, pz);
+      const g = geoPano(s, k, p, _g);
+      if (!g.dentro || Math.abs(g.dist) > R + 0.9) continue;
+      _encosta[nEnc] = plano; _ladoFora[nEnc] = g.dist > 0 ? 1 : 0; nEnc++;
+      const d = deslocamento(est, plano, g.px, g.py, g.pz, t) * fixo(plano, g.px, g.py, g.pz);
       if (d === 0) continue;
+      const dist = g.dist;
       const folga = Math.abs(dist) - R; // espaço entre a superfície da bola e o pano parado
       let e = 0;
       if (dist <= 0) {
@@ -273,6 +292,24 @@ export function empurraoBola(est, p, t, out) {
       normalPano(plano, _n);
       out.x += _n.x * e; out.y += _n.y * e; out.z += _n.z * e;
     }
+  }
+  // restrição na posição final da bola desenhada (só nos panos em que a física encosta)
+  for (let it = 0; it < 3; it++) {
+    let mexeu = false;
+    for (let q = 0; q < nEnc; q++) {
+      const plano = _encosta[q], s = plano >= 4 ? 1 : -1, k = plano & 3;
+      _pd.x = p.x + out.x; _pd.y = p.y + out.y; _pd.z = p.z + out.z;
+      const g = geoPano(s, k, _pd, _g);
+      const d = deslocamento(est, plano, g.px, g.py, g.pz, t) * fixo(plano, g.px, g.py, g.pz);
+      // por dentro: superfície da bola ≤ pano deformado; por fora: ≥ (espelho)
+      const viol = _ladoFora[q] ? d - (g.dist - R) : g.dist + R - d;
+      if (viol <= 0.001) continue;
+      normalPano(plano, _n);
+      const sg = _ladoFora[q] ? 1 : -1;
+      out.x += sg * _n.x * viol; out.y += sg * _n.y * viol; out.z += sg * _n.z * viol;
+      mexeu = true;
+    }
+    if (!mexeu) break;
   }
   return out;
 }
@@ -316,5 +353,27 @@ float redeDesloc(vec3 p, float plano) {
     d += a.w * redePerfil(length(p - a.xyz), b.x) * peso;
   }
   return d;
+}
+// a mesma conta de fixo(): 0 na armação, 1 no meio do pano
+float redeFixo(vec3 p, float plano) {
+  float s = plano >= 3.5 ? 1.0 : -1.0;
+  float k = plano - (s > 0.0 ? 4.0 : 0.0);
+  float X = s * p.x - ${f(MX)};
+  float u; float U; float v; float V;
+  if (k < 0.5) { u = p.z + ${f(ZL)}; U = ${f(2 * ZL)}; v = p.y; V = ${f(HG)}; }
+  else if (k < 1.5) { u = p.z + ${f(ZL)}; U = ${f(2 * ZL)}; v = X; V = ${f(PROF)}; }
+  else { u = X; U = ${f(PROF)}; v = p.y; V = ${f(HG)}; }
+  float bv = (k < 0.5 || k > 1.5) && v < V - v ? ${f(REDE.bordaChao)} : ${f(REDE.borda)};
+  float du = clamp(min(u, U - u) / ${f(REDE.borda)}, 0.0, 1.0);
+  float dv = clamp(min(v, V - v) / bv, 0.0, 1.0);
+  return sin(du * 1.5707963) * sin(dv * 1.5707963);
+}
+// normal do pano (para FORA do gol)
+vec3 redeNormal(float plano) {
+  float s = plano >= 3.5 ? 1.0 : -1.0;
+  float k = plano - (s > 0.0 ? 4.0 : 0.0);
+  if (k < 0.5) return vec3(s, 0.0, 0.0);
+  if (k < 1.5) return vec3(0.0, 1.0, 0.0);
+  return vec3(0.0, 0.0, k < 2.5 ? -1.0 : 1.0);
 }
 `;
