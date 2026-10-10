@@ -561,14 +561,70 @@ export const IA_DEFESA = {
 };
 
 // ----------------------------------------------------------------------------- Parte 3: com bola
-// IA com a bola (plano 2.5 e 2.6; pesquisa §5, §9 e §12 — ameaça esperada, xT).
+// IA com a bola (plano 2.5 e 2.6; pesquisa §5, §9 e §12 — ameaça esperada, xT). ia-ataque.js.
 export const IA_ATAQUE = {
-  apoio: { n: 2, dist: [8, 14], aneis: [9, 13], direcoes: 8, raioRef: 6, cone: 0.209, histerese: 1.3, compromisso: 0.75 },
-  corridas: { folga: 2, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 3, max: [1, 2] },
+  // Apoio curto (Steiner 2018; Buckland 2004): os n mais perto do condutor procuram um ponto em
+  // `direcoes` direções × `aneis` m em volta dele, a ≤ raioRef m da própria referência; distância ideal
+  // `dist` m; linha livre no cone de Steiner (rad); histerese e compromisso (s) do ponto escolhido.
+  apoio: { n: 2, dist: [10, 16], aneis: [12, 16], direcoes: 8, raioRef: 6, cone: 0.209, histerese: 1.3, compromisso: 0.75, antecipa: 0.8, pressa: 1000, colado: 6 },
+  // Corridas nas costas (Ju 2023; SkillCorner; Metrica): começam até `folga` m atrás da linha, com
+  // campoMin m às costas da defesa, o condutor de frente (< angFrente rad) e sem adversário a
+  // < marcadorLivre m, e a linha do passe até o destino com risco ≤ linhaMax; destino = linha + `alem`
+  // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
+  // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa).
+  corridas: { folga: 8, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 2.5, max: [1, 2], espera: 2.0, linhaMax: 0.9 },
+  // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
+  // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
+  // ofensiva: +transOfBonus nas opções à frente.
   condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
+  // Utilidade do condutor (ia-ataque.js decidir): U = P·(V + posse) − (1 − P)·(C + posse), V = xT do
+  // destino, C = xT do adversário onde a bola seria perdida ÷ risco aceito, posse = valor de ter a bola.
+  //  - passe: velocidade média vPasse (m/s); até passeMax m; longo perde precisão (erroDist por 20 m
+  //    além de 20 m); recebedor com adversário a < pressaoRecebe m: −passePress na chance e
+  //    −pressaoValor no valor; para impedido vale impedido×;
+  //  - enfiada: bola a vEnfiada m/s no ponto da corrida a enfiadaLead m do corredor (força enfiadaForca);
+  //  - lançamento: chance lancamentoP (bola alta disputada);
+  //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando)
+  //    e valor cruzamentoV;
+  //  - chute: xG = xgA·θ^xgB (θ = ângulo da boca do gol, teto xgMax) × (1 − bloqueio·risco da linha)
+  //    × chute (× chuteLonge de fora da área) − chutePosse·posse; mira a miraPoste m do poste longe do
+  //    goleiro; força chuteForca (perto → longe);
+  //  - conduzir: 7 direções a passoAngConduz rad, conduzDist m à frente, × conduz (o tempo que leva);
+  //    chance de manter pelos adversários a < manterRaio m do caminho (manterPeso; de lado/atrás
+  //    manterLado), × manterArea[0] dentro da área e [1] a < manterPerto m do gol; quem segura a bola
+  //    perde valor (conduzSolta: de [0] s a [1] s, até [2]×); analógico magConduz; CORRER com
+  //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
+  //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
+  utilidade: {
+    posse: 0, vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
+    passePress: 0.2, impedido: 0.3, enfiadaLead: 6, enfiadaForca: 0.25, lancamentoP: 0.5, cruzamentoV: 0.25,
+    cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
+    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
+    passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
+    manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
+    protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,
+  },
   riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)
-  cruzamento: { zLateral: 20.16, xTerco: 30 },
+  // faixa do cruzamento (|z| > zLateral, u > xTerco); o ataque à área começa com a bola em u > xAtiva e
+  // |z| > zAtiva (quem vai precisa de tempo para chegar)
+  cruzamento: { zLateral: 20.16, xTerco: 30, zAtiva: 15, xAtiva: 17.5 },
+  areaCorre: 6,               // m — quem vai à área e está mais longe que isto do ponto vai correndo (pressa)
+  sobeCorrendo: 1000,         // m — alvo mais que isto à frente: sobe correndo (pressa; desligado: o tronco tremia)
+  antecipa: 0.9,              // s — as referências usam a bola daqui a isto (o time anda com o passe)...
+  antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
+  pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
   impedimentoFolga: 1,        // m — fora da corrida, a referência não passa da linha adversária − isto
+  naLinha: 2.5,               // m — com a bola fora do nosso terço, atacantes e pontas ficam até isto atrás da linha
+  // sobreposição: condutor de lado (|z| > w) no campo adversário → o lateral do lado passa por fora,
+  // frente m à frente dele, a linha m da lateral
+  sobreposicao: { w: 15, frente: 8, linha: 3 },
+  oscila: { amp: 2.5, periodo: 6 }, // m, s — vem e vai do apoio (0 = desliga)
+  rebote: { raio: 25, frente: 7 }, // chute meu no ar: quem está a < raio m do gol corre para frente m da linha do gol
+  empurraRaio: 4,             // m — se quem faz a linha é o marcador (até isto), o atacante a empurra...
+  empurraFolga: 0.2,          // m — ...ficando só isto atrás dela
+  // desmarque: adversário a ≤ raio m e a menos de cone rad do caminho (alvo a ≥ longe m) → o alvo do
+  // momento passa a lado m do lado dele (o lado fica por tempo s)
+  contorna: { raio: 2.5, cone: 0.7, longe: 3, lado: 2.2, tempo: 1.0 },
   corredores: [9.16, 20.16],  // |z| — centro, meio-espaço e corredor lateral
   // Ameaça esperada (xT; Karun Singh 2018, grade aberta 12×8, Premier League 2017/18): chance de a
   // posse virar gol a partir da zona. Linha = faixa da largura (8 × 8,5 m, de w = −34 a +34; a grade
