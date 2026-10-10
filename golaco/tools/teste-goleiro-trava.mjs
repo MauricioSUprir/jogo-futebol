@@ -65,7 +65,7 @@ function ataqueDaIA(sem, x0, z0, perfil, maxS = 12) {
     let e;
     if (m.naMao === 10) {
       if (t0 == null) t0 = m.tick;
-      if (m.controlado[0] === 10) ctrlGK = true;
+      if (m.controlado[0] === 10 && tSolta == null) ctrlGK = true; // só a primeira pegada (o TROCAR/PASSE vale nela)
       e = perfil(m, m.tick - t0);
     } else e = correNaBola(m);
     const antes = m.controlado[0];

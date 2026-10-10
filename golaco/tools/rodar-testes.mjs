@@ -32,6 +32,7 @@ const TESTES = [
   ['treino de ataque com a IA: não trava e chega ao chute', 'teste-treino.mjs'],
   // Correções depois da Etapa 2
   ['goleiro com a bola na mão não trava (repõe sozinho, TROCAR)', 'teste-goleiro-trava.mjs'],
+  ['movimento da IA sem a bola (vai e volta, tremor, amontoado, pressão)', 'teste-movimento.mjs'],
 ];
 
 function rodar(arq) {

@@ -2,7 +2,7 @@
 // Etapa 3). A IA gera uma ENTRADA VIRTUAL {x, z, botoes} — anda e "aperta botões" pelas mesmas
 // regras do humano (aplicarEntrada, condução, ações). Pura: sem three.js nem DOM.
 
-import { BOTAO, CAMPO, PASSO, ACOES } from './config.js';
+import { BOTAO, CAMPO, PASSO, ACOES, IA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { ataca } from './acoes.js';
@@ -10,13 +10,47 @@ import { preverBola } from './conducao.js';
 
 const DT = PASSO;
 
-function para(j, x, z, mag, correr = false, botoes = 0) {
+/**
+ * Entrada que leva o jogador ao ponto (x, z). Com `pressa` (bola livre, passe chegando, pressão,
+ * corrida): vai direto, intensidade d/4. Sem pressa (apoio, marcação, cobertura): o ponto pedido
+ * anda no máximo IA.vAlvo (um salto de alvo vira caminho contínuo), trota até ~10 m e só corre de
+ * longe. Nos dois casos há histerese no parar e no correr (antes: anda-para-anda e CORRER
+ * piscando com o ponto na borda dos limites).
+ */
+function para(j, x, z, mag, correr = false, botoes = 0, pressa = false) {
+  const s = j.ia;
+  if (pressa) s.filtro = false;
+  else if (!s.filtro) { s.fx = x; s.fz = z; s.filtro = true; }
+  else {
+    const ex = x - s.fx, ez = z - s.fz, e = MD.hypot(ex, ez), lim = IA.vAlvo * DT;
+    if (e > lim) { s.fx += (ex / e) * lim; s.fz += (ez / e) * lim; } else { s.fx = x; s.fz = z; }
+    x = s.fx; z = s.fz;
+  }
   const dx = x - j.x, dz = z - j.z;
   const d = MD.hypot(dx, dz);
-  if (d < 0.4) return { x: 0, z: 0, botoes };
+  if (d < IA.chegou || (s.parado && d < IA.retoma[pressa ? 1 : 0])) {
+    s.parado = true; s.corre = false;
+    return { x: 0, z: 0, botoes };
+  }
+  s.parado = false;
   // chega devagar no ponto (sem passar e voltar)
-  const m = Math.min(mag, Math.max(0.25, d / 4));
-  return { x: (dx / d) * m, z: (dz / d) * m, botoes: botoes | (correr && d > 3 ? BOTAO.CORRER : 0) };
+  const m = Math.min(mag, Math.max(pressa ? 0.25 : 0.2, d / (pressa ? 4 : IA.distCalma)));
+  const [liga, desliga] = pressa ? IA.correPressa : IA.corre;
+  s.corre = correr && d > (s.corre ? desliga : liga);
+  if (!pressa && freiaNaLinha(j, dx, dz)) { s.corre = false; return { x: 0, z: 0, botoes }; }
+  return { x: (dx / d) * m, z: (dz / d) * m, botoes: botoes | (s.corre ? BOTAO.CORRER : 0) };
+}
+
+/**
+ * Sem pressa, pedido que inverte o sentido de quem ainda corre: freia na linha (analógico solto)
+ * antes de virar. Antes o pedido virava na hora e o tronco girava a ~7 rad/s ainda a 3–4 m/s.
+ */
+function freiaNaLinha(j, x, z) {
+  const v = MD.hypot(j.vx, j.vz);
+  if (v < IA.freiaLinha[0]) return false;
+  const l = MD.hypot(x, z);
+  if (l < 1e-6) return false;
+  return (x * j.vx + z * j.vz) / (l * v) < IA.freiaLinha[1];
 }
 
 /**
@@ -93,6 +127,11 @@ function acaoIA(m, j, tipo, forca) {
 /** Entrada virtual do jogador j (não controlado) neste tick. */
 export function entradaIA(m, j) {
   const b = m.bola;
+  // o ponto suavizado só vale se a IA guiou este jogador até o tick anterior (depois de um tempo
+  // controlado pelo humano, recomeça do ponto pedido)
+  const s = j.ia ??= { fx: 0, fz: 0, filtro: false, parado: false, corre: false, ataca: false, ramo: '', tick: -2 };
+  if (m.tick - s.tick > 1) { s.filtro = false; s.parado = false; s.corre = false; s.ataca = false; }
+  s.tick = m.tick;
   const lado = ataca(m, j.time);
   let extra = 0;
   if (j.iaAcao) {
@@ -101,39 +140,44 @@ export function entradaIA(m, j) {
   }
   // recebendo um passe: vem ao encontro (passe) ou arranca para o ponto (enfiada, lançamento)
   if (j.recebe && m.posse !== j.id) {
+    s.ramo = 'recebe';
     const r = j.recebe;
     if (m.tick - r.tick > 240 || (m.posse != null && m.posse !== j.id)) j.recebe = null;
     else if (r.tipo !== 'passe' && m.posse == null) {
       // enfiada/lançamento/cruzamento: corre para onde ELE e a BOLA chegam juntos
       const p = pontoInterceptacao(m, j, r.tipo === 'enfiada' ? r : null);
-      if (p) return { ...para(j, p.x, p.z, 1, true), botoes: extra | BOTAO.CORRER };
-      return { ...para(j, r.x, r.z, 1, true), botoes: extra | BOTAO.CORRER };
+      if (p) return { ...para(j, p.x, p.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
+      return { ...para(j, r.x, r.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
     } else if (r.tipo === 'passe') {
       // vem ao encontro: entra na LINHA da bola (o ponto do caminho que ele alcança primeiro),
       // trotando; o passe vem no pé, então são poucos passos
       if (m.posse == null && MD.hypot(b.v.x, b.v.z) > 0.5) {
         const p = pontoInterceptacao(m, j);
-        return { ...para(j, p.x, p.z, 0.7), botoes: extra };
+        return { ...para(j, p.x, p.z, 0.7, false, 0, true), botoes: extra };
       }
-      return { ...para(j, r.x, r.z, 0.6), botoes: extra };
+      return { ...para(j, r.x, r.z, 0.6, false, 0, true), botoes: extra };
     } else {
-      return { ...para(j, r.x, r.z, 1, true), botoes: extra | BOTAO.CORRER };
+      return { ...para(j, r.x, r.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
     }
   }
   if (j.corrida) {
     if (m.tick > j.corrida.ate || MD.hypot(j.corrida.x - j.x, j.corrida.z - j.z) < 1) j.corrida = null;
-    else return { ...para(j, j.corrida.x, j.corrida.z, 1, true), botoes: extra | BOTAO.CORRER };
+    else { s.ramo = 'corrida'; return { ...para(j, j.corrida.x, j.corrida.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER }; }
   }
   const d0 = dono(m);
   // com a bola (IA): conduz para o gol e chuta; passa se apertado e houver companheiro livre
-  if (m.posse === j.id) return comBola(m, j, lado, extra);
+  if (m.posse === j.id) { s.ramo = 'comBola'; return comBola(m, j, lado, extra); }
   // bola livre (ninguém com ela): quem do time chega primeiro vai buscar
   if (m.posse == null && m.naMao == null && vaiNaBolaLivre(m, j)) {
+    s.ramo = 'livre';
     const p = pontoInterceptacao(m, j);
-    return { ...para(j, p.x, p.z, 1, true), botoes: extra | BOTAO.CORRER };
+    return { ...para(j, p.x, p.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
   }
-  const meuTimeTem = d0 && d0.time === j.time;
-  if (meuTimeTem) return apoio(m, j, d0, lado, extra);
+  // meu time com a bola — ou com um passe dele no ar (antes, durante o passe todos viravam
+  // marcadores por um instante e voltavam: o "vai e volta" do time inteiro)
+  const vooMeu = m.posse == null && m.voo && m.voo.time === j.time;
+  s.ramo = (d0 && d0.time === j.time) || vooMeu ? 'apoio' : 'defesa';
+  if (s.ramo === 'apoio') return apoio(m, j, d0 ?? { x: b.p.x, z: b.p.z }, lado, extra);
   return defesa(m, j, d0, lado, extra);
 }
 
@@ -182,43 +226,75 @@ function apoio(m, j, d0, lado, extra) {
   const lim = CAMPO.meioX - 2;
   tx = clamp(tx, -lim, lim);
   tz = clamp(tz, -CAMPO.meioZ + 2, CAMPO.meioZ - 2);
-  const longe = MD.hypot(tx - j.x, tz - j.z) > 8;
-  return { ...para(j, tx, tz, longe ? 1 : 0.6, longe), botoes: extra };
+  // sem pressa: a intensidade vem da distância (para: d/IA.distCalma), sem degrau
+  return { ...para(j, tx, tz, 1, true), botoes: extra };
 }
 
 /** Defesa sem bola: o mais perto pressiona o condutor; os outros marcam entre o adversário e o gol. */
 function defesa(m, j, d0, lado, extra) {
   const b = m.bola;
   const meuGol = -lado * CAMPO.meioX;
-  // quem pressiona: o mais perto da bola no meu time (sem o goleiro)
-  let maisPerto = null, dm = Infinity;
-  for (const o of m.jogadores) {
-    if (o.time !== j.time || o.posicao === 'GOL') continue;
-    const d = MD.hypot(o.x - b.p.x, o.z - b.p.z);
-    if (d < dm) { dm = d; maisPerto = o; }
+  // quem pressiona: o mais perto da bola no meu time (sem o goleiro), com histerese — quem já
+  // pressiona continua até outro estar IA.trocaPressao mais perto (antes trocava a cada toque na
+  // bola e os dois ficavam no meio do caminho)
+  const ps = (m.iaPressao ??= {})[j.time];
+  let maisPerto = ps && ps.tick === m.tick ? m.jogadores.find(o => o.id === ps.id) : null;
+  if (!maisPerto) {
+    let dm = Infinity, atual = null, dAtual = Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado') continue;
+      const d = MD.hypot(o.x - b.p.x, o.z - b.p.z);
+      if (d < dm) { dm = d; maisPerto = o; }
+      if (ps && o.id === ps.id) { atual = o; dAtual = d; }
+    }
+    if (atual && dAtual < dm + IA.trocaPressao) maisPerto = atual;
+    m.iaPressao[j.time] = { id: maisPerto?.id ?? -1, tick: m.tick };
   }
   if (maisPerto === j) {
-    // bola solta do pé de quem conduz (entre toques): ataca a bola
-    if (d0 && MD.hypot(b.p.x - d0.x, b.p.z - d0.z) > ACOES.boteIA.bolaSolta) {
-      return { ...para(j, b.p.x, b.p.z, 1, true), botoes: extra | BOTAO.CORRER };
-    }
-    // senão acompanha entre a bola e o meu gol, a ~1,5 m (sem virar parede colada na bola)
-    const gx = meuGol - b.p.x, gz = -b.p.z;
-    const g = MD.hypot(gx, gz) || 1;
+    const s = j.ia;
+    // bola solta do pé de quem conduz (entre toques) e EU mais perto dela que ele: ataca a bola.
+    // Antes bastava a bola a > 0,7 m do pé: a cada toque o marcador arrancava na bola e voltava
+    // (o tronco tremia); agora só vai quando chega antes, e segue até o condutor ficar mais perto.
+    if (d0) {
+      const dc = MD.hypot(b.p.x - d0.x, b.p.z - d0.z), dj = MD.hypot(b.p.x - j.x, b.p.z - j.z);
+      s.ataca = s.ataca ? dj < dc + 0.3 : dc > ACOES.boteIA.bolaSolta && dj < dc - 0.2;
+    } else s.ataca = false;
+    s.ramo = s.ataca ? 'ataca' : 'pressiona';
+    if (s.ataca) return { ...para(j, b.p.x, b.p.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
+    const gx = meuGol - b.p.x, gz = -b.p.z, g = MD.hypot(gx, gz) || 1;
     const k = ACOES.boteIA.distAcompanha;
     const tx = b.p.x + (gx / g) * k, tz = b.p.z + (gz / g) * k;
-    return { ...para(j, tx, tz, 1, MD.hypot(tx - j.x, tz - j.z) > 4), botoes: extra };
+    return { ...para(j, tx, tz, 1, MD.hypot(tx - j.x, tz - j.z) > 4, 0, true), botoes: extra };
   }
-  // marca o atacante adversário mais perto do meu gol que ninguém marca (simples: o mais perto de mim)
-  let alvo = null, da = Infinity;
-  for (const o of m.jogadores) {
-    if (o.time === j.time || o.posicao === 'GOL') continue;
-    const d = MD.hypot(o.x - j.x, o.z - j.z);
-    if (d < da) { da = d; alvo = o; }
+  // marcação sem repetir: do atacante mais perto do meu gol para o mais longe, cada um fica com o
+  // defensor livre mais perto dele (antes cada um marcava o adversário mais perto DELE: dois ou três
+  // no mesmo homem, grudados e girando juntos). Quem sobra cobre entre a bola e o gol.
+  const livres = m.jogadores.filter(o => o.time === j.time && o.posicao !== 'GOL' && o !== maisPerto
+    && o.papel !== 'parado' && o.papel !== 'marcador');
+  const advs = m.jogadores.filter(o => o.time !== j.time && o.posicao !== 'GOL' && o.papel !== 'parado'
+    && o.papel !== 'marcador' && o.id !== m.posse)
+    .sort((a, c) => MD.hypot(a.x - meuGol, a.z) - MD.hypot(c.x - meuGol, c.z) || a.id - c.id);
+  let alvo = null;
+  for (const o of advs) {
+    let mel = -1, dm2 = Infinity;
+    for (let k = 0; k < livres.length; k++) {
+      const q = livres[k], d = MD.hypot(o.x - q.x, o.z - q.z);
+      if (d < dm2 || (d === dm2 && q.id < livres[mel].id)) { dm2 = d; mel = k; }
+    }
+    if (mel < 0) break;
+    if (livres[mel] === j) { alvo = o; break; }
+    livres.splice(mel, 1);
   }
-  if (!alvo) return { x: 0, z: 0, botoes: extra };
+  if (!alvo) {
+    // sobrou (mais defensores que atacantes): cobre a zona entre a bola e o gol, um de cada lado
+    const gx = meuGol - b.p.x, gz = -b.p.z, g = MD.hypot(gx, gz) || 1;
+    const k = Math.min(12, g * 0.5);
+    j.ia.ramo = 'cobre';
+    return { ...para(j, b.p.x + (gx / g) * k + (j.id % 2 ? 4 : -4), b.p.z + (gz / g) * k, 1, false), botoes: extra };
+  }
   const gx = meuGol - alvo.x, gz = -alvo.z;
   const g = MD.hypot(gx, gz) || 1;
   const tx = alvo.x + (gx / g) * 1.8, tz = alvo.z + (gz / g) * 1.8;
+  j.ia.ramo = 'marca';
   return { ...para(j, tx, tz, 1, MD.hypot(tx - j.x, tz - j.z) > 5), botoes: extra };
 }

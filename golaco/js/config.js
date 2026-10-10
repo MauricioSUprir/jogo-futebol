@@ -117,7 +117,7 @@ export const JOGADOR = {
   vGiroLivre: 1.2,            // abaixo desta velocidade o corpo vira em qualquer direção
   tauVel: 0.18,               // s — constante de tempo do controle de velocidade
   // Giro do corpo (para onde o tronco aponta).
-  giroCorpoParado: 14,        // rad/s máximo parado
+  giroCorpoParado: 8,         // rad/s máximo parado (14 fazia o tronco tremer/rodopiar no lugar)
   giroCorpoCorrendo: 6,       // rad/s máximo a 8 m/s
   rigidezGiro: 260,           // mola crítica do rumo (1/s²)
 };
@@ -373,4 +373,20 @@ export const GOLEIRO = {
   saidaMax: 35,               // m da linha até onde sai com o botão
   esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
   esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
+};
+
+// IA sem a bola: chegar ao ponto sem tremedeira (dono, 09/10: "o movimento dos jogadores tá meio
+// estranho"). Com pressa = bola livre, passe chegando, pressão no condutor, corrida nas costas;
+// sem pressa = apoio, marcação e cobertura.
+export const IA = {
+  vAlvo: 9,                   // m/s: sem pressa, o ponto pedido anda no máximo isto (salto de alvo vira caminho)
+  chegou: 0.4,                // m: para no ponto
+  retoma: [1.2, 0.6],         // m: parado, só volta a andar com o ponto além disto (sem pressa, com pressa)
+  distCalma: 14,              // m: sem pressa, intensidade do analógico = d/distCalma (trota até ~10 m)
+  corre: [14, 10],            // m: sem pressa, corre com o ponto além de 14 m e para de correr abaixo de 10 m
+  correPressa: [3, 1.5],      // m: com pressa, idem (3 m / 1,5 m)
+  olhaBola: [1.5, 5.0],       // m/s: sem a bola, até 1,5 o tronco vira todo para a bola; daí até 5 o
+                              // desvio do sentido do movimento cai de 108° a 0 (contínuo)
+  trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
+  freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
 };

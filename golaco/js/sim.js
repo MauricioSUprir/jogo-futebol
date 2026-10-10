@@ -2,7 +2,7 @@
 // O mundo é um objeto simples (copiável); a mesma semente e as mesmas entradas geram a
 // mesma partida bit a bit (ver hashMundo).
 
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -325,6 +325,23 @@ export function passo(m, entradas) {
     } else {
       j.pedidoPedalada = false;
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
+      // IA sem a bola andando/trotando olha para a bola (passo de lado ou de costas, como no jogo de
+      // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
+      // pode se afastar do sentido do movimento (parado: todo; IA.olhaBola[1] m/s ou mais: nada) —
+      // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
+      if (j.papel === 'ia' && !ehControlado(m, j) && !j.recebe && !j.cond?.toque) {
+        const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
+        const [v0, v1] = IA.olhaBola;
+        const lim = v <= v0 ? Math.PI : Math.PI * 0.6 * clamp((v1 - v) / (v1 - v0), 0, 1);
+        if (lim > 0) {
+          const aB = MD.atan2(m.bola.p.z - j.z, m.bola.p.x - j.x);
+          let d = difAng(mv.rumoAlvo, aB);
+          // bola quase atrás: mantém o lado escolhido (sem o tronco cruzar de um lado para o outro)
+          if (Math.abs(d) > 2.6 && j.ladoOlha) d = j.ladoOlha * Math.abs(d);
+          j.ladoOlha = d >= 0 ? 1 : -1;
+          mv = { ...mv, rumoAlvo: mv.rumoAlvo + clamp(d, -lim, lim) };
+        }
+      }
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
   }
