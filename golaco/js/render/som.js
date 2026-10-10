@@ -127,7 +127,8 @@ export function criarSom(opc = {}) {
     if (!Ctx) return;
     try {
       if (!ctx) {
-        ctx = new Ctx({ latencyHint: 'interactive' });
+        // (o webkitAudioContext do Safari antigo não aceita opções)
+        try { ctx = new Ctx({ latencyHint: 'interactive' }); } catch (_) { ctx = new Ctx(); }
         montarGrafo();
         baixar();
         for (const nome of Object.keys(bytes)) decodificar(nome);

@@ -30,6 +30,20 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
 
+## Estádio — rede, gol, torcida e som (primeira versão; a Etapa 6 completa vem depois)
+
+- **Rede que balança**: a bola entra, a rede estufa no ponto da batida, passa do ponto, volta e a onda corre pelo pano
+  (~1,5 s); a bola desenhada vai junto no bojo; batida por fora (lateral, teto, fundo) afunda a rede para dentro.
+- **Efeito de gol**: "GOL!" grande com o número e o nome de quem marcou e o minuto (entra 0,3 s depois, no terço de baixo:
+  a rede aparece antes), placar pulsando, zoom e tremor curto da câmera (sem tremor com "reduzir movimento"). Some antes
+  da saída de bola e não atrapalha os controles.
+- **Torcida no estádio**: até 18 mil torcedores (Alta; 13 mil na Média do celular, 8 mil sem animação na Baixa), a casa
+  (Golaço FC, preto e verde) é maioria, organizada pulando atrás de um gol, setor visitante (Ventania FC, branco) atrás do
+  outro, o mosaico "GOLAÇO" em camisas verdes; levantam no ataque, explodem no gol, põem a mão na cabeça na chance perdida.
+- **Som** (gravações livres, créditos em `assets/sons/CREDITOS.md`): murmúrio do estádio que sobe perto do gol, canto ao
+  fundo, explosão do gol, "uuuh", palmas, apitos (saída, intervalo, fim) e o chuá da rede. Liga no primeiro toque/tecla
+  (regra dos navegadores). Menu → "Som da torcida": ligado/desligado e volume (salvos). Pesquisa: `PESQUISA-ESTADIO.md`.
+
 ## Etapa 2 — passe, chute, goleiro
 
 - Treino de ataque: o seu time (goleiro + 5) contra uma defesa (goleiro + 3), com IA enxuta.
@@ -81,7 +95,7 @@ Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?mi
 ## Testes
 
 ```bash
-node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea — o Actions roda antes do deploy
+node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, rede e torcida — o Actions roda antes do deploy
 node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade)
 node golaco/tools/hash-igual.mjs       # o treino bit a bit igual à base 980b0b0 (rodar antes de todo commit da lógica)
 node golaco/tools/hash-partida.mjs     # otimização: a partida 11×11 bit a bit igual à de antes (repositório × HEAD)
@@ -90,6 +104,8 @@ node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, ha
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
+node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, 1 chamada, pixels dia/noite), gol de verdade (rede estufa, "GOL!", câmera, saída no tempo), som (1º gesto, eventos, mudo, volume)
+python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
 node golaco/tools/prints.mjs           # prints PC/celular (deitado e em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
 ```
 

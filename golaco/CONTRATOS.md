@@ -1,7 +1,8 @@
 # GOLAÇO — contratos entre módulos
 
 Regra de ouro: **a lógica (`js/*.js` fora de `js/render/` e de `js/entrada.js`/`js/main.js`/`js/hud.js`/
-`js/editor-time.js`) não usa three.js nem DOM**. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
+`js/editor-time.js`) não usa three.js nem DOM**. Em `js/render/`, o som (`som.js`, Web Audio) é DOM; `rede-onda.js`,
+`emocao.js` e `torcida-dados.js` são puros (testados em Node) mas são do desenho: nunca mexem no mundo. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
 semente (`js/rng.js`, estado em `mundo.rng`). `Math.random` é proibido na lógica.
 
 **Matemática determinística:** na lógica, seno, cosseno, atan2, exp, log, pow, asin, acos e hypot
@@ -167,6 +168,50 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   alta e inclinada, sem céu) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
   controle = direita na tela" (`teste-controles`, via `naTela`) e câmera sem tremor a 144 Hz
   (`teste-carga`).
+
+## Estádio — rede que balança, efeito de gol, torcida e som (contrato)
+Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo** (o hash não muda: `hash-igual` e
+`hash-partida` IGUAIS). Constantes nos próprios módulos (não em `config.js`).
+- **Puros (sem three.js nem DOM; testados em Node):** `js/render/rede-onda.js`, `js/render/emocao.js`,
+  `js/render/torcida-dados.js`. Aleatoriedade só por gerador próprio com semente fixa (`geradorTorcida`), nunca `m.rng`.
+- **`rede-onda.js`**: `REDE` (constantes), 8 panos (índice `(lado > 0 ? 4 : 0) + k`, k: 0 fundo, 1 teto, 2 lateral z−,
+  3 lateral z+; normal para FORA do gol: `normalPano(i)`), `fixo(i, x, y, z)` (0 na armação, 1 no meio — a malha grava
+  num atributo), `mola(τ)`, `perfil(r, τ)`, `amplitude(v)`, `criarOndas()` → `{imp[4], total}`, `limparOndas`,
+  `centroBolsa`, `registrarImpacto(est, {plano, x, y, z, vel, sinal}, t0)`, `deslocamento(est, plano, x, y, z, t)` (m ao
+  longo da normal, + = para fora; sem a fixação), `redeAtiva(est, t)`, `detectarImpactos(p0, v0, p1, v1, out)` → n (bola
+  antes/depois do passo), `empurraoBola(est, p, t, out)` (o deslocamento da bola DESENHADA no bojo), `uniformsRede(est, t,
+  a, b)` e `REDE_GLSL` (a mesma conta em GLSL, gerada das mesmas constantes).
+- **`emocao.js`**: `EMOCAO`, `criarEmocao()` → `{agito, torcida: [{excita, tensao, lamento, palmas}·2], disparos,
+  contagem}`, `emocaoEvento(est, ev, {t, timeDe, bola, ataca})` (os eventos de `m.eventos` e `{tipo: 'redeImpacto', vel}`),
+  `emocaoPasso(est, {t, bola, posseTime, ataca, estado}, dt)`, `consumirDisparos(est)` → `[{tipo: 'gol'|'uuuh'|'palmas'|
+  'apito'|'apitoIntervalo'|'apitoFim'|'rede'|'chute', grupo, forca}]`, `zerarEmocao`. Grupo 0 = torcida do time 0 (casa),
+  1 = do time 1.
+- **`torcida-dados.js`**: `ARQUIBANCADA` (a geometria de `campo.js`), `TORCIDA` (ocupação, animação e atlas por
+  qualidade, setores), `POSE`, `cadeiras()`, `gerarTorcida(qualidade, mascara)` → `{n, pos (x, y, z, escala), camisa, pele
+  (rgb + semente), cabelo, info (time, setor, organizada, semente2)}`, `atlasTorcida(cw, ch)` (RGBA: pesos de camisa/pele/
+  cabelo × cobertura; acento = o resto), `poseDoTorcedor(niveis, h, h2, org, t, animada)` (a MESMA regra do vertex shader).
+- **Com three.js/DOM:** `torcida.js` (`criarTorcida(cena, {qualidade, mascara, hora})` → `{mesh, n, atualizar(t, emocao,
+  camera), definirHora, definirQualidade, dispose}`: um `Group` com 3 malhas instanciadas — uma por arquibancada, mesmo
+  material e atlas, ≤ 3 chamadas — com corte por CAIXA contra o frustum da câmera em `atualizar`), `campo.js` (a rede é uma
+  malha subdividida com `aPlano`/`aFixo` e `onBeforeCompile`; `campo.rede = {a, b, mesh}` = os uniforms das batidas),
+  `texturas.js mascaraGolaco()` (cadeiras do mosaico, a mesma para a textura e para a torcida), `camera.js`
+  (`efeitoGol(x, z)`, `efeitoAtivo`, `EFEITO_GOL`), **`som.js` (Web Audio, DOM)**: `criarSom({base, ligado, volume,
+  aoMudar})` → `{iniciar(), atualizar(emocao, pausado, t), tocar(disparo), definir({ligado, volume}), estado ('sem-audio'
+  | 'sem-contexto' | 'suspenso' | 'rodando'), info, tocados, baixar()}`. O AudioContext só nasce no primeiro gesto; os
+  arquivos baixam depois da página abrir (`SOM.atrasoCarga` ou o primeiro gesto).
+- **`main.js`**: a cada passo (`rodarPasso` → `estadioPasso`, só lendo o mundo) procura batidas na rede com a bola
+  antes/depois do passo, alimenta o ânimo com os eventos e toca os disparos; no desenho: bola desenhada = física +
+  `empurraoBola`, uniforms da rede, torcida e som. Relógio do estádio: `passosTotais` (não volta a zero ao trocar de
+  mundo; parado na pausa). Gol: `hud.evento(ev, {gol: {numero, nome, minuto, contra}})` + `cam.efeitoGol`. Menu: comandos
+  `som` (`'ligado'|'desligado'`) e `volume` (0–1), salvos em `golaco.prefs.v1` (`som`, `volume`).
+- **API (`window.__golaco`)**: `estadio {torcida, rede, deslocamentoRede(plano, x, y, z), emocao, som, redeOnda(v) (só o
+  desenho: o mesmo instante com/sem a onda), mostrarTorcida(v), bolaDesenhada, efeitoCamera, baixarSons()}`,
+  `definirSom(v)`, `definirVolume(v)`, `mostrarEvento(ev, {fixo})` (o "GOL!" com autor e minuto; `fixo` segura na tela —
+  prints).
+- **Testes**: `tools/teste-rede.mjs` e `tools/teste-torcida.mjs` (Node, grupo padrão), `tools/teste-estadio.mjs`
+  (navegador, no CI: torcida por qualidade, chamadas e corte pela câmera, pixels de dia e de noite, um gol de verdade com a
+  rede estufando, o "GOL!",
+  a câmera, a saída no mesmo tick, o som no primeiro gesto, os sons nos eventos, mudo e volume).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:

@@ -1,4 +1,5 @@
-// Torcida no estádio (three.js): todos os torcedores num InstancedMesh só (1 chamada de desenho), um
+// Torcida no estádio (three.js): os torcedores em 3 malhas instanciadas (uma por arquibancada, com corte pela
+// câmera: ≤ 3 chamadas de desenho), um
 // quadro por torcedor virado para a câmera em volta do eixo vertical ("billboard" cilíndrico) com a
 // figura do atlas desenhado por código (torcida-dados.js). Cada torcedor tem posição, camisa, pele,
 // cabelo, time, setor e sementes em atributos por instância; a pose (sentado, em pé, palmas, braços para
@@ -144,9 +145,18 @@ export function criarTorcida(cena, opc) {
     // acento (cachecol) na cor do time, linear: verde do Golaço FC, branco do Ventania FC
     uAcento0: { value: new THREE.Color(0x19e07a) }, uAcento1: { value: new THREE.Color(0xf2f4f5) },
   };
-  let mesh = null, qualidade = null, n = 0;
+  let mesh = null, material = null, qualidade = null, n = 0;
+  const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
+  function desmontar() {
+    if (!mesh) return;
+    cena.remove(mesh);
+    for (const m of mesh.children) m.geometry.dispose();
+    material?.dispose();
+    uni.uAtlas.value?.dispose();
+    mesh = null;
+  }
   function montar(q) {
-    if (mesh) { cena.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); uni.uAtlas.value?.dispose(); }
+    desmontar();
     qualidade = q;
     const d = gerarTorcida(q, opc.mascara ?? null);
     n = d.n;
@@ -160,22 +170,48 @@ export function criarTorcida(cena, opc) {
     tex.needsUpdate = true;
     uni.uAtlas.value = tex;
     uni.uTamAtlas.value.set(at.largura, at.altura);
-    const geo = new THREE.InstancedBufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 1, 0, -0.5, 1, 0], 3));
-    geo.setIndex([0, 1, 2, 0, 2, 3]);
-    geo.setAttribute('aPos', new THREE.InstancedBufferAttribute(d.pos, 4));
-    geo.setAttribute('aCamisa', new THREE.InstancedBufferAttribute(d.camisa, 4, true));
-    geo.setAttribute('aPele', new THREE.InstancedBufferAttribute(d.pele, 4, true));
-    geo.setAttribute('aCabelo', new THREE.InstancedBufferAttribute(d.cabelo, 4, true));
-    geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(d.info, 4, true));
-    geo.instanceCount = n;
-    const mat = new THREE.ShaderMaterial({
+    material = new THREE.ShaderMaterial({
       uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true,
       defines: TORCIDA.animada[q] ? { ANIMADA: 1 } : {},
     });
-    mesh = new THREE.Mesh(geo, mat);
-    mesh.frustumCulled = false;   // os quadros saem do shader (a caixa da geometria base não vale)
+    // um InstancedMesh por arquibancada (lado de lá, fundo +x, fundo −x): o mesmo material e o mesmo
+    // atlas, cada um com a esfera de corte dos seus torcedores — com a câmera de TV no meio-campo os
+    // fundos (60% da torcida) ficam fora do quadro e nem chegam à GPU. No máximo 3 chamadas de desenho.
+    mesh = new THREE.Group();
     mesh.name = 'torcida';
+    const quad = new THREE.Float32BufferAttribute([-0.5, 0, 0, 0.5, 0, 0, 0.5, 1, 0, -0.5, 1, 0], 3);
+    const indice = new THREE.Uint16BufferAttribute([0, 1, 2, 0, 2, 3], 1);
+    for (let setor = 0; setor < 3; setor++) {
+      const ids = [];
+      for (let i = 0; i < d.n; i++) if (Math.round(d.info[4 * i + 1] / 85) === setor) ids.push(i);
+      if (!ids.length) continue;
+      const k = ids.length;
+      const pos = new Float32Array(4 * k), camisa = new Uint8Array(4 * k), pele = new Uint8Array(4 * k), cabelo = new Uint8Array(4 * k), info = new Uint8Array(4 * k);
+      let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+      ids.forEach((i, j) => {
+        pos.set(d.pos.subarray(4 * i, 4 * i + 4), 4 * j); camisa.set(d.camisa.subarray(4 * i, 4 * i + 4), 4 * j);
+        pele.set(d.pele.subarray(4 * i, 4 * i + 4), 4 * j); cabelo.set(d.cabelo.subarray(4 * i, 4 * i + 4), 4 * j);
+        info.set(d.info.subarray(4 * i, 4 * i + 4), 4 * j);
+        const x = d.pos[4 * i], y = d.pos[4 * i + 1], z = d.pos[4 * i + 2];
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); z0 = Math.min(z0, z); x1 = Math.max(x1, x); y1 = Math.max(y1, y); z1 = Math.max(z1, z);
+      });
+      const geo = new THREE.InstancedBufferGeometry();
+      geo.setAttribute('position', quad);
+      geo.setIndex(indice);
+      geo.setAttribute('aPos', new THREE.InstancedBufferAttribute(pos, 4));
+      geo.setAttribute('aCamisa', new THREE.InstancedBufferAttribute(camisa, 4, true));
+      geo.setAttribute('aPele', new THREE.InstancedBufferAttribute(pele, 4, true));
+      geo.setAttribute('aCabelo', new THREE.InstancedBufferAttribute(cabelo, 4, true));
+      geo.setAttribute('aInfo', new THREE.InstancedBufferAttribute(info, 4, true));
+      geo.instanceCount = k;
+      // os quadros saem do shader: o corte é por CAIXA (os fundos são compridos: 119 m em z — uma esfera de corte
+      // pegaria a câmera de TV no meio-campo), feito em atualizar() com o frustum da câmera
+      const m = new THREE.Mesh(geo, material);
+      m.frustumCulled = false;
+      m.userData.caixa = new THREE.Box3(new THREE.Vector3(x0 - 1, y0 - 0.2, z0 - 1), new THREE.Vector3(x1 + 1, y1 + TORCIDA.altura + 0.6, z1 + 1));
+      m.name = `torcida-${['lado', 'fundo+x', 'fundo-x'][setor]}`;
+      mesh.add(m);
+    }
     cena.add(mesh);
   }
   montar(opc.qualidade);
@@ -195,11 +231,17 @@ export function criarTorcida(cena, opc) {
         uni.uLamento.value.set(a.lamento, b.lamento);
         uni.uPalmas.value.set(a.palmas, b.palmas);
       }
-      if (camera) uni.uCamPos.value.copy(camera.position);
+      if (camera) {
+        uni.uCamPos.value.copy(camera.position);
+        // corte por arquibancada: só vai para a GPU a que a câmera vê (matriz desta posição da câmera, já)
+        camera.updateMatrixWorld();
+        _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+        if (mesh) for (const m of mesh.children) m.visible = _frustum.intersectsBox(m.userData.caixa);
+      }
     },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); },
     definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) montar(q); },
-    dispose() { if (mesh) { cena.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); uni.uAtlas.value?.dispose(); mesh = null; } },
+    dispose() { desmontar(); },
   };
   t.definirHora(opc.hora ?? 'dia');
   return t;

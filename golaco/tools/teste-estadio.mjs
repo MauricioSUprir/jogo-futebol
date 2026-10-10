@@ -69,12 +69,18 @@ try {
     g.desenhar(); const com = g.estado().desenhoChamadas;
     g.estadio.mostrarTorcida(false); g.desenhar(); const sem = g.estado().desenhoChamadas;
     g.estadio.mostrarTorcida(true); g.desenhar();
+    // a câmera de TV no meio-campo: quantas malhas da torcida vão para a GPU
+    g.cameraLivre({ de: [0, 18.3, 40], para: [0, 0, 0], fov: 32 });
+    g.desenhar(); const comTV = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(false); g.desenhar(); const semTV = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(true); g.desenhar();
     g.cameraLivre(null);
-    return { ...r, com, sem };
+    return { ...r, com, sem, meio: comTV - semTV };
   });
   meta('Torcida: Baixa < Média < Alta (Baixa sem animação)', `baixa ${q.baixa.n} (${q.baixa.animada ? 'animada' : 'parada'}) · média ${q.media.n} · alta ${q.alta.n}`, 'crescente; Baixa parada; Média e Alta animadas',
     q.baixa.n < q.media.n && q.media.n < q.alta.n && !q.baixa.animada && q.media.animada && q.alta.animada && q.alta.visivel);
-  meta('Torcida: uma chamada de desenho (InstancedMesh)', `com ${q.com} · sem ${q.sem}`, '≤ 1 a mais', q.com - q.sem <= 1 && q.com - q.sem >= 1);
+  meta('Torcida: no máximo 3 chamadas de desenho (uma malha instanciada por arquibancada)', `com ${q.com} · sem ${q.sem} (olhando o lado de lá)`, '1 a 3 a mais', q.com - q.sem >= 1 && q.com - q.sem <= 3);
+  meta('Torcida: os fundos saem do desenho quando a câmera de TV está no meio-campo (corte pela câmera)', `meio-campo: ${q.meio} chamadas da torcida`, '1 (só o lado de lá)', q.meio === 1);
 
   // 2) torcida aparece (pixels da arquibancada) de dia e de noite
   for (const hora of ['dia', 'noite']) {
