@@ -348,7 +348,7 @@ async function conferirTodosLayouts(pagina) {
       g.abrirMenu();
       const vis = s => { const b = document.querySelector(s); return !!b && !b.hidden && b.offsetParent !== null; };
       const r = {
-        editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('[data-cmd="reiniciar-partida"]'),
+        editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('#menu [data-cmd="reiniciar-partida"]'),
         recomecar: vis('[data-cmd="recomecar"]'), maquina: vis('[data-cmd="maquina"]'), marcador: vis('[data-cmd="marcador"]'),
         relogio: vis('#placar-relogio'), textoRelogio: document.getElementById('placar-relogio')?.textContent ?? '', siglas: document.getElementById('sigla-1')?.textContent,
       };

@@ -494,7 +494,7 @@ for (const t of TELAS) {
       const g = window.__golaco;
       g.abrirMenu();
       const vis = s => { const b = document.querySelector(s); return !!b && !b.hidden && b.offsetParent !== null; };
-      return { modo: g.estado().modoTreino, editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('[data-cmd="reiniciar-partida"]'), recomecar: vis('[data-cmd="recomecar"]'), maquina: vis('[data-cmd="maquina"]'), abriu: g.editor?.abrir?.() ?? null };
+      return { modo: g.estado().modoTreino, editar: vis('[data-cmd="editar-time"]'), reiniciar: vis('#menu [data-cmd="reiniciar-partida"]'), recomecar: vis('[data-cmd="recomecar"]'), maquina: vis('[data-cmd="maquina"]'), abriu: g.editor?.abrir?.() ?? null };
     });
     meta('12 Treino (?modo=ataque): sem Editar time e sem Reiniciar partida; Recomeçar e Máquina aparecem',
       `modo ${r.modo}, Editar time ${r.editar}, Reiniciar ${r.reiniciar}, Recomeçar ${r.recomecar}, Máquina ${r.maquina}, editor pela API ${r.abriu}`,

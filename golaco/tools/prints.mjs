@@ -1,11 +1,13 @@
-// Prints (navegador): PC 1280×720 Alta de dia e de noite; celular 844×390 dpr 2 Média (toque,
-// entalhe simulado) de dia e de noite; celular em DEFESA (botões TROCAR/GOLEIRO/CORRER e o
-// "próximo da troca"); lançamento de verdade (marca de queda no gramado e câmera enquadrando a
-// bola longe); barra de força do chute; extras: câmera aproximada, qualidade baixa, celular em
-// pé, menu e ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros
-// e o gol). Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em
-// tools/saida/. Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou
-// passam da área segura (botões de toque conferidos como círculos).
+// Prints (navegador), com o HUD: a PARTIDA 11×11 (a página abre nela) no PC 1280×720 Alta e no
+// celular 844×390 dpr 2 Média (toque, entalhe simulado), de dia e de noite — com a bola, em DEFESA
+// (TROCAR/GOLEIRO/CONTER/DIVIDIDA/PRESSÃO/CORRER e o "próximo da troca"), num escanteio e no
+// intervalo; o "Editar time" nas 3 abas no PC, no celular deitado e em pé, e com uma substituição
+// pendente; do treino de ataque (?modo=ataque): lançamento de verdade (marca de queda no gramado)
+// e a barra de força do chute; extras: câmera aproximada, qualidade baixa, celular em pé, menu e
+// ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros e o gol).
+// Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
+// Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
+// segura (botões de toque conferidos como círculos).
 //   node tools/prints.mjs [--so pc-dia,celular-noite] [--segundos 5] [--caixas]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,17 +22,36 @@ fs.mkdirSync(SAIDA, { recursive: true });
 
 const PC = { largura: 1280, altura: 720, dpr: 1, toque: false };
 const CEL = { largura: 844, altura: 390, dpr: 2, toque: true };
+const RET = { largura: 390, altura: 844, dpr: 2, toque: true };
 const CENAS = [
+  // partida 11×11 (padrão da página)
   { nome: 'pc-dia', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'ataque' },
   { nome: 'pc-noite', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'ataque' },
   { nome: 'celular-dia', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'ataque' },
   { nome: 'celular-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'ataque' },
-  // sem a bola: os botões viram TROCAR, GOLEIRO e CORRER (e aparece o "próximo da troca")
+  // sem a bola: os botões da defesa (e o "próximo da troca")
   { nome: 'celular-defesa', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'defesa' },
-  // lançamento de verdade (L segurado): anel de queda pulsando e a câmera com a bola longe
-  { nome: 'pc-lancamento', ...PC, url: 'q=alta&hora=dia', prep: 'lancamento' },
+  { nome: 'pc-defesa-noite', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'defesa' },
+  // bola parada e intervalo
+  { nome: 'pc-escanteio', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'escanteio' },
+  { nome: 'celular-escanteio-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'escanteio' },
+  { nome: 'pc-intervalo-noite', ...PC, url: 'q=alta&hora=noite&demo=1&min=0.25', prep: 'intervalo' },
+  { nome: 'celular-intervalo', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'intervalo' },
+  // Editar time: 3 abas no PC (Alta, dia), no celular deitado (Média, noite) e em pé (Média, dia)
+  { nome: 'pc-editor-escalacao', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'escalacao' },
+  { nome: 'pc-editor-formacao', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'formacao' },
+  { nome: 'pc-editor-taticas', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'taticas' },
+  { nome: 'celular-editor-escalacao', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', editor: 'escalacao' },
+  { nome: 'celular-editor-formacao', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', editor: 'formacao' },
+  { nome: 'celular-editor-taticas', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', editor: 'taticas' },
+  { nome: 'celular-editor-substituicao', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'substituicao' },
+  { nome: 'retrato-editor-escalacao', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'escalacao' },
+  { nome: 'retrato-editor-formacao', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'formacao' },
+  { nome: 'retrato-editor-taticas', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'taticas' },
+  // treino de ataque: lançamento de verdade (L segurado: anel de queda, câmera com a bola longe)
+  { nome: 'pc-lancamento', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'lancamento' },
   // chute carregando: barra de força perto do jogador
-  { nome: 'celular-carga', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', prep: 'carga' },
+  { nome: 'celular-carga', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque', prep: 'carga' },
   { nome: 'pc-aproximada', ...PC, url: 'q=alta&hora=dia&camera=aproximada&demo=1' },
   { nome: 'celular-baixa', ...CEL, url: 'q=baixa&hora=dia&toque=1&entalhe=1&demo=1' },
   // em pé, com a ilha no topo (?entalhe=1 em pé simula a margem segura de cima e a de baixo)
@@ -103,12 +124,25 @@ async function preparar(pagina, prep) {
       return `fase ${e.fase}, posse ${e.posse}, controlado ${e.controlado}`;
     }
     if (prep === 'defesa') {
-      // joga (demo) até o adversário ficar com a bola; sem isso em 40 s, a máquina tira a bola do pé
-      for (let i = 0; i < 2400 && g.fase !== 'defesa'; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      // joga (demo) até o adversário ficar com a bola no pé; no treino, sem isso em 40 s, a máquina
+      // tira a bola do pé
+      const comAdversario = () => { const e = g.estado(); return g.fase === 'defesa' && e.posse != null && g.mundo.jogadores.find(j => j.id === e.posse)?.time === 1; };
+      for (let i = 0; i < 3600 && !comAdversario(); i++) g.relogio.avancar(1000 / 60, { desenhar: false });
       let como = 'jogada';
-      if (g.fase !== 'defesa') { g.acao('maquina'); av(20); como = 'máquina de passes'; }
+      if (g.fase !== 'defesa' && g.estado().modoTreino !== 'partida') { g.acao('maquina'); av(20); como = 'máquina de passes'; }
       av(6);
-      return `fase ${g.fase} (${como}), próximo da troca ${g.estado().proximaTroca}`;
+      return `fase ${g.fase} (${como}), posse ${g.estado().posse}, próximo da troca ${g.estado().proximaTroca}`;
+    }
+    if (prep === 'escanteio' || prep === 'intervalo') {
+      // partida (demo): joga até a parada pedida (escanteio) ou o intervalo; o escanteio pode demorar
+      const achou = () => (prep === 'escanteio' ? g.estado().parada?.tipo === 'escanteio' && g.mundo.tick - g.estado().parada.desde > 40 : g.estado().relogio?.estado === 'intervalo');
+      let n = 0;
+      for (; n < 60 * 60 * 6 && !achou(); n++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const e = g.estado();
+      if (prep === 'intervalo' && achou()) {
+        g.mostrarFaixa({ titulo: 'Intervalo', placar: `${document.getElementById('sigla-0').textContent} ${e.placar[0]} × ${e.placar[1]} ${document.getElementById('sigla-1').textContent}` });
+      }
+      return `${prep}: ${achou() ? 'achou' : 'NÃO achou'} em ${(n / 60).toFixed(0)} s, relógio ${e.relogio?.minuto}' (${e.relogio?.estado}), parada ${e.parada?.tipo ?? '-'}, placar ${e.placar.join('×')}`;
     }
     if (prep === 'lancamento') {
       av(20, { x: 0.75, z: -0.66, botoes: 0 });
@@ -157,6 +191,20 @@ for (const c of CENAS) {
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
     }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' ? 0.5 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep) : '';
+    let notaEd = '';
+    if (c.editor) {
+      // "Editar time" pela pausa (cliques de verdade); a aba e, na substituição, 9 → 22
+      notaEd = await pagina.evaluate(() => { const g = window.__golaco; document.documentElement.classList.remove('modo-prints'); g.abrirMenu(); return ''; });
+      await pagina.click('[data-cmd="editar-time"]');
+      if (c.editor === 'substituicao') {
+        await pagina.click('#editar-time [data-jogador="9"]');
+        await pagina.click('#editar-time [data-jogador="22"]');
+        await pagina.click('#editar-time [data-jogador="10"]');
+      } else if (c.editor !== 'escalacao') await pagina.click(`#editar-time [data-aba="${c.editor}"]`);
+      if (c.editor === 'formacao') await pagina.click('#editar-time [data-formacao="4-2-3-1"]');
+      if (c.editor === 'taticas') { await pagina.click('#editar-time [data-tatica="mentalidade"][data-passo="+1"]'); await pagina.click('#editar-time [data-tatica="linha"][data-passo="+1"]'); }
+      notaEd = await pagina.evaluate(() => { const r = window.__golaco.editor.rascunho; return `editor ${window.__golaco.editor.aba} (${window.__golaco.editor.modo}): ${r.formacao}, subst. ${r.substituicoes.length}, escolhido ${r.escolhido ?? '-'}`; });
+    }
     // alguns quadros com desenho (a mola da câmera e os botões assentam), o último é o print
     await pagina.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: true }); });
     if (c.livre) {
@@ -178,7 +226,7 @@ for (const c of CENAS) {
     await pagina.waitForTimeout(250); // animação de entrada dos botões
     const arq = path.join(SAIDA, `${c.nome}.png`);
     await pagina.screenshot({ path: arq });
-    const lay = c.depois ? { problemas: [], caixas: [] } : await conferirLayout(pagina);
+    const lay = c.depois || c.editor ? { problemas: [], caixas: [] } : await conferirLayout(pagina);
     const est = await pagina.evaluate(() => {
       const g = window.__golaco;
       const e = g.estado();
@@ -190,7 +238,7 @@ for (const c of CENAS) {
     });
     const ok = erros.length === 0 && lay.problemas.length === 0;
     if (!ok) falhas++;
-    console.log(`${ok ? 'OK  ' : 'FALHA'} ${c.nome.padEnd(16)} ${path.relative(RAIZ, arq)}  (${((Date.now() - t0) / 1000).toFixed(1)} s, ${est.desenhoChamadas} chamadas, ${est.jogadores} jogadores, controlado ${est.controlado} ${est.alturaTela.toFixed(0)} px, ${est.modo}, fase ${est.fase}${est.botoesToque ? ', botões ' + est.botoesToque : ''}, q=${est.qualidade})${nota ? '\n      ' + nota : ''}`);
+    console.log(`${ok ? 'OK  ' : 'FALHA'} ${c.nome.padEnd(16)} ${path.relative(RAIZ, arq)}  (${((Date.now() - t0) / 1000).toFixed(1)} s, ${est.desenhoChamadas} chamadas, ${est.jogadores} jogadores, ${est.modoTreino}${est.relogio ? ` ${est.relogio.minuto}'` : ''}, controlado ${est.controlado} ${est.alturaTela.toFixed(0)} px, ${est.modo}, fase ${est.fase}${est.botoesToque ? ', botões ' + est.botoesToque : ''}, q=${est.qualidade})${nota ? '\n      ' + nota : ''}${notaEd ? '\n      ' + notaEd : ''}`);
     for (const e of erros) console.log('      erro no console:', e);
     for (const p of lay.problemas) console.log('      layout:', p);
     if (args.includes('--caixas')) for (const cx of lay.caixas) console.log('      caixa:', cx);
