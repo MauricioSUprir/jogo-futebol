@@ -14,8 +14,16 @@
 // E o que não pode piorar (sem recuo): o treino chega ao chute e a defesa pressiona o condutor.
 //   node tools/teste-movimento.mjs              (lógica do repositório)
 //   node tools/teste-movimento.mjs --js <pasta> (mede outra cópia da lógica, ex.: a publicada)
+//   node tools/teste-movimento.mjs --modo partida (Etapa 3: o mesmo medidor no 11×11)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+// Etapa 3 (Parte 2): --modo partida mede o mesmo no 11×11 (IA × IA). Até lá, marcador.
+const im = process.argv.indexOf('--modo');
+if (im > 0 && process.argv[im + 1] === 'partida') {
+  console.log('teste-movimento --modo partida: AGUARDANDO PARTE 2 (as mesmas metas do treino no 11×11, IA × IA)');
+  process.exit(1);
+}
 
 const ia = process.argv.indexOf('--js');
 const JS = ia > 0 ? path.resolve(process.argv[ia + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
