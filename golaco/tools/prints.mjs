@@ -4,7 +4,9 @@
 // intervalo; o "Editar time" nas 3 abas no PC, no celular deitado e em pé, e com uma substituição
 // pendente; do treino de ataque (?modo=ataque): lançamento de verdade (marca de queda no gramado)
 // e a barra de força do chute; extras: câmera aproximada, qualidade baixa, celular em pé, menu e
-// ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros e o gol).
+// ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros e o gol); o goleiro
+// mergulhando (voo, contato, queda), o salto, a bola segura nas mãos e a recepção com o analógico já para o lado
+// (pedido de 10/10).
 // Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
 // Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
 // segura (botões de toque conferidos como círculos).
@@ -84,6 +86,16 @@ const CENAS = [
   { nome: 'pc-manequim', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { rel: [0, 1.2, 6], fov: 22 } },
   { nome: 'pc-goleiros', ...PC, url: 'q=alta&hora=dia', prep: 'goleiros' },
   { nome: 'pc-gol', ...PC, url: 'q=alta&hora=noite', livre: { de: [38, 5, 14], para: [52.5, 1.2, 0], fov: 40 } },
+  // pedido de 10/10: o goleiro pula (no voo e no contato) e a recepção com o analógico já para o lado (treino de
+  // ataque: um chute no canto / uma bola rolando para o controlado)
+  { nome: 'pc-mergulho-voo', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:voo' },
+  { nome: 'pc-mergulho-contato-noite', ...PC, url: 'q=alta&hora=noite&modo=ataque', prep: 'mergulho:contato' },
+  { nome: 'celular-mergulho-contato', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:contato' },
+  { nome: 'celular-mergulho-queda-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:queda' },
+  { nome: 'pc-salto-contato', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:contato:alta' },
+  { nome: 'pc-goleiro-segura', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:segura:corpo' },
+  { nome: 'pc-recepcao', ...PC, url: 'q=alta&hora=dia&modo=ataque&camera=aproximada', prep: 'recepcao' },
+  { nome: 'celular-recepcao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque&camera=aproximada', prep: 'recepcao' },
 ];
 
 /** Caixas do HUD e botões: nenhum encosta em outro e todos ficam dentro da área segura. */
@@ -184,6 +196,55 @@ async function preparar(pagina, prep, gol = null) {
       g.forcarEntrada({ x: 0.8, z: -0.2, botoes: 32 }); // segue segurando no print
       return `carga ${c ? c.tipo : '-'}`;
     }
+    if (prep.startsWith('mergulho')) {
+      // chute no canto (rasteiro/meia altura, a ~2,4 m do goleiro) e espera a fase pedida do mergulho
+      const fase = prep.split(':')[1], alta = prep.split(':')[2] === 'alta', corpo = prep.split(':')[2] === 'corpo';
+      const m = g.mundo, gk = m.jogadores.find(j => j.posicao === 'GOL' && j.time === 1);
+      const de = m.jogadores.find(j => j.id === m.controlado[0]);
+      const b = m.bola;
+      // (alta: bola por cima do goleiro, perto do corpo — o salto com as mãos acima da cabeça; corpo: na altura
+      // do peito, perto — a defesa em pé, para ver a bola segura nas mãos depois)
+      const sx = gk.x - 17, sz = gk.z - 3, pz = gk.z + (alta ? 0.55 : corpo ? 0.3 : 2.1), py = alta ? 2.25 : corpo ? 1.0 : 0.9, v = 19;
+      const kx = (52.5 - sx) / (gk.x - sx), zLinha = sz + (pz - sz) * kx;
+      const ux0 = 52.5 - sx, uz0 = zLinha - sz, D = Math.hypot(ux0, uz0), Dg = Math.hypot(gk.x - sx, pz - sz);
+      let lo = -0.2, hi = 0.6;
+      for (let k = 0; k < 30; k++) { const el = (lo + hi) / 2, t = Dg / (v * Math.cos(el)); if (0.11 + v * Math.sin(el) * t - 4.905 * t * t < py) lo = el; else hi = el; }
+      const el = (lo + hi) / 2;
+      b.p.x = sx; b.p.y = 0.11; b.p.z = sz;
+      b.v.x = (ux0 / D) * v * Math.cos(el); b.v.y = v * Math.sin(el); b.v.z = (uz0 / D) * v * Math.cos(el);
+      b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+      m.posse = null; m.naMao = null;
+      if (de && de.cond) { de.cond.toque = null; de.cond.busca = false; }
+      m.voo = { tipo: 'chute', de: de ? de.id : 0, time: 0, tick0: m.tick, tickChave: m.tick };
+      for (let i = 0; i < 150; i++) {
+        av(1);
+        const d = gk.mergulho;
+        if (d && d.tc != null) {
+          if (fase === 'voo' && m.tick >= d.tc - 4) break;
+          if (fase === 'contato' && m.tick >= d.tc) break;
+          if (fase === 'queda' && m.tick >= d.tc + 12) break;
+          if (fase === 'segura' && m.tick >= d.fim + 8) break;
+        }
+      }
+      g.cameraLivre({ de: [gk.x - 7.5, 1.5, gk.z - 3.5], para: [gk.x - 0.2, 0.75, gk.z + 1.1], fov: 38 });
+      const d = gk.mergulho;
+      return `goleiro ${gk.id}: ${d ? `${d.tipo}, ${m.tick - d.tick0} ticks (contato no ${d.tc - d.tick0}), ${d.sucesso ? d.encaixe ? 'encaixe' : 'espalmada' : 'batido'}` : 'sem mergulho'}${m.naMao === gk.id ? ', bola na mão' : ''}`;
+    }
+    if (prep === 'recepcao') {
+      // bola rolando para o controlado (de frente, 12 m, 10 m/s) com o analógico já para o lado (90°)
+      const m = g.mundo, j = m.jogadores.find(q => q.id === m.controlado[0]);
+      const a = j.rumo, b = m.bola;
+      b.p.x = j.x + Math.cos(a) * 12 + Math.sin(a) * 0.8; b.p.y = 0.11; b.p.z = j.z + Math.sin(a) * 12 - Math.cos(a) * 0.8;
+      const dx = j.x - b.p.x, dz = j.z - b.p.z, l = Math.hypot(dx, dz);
+      b.v.x = (dx / l) * 10; b.v.y = 0; b.v.z = (dz / l) * 10; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
+      m.posse = null; m.naMao = null; m.voo = null;
+      if (j.cond) { j.cond.toque = null; j.cond.busca = false; j.cond.longeDesde = -1; }
+      const e = { x: -Math.sin(a), z: Math.cos(a), botoes: 0 };
+      let dist = 99, i = 0;
+      for (; i < 200; i++) { av(1, e); dist = Math.hypot(m.bola.p.x - j.x, m.bola.p.z - j.z); if (dist < 1.0 || m.posse === j.id) break; }
+      g.forcarEntrada(e);
+      return `recepção: bola a ${dist.toFixed(2)} m em ${(i / 60).toFixed(2)} s, plano ${j.recep && j.recep.ativo ? j.recep.modo : '-'}, analógico (${e.x.toFixed(2)}, ${e.z.toFixed(2)})`;
+    }
     if (prep === 'antesDoGol') {
       // a jogada que vira gol (achada por acharGol), 0,4 s antes: o ataque perto da área
       while (g.mundo.tick < gol.golTick - 24) g.relogio.avancar(1000 / 60, { desenhar: false });
@@ -240,7 +301,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' ? 0 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep, GOL) : '';
     let notaEd = '';
     if (c.editor) {

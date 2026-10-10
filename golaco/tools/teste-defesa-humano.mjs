@@ -327,10 +327,12 @@ function rodarPressao(sem, comBotao, min, ateTick = Infinity) {
   return { casos, hash1, hashFim: S.hashMundo(m), tick: m.tick };
 }
 {
-  // casos até juntar 20 (6 a 12 partidas de 1,5 min); a IA lê o pedido? A mesma partida sem o botão até o
-  // fim do 1º caso: mundo bit a bit igual = não lê
+  // casos até juntar 20 (6 a 24 partidas de 1,5 min: quantos casos cada partida dá depende do jogo — com a
+  // recepção assistida de 10/10 as mesmas 12 sementes deram 12 casos e outras 36 sementes, o mesmo número de
+  // trocas de posse que antes; a meta continua ≥ 80% com ≥ 20 casos); a IA lê o pedido? A mesma partida sem
+  // o botão até o fim do 1º caso: mundo bit a bit igual = não lê
   let le = false, ok = 0, n = 0, testados = 0;
-  for (let k = 1; k <= 12 && (k <= 6 || n < 20); k++) {
+  for (let k = 1; k <= 24 && (k <= 6 || n < 20); k++) {
     const s = BASE + 30000 + k;
     const r = rodarPressao(s, true, 1.5);
     for (const c of r.casos) if (c.ok || c.durou >= 60) { n++; if (c.ok) ok++; }
