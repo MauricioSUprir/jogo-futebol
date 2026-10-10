@@ -45,7 +45,7 @@ const LISTA = [
   ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs'],
   ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs'],
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
-  ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs', [], 'etapa3'],
+  ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
   ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
   ['movimento da IA no 11×11 (Parte 2)', 'teste-movimento.mjs', ['--modo', 'partida'], 'etapa3'],
   ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],

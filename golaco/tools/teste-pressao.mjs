@@ -1,5 +1,5 @@
 // teste-pressao (Etapa 3, Parte 2): a pressão sem a bola no 11×11, IA × IA (Golaço 4-3-3 × Ventania
-// 4-2-3-1), os dois times com a mesma pressão — Baixa, Média e Alta —, 8 sementes × 1,5 min por
+// 4-2-3-1), os dois times com a mesma pressão — Baixa, Média e Alta —, 24 sementes × 1,5 min por
 // nível, amostras a cada 0,1 s com a bola no pé de um jogador de linha. Definições de
 // tools/lib/partida-medidas.mjs (Metrica, StatsBomb, Wyscout; PESQUISA-ETAPA3.md §4).
 // Metas (plano 5.1):
@@ -28,7 +28,9 @@
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
-const a = T.argumentos(8);
+// 24 sementes (eram 8: ~50–60 perdas por nível; entre conjuntos de sementes a contrapressão variava
+// 34–70%, o PPDA 6,9–10,1 e a retomada por nível ±10 pontos — o "Alta ≥ Média + 5" era sorteio)
+const a = T.argumentos(24);
 const L = await T.carregar(a.js);
 const P3 = T.parte3Presente(L);
 const ATAQUE = P3 ? 'jogo' : 'substituto'; // sem a Parte 3, o ataque substituto dos testes (lib/partida-tatica.mjs)
