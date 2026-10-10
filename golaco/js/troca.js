@@ -12,8 +12,8 @@
 //    (|e| ≤ TROCA_AEREA.analogicoSolto), devolve a entrada que o leva ao ponto da disputa; senão null.
 //
 // Regras (plano 3.5):
-//  1. liga com a bola no ar e sem dono (!b.rolando, m.posse == null, m.naMao == null), fora de chute e de
-//     parada não cobrada, para cada time humano; um voo novo (m.voo.tick0 mudou: cabeceio, lançamento)
+//  1. liga com a bola no ar e sem dono (!b.rolando, m.posse == null, m.naMao == null), fora de parada não
+//     cobrada, para cada time humano (também no rebote de chute: a bola espalmada ou desviada no ar); um voo novo (m.voo.tick0 mudou: cabeceio, lançamento)
 //     recomeça a contagem;
 //  2. a cada avaliaTicks (0,1 s, a 1ª no começo do voo) prevê a trajetória da bola uma vez e acha, para
 //     cada jogador de linha do time, o 1º ponto dela a que ele chega a tempo com y ≤ alcance do salto;
@@ -39,7 +39,6 @@ import { estadoIA } from './ia-tatica.js';
 const T = TROCA_AEREA;
 const N_PREV = 210;               // ticks da trajetória prevista (3,5 s: o lançamento mais longo)
 const PASSO_VARRE = 2;            // a varredura olha um tick a cada 2 (a trajetória é suave)
-const CHUTES = { chute: 1, colocado: 1, cavadinha: 1 };
 // trajetória prevista (reaproveitada: recalculada inteira a cada avaliação, nada é guardado entre mundos)
 const XS = new Float64Array(N_PREV + 1), ZS = new Float64Array(N_PREV + 1), YS = new Float64Array(N_PREV + 1);
 let nPrev = 0;
@@ -50,7 +49,6 @@ function bolaAltaLivre(m) {
   const b = m.bola;
   if (b.rolando || m.posse != null || m.naMao != null) return false;
   if (m.parada && !m.parada.rolou) return false;
-  if (m.voo && CHUTES[m.voo.tipo]) return false;
   return true;
 }
 

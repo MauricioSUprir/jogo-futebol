@@ -545,7 +545,7 @@ export const DEFESA_HUMANO = {
   dividida: {
     alcance: 0.65, perna: 0.55, tempo: 0.1, semToque: 0.1, longe: 1.5, semReacao: 0.75,
     chance: [0.35, 0.65],     // limites da chance de ganhar (bote na hora certa)
-    base: 0.5,                // chance com atributos iguais
+    base: 0.55,               // chance com atributos iguais (meio da faixa de acerto real, 44–71%)
     porAttr: 0.01,            // por ponto de desarme acima da média de drible e controle do condutor
     solta: 0.12,              // a mais com a bola solta do pé do condutor (0,45 → 0,95 m dele)
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)

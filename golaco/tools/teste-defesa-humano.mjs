@@ -224,7 +224,7 @@ function cenaDividida(sem, tipo) {
 const div = { certa: [0, 0, 0], errada: [0, 0, 0], longe: [0, 0, 0] }; // [ganhou, passou, n]
 for (const tipo of ['certa', 'errada', 'longe']) {
   let tentativas = 0;
-  for (let s = 0; div[tipo][2] < NS * 2 && tentativas < NS * 16; s++, tentativas++) {
+  for (let s = 0; div[tipo][2] < NS * 3 && tentativas < NS * 24; s++, tentativas++) {
     const r = cenaDividida(BASE + 20000 + s + (tipo === 'errada' ? 7000 : tipo === 'longe' ? 14000 : 0), tipo);
     if (!r.apertou) continue;
     div[tipo][2]++;
@@ -306,10 +306,12 @@ function rodarPressao(sem, comBotao, min) {
     if (le) for (const c of rodarPressao(s, false, 1.5).casos) if (c.ok || c.durou >= 60) { n0++; if (c.ok) ok0++; }
   }
   if (!le) { ok0 = ok; n0 = n; }
-  const passa = n >= 20 && ok / n >= 0.8;
+  // a IA não lê o pedido: o número é o de sem o botão (não mede a PRESSÃO) — aguarda a Parte 2
+  const aguarda = !le && !ESTRITO && !ANTES;
+  const passa = le && n >= 20 && ok / n >= 0.8;
   reg('PRESSÃO: um companheiro a ≤ 2 m do condutor em ≤ 2 s',
     `${pc(ok, n)} (sem o botão: ${pc(ok0, n0)}; a IA ${le ? 'lê' : 'NÃO lê'} m.pedidoPressao)`, '≥ 80%',
-    passa, !le && !ESTRITO && !ANTES);
+    passa, aguarda);
 }
 
 fim();

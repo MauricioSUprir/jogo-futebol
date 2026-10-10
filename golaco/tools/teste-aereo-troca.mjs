@@ -8,8 +8,9 @@
 //  - canhão: ≥ 120 bolas (≥ 60 do adversário para o meu campo e a minha área, ≥ 60 do meu time); ≥ 90% das
 //    disputas do time 0 com o controlado (no tick antes do contato) sendo quem disputa;
 //  - ≤ 1 troca extra por bola (trocas de controle no voo além da 1ª) e média ≤ 0,3;
-//  - natural (os voos que a IA faz): ≥ 90% com ≥ 60 disputas (real: 97% reavaliando até 0,5 s antes,
-//    Metrica, pesquisa §7).
+//  - natural (IA × IA, sem o canhão; os dois times com um humano — a IA joga pelo controlado de cada um,
+//    e a disputa de cada time conta contra o controlado dele): ≥ 90% com ≥ 60 disputas (real: 97%
+//    reavaliando até 0,5 s antes, Metrica, pesquisa §7).
 //   node tools/teste-aereo-troca.mjs                (lógica do repositório)
 //   node tools/teste-aereo-troca.mjs --antes        (a mesma partida com a IA de antes, sem a troca aérea)
 //   node tools/teste-aereo-troca.mjs --js <pasta>   (outra cópia da lógica)
@@ -23,7 +24,7 @@ const JS = args.includes('--js') ? path.resolve(arg('--js')) : path.resolve(path
 const ANTES = args.includes('--antes');
 const NS = +arg('--sementes', 6);       // partidas com o canhão
 const MIN = +arg('--min', 2);           // minutos de cada uma
-const NS_NAT = +arg('--naturais', 10);  // partidas sem o canhão (natural; 8 × 4 min davam ~50 disputas com a IA de hoje)
+const NS_NAT = +arg('--naturais', 8);   // partidas sem o canhão (natural; os dois times com um humano)
 const MIN_NAT = +arg('--min-natural', 4);
 const NS_SOLTO = +arg('--soltos', 2);   // partidas com o canhão e o analógico largado (assistência)
 const BASE = +arg('--base', 1);
@@ -44,9 +45,10 @@ function fim() {
   process.exit(falhas ? 1 : 0);
 }
 
-let P, S, CFG, A, B;
+let P, S, CFG, A, B, IAT;
 try {
   P = await imp('partida.js'); S = await imp('sim.js'); CFG = await imp('config.js'); A = await imp('acoes.js'); B = await imp('bola.js');
+  IAT = await imp('ia-tatica.js');
 } catch (err) {
   reg('a partida 11×11 existe (criarPartida)', `não carregou: ${err.message.split('\n')[0]}`, 'criarPartida', false);
   fim();
@@ -122,15 +124,26 @@ function lancar(m, r, time) {
  * para o primeiro ponto do voo, na altura da cabeça, a que chega a tempo (lê a bola: a conta é a física do
  * jogo) — ou, com `solto`, larga o analógico (a assistência do jogo decide).
  */
-function entradaHumano(m, solto) {
-  const e = P.entradaDemoPartida(m);
+function entradaHumano(m, solto, time = 0) {
+  const jc = S.jogadorPorId(m, m.controlado[time]);
+  const e = time === 0 ? P.entradaDemoPartida(m) : jc ? IAT.entradaIATatica(m, jc) : { x: 0, z: 0, botoes: 0 };
   const b = m.bola;
   if (b.rolando || m.posse != null || m.naMao != null) return e;
   if (solto) return { x: 0, z: 0, botoes: 0 };
-  const j = S.jogadorPorId(m, m.controlado[0]);
+  const j = jc;
   if (!j || j.posicao === 'GOL') return e;
   // o primeiro ponto do voo, já na altura da cabeça (≤ 2,3 m), a que ele chega correndo a tempo; se não
-  // chega a nenhum, onde a bola desce a 2 m
+  // chega a nenhum, onde a bola desce a 2 m (o humano relê a bola a cada 0,1 s)
+  const L = LEITURAS[time];
+  if (!(L.m === m && L.id === j.id && m.tick - L.tick < 6)) lerBola(m, j, b, L);
+  const dx = L.x - j.x, dz = L.z - j.z, d = Math.hypot(dx, dz);
+  if (d < 0.3) return { x: 0, z: 0, botoes: 0 };
+  const mag = Math.min(1, d / 3);
+  return { x: dx / d * mag, z: dz / d * mag, botoes: d > 4 ? CFG.BOTAO.CORRER : 0 };
+}
+const LEITURA = { m: null, id: -1, tick: -1, x: 0, z: 0 };
+const LEITURAS = [LEITURA, { m: null, id: -1, tick: -1, x: 0, z: 0 }];
+function lerBola(m, j, b, L) {
   const c = B.copiarBola(b);
   let px = null, pz = null, qx = c.p.x, qz = c.p.z;
   const vmax = j.par.vArrancada;
@@ -144,16 +157,22 @@ function entradaHumano(m, solto) {
     if (c.rolando) break;
   }
   if (px === null) { px = qx; pz = qz; }
-  const dx = px - j.x, dz = pz - j.z, d = Math.hypot(dx, dz);
-  if (d < 0.3) return { x: 0, z: 0, botoes: 0 };
-  const mag = Math.min(1, d / 3);
-  return { x: dx / d * mag, z: dz / d * mag, botoes: d > 4 ? CFG.BOTAO.CORRER : 0 };
+  Object.assign(L, { m, id: j.id, tick: m.tick, x: px, z: pz });
 }
 
 function rodar(sem, min, injeta, solto = false) {
   const r = rngTeste(sem * 7 + 3);
   const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: min });
   const N = Math.round(min * 60 / PASSO);
+  // no jogo natural os DOIS times têm um humano (a IA joga pelo controlado de cada um): as disputas
+  // pelo alto dos dois contam, cada uma contra o controlado do próprio time (dobra a amostra no mesmo tempo)
+  const dois = !injeta;
+  if (dois) {
+    m.humanos = [0, 1];
+    let c1 = null;
+    for (const o of m.jogadores) if (o.time === 1 && o.posicao !== 'GOL' && (!c1 || Math.hypot(o.x, o.z) < Math.hypot(c1.x, c1.z))) c1 = o;
+    m.controlado[1] = c1.id;
+  }
   let voo = null, fimVoo = 0;
   for (let i = 0; i < N; i++) {
     // ------------------------------------------------ canhão: uma bola alta a cada ~3 s de jogo corrido
@@ -173,7 +192,16 @@ function rodar(sem, min, injeta, solto = false) {
         ctrlAntes = m.controlado[0];
       }
     }
-    const ev = P.passoPartida(m, entradaHumano(m, solto), null);
+    let ev;
+    const ctrlAntes1 = m.controlado[1];
+    if (dois) {
+      // o mesmo passo da partida (partida.js passoPartida) com a entrada dos dois humanos
+      const e0 = entradaHumano(m, solto, 0), e1 = entradaHumano(m, solto, 1);
+      const est = m.partida.estado;
+      if (est === 'intervalo' || est === 'fim') { m.eventos = []; m.tick++; } else S.passo(m, { 0: e0, 1: e1 });
+      P.regrasPartida(m);
+      ev = m.eventos;
+    } else ev = P.passoPartida(m, entradaHumano(m, solto), null);
     for (const e of ev) if (e.tipo === 'passe' && ALTOS.has(e.modo)) R.bolas.natural++;
     if (!voo) {
       // partidas sem o canhão: as disputas pelo alto do time 0 no jogo da IA (natural)
@@ -181,9 +209,10 @@ function rodar(sem, min, injeta, solto = false) {
       for (const e of ev) {
         if (e.tipo !== 'cabeceio' && e.tipo !== 'dominioAereo') continue;
         const j = S.jogadorPorId(m, e.id);
-        if (!j || j.time !== 0) continue;
+        if (!j) continue;
         R.natural[1]++;
-        if (ctrlAntes === e.id) R.natural[0]++;
+        if ((j.time === 0 ? ctrlAntes : ctrlAntes1) === e.id) R.natural[0]++;
+        else if (DEPURA) { const st = m.trocaAerea?.[j.time]; console.log(`natural sem ${sem} t ${fmt(m.tick * PASSO, 1)} time ${j.time}: disputou ${e.id} (${e.tipo}), controlado ${j.time === 0 ? ctrlAntes : ctrlAntes1}, melhor ${st?.melhor} i ${st?.iMelhor} ativo ${st?.ativo} trocas ${st?.trocas} corr ${st?.correcoes} voo ${m.voo?.tipo ?? '-'} posse ${m.posse}`); }
         else if (DEPURA) console.log(`semente ${sem} t ${fmt(m.tick * PASSO, 1)} s: natural — disputou ${e.id}, controlado ${ctrlAntes}`);
       }
       continue;
@@ -244,6 +273,6 @@ if (SO !== 'natural') {
 }
 if (SO !== 'canhao') {
   console.log(`voos altos da IA (lançamentos e cruzamentos) nas partidas sem o canhão: ${R.bolas.natural}`);
-  reg('natural (IA × IA): o controlado é quem disputa', pc(...R.natural), '≥ 90% com ≥ 60 disputas', ok90(R.natural, 60));
+  reg('natural (IA × IA, os dois times): o controlado é quem disputa', pc(...R.natural), '≥ 90% com ≥ 60 disputas', ok90(R.natural, 60));
 }
 fim();
