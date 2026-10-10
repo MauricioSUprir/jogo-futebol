@@ -477,6 +477,41 @@ function tickComPeLivre(pc, i0, iMin, iMax, antes) {
   return null;
 }
 
+// O toque (executarToque) pede a MESMA velocidade de saída (velParaDistancia: busca binária com ~35
+// rolagens inteiras da bola) e a mesma rolagem até 4 vezes por plano — semUltrapassar, desvioDoArco, de
+// novo e a velocidade do toque. Memória das últimas respostas (Etapa 3, plano 4.3: o passo do toque era
+// o pico do p95): as mesmas contas, na mesma ordem, bit a bit.
+const _vdD = new Float64Array(4), _vdN = new Float64Array(4), _vdV = new Float64Array(4);
+let _vdUsados = 0, _vdProx = 0;
+/** velParaDistancia(d, n) com memória das 4 últimas (d, n). */
+function velDist(d, n) {
+  for (let i = 0; i < _vdUsados; i++) if (Object.is(_vdD[i], d) && _vdN[i] === n) return _vdV[i];
+  const v = velParaDistancia(d, n);
+  _vdD[_vdProx] = d; _vdN[_vdProx] = n; _vdV[_vdProx] = v;
+  _vdProx = (_vdProx + 1) & 3;
+  if (_vdUsados < 4) _vdUsados++;
+  return v;
+}
+// distância rolada até o fim de cada tick saindo a v0 (subpasso a subpasso, como a física): guardada
+// para a última v0 e estendida quando um horizonte maior é pedido
+const _rol = { v0: NaN, n: 0, s: 0, d: 0, ds: new Float64Array(128) };
+/** d[i] = distância rolada no fim do tick i (1..n) saindo a v0. Vetor reaproveitado, só de leitura. */
+function rolagem(v0, n) {
+  const r = _rol;
+  if (!Object.is(r.v0, v0)) { r.v0 = v0; r.n = 0; r.s = v0; r.d = 0; }
+  if (r.n < n) {
+    if (r.ds.length < n + 1) { const ds = new Float64Array(Math.max(n + 1, 2 * r.ds.length)); ds.set(r.ds); r.ds = ds; }
+    let s = r.s, d = r.d;
+    const ds = r.ds;
+    for (let i = r.n + 1; i <= n; i++) {
+      for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+      ds[i] = d;
+    }
+    r.s = s; r.d = d; r.n = n;
+  }
+  return r.ds;
+}
+
 /**
  * A bola, tocada na linha (ux, uz) para rolar sProj até o tick iN, entra no alcance do pé do
  * corpo previsto (pc) em algum tick depois do intervalo mínimo e em até CORTE_ALCANCE_T?
@@ -484,11 +519,11 @@ function tickComPeLivre(pc, i0, iMin, iMax, antes) {
 function linhaAlcancavel(b, linha, iN, pc) {
   const { ux, uz, sProj } = linha;
   const minI = Math.ceil(CONDUCAO.intervaloMin / DT);
-  let s = velParaDistancia(sProj, iN), d = 0;
   const nMax = Math.min(pc.n, Math.round(CORTE_ALCANCE_T / DT));
+  const ds = rolagem(velDist(sProj, iN), nMax);
   for (let i = 1; i <= nMax; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
     if (i < minI) continue;
+    const d = ds[i];
     if (noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], b.p.x + ux * d, b.p.z + uz * d, 0.11)) return true;
   }
   return false;
@@ -502,11 +537,10 @@ function semUltrapassar(b, plano, pc) {
   const { iN, dist } = plano;
   if (dist < 0.05) return true;
   const ux = plano.dx / dist, uz = plano.dz / dist;
-  const v0 = velParaDistancia(dist, iN);
-  let s = v0, d = 0;
+  const ds = rolagem(velDist(dist, iN), iN - 1);
   plano.folgaMax = 0;
   for (let i = 1; i < iN; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    const d = ds[i];
     const bx = b.p.x + ux * d, bz = b.p.z + uz * d;
     const ex = bx - pc.xs[i], ez = bz - pc.zs[i];
     const fr = ex * MD.cos(pc.rs[i]) + ez * MD.sin(pc.rs[i]);
@@ -524,9 +558,10 @@ function desvioDoArco(b, plano, pc) {
   const { iN, dist } = plano;
   if (dist < 0.05) return 0;
   const ux = plano.dx / dist, uz = plano.dz / dist;
-  let s = velParaDistancia(dist, iN), d = 0, dm = 0;
+  const ds = rolagem(velDist(dist, iN), iN - 1);
+  let dm = 0;
   for (let i = 1; i < iN; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    const d = ds[i];
     const ex = b.p.x + ux * d - pc.xs[i], ez = b.p.z + uz * d - pc.zs[i];
     const la = Math.abs(-ex * MD.sin(pc.rs[i]) + ez * MD.cos(pc.rs[i]));
     if (la > dm) dm = la;
@@ -593,8 +628,8 @@ export function executarToque(m, j, pe, tipo) {
   // protegendo parado, a bola é rolada de leve com a sola e para no ponto (não foge do corpo);
   // andando, chega ao ponto no próximo toque, no passo de proteção (sem disparar)
   let vBase;
-  if (!prot) vBase = velParaDistancia(dist, iN);
-  else if (j.imag > MAG_DIR) vBase = Math.min(velParaDistancia(dist, iN), CONDUCAO.vProtecao * 1.6);
+  if (!prot) vBase = velDist(dist, iN);
+  else if (j.imag > MAG_DIR) vBase = Math.min(velDist(dist, iN), CONDUCAO.vProtecao * 1.6);
   else vBase = velParaParar(dist);
   let v0 = vBase * Math.max(0.5, 1 + ev);
   v0 = Math.min(v0, 14);
@@ -1052,11 +1087,22 @@ export function saidaParaToque(m, j) {
  * Ponto em que o pé encosta na bola em (bx, bz): atrás dela, na direção do corpo até ela. Com a
  * bola perto do corpo o recuo diminui aos poucos (sem o ponto girar em volta do jogador).
  */
-export function pontoContato(j, bx, bz) {
+export function pontoContato(j, bx, bz, out = { x: 0, z: 0 }) {
   const dx = bx - j.x, dz = bz - j.z;
   const k = GESTO.recuo / Math.max(MD.hypot(dx, dz), GESTO.recuoPerto);
-  return { x: bx - dx * k, z: bz - dz * k };
+  out.x = bx - dx * k; out.z = bz - dz * k;
+  return out;
 }
+
+/** s até o pé p pousar (no chão: Infinity), com a frequência de passos f. */
+function tempoAtePouso(j, p, f) {
+  return j.pes[p].apoio ? Infinity : (j.pes[p].fasePouso - j.fase) / f;
+}
+/** O pé p fica no ar até o toque (daqui a `falta` s)? */
+function ficaNoAr(j, p, f, falta) {
+  return !j.pes[p].apoio && tempoAtePouso(j, p, f) >= falta - DT;
+}
+const _naBola = { x: 0, z: 0 }, _noToque = { x: 0, z: 0 };
 
 /**
  * Gesto do toque (só visual). Para cada pé: o peso `puxa` (0–1) com que o pé desenhado vai até
@@ -1069,20 +1115,18 @@ export function atualizarGesto(m, j) {
   const c = j.cond;
   const t = c.toque;
   const f = Math.max(freqPassada(MD.hypot(j.vx, j.vz), m.posse === j.id), 0.5);
-  const tPouso = p => (j.pes[p].apoio ? Infinity : (j.pes[p].fasePouso - j.fase) / f); // s até pousar
   let pa = -1; // pé que vai tocar
   const falta = t ? (t.tick - m.tick) * DT : 0;
   if (t && (m.posse === j.id || t.tipo === 'dominio') && falta <= GESTO.janela) {
     // o marcado se ele ficar no ar até o toque; senão o outro, se ficar; senão o marcado (no
     // chão: o gesto só aparece quando ele sair do chão)
-    const fica = p => !j.pes[p].apoio && tPouso(p) >= falta - DT;
-    pa = fica(t.pe) ? t.pe : fica(1 - t.pe) ? 1 - t.pe : t.pe;
+    pa = ficaNoAr(j, t.pe, f, falta) ? t.pe : ficaNoAr(j, 1 - t.pe, f, falta) ? 1 - t.pe : t.pe;
   }
   const u = c.ult;
   const pu = u && (m.tick - u.tick) * DT < GESTO.acompanha ? u.pe : -1; // pé que acompanha a bola
   const b = m.bola.p;
-  const naBola = pontoContato(j, b.x, b.z);
-  const noToque = pa >= 0 ? pontoContato(j, t.bx, t.bz) : null;
+  const naBola = pontoContato(j, b.x, b.z, _naBola);
+  const noToque = pa >= 0 ? pontoContato(j, t.bx, t.bz, _noToque) : null;
   const vMax = (GESTO.velPonto[0] + GESTO.velPonto[1] * MD.hypot(j.vx, j.vz)) * DT;
   // mais rápido o corpo, mais rápido o gesto pode subir (folga até o limite físico do pé)
   const subida = lerp(GESTO.subida[0], GESTO.subida[1], clamp(MD.hypot(j.vx, j.vz) / GESTO.velRef, 0, 1));
@@ -1103,7 +1147,7 @@ export function atualizarGesto(m, j) {
     if (p !== pa && pe.puxa > 0) {
       // o pé vai pousar logo: o gesto se desfaz em todo o tempo que falta até o pouso (e não de
       // uma vez no fim do balanço)
-      const resta = tPouso(p);
+      const resta = tempoAtePouso(j, p, f);
       if (resta < GESTO.acompanha + pe.puxa * GESTO.descida) {
         alvo = 0;
         desce = Math.max(desce, pe.puxa * DT / Math.max(resta, 2 * DT));

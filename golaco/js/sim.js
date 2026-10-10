@@ -470,14 +470,42 @@ function executarAcaoMarcada(m, j) {
   return executarAcao(m, j, peFinal, false);
 }
 
+// candidatos da bola livre (vetores reaproveitados: nada alocado por passo)
+const _cands = [], _candD = [];
+/**
+ * Candidatos da bola livre em _cands[0..n): os jogadores de linha (sem marcador nem parado), o
+ * recebedor marcado (alvo) primeiro e depois pela distância até a bola, com empate na ordem de
+ * m.jogadores — a MESMA ordem do antigo filter + sort (estável) com o comparador (alvo primeiro ||
+ * distância), por inserção estável. Devolve n.
+ */
+function candidatosBolaLivre(m, alvo) {
+  const b = m.bola, js = m.jogadores;
+  let n = 0;
+  for (let k = 0; k < js.length; k++) {
+    const j = js[k];
+    if (j.papel === 'marcador' || j.papel === 'parado' || j.posicao === 'GOL') continue;
+    const d = MD.hypot(j.x - b.p.x, j.z - b.p.z);
+    const pri = j.id === alvo;
+    let i = n - 1;
+    // anda para a direita quem vem DEPOIS de j na ordem (comparador > 0): não é o alvo sendo j o alvo,
+    // ou mesma prioridade e mais longe
+    while (i >= 0 && ((pri && _cands[i].id !== alvo) || ((_cands[i].id === alvo) === pri && _candD[i] - d > 0))) {
+      _cands[i + 1] = _cands[i]; _candD[i + 1] = _candD[i]; i--;
+    }
+    _cands[i + 1] = j; _candD[i + 1] = d;
+    n++;
+  }
+  return n;
+}
+
 /** Bola livre: quem vai recebê-la? Recebedor marcado primeiro; depois, os mais perto. */
 function bolaLivre(m) {
   const b = m.bola;
-  const cands = m.jogadores.filter(j => j.papel !== 'marcador' && j.papel !== 'parado' && j.posicao !== 'GOL');
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
-  cands.sort((a, c) => (a.id === alvo ? -1 : 0) - (c.id === alvo ? -1 : 0) || MD.hypot(a.x - b.p.x, a.z - b.p.z) - MD.hypot(c.x - b.p.x, c.z - b.p.z));
+  const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
-  for (const j of cands) {
+  for (let k = 0; k < nc; k++) {
+    const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     if (!b.rolando && b.p.y > 0.45) {
