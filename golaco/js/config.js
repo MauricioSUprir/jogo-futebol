@@ -470,7 +470,9 @@ export const TATICA = {
   // fator do z da vaga (Estreita/Normal/Aberta). Sem a bola a Normal é 1,12: a tabela é de posições
   // MÉDIAS, que encolhem a largura (o bloco desliza; pesquisa §1.2) — no instante, a Metrica tem
   // ~37 m no bloco médio (33 / 37 / 41 m na Compacta / Normal / Aberta, pesquisa §8)
-  largura: { com: [0.88, 1.0, 1.15], sem: [1.0, 1.12, 1.24] },
+  // (com a bola, Normal 1,0 → 1,04 no PR "IA intensa": a largura com a bola medida no jogo ficava em ~43,8 m,
+  // abaixo da faixa real 44–54 — Metrica 48,3 —, com o time voltando mais compacto da recomposição)
+  largura: { com: [0.9, 1.04, 1.18], sem: [1.0, 1.12, 1.24] },
   // Sem a bola, a altura da linha e a largura do bloco pela posição da bola (u, referencial do time),
   // medidas na Metrica (2 jogos, 33 475 amostras a 5 Hz; scratchpad p2/scripts/forma_por_bola.py):
   // [u da bola, altura da linha (m do gol), largura (m)], faixas de 5 m. A curva não é reta: a linha
@@ -560,7 +562,7 @@ export const TATICA = {
   // referência atrás dela)
   // (no jogo organizado, fora da janela, só liga com mais de `ligaOrganizado` m: a bola longa por cima)
   // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 8, lateral: 0.5, max: 10, pausa: 2 },
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, lateral: 0.5, max: 10, pausa: 2 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -611,8 +613,9 @@ export const IA_ATAQUE = {
   // campoMin m às costas da defesa, o condutor de frente (< angFrente rad), andando (≥ vCondutor m/s) e sem adversário a
   // < marcadorLivre m, e a linha do passe até o destino com risco ≤ linhaMax; destino = linha + `alem`
   // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
-  // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa).
-  corridas: { folga: 15, alem: [8, 12], recarga: 8, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
+  // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa) ou se, passada a linha, o
+  // passe não sai em `alemMax` s.
+  corridas: { folga: 15, alem: [8, 12], recarga: 8, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1, alemMax: 0.5 },
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
@@ -642,7 +645,7 @@ export const IA_ATAQUE = {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
     cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
-    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
+    xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.32, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,
     protegeDist: 1.5, protegeP: 0.7, protegeMax: 1.0, correrLivre: 10, correrAte: 25, curtaPerto: 2.5,

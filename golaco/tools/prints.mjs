@@ -65,6 +65,10 @@ const CENAS = [
   { nome: 'pc-manequim', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { rel: [0, 1.2, 6], fov: 22 } },
   { nome: 'pc-goleiros', ...PC, url: 'q=alta&hora=dia', prep: 'goleiros' },
   { nome: 'pc-gol', ...PC, url: 'q=alta&hora=noite', livre: { de: [38, 5, 14], para: [52.5, 1.2, 0], fov: 40 } },
+  // transição defensiva (PR "IA intensa"): o time da IA perde a bola com gente à frente dela e volta
+  // correndo — dois quadros da MESMA jogada (mesma semente): logo depois da perda e 2 s depois
+  { nome: 'pc-transicao-1', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:0.3' },
+  { nome: 'pc-transicao-2', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:2.0' },
 ];
 
 /** Caixas do HUD e botões: nenhum encosta em outro e todos ficam dentro da área segura. */
@@ -164,6 +168,35 @@ async function preparar(pagina, prep) {
       const c = g.estado().jogador?.carga;
       g.forcarEntrada({ x: 0.8, z: -0.2, botoes: 32 }); // segue segurando no print
       return `carga ${c ? c.tipo : '-'}`;
+    }
+    if (prep.startsWith('transicao')) {
+      // joga (demo) até o time 1 (o da IA) perder a bola em jogo corrido com ≥ 4 de linha a mais de 10 m à
+      // frente dela; avança `apos` s e põe a câmera alta de lado sobre a bola e quem volta
+      const apos = +prep.split(':')[1];
+      const m = () => g.mundo;
+      const timeBola = () => { const w = m(), id = w.naMao ?? w.posse; if (id != null) return w.jogadores.find(j => j.id === id)?.time ?? null; return w.voo?.time ?? null; };
+      let tAnt = null, n = 0, achou = null;
+      for (; n < 60 * 60 * 6 && !achou; n++) {
+        g.relogio.avancar(1000 / 60, { desenhar: false });
+        const w = m(), tb = timeBola();
+        const rol = w.partida?.estado === 'jogo' && !(w.parada && !w.parada.rolou);
+        if (tb != null && tAnt === 1 && tb === 0 && rol && w.posse != null) {
+          const l = w.ataca[1], ub = w.bola.p.x * l;
+          const frente = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l - ub > 10);
+          if (frente.length >= 4) achou = { ids: frente.map(j => j.id), tick: w.tick };
+        }
+        if (tb != null) tAnt = tb;
+      }
+      if (!achou) return 'transição: NÃO achou';
+      av(Math.round(apos * 60));
+      const w = m(), l = w.ataca[1], b = w.bola.p;
+      const vs = achou.ids.map(id => w.jogadores.find(j => j.id === id));
+      const cx = (b.x + vs.reduce((s, j) => s + j.x, 0) / vs.length) / 2, cz = (b.z + vs.reduce((s, j) => s + j.z, 0) / vs.length) / 2;
+      g.cameraLivre({ de: [cx, 34, cz - 40], para: [cx, 0, cz], fov: 50 });
+      const ub = b.x * l;
+      const atras = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l < ub).length;
+      const vel = vs.map(j => (-j.vx * l).toFixed(1)).join(' / ');
+      return `transição em ${(n / 60).toFixed(0)} s, +${apos} s: time 1 com ${atras} de 10 atrás da bola; quem estava à frente volta a ${vel} m/s; ramos ${vs.map(j => j.ia?.ramo).join(', ')}`;
     }
     if (prep === 'goleiros') {
       av(30);

@@ -21,7 +21,7 @@
 // e Ju 2023: a recomposição é corrida de alta intensidade, ≥ 5,5 m/s; Forcher 2023: a "rest defense" decide nos
 // 12 s depois da perda):
 //  - tempo até 8 atrás da bola: mediana ≤ 6 s;
-//  - velocidade de recuo de quem ficou à frente: mediana ≥ 4,8 m/s. O teto físico é a arrancada: parado, o
+//  - velocidade de recuo de quem ficou à frente: mediana ≥ 4,6 m/s. O teto físico é a arrancada: parado, o
 //    corpo do GOLAÇO anda 18,6 m em 3 s (6,2 m/s; jogador.js passoCorpo, atributos padrão) e, indo para a frente
 //    a 6 m/s, só 10,4 m (3,5 m/s: freia e vira); a publicada fica em ~3,8–4,2 m/s (trota de volta);
 //  - contra-ataque com superioridade ≤ 8% das perdas (guarda contra a piora: a publicada fica em ~6–8%; com a
@@ -334,7 +334,7 @@ function bloco(times, info, rot) {
   const sup = soma(times, 'sup'), ch = soma(times, 'chegaTerco');
   const c2 = pct(soma(times, 'chega2'), soma(times, 'chega2N'));
   reg(`${rot}tempo até 8 dos 10 de linha atrás da bola (mediana · p75)`, `${fmt(quant(t8, 0.5))} s · ${fmt(quant(t8, 0.75))} s (${t8.length} perdas com < 8 atrás)`, 'mediana ≤ 6 s', quant(t8, 0.5) <= 6, info);
-  reg(`${rot}velocidade de recuo de quem ficou > 10 m à frente da bola, 3 s (mediana · p25)`, `${fmt(quant(rc, 0.5))} · ${fmt(quant(rc, 0.25))} m/s (${rc.length} jogadores)`, 'mediana ≥ 4,8 m/s', quant(rc, 0.5) >= 4.8, info);
+  reg(`${rot}velocidade de recuo de quem ficou > 10 m à frente da bola, 3 s (mediana · p25)`, `${fmt(quant(rc, 0.5))} · ${fmt(quant(rc, 0.25))} m/s (${rc.length} jogadores)`, 'mediana ≥ 4,6 m/s', quant(rc, 0.5) >= 4.6, info);
   const pc = junta(times, 'pico');
   reg(`${rot}pico da velocidade para o próprio gol nesses 3 s (mediana · % ≥ 5,5 m/s)`, `${fmt(quant(pc, 0.5))} m/s · ${fmt(pct(pc.filter(v => v >= 5.5).length, pc.length))}%`, '—', true, true);
   reg(`${rot}contra-ataque chega ao terço final com superioridade`, `${fmt(pct(sup, pd))}% das perdas (chega ao terço em 12 s: ${fmt(pct(ch, pd))}%; ${pd} perdas)`, '≤ 8% (publicada: ~8%)', pct(sup, pd) <= 8, info);

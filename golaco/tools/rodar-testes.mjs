@@ -53,6 +53,9 @@ const LISTA = [
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],
   ['troca para quem disputa a bola alta ≥ 90% — canhão e assistência (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'canhao']],
   ['troca para quem disputa a bola alta ≥ 90% — jogo natural (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'natural']],
+  // PR "IA intensa" (dono, 10/10: "a IA não corre para trás"): recomposição depois da perda
+  ['transição defensiva: recomposição em disparada (IA × IA)', 'teste-transicao.mjs', [], 'etapa3'],
+  ['transição defensiva contra o humano roteirizado', 'teste-transicao.mjs', ['--humano'], 'etapa3'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

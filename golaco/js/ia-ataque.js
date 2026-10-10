@@ -177,7 +177,7 @@ function novoEstadoJogador() {
   return {
     tAval: -1, papel: 'ref',                                          // papel: 'ref' | 'apoio' | 'area'
     ofu: 0, ofw: 0, ofDesde: -1, ofCond: -1, ofTem: false,            // ponto de apoio (rel. ao condutor)
-    ultCorrida: -99999, corrida: false, corridaCond: -1,              // corrida nas costas
+    ultCorrida: -99999, corrida: false, corridaCond: -1, alemDesde: -1, // corrida nas costas (alemDesde: tick em que passou da linha)
     zona: -1,                                                         // ataque à área
     contorna: 0, contornaDesde: -99999, pressaAte: -1,                // desmarque (lado); pressa até o tick
     ultCond: -2, desde: 0, op: '', opDesde: -1, du: 1, dw: 0, correr: false, curta: false, // condutor
@@ -244,6 +244,22 @@ function estadoAtaque(m, t) {
   }
   A.linha = Math.max(u2, m.bola.p.x * lado, 0);
   A.defLinha = A.linha === u2 ? d2 : null; // o defensor que faz a linha (se é ele, e não a bola/o meio)
+  // corrida que já passou da linha e não recebe em corridas.alemMax s: acaba e ele volta (impedido, pressa) —
+  // esperando o passe atrás da linha até o fim da `espera`, alguém ficava em posição de impedimento ~25% do
+  // tempo com a bola (teste-apoio: real 8–25%, Metrica 16%; PR "IA intensa")
+  const AM = IA_ATAQUE.corridas.alemMax;
+  if (AM != null) {
+    for (const o of m.jogadores) {
+      const s = o.iaA;
+      if (o.time !== t || !s || !s.corrida || !o.corrida) continue;
+      if (o.x * lado <= A.linha + 0.5) { s.alemDesde = -1; continue; }
+      if (s.alemDesde < 0) s.alemDesde = m.tick;
+      if ((m.voo && m.voo.para === o.id) || o.recebe) continue;
+      const c = A.cond;
+      const armando = c && c.iaA && (c.iaA.op === 'enfiada' || c.iaA.op === 'lancamento') && c.iaA.alvo === o.id;
+      if (!armando && m.tick - s.alemDesde > seg(AM)) { o.corrida = null; s.corrida = false; s.alemDesde = -1; A.corridas--; }
+    }
+  }
   // referências da vaga: as do time (ia-tatica.js blocoDoTime → posicaoTatica com a bola do ataque —
   // antecipada IA_ATAQUE.antecipa s e filtrada —, misturada com a sem bola depois da retomada). Uma
   // referência só para o time inteiro: a da defesa e a do apoio são a mesma conta (contrato b da tela)

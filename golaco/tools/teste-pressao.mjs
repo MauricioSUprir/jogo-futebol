@@ -14,17 +14,19 @@
 //    contrapressão ninguém segue em contrapressão e no máximo os 2 mais perto (1º e 2º homem) apertam;
 //  - dependem do ATAQUE (Parte 3; sem ela, contra o condutor clássico que perde a bola ~25×/min no
 //    11×11, só informam): PPDA da Média 8–16 (Wyscout: média 11), "agressão" (recepção com defensor
-//    a ≤ 4,6 m em ≤ 2 s) 58–78% na Média e retomada em ≤ 5 s 25–40% na Média (Metrica 36,5%; Bauer &
+//    a ≤ 4,6 m em ≤ 2 s) 58–78% na Média e retomada em ≤ 5 s 34–54% na Média (Metrica 44,1%; Bauer &
 //    Anzer 31%).
 //    A agressão: a faixa do plano (19–29%) é a da StatsBomb, que conta EVENTOS de pressão (o defensor
 //    marcado como pressionando), e não a proximidade. Com a definição deste teste (adversário de linha
 //    a ≤ 4,6 m do recebedor em ≤ 2 s), o rastreamento da Metrica (2 jogos, 1763 recepções de passe;
 //    tools/pesquisa/agressao_metrica.py) dá 68,0% (t1/t2/t3 do recebedor: 55,9 / 65,5 / 83,7%). A meta
 //    passa a ser a da mesma definição no jogo real: 68 ± 10 pontos (como as outras metas da Metrica).
-//    A retomada fica 25–40%: com a definição deste medidor (perda = qualquer toque do outro time com a
-//    bola rolando; retomada = qualquer toque de volta em ≤ 5 s), os eventos da Metrica dão 44,1% (555
-//    perdas; tools/pesquisa/retomada_metrica.py) contra os 36,5% da pesquisa — ~8 pontos são da
-//    definição (bate-rebate conta como perda); o resto é a IA retomando rápido demais.
+//    A retomada: com a definição deste medidor (perda = qualquer toque do outro time com a bola rolando;
+//    retomada = qualquer toque de volta em ≤ 5 s), os eventos da Metrica dão 44,1% (555 perdas;
+//    tools/pesquisa/retomada_metrica.py) — os 36,5% da pesquisa são de outra definição (rastreamento, posse
+//    "assentada"). PR "IA intensa" (dono, 10/10: "o jogo tem que ser MAIS INTENSO"; contrapressão de 5 s na
+//    Média, Bauer & Anzer 2021): a meta passa a ser a da MESMA definição no jogo real, 44,1 ± 10 pontos
+//    (34–54%), como a agressão (68 ± 10). Era 25–40%.
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
@@ -71,7 +73,7 @@ reg('2 s depois da janela (Média e Alta): em contrapressão / mais de 2 apertan
 reg('Média: PPDA (Wyscout)', fmt(ppda[1], 2), '8–16', dentro(ppda[1], [8, 16]), !P3);
 const agr = 100 * M.agressao / M.recepcoes;
 reg('Média: agressão (recepção com defensor a ≤ 4,6 m em ≤ 2 s)', `${fmt(agr)}% de ${M.recepcoes}`, '58–78% (Metrica 68,0%)', dentro(agr, [58, 78]), !P3);
-reg('Média: retomada em ≤ 5 s depois da perda', `${fmt(ret[1])}%`, '25–40%', dentro(ret[1], [25, 40]), !P3);
+reg('Média: retomada em ≤ 5 s depois da perda', `${fmt(ret[1])}%`, '34–54% (Metrica 44,1%, mesma definição)', dentro(ret[1], [34, 54]), !P3);
 
 console.log(`lógica: ${a.js}${a.antes ? '  (--antes: IA clássica no 11×11)' : ''} · Parte 3 ${P3 ? 'presente (jogo de verdade)' : 'ausente: ataque substituto dos testes; as metas do ataque só informam'}`);
 console.log(`${a.sementes.length} sementes (${a.sementes[0]}–${a.sementes[a.sementes.length - 1]}) × 1,5 min × 3 níveis, ${((Date.now() - t0) / 1000).toFixed(0)} s; perdas/min ${R.map(r => fmt(r.perdas / r.minutos)).join(' / ')}; chutes/min ${R.map(r => fmt(r.chutes / r.minutos)).join(' / ')}`);

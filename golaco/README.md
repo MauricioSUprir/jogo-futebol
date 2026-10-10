@@ -29,6 +29,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - Defesa do humano: **CONTER** (segurar: acompanha o condutor entre a bola e o gol, de frente para ele),
   **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
+- **IA mais intensa** (pedido do dono, 10/10: "o jogo tem que ser MAIS INTENSO, a IA não corre para trás"): na perda da
+  bola, quem ficou à frente dela volta **em disparada** para trás da linha da bola, pelo lado do gol (recomposição), e os
+  mais perto apertam por 5 s (contrapressão; 7 s na pressão Alta) — vale para a IA adversária e para os companheiros do
+  humano; o meio fica atrás da bola no próprio campo, a cobertura da linha de defesa cobre de lado, ninguém dá sprint
+  em bola solta sem disputa e quem volta contorna o condutor. Medido no `teste-transicao` (ver PESQUISA-ETAPA3.md §16).
 
 ## Etapa 2 — passe, chute, goleiro
 
@@ -82,7 +87,8 @@ Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?mi
 
 ```bash
 node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea — o Actions roda antes do deploy
-node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade)
+node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade, transição)
+node golaco/tools/teste-transicao.mjs [--humano] # transição defensiva: recomposição em disparada depois da perda (IA × IA ou contra o humano roteirizado)
 node golaco/tools/hash-igual.mjs       # o treino bit a bit igual à base 980b0b0 (rodar antes de todo commit da lógica)
 node golaco/tools/hash-partida.mjs     # otimização: a partida 11×11 bit a bit igual à de antes (repositório × HEAD)
 #   (metas que dependem só do desenho do pé no anim.js saem como "PENDENTE"; teste-conducao/teste-dribles --estrito reprovam com elas)
