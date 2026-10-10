@@ -433,11 +433,20 @@ export const PARTIDA = {
   golPausa: 2.5,              // s entre o gol e a saída (os 150 ticks do treino)
   foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
   montagem: 1.2,              // s de montagem do recomeço (corte de câmera na saída)
+  // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
+  // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; o tiro de meta é do
+  // goleiro com a bola nas mãos (a reposição que já existe: GOLEIRO.esperaIA / esperaHumano)
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
-  cobrancaHumanoMax: 6,       // s — depois disso a IA cobra pelo humano
+  cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
-  teleporteCobrador: 8,       // m — cobrador mais longe que isto do ponto é levado até ele (com aviso)
+  teleporteCobrador: 8,       // m — o cobrador é levado ao ponto na montagem; o evento do recomeço leva a
+                              // distância (`levado`) e o HUD avisa acima disto (andar até lá: Etapa 4)
   raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area' }, // m dos adversários ('area' = fora da área)
+  folgaRaio: 0.5,             // m a mais que o raio na restrição (a IA mira fora; a parede segura aqui)
+  empurrao: 7,                // m/s — quem está dentro do raio na montagem sai a até esta velocidade
+  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65 }, // força do botão da IA
+  repeteCobranca: 1.0,        // s — se a cobrança não saiu (pedido expirou), a IA aperta de novo
   subsMax: 5,                 // IFAB Regra 3: 5 substituições...
   paradasMax: 3,              // ...em 3 paradas (o intervalo não conta)
 };
