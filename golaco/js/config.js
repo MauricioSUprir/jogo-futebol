@@ -525,6 +525,11 @@ export const TATICA = {
   sobeLinha: 0.5,             // fração do avanço (suave.recuo) da linha de defesa subindo com a bola
   recuoFrente: [0.5, 1],      // frações do recuo da linha da frente sem a bola, recuando e subindo (Forcher 2024: meio–ataque 11–15 m)
   avaliaTicks: 6,             // a IA tática reavalia a cada 6 ticks (10 Hz), escalonada por vagaIdx
+  // quem trocou de vaga (Editar time) corre para a nova até chega m da referência dela (no máximo max s)
+  reposiciona: { chega: 5, max: 8 },
+  // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
+  // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
+  olhar: { tauVel: 0.5, giro: 1.2 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -572,7 +577,7 @@ export const IA_ATAQUE = {
   // < marcadorLivre m, e a linha do passe até o destino com risco ≤ linhaMax; destino = linha + `alem`
   // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
   // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa).
-  corridas: { folga: 8, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 2.5, max: [1, 2], espera: 2.0, linhaMax: 0.9 },
+  corridas: { folga: 15, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
@@ -582,7 +587,8 @@ export const IA_ATAQUE = {
   //  - passe: velocidade média vPasse (m/s); até passeMax m; longo perde precisão (erroDist por 20 m
   //    além de 20 m); recebedor com adversário a < pressaoRecebe m: −passePress na chance e
   //    −pressaoValor no valor; para impedido vale impedido×;
-  //  - enfiada: bola a vEnfiada m/s no ponto da corrida a enfiadaLead m do corredor (força enfiadaForca);
+  //  - enfiada: no ponto da corrida a enfiadaLeads m do corredor (a força sai do ponto): rasteira a
+  //    vEnfiada m/s (cortável no caminho) ou alta por cima da linha a vEnfiadaAlta m/s (× enfiadaAltaP);
   //  - lançamento: chance lancamentoP (bola alta disputada);
   //  - cruzamento: chance cruzamentoP[n] com n de linha na área (ou a ≤ cruzamentoRaio m dela, entrando)
   //    e valor cruzamentoV;
@@ -597,7 +603,7 @@ export const IA_ATAQUE = {
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
   utilidade: {
     posse: 0, vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
-    passePress: 0.2, impedido: 0.3, enfiadaLead: 6, enfiadaForca: 0.25, lancamentoP: 0.5, cruzamentoV: 0.25,
+    passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
     cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,

@@ -16,7 +16,8 @@
 //    gatilho (passe para trás, toque pesado, de costas, na lateral, recepção — pesquisa §4.4), com a
 //    bola perto do meu gol (IA_DEFESA.perigo) ou sempre na pressão Alta; com a bola longe do meu gol
 //    (além de engaja[pressão], a linha de engajamento) não sai do bloco: segue a zona;
-//  - PRESSÃO do humano (m.pedidoPressao[time] = tick): o companheiro mais perto (≠ controlado) aperta;
+//  - PRESSÃO do humano (m.pedidoPressao[time] = tick): o companheiro escolhido por defesa.js
+//    pressionadorDe (o mais perto da bola, ≠ controlado) aperta pela entrada de defesa.js entradaPressao;
 //  - 2º homem: pressão Média/Alta cobre a cobertura m atrás do 1º, do lado do gol e por dentro; na
 //    Alta, com gatilho, aperta junto;
 //  - linha de defesa (grupo 'def'): a referência alinhada; com atacantes a ≤ individualArea m do meu
@@ -28,7 +29,7 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, TATICA, ACOES } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES } from './config.js';
 import { MD } from './matdet.js';
 import { difAng } from './mat.js';
 import { entradaIA, para, pontoInterceptacao } from './ia.js';
@@ -36,6 +37,7 @@ import { apoioTatico, condutorTatico } from './ia-ataque.js';
 import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
+import { entradaPressao, pressaoPedida, pressionadorDe } from './defesa.js';
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
@@ -55,6 +57,13 @@ export function estadoIA(m, j) {
 export function entradaIATatica(m, j) {
   // modo --antes dos testes, e o goleiro com a bola nas mãos jogado pela IA (a reposição é do ia.js)
   if (m.partida?.iaClassica || m.naMao === j.id) return entradaIA(m, j);
+  // o estado do time (fase, 1º/2º homem, contrapressão, referências) anda a TODO tick, com e sem a
+  // bola: com o ataque da Parte 3 ninguém do time com a bola o chamava, a troca de fase com → sem
+  // passava despercebida e a contrapressão nunca começava (integração das Partes 2 e 3)
+  const B = blocoDoTime(m, j.time);
+  // trocou de vaga (Editar time: troca entre titulares ou formação nova): vai correndo para a vaga
+  // nova antes de voltar ao papel (E7 do teste-editor; tela §8: "a IA leva o jogador à vaga nova")
+  if (reposicionando(m, j, B) && m.posse !== j.id && !j.recebe) return reposicionar(m, j, B);
   // recebendo um passe, numa corrida marcada ou indo na bola livre: o código do ia.js
   if ((j.recebe && m.posse !== j.id) || j.corrida) return entradaIA(m, j);
   if (m.posse == null && m.naMao == null && vaiNaLivre(m, j)) return bolaLivre(m, j);
@@ -62,6 +71,32 @@ export function entradaIATatica(m, j) {
   if (m.posse === j.id) return condutorTatico(m, j) ?? entradaIA(m, j);
   if (f.fase === 'com') return apoioTatico(m, j) ?? referenciaComBola(m, j, f);
   return semBola(m, j, f);
+}
+
+/**
+ * O jogador j está indo para uma vaga nova? Liga quando j.vagaId muda (edição na pausa) e desliga a
+ * TATICA.reposiciona.chega m da referência da vaga nova (ou depois de reposiciona.max s). Os
+ * companheiros não passam para ele no caminho (ia-ataque.js) — atravessando o campo ele recebia a bola
+ * no meio e ficava por lá.
+ */
+export function reposicionando(m, j, B = blocoDoTime(m, j.time)) {
+  const it = estadoT(j);
+  if (it.vagaAnt !== j.vagaId) {
+    if (it.vagaAnt) it.reposAte = m.tick + seg(TATICA.reposiciona.max);
+    it.vagaAnt = j.vagaId;
+  }
+  if (it.reposAte < m.tick) return false;
+  const k = j.vagaIdx;
+  if (MD.hypot(B.ref[2 * k] - j.x, B.ref[2 * k + 1] - j.z) <= TATICA.reposiciona.chega) { it.reposAte = -1; return false; }
+  return true;
+}
+
+/** Corre para a referência da vaga nova (parada por cobrar: fora do raio). */
+function reposicionar(m, j, B) {
+  const s = estadoIA(m, j);
+  s.ramo = 'reposiciona';
+  const k = j.vagaIdx;
+  return irPara(m, j, B.ref[2 * k], B.ref[2 * k + 1], 1, true, extraAcao(m, j), 'pressa');
 }
 
 /**
@@ -104,7 +139,8 @@ function bolaLivre(m, j) {
   const p = pontoInterceptacao(m, j);
   _t.x = p.x; _t.z = p.z;
   alvoPressa(m, j, _t);
-  return rumoPressa(m, j, { ...para(j, _t.x, _t.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER });
+  // (com uma bola parada por cobrar, o ponto respeita o raio da cobrança: partida.restricaoParada)
+  return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER });
 }
 
 // ---------------------------------------------------------------------------------- o time (bloco)
@@ -129,10 +165,21 @@ export function blocoDoTime(m, t) {
       contra: [], contraAte: -1,
       refTick: -99, ref: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
       foco: { x: 0, z: 0 }, cvx: 0, cvz: 0, cond: -1, dono: -1, dvx: 0, dvz: 0, bolaRef: { x: 0, z: 0 }, bolaRefDef: { x: 0, z: 0 },
+      bfx: 0, bfz: 0, bTick: -2,
     };
   }
   B.tick = m.tick;
   const f = faseDoTime(m, t);
+  // bola do ataque (Parte 3): onde a bola estará daqui a IA_ATAQUE.antecipa s, filtrada em
+  // IA_ATAQUE.antecipaFiltro s (o time com a bola anda com o passe, não depois dele; sem saltos a cada
+  // toque). É a bola de referência da fase 'com' (referencias).
+  {
+    const ta = IA_ATAQUE.antecipa, bp = m.bola.p, bv = m.bola.v;
+    const bx = Math.max(-CAMPO.meioX, Math.min(CAMPO.meioX, bp.x + bv.x * ta)), bz = Math.max(-CAMPO.meioZ, Math.min(CAMPO.meioZ, bp.z + bv.z * ta));
+    if (B.bTick !== m.tick - 1) { B.bfx = bx; B.bfz = bz; }
+    else { const k = Math.min(1, DT / IA_ATAQUE.antecipaFiltro); B.bfx += (bx - B.bfx) * k; B.bfz += (bz - B.bfz) * k; }
+    B.bTick = m.tick;
+  }
   const tat = m.times[t].tatica, p = tat.pressao;
   const lado = m.ataca[t], meuGol = -lado * CAMPO.meioX;
   const b = m.bola.p, js = m.jogadores;
@@ -277,27 +324,28 @@ export function blocoDoTime(m, t) {
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
   B.aperta2 = !!adv && adv.posicao !== 'GOL' && p >= 2 && engajado && (comGatilho || IA_DEFESA.doisApertam[p]);
 
-  // PRESSÃO segurada pelo humano: o companheiro mais perto (≠ controlado) aperta
+  // PRESSÃO segurada pelo humano (contrato m.pedidoPressao[time] = tick): quem aperta é o escolhido do
+  // leitor da Parte 4 (defesa.js pressionadorDe: o companheiro mais perto da bola, ≠ controlado, com
+  // histerese) — e o semBola dá a ele a entrada de defesa.js entradaPressao
   B.pedido = -1;
-  if ((m.pedidoPressao?.[t] ?? -99) >= m.tick - 1 && f.fase === 'sem' && adv && adv.posicao !== 'GOL') {
-    let mel = null, dm = Infinity;
-    for (const o of js) {
-      if (o.time !== t || !ehLinha(o) || o.id === humano) continue;
-      const d = MD.hypot(o.x - b.x, o.z - b.z);
-      if (d < dm) { dm = d; mel = o; }
-    }
-    if (mel) B.pedido = mel.id;
-  }
+  if (f.fase === 'sem' && pressaoPedida(m, t) && condutorAdversarioDe(m, t)) B.pedido = pressionadorDe(m, t);
 
   // marcação individual dos atacantes perto do meu gol, pela linha de defesa (a cada tick: o
   // atacante na área corre)
   marcarNaArea(m, t, B, meuGol, humano, adv);
   // referências e zona a 10 Hz (escalonado por time)
-  if (m.tick - B.refTick >= TATICA.avaliaTicks || (m.tick + t * 3) % TATICA.avaliaTicks === 0) {
+  if (m.tick - B.refTick >= TATICA.avaliaTicks || (m.tick + t * 3) % TATICA.avaliaTicks === 0 || f.desde === m.tick) {
     B.refTick = m.tick;
     referencias(m, t, B, f, adv);
   }
   return B;
+}
+
+/** Bola no pé de um adversário de linha do time t (não nas mãos), fora de parada e no chão. */
+function condutorAdversarioDe(m, t) {
+  if (m.posse == null || m.naMao != null || (m.parada && !m.parada.rolou) || m.bola.p.y > 0.5) return false;
+  for (const o of m.jogadores) if (o.id === m.posse) return o.time !== t && o.posicao !== 'GOL';
+  return false;
 }
 
 function gatilho(m, B, nome) {
@@ -362,8 +410,17 @@ function referencias(m, t, B, f, adv) {
   // agora (TATICA.antecipa) — antecipar todo mundo fazia o bloco ir e voltar a cada drible.
   const lim = CAMPO.meioX - IA.saidaGoleiro;
   const goleiro = m.naMao != null || (adv && adv.posicao === 'GOL') || (m.posse != null && !adv && donoEhGoleiro(m));
-  bolaDeReferencia(m, B, v, TATICA.antecipa, goleiro, lim, B.bolaRef);
-  bolaDeReferencia(m, B, v, TATICA.antecipaDef, goleiro, lim, B.bolaRefDef);
+  if (f.fase === 'com') {
+    // com a bola, a do ataque (blocoDoTime: antecipada e filtrada) para todo o time — a mesma
+    // referência do apoio da Parte 3 (ia-ataque.js lê B.ref), e a prévia da tela continua sendo a
+    // posicaoTatica dela (contrato b do teste-taticas)
+    B.bolaRef.x = B.bfx; B.bolaRef.z = B.bfz;
+    if (goleiro) B.bolaRef.x = Math.max(-lim, Math.min(lim, B.bolaRef.x));
+    B.bolaRefDef.x = B.bolaRef.x; B.bolaRefDef.z = B.bolaRef.z;
+  } else {
+    bolaDeReferencia(m, B, v, TATICA.antecipa, goleiro, lim, B.bolaRef);
+    bolaDeReferencia(m, B, v, TATICA.antecipaDef, goleiro, lim, B.bolaRefDef);
+  }
   const outra = f.fase === 'com' ? 'sem' : 'com';
   // com a bola na mão do MEU goleiro, a referência com a bola vale na hora (sem a mistura): a 'sem'
   // com a bola na saída de jogo é a linha funda, e quem estava na área seguia para a própria linha
@@ -481,8 +538,8 @@ function irPara(m, j, x, z, mag, correr, extra, modo) {
  *    parada, posse lenta — chega no lugar, sem ficar parado a 1,5 m dele.
  * Reinicia quando o papel muda. Devolve out = {x, z, mag, modo, correr}.
  */
-function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
-  const r = j.ia.ramo, it = estadoT(j), S = r === 'linha' ? TATICA.suaveLinha : r === 'apoio' ? TATICA.suaveApoio : TATICA.suave;
+export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
+  const r = j.ia.ramo, it = estadoT(j), S = r === 'linha' ? TATICA.suaveLinha : r === 'apoio' || r === 'apoioRef' ? TATICA.suaveApoio : TATICA.suave;
   if (it.sTick !== m.tick - 1 || it.sRamo !== j.ia.ramo) {
     it.fx = x; it.fz = z; it.vx = 0; it.vz = 0; it.vf = 0;
     it.quieto = false; it.lento = false; it.tParado = 0;
@@ -554,10 +611,14 @@ function semBola(m, j, f) {
   const b = m.bola.p;
   const advComBola = B.cond >= 0; // condutor adversário de linha com a bola no pé
   const naMaoAdv = m.naMao != null;
-  // 1) contrapressão (janela depois da perda)
+  // 1) PRESSÃO pedida pelo humano: a entrada do leitor da Parte 4 (aperta a DEFESA_HUMANO.pressao.aperto
+  // m do lado do gol, correndo) com o rumo filtrado de quem pressiona
+  if (j.id === B.pedido) {
+    const ep = entradaPressao(m, j);
+    if (ep) return rumoPressa(m, j, extra ? { ...ep, botoes: ep.botoes | extra } : ep);
+  }
+  // 2) contrapressão (janela depois da perda)
   if (B.contraAte > m.tick && B.contra.includes(j.id) && !naMaoAdv) return apertar(m, j, s, B, meuGol, extra, 'contra');
-  // 2) PRESSÃO pedida pelo humano
-  if (j.id === B.pedido) return apertar(m, j, s, B, meuGol, extra, 'aperta');
   // 3) 1º homem
   // (com a bola além da linha de engajamento ele não sai do bloco: segue a zona, abaixo)
   if (j.id === B.p1 && !naMaoAdv && B.engajado) {
@@ -661,9 +722,50 @@ function rumoPressa(m, j, e) {
   return e;
 }
 
+/**
+ * Olhar da IA sem a bola na partida (sim.js, passo 2; só com m.times — o treino segue com o olhar do
+ * sim.js). O mesmo desvio do tronco para a bola pela velocidade (desvio = sim.js desvioOlhaBola), mas:
+ *  - a velocidade passa por um filtro de TATICA.olhar.tauVel s: o limite do desvio muda depressa entre
+ *    ~1,2 e 1,8 m/s e cada variação da passada balançava o tronco;
+ *  - com um passe ou chute no ar, olha para o ponto de chegada (m.voo.alvo), e não para a bola que
+ *    passa: ~60% dos tremores do tronco eram até 0,7 s depois de um passe (o olhar varria junto com a
+ *    bola e voltava no passe seguinte);
+ *  - o desvio do olhar anda no máximo TATICA.olhar.giro rad/s (abaixo do 1,5 rad/s do tremor), e nunca
+ *    passa do limite da velocidade (correndo, o tronco vai com o caminho).
+ * Começa do tronco de agora (sem salto quando o jogador volta para a IA). Devolve o mv com o rumoAlvo
+ * desviado.
+ */
+export function olhaBolaPartida(m, j, mv, desvio) {
+  const it = estadoT(j), O = TATICA.olhar;
+  const v0 = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
+  const novo = it.oTick !== m.tick - 1;
+  if (novo) it.ov = v0;
+  else it.ov += (v0 - it.ov) * Math.min(1, DT / O.tauVel);
+  it.oTick = m.tick;
+  const lim = desvio(it.ov);
+  const v = m.voo;
+  const px = v && m.posse == null && m.naMao == null && v.alvo ? v.alvo.x : m.bola.p.x;
+  const pz = v && m.posse == null && m.naMao == null && v.alvo ? v.alvo.z : m.bola.p.z;
+  let d = difAng(mv.rumoAlvo, MD.atan2(pz - j.z, px - j.x));
+  // bola quase atrás: mantém o lado escolhido (sem o tronco cruzar de um lado para o outro)
+  if (Math.abs(d) > 2.6 && j.ladoOlha) d = j.ladoOlha * Math.abs(d);
+  j.ladoOlha = d >= 0 ? 1 : -1;
+  // o olhar é uma direção ABSOLUTA (it.oAng) que gira no máximo `giro` até o alvo (o caminho + o desvio
+  // permitido) e fica a no máximo `lim` do caminho; relativa ao caminho, ela realimentava o próprio
+  // tronco parado (o caminho de quem está parado é o tronco) e balançava
+  const alvo = mv.rumoAlvo + Math.max(-lim, Math.min(lim, d));
+  if (novo) it.oAng = j.rumo;
+  const w = O.giro * DT;
+  let a = it.oAng + Math.max(-w, Math.min(w, difAng(it.oAng, alvo)));
+  const off = difAng(mv.rumoAlvo, a);
+  if (off > lim) a = mv.rumoAlvo + lim; else if (off < -lim) a = mv.rumoAlvo - lim;
+  it.oAng = a;
+  return { ...mv, rumoAlvo: mv.rumoAlvo + difAng(mv.rumoAlvo, a) };
+}
+
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
 }
 
 /**

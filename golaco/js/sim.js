@@ -20,7 +20,7 @@ import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
-import { entradaIATatica } from './ia-tatica.js';
+import { entradaIATatica, olhaBolaPartida } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
 import { entradaConter, dividida, pedidoPressao } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
@@ -350,7 +350,10 @@ export function passo(m, entradas) {
       // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
       // pode se afastar do sentido do movimento (parado: todo; IA.olhaBola[1] m/s ou mais: nada) —
       // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
-      if (guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) {
+      // (Etapa 3, só na partida: o olhar com a velocidade filtrada, o ponto de chegada do passe no ar
+      // e o giro do olhar limitado — ia-tatica.js olhaBolaPartida; o treino continua com o de baixo)
+      if (m.times && guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) mv = olhaBolaPartida(m, j, mv, desvioOlhaBola);
+      else if (guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) {
         const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
         const lim = desvioOlhaBola(v);
         if (lim > 0) {
