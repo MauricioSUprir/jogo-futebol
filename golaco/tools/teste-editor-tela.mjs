@@ -19,7 +19,8 @@
 //  12  Treino (?modo=ataque): sem Editar time e sem Reiniciar partida no menu.
 //  13  Sem erro no console em nenhuma tela.
 // Saída PASSOU/REPROVOU por item; código 1 se algum reprovar.
-//   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
+//   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>] [--semente N]
+//   (--raiz: mede outra cópia, ex.: a base; --semente soma N a todas as sementes: outro conjunto)
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -27,6 +28,7 @@ import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const raiz = path.resolve(arg('--raiz', RAIZ));
+const DS = Math.max(0, Math.floor(+arg('--semente', 0) || 0)); // deslocamento das sementes
 const res = [];
 const meta = (nome, medido, ok) => res.push({ nome, medido, ok: !!ok });
 const BIT = { CHUTE: 32, CORRER: 1 };
@@ -48,7 +50,7 @@ const quadros = (pg, n) => pg.evaluate(n => { const g = window.__golaco; for (le
 const temEditor = pg => pg.evaluate(() => !!(window.__golaco.editor && document.querySelector('[data-cmd="editar-time"]')));
 // partida nova com o laço já andando (o 1º quadro depois de reiniciar só marca o tempo: sem isso o
 // "Continuar → 1 quadro" do teste não teria passo nenhum)
-const novaPartida = (pg, semente = 5, min) => pg.evaluate(([s, min]) => { const g = window.__golaco; const h = g.reiniciar({ modo: 'partida', semente: s, minutosPorTempo: min }); g.relogio.usarManual(true); g.relogio.avancar(1000 / 60, { desenhar: false }); return { ...g.estado(), h }; }, [semente, min]);
+const novaPartida = (pg, semente = 5, min) => pg.evaluate(([s, min]) => { const g = window.__golaco; const h = g.reiniciar({ modo: 'partida', semente: s, minutosPorTempo: min }); g.relogio.usarManual(true); g.relogio.avancar(1000 / 60, { desenhar: false }); return { ...g.estado(), h }; }, [semente + DS, min]);
 const editorAberto = pg => pg.evaluate(() => !document.getElementById('editar-time')?.hidden);
 const menuAberto = pg => pg.evaluate(() => !document.getElementById('menu').hidden);
 const pressionado = pg => pg.evaluate(() => [...document.querySelectorAll('#editar-time .carta[aria-pressed="true"]')].map(b => +b.dataset.jogador));
@@ -210,15 +212,15 @@ async function conferirEditor(pg) {
       rot.push(e);
     }
     const entradaDoTime = e => { const t = { 0: { x: e.x, z: e.z, botoes: e.botoes } }; Object.defineProperties(t, { x: { value: e.x }, z: { value: e.z }, botoes: { value: e.botoes } }); return t; };
-    const m = P.criarPartida({ semente: 11 });
+    const m = P.criarPartida({ semente: 11 + DS });
     const hsNode = [SIM.hashMundo(m)];
     for (let i = 0; i < rot.length; i++) { P.passoPartida(m, entradaDoTime(rot[i]), rot[i].acoes ?? null); if ((i + 1) % 100 === 0) hsNode.push(SIM.hashMundo(m)); }
-    const nav = await pg.evaluate(rot => {
+    const nav = await pg.evaluate(([rot, sem]) => {
       const g = window.__golaco;
-      const hs = [g.reiniciar({ modo: 'partida', semente: 11 })];
+      const hs = [g.reiniciar({ modo: 'partida', semente: sem })];
       for (let k = 0; k < rot.length; k += 100) hs.push(g.rodarPassos(100, rot.slice(k, k + 100)));
       return { hs, versao: g.mundo.times[0].versao, pend: !!g.mundo.times[0].pendente, linha: g.mundo.times[0].tatica.linha };
-    }, rot);
+    }, [rot, 11 + DS]);
     let difere = -1;
     for (let i = 0; i < hsNode.length; i++) if (hsNode[i] !== nav.hs[i]) { difere = i * 100; break; }
     const hx = h => (h >>> 0).toString(16).padStart(8, '0');

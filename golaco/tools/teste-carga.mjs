@@ -14,7 +14,7 @@
 //   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva — modo
 //      condução (sem adversário para roubar a bola no meio da medida).
 // Saída com PASSOU/REPROVOU e código de saída 1 se reprovar.
-//   node tools/teste-carga.mjs [--url http://...] [--raiz <pasta do jogo>]
+//   node tools/teste-carga.mjs [--url http://...] [--raiz <pasta do jogo>] [--semente N]
 //   (sem --url sobe o servidor da pasta; --raiz mede outra cópia, ex.: a base, com a lógica dela)
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -22,18 +22,20 @@ import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const LIMITE_BYTES = 4 * 1024 * 1024;
 const N_PASSOS = 600;
-const SEMENTE = 7;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
 const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
+// --semente N: soma N às sementes (outro conjunto, para as 5 rodadas seguidas)
+const DS = args.includes('--semente') ? Math.max(0, Math.floor(+args[args.indexOf('--semente') + 1] || 0)) : 0;
+const SEMENTE = 7 + DS;
 const { criarTreino, passoTreino } = await imp('sessao.js');
 const { hashMundo } = await imp('sim.js');
 const { BOTAO } = await imp('config.js');
 const { MD } = await imp('matdet.js');
 const P = await imp('partida.js').catch(() => null);
 const ESC = await imp('escalacao.js').catch(() => null);
-const SEMENTE_PARTIDA = 11;
+const SEMENTE_PARTIDA = 11 + DS;
 const MIN_PARTIDA = 0.1; // tempo de 6 s: o intervalo (com a substituição) cai dentro dos 600 passos
 
 /**

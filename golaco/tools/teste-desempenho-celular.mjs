@@ -15,6 +15,7 @@ const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] :
 const raiz = path.resolve(arg('--raiz', RAIZ));
 const SEG = +arg('--segundos', 30);
 const CPU = +arg('--cpu', 4);
+const DS = Math.max(0, Math.floor(+arg('--semente', 0) || 0)); // soma às sementes (outro conjunto)
 const META = { p95: 6, media: 3, chamadas: 2 };
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
@@ -23,7 +24,7 @@ const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 const srv = await servidor(0, raiz);
 const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
 try {
-  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&semente=4`, { waitUntil: 'load' });
+  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&semente=${4 + DS}`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
   const info = await pg.evaluate(() => {
     const g = window.__golaco;
@@ -50,21 +51,21 @@ try {
   console.log(`      simulação ${txt('sim')} | pose ${txt('pose')} | jogadores ${txt('jogadores')} ms (relógio ${med.relogio?.minuto}', placar ${med.placar.join('×')})`);
 
   // chamadas de desenho: a mesma câmera no treino de ataque e na partida
-  const cham = await pg.evaluate(() => {
+  const cham = await pg.evaluate(DS => {
     const g = window.__golaco;
     const medir = () => { g.cameraLivre({ de: [0, 34, 46], para: [0, 0, 0], fov: 55 }); g.desenhar(); g.desenhar(); const c = g.estado().desenhoChamadas; g.cameraLivre(null); return c; };
     const partida = medir();
-    g.reiniciar({ modo: 'ataque', semente: 4 });
+    g.reiniciar({ modo: 'ataque', semente: 4 + DS });
     g.relogio.avancar(1000 / 60, { desenhar: true });
     const treino = medir();
     return { partida, treino };
-  });
+  }, DS);
   meta('Chamadas de desenho: partida ≤ treino + 2 (mesma câmera)', `partida ${cham.partida} · treino ${cham.treino}`, `≤ ${cham.treino + META.chamadas}`, cham.partida <= cham.treino + META.chamadas);
 
   // vazamento: 10 substituições (5 por time) e a memória da GPU igual
-  const vaz = await pg.evaluate(() => {
+  const vaz = await pg.evaluate(DS => {
     const g = window.__golaco;
-    g.reiniciar({ modo: 'partida', semente: 6, minutosPorTempo: 0.2 });
+    g.reiniciar({ modo: 'partida', semente: 6 + DS, minutosPorTempo: 0.2 });
     for (let i = 0; i < 4; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
     const antes = { geo: g.estado().geometrias, tex: g.estado().texturas };
     const eds = [0, 1].map(t => {
@@ -88,7 +89,7 @@ try {
     for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
     const e = g.estado();
     return { antes, depois: { geo: e.geometrias, tex: e.texturas }, pend, feitas: [g.estadoTime(0).subs.feitas, g.estadoTime(1).subs.feitas], quadros: n, jogadores: e.jogadores };
-  });
+  }, DS);
   meta('10 substituições (5 por time) feitas na parada', `pendentes ${vaz.pend.join('+')}, feitas ${vaz.feitas.join('+')} em ${vaz.quadros} quadros, ${vaz.jogadores} em campo`, '5 + 5, 22 em campo', vaz.feitas[0] === 5 && vaz.feitas[1] === 5 && vaz.jogadores === 22);
   meta('Sem vazamento: geometrias e texturas iguais depois das substituições', `geometrias ${vaz.antes.geo} → ${vaz.depois.geo} · texturas ${vaz.antes.tex} → ${vaz.depois.tex}`, 'iguais', vaz.antes.geo === vaz.depois.geo && vaz.antes.tex === vaz.depois.tex);
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
