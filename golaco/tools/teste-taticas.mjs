@@ -34,6 +34,19 @@ function reg(nome, medido, meta, ok, info = false) {
   if (!ok && !info) falhas++;
 }
 const TAT = (o = {}) => ({ mentalidade: 0, pressao: 1, largura: 1, linha: 1, ...o });
+/**
+ * Tira a bola parada da partida recém-criada (a saída) como o partida.js faz quando ela é cobrada: o
+ * cobrador, que fica com o papel 'parado' (a simulação não o move) até a cobrança, volta ao papel
+ * dele. Sem isso o centroavante que ia dar a saída ficava congelado na cena (integração com a Parte 1).
+ */
+function semParada(m) {
+  const pr = m.parada;
+  if (pr && pr.cobrador != null && pr.papel != null) {
+    const c = L.S.jogadorPorId(m, pr.cobrador);
+    if (c && c.papel === 'parado') c.papel = pr.papel;
+  }
+  m.parada = null;
+}
 
 /**
  * Cena estática. o = {formacao, tatica (do time 0), fase ('sem'|'com' do time 0), bola {x, z} (mundo),
@@ -65,7 +78,7 @@ function cena(o) {
   }
   L.P.teleportar(cond, bx - 0.45 * lc, bz, lc > 0 ? 0 : Math.PI);
   Object.assign(m.bola, L.Bo.criarBola(bx, bz));
-  m.posse = cond.id; m.naMao = null; m.voo = null; m.parada = null;
+  m.posse = cond.id; m.naMao = null; m.voo = null; semParada(m);
   m.humanos = [tc]; m.controlado = { [tc]: cond.id };
   // a cena mede a FORMA: o adversário fica parado nas referências dele (com a bola no centro, a
   // vaga do meia dele cai em cima da bola e ele a roubaria do condutor parado) e ninguém dá bote
@@ -215,7 +228,7 @@ function cenaPressao(p, z0, sem) {
   }
   L.P.teleportar(cond, 12.45, z0, Math.PI);
   Object.assign(m.bola, L.Bo.criarBola(12, z0));
-  m.posse = cond.id; m.naMao = null; m.voo = null; m.parada = null;
+  m.posse = cond.id; m.naMao = null; m.voo = null; semParada(m);
   m.humanos = [1]; m.controlado = { 1: cond.id };
   const ds = [];
   for (let i = 0; i < 12 * 60; i++) {

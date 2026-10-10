@@ -18,6 +18,16 @@ export const ataca = (m, t) => m.ataca[t];
 export const uDe = (m, t, x) => x * m.ataca[t];
 export const wDe = (m, t, z) => z * m.ataca[t];
 
+/**
+ * O evento é um chute? O 'chute' do acoes.js ou o CABECEIO PARA O GOL (o acoes.js emite um 'passe' de
+ * modo 'cabeceio' e marca m.voo.cabeceio = 'chute'): a StatsBomb e a Opta contam a cabeçada no gol como
+ * finalização. Chamar logo depois do passo (o m.voo é o do cabeceio).
+ */
+export function ehChute(m, e) {
+  if (e.tipo === 'chute') return true;
+  return e.tipo === 'passe' && e.modo === 'cabeceio' && !!m.voo && m.voo.de === e.id && m.voo.cabeceio === 'chute';
+}
+
 /** Jogador com a bola (no pé ou nas mãos) ou null. */
 export function donoDaBola(m) {
   const id = m.naMao ?? m.posse;

@@ -8,7 +8,7 @@
 // forma do ia.js, pelo para() com os modos) ou null — null = a IA clássica decide.
 //
 // Como joga (tudo no referencial de quem ataca: u = x·ataca para o gol adversário, w = z·ataca):
-//  - Referência de cada um = posicaoTatica (tatica.js) da vaga com a bola, misturada com a sem bola
+//  - Referência de cada um = a do time (ia-tatica.js blocoDoTime: posicaoTatica da vaga com a bola), misturada com a sem bola
 //    nos TATICA.mistura s depois da retomada e calculada com a bola antecipada (filtrada) — o time
 //    anda com o passe. Impedimento é FORMA: fora da corrida ninguém passa da linha do penúltimo
 //    adversário − 1 m (quem é seguido pelo marcador que faz a linha a empurra); atacantes e pontas
@@ -40,9 +40,9 @@ import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { para, acaoIA } from './ia.js';
 import { zonasCruzamento } from './acoes.js';
-import { posicaoTatica, faseDoTime } from './tatica.js';
+import { faseDoTime } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
-import { estadoIA } from './ia-tatica.js';
+import { estadoIA, blocoDoTime, alvoCalmo } from './ia-tatica.js';
 import { restricaoParada } from './partida.js';
 
 const DT = PASSO;
@@ -54,8 +54,9 @@ const seg = s => Math.round(s / DT);
 const CORREDOR = { ATA: 1, SA: 1, PD: 1, PE: 1, MEI: 1, MD: 1, ME: 1 };
 const LATERAL = { LD: 1, LE: 1, ADD: 1, ADE: 1 };
 const PONTA = { PD: 1, PE: 1, MD: 1, ME: 1 };
+const CENTROAVANTE = { ATA: 1, SA: 1 };
 
-const _p = { x: 0, z: 0 }, _q = { x: 0, z: 0 }, _r = { x: 0, z: 0 }, _b = { x: 0, z: 0 }, _ref = { u: 0, w: 0 };
+const _r = { x: 0, z: 0 }, _ref = { u: 0, w: 0 }, _c = { x: 0, z: 0, mag: 1, modo: 'calma', correr: false };
 
 // ------------------------------------------------------------------------------- ameaça esperada
 
@@ -167,6 +168,9 @@ function advMaisPerto(m, time, x, z) {
   return d;
 }
 
+/** Indo para uma vaga nova (Editar time; ia-tatica.js reposicionando): fora das opções do condutor. */
+const indo = (m, o) => !!o.iaT && o.iaT.reposAte >= m.tick;
+
 // ------------------------------------------------------------------------- estado do time por tick
 
 function novoEstadoJogador() {
@@ -192,7 +196,7 @@ function estadoAtaque(m, t) {
   if (A && A.tick === m.tick) return A;
   if (!A) {
     A = cache[t] = {
-      tick: -1, time: t, lado: 1, ment: 0, posseDesde: 0, timeAnt: null, cond: null, linha: 0, transOf: false, bfx: 0, bfz: 0, bTick: -2,
+      tick: -1, time: t, lado: 1, ment: 0, posseDesde: 0, timeAnt: null, cond: null, linha: 0, transOf: false,
       ids: [], ref: new Map(), apoio: [-1, -1], corridas: 0,
       area: { ativo: false, ids: [], zonas: [], lado: 0, esc: false },
     };
@@ -210,10 +214,10 @@ function estadoAtaque(m, t) {
   if (timeBola !== A.timeAnt) { if (timeBola === t) A.posseDesde = m.tick; A.timeAnt = timeBola; }
   const f = faseDoTime(m, t);
   A.transOf = f.transicao === 'of';
-  // corridas nas costas: acabam quando o time perde a bola (o ia.js seguiria correndo)
-  //   e também se o passe não vem: o condutor que a puxou perdeu a bola ou passou para outro, ou
-  //   passou corridas.espera s sem o condutor armar a enfiada/o lançamento para ele (o corredor
-  //   ficava impedido à toa e voltava devagar)
+  // corridas nas costas: acabam quando o time perde a bola (o ia.js seguiria correndo) ou depois de
+  //   corridas.espera s sem o passe vir para ele. O passe para OUTRO companheiro não acaba a corrida
+  //   (integração com a defesa da Parte 2: a bola troca de pé a cada ~2 s e a corrida acabava antes
+  //   de 1 s, sem chegar às costas da defesa); quem fica impedido volta correndo (apoioTatico)
   A.corridas = 0;
   for (const o of m.jogadores) {
     const s = o.iaA;
@@ -223,48 +227,34 @@ function estadoAtaque(m, t) {
     let acaba = timeBola != null && timeBola !== o.time;
     if (!acaba && !paraEle) {
       let c = null;
-      for (const q of m.jogadores) if (q.id === s.corridaCond) { c = q; break; }
-      const armando = c && m.posse === c.id && c.iaA && (c.iaA.op === 'enfiada' || c.iaA.op === 'lancamento') && c.iaA.alvo === o.id;
-      acaba = m.posse !== s.corridaCond || (!armando && m.tick - s.ultCorrida > seg(IA_ATAQUE.corridas.espera));
+      if (m.posse != null) for (const q of m.jogadores) if (q.id === m.posse) { c = q; break; }
+      const armando = c && c.time === o.time && c.iaA && (c.iaA.op === 'enfiada' || c.iaA.op === 'lancamento') && c.iaA.alvo === o.id;
+      acaba = !armando && m.tick - s.ultCorrida > seg(IA_ATAQUE.corridas.espera);
     }
     if (acaba) { o.corrida = null; s.corrida = false; continue; }
     if (o.time === t) A.corridas++;
   }
-  // linha de impedimento: o penúltimo adversário (com o goleiro), a bola ou o meio-campo
+  // linha de impedimento: o penúltimo adversário (com o goleiro), a bola ou o meio-campo (quem está
+  // parado — o cobrador de uma bola parada — também conta para o impedimento; o boneco do treino não)
   let u1 = -Infinity, u2 = -Infinity, d1 = null, d2 = null;
   for (const o of m.jogadores) {
-    if (o.time === t || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.time === t || o.papel === 'marcador') continue;
     const u = o.x * lado;
     if (u > u1) { u2 = u1; d2 = d1; u1 = u; d1 = o; } else if (u > u2) { u2 = u; d2 = o; }
   }
   A.linha = Math.max(u2, m.bola.p.x * lado, 0);
   A.defLinha = A.linha === u2 ? d2 : null; // o defensor que faz a linha (se é ele, e não a bola/o meio)
-  // referências da vaga (mistura sem → com depois da retomada)
-  const mist = f.fase === 'com' ? f.mistura : 1;
-  // a referência é a da bola daqui a IA_ATAQUE.antecipa s (o time se move com o passe, não depois
-  // dele: sem isso cada um ficava 2–7 m atrás da própria referência, andando atrás da jogada)
-  // (filtrada em IA_ATAQUE.antecipaFiltro s: a velocidade da bola salta a cada toque e passe, e o alvo
-  // de todo mundo saltava junto — o tronco tremia)
-  const ta = IA_ATAQUE.antecipa;
-  const bx = clamp(m.bola.p.x + m.bola.v.x * ta, -MX, MX), bz = clamp(m.bola.p.z + m.bola.v.z * ta, -MZ, MZ);
-  if (A.bTick !== m.tick - 1) { A.bfx = bx; A.bfz = bz; }
-  else { const k = Math.min(1, DT / IA_ATAQUE.antecipaFiltro); A.bfx += (bx - A.bfx) * k; A.bfz += (bz - A.bfz) * k; }
-  A.bTick = m.tick;
-  _b.x = A.bfx; _b.z = A.bfz;
-  const bola = _b;
+  // referências da vaga: as do time (ia-tatica.js blocoDoTime → posicaoTatica com a bola do ataque —
+  // antecipada IA_ATAQUE.antecipa s e filtrada —, misturada com a sem bola depois da retomada). Uma
+  // referência só para o time inteiro: a da defesa e a do apoio são a mesma conta (contrato b da tela)
+  const B = blocoDoTime(m, t);
   A.ids.length = 0;
   for (const o of m.jogadores) {
     if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || !o.vagaId) continue;
     A.ids.push(o);
-    posicaoTatica(ts.formacao, o.vagaId, ts.tatica, bola, 'com', lado, _p);
-    let rx = _p.x, rz = _p.z;
-    if (mist < 1) {
-      posicaoTatica(ts.formacao, o.vagaId, ts.tatica, bola, 'sem', lado, _q);
-      rx = lerp(_q.x, rx, mist); rz = lerp(_q.z, rz, mist);
-    }
     let r = A.ref.get(o.id);
     if (!r) { r = { u: 0, w: 0 }; A.ref.set(o.id, r); }
-    r.u = rx * lado; r.w = rz * lado;
+    r.u = B.ref[2 * o.vagaIdx] * lado; r.w = B.ref[2 * o.vagaIdx + 1] * lado;
   }
   corredoresTercoFinal(m, A);
   // impedimento como forma e o recuo mínimo; com a bola passando do nosso terço, os atacantes
@@ -286,8 +276,10 @@ function estadoAtaque(m, t) {
   for (const o of A.ids) {
     const r = A.ref.get(o.id);
     const vg = FORMACOES[ts.formacao]?.porId[o.vagaId];
-    // os da frente (e os pontas: ME/MD/PE/PD) jogam na linha do último defensor
-    if (naLinha && vg && (vg.grupo === 'ata' || PONTA[o.posDetalhe])) r.u = Math.max(r.u, A.linha - IA_ATAQUE.naLinha);
+    // os centroavantes (ATA/SA) jogam na linha do último defensor. Os pontas não: na tabela (Metrica,
+    // bola no centro) eles ficam ~7 m atrás da linha; puxados para ela, a forma com a bola saía da
+    // tabela (teste-taticas) — eles chegam lá pelas corridas nas costas
+    if (naLinha && vg && vg.grupo === 'ata' && !PONTA[o.posDetalhe]) r.u = Math.max(r.u, A.linha - IA_ATAQUE.naLinha);
     r.u = clamp(r.u, -MX + IA.recuoMin, A.linha - folgaLinha(A, o));
   }
   // os 2 apoios: os de linha mais perto do condutor (2 m de vantagem para quem já apoia)
@@ -295,7 +287,9 @@ function estadoAtaque(m, t) {
   if (A.cond && A.cond.posicao !== 'GOL') {
     let d1 = Infinity, d2 = Infinity;
     for (const o of A.ids) {
-      if (o === A.cond) continue;
+      // (o centroavante não vem buscar o apoio curto: ele dá a profundidade — vindo para o meio, ele
+      // saía da tabela e ficava atrás da bola junto com o resto)
+      if (o === A.cond || indo(m, o) || CENTROAVANTE[o.posDetalhe]) continue;
       let d = MD.hypot(o.x - A.cond.x, o.z - A.cond.z);
       if (o.iaA && o.iaA.papel === 'apoio') d -= 2;
       if (d < d1) { d2 = d1; A.apoio[1] = A.apoio[0]; d1 = d; A.apoio[0] = o.id; }
@@ -380,7 +374,7 @@ function ataqueArea(m, A) {
     const zn = ar.zonas[k];
     let mel = null, dm = Infinity;
     for (const o of A.ids) {
-      if (o === c || o.posDetalhe === 'ZAG' || ar.ids.includes(o.id)) continue;
+      if (o === c || o.posDetalhe === 'ZAG' || ar.ids.includes(o.id) || indo(m, o)) continue;
       let d = MD.hypot(o.x - zn.x, o.z - zn.z);
       if (LATERAL[o.posDetalhe] || o.posDetalhe === 'VOL') d += 10;
       if (d < dm) { dm = d; mel = o; }
@@ -458,7 +452,6 @@ export function apoioTatico(m, j) {
   tu = clamp(tu, -MX + IA.recuoMin, MX - 2);
   tw = clamp(tw, -MZ + 1.5, MZ - 1.5);
   restricaoParada(m, j, tu * lado, tw * lado, _r);
-  contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : A.linha - folgaLinha(A, j), lado);
   // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26)
   if (ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
   // o ataque avançou e ele ficou para trás: sobe correndo (a referência anda com a bola a ~k·v da
@@ -467,7 +460,19 @@ export function apoioTatico(m, j) {
   // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
   if (pressa) ia.pressaAte = m.tick + seg(IA_ATAQUE.pressaMin);
   else if (m.tick < ia.pressaAte && MD.hypot(_r.x - j.x, _r.z - j.z) > IA.chegou * 3) pressa = true;
+  // quem segue a referência (sem pressa) vai pelo ponto calmo da Parte 2 (ia-tatica.js alvoCalmo:
+  // filtro do alvo, parado perto dele, marcha/trote fora da faixa em que o tronco treme, rumo com giro
+  // limitado) — seguir a referência que anda a cada tick direto pelo para() fazia o tronco tremer
+  // (teste-movimento --modo partida: ~1/3 dos tremores eram do apoio pela referência)
+  let calmo = null;
+  if (ia.papel === 'ref' && !pressa) {
+    j.ia.ramo = 'apoioRef';
+    calmo = alvoCalmo(m, j, _r.x, _r.z, _c);
+    _r.x = calmo.x; _r.z = calmo.z;
+  }
+  contornar(m, j, ia, _r, ia.papel === 'area' && pressa ? Infinity : A.linha - folgaLinha(A, j), lado);
   j.ia.ramo = ia.papel === 'ref' ? 'apoioRef' : ia.papel === 'apoio' ? 'apoioCurto' : 'area';
+  if (calmo && !pressa) return para(j, _r.x, _r.z, calmo.mag, calmo.correr, 0, calmo.modo);
   return para(j, _r.x, _r.z, 1, true, 0, pressa ? 'pressa' : 'calma');
 }
 
@@ -580,7 +585,10 @@ function tentarCorrida(m, j, A, ia) {
   if (!(CORREDOR[j.posDetalhe] || (LATERAL[j.posDetalhe] && A.ment >= 1))) return;
   if (m.tick - ia.ultCorrida < seg(cfg.recarga)) return;
   if (A.corridas >= cfg.max[A.ment >= 1 ? 1 : 0]) return;
-  // condutor de frente para o gol adversário e sem marcador colado (na transição, basta ter campo)
+  // condutor de frente para o gol adversário, andando com a bola (a corrida acompanha a progressão de
+  // quem conduz; com ele parado o corredor esperava a linha) e sem marcador colado (na transição,
+  // basta ter campo)
+  if (MD.hypot(c.vx, c.vz) < cfg.vCondutor) return;
   if (!A.transOf) {
     if (Math.abs(difAng(lado > 0 ? 0 : Math.PI, c.rumo)) > cfg.angFrente) return;
     if (advMaisPerto(m, j.time, c.x, c.z) < cfg.marcadorLivre) return;
@@ -654,20 +662,25 @@ function decidir(m, j, A, ia, cobranca) {
   const cfg = IA_ATAQUE.condutor, U = IA_ATAQUE.utilidade, lado = A.lado;
   const u0 = j.x * lado, w0 = j.z * lado;
   const risco = IA_ATAQUE.riscoMentalidade[A.ment + 2];
-  const K = U.posse; // valor de ter a bola (some quando ela é perdida)
+  // valor de ter a bola (some quando ela é perdida): posse + posseMeuCampo no meu campo (cheio até
+  // −10 m, zero a partir de +10 m) — na saída de bola o time guarda a bola (PPDA, retomada em ≤ 5 s:
+  // sem isso ele arriscava o passe para a frente já no próprio campo e devolvia a bola na hora)
+  // (e logo depois de recuperar a bola, posseRetomada: o time segura a bola primeiro — retomava e
+  // perdia de novo na hora: retomada em ≤ 5 s ~45%, Metrica 36,5%)
+  const K = U.posse + U.posseMeuCampo * clamp(0.5 - u0 / 20, 0, 1) + (m.tick - A.posseDesde < seg(U.posseRetomada[1]) ? U.posseRetomada[0] : 0);
   const frente = du => (A.transOf && du > 3 ? 1 + cfg.transOfBonus : 1);
   // custo de perder a bola ali: a ameaça do adversário com ela (xT espelhado) ÷ risco aceito + a posse
   const perda = (u, w) => ameacaEsperada(-u, -w) / risco + K;
   const atual = ia.op;
-  let melhor = '', mU = -Infinity, mAlvo = -1, mDu = 0, mDw = 0, mForca = 0.5, mAx = 0, mAz = 0;
-  const considerar = (op, Uv, alvo, du = 0, dw = 0, forca = 0.5, ax = 0, az = 0) => {
+  let melhor = '', mU = -Infinity, mAlvo = -1, mDu = 0, mDw = 0, mForca = 0.5, mAx = 0, mAz = 0, mAlta = false;
+  const considerar = (op, Uv, alvo, du = 0, dw = 0, forca = 0.5, ax = 0, az = 0, alta = false) => {
     const v = Uv * (op === atual && alvo === ia.alvo ? cfg.histerese : 1);
-    if (v > mU) { mU = v; melhor = op; mAlvo = alvo; mDu = du; mDw = dw; mForca = forca; mAx = ax; mAz = az; }
+    if (v > mU) { mU = v; melhor = op; mAlvo = alvo; mDu = du; mDw = dw; mForca = forca; mAx = ax; mAz = az; mAlta = alta; }
   };
   // 1) passe, enfiada e lançamento para cada companheiro de linha
   const faixaCruz = u0 > ACOES.cruzamento.terco && Math.abs(w0) > ACOES.cruzamento.faixa;
   for (const o of m.jogadores) {
-    if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado') continue;
+    if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || indo(m, o)) continue;
     const ou = o.x * lado, ow = o.z * lado;
     const L = MD.hypot(o.x - j.x, o.z - j.z);
     const imp = !cobranca && ou > A.linha + 0.3; // impedido (a regra é da Etapa 4; aqui é forma)
@@ -680,22 +693,32 @@ function decidir(m, j, A, ia, cobranca) {
       considerar('passe', P * V - (1 - P) * perda((ou + u0) / 2, (ow + w0) / 2), o.id, 0, 0, clamp(0.3 + L / 60, 0.3, 0.7));
     }
     // enfiada para quem corre nas costas (ou em velocidade para o gol perto da linha): a bola no
-    // ponto da corrida a enfiadaLead m dele; corrida = ele chega lá antes do adversário mais perto
+    // espaço, em U.enfiadaLeads m à frente dele (o acoes.js enfiada acha o ponto pela força); vale a
+    // de maior chance entre a RASTEIRA (cortável no caminho: riscoCaminho) e a ALTA, por cima da linha
+    // (sem corte no caminho, voo mais longo e domínio mais difícil: × enfiadaAltaP). Chance pelo
+    // tempo: ele (já embalado) chega ao ponto antes do adversário mais perto dele. Só um ponto a 6 m e
+    // só a rasteira: com a linha de 4 da Parte 2 no caminho a chance era ~0 e não saía enfiada nenhuma
     const sv = MD.hypot(o.vx, o.vz);
     const naCorrida = o.corrida && o.corrida.tipo === 'nasCostas';
     const corre = naCorrida || (o.vx * lado > 4 && ou > A.linha - 3);
     if (!cobranca && corre && sv > 2 && L >= ACOES.enfiada.dMin && L <= ACOES.enfiada.dMax) {
       let rx = o.vx / sv, rz = o.vz / sv;
       if (naCorrida) { const cx = o.corrida.x - o.x, cz = o.corrida.z - o.z, cl = MD.hypot(cx, cz); if (cl > 1) { rx = cx / cl; rz = cz / cl; } }
-      const ax = rx * U.enfiadaLead, az = rz * U.enfiadaLead;
-      const ex = o.x + ax, ez = o.z + az, eu = ex * lado, ew = ez * lado;
-      if (Math.abs(ez) < MZ - 1 && Math.abs(ex) < MX - 1) {
-        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false);
-        const tRec = Math.max(U.enfiadaLead / Math.max(5, sv), MD.hypot(ex - j.x, ez - j.z) / U.vEnfiada + 0.3);
+      const vr = Math.max(5, sv);
+      for (const lead of U.enfiadaLeads) {
+        const ax = rx * lead, az = rz * lead;
+        const ex = o.x + ax, ez = o.z + az, eu = ex * lado, ew = ez * lado;
+        if (Math.abs(ez) > MZ - 1 || Math.abs(ex) > MX - 1) continue;
+        const dB = MD.hypot(ex - j.x, ez - j.z);
         let tAdv = Infinity;
-        for (const q of m.jogadores) if (q.time !== j.time) tAdv = Math.min(tAdv, (q.posicao === 'GOL' ? 0.4 : 0.25) + Math.max(0, MD.hypot(q.x - ex, q.z - ez) - 1) / 6.5);
-        const P = (1 - r) * clamp((tAdv - tRec + 0.3) / 0.6, 0, 1);
-        considerar('enfiada', P * (ameacaEsperada(eu, ew) * frente(eu - u0) + K) - (1 - P) * perda((eu + u0) / 2, (ew + w0) / 2), o.id, 0, 0, U.enfiadaForca, ax, az);
+        for (const q of m.jogadores) if (q.time !== j.time && q.papel !== 'parado' && q.papel !== 'marcador') tAdv = Math.min(tAdv, (q.posicao === 'GOL' ? 0.4 : 0.25) + Math.max(0, MD.hypot(q.x - ex, q.z - ez) - 1) / 6.5);
+        const tRun = lead / vr;
+        const r = riscoCaminho(m, j.time, j.x, j.z, ex, ez, U.vEnfiada, 0, false);
+        const pChao = (1 - r) * clamp((tAdv - Math.max(tRun, dB / U.vEnfiada + 0.3) + 0.3) / 0.6, 0, 1);
+        const pAlta = U.enfiadaAltaP * clamp((tAdv - Math.max(tRun, dB / U.vEnfiadaAlta + 0.3) + 0.3) / 0.6, 0, 1);
+        const alta = pAlta > pChao, P = alta ? pAlta : pChao;
+        const forca = clamp((lead - ACOES.enfiada.lead[0]) / (ACOES.enfiada.lead[1] - ACOES.enfiada.lead[0]), 0, 1);
+        considerar('enfiada', P * (ameacaEsperada(eu, ew) * frente(eu - u0) + K) - (1 - P) * perda((eu + u0) / 2, (ew + w0) / 2), o.id, 0, 0, forca, ax, az, alta);
       }
     }
     // (da faixa do cruzamento do acoes.js o LANÇAMENTO vira cruzamento para a zona, não para ele)
@@ -780,6 +803,8 @@ function decidir(m, j, A, ia, cobranca) {
   else if (melhor === 'cruzamento') ia.mira = miraCruzamento(j, A);
   else { ia.mira = { x: 1, z: 0, ax: mAx, az: mAz }; atualizarMira(m, j, ia); }
   acaoIA(m, j, melhor === 'cruzamento' ? 'lancamento' : melhor, mForca);
+  // enfiada alta: o mesmo botão com o modificador (acoes.js enfiada: p.mod = por cima da defesa)
+  if (melhor === 'enfiada' && mAlta && j.iaAcao) j.iaAcao.bot |= BOTAO.MOD;
 }
 
 /**

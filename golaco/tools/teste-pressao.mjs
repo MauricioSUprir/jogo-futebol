@@ -1,5 +1,5 @@
 // teste-pressao (Etapa 3, Parte 2): a pressão sem a bola no 11×11, IA × IA (Golaço 4-3-3 × Ventania
-// 4-2-3-1), os dois times com a mesma pressão — Baixa, Média e Alta —, 8 sementes × 1,5 min por
+// 4-2-3-1), os dois times com a mesma pressão — Baixa, Média e Alta —, 24 sementes × 1,5 min por
 // nível, amostras a cada 0,1 s com a bola no pé de um jogador de linha. Definições de
 // tools/lib/partida-medidas.mjs (Metrica, StatsBomb, Wyscout; PESQUISA-ETAPA3.md §4).
 // Metas (plano 5.1):
@@ -14,12 +14,23 @@
 //    contrapressão ninguém segue em contrapressão e no máximo os 2 mais perto (1º e 2º homem) apertam;
 //  - dependem do ATAQUE (Parte 3; sem ela, contra o condutor clássico que perde a bola ~25×/min no
 //    11×11, só informam): PPDA da Média 8–16 (Wyscout: média 11), "agressão" (recepção com defensor
-//    a ≤ 4,6 m em ≤ 2 s) 19–29% na Média (StatsBomb) e retomada em ≤ 5 s 25–40% na Média (Metrica
-//    36,5%; Bauer & Anzer 31%).
+//    a ≤ 4,6 m em ≤ 2 s) 58–78% na Média e retomada em ≤ 5 s 25–40% na Média (Metrica 36,5%; Bauer &
+//    Anzer 31%).
+//    A agressão: a faixa do plano (19–29%) é a da StatsBomb, que conta EVENTOS de pressão (o defensor
+//    marcado como pressionando), e não a proximidade. Com a definição deste teste (adversário de linha
+//    a ≤ 4,6 m do recebedor em ≤ 2 s), o rastreamento da Metrica (2 jogos, 1763 recepções de passe;
+//    tools/pesquisa/agressao_metrica.py) dá 68,0% (t1/t2/t3 do recebedor: 55,9 / 65,5 / 83,7%). A meta
+//    passa a ser a da mesma definição no jogo real: 68 ± 10 pontos (como as outras metas da Metrica).
+//    A retomada fica 25–40%: com a definição deste medidor (perda = qualquer toque do outro time com a
+//    bola rolando; retomada = qualquer toque de volta em ≤ 5 s), os eventos da Metrica dão 44,1% (555
+//    perdas; tools/pesquisa/retomada_metrica.py) contra os 36,5% da pesquisa — ~8 pontos são da
+//    definição (bate-rebate conta como perda); o resto é a IA retomando rápido demais.
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
-const a = T.argumentos(8);
+// 24 sementes (eram 8: ~50–60 perdas por nível; entre conjuntos de sementes a contrapressão variava
+// 34–70%, o PPDA 6,9–10,1 e a retomada por nível ±10 pontos — o "Alta ≥ Média + 5" era sorteio)
+const a = T.argumentos(24);
 const L = await T.carregar(a.js);
 const P3 = T.parte3Presente(L);
 const ATAQUE = P3 ? 'jogo' : 'substituto'; // sem a Parte 3, o ataque substituto dos testes (lib/partida-tatica.mjs)
@@ -59,7 +70,7 @@ reg('2 s depois da janela (Média e Alta): em contrapressão / mais de 2 apertan
 // dependem do ataque (Parte 3)
 reg('Média: PPDA (Wyscout)', fmt(ppda[1], 2), '8–16', dentro(ppda[1], [8, 16]), !P3);
 const agr = 100 * M.agressao / M.recepcoes;
-reg('Média: agressão (recepção com defensor a ≤ 4,6 m em ≤ 2 s)', `${fmt(agr)}% de ${M.recepcoes}`, '19–29%', dentro(agr, [19, 29]), !P3);
+reg('Média: agressão (recepção com defensor a ≤ 4,6 m em ≤ 2 s)', `${fmt(agr)}% de ${M.recepcoes}`, '58–78% (Metrica 68,0%)', dentro(agr, [58, 78]), !P3);
 reg('Média: retomada em ≤ 5 s depois da perda', `${fmt(ret[1])}%`, '25–40%', dentro(ret[1], [25, 40]), !P3);
 
 console.log(`lógica: ${a.js}${a.antes ? '  (--antes: IA clássica no 11×11)' : ''} · Parte 3 ${P3 ? 'presente (jogo de verdade)' : 'ausente: ataque substituto dos testes; as metas do ataque só informam'}`);
