@@ -605,7 +605,10 @@ export function executarToque(m, j, pe, tipo) {
   const dom = tipo === 'dominio';
   // domínio orientado da recepção assistida (o analógico do humano é a direção do 1º toque; o da IA é o
   // movimento dela, e o domínio da IA fica como era)
-  const ori = dom && recepcaoAtiva(m, j);
+  // domínio orientado (o analógico decide o 1º toque) — menos embalado CONTRA o analógico (> DOMINIO_CONTRA m/s): aí
+  // a bola mandada para trás fugia do corpo que ainda corre para a frente; ele amortece no caminho dele (o
+  // domínio de sempre) e vira com a bola na condução
+  const ori = dom && recepcaoAtiva(m, j) && !(j.imag > 0.3 && j.vx * j.ix + j.vz * j.iz < -DOMINIO_CONTRA * Math.max(0.3, j.imag));
   let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom, ori);
   // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
   // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
@@ -672,6 +675,7 @@ export function executarToque(m, j, pe, tipo) {
 const CORTE_MAX = 15; // ticks (0,25 s) no máximo segurando o rumo à espera do toque
 const DOMINIO_CURTO = 0.45; // m — domínio orientado sem o ponto do próximo toque à frente: a bola anda isto
 const DOMINIO_LADO = 0.25;  // m — domínio orientado: a linha da bola pode passar até isto de onde o pé vai estar
+const DOMINIO_CONTRA = 4.5; // m/s — embalado contra o analógico mais que isto, o domínio não é orientado (amortece)
 const DOMINIO_KMAX = 2;     // passos de 2,5° — domínio orientado: a bola entorta no máximo ±5° do analógico...
 const DOMINIO_ENTORTA = 0.6; // ...e cada grau de desvio custa como 0,6 m/rad de distância ao pé (prefere o analógico)
 // Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a

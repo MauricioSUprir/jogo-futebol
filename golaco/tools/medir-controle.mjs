@@ -4,7 +4,7 @@
 //  - partida IA × IA (a IA joga pelo humano: entradaDemoPartida);
 //  - partida com humano roteirizado: a entrada da demo SEM a marca da IA (recebe como humano) e, quando a
 //    bola vem para o controlado, o analógico já vai para um lado sorteado e fica lá até ele dominar ("eu já
-//    mudo o analógico pro lado que eu quero");
+//    mudo o analógico pro lado que eu quero") e por mais 0,6 s com a bola (segue para onde queria ir);
 //  - treino de ataque, IA e humano roteirizado do mesmo jeito.
 // Medidas:
 //  1. domínio que escapa: dos domínios sem adversário a < 3 m nos 0,6 s seguintes e sem passe/chute dele,
@@ -60,7 +60,7 @@ function rodar(tipo, humano, sem, A) {
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   const timeDe = id => porId.get(id)?.time;
   const pendentes = []; // domínios acompanhados por 0,6 s
-  let lado = null, recebendo = null, minD = Infinity, dAnt = 0; // minD: o quanto já se afastou nesta recepção (−1: contado)
+  let lado = null, recebendo = null, minD = Infinity, dAnt = 0, seguir = -1; // minD: o quanto já se afastou nesta recepção (−1: contado)
   const advPerto = (x, z, time, raio) => m.jogadores.some(o => o.time !== time && o.posicao !== 'GOL' && Math.hypot(o.x - x, o.z - z) < raio);
   for (let i = 0; i < N; i++) {
     let e = demo();
@@ -68,7 +68,11 @@ function rodar(tipo, humano, sem, A) {
       e = { x: e.x, z: e.z, botoes: e.botoes };
       const j = porId.get(m.controlado[0]);
       const vem = j && m.posse == null && m.naMao == null && j.recebe != null;
-      if (vem) {
+      // dominou: segue para o lado que queria por 0,6 s (a intenção de quem já virou o analógico) — sem isso a
+      // entrada da demo puxava para outro lado logo depois do domínio orientado e "perdia" a bola sozinha
+      if (j && m.posse === j.id && recebendo === j.id && lado) { seguir = m.tick + 36; recebendo = null; }
+      if (j && m.posse === j.id && m.tick < seguir && lado) e = { x: lado.x, z: lado.z, botoes: 0 };
+      else if (vem) {
         if (recebendo !== j.id) { recebendo = j.id; const a = r() * 2 * Math.PI; lado = { x: Math.cos(a), z: Math.sin(a) }; minD = Infinity; }
         e = { x: lado.x, z: lado.z, botoes: 0 };
         // recepção: a bola a ≤ 3 m, ainda vindo para ele (não passou) — o corpo não pode se afastar dela: soma o
@@ -82,7 +86,7 @@ function rodar(tipo, humano, sem, A) {
           if (minD > 0.15) { A.afastou++; if (A.exAfastou.length < 5) A.exAfastou.push(`${tipo} sem ${sem} t ${m.tick}`); minD = -1; }
           dAnt = d;
         }
-      } else recebendo = null;
+      } else if (m.tick >= seguir || m.posse !== j?.id) recebendo = null;
     }
     const ev = passoX(e);
     if (SONDA && SONDA.tipo === tipo && SONDA.humano === humano && SONDA.sem === sem && Math.abs(m.tick - SONDA.t) <= 45) {
