@@ -20,7 +20,7 @@
 // A previsão do domínio (conducao.js preverCorpo com `assist`) usa a MESMA função de movimento
 // (movimentoAssistido): o toque marcado acontece de verdade.
 
-import { RECEPCAO, PASSO, BOTAO, ENTRADA } from './config.js';
+import { RECEPCAO, PASSO, BOTAO, ENTRADA, CAMPO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, difAng } from './mat.js';
 import { preverBola } from './conducao.js';
@@ -29,7 +29,7 @@ import { velocidadeDesejada } from './jogador.js';
 const DT = PASSO;
 const R = RECEPCAO;
 const H = Math.round(R.horizonte / DT);
-const ALCANCE_TOQUE = 0.08; // m — folga do ponto de encontro (o corpo não precisa pisar no ponto exato)
+const ALCANCE_TOQUE = R.folgaEncontro;
 
 /**
  * Tempo (s) para o jogador chegar a (qx, qz) indo no máximo a vmax, a partir da velocidade de agora:
@@ -215,10 +215,27 @@ export function tipoRecepcao(m, j) {
   if (j.recebe) return 'passe';
   if (v && v.para != null) return null;                          // passe para outro: não é dele
   if (v && v.de === j.id && m.tick - (v.tick0 ?? 0) < 30) return null; // a bola que ele acabou de bater
+  // finalização indo para o gol (do companheiro ou do adversário): não é bola para receber — a assistência
+  // puxava o controlado para a linha do chute (cortava o chute do próprio time; bloqueava sozinho o do
+  // adversário, com o analógico para longe). Bloquear é com o botão de defesa. Chute desviado (lento ou
+  // indo para fora) volta a ser bola livre.
+  if (v && FINALIZACAO.has(v.tipo) && chuteNoGol(m.bola)) return null;
   return 'livre';
 }
+const FINALIZACAO = new Set(['chute', 'colocado', 'cavadinha', 'cabeceio']);
 
-/** Tick (relativo) em que o companheiro o chega na bola prevista pb (no máximo a toda), ou Infinity. */
+/** A bola vai (em linha reta, no sentido em que anda) para a boca de um dos gols, forte? */
+function chuteNoGol(b) {
+  const vx = b.v.x, vz = b.v.z, v = MD.hypot(vx, vz);
+  if (v < R.chuteVMin) return false;
+  if (v >= R.chuteVForte) return true;
+  if (Math.abs(vx) < 1e-6) return false;
+  const gx = vx > 0 ? CAMPO.meioX : -CAMPO.meioX;
+  const z = b.p.z + (vz / vx) * (gx - b.p.x);
+  return Math.abs(z) < CAMPO.gol.largura / 2 + R.chuteFolgaTrave;
+}
+
+/** Tick (relativo) em que o jogador o chega na bola prevista pb (no máximo a toda), ou Infinity. */
 function encontroCompanheiro(o, pb, n) {
   for (let i = 2; i <= n; i += 2) {
     if (pb.ys[i] > R.alturaPe) continue;
@@ -281,10 +298,18 @@ export function planejarRecepcao(m, j) {
     const perto = MD.hypot(_enc.qx - j.x, _enc.qz - j.z) <= R.perto || MD.hypot(b.p.x - j.x, b.p.z - j.z) <= R.perto;
     if (_enc.i * DT > R.tLivre || !perto) { if (st) st.ativo = false; return null; }
     const meu = _enc.i;
+    // o mais cedo que ele chega (a toda), para a corrida com o adversário
+    let cedo = -1;
     for (const o of m.jogadores) {
-      if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+      if (o === j || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
       if (MD.hypot(o.x - _enc.bx, o.z - _enc.bz) > MD.hypot(j.x - _enc.bx, j.z - _enc.bz) + 12) continue;
-      if (encontroCompanheiro(o, pb, Math.min(H, meu + 2)) * DT < meu * DT - R.folgaCompanheiro) { if (st) st.ativo = false; return null; }
+      if (o.time === j.time) {
+        if (encontroCompanheiro(o, pb, Math.min(H, meu + 2)) * DT < meu * DT - R.folgaCompanheiro) { if (st) st.ativo = false; return null; }
+      } else {
+        // o adversário chega nela bem antes (S3 da contraprova): a bola é dele — o controlado não é puxado
+        if (cedo < 0) cedo = Math.min(meu, encontroCompanheiro(j, pb, meu));
+        if (encontroCompanheiro(o, pb, Math.min(H, cedo + 2)) * DT < cedo * DT - R.folgaAdversario) { if (st) st.ativo = false; return null; }
+      }
     }
   }
   const p = j.recep ?? (j.recep = { ativo: false, tick: -1, alvo: 0, qx: 0, qz: 0, bx: 0, bz: 0, ux: 0, uz: 0, modo: 'frente', vmax: 0, rapido: false, livre: false });

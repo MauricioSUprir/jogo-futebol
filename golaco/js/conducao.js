@@ -416,10 +416,10 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio, orien
   // isso o embalo do corpo mandaria a bola na diagonal.
   let tolerancia = CONDUCAO.desvioReplanejar;
   if (!prot && (tipoCorte(j, dx, dz) || (dominio && j.imag > 0.3))) {
-    const aPed = MD.atan2(j.iz, j.ix);
+    const aPed = orientado != null ? orientado : MD.atan2(j.iz, j.ix);
     let melhor = null;
-    // domínio orientado da recepção assistida: a bola sai na direção do analógico e só entorta (até ±5°) o
-    // que precisa para passar a ≤ DOMINIO_LADO de onde o pé vai estar no próximo toque (o erro do 1º toque
+    // domínio orientado da recepção assistida: a bola sai na direção pedida (orientado, rad) e só entorta (até
+    // ±5°) o que precisa para passar a ≤ DO.lado de onde o pé vai estar no próximo toque (o erro do 1º toque
     // vem do atributo; a recepção já pôs a bola do lado para onde ele vai — recepcao.js ladoDoToque); no
     // corte e no domínio da IA, a linha (±20°) que mais se aproxima desse ponto (pedido do dono, 10/10: o 1º
     // toque saía até 40° fora do analógico quando o corpo ainda ia virar)
@@ -429,8 +429,8 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio, orien
       const sProj = (tx - b.p.x) * ux + (tz - b.p.z) * uz;
       if (sProj < 0.15) continue;
       const e = Math.abs(-(tx - b.p.x) * uz + (tz - b.p.z) * ux);
-      const custo = orientado ? Math.max(0, e - DOMINIO_LADO) + DOMINIO_ENTORTA * Math.abs(k) * 0.04363 : e + 0.15 * Math.abs(k) * 0.04363;
-      if (orientado && Math.abs(k) > DOMINIO_KMAX) continue;
+      const custo = orientado != null ? Math.max(0, e - DO.lado) + DO.entorta * Math.abs(k) * 0.04363 : e + 0.15 * Math.abs(k) * 0.04363;
+      if (orientado != null && Math.abs(k) > DO.kmax) continue;
       if (!melhor || custo < melhor.custo) melhor = { custo, e, ux, uz, sProj };
     }
     const sv = MD.hypot(j.vx, j.vz);
@@ -454,15 +454,15 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio, orien
         }
       }
     }
-    if (!melhor && orientado) {
+    if (!melhor && orientado != null) {
       // o ponto do próximo toque não fica à frente da bola nessa linha (o corpo ainda vai virar para lá):
       // a bola sai mesmo assim na linha do analógico, curta, e o corpo vai com ela
       const ux = MD.cos(aPed), uz = MD.sin(aPed);
-      melhor = { custo: 0, e: 0, ux, uz, sProj: DOMINIO_CURTO };
+      melhor = { custo: 0, e: 0, ux, uz, sProj: DO.curto };
     }
-    // domínio orientado: a bola anda pelo menos DOMINIO_CURTO na linha (o toque que só amortece não leva
+    // domínio orientado: a bola anda pelo menos DO.curto na linha (o toque que só amortece não leva
     // a bola para o lado pedido)
-    if (melhor && orientado && melhor.sProj < DOMINIO_CURTO) melhor.sProj = DOMINIO_CURTO;
+    if (melhor && orientado != null && melhor.sProj < DO.curto) melhor.sProj = DO.curto;
     if (melhor) {
       dx = melhor.ux * melhor.sProj; dz = melhor.uz * melhor.sProj;
       tx = b.p.x + dx; tz = b.p.z + dz;
@@ -603,12 +603,21 @@ export function executarToque(m, j, pe, tipo) {
   // um toque por passada; se o corpo for passar a bola no meio do caminho (freada forte),
   // toca a cada passo — como quem freia com a bola
   const dom = tipo === 'dominio';
-  // domínio orientado da recepção assistida (o analógico do humano é a direção do 1º toque; o da IA é o
-  // movimento dela, e o domínio da IA fica como era)
-  // domínio orientado (o analógico decide o 1º toque) — menos embalado CONTRA o analógico (> DOMINIO_CONTRA m/s): aí
-  // a bola mandada para trás fugia do corpo que ainda corre para a frente; ele amortece no caminho dele (o
-  // domínio de sempre) e vira com a bola na condução
-  const ori = dom && recepcaoAtiva(m, j) && !(j.imag > 0.3 && j.vx * j.ix + j.vz * j.iz < -DOMINIO_CONTRA * Math.max(0.3, j.imag));
+  // domínio orientado da recepção assistida: o analógico do humano é a direção do 1º toque (o da IA é o
+  // movimento dela, e o domínio da IA fica como era). Embalado (mais que DO.vLivre m/s), o 1º toque sai no
+  // máximo anguloEmbalado(v) do sentido da corrida, para o lado do analógico: a bola mandada para trás ou de
+  // lado fugia do corpo que ainda corre (contraprova de 10/10: o 1º toque saía 137–171° do analógico e a bola
+  // ficava a 1,3–2,1 m do pé); o corpo vira com ela na condução
+  let ori = null;
+  if (dom && recepcaoAtiva(m, j) && j.imag > 0.3) {
+    ori = MD.atan2(j.iz, j.ix);
+    const sv = MD.hypot(j.vx, j.vz);
+    if (sv > DO.vLivre) {
+      const aV = MD.atan2(j.vz, j.vx), lim = anguloEmbalado(sv);
+      const d = difAng(aV, ori);
+      if (d > lim || d < -lim) ori = aV + clamp(d, -lim, lim);
+    }
+  }
   let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom, ori);
   // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
   // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
@@ -641,11 +650,23 @@ export function executarToque(m, j, pe, tipo) {
     const q = CONDUCAO;
     const pressao = (() => { const a = adversarioMaisPerto(m, j); return a && a.d < q.dominioPressaoDist ? 1.6 : 1; })();
     const dif = (1 + Math.max(0, sIn - 6) / q.dominioVRef) * pressao;
-    // o erro cresce mais depressa na ponta fraca (curva de potência pelo que falta para 100): o bom domina
-    // limpo e o fraco espirra a bola forte (pedido do dono, 10/10: "controle de bola melhor")
-    const fa = MD.pow((100 - clamp(attr, 0, 100)) / 100, q.dominioCurva);
-    sigAng = (q.dominioErroAng.bom + (q.dominioErroAng.ruim - q.dominioErroAng.bom) * fa) * dif;
-    sigVel = (q.dominioErroVel.bom + (q.dominioErroVel.ruim - q.dominioErroVel.bom) * fa) * dif;
+    // entre fraco.ate e craque.desde, a conta publicada; acima, o erro cai mais depressa até craque.ang/vel no
+    // 100 — o bom domina mais limpo (pedido do dono, 10/10: "controle de bola melhor"); abaixo de fraco.ate,
+    // cresce mais depressa até fraco.ang/vel no 0
+    const C = q.dominioCraque, F = q.dominioFraco;
+    if (attr < F.ate) {
+      // abaixo de F.ate (nenhum titular dos dois elencos: o menor controle é 59), o fraco espirra mais
+      const u = (F.ate - Math.max(0, attr)) / F.ate;
+      sigAng = lerp(lerp(q.dominioErroAng.ruim, q.dominioErroAng.bom, F.ate / 100), F.ang, u) * dif;
+      sigVel = lerp(lerp(q.dominioErroVel.ruim, q.dominioErroVel.bom, F.ate / 100), F.vel, u) * dif;
+    } else if (attr <= C.desde) {
+      sigAng = lerp(q.dominioErroAng.ruim, q.dominioErroAng.bom, attr / 100) * dif;
+      sigVel = lerp(q.dominioErroVel.ruim, q.dominioErroVel.bom, attr / 100) * dif;
+    } else {
+      const u = Math.min(1, (attr - C.desde) / (100 - C.desde));
+      sigAng = lerp(lerp(q.dominioErroAng.ruim, q.dominioErroAng.bom, C.desde / 100), C.ang, u) * dif;
+      sigVel = lerp(lerp(q.dominioErroVel.ruim, q.dominioErroVel.bom, C.desde / 100), C.vel, u) * dif;
+    }
   }
   const ea = normal(m.rng) * sigAng;
   const ev = normal(m.rng) * sigVel;
@@ -673,11 +694,14 @@ export function executarToque(m, j, pe, tipo) {
 }
 
 const CORTE_MAX = 15; // ticks (0,25 s) no máximo segurando o rumo à espera do toque
-const DOMINIO_CURTO = 0.45; // m — domínio orientado sem o ponto do próximo toque à frente: a bola anda isto
-const DOMINIO_LADO = 0.25;  // m — domínio orientado: a linha da bola pode passar até isto de onde o pé vai estar
-const DOMINIO_CONTRA = 4.5; // m/s — embalado contra o analógico mais que isto, o domínio não é orientado (amortece)
-const DOMINIO_KMAX = 2;     // passos de 2,5° — domínio orientado: a bola entorta no máximo ±5° do analógico...
-const DOMINIO_ENTORTA = 0.6; // ...e cada grau de desvio custa como 0,6 m/rad de distância ao pé (prefere o analógico)
+const DO = CONDUCAO.dominioOrientado;
+/**
+ * Maior ângulo entre o 1º toque e o sentido da corrida que o corpo a v m/s acompanha (o "directional first
+ * touch" limitado pelo embalo): 90° a DO.vLado m/s, caindo DO.queda rad por m/s até DO.angMin.
+ */
+export function anguloEmbalado(v) {
+  return clamp(1.5707963267948966 - (v - DO.vLado) * DO.queda, DO.angMin, 3.141592653589793);
+}
 // Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a
 // velocidade até CORTE_DESVIO do rumo em que estava; o tronco até CORTE_TRONCO): responde ao
 // comando sem tirar a bola do alcance do pé.
@@ -1122,7 +1146,7 @@ function bolaSaindo(j, b) {
   if (MD.hypot(bx - x, bz - z) < BATE_CORPO) return true;
   return !noAlcance(x, z, j.rumo, bx, bz, b.p.y, true);
 }
-const BATE_CORPO = 0.48; // m — a bola mais perto que isso do centro do corpo bateria nas pernas (0,3 + 0,11)
+const BATE_CORPO = RECEPCAO.bateCorpo;
 
 /**
  * Movimento de quem vai receber (domínio marcado). De frente: fica de frente para a bola e

@@ -220,13 +220,24 @@ export const CONDUCAO = {
   erroVelBase: 0.008,
   erroVelRuim: 0.05,
   // Domínio (primeiro toque).
-  // σ = bom + (ruim − bom)·((100 − controle)/100)^dominioCurva (× a bola forte e a pressão): controle 90 →
-  // 0,055 rad, 75 → 0,098, 45 → 0,23 (antes linear: 0,073 / 0,108 / 0,177 — o fraco errava pouco demais
-  // com a recepção assistida, e o bom, demais)
-  dominioErroAng: { bom: 0.04, ruim: 0.5 },
-  dominioErroVel: { bom: 0.04, ruim: 0.5 },
-  dominioCurva: 1.5,
+  // σ (× a bola forte e a pressão) = lerp(ruim, bom, controle/100) entre `fraco.ate` e `craque.desde` (a conta
+  // publicada: a maioria dos titulares tem controle 59–69 e qualquer erro a mais derrubava o ataque —
+  // contraprova de 10/10: ~2,0 → ~1,4 gol por partida com a curva mais dura nessa faixa); acima de
+  // craque.desde cai em linha reta até craque.ang / craque.vel no controle 100 — o bom domina mais limpo
+  // (controle 90: 0,060 rad × 0,073 antes); abaixo de fraco.ate (nenhum titular) sobe em linha reta até
+  // fraco.ang / fraco.vel no 0 — o fraco espirra a bola forte (controle 45: 0,207 rad × 0,177 antes)
+  dominioErroAng: { bom: 0.05, ruim: 0.28 },
+  dominioErroVel: { bom: 0.05, ruim: 0.35 },
+  dominioCraque: { desde: 70, ang: 0.03, vel: 0.03 },
+  dominioFraco: { ate: 55, ang: 0.45, vel: 0.55 },
   dominioVRef: 12,            // m/s — acima disso o domínio fica mais difícil
+  // domínio orientado da recepção assistida (recepcao.js, conducao.js planejarAlvo): a bola sai na direção
+  // pedida e entorta no máximo kmax passos de 2,5° (cada um custa como `entorta` m/rad de distância ao pé)
+  // para passar a ≤ `lado` m de onde o pé vai estar; sem o ponto do próximo toque à frente, anda `curto` m.
+  // Embalado (mais que vLivre m/s), a direção pedida é a do analógico limitada pelo embalo (conducao.js
+  // anguloEmbalado): 90° do sentido da corrida a vLado m/s, menos `queda` rad a cada m/s, até angMin (a bola
+  // para trás ou de lado fugia do corpo que ainda corre)
+  dominioOrientado: { curto: 0.45, lado: 0.25, kmax: 2, entorta: 0.6, vLivre: 3.5, vLado: 4.5, queda: 0.3, angMin: 0.75 },
   dominioPressaoDist: 2.5,    // m — marcador mais perto que isso pressiona
   // Proteção.
   protecaoDist: 5,            // m — marcador a menos disso ativa a proteção (com o modificador)
@@ -262,12 +273,21 @@ export const RECEPCAO = {
   folgaCompanheiro: 0.15,     // s — companheiro que chega antes por mais que isto fica com a bola livre
   custoTempo: 1.5,            // m/s — sem pressa, o encontro escolhido é o de menor (metros andados + isto × s)
   janelaMarca: 45,            // ticks — o toque do domínio é marcado com até isto de antecedência
+  folgaEncontro: 0.08,        // m — o corpo não precisa pisar no ponto exato do encontro
+  bateCorpo: 0.48,            // m — a bola mais perto que isto do centro do corpo bateria nas pernas (0,3 + 0,11 + folga)
   alturaPe: 0.45,             // m — bola até esta altura dá para dominar com o pé (= noAlcance)
   // embalado (> 1,2 m/s), o movimento da recepção pede no máximo angCorteMax (rad) do sentido da corrida — corta
   // freando para o lado (jogador.js passoCorpo: acima de angInversao, 1,95 rad, ele freia na linha sem sair de
   // lado); só o ponto bem para trás (mais que angInverte) pede a inversão
   angCorteMax: 1.5,
   angInverte: 2.6,
+  // finalização (chute, colocado, cavadinha, cabeceio) rumo ao gol não é bola livre para receber: mais forte que
+  // chuteVForte, ou mais forte que chuteVMin e indo para a boca do gol (até chuteFolgaTrave por fora da trave)
+  chuteVMin: 6,
+  chuteVForte: 15,
+  chuteFolgaTrave: 1.5,
+  // bola livre: o adversário que chega antes dele por mais que isto (s) fica com ela — o controlado não é puxado
+  folgaAdversario: 0.3,
 };
 
 // Entrada.
