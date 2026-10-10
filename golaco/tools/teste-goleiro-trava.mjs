@@ -171,6 +171,34 @@ for (let s = 1; s <= 12; s++) for (const z0 of [-8, 0, 8]) for (const x0 of [-36
   }
   reg('recuo para o meu goleiro, sem botão de ação depois — bola nas mãos', `${n} casos (${passes} recuos): pior ${fmt(pior)} s`, '≤ 3,5 s', n >= 20 && pior <= 3.5);
 }
+// ------------------------------------------------------------ 3b. recuo não vira gol contra
+{
+  // o goleiro lia o recuo do próprio time como chute e, quando a "defesa" sorteada falhava, a bola
+  // entrava (~3% dos recuos). Agora recebe sempre que alcança.
+  let n = 0, contra = 0;
+  for (const dist of [6, 12, 20, 28, 38]) for (const zo of [-14, -10, -5, 0, 5, 10, 14]) for (const ft of [2, 15, 30, 45]) for (const sem of [1, 2, 3]) {
+    const m = S.criarTreino({ semente: 900 + sem });
+    const x0 = -CAMPO.meioX + dist;
+    for (const [id, x, z] of [[0, x0 + 15, 5], [1, x0 + 30, 0], [2, x0 + 20, -20], [3, x0 + 20, 20]]) mover(jp(m, id), x, z, 0);
+    for (const [id, x, z] of [[21, x0 + 25, -7], [22, x0 + 25, 7], [23, x0 + 18, 0]]) mover(jp(m, id), x, z, Math.PI);
+    mover(jp(m, 4), x0, zo, Math.PI);
+    darBola(m, 4);
+    for (let i = 0; i < 30; i++) S.passoTreino(m, { x: 0, z: 0, botoes: 0 });
+    if (m.posse !== 4) darBola(m, 4);
+    let passou = false;
+    for (let i = 0; i < 60 * 8; i++) {
+      const j = jp(m, m.controlado[0]), g = jp(m, 10);
+      let e;
+      if (!passou) { const dx = g.x - j.x, dz = g.z - j.z, l = Math.hypot(dx, dz) || 1; e = { x: dx / l, z: dz / l, botoes: i < ft ? BOTAO.PASSE : 0 }; }
+      else e = correNaBola(m); // o humano (já no goleiro, que recebe) leva o analógico para a bola
+      const ev = S.passoTreino(m, e);
+      if (ev.some(x => x.tipo === 'passe' && x.id === 4 && x.para === 10)) { passou = true; n++; }
+      if (passou && m.placar[1] > 0) { contra++; break; }
+      if (passou && (m.naMao === 10 || m.posse === 10)) break;
+    }
+  }
+  reg('recuo para o meu goleiro não vira gol contra', `${contra} gols contra em ${n} recuos`, '0 (≥ 300 recuos)', n >= 300 && contra === 0);
+}
 // ------------------------------------------------------------ 4. jogo livre com quem não sabe repor
 {
   function humano(sem) {

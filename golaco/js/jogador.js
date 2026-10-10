@@ -422,7 +422,11 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false)
   if (semCruzar && o.apoio && Math.abs(vLat) > PASSADA.ladoMin && v < PASSADA.ladoMaxV) {
     const sLado = ((x - o.x) * rx + (z - o.z) * rz) * lado; // > 0: do lado certo do outro pé
     if (sLado < PASSADA.folgaEntrePes) {
-      const k = (PASSADA.folgaEntrePes - sLado) * lado;
+      // o empurrão nunca leva o pé além de PASSADA.ladoOfsMax para o lado do corpo previsto: se o
+      // outro pé ficou para trás (tronco girando rápido), "do lado certo dele" era longe demais e a
+      // perna esticava além do alcance (pé plantado arrastado na pose)
+      const ofs = ((x - j.x - j.vx * tm) * rx + (z - j.z - j.vz * tm) * rz) * lado;
+      const k = clamp(Math.min(PASSADA.folgaEntrePes - sLado, PASSADA.ladoOfsMax - ofs), 0, PASSADA.ladoEmpurraMax) * lado;
       x += rx * k; z += rz * k;
     }
   }

@@ -21,7 +21,7 @@ const ia = process.argv.indexOf('--js');
 const JS = ia > 0 ? path.resolve(process.argv[ia + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarTreino, passoTreino, entradaDemo } = await imp('sessao.js');
-const { PASSO } = await imp('config.js');
+const { PASSO, CAMPO } = await imp('config.js');
 const { pose, J } = await imp('anim.js');
 const POSE = new Float32Array(64 * 3);
 
@@ -33,7 +33,7 @@ const dif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2
 
 const SEMENTES = process.env.SEMENTES ? Array.from({ length: +process.env.SEMENTES }, (_, k) => k + 1) : [1, 2, 3, 4, 5, 6, 7, 8], MIN = 3, N = Math.round(MIN * 60 / PASSO);
 const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
-let chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
+let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
 for (const sem of SEMENTES) {
   const m = criarTreino({ semente: sem });
@@ -64,6 +64,15 @@ for (const sem of SEMENTES) {
         // posse assentada: o mesmo condutor há mais de 1,5 s (fora o bate-rebate depois de uma perda)
         if (d0.id === donoAnt && i - desde > 90) { assentadaN++; if (perto >= 1) assentada++; }
         if (d0.id !== donoAnt) { donoAnt = d0.id; desde = i; }
+      }
+    }
+    // bola na mão do goleiro: os companheiros abrem para a saída (antes os zagueiros iam para a linha do gol)
+    if (m.naMao != null) {
+      const g = m.jogadores.find(o => o.id === m.naMao);
+      const gx = Math.sign(g.x) * CAMPO.meioX;
+      for (const o of m.jogadores) {
+        if (o.time !== g.time || o.posicao === 'GOL' || o.id === ctrl) continue;
+        naMaoN++; if (Math.abs(gx - o.x) < 8) naMaoLinha++;
       }
     }
     const linha = m.jogadores.filter(o => o.posicao !== 'GOL' && o.papel === 'ia');
@@ -137,8 +146,9 @@ reg('anda-para-anda (≤ 2 s)', `${fmt(porMin(A.paraArranca))}/min`, '≤ 4/min'
 reg('de costas para a bola andando devagar', `${fmt(pct(A.costas, A.lento))}%`, '≤ 15%', pct(A.costas, A.lento) <= 15);
 reg('companheiro a menos de 2 m (amontoado)', `${fmt(pct(A.viz2, A.viz))}% do tempo`, '≤ 10%', pct(A.viz2, A.viz) <= 10);
 reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 3/min (publicada: 27)', porMin(A.contatos) <= 3);
-reg('pernas cruzadas (tornozelos trocados de lado > 3 cm)', `${fmt(pct(A.cruz, A.cruzN))}% do tempo`, '≤ 8%', pct(A.cruz, A.cruzN) <= 8);
-reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzLado, A.cruzLadoN))}% (${fmt(pct(A.cruzLadoN, A.cruzN), 0)}% do tempo de lado)`, '≤ 15%', pct(A.cruzLado, A.cruzLadoN) <= 15);
+reg('pernas cruzadas (tornozelos trocados de lado > 3 cm)', `${fmt(pct(A.cruz, A.cruzN))}% do tempo`, '≤ 9% (publicada: 14,9%)', pct(A.cruz, A.cruzN) <= 9);
+reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzLado, A.cruzLadoN))}% (${fmt(pct(A.cruzLadoN, A.cruzN), 0)}% do tempo de lado)`, '≤ 15% (publicada: 42,5%)', pct(A.cruzLado, A.cruzLadoN) <= 15);
+reg('bola na mão do goleiro: companheiro a < 8 m da linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 5% (publicada: 10,8%)', pct(naMaoLinha, naMaoN) <= 5);
 reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
 reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, '≥ 40%', pct(pressao, pressaoN) >= 40);
 reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);

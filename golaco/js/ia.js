@@ -215,8 +215,10 @@ function temCompanheiro(m, j) {
 /** Apoio sem bola (meu time com a bola): ocupa a vaga da posição, com corridas nas costas. */
 function apoio(m, j, d0, lado, extra) {
   const v = j.vaga ?? { x: 0, z: 0 };
-  // a vaga é relativa à bola: acompanha o avanço
-  const bx = d0.x;
+  // a vaga é relativa à bola: acompanha o avanço. Com a bola no goleiro, a referência é a saída de
+  // jogo (IA.saidaGoleiro m à frente do meu gol) — antes os zagueiros corriam para a linha do gol
+  const meuGolX = -lado * CAMPO.meioX;
+  const bx = d0.posicao === 'GOL' ? meuGolX + lado * IA.saidaGoleiro : d0.x;
   let tx = bx + lado * v.x, tz = v.z;
   // atacante: de tempos em tempos corre nas costas da defesa (vem e vai)
   if (j.posicao === 'ATA') {
@@ -225,6 +227,8 @@ function apoio(m, j, d0, lado, extra) {
   }
   const lim = CAMPO.meioX - 2;
   tx = clamp(tx, -lim, lim);
+  // com a bola no meu time, ninguém de linha recua a menos de IA.recuoMin m da minha linha de gol
+  if ((tx - meuGolX) * lado < IA.recuoMin) tx = meuGolX + lado * IA.recuoMin;
   tz = clamp(tz, -CAMPO.meioZ + 2, CAMPO.meioZ - 2);
   // sem pressa: a intensidade vem da distância (para: d/IA.distCalma), sem degrau
   return { ...para(j, tx, tz, 1, true), botoes: extra };

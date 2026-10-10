@@ -119,11 +119,15 @@ export function lerChute(m, j) {
   // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
   const recuo = !alturaOk && Math.abs(j.x - gx) > 2 ? recuoBolaAlta(m, j, b, gx, reac) : null;
   if (recuo) pDefesa = lerp(GOLEIRO.recuoDefesa[0], GOLEIRO.recuoDefesa[1], clamp(recuo.folga / 0.3, 0, 1));
+  // passe do próprio time (recuo) não é chute: o goleiro recebe sempre que alcança, sem o sorteio
+  // da defesa (antes ~3% dos recuos viravam gol contra quando a "defesa" sorteada falhava)
+  const proprio = m.voo && m.voo.time === j.time && m.voo.tipo !== 'chute' && m.voo.tipo !== 'cabeceio';
+  if (proprio) pDefesa = alturaOk && dist <= alcance + GOLEIRO.folgaAlcance / 2 ? 1 : 0;
   const ok = uniforme(m.rng) < pDefesa;
   // segurar ou espalmar: em pé e de longe segura mais; no mergulho e de perto, espalma
   const mergulha = dist > GOLEIRO.alcanceEmPe;
   const S = GOLEIRO.segurar;
-  const pSegura = (mergulha ? S.mergulho : dChute < 12 ? S.perto : S.emPe) * lerp(0.85, 1.15, a.reflexo / 100);
+  const pSegura = proprio ? 1 : (mergulha ? S.mergulho : dChute < 12 ? S.perto : S.emPe) * lerp(0.85, 1.15, a.reflexo / 100);
   const encaixe = ok && uniforme(m.rng) < pSegura;
   j.defesa = recuo ? {
     chave: m.voo?.tickChave, tick: m.tick + recuo.i, inicio: m.tick + reac, x: recuo.x, z: recuo.z, y: recuo.y,
