@@ -419,6 +419,8 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .ajuda-colunas dd { display: inline; margin: 0 0 0 6px; font-size: 12px; color: var(--texto-2); }
 .ajuda-colunas dd::after { content: ""; display: block; height: 7px; }
 .nota { margin: 12px 0 0; font-size: 11px; color: var(--texto-2); line-height: 1.45; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px; }
+/* créditos dos sons (CC BY pede o nome dos autores onde o som toca) */
+.nota.creditos { margin: 0 20px 16px; }
 
 @media (max-width: 680px) {
   .menu-corpo { grid-template-columns: 1fr; }
@@ -451,6 +453,7 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }
   .ajuda-colunas dt, .ajuda-colunas dd { font-size: 11.5px; }
+  .nota.creditos { margin: 0 16px 12px; }
 }
 /* tela estreita: HUD do topo mais compacto para nada encostar */
 @media (max-width: 560px) {

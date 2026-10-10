@@ -40,7 +40,7 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - **Torcida no estádio**: até 18 mil torcedores (Alta; 13 mil na Média do celular, 8 mil sem animação na Baixa), a casa
   (Golaço FC, preto e verde) é maioria, organizada pulando atrás de um gol, setor visitante (Ventania FC, branco) atrás do
   outro, o mosaico "GOLAÇO" em camisas verdes; levantam no ataque, explodem no gol, põem a mão na cabeça na chance perdida.
-- **Som** (gravações livres, créditos em `assets/sons/CREDITOS.md`): murmúrio do estádio que sobe perto do gol, canto ao
+- **Som** (gravações livres, créditos em `assets/sons/CREDITOS.md` e na Ajuda): murmúrio do estádio que sobe perto do gol, canto ao
   fundo, explosão do gol, "uuuh", palmas, apitos (saída, intervalo, fim) e o chuá da rede. Liga no primeiro toque/tecla
   (regra dos navegadores). Menu → "Som da torcida": ligado/desligado e volume (salvos). Pesquisa: `PESQUISA-ESTADIO.md`.
 
