@@ -56,7 +56,14 @@
     </div>
 
     <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
-    <div id="gol-tela" class="gol-tela" aria-hidden="true"><span>GOL!</span><small id="gol-quem"></small></div>
+    <!-- efeito do gol: faixa verde que corta a tela, "GOL!" que bate e treme, o autor (número e nome do
+         elenco fictício) e o time com o minuto; some antes da saída de bola (2,4 s, sem bloquear nada) -->
+    <div id="gol-tela" class="gol-tela" aria-hidden="true">
+      <i class="gol-faixa"></i>
+      <span class="gol-palavra" id="gol-palavra">GOL!</span>
+      <div class="gol-autor" id="gol-autor"><b id="gol-numero"></b><span id="gol-nome"></span></div>
+      <small id="gol-quem"></small>
+    </div>
     <!-- faixa do intervalo e do fim de jogo (partida) -->
     <div id="faixa" class="faixa" role="status" hidden>
       <span class="faixa-titulo" id="faixa-titulo">Intervalo</span>
@@ -167,6 +174,15 @@
               <button type="button" data-valor="tv">TV</button>
               <button type="button" data-valor="aproximada">Aproximada</button>
             </div>
+          </div>
+          <div class="opcao">
+            <span class="opcao-rotulo">Som da torcida</span>
+            <div class="segmentado" data-grupo="som">
+              <button type="button" data-valor="ligado">Ligado</button>
+              <button type="button" data-valor="desligado">Desligado</button>
+            </div>
+            <label class="deslizante">Volume <input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
+            <small class="opcao-info" id="info-som"></small>
           </div>
           <div class="opcao">
             <span class="opcao-rotulo">Controles de toque</span>

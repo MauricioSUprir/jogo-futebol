@@ -1,13 +1,15 @@
 // Campo oficial (IFAB Lei 1, medidas em CAMPO): gramado com faixas de corte, linhas finas
-// com antisserrilhado analítico (um único mesh), gols com rede, bandeirinhas, placas com marcas
-// FICTÍCIAS e arquibancada simples. Poucos draw calls: tudo o que é estático vira um mesh só
-// por material.
+// com antisserrilhado analítico (um único mesh), gols com rede que BALANÇA (malha subdividida, a
+// deformação no vertex shader pela conta de rede-onda.js — uniforms de até 4 batidas), bandeirinhas,
+// placas com marcas FICTÍCIAS e arquibancada (a torcida é de torcida.js). Poucos draw calls: tudo o que
+// é estático vira um mesh só por material.
 import * as THREE from 'three';
 import { CAMPO } from '../config.js';
 import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
   GRAMA, texGramado, texDetalheGrama, texRede, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho,
 } from './texturas.js';
+import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const L = CAMPO.linha, h = L / 2;
@@ -173,15 +175,6 @@ function criarGols(aniso) {
   const yt = g.altura + R;               // centro do travessão
   const geos = [], cores = [];
   const branco = new THREE.Color(0xf7f9f8), cinza = new THREE.Color(0x8b9396), preto = new THREE.Color(0x1a1d1e);
-  const redeGeo = { pos: [], nrm: [], uv: [] };
-  const CEL = 0.14; // tamanho do losango da rede (m)
-  function plano(p0, p1, p2, p3, n, ul, vl) {
-    const o = redeGeo;
-    o.pos.push(...p0, ...p1, ...p2, ...p0, ...p2, ...p3);
-    for (let k = 0; k < 6; k++) o.nrm.push(...n);
-    const u = ul / CEL, v = vl / CEL;
-    o.uv.push(0, 0, u, 0, u, v, 0, 0, u, v, 0, v);
-  }
   for (const s of [-1, 1]) {
     const x = s * MX;
     const xf = s * (MX + g.profundidade);
@@ -198,27 +191,93 @@ function criarGols(aniso) {
     geos.push(cilindroEntre([x, yt, -zp - R], [x, yt, zp + R], R, 16)); cores.push(branco);
     geos.push(cilindroEntre([xf, g.altura, -g.largura / 2], [xf, g.altura, g.largura / 2], 0.03, 8)); cores.push(cinza);
     geos.push(cilindroEntre([xf, 0.02, -g.largura / 2], [xf, 0.02, g.largura / 2], 0.022, 6)); cores.push(cinza);
-    // rede: fundo, teto e laterais (caixa igual à da física)
-    const zl = g.largura / 2, ya = g.altura;
-    plano([xf, 0, -zl], [xf, 0, zl], [xf, ya, zl], [xf, ya, -zl], [-s, 0, 0], g.largura, ya);
-    plano([x, ya, -zl], [x, ya, zl], [xf, ya, zl], [xf, ya, -zl], [0, -1, 0], g.largura, g.profundidade);
-    for (const t of [-1, 1]) {
-      plano([x, 0, t * zl], [xf, 0, t * zl], [xf, ya, t * zl], [x, ya, t * zl], [0, 0, -t], g.profundidade, ya);
-    }
   }
   const estrutura = new THREE.Mesh(juntarGeometrias(geos, cores), new THREE.MeshLambertMaterial({ vertexColors: true }));
   estrutura.name = 'gols';
-  const rg = new THREE.BufferGeometry();
-  rg.setAttribute('position', new THREE.Float32BufferAttribute(redeGeo.pos, 3));
-  rg.setAttribute('normal', new THREE.Float32BufferAttribute(redeGeo.nrm, 3));
-  rg.setAttribute('uv', new THREE.Float32BufferAttribute(redeGeo.uv, 2));
-  rg.computeBoundingSphere();
-  const rede = new THREE.Mesh(rg, new THREE.MeshLambertMaterial({
+  const rede = criarRede(aniso);
+  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms };
+}
+
+/**
+ * Rede dos dois gols: os 8 panos (fundo, teto e laterais de cada gol; a caixa igual à da física da bola)
+ * numa malha subdividida a ~15 cm com dois atributos por vértice — o pano (0–7, a numeração de
+ * rede-onda.js) e a fixação (0 na armação, 1 no meio: rede-onda.js fixo). O vertex shader empurra o
+ * vértice pela normal do pano (para fora do gol) com redeDesloc (REDE_GLSL). A textura é a mesma de antes
+ * (losango de 14 cm na mesma escala de UV).
+ */
+function criarRede(aniso) {
+  const g = CAMPO.gol;
+  const CEL = 0.14;   // tamanho do losango da rede (m)
+  const PASSO_MALHA = 0.15;
+  const pos = [], nrm = [], uv = [], plano = [], fixa = [], idx = [];
+  // pano: canto p0 e eixos (ea ao longo de u, eb ao longo de v), tamanhos ul × vl; n = normal do desenho
+  // (a de antes, virada para dentro do gol: a luz fica igual)
+  function pano(i, p0, ea, eb, ul, vl, n) {
+    const na = Math.max(1, Math.round(ul / PASSO_MALHA)), nb = Math.max(1, Math.round(vl / PASSO_MALHA));
+    const base = pos.length / 3;
+    for (let b = 0; b <= nb; b++) {
+      for (let a = 0; a <= na; a++) {
+        const fu = a / na * ul, fv = b / nb * vl;
+        const x = p0[0] + ea[0] * fu + eb[0] * fv, y = p0[1] + ea[1] * fu + eb[1] * fv, z = p0[2] + ea[2] * fu + eb[2] * fv;
+        pos.push(x, y, z); nrm.push(...n); uv.push(fu / CEL, fv / CEL);
+        plano.push(i); fixa.push(fixoRede(i, x, y, z));
+      }
+    }
+    for (let b = 0; b < nb; b++) {
+      for (let a = 0; a < na; a++) {
+        const k = base + b * (na + 1) + a;
+        idx.push(k, k + 1, k + na + 2, k, k + na + 2, k + na + 1);
+      }
+    }
+  }
+  const zl = g.largura / 2, ya = g.altura;
+  for (const s of [-1, 1]) {
+    const x = s * MX, xf = s * (MX + g.profundidade), base = s > 0 ? 4 : 0;
+    pano(base + 0, [xf, 0, -zl], [0, 0, 1], [0, 1, 0], g.largura, ya, [-s, 0, 0]);
+    pano(base + 1, [x, ya, -zl], [0, 0, 1], [s, 0, 0], g.largura, g.profundidade, [0, -1, 0]);
+    for (const t of [-1, 1]) pano(base + (t < 0 ? 2 : 3), [x, 0, t * zl], [s, 0, 0], [0, 1, 0], g.profundidade, ya, [0, 0, -t]);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setAttribute('aPlano', new THREE.Float32BufferAttribute(plano, 1));
+  geo.setAttribute('aFixo', new THREE.Float32BufferAttribute(fixa, 1));
+  geo.setIndex(idx);
+  geo.computeBoundingSphere();
+  // a bolsa sai até ~0,6 m da caixa: a esfera de corte cresce junto
+  geo.boundingSphere.radius += REDE.ampMax + 0.2;
+  const mat = new THREE.MeshLambertMaterial({
     map: texRede(aniso), transparent: true, side: THREE.DoubleSide, depthWrite: false, alphaTest: 0.02, color: 0xeef2f0,
-  }));
-  rede.name = 'rede';
-  rede.renderOrder = 2;
-  return { estrutura, rede };
+  });
+  const uniforms = { uRedeA: { value: new Float32Array(4 * REDE.maxImpactos) }, uRedeB: { value: new Float32Array(4 * REDE.maxImpactos).fill(-1) } };
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uRedeA = uniforms.uRedeA;
+    sh.uniforms.uRedeB = uniforms.uRedeB;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aPlano;\nattribute float aFixo;' + REDE_GLSL + `
+        vec3 redeNormal(float plano) {
+          float s = plano >= 3.5 ? 1.0 : -1.0;
+          float k = plano - (s > 0.0 ? 4.0 : 0.0);
+          if (k < 0.5) return vec3(s, 0.0, 0.0);
+          if (k < 1.5) return vec3(0.0, 1.0, 0.0);
+          return vec3(0.0, 0.0, k < 2.5 ? -1.0 : 1.0);
+        }`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        vRedeD = 0.0;
+        if (aFixo > 0.0) { vRedeD = redeDesloc(transformed, aPlano) * aFixo; transformed += redeNormal(aPlano) * vRedeD; }`)
+      .replace('#include <common>', '#include <common>\nvarying float vRedeD;');
+    // a bolsa escurece um pouco (a malha esticada e a sombra da dobra): o balanço aparece de qualquer ângulo
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying float vRedeD;')
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        diffuseColor.rgb *= 1.0 - 0.45 * clamp(abs(vRedeD) * 2.2, 0.0, 1.0);`);
+  };
+  mat.customProgramCacheKey = () => 'rede-onda';
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.name = 'rede';
+  mesh.renderOrder = 2;
+  return { mesh, uniforms };
 }
 
 // ------------------------------------------------------------------ bandeirinhas
@@ -434,6 +493,8 @@ export function criarCampo(opc) {
   grupo.add(criarLinhas(detalhe));
   const gols = criarGols(aniso);
   grupo.add(gols.estrutura, gols.rede);
+  // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
+  const uRede = gols.uniformsRede;
   const band = criarBandeiras();
   grupo.add(band.mesh);
   const placas = criarPlacas(aniso);
@@ -444,6 +505,8 @@ export function criarCampo(opc) {
   grupo.add(refl.grupo);
   return {
     grupo,
+    /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
+    rede: { a: uRede.uRedeA.value, b: uRede.uRedeB.value, mesh: gols.rede },
     definirHora(hora) {
       const noite = hora === 'noite';
       uNoite.value = noite ? 1 : 0;

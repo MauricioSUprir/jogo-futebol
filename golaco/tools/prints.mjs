@@ -58,6 +58,17 @@ const CENAS = [
   { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1' },
   // "GOL!" grande e verde (o aviso que aparece por 2 s quando a bola entra)
   { nome: 'celular-gol', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', depois: 'gol' },
+  // gol DE VERDADE (semente 6, a IA jogando pelos dois: o nº 9 marca aos ~21 s): a rede estufada (0,1 s
+  // depois da batida), a torcida explodindo, a câmera com o efeito e o "GOL!" com autor e minuto
+  { nome: 'pc-gol-rede', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede' },
+  { nome: 'celular-gol-rede', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede' },
+  { nome: 'pc-gol-rede-perto', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
+  { nome: 'celular-gol-rede-perto', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
+  // por trás do gol (entre as placas e a arquibancada): a bolsa da rede de fundo vem na direção da câmera
+  { nome: 'pc-gol-rede-atras', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [59.6, 2.3, 0.6], para: [53.2, 1.0, -2.6], fov: 52 } },
+  // torcida de perto (câmera livre): lado de lá com o mosaico, e o fundo da organizada
+  { nome: 'pc-torcida', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { de: [0, 14, 10], para: [0, 9, -55], fov: 42 } },
+  { nome: 'celular-torcida-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', livre: { de: [30, 8, 14], para: [70, 8, -5], fov: 48 } },
   { nome: 'pc-menu', ...PC, url: 'q=alta&hora=dia', depois: 'menu' },
   { nome: 'celular-menu', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', depois: 'menu' },
   { nome: 'celular-ajuda', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1', depois: 'ajuda' },
@@ -165,6 +176,20 @@ async function preparar(pagina, prep) {
       g.forcarEntrada({ x: 0.8, z: -0.2, botoes: 32 }); // segue segurando no print
       return `carga ${c ? c.tipo : '-'}`;
     }
+    if (prep === 'golRede') {
+      // anda até a 1ª batida da bola na rede (guardando o evento do gol) e mais 6 passos: a bolsa no máximo
+      let golEv = null, n = 0;
+      while (n < 4000 && g.estadio.rede.batidas === 0) {
+        g.relogio.avancar(1000 / 60, { desenhar: false }); n++;
+        const ev = g.mundo.eventos.find(e => e.tipo === 'gol');
+        if (ev && !golEv) golEv = { ...ev };
+      }
+      for (let i = 0; i < 6; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      window.__golPrint = golEv;
+      const r = g.estadio.rede;
+      const im = r.impactos[0];
+      return `gol ${golEv ? `do time ${golEv.time} (autor ${golEv.autor})` : 'NÃO houve'} no tick ${g.mundo.tick - 6}, batidas ${r.batidas}${im ? `, pano ${im.plano} em (${im.x.toFixed(1)}, ${im.y.toFixed(2)}, ${im.z.toFixed(2)})` : ''}, placar ${g.estado().placar.join('×')}, torcida da casa excita ${g.estadio.emocao.torcida[0].excita.toFixed(2)}`;
+    }
     if (prep === 'goleiros') {
       av(30);
       // câmera livre de frente para o goleiro do time 1 (laranja) com zagueiros brancos
@@ -183,7 +208,7 @@ for (const c of CENAS) {
   const t0 = Date.now();
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
-    await pagina.goto(`${srv.url}?prints=1&semente=3&${c.url}`, { waitUntil: 'load' });
+    await pagina.goto(`${srv.url}?prints=1&semente=${c.semente ?? 3}&${c.url}`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
@@ -191,7 +216,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' ? 0.5 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' ? 0 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep) : '';
     let notaEd = '';
     if (c.editor) {
@@ -209,7 +234,10 @@ for (const c of CENAS) {
       notaEd = await pagina.evaluate(() => { const r = window.__golaco.editor.rascunho; return `editor ${window.__golaco.editor.aba} (${window.__golaco.editor.modo}): ${r.formacao}, subst. ${r.substituicoes.length}, escolhido ${r.escolhido ?? '-'}`; });
     }
     // alguns quadros com desenho (a mola da câmera e os botões assentam), o último é o print
-    await pagina.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: true }); });
+    // (no gol: o "GOL!" de verdade, com autor e minuto, forçado por cima dos prints; o desenho fica parado
+    // no instante da rede estufada enquanto a animação do aviso chega no ponto)
+    if (c.prep === 'golRede') await pagina.evaluate(() => window.__golaco.desenhar());
+    else await pagina.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: true }); });
     if (c.livre) {
       await pagina.evaluate(l => {
         const g = window.__golaco;
@@ -222,11 +250,25 @@ for (const c of CENAS) {
     if (c.depois === 'menu') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirMenu(); });
     if (c.depois === 'ajuda') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirAjuda(); });
     if (c.depois === 'gol') {
-      await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.mostrarEvento({ tipo: 'gol', time: 0 }); });
-      await pagina.waitForTimeout(400); // transição do "GOL!"
+      await pagina.evaluate(() => {
+        document.documentElement.classList.remove('modo-prints');
+        window.__golaco.mostrarEvento({ tipo: 'gol', time: 0, autor: 9 }, { fixo: true });
+        // o relógio das animações CSS do headless anda devagar: a animação do aviso é posta em 0,9 s e parada
+        for (const el of [document.getElementById('gol-tela'), document.querySelector('.placar')]) for (const an of el.getAnimations({ subtree: true })) { an.currentTime = 900; an.pause(); }
+      });
     }
     await pagina.evaluate(() => window.__golaco.desenhar());
     await pagina.waitForTimeout(250); // animação de entrada dos botões
+    if (c.prep === 'golRede') {
+      // o "GOL!" de verdade (autor e minuto) por cima do instante da rede estufada; mostrado logo antes do
+      // print (o desenho do headless é lento e o aviso some em 2,4 s); o relógio das animações CSS do headless
+      // anda devagar: a animação é posta em 0,9 s e parada
+      await pagina.evaluate(() => {
+        document.documentElement.classList.remove('modo-prints');
+        if (window.__golPrint) window.__golaco.mostrarEvento(window.__golPrint, { fixo: true });
+        for (const el of [document.getElementById('gol-tela'), document.querySelector('.placar')]) for (const an of el.getAnimations({ subtree: true })) { an.currentTime = 900; an.pause(); }
+      });
+    }
     const arq = path.join(SAIDA, `${c.nome}.png`);
     await pagina.screenshot({ path: arq });
     const lay = c.depois || c.editor ? { problemas: [], caixas: [] } : await conferirLayout(pagina);

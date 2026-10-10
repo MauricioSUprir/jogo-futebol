@@ -55,8 +55,8 @@ if (!RO) {
     for (let r = 1.5; r <= 5; r += 0.01) { const v = Math.abs(perfil(r, tau2)); if (v > vM2) { vM2 = v; rMax2 = r; } }
     reg('Onda corre pelo pano (frente da onda)', `τ 0,3 s: máx em ${fmt(rMax, 2)} m (frente ${fmt(frente, 2)}); τ 0,45 s: ${fmt(rMax2, 2)} m (${fmt(frente2, 2)})`, '±0,5 m da frente, e anda', Math.abs(rMax - frente) <= 0.5 && Math.abs(rMax2 - frente2) <= 0.5 && rMax2 > rMax + 0.5);
     const a25 = amplitude(25), a5 = amplitude(5), a1 = amplitude(0.5), a35 = amplitude(35);
-    reg('Bolsa pela força do chute (satura)', `25 m/s ${fmt(a25, 2)} m · 5 m/s ${fmt(a5, 2)} · 35 m/s ${fmt(a35, 2)} · 0,5 m/s ${fmt(a1, 2)}`, '25: 0,35–0,55 · 5: 0,10–0,25 · 35 ≤ 0,55 · lenta 0',
-      a25 >= 0.35 && a25 <= 0.55 && a5 >= 0.1 && a5 <= 0.25 && a35 <= REDE.ampMax && a35 > a25 && a1 === 0);
+    reg('Bolsa pela força do chute (satura)', `25 m/s ${fmt(a25, 2)} m · 5 m/s ${fmt(a5, 2)} · 35 m/s ${fmt(a35, 2)} · 0,5 m/s ${fmt(a1, 2)}`, '25: 0,45–0,70 · 5: 0,12–0,30 · 35 ≤ 0,70 · lenta 0',
+      a25 >= 0.45 && a25 <= 0.7 && a5 >= 0.12 && a5 <= 0.3 && a35 <= REDE.ampMax && a35 > a25 && a1 === 0);
     // armação parada: arestas de todos os 8 panos
     let maxBorda = 0, minMeio = 1;
     for (let i = 0; i < 8; i++) {

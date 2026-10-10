@@ -62,7 +62,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
 /**
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
- * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao).
+ * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
+ * desligado), volume (0–1).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -71,6 +72,7 @@ export function criarHud(opc) {
     carregando: $('carregando'), msg: $('carregando-msg'), marcador: $('estado-marcador'), infoQ: $('info-qualidade'),
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'), golQuem: $('gol-quem'),
+    golNumero: $('gol-numero'), golNome: $('gol-nome'), somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
     mapa: $('minimapa'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
@@ -81,6 +83,8 @@ export function criarHud(opc) {
   let ultimoHud = -1;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
   let timerAviso = null, timerGol = null;
+  // o "GOL!" dura o mesmo que a animação do CSS (2,4 s: some antes da saída de bola, PARTIDA.golPausa 2,5 s)
+  const golDuracaoMs = 2400;
   let prints = false;
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
@@ -117,6 +121,7 @@ export function criarHud(opc) {
     rotulo();
   }
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
+  el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -364,11 +369,28 @@ export function criarHud(opc) {
       if (prints && !forcar) return;
       const tipo = typeof ev === 'string' ? ev : ev?.tipo;
       if (tipo === 'gol') {
+        // extra.gol = {numero, nome, minuto, contra} (main.js, pelo elenco); sem ele (treino), só o time
         const t = typeof ev === 'object' ? ev.time : undefined;
-        if (el.golQuem) el.golQuem.textContent = t === 0 || t === 1 ? times[t].nome : '';
+        const g = extra.gol ?? {};
+        const time = t === 0 || t === 1 ? times[t].nome : '';
+        if (el.golNumero) el.golNumero.textContent = g.numero != null ? String(g.numero) : '';
+        if (el.golNome) el.golNome.textContent = g.nome ?? '';
+        if (el.golQuem) {
+          const partes = [g.contra ? `Gol contra · ${time}` : time];
+          if (Number.isFinite(g.minuto)) partes.push(`${g.minuto}'`);
+          el.golQuem.textContent = partes.filter(Boolean).join(' · ');
+        }
+        // reinicia a animação (gol logo depois de outro, ou o print forçado)
+        el.golTela?.classList.remove('visivel');
+        el.golTela?.classList.toggle('contra', !!g.contra);
+        void el.golTela?.offsetWidth;
         el.golTela?.classList.add('visivel');
         clearTimeout(timerGol);
-        timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, 2000);
+        // (extra.fixo: os prints de conferência seguram o aviso na tela)
+        if (!extra.fixo) timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, golDuracaoMs);
+        // placar pulsando
+        const pl = el.golTela ? $('hud')?.querySelector('.placar') : null;
+        if (pl) { pl.classList.remove('gol-pulso'); void pl.offsetWidth; pl.classList.add('gol-pulso'); }
         el.aviso.classList.remove('visivel');
         return;
       }
@@ -473,6 +495,15 @@ export function criarHud(opc) {
       if (typeof e.toqueTamanho === 'number' && el.tam) {
         el.tam.value = String(Math.round(e.toqueTamanho * 100));
         el.saidaTam.textContent = `${Math.round(e.toqueTamanho * 100)}%`;
+      }
+      if (typeof e.som === 'boolean') marcarGrupo('som', e.som ? 'ligado' : 'desligado');
+      if (typeof e.volume === 'number' && el.somVol) {
+        el.somVol.value = String(Math.round(e.volume * 100));
+        el.saidaVol.textContent = `${Math.round(e.volume * 100)}%`;
+      }
+      if (typeof e.somEstado === 'string' && el.infoSom) {
+        el.infoSom.textContent = e.somEstado === 'sem-audio' ? 'Este navegador não tem Web Audio: sem som.'
+          : e.somEstado === 'rodando' ? 'Torcida, apito e rede' : 'Toque na tela ou aperte uma tecla para o som começar';
       }
       if (typeof e.toqueOpacidade === 'number' && el.opa) {
         el.opa.value = String(Math.round(e.toqueOpacidade * 100));

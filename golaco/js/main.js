@@ -15,6 +15,13 @@
 // uma EDIÇÃO que fica na fila (edicaoNaFila, uma por vez) e entra como ação-objeto no 1º passo
 // depois da pausa — nunca uma escrita direta no mundo (determinismo e replay).
 //
+// Estádio (render, não mexe no mundo nem no hash): a cada passo a bola antes/depois do passo procura
+// batidas na rede (rede-onda.js) — a rede estufa no shader e a bola DESENHADA vai junto no bojo; os
+// eventos do passo e a posição da bola alimentam o ânimo da torcida (emocao.js), que move a torcida 3D
+// (torcida.js) e o som (som.js, Web Audio, liga no primeiro gesto). Gol: "GOL!" com autor e minuto
+// (hud.js), placar pulsando e zoom/tremor leve da câmera (camera.js efeitoGol). Relógio do estádio:
+// passosTotais (não volta a zero ao trocar de mundo), parado na pausa.
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1.
@@ -35,6 +42,11 @@ import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
 import { criarMarcas } from './render/marcas.js';
+import { mascaraGolaco } from './render/texturas.js';
+import { criarTorcida } from './render/torcida.js';
+import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
+import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
+import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo } from './partida.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
@@ -112,6 +124,16 @@ const bolaAnt = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 const bolaAtu = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 let contPassos = 0;
 let alfa = 0;
+// estádio: rede que balança e ânimo da torcida, no relógio do desenho (passosTotais nunca volta a zero)
+let passosTotais = 0;
+const ondas = criarOndas();
+const emocao = criarEmocao();
+const _p0 = { x: 0, y: 0, z: 0 }, _v0 = { x: 0, y: 0, z: 0 };
+const _impactos = [];
+const _ctxEmocao = { t: 0, timeDe: id => timeDe(id), bola: null, ataca: null };
+const _passoEmocao = { t: 0, bola: null, posseTime: null, ataca: null, estado: null };
+/** Tempo do estádio (s) do estado desenhado: o passo atual menos 1 mais alfa. */
+const tempoEstadio = () => Math.max(0, (passosTotais - 1 + alfa) * PASSO);
 const filaAcoes = [];
 // edição do time vinda do "Editar time": entra (uma por vez) no 1º passo depois da pausa
 let edicaoNaFila = null;
@@ -175,10 +197,14 @@ function rodarPasso(entrada, acoes) {
   }
   bolaAnt.p.copy(bolaAtu.p); bolaAnt.q.copy(bolaAtu.q);
   const idAntes = idControlado();
+  const bb = mundo.bola;
+  _p0.x = bb.p.x; _p0.y = bb.p.y; _p0.z = bb.p.z; _v0.x = bb.v.x; _v0.y = bb.v.y; _v0.z = bb.v.z;
   const t0 = agoraMs();
   const eventos = passoDoMundo(mundo, entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
   const t1 = agoraMs();
   contPassos++;
+  passosTotais++;
+  estadioPasso(eventos);
   // atual ← pose deste passo (calculada uma vez por passo); quem saiu do mundo (marcador
   // desligado, substituição) perde o estado — sem alocar nada por passo
   for (const j of mundo.jogadores) {
@@ -228,12 +254,28 @@ function atualizarFase() {
 // "Bola perdida" de um zagueiro adversário, "Goleiro saiu do gol" do goleiro deles)
 const SO_MEU_TIME = new Set(['passe', 'troca', 'perda', 'saidaGoleiro']);
 const camisaDe = id => fichaDe(id)?.camisa ?? String(id);
+/** Autor (número e nome do elenco), minuto e gol contra, para o "GOL!". */
+function dadosDoGol(ev) {
+  const f = ev.autor != null ? fichaDe(ev.autor) : null;
+  const tAutor = ev.autor != null ? timeDe(ev.autor) : null;
+  return {
+    numero: f ? f.num : null, nome: f ? f.nome : null,
+    minuto: mundo.partida ? minutoDeJogo(mundo) : null,
+    contra: tAutor != null && ev.time != null && tAutor !== ev.time,
+  };
+}
 const textoPlacar = () => {
   const t = hud.times;
   return `${t[0].sigla} ${mundo.placar?.[0] ?? 0} × ${mundo.placar?.[1] ?? 0} ${t[1].sigla}`;
 };
 function tratarEvento(ev) {
   const t = ev.tipo;
+  // gol: "GOL!" com o autor (do elenco fictício) e o minuto, placar pulsando e o efeito da câmera
+  if (t === 'gol') {
+    hud.evento(ev, { gol: dadosDoGol(ev) });
+    if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, 0);
+    return;
+  }
   // a troca automática no passe já aparece como o passe; a troca no jogo aéreo aparece no anel
   if (SO_MEU_TIME.has(t) && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
@@ -275,6 +317,28 @@ function tratarEvento(ev) {
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }
 
+/**
+ * Estádio, uma vez por passo (depois do passo, só lendo o mundo): batidas da bola na rede → ondas da rede
+ * e o "chuá"; eventos e bola → ânimo da torcida; disparos de som. Nada aqui escreve no mundo.
+ */
+function estadioPasso(eventos) {
+  const b = mundo.bola;
+  const tFim = passosTotais * PASSO;
+  const n = detectarImpactos(_p0, _v0, b.p, b.v, _impactos);
+  _ctxEmocao.t = tFim; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
+  for (let k = 0; k < n; k++) {
+    // a batida foi dentro do passo: meio passo antes do fim
+    if (registrarImpacto(ondas, _impactos[k], tFim - PASSO / 2)) emocaoEvento(emocao, { tipo: 'redeImpacto', vel: _impactos[k].vel }, _ctxEmocao);
+  }
+  for (const ev of eventos) emocaoEvento(emocao, ev, _ctxEmocao);
+  const p = _passoEmocao;
+  p.t = tFim; p.bola = b.p; p.ataca = mundo.ataca; p.estado = mundo.partida?.estado ?? null;
+  p.posseTime = mundo.posse != null ? timeDe(mundo.posse) : (mundo.voo ? (mundo.voo.time ?? timeDe(mundo.voo.de)) : (mundo.partida?.ultimoTime ?? null));
+  emocaoPasso(emocao, p, PASSO);
+  const ds = consumirDisparos(emocao);
+  if (som) for (const d of ds) som.tocar(d);
+}
+
 // [texto, forte] — pares fixos (nada é alocado por quadro)
 const MODO_J = {
   naMao: ['Bola na mão', true], semBola: ['Sem bola', false], pedalada: ['Pedalada', true],
@@ -304,7 +368,7 @@ function forcaDaCarga(cg) {
 iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
-let cena3d, campo, bola3d, jog3d, cam, entrada, marcas;
+let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, torcida, som = null;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -318,6 +382,9 @@ const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
 const _bp = { x: 0, y: 0, z: 0 };
+const _bpDes = { x: 0, y: 0, z: 0 }, _emp = { x: 0, y: 0, z: 0 };
+// testes: desliga a onda da rede só no desenho (o mesmo quadro com e sem a deformação)
+let redeLigada = true;
 const _proj = new THREE.Vector3();
 const alvoCam = { jx: 0, jz: 0, jvx: 0, jvz: 0, bx: 0, bz: 0, ax: NaN, az: NaN };
 /** Ponto do mundo → px CSS (sem alocar). */
@@ -352,7 +419,12 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   _bp.y = lerp(bolaAnt.p.y, bolaAtu.p.y, alfa);
   _bp.z = lerp(bolaAnt.p.z, bolaAtu.p.z, alfa);
   _qd.slerpQuaternions(bolaAnt.q, bolaAtu.q, alfa);
-  bola3d.atualizar(_bp, _qd);
+  // a bola DESENHADA vai junto no bojo da rede (o ponto da física fica em render.bola)
+  const tEst = tempoEstadio();
+  if (redeLigada) empurraoBola(ondas, _bp, tEst, _emp); else { _emp.x = 0; _emp.y = 0; _emp.z = 0; }
+  _bpDes.x = _bp.x + _emp.x; _bpDes.y = _bp.y + _emp.y; _bpDes.z = _bp.z + _emp.z;
+  bola3d.atualizar(_bpDes, _qd);
+  uniformsRede(ondas, redeLigada ? tEst : -1e9, campo.rede.a, campo.rede.b);
   // jogadores interpolados (quantos houver, dos dois times)
   const idC = idControlado();
   const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
@@ -389,6 +461,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tj1 = performance.now();
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   campo.atualizar(agoraMs / 1000);
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
+  if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
   const td1 = performance.now();
@@ -490,6 +564,7 @@ function adaptarQualidade(dt, agora) {
 
 function aplicarQualidade(recriar) {
   cena3d.definirQualidade(qAtual, recriar);
+  torcida.definirQualidade(qAtual);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -597,7 +672,7 @@ function comando(c, v) {
       break;
     case 'hora':
       if (v !== 'dia' && v !== 'noite') break;
-      hora = v; cena3d.definirHora(v); campo.definirHora(v);
+      hora = v; cena3d.definirHora(v); campo.definirHora(v); torcida.definirHora(v);
       document.documentElement.classList.toggle('noite', v === 'noite');
       hud.definirEstado({ hora: v });
       prefs.hora = v; salvarPrefs(prefs);
@@ -608,6 +683,20 @@ function comando(c, v) {
       hud.definirEstado({ camera: v });
       prefs.camera = v; salvarPrefs(prefs);
       break;
+    case 'som':
+      if (v !== 'ligado' && v !== 'desligado') break;
+      prefs.som = v === 'ligado'; salvarPrefs(prefs);
+      som?.definir({ ligado: prefs.som });
+      hud.definirEstado({ som: prefs.som });
+      break;
+    case 'volume': {
+      const vol = Math.max(0, Math.min(1, +v));
+      if (!Number.isFinite(vol)) break;
+      prefs.volume = vol; salvarPrefs(prefs);
+      som?.definir({ volume: vol });
+      hud.definirEstado({ volume: vol });
+      break;
+    }
     case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
     case 'toqueOpacidade': entrada.definirAjustes({ opacidade: v }); hud.definirEstado({ toqueOpacidade: entrada.ajustes.opacidade }); break;
     default: break;
@@ -629,6 +718,9 @@ async function iniciar() {
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia() });
   cena3d.cena.add(campo.grupo);
   campo.definirHora(hora);
+  hud.progresso('Enchendo as arquibancadas…');
+  await proximoQuadro();
+  torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraGolaco(), hora });
   hud.progresso('Montando os jogadores…');
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
@@ -651,6 +743,13 @@ async function iniciar() {
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false,
   });
   hud.definirTimes(timesDoMundo(mundo));
+  // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
+  const somLigado = prefs.som !== false, volume = Number.isFinite(prefs.volume) ? prefs.volume : undefined;
+  if (!PRINTS) {
+    som = criarSom({ base: 'assets/sons/', ligado: somLigado, volume, aoMudar: e => hud.definirEstado({ somEstado: e }) });
+    som.iniciar();
+  }
+  hud.definirEstado({ som: somLigado, volume: som ? som.volume : (volume ?? 0.8), somEstado: som ? som.estado : 'sem-contexto' });
   if (params.get('qps') === '1') hud.mostrarQps(true);
   hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
@@ -678,6 +777,8 @@ function trocarMundo(m) {
   filaAcoes.length = 0;
   edicaoNaFila = null;
   kitCache.clear();
+  limparOndas(ondas);
+  zerarEmocao(emocao);
   if (editor.aberto) editor.fechar();
   iniciarEstados();
   corteCamera = true;
@@ -834,11 +935,36 @@ const api = {
   /** Escreve um modo/posição no painel do HUD já (testes de layout com o texto mais longo). */
   hudModo(texto, posicao = null) { hud.atualizar(performance.now(), 0, texto, false, posicao); },
   /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
-  mostrarEvento(ev) { hud.evento(ev, { tipoVoo: mundo.voo?.tipo }, true); },
+  mostrarEvento(ev, opc = {}) { hud.evento(ev, ev?.tipo === 'gol' ? { gol: dadosDoGol(ev), fixo: !!opc.fixo } : { tipoVoo: mundo.voo?.tipo }, true); },
   /** Desenha um quadro sem avançar nada (prints). */
   desenhar() { desenharQuadro(0, relogioManual ? tempoManual : performance.now()); },
   /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */
   cameraLivre(l) { cam.definirLivre(l); },
+  /**
+   * Estádio (testes): a torcida (quantos, qualidade, animada, visível), a rede (batidas, se ainda mexe, o
+   * deslocamento de um ponto agora), o ânimo e o som (estado do AudioContext, camadas, quantas vezes cada
+   * som tocou, ganho que sai). A bola DESENHADA (com o bojo da rede) em bolaDesenhada.
+   */
+  estadio: {
+    get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
+    get rede() {
+      const t = tempoEstadio();
+      return { batidas: ondas.total, ativa: redeAtiva(ondas, t), tempo: t, impactos: ondas.imp.filter(i => i.ativo).map(i => ({ ...i })) };
+    },
+    /** Deslocamento (m, para fora do gol) do ponto do pano agora (com a fixação da armação). */
+    deslocamentoRede(plano, x, y, z) { return deslocamento(ondas, plano, x, y, z, tempoEstadio()) * fixoRede(plano, x, y, z); },
+    get emocao() { return { agito: emocao.agito, torcida: emocao.torcida.map(g => ({ ...g })), contagem: { ...emocao.contagem } }; },
+    get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
+    /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
+    redeOnda(v) { redeLigada = !!v; },
+    /** Mostra/esconde a torcida (conferência de pixels nos testes). */
+    mostrarTorcida(v) { if (torcida?.mesh) torcida.mesh.visible = !!v; },
+    get bolaDesenhada() { return { ..._bpDes }; },
+    get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
+    baixarSons() { return som ? som.baixar() : null; },
+  },
+  definirSom(v) { comando('som', v ? 'ligado' : 'desligado'); },
+  definirVolume(v) { comando('volume', v); },
   /** Ponto do mundo → pixel CSS na tela (testes: "direita no analógico = direita na tela"). */
   naTela(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(cam.camera);

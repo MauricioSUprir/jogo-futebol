@@ -128,23 +128,75 @@ html.noite .vinheta { display: block; }
 .aviso.forte { border-left-color: #fff; }
 html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
 
-/* GOL! grande e verde no meio da tela (2 s) */
+/* GOL! (efeito do gol, 2,4 s): faixa verde que corta a tela na diagonal, "GOL!" que bate grande e
+   treme, o autor (número + nome) e o time com o minuto. Entra 0,3 s DEPOIS do gol e no terço de baixo da
+   tela (a rede estufando na boca do gol — no meio do quadro — aparece antes e sem nada na frente). Nada
+   clicável (os controles seguem livres) e some antes da saída de bola. Com "reduzir movimento": só
+   aparece e some. */
 .gol-tela {
-  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.6); opacity: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;
-  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
+  position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); opacity: 0; visibility: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+  width: 100vw; padding: 0 calc(var(--sa-r) + 16px) 0 calc(var(--sa-l) + 16px);
 }
-.gol-tela span {
-  font-size: clamp(64px, 15vmin, 150px); font-weight: 900; font-style: italic; letter-spacing: 0.04em; line-height: 0.9;
+.gol-faixa {
+  position: absolute; left: -10vw; right: -10vw; top: 50%; height: clamp(84px, 24vmin, 210px); transform: translateY(-58%) skewY(-4deg) scaleX(0);
+  background: linear-gradient(90deg, rgba(7, 9, 10, 0) 0%, rgba(7, 9, 10, 0.82) 14%, rgba(7, 9, 10, 0.82) 86%, rgba(7, 9, 10, 0) 100%);
+  border-top: 3px solid var(--verde); border-bottom: 3px solid var(--verde); z-index: -1;
+}
+.gol-palavra {
+  font-size: clamp(64px, 17vmin, 168px); font-weight: 900; font-style: italic; letter-spacing: 0.04em; line-height: 0.9;
   color: var(--verde); -webkit-text-stroke: 3px var(--preto); paint-order: stroke fill;
-  text-shadow: 0 0 40px rgba(25, 224, 122, 0.55), 0 6px 0 rgba(0, 0, 0, 0.55);
+  text-shadow: 0 0 40px rgba(25, 224, 122, 0.6), 0 6px 0 rgba(0, 0, 0, 0.55);
 }
+.gol-autor {
+  display: flex; align-items: center; gap: 10px; max-width: 100%;
+  font-size: clamp(15px, 3.6vmin, 22px); font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+}
+.gol-autor span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gol-autor b {
+  flex: none; min-width: 1.9em; padding: 2px 6px; border-radius: 6px; text-align: center; font-variant-numeric: tabular-nums;
+  color: var(--preto); background: var(--verde);
+}
+.gol-autor b:empty, .gol-autor span:empty { display: none; }
 .gol-tela small {
-  font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--preto);
+  font-size: 12px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--preto);
   background: var(--verde); padding: 5px 12px; border-radius: 6px;
 }
 .gol-tela small:empty { display: none; }
-.gol-tela.visivel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.gol-tela.contra .gol-autor b { background: var(--sai); }
+.gol-tela.visivel { visibility: visible; animation: gol-aparece 2.4s linear forwards; }
+.gol-tela.visivel .gol-faixa { animation: gol-faixa 2.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
+.gol-tela.visivel .gol-palavra { animation: gol-bate 2.4s cubic-bezier(0.2, 1.5, 0.35, 1) forwards; }
+.gol-tela.visivel .gol-autor, .gol-tela.visivel small { animation: gol-sobe 2.4s ease-out forwards; }
+/* 0–12,5% (0,3 s): nada — a rede estufa primeiro */
+@keyframes gol-aparece { 0%, 12% { opacity: 0; } 16%, 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gol-faixa { 0%, 12% { transform: translateY(-58%) skewY(-4deg) scaleX(0); } 24%, 100% { transform: translateY(-58%) skewY(-4deg) scaleX(1); } }
+@keyframes gol-bate {
+  0%, 12% { transform: scale(2.6) rotate(-6deg); opacity: 0; }
+  20% { transform: scale(0.94) rotate(-3deg); opacity: 1; }
+  24% { transform: scale(1.06) rotate(-3deg) translateX(-4px); }
+  27% { transform: scale(1) rotate(-3deg) translateX(4px); }
+  30% { transform: scale(1.02) rotate(-3deg) translateX(-2px); }
+  34%, 70% { transform: scale(1) rotate(-3deg); }
+  78% { transform: scale(1.05) rotate(-3deg); }
+  86%, 100% { transform: scale(1) rotate(-3deg); }
+}
+@keyframes gol-sobe { 0%, 20% { transform: translateY(14px); opacity: 0; } 32%, 100% { transform: translateY(0); opacity: 1; } }
+/* celular: um pouco acima (os botões e o analógico ficam embaixo) */
+html.com-toque .gol-tela { top: 62%; }
+@media (prefers-reduced-motion: reduce) {
+  .gol-tela.visivel .gol-faixa, .gol-tela.visivel .gol-palavra, .gol-tela.visivel .gol-autor, .gol-tela.visivel small { animation: none; }
+  .gol-tela .gol-faixa { transform: translateY(-58%) skewY(-4deg); }
+}
+/* placar pulsando no gol (o lado de quem marcou) */
+.placar.gol-pulso { animation: placar-pulso 2.4s ease-out; }
+@keyframes placar-pulso {
+  0%, 30%, 60% { box-shadow: 0 0 0 0 rgba(25, 224, 122, 0.85); }
+  15%, 45%, 75% { box-shadow: 0 0 0 7px rgba(25, 224, 122, 0), 0 0 22px rgba(25, 224, 122, 0.55); border-color: var(--verde); background: rgba(10, 92, 51, 0.85); }
+  100% { box-shadow: 0 0 0 0 rgba(25, 224, 122, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .placar.gol-pulso { animation: none; border-color: var(--verde); } }
 
 /* faixa do intervalo e do fim de jogo (partida): no meio da tela, por cima do campo */
 .faixa {

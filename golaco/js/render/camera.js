@@ -45,6 +45,13 @@ const RETRATO = {
 const ASPECTO_TV = 16 / 9;
 const CHAVES = Object.keys(PERFIS.tv);
 
+// Efeito do gol (render): zoom leve (o fov fecha até 9%) e um tremor curto que morre em ~1 s — sem
+// enjoar: amplitude ≤ 0,12 m (a 44 m do foco: ~0,15°), 6–9,5 Hz, sem girar a câmera além do que o "olhar" desloca (metade do tremor), e o
+// foco puxa um pouco para a boca do gol (a rede estufada aparece). Com "reduzir movimento" do sistema:
+// sem tremor e metade do zoom.
+export const EFEITO_GOL = { duracao: 2.4, zoom: 0.09, zoomEntra: 0.35, zoomSai: [1.6, 2.4], tremor: 0.12, tremorTau: 0.3, puxaGol: 0.3 };
+const reduzMovimento = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
 function lerp(a, b, t) { return a + (b - a) * t; }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function suave(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
@@ -58,6 +65,7 @@ export function criarCamera(aspecto) {
     iniciado: false,
     aspecto,
     pequena: false,           // tela de celular (menor lado < 520 px CSS)
+    gol: { ativo: false, t: 0, x: 0, z: 0, reduz: false }, // efeito do gol
   };
   const yaw = -Math.PI / 2;
   const _p = {};
@@ -84,8 +92,23 @@ export function criarCamera(aspecto) {
     const d = Math.hypot(p.distancia, p.altura - p.olharY);
     return (2 * Math.atan(larg / 2 / d / a) * 180) / Math.PI;
   }
+  /** Zoom (fração do fov) e tremor (m) do efeito do gol no tempo do efeito. */
+  function efeitoGol() {
+    const g = est.gol;
+    if (!g.ativo) return null;
+    const E = EFEITO_GOL, t = g.t;
+    const zoom = E.zoom * (g.reduz ? 0.5 : 1) * suave(t / E.zoomEntra) * (1 - suave((t - E.zoomSai[0]) / (E.zoomSai[1] - E.zoomSai[0])));
+    const a = g.reduz ? 0 : E.tremor * Math.exp(-t / E.tremorTau) * (1 - suave((t - 0.9) / 0.4));
+    // tremor grave (6–9,5 Hz: o estádio "treme", sem o zumbido de alta frequência que enjoa)
+    const tx = a * (0.6 * Math.sin(t * 2 * Math.PI * 6.1) + 0.4 * Math.sin(t * 2 * Math.PI * 9.4 + 1.3));
+    const ty = a * (0.55 * Math.sin(t * 2 * Math.PI * 7.3 + 0.7) + 0.45 * Math.sin(t * 2 * Math.PI * 8.9 + 2.1));
+    _ef.zoom = zoom; _ef.tx = tx; _ef.ty = ty;
+    return _ef;
+  }
+  const _ef = { zoom: 0, tx: 0, ty: 0 };
   function posicionar(p) {
-    const fov = fovPara(p);
+    const ef = efeitoGol();
+    const fov = fovPara(p) * (ef ? 1 - ef.zoom : 1);
     if (Math.abs(camera.fov - fov) > 1e-4 || camera.aspect !== est.aspecto) {
       camera.fov = fov;
       camera.aspect = est.aspecto;
@@ -99,8 +122,13 @@ export function criarCamera(aspecto) {
       if (l.fov && Math.abs(camera.fov - l.fov) > 1e-4) { camera.fov = l.fov; camera.updateProjectionMatrix(); }
       return;
     }
-    camera.position.set(est.x, p.altura, est.z + p.distancia);
-    camera.lookAt(est.x, p.olharY, est.z);
+    if (ef) {
+      camera.position.set(est.x + ef.tx, p.altura + ef.ty, est.z + p.distancia);
+      camera.lookAt(est.x + ef.tx * 0.5, p.olharY + ef.ty * 0.5, est.z);
+    } else {
+      camera.position.set(est.x, p.altura, est.z + p.distancia);
+      camera.lookAt(est.x, p.olharY, est.z);
+    }
   }
   return {
     camera,
@@ -137,6 +165,16 @@ export function criarCamera(aspecto) {
       const mx = p.largura * 0.38, mz = p.largura * 0.24;
       fx = clamp(fx, alvo.bx - mx, alvo.bx + mx);
       fz = clamp(fz, alvo.bz - mz, alvo.bz + mz);
+      // efeito do gol: o foco puxa um pouco para a boca do gol (a rede estufada no quadro)
+      const g = est.gol;
+      if (g.ativo) {
+        g.t += dt;
+        if (g.t >= EFEITO_GOL.duracao) g.ativo = false;
+        else {
+          const w = EFEITO_GOL.puxaGol * suave(g.t / 0.4) * (1 - suave((g.t - 1.6) / 0.8));
+          fx = lerp(fx, g.x, w); fz = lerp(fz, g.z, w);
+        }
+      }
       fx = clamp(fx, -p.limX, p.limX);
       fz = clamp(fz, p.limZ0, p.limZ1);
       if (!est.iniciado || corte) {
@@ -150,6 +188,9 @@ export function criarCamera(aspecto) {
     },
     /** Foco atual da câmera (para a sombra acompanhar a jogada). */
     foco() { _foco.x = est.x; _foco.z = est.z; return _foco; },
+    /** Efeito do gol na boca do gol (x, z): zoom leve e tremor curto (EFEITO_GOL). */
+    efeitoGol(x, z) { Object.assign(est.gol, { ativo: true, t: 0, x, z, reduz: reduzMovimento() }); },
+    get efeitoAtivo() { return est.gol.ativo; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };

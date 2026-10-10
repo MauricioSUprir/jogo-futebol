@@ -27,17 +27,19 @@ export const REDE = {
   maxImpactos: 4,       // impactos guardados ao mesmo tempo (uniforms do shader)
   freq: 2.0,            // Hz — frequência natural da bolsa
   amort: 0.3,           // ζ — passa do ponto ~37% e para em ~1 s
-  ampMax: 0.55,         // m — bolsa máxima (chute forte)
-  vRef: 14,             // m/s — saturação: amp = ampMax·(1 − e^(−v/vRef)); 25 m/s → 0,46 m, 5 m/s → 0,17 m
+  ampMax: 0.7,          // m — bolsa máxima (chute forte; a rede do fundo tem folga)
+  vRef: 14,             // m/s — saturação: amp = ampMax·(1 − e^(−v/vRef)); 25 m/s → 0,58 m, 5 m/s → 0,21 m
   vMin: 0.8,            // m/s — batida mais lenta que isto não mexe a rede
-  sigma: 0.62,          // m — raio da bolsa (gaussiana)
+  sigma: 0.75,          // m — raio da bolsa (gaussiana)
   ondaVel: 6.5,         // m/s — a onda corre pelo pano
   ondaLarg: 0.42,       // m — largura da frente da onda (Ricker)
   ondaAmp: 0.32,        // fração do impacto na onda
   ondaDecai: 0.45,      // s — a onda some com e^(−τ/ondaDecai)
   duracao: 1.6,         // s — depois disso o impacto não conta (janela suave a partir de 80%)
-  borda: 0.5,           // m — perto da armação a rede não se mexe (perfil seno até a borda)
-  bordaChao: 0.2,       // m — na barra do chão o pano é mais solto (o chute rasteiro também estufa)
+  borda: 0.6,           // m — perto da armação a rede não se mexe (perfil seno até a borda)
+  bordaChao: 0.25,      // m — na barra do chão o pano é mais solto (o chute rasteiro também estufa)
+  margemBolsa: 0.55,    // m — a bolsa se forma na parte solta do pano: o centro fica a ≥ isto da armação
+  margemChao: 0.3,      // m — idem, da barra do chão
   outrosPanos: 0.3,     // fração que chega aos outros panos do mesmo gol (o tecido é um só)
   tol: 0.05,            // m — folga para achar a bola encostada no plano
 };
@@ -123,6 +125,20 @@ function restante(i, t) {
 }
 
 /**
+ * Centro da bolsa de uma batida no ponto (x, y, z) do pano i: o próprio ponto, puxado para dentro do pano
+ * até margemBolsa da armação (margemChao da barra do chão) — batida no canto faz a bolsa na parte solta,
+ * não uma dobra encostada na trave. Escreve em out {x, y, z}.
+ */
+export function centroBolsa(i, x, y, z, out) {
+  const s = i >= 4 ? 1 : -1, k = i & 3, M = REDE.margemBolsa;
+  const yc = clamp(y, Math.min(REDE.margemChao, HG / 2), HG - M);
+  if (k === 0) { out.x = x; out.y = yc; out.z = clamp(z, -ZL + M, ZL - M); }
+  else if (k === 1) { out.x = s * (MX + clamp(s * x - MX, M, PROF - M)); out.y = y; out.z = clamp(z, -ZL + M, ZL - M); }
+  else { out.x = s * (MX + clamp(s * x - MX, M, PROF - M)); out.y = yc; out.z = z; }
+  return out;
+}
+
+/**
  * Guarda a batida imp = {plano, x, y, z, vel, sinal} no tempo t0 (s, no relógio do desenho). Ocupa um
  * espaço livre ou o do impacto que menos se mexe agora. Devolve o impacto guardado (ou null: lenta).
  */
@@ -134,7 +150,8 @@ export function registrarImpacto(est, imp, t0) {
     const e = restante(i, t0);
     if (e < menor) { menor = e; alvo = i; }
   }
-  alvo.ativo = true; alvo.t0 = t0; alvo.x = imp.x; alvo.y = imp.y; alvo.z = imp.z; alvo.plano = imp.plano;
+  centroBolsa(imp.plano, imp.x, imp.y, imp.z, alvo);
+  alvo.ativo = true; alvo.t0 = t0; alvo.plano = imp.plano;
   alvo.amp = a * (imp.sinal < 0 ? -1 : 1);
   est.total++;
   return alvo;
