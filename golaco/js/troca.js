@@ -17,13 +17,15 @@
 //     recomeça a contagem;
 //  2. a cada avaliaTicks (0,1 s, a 1ª no começo do voo) prevê a trajetória da bola uma vez e acha, para
 //     cada jogador de linha do time, o 1º ponto dela a que ele chega a tempo com y ≤ alcance do salto;
-//     disputante = quem chega primeiro (menor tick; desempate pela folga de tempo, depois vagaIdx/id).
+//     disputante = o recebedor do passe, se chega a tempo (ele vem primeiro na bola livre e o toque
+//     marcado dele segura a bola); senão quem chega primeiro (menor tick; desempate pela folga de tempo,
+//     depois vagaIdx/id).
 //     Um companheiro com o toque aéreo marcado (sim.js bolaAltaNoCorpo) para daqui a ≤ janelaMarcado s é o
 //     disputante (com mais de um, o primeiro na ordem da bola livre: o recebedor, depois o mais perto dela);
 //  3. troca na 1ª avaliação do voo (sem esperar; o passe do meu time já trocou para o recebedor no
-//     lançamento e isso conta como a 1ª troca); depois, no máximo correcoesMax correções por bola, cada
-//     uma com o mesmo disputante em `confirma` avaliações seguidas e folga ≥ folgaMin s sobre o controlado
-//     — ou na hora, se um companheiro já tem o toque aéreo marcado;
+//     lançamento e isso conta como a 1ª troca); depois, no máximo correcoesMax correções por bola, na reta
+//     final (≤ janelaMarcado s da disputa), com o mesmo disputante em `confirma` avaliações seguidas e
+//     folga ≥ folgaMin s sobre o controlado — ou na hora, se um companheiro já tem o toque aéreo marcado;
 //  4. não troca se o controlado já tem o toque aéreo (ainda por vir e o primeiro do time), se carrega uma ação (carga ou pedido: o humano está
 //     preparando a jogada com ele) ou se o humano apertou TROCAR há < manualRecente s.
 // Estado por time em m.trocaAerea[time] (reaproveitado; não entra no hash — é derivado do mundo).
@@ -71,12 +73,14 @@ function alcanceY(j) {
 }
 
 /** Tempo (s) para o jogador chegar correndo a (x, z): aceleração até a máxima (a conta do ia.js). */
+let _embalo = 0; // fração da velocidade máxima que o jogador já leva na direção do último ponto (tempoAte)
 function tempoAte(j, x, z) {
   const dx = x - j.x, dz = z - j.z, dist = MD.hypot(dx, dz);
   const d = Math.max(0, dist - 0.5);
   const vmax = j.par.vArrancada;
   // velocidade que já vai na direção do ponto
   const s0 = dist > 1e-6 ? Math.max(0, Math.min(vmax, (j.vx * dx + j.vz * dz) / dist)) : 0;
+  _embalo = s0 / vmax;
   const tAcel = (vmax - s0) / 7;
   const dAcel = (s0 + vmax) / 2 * tAcel;
   return d <= dAcel ? d / Math.max((s0 + vmax) / 2, 1) : tAcel + (d - dAcel) / vmax;
@@ -94,8 +98,9 @@ function pontoDeDisputa(j, out) {
     const t = tempoAte(j, XS[i], ZS[i]);
     const folga = i * PASSO - t;
     // chega com folga: quem precisaria de uma corrida perfeita (sem reação nem curva) não é quem disputa.
-    // A folga pedida encolhe perto da disputa (a 1 s, a margem inteira; em cima da hora, quase nada)
-    if (folga >= T.margem * Math.min(1, i * PASSO)) { out.i = i; out.folga = folga; out.x = XS[i]; out.z = ZS[i]; return out; }
+    // A folga pedida encolhe perto da disputa (a 1 s, a margem inteira; em cima da hora, quase nada) e
+    // para quem já corre para lá (não precisa reagir nem virar)
+    if (folga >= T.margem * Math.min(1, i * PASSO) * (1 - _embalo)) { out.i = i; out.folga = folga; out.x = XS[i]; out.z = ZS[i]; return out; }
   }
   return out;
 }
@@ -112,15 +117,19 @@ const _p = { i: -1, folga: 0, x: 0, z: 0 };
 
 /** Avaliação (a cada 0,1 s): disputante previsto do time e as folgas dele e do controlado. */
 function avaliar(m, t, st, ctrl) {
-  let mel = null, mi = Infinity, mf = -Infinity, mx = 0, mz = 0;
+  let mel = null, mi = Infinity, mf = -Infinity, mx = 0, mz = 0, melPara = false;
   st.iCtrl = Infinity; // o controlado não chega: qualquer outro tem folga infinita sobre ele
+  // o recebedor do passe vem primeiro na bola livre (sim.js bolaLivre): chegando a tempo, é ele quem
+  // disputa — o toque aéreo dele, marcado, segura a bola mesmo que ela passe antes perto de outro
+  const para = m.voo ? m.voo.para : null;
   for (const o of m.jogadores) {
     if (o.time !== t || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
     pontoDeDisputa(o, _p);
     if (_p.i < 0) continue;
     if (o === ctrl) st.iCtrl = _p.i;
-    const melhor = _p.i < mi || (_p.i === mi && (_p.folga > mf || (_p.folga === mf && mel && (o.vagaIdx ?? o.id) < (mel.vagaIdx ?? mel.id))));
-    if (melhor) { mel = o; mi = _p.i; mf = _p.folga; mx = _p.x; mz = _p.z; }
+    const ehPara = o.id === para;
+    const melhor = !melPara && (ehPara || _p.i < mi || (_p.i === mi && (_p.folga > mf || (_p.folga === mf && mel && (o.vagaIdx ?? o.id) < (mel.vagaIdx ?? mel.id)))));
+    if (melhor) { mel = o; mi = _p.i; mf = _p.folga; mx = _p.x; mz = _p.z; melPara = ehPara; }
   }
   const id = mel ? mel.id : -1;
   st.seguidas = id === st.melhor ? st.seguidas + 1 : 1;
@@ -180,11 +189,12 @@ export function trocaAerea(m) {
     }
     // o toque marcado perde para a previsão quando ela (confirmada) põe outro na bola bem antes: alguém mais
     // perto do caminho dela, que só marca o toque em cima da hora (sim.js bolaAltaPassando olha o corpo de
-    // agora), chega antes de quem marcou de longe
+    // agora), chega antes de quem marcou de longe. Nunca contra o recebedor do passe: o toque marcado dele
+    // vem primeiro na bola livre e segura a bola até a hora dele
     const tqc = ctrl.cond && ctrl.cond.toque;
     const tqcVale = tqc && tqc.tipo === 'aereo' && m.tick <= tqc.tick;
     let disputa = marcado ?? (tqcVale ? ctrl : null);
-    if (disputa && st.melhor >= 0 && st.melhor !== disputa.id && st.seguidas >= T.confirma) {
+    if (disputa && disputa.id !== para && st.melhor >= 0 && st.melhor !== disputa.id && st.seguidas >= T.confirma) {
       const iAgora = st.iMelhor - (m.tick - st.tickAval);
       if (iAgora < disputa.cond.toque.tick - m.tick - T.antecede) {
         for (const o of m.jogadores) if (o.id === st.melhor) { disputa = o; break; }
@@ -203,7 +213,10 @@ export function trocaAerea(m) {
         for (const o of m.jogadores) if (o.id === st.melhor) { novo = o; break; }
         if (novo) {
           if (st.primeira && st.trocas === 0) trocar(m, t, st, novo);
-          else if (podeCorrigir && st.seguidas >= T.confirma && (st.iCtrl - st.iMelhor) * PASSO >= T.folgaMin) trocar(m, t, st, novo);
+          // a correção pela previsão só na reta final (≤ janelaMarcado s da disputa): de longe ela ainda erra
+          // (pesquisa §7: o mais perto 0,5 s antes acerta 97%) e gastaria a única correção da bola
+          else if (podeCorrigir && st.seguidas >= T.confirma && (st.iCtrl - st.iMelhor) * PASSO >= T.folgaMin
+            && st.iMelhor * PASSO <= T.janelaMarcado) trocar(m, t, st, novo);
         }
       }
     }
