@@ -544,6 +544,23 @@ export const TATICA = {
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
   olhar: { tauVel: 0.5, giro: 1.2 },
+  // ---- intensidade e recomposição (PR "IA intensa", dono 10/10: "a IA não corre para trás";
+  // PESQUISA-ETAPA3.md, "Intensidade e recomposição")
+  // o meio atrás da bola no meu campo (tatica.js): referência do meio ≤ bola − [0] m, mas não a menos de
+  // [1] + [2] × (distância natural da vaga até a linha) m à frente da linha de defesa, nem a menos de [3] m
+  // do meu gol (a entrada da área)
+  meioAtras: [2, 2.5, 0.2, 18],
+  // RECOMPOSIÇÃO EM DISPARADA (ia-tatica.js recompor): sem a bola, quem está mais de `liga` m à frente do
+  // alvo (a referência; para quem não é da frente, também atrás da bola em `atras` m) volta correndo até
+  // ficar a menos de `desliga` m dele — CORRER (sprint) com mais de `corre` m de atraso; a frente que
+  // fica para o contra-ataque (vaga com x ≥ 0 sem a bola) volta sem o sprint. Enquanto está à frente da
+  // bola, o caminho é pelo lado do gol: o z anda só `lateral` do caminho até a referência. No máximo
+  // `max` s seguidos (depois, o ponto calmo de sempre, por `pausa` s).
+  // (liga também, nos `janela` s depois da perda, com mais de `ligaBola` m à frente da bola, para quem tem a
+  // referência atrás dela)
+  // (no jogo organizado, fora da janela, só liga com mais de `ligaOrganizado` m: a bola longa por cima)
+  // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 8, lateral: 0.5, max: 10, pausa: 2 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -557,15 +574,19 @@ export const IA_DEFESA = {
   doisApertam: [false, false, true],  // ...e o 2º aperta junto (nas outras, o 2º só aperta com gatilho na Alta)
   cobertura: 8.5,             // m — 2º homem (Média e Alta) atrás do 1º, do lado do gol (real: 2º marcador a 9,6 m)...
   coberturaLado: 3,           // m — ...e por dentro (na diagonal)
+  desvio: [3, 1.4],           // m — quem segue a referência contorna o condutor adversário a menos de [0] m que está no caminho (a [1] m dele)
+  coberturaFundo: 1.5,        // m — quem cobre sendo da linha de defesa fica no máximo isto atrás da própria referência (cobre de lado)
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
   antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
   giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
-  livre: { histerese: 0.25, margem: 0.2 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor
+  livre: { histerese: 0.25, margem: 0.2, disputa: 0.6 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
   // menos que eles)
-  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
+  // (PR "IA intensa": janela da Média 3 → 5 s — Bauer & Anzer 2021 e a regra dos 5 s; Alta 5 → 7 s — FIFA 23
+  // "pressão após perda")
+  contrapressao: { s: [0, 5, 7], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
   zona: { raio: 7, peso: 0.6, frente: 1 }, // adversário a ≤ 7 m da referência, no máximo 1 m à frente dela, puxa 60% para o lado do gol dele
   marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
