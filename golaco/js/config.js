@@ -371,4 +371,6 @@ export const GOLEIRO = {
   vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
   recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
+  esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
+  esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
 };
