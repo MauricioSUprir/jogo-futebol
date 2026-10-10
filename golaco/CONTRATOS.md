@@ -362,5 +362,6 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   20 ms de parede, vale a CPU do fio principal: `process.threadCpuUsage`, sem a espera do escalonador nem os fios de fundo).
 - `tools/teste-desempenho-celular.mjs` (navegador): Chromium 844×390, Média, CPU 4×, 30 s de partida demo; CPU por quadro
   sem a GPU p95 ≤ 6 ms e média ≤ 3 ms.
-- Otimização da lógica: o hash da partida tem de ficar igual ANTES/DEPOIS (além do `hash-igual` do treino): mesma semente,
-  as mesmas entradas, `hashMundo` a cada N passos nas duas cópias da lógica.
+- Otimização da lógica: o hash da PARTIDA tem de ficar igual antes e depois (além do `hash-igual` do treino):
+  `node tools/hash-partida.mjs` (repositório × HEAD; `--ref <commit>` ou `--base <pasta js>`): partidas inteiras IA × IA e
+  com humano aleatório (botões de defesa e uma edição do time), `hashMundo` a cada 300 passos nas duas cópias da lógica.
