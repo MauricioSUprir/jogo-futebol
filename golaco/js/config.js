@@ -475,7 +475,7 @@ export const TATICA = {
     [2.5, 32.7, 37.1], [7.5, 36.1, 38.2], [12.5, 39.0, 38.6], [17.5, 42.1, 39.4], [22.5, 45.5, 39.7],
     [27.5, 47.0, 39.5], [32.5, 48.7, 39.8], [37.5, 49.5, 39.7], [42.5, 50.2, 38.9], [47.5, 49.9, 37.2],
   ],
-  linhasSem: { mei: -1.5, ata: 2 }, // m — sem a bola, deslocamento das linhas do meio e da frente (ver tatica.js)
+  linhasSem: { mei: -0.5, ata: 0.5 }, // m — sem a bola, deslocamento das linhas do meio e da frente (ver tatica.js); com a Parte 3 integrada, −1,5/+2 deixava o meio–ataque em ~16,5 m (Forcher 2024: 13,2)
   kFrenteSem: 0.85,           // k da frente sem a bola com a bola no campo de lá (o do atacante é 0,66)
   mentalidadeBloco: 3,        // m por nível de mentalidade (−2..+2), bloco inteiro
   lateralSobe: 1,             // m a mais por nível acima de 0, com a bola, para os laterais/alas
@@ -512,15 +512,18 @@ export const TATICA = {
   // rad/s do rumo pedido andando com a bola atrás do caminho (além de [2] rad), trotando e andando com
   // a bola à frente ([0], [1], [3]); virada além de [4] rad vai de uma vez. ajusta: com o alvo abaixo
   // de vParado m/s há [0] s, vai até ele com intensidade d / dist e fica a [1] m (retoma além de [2]).
-  // tauPressa, tauVelPressa: filtros do ponto de quem pressiona e da velocidade dele (s).
-  suave: { tau: 1.2, tauVel: 0.5, recuo: { s: 3.6, max: 6 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+  // tauPressa, tauVelPressa: filtros do ponto de quem pressiona e da velocidade dele (s). volta: com o
+  // alvo a menos de [0] m do lado de trás do movimento (> 120°), freia e espera [1] s antes de voltar.
+  // recomp: com o alvo recuando a mais de [0] m/s, vai à velocidade dele + [1] (no máximo [2] m/s).
+  // passinho: quieto perto do alvo, anda até ele com intensidade [0] enquanto estiver a mais de [1] m.
+  suave: { tau: 1.2, tauVel: 0.5, volta: [8, 1.0], passinho: [0.1, 0.6], recuo: { s: 3.6, max: 6 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
     trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12,
     tauPressa: 0.2, tauVelPressa: 0.3 },
   // a linha de defesa recua mais à frente da bola (Metrica: altura da linha por faixa)
-  suaveLinha: { tau: 1.2, tauVel: 0.5, recuo: { s: 4.5, max: 7 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+  suaveLinha: { tau: 1.2, tauVel: 0.5, volta: [8, 1.0], passinho: [0.1, 0.6], recomp: [2.0, 0.5, 6.0], recuo: { s: 4.5, max: 7 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
     trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
   // o apoio com a bola pela referência (sem a Parte 3): o mesmo, sem recuo
-  suaveApoio: { tau: 1.2, tauVel: 0.5, recuo: { s: 0, max: 0 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+  suaveApoio: { tau: 1.2, tauVel: 0.5, volta: [8, 1.0], passinho: [0.1, 0.6], recuo: { s: 0, max: 0 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
     trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
   sobeLinha: 0.5,             // fração do avanço (suave.recuo) da linha de defesa subindo com a bola
   recuoFrente: [0.5, 1],      // frações do recuo da linha da frente sem a bola, recuando e subindo (Forcher 2024: meio–ataque 11–15 m)
@@ -583,7 +586,8 @@ export const IA_ATAQUE = {
   // ofensiva: +transOfBonus nas opções à frente.
   condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
   // Utilidade do condutor (ia-ataque.js decidir): U = P·(V + posse) − (1 − P)·(C + posse), V = xT do
-  // destino, C = xT do adversário onde a bola seria perdida ÷ risco aceito, posse = valor de ter a bola.
+  // destino, C = xT do adversário onde a bola seria perdida ÷ risco aceito, posse = valor de ter a bola
+  // (+ posseMeuCampo com o condutor no próprio campo: cheio até −10 m, zero a partir de +10 m).
   //  - passe: velocidade média vPasse (m/s); até passeMax m; longo perde precisão (erroDist por 20 m
   //    além de 20 m); recebedor com adversário a < pressaoRecebe m: −passePress na chance e
   //    −pressaoValor no valor; para impedido vale impedido×;
@@ -602,7 +606,7 @@ export const IA_ATAQUE = {
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
   utilidade: {
-    posse: 0, vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
+    posse: 0, posseMeuCampo: 0.025, vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
     cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
@@ -687,7 +691,9 @@ export const DEFESA_HUMANO = {
   // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Leitor de referência em
   // defesa.js entradaPressao: o companheiro mais perto do condutor (≠ controlado e goleiro) aperta a
   // `aperto` m do lado do gol; troca de quem aperta só com outro `troca` m mais perto.
-  pressao: { aperto: 1.5, troca: 2, validade: 1 },
+  // aperto 1,0 m da bola (com 1,5 m ele parava a ~2,2 m do corpo do condutor: a bola vai ~0,5 m à
+  // frente dele)
+  pressao: { aperto: 1.0, troca: 2, validade: 1 },
 };
 
 // Troca automática no jogo aéreo (plano 3.5; pesquisa §7: reavaliar no voo acerta ~97%).

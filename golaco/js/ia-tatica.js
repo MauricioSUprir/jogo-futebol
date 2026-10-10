@@ -29,7 +29,7 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA } from './config.js';
 import { MD } from './matdet.js';
 import { difAng } from './mat.js';
 import { entradaIA, para, pontoInterceptacao } from './ia.js';
@@ -320,7 +320,9 @@ export function blocoDoTime(m, t) {
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
   const engajado = dGol <= IA_DEFESA.engaja[p];
   B.engajado = engajado;
-  B.aperta1 = !!adv && adv.posicao !== 'GOL' && (comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado;
+  // (com a PRESSÃO do humano valendo, o 1º homem também aperta: o time responde ao pedido — o companheiro
+  // escolhido pelo defesa.js vai junto)
+  B.aperta1 = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.pedido >= 0);
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
   B.aperta2 = !!adv && adv.posicao !== 'GOL' && p >= 2 && engajado && (comGatilho || IA_DEFESA.doisApertam[p]);
 
@@ -563,7 +565,20 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   // no ajuste, o modo pressa com intensidade d / dist (no mínimo a da marcha; a histerese de 0,6 m
   // dele deixa chegar a ajusta[1] m); senão o modo calma do para() (filtro, freada na linha e
   // histerese de 1,2 m)
-  if (it.quieto) { out.x = j.x; out.z = j.z; it.dTick = -9; return out; }
+  // não volta na hora: com o alvo (perto, a menos de volta[0] m) do lado de trás do movimento (mais
+  // de 120°), freia e espera volta[1] s antes de ir para o outro lado — seguir cada ida e volta da
+  // referência (que anda com a bola a cada passe) era o vai e volta (teste-movimento)
+  if (S.volta && !it.quieto && d < S.volta[0]) {
+    const v = MD.hypot(j.vx, j.vz);
+    if (v > 0.5 && (j.vx * (px - j.x) + j.vz * (it.fz - j.z)) < -0.5 * v * d) it.seguraAte = m.tick + seg(S.volta[1]);
+    if (m.tick < it.seguraAte) { out.x = j.x; out.z = j.z; it.dTick = -9; return out; }
+  } else it.seguraAte = -1;
+  if (it.quieto) {
+    // perto do alvo: ajusta andando bem devagar (passinho[0] de intensidade, ~0,6 m/s) até passinho[1] m
+    // dele — ninguém fica plantado no jogo (Metrica: 0,9% do tempo parado; aqui eram ~10%)
+    if (S.passinho && d > S.passinho[1]) { out.x = px; out.z = it.fz; out.mag = S.passinho[0]; out.modo = 'pressa'; out.correr = false; it.dTick = -9; return out; }
+    out.x = j.x; out.z = j.z; it.dTick = -9; return out;
+  }
   if (ajuste) { out.modo = 'pressa'; out.mag = Math.min(1, Math.max(g[2], d / S.dist)); out.correr = d > S.corre; }
   else if (it.lento) out.mag = g[2];
   else {
@@ -572,6 +587,10 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // não tem piso próprio (o rumo já vem filtrado e com o giro limitado, abaixo)
     out.modo = 'pressa';
     out.mag = Math.max(S.trote[2], Math.min(d < S.trote[1] ? S.trote[0] : 1, d / 14));
+    // recomposição: com o alvo recuando para o meu gol mais rápido que recomp[0] m/s, vai no ritmo
+    // dele (+ recomp[1] m/s, no máximo recomp[2]) — trotando a ~2,6 m/s a linha ficava 5–10 m acima da
+    // bola que entrava conduzida no meu terço (teste-forma: 3,5 de 10 atrás da bola no t1)
+    if (lado && S.recomp && it.vx * lado < -S.recomp[0]) out.mag = Math.max(out.mag, magDaVel(j, Math.min(S.recomp[2], it.vf + S.recomp[1])));
     out.correr = d > S.corre;
   }
   const mao = maoDoMeuGoleiro(m, j.time);
@@ -595,6 +614,13 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
   return out;
 }
 
+/** Intensidade do analógico que pede a velocidade v (a inversa de jogador.js velocidadeDesejada, sem CORRER). */
+function magDaVel(j, v) {
+  const p = j.par, mt = ENTRADA.magTrote;
+  if (v <= p.vTrote) return Math.max(0, mt * v / p.vTrote);
+  return Math.min(1, mt + (1 - mt) * (v - p.vTrote) / (p.vCorrida - p.vTrote));
+}
+
 /** A bola está na mão do goleiro do time t? */
 function maoDoMeuGoleiro(m, t) {
   if (m.naMao == null) return false;
@@ -612,16 +638,16 @@ function semBola(m, j, f) {
   const advComBola = B.cond >= 0; // condutor adversário de linha com a bola no pé
   const naMaoAdv = m.naMao != null;
   // 1) PRESSÃO pedida pelo humano: a entrada do leitor da Parte 4 (aperta a DEFESA_HUMANO.pressao.aperto
-  // m do lado do gol, correndo) com o rumo filtrado de quem pressiona
+  // m do lado do gol, correndo)
   if (j.id === B.pedido) {
     const ep = entradaPressao(m, j);
-    if (ep) return rumoPressa(m, j, extra ? { ...ep, botoes: ep.botoes | extra } : ep);
+    if (ep) return extra ? { ...ep, botoes: ep.botoes | extra } : ep;
   }
   // 2) contrapressão (janela depois da perda)
   if (B.contraAte > m.tick && B.contra.includes(j.id) && !naMaoAdv) return apertar(m, j, s, B, meuGol, extra, 'contra');
   // 3) 1º homem
   // (com a bola além da linha de engajamento ele não sai do bloco: segue a zona, abaixo)
-  if (j.id === B.p1 && !naMaoAdv && B.engajado) {
+  if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0)) {
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
     return conter(m, j, s, B, meuGol, IA_DEFESA.contencao[p], extra);
   }
@@ -765,7 +791,7 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
 }
 
 /**

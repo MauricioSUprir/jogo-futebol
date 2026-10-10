@@ -432,8 +432,8 @@ export function apoioTatico(m, j) {
   } else {
     const r = A.ref.get(j.id);
     tu = r ? r.u : j.x * lado; tw = r ? r.w : j.z * lado;
-    // retomada com o time longe da referência: volta (ou sobe) com pressa
-    pressa = A.transOf && MD.hypot(tu * lado - j.x, tw * lado - j.z) > 12;
+    // (retomada com o time longe da referência: o ponto calmo já corre de longe — com pressa direta
+    // ele chegava, parava e arrancava de novo atrás da referência que anda: anda-para-anda)
     // movimento de apoio contínuo (vem e vai na linha da referência, como o "dar opção" dos jogos de
     // posição): quem não é o apoio curto nem defensor oscila oscila.amp m em u num ciclo de oscila.periodo s
     // (fases diferentes por vaga) — parado na referência, o time andava atrás da jogada
@@ -450,13 +450,15 @@ export function apoioTatico(m, j) {
   tw = clamp(tw, -MZ + 1.5, MZ - 1.5);
   restricaoParada(m, j, tu * lado, tw * lado, _r);
   // impedido (depois de uma corrida, ou a linha subiu): volta rápido para a linha (FC 26)
-  if (ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0) pressa = true;
+  const impedido = ia.papel !== 'area' && j.x * lado > A.linha && j.x * lado > 0;
+  if (impedido) pressa = true;
   // o ataque avançou e ele ficou para trás: sobe correndo (a referência anda com a bola a ~k·v da
   // bola; trotando, o time inteiro ficava atrás da jogada)
   if ((_r.x - j.x) * lado > IA_ATAQUE.sobeCorrendo) pressa = true;
-  // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para())
+  // a pressa fica por pressaMin s (ligar e desligar a cada tick trocava o modo e o alvo do para());
+  // na referência, só a volta do impedimento segue com pressa (o resto vai pelo ponto calmo)
   if (pressa) ia.pressaAte = m.tick + seg(IA_ATAQUE.pressaMin);
-  else if (m.tick < ia.pressaAte && MD.hypot(_r.x - j.x, _r.z - j.z) > IA.chegou * 3) pressa = true;
+  else if (m.tick < ia.pressaAte && MD.hypot(_r.x - j.x, _r.z - j.z) > IA.chegou * 3 && !(ia.papel === 'ref')) pressa = true;
   // quem segue a referência (sem pressa) vai pelo ponto calmo da Parte 2 (ia-tatica.js alvoCalmo:
   // filtro do alvo, parado perto dele, marcha/trote fora da faixa em que o tronco treme, rumo com giro
   // limitado) — seguir a referência que anda a cada tick direto pelo para() fazia o tronco tremer
@@ -659,7 +661,10 @@ function decidir(m, j, A, ia, cobranca) {
   const cfg = IA_ATAQUE.condutor, U = IA_ATAQUE.utilidade, lado = A.lado;
   const u0 = j.x * lado, w0 = j.z * lado;
   const risco = IA_ATAQUE.riscoMentalidade[A.ment + 2];
-  const K = U.posse; // valor de ter a bola (some quando ela é perdida)
+  // valor de ter a bola (some quando ela é perdida): posse + posseMeuCampo no meu campo (cheio até
+  // −10 m, zero a partir de +10 m) — na saída de bola o time guarda a bola (PPDA, retomada em ≤ 5 s:
+  // sem isso ele arriscava o passe para a frente já no próprio campo e devolvia a bola na hora)
+  const K = U.posse + U.posseMeuCampo * clamp(0.5 - u0 / 20, 0, 1);
   const frente = du => (A.transOf && du > 3 ? 1 + cfg.transOfBonus : 1);
   // custo de perder a bola ali: a ameaça do adversário com ela (xT espelhado) ÷ risco aceito + a posse
   const perda = (u, w) => ameacaEsperada(-u, -w) / risco + K;
