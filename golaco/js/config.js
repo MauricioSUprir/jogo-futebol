@@ -412,6 +412,16 @@ export const GOLEIRO = {
   saidaMax: 35,               // m da linha até onde sai com o botão
   esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
   esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
+  // espalmada (pedido do dono, 10/10: "nem espalma direito"): a bola sai a fracaoV da velocidade (entre vMin
+  // e vMax), por cima do travessão com ela acima de alturaTravessao, pela linha de fundo por fora da trave com
+  // o contato a menos de `perto` m da linha, ou bem aberta (|z| ≥ zAberta) mais longe; conferida pela física:
+  // não pode morrer (abaixo de vMorre m/s) na zona perigosa (a menos de zonaX m da linha e |z| < zonaZ)
+  espalmada: { fracaoV: 0.4, vMin: 5, vMax: 12, alturaTravessao: 1.85, perto: 4, zAberta: 10, vMorre: 4, zonaX: 11, zonaZ: 9 },
+  // defesa desenhada (mergulho, salto ou em pé): começa no máximo antecipaMergulho s antes do contato (o
+  // mergulho real leva ~0,4–0,6 s do primeiro movimento à bola); antes disso o goleiro anda de lado para a
+  // linha da bola (passos de lado, até vLado m/s) — batido, ele para a ~1,2 m dela
+  antecipaMergulho: 0.5,
+  vLado: 3.5,
 };
 
 // IA sem a bola: chegar ao ponto sem tremedeira (dono, 09/10: "o movimento dos jogadores tá meio

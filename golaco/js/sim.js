@@ -14,7 +14,7 @@ import {
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
-import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
@@ -347,6 +347,8 @@ export function passo(m, entradas) {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
     } else if (j.posicao === 'GOL' && !(ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id)) {
       mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
+      // defesa desenhada (mergulho, salto, em pé): o corpo anda pela conta do mergulho, não pela locomoção
+      if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
@@ -394,6 +396,8 @@ export function passo(m, entradas) {
   // a passada depois da trombada: o pé que sai do chão mira o pouso pela velocidade que o corpo
   // tem DEPOIS do contato (antes mirava pela de antes e o pé caía longe do corpo)
   for (const j of js) {
+    // goleiro na defesa desenhada: o corpo e os pés são os do quadro do mergulho (trombada não o tira dele)
+    if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) { fixarMergulho(m, j); pesMergulho(m, j); continue; }
     const ped = j.cond && j.cond.pedalada ? pesDaPedalada(m, j) : null;
     if (!(j.cond && j.cond.pedalada) && j.travaApoio != null) j.travaApoio = null;
     passoPassada(j, m.posse === j.id, PASSO, null, ped || saidaParaToque(m, j));
@@ -451,7 +455,7 @@ export function passo(m, entradas) {
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
   // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
-  for (const j of js) passoPeDesenhado(j, m, PASSO);
+  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1))) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
 }
@@ -650,6 +654,8 @@ function desvioOlhaBola(v) {
 
 /** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */
 function goleiroComBola(m, g) {
+  // ainda no chão depois do encaixe no mergulho: levanta antes de repor
+  if (mergulhoAtivo(g, m.tick + 1)) return;
   const humano = ehControlado(m, g);
   // IA: repõe depois de 1,5 s. Humano: se não apertar botão de ação (nem estiver carregando um),
   // a IA repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para

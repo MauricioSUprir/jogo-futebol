@@ -347,10 +347,20 @@ export function criarJogadores3D(cena, qualidade) {
   const A = new THREE.Vector3(), B = new THREE.Vector3(), Y = new THREE.Vector3(), Z = new THREE.Vector3(), X = new THREE.Vector3();
   const CIMA = new THREE.Vector3(0, 1, 0);
 
+  /**
+   * "Frente" do corpo pelos ombros (ou quadris) e pelo eixo do tronco: cima × direita, em 3D. De pé é a
+   * mesma frente de antes (no plano do chão); no goleiro mergulhando, deitado de lado, a direita fica quase
+   * vertical e só a conta em 3D dá a frente certa (as cápsulas não torcem).
+   */
   function frente(pose, iE, iD, out) {
-    const rx = pose[iD * 3] - pose[iE * 3], rz = pose[iD * 3 + 2] - pose[iE * 3 + 2];
-    const l = Math.hypot(rx, rz) || 1;
-    return out.set(rz / l, 0, -rx / l);
+    const rx = pose[iD * 3] - pose[iE * 3], ry = pose[iD * 3 + 1] - pose[iE * 3 + 1], rz = pose[iD * 3 + 2] - pose[iE * 3 + 2];
+    const ip = J.pelve * 3, in_ = J.pescoco * 3;
+    const ux = pose[in_] - pose[ip], uy = pose[in_ + 1] - pose[ip + 1], uz = pose[in_ + 2] - pose[ip + 2];
+    // cima × direita
+    let fx = uy * rz - uz * ry, fy = uz * rx - ux * rz, fz = ux * ry - uy * rx;
+    let l = Math.hypot(fx, fy, fz);
+    if (l < 1e-6) { fx = rz; fy = 0; fz = -rx; l = Math.hypot(fx, fz) || 1; }
+    return out.set(fx / l, fy / l, fz / l);
   }
 
   return {

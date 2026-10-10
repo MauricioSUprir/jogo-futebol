@@ -4,6 +4,7 @@
 import { criarMundo, passo, jogadorPorId } from '../js/sim.js';
 import { BOTAO, CAMPO, GOLEIRO } from '../js/config.js';
 import { pontoBissetriz } from '../js/goleiro.js';
+import { pose, J, NJ } from '../js/anim.js';
 import { tabelaTexto, fmt, media, DEG } from './lib/medidas.mjs';
 
 const N = +(process.argv[2] ?? 120);
@@ -212,9 +213,17 @@ for (const comBotao of [true, false]) {
     if (r.res !== 'defesa') continue;
     const m = r.m;
     if (r.modo === 'encaixe' && encaixe == null) {
+      // a bola nas MÃOS (desenhadas): no mergulho (pedido do dono, 10/10) o goleiro encaixa com os braços
+      // esticados e a traz para o peito — antes a bola ia de uma vez para 0,32 m à frente do corpo
       const g = jogadorPorId(m, 20);
+      const P = new Float32Array(NJ * 3);
       let longe = 0;
-      for (let i = 0; i < 40; i++) { passo(m, {}); longe = Math.max(longe, Math.hypot(m.bola.p.x - g.x, m.bola.p.z - g.z)); }
+      for (let i = 0; i < 40; i++) {
+        passo(m, {});
+        pose(g, m, P);
+        const mx = (P[J.maoE * 3] + P[J.maoD * 3]) / 2, my = (P[J.maoE * 3 + 1] + P[J.maoD * 3 + 1]) / 2, mz = (P[J.maoE * 3 + 2] + P[J.maoD * 3 + 2]) / 2;
+        longe = Math.max(longe, Math.hypot(m.bola.p.x - mx, m.bola.p.y - my, m.bola.p.z - mz));
+      }
       encaixe = { naMao: m.naMao === 20, posse: m.posse === 20, longe };
     } else if (r.modo === 'espalmada') {
       // a bola espalmada não pode entrar no gol
@@ -224,7 +233,7 @@ for (const comBotao of [true, false]) {
       espalmadas.push(gol);
     }
   }
-  reg('encaixe — a bola fica nas mãos do goleiro', encaixe ? `naMao ${encaixe.naMao}, posse ${encaixe.posse}, a ${fmt(encaixe.longe, 2)} m dele` : 'nenhum encaixe', 'nas mãos, ≤ 0,5 m', !!encaixe && encaixe.naMao && encaixe.posse && encaixe.longe <= 0.5);
+  reg('encaixe — a bola fica nas mãos do goleiro', encaixe ? `naMao ${encaixe.naMao}, posse ${encaixe.posse}, a ${fmt(encaixe.longe, 2)} m das mãos` : 'nenhum encaixe', 'nas mãos, ≤ 0,5 m', !!encaixe && encaixe.naMao && encaixe.posse && encaixe.longe <= 0.5);
   reg('espalmada — não entra no próprio gol', `${dentroGol}/${espalmadas.length}`, '0', espalmadas.length >= 5 && dentroGol === 0);
 }
 

@@ -37,6 +37,7 @@ const LISTA = [
   ['passes: rasteiro, enfiada, lançamento, cruzamento, primeira, tabela', 'teste-passes.mjs'],
   ['chute: velocidade, curva, dispersão, perna ruim, cavadinha', 'teste-chutes.mjs'],
   ['goleiro: defesas pelos dados, posição, botão GOLEIRO, mãos', 'teste-goleiro.mjs'],
+  ['goleiro pula e espalma: mergulho desenhado, mão na bola, espalmada para fora do perigo', 'teste-mergulho.mjs'],
   ['jogo aéreo: domínio no peito e cabeceio', 'teste-aereo.mjs'],
   ['treino de ataque com a IA: não trava e chega ao chute', 'teste-treino.mjs'],
   // Correções depois da Etapa 2
