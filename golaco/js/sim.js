@@ -22,7 +22,7 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
-import { entradaConter, dividida, pedidoPressao } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 
@@ -366,6 +366,9 @@ export function passo(m, entradas) {
     // a IA sem a bola gira o tronco parado mais devagar (o tronco rodopiava no lugar); o jogador do
     // humano mantém o giro rápido (virar 90° parado em ~0,12 s)
     j.giroParado = guiadoPelaIA(m, j) && m.posse !== j.id ? IA.giroParado : null;
+    // CONTER (defesa.js): o controlado acompanhando o condutor fica de frente para ele (j.conter só
+    // existe depois do CONTER apertado: o treino não muda)
+    if (j.conter && m.posse !== j.id) mv = troncoConter(m, j, mv);
     // partida: na bola parada, ninguém entra no raio (e quem está dentro sai) pela locomoção
     if (m.parada) mv = paredeParada(m, j, mv);
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
@@ -434,6 +437,25 @@ export function passo(m, entradas) {
   for (const j of js) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
+}
+
+/**
+ * Tronco do controlado no CONTER (defesa.js rumoConter: de frente para a bola do condutor), limitado
+ * pela velocidade com a mesma regra do "olha a bola" da IA (IA.olhaBola; função própria, para o CONTER
+ * não mudar se o "olha a bola" da IA for recalibrado): devagar (o "jockey"), de frente; correndo atrás
+ * do condutor, o tronco vai com a corrida (ninguém corre de lado a 3 m/s; acima de 2,5 m/s o passoCorpo
+ * prende o tronco a ≤ 80° da corrida, e um limite que não chegasse antes disso faria o tronco virar de
+ * uma vez nessa velocidade). Sem pedido: `mv`.
+ */
+function troncoConter(m, j, mv) {
+  const r = rumoConter(m, j);
+  if (r == null) return mv;
+  const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
+  const { vLivre, vLado, vSome } = IA.olhaBola;
+  const v1 = vLivre * 1.5;
+  const lat = a => MD.asin(Math.min(1, vLado / a));
+  const lim = v <= vLivre ? Math.PI : v < v1 ? lerp(Math.PI, lat(v1), (v - vLivre) / (v1 - vLivre)) : lat(v) * clamp((vSome - v) / 1.0, 0, 1);
+  return { dx: mv.dx, dz: mv.dz, vel: mv.vel, rumoAlvo: mv.rumoAlvo + clamp(difAng(mv.rumoAlvo, r), -lim, lim) };
 }
 
 /** Executa a ação marcada para este tick (pé de apoio no chão, bola no alcance). */

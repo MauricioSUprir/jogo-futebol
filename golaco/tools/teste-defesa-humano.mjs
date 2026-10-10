@@ -6,6 +6,9 @@
 // Metas (plano 5.1):
 //  - CONTER segurado (reta e zigue-zague): a 1–2,5 m do condutor e do lado do gol em ≥ 80% do tempo;
 //    o analógico de lado desloca o ponto (0,4–1,2 m para o lado pedido, sem largar o condutor);
+//    de frente para o condutor (plano 2.8): com o condutor andando e parando, o tronco do defensor a
+//    ≤ 45° da bola em ≥ 85% do tempo em que ele está no "jockey" (≤ 1,2 m/s; correndo atrás do condutor o
+//    tronco vai com a corrida, como o "olha a bola" da IA — sim.js troncoConter);
 //  - DIVIDIDA na hora certa (bola a ≤ 1 m, entre toques): ganha 35–65% (bote em pé no FC; 44–71% de acerto
 //    nos titulares da Premier League 2022/23); errada (logo depois do toque do condutor): o condutor passa
 //    em ≥ 70%; de longe (> 1,5 m): ganha 0%;
@@ -94,6 +97,11 @@ function cena(sem, c) {
 function entradaCondutor(m, cond, def, c, t) {
   let a = Math.PI; // ataca −x
   if (c.modo === 'zigue') a += c.amp * (Math.sin(2 * Math.PI * t / c.periodo) >= 0 ? 1 : -1);
+  else if (c.modo === 'para') {
+    // anda e para (o "jockey": o defensor fica de frente esperando o condutor decidir)
+    const anda = Math.floor(t / c.periodo) % 2 === 0;
+    return { x: anda ? Math.cos(a) * c.mag * 0.6 : 0, z: 0, botoes: 0 };
+  }
   else if (c.modo === 'drible') {
     const dx = def.x - cond.x, dz = def.z - cond.z, d = Math.hypot(dx, dz);
     if (d < 3.2 && dx < 0.5) {
@@ -147,6 +155,31 @@ for (const modo of ['reta', 'zigue']) {
   const piores = conterCenas[modo].filter(Number.isFinite).sort((x, y) => x - y);
   reg(`CONTER ao lado do condutor (${modo === 'reta' ? 'reta' : 'zigue-zague'}): a 1–2,5 m e do lado do gol`,
     `${pc(a, n)} do tempo (pior cena ${fmt(100 * (piores[0] ?? NaN), 0)}%)`, '≥ 80%', n > 0 && a / n >= 0.8);
+}
+// de frente para o condutor no "jockey" (o condutor anda e para; o tronco do defensor a ≤ 45° da bola)
+{
+  let frente = 0, n = 0, soma = 0;
+  for (let s = 0; s < NS; s++) {
+    const sem = BASE + s + 7000;
+    const r = rngTeste(sem);
+    const c = {
+      modo: 'para', x0: 4 + r() * 6, z0: -8 + r() * 16, dist: 2.5 + r() * 2, lado: -1 + r() * 2,
+      mag: 0.65 + r() * 0.35, correr: false, periodo: 1.2 + r() * 0.8, posCond: r() < 0.5 ? 'ATA' : 'PON', posDef: r() < 0.5 ? 'ZAG' : 'LAT',
+    };
+    const { m, cond, def } = cena(sem, c);
+    for (let i = 0; i < Math.round(5 / PASSO); i++) {
+      const t = i * PASSO;
+      S.passo(m, { 0: { x: 0, z: 0, botoes: BOTAO.CONTER }, 1: entradaCondutor(m, cond, def, c, t) });
+      if (m.posse !== cond.id || ehFora(m.bola)) break;
+      if (t < 0.8 || Math.hypot(def.vx, def.vz) > 1.2) continue;
+      let d = Math.abs(Math.atan2(m.bola.p.z - def.z, m.bola.p.x - def.x) - def.rumo) % (2 * Math.PI);
+      if (d > Math.PI) d = 2 * Math.PI - d;
+      n++; soma += d;
+      if (d <= Math.PI / 4) frente++;
+    }
+  }
+  reg('CONTER de frente para o condutor (jockey, defensor a ≤ 1,2 m/s): tronco a ≤ 45° da bola',
+    `${pc(frente, n)} do tempo (ângulo médio ${fmt(n ? soma / n * 180 / Math.PI : NaN, 0)}°)`, '≥ 85%', n >= 200 && frente / n >= 0.85);
 }
 // o analógico de lado mostra o lado ao condutor (desloca o ponto)
 {
