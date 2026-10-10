@@ -23,7 +23,6 @@ fs.mkdirSync(SAIDA, { recursive: true });
 
 const PC = { largura: 1280, altura: 720, dpr: 1, toque: false };
 const CEL = { largura: 844, altura: 390, dpr: 2, toque: true };
-const RET = { largura: 390, altura: 844, dpr: 2, toque: true };
 const CENAS = [
   // partida 11×11 (padrão da página)
   { nome: 'pc-dia', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'ataque' },
@@ -38,7 +37,7 @@ const CENAS = [
   { nome: 'celular-escanteio-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'escanteio' },
   { nome: 'pc-intervalo-noite', ...PC, url: 'q=alta&hora=noite&demo=1&min=0.25', prep: 'intervalo' },
   { nome: 'celular-intervalo', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'intervalo' },
-  // Editar time: 3 abas no PC (Alta, dia), no celular deitado (Média, noite) e em pé (Média, dia)
+  // Editar time: 3 abas no PC (Alta, dia) e no celular deitado (Média, noite)
   { nome: 'pc-editor-escalacao', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'escalacao' },
   { nome: 'pc-editor-formacao', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'formacao' },
   { nome: 'pc-editor-taticas', ...PC, url: 'q=alta&hora=dia&demo=1', editor: 'taticas' },
@@ -46,23 +45,20 @@ const CENAS = [
   { nome: 'celular-editor-formacao', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', editor: 'formacao' },
   { nome: 'celular-editor-taticas', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', editor: 'taticas' },
   { nome: 'celular-editor-substituicao', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'substituicao' },
-  { nome: 'retrato-editor-escalacao', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'escalacao' },
-  { nome: 'retrato-editor-formacao', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'formacao' },
-  { nome: 'retrato-editor-taticas', ...RET, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', editor: 'taticas' },
   // treino de ataque: lançamento de verdade (L segurado: anel de queda, câmera com a bola longe)
   { nome: 'pc-lancamento', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'lancamento' },
   // chute carregando: barra de força perto do jogador
   { nome: 'celular-carga', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque', prep: 'carga' },
   { nome: 'pc-aproximada', ...PC, url: 'q=alta&hora=dia&camera=aproximada&demo=1' },
   { nome: 'celular-baixa', ...CEL, url: 'q=baixa&hora=dia&toque=1&entalhe=1&demo=1' },
-  // em pé, com a ilha no topo (?entalhe=1 em pé simula a margem segura de cima e a de baixo)
+  // em pé, com a ilha no topo: a tela "Gire o celular" (o jogo só roda deitado — dono, 10/10)
   { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1' },
   // "GOL!" grande e verde (o aviso que aparece por 2 s quando a bola entra)
   { nome: 'celular-gol', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', depois: 'gol' },
   // gol DE VERDADE (semente: 'gol' = a 1ª semente com gol e batida na rede, achada em Node por acharGol — a IA
   // jogando pelos dois; nada de semente fixa, que deixa de ter gol quando a IA ou o goleiro mudam): a rede
   // estufada (0,1 s depois da batida) na câmera do gol (o corte da transmissão), a torcida atrás do gol
-  // explodindo e o "GOL!" com autor e minuto; e o ataque que vira gol, 0,4 s antes, na câmera de TV
+  // explodindo e o "GOL!"; e o ataque que vira gol, 0,4 s antes, na câmera de TV
   { nome: 'pc-dia-ataque', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'antesDoGol' },
   { nome: 'pc-noite-ataque', ...PC, semente: 'gol', url: 'q=alta&hora=noite&demo=1', prep: 'antesDoGol' },
   { nome: 'celular-dia-ataque', ...CEL, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
@@ -262,7 +258,7 @@ for (const c of CENAS) {
       notaEd = await pagina.evaluate(() => { const r = window.__golaco.editor.rascunho; return `editor ${window.__golaco.editor.aba} (${window.__golaco.editor.modo}): ${r.formacao}, subst. ${r.substituicoes.length}, escolhido ${r.escolhido ?? '-'}`; });
     }
     // alguns quadros com desenho (a mola da câmera e os botões assentam), o último é o print
-    // (no gol: o "GOL!" de verdade, com autor e minuto, forçado por cima dos prints; o desenho fica parado
+    // (no gol: o "GOL!" de verdade forçado por cima dos prints; o desenho fica parado
     // no instante da rede estufada enquanto a animação do aviso chega no ponto)
     if (c.prep === 'golRede') await pagina.evaluate(() => window.__golaco.desenhar());
     else await pagina.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: true }); });
@@ -290,7 +286,7 @@ for (const c of CENAS) {
     await pagina.evaluate(() => window.__golaco.desenhar());
     await pagina.waitForTimeout(250); // animação de entrada dos botões
     if (c.prep === 'golRede') {
-      // o "GOL!" de verdade (autor e minuto) por cima do instante da rede estufada; mostrado logo antes do
+      // o "GOL!" de verdade por cima do instante da rede estufada; mostrado logo antes do
       // print (o desenho do headless é lento e o aviso some em 2,4 s); o relógio das animações CSS do headless
       // anda devagar: a animação é posta em 0,9 s e parada
       await pagina.evaluate(() => {

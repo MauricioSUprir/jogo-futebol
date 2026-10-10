@@ -166,7 +166,8 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 - Câmera de TV: `yaw = −π/2` fixo (a entrada usa `paraMundo(ax, ay, camera.yaw)`). Enquadramento
   pela LARGURA vista no foco (`CAMERA.largura`), não pelo fov: tela mais larga que 16:9 mantém a
   largura (jogador maior no celular deitado), 4:3 perde metade, em pé usa `CAMERA.retrato` (mais
-  alta e inclinada, sem céu) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
+  alta e inclinada, sem céu — hoje só na janela estreita do PC: no celular em pé o jogo para e mostra
+  "Gire o celular", main.js retratoBloqueado + #girar no CSS) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
   controle = direita na tela" (`teste-controles`, via `naTela`) e câmera sem tremor a 144 Hz
   (`teste-carga`).
 
@@ -226,18 +227,18 @@ Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo
   desenho: bola desenhada = física + `empurraoBola`, uniforms da rede, torcida e som. Relógio do estádio: `passosTotais`
   (não volta a zero ao trocar de mundo; parado na pausa). Os eventos que o mundo já traz ANTES do 1º passo (o `saida` do
   começo da partida) passam pelo ânimo e pelo som em `eventosIniciais()` (no início e em `trocarMundo`). Gol:
-  `hud.evento(ev, {gol: {id, numero, nome, minuto, contra}})` com o autor de verdade + `cam.efeitoGol(x, z, {fechado:
+  `hud.evento(ev)` (só "GOL!": sem autor nem minuto escritos — sem narração na tela, dono 10/10) + `cam.efeitoGol(x, z, {fechado:
   partida})`; `saida`/`recomeco` encerram o "GOL!" e a câmera do gol (`encerrarEfeitosGol`) e o plano geral; `intervalo`
   e `fimDeJogo` ligam o plano geral. Menu: comandos `som` (`'ligado'|'desligado'`) e `volume` (0–1), salvos em
   `golaco.prefs.v1` (`som`, `volume`).
-- **`hud.js`**: `evento({tipo: 'gol'}, {gol, fixo})` (`fixo`: o aviso fica na tela — sem o tempo e sem o apagar da
+- **`hud.js`**: `evento({tipo: 'gol'}, {fixo})` (`fixo`: o aviso fica na tela — sem o tempo e sem o apagar da
   animação, classe `fixo`), `esconderGol()`. O "GOL!" fica no terço de cima (por cima da torcida, longe da boca do gol na
   câmera do gol); no celular, compacto entre o analógico e os botões.
 - **API (`window.__golaco`)**: `estadio {torcida, rede, deslocamentoRede(plano, x, y, z), emocao, som, redeOnda(v) (só o
   desenho: o mesmo instante com/sem a onda), mostrarTorcida(v), trocarTorcida(q) (ms da troca de qualidade só da
   torcida), bolaDesenhada, efeitoCamera, planoCamera ('fechado' | 'leve' | 'geral' | 'jogo'), autorGol, ultimoToque,
-  baixarSons(), analisarSom(nome)}`, `definirSom(v)`, `definirVolume(v)`, `mostrarEvento(ev, {fixo})` (o "GOL!" com autor e
-  minuto; `fixo` segura na tela — prints).
+  baixarSons(), analisarSom(nome)}`, `definirSom(v)`, `definirVolume(v)`, `mostrarEvento(ev, {fixo})` (o "GOL!";
+  `fixo` segura na tela — prints). `autorGol` (o autor de verdade, `render/autor-gol.js`) não aparece na tela.
 - **Testes**: `tools/teste-rede.mjs` e `tools/teste-torcida.mjs` (Node, grupo padrão), `tools/teste-estadio.mjs`
   (navegador, no CI). O gol do teste de navegador é ROTEIRIZADO (`tools/lib/gol-roteirizado.mjs`: um jogador do time com a
   bola e o último toque, os adversários do corredor e o goleiro tirados do caminho e o chute com a física da bola — não

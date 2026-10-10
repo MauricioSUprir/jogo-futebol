@@ -18,8 +18,9 @@
 // Estádio (render, não mexe no mundo nem no hash): a cada passo a bola antes/depois do passo procura
 // batidas na rede (rede-onda.js) — a rede estufa no shader e a bola DESENHADA vai junto no bojo; os
 // eventos do passo e a posição da bola alimentam o ânimo da torcida (emocao.js), que move a torcida 3D
-// (torcida.js) e o som (som.js, Web Audio, liga no primeiro gesto). Gol: "GOL!" com autor e minuto
-// (hud.js; o autor de verdade pelos eventos de toque, autor-gol.js), placar pulsando e, na partida, CORTE para a
+// (torcida.js) e o som (som.js, Web Audio, liga no primeiro gesto). Gol: só "GOL!" (sem autor nem
+// minuto escritos — sem narração na tela, dono 10/10; o autor de verdade fica em autor-gol.js para a API e os
+// prints), placar pulsando e, na partida, CORTE para a
 // câmera do gol (camera.js CAMERA_GOL: a rede estufando e a torcida atrás do gol) até a saída de bola; no treino,
 // zoom/tremor leve que acaba no recomeço. Intervalo e fim: plano geral do estádio. O 'saida' do começo da partida
 // (criado antes do 1º passo) também passa pela torcida e pelo som (apito pendente até o 1º gesto). Relógio do
@@ -255,24 +256,7 @@ function atualizarFase() {
   if (entrada) entrada.definirFase(fase.atual);
 }
 
-// eventos que só fazem sentido para o MEU time (os da IA encheriam a tela de avisos sem dono:
-// "Bola perdida" de um zagueiro adversário, "Goleiro saiu do gol" do goleiro deles)
-const SO_MEU_TIME = new Set(['passe', 'troca', 'perda', 'saidaGoleiro']);
 const camisaDe = id => fichaDe(id)?.camisa ?? String(id);
-/**
- * Autor (número e nome do elenco), minuto e gol contra, para o "GOL!". O autor é o de verdade (autor-gol.js:
- * último toque pelos eventos, desvio conta para quem chutou); sem ele (aviso forçado dos prints), ev.autor.
- */
-function dadosDoGol(ev, deVerdade = null) {
-  const id = deVerdade ? deVerdade.id : (ev.autor ?? null);
-  const f = id != null ? fichaDe(id) : null;
-  const tAutor = id != null ? timeDe(id) : null;
-  return {
-    id, numero: f ? f.num : null, nome: f ? f.nome : null,
-    minuto: mundo.partida ? minutoDeJogo(mundo) : null,
-    contra: tAutor != null && ev.time != null && tAutor !== ev.time,
-  };
-}
 /** Fim dos efeitos do gol (saída de bola, recomeço do treino): o "GOL!" sai e a câmera de jogo volta. */
 function encerrarEfeitosGol() {
   if (cam && cam.efeitoAtivo) { cam.encerrarGol(); corteCamera = true; }
@@ -284,15 +268,13 @@ const textoPlacar = () => {
 };
 function tratarEvento(ev) {
   const t = ev.tipo;
-  // gol: "GOL!" com o autor (do elenco fictício) e o minuto, placar pulsando e o efeito da câmera
+  // gol: "GOL!" (sem autor nem minuto escritos: nada de narração na tela), placar pulsando e o efeito da câmera
   if (t === 'gol') {
-    hud.evento(ev, { gol: dadosDoGol(ev, autorGol.gol.ativo && autorGol.gol.tick === mundo.tick ? autorGol.gol : null) });
+    hud.evento(ev);
     // partida: corte para a câmera do gol (até a saída); treino: zoom/tremor leve (até o recomeço)
     if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     return;
   }
-  // a troca automática no passe já aparece como o passe; a troca no jogo aéreo aparece no anel
-  if (SO_MEU_TIME.has(t) && ev.id != null && timeDe(ev.id) !== TIME_HUMANO) return;
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
@@ -323,17 +305,14 @@ function tratarEvento(ev) {
     return;
   }
   if (t === 'substituicao') {
-    if (ev.time !== TIME_HUMANO) { hud.evento(ev, { texto: `${hud.times[ev.time]?.sigla ?? ''}: sai ${camisaDe(ev.sai)}, entra ${camisaDe(ev.entra)}` }); return; }
+    // só a do MEU time (a confirmação do que pedi na pausa); a do adversário seria narração
+    if (ev.time !== TIME_HUMANO) return;
     hud.evento(ev, { texto: `Substituição: sai ${camisaDe(ev.sai)}, entra ${camisaDe(ev.entra)}` });
     return;
   }
-  // o MEU goleiro ficou com a bola na mão (o controle vai para ele): diz como repor — antes só
-  // aparecia "O goleiro pegou" e quem não sabia ficava parado (a IA repõe sozinha em 3 s)
-  if (t === 'defesa' && (ev.modo === 'encaixe' || ev.modo === 'pegou') && timeDe(ev.id) === TIME_HUMANO) {
-    hud.evento({ tipo: 'repor' });
-    return;
-  }
-  hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
+  // lances (passe, chute, defesa, lateral...) não viram texto: o hud só mostra o gol e os comandos
+  // (o goleiro com a bola na mão repõe sozinho em 3 s — GOLEIRO.esperaHumano)
+  hud.evento(ev);
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }
 
@@ -434,7 +413,13 @@ const _pt = { x: 0, y: 0, atras: false };
 const _carga = { x: 0, y: 0, forca: 0, tipo: '' };
 const _queda = { x: 0, z: 0 };
 
-function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto; }
+// Celular em pé: o jogo só roda deitado (dono, 10/10: "é obrigatório virar o celular pra jogar").
+// A tela "Gire o celular" (index.html #girar, mostrada pelo CSS com a mesma media query) cobre tudo
+// e o jogo fica parado até deitar. Só com toque: janela estreita no PC continua jogando.
+const mqRetrato = window.matchMedia('(orientation: portrait)');
+function retratoBloqueado() { return mqRetrato.matches && document.documentElement.classList.contains('com-toque'); }
+
+function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto || retratoBloqueado(); }
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
 const kitCache = new Map();
@@ -566,7 +551,8 @@ function quadro(agoraMs, desenhar = true) {
     }
     alfa = r.alfa;
   }
-  desenharQuadro(dt, agoraMs, desenhar);
+  // em pé no celular a tela "Gire o celular" cobre tudo: não gasta bateria desenhando por baixo
+  desenharQuadro(dt, agoraMs, desenhar && !retratoBloqueado());
   medirQps(dtReal, agoraMs);
   adaptarQualidade(dtReal, agoraMs);
 }
@@ -775,6 +761,15 @@ async function iniciar() {
     if (document.hidden) entrada.soltarTudo();
     else { laco.ultimo = null; ultimoQuadro = null; }
   });
+  // girou para em pé: solta o que estava segurado (o dedo saiu do analógico ao girar); ao deitar,
+  // o laço não tenta recuperar o tempo parado
+  // o botão de tela cheia da tela "Gire o celular": só onde a tela trava deitada (Android)
+  const btnGirar = document.getElementById('girar-tela-cheia');
+  if (btnGirar) btnGirar.hidden = !(document.fullscreenEnabled && screen.orientation && typeof screen.orientation.lock === 'function');
+  mqRetrato.addEventListener('change', () => {
+    if (retratoBloqueado()) entrada.soltarTudo();
+    else { laco.ultimo = null; ultimoQuadro = null; }
+  });
   hud.definirEstado({
     qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false,
@@ -979,7 +974,7 @@ const api = {
   /** Escreve um modo/posição no painel do HUD já (testes de layout com o texto mais longo). */
   hudModo(texto, posicao = null) { hud.atualizar(performance.now(), 0, texto, false, posicao); },
   /** Mostra o aviso de um evento ({tipo, ...}) mesmo no modo de prints (conferência do HUD). */
-  mostrarEvento(ev, opc = {}) { hud.evento(ev, ev?.tipo === 'gol' ? { gol: dadosDoGol(ev), fixo: !!opc.fixo } : { tipoVoo: mundo.voo?.tipo }, true); },
+  mostrarEvento(ev, opc = {}) { hud.evento(ev, ev?.tipo === 'gol' ? { fixo: !!opc.fixo } : {}, true); },
   /** Desenha um quadro sem avançar nada (prints). */
   desenhar() { desenharQuadro(0, relogioManual ? tempoManual : performance.now()); },
   /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */

@@ -7,7 +7,7 @@
 //      clique cria e retoma (running); 9 gravações e 3 laços; o grito do gol já sai alto (≤ 0,3 s até 6 dB do pico);
 //   4) um GOL ROTEIRIZADO (tools/lib/gol-roteirizado.mjs: não depende da IA nem do goleiro — contraprova B1): a
 //      rede estufa ≥ 0,2 m, a bola desenhada vai junto, a câmera CORTA para a câmera do gol (a rede mexe na tela e
-//      a torcida enche o fundo do quadro), "GOL!" com o autor e o minuto, placar pulsando, câmera sem tranco entre
+//      a torcida enche o fundo do quadro), só "GOL!" (sem autor nem minuto: sem narração — dono, 10/10), placar pulsando, câmera sem tranco entre
 //      os cortes, o "GOL!" sai na saída de bola, que sai no mesmo tick de sempre; gol, chuá e apito tocam;
 //   5) gol do VISITANTE: a casa cala (barulho ≤ 0,15) e só o setor visitante comemora (contraprova I4);
 //   6) treino de condução: o "GOL!" e o efeito da câmera acabam quando a bola volta (contraprova M8);
@@ -156,19 +156,21 @@ try {
   const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
   meta('Gol roteirizado (sem depender da IA nem do goleiro)', gol.ok ? `autor ${gol.autor}, gol no tick ${gol.golTick} (${gol.golTick - gol.tickChute} passos depois do chute), ${gol.movidos} tirados do caminho` : `sem gol (${JSON.stringify(gol)})`, 'gol', gol.ok);
   if (!gol.ok) throw new Error('o gol roteirizado não saiu');
-  const hudGol = await pg.evaluate(async autor => {
+  const hudGol = await pg.evaluate(() => {
     const g = window.__golaco;
     const el = document.getElementById('gol-tela');
     const r0 = el.getBoundingClientRect();
     const debaixo = document.elementFromPoint(r0.left + r0.width / 2, r0.top + r0.height / 2);
-    const { fichaDe } = await import('./js/elenco.js');
+    // nenhum outro texto na tela durante o gol (sem narração): o aviso de lance não aparece
+    const aviso = document.getElementById('aviso');
     return {
-      visivel: el.classList.contains('visivel'), texto: el.textContent.replace(/\s+/g, ' ').trim(), nome: fichaDe(autor)?.nome ?? null,
+      visivel: el.classList.contains('visivel'), texto: el.textContent.replace(/\s+/g, ' ').trim(),
+      aviso: aviso.classList.contains('visivel') ? aviso.textContent : '',
       pulso: document.querySelector('.placar').classList.contains('gol-pulso'), plano: g.estadio.planoCamera ?? (g.estadio.efeitoCamera ? 'leve' : 'jogo'),
-      pega: el.contains(debaixo), minuto: g.estado().relogio.minuto,
+      pega: el.contains(debaixo),
     };
-  }, gol.autor);
-  meta('Gol: "GOL!" com o autor e o minuto', `"${hudGol.texto}"`, `GOL!, ${hudGol.nome}, ${hudGol.minuto}'`, hudGol.visivel && /GOL!/.test(hudGol.texto) && !!hudGol.nome && hudGol.texto.includes(hudGol.nome) && hudGol.texto.includes(`${hudGol.minuto}'`));
+  });
+  meta('Gol: só "GOL!" na tela (sem autor, minuto nem aviso de lance: sem narração)', `"${hudGol.texto}"${hudGol.aviso ? `, aviso "${hudGol.aviso}"` : ''}`, 'GOL!', hudGol.visivel && hudGol.texto === 'GOL!' && !hudGol.aviso);
   meta('Gol: placar pulsa e a câmera CORTA para a câmera do gol', `placar ${hudGol.pulso ? 'pulsando' : 'parado'}, câmera ${hudGol.plano}`, 'pulsando, fechado (câmera do gol)', hudGol.pulso && hudGol.plano === 'fechado');
   meta('Gol: o aviso não pega toque nem clique', hudGol.pega ? 'pega' : 'passa direto para o jogo', 'passa direto', !hudGol.pega);
   // a rede: até 0,25 s depois da 1ª batida, a maior bolsa e o quanto a bola desenhada entra (câmera do jogo)
@@ -439,16 +441,11 @@ try {
       await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
       const r = await pagina.evaluate(async () => {
         const g = window.__golaco;
-        const { fichaDe } = await import('./js/elenco.js');
-        // o nome mais longo do elenco (pior caso)
-        let longo = null;
-        for (let id = 1; id <= 123; id++) { const f = fichaDe(id); if (f && (!longo || f.nome.length > longo.nome.length)) longo = { id, nome: f.nome }; }
-        document.documentElement.classList.remove('modo-prints');
-        g.mostrarEvento({ tipo: 'gol', time: longo.id >= 100 ? 1 : 0, autor: longo.id }, { fixo: true });
+        g.mostrarEvento({ tipo: 'gol', time: 0 }, { fixo: true });
         for (const a of document.getAnimations()) { a.currentTime = 2000; a.pause(); }
         await new Promise(ok => setTimeout(ok, 200));
         const rr = el => { const b = el.getBoundingClientRect(); return { x0: b.left, y0: b.top, x1: b.right, y1: b.bottom }; };
-        const partes = ['.gol-palavra', '#gol-autor', '#gol-quem'].map(s => document.querySelector(s)).filter(el => el && el.getBoundingClientRect().width > 0);
+        const partes = ['.gol-palavra'].map(s => document.querySelector(s)).filter(el => el && el.getBoundingClientRect().width > 0);
         const cruza = [];
         for (const fase of ['ataque', 'defesa']) {
           const tq = document.getElementById('toque');
@@ -461,10 +458,9 @@ try {
             if (ix > 1 && iy > 1) cruza.push(`${p.className || p.id} × ${(b.id || b.className).slice(0, 20)} (${fase}, ${Math.round(ix)}×${Math.round(iy)} px)`);
           }
         }
-        const nome = document.getElementById('gol-nome');
-        return { cruza, nomeCortado: nome.scrollWidth > nome.clientWidth + 1, texto: document.getElementById('gol-tela').textContent.replace(/\s+/g, ' ').trim() };
+        return { cruza, texto: document.getElementById('gol-tela').textContent.replace(/\s+/g, ' ').trim() };
       });
-      meta(`"GOL!" no celular ${w}×${h} longe dos controles`, r.cruza.length ? r.cruza.slice(0, 4).join('; ') : `nada encosta ("${r.texto}"${r.nomeCortado ? ', nome com reticências' : ''})`, 'nada encosta', r.cruza.length === 0 && errosCel.length === 0);
+      meta(`"GOL!" no celular ${w}×${h} longe dos controles`, r.cruza.length ? r.cruza.slice(0, 4).join('; ') : `nada encosta ("${r.texto}")`, 'nada encosta', r.cruza.length === 0 && errosCel.length === 0);
     } finally { await nav.close(); }
   }
 } catch (e) {
