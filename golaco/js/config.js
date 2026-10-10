@@ -444,6 +444,9 @@ export const GOLEIRO = {
   // m: a bola, no tick da defesa, longe disso do ponto lido (desvio depois da leitura) → não há defesa
   desvioMax: 0.3,
   pegaMergulho: 0.3,          // m da mão desenhada à bola para pegar a bola solta no meio da defesa desenhada
+  // s depois de espalmar em que o goleiro não pega a própria espalmada: antes ~metade das espalmadas (publicada e
+  // 10/10) voltava para as mãos 1 tick depois (a bola saía da mão a < 9 m/s, a < 1 m dele) — a espalmada virava encaixe
+  reagarra: 0.5,
   // espalmada (pedido do dono, 10/10: "nem espalma direito"): a bola sai a fracaoV da velocidade (entre vMin
   // e vMax), por cima do travessão com ela acima de alturaTravessao, pela linha de fundo por fora da trave com
   // o contato a menos de `perto` m da linha, ou bem aberta (|z| ≥ zAberta) mais longe; conferida pela física

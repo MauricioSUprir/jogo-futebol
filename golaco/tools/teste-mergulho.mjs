@@ -23,6 +23,8 @@
 //        algum instante dos 2 s seguintes, contado desde o contato) ≤ 10%;
 //    10. bola alta (> 1,9 m) perto do corpo (< 0,8 m): salto (pés fora do chão e as duas mãos acima da cabeça)
 //        em ≥ 80%;
+//    11. a espalmada não volta para as mãos dele em ≤ 0,5 s (≤ 2%, grade A + canhão B; antes ~metade voltava 1
+//        tick depois e a espalmada virava encaixe);
 //  C. rebote disputado: 720 chutes com 3 atacantes e 2 defensores (IA) na área; depois da espalmada, quem toca
 //     primeiro na bola:
 //    11. o ataque em ≤ 10% das espalmadas (a espalmada para fora do perigo; na partida da versão publicada o
@@ -166,6 +168,8 @@ function medir(m, g, n, reb) {
     ant = atu;
     for (const e of m.eventos) {
       if (t2 != null) continue; // o 2º chute do rebote não muda o desfecho do 1º
+      // a espalmada que volta para as mãos dele logo depois ("pegou" em ≤ 0,5 s) não é espalmada
+      if (e.tipo === 'defesa' && e.modo === 'pegou' && e.id === g.id && r.res === 'espalmada' && m.tick - r.tickDef <= 30) r.reagarrou = true;
       if (e.tipo === 'gol' && !r.res) { r.res = 'gol'; r.tickDef = m.tick; }
       if (e.tipo === 'defesa' && !r.res) {
         r.res = e.modo; r.tickDef = m.tick;
@@ -410,6 +414,8 @@ const defB = prim.filter(x => x.r.res === 'encaixe' || x.r.res === 'espalmada');
 const maoOkB = defB.filter(x => x.r.maoContato != null && x.r.maoContato <= 0.25);
 const espB = defB.filter(x => x.r.res === 'espalmada');
 const jogB = espB.filter(x => x.r.jogavel);
+const espTodas = [...esp, ...espB];
+const reag = espTodas.filter(x => x.r.reagarrou);
 const altos = prim.filter(x => ['gol', 'encaixe', 'espalmada'].includes(x.r.res) && x.c.yA > 1.9 && x.r.latCorpo != null && x.r.latCorpo < 0.8 && !x.r.recuo);
 const altosSalto = altos.filter(x => x.r.voou && x.r.maoAcima);
 const vCentro = Math.max(...resB.map(x => x.r.vCentro), ...res.map(x => x.r.vCentro));
@@ -455,6 +461,7 @@ const metas = [
   ['B7. o centro do goleiro nunca passa da linha do gol', xMax <= GX, `x máx ${fmt(xMax, 2)} (linha ${GX})`, `≤ ${GX}`],
   ['B8. o tronco gira por quadro (máx.; no rebote com o goleiro no chão)', giro <= 20, `${fmt(giro, 0)}° (rebote ${fmt(giroReb, 0)}°)`, '≤ 20°'],
   ['B9. espalmadas jogáveis na zona (< 1,5 m e < 7 m/s, < 11 m da linha, |z| < 9, em 2 s)', espB.length >= 10 && jogB.length / espB.length <= 0.10, pc(jogB.length, espB.length), '≤ 10%'],
+  ['B11. a espalmada volta para as mãos dele em ≤ 0,5 s (vira encaixe; grade A + canhão B)', espTodas.length >= 50 && reag.length / espTodas.length <= 0.02, pc(reag.length, espTodas.length), '≤ 2%'],
   ['B10. bola alta (> 1,9 m) perto do corpo (< 0,8 m): salto com as duas mãos acima da cabeça', altos.length >= 5 && altosSalto.length / altos.length >= 0.8, pc(altosSalto.length, altos.length), '≥ 80%'],
   ['C11. rebote disputado: o ataque toca primeiro na bola espalmada', resC.length >= 40 && atk.length / resC.length <= 0.10, pc(atk.length, resC.length), '≤ 10%'],
   ['E12. chute desviado num corpo depois da leitura: nas defesas, a mão a ≤ 0,25 m da bola', resE.length >= 40 && (defE.length === 0 || maoOkE.length / defE.length >= 0.95), pc(maoOkE.length, defE.length), '≥ 95%'],
