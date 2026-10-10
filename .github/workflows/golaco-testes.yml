@@ -33,3 +33,14 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-controles.mjs
+      - name: Editar time (mouse, teclado e toque; Node = Chromium; nada encosta em 6 telas)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-editor-tela.mjs
+      # informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa
+      # do teto do plano 4.1); mostra os números no PR sem bloquear
+      - name: Desempenho no celular simulado (CPU 4×, informativo)
+        continue-on-error: true
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-desempenho-celular.mjs
