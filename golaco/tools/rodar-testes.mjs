@@ -51,7 +51,8 @@ const LISTA = [
   ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],
   ['intensidade e sanidade da partida (Parte 3)', 'teste-intensidade.mjs', [], 'etapa3'],
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs', [], 'etapa3'],
-  ['troca para quem disputa a bola alta ≥ 90% (Parte 4)', 'teste-aereo-troca.mjs', [], 'etapa3'],
+  ['troca para quem disputa a bola alta ≥ 90% — canhão e assistência (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'canhao'], 'etapa3'],
+  ['troca para quem disputa a bola alta ≥ 90% — jogo natural (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'natural'], 'etapa3'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

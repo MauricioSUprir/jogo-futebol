@@ -560,6 +560,9 @@ export const DEFESA_HUMANO = {
 // Troca automática no jogo aéreo (plano 3.5; pesquisa §7: reavaliar no voo acerta ~97%).
 export const TROCA_AEREA = {
   avaliaTicks: 6,             // reavalia a cada 0,1 s
+  margem: 0.3,                // s — chega ao ponto da trajetória com esta folga (corrida real: reação e curva)
+  janelaMarcado: 0.5,         // s — toque aéreo de um companheiro marcado para daqui a até isto: é ele que disputa...
+  antecede: 3,                // ticks — ...salvo se a previsão confirmada põe outro na bola isto antes
   confirma: 2,                // avaliações seguidas com o mesmo melhor antes de trocar (0,2 s)
   folgaMin: 0.25,             // s de vantagem sobre o controlado
   correcoesMax: 1,            // trocas depois da primeira, por bola
