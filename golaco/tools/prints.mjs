@@ -85,9 +85,12 @@ const CENAS = [
   { nome: 'pc-goleiros', ...PC, url: 'q=alta&hora=dia', prep: 'goleiros' },
   { nome: 'pc-gol', ...PC, url: 'q=alta&hora=noite', livre: { de: [38, 5, 14], para: [52.5, 1.2, 0], fov: 40 } },
   // transição defensiva (PR "IA intensa"): o time da IA perde a bola com gente à frente dela e volta
-  // correndo — dois quadros da MESMA jogada (mesma semente): logo depois da perda e 3 s depois
-  { nome: 'pc-transicao-1', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:0.3' },
-  { nome: 'pc-transicao-2', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:3.0' },
+  // correndo — três quadros da MESMA jogada (mesma semente), câmera fixa baixa de lado: logo depois da perda,
+  // 1,5 s e 3 s depois, com o RASTRO (linha amarela) de quem estava à frente da bola desde a perda, um círculo
+  // na bola e a linha da bola na hora da perda (tracejada)
+  { nome: 'pc-transicao-1', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:0.3', depois: 'rastro' },
+  { nome: 'pc-transicao-2', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:1.5', depois: 'rastro' },
+  { nome: 'pc-transicao-3', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:3.0', depois: 'rastro' },
 ];
 
 /** Caixas do HUD e botões: nenhum encosta em outro e todos ficam dentro da área segura. */
@@ -214,10 +217,19 @@ async function preparar(pagina, prep, gol = null) {
         if (tb != null) tAnt = tb;
       }
       if (!achou) return 'transição: NÃO achou';
-      av(Math.round(apos * 60));
+      // rastro de quem estava à frente (a cada 0,1 s) e a linha da bola na hora da perda
+      const rastro = achou.ids.map(id => { const j = m().jogadores.find(q => q.id === id); return [{ x: j.x, z: j.z }]; });
+      const bola0 = { x: m().bola.p.x, z: m().bola.p.z };
+      const passos = Math.round(apos * 60);
+      for (let k = 1; k <= passos; k++) {
+        av(1);
+        if (k % 6 === 0 || k === passos) achou.ids.forEach((id, q) => { const j = m().jogadores.find(o => o.id === id); rastro[q].push({ x: j.x, z: j.z }); });
+      }
       const w = m(), l = w.ataca[1], b = w.bola.p;
       const vs = achou.ids.map(id => w.jogadores.find(j => j.id === id));
-      g.cameraLivre({ de: [achou.cx, 40, achou.cz + 46], para: [achou.cx, 0, achou.cz], fov: 55 }); // alta, do lado da TV (+x à direita)
+      window.__rastro = { pontos: rastro, bola0, bola: { x: b.x, z: b.z }, apos };
+      // câmera fixa (a mesma nos três quadros): baixa e de lado, do lado da TV (+x à direita), ~45 m da jogada
+      g.cameraLivre({ de: [achou.cx, 22, achou.cz + 38], para: [achou.cx, 0, achou.cz - 2], fov: 50 });
       const ub = b.x * l;
       const atras = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l < ub).length;
       const vel = vs.map(j => (-j.vx * l).toFixed(1)).join(' / ');
@@ -311,6 +323,31 @@ for (const c of CENAS) {
         if (l.doGol && window.__golLado) { const { s, z } = window.__golLado; de = [s * de[0], de[1], de[2]]; para = [s * para[0], para[1], z]; }
         g.cameraLivre({ de, para, fov: l.fov });
       }, c.livre);
+    }
+    if (c.depois === 'rastro') {
+      // rastro da transição por cima do desenho (SVG; os pontos do mundo pela câmera de verdade: naTela)
+      await pagina.evaluate(() => {
+        const g = window.__golaco, R = window.__rastro;
+        g.desenhar();
+        if (!R) return;
+        const NS = 'http://www.w3.org/2000/svg', svg = document.createElementNS(NS, 'svg');
+        svg.setAttribute('style', 'position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:50');
+        const el = (t, a) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); svg.appendChild(e); return e; };
+        // linha da bola na hora da perda (de lado a lado do campo)
+        const a = g.naTela(R.bola0.x, 0, -34), b = g.naTela(R.bola0.x, 0, 34);
+        el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: '#ffffff', 'stroke-width': 2, 'stroke-dasharray': '8 6', opacity: 0.8 });
+        for (const pts of R.pontos) {
+          const tela = pts.map(p => g.naTela(p.x, 0.05, p.z));
+          el('polyline', { points: tela.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '), fill: 'none', stroke: '#ffd400', 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.9 });
+          const f = tela[tela.length - 1];
+          el('circle', { cx: f.x, cy: f.y, r: 5, fill: '#ffd400' });
+        }
+        const bt = g.naTela(R.bola.x, 0.1, R.bola.z);
+        el('circle', { cx: bt.x, cy: bt.y, r: 14, fill: 'none', stroke: '#ffffff', 'stroke-width': 3 });
+        const txt = el('text', { x: 24, y: 120, fill: '#ffffff', 'font-size': 22, 'font-family': 'sans-serif', 'font-weight': 700, stroke: '#000', 'stroke-width': 0.8 });
+        txt.textContent = `${R.apos.toFixed(1).replace('.', ',')} s depois da perda — rastro de quem estava à frente da bola (linha tracejada: a bola na perda)`;
+        document.body.appendChild(svg);
+      });
     }
     if (c.depois === 'menu') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirMenu(); });
     if (c.depois === 'ajuda') await pagina.evaluate(() => { document.documentElement.classList.remove('modo-prints'); window.__golaco.abrirAjuda(); });

@@ -564,7 +564,8 @@ export const TATICA = {
   // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
   // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
   // de `vUrgente` m/s)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2 },
+  // (voltando, o ponto vai `marca` para o lado do gol do adversário que a zona dele reivindicou: acha o homem)
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -575,7 +576,8 @@ export const IA_DEFESA = {
   engaja: [42, 66, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento); Média 66 (era 60): com a saída de bola guardando a bola, o marcador a ≤ 3 m caía abaixo de 40%
   perigo: 30,                 // m do meu gol: bola mais perto que isto, o 1º homem aperta (todos os níveis)
   apertaSempre: [false, false, true], // pressão Alta: o 1º homem aperta sempre que engajado...
-  doisApertam: [false, false, true],  // ...e o 2º aperta junto (nas outras, o 2º só aperta com gatilho na Alta)
+  doisApertam: [false, false, true],  // ...e o 2º aperta junto (nas outras, o 2º só aperta com gatilho na Alta)...
+  segundoNoGatilho: [false, true, true], // ...e na Média também com gatilho (correções da contraprova: pressão coordenada)
   cobertura: 8.5,             // m — 2º homem (Média e Alta) atrás do 1º, do lado do gol (real: 2º marcador a 9,6 m)...
   coberturaLado: 3,           // m — ...e por dentro (na diagonal)
   desvio: [3, 1.4],           // m — quem segue a referência contorna o condutor adversário a menos de [0] m que está no caminho (a [1] m dele)
@@ -591,7 +593,7 @@ export const IA_DEFESA = {
   // (PR "IA intensa": janela da Média 3 → 4 s e da Alta 5 → 7 s — FIFA 23 "pressão após perda"; com 5 s na Média,
   // como a regra dos 5 s de Bauer & Anzer 2021, o PPDA da Média caía para ~7, o dos times mais intensos da Europa,
   // abaixo da faixa 8–16 da pressão Equilibrada)
-  contrapressao: { s: [0, 4, 7], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
+  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
   zona: { raio: 7, peso: 0.6, frente: 1 }, // adversário a ≤ 7 m da referência, no máximo 1 m à frente dela, puxa 60% para o lado do gol dele
   marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
@@ -623,6 +625,15 @@ export const IA_ATAQUE = {
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
   condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
+  // Contra-ataque (ia-ataque.js contraAtaque; correções da contraprova, PR "IA intensa"): retomada em jogo corrido
+  // com a bola a mais de `campo` m do meio para o lado de cá (u, referencial de quem retoma) e no máximo `atras`
+  // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição
+  // ofensiva com bônus `bonus` nas opções à frente e sem a posse da retomada (utilidade.posseRetomada).
+  // Tenga 2010; Armatas 2022; PESQUISA-ETAPA3.md §16.5.
+  contra: { atras: 6, campo: -30, s: 6, bonus: 0.5 },
+  // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
+  // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
+  primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },
   // Utilidade do condutor (ia-ataque.js decidir): U = P·(V + posse) − (1 − P)·(C + posse), V = xT do
   // destino, C = xT do adversário onde a bola seria perdida ÷ risco aceito, posse = valor de ter a bola
   // (+ posseMeuCampo com o condutor no próprio campo: cheio até −10 m, zero a partir de +10 m; +

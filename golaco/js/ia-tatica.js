@@ -33,7 +33,7 @@ import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA }
 import { MD } from './matdet.js';
 import { difAng } from './mat.js';
 import { entradaIA, para, pontoInterceptacao } from './ia.js';
-import { apoioTatico, condutorTatico } from './ia-ataque.js';
+import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
 import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
@@ -71,7 +71,9 @@ export function entradaIATatica(m, j) {
   // trocou de vaga (Editar time: troca entre titulares ou formação nova): vai correndo para a vaga
   // nova antes de voltar ao papel (E7 do teste-editor; tela §8: "a IA leva o jogador à vaga nova")
   if (reposicionando(m, j, B) && m.posse !== j.id && !j.recebe) return reposicionar(m, j, B);
-  // recebendo um passe, numa corrida marcada ou indo na bola livre: o código do ia.js
+  // recebendo um passe, numa corrida marcada ou indo na bola livre: o código do ia.js (recebendo na área, a
+  // finalização de primeira da Parte 3 aperta o CHUTE antes: ia-ataque.js primeiraIA)
+  if (j.recebe && m.posse !== j.id) primeiraIA(m, j);
   if ((j.recebe && m.posse !== j.id) || j.corrida) return entradaIA(m, j);
   if (m.posse == null && m.naMao == null && vaiNaLivre(m, j)) return bolaLivre(m, j);
   const f = faseDoTime(m, j.time);
@@ -350,7 +352,9 @@ export function blocoDoTime(m, t) {
   // escolhido pelo defesa.js vai junto)
   B.aperta1 = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.pedido >= 0);
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
-  B.aperta2 = !!adv && adv.posicao !== 'GOL' && p >= 2 && engajado && (comGatilho || IA_DEFESA.doisApertam[p]);
+  // (Média: com gatilho o 2º também aperta — a pressão coordenada do "pressing trigger": o 1º vai na bola e o 2º
+  // fecha o lado de dentro; IA_DEFESA.segundoNoGatilho, correções da contraprova I2)
+  B.aperta2 = !!adv && adv.posicao !== 'GOL' && engajado && ((p >= 2 && (comGatilho || IA_DEFESA.doisApertam[p])) || (comGatilho && !!IA_DEFESA.segundoNoGatilho?.[p]));
 
   // PRESSÃO segurada pelo humano (contrato m.pedidoPressao[time] = tick): quem aperta é o escolhido do
   // leitor da Parte 4 (defesa.js pressionadorDe: o companheiro mais perto da bola, ≠ controlado, com
@@ -745,16 +749,21 @@ function semBola(m, j, f) {
 }
 
 /**
- * Quem só segue a referência (zona, linha, recomposição) não atravessa o condutor adversário: com ele a
- * menos de IA_DEFESA.desvio[0] m e no caminho até o ponto (a menos de desvio[1] m da reta, antes do ponto),
- * o ponto vai para o lado dele, a desvio[1] m. Sem isso, o meio que voltava pelo meio empurrava o condutor
- * pelo corpo (colisão) e, com a referência presa ao corpo dele, os dois iam juntos para o meu gol.
+ * Quem só segue a referência (zona, linha, recomposição) e vem por trás do condutor adversário não o atravessa:
+ * com ele a menos de IA_DEFESA.desvio[0] m e no caminho até o ponto (a menos de desvio[1] m da reta, antes do
+ * ponto), o ponto vai para o lado dele, a desvio[1] m. Sem isso, o meio que voltava pelo meio empurrava o condutor
+ * pelo corpo (colisão) e, com a referência presa ao corpo dele, os dois iam juntos para o meu gol. Quem já está do
+ * lado do meu gol não desvia (fica no caminho dele).
  */
 function desviaCondutor(m, j, B, out) {
   if (B.cond < 0) return;
   let c = null;
   for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
   if (!c) return;
+  // só quem vem por TRÁS dele (do lado do gol deles) contorna: quem já está do lado do meu gol fica no caminho —
+  // é a marcação (o bote do sim.js tira a bola de quem vem para cima dele); contornar todo mundo tirava ~1 desarme
+  // da zona por partida e o PPDA subia (correções da contraprova, I2)
+  if ((j.x - c.x) * m.ataca[j.time] < 0) return;
   const D = IA_DEFESA.desvio, cx = c.x - j.x, cz = c.z - j.z, dc = MD.hypot(cx, cz);
   if (dc > D[0] || dc < 1e-6) return;
   const dx = out.x - j.x, dz = out.z - j.z, L = MD.hypot(dx, dz);
@@ -827,6 +836,20 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   // (o alvo fica pelo menos 2 m além na profundidade: o para() pressa chega com intensidade d/4 e, com o
   // alvo perto, o sprint virava trote antes de passar da bola)
   if (atraso > R.desliga) _t.x -= lado * 2;
+  // voltando, ACOMPANHA o adversário da zona dele (o "recovery run" que acha o homem: a referência reivindicou um
+  // adversário perto dela): o ponto vai `R.marca` para o lado do gol desse adversário — sem isso, quem voltava
+  // passava pelo homem livre e o passe para ele saía sem disputa (contraprova I2: PPDA mais alto)
+  const za = R.marca ? B.zonaAdv[k] : -1;
+  if (za >= 0) {
+    for (const o of m.jogadores) {
+      if (o.id !== za) continue;
+      const gx = -lado * CAMPO.meioX - o.x, gz = -o.z, g = MD.hypot(gx, gz) || 1;
+      const ax = o.x + (gx / g) * IA_DEFESA.marcaDist, az = o.z + (gz / g) * IA_DEFESA.marcaDist;
+      // (só se ele está no caminho de volta: do lado de lá do ponto não puxa para a frente)
+      if ((ax - _t.x) * lado <= 2) { _t.x += (ax - _t.x) * R.marca; _t.z += (az - _t.z) * R.marca; }
+      break;
+    }
+  }
   desviaCondutor(m, j, B, _t);
   // sprint só com urgência: a bola no meu campo (até `urgente` m além do meio) ou vindo para o meu gol a mais de
   // `vUrgente` m/s (o contra-ataque); a bola parada lá na frente, com a construção deles devagar, ele volta
