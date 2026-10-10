@@ -30,7 +30,8 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   o tronco sobre a bola baixa, mãos prontas à frente da cintura; mergulha ao longo da linha do gol, nunca para dentro
   dele, com o corpo no máximo a ~4,6 m/s; no rebote começa de onde está (no chão, só alcança o que dá dali); a defesa
   que o corpo desenhado não alcança vira gol. A espalmada sai forte e para fora (trave, linha de fundo ou por cima do
-  travessão), nunca de volta para a área. Chute desviado num corpo: o goleiro relê (e muitas vezes é enganado) — a
+  travessão), nunca de volta para a área — e não volta para as mãos dele logo depois (antes metade das espalmadas
+  virava encaixe). Chute desviado num corpo: o goleiro relê (e muitas vezes é enganado) — a
   bola nunca "vai parar" nas mãos de longe. Com a bola na mão, as palmas ficam dos dois lados dela; a bola pega
   solta chega às mãos sem salto.
 - Pesquisa e números: `PESQUISA-RECEPCAO-GOLEIRO.md`.
