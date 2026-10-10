@@ -220,8 +220,12 @@ export const CONDUCAO = {
   erroVelBase: 0.008,
   erroVelRuim: 0.05,
   // Domínio (primeiro toque).
-  dominioErroAng: { bom: 0.05, ruim: 0.28 },
-  dominioErroVel: { bom: 0.05, ruim: 0.35 },
+  // σ = bom + (ruim − bom)·((100 − controle)/100)^dominioCurva (× a bola forte e a pressão): controle 90 →
+  // 0,055 rad, 75 → 0,098, 45 → 0,23 (antes linear: 0,073 / 0,108 / 0,177 — o fraco errava pouco demais
+  // com a recepção assistida, e o bom, demais)
+  dominioErroAng: { bom: 0.04, ruim: 0.5 },
+  dominioErroVel: { bom: 0.04, ruim: 0.5 },
+  dominioCurva: 1.5,
   dominioVRef: 12,            // m/s — acima disso o domínio fica mais difícil
   dominioPressaoDist: 2.5,    // m — marcador mais perto que isso pressiona
   // Proteção.
@@ -236,6 +240,29 @@ export const CONDUCAO = {
   pedaladaToqueDuplo: 0.3,    // s — dois toques no modificador dentro disso
   // Puxada de sola.
   puxadaVel: 1.6,             // m/s da bola puxada para trás (no chão; o corpo freia junto)
+};
+
+// Recepção assistida (pedido do dono, 10/10: "o jogador sai da bola, isso nunca pode acontecer"). Com a
+// bola vindo para o jogador do humano (passe dele, ou bola livre sem passe que passa perto e ele alcança
+// antes dos companheiros), o CORPO vai ao encontro da bola (o ponto da linha dela a que ele chega primeiro)
+// e o analógico só decide para onde vai o 1º toque (domínio orientado, como o "directional first touch" do
+// EA FC) e abre o corpo (meia-volta). Ver recepcao.js e PESQUISA-RECEPCAO-GOLEIRO.md.
+export const RECEPCAO = {
+  horizonte: 2.5,             // s — previsão da bola para achar o ponto de encontro
+  ofsFrente: 0.42,            // m — de frente: a bola chega a esta distância à frente do corpo
+  ofsCorrida: 0.3,            // m — em corrida: a bola chega um pouco à frente...
+  ladoCorrida: 0.22,          // m — ...e deste lado do pé (nem nas pernas, nem longe)
+  tLateral: 0.3,              // s — o desvio de lado até a linha da bola é feito com pressa (em até isto)
+  corpoAberto: 0.5,           // rad (~29°) — de frente, o tronco abre até isto para o lado do analógico
+  aLatCorrida: 6,             // m/s² — em corrida, o encontro em que ele segue reto, corrigindo de lado até isto...
+  aRitmoCorrida: 2.5,         // m/s² — ...e o ritmo até isto (para mais ou para menos: sem frear para a bola)...
+  tCorrida: 0.8,              // s — ...em até isto (mais longe, recebe como de frente: vai à linha da bola)
+  perto: 3.0,                 // m — bola livre (sem passe) liga a assistência se o encontro fica a até isto dele...
+  tLivre: 1.6,                // s — ...e acontece em até isto
+  folgaCompanheiro: 0.15,     // s — companheiro que chega antes por mais que isto fica com a bola livre
+  custoTempo: 1.5,            // m/s — sem pressa, o encontro escolhido é o de menor (metros andados + isto × s)
+  janelaMarca: 45,            // ticks — o toque do domínio é marcado com até isto de antecedência
+  alturaPe: 0.45,             // m — bola até esta altura dá para dominar com o pé (= noAlcance)
 };
 
 // Entrada.

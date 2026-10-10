@@ -4,6 +4,7 @@
 //   node tools/rodar-testes.mjs              (grupo padrão: o que o CI roda)
 //   node tools/rodar-testes.mjs --etapa3     (padrão + o grupo 'etapa3')
 //   node tools/rodar-testes.mjs --so etapa3  (só o grupo 'etapa3')
+//   node tools/rodar-testes.mjs --par 2      (no máximo 2 testes ao mesmo tempo; padrão: um por núcleo)
 // Cada linha: [nome, arquivo, argumentos (opcional), grupo (opcional; padrão = 'padrao')].
 // Grupo 'etapa3' (Etapa 3): marcadores que saem com "AGUARDANDO PARTE N" e testes novos que ainda
 // não passaram 5 vezes seguidas com sementes diferentes (plano 5). Não entram no padrão, para o CI
@@ -28,6 +29,7 @@ const LISTA = [
   ['patinação dos pés', 'teste-patinacao.mjs'],
   ['tronco inclina na arrancada, freada e curva', 'teste-inclinacao.mjs'],
   ['domínio orientado', 'teste-dominio.mjs'],
+  ['recepção que nunca se afasta da bola (canhão de passes e bolas livres)', 'teste-recepcao.mjs'],
   ['proteção de corpo', 'teste-protecao.mjs'],
   ['condução curta e pedalada', 'teste-dribles.mjs'],
   ['recomeço do treino (bola no pé, bola fora)', 'teste-recomeco.mjs'],
@@ -72,7 +74,8 @@ function rodar(arq, args = []) {
 }
 
 const t0 = Date.now();
-const nPar = Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
+const iPar = argv.indexOf('--par');
+const nPar = iPar >= 0 ? Math.max(1, +argv[iPar + 1]) : Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
 const res = new Array(TESTES.length);
 let prox = 0, impresso = 0;
 function imprimir() {

@@ -25,6 +25,7 @@ import { trocaAerea, alvoAereo } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
+import { planejarRecepcao } from './recepcao.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -72,6 +73,12 @@ export function criarMundo(opcoes = {}) {
   }
   if (opcoes.controlado) Object.assign(m.controlado, opcoes.controlado);
   return m;
+}
+
+/** Desliga a recepção assistida de j neste passo (devolve null). */
+function semRecepcao(j) {
+  if (j.recep) j.recep.ativo = false;
+  return null;
 }
 
 /** O jogador j é o controlado pelo humano do time dele? */
@@ -302,15 +309,22 @@ export function passo(m, entradas) {
     const e = m.humanos.includes(j.time) ? entradas?.[j.time] : null;
     j.botoesTime = e ? (e.botoes | 0) : 0;
     if (ehControlado(m, j)) {
-      // recebendo um passe com o analógico solto: a assistência leva ao encontro da bola
-      const assist = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
-      if (assist) {
+      // passe chegando com o analógico solto: a assistência de antes (a IA leva ao encontro / ao ponto da
+      // enfiada) — vale quando a recepção assistida não acha encontro (bola alta longe de descer)
+      const antiga = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
+      // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
+      const ed = !antiga && (j.defH || (e && (e.botoes & BOTOES_DEFESA))) ? entradaConter(m, j, e) : null;
+      const ea = !antiga && !ed && m.times ? alvoAereo(m, j, e) : null;
+      // recepção assistida (recepcao.js; pedido do dono, 10/10): a bola vindo para ele, o CORPO vai ao
+      // encontro dela (passo 2, movimentoRecepcao) e o analógico fica para o 1º toque — nada de sair da
+      // bola. O plano usa o analógico do passo anterior (j.ix, j.iz, j.botoes): um passo de atraso no
+      // modo/pressa da recepção, nunca no corpo
+      // (a entrada da demo — a IA jogando pelo humano, e.ia — recebe como a IA, sem a assistência)
+      const rp = !ed && !ea && !(e && e.ia) ? planejarRecepcao(m, j) : semRecepcao(j);
+      if (!rp && antiga) {
         const ia = m.times ? entradaIATatica(m, j) : entradaIA(m, j);
         aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
       } else {
-        // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
-        const ed = j.defH || (e && (e.botoes & BOTOES_DEFESA)) ? entradaConter(m, j, e) : null;
-        const ea = !ed && m.times ? alvoAereo(m, j, e) : null;
         aplicarEntrada(j, ed ?? ea ?? e, m.tick);
       }
       if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);

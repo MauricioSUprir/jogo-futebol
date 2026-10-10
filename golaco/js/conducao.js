@@ -15,12 +15,13 @@
 //   semDominioAte  tick até o qual não domina (acabou de ter a bola roubada)
 //   puxada  {tick0, rumo} | null — puxada de sola em andamento (ult.tipo === 'sola')
 
-import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO } from './config.js';
+import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, freqPassada, cargaPassada, faseLocal, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
 import { normal } from './rng.js';
 import { MD } from './matdet.js';
+import { movimentoAssistido, recepcaoAtiva } from './recepcao.js';
 
 const DT = PASSO;
 const PROT_INTERVALO = Math.round(0.3 / PASSO); // ticks — toque de proteção mais espaçado
@@ -169,9 +170,10 @@ const _mvPrev = { dx: 0, dz: 0, vel: 0, rumoAlvo: 0 };
  * {n, xs, zs, rs, ss, fs}, SÓ DE LEITURA e REAPROVEITADOS (valem até a segunda chamada seguinte de
  * preverCorpo; os vetores podem ter mais de n + 1 posições). Não muda j. rec (opcional) = bola
  * prevista {xs, zs}: aplica a mesma regra de movimentoRecepcao de frente (freia e vira para a bola),
- * para o domínio marcado com esta previsão acontecer de verdade.
+ * para o domínio marcado com esta previsão acontecer de verdade. assist (opcional, com rec) = o plano da
+ * recepção assistida (recepcao.js): o corpo previsto anda pela MESMA movimentoAssistido da simulação.
  */
-export function preverCorpo(m, j, n, comBola, prot, rec) {
+export function preverCorpo(m, j, n, comBola, prot, rec, assist) {
   const res = _pcs[_pcVez];
   _pcVez ^= 1;
   if (res.cap < n + 1) {
@@ -214,7 +216,8 @@ export function preverCorpo(m, j, n, comBola, prot, rec) {
       const rc = rumosCorte(j.cond.corteRumo ?? rv0, MD.atan2(iz, ix), mv.rumoAlvo);
       mv.dx = MD.cos(rc.dir); mv.dz = MD.sin(rc.dir); mv.vel = Math.min(mv.vel, s0); mv.rumoAlvo = rc.tronco;
     }
-    if (rec) { mv.vel = Math.min(mv.vel, VEL_RECEPCAO); mv.rumoAlvo = MD.atan2(rec.zs[i] - k.z, rec.xs[i] - k.x); }
+    if (assist) movimentoAssistido(k, assist, m.tick + i, rec.xs[i], rec.zs[i], j.par, j.ix, j.iz, j.imag, mv);
+    else if (rec) { mv.vel = Math.min(mv.vel, VEL_RECEPCAO); mv.rumoAlvo = MD.atan2(rec.zs[i] - k.z, rec.xs[i] - k.x); }
     passoCorpo(k, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, DT, comBola);
     const s = MD.hypot(k.vx, k.vz);
     const ativa = s > 0.22 || Math.abs(k.giro) > 1.6;
@@ -310,11 +313,11 @@ export function noAlcance(x, z, rumo, bx, bz, by, relaxado) {
 /**
  * Procura o primeiro tick (a partir de `lead`) em que um pé pode tocar a bola: o pé está no
  * balanço, o outro no chão, e a bola no alcance. Devolve {i, pe} ou null. recFrente: prevê o
- * corpo com a regra da recepção de frente (preverCorpo rec).
+ * corpo com a regra da recepção de frente (preverCorpo rec). assist: com o plano da recepção assistida.
  */
-export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado, recFrente) {
+export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado, recFrente, assist) {
   const pb = preverBola(m.bola, max);
-  const pc = preverCorpo(m, j, max, comBola, prot, recFrente ? pb : null);
+  const pc = preverCorpo(m, j, max, comBola, prot, recFrente || assist ? pb : null, assist);
   for (let i = Math.max(1, lead); i <= max; i++) {
     if (!noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i], pb.ys[i], relaxado)) continue;
     const ap0 = apoioPrevisto(pc.fs[i], pc.ss[i], 0), ap1 = apoioPrevisto(pc.fs[i], pc.ss[i], 1);
@@ -355,7 +358,7 @@ function marcarReferencia(m, j, prot) {
  * próximo toque estará no balanço (com o outro no chão) e mira à frente dele.
  * forcarI: força o tick do próximo toque (≤ previsão).
  */
-function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
+function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio, orientado) {
   const b = m.bola;
   const H = pc.n;
   const apoio = 1 - pe;
@@ -415,13 +418,19 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
   if (!prot && (tipoCorte(j, dx, dz) || (dominio && j.imag > 0.3))) {
     const aPed = MD.atan2(j.iz, j.ix);
     let melhor = null;
+    // domínio orientado da recepção assistida: a bola sai na direção do analógico e só entorta (até ±5°) o
+    // que precisa para passar a ≤ DOMINIO_LADO de onde o pé vai estar no próximo toque (o erro do 1º toque
+    // vem do atributo; a recepção já pôs a bola do lado para onde ele vai — recepcao.js ladoDoToque); no
+    // corte e no domínio da IA, a linha (±20°) que mais se aproxima desse ponto (pedido do dono, 10/10: o 1º
+    // toque saía até 40° fora do analógico quando o corpo ainda ia virar)
     for (let k = -8; k <= 8; k++) {
       const a = aPed + k * 0.04363; // passos de 2,5°
       const ux = MD.cos(a), uz = MD.sin(a);
       const sProj = (tx - b.p.x) * ux + (tz - b.p.z) * uz;
       if (sProj < 0.15) continue;
       const e = Math.abs(-(tx - b.p.x) * uz + (tz - b.p.z) * ux);
-      const custo = e + 0.15 * Math.abs(k) * 0.04363;
+      const custo = orientado ? Math.max(0, e - DOMINIO_LADO) + DOMINIO_ENTORTA * Math.abs(k) * 0.04363 : e + 0.15 * Math.abs(k) * 0.04363;
+      if (orientado && Math.abs(k) > DOMINIO_KMAX) continue;
       if (!melhor || custo < melhor.custo) melhor = { custo, e, ux, uz, sProj };
     }
     const sv = MD.hypot(j.vx, j.vz);
@@ -445,6 +454,15 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
         }
       }
     }
+    if (!melhor && orientado) {
+      // o ponto do próximo toque não fica à frente da bola nessa linha (o corpo ainda vai virar para lá):
+      // a bola sai mesmo assim na linha do analógico, curta, e o corpo vai com ela
+      const ux = MD.cos(aPed), uz = MD.sin(aPed);
+      melhor = { custo: 0, e: 0, ux, uz, sProj: DOMINIO_CURTO };
+    }
+    // domínio orientado: a bola anda pelo menos DOMINIO_CURTO na linha (o toque que só amortece não leva
+    // a bola para o lado pedido)
+    if (melhor && orientado && melhor.sProj < DOMINIO_CURTO) melhor.sProj = DOMINIO_CURTO;
     if (melhor) {
       dx = melhor.ux * melhor.sProj; dz = melhor.uz * melhor.sProj;
       tx = b.p.x + dx; tz = b.p.z + dz;
@@ -585,14 +603,17 @@ export function executarToque(m, j, pe, tipo) {
   // um toque por passada; se o corpo for passar a bola no meio do caminho (freada forte),
   // toca a cada passo — como quem freia com a bola
   const dom = tipo === 'dominio';
-  let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom);
+  // domínio orientado da recepção assistida (o analógico do humano é a direção do 1º toque; o da IA é o
+  // movimento dela, e o domínio da IA fica como era)
+  const ori = dom && recepcaoAtiva(m, j);
+  let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom, ori);
   // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
   // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
   // bola rolando reta se afastaria demais do arco do corpo até o próximo toque
   // (curva = o analógico girando de forma contínua; um gesto brusco não conta)
   const curvando = Math.abs(j.intW) > 0.3;
   if (!prot && !curta && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
-    plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom);
+    plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom, ori);
   }
   if (!semUltrapassar(b, plano, pc)) {
     // nem a cada passo: marca o próximo toque antes do ponto em que o corpo alcançaria a bola.
@@ -601,8 +622,8 @@ export function executarToque(m, j, pe, tipo) {
     // sai mais rápida que o corpo freando (em vez de rolar devagar até o fim da previsão e ser
     // atropelada). Virando, não: a bola mais forte fugiria do corpo que está fazendo a curva.
     const iv = plano.violacao, minI = Math.ceil(CONDUCAO.intervaloMin / DT);
-    if (iv > minI) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, iv, dom);
-    else if (velPedida(j, true) < sAgora0 - 1.0) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, minI, dom);
+    if (iv > minI) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, iv, dom, ori);
+    else if (velPedida(j, true) < sAgora0 - 1.0) plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, minI, dom, ori);
   }
   let { iN, proxPe, tx, tz, dx, dz, dist, tolerancia } = plano;
   const apoio = 1 - pe;
@@ -617,8 +638,11 @@ export function executarToque(m, j, pe, tipo) {
     const q = CONDUCAO;
     const pressao = (() => { const a = adversarioMaisPerto(m, j); return a && a.d < q.dominioPressaoDist ? 1.6 : 1; })();
     const dif = (1 + Math.max(0, sIn - 6) / q.dominioVRef) * pressao;
-    sigAng = lerp(q.dominioErroAng.ruim, q.dominioErroAng.bom, attr / 100) * dif;
-    sigVel = lerp(q.dominioErroVel.ruim, q.dominioErroVel.bom, attr / 100) * dif;
+    // o erro cresce mais depressa na ponta fraca (curva de potência pelo que falta para 100): o bom domina
+    // limpo e o fraco espirra a bola forte (pedido do dono, 10/10: "controle de bola melhor")
+    const fa = MD.pow((100 - clamp(attr, 0, 100)) / 100, q.dominioCurva);
+    sigAng = (q.dominioErroAng.bom + (q.dominioErroAng.ruim - q.dominioErroAng.bom) * fa) * dif;
+    sigVel = (q.dominioErroVel.bom + (q.dominioErroVel.ruim - q.dominioErroVel.bom) * fa) * dif;
   }
   const ea = normal(m.rng) * sigAng;
   const ev = normal(m.rng) * sigVel;
@@ -646,6 +670,10 @@ export function executarToque(m, j, pe, tipo) {
 }
 
 const CORTE_MAX = 15; // ticks (0,25 s) no máximo segurando o rumo à espera do toque
+const DOMINIO_CURTO = 0.45; // m — domínio orientado sem o ponto do próximo toque à frente: a bola anda isto
+const DOMINIO_LADO = 0.25;  // m — domínio orientado: a linha da bola pode passar até isto de onde o pé vai estar
+const DOMINIO_KMAX = 2;     // passos de 2,5° — domínio orientado: a bola entorta no máximo ±5° do analógico...
+const DOMINIO_ENTORTA = 0.6; // ...e cada grau de desvio custa como 0,6 m/rad de distância ao pé (prefere o analógico)
 // Segurando o rumo à espera do toque do corte, o corpo já começa a ir para o lado pedido (a
 // velocidade até CORTE_DESVIO do rumo em que estava; o tronco até CORTE_TRONCO): responde ao
 // comando sem tirar a bola do alcance do pé.
@@ -1000,6 +1028,7 @@ export function tentarDominio(m, j, primeira) {
   const b = m.bola;
   // acabou de ter a bola roubada: não recupera no tick seguinte
   if (c.semDominioAte != null && m.tick < c.semDominioAte) return false;
+  if (recepcaoAtiva(m, j)) return dominioAssistido(m, j, primeira);
   if (c.toque && c.toque.tipo === 'dominio') {
     if (m.tick >= c.toque.tick) {
       if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
@@ -1044,12 +1073,62 @@ export function tentarDominio(m, j, primeira) {
 }
 
 /**
+ * Domínio da recepção assistida (recepcao.js): a bola no alcance com um pé livre, domina (ou bate de
+ * primeira) já; senão marca o toque previsto pela MESMA previsão do movimento assistido — o pé sai do
+ * chão a tempo (saidaParaToque) e o gesto vai até a bola. Devolve true com o domínio marcado/feito.
+ */
+function dominioAssistido(m, j, primeira) {
+  const c = j.cond, b = m.bola, pl = j.recep;
+  const t = c.toque && c.toque.tipo === 'dominio' ? c.toque : null;
+  if (noAlcance(j.x, j.z, j.rumo, b.p.x, b.p.z, b.p.y, true)) {
+    // a bola no alcance: domina na hora marcada (a bola chegando ao ponto do encontro, do lado certo do
+    // corpo) — ou já, se ela vai sair do alcance antes disso
+    if (!t || m.tick >= t.tick || bolaSaindo(j, b)) {
+      const pe = peLivre(j, t ? t.pe : ladoDaBola(j.x, j.z, j.rumo, b.p.x, b.p.z), true);
+      if (pe >= 0) {
+        if (primeira && primeira(m, j, pe)) { c.toque = null; return true; }
+        executarToque(m, j, pe, 'dominio');
+        return true;
+      }
+      // os dois pés no chão: o pé do toque está saindo (a bola ainda está no alcance)
+      if (t && m.tick - t.tick < GESTO.esperaSaida) return true;
+    }
+  }
+  // marca o toque previsto: o 1º tick no alcance a partir do encontro planejado (pl.alvo), pela MESMA
+  // previsão do movimento assistido — o pé sai do chão a tempo (saidaParaToque) e o gesto vai até a bola
+  const rel = pl.alvo - m.tick - 1;
+  if (rel > RECEPCAO.janelaMarca) { if (t) c.toque = null; return false; }
+  const lead = Math.max(1, rel);
+  const op = procurarOportunidade(m, j, lead, lead + 15, false, null, true, false, pl)
+    ?? (lead > 1 ? procurarOportunidade(m, j, 1, lead + 15, false, null, true, false, pl) : null);
+  if (op) {
+    c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio', modo: 'assistido', desde: t ? t.desde : m.tick, qx: pl.qx, qz: pl.qz };
+    return true;
+  }
+  if (t) c.toque = null;
+  return false;
+}
+
+/**
+ * A bola (no alcance agora) sai do alcance do pé no próximo tick, ou bate no corpo antes de ser tocada? (os
+ * dois seguindo como estão; o corpo + a bola = JOGADOR.raio + raio da bola, com folga)
+ */
+function bolaSaindo(j, b) {
+  const x = j.x + j.vx * DT, z = j.z + j.vz * DT, bx = b.p.x + b.v.x * DT, bz = b.p.z + b.v.z * DT;
+  if (MD.hypot(bx - x, bz - z) < BATE_CORPO) return true;
+  return !noAlcance(x, z, j.rumo, bx, bz, b.p.y, true);
+}
+const BATE_CORPO = 0.48; // m — a bola mais perto que isso do centro do corpo bateria nas pernas (0,3 + 0,11)
+
+/**
  * Movimento de quem vai receber (domínio marcado). De frente: fica de frente para a bola e
  * quase parado; o analógico decide para onde vai o primeiro toque, não para onde o corpo foge.
  * Em corrida: segue correndo e só corrige o caminho até o ponto marcado (qx, qz).
  */
 export function movimentoRecepcao(m, j, base) {
   const c = j.cond;
+  // recepção assistida (recepcao.js): o corpo vai ao encontro da bola; o analógico fica para o 1º toque
+  if (recepcaoAtiva(m, j)) return movimentoAssistido(j, j.recep, m.tick, m.bola.p.x, m.bola.p.z, j.par, j.ix, j.iz, j.imag);
   if (!c.toque || c.toque.tipo !== 'dominio') return base;
   const b = m.bola;
   if (c.toque.modo === 'corrida') {

@@ -145,7 +145,10 @@ export function entradaDemo(m, opc = DEMO) {
   if (m.modo === 'partida') return entradaDemoPartida(m);
   if (m.modo === 'ataque') {
     const j = jogadorPorId(m, idControlado(m));
-    return j ? entradaIA(m, j) : { x: 0, z: 0, botoes: 0 };
+    if (!j) return { x: 0, z: 0, botoes: 0 };
+    // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
+    const e = entradaIA(m, j);
+    return { x: e.x, z: e.z, botoes: e.botoes, ia: true };
   }
   const j = jogadorPorId(m, ID_HUMANO);
   if (!j) return { x: 0, z: 0, botoes: 0 };

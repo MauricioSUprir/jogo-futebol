@@ -68,7 +68,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     botoesTime: undefined, giroParado: undefined, quadril: undefined, iaA: undefined,
     pedidoPedalada: undefined, ladoOlha: undefined, ritmo: undefined, ultLanc: undefined,
     ultMod: undefined, descansoBote: undefined, defH: undefined, conter: undefined, descanso: undefined,
-    contorno: undefined,
+    contorno: undefined, recep: undefined,
   };
   return j;
 }
