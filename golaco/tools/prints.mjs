@@ -12,6 +12,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { acharGol } from './lib/acha-gol.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -58,21 +59,25 @@ const CENAS = [
   { nome: 'celular-retrato', largura: 390, altura: 844, dpr: 2, toque: true, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1' },
   // "GOL!" grande e verde (o aviso que aparece por 2 s quando a bola entra)
   { nome: 'celular-gol', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', depois: 'gol' },
-  // gol DE VERDADE (semente 6, a IA jogando pelos dois: o nº 9 marca aos ~21 s): a rede estufada (0,1 s
-  // depois da batida), a torcida explodindo, a câmera com o efeito e o "GOL!" com autor e minuto
-  // o ataque que vira gol (semente 6), 0,4 s antes do gol: a câmera de TV perto da área com a torcida no quadro
-  { nome: 'pc-dia-ataque', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'antesDoGol' },
-  { nome: 'pc-noite-ataque', ...PC, semente: 6, url: 'q=alta&hora=noite&demo=1', prep: 'antesDoGol' },
-  { nome: 'celular-dia-ataque', ...CEL, semente: 6, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
-  { nome: 'celular-noite-ataque', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
-  { nome: 'pc-gol-rede', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede' },
-  { nome: 'pc-gol-rede-noite', ...PC, semente: 6, url: 'q=alta&hora=noite&demo=1', prep: 'golRede' },
-  { nome: 'celular-gol-rede-dia', ...CEL, semente: 6, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
-  { nome: 'celular-gol-rede', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede' },
-  { nome: 'pc-gol-rede-perto', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
-  { nome: 'celular-gol-rede-perto', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
+  // gol DE VERDADE (semente: 'gol' = a 1ª semente com gol e batida na rede, achada em Node por acharGol — a IA
+  // jogando pelos dois; nada de semente fixa, que deixa de ter gol quando a IA ou o goleiro mudam): a rede
+  // estufada (0,1 s depois da batida) na câmera do gol (o corte da transmissão), a torcida atrás do gol
+  // explodindo e o "GOL!" com autor e minuto; e o ataque que vira gol, 0,4 s antes, na câmera de TV
+  { nome: 'pc-dia-ataque', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'antesDoGol' },
+  { nome: 'pc-noite-ataque', ...PC, semente: 'gol', url: 'q=alta&hora=noite&demo=1', prep: 'antesDoGol' },
+  { nome: 'celular-dia-ataque', ...CEL, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
+  { nome: 'celular-noite-ataque', ...CEL, semente: 'gol', url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
+  { nome: 'pc-gol-rede', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'golRede' },
+  { nome: 'pc-gol-rede-noite', ...PC, semente: 'gol', url: 'q=alta&hora=noite&demo=1', prep: 'golRede' },
+  { nome: 'celular-gol-rede-dia', ...CEL, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
+  { nome: 'celular-gol-rede', ...CEL, semente: 'gol', url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede' },
+  // (câmeras livres "do gol": x espelhado pelo lado do gol e o olhar no z da batida)
+  { nome: 'pc-gol-rede-perto', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42, doGol: true } },
+  { nome: 'celular-gol-rede-perto', ...CEL, semente: 'gol', url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42, doGol: true } },
   // por trás do gol (entre as placas e a arquibancada): a bolsa da rede de fundo vem na direção da câmera
-  { nome: 'pc-gol-rede-atras', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [59.6, 2.3, 0.6], para: [53.2, 1.0, -2.6], fov: 52 } },
+  { nome: 'pc-gol-rede-atras', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [59.6, 2.3, 0.6], para: [53.2, 1.0, -2.6], fov: 52, doGol: true } },
+  // o "GOL!" no menor celular deitado (568×320): entre o analógico e os botões
+  { nome: 'celular-568-gol', largura: 568, altura: 320, dpr: 2, toque: true, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
   // torcida de perto (câmera livre): lado de lá com o mosaico, e o fundo da organizada
   { nome: 'pc-torcida', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { de: [0, 14, 10], para: [0, 9, -55], fov: 42 } },
   { nome: 'celular-torcida-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', livre: { de: [30, 8, 14], para: [70, 8, -5], fov: 48 } },
@@ -127,8 +132,8 @@ async function conferirLayout(pagina) {
 }
 
 /** Preparações de cena (no navegador, relógio manual). Devolvem um texto curto do que houve. */
-async function preparar(pagina, prep) {
-  return pagina.evaluate(prep => {
+async function preparar(pagina, prep, gol = null) {
+  return pagina.evaluate(({ prep, gol }) => {
     const g = window.__golaco;
     const av = (n, e) => { for (let i = 0; i < n; i++) { if (e) g.forcarEntrada(typeof e === 'function' ? e(i) : e); g.relogio.avancar(1000 / 60, { desenhar: false }); } };
     if (prep === 'ataque') {
@@ -184,8 +189,8 @@ async function preparar(pagina, prep) {
       return `carga ${c ? c.tipo : '-'}`;
     }
     if (prep === 'antesDoGol') {
-      // a jogada que vira gol (semente 6: gol no tick 1260), 0,4 s antes: o ataque perto da área
-      while (g.mundo.tick < 1236) g.relogio.avancar(1000 / 60, { desenhar: false });
+      // a jogada que vira gol (achada por acharGol), 0,4 s antes: o ataque perto da área
+      while (g.mundo.tick < gol.golTick - 24) g.relogio.avancar(1000 / 60, { desenhar: false });
       const e = g.estado();
       return `tick ${g.mundo.tick}, bola em (${e.bola.x.toFixed(1)}, ${e.bola.z.toFixed(1)}), torcida da casa: tensão ${g.estadio.emocao.torcida[0].tensao.toFixed(2)}, barulho ${g.estadio.emocao.agito.toFixed(2)}`;
     }
@@ -198,10 +203,13 @@ async function preparar(pagina, prep) {
         if (ev && !golEv) golEv = { ...ev };
       }
       for (let i = 0; i < 6; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-      window.__golPrint = golEv;
+      // o autor de verdade (último toque pelos eventos, autor-gol.js), como o "GOL!" do jogo
+      window.__golPrint = golEv ? { ...golEv, autor: g.estadio.autorGol?.id ?? golEv.autor } : null;
+      const im0 = g.estadio.rede.impactos[0];
+      window.__golLado = im0 ? { s: im0.x > 0 ? 1 : -1, z: im0.z } : { s: 1, z: 0 };
       const r = g.estadio.rede;
       const im = r.impactos[0];
-      return `gol ${golEv ? `do time ${golEv.time} (autor ${golEv.autor})` : 'NÃO houve'} no tick ${g.mundo.tick - 6}, batidas ${r.batidas}${im ? `, pano ${im.plano} em (${im.x.toFixed(1)}, ${im.y.toFixed(2)}, ${im.z.toFixed(2)})` : ''}, placar ${g.estado().placar.join('×')}, torcida da casa excita ${g.estadio.emocao.torcida[0].excita.toFixed(2)}`;
+      return `gol ${golEv ? `do time ${golEv.time} (autor ${window.__golPrint.autor})` : 'NÃO houve'} no tick ${g.mundo.tick - 6}, câmera ${g.estadio.planoCamera}, batidas ${r.batidas}${im ? `, pano ${im.plano} em (${im.x.toFixed(1)}, ${im.y.toFixed(2)}, ${im.z.toFixed(2)})` : ''}, placar ${g.estado().placar.join('×')}, torcida da casa excita ${g.estadio.emocao.torcida[0].excita.toFixed(2)}`;
     }
     if (prep === 'goleiros') {
       av(30);
@@ -211,17 +219,24 @@ async function preparar(pagina, prep) {
       return gol1 ? `goleiro ${gol1.id} em ${gol1.x.toFixed(1)}, ${gol1.z.toFixed(1)}` : 'sem goleiro no mundo';
     }
     return '';
-  }, prep);
+  }, { prep, gol });
 }
 
 const srv = await servidor();
+// a 1ª semente com gol de verdade (só se alguma cena pedir)
+let GOL = null;
+if (CENAS.some(c => c.semente === 'gol' && (!so || so.has(c.nome)))) {
+  GOL = await acharGol({ pastaJs: path.join(RAIZ, 'js') });
+  console.log(GOL ? `gol de verdade: semente ${GOL.semente}, tick ${GOL.golTick} (time ${GOL.time}, autor ${GOL.autor})` : 'NENHUM gol de verdade nas sementes 1–40: cenas do gol puladas');
+}
 let falhas = 0;
 for (const c of CENAS) {
   if (so && !so.has(c.nome)) continue;
+  if (c.semente === 'gol' && !GOL) continue;
   const t0 = Date.now();
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
-    await pagina.goto(`${srv.url}?prints=1&semente=${c.semente ?? 3}&${c.url}`, { waitUntil: 'load' });
+    await pagina.goto(`${srv.url}?prints=1&semente=${c.semente === 'gol' ? GOL.semente : (c.semente ?? 3)}&${c.url}`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
@@ -230,7 +245,7 @@ for (const c of CENAS) {
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
     }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' ? 0 : segundos);
-    const nota = c.prep ? await preparar(pagina, c.prep) : '';
+    const nota = c.prep ? await preparar(pagina, c.prep, GOL) : '';
     let notaEd = '';
     if (c.editor) {
       // "Editar time" pela pausa (cliques de verdade); a aba e, na substituição, 9 → 22
@@ -255,8 +270,10 @@ for (const c of CENAS) {
       await pagina.evaluate(l => {
         const g = window.__golaco;
         const j = g.estado().jogador;
-        const de = l.rel ? [j.x + l.rel[0], l.rel[1], j.z + l.rel[2]] : l.de;
-        const para = l.rel ? [j.x, 0.9, j.z] : l.para;
+        let de = l.rel ? [j.x + l.rel[0], l.rel[1], j.z + l.rel[2]] : l.de;
+        let para = l.rel ? [j.x, 0.9, j.z] : l.para;
+        // câmera "do gol": espelha pelo lado do gol e olha para o z da batida
+        if (l.doGol && window.__golLado) { const { s, z } = window.__golLado; de = [s * de[0], de[1], de[2]]; para = [s * para[0], para[1], z]; }
         g.cameraLivre({ de, para, fov: l.fov });
       }, c.livre);
     }
