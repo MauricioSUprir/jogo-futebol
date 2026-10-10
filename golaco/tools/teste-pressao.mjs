@@ -24,8 +24,8 @@
 //    A retomada: com a definição deste medidor (perda = qualquer toque do outro time com a bola rolando;
 //    retomada = qualquer toque de volta em ≤ 5 s), os eventos da Metrica dão 44,1% (555 perdas;
 //    tools/pesquisa/retomada_metrica.py) — os 36,5% da pesquisa são de outra definição (rastreamento, posse
-//    "assentada"). PR "IA intensa" (dono, 10/10: "o jogo tem que ser MAIS INTENSO"; contrapressão de 5 s na
-//    Média, Bauer & Anzer 2021): a meta passa a ser a da MESMA definição no jogo real, 44,1 ± 10 pontos
+//    "assentada"). PR "IA intensa" (dono, 10/10: "o jogo tem que ser MAIS INTENSO"; contrapressão da Média
+//    3 → 4 s, Bauer & Anzer 2021): a meta passa a ser a da MESMA definição no jogo real, 44,1 ± 10 pontos
 //    (34–54%), como a agressão (68 ± 10). Era 25–40%.
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';

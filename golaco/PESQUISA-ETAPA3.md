@@ -766,10 +766,8 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
 | `IA_DEFESA.desvio` | 3 m / 1,4 m | EA FC 27 (apoio pela posição); erro medido no `teste-taticas` (o meio empurrava o condutor pelo corpo) |
 | `IA_DEFESA.livre.disputa` | 0,6 s | Di Salvo 2009; Metrica (sprint 0,6% do tempo) |
 | `TATICA.largura.com` | 0,90 / **1,04** / 1,18 | Metrica (48,3 m com a bola): o jogo media ~43,8 m |
-| `IA_ATAQUE.corridas.alemMax` | 0,5 s | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
-| `IA_ATAQUE.utilidade.chuteLonge` | 0,30 → 0,32 | ~40% dos chutes do futebol de elite são de fora da área (o jogo tinha ~30%); a conversão ficava em ~20%, no teto da faixa |
+| `IA_ATAQUE.corridas.alemMax` | 0,5 s (corrida que passou da linha e não recebe acaba; o ataque à área segue) | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
 | `IA_ATAQUE.utilidade.cruzamentoP` | 0 / 1 na área: 0,02 / 0,12 → **0,01 / 0,06** | Metrica (3 atacantes na área no cruzamento, p90 5): cruzar para a área vazia vale menos — atacantes na área no cruzamento 1,6 → 2,6 |
-| `IA_ATAQUE.corridas.alemMax` (com o ataque à área valendo, não corta) | 0,5 s | — |
 
 ### 16.3 Metas que mudaram
 
@@ -777,7 +775,7 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
   (perda = qualquer toque do outro time com a bola rolando; retomada = qualquer toque de volta em ≤ 5 s), os eventos da
   Metrica dão **44,1%** (`tools/pesquisa/retomada_metrica.py`, 555 perdas); os 36,5% eram de outra definição. A meta passa
   a ser a da mesma definição no jogo real ± 10 pontos, como a da agressão (68 ± 10) — e o dono pediu contrapressão mais
-  forte (5 s).
+  forte (Média 3 → 4 s, Alta 5 → 7 s). A publicada ficava em ~47% e já reprovava a faixa antiga.
 - **m/min nos lances rápidos** (`teste-intensidade`): 180–220 → **180–280**. A média real (Jerome 2024) é 196–208; a
   publicada já ficava em ~240 (a partida condensada tem ~5 posses por minuto, contra ~1 no jogo real); o dono pediu o
   jogo "MAIS INTENSO" com a IA voltando em disparada, e quem recompõe corre a ~390 m/min nos lances rápidos (~21% do
@@ -791,6 +789,11 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
   meta vem da física do próprio jogo e do limiar de alta intensidade (Ju 2023), não de uma distribuição real (B).
 - **Superioridade no contra-ataque**: a definição (atacantes no terço final ≥ defensores entre a bola e o gol) é uma
   aproximação da de Forcher 2023 (zona da "rest defense" na hora da perda); serve para comparar o GOLAÇO consigo mesmo.
+- **Testadas e descartadas** (medidas com 48 partidas, sementes 1–48 e 49–96): `chuteLonge` 0,32 (mais chutes de fora;
+  a fatia de dentro da área caía para ~58%, e para 44% numa rodada de 8 partidas — meta ≥ 55%); recomposição sem
+  urgência a ~5 m/s (intensidade 0,85 do analógico: não devolveu tempo à faixa "andando" e o recuo caía de 5,2 para
+  4,9 m/s); bônus de transição ofensiva maior (subia os m/min dos lances rápidos sem chute a mais); contrapressão Média
+  de 5 s (PPDA ~7).
 - **Ataque × defesa**: com a defesa mais organizada, o ataque da IA chuta um pouco menos (ver o relatório do PR);
   as metas de chutes (≥ 10) e de passe certo (≤ 90%) já reprovavam na publicada e seguem pendentes (Etapa 4: bolas
   paradas, escanteios — o jogo tem ~0,3 escanteio por partida, o real ~10).
