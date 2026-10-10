@@ -13,7 +13,7 @@
 //  - alguém em posição de impedimento (% do tempo com a bola no pé)       8–25%     (Metrica 16%)
 //  - no cruzamento de jogo corrido: de linha do time na área adversária   mediana 2–4, p90 ≤ 6 (Metrica 3, p90 5)
 // Amostras a cada 0,1 s de bola rolando (sem parada por cobrar, sem bola fora, sem gol).
-//   node tools/teste-apoio.mjs              (lógica do repositório; 8 sementes × 1º tempo de 4 min)
+//   node tools/teste-apoio.mjs              (lógica do repositório; 8 partidas de 2 × 4 min)
 //   node tools/teste-apoio.mjs --antes      (a mesma partida com a IA de hoje: criarPartida({iaClassica: true}))
 //   node tools/teste-apoio.mjs --js <pasta> (outra cópia da lógica; sem partida.js → REPROVA)
 //   SEMENTES=20 node tools/teste-apoio.mjs  · --sem0 101 (primeira semente; rodadas com outro conjunto)
@@ -28,7 +28,7 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const ANTES = args.includes('--antes');
-const MIN = 4; // um tempo de 4 min reais por semente
+const MIN_TEMPO = 4; // partida inteira: 2 tempos de 4 min reais (o padrão)
 
 // ------------------------------------------------------------------ coleta de uma semente (processo filho)
 async function coletar(sem) {
@@ -38,19 +38,19 @@ async function coletar(sem) {
     perto: [], livres2: 0, livresN: 0, frente: 0, lado: 0, atras: 0, corr: [0, 0, 0, 0, 0], corrN: 0,
     imp: 0, impN: 0, cruz: [], corridas: [0, 0], rolando: 0,
   };
-  const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: MIN });
+  const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: MIN_TEMPO });
   const corre = new Map(); // id → {t, x0, z0, lado}
-  const N = Math.round(MIN * 3600);
+  const N = Math.round(2 * MIN_TEMPO * 3600 + 1200);
   for (let i = 0; i < N; i++) {
     const parada = m.parada && !m.parada.rolou;
     const ev = P.passoPartida(m, P.entradaDemoPartida(m));
-    if (m.partida.estado === 'intervalo' || m.partida.estado === 'fim') break;
+    if (m.partida.estado === 'fim') break;
     for (const e of ev) {
       if (e.tipo !== 'passe' || e.modo !== 'cruzamento' || parada) continue; // escanteio não conta
       const j = m.jogadores.find(o => o.id === e.id);
       if (j) R.cruz.push(M.naAreaAdversaria(m, j.time));
     }
-    const rolando = !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
+    const rolando = m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
     if (!rolando) { corre.clear(); continue; }
     R.rolando++;
     const tc = M.timeComBola(m);
@@ -134,7 +134,7 @@ const med = a => { const s = [...a].sort((x, y) => x - y); return s.length ? s[M
 const quant = (a, q) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.ceil(q * s.length) - 1)] : NaN; };
 const pct = (a, b) => (b ? 100 * a / b : NaN);
 
-console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}\n${NS} sementes (${S0}–${S0 + NS - 1}) × 1º tempo de ${MIN} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}\n${NS} partidas (sementes ${S0}–${S0 + NS - 1}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 const perto = med(junta('perto'));
 reg('companheiro mais perto do portador (mediana)', `${fmt(perto)} m`, '8–12 m (real 10,2)', perto >= 8 && perto <= 12);
 const liv = pct(soma('livres2'), soma('livresN'));
@@ -147,7 +147,7 @@ const cN = soma('corrN'), corr = [0, 1, 2, 3, 4].map(k => res.reduce((a, r) => a
 const corrOk = corr[0] >= 0.7 && corr[0] <= 1.5 && corr[4] >= 0.7 && corr[4] <= 1.5 && corr[1] >= 1 && corr[1] <= 2 && corr[3] >= 1 && corr[3] <= 2 && corr[2] >= 3 && corr[2] <= 5;
 reg('terço final: de linha no campo adversário por corredor (lat/meio/centro/meio/lat)', `${corr.map(v => fmt(v, 2)).join(' / ')} (${cN} amostras)`, '0,7–1,5 / 1–2 / 3–5 / 1–2 / 0,7–1,5', cN > 0 && corrOk);
 const minRol = soma('rolando') / 3600, corridas = res.reduce((a, r) => a + r.corridas[0] + r.corridas[1], 0);
-const porPartida = corridas / 2 / Math.max(minRol, 1e-9) * (2 * MIN);
+const porPartida = corridas / 2 / Math.max(minRol, 1e-9) * (2 * MIN_TEMPO);
 reg('corridas nas costas da defesa, por time por partida de bola rolando', `${fmt(porPartida)} (${corridas} em ${fmt(minRol)} min rolando)`, '15–40 (Metrica ~27)', porPartida >= 15 && porPartida <= 40);
 const imp = pct(soma('imp'), soma('impN'));
 reg('alguém em posição de impedimento', `${fmt(imp)}% do tempo com a bola`, '8–25% (Metrica 16%)', imp >= 8 && imp <= 25);
