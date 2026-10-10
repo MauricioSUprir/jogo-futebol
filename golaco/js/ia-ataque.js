@@ -54,6 +54,7 @@ const seg = s => Math.round(s / DT);
 const CORREDOR = { ATA: 1, SA: 1, PD: 1, PE: 1, MEI: 1, MD: 1, ME: 1 };
 const LATERAL = { LD: 1, LE: 1, ADD: 1, ADE: 1 };
 const PONTA = { PD: 1, PE: 1, MD: 1, ME: 1 };
+const CENTROAVANTE = { ATA: 1, SA: 1 };
 
 const _r = { x: 0, z: 0 }, _ref = { u: 0, w: 0 }, _c = { x: 0, z: 0, mag: 1, modo: 'calma', correr: false };
 
@@ -286,7 +287,9 @@ function estadoAtaque(m, t) {
   if (A.cond && A.cond.posicao !== 'GOL') {
     let d1 = Infinity, d2 = Infinity;
     for (const o of A.ids) {
-      if (o === A.cond || indo(m, o)) continue;
+      // (o centroavante não vem buscar o apoio curto: ele dá a profundidade — vindo para o meio, ele
+      // saía da tabela e ficava atrás da bola junto com o resto)
+      if (o === A.cond || indo(m, o) || CENTROAVANTE[o.posDetalhe]) continue;
       let d = MD.hypot(o.x - A.cond.x, o.z - A.cond.z);
       if (o.iaA && o.iaA.papel === 'apoio') d -= 2;
       if (d < d1) { d2 = d1; A.apoio[1] = A.apoio[0]; d1 = d; A.apoio[0] = o.id; }

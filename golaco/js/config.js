@@ -475,7 +475,7 @@ export const TATICA = {
     [2.5, 32.7, 37.1], [7.5, 36.1, 38.2], [12.5, 39.0, 38.6], [17.5, 42.1, 39.4], [22.5, 45.5, 39.7],
     [27.5, 47.0, 39.5], [32.5, 48.7, 39.8], [37.5, 49.5, 39.7], [42.5, 50.2, 38.9], [47.5, 49.9, 37.2],
   ],
-  linhasSem: { mei: -0.5, ata: 0.5 }, // m — sem a bola, deslocamento das linhas do meio e da frente (ver tatica.js); com a Parte 3 integrada, −1,5/+2 deixava o meio–ataque em ~16,5 m (Forcher 2024: 13,2)
+  linhasSem: { mei: -1.5, ata: -0.5 }, // m — sem a bola, deslocamento das linhas do meio e da frente (ver tatica.js); com a Parte 3 integrada, −1,5/+2 deixava o meio–ataque em ~16,5 m (Forcher 2024: 13,2) e a frente sobrando à frente da bola (atrás da bola < 8)
   kFrenteSem: 0.85,           // k da frente sem a bola com a bola no campo de lá (o do atacante é 0,66)
   mentalidadeBloco: 3,        // m por nível de mentalidade (−2..+2), bloco inteiro
   lateralSobe: 1,             // m a mais por nível acima de 0, com a bola, para os laterais/alas
@@ -580,7 +580,7 @@ export const IA_ATAQUE = {
   // < marcadorLivre m, e a linha do passe até o destino com risco ≤ linhaMax; destino = linha + `alem`
   // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
   // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa).
-  corridas: { folga: 15, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
+  corridas: { folga: 15, alem: [8, 12], recarga: 8, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
@@ -625,7 +625,7 @@ export const IA_ATAQUE = {
   antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
   pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
   impedimentoFolga: 1,        // m — fora da corrida, a referência não passa da linha adversária − isto
-  naLinha: 4,                 // m — com a bola fora do nosso terço, os centroavantes ficam até isto atrás da linha
+  naLinha: 5,                 // m — com a bola fora do nosso terço, os centroavantes ficam até isto atrás da linha
   // sobreposição: condutor de lado (|z| > w) no campo adversário → o lateral do lado passa por fora,
   // frente m à frente dele, a linha m da lateral
   sobreposicao: { w: 15, frente: 8, linha: 3 },
