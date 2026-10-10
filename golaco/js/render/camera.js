@@ -64,6 +64,7 @@ export const CAMERA_GOL = {
   recuo: 6.5, lateral: 13, altura: 2.6,      // m: antes da linha do gol, para o lado da TV e de altura (~60° do eixo)
   olharAlem: 1.0, olharY: 1.55, olharBola: 0.2, // olha 1 m além da linha, a 1,55 m de altura, um pouco para o lado da bola
   fov: 27, aproxima: 0.07, aproximaT: 2.5,
+  celularDesvio: 1.1,                         // m — no celular o olhar vai para a direita (o gol fica longe dos botões)
   tremor: 0.035, tremorTau: 0.22,
   maxDuracao: 4,                              // s — sem saída de bola (treino), volta sozinha
 };
@@ -146,8 +147,15 @@ export function criarCamera(aspecto) {
     ajustarFov(fovFixo(C.fov) * (g.reduz ? 1 : 1 - C.aproxima * suave(t / C.aproximaT)));
     const a = g.reduz ? 0 : C.tremor * Math.exp(-t / C.tremorTau);
     const tx = a * Math.sin(t * 2 * Math.PI * 6.1), ty = a * Math.sin(t * 2 * Math.PI * 7.3 + 0.7);
-    camera.position.set(s * (mx - C.recuo) + tx, C.altura + ty, C.lateral);
-    camera.lookAt(s * (mx + C.olharAlem), C.olharY, clamp(g.z, -3.66, 3.66) * C.olharBola);
+    const px = s * (mx - C.recuo), pz = C.lateral;
+    let lx = s * (mx + C.olharAlem), lz = clamp(g.z, -3.66, 3.66) * C.olharBola;
+    if (est.pequena) {
+      // celular: o arco de botões fica à direita — o olhar vai um pouco para a direita e o gol para a esquerda
+      const dx = lx - px, dz = lz - pz, l = Math.hypot(dx, dz) || 1;
+      lx += (-dz / l) * C.celularDesvio; lz += (dx / l) * C.celularDesvio;
+    }
+    camera.position.set(px + tx, C.altura + ty, pz);
+    camera.lookAt(lx, C.olharY, lz);
   }
   function posicionar(p) {
     if (!est.livre && est.gol.ativo && est.gol.fechado) { posicionarGol(); return; }

@@ -139,7 +139,9 @@ async function trabalhador() {
     } catch (e) { erro = e; }
   }
 }
-await Promise.all(Array.from({ length: Math.max(2, os.cpus().length || 2) }, trabalhador));
+// --par N: no máximo N processos ao mesmo tempo (máquina dividida com outros processos)
+const iParN = process.argv.indexOf('--par');
+await Promise.all(Array.from({ length: iParN >= 0 ? Math.max(1, +process.argv[iParN + 1] || 1) : Math.max(2, os.cpus().length || 2) }, trabalhador));
 if (erro) { console.error(erro.message); process.exit(2); }
 
 let falhas = 0;
