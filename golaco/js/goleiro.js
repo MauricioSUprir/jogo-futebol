@@ -139,11 +139,11 @@ export function lerChute(m, j) {
   const inicio = m.tick + Math.max(1, reac - Math.round(GOLEIRO.leitura / DT));
   j.defesa = recuo ? {
     chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + recuo.i, inicio, x: recuo.x, z: recuo.z, y: recuo.y,
-    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha: false, recuo: true,
+    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha: false, recuo: true, proprio,
     lado: Math.sign(recuo.z - j.z) || 1, xPlano: recuo.x, bx: recuo.bx, by: recuo.by, bz: recuo.bz,
   } : {
     chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + plano.ticks, inicio, z: plano.z, y: plano.y,
-    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha,
+    sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha, proprio,
     lado: Math.sign(lat) || 1, xPlano, bx: contato.x, by: contato.y, bz: contato.z,
   };
   m.eventos.push({ tipo: 'leituraGoleiro', id: j.id, chega: dist <= alcance, p: pDefesa });
@@ -342,8 +342,8 @@ export function movimentoGoleiro(m, j, humano) {
         const v = Math.min(GOLEIRO.vLado, Math.abs(dz) / Math.max(falta, 0.05));
         return { dx: 0, dz: Math.sign(dz) || 1, vel: Math.abs(dz) > 0.05 ? v : 0, rumoAlvo: olhar };
       }
-      iniciarMergulho(m, j, d);
-      j.mergulho.idDefesa = idDefesa(d);
+      const g = iniciarMergulho(m, j, d);
+      if (g) g.idDefesa = idDefesa(d);
     }
     return { dx: -sentido, dz: 0, vel: 0, rumoAlvo: j.rumo };
   }
@@ -760,6 +760,12 @@ export function iniciarMergulho(m, j, d) {
   // bola no corpo (em pé, no peito ou nas pernas): a defesa vale mesmo sem a mão chegar — o corpo bloqueia
   const noCorpo = (tipo === 'peito' || tipo === 'baixa') && bL <= MG.corpoLado && bY <= MG.corpoAlto;
   if (d.sucesso && !maoAlcanca(g)) {
+    if (d.proprio) {
+      // recuo do próprio time que o corpo desenhado não alcança no ponto lido (ele andou depois da leitura): não é
+      // defesa — sem mergulho batido, ele segue no lugar e recebe a bola que passa perto (sim.js bolaLivre)
+      d.fora = true;
+      return null;
+    }
     if (!noCorpo) {
       // o sorteio dava defesa, mas o corpo desenhado não chega à bola a tempo: goleiro batido (o que se vê)
       d.sucesso = false; d.tipo = 'falhou';

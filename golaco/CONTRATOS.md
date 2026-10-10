@@ -423,7 +423,9 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contrapro
   inclinação, rumo) e com as mãos saindo de onde estavam em relação ao ombro (`j.mergulho.mao0`, em
   `mergulho.tMaoRebote`) — deitado, ele só alcança o que dá dali (`j.mergulho.rebote`). **A defesa sorteada só vale se a
   mão desenhada chega a `maoOk` da bola no contato e sem passar de `vMao` em relação ao corpo** (`maoAlcanca`); senão
-  vira goleiro batido (`d.sucesso = false`, `j.mergulho.rebaixada`) — exceto a bola no corpo (em pé, a até
+  vira goleiro batido (`d.sucesso = false`, `j.mergulho.rebaixada`) — no recuo do próprio time (`d.proprio`) não há
+  mergulho batido: `iniciarMergulho` devolve null, `d.fora = true` e ele recebe a bola que passa perto
+  (`bolaLivre`) — exceto a bola no corpo (em pé, a até
   `corpoLado` de lado e abaixo de `corpoAlto`), que bate nele e sai (vira espalmada). Batido em cima da hora, o
   mergulho é atrasado (`tp`: o pico `tMinFalha` s depois de começar). Campos de `j.mergulho` no comentário do módulo
   (`tick0, tc, tp, T, tipo, sucesso, encaixe, x0, z0, fx, fz, lx, lz, ladoS, rF, dYaw, tGiro, sC, fC, hC, hLow, phi0,
