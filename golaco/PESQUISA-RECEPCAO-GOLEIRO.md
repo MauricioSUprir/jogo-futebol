@@ -32,9 +32,31 @@ de biomecânica do goleiro já levantados na Etapa 2 continuam em `PESQUISA-ETAP
 | StatsBomb (já em `PESQUISA-ETAPA2.md`: 48,5% seguradas, 21,8% para fora, 18% para um adversário) | A proporção segurar × espalmar | Mantida (`GOLEIRO.segurar`); a espalmada agora vai para fora em vez de cair na frente do gol |
 | Penalty dive kinematics (Scientific Reports 2024, https://www.nature.com/articles/s41598-024-60074-x) | O corpo cai de lado e o goleiro se levanta em seguida | Depois do contato: cai de lado (quadril a 0,17 m), fica `T_CHAO` no chão e levanta em `T_LEVANTA` com os pés vindo para debaixo do quadril — do contato até de pé: mediana 0,93 s (0,88–1,02) |
 
+## 4. Correções da contraprova (10/10): limites do corpo, rebote, cavadinha, espalmada e 1º toque embalado
+
+A contraprova adversarial achou o goleiro "teletransportando" (centro do corpo a até 64 m/s quando a reação
+acabava em cima da hora), o tronco virando ~90° num quadro no rebote, a cavadinha sem pulo, a espalmada ainda
+jogável na área e a curva nova do domínio derrubando os gols da partida. O que foi lido e usado em cada correção:
+
+| Fonte | O que diz | O que foi usado |
+|---|---|---|
+| Monteiro 2022 / Ibrahim 2019 (já acima) | O centro de massa do goleiro chega a 3,6–4,0 m/s no mergulho | Teto duro: o perfil do centro (Hermite, partindo da velocidade que ele tinha) é limitado a `GOLEIRO.mergulho.vPico` 4,6 m/s de lado e `vFrente` 2,5 m/s para a frente, conferido amostrando a velocidade (`faixaDesloc`); medido: pior 5,2 m/s no canhão de 1050 chutes (antes 64) |
+| "Biomechanical Analysis of Anticipation of Elite and Inexperienced Goalkeepers" (handebol, https://pmc.ncbi.nlm.nih.gov/articles/PMC3590836/) | Goleiros experientes começam o movimento ~0,19 s ANTES de a bola sair, lendo o corpo de quem arremessa | `GOLEIRO.leitura` 0,1 s: o corpo começa a se mexer um pouco antes do fim da reação da conta da chance de defesa (que não muda) — o desenho tem tempo de chegar à bola sem teletransporte. Com isso a defesa sorteada que o corpo não alcança vira gol (`maoAlcanca`) sem mudar o canhão do `teste-goleiro` (±8 pontos dos dados; ±7 antes) |
+| Biomecânica do soco (PMC9798280: pico do jab de boxeadores de elite 7,2 m/s; direto de trás 8–12,5 m/s) | O braço humano mais rápido chega a ~12 m/s | `GOLEIRO.mergulho.vMao` 12 m/s: a mão vai da espera até a bola no máximo nesse pico (perfil suave, em relação ao corpo); mais que isso, a defesa não vale |
+| Física do salto (v = √(2·g·h): 0,6 m de subida saem a ~3,4 m/s) | A impulsão limita quanto e quão rápido o quadril sobe | `sobe` 3,5 m/s e `saltoMax` 0,6 m: no salto e na cavadinha o goleiro alcança ~2,6 m com a mão |
+| Treinadores de goleiro (já acima: "para fora = escanteio") e o critério duro da contraprova (bola abaixo de 1,5 m e de 7 m/s na zona perigosa em 2 s) | A espalmada boa sai forte e para fora da área | `espalmada.vMin` 8 m/s (a bola parada na mão do goleiro era o rebote), até 8 direções cada vez mais abertas e mais altas, conferidas pela física até a bola não ficar jogável na zona; medido com atacantes na área (`teste-mergulho` C): o ataque tocou primeiro em 1,6% das espalmadas (publicada: 33,6%) |
+| Locomoção do próprio jogo (`jogador.js`: aceleração de lado `latCorte`, freio) e a medida do `teste-recepcao` | A ~7 m/s o corpo não acompanha uma bola mandada de lado ou para trás (ficava a 1,3–2,1 m do pé 0,5 s depois) | `conducao.js anguloEmbalado(v)`: o 1º toque orientado sai no máximo 90° do sentido da corrida a 4,5 m/s e ~45° a 7 m/s, para o lado do analógico (o "directional first touch" limitado pelo embalo) |
+| Contraprova (ablação só da curva do domínio, 32 partidas: 2,03 × 1,38 gols) e o elenco (menor controle de titular: 59) | A curva mais dura na faixa 55–69 tirava o ataque da partida | A conta publicada volta entre 55 e 70; acima de 70 o erro cai mais depressa (o bom mais limpo); abaixo de 55 (nenhum titular) cresce mais depressa (o fraco espirra a bola forte — `teste-dominio`) |
+| Hudl/StatsBomb, "Post-Shot Expected Goals (PSxG)" (https://support.hudl.com/s/article/post-shot-expected-goals): "deflections tend to significantly increase the likelihood of a goal"; Apunts 2025, "Shooting and goalkeepers response analysis in a professional football league" (https://www.apunts.org/en-shooting-goalkeepers-response-analysis-in-articulo-S2666506925000045: 8–21% dos chutes desviados); no hóquei, a defesa cai mais de 10 pontos com o desvio (OMHA, https://www.omha.net/news_article/show/716614-using-deflections-and-tip-ins-to-alter-goalie-positioning) | O desvio engana o goleiro: ele reage de novo, do zero | `m.desvio` + `lerChute` relê o chute desviado com o tempo de reação inteiro; a defesa lida antes só vale com a bola onde foi lida (`GOLEIRO.desvioMax`) e, sem tempo de começar a nova, com a mão desenhada na bola. Medido (`teste-mergulho` E, 228 chutes desviados): a bola nunca salta (publicada: até 8,4 m num quadro; na partida, 23 m); 18 de 70 desviados no alvo defendidos depois de reler, todos com a mão ≤ 0,25 m |
+| The FA, "Different saving actions" (já acima: depois do encaixe a bola vem para o peito, protegida pelas mãos) | A bola segura fica entre as mãos, junto do corpo | Bola na mão de pé com as palmas dos dois lados dela (`anim.js`), o encaixe desenhado termina nesse ponto (antes os braços "pulavam" ~0,43 m no quadro em que a defesa acabava; agora ≤ 0,01 m) e a bola pega solta chega às mãos a `bolaMao.vJunta` 4 m/s (antes saltava ~0,9 m num quadro) |
+
 ## O que ficou de fora (honestidade)
 
 - Não há captura de movimento do mergulho (fica para a Etapa 5, mocap): a pose é procedural, pela mesma conta da
   simulação.
+- Bola alta e longe (acima de ~2,3 m, no ângulo): o boneco tem o braço curto, e o mergulho sai com o tronco a
+  ~35° (deitar mais pediria o quadril a ~1,8 m do chão); abaixo disso o tronco passa de 45°.
+- Batido em cima da hora, o goleiro mergulha atrasado (o pico ~0,3 s depois de começar): quando a bola já entrou,
+  ele ainda está saindo do chão.
 - O "Pass Receiver Lock" e o "Directional First Touch" são descritos em notas e guias do EA FC; não há número
   público — os números da recepção (0,42 m à frente, ±20°, 1,5 rad) foram calibrados pelos testes deste repositório.

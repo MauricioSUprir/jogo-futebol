@@ -367,46 +367,99 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
   com humano aleatório (botões de defesa e uma edição do time), `hashMundo` a cada 300 passos nas duas cópias da lógica.
 
 ## Pedido de 10/10 — recepção que nunca sai da bola, controle de bola e goleiro que pula e espalma (contrato)
-Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md`. Constantes: `config.js` `RECEPCAO`, `CONDUCAO.dominioErroAng/Vel/Curva`,
-`GOLEIRO.espalmada`, `GOLEIRO.antecipaMergulho`, `GOLEIRO.vLado`.
+Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contraprova). Constantes: `config.js` `RECEPCAO`,
+`CONDUCAO.dominioErroAng/Vel`, `CONDUCAO.dominioCraque`, `CONDUCAO.dominioFraco`, `CONDUCAO.dominioOrientado`,
+`GOLEIRO.espalmada`, `GOLEIRO.antecipaMergulho`, `GOLEIRO.antecipaSalto`, `GOLEIRO.leitura`, `GOLEIRO.vLado`,
+`GOLEIRO.mergulho` (limites físicos e tempos da defesa desenhada), `GOLEIRO.bolaMao`, `GOLEIRO.desvioMax`,
+`GOLEIRO.pegaMergulho`.
 - **Recepção assistida** (`js/recepcao.js`, puro): só para o jogador **controlado pelo humano** que vai receber —
-  o passe é para ele (`j.recebe`) ou a bola livre passa perto e ele chega antes dos companheiros (`tipoRecepcao`).
+  o passe é para ele (`j.recebe`) ou a bola livre passa perto e ele chega antes dos companheiros e dos adversários
+  (`tipoRecepcao`; o adversário que chega `RECEPCAO.folgaAdversario` s antes fica com ela). **Finalização indo para o
+  gol não é bola livre** (chute, colocado, cavadinha, cabeceio mais forte que `chuteVForte`, ou mais que `chuteVMin`
+  rumo à boca do gol até `chuteFolgaTrave` por fora da trave): a assistência puxava o controlado para a linha do
+  chute (cortava o do companheiro, bloqueava o do adversário com o analógico para longe). Chute desviado lento ou
+  indo para fora volta a ser bola livre.
   `planejarRecepcao(m, j)` roda no passo 1 (entradas) e grava `j.recep = {ativo, tick (deste plano), alvo (tick do
   encontro), qx, qz (onde o corpo chega), bx, bz (a bola lá), ux, uz (sentido dela), modo: 'frente'|'corrida', vmax,
   rapido, livre}`; `recepcaoAtiva(m, j)` = plano deste tick. No passo 2 o corpo anda por `movimentoAssistido` (o
   mesmo que `conducao.js preverCorpo` usa na previsão do domínio). O analógico decide o 1º toque (domínio orientado:
-  `conducao.js tentarDominio → dominioAssistido`, `planejarAlvo(…, orientado)`, ±20°; embalado a mais de
-  `DOMINIO_CONTRA` = 4,5 m/s contra o analógico, amortece no caminho em vez de orientar) e abre o tronco; CORRER ou o
-  analógico para a bola apressam o encontro; nada do analógico afasta o corpo da linha da bola. Analógico solto =
-  recebe de frente como antes. A IA não muda (recebe pelo caminho de antes) e **a entrada da demo marca `ia: true`**
-  (`sessao.js entradaDemo`, `partida.js entradaDemoPartida`): a IA jogando pelo humano recebe como a IA.
-  `criarJogador` declara `recep: undefined` (o mesmo formato de objeto). `tempoAlcance(j, qx, qz, vmax, parar)`:
-  com `parar`, chega freando (embalado passa do ponto, para e volta). Embalado (> 1,2 m/s), o pedido de movimento
-  abre no máximo `RECEPCAO.angCorteMax` do sentido da corrida (corta freando; acima de `angInverte` inverte).
-- **Erro do domínio por atributo**: `σ = bom + (ruim − bom)·((100 − controle)/100)^dominioCurva` (ângulo e velocidade),
-  × velocidade da bola e pressão como antes.
+  `conducao.js tentarDominio → dominioAssistido`, `planejarAlvo(…, orientado)` com `orientado` = a direção pedida em
+  rad, ±20°) e abre o tronco; CORRER ou o analógico para a bola apressam o encontro; nada do analógico afasta o corpo
+  da linha da bola. **Embalado** (mais que `dominioOrientado.vLivre` m/s), a direção do 1º toque é a do analógico
+  limitada a `anguloEmbalado(v)` do sentido da corrida (90° a 4,5 m/s, ~45° a 7 m/s; exportada para o teste): a bola
+  para trás ou de lado fugia do corpo. Analógico solto = recebe de frente como antes. A IA não muda (recebe pelo
+  caminho de antes) e **a entrada da demo marca `ia: true`** (`sessao.js entradaDemo`, `partida.js
+  entradaDemoPartida`): a IA jogando pelo humano recebe como a IA. `criarJogador` declara `recep: undefined`.
+  `tempoAlcance(j, qx, qz, vmax, parar)`: com `parar`, chega freando (embalado passa do ponto, para e volta).
+  Bola que bate num corpo (`sim.js colisaoBolaCorpo`) derruba os planos de domínio aéreo/cabeceio marcados
+  (`cond.toque.tipo === 'aereo'`): o jogador ia para o ponto antigo enquanto a bola fugia (até 3 m no lançamento).
+  Embalado (> 1,2 m/s), o pedido de movimento abre no máximo `RECEPCAO.angCorteMax` do sentido da corrida.
+- **Erro do domínio por atributo** (`conducao.js executarToque`): σ (ângulo e velocidade, × bola forte e pressão) =
+  a conta publicada `lerp(ruim, bom, controle/100)` entre `dominioFraco.ate` (55) e `dominioCraque.desde` (70);
+  acima de 70 cai em linha reta até `dominioCraque.ang/vel` no 100 (o bom domina mais limpo); abaixo de 55 sobe em
+  linha reta até `dominioFraco.ang/vel` no 0 (o fraco espirra a bola forte). Os titulares dos dois elencos têm
+  controle 59–83: na faixa deles só o bom mudou (a curva mais dura de antes tirava ~0,6 gol por partida).
 - **Goleiro — defesa desenhada** (`js/goleiro.js`, puro; matemática pelo MD — entra no estado e no hash):
-  `movimentoGoleiro` começa a defesa (`iniciarMergulho(m, j, d)`) uma vez por leitura (`j.mergulho.idDefesa =
-  d.tick`), no máximo `GOLEIRO.antecipaMergulho` s antes do contato (antes anda de lado para a linha da bola, até
-  `GOLEIRO.vLado`). Tipos pela bola no contato: `'salto'` (alta e perto), `'baixa'`/`'peito'` (em pé, perto: tronco
-  curvado sobre a bola `thC`, pé longe dá um passo curto) e `'mergulho'` (a "prancha": pés fora do chão, quadril,
-  ombros e mãos na linha da bola; cai de lado, fica no chão, levanta). Campos de `j.mergulho` no comentário do
-  módulo (`tick0, tc, tipo, sucesso, encaixe, x0, z0, fx, fz, lx, lz, sC, fC, hC, phiC, thC, v0L, v0F, h0, bx, by, bz,
-  ext, tImp, tq, vc, sFim, sLev, fim, pe0, perto, passo, pmL, pmF, pf, passa, durPasso, iniPasso, …`).
-  `mergulhoAtivo(j, tick)` (tick0 < tick ≤ fim). `quadroMergulho(g, tick, q)` é **função pura do tempo**: centro
-  (x, z), quadril h, inclinações `phi` (de lado) e `th` (para a frente), braços, fase, tornozelos `a0/a1` e apoio.
-  Na simulação (`sim.js`): passo 2 `passoMergulho` (o corpo = quadro do próximo tick, no lugar da locomoção), depois
-  das trombadas `fixarMergulho` + `pesMergulho` (pés plantados/no ar pelo quadro, no lugar da passada), passo 8 sem
-  `passoPeDesenhado`; `goleiroComBola` espera ele levantar. `bolaNaMao` usa `bolaNasMaosMergulho` (a bola nas mãos
-  do quadro, trazida ao peito em `T_ABRACA`). Na animação: `anim.js poseMergulho` (mesmo quadro, `maosMergulho`,
-  `eixosMergulho`); `alturaQuadril` devolve o h do quadro. `render/jogador3d.js frente()` em 3D (corpo deitado).
+  `lerChute` marca `d.inicio` = fim da reação **menos `GOLEIRO.leitura`** (o corpo começa a se mexer um pouco antes:
+  o goleiro lê o chutador; a chance de defesa não muda) e, na bola por cima do goleiro adiantado (`d.recuo`), a bola
+  do contato (`bx, by, bz`); `d.lido` = o tick da leitura. **Chute desviado**: `sim.js colisaoBolaCorpo` grava
+  `m.desvio = tick` quando a bola bate num corpo; `lerChute` relê o chute (defesa nova, reação inteira) se
+  `m.desvio > d.lido`. `aplicarDefesa` só vale com a bola a ≤ `desvioMax` (|Δxz| + |Δy|) de `bx, by, bz` e, com
+  outra defesa desenhada ainda em andamento (a relida não teve tempo de começar), com a mão desenhada dela a ≤
+  `pegaMergulho` da bola; senão é goleiro batido (evento `goleiroBatido` com `desvio: true`) — antes a defesa lida
+  acontecia no tick lido com a bola em outro lugar (a bola ia parar nas mãos de até 23 m num quadro).
+  `movimentoGoleiro`: com chute vindo, o tronco fica de frente para o chute (até ~35° do campo), sem virar atrás da
+  bola que passa; começa a defesa (`iniciarMergulho(m, j, d)`) uma vez por leitura (`j.mergulho.idDefesa` = a
+  identidade da leitura: `lido` e `tick`), no máximo `antecipaMergulho` s antes do contato (`antecipaSalto` na
+  cavadinha: antes disso volta correndo; depois, salta para trás até a bola) — antes disso anda de lado até `vLado`.
+  `iniciarMergulho`: o **lado do mergulho é a linha do gol** (frente final = o campo; o tronco gira do rumo de antes até
+  lá em `mergulho.tGiro`, sem salto) e o centro nunca chega a menos de `margemLinha` da linha. Tipos pela bola no
+  contato: `'salto'` (alta e perto; quadril até `saltoMax` acima de em pé), `'baixa'`/`'peito'` (em pé, perto) e
+  `'mergulho'` (a "prancha"). **Limites físicos duros**: o centro anda no perfil Hermite (sai com a velocidade que
+  tinha) com velocidade ≤ `vPico` de lado e ≤ `vFrente` para a frente (`faixaDesloc`); o tronco inclina ≤ `giro`
+  rad/s e curva ≤ `dobra` rad/s; o quadril sobe ≤ `sobe` m/s e agacha ≤ `agacha` m/s; a queda e o deitar também
+  respeitam `giro`. O tronco parte da inclinação da pose de pé (a mesma conta de `anim.js pose`, pelo MD) e, no
+  **rebote** (defesa nova com outra em andamento), do quadro em andamento (`quadroMergulho` do anterior: quadril,
+  inclinação, rumo) e com as mãos saindo de onde estavam em relação ao ombro (`j.mergulho.mao0`, em
+  `mergulho.tMaoRebote`) — deitado, ele só alcança o que dá dali (`j.mergulho.rebote`). **A defesa sorteada só vale se a
+  mão desenhada chega a `maoOk` da bola no contato e sem passar de `vMao` em relação ao corpo** (`maoAlcanca`); senão
+  vira goleiro batido (`d.sucesso = false`, `j.mergulho.rebaixada`) — exceto a bola no corpo (em pé, a até
+  `corpoLado` de lado e abaixo de `corpoAlto`), que bate nele e sai (vira espalmada). Batido em cima da hora, o
+  mergulho é atrasado (`tp`: o pico `tMinFalha` s depois de começar). Campos de `j.mergulho` no comentário do módulo
+  (`tick0, tc, tp, T, tipo, sucesso, encaixe, x0, z0, fx, fz, lx, lz, ladoS, rF, dYaw, tGiro, sC, fC, hC, hLow, phi0,
+  phiC, th0, thC, v0L, v0F, h0, bx, by, bz, ext, tImp, tq, vc, sFim, sLev, fim, pe0, perto, passo, pmL, pmF, pf,
+  passa, durPasso, iniPasso, rebote, rebaixada, …`). `mergulhoAtivo(j, tick)` (tick0 < tick ≤ fim).
+  `quadroMergulho(g, tick, q)` é **função pura do tempo**: centro (x, z), rumo e frente/lado do tick (`yaw, fx, fz,
+  lx, lz`), quadril h, inclinações `phi` (de lado) e `th` (para a frente), braços, fase, tornozelos `a0/a1` e apoio.
+  Na simulação (`sim.js`): passo 2 `passoMergulho` (o corpo = quadro do próximo tick, `j.rumo = q.yaw`), depois das
+  trombadas `fixarMergulho` + `pesMergulho` (pés plantados/no ar pelo quadro), passo 8 sem `passoPeDesenhado`;
+  `goleiroComBola` espera ele levantar. **Bola na mão** (`bolaNaMao`): no encaixe desenhado, nas mãos do quadro
+  (`bolaNasMaosMergulho`: trazida ao peito em `tAbraca` e, nos últimos `bolaMao.tJunta` s, ao ponto de segurar em pé);
+  de pé, `bolaMao.frente` à frente na altura `bolaMao.altura`. A diferença de quando ele pegou (bola solta a até 1 m,
+  tiro de meta no chão) fica em `j.segura.off` e some a `bolaMao.vJunta` m/s — a bola não salta para a mão. No meio
+  da defesa desenhada ele só pega a bola solta com a mão desenhada a ≤ `pegaMergulho` dela (`maoNaBola`). Na
+  animação: `anim.js pose` com a bola na mão põe as palmas dos dois lados da bola do estado (±`bolaMao.palma`); o
+  encaixe desenhado termina nesse mesmo ponto (sem salto de braço no fim). `anim.js poseMergulho` (mesmo quadro, `maosMergulho(g, q, out, segura)`,
+  `eixosMergulho`); `alturaQuadril` devolve o h do quadro. **Mãos prontas**: `MAO_PRONTA_FRENTE/BAIXO`
+  (`goleiro.js`) — a espera da defesa desenhada e a pose de pé do goleiro sem a bola (`anim.js pose`, por IK; com
+  chute vindo, sempre): sem salto de braço ao começar e ao terminar a defesa. `render/jogador3d.js frente()`: com o
+  tronco a mais de ~30° da vertical a frente sai em 3D (cima × direita); de pé, a conta de sempre (os jogadores de
+  linha não mudam).
 - **Espalmada** (`aplicarDefesa → espalmar`): por cima do travessão (bola acima de `alturaTravessao`), pela linha de
-  fundo por fora da trave (contato a < `perto` m da linha) ou bem aberta (|z| ≥ `zAberta`), velocidade `fracaoV` da
-  bola (entre `vMin` e `vMax`); conferida pela física (`espalmadaSegura`): não entra no gol nem morre (abaixo de
-  `vMorre`) na zona perigosa (< `zonaX` da linha, |z| < `zonaZ`); senão abre mais o ângulo (até 6 tentativas).
+  fundo por fora da trave (contato a < `perto` m da linha) ou bem aberta (|z| ≥ `zAberta`), a `fracaoV` da bola entre
+  `vMin` e `vMax`; até `tentativas` direções, cada uma mais aberta e mais alta, conferidas pela física
+  (`espalmadaSegura`): não entra no gol e, depois de `tSai` s, não fica jogável (abaixo de `jogavelAlt` e de
+  `jogavelV`) na zona perigosa (< `zonaX` da linha, |z| < `zonaZ`) nos `tConfere` s seguintes.
 - **Testes**: `teste-recepcao` (padrão; canhão de 1000 bolas: domínio ≥ 99%, corpo nunca se afasta > 0,15 m, 1º toque
-  ±20° ≥ 95%, bola ≤ 1,2 m do pé 0,5 s depois ≥ 97%), `teste-mergulho` (padrão; 432 chutes: mergulho desenhado em 100%
-  dos chutes no alvo a > 1 m de onde o goleiro estava 0,5 s antes, mão ≤ 0,25 m da bola no contato ≥ 95%, espalmadas
-  que morrem na zona perigosa ≤ 10%, pés sem patinar), `tools/medir-controle.mjs` (informativo, minutos: domínio que
-  escapa, perdas sozinho, bola–pé por velocidade, 1º toque por atributo, "se afastou da bola vindo" do humano
-  roteirizado; `--sonda tipo,h|i,semente,tick` imprime o lance).
+  ±20° ≥ 95% no total e em cada corpo — parado, trote, corrida —, bola ≤ 1,2 m do pé 0,5 s depois ≥ 97% no total e em
+  cada corpo; embalado, a direção certa é a do analógico limitada por `anguloEmbalado`), `teste-mergulho` (padrão;
+  A: grade de 432 chutes — mergulho desenhado em 100% dos chutes a > 1 m, mão ≤ 0,25 m ≥ 95%, espalmada que morre na
+  zona ≤ 10%, pés sem patinar com v ≤ 6 m/s; B: canhão variado de 900 chutes + 150 rebotes no chão — mão ≤ 0,25 m ≥
+  95% (com a cavadinha), centro ≤ 5,5 m/s, pelve ≤ 7,5 m/s, nunca atrás da linha, tronco ≤ 20°/quadro, espalmada
+  jogável na zona ≤ 10%, salto na bola alta perto ≥ 80%; C: rebote disputado com 3 atacantes e 2 defensores — o ataque
+  toca primeiro ≤ 10%; E: 648 chutes rasteiros que raspam num zagueiro depois da leitura — nas defesas, mão ≤
+  0,25 m ≥ 95%, a bola nunca salta > 0,3 m num quadro), `teste-patinacao` (no mergulho do goleiro, v = a maior velocidade do corpo, da pelve
+  desenhada também, até 6 m/s — o corpo cai), `teste-carga` 5c (um chute forçado no treino: o goleiro mergulha e o
+  hash é o mesmo no Node e no Chromium), `tools/medir-controle.mjs` (informativo, minutos: domínio que escapa, perdas
+  sozinho, bola–pé por velocidade, 1º toque por atributo, "se afastou da bola vindo" do humano roteirizado; `--sonda
+  tipo,h|i,semente,tick` imprime o lance).
