@@ -571,13 +571,13 @@ export const IA_ATAQUE = {
   // Apoio curto (Steiner 2018; Buckland 2004): os n mais perto do condutor procuram um ponto em
   // `direcoes` direções × `aneis` m em volta dele, a ≤ raioRef m da própria referência; distância ideal
   // `dist` m; linha livre no cone de Steiner (rad); histerese e compromisso (s) do ponto escolhido.
-  apoio: { n: 2, dist: [10, 16], aneis: [12, 16], direcoes: 8, raioRef: 6, cone: 0.209, histerese: 1.3, compromisso: 0.75, antecipa: 0.8, pressa: 1000, colado: 6 },
+  apoio: { n: 2, dist: [8, 16], aneis: [12, 16], direcoes: 8, raioRef: 3, cone: 0.209, histerese: 1.3, compromisso: 0.75, antecipa: 0.8, pressa: 1000, colado: 6 },
   // Corridas nas costas (Ju 2023; SkillCorner; Metrica): começam até `folga` m atrás da linha, com
-  // campoMin m às costas da defesa, o condutor de frente (< angFrente rad) e sem adversário a
+  // campoMin m às costas da defesa, o condutor de frente (< angFrente rad), andando (≥ vCondutor m/s) e sem adversário a
   // < marcadorLivre m, e a linha do passe até o destino com risco ≤ linhaMax; destino = linha + `alem`
   // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
   // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa).
-  corridas: { folga: 15, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
+  corridas: { folga: 15, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1 },
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
@@ -620,11 +620,11 @@ export const IA_ATAQUE = {
   antecipaFiltro: 0.5,        // s — ...filtrada (constante de tempo; sem saltos a cada toque)
   pressaMin: 0.6,             // s — quem entra na pressa fica nela por isto (sem trocar de modo a cada tick)
   impedimentoFolga: 1,        // m — fora da corrida, a referência não passa da linha adversária − isto
-  naLinha: 2.5,               // m — com a bola fora do nosso terço, atacantes e pontas ficam até isto atrás da linha
+  naLinha: 4,                 // m — com a bola fora do nosso terço, os centroavantes ficam até isto atrás da linha
   // sobreposição: condutor de lado (|z| > w) no campo adversário → o lateral do lado passa por fora,
   // frente m à frente dele, a linha m da lateral
   sobreposicao: { w: 15, frente: 8, linha: 3 },
-  oscila: { amp: 2.5, periodo: 6 }, // m, s — vem e vai do apoio (0 = desliga)
+  oscila: { amp: 0, periodo: 6 }, // m, s — vem e vai do apoio (0 = desliga: com o ponto calmo da Parte 2 ele só fazia o apoio ir e voltar)
   rebote: { raio: 25, frente: 7 }, // chute meu no ar: quem está a < raio m do gol corre para frente m da linha do gol
   empurraRaio: 4,             // m — se quem faz a linha é o marcador (até isto), o atacante a empurra...
   empurraFolga: 0.2,          // m — ...ficando só isto atrás dela

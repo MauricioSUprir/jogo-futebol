@@ -233,10 +233,11 @@ function estadoAtaque(m, t) {
     if (acaba) { o.corrida = null; s.corrida = false; continue; }
     if (o.time === t) A.corridas++;
   }
-  // linha de impedimento: o penúltimo adversário (com o goleiro), a bola ou o meio-campo
+  // linha de impedimento: o penúltimo adversário (com o goleiro), a bola ou o meio-campo (quem está
+  // parado — o cobrador de uma bola parada — também conta para o impedimento; o boneco do treino não)
   let u1 = -Infinity, u2 = -Infinity, d1 = null, d2 = null;
   for (const o of m.jogadores) {
-    if (o.time === t || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.time === t || o.papel === 'marcador') continue;
     const u = o.x * lado;
     if (u > u1) { u2 = u1; d2 = d1; u1 = u; d1 = o; } else if (u > u2) { u2 = u; d2 = o; }
   }
@@ -274,8 +275,10 @@ function estadoAtaque(m, t) {
   for (const o of A.ids) {
     const r = A.ref.get(o.id);
     const vg = FORMACOES[ts.formacao]?.porId[o.vagaId];
-    // os da frente (e os pontas: ME/MD/PE/PD) jogam na linha do último defensor
-    if (naLinha && vg && (vg.grupo === 'ata' || PONTA[o.posDetalhe])) r.u = Math.max(r.u, A.linha - IA_ATAQUE.naLinha);
+    // os centroavantes (ATA/SA) jogam na linha do último defensor. Os pontas não: na tabela (Metrica,
+    // bola no centro) eles ficam ~7 m atrás da linha; puxados para ela, a forma com a bola saía da
+    // tabela (teste-taticas) — eles chegam lá pelas corridas nas costas
+    if (naLinha && vg && vg.grupo === 'ata' && !PONTA[o.posDetalhe]) r.u = Math.max(r.u, A.linha - IA_ATAQUE.naLinha);
     r.u = clamp(r.u, -MX + IA.recuoMin, A.linha - folgaLinha(A, o));
   }
   // os 2 apoios: os de linha mais perto do condutor (2 m de vantagem para quem já apoia)
@@ -579,7 +582,10 @@ function tentarCorrida(m, j, A, ia) {
   if (!(CORREDOR[j.posDetalhe] || (LATERAL[j.posDetalhe] && A.ment >= 1))) return;
   if (m.tick - ia.ultCorrida < seg(cfg.recarga)) return;
   if (A.corridas >= cfg.max[A.ment >= 1 ? 1 : 0]) return;
-  // condutor de frente para o gol adversário e sem marcador colado (na transição, basta ter campo)
+  // condutor de frente para o gol adversário, andando com a bola (a corrida acompanha a progressão de
+  // quem conduz; com ele parado o corredor esperava a linha) e sem marcador colado (na transição,
+  // basta ter campo)
+  if (MD.hypot(c.vx, c.vz) < cfg.vCondutor) return;
   if (!A.transOf) {
     if (Math.abs(difAng(lado > 0 ? 0 : Math.PI, c.rumo)) > cfg.angFrente) return;
     if (advMaisPerto(m, j.time, c.x, c.z) < cfg.marcadorLivre) return;
