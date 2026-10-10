@@ -375,7 +375,8 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md`. Constantes: `config.js` `RECEPCAO`, `C
   encontro), qx, qz (onde o corpo chega), bx, bz (a bola lá), ux, uz (sentido dela), modo: 'frente'|'corrida', vmax,
   rapido, livre}`; `recepcaoAtiva(m, j)` = plano deste tick. No passo 2 o corpo anda por `movimentoAssistido` (o
   mesmo que `conducao.js preverCorpo` usa na previsão do domínio). O analógico decide o 1º toque (domínio orientado:
-  `conducao.js tentarDominio → dominioAssistido`, `planejarAlvo(…, orientado)`, ±20°) e abre o tronco; CORRER ou o
+  `conducao.js tentarDominio → dominioAssistido`, `planejarAlvo(…, orientado)`, ±20°; embalado a mais de
+  `DOMINIO_CONTRA` = 4,5 m/s contra o analógico, amortece no caminho em vez de orientar) e abre o tronco; CORRER ou o
   analógico para a bola apressam o encontro; nada do analógico afasta o corpo da linha da bola. Analógico solto =
   recebe de frente como antes. A IA não muda (recebe pelo caminho de antes) e **a entrada da demo marca `ia: true`**
   (`sessao.js entradaDemo`, `partida.js entradaDemoPartida`): a IA jogando pelo humano recebe como a IA.
