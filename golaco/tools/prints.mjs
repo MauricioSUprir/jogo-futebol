@@ -66,9 +66,9 @@ const CENAS = [
   { nome: 'pc-goleiros', ...PC, url: 'q=alta&hora=dia', prep: 'goleiros' },
   { nome: 'pc-gol', ...PC, url: 'q=alta&hora=noite', livre: { de: [38, 5, 14], para: [52.5, 1.2, 0], fov: 40 } },
   // transição defensiva (PR "IA intensa"): o time da IA perde a bola com gente à frente dela e volta
-  // correndo — dois quadros da MESMA jogada (mesma semente): logo depois da perda e 2 s depois
+  // correndo — dois quadros da MESMA jogada (mesma semente): logo depois da perda e 3 s depois
   { nome: 'pc-transicao-1', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:0.3' },
-  { nome: 'pc-transicao-2', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:2.0' },
+  { nome: 'pc-transicao-2', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'transicao:3.0' },
 ];
 
 /** Caixas do HUD e botões: nenhum encosta em outro e todos ficam dentro da área segura. */
@@ -170,8 +170,8 @@ async function preparar(pagina, prep) {
       return `carga ${c ? c.tipo : '-'}`;
     }
     if (prep.startsWith('transicao')) {
-      // joga (demo) até o time 1 (o da IA) perder a bola em jogo corrido com ≥ 4 de linha a mais de 10 m à
-      // frente dela; avança `apos` s e põe a câmera alta de lado sobre a bola e quem volta
+      // joga (demo) até o time 1 (o da IA) perder a bola em jogo corrido do meio para a frente, com ≥ 4 de
+      // linha à frente dela; avança `apos` s e põe a câmera alta de lado sobre a bola e quem volta
       const apos = +prep.split(':')[1];
       const m = () => g.mundo;
       const timeBola = () => { const w = m(), id = w.naMao ?? w.posse; if (id != null) return w.jogadores.find(j => j.id === id)?.time ?? null; return w.voo?.time ?? null; };
@@ -182,8 +182,9 @@ async function preparar(pagina, prep) {
         const rol = w.partida?.estado === 'jogo' && !(w.parada && !w.parada.rolou);
         if (tb != null && tAnt === 1 && tb === 0 && rol && w.posse != null) {
           const l = w.ataca[1], ub = w.bola.p.x * l;
-          const frente = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l - ub > 10);
-          if (frente.length >= 4) achou = { ids: frente.map(j => j.id), tick: w.tick };
+          const frente = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l - ub > 3);
+          // (perdeu do meio para a frente: quem passou da bola tem de voltar)
+          if (frente.length >= 4 && ub > -10) achou = { ids: frente.map(j => j.id), tick: w.tick };
         }
         if (tb != null) tAnt = tb;
       }
@@ -192,7 +193,7 @@ async function preparar(pagina, prep) {
       const w = m(), l = w.ataca[1], b = w.bola.p;
       const vs = achou.ids.map(id => w.jogadores.find(j => j.id === id));
       const cx = (b.x + vs.reduce((s, j) => s + j.x, 0) / vs.length) / 2, cz = (b.z + vs.reduce((s, j) => s + j.z, 0) / vs.length) / 2;
-      g.cameraLivre({ de: [cx, 34, cz - 40], para: [cx, 0, cz], fov: 50 });
+      g.cameraLivre({ de: [cx, 34, cz + 40], para: [cx, 0, cz], fov: 50 }); // alta, do lado da TV (+x à direita)
       const ub = b.x * l;
       const atras = w.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL' && j.x * l < ub).length;
       const vel = vs.map(j => (-j.vx * l).toFixed(1)).join(' / ');

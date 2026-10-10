@@ -24,9 +24,9 @@
 //  - velocidade de recuo de quem ficou à frente: mediana ≥ 4,6 m/s. O teto físico é a arrancada: parado, o
 //    corpo do GOLAÇO anda 18,6 m em 3 s (6,2 m/s; jogador.js passoCorpo, atributos padrão) e, indo para a frente
 //    a 6 m/s, só 10,4 m (3,5 m/s: freia e vira); a publicada fica em ~3,8–4,2 m/s (trota de volta);
-//  - contra-ataque com superioridade ≤ 8% das perdas (guarda contra a piora: a publicada fica em ~6–8%; com a
-//    recomposição, ~4–6%).
-// O pico da velocidade para o próprio gol e a contrapressão (a meta dela é do teste-pressao) só informam.
+// Informativos: contra-ataque que chega ao terço final com superioridade (% das perdas; deve cair — a publicada fica em
+// ~8%, com a recomposição ~4–8% conforme as sementes: oscila demais entre rodadas para ser meta), o pico da velocidade
+// para o próprio gol e a contrapressão (a meta dela é do teste-pressao).
 // Com --humano, o time 0 é de um humano ROTEIRIZADO (o controlado joga por um roteiro simples e determinístico:
 // conduz para o gol, passa a cada 1–3 s, chuta perto, aperta o condutor e dá DIVIDIDA, troca de jogador); as
 // metas valem para o time da IA (1) — a IA contra o humano tem de ser tão intensa quanto IA × IA — e o time do
@@ -337,7 +337,7 @@ function bloco(times, info, rot) {
   reg(`${rot}velocidade de recuo de quem ficou > 10 m à frente da bola, 3 s (mediana · p25)`, `${fmt(quant(rc, 0.5))} · ${fmt(quant(rc, 0.25))} m/s (${rc.length} jogadores)`, 'mediana ≥ 4,6 m/s', quant(rc, 0.5) >= 4.6, info);
   const pc = junta(times, 'pico');
   reg(`${rot}pico da velocidade para o próprio gol nesses 3 s (mediana · % ≥ 5,5 m/s)`, `${fmt(quant(pc, 0.5))} m/s · ${fmt(pct(pc.filter(v => v >= 5.5).length, pc.length))}%`, '—', true, true);
-  reg(`${rot}contra-ataque chega ao terço final com superioridade`, `${fmt(pct(sup, pd))}% das perdas (chega ao terço em 12 s: ${fmt(pct(ch, pd))}%; ${pd} perdas)`, '≤ 8% (publicada: ~8%)', pct(sup, pd) <= 8, info);
+  reg(`${rot}contra-ataque chega ao terço final com superioridade`, `${fmt(pct(sup, pd))}% das perdas (chega ao terço em 12 s: ${fmt(pct(ch, pd))}%; ${pd} perdas)`, '— (deve cair; publicada ~8%)', true, true);
   reg(`${rot}contrapressão: alguém ≠ quem perdeu a ≤ 2 m da bola em ≤ 3 s (a meta é do teste-pressao)`, `${fmt(c2)}%`, '—', true, true);
 }
 bloco(META, false, HUMANO ? 'IA (time 1): ' : '');

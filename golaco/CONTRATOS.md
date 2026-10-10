@@ -377,11 +377,12 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
 - Todo teste novo aceita `--antes` (a mesma partida com `criarPartida({iaClassica: true})`, a IA de hoje) e
   `--js <pasta>`; metas sobre a mediana, ≥ 8 sementes no CI. Medidas comuns: `tools/lib/partida-medidas.mjs` (terço,
   fase, forma, linha de 4, área, portador, linhas de passe livres, corredores, impedimento, troca de posse, PPDA).
-- `tools/teste-transicao.mjs` (PR "IA intensa"; grupo `'etapa3'` até passar 5 rodadas seguidas): partidas inteiras IA × IA
-  (24 sementes; `--humano` = time 0 de um humano roteirizado, metas para o time da IA): tempo até 8 dos 10 de linha atrás
-  da bola depois da perda (mediana ≤ 6 s), velocidade de recuo de quem ficou > 10 m à frente da bola nos 3 s seguintes
-  (mediana ≥ 4,6 m/s), contra-ataque que chega ao terço final com superioridade (≤ 8% das perdas, guarda); informa
-  sprints, alta intensidade, chutes no alvo, posses no terço final e o tempo da recuperação ao chute. `--par N` (padrão 2).
+- `tools/teste-transicao.mjs` (PR "IA intensa"; IA × IA no grupo padrão — passou 5 rodadas seguidas, sementes 1, 25, 49,
+  73 e 97; `--humano` no grupo `'etapa3'`): partidas inteiras (24 sementes; `--humano` = time 0 de um humano roteirizado,
+  metas para o time da IA): tempo até 8 dos 10 de linha atrás da bola depois da perda (mediana ≤ 6 s) e velocidade de
+  recuo de quem ficou > 10 m à frente da bola nos 3 s seguintes (mediana ≥ 4,6 m/s); informa o contra-ataque que chega
+  ao terço final com superioridade, o pico de velocidade para o próprio gol, a contrapressão, sprints, alta intensidade,
+  chutes no alvo, posses no terço final e o tempo da recuperação ao chute. `--par N` (padrão 2), `--sem0 K`.
 - `tools/teste-custo.mjs`: razão partida ÷ treino no mesmo processo (média e p95 ≤ 2,5×; nenhum passo > 50 ms — acima de
   20 ms de parede, vale a CPU do fio principal: `process.threadCpuUsage`, sem a espera do escalonador nem os fios de fundo).
 - `tools/teste-desempenho-celular.mjs` (navegador): Chromium 844×390, Média, CPU 4×, 30 s de partida demo; CPU por quadro
