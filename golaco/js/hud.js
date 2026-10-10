@@ -133,7 +133,10 @@ export function criarHud(opc) {
     const [pl, pa, mp] = caixasTopo.map(e => e?.getBoundingClientRect());
     if (!pl || !pa || !mp || mp.width === 0) return false;
     const enc = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
-    return enc(pl, mp) || enc(pa, mp) || enc(pl, pa);
+    // o botão de menu também conta: no celular em pé, o placar com o relógio da partida chega nele
+    // (a largura depende da fonte do aparelho — no CI encostava e aqui não)
+    const mn = $('btn-menu')?.getBoundingClientRect();
+    return enc(pl, mp) || enc(pa, mp) || enc(pl, pa) || (mn && mn.width > 0 && enc(pl, mn));
   }
   /**
    * Algum botão de toque (de QUALQUER fase: a posição de cada vaga vem do style que a entrada
@@ -415,7 +418,12 @@ export function criarHud(opc) {
       if (!r) return;
       const min = `${r.minuto}'`;
       const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : NOME_TEMPO[r.tempo] ?? '';
-      if (min !== relogioVisto.minuto) { el.minuto.textContent = min; relogioVisto.minuto = min; }
+      if (min !== relogioVisto.minuto) {
+        // 9' → 10': o placar alarga (a compactação do topo é refeita só quando muda o número de dígitos)
+        const largura = (relogioVisto.minuto ?? '').length !== min.length;
+        el.minuto.textContent = min; relogioVisto.minuto = min;
+        if (largura) ajustarTopo();
+      }
       if (tempo !== relogioVisto.tempo) {
         el.tempo.textContent = tempo; relogioVisto.tempo = tempo;
         el.relogio.classList.toggle('parado', r.estado === 'intervalo' || r.estado === 'fim');
