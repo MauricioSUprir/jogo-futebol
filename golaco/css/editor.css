@@ -234,7 +234,8 @@
 /* ------------------------------------------------------------------ ações: Desfazer tudo | PRONTO */
 .ed-acoes { grid-area: acoes; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .ed-btn {
-  min-height: 48px; padding: 0 12px; cursor: pointer; font-size: 13px; font-weight: 800; color: var(--texto); white-space: nowrap;
+  /* folga para a fonte do aparelho: em 667×375 "Desfazer tudo" saía 2 px maior que o botão com a fonte do CI */
+  min-height: 48px; padding: 0 clamp(6px, 1.2vw, 12px); cursor: pointer; font-size: clamp(12px, 1.9vw, 13px); font-weight: 800; color: var(--texto); white-space: nowrap;
   background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px;
 }
 .ed-btn:hover { border-color: var(--verde); }
