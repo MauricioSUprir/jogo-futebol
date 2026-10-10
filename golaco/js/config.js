@@ -437,16 +437,62 @@ export const GOLEIRO = {
   saidaMax: 35,               // m da linha até onde sai com o botão
   esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
   esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
+  // bola nas mãos de pé: frente (m à frente do centro) e altura (m), palmas a ±palma m do meio da bola; no fim
+  // do encaixe desenhado a bola vai do peito a esse ponto nos últimos tJunta s (sem salto de bola nem de braço);
+  // a bola pega solta (ou no chão, no tiro de meta) chega às mãos a vJunta m/s, sem salto
+  bolaMao: { frente: 0.32, altura: 1.05, palma: 0.12, tJunta: 0.3, vJunta: 4 },
+  // m: a bola, no tick da defesa, longe disso do ponto lido (desvio depois da leitura) → não há defesa
+  desvioMax: 0.3,
+  pegaMergulho: 0.3,          // m da mão desenhada à bola para pegar a bola solta no meio da defesa desenhada
   // espalmada (pedido do dono, 10/10: "nem espalma direito"): a bola sai a fracaoV da velocidade (entre vMin
   // e vMax), por cima do travessão com ela acima de alturaTravessao, pela linha de fundo por fora da trave com
-  // o contato a menos de `perto` m da linha, ou bem aberta (|z| ≥ zAberta) mais longe; conferida pela física:
-  // não pode morrer (abaixo de vMorre m/s) na zona perigosa (a menos de zonaX m da linha e |z| < zonaZ)
-  espalmada: { fracaoV: 0.4, vMin: 5, vMax: 12, alturaTravessao: 1.85, perto: 4, zAberta: 10, vMorre: 4, zonaX: 11, zonaZ: 9 },
+  // o contato a menos de `perto` m da linha, ou bem aberta (|z| ≥ zAberta) mais longe; conferida pela física
+  // (até `tentativas` direções, cada uma mais aberta e mais alta): não entra no gol e, depois de tSai s, não
+  // fica jogável (abaixo de jogavelAlt m e de jogavelV m/s) na zona perigosa (a menos de zonaX m da linha e
+  // |z| < zonaZ) nos tConfere s seguintes. Treinadores de goleiro: "nunca espalmar para a frente; para fora =
+  // escanteio" (PESQUISA-RECEPCAO-GOLEIRO.md)
+  espalmada: {
+    fracaoV: 0.45, vMin: 8, vMax: 13, alturaTravessao: 1.85, perto: 4, zAberta: 10, tentativas: 8,
+    tSai: 0.1, tConfere: 2, jogavelAlt: 1.5, jogavelV: 7, zonaX: 11, zonaZ: 9,
+  },
   // defesa desenhada (mergulho, salto ou em pé): começa no máximo antecipaMergulho s antes do contato (o
   // mergulho real leva ~0,4–0,6 s do primeiro movimento à bola); antes disso o goleiro anda de lado para a
   // linha da bola (passos de lado, até vLado m/s) — batido, ele para a ~1,2 m dela
   antecipaMergulho: 0.5,
   vLado: 3.5,
+  // bola por cima do goleiro adiantado (cavadinha): ele volta correndo e salta para trás até a bola nos
+  // últimos antecipaSalto s
+  antecipaSalto: 0.5,
+  // o corpo do goleiro começa a se mexer isto antes do fim da reação (reacao, acima: a chance de defesa é a
+  // mesma): o goleiro lê o corpo do chutador (handebol: goleiros experientes começam o movimento ~0,19 s antes
+  // de a bola sair — PMC3590836) e a defesa desenhada tem tempo de chegar à bola sem teletransporte
+  leitura: 0.1,
+  // limites físicos da defesa desenhada (goleiro.js; pesquisa: PESQUISA-RECEPCAO-GOLEIRO.md — Monteiro 2022,
+  // Ibrahim 2019: centro de massa até 3,6–4,0 m/s no mergulho; contraprova de 10/10: sem teto o corpo andava
+  // até 64 m/s quando a reação acabava em cima da hora)
+  mergulho: {
+    vPico: 4.6,       // m/s — o centro de lado (folga do braço curto do boneco sobre os 4,0 da pesquisa)
+    vFrente: 2.5,     // m/s — o centro para a frente/para trás
+    giro: 7,          // rad/s — o tronco inclinando de lado (o mergulho inteiro deita em ~0,3 s)
+    dobra: 9,         // rad/s — o tronco curvando para a frente (defesa em pé, bola baixa)
+    sobe: 3.5,        // m/s — o quadril subindo (impulsão: salto de ~0,6 m sai a ~3,4 m/s)
+    saltoMax: 0.6,    // m — o quadril sobe no máximo isto acima de em pé no salto (bola alta)
+    agacha: 2.5,      // m/s — o quadril descendo na defesa em pé
+    vMao: 12,         // m/s — pico da mão em relação ao corpo, da espera até a bola (reflexo de braço)
+    maoOk: 0.22,      // m — a defesa sorteada só vale se a mão desenhada chega a isto da bola no contato...
+    corpoLado: 0.35,  // m — ...menos a bola no corpo (em pé, a até isto de lado e abaixo de corpoAlto): o corpo
+    corpoAlto: 1.7,   //   bloqueia
+    margemLinha: 0.35, // m — o centro nunca chega mais perto que isto da linha do gol
+    tMinFalha: 0.32,  // s — batido em cima da hora: o mergulho atrasado leva pelo menos isto até o pico
+    tGiro: 0.2,       // s — o tronco gira do rumo de antes até ficar de frente para o campo
+    tChao: 0.12,      // s deitado depois de cair
+    tLevanta: 0.5,    // s para levantar
+    recua: 0.3,       // m que o corpo volta de lado ao levantar (sobe por cima dos pés)
+    tSaltoPouso: 0.3, // s do contato até os pés pousarem no salto
+    tEmPe: 0.45,      // s da defesa em pé (baixa / peito) depois do contato
+    tAbraca: 0.25,    // s para trazer a bola encaixada para junto do peito
+    tMaoRebote: 0.15, // s para as mãos irem de onde estavam (defesa anterior) às da defesa nova no rebote
+  },
 };
 
 // IA sem a bola: chegar ao ponto sem tremedeira (dono, 09/10: "o movimento dos jogadores tá meio

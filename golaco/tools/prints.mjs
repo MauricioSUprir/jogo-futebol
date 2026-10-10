@@ -72,6 +72,7 @@ const CENAS = [
   { nome: 'pc-mergulho-contato-noite', ...PC, url: 'q=alta&hora=noite&modo=ataque', prep: 'mergulho:contato' },
   { nome: 'celular-mergulho-contato', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:contato' },
   { nome: 'celular-mergulho-queda-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:queda' },
+  { nome: 'pc-salto-contato', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:contato:alta' },
   { nome: 'pc-recepcao', ...PC, url: 'q=alta&hora=dia&modo=ataque&camera=aproximada', prep: 'recepcao' },
   { nome: 'celular-recepcao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque&camera=aproximada', prep: 'recepcao' },
 ];
@@ -176,11 +177,12 @@ async function preparar(pagina, prep) {
     }
     if (prep.startsWith('mergulho')) {
       // chute no canto (rasteiro/meia altura, a ~2,4 m do goleiro) e espera a fase pedida do mergulho
-      const fase = prep.split(':')[1];
+      const fase = prep.split(':')[1], alta = prep.split(':')[2] === 'alta';
       const m = g.mundo, gk = m.jogadores.find(j => j.posicao === 'GOL' && j.time === 1);
       const de = m.jogadores.find(j => j.id === m.controlado[0]);
       const b = m.bola;
-      const sx = gk.x - 17, sz = gk.z - 3, pz = gk.z + 2.1, py = 0.9, v = 19;
+      // (alta: bola por cima do goleiro, perto do corpo — o salto com as mãos acima da cabeça)
+      const sx = gk.x - 17, sz = gk.z - 3, pz = gk.z + (alta ? 0.55 : 2.1), py = alta ? 2.25 : 0.9, v = 19;
       const kx = (52.5 - sx) / (gk.x - sx), zLinha = sz + (pz - sz) * kx;
       const ux0 = 52.5 - sx, uz0 = zLinha - sz, D = Math.hypot(ux0, uz0), Dg = Math.hypot(gk.x - sx, pz - sz);
       let lo = -0.2, hi = 0.6;

@@ -348,18 +348,24 @@ export function criarJogadores3D(cena, qualidade) {
   const CIMA = new THREE.Vector3(0, 1, 0);
 
   /**
-   * "Frente" do corpo pelos ombros (ou quadris) e pelo eixo do tronco: cima × direita, em 3D. De pé é a
-   * mesma frente de antes (no plano do chão); no goleiro mergulhando, deitado de lado, a direita fica quase
-   * vertical e só a conta em 3D dá a frente certa (as cápsulas não torcem).
+   * "Frente" do corpo pelos ombros (ou quadris). De pé (tronco a menos de ~30° da vertical) é a conta de
+   * sempre, no plano do chão — nada muda para os jogadores de linha. Com o tronco bem inclinado (o goleiro
+   * mergulhando, deitado de lado), a direita fica quase vertical e a frente sai de cima × direita, em 3D (as
+   * cápsulas não torcem); entre ~30° e ~45° as duas se misturam, sem salto.
    */
   function frente(pose, iE, iD, out) {
     const rx = pose[iD * 3] - pose[iE * 3], ry = pose[iD * 3 + 1] - pose[iE * 3 + 1], rz = pose[iD * 3 + 2] - pose[iE * 3 + 2];
+    const l0 = Math.hypot(rx, rz) || 1;
     const ip = J.pelve * 3, in_ = J.pescoco * 3;
     const ux = pose[in_] - pose[ip], uy = pose[in_ + 1] - pose[ip + 1], uz = pose[in_ + 2] - pose[ip + 2];
+    const k = Math.min(1, Math.max(0, (0.87 - uy / (Math.hypot(ux, uy, uz) || 1)) / 0.16));
+    if (k === 0) return out.set(rz / l0, 0, -rx / l0);
     // cima × direita
     let fx = uy * rz - uz * ry, fy = uz * rx - ux * rz, fz = ux * ry - uy * rx;
     let l = Math.hypot(fx, fy, fz);
-    if (l < 1e-6) { fx = rz; fy = 0; fz = -rx; l = Math.hypot(fx, fz) || 1; }
+    if (l < 1e-6) { fx = rz; fy = 0; fz = -rx; l = l0; }
+    fx = (rz / l0) * (1 - k) + (fx / l) * k; fy = (fy / l) * k; fz = (-rx / l0) * (1 - k) + (fz / l) * k;
+    l = Math.hypot(fx, fy, fz) || 1;
     return out.set(fx / l, fy / l, fz / l);
   }
 

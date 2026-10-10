@@ -22,6 +22,7 @@
 //     velocidade de um pé real tocando o chão: 0,19·v + 0,81 m/s (Clark et al. 2023, "GSD").
 //   node tools/teste-patinacao.mjs [--detalhe]
 import { criarTreino, passoTreino, entradaDemo, DEMO } from '../js/sessao.js';
+import { mergulhoAtivo } from '../js/goleiro.js';
 import { pose, J, NJ } from '../js/anim.js';
 import { BOTAO, PASSO } from '../js/config.js';
 import { fmt, tabelaTexto } from './lib/medidas.mjs';
@@ -123,11 +124,16 @@ for (const [nome, rot, op = {}] of cenas) {
       t: TORNOZELO.map(k => [out[k * 3], out[k * 3 + 1], out[k * 3 + 2]]),
       sim: j.pes.map(p => ({ apoio: p.apoio, x: p.x, z: p.z })),
       v: Math.hypot(j.vx, j.vz),
+      pel: [out[J.pelve * 3], out[J.pelve * 3 + 1], out[J.pelve * 3 + 2]],
+      // goleiro na defesa desenhada: o corpo também cai e sobe (a mesma regra do teste-mergulho: v = a maior
+      // velocidade do corpo, do centro no chão ou da pelve desenhada, até 6 m/s)
+      merg: j.posicao === 'GOL' && mergulhoAtivo(j, m.tick),
     };
     const ant = recomecou ? null : antes.get(j.id);
     antes.set(j.id, atu);
     if (ant) {
-      const v = Math.max(atu.v, ant.v);
+      let v = Math.max(atu.v, ant.v);
+      if (atu.merg || ant.merg) v = Math.min(6, Math.max(v, Math.hypot(atu.pel[0] - ant.pel[0], atu.pel[1] - ant.pel[1], atu.pel[2] - ant.pel[2]) / PASSO));
       for (let p = 0; p < 2; p++) {
         const d = Math.hypot(atu.t[p][0] - ant.t[p][0], atu.t[p][1] - ant.t[p][1], atu.t[p][2] - ant.t[p][2]);
         const vp = d / PASSO;
