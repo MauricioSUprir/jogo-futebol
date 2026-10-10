@@ -227,16 +227,26 @@ export function criarHud(opc) {
     const X = x => m + (Math.max(-CAMPO_MX - 2, Math.min(CAMPO_MX + 2, x)) + CAMPO_MX) * sx;
     const Z = z => m + (Math.max(-CAMPO_MZ - 2, Math.min(CAMPO_MZ + 2, z)) + CAMPO_MZ) * sz;
     const r = Math.max(1.6, 1.9 * dpr * (w / dpr > 110 ? 1.15 : 1));
-    let ctrl = null;
-    for (const j of mundo.jogadores ?? []) {
-      const gol = j.posicao === 'GOL';
-      g.fillStyle = j.time === 1 ? (gol ? COR_MAPA.t1gol : COR_MAPA.t1) : (gol ? COR_MAPA.t0gol : COR_MAPA.t0);
-      g.beginPath(); g.arc(X(j.x), Z(j.z), r, 0, Math.PI * 2); g.fill();
-      if (j.id === idControlado) ctrl = j;
-      else if (j.id === idProximo) {
-        g.strokeStyle = 'rgba(255, 255, 255, 0.55)'; g.lineWidth = dpr * 0.8;
-        g.beginPath(); g.arc(X(j.x), Z(j.z), r + 1.4 * dpr, 0, Math.PI * 2); g.stroke();
+    let ctrl = null, prox = null;
+    const js = mundo.jogadores ?? [];
+    // um preenchimento por cor (4 no total, não um por jogador): com 22 em campo o minimapa era o
+    // item mais caro do HUD no celular
+    for (let cor = 0; cor < 4; cor++) {
+      const t = cor >> 1, gol = (cor & 1) === 1;
+      g.fillStyle = t === 1 ? (gol ? COR_MAPA.t1gol : COR_MAPA.t1) : (gol ? COR_MAPA.t0gol : COR_MAPA.t0);
+      g.beginPath();
+      for (let k = 0; k < js.length; k++) {
+        const j = js[k];
+        if ((j.time === 1 ? 1 : 0) !== t || (j.posicao === 'GOL') !== gol) continue;
+        const x = X(j.x), z = Z(j.z);
+        g.moveTo(x + r, z); g.arc(x, z, r, 0, Math.PI * 2);
+        if (j.id === idControlado) ctrl = j; else if (j.id === idProximo) prox = j;
       }
+      g.fill();
+    }
+    if (prox) {
+      g.strokeStyle = 'rgba(255, 255, 255, 0.55)'; g.lineWidth = dpr * 0.8;
+      g.beginPath(); g.arc(X(prox.x), Z(prox.z), r + 1.4 * dpr, 0, Math.PI * 2); g.stroke();
     }
     if (ctrl) {
       // controlado: ponto maior com anel branco
@@ -295,9 +305,10 @@ export function criarHud(opc) {
         placarVisto[i] = v[i];
       }
     },
-    /** Minimapa (no máximo ~30 vezes por segundo). */
+    /** Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). */
     minimapa(agoraMs, mundo, idControlado, idProximo) {
-      if (agoraMs - mapa.ultimo < 33 && agoraMs >= mapa.ultimo) return;
+      const intervalo = raiz.classList.contains('com-toque') ? 50 : 33;
+      if (agoraMs - mapa.ultimo < intervalo && agoraMs >= mapa.ultimo) return;
       mapa.ultimo = agoraMs;
       desenharMapa(mundo, idControlado, idProximo);
     },
