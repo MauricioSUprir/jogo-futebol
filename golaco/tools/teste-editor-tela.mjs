@@ -48,7 +48,7 @@ const quadros = (pg, n) => pg.evaluate(n => { const g = window.__golaco; for (le
 const temEditor = pg => pg.evaluate(() => !!(window.__golaco.editor && document.querySelector('[data-cmd="editar-time"]')));
 // partida nova com o laço já andando (o 1º quadro depois de reiniciar só marca o tempo: sem isso o
 // "Continuar → 1 quadro" do teste não teria passo nenhum)
-const novaPartida = (pg, semente = 5) => pg.evaluate(s => { const g = window.__golaco; const h = g.reiniciar({ modo: 'partida', semente: s }); g.relogio.usarManual(true); g.relogio.avancar(1000 / 60, { desenhar: false }); return { ...g.estado(), h }; }, semente);
+const novaPartida = (pg, semente = 5, min) => pg.evaluate(([s, min]) => { const g = window.__golaco; const h = g.reiniciar({ modo: 'partida', semente: s, minutosPorTempo: min }); g.relogio.usarManual(true); g.relogio.avancar(1000 / 60, { desenhar: false }); return { ...g.estado(), h }; }, [semente, min]);
 const editorAberto = pg => pg.evaluate(() => !document.getElementById('editar-time')?.hidden);
 const menuAberto = pg => pg.evaluate(() => !document.getElementById('menu').hidden);
 const pressionado = pg => pg.evaluate(() => [...document.querySelectorAll('#editar-time .carta[aria-pressed="true"]')].map(b => +b.dataset.jogador));
@@ -361,8 +361,8 @@ async function conferirEditor(pg) {
   const { navegador, pagina: pg, erros } = await abrirPagina(CEL);
   try {
     if (!(await temEditor(pg))) throw new Error('sem Editar time na página');
-    // ---- 5) substituição pelo toque
-    await novaPartida(pg, 3);
+    // ---- 5) substituição pelo toque (tempo de 18 s: a próxima parada vem no máximo no intervalo)
+    await novaPartida(pg, 3, 0.3);
     await tocar(pg, '#btn-menu');
     await tocar(pg, '[data-cmd="editar-time"]');
     await tocar(pg, '#editar-time [data-jogador="9"]');
@@ -376,7 +376,7 @@ async function conferirEditor(pg) {
     await tocar(pg, '#menu [data-cmd="continuar"]');
     const e5 = await quadros(pg, 1);
     const pend = e5.times?.[0]?.pendente?.substituicoes ?? [];
-    // a bola tem de sair: o controlado chuta para a lateral sempre que pode (até 20 s)
+    // a bola tem de parar (fora, gol ou intervalo): o controlado chuta sempre que pode (até 20 s)
     const sub = await pg.evaluate(BIT => {
       const g = window.__golaco;
       let carga = 0, aviso = '', ev = null;
@@ -404,7 +404,7 @@ async function conferirEditor(pg) {
       `entra ${selos.entra}, sai ${selos.sai}, "${selos.cont}"`, selos.entra && selos.sai && /1\/5/.test(selos.cont));
     meta('5  Celular: PRONTO → Continuar → pendente {sai 9, entra 22} no mundo',
       JSON.stringify(pend), pend.length === 1 && pend[0].sai === 9 && pend[0].entra === 22);
-    meta('5  Celular: a bola sai → substituição feita: 22 em campo, 9 fora, aviso no HUD',
+    meta('5  Celular: na parada → substituição feita: 22 em campo, 9 fora, aviso no HUD',
       `em ${sub.quadro ?? '-'} quadros; 22 em campo ${sub.em22}, 9 em campo ${sub.em9}, saiu [${sub.saiu}], subs ${JSON.stringify(sub.subs)}, aviso "${sub.aviso}"`,
       sub.quadro != null && sub.em22 && !sub.em9 && sub.saiu.includes(9) && /sai Diego, entra Wallace/.test(sub.aviso));
 
