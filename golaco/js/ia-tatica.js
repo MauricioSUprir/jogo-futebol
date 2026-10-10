@@ -61,6 +61,13 @@ export function entradaIATatica(m, j) {
   // bola: com o ataque da Parte 3 ninguém do time com a bola o chamava, a troca de fase com → sem
   // passava despercebida e a contrapressão nunca começava (integração das Partes 2 e 3)
   const B = blocoDoTime(m, j.time);
+  // arranque calmo (alvoCalmo): quem vinha trotando e parou retoma devagar por TATICA.arranque.s s
+  const A = TATICA.arranque;
+  if (A) {
+    const it = estadoT(j), v = MD.hypot(j.vx, j.vz);
+    if (v > A.rapido) it.rap = true;
+    else if (v < A.parado && it.rap) { it.rap = false; it.calmoAte = m.tick + seg(A.s); }
+  }
   // trocou de vaga (Editar time: troca entre titulares ou formação nova): vai correndo para a vaga
   // nova antes de voltar ao papel (E7 do teste-editor; tela §8: "a IA leva o jogador à vaga nova")
   if (reposicionando(m, j, B) && m.posse !== j.id && !j.recebe) return reposicionar(m, j, B);
@@ -579,7 +586,10 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     if (S.passinho && d > S.passinho[1]) { out.x = px; out.z = it.fz; out.mag = S.passinho[0]; out.modo = 'pressa'; out.correr = false; it.dTick = -9; return out; }
     out.x = j.x; out.z = j.z; it.dTick = -9; return out;
   }
-  if (ajuste) { out.modo = 'pressa'; out.mag = Math.min(1, Math.max(g[2], d / S.dist)); out.correr = d > S.corre; }
+  if (ajuste) {
+    out.modo = 'pressa'; out.mag = Math.min(1, Math.max(g[2], d / S.dist)); out.correr = d > S.corre;
+    if (TATICA.arranque && m.tick < it.calmoAte && d < TATICA.arranque.dMax) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
+  }
   else if (it.lento) out.mag = g[2];
   else {
     // longe: a intensidade do modo calma (d / 14), mas nunca abaixo de trote[2] (~1,9 m/s: acima
@@ -587,6 +597,10 @@ export function alvoCalmo(m, j, x, z, out, lado = 0, fRecuo = 1, fSobe = 0) {
     // não tem piso próprio (o rumo já vem filtrado e com o giro limitado, abaixo)
     out.modo = 'pressa';
     out.mag = Math.max(S.trote[2], Math.min(d < S.trote[1] ? S.trote[0] : 1, d / 14));
+    // arranque calmo: logo depois de parar (TATICA.arranque.s s), um ajuste de até dMax m sai trotando
+    // devagar (trote[2]) — parado no lugar e arrancando de novo a cada passe era o anda-para-anda
+    // (teste-movimento; Metrica: 0,37/min, quase ninguém para de vez); a recomposição (abaixo) passa
+    if (TATICA.arranque && m.tick < it.calmoAte && d < TATICA.arranque.dMax) { out.mag = Math.min(out.mag, S.trote[2]); out.correr = false; }
     // recomposição: com o alvo recuando para o meu gol mais rápido que recomp[0] m/s, vai no ritmo
     // dele (+ recomp[1] m/s, no máximo recomp[2]) — trotando a ~2,6 m/s a linha ficava 5–10 m acima da
     // bola que entrava conduzida no meu terço (teste-forma: 3,5 de 10 atrás da bola no t1)
@@ -791,7 +805,7 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0 };
 }
 
 /**

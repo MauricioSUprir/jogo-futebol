@@ -530,6 +530,9 @@ export const TATICA = {
   avaliaTicks: 6,             // a IA tática reavalia a cada 6 ticks (10 Hz), escalonada por vagaIdx
   // quem trocou de vaga (Editar time) corre para a nova até chega m da referência dela (no máximo max s)
   reposiciona: { chega: 5, max: 8 },
+  // arranque calmo (ia-tatica.js alvoCalmo): quem passou de rapido m/s e parou (< parado m/s) retoma um
+  // ajuste de até dMax m trotando devagar (suave.trote[2]) por s s — anda-para-anda (teste-movimento)
+  arranque: { rapido: 2.2, parado: 0.5, s: 2.0, dMax: 12 },
   // olhar da IA sem a bola na partida (ia-tatica.js olhaBolaPartida): velocidade filtrada em tauVel s
   // (o limite do desvio do tronco) e o desvio girando no máximo giro rad/s (o tremor é > 1,5 rad/s)
   olhar: { tauVel: 0.5, giro: 1.2 },

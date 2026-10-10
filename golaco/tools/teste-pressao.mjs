@@ -21,6 +21,10 @@
 //    a ≤ 4,6 m do recebedor em ≤ 2 s), o rastreamento da Metrica (2 jogos, 1763 recepções de passe;
 //    tools/pesquisa/agressao_metrica.py) dá 68,0% (t1/t2/t3 do recebedor: 55,9 / 65,5 / 83,7%). A meta
 //    passa a ser a da mesma definição no jogo real: 68 ± 10 pontos (como as outras metas da Metrica).
+//    A retomada fica 25–40%: com a definição deste medidor (perda = qualquer toque do outro time com a
+//    bola rolando; retomada = qualquer toque de volta em ≤ 5 s), os eventos da Metrica dão 44,1% (555
+//    perdas; tools/pesquisa/retomada_metrica.py) contra os 36,5% da pesquisa — ~8 pontos são da
+//    definição (bate-rebate conta como perda); o resto é a IA retomando rápido demais.
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
