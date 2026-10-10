@@ -5,6 +5,15 @@
 //
 // IA × IA "pura": ninguém é do humano (m.humanos = []), então os 22 são guiados pela IA com as
 // mesmas regras (o controlado da demo não dá bote nem gira como a IA — mediria dois times diferentes).
+//
+// ATAQUE SUBSTITUTO (só dos testes, enquanto a IA com a bola da Parte 3 não existe): o condutor
+// clássico do treino conduz em disparada para o gol e só passa apertado — no 11×11 contra um bloco
+// ele perde a bola ~25×/min e as medidas de pressão viram medidas desse ataque. Sem a Parte 3, quem
+// está com a bola no pé é conduzido por uma regra simples de construção (trota, segura 1,5–4 s e passa
+// para o companheiro com a linha mais livre e mais à frente; chuta perto do gol), pelos mesmos botões
+// do humano: o time com a bola vira "humano" só naquele tick (m.humanos = [time], controlado = o
+// condutor); sem dono, ninguém é humano. A defesa medida é sempre a IA do jogo. Com a Parte 3
+// presente, os testes usam o jogo de verdade (ataque: 'jogo').
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import * as M from './partida-medidas.mjs';
@@ -24,10 +33,10 @@ export function argumentos(padraoSementes = 8) {
 /** Importa os módulos da lógica da pasta `js`. */
 export async function carregar(js) {
   const imp = f => import(pathToFileURL(path.join(js, f)).href);
-  const [P, S, C, F, Bo, A] = await Promise.all([imp('partida.js'), imp('sim.js'), imp('config.js'), imp('formacoes.js'), imp('bola.js'), imp('ia-ataque.js')]);
+  const [P, S, C, F, Bo, A, Ac] = await Promise.all([imp('partida.js'), imp('sim.js'), imp('config.js'), imp('formacoes.js'), imp('bola.js'), imp('ia-ataque.js'), imp('acoes.js')]);
   let T = null;
   try { T = await imp('tatica.js'); } catch { T = null; }
-  return { P, S, C, T, F, Bo, A, js };
+  return { P, S, C, T, F, Bo, A, Ac, js };
 }
 
 const NADA = { x: 0, z: 0, botoes: 0 };
@@ -53,14 +62,85 @@ export function parte3Presente(L) {
 }
 /**
  * Partida IA × IA. opc: {antes, times: {0: {formacao, tatica}, 1: {...}}, minutos (por tempo; padrão
- * 60 = sem intervalo no trecho medido)}.
+ * 60 = sem intervalo no trecho medido), ataque: 'jogo' | 'substituto'}.
  */
 export function criarJogo(L, semente, opc = {}) {
   const m = L.P.criarPartida({ semente, iaClassica: !!opc.antes, minutosPorTempo: opc.minutos ?? 60, times: opc.times });
   m.humanos = [];
+  if (opc.ataque === 'substituto') m._sub = { s: (semente * 2654435761) >>> 0 || 1, id: -1, desde: 0, espera: 0, carga: null };
   return m;
 }
-export const passoJogo = (L, m) => L.P.passoPartida(m, NADA);
+
+/** Um passo da partida IA × IA (com o ataque substituto, se a partida foi criada com ele). */
+export function passoJogo(L, m) {
+  if (!m._sub) return L.P.passoPartida(m, NADA);
+  const e = entradaSubstituta(L, m);
+  const est = m.partida.estado;
+  // sem condutor (bola livre, no ar, nas mãos, bola parada, intervalo): o passo da partida
+  if (e.time == null || est === 'intervalo' || est === 'fim') return L.P.passoPartida(m, NADA);
+  // com condutor: o mesmo passo da partida (passoPartida só leva a entrada do time 0)
+  L.S.passo(m, { [e.time]: e });
+  L.P.regrasPartida(m);
+  return m.eventos;
+}
+
+// gerador local (não mexe no m.rng: o mundo sorteia o mesmo que no jogo)
+function sorteio(st) { st.s ^= st.s << 13; st.s >>>= 0; st.s ^= st.s >>> 17; st.s ^= st.s << 5; st.s >>>= 0; return st.s / 4294967296; }
+
+/** Entrada do condutor pelo ataque substituto (e acerta m.humanos/m.controlado para este tick). */
+function entradaSubstituta(L, m) {
+  const st = m._sub, B = L.C.BOTAO;
+  const d = m.naMao == null && m.posse != null ? m.jogadores.find(o => o.id === m.posse) : null;
+  if (!d || (m.parada && !m.parada.rolou)) { m.humanos = []; st.id = -1; st.carga = null; return NADA; }
+  const t = d.time, lado = m.ataca[t];
+  m.humanos = [t]; m.controlado[t] = d.id;
+  if (st.id !== d.id) { st.id = d.id; st.desde = m.tick; st.espera = Math.round((1.5 + 2.5 * sorteio(st)) * 60); st.carga = null; }
+  // carregando um passe/chute: segura o botão com o analógico no alvo e solta
+  if (st.carga) {
+    const c = st.carga;
+    if (m.tick < c.ate) return { x: c.x * 0.6, z: c.z * 0.6, botoes: c.bot, time: t };
+    st.carga = null; st.desde = m.tick; st.espera = Math.round((1.5 + 2.5 * sorteio(st)) * 60);
+    return { x: c.x * 0.6, z: c.z * 0.6, botoes: 0, time: t };
+  }
+  const gx = lado * 52.5, dGol = Math.hypot(gx - d.x, d.z);
+  // chute perto do gol
+  if (dGol < 22 && Math.abs(d.z) < 16 && d.posicao !== 'GOL') {
+    const dx = gx - d.x, dz = -d.z * 0.8, l = Math.hypot(dx, dz) || 1;
+    st.carga = { bot: B.CHUTE, x: dx / l, z: dz / l, ate: m.tick + 24 };
+    return { x: dx / l, z: dz / l, botoes: B.CHUTE, time: t };
+  }
+  // marcador mais perto
+  let pm = null, dm = Infinity;
+  for (const o of m.jogadores) if (o.time !== t && o.posicao !== 'GOL') { const dd = Math.hypot(o.x - d.x, o.z - d.z); if (dd < dm) { dm = dd; pm = o; } }
+  const apertado = dm < 2 && m.tick - st.desde > 15;
+  if (m.tick - st.desde >= st.espera || apertado || d.posicao === 'GOL') {
+    // passe: a linha mais livre (risco do acoes.js) e mais à frente, 6–35 m
+    let mel = null, nm = -Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== t || o === d || o.posicao === 'GOL') continue;
+      const dx = o.x - d.x, dz = o.z - d.z, l = Math.hypot(dx, dz);
+      if (l < 6 || l > 35) continue;
+      const risco = L.Ac.riscoLinha(m, d, d.x, d.z, o.x, o.z, 12);
+      const nota = (1 - risco) * (1 + 0.5 * Math.max(-0.5, Math.min(1, dx * lado / 25))) - 0.1 * Math.abs(l - 15) / 15;
+      if (risco < 0.6 && nota > nm) { nm = nota; mel = o; }
+    }
+    if (mel) {
+      const dx = mel.x - d.x, dz = mel.z - d.z, l = Math.hypot(dx, dz);
+      st.carga = { bot: B.PASSE, x: dx / l, z: dz / l, ate: m.tick + Math.round(Math.min(0.5, 0.12 + l / 80) * 60) };
+      return { x: dx / l * 0.6, z: dz / l * 0.6, botoes: B.PASSE, time: t };
+    }
+    st.espera += 30;
+  }
+  // conduz trotando para a frente; com marcador perto na frente, sai de lado
+  let dx = lado * 10, dz = 0;
+  if (pm && dm < 3) {
+    const ax = pm.x - d.x, az = pm.z - d.z;
+    if (ax * dx + az * dz > 0) { const s = (d.z >= 0 ? -1 : 1); dx = -az * s; dz = ax * s; }
+  }
+  const l = Math.hypot(dx, dz) || 1;
+  return { x: dx / l * 0.55, z: dz / l * 0.55, botoes: 0, time: t };
+}
+
 
 /**
  * Linhas da forma SEM a bola pela formação (Forcher 2024 mede as linhas do bloco defensivo): defesa
@@ -90,9 +170,10 @@ export function medirJogos(L, sementes, opc = {}) {
     sem: { 1: [], 2: [], 3: [] }, com: { 1: [], 2: [], 3: [] }, atras: [], atrasT: { 1: [], 2: [], 3: [] }, p1ramo: {}, marca: 0, defN: 0, areaCom: [], areaSem: [],
     m1: [], m2: [], m1t: { 1: [], 2: [], 3: [] }, a10: [], perto3: 0, porta: 0, assentada: 0, assentadaN: 0,
     recepcoes: 0, agressao: 0, perdas: 0, retomada5: 0, chega2: 0, depoisJanela: [], ppda: [], passes: 0, acoes: 0,
-    chutes: 0, gols: 0, minutos: 0, ramos: {},
+    chutes: 0, gols: 0, minutos: 0, ramos: {}, porBola: [],
   };
   const cada = opc.cada ?? 6;
+  R.ataque = opc.ataque ?? 'jogo';
   for (const s of sementes) {
     const m = criarJogo(L, s, opc);
     const linhas = { 0: linhasSemBola(L, m, 0), 1: linhasSemBola(L, m, 1) };
@@ -102,6 +183,8 @@ export function medirJogos(L, sementes, opc = {}) {
     let donoAnt = null, desde = 0;
     const recepcoes = []; // {tick, id, time (de quem recebeu)}
     const perdas = [];    // {tick, perdeu (time), quem (id), x, z, chegou, retomou}
+    const depois = [];    // {tick (janela + 2 s), perdeu, desde}
+    let ultTroca = -1;
     let vooAnt = null;
     const ultDono = { 0: null, 1: null };
     for (let i = 0; i < N; i++) {
@@ -117,17 +200,33 @@ export function medirJogos(L, sementes, opc = {}) {
       const tr = posse.atualizar(m);
       if (tr && !(m.parada && !m.parada.rolou) && !ev.some(e => e.tipo === 'saida')) {
         perdas.push({ tick: m.tick, perdeu: tr.de, x: tr.x, z: tr.z, quem: ultDono[tr.de], chegou: false, retomou: false, fim: false });
+        // 2 s depois da janela de contrapressão do time que perdeu: quantos ainda apertam?
+        const pr = m.times?.[tr.de]?.tatica?.pressao ?? 1;
+        depois.push({ tick: m.tick + Math.round(((L.C.IA_DEFESA?.contrapressao?.s?.[pr] ?? 3) + 2) * 60), perdeu: tr.de, desde: m.tick });
+      }
+      if (tr) ultTroca = m.tick;
+      for (const q of depois) {
+        if (q.fim || m.tick < q.tick) continue;
+        q.fim = true;
+        if (ultTroca > q.desde) continue; // a posse trocou de novo no meio (outra perda, outra janela)
+        let contra = 0, apertam = 0;
+        for (const o of M.deLinha(m, q.perdeu)) {
+          const r = o.ia?.ramo;
+          if (r === 'contra') contra++;
+          if (r === 'contra' || r === 'aperta' || r === 'ataca' || r === 'contem') apertam++;
+        }
+        R.depoisJanela.push({ contra, apertam });
       }
       // acompanha as perdas abertas (5 s)
       for (const p of perdas) {
         if (p.fim) continue;
         const dt = (m.tick - p.tick) / 60;
         if (dt > 5) { p.fim = true; continue; }
-        const tb = M.timeComBola(m);
-        if (d && tb === p.perdeu && dt > 0) { p.retomou = true; p.fim = true; continue; }
         if (dt <= 3 && !p.chegou) {
           for (const o of m.jogadores) if (o.time === p.perdeu && o.posicao !== 'GOL' && o.id !== p.quem && Math.hypot(o.x - m.bola.p.x, o.z - m.bola.p.z) <= 2) { p.chegou = true; break; }
         }
+        const tb = M.timeComBola(m);
+        if (d && tb === p.perdeu && dt > 0) { p.retomou = true; if (dt > 3 || p.chegou) p.fim = true; }
       }
       // agressão: recepções com defensor a ≤ 4,6 m em ≤ 2 s
       for (const r of recepcoes) {
@@ -143,6 +242,7 @@ export function medirJogos(L, sementes, opc = {}) {
       const fc = M.forma(m, tc), fd = M.forma(m, td, { grupos: linhas[td] });
       const tB = M.tercoDaBola(m, td), tBc = M.tercoDaBola(m, tc);
       R.sem[tB].push(fd); R.com[tBc].push(fc);
+      R.porBola.push([M.uDe(m, td, m.bola.p.x), fd.alturaLinha, fd.larg, fd.comp]);
       R.atras.push(fd.atrasDaBola); R.atrasT[tB].push(fd.atrasDaBola);
       R.areaCom.push(fc.area); R.areaSem.push(fd.area);
       // marcação individual (ramo 'marca') de quem defende, com a bola fora da área de quem defende

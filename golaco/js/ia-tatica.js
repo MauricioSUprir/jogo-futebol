@@ -21,8 +21,8 @@
 //    Alta, com gatilho, aperta junto;
 //  - linha de defesa (grupo 'def'): a referência alinhada; com atacantes a ≤ individualArea m do meu
 //    gol, marcação individual deles (FC 26: individual na área);
-//  - zona (os outros): a referência; um adversário a ≤ zona.raio m dela a puxa zona.peso para o lado
-//    do gol dele (uma reivindicação por adversário: a marcação fica única);
+//  - zona (os outros): a referência; um adversário a ≤ zona.raio m dela, no nível dela ou nas costas,
+//    a puxa zona.peso para o lado do gol dele (uma reivindicação por adversário: marcação única);
 //  - recomposição: > recomposicao m à frente da referência com a bola vindo para o meu gol → corre.
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
@@ -80,10 +80,10 @@ export function blocoDoTime(m, t) {
   if (!B) {
     B = todos[t] = {
       tick: -1, faseAnt: null, p1: -1, p2: -1, aperta1: false, aperta2: false, pedido: -1,
-      gatilhoAte: -1, gatilho: '', vooTick: -1, recebePara: -1, donoAnt: -1,
+      gatilhoAte: -1, gatilho: '', vooTick: -1, recebePara: -1, donoAnt: -1, cPesado: false, cCostas: false, cLateral: false,
       contra: [], contraAte: -1,
-      refTick: -99, ref: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
-      foco: { x: 0, z: 0 }, cvx: 0, cvz: 0, cond: -1,
+      refTick: -99, ref: new Float64Array(22), refV: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
+      foco: { x: 0, z: 0 }, cvx: 0, cvz: 0, cond: -1, dono: -1, dvx: 0, dvz: 0, bolaRef: { x: 0, z: 0 },
     };
   }
   B.tick = m.tick;
@@ -110,19 +110,48 @@ export function blocoDoTime(m, t) {
     const a = DT / IA.filtroCondutor;
     B.cvx += (adv.vx - B.cvx) * a; B.cvz += (adv.vz - B.cvz) * a;
   } else { B.cond = -1; B.cvx = 0; B.cvz = 0; }
+  // velocidade (filtrada) de quem tem a bola no pé, de qualquer time: o bloco antecipa para onde a
+  // bola vai (sem isso, no modo calma a referência que anda a ~3 m/s deixava o time ~6 m atrasado)
+  if (dono && m.naMao == null && dono.posicao !== 'GOL') {
+    if (B.dono !== dono.id) { B.dono = dono.id; B.dvx = dono.vx; B.dvz = dono.vz; }
+    const a = DT / IA.filtroCondutor;
+    B.dvx += (dono.vx - B.dvx) * a; B.dvz += (dono.vz - B.dvz) * a;
+  } else { B.dono = -1; B.dvx = 0; B.dvz = 0; }
 
-  // 1º e 2º homem: os mais perto do foco (sem o goleiro), com histerese de IA.trocaPressao m
-  let a1 = null, d1 = Infinity, a2 = null, d2 = Infinity, at1 = null, dAt1 = Infinity, at2 = null, dAt2 = Infinity;
+  // 1º e 2º homem, com histerese de IA.trocaPressao m. 1º: o mais perto do foco (sem o goleiro); quem
+  // está — ou tem a referência — à frente da bola (do lado do gol dele) paga IA_DEFESA.frentePaga m:
+  // chegar por trás para conter dá a volta no condutor, e o atacante que acompanhou o condutor desde
+  // a saída entrega a contenção ao meio-campista quando a bola passa da linha dele. 2º (cobertura):
+  // o mais perto entre os que estão do lado do meu gol (o centroavante não volta para cobrir).
+  // Quem é da linha de defesa paga IA_DEFESA.defesaPaga m com a bola à frente da referência dele: o
+  // lateral que sai para conter tira a linha de 4 do lugar (Metrica: 3,5 m de espalhamento no
+  // bloco baixo) — o meio-campista chega antes.
+  const ub = B.foco.x * lado, fp = IA_DEFESA.frentePaga, dp = IA_DEFESA.defesaPaga;
+  const vagas = FORMACOES[m.times[t].formacao].vagas;
+  const efetiva = o => {
+    let d = MD.hypot(o.x - B.foco.x, o.z - B.foco.z);
+    if (B.refTick < 0) return d;
+    const ur = B.ref[2 * o.vagaIdx] * lado;
+    if (o.x * lado > ub + 1 || ur > ub + 1) d += fp;
+    else if (vagas[o.vagaIdx].grupo === 'def' && ub > ur + 3) d += dp;
+    return d;
+  };
+  let p1 = null, d1 = Infinity, at1 = null, dAt1 = Infinity;
   for (const o of js) {
     if (o.time !== t || !ehLinha(o)) continue;
-    const d = MD.hypot(o.x - B.foco.x, o.z - B.foco.z);
-    if (d < d1) { a2 = a1; d2 = d1; a1 = o; d1 = d; } else if (d < d2) { a2 = o; d2 = d; }
+    const d = efetiva(o);
+    if (d < d1) { d1 = d; p1 = o; }
     if (o.id === B.p1) { at1 = o; dAt1 = d; }
+  }
+  if (at1 && at1 !== p1 && dAt1 < d1 + IA.trocaPressao) p1 = at1;
+  let p2 = null, d2 = Infinity, at2 = null, dAt2 = Infinity;
+  for (const o of js) {
+    if (o.time !== t || !ehLinha(o) || o === p1 || o.x * lado > ub + 1) continue;
+    const d = MD.hypot(o.x - B.foco.x, o.z - B.foco.z);
+    if (d < d2) { d2 = d; p2 = o; }
     if (o.id === B.p2) { at2 = o; dAt2 = d; }
   }
-  let p1 = a1, p2 = a2;
-  if (at1 && at1 !== a1 && dAt1 < d1 + IA.trocaPressao) { p1 = at1; p2 = a1; }
-  if (p2 && at2 && at2 !== p1 && at2 !== p2 && dAt2 < MD.hypot(p2.x - B.foco.x, p2.z - B.foco.z) + IA.trocaPressao) p2 = at2;
+  if (at2 && at2 !== p2 && dAt2 < d2 + IA.trocaPressao) p2 = at2;
   B.p1 = p1 ? p1.id : -1;
   B.p2 = p2 ? p2.id : -1;
 
@@ -138,7 +167,7 @@ export function blocoDoTime(m, t) {
       if (o.time === t) meus++; else deles++;
     }
     const lugar = b.x * lado > IA_DEFESA.contrapressao.campo || Math.abs(b.z) > IA_DEFESA.gatilhos.lateral;
-    if (lugar && meus >= deles) {
+    if (lugar && meus >= deles - IA_DEFESA.contrapressao.inferioridade) {
       for (let k = 0; k < max; k++) {
         let mel = null, dm = R;
         for (const o of js) {
@@ -151,6 +180,8 @@ export function blocoDoTime(m, t) {
       }
       B.contraAte = m.tick + seg(IA_DEFESA.contrapressao.s[p]);
     }
+    // e o 1º homem aperta logo depois da perda (FIFA 23: "pressão após perda"), se estiver perto
+    if (p >= 1) gatilho(m, B, 'perda');
   }
   if (f.fase === 'com' || naParada) B.contraAte = -1;
   B.faseAnt = f.fase;
@@ -168,23 +199,34 @@ export function blocoDoTime(m, t) {
         if (de && de.posicao !== 'GOL' && (v.alvo.x - de.x) * ladoAdv < -G.passeTras) gatilho(m, B, 'passeTras');
       }
     }
+    // os de estado disparam na BORDA (quando começam): de costas o tempo todo, o 1º homem apertaria
+    // sem parar
     if (adv && adv.posicao !== 'GOL') {
       if (adv.id !== B.donoAnt && adv.id === B.recebePara) gatilho(m, B, 'recepcao');
-      if (MD.hypot(b.x - adv.x, b.z - adv.z) > G.toquePesado) gatilho(m, B, 'toquePesado');
+      const pesado = MD.hypot(b.x - adv.x, b.z - adv.z) > G.toquePesado;
       const cr = MD.cos(adv.rumo), sr = MD.sin(adv.rumo);
-      if (cr * ladoAdv < MD.cos(G.costas)) gatilho(m, B, 'costas');
-      if (Math.abs(b.z) > G.lateral && sr * (b.z > 0 ? 1 : -1) > 0.5) gatilho(m, B, 'lateral');
-    }
+      const costas = cr * ladoAdv < MD.cos(G.costas);
+      const lateral = Math.abs(b.z) > G.lateral && sr * (b.z > 0 ? 1 : -1) > 0.5;
+      const novo = adv.id !== B.donoAnt;
+      if (pesado && (novo || !B.cPesado)) gatilho(m, B, 'toquePesado');
+      if (costas && (novo || !B.cCostas)) gatilho(m, B, 'costas');
+      if (lateral && (novo || !B.cLateral)) gatilho(m, B, 'lateral');
+      B.cPesado = pesado; B.cCostas = costas; B.cLateral = lateral;
+    } else { B.cPesado = false; B.cCostas = false; B.cLateral = false; }
   }
   B.donoAnt = adv ? adv.id : -1;
-  const comGatilho = p >= 1 && B.gatilhoAte >= m.tick;
+  B.gatilhoPerto = false;
+  if (adv && p1) B.gatilhoPerto = MD.hypot(p1.x - adv.x, p1.z - adv.z) <= G.alcance;
+  // (o gatilho só vale com o 1º homem perto o bastante para chegar: gatilhos.alcance m do condutor)
+  const comGatilho = p >= 1 && B.gatilhoAte >= m.tick && B.gatilhoPerto;
 
   // 1º homem: aperta ou contém (o goleiro adversário com a bola na mão não é pressionado: Regra 12.3)
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
   const engajado = dGol <= IA_DEFESA.engaja[p];
   B.engajado = engajado;
   B.aperta1 = !!adv && adv.posicao !== 'GOL' && (comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado;
-  B.aperta2 = !!adv && adv.posicao !== 'GOL' && p >= 2 && comGatilho && engajado;
+  // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
+  B.aperta2 = !!adv && adv.posicao !== 'GOL' && p >= 2 && engajado && (comGatilho || IA_DEFESA.doisApertam[p]);
 
   // PRESSÃO segurada pelo humano: o companheiro mais perto (≠ controlado) aperta
   B.pedido = -1;
@@ -203,8 +245,9 @@ export function blocoDoTime(m, t) {
   marcarNaArea(m, t, B, meuGol, humano, adv);
   // referências e zona a 10 Hz (escalonado por time)
   if (m.tick - B.refTick >= TATICA.avaliaTicks || (m.tick + t * 3) % TATICA.avaliaTicks === 0) {
+    const dt = (m.tick - B.refTick) * DT;
     B.refTick = m.tick;
-    referencias(m, t, B, f, adv);
+    referencias(m, t, B, f, adv, dt);
   }
   return B;
 }
@@ -261,15 +304,22 @@ const _r = { x: 0, z: 0 }, _o = { x: 0, z: 0 }, _bola = { x: 0, z: 0 };
  * Referência de cada vaga do time t (B.ref[2k], B.ref[2k + 1]) pela posicaoTatica, com a mistura
  * com/sem nos TATICA.mistura s depois da troca de fase, e as reivindicações da zona (sem a bola).
  */
-function referencias(m, t, B, f, adv) {
+function referencias(m, t, B, f, adv, dt) {
   const T = m.times[t], form = FORMACOES[T.formacao], lado = m.ataca[t];
   const v = m.voo;
   // bola de referência: com um passe no ar, o ponto de chegada (o bloco antecipa); com a bola nas
   // mãos de um goleiro, a referência é a saída de jogo (IA.saidaGoleiro m do gol dele)
   if (v && v.time != null && passeNoAr(v) && m.posse == null && m.naMao == null) { _bola.x = v.alvo.x; _bola.z = v.alvo.z; }
-  else { _bola.x = m.bola.p.x; _bola.z = m.bola.p.z; }
+  else {
+    // a bola no pé de alguém: onde ela estará em TATICA.antecipa s (no máximo antecipaMax m)
+    let ax = B.dvx * TATICA.antecipa, az = B.dvz * TATICA.antecipa;
+    const l = MD.hypot(ax, az);
+    if (l > TATICA.antecipaMax) { ax *= TATICA.antecipaMax / l; az *= TATICA.antecipaMax / l; }
+    _bola.x = m.bola.p.x + ax; _bola.z = m.bola.p.z + az;
+  }
   const lim = CAMPO.meioX - IA.saidaGoleiro;
   if (m.naMao != null || (adv && adv.posicao === 'GOL') || (m.posse != null && !adv && donoEhGoleiro(m))) _bola.x = Math.max(-lim, Math.min(lim, _bola.x));
+  B.bolaRef.x = _bola.x; B.bolaRef.z = _bola.z;
   const outra = f.fase === 'com' ? 'sem' : 'com';
   for (const vg of form.vagas) {
     const k = form.indice[vg.id];
@@ -279,14 +329,26 @@ function referencias(m, t, B, f, adv) {
       _r.x = _o.x + (_r.x - _o.x) * f.mistura;
       _r.z = _o.z + (_r.z - _o.z) * f.mistura;
     }
+    // velocidade da referência (filtrada): quem segue a referência mira um pouco à frente dela
+    // (sem isso, o time que recua atrás da bola andava ~2,5 m atrasado no próprio ritmo dela)
+    const V = B.refV;
+    if (dt > 0 && dt <= 0.5) {
+      let vx = (_r.x - B.ref[2 * k]) / dt, vz = (_r.z - B.ref[2 * k + 1]) / dt;
+      const l = MD.hypot(vx, vz), vm = TATICA.lead.vMax;
+      if (l > vm) { vx *= vm / l; vz *= vm / l; }
+      V[2 * k] += (vx - V[2 * k]) * TATICA.lead.filtro; V[2 * k + 1] += (vz - V[2 * k + 1]) * TATICA.lead.filtro;
+    } else { V[2 * k] = 0; V[2 * k + 1] = 0; }
     B.ref[2 * k] = _r.x; B.ref[2 * k + 1] = _r.z;
   }
-  // zona: cada adversário perto de uma referência (≤ zona.raio m) é reivindicado por no máximo um
-  // jogador do meio/ataque, o par mais perto primeiro (o par de antes leva 1,5 m de vantagem)
+  // zona: cada adversário perto de uma referência (≤ zona.raio m) e no nível dela ou atrás (do lado
+  // do meu gol: o que ataca as costas da zona; o da frente é do bloco que sobe com a bola) é
+  // reivindicado por no máximo um jogador do meio/ataque, o par mais perto primeiro (o par de antes
+  // leva 1,5 m de vantagem)
   const ant = B.zonaAdv, novo = _novo;
   novo.fill(-1);
   if (f.fase === 'sem') {
-    const R = IA_DEFESA.zona.raio;
+    const pr = T.tatica.pressao;
+    const R = IA_DEFESA.zona.raio, frente = IA_DEFESA.linhaDePasse.pressao[pr] ? IA_DEFESA.linhaDePasse.frente : IA_DEFESA.zona.frente;
     for (let it = 0; it < 11; it++) {
       let mk = -1, mo = null, dm = Infinity;
       for (const vg of form.vagas) {
@@ -299,6 +361,7 @@ function referencias(m, t, B, f, adv) {
           let livre = true;
           for (let q = 0; q < 11; q++) if (novo[q] === o.id) { livre = false; break; }
           if (!livre) continue;
+          if ((o.x - rx) * lado > frente) continue;
           const d = MD.hypot(o.x - rx, o.z - rz) - (ant[k] === o.id ? 1.5 : 0);
           if (d < R && (d < dm || (d === dm && o.id < mo.id))) { dm = d; mk = k; mo = o; }
         }
@@ -374,15 +437,27 @@ function semBola(m, j, f) {
     }
   }
   // 6) referência (linha alinhada ou zona), com recomposição
-  let tx = B.ref[2 * k], tz = B.ref[2 * k + 1];
+  pontoRef(B, k, _t);
+  let tx = _t.x, tz = _t.z;
   const vaga = FORMACOES[m.times[j.time].formacao].vagas[k];
   s.ramo = vaga.grupo === 'def' ? 'linha' : 'zona';
   const za = B.zonaAdv[k];
   if (za >= 0) {
     for (const o of m.jogadores) {
       if (o.id !== za) continue;
-      const gx = meuGol - o.x, gz = -o.z, g = MD.hypot(gx, gz) || 1;
-      const ax = o.x + (gx / g) * IA_DEFESA.marcaDist, az = o.z + (gz / g) * IA_DEFESA.marcaDist;
+      let ax, az;
+      const L = IA_DEFESA.linhaDePasse;
+      let c = null;
+      if (L.pressao[p] && B.cond >= 0) for (const q of m.jogadores) if (q.id === B.cond) { c = q; break; }
+      if (c && MD.hypot(o.x - c.x, o.z - c.z) <= L.alcance) {
+        // pressão Alta: fecha a linha de passe do condutor para ele (FM: "os outros fecham linhas de
+        // passe"; mais interceptações — o PPDA cai)
+        ax = c.x + (o.x - c.x) * L.ponto; az = c.z + (o.z - c.z) * L.ponto;
+        s.ramo = 'fechaLinha';
+      } else {
+        const gx = meuGol - o.x, gz = -o.z, g = MD.hypot(gx, gz) || 1;
+        ax = o.x + (gx / g) * IA_DEFESA.marcaDist; az = o.z + (gz / g) * IA_DEFESA.marcaDist;
+      }
       tx += (ax - tx) * IA_DEFESA.zona.peso; tz += (az - tz) * IA_DEFESA.zona.peso;
       break;
     }
@@ -403,14 +478,27 @@ function semBola(m, j, f) {
   return irPara(m, j, tx, tz, 1, true, extra, 'calma');
 }
 
+/** Ponto que segue a referência da vaga k: ela mais TATICA.lead.s s da velocidade dela (no máx. lead.max m). */
+function pontoRef(B, k, out) {
+  let lx = B.refV[2 * k] * TATICA.lead.s, lz = B.refV[2 * k + 1] * TATICA.lead.s;
+  const l = MD.hypot(lx, lz);
+  if (l > TATICA.lead.max) { lx *= TATICA.lead.max / l; lz *= TATICA.lead.max / l; }
+  out.x = B.ref[2 * k] + lx; out.z = B.ref[2 * k + 1] + lz;
+  return out;
+}
+
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
   return j.iaT ??= { recua: false };
 }
 
-/** Ponto entre a bola e o meu gol a `dist` m, mirando à frente pela velocidade (filtrada) do condutor. */
-function pontoPressao(m, B, meuGol, dist, out, antecipa = IA.antecipaPressao) {
-  const fx = B.foco.x, fz = B.foco.z;
+/**
+ * Ponto entre o foco (a bola; na contenção, o corpo do condutor: a distância real é até ele) e o meu
+ * gol a `dist` m, mirando à frente pela velocidade (filtrada) do condutor.
+ */
+function pontoPressao(m, B, meuGol, dist, out, antecipa = IA.antecipaPressao, peloCorpo = false) {
+  let fx = B.foco.x, fz = B.foco.z;
+  if (peloCorpo && B.cond >= 0) for (const o of m.jogadores) if (o.id === B.cond) { fx = o.x; fz = o.z; break; }
   const gx = meuGol - fx, gz = -fz, g = MD.hypot(gx, gz) || 1;
   let ax = B.cvx * antecipa, az = B.cvz * antecipa;
   const l = MD.hypot(ax, az);
@@ -437,7 +525,8 @@ function apertar(m, j, s, B, meuGol, extra, ramo, lado2 = 0) {
   const b = m.bola.p;
   if (atacaBola(m, j, s)) { s.ramo = 'ataca'; return { ...irPara(m, j, b.x, b.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER }; }
   s.ramo = ramo;
-  pontoPressao(m, B, meuGol, IA_DEFESA.aperto, _t);
+  if (ramo === 'contra') pontoPressao(m, B, meuGol, IA_DEFESA.contrapressao.dist, _t, IA_DEFESA.antecipaContem);
+  else pontoPressao(m, B, meuGol, IA_DEFESA.aperto[m.times[j.time].tatica.pressao], _t);
   if (lado2) {
     // o 2º fecha o lado de dentro (para o meio do campo), sem disputar o mesmo ponto com o 1º
     const gx = _t.x - B.foco.x, gz = _t.z - B.foco.z, g = MD.hypot(gx, gz) || 1;
@@ -446,8 +535,9 @@ function apertar(m, j, s, B, meuGol, extra, ramo, lado2 = 0) {
     if (nz * sz < 0) { nx = -nx; nz = -nz; }
     _t.x += nx * IA_DEFESA.apertoLado; _t.z += nz * IA_DEFESA.apertoLado;
   }
+  // arranca (CORRER) de longe; na pressão Alta, já de perto (fecha o condutor que trota)
   const d = MD.hypot(_t.x - j.x, _t.z - j.z);
-  return irPara(m, j, _t.x, _t.z, 1, d > IA.pressaoArranca, extra, 'pressa');
+  return irPara(m, j, _t.x, _t.z, 1, d > IA_DEFESA.apertoArranca[m.times[j.time].tatica.pressao], extra, 'pressa');
 }
 
 /** Contém: entre a bola e o meu gol a `c` m, de frente para o condutor (sem bote). */
@@ -455,7 +545,7 @@ function conter(m, j, s, B, meuGol, c, extra) {
   const b = m.bola.p;
   if (atacaBola(m, j, s)) { s.ramo = 'ataca'; return { ...irPara(m, j, b.x, b.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER }; }
   s.ramo = 'contem';
-  pontoPressao(m, B, meuGol, c, _t, IA_DEFESA.antecipaContem);
+  pontoPressao(m, B, meuGol, c, _t, IA_DEFESA.antecipaContem, true);
   const d = MD.hypot(_t.x - j.x, _t.z - j.z);
   return irPara(m, j, _t.x, _t.z, 1, d > IA.pressaoArranca, extra, 'pressa');
 }
@@ -486,5 +576,6 @@ function referenciaComBola(m, j, f) {
   const extra = extraAcao(m, j);
   s.ramo = 'apoio';
   const k = j.vagaIdx;
-  return irPara(m, j, B.ref[2 * k], B.ref[2 * k + 1], 1, true, extra, 'calma');
+  pontoRef(B, k, _t);
+  return irPara(m, j, _t.x, _t.z, 1, true, extra, 'calma');
 }
