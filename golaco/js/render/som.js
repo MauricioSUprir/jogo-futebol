@@ -34,6 +34,7 @@ export const SOM = {
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function suave(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
+const LACOS = ['ambiente', 'agito', 'canto'];   // as camadas em laço (ordem fixa)
 
 /**
  * opc = {base (pasta dos sons, ex. 'assets/sons/'), ligado, volume, aoMudar(estado)}.
@@ -54,6 +55,7 @@ export function criarSom(opc = {}) {
   const lacos = {};       // nome → {fonte, ganho}
   let ruido = null;
   let ultimoAlvo = { ambiente: -1, agito: -1, canto: -1, pausa: -1 };
+  const _alvo = { ambiente: 0, agito: 0, canto: 0 };
   let estado = Ctx ? 'sem-contexto' : 'sem-audio';
   const ouvintes = ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'];
   // ponto de partida dentro do ruído (gerador próprio do som, nada do mundo)
@@ -225,13 +227,13 @@ export function criarSom(opc = {}) {
     atualizar(emocao, pausado, t) {
       if (!ctx || ctx.state !== 'running' || !emocao) return;
       const casa = emocao.torcida[0];
-      const alvo = {
-        ambiente: 0.34 + 0.3 * emocao.agito,
-        agito: 0.78 * suave(0.38, 0.95, emocao.agito),
-        canto: (0.2 + 0.3 * casa.excita + 0.12 * casa.tensao) * (0.62 + 0.38 * Math.sin(t * 2 * Math.PI / SOM.cantoPeriodo)),
-      };
+      // alvos num objeto só, reaproveitado (nada alocado por quadro)
+      const alvo = _alvo;
+      alvo.ambiente = 0.34 + 0.3 * emocao.agito;
+      alvo.agito = 0.78 * suave(0.38, 0.95, emocao.agito);
+      alvo.canto = (0.2 + 0.3 * casa.excita + 0.12 * casa.tensao) * (0.62 + 0.38 * Math.sin(t * 2 * Math.PI / SOM.cantoPeriodo));
       const agora = ctx.currentTime;
-      for (const nome of ['ambiente', 'agito', 'canto']) {
+      for (const nome of LACOS) {
         const l = lacos[nome];
         if (!l) continue;
         const v = Math.round(alvo[nome] * 100) / 100;

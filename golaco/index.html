@@ -175,13 +175,15 @@
               <button type="button" data-valor="aproximada">Aproximada</button>
             </div>
           </div>
-          <div class="opcao">
+          <div class="opcao opcao-som">
             <span class="opcao-rotulo">Som da torcida</span>
-            <div class="segmentado" data-grupo="som">
-              <button type="button" data-valor="ligado">Ligado</button>
-              <button type="button" data-valor="desligado">Desligado</button>
+            <div class="opcao-som-linha">
+              <div class="segmentado" data-grupo="som">
+                <button type="button" data-valor="ligado">Ligado</button>
+                <button type="button" data-valor="desligado">Desligado</button>
+              </div>
+              <label class="deslizante">Volume <input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
             </div>
-            <label class="deslizante">Volume <input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
             <small class="opcao-info" id="info-som"></small>
           </div>
           <div class="opcao">

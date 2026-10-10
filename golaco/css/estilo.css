@@ -404,6 +404,7 @@ html.modo-prints .dica-retrato { display: none; }
 .segmentado button:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
 .deslizante { display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; align-items: center; gap: 10px; font-size: 13px; color: var(--texto); }
 .deslizante output { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--texto-2); text-align: right; }
+.opcao-som-linha { display: flex; flex-direction: column; gap: 7px; }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; touch-action: pan-x; }
 input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--preto-3); border-radius: 2px; }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%; background: var(--verde); border: 3px solid var(--preto); }
@@ -434,8 +435,18 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   .btn { min-height: 48px; }
   .segmentado button { height: 32px; }
   /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
-  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 9px; }
+  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 6px; }
+  .menu-opcoes .opcao { gap: 5px; }
   .menu-opcoes .opcao:first-child, .menu-opcoes .opcao:last-child { grid-column: 1 / -1; }
+  /* som: ligado/desligado e o volume na mesma linha (o menu continua cabendo sem rolar) */
+  .menu-opcoes .opcao-som { grid-column: 1 / -1; }
+  .opcao-som-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: center; }
+  .opcao-som .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
+  .opcao-som .opcao-info { display: none; }
+  /* controles de toque: Tamanho e Transparência lado a lado (a linha do som não faz o menu rolar) */
+  .menu-opcoes .opcao:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 5px; }
+  .menu-opcoes .opcao:last-child .opcao-rotulo { grid-column: 1 / -1; }
+  .menu-opcoes .opcao:last-child .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
   .menu-opcoes .segmentado button { font-size: 12px; padding: 0 4px; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }

@@ -60,7 +60,14 @@ const CENAS = [
   { nome: 'celular-gol', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', depois: 'gol' },
   // gol DE VERDADE (semente 6, a IA jogando pelos dois: o nº 9 marca aos ~21 s): a rede estufada (0,1 s
   // depois da batida), a torcida explodindo, a câmera com o efeito e o "GOL!" com autor e minuto
+  // o ataque que vira gol (semente 6), 0,4 s antes do gol: a câmera de TV perto da área com a torcida no quadro
+  { nome: 'pc-dia-ataque', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'antesDoGol' },
+  { nome: 'pc-noite-ataque', ...PC, semente: 6, url: 'q=alta&hora=noite&demo=1', prep: 'antesDoGol' },
+  { nome: 'celular-dia-ataque', ...CEL, semente: 6, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
+  { nome: 'celular-noite-ataque', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'antesDoGol' },
   { nome: 'pc-gol-rede', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede' },
+  { nome: 'pc-gol-rede-noite', ...PC, semente: 6, url: 'q=alta&hora=noite&demo=1', prep: 'golRede' },
+  { nome: 'celular-gol-rede-dia', ...CEL, semente: 6, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
   { nome: 'celular-gol-rede', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede' },
   { nome: 'pc-gol-rede-perto', ...PC, semente: 6, url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
   { nome: 'celular-gol-rede-perto', ...CEL, semente: 6, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'golRede', livre: { de: [45.5, 2.6, 7.5], para: [53.8, 1.1, -1.2], fov: 42 } },
@@ -176,6 +183,12 @@ async function preparar(pagina, prep) {
       g.forcarEntrada({ x: 0.8, z: -0.2, botoes: 32 }); // segue segurando no print
       return `carga ${c ? c.tipo : '-'}`;
     }
+    if (prep === 'antesDoGol') {
+      // a jogada que vira gol (semente 6: gol no tick 1260), 0,4 s antes: o ataque perto da área
+      while (g.mundo.tick < 1236) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const e = g.estado();
+      return `tick ${g.mundo.tick}, bola em (${e.bola.x.toFixed(1)}, ${e.bola.z.toFixed(1)}), torcida da casa: tensão ${g.estadio.emocao.torcida[0].tensao.toFixed(2)}, barulho ${g.estadio.emocao.agito.toFixed(2)}`;
+    }
     if (prep === 'golRede') {
       // anda até a 1ª batida da bola na rede (guardando o evento do gol) e mais 6 passos: a bolsa no máximo
       let golEv = null, n = 0;
@@ -216,7 +229,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' ? 0 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' ? 0 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep) : '';
     let notaEd = '';
     if (c.editor) {
