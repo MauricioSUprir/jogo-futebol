@@ -17,6 +17,18 @@ import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, e
 import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
+// Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
+// (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
+// CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
+import { entradaIATatica } from './ia-tatica.js';
+import { trocaAerea, alvoAereo } from './troca.js';
+import { entradaConter, dividida, pedidoPressao } from './defesa.js';
+import { misturarTimes } from './escalacao.js';
+import { misturarPartida } from './partida.js';
+
+const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
+/** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
+const naParada = m => m.parada && !m.parada.rolou;
 
 /**
  * Cria o mundo. opcoes:
@@ -169,6 +181,7 @@ function colisaoBolaCorpo(m) {
   if (b.p.y > 0.9) return;
   for (const j of m.jogadores) {
     if (j.id === m.posse) continue;
+    if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: bola parada não bate em ninguém
     // quem acabou de bater na bola não a rebate no próprio corpo; o goleiro com a defesa já
     // decidida (sorteio da leitura) também não: o resultado é o da leitura
     if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
@@ -248,6 +261,7 @@ function roubarComMarcador(m, j) {
 function boteIA(m, j) {
   if (j.descansoBote > 0) { j.descansoBote--; return; }
   if (m.posse == null || m.naMao != null) return;
+  if (naParada(m)) return; // partida: ninguém dá bote na cobrança
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
@@ -291,17 +305,24 @@ export function passo(m, entradas) {
       // recebendo um passe com o analógico solto: a assistência leva ao encontro da bola
       const assist = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
       if (assist) {
-        const ia = entradaIA(m, j);
+        const ia = m.times ? entradaIATatica(m, j) : entradaIA(m, j);
         aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
-      } else aplicarEntrada(j, e, m.tick);
+      } else {
+        // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
+        const ed = j.defH || (e && (e.botoes & BOTOES_DEFESA)) ? entradaConter(m, j, e) : null;
+        const ea = !ed && m.times ? alvoAereo(m, j, e) : null;
+        aplicarEntrada(j, ed ?? ea ?? e, m.tick);
+      }
+      if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);
     } else if (j.posicao === 'GOL') {
       aplicarEntrada(j, null, m.tick);
     } else {
-      aplicarEntrada(j, entradaIA(m, j), m.tick);
+      aplicarEntrada(j, m.times ? entradaIATatica(m, j) : entradaIA(m, j), m.tick);
     }
     atualizarBotoesAcao(m, j);
   }
   trocarJogador(m, entradas);
+  if (m.times) trocaAerea(m); // Etapa 3: troca automática para quem disputa a bola alta
   // 2) movimento de cada corpo
   for (const j of js) {
     let mv;
@@ -374,6 +395,7 @@ export function passo(m, entradas) {
   for (const j of js) {
     if (j.papel === 'marcador' && !(j.descanso > 0) && m.posse !== j.id) roubarComMarcador(m, j);
     else if (j.posicao !== 'GOL' && guiadoPelaIA(m, j)) boteIA(m, j);
+    else if ((j.defH || ((j.botoes | j.botoesAnt) & BOTAO.DIVIDIDA)) && ehControlado(m, j)) dividida(m, j); // Etapa 3
   }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
@@ -433,6 +455,7 @@ function bolaLivre(m) {
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
   for (const j of cands) {
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     if (!b.rolando && b.p.y > 0.45) {
       if (bolaAltaNoCorpo(m, j)) return;
       continue;
@@ -446,6 +469,7 @@ function bolaLivre(m) {
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
+    if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     const naArea = Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
     if (naArea && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9) {
@@ -651,6 +675,10 @@ export function candidatoTroca(m, t) {
 // ---------------------------------------------------------------- determinismo
 
 const _buf = new DataView(new ArrayBuffer(8));
+/** Mistura um número (float64) no hash FNV-1a (usada também por escalacao.js e partida.js). */
+export function misturarHash(h, x) {
+  return misturar(h, x);
+}
 function misturar(h, x) {
   _buf.setFloat64(0, x);
   for (let i = 0; i < 8; i++) {
@@ -674,6 +702,8 @@ export function hashMundo(m) {
   for (const t of Object.keys(m.controlado ?? {})) h = misturar(h, m.controlado[t]);
   h = misturar(h, m.tick);
   for (const s of m.rng.s) h = misturar(h, s);
+  // Etapa 3: escalação, formação, tática, relógio e parada (só na partida: o hash do treino não muda)
+  if (m.times) { h = misturarTimes(h, m); h = misturarPartida(h, m); }
   return h >>> 0;
 }
 
