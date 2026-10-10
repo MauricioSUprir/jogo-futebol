@@ -12,6 +12,13 @@
 // (atrasoCarga ou no primeiro gesto, o que vier antes) e são decodificados quando o contexto existe. Os
 // laços tocam de loopInicio a loopFim (margem periódica do MP3: sem buraco nem estalo na volta). Página
 // escondida: o contexto suspende. Pausa: a torcida abaixa e fica abafada (filtro passa-baixas).
+// Som DESLIGADO (menu, salvo): nada de Web Audio — o gesto não cria o contexto, os arquivos não baixam e, se
+// o som for desligado com o contexto rodando, ele é SUSPENSO depois de abaixar (contraprova M7: os 3 laços
+// tocavam em silêncio o jogo inteiro, CPU e bateria à toa no celular). Ligar de novo (o clique no menu é um
+// gesto) cria/retoma o contexto na hora.
+// Apito do início (contraprova I5): o 'saida' do começo da partida chega antes de qualquer gesto (sem
+// contexto ainda); o apito fica PENDENTE e toca quando o som for liberado, se isso acontecer em até
+// SOM.apitoPendente ms (depois disso o jogo já começou e o apito atrasado só confundiria).
 
 export const SOM = {
   arquivos: {
@@ -30,6 +37,8 @@ export const SOM = {
   pausaGanho: 0.35,       // a torcida na pausa
   pausaFiltro: 900,       // Hz do passa-baixas na pausa
   cantoPeriodo: 46,       // s — o canto da torcida vai e volta
+  apitoPendente: 6000,    // ms — o apito da saída que chegou antes do primeiro gesto ainda toca até isto
+  desligaSuspende: 300,   // ms — som desligado: abaixa (τ 0,05 s) e depois suspende o contexto
 };
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
@@ -56,7 +65,9 @@ export function criarSom(opc = {}) {
   let ruido = null;
   let ultimoAlvo = { ambiente: -1, agito: -1, canto: -1, pausa: -1 };
   const _alvo = { ambiente: 0, agito: 0, canto: 0 };
-  let estado = Ctx ? 'sem-contexto' : 'sem-audio';
+  let estado = !Ctx ? 'sem-audio' : ligado ? 'sem-contexto' : 'desligado';
+  let pendente = null;    // apito que chegou antes do som liberado: {tipo, quando (ms)}
+  let timerSuspende = null;
   const ouvintes = ['pointerdown', 'pointerup', 'touchend', 'keydown', 'click'];
   // ponto de partida dentro do ruído (gerador próprio do som, nada do mundo)
   let semente = 987654321;
@@ -82,7 +93,7 @@ export function criarSom(opc = {}) {
     const dados = bytes[nome];
     bytes[nome] = null;
     let feito = false;
-    const fim = b => { if (feito || !b) return; feito = true; buffers[nome] = b; if (SOM.arquivos[nome].laco) iniciarLaco(nome); };
+    const fim = b => { if (feito || !b) return; feito = true; buffers[nome] = b; if (SOM.arquivos[nome].laco) iniciarLaco(nome); tentarPendente(); };
     try {
       const p = ctx.decodeAudioData(dados, fim, () => {});
       if (p && p.then) p.then(fim, () => {});
@@ -126,7 +137,8 @@ export function criarSom(opc = {}) {
 
   /** Primeiro gesto: cria/retoma o contexto (política de reprodução automática). */
   function desbloquear() {
-    if (!Ctx) return;
+    // som desligado: o gesto não cria nada (nem baixa os arquivos)
+    if (!Ctx || !ligado) return;
     try {
       if (!ctx) {
         // (o webkitAudioContext do Safari antigo não aceita opções)
@@ -143,9 +155,16 @@ export function criarSom(opc = {}) {
     atualizarEstado();
   }
   function atualizarEstado() {
-    const novo = !ctx ? (Ctx ? 'sem-contexto' : 'sem-audio') : ctx.state === 'running' ? 'rodando' : 'suspenso';
+    const novo = !Ctx ? 'sem-audio' : !ligado ? 'desligado' : !ctx ? 'sem-contexto' : ctx.state === 'running' ? 'rodando' : 'suspenso';
     if (novo !== estado) { estado = novo; mudou(); }
-    if (estado === 'rodando') for (const o of ouvintes) window.removeEventListener(o, desbloquear, true);
+    if (estado === 'rodando') { for (const o of ouvintes) window.removeEventListener(o, desbloquear, true); tentarPendente(); }
+  }
+  /** O apito pendente (chegou antes do som liberado) toca agora, se ainda vale. */
+  function tentarPendente() {
+    if (!pendente || !ligado || !ctx || ctx.state !== 'running' || !buffers[pendente.tipo]) return;
+    const p = pendente;
+    pendente = null;
+    if (performance.now() - p.quando <= SOM.apitoPendente) api.tocar({ tipo: p.tipo, grupo: -1, forca: 1, pendente: true });
   }
 
   function umaVez(nome, ganho, opc2 = {}) {
@@ -214,6 +233,7 @@ export function criarSom(opc = {}) {
       if (!Ctx) { estado = 'sem-audio'; mudou(); return; }
       for (const o of ouvintes) window.addEventListener(o, desbloquear, { capture: true, passive: true });
       setTimeout(() => {
+        if (!ligado) return; // desligado: não baixa (baixa quando ligar)
         const vai = () => baixar();
         if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(vai, { timeout: 2000 }); else vai();
       }, SOM.atrasoCarga);
@@ -253,7 +273,12 @@ export function criarSom(opc = {}) {
     },
     /** Um disparo de emocao.js ({tipo, grupo, forca}). Devolve true se tocou. */
     tocar(d) {
-      if (!ligado || !ctx || ctx.state !== 'running') return false;
+      if (!ligado) return false;
+      if (!ctx || ctx.state !== 'running' || (d.tipo === 'apito' && !buffers.apito)) {
+        // o apito da saída antes do primeiro gesto (ou antes do arquivo pronto): fica pendente
+        if (d.tipo === 'apito') pendente = { tipo: d.tipo, quando: performance.now() };
+        return false;
+      }
       let ok = false;
       switch (d.tipo) {
         // gol da casa: o estádio inteiro; do visitante: só o setor deles (mais baixo e abafado, longe)
@@ -272,14 +297,23 @@ export function criarSom(opc = {}) {
     },
     /** Liga/desliga e volume (0–1). */
     definir(o = {}) {
+      const antes = ligado;
       if (typeof o.ligado === 'boolean') ligado = o.ligado;
       if (typeof o.volume === 'number') volume = clamp(o.volume, 0, 1);
+      if (!ligado) pendente = null;
+      // ligou agora (o clique no menu é um gesto): cria/retoma o contexto e baixa os sons
+      if (ligado && !antes && Ctx) { desbloquear(); if (!baixando) baixar(); }
       if (ctx && mestre) {
         const agora = ctx.currentTime;
         mestre.gain.cancelScheduledValues(agora);
         mestre.gain.setTargetAtTime(ligado ? volume : 0, agora, 0.05);
-        if (ligado && ctx.state !== 'running' && !document.hidden) ctx.resume().then(atualizarEstado, () => {});
+        clearTimeout(timerSuspende);
+        if (!ligado) {
+          // desligou: abaixa e SUSPENDE (nada de Web Audio rodando em silêncio)
+          timerSuspende = setTimeout(() => { if (!ligado && ctx.state === 'running') ctx.suspend().then(atualizarEstado, () => {}); }, SOM.desligaSuspende);
+        } else if (ctx.state !== 'running' && !document.hidden) ctx.resume().then(atualizarEstado, () => {});
       }
+      atualizarEstado();
     },
     get estado() { return estado; },
     get ligado() { return ligado; },
@@ -291,7 +325,27 @@ export function criarSom(opc = {}) {
         estado, ligado, volume, ganhoMestre: mestre ? mestre.gain.value : null,
         decodificados: Object.keys(buffers).sort(), lacos: Object.keys(lacos).sort(),
         niveis: Object.fromEntries(Object.entries(lacos).map(([k, l]) => [k, Math.round(l.ganho.gain.value * 1000) / 1000])),
+        contexto: ctx ? ctx.state : null, baixando: !!baixando, pendente: pendente ? pendente.tipo : null,
       };
+    },
+    /**
+     * Envelope de uma gravação decodificada (testes): RMS em janelas de `jan` s a cada `passo` s →
+     * {duracao, picoDb, tPico, t6dB (1ª janela a ≤ 6 dB do pico), media0a2_5Db (RMS dos primeiros 2,5 s)}.
+     */
+    analisar(nome, jan = 0.25, passo = 0.05) {
+      const b = buffers[nome];
+      if (!b) return null;
+      const d = b.getChannelData(0), sr = b.sampleRate, J = Math.round(jan * sr), P = Math.round(passo * sr);
+      const env = [];
+      for (let i = 0; i + J <= d.length; i += P) { let s = 0; for (let k = i; k < i + J; k++) s += d[k] * d[k]; env.push(10 * Math.log10(s / J + 1e-12)); }
+      let pico = -Infinity, iPico = 0;
+      env.forEach((v, i) => { if (v > pico) { pico = v; iPico = i; } });
+      const i6 = env.findIndex(v => v >= pico - 6);
+      let s25 = 0;
+      const n25 = Math.min(d.length, Math.round(2.5 * sr));
+      for (let k = 0; k < n25; k++) s25 += d[k] * d[k];
+      const r = x => Math.round(x * 100) / 100;
+      return { duracao: r(b.duration), picoDb: r(pico), tPico: r(iPico * passo), t6dB: r(i6 * passo), media0a2_5Db: r(10 * Math.log10(s25 / Math.max(1, n25) + 1e-12)) };
     },
     get contexto() { return ctx; },
     /** Força o download agora (testes). */

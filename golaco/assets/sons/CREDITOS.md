@@ -12,7 +12,7 @@ MP3). As gravações originais não ficam no repositório (baixar pelos endereç
 | `torcida-agito.mp3` (laço de 13 s) | 77–92 s | idem | idem | CC BY 4.0 |
 | `torcida-canto.mp3` (laço de 14 s) | 188,5–204,5 s | idem (trecho com a torcida cantando junto) | idem | CC BY 4.0 |
 | `torcida-uuuh.mp3` | 57,7–66,5 s | idem (reação a um lance perigoso) | idem | CC BY 4.0 |
-| `torcida-gol.mp3` | 0,6–22,5 s | "Free Crowd Cheering Sounds" — 03 "Strong cheering - I" | Gregor Quendel (gregorquendel.com) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| `torcida-gol.mp3` | 5,3–22,5 s (a partir da subida: o grito já sai alto) | "Free Crowd Cheering Sounds" — 03 "Strong cheering - I" | Gregor Quendel (gregorquendel.com) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | `torcida-palmas.mp3` | 1,2–12,8 s | "Free Crowd Cheering Sounds" — 06 "Soft cheering - II" | Gregor Quendel | CC BY 4.0 |
 | `apito.mp3`, `apito-intervalo.mp3`, `apito-fim.mp3` | o sopro inteiro; o sopro longo estica o meio (0,15–0,45 s) | "Referee's whistle blowing inside a gymnasium" (freesound 218318) | SpliceSound | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 

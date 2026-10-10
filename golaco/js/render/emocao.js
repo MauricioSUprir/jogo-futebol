@@ -10,7 +10,8 @@
 //   tensao  — o time ataca perto do gol: a torcida levanta;
 //   lamento — chance perdida ou gol sofrido: mãos na cabeça;
 //   palmas  — incentivo (defesa do goleiro do time, boa jogada).
-// agito (0–1): o barulho geral (o murmúrio sobe quando a bola chega no terço final de qualquer lado).
+// agito (0–1): o barulho geral (o murmúrio sobe quando a bola chega no terço final de qualquer lado; no
+// gol da casa vai ao máximo, no gol do visitante cai quase a zero — a casa é a maioria do estádio).
 // Disparos (sons de uma vez): {tipo: 'gol'|'uuuh'|'palmas'|'apito'|'apitoIntervalo'|'apitoFim'|'rede'|
 // 'chute', grupo, forca} numa fila que o som consome.
 
@@ -23,6 +24,11 @@ export const EMOCAO = {
   sobe: 0.7, desce: 1.8,  // s — constante de tempo do agito subindo e descendo
   golSegura: 2.6,         // s de explosão cheia depois do gol
   golCai: 3.5,            // s — e cai com e^(−t/golCai)
+  // gol do VISITANTE: a casa (a maioria do estádio) cala — o barulho geral cai para quase nada e só o setor
+  // visitante comemora (som.js toca a explosão deles baixa e abafada, longe). Contraprova I4: antes o
+  // agito ia ao máximo no gol de qualquer time.
+  agitoGolSofrido: 0.06,
+  caiGolSofrido: 0.5,     // s — constante de tempo da queda (o silêncio vem rápido)
   tensaoTau: 0.6,         // s
   lamentoTau: 1.8,        // s
   palmasTau: 2.2,         // s
@@ -175,9 +181,11 @@ export function emocaoPasso(est, ctx, dt) {
     alvo = E.agitoBase + (1 - E.agitoBase) * (0.62 * suave(E.terco[0], E.terco[1], xAvanco) + 0.25 * naArea);
   }
   if (ctx.estado === 'intervalo' || ctx.estado === 'fim') alvo = E.agitoParado;
-  // gol: o barulho fica no máximo enquanto a explosão segura
-  for (const g of est.torcida) if (ctx.t < g.golAte) alvo = 1;
-  est.agito = aproxima(est.agito, alvo, dt, alvo > est.agito ? E.sobe : E.desce);
+  // gol da CASA: o barulho fica no máximo enquanto a explosão segura; gol do visitante: a casa cala
+  let tau = 0;
+  if (ctx.t < est.torcida[E.casa].golAte) alvo = 1;
+  else if (ctx.t < est.torcida[1 - E.casa].golAte) { alvo = E.agitoGolSofrido; tau = E.caiGolSofrido; }
+  est.agito = aproxima(est.agito, alvo, dt, tau || (alvo > est.agito ? E.sobe : E.desce));
   for (let i = 0; i < 2; i++) {
     const g = est.torcida[i];
     if (ctx.t >= g.golAte) g.excita *= Math.exp(-dt / E.golCai);

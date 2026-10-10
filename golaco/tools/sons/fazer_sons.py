@@ -86,7 +86,10 @@ for nome, arq, ini, P, X in [
 
 # reações (um disparo): pico a −1 dBFS
 for nome, arq, ini, fim, ent, sai in [
-    ('torcida-gol', Q('03'), 0.6, 22.5, 0.15, 4.0),   # explosão longa (Quendel "Strong cheering - I")
+    # explosão longa (Quendel "Strong cheering - I"): a gravação é um crescendo de ~7 s (−50 dB no começo, pico
+    # aos 7,5 s); o gol pede o grito NA HORA — recorte a partir de 5,3 s (já a ~6 dB do pico, chega ao pico
+    # em ~2 s) com entrada de 40 ms. Antes (0,6 s) o grito só ficava alto 4–5 s depois do gol (contraprova I1).
+    ('torcida-gol', Q('03'), 5.3, 22.5, 0.04, 4.0),
     ('torcida-uuuh', WWS, 57.7, 66.5, 0.08, 3.0),     # reação a lance perigoso no estádio (WWS 57,7–66,5 s)
     ('torcida-palmas', Q('06'), 1.2, 12.8, 0.3, 2.5), # aplauso/incentivo (Quendel "Soft cheering - II")
 ]:
