@@ -24,7 +24,7 @@ import { entradaIATatica } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
 import { entradaConter, dividida, pedidoPressao } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
-import { misturarPartida } from './partida.js';
+import { misturarPartida, paredeParada } from './partida.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -366,6 +366,8 @@ export function passo(m, entradas) {
     // a IA sem a bola gira o tronco parado mais devagar (o tronco rodopiava no lugar); o jogador do
     // humano mantém o giro rápido (virar 90° parado em ~0,12 s)
     j.giroParado = guiadoPelaIA(m, j) && m.posse !== j.id ? IA.giroParado : null;
+    // partida: na bola parada, ninguém entra no raio (e quem está dentro sai) pela locomoção
+    if (m.parada) mv = paredeParada(m, j, mv);
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
   }
   colisaoCorpos(m);

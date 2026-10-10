@@ -444,7 +444,15 @@ export const PARTIDA = {
                               // distância (`levado`) e o HUD avisa acima disto (andar até lá: Etapa 4)
   raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area' }, // m dos adversários ('area' = fora da área)
   folgaRaio: 0.5,             // m a mais que o raio na restrição (a IA mira fora; a parede segura aqui)
-  empurrao: 7,                // m/s — quem está dentro do raio na montagem sai a até esta velocidade
+  empurrao: 7,                // m/s — quem está dentro do raio sai andando/correndo a até esta velocidade
+  // parede da parada pela locomoção (partida.js paredeParada): o pedido para dentro fica limitado a
+  // √(2·freioParede·(distância à borda − margemParede)) — freia antes da borda com metade da freada
+  // normal (JOGADOR.freio 6,2); quem está dentro sai a √(2·freioParede·(fundo + margem)), entre
+  // saiParede e empurrao; "dentro" = mais de dentroParede m além da borda
+  freioParede: 3,             // m/s²
+  margemParede: 0.3,          // m
+  saiParede: 1.0,             // m/s
+  dentroParede: 0.02,         // m
   forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65 }, // força do botão da IA
   repeteCobranca: 1.0,        // s — se a cobrança não saiu (pedido expirou), a IA aperta de novo
   livreAte: 1.5,              // s antes de paradaMax: a IA cobra mesmo sem a zona livre (trava proibida)

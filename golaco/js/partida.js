@@ -29,8 +29,10 @@
 // O cobrador é levado ao ponto na montagem e fica parado (papel 'parado': a simulação não o move)
 // até cobrar; a cobrança é a ação de verdade (acoes.js executarAcao, a mesma do jogo). A IA cobra em
 // 0,6–1,4 s depois de pronta; o humano tem até 6 s desde a bola morta, depois a IA cobra por ele.
-// Quem está dentro do raio na montagem sai andando rápido (até PARTIDA.empurrao) e ninguém entra até a
-// bola rolar (parede: restricaoParada). Nenhuma parada passa de PARTIDA.paradaMax (8 s).
+// Quem está dentro do raio sai andando (até PARTIDA.empurrao m/s) e ninguém entra até a bola rolar:
+// a parede (paredeParada, chamada pelo sim.js antes de passoCorpo) só muda o PEDIDO de movimento, pela
+// locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
+// PARTIDA.paradaMax (8 s).
 
 import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
@@ -340,26 +342,81 @@ export function restricaoParada(m, j, x, z, out = { x: 0, z: 0 }) {
 }
 
 const _r = { x: 0, z: 0 };
+const _b = { d: 0, nx: 0, nz: 0 };
+
 /**
- * Parede da parada (depois do passo, da montagem até a bola rolar): quem está fora da restrição volta
- * para ela a até PARTIDA.empurrao m/s e perde a velocidade para dentro. Quem já estava fora fica na
- * borda; quem estava dentro na montagem sai andando rápido. Só o corpo (os pés seguem pela passada,
- * como na colisão entre corpos).
+ * Borda de uma restrição da parada vista do ponto (x, z): `d` = distância com sinal até a borda
+ * (> 0 do lado permitido; < 0 dentro da zona proibida) e (nx, nz) = normal unitária que aponta para
+ * o lado permitido. k: 0 = o próprio campo (saída), 1 = o raio / a área. Devolve false se a
+ * restrição não vale para j (escreve em _b).
  */
-function conterParada(m) {
-  const pr = m.parada;
-  if (!pr || pr.rolou || pr.cobrador == null) return;
-  const max = PARTIDA.empurrao * PASSO;
-  for (const j of m.jogadores) {
-    if (j.id === pr.cobrador || j.papel === 'parado') continue;
-    restricaoParada(m, j, j.x, j.z, _r);
-    const dx = _r.x - j.x, dz = _r.z - j.z, d = MD.hypot(dx, dz);
-    if (d < 1e-9) continue;
-    const nx = dx / d, nz = dz / d, k = Math.min(d, max);
-    j.x += nx * k; j.z += nz * k;
-    const vn = j.vx * nx + j.vz * nz;
-    if (vn < 0) { j.vx -= vn * nx; j.vz -= vn * nz; }
+function bordaParada(m, p, j, x, z, k) {
+  const folga = PARTIDA.folgaRaio;
+  if (k === 0) {
+    if (p.tipo !== 'saida') return false;
+    const lado = m.ataca[j.time];
+    _b.d = -0.3 - x * lado; _b.nx = -lado; _b.nz = 0;
+    return true;
   }
+  if (j.time === p.time) return false;
+  if (p.raio === 'area') {
+    const s = -m.ataca[p.time], gx = s * CAMPO.meioX;
+    const prof = CAMPO.area.profundidade + folga, larg = CAMPO.area.largura / 2 + folga;
+    const ax = Math.abs(x - gx), az = Math.abs(z);
+    const sx = x - gx >= 0 ? 1 : -1, sz = z >= 0 ? 1 : -1;
+    const ex = ax - prof, ez = az - larg;   // > 0: fora por aquele lado
+    if (ex > 0 && ez > 0) {
+      const d = MD.hypot(ex, ez);
+      _b.d = d; _b.nx = sx * ex / d; _b.nz = sz * ez / d;
+    } else if (ex > 0 || ez > 0) {
+      if (ex >= ez) { _b.d = ex; _b.nx = sx; _b.nz = 0; } else { _b.d = ez; _b.nx = 0; _b.nz = sz; }
+    } else if (-ex <= -ez) {
+      // dentro: sai pelo lado mais perto (frente da área), como restricaoParada
+      _b.d = ex; _b.nx = -s; _b.nz = 0;
+    } else { _b.d = ez; _b.nx = 0; _b.nz = sz; }
+    return true;
+  }
+  const dx = x - p.x, dz = z - p.z, dd = MD.hypot(dx, dz);
+  _b.d = dd - (p.raio + folga);
+  if (dd < 1e-6) { _b.nx = -m.ataca[p.time]; _b.nz = 0; } else { _b.nx = dx / dd; _b.nz = dz / dd; }
+  return true;
+}
+
+/**
+ * Parede da parada PELA LOCOMOÇÃO (sim.js chama no passo 2, antes de passoCorpo): muda só o pedido
+ * de movimento `mv` = {dx, dz, vel, rumoAlvo} de quem tem restrição (restricaoParada), nunca a posição
+ * do corpo — os pés seguem pela passada, sem pé plantado arrastado (antes a parede empurrava o corpo
+ * até 7 m/s com os pés no chão: teste-patinacao). Vale da bola morta (lateral, escanteio e tiro de
+ * meta; a saída é montada por teleporte) até a bola rolar; o cobrador fica de fora.
+ *  - dentro da zona: sai andando pelo caminho mais curto (o ponto de restricaoParada), mais depressa
+ *    quanto mais fundo (até PARTIDA.empurrao m/s);
+ *  - fora: a componente do pedido para dentro fica limitada pela distância até a borda (dá para frear
+ *    antes dela com PARTIDA.freioParede m/s²): ninguém entra, e quem corre para a borda freia.
+ * Devolve `mv` (sem mudança) ou um pedido novo. Pura.
+ */
+export function paredeParada(m, j, mv) {
+  const p = m.parada;
+  if (!p || p.rolou || j.id === p.cobrador || j.papel === 'parado') return mv;
+  if (p.cobrador == null && p.tipo === 'saida') return mv;
+  // dentro de alguma restrição: sai pelo ponto mais perto
+  restricaoParada(m, j, j.x, j.z, _r);
+  const ox = _r.x - j.x, oz = _r.z - j.z, od = MD.hypot(ox, oz);
+  if (od > PARTIDA.dentroParede) {
+    const vel = clamp(Math.sqrt(2 * PARTIDA.freioParede * (od + PARTIDA.margemParede)), PARTIDA.saiParede, PARTIDA.empurrao);
+    return { dx: ox / od, dz: oz / od, vel, rumoAlvo: mv.rumoAlvo };
+  }
+  // fora: tira do pedido a velocidade para dentro que não daria para frear antes da borda
+  let wx = mv.dx * mv.vel, wz = mv.dz * mv.vel, mudou = false;
+  for (let k = 0; k < 2; k++) {
+    if (!bordaParada(m, p, j, j.x, j.z, k)) continue;
+    const vMax = Math.sqrt(2 * PARTIDA.freioParede * Math.max(0, _b.d - PARTIDA.margemParede));
+    const vIn = -(wx * _b.nx + wz * _b.nz);
+    if (vIn > vMax) { const c = vIn - vMax; wx += c * _b.nx; wz += c * _b.nz; mudou = true; }
+  }
+  if (!mudou) return mv;
+  const vel = MD.hypot(wx, wz);
+  if (vel < 1e-6) return { dx: mv.dx, dz: mv.dz, vel: 0, rumoAlvo: mv.rumoAlvo };
+  return { dx: wx / vel, dz: wz / vel, vel, rumoAlvo: mv.rumoAlvo };
 }
 
 /**
@@ -629,7 +686,7 @@ export function regrasPartida(m) {
       const b = m.bola;
       b.p.x = pr.x; b.p.z = pr.z; b.p.y = BOLA.raio; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
     }
-    conterParada(m);
+    // a parede (ninguém entra no raio) é pela locomoção: paredeParada, no passo 2 do sim.js
     return;
   }
   // estado 'jogo': bola fora?
