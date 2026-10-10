@@ -14,7 +14,7 @@
 //   node tools/teste-aereo-troca.mjs                (lógica do repositório)
 //   node tools/teste-aereo-troca.mjs --antes        (a mesma partida com a IA de antes, sem a troca aérea)
 //   node tools/teste-aereo-troca.mjs --js <pasta>   (outra cópia da lógica)
-//   node tools/teste-aereo-troca.mjs --sementes 6 --min 2 --naturais 8 --min-natural 4 --base 1
+//   node tools/teste-aereo-troca.mjs --sementes 6 --min 2 --naturais 6 --naturais-max 16 --min-natural 4 --base 1
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -24,7 +24,8 @@ const JS = args.includes('--js') ? path.resolve(arg('--js')) : path.resolve(path
 const ANTES = args.includes('--antes');
 const NS = +arg('--sementes', 6);       // partidas com o canhão
 const MIN = +arg('--min', 2);           // minutos de cada uma
-const NS_NAT = +arg('--naturais', 8);   // partidas sem o canhão (natural; os dois times com um humano)
+const NS_NAT = +arg('--naturais', 6);   // partidas sem o canhão, no mínimo (natural; os dois times com um humano)
+const NAT_MAX = +arg('--naturais-max', 16);
 const MIN_NAT = +arg('--min-natural', 4);
 const NS_SOLTO = +arg('--soltos', 2);   // partidas com o canhão e o analógico largado (assistência)
 const BASE = +arg('--base', 1);
@@ -55,7 +56,7 @@ try {
 }
 const { PASSO, CAMPO } = CFG;
 const ESPERA = 90; // ticks de jogo corrido entre o fim de um voo do canhão e o próximo
-console.log(`lógica: ${JS}${ANTES ? ' (--antes: iaClassica, sem a troca aérea)' : ''} · canhão ${NS} × ${MIN} min, natural ${NS_NAT} × ${MIN_NAT} min, sementes a partir da ${BASE}`);
+console.log(`lógica: ${JS}${ANTES ? ' (--antes: iaClassica, sem a troca aérea)' : ''} · canhão ${NS} × ${MIN} min, natural ${NS_NAT}–${NAT_MAX} × ${MIN_NAT} min (até 60 disputas), sementes a partir da ${BASE}`);
 
 function rngTeste(s) {
   let a = (s * 2654435761) >>> 0 || 1;
@@ -251,7 +252,10 @@ function rodar(sem, min, injeta, solto = false) {
   }
 }
 if (SO !== 'natural') for (let s = 0; s < NS; s++) rodar(BASE + s, MIN, true);
-if (SO !== 'canhao') for (let s = 0; s < NS_NAT; s++) rodar(BASE + 500 + s, MIN_NAT, false);
+// natural: pelo menos NS_NAT partidas e até juntar 60 disputas (no máximo NAT_MAX): a IA da partida muda
+// quantas bolas altas o jogo tem (a de hoje dá ~8 disputas por partida de 4 min; a das Partes 2 e 3, ~7)
+let nNat = 0;
+if (SO !== 'canhao') for (let s = 0; s < NAT_MAX && (s < NS_NAT || R.natural[1] < 60); s++, nNat++) rodar(BASE + 500 + s, MIN_NAT, false);
 // assistência: o canhão com o analógico largado (o jogo leva o controlado à bola)
 const Rc = { canhaoMeu: R.canhaoMeu.slice(), canhaoAdv: R.canhaoAdv.slice() };
 if (SO !== 'natural') { R.canhaoMeu = [0, 0]; R.canhaoAdv = [0, 0]; for (let s = 0; s < NS_SOLTO; s++) rodar(BASE + 900 + s, MIN, true, true); }
@@ -273,6 +277,6 @@ if (SO !== 'natural') {
 }
 if (SO !== 'canhao') {
   console.log(`voos altos da IA (lançamentos e cruzamentos) nas partidas sem o canhão: ${R.bolas.natural}`);
-  reg('natural (IA × IA, os dois times): o controlado é quem disputa', pc(...R.natural), '≥ 90% com ≥ 60 disputas', ok90(R.natural, 60));
+  reg('natural (IA × IA, os dois times): o controlado é quem disputa', `${pc(...R.natural)} em ${nNat} × ${MIN_NAT} min`, '≥ 90% com ≥ 60 disputas', ok90(R.natural, 60));
 }
 fim();

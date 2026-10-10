@@ -256,12 +256,13 @@ function maisPerto(m, d) {
   }
   return dm;
 }
-function rodarPressao(sem, comBotao, min) {
+function rodarPressao(sem, comBotao, min, ateTick = Infinity) {
   const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: min });
   const N = Math.round(min * 60 / PASSO);
   const casos = [];
   let caso = null, posseAnt = null;
-  for (let i = 0; i < N; i++) {
+  let hash1 = null; // hash do mundo no fim do 1º caso (o detector compara com a partida sem o botão)
+  for (let i = 0; i < N && m.tick < ateTick; i++) {
     const dono = m.posse != null && m.naMao == null ? S.jogadorPorId(m, m.posse) : null;
     const advTem = dono && dono.time === 1 && !(m.parada && !m.parada.rolou);
     // um caso por posse do adversário, quando há um companheiro (≠ controlado) a ≤ 12 m do condutor (dá
@@ -284,33 +285,33 @@ function rodarPressao(sem, comBotao, min) {
       }
       if (m.tick - caso.t0 >= Math.round(2 / PASSO)) {
         casos.push(caso);
+        if (hash1 == null) hash1 = { tick: m.tick, h: S.hashMundo(m) };
         if (DEPURA) console.log(`PRESSÃO ${sem}${comBotao ? '' : ' (sem botão)'} t ${fmt(caso.t0 * PASSO, 1)} s: mais perto ${fmt(caso.d0, 1)} → ${fmt(caso.dMin, 1)} m, posse ${caso.durou} ticks ${caso.ok ? 'OK' : ''}`);
         caso = null;
       }
     }
   }
-  return { casos, hash: S.hashMundo(m) };
+  return { casos, hash1, hashFim: S.hashMundo(m), tick: m.tick };
 }
 {
-  const SEM_P = [1, 2, 3, 4, 5, 6].map(k => BASE + 30000 + k);
-  // detector: a IA desta lógica lê o pedido? (a mesma partida curta com e sem o botão)
-  let le = false;
-  for (const s of SEM_P.slice(0, 2)) {
-    const a = rodarPressao(s, true, 0.5), b = rodarPressao(s, false, 0.5);
-    if (a.hash !== b.hash) { le = true; break; }
+  // casos até juntar 20 (6 a 12 partidas de 1,5 min); a IA lê o pedido? A mesma partida sem o botão até o
+  // fim do 1º caso: mundo bit a bit igual = não lê
+  let le = false, ok = 0, n = 0, testados = 0;
+  for (let k = 1; k <= 12 && (k <= 6 || n < 20); k++) {
+    const s = BASE + 30000 + k;
+    const r = rodarPressao(s, true, 1.5);
+    for (const c of r.casos) if (c.ok || c.durou >= 60) { n++; if (c.ok) ok++; }
+    if (!le && r.hash1 && testados < 3) {
+      testados++;
+      const b = rodarPressao(s, false, 1.5, r.hash1.tick);
+      if (b.hashFim !== r.hash1.h) le = true;
+    }
   }
-  let ok = 0, n = 0, ok0 = 0, n0 = 0;
-  for (const s of SEM_P) {
-    for (const c of rodarPressao(s, true, 1.5).casos) if (c.ok || c.durou >= 60) { n++; if (c.ok) ok++; }
-    // sem o botão (a referência): se a IA não lê o pedido, é a mesma partida — não precisa rodar de novo
-    if (le) for (const c of rodarPressao(s, false, 1.5).casos) if (c.ok || c.durou >= 60) { n0++; if (c.ok) ok0++; }
-  }
-  if (!le) { ok0 = ok; n0 = n; }
   // a IA não lê o pedido: o número é o de sem o botão (não mede a PRESSÃO) — aguarda a Parte 2
   const aguarda = !le && !ESTRITO && !ANTES;
   const passa = le && n >= 20 && ok / n >= 0.8;
   reg('PRESSÃO: um companheiro a ≤ 2 m do condutor em ≤ 2 s',
-    `${pc(ok, n)} (sem o botão: ${pc(ok0, n0)}; a IA ${le ? 'lê' : 'NÃO lê'} m.pedidoPressao)`, '≥ 80%',
+    `${pc(ok, n)} (a IA ${le ? 'lê' : 'NÃO lê'} m.pedidoPressao)`, '≥ 80%',
     passa, aguarda);
 }
 
