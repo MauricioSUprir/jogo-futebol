@@ -53,12 +53,15 @@ export const CHAVES = [
 ];
 const SO_GOL = ['reflexo', 'posicionamento', 'mergulho'];
 // Perfil por posição (Parte 1): quanto um atributo fora do papel da posição natural (peso 0 nela)
-// fica abaixo do nível. O padrão é −12 (tela §7.3), com duas exceções tiradas das cartas do FC:
-//  - o zagueiro finaliza mal (FC 25: zagueiros de 75–80 com finalização ~35–45 = nível − 30 a − 40);
-//  - o goleiro joga mal na linha (FC 25: goleiros de 75–80 com finalização, drible, marcação e
-//    passe entre ~15 e ~45): técnica de linha a nível − 40, passe longo e controle a − 25.
+// fica abaixo do nível. O padrão é −12 (tela §7.3), com duas exceções tiradas das cartas do FC
+// (páginas oficiais de notas do EA FC 27, conferidas em 10/10/2026):
+//  - o zagueiro finaliza mal: Rúben Dias (ZAG 87) tem finalização 33 (nível − 54), controle 75
+//    (− 12, o nosso padrão) e passe curto 80. Aqui: finalização a nível − 35 (mais brando);
+//  - o goleiro joga mal na linha: Alisson (GOL 87) tem finalização 13, desarme 19, cabeceio 29,
+//    controle 42, passe curto 60 e passe longo 58 (nível − 27 a − 74). Aqui: técnica de linha a
+//    nível − 40, passe longo e controle a − 25 (mais brando que o FC).
 //    Os físicos do goleiro (velocidade e aceleração − 30; agilidade, equilíbrio, força, fôlego − 12)
-//    ficam como na Parte 0, para o goleiro se mexer igual.
+//    ficam como na Parte 0, para o goleiro se mexer igual (no FC a agilidade dele é 40).
 // Sem as exceções, um ZAG jogando de ATA perdia só 5 pontos e um GOL na linha chegava a 66 (o E2 pede
 // ≤ nível − 12 e ≤ 50). Nos jogadores de linha, só a finalização do zagueiro muda: o que a simulação
 // mais lê (velocidade, aceleração, drible, controle, passe) continua com o −12.
