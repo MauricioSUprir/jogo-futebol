@@ -117,7 +117,7 @@ export const JOGADOR = {
   vGiroLivre: 1.2,            // abaixo desta velocidade o corpo vira em qualquer direção
   tauVel: 0.18,               // s — constante de tempo do controle de velocidade
   // Giro do corpo (para onde o tronco aponta).
-  giroCorpoParado: 8,         // rad/s máximo parado (14 fazia o tronco tremer/rodopiar no lugar)
+  giroCorpoParado: 14,        // rad/s máximo parado (a IA sem a bola usa IA.giroParado)
   giroCorpoCorrendo: 6,       // rad/s máximo a 8 m/s
   rigidezGiro: 260,           // mola crítica do rumo (1/s²)
 };
@@ -386,20 +386,29 @@ export const GOLEIRO = {
 // estranho"). Com pressa = bola livre, passe chegando, pressão no condutor, corrida nas costas;
 // sem pressa = apoio, marcação e cobertura.
 export const IA = {
-  vAlvo: 9,                   // m/s: sem pressa, o ponto pedido anda no máximo isto (salto de alvo vira caminho)
   chegou: 0.4,                // m: para no ponto
-  retoma: [1.2, 0.6],         // m: parado, só volta a andar com o ponto além disto (sem pressa, com pressa)
-  distCalma: 14,              // m: sem pressa, intensidade do analógico = d/distCalma (trota até ~10 m)
-  corre: [14, 10],            // m: sem pressa, corre com o ponto além de 14 m e para de correr abaixo de 10 m
-  correPressa: [3, 1.5],      // m: com pressa, idem (3 m / 1,5 m)
+  // Modos de chegar ao ponto (ia.js para): vAlvo = m/s máximos do ponto pedido (salto de alvo vira
+  // caminho; null = direto), retoma = m: parado, só volta a andar com o ponto além disto, dist = m:
+  // intensidade do analógico d/dist, magMin = piso da intensidade, corre = [liga, desliga] m,
+  // freia = pedido que inverte o sentido freia na linha antes de virar
+  modos: {
+    // (marcação e cobertura usam a calma: um modo "marca" mais urgente fazia o tronco tremer e
+    // não aumentava a pressão — medido)
+    pressa: { vAlvo: null, retoma: 0.6, dist: 4, magMin: 0.25, corre: [3, 1.5], freia: false },
+    calma: { vAlvo: 9, retoma: 1.2, dist: 14, magMin: 0.2, corre: [14, 10], freia: true },
+  },
+  giroParado: 8,              // rad/s: giro máximo do tronco parado da IA sem a bola (o humano: JOGADOR.giroCorpoParado)
+  trocaMarcacao: 3,           // m: a marcação só troca de homem se a nova for isto melhor (antes trocava ~18×/min)
+  cobreLado: 4,               // m: quem sobra cobre de lado (perpendicular à linha bola–gol), um de cada lado
   // sem a bola, o tronco vira para a bola: até vLivre todo (até de costas); acima, só o que deixa
   // a velocidade de lado em até vLado; some entre vSome − 1 e vSome (m/s; contínuo)
   olhaBola: { vLivre: 1.2, vLado: 1.5, vSome: 6.0 },
   antecipaPressao: 0.7,       // s: quem pressiona mira à frente do condutor pela velocidade dele...
-  filtroCondutor: 0.3,        // s: ...filtrada por esta constante...
+  filtroCondutor: 0.5,        // s: ...filtrada por esta constante...
   antecipaMax: 3,             // m: ...e com avanço de no máximo isto
   saidaGoleiro: 25,           // m: com a bola no goleiro, as vagas do time se medem a partir daqui (do meu gol)
   recuoMin: 12,               // m: com a bola no meu time, jogador de linha não recua mais perto do meu gol que isto
+  pressaoArranca: 6,          // m: quem pressiona só aperta CORRER com o ponto além disto
   trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
 };

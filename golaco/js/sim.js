@@ -329,7 +329,7 @@ export function passo(m, entradas) {
       // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
       // pode se afastar do sentido do movimento (parado: todo; IA.olhaBola[1] m/s ou mais: nada) —
       // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
-      if (j.papel === 'ia' && !ehControlado(m, j) && !j.recebe && !j.cond?.toque) {
+      if (guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) {
         const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
         const lim = desvioOlhaBola(v);
         if (lim > 0) {
@@ -342,6 +342,9 @@ export function passo(m, entradas) {
         }
       }
     }
+    // a IA sem a bola gira o tronco parado mais devagar (o tronco rodopiava no lugar); o jogador do
+    // humano mantém o giro rápido (virar 90° parado em ~0,12 s)
+    j.giroParado = guiadoPelaIA(m, j) && m.posse !== j.id ? IA.giroParado : null;
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
   }
   colisaoCorpos(m);
@@ -370,13 +373,20 @@ export function passo(m, entradas) {
   }
   for (const j of js) {
     if (j.papel === 'marcador' && !(j.descanso > 0) && m.posse !== j.id) roubarComMarcador(m, j);
-    else if (j.papel === 'ia' && j.posicao !== 'GOL' && !ehControlado(m, j)) boteIA(m, j);
+    else if (j.posicao !== 'GOL' && guiadoPelaIA(m, j)) boteIA(m, j);
   }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
     if (j.posicao !== 'GOL') continue;
     lerChute(m, j);
+    const antes = m.naMao;
     aplicarDefesa(m, j);
+    // encaixou: com o goleiro do time humano, o controle vai para ele como no "pegou" (antes o encaixe
+    // deixava o controle na linha e o pegou o passava ao goleiro: dois comportamentos para a mesma bola)
+    if (m.naMao === j.id && antes !== j.id && m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
+      assumirControle(m, j.time, j);
+      m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
+    }
   }
   // 5) bola
   if (m.naMao != null) {
@@ -526,6 +536,11 @@ function ganhouPosse(m, j) {
   }
 }
 
+/** Jogador de linha que a IA move neste tick (não é o controlado nem um boneco do treino). */
+function guiadoPelaIA(m, j) {
+  return j.papel !== 'marcador' && j.papel !== 'parado' && !ehControlado(m, j);
+}
+
 /**
  * Quanto o tronco da IA sem a bola pode se afastar do sentido do movimento para olhar a bola, pela
  * velocidade: devagar, todo (até de costas); depois, só o que deixa a velocidade de lado em até
@@ -549,13 +564,16 @@ function goleiroComBola(m, g) {
   const espera = Math.round((humano ? GOLEIRO.esperaHumano : GOLEIRO.esperaIA) / PASSO);
   if (!g.pedido && !g.carga && m.tick - (g.segura?.desde ?? m.tick) > espera) {
     // lança para o companheiro mais adiantado ou na direção do analógico/do corpo
-    g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick };
+    // para a frente, sem o analógico: quem não sabe repor mexe justamente o analógico (para o próprio
+    // gol o goleiro pegava a própria reposição de novo, em laço)
+    g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick, dir: { x: ataca(m, g.time), z: 0 } };
   }
   if (g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 20) {
     soltarDaMao(m, g);
     const b = m.bola;
     b.p.x = g.x + MD.cos(g.rumo) * 0.45; b.p.z = g.z + MD.sin(g.rumo) * 0.45;
     executarAcao(m, g, g.par.attr.pePreferido, false);
+    g.miraAuto = null;
     // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola (o
     // analógico não o move): o controle vai para o jogador de linha mais perto de onde ela cai
     if (ehControlado(m, g)) {

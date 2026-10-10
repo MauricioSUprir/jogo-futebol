@@ -77,7 +77,30 @@ for (const [nome, mag, bot] of andares) {
 console.log('Pior tempo até o MOVIMENTO responder (24 fases da passada × 2 lados):');
 console.log(tabelaTexto(linhas));
 for (const c of casoPior) console.log('  - ' + c);
-const ok = pior <= 0.1 + 1e-9;
+const okResp = pior <= 0.1 + 1e-9;
 console.log(`\nTronco começa a virar (informação): pior ${fmt(piorTronco, 3)} s`);
-console.log(`Pior tempo até o movimento responder: ${fmt(pior, 3)} s em ${total} casos, ${acima} acima de 0,1 s (meta ≤ 0,1 s) → ${ok ? 'PASSOU' : 'REPROVOU'}`);
-process.exit(ok ? 0 : 1);
+console.log(`Pior tempo até o movimento responder: ${fmt(pior, 3)} s em ${total} casos, ${acima} acima de 0,1 s (meta ≤ 0,1 s) → ${okResp ? 'PASSOU' : 'REPROVOU'}`);
+
+// Virar parado (jogador do humano, sem bola): tempo até o tronco ficar a menos de 10° do pedido.
+// O giro parado mais lento é só da IA (IA.giroParado); o do humano continua rápido.
+const metasGiro = { 90: 0.27, 170: 0.36 }; // Etapa 2 (giro 14 rad/s): 0,25 e 0,333 s; com 8 rad/s, 170° levava 0,433 s
+let okGiro = true;
+for (const a of [90, 170]) {
+  let piorG = 0;
+  for (const lado of [1, -1]) {
+    const m = criarMundo({ semente: 5, jogadores: [{ id: 0, x: 0, z: 0, rumo: 0, time: 0, papel: 'humano', posicao: 'MEI' }], bola: { x: 30, z: 20 }, posse: null });
+    for (let i = 0; i < 30; i++) passo(m, { 0: { x: 0, z: 0, botoes: 0 } });
+    const j = m.jogadores[0];
+    const alvo = (a / DEG) * lado;
+    let t = null;
+    for (let i = 0; i < 60 && t === null; i++) {
+      passo(m, { 0: { x: Math.cos(alvo) * 0.15, z: Math.sin(alvo) * 0.15, botoes: 0 } });
+      if (Math.abs(difAng(j.rumo, alvo)) < 10 / DEG) t = (i + 1) * PASSO;
+    }
+    piorG = Math.max(piorG, t ?? 1);
+  }
+  const ok = piorG <= metasGiro[a];
+  okGiro &&= ok;
+  console.log(`Virar ${a}° parado (humano): ${fmt(piorG, 3)} s (meta ≤ ${fmt(metasGiro[a], 2)} s) → ${ok ? 'PASSOU' : 'REPROVOU'}`);
+}
+process.exit(okResp && okGiro ? 0 : 1);

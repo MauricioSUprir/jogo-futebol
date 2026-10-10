@@ -141,6 +141,72 @@ for (let s = 1; s <= 12; s++) for (const z0 of [-8, 0, 8]) for (const x0 of [-36
   }
   reg('reposição sem recebedor: o humano não fica controlando o goleiro sem a bola', `${presos}/${n} ficaram no goleiro, pior ${fmt(pior)} s`, '0', n >= 10 && presos === 0);
 }
+// ------------------------------------------------------------ 2c. a reposição automática sai limpa
+{
+  // contraprova (10/10): aos 3 s o adversário já estava a ~2 m (a IA pressionava o goleiro com a bola
+  // na mão — a Regra 12.3 proíbe) e a reposição batia nele em ~49% das vezes; e ela seguia o
+  // analógico: com o analógico para o próprio gol, o goleiro pegava a própria reposição em laço
+  const bateu = { n: 0, b: 0 };
+  let lacoPior = 0, lacoN = 0;
+  for (const [perfilNome, perfil] of [
+    ['solto', () => ({ x: 0, z: 0, botoes: 0 })],
+    ['para o próprio gol', () => ({ x: -1, z: 0, botoes: 0 })],
+  ]) {
+    for (const c of CASOS_IA) {
+      const m = S.criarTreino({ semente: c[0] });
+      for (const [id, x, z] of [[0, -5, 0], [1, 10, 2], [2, 5, -20], [3, 5, 20], [4, -12, 0]]) mover(jp(m, id), x, z, Math.PI);
+      mover(jp(m, 23), c[1], c[2], Math.PI); mover(jp(m, 21), c[1] + 6, c[2] - 8, Math.PI); mover(jp(m, 22), c[1] + 6, c[2] + 8, Math.PI);
+      darBola(m, 23);
+      let pegou = false, soltou = -1, pegadas = 0, naMaoAntes = false, bateuNele = false;
+      for (let i = 0; i < 60 * 20; i++) {
+        const comGK = m.naMao === 10;
+        if (comGK && !naMaoAntes) { pegadas++; pegou = true; }
+        naMaoAntes = comGK;
+        const e = pegou ? perfil(m) : correNaBola(m);
+        const ev = S.passoTreino(m, e);
+        if (pegou && soltou < 0 && m.naMao !== 10) soltou = m.tick;
+        if (soltou >= 0 && m.tick - soltou <= 21 && ev.some(x => x.id != null && jp(m, x.id)?.time === 1)) bateuNele = true;
+        if (!pegou && (m.golTick != null || i > 60 * 12)) break;
+        if (perfilNome === 'solto' && soltou >= 0 && m.tick - soltou > 30) break;
+      }
+      if (!pegou || soltou < 0) continue;
+      if (perfilNome === 'solto') { bateu.n++; if (bateuNele) bateu.b++; }
+      else { lacoN++; lacoPior = Math.max(lacoPior, pegadas - 1); }
+    }
+  }
+  reg('reposição automática (analógico solto): adversário toca na bola em ≤ 0,35 s', `${bateu.b}/${bateu.n}`, '≤ 10%', bateu.n >= 20 && bateu.b <= 0.1 * bateu.n);
+  reg('reposição automática com o analógico para o próprio gol: goleiro pega a própria reposição', `pior: ${lacoPior} vezes em 20 s (${lacoN} casos)`, '≤ 1', lacoN >= 20 && lacoPior <= 1);
+}
+// ------------------------------------------------------------ 2d. recuo: controle não fica "morto" no goleiro
+{
+  // no recuo o controle ia para o goleiro durante o passe, e o analógico não o move: o jogador ficava
+  // sem controle até a bola chegar (contraprova: ~10% do tempo de quem recua muito)
+  let n = 0, morto = 0, pior = 0;
+  for (const dist of [12, 28]) for (const zo of [-10, 0, 10]) for (const sem of [1, 2]) {
+    const m = S.criarTreino({ semente: 950 + sem });
+    const x0 = -CAMPO.meioX + dist;
+    for (const [id, x, z] of [[0, x0 + 15, 5], [1, x0 + 30, 0], [2, x0 + 20, -20], [3, x0 + 20, 20]]) mover(jp(m, id), x, z, 0);
+    for (const [id, x, z] of [[21, x0 + 25, -7], [22, x0 + 25, 7], [23, x0 + 18, 0]]) mover(jp(m, id), x, z, Math.PI);
+    mover(jp(m, 4), x0, zo, Math.PI);
+    darBola(m, 4);
+    for (let i = 0; i < 30; i++) S.passoTreino(m, { x: 0, z: 0, botoes: 0 });
+    if (m.posse !== 4) darBola(m, 4);
+    let passou = false, semBola = 0;
+    for (let i = 0; i < 60 * 6; i++) {
+      const j = jp(m, m.controlado[0]), g = jp(m, 10);
+      let e;
+      if (!passou) { const dx = g.x - j.x, dz = g.z - j.z, l = Math.hypot(dx, dz) || 1; e = { x: dx / l, z: dz / l, botoes: i < 2 ? BOTAO.PASSE : 0 }; }
+      else e = { x: 0, z: 1, botoes: 0 };
+      const ev = S.passoTreino(m, e);
+      if (ev.some(x => x.tipo === 'passe' && x.id === 4 && x.para === 10)) { passou = true; n++; }
+      if (passou && m.controlado[0] === 10 && m.naMao !== 10 && m.posse !== 10) semBola++;
+      if (passou && m.naMao === 10) break;
+    }
+    if (semBola > 0) morto++;
+    pior = Math.max(pior, semBola / 60);
+  }
+  reg('recuo: controle no goleiro sem a bola (analógico não o move)', `${morto}/${n} casos, pior ${fmt(pior, 2)} s`, '0', n >= 8 && morto === 0);
+}
 // ------------------------------------------------------------ 3. recuo para o goleiro
 {
   let n = 0, pior = 0, passes = 0;
@@ -190,7 +256,9 @@ for (let s = 1; s <= 12; s++) for (const z0 of [-8, 0, 8]) for (const x0 of [-36
       const j = jp(m, m.controlado[0]), g = jp(m, 10);
       let e;
       if (!passou) { const dx = g.x - j.x, dz = g.z - j.z, l = Math.hypot(dx, dz) || 1; e = { x: dx / l, z: dz / l, botoes: i < ft ? BOTAO.PASSE : 0 }; }
-      else e = correNaBola(m); // o humano (já no goleiro, que recebe) leva o analógico para a bola
+      // o humano leva o analógico para a bola se o controle está no goleiro (versão publicada: o
+      // controle ia para ele no passe); com o controle na linha, espera (não conduz para o próprio gol)
+      else e = m.controlado[0] === 10 ? correNaBola(m) : { x: 0, z: 0, botoes: 0 };
       const ev = S.passoTreino(m, e);
       if (ev.some(x => x.tipo === 'passe' && x.id === 4 && x.para === 10)) { passou = true; n++; }
       if (passou && m.placar[1] > 0) { contra++; break; }
