@@ -21,8 +21,9 @@ export const FUNCAO_K = {
 };
 const LATERAIS = { LD: 1, LE: 1, ADD: 1, ADE: 1 };
 const H_MEDIA = 32.5; // altura da linha de referência das tabelas (bola no centro, sem bola)
-// altura da linha e largura da curva da Metrica com a bola em u = 0 (a curva entra pela diferença)
-const H0 = tabela(TATICA.formaPelaBola, 0, 1), W0 = tabela(TATICA.formaPelaBola, 0, 2);
+// largura da curva da Metrica com a bola em u = 0 (a largura entra pela razão; a altura, pela
+// diferença para H_MEDIA)
+const W0 = tabela(TATICA.formaPelaBola, 0, 2);
 
 /** Terço da bola no referencial de quem ataca para `ataca`: 1 (meu terço), 2 (meio) ou 3 (ataque). */
 export function tercoDaBola(bx, ataca) {
@@ -65,8 +66,10 @@ export function posicaoTatica(formacao, vaga, tatica, bola, fase, ataca, out = {
     if (v.grupo === 'def' && ph === 'sem') {
       // 6) linha de defesa alinhada: todos pela altura da linha e pela curva da Metrica (altura pela
       // bola). A altura da tática é relativa à da formação (a tabela é a linha Média: o 5-3-2 defende
-      // ~2 m mais fundo que o 4-4-2), para a prévia com a bola no centro ser a própria tabela
-      let xLinha = f.xLinhaSem + dH + (tabela(TATICA.formaPelaBola, bx, 1) - H0) + ment;
+      // ~2 m mais fundo que o 4-4-2). Na Média a altura é a da própria curva (a Metrica tem a linha a
+      // 31,4 m com a bola no centro, 1,1 m abaixo dos 32,5 da tabela; com a da tabela, a linha ficava
+      // ~2,5 m alta em toda a metade de cá: teste-forma, altura por faixa)
+      let xLinha = f.xLinhaSem + dH + (tabela(TATICA.formaPelaBola, bx, 1) - H_MEDIA) + ment;
       xLinha = clamp(xLinha, TATICA.linhaPiso, TATICA.linhaTeto);
       if (bx < xLinha + TATICA.linhaAtrasDaBola) xLinha = Math.max(TATICA.linhaPiso, bx - TATICA.linhaAtrasDaBola);
       x = xLinha + (base.x - f.xLinhaSem);

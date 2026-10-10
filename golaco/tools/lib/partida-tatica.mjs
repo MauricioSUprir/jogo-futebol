@@ -9,7 +9,7 @@
 // ATAQUE SUBSTITUTO (só dos testes, enquanto a IA com a bola da Parte 3 não existe): o condutor
 // clássico do treino conduz em disparada para o gol e só passa apertado — no 11×11 contra um bloco
 // ele perde a bola ~25×/min e as medidas de pressão viram medidas desse ataque. Sem a Parte 3, quem
-// está com a bola no pé é conduzido por uma regra simples de construção (trota, segura 1,5–4 s e passa
+// está com a bola no pé é conduzido por uma regra simples de construção (trota, segura 2,5–5 s — ~11 passes por minuto, como no jogo real — e passa
 // para o companheiro com a linha mais livre e mais à frente; chuta perto do gol), pelos mesmos botões
 // do humano: o time com a bola vira "humano" só naquele tick (m.humanos = [time], controlado = o
 // condutor); sem dono, ninguém é humano. A defesa medida é sempre a IA do jogo. Com a Parte 3
@@ -94,12 +94,12 @@ function entradaSubstituta(L, m) {
   if (!d || (m.parada && !m.parada.rolou)) { m.humanos = []; st.id = -1; st.carga = null; return NADA; }
   const t = d.time, lado = m.ataca[t];
   m.humanos = [t]; m.controlado[t] = d.id;
-  if (st.id !== d.id) { st.id = d.id; st.desde = m.tick; st.espera = Math.round((1.5 + 2.5 * sorteio(st)) * 60); st.carga = null; }
+  if (st.id !== d.id) { st.id = d.id; st.desde = m.tick; st.espera = Math.round((2.5 + 2.5 * sorteio(st)) * 60); st.carga = null; st.fuga = null; }
   // carregando um passe/chute: segura o botão com o analógico no alvo e solta
   if (st.carga) {
     const c = st.carga;
     if (m.tick < c.ate) return { x: c.x * 0.6, z: c.z * 0.6, botoes: c.bot, time: t };
-    st.carga = null; st.desde = m.tick; st.espera = Math.round((1.5 + 2.5 * sorteio(st)) * 60);
+    st.carga = null; st.desde = m.tick; st.espera = Math.round((2.5 + 2.5 * sorteio(st)) * 60);
     return { x: c.x * 0.6, z: c.z * 0.6, botoes: 0, time: t };
   }
   const gx = lado * 52.5, dGol = Math.hypot(gx - d.x, d.z);
@@ -131,14 +131,16 @@ function entradaSubstituta(L, m) {
     }
     st.espera += 30;
   }
-  // conduz trotando para a frente; com marcador perto na frente, sai de lado
-  let dx = lado * 10, dz = 0;
-  if (pm && dm < 3) {
-    const ax = pm.x - d.x, az = pm.z - d.z;
-    if (ax * dx + az * dz > 0) { const s = (d.z >= 0 ? -1 : 1); dx = -az * s; dz = ax * s; }
+  // conduz trotando para a frente; com marcador perto na frente, sai na diagonal (60° do ataque) para o
+  // lado de lá dele e segura essa direção por 1 s (decidir a cada tick fazia a bola ziguezaguear)
+  let dx = lado, dz = 0;
+  if (st.fuga && m.tick < st.fuga.ate) { dx = st.fuga.x; dz = st.fuga.z; }
+  else if (pm && dm < 3 && (pm.x - d.x) * lado > 0) {
+    const s = pm.z > d.z ? -1 : 1;
+    st.fuga = { x: lado * 0.5, z: s * 0.866, ate: m.tick + 60 };
+    dx = st.fuga.x; dz = st.fuga.z;
   }
-  const l = Math.hypot(dx, dz) || 1;
-  return { x: dx / l * 0.55, z: dz / l * 0.55, botoes: 0, time: t };
+  return { x: dx * 0.55, z: dz * 0.55, botoes: 0, time: t };
 }
 
 

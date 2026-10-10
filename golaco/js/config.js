@@ -489,17 +489,35 @@ export const TATICA = {
     com: { goleiro: 0.1, lateral: 0.23, zagueiro: 0.29, meiaAberto: 0.21, meioCentral: 0.35, atacante: 0.27 },
   },
   mistura: 0.8,               // s — ao trocar de fase, as referências com/sem se misturam nesse tempo
-  antecipa: 1.2,              // s — a referência usa a bola onde ela estará (velocidade filtrada de quem a conduz)...
+  antecipa: 0,                // s — a referência usa a bola onde ela estará (velocidade filtrada de quem a conduz)...
+  antecipaDef: 0,             // s — ...a da linha de defesa (que tem de recuar a tempo)...
   antecipaMax: 6,             // m — ...no máximo isto à frente
   // quem segue a referência mira s segundos à frente dela pela velocidade dela (filtrada a cada
   // avaliação, no máximo vMax m/s e max m): tira o atraso do controle proporcional do para()
-  lead: { s: 0.7, max: 3, vMax: 9, filtro: 0.5 },
+  lead: { s: 0, def: 0, max: 3, vMax: 9, filtro: 0.5 },
+  // alvo de quem segue a referência (ia-tatica.js alvoCalmo): filtros tau e tauVel (s); recuo: com
+  // o alvo andando para o meu gol, o ponto vai à frente na profundidade a velocidade × s (no máx. max
+  // m); quieto a menos de quieto[0] m até o alvo passar de quieto[1] m, marcha lenta (intensidade
+  // marcha[2]) a menos de marcha[0] m até passar de marcha[1] m, trote (intensidade no máximo
+  // trote[0] até trote[1] m e no mínimo trote[2]); giro: rad/s do rumo pedido (andando com a bola atrás — além de giro[2] rad —, trotando, andando com
+  // a bola à frente; virada além de giro[4] rad vai de uma vez); ajusta: alvo abaixo de vParado m/s
+  // há ajusta[0] s → vai com intensidade d / dist (correndo além de corre m) e chega a ajusta[1] m
+  // (retoma com ajusta[2]); costas: rad, rad, intensidade (deCostasSemTremer); tauPressa,
+  // tauVelPressa: filtros do ponto de quem pressiona e da velocidade dele (s)
+  suave: { tau: 1.2, tauVel: 0.5, recuo: { s: 3.6, max: 6 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18], trote: [0.5, 10, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75],
+    vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12, costas: [2.36, 2.85, 0.3], tauPressa: 0.2, tauVelPressa: 0.3 },
+  suaveLinha: { tau: 1.2, tauVel: 0.5, recuo: { s: 3.6, max: 6 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18], trote: [0.5, 10, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75],
+    vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
+  recuoFrente: [0, 1],        // frações do recuo (suave.recuo) da linha da frente sem a bola, recuando e subindo (Forcher 2024: meio–ataque 11–15 m)
+  // o apoio com a bola da referência (sem a Parte 3): o mesmo, sem recuo
+  suaveApoio: { tau: 1.2, tauVel: 0.5, recuo: { s: 0, max: 0 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18], trote: [0.5, 10, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75],
+    vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
   avaliaTicks: 6,             // a IA tática reavalia a cada 6 ticks (10 Hz), escalonada por vagaIdx
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
 export const IA_DEFESA = {
-  contencao: [5.5, 3.0, 2.0], // m do condutor — 1º homem fora do gatilho, entre ele e o meu gol
+  contencao: [5.5, 2.5, 2.0], // m do condutor — 1º homem fora do gatilho, entre ele e o meu gol
   aperto: [1.5, 1.5, 0.6],    // m da bola — 1º homem no gatilho (e o boteIA do sim.js tenta tirar); na Alta, colado...
   apertoArranca: [6, 6, 2.5], // m — ...e aperta CORRER com o ponto além disto (IA.pressaoArranca = 6)
   engaja: [42, 60, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento)
@@ -509,7 +527,9 @@ export const IA_DEFESA = {
   cobertura: 8.5,             // m — 2º homem (Média e Alta) atrás do 1º, do lado do gol (real: 2º marcador a 9,6 m)...
   coberturaLado: 3,           // m — ...e por dentro (na diagonal)
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
-  antecipaContem: 0.3,        // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
+  antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
+  livre: { histerese: 0.25, margem: 0.2 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor
+  contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
   // menos que eles)
@@ -523,7 +543,7 @@ export const IA_DEFESA = {
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   recomposicao: 15,           // m à frente da referência com a bola vindo para o meu gol: corre de volta...
   recompoeVel: 1,             // m/s — ..."vindo" = condutor (ou bola) a mais que isto na direção do meu gol
-  recompoe: { liga: 2.5, desliga: 1 }, // m à frente da referência: vai direto (pressa) até ela, com histerese
+  recompoe: { liga: 99, desliga: 98 }, // m à frente da referência: a linha de defesa vai direto (pressa) até ela, com histerese
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
   defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
   gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8 }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor

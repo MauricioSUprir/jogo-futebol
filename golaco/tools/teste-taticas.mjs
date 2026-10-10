@@ -95,7 +95,7 @@ function cena(o) {
       let ok = true;
       for (const v of F0.vagas) {
         const k = F0.indice[v.id];
-        L.T.posicaoTatica(T0.formacao, v, T0.tatica, B.bolaRef, o.fase, m.ataca[tm], r);
+        L.T.posicaoTatica(T0.formacao, v, T0.tatica, v.grupo === 'def' && B.bolaRefDef ? B.bolaRefDef : B.bolaRef, o.fase, m.ataca[tm], r);
         if (r.x !== B.ref[2 * k] || r.z !== B.ref[2 * k + 1]) ok = false;
       }
       contrato = ok;

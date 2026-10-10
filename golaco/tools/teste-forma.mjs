@@ -71,6 +71,7 @@ for (const [c, h] of METRICA_ALTURA) {
   if (s.length < 100) continue;
   nFaixas++;
   const dlt = mediana(s.map(q => q[1])) - h;
+  if (a.detalhe) console.log(`  faixa [${c - 2.5}, ${c + 2.5}): ${s.length} amostras, linha ${fmt(h + dlt)} m × Metrica ${fmt(h)} (Δ ${fmt(dlt)})`);
   if (Math.abs(dlt) > Math.abs(piorFaixa)) { piorFaixa = dlt; faixaTxt = `[${c - 2.5}, ${c + 2.5})`; }
 }
 reg('altura da linha por faixa de 5 m da bola × Metrica', `${nFaixas} faixas; maior Δ ${fmt(piorFaixa)} m em ${faixaTxt}`, '|Δ| ≤ 2,5 m (faixas com ≥ 100 amostras)', Math.abs(piorFaixa) <= 2.5 && nFaixas >= 8);
