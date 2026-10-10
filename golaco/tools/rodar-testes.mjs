@@ -42,8 +42,8 @@ const LISTA = [
   ['movimento da IA sem a bola (vai e volta, tremor, amontoado, pressão)', 'teste-movimento.mjs'],
   // Etapa 3 (partida 11×11, tática, IA e Editar time)
   ['custo da partida 11×11 (razão partida ÷ treino ≤ 2,5×)', 'teste-custo.mjs'],
-  ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs', [], 'etapa3'],
-  ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs', [], 'etapa3'],
+  ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs'],
+  ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs'],
   ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
   ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs', [], 'etapa3'],
   ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
