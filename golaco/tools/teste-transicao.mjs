@@ -12,8 +12,9 @@
 //    chega em 12 s entra como 12 s; a perda interrompida antes (retomada, bola fora, falta de amostra) sai;
 //  - velocidade de recuo de quem ficou à frente do lance: jogadores do time que perdeu a mais de 10 m à
 //    frente da linha da bola na hora da perda (sem os da frente que ficam para o contra-ataque — vagas com
-//    x ≥ 0 na tabela sem a bola — e sem o controlado do humano), o quanto andaram para o próprio gol em
-//    3 s ÷ 3 s (perdas em que o outro time segue com a bola os 3 s);
+//    x ≥ 0 na tabela sem a bola, medidos à parte — e sem o controlado do humano), o quanto andaram para o
+//    próprio gol em 3 s ÷ 3 s (perdas em que o outro time segue com a bola os 3 s); o MEIO = esses sem a
+//    linha de defesa;
 //  - superioridade no contra-ataque: perdas em que o time que recuperou chega ao terço final com a bola no
 //    pé em até 12 s e, nessa hora, tem tantos ou mais jogadores de linha no terço final que o time que
 //    perdeu tem entre a bola e o próprio gol (% das perdas em jogo corrido).
@@ -27,15 +28,22 @@
 // Informativos: contra-ataque que chega ao terço final com superioridade (% das perdas; deve cair — a publicada fica em
 // ~8%, com a recomposição ~4–8% conforme as sementes: oscila demais entre rodadas para ser meta), o pico da velocidade
 // para o próprio gol e a contrapressão (a meta dela é do teste-pressao).
-// Com --humano, o time 0 é de um humano ROTEIRIZADO (o controlado joga por um roteiro simples e determinístico:
-// conduz para o gol, passa a cada 1–3 s, chuta perto, aperta o condutor e dá DIVIDIDA, troca de jogador); as
-// metas valem para o time da IA (1) — a IA contra o humano tem de ser tão intensa quanto IA × IA — e o time do
-// humano (os companheiros da IA) é informado.
+// Com --humano, o time 0 é de um humano ROTEIRIZADO (o controlado joga por um roteiro simples e determinístico);
+// as metas valem para o time da IA (1) — a IA contra o humano tem de ser tão intensa quanto IA × IA — e o time
+// do humano (os companheiros da IA) é informado. O roteiro padrão é AGRESSIVO (contraprova I3: o de antes chutava
+// 0,5–0,8 vez por partida e quase não contra-atacava): conduz em disparada para o gol, passa a cada 0,5–1,5 s
+// para a frente (metade das bolas longas pela ENFIADA), chuta de até 28 m, aperta o condutor e dá DIVIDIDA,
+// troca de jogador. --roteiro conduz: só conduz em disparada e chuta de 20 m (o contra-ataque individual).
+// Contra o humano há também a meta do MEIO (sem a linha de defesa e a frente): mediana ≥ 5,5 m/s em 3 s — é o
+// lance de que o dono reclama (o humano rouba e sai; a publicada volta a ~4,8 m/s, trotando). A frente é
+// informada à parte (fica para o contra-ataque e volta sem o sprint).
+// Nos dois modos: nenhuma recomposição bloqueada nos 0,5 s depois da perda (contraprova I1: o estado velho de uma
+// recomposição de outra posse armava a pausa de TATICA.recomp.pausa s justo na transição).
 // Informativo (as duas versões): sprints (≥ 7 m/s por ≥ 1 s) por jogador por minuto, distância em alta intensidade
 // (≥ 5,5 m/s) por jogador por minuto, chutes e chutes no alvo por partida, posses que chegam ao terço final,
 // tempo da recuperação ao chute.
 //   node tools/teste-transicao.mjs                 (lógica do repositório, IA × IA)
-//   node tools/teste-transicao.mjs --humano        (time 0 do humano roteirizado)
+//   node tools/teste-transicao.mjs --humano        (time 0 do humano roteirizado, agressivo; --roteiro conduz)
 //   node tools/teste-transicao.mjs --antes         (a mesma partida com a IA clássica: criarPartida({iaClassica: true}))
 //   node tools/teste-transicao.mjs --js <pasta>    (outra cópia da lógica, ex.: a publicada)
 //   SEMENTES=24 · --sem0 K (primeira semente) · --par N (processos; padrão 2) · --min M (minutos por tempo)
@@ -50,7 +58,8 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const ANTES = args.includes('--antes');
-const HUMANO = args.includes('--humano');
+const HUMANO = args.includes('--humano') || args.includes('--roteiro');
+const ROTEIRO = arg('--roteiro', 'agressivo'); // 'agressivo' (padrão) | 'conduz'
 const MIN_TEMPO = +arg('--min', 4);
 const JANELA = 12, RECUO = 3, FRENTE = 10;
 
@@ -79,16 +88,20 @@ function entradaRoteiro(m, M, B, st) {
     }
     return { x: 0, z: 0, botoes: 0 };
   }
+  const CONDUZ = ROTEIRO === 'conduz';
   if (m.posse === j.id) {
-    if (st.id !== j.id) { st.id = j.id; st.desde = m.tick; st.espera = Math.round((1 + 2 * sorteio(st)) * 60); }
+    if (st.id !== j.id) { st.id = j.id; st.desde = m.tick; st.espera = Math.round((0.5 + sorteio(st)) * 60); }
     const dGol = Math.hypot(gx - j.x, j.z);
-    if (dGol < 24 && Math.abs(j.z) < 18) {
+    if (dGol < (CONDUZ ? 20 : 28) && Math.abs(j.z) < 18) {
       const d = dir(j, gx, -j.z * 0.3);
       st.carga = { bot: B.CHUTE, x: d.x, z: d.z, ate: m.tick + 30 };
       return { x: d.x, z: d.z, botoes: B.CHUTE };
     }
+    // 'conduz': só conduz para o gol em disparada (o contra-ataque individual) e chuta perto
+    if (CONDUZ) { const d = dir(j, gx, j.z * 0.5); return { x: d.x, z: d.z, botoes: B.CORRER }; }
     if (m.tick - st.desde >= st.espera) {
-      // passe para o companheiro mais à frente com a linha mais livre (a mira do acoes.js acha quem está no cone)
+      // passe para o companheiro mais à frente com a linha mais livre (a mira do acoes.js acha quem está no cone);
+      // para a frente e longe (> 12 m à frente), metade das vezes pela ENFIADA: o contra-ataque rápido
       let mel = null, nm = -Infinity;
       for (const o of m.jogadores) {
         if (o.time !== 0 || o === j || o.posicao === 'GOL') continue;
@@ -96,16 +109,19 @@ function entradaRoteiro(m, M, B, st) {
         if (l < 6 || l > 32) continue;
         let marc = Infinity;
         for (const q of m.jogadores) if (q.time === 1) marc = Math.min(marc, Math.hypot(q.x - o.x, q.z - o.z));
-        const n = (o.x - j.x) * lado / 20 + Math.min(marc, 6) / 6 - l / 60;
+        const n = (o.x - j.x) * lado / 10 + Math.min(marc, 6) / 6 - l / 60;
         if (n > nm) { nm = n; mel = o; }
       }
-      if (mel) { const d = dir(j, mel.x, mel.z); st.carga = { bot: B.PASSE, x: d.x, z: d.z, ate: m.tick + 18 }; st.desde = m.tick; return { x: d.x, z: d.z, botoes: B.PASSE }; }
+      if (mel) {
+        const d = dir(j, mel.x, mel.z);
+        const bot = (mel.x - j.x) * lado > 12 && sorteio(st) < 0.5 ? B.ENFIADA : B.PASSE;
+        st.carga = { bot, x: d.x, z: d.z, ate: m.tick + 18 }; st.desde = m.tick; return { x: d.x, z: d.z, botoes: bot };
+      }
       st.espera += 30;
     }
-    // conduz para o gol, correndo com campo livre
-    const livre = !m.jogadores.some(q => q.time === 1 && q.posicao !== 'GOL' && Math.hypot(q.x - j.x, q.z - j.z) < 5);
+    // conduz para o gol, em disparada
     const d = dir(j, gx, j.z * 0.6);
-    return { x: d.x * 0.95, z: d.z * 0.95, botoes: livre ? B.CORRER : 0 };
+    return { x: d.x * 0.95, z: d.z * 0.95, botoes: B.CORRER };
   }
   st.id = -1;
   const tb = M.timeComBola(m);
@@ -118,7 +134,7 @@ function entradaRoteiro(m, M, B, st) {
     const tx = b.x + (gy - b.x) * 0.04, tz = b.z * 0.96;
     const d = dir(j, tx, tz);
     let bot = dB > 3 ? B.CORRER : 0;
-    if (dB < 1.6 && sorteio(st) < 0.04) bot |= B.DIVIDIDA;
+    if (dB < 1.6 && sorteio(st) < 0.08) bot |= B.DIVIDIDA;
     return { x: d.x, z: d.z, botoes: bot };
   }
   // o próprio time com a bola (ou bola livre): vai um pouco para a frente, trotando
@@ -136,9 +152,9 @@ async function coletar(sem) {
   const F = await import(pathToFileURL(path.join(JS, 'formacoes.js')).href);
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   // por time que PERDEU a bola: t8 (s), recuo (m/s), superioridade, contrapressão
-  const novo = () => ({ t8: [], recuo: [], pico: [], vel: [], perdas: 0, sup: 0, chegaTerco: 0, chega2: 0, chega2N: 0 });
+  const novo = () => ({ t8: [], recuo: [], recuoMeio: [], recuoFrente: [], pico: [], vel: [], perdas: 0, sup: 0, chegaTerco: 0, chega2: 0, chega2N: 0, bloq: 0, bloqN: 0 });
   const R = {
-    t: { 0: novo(), 1: novo() }, chutes: 0, noAlvo: 0, gols: 0, sprints: 0, hiM: 0, tJog: 0, posses: 0, possesTerco: 0,
+    t: { 0: novo(), 1: novo() }, chutes: 0, noAlvo: 0, gols: 0, chutesT: [0, 0], golsT: [0, 0], sprints: 0, hiM: 0, tJog: 0, posses: 0, possesTerco: 0,
     recChute: [], rolando: 0,
   };
   const m = P.criarPartida({ semente: sem, iaClassica: ANTES, minutosPorTempo: MIN_TEMPO });
@@ -147,12 +163,14 @@ async function coletar(sem) {
   const posse = M.criarRastreioPosse();
   const N = Math.round(2 * MIN_TEMPO * 3600 + 1200);
   const frente = {}; // id → é da frente sem a bola (fica para o contra-ataque)
+  const meio = {};   // id → é do meio (nem da linha de defesa nem da frente)
   const marcarFrente = () => {
     for (const t of [0, 1]) {
       const T = m.times[t], f = F.FORMACOES[T.formacao];
-      for (const v of f.vagas) frente[T.vagas[v.id]] = v.sem.x >= 0;
+      for (const v of f.vagas) { frente[T.vagas[v.id]] = v.sem.x >= 0; meio[T.vagas[v.id]] = v.sem.x < 0 && v.grupo !== 'def' && v.grupo !== 'gol'; }
     }
   };
+  const bloqAnt = new Map(); // id → j.iaT.recompBloq do tick anterior (bloqueio da recomposição armado)
   marcarFrente();
   const abertas = [];   // transições em andamento
   const sprint = new Map(); // id → ticks seguidos ≥ 7 m/s
@@ -182,11 +200,16 @@ async function coletar(sem) {
     if (m.partida.estado === 'fim') break;
     if (ev.some(e => e.tipo === 'substituicao' || e.tipo === 'intervalo')) marcarFrente();
     for (const e of ev) {
-      if (e.tipo === 'gol') { R.gols++; if (chuteAberto) { R.noAlvo++; chuteAberto = null; } }
+      if (e.tipo === 'gol') {
+        R.gols++; if (chuteAberto) { R.noAlvo++; chuteAberto = null; }
+        const tg = e.time ?? m.jogadores.find(o => o.id === e.id)?.time;
+        if (tg === 0 || tg === 1) R.golsT[tg]++;
+      }
       else if (e.tipo === 'defesa' && (e.modo === 'encaixe' || e.modo === 'espalmada') && chuteAberto) { R.noAlvo++; chuteAberto = null; }
       if (M.ehChute(m, e)) {
         R.chutes++; chuteAberto = { tick: m.tick };
         const j = m.jogadores.find(o => o.id === e.id);
+        if (j) R.chutesT[j.time]++;
         if (j && recup && recup.time === j.time) { R.recChute.push((m.tick - recup.tick) / 60); recup = null; }
       }
     }
@@ -225,10 +248,10 @@ async function coletar(sem) {
       for (const o of M.deLinha(m, p)) {
         const u = M.uDe(m, p, o.x);
         if (u < ub) atras++;
-        if (u - ub > FRENTE && !frente[o.id] && o.id !== ctrl()) fr.push({ id: o.id, u0: u, pico: 0 });
+        if (u - ub > FRENTE && o.id !== ctrl()) fr.push({ id: o.id, u0: u, pico: 0, frente: !!frente[o.id], meio: !!meio[o.id] });
       }
       const quem = M.donoDaBola(m);
-      abertas.push({ p, a: tr.para, tick: m.tick, n0: atras, t8: atras >= 8 ? 0 : -1, fr, recuoFeito: false, sup: false, chegou: false, chega2: false, quemPerdeu: R.ultDono?.[p] ?? -1 });
+      abertas.push({ p, a: tr.para, tick: m.tick, n0: atras, t8: atras >= 8 ? 0 : -1, fr, recuoFeito: false, sup: false, chegou: false, chega2: false, quemPerdeu: R.ultDono?.[p] ?? -1, bloqFeito: false });
     }
     if (M.donoDaBola(m) && M.donoDaBola(m).posicao !== 'GOL') (R.ultDono ??= {})[M.donoDaBola(m).time] = M.donoDaBola(m).id;
     // acompanha as transições abertas
@@ -251,6 +274,14 @@ async function coletar(sem) {
         for (const o of M.deLinha(m, a.p)) if (M.uDe(m, a.p, o.x) < ub) atras++;
         if (atras >= 8) a.t8 = dt;
       }
+      // bloqueio da recomposição armado nos 0,5 s depois da perda (contraprova I1: o estado velho de uma
+      // recomposição de outra posse bloqueava o jogador por TATICA.recomp.pausa s justo na transição)
+      if (dt <= 0.5) {
+        for (const o of M.deLinha(m, a.p)) {
+          const b = o.iaT?.recompBloq;
+          if (b != null && b !== (bloqAnt.get(o.id) ?? -1) && b > m.tick) A.bloq++;
+        }
+      } else if (!a.bloqFeito) { a.bloqFeito = true; A.bloqN++; }
       if (!a.recuoFeito) {
         // pico da velocidade para o próprio gol (−u̇ no referencial de quem perdeu)
         for (const f of a.fr) {
@@ -262,7 +293,11 @@ async function coletar(sem) {
         a.recuoFeito = true;
         for (const f of a.fr) {
           const o = m.jogadores.find(q => q.id === f.id);
-          if (o) { A.recuo.push((f.u0 - M.uDe(m, a.p, o.x)) / RECUO); A.pico.push(f.pico); }
+          if (!o) continue;
+          const r = (f.u0 - M.uDe(m, a.p, o.x)) / RECUO;
+          if (f.frente) { A.recuoFrente.push(r); continue; }
+          A.recuo.push(r); A.pico.push(f.pico);
+          if (f.meio) A.recuoMeio.push(r);
         }
       }
       // contra-ataque chega ao terço final com a bola no pé
@@ -278,6 +313,7 @@ async function coletar(sem) {
       if (dt >= JANELA) a.fim = true;
     }
     fechar();
+    for (const o of m.jogadores) bloqAnt.set(o.id, o.iaT?.recompBloq ?? -1);
   }
   delete R.ultDono;
   return R;
@@ -324,7 +360,7 @@ const pct = (a, b) => (b ? 100 * a / b : NaN);
 const junta = (times, k) => res.flatMap(r => times.flatMap(t => r.t[t][k]));
 const soma = (times, k) => res.reduce((s, r) => s + times.reduce((q, t) => q + r.t[t][k], 0), 0);
 const somaR = k => res.reduce((s, r) => s + r[k], 0);
-console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}${HUMANO ? ' · time 0 do humano roteirizado' : ' · IA × IA'}`);
+console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}${HUMANO ? ` · time 0 do humano roteirizado (${ROTEIRO})` : ' · IA × IA'}`);
 console.log(`${NS} partidas (sementes ${S0}–${S0 + NS - 1}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 
 // metas: IA × IA = os dois times; com o humano, o time da IA (1)
@@ -335,6 +371,13 @@ function bloco(times, info, rot) {
   const c2 = pct(soma(times, 'chega2'), soma(times, 'chega2N'));
   reg(`${rot}tempo até 8 dos 10 de linha atrás da bola (mediana · p75)`, `${fmt(quant(t8, 0.5))} s · ${fmt(quant(t8, 0.75))} s (${t8.length} perdas com < 8 atrás)`, 'mediana ≤ 6 s', quant(t8, 0.5) <= 6, info);
   reg(`${rot}velocidade de recuo de quem ficou > 10 m à frente da bola, 3 s (mediana · p25)`, `${fmt(quant(rc, 0.5))} · ${fmt(quant(rc, 0.25))} m/s (${rc.length} jogadores)`, 'mediana ≥ 4,6 m/s', quant(rc, 0.5) >= 4.6, info);
+  // o MEIO contra o humano (contraprova I3): o lance de que o dono reclama — o humano rouba e sai em
+  // velocidade; o meio da IA que ficou à frente volta em disparada (a publicada: ~4,8 m/s, trotando)
+  const rm = junta(times, 'recuoMeio'), rf = junta(times, 'recuoFrente');
+  reg(`${rot}… só o MEIO (sem a linha de defesa e a frente), 3 s (mediana)`, `${fmt(quant(rm, 0.5))} m/s (${rm.length} jogadores)`, HUMANO && !info ? 'mediana ≥ 5,5 m/s' : '—', quant(rm, 0.5) >= 5.5, info || !HUMANO);
+  reg(`${rot}… a FRENTE (fica para o contra-ataque e volta sem o sprint), 3 s (mediana)`, `${fmt(quant(rf, 0.5))} m/s (${rf.length} jogadores)`, '—', true, true);
+  const bq = soma(times, 'bloq');
+  reg(`${rot}recomposição bloqueada nos 0,5 s depois da perda (estado velho de outra posse)`, `${bq} em ${soma(times, 'bloqN')} perdas`, '0', bq === 0, info);
   const pc = junta(times, 'pico');
   reg(`${rot}pico da velocidade para o próprio gol nesses 3 s (mediana · % ≥ 5,5 m/s)`, `${fmt(quant(pc, 0.5))} m/s · ${fmt(pct(pc.filter(v => v >= 5.5).length, pc.length))}%`, '—', true, true);
   reg(`${rot}contra-ataque chega ao terço final com superioridade`, `${fmt(pct(sup, pd))}% das perdas (chega ao terço em 12 s: ${fmt(pct(ch, pd))}%; ${pd} perdas)`, '— (deve cair; publicada ~8%)', true, true);
@@ -345,7 +388,7 @@ if (HUMANO) bloco([0], true, 'time do humano (0): ');
 const tJ = somaR('tJog') / 3600; // minutos·jogador de bola rolando
 reg('sprints (≥ 7 m/s por ≥ 1 s) por jogador por minuto de bola rolando', fmt(somaR('sprints') / tJ, 2), '—', true, true);
 reg('distância em alta intensidade (≥ 5,5 m/s) por jogador', `${fmt(somaR('hiM') / tJ)} m/min`, '—', true, true);
-reg('chutes · no alvo por partida', `${fmt(somaR('chutes') / NS)} · ${fmt(somaR('noAlvo') / NS)} (gols ${fmt(somaR('gols') / NS, 2)})`, '—', true, true);
+reg('chutes · no alvo por partida', `${fmt(somaR('chutes') / NS)} · ${fmt(somaR('noAlvo') / NS)} (gols ${fmt(somaR('gols') / NS, 2)})${HUMANO ? ` — IA ${fmt(res.reduce((a, r) => a + r.chutesT[1], 0) / NS)} chutes, ${fmt(res.reduce((a, r) => a + r.golsT[1], 0) / NS, 2)} gols; humano ${fmt(res.reduce((a, r) => a + r.chutesT[0], 0) / NS)} chutes, ${fmt(res.reduce((a, r) => a + r.golsT[0], 0) / NS, 2)} gols` : ''}`, '—', true, true);
 reg('posses que chegam ao terço final', `${fmt(pct(somaR('possesTerco'), somaR('posses')))}% de ${fmt(somaR('posses') / NS, 0)} por partida`, '—', true, true);
 const rcx = res.flatMap(r => r.recChute);
 reg('tempo da recuperação ao chute (mediana)', `${fmt(quant(rcx, 0.5))} s (${rcx.length} chutes da mesma posse)`, '—', true, true);

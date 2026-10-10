@@ -506,7 +506,7 @@ Todas as medidas com **as mesmas definições da análise própria** (`tools/pes
 | | defensores a ≤ 10 m do portador | média 1,4–2,4 | 1,8 |
 | | agressão (recepções com defensor a ≤ 4,6 m em ≤ 2 s) | 19–29% (Equilibrada 22–24%) | StatsBomb |
 | | PPDA por abordagem | 14–17 / 10–12 / 8–10 / 6,5–8, monotônico | Wyscout/StatsBomb |
-| `teste-contrapressao` | retomada em ≤ 5 s após perda em jogo corrido | 25–40% (Agressiva no topo) | 36,5% (Metrica); 31% (Bauer) |
+| `teste-contrapressao` | retomada em ≤ 5 s após perda em jogo corrido | 25–40% (Agressiva no topo) — no `teste-pressao` virou **34–54%** (Média), a mesma definição do medidor na Metrica (44,1%): §16.3 | 36,5% (Metrica); 31% (Bauer) |
 | | alguém (≠ quem perdeu) a ≤ 2 m da bola em ≤ 3 s | 50–70% | 61% |
 | | jogadores do time que perdeu a ≤ 10 m (t = 0) | mediana 1–3 | 2 |
 | | volta à forma depois da janela | 0 jogadores ainda pressionando 2 s após o fim da janela (5/7 s), salvo os 2 mais perto | Bauer 2021 |
@@ -749,7 +749,7 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
 | Di Salvo et al. 2009, *Int J Sports Med* 30 — alta intensidade na Premier League | entre esforços muito intensos, **72 s** de recuperação em média: o sprint é raro e tem motivo | sprint só onde importa: na recomposição com atraso > 11 m **e urgência** (bola no meu campo ou vindo para o meu gol a > 4 m/s) e na bola solta **disputada**; sem urgência, volta correndo sem o sprint | A |
 | FIFA EFI 2022 (Copa do Mundo, fases sem bola) | bloco baixo = **8 de linha** no terço defensivo; "recomposição = correr para o próprio gol" | o meio fica atrás da bola no meu campo (`TATICA.meioAtras`); o alvo da recomposição é atrás da linha da bola | A |
 | Front. Sports 2026 (Copa feminina 2023) | recomposição = **4,2%** do tempo sem bola | a recomposição liga na janela da transição (6 s) e, no jogo organizado, só com atraso > 15 m (a bola longa por cima): **~9%** do tempo de quem defende (era 15% na 1ª versão, que ligava a cada passe deles) | M |
-| Jerome 2024 (1083 partidas) | m/min: defesa rápida **208**, ataque rápido **196** | meta dos lances rápidos 180–220 → **180–280** (ver 16.3) | A |
+| Jerome 2024 (1083 partidas) | m/min: defesa rápida **208**, ataque rápido **196** | a meta dos lances rápidos **continua 180–220** (a 1ª versão do PR a afrouxou para 180–280 sem fonte; a contraprova derrubou — 16.3) e fica pendente | A |
 | EA SPORTS FC 27, Pitch Notes (jul/2026) | "AI defenders will now play more of a supporting role through their on-pitch positioning" | quem não pressiona apoia pela posição: recompõe, cobre de lado e não atravessa o condutor (`desviaCondutor`) | A (oficial) |
 | FIFA 23 (FIFPlay), "pressão após perda" ~7 s | contrapressão mais longa na pressão agressiva | `contrapressao.s` da Alta 5 → **7 s** | M |
 | Buckland 2004 (Simple Soccer); Reis, Lau & Oliveira 2001 (SBSP) | papéis por estado do time, um por jogador, em ordem de prioridade | a ordem dos papéis sem a bola: PRESSÃO do humano → contrapressão → 1º homem → 2º → marcação na área → **recomposição** → referência | A |
@@ -776,12 +776,12 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
   Metrica dão **44,1%** (`tools/pesquisa/retomada_metrica.py`, 555 perdas); os 36,5% eram de outra definição. A meta passa
   a ser a da mesma definição no jogo real ± 10 pontos, como a da agressão (68 ± 10) — e o dono pediu contrapressão mais
   forte (Média 3 → 4 s, Alta 5 → 7 s). A publicada ficava em ~47% e já reprovava a faixa antiga.
-- **m/min nos lances rápidos** (`teste-intensidade`): 180–220 → **180–280**. A média real (Jerome 2024) é 196–208; a
-  publicada já ficava em ~240 (a partida condensada tem ~5 posses por minuto, contra ~1 no jogo real); o dono pediu o
-  jogo "MAIS INTENSO" com a IA voltando em disparada, e quem recompõe corre a ~390 m/min nos lances rápidos (~21% do
-  tempo deles), somando ~25 m/min. Confiança B (não há fonte para o "time mais intenso" por fase); o jogo organizado
-  (120–160) e o tempo por faixa de velocidade (± 8 pontos da Metrica) continuam com a faixa real e seguram a "correria
-  sem sentido".
+- **m/min nos lances rápidos** (`teste-intensidade`): **continua 180–220** (Jerome 2024: 196–208). A 1ª versão deste PR
+  afrouxou para 180–280 sem fonte (a publicada já ficava em ~240: a partida condensada tem ~5 posses por minuto,
+  contra ~1 no jogo real; quem recompõe corre a ~390 m/min nos lances rápidos e soma ~10–20 m/min). A contraprova
+  derrubou o afrouxamento (não há dado do "time mais intenso" por fase; a trava pela faixa de velocidade ± 8 pontos é
+  frouxa para as faixas pequenas: sprint 4,9% do tempo contra 0,6% no real). Fica **pendente**: achar o p90 real por
+  time ou trazer a partida para a faixa (o sprint "com a bola" dos apoios é ~1/3 do sprint da partida).
 
 ### 16.4 Incertezas
 

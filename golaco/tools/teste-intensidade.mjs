@@ -1,12 +1,11 @@
 // teste-intensidade (Etapa 3, Parte 3): intensidade e sanidade da partida 11×11, IA × IA (a IA joga
 // também pelo controlado do time 0: entradaDemoPartida), partidas inteiras (2 tempos de 4 min reais).
 //  - metros por minuto por jogador de linha com a bola rolando (Jerome 2024, 1083 partidas):
-//      jogo organizado 120–160 · lances rápidos 180–280 (ataque rápido 196, defesa rápida 208). O teto dos
-//    lances rápidos era 220 (o real); a publicada já ficava em ~240 (a partida condensada: ~5 posses por minuto,
-//    contra ~1 no jogo real). No PR "IA intensa" (dono, 10/10: "o jogo tem que ser MAIS INTENSO, a IA não corre
-//    para trás") quem recompõe volta a ~390 m/min nos lances rápidos (~21% do tempo deles) e soma ~25 m/min: o teto
-//    vira 280 (jogo mais intenso que a média real, como o dono pediu; o jogo organizado continua com a faixa real e
-//    o tempo por faixa de velocidade, ± 8 pontos da Metrica, segura a "correria").
+//      jogo organizado 120–160 · lances rápidos 180–220 (ataque rápido 196, defesa rápida 208). PENDENTE: a
+//    publicada já fica em ~240 (a partida condensada: ~5 posses por minuto, contra ~1 no jogo real) e a
+//    recomposição do PR "IA intensa" soma ~10–20 m/min (quem volta corre a ~390 m/min nos lances rápidos). O teto
+//    NÃO foi afrouxado (contraprova I4: não há fonte para os lances rápidos do "time mais intenso"); falta o dado
+//    real do p90 por time (Jerome 2024 só dá a média) — PESQUISA-ETAPA3.md §16.4.
 //    Lance rápido = depois de o time recuperar a bola em jogo corrido, a bola avança ≥ 15 m para o
 //    gol adversário em até 6 s: conta dos 0 s da recuperação até 1 s depois de a bola parar de avançar
 //    (no máximo 10 s), para os 20 de linha (o ataque rápido de um é a defesa rápida do outro).
@@ -137,7 +136,7 @@ const pct = (a, b) => (b ? 100 * a / b : NaN);
 console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}\n${NS} partidas (sementes ${S0}–${S0 + NS - 1}) de 2 × ${MIN_TEMPO} min, ${nPar} processos, ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 const mOrg = soma('dOrg') / (soma('tOrg') / 3600), mRap = soma('dRap') / (soma('tRap') / 3600);
 reg('m/min por jogador de linha, jogo organizado (Jerome 2024)', `${fmt(mOrg)}`, '120–160', mOrg >= 120 && mOrg <= 160);
-reg('m/min por jogador de linha, lances rápidos', `${fmt(mRap)} (${fmt(pct(soma('tRap'), soma('tRap') + soma('tOrg')))}% do tempo)`, '180–280', mRap >= 180 && mRap <= 280);
+reg('m/min por jogador de linha, lances rápidos', `${fmt(mRap)} (${fmt(pct(soma('tRap'), soma('tRap') + soma('tOrg')))}% do tempo)`, '180–220', mRap >= 180 && mRap <= 220);
 const tJ = soma('tJog'), fx = NOMES.map((_, k) => pct(res.reduce((a, r) => a + r.faixas[k], 0), tJ));
 const fxOk = fx.every((v, k) => Math.abs(v - REAL[k]) <= 8);
 reg('tempo por faixa de velocidade (parado/andando/trotando/correndo/alta/sprint)', fx.map(v => fmt(v)).join(' / ') + '%', '± 8 pontos de 0,9/48,5/37,8/9,6/2,7/0,6', fxOk);

@@ -154,9 +154,14 @@ function bolaLivre(m, j) {
   return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
 }
 
-/** Um adversário de linha chega a (x, z) até IA_DEFESA.livre.disputa s depois de j (correndo no máximo)? */
+/**
+ * Um adversário de linha chega a (x, z) até IA_DEFESA.livre.disputa s depois de j? j sem o sprint (a
+ * velocidade de corrida: é assim que ele vai se achar que não há disputa) e o adversário no máximo (em
+ * sprint): comparar os dois em sprint deixava passar ~1 s a mais a 20 m, e quem trotava chegava depois do
+ * adversário (contraprova M5).
+ */
 function disputada(m, j, x, z) {
-  const tj = MD.hypot(x - j.x, z - j.z) / j.par.vArrancada + IA_DEFESA.livre.disputa;
+  const tj = MD.hypot(x - j.x, z - j.z) / j.par.vCorrida + IA_DEFESA.livre.disputa;
   for (const o of m.jogadores) {
     if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado') continue;
     if (MD.hypot(x - o.x, z - o.z) / o.par.vArrancada <= tj) return true;
@@ -783,6 +788,11 @@ function desviaCondutor(m, j, B, out) {
 function recompor(m, j, s, B, vaga, lado, extra) {
   const R = TATICA.recomp;
   const it = estadoT(j);
+  // o estado só vale se a recomposição rodou no tick anterior: com a bola de volta (o semBola não roda) ou
+  // num papel de pressão no meio, `recomp` ficava velho e, na perda seguinte (> max s depois), o 1º tick
+  // caía em "acabou pelo tempo" e bloqueava o jogador por `pausa` s justo na transição (contraprova I1)
+  if (it.recomp && it.recompTick !== m.tick - 1) it.recomp = false;
+  it.recompTick = m.tick;
   const v = m.voo;
   // (chute deles no ar: a bola vai para o meu gol a 25 m/s — "atrás da bola" seria a linha do gol)
   if (!R || (m.parada && !m.parada.rolou) || B.refTick < 0 || (v && m.posse == null && v.time !== j.time && !passeNoAr(v))) { it.recomp = false; return null; }
@@ -910,7 +920,7 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999 };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9 };
 }
 
 /**
