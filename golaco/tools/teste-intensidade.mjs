@@ -8,7 +8,9 @@
 //    A contrapressão é medida pela Parte 2 (teste-pressao).
 //  - tempo por faixa de velocidade com a bola rolando, ± 8 pontos da real (Metrica): parado 0,9 ·
 //    andando 48,5 · trotando 37,8 · correndo 9,6 · alta 2,7 · sprint 0,6 (limites 0,2/2/4/5,5/7 m/s).
-//  - sanidade por partida (faixas do plano 5.1; a calibração fina é da Etapa 4, com 144+ partidas):
+//  - sanidade por partida (faixas do plano 5.1; a calibração fina é da Etapa 4, com 144+ partidas;
+//    chute = o evento 'chute' ou o cabeceio para o gol — como a StatsBomb e a Opta contam;
+//    lib/partida-medidas.mjs ehChute):
 //      chutes 10–35 · gols 1,5–4,5 (média) · conversão 6–20% · ≥ 55% dos chutes de dentro da área ·
 //      passe certo 70–90% (o próximo a ter a bola é do time de quem passou; bola fora = errado) ·
 //      posse 35–65% para cada time (soma das partidas).
@@ -49,7 +51,7 @@ async function coletar(sem) {
     if (m.partida.estado === 'fim') break;
     for (const e of ev) {
       if (e.tipo === 'gol') R.gols++;
-      if (e.tipo === 'chute') {
+      if (M.ehChute(m, e)) {
         R.chutes++; passe = null;
         const j = m.jogadores.find(o => o.id === e.id);
         if (j && M.uDe(m, j.time, m.bola.p.x) > 52.5 - 16.5 && Math.abs(M.wDe(m, j.time, m.bola.p.z)) < 20.16) R.chutesArea++;

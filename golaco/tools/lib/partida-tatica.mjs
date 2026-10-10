@@ -192,7 +192,7 @@ export function medirJogos(L, sementes, opc = {}) {
     for (let i = 0; i < N; i++) {
       const ev = passoJogo(L, m);
       pp.atualizar(m, ev);
-      for (const e of ev) { if (e.tipo === 'chute') R.chutes++; if (e.tipo === 'gol') R.gols++; }
+      for (const e of ev) { if (M.ehChute(m, e)) R.chutes++; if (e.tipo === 'gol') R.gols++; }
       const d = M.donoDaBola(m);
       if (d && d.posicao !== 'GOL') ultDono[d.time] = d.id;
       // recepção de passe: o dono novo é o destino do passe do próprio time que estava no ar

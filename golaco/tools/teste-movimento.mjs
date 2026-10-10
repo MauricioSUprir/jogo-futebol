@@ -33,7 +33,9 @@ const { criarTreino, passoTreino, entradaDemo } = await imp('sessao.js');
 const { PASSO, CAMPO } = await imp('config.js');
 // partida 11×11 (Etapa 3): o mesmo laço, com a partida IA × IA no lugar do treino
 let P3 = true, novoMundo = s => criarTreino({ semente: s }), passoMundo = m => passoTreino(m, entradaDemo(m));
+let ehChute = () => false;
 if (PARTIDA) {
+  ({ ehChute } = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/partida-medidas.mjs')).href));
   const T = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/partida-tatica.mjs')).href);
   const L = await T.carregar(JS);
   P3 = T.parte3Presente(L);
@@ -67,7 +69,8 @@ for (const sem of SEMENTES) {
   let pular = 0, chutes = 0, timeBola = null, ultTroca = -999, donoAnt = null, desde = 0;
   for (let i = 0; i < N; i++) {
     const ev = passoMundo(m);
-    for (const e of ev) if (e.tipo === 'chute') chutes++;
+    // (na partida o cabeceio para o gol também é chute: lib/partida-medidas.mjs ehChute)
+    for (const e of ev) if (e.tipo === 'chute' || (PARTIDA && ehChute(m, e))) chutes++;
     // time com a bola (no pé, nas mãos ou o passe/chute no ar dele)
     const idB = m.posse ?? m.naMao;
     const tb = idB != null ? m.jogadores.find(o => o.id === idB)?.time : m.voo ? m.voo.time : timeBola;
