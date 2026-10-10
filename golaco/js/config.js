@@ -526,15 +526,53 @@ export const IA_ATAQUE = {
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
-// Botões de defesa do humano (plano 2.8): CONTER, DIVIDIDA e PRESSÃO. CARRINHO fica na Etapa 4.
+// Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA e PRESSÃO. CARRINHO fica na Etapa 4.
+// Mapa dos controles como no EA FC 25 (FIFPlay, KeenGamer, TeamGullit): segurar A = conter, B = bote em pé,
+// segurar RB = companheiro pressiona. Taxa de acerto do bote em pé: 44–71% entre os titulares da Premier League
+// 2022/23 (premierleague.com; definição Opta: tirar a bola do adversário num desarme legal no chão).
 export const DEFESA_HUMANO = {
-  conter: { dist: [1.5, 2.0] },  // m do condutor, entre a bola e o meu gol, de frente para ele
-  dividida: { alcance: 0.65, semToque: 0.15, longe: 1.5, semReacao: 0.75, chance: [0.35, 0.65] },
+  // CONTER (segurar): o controlado acompanha o condutor sozinho, entre ele e o meu gol (a conta do 1º homem
+  // da IA: ponto na linha condutor → gol; o corpo anda com a velocidade do condutor + a correção), sem bote.
+  conter: {
+    dist: [1.5, 2.2],         // m do condutor: parado → embalado (vRef)
+    vRef: 6,                  // m/s do condutor em que a distância chega a dist[1]
+    folgaBola: 0.9,           // m — o ponto fica pelo menos isto à frente da bola (na linha do gol)
+    filtro: 0.1,              // s — velocidade e aceleração do corpo do condutor filtradas
+    antecipa: 0.25,           // s — a velocidade pedida vai à frente pela aceleração do condutor
+    ganho: 3,                 // 1/s — velocidade pedida = a do condutor + ganho × (ponto − corpo)
+    aproxMax: 1.2,            // m/s — do lado do gol e a até perto m além do ponto, chega no condutor no máximo
+    perto: 3,                 //       a esta velocidade relativa (recua a tempo quando ele arranca)
+    lado: 0.8,                // m — o analógico de lado desloca o ponto (mostra o lado ao condutor)
+    recua: 0.5,               // m — o analógico para o meu gol afasta (e para longe dele aproxima) até isto
+    folgaCorrer: 0.25,        // m/s — pedido acima da corrida: CORRER liga abaixo do pedido − isto, solta acima + isto
+  },
+  // DIVIDIDA (borda): bote em pé. O pé sai na direção da bola e chega nela `tempo` s depois do aperto; ganha
+  // se a bola estiver a ≤ alcance m do pé (que estica até `perna` m do corpo) e o condutor não tiver tocado
+  // nos últimos semToque s; a chance sai do desarme × drible/controle (e da bola solta do pé), pelo m.rng.
+  // Errar = semReacao s parado. Bola a mais de `longe` m no aperto: nunca ganha. tempo e semToque: 0,1 s (o
+  // plano dizia ~0,15 s; o condutor apertado toca a cada 0,18–0,33 s e com 0,15 s sobravam ~2 ticks de
+  // janela "entre toques" — medido no teste-defesa-humano).
+  dividida: {
+    alcance: 0.65, perna: 0.55, tempo: 0.1, semToque: 0.1, longe: 1.5, semReacao: 0.75,
+    chance: [0.35, 0.65],     // limites da chance de ganhar (bote na hora certa)
+    base: 0.55,               // chance com atributos iguais (meio da faixa de acerto real, 44–71%)
+    porAttr: 0.01,            // por ponto de desarme acima da média de drible e controle do condutor
+    solta: 0.12,              // a mais com a bola solta do pé do condutor (0,45 → 0,95 m dele)
+    vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
+    semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
+  },
+  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Leitor de referência em
+  // defesa.js entradaPressao: o companheiro mais perto do condutor (≠ controlado e goleiro) aperta a
+  // `aperto` m do lado do gol; troca de quem aperta só com outro `troca` m mais perto.
+  pressao: { aperto: 1.5, troca: 2, validade: 1 },
 };
 
 // Troca automática no jogo aéreo (plano 3.5; pesquisa §7: reavaliar no voo acerta ~97%).
 export const TROCA_AEREA = {
   avaliaTicks: 6,             // reavalia a cada 0,1 s
+  margem: 0.3,                // s — chega ao ponto da trajetória com esta folga (corrida real: reação e curva)
+  janelaMarcado: 0.5,         // s — toque aéreo de um companheiro marcado para daqui a até isto: é ele que disputa...
+  antecede: 3,                // ticks — ...salvo se a previsão confirmada põe outro na bola isto antes
   confirma: 2,                // avaliações seguidas com o mesmo melhor antes de trocar (0,2 s)
   folgaMin: 0.25,             // s de vantagem sobre o controlado
   correcoesMax: 1,            // trocas depois da primeira, por bola

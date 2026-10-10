@@ -2,6 +2,12 @@
 // (robusto à máquina do CI), com o JIT aquecido. Treino e partida rodam em blocos alternados de 300
 // passos (a carga da máquina pesa igual nos dois), 3 sementes × 1 min cada.
 // Metas: média ≤ 2,5× e p95 ≤ 2,5× a do treino; nenhum passo da partida > 50 ms.
+// As razões são a MEDIANA das razões de cada par de blocos vizinhos (treino i, partida i): com a máquina
+// carregada (o rodar-testes roda 4 testes ao mesmo tempo) um surto de carga cai num bloco só e não decide
+// o p95 inteiro — antes, com a lógica das 4 partes juntas, a razão do p95 ia de 1,5× sozinho a 3,8× na
+// bateria. As razões do total (todos os passos juntos) continuam impressas, para comparar. O passo mais
+// lento, se passar de 20 ms no relógio, vale pelo tempo de CPU do processo (com a máquina cheia o sistema
+// chegou a deixar um passo de 0,4 ms esperando 77 ms).
 // Informativo (sem meta no CI): tempo absoluto por passo (meta da máquina de dev: média ≤ 0,6 ms,
 // p95 ≤ 1,5 ms) e a pose dos 22.
 //   node tools/teste-custo.mjs              (lógica do repositório)
@@ -37,15 +43,18 @@ const P = await imp('partida.js');
 const { pose, NJ } = await imp('anim.js');
 
 const SEMENTES = [1, 2, 3], MIN = 1, BLOCO = 300, AQUECE = 600;
+const media = a => a.reduce((s, v) => s + v, 0) / a.length;
+const pct = (a, q) => { const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.round((s.length - 1) * q))]; };
 const N = Math.round(MIN * 3600);
-const tt = [], tp = [], tpose = [];
-let maxP = 0, maxT = 0;
+const tt = [], tp = [], tpose = [], razMedia = [], razP95 = [];
+let maxP = 0, maxT = 0, maxPParede = 0;
 const POSE = new Float32Array(NJ * 3);
 for (const sem of SEMENTES) {
   const t = S.criarTreino({ modo: 'ataque', semente: sem });
   const p = P.criarPartida({ semente: sem, iaClassica: ANTES });
   for (let i = 0; i < AQUECE; i++) { S.passoTreino(t, S.entradaDemo(t)); P.passoPartida(p, P.entradaDemoPartida(p)); }
   for (let feitos = 0; feitos < N; feitos += BLOCO) {
+    const it0 = tt.length, ip0 = tp.length;
     for (let i = 0; i < BLOCO; i++) {
       const a = performance.now();
       S.passoTreino(t, S.entradaDemo(t));
@@ -53,26 +62,35 @@ for (const sem of SEMENTES) {
       tt.push(d); if (d > maxT) maxT = d;
     }
     for (let i = 0; i < BLOCO; i++) {
+      const c0 = process.cpuUsage();
       const a = performance.now();
       P.passoPartida(p, P.entradaDemoPartida(p));
       const d = performance.now() - a;
-      tp.push(d); if (d > maxP) maxP = d;
+      tp.push(d);
+      // o passo mais lento: tempo de parede, mas o que passar de 20 ms é conferido com o tempo de CPU do
+      // processo (inclui a coleta de lixo; não inclui o tempo em que o sistema deixou o processo esperando)
+      let dMax = d;
+      if (d > 20) { const c = process.cpuUsage(c0); dMax = Math.min(d, (c.user + c.system) / 1000); }
+      if (d > maxPParede) maxPParede = d;
+      if (dMax > maxP) maxP = dMax;
       if (i % 10 === 0) {
         const b = performance.now();
         for (const j of p.jogadores) pose(j, p, POSE);
         tpose.push(performance.now() - b);
       }
     }
+    const bt = tt.slice(it0), bp = tp.slice(ip0);
+    razMedia.push(media(bp) / media(bt));
+    razP95.push(pct(bp, 0.95) / pct(bt, 0.95));
   }
 }
-const media = a => a.reduce((s, v) => s + v, 0) / a.length;
-const pct = (a, q) => { const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.round((s.length - 1) * q))]; };
 const mt = media(tt), mp = media(tp), p95t = pct(tt, 0.95), p95p = pct(tp, 0.95);
 console.log(`lógica: ${JS}${ANTES ? ' (--antes: IA clássica na partida)' : ''}\n${SEMENTES.length} sementes × ${MIN} min, blocos alternados de ${BLOCO} passos`);
 console.log(`treino de ataque (10): média ${fmt(mt, 3)} ms · p95 ${fmt(p95t, 3)} · p99 ${fmt(pct(tt, 0.99), 3)} · máx ${fmt(maxT, 1)}`);
 console.log(`partida 11×11 (22):    média ${fmt(mp, 3)} ms · p95 ${fmt(p95p, 3)} · p99 ${fmt(pct(tp, 0.99), 3)} · máx ${fmt(maxP, 1)} (informativo na máquina de dev: média ≤ 0,6, p95 ≤ 1,5)`);
 console.log(`pose dos 22 por passo: média ${fmt(media(tpose), 3)} ms`);
-reg('razão da média (partida ÷ treino)', `${fmt(mp / mt)}×`, '≤ 2,5×', mp / mt <= 2.5);
-reg('razão do p95 (partida ÷ treino)', `${fmt(p95p / p95t)}×`, '≤ 2,5×', p95p / p95t <= 2.5);
-reg('passo mais lento da partida', `${fmt(maxP, 1)} ms`, '≤ 50 ms', maxP <= 50);
+const rm = pct(razMedia, 0.5), rp = pct(razP95, 0.5);
+reg('razão da média (partida ÷ treino; mediana dos blocos)', `${fmt(rm)}× (total ${fmt(mp / mt)}×)`, '≤ 2,5×', rm <= 2.5);
+reg('razão do p95 (partida ÷ treino; mediana dos blocos)', `${fmt(rp)}× (total ${fmt(p95p / p95t)}×)`, '≤ 2,5×', rp <= 2.5);
+reg('passo mais lento da partida (sem a espera do sistema)', `${fmt(maxP, 1)} ms (parede ${fmt(maxPParede, 1)})`, '≤ 50 ms', maxP <= 50);
 fim();
