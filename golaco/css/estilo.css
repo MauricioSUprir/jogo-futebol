@@ -179,6 +179,8 @@ html.topo-c1 .marca-simbolo { display: none; }
 html.topo-c1 .placar { padding-left: 12px; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
+/* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
+html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + 48px + 8px); }
 /* 3) sai o "1º T" do relógio (fica o minuto) */
 html.topo-c3 .placar-relogio small { display: none; }
 html.topo-c3 .placar { gap: 8px; padding-right: 10px; }

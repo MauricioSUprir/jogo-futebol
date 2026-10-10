@@ -28,7 +28,7 @@ const srv = await servidor();
 const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048 };
 const AG4 = 'aguardando4';
 /** A entrada da Parte 4 posiciona os botões da defesa da Etapa 3 (CONTER, DIVIDIDA, PRESSÃO)? */
-const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-conter'); return !!b && b.hasAttribute('style'); });
+const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-conter'); return !!window.__golaco.entradaEtapa3 || (!!b && b.hasAttribute('style')); });
 
 async function quadros(pagina, n) {
   return pagina.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 }); return g.estado(); }, n);

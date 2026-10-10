@@ -608,7 +608,7 @@ function comando(c, v) {
       hud.definirEstado({ camera: v });
       prefs.camera = v; salvarPrefs(prefs);
       break;
-    case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); break;
+    case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
     case 'toqueOpacidade': entrada.definirAjustes({ opacidade: v }); hud.definirEstado({ toqueOpacidade: entrada.ajustes.opacidade }); break;
     default: break;
   }
@@ -802,6 +802,8 @@ const api = {
   fecharMenu() { hud.fecharMenu(); },
   /** Faixa do intervalo/fim por cima dos prints (conferência do HUD). */
   mostrarFaixa(f) { hud.faixa(f, true); },
+  /** A entrada já tem os botões da defesa da Etapa 3 e o bloquear() do editor? */
+  get entradaEtapa3() { return typeof entrada?.bloquear === 'function'; },
   /** Modo da página (partida, ataque, conducao), como o menu "Modo de jogo". */
   trocarModo(v) { comando('modo', v); },
   get modoPagina() { return modoPagina; },

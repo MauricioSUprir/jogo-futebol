@@ -133,9 +133,28 @@ export function criarHud(opc) {
     const enc = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
     return enc(pl, mp) || enc(pa, mp) || enc(pl, pa);
   }
+  /**
+   * Algum botão de toque (de QUALQUER fase: a posição de cada vaga vem do style que a entrada
+   * escreve) encosta no placar, no minimapa ou no painel? Com o arco grande (140%) e os 5 botões da
+   * defesa da Etapa 3, a vaga de cima chega à faixa do topo.
+   */
+  function botaoNoTopo() {
+    const caixas = caixasTopo.map(e => e?.getBoundingClientRect()).filter(r => r && r.width > 0);
+    for (const b of document.querySelectorAll('#toque .btn-toque[style]')) {
+      const d = parseFloat(b.style.width), x = parseFloat(b.style.left) + d / 2, y = parseFloat(b.style.top) + d / 2;
+      if (!(d > 0)) continue;
+      for (const r of caixas) {
+        const qx = Math.max(r.left, Math.min(x, r.right)), qy = Math.max(r.top, Math.min(y, r.bottom));
+        if (Math.hypot(x - qx, y - qy) < d / 2 + 8) return true;
+      }
+    }
+    return false;
+  }
   function ajustarTopo() {
-    raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3');
+    raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3', 'topo-desce');
     if (!raiz.classList.contains('com-toque')) return;
+    // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
+    if (botaoNoTopo()) raiz.classList.add('topo-desce');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c1');
     if (!encostaTopo()) return;
