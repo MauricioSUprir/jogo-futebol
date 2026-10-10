@@ -56,7 +56,12 @@
     </div>
 
     <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
-    <div id="gol-tela" class="gol-tela" aria-hidden="true"><span>GOL!</span><small id="gol-quem"></small></div>
+    <!-- efeito do gol: faixa verde que corta a tela e "GOL!" que bate e treme; some antes da saída de bola
+         (2,4 s, sem bloquear nada). Sem autor nem minuto escritos: nada de narração na tela (dono, 10/10) -->
+    <div id="gol-tela" class="gol-tela" aria-hidden="true">
+      <i class="gol-faixa"></i>
+      <span class="gol-palavra" id="gol-palavra">GOL!</span>
+    </div>
     <!-- faixa do intervalo e do fim de jogo (partida) -->
     <div id="faixa" class="faixa" role="status" hidden>
       <span class="faixa-titulo" id="faixa-titulo">Intervalo</span>
@@ -65,7 +70,6 @@
     </div>
     <div id="qps" class="qps" hidden></div>
     <div id="dica" class="dica" data-caixa="dica"><kbd>H</kbd> controles <span class="sep"></span> <kbd>Esc</kbd> menu</div>
-    <div class="dica-retrato" data-caixa="dica-retrato">Deite o celular para jogar melhor</div>
   </div>
 
   <!-- Controles de toque (celular): analógico flutuante à esquerda; à direita o arco de botões
@@ -168,6 +172,17 @@
               <button type="button" data-valor="aproximada">Aproximada</button>
             </div>
           </div>
+          <div class="opcao opcao-som">
+            <span class="opcao-rotulo">Som da torcida</span>
+            <div class="opcao-som-linha">
+              <div class="segmentado" data-grupo="som">
+                <button type="button" data-valor="ligado">Ligado</button>
+                <button type="button" data-valor="desligado">Desligado</button>
+              </div>
+              <label class="deslizante">Volume <input type="range" id="som-volume" min="0" max="100" step="5"><output id="saida-volume"></output></label>
+            </div>
+            <small class="opcao-info" id="info-som"></small>
+          </div>
           <div class="opcao">
             <span class="opcao-rotulo">Controles de toque</span>
             <label class="deslizante">Tamanho <input type="range" id="toque-tamanho" min="70" max="140" step="5"><output id="saida-tamanho"></output></label>
@@ -238,6 +253,7 @@
           <p class="nota">Tamanho e transparência dos botões: menu, "Controles de toque".</p>
         </section>
       </div>
+      <p class="nota creditos">Sons da torcida: Work With Sounds / Torsten Nilsson e Gregor Quendel (CC BY 4.0); apito: SpliceSound (CC0). Detalhes em assets/sons/CREDITOS.md.</p>
     </div>
   </div>
 
@@ -248,6 +264,19 @@
     <div class="carregando-marca">GOLAÇO</div>
     <div class="carregando-barra"><span></span></div>
     <p id="carregando-msg">Preparando o campo…</p>
+  </div>
+
+  <!-- Celular em pé: o jogo só roda deitado (o CSS mostra esta tela com toque + retrato e o jogo
+       fica parado: main.js retratoBloqueado). O botão de tela cheia só aparece onde o navegador
+       consegue travar a tela deitada (Android); no iPhone basta girar. -->
+  <div id="girar" class="girar" role="alertdialog" aria-modal="true" aria-labelledby="girar-titulo" aria-describedby="girar-texto">
+    <svg class="girar-icone" viewBox="0 0 96 96" aria-hidden="true">
+      <g class="girar-celular"><rect x="30" y="12" width="36" height="66" rx="7"/><path d="M43 19h10"/><circle cx="48" cy="70" r="2.6"/></g>
+      <path class="girar-seta" d="M78 40a32 32 0 0 0-16-22M80 30l-2 10-10-2"/>
+    </svg>
+    <p id="girar-titulo" class="girar-titulo">Gire o celular para jogar</p>
+    <p id="girar-texto" class="girar-texto">O GOLAÇO só joga com o celular deitado.</p>
+    <button id="girar-tela-cheia" class="btn btn-primario girar-botao" type="button" data-cmd="tela-cheia" hidden>Tela cheia deitada</button>
   </div>
 
   <script type="module" src="js/main.js"></script>
