@@ -2,7 +2,7 @@
 // O mundo é um objeto simples (copiável); a mesma semente e as mesmas entradas geram a
 // mesma partida bit a bit (ver hashMundo).
 
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -325,6 +325,22 @@ export function passo(m, entradas) {
     } else {
       j.pedidoPedalada = false;
       mv = movimentoAereo(m, j, movimentoRecepcao(m, j, movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null)));
+      // IA sem a bola andando/trotando olha para a bola (passo de lado ou de costas, como no jogo de
+      // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
+      // pode se afastar do sentido do movimento (parado: todo; IA.olhaBola[1] m/s ou mais: nada) —
+      // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
+      if (j.papel === 'ia' && !ehControlado(m, j) && !j.recebe && !j.cond?.toque) {
+        const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
+        const lim = desvioOlhaBola(v);
+        if (lim > 0) {
+          const aB = MD.atan2(m.bola.p.z - j.z, m.bola.p.x - j.x);
+          let d = difAng(mv.rumoAlvo, aB);
+          // bola quase atrás: mantém o lado escolhido (sem o tronco cruzar de um lado para o outro)
+          if (Math.abs(d) > 2.6 && j.ladoOlha) d = j.ladoOlha * Math.abs(d);
+          j.ladoOlha = d >= 0 ? 1 : -1;
+          mv = { ...mv, rumoAlvo: mv.rumoAlvo + clamp(d, -lim, lim) };
+        }
+      }
     }
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
   }
@@ -510,11 +526,29 @@ function ganhouPosse(m, j) {
   }
 }
 
+/**
+ * Quanto o tronco da IA sem a bola pode se afastar do sentido do movimento para olhar a bola, pela
+ * velocidade: devagar, todo (até de costas); depois, só o que deixa a velocidade de lado em até
+ * IA.olhaBola.vLado (ninguém corre de lado a 3 m/s — o passo lateral é curto); some na arrancada.
+ */
+function desvioOlhaBola(v) {
+  const { vLivre, vLado, vSome } = IA.olhaBola;
+  const lat = a => MD.asin(Math.min(1, vLado / a));
+  if (v <= vLivre) return Math.PI;
+  const v1 = vLivre * 1.5;
+  if (v < v1) return lerp(Math.PI, lat(v1), (v - vLivre) / (v1 - vLivre));
+  return lat(v) * clamp((vSome - v) / 1.0, 0, 1);
+}
+
 /** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */
 function goleiroComBola(m, g) {
   const humano = ehControlado(m, g);
-  if (!humano && !g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 90) {
-    // IA: lança para o companheiro mais adiantado ou rola para o mais perto
+  // IA: repõe depois de 1,5 s. Humano: se não apertar botão de ação (nem estiver carregando um),
+  // a IA repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para
+  // sempre (o analógico não o move, TROCAR é bloqueado com a bola na mão): "trava"
+  const espera = Math.round((humano ? GOLEIRO.esperaHumano : GOLEIRO.esperaIA) / PASSO);
+  if (!g.pedido && !g.carga && m.tick - (g.segura?.desde ?? m.tick) > espera) {
+    // lança para o companheiro mais adiantado ou na direção do analógico/do corpo
     g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick };
   }
   if (g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 20) {
@@ -522,6 +556,18 @@ function goleiroComBola(m, g) {
     const b = m.bola;
     b.p.x = g.x + MD.cos(g.rumo) * 0.45; b.p.z = g.z + MD.sin(g.rumo) * 0.45;
     executarAcao(m, g, g.par.attr.pePreferido, false);
+    // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola (o
+    // analógico não o move): o controle vai para o jogador de linha mais perto de onde ela cai
+    if (ehControlado(m, g)) {
+      const a = m.voo?.alvo ?? b.p;
+      let mel = null, dm = Infinity;
+      for (const o of m.jogadores) {
+        if (o.time !== g.time || o.posicao === 'GOL') continue;
+        const d = MD.hypot(o.x - a.x, o.z - a.z);
+        if (d < dm) { dm = d; mel = o; }
+      }
+      if (mel) { assumirControle(m, g.time, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
+    }
   }
 }
 
@@ -554,8 +600,9 @@ function trocarJogador(m, entradas) {
     // a borda do botão é do TIME (não do jogador): segurar TROCAR troca uma vez só
     const agora = m.botoesTimeAgora[t] ?? 0, antes = m.botoesTimeAnt[t] ?? 0;
     const apertou = (agora & BOTAO.TROCAR) && !(antes & BOTAO.TROCAR);
-    // com a bola no pé (ou nas mãos) o TROCAR não tira o controle de quem conduz
-    const comBola = m.posse === j.id || m.naMao === j.id;
+    // com a bola no pé o TROCAR não tira o controle de quem conduz; com a bola nas mãos do
+    // goleiro, TROCAR passa o controle para um jogador de linha e a IA repõe
+    const comBola = m.posse === j.id && m.naMao !== j.id;
     if (apertou && !comBola && melhor && melhor.id !== j.id) {
       assumirControle(m, t, melhor);
       m.eventos.push({ tipo: 'troca', id: melhor.id });

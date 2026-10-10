@@ -3,7 +3,7 @@
 // da página (sessao.js: criarTreino + passoTreino), em 18 cenas: trote, corrida, arrancada,
 // curvas, zigue-zague, giros (também em arrancada), corte em arrancada, para e sai, parado
 // girando, máquina de passes (domínio parado e andando), marcador (proteção e corrida),
-// pedaladas e a demo — e o treino de ataque jogado pela IA (10 jogadores, duas sementes).
+// pedaladas e a demo — e o treino de ataque jogado pela IA (10 jogadores, três sementes).
 //
 // Metas (todas pelo MÁXIMO, não pela média):
 //  1. Pé plantado não anda: com o pé apoiado no MESMO ponto na simulação nos dois quadros, o
@@ -45,6 +45,8 @@ const cenas = [
   // medindo os 10 jogadores, em duas sementes
   ['treino de ataque (10 jogadores)', null, { ataque: true, semente: 2 }],
   ['treino de ataque (semente 7)', null, { ataque: true, semente: 7 }],
+  // marcador girando rápido andando de lado (o passo lateral jogava o pé longe do corpo)
+  ['treino de ataque (semente 29)', null, { ataque: true, semente: 29 }],
 ];
 
 const TORNOZELO = [J.tornozeloE, J.tornozeloD];

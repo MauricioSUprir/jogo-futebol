@@ -9,6 +9,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
   Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (PR desta etapa: passe, enfiada, lançamento/cruzamento, chute,
   goleiro, botões sem CONDUÇÃO; revisão adversarial da Etapa 1 com 30 achados corrigidos). Próxima: Etapa 3.
+  **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
+  goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
+  intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
+  da Etapa 2" abaixo); (2) Etapa 3 — PRÓXIMA —
+  11×11 com formações, tática, IA com/sem bola mais intensa e "Editar time" na pausa (formação, escalação no
+  campinho com reservas, táticas: mentalidade, pressão, largura, linha), no estilo do Gerenciar equipe do FIFA.
   Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
   continue assim" (não mexer sem motivo medido). Quer um jogo **11×11 de alto nível, tipo FIFA**: posições,
   regras, táticas, torcida **cantando alto**, **cenas de pré-jogo**, botões de **chute, passe, enfiada,
@@ -108,6 +114,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-patinacao` mede também o treino de ataque (10 jogadores). Pendências para o dono: corte de 90° a ~7 m/s em
   2–3 apoios (PESQUISA pede 3–5); tornozelo do pé que toca até a bola p95 0,33 m (meta ≤ 0,30, só `--estrito`);
   falta com curva chega a ~24 m/s aos 27 m (vídeo: 17–21).
+- Correções depois da Etapa 2 (`ia.js`, `sim.js`, `jogador.js`, `goleiro.js`; constantes em `config.js` IA e PASSADA):
+  goleiro do humano com a bola na mão repõe sozinho em 3 s (`GOLEIRO.esperaHumano`), TROCAR funciona com a bola na
+  mão; recuo do próprio time não é chute (goleiro recebe sempre que alcança); IA sem a bola com ponto suavizado
+  (9 m/s), histerese de parar/correr, marcação sem repetir + cobertura, pressão com histerese e mirando 0,7 s à
+  frente do condutor (velocidade filtrada), freia na linha antes de inverter, olha a bola devagar (velocidade de
+  lado ≤ 1,5 m/s); com a bola no goleiro o time abre (vagas a 25 m do gol, ninguém a < 12 m da linha); passo
+  lateral sem cruzar as pernas (`pontoPouso` semCruzar, limitado para a perna não esticar). Testes:
+  `teste-goleiro-trava` e `teste-movimento` (8 sementes; aceitam `--js <pasta>` para medir a publicada). Lição:
+  amostra de 4 sementes engana na pressão (±6 pontos) — decidir com 8–12; e toda mudança no pouso do pé tem que
+  passar no arrasto (pé plantado) em ~12 sementes do treino de ataque, não só nas 3 do `teste-patinacao`.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

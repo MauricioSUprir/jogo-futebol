@@ -117,7 +117,7 @@ export const JOGADOR = {
   vGiroLivre: 1.2,            // abaixo desta velocidade o corpo vira em qualquer direção
   tauVel: 0.18,               // s — constante de tempo do controle de velocidade
   // Giro do corpo (para onde o tronco aponta).
-  giroCorpoParado: 14,        // rad/s máximo parado
+  giroCorpoParado: 8,         // rad/s máximo parado (14 fazia o tronco tremer/rodopiar no lugar)
   giroCorpoCorrendo: 6,       // rad/s máximo a 8 m/s
   rigidezGiro: 260,           // mola crítica do rumo (1/s²)
 };
@@ -145,6 +145,13 @@ export const PASSADA = {
   alcanceParado: 0.3,         // m — parado, o corpo que se afasta mais que isso de um pé faz dar um passo
   ajusteParado: 0.15,         // s — em quanto tempo esse pé sai do chão
   afastamentoLateral: 0.09,   // m — pé plantado ao lado do centro do corpo
+  folgaEntrePes: 0.12,        // m — andando de lado sem a bola, o pé pousa pelo menos isto do lado dele do outro pé
+  ladoMin: 0.3,               // m/s — ...quando a velocidade de lado (em relação ao tronco) passa disto
+  ladoMaxV: 3.0,              // m/s — ...e o corpo anda a menos disto (passo lateral é coisa de quem anda/trota)
+  ladoEmpurraMax: 0.6,        // m — o pouso anda no máximo isto para o lado...
+  ladoOfsMax: 0.7,            // m — ...e nunca fica mais longe que isto do centro do corpo (de lado)
+  cruzadoParado: 0.03,        // m — parado sem a bola, pés cruzados mais que isto (em relação ao tronco) dão um passo
+  baseMaxParado: 0.5,         // m — parado sem a bola, base mais aberta que isto dá um passo
   alturaPasso: 0.12,          // m — altura do pé no meio do balanço (corrida)
   // A fase da passada nunca salta (o pé no balanço anda pela fase: salto de fase = pé que
   // teletransporta). Quando um pé precisa sair antes, só o RITMO aumenta, com estes limites.
@@ -371,4 +378,28 @@ export const GOLEIRO = {
   vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
   recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
+  esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
+  esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
+};
+
+// IA sem a bola: chegar ao ponto sem tremedeira (dono, 09/10: "o movimento dos jogadores tá meio
+// estranho"). Com pressa = bola livre, passe chegando, pressão no condutor, corrida nas costas;
+// sem pressa = apoio, marcação e cobertura.
+export const IA = {
+  vAlvo: 9,                   // m/s: sem pressa, o ponto pedido anda no máximo isto (salto de alvo vira caminho)
+  chegou: 0.4,                // m: para no ponto
+  retoma: [1.2, 0.6],         // m: parado, só volta a andar com o ponto além disto (sem pressa, com pressa)
+  distCalma: 14,              // m: sem pressa, intensidade do analógico = d/distCalma (trota até ~10 m)
+  corre: [14, 10],            // m: sem pressa, corre com o ponto além de 14 m e para de correr abaixo de 10 m
+  correPressa: [3, 1.5],      // m: com pressa, idem (3 m / 1,5 m)
+  // sem a bola, o tronco vira para a bola: até vLivre todo (até de costas); acima, só o que deixa
+  // a velocidade de lado em até vLado; some entre vSome − 1 e vSome (m/s; contínuo)
+  olhaBola: { vLivre: 1.2, vLado: 1.5, vSome: 6.0 },
+  antecipaPressao: 0.7,       // s: quem pressiona mira à frente do condutor pela velocidade dele...
+  filtroCondutor: 0.3,        // s: ...filtrada por esta constante...
+  antecipaMax: 3,             // m: ...e com avanço de no máximo isto
+  saidaGoleiro: 25,           // m: com a bola no goleiro, as vagas do time se medem a partir daqui (do meu gol)
+  recuoMin: 12,               // m: com a bola no meu time, jogador de linha não recua mais perto do meu gol que isto
+  trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
+  freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
 };

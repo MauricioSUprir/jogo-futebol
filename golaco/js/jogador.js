@@ -260,6 +260,15 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       const d = distanciaDoApoio(j, p);
       if (d > dl) { dl = d; longe = p; }
     }
+    // sem a bola, parado depois de virar o tronco (olhando a bola): pés cruzados em relação ao
+    // tronco ou base aberta demais também pedem um passo (o pé mais longe do lugar dele)
+    if (longe < 0 && !comBola) {
+      const rx = -MD.sin(j.rumo), rz = MD.cos(j.rumo);
+      const larg = (j.pes[1].x - j.pes[0].x) * rx + (j.pes[1].z - j.pes[0].z) * rz; // > 0: direito à direita
+      if (larg < -PASSADA.cruzadoParado || larg > PASSADA.baseMaxParado) {
+        longe = distanciaDoApoio(j, 0) >= distanciaDoApoio(j, 1) ? 0 : 1;
+      }
+    }
     if (longe >= 0) pedido = { pe: longe, em: PASSADA.ajusteParado };
   }
   const toqueVindo = !!saida;
@@ -367,7 +376,7 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       // desenhado é que tem a velocidade limitada (passoPeDesenhado). O tempo até o pouso é o
       // mesmo do progresso do balanço (contínuo, ao menos um tick); com o pé desenhado já no ponto
       // de pouso (chegou), o ponto fica parado até a passada plantar o pé.
-      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(ritmo, 0.3), dt));
+      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(ritmo, 0.3), dt), !comBola);
       pe.lx = pt.x; pe.lz = pt.z; pe.lrumo = pt.rumo;
     }
   }
@@ -392,18 +401,36 @@ function distanciaDoApoio(j, p) {
   return MD.hypot(pe.x - hx, pe.z - hz);
 }
 
-/** Onde o pé p pousa se pousar daqui a tempoAtePouso segundos (o centro do apoio à frente). */
-export function pontoPouso(j, p, carga, f, tempoAtePouso = 0) {
+/**
+ * Onde o pé p pousa se pousar daqui a tempoAtePouso segundos (o centro do apoio à frente).
+ * semCruzar (sem a bola): andando de lado, o pé pousa sempre do lado dele em relação ao outro pé
+ * plantado (passo lateral: um abre, o outro fecha sem passar) — antes o pé de trás passava pela
+ * frente do outro e as pernas cruzavam (~40% do tempo andando de lado).
+ */
+export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false) {
   const tm = tempoAtePouso + carga / Math.max(f, 0.5); // meio do apoio
   const lado = p === 0 ? -1 : 1;
   // rumo previsto no pouso (o tronco continua girando)
   const rumo = j.rumo + clamp(j.giro, -6, 6) * Math.min(tempoAtePouso, 0.25);
   const rx = -MD.sin(rumo), rz = MD.cos(rumo);
-  return {
-    x: j.x + j.vx * tm + rx * lado * PASSADA.afastamentoLateral,
-    z: j.z + j.vz * tm + rz * lado * PASSADA.afastamentoLateral,
-    rumo,
-  };
+  let x = j.x + j.vx * tm + rx * lado * PASSADA.afastamentoLateral;
+  let z = j.z + j.vz * tm + rz * lado * PASSADA.afastamentoLateral;
+  const o = j.pes[1 - p];
+  // só no passo lateral de verdade (devagar e de lado): recuando ou freando, empurrar o pouso para o
+  // lado deixava a perna de apoio esticada além do alcance (pé plantado arrastado na pose)
+  const vLat = j.vx * rx + j.vz * rz, v = MD.hypot(j.vx, j.vz);
+  if (semCruzar && o.apoio && Math.abs(vLat) > PASSADA.ladoMin && v < PASSADA.ladoMaxV) {
+    const sLado = ((x - o.x) * rx + (z - o.z) * rz) * lado; // > 0: do lado certo do outro pé
+    if (sLado < PASSADA.folgaEntrePes) {
+      // o empurrão nunca leva o pé além de PASSADA.ladoOfsMax para o lado do corpo previsto: se o
+      // outro pé ficou para trás (tronco girando rápido), "do lado certo dele" era longe demais e a
+      // perna esticava além do alcance (pé plantado arrastado na pose)
+      const ofs = ((x - j.x - j.vx * tm) * rx + (z - j.z - j.vz * tm) * rz) * lado;
+      const k = clamp(Math.min(PASSADA.folgaEntrePes - sLado, PASSADA.ladoOfsMax - ofs), 0, PASSADA.ladoEmpurraMax) * lado;
+      x += rx * k; z += rz * k;
+    }
+  }
+  return { x, z, rumo };
 }
 
 /** Planta o pé p no ponto de pouso guardado (o mesmo que a animação mostrou no último tick). */
