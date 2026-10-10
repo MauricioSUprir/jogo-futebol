@@ -14,7 +14,7 @@ import {
 } from './conducao.js';
 import { MD } from './matdet.js';
 import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, executarCabeceio, ataca, assumirControle } from './acoes.js';
-import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
+import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
@@ -25,6 +25,7 @@ import { trocaAerea, alvoAereo } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
+import { planejarRecepcao } from './recepcao.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -72,6 +73,12 @@ export function criarMundo(opcoes = {}) {
   }
   if (opcoes.controlado) Object.assign(m.controlado, opcoes.controlado);
   return m;
+}
+
+/** Desliga a recepção assistida de j neste passo (devolve null). */
+function semRecepcao(j) {
+  if (j.recep) j.recep.ativo = false;
+  return null;
 }
 
 /** O jogador j é o controlado pelo humano do time dele? */
@@ -197,6 +204,10 @@ function colisaoBolaCorpo(m) {
       b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz;
       if (b.rolando) { b.w.x = b.v.z / 0.11; b.w.z = -b.v.x / 0.11; }
       m.eventos.push({ tipo: 'bateuCorpo', id: j.id });
+      m.desvio = m.tick; // o goleiro relê o chute desviado (goleiro.js lerChute)
+      // a bola desviada não passa mais onde o domínio aéreo / cabeceio marcado esperava: o plano cai (o jogador ia
+      // para o ponto antigo enquanto a bola fugia — contraprova M4: até 3 m em lançamento que bate no corpo)
+      for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
       const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
       if (dono) dono.cond.bolaDesviada = true;
     }
@@ -302,15 +313,22 @@ export function passo(m, entradas) {
     const e = m.humanos.includes(j.time) ? entradas?.[j.time] : null;
     j.botoesTime = e ? (e.botoes | 0) : 0;
     if (ehControlado(m, j)) {
-      // recebendo um passe com o analógico solto: a assistência leva ao encontro da bola
-      const assist = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
-      if (assist) {
+      // passe chegando com o analógico solto: a assistência de antes (a IA leva ao encontro / ao ponto da
+      // enfiada) — vale quando a recepção assistida não acha encontro (bola alta longe de descer)
+      const antiga = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
+      // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
+      const ed = !antiga && (j.defH || (e && (e.botoes & BOTOES_DEFESA))) ? entradaConter(m, j, e) : null;
+      const ea = !antiga && !ed && m.times ? alvoAereo(m, j, e) : null;
+      // recepção assistida (recepcao.js; pedido do dono, 10/10): a bola vindo para ele, o CORPO vai ao
+      // encontro dela (passo 2, movimentoRecepcao) e o analógico fica para o 1º toque — nada de sair da
+      // bola. O plano usa o analógico do passo anterior (j.ix, j.iz, j.botoes): um passo de atraso no
+      // modo/pressa da recepção, nunca no corpo
+      // (a entrada da demo — a IA jogando pelo humano, e.ia — recebe como a IA, sem a assistência)
+      const rp = !ed && !ea && !(e && e.ia) ? planejarRecepcao(m, j) : semRecepcao(j);
+      if (!rp && antiga) {
         const ia = m.times ? entradaIATatica(m, j) : entradaIA(m, j);
         aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
       } else {
-        // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
-        const ed = j.defH || (e && (e.botoes & BOTOES_DEFESA)) ? entradaConter(m, j, e) : null;
-        const ea = !ed && m.times ? alvoAereo(m, j, e) : null;
         aplicarEntrada(j, ed ?? ea ?? e, m.tick);
       }
       if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);
@@ -333,6 +351,8 @@ export function passo(m, entradas) {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
     } else if (j.posicao === 'GOL' && !(ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id)) {
       mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
+      // defesa desenhada (mergulho, salto, em pé): o corpo anda pela conta do mergulho, não pela locomoção
+      if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
@@ -380,6 +400,8 @@ export function passo(m, entradas) {
   // a passada depois da trombada: o pé que sai do chão mira o pouso pela velocidade que o corpo
   // tem DEPOIS do contato (antes mirava pela de antes e o pé caía longe do corpo)
   for (const j of js) {
+    // goleiro na defesa desenhada: o corpo e os pés são os do quadro do mergulho (trombada não o tira dele)
+    if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1)) { fixarMergulho(m, j); pesMergulho(m, j); continue; }
     const ped = j.cond && j.cond.pedalada ? pesDaPedalada(m, j) : null;
     if (!(j.cond && j.cond.pedalada) && j.travaApoio != null) j.travaApoio = null;
     passoPassada(j, m.posse === j.id, PASSO, null, ped || saidaParaToque(m, j));
@@ -433,11 +455,17 @@ export function passo(m, entradas) {
     if (dono) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
+  // passe que morreu (a bola rolando a menos de 1 m/s meio segundo depois da hora de chegar): vira bola livre.
+  // Antes o passe continuava "do recebedor" para sempre: ele já tinha desistido (j.recebe vence em 4 s) e os
+  // companheiros mais perto não iam na bola do passe de outro — os 22 ficavam parados em volta dela (medido
+  // na partida IA × IA, semente 7: 40% do tempo com a bola parada no meio-campo)
+  else if (m.voo && m.voo.para != null && m.naMao == null && m.bola.rolando && m.tick > (m.voo.tickChegada ?? m.voo.tick0) + 30
+    && MD.hypot(m.bola.v.x, m.bola.v.z) < 1) m.voo = null;
   // 7) gesto do toque (só visual: o pé desenhado indo até a bola, com velocidade limitada)
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
   // do quadril da pose (sobe com velocidade limitada: anim.js alturaQuadril)
-  for (const j of js) passoPeDesenhado(j, m, PASSO);
+  for (const j of js) if (!(j.posicao === 'GOL' && mergulhoAtivo(j, m.tick + 1))) passoPeDesenhado(j, m, PASSO);
   m.tick++;
   for (const j of js) j.quadril = alturaQuadril(j, m);
 }
@@ -527,7 +555,11 @@ function bolaLivre(m) {
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     const naArea = Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
-    if (naArea && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9) {
+    // no meio da defesa desenhada (o corpo já está no quadro do próximo tick), só com a mão desenhada na bola
+    // a própria espalmada não volta para as mãos logo depois (GOLEIRO.reagarra)
+    const espalmou = m.ultimoToque && m.ultimoToque.id === g.id && (m.tick - m.ultimoToque.tick) * PASSO < GOLEIRO.reagarra;
+    if (naArea && !espalmou && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9
+      && (!mergulhoAtivo(g, m.tick + 1) || maoNaBola(g, m.tick + 1, b.p))) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
       b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;
       m.eventos.push({ tipo: 'defesa', id: g.id, modo: 'pegou' });
@@ -636,6 +668,8 @@ function desvioOlhaBola(v) {
 
 /** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */
 function goleiroComBola(m, g) {
+  // ainda no chão depois do encaixe no mergulho: levanta antes de repor
+  if (mergulhoAtivo(g, m.tick + 1)) return;
   const humano = ehControlado(m, g);
   // IA: repõe depois de 1,5 s. Humano: se não apertar botão de ação (nem estiver carregando um),
   // a IA repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para

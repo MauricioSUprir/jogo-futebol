@@ -737,7 +737,9 @@ export function entradaDemoPartida(m) {
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
   if (pr && !pr.rolou && pr.cobrador === j.id && pr.tipo !== 'tiroDeMeta') return entradaCobranca(m, j);
-  return entradaIATatica(m, j);
+  // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
+  const e = entradaIATatica(m, j);
+  return { x: e.x, z: e.z, botoes: e.botoes, ia: true };
 }
 
 /** Mistura no hash o estado da partida (relógio, estado, último toque, parada). Só com m.times. */

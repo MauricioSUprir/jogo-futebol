@@ -245,6 +245,48 @@ try {
   meta('Partida: a edição e a substituição entraram (2º tempo, 9 → 22, PD = 11, linha Alta)', `tempo ${navP.tempo}, versão ${navP.versao}, saiu [${navP.saiu}], 22 em campo ${navP.em22}, PD ${navP.pd}, linha ${navP.linha}`,
     '2º tempo, saiu 9, PD 11, linha 2', navP.tempo === 2 && navP.saiu.includes(9) && navP.em22 && navP.pd === 11 && navP.linha === 2);
 
+  // 5c) goleiro na defesa desenhada (pedido de 10/10): o mergulho entra no estado (pés plantados, bola nas mãos),
+  // pelo MD — um chute forçado no treino de ataque, 240 passos, Node = Chromium (o roteiro do 5 exercita a
+  // recepção assistida, mas não chega a um mergulho)
+  const CHUTE = { x: 36, z: -2, vx: 22, vy: 2.2, vz: 1.8 };
+  const forcarChute = (m, c) => {
+    m.posse = null; m.naMao = null;
+    for (const j of m.jogadores) { j.recebe = null; if (j.cond) j.cond.toque = null; }
+    const b = m.bola;
+    b.p.x = c.x; b.p.y = 0.11; b.p.z = c.z; b.v.x = c.vx; b.v.y = c.vy; b.v.z = c.vz; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = false;
+    m.voo = { tipo: 'chute', de: -1, time: 0, para: null, alvo: { x: 52.5, z: 0 }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + 40, alto: false };
+  };
+  const zero = { x: 0, z: 0, botoes: 0 };
+  const nodeM = (() => {
+    const m = criarTreino({ semente: SEMENTE, modo: 'ataque' });
+    for (let i = 0; i < 60; i++) passoTreino(m, entradaDoTime(zero), null);
+    forcarChute(m, CHUTE);
+    const hs = [];
+    let merg = 0;
+    for (let i = 0; i < 240; i++) {
+      passoTreino(m, entradaDoTime(zero), null);
+      if (m.jogadores.some(j => j.posicao === 'GOL' && j.mergulho && j.mergulho.tc != null && m.tick > j.mergulho.tick0 && m.tick <= j.mergulho.fim)) merg++;
+      if ((i + 1) % 40 === 0) hs.push(hashMundo(m));
+    }
+    return { hs, merg };
+  })();
+  const navM = await pagina.evaluate(({ semente, c, forcar }) => {
+    const g = window.__golaco;
+    g.pausar(true);
+    g.reiniciar({ semente, modo: 'ataque' });
+    const z = Array.from({ length: 60 }, () => ({ x: 0, z: 0, botoes: 0 }));
+    g.rodarPassos(60, z);
+    new Function('m', 'c', forcar)(g.mundo, c);
+    const hs = [];
+    for (let k = 0; k < 6; k++) hs.push(g.rodarPassos(40, Array.from({ length: 40 }, () => ({ x: 0, z: 0, botoes: 0 }))));
+    g.pausar(false);
+    return { hs };
+  }, { semente: SEMENTE, c: CHUTE, forcar: forcarChute.toString().replace(/^\(m, c\) => \{|\}$/g, '') });
+  let divergeM = -1;
+  for (let i = 0; i < nodeM.hs.length; i++) if (nodeM.hs[i] !== navM.hs[i]) { divergeM = (i + 1) * 40; break; }
+  meta('Goleiro mergulhando: hash após 240 passos de um chute (Node = Chromium)', `Node ${hexa(nodeM.hs.at(-1))} · Chromium ${hexa(navM.hs.at(-1))} · ${nodeM.merg} passos com a defesa desenhada${divergeM >= 0 ? ` (diverge até o passo ${divergeM})` : ''}`,
+    'iguais, com mergulho', divergeM < 0 && nodeM.merg > 20);
+
   const matNode = assinaturaMat(MD);
   const matNav = await pagina.evaluate(async src => {
     const { MD } = await import('./js/matdet.js');

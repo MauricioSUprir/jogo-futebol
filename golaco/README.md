@@ -15,7 +15,28 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   velocidade exata para a bola chegar onde o pé vai estar no próximo toque, na passada.
 - Corte, giro de 180°, puxada de sola, condução curta, pedalada, domínio orientado e proteção.
 
-## Etapa 3 — partida 11×11, tática, IA e "Editar time" (esta versão)
+## Pedido de 10/10 — o jogador nunca sai da bola, controle de bola e goleiro que pula e espalma
+
+- **Recepção que nunca sai da bola**: com a bola vindo para o seu jogador (passe para ele ou bola livre que passa
+  perto e é dele — nem do companheiro nem do adversário que chega antes), o corpo vai ao encontro dela — o analógico
+  decide para onde vai o **1º toque** (±20°) e abre o corpo para aquele lado; nada do analógico o afasta da bola.
+  Embalado, ele corta freando para a linha da bola, e o 1º toque sai para o lado pedido só até onde o corpo
+  acompanha (90° a 4,5 m/s, ~45° a 7 m/s). Analógico solto: recebe de frente, como antes. Chute indo para o gol não
+  puxa o seu jogador para a frente dele. A IA não muda.
+- **Controle de bola por atributo**: o bom (controle acima de 70) domina mais limpo; o fraco (abaixo de 55) espirra
+  mais a bola forte; na faixa dos titulares (59–70) é a conta de antes.
+- **Goleiro que pula e espalma**: mergulho desenhado (sai do chão, corpo estendido, a mão chega à bola no contato,
+  cai de lado e levanta), salto para a bola alta perto do corpo e na cavadinha por cima dele, defesa em pé curvando
+  o tronco sobre a bola baixa, mãos prontas à frente da cintura; mergulha ao longo da linha do gol, nunca para dentro
+  dele, com o corpo no máximo a ~4,6 m/s; no rebote começa de onde está (no chão, só alcança o que dá dali); a defesa
+  que o corpo desenhado não alcança vira gol. A espalmada sai forte e para fora (trave, linha de fundo ou por cima do
+  travessão), nunca de volta para a área — e não volta para as mãos dele logo depois (antes metade das espalmadas
+  virava encaixe). Chute desviado num corpo: o goleiro relê (e muitas vezes é enganado) — a
+  bola nunca "vai parar" nas mãos de longe. Com a bola na mão, as palmas ficam dos dois lados dela; a bola pega
+  solta chega às mãos sem salto.
+- Pesquisa e números: `PESQUISA-RECEPCAO-GOLEIRO.md`.
+
+## Etapa 3 — partida 11×11, tática, IA e "Editar time"
 
 - A página abre na **partida 11×11** (Golaço FC × Ventania FC, elencos fictícios de 23): 2 tempos curtos
   (o relógio mostra 0'–90'), intervalo com troca de lado, saída de bola, lateral, escanteio e tiro de meta
@@ -111,11 +132,15 @@ Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?mi
 ## Testes
 
 ```bash
-node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, transição defensiva, rede e torcida — o Actions roda antes do deploy
+node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, transição defensiva, rede e torcida, recepção, mergulho — o Actions roda antes do deploy
 node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade)
 node golaco/tools/rodar-testes.mjs --par 2    # no máximo 2 testes ao mesmo tempo (também em hash-igual e hash-partida)
 node golaco/tools/teste-transicao.mjs [--humano] # transição defensiva: recomposição em disparada depois da perda (IA × IA ou contra o humano roteirizado)
-node golaco/tools/hash-igual.mjs       # o treino bit a bit igual à base 980b0b0 (rodar antes de todo commit da lógica)
+node golaco/tools/teste-recepcao.mjs   # 1000 bolas no jogador do humano com o analógico já para o lado: domina, nunca se afasta, 1º toque ±20°
+node golaco/tools/teste-mergulho.mjs   # canhões de chutes no goleiro: mergulho desenhado, mão na bola, corpo ≤ 5,5 m/s, rebote, cavadinha, espalmada para fora (com atacantes na área), chute desviado
+node golaco/tools/medir-controle.mjs   # (minutos, informativo) controle de bola em jogo: domínio que escapa, perdas, bola–pé, 1º toque por atributo
+node golaco/tools/hash-igual.mjs       # o treino bit a bit igual a uma base (padrão 980b0b0; --ref <commit>) — rodar antes de todo commit da lógica;
+                                       #   o pedido de 10/10 muda o treino de propósito (recepção, domínio, goleiro): use --ref com o commit dele
 node golaco/tools/hash-partida.mjs     # otimização: a partida 11×11 bit a bit igual à de antes (repositório × HEAD)
 #   (metas que dependem só do desenho do pé no anim.js saem como "PENDENTE"; teste-conducao/teste-dribles --estrito reprovam com elas)
 node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz, câmera sem tremor
@@ -128,6 +153,7 @@ node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de 
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os
-números: `PESQUISA.md` (Etapa 1), `PESQUISA-ETAPA2.md` (Etapa 2) e `PESQUISA-ETAPA3.md` (Etapa 3).
+números: `PESQUISA.md` (Etapa 1), `PESQUISA-ETAPA2.md` (Etapa 2), `PESQUISA-ETAPA3.md` (Etapa 3) e
+`PESQUISA-RECEPCAO-GOLEIRO.md` (recepção, controle de bola e goleiro, 10/10).
 A lógica (`js/*.js` menos `main.js`, `hud.js`, `entrada.js`, `editor-time.js` e `js/render/`) não usa three.js nem
 DOM e roda nos testes em Node.

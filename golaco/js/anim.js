@@ -14,9 +14,10 @@
 //    alturaQuadril) — o tornozelo preso pelo joelho não salta com o quadril.
 // Sem three.js nem DOM. Saída: posições das juntas no mundo (Float32Array).
 
-import { JOGADOR, PASSO, G, CONDUCAO } from './config.js';
+import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
+import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -171,6 +172,8 @@ function pesEQuadril(j, m) {
  * passa por baixo do corpo, o pé que pousa).
  */
 export function alturaQuadril(j, m) {
+  // goleiro na defesa desenhada: a altura do quadro do mergulho (goleiro.js quadroMergulho)
+  if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return quadroMergulho(j.mergulho, m.tick, _qa).h;
   const { hy } = pesEQuadril(j, m);
   return j.quadril == null ? hy : Math.min(hy, j.quadril + QUADRIL_SOBE * PASSO);
 }
@@ -181,6 +184,7 @@ export function alturaQuadril(j, m) {
  * quadril é a guardada pela simulação (alturaQuadril), nunca acima do teto deste tick.
  */
 export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
+  if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return poseMergulho(j, m, out, info);
   const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto } = pesEQuadril(j, m);
   const hy = j.quadril == null ? teto : Math.min(teto, j.quadril);
   por(out, J.pelve, px, hy, pz);
@@ -204,6 +208,13 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   por(out, J.cabeca, pes2[0] + ux * 0.13 + fx * 0.02, pes2[1] + uy * 0.13, pes2[2] + uz * 0.13 + fz * 0.02);
 
   // ---- ombros e braços (contrafase com as pernas)
+  // goleiro sem a bola, de pé e devagar (ou com chute vindo): mãos prontas (o braço vai por IK até elas)
+  const pronto = j.posicao === 'GOL' && m.naMao !== j.id
+    ? (j.defesa && !j.defesa.fora ? 1 : clamp(1 - (s - 2) / 2, 0, 1)) : 0;
+  // goleiro com a bola nas mãos: as palmas dos dois lados da bola (goleiro.js bolaNaMao; o encaixe desenhado
+  // termina nesse mesmo ponto — sem salto de braço ao acabar a defesa)
+  const segura = j.posicao === 'GOL' && m.naMao === j.id;
+  const sgx = Math.cos(j.rumo), sgz = Math.sin(j.rumo);
   const oh = h - torcao * 1.4;
   const orx = -Math.sin(oh), orz = Math.cos(oh);
   const ofx = Math.cos(oh), ofz = Math.sin(oh);
@@ -231,6 +242,17 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     const fby = -Math.cos(a2);
     const fbz = ofz * Math.sin(a2) + orz * lado * 0.08;
     por(out, iM, cxp + fbx * 0.26, cyp + fby * 0.26, czp + fbz * 0.26);
+    if (pronto > 0) {
+      // goleiro: mãos prontas à frente da cintura (a mesma espera da defesa desenhada — goleiro.js maosMergulho)
+      const ax = ox + fx * MAO_PRONTA_FRENTE - ux * MAO_PRONTA_BAIXO, ay = oy - uy * MAO_PRONTA_BAIXO, az = oz + fz * MAO_PRONTA_FRENTE - uz * MAO_PRONTA_BAIXO;
+      const mx = out[iM * 3] + (ax - out[iM * 3]) * pronto, my = out[iM * 3 + 1] + (ay - out[iM * 3 + 1]) * pronto, mz = out[iM * 3 + 2] + (az - out[iM * 3 + 2]) * pronto;
+      ikBraco(ox, oy, oz, mx, my, mz, orx * lado - ux * 0.4 - fx * 0.2, -uy * 0.4, orz * lado - uz * 0.4 - fz * 0.2, out, iC, iM);
+    } else if (segura) {
+      // as palmas dos dois lados da bola (a bola do estado: goleiro.js bolaNaMao a leva ao ponto de segurar)
+      const bp = m.bola.p;
+      ikBraco(ox, oy, oz, bp.x - sgz * lado * BOLA_MAO.palma, bp.y, bp.z + sgx * lado * BOLA_MAO.palma,
+        orx * lado - ux * 0.4 - fx * 0.2, -uy * 0.4, orz * lado - uz * 0.4 - fz * 0.2, out, iC, iM);
+    }
   }
 
   // ---- pernas (IK) e pés
@@ -256,6 +278,88 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       info.pes[p].apoio = pe.apoio;
       info.pes[p].x = tx; info.pes[p].y = ty; info.pes[p].z = tz;
       info.pes[p].alvoX = pe.x; info.pes[p].alvoZ = pe.z;
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé
+const _qa = {}, _qp = {}, _mp = {}, _ep = {};
+const BOLA_MAO = GOLEIRO.bolaMao;
+const BRACO = 0.29, ANTEBRACO = 0.26;
+
+/** IK de dois ossos do braço: ombro O, mão M, polo (para onde o cotovelo aponta); escreve o cotovelo. */
+function ikBraco(ox, oy, oz, mx, my, mz, px, py, pz, out, iCot, iMao) {
+  let dx = mx - ox, dy = my - oy, dz = mz - oz;
+  const d0 = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
+  const ux = dx / d0, uy = dy / d0, uz = dz / d0;
+  const d = clamp(d0, 0.05, (BRACO + ANTEBRACO) * 0.999);
+  const a = (BRACO * BRACO - ANTEBRACO * ANTEBRACO + d * d) / (2 * d);
+  const hh = Math.sqrt(Math.max(0, BRACO * BRACO - a * a));
+  const pd = px * ux + py * uy + pz * uz;
+  let qx = px - pd * ux, qy = py - pd * uy, qz = pz - pd * uz;
+  const ql = Math.sqrt(qx * qx + qy * qy + qz * qz) || 1;
+  qx /= ql; qy /= ql; qz /= ql;
+  por(out, iCot, ox + ux * a + qx * hh, oy + uy * a + qy * hh, oz + uz * a + qz * hh);
+  por(out, iMao, ox + ux * d, oy + uy * d, oz + uz * d);
+}
+
+/**
+ * Pose do goleiro na defesa desenhada (pura): quadril, tronco inclinado de lado (phi), pés e mãos do quadro do
+ * mergulho (goleiro.js quadroMergulho / maosMergulho — a mesma conta da simulação). Pés no chão = o ponto
+ * plantado; no ar = o tornozelo do quadro. info (opcional) como em pose().
+ */
+export function poseMergulho(j, m, out, info) {
+  const g = j.mergulho;
+  const q = quadroMergulho(g, m.tick, _qp);
+  // segurando a bola (encaixe): as mãos a trazem para o peito (a mesma conta da bola nas mãos na simulação)
+  const segura = m.naMao === j.id;
+  // cima do tronco (inclinado de lado e para a frente) e direita do corpo: a mesma conta da simulação
+  const e = eixosMergulho(g, q, _ep);
+  const ux = e.ux, uy = e.uy, uz = e.uz, rx = e.rx, ry = e.ry, rz = e.rz;
+  const px = q.x, py = q.h, pz = q.z;
+  por(out, J.pelve, px, py, pz);
+  const lx = px + ux * 0.17, ly = py + uy * 0.17, lz = pz + uz * 0.17;
+  por(out, J.lombar, lx, ly, lz);
+  const ex = lx + ux * 0.22, ey = ly + uy * 0.22, ez = lz + uz * 0.22;
+  por(out, J.peito, ex, ey, ez);
+  const nx = ex + ux * 0.13, ny = ey + uy * 0.13, nz = ez + uz * 0.13;
+  por(out, J.pescoco, nx, ny, nz);
+  // cabeça: no eixo do tronco, olhando para a bola (um pouco para a frente)
+  por(out, J.cabeca, nx + ux * 0.13 + q.fx * 0.03, ny + uy * 0.13, nz + uz * 0.13 + q.fz * 0.03);
+  // braços: ombros e mãos do quadro (depois do contato voltam à mão pronta, a mesma da pose de pé)
+  const mm = maosMergulho(g, q, _mp, segura);
+  for (let p = 0; p < 2; p++) {
+    const lado = p === 0 ? -1 : 1;
+    const o = p === 0 ? mm.o0 : mm.o1, mao = p === 0 ? mm.m0 : mm.m1;
+    por(out, p === 0 ? J.ombroE : J.ombroD, o.x, o.y, o.z);
+    // cotovelo para fora e um pouco para trás (para baixo do braço)
+    ikBraco(o.x, o.y, o.z, mao.x, mao.y, mao.z, rx * lado - ux * 0.4 - q.fx * 0.2, ry * lado - uy * 0.4, rz * lado - uz * 0.4 - q.fz * 0.2, out,
+      p === 0 ? J.cotoveloE : J.cotoveloD, p === 0 ? J.maoE : J.maoD);
+  }
+  // pernas: quadris pela direita girada; tornozelos do quadro; joelhos para a frente
+  for (let p = 0; p < 2; p++) {
+    const lado = p === 0 ? -1 : 1;
+    const iQ = p === 0 ? J.quadrilE : J.quadrilD, iJ = p === 0 ? J.joelhoE : J.joelhoD;
+    const iT = p === 0 ? J.tornozeloE : J.tornozeloD, iP = p === 0 ? J.pontaE : J.pontaD;
+    const hx = px + rx * lado * MEIO_QUADRIL - ux * 0.03, hyq = py + ry * lado * MEIO_QUADRIL - uy * 0.03, hz = pz + rz * lado * MEIO_QUADRIL - uz * 0.03;
+    por(out, iQ, hx, hyq, hz);
+    const a = p === 0 ? q.a0 : q.a1;
+    const pe = j.pes[p];
+    // plantado: exatamente o ponto plantado na simulação (y do tornozelo)
+    const tx = pe.apoio ? pe.x : a.x, ty = pe.apoio ? TORN : a.y, tz = pe.apoio ? pe.z : a.z;
+    ik(hx, hyq, hz, tx, ty, tz, q.fx + rx * lado * 0.1, 0.05, q.fz + rz * lado * 0.1, out, iJ, iT);
+    const ax = out[iT * 3], ay = out[iT * 3 + 1], az = out[iT * 3 + 2];
+    // ponta do pé: para a frente; no ar, esticada um pouco na direção da perna
+    const estica = pe.apoio ? 0 : clamp((py - ay) < 0.5 ? 0.6 : 0.3, 0, 1);
+    const dpx = q.fx * (1 - estica) - ux * estica, dpy = -uy * estica, dpz = q.fz * (1 - estica) - uz * estica;
+    const dl = Math.sqrt(dpx * dpx + dpy * dpy + dpz * dpz) || 1;
+    por(out, iP, ax + (dpx / dl) * 0.17, Math.max(0.025, ay - 0.055 + (dpy / dl) * 0.17), az + (dpz / dl) * 0.17);
+    if (info) {
+      info.pes = info.pes || [{}, {}];
+      info.pes[p].apoio = pe.apoio;
+      info.pes[p].x = ax; info.pes[p].y = ay; info.pes[p].z = az;
+      info.pes[p].alvoX = tx; info.pes[p].alvoZ = tz;
     }
   }
   return out;

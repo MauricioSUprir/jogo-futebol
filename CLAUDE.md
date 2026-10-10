@@ -160,6 +160,16 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   atrás da bola 7,1, linha de 4 no t1, retomada 47%, à frente 21,5%). Lições: medir defesa e ataque JUNTOS (cada
   parte calibrada sozinha reprovou na integração); parede/teleporte nunca move o corpo sem a passada (pé arrasta);
   `teste-custo` mede CPU do fio, não a parede (a fila do escalonador dava picos falsos de 265 ms).
+- **Recepção e goleiro** (pedidos de 10/10; `PESQUISA-RECEPCAO-GOLEIRO.md`): o controlado com a bola vindo (passe para
+  ele ou bola livre que ele alcança antes dos companheiros) tem o CORPO levado ao encontro da bola (assistência de
+  recepção) e o analógico só decide o 1º toque (±20°, limitado correndo por `anguloEmbalado(v)`) — nunca se afasta da
+  bola; chute passando perto não puxa o controlado. Erro do domínio por faixa de atributo (`CONDUCAO.dominioCraque/
+  Fraco`; entre 55 e 70 igual ao de antes). Goleiro: mergulho/salto/defesa em pé desenhados em `anim.js` a partir de
+  `j.mergulho` (centro ≤ 4,6 m/s de lado, perfil Hermite, nunca dentro do gol), a defesa sorteada só vale se a mão
+  desenhada chega (`maoAlcanca`), espalmada para fora conferida pela física e sem voltar para a mão (`GOLEIRO.reagarra`),
+  chute desviado relido (`m.desvio`). Constantes: `RECEPCAO`, `GOLEIRO.mergulho/espalmada/bolaMao/...`. Testes:
+  `teste-recepcao` e `teste-mergulho` (padrão); `medir-controle.mjs` (informativo). O treino mudou de propósito:
+  `hash-igual` contra a base nova usa `--ref <commit do merge>`.
 - **Estádio, tela limpa e celular deitado** (pedidos de 10/10; primeira versão puxada da Etapa 6; `PESQUISA-ESTADIO.md`):
   rede que balança no shader (`render/rede-onda.js`, conta pura testada em Node e GPU = JS), câmera do gol no gol da
   partida (só cortes), "GOL!" SEM autor nem minuto escritos, torcida instanciada (`render/torcida.js`/`torcida-dados.js`,
