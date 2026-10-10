@@ -114,10 +114,12 @@ async function preparar(pagina, prep) {
     const g = window.__golaco;
     const av = (n, e) => { for (let i = 0; i < n; i++) { if (e) g.forcarEntrada(typeof e === 'function' ? e(i) : e); g.relogio.avancar(1000 / 60, { desenhar: false }); } };
     if (prep === 'ataque') {
-      // segue jogando (demo) até o meu time estar com a bola no pé do controlado
-      for (let i = 0; i < 1800; i++) {
+      // segue jogando (demo) até o meu time estar com a bola no pé do controlado (na partida, com a
+      // bola rolando: fora da saída de bola e das outras paradas)
+      for (let i = 0; i < 3600; i++) {
         const e = g.estado();
-        if (e.fase === 'ataque' && e.posse != null && e.posse === e.controlado) break;
+        const rolando = !e.relogio || ((!e.parada || e.parada.rolou) && e.relogio.estado === 'jogo');
+        if (e.fase === 'ataque' && e.posse != null && e.posse === e.controlado && rolando) break;
         g.relogio.avancar(1000 / 60, { desenhar: false });
       }
       const e = g.estado();
@@ -203,6 +205,7 @@ for (const c of CENAS) {
       } else if (c.editor !== 'escalacao') await pagina.click(`#editar-time [data-aba="${c.editor}"]`);
       if (c.editor === 'formacao') await pagina.click('#editar-time [data-formacao="4-2-3-1"]');
       if (c.editor === 'taticas') { await pagina.click('#editar-time [data-tatica="mentalidade"][data-passo="+1"]'); await pagina.click('#editar-time [data-tatica="linha"][data-passo="+1"]'); }
+      await pagina.evaluate(() => { const c = document.querySelector('#editar-time .ed-corpo'); if (c) c.scrollTop = 0; });
       notaEd = await pagina.evaluate(() => { const r = window.__golaco.editor.rascunho; return `editor ${window.__golaco.editor.aba} (${window.__golaco.editor.modo}): ${r.formacao}, subst. ${r.substituicoes.length}, escolhido ${r.escolhido ?? '-'}`; });
     }
     // alguns quadros com desenho (a mola da câmera e os botões assentam), o último é o print

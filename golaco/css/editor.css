@@ -227,7 +227,7 @@
 }
 .ed-seg[aria-pressed="true"] { background: var(--verde); color: var(--preto); border-color: var(--verde); }
 .ed-canvas { flex: 1 1 auto; min-height: 120px; width: 100%; display: block; border-radius: 9px; background: #07130d; }
-.ed-empe .ed-canvas { flex: none; height: clamp(200px, 56vw, 300px); }
+.ed-empe .ed-canvas { flex: none; height: clamp(240px, 70vw, 340px); }
 .ed-aba-taticas .ed-lista { overflow: hidden; }
 .ed-empe.ed-aba-taticas .ed-lista { overflow: visible; }
 

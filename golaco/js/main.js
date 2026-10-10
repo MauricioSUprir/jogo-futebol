@@ -402,7 +402,9 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   render.quadros++;
   // HUD
   if (h) {
-    const kmh = Math.hypot(h.vx, h.vz) * 3.6;
+    // intervalo e fim: o mundo fica parado (o corpo guarda a velocidade de antes, o painel mostra 0)
+    const parado = mundo.partida && (mundo.partida.estado === 'intervalo' || mundo.partida.estado === 'fim');
+    const kmh = parado ? 0 : Math.hypot(h.vx, h.vz) * 3.6;
     kmhVisto += (kmh - kmhVisto) * Math.min(1, dt * 8);
     const [modo, forte] = modoDoJogador(h);
     hud.atualizar(agoraMs, kmhVisto < 0.5 ? 0 : kmhVisto, modo, forte, h.posicao ?? null);
