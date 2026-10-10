@@ -3,7 +3,10 @@
 // da página (sessao.js: criarTreino + passoTreino), em 18 cenas: trote, corrida, arrancada,
 // curvas, zigue-zague, giros (também em arrancada), corte em arrancada, para e sai, parado
 // girando, máquina de passes (domínio parado e andando), marcador (proteção e corrida),
-// pedaladas e a demo — e o treino de ataque jogado pela IA (10 jogadores, três sementes).
+// pedaladas e a demo — e o treino de ataque jogado pela IA (10 jogadores, três sementes) e a
+// partida 11×11 IA × IA (Etapa 3: os 22, duas sementes; sem a IA com a bola da Parte 3, quem está
+// com a bola no pé é o ataque substituto dos testes, tools/lib/partida-tatica.mjs). Os quadros que
+// teletransportam (saída de bola, lateral, escanteio, tiro de meta, intervalo) não contam.
 //
 // Metas (todas pelo MÁXIMO, não pela média):
 //  1. Pé plantado não anda: com o pé apoiado no MESMO ponto na simulação nos dois quadros, o
@@ -19,6 +22,14 @@ import { criarTreino, passoTreino, entradaDemo, DEMO } from '../js/sessao.js';
 import { pose, J, NJ } from '../js/anim.js';
 import { BOTAO, PASSO } from '../js/config.js';
 import { fmt, tabelaTexto } from './lib/medidas.mjs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import * as PT from './lib/partida-tatica.mjs';
+
+// partida 11×11 (Etapa 3): pela lib dos testes da partida, com a lógica do repositório
+const LP = await PT.carregar(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js'));
+const ATAQUE_PARTIDA = PT.parte3Presente(LP) ? 'jogo' : 'substituto';
+const SALTA = new Set(['recomeco', 'saida', 'lateral', 'escanteio', 'tiroDeMeta', 'intervalo']);
 
 const detalhe = process.argv.includes('--detalhe');
 const { MOD, CORRER } = BOTAO;
@@ -47,6 +58,9 @@ const cenas = [
   ['treino de ataque (semente 7)', null, { ataque: true, semente: 7 }],
   // marcador girando rápido andando de lado (o passo lateral jogava o pé longe do corpo)
   ['treino de ataque (semente 29)', null, { ataque: true, semente: 29 }],
+  // Etapa 3: a partida 11×11 IA × IA (os 22: bloco, pressão, recuo, bola livre, goleiros)
+  ['partida 11×11 (22 jogadores)', null, { partida: true, semente: 3 }],
+  ['partida 11×11 (semente 11)', null, { partida: true, semente: 11 }],
 ];
 
 const TORNOZELO = [J.tornozeloE, J.tornozeloD];
@@ -55,18 +69,20 @@ const limitePouso = v => 0.19 * v + 0.81;     // m/s
 const linhas = [['cena', 'plantado: máx (m/s)', 'maior desloc. / limite', 'pouso: máx (m/s)', 'quadros']];
 const geral = { plantado: 0, razao: 0, pouso: 0, quadros: 0, pior: null };
 for (const [nome, rot, op = {}] of cenas) {
-  const m = op.ataque ? criarTreino({ modo: 'ataque', semente: op.semente })
-    : op.demo ? criarTreino({ modo: 'conducao', semente: 1, ...DEMO.inicio })
-      : criarTreino({ modo: 'conducao', semente: 3, x: -20, z: 0, rumo: 0, marcador: !!op.marcador });
-  const medidos = op.ataque ? m.jogadores : [m.jogadores[0]];
+  const m = op.partida ? PT.criarJogo(LP, op.semente, { minutos: 60, ataque: ATAQUE_PARTIDA })
+    : op.ataque ? criarTreino({ modo: 'ataque', semente: op.semente })
+      : op.demo ? criarTreino({ modo: 'conducao', semente: 1, ...DEMO.inicio })
+        : criarTreino({ modo: 'conducao', semente: 3, x: -20, z: 0, rumo: 0, marcador: !!op.marcador });
+  const medidos = op.ataque || op.partida ? m.jogadores : [m.jogadores[0]];
   const out = new Float32Array(NJ * 3);
   const r = { plantado: 0, razao: 0, desloc: 0, pouso: 0, pousoRazao: 0, quadros: 0 };
   const antes = new Map();
-  for (let i = 0; i < (op.ataque ? 30 : 10) * 60; i++) {
+  for (let i = 0; i < (op.partida ? 60 : op.ataque ? 30 : 10) * 60; i++) {
     const acoes = op.maquina && i > 0 && i % (op.maquina * 60) === 0 ? ['maquina'] : null;
-    // recomeço do treino de ataque teletransporta todos: o quadro do recomeço não conta
-    const evs = passoTreino(m, rot ? rot(i * PASSO) : entradaDemo(m), acoes);
-    const recomecou = evs.some(e => e.tipo === 'recomeco');
+    // recomeço do treino de ataque (e saída, lateral, escanteio, tiro de meta e intervalo da
+    // partida) teletransporta: o quadro não conta
+    const evs = op.partida ? PT.passoJogo(LP, m) : passoTreino(m, rot ? rot(i * PASSO) : entradaDemo(m), acoes);
+    const recomecou = evs.some(e => SALTA.has(e.tipo));
     for (const j of medidos) {
     pose(j, m, out);
     const atu = {

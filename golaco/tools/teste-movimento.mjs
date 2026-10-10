@@ -14,22 +14,36 @@
 // E o que não pode piorar (sem recuo): o treino chega ao chute e a defesa pressiona o condutor.
 //   node tools/teste-movimento.mjs              (lógica do repositório)
 //   node tools/teste-movimento.mjs --js <pasta> (mede outra cópia da lógica, ex.: a publicada)
-//   node tools/teste-movimento.mjs --modo partida (Etapa 3: o mesmo medidor no 11×11)
+//   node tools/teste-movimento.mjs --modo partida [--antes] (Etapa 3: o mesmo medidor e as mesmas metas
+//     no 11×11, IA × IA — Golaço 4-3-3 × Ventania 4-2-3-1, os 22 da IA; sem a IA com a bola da Parte 3,
+//     quem está com a bola no pé é o ataque substituto dos testes (tools/lib/partida-tatica.mjs), e a
+//     meta "chega ao chute" é do ataque: só informa até a Parte 3. --antes = a IA clássica no 11×11)
+//   [--sementes N] [--base K]: N sementes a partir de K + 1 (padrão 8 a partir de 1)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-// Etapa 3 (Parte 2): --modo partida mede o mesmo no 11×11 (IA × IA). Até lá, marcador.
 const im = process.argv.indexOf('--modo');
-if (im > 0 && process.argv[im + 1] === 'partida') {
-  console.log('teste-movimento --modo partida: AGUARDANDO PARTE 2 (as mesmas metas do treino no 11×11, IA × IA)');
-  process.exit(1);
-}
+const PARTIDA = im > 0 && process.argv[im + 1] === 'partida';
+const ANTES = process.argv.includes('--antes');
 
 const ia = process.argv.indexOf('--js');
 const JS = ia > 0 ? path.resolve(process.argv[ia + 1]) : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarTreino, passoTreino, entradaDemo } = await imp('sessao.js');
 const { PASSO, CAMPO } = await imp('config.js');
+// partida 11×11 (Etapa 3): o mesmo laço, com a partida IA × IA no lugar do treino
+let P3 = true, novoMundo = s => criarTreino({ semente: s }), passoMundo = m => passoTreino(m, entradaDemo(m));
+if (PARTIDA) {
+  const T = await import(pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)), 'lib/partida-tatica.mjs')).href);
+  const L = await T.carregar(JS);
+  P3 = T.parte3Presente(L);
+  const ia2 = process.argv.indexOf('--ataque');
+  const ATAQUE = ia2 > 0 ? process.argv[ia2 + 1] : P3 ? 'jogo' : 'substituto';
+  novoMundo = s => T.criarJogo(L, s, { antes: ANTES, minutos: 60, ataque: ATAQUE });
+  passoMundo = m => T.passoJogo(L, m);
+}
+// eventos que teletransportam (recomeço do treino; saída de bola e recomeços da partida)
+const SALTA = new Set(['recomeco', 'saida', 'lateral', 'escanteio', 'tiroDeMeta', 'intervalo']);
 const { pose, J } = await imp('anim.js');
 const POSE = new Float32Array(64 * 3);
 
@@ -39,17 +53,20 @@ function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok ? 'PA
 const fmt = (v, c = 1) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : String(v));
 const dif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
 
-const SEMENTES = process.env.SEMENTES ? Array.from({ length: +process.env.SEMENTES }, (_, k) => k + 1) : [1, 2, 3, 4, 5, 6, 7, 8], MIN = 3, N = Math.round(MIN * 60 / PASSO);
+// sementes: 1–8 (ou SEMENTES=N / --sementes N); --base K soma K a todas (outro conjunto de sementes)
+const argN = (nome, pad) => { const i = process.argv.indexOf(nome); return i > 0 ? +process.argv[i + 1] : pad; };
+const NSEM = argN('--sementes', process.env.SEMENTES ? +process.env.SEMENTES : 8), BASE = argN('--base', 0);
+const SEMENTES = Array.from({ length: NSEM }, (_, k) => BASE + k + 1), MIN = 3, N = Math.round(MIN * 60 / PASSO);
 const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
 let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
 for (const sem of SEMENTES) {
-  const m = criarTreino({ semente: sem });
+  const m = novoMundo(sem);
   const H = new Map(); // id → últimos 60 ticks {vx, vz, giro}
   const st = new Map(); // id → estado (inversão, tremor, para-arranca)
   let pular = 0, chutes = 0, timeBola = null, ultTroca = -999, donoAnt = null, desde = 0;
   for (let i = 0; i < N; i++) {
-    const ev = passoTreino(m, entradaDemo(m));
+    const ev = passoMundo(m);
     for (const e of ev) if (e.tipo === 'chute') chutes++;
     // time com a bola (no pé, nas mãos ou o passe/chute no ar dele)
     const idB = m.posse ?? m.naMao;
@@ -57,16 +74,17 @@ for (const sem of SEMENTES) {
     if (tb != null && tb !== timeBola) { if (timeBola != null) { A.trocas++; ultTroca = i; } timeBola = tb; }
     const est = i - ultTroca > 60;
     // recomeço (bola de volta ao meio): o mundo salta, não conta 0,75 s
-    if (ev.some(e => e.tipo === 'recomeco')) { pular = 45; H.clear(); st.clear(); }
+    if (ev.some(e => SALTA.has(e.tipo))) { pular = 45; H.clear(); st.clear(); }
     if (pular > 0) { pular--; continue; }
     const b = m.bola.p;
-    const ctrl = m.controlado[0];
+    // (na partida IA × IA ninguém é controlado, a não ser o condutor do ataque substituto)
+    const ctrl = PARTIDA ? (m.humanos.length ? m.controlado[m.humanos[0]] : -1) : m.controlado[0];
     // defesa pressiona quem conduz: alguém do time 1 a ≤ 3 m do condutor do time 0
     if (m.posse != null) {
       const d0 = m.jogadores.find(o => o.id === m.posse);
-      if (d0 && d0.time === 0) {
+      if (d0 && (PARTIDA ? d0.posicao !== 'GOL' : d0.time === 0)) {
         pressaoN++;
-        const perto = m.jogadores.filter(o => o.time === 1 && o.posicao !== 'GOL' && Math.hypot(o.x - d0.x, o.z - d0.z) <= 3).length;
+        const perto = m.jogadores.filter(o => o.time !== d0.time && o.posicao !== 'GOL' && Math.hypot(o.x - d0.x, o.z - d0.z) <= 3).length;
         if (perto >= 1) pressao++;
         if (perto >= 2) dois++;
         // posse assentada: o mesmo condutor há mais de 1,5 s (fora o bate-rebate depois de uma perda)
@@ -85,7 +103,7 @@ for (const sem of SEMENTES) {
         naMaoN++; if (Math.abs(gx - o.x) < 16 && vLinha > 1) naMaoLinha++;
       }
     }
-    const linha = m.jogadores.filter(o => o.posicao !== 'GOL' && o.papel === 'ia');
+    const linha = m.jogadores.filter(o => o.posicao !== 'GOL' && (PARTIDA ? o.papel !== 'parado' && o.papel !== 'marcador' : o.papel === 'ia'));
     for (const j of linha) {
       const h = H.get(j.id) ?? [];
       h.push({ vx: j.vx, vz: j.vz, giro: j.giro, x: j.x, z: j.z });
@@ -121,7 +139,7 @@ for (const sem of SEMENTES) {
         if (o === j || o.time !== j.time || o.posicao === 'GOL') continue;
         const d = Math.hypot(o.x - j.x, o.z - j.z);
         dm = Math.min(dm, d);
-        if (o.id > j.id && o.papel === 'ia' && o.id !== ctrl) {
+        if (o.id > j.id && (PARTIDA ? o.papel !== 'parado' : o.papel === 'ia') && o.id !== ctrl) {
           const ho = H.get(o.id);
           if (ho && ho.length >= 2 && h.length >= 2) {
             const a = ho[ho.length - 2], c = h[h.length - 2];
@@ -147,7 +165,7 @@ for (const sem of SEMENTES) {
 
 const porMin = (x, seg = A.seg) => x / (seg / 60);
 const pct = (a, b) => (b ? 100 * a / b : NaN);
-console.log(`lógica: ${JS}\n${SEMENTES.length} sementes × ${MIN} min, ${fmt(A.seg / 60, 0)} min·jogador da IA sem a bola (${fmt(pct(A.segEst, A.seg), 0)}% em jogo estável), ${fmt(A.trocas / (SEMENTES.length * MIN), 1)} trocas de time com a bola/min`);
+console.log(`lógica: ${JS}${PARTIDA ? `  · partida 11×11 IA × IA${ANTES ? ' (--antes: IA clássica)' : ''}; Parte 3 ${P3 ? 'presente' : 'ausente (ataque substituto dos testes)'}` : ''}\n${SEMENTES.length} sementes × ${MIN} min, ${fmt(A.seg / 60, 0)} min·jogador da IA sem a bola (${fmt(pct(A.segEst, A.seg), 0)}% em jogo estável), ${fmt(A.trocas / (SEMENTES.length * MIN), 1)} trocas de time com a bola/min`);
 reg('vai e volta (direção inverte em ≤ 1 s), jogo estável', `${fmt(porMin(A.invEst, A.segEst))}/min por jogador`, '≤ 8/min', porMin(A.invEst, A.segEst) <= 8);
 reg('vai e volta, total (com as transições)', `${fmt(porMin(A.inv))}/min`, '≤ 11/min', porMin(A.inv) <= 11);
 reg('tremor do tronco (giro troca de lado em ≤ 0,4 s), jogo estável', `${fmt(porMin(A.tremorEst, A.segEst))}/min`, '≤ 7/min', porMin(A.tremorEst, A.segEst) <= 7);
@@ -158,12 +176,15 @@ reg('companheiro a menos de 2 m (amontoado)', `${fmt(pct(A.viz2, A.viz))}% do te
 reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 3/min (publicada: 27)', porMin(A.contatos) <= 3);
 reg('pernas cruzadas (tornozelos trocados de lado > 3 cm)', `${fmt(pct(A.cruz, A.cruzN))}% do tempo`, '≤ 9% (publicada: 14,9%)', pct(A.cruz, A.cruzN) <= 9);
 reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzLado, A.cruzLadoN))}% (${fmt(pct(A.cruzLadoN, A.cruzN), 0)}% do tempo de lado)`, '≤ 15% (publicada: 42,5%)', pct(A.cruzLado, A.cruzLadoN) <= 15);
-reg('bola na mão do goleiro: companheiro correndo para a própria linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 15% (publicada: 32,6%)', pct(naMaoLinha, naMaoN) <= 15);
-reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
+if (PARTIDA && !naMaoN) linhas.push(['bola na mão do goleiro: companheiro correndo para a própria linha do gol', 'sem amostra (nenhum goleiro com a bola na mão)', '≤ 15%', 'sem amostra']);
+else reg('bola na mão do goleiro: companheiro correndo para a própria linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 15% (publicada: 32,6%)', pct(naMaoLinha, naMaoN) <= 15);
+if (PARTIDA && !P3) linhas.push(['sem recuo — chega ao chute (é do ataque: Parte 3)', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5 ? 'passa (informativo)' : 'AGUARDANDO PARTE 3']);
+else reg(`sem recuo — ${PARTIDA ? 'a partida' : 'treino'} chega ao chute`, `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
 reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, '≥ 40%', pct(pressao, pressaoN) >= 40);
 reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));
-console.log(falhas ? `\nteste-movimento: REPROVOU (${falhas})` : '\nteste-movimento: PASSOU');
+const nomeT = PARTIDA ? 'teste-movimento --modo partida' : 'teste-movimento';
+console.log(falhas ? `\n${nomeT}: REPROVOU (${falhas})` : `\n${nomeT}: PASSOU`);
 process.exit(falhas ? 1 : 0);

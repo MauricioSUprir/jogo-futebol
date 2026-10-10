@@ -459,7 +459,24 @@ export const PARTIDA = {
 export const TATICA = {
   terco: 17.5,                // m — t1: x' < −17,5; t3: x' ≥ 17,5 (referencial do time)
   linhaAltura: [26, 32.5, 40], // m da própria linha de gol, bola no centro, sem bola (Baixa/Média/Alta)
-  largura: { com: [0.88, 1.0, 1.15], sem: [0.9, 1.0, 1.1] }, // fator do z da vaga (Estreita/Normal/Aberta)
+  // fator do z da vaga (Estreita/Normal/Aberta). Sem a bola a Normal é 1,12: a tabela é de posições
+  // MÉDIAS, que encolhem a largura (o bloco desliza; pesquisa §1.2) — no instante, a Metrica tem
+  // ~37 m no bloco médio (33 / 37 / 41 m na Compacta / Normal / Aberta, pesquisa §8)
+  largura: { com: [0.88, 1.0, 1.15], sem: [1.0, 1.12, 1.24] },
+  // Sem a bola, a altura da linha e a largura do bloco pela posição da bola (u, referencial do time),
+  // medidas na Metrica (2 jogos, 33 475 amostras a 5 Hz; scratchpad p2/scripts/forma_por_bola.py):
+  // [u da bola, altura da linha (m do gol), largura (m)], faixas de 5 m. A curva não é reta: a linha
+  // anda ~0,6 m por metro de bola no meio e quase para nas pontas (o k único de 0,5 deixava a linha
+  // ~3 m alta com a bola entrando no meu terço). A tabela entra pela diferença para u = 0 (a altura
+  // da tática e a largura da formação continuam valendo com a bola no centro).
+  formaPelaBola: [
+    [-47.5, 4.9, 28.9], [-42.5, 7.9, 30.4], [-37.5, 10.9, 31.6], [-32.5, 13.3, 32.9], [-27.5, 15.6, 33.5],
+    [-22.5, 17.8, 34.5], [-17.5, 21.1, 35.1], [-12.5, 24.2, 35.9], [-7.5, 26.9, 36.7], [-2.5, 30.0, 37.4],
+    [2.5, 32.7, 37.1], [7.5, 36.1, 38.2], [12.5, 39.0, 38.6], [17.5, 42.1, 39.4], [22.5, 45.5, 39.7],
+    [27.5, 47.0, 39.5], [32.5, 48.7, 39.8], [37.5, 49.5, 39.7], [42.5, 50.2, 38.9], [47.5, 49.9, 37.2],
+  ],
+  linhasSem: { mei: -1.5, ata: 2 }, // m — sem a bola, deslocamento das linhas do meio e da frente (ver tatica.js)
+  kFrenteSem: 0.85,           // k da frente sem a bola com a bola no campo de lá (o do atacante é 0,66)
   mentalidadeBloco: 3,        // m por nível de mentalidade (−2..+2), bloco inteiro
   lateralSobe: 1,             // m a mais por nível acima de 0, com a bola, para os laterais/alas
   naArea: [2, 2, 3, 4, 5],    // atacantes na área no cruzamento, por mentalidade (−2..+2)
@@ -482,20 +499,64 @@ export const TATICA = {
     com: { goleiro: 0.1, lateral: 0.23, zagueiro: 0.29, meiaAberto: 0.21, meioCentral: 0.35, atacante: 0.27 },
   },
   mistura: 0.8,               // s — ao trocar de fase, as referências com/sem se misturam nesse tempo
+  antecipa: 0,                // s — a referência usa a bola onde ela estará (velocidade filtrada de quem a conduz)...
+  antecipaDef: 0,             // s — ...a da linha de defesa (que tem de recuar a tempo)...
+  antecipaMax: 6,             // m — ...no máximo isto à frente
+  // Quem segue a referência (ia-tatica.js alvoCalmo). O alvo passa por um filtro de tau s (e a
+  // velocidade dele por um de tauVel s). recuo: com o alvo andando para o meu gol, o ponto vai à
+  // frente dele SÓ na profundidade, a velocidade × s s (no máximo max m; subindo, a fração sobeLinha /
+  // recuoFrente[1] disso). quieto: parado a menos de [0] m do ponto até ele passar de [1] m. marcha:
+  // anda (intensidade [2], ~1 m/s, abaixo da faixa de ~1,2–1,8 m/s em que o tronco treme) a menos de
+  // [0] m até passar de [1] m, se o alvo anda a menos de [3] m/s. trote: mais longe, intensidade d / 14
+  // no máximo [0] até [1] m e no mínimo [2] (~1,9 m/s, acima da faixa); corre além de corre m. giro:
+  // rad/s do rumo pedido andando com a bola atrás do caminho (além de [2] rad), trotando e andando com
+  // a bola à frente ([0], [1], [3]); virada além de [4] rad vai de uma vez. ajusta: com o alvo abaixo
+  // de vParado m/s há [0] s, vai até ele com intensidade d / dist e fica a [1] m (retoma além de [2]).
+  // tauPressa, tauVelPressa: filtros do ponto de quem pressiona e da velocidade dele (s).
+  suave: { tau: 1.2, tauVel: 0.5, recuo: { s: 3.6, max: 6 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+    trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12,
+    tauPressa: 0.2, tauVelPressa: 0.3 },
+  // a linha de defesa recua mais à frente da bola (Metrica: altura da linha por faixa)
+  suaveLinha: { tau: 1.2, tauVel: 0.5, recuo: { s: 4.5, max: 7 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+    trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
+  // o apoio com a bola pela referência (sem a Parte 3): o mesmo, sem recuo
+  suaveApoio: { tau: 1.2, tauVel: 0.5, recuo: { s: 0, max: 0 }, quieto: [1.5, 2.6], marcha: [3.5, 4.5, 0.18, 1.2],
+    trote: [0.45, 12, 0.33], giro: [0.7, 1.4, 2.2, 6, 1.75], vParado: 0.25, ajusta: [0.5, 0.5, 1.0], dist: 6, corre: 12 },
+  sobeLinha: 0.5,             // fração do avanço (suave.recuo) da linha de defesa subindo com a bola
+  recuoFrente: [0.5, 1],      // frações do recuo da linha da frente sem a bola, recuando e subindo (Forcher 2024: meio–ataque 11–15 m)
   avaliaTicks: 6,             // a IA tática reavalia a cada 6 ticks (10 Hz), escalonada por vagaIdx
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
 export const IA_DEFESA = {
-  contencao: [5.0, 3.0, 2.0], // m — 1º homem fora do gatilho, entre a bola e o meu gol
-  aperto: 1.5,                // m — 1º homem no gatilho (com boteIA)
-  engaja: [42, 60, 105],      // m do meu gol: bola mais perto que isto, o 1º homem aperta
-  cobertura: [7, 10],         // m — 2º homem (Média e Alta), do lado do gol e por dentro
-  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10 }, // janela, quantos, a ≤ quantos m da bola
-  zona: { raio: 7, peso: 0.6 }, // adversário a ≤ 7 m da referência puxa 60% para o lado do gol dele
+  contencao: [5.5, 2.75, 1.5], // m do condutor — 1º homem fora do gatilho, entre ele e o meu gol
+  aperto: [1.5, 1.5, 0.6],    // m da bola — 1º homem no gatilho (e o boteIA do sim.js tenta tirar); na Alta, colado...
+  apertoArranca: [6, 6, 2.5], // m — ...e aperta CORRER com o ponto além disto (IA.pressaoArranca = 6)
+  engaja: [42, 60, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento)
+  perigo: 30,                 // m do meu gol: bola mais perto que isto, o 1º homem aperta (todos os níveis)
+  apertaSempre: [false, false, true], // pressão Alta: o 1º homem aperta sempre que engajado...
+  doisApertam: [false, false, true],  // ...e o 2º aperta junto (nas outras, o 2º só aperta com gatilho na Alta)
+  cobertura: 8.5,             // m — 2º homem (Média e Alta) atrás do 1º, do lado do gol (real: 2º marcador a 9,6 m)...
+  coberturaLado: 3,           // m — ...e por dentro (na diagonal)
+  apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
+  antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
+  giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
+  livre: { histerese: 0.25, margem: 0.2 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor
+  contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
+  // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
+  // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
+  // menos que eles)
+  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 0.8 }, // ...e vão a dist m da bola
+  zona: { raio: 7, peso: 0.6, frente: 1 }, // adversário a ≤ 7 m da referência, no máximo 1 m à frente dela, puxa 60% para o lado do gol dele
+  marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
+  // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
+  // alcance m do condutor), num ponto a `ponto` do caminho; e reivindica também quem está até
+  // `frente` m à frente da referência (sobe para pressionar a construção)
+  linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
-  recomposicao: 15,           // m atrás da referência com a bola indo para o meu gol: corre de volta
-  gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27 }, // s, m, m, rad (110°), |z|
+  frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
+  defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
+  gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8 }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor
   transOf: 3,                 // s de transição ofensiva depois da retomada
 };
 
