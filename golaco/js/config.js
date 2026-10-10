@@ -285,6 +285,11 @@ export const ATRIBUTOS_PADRAO = {
   reflexo: 65,                // goleiro
   posicionamento: 65,
   mergulho: 65,
+  // Etapa 3 (elenco da partida): ninguém do treino lê estes, então o treino e o hash não mudam
+  marcacao: 65,
+  desarme: 65,
+  visao: 65,
+  folego: 65,
 };
 
 // Câmera de TV. O enquadramento é pela LARGURA vista no foco (m), não pelo fov: o fov vertical
@@ -411,4 +416,104 @@ export const IA = {
   pressaoArranca: 6,          // m: quem pressiona só aperta CORRER com o ponto além disto
   trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
+};
+
+// =====================================================================================================
+// Etapa 3 — partida 11×11, tática e IA. Um bloco por parte (cada parte edita só o seu); valores
+// iniciais do plano (seções 2.7 e 3.2) e da pesquisa (PESQUISA-ETAPA3.md). Quem calibra é o teste.
+// Nada daqui é lido no treino (a lógica nova só liga com m.times).
+// =====================================================================================================
+
+// ----------------------------------------------------------------------------- Parte 1: partida
+// Partida (plano 3.2): 2 tempos curtos com relógio acelerado (0'–45' e 45'–90'), recomeços
+// simplificados (a regra IFAB completa é da Etapa 4) e substituições da Regra 3 (5 em 3 paradas).
+export const PARTIDA = {
+  minutosPorTempo: 4,         // minutos REAIS por tempo (o relógio mostra 45' por tempo)
+  intervalo: 3,               // s de faixa "Intervalo" antes da saída do 2º tempo
+  golPausa: 2.5,              // s entre o gol e a saída (os 150 ticks do treino)
+  foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
+  montagem: 1.2,              // s de montagem do recomeço (corte de câmera na saída)
+  cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
+  cobrancaHumanoMax: 6,       // s — depois disso a IA cobra pelo humano
+  paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
+  teleporteCobrador: 8,       // m — cobrador mais longe que isto do ponto é levado até ele (com aviso)
+  raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area' }, // m dos adversários ('area' = fora da área)
+  subsMax: 5,                 // IFAB Regra 3: 5 substituições...
+  paradasMax: 3,              // ...em 3 paradas (o intervalo não conta)
+};
+
+// ------------------------------------------------------------------------ Parte 2: tática e defesa
+// Posição de referência por formação (tatica.js posicaoTatica; plano 2.3). Funções do k: goleiro,
+// lateral (LD/LE/ADD/ADE), zagueiro, meioCentral (VOL/MC/MEI), meiaAberto (MD/ME/PD/PE),
+// atacante (SA/ATA). k = [bola atrás do meio (t1→t2), bola à frente (t2→t3)], pesquisa §1.2.
+export const TATICA = {
+  terco: 17.5,                // m — t1: x' < −17,5; t3: x' ≥ 17,5 (referencial do time)
+  linhaAltura: [26, 32.5, 40], // m da própria linha de gol, bola no centro, sem bola (Baixa/Média/Alta)
+  largura: { com: [0.88, 1.0, 1.15], sem: [0.9, 1.0, 1.1] }, // fator do z da vaga (Estreita/Normal/Aberta)
+  mentalidadeBloco: 3,        // m por nível de mentalidade (−2..+2), bloco inteiro
+  lateralSobe: 1,             // m a mais por nível acima de 0, com a bola, para os laterais/alas
+  naArea: [2, 2, 3, 4, 5],    // atacantes na área no cruzamento, por mentalidade (−2..+2)
+  blocoSegueLinha: 0.8,       // o resto do bloco acompanha 80% da diferença da altura da linha
+  linhaPiso: -46.5,           // x' mínimo da linha de defesa (≥ 6 m do gol)
+  linhaTeto: 3.5,             // x' máximo (≤ 56 m do gol)
+  linhaAtrasDaBola: 2,        // m — sem bola, com a bola atrás da linha: linha ≤ x'bola − 2
+  limiteX: 51.5,
+  limiteZ: 32.5,
+  k: {
+    goleiro: { sem: [0.2, 0.23], com: [0.23, 0.23] },
+    lateral: { sem: [0.51, 0.6], com: [0.69, 0.54] },
+    zagueiro: { sem: [0.51, 0.49], com: [0.57, 0.49] },
+    meiaAberto: { sem: [0.6, 0.71], com: [0.66, 0.54] },
+    meioCentral: { sem: [0.54, 0.57], com: [0.63, 0.49] },
+    atacante: { sem: [0.43, 0.66], com: [0.49, 0.51] },
+  },
+  kz: {
+    sem: { goleiro: 0.1, lateral: 0.3, zagueiro: 0.32, meiaAberto: 0.29, meioCentral: 0.41, atacante: 0.34 },
+    com: { goleiro: 0.1, lateral: 0.23, zagueiro: 0.29, meiaAberto: 0.21, meioCentral: 0.35, atacante: 0.27 },
+  },
+  mistura: 0.8,               // s — ao trocar de fase, as referências com/sem se misturam nesse tempo
+  avaliaTicks: 6,             // a IA tática reavalia a cada 6 ticks (10 Hz), escalonada por vagaIdx
+};
+
+// IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
+export const IA_DEFESA = {
+  contencao: [5.0, 3.0, 2.0], // m — 1º homem fora do gatilho, entre a bola e o meu gol
+  aperto: 1.5,                // m — 1º homem no gatilho (com boteIA)
+  engaja: [42, 60, 105],      // m do meu gol: bola mais perto que isto, o 1º homem aperta
+  cobertura: [7, 10],         // m — 2º homem (Média e Alta), do lado do gol e por dentro
+  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10 }, // janela, quantos, a ≤ quantos m da bola
+  zona: { raio: 7, peso: 0.6 }, // adversário a ≤ 7 m da referência puxa 60% para o lado do gol dele
+  individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
+  recomposicao: 15,           // m atrás da referência com a bola indo para o meu gol: corre de volta
+  gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27 }, // s, m, m, rad (110°), |z|
+  transOf: 3,                 // s de transição ofensiva depois da retomada
+};
+
+// ----------------------------------------------------------------------------- Parte 3: com bola
+// IA com a bola (plano 2.5 e 2.6; pesquisa §5 e §9). Ameaça esperada (xT) em PESQUISA-ETAPA3.md.
+export const IA_ATAQUE = {
+  apoio: { n: 2, dist: [8, 14], aneis: [9, 13], direcoes: 8, raioRef: 6, cone: 0.209, histerese: 1.3, compromisso: 0.75 },
+  corridas: { folga: 2, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 3, max: [1, 2] },
+  condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
+  riscoMentalidade: [0.8, 0.9, 1.0, 1.1, 1.25], // risco de passe aceito, por mentalidade (−2..+2)
+  cruzamento: { zLateral: 20.16, xTerco: 30 },
+  impedimentoFolga: 1,        // m — fora da corrida, a referência não passa da linha adversária − isto
+  corredores: [9.16, 20.16],  // |z| — centro, meio-espaço e corredor lateral
+};
+
+// -------------------------------------------------------------- Parte 4: humano na defesa e troca
+// Botões de defesa do humano (plano 2.8): CONTER, DIVIDIDA e PRESSÃO. CARRINHO fica na Etapa 4.
+export const DEFESA_HUMANO = {
+  conter: { dist: [1.5, 2.0] },  // m do condutor, entre a bola e o meu gol, de frente para ele
+  dividida: { alcance: 0.65, semToque: 0.15, longe: 1.5, semReacao: 0.75, chance: [0.35, 0.65] },
+};
+
+// Troca automática no jogo aéreo (plano 3.5; pesquisa §7: reavaliar no voo acerta ~97%).
+export const TROCA_AEREA = {
+  avaliaTicks: 6,             // reavalia a cada 0,1 s
+  confirma: 2,                // avaliações seguidas com o mesmo melhor antes de trocar (0,2 s)
+  folgaMin: 0.25,             // s de vantagem sobre o controlado
+  correcoesMax: 1,            // trocas depois da primeira, por bola
+  manualRecente: 0.5,         // s — TROCAR apertado há menos que isto: a escolha manual manda
+  analogicoSolto: 0.25,       // |e| ≤ isto: assistência leva o controlado ao ponto de queda
 };
