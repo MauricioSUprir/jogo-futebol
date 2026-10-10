@@ -50,6 +50,31 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - Defesa do humano: **CONTER** (segurar: acompanha o condutor entre a bola e o gol, de frente para ele),
   **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
+- Tela limpa (dono, 10/10): **sem narração** — os lances (passe, chute, defesa, lateral...) não viram texto;
+  na partida o topo é só placar, minimapa e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
+  de comando (menu, treino, edição do time) e o efeito do gol.
+- **Celular só deitado**: em pé (com toque) a tela "Gire o celular para jogar" cobre tudo e o jogo para;
+  onde dá (Android), o botão "Tela cheia deitada" trava a tela. Janela estreita no PC continua jogando.
+
+## Estádio — rede, gol, torcida e som (primeira versão; a Etapa 6 completa vem depois)
+
+- **Rede que balança**: a bola entra, a rede estufa no ponto da batida, passa do ponto, volta e a onda corre pelo pano
+  (~1,5 s), com a luz mudando na dobra; a bola desenhada vai junto no bojo e nunca fura a rede (nem nos cantos); batida
+  por fora (lateral, teto, fundo) afunda a rede para dentro.
+- **Efeito de gol**: na partida a transmissão CORTA para a câmera do gol (baixa, de lado: a rede estufando de perfil e a
+  torcida atrás do gol explodindo) até a saída de bola; "GOL!" grande no alto com o número e o nome de quem tocou por
+  último de verdade (desvio conta para quem chutou; "Gol contra" quando for) e o minuto, placar pulsando. No treino, zoom
+  e tremor curtos que acabam quando a bola volta. Sem tremor com "reduzir movimento". Não atrasa a saída de bola nem
+  atrapalha os controles. Intervalo e fim: plano geral do estádio.
+- **Torcida no estádio**: até 18 mil torcedores (Alta; 13 mil na Média do celular, 8 mil sem animação na Baixa — trocar a
+  qualidade não remonta nada), a casa (Golaço FC, preto e verde) é maioria, organizada pulando atrás de um gol, setor
+  visitante (Ventania FC, branco) atrás do outro, o mosaico "GOLAÇO" em camisas verdes; levantam no ataque, explodem no
+  gol, põem a mão na cabeça na chance perdida.
+- **Som** (gravações livres, créditos em `assets/sons/CREDITOS.md` e na Ajuda): murmúrio do estádio que sobe perto do gol, canto ao
+  fundo, explosão do gol (na hora), "uuuh", palmas, apitos (início, saída, intervalo, fim) e o chuá da rede. No gol do
+  visitante a casa cala e só o setor deles comemora. Liga no primeiro toque/tecla (regra dos navegadores; o apito do
+  início espera por ele). Menu → "Som da torcida": ligado/desligado e volume (salvos); desligado não liga o Web Audio nem
+  baixa os sons. Pesquisa: `PESQUISA-ESTADIO.md`.
 
 ## Etapa 2 — passe, chute, goleiro
 
@@ -102,8 +127,9 @@ Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?mi
 ## Testes
 
 ```bash
-node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo; --par N limita os processos): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, recepção, mergulho — o Actions roda antes do deploy
+node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, rede e torcida, recepção, mergulho — o Actions roda antes do deploy
 node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade)
+node golaco/tools/rodar-testes.mjs --par 2    # no máximo 2 testes ao mesmo tempo (também em hash-igual e hash-partida)
 node golaco/tools/teste-recepcao.mjs   # 1000 bolas no jogador do humano com o analógico já para o lado: domina, nunca se afasta, 1º toque ±20°
 node golaco/tools/teste-mergulho.mjs   # canhões de chutes no goleiro: mergulho desenhado, mão na bola, corpo ≤ 5,5 m/s, rebote, cavadinha, espalmada para fora (com atacantes na área), chute desviado
 node golaco/tools/medir-controle.mjs   # (minutos, informativo) controle de bola em jogo: domínio que escapa, perdas, bola–pé, 1º toque por atributo
@@ -115,7 +141,9 @@ node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, ha
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
-node golaco/tools/prints.mjs           # prints PC/celular (deitado e em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
+node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
+python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
+node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os

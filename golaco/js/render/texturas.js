@@ -197,6 +197,34 @@ export function texPlacas(aniso) {
 
 export const ARQ = { fileiras: 36, assentoLarg: 0.5, comprimento: 125 };
 
+let _mascara = null;
+/**
+ * Cadeiras do mosaico "GOLAÇO" do lado de lá: Uint8Array(nA × fileiras), 1 = cadeira do texto (fileira 0
+ * = a de cima). Calculada uma vez (o texto vem do canvas: depende da fonte do aparelho, a mesma para a
+ * textura das cadeiras e para a torcida).
+ */
+export function mascaraGolaco() {
+  if (_mascara) return _mascara;
+  const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg), nF = ARQ.fileiras;
+  const mk = criarCanvas(nA, nF);
+  const mg = mk.getContext('2d');
+  mg.fillStyle = '#000'; mg.fillRect(0, 0, nA, nF);
+  mg.fillStyle = '#fff';
+  mg.textAlign = 'center'; mg.textBaseline = 'middle';
+  mg.font = '900 13px system-ui, "Segoe UI", Roboto, Arial, sans-serif';
+  // largura do texto ~60 m (120 cadeiras), nas fileiras 1–11 (as que a câmera de TV vê)
+  const larg = mg.measureText('GOLAÇO').width;
+  mg.save();
+  mg.translate(nA / 2, nF - 6.2);
+  mg.scale(120 / larg, 1);
+  mg.fillText('GOLAÇO', 0, 0);
+  mg.restore();
+  const d = mg.getImageData(0, 0, nA, nF).data;
+  _mascara = new Uint8Array(nA * nF);
+  for (let i = 0; i < nA * nF; i++) _mascara[i] = d[i * 4] > 110 ? 1 : 0;
+  return _mascara;
+}
+
 /**
  * Cadeiras da arquibancada: fileiras (degrau, assento, encosto), corredores e o nome
  * GOLAÇO em cadeiras verdes no meio. A faixa de cima (v > 0,95) é a cor das paredes.
@@ -217,21 +245,8 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
   const hF = (H - topo) / nF;
   const nA = Math.round(ARQ.comprimento / ARQ.assentoLarg);
   const wA = W / nA;
-  // máscara do texto (uma célula por cadeira)
-  const mk = criarCanvas(nA, nF);
-  const mg = mk.getContext('2d');
-  mg.fillStyle = '#000'; mg.fillRect(0, 0, nA, nF);
-  mg.fillStyle = '#fff';
-  mg.textAlign = 'center'; mg.textBaseline = 'middle';
-  mg.font = '900 13px system-ui, "Segoe UI", Roboto, Arial, sans-serif';
-  // largura do texto ~60 m (120 cadeiras), nas fileiras 1–11 (as que a câmera de TV vê)
-  const larg = mg.measureText('GOLAÇO').width;
-  mg.save();
-  mg.translate(nA / 2, nF - 6.2);
-  mg.scale(120 / larg, 1);
-  if (comTexto) mg.fillText('GOLAÇO', 0, 0);
-  mg.restore();
-  const mascara = mg.getImageData(0, 0, nA, nF).data;
+  // máscara do texto (uma célula por cadeira); a torcida (torcida.js) põe camisas verdes nela
+  const mascara = comTexto ? mascaraGolaco() : null;
   const rnd = gerador(comTexto ? 5 : 9);
   for (let f = 0; f < nF; f++) {
     const y0 = topo + f * hF;
@@ -246,7 +261,7 @@ export function texArquibancada(aniso, comTexto = true, W = 2048) {
         g.fillRect(x0, y0, wA, hF);
         continue;
       }
-      const texto = mascara[(a + f * nA) * 4] > 110;
+      const texto = mascara ? mascara[a + f * nA] === 1 : false;
       if (texto) {
         // cadeiras do mosaico: bloco cheio (as letras ficam legíveis de longe)
         g.fillStyle = '#0d8447';

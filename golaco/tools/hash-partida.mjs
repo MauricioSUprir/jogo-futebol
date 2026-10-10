@@ -97,7 +97,9 @@ async function trabalhador() {
     try { res[`${t.cena} ${t.sem} ${t.lado}`] = await rodar(t.lado === 'repo' ? JS_REPO : JS_BASE, t.cena, t.sem); } catch (e2) { erro = e2; }
   }
 }
-await Promise.all(Array.from({ length: Math.max(2, os.cpus().length || 2) }, trabalhador));
+// --par N: no máximo N processos ao mesmo tempo (máquina dividida com outros processos)
+const iParN = process.argv.indexOf('--par');
+await Promise.all(Array.from({ length: iParN >= 0 ? Math.max(1, +process.argv[iParN + 1] || 1) : Math.max(2, os.cpus().length || 2) }, trabalhador));
 if (erro) { console.error(erro.message); process.exit(2); }
 console.log(`base: ${JS_BASE}\nrepositório: ${JS_REPO}\n${NSEM} sementes × 2 cenas, ${MIN} min por tempo, hash a cada ${CADA} passos`);
 let falhas = 0, total = 0;

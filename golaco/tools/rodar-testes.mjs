@@ -56,6 +56,9 @@ const LISTA = [
   ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],
   ['troca para quem disputa a bola alta ≥ 90% — canhão e assistência (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'canhao']],
   ['troca para quem disputa a bola alta ≥ 90% — jogo natural (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'natural']],
+  // Estádio: rede que balança, torcida e som (contas puras do desenho)
+  ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
+  ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');
@@ -75,8 +78,10 @@ function rodar(arq, args = []) {
 }
 
 const t0 = Date.now();
-const iPar = argv.indexOf('--par');
-const nPar = iPar >= 0 ? Math.max(1, +argv[iPar + 1]) : Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
+// --par N: no máximo N testes ao mesmo tempo (máquina dividida com outros processos)
+const iPar = process.argv.indexOf('--par');
+const parPedido = iPar >= 0 ? Math.max(1, Math.floor(+process.argv[iPar + 1] || 1)) : null;
+const nPar = parPedido ?? Math.max(2, Math.min(TESTES.length, os.cpus().length || 2));
 const res = new Array(TESTES.length);
 let prox = 0, impresso = 0;
 function imprimir() {

@@ -2,7 +2,9 @@
 
 Regra de ouro: **a lógica (`js/*.js` fora de `js/render/` e de `js/entrada.js`/`js/main.js`/`js/hud.js`/
 `js/editor-time.js`) não usa three.js nem DOM**. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
-semente (`js/rng.js`, estado em `mundo.rng`). `Math.random` é proibido na lógica.
+semente (`js/rng.js`, estado em `mundo.rng`). `Math.random` é proibido na lógica. Em `js/render/`, o som (`som.js`, Web
+Audio) é DOM; `rede-onda.js`, `emocao.js`, `torcida-dados.js` e `autor-gol.js` são puros (testados em Node), mas são do
+desenho: só leem o mundo, nunca escrevem nele.
 
 **Matemática determinística:** na lógica, seno, cosseno, atan2, exp, log, pow, asin, acos e hypot
 saem SEMPRE de `js/matdet.js` (`MD.sin(...)` etc.), nunca do `Math`. `Math.sin/cos/pow` mudam
@@ -164,9 +166,84 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 - Câmera de TV: `yaw = −π/2` fixo (a entrada usa `paraMundo(ax, ay, camera.yaw)`). Enquadramento
   pela LARGURA vista no foco (`CAMERA.largura`), não pelo fov: tela mais larga que 16:9 mantém a
   largura (jogador maior no celular deitado), 4:3 perde metade, em pé usa `CAMERA.retrato` (mais
-  alta e inclinada, sem céu) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
+  alta e inclinada, sem céu — hoje só na janela estreita do PC: no celular em pé o jogo para e mostra
+  "Gire o celular", main.js retratoBloqueado + #girar no CSS) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
   controle = direita na tela" (`teste-controles`, via `naTela`) e câmera sem tremor a 144 Hz
   (`teste-carga`).
+
+## Estádio — rede que balança, efeito de gol, torcida e som (contrato)
+Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo** (o hash não muda: `hash-igual` e
+`hash-partida` IGUAIS). Constantes nos próprios módulos (não em `config.js`).
+- **Puros (sem three.js nem DOM; testados em Node):** `js/render/rede-onda.js`, `js/render/emocao.js`,
+  `js/render/torcida-dados.js`. Aleatoriedade só por gerador próprio com semente fixa (`geradorTorcida`), nunca `m.rng`.
+- **`rede-onda.js`**: `REDE` (constantes), 8 panos (índice `(lado > 0 ? 4 : 0) + k`, k: 0 fundo, 1 teto, 2 lateral z−,
+  3 lateral z+; normal para FORA do gol: `normalPano(i)`), `fixo(i, x, y, z)` (0 na armação, 1 no meio — a malha grava
+  num atributo), `mola(τ)`, `perfil(r, τ)`, `amplitude(v)`, `criarOndas()` → `{imp[4], total}`, `limparOndas`,
+  `centroBolsa`, `registrarImpacto(est, {plano, x, y, z, vel, sinal}, t0)`, `deslocamento(est, plano, x, y, z, t)` (m ao
+  longo da normal, + = para fora; sem a fixação), `redeAtiva(est, t)`, `detectarImpactos(p0, v0, p1, v1, out)` → n (bola
+  antes/depois do passo), `empurraoBola(est, p, t, out)` (o deslocamento da bola DESENHADA no bojo), `uniformsRede(est, t,
+  a, b)` e `REDE_GLSL` (a mesma conta em GLSL, gerada das mesmas constantes: `redeDesloc`, `redeFixo`, `redeNormal`).
+  `detectarImpactos` só conta batida POR DENTRO no fundo e nas laterais com o centro da bola abaixo da barra (a bola em
+  cima do teto não estufa a rede). `empurraoBola` termina com a RESTRIÇÃO: na posição final, a superfície da bola
+  desenhada não passa de nenhum pano deformado em que a física encosta (3 passadas; sem furo nos cantos). O shader da
+  rede (`campo.js`) refaz a normal pela inclinação da bolsa (diferença finita a 10 cm).
+- **`emocao.js`**: `EMOCAO`, `criarEmocao()` → `{agito, torcida: [{excita, tensao, lamento, palmas}·2], disparos,
+  contagem}`, `emocaoEvento(est, ev, {t, timeDe, bola, ataca})` (os eventos de `m.eventos` e `{tipo: 'redeImpacto', vel}`),
+  `emocaoPasso(est, {t, bola, posseTime, ataca, estado}, dt)`, `consumirDisparos(est)` → `[{tipo: 'gol'|'uuuh'|'palmas'|
+  'apito'|'apitoIntervalo'|'apitoFim'|'rede'|'chute', grupo, forca}]`, `zerarEmocao`. Grupo 0 = torcida do time 0 (casa),
+  1 = do time 1. `agito` (o barulho geral) vai ao máximo só no gol da CASA (`EMOCAO.casa`); no gol do visitante cai para
+  `agitoGolSofrido` em `caiGolSofrido` s (a casa cala; só o setor visitante comemora).
+- **`autor-gol.js`**: `criarAutorGol()`, `zerarAutorGol`, `autorEventos(est, eventos, tick, timeDe)` (uma vez por passo,
+  na ordem dos eventos; preenche `est.gol = {ativo, tick, time, id, contra, desvio}` no passo do gol), `autorDoGol`,
+  `TOQUES`. O autor é o último toque de VERDADE (`toque` da condução, domínio, chute, passe, cabeceio, defesa, bateuCorpo,
+  roubada, dividida ganha); chute de quem marcou seguido só de desvio/defesa do adversário → gol de quem chutou. Sem alocar
+  por passo.
+- **`torcida-dados.js`**: `ARQUIBANCADA` (a geometria de `campo.js`), `TORCIDA` (ocupação e animação por qualidade,
+  `atlas` [64, 128], setores), `POSE`, `NIVEIS`, `cadeiras()`, `gerarTorcidaNiveis(mascara)` → `{n, pos (x, y, z, escala),
+  camisa, pele (rgb + semente), cabelo, info (time, setor, organizada, semente2), nivel (0 Baixa, 1 Média, 2 Alta),
+  faixas[setor] = {inicio, porNivel[3]}}` (TODOS os torcedores de uma vez; as qualidades são prefixos em cada
+  arquibancada; ordem: setor, nível, fileira da frente para cima), `quantosNoSetor(d, setor, qualidade)`,
+  `gerarTorcida(qualidade, mascara)` (os de nível ≤ o da qualidade, o mesmo formato sem `nivel`), `atlasTorcida(cw, ch)`
+  (RGBA: pesos de camisa/pele/cabelo × cobertura; acento = o resto), `POSE_REGRA` (limiares e ritmos),
+  `poseDoTorcedor(niveis, h, h2, org, t, animada)` e `POSE_GLSL` (`vec2 torcidaPose(...)` → (pose, pulo): a MESMA regra,
+  gerada de `POSE_REGRA`), `CAIXA_POSE` (largura e altura de cada pose em fração da célula: o quadro encolhe para a pose).
+- **Com three.js/DOM:** `torcida.js` (`criarTorcida(cena, {qualidade, mascara, hora})` → `{mesh, n, atualizar(t, emocao,
+  camera), definirHora, definirQualidade, dispose}`: um `Group` com 3 malhas instanciadas — uma por arquibancada, mesmo
+  material e atlas, ≤ 3 chamadas — com corte por CAIXA contra o frustum da câmera em `atualizar`; monta TODOS os torcedores
+  uma vez e `definirQualidade` só muda `instanceCount` e o uniform `uAnimada` — nada remonta nem recompila), `campo.js` (a
+  rede é uma malha subdividida com `aPlano`/`aFixo` e `onBeforeCompile`; `campo.rede = {a, b, mesh}` = os uniforms das
+  batidas), `texturas.js mascaraGolaco()` (cadeiras do mosaico, a mesma para a textura e para a torcida), `camera.js`
+  (`efeitoGol(x, z, {fechado})`: com `fechado` (partida) CORTA para a câmera do gol `CAMERA_GOL` até `encerrarGol()`; sem
+  ele (treino) zoom/tremor leve `EFEITO_GOL`; `encerrarGol()`, `efeitoAtivo`, `planoGol` ('fechado' | 'leve' | null),
+  `planoGeral(v)` / `geral` (intervalo e fim: `CAMERA_GERAL`); `foco()` acompanha a boca do gol na câmera do gol),
+  **`som.js` (Web Audio, DOM)**: `criarSom({base, ligado, volume, aoMudar})` → `{iniciar(), atualizar(emocao, pausado, t),
+  tocar(disparo), definir({ligado, volume}), estado ('sem-audio' | 'desligado' | 'sem-contexto' | 'suspenso' |
+  'rodando'), info ({…, contexto, baixando, pendente}), tocados, baixar(), analisar(nome) (envelope de uma gravação)}`. O
+  AudioContext só nasce no primeiro gesto e só com o som LIGADO; desligado, nada baixa e o contexto existente é
+  suspenso. Os arquivos baixam depois da página abrir (`SOM.atrasoCarga` ou o primeiro gesto). O apito que chega antes do
+  som liberado fica pendente até `SOM.apitoPendente` ms.
+- **`main.js`**: a cada passo (`rodarPasso` → `estadioPasso`, só lendo o mundo) acompanha o autor (`autorEventos`),
+  procura batidas na rede com a bola antes/depois do passo, alimenta o ânimo com os eventos e toca os disparos; no
+  desenho: bola desenhada = física + `empurraoBola`, uniforms da rede, torcida e som. Relógio do estádio: `passosTotais`
+  (não volta a zero ao trocar de mundo; parado na pausa). Os eventos que o mundo já traz ANTES do 1º passo (o `saida` do
+  começo da partida) passam pelo ânimo e pelo som em `eventosIniciais()` (no início e em `trocarMundo`). Gol:
+  `hud.evento(ev)` (só "GOL!": sem autor nem minuto escritos — sem narração na tela, dono 10/10) + `cam.efeitoGol(x, z, {fechado:
+  partida})`; `saida`/`recomeco` encerram o "GOL!" e a câmera do gol (`encerrarEfeitosGol`) e o plano geral; `intervalo`
+  e `fimDeJogo` ligam o plano geral. Menu: comandos `som` (`'ligado'|'desligado'`) e `volume` (0–1), salvos em
+  `golaco.prefs.v1` (`som`, `volume`).
+- **`hud.js`**: `evento({tipo: 'gol'}, {fixo})` (`fixo`: o aviso fica na tela — sem o tempo e sem o apagar da
+  animação, classe `fixo`), `esconderGol()`. O "GOL!" fica no terço de cima (por cima da torcida, longe da boca do gol na
+  câmera do gol); no celular, compacto entre o analógico e os botões.
+- **API (`window.__golaco`)**: `estadio {torcida, rede, deslocamentoRede(plano, x, y, z), emocao, som, redeOnda(v) (só o
+  desenho: o mesmo instante com/sem a onda), mostrarTorcida(v), trocarTorcida(q) (ms da troca de qualidade só da
+  torcida), bolaDesenhada, efeitoCamera, planoCamera ('fechado' | 'leve' | 'geral' | 'jogo'), autorGol, ultimoToque,
+  baixarSons(), analisarSom(nome)}`, `definirSom(v)`, `definirVolume(v)`, `mostrarEvento(ev, {fixo})` (o "GOL!";
+  `fixo` segura na tela — prints). `autorGol` (o autor de verdade, `render/autor-gol.js`) não aparece na tela.
+- **Testes**: `tools/teste-rede.mjs` e `tools/teste-torcida.mjs` (Node, grupo padrão), `tools/teste-estadio.mjs`
+  (navegador, no CI). O gol do teste de navegador é ROTEIRIZADO (`tools/lib/gol-roteirizado.mjs`: um jogador do time com a
+  bola e o último toque, os adversários do corredor e o goleiro tirados do caminho e o chute com a física da bola — não
+  depende da IA nem do goleiro de nenhuma frente); os prints do gol usam um gol de VERDADE achado em Node
+  (`tools/lib/acha-gol.mjs acharGol`: a 1ª semente com gol e batida na rede).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
