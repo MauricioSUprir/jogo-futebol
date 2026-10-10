@@ -17,7 +17,7 @@
 
 import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
-import { passoCorpo, infoPassada, faseLocal, copiaCinematica, velocidadeDesejada } from './jogador.js';
+import { passoCorpo, freqPassada, cargaPassada, faseLocal, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
 import { normal } from './rng.js';
 import { MD } from './matdet.js';
@@ -29,7 +29,8 @@ const BUSCA_PEDIDO_MAX = 1.75;       // rad (~100°) — indo buscar a bola, ped
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null };
+  // bolaDesviada (sim.js) declarado já (undefined, como antes da 1ª escrita): todos os cond com a mesma forma
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */
@@ -77,9 +78,10 @@ function andarProtegendo(ix, iz, imag, vel, ux, uz) {
 
 /**
  * Movimento pedido sem considerar a bola (o que o analógico manda). Usado pela simulação e
- * pela previsão. ctx: {marcador:{x,z}} quando protegendo.
+ * pela previsão. ctx: {marcador:{x,z}} quando protegendo. out (opcional): objeto reaproveitado em
+ * que a resposta {dx, dz, vel, rumoAlvo} é escrita (a previsão do corpo usa um só); sem ele, um novo.
  */
-export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) {
+export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx, out) {
   const correr = (botoes & BOTAO.CORRER) !== 0;
   const mod = (botoes & BOTAO.MOD) !== 0;
   let vel = velocidadeDesejada(j.par, imag, correr, mod, comBola);
@@ -109,13 +111,20 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
       const vg = Math.min(giroProtecao(j) * r, d * 8);
       const vx = (d > 1e-6 ? dx / d : 0) * vg + wx * vAnda, vz = (d > 1e-6 ? dz / d : 0) * vg + wz * vAnda;
       const v = Math.min(MD.hypot(vx, vz), CONDUCAO.vProtecao * 2.4);
-      return { dx: v > 1e-6 ? vx / v : ix, dz: v > 1e-6 ? vz / v : iz, vel: v, rumoAlvo: MD.atan2(-uz, -ux) };
+      return mvEm(out, v > 1e-6 ? vx / v : ix, v > 1e-6 ? vz / v : iz, v, MD.atan2(-uz, -ux));
     }
     vel = Math.min(vel, CONDUCAO.vProtecao);
     rumoAlvo = MD.atan2(ctx.corpoZ - ctx.marcador.z, ctx.corpoX - ctx.marcador.x);
   }
   if (ctx && ctx.pedalada) vel = Math.min(vel, 1.0);
-  return { dx: ix, dz: iz, vel, rumoAlvo };
+  return mvEm(out, ix, iz, vel, rumoAlvo);
+}
+
+/** Pedido de movimento {dx, dz, vel, rumoAlvo}: escrito em `out` ou num objeto novo. */
+function mvEm(out, dx, dz, vel, rumoAlvo) {
+  if (!out) return { dx, dz, vel, rumoAlvo };
+  out.dx = dx; out.dz = dz; out.vel = vel; out.rumoAlvo = rumoAlvo;
+  return out;
 }
 
 /**
@@ -123,14 +132,15 @@ export function movimentoBase(j, ix, iz, imag, botoes, comBola, rumoAtual, ctx) 
  * protetor) com a velocidade angular atual — sem extrapolar a aproximação em linha reta,
  * que "atravessaria" o protetor e inverteria o lado da bola.
  */
-export function marcadorPrevisto(o, cx, cz, t) {
+export function marcadorPrevisto(o, cx, cz, t, out = { x: 0, z: 0 }) {
   const rx = o.x - cx, rz = o.z - cz;
   const r2 = rx * rx + rz * rz;
-  if (r2 < 1e-6) return { x: o.x, z: o.z };
+  if (r2 < 1e-6) { out.x = o.x; out.z = o.z; return out; }
   const w = (rx * o.vz - rz * o.vx) / r2;
   const a = MD.atan2(rz, rx) + clamp(w * t, -1.2, 1.2);
   const r = Math.sqrt(r2);
-  return { x: cx + MD.cos(a) * r, z: cz + MD.sin(a) * r };
+  out.x = cx + MD.cos(a) * r; out.z = cz + MD.sin(a) * r;
+  return out;
 }
 
 /** Rumo pedido extrapolado t segundos à frente (o giro do analógico continua, amortecido). */
@@ -141,20 +151,45 @@ export function rumoExtrapolado(intRumo, intW, t) {
   return intRumo + ang;
 }
 
+// Previsão do corpo sem alocar (Etapa 3, plano 4.3): dois jogos de vetores que se revezam (a resposta
+// vale até a SEGUNDA chamada seguinte — nenhum chamador guarda a previsão: todos a leem na própria
+// função), o estado cinemático de trabalho, o contexto da proteção e o pedido de movimento, todos
+// reaproveitados. Os vetores crescem quando um horizonte maior é pedido (as posições além de n
+// sobram da conta anterior: quem lê usa só 0..n).
+const _pcs = [0, 1].map(() => ({ n: 0, cap: 0, xs: null, zs: null, rs: null, ss: null, fs: null }));
+let _pcVez = 0;
+// mesma forma do objeto de copiaCinematica (jogador.js): o passoCorpo vê sempre a mesma classe
+const _kc = { x: 0, z: 0, vx: 0, vz: 0, rumo: 0, giro: 0, ax: 0, az: 0, inv: false, fase: 0 };
+const _ctx = { marcador: null, corpoX: 0, corpoZ: 0, pedalada: false, bola: null };
+const _ctxBola = { x: 0, z: 0 }, _ctxMarc = { x: 0, z: 0 };
+const _mvPrev = { dx: 0, dz: 0, vel: 0, rumoAlvo: 0 };
+
 /**
- * Previsão do corpo n ticks à frente com o analógico extrapolado. Devolve arrays planos.
- * Não muda j. rec (opcional) = bola prevista {xs, zs}: aplica a mesma regra de
- * movimentoRecepcao de frente (freia e vira para a bola), para o domínio marcado com esta
- * previsão acontecer de verdade.
+ * Previsão do corpo n ticks à frente com o analógico extrapolado. Devolve arrays planos
+ * {n, xs, zs, rs, ss, fs}, SÓ DE LEITURA e REAPROVEITADOS (valem até a segunda chamada seguinte de
+ * preverCorpo; os vetores podem ter mais de n + 1 posições). Não muda j. rec (opcional) = bola
+ * prevista {xs, zs}: aplica a mesma regra de movimentoRecepcao de frente (freia e vira para a bola),
+ * para o domínio marcado com esta previsão acontecer de verdade.
  */
 export function preverCorpo(m, j, n, comBola, prot, rec) {
-  const k = copiaCinematica(j);
-  const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), rs = new Float64Array(n + 1);
-  const ss = new Float64Array(n + 1), fs = new Float64Array(n + 1);
+  const res = _pcs[_pcVez];
+  _pcVez ^= 1;
+  if (res.cap < n + 1) {
+    const cap = Math.max(n + 1, 128);
+    res.cap = cap;
+    res.xs = new Float64Array(cap); res.zs = new Float64Array(cap); res.rs = new Float64Array(cap);
+    res.ss = new Float64Array(cap); res.fs = new Float64Array(cap);
+  }
+  res.n = n;
+  const { xs, zs, rs, ss, fs } = res;
+  const k = _kc;
+  k.x = j.x; k.z = j.z; k.vx = j.vx; k.vz = j.vz; k.rumo = j.rumo; k.giro = j.giro;
+  k.ax = j.ax; k.az = j.az; k.inv = j.inv; k.fase = j.fase;
   xs[0] = k.x; zs[0] = k.z; rs[0] = k.rumo; ss[0] = MD.hypot(k.vx, k.vz); fs[0] = k.fase;
   const mov = j.imag > MAG_DIR;
   const ped = !!(j.cond && j.cond.pedalada);
-  const ctx = { marcador: null, corpoX: 0, corpoZ: 0, pedalada: ped };
+  const ctx = _ctx;
+  ctx.marcador = null; ctx.corpoX = 0; ctx.corpoZ = 0; ctx.pedalada = ped; ctx.bola = null;
   // corte pendente: o corpo segura o rumo até o toque (só nos primeiros ticks)
   const reto = j.cond ? ticksCorteRestantes(j.cond, m.tick) : 0;
   const pbProt = prot ? preverBola(m.bola, n) : null;
@@ -169,11 +204,12 @@ export function preverCorpo(m, j, n, comBola, prot, rec) {
     }
     if (prot) {
       const tp = Math.min(t, 0.5);
-      ctx.marcador = marcadorPrevisto(prot, j.x, j.z, tp);
+      ctx.marcador = marcadorPrevisto(prot, j.x, j.z, tp, _ctxMarc);
       ctx.corpoX = k.x; ctx.corpoZ = k.z;
-      ctx.bola = { x: pbProt.xs[i - 1], z: pbProt.zs[i - 1] };
+      _ctxBola.x = pbProt.xs[i - 1]; _ctxBola.z = pbProt.zs[i - 1];
+      ctx.bola = _ctxBola;
     } else ctx.marcador = null;
-    const mv = movimentoBase(j, ix, iz, j.imag, j.botoes, comBola, k.rumo, ctx);
+    const mv = movimentoBase(j, ix, iz, j.imag, j.botoes, comBola, k.rumo, ctx, _mvPrev);
     if (i <= reto && s0 > 1) {
       const rc = rumosCorte(j.cond.corteRumo ?? rv0, MD.atan2(iz, ix), mv.rumoAlvo);
       mv.dx = MD.cos(rc.dir); mv.dz = MD.sin(rc.dir); mv.vel = Math.min(mv.vel, s0); mv.rumoAlvo = rc.tronco;
@@ -182,29 +218,80 @@ export function preverCorpo(m, j, n, comBola, prot, rec) {
     passoCorpo(k, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, DT, comBola);
     const s = MD.hypot(k.vx, k.vz);
     const ativa = s > 0.22 || Math.abs(k.giro) > 1.6;
-    if (ativa) k.fase += infoPassada(s, comBola).f * DT;
+    if (ativa) k.fase += freqPassada(s, comBola) * DT;
     xs[i] = k.x; zs[i] = k.z; rs[i] = k.rumo; ss[i] = s; fs[i] = k.fase;
   }
-  return { n, xs, zs, rs, ss, fs };
+  return res;
 }
 
-/** Bola prevista n ticks à frente (física pura). */
+// A última bola prevista (Etapa 3, plano 4.3: a previsão da bola é compartilhada no passo e não aloca).
+// Dois jogos de vetores que se revezam a cada bola nova (uma resposta antiga continua valendo até a
+// SEGUNDA bola nova seguinte; nenhum chamador a guarda tanto), e a bola de trabalho, que fica no último
+// tick previsto: a MESMA bola pedida com um horizonte maior continua a conta de onde parou (passoBola é
+// função pura do estado, então as posições já calculadas são as mesmas, bit a bit).
+const _pbs = [0, 1].map(() => ({ cap: 0, res: { xs: null, zs: null, ys: null, rol: null } }));
+let _pbVez = 0;
+const _bolaTrab = copiarBola({ p: { x: 0, y: 0, z: 0 }, v: { x: 0, y: 0, z: 0 }, w: { x: 0, y: 0, z: 0 }, q: { x: 0, y: 0, z: 0, w: 1 }, rolando: true });
+const _prevBola = { n: -1, rol: false, px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0, wx: 0, wy: 0, wz: 0, res: null, buf: null };
+const CAP_BOLA = 256; // o maior horizonte pedido hoje é 240 (ia.js, enfiada)
+
+/** Garante capacidade para n + 1 posições (crescendo, copia o que já foi calculado até `ate`). */
+function capBola(buf, n, ate) {
+  if (buf.cap >= n + 1) return;
+  const cap = Math.max(n + 1, CAP_BOLA), r = buf.res;
+  const xs = new Float64Array(cap), zs = new Float64Array(cap), ys = new Float64Array(cap), rol = new Uint8Array(cap);
+  if (ate >= 0 && r.xs) { xs.set(r.xs.subarray(0, ate + 1)); zs.set(r.zs.subarray(0, ate + 1)); ys.set(r.ys.subarray(0, ate + 1)); rol.set(r.rol.subarray(0, ate + 1)); }
+  r.xs = xs; r.zs = zs; r.ys = ys; r.rol = rol;
+  buf.cap = cap;
+}
+
+/**
+ * Bola prevista n ticks à frente (física pura): {xs, zs, ys, rol} (rol[i] = 1 se ela rola no tick i).
+ * Os arrays devolvidos são SÓ DE LEITURA, REAPROVEITADOS (valem até a segunda bola nova prevista
+ * depois desta) e podem ter mais de n + 1 posições: a mesma bola prevista de novo — a bola livre testa o
+ * domínio de cada candidato no mesmo passo, a IA, a condução e a bola alta (acoes.js bolaAltaPassando)
+ * também preveem — sai da memória. A chave é o estado que a física lê (posição, velocidade, giro e se
+ * rola; a orientação é só do desenho), então a resposta é a mesma conta, bit a bit
+ * (tools/hash-igual.mjs); nenhum chamador escreve nos arrays nem os guarda.
+ */
 export function preverBola(b, n) {
-  const c = copiarBola(b);
-  const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), ys = new Float64Array(n + 1);
-  xs[0] = c.p.x; zs[0] = c.p.z; ys[0] = c.p.y;
-  for (let i = 1; i <= n; i++) {
-    passoBola(c, null);
-    xs[i] = c.p.x; zs[i] = c.p.z; ys[i] = c.p.y;
+  const k = _prevBola;
+  const p = b.p, v = b.v, w = b.w;
+  // Object.is: −0 e +0 são estados diferentes para a conta (atan2 etc.)
+  const ig = Object.is;
+  const c = _bolaTrab;
+  let i0;
+  if (k.res && k.rol === b.rolando && ig(k.px, p.x) && ig(k.py, p.y) && ig(k.pz, p.z) && ig(k.vx, v.x) && ig(k.vy, v.y)
+    && ig(k.vz, v.z) && ig(k.wx, w.x) && ig(k.wy, w.y) && ig(k.wz, w.z)) {
+    if (k.n >= n) return k.res;
+    // a mesma bola com um horizonte maior: continua do último tick previsto
+    capBola(k.buf, n, k.n);
+    i0 = k.n + 1;
+  } else {
+    const buf = _pbs[_pbVez];
+    _pbVez ^= 1;
+    capBola(buf, n, -1);
+    c.p.x = p.x; c.p.y = p.y; c.p.z = p.z; c.v.x = v.x; c.v.y = v.y; c.v.z = v.z;
+    c.w.x = w.x; c.w.y = w.y; c.w.z = w.z; // (a orientação q é só do desenho: a física não a lê)
+    c.rolando = b.rolando;
+    const r = buf.res;
+    r.xs[0] = c.p.x; r.zs[0] = c.p.z; r.ys[0] = c.p.y; r.rol[0] = c.rolando ? 1 : 0;
+    k.rol = b.rolando; k.px = p.x; k.py = p.y; k.pz = p.z; k.vx = v.x; k.vy = v.y; k.vz = v.z;
+    k.wx = w.x; k.wy = w.y; k.wz = w.z; k.res = r; k.buf = buf;
+    i0 = 1;
   }
-  return { xs, zs, ys };
+  const { xs, zs, ys, rol } = k.res;
+  for (let i = i0; i <= n; i++) {
+    passoBola(c, null);
+    xs[i] = c.p.x; zs[i] = c.p.z; ys[i] = c.p.y; rol[i] = c.rolando ? 1 : 0;
+  }
+  k.n = n;
+  return k.res;
 }
 
-/** Situação dos pés pela fase (para previsão): devolve [apoio0, apoio1]. */
-function apoioPrevisto(fase, s, comBola) {
-  const { carga } = infoPassada(s, comBola);
-  const st = 2 * carga;
-  return [faseLocal(fase, 0) < st, faseLocal(fase, 1) < st];
+/** Situação dos pés pela fase (para previsão): o pé p está no chão? (sem alocar) */
+function apoioPrevisto(fase, s, p) {
+  return faseLocal(fase, p) < 2 * cargaPassada(s);
 }
 
 /** A bola (bx,bz) está no alcance de um pé do corpo (x,z,rumo)? */
@@ -230,10 +317,10 @@ export function procurarOportunidade(m, j, lead, max, comBola, prot, relaxado, r
   const pc = preverCorpo(m, j, max, comBola, prot, recFrente ? pb : null);
   for (let i = Math.max(1, lead); i <= max; i++) {
     if (!noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i], pb.ys[i], relaxado)) continue;
-    const ap = apoioPrevisto(pc.fs[i], pc.ss[i], comBola);
+    const ap0 = apoioPrevisto(pc.fs[i], pc.ss[i], 0), ap1 = apoioPrevisto(pc.fs[i], pc.ss[i], 1);
     let pe = -1;
-    if (ap[0] !== ap[1]) pe = ap[0] ? 1 : 0;
-    else if (ap[0] && ap[1]) {
+    if (ap0 !== ap1) pe = ap0 ? 1 : 0;
+    else if (ap0 && ap1) {
       // os dois no chão: na condução, o pé que a passada tira do chão primeiro (o de trás);
       // no domínio, o do lado da bola
       pe = relaxado ? ladoDaBola(pc.xs[i], pc.zs[i], pc.rs[i], pb.xs[i], pb.zs[i]) : (faseLocal(pc.fs[i], 1) > faseLocal(pc.fs[i], 0) ? 1 : 0);
@@ -286,7 +373,7 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
     if (v) { iN = v.i; proxPe = v.pe; }
   } else {
     for (let i = minI; i <= H; i++) {
-      const { carga } = infoPassada(pc.ss[i], true);
+      const carga = cargaPassada(pc.ss[i]);
       const alvoFase = nApoio + passos + CONDUCAO.faseToque * 2 * carga;
       if (pc.fs[i] >= alvoFase) { iN = i; break; }
     }
@@ -372,9 +459,9 @@ function planejarAlvo(m, j, pe, passos, pc, prot, curta, forcarI, dominio) {
 /** Pé que pode tocar no tick i da previsão (um no ar e o outro no chão; os dois no chão: o
  * que a passada tira primeiro) ou -1 (fase de voo). */
 function peLivrePrevisto(pc, i) {
-  const ap = apoioPrevisto(pc.fs[i], pc.ss[i], true);
-  if (ap[0] !== ap[1]) return ap[0] ? 1 : 0;
-  if (ap[0] && ap[1]) return faseLocal(pc.fs[i], 1) > faseLocal(pc.fs[i], 0) ? 1 : 0;
+  const ap0 = apoioPrevisto(pc.fs[i], pc.ss[i], 0), ap1 = apoioPrevisto(pc.fs[i], pc.ss[i], 1);
+  if (ap0 !== ap1) return ap0 ? 1 : 0;
+  if (ap0 && ap1) return faseLocal(pc.fs[i], 1) > faseLocal(pc.fs[i], 0) ? 1 : 0;
   return -1;
 }
 
@@ -390,6 +477,41 @@ function tickComPeLivre(pc, i0, iMin, iMax, antes) {
   return null;
 }
 
+// O toque (executarToque) pede a MESMA velocidade de saída (velParaDistancia: busca binária com ~35
+// rolagens inteiras da bola) e a mesma rolagem até 4 vezes por plano — semUltrapassar, desvioDoArco, de
+// novo e a velocidade do toque. Memória das últimas respostas (Etapa 3, plano 4.3: o passo do toque era
+// o pico do p95): as mesmas contas, na mesma ordem, bit a bit.
+const _vdD = new Float64Array(4), _vdN = new Float64Array(4), _vdV = new Float64Array(4);
+let _vdUsados = 0, _vdProx = 0;
+/** velParaDistancia(d, n) com memória das 4 últimas (d, n). */
+function velDist(d, n) {
+  for (let i = 0; i < _vdUsados; i++) if (Object.is(_vdD[i], d) && _vdN[i] === n) return _vdV[i];
+  const v = velParaDistancia(d, n);
+  _vdD[_vdProx] = d; _vdN[_vdProx] = n; _vdV[_vdProx] = v;
+  _vdProx = (_vdProx + 1) & 3;
+  if (_vdUsados < 4) _vdUsados++;
+  return v;
+}
+// distância rolada até o fim de cada tick saindo a v0 (subpasso a subpasso, como a física): guardada
+// para a última v0 e estendida quando um horizonte maior é pedido
+const _rol = { v0: NaN, n: 0, s: 0, d: 0, ds: new Float64Array(128) };
+/** d[i] = distância rolada no fim do tick i (1..n) saindo a v0. Vetor reaproveitado, só de leitura. */
+function rolagem(v0, n) {
+  const r = _rol;
+  if (!Object.is(r.v0, v0)) { r.v0 = v0; r.n = 0; r.s = v0; r.d = 0; }
+  if (r.n < n) {
+    if (r.ds.length < n + 1) { const ds = new Float64Array(Math.max(n + 1, 2 * r.ds.length)); ds.set(r.ds); r.ds = ds; }
+    let s = r.s, d = r.d;
+    const ds = r.ds;
+    for (let i = r.n + 1; i <= n; i++) {
+      for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+      ds[i] = d;
+    }
+    r.s = s; r.d = d; r.n = n;
+  }
+  return r.ds;
+}
+
 /**
  * A bola, tocada na linha (ux, uz) para rolar sProj até o tick iN, entra no alcance do pé do
  * corpo previsto (pc) em algum tick depois do intervalo mínimo e em até CORTE_ALCANCE_T?
@@ -397,11 +519,11 @@ function tickComPeLivre(pc, i0, iMin, iMax, antes) {
 function linhaAlcancavel(b, linha, iN, pc) {
   const { ux, uz, sProj } = linha;
   const minI = Math.ceil(CONDUCAO.intervaloMin / DT);
-  let s = velParaDistancia(sProj, iN), d = 0;
   const nMax = Math.min(pc.n, Math.round(CORTE_ALCANCE_T / DT));
+  const ds = rolagem(velDist(sProj, iN), nMax);
   for (let i = 1; i <= nMax; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
     if (i < minI) continue;
+    const d = ds[i];
     if (noAlcance(pc.xs[i], pc.zs[i], pc.rs[i], b.p.x + ux * d, b.p.z + uz * d, 0.11)) return true;
   }
   return false;
@@ -415,11 +537,10 @@ function semUltrapassar(b, plano, pc) {
   const { iN, dist } = plano;
   if (dist < 0.05) return true;
   const ux = plano.dx / dist, uz = plano.dz / dist;
-  const v0 = velParaDistancia(dist, iN);
-  let s = v0, d = 0;
+  const ds = rolagem(velDist(dist, iN), iN - 1);
   plano.folgaMax = 0;
   for (let i = 1; i < iN; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    const d = ds[i];
     const bx = b.p.x + ux * d, bz = b.p.z + uz * d;
     const ex = bx - pc.xs[i], ez = bz - pc.zs[i];
     const fr = ex * MD.cos(pc.rs[i]) + ez * MD.sin(pc.rs[i]);
@@ -437,9 +558,10 @@ function desvioDoArco(b, plano, pc) {
   const { iN, dist } = plano;
   if (dist < 0.05) return 0;
   const ux = plano.dx / dist, uz = plano.dz / dist;
-  let s = velParaDistancia(dist, iN), d = 0, dm = 0;
+  const ds = rolagem(velDist(dist, iN), iN - 1);
+  let dm = 0;
   for (let i = 1; i < iN; i++) {
-    for (let k = 0; k < SUBPASSOS_BOLA; k++) { s = proxVelRolando(s, DT_BOLA); d += s * DT_BOLA; }
+    const d = ds[i];
     const ex = b.p.x + ux * d - pc.xs[i], ez = b.p.z + uz * d - pc.zs[i];
     const la = Math.abs(-ex * MD.sin(pc.rs[i]) + ez * MD.cos(pc.rs[i]));
     if (la > dm) dm = la;
@@ -506,8 +628,8 @@ export function executarToque(m, j, pe, tipo) {
   // protegendo parado, a bola é rolada de leve com a sola e para no ponto (não foge do corpo);
   // andando, chega ao ponto no próximo toque, no passo de proteção (sem disparar)
   let vBase;
-  if (!prot) vBase = velParaDistancia(dist, iN);
-  else if (j.imag > MAG_DIR) vBase = Math.min(velParaDistancia(dist, iN), CONDUCAO.vProtecao * 1.6);
+  if (!prot) vBase = velDist(dist, iN);
+  else if (j.imag > MAG_DIR) vBase = Math.min(velDist(dist, iN), CONDUCAO.vProtecao * 1.6);
   else vBase = velParaParar(dist);
   let v0 = vBase * Math.max(0.5, 1 + ev);
   v0 = Math.min(v0, 14);
@@ -844,6 +966,32 @@ function oportunidadeCorrida(m, j, max) {
 }
 
 /**
+ * Poda EXATA da recepção (Etapa 3, plano 4.3): a bola livre testa o domínio de cada candidato a cada
+ * passo, e cada teste prevê o corpo por 36–45 ticks. Se em nenhum tick da previsão a bola (no chão)
+ * fica a menos de (alcance do toque + o que o corpo pode andar até lá) do corpo de AGORA, não há
+ * domínio — o mesmo "não" que a previsão daria, sem fazê-la. O corpo anda no máximo
+ * Σ|v_i|·dt ≤ n·|v0|·dt + aMax·dt²·n(n+1)/2 (velocidade ≤ |v0| + aMax·t, aMax = a maior aceleração que
+ * passoCorpo aplica: arrancada, freada, inversão com a correção de lado, curva). O toque alcança a bola
+ * a CONDUCAO.alcance do corpo (de frente) ou a REC_ALCANCE + o desvio do caminho (em corrida, ≤ 3·t²).
+ * Folga de 0,3 m sobre os dois limites. corrida = o modo da recepção.
+ */
+function semDominioPossivel(m, j, max, corrida) {
+  const pb = preverBola(m.bola, max);
+  const par = j.par;
+  const aFrente = Math.max(par.acel0, par.freio), aLado = Math.max(par.latNormal, par.latCorte);
+  const aMax = Math.max(aFrente, par.freioGiro + par.latCorte, Math.sqrt(aFrente * aFrente + aLado * aLado));
+  const s0 = MD.hypot(j.vx, j.vz);
+  for (let i = 1; i <= max; i++) {
+    if (pb.ys[i] > 0.45) continue; // alta: nenhum dos dois modos toca (noAlcance e oportunidadeCorrida pulam)
+    const t = i * DT;
+    const anda = s0 * t + aMax * DT * DT * i * (i + 1) / 2;
+    const toque = corrida ? REC_ALCANCE + 0.5 * REC_ACEL_LAT * t * t : CONDUCAO.alcance;
+    if (MD.hypot(pb.xs[i] - j.x, pb.zs[i] - j.z) <= anda + toque + 0.3) return false;
+  }
+  return true;
+}
+
+/**
  * Jogador sem a posse e bola livre: procura o primeiro toque (domínio). Devolve true se
  * marcou um domínio. primeira (opcional, Etapa 2): com uma ação pedida, bate de primeira.
  */
@@ -880,6 +1028,7 @@ export function tentarDominio(m, j, primeira) {
   const s = MD.hypot(j.vx, j.vz);
   if (d > 1.0 + (vb + s) * 0.8) return false;
   const modo = modoRecepcao(j, b);
+  if (semDominioPossivel(m, j, modo === 'corrida' ? 45 : 36, modo === 'corrida')) return false;
   const op = modo === 'corrida' ? oportunidadeCorrida(m, j, 45) : procurarOportunidade(m, j, 1, 36, false, null, true, true);
   if (!op) return false;
   c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio', modo, desde: m.tick, qx: op.qx, qz: op.qz };
@@ -965,11 +1114,22 @@ export function saidaParaToque(m, j) {
  * Ponto em que o pé encosta na bola em (bx, bz): atrás dela, na direção do corpo até ela. Com a
  * bola perto do corpo o recuo diminui aos poucos (sem o ponto girar em volta do jogador).
  */
-export function pontoContato(j, bx, bz) {
+export function pontoContato(j, bx, bz, out = { x: 0, z: 0 }) {
   const dx = bx - j.x, dz = bz - j.z;
   const k = GESTO.recuo / Math.max(MD.hypot(dx, dz), GESTO.recuoPerto);
-  return { x: bx - dx * k, z: bz - dz * k };
+  out.x = bx - dx * k; out.z = bz - dz * k;
+  return out;
 }
+
+/** s até o pé p pousar (no chão: Infinity), com a frequência de passos f. */
+function tempoAtePouso(j, p, f) {
+  return j.pes[p].apoio ? Infinity : (j.pes[p].fasePouso - j.fase) / f;
+}
+/** O pé p fica no ar até o toque (daqui a `falta` s)? */
+function ficaNoAr(j, p, f, falta) {
+  return !j.pes[p].apoio && tempoAtePouso(j, p, f) >= falta - DT;
+}
+const _naBola = { x: 0, z: 0 }, _noToque = { x: 0, z: 0 };
 
 /**
  * Gesto do toque (só visual). Para cada pé: o peso `puxa` (0–1) com que o pé desenhado vai até
@@ -981,21 +1141,19 @@ export function pontoContato(j, bx, bz) {
 export function atualizarGesto(m, j) {
   const c = j.cond;
   const t = c.toque;
-  const f = Math.max(infoPassada(MD.hypot(j.vx, j.vz), m.posse === j.id).f, 0.5);
-  const tPouso = p => (j.pes[p].apoio ? Infinity : (j.pes[p].fasePouso - j.fase) / f); // s até pousar
+  const f = Math.max(freqPassada(MD.hypot(j.vx, j.vz), m.posse === j.id), 0.5);
   let pa = -1; // pé que vai tocar
   const falta = t ? (t.tick - m.tick) * DT : 0;
   if (t && (m.posse === j.id || t.tipo === 'dominio') && falta <= GESTO.janela) {
     // o marcado se ele ficar no ar até o toque; senão o outro, se ficar; senão o marcado (no
     // chão: o gesto só aparece quando ele sair do chão)
-    const fica = p => !j.pes[p].apoio && tPouso(p) >= falta - DT;
-    pa = fica(t.pe) ? t.pe : fica(1 - t.pe) ? 1 - t.pe : t.pe;
+    pa = ficaNoAr(j, t.pe, f, falta) ? t.pe : ficaNoAr(j, 1 - t.pe, f, falta) ? 1 - t.pe : t.pe;
   }
   const u = c.ult;
   const pu = u && (m.tick - u.tick) * DT < GESTO.acompanha ? u.pe : -1; // pé que acompanha a bola
   const b = m.bola.p;
-  const naBola = pontoContato(j, b.x, b.z);
-  const noToque = pa >= 0 ? pontoContato(j, t.bx, t.bz) : null;
+  const naBola = pontoContato(j, b.x, b.z, _naBola);
+  const noToque = pa >= 0 ? pontoContato(j, t.bx, t.bz, _noToque) : null;
   const vMax = (GESTO.velPonto[0] + GESTO.velPonto[1] * MD.hypot(j.vx, j.vz)) * DT;
   // mais rápido o corpo, mais rápido o gesto pode subir (folga até o limite físico do pé)
   const subida = lerp(GESTO.subida[0], GESTO.subida[1], clamp(MD.hypot(j.vx, j.vz) / GESTO.velRef, 0, 1));
@@ -1016,7 +1174,7 @@ export function atualizarGesto(m, j) {
     if (p !== pa && pe.puxa > 0) {
       // o pé vai pousar logo: o gesto se desfaz em todo o tempo que falta até o pouso (e não de
       // uma vez no fim do balanço)
-      const resta = tPouso(p);
+      const resta = tempoAtePouso(j, p, f);
       if (resta < GESTO.acompanha + pe.puxa * GESTO.descida) {
         alvo = 0;
         desce = Math.max(desce, pe.puxa * DT / Math.max(resta, 2 * DT));

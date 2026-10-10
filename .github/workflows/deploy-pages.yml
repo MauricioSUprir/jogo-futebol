@@ -30,6 +30,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-carga.mjs || node golaco/tools/teste-carga.mjs
+      - name: Editar time no navegador (mouse, teclado, toque e nada encostando)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-editor-tela.mjs
   deploy:
     needs: testes-golaco
     environment:

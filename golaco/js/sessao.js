@@ -6,6 +6,10 @@
 //  - 'ataque' (Etapa 2, padrão): meu time (goleiro + 5 de linha) ataca o gol de x = +52,5 contra
 //    uma defesa (goleiro + 3). Passe, enfiada, lançamento, cruzamento, chute, goleiro e troca.
 //  - 'conducao' (Etapa 1): um jogador sozinho com a bola, máquina de passes e marcador.
+//  - 'partida' (Etapa 3): 11×11 Golaço FC × Ventania FC com relógio, recomeços e "Editar time"
+//    (partida.js). As ações-objeto (a edição {tipo: 'editarTime', ...}) entram ANTES do passo; as
+//    ações-texto do treino (recomecar, maquina, marcador) não valem na partida (a página cria outra
+//    partida para reiniciar). O padrão continua 'ataque': os testes do treino não mudam.
 
 import { criarMundo, passo, jogadorPorId } from './sim.js';
 import { cuidarBolaFora, maquinaPasse, alternarMarcador, devolverBola, ID_MARCADOR } from './treino.js';
@@ -13,6 +17,7 @@ import { BOTAO, CAMPO, BOLA } from './config.js';
 import { MD } from './matdet.js';
 import { criarBola } from './bola.js';
 import { entradaIA } from './ia.js';
+import { criarPartida, passoPartida, entradaDemoPartida } from './partida.js';
 
 export const ID_HUMANO = 0;
 export { ID_MARCADOR };
@@ -37,10 +42,13 @@ const DEFESA = [
 ];
 
 /**
- * Cria o mundo de treino. opc: {modo: 'ataque' | 'conducao', semente, x, z, rumo, attr, marcador}
+ * Cria o mundo de treino. opc: {modo: 'ataque' | 'conducao' | 'partida', semente, x, z, rumo, attr,
+ * marcador}. Na partida, as opções são as de criarPartida ({semente, minutosPorTempo, iaClassica,
+ * elencos, times, saida, log}).
  */
 export function criarTreino(opc = {}) {
   const modo = opc.modo ?? 'ataque';
+  if (modo === 'partida') return criarPartida(opc);
   if (modo === 'conducao') {
     const x = opc.x ?? 0, z = opc.z ?? 0, rumo = opc.rumo ?? 0;
     const m = criarMundo({
@@ -87,6 +95,7 @@ function idControlado(m) {
 
 /** Aplica uma ação de treino no mundo (depois do passo, para o evento entrar no passo). */
 export function aplicarAcao(m, acao) {
+  if (m.modo === 'partida' || typeof acao !== 'string') return; // a partida trata as dela (passoPartida)
   if (acao === 'recomecar') {
     if (m.modo === 'ataque') recomecarAtaque(m); else devolverBola(m, idControlado(m));
   } else if (acao === 'maquina') maquinaPasse(m, idControlado(m));
@@ -115,6 +124,7 @@ function regrasAtaque(m) {
  * entrada = {x, z, botoes} do humano (time 0; analógico já no mundo). Devolve os eventos.
  */
 export function passoTreino(m, entrada, acoes) {
+  if (m.modo === 'partida') return passoPartida(m, entrada, acoes);
   passo(m, { 0: entrada });
   if (m.modo === 'ataque') regrasAtaque(m);
   else cuidarBolaFora(m, ID_HUMANO);
@@ -132,6 +142,7 @@ export function marcadorLigado(m) {
 export const DEMO = { cx: 30, cz: 2, raio: 9, mag: 0.82, inicio: { x: 22, z: 8, rumo: -0.6 } };
 
 export function entradaDemo(m, opc = DEMO) {
+  if (m.modo === 'partida') return entradaDemoPartida(m);
   if (m.modo === 'ataque') {
     const j = jogadorPorId(m, idControlado(m));
     return j ? entradaIA(m, j) : { x: 0, z: 0, botoes: 0 };

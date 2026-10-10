@@ -55,6 +55,20 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     alvo: null,
     // pé que não sai do chão agora (pedalada: o outro passa por cima da bola) | null
     travaApoio: null,
+    // Campos que os outros módulos põem no jogador DEPOIS de criado (sim, partida, escalação, IA,
+    // ações, goleiro, defesa), já declarados aqui, na mesma ordem para todos e com o mesmo valor que
+    // teriam antes da 1ª escrita (undefined): todos os jogadores ficam com a MESMA forma (classe oculta
+    // do motor JS). Antes cada um ganhava os campos numa ordem (9 formas para 22 jogadores na partida):
+    // os acessos ficavam megamórficos e cada leitura de número alocava (~300 KB de lixo por passo; a
+    // coleta de lixo caía em 6% dos passos — o p95 do celular). Campo novo no jogador: declarar aqui.
+    papel: undefined, posicao: undefined, vagaId: undefined, vagaIdx: undefined, posDetalhe: undefined,
+    vaga: undefined, iaT: undefined, recebe: undefined, corrida: undefined, intercepta: undefined,
+    carga: undefined, pedido: undefined, mira: undefined, miraAuto: undefined, iaAcao: undefined,
+    defesa: undefined, mergulho: undefined, segura: undefined, saindo: undefined, ia: undefined,
+    botoesTime: undefined, giroParado: undefined, quadril: undefined, iaA: undefined,
+    pedidoPedalada: undefined, ladoOlha: undefined, ritmo: undefined, ultLanc: undefined,
+    ultMod: undefined, descansoBote: undefined, defH: undefined, conter: undefined, descanso: undefined,
+    contorno: undefined,
   };
   return j;
 }
@@ -205,11 +219,20 @@ export function passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt, comBola = false) {
   }
 }
 
-/** Frequência de passos (Hz) e fator de carga pela velocidade. */
+/** Frequência de passos (Hz) pela velocidade (a mesma conta de infoPassada, sem alocar). */
+export function freqPassada(s, comBola) {
+  return tabela(PASSADA.tabela, s, 1) * (comBola ? PASSADA.fatorComBola : 1);
+}
+
+/** Fator de carga da passada pela velocidade (o mesmo de infoPassada, sem alocar). */
+export function cargaPassada(s) {
+  return tabela(PASSADA.tabela, s, 2);
+}
+
+/** Frequência de passos (Hz) e fator de carga pela velocidade. (No caminho quente use
+ * freqPassada/cargaPassada: este devolve um objeto novo a cada chamada.) */
 export function infoPassada(s, comBola) {
-  const f = tabela(PASSADA.tabela, s, 1) * (comBola ? PASSADA.fatorComBola : 1);
-  const carga = tabela(PASSADA.tabela, s, 2);
-  return { f, carga };
+  return { f: freqPassada(s, comBola), carga: cargaPassada(s) };
 }
 
 /** Fase local do pé j em [0, 2): 0 = tocou o chão. */
@@ -226,7 +249,8 @@ export function faseLocal(fase, j) {
  */
 function passadaAtiva(k, s) {
   if (s > 0.22 || Math.abs(k.giro) > 1.6) return true;
-  if (k.pes) for (const pe of k.pes) if (Math.abs(difAng(pe.rumo, k.rumo)) > PE_TORTO_PASSO) return true;
+  const pes = k.pes;
+  if (pes) for (let p = 0; p < pes.length; p++) if (Math.abs(difAng(pes[p].rumo, k.rumo)) > PE_TORTO_PASSO) return true;
   return false;
 }
 const PE_TORTO_PASSO = 1.0; // rad — pé plantado mais torto que isso em relação ao tronco dá um passo
@@ -247,7 +271,7 @@ const PE_TORTO = 1.2;       // rad — torção máxima do pé plantado: além d
  */
 export function passoPassada(j, comBola, dt, ev, saida = null) {
   const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
-  const { f, carga } = infoPassada(s, comBola);
+  const f = freqPassada(s, comBola), carga = cargaPassada(s);
   const ambosNoChao = j.pes[0].apoio && j.pes[1].apoio;
   const ativa = passadaAtiva(j, s);
   let pedido = saida && ambosNoChao ? saida : null;
@@ -376,7 +400,7 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       // desenhado é que tem a velocidade limitada (passoPeDesenhado). O tempo até o pouso é o
       // mesmo do progresso do balanço (contínuo, ao menos um tick); com o pé desenhado já no ponto
       // de pouso (chegou), o ponto fica parado até a passada plantar o pé.
-      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(ritmo, 0.3), dt), !comBola);
+      const pt = pontoPouso(j, p, carga, f, Math.max((pe.fasePouso - f1) / Math.max(ritmo, 0.3), dt), !comBola, _pouso);
       pe.lx = pt.x; pe.lz = pt.z; pe.lrumo = pt.rumo;
     }
   }
@@ -401,13 +425,16 @@ function distanciaDoApoio(j, p) {
   return MD.hypot(pe.x - hx, pe.z - hz);
 }
 
+const _pouso = { x: 0, z: 0, rumo: 0 };
+
 /**
  * Onde o pé p pousa se pousar daqui a tempoAtePouso segundos (o centro do apoio à frente).
+ * out (opcional): objeto reaproveitado em que a resposta é escrita (a passada usa um só).
  * semCruzar (sem a bola): andando de lado, o pé pousa sempre do lado dele em relação ao outro pé
  * plantado (passo lateral: um abre, o outro fecha sem passar) — antes o pé de trás passava pela
  * frente do outro e as pernas cruzavam (~40% do tempo andando de lado).
  */
-export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false) {
+export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false, out = { x: 0, z: 0, rumo: 0 }) {
   const tm = tempoAtePouso + carga / Math.max(f, 0.5); // meio do apoio
   const lado = p === 0 ? -1 : 1;
   // rumo previsto no pouso (o tronco continua girando)
@@ -430,7 +457,8 @@ export function pontoPouso(j, p, carga, f, tempoAtePouso = 0, semCruzar = false)
       x += rx * k; z += rz * k;
     }
   }
-  return { x, z, rumo };
+  out.x = x; out.z = z; out.rumo = rumo;
+  return out;
 }
 
 /** Planta o pé p no ponto de pouso guardado (o mesmo que a animação mostrou no último tick). */
@@ -452,29 +480,33 @@ const PEDALADA = { raio: 0.24, altura: 0.27, atras: 0.06, entra: 0.2, sai: 0.68,
 
 function suaveU(t) { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
 
+const _balanco = { u: 0, livre: 0, total: 0, meioApoio: 0, s: 0 };
+
 /**
  * Progresso do balanço do pé p (0 na saída, 1 no pouso), UM TICK ADIANTADO: no último tick do
  * balanço o pé desenhado já está no ponto de pouso, e a passada planta o pé no fim do tick em que
  * a fase cruza o inteiro. Usa o ritmo natural, que muda devagar com a velocidade. Também devolve
  * o tempo livre do pé (s desde que saiu ou até pousar, o menor): o gesto do toque cabe nisso.
+ * Devolve um objeto REAPROVEITADO (o mesmo a cada chamada): ler os campos na hora, sem guardá-lo.
  */
 export function progressoBalanco(j, p, comBola) {
   const pe = j.pes[p];
   const s = Math.sqrt(j.vx * j.vx + j.vz * j.vz);
-  const { f, carga } = infoPassada(s, comBola);
+  const f = freqPassada(s, comBola), carga = cargaPassada(s);
   const fp = Math.max(f, 0.5);
   // ritmo da passada no último tick (o passo acelerado — toque, pé no limite, pedalada — também
   // adianta o balanço: o pé desenhado chega ao ponto de pouso quando a fase cruza o inteiro)
   const r = Math.max(j.ritmo ?? fp, 0.3);
   const total = Math.max(pe.fasePouso - pe.faseSaida, 1e-3);
   const falta = Math.max(0, pe.fasePouso - j.fase);
-  return {
-    u: clamp(1 - (falta - r * PASSO) / total, 0, 1),
-    livre: Math.min(j.fase - pe.faseSaida, Math.max(0, falta - r * PASSO)) / r,
-    total: total / r,
-    meioApoio: carga / fp, // s do pouso ao meio do apoio (o pé pousa à frente do corpo: v × isto)
-    s,
-  };
+  // um objeto só, reaproveitado: quem chama lê os campos na hora (não guarda a resposta)
+  const o = _balanco;
+  o.u = clamp(1 - (falta - r * PASSO) / total, 0, 1);
+  o.livre = Math.min(j.fase - pe.faseSaida, Math.max(0, falta - r * PASSO)) / r;
+  o.total = total / r;
+  o.meioApoio = carga / fp; // s do pouso ao meio do apoio (o pé pousa à frente do corpo: v × isto)
+  o.s = s;
+  return o;
 }
 
 /**

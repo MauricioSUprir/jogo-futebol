@@ -17,7 +17,9 @@ const NSEG = SEGMENTOS.length;
 // Uniformes (cores) por time e função. Tudo fictício.
 // Time 0 (GOLAÇO): preto com detalhes verdes; goleiro verde-limão com preto.
 // Time 1 (visitante): branco/cinza com detalhes pretos; goleiro laranja escuro com cinza.
-const KITS = {
+// Na partida (Etapa 3) o uniforme vem do elenco (ELENCOS[id].uniforme = {linha, goleiro}, chaves
+// destes KITS): a lista do desenho traz `kit`; sem ele (treino), vale o do time.
+export const KITS = {
   linha0: { camisa: '#15191b', calcao: '#0e1112', meiao: '#15191b', chuteira: '#19e07a', acento: '#19e07a', sola: '#0b0d0e', luva: '#19e07a' },
   goleiro0: { camisa: '#b8f02e', calcao: '#101314', meiao: '#b8f02e', chuteira: '#101314', acento: '#101314', sola: '#0b0d0e', luva: '#101314' },
   linha1: { camisa: '#e9ecee', calcao: '#b9bfc4', meiao: '#e9ecee', chuteira: '#15191b', acento: '#15191b', sola: '#d5d9dc', luva: '#15191b' },
@@ -308,6 +310,11 @@ export function criarJogadores3D(cena, qualidade) {
   cena.add(anelProx);
 
   const kitsLin = Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, Object.fromEntries(Object.entries(kit).map(([nome, hex]) => [nome, new THREE.Color(hex)]))]));
+  // índice do uniforme (sem alocar no quadro): o do elenco, se vier; senão o do time e da função
+  const NOMES_KIT = Object.keys(KITS);
+  const IDX_KIT = Object.fromEntries(NOMES_KIT.map((k, i) => [k, i]));
+  const PADRAO_KIT = [[IDX_KIT.linha0, IDX_KIT.goleiro0], [IDX_KIT.linha1, IDX_KIT.goleiro1]];
+  const kitIdx = jg => IDX_KIT[jg.kit] ?? PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0];
   const pelesLin = PELES.map(h => new THREE.Color(h));
   const cabelosLin = CABELOS.map(h => new THREE.Color(h));
   const vagaDe = new Map(); // vaga → chave (id, time, goleiro) das cores escritas
@@ -315,7 +322,7 @@ export function criarJogadores3D(cena, qualidade) {
 
   function escreverCores(vaga, jg) {
     const gol = !!jg.goleiro;
-    const kit = kitsLin[(gol ? 'goleiro' : 'linha') + (jg.time === 1 ? 1 : 0)];
+    const kit = kitsLin[NOMES_KIT[kitIdx(jg)]];
     const est = gol ? ESTILOS_GOL : ESTILOS;
     const pele = pelesLin[Math.floor(sorteio(jg.id, 1) * pelesLin.length)];
     const cab = cabelosLin[Math.floor(sorteio(jg.id, 2) * cabelosLin.length)];
@@ -352,7 +359,8 @@ export function criarJogadores3D(cena, qualidade) {
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
     /**
-     * lista: [{id, time, goleiro, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
+     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
+     * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
      * camera: para o tamanho constante da seta acima da cabeça.
      */
     atualizar(lista, camera) {
@@ -363,8 +371,8 @@ export function criarJogadores3D(cena, qualidade) {
       let controlado = null, proximo = null;
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
-        // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função)
-        const chave = jg.id * 8 + (jg.time === 1 ? 1 : 0) * 2 + (jg.goleiro ? 1 : 0);
+        // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
+        const chave = ((jg.id * 8 + kitIdx(jg)) * 2 + (jg.time === 1 ? 1 : 0)) * 2 + (jg.goleiro ? 1 : 0);
         if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
         const est = jg.goleiro ? ESTILOS_GOL : ESTILOS;
         const pose = jg.pose;

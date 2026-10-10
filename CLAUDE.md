@@ -7,12 +7,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
-  Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (PR desta etapa: passe, enfiada, lançamento/cruzamento, chute,
-  goleiro, botões sem CONDUÇÃO; revisão adversarial da Etapa 1 com 30 achados corrigidos). Próxima: Etapa 3.
+  Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (#452). Correções (#453, #454). Etapa 3 ENTREGUE (11×11, tática,
+  Editar time; ver "Etapa 3" abaixo). **Próximo:** PR de calibração da Etapa 3 (volume de ataque e forma no terço
+  defensivo — os 5 testes do grupo `etapa3`), depois Etapa 4.
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
-  da Etapa 2" abaixo); (2) Etapa 3 — PRÓXIMA —
+  da Etapa 2" abaixo); (2) Etapa 3 — ENTREGUE —
   11×11 com formações, tática, IA com/sem bola mais intensa e "Editar time" na pausa (formação, escalação no
   campinho com reservas, táticas: mentalidade, pressão, largura, linha), no estilo do Gerenciar equipe do FIFA.
   Retorno do dono (09/10): "achei legal"; a movimentação/condução "está bem boa,
@@ -133,6 +134,24 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   parado 14 para o humano e 8 só para a IA (`IA.giroParado`). Roubadas do treino (24 → ~13 por 3 min)
   caíram com o fim do amontoado e NÃO voltam com pressão de perto (medido: depende de 2–3 na bola);
   recuperar intensidade = tática da Etapa 3 (compactação perto da bola, pressão alta configurável).
+- **Etapa 3 (11×11, tática, Editar time)** — plano e pesquisa em `golaco/PESQUISA-ETAPA3.md` e `CONTRATOS.md`. A página
+  abre na partida Golaço FC × Ventania FC (2 tempos de 4 min, relógio 0'–90', intervalo com troca de lado); treinos em
+  `?modo=ataque` / `?modo=conducao` e no menu. Módulos puros: `elenco.js` (46 jogadores fictícios, ids 1–23 e
+  101–123), `formacoes.js` (6 formações, encaixe húngaro), `escalacao.js` (dois toques, validar/aplicar edição,
+  substituição na próxima parada, 5 em 3 paradas), `partida.js` (relógio, saída, lateral com o pé, escanteio, tiro de
+  meta pela mão — simplificados, regra completa na Etapa 4; parede de bola parada pela locomoção), `tatica.js`
+  (`posicaoTatica`: a MESMA função na prévia da tela e na IA), `ia-tatica.js` (sem bola: bloco, linha alinhada,
+  zona, 1º/2º homem, gatilhos, contrapressão), `ia-ataque.js` (apoios, corredores, corridas, impedimento como forma,
+  condutor por utilidade com xT), `defesa.js` (CONTER/DIVIDIDA/PRESSÃO do humano), `troca.js` (troca no jogo aéreo
+  ≥ 90%). DOM: `editor-time.js` + `css/editor.css`. Tudo novo só liga com `m.times`: o treino fica BIT A BIT igual
+  (`tools/hash-igual.mjs` em todo merge; `tools/hash-partida.mjs` para otimizações da partida). Testes novos no
+  padrão: teste-partida, teste-editor, teste-taticas, teste-defesa-humano, teste-aereo-troca (canhão e natural),
+  teste-custo; navegador: teste-editor-tela (CI), teste-desempenho-celular (informativo). Grupo `etapa3`
+  (`rodar-testes --etapa3`, fora do CI até passar 5×): teste-forma, teste-pressao, teste-movimento --modo partida,
+  teste-apoio, teste-intensidade — reprovam por pouco (ver o PR da Etapa 3: chutes 9/partida, passe certo 90,7%,
+  atrás da bola 7,1, linha de 4 no t1, retomada 47%, à frente 21,5%). Lições: medir defesa e ataque JUNTOS (cada
+  parte calibrada sozinha reprovou na integração); parede/teleporte nunca move o corpo sem a passada (pé arrasta);
+  `teste-custo` mede CPU do fio, não a parede (a fila do escalonador dava picos falsos de 265 ms).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

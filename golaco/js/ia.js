@@ -1,6 +1,11 @@
 // IA dos jogadores de linha que o humano não controla (Etapa 2: enxuta; a tática completa é a
 // Etapa 3). A IA gera uma ENTRADA VIRTUAL {x, z, botoes} — anda e "aperta botões" pelas mesmas
 // regras do humano (aplicarEntrada, condução, ações). Pura: sem three.js nem DOM.
+//
+// Etapa 3: esta é a IA "clássica" do treino e fica CONGELADA (o treino tem de sair bit a bit igual:
+// tools/hash-igual.mjs). A IA da partida (ia-tatica.js, ia-ataque.js) reaproveita as peças
+// exportadas (para, freiaNaLinha, pontoInterceptacao, vaiNaBolaLivre, dono, acaoIA, marcacao) sem
+// mudar nenhuma linha de comportamento daqui.
 
 import { BOTAO, CAMPO, PASSO, ACOES, IA } from './config.js';
 import { MD } from './matdet.js';
@@ -19,7 +24,7 @@ const DT = PASSO;
  * `extra` são os botões da ação em curso; o CORRER do modo soma a eles (antes o chamador
  * sobrescrevia os botões e a IA nunca corria no apoio nem na marcação).
  */
-function para(j, x, z, mag, correr = false, extra = 0, modo = 'calma') {
+export function para(j, x, z, mag, correr = false, extra = 0, modo = 'calma') {
   const s = j.ia, M = IA.modos[modo];
   if (!M.vAlvo) s.filtro = false;
   else if (!s.filtro) { s.fx = x; s.fz = z; s.filtro = true; }
@@ -47,7 +52,7 @@ function para(j, x, z, mag, correr = false, extra = 0, modo = 'calma') {
  * Sem pressa, pedido que inverte o sentido de quem ainda corre: freia na linha (analógico solto)
  * antes de virar. Antes o pedido virava na hora e o tronco girava a ~7 rad/s ainda a 3–4 m/s.
  */
-function freiaNaLinha(j, x, z) {
+export function freiaNaLinha(j, x, z) {
   const v = MD.hypot(j.vx, j.vz);
   if (v < IA.freiaLinha[0]) return false;
   const l = MD.hypot(x, z);
@@ -96,7 +101,7 @@ export function pontoInterceptacao(m, j, aPartirDe = null) {
  * passe do próprio time para outro companheiro (ele recebe); passe do adversário vale (corta se
  * chegar antes do recebedor).
  */
-function vaiNaBolaLivre(m, j) {
+export function vaiNaBolaLivre(m, j) {
   if (j.posicao === 'GOL') return false;
   const v = m.voo;
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
@@ -116,12 +121,12 @@ function vaiNaBolaLivre(m, j) {
   return true;
 }
 
-function dono(m) {
+export function dono(m) {
   return m.posse != null ? m.jogadores.find(o => o.id === m.posse) : null;
 }
 
 /** Botões virtuais de uma ação da IA: segura pelo tempo da força e solta. */
-function acaoIA(m, j, tipo, forca) {
+export function acaoIA(m, j, tipo, forca) {
   const bot = { passe: BOTAO.PASSE, enfiada: BOTAO.ENFIADA, lancamento: BOTAO.LANCAMENTO, chute: BOTAO.CHUTE }[tipo];
   j.iaAcao = { bot, ate: m.tick + Math.max(2, Math.round(forca * ACOES.cargaCheia / DT)) };
 }
@@ -241,7 +246,7 @@ function apoio(m, j, d0, lado, extra) {
  * a lista (ordenada pela posição lateral) de quem sobra para cobrir. Guloso do atacante mais perto
  * do meu gol para o mais longe; o par que já existia leva IA.trocaMarcacao m de vantagem.
  */
-function marcacao(m, time, pressiona, meuGol) {
+export function marcacao(m, time, pressiona, meuGol) {
   const cache = (m.iaMarca ??= {})[time];
   if (cache && cache.tick === m.tick) return cache;
   const antes = cache?.pares ?? {};

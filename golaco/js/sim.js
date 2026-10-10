@@ -17,6 +17,18 @@ import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, e
 import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol } from './goleiro.js';
 import { entradaIA } from './ia.js';
 import { ACOES } from './config.js';
+// Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
+// (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
+// CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
+import { entradaIATatica, olhaBolaPartida } from './ia-tatica.js';
+import { trocaAerea, alvoAereo } from './troca.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
+import { misturarTimes } from './escalacao.js';
+import { misturarPartida, paredeParada } from './partida.js';
+
+const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
+/** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
+const naParada = m => m.parada && !m.parada.rolou;
 
 /**
  * Cria o mundo. opcoes:
@@ -169,6 +181,7 @@ function colisaoBolaCorpo(m) {
   if (b.p.y > 0.9) return;
   for (const j of m.jogadores) {
     if (j.id === m.posse) continue;
+    if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: bola parada não bate em ninguém
     // quem acabou de bater na bola não a rebate no próprio corpo; o goleiro com a defesa já
     // decidida (sorteio da leitura) também não: o resultado é o da leitura
     if (m.ultimoToque && m.ultimoToque.id === j.id && m.tick - m.ultimoToque.tick < 10) continue;
@@ -248,6 +261,7 @@ function roubarComMarcador(m, j) {
 function boteIA(m, j) {
   if (j.descansoBote > 0) { j.descansoBote--; return; }
   if (m.posse == null || m.naMao != null) return;
+  if (naParada(m)) return; // partida: ninguém dá bote na cobrança
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
@@ -291,17 +305,24 @@ export function passo(m, entradas) {
       // recebendo um passe com o analógico solto: a assistência leva ao encontro da bola
       const assist = j.recebe && m.posse !== j.id && !(e && MD.hypot(e.x ?? 0, e.z ?? 0) > 0.25);
       if (assist) {
-        const ia = entradaIA(m, j);
+        const ia = m.times ? entradaIATatica(m, j) : entradaIA(m, j);
         aplicarEntrada(j, { ...ia, botoes: (e?.botoes ?? 0) | (ia.botoes & BOTAO.CORRER) }, m.tick);
-      } else aplicarEntrada(j, e, m.tick);
+      } else {
+        // Etapa 3: CONTER (defesa.js) e a assistência na bola alta (troca.js, só na partida)
+        const ed = j.defH || (e && (e.botoes & BOTOES_DEFESA)) ? entradaConter(m, j, e) : null;
+        const ea = !ed && m.times ? alvoAereo(m, j, e) : null;
+        aplicarEntrada(j, ed ?? ea ?? e, m.tick);
+      }
+      if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);
     } else if (j.posicao === 'GOL') {
       aplicarEntrada(j, null, m.tick);
     } else {
-      aplicarEntrada(j, entradaIA(m, j), m.tick);
+      aplicarEntrada(j, m.times ? entradaIATatica(m, j) : entradaIA(m, j), m.tick);
     }
     atualizarBotoesAcao(m, j);
   }
   trocarJogador(m, entradas);
+  if (m.times) trocaAerea(m); // Etapa 3: troca automática para quem disputa a bola alta
   // 2) movimento de cada corpo
   for (const j of js) {
     let mv;
@@ -329,7 +350,10 @@ export function passo(m, entradas) {
       // verdade); antes andava de costas para o lance. Contínuo: quanto mais devagar, mais o tronco
       // pode se afastar do sentido do movimento (parado: todo; IA.olhaBola[1] m/s ou mais: nada) —
       // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
-      if (guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) {
+      // (Etapa 3, só na partida: o olhar com a velocidade filtrada, o ponto de chegada do passe no ar
+      // e o giro do olhar limitado — ia-tatica.js olhaBolaPartida; o treino continua com o de baixo)
+      if (m.times && guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) mv = olhaBolaPartida(m, j, mv, desvioOlhaBola);
+      else if (guiadoPelaIA(m, j) && !j.recebe && !j.cond?.toque) {
         const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
         const lim = desvioOlhaBola(v);
         if (lim > 0) {
@@ -345,6 +369,11 @@ export function passo(m, entradas) {
     // a IA sem a bola gira o tronco parado mais devagar (o tronco rodopiava no lugar); o jogador do
     // humano mantém o giro rápido (virar 90° parado em ~0,12 s)
     j.giroParado = guiadoPelaIA(m, j) && m.posse !== j.id ? IA.giroParado : null;
+    // CONTER (defesa.js): o controlado acompanhando o condutor fica de frente para ele (j.conter só
+    // existe depois do CONTER apertado: o treino não muda)
+    if (j.conter && m.posse !== j.id) mv = troncoConter(m, j, mv);
+    // partida: na bola parada, ninguém entra no raio (e quem está dentro sai) pela locomoção
+    if (m.parada) mv = paredeParada(m, j, mv);
     passoCorpo(j, mv.dx, mv.dz, mv.vel, mv.rumoAlvo, j.par, PASSO, m.posse === j.id);
   }
   colisaoCorpos(m);
@@ -374,6 +403,7 @@ export function passo(m, entradas) {
   for (const j of js) {
     if (j.papel === 'marcador' && !(j.descanso > 0) && m.posse !== j.id) roubarComMarcador(m, j);
     else if (j.posicao !== 'GOL' && guiadoPelaIA(m, j)) boteIA(m, j);
+    else if ((j.defH || ((j.botoes | j.botoesAnt) & BOTAO.DIVIDIDA)) && ehControlado(m, j)) dividida(m, j); // Etapa 3
   }
   // 4) goleiros leem o chute e defendem
   for (const j of js) {
@@ -412,6 +442,25 @@ export function passo(m, entradas) {
   for (const j of js) j.quadril = alturaQuadril(j, m);
 }
 
+/**
+ * Tronco do controlado no CONTER (defesa.js rumoConter: de frente para a bola do condutor), limitado
+ * pela velocidade com a mesma regra do "olha a bola" da IA (IA.olhaBola; função própria, para o CONTER
+ * não mudar se o "olha a bola" da IA for recalibrado): devagar (o "jockey"), de frente; correndo atrás
+ * do condutor, o tronco vai com a corrida (ninguém corre de lado a 3 m/s; acima de 2,5 m/s o passoCorpo
+ * prende o tronco a ≤ 80° da corrida, e um limite que não chegasse antes disso faria o tronco virar de
+ * uma vez nessa velocidade). Sem pedido: `mv`.
+ */
+function troncoConter(m, j, mv) {
+  const r = rumoConter(m, j);
+  if (r == null) return mv;
+  const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
+  const { vLivre, vLado, vSome } = IA.olhaBola;
+  const v1 = vLivre * 1.5;
+  const lat = a => MD.asin(Math.min(1, vLado / a));
+  const lim = v <= vLivre ? Math.PI : v < v1 ? lerp(Math.PI, lat(v1), (v - vLivre) / (v1 - vLivre)) : lat(v) * clamp((vSome - v) / 1.0, 0, 1);
+  return { dx: mv.dx, dz: mv.dz, vel: mv.vel, rumoAlvo: mv.rumoAlvo + clamp(difAng(mv.rumoAlvo, r), -lim, lim) };
+}
+
 /** Executa a ação marcada para este tick (pé de apoio no chão, bola no alcance). */
 function executarAcaoMarcada(m, j) {
   const t = j.cond.toque;
@@ -424,15 +473,44 @@ function executarAcaoMarcada(m, j) {
   return executarAcao(m, j, peFinal, false);
 }
 
+// candidatos da bola livre (vetores reaproveitados: nada alocado por passo)
+const _cands = [], _candD = [];
+/**
+ * Candidatos da bola livre em _cands[0..n): os jogadores de linha (sem marcador nem parado), o
+ * recebedor marcado (alvo) primeiro e depois pela distância até a bola, com empate na ordem de
+ * m.jogadores — a MESMA ordem do antigo filter + sort (estável) com o comparador (alvo primeiro ||
+ * distância), por inserção estável. Devolve n.
+ */
+function candidatosBolaLivre(m, alvo) {
+  const b = m.bola, js = m.jogadores;
+  let n = 0;
+  for (let k = 0; k < js.length; k++) {
+    const j = js[k];
+    if (j.papel === 'marcador' || j.papel === 'parado' || j.posicao === 'GOL') continue;
+    const d = MD.hypot(j.x - b.p.x, j.z - b.p.z);
+    const pri = j.id === alvo;
+    let i = n - 1;
+    // anda para a direita quem vem DEPOIS de j na ordem (comparador > 0): não é o alvo sendo j o alvo,
+    // ou mesma prioridade e mais longe
+    while (i >= 0 && ((pri && _cands[i].id !== alvo) || ((_cands[i].id === alvo) === pri && _candD[i] - d > 0))) {
+      _cands[i + 1] = _cands[i]; _candD[i + 1] = _candD[i]; i--;
+    }
+    _cands[i + 1] = j; _candD[i + 1] = d;
+    n++;
+  }
+  return n;
+}
+
 /** Bola livre: quem vai recebê-la? Recebedor marcado primeiro; depois, os mais perto. */
 function bolaLivre(m) {
   const b = m.bola;
-  const cands = m.jogadores.filter(j => j.papel !== 'marcador' && j.papel !== 'parado' && j.posicao !== 'GOL');
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
-  cands.sort((a, c) => (a.id === alvo ? -1 : 0) - (c.id === alvo ? -1 : 0) || MD.hypot(a.x - b.p.x, a.z - b.p.z) - MD.hypot(c.x - b.p.x, c.z - b.p.z));
+  const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
-  for (const j of cands) {
+  for (let k = 0; k < nc; k++) {
+    const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     if (!b.rolando && b.p.y > 0.45) {
       if (bolaAltaNoCorpo(m, j)) return;
       continue;
@@ -446,6 +524,7 @@ function bolaLivre(m) {
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
+    if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     const naArea = Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
     if (naArea && MD.hypot(b.p.x - g.x, b.p.z - g.z) < 1.0 && b.p.y < 2.2 && MD.hypot(b.v.x, b.v.z) < 9) {
@@ -651,6 +730,10 @@ export function candidatoTroca(m, t) {
 // ---------------------------------------------------------------- determinismo
 
 const _buf = new DataView(new ArrayBuffer(8));
+/** Mistura um número (float64) no hash FNV-1a (usada também por escalacao.js e partida.js). */
+export function misturarHash(h, x) {
+  return misturar(h, x);
+}
 function misturar(h, x) {
   _buf.setFloat64(0, x);
   for (let i = 0; i < 8; i++) {
@@ -674,6 +757,8 @@ export function hashMundo(m) {
   for (const t of Object.keys(m.controlado ?? {})) h = misturar(h, m.controlado[t]);
   h = misturar(h, m.tick);
   for (const s of m.rng.s) h = misturar(h, s);
+  // Etapa 3: escalação, formação, tática, relógio e parada (só na partida: o hash do treino não muda)
+  if (m.times) { h = misturarTimes(h, m); h = misturarPartida(h, m); }
   return h >>> 0;
 }
 

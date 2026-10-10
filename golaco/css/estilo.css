@@ -11,6 +11,9 @@
   --texto-2: #9cb0a5;
   --linha: rgba(25, 224, 122, 0.24);
   --painel: rgba(8, 11, 12, 0.8);
+  --alerta: #ffb547;          /* fora de posição (Editar time) */
+  --sai: #ff7a66;             /* ↓ sai na próxima parada */
+  --campinho: #0b2416;        /* fundo do campinho do Editar time */
   --sa-t: env(safe-area-inset-top, 0px);
   --sa-r: env(safe-area-inset-right, 0px);
   --sa-b: env(safe-area-inset-bottom, 0px);
@@ -70,6 +73,15 @@ html.noite .vinheta { display: block; }
 .placar-gols.mudou { animation: placar-mudou 1.2s ease-out; }
 @keyframes placar-mudou { 0%, 40% { background: var(--verde); color: var(--preto); } 100% { background: var(--preto); color: var(--texto); } }
 .placar-x { width: 6px; height: 2px; background: var(--texto-2); border-radius: 1px; }
+/* relógio da partida: minuto acelerado (0'–90') e o tempo, depois do placar */
+.placar-relogio {
+  display: flex; align-items: baseline; gap: 5px; padding-left: 10px; margin-left: 1px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1); line-height: 1; white-space: nowrap;
+}
+.placar-relogio[hidden] { display: none; }
+.placar-relogio b { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; min-width: 2.2ch; text-align: right; }
+.placar-relogio small { font-size: 10px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); text-transform: uppercase; }
+.placar-relogio.parado b { color: var(--verde); }
 
 .painel-jogo {
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m) + 48px + 10px);
@@ -105,7 +117,9 @@ html.noite .vinheta { display: block; }
 .aviso {
   position: absolute; top: calc(var(--sa-t) + var(--m) + 62px); left: 50%;
   transform: translate(-50%, -6px); opacity: 0; transition: opacity 0.18s, transform 0.18s;
-  padding: 9px 18px 9px 14px; border-radius: 9px; white-space: nowrap;
+  padding: 9px 18px 9px 14px; border-radius: 9px;
+  /* aviso longo (substituição) quebra a linha em vez de passar da tela */
+  width: max-content; max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 2 * var(--m)); white-space: normal; text-align: center;
   background: rgba(7, 9, 10, 0.86); border: 1px solid var(--linha); border-left: 4px solid var(--verde);
   font-size: 14px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
 }
@@ -132,6 +146,21 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
 .gol-tela small:empty { display: none; }
 .gol-tela.visivel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
+/* faixa do intervalo e do fim de jogo (partida): no meio da tela, por cima do campo */
+.faixa {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 26px 16px;
+  min-width: min(320px, calc(100vw - 32px)); max-width: calc(100vw - 32px);
+  background: rgba(7, 9, 10, 0.9); border: 1px solid var(--linha); border-top: 4px solid var(--verde); border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); pointer-events: none;
+}
+.faixa[hidden] { display: none; }
+.faixa-titulo { font-size: 22px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
+.faixa-placar { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.faixa-placar:empty { display: none; }
+.faixa-botao { pointer-events: auto; min-width: 200px; margin-top: 4px; }
+.faixa-botao[hidden] { display: none; }
+
 /* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola */
 .minimapa {
   position: absolute; left: 50%; transform: translateX(-50%);
@@ -152,6 +181,11 @@ html.topo-c1 .marca-simbolo { display: none; }
 html.topo-c1 .placar { padding-left: 12px; }
 html.topo-c2 .modo { font-size: 0; letter-spacing: 0; gap: 0; }
 html.topo-c2 .painel-jogo { gap: 9px; padding: 0 10px 0 12px; }
+/* arco de botões grande (140%) chegando ao topo: o painel desce para baixo do placar, à esquerda */
+html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + 48px + 8px); }
+/* 3) sai o "1º T" do relógio (fica o minuto) */
+html.topo-c3 .placar-relogio small { display: none; }
+html.topo-c3 .placar { gap: 8px; padding-right: 10px; }
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
 .carga {
@@ -242,6 +276,11 @@ html.modo-prints .dica-retrato { display: none; }
 .btn-trocar { border-width: 3px; }
 .btn-goleiro svg { stroke: #c6ff3d; }
 .btn-goleiro.ativo svg { stroke: var(--preto); }
+/* defesa da Etapa 3: só aparecem depois que a entrada os posiciona no arco (style com a posição) */
+.btn-toque[data-etapa="3"]:not([style]) { display: none; }
+.btn-conter svg, .btn-pressao svg { stroke: #9ff5c6; }
+.btn-dividida svg { stroke: var(--verde); }
+.btn-conter.ativo svg, .btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
 .toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
@@ -267,10 +306,12 @@ html.modo-prints .dica-retrato { display: none; }
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
   padding: 12px 12px 10px 20px; background: #0e1314; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.janela-topo h2 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
+.janela-topo h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
 .janela-topo h2::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--verde); margin-right: 10px; vertical-align: -1px; border-radius: 2px; }
+.janela-topo .btn-fechar + .btn-fechar { margin-left: 8px; }
+.btn-fechar[hidden] { display: none; }
 .btn-fechar {
-  width: 40px; height: 40px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  width: 48px; height: 48px; display: grid; place-items: center; padding: 0; cursor: pointer;
   background: transparent; color: var(--texto-2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px;
 }
 .btn-fechar svg { width: 18px; height: 18px; }
@@ -278,9 +319,10 @@ html.modo-prints .dica-retrato { display: none; }
 
 .menu-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 20px; }
 .menu-acoes { display: flex; flex-direction: column; gap: 8px; }
+.menu-acoes[hidden] { display: none; }
 .btn {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  min-height: 44px; padding: 0 14px; cursor: pointer; text-align: left;
+  min-height: 48px; padding: 0 14px; cursor: pointer; text-align: left;
   font-size: 14px; font-weight: 700; color: var(--texto);
   background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px;
 }
@@ -290,6 +332,10 @@ html.modo-prints .dica-retrato { display: none; }
 .btn-primario { background: var(--verde); color: var(--preto); border-color: var(--verde); justify-content: center; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
 .btn-primario:hover, .btn-primario:focus-visible { background: #3cf092; }
 .btn-alternar[aria-pressed="true"] small { color: var(--verde); }
+.btn-voltar { justify-content: flex-start; gap: 6px; }
+.btn-voltar svg { width: 18px; height: 18px; flex: none; }
+#menu-modos .btn[aria-pressed="true"] { border-color: var(--verde); }
+#menu-modos .btn[aria-pressed="true"] small { color: var(--verde); }
 
 .menu-opcoes { display: flex; flex-direction: column; gap: 14px; }
 .opcao { display: flex; flex-direction: column; gap: 7px; }
@@ -329,11 +375,11 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 html.com-toque .ajuda-colunas section:last-child { order: -1; }
 /* tela baixa (celular deitado): janelas mais compactas */
 @media (max-height: 480px) {
-  .janela-topo { padding: 8px 10px 7px 16px; }
-  .btn-fechar { width: 36px; height: 36px; }
-  .menu-corpo { padding: 10px 16px 14px; gap: 16px; }
+  .janela-topo { padding: 4px 6px 4px 16px; }
+  .menu-corpo { padding: 8px 16px 10px; gap: 16px; }
   .menu-acoes { gap: 6px; }
-  .btn { min-height: 38px; }
+  /* os botões da pausa ficam com 48 px também no celular deitado (alvo de toque) */
+  .btn { min-height: 48px; }
   .segmentado button { height: 32px; }
   /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
   .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 9px; }
@@ -378,4 +424,5 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando { display: none; }
+html.modo-prints .faixa:not(.forcada) { display: none; }
 html.sem-hud .hud, html.sem-hud .toque { display: none; }

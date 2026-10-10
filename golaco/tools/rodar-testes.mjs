@@ -1,14 +1,21 @@
 // Roda toda a bateria de testes em Node (a mesma que o GitHub Actions roda antes de publicar).
 // Os testes rodam em paralelo (um processo cada, até o número de núcleos); o resultado sai na
 // ordem da lista. Sai com código 1 se algum reprovar.
-//   node tools/rodar-testes.mjs [--rapido]
+//   node tools/rodar-testes.mjs              (grupo padrão: o que o CI roda)
+//   node tools/rodar-testes.mjs --etapa3     (padrão + o grupo 'etapa3')
+//   node tools/rodar-testes.mjs --so etapa3  (só o grupo 'etapa3')
+// Cada linha: [nome, arquivo, argumentos (opcional), grupo (opcional; padrão = 'padrao')].
+// Grupo 'etapa3' (Etapa 3): marcadores que saem com "AGUARDANDO PARTE N" e testes novos que ainda
+// não passaram 5 vezes seguidas com sementes diferentes (plano 5). Não entram no padrão, para o CI
+// da main continuar verde. Quando o teste de uma parte estiver pronto, ela tira o 'etapa3' da linha
+// DELA (só da dela; a lista não muda de lugar).
 import { spawn } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
-const TESTES = [
+const LISTA = [
   ['matemática determinística (igual em todo motor JS)', 'teste-matdet.mjs'],
   ['física da bola', 'teste-bola.mjs'],
   ['determinismo (semente → mesmo hash)', 'teste-determinismo.mjs'],
@@ -33,12 +40,30 @@ const TESTES = [
   // Correções depois da Etapa 2
   ['goleiro com a bola na mão não trava (repõe sozinho, TROCAR)', 'teste-goleiro-trava.mjs'],
   ['movimento da IA sem a bola (vai e volta, tremor, amontoado, pressão)', 'teste-movimento.mjs'],
+  // Etapa 3 (partida 11×11, tática, IA e Editar time)
+  ['custo da partida 11×11 (razão partida ÷ treino ≤ 2,5×)', 'teste-custo.mjs'],
+  ['partida 11×11: relógio, intervalo, fim e recomeços (Parte 1)', 'teste-partida.mjs'],
+  ['Editar time: elenco, formações, encaixe, edição e substituição (Parte 1)', 'teste-editor.mjs'],
+  ['forma do time sem e com a bola (Parte 2)', 'teste-forma.mjs', [], 'etapa3'],
+  ['táticas do Editar time movem a forma (Parte 2)', 'teste-taticas.mjs'],
+  ['pressão, PPDA e contrapressão (Parte 2)', 'teste-pressao.mjs', [], 'etapa3'],
+  ['movimento da IA no 11×11 (Parte 2)', 'teste-movimento.mjs', ['--modo', 'partida'], 'etapa3'],
+  ['apoio, corredores, corridas e área (Parte 3)', 'teste-apoio.mjs', [], 'etapa3'],
+  ['intensidade e sanidade da partida (Parte 3)', 'teste-intensidade.mjs', [], 'etapa3'],
+  ['CONTER, DIVIDIDA e PRESSÃO do humano (Parte 4)', 'teste-defesa-humano.mjs'],
+  ['troca para quem disputa a bola alta ≥ 90% — canhão e assistência (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'canhao']],
+  ['troca para quem disputa a bola alta ≥ 90% — jogo natural (Parte 4)', 'teste-aereo-troca.mjs', ['--so', 'natural']],
 ];
+const argv = process.argv.slice(2);
+const iSo = argv.indexOf('--so');
+const so = iSo >= 0 ? argv[iSo + 1] : null;
+const grupos = so ? [so] : argv.includes('--etapa3') ? ['padrao', 'etapa3'] : ['padrao'];
+const TESTES = LISTA.filter(([, , , g = 'padrao']) => grupos.includes(g));
 
-function rodar(arq) {
+function rodar(arq, args = []) {
   return new Promise(resolve => {
     const ti = Date.now();
-    const p = spawn(process.execPath, [path.join(AQUI, arq)], { cwd: path.resolve(AQUI, '..') });
+    const p = spawn(process.execPath, [path.join(AQUI, arq), ...args], { cwd: path.resolve(AQUI, '..') });
     let saida = '';
     p.stdout.on('data', d => { saida += d; });
     p.stderr.on('data', d => { saida += d; });
@@ -61,7 +86,7 @@ function imprimir() {
 async function trabalhador() {
   while (prox < TESTES.length) {
     const i = prox++;
-    res[i] = await rodar(TESTES[i][1]);
+    res[i] = await rodar(TESTES[i][1], TESTES[i][2]);
     imprimir();
   }
 }
