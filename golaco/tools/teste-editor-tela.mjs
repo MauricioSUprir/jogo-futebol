@@ -262,6 +262,18 @@ async function conferirEditor(pg) {
     const chegou11 = await irAte(11);
     await pg.keyboard.press('Enter');
     const naPDt = await jogadorNaVaga(pg, 'PD');
+    // Tab até as reservas, Enter escolhe uma e o foco continua nela (a lista é redesenhada); Esc desmarca
+    let naLista = false;
+    for (let k = 0; k < 8 && !naLista; k++) {
+      await pg.keyboard.press('Tab');
+      naLista = await pg.evaluate(() => !!document.activeElement?.classList.contains('na-lista'));
+    }
+    await pg.keyboard.press('Enter');
+    const res3 = await pg.evaluate(() => { const a = document.activeElement; return { lista: !!a?.classList.contains('na-lista'), escolhida: a?.getAttribute('aria-pressed') === 'true' }; });
+    await pg.keyboard.press('Escape');
+    const desmarcou = (await pressionado(pg)).length === 0 && (await editorAberto(pg));
+    meta('3  PC teclado: Tab até as reservas, Enter escolhe e o foco fica na carta; Esc só desmarca',
+      `chegou às reservas ${naLista}, foco na carta ${res3.lista}, escolhida ${res3.escolhida}, Esc desmarcou e o editor segue aberto ${desmarcou}`, naLista && res3.lista && res3.escolhida && desmarcou);
     await pg.keyboard.press('Escape');
     const pausaT = await menuAberto(pg), fechouT = !(await editorAberto(pg));
     const focoVolta = await pg.evaluate(() => document.activeElement?.dataset?.cmd ?? '');
