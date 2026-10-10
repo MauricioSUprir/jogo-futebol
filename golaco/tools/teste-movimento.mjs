@@ -18,6 +18,7 @@
 //     no 11×11, IA × IA — Golaço 4-3-3 × Ventania 4-2-3-1, os 22 da IA; sem a IA com a bola da Parte 3,
 //     quem está com a bola no pé é o ataque substituto dos testes (tools/lib/partida-tatica.mjs), e a
 //     meta "chega ao chute" é do ataque: só informa até a Parte 3. --antes = a IA clássica no 11×11)
+//   [--sementes N] [--base K]: N sementes a partir de K + 1 (padrão 8 a partir de 1)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -52,7 +53,10 @@ function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok ? 'PA
 const fmt = (v, c = 1) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : String(v));
 const dif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
 
-const SEMENTES = process.env.SEMENTES ? Array.from({ length: +process.env.SEMENTES }, (_, k) => k + 1) : [1, 2, 3, 4, 5, 6, 7, 8], MIN = 3, N = Math.round(MIN * 60 / PASSO);
+// sementes: 1–8 (ou SEMENTES=N / --sementes N); --base K soma K a todas (outro conjunto de sementes)
+const argN = (nome, pad) => { const i = process.argv.indexOf(nome); return i > 0 ? +process.argv[i + 1] : pad; };
+const NSEM = argN('--sementes', process.env.SEMENTES ? +process.env.SEMENTES : 8), BASE = argN('--base', 0);
+const SEMENTES = Array.from({ length: NSEM }, (_, k) => BASE + k + 1), MIN = 3, N = Math.round(MIN * 60 / PASSO);
 const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
 let naMaoN = 0, naMaoLinha = 0, chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
