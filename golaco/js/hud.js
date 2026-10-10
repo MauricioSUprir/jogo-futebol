@@ -1,10 +1,15 @@
-// HUD (DOM): placar, velocidade e modo do jogador controlado, posição dele, minimapa, barra de
-// força do passe/chute perto do jogador, avisos curtos de eventos, "GOL!" grande, menu de pausa,
-// ajuda, contador de qps e tela de carregamento. Só mexe no DOM; quem decide é o main.js.
-// Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não existem.
+// HUD (DOM): placar (com o relógio da partida), velocidade e modo do jogador controlado, posição
+// dele, minimapa, barra de força do passe/chute perto do jogador, avisos curtos de eventos, "GOL!"
+// grande, faixa do intervalo e do fim de jogo, menu de pausa (itens por modo: Editar time e
+// Reiniciar partida na partida; Recomeçar, Máquina e Marcador só nos treinos; "Modo de jogo" com a
+// partida e os treinos), ajuda, contador de qps e tela de carregamento. Só mexe no DOM; quem
+// decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
+// existem.
 
+// prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
+// resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
 const TEXTO_EVENTO = {
-  fora: { t: 'Bola fora', ms: 1300 },
+  fora: { t: 'Bola fora', ms: 1300, prio: 0 },
   roubada: { t: 'Roubada!', ms: 1300 },
   perda: { t: 'Bola perdida', ms: 1300 },
   maquina: { t: 'Máquina: passe a caminho', ms: 1200 },
@@ -20,6 +25,16 @@ const TEXTO_EVENTO = {
   saidaGoleiro: { t: 'Goleiro saiu do gol', ms: 1200 },
   recomeco: { t: 'Recomeço da jogada', ms: 1000 },
   semMarcador: { t: 'Marcador só no treino de condução', ms: 1400 },
+  soTreino: { t: 'Só nos treinos (menu, Modo de jogo)', ms: 1600 },
+  // partida (Etapa 3)
+  saida: { t: 'Saída de bola', ms: 1100, prio: 0 },
+  lateral: { t: 'Lateral', ms: 1100, prio: 0 },
+  escanteio: { t: 'Escanteio', ms: 1300, forte: true, prio: 0 },
+  tiroDeMeta: { t: 'Tiro de meta', ms: 1100, prio: 0 },
+  timeEditado: { t: 'Time atualizado', ms: 1600, forte: true, prio: 2 },
+  edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
+  substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
+  reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
 // subtipos (o tipo do passe/chute vem no evento ou em m.voo.tipo)
 const NOME_ACAO = {
@@ -37,15 +52,17 @@ const ROTULO_CARGA = {
 const COR_MAPA = {
   t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
-// times fictícios: siglas do placar
-const TIMES = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
+// times fictícios: siglas do placar (treino; na partida vêm do elenco por definirTimes)
+const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
+const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
 const CAMPO_MX = 52.5, CAMPO_MZ = 34;
 
 /**
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
- * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade.
+ * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
+ * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -55,6 +72,10 @@ export function criarHud(opc) {
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'), golQuem: $('gol-quem'),
     mapa: $('minimapa'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
+    relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
+    faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
+    acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
+    reiniciarPartida: $('btn-reiniciar-partida'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1;
@@ -62,11 +83,16 @@ export function criarHud(opc) {
   let timerAviso = null, timerGol = null;
   let prints = false;
   const placarVisto = [null, null];
-  TIMES.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
+  let times = TIMES_TREINO;
+  const relogioVisto = { minuto: null, tempo: null, visivel: null };
+  let timerFaixa = null;
+  let modoAtual = null, fimDeJogo = false;
+  const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
+  times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
 
-  // botões com data-cmd (menu e ajuda)
+  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
   document.querySelectorAll('[data-cmd]').forEach(b => {
-    b.addEventListener('click', () => cmd(b.dataset.cmd));
+    b.addEventListener('click', () => cmd(b.dataset.cmd, b.dataset.valor));
   });
   // grupos segmentados
   document.querySelectorAll('.segmentado').forEach(g => {
@@ -86,7 +112,7 @@ export function criarHud(opc) {
   const btTela = $('btn-tela-cheia');
   if (btTela && document.fullscreenEnabled) {
     btTela.hidden = false;
-    const rotulo = () => { btTela.textContent = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; };
+    const rotulo = () => { const t = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; btTela.setAttribute('aria-label', t); btTela.title = t; };
     document.addEventListener('fullscreenchange', rotulo);
     rotulo();
   }
@@ -109,20 +135,71 @@ export function criarHud(opc) {
     const enc = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
     return enc(pl, mp) || enc(pa, mp) || enc(pl, pa);
   }
+  /**
+   * Algum botão de toque (de QUALQUER fase: a posição de cada vaga vem do style que a entrada
+   * escreve) encosta no placar, no minimapa ou no painel? Com o arco grande (140%) e os 5 botões da
+   * defesa da Etapa 3, a vaga de cima chega à faixa do topo.
+   */
+  function botaoNoTopo() {
+    const caixas = caixasTopo.map(e => e?.getBoundingClientRect()).filter(r => r && r.width > 0);
+    for (const b of document.querySelectorAll('#toque .btn-toque[style]')) {
+      const d = parseFloat(b.style.width), x = parseFloat(b.style.left) + d / 2, y = parseFloat(b.style.top) + d / 2;
+      if (!(d > 0)) continue;
+      for (const r of caixas) {
+        const qx = Math.max(r.left, Math.min(x, r.right)), qy = Math.max(r.top, Math.min(y, r.bottom));
+        if (Math.hypot(x - qx, y - qy) < d / 2 + 8) return true;
+      }
+    }
+    return false;
+  }
   function ajustarTopo() {
-    raiz.classList.remove('topo-c1', 'topo-c2');
+    raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3', 'topo-desce');
     if (!raiz.classList.contains('com-toque')) return;
+    // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
+    if (botaoNoTopo()) raiz.classList.add('topo-desce');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c1');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c2');
+    if (!encostaTopo()) return;
+    raiz.classList.add('topo-c3');
   }
   window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
 
-  function mostrarAviso(texto, ms, cls = '') {
+  /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
+  function aplicarModoNoMenu() {
+    const partida = modoAtual === 'partida';
+    document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = b.dataset.so !== (partida ? 'partida' : 'treino'); });
+    // marcador de treino só no treino de condução (no de ataque a defesa já marca)
+    if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
+    if (el.estadoModo) el.estadoModo.textContent = NOME_MODO[modoAtual] ?? '';
+    el.modos?.querySelectorAll('[data-cmd="modo"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.valor === modoAtual)));
+    // fim de jogo: "Jogar de novo" no lugar de Continuar
+    const fim = partida && fimDeJogo;
+    if (el.continuar) el.continuar.hidden = fim;
+    if (el.reiniciarPartida) {
+      el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : 'Reiniciar partida';
+      el.reiniciarPartida.classList.toggle('btn-primario', fim);
+    }
+  }
+  function mostrarSubmenu(v) {
+    if (!el.acoes || !el.modos) return;
+    el.acoes.hidden = v; el.modos.hidden = !v;
+    const alvo = v ? el.modos.querySelector('[aria-pressed="true"]') ?? el.modos.querySelector('button') : $('btn-modos');
+    alvo?.focus({ preventScroll: true });
+  }
+
+  const avisoAtual = { tipo: null, prio: 0, ate: 0, texto: '' };
+  function mostrarAviso(texto, ms, cls = '', prio = 1, tipo = null) {
+    const agora = performance.now();
+    const vivo = el.aviso.classList.contains('visivel') && agora < avisoAtual.ate;
+    if (vivo && avisoAtual.prio > prio) return;
+    // duas substituições na mesma parada: um aviso só ("Substituição: sai A, entra B; sai C, entra D")
+    if (vivo && tipo === 'substituicao' && avisoAtual.tipo === 'substituicao' && texto !== avisoAtual.texto) texto = `${avisoAtual.texto}; ${texto.replace(/^Substituição: /, '')}`;
     el.aviso.textContent = texto;
     el.aviso.className = 'aviso visivel' + (cls ? ' ' + cls : '');
+    Object.assign(avisoAtual, { tipo, prio, ate: agora + ms, texto });
     clearTimeout(timerAviso);
     timerAviso = setTimeout(() => { el.aviso.classList.remove('visivel'); }, ms);
   }
@@ -178,16 +255,26 @@ export function criarHud(opc) {
     const X = x => m + (Math.max(-CAMPO_MX - 2, Math.min(CAMPO_MX + 2, x)) + CAMPO_MX) * sx;
     const Z = z => m + (Math.max(-CAMPO_MZ - 2, Math.min(CAMPO_MZ + 2, z)) + CAMPO_MZ) * sz;
     const r = Math.max(1.6, 1.9 * dpr * (w / dpr > 110 ? 1.15 : 1));
-    let ctrl = null;
-    for (const j of mundo.jogadores ?? []) {
-      const gol = j.posicao === 'GOL';
-      g.fillStyle = j.time === 1 ? (gol ? COR_MAPA.t1gol : COR_MAPA.t1) : (gol ? COR_MAPA.t0gol : COR_MAPA.t0);
-      g.beginPath(); g.arc(X(j.x), Z(j.z), r, 0, Math.PI * 2); g.fill();
-      if (j.id === idControlado) ctrl = j;
-      else if (j.id === idProximo) {
-        g.strokeStyle = 'rgba(255, 255, 255, 0.55)'; g.lineWidth = dpr * 0.8;
-        g.beginPath(); g.arc(X(j.x), Z(j.z), r + 1.4 * dpr, 0, Math.PI * 2); g.stroke();
+    let ctrl = null, prox = null;
+    const js = mundo.jogadores ?? [];
+    // um preenchimento por cor (4 no total, não um por jogador): com 22 em campo o minimapa era o
+    // item mais caro do HUD no celular
+    for (let cor = 0; cor < 4; cor++) {
+      const t = cor >> 1, gol = (cor & 1) === 1;
+      g.fillStyle = t === 1 ? (gol ? COR_MAPA.t1gol : COR_MAPA.t1) : (gol ? COR_MAPA.t0gol : COR_MAPA.t0);
+      g.beginPath();
+      for (let k = 0; k < js.length; k++) {
+        const j = js[k];
+        if ((j.time === 1 ? 1 : 0) !== t || (j.posicao === 'GOL') !== gol) continue;
+        const x = X(j.x), z = Z(j.z);
+        g.moveTo(x + r, z); g.arc(x, z, r, 0, Math.PI * 2);
+        if (j.id === idControlado) ctrl = j; else if (j.id === idProximo) prox = j;
       }
+      g.fill();
+    }
+    if (prox) {
+      g.strokeStyle = 'rgba(255, 255, 255, 0.55)'; g.lineWidth = dpr * 0.8;
+      g.beginPath(); g.arc(X(prox.x), Z(prox.z), r + 1.4 * dpr, 0, Math.PI * 2); g.stroke();
     }
     if (ctrl) {
       // controlado: ponto maior com anel branco
@@ -246,9 +333,10 @@ export function criarHud(opc) {
         placarVisto[i] = v[i];
       }
     },
-    /** Minimapa (no máximo ~30 vezes por segundo). */
+    /** Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). */
     minimapa(agoraMs, mundo, idControlado, idProximo) {
-      if (agoraMs - mapa.ultimo < 33 && agoraMs >= mapa.ultimo) return;
+      const intervalo = raiz.classList.contains('com-toque') ? 50 : 33;
+      if (agoraMs - mapa.ultimo < intervalo && agoraMs >= mapa.ultimo) return;
       mapa.ultimo = agoraMs;
       desenharMapa(mundo, idControlado, idProximo);
     },
@@ -274,7 +362,7 @@ export function criarHud(opc) {
       const tipo = typeof ev === 'string' ? ev : ev?.tipo;
       if (tipo === 'gol') {
         const t = typeof ev === 'object' ? ev.time : undefined;
-        if (el.golQuem) el.golQuem.textContent = t === 0 || t === 1 ? TIMES[t].nome : '';
+        if (el.golQuem) el.golQuem.textContent = t === 0 || t === 1 ? times[t].nome : '';
         el.golTela?.classList.add('visivel');
         clearTimeout(timerGol);
         timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, 2000);
@@ -283,8 +371,8 @@ export function criarHud(opc) {
       }
       const d = TEXTO_EVENTO[tipo];
       if (!d) return;
-      let texto = d.t;
-      if (typeof ev === 'object' && ev) {
+      let texto = extra.texto ?? d.t;
+      if (typeof ev === 'object' && ev && !extra.texto) {
         if (tipo === 'passe' || tipo === 'chute') {
           const sub = ev.acao ?? ev.subtipo ?? ev.modo ?? ev.estilo ?? extra.tipoVoo;
           if (NOME_ACAO[sub]) texto = NOME_ACAO[sub];
@@ -293,20 +381,75 @@ export function criarHud(opc) {
           if (NOME_DEFESA[sub]) texto = NOME_DEFESA[sub];
         }
       }
-      mostrarAviso(texto, d.ms, d.forte ? 'forte' : '');
+      mostrarAviso(texto, d.ms, d.forte ? 'forte' : '', d.prio ?? 1, tipo);
     },
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
-    abrirMenu(forcar = false) { if (prints && !forcar) return; el.ajuda.hidden = true; el.menu.hidden = false; el.menu.querySelector('.btn-primario')?.focus({ preventScroll: true }); },
+    /** Abre a pausa; foco: seletor do botão que recebe o foco (padrão: o primário visível). */
+    abrirMenu(forcar = false, foco = null) {
+      if (prints && !forcar) return;
+      el.ajuda.hidden = true; el.menu.hidden = false;
+      if (el.acoes) el.acoes.hidden = false;
+      if (el.modos) el.modos.hidden = true;
+      const alvo = (foco && el.menu.querySelector(foco)) || [...el.menu.querySelectorAll('#menu-acoes .btn-primario')].find(b => !b.hidden);
+      alvo?.focus({ preventScroll: true });
+    },
     fecharMenu() { el.menu.hidden = true; },
+    /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
+    submenuModos: mostrarSubmenu,
+    /** Siglas e nomes dos dois times (partida: do elenco) ou null (treino). */
+    definirTimes(t) {
+      times = t ?? TIMES_TREINO;
+      times.forEach((x, i) => { if (el.siglas[i]) el.siglas[i].textContent = x.sigla; });
+      ajustarTopo();
+    },
+    get times() { return times; },
+    /**
+     * Relógio da partida no placar: r = {minuto (0–90), tempo (1|2), estado} ou null (treino: some).
+     * Só escreve no DOM quando muda.
+     */
+    relogio(r) {
+      if (!el.relogio) return;
+      const vis = !!r;
+      if (vis !== relogioVisto.visivel) { el.relogio.hidden = !vis; relogioVisto.visivel = vis; ajustarTopo(); }
+      if (!r) return;
+      const min = `${r.minuto}'`;
+      const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : NOME_TEMPO[r.tempo] ?? '';
+      if (min !== relogioVisto.minuto) { el.minuto.textContent = min; relogioVisto.minuto = min; }
+      if (tempo !== relogioVisto.tempo) {
+        el.tempo.textContent = tempo; relogioVisto.tempo = tempo;
+        el.relogio.classList.toggle('parado', r.estado === 'intervalo' || r.estado === 'fim');
+        ajustarTopo();
+      }
+    },
+    /**
+     * Faixa no meio da tela: f = {titulo, placar, ms?, botao?} (botao = "Jogar de novo") ou null.
+     * Sem ms, fica até ser trocada (fim de jogo). No modo de prints só aparece com forcar.
+     */
+    faixa(f, forcar = false) {
+      if (!el.faixa) return;
+      clearTimeout(timerFaixa);
+      if (!f || (prints && !forcar)) { el.faixa.hidden = true; el.faixa.classList.remove('forcada'); return; }
+      el.faixaTitulo.textContent = f.titulo ?? '';
+      el.faixaPlacar.textContent = f.placar ?? '';
+      el.faixaBotao.hidden = !f.botao;
+      el.faixa.classList.toggle('forcada', !!forcar);
+      el.faixa.hidden = false;
+      if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
+    },
+    get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
     abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
     fecharAjuda() { el.ajuda.hidden = true; },
     /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
     /** Estado das opções no menu. */
     definirEstado(e) {
-      // marcador de treino só existe no treino de condução (no de ataque a defesa já marca)
-      if (e.modoTreino !== undefined && el.marcador) el.marcador.closest('button').hidden = e.modoTreino === 'ataque';
+      // itens do menu por modo (partida × treinos) e pelo fim de jogo
+      if (e.modoTreino !== undefined || e.fim !== undefined) {
+        if (e.modoTreino !== undefined) modoAtual = e.modoTreino;
+        if (e.fim !== undefined) fimDeJogo = !!e.fim;
+        aplicarModoNoMenu();
+      }
       if (e.qualidadeEscolha) marcarGrupo('qualidade', e.qualidadeEscolha);
       if (e.qualidadeAtual && el.infoQ) {
         el.infoQ.textContent = e.qualidadeEscolha === 'auto'

@@ -4,26 +4,39 @@
 //   3) download inicial (nosso servidor + CDN) ≤ 4 MB;
 //   4) laço de passo fixo: 1 s de relógio manual a 60, 120 e 144 Hz = 60 passos;
 //   5) determinismo Node = Chromium: 600 passos com o MESMO roteiro de entradas (correr,
-//      modificador, pedalada, passe, chute, marcador e máquina de passes) no treino padrão
-//      (Etapa 2: os dois times com a IA) dão o mesmo hashMundo nos dois; e a matemática
+//      modificador, pedalada, passe, chute, marcador e máquina de passes) no treino de ataque
+//      (modo explícito: a página abre na partida) dão o mesmo hashMundo nos dois; o mesmo na
+//      PARTIDA 11×11 (Etapa 3): 600 passos com uma edição do time no meio (troca de vaga, tática e
+//      uma substituição, que entra no intervalo de um tempo curto) e a troca de lado; e a matemática
 //      determinística (js/matdet.js) dá os mesmos bits nos dois motores;
 //   6) interpolação: a 144 Hz o jogador desenhado anda a passos regulares (sem o "anda, para,
 //      anda" de quem desenha só o último passo de simulação) — modo condução;
 //   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva — modo
 //      condução (sem adversário para roubar a bola no meio da medida).
 // Saída com PASSOU/REPROVOU e código de saída 1 se reprovar.
-//   node tools/teste-carga.mjs [--url http://...]   (sem --url sobe o servidor da pasta)
-import { servidor, abrir } from './lib/navegador.mjs';
-import { criarTreino, passoTreino } from '../js/sessao.js';
-import { hashMundo } from '../js/sim.js';
-import { BOTAO } from '../js/config.js';
-import { MD } from '../js/matdet.js';
+//   node tools/teste-carga.mjs [--url http://...] [--raiz <pasta do jogo>] [--semente N]
+//   (sem --url sobe o servidor da pasta; --raiz mede outra cópia, ex.: a base, com a lógica dela)
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const LIMITE_BYTES = 4 * 1024 * 1024;
 const N_PASSOS = 600;
-const SEMENTE = 7;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
+const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
+// --semente N: soma N às sementes (outro conjunto, para as 5 rodadas seguidas)
+const DS = args.includes('--semente') ? Math.max(0, Math.floor(+args[args.indexOf('--semente') + 1] || 0)) : 0;
+const SEMENTE = 7 + DS;
+const { criarTreino, passoTreino } = await imp('sessao.js');
+const { hashMundo } = await imp('sim.js');
+const { BOTAO } = await imp('config.js');
+const { MD } = await imp('matdet.js');
+const P = await imp('partida.js').catch(() => null);
+const ESC = await imp('escalacao.js').catch(() => null);
+const SEMENTE_PARTIDA = 11 + DS;
+const MIN_PARTIDA = 0.1; // tempo de 6 s: o intervalo (com a substituição) cai dentro dos 600 passos
 
 /**
  * Entrada no formato POR TIME ({0: {x, z, botoes}}), com x/z/botoes também no próprio objeto
@@ -59,7 +72,7 @@ function roteiro(n) {
 }
 
 function hashesNode(rot) {
-  const m = criarTreino({ semente: SEMENTE });
+  const m = criarTreino({ semente: SEMENTE, modo: 'ataque' });
   const hs = [hashMundo(m)];
   for (let i = 0; i < rot.length; i++) {
     const e = rot[i];
@@ -82,11 +95,43 @@ function assinaturaMat(MD) {
   return h >>> 0;
 }
 
+/**
+ * Roteiro da partida: correr, conduzir, chutar e, no passo 300, uma edição do time 0 (PD ↔ PE,
+ * tática mais ofensiva e a substituição 9 → 22, pendente até a parada).
+ */
+function roteiroPartida(n) {
+  const base = ESC ? ESC.estadoInicialTime('golaco') : null;
+  const ed = base ? {
+    tipo: 'editarTime', time: 0, base: 0, formacao: base.formacao,
+    vagas: { ...base.vagas, PD: base.vagas.PE, PE: base.vagas.PD, ATA: 22 },
+    substituicoes: [{ sai: base.vagas.ATA, entra: 22 }], tatica: { mentalidade: 1, pressao: 2, largura: 2, linha: 2 },
+  } : null;
+  const r = [];
+  for (let i = 0; i < n; i++) {
+    const a = 0.7 * Math.sin(i / 45);
+    const e = { x: Math.cos(a) * 0.9, z: Math.sin(a) * 0.9, botoes: (i >= 60 && i < 140 ? BOTAO.CORRER : 0) | (i >= 160 && i < 185 ? BOTAO.CHUTE : 0) | (i >= 470 && i < 490 ? BOTAO.PASSE : 0) };
+    if (i === 300 && ed) e.acoes = [ed];
+    r.push(e);
+  }
+  return r;
+}
+function hashesPartidaNode(rot) {
+  if (!P) return null;
+  const m = P.criarPartida({ semente: SEMENTE_PARTIDA, minutosPorTempo: MIN_PARTIDA });
+  const hs = [hashMundo(m)];
+  for (let i = 0; i < rot.length; i++) {
+    const e = rot[i];
+    P.passoPartida(m, entradaDoTime(e), e.acoes ?? null);
+    if ((i + 1) % 100 === 0) hs.push(hashMundo(m));
+  }
+  return { hs, jogadores: m.jogadores.length };
+}
+
 const resultados = [];
 let hexa = h => (h >>> 0).toString(16).padStart(8, '0');
 function meta(nome, medido, alvo, ok) { resultados.push({ nome, medido, alvo, ok }); }
 
-const srv = urlExterna ? null : await servidor();
+const srv = urlExterna ? null : await servidor(0, raiz);
 const url = urlExterna ?? srv.url;
 const { navegador, contexto, pagina, erros, cdnBytes } = await abrir({ largura: 1280, altura: 720 });
 try {
@@ -161,7 +206,7 @@ try {
   const nav = await pagina.evaluate(({ rot, semente }) => {
     const g = window.__golaco;
     g.pausar(true);
-    const hs = [g.reiniciar({ semente })];
+    const hs = [g.reiniciar({ semente, modo: 'ataque' })];
     for (let k = 0; k < rot.length; k += 100) hs.push(g.rodarPassos(100, rot.slice(k, k + 100)));
     const m = g.mundo;
     const r = { hs, posse: m.posse, tick: m.tick, stats: { ...m.stats }, jogadores: m.jogadores.length };
@@ -172,6 +217,33 @@ try {
   for (let i = 0; i < node.hs.length; i++) if (node.hs[i] !== nav.hs[i]) { divergeEm = i * 100; break; }
   meta('Hash após 600 passos (Node = Chromium)', `Node ${hexa(node.hs.at(-1))} · Chromium ${hexa(nav.hs.at(-1))}${divergeEm >= 0 ? ` (diverge até o passo ${divergeEm})` : ''}`, 'iguais', divergeEm < 0);
   meta('Roteiro exercitado', `tick ${nav.tick}, posse ${nav.posse}, ${nav.jogadores} jogadores, passes ${nav.stats.passes ?? '-'}, chutes ${nav.stats.chutes ?? '-'}, roubadas ${nav.stats.roubadas}, perdas ${nav.stats.perdas}`, 'tick 600', nav.tick === N_PASSOS);
+
+  // 5b) partida 11×11 (Etapa 3): Node = Chromium com edição, substituição, intervalo e troca de lado
+  const rotP = roteiroPartida(N_PASSOS);
+  const nodeP = hashesPartidaNode(rotP);
+  const navP = await pagina.evaluate(({ rot, semente, min }) => {
+    const g = window.__golaco;
+    g.pausar(true);
+    const hs = [g.reiniciar({ modo: 'partida', semente, minutosPorTempo: min })];
+    for (let k = 0; k < rot.length; k += 100) hs.push(g.rodarPassos(100, rot.slice(k, k + 100)));
+    const m = g.mundo;
+    const t = m.times?.[0];
+    const r = {
+      hs, jogadores: m.jogadores.length, tick: m.tick, modo: m.modo ?? null,
+      tempo: m.partida?.tempo ?? null, versao: t?.versao ?? null, saiu: t ? [...t.saiu] : [], pd: t?.vagas?.PD ?? null,
+      em22: m.jogadores.some(j => j.id === 22), linha: t?.tatica?.linha ?? null,
+    };
+    g.pausar(false);
+    return r;
+  }, { rot: rotP, semente: SEMENTE_PARTIDA, min: MIN_PARTIDA });
+  let divergeP = -1;
+  if (nodeP) for (let i = 0; i < nodeP.hs.length; i++) if (nodeP.hs[i] !== navP.hs[i]) { divergeP = i * 100; break; }
+  meta('Partida 11×11: 22 em campo no Chromium (reiniciar com modo partida)', `${navP.jogadores} jogadores, modo ${navP.modo}`, '22, partida', navP.jogadores === 22 && navP.modo === 'partida');
+  meta('Partida: hash após 600 passos com edição e substituição (Node = Chromium)', nodeP
+    ? `Node ${hexa(nodeP.hs.at(-1))} · Chromium ${hexa(navP.hs.at(-1))}${divergeP >= 0 ? ` (diverge até o passo ${divergeP})` : ''}`
+    : 'sem partida.js na lógica', 'iguais', !!nodeP && divergeP < 0);
+  meta('Partida: a edição e a substituição entraram (2º tempo, 9 → 22, PD = 11, linha Alta)', `tempo ${navP.tempo}, versão ${navP.versao}, saiu [${navP.saiu}], 22 em campo ${navP.em22}, PD ${navP.pd}, linha ${navP.linha}`,
+    '2º tempo, saiu 9, PD 11, linha 2', navP.tempo === 2 && navP.saiu.includes(9) && navP.em22 && navP.pd === 11 && navP.linha === 2);
 
   const matNode = assinaturaMat(MD);
   const matNav = await pagina.evaluate(async src => {

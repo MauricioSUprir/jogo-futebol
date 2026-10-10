@@ -103,7 +103,9 @@ export function criarCena(opc) {
   const dirLuz = new THREE.Vector3(0, 1, 0);
   // base da vista da luz (para o "texel snapping")
   const eixoD = new THREE.Vector3(), eixoC = new THREE.Vector3();
-  const RAIO_SOMBRA = 21;
+  // raio da sombra em volta do foco: 21 m; na Alta, 28 m (com 22 em campo, os jogadores da borda do
+  // quadro de TV, ~45 m de largura, ficavam só com a mancha). Texel com o mapa de 2048: 2,7 cm.
+  const raioSombra = () => (q.mapaSombra >= 2048 ? 28 : 21);
 
   function configurarSombra() {
     luz.castShadow = q.sombras;
@@ -112,8 +114,8 @@ export function criarCena(opc) {
     if (luz.shadow.map) { luz.shadow.map.dispose(); luz.shadow.map = null; }
     if (q.sombras) {
       luz.shadow.mapSize.set(q.mapaSombra, q.mapaSombra);
-      const c = luz.shadow.camera;
-      c.left = -RAIO_SOMBRA; c.right = RAIO_SOMBRA; c.top = RAIO_SOMBRA; c.bottom = -RAIO_SOMBRA;
+      const c = luz.shadow.camera, R = raioSombra();
+      c.left = -R; c.right = R; c.top = R; c.bottom = -R;
       c.near = 1; c.far = 160;
       c.updateProjectionMatrix();
       luz.shadow.bias = -0.0006;
@@ -189,7 +191,7 @@ export function criarCena(opc) {
     acompanhar(x, z) {
       foco.set(x, 0, z);
       if (q.sombras) {
-        const texel = (2 * RAIO_SOMBRA) / q.mapaSombra;
+        const texel = (2 * raioSombra()) / q.mapaSombra;
         const u = foco.dot(eixoD), v = foco.dot(eixoC);
         foco.addScaledVector(eixoD, Math.round(u / texel) * texel - u);
         foco.addScaledVector(eixoC, Math.round(v / texel) * texel - v);
@@ -204,5 +206,7 @@ export function criarCena(opc) {
       renderer.render(cena, camera);
     },
     info() { return renderer.info; },
+    /** Raio (m) da sombra em volta do foco (21; 28 na Alta). */
+    get raioSombra() { return q.sombras ? raioSombra() : 0; },
   };
 }
