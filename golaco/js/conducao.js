@@ -188,8 +188,22 @@ export function preverCorpo(m, j, n, comBola, prot, rec) {
   return { n, xs, zs, rs, ss, fs };
 }
 
-/** Bola prevista n ticks à frente (física pura). */
+// a última bola prevista (arrays novos a cada conta: quem recebeu uma resposta antiga não a vê mudar)
+const _prevBola = { n: -1, rol: false, px: 0, py: 0, pz: 0, vx: 0, vy: 0, vz: 0, wx: 0, wy: 0, wz: 0, res: null };
+/**
+ * Bola prevista n ticks à frente (física pura). Os arrays devolvidos são SÓ DE LEITURA e podem ter mais
+ * de n + 1 posições (Etapa 3, plano 4.3): a mesma bola prevista de novo — a bola livre testa o domínio de
+ * cada candidato no mesmo passo, a IA e a condução também preveem — sai da memória. A chave é o estado
+ * que a física lê (posição, velocidade, giro e se rola; a orientação é só do desenho), então a resposta
+ * é a mesma conta, bit a bit (tools/hash-igual.mjs); nenhum chamador escreve nos arrays nem os guarda.
+ */
 export function preverBola(b, n) {
+  const k = _prevBola;
+  const p = b.p, v = b.v, w = b.w;
+  // Object.is: −0 e +0 são estados diferentes para a conta (atan2 etc.)
+  const ig = Object.is;
+  if (k.n >= n && k.rol === b.rolando && ig(k.px, p.x) && ig(k.py, p.y) && ig(k.pz, p.z) && ig(k.vx, v.x) && ig(k.vy, v.y)
+    && ig(k.vz, v.z) && ig(k.wx, w.x) && ig(k.wy, w.y) && ig(k.wz, w.z)) return k.res;
   const c = copiarBola(b);
   const xs = new Float64Array(n + 1), zs = new Float64Array(n + 1), ys = new Float64Array(n + 1);
   xs[0] = c.p.x; zs[0] = c.p.z; ys[0] = c.p.y;
@@ -197,7 +211,9 @@ export function preverBola(b, n) {
     passoBola(c, null);
     xs[i] = c.p.x; zs[i] = c.p.z; ys[i] = c.p.y;
   }
-  return { xs, zs, ys };
+  k.n = n; k.rol = b.rolando; k.px = p.x; k.py = p.y; k.pz = p.z; k.vx = v.x; k.vy = v.y; k.vz = v.z;
+  k.wx = w.x; k.wy = w.y; k.wz = w.z; k.res = { xs, zs, ys };
+  return k.res;
 }
 
 /** Situação dos pés pela fase (para previsão): devolve [apoio0, apoio1]. */
