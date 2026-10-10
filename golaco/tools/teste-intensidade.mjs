@@ -12,7 +12,7 @@
 //      chutes 10–35 · gols 1,5–4,5 (média) · conversão 6–20% · ≥ 55% dos chutes de dentro da área ·
 //      passe certo 70–90% (o próximo a ter a bola é do time de quem passou; bola fora = errado) ·
 //      posse 35–65% para cada time (soma das partidas).
-//   node tools/teste-intensidade.mjs              (lógica do repositório; 6 partidas)
+//   node tools/teste-intensidade.mjs              (lógica do repositório; 8 partidas)
 //   node tools/teste-intensidade.mjs --antes      (a mesma partida com a IA de hoje: criarPartida({iaClassica: true}))
 //   node tools/teste-intensidade.mjs --js <pasta> (outra cópia da lógica; sem partida.js → REPROVA)
 //   SEMENTES=20 node tools/teste-intensidade.mjs  · --sem0 101 (primeira semente)
@@ -109,7 +109,7 @@ if (!fs.existsSync(path.join(JS, 'partida.js'))) {
   reg('a partida 11×11 existe (criarPartida)', 'partida.js não existe nesta lógica', 'criarPartida', false);
   fim();
 }
-const NS = +(process.env.SEMENTES ?? 6), S0 = +arg('--sem0', 1);
+const NS = +(process.env.SEMENTES ?? 8), S0 = +arg('--sem0', 1);
 const SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
 const t0 = Date.now();
 const res = [];
