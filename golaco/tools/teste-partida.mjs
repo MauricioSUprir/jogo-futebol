@@ -40,15 +40,28 @@ const existe = f => fs.existsSync(path.join(JS, f));
 const PASSO = 1 / 60;
 const fmtS = v => v.toFixed(2).replace('.', ',');
 
+/**
+ * API da partida: a da sessão (a mesma da página). Se a sessão desta lógica ainda não cria a
+ * partida (cai no treino) mas o partida.js existe (Parte 0), mede direto pelo partida.js — a linha
+ * "a sessão cria a partida" reprova e o resto mostra o que aquela partida fazia.
+ */
+async function apiPartida() {
+  const S = await imp('sessao.js');
+  const P = existe('partida.js') ? await imp('partida.js') : null;
+  const viaSessao = !!S.criarTreino({ modo: 'partida', semente: 1 }).partida;
+  if (viaSessao || !P) return { viaSessao, criar: o => S.criarTreino({ modo: 'partida', ...o }), passo: S.passoTreino, demo: S.entradaDemo };
+  return { viaSessao, criar: o => P.criarPartida(o), passo: P.passoPartida, demo: P.entradaDemoPartida };
+}
+
 // --------------------------------------------------------------- medida de uma partida (C e D)
 /**
  * Roda 1 tempo IA × IA (ou com o humano parado) e mede paradas, bola rolando, trocas de posse,
  * NaN e as violações da parada. Devolve um resumo serializável.
  */
 async function medirTempo(sem, min, parado) {
-  const S = await imp('sessao.js');
+  const S = await apiPartida();
   const { jogadorPorId } = await imp('sim.js');
-  const m = S.criarTreino({ modo: 'partida', semente: sem, minutosPorTempo: min, iaClassica: ANTES });
+  const m = S.criar({ semente: sem, minutosPorTempo: min, iaClassica: ANTES });
   const r = { sem, paradas: [], rolando: 0, total: 0, trocas: 0, nan: false, violaSaida: 0, violaEntra: 0, violaCobranca: 0, violaCampo: 0, violaPosse: 0, saidasGol: 0, tipos: {}, gols: 0, fim: false, detalhes: [] };
   if (!m.partida) { r.semPartida = true; return r; }
   const N = Math.round(min * 60 / PASSO) + 3000;
@@ -63,7 +76,7 @@ async function medirTempo(sem, min, parado) {
   };
   for (let i = 0; i < N; i++) {
     const pr0 = m.parada;
-    const ev = S.passoTreino(m, parado ? zero : S.entradaDemo(m));
+    const ev = S.passo(m, parado ? zero : S.demo(m));
     for (const e of ev) {
       if ((e.tipo === 'fora' || e.tipo === 'gol') && morta == null) morta = m.tick - 1;
       if (e.tipo === 'gol') { r.gols++; golAntes = true; }
@@ -146,7 +159,7 @@ const MIN = +arg('--min', 4);
 const SEMENTES = Array.from({ length: NSEM }, (_, k) => BASE + k);
 console.log(`teste-partida: lógica ${JS}${ANTES ? ' (IA clássica: --antes)' : ''}; sementes ${SEMENTES.join(',')}; ${MIN} min por tempo`);
 
-const S = await imp('sessao.js');
+const S = await apiPartida();
 const SIM = await imp('sim.js');
 const temPartida = existe('partida.js');
 const P = temPartida ? await imp('partida.js') : null;
@@ -154,7 +167,8 @@ const E = existe('elenco.js') ? await imp('elenco.js') : null;
 
 // ----------------------------------------------------------------------- A. elenco em campo
 {
-  const m = S.criarTreino({ modo: 'partida', semente: BASE, iaClassica: ANTES });
+  reg('a sessão cria a partida (criarTreino({modo: "partida"}), a API da página)', S.viaSessao ? 'cria' : 'cai no treino de ataque', 'cria', S.viaSessao);
+  const m = S.criar({ semente: BASE, iaClassica: ANTES });
   const js = m.jogadores;
   const porTime = [0, 1].map(t => js.filter(j => j.time === t));
   reg('22 em campo (11 por time)', `${js.length} (${porTime[0].length} + ${porTime[1].length})`, '22 (11 + 11)', js.length === 22 && porTime.every(a => a.length === 11));
@@ -179,13 +193,13 @@ if (!temPartida) {
 
 // ------------------------------------------------------------------------ B. relógio e lados
 {
-  const m = S.criarTreino({ modo: 'partida', semente: BASE + 100, minutosPorTempo: 0.5, iaClassica: ANTES });
+  const m = S.criar({ semente: BASE + 100, minutosPorTempo: 0.5, iaClassica: ANTES });
   const saida1 = m.partida.saidaInicial;
   const lado0 = m.ataca[0];
   let minIntervalo = null, minFim = null, cresce = true, ultMin = -1, saida2 = null, golOk = null, i = 0;
   const min1 = [];
   for (; i < 20000 && m.partida.estado !== 'fim'; i++) {
-    const ev = S.passoTreino(m, S.entradaDemo(m));
+    const ev = S.passo(m, S.demo(m));
     const mn = P.minutoDeJogo(m);
     if (mn < ultMin) cresce = false;
     ultMin = mn;
@@ -210,7 +224,7 @@ if (!temPartida) {
   const foto = () => [m.bola.p.x, m.bola.p.y, m.bola.p.z, ...m.jogadores.flatMap(j => [j.x, j.z, j.rumo])];
   const a = foto();
   const t0 = m.tick;
-  for (let k = 0; k < 120; k++) S.passoTreino(m, { x: 1, z: 0, botoes: 0 });
+  for (let k = 0; k < 120; k++) S.passo(m, { x: 1, z: 0, botoes: 0 });
   const b = foto();
   const parado = a.every((v, k) => v === b[k]);
   reg('fim para tudo (120 passos depois)', `${parado ? 'tudo parado' : 'mexeu'}; estado ${m.partida.estado}; tick ${m.tick - t0 === 120 ? 'anda' : 'parado'}`, 'tudo parado; fim', parado && m.partida.estado === 'fim');
@@ -272,9 +286,9 @@ const [resC, resD] = await Promise.all([
   const meioX = 52.5, meioZ = 34;
   /** Partida rolando no tempo `tempo` (1 ou 2), pronta para receber a bola do canhão. */
   function partidaRolando(sem, tempo) {
-    const m = S.criarTreino({ modo: 'partida', semente: sem, minutosPorTempo: 2, iaClassica: ANTES });
+    const m = S.criar({ semente: sem, minutosPorTempo: 2, iaClassica: ANTES });
     if (tempo === 2) m.partida.tick0Tempo -= m.partida.ticksPorTempo; // o 1º tempo acaba no próximo passo
-    for (let i = 0; i < 1500 && !(m.partida.estado === 'jogo' && m.partida.tempo === tempo); i++) S.passoTreino(m, S.entradaDemo(m));
+    for (let i = 0; i < 1500 && !(m.partida.estado === 'jogo' && m.partida.tempo === tempo); i++) S.passo(m, S.demo(m));
     return m;
   }
   /** Afasta de (x, z) quem está a < 12 m (para ninguém tocar a bola no caminho). */
@@ -318,7 +332,7 @@ const [resC, resD] = await Promise.all([
     m.ultimoToque = { id: toq.id, time: toque, tick: m.tick };
     let montada = null, bateu = false, cobrou = null, t0 = m.tick, saiuLateral = null, dentroAntes = null;
     for (let i = 0; i < 900 && cobrou == null; i++) {
-      const ev = S.passoTreino(m, S.entradaDemo(m));
+      const ev = S.passo(m, S.demo(m));
       for (const e of ev) {
         if (e.tipo === 'bateuCorpo' && defl && e.id === defl.id && montada == null) bateu = true;
         if (e.tipo === 'fora' && saiuLateral == null) saiuLateral = Math.abs(m.bola.p.z) > meioZ;
