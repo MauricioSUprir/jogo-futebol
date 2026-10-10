@@ -12,10 +12,9 @@ import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
 import {
   chutarRasteiro, chutar, velParaChegarCom, velParaDistancia, velRolandoApos, velParaPousar, elevacaoParaAltura,
-  alturaNaDistancia, simularVoo, criarBola,
+  alturaNaDistancia, simularVoo,
 } from './bola.js';
-import { procurarOportunidade } from './conducao.js';
-import { passoBola as passoBolaTeste } from './bola.js';
+import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
 
 const DT = PASSO;
@@ -690,22 +689,22 @@ function tabela(m, j, p) {
 /**
  * Altura e ponto em que a bola (no ar) passa pelo jogador: o tick de maior aproximação entre os
  * que ficam a ≤ 0,6 m do corpo na horizontal (onde ela chega ao corpo). {i, y, x, z} ou null.
+ * Pela previsão da bola compartilhada no passo (conducao.js preverBola: a mesma física, bit a bit) —
+ * antes cada jogador simulava o voo inteiro de novo (até 150 ticks por jogador e por passo).
  */
 export function bolaAltaPassando(m, j, max = 60) {
   const b = m.bola;
   if (b.rolando) return null;
-  const t = criarBola(b.p.x, b.p.z);
-  Object.assign(t.p, b.p); Object.assign(t.v, b.v); Object.assign(t.w, b.w); t.rolando = false;
-  const ev = [];
+  const pb = preverBola(b, max);
   let melhor = null;
   for (let i = 1; i <= max; i++) {
-    passoBolaTeste(t, ev);
-    const d = MD.hypot(t.p.x - j.x, t.p.z - j.z);
+    const x = pb.xs[i], z = pb.zs[i];
+    const d = MD.hypot(x - j.x, z - j.z);
     if (d < 0.6) {
-      if (!melhor || d < melhor.d) melhor = { i, y: t.p.y, x: t.p.x, z: t.p.z, d };
+      if (!melhor || d < melhor.d) melhor = { i, y: pb.ys[i], x, z, d };
       else break; // já se afastando
     } else if (melhor) break;
-    if (t.rolando) break;
+    if (pb.rol[i]) break;
   }
   // ainda se aproximando no fim do horizonte: o ponto de contato não está visto
   if (melhor && melhor.i >= max) return null;
