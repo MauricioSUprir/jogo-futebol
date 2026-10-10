@@ -1,0 +1,242 @@
+/* GOLAÇO — "Editar time" (Etapa 3; tela "Editar time" §3–§5). Grade fixa em regiões: só as listas
+   rolam e nada desliza por baixo de nada. Três arranjos (js/editor-time.js põe a classe):
+   .ed-pc (altura ≥ 560 e largura ≥ 900), .ed-deitado (celular deitado) e .ed-empe (em pé).
+   Alvos de toque ≥ 48 px; folga ≥ 6 px entre interativos; tudo dentro da área segura (--sa-*).
+   Cores: as variáveis de estilo.css (--verde, --preto-*, --texto*, --alerta, --sai, --campinho). */
+
+.editor {
+  z-index: 45; align-items: center; justify-content: center;
+  background: rgba(3, 5, 6, 0.9);
+  padding: calc(var(--sa-t) + 6px) calc(var(--sa-r) + 6px) calc(var(--sa-b) + 6px) calc(var(--sa-l) + 6px);
+  -webkit-user-select: none; user-select: none;
+}
+.editor[hidden] { display: none; }
+.editor.ed-pc { padding: calc(var(--sa-t) + 12px) calc(var(--sa-r) + 12px) calc(var(--sa-b) + 12px) calc(var(--sa-l) + 12px); }
+.editor button { font-family: var(--fonte); }
+.editor :focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+
+.ed-janela {
+  --ed-topo: 48px; --ed-col: clamp(224px, 36%, 300px);
+  width: 100%; height: 100%; min-height: 0; display: grid; gap: 6px;
+  grid-template-columns: minmax(0, 1fr) var(--ed-col);
+  grid-template-rows: var(--ed-topo) minmax(0, 1fr) 48px;
+  grid-template-areas: "topo topo" "princ col" "princ acoes";
+}
+.ed-pc .ed-janela {
+  --ed-topo: 56px; --ed-col: clamp(340px, 34%, 420px);
+  width: min(1120px, 100%); height: min(640px, 100%); gap: 12px;
+  padding: 14px; background: linear-gradient(180deg, #0e1314, #090c0d); border: 1px solid var(--linha); border-radius: 14px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+}
+.ed-empe .ed-janela {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) 48px;
+  grid-template-areas: "topo" "corpo" "acoes";
+}
+
+/* ------------------------------------------------------------------ topo: ‹, título, abas e nota */
+.ed-topo { grid-area: topo; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.ed-empe .ed-topo {
+  display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; grid-template-areas: "voltar titulo nota" "abas abas abas";
+  column-gap: 8px; row-gap: 6px;
+}
+.ed-voltar {
+  grid-area: voltar; flex: none; width: 48px; height: 48px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  color: var(--texto); background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px;
+}
+.ed-voltar svg { width: 22px; height: 22px; }
+.ed-voltar:hover { border-color: var(--verde); color: var(--verde); }
+.ed-titulo {
+  grid-area: titulo; margin: 0; flex: none; font-size: 13px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap;
+}
+.ed-titulo::before { content: ""; display: inline-block; width: 4px; height: 13px; background: var(--verde); margin-right: 9px; vertical-align: -1px; border-radius: 2px; }
+.ed-estreito .ed-titulo { display: none; }
+.ed-empe.ed-estreito .ed-titulo { display: block; overflow: hidden; text-overflow: ellipsis; }
+.ed-abas { grid-area: abas; display: flex; gap: 6px; flex: 0 1 auto; min-width: 0; }
+.ed-pc .ed-abas, .ed-deitado .ed-abas { margin-left: 4px; }
+.ed-aba {
+  flex: 1 1 auto; min-width: 48px; height: 48px; padding: 0 14px; cursor: pointer;
+  font-size: 13px; font-weight: 800; color: var(--texto-2); white-space: nowrap;
+  background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px;
+}
+.ed-pc .ed-aba { padding: 0 20px; font-size: 14px; }
+.ed-aba:hover { color: var(--texto); border-color: rgba(25, 224, 122, 0.45); }
+.ed-aba[aria-selected="true"] { background: var(--verde); color: var(--preto); border-color: var(--verde); }
+.ed-empe .ed-abas { width: 100%; }
+
+.ed-nota {
+  grid-area: nota; margin-left: auto; display: flex; align-items: center; gap: 8px; flex: none; white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.ed-estrelas { display: flex; gap: 1px; color: var(--verde); }
+.ed-estrela { position: relative; display: block; width: 14px; height: 14px; color: rgba(255, 255, 255, 0.16); }
+.ed-estrela > svg { width: 14px; height: 14px; display: block; }
+.ed-estrela-cheia { position: absolute; left: 0; top: 0; height: 100%; overflow: hidden; color: var(--verde); }
+.ed-estrela-cheia svg { width: 14px; height: 14px; display: block; }
+.ed-nota-num { display: flex; align-items: center; gap: 4px; font-size: 18px; font-weight: 900; }
+.ed-nota-antes { color: var(--texto-2); font-size: 14px; }
+.ed-seta { width: 12px; height: 12px; color: var(--texto-2); }
+.ed-nota-linhas { display: none; font-size: 11px; font-weight: 800; letter-spacing: 0.06em; color: var(--texto-2); }
+.ed-pc .ed-nota-linhas { display: inline; }
+
+/* ------------------------------------------------------------------ corpo: principal | coluna */
+.ed-corpo { display: contents; }
+.ed-empe .ed-corpo {
+  grid-area: corpo; display: flex; flex-direction: column; gap: 6px; min-height: 0; overflow: auto;
+  overscroll-behavior: contain; touch-action: pan-y;
+}
+.ed-principal { grid-area: princ; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.ed-empe .ed-principal { flex: none; }
+.ed-coluna { grid-area: col; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.ed-empe .ed-coluna { flex: none; }
+.ed-empe.ed-aba-taticas .ed-coluna { order: -1; }
+
+/* campinho: as cartas em position:absolute pela vaga (js/editor-time.js layout) */
+.campinho {
+  position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden;
+  background: var(--campinho); border: 1px solid rgba(25, 224, 122, 0.28); border-radius: 10px;
+}
+.ed-empe .campinho { flex: none; width: 100%; aspect-ratio: 1.24; max-height: 360px; }
+.campinho-linhas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.campinho-linhas * { fill: none; stroke: rgba(25, 224, 122, 0.35); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.campinho-rotulo {
+  position: absolute; left: 8px; top: 6px; font-size: 10px; font-weight: 900; letter-spacing: 0.12em; color: rgba(25, 224, 122, 0.7);
+  pointer-events: none; white-space: nowrap;
+}
+.ed-empe .campinho-rotulo { top: auto; bottom: 6px; }
+.ed-aba-taticas .campinho { display: none; }
+
+/* ------------------------------------------------------------------ cartas */
+.carta {
+  display: flex; flex-direction: column; justify-content: space-between; gap: 2px;
+  padding: 4px 6px 5px; min-width: 48px; min-height: 48px; cursor: pointer; text-align: left;
+  color: var(--texto); background: #111a1b; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); line-height: 1;
+}
+.carta.no-campo { position: absolute; }
+.carta:hover { border-color: rgba(25, 224, 122, 0.55); }
+.carta[aria-pressed="true"] { border: 2px solid var(--verde); padding: 3px 5px 4px; box-shadow: 0 0 0 3px rgba(25, 224, 122, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4); background: #13261d; }
+.tem-escolha .carta:not([aria-pressed="true"]):not(.saiu) { outline: 1px dashed rgba(25, 224, 122, 0.35); outline-offset: -4px; }
+.tem-escolha .carta:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+.carta.saiu { opacity: 0.45; cursor: default; }
+.c-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 4px; }
+.c-nota { font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.c-alt { font-size: 12px; font-weight: 900; margin-left: 1px; color: var(--texto-2); }
+.c-dir { display: flex; align-items: center; gap: 3px; }
+.c-pos { font-size: 10px; font-weight: 800; letter-spacing: 0.05em; color: var(--verde); }
+.enc-alternativa .c-pos { color: var(--texto); }
+.enc-fora .c-pos { color: var(--alerta); }
+.c-base { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; min-width: 0; }
+.c-nome { display: block; min-width: 0; flex: 1 1 auto; font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.c-num { display: none; font-size: 10px; font-weight: 800; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.ed-pc .c-num { display: inline; }
+.ed-pc .carta.no-campo .c-nota { font-size: 20px; }
+.ed-pc .carta.no-campo .c-pos { font-size: 11px; }
+.ed-pc .carta.no-campo .c-nome { font-size: 13px; }
+.c-selo { width: 14px; height: 14px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; font-size: 10px; font-weight: 900; line-height: 1; }
+.c-selo svg { width: 10px; height: 10px; }
+.c-fora { color: var(--alerta); border: 1.5px solid var(--alerta); }
+.muito-fora .c-fora { background: var(--alerta); color: var(--preto); }
+.c-entra { color: var(--preto); background: var(--verde); }
+.c-sai { color: var(--preto); background: var(--sai); }
+.carta.sai { border-color: rgba(255, 122, 102, 0.6); }
+.carta.entra { border-color: rgba(25, 224, 122, 0.7); }
+.carta.treme { animation: ed-treme 150ms linear; }
+@keyframes ed-treme { 0%, 100% { translate: 0; } 25% { translate: -3px 0; } 75% { translate: 3px 0; } }
+
+/* ------------------------------------------------------------------ coluna: info, rótulo, lista */
+.ed-info {
+  flex: none; min-height: 72px; padding: 7px 10px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+  background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 9px;
+  font-size: 11.5px; line-height: 1.35; color: var(--texto); -webkit-user-select: text; user-select: text;
+}
+.ed-pc .ed-info { min-height: 150px; padding: 12px 14px; font-size: 13px; }
+.ed-empe .ed-info { min-height: 52px; }
+.ed-info-linha { margin: 0; }
+.ed-info-linha b { color: var(--verde); font-weight: 900; }
+.ed-info-linha.fraca { color: var(--texto-2); }
+.ed-info-linha.alerta { color: var(--alerta); font-weight: 700; }
+.ed-contagem { color: var(--texto-2); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ed-numeros { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--texto-2); }
+.ed-btn-info { align-self: flex-start; min-width: 120px; }
+.ed-aba-taticas .ed-info { display: none; }
+.ed-rotulo { flex: none; font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--texto-2); }
+.ed-aba-taticas .ed-rotulo { display: none; }
+.ed-lista {
+  flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y;
+  scrollbar-width: thin; scrollbar-color: rgba(25, 224, 122, 0.4) transparent;
+}
+.ed-empe .ed-lista { flex: none; overflow: visible; }
+.ed-reservas, .ed-forms, .ed-previa { display: none; }
+.ed-aba-escalacao .ed-reservas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 1px 2px 2px 1px; }
+.ed-pc.ed-aba-escalacao .ed-reservas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ed-empe.ed-aba-escalacao .ed-reservas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ed-reservas .carta { height: 48px; }
+.ed-pc .ed-reservas .carta { height: 56px; }
+.ed-grupo { grid-column: 1 / -1; padding: 6px 2px 0; font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-2); }
+.ed-grupo-sai { color: var(--sai); }
+
+/* formações: 6 botões com o minidiagrama */
+.ed-aba-formacao .ed-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 1px 2px 2px 1px; }
+.ed-empe.ed-aba-formacao .ed-forms { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ed-forma {
+  min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 4px 8px; cursor: pointer;
+  color: var(--texto); background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px;
+}
+.ed-pc .ed-forma { min-height: 76px; flex-direction: column; gap: 6px; }
+.ed-empe .ed-forma { flex-direction: column; gap: 4px; min-height: 64px; }
+.ed-forma-mini { width: 44px; height: 28px; flex: none; fill: var(--texto-2); }
+.ed-deitado .ed-forma { gap: 6px; padding: 4px 6px; }
+.ed-deitado .ed-forma-mini { width: 34px; height: 22px; }
+.ed-forma-nome { font-size: 14px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ed-deitado .ed-forma-nome { font-size: 13px; }
+.ed-forma:hover { border-color: rgba(25, 224, 122, 0.55); }
+.ed-forma[aria-pressed="true"] { border: 2px solid var(--verde); color: var(--verde); }
+.ed-forma[aria-pressed="true"] .ed-forma-mini { fill: var(--verde); }
+
+/* táticas: 4 seletores de passos (2 × 2 deitado/PC; 1 coluna em pé) */
+.ed-passos { display: none; }
+.ed-aba-taticas .ed-passos {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: min-content; gap: 10px 12px; align-content: start;
+  flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y;
+}
+.ed-empe.ed-aba-taticas .ed-passos { grid-template-columns: minmax(0, 1fr); flex: none; overflow: visible; }
+.ed-passo { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 10px; }
+.ed-passo-nome { font-size: 11px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--texto-2); }
+.ed-passo-linha { display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; align-items: center; gap: 6px; }
+.ed-passo-bt {
+  width: 48px; height: 48px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  color: var(--texto); background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px;
+}
+.ed-passo-bt svg { width: 20px; height: 20px; }
+.ed-passo-bt:hover:not(:disabled) { border-color: var(--verde); color: var(--verde); }
+.ed-passo-bt:disabled { opacity: 0.32; cursor: default; }
+.ed-passo-nivel { text-align: center; font-size: 15px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ed-passo-desc { margin: 0; font-size: 11.5px; line-height: 1.35; color: var(--texto-2); min-height: 2.7em; }
+.ed-pontos { display: inline-flex; gap: 3px; margin-right: 7px; vertical-align: 1px; }
+.ed-pontos i { display: block; width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); }
+.ed-pontos i.on { background: var(--verde); }
+
+/* prévia (na coluna; em cima quando em pé): Sem a bola | Com a bola + desenho */
+.ed-aba-taticas .ed-previa { display: flex; flex-direction: column; gap: 6px; height: 100%; min-height: 0; }
+.ed-empe.ed-aba-taticas .ed-previa { height: auto; }
+.ed-fases { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ed-seg {
+  min-height: 48px; padding: 0 8px; cursor: pointer; font-size: 13px; font-weight: 800; color: var(--texto-2);
+  background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px; white-space: nowrap;
+}
+.ed-seg[aria-pressed="true"] { background: var(--verde); color: var(--preto); border-color: var(--verde); }
+.ed-canvas { flex: 1 1 auto; min-height: 120px; width: 100%; display: block; border-radius: 9px; background: #07130d; }
+.ed-empe .ed-canvas { flex: none; height: clamp(200px, 56vw, 300px); }
+.ed-aba-taticas .ed-lista { overflow: hidden; }
+.ed-empe.ed-aba-taticas .ed-lista { overflow: visible; }
+
+/* ------------------------------------------------------------------ ações: Desfazer tudo | PRONTO */
+.ed-acoes { grid-area: acoes; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
+.ed-btn {
+  min-height: 48px; padding: 0 12px; cursor: pointer; font-size: 13px; font-weight: 800; color: var(--texto); white-space: nowrap;
+  background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px;
+}
+.ed-btn:hover { border-color: var(--verde); }
+.ed-primario { background: var(--verde); color: var(--preto); border-color: var(--verde); font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.ed-primario:hover { background: #3cf092; }
