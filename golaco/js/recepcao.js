@@ -35,16 +35,30 @@ const ALCANCE_TOQUE = 0.08; // m — folga do ponto de encontro (o corpo não pr
  * Tempo (s) para o jogador chegar a (qx, qz) indo no máximo a vmax, a partir da velocidade de agora:
  * tira a velocidade de lado, freia o que vai no sentido contrário e acelera (aceleração média do perfil
  * a(v) = A0·(1 − v/S0)). Conta barata e um pouco conservadora (o encontro é refeito a cada passo).
+ * parar: ele tem de chegar PARANDO lá (recepção de frente: chega freando, de frente para a bola) — embalado
+ * na direção do ponto, ou já em cima dele, passa do ponto, para e volta (antes contava como já chegou, e o
+ * corpo a 5–6 m/s freava passando do encontro e saía da linha da bola).
  */
-export function tempoAlcance(j, qx, qz, vmax) {
+export function tempoAlcance(j, qx, qz, vmax, parar = false) {
   const dx = qx - j.x, dz = qz - j.z;
   const dist = MD.hypot(dx, dz);
   const d0 = dist - ALCANCE_TOQUE;
-  if (d0 <= 0) return 0;
+  const par = j.par;
+  if (d0 <= 0) {
+    if (!parar) return 0;
+    const s = MD.hypot(j.vx, j.vz), dp = (s * s) / (2 * par.freio);
+    return dp <= ALCANCE_TOQUE ? 0 : s / par.freio + 2 * Math.sqrt(dp / (par.acel0 * 0.7));
+  }
   const ex = dx / dist, ez = dz / dist;
   let vpar = j.vx * ex + j.vz * ez;
   const vperp = Math.abs(-j.vx * ez + j.vz * ex);
-  const par = j.par;
+  if (parar && vpar > 0) {
+    const dp = (vpar * vpar) / (2 * par.freio);
+    if (dp > d0 + ALCANCE_TOQUE) {
+      const volta = dp - d0;
+      return (0.6 * vperp) / par.latCorte + vpar / par.freio + 2 * Math.sqrt(volta / (par.acel0 * 0.7));
+    }
+  }
   let t = (0.6 * vperp) / par.latCorte;
   let d = d0;
   if (vpar < 0) { t += -vpar / par.freioGiro; d += (vpar * vpar) / (2 * par.freioGiro); vpar = 0; }
@@ -139,7 +153,9 @@ function acharEncontro(j, pb, n, i0, vmax, modo, out, calmo, esforco) {
     }
     if (calmo && R.custoTempo * t >= melhor) break; // nada mais adiante fica mais barato
     const dq = MD.hypot(qx - j.x, qz - j.z);
-    if (tempoAlcance(j, qx, qz, vmax) <= t) {
+    // sem pressa, ele chega PARANDO no encontro (o movimento de frente chega freando): embalado, o ponto em que
+    // ele está agora não vale — passaria dele (a conta antes dava 0 s e o corpo freava saindo da linha da bola)
+    if (tempoAlcance(j, qx, qz, vmax, calmo) <= t) {
       // sem pressa: o encontro que pede menos deslocamento (custo = metros + custoTempo × s) — a bola que
       // vem para ele é recebida onde ele está (ou no pé da perpendicular à linha dela); com pressa: o 1º
       const custo = calmo ? dq + R.custoTempo * t : 0;
@@ -305,6 +321,21 @@ export function movimentoAssistido(k, pl, tick, bx, bz, par, ix, iz, imag, out) 
   let cap = pl.vmax;
   if (pl.modo !== 'corrida') cap = Math.min(cap, Math.sqrt(2 * par.freio * Math.max(0, d - 0.03)) + 0.3);
   if (v > cap) { vx *= cap / v; vz *= cap / v; v = cap; }
+  // embalado, com o ponto de lado e um pouco para trás: o pedido abre no máximo R.angCorteMax do sentido da
+  // corrida — ele corta para a linha da bola freando (passoCorpo: freio + aceleração de lado), em vez de
+  // "inverter" (frear na linha sem sair de lado: o corpo passava do encontro e saía da linha da bola).
+  // Ponto bem para trás (mais que R.angInverte): inverte, como antes.
+  const s = MD.hypot(k.vx, k.vz);
+  if (s > 1.2 && v > 0.05) {
+    const hx = k.vx / s, hz = k.vz / s;
+    const c = (vx * hx + vz * hz) / v, sn = (hx * vz - hz * vx) / v;
+    const th = MD.atan2(sn, c), ath = Math.abs(th);
+    if (ath > R.angCorteMax && ath < R.angInverte) {
+      const a = th > 0 ? R.angCorteMax : -R.angCorteMax;
+      const ca = MD.cos(a), sa = MD.sin(a);
+      vx = (hx * ca - hz * sa) * v; vz = (hz * ca + hx * sa) * v;
+    }
+  }
   let rumo;
   if (pl.modo === 'corrida') {
     const s = MD.hypot(k.vx, k.vz);

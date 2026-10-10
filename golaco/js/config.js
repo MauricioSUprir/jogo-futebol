@@ -263,6 +263,11 @@ export const RECEPCAO = {
   custoTempo: 1.5,            // m/s — sem pressa, o encontro escolhido é o de menor (metros andados + isto × s)
   janelaMarca: 45,            // ticks — o toque do domínio é marcado com até isto de antecedência
   alturaPe: 0.45,             // m — bola até esta altura dá para dominar com o pé (= noAlcance)
+  // embalado (> 1,2 m/s), o movimento da recepção pede no máximo angCorteMax (rad) do sentido da corrida — corta
+  // freando para o lado (jogador.js passoCorpo: acima de angInversao, 1,95 rad, ele freia na linha sem sair de
+  // lado); só o ponto bem para trás (mais que angInverte) pede a inversão
+  angCorteMax: 1.5,
+  angInverte: 2.6,
 };
 
 // Entrada.
