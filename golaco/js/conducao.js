@@ -966,6 +966,32 @@ function oportunidadeCorrida(m, j, max) {
 }
 
 /**
+ * Poda EXATA da recepção (Etapa 3, plano 4.3): a bola livre testa o domínio de cada candidato a cada
+ * passo, e cada teste prevê o corpo por 36–45 ticks. Se em nenhum tick da previsão a bola (no chão)
+ * fica a menos de (alcance do toque + o que o corpo pode andar até lá) do corpo de AGORA, não há
+ * domínio — o mesmo "não" que a previsão daria, sem fazê-la. O corpo anda no máximo
+ * Σ|v_i|·dt ≤ n·|v0|·dt + aMax·dt²·n(n+1)/2 (velocidade ≤ |v0| + aMax·t, aMax = a maior aceleração que
+ * passoCorpo aplica: arrancada, freada, inversão com a correção de lado, curva). O toque alcança a bola
+ * a CONDUCAO.alcance do corpo (de frente) ou a REC_ALCANCE + o desvio do caminho (em corrida, ≤ 3·t²).
+ * Folga de 0,3 m sobre os dois limites. corrida = o modo da recepção.
+ */
+function semDominioPossivel(m, j, max, corrida) {
+  const pb = preverBola(m.bola, max);
+  const par = j.par;
+  const aFrente = Math.max(par.acel0, par.freio), aLado = Math.max(par.latNormal, par.latCorte);
+  const aMax = Math.max(aFrente, par.freioGiro + par.latCorte, Math.sqrt(aFrente * aFrente + aLado * aLado));
+  const s0 = MD.hypot(j.vx, j.vz);
+  for (let i = 1; i <= max; i++) {
+    if (pb.ys[i] > 0.45) continue; // alta: nenhum dos dois modos toca (noAlcance e oportunidadeCorrida pulam)
+    const t = i * DT;
+    const anda = s0 * t + aMax * DT * DT * i * (i + 1) / 2;
+    const toque = corrida ? REC_ALCANCE + 0.5 * REC_ACEL_LAT * t * t : CONDUCAO.alcance;
+    if (MD.hypot(pb.xs[i] - j.x, pb.zs[i] - j.z) <= anda + toque + 0.3) return false;
+  }
+  return true;
+}
+
+/**
  * Jogador sem a posse e bola livre: procura o primeiro toque (domínio). Devolve true se
  * marcou um domínio. primeira (opcional, Etapa 2): com uma ação pedida, bate de primeira.
  */
@@ -1002,6 +1028,7 @@ export function tentarDominio(m, j, primeira) {
   const s = MD.hypot(j.vx, j.vz);
   if (d > 1.0 + (vb + s) * 0.8) return false;
   const modo = modoRecepcao(j, b);
+  if (semDominioPossivel(m, j, modo === 'corrida' ? 45 : 36, modo === 'corrida')) return false;
   const op = modo === 'corrida' ? oportunidadeCorrida(m, j, 45) : procurarOportunidade(m, j, 1, 36, false, null, true, true);
   if (!op) return false;
   c.toque = { tick: m.tick + op.i, pe: op.pe, bx: op.bx, bz: op.bz, tipo: 'dominio', modo, desde: m.tick, qx: op.qx, qz: op.qz };
