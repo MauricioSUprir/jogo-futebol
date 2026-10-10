@@ -17,13 +17,15 @@
 //    conter, K dividida, O pressão). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
 // Itens que dependem da lógica (Etapa 2: m.controlado, j.carga, m.voo...; Etapa 3: a entrada da
 // defesa da Parte 4) saem como AGUARDANDO enquanto ela não existir — nunca como PASSOU.
-//   node tools/teste-controles.mjs
-import { servidor, abrir } from './lib/navegador.mjs';
+//   node tools/teste-controles.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
+import path from 'node:path';
+import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const res = [];
 const AG = 'aguardando';
 const meta = (nome, medido, ok) => res.push({ nome, medido, ok });
-const srv = await servidor();
+const argv = process.argv.slice(2);
+const srv = await servidor(0, path.resolve(argv.includes('--raiz') ? argv[argv.indexOf('--raiz') + 1] : RAIZ));
 
 const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048 };
 const AG4 = 'aguardando4';
