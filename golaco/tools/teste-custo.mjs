@@ -6,8 +6,11 @@
 // carregada (o rodar-testes roda 4 testes ao mesmo tempo) um surto de carga cai num bloco só e não decide
 // o p95 inteiro — antes, com a lógica das 4 partes juntas, a razão do p95 ia de 1,5× sozinho a 3,8× na
 // bateria. As razões do total (todos os passos juntos) continuam impressas, para comparar. O passo mais
-// lento, se passar de 20 ms no relógio, vale pelo tempo de CPU do processo (com a máquina cheia o sistema
-// chegou a deixar um passo de 0,4 ms esperando 77 ms).
+// lento, se passar de 20 ms no relógio, vale pelo tempo de CPU do FIO PRINCIPAL (com a máquina cheia o
+// sistema chegou a deixar um passo de 0,4 ms esperando 77 ms, e a integração viu 265 ms de parede). Medido
+// com 16 processos girando ao lado (Etapa 3, frente B): parede até 418 ms e CPU do fio ≤ 12,7 ms — era a
+// espera do escalonador, não pico de alocação nem coleta de lixo (a maior coleta, Mark-Compact, ~10 ms);
+// e a CPU do processo inteiro somava a dos fios de fundo (compilador, coleta concorrente) ao passo.
 // Informativo (sem meta no CI): tempo absoluto por passo (meta da máquina de dev: média ≤ 0,6 ms,
 // p95 ≤ 1,5 ms) e a pose dos 22.
 //   node tools/teste-custo.mjs              (lógica do repositório)
@@ -47,7 +50,16 @@ const media = a => a.reduce((s, v) => s + v, 0) / a.length;
 const pct = (a, q) => { const s = Float64Array.from(a).sort(); return s[Math.min(s.length - 1, Math.round((s.length - 1) * q))]; };
 const N = Math.round(MIN * 3600);
 const tt = [], tp = [], tpose = [], razMedia = [], razP95 = [];
-let maxP = 0, maxT = 0, maxPParede = 0;
+let maxP = 0, maxT = 0, maxPParede = 0, maxPCpu = 0;
+/**
+ * CPU (ms) do fio principal desde c0 (sem c0: a leitura atual). process.threadCpuUsage (Node ≥ 22.19)
+ * conta só o fio do jogo; sem ele, process.cpuUsage (o processo inteiro: soma também a CPU dos fios de
+ * fundo — compilador e coleta de lixo concorrente —, que nada têm a ver com o passo). A conta do Linux
+ * anda em ~4 ms: serve para o teto de 50 ms, não para medir cada passo.
+ */
+const cpuFio = typeof process.threadCpuUsage === 'function'
+  ? (c0) => { if (!c0) return process.threadCpuUsage(); const c = process.threadCpuUsage(c0); return (c.user + c.system) / 1000; }
+  : (c0) => { if (!c0) return process.cpuUsage(); const c = process.cpuUsage(c0); return (c.user + c.system) / 1000; };
 const POSE = new Float32Array(NJ * 3);
 for (const sem of SEMENTES) {
   const t = S.criarTreino({ modo: 'ataque', semente: sem });
@@ -62,15 +74,16 @@ for (const sem of SEMENTES) {
       tt.push(d); if (d > maxT) maxT = d;
     }
     for (let i = 0; i < BLOCO; i++) {
-      const c0 = process.cpuUsage();
+      const c0 = cpuFio();
       const a = performance.now();
       P.passoPartida(p, P.entradaDemoPartida(p));
       const d = performance.now() - a;
       tp.push(d);
       // o passo mais lento: tempo de parede, mas o que passar de 20 ms é conferido com o tempo de CPU do
-      // processo (inclui a coleta de lixo; não inclui o tempo em que o sistema deixou o processo esperando)
+      // FIO PRINCIPAL (inclui a coleta de lixo que para o jogo; não inclui o tempo em que o sistema deixou
+      // o processo esperando, nem a CPU dos fios de fundo — compilador e coleta concorrente)
       let dMax = d;
-      if (d > 20) { const c = process.cpuUsage(c0); dMax = Math.min(d, (c.user + c.system) / 1000); }
+      if (d > 20) { dMax = Math.min(d, cpuFio(c0)); maxPCpu = Math.max(maxPCpu, dMax); }
       if (d > maxPParede) maxPParede = d;
       if (dMax > maxP) maxP = dMax;
       if (i % 10 === 0) {
@@ -92,5 +105,5 @@ console.log(`pose dos 22 por passo: média ${fmt(media(tpose), 3)} ms`);
 const rm = pct(razMedia, 0.5), rp = pct(razP95, 0.5);
 reg('razão da média (partida ÷ treino; mediana dos blocos)', `${fmt(rm)}× (total ${fmt(mp / mt)}×)`, '≤ 2,5×', rm <= 2.5);
 reg('razão do p95 (partida ÷ treino; mediana dos blocos)', `${fmt(rp)}× (total ${fmt(p95p / p95t)}×)`, '≤ 2,5×', rp <= 2.5);
-reg('passo mais lento da partida (sem a espera do sistema)', `${fmt(maxP, 1)} ms (parede ${fmt(maxPParede, 1)})`, '≤ 50 ms', maxP <= 50);
+reg('passo mais lento da partida (sem a espera do sistema)', `${fmt(maxP, 1)} ms (parede ${fmt(maxPParede, 1)}${maxPCpu ? `; CPU do fio no pior acima de 20 ms: ${fmt(maxPCpu, 1)}` : ''})`, '≤ 50 ms', maxP <= 50);
 fim();
