@@ -204,6 +204,10 @@ function colisaoBolaCorpo(m) {
       b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz;
       if (b.rolando) { b.w.x = b.v.z / 0.11; b.w.z = -b.v.x / 0.11; }
       m.eventos.push({ tipo: 'bateuCorpo', id: j.id });
+      m.desvio = m.tick; // o goleiro relê o chute desviado (goleiro.js lerChute)
+      // a bola desviada não passa mais onde o domínio aéreo / cabeceio marcado esperava: o plano cai (o jogador ia
+      // para o ponto antigo enquanto a bola fugia — contraprova M4: até 3 m em lançamento que bate no corpo)
+      for (const o of m.jogadores) if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') o.cond.toque = null;
       const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
       if (dono) dono.cond.bolaDesviada = true;
     }
@@ -451,6 +455,12 @@ export function passo(m, entradas) {
     if (dono) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
+  // passe que morreu (a bola rolando a menos de 1 m/s meio segundo depois da hora de chegar): vira bola livre.
+  // Antes o passe continuava "do recebedor" para sempre: ele já tinha desistido (j.recebe vence em 4 s) e os
+  // companheiros mais perto não iam na bola do passe de outro — os 22 ficavam parados em volta dela (medido
+  // na partida IA × IA, semente 7: 40% do tempo com a bola parada no meio-campo)
+  else if (m.voo && m.voo.para != null && m.naMao == null && m.bola.rolando && m.tick > (m.voo.tickChegada ?? m.voo.tick0) + 30
+    && MD.hypot(m.bola.v.x, m.bola.v.z) < 1) m.voo = null;
   // 7) gesto do toque (só visual: o pé desenhado indo até a bola, com velocidade limitada)
   for (const j of js) if (j.cond) atualizarGesto(m, j);
   // 8) pé desenhado no balanço (trajetória + gesto, com a velocidade de um pé humano) e altura
