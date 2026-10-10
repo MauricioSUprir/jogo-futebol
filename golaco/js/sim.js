@@ -331,8 +331,7 @@ export function passo(m, entradas) {
       // um liga/desliga na velocidade do trote fazia o tronco ir e voltar
       if (j.papel === 'ia' && !ehControlado(m, j) && !j.recebe && !j.cond?.toque) {
         const v = Math.max(mv.vel, MD.hypot(j.vx, j.vz));
-        const [v0, v1] = IA.olhaBola;
-        const lim = v <= v0 ? Math.PI : Math.PI * 0.6 * clamp((v1 - v) / (v1 - v0), 0, 1);
+        const lim = desvioOlhaBola(v);
         if (lim > 0) {
           const aB = MD.atan2(m.bola.p.z - j.z, m.bola.p.x - j.x);
           let d = difAng(mv.rumoAlvo, aB);
@@ -525,6 +524,20 @@ function ganhouPosse(m, j) {
     }
     if (mel && m.controlado[t] !== mel.id) { assumirControle(m, t, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
   }
+}
+
+/**
+ * Quanto o tronco da IA sem a bola pode se afastar do sentido do movimento para olhar a bola, pela
+ * velocidade: devagar, todo (até de costas); depois, só o que deixa a velocidade de lado em até
+ * IA.olhaBola.vLado (ninguém corre de lado a 3 m/s — o passo lateral é curto); some na arrancada.
+ */
+function desvioOlhaBola(v) {
+  const { vLivre, vLado, vSome } = IA.olhaBola;
+  const lat = a => MD.asin(Math.min(1, vLado / a));
+  if (v <= vLivre) return Math.PI;
+  const v1 = vLivre * 1.5;
+  if (v < v1) return lerp(Math.PI, lat(v1), (v - vLivre) / (v1 - vLivre));
+  return lat(v) * clamp((vSome - v) / 1.0, 0, 1);
 }
 
 /** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */

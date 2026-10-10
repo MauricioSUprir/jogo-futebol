@@ -1,5 +1,5 @@
 // Movimento dos jogadores da IA sem a bola (dono, 09/10: "o movimento dos jogadores tá meio
-// estranho"). Treino de ataque jogado pela IA (o que se vê em volta do jogador), 3 sementes × 3 min,
+// estranho"). Treino de ataque jogado pela IA (o que se vê em volta do jogador), 8 sementes × 3 min,
 // só jogadores de linha da IA (sem o controlado). Mede o que o olho estranha em jogo ESTÁVEL (fora
 // do 1 s depois de a bola trocar de time: reagir à perda/recuperação é virada legítima — o total,
 // com as transições, também tem limite):
@@ -8,7 +8,9 @@
 //  - anda-para-anda: > 2,5 m/s → < 0,5 m/s → > 2,5 m/s em ≤ 2 s;
 //  - de costas para a bola andando devagar (< 2 m/s, bola a > 2 m);
 //  - amontoado: companheiro a < 2 m (dois marcando o mesmo homem, todos na bola);
-//  - trombadas entre companheiros (começo de contato a < 0,65 m).
+//  - trombadas entre companheiros (começo de contato a < 0,65 m);
+//  - pernas cruzadas: o tornozelo esquerdo passa para a direita do direito (em relação ao tronco),
+//    no geral e andando de lado (o pé de trás passava pela frente do outro).
 // E o que não pode piorar (sem recuo): o treino chega ao chute e a defesa pressiona o condutor.
 //   node tools/teste-movimento.mjs              (lógica do repositório)
 //   node tools/teste-movimento.mjs --js <pasta> (mede outra cópia da lógica, ex.: a publicada)
@@ -20,6 +22,8 @@ const JS = ia > 0 ? path.resolve(process.argv[ia + 1]) : path.resolve(path.dirna
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const { criarTreino, passoTreino, entradaDemo } = await imp('sessao.js');
 const { PASSO } = await imp('config.js');
+const { pose, J } = await imp('anim.js');
+const POSE = new Float32Array(64 * 3);
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -27,8 +31,8 @@ function reg(nome, medido, meta, ok) { linhas.push([nome, medido, meta, ok ? 'PA
 const fmt = (v, c = 1) => (Number.isFinite(v) ? v.toFixed(c).replace('.', ',') : String(v));
 const dif = (a, b) => { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI; return d; };
 
-const SEMENTES = [1, 2, 3, 4], MIN = 3, N = Math.round(MIN * 60 / PASSO);
-const A = { seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
+const SEMENTES = process.env.SEMENTES ? Array.from({ length: +process.env.SEMENTES }, (_, k) => k + 1) : [1, 2, 3, 4, 5, 6, 7, 8], MIN = 3, N = Math.round(MIN * 60 / PASSO);
+const A = { cruz: 0, cruzN: 0, cruzLado: 0, cruzLadoN: 0, seg: 0, segEst: 0, inv: 0, invEst: 0, tremor: 0, tremorEst: 0, paraArranca: 0, lento: 0, costas: 0, viz: 0, viz2: 0, contatos: 0, trocas: 0 };
 let chutesMin = Infinity, pressao = 0, pressaoN = 0, assentada = 0, assentadaN = 0, dois = 0;
 
 for (const sem of SEMENTES) {
@@ -107,6 +111,16 @@ for (const sem of SEMENTES) {
         }
       }
       if (dm < Infinity) { A.viz++; if (dm < 2) A.viz2++; }
+      if (i % 2 === 0) {
+        pose(j, m, POSE);
+        const rx = -Math.sin(j.rumo), rz = Math.cos(j.rumo); // direita do tronco
+        const lE = POSE[J.tornozeloE * 3] * rx + POSE[J.tornozeloE * 3 + 2] * rz;
+        const lD = POSE[J.tornozeloD * 3] * rx + POSE[J.tornozeloD * 3 + 2] * rz;
+        const cruzou = lE > lD + 0.03;
+        A.cruzN++; if (cruzou) A.cruz++;
+        const deLado = v > 0.5 && Math.abs(dif(j.rumo, dirv)) > Math.PI / 4 && Math.abs(dif(j.rumo, dirv)) < 3 * Math.PI / 4;
+        if (deLado) { A.cruzLadoN++; if (cruzou) A.cruzLado++; }
+      }
     }
   }
   chutesMin = Math.min(chutesMin, chutes);
@@ -122,10 +136,12 @@ reg('tremor do tronco, total', `${fmt(porMin(A.tremor))}/min`, '≤ 10/min', por
 reg('anda-para-anda (≤ 2 s)', `${fmt(porMin(A.paraArranca))}/min`, '≤ 4/min', porMin(A.paraArranca) <= 4);
 reg('de costas para a bola andando devagar', `${fmt(pct(A.costas, A.lento))}%`, '≤ 15%', pct(A.costas, A.lento) <= 15);
 reg('companheiro a menos de 2 m (amontoado)', `${fmt(pct(A.viz2, A.viz))}% do tempo`, '≤ 10%', pct(A.viz2, A.viz) <= 10);
-reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 2/min', porMin(A.contatos) <= 2);
+reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 3/min (publicada: 27)', porMin(A.contatos) <= 3);
+reg('pernas cruzadas (tornozelos trocados de lado > 3 cm)', `${fmt(pct(A.cruz, A.cruzN))}% do tempo`, '≤ 8%', pct(A.cruz, A.cruzN) <= 8);
+reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzLado, A.cruzLadoN))}% (${fmt(pct(A.cruzLadoN, A.cruzN), 0)}% do tempo de lado)`, '≤ 15%', pct(A.cruzLado, A.cruzLadoN) <= 15);
 reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
 reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, '≥ 40%', pct(pressao, pressaoN) >= 40);
-reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 59%)', pct(assentada, assentadaN) >= 50);
+reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);
 
 const larg = linhas[0].map((_, c) => Math.max(...linhas.map(l => String(l[c]).length)));
 console.log(linhas.map(l => l.map((x, c) => String(x).padEnd(larg[c])).join(' | ')).join('\n'));

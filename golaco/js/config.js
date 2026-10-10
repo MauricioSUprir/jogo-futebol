@@ -145,6 +145,11 @@ export const PASSADA = {
   alcanceParado: 0.3,         // m — parado, o corpo que se afasta mais que isso de um pé faz dar um passo
   ajusteParado: 0.15,         // s — em quanto tempo esse pé sai do chão
   afastamentoLateral: 0.09,   // m — pé plantado ao lado do centro do corpo
+  folgaEntrePes: 0.12,        // m — andando de lado sem a bola, o pé pousa pelo menos isto do lado dele do outro pé
+  ladoMin: 0.3,               // m/s — ...quando a velocidade de lado (em relação ao tronco) passa disto
+  ladoMaxV: 3.0,              // m/s — ...e o corpo anda a menos disto (passo lateral é coisa de quem anda/trota)
+  cruzadoParado: 0.03,        // m — parado sem a bola, pés cruzados mais que isto (em relação ao tronco) dão um passo
+  baseMaxParado: 0.5,         // m — parado sem a bola, base mais aberta que isto dá um passo
   alturaPasso: 0.12,          // m — altura do pé no meio do balanço (corrida)
   // A fase da passada nunca salta (o pé no balanço anda pela fase: salto de fase = pé que
   // teletransporta). Quando um pé precisa sair antes, só o RITMO aumenta, com estes limites.
@@ -385,8 +390,12 @@ export const IA = {
   distCalma: 14,              // m: sem pressa, intensidade do analógico = d/distCalma (trota até ~10 m)
   corre: [14, 10],            // m: sem pressa, corre com o ponto além de 14 m e para de correr abaixo de 10 m
   correPressa: [3, 1.5],      // m: com pressa, idem (3 m / 1,5 m)
-  olhaBola: [1.5, 5.0],       // m/s: sem a bola, até 1,5 o tronco vira todo para a bola; daí até 5 o
-                              // desvio do sentido do movimento cai de 108° a 0 (contínuo)
+  // sem a bola, o tronco vira para a bola: até vLivre todo (até de costas); acima, só o que deixa
+  // a velocidade de lado em até vLado; some entre vSome − 1 e vSome (m/s; contínuo)
+  olhaBola: { vLivre: 1.2, vLado: 1.5, vSome: 6.0 },
+  antecipaPressao: 0.7,       // s: quem pressiona mira à frente do condutor pela velocidade dele...
+  filtroCondutor: 0.3,        // s: ...filtrada por esta constante...
+  antecipaMax: 3,             // m: ...e com avanço de no máximo isto
   trocaPressao: 2,            // m: outro só assume a pressão se estiver isto mais perto da bola que quem pressiona
   freiaLinha: [2.5, -0.17],   // acima de 2,5 m/s, pedido a mais de ~100° do movimento: freia na linha antes de virar
 };

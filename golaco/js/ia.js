@@ -129,7 +129,7 @@ export function entradaIA(m, j) {
   const b = m.bola;
   // o ponto suavizado só vale se a IA guiou este jogador até o tick anterior (depois de um tempo
   // controlado pelo humano, recomeça do ponto pedido)
-  const s = j.ia ??= { fx: 0, fz: 0, filtro: false, parado: false, corre: false, ataca: false, ramo: '', tick: -2 };
+  const s = j.ia ??= { fx: 0, fz: 0, filtro: false, parado: false, corre: false, ataca: false, ramo: '', cond: -1, cvx: 0, cvz: 0, tick: -2 };
   if (m.tick - s.tick > 1) { s.filtro = false; s.parado = false; s.corre = false; s.ataca = false; }
   s.tick = m.tick;
   const lado = ataca(m, j.time);
@@ -261,9 +261,23 @@ function defesa(m, j, d0, lado, extra) {
     } else s.ataca = false;
     s.ramo = s.ataca ? 'ataca' : 'pressiona';
     if (s.ataca) return { ...para(j, b.p.x, b.p.z, 1, true, 0, true), botoes: extra | BOTAO.CORRER };
+    // acompanha entre a bola e o meu gol, a ~1,5 m (sem virar parede colada na bola), mirando
+    // IA.antecipaPressao s à frente pela velocidade do condutor: chegando pelo erro, quem corria
+    // com a bola deixava o marcador 3–5 m para trás
+    // (velocidade filtrada em ~0,3 s e avanço de no máximo 3 m: com a velocidade crua o ponto
+    // chicoteava a cada drible e o marcador girava a 7 rad/s com um pé no ar)
     const gx = meuGol - b.p.x, gz = -b.p.z, g = MD.hypot(gx, gz) || 1;
     const k = ACOES.boteIA.distAcompanha;
-    const tx = b.p.x + (gx / g) * k, tz = b.p.z + (gz / g) * k;
+    let ax = 0, az = 0;
+    if (d0) {
+      if (s.cond !== d0.id) { s.cond = d0.id; s.cvx = d0.vx; s.cvz = d0.vz; }
+      const a = DT / IA.filtroCondutor;
+      s.cvx += (d0.vx - s.cvx) * a; s.cvz += (d0.vz - s.cvz) * a;
+      ax = s.cvx * IA.antecipaPressao; az = s.cvz * IA.antecipaPressao;
+      const l = MD.hypot(ax, az);
+      if (l > IA.antecipaMax) { ax *= IA.antecipaMax / l; az *= IA.antecipaMax / l; }
+    }
+    const tx = b.p.x + (gx / g) * k + ax, tz = b.p.z + (gz / g) * k + az;
     return { ...para(j, tx, tz, 1, MD.hypot(tx - j.x, tz - j.z) > 4, 0, true), botoes: extra };
   }
   // marcação sem repetir: do atacante mais perto do meu gol para o mais longe, cada um fica com o
