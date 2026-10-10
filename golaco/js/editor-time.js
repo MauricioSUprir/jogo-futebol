@@ -231,6 +231,12 @@ export function criarEditorTime(opc) {
   // ------------------------------------------------------------------------------- desenho
   function render() {
     if (!st.montado || !st.rasc) return;
+    // a lista de reservas é reordenada (replaceChildren): o foco do teclado volta para o mesmo botão
+    const focado = raiz.contains(document.activeElement) ? document.activeElement : null;
+    redesenhar();
+    if (focado && focado.isConnected && document.activeElement !== focado && focado.offsetParent !== null) focado.focus({ preventScroll: true });
+  }
+  function redesenhar() {
     raiz.classList.remove('ed-aba-escalacao', 'ed-aba-formacao', 'ed-aba-taticas');
     raiz.classList.add('ed-aba-' + st.aba);
     raiz.classList.toggle('tem-escolha', R().escolhido != null);
