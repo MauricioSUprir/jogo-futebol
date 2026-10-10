@@ -15,7 +15,9 @@
 //   9  Desfazer tudo: depois de uma troca, rascunho = mundo; PRONTO sem diferença não põe nada na fila.
 //  10  Nada encosta (6 telas × 3 abas × 3 estados): alvos ≥ 48 px, folga ≥ 4 px, área segura, nomes
 //      inteiros, sem rolagem horizontal, toda lista que rola alcança o último item.
-//  11  Girar o celular (844×390 → 390×844) com uma carta escolhida: rascunho e escolha continuam, e o 10.
+//  11  Girar o celular (844×390 → 390×844) com uma carta escolhida: "Gire o celular" cobre o editor
+//      (o jogo só roda deitado — dono, 10/10); deitando de novo, rascunho e escolha continuam, e o 10.
+//      O layout em pé do editor continua conferido no 10 numa janela estreita de PC (sem toque).
 //  12  Treino (?modo=ataque): sem Editar time e sem Reiniciar partida no menu.
 //  13  Sem erro no console em nenhuma tela.
 //  14  Fim de jogo: faixa "Fim de jogo" com o placar e "Jogar de novo" (também no lugar de Continuar
@@ -464,12 +466,21 @@ async function conferirEditor(pg) {
     const antes11 = await pg.evaluate(() => ({ esc: window.__golaco.editor.rascunho.escolhido, vagas: JSON.stringify(window.__golaco.editor.rascunho.vagas) }));
     await pg.setViewportSize({ width: 390, height: 844 });
     await pg.waitForTimeout(300);
+    const empe11 = await pg.evaluate(() => {
+      const el = document.getElementById('girar');
+      const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      return { vis: getComputedStyle(el).display !== 'none', porCima: !!e && el.contains(e), aberto: window.__golaco.editor.aberto };
+    });
+    meta('11 Em pé com o editor aberto: "Gire o celular" por cima de tudo (o editor fica aberto por baixo)',
+      `tela ${empe11.vis ? 'visível' : 'escondida'}, por cima ${empe11.porCima}, editor aberto ${empe11.aberto}`, empe11.vis && empe11.porCima && empe11.aberto);
+    await pg.setViewportSize({ width: 844, height: 390 });
+    await pg.waitForTimeout(300);
     const depois11 = await pg.evaluate(() => ({ esc: window.__golaco.editor.rascunho.escolhido, vagas: JSON.stringify(window.__golaco.editor.rascunho.vagas), modo: window.__golaco.editor.modo, pres: [...document.querySelectorAll('#editar-time .carta[aria-pressed="true"]')].map(b => +b.dataset.jogador) }));
     const lay11 = await conferirEditor(pg);
-    meta('11 Girar o celular (844×390 → 390×844) com a carta 10 escolhida: rascunho e escolha continuam',
+    meta('11 Girar e voltar a deitar (844×390 → 390×844 → 844×390) com a carta 10 escolhida: rascunho e escolha continuam',
       `escolhido ${antes11.esc} → ${depois11.esc}, marcadas [${depois11.pres}], modo ${depois11.modo}, rascunho ${antes11.vagas === depois11.vagas ? 'igual' : 'mudou'}`,
-      antes11.esc === 10 && depois11.esc === 10 && depois11.pres.length === 1 && depois11.pres[0] === 10 && antes11.vagas === depois11.vagas && depois11.modo === 'empe');
-    meta('11 Girado: nada encosta', `${lay11.resumo}${lay11.problemas.length ? ' — ' + lay11.problemas.slice(0, 6).join('; ') : ''}`, lay11.problemas.length === 0);
+      antes11.esc === 10 && depois11.esc === 10 && depois11.pres.length === 1 && depois11.pres[0] === 10 && antes11.vagas === depois11.vagas && depois11.modo === 'deitado');
+    meta('11 Deitado de novo: nada encosta', `${lay11.resumo}${lay11.problemas.length ? ' — ' + lay11.problemas.slice(0, 6).join('; ') : ''}`, lay11.problemas.length === 0);
     meta('13 Celular sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', erros.length === 0);
   } catch (e) {
     meta('Celular: execução', e.message, false);
@@ -482,8 +493,10 @@ const TELAS = [
   { nome: '844×390 entalhe', largura: 844, altura: 390, dpr: 2, toque: true, entalhe: true },
   { nome: '812×375 entalhe', largura: 812, altura: 375, dpr: 2, toque: true, entalhe: true },
   { nome: '667×375', largura: 667, altura: 375, dpr: 2, toque: true },
-  { nome: '390×844 entalhe', largura: 390, altura: 844, dpr: 2, toque: true, entalhe: true },
-  { nome: '375×667', largura: 375, altura: 667, dpr: 2, toque: true },
+  // em pé: o celular mostra "Gire o celular" (o jogo só roda deitado); o layout em pé do editor vale
+  // para a janela estreita do PC
+  { nome: '390×844 janela de PC', largura: 390, altura: 844, dpr: 2 },
+  { nome: '375×667 janela de PC', largura: 375, altura: 667, dpr: 2 },
 ];
 for (const t of TELAS) {
   const { navegador, pagina: pg, erros } = await abrirPagina(t);

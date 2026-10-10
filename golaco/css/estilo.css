@@ -88,6 +88,8 @@ html.noite .vinheta { display: block; }
   display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 14px;
   background: var(--painel); border: 1px solid var(--linha); border-radius: 10px;
 }
+/* partida: sem o painel "Conduzindo"/posição/km/h no topo (narração na tela — dono, 10/10); nos treinos fica */
+html.em-partida .painel-jogo { display: none; }
 .vel { display: flex; align-items: baseline; gap: 4px; min-width: 72px; justify-content: flex-end; }
 .vel b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .vel small { font-size: 11px; font-weight: 700; color: var(--texto-2); letter-spacing: 0.06em; }
@@ -221,13 +223,6 @@ html.com-toque .qps { bottom: auto; top: calc(var(--sa-t) + var(--m) + 58px); }
 }
 .dica .sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; }
 html.com-toque .dica { display: none; }
-.dica-retrato {
-  display: none; position: absolute; left: 50%; top: calc(var(--sa-t) + var(--m) + 128px); transform: translateX(-50%);
-  padding: 7px 12px; border-radius: 8px; white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--texto);
-  background: rgba(7, 9, 10, 0.72); border: 1px solid var(--linha);
-}
-@media (orientation: portrait) { html.com-toque .dica-retrato { display: block; } }
-html.modo-prints .dica-retrato { display: none; }
 
 /* ------------------------------------------------------------------ toque */
 .toque { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
@@ -403,8 +398,27 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 186px); }
   html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); right: auto; left: calc(var(--sa-l) + var(--m)); }
   html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
-  html.com-toque .dica-retrato { top: calc(var(--sa-t) + var(--m) + 236px); }
 }
+
+/* ------------------------------------------------------------------ celular em pé: gire o celular
+   O jogo só roda deitado (dono, 10/10). A mesma media query de main.js (retratoBloqueado); por cima
+   de tudo, até da tela de carregamento. */
+.girar {
+  position: fixed; inset: 0; z-index: 70; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: calc(var(--sa-t) + 24px) calc(var(--sa-r) + 28px) calc(var(--sa-b) + 24px) calc(var(--sa-l) + 28px);
+  background: var(--preto); text-align: center;
+}
+@media (orientation: portrait) { html.com-toque .girar { display: flex; } }
+.girar-icone { width: 112px; height: 112px; fill: none; stroke: var(--verde); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.girar-celular { transform-origin: 48px 45px; animation: girar-celular 2.4s ease-in-out infinite; }
+.girar-celular circle { fill: var(--verde); stroke: none; }
+.girar-seta { stroke: var(--texto-2); }
+@keyframes girar-celular { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+@media (prefers-reduced-motion: reduce) { .girar-celular { animation: none; transform: rotate(-90deg); } }
+.girar-titulo { margin: 4px 0 0; font-size: 22px; font-weight: 900; letter-spacing: 0.02em; color: var(--texto); }
+.girar-texto { margin: 0; max-width: 300px; font-size: 14px; line-height: 1.45; color: var(--texto-2); }
+.girar-botao { margin-top: 10px; min-height: 48px; padding: 0 22px; }
+.girar-botao[hidden] { display: none; }
 
 /* ------------------------------------------------------------------ carregando e erro */
 .carregando {

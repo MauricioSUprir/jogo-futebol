@@ -261,17 +261,14 @@ function tratarEvento(ev) {
     return;
   }
   if (t === 'substituicao') {
-    if (ev.time !== TIME_HUMANO) { hud.evento(ev, { texto: `${hud.times[ev.time]?.sigla ?? ''}: sai ${camisaDe(ev.sai)}, entra ${camisaDe(ev.entra)}` }); return; }
+    // só a do MEU time (a confirmação do que pedi na pausa); a do adversário seria narração
+    if (ev.time !== TIME_HUMANO) return;
     hud.evento(ev, { texto: `Substituição: sai ${camisaDe(ev.sai)}, entra ${camisaDe(ev.entra)}` });
     return;
   }
-  // o MEU goleiro ficou com a bola na mão (o controle vai para ele): diz como repor — antes só
-  // aparecia "O goleiro pegou" e quem não sabia ficava parado (a IA repõe sozinha em 3 s)
-  if (t === 'defesa' && (ev.modo === 'encaixe' || ev.modo === 'pegou') && timeDe(ev.id) === TIME_HUMANO) {
-    hud.evento({ tipo: 'repor' });
-    return;
-  }
-  hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
+  // lances (passe, chute, defesa, lateral...) não viram texto: o hud só mostra o gol e os comandos
+  // (o goleiro com a bola na mão repõe sozinho em 3 s — GOLEIRO.esperaHumano)
+  hud.evento(ev);
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }
 
@@ -330,7 +327,13 @@ const _pt = { x: 0, y: 0, atras: false };
 const _carga = { x: 0, y: 0, forca: 0, tipo: '' };
 const _queda = { x: 0, z: 0 };
 
-function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto; }
+// Celular em pé: o jogo só roda deitado (dono, 10/10: "é obrigatório virar o celular pra jogar").
+// A tela "Gire o celular" (index.html #girar, mostrada pelo CSS com a mesma media query) cobre tudo
+// e o jogo fica parado até deitar. Só com toque: janela estreita no PC continua jogando.
+const mqRetrato = window.matchMedia('(orientation: portrait)');
+function retratoBloqueado() { return mqRetrato.matches && document.documentElement.classList.contains('com-toque'); }
+
+function pausado() { return hud.menuAberto || hud.ajudaAberta || editor.aberto || retratoBloqueado(); }
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
 const kitCache = new Map();
@@ -455,7 +458,8 @@ function quadro(agoraMs, desenhar = true) {
     }
     alfa = r.alfa;
   }
-  desenharQuadro(dt, agoraMs, desenhar);
+  // em pé no celular a tela "Gire o celular" cobre tudo: não gasta bateria desenhando por baixo
+  desenharQuadro(dt, agoraMs, desenhar && !retratoBloqueado());
   medirQps(dtReal, agoraMs);
   adaptarQualidade(dtReal, agoraMs);
 }
@@ -644,6 +648,15 @@ async function iniciar() {
   if (window.visualViewport) window.visualViewport.addEventListener('resize', redimensionar);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) entrada.soltarTudo();
+    else { laco.ultimo = null; ultimoQuadro = null; }
+  });
+  // girou para em pé: solta o que estava segurado (o dedo saiu do analógico ao girar); ao deitar,
+  // o laço não tenta recuperar o tempo parado
+  // o botão de tela cheia da tela "Gire o celular": só onde a tela trava deitada (Android)
+  const btnGirar = document.getElementById('girar-tela-cheia');
+  if (btnGirar) btnGirar.hidden = !(document.fullscreenEnabled && screen.orientation && typeof screen.orientation.lock === 'function');
+  mqRetrato.addEventListener('change', () => {
+    if (retratoBloqueado()) entrada.soltarTudo();
     else { laco.ultimo = null; ultimoQuadro = null; }
   });
   hud.definirEstado({

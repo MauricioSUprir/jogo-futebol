@@ -29,6 +29,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - Defesa do humano: **CONTER** (segurar: acompanha o condutor entre a bola e o gol, de frente para ele),
   **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
+- Tela limpa (dono, 10/10): **sem narração** — os lances (passe, chute, defesa, lateral...) não viram texto;
+  na partida o topo é só placar, minimapa e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
+  de comando (menu, treino, edição do time) e o efeito do gol.
+- **Celular só deitado**: em pé (com toque) a tela "Gire o celular para jogar" cobre tudo e o jogo para;
+  onde dá (Android), o botão "Tela cheia deitada" trava a tela. Janela estreita no PC continua jogando.
 
 ## Etapa 2 — passe, chute, goleiro
 
@@ -90,7 +95,7 @@ node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, ha
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
-node golaco/tools/prints.mjs           # prints PC/celular (deitado e em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
+node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e gol de perto (tools/saida/)
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os

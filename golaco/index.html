@@ -65,7 +65,6 @@
     </div>
     <div id="qps" class="qps" hidden></div>
     <div id="dica" class="dica" data-caixa="dica"><kbd>H</kbd> controles <span class="sep"></span> <kbd>Esc</kbd> menu</div>
-    <div class="dica-retrato" data-caixa="dica-retrato">Deite o celular para jogar melhor</div>
   </div>
 
   <!-- Controles de toque (celular): analógico flutuante à esquerda; à direita o arco de botões
@@ -248,6 +247,19 @@
     <div class="carregando-marca">GOLAÇO</div>
     <div class="carregando-barra"><span></span></div>
     <p id="carregando-msg">Preparando o campo…</p>
+  </div>
+
+  <!-- Celular em pé: o jogo só roda deitado (o CSS mostra esta tela com toque + retrato e o jogo
+       fica parado: main.js retratoBloqueado). O botão de tela cheia só aparece onde o navegador
+       consegue travar a tela deitada (Android); no iPhone basta girar. -->
+  <div id="girar" class="girar" role="alertdialog" aria-modal="true" aria-labelledby="girar-titulo" aria-describedby="girar-texto">
+    <svg class="girar-icone" viewBox="0 0 96 96" aria-hidden="true">
+      <g class="girar-celular"><rect x="30" y="12" width="36" height="66" rx="7"/><path d="M43 19h10"/><circle cx="48" cy="70" r="2.6"/></g>
+      <path class="girar-seta" d="M78 40a32 32 0 0 0-16-22M80 30l-2 10-10-2"/>
+    </svg>
+    <p id="girar-titulo" class="girar-titulo">Gire o celular para jogar</p>
+    <p id="girar-texto" class="girar-texto">O GOLAÇO só joga com o celular deitado.</p>
+    <button id="girar-tela-cheia" class="btn btn-primario girar-botao" type="button" data-cmd="tela-cheia" hidden>Tela cheia deitada</button>
   </div>
 
   <script type="module" src="js/main.js"></script>
