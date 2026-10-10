@@ -32,7 +32,7 @@
 // Quem está dentro do raio na montagem sai andando rápido (até PARTIDA.empurrao) e ninguém entra até a
 // bola rolar (parede: restricaoParada). Nenhuma parada passa de PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -142,7 +142,9 @@ function bolaMorta(m, tipo, time, x, z) {
   };
   // ninguém segue disputando a bola morta: sem posse, sem passe no ar, sem recepção marcada
   if (m.posse != null) { const d = jogadorPorId(m, m.posse); if (d && d.cond) { d.cond.toque = null; d.cond.busca = false; } }
-  if (m.naMao == null) m.posse = null;
+  // o goleiro que entrou com a bola nas mãos no gol (gol contra) também a larga
+  if (m.naMao != null) { const g = jogadorPorId(m, m.naMao); if (g) { g.segura = null; g.pedido = null; } m.naMao = null; }
+  m.posse = null;
   m.voo = null;
   for (const j of m.jogadores) { j.recebe = null; j.corrida = null; j.intercepta = null; }
 }
@@ -360,6 +362,29 @@ function conterParada(m) {
   }
 }
 
+/**
+ * Ninguém (fora o cobrador) está dentro da restrição da parada (mais de 5 cm para dentro da borda
+ * com a folga)? A IA só cobra com a zona livre — ou, sem ela, PARTIDA.livreAte s antes do limite
+ * da parada (trava proibida).
+ */
+export function zonaLivre(m) {
+  const pr = m.parada;
+  if (!pr || pr.cobrador == null) return false;
+  for (const j of m.jogadores) {
+    if (j.id === pr.cobrador || j.papel === 'parado') continue;
+    restricaoParada(m, j, j.x, j.z, _r);
+    if (MD.hypot(_r.x - j.x, _r.z - j.z) > 0.05) return false;
+  }
+  return true;
+}
+
+/** A IA pode cobrar agora: depois de pronta + atraso, com a zona livre (ou perto do limite). */
+function iaPodeCobrar(m) {
+  const pr = m.parada;
+  if (m.tick < pr.pronta + pr.atraso) return false;
+  return zonaLivre(m) || m.tick - pr.inicio >= seg(PARTIDA.paradaMax - PARTIDA.livreAte);
+}
+
 // ------------------------------------------------------------------------------- cobrança
 
 /**
@@ -412,7 +437,7 @@ export function entradaCobranca(m, j) {
   if (!pr || pr.rolou || pr.cobrador !== j.id || pr.tipo === 'tiroDeMeta') return { x: 0, z: 0, botoes: 0 };
   const a = alvoCobranca(m, j, pr.tipo);
   const t0 = pr.pronta + pr.atraso;
-  if (m.tick < t0) return { x: a.dx, z: a.dz, botoes: 0 };
+  if (!iaPodeCobrar(m)) return { x: a.dx, z: a.dz, botoes: 0 };
   const k = Math.max(2, Math.round(a.forca * ACOES.cargaCheia / PASSO));
   const fase = (m.tick - t0) % seg(PARTIDA.repeteCobranca);
   // escanteio: o analógico solto deixa o acoes.js escolher a zona pelo companheiro mais perto dela
@@ -428,7 +453,16 @@ export function entradaCobranca(m, j) {
  */
 function cobrar(m, entrada) {
   const pr = m.parada;
-  if (!pr || pr.rolou || pr.cobrador == null || pr.tipo === 'tiroDeMeta') return false;
+  if (!pr || pr.rolou || pr.cobrador == null) return false;
+  if (pr.tipo === 'tiroDeMeta') {
+    // o goleiro repõe pela reposição que já existe (sim.js goleiroComBola, que conta o tempo desde
+    // g.segura.desde): com adversário na área, o relógio dele não anda (até perto do limite)
+    const g = jogadorPorId(m, pr.cobrador);
+    if (g && g.segura && m.naMao === g.id && !zonaLivre(m) && m.tick - pr.inicio < seg(PARTIDA.paradaMax - PARTIDA.livreAte - GOLEIRO.esperaHumano)) {
+      g.segura.desde = m.tick; g.pedido = null; g.carga = null;
+    }
+    return false;
+  }
   const c = jogadorPorId(m, pr.cobrador);
   if (!c || c.papel !== 'parado') return false;
   // parado com a bola no pé: a condução não "ajeita" a bola (ela fica no ponto até a cobrança)
@@ -436,13 +470,14 @@ function cobrar(m, entrada) {
   const humano = m.humanos.includes(c.time) && m.controlado[c.time] === c.id;
   const iaAssume = !humano || m.tick - pr.inicio >= seg(PARTIDA.cobrancaHumanoMax);
   if (iaAssume) {
-    if (m.tick < pr.pronta + pr.atraso) { c.pedido = null; c.carga = null; return false; }
+    if (!iaPodeCobrar(m)) { c.pedido = null; c.carga = null; return false; }
     const a = alvoCobranca(m, c, pr.tipo);
     c.carga = null;
     c.pedido = { tipo: a.tipo, forca: a.forca, mod: false, tick: m.tick, dir: pr.tipo === 'escanteio' ? null : { x: a.dx, z: a.dz } };
   } else {
     const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
     aplicarEntrada(c, e, m.tick);
+    c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
     if (c.pedido && c.pedido.tipo === 'chute') c.pedido = null;  // bola parada não é chutada a gol (Etapa 4)
   }
@@ -583,7 +618,9 @@ export function regrasPartida(m) {
     }
     // montada: a bola rolou? (o tiro de meta sai pela reposição do goleiro; a cobrança com o pé sai
     // em cobrar(), antes do passo). Trava proibida: passou de paradaMax, rola do jeito que está.
-    if (m.posse !== pr.cobrador || m.voo || MD.hypot(m.bola.p.x - pr.x, m.bola.p.z - pr.z) > 0.6 || m.tick - pr.inicio > seg(PARTIDA.paradaMax)) {
+    // (no tiro de meta a bola anda com o goleiro, nas mãos: só vale a reposição)
+    const saiuDoPonto = pr.tipo !== 'tiroDeMeta' && MD.hypot(m.bola.p.x - pr.x, m.bola.p.z - pr.z) > 0.6;
+    if (m.posse !== pr.cobrador || m.voo || saiuDoPonto || m.tick - pr.inicio > seg(PARTIDA.paradaMax)) {
       rolou(m);
       return;
     }

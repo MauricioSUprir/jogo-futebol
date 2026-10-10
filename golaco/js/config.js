@@ -447,6 +447,7 @@ export const PARTIDA = {
   empurrao: 7,                // m/s — quem está dentro do raio na montagem sai a até esta velocidade
   forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65 }, // força do botão da IA
   repeteCobranca: 1.0,        // s — se a cobrança não saiu (pedido expirou), a IA aperta de novo
+  livreAte: 1.5,              // s antes de paradaMax: a IA cobra mesmo sem a zona livre (trava proibida)
   subsMax: 5,                 // IFAB Regra 3: 5 substituições...
   paradasMax: 3,              // ...em 3 paradas (o intervalo não conta)
 };

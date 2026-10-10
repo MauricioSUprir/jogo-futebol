@@ -362,6 +362,7 @@ export function aplicarEdicao(m, ed) {
   t.vagas = imediatas;
   t.pendente = subs.length || golEspera ? { vagas: ordenar(ed.formacao, ed.vagas), substituicoes: subs } : null;
   t.versao++;
+  t.editadoEm = m.tick; // o tick da edição entra no hash (a mesma edição um tick depois é outro jogo)
   for (const j of m.jogadores) if (j.time === ed.time) vestirVaga(m, j, vagaDe(t.vagas, j.id));
   return { ok: true, pendente: !!t.pendente };
 }
@@ -435,6 +436,7 @@ export function misturarTimes(h, m) {
     h = misturarHash(h, s.subs.feitas);
     h = misturarHash(h, s.subs.paradas);
     h = misturarHash(h, s.versao);
+    h = misturarHash(h, s.editadoEm ?? -1);
   }
   return h;
 }
