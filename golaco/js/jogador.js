@@ -191,7 +191,7 @@ export function passoCorpo(k, dx, dz, vel, rumoAlvo, par, dt, comBola = false) {
     alvo = rv + clamp(d, -lim, lim);
   }
   const err = difAng(k.rumo, alvo);
-  const wMax = lerp(JOGADOR.giroCorpoParado, JOGADOR.giroCorpoCorrendo, clamp(s3 / 8, 0, 1));
+  const wMax = lerp(k.giroParado ?? JOGADOR.giroCorpoParado, JOGADOR.giroCorpoCorrendo, clamp(s3 / 8, 0, 1));
   const kr = JOGADOR.rigidezGiro;
   k.giro += (kr * err - 2 * Math.sqrt(kr) * k.giro) * dt;
   k.giro = clamp(k.giro, -wMax, wMax);

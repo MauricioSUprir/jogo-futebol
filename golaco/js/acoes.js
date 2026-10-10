@@ -136,6 +136,7 @@ export function processarPedido(m, j) {
  * (quem solta o botão e o analógico juntos não perde a direção). {x, z, mag} ou null.
  */
 function mira(j) {
+  if (j.miraAuto) return { x: j.miraAuto.x, z: j.miraAuto.z, mag: 1 }; // reposição automática
   if (j.imag > 0.2) return { x: j.ix, z: j.iz, mag: j.imag };
   return j.mira ?? null;
 }
@@ -272,6 +273,9 @@ function finalizarChute(m, j, pe, tipo, v, w, alvo, para, extra = {}) {
 function marcarRecebedor(m, r, x, z, tipo, tick) {
   if (!r) return;
   r.recebe = { tick: m.tick, x, z, tipo, chega: tick };
+  // recuo para o goleiro: o controle só vai para ele quando pegar a bola (no caminho o analógico não
+  // move o goleiro — o jogador ficava com o controle "morto" durante o passe)
+  if (r.posicao === 'GOL') return;
   if (m.humanos && m.humanos.includes(r.time) && m.controlado) {
     // o controle passa para quem vai receber (como nos jogos de futebol atuais)
     if (m.controlado[r.time] !== r.id) {
@@ -291,6 +295,7 @@ export function executarAcao(m, j, pe, primeira = false) {
   const p = j.pedido;
   j.pedido = null;
   if (!p) return false;
+  j.miraAuto = p.dir ?? null; // reposição automática do goleiro: direção fixa, sem o analógico
   const b = m.bola;
   if (b.p.y > 0.6 && p.tipo !== 'chute') return executarCabeceio(m, j, p);
   if (b.p.y > 1.2) return executarCabeceio(m, j, p);

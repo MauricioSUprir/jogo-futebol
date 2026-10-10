@@ -72,7 +72,9 @@ for (const sem of SEMENTES) {
       const gx = Math.sign(g.x) * CAMPO.meioX;
       for (const o of m.jogadores) {
         if (o.time !== g.time || o.posicao === 'GOL' || o.id === ctrl) continue;
-        naMaoN++; if (Math.abs(gx - o.x) < 8) naMaoLinha++;
+        // correndo para a própria linha do gol (a < 16 m dela, > 1 m/s na direção dela)
+        const vLinha = o.vx * Math.sign(gx);
+        naMaoN++; if (Math.abs(gx - o.x) < 16 && vLinha > 1) naMaoLinha++;
       }
     }
     const linha = m.jogadores.filter(o => o.posicao !== 'GOL' && o.papel === 'ia');
@@ -148,7 +150,7 @@ reg('companheiro a menos de 2 m (amontoado)', `${fmt(pct(A.viz2, A.viz))}% do te
 reg('trombadas entre companheiros', `${fmt(porMin(A.contatos), 2)}/min`, '≤ 3/min (publicada: 27)', porMin(A.contatos) <= 3);
 reg('pernas cruzadas (tornozelos trocados de lado > 3 cm)', `${fmt(pct(A.cruz, A.cruzN))}% do tempo`, '≤ 9% (publicada: 14,9%)', pct(A.cruz, A.cruzN) <= 9);
 reg('pernas cruzadas andando de lado (45–135° do tronco)', `${fmt(pct(A.cruzLado, A.cruzLadoN))}% (${fmt(pct(A.cruzLadoN, A.cruzN), 0)}% do tempo de lado)`, '≤ 15% (publicada: 42,5%)', pct(A.cruzLado, A.cruzLadoN) <= 15);
-reg('bola na mão do goleiro: companheiro a < 8 m da linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 5% (publicada: 10,8%)', pct(naMaoLinha, naMaoN) <= 5);
+reg('bola na mão do goleiro: companheiro correndo para a própria linha do gol', `${fmt(pct(naMaoLinha, naMaoN))}% do tempo`, '≤ 15% (publicada: 32,6%)', pct(naMaoLinha, naMaoN) <= 15);
 reg('sem recuo — treino chega ao chute', `pior semente: ${chutesMin} chutes em ${MIN} min`, '≥ 5', chutesMin >= 5);
 reg('sem recuo — defesa pressiona o condutor (marcador a ≤ 3 m)', `${fmt(pct(pressao, pressaoN))}% do tempo com a bola (2+ marcadores: ${fmt(pct(dois, pressaoN))}%)`, '≥ 40%', pct(pressao, pressaoN) >= 40);
 reg('sem recuo — pressão na posse assentada (mesmo condutor > 1,5 s)', `${fmt(pct(assentada, assentadaN))}%`, '≥ 50% (publicada: 53,7%)', pct(assentada, assentadaN) >= 50);

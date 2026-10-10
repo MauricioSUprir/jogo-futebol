@@ -15,6 +15,7 @@ const TEXTO_EVENTO = {
   chute: { t: 'Chute', ms: 1100, forte: true },
   cabeceio: { t: 'Cabeceio', ms: 1100, forte: true },
   defesa: { t: 'Defesa do goleiro', ms: 1500, forte: true },
+  repor: { t: 'Bola na mão: PASSE ou LANÇAMENTO', ms: 2600, forte: true },
   troca: { t: 'Troca de jogador', ms: 800 },
   saidaGoleiro: { t: 'Goleiro saiu do gol', ms: 1200 },
   recomeco: { t: 'Recomeço da jogada', ms: 1000 },

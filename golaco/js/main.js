@@ -200,6 +200,12 @@ function tratarEvento(ev) {
   // recomeço (gol, bola fora, R): todos voltam às posições — a câmera CORTA para a jogada nova
   // (sem atravessar o campo) e o km/h não fica descendo do valor de antes
   if (t === 'recomeco') { corteCamera = true; kmhVisto = 0; }
+  // o MEU goleiro ficou com a bola na mão (o controle vai para ele): diz como repor — antes só
+  // aparecia "O goleiro pegou" e quem não sabia ficava parado (a IA repõe sozinha em 3 s)
+  if (t === 'defesa' && (ev.modo === 'encaixe' || ev.modo === 'pegou') && timeDe(ev.id) === TIME_HUMANO) {
+    hud.evento({ tipo: 'repor' });
+    return;
+  }
   hud.evento(ev, { tipoVoo: mundo.voo?.tipo });
   if (t === 'marcadorLigado' || t === 'marcadorDesligado') hud.definirEstado({ marcador: marcadorLigado(mundo) });
 }

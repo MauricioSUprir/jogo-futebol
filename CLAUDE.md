@@ -124,6 +124,15 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-goleiro-trava` e `teste-movimento` (8 sementes; aceitam `--js <pasta>` para medir a publicada). Lição:
   amostra de 4 sementes engana na pressão (±6 pontos) — decidir com 8–12; e toda mudança no pouso do pé tem que
   passar no arrasto (pé plantado) em ~12 sementes do treino de ataque, não só nas 3 do `teste-patinacao`.
+  Correções 2 (contraprova adversarial): ninguém pressiona o goleiro com a bola na mão (Regra 12.3; a
+  reposição batia no adversário em ~49%); reposição automática sai para a frente, sem o analógico (laço
+  com o analógico para o próprio gol); no recuo o controle só vai para o goleiro quando ele pega; encaixe e
+  "pegou" dão o controle ao goleiro do humano (aviso "Bola na mão: PASSE ou LANÇAMENTO"); o CORRER da IA
+  estava morto (`{...para(), botoes: extra}` sobrescrevia) — com ele a pressão voltou (marcador a ≤ 3 m
+  ~55%); marcação calculada 1×/tick por time com vantagem de 3 m para o par atual; cobertura de lado; giro
+  parado 14 para o humano e 8 só para a IA (`IA.giroParado`). Roubadas do treino (24 → ~13 por 3 min)
+  caíram com o fim do amontoado e NÃO voltam com pressão de perto (medido: depende de 2–3 na bola);
+  recuperar intensidade = tática da Etapa 3 (compactação perto da bola, pressão alta configurável).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
