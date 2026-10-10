@@ -19,14 +19,18 @@ const TIPOS = {
   '.bin': 'application/octet-stream', '.glb': 'model/gltf-binary', '.ico': 'image/x-icon',
 };
 
-/** Sobe um servidor estático na pasta do jogo. Devolve {url, fechar, bytes()}. */
-export function servidor(porta = 0) {
+/**
+ * Sobe um servidor estático na pasta do jogo (ou em `raiz`, outra cópia do jogo: os testes medem o
+ * "antes" servindo a base). Devolve {url, fechar, bytes()}.
+ */
+export function servidor(porta = 0, raiz = RAIZ) {
   let bytes = 0;
+  const base = path.resolve(raiz);
   const srv = http.createServer((req, res) => {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (p.endsWith('/')) p += 'index.html';
-    const arq = path.join(RAIZ, p);
-    if (!arq.startsWith(RAIZ) || !fs.existsSync(arq) || fs.statSync(arq).isDirectory()) {
+    const arq = path.join(base, p);
+    if (!arq.startsWith(base) || !fs.existsSync(arq) || fs.statSync(arq).isDirectory()) {
       res.writeHead(404); res.end('404'); return;
     }
     const dados = fs.readFileSync(arq);

@@ -722,6 +722,8 @@ const api = {
       else if (roteiro === 'demo') e = entradaDemoDoMundo(mundo);
       else e = roteiro;
       e = e ?? { x: 0, z: 0, botoes: 0 };
+      // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
+      if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
       rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
     }
     return hashMundo(mundo);

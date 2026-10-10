@@ -99,13 +99,13 @@ export function posicaoNaTela(vaga, W, H, cw, ch, vertical) {
   return { x: 6 + cw / 2 + (vaga.col + 2) * (Wc - cw) / 4, y: Hc + 6 - ch / 2 - vaga.fila * (Hc - ch) / 4 };
 }
 
-/** Tamanho das cartas do campinho W × H (tela §5): nada encosta (passo ≥ carta + folga). */
+/** Tamanho das cartas do campinho W × H (tela §5): nada encosta (passo ≥ carta + 6 px de folga). */
 export function tamanhoCarta(modo, W, H) {
   const Wc = W - 12, Hc = H - 12;
   const lim = modo === 'pc' ? [104, 64] : modo === 'deitado' ? [76, 48] : [96, 64];
   const minH = modo === 'empe' ? 52 : 48;
   const cw = Math.max(56, Math.min(lim[0], Math.floor((Wc - 24) / 5), modo === 'empe' ? Math.floor((W - 44) / 5) : Infinity));
-  const ch = Math.max(48, Math.min(lim[1], Math.max(minH, Math.floor((Hc - 16) / 5))));
+  const ch = Math.max(48, Math.min(lim[1], Math.max(minH, Math.floor((Hc - 24) / 5))));
   return { cw, ch };
 }
 
