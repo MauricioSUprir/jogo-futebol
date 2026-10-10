@@ -18,6 +18,8 @@
 //  11  Girar o celular (844×390 → 390×844) com uma carta escolhida: rascunho e escolha continuam, e o 10.
 //  12  Treino (?modo=ataque): sem Editar time e sem Reiniciar partida no menu.
 //  13  Sem erro no console em nenhuma tela.
+//  14  Fim de jogo: faixa "Fim de jogo" com o placar e "Jogar de novo" (também no lugar de Continuar
+//      na pausa); o botão começa outra partida.
 // Saída PASSOU/REPROVOU por item; código 1 se algum reprovar.
 //   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>] [--semente N]
 //   (--raiz: mede outra cópia, ex.: a base; --semente soma N a todas as sementes: outro conjunto)
@@ -363,6 +365,26 @@ async function conferirEditor(pg) {
     const h9b = await novaPartida(pg, 13).then(() => pg.evaluate(() => { const g = window.__golaco; return { antes: g.hash(), depois: g.rodarPassos(120, 'demo') }; }));
     meta('9  Desfazer tudo: rascunho = mundo; PRONTO sem diferença não põe nada na fila (hash igual)',
       `trocou ${trocou}, voltou ${volta.igual}, fila ${fila9 ? 'com edição' : 'vazia'}, hash ${h9.antes === h9a && h9.depois === h9b.depois ? 'igual' : 'diferente'}`, trocou && volta.igual && fila9 === null && h9.antes === h9a && h9.depois === h9b.depois);
+    // ---- 14) fim de jogo: faixa com "Jogar de novo"; na pausa, "Jogar de novo" no lugar de Continuar
+    const fim = await pg.evaluate(() => {
+      const g = window.__golaco;
+      g.reiniciar({ modo: 'partida', semente: 21, minutosPorTempo: 0.05 });
+      let n = 0;
+      while (n < 1800 && g.estado().relogio.estado !== 'fim') { g.rodarPassos(30, 'demo'); n += 30; }
+      const faixa = document.getElementById('faixa');
+      const r = { estado: g.estado().relogio.estado, minuto: g.estado().relogio.minuto, faixa: !faixa.hidden ? faixa.textContent.replace(/\s+/g, ' ').trim() : null, botaoFaixa: !document.getElementById('faixa-botao').hidden };
+      g.abrirMenu();
+      const prim = [...document.querySelectorAll('#menu-acoes .btn-primario')].filter(b => !b.hidden && b.offsetParent !== null).map(b => b.textContent.trim());
+      r.primario = prim.join(',');
+      r.continuar = !document.getElementById('btn-continuar').hidden;
+      return r;
+    });
+    await clicar(pg, '#menu-acoes .btn-primario:not([hidden])');
+    const fim2 = await pg.evaluate(() => ({ estado: window.__golaco.estado().relogio.estado, tempo: window.__golaco.estado().relogio.tempo, faixa: !document.getElementById('faixa').hidden, menu: !document.getElementById('menu').hidden }));
+    meta('14 Fim de jogo: faixa "Fim de jogo" com o placar e Jogar de novo; na pausa Jogar de novo no lugar de Continuar',
+      `${fim.estado} ${fim.minuto}', faixa "${fim.faixa}", botão ${fim.botaoFaixa}, pausa: primário "${fim.primario}", Continuar ${fim.continuar}; depois do clique: ${fim2.estado} (${fim2.tempo}º tempo), faixa ${fim2.faixa}, pausa ${fim2.menu}`,
+      fim.estado === 'fim' && /Fim de jogo/.test(fim.faixa ?? '') && /GLÇ \d+ × \d+ VNT/.test(fim.faixa ?? '') && fim.botaoFaixa && fim.primario === 'Jogar de novo' && !fim.continuar
+      && fim2.estado !== 'fim' && fim2.tempo === 1 && !fim2.faixa && !fim2.menu);
     meta('13 PC sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', erros.length === 0);
   } catch (e) {
     meta('PC: execução', e.message, false);
