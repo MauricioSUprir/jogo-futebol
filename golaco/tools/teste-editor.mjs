@@ -426,12 +426,12 @@ bloco('E10', () => {
 // ------------------------------------------------------------------------------------ E11
 {
   // hashes gravados (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600) — pedido de
-  // 10/10 (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914], ataque-2 [3929265932, 3750097417,
-  // 646006693], conducao-7 [1415330591, 986885701, 4093573822])
+  // 10/10 com as correções da contraprova (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914],
+  // ataque-2 [3929265932, 3750097417, 646006693], conducao-7 [1415330591, 986885701, 4093573822])
   const GRAVADO = {
-    'ataque-1': [2811615975, 1768777365, 1390258626],
-    'ataque-2': [3194456073, 2433901321, 696346031],
-    'conducao-7': [1415330591, 986885701, 1630605632],
+    'ataque-1': [3678653782, 2725485303, 3876666268],
+    'ataque-2': [1851623551, 2824497266, 4248311134],
+    'conducao-7': [1415330591, 986885701, 2262414902],
   };
   const R = await import(pathToFileURL(path.join(AQUI, 'lib/roteiros.mjs')).href);
   const obt = {};
