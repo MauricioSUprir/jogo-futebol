@@ -818,7 +818,11 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   // alvo perto, o sprint virava trote antes de passar da bola)
   if (atraso > R.desliga) _t.x -= lado * 2;
   desviaCondutor(m, j, B, _t);
-  const correr = !frente && atraso > R.corre;
+  // sprint só com urgência: a bola no meu campo (até `urgente` m além do meio) ou vindo para o meu gol a mais de
+  // `vUrgente` m/s (o contra-ataque); a bola parada lá na frente, com a construção deles devagar, ele volta
+  // correndo sem o sprint (Di Salvo 2009: o esforço máximo é raro e tem motivo)
+  const vb = -(m.bola.v.x * lado);
+  const correr = !frente && atraso > R.corre && (ub < R.urgente || vb > R.vUrgente);
   return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
 }
 

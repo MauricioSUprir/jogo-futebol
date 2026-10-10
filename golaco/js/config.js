@@ -562,7 +562,9 @@ export const TATICA = {
   // referência atrás dela)
   // (no jogo organizado, fora da janela, só liga com mais de `ligaOrganizado` m: a bola longa por cima)
   // (`respiro` s depois de uma recomposição acabada, a volta pela linha da bola espera)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, lateral: 0.5, max: 10, pausa: 2 },
+  // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
+  // de `vUrgente` m/s)
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -586,9 +588,10 @@ export const IA_DEFESA = {
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
   // menos que eles)
-  // (PR "IA intensa": janela da Média 3 → 5 s — Bauer & Anzer 2021 e a regra dos 5 s; Alta 5 → 7 s — FIFA 23
-  // "pressão após perda")
-  contrapressao: { s: [0, 5, 7], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
+  // (PR "IA intensa": janela da Média 3 → 4 s e da Alta 5 → 7 s — FIFA 23 "pressão após perda"; com 5 s na Média,
+  // como a regra dos 5 s de Bauer & Anzer 2021, o PPDA da Média caía para ~7, o dos times mais intensos da Europa,
+  // abaixo da faixa 8–16 da pressão Equilibrada)
+  contrapressao: { s: [0, 4, 7], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
   zona: { raio: 7, peso: 0.6, frente: 1 }, // adversário a ≤ 7 m da referência, no máximo 1 m à frente dela, puxa 60% para o lado do gol dele
   marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
@@ -644,7 +647,7 @@ export const IA_ATAQUE = {
   utilidade: {
     posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
-    cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
+    cruzamentoP: [0.01, 0.06, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.32, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],
     passoAngConduz: 0.5, conduzDist: 5, conduz: 0.85, conduzSolta: [1.5, 4, 0.35], vConduz: 5.5, magConduz: 0.9,
     manterRaio: 3, manterPeso: 0.7, manterLado: 0.4, manterArea: [0.95, 0.7], manterPerto: 9,

@@ -247,8 +247,9 @@ function estadoAtaque(m, t) {
   // corrida que já passou da linha e não recebe em corridas.alemMax s: acaba e ele volta (impedido, pressa) —
   // esperando o passe atrás da linha até o fim da `espera`, alguém ficava em posição de impedimento ~25% do
   // tempo com a bola (teste-apoio: real 8–25%, Metrica 16%; PR "IA intensa")
+  // (com o ataque à área valendo — a bola de lado no terço final —, quem passou da linha fica: é o cruzamento)
   const AM = IA_ATAQUE.corridas.alemMax;
-  if (AM != null) {
+  if (AM != null && !A.area.ativo) {
     for (const o of m.jogadores) {
       const s = o.iaA;
       if (o.time !== t || !s || !s.corrida || !o.corrida) continue;
