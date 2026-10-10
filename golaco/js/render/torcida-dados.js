@@ -28,7 +28,7 @@ export const ARQUIBANCADA = {
 export const TORCIDA = {
   ocupacao: { baixa: 0.38, media: 0.62, alta: 0.9 },
   animada: { baixa: false, media: true, alta: true },
-  atlasCelula: { baixa: [32, 64], media: [64, 128], alta: [64, 128] },
+  atlas: [64, 128],         // px de cada célula do atlas (um atlas só para as 3 qualidades: o mipmap faz a Baixa)
   largura: 1.1, altura: 2.2,  // m do quadro de cada torcedor (cabe os braços para cima)
   visitante: { x: -1, z: [-22, 18], vazio: 4 },   // fundo −x; 4 m de cadeiras vazias de cada lado
   organizada: { x: 1, z: [-18, 18] },              // fundo +x
@@ -92,49 +92,133 @@ export function cadeiras() {
   return lista;
 }
 
+// cores pré-convertidas (sem alocar por torcedor)
+const PRE = l => { let tot = 0; for (const [, p] of l) tot += p; return { tot, cores: l.map(([c, p]) => [hex(c), p]) }; };
+const P_CASA = PRE(CASA_CAMISA), P_FORA = PRE(FORA_CAMISA), P_PELE = PRE(PELE), P_CABELO = PRE(CABELO);
+function sorteiaPre(P, r) {
+  let x = r * P.tot;
+  for (const [c, p] of P.cores) { x -= p; if (x <= 0) return c; }
+  return P.cores[P.cores.length - 1][0];
+}
+const RGB_MOSAICO = hex(VERDE_MOSAICO);
+export const NIVEIS = ['baixa', 'media', 'alta'];
+
 /**
- * Torcedores de uma qualidade. mascara: Uint8Array(nA × fileiras) com 1 nas cadeiras do mosaico "GOLAÇO"
- * do lado de lá (ou null). Devolve {n, pos: Float32Array(4n) [x, y, z, escala], camisa, pele, cabelo,
- * info: Uint8Array(4n)} — info = [time·255, setor·85, organizada·255, semente2]; pele[3] = semente.
+ * Torcedores de TODAS as qualidades de uma vez (contraprova M4: trocar a qualidade no meio do jogo — a
+ * Automática faz isso sozinha no aparelho que está sofrendo — montava a torcida de novo e travava o quadro
+ * 300 ms). O sorteio é o mesmo por cadeira e a ocupação cresce com a qualidade, então Baixa ⊂ Média ⊂ Alta:
+ * cada torcedor guarda o NÍVEL em que entra (0 já na Baixa, 1 a partir da Média, 2 só na Alta) e a troca de
+ * qualidade é só quantos desenhar (instanceCount). Ordem: por arquibancada (setor 0 lado, 1 fundo +x, 2 fundo
+ * −x), no setor por nível e, no nível, da fileira da FRENTE para a de cima — desenhados da frente para trás, os
+ * de trás que ficam escondidos são descartados pelo teste de profundidade antes do fragment shader (menos
+ * trabalho por pixel; contraprova M3). Tudo em vetores tipados, sem objetos por torcedor (menos lixo ao abrir).
+ * mascara: Uint8Array(nA × fileiras) com 1 nas cadeiras do mosaico "GOLAÇO" do lado de lá (ou null).
+ * Devolve {n, pos: Float32Array(4n) [x, y, z, escala], camisa, pele, cabelo, info: Uint8Array(4n), nivel:
+ * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2]}] por setor} — info = [time·255, setor·85,
+ * organizada·255, semente2]; pele[3] = semente.
  */
-export function gerarTorcida(qualidade = 'media', mascara = null) {
+export function gerarTorcidaNiveis(mascara = null) {
   const T = TORCIDA, A = ARQUIBANCADA;
-  const ocup = T.ocupacao[qualidade] ?? T.ocupacao.media;
+  const ocs = NIVEIS.map(q => T.ocupacao[q]);
   const rnd = geradorTorcida(20261010);
   const nA = Math.round(A.comprimento / A.assento);
-  const sel = [];
-  for (const c of cadeiras()) {
+  const cap = A.fileiras * nA * 3;
+  const tPos = new Float32Array(4 * cap), tCam = new Uint8Array(4 * cap), tPel = new Uint8Array(4 * cap), tCab = new Uint8Array(4 * cap), tInf = new Uint8Array(4 * cap);
+  const tNiv = new Uint8Array(cap), tF = new Uint8Array(cap);
+  let n = 0;
+  const [vz0, vz1] = T.visitante.z;
+  const pq = [0, 0, 0];
+  // uma cadeira: os MESMOS 7 sorteios por cadeira e na mesma ordem de cadeiras() (o resultado não muda)
+  function cadeira(setor, f, a, x, y, z) {
     const r = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd(), r5 = rnd(), r6 = rnd(), r7 = rnd();
     let time = 0, org = 0, mosaico = false;
-    let p = ocup * (c.setor === 0 ? 1 : 0.95) * (1 - 0.18 * (1 - (c.f + 0.5) / A.fileiras) * (c.setor === 0 ? 1 : 0)); // topo um pouco mais vazio
-    if (c.setor === 0 && mascara && mascara[c.a + c.f * nA]) { mosaico = true; p = qualidade === 'baixa' ? 0.8 : 1; }
-    if (c.setor === 2) {
-      const [z0, z1] = T.visitante.z;
-      if (c.z >= z0 && c.z <= z1) { time = 1; p = Math.min(1, ocup * 1.05); }
-      else if (c.z >= z0 - T.visitante.vazio && c.z <= z1 + T.visitante.vazio) p = 0; // separação
+    const topo = 1 - 0.18 * (1 - (f + 0.5) / A.fileiras) * (setor === 0 ? 1 : 0);
+    for (let q = 0; q < 3; q++) pq[q] = ocs[q] * (setor === 0 ? 1 : 0.95) * topo;
+    if (setor === 0 && mascara && mascara[a + f * nA]) { mosaico = true; pq[0] = 0.8; pq[1] = 1; pq[2] = 1; }
+    if (setor === 2) {
+      if (z >= vz0 && z <= vz1) { time = 1; for (let q = 0; q < 3; q++) pq[q] = Math.min(1, ocs[q] * 1.05); }
+      else if (z >= vz0 - T.visitante.vazio && z <= vz1 + T.visitante.vazio) { pq[0] = 0; pq[1] = 0; pq[2] = 0; }
     }
-    if (c.setor === 1 && c.z >= T.organizada.z[0] && c.z <= T.organizada.z[1]) { org = 1; p = Math.min(1, ocup * 1.15 + 0.08); }
+    if (setor === 1 && z >= T.organizada.z[0] && z <= T.organizada.z[1]) { org = 1; for (let q = 0; q < 3; q++) pq[q] = Math.min(1, ocs[q] * 1.15 + 0.08); }
     // alguns visitantes espalhados pelo lado de lá
-    if (c.setor === 0 && !mosaico && r7 < 0.03) time = 1;
-    if (r >= p) continue;
-    const camisa = mosaico ? hex(VERDE_MOSAICO) : sorteia(time === 1 ? FORA_CAMISA : CASA_CAMISA, r2);
-    const pele = sorteia(PELE, r3);
-    const careca = r5 < 0.08;
-    const cabelo = careca ? pele : sorteia(CABELO, r4);
-    sel.push({
-      x: c.x + (r6 - 0.5) * 0.12, y: c.y, z: c.z, esc: 0.92 + 0.16 * r5,
-      camisa, pele, cabelo, time, setor: c.setor, org, s1: Math.floor(r6 * 255.99), s2: Math.floor(r2 * 255.99),
-    });
+    if (setor === 0 && !mosaico && r7 < 0.03) time = 1;
+    let nivel = 3;
+    for (let q = 2; q >= 0; q--) if (r < pq[q]) nivel = q;
+    if (nivel > 2) return;
+    const camisa = mosaico ? RGB_MOSAICO : sorteiaPre(time === 1 ? P_FORA : P_CASA, r2);
+    const pele = sorteiaPre(P_PELE, r3);
+    const cabelo = r5 < 0.08 ? pele : sorteiaPre(P_CABELO, r4);
+    const k = 4 * n;
+    tPos[k] = x + (r6 - 0.5) * 0.12; tPos[k + 1] = y; tPos[k + 2] = z; tPos[k + 3] = 0.92 + 0.16 * r5;
+    tCam[k] = camisa[0]; tCam[k + 1] = camisa[1]; tCam[k + 2] = camisa[2]; tCam[k + 3] = 255;
+    tPel[k] = pele[0]; tPel[k + 1] = pele[1]; tPel[k + 2] = pele[2]; tPel[k + 3] = Math.floor(r6 * 255.99);
+    tCab[k] = cabelo[0]; tCab[k + 1] = cabelo[1]; tCab[k + 2] = cabelo[2]; tCab[k + 3] = 255;
+    tInf[k] = time * 255; tInf[k + 1] = setor * 85; tInf[k + 2] = org * 255; tInf[k + 3] = Math.floor(r2 * 255.99);
+    tNiv[n] = nivel; tF[n] = f;
+    n++;
   }
-  const n = sel.length;
+  const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento; // 119/125
+  for (let f = 0; f < A.fileiras; f++) {
+    const sLado = 1 - (f + 0.5) / A.fileiras;
+    const sFundo = sLado / A.vFundo;
+    for (let a = 0; a < nA; a++) {
+      if (a % A.corredor < 2) continue;
+      const u = (a + 0.5) / nA;
+      cadeira(0, f, a, -A.meioComprimento + A.comprimento * u, A.yBase + (A.yTopoLado - A.yBase) * sLado, -A.frenteZ - A.profLado * sLado);
+      if (sFundo <= 1 && u <= u1) {
+        for (let s = 1; s >= -1; s -= 2) {
+          const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
+          cadeira(s > 0 ? 1 : 2, f, a, s * (A.fundoX0 + A.profFundo * sFundo), A.yBase + (A.yTopoFundo - A.yBase) * sFundo, za + (zb - za) * (u / u1));
+        }
+      }
+    }
+  }
+  // ordem por (setor, nível, fileira da frente para cima): contagem por balde (estável)
+  const F = A.fileiras, NB = 3 * 3 * F;
+  const conta = new Int32Array(NB + 1);
+  const balde = i => (Math.round(tInf[4 * i + 1] / 85) * 3 + tNiv[i]) * F + (F - 1 - tF[i]);
+  for (let i = 0; i < n; i++) conta[balde(i) + 1]++;
+  for (let b = 0; b < NB; b++) conta[b + 1] += conta[b];
+  const pos = new Float32Array(4 * n), camisa = new Uint8Array(4 * n), pele = new Uint8Array(4 * n), cabelo = new Uint8Array(4 * n), info = new Uint8Array(4 * n), nivel = new Uint8Array(n);
+  const faixas = [0, 1, 2].map(() => ({ inicio: 0, porNivel: [0, 0, 0] }));
+  for (let i = 0; i < n; i++) {
+    const b = balde(i), j = conta[b]++;
+    pos.set(tPos.subarray(4 * i, 4 * i + 4), 4 * j); camisa.set(tCam.subarray(4 * i, 4 * i + 4), 4 * j);
+    pele.set(tPel.subarray(4 * i, 4 * i + 4), 4 * j); cabelo.set(tCab.subarray(4 * i, 4 * i + 4), 4 * j);
+    info.set(tInf.subarray(4 * i, 4 * i + 4), 4 * j); nivel[j] = tNiv[i];
+    faixas[Math.round(tInf[4 * i + 1] / 85)].porNivel[tNiv[i]]++;
+  }
+  faixas[1].inicio = faixas[0].porNivel[0] + faixas[0].porNivel[1] + faixas[0].porNivel[2];
+  faixas[2].inicio = faixas[1].inicio + faixas[1].porNivel[0] + faixas[1].porNivel[1] + faixas[1].porNivel[2];
+  return { n, pos, camisa, pele, cabelo, info, nivel, faixas };
+}
+
+/** Quantos torcedores de um setor a qualidade desenha (os primeiros da faixa do setor). */
+export function quantosNoSetor(d, setor, qualidade) {
+  const q = Math.max(0, NIVEIS.indexOf(qualidade));
+  let k = 0;
+  for (let v = 0; v <= q; v++) k += d.faixas[setor].porNivel[v];
+  return k;
+}
+
+/**
+ * Torcedores de uma qualidade (os de gerarTorcidaNiveis com nível ≤ o da qualidade). mascara como lá.
+ * Devolve {n, pos, camisa, pele, cabelo, info} no mesmo formato.
+ */
+export function gerarTorcida(qualidade = 'media', mascara = null, niveis = null) {
+  const d = niveis ?? gerarTorcidaNiveis(mascara);
+  const q = NIVEIS.includes(qualidade) ? NIVEIS.indexOf(qualidade) : 1;
+  let n = 0;
+  for (let i = 0; i < d.n; i++) if (d.nivel[i] <= q) n++;
   const pos = new Float32Array(4 * n), camisa = new Uint8Array(4 * n), pele = new Uint8Array(4 * n), cabelo = new Uint8Array(4 * n), info = new Uint8Array(4 * n);
-  sel.forEach((t, i) => {
-    pos[4 * i] = t.x; pos[4 * i + 1] = t.y; pos[4 * i + 2] = t.z; pos[4 * i + 3] = t.esc;
-    camisa.set([...t.camisa, 255], 4 * i);
-    pele.set([...t.pele, t.s1], 4 * i);
-    cabelo.set([...t.cabelo, 255], 4 * i);
-    info.set([t.time * 255, t.setor * 85, t.org * 255, t.s2], 4 * i);
-  });
+  let j = 0;
+  for (let i = 0; i < d.n; i++) {
+    if (d.nivel[i] > q) continue;
+    pos.set(d.pos.subarray(4 * i, 4 * i + 4), 4 * j); camisa.set(d.camisa.subarray(4 * i, 4 * i + 4), 4 * j);
+    pele.set(d.pele.subarray(4 * i, 4 * i + 4), 4 * j); cabelo.set(d.cabelo.subarray(4 * i, 4 * i + 4), 4 * j);
+    info.set(d.info.subarray(4 * i, 4 * i + 4), 4 * j);
+    j++;
+  }
   return { n, pos, camisa, pele, cabelo, info };
 }
 
@@ -231,25 +315,78 @@ export function atlasTorcida(cw = 64, ch = 128) {
   return { dados, largura: W, altura: H };
 }
 
+// ------------------------------------------------------------------ pose (JS e GLSL da MESMA regra)
+// Limiares e ritmos da pose num lugar só: poseDoTorcedor (JS, testes) e POSE_GLSL (o vertex shader de
+// torcida.js) saem destes números (contraprova M9: as duas contas eram escritas à mão em dois lugares; o
+// teste-estadio confere na GPU que o shader dá o mesmo que o JS).
+export const POSE_REGRA = {
+  emPeTensao: [0.25, 0.7], emPeExcita: [0.08, 0.5],   // em pé: nível > a + b·h (h = semente do torcedor)
+  explode: [0.2, 0.55], lamento: [0.3, 0.5], palmas: [0.2, 0.6],
+  bateHz: 2.3,                                       // palmas
+  bracoV: 0.45, umBraco: 0.75,                       // gol: h2 < 0,45 braços em V, < 0,75 um braço, senão cachecol
+  orgCachecol: 0.15, orgUmBraco: 0.3, orgPalmas: 0.6,
+  puloHz: 1.9, puloAlt: 0.32, puloGanho: 1.4, orgPuloHz: 1.6, orgPuloAlt: 0.11, orgPuloFase: 0.6,
+};
+const TAU = Math.PI * 2;
+
 /**
- * Pose e pulo de um torcedor (a MESMA regra do vertex shader de torcida.js, para os testes):
+ * Pose e pulo de um torcedor (a MESMA regra do vertex shader de torcida.js, POSE_GLSL):
  * niveis = {excita, tensao, lamento, palmas} do time dele; h = semente 0–1; org = organizada; t = s.
  */
 export function poseDoTorcedor(niveis, h, h2, org, t, animada = true) {
+  const R = POSE_REGRA;
   const { excita, tensao, lamento, palmas } = niveis;
-  const emPe = org || tensao > 0.25 + 0.7 * h || excita > 0.08 + 0.5 * h;
-  const bate = animada && (Math.sin(t * Math.PI * 2 * 2.3 + h2 * 6.283) > 0) ? 1 : 0;
+  const emPe = org || tensao > R.emPeTensao[0] + R.emPeTensao[1] * h || excita > R.emPeExcita[0] + R.emPeExcita[1] * h;
+  const bate = animada && (Math.sin(t * TAU * R.bateHz + h2 * 6.283) > 0) ? 1 : 0;
+  const explode = excita > R.explode[0] + R.explode[1] * h;
   let pose;
-  if (excita > 0.2 + 0.55 * h) pose = h2 < 0.45 ? POSE.BRACOS_V : h2 < 0.75 ? POSE.UM_BRACO : POSE.CACHECOL;
-  else if (lamento > 0.3 + 0.5 * h) pose = POSE.MAOS_CABECA;
-  else if (palmas > 0.2 + 0.6 * h) pose = emPe ? (bate ? POSE.EM_PE_PALMAS : POSE.EM_PE) : (bate ? POSE.SENTADO_PALMAS : POSE.SENTADO);
-  else if (org) pose = h2 < 0.15 ? POSE.CACHECOL : h2 < 0.3 ? POSE.UM_BRACO : (bate && h2 < 0.6 ? POSE.EM_PE_PALMAS : POSE.EM_PE);
+  if (explode) pose = h2 < R.bracoV ? POSE.BRACOS_V : h2 < R.umBraco ? POSE.UM_BRACO : POSE.CACHECOL;
+  else if (lamento > R.lamento[0] + R.lamento[1] * h) pose = POSE.MAOS_CABECA;
+  else if (palmas > R.palmas[0] + R.palmas[1] * h) pose = emPe ? (bate ? POSE.EM_PE_PALMAS : POSE.EM_PE) : (bate ? POSE.SENTADO_PALMAS : POSE.SENTADO);
+  else if (org) pose = h2 < R.orgCachecol ? POSE.CACHECOL : h2 < R.orgUmBraco ? POSE.UM_BRACO : (bate && h2 < R.orgPalmas ? POSE.EM_PE_PALMAS : POSE.EM_PE);
   else pose = emPe ? POSE.EM_PE : POSE.SENTADO;
   let pulo = 0;
   if (animada) {
-    const fase = Math.sin(t * Math.PI * 2 * 1.9 + h * 6.283);
-    if (excita > 0.2 + 0.55 * h) pulo = Math.max(0, fase) * 0.32 * Math.min(1, excita * 1.4);
-    else if (org) pulo = Math.max(0, Math.sin(t * Math.PI * 2 * 1.6 + h * 0.6)) * 0.11;
+    const fase = Math.sin(t * TAU * R.puloHz + h * 6.283);
+    if (explode) pulo = Math.max(0, fase) * R.puloAlt * Math.min(1, excita * R.puloGanho);
+    else if (org) pulo = Math.max(0, Math.sin(t * TAU * R.orgPuloHz + h * R.orgPuloFase)) * R.orgPuloAlt;
   }
   return { pose, emPe, pulo };
 }
+
+const g = v => (Number.isInteger(v) ? v.toFixed(1) : String(v));
+/**
+ * A mesma regra em GLSL: vec2 torcidaPose(ex, te, la, pa, h, h2, org, t, animada) → (pose, pulo).
+ * org e animada: 0 ou 1.
+ */
+export const POSE_GLSL = (() => {
+  const R = POSE_REGRA, P = POSE;
+  return `
+vec2 torcidaPose(float ex, float te, float la, float pa, float h, float h2, float org, float t, float animada) {
+  bool emPe = org > 0.5 || te > ${g(R.emPeTensao[0])} + ${g(R.emPeTensao[1])} * h || ex > ${g(R.emPeExcita[0])} + ${g(R.emPeExcita[1])} * h;
+  bool bate = animada > 0.5 && sin(t * ${g(TAU * R.bateHz)} + h2 * 6.283) > 0.0;
+  bool explode = ex > ${g(R.explode[0])} + ${g(R.explode[1])} * h;
+  float pose;
+  if (explode) pose = h2 < ${g(R.bracoV)} ? ${g(P.BRACOS_V)} : (h2 < ${g(R.umBraco)} ? ${g(P.UM_BRACO)} : ${g(P.CACHECOL)});
+  else if (la > ${g(R.lamento[0])} + ${g(R.lamento[1])} * h) pose = ${g(P.MAOS_CABECA)};
+  else if (pa > ${g(R.palmas[0])} + ${g(R.palmas[1])} * h) pose = emPe ? (bate ? ${g(P.EM_PE_PALMAS)} : ${g(P.EM_PE)}) : (bate ? ${g(P.SENTADO_PALMAS)} : ${g(P.SENTADO)});
+  else if (org > 0.5) pose = h2 < ${g(R.orgCachecol)} ? ${g(P.CACHECOL)} : (h2 < ${g(R.orgUmBraco)} ? ${g(P.UM_BRACO)} : ((bate && h2 < ${g(R.orgPalmas)}) ? ${g(P.EM_PE_PALMAS)} : ${g(P.EM_PE)}));
+  else pose = emPe ? ${g(P.EM_PE)} : ${g(P.SENTADO)};
+  float pulo = 0.0;
+  if (animada > 0.5) {
+    float fase = sin(t * ${g(TAU * R.puloHz)} + h * 6.283);
+    if (explode) pulo = max(0.0, fase) * ${g(R.puloAlt)} * min(1.0, ex * ${g(R.puloGanho)});
+    else if (org > 0.5) pulo = max(0.0, sin(t * ${g(TAU * R.orgPuloHz)} + h * ${g(R.orgPuloFase)})) * ${g(R.orgPuloAlt)};
+  }
+  return vec2(pose, pulo);
+}
+`;
+})();
+
+/**
+ * Caixa de cada pose dentro da célula do atlas (largura e altura em fração da célula, com 1 texel de folga;
+ * medida no atlas 64 × 128 — tools/teste-torcida confere que nada da figura fica de fora): o quadro de cada
+ * torcedor encolhe para a pose (sentado com os braços para baixo ocupa 40% do quadro cheio) — menos pixels
+ * descartados por torcedor (contraprova M3: a torcida custava muito por pixel com os quadros sobrepostos).
+ */
+export const CAIXA_POSE = [[0.61, 0.617], [0.64, 0.617], [0.61, 0.797], [0.64, 0.797], [0.954, 0.906], [0.704, 0.938], [0.796, 0.922], [0.796, 0.805]];
