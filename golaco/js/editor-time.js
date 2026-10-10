@@ -325,8 +325,9 @@ export function criarEditorTime(opc) {
         cartasCampo.set(v.id, bt);
       }
       formacaoDesenhada = f.id;
-      if (!cartasCampo.has(st.roving.campo)) st.roving.campo = f.vagas[0].id;
     }
+    // a carta que recebe o Tab (as setas andam entre as outras)
+    if (!cartasCampo.has(st.roving.campo)) st.roving.campo = f.vagas[0].id;
     for (const v of f.vagas) {
       const bt = cartasCampo.get(v.id);
       preencher(bt, R().vagas[v.id], v.pos, true);
@@ -512,12 +513,17 @@ export function criarEditorTime(opc) {
     }
     ajustarNomes();
   }
-  /** Nome de camisa sempre inteiro: diminui a letra da carta que não couber (até 8 px). */
+  /**
+   * Nome de camisa e nível da tática sempre inteiros: diminui a letra do que não couber (até 8 px no
+   * nome da carta e 10 px no nível).
+   */
   function ajustarNomes() {
-    for (const n of raiz.querySelectorAll('.c-nome')) {
+    for (const n of raiz.querySelectorAll('.c-nome, .ed-passo-nivel')) {
+      if (n.offsetParent === null) continue;
       n.style.fontSize = '';
+      const min = n.classList.contains('c-nome') ? 8 : 10;
       let fs = parseFloat(getComputedStyle(n).fontSize) || 11;
-      for (let k = 0; k < 12 && n.scrollWidth > n.clientWidth + 0.5 && fs > 8; k++) { fs -= 0.5; n.style.fontSize = `${fs}px`; }
+      for (let k = 0; k < 16 && n.scrollWidth > n.clientWidth + 0.5 && fs > min; k++) { fs -= 0.5; n.style.fontSize = `${fs}px`; }
     }
   }
 

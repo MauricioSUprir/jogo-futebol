@@ -46,7 +46,9 @@ async function abrirPagina(t, q = '') {
 }
 const quadros = (pg, n) => pg.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return g.estado(); }, n);
 const temEditor = pg => pg.evaluate(() => !!(window.__golaco.editor && document.querySelector('[data-cmd="editar-time"]')));
-const novaPartida = (pg, semente = 5) => pg.evaluate(s => { const g = window.__golaco; g.reiniciar({ modo: 'partida', semente: s }); g.relogio.usarManual(true); return g.estado(); }, semente);
+// partida nova com o laço já andando (o 1º quadro depois de reiniciar só marca o tempo: sem isso o
+// "Continuar → 1 quadro" do teste não teria passo nenhum)
+const novaPartida = (pg, semente = 5) => pg.evaluate(s => { const g = window.__golaco; const h = g.reiniciar({ modo: 'partida', semente: s }); g.relogio.usarManual(true); g.relogio.avancar(1000 / 60, { desenhar: false }); return { ...g.estado(), h }; }, semente);
 const editorAberto = pg => pg.evaluate(() => !document.getElementById('editar-time')?.hidden);
 const menuAberto = pg => pg.evaluate(() => !document.getElementById('menu').hidden);
 const pressionado = pg => pg.evaluate(() => [...document.querySelectorAll('#editar-time .carta[aria-pressed="true"]')].map(b => +b.dataset.jogador));
@@ -141,8 +143,9 @@ async function conferirEditor(pg) {
     for (const p of roladores) {
       const ant = p.scrollTop;
       p.scrollTop = p.scrollHeight;
+      // o último na TELA (em pé a prévia vem antes dos seletores, fora da ordem do DOM)
       const itens = [...p.querySelectorAll('button, .ed-passo')].filter(vis);
-      const ult = itens[itens.length - 1];
+      const ult = itens.reduce((a, e) => (!a || e.getBoundingClientRect().bottom > a.getBoundingClientRect().bottom ? e : a), null);
       if (ult) {
         const q = p.getBoundingClientRect(), u = ult.getBoundingClientRect();
         if (u.bottom > q.bottom + 0.5 || u.top < q.top - 0.5) problemas.push(`a lista ${p.className.split(' ')[0]} não alcança o último item`);
@@ -331,7 +334,7 @@ async function conferirEditor(pg) {
       `${c0.nivel} → ${c1.nivel}, prévia ${c0.s === c1.s && c0.sx === c1.sx ? 'igual' : 'mudou'}, mundo linha ${e8.times?.[0]?.tatica?.linha}`, c0.nivel === 'Baixa' && c1.nivel === 'Alta' && (c0.s !== c1.s || c0.sx !== c1.sx) && e8.times?.[0]?.tatica?.linha === 2);
 
     // ---- 9) desfazer tudo
-    const h9a = await novaPartida(pg, 13).then(() => pg.evaluate(() => window.__golaco.hash()));
+    const h9a = (await novaPartida(pg, 13)).h;
     await pg.evaluate(() => window.__golaco.abrirMenu());
     await clicar(pg, '[data-cmd="editar-time"]');
     await clicar(pg, '#editar-time [data-jogador="7"]');
