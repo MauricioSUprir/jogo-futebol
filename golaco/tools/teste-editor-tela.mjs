@@ -429,10 +429,10 @@ async function conferirEditor(pg) {
         g.forcarEntrada({ x, z, botoes: b });
         g.relogio.avancar(1000 / 60, { desenhar: false });
         const a = document.getElementById('aviso').textContent;
-        if (/Substitui/.test(a)) aviso = a;
+        if (/sai .+, entra /.test(a)) aviso = a; // o aviso da substituição feita (não o da edição)
       }
       g.forcarEntrada(null);
-      for (let i = 0; i < 3; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const a = document.getElementById('aviso').textContent; if (/Substitui/.test(a)) aviso = a; }
+      for (let i = 0; i < 3; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const a = document.getElementById('aviso').textContent; if (/sai .+, entra /.test(a)) aviso = a; }
       const m = g.mundo;
       return { quadro: ev, aviso, em22: m.jogadores.some(j => j.id === 22), em9: m.jogadores.some(j => j.id === 9), saiu: [...m.times[0].saiu], subs: { ...m.times[0].subs } };
     }, BIT);

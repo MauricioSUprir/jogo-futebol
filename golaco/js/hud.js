@@ -6,8 +6,10 @@
 // decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
 // existem.
 
+// prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
+// resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
 const TEXTO_EVENTO = {
-  fora: { t: 'Bola fora', ms: 1300 },
+  fora: { t: 'Bola fora', ms: 1300, prio: 0 },
   roubada: { t: 'Roubada!', ms: 1300 },
   perda: { t: 'Bola perdida', ms: 1300 },
   maquina: { t: 'Máquina: passe a caminho', ms: 1200 },
@@ -25,13 +27,13 @@ const TEXTO_EVENTO = {
   semMarcador: { t: 'Marcador só no treino de condução', ms: 1400 },
   soTreino: { t: 'Só nos treinos (menu, Modo de jogo)', ms: 1600 },
   // partida (Etapa 3)
-  saida: { t: 'Saída de bola', ms: 1100 },
-  lateral: { t: 'Lateral', ms: 1100 },
-  escanteio: { t: 'Escanteio', ms: 1300, forte: true },
-  tiroDeMeta: { t: 'Tiro de meta', ms: 1100 },
-  timeEditado: { t: 'Time atualizado', ms: 1600, forte: true },
-  edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400 },
-  substituicao: { t: 'Substituição', ms: 2000, forte: true },
+  saida: { t: 'Saída de bola', ms: 1100, prio: 0 },
+  lateral: { t: 'Lateral', ms: 1100, prio: 0 },
+  escanteio: { t: 'Escanteio', ms: 1300, forte: true, prio: 0 },
+  tiroDeMeta: { t: 'Tiro de meta', ms: 1100, prio: 0 },
+  timeEditado: { t: 'Time atualizado', ms: 1600, forte: true, prio: 2 },
+  edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
+  substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
 // subtipos (o tipo do passe/chute vem no evento ou em m.voo.tipo)
@@ -188,9 +190,16 @@ export function criarHud(opc) {
     alvo?.focus({ preventScroll: true });
   }
 
-  function mostrarAviso(texto, ms, cls = '') {
+  const avisoAtual = { tipo: null, prio: 0, ate: 0, texto: '' };
+  function mostrarAviso(texto, ms, cls = '', prio = 1, tipo = null) {
+    const agora = performance.now();
+    const vivo = el.aviso.classList.contains('visivel') && agora < avisoAtual.ate;
+    if (vivo && avisoAtual.prio > prio) return;
+    // duas substituições na mesma parada: um aviso só ("Substituição: sai A, entra B; sai C, entra D")
+    if (vivo && tipo === 'substituicao' && avisoAtual.tipo === 'substituicao' && texto !== avisoAtual.texto) texto = `${avisoAtual.texto}; ${texto.replace(/^Substituição: /, '')}`;
     el.aviso.textContent = texto;
     el.aviso.className = 'aviso visivel' + (cls ? ' ' + cls : '');
+    Object.assign(avisoAtual, { tipo, prio, ate: agora + ms, texto });
     clearTimeout(timerAviso);
     timerAviso = setTimeout(() => { el.aviso.classList.remove('visivel'); }, ms);
   }
@@ -372,7 +381,7 @@ export function criarHud(opc) {
           if (NOME_DEFESA[sub]) texto = NOME_DEFESA[sub];
         }
       }
-      mostrarAviso(texto, d.ms, d.forte ? 'forte' : '');
+      mostrarAviso(texto, d.ms, d.forte ? 'forte' : '', d.prio ?? 1, tipo);
     },
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
