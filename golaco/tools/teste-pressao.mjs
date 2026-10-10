@@ -14,8 +14,13 @@
 //    contrapressão ninguém segue em contrapressão e no máximo os 2 mais perto (1º e 2º homem) apertam;
 //  - dependem do ATAQUE (Parte 3; sem ela, contra o condutor clássico que perde a bola ~25×/min no
 //    11×11, só informam): PPDA da Média 8–16 (Wyscout: média 11), "agressão" (recepção com defensor
-//    a ≤ 4,6 m em ≤ 2 s) 19–29% na Média (StatsBomb) e retomada em ≤ 5 s 25–40% na Média (Metrica
-//    36,5%; Bauer & Anzer 31%).
+//    a ≤ 4,6 m em ≤ 2 s) 58–78% na Média e retomada em ≤ 5 s 25–40% na Média (Metrica 36,5%; Bauer &
+//    Anzer 31%).
+//    A agressão: a faixa do plano (19–29%) é a da StatsBomb, que conta EVENTOS de pressão (o defensor
+//    marcado como pressionando), e não a proximidade. Com a definição deste teste (adversário de linha
+//    a ≤ 4,6 m do recebedor em ≤ 2 s), o rastreamento da Metrica (2 jogos, 1763 recepções de passe;
+//    tools/pesquisa/agressao_metrica.py) dá 68,0% (t1/t2/t3 do recebedor: 55,9 / 65,5 / 83,7%). A meta
+//    passa a ser a da mesma definição no jogo real: 68 ± 10 pontos (como as outras metas da Metrica).
 //   node tools/teste-pressao.mjs [--antes] [--js <pasta>] [--sementes N] [--base K]
 import * as T from './lib/partida-tatica.mjs';
 
@@ -59,7 +64,7 @@ reg('2 s depois da janela (Média e Alta): em contrapressão / mais de 2 apertan
 // dependem do ataque (Parte 3)
 reg('Média: PPDA (Wyscout)', fmt(ppda[1], 2), '8–16', dentro(ppda[1], [8, 16]), !P3);
 const agr = 100 * M.agressao / M.recepcoes;
-reg('Média: agressão (recepção com defensor a ≤ 4,6 m em ≤ 2 s)', `${fmt(agr)}% de ${M.recepcoes}`, '19–29%', dentro(agr, [19, 29]), !P3);
+reg('Média: agressão (recepção com defensor a ≤ 4,6 m em ≤ 2 s)', `${fmt(agr)}% de ${M.recepcoes}`, '58–78% (Metrica 68,0%)', dentro(agr, [58, 78]), !P3);
 reg('Média: retomada em ≤ 5 s depois da perda', `${fmt(ret[1])}%`, '25–40%', dentro(ret[1], [25, 40]), !P3);
 
 console.log(`lógica: ${a.js}${a.antes ? '  (--antes: IA clássica no 11×11)' : ''} · Parte 3 ${P3 ? 'presente (jogo de verdade)' : 'ausente: ataque substituto dos testes; as metas do ataque só informam'}`);

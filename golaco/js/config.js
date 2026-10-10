@@ -540,7 +540,7 @@ export const IA_DEFESA = {
   contencao: [5.5, 2.75, 1.5], // m do condutor — 1º homem fora do gatilho, entre ele e o meu gol
   aperto: [1.5, 1.5, 0.6],    // m da bola — 1º homem no gatilho (e o boteIA do sim.js tenta tirar); na Alta, colado...
   apertoArranca: [6, 6, 2.5], // m — ...e aperta CORRER com o ponto além disto (IA.pressaoArranca = 6)
-  engaja: [42, 60, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento)
+  engaja: [42, 66, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento); Média 66 (era 60): com a saída de bola guardando a bola, o marcador a ≤ 3 m caía abaixo de 40%
   perigo: 30,                 // m do meu gol: bola mais perto que isto, o 1º homem aperta (todos os níveis)
   apertaSempre: [false, false, true], // pressão Alta: o 1º homem aperta sempre que engajado...
   doisApertam: [false, false, true],  // ...e o 2º aperta junto (nas outras, o 2º só aperta com gatilho na Alta)
@@ -554,7 +554,7 @@ export const IA_DEFESA = {
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
   // menos que eles)
-  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 0.8 }, // ...e vão a dist m da bola
+  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: -17.5, inferioridade: 1, dist: 1.6 }, // ...e vão a dist m da bola (1,6: a 0,8 m o desarme vinha em < 1 s e a retomada em ≤ 5 s ia a ~45%; Metrica 36,5%)
   zona: { raio: 7, peso: 0.6, frente: 1 }, // adversário a ≤ 7 m da referência, no máximo 1 m à frente dela, puxa 60% para o lado do gol dele
   marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
@@ -564,7 +564,7 @@ export const IA_DEFESA = {
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
   defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
-  gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8 }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor
+  gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8, recepcao: true }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor; recepcao = a recepção de passe é gatilho
   transOf: 3,                 // s de transição ofensiva depois da retomada
 };
 
@@ -587,7 +587,8 @@ export const IA_ATAQUE = {
   condutor: { avaliaTicks: 6, histerese: 1.25, compromisso: 0.5, chuteMax: 28, chuteMaxOfensivo: 30, lancamentoMin: 30, transOfBonus: 0.2 },
   // Utilidade do condutor (ia-ataque.js decidir): U = P·(V + posse) − (1 − P)·(C + posse), V = xT do
   // destino, C = xT do adversário onde a bola seria perdida ÷ risco aceito, posse = valor de ter a bola
-  // (+ posseMeuCampo com o condutor no próprio campo: cheio até −10 m, zero a partir de +10 m).
+  // (+ posseMeuCampo com o condutor no próprio campo: cheio até −10 m, zero a partir de +10 m; +
+  // posseRetomada[0] nos posseRetomada[1] s depois de o time recuperar a bola).
   //  - passe: velocidade média vPasse (m/s); até passeMax m; longo perde precisão (erroDist por 20 m
   //    além de 20 m); recebedor com adversário a < pressaoRecebe m: −passePress na chance e
   //    −pressaoValor no valor; para impedido vale impedido×;
@@ -606,7 +607,7 @@ export const IA_ATAQUE = {
   //    correrLivre m livres à frente (transição ou antes de correrAte m), condução curta com < curtaPerto m;
   //  - proteger: adversário a < protegeDist m, chance protegeP, no máximo protegeMax s por posse.
   utilidade: {
-    posse: 0, posseMeuCampo: 0.025, vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
+    posse: 0, posseMeuCampo: 0.025, posseRetomada: [0.02, 2], vPasse: 12, vEnfiada: 15, vChute: 25, passeMax: 40, erroDist: 0.25, pressaoRecebe: 3.5, pressaoValor: 0.5,
     passePress: 0.2, impedido: 0.3, enfiadaLeads: [6, 10, 14], vEnfiadaAlta: 13, enfiadaAltaP: 0.7, lancamentoP: 0.5, cruzamentoV: 0.25,
     cruzamentoP: [0.02, 0.12, 0.35, 0.4], cruzamentoRaio: 1,
     xgA: 0.4, xgB: 1.6, xgMax: 0.7, chute: 2.5, chuteLonge: 0.3, bloqueio: 0.4, chutePosse: 0.5, miraPoste: 2.6, chuteForca: [0.5, 0.75],

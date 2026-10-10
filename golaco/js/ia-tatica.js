@@ -298,7 +298,7 @@ export function blocoDoTime(m, t) {
     // os de estado disparam na BORDA (quando começam): de costas o tempo todo, o 1º homem apertaria
     // sem parar
     if (adv && adv.posicao !== 'GOL') {
-      if (adv.id !== B.donoAnt && adv.id === B.recebePara) gatilho(m, B, 'recepcao');
+      if (G.recepcao && adv.id !== B.donoAnt && adv.id === B.recebePara) gatilho(m, B, 'recepcao');
       const pesado = MD.hypot(b.x - adv.x, b.z - adv.z) > G.toquePesado;
       const cr = MD.cos(adv.rumo), sr = MD.sin(adv.rumo);
       const costas = cr * ladoAdv < MD.cos(G.costas);
