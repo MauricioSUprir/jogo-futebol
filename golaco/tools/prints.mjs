@@ -5,7 +5,8 @@
 // pendente; do treino de ataque (?modo=ataque): lançamento de verdade (marca de queda no gramado)
 // e a barra de força do chute; extras: câmera aproximada, qualidade baixa, celular em pé, menu e
 // ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros e o gol); o goleiro
-// mergulhando (voo, contato, queda) e a recepção com o analógico já para o lado (pedido de 10/10).
+// mergulhando (voo, contato, queda), o salto, a bola segura nas mãos e a recepção com o analógico já para o lado
+// (pedido de 10/10).
 // Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
 // Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
 // segura (botões de toque conferidos como círculos).
@@ -73,6 +74,7 @@ const CENAS = [
   { nome: 'celular-mergulho-contato', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:contato' },
   { nome: 'celular-mergulho-queda-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque', prep: 'mergulho:queda' },
   { nome: 'pc-salto-contato', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:contato:alta' },
+  { nome: 'pc-goleiro-segura', ...PC, url: 'q=alta&hora=dia&modo=ataque', prep: 'mergulho:segura:corpo' },
   { nome: 'pc-recepcao', ...PC, url: 'q=alta&hora=dia&modo=ataque&camera=aproximada', prep: 'recepcao' },
   { nome: 'celular-recepcao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&modo=ataque&camera=aproximada', prep: 'recepcao' },
 ];
@@ -177,12 +179,13 @@ async function preparar(pagina, prep) {
     }
     if (prep.startsWith('mergulho')) {
       // chute no canto (rasteiro/meia altura, a ~2,4 m do goleiro) e espera a fase pedida do mergulho
-      const fase = prep.split(':')[1], alta = prep.split(':')[2] === 'alta';
+      const fase = prep.split(':')[1], alta = prep.split(':')[2] === 'alta', corpo = prep.split(':')[2] === 'corpo';
       const m = g.mundo, gk = m.jogadores.find(j => j.posicao === 'GOL' && j.time === 1);
       const de = m.jogadores.find(j => j.id === m.controlado[0]);
       const b = m.bola;
-      // (alta: bola por cima do goleiro, perto do corpo — o salto com as mãos acima da cabeça)
-      const sx = gk.x - 17, sz = gk.z - 3, pz = gk.z + (alta ? 0.55 : 2.1), py = alta ? 2.25 : 0.9, v = 19;
+      // (alta: bola por cima do goleiro, perto do corpo — o salto com as mãos acima da cabeça; corpo: na altura
+      // do peito, perto — a defesa em pé, para ver a bola segura nas mãos depois)
+      const sx = gk.x - 17, sz = gk.z - 3, pz = gk.z + (alta ? 0.55 : corpo ? 0.3 : 2.1), py = alta ? 2.25 : corpo ? 1.0 : 0.9, v = 19;
       const kx = (52.5 - sx) / (gk.x - sx), zLinha = sz + (pz - sz) * kx;
       const ux0 = 52.5 - sx, uz0 = zLinha - sz, D = Math.hypot(ux0, uz0), Dg = Math.hypot(gk.x - sx, pz - sz);
       let lo = -0.2, hi = 0.6;
@@ -201,11 +204,12 @@ async function preparar(pagina, prep) {
           if (fase === 'voo' && m.tick >= d.tc - 4) break;
           if (fase === 'contato' && m.tick >= d.tc) break;
           if (fase === 'queda' && m.tick >= d.tc + 12) break;
+          if (fase === 'segura' && m.tick >= d.fim + 8) break;
         }
       }
       g.cameraLivre({ de: [gk.x - 7.5, 1.5, gk.z - 3.5], para: [gk.x - 0.2, 0.75, gk.z + 1.1], fov: 38 });
       const d = gk.mergulho;
-      return `goleiro ${gk.id}: ${d ? `${d.tipo}, ${m.tick - d.tick0} ticks (contato no ${d.tc - d.tick0}), ${d.sucesso ? d.encaixe ? 'encaixe' : 'espalmada' : 'batido'}` : 'sem mergulho'}`;
+      return `goleiro ${gk.id}: ${d ? `${d.tipo}, ${m.tick - d.tick0} ticks (contato no ${d.tc - d.tick0}), ${d.sucesso ? d.encaixe ? 'encaixe' : 'espalmada' : 'batido'}` : 'sem mergulho'}${m.naMao === gk.id ? ', bola na mão' : ''}`;
     }
     if (prep === 'recepcao') {
       // bola rolando para o controlado (de frente, 12 m, 10 m/s) com o analógico já para o lado (90°)
