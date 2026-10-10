@@ -51,8 +51,21 @@ export const CHAVES = [
   'velocidade', 'aceleracao', 'agilidade', 'equilibrio', 'drible', 'controle', 'forca', 'passe', 'passeLongo',
   'finalizacao', 'cabeceio', 'impulsao', 'reflexo', 'posicionamento', 'mergulho', 'marcacao', 'desarme', 'visao', 'folego',
 ];
-const GOL_FRACO = ['finalizacao', 'drible', 'marcacao', 'desarme', 'cabeceio', 'velocidade', 'aceleracao'];
 const SO_GOL = ['reflexo', 'posicionamento', 'mergulho'];
+// Perfil por posição (Parte 1): quanto um atributo fora do papel da posição natural (peso 0 nela)
+// fica abaixo do nível. O padrão é −12 (tela §7.3), com duas exceções tiradas das cartas do FC:
+//  - o zagueiro finaliza mal (FC 25: zagueiros de 75–80 com finalização ~35–45 = nível − 30 a − 40);
+//  - o goleiro joga mal na linha (FC 25: goleiros de 75–80 com finalização, drible, marcação e
+//    passe entre ~15 e ~45): técnica de linha a nível − 40, passe longo e controle a − 25.
+//    Os físicos do goleiro (velocidade e aceleração − 30; agilidade, equilíbrio, força, fôlego − 12)
+//    ficam como na Parte 0, para o goleiro se mexer igual.
+// Sem as exceções, um ZAG jogando de ATA perdia só 5 pontos e um GOL na linha chegava a 66 (o E2 pede
+// ≤ nível − 12 e ≤ 50). Nos jogadores de linha, só a finalização do zagueiro muda: o que a simulação
+// mais lê (velocidade, aceleração, drible, controle, passe) continua com o −12.
+const FORA_PADRAO = -12;
+const FORA_PERFIL = { ZAG: { finalizacao: -35 } };
+const GOL_TECNICA = { drible: -40, passe: -40, finalizacao: -40, cabeceio: -40, marcacao: -40, desarme: -40, visao: -40, passeLongo: -25, controle: -25 };
+const GOL_FISICO = { velocidade: -30, aceleracao: -30, agilidade: -12, equilibrio: -12, forca: -12, folego: -12 };
 const ALTURA = { GOL: 188, ZAG: 186, ATA: 182, VOL: 180, SA: 176, MEI: 176, MC: 176, LD: 176, LE: 176, ADD: 176, ADE: 176, PD: 174, PE: 174, MD: 174, ME: 174 };
 
 // ------------------------------------------------------------------------------------- times
@@ -171,10 +184,11 @@ export function atributosDe(jog) {
     a = {};
     const pesos = PESOS[jog.pos];
     const gol = jog.pos === 'GOL';
+    const perfil = FORA_PERFIL[jog.pos] ?? {};
     CHAVES.forEach((k, i) => {
       const w = pesos[k] ?? 0;
-      let v = jog.nivel + (w >= 0.15 ? 3 : w > 0 ? 0 : -12) + varia(jog.id, i);
-      if (gol && GOL_FRACO.includes(k)) v = jog.nivel - 30 + varia(jog.id, i);
+      let v = jog.nivel + (w >= 0.15 ? 3 : w > 0 ? 0 : perfil[k] ?? FORA_PADRAO) + varia(jog.id, i);
+      if (gol && w < 0.1) v = jog.nivel + (GOL_TECNICA[k] ?? GOL_FISICO[k]) + varia(jog.id, i);
       if (!gol && SO_GOL.includes(k)) v = 25 + varia(jog.id, i);
       a[k] = clamp(v, 25, 97);
     });

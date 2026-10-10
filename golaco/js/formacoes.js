@@ -14,7 +14,7 @@
 //    time defende num 5-3-2 (alas a −18).
 // A ordem das vagas é fixa (GOL primeiro): é a ordem do hash, do desempate e do vagaIdx.
 
-import { fichaDe, atributosDe, notaNaPosicao, encaixeNaVaga } from './elenco.js';
+import { ELENCOS, fichaDe, atributosDe, notaNaPosicao, encaixeNaVaga } from './elenco.js';
 
 const V = (id, pos, fila, col, grupo, sx, sz, cx, cz) => ({ id, pos, fila, col, grupo, sem: { x: sx, z: sz }, com: { x: cx, z: cz } });
 
@@ -200,5 +200,29 @@ export function encaixar(titulares, formNova, elenco, vagasAntigas = {}) {
   ids.forEach((id, i) => { dono[vagas[col[i]].id] = id; });
   const out = {};
   for (const v of f.vagas) out[v.id] = dono[v.id]; // na ordem da formação
+  return out;
+}
+
+/**
+ * Melhor 11 do elenco inteiro para a formação, com o mesmo objetivo do encaixe (nota na vaga + bônus
+ * de natural/alternativa; quem não entra fica no banco). Devolve {vagaId: id}. Ignora os ids de
+ * `fora` (ex.: quem já saiu). Usado pelo teste E1 (e pela tela, se um dia tiver o "Melhor time").
+ */
+export function melhorOnze(elencoId, formacao, fora = []) {
+  const f = FORMACOES[formacao];
+  const jogs = ELENCOS[elencoId].jogadores.filter(j => !fora.includes(j.id)).sort((a, b) => a.id - b.id);
+  const n = Math.max(jogs.length, f.vagas.length);
+  const nota = (jog, v) => notaNaPosicao(atributosDe(jog), v.pos) + (encaixeNaVaga(jog, v.pos) !== 'fora' ? BONUS_ENCAIXE.naPosicao : 0);
+  const M = 1000;
+  const custo = [];
+  for (let i = 0; i < n; i++) {
+    const linha = [];
+    for (let k = 0; k < n; k++) linha.push(i < jogs.length && k < f.vagas.length ? M - nota(jogs[i], f.vagas[k]) : M);
+    custo.push(linha);
+  }
+  const col = hungaro(custo);
+  const out = {};
+  for (const v of f.vagas) out[v.id] = null;
+  jogs.forEach((jog, i) => { if (col[i] < f.vagas.length) out[f.vagas[col[i]].id] = jog.id; });
   return out;
 }
