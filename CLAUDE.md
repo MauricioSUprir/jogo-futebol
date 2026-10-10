@@ -7,9 +7,17 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
   do outro" (dono). Etapas 1–7 na seção "GOLAÇO NOVO" abaixo; cada etapa termina com PR + merge + link + prints.
-  Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (#452). Correções (#453, #454). Etapa 3 ENTREGUE (11×11, tática,
-  Editar time; ver "Etapa 3" abaixo). **Próximo:** PR de calibração da Etapa 3 (volume de ataque e forma no terço
-  defensivo — os 5 testes do grupo `etapa3`), depois Etapa 4.
+  Etapa 1 ENTREGUE (#449, #450). Etapa 2 ENTREGUE (#452). Correções (#453, #454). Etapa 3 ENTREGUE (#455: 11×11,
+  tática, Editar time; ver "Etapa 3" abaixo).
+  **Pedidos do dono de 10/10 depois da Etapa 3** ("o jogo tá muito bom, mas..."): controle de bola melhor; IA mais
+  inteligente; jogo MAIS INTENSO e tático ("a ia não corre para trás, tem que ser algo mais profissional"); goleiro que
+  pula e espalma; "quando a bola chega no jogador e eu já mudo o analógico, o jogador sai da bola — isso nunca pode
+  acontecer, ele tem que sempre dominar"; efeito de rede e de gol; torcida no estádio com barulho; "não quero narração
+  em cima"; "é obrigatório virar o celular pra jogar". Três PRs: (1) estádio + tela limpa + celular deitado
+  (`golaco/estadio-torcida`); (2) recepção que nunca sai da bola + controle por atributo + goleiro que pula e espalma
+  (`golaco/dominio-goleiro`); (3) IA intensa: recomposição em disparada, pressão, ataque (`golaco/ia-intensa`, medir
+  por cima do 2). **Decisão pendente do dono:** câmera de TV do celular mais baixa e mais longe para a torcida
+  aparecer durante o jogo (hoje só no gol, intervalo e fim). Depois: Etapa 4.
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
@@ -152,6 +160,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   atrás da bola 7,1, linha de 4 no t1, retomada 47%, à frente 21,5%). Lições: medir defesa e ataque JUNTOS (cada
   parte calibrada sozinha reprovou na integração); parede/teleporte nunca move o corpo sem a passada (pé arrasta);
   `teste-custo` mede CPU do fio, não a parede (a fila do escalonador dava picos falsos de 265 ms).
+- **Estádio, tela limpa e celular deitado** (pedidos de 10/10; primeira versão puxada da Etapa 6; `PESQUISA-ESTADIO.md`):
+  rede que balança no shader (`render/rede-onda.js`, conta pura testada em Node e GPU = JS), câmera do gol no gol da
+  partida (só cortes), "GOL!" SEM autor nem minuto escritos, torcida instanciada (`render/torcida.js`/`torcida-dados.js`,
+  ânimo em `render/emocao.js`, 8/13/18 mil por qualidade) e som com gravações livres (`render/som.js`,
+  `assets/sons/CREDITOS.md`; liga no 1º gesto; "Som da torcida" na pausa). **Sem narração na tela:** lance nenhum vira
+  texto (hud.js `TEXTO_EVENTO` só tem avisos de comando); na partida o topo é placar + minimapa + menu (painel
+  "Conduzindo" só nos treinos). **Celular só deitado:** em pé (com toque) a tela "Gire o celular" cobre tudo e o jogo
+  para (`main.js` retratoBloqueado + `#girar`); janela estreita de PC continua jogando. O render nunca muda o hash
+  (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
+  por `tools/lib/gol-roteirizado.mjs`, sem depender de semente); `teste-controles`/`teste-editor-tela` conferem a tela
+  de girar.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

@@ -11,7 +11,10 @@
 //    com a entrada da Parte 4); nenhum botão encosta em outro, no analógico em repouso nem no HUD
 //    (e as caixas do HUD não encostam entre si, com o texto de modo mais longo e o placar com o
 //    relógio da partida), todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com
-//    entalhe), 667×375 e 390×844 (em pé, com a ilha no topo), nos tamanhos 70–140%.
+//    entalhe) e 667×375, nos tamanhos 70–140%.
+//  - Celular em pé (dono, 10/10: "é obrigatório virar o celular pra jogar"): 390×844 e 375×667
+//    mostram "Gire o celular" por cima de tudo, o jogo fica parado e o toque não chega aos botões;
+//    deitando, a tela some, o jogo anda e nada encosta.
 //  - Partida (Etapa 3; a página abre nela): menu com Editar time e Reiniciar partida, sem Recomeçar,
 //    Máquina e Marcador; placar com o relógio; R/M/N não mexem na partida; teclas da defesa (J
 //    conter, K dividida, O pressão). As cenas de treino pedem modo:'ataque'/'conducao' explícito.
@@ -502,9 +505,8 @@ async function conferirTodosLayouts(pagina) {
 }
 
 // ------------------------------------------------------------------ outras telas de celular
-// em pé com a ilha/entalhe no topo; deitado estreito (iPhone SE, sem entalhe) e com entalhe (mini)
+// deitado estreito (iPhone SE, sem entalhe) e com entalhe (mini)
 for (const t of [
-  { largura: 390, altura: 844, entalhe: true, nome: '390×844 em pé, entalhe' },
   { largura: 667, altura: 375, entalhe: false, nome: '667×375 deitado' },
   { largura: 812, altura: 375, entalhe: true, nome: '812×375 deitado, entalhe' },
 ]) {
@@ -518,6 +520,70 @@ for (const t of [
     const [okL, txtL] = await conferirTodosLayouts(pagina);
     meta(`${t.nome}: nada encosta (botões, analógico, HUD com o relógio da partida), ≥ 48 px, área segura`, `modo ${ep.modoTreino}, relógio ${relVis}; ${txtL}`, okL && ep.modoTreino === 'partida' && relVis);
     meta(`${t.nome}: sem erro no console`, erros.length ? erros.join(' | ') : '0', erros.length === 0);
+  } finally { await navegador.close(); }
+}
+// ------------------------------------------------------------------ em pé: gire o celular
+for (const t of [
+  { largura: 390, altura: 844, entalhe: true, nome: '390×844 em pé, entalhe' },
+  { largura: 375, altura: 667, entalhe: false, nome: '375×667 em pé' },
+]) {
+  const { navegador, pagina, erros } = await abrir({ largura: t.largura, altura: t.altura, dpr: 2, toque: true });
+  try {
+    await pagina.goto(srv.url + '?q=baixa' + (t.entalhe ? '&entalhe=1' : ''), { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pagina.evaluate(() => { window.__golaco.relogio.usarManual(true); });
+    // 2 s de jogo em pé, segurando o analógico e tocando onde ficam os botões
+    const x0 = Math.round(t.largura * 0.25), y0 = Math.round(t.altura * 0.8);
+    const cdp = await pagina.context().newCDPSession(pagina);
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0, id: 1 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + 40, y: y0 - 30, id: 1 }] });
+    const em = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      const h0 = g.hash(), t0 = g.estado().tick;
+      for (let i = 0; i < 120; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 119 });
+      const el = document.getElementById('girar');
+      const r = el.getBoundingClientRect();
+      const pontos = [[innerWidth / 2, innerHeight / 2], [innerWidth * 0.85, innerHeight * 0.85], [innerWidth * 0.2, innerHeight * 0.8], [innerWidth - 30, 30]];
+      const cobertos = pontos.filter(([x, y]) => { const e = document.elementFromPoint(x, y); return !!e && el.contains(e); }).length;
+      return {
+        h0, h1: g.hash(), t0, t1: g.estado().tick, vis: getComputedStyle(el).display !== 'none',
+        cobre: r.left <= 0 && r.top <= 0 && r.right >= innerWidth && r.bottom >= innerHeight, cobertos, n: pontos.length,
+        texto: document.getElementById('girar-titulo').textContent.trim(),
+      };
+    });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    meta(`${t.nome}: "Gire o celular" por cima de tudo e o jogo parado (2 s, analógico segurado)`,
+      `tela ${em.vis ? 'visível' : 'escondida'}, cobre ${em.cobre}, por cima em ${em.cobertos}/${em.n} pontos, tick ${em.t0} → ${em.t1}, hash ${em.h0 === em.h1 ? 'igual' : 'mudou'}, "${em.texto}"`,
+      em.vis && em.cobre && em.cobertos === em.n && em.t1 === em.t0 && em.h0 === em.h1 && /gire o celular/i.test(em.texto));
+    // deita: a tela some, o jogo anda e o layout deitado continua sem nada encostando
+    await pagina.setViewportSize({ width: t.altura, height: t.largura });
+    await pagina.waitForTimeout(250);
+    const dep = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      const t0 = g.estado().tick;
+      for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 59 });
+      return { t0, t1: g.estado().tick, vis: getComputedStyle(document.getElementById('girar')).display !== 'none' };
+    });
+    const [okL, txtL] = await conferirTodosLayouts(pagina);
+    meta(`${t.nome} → deitado (${t.altura}×${t.largura}): a tela some, o jogo anda e nada encosta`,
+      `tela ${dep.vis ? 'visível' : 'escondida'}, tick ${dep.t0} → ${dep.t1}; ${txtL}`, !dep.vis && dep.t1 > dep.t0 && okL);
+    meta(`${t.nome}: sem erro no console`, erros.length ? erros.join(' | ') : '0', erros.length === 0);
+  } finally { await navegador.close(); }
+}
+// PC com a janela estreita em pé (sem toque): continua jogando, sem a tela de girar
+{
+  const { navegador, pagina, erros } = await abrir({ largura: 420, altura: 800, dpr: 1, toque: false });
+  try {
+    await pagina.goto(srv.url + '?q=baixa', { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    const pc = await pagina.evaluate(() => {
+      const g = window.__golaco; g.relogio.usarManual(true);
+      const t0 = g.estado().tick;
+      for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 29 });
+      return { t0, t1: g.estado().tick, vis: getComputedStyle(document.getElementById('girar')).display !== 'none' };
+    });
+    meta('PC, janela em pé (sem toque): sem "Gire o celular", o jogo anda', `tela ${pc.vis ? 'visível' : 'escondida'}, tick ${pc.t0} → ${pc.t1}`, !pc.vis && pc.t1 > pc.t0);
+    meta('PC, janela em pé: sem erro no console', erros.length ? erros.join(' | ') : '0', erros.length === 0);
   } finally { await navegador.close(); }
 }
 await srv.fechar();

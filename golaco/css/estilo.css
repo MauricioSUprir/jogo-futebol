@@ -88,6 +88,8 @@ html.noite .vinheta { display: block; }
   display: flex; align-items: center; gap: 12px; height: 48px; padding: 0 14px;
   background: var(--painel); border: 1px solid var(--linha); border-radius: 10px;
 }
+/* partida: sem o painel "Conduzindo"/posição/km/h no topo (narração na tela — dono, 10/10); nos treinos fica */
+html.em-partida .painel-jogo { display: none; }
 .vel { display: flex; align-items: baseline; gap: 4px; min-width: 72px; justify-content: flex-end; }
 .vel b { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .vel small { font-size: 11px; font-weight: 700; color: var(--texto-2); letter-spacing: 0.06em; }
@@ -128,23 +130,63 @@ html.noite .vinheta { display: block; }
 .aviso.forte { border-left-color: #fff; }
 html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
 
-/* GOL! grande e verde no meio da tela (2 s) */
+/* GOL! (efeito do gol, 2,4 s): faixa verde que corta a tela na diagonal, "GOL!" que bate grande e
+   treme, o autor (número + nome) e o time com o minuto. Entra 0,3 s DEPOIS do gol e no terço de CIMA da
+   tela, por cima da torcida: na câmera do gol (camera.js CAMERA_GOL) a boca do gol e a rede estufando
+   ficam do meio para baixo e aparecem sem nada na frente; no celular, longe do analógico e dos botões
+   (contraprova M2: em 568–844 px de largura o texto ficava embaixo do CORRER/PASSE). Nada clicável (os
+   controles seguem livres) e some antes da saída de bola. Com "reduzir movimento": só aparece e some. */
 .gol-tela {
-  position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(0.6); opacity: 0;
-  display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none;
-  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.2, 1.6, 0.4, 1);
+  position: absolute; left: 50%; top: 27%; transform: translate(-50%, -50%); opacity: 0; visibility: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
+  width: 100vw; padding: 0 calc(var(--sa-r) + 16px) 0 calc(var(--sa-l) + 16px);
 }
-.gol-tela span {
-  font-size: clamp(64px, 15vmin, 150px); font-weight: 900; font-style: italic; letter-spacing: 0.04em; line-height: 0.9;
+.gol-faixa {
+  position: absolute; left: -10vw; right: -10vw; top: 50%; height: clamp(84px, 24vmin, 210px); transform: translateY(-58%) skewY(-4deg) scaleX(0);
+  background: linear-gradient(90deg, rgba(7, 9, 10, 0) 0%, rgba(7, 9, 10, 0.82) 14%, rgba(7, 9, 10, 0.82) 86%, rgba(7, 9, 10, 0) 100%);
+  border-top: 3px solid var(--verde); border-bottom: 3px solid var(--verde); z-index: -1;
+}
+.gol-palavra {
+  font-size: clamp(64px, 17vmin, 168px); font-weight: 900; font-style: italic; letter-spacing: 0.04em; line-height: 0.9;
   color: var(--verde); -webkit-text-stroke: 3px var(--preto); paint-order: stroke fill;
-  text-shadow: 0 0 40px rgba(25, 224, 122, 0.55), 0 6px 0 rgba(0, 0, 0, 0.55);
+  text-shadow: 0 0 40px rgba(25, 224, 122, 0.6), 0 6px 0 rgba(0, 0, 0, 0.55);
 }
-.gol-tela small {
-  font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: var(--preto);
-  background: var(--verde); padding: 5px 12px; border-radius: 6px;
+.gol-tela.visivel { visibility: visible; animation: gol-aparece 2.4s linear forwards; }
+/* prints de conferência (mostrarEvento fixo): o aviso fica na tela, sem o apagar do fim */
+.gol-tela.visivel.fixo { animation: none; opacity: 1; }
+.gol-tela.visivel .gol-faixa { animation: gol-faixa 2.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
+.gol-tela.visivel .gol-palavra { animation: gol-bate 2.4s cubic-bezier(0.2, 1.5, 0.35, 1) forwards; }
+/* 0–12,5% (0,3 s): nada — a rede estufa primeiro */
+@keyframes gol-aparece { 0%, 12% { opacity: 0; } 16%, 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes gol-faixa { 0%, 12% { transform: translateY(-58%) skewY(-4deg) scaleX(0); } 24%, 100% { transform: translateY(-58%) skewY(-4deg) scaleX(1); } }
+@keyframes gol-bate {
+  0%, 12% { transform: scale(2.6) rotate(-6deg); opacity: 0; }
+  20% { transform: scale(0.94) rotate(-3deg); opacity: 1; }
+  24% { transform: scale(1.06) rotate(-3deg) translateX(-4px); }
+  27% { transform: scale(1) rotate(-3deg) translateX(4px); }
+  30% { transform: scale(1.02) rotate(-3deg) translateX(-2px); }
+  34%, 70% { transform: scale(1) rotate(-3deg); }
+  78% { transform: scale(1.05) rotate(-3deg); }
+  86%, 100% { transform: scale(1) rotate(-3deg); }
 }
-.gol-tela small:empty { display: none; }
-.gol-tela.visivel { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+/* celular: compacto, logo abaixo da barra de cima (placar e minimapa terminam a ~74 px) e no meio, entre o
+   analógico (esquerda, embaixo) e o arco de botões (direita): em 568×320 sobram ~180 px de largura ali
+   (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
+html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
+html.com-toque .gol-palavra { font-size: clamp(40px, 12.5vmin, 96px); -webkit-text-stroke-width: 2px; }
+html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
+@media (prefers-reduced-motion: reduce) {
+  .gol-tela.visivel .gol-faixa, .gol-tela.visivel .gol-palavra { animation: none; }
+  .gol-tela .gol-faixa { transform: translateY(-58%) skewY(-4deg); }
+}
+/* placar pulsando no gol (o lado de quem marcou) */
+.placar.gol-pulso { animation: placar-pulso 2.4s ease-out; }
+@keyframes placar-pulso {
+  0%, 30%, 60% { box-shadow: 0 0 0 0 rgba(25, 224, 122, 0.85); }
+  15%, 45%, 75% { box-shadow: 0 0 0 7px rgba(25, 224, 122, 0), 0 0 22px rgba(25, 224, 122, 0.55); border-color: var(--verde); background: rgba(10, 92, 51, 0.85); }
+  100% { box-shadow: 0 0 0 0 rgba(25, 224, 122, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .placar.gol-pulso { animation: none; border-color: var(--verde); } }
 
 /* faixa do intervalo e do fim de jogo (partida): no meio da tela, por cima do campo */
 .faixa {
@@ -221,13 +263,6 @@ html.com-toque .qps { bottom: auto; top: calc(var(--sa-t) + var(--m) + 58px); }
 }
 .dica .sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; }
 html.com-toque .dica { display: none; }
-.dica-retrato {
-  display: none; position: absolute; left: 50%; top: calc(var(--sa-t) + var(--m) + 128px); transform: translateX(-50%);
-  padding: 7px 12px; border-radius: 8px; white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--texto);
-  background: rgba(7, 9, 10, 0.72); border: 1px solid var(--linha);
-}
-@media (orientation: portrait) { html.com-toque .dica-retrato { display: block; } }
-html.modo-prints .dica-retrato { display: none; }
 
 /* ------------------------------------------------------------------ toque */
 .toque { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
@@ -352,6 +387,7 @@ html.modo-prints .dica-retrato { display: none; }
 .segmentado button:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
 .deslizante { display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; align-items: center; gap: 10px; font-size: 13px; color: var(--texto); }
 .deslizante output { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--texto-2); text-align: right; }
+.opcao-som-linha { display: flex; flex-direction: column; gap: 7px; }
 input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; touch-action: pan-x; }
 input[type="range"]::-webkit-slider-runnable-track { height: 4px; background: var(--preto-3); border-radius: 2px; }
 input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; margin-top: -8px; border-radius: 50%; background: var(--verde); border: 3px solid var(--preto); }
@@ -366,6 +402,8 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius
 .ajuda-colunas dd { display: inline; margin: 0 0 0 6px; font-size: 12px; color: var(--texto-2); }
 .ajuda-colunas dd::after { content: ""; display: block; height: 7px; }
 .nota { margin: 12px 0 0; font-size: 11px; color: var(--texto-2); line-height: 1.45; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 10px; }
+/* créditos dos sons (CC BY pede o nome dos autores onde o som toca) */
+.nota.creditos { margin: 0 20px 16px; }
 
 @media (max-width: 680px) {
   .menu-corpo { grid-template-columns: 1fr; }
@@ -382,12 +420,23 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   .btn { min-height: 48px; }
   .segmentado button { height: 32px; }
   /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
-  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 9px; }
+  .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 6px; }
+  .menu-opcoes .opcao { gap: 5px; }
   .menu-opcoes .opcao:first-child, .menu-opcoes .opcao:last-child { grid-column: 1 / -1; }
+  /* som: ligado/desligado e o volume na mesma linha (o menu continua cabendo sem rolar) */
+  .menu-opcoes .opcao-som { grid-column: 1 / -1; }
+  .opcao-som-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: center; }
+  .opcao-som .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
+  .opcao-som .opcao-info { display: none; }
+  /* controles de toque: Tamanho e Transparência lado a lado (a linha do som não faz o menu rolar) */
+  .menu-opcoes .opcao:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 5px; }
+  .menu-opcoes .opcao:last-child .opcao-rotulo { grid-column: 1 / -1; }
+  .menu-opcoes .opcao:last-child .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
   .menu-opcoes .segmentado button { font-size: 12px; padding: 0 4px; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }
   .ajuda-colunas dt, .ajuda-colunas dd { font-size: 11.5px; }
+  .nota.creditos { margin: 0 16px 12px; }
 }
 /* tela estreita: HUD do topo mais compacto para nada encostar */
 @media (max-width: 560px) {
@@ -403,8 +452,27 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 186px); }
   html.com-toque .qps { top: calc(var(--sa-t) + var(--m) + 116px); right: auto; left: calc(var(--sa-l) + var(--m)); }
   html.com-toque .minimapa { top: calc(var(--sa-t) + var(--m) + 116px); left: auto; right: calc(var(--sa-r) + var(--m)); transform: none; }
-  html.com-toque .dica-retrato { top: calc(var(--sa-t) + var(--m) + 236px); }
 }
+
+/* ------------------------------------------------------------------ celular em pé: gire o celular
+   O jogo só roda deitado (dono, 10/10). A mesma media query de main.js (retratoBloqueado); por cima
+   de tudo, até da tela de carregamento. */
+.girar {
+  position: fixed; inset: 0; z-index: 70; display: none; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: calc(var(--sa-t) + 24px) calc(var(--sa-r) + 28px) calc(var(--sa-b) + 24px) calc(var(--sa-l) + 28px);
+  background: var(--preto); text-align: center;
+}
+@media (orientation: portrait) { html.com-toque .girar { display: flex; } }
+.girar-icone { width: 112px; height: 112px; fill: none; stroke: var(--verde); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.girar-celular { transform-origin: 48px 45px; animation: girar-celular 2.4s ease-in-out infinite; }
+.girar-celular circle { fill: var(--verde); stroke: none; }
+.girar-seta { stroke: var(--texto-2); }
+@keyframes girar-celular { 0%, 25% { transform: rotate(0deg); } 55%, 85% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+@media (prefers-reduced-motion: reduce) { .girar-celular { animation: none; transform: rotate(-90deg); } }
+.girar-titulo { margin: 4px 0 0; font-size: 22px; font-weight: 900; letter-spacing: 0.02em; color: var(--texto); }
+.girar-texto { margin: 0; max-width: 300px; font-size: 14px; line-height: 1.45; color: var(--texto-2); }
+.girar-botao { margin-top: 10px; min-height: 48px; padding: 0 22px; }
+.girar-botao[hidden] { display: none; }
 
 /* ------------------------------------------------------------------ carregando e erro */
 .carregando {

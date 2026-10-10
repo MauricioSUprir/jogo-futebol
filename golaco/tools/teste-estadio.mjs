@@ -1,0 +1,475 @@
+// Estádio no navegador (Chromium): rede que balança, efeito de gol, torcida e som.
+//   1) a página abre sem erro no console, com a torcida na cena (≤ 3 chamadas de desenho a mais) e mais gente na
+//      Alta que na Média e na Baixa (sem animação na Baixa); trocar a qualidade não remonta a torcida (≤ 25 ms
+//      com a CPU 4× mais lenta) e não vaza geometria nem textura;
+//   2) a torcida APARECE (os pixels da arquibancada mudam com ela) de dia e de noite;
+//   3) som: nada de AudioContext antes do primeiro gesto; o apito do início fica pendente e toca no gesto; um
+//      clique cria e retoma (running); 9 gravações e 3 laços; o grito do gol já sai alto (≤ 0,3 s até 6 dB do pico);
+//   4) um GOL ROTEIRIZADO (tools/lib/gol-roteirizado.mjs: não depende da IA nem do goleiro — contraprova B1): a
+//      rede estufa ≥ 0,2 m, a bola desenhada vai junto, a câmera CORTA para a câmera do gol (a rede mexe na tela e
+//      a torcida enche o fundo do quadro), só "GOL!" (sem autor nem minuto: sem narração — dono, 10/10), placar pulsando, câmera sem tranco entre
+//      os cortes, o "GOL!" sai na saída de bola, que sai no mesmo tick de sempre; gol, chuá e apito tocam;
+//   5) gol do VISITANTE: a casa cala (barulho ≤ 0,15) e só o setor visitante comemora (contraprova I4);
+//   6) treino de condução: o "GOL!" e o efeito da câmera acabam quando a bola volta (contraprova M8);
+//   7) som desligado: ganho 0, contexto suspenso, nada toca e fica salvo; abrindo a página já desligada, o gesto
+//      não cria AudioContext e nada baixa (contraprova M7); religado em 50%;
+//   8) "GOL!" no celular (568×320, 667×375, 844×390) não encosta no analógico, nos botões, no placar nem no
+//      minimapa (contraprova M2);
+//   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
+//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9).
+//   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
+import path from 'node:path';
+import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { golRoteirizado } from './lib/gol-roteirizado.mjs';
+
+const args = process.argv.slice(2);
+const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const res = [];
+const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
+const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
+
+/** Diferença entre dois PNG numa região (px CSS): média (0–255) ou fração de pixels que mudam > 20. */
+async function diferenca(contexto, a, b, reg) {
+  const aux = await contexto.newPage();
+  await aux.setContent('<canvas id="c"></canvas>');
+  const r = await aux.evaluate(async ({ a, b, reg }) => {
+    const ler = async src => { const i = new Image(); i.src = 'data:image/png;base64,' + src; await i.decode(); return i; };
+    const [ia, ib] = [await ler(a), await ler(b)];
+    const c = document.getElementById('c'); c.width = ia.width; c.height = ia.height;
+    const g = c.getContext('2d');
+    const k = ia.width / window.innerWidth > 1.5 ? ia.width / reg.larguraCss : 1;
+    const R = { x: Math.round(reg.x * k), y: Math.round(reg.y * k), w: Math.max(1, Math.round(reg.w * k)), h: Math.max(1, Math.round(reg.h * k)) };
+    const dados = img => { g.drawImage(img, 0, 0); return g.getImageData(R.x, R.y, R.w, R.h).data; };
+    const da = dados(ia), db = dados(ib);
+    let soma = 0, n = 0, mudou = 0;
+    for (let i = 0; i < da.length; i += 4) {
+      const d = (Math.abs(da[i] - db[i]) + Math.abs(da[i + 1] - db[i + 1]) + Math.abs(da[i + 2] - db[i + 2])) / 3;
+      soma += d; n++;
+      if (d > 20) mudou++;
+    }
+    return reg.fracao ? mudou / Math.max(1, n) : soma / Math.max(1, n);
+  }, { a: a.toString('base64'), b: b.toString('base64'), reg });
+  await aux.close();
+  return r;
+}
+
+const srv = await servidor(0, raiz);
+const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
+// contagem de AudioContext criados e de sons baixados (nada antes do gesto; nada com o som desligado)
+await contexto.addInitScript(() => {
+  window.__ctxCriados = 0;
+  const C = window.AudioContext;
+  if (C) window.AudioContext = class extends C { constructor(...a) { super(...a); window.__ctxCriados++; } };
+});
+const mp3 = [];
+contexto.on('request', r => { if (/\.mp3(\?|$)/.test(r.url())) mp3.push(r.url().split('/').pop()); });
+try {
+  await pg.goto(`${srv.url}?q=alta&hora=dia&semente=5`, { waitUntil: 'load' });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  const tem = await pg.evaluate(() => !!window.__golaco.estadio);
+  meta('A página tem o estádio (torcida, rede, som)', String(tem), 'true', tem);
+  if (!tem) throw new Error('página sem o estádio (versão publicada)');
+  await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
+  // som: antes de qualquer gesto, nenhum AudioContext
+  const somAntes = await pg.evaluate(() => ({ estado: window.__golaco.estadio.som?.estado ?? 'sem som', criados: window.__ctxCriados }));
+  meta('Som: nada antes do primeiro gesto (política de reprodução automática)', `${somAntes.estado}, ${somAntes.criados} AudioContext`, 'sem-contexto, 0', somAntes.estado === 'sem-contexto' && somAntes.criados === 0);
+
+  // 1) torcida por qualidade e chamadas de desenho
+  const q = await pg.evaluate(() => {
+    const g = window.__golaco, r = {};
+    for (const nome of ['baixa', 'media', 'alta']) {
+      g.definirQualidade(nome);
+      g.relogio.avancar(1000 / 60, { desenhar: true });
+      r[nome] = { ...g.estadio.torcida };
+    }
+    // a mesma câmera, com e sem a torcida: quantas chamadas ela custa
+    g.cameraLivre({ de: [0, 14, 12], para: [0, 8, -55], fov: 45 });
+    g.desenhar(); const com = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(false); g.desenhar(); const sem = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(true); g.desenhar();
+    // a câmera de TV no meio-campo: quantas malhas da torcida vão para a GPU
+    g.cameraLivre({ de: [0, 18.3, 40], para: [0, 0, 0], fov: 32 });
+    g.desenhar(); const comTV = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(false); g.desenhar(); const semTV = g.estado().desenhoChamadas;
+    g.estadio.mostrarTorcida(true); g.desenhar();
+    g.cameraLivre(null);
+    return { ...r, com, sem, meio: comTV - semTV };
+  });
+  meta('Torcida: Baixa < Média < Alta (Baixa sem animação)', `baixa ${q.baixa.n} (${q.baixa.animada ? 'animada' : 'parada'}) · média ${q.media.n} · alta ${q.alta.n}`, 'crescente; Baixa parada; Média e Alta animadas',
+    q.baixa.n < q.media.n && q.media.n < q.alta.n && !q.baixa.animada && q.media.animada && q.alta.animada && q.alta.visivel);
+  meta('Torcida: no máximo 3 chamadas de desenho (uma malha instanciada por arquibancada)', `com ${q.com} · sem ${q.sem} (olhando o lado de lá)`, '1 a 3 a mais', q.com - q.sem >= 1 && q.com - q.sem <= 3);
+  meta('Torcida: os fundos saem do desenho quando a câmera de TV está no meio-campo (corte pela câmera)', `meio-campo: ${q.meio} chamadas da torcida`, '1 (só o lado de lá)', q.meio === 1);
+  // contraprova M4: trocar a qualidade no meio do jogo (a Automática faz isso sozinha) com a CPU 4× mais lenta —
+  // a parte da torcida (antes ela era remontada: ~300 ms); a troca do renderizador (sombras, antialias) é a de antes
+  {
+    const cdp = await contexto.newCDPSession(pg);
+    const mem0 = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geo: e.geometrias, tex: e.texturas }; });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    const trocas = await pg.evaluate(() => {
+      const g = window.__golaco;
+      if (!g.estadio.trocarTorcida) return null;
+      return ['baixa', 'media', 'alta', 'media', 'baixa', 'alta'].map(q => g.estadio.trocarTorcida(q));
+    });
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+    await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: true }); });
+    const mem1 = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geo: e.geometrias, tex: e.texturas, n: window.__golaco.estadio.torcida.n }; });
+    const pior = trocas ? Math.max(...trocas) : Infinity;
+    meta('Trocar a qualidade não remonta a torcida (CPU 4× mais lenta)', trocas ? `pior troca da torcida ${f2(pior)} ms (${trocas.map(t => t.toFixed(1)).join(' · ')}); geometrias ${mem0.geo}→${mem1.geo}, texturas ${mem0.tex}→${mem1.tex}` : 'sem medida (a troca remonta a torcida)', '≤ 5 ms; sem vazamento',
+      trocas && pior <= 5 && mem1.geo <= mem0.geo && mem1.tex <= mem0.tex && mem1.n === q.alta.n);
+  }
+
+  // 2) torcida aparece (pixels da arquibancada) de dia e de noite
+  for (const hora of ['dia', 'noite']) {
+    await pg.evaluate(h => { const g = window.__golaco; g.definirHora(h); g.cameraLivre({ de: [0, 14, 12], para: [0, 8, -55], fov: 45 }); g.estadio.mostrarTorcida(true); g.desenhar(); }, hora);
+    await pg.evaluate(() => document.documentElement.classList.add('sem-hud'));
+    const com = await pg.screenshot({ type: 'png' });
+    await pg.evaluate(() => { const g = window.__golaco; g.estadio.mostrarTorcida(false); g.desenhar(); });
+    const sem = await pg.screenshot({ type: 'png' });
+    await pg.evaluate(() => { const g = window.__golaco; g.estadio.mostrarTorcida(true); g.cameraLivre(null); g.desenhar(); document.documentElement.classList.remove('sem-hud'); });
+    const d = await diferenca(contexto, com, sem, { x: 0, y: 120, w: 1280, h: 330, larguraCss: 1280 });
+    meta(`Torcida visível na arquibancada (${hora})`, `diferença média ${f2(d)} (0–255)`, '≥ 12', d >= 12);
+  }
+  await pg.evaluate(() => window.__golaco.definirHora('dia'));
+
+  // 3) o apito do começo da partida: chega antes de qualquer gesto, fica pendente e toca no primeiro gesto
+  //    (contraprova I5: o 1º passo limpava o 'saida' e não havia contexto; nunca tocava)
+  await pg.evaluate(() => window.__golaco.reiniciar({ modo: 'partida', semente: 5 }));
+  const pend = await pg.evaluate(() => window.__golaco.estadio.som?.pendente ?? null);
+  await pg.mouse.click(640, 400);
+  await pg.waitForFunction(() => { const s = window.__golaco.estadio.som; return s && s.decodificados.length >= 9 && s.lacos.length >= 3; }, null, { timeout: 30000 }).catch(() => {});
+  await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+  await pg.waitForTimeout(1200);
+  const som1 = await pg.evaluate(() => ({ ...window.__golaco.estadio.som, criados: window.__ctxCriados }));
+  meta('Som: o clique cria e retoma o AudioContext', `${som1.estado} (${som1.criados} contexto)`, 'rodando, 1', som1.estado === 'rodando' && som1.criados === 1);
+  meta('Som: 9 gravações decodificadas e os 3 laços tocando', `decodificados [${som1.decodificados}] · laços [${som1.lacos}] · níveis ${JSON.stringify(som1.niveis)}`, '9 e 3, murmúrio > 0',
+    som1.decodificados.length === 9 && som1.lacos.length === 3 && som1.niveis.ambiente > 0.05);
+  meta('Apito do início da partida (pendente até o 1º gesto, toca no gesto)', `antes do gesto: pendente ${pend ?? 'nada'}; depois: apito tocou ${som1.tocados.apito ?? 0}×`, 'pendente apito; tocou ≥ 1', pend === 'apito' && (som1.tocados.apito ?? 0) >= 1);
+  const apitoReinicio = await pg.evaluate(() => { const g = window.__golaco, a = g.estadio.som.tocados.apito ?? 0; g.reiniciar({ modo: 'partida', semente: 5 }); return (g.estadio.som.tocados.apito ?? 0) - a; });
+  meta('Apito no "Reiniciar partida"', `${apitoReinicio} apito`, '1', apitoReinicio === 1);
+  // contraprova I1: o grito gravado do gol já sai alto (antes ficava ~15 dB abaixo do murmúrio por 4 s)
+  const env = await pg.evaluate(() => window.__golaco.estadio.analisarSom?.('gol') ?? null);
+  meta('Grito do gol sai na hora (gravação)', env ? `chega a 6 dB do pico em ${f2(env.t6dB)} s; média dos 2,5 s ${f2(env.media0a2_5Db)} dB (pico ${f2(env.picoDb)} dB)` : 'sem análise',
+    '≤ 0,3 s; média ≥ pico − 9 dB', env && env.t6dB <= 0.3 && env.media0a2_5Db >= env.picoDb - 9);
+
+  // 4) gol roteirizado do time 0 (Golaço FC): o caminho todo do jogo até o "GOL!"
+  const tocados0 = await pg.evaluate(() => ({ ...(window.__golaco.estadio.som?.tocados ?? {}) }));
+  const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+  meta('Gol roteirizado (sem depender da IA nem do goleiro)', gol.ok ? `autor ${gol.autor}, gol no tick ${gol.golTick} (${gol.golTick - gol.tickChute} passos depois do chute), ${gol.movidos} tirados do caminho` : `sem gol (${JSON.stringify(gol)})`, 'gol', gol.ok);
+  if (!gol.ok) throw new Error('o gol roteirizado não saiu');
+  const hudGol = await pg.evaluate(() => {
+    const g = window.__golaco;
+    const el = document.getElementById('gol-tela');
+    const r0 = el.getBoundingClientRect();
+    const debaixo = document.elementFromPoint(r0.left + r0.width / 2, r0.top + r0.height / 2);
+    // nenhum outro texto na tela durante o gol (sem narração): o aviso de lance não aparece
+    const aviso = document.getElementById('aviso');
+    return {
+      visivel: el.classList.contains('visivel'), texto: el.textContent.replace(/\s+/g, ' ').trim(),
+      aviso: aviso.classList.contains('visivel') ? aviso.textContent : '',
+      pulso: document.querySelector('.placar').classList.contains('gol-pulso'), plano: g.estadio.planoCamera ?? (g.estadio.efeitoCamera ? 'leve' : 'jogo'),
+      pega: el.contains(debaixo),
+    };
+  });
+  meta('Gol: só "GOL!" na tela (sem autor, minuto nem aviso de lance: sem narração)', `"${hudGol.texto}"${hudGol.aviso ? `, aviso "${hudGol.aviso}"` : ''}`, 'GOL!', hudGol.visivel && hudGol.texto === 'GOL!' && !hudGol.aviso);
+  meta('Gol: placar pulsa e a câmera CORTA para a câmera do gol', `placar ${hudGol.pulso ? 'pulsando' : 'parado'}, câmera ${hudGol.plano}`, 'pulsando, fechado (câmera do gol)', hudGol.pulso && hudGol.plano === 'fechado');
+  meta('Gol: o aviso não pega toque nem clique', hudGol.pega ? 'pega' : 'passa direto para o jogo', 'passa direto', !hudGol.pega);
+  // a rede: até 0,25 s depois da 1ª batida, a maior bolsa e o quanto a bola desenhada entra (câmera do jogo)
+  const somGol0 = await pg.evaluate(() => ({ ...(window.__golaco.estadio.som?.tocados ?? {}) }));
+  const lance = await pg.evaluate(() => {
+    const g = window.__golaco;
+    let n = 0;
+    while (g.estadio.rede.batidas === 0 && n < 60) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+    let melhor = { desloc: 0, imp: null, k: -1 }, entra = 0;
+    const t0 = g.mundo.tick;
+    for (let k = 0; k < 15; k++) {
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      for (const imp of g.estadio.rede.impactos) {
+        const d = g.estadio.deslocamentoRede(imp.plano, imp.x, imp.y, imp.z);
+        if (d > melhor.desloc) melhor = { desloc: d, imp, k, tick: g.mundo.tick };
+      }
+      const bolaD = g.estadio.bolaDesenhada, bolaF = g.render.bola;
+      entra = Math.max(entra, Math.hypot(bolaD.x - bolaF.x, bolaD.y - bolaF.y, bolaD.z - bolaF.z));
+    }
+    return { n, t0, ...melhor, entra, batidas: g.estadio.rede.batidas };
+  });
+  meta('A rede estufa no ponto da batida', lance.imp ? `${f2(lance.desloc)} m para fora (amplitude ${f2(lance.imp.amp)} m, pano ${lance.imp.plano}), ${lance.k + 1} passo(s) depois` : 'sem batida', '≥ 0,2 m', lance.desloc >= 0.2);
+  meta('A bola desenhada entra na rede junto', `${f2(lance.entra)} m além do ponto da física`, '≥ 0,12 m', lance.entra >= 0.12);
+  // o mesmo instante (o da maior bolsa) com e sem a onda, na câmera do JOGO no gol (a câmera do gol): pixels da
+  // caixa do gol que mudam e quanto o ponto da bolsa anda na tela
+  const golGeo = await golRoteirizado(pg, { semente: 5, time: 0 });
+  const quadroRede = await pg.evaluate(alvo => {
+    const g = window.__golaco;
+    while (g.mundo.tick < alvo) g.relogio.avancar(1000 / 60, { desenhar: false });
+    g.desenhar();
+    document.documentElement.classList.add('sem-hud');
+    const im = g.estadio.rede.impactos[0];
+    const s = im.x > 0 ? 1 : -1;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const x of [52.5, 55.2]) for (const y of [0, 3]) for (const z of [-4.4, 4.4]) { const p = g.naTela(s * x, y, z); x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
+    const cl = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
+    const caixa = { x: cl(x0, 0, 1279), y: cl(y0, 0, 719), w: cl(x1, 1, 1280) - cl(x0, 0, 1279), h: cl(y1, 1, 720) - cl(y0, 0, 719) };
+    // ponto da bolsa: parado × estufado (pela normal do pano)
+    const d = g.estadio.deslocamentoRede(im.plano, im.x, im.y, im.z);
+    const n = im.plano % 4 === 0 ? [s, 0, 0] : im.plano % 4 === 1 ? [0, 1, 0] : [0, 0, im.plano % 4 === 2 ? -1 : 1];
+    const a = g.naTela(im.x, im.y, im.z), b = g.naTela(im.x + n[0] * d, im.y + n[1] * d, im.z + n[2] * d);
+    return { caixa, px: Math.hypot(b.x - a.x, b.y - a.y), d, plano: g.estadio.planoCamera };
+  }, golGeo.golTick + ((lance.tick ?? gol.golTick) - gol.golTick));
+  const cheia = await pg.screenshot({ type: 'png' });
+  await pg.evaluate(() => { const g = window.__golaco; g.estadio.redeOnda(false); g.desenhar(); });
+  const parada = await pg.screenshot({ type: 'png' });
+  await pg.evaluate(() => { const g = window.__golaco; g.estadio.redeOnda(true); g.desenhar(); });
+  const dRede = await diferenca(contexto, cheia, parada, { ...quadroRede.caixa, fracao: true, larguraCss: 1280 });
+  meta('A rede mexe na tela no gol (câmera do jogo: o mesmo instante com × sem a onda)', `câmera ${quadroRede.plano}: a bolsa anda ${f2(quadroRede.px)} px na tela; ${f2(dRede * 100)}% dos pixels da caixa do gol mudam (${quadroRede.caixa.w}×${quadroRede.caixa.h} px)`, '≥ 25 px e ≥ 1%', quadroRede.px >= 25 && dRede >= 0.01);
+  // a torcida no quadro da câmera do gol (com × sem ela)
+  await pg.evaluate(() => { const g = window.__golaco; g.estadio.mostrarTorcida(false); g.desenhar(); });
+  const semTorcida = await pg.screenshot({ type: 'png' });
+  await pg.evaluate(() => { const g = window.__golaco; g.estadio.mostrarTorcida(true); g.desenhar(); document.documentElement.classList.remove('sem-hud'); });
+  const dTorc = await diferenca(contexto, cheia, semTorcida, { x: 0, y: 0, w: 1280, h: 720, fracao: true, larguraCss: 1280 });
+  meta('Câmera do gol: a torcida enche o fundo do quadro', `${f2(dTorc * 100)}% da tela é torcida`, '≥ 20%', dTorc >= 0.2);
+  // a câmera de verdade (quadros da página) do gol até a saída de bola: cortes e tranco; e o apito da saída
+  const somGol1 = await pg.evaluate(() => ({ ...(window.__golaco.estadio.som?.tocados ?? {}) }));
+  const golCam = await golRoteirizado(pg, { semente: 5, time: 0 });
+  const somSaida0 = await pg.evaluate(() => ({ ...(window.__golaco.estadio.som?.tocados ?? {}) }));
+  const camEf = await pg.evaluate(async golTick => {
+    const g = window.__golaco;
+    const ps = [], planos = [];
+    let saidaTick = null, visivelNaSaida = null;
+    for (let i = 0; i < 260 && (saidaTick == null || g.mundo.tick < saidaTick + 12); i++) {
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      ps.push({ ...g.render.camera }); planos.push(g.estadio.planoCamera);
+      if (saidaTick == null && g.mundo.partida.estado !== 'gol') { saidaTick = g.mundo.tick; visivelNaSaida = document.getElementById('gol-tela').classList.contains('visivel'); }
+    }
+    let cortes = 0, maxPasso = 0, maxAcel = 0;
+    for (let i = 1; i < ps.length; i++) {
+      const p = Math.hypot(ps[i].x - ps[i - 1].x, ps[i].y - ps[i - 1].y, ps[i].z - ps[i - 1].z);
+      if (p > 1) { cortes++; continue; }
+      maxPasso = Math.max(maxPasso, p);
+      if (i >= 2 && Math.hypot(ps[i - 1].x - ps[i - 2].x, ps[i - 1].y - ps[i - 2].y, ps[i - 1].z - ps[i - 2].z) <= 1) maxAcel = Math.max(maxAcel, Math.hypot(ps[i].x - 2 * ps[i - 1].x + ps[i - 2].x, ps[i].y - 2 * ps[i - 1].y + ps[i - 2].y, ps[i].z - 2 * ps[i - 1].z + ps[i - 2].z));
+    }
+    return { cortes, maxPasso, maxAcel, ultimo: planos[planos.length - 1], efeito: g.estadio.efeitoCamera, golTick, saidaTick, visivelNaSaida, fechado: planos.filter(p => p === 'fechado').length };
+  }, golCam.golTick);
+  const somSaida1 = await pg.evaluate(() => ({ ...(window.__golaco.estadio.som?.tocados ?? {}) }));
+  meta('Câmera do gol sem enjoar: só cortes (nada de travelling rápido) e volta na saída', `${camEf.cortes} corte(s); entre eles maior passo ${f2(camEf.maxPasso * 100)} cm/quadro, maior tranco ${f2(camEf.maxAcel * 100)} cm; depois da saída: ${camEf.ultimo}`, '≤ 2 cortes; ≤ 15 cm e ≤ 10 cm; jogo',
+    camEf.cortes <= 2 && camEf.maxPasso <= 0.15 && camEf.maxAcel <= 0.1 && camEf.ultimo === 'jogo' && !camEf.efeito);
+  meta('O "GOL!" sai na saída de bola', camEf.visivelNaSaida ? 'ainda na tela na saída' : 'saiu', 'saiu', camEf.visivelNaSaida === false);
+  // a saída de bola, passo a passo (exato), no mesmo gol roteirizado
+  await golRoteirizado(pg, { semente: 5, time: 0 });
+  const saida = await pg.evaluate(() => {
+    const g = window.__golaco, m = g.mundo, golTick = m.golTick;
+    let saidaTick = null;
+    for (let i = 0; i < 400 && saidaTick === null; i++) { g.rodarPassos(1, 'demo'); if (m.partida.estado !== 'gol') saidaTick = m.tick; }
+    return { golTick, saidaTick };
+  });
+  meta('A saída de bola não atrasa (o mesmo tick: PARTIDA.golPausa)', `saída ${saida.saidaTick - saida.golTick} ticks depois do gol`, '150 ticks (2,5 s)', saida.saidaTick - saida.golTick === 150);
+  await pg.waitForTimeout(300);
+  const som2 = await pg.evaluate(() => window.__golaco.estadio.som);
+  const dif = (a, b, k) => (a[k] ?? 0) - (b[k] ?? 0);
+  // gol e chuá: no 1º gol roteirizado (do gol até 0,25 s depois da batida); apito: na saída de bola do 3º
+  const nGol = dif(somGol1, tocados0, 'gol'), nRede = dif(somGol1, tocados0, 'rede'), nApito = dif(somSaida1, somSaida0, 'apito');
+  meta('Som: gol, chuá da rede e apito da saída tocaram', `gol ${nGol} · rede ${nRede} · apito na saída ${nApito}`, '≥ 1 cada (gol, rede, apito)', nGol >= 1 && nRede >= 1 && nApito >= 1);
+  const torc = await pg.evaluate(() => window.__golaco.estadio.emocao);
+  meta('Torcida da casa explodiu no gol', `gols contados ${torc.contagem.gol ?? 0}`, '≥ 1', (torc.contagem.gol ?? 0) >= 1);
+
+  // 5) gol do visitante: a casa cala
+  const golFora = await golRoteirizado(pg, { semente: 5, time: 1 });
+  const fora = await pg.evaluate(() => {
+    const g = window.__golaco;
+    for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    return { agito: g.estadio.emocao.agito, casa: g.estadio.emocao.torcida[0], visit: g.estadio.emocao.torcida[1], niveis: g.estadio.som.niveis };
+  });
+  meta('Gol do visitante: a casa cala, só o setor deles comemora', golFora.ok ? `barulho ${f2(fora.agito)} (laço agitado ${f2(fora.niveis.agito)}); casa lamento ${f2(fora.casa.lamento)}, visitante excita ${f2(fora.visit.excita)}` : 'sem gol',
+    'barulho ≤ 0,15; casa lamenta; visitante comemora', golFora.ok && fora.agito <= 0.15 && fora.casa.lamento > 0.3 && fora.visit.excita > 0.8);
+
+  // 6) treino de condução: a bola entra, o "GOL!" e o efeito da câmera acabam quando ela volta ao pé (1 s)
+  const treino = await pg.evaluate(async () => {
+    const g = window.__golaco;
+    const { criarBola } = await import('./js/bola.js');
+    g.reiniciar({ modo: 'conducao', semente: 5 });
+    for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    const m = g.mundo;
+    m.posse = null;
+    Object.assign(m.bola, criarBola(51.5, 0.5));
+    m.bola.v.x = 9;
+    let golT = null, voltaT = null, depois = null;
+    for (let i = 0; i < 200 && depois == null; i++) {
+      g.relogio.avancar(1000 / 60, { desenhar: false });
+      if (golT == null && document.getElementById('gol-tela').classList.contains('visivel')) golT = g.mundo.tick;
+      if (golT != null && voltaT == null && g.mundo.eventos.some(e => e.tipo === 'recomeco')) {
+        voltaT = g.mundo.tick;
+        depois = { visivel: document.getElementById('gol-tela').classList.contains('visivel'), efeito: g.estadio.efeitoCamera, plano: g.estadio.planoCamera };
+      }
+    }
+    return { golT, voltaT, depois };
+  });
+  meta('Treino de condução: o "GOL!" e a câmera acabam quando a bola volta', treino.depois ? `bola de volta ${treino.voltaT - treino.golT} ticks depois do gol; "GOL!" ${treino.depois.visivel ? 'ainda na tela' : 'saiu'}, câmera ${treino.depois.efeito ? 'com efeito' : 'normal'}` : `sem gol/recomeço (${JSON.stringify(treino)})`,
+    'saiu e normal', treino.depois && !treino.depois.visivel && !treino.depois.efeito);
+
+  // 7) som desligado: ganho 0, contexto suspenso, nada toca, salvo; religado em 50%
+  await pg.evaluate(() => window.__golaco.reiniciar({ modo: 'partida', semente: 5 }));
+  await pg.evaluate(() => window.__golaco.definirSom(false));
+  await pg.waitForTimeout(600);
+  const mudo = await pg.evaluate(() => {
+    const g = window.__golaco;
+    const antes = { ...g.estadio.som.tocados };
+    const pedidos0 = Object.values(g.estadio.emocao.contagem).reduce((a, v) => a + v, 0);
+    g.reiniciar({ modo: 'partida', semente: 6 });
+    g.rodarPassos(1500, 'demo');
+    const s = g.estadio.som;
+    const soma = o => Object.values(o).reduce((a, v) => a + v, 0);
+    return { ganho: s.ganhoMestre, contexto: s.contexto, estado: s.estado, tocou: soma(s.tocados) - soma(antes), pedidos: Object.values(g.estadio.emocao.contagem).reduce((a, v) => a + v, 0) - pedidos0, salvo: JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}').som };
+  });
+  meta('Som desligado: ganho 0, contexto SUSPENSO, nada toca, fica salvo', `ganho ${f2(mudo.ganho)}, contexto ${mudo.contexto}, ${mudo.tocou} sons (de ${mudo.pedidos} pedidos), salvo ${mudo.salvo}`, 'ganho ≤ 0,01, suspended, 0 sons, salvo false',
+    mudo.ganho <= 0.01 && mudo.contexto === 'suspended' && mudo.tocou === 0 && mudo.pedidos > 0 && mudo.salvo === false);
+  // a página aberta já com o som desligado: o gesto não cria contexto e nada baixa (nem depois dos 4 s)
+  const mp3Antes = mp3.length;
+  await pg.reload({ waitUntil: 'load' });
+  await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+  await pg.mouse.click(640, 400);
+  await pg.keyboard.press('ArrowLeft');
+  await pg.waitForTimeout(5500);
+  const desl = await pg.evaluate(() => ({ criados: window.__ctxCriados, estado: window.__golaco.estadio.som?.estado, info: document.getElementById('info-som')?.textContent }));
+  meta('Aberta com o som desligado: o gesto não liga o Web Audio e nada baixa', `${desl.criados} AudioContext, ${mp3.length - mp3Antes} MP3 baixados em 5,5 s, estado ${desl.estado} ("${desl.info}")`, '0, 0, desligado', desl.criados === 0 && mp3.length === mp3Antes && desl.estado === 'desligado');
+  await pg.evaluate(() => { window.__golaco.definirSom(true); window.__golaco.definirVolume(0.5); });
+  await pg.waitForTimeout(800);
+  const volta2 = await pg.evaluate(() => ({ ganho: window.__golaco.estadio.som.ganhoMestre, contexto: window.__golaco.estadio.som.contexto, vol: JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}').volume }));
+  meta('Religado em 50% (salvo)', `ganho ${f2(volta2.ganho)}, contexto ${volta2.contexto}, salvo ${volta2.vol}`, '≈ 0,5, running e 0.5', Math.abs(volta2.ganho - 0.5) < 0.03 && volta2.contexto === 'running' && volta2.vol === 0.5);
+
+  // 9) as contas da GPU = as do JS (o shader de verdade, em float)
+  const gpu = await pg.evaluate(async () => {
+    const TD = await import('./js/render/torcida-dados.js');
+    const RO = await import('./js/render/rede-onda.js');
+    if (!TD.POSE_GLSL) return { erro: 'sem POSE_GLSL (a pose do shader é escrita à mão)' };
+    const cv = document.createElement('canvas');
+    const gl = cv.getContext('webgl2');
+    if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+    const N = 4096;
+    cv.width = N; cv.height = 1;
+    const prog = (frag) => {
+      const sh = (tipo, src) => { const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, frag));
+      gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+      return p;
+    };
+    const texDados = (dados, largura, altura) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, largura, altura, 0, gl.RGBA, gl.FLOAT, dados); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); return t; };
+    const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+    const rodar = (p, entrada, linhas) => {
+      gl.useProgram(p); gl.viewport(0, 0, N, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texDados(entrada, N, linhas)); gl.uniform1i(gl.getUniformLocation(p, 'uEntrada'), 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out); return out;
+    };
+    let semente = 12345;
+    const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+    // pose: (ex, te, la, pa) e (h, h2, org, t) e (animada)
+    const ent = new Float32Array(4 * N * 3);
+    for (let i = 0; i < N; i++) {
+      const r = [rnd(), rnd(), rnd(), rnd()].map(v => (v < 0.15 ? 0 : v));
+      ent.set([r[0], r[1], r[2], r[3]], 4 * i);
+      ent.set([rnd(), rnd(), rnd() < 0.2 ? 1 : 0, rnd() * 30], 4 * (N + i));
+      ent.set([rnd() < 0.8 ? 1 : 0, 0, 0, 0], 4 * (2 * N + i));
+    }
+    const pPose = prog(`#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${TD.POSE_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0), b = texelFetch(uEntrada, ivec2(i, 1), 0), c = texelFetch(uEntrada, ivec2(i, 2), 0);
+  cor = vec4(torcidaPose(a.x, a.y, a.z, a.w, b.x, b.y, b.z, b.w, c.x), 0.0, 1.0); }`);
+    const oPose = rodar(pPose, ent, 3);
+    let poseDif = 0, puloDif = 0;
+    for (let i = 0; i < N; i++) {
+      const a = ent.subarray(4 * i, 4 * i + 4), b = ent.subarray(4 * (N + i), 4 * (N + i) + 4), c = ent[4 * (2 * N + i)];
+      const r = TD.poseDoTorcedor({ excita: a[0], tensao: a[1], lamento: a[2], palmas: a[3] }, b[0], b[1], b[2] > 0.5, b[3], c > 0.5);
+      if (r.pose !== Math.round(oPose[4 * i])) poseDif++;
+      puloDif = Math.max(puloDif, Math.abs(r.pulo - oPose[4 * i + 1]));
+    }
+    // rede: 4 batidas de verdade, pontos dos 8 panos em τ variados
+    const est = RO.criarOndas();
+    const bat = [{ plano: 4, x: 54.5, y: 0.9, z: -1.2, vel: 24, sinal: 1 }, { plano: 7, x: 53.6, y: 1.2, z: 3.66, vel: 12, sinal: 1 }, { plano: 5, x: 53.4, y: 2.44, z: 0.8, vel: 9, sinal: -1 }, { plano: 0, x: -54.5, y: 0.5, z: 2.0, vel: 18, sinal: 1 }];
+    bat.forEach((b, k) => RO.registrarImpacto(est, b, 1 + 0.05 * k));
+    const t = 1.32;
+    const ua = new Float32Array(16), ub = new Float32Array(16);
+    RO.uniformsRede(est, t, ua, ub);
+    const entR = new Float32Array(4 * N);
+    const MX = 52.5, ZL = 3.66, HG = 2.44, PR = 2.0;
+    for (let i = 0; i < N; i++) {
+      const plano = Math.floor(rnd() * 8), s = plano >= 4 ? 1 : -1, k = plano & 3, u = rnd(), v = rnd();
+      let x, y, z;
+      if (k === 0) { x = s * (MX + PR); y = v * HG; z = -ZL + 2 * ZL * u; }
+      else if (k === 1) { x = s * (MX + PR * v); y = HG; z = -ZL + 2 * ZL * u; }
+      else { x = s * (MX + PR * u); y = v * HG; z = k === 2 ? -ZL : ZL; }
+      entR.set([x, y, z, plano], 4 * i);
+    }
+    const pRede = prog(`#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${RO.REDE_GLSL}
+void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
+  float d = redeDesloc(a.xyz, a.w); float f = redeFixo(a.xyz, a.w); cor = vec4(d, f, d * f, 1.0); }`);
+    gl.useProgram(pRede);
+    gl.uniform4fv(gl.getUniformLocation(pRede, 'uRedeA'), ua);
+    gl.uniform4fv(gl.getUniformLocation(pRede, 'uRedeB'), ub);
+    const oRede = rodar(pRede, entR, 1);
+    let redeDif = 0, fixoDif = 0, maxD = 0;
+    for (let i = 0; i < N; i++) {
+      const [x, y, z, plano] = entR.subarray(4 * i, 4 * i + 4);
+      const d = RO.deslocamento(est, plano, x, y, z, t), f = RO.fixo(plano, x, y, z);
+      maxD = Math.max(maxD, Math.abs(d * f));
+      redeDif = Math.max(redeDif, Math.abs(d * f - oRede[4 * i + 2]));
+      fixoDif = Math.max(fixoDif, Math.abs(f - oRede[4 * i + 1]));
+    }
+    return { N, poseDif, puloDif, redeDif, fixoDif, maxD };
+  });
+  meta('GPU = JS: pose da torcida (4096 torcedores sorteados)', gpu.erro ?? `${gpu.poseDif} poses diferentes; pulo difere até ${(gpu.puloDif * 1000).toFixed(2)} mm`, '≤ 0,2% (limiar no float) e ≤ 1 mm', !gpu.erro && gpu.poseDif <= 0.002 * gpu.N && gpu.puloDif <= 0.001);
+  meta('GPU = JS: deslocamento da rede (4096 pontos dos 8 panos, 4 batidas)', gpu.erro ?? `difere até ${(gpu.redeDif * 1000).toFixed(3)} mm (bolsa até ${f2(gpu.maxD)} m); fixação até ${gpu.fixoDif.toExponential(1)}`, '≤ 0,1 mm (fixação ≤ 0,001)', !gpu.erro && gpu.redeDif <= 1e-4 && gpu.fixoDif <= 1e-3 && gpu.maxD > 0.1);
+  meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+} catch (e) {
+  meta('Execução', e.message, 'sem exceção', false);
+} finally {
+  await navegador.close();
+}
+
+// 8) "GOL!" no celular: não encosta no analógico, nos botões (ataque e defesa), no placar, no minimapa nem no menu
+try {
+  for (const [w, h] of [[568, 320], [667, 375], [844, 390]]) {
+    const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
+    try {
+      await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&semente=5&prints=1`, { waitUntil: 'load' });
+      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+      const r = await pagina.evaluate(async () => {
+        const g = window.__golaco;
+        g.mostrarEvento({ tipo: 'gol', time: 0 }, { fixo: true });
+        for (const a of document.getAnimations()) { a.currentTime = 2000; a.pause(); }
+        await new Promise(ok => setTimeout(ok, 200));
+        const rr = el => { const b = el.getBoundingClientRect(); return { x0: b.left, y0: b.top, x1: b.right, y1: b.bottom }; };
+        const partes = ['.gol-palavra'].map(s => document.querySelector(s)).filter(el => el && el.getBoundingClientRect().width > 0);
+        const cruza = [];
+        for (const fase of ['ataque', 'defesa']) {
+          const tq = document.getElementById('toque');
+          tq.classList.toggle('fase-ataque', fase === 'ataque'); tq.classList.toggle('fase-defesa', fase === 'defesa');
+          const alvos = [...document.querySelectorAll('.toque .btn-toque, #analogico .analogico-base, .placar, #minimapa, .btn-menu')]
+            .filter(b => { const s = getComputedStyle(b); const q = b.getBoundingClientRect(); return s.display !== 'none' && s.visibility !== 'hidden' && q.width > 0 && !b.closest('[hidden]'); });
+          for (const p of partes) for (const b of alvos) {
+            const a = rr(p), c = rr(b);
+            const ix = Math.min(a.x1, c.x1) - Math.max(a.x0, c.x0), iy = Math.min(a.y1, c.y1) - Math.max(a.y0, c.y0);
+            if (ix > 1 && iy > 1) cruza.push(`${p.className || p.id} × ${(b.id || b.className).slice(0, 20)} (${fase}, ${Math.round(ix)}×${Math.round(iy)} px)`);
+          }
+        }
+        return { cruza, texto: document.getElementById('gol-tela').textContent.replace(/\s+/g, ' ').trim() };
+      });
+      meta(`"GOL!" no celular ${w}×${h} longe dos controles`, r.cruza.length ? r.cruza.slice(0, 4).join('; ') : `nada encosta ("${r.texto}")`, 'nada encosta', r.cruza.length === 0 && errosCel.length === 0);
+    } finally { await nav.close(); }
+  }
+} catch (e) {
+  meta('Execução (celular)', e.message, 'sem exceção', false);
+}
+await srv.fechar();
+
+const larg = Math.max(...res.map(r => r.nome.length));
+for (const r of res) console.log(`${r.ok ? 'PASSOU  ' : 'REPROVOU'}  ${r.nome.padEnd(larg)}  ${r.medido}   (alvo: ${r.alvo})`);
+const ok = res.length > 0 && res.every(r => r.ok);
+console.log(ok ? '\nteste-estadio: PASSOU' : '\nteste-estadio: REPROVOU');
+process.exit(ok ? 0 : 1);

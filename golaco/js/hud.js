@@ -8,40 +8,22 @@
 
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
+// Sem narração na tela (dono, 10/10: "não quero narração em cima"): os lances (passe, chute,
+// defesa, troca, lateral, escanteio, bola fora...) não viram texto — o jogo mostra a jogada, não a
+// descreve. Ficam só os avisos de COMANDO (menu, treino, edição do time); o gol tem o efeito próprio.
 const TEXTO_EVENTO = {
-  fora: { t: 'Bola fora', ms: 1300, prio: 0 },
-  roubada: { t: 'Roubada!', ms: 1300 },
-  perda: { t: 'Bola perdida', ms: 1300 },
   maquina: { t: 'Máquina: passe a caminho', ms: 1200 },
   marcadorLigado: { t: 'Marcador de treino ligado', ms: 1400 },
   marcadorDesligado: { t: 'Marcador de treino desligado', ms: 1400 },
   recomecar: { t: 'Bola no pé', ms: 900 },
-  passe: { t: 'Passe', ms: 900 },
-  chute: { t: 'Chute', ms: 1100, forte: true },
-  cabeceio: { t: 'Cabeceio', ms: 1100, forte: true },
-  defesa: { t: 'Defesa do goleiro', ms: 1500, forte: true },
-  repor: { t: 'Bola na mão: PASSE ou LANÇAMENTO', ms: 2600, forte: true },
-  troca: { t: 'Troca de jogador', ms: 800 },
-  saidaGoleiro: { t: 'Goleiro saiu do gol', ms: 1200 },
-  recomeco: { t: 'Recomeço da jogada', ms: 1000 },
   semMarcador: { t: 'Marcador só no treino de condução', ms: 1400 },
   soTreino: { t: 'Só nos treinos (menu, Modo de jogo)', ms: 1600 },
-  // partida (Etapa 3)
-  saida: { t: 'Saída de bola', ms: 1100, prio: 0 },
-  lateral: { t: 'Lateral', ms: 1100, prio: 0 },
-  escanteio: { t: 'Escanteio', ms: 1300, forte: true, prio: 0 },
-  tiroDeMeta: { t: 'Tiro de meta', ms: 1100, prio: 0 },
+  // partida (Etapa 3): respostas à edição do time feita na pausa
   timeEditado: { t: 'Time atualizado', ms: 1600, forte: true, prio: 2 },
   edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
   substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
-// subtipos (o tipo do passe/chute vem no evento ou em m.voo.tipo)
-const NOME_ACAO = {
-  passe: 'Passe', enfiada: 'Enfiada', enfiadaAlta: 'Enfiada pelo alto', lancamento: 'Lançamento',
-  cruzamento: 'Cruzamento', chute: 'Chute', colocado: 'Chute colocado', cavadinha: 'Cavadinha', cabeceio: 'Cabeceio',
-};
-const NOME_DEFESA = { encaixe: 'Defesa: encaixou', espalmada: 'Defesa: espalmou', pegou: 'O goleiro pegou' };
 // rótulo da barra de força por tipo de carga
 const ROTULO_CARGA = {
   passe: 'PASSE', enfiada: 'ENFIADA', enfiadaAlta: 'ENFIADA ALTA', lancamento: 'LANÇAMENTO', cruzamento: 'CRUZAMENTO',
@@ -62,7 +44,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
 /**
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
- * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao).
+ * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
+ * desligado), volume (0–1).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -70,7 +53,8 @@ export function criarHud(opc) {
     vel: $('vel'), modo: $('modo'), posicao: $('posicao'), aviso: $('aviso'), qps: $('qps'), menu: $('menu'), ajuda: $('ajuda'),
     carregando: $('carregando'), msg: $('carregando-msg'), marcador: $('estado-marcador'), infoQ: $('info-qualidade'),
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
-    gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'), golQuem: $('gol-quem'),
+    gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'),
+    somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
     mapa: $('minimapa'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
@@ -81,6 +65,8 @@ export function criarHud(opc) {
   let ultimoHud = -1;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
   let timerAviso = null, timerGol = null;
+  // o "GOL!" dura o mesmo que a animação do CSS (2,4 s: some antes da saída de bola, PARTIDA.golPausa 2,5 s)
+  const golDuracaoMs = 2400;
   let prints = false;
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
@@ -117,6 +103,7 @@ export function criarHud(opc) {
     rotulo();
   }
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
+  el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -132,7 +119,8 @@ export function criarHud(opc) {
   function encostaTopo() {
     const [pl, pa, mp] = caixasTopo.map(e => e?.getBoundingClientRect());
     if (!pl || !pa || !mp || mp.width === 0) return false;
-    const enc = (a, b) => a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
+    // caixa escondida (o painel some na partida) não encosta em nada
+    const enc = (a, b) => a.width > 0 && b.width > 0 && a.left < b.right + 6 && b.left < a.right + 6 && a.top < b.bottom + 4 && b.top < a.bottom + 4;
     // o botão de menu também conta: no celular em pé, o placar com o relógio da partida chega nele
     // (a largura depende da fonte do aparelho — no CI encostava e aqui não)
     const mn = $('btn-menu')?.getBoundingClientRect();
@@ -173,6 +161,9 @@ export function criarHud(opc) {
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
   function aplicarModoNoMenu() {
     const partida = modoAtual === 'partida';
+    // na partida o topo fica só com placar, minimapa e menu (sem o painel "Conduzindo"/posição/km/h:
+    // é narração na tela); nos treinos o painel continua (é o retorno do exercício)
+    raiz.classList.toggle('em-partida', partida);
     document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = b.dataset.so !== (partida ? 'partida' : 'treino'); });
     // marcador de treino só no treino de condução (no de ataque a defesa já marca)
     if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
@@ -359,31 +350,31 @@ export function criarHud(opc) {
       el.carga.classList.add('visivel');
       el.carga.classList.toggle('cheia', c.forca >= 0.999);
     },
-    /** Evento da simulação (tipo ou o objeto do evento) → aviso curto; gol → "GOL!" grande. */
+    /** Evento (tipo ou o objeto do evento): gol → "GOL!" grande; comando → aviso curto; lance → nada. */
     evento(ev, extra = {}, forcar = false) {
       if (prints && !forcar) return;
       const tipo = typeof ev === 'string' ? ev : ev?.tipo;
       if (tipo === 'gol') {
-        const t = typeof ev === 'object' ? ev.time : undefined;
-        if (el.golQuem) el.golQuem.textContent = t === 0 || t === 1 ? times[t].nome : '';
+        // só o efeito: "GOL!", a faixa e o placar pulsando — autor e minuto escritos seriam narração
+        // na tela (dono, 10/10: "não quero narração em cima")
+        // reinicia a animação (gol logo depois de outro, ou o print forçado)
+        el.golTela?.classList.remove('visivel');
+        // extra.fixo (prints de conferência): o aviso FICA na tela — sem o apagar do fim da animação nem o
+        // tempo (antes só o tempo saía e a animação apagava em 2,4 s; contraprova M10)
+        el.golTela?.classList.toggle('fixo', !!extra.fixo);
+        void el.golTela?.offsetWidth;
         el.golTela?.classList.add('visivel');
         clearTimeout(timerGol);
-        timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, 2000);
+        if (!extra.fixo) timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, golDuracaoMs);
+        // placar pulsando
+        const pl = el.golTela ? $('hud')?.querySelector('.placar') : null;
+        if (pl) { pl.classList.remove('gol-pulso'); void pl.offsetWidth; pl.classList.add('gol-pulso'); }
         el.aviso.classList.remove('visivel');
         return;
       }
       const d = TEXTO_EVENTO[tipo];
       if (!d) return;
-      let texto = extra.texto ?? d.t;
-      if (typeof ev === 'object' && ev && !extra.texto) {
-        if (tipo === 'passe' || tipo === 'chute') {
-          const sub = ev.acao ?? ev.subtipo ?? ev.modo ?? ev.estilo ?? extra.tipoVoo;
-          if (NOME_ACAO[sub]) texto = NOME_ACAO[sub];
-        } else if (tipo === 'defesa') {
-          const sub = ev.modo ?? ev.subtipo ?? ev.estilo ?? ev.como;
-          if (NOME_DEFESA[sub]) texto = NOME_DEFESA[sub];
-        }
-      }
+      const texto = extra.texto ?? d.t;
       mostrarAviso(texto, d.ms, d.forte ? 'forte' : '', d.prio ?? 1, tipo);
     },
     get menuAberto() { return !el.menu.hidden; },
@@ -474,6 +465,16 @@ export function criarHud(opc) {
         el.tam.value = String(Math.round(e.toqueTamanho * 100));
         el.saidaTam.textContent = `${Math.round(e.toqueTamanho * 100)}%`;
       }
+      if (typeof e.som === 'boolean') marcarGrupo('som', e.som ? 'ligado' : 'desligado');
+      if (typeof e.volume === 'number' && el.somVol) {
+        el.somVol.value = String(Math.round(e.volume * 100));
+        el.saidaVol.textContent = `${Math.round(e.volume * 100)}%`;
+      }
+      if (typeof e.somEstado === 'string' && el.infoSom) {
+        el.infoSom.textContent = e.somEstado === 'sem-audio' ? 'Este navegador não tem Web Audio: sem som.'
+          : e.somEstado === 'desligado' ? 'Som desligado'
+            : e.somEstado === 'rodando' ? 'Torcida, apito e rede' : 'Toque na tela ou aperte uma tecla para o som começar';
+      }
       if (typeof e.toqueOpacidade === 'number' && el.opa) {
         el.opa.value = String(Math.round(e.toqueOpacidade * 100));
         el.saidaOpa.textContent = `${Math.round(e.toqueOpacidade * 100)}%`;
@@ -492,6 +493,11 @@ export function criarHud(opc) {
       el.carregando.classList.remove('sumir');
       el.carregando.classList.add('erro');
       if (el.msg) el.msg.textContent = msg;
+    },
+    /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
+    esconderGol() {
+      clearTimeout(timerGol);
+      el.golTela?.classList.remove('visivel', 'fixo');
     },
     modoPrints() {
       prints = true;
