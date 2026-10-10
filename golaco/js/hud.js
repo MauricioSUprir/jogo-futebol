@@ -383,10 +383,12 @@ export function criarHud(opc) {
         // reinicia a animação (gol logo depois de outro, ou o print forçado)
         el.golTela?.classList.remove('visivel');
         el.golTela?.classList.toggle('contra', !!g.contra);
+        // extra.fixo (prints de conferência): o aviso FICA na tela — sem o apagar do fim da animação nem o
+        // tempo (antes só o tempo saía e a animação apagava em 2,4 s; contraprova M10)
+        el.golTela?.classList.toggle('fixo', !!extra.fixo);
         void el.golTela?.offsetWidth;
         el.golTela?.classList.add('visivel');
         clearTimeout(timerGol);
-        // (extra.fixo: os prints de conferência seguram o aviso na tela)
         if (!extra.fixo) timerGol = setTimeout(() => { el.golTela?.classList.remove('visivel'); }, golDuracaoMs);
         // placar pulsando
         const pl = el.golTela ? $('hud')?.querySelector('.placar') : null;
@@ -503,7 +505,8 @@ export function criarHud(opc) {
       }
       if (typeof e.somEstado === 'string' && el.infoSom) {
         el.infoSom.textContent = e.somEstado === 'sem-audio' ? 'Este navegador não tem Web Audio: sem som.'
-          : e.somEstado === 'rodando' ? 'Torcida, apito e rede' : 'Toque na tela ou aperte uma tecla para o som começar';
+          : e.somEstado === 'desligado' ? 'Som desligado'
+            : e.somEstado === 'rodando' ? 'Torcida, apito e rede' : 'Toque na tela ou aperte uma tecla para o som começar';
       }
       if (typeof e.toqueOpacidade === 'number' && el.opa) {
         el.opa.value = String(Math.round(e.toqueOpacidade * 100));
@@ -523,6 +526,11 @@ export function criarHud(opc) {
       el.carregando.classList.remove('sumir');
       el.carregando.classList.add('erro');
       if (el.msg) el.msg.textContent = msg;
+    },
+    /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
+    esconderGol() {
+      clearTimeout(timerGol);
+      el.golTela?.classList.remove('visivel', 'fixo');
     },
     modoPrints() {
       prints = true;

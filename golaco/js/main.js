@@ -19,8 +19,11 @@
 // batidas na rede (rede-onda.js) — a rede estufa no shader e a bola DESENHADA vai junto no bojo; os
 // eventos do passo e a posição da bola alimentam o ânimo da torcida (emocao.js), que move a torcida 3D
 // (torcida.js) e o som (som.js, Web Audio, liga no primeiro gesto). Gol: "GOL!" com autor e minuto
-// (hud.js), placar pulsando e zoom/tremor leve da câmera (camera.js efeitoGol). Relógio do estádio:
-// passosTotais (não volta a zero ao trocar de mundo), parado na pausa.
+// (hud.js; o autor de verdade pelos eventos de toque, autor-gol.js), placar pulsando e, na partida, CORTE para a
+// câmera do gol (camera.js CAMERA_GOL: a rede estufando e a torcida atrás do gol) até a saída de bola; no treino,
+// zoom/tremor leve que acaba no recomeço. Intervalo e fim: plano geral do estádio. O 'saida' do começo da partida
+// (criado antes do 1º passo) também passa pela torcida e pelo som (apito pendente até o 1º gesto). Relógio do
+// estádio: passosTotais (não volta a zero ao trocar de mundo), parado na pausa.
 //
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
@@ -46,6 +49,7 @@ import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
+import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo } from './partida.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
@@ -128,6 +132,7 @@ let alfa = 0;
 let passosTotais = 0;
 const ondas = criarOndas();
 const emocao = criarEmocao();
+const autorGol = criarAutorGol();
 const _p0 = { x: 0, y: 0, z: 0 }, _v0 = { x: 0, y: 0, z: 0 };
 const _impactos = [];
 const _ctxEmocao = { t: 0, timeDe: id => timeDe(id), bola: null, ataca: null };
@@ -254,15 +259,24 @@ function atualizarFase() {
 // "Bola perdida" de um zagueiro adversário, "Goleiro saiu do gol" do goleiro deles)
 const SO_MEU_TIME = new Set(['passe', 'troca', 'perda', 'saidaGoleiro']);
 const camisaDe = id => fichaDe(id)?.camisa ?? String(id);
-/** Autor (número e nome do elenco), minuto e gol contra, para o "GOL!". */
-function dadosDoGol(ev) {
-  const f = ev.autor != null ? fichaDe(ev.autor) : null;
-  const tAutor = ev.autor != null ? timeDe(ev.autor) : null;
+/**
+ * Autor (número e nome do elenco), minuto e gol contra, para o "GOL!". O autor é o de verdade (autor-gol.js:
+ * último toque pelos eventos, desvio conta para quem chutou); sem ele (aviso forçado dos prints), ev.autor.
+ */
+function dadosDoGol(ev, deVerdade = null) {
+  const id = deVerdade ? deVerdade.id : (ev.autor ?? null);
+  const f = id != null ? fichaDe(id) : null;
+  const tAutor = id != null ? timeDe(id) : null;
   return {
-    numero: f ? f.num : null, nome: f ? f.nome : null,
+    id, numero: f ? f.num : null, nome: f ? f.nome : null,
     minuto: mundo.partida ? minutoDeJogo(mundo) : null,
     contra: tAutor != null && ev.time != null && tAutor !== ev.time,
   };
+}
+/** Fim dos efeitos do gol (saída de bola, recomeço do treino): o "GOL!" sai e a câmera de jogo volta. */
+function encerrarEfeitosGol() {
+  if (cam && cam.efeitoAtivo) { cam.encerrarGol(); corteCamera = true; }
+  hud.esconderGol();
 }
 const textoPlacar = () => {
   const t = hud.times;
@@ -272,8 +286,9 @@ function tratarEvento(ev) {
   const t = ev.tipo;
   // gol: "GOL!" com o autor (do elenco fictício) e o minuto, placar pulsando e o efeito da câmera
   if (t === 'gol') {
-    hud.evento(ev, { gol: dadosDoGol(ev) });
-    if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, 0);
+    hud.evento(ev, { gol: dadosDoGol(ev, autorGol.gol.ativo && autorGol.gol.tick === mundo.tick ? autorGol.gol : null) });
+    // partida: corte para a câmera do gol (até a saída); treino: zoom/tremor leve (até o recomeço)
+    if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     return;
   }
   // a troca automática no passe já aparece como o passe; a troca no jogo aéreo aparece no anel
@@ -281,15 +296,20 @@ function tratarEvento(ev) {
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
-  if (t === 'recomeco' || t === 'saida') { corteCamera = true; kmhVisto = 0; }
-  // partida: intervalo, fim, edição do time e substituição
+  // (o "GOL!" e a câmera do gol acabam aqui: no treino a bola volta em 1 s — contraprova M8)
+  if (t === 'recomeco' || t === 'saida') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
+  // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio)
   if (t === 'intervalo') {
     hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
+    encerrarEfeitosGol();
+    if (cam) cam.planoGeral(true);
     return;
   }
   if (t === 'fimDeJogo') {
     hud.faixa({ titulo: 'Fim de jogo', placar: textoPlacar(), botao: true });
     hud.definirEstado({ fim: true });
+    encerrarEfeitosGol();
+    if (cam) cam.planoGeral(true);
     return;
   }
   if (t === 'timeEditado') {
@@ -324,6 +344,8 @@ function tratarEvento(ev) {
 function estadioPasso(eventos) {
   const b = mundo.bola;
   const tFim = passosTotais * PASSO;
+  // autor de verdade do gol (último toque pelos eventos; tratarEvento usa no "GOL!")
+  autorEventos(autorGol, eventos, mundo.tick, timeDe);
   const n = detectarImpactos(_p0, _v0, b.p, b.v, _impactos);
   _ctxEmocao.t = tFim; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
   for (let k = 0; k < n; k++) {
@@ -335,6 +357,21 @@ function estadioPasso(eventos) {
   p.t = tFim; p.bola = b.p; p.ataca = mundo.ataca; p.estado = mundo.partida?.estado ?? null;
   p.posseTime = mundo.posse != null ? timeDe(mundo.posse) : (mundo.voo ? (mundo.voo.time ?? timeDe(mundo.voo.de)) : (mundo.partida?.ultimoTime ?? null));
   emocaoPasso(emocao, p, PASSO);
+  const ds = consumirDisparos(emocao);
+  if (som) for (const d of ds) som.tocar(d);
+}
+
+/**
+ * Eventos que o mundo já traz ANTES do 1º passo (criarPartida deixa o 'saida' do começo): o 1º passo os
+ * limpa, então passam aqui pela torcida e pelo som — o apito do início (contraprova I5; sem gesto ainda, o
+ * som.js guarda o apito pendente até o som ser liberado).
+ */
+function eventosIniciais() {
+  const evs = mundo.eventos ?? [];
+  if (!evs.length) return;
+  const b = mundo.bola;
+  _ctxEmocao.t = passosTotais * PASSO; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
+  for (const ev of evs) emocaoEvento(emocao, ev, _ctxEmocao);
   const ds = consumirDisparos(emocao);
   if (som) for (const d of ds) som.tocar(d);
 }
@@ -750,6 +787,8 @@ async function iniciar() {
     som.iniciar();
   }
   hud.definirEstado({ som: somLigado, volume: som ? som.volume : (volume ?? 0.8), somEstado: som ? som.estado : 'sem-contexto' });
+  // o 'saida' do começo da partida (o apito do início fica pendente até o primeiro gesto)
+  eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
   hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
@@ -779,6 +818,9 @@ function trocarMundo(m) {
   kitCache.clear();
   limparOndas(ondas);
   zerarEmocao(emocao);
+  zerarAutorGol(autorGol);
+  if (cam) { cam.encerrarGol(); cam.planoGeral(false); }
+  hud.esconderGol();
   if (editor.aberto) editor.fechar();
   iniciarEstados();
   corteCamera = true;
@@ -786,6 +828,8 @@ function trocarMundo(m) {
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
+  // apito do início (Reiniciar partida, troca de modo): o 'saida' que criarPartida deixou
+  eventosIniciais();
   return hashMundo(mundo);
 }
 
@@ -957,11 +1001,21 @@ const api = {
     get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
     redeOnda(v) { redeLigada = !!v; },
+    /** Só a troca de qualidade da torcida (ms): quantos desenhar e a animação, sem remontar nada. */
+    trocarTorcida(q) { const t0 = performance.now(); torcida.definirQualidade(q); const ms = performance.now() - t0; torcida.definirQualidade(qAtual); return ms; },
     /** Mostra/esconde a torcida (conferência de pixels nos testes). */
     mostrarTorcida(v) { if (torcida?.mesh) torcida.mesh.visible = !!v; },
     get bolaDesenhada() { return { ..._bpDes }; },
     get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
+    /** 'fechado' (câmera do gol da partida), 'leve' (treino) ou null; e o plano geral (intervalo/fim). */
+    get planoCamera() { return cam ? (cam.planoGol ?? (cam.geral ? 'geral' : 'jogo')) : null; },
+    /** O último autor de gol de verdade (autor-gol.js) e o que o "GOL!" mostrou. */
+    get autorGol() { return autorGol.gol.ativo ? { ...autorGol.gol } : null; },
+    /** O último toque de verdade (pelos eventos; o autor de um gol que saísse agora). */
+    get ultimoToque() { return autorGol.ultimo.ativo ? { ...autorGol.ultimo } : null; },
     baixarSons() { return som ? som.baixar() : null; },
+    /** Envelope de uma gravação decodificada (som.js analisar): o grito do gol sai na hora? */
+    analisarSom(nome) { return som ? som.analisar(nome) : null; },
   },
   definirSom(v) { comando('som', v ? 'ligado' : 'desligado'); },
   definirVolume(v) { comando('volume', v); },

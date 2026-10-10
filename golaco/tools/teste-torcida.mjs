@@ -93,6 +93,38 @@ if (TD) {
   const R2 = gerarTorcida('alta', mascara);
   const igual = R2.n === R.n && R2.pos.every((v, i) => v === R.pos[i]) && R2.camisa.every((v, i) => v === R.camisa[i]) && R2.info.every((v, i) => v === R.info[i]);
   reg('Mesma torcida em toda abertura (semente fixa)', igual ? 'igual' : 'diferente', 'igual', igual);
+  // contraprova M4: as qualidades são PREFIXOS umas das outras em cada arquibancada (montar uma vez; trocar a
+  // qualidade = quantos desenhar) e, no nível, da fileira da frente para a de cima (desenho da frente para trás)
+  if (TD.gerarTorcidaNiveis) {
+    const t0 = performance.now();
+    const NV = TD.gerarTorcidaNiveis(mascara);
+    const ms = performance.now() - t0;
+    const chave = (d, i) => `${d.pos.subarray(4 * i, 4 * i + 4).join(',')}|${d.camisa.subarray(4 * i, 4 * i + 4).join(',')}|${d.info.subarray(4 * i, 4 * i + 4).join(',')}`;
+    let prefixoOk = true, totais = [];
+    for (const q of ['baixa', 'media', 'alta']) {
+      const conj = new Set();
+      for (let i = 0; i < Q[q].n; i++) conj.add(chave(Q[q], i));
+      let k = 0;
+      for (let setor = 0; setor < 3; setor++) {
+        const f = NV.faixas[setor], m = TD.quantosNoSetor(NV, setor, q);
+        for (let i = f.inicio; i < f.inicio + m; i++) if (!conj.has(chave(NV, i))) prefixoOk = false;
+        k += m;
+      }
+      if (k !== Q[q].n) prefixoOk = false;
+      totais.push(k);
+    }
+    let ordemOk = true;
+    for (let setor = 0; setor < 3; setor++) {
+      const f = NV.faixas[setor];
+      let fim = f.inicio;
+      for (let v = 0; v < 3; v++) {
+        // dentro do nível: y (altura do degrau) nunca desce (frente → cima)
+        for (let i = fim + 1; i < fim + f.porNivel[v]; i++) if (NV.pos[4 * i + 1] < NV.pos[4 * (i - 1) + 1] - 1e-4 || NV.nivel[i] !== v) ordemOk = false;
+        fim += f.porNivel[v];
+      }
+    }
+    reg('Qualidades são prefixos (montar uma vez, trocar = quantos desenhar)', `${totais.join(' · ')} torcedores; ${prefixoOk ? 'os mesmos de cada qualidade' : 'DIFERENTES'}; ordem frente → cima ${ordemOk ? 'sim' : 'não'}; montar tudo ${fmt(ms, 0)} ms`, 'prefixos iguais e em ordem', prefixoOk && ordemOk);
+  } else reg('Qualidades são prefixos (montar uma vez, trocar = quantos desenhar)', 'não (cada qualidade remonta a torcida)', 'prefixos', false);
 
   // atlas
   const at = atlasTorcida(64, 128);
@@ -113,6 +145,19 @@ if (TD) {
   reg('Atlas: braços para cima no gol', `V ${fmt(topo[POSE.BRACOS_V], 2)} m · um braço ${fmt(topo[POSE.UM_BRACO], 2)} · cachecol ${fmt(topo[POSE.CACHECOL], 2)}`, '≥ 1,95 m', Math.min(topo[POSE.BRACOS_V], topo[POSE.UM_BRACO], topo[POSE.CACHECOL]) >= 1.95);
   reg('Atlas: as 8 poses desenhadas', cobertura.join(' · ') + ' px', 'todas ≥ 600 px', cobertura.every(c => c >= 600));
   reg('Atlas: pesos de cor ≤ cobertura (mipmap certo)', `excesso máx ${pesoMaior}`, '≤ 2 (arredondamento)', pesoMaior <= 2);
+  // contraprova M3: o quadro de cada torcedor encolhe para a caixa da pose — nada da figura fica de fora dela
+  if (TD.CAIXA_POSE) {
+    let fora = 0, area = 0;
+    for (let p = 0; p < T.quadros; p++) {
+      const [w, h] = TD.CAIXA_POSE[p];
+      area += w * h / T.quadros;
+      for (let r = 0; r < H; r++) for (let c = 0; c < 64; c++) {
+        const a = at.dados[(r * W + p * 64 + c) * 4 + 3];
+        if (a > 8 && (Math.abs((c + 0.5) / 64 - 0.5) > w / 2 || (r + 0.5) / H > h)) fora++;
+      }
+    }
+    reg('Quadro do torcedor na medida da pose (menos pixels descartados)', `${fora} px da figura fora da caixa; área média ${fmt(100 * area, 0)}% do quadro cheio (sentado ${fmt(100 * TD.CAIXA_POSE[0][0] * TD.CAIXA_POSE[0][1], 0)}%)`, '0 px fora; área < 75%', fora === 0 && area < 0.75);
+  } else reg('Quadro do torcedor na medida da pose (menos pixels descartados)', 'quadro cheio (1,1 × 2,2 m) em toda pose', 'caixa por pose', false);
 
   // C) regra da pose
   const amostra = (niv, org = false, t = 0.37) => {
@@ -181,6 +226,19 @@ if (EM) {
     reg('Gol do visitante: o setor deles explode, a casa lamenta', `excita visitante ${fmt(e.torcida[1].excita, 2)}, lamento casa ${fmt(e.torcida[0].lamento, 2)}, disparo ${consumirDisparos(e).map(x => `${x.tipo}:${x.grupo}`)}`,
       '1, 1, gol:1', e.torcida[1].excita === 1 && e.torcida[0].lamento === 1);
   }
+  // contraprova I4: no gol do visitante o estádio da casa (87,6% da torcida) CALA — o barulho geral cai; no gol da
+  // casa vai ao máximo. Os dois depois de 10 s de bola no meio-campo, medido 1,5 s depois do gol.
+  {
+    const nivel = time => {
+      const e = criarEmocao();
+      const t = roda(e, 10, { x: 0, z: 0 }, 0, 0);
+      emocaoEvento(e, { tipo: 'gol', time, autor: time ? 109 : 9 }, ctx(t, { x: time ? -53 : 53, z: 0 }));
+      roda(e, 1.5, { x: time ? -53 : 53, z: 0 }, null, t, 'gol');
+      return e.agito;
+    };
+    const casa = nivel(0), fora = nivel(1);
+    reg('Gol do visitante: a casa cala (barulho 1,5 s depois do gol)', `gol da casa ${fmt(casa, 2)} · gol do visitante ${fmt(fora, 2)}`, 'casa ≥ 0,9; visitante ≤ 0,15', casa >= 0.9 && fora <= 0.15);
+  }
   // chance perdida: chute de 16 m e defesa
   {
     const e = criarEmocao();
@@ -220,6 +278,34 @@ if (EM) {
     const e = criarEmocao();
     for (let i = 0; i < 50; i++) emocaoEvento(e, { tipo: 'redeImpacto', vel: 20 }, ctx(i, { x: 54, z: 0 }));
     reg('Fila de sons limitada (nada acumula com o som desligado)', `${e.disparos.length} na fila`, `≤ ${EMOCAO.maxDisparos}`, e.disparos.length <= EMOCAO.maxDisparos);
+  }
+}
+
+// D) autor do gol (contraprova M5): o último toque DE VERDADE pelos eventos (condução e domínio contam); desvio
+// e defesa do adversário depois do chute de quem marcou contam para quem chutou
+{
+  const AG = await imp('render/autor-gol.js');
+  if (!AG) reg('Autor do gol pelo último toque de verdade (render/autor-gol.js)', 'não existe (ev.autor = m.ultimoToque: condução não conta)', 'existe', false);
+  else {
+    const timeDe = id => (id == null ? null : id >= 100 ? 1 : 0);
+    const caso = passos => {
+      const est = AG.criarAutorGol();
+      let tick = 0;
+      for (const evs of passos) AG.autorEventos(est, evs, ++tick, timeDe);
+      return est.gol.ativo ? { id: est.gol.id, contra: est.gol.contra, desvio: est.gol.desvio } : null;
+    };
+    const CASOS = [
+      // o caso da contraprova: passe do 7 do Golaço, condução do 106 do Ventania, a bola entra no gol do Ventania
+      { nome: 'condução do adversário depois do passe → gol contra dele', passos: [[{ tipo: 'passe', id: 7 }], [{ tipo: 'toque', id: 106 }], [{ tipo: 'toque', id: 106 }], [{ tipo: 'gol', time: 0, autor: 7 }]], id: 106, contra: true },
+      { nome: 'chute e o goleiro espalma para dentro → gol de quem chutou', passos: [[{ tipo: 'toque', id: 9 }, { tipo: 'chute', id: 9 }], [{ tipo: 'defesa', id: 101, modo: 'espalmada' }], [{ tipo: 'gol', time: 0, autor: 101 }]], id: 9, contra: false },
+      { nome: 'chute desviado no corpo do zagueiro → gol de quem chutou', passos: [[{ tipo: 'chute', id: 10 }], [{ tipo: 'bateuCorpo', id: 104 }], [{ tipo: 'gol', time: 0, autor: 10 }]], id: 10, contra: false },
+      { nome: 'chute, o zagueiro domina e conduz para o próprio gol → gol contra', passos: [[{ tipo: 'chute', id: 10 }], [{ tipo: 'toque', id: 104, modo: 'dominio' }], [{ tipo: 'toque', id: 104 }], [{ tipo: 'gol', time: 0, autor: 10 }]], id: 104, contra: true },
+      { nome: 'dividida perdida não toca na bola', passos: [[{ tipo: 'toque', id: 9 }], [{ tipo: 'dividida', id: 103, ganhou: false }], [{ tipo: 'chute', id: 9 }], [{ tipo: 'gol', time: 0, autor: 9 }]], id: 9, contra: false },
+      { nome: 'cabeceio do visitante → gol dele', passos: [[{ tipo: 'passe', id: 108 }], [{ tipo: 'cabeceio', id: 109 }], [{ tipo: 'gol', time: 1, autor: 109 }]], id: 109, contra: false },
+    ];
+    const erros = [];
+    for (const c of CASOS) { const r = caso(c.passos); if (!r || r.id !== c.id || r.contra !== c.contra) erros.push(`${c.nome}: ${JSON.stringify(r)}`); }
+    reg('Autor do gol pelo último toque de verdade (6 lances)', erros.length ? erros.join(' | ') : `os ${CASOS.length} certos (condução conta; desvio/defesa → quem chutou)`, '6 certos', erros.length === 0);
   }
 }
 

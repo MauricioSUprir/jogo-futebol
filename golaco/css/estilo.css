@@ -129,12 +129,13 @@ html.noite .vinheta { display: block; }
 html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
 
 /* GOL! (efeito do gol, 2,4 s): faixa verde que corta a tela na diagonal, "GOL!" que bate grande e
-   treme, o autor (número + nome) e o time com o minuto. Entra 0,3 s DEPOIS do gol e no terço de baixo da
-   tela (a rede estufando na boca do gol — no meio do quadro — aparece antes e sem nada na frente). Nada
-   clicável (os controles seguem livres) e some antes da saída de bola. Com "reduzir movimento": só
-   aparece e some. */
+   treme, o autor (número + nome) e o time com o minuto. Entra 0,3 s DEPOIS do gol e no terço de CIMA da
+   tela, por cima da torcida: na câmera do gol (camera.js CAMERA_GOL) a boca do gol e a rede estufando
+   ficam do meio para baixo e aparecem sem nada na frente; no celular, longe do analógico e dos botões
+   (contraprova M2: em 568–844 px de largura o texto ficava embaixo do CORRER/PASSE). Nada clicável (os
+   controles seguem livres) e some antes da saída de bola. Com "reduzir movimento": só aparece e some. */
 .gol-tela {
-  position: absolute; left: 50%; top: 70%; transform: translate(-50%, -50%); opacity: 0; visibility: hidden;
+  position: absolute; left: 50%; top: 27%; transform: translate(-50%, -50%); opacity: 0; visibility: hidden;
   display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
   width: 100vw; padding: 0 calc(var(--sa-r) + 16px) 0 calc(var(--sa-l) + 16px);
 }
@@ -166,6 +167,8 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
 .gol-tela small:empty { display: none; }
 .gol-tela.contra .gol-autor b { background: var(--sai); }
 .gol-tela.visivel { visibility: visible; animation: gol-aparece 2.4s linear forwards; }
+/* prints de conferência (mostrarEvento fixo): o aviso fica na tela, sem o apagar do fim */
+.gol-tela.visivel.fixo { animation: none; opacity: 1; }
 .gol-tela.visivel .gol-faixa { animation: gol-faixa 2.4s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
 .gol-tela.visivel .gol-palavra { animation: gol-bate 2.4s cubic-bezier(0.2, 1.5, 0.35, 1) forwards; }
 .gol-tela.visivel .gol-autor, .gol-tela.visivel small { animation: gol-sobe 2.4s ease-out forwards; }
@@ -183,8 +186,14 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
   86%, 100% { transform: scale(1) rotate(-3deg); }
 }
 @keyframes gol-sobe { 0%, 20% { transform: translateY(14px); opacity: 0; } 32%, 100% { transform: translateY(0); opacity: 1; } }
-/* celular: um pouco acima (os botões e o analógico ficam embaixo) */
-html.com-toque .gol-tela { top: 62%; }
+/* celular: compacto, logo abaixo da barra de cima (placar e minimapa terminam a ~74 px) e no meio, entre o
+   analógico (esquerda, embaixo) e o arco de botões (direita): em 568×320 sobram ~180 px de largura ali
+   (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
+html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
+html.com-toque .gol-palavra { font-size: clamp(40px, 12.5vmin, 96px); -webkit-text-stroke-width: 2px; }
+html.com-toque .gol-autor { font-size: clamp(12px, 3.3vmin, 17px); gap: 6px; letter-spacing: 0.03em; max-width: 31vw; }
+html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
+html.com-toque .gol-tela small { font-size: 10.5px; letter-spacing: 0.08em; padding: 3px 8px; max-width: 31vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (prefers-reduced-motion: reduce) {
   .gol-tela.visivel .gol-faixa, .gol-tela.visivel .gol-palavra, .gol-tela.visivel .gol-autor, .gol-tela.visivel small { animation: none; }
   .gol-tela .gol-faixa { transform: translateY(-58%) skewY(-4deg); }
