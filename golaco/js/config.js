@@ -490,7 +490,7 @@ export const IA_DEFESA = {
 };
 
 // ----------------------------------------------------------------------------- Parte 3: com bola
-// IA com a bola (plano 2.5 e 2.6; pesquisa §5 e §9). Ameaça esperada (xT) em PESQUISA-ETAPA3.md.
+// IA com a bola (plano 2.5 e 2.6; pesquisa §5, §9 e §12 — ameaça esperada, xT).
 export const IA_ATAQUE = {
   apoio: { n: 2, dist: [8, 14], aneis: [9, 13], direcoes: 8, raioRef: 6, cone: 0.209, histerese: 1.3, compromisso: 0.75 },
   corridas: { folga: 2, alem: [8, 12], recarga: 6, campoMin: 15, angFrente: 1.05, marcadorLivre: 3, max: [1, 2] },
@@ -499,6 +499,20 @@ export const IA_ATAQUE = {
   cruzamento: { zLateral: 20.16, xTerco: 30 },
   impedimentoFolga: 1,        // m — fora da corrida, a referência não passa da linha adversária − isto
   corredores: [9.16, 20.16],  // |z| — centro, meio-espaço e corredor lateral
+  // Ameaça esperada (xT; Karun Singh 2018, grade aberta 12×8, Premier League 2017/18): chance de a
+  // posse virar gol a partir da zona. Linha = faixa da largura (8 × 8,5 m, de w = −34 a +34; a grade
+  // é simétrica), coluna = faixa do comprimento (12 × 8,75 m, do meu gol ao gol adversário), no
+  // referencial do time com a bola: col = floor((u + 52,5) / 8,75), lin = floor((w + 34) / 8,5).
+  xT: [
+    [0.0064, 0.0078, 0.0084, 0.0098, 0.0113, 0.0125, 0.0147, 0.0175, 0.0212, 0.0276, 0.0349, 0.0379],
+    [0.0075, 0.0088, 0.0094, 0.0106, 0.0121, 0.0138, 0.0161, 0.0187, 0.0240, 0.0295, 0.0407, 0.0465],
+    [0.0089, 0.0098, 0.0100, 0.0111, 0.0127, 0.0143, 0.0169, 0.0194, 0.0241, 0.0286, 0.0549, 0.0644],
+    [0.0094, 0.0108, 0.0102, 0.0113, 0.0126, 0.0148, 0.0169, 0.0200, 0.0239, 0.0351, 0.1081, 0.2575],
+    [0.0094, 0.0108, 0.0102, 0.0113, 0.0126, 0.0148, 0.0169, 0.0200, 0.0239, 0.0351, 0.1081, 0.2575],
+    [0.0089, 0.0098, 0.0100, 0.0111, 0.0127, 0.0143, 0.0169, 0.0194, 0.0241, 0.0286, 0.0549, 0.0644],
+    [0.0075, 0.0088, 0.0094, 0.0106, 0.0121, 0.0138, 0.0161, 0.0187, 0.0240, 0.0295, 0.0407, 0.0465],
+    [0.0064, 0.0078, 0.0084, 0.0098, 0.0113, 0.0125, 0.0147, 0.0175, 0.0212, 0.0276, 0.0349, 0.0379],
+  ],
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

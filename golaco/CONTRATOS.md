@@ -1,7 +1,7 @@
 # GOLAÇO — contratos entre módulos
 
-Regra de ouro: **a lógica (`js/*.js` fora de `js/render/` e de `js/entrada.js`/`js/main.js`) não
-usa three.js nem DOM**. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
+Regra de ouro: **a lógica (`js/*.js` fora de `js/render/` e de `js/entrada.js`/`js/main.js`/`js/hud.js`/
+`js/editor-time.js`) não usa three.js nem DOM**. Ela roda nos testes em Node. Toda aleatoriedade passa pelo gerador com
 semente (`js/rng.js`, estado em `mundo.rng`). `Math.random` é proibido na lógica.
 
 **Matemática determinística:** na lógica, seno, cosseno, atan2, exp, log, pow, asin, acos e hypot
@@ -177,3 +177,120 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 - **Bola alta**: `bolaAltaPassando(m, j)` devolve o ponto de maior aproximação; com toque `'aereo'` marcado o jogador
   vai para esse ponto (`movimentoAereo`). Eventos: `cabeceio`, `dominioAereo` ({vChegada, sobra}).
 
+
+## Etapa 3 — partida 11×11, tática, IA e "Editar time" (contrato)
+Pesquisa: `PESQUISA-ETAPA3.md`. Constantes: `config.js` (blocos `PARTIDA`, `TATICA`, `IA_DEFESA`, `IA_ATAQUE`,
+`DEFESA_HUMANO`, `TROCA_AEREA`; cada parte edita só o seu bloco) e os atributos `marcacao`, `desarme`, `visao`,
+`folego` (= 65 no padrão; o treino não lê).
+
+**Chave única: `m.times`.** Toda lógica nova (IA tática, troca aérea, regras da partida, parada, hash dos times) só
+liga quando o mundo tem `m.times` (a partida). O treino (`'ataque'`, `'conducao'`) fica **bit a bit igual** à base:
+`node tools/hash-igual.mjs` (20 sementes × 3 min por cena, hash a cada 600 passos, contra `git archive 980b0b0`) roda
+antes de todo commit/merge. Única exceção prevista: os botões de defesa do humano (`defesa.js`) agem também no
+treino, mas só com CONTER/DIVIDIDA/PRESSÃO apertados (ou `j.defH` ligado), e nenhum roteiro do treino aperta esses bits.
+`js/ia.js` (a IA "clássica" do treino) fica congelado: só exporta `para`, `freiaNaLinha`, `pontoInterceptacao`,
+`vaiNaBolaLivre`, `dono`, `acaoIA`, `marcacao` e `entradaIA`.
+
+**Arquivos.** Puros (sem three.js nem DOM; só `MD` e `m.rng`): `elenco.js`, `formacoes.js`, `tatica.js`,
+`escalacao.js`, `partida.js`, `ia-tatica.js`, `ia-ataque.js`, `defesa.js`, `troca.js`. Com DOM: `js/editor-time.js`
+(sobreposição "Editar time") e `css/editor.css`, além dos de antes (`main.js`, `hud.js`, `entrada.js`, `render/*`).
+
+### Passo da partida
+```
+main.js (DOM)                  partida.js (puro)
+quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
+  edicaoNaFila ─┘          1. ações-objeto ANTES do passo: aplicarEdicao(m, ed) + m.log.push({tick, acao})
+                           2. sim.passo(m, {0: entrada})  (intervalo e fim: só m.tick++, o mundo fica parado)
+                              ├ entrada da IA: m.times ? entradaIATatica : entradaIA (também na assistência do passe)
+                              │   ia-tatica.js (sem bola) ──▶ ia-ataque.js (com bola) ──▶ null = IA clássica
+                              ├ controlado: entradaConter (CONTER) · alvoAereo (bola alta, só com m.times) · pedidoPressao
+                              ├ trocarJogador (TROCAR) + trocaAerea(m) (só com m.times)
+                              ├ desarmes: boteIA (IA) · dividida (controlado, com DIVIDIDA ou j.defH)
+                              └ m.parada sem rolar: só o cobrador toca a bola (bolaLivre, goleiro, boteIA, colisaoBolaCorpo)
+                           3. regrasPartida(m): relógio, gol, bola fora → parada/saída, intervalo, fim, aplicarPendentes
+                           4. eventos de depois do passo (timeEditado / edicaoRecusada)
+```
+
+### Módulos (assinaturas finais)
+- **`elenco.js`**: `POSICOES` (15 códigos: GOL, LD, LE, ZAG, ADD, ADE, VOL, MC, MD, ME, MEI, PD, PE, SA, ATA → `{nome,
+  funcao, lado}`), `FUNCAO` (pos → `j.posicao`: GOL, LAT, ZAG, VOL, MEI, PON, ATA), `PESOS` (nota por posição),
+  `CHAVES` (19 atributos gerados, ordem fixa), `ELENCOS` (`golaco`, `ventania`), `fichaDe(id)`, `elencoDoJogador(id)`,
+  `h32(a, b)`, `atributosDe(jog)` (determinístico; nota natural = nível ± 1; devolve cópia), `notaNaPosicao(attr, pos)`,
+  `encaixeNaVaga(jog, pos)` → `'natural' | 'alternativa' | 'fora'`, `numerosCarta(attr)` → `{RIT, FIN, PAS, DRI, DEF,
+  FIS}`, `notaTime(vagas, formacao)` → `{geral, ata, mei, def}`, `estrelas(geral)` (½ a 5).
+- **`formacoes.js`**: `FORMACOES` (`'4-3-3' '4-2-3-1' '4-4-2' '4-1-4-1' '3-5-2' '5-3-2'` → `{id, vagas, porId, indice,
+  xLinhaSem}`), `ORDEM_FORMACOES` (menu e índice do hash), `vagasDe(formacao)`, `hungaro(custo)`,
+  `encaixar(titulares, formNova, elenco, vagasAntigas)` → `{vagaId: id}` (só a tela usa; a edição leva o resultado),
+  `BONUS_ENCAIXE`.
+- **`tatica.js`**: `TATICA_PADRAO` `{0, 1, 1, 1}`, `FUNCAO_K`, `posicaoTatica(formacao, vaga, tatica, bola, fase, ataca,
+  out)` → `out {x, z}` (mundo; `vaga` = id ou objeto Vaga; `fase` `'sem'|'com'`; pura e sem alocar), `alturaLinha(formacao,
+  tatica, bola, fase, ataca)` → m, `tercoDaBola(bx, ataca)` → 1|2|3, `faseDoTime(m, time)` → `m.iaTime[time]`.
+  **Contrato com a tela:** a prévia desenha `posicaoTatica(..., bola = {x: 0, z: 0}, ...)` — a mesma conta da IA.
+- **`escalacao.js`**: `estadoInicialTime(elencoId, {formacao, vagas, tatica}?)`, `vestirVaga(m, j, vagaId)`,
+  `rascunhoDe(timeEstado, edicaoNaFila?, time?)`, `tocar(rasc, id)` → `{rasc, evento}`, `mudarFormacao(rasc, f)`,
+  `mudarTatica(rasc, chave, nivel)`, `desfazer(rasc)`, `desfazerTudo(rasc)`, `edicaoDe(rasc)` → edição | null,
+  `validarEdicao(timeEstado, ed, elencoId?)` → `{ok, motivo?}` (a tela usa a mesma), `aplicarEdicao(m, ed)` → `{ok, motivo?,
+  pendente}`, `aplicarPendentes(m, t, {intervalo}?)` → n, `misturarTimes(h, m)`.
+- **`partida.js`**: `criarPartida({semente, minutosPorTempo, iaClassica, elencos, times, saida, log})`,
+  `passoPartida(m, entrada, acoes)` → eventos, `regrasPartida(m)`, `montarSaida(m, time)`, `teleportar(j, x, z, rumo)`,
+  `restricaoParada(m, j, x, z, out)` → `out` (a IA respeita: empurra o alvo para fora do raio/da área),
+  `minutoDeJogo(m)` → 0..90, `entradaDemoPartida(m)`, `misturarPartida(h, m)`, `cobradorDaSaida(timeEstado)`,
+  `vagaDoJogador(timeEstado, id)`, `ESTADOS`, `TIPOS_PARADA`.
+- **`ia-tatica.js`**: `entradaIATatica(m, j)` → `{x, z, botoes}` (despacho: `iaClassica` ou goleiro com a bola nas mãos
+  → `entradaIA`; recebe/corrida/bola livre; condutor → `condutorTatico`; fase `'com'` → `apoioTatico`; sem bola → a IA
+  sem bola), `estadoIA(m, j)` (prepara `j.ia` para usar o `para()` de fora do ia.js).
+- **`ia-ataque.js`**: `apoioTatico(m, j)`, `condutorTatico(m, j)` → entrada ou **null (= a IA clássica decide)**.
+- **`defesa.js`**: `entradaConter(m, j, e)` → entrada ou null; `dividida(m, j)`; `pedidoPressao(m, j)` (grava
+  `m.pedidoPressao[time] = tick`, que a IA tática lê).
+- **`troca.js`**: `trocaAerea(m)` (troca por `assumirControle`, evento `trocaAerea {id}`), `alvoAereo(m, j, e)` → entrada
+  ou null.
+
+### Estruturas
+- **Elenco** (`ELENCOS[id]`): `{id, nome, sigla, uniforme: {linha, goleiro} (chaves dos KITS de render/jogador3d.js),
+  formacaoPadrao, titularesPadrao: {vagaId: id}, taticaPadrao, jogadores: [Jog]}`; `Jog = {id, num, nome, camisa (≤ 10
+  caracteres), pos, alt: [pos], nivel, pe: 'D'|'E'}`. **Ids no mundo:** Golaço FC 1–23 (= número), Ventania FC 101–123.
+  Nunca o 0 (condução) nem o 90 (marcador do treino).
+- **Vaga** (`FORMACOES[f].vagas`, ordem fixa com GOL primeiro = ordem do hash, do desempate e do `vagaIdx`):
+  `{id, pos, fila, col, grupo: 'gol'|'def'|'mei'|'ata', sem: {x, z}, com: {x, z}}` — metros, bola no centro,
+  referencial de quem ataca para +x (direita = +z). `grupo 'def'` = a linha de defesa sem a bola (alinhada pela altura).
+- **Tática**: `{mentalidade: −2..2, pressao: 0..2, largura: 0..2, linha: 0..2}`.
+- **`m.times`** = `{0: T, 1: T}`, `T = {elenco, formacao, vagas: {vagaId: id} (os 11 em campo), tatica, pendente: null |
+  {vagas, substituicoes: [{sai, entra}]}, saiu: [ids], subs: {feitas, paradas}, versao}`. Quem está no banco não é objeto
+  da simulação: só os 22 em campo ficam em `m.jogadores` (time 0 na ordem da formação, depois o time 1). A substituição
+  troca o objeto no **mesmo índice** de `m.jogadores`.
+- **Jogador em campo** (campos novos): `j.vagaId` (`'MCE'`), `j.vagaIdx` (0–10: substitui `id·97` e a paridade do id em
+  todo código novo), `j.posDetalhe` (= `vaga.pos`), `j.posicao = FUNCAO[posDetalhe]`, `j.iaT` (estado da IA tática;
+  criado uma vez e reaproveitado), `j.defH` (estado do humano na defesa, `null` quando nada). `j.vaga` (deslocamento à
+  frente da bola, z absoluto) continua com o sentido do treino e só é lido pela IA clássica (`vestirVaga` o mantém).
+- **`m.partida`** = `{estado: 'jogo'|'parada'|'gol'|'intervalo'|'fim', tempo: 1|2, tick0Tempo, ticksPorTempo,
+  saidaInicial: 0|1, iaClassica, desde, ultimoTime, golTime}`. Relógio mostrado: `minutoDeJogo(m)` (0'–45' e 45'–90',
+  acelerado). Intervalo: troca de lado (`m.ataca` invertido; goleiro, IA e ações já leem `ataca()`/`linhaDoGol`).
+- **`m.parada`** = `null | {tipo: 'saida'|'lateral'|'escanteio'|'tiroDeMeta', time, x, z, cobrador: id, desde, pronta,
+  rolou, raio (m; 'area' = fora da área)}`. Com `rolou === false`, só o cobrador toca a bola e ninguém dá bote.
+  Nenhuma parada passa de `PARTIDA.paradaMax` (8 s).
+- **`m.iaTime[time]`** (`faseDoTime`) = `{tick, fase: 'com'|'sem', desde, transicao: 'def'|'of'|null, mistura: 0..1}`.
+- **`m.pedidoPressao[time]`** = tick do último PRESSÃO segurado pelo humano daquele time.
+- **Edição** (ação da fila, aplicada no início do tick): `{tipo: 'editarTime', time, base: versao, formacao, vagas: {...11},
+  substituicoes: [{sai, entra}], tatica}` — `vagas` é o arranjo final desejado; `substituicoes` é a lista completa.
+  Recusada (base velha etc.) → evento `edicaoRecusada {time, motivo}`.
+- **Rascunho** (só da tela, nunca o mundo): `{time, elenco, base, formacao, vagas, tatica, substituicoes, saiu, subs,
+  escolhido, historico, original}`.
+- **Eventos novos**: `saida {time}`, `lateral {time, x, z}`, `escanteio {time, lado}`, `tiroDeMeta {time}`,
+  `cobranca {parada, id}` (a bola rolou; `parada` = o tipo da parada), `intervalo`, `fimDeJogo {placar}`,
+  `timeEditado {time, pendente}`, `edicaoRecusada {time, motivo}`, `substituicao {time, sai, entra}`, `trocaAerea {id}`.
+- **Hash**: com `m.times`, `hashMundo` mistura também `misturarTimes` (para cada time: índice da formação, ids na ordem
+  das vagas, as 4 táticas, pendente, saiu, subs, versao) e `misturarPartida` (estado, tempo, relógio, parada). Sem
+  `m.times` o hash é o de antes. `sim.js misturarHash(h, x)` é a mistura FNV-1a de um número.
+- **API da página para os testes** (`window.__golaco`, Parte 5): `reiniciar({modo: 'partida', semente,
+  minutosPorTempo})`, `editarTime(ed)` (põe na fila), `estadoTime(t)`, `editor.aberto`, `estado()` com `times`,
+  `relogio {tempo, minuto}`, `parada` e `placar`, e `medirQuadro()`.
+
+### Testes da Etapa 3
+- `tools/rodar-testes.mjs`: cada linha é `[nome, arquivo, argumentos?, grupo?]`. O padrão (o CI) roda os 22 de antes
+  + `teste-custo`. O grupo `'etapa3'` (`--etapa3` = padrão + etapa3; `--so etapa3`) tem os marcadores
+  "AGUARDANDO PARTE N" e os testes novos até passarem 5 vezes seguidas com sementes diferentes; então a parte tira o
+  `'etapa3'` da linha dela.
+- Todo teste novo aceita `--antes` (a mesma partida com `criarPartida({iaClassica: true})`, a IA de hoje) e
+  `--js <pasta>`; metas sobre a mediana, ≥ 8 sementes no CI. Medidas comuns: `tools/lib/partida-medidas.mjs` (terço,
+  fase, forma, linha de 4, área, portador, linhas de passe livres, corredores, impedimento, troca de posse, PPDA).
+- `tools/teste-custo.mjs`: razão partida ÷ treino no mesmo processo (média e p95 ≤ 2,5×; nenhum passo > 50 ms).
