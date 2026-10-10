@@ -477,14 +477,24 @@ export const TATICA = {
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
 export const IA_DEFESA = {
-  contencao: [5.0, 3.0, 2.0], // m — 1º homem fora do gatilho, entre a bola e o meu gol
+  contencao: [5.0, 2.6, 2.0], // m — 1º homem fora do gatilho, entre a bola e o meu gol
   aperto: 1.5,                // m — 1º homem no gatilho (com boteIA)
-  engaja: [42, 60, 105],      // m do meu gol: bola mais perto que isto, o 1º homem aperta
-  cobertura: [7, 10],         // m — 2º homem (Média e Alta), do lado do gol e por dentro
-  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10 }, // janela, quantos, a ≤ quantos m da bola
+  engaja: [42, 60, 105],      // m do meu gol: com a bola mais longe que isto o 1º homem não sai do bloco (FM: linha de engajamento)
+  perigo: 30,                 // m do meu gol: bola mais perto que isto, o 1º homem aperta (todos os níveis)
+  apertaSempre: [false, false, true], // pressão Alta: o 1º homem aperta sempre que engajado
+  cobertura: 8.5,             // m — 2º homem (Média e Alta) atrás do 1º, do lado do gol (real: 2º marcador a 9,6 m)...
+  coberturaLado: 3,           // m — ...e por dentro (na diagonal)
+  apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
+  antecipaContem: 0.3,        // s — a contenção mira menos à frente que o aperto (IA.antecipaPressao)
+  // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda além de `campo` m do meio
+  // (no campo adversário; ou perto da lateral) e com tantos ou mais dos meus que deles a ≤ raio m
+  contrapressao: { s: [0, 3, 5], max: [0, 2, 3], raio: 10, campo: 0 },
   zona: { raio: 7, peso: 0.6 }, // adversário a ≤ 7 m da referência puxa 60% para o lado do gol dele
+  marcaDist: 1.5,             // m do lado do gol do atacante marcado (individual e puxada da zona)
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
-  recomposicao: 15,           // m atrás da referência com a bola indo para o meu gol: corre de volta
+  recomposicao: 15,           // m à frente da referência com a bola vindo para o meu gol: corre de volta...
+  recompoeVel: 1,             // m/s — ..."vindo" = condutor (ou bola) a mais que isto na direção do meu gol
+  recompoe: { liga: 4, desliga: 1.5 }, // m à frente da referência: vai direto (pressa) até ela, com histerese
   gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27 }, // s, m, m, rad (110°), |z|
   transOf: 3,                 // s de transição ofensiva depois da retomada
 };

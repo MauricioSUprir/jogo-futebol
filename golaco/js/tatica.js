@@ -54,8 +54,10 @@ export function posicaoTatica(formacao, vaga, tatica, bola, fase, ataca, out = {
     const ment = t.mentalidade * TATICA.mentalidadeBloco + (ph === 'com' && LATERAIS[v.pos] && t.mentalidade > 0 ? t.mentalidade * TATICA.lateralSobe : 0);
     const dH = TATICA.linhaAltura[t.linha] - H_MEDIA;
     if (v.grupo === 'def' && ph === 'sem') {
-      // 6) linha de defesa alinhada: todos pela altura da linha e pelo k do zagueiro
-      let xLinha = -CAMPO.meioX + TATICA.linhaAltura[t.linha] + TATICA.k.zagueiro.sem[lado] * bx + ment;
+      // 6) linha de defesa alinhada: todos pela altura da linha e pelo k do zagueiro. A altura da
+      // tática é relativa à da formação (a tabela é a linha Média: o 5-3-2 defende ~2 m mais fundo
+      // que o 4-4-2), para a prévia com a bola no centro ser a própria tabela
+      let xLinha = f.xLinhaSem + dH + TATICA.k.zagueiro.sem[lado] * bx + ment;
       xLinha = clamp(xLinha, TATICA.linhaPiso, TATICA.linhaTeto);
       if (bx < xLinha + TATICA.linhaAtrasDaBola) xLinha = Math.max(TATICA.linhaPiso, bx - TATICA.linhaAtrasDaBola);
       x = xLinha + (base.x - f.xLinhaSem);
@@ -99,14 +101,16 @@ export function faseDoTime(m, time) {
   const cache = (m.iaTime ??= {});
   let s = cache[time];
   if (s && s.tick === m.tick) return s;
-  if (!s) s = cache[time] = { tick: -1, fase: 'sem', desde: m.tick, transicao: null, mistura: 1 };
+  // (criado já assentado: sem mistura nem transição no primeiro tick)
+  if (!s) s = cache[time] = { tick: -1, fase: null, desde: m.tick - Math.round(Math.max(TATICA.mistura, IA_DEFESA.transOf, ...IA_DEFESA.contrapressao.s) / PASSO) - 1, transicao: null, mistura: 1 };
   let dono = m.naMao ?? m.posse;
   let timeBola = null;
   if (dono != null) {
     for (const o of m.jogadores) if (o.id === dono) { timeBola = o.time; break; }
   } else if (m.voo && m.voo.time != null) timeBola = m.voo.time;
-  const fase = timeBola == null ? s.fase : timeBola === time ? 'com' : 'sem';
-  if (fase !== s.fase) { s.fase = fase; s.desde = m.tick; }
+  const fase = timeBola == null ? (s.fase ?? 'sem') : timeBola === time ? 'com' : 'sem';
+  if (s.fase == null) s.fase = fase;
+  else if (fase !== s.fase) { s.fase = fase; s.desde = m.tick; }
   const dt = (m.tick - s.desde) * PASSO;
   const pressao = m.times?.[time]?.tatica?.pressao ?? 1;
   s.transicao = s.fase === 'sem' ? (dt < IA_DEFESA.contrapressao.s[pressao] ? 'def' : null) : (dt < IA_DEFESA.transOf ? 'of' : null);
