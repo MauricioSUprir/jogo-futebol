@@ -29,7 +29,8 @@ const BUSCA_PEDIDO_MAX = 1.75;       // rad (~100°) — indo buscar a bola, ped
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
 
 export function criarCond() {
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null };
+  // bolaDesviada (sim.js) declarado já (undefined, como antes da 1ª escrita): todos os cond com a mesma forma
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */

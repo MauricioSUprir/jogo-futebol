@@ -55,6 +55,20 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     alvo: null,
     // pé que não sai do chão agora (pedalada: o outro passa por cima da bola) | null
     travaApoio: null,
+    // Campos que os outros módulos põem no jogador DEPOIS de criado (sim, partida, escalação, IA,
+    // ações, goleiro, defesa), já declarados aqui, na mesma ordem para todos e com o mesmo valor que
+    // teriam antes da 1ª escrita (undefined): todos os jogadores ficam com a MESMA forma (classe oculta
+    // do motor JS). Antes cada um ganhava os campos numa ordem (9 formas para 22 jogadores na partida):
+    // os acessos ficavam megamórficos e cada leitura de número alocava (~300 KB de lixo por passo; a
+    // coleta de lixo caía em 6% dos passos — o p95 do celular). Campo novo no jogador: declarar aqui.
+    papel: undefined, posicao: undefined, vagaId: undefined, vagaIdx: undefined, posDetalhe: undefined,
+    vaga: undefined, iaT: undefined, recebe: undefined, corrida: undefined, intercepta: undefined,
+    carga: undefined, pedido: undefined, mira: undefined, miraAuto: undefined, iaAcao: undefined,
+    defesa: undefined, mergulho: undefined, segura: undefined, saindo: undefined, ia: undefined,
+    botoesTime: undefined, giroParado: undefined, quadril: undefined, iaA: undefined,
+    pedidoPedalada: undefined, ladoOlha: undefined, ritmo: undefined, ultLanc: undefined,
+    ultMod: undefined, descansoBote: undefined, defH: undefined, conter: undefined, descanso: undefined,
+    contorno: undefined,
   };
   return j;
 }
