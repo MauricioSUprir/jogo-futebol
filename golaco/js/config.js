@@ -676,7 +676,7 @@ export const TATICA = {
   // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
   // de `vUrgente` m/s)
   // (voltando, o ponto vai `marca` para o lado do gol do adversário que a zona dele reivindicou: acha o homem)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0 }, // marca 0: desligado (0,6 tirava ~0,7 chute por partida sem melhorar o PPDA na partida inteira)
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
