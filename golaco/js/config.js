@@ -741,7 +741,7 @@ export const IA_ATAQUE = {
   // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição
   // ofensiva com bônus `bonus` nas opções à frente e sem a posse da retomada (utilidade.posseRetomada).
   // Tenga 2010; Armatas 2022; PESQUISA-ETAPA3.md §16.5.
-  contra: { atras: 6, campo: -30, s: 6, bonus: 0.8 }, // bonus 0,8 (era 0,5): o contra-ataque compensa no ataque o que a recomposição tira
+  contra: { atras: 6, campo: -30, s: 6, bonus: 0.5 },
   // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
   // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
   primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },
