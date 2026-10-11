@@ -14,7 +14,7 @@
 //    alturaQuadril) — o tornozelo preso pelo joelho não salta com o quadril.
 // Sem three.js nem DOM. Saída: posições das juntas no mundo (Float32Array).
 
-import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO } from './config.js';
+import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
@@ -215,6 +215,12 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   // termina nesse mesmo ponto — sem salto de braço ao acabar a defesa)
   const segura = j.posicao === 'GOL' && m.naMao === j.id;
   const sgx = Math.cos(j.rumo), sgz = Math.sin(j.rumo);
+  // lateral (Regra 15): o cobrador segura a bola com as duas mãos atrás da cabeça e a leva no arco do arremesso (a bola
+  // do estado: lateral.js segurarLateral); depois da soltura os braços seguem o arremesso por LATERAL.seguimento s
+  const pr = m.parada;
+  const lat = !!(pr && pr.tipo === 'lateral' && !pr.rolou && pr.cobrador === j.id);
+  let segue = -1;
+  if (!lat && j.arremesso) { const t = (m.tick - j.arremesso.tick) * PASSO; if (t >= 0 && t < LATERAL.seguimento) segue = t / LATERAL.seguimento; }
   const oh = h - torcao * 1.4;
   const orx = -Math.sin(oh), orz = Math.cos(oh);
   const ofx = Math.cos(oh), ofz = Math.sin(oh);
@@ -252,6 +258,20 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       const bp = m.bola.p;
       ikBraco(ox, oy, oz, bp.x - sgz * lado * BOLA_MAO.palma, bp.y, bp.z + sgx * lado * BOLA_MAO.palma,
         orx * lado - ux * 0.4 - fx * 0.2, -uy * 0.4, orz * lado - uz * 0.4 - fz * 0.2, out, iC, iM);
+    } else if (lat) {
+      // lateral: as palmas dos dois lados da bola, acima da cabeça; os cotovelos para fora e para a frente
+      const bp = m.bola.p;
+      ikBraco(ox, oy, oz, bp.x - sgz * lado * BOLA_MAO.palma, bp.y, bp.z + sgx * lado * BOLA_MAO.palma,
+        orx * lado * 0.7 + fx * 0.5 + ux * 0.3, uy * 0.3, orz * lado * 0.7 + fz * 0.5 + uz * 0.3, out, iC, iM);
+    } else if (segue >= 0) {
+      // depois da soltura: as mãos seguem para a frente e para baixo; no fim voltam ao balanço da passada
+      const e = suave(segue), ar = j.arremesso;
+      const afx = Math.cos(ar.rumo), afz = Math.sin(ar.rumo);
+      const fr = LATERAL.soltaFrente + 0.3 * e, yy = LATERAL.soltaAltura - 0.75 * e;
+      const w = segue < 0.6 ? 1 : (1 - segue) / 0.4;
+      const tx = j.x + afx * fr - afz * lado * BOLA_MAO.palma, tz = j.z + afz * fr + afx * lado * BOLA_MAO.palma;
+      const mx = out[iM * 3] + (tx - out[iM * 3]) * w, my = out[iM * 3 + 1] + (yy - out[iM * 3 + 1]) * w, mz = out[iM * 3 + 2] + (tz - out[iM * 3 + 2]) * w;
+      ikBraco(ox, oy, oz, mx, my, mz, orx * lado * 0.7 + fx * 0.3 - ux * 0.2, -uy * 0.2, orz * lado * 0.7 + fz * 0.3 - uz * 0.2, out, iC, iM);
     }
   }
 

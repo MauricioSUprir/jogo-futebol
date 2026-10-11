@@ -47,6 +47,7 @@ import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
 import { criarMarcas } from './render/marcas.js';
 import { criarLinhaImpedimento } from './render/linha-impedimento.js';
+import { criarMarcasLateral } from './render/marcas-lateral.js';
 import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
@@ -386,7 +387,7 @@ function forcaDaCarga(cg) {
 iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
-let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, torcida, som = null;
+let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, marcasLat, torcida, som = null;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -395,6 +396,12 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
+// posição DESENHADA (interpolada no quadro) do jogador `id` — os marcadores do gramado andam com o corpo desenhado
+const _posDes = { x: 0, z: 0 };
+function posDesenhada(id) {
+  for (const it of lista) if (it.id === id) { _posDes.x = it.x; _posDes.z = it.z; return _posDes; }
+  return null;
+}
 const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
 const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
@@ -485,6 +492,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tj1 = performance.now();
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   linhaImped.atualizar(mundo, dt);
+  marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   campo.atualizar(agoraMs / 1000);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -762,6 +770,7 @@ async function iniciar() {
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
   marcas = criarMarcas(cena3d.cena);
   linhaImped = criarLinhaImpedimento(cena3d.cena);
+  marcasLat = criarMarcasLateral(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -1028,6 +1037,8 @@ const api = {
    */
   /** Linha de impedimento desenhada (testes): {visivel, x, lance, opacidade}. */
   get linhaImpedimento() { return linhaImped?.estado ?? null; },
+  /** Marcadores das 3 opções do lateral (testes): {visivel, ids, mirada}. */
+  get marcasLateral() { return marcasLat?.estado ?? null; },
   estadio: {
     get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
     get rede() {

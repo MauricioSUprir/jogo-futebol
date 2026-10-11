@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, LATERAL } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -526,6 +526,52 @@ function cruzamento(m, j, pe, p, erroMult) {
   }
   finalizarChute(m, j, pe, tipo, v, w, { x: ex, z: ez }, r, { voo: { alto: !p.rasteiro, zona: zona.nome, rasteiro: !!p.rasteiro, tenso: !!p.mod }, ticks });
   if (r) marcarRecebedor(m, r, ex, ez, 'cruzamento', m.tick + ticks);
+  return true;
+}
+
+/**
+ * Arremesso do lateral (Regra 15; lateral.js): a bola sai das mãos (já no ponto da soltura) para o recebedor `r` ou,
+ * sem ele, para o ponto `alvo` {x, z} (o arremesso longo na área) ou na direção a.dir. Curto (PASSE/ENFIADA): chega a r
+ * na altura LATERAL.yRecebe (coxa/peito), no máximo LATERAL.adiante m à frente dele. Longo (LANÇAMENTO): ~30°, pousa no
+ * ponto. A velocidade nunca passa da do braço dele (lateral.js vMaxArremesso): longe demais, a bola fica curta.
+ * a = {tipo, forca, dir?}; vMax em m/s. Evento 'passe' com modo 'lateral'.
+ */
+export function arremessoLateral(m, j, a, r, alvo, vMax) {
+  const b = m.bola;
+  const L = LATERAL;
+  const longo = a.tipo === 'lancamento';
+  let tx, tz;
+  if (r) {
+    const L0 = MD.hypot(r.x - b.p.x, r.z - b.p.z);
+    const tVoo = 0.3 + L0 / 13;
+    let lx = r.vx * tVoo, lz = r.vz * tVoo;
+    const ll = MD.hypot(lx, lz), lim = a.tipo === 'enfiada' ? 4 : L.adiante;
+    if (ll > lim) { lx *= lim / ll; lz *= lim / ll; }
+    if (a.tipo === 'enfiada' && ll < 1e-6) { const lado = ataca(m, j.time); lx = lado * lim; }
+    tx = r.x + lx; tz = r.z + lz;
+  } else if (alvo) { tx = alvo.x; tz = alvo.z; }
+  else {
+    const d = a.dir ?? { x: MD.cos(j.rumo), z: MD.sin(j.rumo) };
+    const D = 8 + 17 * clamp(a.forca, 0, 1);
+    tx = b.p.x + d.x * D; tz = b.p.z + d.z * D;
+  }
+  ({ x: tx, z: tz } = dentroDoCampo(tx, tz, 0.5));
+  let ux = tx - b.p.x, uz = tz - b.p.z;
+  const D = MD.hypot(ux, uz) || 1;
+  ux /= D; uz /= D;
+  const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
+  const w = { x: uz * 5, y: 0, z: -ux * 5 }; // um pouco de giro para trás (a bola sai das pontas dos dedos)
+  const el = longo || !r ? L.elevLongo : L.elevCurto;
+  let s = longo || !r ? velParaPousar(pp, ux, uz, D, el, w) : velParaAlturaEm(pp, ux, uz, D, el, w, L.yRecebe);
+  s = Math.min(s, vMax);
+  const sig = lerp(L.erroRuim, L.erroBom, j.par.attr.passe / 100);
+  const u = girar(ux, uz, normal(m.rng) * sig);
+  s *= 1 + normal(m.rng) * sig * 0.6;
+  const ce = MD.cos(el), se = MD.sin(el);
+  const v = { x: u.x * s * ce, y: s * se, z: u.z * s * ce };
+  const voo = simularVoo(pp, v, w);
+  finalizarChute(m, j, j.par.attr.pePreferido ?? 1, 'lateral', v, w, { x: tx, z: tz }, r, { voo: { alto: true, lateral: true }, ticks: voo.ticks });
+  if (r) marcarRecebedor(m, r, tx, tz, 'lancamento', m.tick + voo.ticks);
   return true;
 }
 

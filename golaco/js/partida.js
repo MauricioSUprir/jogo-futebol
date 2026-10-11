@@ -19,13 +19,12 @@
 // Recomeços (plano 3.3), todos com a bola morta 1 s (foraEspera) ou 2,5 s (gol) antes da montagem:
 //  - saída: todos levados às posições de saída, cada um no seu campo, adversários fora do círculo
 //    (corte de câmera); o cobrador (ATA/SA) toca curto para trás;
-//  - lateral: o time que NÃO tocou por último; o jogador de linha mais perto cobra COM O PÉ (Etapa 4:
-//    arremesso com as mãos); adversários a ≥ 2 m;
+//  - lateral (Regra 15; lateral.js): o time que NÃO tocou por último; cobra o jogador de linha mais perto (o lateral/ala
+//    com vantagem), com o pé sobre a linha e a bola nas duas mãos atrás da cabeça; 3 opções marcadas; adversários a 2 m;
 //  - escanteio: bola na linha de fundo com o último toque de quem defende; cobra quem cruza melhor;
 //    adversários a ≥ 9,15 m; a IA cruza (o lançamento vira cruzamento pela zona, acoes.js);
-//  - tiro de meta: o goleiro com a bola NAS MÃOS na linha da pequena área (Etapa 4: com o pé no
-//    chão), adversários fora da área até a bola sair; a reposição é a que já existe (sim.js
-//    goleiroComBola: IA em 1,5 s, humano em até 3 s);
+//  - tiro de meta (Regra 16): a bola no chão dentro da pequena área, o goleiro cobra com o pé (curto para um zagueiro
+//    aberto ou longo); adversários fora da área até a bola rolar;
 //  - tiro livre indireto (Etapa 4, impedimento — impedimento.js): do outro time no ponto em que o impedido
 //    tocou a bola; o de linha mais perto cobra com passe (nunca para quem está impedido); adversários a 9,15 m.
 // Acréscimos (Regra 7.3): anunciados no fim do tempo regulamentar (PARTIDA.acrescimos), o tempo acaba depois deles.
@@ -40,7 +39,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -51,15 +50,18 @@ import { FORMACOES } from './formacoes.js';
 import { posicaoTatica } from './tatica.js';
 import { estadoInicialTime, vestirVaga, aplicarEdicao, aplicarPendentes } from './escalacao.js';
 import { entradaIATatica } from './ia-tatica.js';
-import { assumirControle, atualizarBotoesAcao, executarAcao, riscoLinha, ataca } from './acoes.js';
+import { assumirControle, atualizarBotoesAcao, executarAcao, riscoLinha, ataca, arremessoLateral } from './acoes.js';
 import { regraImpedimento, linhaImpedimento, emPosicaoDeImpedimento } from './impedimento.js';
 import { naAreaDe } from './faltas.js';
+import { segurarLateral, opcoesLateral, opcaoMirada, alvoLongoNaArea, vMaxArremesso } from './lateral.js';
+import { alvoBolaParada } from './bolas-paradas.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
 const PAPEIS = ['ia', 'humano', 'parado', 'marcador'];
 const seg = s => Math.round(s / PASSO);
 const BOTAO_ACAO = { passe: BOTAO.PASSE, lancamento: BOTAO.LANCAMENTO, chute: BOTAO.CHUTE };
+const LADO_CAMPO = { LD: 1, LE: 1, ADD: 1, ADE: 1 }; // laterais e alas (quem cobra o lateral)
 
 /** Id do cobrador da saída de bola do time (estado m.times[t]): o ATA, senão o SA, senão a vaga mais adiantada. */
 export function cobradorDaSaida(timeEstado) {
@@ -201,7 +203,7 @@ function fecharMontagem(m, c, levado) {
   const [a0, a1] = PARTIDA.cobrancaIA;
   pr.atraso = seg(lerp(a0, a1, uniforme(m.rng)));
   pr.levado = levado;
-  if (pr.tipo !== 'tiroDeMeta') { pr.papel = c.papel; c.papel = 'parado'; }
+  pr.papel = c.papel; c.papel = 'parado';
   // o humano do time que cobra controla o cobrador; o do outro time, o jogador de linha mais perto da bola
   for (const t of m.humanos) {
     if (t === pr.time) {
@@ -283,11 +285,12 @@ function montarBolaParada(m) {
   const t = pr.time, lado = m.ataca[t];
   let c = null;
   if (pr.tipo === 'lateral' || pr.tipo === 'tiroLivre') {
-    // o jogador de linha mais perto do ponto
+    // o jogador de linha mais perto do ponto (no lateral, o lateral/ala leva LATERAL.preferirLateral m de vantagem:
+    // é quem cobra no jogo de verdade)
     let dm = Infinity;
     for (const o of m.jogadores) {
       if (o.time !== t || o.posicao === 'GOL') continue;
-      const d = MD.hypot(o.x - pr.x, o.z - pr.z);
+      const d = MD.hypot(o.x - pr.x, o.z - pr.z) - (pr.tipo === 'lateral' && LADO_CAMPO[o.posDetalhe] ? LATERAL.preferirLateral : 0);
       if (d < dm) { dm = d; c = o; }
     }
   } else {
@@ -301,6 +304,7 @@ function montarBolaParada(m) {
     if (!c) for (const o of m.jogadores) if (o.time === t && o.posicao !== 'GOL') { c = o; break; }
   }
   limparAcoes(m);
+  if (pr.tipo === 'lateral') { montarLateral(m, c); return; }
   Object.assign(m.bola, criarBola(pr.x, pr.z));
   const rumo = pr.tipo === 'lateral'
     ? MD.atan2(-Math.sign(pr.z), 0)                                        // de frente para o campo
@@ -313,6 +317,36 @@ function montarBolaParada(m) {
   if (pr.tipo === 'lateral') m.eventos.push({ tipo: 'lateral', time: t, x: pr.x, z: pr.z, id: c.id, levado });
   else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado, indireto: true });
   else m.eventos.push({ tipo: 'escanteio', time: t, lado: pr.z >= 0 ? 1 : -1, id: c.id, levado });
+}
+
+/**
+ * Lateral (Regra 15): o cobrador com o pé da frente sobre a linha (o centro LATERAL.linha m fora dela), de frente para o
+ * campo, a bola nas duas mãos atrás da cabeça (lateral.js segurarLateral a mantém lá); o ponto da parada é a linha
+ * (adversários a 2 m dele). A IA sorteia na montagem para qual das 3 opções vai arremessar (LATERAL.pesos) e, perto
+ * da área atacada, se vai no arremesso longo (LATERAL.longaNaArea).
+ */
+function montarLateral(m, c) {
+  const pr = m.parada;
+  const sz = pr.z >= 0 ? 1 : -1;
+  pr.z = sz * CAMPO.meioZ;
+  const rumo = MD.atan2(-sz, 0);
+  const x = pr.x, z = sz * (CAMPO.meioZ + LATERAL.linha);
+  const levado = MD.hypot(c.x - x, c.z - z);
+  teleportar(c, x, z, rumo);
+  Object.assign(m.bola, criarBola(x, z));
+  m.posse = c.id; m.naMao = null; m.voo = null;
+  m.partida.estado = 'parada'; m.partida.desde = m.tick;
+  fecharMontagem(m, c, levado);
+  segurarLateral(m);
+  // a escolha da IA (sorteada uma vez: alvoCobranca é pura)
+  const P = LATERAL.pesos;
+  let r = uniforme(m.rng) * P.reduce((a, q) => a + q, 0);
+  pr.opcaoIA = P.length - 1;
+  for (let i = 0; i < P.length; i++) { if (r < P[i]) { pr.opcaoIA = i; break; } r -= P[i]; }
+  const lado = m.ataca[pr.time];
+  pr.longa = (CAMPO.meioX - x * lado) <= LATERAL.longaDist && uniforme(m.rng) < LATERAL.longaNaArea;
+  pr.arremesso = null;
+  m.eventos.push({ tipo: 'lateral', time: pr.time, x: pr.x, z: pr.z, id: c.id, levado });
 }
 
 /**
@@ -367,7 +401,12 @@ function montarPenalti(m) {
   m.eventos.push({ tipo: 'cobrancaPenalti', time: t, id: c.id, levado });
 }
 
-/** Tiro de meta (simplificado): o goleiro com a bola nas mãos na linha da pequena área. */
+/**
+ * Tiro de meta (IFAB Regra 16): a bola parada no chão dentro da pequena área (do lado em que saiu, a até
+ * TIRO_DE_META.z m do meio), o goleiro cobra com o pé como qualquer bola parada; adversários fora da área até a bola
+ * rolar, companheiros podem receber dentro dela. A IA sorteia na montagem se vai sair curto (TIRO_DE_META.curta, para
+ * um zagueiro aberto e livre) ou longo.
+ */
 function montarTiroDeMeta(m) {
   const pr = m.parada;
   const t = pr.time;
@@ -376,15 +415,13 @@ function montarTiroDeMeta(m) {
   if (!g) { montarBolaParada(m); return; }
   limparAcoes(m);
   const s = -m.ataca[t];                    // lado do gol do time (x = s · 52,5)
-  const x = s * (CAMPO.meioX - CAMPO.pequenaArea.profundidade), z = clamp(pr.z, -8, 8);
-  const levado = MD.hypot(g.x - x, g.z - z);
-  teleportar(g, x, z, MD.atan2(0, -s));
+  const x = s * (CAMPO.meioX - CAMPO.pequenaArea.profundidade + TIRO_DE_META.dentro);
+  const z = (pr.z >= 0 ? 1 : -1) * Math.min(Math.abs(pr.z), TIRO_DE_META.z);
   pr.x = x; pr.z = z;
-  Object.assign(m.bola, criarBola(x, z));
-  m.posse = g.id; m.naMao = g.id; m.voo = null;
-  g.segura = { desde: m.tick };
+  const levado = cobradorNoPonto(m, g, x, z, MD.atan2(-z * 0.3, -s));
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, g, levado);
+  pr.curta = uniforme(m.rng) < TIRO_DE_META.curta;
   m.eventos.push({ tipo: 'tiroDeMeta', time: t, id: g.id, levado });
 }
 
@@ -563,7 +600,20 @@ export function zonaLivre(m) {
 function iaPodeCobrar(m) {
   const pr = m.parada;
   if (m.tick < pr.pronta + pr.atraso) return false;
+  // saída curta do tiro de meta: o goleiro espera os zagueiros abrirem (até TIRO_DE_META.esperaMax s da bola morta)
+  if (pr.tipo === 'tiroDeMeta' && pr.curta && m.tick - pr.inicio < seg(TIRO_DE_META.esperaMax) && !zagueirosAbertos(m, pr.time)) return false;
   return zonaLivre(m) || m.tick - pr.inicio >= seg(PARTIDA.paradaMax - PARTIDA.livreAte);
+}
+
+const _za = { x: 0, z: 0, correr: false };
+/** Os zagueiros do time `t` já estão nos lugares da saída curta (a ≤ TIRO_DE_META.chegou m)? */
+function zagueirosAbertos(m, t) {
+  for (const o of m.jogadores) {
+    if (o.time !== t || o.posDetalhe !== 'ZAG') continue;
+    const a = alvoBolaParada(m, o, _za);
+    if (a && MD.hypot(a.x - o.x, a.z - o.z) > TIRO_DE_META.chegou) return false;
+  }
+  return true;
 }
 
 // ------------------------------------------------------------------------------- cobrança
@@ -578,6 +628,8 @@ function iaPodeCobrar(m) {
  *    lançamento para a frente.
  */
 const _li = { u: 0, x: 0, defensor: null };
+const _al = { x: 0, z: 0 }, _ops = [];
+const COS_LONGO = MD.cos(35 * Math.PI / 180);
 /**
  * Direção (dx, dz) que, pela conta da mira do chute do acoes.js (lat × meio gol × 1,4), põe a bola em z = zm (m do
  * meio do gol, no referencial de quem ataca: + = à direita de quem chuta para o gol).
@@ -595,8 +647,60 @@ export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
     const tx = lado * (CAMPO.meioX - CAMPO.marcaPenalti) - b.x, tz = -b.z, l = MD.hypot(tx, tz) || 1;
     return { dx: tx / l, dz: tz / l, tipo: 'lancamento', forca: F.escanteio, para: null };
   }
-  // pênalti: o canto sorteado na montagem (pr.miraZ, m do meio do gol) e a força
   const pr = m.parada;
+  // lateral (Regra 15): a opção sorteada na montagem (lateral.js opcoesLateral) ou o arremesso longo na área
+  if (tipo === 'lateral' && pr) {
+    if (pr.longa) {
+      alvoLongoNaArea(m, j, _al);
+      let para = null, dm = Infinity;
+      for (const o of m.jogadores) {
+        if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL') continue;
+        const d = MD.hypot(o.x - _al.x, o.z - _al.z);
+        if (d < dm) { dm = d; para = o; }
+      }
+      const tx = _al.x - b.x, tz = _al.z - b.z, l = MD.hypot(tx, tz) || 1;
+      return { dx: tx / l, dz: tz / l, tipo: 'lancamento', forca: 1, para: para ? para.id : null, longo: { x: _al.x, z: _al.z } };
+    }
+    const ops = opcoesLateral(m, j, _ops);
+    if (ops.length) {
+      const o = ops[Math.min(pr.opcaoIA ?? 0, ops.length - 1)];
+      const ox = o.x - b.x, oz = o.z - b.z, l = MD.hypot(ox, oz) || 1;
+      return { dx: ox / l, dz: oz / l, tipo: 'passe', forca: F.lateral, para: o.id };
+    }
+  }
+  // tiro de meta (Regra 16): curto para o zagueiro aberto e livre (sorteado na montagem: pr.curta), senão longo para o
+  // companheiro mais adiantado (no tiro de meta não há impedimento)
+  if (tipo === 'tiroDeMeta') {
+    if (pr && pr.curta) {
+      let mel = null, ms = Infinity;
+      for (const o of m.jogadores) {
+        if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL' || o.papel === 'parado') continue;
+        const d = MD.hypot(o.x - b.x, o.z - b.z);
+        if (d < 6 || d > 32) continue;
+        let dAdv = Infinity;
+        for (const q of m.jogadores) if (q.time !== j.time) dAdv = Math.min(dAdv, MD.hypot(q.x - o.x, q.z - o.z));
+        if (dAdv < TIRO_DE_META.curtoLivre) continue;
+        const sc = 20 * riscoLinha(m, j, b.x, b.z, o.x, o.z, 12) + 0.2 * d - (o.posDetalhe === 'ZAG' ? 3 : 0);
+        if (sc < ms || (sc === ms && o.id < mel.id)) { ms = sc; mel = o; }
+      }
+      if (mel && ms < 8) {
+        const ox = mel.x - b.x, oz = mel.z - b.z, l = MD.hypot(ox, oz) || 1;
+        return { dx: ox / l, dz: oz / l, tipo: 'passe', forca: F.saida, para: mel.id };
+      }
+    }
+    let mel = null, mu = -Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL') continue;
+      const u = o.x * lado;
+      if (u > mu || (u === mu && o.id < mel.id)) { mu = u; mel = o; }
+    }
+    if (mel) {
+      const ox = mel.x - b.x, oz = mel.z - b.z, l = MD.hypot(ox, oz) || 1;
+      return { dx: ox / l, dz: oz / l, tipo: 'lancamento', forca: F.tiroDeMetaLongo, para: mel.id };
+    }
+    return { dx: lado, dz: 0, tipo: 'lancamento', forca: F.tiroDeMetaLongo, para: null };
+  }
+  // pênalti: o canto sorteado na montagem (pr.miraZ, m do meio do gol) e a força
   if (tipo === 'penalti' && pr) return { ...dirParaZ(b, lado, pr.miraZ ?? 2.75), tipo: 'chute', forca: pr.forca ?? 0.8, para: null };
   // tiro livre DIRETO perto do gol: chute no canto longe do goleiro
   if (tipo === 'tiroLivre' && pr && pr.direto) {
@@ -647,7 +751,7 @@ export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
  */
 export function entradaCobranca(m, j) {
   const pr = m.parada;
-  if (!pr || pr.rolou || pr.cobrador !== j.id || pr.tipo === 'tiroDeMeta') return { x: 0, z: 0, botoes: 0 };
+  if (!pr || pr.rolou || pr.cobrador !== j.id) return { x: 0, z: 0, botoes: 0 };
   const a = alvoCobranca(m, j, pr.tipo);
   const t0 = pr.pronta + pr.atraso;
   if (!iaPodeCobrar(m)) return { x: a.dx, z: a.dz, botoes: 0 };
@@ -667,19 +771,15 @@ export function entradaCobranca(m, j) {
 function cobrar(m, entrada) {
   const pr = m.parada;
   if (!pr || pr.rolou || pr.cobrador == null) return false;
-  if (pr.tipo === 'tiroDeMeta') {
-    // o goleiro repõe pela reposição que já existe (sim.js goleiroComBola, que conta o tempo desde
-    // g.segura.desde): com adversário na área, o relógio dele não anda (até perto do limite)
-    const g = jogadorPorId(m, pr.cobrador);
-    if (g && g.segura && m.naMao === g.id && !zonaLivre(m) && m.tick - pr.inicio < seg(PARTIDA.paradaMax - PARTIDA.livreAte - GOLEIRO.esperaHumano)) {
-      g.segura.desde = m.tick; g.pedido = null; g.carga = null;
-    }
-    return false;
-  }
   const c = jogadorPorId(m, pr.cobrador);
   if (!c || c.papel !== 'parado') return false;
   // parado com a bola no pé: a condução não "ajeita" a bola (ela fica no ponto até a cobrança)
   if (c.cond) { c.cond.toque = null; c.cond.busca = false; }
+  // lateral: no meio do arco do arremesso, a bola sai das mãos na hora da soltura
+  if (pr.tipo === 'lateral' && pr.arremesso) {
+    if (m.tick < pr.arremesso.solta) return false;
+    return soltarLateral(m, c);
+  }
   const humano = m.humanos.includes(c.time) && m.controlado[c.time] === c.id;
   const iaAssume = !humano || m.tick - pr.inicio >= seg(PARTIDA.cobrancaHumanoMax);
   if (iaAssume) {
@@ -696,9 +796,47 @@ function cobrar(m, entrada) {
     if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) c.pedido = null;
   }
   if (!c.pedido) return false;
+  if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
   const ok = executarAcao(m, c, c.par.attr.pePreferido ?? 1, false);
   c.miraAuto = null; // a direção da cobrança não vale para o próximo passe dele
+  if (!ok) return false;
+  rolou(m);
+  return true;
+}
+
+/**
+ * Lateral: o pedido do cobrador (PASSE, ENFIADA ou LANÇAMENTO) começa o arco do arremesso (LATERAL.tempo s; a bola
+ * anda nas mãos por lateral.js segurarLateral). O alvo é a opção da IA (alvoCobranca) ou a mirada pelo analógico do
+ * humano (lateral.js opcaoMirada); o LANÇAMENTO do humano sem opção vai na direção do analógico, no máximo.
+ */
+function comecarArremesso(m, c, ia) {
+  const pr = m.parada, p = c.pedido;
+  c.pedido = null; c.carga = null;
+  if (p.tipo === 'chute') return false; // lateral não é chutado
+  let para = null, longo = null;
+  if (ia) {
+    const a = alvoCobranca(m, c, 'lateral');
+    para = a.para; longo = a.longo ?? null;
+  } else {
+    // LANÇAMENTO com o analógico longe de todas as opções (> 35°): o arremesso longo vai na direção dele
+    const ops = opcoesLateral(m, c, _ops);
+    const k = opcaoMirada(m, c, ops, p.tipo === 'lancamento' ? COS_LONGO : -2);
+    if (k >= 0) para = ops[k].id;
+  }
+  const dir = p.dir ?? (c.imag > 0.3 ? { x: c.ix, z: c.iz } : { x: MD.cos(c.rumo), z: MD.sin(c.rumo) });
+  pr.arremesso = { tick0: m.tick, solta: m.tick + seg(LATERAL.tempo), tipo: p.tipo, forca: p.forca, para, longo, dx: dir.x, dz: dir.z };
+  m.eventos.push({ tipo: 'arremesso', id: c.id, para });
+  return false;
+}
+
+/** Fim do arco do arremesso: a bola sai das mãos (acoes.js arremessoLateral) e a parada acaba. */
+function soltarLateral(m, c) {
+  const pr = m.parada, a = pr.arremesso;
+  segurarLateral(m); // a bola no ponto da soltura
+  const r = a.para != null ? jogadorPorId(m, a.para) : null;
+  const ok = arremessoLateral(m, c, { tipo: a.tipo, forca: a.forca, dir: { x: a.dx, z: a.dz } }, r, r ? null : a.longo, vMaxArremesso(c));
+  c.arremesso = { tick: m.tick, rumo: c.rumo }; // os braços seguem o arremesso (só desenho: anim.js)
   if (!ok) return false;
   rolou(m);
   return true;
@@ -1060,17 +1198,16 @@ export function regrasPartida(m) {
       else montarBolaParada(m);
       return;
     }
-    // montada: a bola rolou? (o tiro de meta sai pela reposição do goleiro; a cobrança com o pé sai
-    // em cobrar(), antes do passo). Trava proibida: passou de paradaMax, rola do jeito que está.
-    // (no tiro de meta a bola anda com o goleiro, nas mãos: só vale a reposição)
-    const saiuDoPonto = pr.tipo !== 'tiroDeMeta' && MD.hypot(m.bola.p.x - pr.x, m.bola.p.z - pr.z) > 0.6;
+    // montada: a bola rolou? (a cobrança sai em cobrar(), antes do passo; no lateral a bola está nas mãos do
+    // cobrador e não "sai do ponto"). Trava proibida: passou de paradaMax, rola do jeito que está.
+    const saiuDoPonto = pr.tipo !== 'lateral' && MD.hypot(m.bola.p.x - pr.x, m.bola.p.z - pr.z) > 0.6;
     if (m.posse !== pr.cobrador || m.voo || saiuDoPonto || m.tick - pr.inicio > seg(PARTIDA.paradaMax)) {
       rolou(m);
       regraImpedimento(m); // a foto da cobrança (do tiro de meta não há impedimento: zera)
       return;
     }
-    // a bola fica no ponto até a cobrança (o tiro de meta está nas mãos do goleiro)
-    if (pr.tipo !== 'tiroDeMeta') {
+    // a bola fica no ponto até a cobrança (no lateral, nas mãos do cobrador)
+    if (pr.tipo !== 'lateral') {
       const b = m.bola;
       b.p.x = pr.x; b.p.z = pr.z; b.p.y = BOLA.raio; b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
     }
@@ -1133,7 +1270,7 @@ export function entradaDemoPartida(m) {
   const j = jogadorPorId(m, m.controlado[0]);
   if (!j) return { x: 0, z: 0, botoes: 0 };
   const pr = m.parada;
-  if (pr && !pr.rolou && pr.cobrador === j.id && pr.tipo !== 'tiroDeMeta') return entradaCobranca(m, j);
+  if (pr && !pr.rolou && pr.cobrador === j.id) return entradaCobranca(m, j);
   // ia: a IA joga pelo humano — recebe como a IA (sem a recepção assistida do controle humano, recepcao.js)
   const e = entradaIATatica(m, j);
   return { x: e.x, z: e.z, botoes: e.botoes, ia: true };
@@ -1157,5 +1294,9 @@ export function misturarPartida(h, m) {
   if (!pr) return misturarHash(h, -1);
   for (const v of [TIPOS_PARADA.indexOf(pr.tipo), pr.time, pr.x, pr.z, pr.cobrador ?? -1, pr.inicio, pr.desde, pr.pronta, pr.atraso, pr.rolou ? 1 : 0, pr.raio === 'area' ? -2 : pr.raio, PAPEIS.indexOf(pr.papel), pr.levado]) h = misturarHash(h, v);
   for (const v of [pr.direto ? 1 : 0, pr.miraZ ?? -9, pr.forca ?? -1, pr.palpite ?? -9]) h = misturarHash(h, v);
+  // lateral: a escolha da IA e o arremesso em andamento
+  for (const v of [pr.opcaoIA ?? -1, pr.longa ? 1 : 0, pr.curta ? 1 : 0]) h = misturarHash(h, v);
+  const ar = pr.arremesso;
+  if (ar) for (const v of [ar.tick0, ar.solta, ar.para ?? -1, ar.forca, ar.dx, ar.dz]) h = misturarHash(h, v);
   return h;
 }

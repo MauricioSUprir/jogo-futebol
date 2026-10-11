@@ -554,9 +554,8 @@ export const PARTIDA = {
   foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
   montagem: 1.2,              // s de montagem do recomeço (corte de câmera na saída)
   // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
-  // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; o tiro de meta é do
-  // goleiro com a bola nas mãos (a reposição que já existe: GOLEIRO.esperaIA / esperaHumano)
-  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0, tiroLivre: 1.0, penalti: 1.5 },
+  // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; no tiro de meta os zagueiros abrem
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 1.0, tiroLivre: 1.0, penalti: 1.5 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
   cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
@@ -573,7 +572,7 @@ export const PARTIDA = {
   margemParede: 0.3,          // m
   saiParede: 1.0,             // m/s
   dentroParede: 0.02,         // m
-  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65 }, // força do botão da IA
+  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65, tiroDeMetaLongo: 0.85 }, // força do botão da IA
   // pênalti da IA (Regra 14): canto sorteado pelo m.rng — z da mira (m do meio do gol) com o peso de cada um; força
   // sorteada na faixa (a dispersão do chute do acoes.js faz o resto: fora e na trave)
   penaltiIA: { mira: [[-2.75, 0.32], [-1.6, 0.12], [0, 0.12], [1.6, 0.12], [2.75, 0.32]], forca: [0.62, 0.9] },
@@ -594,6 +593,51 @@ export const PARTIDA = {
     porImpedimento: 0,                // a parada do impedimento é rápida (tiro livre na hora)
     max: { 1: 5, 2: 10 },
   },
+};
+
+// Bolas paradas da Etapa 4 (lateral.js; partida.js). Lateral (IFAB Regra 15): de frente para o campo, parte de cada pé
+// na linha ou fora dela, as duas mãos levando a bola de trás e por cima da cabeça; adversários a 2 m. Arremesso de
+// 12–19 m/s entre jogadores homens, solto a ~2,3 m de altura, alcance máximo com ~30° (Linthorne & Everett 2006, que
+// citam Messier & Brody 1986, Kollath & Schwirtz 1988 e Bray & Kerwin 2004). O esqueleto daqui é mais baixo (ombro a
+// ~1,42 m, braço de 0,55 m: a mão alcança ~1,96 m): a bola fica e sai onde as mãos desenhadas alcançam.
+export const LATERAL = {
+  tras: 0.1,                  // m — segurando: a bola atrás do meio da cabeça...
+  altura: 1.84,               // ...nesta altura (as palmas dos dois lados dela)
+  topo: 1.94,                 // m — o arco passa por cima da cabeça nesta altura...
+  soltaFrente: 0.24,          // ...e solta à frente do corpo...
+  soltaAltura: 1.85,          // ...nesta altura
+  tempo: 0.22,                // s do arco (de trás da cabeça até a soltura)
+  seguimento: 0.35,           // s — os braços seguem o arremesso depois da soltura (só desenho)
+  linha: 0.12,                // m — o centro do cobrador fora da linha (o pé da frente sobre ela)
+  vMax: [12, 19],             // m/s — arremesso mais forte, pela força e pelo passe longo (12–19 m/s medidos)
+  elevCurto: 0.3,             // rad — arremesso curto: chega ao recebedor na altura yRecebe
+  elevLongo: 0.52,            // rad (~30°: o alcance máximo medido)
+  yRecebe: 0.9,               // m — o curto chega na coxa/peito de quem recebe
+  adiante: 1.5,               // m — no máximo isto à frente de quem recebe (o arremesso no pé)
+  erroBom: 0.025,             // rad — dispersão do arremesso (passe 100)...
+  erroRuim: 0.07,             // ...e (passe 0)
+  dMin: 4, dMax: 28, dIdeal: 11, // m — as opções: companheiros a dMin–dMax m, de preferência a ~dIdeal m
+  risco: 20,                  // peso do risco da linha (acoes.js riscoLinha) na nota de cada opção
+  frente: 0.1,                // ganho por metro à frente da bola (até 15 m)
+  pesos: [0.6, 0.27, 0.13],   // IA: chance de arremessar para a 1ª, 2ª e 3ª opção
+  longaNaArea: 0.3,           // IA a ≤ longaDist m da linha de fundo atacada: chance do arremesso longo na área
+  longaDist: 25,
+  preferirLateral: 8,         // m de vantagem para o lateral/ala do time cobrar (é quem cobra no jogo de verdade)
+};
+
+// Tiro de meta (IFAB Regra 16, desde 2019/20): a bola parada em qualquer ponto da pequena área, chutada pelo goleiro; está
+// em jogo quando é chutada e se move claramente; adversários fora da área até então, companheiros podem receber dentro
+// dela. A saída curta com os zagueiros abertos nos cantos da área virou o padrão (pedido do dono, seção 8).
+export const TIRO_DE_META = {
+  dentro: 0.3,                // m para dentro da linha da pequena área
+  z: 6,                       // m — no máximo isto do meio (do lado em que a bola saiu)
+  curta: 0.55,                // IA: chance de sair curto (sorteada na montagem; só com um zagueiro livre)
+  curtoLivre: 7,              // m — o zagueiro está livre se nenhum adversário está a menos disto
+  esperaMax: 5,               // s da bola morta — na saída curta o goleiro espera os zagueiros abrirem até isto...
+  chegou: 3,                  // ...(a esta distância do lugar deles)
+  // zagueiros abertos: a ~aberto.u m da própria linha de fundo, a aberto.z m do meio (dentro da área, nos cantos);
+  // o volante encosta na meia-lua; os laterais sobem pelos lados
+  aberto: { u: 12.5, z: 17 }, volante: { u: 21, z: 0 }, laterais: { u: 30, z: 29 },
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e

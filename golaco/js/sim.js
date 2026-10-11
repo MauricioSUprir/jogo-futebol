@@ -27,6 +27,7 @@ import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
 import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
+import { lateralSegurando, segurarLateral } from './lateral.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -428,6 +429,8 @@ export function passo(m, entradas) {
   if (m.naMao != null) {
     const g = jogadorPorId(m, m.naMao);
     if (g) goleiroComBola(m, g);
+  } else if (m.parada && lateralSegurando(m)) {
+    // lateral (Etapa 4): a bola está nas mãos do cobrador — nada de condução até o arremesso (partida.js cobrar)
   } else if (m.posse != null) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) {
@@ -461,13 +464,15 @@ export function passo(m, entradas) {
   if (m.naMao != null) {
     const g = jogadorPorId(m, m.naMao);
     if (g) bolaNaMao(m, g);
+  } else if (m.parada && segurarLateral(m)) {
+    // lateral (Etapa 4): a bola nas duas mãos (atrás da cabeça ou no arco do arremesso), sem física
   } else {
     passoBola(m.bola, m.eventos);
     colisaoBolaCorpo(m);
   }
   verificarGol(m);
   // 6) posse
-  if (m.posse != null && m.naMao == null) {
+  if (m.posse != null && m.naMao == null && !(m.parada && lateralSegurando(m))) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) verificarPerda(m, dono);
   }
