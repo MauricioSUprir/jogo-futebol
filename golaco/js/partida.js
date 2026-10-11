@@ -8,7 +8,7 @@
 //  m.partida = {estado: 'jogo'|'parada'|'gol'|'intervalo'|'fim', tempo: 1|2, tick0Tempo, ticksPorTempo,
 //               saidaInicial: 0|1, iaClassica, desde (tick do estado), ultimoTime / ultimoId / ultimoTick
 //               (último toque na bola: decide o recomeço), golTime (quem marcou o último gol)}
-//  m.parada  = null | {tipo: 'saida'|'lateral'|'escanteio'|'tiroDeMeta', time (quem cobra), x, z (ponto),
+//  m.parada  = null | {tipo: 'saida'|'lateral'|'escanteio'|'tiroDeMeta'|'tiroLivre', time (quem cobra), x, z (ponto),
 //               cobrador: id | null (null = bola morta, antes da montagem: ninguém toca nela), inicio (tick
 //               em que a bola morreu), desde (tick da montagem), pronta (tick em que pode cobrar), atraso
 //               (ticks que a IA espera depois de pronta, sorteados pelo m.rng), rolou: bool, raio (m dos
@@ -25,7 +25,10 @@
 //    adversários a ≥ 9,15 m; a IA cruza (o lançamento vira cruzamento pela zona, acoes.js);
 //  - tiro de meta: o goleiro com a bola NAS MÃOS na linha da pequena área (Etapa 4: com o pé no
 //    chão), adversários fora da área até a bola sair; a reposição é a que já existe (sim.js
-//    goleiroComBola: IA em 1,5 s, humano em até 3 s).
+//    goleiroComBola: IA em 1,5 s, humano em até 3 s);
+//  - tiro livre indireto (Etapa 4, impedimento — impedimento.js): do outro time no ponto em que o impedido
+//    tocou a bola; o de linha mais perto cobra com passe (nunca para quem está impedido); adversários a 9,15 m.
+// Acréscimos (Regra 7.3): anunciados no fim do tempo regulamentar (PARTIDA.acrescimos), o tempo acaba depois deles.
 // O cobrador é levado ao ponto na montagem e fica parado (papel 'parado': a simulação não o move)
 // até cobrar; a cobrança é a ação de verdade (acoes.js executarAcao, a mesma do jogo). A IA cobra em
 // 0,6–1,4 s depois de pronta; o humano tem até 6 s desde a bola morta, depois a IA cobra por ele.
