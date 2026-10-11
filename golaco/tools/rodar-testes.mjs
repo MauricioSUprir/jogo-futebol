@@ -65,6 +65,7 @@ const LISTA = [
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],
+  ['bolas paradas: lateral com as mãos e 3 opções (Regra 15), tiro de meta (16), escanteio por zonas, barreira (13)', 'teste-bolas-paradas.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

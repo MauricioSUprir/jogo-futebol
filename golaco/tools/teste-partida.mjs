@@ -17,7 +17,8 @@
 //  E. Canhão de 40 bolas para fora (linhas laterais e de fundo, os dois lados, os dois tempos,
 //     último toque dos dois times) + 8 que desviam num jogador antes de sair: recomeço certo (lateral
 //     para quem não tocou por último, no ponto em que ela cruzou; escanteio quando o último toque é de
-//     quem defende; senão tiro de meta com o goleiro com a bola nas mãos) e cobrado em ≤ 8 s.
+//     quem defende; senão tiro de meta — da Etapa 4 em diante, com a bola no chão dentro da pequena área (Regra 16) e o
+//     lateral na linha (Regra 15)) e cobrado em ≤ 8 s.
 //
 //   node tools/teste-partida.mjs                  (lógica do repositório, sementes 1..8)
 //   node tools/teste-partida.mjs --base 11        (sementes 11..18; as 5 rodadas usam 1, 11, 21, 31, 41)
@@ -37,6 +38,8 @@ const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const ANTES = args.includes('--antes');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const existe = f => fs.existsSync(path.join(JS, f));
+// Etapa 4 (lateral.js): o lateral na linha (Regra 15) e o tiro de meta com a bola no chão (Regra 16)
+const BOLAS_E4 = existe('lateral.js');
 const PASSO = 1 / 60;
 const fmtS = v => v.toFixed(2).replace('.', ',');
 
@@ -338,7 +341,7 @@ const [resC, resD] = await Promise.all([
         if (e.tipo === 'fora' && saiuLateral == null) saiuLateral = Math.abs(m.bola.p.z) > meioZ;
         if (e.tipo === 'cobranca' && montada) { cobrou = (m.tick - t0) * PASSO; if (dentroAntes && dentroAntes.size) dentroCobranca++; }
       }
-      if (!montada && m.parada && m.parada.cobrador != null) montada = { ...m.parada, naMao: m.naMao, ataca: { ...m.ataca } };
+      if (!montada && m.parada && m.parada.cobrador != null) montada = { ...m.parada, naMao: m.naMao, ataca: { ...m.ataca }, lateralNaLinha: BOLAS_E4, tiroDeMetaNoChao: BOLAS_E4 };
       // raio da parada: ninguém entra; ninguém dentro na cobrança
       const pr = m.parada;
       if (pr && pr.cobrador != null && !pr.rolou) {
@@ -369,7 +372,9 @@ const [resC, resD] = await Promise.all([
     let ok, esperado;
     if (lateral) {
       esperado = `lateral para ${1 - toque} em x≈${alvoX.toFixed(1)}`;
-      ok = montada.tipo === 'lateral' && montada.time === 1 - toque && Math.abs(montada.x - alvoX) <= 1 && Math.sign(montada.z) === sz && Math.abs(Math.abs(montada.z) - (meioZ - 0.3)) < 1e-9;
+      // (Etapa 4, Regra 15: o ponto do lateral é a linha — o cobrador com o pé sobre ela; antes, 0,3 m para dentro)
+      const zl = montada.lateralNaLinha ? meioZ : meioZ - 0.3;
+      ok = montada.tipo === 'lateral' && montada.time === 1 - toque && Math.abs(montada.x - alvoX) <= 1 && Math.sign(montada.z) === sz && Math.abs(Math.abs(montada.z) - zl) < 1e-9;
     } else {
       const defende = montada.ataca[0] === -sx ? 0 : 1;
       if (toque === defende) {
@@ -378,7 +383,9 @@ const [resC, resD] = await Promise.all([
       } else {
         esperado = `tiro de meta para ${defende}`;
         const g = m.jogadores.find(j => j.time === defende && j.posicao === 'GOL');
-        ok = montada.tipo === 'tiroDeMeta' && montada.time === defende && montada.naMao === g.id && Math.abs(montada.x - sx * (meioX - 5.5)) < 0.01;
+        // (Etapa 4, Regra 16: a bola no chão dentro da pequena área e o goleiro cobra com o pé; antes, nas mãos dele)
+        ok = montada.tipo === 'tiroDeMeta' && montada.time === defende && montada.cobrador === g.id
+          && (montada.tiroDeMetaNoChao ? montada.naMao == null && Math.abs(montada.x) >= meioX - 5.5 && Math.abs(montada.x) <= meioX : montada.naMao === g.id && Math.abs(montada.x - sx * (meioX - 5.5)) < 0.01);
       }
     }
     if (ok) certos++; else erros.push(`#${k} (${tempo}º tempo): ${montada.tipo} para ${montada.time} em (${montada.x.toFixed(1)}, ${montada.z.toFixed(1)}); esperado ${esperado}`);

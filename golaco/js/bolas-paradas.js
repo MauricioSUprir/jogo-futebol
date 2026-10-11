@@ -104,6 +104,17 @@ export function papeisEscanteio(m, c) {
   return lista;
 }
 
+/** j é o de linha do time dele mais perto do ponto `a` (empate: o menor id)? */
+function atacaABola(m, j, a) {
+  const dj = MD.hypot(a.x - j.x, a.z - j.z);
+  for (const o of m.jogadores) {
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado') continue;
+    const d = MD.hypot(a.x - o.x, a.z - o.z);
+    if (d < dj || (d === dj && o.id < j.id)) return false;
+  }
+  return true;
+}
+
 /** Ponto (x, z) no mundo do referencial do escanteio do time `t` no lado `sz` (escreve em out). */
 export function pontoEscanteio(m, t, sz, u, w, out) {
   const lado = m.ataca[t];
@@ -126,6 +137,13 @@ function escanteio(m, j, out, B, depois) {
   for (const q of B.papeis) if (q.id === j.id) { p = q; break; }
   if (!p) return null;
   const t = B.time;
+  // com o cruzamento no ar, o defensor (de linha) mais perto do ponto dele vai disputar a bola — a zona e a marcação
+  // seguram o resto (sem isso ninguém da IA atacava a bola: só o controlado do humano, levado pela troca aérea)
+  const v = m.voo;
+  if (depois && j.time !== t && v && v.alvo && v.time === t && atacaABola(m, j, v.alvo)) {
+    out.x = v.alvo.x; out.z = v.alvo.z; out.correr = true;
+    return out;
+  }
   if (p.papel === 'atacaZona') {
     if (depois) pontoEscanteio(m, t, B.sz, p.u, p.w, out);
     else pontoEscanteio(m, t, B.sz, p.su, p.sw, out);

@@ -630,8 +630,9 @@ function bolaAltaNoCorpo(m, j) {
         const venceu = ganhaDisputa(m, j, o);
         m.eventos.push({ tipo: 'disputaAerea', id: venceu ? j.id : o.id, perdeu: venceu ? o.id : j.id });
         if (!venceu) {
-          // o rival ganhou: afasta de cabeça (para longe do gol dele); quem ia na bola não toca nela
-          j.pedido = null;
+          // o rival ganhou: afasta de cabeça (para longe do gol dele); quem ia na bola não toca nela — nem logo depois,
+          // ainda no ar (AEREO.perdeuSalto s: antes ele cabeceava a bola recém-afastada, colada nele, para o gol)
+          j.pedido = null; j.perdeuAlto = m.tick;
           const p0 = o.pedido && o.pedido.tipo !== 'chute' ? o.pedido : { tipo: 'lancamento', forca: 0.8 };
           o.pedido = null; if (o.cond) o.cond.toque = null;
           executarCabeceio(m, o, p0);
@@ -661,6 +662,7 @@ function bolaAltaNoCorpo(m, j) {
     ganhouPosse(m, j);
     return true;
   }
+  if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
   const r = bolaAltaPassando(m, j, 60);
   if (!r) return false;
   const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
@@ -679,10 +681,12 @@ function rivalNoAlto(m, j) {
   for (const o of m.jogadores) {
     if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
     const d = MD.hypot(b.x - o.x, b.z - o.z);
-    if (d > AEREO.raio || d >= dm) continue;
+    if (d > AEREO.raio) continue;
     const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * o.par.attr.impulsao / 100);
     if (b.y > alcanceY) continue;
-    dm = d; mel = o;
+    // o controlado do humano ao alcance disputa (quem joga vê o próprio jogador subir); senão, o mais perto
+    if (ehControlado(m, o)) return o;
+    if (d < dm) { dm = d; mel = o; }
   }
   return mel;
 }

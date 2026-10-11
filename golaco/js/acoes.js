@@ -618,7 +618,7 @@ function chute(m, j, pe, p, erroMult) {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
   }
-  let yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
+  const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;
@@ -648,19 +648,24 @@ function chute(m, j, pe, p, erroMult) {
     const g = girar(ux0, uz0, a);
     ux = g.x; uz = g.z;
   }
-  // tiro livre com barreira (Regra 13; partida.js): a altura no gol mais baixa que ainda passa por cima dela (o centro da
-  // bola acima de p.barreira.altura a p.barreira.dist m); nem no travessão passa: tira força (a bola sobe e cai antes)
+  // tiro livre com barreira (Regra 13; partida.js): com efeito por cima (giro para a frente: a bola desce), a elevação que
+  // passa por cima dela (o centro da bola a p.barreira.altura m a p.barreira.dist m); chegando no gol acima de
+  // yBarreiraMax, tira força até descer abaixo do travessão
+  let elFalta = null;
   if (p.barreira && D > p.barreira.dist + 1) {
-    for (let k = 0; k < 14; k++) {
-      const el0 = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
-      if (alturaNaDistancia(pp, ux, uz, p.barreira.dist, s, el0, w).y >= p.barreira.altura) break;
-      if (yMira < cfg.yBarreiraMax) yMira = Math.min(cfg.yBarreiraMax, yMira + 0.12); else s *= 0.94;
+    w = { x: w.x + uz * cfg.giroFalta, y: w.y, z: w.z - ux * cfg.giroFalta };
+    for (let k = 0; k < 18; k++) {
+      const elW = elevacaoParaAltura(pp, ux, uz, p.barreira.dist, s, p.barreira.altura, w);
+      const yG = alturaNaDistancia(pp, ux, uz, D, s, elW, w).y;
+      if (yG <= cfg.yBarreiraMax) { elFalta = elW; break; }
+      s *= 0.95;
     }
   }
-  const el = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
+  const el = elFalta ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
   const base = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100);
-  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * (colocado ? cfg.colocadoErro : 1);
+  // (no tiro livre com barreira o erro é o da falta, com ou sem efeito: ACOES.chute.faltaErro já está em erroMult)
+  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * (colocado && !p.barreira ? cfg.colocadoErro : 1);
   const ea = normal(m.rng) * sig, ee = normal(m.rng) * sig * 0.6;
   const u = girar(ux, uz, ea);
   const ce = MD.cos(el + ee), se = MD.sin(el + ee);
@@ -696,8 +701,10 @@ export function executarCabeceio(m, j, p) {
   const lado = ataca(m, j.time);
   const cfg = ACOES.cabeceio;
   const attr = j.par.attr.cabeceio;
-  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão
-  const sig = lerp(0.12, 0.03, attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
+  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão. Na partida (Etapa 4) o cabeceio
+  // PARA O GOL espalha como o de verdade (Opta: ~1/3 dos cabeceios a gol no alvo; antes quase todos iam no alvo)
+  const e0 = m.partida && p.tipo === 'chute' ? cfg.erroGolPartida : [0.12, 0.03];
+  const sig = lerp(e0[0], e0[1], attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;
   if (p.tipo === 'chute') {

@@ -398,12 +398,13 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.2, faltaErro: 2.7 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
-  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35 },
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
+    erroGolPartida: [0.3, 0.1] }, // rad — cabeceio para o gol na partida (cabeceio 0 → 100; Opta: ~1/3 no alvo)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -691,8 +692,8 @@ export const BARREIRA = {
   salto: { altura: 0.4, tempo: 0.6 }, // pulo no chute: sobe até ~altura m (pela impulsão) em tempo/2 s
   restituicao: 0.35,          // a bola que bate na barreira volta com isso da velocidade normal...
   amortece: 0.55,             // ...e perde isso do resto
-  alturaPassar: 2.15,         // m — o chute de falta mira para passar com o centro da bola acima disto na barreira
-                              // (rente ao topo do pulo: parte dos chutes bate nela)
+  alturaPassar: 2.32,         // m — o chute de falta mira para passar com o centro da bola acima disto na barreira
+                              // (o topo do pulo fica a ~2,2 m + o raio da bola: o erro para baixo bate nela)
   goleiro: 0.6,               // m — o goleiro fica isto para o lado do 2º pau (a barreira cobre o 1º; mais longe, o chute
                               // por cima dela no canto do 1º pau entrava demais)
 };
@@ -709,6 +710,7 @@ export const AEREO = {
   k: 3.0,                     // ganho da diferença de nota (por 100 pontos) no logit
   ladoGol: 0.35,              // vantagem (logit) de quem está do lado do próprio gol
   erroDisputa: 1.8,           // o cabeceio de quem ganhou a disputa espreme mais (pressão no salto)
+  perdeuSalto: 0.6,           // s — quem perdeu a disputa não toca na bola alta por isto (ainda no ar, caindo)
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e
