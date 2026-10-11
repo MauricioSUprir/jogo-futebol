@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, LATERAL } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, LATERAL, AEREO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -303,7 +303,8 @@ export function executarAcao(m, j, pe, primeira = false) {
     const lado = ataca(m, j.time);
     const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
-      * (p.penalti ? ACOES.chute.penaltiErro : 1); // a pressão da cobrança do pênalti
+      * (p.penalti ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
+      * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
     return chute(m, j, pe, p, em);
   }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
@@ -617,7 +618,7 @@ function chute(m, j, pe, p, erroMult) {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
   }
-  const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
+  let yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);
   if (colocado) s *= cfg.colocadoV;
@@ -646,6 +647,15 @@ function chute(m, j, pe, p, erroMult) {
     }
     const g = girar(ux0, uz0, a);
     ux = g.x; uz = g.z;
+  }
+  // tiro livre com barreira (Regra 13; partida.js): a altura no gol mais baixa que ainda passa por cima dela (o centro da
+  // bola acima de p.barreira.altura a p.barreira.dist m); nem no travessão passa: tira força (a bola sobe e cai antes)
+  if (p.barreira && D > p.barreira.dist + 1) {
+    for (let k = 0; k < 14; k++) {
+      const el0 = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
+      if (alturaNaDistancia(pp, ux, uz, p.barreira.dist, s, el0, w).y >= p.barreira.altura) break;
+      if (yMira < cfg.yBarreiraMax) yMira = Math.min(cfg.yBarreiraMax, yMira + 0.12); else s *= 0.94;
+    }
   }
   const el = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
@@ -686,7 +696,8 @@ export function executarCabeceio(m, j, p) {
   const lado = ataca(m, j.time);
   const cfg = ACOES.cabeceio;
   const attr = j.par.attr.cabeceio;
-  const sig = lerp(0.12, 0.03, attr / 100);
+  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão
+  const sig = lerp(0.12, 0.03, attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;
   if (p.tipo === 'chute') {

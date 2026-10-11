@@ -82,6 +82,11 @@ export function entradaIATatica(m, j) {
   if (j.recebe && m.posse !== j.id) primeiraIA(m, j);
   if ((j.recebe && m.posse !== j.id) || j.corrida) return entradaIA(m, j);
   if (m.posse == null && m.naMao == null && vaiNaLivre(m, j)) return bolaLivre(m, j);
+  // depois do chute do escanteio: cada um segue o papel dele enquanto o cruzamento está no ar (bolas-paradas.js)
+  if (m.posse !== j.id && m.partida?.bp) {
+    const bp = alvoBolaParada(m, j, _bpar);
+    if (bp) { estadoIA(m, j).ramo = 'bolaParada'; return irPara(m, j, bp.x, bp.z, 1, bp.correr, extraAcao(m, j), 'pressa'); }
+  }
   const f = faseDoTime(m, j.time);
   if (m.posse === j.id) return condutorTatico(m, j) ?? entradaIA(m, j);
   if (f.fase === 'com') return apoioTatico(m, j) ?? referenciaComBola(m, j, f);

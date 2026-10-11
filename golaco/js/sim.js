@@ -2,7 +2,7 @@
 // O mundo é um objeto simples (copiável); a mesma semente e as mesmas entradas geram a
 // mesma partida bit a bit (ver hashMundo).
 
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -28,6 +28,7 @@ import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
 import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
+import { notaAerea, colisaoBarreira } from './bolas-paradas.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -469,6 +470,7 @@ export function passo(m, entradas) {
   } else {
     passoBola(m.bola, m.eventos);
     colisaoBolaCorpo(m);
+    if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
   verificarGol(m);
   // 6) posse
@@ -620,6 +622,25 @@ function bolaAltaNoCorpo(m, j) {
     const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
     const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
     if (d > 0.75 || b.p.y > alcanceY) return false;
+    // disputa pelo alto (Etapa 4, só na partida e, por enquanto, só na bola que vem de uma bola parada — escanteio,
+    // falta, lateral; no jogo corrido entra com o equilíbrio): o adversário que alcança a bola no ponto disputa
+    if (m.partida && b.p.y >= AEREO.yMin && m.voo && m.voo.bolaParada) {
+      const o = rivalNoAlto(m, j);
+      if (o) {
+        const venceu = ganhaDisputa(m, j, o);
+        m.eventos.push({ tipo: 'disputaAerea', id: venceu ? j.id : o.id, perdeu: venceu ? o.id : j.id });
+        if (!venceu) {
+          // o rival ganhou: afasta de cabeça (para longe do gol dele); quem ia na bola não toca nela
+          j.pedido = null;
+          const p0 = o.pedido && o.pedido.tipo !== 'chute' ? o.pedido : { tipo: 'lancamento', forca: 0.8 };
+          o.pedido = null; if (o.cond) o.cond.toque = null;
+          executarCabeceio(m, o, p0);
+          m.eventos.push({ tipo: 'cabeceio', id: o.id });
+          return true;
+        }
+        j.disputa = m.tick; // ganhou disputando: o cabeceio sai mais impreciso (acoes.js)
+      }
+    }
     if (b.p.y > ACOES.cabeceio.alturaPeito[1] || j.pedido) {
       // sem botão: a IA na área cabeceia para o gol; fora dela (e o humano), cabeceia de passe
       const lado = ataca(m, j.time);
@@ -646,6 +667,33 @@ function bolaAltaNoCorpo(m, j) {
   if (r.y > alcanceY || r.y < 0.2) return false;
   c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
   return true;
+}
+
+/**
+ * Adversário de j que disputa a bola alta no toque dele: de linha, a ≤ AEREO.raio m da bola e alcançando a altura dela
+ * (o salto pela impulsão); o mais perto. Só na partida.
+ */
+function rivalNoAlto(m, j) {
+  const b = m.bola.p;
+  let mel = null, dm = Infinity;
+  for (const o of m.jogadores) {
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    const d = MD.hypot(b.x - o.x, b.z - o.z);
+    if (d > AEREO.raio || d >= dm) continue;
+    const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * o.par.attr.impulsao / 100);
+    if (b.y > alcanceY) continue;
+    dm = d; mel = o;
+  }
+  return mel;
+}
+
+/** j (quem ia na bola) ganha a disputa pelo alto contra o? Logística da diferença de nota, o lado do gol (m.rng). */
+function ganhaDisputa(m, j, o) {
+  const gx = ataca(m, o.time) * -CAMPO.meioX; // gol que o rival defende
+  const oNoGol = MD.hypot(gx - o.x, o.z) < MD.hypot(gx - j.x, j.z);
+  const x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100 + (oNoGol ? -AEREO.ladoGol : AEREO.ladoGol);
+  const p = 1 / (1 + MD.exp(-x));
+  return uniforme(m.rng) < p;
 }
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */

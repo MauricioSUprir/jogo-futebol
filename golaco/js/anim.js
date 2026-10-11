@@ -18,6 +18,7 @@ import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
+import { alturaSalto } from './bolas-paradas.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -300,6 +301,9 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       info.pes[p].alvoX = pe.x; info.pes[p].alvoZ = pe.z;
     }
   }
+  // barreira (Etapa 4): o pulo no chute sobe o corpo inteiro (bolas-paradas.js alturaSalto: a mesma conta da colisão)
+  const hs = j.salto ? alturaSalto(j, m.tick) : 0;
+  if (hs > 0) for (let i = 1; i < out.length; i += 3) out[i] += hs;
   return out;
 }
 

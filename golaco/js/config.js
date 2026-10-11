@@ -398,7 +398,7 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.2, faltaErro: 2.7 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
@@ -638,6 +638,77 @@ export const TIRO_DE_META = {
   // zagueiros abertos: a ~aberto.u m da própria linha de fundo, a aberto.z m do meio (dentro da área, nos cantos);
   // o volante encosta na meia-lua; os laterais sobem pelos lados
   aberto: { u: 12.5, z: 17 }, volante: { u: 21, z: 0 }, laterais: { u: 30, z: 29 },
+};
+
+// Escanteio (pedido do dono, seção 8: "atacantes em zonas — 1º pau, 2º pau, marca do pênalti, entrada da área — e defesa
+// mista, zona + individual"; bolas-paradas.js). Kubayi & Larkin 2020 (600 escanteios da Copa de 2018): a defesa mista
+// sofreu menos gols (3,7%) que a só por zona (6,0%); os gols saem mais do meio e do 1º pau. Premier League ("which clubs
+// are best at defending corners"): a maioria mistura zona e individual, com 4 na zona da pequena área (2 no 1º pau, 1 no
+// meio, 1 no 2º pau). Copa de 2022 (570 escanteios): 2,6% viram gol. Montagem com corte de câmera (como a TV): cada um
+// no seu lugar; na cobrança os atacantes atacam as zonas (escanteio.corrida s depois do chute, no máximo).
+// Pontos em m: u = da linha de fundo atacada para dentro do campo; w = para o lado do escanteio (+) ou o outro (−).
+export const ESCANTEIO = {
+  // zonas do ataque (as 3 primeiras são as do cruzamento: acoes.js zonasCruzamento) e de onde cada um sai
+  zonas: [
+    { nome: 'centro', u: 7.5, w: 0, sai: { u: 11.5, w: -1.5 } },
+    { nome: 'primeiroPau', u: 5.5, w: 2.2, sai: { u: 10, w: 3 } },
+    { nome: 'segundoPau', u: 6.5, w: -3.2, sai: { u: 11, w: -5 } },
+    { nome: 'marcaPenalti', u: 11, w: 0, sai: { u: 14, w: 1 } },
+    { nome: 'entradaArea', u: 18.5, w: -2, sai: { u: 20.5, w: -3 } },
+  ],
+  segundaBola: [{ u: 24, w: 10 }, { u: 24, w: -12 }],   // quem sobra do ataque, na frente da área
+  ficam: { u: 48, w: 11 },                               // os 2 que ficam atrás (contra o contra-ataque)
+  // defesa: zona na pequena área (as 3 primeiras sempre; a 4ª com gente sobrando) e a sobra
+  zonasDefesa: [
+    { nome: 'meio', u: 4.5, w: -0.5 },
+    { nome: 'primeiroPau', u: 2.2, w: 3.0 },
+    { nome: 'frentePrimeiroPau', u: 5.5, w: 4.5 },
+    { nome: 'segundoPau', u: 4.2, w: -4.2 },
+  ],
+  marca: 0.9,                 // m — o marcador individual fica do lado do gol do atacante, a esta distância
+  borda: { u: 17, w: -1 },    // o da entrada da área (rebote; marca quem está lá)
+  frente: { u: 38, w: 4 },    // quem fica lá na frente para o contra-ataque (1, ou 2 com gente sobrando)
+  janela: 3,                  // s depois do chute em que os lugares do escanteio ainda valem (até alguém tocar)
+  zonaIA: [0.35, 0.35, 0.3],  // IA: chance de cruzar no 1º pau, no 2º pau e na marca do pênalti
+};
+
+// Barreira no tiro livre direto (IFAB Regra 13: a 9,15 m da bola; com 3 ou mais na barreira, os atacantes a ≥ 1 m dela;
+// bolas-paradas.js). Tamanho pela conta da Plus Magazine (Universidade de Cambridge, "The wall"): a largura que tapa o
+// gol visto da bola (2/3 dele, a partir do 1º pau) ÷ ~0,45 m por defensor — no meio a 22 m dá ~4,5 (eles usam 4); perto
+// e no meio, 5 ou 6 são comuns; de lado, menos. Opta (The Analyst): faltas no terço final chutadas a gol a ~27,6 m de
+// mediana; ~2,4–4,4% dos chutes de falta viram gol nas grandes ligas.
+export const BARREIRA = {
+  distancia: 9.15,            // m da bola
+  espaco: 0.5,                // m entre os centros de dois da barreira (ombro com ombro)
+  cobre: 2 / 3,               // fração do gol que a barreira tapa, a partir do 1º pau...
+  foraPau: 0.3,               // ...começando um pouco por fora dele (m)
+  max: 5, min: 1,             // tamanho
+  longe: 33,                  // m do gol — mais longe, sem barreira (ninguém chuta dali)
+  deLado: 0.9,                // rad (~52°) — a bola mais longe que isto do eixo do gol (falta de lado, de cruzamento): no máximo 2
+  ataque: 1.0,                // m — atacantes longe disto da barreira (Regra 13)
+  corpo: 0.3,                 // m — raio do corpo na barreira (o atacante a ataque + corpo do centro de cada um)
+  topo: 1.86,                 // m — topo da cabeça em pé
+  salto: { altura: 0.4, tempo: 0.6 }, // pulo no chute: sobe até ~altura m (pela impulsão) em tempo/2 s
+  restituicao: 0.35,          // a bola que bate na barreira volta com isso da velocidade normal...
+  amortece: 0.55,             // ...e perde isso do resto
+  alturaPassar: 2.15,         // m — o chute de falta mira para passar com o centro da bola acima disto na barreira
+                              // (rente ao topo do pulo: parte dos chutes bate nela)
+  goleiro: 0.6,               // m — o goleiro fica isto para o lado do 2º pau (a barreira cobre o 1º; mais longe, o chute
+                              // por cima dela no canto do 1º pau entrava demais)
+};
+
+// Disputa pelo alto (Etapa 4, só na partida; sim.js bolaAltaNoCorpo): no toque aéreo de quem ia na bola (o recebedor
+// do cruzamento, do lançamento...), um adversário a ≤ raio m do ponto que também alcança a altura dela disputa: ganha
+// pela nota no alto (bolas-paradas.js notaAerea: cabeceio, impulsão, altura), com vantagem para quem está do lado do
+// gol. O atacante ganha o 1º contato em ~40–53% dos escanteios (Copa América 2021: 52,6%; Premier League: a defesa
+// ganha mais; FIFA Training Centre, Copas femininas 2019/2023). Quem perde não toca; quem ganha cabeceia — o atacante
+// pressionado, com erroDisputa × a dispersão.
+export const AEREO = {
+  raio: 1.3,                  // m do ponto do toque até o adversário que disputa
+  yMin: 0.9,                  // m — abaixo disto não é disputa no alto (peito/coxa: o domínio de sempre)
+  k: 3.0,                     // ganho da diferença de nota (por 100 pontos) no logit
+  ladoGol: 0.35,              // vantagem (logit) de quem está do lado do próprio gol
+  erroDisputa: 1.8,           // o cabeceio de quem ganhou a disputa espreme mais (pressão no salto)
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e

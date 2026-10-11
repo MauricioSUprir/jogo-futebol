@@ -39,7 +39,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META } from './config.js';
+import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -54,11 +54,12 @@ import { assumirControle, atualizarBotoesAcao, executarAcao, riscoLinha, ataca, 
 import { regraImpedimento, linhaImpedimento, emPosicaoDeImpedimento } from './impedimento.js';
 import { naAreaDe } from './faltas.js';
 import { segurarLateral, opcoesLateral, opcaoMirada, alvoLongoNaArea, vMaxArremesso } from './lateral.js';
-import { alvoBolaParada } from './bolas-paradas.js';
+import { alvoBolaParada, papeisEscanteio, pontoEscanteio, pontoMarcador, bolaParadaAtiva, barreiraDoTiroLivre } from './bolas-paradas.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
 const PAPEIS = ['ia', 'humano', 'parado', 'marcador'];
+const PAPEIS_BP = ['atacaZona', 'segundaBola', 'fica', 'zona', 'marca', 'borda', 'frente'];
 const seg = s => Math.round(s / PASSO);
 const BOTAO_ACAO = { passe: BOTAO.PASSE, lancamento: BOTAO.LANCAMENTO, chute: BOTAO.CHUTE };
 const LADO_CAMPO = { LD: 1, LE: 1, ADD: 1, ADE: 1 }; // laterais e alas (quem cobra o lateral)
@@ -208,8 +209,9 @@ function fecharMontagem(m, c, levado) {
   for (const t of m.humanos) {
     if (t === pr.time) {
       if (m.controlado[t] !== c.id) { assumirControle(m, t, c); m.eventos.push({ tipo: 'troca', id: c.id, auto: true }); }
-    } else if (pr.tipo === 'penalti') {
-      // pênalti contra: o humano controla o goleiro (escolhe o lado com o analógico)
+    } else if (pr.tipo === 'penalti' || (pr.barreira && pr.barreira.n > 0)) {
+      // pênalti contra: o humano controla o goleiro (escolhe o lado com o analógico); tiro livre com barreira: também
+      // (quem está na barreira fica parado até a cobrança)
       const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
       if (g && m.controlado[t] !== g.id) { assumirControle(m, t, g); m.eventos.push({ tipo: 'troca', id: g.id, auto: true }); }
     } else {
@@ -305,18 +307,61 @@ function montarBolaParada(m) {
   }
   limparAcoes(m);
   if (pr.tipo === 'lateral') { montarLateral(m, c); return; }
+  if (pr.tipo === 'escanteio') { montarEscanteio(m, c); return; }
   Object.assign(m.bola, criarBola(pr.x, pr.z));
   const rumo = pr.tipo === 'lateral'
     ? MD.atan2(-Math.sign(pr.z), 0)                                        // de frente para o campo
-    : pr.tipo === 'tiroLivre'
-      ? MD.atan2(0, lado)                                                   // de frente para o ataque
-      : MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x); // para a marca do pênalti
+    : pr.tipo === 'tiroLivre' && pr.direto
+      ? MD.atan2(-pr.z, lado * CAMPO.meioX - pr.x)                          // de frente para o gol
+      : pr.tipo === 'tiroLivre'
+        ? MD.atan2(0, lado)                                                 // de frente para o ataque
+        : MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x); // para a marca do pênalti
   const levado = cobradorNoPonto(m, c, pr.x, pr.z, rumo);
+  if (pr.tipo === 'tiroLivre' && pr.direto) montarBarreira(m, c);
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, c, levado);
   if (pr.tipo === 'lateral') m.eventos.push({ tipo: 'lateral', time: t, x: pr.x, z: pr.z, id: c.id, levado });
-  else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado, indireto: true });
+  else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado, indireto: !pr.direto });
   else m.eventos.push({ tipo: 'escanteio', time: t, lado: pr.z >= 0 ? 1 : -1, id: c.id, levado });
+}
+
+/**
+ * Barreira (Regra 13) no tiro livre direto perto do gol: os de linha do time que defende mais perto dos pontos dela
+ * (bolas-paradas.js barreiraDoTiroLivre), levados até eles — corte de câmera, como a TV — de frente para a bola e
+ * parados até a cobrança; os atacantes ficam a ≥ 1 m dela (restricaoParada). Guarda pr.barreira.
+ */
+function montarBarreira(m, c) {
+  const pr = m.parada;
+  const br = barreiraDoTiroLivre(m, pr.time, pr.x, pr.z);
+  if (!br) return;
+  const ids = [], papeis = [];
+  for (const p of br.pontos) {
+    let mel = null, dm = Infinity;
+    for (const o of m.jogadores) {
+      if (o.time === pr.time || o.posicao === 'GOL' || ids.includes(o.id)) continue;
+      const d = MD.hypot(o.x - p.x, o.z - p.z);
+      if (d < dm || (d === dm && o.id < mel.id)) { dm = d; mel = o; }
+    }
+    if (!mel) break;
+    ids.push(mel.id); papeis.push(mel.papel);
+    teleportar(mel, p.x, p.z, MD.atan2(pr.z - p.z, pr.x - p.x));
+    mel.papel = 'parado';
+  }
+  pr.barreira = { ids, papeis, n: ids.length, cx: br.cx, cz: br.cz, ladoLongo: br.ladoLongo, dist: br.dist, pontos: br.pontos };
+  m.eventos.push({ tipo: 'barreira', n: ids.length, ids: ids.slice() }, { tipo: 'corteBolaParada', parada: 'tiroLivre' });
+}
+
+/** Desfaz a barreira (a bola rolou): cada um volta ao papel; no chute, todos pulam (bolas-paradas.js alturaSalto). */
+function desfazerBarreira(m, pr) {
+  const br = pr.barreira;
+  const chutou = !!(m.voo && (m.voo.tipo === 'chute' || m.voo.tipo === 'colocado'));
+  br.ids.forEach((id, k) => {
+    const j = jogadorPorId(m, id);
+    if (!j) return;
+    if (j.papel === 'parado') j.papel = br.papeis[k];
+    if (chutou) j.salto = { tick: m.tick, h: BARREIRA.salto.altura * (0.8 + 0.4 * (j.par.attr.impulsao ?? 60) / 100) };
+  });
+  if (chutou) m.partida.barreira = { ids: br.ids.slice(), tick: m.tick, bateu: [] };
 }
 
 /**
@@ -348,6 +393,58 @@ function montarLateral(m, c) {
   pr.arremesso = null;
   m.eventos.push({ tipo: 'lateral', time: pr.time, x: pr.x, z: pr.z, id: c.id, levado });
 }
+
+/**
+ * Escanteio (ESCANTEIO; bolas-paradas.js): o cobrador na bandeira, virado para a marca do pênalti; os papéis dos dois
+ * times (ataque nas zonas, defesa mista) e cada um levado ao seu lugar — corte de câmera, como a TV faz depois do
+ * replay; o goleiro de quem defende no gol. A IA sorteia a zona do cruzamento (ESCANTEIO.zonaIA).
+ */
+function montarEscanteio(m, c) {
+  const pr = m.parada, t = pr.time, lado = m.ataca[t];
+  const sz = pr.z >= 0 ? 1 : -1;
+  const rumo = MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x);
+  const levado = cobradorNoPonto(m, c, pr.x, pr.z, rumo);
+  pr.sz = sz;
+  pr.papeis = papeisEscanteio(m, c);
+  const usados = [];
+  const livre = (x, z) => {
+    for (let k = 0; k < 10; k++) {
+      let perto = false;
+      for (const q of usados) if (MD.hypot(q.x - x, q.z - z) < 1.1) { perto = true; break; }
+      if (!perto) break;
+      z += 1.2 * (k % 2 ? -1 : 1) * (k + 1);
+    }
+    usados.push({ x, z });
+    return { x, z };
+  };
+  // primeiro os atacantes e quem não marca ninguém; depois os marcadores (do lado do gol de quem marcam)
+  for (const fase of [0, 1]) {
+    for (const q of pr.papeis) {
+      const marcador = q.papel === 'marca' || (q.papel === 'borda' && q.marca >= 0);
+      if ((fase === 1) !== marcador) continue;
+      const j = jogadorPorId(m, q.id);
+      if (!j) continue;
+      if (marcador) {
+        const a = jogadorPorId(m, q.marca);
+        if (a) pontoMarcador(m, t, a, _pe); else pontoEscanteio(m, t, sz, q.u || ESCANTEIO.borda.u, q.w, _pe);
+      } else if (q.papel === 'atacaZona') pontoEscanteio(m, t, sz, q.su, q.sw, _pe);
+      else pontoEscanteio(m, t, sz, q.u, q.w, _pe);
+      const p = livre(_pe.x, _pe.z);
+      teleportar(j, p.x, p.z, MD.atan2(pr.z - p.z, pr.x - p.x));
+    }
+  }
+  // goleiro de quem defende: no gol, um pouco para o 1º pau, de frente para a bola
+  const gk = m.jogadores.find(o => o.time !== t && o.posicao === 'GOL');
+  if (gk) { const gx = lado * (CAMPO.meioX - 0.6), gz = sz * 0.8; teleportar(gk, gx, gz, MD.atan2(pr.z - gz, pr.x - gx)); }
+  const Z = ESCANTEIO.zonaIA;
+  let r = uniforme(m.rng) * Z.reduce((a, q) => a + q, 0);
+  pr.zonaIA = Z.length - 1;
+  for (let i = 0; i < Z.length; i++) { if (r < Z[i]) { pr.zonaIA = i; break; } r -= Z[i]; }
+  m.partida.estado = 'parada'; m.partida.desde = m.tick;
+  fecharMontagem(m, c, levado);
+  m.eventos.push({ tipo: 'escanteio', time: t, lado: sz, id: c.id, levado }, { tipo: 'corteBolaParada', parada: 'escanteio' });
+}
+const _pe = { x: 0, z: 0 };
 
 /**
  * Pênalti (Regra 14): a bola na marca; cobra a melhor finalização do time (fora o goleiro); o goleiro de quem defende
@@ -441,7 +538,7 @@ export function restricaoParada(m, j, x, z, out = { x: 0, z: 0 }) {
     const lado = m.ataca[j.time];
     if (out.x * lado > -0.3) out.x = -0.3 * lado;   // cada um no seu campo
     if (j.time === p.time) return out;
-  } else if (j.time === p.time) return out;
+  } else if (j.time === p.time) return p.barreira && p.barreira.n >= 3 ? foraDaBarreira(p.barreira, out) : out;
   if (p.raio === 'area') {
     const s = -m.ataca[p.time], gx = s * CAMPO.meioX;
     const prof = CAMPO.area.profundidade + folga, larg = CAMPO.area.largura / 2 + folga;
@@ -456,6 +553,20 @@ export function restricaoParada(m, j, x, z, out = { x: 0, z: 0 }) {
   const dx = out.x - p.x, dz = out.z - p.z, d = MD.hypot(dx, dz), r = p.raio + folga;
   if (d < r) {
     if (d < 1e-6) { out.x = p.x - m.ataca[p.time] * r; out.z = p.z; } else { out.x = p.x + dx * r / d; out.z = p.z + dz * r / d; }
+  }
+  return out;
+}
+
+/** Atacante a ≥ BARREIRA.ataque m do corpo de cada um da barreira (Regra 13): sai pelo lado mais perto. */
+function foraDaBarreira(br, out) {
+  const r = BARREIRA.ataque + 2 * BARREIRA.corpo + PARTIDA.folgaRaio * 0.4;
+  for (let it = 0; it < 2; it++) {
+    for (const q of br.pontos) {
+      const dx = out.x - q.x, dz = out.z - q.z, d = MD.hypot(dx, dz);
+      if (d >= r) continue;
+      if (d < 1e-6) { out.x = q.x - r; continue; }
+      out.x = q.x + dx * r / d; out.z = q.z + dz * r / d;
+    }
   }
   return out;
 }
@@ -644,6 +755,13 @@ export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
   const lado = ataca(m, j.time);
   const F = PARTIDA.forcaCobranca;
   if (tipo === 'escanteio') {
+    // a zona sorteada na montagem pelo setor do analógico do cruzamento (acoes.js: + = para a linha de fundo = 1º pau;
+    // 0 = atravessado = 2º pau; − = para trás = marca do pênalti)
+    const zi = m.parada?.zonaIA;
+    if (zi != null) {
+      const phi = [0.8, 0, -0.8][zi] ?? 0, sz = b.z >= 0 ? 1 : -1;
+      return { dx: MD.sin(phi) * lado, dz: -MD.cos(phi) * sz, tipo: 'lancamento', forca: F.escanteio, para: null };
+    }
     const tx = lado * (CAMPO.meioX - CAMPO.marcaPenalti) - b.x, tz = -b.z, l = MD.hypot(tx, tz) || 1;
     return { dx: tx / l, dz: tz / l, tipo: 'lancamento', forca: F.escanteio, para: null };
   }
@@ -757,9 +875,7 @@ export function entradaCobranca(m, j) {
   if (!iaPodeCobrar(m)) return { x: a.dx, z: a.dz, botoes: 0 };
   const k = Math.max(2, Math.round(a.forca * ACOES.cargaCheia / PASSO));
   const fase = (m.tick - t0) % seg(PARTIDA.repeteCobranca);
-  // escanteio: o analógico solto deixa o acoes.js escolher a zona pelo companheiro mais perto dela
-  const solto = pr.tipo === 'escanteio';
-  return { x: solto ? 0 : a.dx, z: solto ? 0 : a.dz, botoes: fase < k ? BOTAO_ACAO[a.tipo] : 0 };
+  return { x: a.dx, z: a.dz, botoes: fase < k ? BOTAO_ACAO[a.tipo] : 0 };
 }
 
 /**
@@ -786,7 +902,7 @@ function cobrar(m, entrada) {
     if (!iaPodeCobrar(m)) { c.pedido = null; c.carga = null; return false; }
     const a = alvoCobranca(m, c, pr.tipo);
     c.carga = null;
-    c.pedido = { tipo: a.tipo, forca: a.forca, mod: false, tick: m.tick, dir: pr.tipo === 'escanteio' ? null : { x: a.dx, z: a.dz } };
+    c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   } else {
     const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
     aplicarEntrada(c, e, m.tick);
@@ -798,6 +914,8 @@ function cobrar(m, entrada) {
   if (!c.pedido) return false;
   if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
+  // tiro livre com barreira: o chute (da IA e do humano) busca passar por cima dela (acoes.js chute)
+  if (pr.barreira && pr.barreira.n > 0 && c.pedido.tipo === 'chute') c.pedido.barreira = { dist: pr.barreira.dist, altura: BARREIRA.alturaPassar };
   const ok = executarAcao(m, c, c.par.attr.pePreferido ?? 1, false);
   c.miraAuto = null; // a direção da cobrança não vale para o próximo passe dele
   if (!ok) return false;
@@ -846,7 +964,10 @@ function soltarLateral(m, c) {
 function rolou(m) {
   const pr = m.parada;
   pr.rolou = true;
+  if (m.voo) m.voo.bolaParada = pr.tipo; // a bola que sai da cobrança (a disputa pelo alto vale nela: sim.js)
   m.eventos.push({ tipo: 'cobranca', parada: pr.tipo, id: pr.cobrador });
+  if (pr.barreira) desfazerBarreira(m, pr);
+  if (pr.tipo === 'escanteio' && pr.papeis) m.partida.bp = { tipo: 'escanteio', time: pr.time, sz: pr.sz, papeis: pr.papeis, tick: m.tick };
   if (pr.tipo === 'penalti') {
     m.partida.penaltiAberto = { tick: m.tick, time: pr.time, id: pr.cobrador };
     // goleiro do humano: o lado é o do analógico na hora do chute (solto: fica no meio)
@@ -1149,6 +1270,7 @@ function resolverPenalti(m) {
 export function regrasPartida(m) {
   const p = m.partida;
   atualizarUltimoToque(m);
+  if (p.bp && !bolaParadaAtiva(m) && !(m.parada && !m.parada.rolou)) p.bp = null;
   if (p.penaltiAberto) resolverPenalti(m);
   if (p.estado === 'fim') return;
   if (p.estado === 'intervalo') {
@@ -1288,6 +1410,8 @@ export function misturarPartida(h, m) {
   else h = misturarHash(h, -1);
   // faltas e cartões
   for (const v of [p.contagem.faltas, p.contagem.cartoes, p.vantagem ? p.vantagem.ate : -1, p.penaltiAberto ? p.penaltiAberto.tick : -1, p.cartoesPendentes.length]) h = misturarHash(h, v);
+  h = misturarHash(h, p.bp ? p.bp.tick : -1);
+  if (p.barreira) { h = misturarHash(h, p.barreira.tick); for (const id of p.barreira.bateu) h = misturarHash(h, id); } else h = misturarHash(h, -1);
   for (const id of Object.keys(p.cartoes).map(Number).sort((a, b) => a - b)) { h = misturarHash(h, id); h = misturarHash(h, p.cartoes[id]); }
   for (const id of p.expulsos) h = misturarHash(h, id);
   const pr = m.parada;
@@ -1295,7 +1419,9 @@ export function misturarPartida(h, m) {
   for (const v of [TIPOS_PARADA.indexOf(pr.tipo), pr.time, pr.x, pr.z, pr.cobrador ?? -1, pr.inicio, pr.desde, pr.pronta, pr.atraso, pr.rolou ? 1 : 0, pr.raio === 'area' ? -2 : pr.raio, PAPEIS.indexOf(pr.papel), pr.levado]) h = misturarHash(h, v);
   for (const v of [pr.direto ? 1 : 0, pr.miraZ ?? -9, pr.forca ?? -1, pr.palpite ?? -9]) h = misturarHash(h, v);
   // lateral: a escolha da IA e o arremesso em andamento
-  for (const v of [pr.opcaoIA ?? -1, pr.longa ? 1 : 0, pr.curta ? 1 : 0]) h = misturarHash(h, v);
+  for (const v of [pr.opcaoIA ?? -1, pr.longa ? 1 : 0, pr.curta ? 1 : 0, pr.zonaIA ?? -1, pr.sz ?? 0]) h = misturarHash(h, v);
+  if (pr.barreira) for (const id of pr.barreira.ids) h = misturarHash(h, id);
+  if (pr.papeis) for (const q of pr.papeis) { h = misturarHash(h, q.id); h = misturarHash(h, PAPEIS_BP.indexOf(q.papel)); h = misturarHash(h, q.marca); }
   const ar = pr.arremesso;
   if (ar) for (const v of [ar.tick0, ar.solta, ar.para ?? -1, ar.forca, ar.dx, ar.dz]) h = misturarHash(h, v);
   return h;
