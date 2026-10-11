@@ -26,6 +26,16 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   mão e com o pé, recuo (Regra 12.2), 8 s, saída no 1×1 e saída no cruzamento (traz os gols de escanteio para perto dos
   2,6% reais); (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais; a disputa pelo alto na bola rolando
   junto com o volume de chutes), prorrogação e pênaltis, pendências da IA acima.
+  **Pedidos do dono de 11/10 (depois da 4.3)** — FILA ATUAL, nesta ordem (cada item = PR + merge + link + prints):
+  (A) regras e controles: botão PRESSÃO "não funciona"; "não consigo mexer com o goleiro"; goleiro só pega com a mão
+  DENTRO da área; "não pode recuo" (Regra 12.2); tiro de meta só com gente do time que cobra na área; "os jogadores não
+  cabeceiam a bola, de jeito nenhum" (cabeceio na bola rolando); (B) "O JOGO TEM QUE SER MAIS INTENSO, ninguém do outro
+  time corre, ninguém marca, mas tem que marcar com responsabilidade e consciência, a IA tem que ser mais inteligente";
+  (C) "quero menos informação na tela / tem muita coisa na tela"; (D) mais torcida no estádio, bandeirões,
+  sinalizadores e som de torcida durante o jogo; (E) cenas de pré-jogo: fora do estádio, o estádio aparecendo,
+  jogadores entrando em campo, a fila, a câmera passando; no fim vários cortes de torcida e estádio; depois a escalação
+  de cada time num campinho, grande na tela, com o mesmo fundo, ~10 s, sai e entra a do outro time do mesmo jeito.
+  A parte 3b do goleiro (reposição, recuo, 8 s, 1×1, saída no cruzamento) entra em (A).
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
