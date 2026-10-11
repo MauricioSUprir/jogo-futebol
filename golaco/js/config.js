@@ -403,7 +403,11 @@ export const ACOES = {
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
-  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35 },
+  // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
+  // dos cabeceios a gol no alvo). Na bola rolando fica como antes até a entrega do cabeceio (valendo em todo cabeceio
+  // derrubou os gols de bola rolando: painel de 144, 1,78 → 1,67)
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
+    erroGolBolaParada: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
