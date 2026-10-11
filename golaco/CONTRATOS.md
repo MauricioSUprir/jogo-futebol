@@ -657,7 +657,8 @@ Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit ig
   fica `parado` até a bola rolar; no chute, `j.salto {tick, h}`; `m.partida.barreira {ids, tick, bateu}`); os
   atacantes a ≥ BARREIRA.ataque m da barreira; o goleiro se desloca BARREIRA.goleiro m para o lado longo
   (`goleiro.js`). `montarTiroDeMeta`: a bola no chão dentro da pequena área (TIRO_DE_META.dentro), o goleiro cobra com
-  o pé; `pr.curta` (TIRO_DE_META.curta); a IA espera os zagueiros abrirem (≤ TIRO_DE_META.chegou m da vaga, até
+  o pé; os adversários que estão na área vão para fora JÁ na montagem (`restricaoParada` + `teleportar`, evento
+  `corteBolaParada`) e o humano só cobra com `zonaLivre` (Regra 16); `pr.curta` (TIRO_DE_META.curta); a IA espera os zagueiros abrirem (≤ TIRO_DE_META.chegou m da vaga, até
   esperaMax s) e passa curto para um zagueiro livre (≥ curtoLivre m) ou lança no mais adiantado. Adversários fora da
   área até a cobrança (Regra 16, como antes). `rolou` grava `m.voo.bolaParada = pr.tipo` e, no escanteio,
   `m.partida.bp`. `fecharMontagem`: o cobrador vira `parado` (papel guardado em `pr.papel`); o humano que defende o
@@ -665,8 +666,8 @@ Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit ig
 - Disputa pelo alto (`sim.js bolaAltaNoCorpo`, só com `m.voo.bolaParada`): o rival mais perto da bola alta
   (AEREO.raio, y ≥ AEREO.yMin; o controlado tem preferência) disputa por `ganhaDisputa` (logística de AEREO.k·Δnota/100,
   ± AEREO.ladoGol para quem defende); o rival ganha → afasta de cabeça e `j.perdeuAlto` (não tenta de novo por
-  AEREO.perdeuSalto s); senão `j.disputa = m.tick` e o cabeceio sai com erro × AEREO.erroDisputa. O cabeceio a gol na
-  partida usa `ACOES.cabeceio.erroGolPartida`. Na bola rolando a disputa não vale (derrubou os gols de 2,8 para 1,5;
+  AEREO.perdeuSalto s); senão `j.disputa = m.tick` e o cabeceio sai com erro × AEREO.erroDisputa. Na bola rolando a
+  disputa não vale (derrubou os gols de 2,8 para 1,5;
   fica para a 4.5 junto com o volume de chutes).
 - Tiro livre direto com barreira (`acoes.js chute` com `pedido.barreira {dist, altura}`): a IA procura a elevação que
   passa por cima da barreira (BARREIRA.alturaPassar no ponto dela, com o efeito de cima `giroFalta`) e abaixo do

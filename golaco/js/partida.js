@@ -516,10 +516,21 @@ function montarTiroDeMeta(m) {
   const z = (pr.z >= 0 ? 1 : -1) * Math.min(Math.abs(pr.z), TIRO_DE_META.z);
   pr.x = x; pr.z = z;
   const levado = cobradorNoPonto(m, g, x, z, MD.atan2(-z * 0.3, -s));
+  // Regra 16: só o time que cobra fica na área. Quem é do outro time e está dentro vai para fora já na montagem (com
+  // corte de câmera, como no escanteio) — antes eles saíam andando pela parede e o humano cobrava com eles na área
+  let tirou = false;
+  for (const o of m.jogadores) {
+    if (o.time === t) continue;
+    restricaoParada(m, o, o.x, o.z, _r);
+    if (MD.hypot(_r.x - o.x, _r.z - o.z) <= 0.05) continue;
+    teleportar(o, _r.x, _r.z, MD.atan2(z - _r.z, x - _r.x));
+    tirou = true;
+  }
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, g, levado);
   pr.curta = uniforme(m.rng) < TIRO_DE_META.curta;
   m.eventos.push({ tipo: 'tiroDeMeta', time: t, id: g.id, levado });
+  if (tirou) m.eventos.push({ tipo: 'corteBolaParada', parada: 'tiroDeMeta' });
 }
 
 /**
@@ -910,6 +921,8 @@ function cobrar(m, entrada) {
     atualizarBotoesAcao(m, c);
     // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto
     if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) c.pedido = null;
+    // tiro de meta (Regra 16): o humano só cobra com a área livre de adversários (o pedido espera)
+    if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
   if (!c.pedido) return false;
   if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);

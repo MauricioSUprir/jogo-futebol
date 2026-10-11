@@ -701,10 +701,8 @@ export function executarCabeceio(m, j, p) {
   const lado = ataca(m, j.time);
   const cfg = ACOES.cabeceio;
   const attr = j.par.attr.cabeceio;
-  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão. Na partida (Etapa 4) o cabeceio
-  // PARA O GOL espalha como o de verdade (Opta: ~1/3 dos cabeceios a gol no alvo; antes quase todos iam no alvo)
-  const e0 = m.partida && p.tipo === 'chute' ? cfg.erroGolPartida : [0.12, 0.03];
-  const sig = lerp(e0[0], e0[1], attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
+  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão
+  const sig = lerp(0.12, 0.03, attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;
   if (p.tipo === 'chute') {
