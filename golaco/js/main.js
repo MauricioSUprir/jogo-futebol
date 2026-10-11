@@ -973,6 +973,8 @@ const api = {
     const c = opc.doMeu ? outro : meu, d = opc.doMeu ? meu : outro;
     const lado = m.ataca[c.time];
     if (opc.area) teleportar(c, lado * (CFG.CAMPO.meioX - 9), 3, lado > 0 ? 0 : Math.PI);
+    // u, w: a falta a u m da linha de fundo atacada, w m do meio (o tiro livre direto com barreira dos prints)
+    if (opc.u != null) teleportar(c, lado * (CFG.CAMPO.meioX - opc.u), opc.w ?? 0, lado > 0 ? 0 : Math.PI);
     teleportar(d, c.x - lado * 1.1, c.z + 0.3, lado > 0 ? 0 : Math.PI);
     c.vx = 0; c.vz = 0;
     m.bola.p.x = c.x + lado * 0.4; m.bola.p.z = c.z; m.bola.p.y = CFG.BOLA.raio;
@@ -984,6 +986,25 @@ const api = {
     estadioPasso(m.eventos);
     for (const ev of m.eventos) tratarEvento(ev);
     return { parada: m.parada?.tipo ?? null, def: d.id, cond: c.id, cartao: f.cartao };
+  },
+  /**
+   * Bola parada de teste (prints): a bola sai com o último toque certo e a partida monta o recomeço como no jogo.
+   * tipo: 'lateral' | 'escanteio' (do time do humano, que cobra) | 'tiroDeMeta' (do time do humano: o goleiro dele).
+   */
+  bolaParadaDeTeste(tipo) {
+    const m = mundo;
+    if (!m.partida) return null;
+    const t = TIME_HUMANO, lado = m.ataca[t], C = CFG.CAMPO;
+    let x, z, ult;
+    if (tipo === 'lateral') { x = lado * 14; z = C.meioZ + 0.5; ult = 1 - t; }
+    else if (tipo === 'escanteio') { x = lado * (C.meioX + 0.6); z = 10; ult = 1 - t; }
+    else { x = -lado * (C.meioX + 0.6); z = -9; ult = 1 - t; }
+    const j = m.jogadores.find(o => o.time === ult && o.posicao !== 'GOL');
+    m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+    Object.assign(m.bola.p, { x, y: CFG.BOLA.raio, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
+    m.partida.ultimoTime = ult; m.partida.ultimoId = j.id; m.partida.ultimoTick = m.tick;
+    m.ultimoToque = { id: j.id, time: ult, tick: m.tick };
+    return { tipo, x, z };
   },
   acao(a) { tratarAcao(a); },
   definirQualidade(nome) { comando('qualidade', nome); },

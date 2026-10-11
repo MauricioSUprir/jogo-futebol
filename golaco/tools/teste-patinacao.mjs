@@ -96,6 +96,7 @@ function forcarParada(m, k) {
 
 const TORNOZELO = [J.tornozeloE, J.tornozeloD];
 const limiteBalanco = v => 2.5 * v + 3;       // m/s
+const PERNA = 0.9;                            // m — quadril ao tornozelo (a rotação do corpo no mergulho)
 const limitePouso = v => 0.19 * v + 0.81;     // m/s
 const linhas = [['cena', 'plantado: máx (m/s)', 'maior desloc. / limite', 'pouso: máx (m/s)', 'quadros']];
 const geral = { plantado: 0, razao: 0, pouso: 0, quadros: 0, pior: null };
@@ -128,12 +129,20 @@ for (const [nome, rot, op = {}] of cenas) {
       // goleiro na defesa desenhada: o corpo também cai e sobe (a mesma regra do teste-mergulho: v = a maior
       // velocidade do corpo, do centro no chão ou da pelve desenhada, até 6 m/s)
       merg: j.posicao === 'GOL' && mergulhoAtivo(j, m.tick),
+      tronco: [out[J.peito * 3] - out[J.pelve * 3], out[J.peito * 3 + 1] - out[J.pelve * 3 + 1], out[J.peito * 3 + 2] - out[J.pelve * 3 + 2]],
     };
     const ant = recomecou ? null : antes.get(j.id);
     antes.set(j.id, atu);
     if (ant) {
       let v = Math.max(atu.v, ant.v);
-      if (atu.merg || ant.merg) v = Math.min(6, Math.max(v, Math.hypot(atu.pel[0] - ant.pel[0], atu.pel[1] - ant.pel[1], atu.pel[2] - ant.pel[2]) / PASSO));
+      // no mergulho o corpo também GIRA (de pé até deitado, ~5 rad/s no pico): a perna gira junto com ele — a velocidade
+      // do corpo inclui a rotação do tronco × o comprimento da perna (Etapa 4: um mergulho de goleiro batido da cena
+      // 11×11 passava em 2%, com a pelve quase parada e o tronco girando 0,09 rad num quadro)
+      if (atu.merg || ant.merg) {
+        const a = ant.tronco, b = atu.tronco, la = Math.hypot(...a) || 1, lb = Math.hypot(...b) || 1;
+        const giro = Math.acos(Math.max(-1, Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb)))) / PASSO;
+        v = Math.min(6, Math.max(v, Math.hypot(atu.pel[0] - ant.pel[0], atu.pel[1] - ant.pel[1], atu.pel[2] - ant.pel[2]) / PASSO, giro * PERNA));
+      }
       for (let p = 0; p < 2; p++) {
         const d = Math.hypot(atu.t[p][0] - ant.t[p][0], atu.t[p][1] - ant.t[p][1], atu.t[p][2] - ant.t[p][2]);
         const vp = d / PASSO;

@@ -627,3 +627,56 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   API de testes: `__golaco.faltaDeTeste({area, cartao, doMeu})`.
 - Testes: `teste-faltas` (padrão): cenas, vantagem e volta, pênalti montado, 2º amarelo/expulsão/editor, goleiro
   expulso, canhão de 400 pênaltis, 12 partidas.
+
+### Bolas paradas (Regras 13, 15 e 16) e disputa pelo alto
+Pedido do dono (seção 8). Tudo só com `m.partida`: o treino fica bit a bit igual (`hash-igual`).
+- `lateral.js` (puro): `lateralSegurando(m)`; `pontoMaosLateral(c, s, out)` (s = 0 atrás da cabeça, 1 a soltura à
+  frente; Bézier por cima da cabeça); `segurarLateral(m)` (o sim.js chama no passo da bola, no lugar da física, nos
+  passos 3, 5 e 6: a bola fica NAS mãos, parada); `vMaxArremesso(j)` (LATERAL.vMax pelo atributo); `opcoesLateral(m, c,
+  out)` → até 3 `{id, nota}` (companheiros de linha a LATERAL.dMin–dMax m, risco da linha pelo `acoes.js riscoLinha`,
+  distância perto de dIdeal, um pouco à frente); `opcaoMirada(m, c, ops, cosMin)` (a opção mais perto do analógico;
+  solto, a 1ª); `alvoLongoNaArea(m, c, out)`.
+- `partida.js montarLateral`: a bola em z = ±meioZ; o cobrador (o lateral/ala do lado, `LATERAL.preferirLateral` m de
+  vantagem) a LATERAL.linha m por fora, de frente para o campo; `pr.opcaoIA` (sorteio por LATERAL.pesos), `pr.longa`
+  (perto da área, LATERAL.longaNaArea), `pr.arremesso = null`. Cobrança: PASSE, ENFIADA ou LANÇAMENTO (o CHUTE não
+  vale) começam o arco (`pr.arremesso {tick0, solta}`, LATERAL.tempo s) e a bola sai das mãos por `acoes.js
+  arremessoLateral` (velocidade até vMaxArremesso, elevação LATERAL.elevCurto/elevLongo, erro por atributo).
+- `bolas-paradas.js` (puro): `alvoBolaParada(m, j, out)` (o ia-tatica.js pergunta antes do papel de sempre, antes do
+  chute e na janela depois dele); `bolaParadaAtiva(m)` (`m.partida.bp`: ESCANTEIO.janela s depois do chute, até alguém
+  dominar ou a bola ir à mão); `notaAerea(j)`; `papeisEscanteio(m, c)` → `[{id, papel, u, w, su, sw, marca}]` (ataque: 5
+  zonas — centro, 1º pau, 2º pau, marca do pênalti, entrada da área —, 2 ficam, o resto na segunda bola; defesa mista:
+  zona na pequena área, individual nos 4 melhores no alto, borda, frente para o contra-ataque); `pontoEscanteio`,
+  `pontoMarcador` (do lado do gol, ESCANTEIO.marca m); no ar, o defensor mais perto de `m.voo.alvo` ataca a bola;
+  `barreiraDoTiroLivre(m, t, bx, bz)` → `{n, pontos, cx, cz, px, pz, dist, ladoLongo}` ou null (longe: BARREIRA.longe)
+  — cobre BARREIRA.cobre do gol a partir de BARREIRA.foraPau por fora do 1º pau, ângulos relativos ao meio do gol (sem o
+  salto de ±π de quem ataca para −x), de lado (BARREIRA.deLado) no máximo 2; `alturaSalto(j, tick)`;
+  `colisaoBarreira(m)` (depois do `colisaoBolaCorpo`: restituição/amortece, uma batida por jogador, eventos
+  `bateuCorpo` + `bateuBarreira`, `m.desvio`).
+- `partida.js`: `montarEscanteio` (papéis, teleporte para os pontos de saída, goleiro na linha, `pr.zonaIA` sorteada
+  por ESCANTEIO.zonaIA, eventos `escanteio` e `corteBolaParada`); `montarBarreira`/`desfazerBarreira` (a barreira
+  fica `parado` até a bola rolar; no chute, `j.salto {tick, h}`; `m.partida.barreira {ids, tick, bateu}`); os
+  atacantes a ≥ BARREIRA.ataque m da barreira; o goleiro se desloca BARREIRA.goleiro m para o lado longo
+  (`goleiro.js`). `montarTiroDeMeta`: a bola no chão dentro da pequena área (TIRO_DE_META.dentro), o goleiro cobra com
+  o pé; `pr.curta` (TIRO_DE_META.curta); a IA espera os zagueiros abrirem (≤ TIRO_DE_META.chegou m da vaga, até
+  esperaMax s) e passa curto para um zagueiro livre (≥ curtoLivre m) ou lança no mais adiantado. Adversários fora da
+  área até a cobrança (Regra 16, como antes). `rolou` grava `m.voo.bolaParada = pr.tipo` e, no escanteio,
+  `m.partida.bp`. `fecharMontagem`: o cobrador vira `parado` (papel guardado em `pr.papel`); o humano que defende o
+  pênalti ou a barreira fica com o goleiro.
+- Disputa pelo alto (`sim.js bolaAltaNoCorpo`, só com `m.voo.bolaParada`): o rival mais perto da bola alta
+  (AEREO.raio, y ≥ AEREO.yMin; o controlado tem preferência) disputa por `ganhaDisputa` (logística de AEREO.k·Δnota/100,
+  ± AEREO.ladoGol para quem defende); o rival ganha → afasta de cabeça e `j.perdeuAlto` (não tenta de novo por
+  AEREO.perdeuSalto s); senão `j.disputa = m.tick` e o cabeceio sai com erro × AEREO.erroDisputa. O cabeceio a gol na
+  partida usa `ACOES.cabeceio.erroGolPartida`. Na bola rolando a disputa não vale (derrubou os gols de 2,8 para 1,5;
+  fica para a 4.5 junto com o volume de chutes).
+- Tiro livre direto com barreira (`acoes.js chute` com `pedido.barreira {dist, altura}`): a IA procura a elevação que
+  passa por cima da barreira (BARREIRA.alturaPassar no ponto dela, com o efeito de cima `giroFalta`) e abaixo do
+  travessão (yBarreiraMax); erro × `faltaErro`.
+- Desenho: `anim.js` (as palmas dos dois lados da bola no lateral, o seguimento depois da soltura, o pulo da barreira
+  somado a todas as juntas); `render/marcas-lateral.js` (3 anéis sob as opções do humano, a escolhida amarela e
+  pulsando; sem texto); corte de câmera em `corteBolaParada`. API de testes: `__golaco.marcasLateral`,
+  `__golaco.bolaParadaDeTeste(tipo)`, `__golaco.faltaDeTeste({u, w, ...})`.
+- Testes: `teste-bolas-paradas` (padrão): A lateral (mãos, arco, 3 opções, CHUTE recusado, posse mantida), B tiro de
+  meta (bola no chão, zagueiros abertos, saída curta), C escanteio (canhão de 120 de estados no meio da partida: 1º
+  contato do ataque 35–62%, gol ≤ 12%, chute ≥ 12%), D barreira (canhão de 160: na barreira 15–40%, gol 2–12%, no alvo
+  18–36%), E 8 partidas IA × IA (as quatro acontecem, nenhuma parada passa de 8 s, o time fica com a bola
+  em ≥ 55% dos laterais). `teste-estadio` (navegador) confere os marcadores do lateral.

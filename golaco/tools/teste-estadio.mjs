@@ -504,6 +504,36 @@ try {
 } catch (e) {
   meta('Execução (torcida no celular)', e.message, 'sem exceção', false);
 }
+// ------------------------------------------------------------------------------------------------------------------
+// Etapa 4 (bolas paradas): no lateral do humano, a bola fica nas mãos acima da cabeça e as opções aparecem marcadas no
+// gramado; com o analógico solto, a 1ª opção é a destacada (pedido do dono, seção 8: "três opções de passe e marcadores")
+try {
+  const { navegador: nav, pagina, erros: errosLat } = await abrir({ largura: 1280, altura: 720 });
+  try {
+    await pagina.goto(`${srv.url}?q=media&semente=3&hora=dia`, { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    const r = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      g.relogio.usarManual(true);
+      for (let i = 0; i < 150; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.bolaParadaDeTeste('lateral');
+      for (let i = 0; i < 400; i++) {
+        const pr = g.mundo.parada;
+        if (pr && pr.tipo === 'lateral' && pr.cobrador != null && g.mundo.tick >= pr.pronta) break;
+        g.relogio.avancar(1000 / 60, { desenhar: false });
+      }
+      g.relogio.avancar(1000 / 60, { desenhar: true });
+      g.relogio.avancar(1000 / 60, { desenhar: true });
+      const pr = g.mundo.parada, c = g.mundo.jogadores.find(j => j.id === pr?.cobrador);
+      return { tipo: pr?.tipo, meu: c?.time === 0 && g.mundo.controlado[0] === c?.id, y: g.mundo.bola.p.y, marcas: g.marcasLateral };
+    });
+    meta('Lateral do humano: bola nas mãos e as opções marcadas no gramado (a 1ª em destaque)',
+      `${r.tipo}, humano cobra ${r.meu ? 'sim' : 'não'}, bola a ${f2(r.y)} m · ${r.marcas?.visivel ? `${r.marcas.ids.length} marcador(es), destaque na ${r.marcas.mirada + 1}ª` : 'sem marcadores'}`,
+      'lateral, sim, ≥ 1,75 m · 1–3, a 1ª', r.tipo === 'lateral' && r.meu && r.y >= 1.75 && r.marcas?.visivel && r.marcas.ids.length >= 1 && r.marcas.ids.length <= 3 && r.marcas.mirada === 0 && errosLat.length === 0);
+  } finally { await nav.close(); }
+} catch (e) {
+  meta('Execução (lateral: marcadores)', e.message, 'sem exceção', false);
+}
 await srv.fechar();
 
 const larg = Math.max(...res.map(r => r.nome.length));
