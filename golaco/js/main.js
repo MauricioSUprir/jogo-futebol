@@ -56,6 +56,7 @@ import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
 import { montarFalta } from './faltas.js';
 import { pressionadorVisivel } from './defesa.js';
+import { relogioMao } from './regras-goleiro.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 
@@ -257,6 +258,11 @@ function atualizarFase() {
     if (mundo.tick - fase.defesaDesde >= 15) { fase.atual = 'defesa'; fase.defesaDesde = null; }
   }
   if (entrada) entrada.definirFase(fase.atual);
+  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida)
+  if (entrada && entrada.definirGoleiroPe) {
+    const c = jogadorPorId(mundo, idControlado());
+    entrada.definirGoleiroPe(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.posse === c.id && mundo.naMao !== c.id));
+  }
 }
 
 const camisaDe = id => fichaDe(id)?.camisa ?? String(id);
@@ -455,6 +461,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
   // companheiro chamado pelo PRESSÃO no último passo (só lê o mundo: o desenho nunca muda a simulação)
   const idPress = mundo.partida ? pressionadorVisivel(mundo, TIME_HUMANO) : -1;
+  // Regra 12.3: o anel dos últimos 5 s sob o goleiro do humano com a bola nas mãos (só lê o mundo)
+  const rel = mundo.partida ? relogioMao(mundo, TIME_HUMANO) : null;
   let n = 0;
   let hx = 0, hz = 0, achou = false;
   for (const j of mundo.jogadores) {
@@ -465,6 +473,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === idC;
     it.goleiro = j.posicao === 'GOL'; it.proximo = idProx != null && j.id === idProx && !it.controlado;
     it.pressiona = j.id === idPress && !it.controlado;
+    it.relogio = rel && rel.id === j.id ? rel.frac : -1;
     it.kit = kitDe(j);
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
     if (it.controlado) { hx = it.x; hz = it.z; achou = true; }

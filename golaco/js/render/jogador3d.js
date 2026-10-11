@@ -302,6 +302,19 @@ export function criarJogadores3D(cena, qualidade) {
   marcaPressao.renderOrder = 5;
   marcaPressao.name = 'indicador-pressao';
   cena.add(marcaPressao);
+  // Regra 12.3 (pedido do dono, 11/10): nos últimos 5 s dos 8 com a bola nas mãos, um anel âmbar sob o goleiro que se
+  // esvazia (a contagem que o árbitro faz com a mão; sem texto). O anel é desenhado em pedaços (drawRange)
+  const SEG_OITO = 48;
+  const geoOito = new THREE.RingGeometry(0.62, 0.74, SEG_OITO, 1);
+  const anelOito = new THREE.Mesh(geoOito, new THREE.MeshBasicMaterial({
+    color: 0xffc23a, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+  }));
+  anelOito.rotation.x = -Math.PI / 2;
+  anelOito.renderOrder = 4;
+  anelOito.visible = false;
+  anelOito.name = 'anel-oito';
+  cena.add(anelOito);
   // "próximo da troca": anel fino, menor e translúcido (discreto)
   const matProx = new THREE.MeshBasicMaterial({
     color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
@@ -383,7 +396,8 @@ export function criarJogadores3D(cena, qualidade) {
     get capacidade() { return cap; },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
-     * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça)
+     * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça; relogio: 0–1 dos últimos 5 s
+     * dos 8 com a bola nas mãos — o anel âmbar sob o goleiro, Regra 12.3; −1 ou ausente = nada)
      * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
      * camera: para o tamanho constante da seta acima da cabeça.
      */
@@ -392,7 +406,7 @@ export function criarJogadores3D(cena, qualidade) {
       const nj = lista.length;
       const mat = segs.instanceMatrix.array;
       const dim = aDim.array;
-      let controlado = null, proximo = null, pressiona = null;
+      let controlado = null, proximo = null, pressiona = null, relogio = null;
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
@@ -453,6 +467,7 @@ export function criarJogadores3D(cena, qualidade) {
         if (jg.controlado) controlado = jg;
         else if (jg.proximo) proximo = jg;
         if (jg.pressiona && !jg.controlado) pressiona = jg;
+        if (jg.relogio != null && jg.relogio >= 0) relogio = jg;
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
@@ -493,6 +508,11 @@ export function criarJogadores3D(cena, qualidade) {
           marcaPressao.position.y += k * 0.3;
         }
       } else marcaPressao.visible = false;
+      if (relogio) {
+        anelOito.visible = true;
+        anelOito.position.set(relogio.x, 0.021, relogio.z);
+        geoOito.setDrawRange(0, Math.max(1, Math.round(relogio.relogio * SEG_OITO)) * 6);
+      } else anelOito.visible = false;
       if (proximo) {
         anelProx.visible = true;
         anelProx.position.set(proximo.x, 0.019, proximo.z);
