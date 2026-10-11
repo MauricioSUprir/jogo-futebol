@@ -376,8 +376,12 @@ export function passoPassada(j, comBola, dt, ev, saida = null) {
       if (virou) {
         // fez o ciclo inteiro no chão (passada muito lenta): conta como se tivesse pisado de novo
         pe.faseApoio = p + 2 * Math.floor((f1 - p) / 2);
-      } else if (psi1 >= sair && j.travaApoio !== p) {
+      } else if (j.travaApoio !== p && (psi1 >= sair || (!j.pes[1 - p].apoio && distanciaDoApoio(j, p) >= PASSADA.alcanceMax))) {
         // (travaApoio: este pé segura o corpo — pedalada: o outro passa por cima da bola)
+        // Tropeço: empurrado numa trombada (o corpo inverte de uma vez), o pé de apoio chega ao limite da
+        // perna antes de o outro pousar — sai mesmo assim (um pulinho, os dois no ar por um instante),
+        // como quem leva um tranco; antes ficava plantado, o quadril afundava até ~8 cm do chão e o pé
+        // arrastava (teste-patinacao, partida semente 11 com a IA intensa)
         pe.apoio = false;
         pe.faseSaida = f1;
         pe.fasePouso = f1 + (2 - psi1); // o próximo inteiro n ≡ p (mod 2): é quando pousa
