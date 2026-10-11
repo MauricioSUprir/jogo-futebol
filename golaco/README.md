@@ -50,6 +50,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - Defesa do humano: **CONTER** (segurar: acompanha o condutor entre a bola e o gol, de frente para ele),
   **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
+- **IA mais intensa** (pedido do dono, 10/10: "o jogo tem que ser MAIS INTENSO, a IA não corre para trás"): na perda da
+  bola, quem ficou à frente dela volta **em disparada** para trás da linha da bola, pelo lado do gol (recomposição), e os
+  mais perto apertam por 4 s (contrapressão; 7 s na pressão Alta) — vale para a IA adversária e para os companheiros do
+  humano; o meio fica atrás da bola no próprio campo, a cobertura da linha de defesa cobre de lado, toda bola solta é
+  disputada em disparada e quem volta contorna o condutor. Medido no `teste-transicao` (ver PESQUISA-ETAPA3.md §16).
 - Tela limpa (dono, 10/10): **sem narração** — os lances (passe, chute, defesa, lateral...) não viram texto;
   na partida o topo é só placar, minimapa e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
   de comando (menu, treino, edição do time) e o efeito do gol.
@@ -127,9 +132,10 @@ Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?mi
 ## Testes
 
 ```bash
-node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, rede e torcida, recepção, mergulho — o Actions roda antes do deploy
+node golaco/tools/rodar-testes.mjs     # lógica em Node (em paralelo): Etapas 1 e 2 + partida, Editar time, custo, defesa do humano, troca aérea, transição defensiva, rede e torcida, recepção, mergulho — o Actions roda antes do deploy
 node golaco/tools/rodar-testes.mjs --etapa3   # + os testes da IA 11×11 (forma, táticas, pressão, movimento, apoio, intensidade)
 node golaco/tools/rodar-testes.mjs --par 2    # no máximo 2 testes ao mesmo tempo (também em hash-igual e hash-partida)
+node golaco/tools/teste-transicao.mjs [--humano] # transição defensiva: recomposição em disparada depois da perda (IA × IA ou contra o humano roteirizado)
 node golaco/tools/teste-recepcao.mjs   # 1000 bolas no jogador do humano com o analógico já para o lado: domina, nunca se afasta, 1º toque ±20°
 node golaco/tools/teste-mergulho.mjs   # canhões de chutes no goleiro: mergulho desenhado, mão na bola, corpo ≤ 5,5 m/s, rebote, cavadinha, espalmada para fora (com atacantes na área), chute desviado
 node golaco/tools/medir-controle.mjs   # (minutos, informativo) controle de bola em jogo: domínio que escapa, perdas, bola–pé, 1º toque por atributo

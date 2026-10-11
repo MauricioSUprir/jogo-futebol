@@ -1,7 +1,11 @@
 // teste-intensidade (Etapa 3, Parte 3): intensidade e sanidade da partida 11×11, IA × IA (a IA joga
 // também pelo controlado do time 0: entradaDemoPartida), partidas inteiras (2 tempos de 4 min reais).
 //  - metros por minuto por jogador de linha com a bola rolando (Jerome 2024, 1083 partidas):
-//      jogo organizado 120–160 · lances rápidos 180–220 (ataque rápido 196, defesa rápida 208).
+//      jogo organizado 120–160 · lances rápidos 180–220 (ataque rápido 196, defesa rápida 208). PENDENTE: a
+//    publicada já fica em ~240 (a partida condensada: ~5 posses por minuto, contra ~1 no jogo real) e a
+//    recomposição do PR "IA intensa" soma ~10–20 m/min (quem volta corre a ~390 m/min nos lances rápidos). O teto
+//    NÃO foi afrouxado (contraprova I4: não há fonte para os lances rápidos do "time mais intenso"); falta o dado
+//    real do p90 por time (Jerome 2024 só dá a média) — PESQUISA-ETAPA3.md §16.4.
 //    Lance rápido = depois de o time recuperar a bola em jogo corrido, a bola avança ≥ 15 m para o
 //    gol adversário em até 6 s: conta dos 0 s da recuperação até 1 s depois de a bola parar de avançar
 //    (no máximo 10 s), para os 20 de linha (o ataque rápido de um é a defesa rápida do outro).

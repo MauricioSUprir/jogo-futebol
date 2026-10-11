@@ -177,7 +177,7 @@ function novoEstadoJogador() {
   return {
     tAval: -1, papel: 'ref',                                          // papel: 'ref' | 'apoio' | 'area'
     ofu: 0, ofw: 0, ofDesde: -1, ofCond: -1, ofTem: false,            // ponto de apoio (rel. ao condutor)
-    ultCorrida: -99999, corrida: false, corridaCond: -1,              // corrida nas costas
+    ultCorrida: -99999, corrida: false, corridaCond: -1, alemDesde: -1, // corrida nas costas (alemDesde: tick em que passou da linha)
     zona: -1,                                                         // ataque à área
     contorna: 0, contornaDesde: -99999, pressaAte: -1,                // desmarque (lado); pressa até o tick
     ultCond: -2, desde: 0, op: '', opDesde: -1, du: 1, dw: 0, correr: false, curta: false, // condutor
@@ -196,7 +196,7 @@ function estadoAtaque(m, t) {
   if (A && A.tick === m.tick) return A;
   if (!A) {
     A = cache[t] = {
-      tick: -1, time: t, lado: 1, ment: 0, posseDesde: 0, timeAnt: null, cond: null, linha: 0, transOf: false,
+      tick: -1, time: t, lado: 1, ment: 0, posseDesde: 0, faseDesde: null, cond: null, linha: 0, transOf: false, contraAte: -1, contra: false,
       ids: [], ref: new Map(), apoio: [-1, -1], corridas: 0,
       area: { ativo: false, ids: [], zonas: [], lado: 0, esc: false },
     };
@@ -210,10 +210,21 @@ function estadoAtaque(m, t) {
   let dono = null;
   if (idB != null) for (const o of m.jogadores) if (o.id === idB) { dono = o; break; }
   A.cond = dono && dono.time === t ? dono : null;
-  const timeBola = dono ? dono.time : (m.voo && m.voo.time != null ? m.voo.time : A.timeAnt);
-  if (timeBola !== A.timeAnt) { if (timeBola === t) A.posseDesde = m.tick; A.timeAnt = timeBola; }
   const f = faseDoTime(m, t);
-  A.transOf = f.transicao === 'of';
+  const timeBola = dono ? dono.time : (m.voo && m.voo.time != null ? m.voo.time : f.fase === 'com' ? t : null);
+  // posse nova = a fase do time virou 'com' (faseDoTime.desde). Antes a troca era vista pelo time da bola NESTE
+  // estado — que só é atualizado com o time na fase 'com': a troca para o adversário passava despercebida e a posse
+  // nova nunca era marcada (posseDesde mudava 2 vezes por partida; a posse da retomada e a reavaliação do apoio na
+  // posse nova nunca valiam — correções da contraprova)
+  if (f.fase === 'com' && A.faseDesde !== f.desde) {
+    const nova = A.faseDesde != null;
+    A.faseDesde = f.desde; A.posseDesde = f.desde;
+    A.contraAte = nova && contraAtaque(m, t) ? f.desde + seg(IA_ATAQUE.contra.s) : -1;
+  }
+  // contra-ataque (retomada com a defesa deles desarrumada: contraAtaque): vale como transição ofensiva, com
+  // o bônus maior nas opções à frente e sem segurar a bola (decidir)
+  A.contra = m.tick < A.contraAte && timeBola === t;
+  A.transOf = f.transicao === 'of' || A.contra;
   // corridas nas costas: acabam quando o time perde a bola (o ia.js seguiria correndo) ou depois de
   //   corridas.espera s sem o passe vir para ele. O passe para OUTRO companheiro não acaba a corrida
   //   (integração com a defesa da Parte 2: a bola troca de pé a cada ~2 s e a corrida acabava antes
@@ -244,6 +255,23 @@ function estadoAtaque(m, t) {
   }
   A.linha = Math.max(u2, m.bola.p.x * lado, 0);
   A.defLinha = A.linha === u2 ? d2 : null; // o defensor que faz a linha (se é ele, e não a bola/o meio)
+  // corrida que já passou da linha e não recebe em corridas.alemMax s: acaba e ele volta (impedido, pressa) —
+  // esperando o passe atrás da linha até o fim da `espera`, alguém ficava em posição de impedimento ~25% do
+  // tempo com a bola (teste-apoio: real 8–25%, Metrica 16%; PR "IA intensa")
+  // (com o ataque à área valendo — a bola de lado no terço final —, quem passou da linha fica: é o cruzamento)
+  const AM = IA_ATAQUE.corridas.alemMax;
+  if (AM != null && !A.area.ativo) {
+    for (const o of m.jogadores) {
+      const s = o.iaA;
+      if (o.time !== t || !s || !s.corrida || !o.corrida) continue;
+      if (o.x * lado <= A.linha + 0.5) { s.alemDesde = -1; continue; }
+      if (s.alemDesde < 0) s.alemDesde = m.tick;
+      if ((m.voo && m.voo.para === o.id) || o.recebe) continue;
+      const c = A.cond;
+      const armando = c && c.iaA && (c.iaA.op === 'enfiada' || c.iaA.op === 'lancamento') && c.iaA.alvo === o.id;
+      if (!armando && m.tick - s.alemDesde > seg(AM)) { o.corrida = null; s.corrida = false; s.alemDesde = -1; A.corridas--; }
+    }
+  }
   // referências da vaga: as do time (ia-tatica.js blocoDoTime → posicaoTatica com a bola do ataque —
   // antecipada IA_ATAQUE.antecipa s e filtrada —, misturada com a sem bola depois da retomada). Uma
   // referência só para o time inteiro: a da defesa e a do apoio são a mesma conta (contrato b da tela)
@@ -298,6 +326,24 @@ function estadoAtaque(m, t) {
   }
   ataqueArea(m, A);
   return A;
+}
+
+/**
+ * A retomada vira contra-ataque? (Tenga et al. 2010: contra a defesa desarrumada o contra-ataque dá mais chance
+ * de gol que o ataque elaborado, OR 1,64; Armatas et al. 2022, Champions 2018/19, 1415 retomadas: chega à
+ * finalização com passes de ruptura e 4+ atacantes; EA FC 25, "Build-Up Style" Counter / Balanced / Slow.)
+ * Em jogo corrido (não de bola parada nem das mãos do goleiro), o time que perdeu a bola tem no máximo
+ * IA_ATAQUE.contra.atras jogadores de linha entre a bola e o gol dele: o time vai para a frente na hora em vez
+ * de segurar a bola (a posse da retomada, utilidade.posseRetomada, é para a retomada contra a defesa arrumada).
+ */
+function contraAtaque(m, t) {
+  const C = IA_ATAQUE.contra;
+  if (!C || (m.parada && !m.parada.rolou) || m.naMao != null) return false;
+  const lado = m.ataca[t], ub = m.bola.p.x * lado;
+  if (ub < C.campo) return false;
+  let n = 0;
+  for (const o of m.jogadores) if (o.time !== t && o.posicao !== 'GOL' && o.papel !== 'parado' && o.papel !== 'marcador' && o.x * lado > ub) n++;
+  return n <= C.atras;
 }
 
 /**
@@ -644,6 +690,47 @@ export function condutorTatico(m, j) {
   return { x: ia.du * lado * mag, z: ia.dw * lado * mag, botoes };
 }
 
+/**
+ * Finalização DE PRIMEIRA da IA (correções da contraprova, PR "IA intensa"): recebendo um passe rasteiro (passe,
+ * enfiada ou cruzamento rasteiro) dentro da área, num ponto com chance de gol (chanceDeGol) de pelo menos
+ * IA_ATAQUE.primeira.xg, a IA aperta CHUTE a tempo de o pedido estar pronto quando a bola chegar (o sim.js bate de
+ * primeira em vez de dominar: sim.js primeira, erro × ACOES.chute.primeiraErro) e mira o canto longe do goleiro
+ * (pedido.dir). Antes o recebedor da IA sempre dominava, e o zagueiro chegava no domínio (Opta/StatsBomb: cerca de
+ * metade dos chutes da área saem de primeira). Chamar a cada tick para quem recebe (ia-tatica.js).
+ */
+export function primeiraIA(m, j) {
+  const P = IA_ATAQUE.primeira;
+  if (!P || !m.times || j.posicao === 'GOL' || m.naMao === j.id) return;
+  const ia = j.iaA ??= novoEstadoJogador();
+  // pedido pronto (esperando a bola): a mira fica no canto escolhido
+  if (j.pedido && j.pedido.tipo === 'chute' && ia.primeira) { j.pedido.dir = { x: ia.primeira.x, z: ia.primeira.z }; return; }
+  if (j.iaAcao || j.carga || j.pedido) return;
+  ia.primeira = null;
+  const r = j.recebe, v = m.voo;
+  if (!r || m.posse != null || !v || v.para !== j.id || v.time !== j.time || v.alto) return;
+  if (v.tipo !== 'passe' && v.tipo !== 'enfiada' && v.tipo !== 'cruzamento') return;
+  if (m.bola.p.y > P.alturaMax) return;
+  // onde ele vai bater: o ponto de chegada do passe (o recebedor vem ao encontro)
+  const lado = m.ataca[j.time], u = r.x * lado, w = r.z * lado;
+  if (u < AREA_U || Math.abs(w) > AREA_W) return;
+  if (chanceDeGol(u, w) < P.xg) return;
+  // aperta agora se o tempo até a bola chegar (distância ÷ velocidade de agora: a rolagem freia, então a bola
+  // chega um pouco depois e o pedido espera — vale ACOES.pedidoPrimeira s) é o da carga + a folga
+  const vb = MD.hypot(m.bola.v.x, m.bola.v.z);
+  if (vb < 2) return;
+  const carga = seg(P.forca * ACOES.cargaCheia);
+  const falta = seg(MD.hypot(r.x - m.bola.p.x, r.z - m.bola.p.z) / vb);
+  if (falta > carga + seg(P.folga) || falta < carga + 2) return;
+  let gz = 0;
+  for (const o of m.jogadores) if (o.time !== j.time && o.posicao === 'GOL') { gz = o.z * lado; break; }
+  const U = IA_ATAQUE.utilidade;
+  const zm = gz > w * 0.15 ? -(MEIO_GOL - U.miraPoste) : (MEIO_GOL - U.miraPoste);
+  const bx = r.x * lado, bz = r.z * lado;
+  const a = MD.atan2(-bz, MX - bx) + MD.asin(clamp(zm / (MEIO_GOL * 1.4), -0.99, 0.99));
+  ia.primeira = { x: MD.cos(a) * lado, z: MD.sin(a) * lado };
+  acaoIA(m, j, 'chute', P.forca);
+}
+
 /** Mira de um alvo que se move: a direção do condutor até ele (mais o deslocamento da enfiada). */
 function atualizarMira(m, j, ia) {
   if (!ia.miraAlvo) return;
@@ -667,8 +754,9 @@ function decidir(m, j, A, ia, cobranca) {
   // sem isso ele arriscava o passe para a frente já no próprio campo e devolvia a bola na hora)
   // (e logo depois de recuperar a bola, posseRetomada: o time segura a bola primeiro — retomava e
   // perdia de novo na hora: retomada em ≤ 5 s ~45%, Metrica 36,5%)
-  const K = U.posse + U.posseMeuCampo * clamp(0.5 - u0 / 20, 0, 1) + (m.tick - A.posseDesde < seg(U.posseRetomada[1]) ? U.posseRetomada[0] : 0);
-  const frente = du => (A.transOf && du > 3 ? 1 + cfg.transOfBonus : 1);
+  const K = U.posse + U.posseMeuCampo * clamp(0.5 - u0 / 20, 0, 1) + (!A.contra && m.tick - A.posseDesde < seg(U.posseRetomada[1]) ? U.posseRetomada[0] : 0);
+  const bonus = A.contra ? IA_ATAQUE.contra.bonus : cfg.transOfBonus;
+  const frente = du => (A.transOf && du > 3 ? 1 + bonus : 1);
   // custo de perder a bola ali: a ameaça do adversário com ela (xT espelhado) ÷ risco aceito + a posse
   const perda = (u, w) => ameacaEsperada(-u, -w) / risco + K;
   const atual = ia.op;

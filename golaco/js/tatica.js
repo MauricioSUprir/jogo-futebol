@@ -79,6 +79,20 @@ export function posicaoTatica(formacao, vaga, tatica, bola, fase, ataca, out = {
       // afastadas um pouco: o 1º homem e a cobertura saem da linha do meio para a bola, e o meio que
       // sobra fica mais perto da frente do que a tabela (medido no teste-forma; Forcher 2024)
       if (ph === 'sem') x += v.sem.x >= 0 ? TATICA.linhasSem.ata : TATICA.linhasSem.mei;
+      // o MEIO atrás da bola no meu campo (FIFA EFI: bloco baixo = 8 de linha atrás da bola; Bauer & Anzer
+      // 2021: ≥ 4 atrás na perda): com a bola no meu campo, a referência do meio fica meioAtras[0] m atrás
+      // dela, mas nunca a menos de meioAtras[1] m à frente da linha de defesa (o bloco não vira uma linha
+      // só), nem a menos de MA[3] m do meu gol. Com a bola no centro (a prévia da tela) não muda nada.
+      const MA = TATICA.meioAtras;
+      if (ph === 'sem' && MA && v.sem.x < 0 && bx < 0) {
+        let xl = f.xLinhaSem + dH + (tabela(TATICA.formaPelaBola, bx, 1) - H_MEDIA) + ment;
+        xl = clamp(xl, TATICA.linhaPiso, TATICA.linhaTeto);
+        if (bx < xl + TATICA.linhaAtrasDaBola) xl = Math.max(TATICA.linhaPiso, bx - TATICA.linhaAtrasDaBola);
+        // (e nunca mais fundo que MA[3] m do meu gol: com a bola na linha de fundo, o meio fica na entrada da
+        // área — o rebote e o passe para trás —, não dentro dela: Metrica, 6 defensores na área no cruzamento)
+        const teto = Math.max(bx - MA[0], xl + (v.sem.x - f.xLinhaSem) * MA[2] + MA[1], MA[3] - CAMPO.meioX);
+        if (x > teto) x = teto;
+      }
     }
   }
   // 7) limites

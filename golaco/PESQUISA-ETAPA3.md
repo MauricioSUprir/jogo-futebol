@@ -506,7 +506,7 @@ Todas as medidas com **as mesmas definições da análise própria** (`tools/pes
 | | defensores a ≤ 10 m do portador | média 1,4–2,4 | 1,8 |
 | | agressão (recepções com defensor a ≤ 4,6 m em ≤ 2 s) | 19–29% (Equilibrada 22–24%) | StatsBomb |
 | | PPDA por abordagem | 14–17 / 10–12 / 8–10 / 6,5–8, monotônico | Wyscout/StatsBomb |
-| `teste-contrapressao` | retomada em ≤ 5 s após perda em jogo corrido | 25–40% (Agressiva no topo) | 36,5% (Metrica); 31% (Bauer) |
+| `teste-contrapressao` | retomada em ≤ 5 s após perda em jogo corrido | 25–40% (Agressiva no topo) — no `teste-pressao` virou **34–54%** (Média), a mesma definição do medidor na Metrica (44,1%): §16.3 | 36,5% (Metrica); 31% (Bauer) |
 | | alguém (≠ quem perdeu) a ≤ 2 m da bola em ≤ 3 s | 50–70% | 61% |
 | | jogadores do time que perdeu a ≤ 10 m (t = 0) | mediana 1–3 | 2 |
 | | volta à forma depois da janela | 0 jogadores ainda pressionando 2 s após o fim da janela (5/7 s), salvo os 2 mais perto | Bauer 2021 |
@@ -727,3 +727,85 @@ zona compensa o risco de perder a bola.
   lineares ancoradas nas medianas reais; o FC não publica as contas. Calibrar no `teste-taticas`.
 - **Sprints** dependem do limiar e do filtro (Barnes ~40–75 por partida × Metrica 6,7 com ≥ 1 s): só comparar o GOLAÇO
   consigo mesmo, com a mesma definição.
+
+---
+
+## 16. Intensidade e recomposição (PR "IA intensa", 10/10)
+
+Pedido do dono (10/10): "a IA, no caso, o computador que joga contra mim, tem que ser mais inteligente, o jogo tem que
+ser mais intenso e tático" e "O jogo tem que ser MAIS INTENSO, a IA não corre para trás, tem que ser algo mais
+profissional". O que se via (medido na versão publicada, `tools/teste-transicao.mjs`, 24 partidas IA × IA): depois da
+perda da bola, quem estava mais de 10 m à frente dela voltava a **3,8 m/s** de média nos 3 s seguintes (trote: o ponto
+calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/s até 12 m do alvo); no meu terço, só
+**3,4 de 10** ficavam atrás da bola (`teste-forma`), porque a referência do meio ficava à frente dela.
+
+### 16.1 Fontes → o que foi aproveitado
+
+| Fonte | Número / ideia | O que virou no GOLAÇO | Confiança |
+|---|---|---|---|
+| Bauer & Anzer 2021, *Data Min Knowl Disc* 35 — contrapressão na Bundesliga | janela de **5 s**; ≥ 4 atrás da bola na perda ajuda a transição; 23% das perdas viram contrapressão | `IA_DEFESA.contrapressao.s` da pressão Média 3 → **4 s** (com 5 s o PPDA da Média caía para ~7, o dos times mais intensos da Europa, abaixo da faixa 8–16 da Equilibrada); os outros recompõem (não vão todos na bola) | A |
+| Forcher, Forcher, Altmann, Jekauc & Kempe 2023, *J Sports Sci Med* 22:707–725 — "rest defense" (153 jogos da Bundesliga 2020/21, rastreamento) | na perda: **3,70 ± 0,76** defensores × **2,01 ± 0,93** atacantes na zona da "rest defense" (superioridade de 1,69); o contra-ataque dura **10,9 s**; sucesso = retomar em **12 s** | a frente (vaga com x ≥ 0 sem a bola) fica para o contra-ataque ("rest attack") e volta sem sprint; janela de **12 s** do `teste-transicao` e a medida "contra-ataque com superioridade" | A |
+| Ju et al. 2023 (LJMU) — corridas de alta intensidade com contexto | sem a bola, "Recovery Run" (voltar para o próprio gol) e "Close Down" são categorias de corrida de **alta intensidade** (> 19,8 km/h = 5,5 m/s) | a recomposição é em disparada (CORRER) com atraso grande; o pico de velocidade para o próprio gol medido no teste | A |
+| Di Salvo et al. 2009, *Int J Sports Med* 30 — alta intensidade na Premier League | entre esforços muito intensos, **72 s** de recuperação em média: o sprint é raro e tem motivo | sprint só onde importa: na recomposição com atraso > 11 m **e urgência** (bola no meu campo ou vindo para o meu gol a > 4 m/s) e na bola solta **disputada**; sem urgência, volta correndo sem o sprint | A |
+| FIFA EFI 2022 (Copa do Mundo, fases sem bola) | bloco baixo = **8 de linha** no terço defensivo; "recomposição = correr para o próprio gol" | o meio fica atrás da bola no meu campo (`TATICA.meioAtras`); o alvo da recomposição é atrás da linha da bola | A |
+| Front. Sports 2026 (Copa feminina 2023) | recomposição = **4,2%** do tempo sem bola | a recomposição liga na janela da transição (6 s) e, no jogo organizado, só com atraso > 15 m (a bola longa por cima): **~9%** do tempo de quem defende (era 15% na 1ª versão, que ligava a cada passe deles) | M |
+| Jerome 2024 (1083 partidas) | m/min: defesa rápida **208**, ataque rápido **196** | a meta dos lances rápidos **continua 180–220** (a 1ª versão do PR a afrouxou para 180–280 sem fonte; a contraprova derrubou — 16.3) e fica pendente | A |
+| EA SPORTS FC 27, Pitch Notes (jul/2026) | "AI defenders will now play more of a supporting role through their on-pitch positioning" | quem não pressiona apoia pela posição: recompõe, cobre de lado e não atravessa o condutor (`desviaCondutor`) | A (oficial) |
+| FIFA 23 (FIFPlay), "pressão após perda" ~7 s | contrapressão mais longa na pressão agressiva | `contrapressao.s` da Alta 5 → **7 s** | M |
+| Buckland 2004 (Simple Soccer); Reis, Lau & Oliveira 2001 (SBSP) | papéis por estado do time, um por jogador, em ordem de prioridade | a ordem dos papéis sem a bola: PRESSÃO do humano → contrapressão → 1º homem → 2º → marcação na área → **recomposição** → referência | A |
+| Física do próprio jogo (`jogador.js passoCorpo`, atributos padrão) | parado, a arrancada anda **18,6 m em 3 s** (6,2 m/s de média); indo para a frente a 6 m/s, só **10,4 m** (freia e vira) | a meta da velocidade de recuo em 3 s é **≥ 4,6 m/s** (a mistura dos dois casos), não os ~6 m/s de uma corrida já lançada | — |
+
+### 16.2 Como virou constante (`js/config.js`)
+
+| Constante | Valor | De onde |
+|---|---|---|
+| `TATICA.recomp` | liga 8 m (na janela de 6 s depois da perda; fora dela 15 m), ou ≥ 1 m à frente da bola com a referência atrás dela; desliga a 3 m; alvo 2 m atrás da bola; sprint com > 11 m de atraso e urgência (bola a menos de 10 m além do meio para o meu lado, ou vindo para o meu gol a > 4 m/s); pelo lado do gol (z anda 50% enquanto à frente da bola); ≤ 10 s; respiro 1,5 s | FIFA EFI, Bauer & Anzer, Forcher 2023, Ju 2023; calibrado no `teste-transicao` e no `teste-movimento` (o "respiro" tirou o arranca-para-arranca) |
+| `TATICA.meioAtras` | 2 m atrás da bola; ≥ 2,5 + 0,2 × (distância natural) m da linha de defesa; ≥ 18 m do gol | FIFA EFI (bloco baixo); Metrica (6 defensores na área no cruzamento: o meio fica na entrada dela) |
+| `IA_DEFESA.contrapressao.s` | 0 / **4** / **7** s | Bauer & Anzer 2021 (5 s é a janela da definição); FIFA 23; o PPDA da Média (8–16) |
+| `IA_DEFESA.coberturaFundo` | 1,5 m | Metrica (linha de 4 com 3,5 m de espalhamento no meu terço): quem cobre sendo da linha cobre de lado |
+| `IA_DEFESA.desvio` | 3 m / 1,4 m | EA FC 27 (apoio pela posição); erro medido no `teste-taticas` (o meio empurrava o condutor pelo corpo) |
+| `IA_DEFESA.livre.disputa` | **null** (arranca em toda bola solta; com 0,6 s — Di Salvo 2009, Metrica: sprint 0,6% do tempo — o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; calibração final, 96 partidas) | pedido do dono; triagem de 32 partidas por mudança (§16.5) |
+| `TATICA.largura.com` | 0,90 / **1,04** / 1,18 | Metrica (48,3 m com a bola): o jogo media ~43,8 m |
+| `IA_ATAQUE.corridas.alemMax` | 0,5 → **1,5 s** na calibração final (corrida que passou da linha e não recebe acaba; o ataque à área segue; com 0,5 s a corrida acabava antes do passe: ~0,5 chute por partida) | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
+| `IA_ATAQUE.utilidade.cruzamentoP` | 0 / 1 na área: 0,02 / 0,12 → **0,01 / 0,06** | Metrica (3 atacantes na área no cruzamento, p90 5): cruzar para a área vazia vale menos — atacantes na área no cruzamento 1,6 → 2,6 |
+
+### 16.5 Calibração final (coordenador, depois da contraprova)
+
+A contraprova achou menos chutes e gols (B1). Com a `main` de hoje (recepção + goleiro + estádio) e a demo no time 0,
+como o `teste-intensidade`, 32 partidas por variação (sementes 101–132), desligando uma mudança de cada vez:
+nenhuma sozinha explicava a queda (cada uma ~0,5–1 chute: bola solta no trote, corrida além da linha em 0,5 s,
+marcação na volta, largura, 2º homem no gatilho); o contra-ataque ajudava (desligado: −0,8 chute). Ficou:
+`livre.disputa` null e `alemMax` 1,5 s; a marcação na volta (0,6) e o contra-ataque (bônus 0,5) ficam como estavam
+(com a marcação desligada uma partida trocava a posse só 9 vezes num tempo; com o bônus 0,8 o PRESSÃO do humano caía
+para 71%). Em 96 partidas (101–132, 201–232, 301–332): 10,00 chutes e 2,09 gols por partida (main 10,92 e 2,19).
+IA × IA (`teste-transicao`) os chutes empatam e os gols sobem; a diferença está no time da demo, cujos companheiros
+agora voltam (4,4 × 1,6 m/s): a IA acha menos contra-ataque em superioridade.
+
+### 16.3 Metas que mudaram
+
+- **Retomada em ≤ 5 s depois da perda, pressão Média** (`teste-pressao`): 25–40% → **34–54%**. Com a definição do medidor
+  (perda = qualquer toque do outro time com a bola rolando; retomada = qualquer toque de volta em ≤ 5 s), os eventos da
+  Metrica dão **44,1%** (`tools/pesquisa/retomada_metrica.py`, 555 perdas); os 36,5% eram de outra definição. A meta passa
+  a ser a da mesma definição no jogo real ± 10 pontos, como a da agressão (68 ± 10) — e o dono pediu contrapressão mais
+  forte (Média 3 → 4 s, Alta 5 → 7 s). A publicada ficava em ~47% e já reprovava a faixa antiga.
+- **m/min nos lances rápidos** (`teste-intensidade`): **continua 180–220** (Jerome 2024: 196–208). A 1ª versão deste PR
+  afrouxou para 180–280 sem fonte (a publicada já ficava em ~240: a partida condensada tem ~5 posses por minuto,
+  contra ~1 no jogo real; quem recompõe corre a ~390 m/min nos lances rápidos e soma ~10–20 m/min). A contraprova
+  derrubou o afrouxamento (não há dado do "time mais intenso" por fase; a trava pela faixa de velocidade ± 8 pontos é
+  frouxa para as faixas pequenas: sprint 4,9% do tempo contra 0,6% no real). Fica **pendente**: achar o p90 real por
+  time ou trazer a partida para a faixa (o sprint "com a bola" dos apoios é ~1/3 do sprint da partida).
+
+### 16.4 Incertezas
+
+- **Velocidade de recuo**: o rastreamento real não dá a média de 3 s depois da perda por jogador "à frente da bola"; a
+  meta vem da física do próprio jogo e do limiar de alta intensidade (Ju 2023), não de uma distribuição real (B).
+- **Superioridade no contra-ataque**: a definição (atacantes no terço final ≥ defensores entre a bola e o gol) é uma
+  aproximação da de Forcher 2023 (zona da "rest defense" na hora da perda); serve para comparar o GOLAÇO consigo mesmo.
+- **Testadas e descartadas** (medidas com 48 partidas, sementes 1–48 e 49–96): `chuteLonge` 0,32 (mais chutes de fora;
+  a fatia de dentro da área caía para ~58%, e para 44% numa rodada de 8 partidas — meta ≥ 55%); recomposição sem
+  urgência a ~5 m/s (intensidade 0,85 do analógico: não devolveu tempo à faixa "andando" e o recuo caía de 5,2 para
+  4,9 m/s); bônus de transição ofensiva maior (subia os m/min dos lances rápidos sem chute a mais); contrapressão Média
+  de 5 s (PPDA ~7).
+- **Ataque × defesa**: com a defesa mais organizada, o ataque da IA chuta um pouco menos (ver o relatório do PR);
+  as metas de chutes (≥ 10) e de passe certo (≤ 90%) já reprovavam na publicada e seguem pendentes (Etapa 4: bolas
+  paradas, escanteios — o jogo tem ~0,3 escanteio por partida, o real ~10).
