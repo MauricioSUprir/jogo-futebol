@@ -81,3 +81,31 @@ para cada correção:
 | M9 contas do shader e do JS escritas à mão duas vezes | WebGL2 + `EXT_color_buffer_float` (ler de volta, em float, o que o shader calculou) | A pose (`POSE_GLSL`) sai das mesmas constantes do JS (`POSE_REGRA`), e o `teste-estadio` avalia a pose e a rede NO SHADER de verdade (4096 casos cada) e compara com o JS |
 | B1 teste preso à semente 6 | — | Gol roteirizado no `teste-estadio` (`tools/lib/gol-roteirizado.mjs`: a física da bola com velocidade conhecida, defensores e goleiro fora do caminho) e gol de verdade achado em Node para os prints (`tools/lib/acha-gol.mjs`); conferido com a lógica do PR 1 e do PR 3 por cima desta branch |
 | M2 "GOL!" embaixo dos botões | Layout medido nos celulares (568×320, 667×375, 844×390) | No celular, o "GOL!" fica compacto logo abaixo da barra de cima e no meio, entre o analógico e o arco de botões; no PC, no terço de cima (na câmera do gol a boca do gol fica do meio para baixo) |
+
+## 6. Tela limpa (11/10): HUD mínimo e linha de impedimento só no apito (`css/estilo.css`, `js/hud.js`, `js/entrada.js`, `js/render/*`)
+
+Pedido do dono (11/10): "quero menos informação na tela", "tem muita coisa na tela", "não quero a linha de impedimento
+durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a linha". Medido na versão publicada
+(`tools/teste-hud-minimo.mjs`): no celular deitado o HUD cobria 18–26% da tela (9–10 peças, 46 caracteres de texto,
+CHUTE de 104 px a 80% de opacidade, analógico visível em repouso), escondia 31% da torcida que a câmera do celular (#459)
+passou a mostrar, e a linha de impedimento viva ficava na tela em ~30% do tempo com a bola rolando (42–47% da partida).
+Nenhum teste media isso: os de antes só conferiam que nada encosta e que os botões têm ≥ 48 px.
+
+| Fonte | O que aproveitamos |
+|---|---|
+| EA SPORTS FC 26, recursos de acessibilidade (EA, oficial: https://www.ea.com/able/resources/ea-sports-fc/fc-26) | O FC deixa desligar cada camada ("Score Clock", indicador do próximo da troca, tamanho do indicador do jogador, radar 2D/3D). Daí: minimapa como OPÇÃO da pausa, indicador do controlado menor (triângulo 2,6% → 2,2% e sem a seta no chão) e o anel do próximo da troca mantido (no FC é ligado por padrão) |
+| FC 25, configurações do jogo (FIFPlay: https://www.fifplay.com/fc-25-game-settings/) | "Time/Score Display" e "Radar Off/2D/3D": o padrão da TV é só placar e relógio, o resto é opcional. Daí: na partida o topo é só o placar compacto e o menu; minimapa desligado no celular por padrão |
+| FC Mobile 24, guia de controles (FIFAMobileGuide: https://www.fifamobileguide.com/gameplay-controls; FIFAuteam: https://fifauteam.com/fc-mobile-24-controls/) | O FC Mobile tem tamanho dos botões, analógico flutuante e "Gestures Only"; na defesa, "Sprint & Tackle": SEGURAR perto do condutor = marca/acompanha, TOCAR = bote em pé (nenhum dos dois guias dá o tempo do toque × segurar). Daí: botões menores por padrão (80%), analógico discreto e a DIVIDIDA de dois sentidos (tocar = bote, segurar = CONTER) — a defesa cai para 5 botões, todos no 1º anel. Limiar escolhido: 0,25 s (um toque curto dura ~0,07–0,15 s; o "long press" do Android/iOS é 0,4–0,5 s, longo demais para a defesa) e o CONTER começa no 1º quadro do aperto, sem esperar o limiar |
+| eFootball, manual de controles (Konami: https://www.konami.com/efootball/en/page/mobile_controller) | A página só tem uma imagem: sem número oficial de tamanho ou transparência dos botões. Lacuna registrada, sem números inventados |
+| "Designing the Modern Scorebug" (SportsVideo.org, 2026: https://www.sportsvideo.org/2026/06/09/designing-the-modern-scorebug-how-broadcast-graphics-teams-are-rethinking-the-most-important-element-on-screen/) | Placar e relógio primeiro, o resto em camadas que só aparecem quando precisa; placares mais limpos, sem enfeite; "não deixe grande demais". Daí: placar de 30 px (34 no PC), sem a marca e sem caixinhas nos gols, e o "1º T" só no intervalo, no fim e nos acréscimos ("1º T +4", como na TV) |
+| Score bug (Wikipédia: https://en.wikipedia.org/wiki/Score_bug) | O placar fica num canto de cima, fora da ação. Mantido no canto de cima à esquerda |
+| Finger-Friendly Design (Smashing Magazine: https://www.smashingmagazine.com/2012/02/finger-friendly-design-ideal-mobile-touchscreen-target-sizes/) | 44×44 pt (Apple) e 48 dp (Material), polegar de 9–11 mm. O piso de 48 px dos botões do jogo continua (no menor celular, 568×320, o menor botão fica com 48 px) e o menu passa a 44 px |
+| "Toward Minimalist HUDs?" (Universidade de Bonn, 2026: https://bonndoc.ulb.uni-bonn.de/xmlui/handle/20.500.11811/14207) | 59 jogadores: HUD mais minimalista teve mais imersão e mais preferência; a clareza dependeu da familiaridade. Daí: botões só com o ícone e a opção "Nomes nos botões" (e a Ajuda, com o desenho de cada ícone) para quem está aprendendo |
+| "Removing the HUD" (CHI PLAY 2015, Open University: https://oro.open.ac.uk/46759) | Tirar o que está fora do mundo do jogo aumentou a imersão de quem já joga. Daí: a linha viva sai (fica a do lance, no apito), o rótulo da barra de força sai e a marca de queda fica só para a bola alta do próprio time |
+
+Resultado (`teste-hud-minimo`, mesma amostra na base e agora): HUD no celular 26,2% → 10,1% no pior caso (844×390:
+18,2/19,3% → 7,3/7,3%), texto fora do placar 46 → 0 caracteres, torcida atrás do HUD 31,4% → 13,4%, linha viva 29,7% → 0
+(a do lance continua no apito), PC 3,8% → 1,8% com a dica de teclas que some em 8 s; chamadas de desenho no print do
+celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
+mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
+liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
