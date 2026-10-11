@@ -238,6 +238,16 @@ html.topo-c4 .placar-relogio { padding-left: 6px; }
 html.topo-c4 .placar-relogio b { font-size: 13px; min-width: 0; letter-spacing: -0.02em; }
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
+/* cartão do árbitro (amarelo/vermelho) em cima de quem levou: só o cartão, sem texto */
+.cartao-icone {
+  position: absolute; left: 0; top: 0; width: 16px; height: 22px; margin: -22px 0 0 -8px; border-radius: 3px;
+  opacity: 0; transition: opacity 0.15s; will-change: transform; pointer-events: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7); transform-origin: 50% 100%;
+}
+.cartao-icone.visivel { opacity: 1; }
+.cartao-icone.amarelo { background: #f5c518; }
+.cartao-icone.vermelho { background: #e5484d; }
+
 .carga {
   position: absolute; left: 0; top: 0; width: 64px; margin-left: -32px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;

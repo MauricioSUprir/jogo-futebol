@@ -33,7 +33,7 @@ import * as PT from './lib/partida-tatica.mjs';
 // partida 11×11 (Etapa 3): pela lib dos testes da partida, com a lógica do repositório
 const LP = await PT.carregar(path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../js'));
 const ATAQUE_PARTIDA = PT.parte3Presente(LP) ? 'jogo' : 'substituto';
-const SALTA = new Set(['recomeco', 'saida', 'lateral', 'escanteio', 'tiroDeMeta', 'intervalo']);
+const SALTA = new Set(['recomeco', 'saida', 'lateral', 'escanteio', 'tiroDeMeta', 'intervalo', 'tiroLivre', 'cobrancaPenalti']); // montagens com teleporte (Etapa 4: tiro livre, pênalti)
 
 const detalhe = process.argv.includes('--detalhe');
 const { MOD, CORRER } = BOTAO;

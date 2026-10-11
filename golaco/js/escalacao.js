@@ -102,6 +102,7 @@ export function rascunhoDe(timeEstado, edicaoNaFila = null, time = 0) {
   const r = {
     time, elenco: timeEstado.elenco, base: timeEstado.versao, formacao, vagas, tatica, substituicoes,
     saiu: [...timeEstado.saiu], subs: { ...timeEstado.subs }, escolhido: null, historico: [], original: null,
+    expulsos: [...(timeEstado.expulsos ?? [])],
   };
   r.original = { formacao, vagas: { ...vagas }, tatica: { ...tatica }, substituicoes: substituicoes.map(s => ({ ...s })) };
   return r;
@@ -126,6 +127,8 @@ function mudanca(rasc) {
  * null (não é do elenco). Mais: entra (é o ↑ de um par pendente) e par ({sai, entra} | null).
  */
 export function situacao(rasc, id) {
+  // expulso (Regra 12): fica na vaga como um buraco — não joga, não sai nem entra
+  if ((rasc.expulsos ?? []).includes(id)) return { tipo: 'expulso', par: null, entra: false };
   const par = rasc.substituicoes.find(s => s.sai === id || s.entra === id) ?? null;
   if (rasc.saiu.includes(id)) return { tipo: 'saiu', par: null, entra: false };
   if (vagaDe(rasc.vagas, id) != null) return { tipo: 'titular', par, entra: !!par && par.entra === id };
@@ -166,6 +169,25 @@ export function tocar(rasc, id) {
   const esc = rasc.escolhido;
   // o mesmo de novo: desmarca
   if (esc === id) return { rasc: { ...rasc, escolhido: null }, evento: { tipo: 'desmarcou', a: id } };
+  // expulso (o buraco na vaga): troca de vaga com um titular (o técnico escolhe a vaga que fica vazia), nunca com o
+  // gol; não pode ser substituído
+  const seE = esc != null ? situacao(rasc, esc) : null;
+  if (sit.tipo === 'expulso' || seE?.tipo === 'expulso') {
+    if (esc == null) return { rasc: { ...rasc, escolhido: id }, evento: { tipo: 'escolheu', a: id } };
+    const buraco = sit.tipo === 'expulso' ? id : esc, outro = buraco === id ? esc : id;
+    const so = situacao(rasc, outro);
+    if (so.tipo !== 'titular' && so.tipo !== 'expulso') {
+      return { rasc: { ...rasc, escolhido: null }, evento: { tipo: 'recusou', a: buraco, b: outro, motivo: 'expulso', texto: `${camisa(buraco)} foi expulso e não pode ser substituído` } };
+    }
+    const va = vagaDe(rasc.vagas, buraco), vb = vagaDe(rasc.vagas, outro);
+    if ((va === 'GOL' || vb === 'GOL') && so.tipo !== 'expulso') {
+      return { rasc: { ...rasc, escolhido: null }, evento: { tipo: 'recusou', a: buraco, b: outro, motivo: 'gol', texto: 'O gol não pode ficar sem goleiro' } };
+    }
+    const r = mudanca(rasc);
+    r.vagas[va] = outro; r.vagas[vb] = buraco;
+    r.escolhido = null;
+    return { rasc: r, evento: { tipo: 'trocou', a: esc, b: id, gol: false } };
+  }
   // quem sai (↓): só o painel do par
   if (sit.tipo === 'sai') return { rasc: { ...rasc, escolhido: null }, evento: { tipo: 'pendente', a: sit.par.sai, b: sit.par.entra } };
   if (esc == null) {
@@ -225,7 +247,13 @@ export function cancelarSubstituicao(rasc, id) {
 export function mudarFormacao(rasc, formacao) {
   if (!FORMACOES[formacao] || formacao === rasc.formacao) return rasc;
   const r = mudanca(rasc);
-  r.vagas = encaixar(Object.values(rasc.vagas), formacao, rasc.elenco, rasc.vagas);
+  // os expulsos não entram no encaixe: ficam nas vagas que sobrarem (nunca no gol)
+  const fora = rasc.expulsos ?? [];
+  r.vagas = encaixar(Object.values(rasc.vagas).filter(id => !fora.includes(id)), formacao, rasc.elenco, rasc.vagas);
+  if (fora.length) {
+    const vazias = FORMACOES[formacao].vagas.filter(v => r.vagas[v.id] == null).map(v => v.id).sort((a, b) => (a === 'GOL') - (b === 'GOL'));
+    fora.forEach((id, k) => { if (vazias[k] != null) r.vagas[vazias[k]] = id; });
+  }
   r.formacao = formacao;
   r.escolhido = null;
   return r;
@@ -299,17 +327,21 @@ export function validarEdicao(timeEstado, ed, elencoId = timeEstado?.elenco) {
   // 3) ids: do elenco, sem repetir, nenhum que já saiu
   const elenco = ELENCOS[elencoId];
   const doElenco = new Set(elenco.jogadores.map(j => j.id));
+  const fora = timeEstado.expulsos ?? [];
   const vistos = new Set();
   for (const v of f.vagas) {
     const id = ed.vagas[v.id];
     if (!Number.isInteger(id) || !doElenco.has(id)) return recusa(3, 'Jogador fora do elenco');
     if (vistos.has(id)) return recusa(3, 'Jogador repetido na escalação');
+    // o expulso fica numa vaga (o buraco), nunca no gol
+    if (fora.includes(id)) { if (v.id === 'GOL') return recusa(3, 'O gol não pode ficar sem goleiro'); continue; }
     if (timeEstado.saiu.includes(id)) return recusa(3, `${camisa(id)} já saiu e não pode voltar`);
     vistos.add(id);
   }
+  if (fora.some(id => !Object.values(ed.vagas).includes(id))) return recusa(5, 'A escalação não bate com as substituições');
   // 4) substituições
   const subs = Array.isArray(ed.substituicoes) ? ed.substituicoes : [];
-  const emCampo = new Set(Object.values(timeEstado.vagas));
+  const emCampo = new Set(Object.values(timeEstado.vagas).filter(id => !fora.includes(id)));
   const sais = new Set(), entras = new Set();
   for (const s of subs) {
     if (!s || !emCampo.has(s.sai)) return recusa(4, 'Quem sai não está em campo');
@@ -437,6 +469,7 @@ export function misturarTimes(h, m) {
     h = misturarHash(h, s.subs.paradas);
     h = misturarHash(h, s.versao);
     h = misturarHash(h, s.editadoEm ?? -1);
+    for (const id of s.expulsos ?? []) h = misturarHash(h, id);
   }
   return h;
 }

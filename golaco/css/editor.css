@@ -139,6 +139,9 @@
 .muito-fora .c-fora { background: var(--alerta); color: var(--preto); }
 .c-entra { color: var(--preto); background: var(--verde); }
 .c-sai { color: var(--preto); background: var(--sai); }
+/* expulso (Regra 12): o cartão vermelho na carta; a vaga fica vazia (a carta apagada, mas dá para mudar a vaga vazia) */
+.c-expulso { width: 9px; height: 12px; border-radius: 2px; background: #e5484d; }
+.carta.expulso { opacity: 0.5; border-style: dashed; border-color: rgba(229, 72, 77, 0.7); }
 .carta.sai { border-color: rgba(255, 122, 102, 0.6); }
 .carta.entra { border-color: rgba(25, 224, 122, 0.7); }
 .carta.treme { animation: ed-treme 150ms linear; }

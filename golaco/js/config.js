@@ -397,7 +397,8 @@ export const ACOES = {
   // chute (pesquisa da Etapa 2): máximo de 30–34 m/s nos melhores (Shinkai 2008; DFL); colocado
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15 },
+  // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
@@ -418,6 +419,10 @@ export const ACOES = {
 // Ibrahim et al. 2019); profundidade no chute 1,2 m (pequena área), 1,8 m (área) e 2,1 m (fora),
 // e chance de defesa pela distância lateral (StatsBomb Open Data, logística ajustada).
 export const GOLEIRO = {
+  // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
+  // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
+  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
@@ -551,13 +556,13 @@ export const PARTIDA = {
   // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
   // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; o tiro de meta é do
   // goleiro com a bola nas mãos (a reposição que já existe: GOLEIRO.esperaIA / esperaHumano)
-  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0, tiroLivre: 1.0 },
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0, tiroLivre: 1.0, penalti: 1.5 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
   cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
   teleporteCobrador: 8,       // m — o cobrador é levado ao ponto na montagem; o evento do recomeço leva a
                               // distância (`levado`) e o HUD avisa acima disto (andar até lá: Etapa 4)
-  raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area', tiroLivre: 9.15 }, // m dos adversários ('area' = fora da área)
+  raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area', tiroLivre: 9.15, penalti: 9.15 }, // m dos adversários ('area' = fora da área; pênalti: todos fora da área e da meia-lua)
   folgaRaio: 0.5,             // m a mais que o raio na restrição (a IA mira fora; a parede segura aqui)
   empurrao: 7,                // m/s — quem está dentro do raio sai andando/correndo a até esta velocidade
   // parede da parada pela locomoção (partida.js paredeParada): o pedido para dentro fica limitado a
@@ -569,6 +574,11 @@ export const PARTIDA = {
   saiParede: 1.0,             // m/s
   dentroParede: 0.02,         // m
   forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65 }, // força do botão da IA
+  // pênalti da IA (Regra 14): canto sorteado pelo m.rng — z da mira (m do meio do gol) com o peso de cada um; força
+  // sorteada na faixa (a dispersão do chute do acoes.js faz o resto: fora e na trave)
+  penaltiIA: { mira: [[-2.75, 0.32], [-1.6, 0.12], [0, 0.12], [1.6, 0.12], [2.75, 0.32]], forca: [0.62, 0.9] },
+  // tiro livre DIRETO da IA: chuta a gol a até `chuteMax` m (fora disso, passa/lança)
+  tiroLivreDireto: { chuteMax: 30, forca: [0.7, 0.9] },
   repeteCobranca: 1.0,        // s — se a cobrança não saiu (pedido expirou), a IA aperta de novo
   livreAte: 1.5,              // s antes de paradaMax: a IA cobra mesmo sem a zona livre (trava proibida)
   subsMax: 5,                 // IFAB Regra 3: 5 substituições...
@@ -593,6 +603,37 @@ export const PARTIDA = {
 // adversário ou de uma DEFESA do goleiro); jogada deliberada do adversário (domínio, passe, chutão) zera. Não há
 // impedimento recebendo direto de tiro de meta, lateral ou escanteio. Recomeço: tiro livre INDIRETO do outro time
 // onde ele tocou a bola (PARTIDA.raio.tiroLivre: adversários a 9,15 m).
+// Faltas e cartões (IFAB Regra 12; faltas.js). Só na partida (o treino não tem árbitro: o hash dele não muda).
+// Imprudente (sem cuidado) = tiro livre direto; temerário (sem ligar para o perigo) = amarelo; força excessiva =
+// vermelho. Amarelo também por parar um ataque promissor (SPA); vermelho por tirar uma chance clara de gol (DOGSO: a
+// ≤ dogso.dist do gol, indo para ele, com a bola dominada, sem defensor entre ele e o gol além do goleiro) — dentro da
+// área, tentando jogar a bola, é amarelo + pênalti. Dois amarelos = vermelho (o expulso sai; o time joga com um a
+// menos; não pode ser substituído). Vantagem: o time que sofreu segue com a bola no ataque; se perder em `vantagem` s,
+// volta à falta; o cartão sai na próxima parada.
+// Partida da Premier League: ~22,8 faltas, 4,3 amarelos, 0,15 vermelho e 0,23 pênalti por jogo. A partida daqui tem ~1/3
+// dos lances de um jogo de 90 min (~270 passes × ~900): faixas escaladas no painel.
+export const FALTAS = {
+  // bote da IA (sim.js boteIA) que chega: chance de ser falta pela chegada ao condutor (frente/lado/trás pelo rumo do
+  // condutor), × (1 + porVel · (v − vLivre)⁺) pela velocidade de quem chega, × lerp(desarme 40 → 90: 1,3 → 0,7)
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7] },
+  // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances
+  dividida: { perdeu: 1.0, tocou: 0.6 },
+  // carga por trás (sim.js colisaoCorpos): o marcador bate no condutor por trás fechando a ≥ vMin m/s
+  carga: { vMin: 1.8, chance: 0.5, naChanceClara: 0.2 },
+  // falta tática (o marcador batido segura o condutor no contra-ataque: SPA → amarelo): chance por passo colado (não
+  // na chance clara de gol: seria vermelho, e o defensor sabe)
+  tatica: { dist: 1.4, chancePorPasso: 0.012 },
+  temerario: 6.0,             // m/s — chegando por trás acima disto: temerário (amarelo)
+  excessivo: 7.6,             // m/s — por trás acima disto: força excessiva (sorteio pelo `excessivoP`)
+  excessivoP: 0.25,
+  dogso: { dist: 30, angulo: 0.8 }, // m do gol; rad entre a corrida e o gol
+  spa: { u: 10, vFrente: 3.5, defensores: 2 }, // ataque promissor: a ≥ u m do meio no ataque, indo para a frente a ≥ vFrente m/s, com ≤ defensores de linha à frente
+  vantagem: 2.5,              // s
+  vantagemVel: 3.0,           // m/s — vantagem só se quem sofreu segue com a bola indo para a frente a pelo menos isto
+  queda: 0.7,                 // s — quem sofre a falta perde o equilíbrio (sem domínio, devagar)
+  icone: 2.5,                 // s — o cartão em cima do jogador (desenho)
+};
+
 export const IMPEDIMENTO = {
   tolerancia: 0.1,            // m — "na mesma linha": até isto além da linha ainda vale (o benefício da dúvida)
   linhaMostra: 0.3,           // s — a linha desenhada aparece/some em

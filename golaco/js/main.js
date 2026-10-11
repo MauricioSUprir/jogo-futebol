@@ -57,7 +57,7 @@ import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimo
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 
-const { PASSO, BOTAO, QUALIDADE, VERSAO } = CFG;
+const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
 const TIME_HUMANO = 0;
 
@@ -280,7 +280,7 @@ function tratarEvento(ev) {
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
   // (o "GOL!" e a câmera do gol acabam aqui: no treino a bola volta em 1 s — contraprova M8)
-  if (t === 'recomeco' || t === 'saida') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
+  if (t === 'recomeco' || t === 'saida' || t === 'cobrancaPenalti') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio)
   if (t === 'intervalo') {
     hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
@@ -513,6 +513,13 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
       else { _carga.x = _pt.x; _carga.y = _pt.y + 6; _carga.forca = forcaDaCarga(h.carga); _carga.tipo = h.carga.tipo; hud.carga(_carga); }
     } else hud.carga(null);
   } else hud.carga(null);
+  // cartão do árbitro em cima de quem levou (por FALTAS.icone s; o expulso no lugar em que estava)
+  const uc = mundo.partida?.ultimoCartao;
+  if (uc && mundo.tick >= uc.tick && (mundo.tick - uc.tick) * PASSO < FALTAS.icone) {
+    const jc = mundo.jogadores.find(q => q.id === uc.id);
+    projetar(jc ? jc.x : uc.x, 2.25, jc ? jc.z : uc.z, _pt);
+    if (_pt.atras) hud.cartao(null); else { _cartao.x = _pt.x; _cartao.y = _pt.y; _cartao.cor = uc.cor; hud.cartao(_cartao); }
+  } else hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
   hud.relogio(mundo.partida ? lerRelogio() : null);
   hud.minimapa(agoraMs, mundo, idC, idProx);
@@ -527,6 +534,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0;
 }
 const _rel = { minuto: 0, tempo: 1, estado: 'jogo', acrescimo: null };
+const _cartao = { x: 0, y: 0, cor: 'amarelo' };
 function lerRelogio() {
   _rel.minuto = minutoDeJogo(mundo); _rel.tempo = mundo.partida.tempo; _rel.estado = mundo.partida.estado;
   _rel.acrescimo = acrescimoDeJogo(mundo);

@@ -213,8 +213,9 @@ export function criarEditorTime(opc) {
   const vagaDe = id => { for (const k in R().vagas) if (R().vagas[k] === id) return k; return null; };
   const parDe = id => R().substituicoes.find(s => s.sai === id || s.entra === id) ?? null;
   const camisa = id => fichaDe(id)?.camisa ?? String(id);
-  /** Situação do jogador no rascunho: titular | reserva | sai | saiu (tela §3.1). */
+  /** Situação do jogador no rascunho: titular | reserva | sai | saiu | expulso (tela §3.1; Regra 12). */
   function situacao(id) {
+    if ((R().expulsos ?? []).includes(id)) return 'expulso';
     if (R().saiu.includes(id)) return 'saiu';
     if (vagaDe(id) != null) return 'titular';
     const p = parDe(id);
@@ -297,13 +298,15 @@ export function criarEditorTime(opc) {
     const entra = !!par && par.entra === id && sit === 'titular';
     const sai = sit === 'sai';
     const saiu = sit === 'saiu';
+    const expulso = sit === 'expulso';
     const muitoFora = noCampo && t.enc === 'fora' && t.nota <= notaNatural(id) - 10;
     bt.dataset.jogador = String(id);
-    bt.className = `carta ${noCampo ? 'no-campo' : 'na-lista'} enc-${t.enc}${muitoFora ? ' muito-fora' : ''}${entra ? ' entra' : ''}${sai ? ' sai' : ''}${saiu ? ' saiu' : ''}`;
+    bt.className = `carta ${noCampo ? 'no-campo' : 'na-lista'} enc-${t.enc}${muitoFora ? ' muito-fora' : ''}${entra ? ' entra' : ''}${sai ? ' sai' : ''}${saiu ? ' saiu' : ''}${expulso ? ' expulso' : ''}`;
     bt.setAttribute('aria-pressed', String(r.escolhido === id));
     if (saiu) bt.setAttribute('aria-disabled', 'true'); else bt.removeAttribute('aria-disabled');
     let selo = '';
-    if (entra) selo = `<span class="c-selo c-entra" title="Entra na próxima parada">${SVG.entra}</span>`;
+    if (expulso) selo = '<span class="c-selo c-expulso" title="Expulso"></span>';
+    else if (entra) selo = `<span class="c-selo c-entra" title="Entra na próxima parada">${SVG.entra}</span>`;
     else if (sai) selo = `<span class="c-selo c-sai" title="Sai na próxima parada">${SVG.sai}</span>`;
     else if (t.enc === 'fora') selo = '<span class="c-selo c-fora" title="Fora de posição">!</span>';
     const alt = t.enc === 'alternativa' ? '<span class="c-alt" aria-hidden="true">°</span>' : '';
@@ -312,7 +315,8 @@ export function criarEditorTime(opc) {
     let aria = t.aria;
     if (entra) aria += `, entra no lugar de ${camisa(par.sai)} na próxima parada`;
     if (sai) aria += `, sai na próxima parada (entra ${camisa(par.entra)})`;
-    if (saiu) aria += ', já substituído';
+    if (expulso) aria += ', expulso (a vaga fica vazia; toque em outro titular para mudar a vaga vazia)';
+    else if (saiu) aria += ', já substituído';
     else aria += r.escolhido === id ? '. Escolhido: toque em outro para trocar.' : '. Toque para escolher.';
     bt.setAttribute('aria-label', aria);
   }

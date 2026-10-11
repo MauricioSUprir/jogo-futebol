@@ -55,7 +55,7 @@ export function criarHud(opc) {
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'),
     somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
-    mapa: $('minimapa'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
+    mapa: $('minimapa'), cartao: $('cartao-icone'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
@@ -356,6 +356,17 @@ export function criarHud(opc) {
       if (el.cargaTipo.textContent !== rot) el.cargaTipo.textContent = rot;
       el.carga.classList.add('visivel');
       el.carga.classList.toggle('cheia', c.forca >= 0.999);
+    },
+    /** Cartão em cima de quem levou: c = null (some) ou {x, y (px CSS, a cabeça), cor: 'amarelo' | 'vermelho'}. */
+    cartao(c) {
+      if (!el.cartao) return;
+      if (!c) { if (el.cartao.classList.contains('visivel')) el.cartao.classList.remove('visivel'); return; }
+      const x = Math.min(Math.max(c.x, 20), window.innerWidth - 20);
+      const y = Math.min(Math.max(c.y, 80), window.innerHeight - 20);
+      el.cartao.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+      el.cartao.classList.toggle('amarelo', c.cor === 'amarelo');
+      el.cartao.classList.toggle('vermelho', c.cor === 'vermelho');
+      el.cartao.classList.add('visivel');
     },
     /** Evento (tipo ou o objeto do evento): gol → "GOL!" grande; comando → aviso curto; lance → nada. */
     evento(ev, extra = {}, forcar = false) {
