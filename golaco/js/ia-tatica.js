@@ -17,7 +17,8 @@
 //    bola perto do meu gol (IA_DEFESA.perigo) ou sempre na pressão Alta; com a bola longe do meu gol
 //    (além de engaja[pressão], a linha de engajamento) não sai do bloco: segue a zona;
 //  - PRESSÃO do humano (m.pedidoPressao[time] = tick): o companheiro escolhido por defesa.js
-//    pressionadorDe (o mais perto da bola, ≠ controlado) aperta pela entrada de defesa.js entradaPressao;
+//    pressionadorDe (quem chega primeiro ao condutor, ≠ controlado; com o 1º homem já apertando, outro) persegue
+//    e disputa a bola pela entrada de defesa.js entradaPressao;
 //  - 2º homem: pressão Média/Alta cobre a cobertura m atrás do 1º, do lado do gol e por dentro; na
 //    Alta, com gatilho, aperta junto;
 //  - linha de defesa (grupo 'def'): a referência alinhada; com atacantes a ≤ individualArea m do meu
@@ -189,7 +190,7 @@ export function blocoDoTime(m, t) {
   if (B && B.tick === m.tick) return B;
   if (!B) {
     B = todos[t] = {
-      tick: -1, faseAnt: null, p1: -1, p2: -1, aperta1: false, aperta2: false, pedido: -1,
+      tick: -1, faseAnt: null, p1: -1, p2: -1, aperta1: false, aperta2: false, pedido: -1, pedidoTick: -2, apertaProprio: false,
       gatilhoAte: -1, gatilho: '', vooTick: -1, recebePara: -1, donoAnt: -1, cPesado: false, cCostas: false, cLateral: false,
       contra: [], contraAte: -1,
       refTick: -99, ref: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
@@ -257,9 +258,12 @@ export function blocoDoTime(m, t) {
     else if (vagas[o.vagaIdx].grupo === 'def' && ub > ur + 3) d += dp;
     return d;
   };
+  // (quem aperta a pedido do humano no tick anterior — PRESSÃO segurado — não é o 1º homem: o botão SOMA pressão, e o
+  // papel dele no bloco passa ao próximo)
+  const pedAnt = B.pedidoTick === m.tick - 1 && pressaoPedida(m, t) ? B.pedido : -1;
   let p1 = null, d1 = Infinity, at1 = null, dAt1 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o)) continue;
+    if (o.time !== t || !ehLinha(o) || o.id === pedAnt) continue;
     const d = efetiva(o);
     if (d < d1) { d1 = d; p1 = o; }
     if (o.id === B.p1) { at1 = o; dAt1 = d; }
@@ -267,7 +271,7 @@ export function blocoDoTime(m, t) {
   if (at1 && at1 !== p1 && dAt1 < d1 + IA.trocaPressao) p1 = at1;
   let p2 = null, d2 = Infinity, at2 = null, dAt2 = Infinity;
   for (const o of js) {
-    if (o.time !== t || !ehLinha(o) || o === p1 || o.x * lado > ub + 1) continue;
+    if (o.time !== t || !ehLinha(o) || o === p1 || o.id === pedAnt || o.x * lado > ub + 1) continue;
     // (quem tem a referência à frente da bola — o atacante que a bola passou — paga frentePaga: a
     // cobertura é do meio; com o atacante cobrindo ~1/4 do tempo, a linha da frente ficava ~6 m
     // atrás da referência e o meio–ataque caía para ~8 m: teste-forma)
@@ -358,19 +362,25 @@ export function blocoDoTime(m, t) {
     if (B.lentoId !== adv.id) { B.lentoId = adv.id; B.lentoDesde = m.tick; }
   } else B.lentoId = -1;
   B.lento = B.lentoId >= 0 && (m.tick - B.lentoDesde) * DT >= LT.s[p] + (engajado ? 0 : LT.longe);
-  // (com a PRESSÃO do humano valendo, o 1º homem também aperta: o time responde ao pedido — o companheiro
-  // escolhido pelo defesa.js vai junto)
-  B.aperta1 = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.pedido >= 0 || B.lento);
+  // o 1º homem aperta por conta própria? (gatilho, perigo, Alta ou condutor lento)
+  B.apertaProprio = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.lento);
+  // PRESSÃO segurada pelo humano (contrato m.pedidoPressao[time] = tick): quem aperta é o escolhido de defesa.js
+  // pressionadorDe (quem chega primeiro ao condutor, ≠ controlado) — e o semBola dá a ele a entrada de defesa.js
+  // entradaPressao. Com o 1º homem (≠ controlado) já apertando por conta própria, o botão chama OUTRO: dobra a
+  // marcação (o "second man press" do EA FC). Calculado ANTES do aperto do 1º (antes ia com 1 tick de atraso)
+  B.pedido = -1;
+  if (f.fase === 'sem' && pressaoPedida(m, t) && condutorAdversarioDe(m, t)) {
+    B.pedido = pressionadorDe(m, t, B.apertaProprio && p1 && p1.id !== humano ? p1.id : -1);
+  }
+  B.pedidoTick = m.tick;
+  // (o 1º homem segue o papel dele: apertando por conta própria ou contendo — com o pedido valendo, também além da linha
+  // de engajamento — e o escolhido do botão vai na bola: um a mais apertando)
+  B.aperta1 = B.apertaProprio;
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
   // (Média: com gatilho o 2º também aperta — a pressão coordenada do "pressing trigger": o 1º vai na bola e o 2º
   // fecha o lado de dentro; IA_DEFESA.segundoNoGatilho, correções da contraprova I2)
   B.aperta2 = !!adv && adv.posicao !== 'GOL' && engajado && ((p >= 2 && (comGatilho || IA_DEFESA.doisApertam[p])) || (comGatilho && !!IA_DEFESA.segundoNoGatilho?.[p]));
 
-  // PRESSÃO segurada pelo humano (contrato m.pedidoPressao[time] = tick): quem aperta é o escolhido do
-  // leitor da Parte 4 (defesa.js pressionadorDe: o companheiro mais perto da bola, ≠ controlado, com
-  // histerese) — e o semBola dá a ele a entrada de defesa.js entradaPressao
-  B.pedido = -1;
-  if (f.fase === 'sem' && pressaoPedida(m, t) && condutorAdversarioDe(m, t)) B.pedido = pressionadorDe(m, t);
 
   // marcação individual dos atacantes perto do meu gol, pela linha de defesa (a cada tick: o
   // atacante na área corre)

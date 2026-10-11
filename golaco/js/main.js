@@ -55,6 +55,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
 import { montarFalta } from './faltas.js';
+import { pressionadorVisivel } from './defesa.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 
@@ -452,6 +453,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // jogadores interpolados (quantos houver, dos dois times)
   const idC = idControlado();
   const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
+  // companheiro chamado pelo PRESSÃO no último passo (só lê o mundo: o desenho nunca muda a simulação)
+  const idPress = mundo.partida ? pressionadorVisivel(mundo, TIME_HUMANO) : -1;
   let n = 0;
   let hx = 0, hz = 0, achou = false;
   for (const j of mundo.jogadores) {
@@ -461,6 +464,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     const it = lista[n] ?? (lista[n] = {});
     it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === idC;
     it.goleiro = j.posicao === 'GOL'; it.proximo = idProx != null && j.id === idProx && !it.controlado;
+    it.pressiona = j.id === idPress && !it.controlado;
     it.kit = kitDe(j);
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
     if (it.controlado) { hx = it.x; hz = it.z; achou = true; }

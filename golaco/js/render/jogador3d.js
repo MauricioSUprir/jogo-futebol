@@ -10,7 +10,7 @@
 // comprida e luvas.
 import * as THREE from 'three';
 import { SEGMENTOS, RAIO_CABECA, J } from '../anim.js';
-import { texMancha, texIndicador } from './texturas.js';
+import { texMancha, texIndicador, texIndicadorPressao } from './texturas.js';
 
 const NSEG = SEGMENTOS.length;
 
@@ -295,6 +295,13 @@ export function criarJogadores3D(cena, qualidade) {
   marca.visible = false;
   marca.renderOrder = 5;
   cena.add(marca);
+  // companheiro chamado pelo PRESSÃO (pedido do dono, 11/10: "o botão de pressão não funciona" — nada na tela mostrava
+  // quem ia): setas âmbar acima da cabeça, sem texto
+  const marcaPressao = new THREE.Sprite(new THREE.SpriteMaterial({ map: texIndicadorPressao(), depthWrite: false, transparent: true }));
+  marcaPressao.visible = false;
+  marcaPressao.renderOrder = 5;
+  marcaPressao.name = 'indicador-pressao';
+  cena.add(marcaPressao);
   // "próximo da troca": anel fino, menor e translúcido (discreto)
   const matProx = new THREE.MeshBasicMaterial({
     color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
@@ -375,7 +382,8 @@ export function criarJogadores3D(cena, qualidade) {
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
     /**
-     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
+     * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
+     * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça)
      * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
      * camera: para o tamanho constante da seta acima da cabeça.
      */
@@ -384,7 +392,7 @@ export function criarJogadores3D(cena, qualidade) {
       const nj = lista.length;
       const mat = segs.instanceMatrix.array;
       const dim = aDim.array;
-      let controlado = null, proximo = null;
+      let controlado = null, proximo = null, pressiona = null;
       for (let p = 0; p < nj; p++) {
         const jg = lista[p];
         // cores fixas por vaga (só reescreve quando a vaga muda de dono/time/função/uniforme)
@@ -444,6 +452,7 @@ export function criarJogadores3D(cena, qualidade) {
         manchas.setMatrixAt(p, _m);
         if (jg.controlado) controlado = jg;
         else if (jg.proximo) proximo = jg;
+        if (jg.pressiona && !jg.controlado) pressiona = jg;
       }
       segs.count = nj * NSEG;
       cabecas.count = cabelos.count = manchas.count = nj;
@@ -472,6 +481,18 @@ export function criarJogadores3D(cena, qualidade) {
         anelTodo.visible = false;
         marca.visible = false;
       }
+      if (pressiona) {
+        const ic3 = J.cabeca * 3, pz = pressiona.pose;
+        marcaPressao.visible = true;
+        marcaPressao.position.set(pz[ic3], pz[ic3 + 1] + 0.42, pz[ic3 + 2]);
+        if (camera) {
+          // o mesmo tamanho na tela da seta do controlado (~2,6% do menor lado)
+          const d = camera.position.distanceTo(marcaPressao.position);
+          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.026 * Math.min(1, camera.aspect);
+          marcaPressao.scale.set(k, k, 1);
+          marcaPressao.position.y += k * 0.3;
+        }
+      } else marcaPressao.visible = false;
       if (proximo) {
         anelProx.visible = true;
         anelProx.position.set(proximo.x, 0.019, proximo.z);

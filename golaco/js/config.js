@@ -931,12 +931,19 @@ export const DEFESA_HUMANO = {
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
-  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Leitor de referência em
-  // defesa.js entradaPressao: o companheiro mais perto do condutor (≠ controlado e goleiro) aperta a
-  // `aperto` m do lado do gol; troca de quem aperta só com outro `troca` m mais perto.
-  // aperto 1,0 m da bola (com 1,5 m ele parava a ~2,2 m do corpo do condutor: a bola vai ~0,5 m à
-  // frente dele)
-  pressao: { aperto: 1.0, troca: 2, validade: 1 },
+  // PRESSÃO (segurar): grava m.pedidoPressao[time] = tick (contrato da Parte 0). Pedido do dono, 11/10 ("o botão de
+  // pressão não funciona"), como o "teammate pressure" do EA FC: vai quem CHEGA PRIMEIRO (defesa.js pressionadorDe:
+  // tempo de chegada com aceleração `acel` m/s² e freada `freio` m/s² ao ponto a `colado` m do corpo do condutor, do lado
+  // do gol, adiantado pela corrida dele até `leadMax` s; quem já vai leva `histerese` s de vantagem) — com o 1º homem da
+  // IA já apertando, o botão chama o segundo. Aproximação em disparada até `chega` m do condutor (vindo por trás,
+  // contorna a `contorno` m dele) e disputa na bola, pelo lado do gol (`naBola` m antes dela, adiantada `leadDisputa` s),
+  // e vai na bola solta a mais de `bolaSolta` m do pé dele. Na disputa o corpo anda pela velocidade (a do condutor +
+  // `ganho` × (ponto − corpo), até `aproxMax` m/s mais rápido que ele; por trás dele, a menos de `trasPerto` m, fechando
+  // no máximo a `trasAprox` m/s: abaixo da carga por trás, FALTAS.carga.vMin). `filtro`: s da velocidade do condutor.
+  pressao: {
+    validade: 1, acel: 7, freio: 6.2, histerese: 0.3, colado: 0.5, leadMax: 1.2, chega: 2.5, contorno: 1.2,
+    naBola: 0.3, leadDisputa: 0.15, bolaSolta: 0.5, filtro: 0.2, ganho: 3, aproxMax: 4, trasPerto: 1.5, trasAprox: 1.4,
+  },
 };
 
 // Troca automática no jogo aéreo (plano 3.5; pesquisa §7: reavaliar no voo acerta ~97%).

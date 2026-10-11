@@ -1,10 +1,12 @@
 // Botões de defesa do jogador do humano (Etapa 3, Parte 4; plano 2.8): CONTER (segurar: acompanha o
 // condutor entre a bola e o gol, de frente para ele), DIVIDIDA (borda: bote em pé, o pé sai na direção
-// da bola) e PRESSÃO (segurar: um companheiro aperta o condutor). CARRINHO fica na Etapa 4 (precisa de
+// da bola) e PRESSÃO (segurar: o companheiro que chega primeiro persegue o condutor e disputa a bola, com uma marca em
+// cima dele no desenho). CARRINHO fica na Etapa 4 (precisa de
 // falta e cartão). Pura: sem three.js nem DOM; só MD e m.rng. Constantes em config.js DEFESA_HUMANO.
 //
 // Ganchos em sim.js (valem também no treino, mas só agem com os bits CONTER/DIVIDIDA/PRESSÃO
-// apertados ou com o estado j.defH ligado — nenhum roteiro do treino aperta esses bits):
+// apertados ou com o estado j.defH ligado — nenhum roteiro do treino aperta esses bits; a PRESSÃO só é lida pela IA
+// tática da partida):
 //  - passo 1 (entradas), jogador controlado: entradaConter(m, j, e) → entrada que substitui a do
 //    analógico (ou null = usa a do humano); pedidoPressao(m, j) com PRESSÃO segurado;
 //  - passo 3 (desarmes), jogador controlado: dividida(m, j).
@@ -16,7 +18,7 @@
 // iaClassica (m.partida.iaClassica, o "antes" dos testes): nada disto age — o jogo de antes da Etapa 3
 // não tinha botões de defesa.
 
-import { BOTAO, CAMPO, PASSO, ENTRADA, IA, DEFESA_HUMANO, FALTAS } from './config.js';
+import { BOTAO, CAMPO, PASSO, ENTRADA, DEFESA_HUMANO, FALTAS, JOGADOR } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
@@ -278,8 +280,12 @@ function resolverBote(m, j, h) {
 }
 
 // ------------------------------------------------------------------------------------ PRESSÃO
+// (pedido do dono, 11/10: "o botão de pressão não funciona". Como no EA FC — segurar o botão manda o companheiro que
+// chega primeiro PERSEGUIR o condutor de forma agressiva, com uma marca em cima dele; se a IA já aperta, o botão chama o
+// segundo. Antes: o mais perto da BOLA ia a 1 m dela, do lado do gol — quase o que a IA já fazia sozinha, sem disputar
+// a bola e sem nada na tela; a distância ao condutor caía ~0,5 m.)
 
-/** PRESSÃO segurado: pede à IA tática que o companheiro mais perto aperte o condutor (contrato). */
+/** PRESSÃO segurado: pede à IA tática que um companheiro aperte o condutor (contrato). */
 export function pedidoPressao(m, j) {
   (m.pedidoPressao ??= {})[j.time] = m.tick;
 }
@@ -291,34 +297,82 @@ export function pressaoPedida(m, time) {
 }
 
 /**
- * Quem do time aperta o condutor a pedido do humano: o companheiro de linha mais perto da bola (sem o
- * controlado nem o goleiro); quem já aperta só perde a vez para outro P.troca m mais perto. Uma vez por
- * tick (m.pressaoHumano[time] = {tick, id}). -1 = ninguém.
+ * Ponto de encontro do jogador o com o condutor d0 (velocidade vx, vz): a P.colado m do corpo do condutor, na linha dele
+ * até o meu gol, adiantado pelo tempo que o jogador leva para chegar (até P.leadMax s; 3 voltas do ponto fixo — quem
+ * persegue o condutor que foge por trás não chega: o tempo cresce). Escreve em out {x, z, ux, uz, t} (u = direção
+ * condutor → meu gol; t = tempo de chegada).
  */
-export function pressionadorDe(m, time) {
+function pontoEncontro(m, time, o, d0, vx, vz, out) {
+  const gx = -ataca(m, time) * CAMPO.meioX;
+  let ux = gx - d0.x, uz = -d0.z;
+  const g = MD.hypot(ux, uz) || 1;
+  ux /= g; uz /= g;
+  let t = 0;
+  for (let k = 0; k < 3; k++) {
+    const l = Math.min(t, P.leadMax);
+    out.x = d0.x + vx * l + ux * P.colado; out.z = d0.z + vz * l + uz * P.colado;
+    t = tempoChegada(o, out.x, out.z);
+  }
+  out.ux = ux; out.uz = uz; out.t = t;
+  return out;
+}
+const _pc = { x: 0, z: 0, ux: 0, uz: 0, t: 0 };
+
+/**
+ * Tempo (s) para o jogador o chegar ao ponto (px, pz): distância na arrancada + o que falta acelerar (partindo da
+ * velocidade que ele já tem na direção do ponto) + a freada se ele vai para o outro lado.
+ */
+function tempoChegada(o, px, pz) {
+  const dx = px - o.x, dz = pz - o.z, d = MD.hypot(dx, dz);
+  if (d < 1e-6) return 0;
+  const vr = (o.vx * dx + o.vz * dz) / d, vA = o.par.vArrancada;
+  return d / vA + (vA - Math.max(0, Math.min(vA, vr))) / (2 * P.acel) + Math.max(0, -vr) / P.freio;
+}
+
+/**
+ * Quem do time aperta o condutor a pedido do humano: o companheiro de linha que CHEGA PRIMEIRO ao condutor (pontoEncontro:
+ * o tempo de chegada ao ponto adiantado pela corrida do condutor), sem o controlado, o goleiro e `excluir` (o 1º homem da
+ * IA que já aperta por conta própria: o botão dobra a marcação). Quem já vai leva P.histerese s de vantagem (e nunca é
+ * o excluído). Uma vez por tick (m.pressaoHumano[time] = {tick, id}; o desenho lê por pressionadorVisivel). -1 = ninguém.
+ */
+export function pressionadorDe(m, time, excluir = -1) {
   const cache = (m.pressaoHumano ??= {});
   const ant = cache[time];
   if (ant && ant.tick === m.tick) return ant.id;
-  const b = m.bola.p;
+  const d0 = m.posse != null ? porId(m, m.posse) : null;
   const ctrl = m.humanos.includes(time) ? m.controlado[time] : null;
-  let mel = null, dm = Infinity, dAnt = Infinity;
-  for (const o of m.jogadores) {
-    if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
-    const d = MD.hypot(o.x - b.x, o.z - b.z);
-    if (d < dm) { dm = d; mel = o; }
-    if (ant && o.id === ant.id) dAnt = d;
+  const atual = ant && ant.tick === m.tick - 1 ? ant.id : -1;
+  let id = -1;
+  if (d0 && d0.time !== time) {
+    let mt = Infinity;
+    for (const o of m.jogadores) {
+      if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
+      if (o.id === excluir && o.id !== atual) continue;
+      const t = pontoEncontro(m, time, o, d0, d0.vx, d0.vz, _pc).t - (o.id === atual ? P.histerese : 0);
+      if (t < mt) { mt = t; id = o.id; }
+    }
   }
-  let id = mel ? mel.id : -1;
-  if (ant && ant.tick === m.tick - 1 && dAnt < dm + P.troca) id = ant.id;
   cache[time] = { tick: m.tick, id };
   return id;
 }
 
 /**
- * Leitor de referência do pedido de PRESSÃO (quem decide usar é a IA tática, ia-tatica.js, dona do
- * comportamento sem a bola): para o jogador da IA escolhido por pressionadorDe, a entrada que aperta o
- * condutor a P.aperto m do lado do meu gol, mirando à frente pela velocidade dele (a conta do 1º homem do
- * ia.js), com pressa; com o pedido valendo e um condutor adversário. Senão null.
+ * O companheiro que aperta a pedido do humano no último passo (para a marca do desenho: render/jogador3d.js), ou -1.
+ * Pura (só lê o que o passo gravou: o desenho nunca muda a simulação).
+ */
+export function pressionadorVisivel(m, time) {
+  const c = m.pressaoHumano?.[time];
+  return c && c.tick === m.tick - 1 && c.id >= 0 && pressaoPedida(m, time) ? c.id : -1;
+}
+
+/**
+ * Entrada do companheiro escolhido por pressionadorDe (a IA tática a dá a ele: ia-tatica.js semBola), com o pedido
+ * valendo e um condutor adversário; senão null. Em duas fases:
+ *  - APROXIMAÇÃO (a mais de P.chega m do condutor): em disparada (CORRER, analógico cheio, sem o filtro da IA), em linha
+ *    reta até o ponto da disputa adiantado pela velocidade do condutor (até P.leadMax s); vindo por trás dele, contorna
+ *    pelo lado (não atravessa o corpo do condutor: carga por trás);
+ *  - DISPUTA: o ponto a P.colado m do corpo do condutor, do lado do meu gol — a bola fica ao alcance do bote (sim.js
+ *    boteIA, 0,65 m) — e, com a bola solta do pé (a mais de P.bolaSolta m dele) e eu mais perto, vai na bola.
  */
 export function entradaPressao(m, j) {
   if (!pressaoPedida(m, j.time)) return null;
@@ -326,15 +380,58 @@ export function entradaPressao(m, j) {
   if (!d0 || pressionadorDe(m, j.time) !== j.id) return null;
   const s = estadoIA(m, j);
   if (s.cond !== d0.id) { s.cond = d0.id; s.cvx = d0.vx; s.cvz = d0.vz; }
-  const a = PASSO / IA.filtroCondutor;
+  const a = Math.min(1, PASSO / P.filtro);
   s.cvx += (d0.vx - s.cvx) * a; s.cvz += (d0.vz - s.cvz) * a;
-  let ax = s.cvx * IA.antecipaPressao, az = s.cvz * IA.antecipaPressao;
-  const l = MD.hypot(ax, az);
-  if (l > IA.antecipaMax) { ax *= IA.antecipaMax / l; az *= IA.antecipaMax / l; }
-  const b = m.bola.p;
-  const gx = -ataca(m, j.time) * CAMPO.meioX - b.x, gz = -b.z, g = MD.hypot(gx, gz) || 1;
-  const tx = b.x + (gx / g) * P.aperto + ax, tz = b.z + (gz / g) * P.aperto + az;
   s.ramo = 'pressaoHumano';
-  // aperta de verdade: CORRER até perto (a histerese do modo pressa solta o CORRER a ~1,5 m)
-  return para(j, tx, tz, 1, true, 0, 'pressa');
+  const b = m.bola.p;
+  // bola solta do pé do condutor e eu mais perto dela: vou na bola
+  const dbC = MD.hypot(b.x - d0.x, b.z - d0.z), dbJ = MD.hypot(b.x - j.x, b.z - j.z);
+  if (dbC > P.bolaSolta && dbJ < dbC) return direto(j, b.x - j.x, b.z - j.z, true);
+  const dc = MD.hypot(d0.x - j.x, d0.z - j.z);
+  let tx, tz;
+  const longe = dc > P.chega;
+  if (longe) {
+    pontoEncontro(m, j.time, j, d0, s.cvx, s.cvz, _pc);
+    tx = _pc.x; tz = _pc.z;
+  } else {
+    // disputa: na BOLA, pelo lado do meu gol (P.naBola m antes dela), adiantada pela corrida do condutor — a bola fica ao
+    // alcance do bote; com ela do outro lado do corpo do condutor (ele protege), o corpo dele segura o meu
+    const gx = -ataca(m, j.time) * CAMPO.meioX - b.x, gz = -b.z, g = MD.hypot(gx, gz) || 1;
+    _pc.ux = gx / g; _pc.uz = gz / g;
+    tx = b.x + _pc.ux * P.naBola + s.cvx * P.leadDisputa; tz = b.z + _pc.uz * P.naBola + s.cvz * P.leadDisputa;
+  }
+  // vindo por trás do condutor (do lado do gol dele) com o corpo dele no caminho: contorna pelo lado (atravessar o
+  // corpo dele é carga por trás — falta)
+  const rx = j.x - d0.x, rz = j.z - d0.z;
+  if (rx * _pc.ux + rz * _pc.uz < 0) {
+    const dx = tx - j.x, dz = tz - j.z, L = MD.hypot(dx, dz) || 1;
+    const cx = d0.x - j.x, cz = d0.z - j.z, ao = (cx * dx + cz * dz) / L;
+    const lat = (-cx * dz + cz * dx) / L;
+    if (ao > 0 && ao < L + JOGADOR.raio * 2 && Math.abs(lat) < P.contorno) {
+      const lado = lat > 0 ? -1 : 1, nx = -dz / L * lado, nz = dx / L * lado;
+      tx = d0.x + nx * P.contorno + s.cvx * P.leadDisputa; tz = d0.z + nz * P.contorno + s.cvz * P.leadDisputa;
+    }
+  }
+  if (longe) return direto(j, tx - j.x, tz - j.z, true);
+  // disputa pela VELOCIDADE (como o CONTER): a do condutor + P.ganho × (ponto − corpo), chegando no máximo a P.aproxMax
+  // m/s mais rápido que ele — o para() reduzia a intensidade perto do ponto e soltava o CORRER, e o condutor que arrancava
+  // fugia; por trás dele, perto (P.trasPerto m), a aproximação fica abaixo da carga por trás (P.trasAprox m/s)
+  let vx = s.cvx + P.ganho * (tx - j.x), vz = s.cvz + P.ganho * (tz - j.z);
+  let rvx = vx - s.cvx, rvz = vz - s.cvz;
+  const rl = MD.hypot(rvx, rvz);
+  if (rl > P.aproxMax) { rvx *= P.aproxMax / rl; rvz *= P.aproxMax / rl; }
+  if (rx * _pc.ux + rz * _pc.uz < 0 && dc < P.trasPerto) {
+    const nx = (d0.x - j.x) / (dc || 1), nz = (d0.z - j.z) / (dc || 1), ap = rvx * nx + rvz * nz;
+    if (ap > P.trasAprox) { rvx -= (ap - P.trasAprox) * nx; rvz -= (ap - P.trasAprox) * nz; }
+  }
+  vx = s.cvx + rvx; vz = s.cvz + rvz;
+  const st = j.pressaoH ??= { corre: false };
+  return entradaVelocidade(j, vx, vz, st, 0);
+}
+
+/** Analógico cheio na direção (dx, dz), com CORRER. */
+function direto(j, dx, dz, correr) {
+  const l = MD.hypot(dx, dz);
+  if (l < 1e-6) return { x: 0, z: 0, botoes: 0 };
+  return { x: dx / l, z: dz / l, botoes: correr ? BOTAO.CORRER : 0 };
 }
