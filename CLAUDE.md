@@ -244,6 +244,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   abertos e saída curta (Regra 16); disputa pelo alto SÓ na bola parada (na bola rolando derrubou os gols de 2,8 para
   1,5 — fica para a 4.5). Canhões com estados do MEIO da partida (estados de saída são quase iguais e enganam).
   Teste: `teste-bolas-paradas` (padrão); `teste-estadio` confere os marcadores. `__golaco.bolaParadaDeTeste(tipo)`.
+  Decisão do dono (11/10): publicar mesmo com os gols caindo 2,13 → 1,68 por partida e o goleiro 72,5%/64,6% (meta
+  66–72/55–60) — o que saiu foram as cabeçadas fáceis de escanteio (22% dos escanteios viravam gol; real 2,6%), a
+  mistura de chutes mudou. A entrega do cabeceio + IA intensa TEM de trazer os gols de volta (hoje 0 gol de cabeça:
+  a cabeçada sai sempre para baixo). O tiro de meta tira os adversários da área na montagem (Regra 16).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
