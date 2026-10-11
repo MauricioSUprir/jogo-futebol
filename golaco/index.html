@@ -23,7 +23,8 @@
   <canvas id="tela" class="tela" aria-label="Campo 3D"></canvas>
   <div class="vinheta" aria-hidden="true"></div>
 
-  <!-- HUD fixo: placar, velocidade e modo, minimapa, força do passe/chute, avisos -->
+  <!-- HUD fixo: placar, velocidade e modo (treinos), minimapa (opção da pausa), força do passe/chute, avisos.
+       Tela limpa (dono, 11/10): na partida, placar compacto de TV + menu só com o ícone (tools/teste-hud-minimo.mjs) -->
   <div id="hud" class="hud" data-hud>
     <header class="placar" data-caixa="placar" aria-label="Placar">
       <svg class="marca-simbolo" viewBox="0 0 40 40" aria-hidden="true"><path d="M7 31 15.5 9H34L25.5 31z" fill="currentColor"/><path d="M13 31 21.5 9h3L16 31z" fill="#07090a" opacity=".55"/></svg>
@@ -76,10 +77,11 @@
   </div>
 
   <!-- Controles de toque (celular): analógico flutuante à esquerda; à direita o arco de botões
-       ao alcance do polegar (posições calculadas em js/entrada.js, calcularLayoutToque).
-       Ataque: CHUTE, PASSE, ENFIADA, LANÇAMENTO, CORRER. Defesa: TROCAR, GOLEIRO, CONTER, DIVIDIDA,
-       PRESSÃO e CORRER. Os botões da defesa da Etapa 3 (data-etapa="3") só aparecem depois que a
-       entrada os posiciona no arco (sem posição, ficam escondidos pelo CSS). -->
+       ao alcance do polegar (posições calculadas em js/entrada.js, calcularLayoutToque), só com o ícone
+       (o nome aparece com a opção "Nomes nos botões" da pausa).
+       Ataque: CHUTE, PASSE, ENFIADA, LANÇAMENTO, CORRER. Defesa (5 botões): TROCAR, GOLEIRO, PRESSÃO,
+       DIVIDIDA (tocar = bote; segurar = conter) e CORRER. Os botões da defesa da Etapa 3 (data-etapa="3")
+       só aparecem depois que a entrada os posiciona no arco (sem posição, ficam escondidos pelo CSS). -->
   <div id="toque" class="toque fase-ataque" data-fase="ataque" hidden>
     <div id="zona-analogico" class="zona-analogico" aria-hidden="true"></div>
     <div id="analogico" class="analogico" aria-hidden="true">
@@ -104,10 +106,7 @@
     <button id="btn-goleiro" class="btn-toque btn-goleiro" data-caixa="btn-goleiro" data-fase="defesa" type="button" aria-label="Goleiro (segure: ele sai do gol)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 20V5h19v15"/><circle cx="12" cy="9" r="2"/><path d="M6.5 10.5 12 13l5.5-2.5M12 13v4"/></svg><span>GOLEIRO</span>
     </button>
-    <button id="btn-conter" class="btn-toque btn-conter" data-caixa="btn-conter" data-fase="defesa" data-etapa="3" type="button" aria-label="Conter (segure: acompanha o adversário com a bola)">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z"/><path d="M9 12h6"/></svg><span>CONTER</span>
-    </button>
-    <button id="btn-dividida" class="btn-toque btn-dividida" data-caixa="btn-dividida" data-fase="defesa" data-etapa="3" type="button" aria-label="Dividida (bote em pé)">
+    <button id="btn-dividida" class="btn-toque btn-dividida" data-caixa="btn-dividida" data-fase="defesa" data-etapa="3" type="button" aria-label="Dividida (toque: bote em pé; segure: conter, acompanha o adversário com a bola)">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7v6.5c0 1.4 1.1 2.5 2.5 2.5H13l3.5 3"/><circle cx="18.5" cy="12" r="2.6"/><path d="M4 7h4"/></svg><span>DIVIDIDA</span>
     </button>
     <button id="btn-pressao" class="btn-toque btn-pressao" data-caixa="btn-pressao" data-fase="defesa" data-etapa="3" type="button" aria-label="Pressão (segure: um companheiro aperta quem está com a bola)">
@@ -123,6 +122,13 @@
     <div class="janela janela-menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo">
       <div class="janela-topo">
         <h2 id="menu-titulo">Pausa</h2>
+        <!-- tela limpa (11/10): o que aparece na tela durante o jogo, liga/desliga com um toque — o minimapa (desligado
+             no celular por padrão, como o radar do EA FC) e os nomes nos botões de toque (desligados: só o ícone). Na
+             barra de cima: a pausa continua cabendo sem rolar no celular deitado -->
+        <div class="chips-tela" role="group" aria-label="Na tela">
+          <button type="button" class="chip" id="chip-minimapa" data-cmd="minimapa" aria-pressed="false">Minimapa</button>
+          <button type="button" class="chip chip-nomes" id="chip-nomes" data-cmd="nomes" aria-pressed="false">Nomes nos botões</button>
+        </div>
         <!-- tela cheia (só onde a página pode pedir: Android e PC) fica no topo, ao lado do X -->
         <button class="btn-fechar btn-tela-cheia" type="button" data-cmd="tela-cheia" id="btn-tela-cheia" aria-label="Tela cheia" title="Tela cheia" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -248,12 +254,12 @@
           <h3>Toque</h3>
           <dl>
             <dt>Metade esquerda</dt><dd>Analógico: encoste o dedo onde quiser e arraste</dd>
-            <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e CORRER, em arco ao alcance do polegar</dd>
-            <dt>Sem a bola</dt><dd>TROCAR, GOLEIRO (segure: ele sai), CONTER (segure), DIVIDIDA, PRESSÃO (segure) e CORRER</dd>
+            <dt>Com a bola</dt><dd>CHUTE (o maior), PASSE (seta), ENFIADA (seta cortando a linha), LANÇAMENTO (curva) e CORRER (seta dupla), em arco ao alcance do polegar</dd>
+            <dt>Sem a bola</dt><dd>TROCAR (o maior), GOLEIRO (segure: ele sai), PRESSÃO (segure: um companheiro aperta), DIVIDIDA (toque: bote; segure: conter) e CORRER</dd>
             <dt>Segurar</dt><dd>Mais força (a barra aparece perto do jogador)</dd>
             <dt>Botão do topo</dt><dd>Pausa e menu (Editar time na partida, treinos, câmera)</dd>
           </dl>
-          <p class="nota">Tamanho e transparência dos botões: menu, "Controles de toque".</p>
+          <p class="nota">Os botões mostram só o ícone; o nome aparece com o botão "Nomes nos botões" no alto do menu. Tamanho e transparência: menu, "Controles de toque". Minimapa: menu, botão "Minimapa" no alto.</p>
         </section>
       </div>
       <p class="nota creditos">Sons da torcida: Work With Sounds / Torsten Nilsson e Gregor Quendel (CC BY 4.0); apito: SpliceSound (CC0). Detalhes em assets/sons/CREDITOS.md.</p>
