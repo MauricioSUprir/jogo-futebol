@@ -228,6 +228,14 @@ html.topo-desce .painel-jogo { right: auto; left: calc(var(--sa-l) + var(--m)); 
 /* 3) sai o "1º T" do relógio (fica o minuto) */
 html.topo-c3 .placar-relogio small { display: none; }
 html.topo-c3 .placar { gap: 8px; padding-right: 10px; }
+/* 4) celular estreito com o relógio de 2 dígitos ou nos acréscimos ("45+2'"): o placar inteiro aperta (fontes e
+   espaços menores); 5) se ainda encostar, o minimapa sai do meio (js/hud.js ajustarTopo) */
+html.topo-c4 .placar { gap: 5px; padding-left: 9px; padding-right: 8px; }
+html.topo-c4 .placar-linha { gap: 5px; }
+html.topo-c4 .placar-time { gap: 4px; font-size: 12px; letter-spacing: 0.04em; }
+html.topo-c4 .placar-gols { min-width: 22px; height: 26px; font-size: 16px; padding: 0 4px; }
+html.topo-c4 .placar-relogio { padding-left: 6px; }
+html.topo-c4 .placar-relogio b { font-size: 13px; min-width: 0; letter-spacing: -0.02em; }
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
 .carga {

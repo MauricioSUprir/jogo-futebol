@@ -46,9 +46,10 @@ import { posicaoTatica } from './tatica.js';
 import { estadoInicialTime, vestirVaga, aplicarEdicao, aplicarPendentes } from './escalacao.js';
 import { entradaIATatica } from './ia-tatica.js';
 import { assumirControle, atualizarBotoesAcao, executarAcao, riscoLinha, ataca } from './acoes.js';
+import { regraImpedimento, linhaImpedimento, emPosicaoDeImpedimento } from './impedimento.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
-export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta'];
+export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre'];
 const PAPEIS = ['ia', 'humano', 'parado', 'marcador'];
 const seg = s => Math.round(s / PASSO);
 const BOTAO_ACAO = { passe: BOTAO.PASSE, lancamento: BOTAO.LANCAMENTO };
@@ -98,6 +99,9 @@ export function criarPartida(opc = {}) {
   m.partida = {
     estado: 'parada', tempo: 1, tick0Tempo: 0, ticksPorTempo: Math.max(1, Math.round(min * 60 / PASSO)),
     saidaInicial: saida, iaClassica: !!opc.iaClassica, desde: 0, ultimoTime: saida, ultimoId: null, ultimoTick: -1, golTime: null,
+    // Etapa 4: impedimento (impedimento.js; a foto da última jogada e o último apito, para o desenho da linha) e
+    // acréscimos (minutos anunciados no fim do tempo regulamentar; o que parou no tempo conta)
+    imped: null, ultimoImped: null, acrescimo: null, contagem: { gols: 0, subs: 0, imped: 0 },
   };
   m.parada = null;
   m.golTick = null; m.foraDesde = null;
@@ -137,6 +141,7 @@ const MORTA = -2;
 /** Bola morta (fora, gol ou começo do tempo): a parada começa SEM cobrador (ninguém toca a bola). */
 function bolaMorta(m, tipo, time, x, z) {
   encerrarParada(m);
+  if (m.partida) m.partida.imped = null; // bola morta: nenhuma jogada vale para o impedimento
   if (m.golTick == null) m.golTick = MORTA;
   m.parada = {
     tipo, time, x, z, cobrador: null, inicio: m.tick, desde: m.tick, pronta: -1, atraso: 0, rolou: false,
@@ -251,12 +256,12 @@ export function montarSaida(m, time) {
   m.eventos.push({ tipo: 'saida', time });
 }
 
-/** Lateral e escanteio: o cobrador levado ao ponto, a bola no chão, os adversários saem do raio. */
+/** Lateral, escanteio e tiro livre: o cobrador levado ao ponto, a bola no chão, os adversários saem do raio. */
 function montarBolaParada(m) {
   const pr = m.parada;
   const t = pr.time, lado = m.ataca[t];
   let c = null;
-  if (pr.tipo === 'lateral') {
+  if (pr.tipo === 'lateral' || pr.tipo === 'tiroLivre') {
     // o jogador de linha mais perto do ponto
     let dm = Infinity;
     for (const o of m.jogadores) {
@@ -278,11 +283,14 @@ function montarBolaParada(m) {
   Object.assign(m.bola, criarBola(pr.x, pr.z));
   const rumo = pr.tipo === 'lateral'
     ? MD.atan2(-Math.sign(pr.z), 0)                                        // de frente para o campo
-    : MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x);   // para a marca do pênalti
+    : pr.tipo === 'tiroLivre'
+      ? MD.atan2(0, lado)                                                   // de frente para o ataque
+      : MD.atan2(-pr.z, lado * (CAMPO.meioX - CAMPO.marcaPenalti) - pr.x); // para a marca do pênalti
   const levado = cobradorNoPonto(m, c, pr.x, pr.z, rumo);
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, c, levado);
   if (pr.tipo === 'lateral') m.eventos.push({ tipo: 'lateral', time: t, x: pr.x, z: pr.z, id: c.id, levado });
+  else if (pr.tipo === 'tiroLivre') m.eventos.push({ tipo: 'tiroLivre', time: t, x: pr.x, z: pr.z, id: c.id, levado, indireto: true });
   else m.eventos.push({ tipo: 'escanteio', time: t, lado: pr.z >= 0 ? 1 : -1, id: c.id, levado });
 }
 
@@ -449,8 +457,11 @@ function iaPodeCobrar(m) {
  *  saída: o companheiro mais perto atrás da bola (toque curto para trás);
  *  lateral: o companheiro de linha a 6–30 m com a linha de passe mais livre (riscoLinha), um pouco à
  *    frente de preferência; sem ninguém livre, lançamento ao longo da linha;
- *  escanteio: cruzamento (lançamento; acoes.js escolhe a zona pelo companheiro mais perto dela).
+ *  escanteio: cruzamento (lançamento; acoes.js escolhe a zona pelo companheiro mais perto dela);
+ *  tiro livre (indireto, do impedimento): como o lateral, sem passar para quem está impedido; sem ninguém livre,
+ *    lançamento para a frente.
  */
+const _li = { u: 0, x: 0, defensor: null };
 export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
   const b = m.bola.p;
   const lado = ataca(m, j.time);
@@ -460,8 +471,10 @@ export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
     return { dx: tx / l, dz: tz / l, tipo: 'lancamento', forca: F.escanteio, para: null };
   }
   let mel = null, ms = Infinity;
+  if (tipo === 'tiroLivre') linhaImpedimento(m, j.time, _li);
   for (const o of m.jogadores) {
     if (o.time !== j.time || o.id === j.id || o.posicao === 'GOL' || o.papel === 'parado') continue;
+    if (tipo === 'tiroLivre' && emPosicaoDeImpedimento(m, o, _li.u)) continue;
     const ox = o.x - b.x, oz = o.z - b.z, d = MD.hypot(ox, oz);
     const u = ox * lado; // à frente (+) ou atrás (−) da bola
     let s;
@@ -476,9 +489,14 @@ export function alvoCobranca(m, j, tipo = m.parada?.tipo) {
   }
   if (mel && (tipo === 'saida' || ms < 12)) {
     const ox = mel.x - b.x, oz = mel.z - b.z, l = MD.hypot(ox, oz) || 1;
-    return { dx: ox / l, dz: oz / l, tipo: 'passe', forca: tipo === 'saida' ? F.saida : F.lateral, para: mel.id };
+    return { dx: ox / l, dz: oz / l, tipo: 'passe', forca: tipo === 'saida' ? F.saida : tipo === 'tiroLivre' ? F.tiroLivre : F.lateral, para: mel.id };
   }
   if (tipo === 'saida') return { dx: -lado, dz: 0, tipo: 'passe', forca: F.saida, para: null };
+  // tiro livre (indireto) sem ninguém livre: lançamento para a frente, para o meio do campo
+  if (tipo === 'tiroLivre') {
+    const dz = clamp(-b.z / 30, -0.4, 0.4), l = MD.hypot(1, dz);
+    return { dx: lado / l, dz: dz / l, tipo: 'lancamento', forca: F.tiroLivreLongo, para: null };
+  }
   // lateral sem ninguém livre: lançamento para a frente, ao longo da linha (um pouco para dentro)
   const dz = -Math.sign(b.z) * 0.35, l = MD.hypot(1, dz);
   return { dx: lado / l, dz: dz / l, tipo: 'lancamento', forca: F.lateralLonga, para: null };
@@ -558,7 +576,7 @@ function rolou(m) {
 
 // ----------------------------------------------------------------------------- relógio e regras
 
-/** Minuto mostrado no placar (0–90): tempo real × 45 / minutosPorTempo, por tempo. */
+/** Minuto mostrado no placar (0–90): tempo real × 45 / minutosPorTempo, por tempo (nos acréscimos fica em 45/90). */
 export function minutoDeJogo(m) {
   const p = m.partida;
   if (!p) return 0;
@@ -568,10 +586,37 @@ export function minutoDeJogo(m) {
   return (p.tempo - 1) * 45 + Math.floor(f * 45);
 }
 
+/** Ticks de acréscimo do tempo atual (0 antes do anúncio). */
+function ticksAcrescimo(p) {
+  return p.acrescimo ? Math.round(p.acrescimo * p.ticksPorTempo / 45) : 0;
+}
+
+/**
+ * Acréscimos no placar: {anunciado (min), decorrido (min inteiros já jogados nele)} depois do anúncio, com a bola
+ * rolando ou parada no tempo; null antes dele, no intervalo e no fim.
+ */
+export function acrescimoDeJogo(m) {
+  const p = m.partida;
+  if (!p || p.acrescimo == null || p.estado === 'intervalo' || p.estado === 'fim') return null;
+  const alem = m.tick - p.tick0Tempo - p.ticksPorTempo;
+  if (alem < 0) return null;
+  return { anunciado: p.acrescimo, decorrido: Math.min(p.acrescimo, Math.floor(alem * 45 / p.ticksPorTempo)) };
+}
+
+/** Fim do tempo regulamentar: anuncia os acréscimos (IFAB Regra 7.3; PARTIDA.acrescimos), evento 'acrescimo'. */
+function anunciarAcrescimo(m) {
+  const p = m.partida, A = PARTIDA.acrescimos, t = p.tempo, c = p.contagem;
+  const [b0, b1] = A.base[t] ?? A.base[2];
+  const total = lerp(b0, b1, uniforme(m.rng)) + A.porGol * c.gols + A.porSubstituicao * c.subs + A.porImpedimento * c.imped;
+  p.acrescimo = clamp(Math.round(total), 1, A.max[t] ?? A.max[2]);
+  m.eventos.push({ tipo: 'acrescimo', tempo: t, minutos: p.acrescimo });
+}
+
 function fimDoTempo(m) {
   const p = m.partida;
   encerrarParada(m);
   m.golTick = null; m.foraDesde = null;
+  p.imped = null;
   if (p.tempo === 1) {
     p.estado = 'intervalo'; p.desde = m.tick;
     m.eventos.push({ tipo: 'intervalo' });
@@ -627,6 +672,20 @@ function bolaFora(m) {
   else bolaMorta(m, 'tiroDeMeta', defende, s * (CAMPO.meioX - CAMPO.pequenaArea.profundidade), b.p.z);
 }
 
+/**
+ * Impedimento marcado (Regra 11.4): evento 'impedimento', a linha do lance guardada para o desenho e tiro livre
+ * INDIRETO do outro time no ponto em que o impedido tocou a bola (dentro do campo).
+ */
+function marcarImpedimento(m, off) {
+  const p = m.partida;
+  m.eventos.push({ tipo: 'impedimento', id: off.id, time: off.time, x: off.x, z: off.z, linhaX: off.linhaX, por: off.por });
+  p.ultimoImped = { tick: m.tick, linhaX: off.linhaX, id: off.id, time: off.time, x: off.x, z: off.z };
+  p.contagem.imped++;
+  const x = clamp(off.x, -CAMPO.meioX + 1, CAMPO.meioX - 1), z = clamp(off.z, -CAMPO.meioZ + 1, CAMPO.meioZ - 1);
+  bolaMorta(m, 'tiroLivre', 1 - off.time, x, z);
+  p.estado = 'parada'; p.desde = m.tick;
+}
+
 /** Regras da partida (depois do passo): relógio, gol, bola fora → recomeço, cobrança, intervalo e fim. */
 export function regrasPartida(m) {
   const p = m.partida;
@@ -640,11 +699,15 @@ export function regrasPartida(m) {
     aplicarPendentes(m, 1, { intervalo: true });
     for (const j of m.jogadores) vestirVaga(m, j, j.vagaId);
     p.tempo = 2; p.tick0Tempo = m.tick;
+    p.acrescimo = null; p.contagem = { gols: 0, subs: 0, imped: 0 };
     bolaMorta(m, 'saida', 1 - p.saidaInicial, 0, 0);
     montarSaida(m, 1 - p.saidaInicial);
     return;
   }
-  const acabou = m.tick - p.tick0Tempo >= p.ticksPorTempo;
+  // fim do tempo regulamentar: os acréscimos são anunciados; o tempo acaba depois deles
+  const regular = m.tick - p.tick0Tempo >= p.ticksPorTempo;
+  if (regular && p.acrescimo == null) anunciarAcrescimo(m);
+  const acabou = regular && m.tick - p.tick0Tempo >= p.ticksPorTempo + ticksAcrescimo(p);
   if (p.estado === 'gol') {
     if (m.tick - p.desde < seg(PARTIDA.golPausa)) return;
     if (acabou) { fimDoTempo(m); return; }
@@ -656,12 +719,13 @@ export function regrasPartida(m) {
   if (m.golTick != null && m.golTick >= 0 && p.estado === 'jogo') {
     const ev = m.eventos.find(e => e.tipo === 'gol');
     p.golTime = ev ? ev.time : (m.bola.p.x * m.ataca[0] > 0 ? 0 : 1);
+    p.contagem.gols++;
     p.estado = 'gol'; p.desde = m.golTick;
     bolaMorta(m, 'saida', 1 - p.golTime, 0, 0);
     m.parada.inicio = m.golTick;
     return;
   }
-  // o relógio não para nas bolas paradas: acabou o tempo, acabou (sem acréscimos: Etapa 4)
+  // o relógio não para nas bolas paradas: acabou o tempo (com os acréscimos), acabou
   if (acabou) { fimDoTempo(m); return; }
   const pr = m.parada;
   if (p.estado === 'parada' && pr) {
@@ -679,6 +743,7 @@ export function regrasPartida(m) {
     const saiuDoPonto = pr.tipo !== 'tiroDeMeta' && MD.hypot(m.bola.p.x - pr.x, m.bola.p.z - pr.z) > 0.6;
     if (m.posse !== pr.cobrador || m.voo || saiuDoPonto || m.tick - pr.inicio > seg(PARTIDA.paradaMax)) {
       rolou(m);
+      regraImpedimento(m); // a foto da cobrança (do tiro de meta não há impedimento: zera)
       return;
     }
     // a bola fica no ponto até a cobrança (o tiro de meta está nas mãos do goleiro)
@@ -689,6 +754,9 @@ export function regrasPartida(m) {
     // a parede (ninguém entra no raio) é pela locomoção: paredeParada, no passo 2 do sim.js
     return;
   }
+  // impedimento (Regra 11): quem estava impedido na última jogada do companheiro tocou a bola
+  const off = regraImpedimento(m);
+  if (off) { marcarImpedimento(m, off); return; }
   // estado 'jogo': bola fora?
   const b = m.bola;
   const fora = Math.abs(b.p.x) > CAMPO.meioX + BOLA.raio || Math.abs(b.p.z) > CAMPO.meioZ + BOLA.raio;
@@ -727,6 +795,8 @@ export function passoPartida(m, entrada, acoes) {
     if (evCobranca.length) m.eventos = evCobranca.concat(m.eventos);
   }
   regrasPartida(m);
+  // substituições do tempo (contam nos acréscimos; as do intervalo não)
+  if (m.partida.estado !== 'intervalo') for (const e of m.eventos) if (e.tipo === 'substituicao') m.partida.contagem.subs++;
   for (const e of depois) m.eventos.push(e);
   return m.eventos;
 }
@@ -747,6 +817,11 @@ export function misturarPartida(h, m) {
   const p = m.partida;
   if (!p) return h;
   for (const v of [ESTADOS.indexOf(p.estado), p.tempo, p.tick0Tempo, p.ticksPorTempo, p.saidaInicial, p.iaClassica ? 1 : 0, p.desde, p.ultimoTime ?? -1, p.ultimoId ?? -1, p.ultimoTick ?? -1, p.golTime ?? -1, m.golTick ?? -1, m.foraDesde ?? -1]) h = misturarHash(h, v);
+  // Etapa 4: acréscimos e impedimento
+  for (const v of [p.acrescimo ?? -1, p.contagem.gols, p.contagem.subs, p.contagem.imped, p.ultimoImped ? p.ultimoImped.tick : -1]) h = misturarHash(h, v);
+  const im = p.imped;
+  if (im) { h = misturarHash(h, im.time); h = misturarHash(h, im.tick); h = misturarHash(h, im.linhaX); for (const id of im.ids) h = misturarHash(h, id); }
+  else h = misturarHash(h, -1);
   const pr = m.parada;
   if (!pr) return misturarHash(h, -1);
   for (const v of [TIPOS_PARADA.indexOf(pr.tipo), pr.time, pr.x, pr.z, pr.cobrador ?? -1, pr.inicio, pr.desde, pr.pronta, pr.atraso, pr.rolou ? 1 : 0, pr.raio === 'area' ? -2 : pr.raio, PAPEIS.indexOf(pr.papel), pr.levado]) h = misturarHash(h, v);

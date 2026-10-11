@@ -147,6 +147,7 @@ export function emocaoEvento(est, ev, ctx) {
     return;
   }
   if (tipo === 'saida') { disparar(est, 'apito', -1, 0.8); return; }
+  if (tipo === 'impedimento') { disparar(est, 'apito', -1, 0.6); return; }
   if (tipo === 'intervalo') { disparar(est, 'apitoIntervalo', -1, 0.9); return; }
   if (tipo === 'fimDeJogo') {
     disparar(est, 'apitoFim', -1, 1);

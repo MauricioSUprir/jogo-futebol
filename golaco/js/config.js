@@ -551,13 +551,13 @@ export const PARTIDA = {
   // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
   // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; o tiro de meta é do
   // goleiro com a bola nas mãos (a reposição que já existe: GOLEIRO.esperaIA / esperaHumano)
-  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0 },
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0, tiroLivre: 1.0 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
   cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
   teleporteCobrador: 8,       // m — o cobrador é levado ao ponto na montagem; o evento do recomeço leva a
                               // distância (`levado`) e o HUD avisa acima disto (andar até lá: Etapa 4)
-  raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area' }, // m dos adversários ('area' = fora da área)
+  raio: { saida: 9.15, lateral: 2, escanteio: 9.15, tiroDeMeta: 'area', tiroLivre: 9.15 }, // m dos adversários ('area' = fora da área)
   folgaRaio: 0.5,             // m a mais que o raio na restrição (a IA mira fora; a parede segura aqui)
   empurrao: 7,                // m/s — quem está dentro do raio sai andando/correndo a até esta velocidade
   // parede da parada pela locomoção (partida.js paredeParada): o pedido para dentro fica limitado a
@@ -568,11 +568,35 @@ export const PARTIDA = {
   margemParede: 0.3,          // m
   saiParede: 1.0,             // m/s
   dentroParede: 0.02,         // m
-  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65 }, // força do botão da IA
+  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65 }, // força do botão da IA
   repeteCobranca: 1.0,        // s — se a cobrança não saiu (pedido expirou), a IA aperta de novo
   livreAte: 1.5,              // s antes de paradaMax: a IA cobra mesmo sem a zona livre (trava proibida)
   subsMax: 5,                 // IFAB Regra 3: 5 substituições...
   paradasMax: 3,              // ...em 3 paradas (o intervalo não conta)
+  // Acréscimos (IFAB Regra 7.3: substituições, atendimento, cera, cartões, comemoração...), em minutos DO JOGO,
+  // anunciados aos 45' e aos 90'. Premier League (dados oficiais): o jogo dura ~101,7 min em 2023/24 e ~99,9 em
+  // 2024/25 (~10–12 min de acréscimo somando os dois tempos, mais no 2º). Base sorteada pelo m.rng + o que parou
+  // naquele tempo; arredondado e limitado.
+  acrescimos: {
+    base: { 1: [1, 3], 2: [3, 5] },  // min sorteados (uniforme)
+    porGol: 0.5,                      // comemoração (a PL tira os primeiros 30 s desde 2024/25)
+    porSubstituicao: 0.25,            // as trocas saem em janelas de 2–3 (IFAB: ~30 s cada janela)
+    porImpedimento: 0,                // a parada do impedimento é rápida (tiro livre na hora)
+    max: { 1: 5, 2: 10 },
+  },
+};
+
+// Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e
+// mais perto da linha de fundo que a bola E o penúltimo adversário, no instante em que um companheiro joga ou toca
+// a bola; "na mesma linha" não é impedimento. A posição do corpo (o centro) conta — braços e mãos não contam
+// (IFAB 2025/26). Infração só se o impedido toca a bola (jogada do companheiro, rebote da trave, do corpo de um
+// adversário ou de uma DEFESA do goleiro); jogada deliberada do adversário (domínio, passe, chutão) zera. Não há
+// impedimento recebendo direto de tiro de meta, lateral ou escanteio. Recomeço: tiro livre INDIRETO do outro time
+// onde ele tocou a bola (PARTIDA.raio.tiroLivre: adversários a 9,15 m).
+export const IMPEDIMENTO = {
+  tolerancia: 0.1,            // m — "na mesma linha": até isto além da linha ainda vale (o benefício da dúvida)
+  linhaMostra: 0.3,           // s — a linha desenhada aparece/some em
+  linhaCongela: 2.2,          // s — no apito, a linha do lance fica parada (destacada) por este tempo
 };
 
 // ------------------------------------------------------------------------ Parte 2: tática e defesa
