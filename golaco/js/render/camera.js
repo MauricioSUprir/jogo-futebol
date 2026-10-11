@@ -8,7 +8,8 @@
 // tela mais larga que 16:9 (celular deitado) mantém a largura e fecha na altura — jogadores
 // maiores sem perder o que se vê dos lados; tela mais estreita (4:3) perde só metade da
 // largura; em pé (retrato) entra um perfil próprio, mais alto e inclinado, para o quadro não
-// virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena).
+// virar metade céu. Tela pequena (celular) fecha mais (CAMERA.telaPequena) e, deitado, usa a TV mais baixa e mais
+// longe (CAMERA.celular): a torcida do outro lado aparece no alto do quadro durante o jogo.
 //
 // Bola longe (lançamento, defesa): a bola manda — o foco nunca fica a mais de ~0,31 da largura
 // vista do "ponto da bola", e a bola nunca sai do quadro. Com a bola no ar (m.voo), o ponto da
@@ -37,6 +38,8 @@ const PERFIS = {
     pesoBola: 0.3, antecipa: 0.35, anteVoo: 0.3, limX: CAMPO.meioX - 3, limZ0: -CAMPO.meioZ + 3, limZ1: CAMPO.meioZ - 2, olharY: 0.6,
   },
 };
+// celular deitado: a TV mais baixa e mais longe (a torcida no alto do quadro); a mesma largura vista no foco
+const TV_CELULAR = { ...PERFIS.tv, ...CAMERA.celular };
 // celular em pé: mesmos pesos, câmera mais alta/inclinada e limites que deixam chegar às linhas
 const RETRATO = {
   tv: { ...PERFIS.tv, ...CAMERA.retrato, limX: CAMPO.meioX - 8, limZ0: -CAMPO.meioZ + 6, limZ1: CAMPO.meioZ - 6 },
@@ -96,8 +99,9 @@ export function criarCamera(aspecto) {
     // TV ↔ aproximada pela transição; paisagem ↔ retrato pelo formato da tela (1,25 → 0,75)
     const s = suave(est.mistura);
     const r = suave((1.25 - est.aspecto) / 0.5);
+    const tv = est.pequena ? TV_CELULAR : PERFIS.tv;
     for (const k of CHAVES) {
-      const pais = lerp(PERFIS.tv[k], PERFIS.aproximada[k], s);
+      const pais = lerp(tv[k], PERFIS.aproximada[k], s);
       const ret = lerp(RETRATO.tv[k], RETRATO.aproximada[k], s);
       _p[k] = lerp(pais, ret, r);
     }

@@ -15,10 +15,12 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   acontecer, ele tem que sempre dominar"; efeito de rede e de gol; torcida no estádio com barulho; "não quero narração
   em cima"; "é obrigatório virar o celular pra jogar". Três PRs, todos ENTREGUES: (1) estádio + tela limpa + celular
   deitado (#456); (2) recepção que nunca sai da bola + controle por atributo + goleiro que pula e espalma (#457); (3) IA
-  intensa: recomposição em disparada, contrapressão, bola solta disputada (`golaco/ia-intensa`). Pendente da IA: o
+  intensa: recomposição em disparada, contrapressão, bola solta disputada (#458). Pendente da IA: o
   grupo `etapa3` (forma, movimento, apoio, intensidade; 2/6), os chutes contra o time do humano (~10 por partida,
-  main ~10,9) e a pressão mais agressiva (PPDA da Média 11,0 × 8,4 na main: aperta um pouco menos). **Decisão pendente do dono:** câmera de TV do celular mais baixa e mais longe para a torcida
-  aparecer durante o jogo (hoje só no gol, intervalo e fim). Depois: Etapa 4.
+  main ~10,9) e a pressão mais agressiva (PPDA da Média 11,0 × 8,4 na main: aperta um pouco menos). Depois o dono
+  delegou as decisões ("vc escolhe tudo", 10/10): câmera de TV do celular mais baixa e mais longe, com a torcida
+  durante o jogo (`golaco/camera-torcida`), e em seguida a **Etapa 4** em PRs menores (goleiro, regras IFAB — faltas,
+  cartões, pênalti, impedimento —, bolas paradas, equilíbrio com 144+ partidas e as pendências da IA acima).
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
@@ -187,11 +189,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ânimo em `render/emocao.js`, 8/13/18 mil por qualidade) e som com gravações livres (`render/som.js`,
   `assets/sons/CREDITOS.md`; liga no 1º gesto; "Som da torcida" na pausa). **Sem narração na tela:** lance nenhum vira
   texto (hud.js `TEXTO_EVENTO` só tem avisos de comando); na partida o topo é placar + minimapa + menu (painel
-  "Conduzindo" só nos treinos). **Celular só deitado:** em pé (com toque) a tela "Gire o celular" cobre tudo e o jogo
+  "Conduzindo" só nos treinos). **Câmera do celular deitado** (`CAMERA.celular`, só com `pequena`; o PC não muda): TV
+  mais baixa e mais longe (12,3 m a 46 m = 15°, o limite de cima da câmera principal da UEFA, 12–15°) — a torcida do
+  outro lado entra no alto do quadro durante o jogo (40/40 instantes, mediana 11% da tela; antes 13/40) e o plano pela
+  largura mantém o tamanho dos jogadores (36 → 38 px). **Celular só deitado:** em pé (com toque) a tela "Gire o celular" cobre tudo e o jogo
   para (`main.js` retratoBloqueado + `#girar`); janela estreita de PC continua jogando. O render nunca muda o hash
   (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
-  por `tools/lib/gol-roteirizado.mjs`, sem depender de semente); `teste-controles`/`teste-editor-tela` conferem a tela
-  de girar.
+  por `tools/lib/gol-roteirizado.mjs`, sem depender de semente; item 10 = torcida durante o jogo no celular);
+  `teste-controles`/`teste-editor-tela` conferem a tela de girar.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

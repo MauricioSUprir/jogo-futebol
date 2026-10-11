@@ -354,6 +354,10 @@ export const CAMERA = {
   altura: 18.3,               // inclinação ~24,6°
   rigidez: 3.2,               // 1/s — mola crítica que segue o alvo
   telaPequena: 0.88,          // celular (menor lado < 520 px CSS): largura × 0,88
+  // celular deitado (pedido do dono, 10/10): TV mais baixa e mais longe, a 15° do horizontal — o limite de cima da
+  // câmera principal da UEFA (12–15° olhando o centro do campo) — para a torcida aparecer durante o jogo. O plano é
+  // pela largura, então os jogadores não diminuem e a arquibancada do outro lado entra no alto do quadro.
+  celular: { distancia: 46, altura: 12.3 },
   aproximada: { largura: 23, distancia: 16, altura: 8 },
   // celular em pé: câmera mais alta e inclinada (~40°), largura menor; nada de céu no quadro
   retrato: { largura: 22, distancia: 25.3, altura: 21.2 },
