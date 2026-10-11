@@ -16,8 +16,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   em cima"; "é obrigatório virar o celular pra jogar". Três PRs, todos ENTREGUES: (1) estádio + tela limpa + celular
   deitado (#456); (2) recepção que nunca sai da bola + controle por atributo + goleiro que pula e espalma (#457); (3) IA
   intensa: recomposição em disparada, contrapressão, bola solta disputada (`golaco/ia-intensa`). Pendente da IA: o
-  grupo `etapa3` (forma, movimento, apoio, intensidade) e os chutes contra o time do humano (~10 por partida, main
-  ~10,9). **Decisão pendente do dono:** câmera de TV do celular mais baixa e mais longe para a torcida
+  grupo `etapa3` (forma, movimento, apoio, intensidade; 2/6), os chutes contra o time do humano (~10 por partida,
+  main ~10,9) e a pressão mais agressiva (PPDA da Média 11,0 × 8,4 na main: aperta um pouco menos). **Decisão pendente do dono:** câmera de TV do celular mais baixa e mais longe para a torcida
   aparecer durante o jogo (hoje só no gol, intervalo e fim). Depois: Etapa 4.
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
@@ -178,7 +178,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   retomada com a defesa deles desarrumada (`IA_ATAQUE.contra`), finalização de primeira (`IA_ATAQUE.primeira`). Vale
   para os companheiros do humano. Teste: `teste-transicao` (padrão; `--humano` contra o roteiro). Lição: a triagem
   com `--set` de constantes (32 partidas por variação, demo no time 0 como o `teste-intensidade`) achou que a queda
-  de chutes era a soma de efeitos pequenos — medir 96 partidas antes de decidir.
+  de chutes era a soma de efeitos pequenos — medir 96 partidas antes de decidir. Tropeço (`jogador.js` passoPassada): o pé
+  de apoio além de `PASSADA.alcanceMax` sai mesmo com o outro no ar (trombada que inverte o corpo; antes o quadril
+  afundava e o pé arrastava) — muda o treino só em passos raros (hash-igual DIFERENTE a partir do passo ~4200).
 - **Estádio, tela limpa e celular deitado** (pedidos de 10/10; primeira versão puxada da Etapa 6; `PESQUISA-ESTADIO.md`):
   rede que balança no shader (`render/rede-onda.js`, conta pura testada em Node e GPU = JS), câmera do gol no gol da
   partida (só cortes), "GOL!" SEM autor nem minuto escritos, torcida instanciada (`render/torcida.js`/`torcida-dados.js`,
