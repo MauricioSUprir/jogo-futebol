@@ -36,6 +36,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   jogadores entrando em campo, a fila, a câmera passando; no fim vários cortes de torcida e estádio; depois a escalação
   de cada time num campinho, grande na tela, com o mesmo fundo, ~10 s, sai e entra a do outro time do mesmo jeito.
   A parte 3b do goleiro (reposição, recuo, 8 s, 1×1, saída no cruzamento) entra em (A).
+  Mais do dono (11/10): "se eu deixo o meu jogador parado, ninguém pega a bola, isso NÃO PODE ACONTECER" (entra em
+  (A), urgente); "não quero a linha de impedimento durante o jogo; quando o jogo parar por impedimento, no replay mostra a
+  linha" (entra em (C)); (F) gol e replay: "as redes têm que ser brancas, com movimentação quando a bola toca, em véu de
+  noiva"; "o replay não funciona"; "não tem cena de comemoração!!!".
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
