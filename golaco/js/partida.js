@@ -54,6 +54,7 @@ import { entradaIATatica } from './ia-tatica.js';
 import { assumirControle, atualizarBotoesAcao, executarAcao, riscoLinha, ataca } from './acoes.js';
 import { regraImpedimento, linhaImpedimento, emPosicaoDeImpedimento } from './impedimento.js';
 import { naAreaDe } from './faltas.js';
+import { limparRegraMao, segundosNaMao, pontoTiroLivreMao } from './regras-goleiro.js';
 
 export const ESTADOS = ['jogo', 'parada', 'gol', 'intervalo', 'fim'];
 export const TIPOS_PARADA = ['saida', 'lateral', 'escanteio', 'tiroDeMeta', 'tiroLivre', 'penalti'];
@@ -117,6 +118,7 @@ export function criarPartida(opc = {}) {
   m.parada = null;
   m.golTick = null; m.foraDesde = null;
   m.faltaPendente = null; m.expulsos = [];
+  m.infracaoMao = null; m.regraMao = { semMao: -1, soltou: -1 };
   montarSaida(m, saida);
   return m;
 }
@@ -171,6 +173,7 @@ function bolaMorta(m, tipo, time, x, z) {
   m.posse = null;
   m.voo = null;
   for (const j of m.jogadores) { j.recebe = null; j.corrida = null; j.intercepta = null; }
+  limparRegraMao(m); // recuo e "soltou" (Regra 12.2) não passam da bola morta
 }
 
 /** Desfaz a parada (cobrança feita, fim do tempo): o cobrador volta a se mexer. */
@@ -383,9 +386,20 @@ function montarTiroDeMeta(m) {
   Object.assign(m.bola, criarBola(x, z));
   m.posse = g.id; m.naMao = g.id; m.voo = null;
   g.segura = { desde: m.tick };
+  // Regra 16: só o time que cobra fica na área. Quem é do outro time e está dentro vai para fora já na montagem (com
+  // corte de câmera, como no escanteio) — antes eles saíam andando pela parede (~0,7 s por tiro de meta)
+  let tirou = false;
+  for (const o of m.jogadores) {
+    if (o.time === t) continue;
+    restricaoParada(m, o, o.x, o.z, _r);
+    if (MD.hypot(_r.x - o.x, _r.z - o.z) <= 0.05) continue;
+    teleportar(o, _r.x, _r.z, MD.atan2(z - _r.z, x - _r.x));
+    tirou = true;
+  }
   m.partida.estado = 'parada'; m.partida.desde = m.tick;
   fecharMontagem(m, g, levado);
   m.eventos.push({ tipo: 'tiroDeMeta', time: t, id: g.id, levado });
+  if (tirou) m.eventos.push({ tipo: 'corteBolaParada', parada: 'tiroDeMeta' });
 }
 
 /**
@@ -717,6 +731,8 @@ function rolou(m) {
       gk.palpite = gk.imag > 0.3 ? (gk.iz >= 0 ? 1 : -1) * GOLEIRO.penalti.palpite[GOLEIRO.penalti.palpite.length - 1][0] : 0;
     }
   }
+  // tiro de meta que rolou com a bola ainda nas mãos (o limite da parada): o relógio da Regra 12.3 começa agora
+  if (pr.tipo === 'tiroDeMeta' && m.naMao != null) { const g = jogadorPorId(m, m.naMao); if (g && g.segura) g.segura.dePe = m.tick; }
   encerrarParada(m);
   m.golTick = null; m.foraDesde = null;
   m.partida.estado = 'jogo'; m.partida.desde = m.tick;
@@ -988,6 +1004,30 @@ function resolverVantagem(m) {
   return false;
 }
 
+/**
+ * Mão do goleiro onde não podia (Regra 12.2: recuo, lateral de companheiro, a bola que ele mesmo soltou): tiro livre
+ * INDIRETO do adversário no ponto (na pequena área, na linha dela — Regra 13). f = {id, x, z, motivo}.
+ */
+function apitarMao(m, f) {
+  const p = m.partida, g = jogadorPorId(m, f.id);
+  if (!g) return;
+  m.eventos.push({ tipo: 'apito', motivo: 'maoGoleiro' }, { tipo: 'infracaoMao', id: g.id, time: g.time, motivo: f.motivo });
+  const q = pontoTiroLivreMao(m, g, f.x, f.z);
+  const x = clamp(q.x, -CAMPO.meioX + 1, CAMPO.meioX - 1), z = clamp(q.z, -CAMPO.meioZ + 1, CAMPO.meioZ - 1);
+  bolaMorta(m, 'tiroLivre', 1 - g.time, x, z);
+  p.estado = 'parada'; p.desde = m.tick;
+}
+
+/** Regra 12.3: o goleiro passou de 8 s com a bola nas mãos — escanteio do adversário do lado mais perto dele. */
+function oitoSegundos(m, g) {
+  const p = m.partida;
+  const s = -m.ataca[g.time];               // lado do gol dele
+  const sz = g.z >= 0 ? 1 : -1;
+  m.eventos.push({ tipo: 'apito', motivo: 'oitoSegundos' }, { tipo: 'oitoSegundos', id: g.id, time: g.time });
+  bolaMorta(m, 'escanteio', 1 - g.time, s * (CAMPO.meioX - 0.4), sz * (CAMPO.meioZ - 0.4));
+  p.estado = 'parada'; p.desde = m.tick;
+}
+
 /** Pênalti em aberto (depois da cobrança): gol, defesa ou fora — evento `penalti {time, id, resultado}`. */
 function resolverPenalti(m) {
   const p = m.partida, a = p.penaltiAberto;
@@ -1077,6 +1117,13 @@ export function regrasPartida(m) {
     // a parede (ninguém entra no raio) é pela locomoção: paredeParada, no passo 2 do sim.js
     return;
   }
+  // mão do goleiro (Regra 12.2): pegou com a mão a bola do recuo / a que ele soltou → tiro livre INDIRETO do adversário
+  if (m.infracaoMao) { const f = m.infracaoMao; m.infracaoMao = null; apitarMao(m, f); return; }
+  // Regra 12.3: mais de 8 s com a bola nas mãos → escanteio para o adversário, do lado do campo mais perto do goleiro
+  if (m.naMao != null) {
+    const g = jogadorPorId(m, m.naMao), sm = g ? segundosNaMao(m, g) : null;
+    if (sm != null && sm > GOLEIRO.oitoSegundos) { oitoSegundos(m, g); return; }
+  }
   // faltas (Regra 12): a do passo (vantagem, tiro livre direto ou pênalti) e a vantagem em andamento
   if (m.faltaPendente) { const f = m.faltaPendente; m.faltaPendente = null; if (decidirFalta(m, f)) return; }
   if (p.vantagem && resolverVantagem(m)) return;
@@ -1111,7 +1158,7 @@ export function passoPartida(m, entrada, acoes) {
     }
   }
   const est = m.partida.estado;
-  m.faltaPendente = null;
+  m.faltaPendente = null; m.infracaoMao = null;
   if (est === 'intervalo' || est === 'fim') { m.eventos = []; m.tick++; }
   else {
     // a cobrança sai antes do passo (os eventos dela entram de novo depois: o passo zera m.eventos)
@@ -1153,6 +1200,8 @@ export function misturarPartida(h, m) {
   for (const v of [p.contagem.faltas, p.contagem.cartoes, p.vantagem ? p.vantagem.ate : -1, p.penaltiAberto ? p.penaltiAberto.tick : -1, p.cartoesPendentes.length]) h = misturarHash(h, v);
   for (const id of Object.keys(p.cartoes).map(Number).sort((a, b) => a - b)) { h = misturarHash(h, id); h = misturarHash(h, p.cartoes[id]); }
   for (const id of p.expulsos) h = misturarHash(h, id);
+  // regra da mão do goleiro (regras-goleiro.js)
+  h = misturarHash(h, m.regraMao ? m.regraMao.semMao : -1); h = misturarHash(h, m.regraMao ? m.regraMao.soltou : -1);
   const pr = m.parada;
   if (!pr) return misturarHash(h, -1);
   for (const v of [TIPOS_PARADA.indexOf(pr.tipo), pr.time, pr.x, pr.z, pr.cobrador ?? -1, pr.inicio, pr.desde, pr.pronta, pr.atraso, pr.rolou ? 1 : 0, pr.raio === 'area' ? -2 : pr.raio, PAPEIS.indexOf(pr.papel), pr.levado]) h = misturarHash(h, v);

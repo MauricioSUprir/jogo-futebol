@@ -10,6 +10,13 @@
 //  4. jogo livre com quem não sabe repor (6 sementes × 3 min): nenhuma parada > 5 s com a bola na mão;
 //  5. sem recuo: quem aperta PASSE com o goleiro tem o PASSE dele (≤ 1,3 s); carregando LANÇAMENTO a
 //     reposição automática não atropela a carga; o goleiro da IA continua repondo em 1,5 s.
+// Escopo (pedidos do dono de 11/10, regras-goleiro.js): estas metas são do TREINO, que não tem árbitro — lá o goleiro
+// do humano continua repondo sozinho em GOLEIRO.esperaHumano e o recuo vai para as mãos, como antes (treino bit a bit
+// igual). Na PARTIDA as metas 1 e 3 deixaram de valer de propósito, pelas Leis do Jogo: o humano repõe quando quiser e
+// anda com a bola na mão até a borda da área, com o limite de 8 s da Regra 12.3 (escanteio do adversário), e o recuo
+// com o pé não pode ir para a mão (Regra 12.2: o goleiro domina com o pé; PEGAR = tiro livre indireto). A "trava" na
+// partida (a bola nunca fica mais de 8 s nas mãos; o goleiro controlado anda e o TROCAR segurado vai para ele) está no
+// tools/teste-goleiro-regras.mjs (G1, G3, G4, G7).
 //   node tools/teste-goleiro-trava.mjs            (no repositório: golaco/tools/)
 //   node teste-goleiro-trava.mjs --js <pasta js>  (diagnóstico: roda contra outra cópia da lógica)
 import path from 'node:path';

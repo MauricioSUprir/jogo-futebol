@@ -27,6 +27,7 @@ import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
 import { chanceFaltaBote, montarFalta, registrarFalta } from './faltas.js';
+import { registrarToque } from './regras-goleiro.js';
 
 const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao;
 const seg = s => Math.round(s / PASSO);
@@ -271,6 +272,7 @@ function resolverBote(m, j, h) {
     m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
     if (m.stats) m.stats.roubadas++;
     m.eventos.push({ tipo: 'roubada', id: j.id, dividida: true });
+    registrarToque(m, j, 'roubada');
     j.defH = null;
     return;
   }

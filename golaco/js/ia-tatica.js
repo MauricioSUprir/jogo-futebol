@@ -30,10 +30,12 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA, GOLEIRO } from './config.js';
 import { MD } from './matdet.js';
 import { difAng } from './mat.js';
-import { entradaIA, para, pontoInterceptacao } from './ia.js';
+import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
+import { riscoLinha } from './acoes.js';
+import { goleiroNoPe } from './regras-goleiro.js';
 import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
 import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
@@ -58,6 +60,9 @@ export function estadoIA(m, j) {
 export function entradaIATatica(m, j) {
   // modo --antes dos testes, e o goleiro com a bola nas mãos jogado pela IA (a reposição é do ia.js)
   if (m.partida?.iaClassica || m.naMao === j.id) return entradaIA(m, j);
+  // o goleiro (a demo jogando pelo humano que controla o goleiro): com a bola no pé, a entrada do goleiro com o pé; sem
+  // ela, nada (o sim.js o move pela IA do goleiro)
+  if (j.posicao === 'GOL') return goleiroNoPe(m, j) ? entradaGoleiroPe(m, j) : { x: 0, z: 0, botoes: 0 };
   // o estado do time (fase, 1º/2º homem, contrapressão, referências) anda a TODO tick, com e sem a
   // bola: com o ataque da Parte 3 ninguém do time com a bola o chamava, a troca de fase com → sem
   // passava despercebida e a contrapressão nunca começava (integração das Partes 2 e 3)
@@ -176,6 +181,11 @@ function disputada(m, j, x, z) {
 // ---------------------------------------------------------------------------------- o time (bloco)
 
 const ehLinha = o => o.posicao !== 'GOL' && o.papel !== 'parado' && o.papel !== 'marcador';
+/**
+ * O condutor adversário pode ser pressionado? Todo mundo com a bola no pé — também o goleiro (recuo, bola que ele soltou);
+ * só o goleiro com a bola NAS MÃOS não (Regra 12.3: "o goleiro com a bola sob controle não pode ser disputado").
+ */
+const pressionavel = (m, o) => !!o && !(o.posicao === 'GOL' && m.naMao === o.id);
 const passeNoAr = v => v && v.tipo !== 'chute' && v.tipo !== 'colocado' && v.tipo !== 'cavadinha';
 
 /**
@@ -227,7 +237,7 @@ export function blocoDoTime(m, t) {
   else if (v && v.time != null && v.time !== t && passeNoAr(v) && m.posse == null) { B.foco.x = v.alvo.x; B.foco.z = v.alvo.z; }
   else { B.foco.x = b.x; B.foco.z = b.z; }
   // velocidade do condutor filtrada (~0,5 s): a antecipação do 1º homem (o mesmo filtro do ia.js)
-  if (adv && adv.posicao !== 'GOL') {
+  if (pressionavel(m, adv)) {
     if (B.cond !== adv.id) { B.cond = adv.id; B.cvx = adv.vx; B.cvz = adv.vz; }
     const a = DT / IA.filtroCondutor;
     B.cvx += (adv.vx - B.cvx) * a; B.cvz += (adv.vz - B.cvz) * a;
@@ -330,7 +340,7 @@ export function blocoDoTime(m, t) {
     }
     // os de estado disparam na BORDA (quando começam): de costas o tempo todo, o 1º homem apertaria
     // sem parar
-    if (adv && adv.posicao !== 'GOL') {
+    if (pressionavel(m, adv)) {
       if (G.recepcao && adv.id !== B.donoAnt && adv.id === B.recebePara) gatilho(m, B, 'recepcao');
       const pesado = MD.hypot(b.x - adv.x, b.z - adv.z) > G.toquePesado;
       const cr = MD.cos(adv.rumo), sr = MD.sin(adv.rumo);
@@ -358,12 +368,12 @@ export function blocoDoTime(m, t) {
   // até o alcance do bote, e o 2º cobre. Os gatilhos acima só disparam na BORDA: quem ficava parado com a bola nunca
   // era apertado (a contenção a 2,75 m durava para sempre)
   const LT = IA_DEFESA.lento;
-  if (adv && adv.posicao !== 'GOL' && !naParada && m.naMao == null && f.fase === 'sem' && MD.hypot(B.cvx, B.cvz) < LT.v) {
+  if (pressionavel(m, adv) && !naParada && m.naMao == null && f.fase === 'sem' && MD.hypot(B.cvx, B.cvz) < LT.v) {
     if (B.lentoId !== adv.id) { B.lentoId = adv.id; B.lentoDesde = m.tick; }
   } else B.lentoId = -1;
   B.lento = B.lentoId >= 0 && (m.tick - B.lentoDesde) * DT >= LT.s[p] + (engajado ? 0 : LT.longe);
   // o 1º homem aperta por conta própria? (gatilho, perigo, Alta ou condutor lento)
-  B.apertaProprio = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.lento);
+  B.apertaProprio = pressionavel(m, adv) && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.lento);
   // PRESSÃO segurada pelo humano (contrato m.pedidoPressao[time] = tick): quem aperta é o escolhido de defesa.js
   // pressionadorDe (quem chega primeiro ao condutor, ≠ controlado) — e o semBola dá a ele a entrada de defesa.js
   // entradaPressao. Com o 1º homem (≠ controlado) já apertando por conta própria, o botão chama OUTRO: dobra a
@@ -379,7 +389,7 @@ export function blocoDoTime(m, t) {
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
   // (Média: com gatilho o 2º também aperta — a pressão coordenada do "pressing trigger": o 1º vai na bola e o 2º
   // fecha o lado de dentro; IA_DEFESA.segundoNoGatilho, correções da contraprova I2)
-  B.aperta2 = !!adv && adv.posicao !== 'GOL' && engajado && ((p >= 2 && (comGatilho || IA_DEFESA.doisApertam[p])) || (comGatilho && !!IA_DEFESA.segundoNoGatilho?.[p]));
+  B.aperta2 = pressionavel(m, adv) && engajado && ((p >= 2 && (comGatilho || IA_DEFESA.doisApertam[p])) || (comGatilho && !!IA_DEFESA.segundoNoGatilho?.[p]));
 
 
   // marcação individual dos atacantes perto do meu gol, pela linha de defesa (a cada tick: o
@@ -396,7 +406,7 @@ export function blocoDoTime(m, t) {
 /** Bola no pé de um adversário de linha do time t (não nas mãos), fora de parada e no chão. */
 function condutorAdversarioDe(m, t) {
   if (m.posse == null || m.naMao != null || (m.parada && !m.parada.rolou) || m.bola.p.y > 0.5) return false;
-  for (const o of m.jogadores) if (o.id === m.posse) return o.time !== t && o.posicao !== 'GOL';
+  for (const o of m.jogadores) if (o.id === m.posse) return o.time !== t;
   return false;
 }
 
@@ -988,7 +998,7 @@ function atacaBola(m, j, s) {
   const b = m.bola.p;
   let d0 = null;
   if (m.posse != null) for (const o of m.jogadores) if (o.id === m.posse) { d0 = o; break; }
-  if (d0 && d0.time !== j.time && d0.posicao !== 'GOL') {
+  if (d0 && d0.time !== j.time && pressionavel(m, d0)) {
     const dc = MD.hypot(b.x - d0.x, b.z - d0.z), dj = MD.hypot(b.x - j.x, b.z - j.z);
     s.ataca = s.ataca ? dj < dc + 0.3 : dc > ACOES.boteIA.bolaSolta && dj < dc - 0.2;
   } else s.ataca = false;
@@ -1067,4 +1077,55 @@ function referenciaComBola(m, j, f) {
   const k = j.vagaIdx;
   alvoCalmo(m, j, B.ref[2 * k], B.ref[2 * k + 1], _t);
   return irPara(m, j, _t.x, _t.z, _t.mag, _t.correr, extra, _t.modo);
+}
+
+// ------------------------------------------------------------------------- goleiro com a bola no pé (partida)
+
+/**
+ * Entrada do goleiro que joga com o pé (sim.js: a bola no pé dele, ou indo à bola que ele não pode pegar com a mão —
+ * recuo, a bola que ele soltou, fora da área; pedido do dono, 11/10: "não pode recuo"). Sem a bola: vai ao ponto de
+ * interceptação, correndo. Com ela: espera GOLEIRO.pe.espera s (domina e levanta a cabeça) e passa curto para o
+ * companheiro de linha a dMin–dMax m com a linha de passe mais livre (riscoLinha; nunca para trás); sem ninguém livre,
+ * ou com um adversário a menos de GOLEIRO.pe.pressao m, chutão para a frente, para o lado dele. Nunca conduz.
+ */
+export function entradaGoleiroPe(m, g) {
+  const s = estadoIA(m, g);
+  if (m.posse !== g.id) {
+    s.ramo = 'golPe';
+    const p = pontoInterceptacao(m, g);
+    return { ...para(g, p.x, p.z, 1, true, 0, 'pressa'), botoes: BOTAO.CORRER };
+  }
+  const P = GOLEIRO.pe, lado = m.ataca[g.time];
+  s.ramo = 'golPeBola';
+  if (s.golPeTick !== m.tick - 1) { s.golPeDesde = m.tick; s.golPeX = lado; s.golPeZ = 0; }
+  s.golPeTick = m.tick;
+  // a ação já decidida: segura o botão pelo tempo da força, o analógico na direção escolhida (a mira do passe)
+  if (g.iaAcao || g.pedido || g.carga) {
+    const bot = g.iaAcao && m.tick < g.iaAcao.ate ? g.iaAcao.bot : 0;
+    return { x: s.golPeX * 0.25, z: s.golPeZ * 0.25, botoes: bot };
+  }
+  let dAdv = Infinity;
+  for (const o of m.jogadores) if (o.time !== g.time && o.papel !== 'parado') dAdv = Math.min(dAdv, MD.hypot(o.x - g.x, o.z - g.z));
+  if ((m.tick - s.golPeDesde) * DT < P.espera && dAdv >= P.pressao) return { x: 0, z: 0, botoes: 0 };
+  let mel = null, ms = Infinity;
+  if (dAdv >= P.pressao) {
+    for (const o of m.jogadores) {
+      if (o.time !== g.time || o === g || o.posicao === 'GOL' || o.papel === 'parado') continue;
+      const ox = o.x - g.x, oz = o.z - g.z, d = MD.hypot(ox, oz), u = ox * lado;
+      if (d < P.dMin || d > P.dMax || u < -2) continue;
+      const sc = 20 * riscoLinha(m, g, g.x, g.z, o.x, o.z, 12) + 0.3 * Math.abs(d - 14) - 0.1 * Math.max(-10, Math.min(15, u));
+      if (sc < ms || (sc === ms && o.id < mel.id)) { ms = sc; mel = o; }
+    }
+  }
+  if (mel && ms < 12) {
+    const dx = mel.x - g.x, dz = mel.z - g.z, l = MD.hypot(dx, dz) || 1;
+    s.golPeX = dx / l; s.golPeZ = dz / l;
+    acaoIA(m, g, 'passe', P.forcaPasse);
+  } else {
+    // chutão: para a frente e para o lado dele (longe do meio, onde o rebote vira chance deles)
+    const dz = g.z >= 0 ? 0.45 : -0.45, l = MD.hypot(1, dz);
+    s.golPeX = lado / l; s.golPeZ = dz / l;
+    acaoIA(m, g, 'lancamento', P.forcaChutao);
+  }
+  return { x: s.golPeX * 0.25, z: s.golPeZ * 0.25, botoes: g.iaAcao ? g.iaAcao.bot : 0 };
 }

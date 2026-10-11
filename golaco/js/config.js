@@ -315,6 +315,7 @@ export const BOTAO = {
   PRESSAO: 512,
   TROCAR: 1024,
   GOLEIRO: 2048,
+  PEGAR: 4096,                // goleiro com a bola no pé, na área: pega com a mão (o "Pick Up Ball" do EA FC)
 };
 
 // Atributos padrão (0–100).
@@ -448,8 +449,26 @@ export const GOLEIRO = {
   vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
   recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
-  esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele
+  esperaHumano: 3.0,          // s com a bola nas mãos do goleiro do humano sem botão de ação: a IA repõe por ele (só no
+                              // treino e na demo — na partida o humano repõe quando quiser, com os 8 s da Regra 12.3)
   esperaIA: 1.5,              // s que o goleiro da IA segura antes de repor
+  // Regras da mão (IFAB 2025/26 — regras-goleiro.js; pedido do dono, 11/10). Regra 12.3: mais de oitoSegundos s com a
+  // bola nas mãos (de pé, bola em jogo) = escanteio para o adversário; o anel no chão conta os últimos `contagem` s.
+  oitoSegundos: 8,
+  contagem: 5,
+  // o goleiro do humano anda com a bola nas mãos (o analógico; CORRER mais depressa) até a borda da área — parede pela
+  // locomoção a `margem` m da linha, freando a `freio` m/s²: ele nunca sai da área com a bola na mão
+  maoAnda: { v: 3.2, vCorrer: 4.5, margem: 0.6, freio: 3 },
+  trocarGoleiro: 0.4,         // s com TROCAR segurado: o controle vai para o goleiro (o "Switch to Goalkeeper")
+  pegaPe: 1.0,                // m — PEGAR alcança a bola no pé até isto do corpo
+  // goleiro da IA com a bola no pé (recuo, bola que ele não pode pegar): passa curto para um companheiro livre a dMin–dMax
+  // m depois de `espera` s; com um adversário a menos de `pressao` m, chutão para a frente (nunca conduz sob pressão)
+  // (e vai com o pé à bola livre que não pode pegar com a mão — o passe para ele, ou a até `busca` m sendo o 1º do time a
+  // chegar e antes dos adversários, ou ela na área dele)
+  pe: { espera: 0.5, pressao: 6, dMin: 6, dMax: 35, forcaPasse: 0.45, forcaChutao: 0.9, busca: 16 },
+  // a IA de linha só recua para o goleiro rasteiro, com ele livre (nenhum adversário a menos de `livre` m dele nem da
+  // linha do passe) e com a bola que erra o goleiro passando longe do gol (|z| na linha do gol ≥ `foraGol` m)
+  recuoIA: { livre: 8, foraGol: 6 },
   // bola nas mãos de pé: frente (m à frente do centro) e altura (m), palmas a ±palma m do meio da bola; no fim
   // do encaixe desenhado a bola vai do peito a esse ponto nos últimos tJunta s (sem salto de bola nem de braço);
   // a bola pega solta (ou no chão, no tiro de meta) chega às mãos a vJunta m/s, sem salto
