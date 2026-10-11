@@ -676,7 +676,7 @@ export const TATICA = {
   // (sprint só com urgência: bola a menos de `urgente` m do meio para o lado do meu gol, ou vindo para ele a mais
   // de `vUrgente` m/s)
   // (voltando, o ponto vai `marca` para o lado do gol do adversário que a zona dele reivindicou: acha o homem)
-  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0.6 },
+  recomp: { liga: 8, ligaOrganizado: 15, ligaBola: 1, janela: 6, respiro: 1.5, desliga: 3, atras: 2, corre: 11, urgente: 10, vUrgente: 4, lateral: 0.5, max: 10, pausa: 2, marca: 0 }, // marca 0: desligado (0,6 tirava ~0,7 chute por partida sem melhorar o PPDA na partida inteira)
 };
 
 // IA sem a bola (plano 2.4; pesquisa §4). Por nível de pressão: [Baixa, Média, Alta].
@@ -696,7 +696,7 @@ export const IA_DEFESA = {
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
   antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
   giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
-  livre: { histerese: 0.25, margem: 0.2, disputa: 0.6 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele
+  livre: { histerese: 0.25, margem: 0.2, disputa: null }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
@@ -731,7 +731,7 @@ export const IA_ATAQUE = {
   // m; recarga (s) por corredor; no máximo max[mentalidade ≥ +1] ao mesmo tempo; acabam se o condutor
   // não armar a enfiada/o lançamento em `espera` s (o corredor ficava impedido à toa) ou se, passada a linha, o
   // passe não sai em `alemMax` s.
-  corridas: { folga: 15, alem: [8, 12], recarga: 8, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1, alemMax: 0.5 },
+  corridas: { folga: 15, alem: [8, 12], recarga: 8, campoMin: 15, angFrente: 1.05, marcadorLivre: 1.5, vCondutor: 1.5, max: [2, 3], espera: 2.0, linhaMax: 1, alemMax: 1.5 }, // alemMax 1,5 s (era 0,5: a corrida acabava antes do passe e o ataque perdia ~0,5 chute por partida)
   // Condutor: reavalia a cada avaliaTicks (10 Hz), histerese 1,25× e compromisso 0,5 s; chute até
   // chuteMax m (chuteMaxOfensivo com mentalidade ≥ +1); lançamento ≥ lancamentoMin m; transição
   // ofensiva: +transOfBonus nas opções à frente.
@@ -741,7 +741,7 @@ export const IA_ATAQUE = {
   // jogadores de linha deles entre a bola e o gol deles → por `s` s o time joga o contra-ataque: transição
   // ofensiva com bônus `bonus` nas opções à frente e sem a posse da retomada (utilidade.posseRetomada).
   // Tenga 2010; Armatas 2022; PESQUISA-ETAPA3.md §16.5.
-  contra: { atras: 6, campo: -30, s: 6, bonus: 0.5 },
+  contra: { atras: 6, campo: -30, s: 6, bonus: 0.8 }, // bonus 0,8 (era 0,5): o contra-ataque compensa no ataque o que a recomposição tira
   // Finalização de primeira (ia-ataque.js primeiraIA): recebendo passe rasteiro na área num ponto com chance de gol
   // ≥ xg, aperta CHUTE com a força `forca` para o pedido nascer `folga` s antes da bola (bola até alturaMax m).
   primeira: { xg: 0.12, forca: 0.6, folga: 0.25, alturaMax: 0.6 },

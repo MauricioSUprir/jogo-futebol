@@ -152,7 +152,8 @@ function bolaLivre(m, j) {
   // Arranca (CORRER) só quando é disputa: um adversário chega ao ponto até IA_DEFESA.livre.disputa s depois
   // dele; sozinho na bola, vai correndo sem o sprint (PR "IA intensa": o sprint em toda bola solta era ~25%
   // do tempo de sprint da partida e não é o jogo — Metrica: sprint 0,6% do tempo).
-  const correr = disputada(m, j, _t.x, _t.z);
+  // (IA_DEFESA.livre.disputa null: arranca em toda bola solta — jogo mais intenso, pedido do dono)
+  const correr = IA_DEFESA.livre.disputa == null || disputada(m, j, _t.x, _t.z);
   return rumoPressa(m, j, { ...irPara(m, j, _t.x, _t.z, 1, correr, extra, 'pressa'), botoes: extra | (correr ? BOTAO.CORRER : 0) });
 }
 
