@@ -394,6 +394,13 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
+    /** Marcas da partida (testes de navegador): a do PRESSÃO e o anel dos 8 s — posição e quanto do anel aparece. */
+    get indicadores() {
+      return {
+        pressao: marcaPressao.visible ? { x: marcaPressao.position.x, y: marcaPressao.position.y, z: marcaPressao.position.z } : null,
+        oito: anelOito.visible ? { x: anelOito.position.x, z: anelOito.position.z, segmentos: Math.round(geoOito.drawRange.count / 6), total: SEG_OITO } : null,
+      };
+    },
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, pressiona, x, z, rumo}]
      * (pressiona: o companheiro chamado pelo botão PRESSÃO — a marca âmbar acima da cabeça; relogio: 0–1 dos últimos 5 s
