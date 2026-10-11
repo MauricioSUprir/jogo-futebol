@@ -16,7 +16,10 @@
 //   8) "GOL!" no celular (568×320, 667×375, 844×390) não encosta no analógico, nos botões, no placar nem no
 //      minimapa (contraprova M2);
 //   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
-//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9).
+//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9);
+//  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
+//      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
+//      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos).
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -465,6 +468,41 @@ try {
   }
 } catch (e) {
   meta('Execução (celular)', e.message, 'sem exceção', false);
+}
+// 10) torcida durante o jogo no celular deitado (câmera de TV do celular: CAMERA.celular)
+try {
+  const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+  try {
+    await pagina.goto(`${srv.url}?q=media&demo=1&semente=4&toque=1&hora=dia`, { waitUntil: 'load' });
+    await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    const r = await pagina.evaluate(() => {
+      const g = window.__golaco;
+      g.relogio.usarManual(true);
+      const cv = document.querySelector('canvas');
+      const off = document.createElement('canvas'); off.width = 211; off.height = 98; // amostra reduzida (1/4)
+      const cx = off.getContext('2d', { willReadFrequently: true });
+      const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
+      const fr = [], alt = [];
+      for (let k = 0; k < 20; k++) {
+        for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        g.estadio.mostrarTorcida(true); g.desenhar(); const a = ler();
+        g.estadio.mostrarTorcida(false); g.desenhar(); const b = ler();
+        g.estadio.mostrarTorcida(true);
+        let n = 0;
+        for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 24) n++;
+        fr.push(n / (a.length / 4));
+        const j = g.render.jogador;
+        if (j) { const p0 = g.naTela(j.x, 0, j.z), p1 = g.naTela(j.x, 1.8, j.z); if (p0 && p1) alt.push(Math.abs(p0.y - p1.y)); }
+      }
+      return { fr, alt };
+    });
+    const vis = r.fr.filter(f => f >= 0.01).length;
+    const med = v => { const s = [...v].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
+    meta('Celular deitado: a torcida aparece durante o jogo (20 instantes, ≥ 1% da tela)', `${vis}/${r.fr.length} (mediana ${f2(med(r.fr) * 100)}% da tela)`, '≥ 18/20', vis >= 18 && errosCel.length === 0);
+    meta('Celular deitado: o jogador controlado não fica menor', `mediana ${f2(med(r.alt))} px de altura`, '≥ 33 px (antes 36)', med(r.alt) >= 33);
+  } finally { await nav.close(); }
+} catch (e) {
+  meta('Execução (torcida no celular)', e.message, 'sem exceção', false);
 }
 await srv.fechar();
 

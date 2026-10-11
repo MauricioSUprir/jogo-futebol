@@ -167,7 +167,7 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   pela LARGURA vista no foco (`CAMERA.largura`), não pelo fov: tela mais larga que 16:9 mantém a
   largura (jogador maior no celular deitado), 4:3 perde metade, em pé usa `CAMERA.retrato` (mais
   alta e inclinada, sem céu — hoje só na janela estreita do PC: no celular em pé o jogo para e mostra
-  "Gire o celular", main.js retratoBloqueado + #girar no CSS) e tela pequena fecha mais (`CAMERA.telaPequena`). Testes: "direita no
+  "Gire o celular", main.js retratoBloqueado + #girar no CSS) e tela pequena fecha mais (`CAMERA.telaPequena`) e, deitada, usa a TV mais baixa e mais longe (`CAMERA.celular`: a torcida do outro lado no alto do quadro durante o jogo, mesma largura vista no foco). Testes: "direita no
   controle = direita na tela" (`teste-controles`, via `naTela`) e câmera sem tremor a 144 Hz
   (`teste-carga`).
 
