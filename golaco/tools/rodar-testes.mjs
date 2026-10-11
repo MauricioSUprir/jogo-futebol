@@ -62,6 +62,8 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
+  // Etapa 4: regras (IFAB)
+  ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

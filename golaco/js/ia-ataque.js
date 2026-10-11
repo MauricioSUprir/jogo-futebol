@@ -771,7 +771,7 @@ function decidir(m, j, A, ia, cobranca) {
     if (o.time !== j.time || o === j || o.posicao === 'GOL' || o.papel === 'parado' || indo(m, o)) continue;
     const ou = o.x * lado, ow = o.z * lado;
     const L = MD.hypot(o.x - j.x, o.z - j.z);
-    const imp = !cobranca && ou > A.linha + 0.3; // impedido (a regra é da Etapa 4; aqui é forma)
+    const imp = !cobranca && ou > A.linha + 0.3; // impedido agora (Regra 11, impedimento.js: tocar a bola vira tiro livre)
     const press = clamp((U.pressaoRecebe - advMaisPerto(m, j.time, o.x, o.z)) / (U.pressaoRecebe - 1), 0, 1);
     if (L >= ACOES.passe.dMin && L <= U.passeMax) {
       // P: ninguém corta a linha × precisão (passe longo erra mais) × o recebedor não perde na hora
@@ -789,7 +789,9 @@ function decidir(m, j, A, ia, cobranca) {
     const sv = MD.hypot(o.vx, o.vz);
     const naCorrida = o.corrida && o.corrida.tipo === 'nasCostas';
     const corre = naCorrida || (o.vx * lado > 4 && ou > A.linha - 3);
-    if (!cobranca && corre && sv > 2 && L >= ACOES.enfiada.dMin && L <= ACOES.enfiada.dMax) {
+    // (para quem JÁ passou da linha não: seria impedimento — 48 partidas: 1,33 → 1,15 impedimento por partida, gols e
+    // chutes iguais dentro da variação)
+    if (!cobranca && !imp && corre && sv > 2 && L >= ACOES.enfiada.dMin && L <= ACOES.enfiada.dMax) {
       let rx = o.vx / sv, rz = o.vz / sv;
       if (naCorrida) { const cx = o.corrida.x - o.x, cz = o.corrida.z - o.z, cl = MD.hypot(cx, cz); if (cl > 1) { rx = cx / cl; rz = cz / cl; } }
       const vr = Math.max(5, sv);

@@ -19,8 +19,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   grupo `etapa3` (forma, movimento, apoio, intensidade; 2/6), os chutes contra o time do humano (~10 por partida,
   main ~10,9) e a pressão mais agressiva (PPDA da Média 11,0 × 8,4 na main: aperta um pouco menos). Depois o dono
   delegou as decisões ("vc escolhe tudo", 10/10): câmera de TV do celular mais baixa e mais longe, com a torcida
-  durante o jogo (`golaco/camera-torcida`), e em seguida a **Etapa 4** em PRs menores (goleiro, regras IFAB — faltas,
-  cartões, pênalti, impedimento —, bolas paradas, equilíbrio com 144+ partidas e as pendências da IA acima).
+  durante o jogo (#459, ENTREGUE), e em seguida a **Etapa 4** em PRs menores (seção "Etapa 4" abaixo): (1) painel de
+  equilíbrio + impedimento + acréscimos (`golaco/impedimento`); (2) faltas com vantagem, cartões, tiro livre direto com
+  barreira e pênalti; (3) goleiro e bolas paradas (lateral com as mãos e 3 opções, escanteio por zonas, recuo, 8 s);
+  (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais), prorrogação e pênaltis, pendências da IA acima.
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
@@ -197,6 +199,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
   por `tools/lib/gol-roteirizado.mjs`, sem depender de semente; item 10 = torcida durante o jogo no celular);
   `teste-controles`/`teste-editor-tela` conferem a tela de girar.
+- **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
+  contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
+  CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
+  4: 2,11 gols, 9,8 chutes (63% no alvo, 21% de conversão), passe 88,9%, último terço 48%, goleiro 67/58/89% (meta ok),
+  40% dos gols de bola roubada perto da área. **Impedimento** (`impedimento.js`, Regra 11): foto em cada jogada do
+  companheiro, infração no toque (também rebote de defesa e desvio), jogada deliberada do adversário zera, nada direto de
+  tiro de meta/lateral/escanteio; tiro livre INDIRETO (`tiroLivre`, 9,15 m); linha viva amarelo-clara e a do lance parada
+  no apito (`render/linha-impedimento.js`); ~1,2 por partida. **Acréscimos** (Regra 7.3): `PARTIDA.acrescimos`, "45+2'"
+  e "1º T +4" no placar. HUD no celular estreito: `topo-c4` aperta o placar e, se ainda encostar, o minimapa encosta à
+  direita dele (o relógio de 2 dígitos já encostava em 667/568 px). Teste: `teste-impedimento` (padrão; árbitro
+  independente). Lição: a página com `?prints=1&demo=1` não refaz o laço do Node passo a passo — prints procuram o lance
+  no próprio navegador.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

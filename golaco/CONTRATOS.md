@@ -571,3 +571,31 @@ Pesquisa: `PESQUISA-RECEPCAO-GOLEIRO.md` (seção 4: as correções da contrapro
   hash é o mesmo no Node e no Chromium), `tools/medir-controle.mjs` (informativo, minutos: domínio que escapa, perdas
   sozinho, bola–pé por velocidade, 1º toque por atributo, "se afastou da bola vindo" do humano roteirizado; `--sonda
   tipo,h|i,semente,tick` imprime o lance).
+
+## Etapa 4 — regras (IFAB), goleiro, bolas paradas e equilíbrio (contrato)
+
+Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em `PESQUISA-ETAPA4.md`.
+
+### Impedimento (Regra 11) e acréscimos (Regra 7.3)
+- `impedimento.js` (puro): `penultimoAdversario(m, t)`, `linhaImpedimento(m, t, out)` → `{u, x, defensor}` (o maior entre
+  o penúltimo adversário com o goleiro, a bola e o meio, no referencial de quem ataca), `emPosicaoDeImpedimento(m, j, u)`
+  (`IMPEDIMENTO.tolerancia` = "na mesma linha"), `fotografar(m, t, idToque)` e `regraImpedimento(m)` — chamada por
+  `partida.js regrasPartida` com a bola rolando (e no passo em que o tiro de meta rola). Lê quem tocou a bola no passo
+  (o dono no pé ou na mão; eventos `passe`, `chute`, `roubada` = deliberados; `bateuCorpo` = desvio; `defesa` = defesa do
+  goleiro): impedido da foto que toca → devolve a infração; jogada deliberada do adversário → zera; `cobranca` de tiro de
+  meta, lateral ou escanteio → zera sem fotografar; senão a jogada deliberada do passo fotografa de novo.
+- Estado: `m.partida.imped = null | {time, ids, tick, linhaX, por}`; `m.partida.ultimoImped = {tick, linhaX, id, time, x,
+  z}` (para o desenho); `bolaMorta` zera a foto. Infração: evento `impedimento {id, time, x, z, linhaX, por}` e parada
+  `tiroLivre` (novo em `TIPOS_PARADA`, no fim da lista) do outro time no ponto do toque; `PARTIDA.raio.tiroLivre` 9,15 m;
+  a montagem é a do lateral (o de linha mais perto, virado para o ataque), evento `tiroLivre {time, x, z, id, levado,
+  indireto: true}`; `alvoCobranca` não passa para quem está impedido; o humano não chuta a gol (indireto).
+- Acréscimos: no fim do tempo regulamentar `anunciarAcrescimo` (rng do mundo) grava `m.partida.acrescimo` (min de jogo) e
+  emite `acrescimo {tempo, minutos}`; o tempo acaba em `ticksPorTempo + round(acrescimo · ticksPorTempo / 45)`.
+  `m.partida.contagem = {gols, subs, imped}` do tempo. `acrescimoDeJogo(m)` → `{anunciado, decorrido} | null` (o
+  `minutoDeJogo` fica em 45/90); o HUD mostra "45+2'" e "1º T +4".
+- Desenho (`render/linha-impedimento.js`, só lê o mundo): linha viva amarelo-clara na linha de impedimento de quem tem a
+  bola no campo de ataque; no apito, a linha do lance (`ultimoImped.linhaX`) parada, amarela e mais grossa por
+  `IMPEDIMENTO.linhaCongela` s. API de testes: `__golaco.linhaImpedimento` → `{visivel, x, lance, opacidade}`.
+- Hash: `misturarPartida` inclui acréscimo, contagem, a foto e o último apito (a partida muda; o treino não).
+- Testes: `teste-impedimento` (padrão): cenas da Regra 11, recomeço, árbitro independente em 6 partidas, acréscimos.
+  `tools/painel-equilibrio.mjs` (seção 11; `--base <pasta js>` compara duas versões com as mesmas sementes).

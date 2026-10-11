@@ -46,13 +46,14 @@ import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
 import { criarMarcas } from './render/marcas.js';
+import { criarLinhaImpedimento } from './render/linha-impedimento.js';
 import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
-import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo } from './partida.js';
+import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo } from './partida.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 
@@ -384,7 +385,7 @@ function forcaDaCarga(cg) {
 iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
-let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, torcida, som = null;
+let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, torcida, som = null;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -482,6 +483,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   jog3d.atualizar(lista, cam.camera);
   const tj1 = performance.now();
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
+  linhaImped.atualizar(mundo, dt);
   campo.atualizar(agoraMs / 1000);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -524,9 +526,10 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   mq.i = (i + 1) % MQ; mq.n = Math.min(MQ, mq.n + 1);
   mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0;
 }
-const _rel = { minuto: 0, tempo: 1, estado: 'jogo' };
+const _rel = { minuto: 0, tempo: 1, estado: 'jogo', acrescimo: null };
 function lerRelogio() {
   _rel.minuto = minutoDeJogo(mundo); _rel.tempo = mundo.partida.tempo; _rel.estado = mundo.partida.estado;
+  _rel.acrescimo = acrescimoDeJogo(mundo);
   return _rel;
 }
 
@@ -749,6 +752,7 @@ async function iniciar() {
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
   marcas = criarMarcas(cena3d.cena);
+  linhaImped = criarLinhaImpedimento(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -961,7 +965,7 @@ const api = {
       jogadores: mundo.jogadores.length, modoTreino: mundo.modo ?? null, logicaEtapa2: 'controlado' in mundo,
       // partida (Etapa 3)
       times: mundo.times ? { 0: resumoTime(mundo.times[0]), 1: resumoTime(mundo.times[1]) } : null,
-      relogio: mundo.partida ? { tempo: mundo.partida.tempo, minuto: minutoDeJogo(mundo), estado: mundo.partida.estado } : null,
+      relogio: mundo.partida ? { tempo: mundo.partida.tempo, minuto: minutoDeJogo(mundo), estado: mundo.partida.estado, acrescimo: acrescimoDeJogo(mundo) } : null,
       parada: mundo.parada ? { ...mundo.parada } : null,
       edicaoNaFila: !!edicaoNaFila, editorAberto: editor.aberto, menuAberto: hud.menuAberto,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
@@ -984,6 +988,8 @@ const api = {
    * deslocamento de um ponto agora), o ânimo e o som (estado do AudioContext, camadas, quantas vezes cada
    * som tocou, ganho que sai). A bola DESENHADA (com o bojo da rede) em bolaDesenhada.
    */
+  /** Linha de impedimento desenhada (testes): {visivel, x, lance, opacidade}. */
+  get linhaImpedimento() { return linhaImped?.estado ?? null; },
   estadio: {
     get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
     get rede() {

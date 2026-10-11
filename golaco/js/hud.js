@@ -144,7 +144,8 @@ export function criarHud(opc) {
     return false;
   }
   function ajustarTopo() {
-    raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3', 'topo-desce');
+    raiz.classList.remove('topo-c1', 'topo-c2', 'topo-c3', 'topo-c4', 'topo-desce');
+    if (el.mapa) { el.mapa.style.left = ''; el.mapa.style.transform = ''; }
     if (!raiz.classList.contains('com-toque')) return;
     // o painel (modo e posição) desce para baixo do placar, à esquerda, se o arco chega nele
     if (botaoNoTopo()) raiz.classList.add('topo-desce');
@@ -154,6 +155,12 @@ export function criarHud(opc) {
     raiz.classList.add('topo-c2');
     if (!encostaTopo()) return;
     raiz.classList.add('topo-c3');
+    if (!encostaTopo()) return;
+    raiz.classList.add('topo-c4');
+    if (!encostaTopo() || !el.mapa) return;
+    // 5) celular bem estreito (568 px com entalhe): o minimapa sai do meio e encosta à direita do placar
+    const pl = caixasTopo[0]?.getBoundingClientRect();
+    if (pl && pl.width > 0) { el.mapa.style.left = `${Math.round(pl.right + 8)}px`; el.mapa.style.transform = 'none'; }
   }
   window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
@@ -399,7 +406,8 @@ export function criarHud(opc) {
     },
     get times() { return times; },
     /**
-     * Relógio da partida no placar: r = {minuto (0–90), tempo (1|2), estado} ou null (treino: some).
+     * Relógio da partida no placar: r = {minuto (0–90), tempo (1|2), estado, acrescimo: {anunciado, decorrido} |
+     * null} ou null (treino: some). Nos acréscimos: "45+2'" e o anúncio ao lado do tempo ("1º T +4"), como na TV.
      * Só escreve no DOM quando muda.
      */
     relogio(r) {
@@ -407,8 +415,9 @@ export function criarHud(opc) {
       const vis = !!r;
       if (vis !== relogioVisto.visivel) { el.relogio.hidden = !vis; relogioVisto.visivel = vis; ajustarTopo(); }
       if (!r) return;
-      const min = `${r.minuto}'`;
-      const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : NOME_TEMPO[r.tempo] ?? '';
+      const ac = r.acrescimo;
+      const min = ac && ac.decorrido > 0 ? `${r.minuto}+${ac.decorrido}'` : `${r.minuto}'`;
+      const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : `${NOME_TEMPO[r.tempo] ?? ''}${ac ? ` +${ac.anunciado}` : ''}`;
       if (min !== relogioVisto.minuto) {
         // 9' → 10': o placar alarga (a compactação do topo é refeita só quando muda o número de dígitos)
         const largura = (relogioVisto.minuto ?? '').length !== min.length;
