@@ -299,6 +299,9 @@ export const ENTRADA = {
   // nem anda no rumo antigo nem anda sem virar o tronco (analógico leve no celular).
   magDirecao: 0.1,
   quant: 1024,                // a entrada é quantizada (replay compacto e determinístico)
+  // toque (DOM, entrada.js criarToqueOuSegura): DIVIDIDA solta antes disto = bote; segurada = CONTER (como o
+  // "Sprint & Tackle" do FC Mobile: segurar perto = marca; tocar = bote em pé). Medido no relógio do jogo.
+  toqueCurto: 0.25,           // s
 };
 
 // Botões (máscara de bits). Os da Etapa 2+ já têm número reservado.
@@ -638,6 +641,9 @@ export const IMPEDIMENTO = {
   tolerancia: 0.1,            // m — "na mesma linha": até isto além da linha ainda vale (o benefício da dúvida)
   linhaMostra: 0.3,           // s — a linha desenhada aparece/some em
   linhaCongela: 2.2,          // s — no apito, a linha do lance fica parada (destacada) por este tempo
+  // linha VIVA (a da defesa com a bola rolando, desenho): desligada — dono, 11/10: "não quero a linha de impedimento
+  // durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a linha". Fica só a do lance no apito.
+  linhaViva: false,
 };
 
 // ------------------------------------------------------------------------ Parte 2: tática e defesa
