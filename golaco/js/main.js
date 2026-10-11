@@ -53,7 +53,8 @@ import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRe
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
-import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo } from './partida.js';
+import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
+import { montarFalta } from './faltas.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 
@@ -946,6 +947,35 @@ const api = {
     get agora() { return tempoManual; },
   },
   forcarEntrada(e) { entrada.forcar(e); },
+  /**
+   * Prints e testes de navegador: o adversário mais perto faz falta no controlado (time 0), como se fosse no último
+   * passo — opc = {area: true → quem sofre é levado para dentro da área (pênalti); cartao: 'amarelo' | 'vermelho' |
+   * null; doMeu: a falta é do controlado}. Passa pelas regras e pelos eventos da página (apito, cartão, câmera).
+   */
+  faltaDeTeste(opc = {}) {
+    const m = mundo;
+    if (!m.partida) return null;
+    // doMeu: quem faz a falta é o controlado (time 0) e quem sofre, o adversário mais perto
+    const meu = jogadorPorId(m, m.controlado[TIME_HUMANO]);
+    if (!meu) return null;
+    let outro = null, dm = Infinity;
+    for (const o of m.jogadores) { if (o.time === meu.time || o.posicao === 'GOL') continue; const q = Math.hypot(o.x - meu.x, o.z - meu.z); if (q < dm) { dm = q; outro = o; } }
+    if (!outro) return null;
+    const c = opc.doMeu ? outro : meu, d = opc.doMeu ? meu : outro;
+    const lado = m.ataca[c.time];
+    if (opc.area) teleportar(c, lado * (CFG.CAMPO.meioX - 9), 3, lado > 0 ? 0 : Math.PI);
+    teleportar(d, c.x - lado * 1.1, c.z + 0.3, lado > 0 ? 0 : Math.PI);
+    c.vx = 0; c.vz = 0;
+    m.bola.p.x = c.x + lado * 0.4; m.bola.p.z = c.z; m.bola.p.y = CFG.BOLA.raio;
+    m.posse = c.id; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+    const f = montarFalta(m, d, c, 'bote', true);
+    if ('cartao' in opc) f.cartao = opc.cartao;
+    m.eventos = []; m.faltaPendente = f;
+    regrasPartida(m);
+    estadioPasso(m.eventos);
+    for (const ev of m.eventos) tratarEvento(ev);
+    return { parada: m.parada?.tipo ?? null, def: d.id, cond: c.id, cartao: f.cartao };
+  },
   acao(a) { tratarAcao(a); },
   definirQualidade(nome) { comando('qualidade', nome); },
   definirHora(h) { comando('hora', h); },

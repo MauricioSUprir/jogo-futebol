@@ -599,3 +599,31 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
 - Hash: `misturarPartida` inclui acréscimo, contagem, a foto e o último apito (a partida muda; o treino não).
 - Testes: `teste-impedimento` (padrão): cenas da Regra 11, recomeço, árbitro independente em 6 partidas, acréscimos.
   `tools/painel-equilibrio.mjs` (seção 11; `--base <pasta js>` compara duas versões com as mesmas sementes).
+
+### Faltas, vantagem, cartões, expulsão (Regra 12) e pênalti (Regra 14)
+- `faltas.js` (puro, só com `m.partida`): `chegada(d, c)` → 'frente'|'lado'|'tras'; `naAreaDe(m, t, x, z)`;
+  `chanceClara(m, c, def)` (DOGSO); `ataquePromissor(m, c)` (SPA); `montarFalta(m, d, c, origem, tentouBola, excessivo)` →
+  `{def, cond, time (quem sofreu), x, z, area, chegada, v, grau, cartao, motivo, origem, tick}`; `registrarFalta(m, f)`
+  (a 1ª do passo: `m.faltaPendente` e o evento `falta`); `chanceFaltaBote`, `faltaNoBote`, `faltaTatica`, `faltaNaCarga`
+  (sorteiam pelo m.rng). Ganchos: `sim.js boteIA` (tática antes do alcance; o bote que chega), `sim.js colisaoCorpos`
+  (carga), `defesa.js resolverBote` (dividida do humano que não ganha a bola).
+- `partida.js`: `passoPartida` zera `m.faltaPendente`; `regrasPartida` (bola rolando) → `decidirFalta`: na área →
+  `penaltiMarcado` + parada `penalti`; vantagem clara (`vantagem`; `resolverVantagem`: `vantagemVolta` + apito); senão
+  `apitarFalta` (evento `apito`, parada `tiroLivre` com `direto: true`). Cartões: `m.partida.cartoes` (amarelos por id),
+  `cartoesPendentes` (saem em `bolaMorta`), evento `cartao {id, time, cor, motivo, segundo}`, `ultimoCartao` (desenho).
+  Expulsão (`expulsar`): sai de `m.jogadores` para `m.expulsos`; `m.times[t].expulsos` e `saiu`; a vaga guarda o id (o
+  buraco); substituição pendente dele é desfeita; goleiro expulso → o de linha mais perto vai para a vaga GOL.
+- Pênalti: `montarPenalti` (cobrador = maior finalização; goleiro na linha; os outros na beira da área/meia-lua; o canto
+  `pr.miraZ` e a força `pr.forca` da IA e o lado do goleiro `pr.palpite`/`gk.palpite` sorteados na montagem; evento
+  `cobrancaPenalti`); `rolou` abre `penaltiAberto` (o goleiro do humano escolhe o lado pelo analógico); `resolverPenalti`
+  → evento `penalti {time, id, resultado: 'gol'|'defesa'|'fora'}`. Na cobrança o humano pode chutar (pênalti e tiro
+  livre direto); `pedido.penalti` multiplica o erro (`ACOES.chute.penaltiErro`). `goleiro.js lerChute`: no pênalti, lado
+  errado = não defende (o mergulho desenhado vai para o lado escolhido); lado certo = chance × `GOLEIRO.penalti.fator`.
+- Escalação: `situacao` → 'expulso'; `tocar` troca o buraco com um titular (nunca o gol) e recusa substituí-lo;
+  `mudarFormacao` deixa o buraco nas vagas que sobram (fora do gol); `validarEdicao` aceita o expulso só como buraco e
+  fora do gol; `misturarTimes` inclui os expulsos.
+- Desenho/HUD: `#cartao-icone` em cima de quem levou (`hud.cartao`, `FALTAS.icone` s; sem texto); apito nos eventos
+  `apito` e `impedimento`; corte de câmera em `cobrancaPenalti`; editor: carta `.expulso` com o cartão vermelho.
+  API de testes: `__golaco.faltaDeTeste({area, cartao, doMeu})`.
+- Testes: `teste-faltas` (padrão): cenas, vantagem e volta, pênalti montado, 2º amarelo/expulsão/editor, goleiro
+  expulso, canhão de 400 pênaltis, 12 partidas.

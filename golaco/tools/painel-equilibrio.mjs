@@ -8,7 +8,7 @@
 //    (gol do time de quem chutou), defesa (do goleiro adversário), bloqueado (bateu no corpo de alguém), fora (a bola
 //    saiu ou a jogada acabou). No alvo = gol + defesa. Defesas do goleiro = defesa ÷ (defesa + gol), por distância
 //    do chute ao centro do gol: < 6 m · 6–16,5 m · ≥ 16,5 m (meta do dono: 66–72% no total, 55–60% de 6 a 16,5 m e
-//    ~85% de fora da área). Gol contra não conta como chute.
+//    ~85% de fora da área), SEM os pênaltis (eles têm a linha própria). Gol contra não conta como chute.
 //  - dentro da área = a bola no chute dentro da grande área adversária (16,5 m × 40,32 m).
 //  - passe certo: o próximo jogador a ter a bola é do time de quem passou (bola fora ou gol antes = errado); passes do
 //    goleiro de fora (a mesma conta do teste-intensidade).
@@ -114,7 +114,9 @@ async function partida(pastaJs, sem) {
             fecharChute('fora');
             const u = M.uDe(m, j.time, m.bola.p.x), w = M.wDe(m, j.time, m.bola.p.z);
             const dist = Math.hypot(52.5 - u, w);
-            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null };
+            // (a cobrança de pênalti é marcada: as defesas do goleiro contam sem ela — o pênalti tem a linha dele)
+            const pen = ev.some(x => x.tipo === 'cobranca' && x.parada === 'penalti');
+            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen };
             passe = null;
           } else if (e.tipo === 'passe' && j) {
             passe = j.posicao !== 'GOL' ? { time: j.time } : null;
@@ -181,7 +183,8 @@ function medidas(res) {
   const golsPart = res.map(r => r.gols[0] + r.gols[1]);
   const gols = soma(r => r.gols[0] + r.gols[1]);
   const pct = (a, b) => (b ? 100 * a / b : NaN);
-  const goleiro = (f) => { const g = cnt(c => c.res === 'gol' && f(c)), d = cnt(c => c.res === 'defesa' && f(c)); return { v: pct(d, d + g), n: d + g }; };
+  // defesas do goleiro sem os pênaltis (StatsBomb/Opta: o pênalti tem a conta dele)
+  const goleiro = (f) => { const g = cnt(c => c.res === 'gol' && !c.penalti && f(c)), d = cnt(c => c.res === 'defesa' && !c.penalti && f(c)); return { v: pct(d, d + g), n: d + g }; };
   const orig = k => soma(r => r.origem[k]);
   const golsAberto = gols;
   const pen = { total: soma(r => r.penaltis.total), gol: soma(r => r.penaltis.gol), defesa: soma(r => r.penaltis.defesa), fora: soma(r => r.penaltis.fora) };

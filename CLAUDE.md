@@ -20,8 +20,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   main ~10,9) e a pressão mais agressiva (PPDA da Média 11,0 × 8,4 na main: aperta um pouco menos). Depois o dono
   delegou as decisões ("vc escolhe tudo", 10/10): câmera de TV do celular mais baixa e mais longe, com a torcida
   durante o jogo (#459, ENTREGUE), e em seguida a **Etapa 4** em PRs menores (seção "Etapa 4" abaixo): (1) painel de
-  equilíbrio + impedimento + acréscimos (`golaco/impedimento`); (2) faltas com vantagem, cartões, tiro livre direto com
-  barreira e pênalti; (3) goleiro e bolas paradas (lateral com as mãos e 3 opções, escanteio por zonas, recuo, 8 s);
+  equilíbrio + impedimento + acréscimos (#460, ENTREGUE); (2) faltas com vantagem, cartões e expulsão, tiro livre
+  direto e pênalti (`golaco/faltas`); (3) goleiro, barreira e bolas paradas (lateral com as mãos e 3 opções, escanteio por zonas, recuo, 8 s);
   (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais), prorrogação e pênaltis, pendências da IA acima.
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
@@ -210,7 +210,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   e "1º T +4" no placar. HUD no celular estreito: `topo-c4` aperta o placar e, se ainda encostar, o minimapa encosta à
   direita dele (o relógio de 2 dígitos já encostava em 667/568 px). Teste: `teste-impedimento` (padrão; árbitro
   independente). Lição: a página com `?prints=1&demo=1` não refaz o laço do Node passo a passo — prints procuram o lance
-  no próprio navegador.
+  no próprio navegador. **Faltas** (`faltas.js`, Regra 12; PR 2 da Etapa 4): bote da IA, dividida do humano, carga por
+  trás e falta tática (SPA); imprudente/temerária (amarelo)/força excessiva (vermelho); DOGSO = vermelho (na área
+  tentando a bola: amarelo + pênalti); vantagem só clara (volta em 2,5 s); tiro livre DIRETO (a IA chuta até 30 m; a
+  barreira é da parte 3); **pênalti** (Regra 14: todos fora da área e da meia-lua, goleiro na linha escolhendo o lado ANTES
+  do chute — o humano pelo analógico; canhão 77/18/5% gol/defesa/fora); **expulsão** (sai de `m.jogadores`, fica na vaga
+  como buraco, sem substituto; o técnico muda a vaga vazia, nunca o gol; goleiro expulso → o de linha mais perto vai
+  para o gol). Calibrado: 2,6 faltas, 18% de amarelos, 0,08 vermelho por partida. Ícone do cartão sem texto
+  (`#cartao-icone`). Teste: `teste-faltas` (padrão). `__golaco.faltaDeTeste()` para prints/testes de navegador.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

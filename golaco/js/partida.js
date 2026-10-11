@@ -29,6 +29,9 @@
 //  - tiro livre indireto (Etapa 4, impedimento — impedimento.js): do outro time no ponto em que o impedido
 //    tocou a bola; o de linha mais perto cobra com passe (nunca para quem está impedido); adversários a 9,15 m.
 // Acréscimos (Regra 7.3): anunciados no fim do tempo regulamentar (PARTIDA.acrescimos), o tempo acaba depois deles.
+// Faltas (Etapa 4, faltas.js; Regra 12): vantagem clara, tiro livre DIRETO no ponto ou pênalti (Regra 14: todos fora da
+// área e da meia-lua, o goleiro na linha escolhendo o lado antes do chute); cartões (2º amarelo = vermelho) e expulsão
+// (o expulso sai do campo e fica na vaga como buraco).
 // O cobrador é levado ao ponto na montagem e fica parado (papel 'parado': a simulação não o move)
 // até cobrar; a cobrança é a ação de verdade (acoes.js executarAcao, a mesma do jogo). A IA cobra em
 // 0,6–1,4 s depois de pronta; o humano tem até 6 s desde a bola morta, depois a IA cobra por ele.
