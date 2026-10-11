@@ -111,7 +111,16 @@ export function lerChute(m, j) {
   const plano = preverPassagem(b, xPlano, 150) ?? linha;
   const a = j.par.attr;
   const reac = Math.round(lerp(GOLEIRO.reacao[0], GOLEIRO.reacao[1], a.reflexo / 100) / DT);
-  const tau = (plano.ticks - reac) * DT;              // tempo para se mexer depois de reagir
+  // pênalti (Regra 14): o goleiro já escolheu o lado antes do chute (j.palpite, z do mergulho; partida.js). Lado certo:
+  // sai antes (GOLEIRO.penalti.antecipa s a mais); lado errado ou parado no meio com a bola no canto: não chega
+  const pen = m.partida?.penaltiAberto;
+  const ehPenalti = !!pen && j.palpite != null && m.voo && m.voo.de === pen.id && j.time !== pen.time && m.tick - pen.tick < 90;
+  let palpiteErrado = false;
+  if (ehPenalti) {
+    const zg = j.palpite, P = GOLEIRO.penalti;
+    palpiteErrado = zg === 0 ? Math.abs(plano.z - j.z) > P.meio : Math.sign(plano.z - j.z) !== Math.sign(zg) && Math.abs(plano.z - j.z) > P.meio * 0.5;
+  }
+  const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa : 0); // tempo para se mexer depois de reagir
   const lat = plano.z - j.z;
   const dist = Math.abs(lat);
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
@@ -125,6 +134,8 @@ export function lerChute(m, j) {
   // da defesa (antes ~3% dos recuos viravam gol contra quando a "defesa" sorteada falhava)
   const proprio = m.voo && m.voo.time === j.time && m.voo.tipo !== 'chute' && m.voo.tipo !== 'cabeceio';
   if (proprio) pDefesa = alturaOk && dist <= alcance + GOLEIRO.folgaAlcance / 2 ? 1 : 0;
+  if (palpiteErrado) pDefesa = 0;
+  else if (ehPenalti) pDefesa *= GOLEIRO.penalti.fator; // lado certo: o pênalti no canto ainda é difícil de pegar
   const ok = uniforme(m.rng) < pDefesa;
   // segurar ou espalmar: em pé e de longe segura mais; no mergulho e de perto, espalma
   const mergulha = dist > GOLEIRO.alcanceEmPe;
@@ -137,6 +148,17 @@ export function lerChute(m, j) {
   // o corpo começa a se mexer GOLEIRO.leitura s antes do fim da reação da conta acima (o goleiro lê o corpo do
   // chutador: PESQUISA-RECEPCAO-GOLEIRO.md) — a chance de defesa não muda; o desenho tem tempo de chegar
   const inicio = m.tick + Math.max(1, reac - Math.round(GOLEIRO.leitura / DT));
+  // pênalti no lado errado: o mergulho desenhado vai para o lado que ele escolheu (ou ele fica no meio)
+  if (palpiteErrado) {
+    const zg = j.palpite;
+    j.defesa = {
+      chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + plano.ticks, inicio, z: zg === 0 ? j.z : zg, y: 0.55,
+      sucesso: false, tipo: 'falhou', mergulha: zg !== 0, proprio: false, lado: Math.sign(zg - j.z) || 1, xPlano,
+      bx: contato.x, by: contato.y, bz: contato.z, palpite: true,
+    };
+    m.eventos.push({ tipo: 'leituraGoleiro', id: j.id, chega: false, p: 0, palpite: zg });
+    return;
+  }
   j.defesa = recuo ? {
     chave: m.voo?.tickChave, lido: m.tick, tick: m.tick + recuo.i, inicio, x: recuo.x, z: recuo.z, y: recuo.y,
     sucesso: ok, tipo: ok ? (encaixe ? 'encaixe' : 'espalmada') : 'falhou', mergulha: false, recuo: true, proprio,

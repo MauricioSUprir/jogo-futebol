@@ -84,6 +84,13 @@ const CENAS = [
   { nome: 'celular-linha-viva', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'linhaViva' },
   { nome: 'celular-acrescimo', ...CEL, semente: 5, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   { nome: 'celular-568-acrescimo', largura: 568, altura: 320, dpr: 2, toque: true, semente: 2, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
+  // Etapa 4, faltas: o pênalti montado (todos fora da área e da meia-lua, o goleiro na linha), o cartão amarelo em cima
+  // de quem fez a falta e o "Editar time" com um expulso do time (a vaga vazia, tracejada, com o cartão vermelho)
+  { nome: 'pc-penalti', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'penalti' },
+  { nome: 'celular-penalti', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'penalti' },
+  { nome: 'pc-cartao', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'cartao' },
+  { nome: 'celular-cartao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'cartao' },
+  { nome: 'pc-editor-expulso', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'expulso', editor: 'escalacao' },
   { nome: 'celular-568-gol', largura: 568, altura: 320, dpr: 2, toque: true, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
   // torcida de perto (câmera livre): lado de lá com o mosaico, e o fundo da organizada
   { nome: 'pc-torcida', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { de: [0, 14, 10], para: [0, 9, -55], fov: 42 } },
@@ -365,6 +372,26 @@ async function preparar(pagina, prep, gol = null) {
       while (m.tick < alvo && p.estado !== 'intervalo') g.relogio.avancar(1000 / 60, { desenhar: false });
       return `acréscimo de ${p.acrescimo} min, tick ${m.tick}, relógio "${document.getElementById('relogio')?.textContent}" / "${document.getElementById('relogio-tempo')?.textContent}"`;
     }
+    if (prep === 'penalti') {
+      // falta na área (gancho faltaDeTeste) e a montagem do pênalti: até a cobrança ficar pronta
+      const r = g.faltaDeTeste({ area: true, cartao: null });
+      let n = 0;
+      while (n < 600 && !(g.mundo.parada && g.mundo.parada.tipo === 'penalti' && g.mundo.parada.cobrador != null && g.mundo.tick >= g.mundo.parada.pronta)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      const pr = g.mundo.parada;
+      return `pênalti: ${r?.parada}, cobrador ${pr?.cobrador}, canto ${pr?.miraZ}, palpite do goleiro ${pr?.palpite}`;
+    }
+    if (prep === 'cartao') {
+      // falta com amarelo: o cartão em cima de quem fez (0,3 s depois do apito)
+      const r = g.faltaDeTeste({ cartao: 'amarelo' });
+      for (let i = 0; i < 18; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      return `cartão ${r?.cartao} para ${r?.def} (parada ${r?.parada})`;
+    }
+    if (prep === 'expulso') {
+      // o controlado (time 0) faz falta para vermelho: sai do campo; o editor mostra a vaga vazia
+      const r = g.faltaDeTeste({ cartao: 'vermelho', doMeu: true });
+      for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      return `vermelho para ${r?.def}: em campo ${g.mundo.jogadores.filter(j => j.time === 0).length}`;
+    }
     if (prep === 'goleiros') {
       av(30);
       // câmera livre de frente para o goleiro do time 1 (laranja) com zagueiros brancos
@@ -404,7 +431,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' ? 2 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : GOL) : '';
     let notaEd = '';
     if (c.editor) {

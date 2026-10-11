@@ -26,6 +26,7 @@ import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js'
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
+import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -174,6 +175,11 @@ function colisaoCorpos(m) {
       p.x -= nx * pen * wp; p.z -= nz * pen * wp;
       q.x += nx * pen * wq; q.z += nz * pen * wq;
       const rv = (q.vx - p.vx) * nx + (q.vz - p.vz) * nz;
+      // Etapa 4 (só na partida): carga por trás no condutor (faltas.js; o árbitro decide nas regras)
+      if (rv < 0 && m.partida && m.posse != null && (p.id === m.posse || q.id === m.posse) && !m.faltaPendente) {
+        const f = faltaNaCarga(m, p, q, -rv);
+        if (f) registrarFalta(m, f);
+      }
       if (rv < 0) {
         p.vx += nx * rv * wp; p.vz += nz * rv * wp;
         q.vx -= nx * rv * wq; q.vz -= nz * rv * wq;
@@ -276,12 +282,23 @@ function boteIA(m, j) {
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
   const b = m.bola, cfg = ACOES.boteIA;
+  // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor no ataque promissor, segura (falta tática)
+  if (m.partida && !m.faltaPendente) {
+    const ft = faltaTatica(m, j, dono);
+    if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
+  }
   if (b.p.y > 0.5) return;
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
   if (dD < 0.35 || dB > dD) return; // colada no pé de quem conduz: não alcança
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
+  // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
+  // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)
+  if (m.partida && !m.faltaPendente) {
+    const f = faltaNoBote(m, j, dono);
+    if (f) { registrarFalta(m, f); dono.vx *= 0.5; dono.vz *= 0.5; j.descansoBote = cfg.descanso; return; }
+  }
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
   const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;

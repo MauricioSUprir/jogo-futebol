@@ -16,7 +16,7 @@
 // iaClassica (m.partida.iaClassica, o "antes" dos testes): nada disto age — o jogo de antes da Etapa 3
 // não tinha botões de defesa.
 
-import { BOTAO, CAMPO, PASSO, ENTRADA, IA, DEFESA_HUMANO } from './config.js';
+import { BOTAO, CAMPO, PASSO, ENTRADA, IA, DEFESA_HUMANO, FALTAS } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
@@ -24,6 +24,7 @@ import { chutarRasteiro } from './bola.js';
 import { ataca } from './acoes.js';
 import { para } from './ia.js';
 import { estadoIA } from './ia-tatica.js';
+import { chanceFaltaBote, montarFalta, registrarFalta } from './faltas.js';
 
 const C = DEFESA_HUMANO.conter, D = DEFESA_HUMANO.dividida, P = DEFESA_HUMANO.pressao;
 const seg = s => Math.round(s / PASSO);
@@ -244,7 +245,19 @@ function resolverBote(m, j, h) {
       if (!ganhou) motivo = 'perdeu';
     }
   }
-  m.eventos.push({ tipo: 'dividida', id: j.id, ganhou, motivo });
+  // Etapa 4 (só na partida): a dividida que não ganha a bola com o pé no condutor pode ser falta (faltas.js) — a
+  // mesma chance do bote da IA (chegada, velocidade, desarme) × FALTAS.dividida[motivo]
+  let falta = null;
+  if (!ganhou && m.partida && d0 && (motivo === 'perdeu' || motivo === 'tocou') && !m.faltaPendente) {
+    const pF = chanceFaltaBote(j, d0) * (FALTAS.dividida[motivo] ?? 0);
+    if (uniforme(m.rng) < pF) {
+      const v = MD.hypot(j.vx, j.vz);
+      const exc = v >= FALTAS.excessivo && uniforme(m.rng) < FALTAS.excessivoP;
+      falta = montarFalta(m, j, d0, 'dividida', true, exc);
+    }
+  }
+  m.eventos.push({ tipo: 'dividida', id: j.id, ganhou, motivo: falta ? 'falta' : motivo });
+  if (falta) { registrarFalta(m, falta); d0.vx *= 0.5; d0.vz *= 0.5; }
   if (ganhou) {
     let ux = b.p.x - d0.x, uz = b.p.z - d0.z;
     const l = MD.hypot(ux, uz);

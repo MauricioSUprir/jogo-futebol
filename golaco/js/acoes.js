@@ -302,7 +302,8 @@ export function executarAcao(m, j, pe, primeira = false) {
     // no chute a pressão só pesa de perto (< 12 m) e pouco; de primeira, ×1,15 (StatsBomb)
     const lado = ataca(m, j.time);
     const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
-    const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe);
+    const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
+      * (p.penalti ? ACOES.chute.penaltiErro : 1); // a pressão da cobrança do pênalti
     return chute(m, j, pe, p, em);
   }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
