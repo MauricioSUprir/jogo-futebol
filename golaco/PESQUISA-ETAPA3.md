@@ -764,10 +764,22 @@ calmo da referência anda com um filtro de 1,2 s e o trote é limitado a ~2,6 m/
 | `IA_DEFESA.contrapressao.s` | 0 / **4** / **7** s | Bauer & Anzer 2021 (5 s é a janela da definição); FIFA 23; o PPDA da Média (8–16) |
 | `IA_DEFESA.coberturaFundo` | 1,5 m | Metrica (linha de 4 com 3,5 m de espalhamento no meu terço): quem cobre sendo da linha cobre de lado |
 | `IA_DEFESA.desvio` | 3 m / 1,4 m | EA FC 27 (apoio pela posição); erro medido no `teste-taticas` (o meio empurrava o condutor pelo corpo) |
-| `IA_DEFESA.livre.disputa` | 0,6 s | Di Salvo 2009; Metrica (sprint 0,6% do tempo) |
+| `IA_DEFESA.livre.disputa` | **null** (arranca em toda bola solta; com 0,6 s — Di Salvo 2009, Metrica: sprint 0,6% do tempo — o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; calibração final, 96 partidas) | pedido do dono; triagem de 32 partidas por mudança (§16.5) |
 | `TATICA.largura.com` | 0,90 / **1,04** / 1,18 | Metrica (48,3 m com a bola): o jogo media ~43,8 m |
-| `IA_ATAQUE.corridas.alemMax` | 0,5 s (corrida que passou da linha e não recebe acaba; o ataque à área segue) | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
+| `IA_ATAQUE.corridas.alemMax` | 0,5 → **1,5 s** na calibração final (corrida que passou da linha e não recebe acaba; o ataque à área segue; com 0,5 s a corrida acabava antes do passe: ~0,5 chute por partida) | Metrica (alguém em posição de impedimento 16% do tempo; o jogo ficava em ~25%) |
 | `IA_ATAQUE.utilidade.cruzamentoP` | 0 / 1 na área: 0,02 / 0,12 → **0,01 / 0,06** | Metrica (3 atacantes na área no cruzamento, p90 5): cruzar para a área vazia vale menos — atacantes na área no cruzamento 1,6 → 2,6 |
+
+### 16.5 Calibração final (coordenador, depois da contraprova)
+
+A contraprova achou menos chutes e gols (B1). Com a `main` de hoje (recepção + goleiro + estádio) e a demo no time 0,
+como o `teste-intensidade`, 32 partidas por variação (sementes 101–132), desligando uma mudança de cada vez:
+nenhuma sozinha explicava a queda (cada uma ~0,5–1 chute: bola solta no trote, corrida além da linha em 0,5 s,
+marcação na volta, largura, 2º homem no gatilho); o contra-ataque ajudava (desligado: −0,8 chute). Ficou:
+`livre.disputa` null e `alemMax` 1,5 s; a marcação na volta (0,6) e o contra-ataque (bônus 0,5) ficam como estavam
+(com a marcação desligada uma partida trocava a posse só 9 vezes num tempo; com o bônus 0,8 o PRESSÃO do humano caía
+para 71%). Em 96 partidas (101–132, 201–232, 301–332): 10,00 chutes e 2,09 gols por partida (main 10,92 e 2,19).
+IA × IA (`teste-transicao`) os chutes empatam e os gols sobem; a diferença está no time da demo, cujos companheiros
+agora voltam (4,4 × 1,6 m/s): a IA acha menos contra-ataque em superioridade.
 
 ### 16.3 Metas que mudaram
 
