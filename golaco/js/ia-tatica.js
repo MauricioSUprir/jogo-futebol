@@ -194,7 +194,7 @@ export function blocoDoTime(m, t) {
       contra: [], contraAte: -1,
       refTick: -99, ref: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
       foco: { x: 0, z: 0 }, cvx: 0, cvz: 0, cond: -1, dono: -1, dvx: 0, dvz: 0, bolaRef: { x: 0, z: 0 }, bolaRefDef: { x: 0, z: 0 },
-      bfx: 0, bfz: 0, bTick: -2,
+      bfx: 0, bfz: 0, bTick: -2, lentoId: -1, lentoDesde: -1, lento: false,
     };
   }
   B.tick = m.tick;
@@ -349,9 +349,18 @@ export function blocoDoTime(m, t) {
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
   const engajado = dGol <= IA_DEFESA.engaja[p];
   B.engajado = engajado;
+  // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10): o condutor de linha com a velocidade filtrada abaixo de
+  // lento.v m/s por lento.s[pressão] s (+ lento.longe s fora da linha de engajamento) → o 1º homem sai do bloco e aperta
+  // até o alcance do bote, e o 2º cobre. Os gatilhos acima só disparam na BORDA: quem ficava parado com a bola nunca
+  // era apertado (a contenção a 2,75 m durava para sempre)
+  const LT = IA_DEFESA.lento;
+  if (adv && adv.posicao !== 'GOL' && !naParada && m.naMao == null && f.fase === 'sem' && MD.hypot(B.cvx, B.cvz) < LT.v) {
+    if (B.lentoId !== adv.id) { B.lentoId = adv.id; B.lentoDesde = m.tick; }
+  } else B.lentoId = -1;
+  B.lento = B.lentoId >= 0 && (m.tick - B.lentoDesde) * DT >= LT.s[p] + (engajado ? 0 : LT.longe);
   // (com a PRESSÃO do humano valendo, o 1º homem também aperta: o time responde ao pedido — o companheiro
   // escolhido pelo defesa.js vai junto)
-  B.aperta1 = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.pedido >= 0);
+  B.aperta1 = !!adv && adv.posicao !== 'GOL' && (((comGatilho || dGol <= IA_DEFESA.perigo || IA_DEFESA.apertaSempre[p]) && engajado) || B.pedido >= 0 || B.lento);
   // (Alta: "2 pressionam" — o 2º homem fecha o lado de dentro junto com o 1º; tela §7.5)
   // (Média: com gatilho o 2º também aperta — a pressão coordenada do "pressing trigger": o 1º vai na bola e o 2º
   // fecha o lado de dentro; IA_DEFESA.segundoNoGatilho, correções da contraprova I2)
@@ -685,14 +694,15 @@ function semBola(m, j, f) {
   if (B.contraAte > m.tick && B.contra.includes(j.id) && !naMaoAdv) return apertar(m, j, s, B, meuGol, extra, 'contra');
   // 3) 1º homem
   // (com a bola além da linha de engajamento ele não sai do bloco: segue a zona, abaixo)
-  if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0)) {
+  // (o condutor lento — B.lento — tira o 1º do bloco também além dela)
+  if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento)) {
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
     return conter(m, j, s, B, meuGol, IA_DEFESA.contencao[p], extra);
   }
-  // 4) 2º homem (Média e Alta)
-  if (j.id === B.p2 && p >= 1 && advComBola && !naMaoAdv) {
+  // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento)
+  if (j.id === B.p2 && (p >= 1 || B.lento) && advComBola && !naMaoAdv) {
     if (B.aperta2) return apertar(m, j, s, B, meuGol, extra, 'aperta', 1);
-    if (B.engajado) return cobrir(m, j, s, B, meuGol, extra);
+    if (B.engajado || B.lento) return cobrir(m, j, s, B, meuGol, extra);
   }
   // 5) marcação individual perto do meu gol (linha de defesa)
   const k = j.vagaIdx;
@@ -981,7 +991,9 @@ function apertar(m, j, s, B, meuGol, extra, ramo, lado2 = 0) {
   if (atacaBola(m, j, s)) { s.ramo = 'ataca'; return { ...irPara(m, j, b.x, b.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER }; }
   s.ramo = ramo;
   if (ramo === 'contra') pontoPressao(m, B, meuGol, IA_DEFESA.contrapressao.dist, _t, IA_DEFESA.antecipaContem);
-  else pontoPressao(m, B, meuGol, IA_DEFESA.aperto[m.times[j.time].tatica.pressao], _t);
+  // (condutor lento: o 1º mira lento.aperto m da bola — com aperto[p] = 1,5 m e o "chegou" do para() ele parava fora do
+  // alcance do bote, 0,65 m; a 0,2 m a colisão dos corpos o deixa a ~0,6 m do condutor e a 0,26–0,4 m da bola)
+  else pontoPressao(m, B, meuGol, B.lento && !lado2 ? IA_DEFESA.lento.aperto : IA_DEFESA.aperto[m.times[j.time].tatica.pressao], _t);
   if (lado2) {
     // o 2º fecha o lado de dentro (para o meio do campo), sem disputar o mesmo ponto com o 1º
     const gx = _t.x - B.foco.x, gz = _t.z - B.foco.z, g = MD.hypot(gx, gz) || 1;

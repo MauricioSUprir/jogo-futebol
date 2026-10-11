@@ -22,7 +22,7 @@ import { ACOES } from './config.js';
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
 import { entradaIATatica, olhaBolaPartida } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
@@ -291,13 +291,26 @@ function boteIA(m, j) {
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
-  if (dD < 0.35 || dB > dD) return; // colada no pé de quem conduz: não alcança
+  // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
+  // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
+  // tirar. Antes o bote nunca chegava ao sorteio contra quem ficava parado (o defensor não fica mais perto da bola que
+  // o condutor: corpos de 0,3 m de raio) — pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"
+  const ultT = dono.cond?.ult;
+  const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
+  if (!lento && (dD < 0.35 || dB > dD)) return; // colada no pé de quem conduz: não alcança
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)
   if (m.partida && !m.faltaPendente) {
     const f = faltaNoBote(m, j, dono);
     if (f) { registrarFalta(m, f); dono.vx *= 0.5; dono.vz *= 0.5; j.descansoBote = cfg.descanso; return; }
+  }
+  // contra o condutor parado/lento o bote em pé ganha pela mesma chance da DIVIDIDA do humano (desarme × drible/controle,
+  // 35–65%: simetria — o humano já tirava a bola do condutor parado da IA); errou, descansa (o condutor que reage escapa)
+  if (lento && uniforme(m.rng) >= chanceDividida(j, dono, b.p.x, b.p.z)) {
+    j.descansoBote = cfg.descanso;
+    m.eventos.push({ tipo: 'boteErrado', id: j.id });
+    return;
   }
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;

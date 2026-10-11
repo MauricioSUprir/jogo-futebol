@@ -409,7 +409,11 @@ export const ACOES = {
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
   // bote da IA defensora (Etapa 2, enxuto; os botões de defesa e a disputa completa são da Etapa 3):
   // acompanha a ~1,5 m, ataca a bola solta do pé e tenta tirar só com ela ao alcance do pé
-  boteIA: { distAcompanha: 1.5, bolaSolta: 0.7, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2 },
+  boteIA: { distAcompanha: 1.5, bolaSolta: 0.7, alcance: 0.65, chancePorPasso: 0.08, descanso: 45, vSai: 3.2,
+    // (só na partida; pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola") com o condutor
+    // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
+    // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
+    vParado: 2.0, semToque: 0.1 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -615,7 +619,9 @@ export const PARTIDA = {
 export const FALTAS = {
   // bote da IA (sim.js boteIA) que chega: chance de ser falta pela chegada ao condutor (frente/lado/trás pelo rumo do
   // condutor), × (1 + porVel · (v − vLivre)⁺) pela velocidade de quem chega, × lerp(desarme 40 → 90: 1,3 → 0,7)
-  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7] },
+  // (× lento com o condutor parado/lento, abaixo de ACOES.boteIA.vParado: o bote nele chega devagar e de perto — sem
+  // isso ~30% das tentativas viravam falta e o humano ganhava tiro livre só por ficar parado)
+  bote: { frente: 0.2, lado: 0.42, tras: 0.8, porVel: 0.12, vLivre: 4, desarme: [1.3, 0.7], lento: 0.4 },
   // DIVIDIDA do humano que não ganha a bola com o pé no condutor (defesa.js resolverBote): as mesmas chances
   dividida: { perdeu: 1.0, tocou: 0.6 },
   // carga por trás (sim.js colisaoCorpos): o marcador bate no condutor por trás fechando a ≥ vMin m/s
@@ -785,6 +791,13 @@ export const IA_DEFESA = {
   defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
   gatilhos: { janela: 1.5, passeTras: 3, toquePesado: 1.5, costas: 1.92, lateral: 27, alcance: 8, recepcao: true }, // s, m, m, rad (110°), |z|, m do 1º homem ao condutor; recepcao = a recepção de passe é gatilho
   transOf: 3,                 // s de transição ofensiva depois da retomada
+  // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"):
+  // o condutor adversário de linha com a velocidade filtrada abaixo de v m/s por s[pressão] s (+ longe s fora da linha
+  // de engajamento) → o 1º homem sai do bloco e aperta a `aperto` m da bola (ao alcance do bote: com 1,5 m ele parava
+  // fora dele) e o 2º cobre, em todos os níveis de pressão. Os gatilhos de BORDA (recepção, costas...) não pegam quem
+  // fica parado: a contenção durava para sempre (Sportsessionplanner, 1 × 1: fechar, conter e dar o bote quando o
+  // atacante dá a chance)
+  lento: { v: 2.0, s: [0.8, 0.5, 0.3], longe: 0.5, aperto: 0.2 },
 };
 
 // ----------------------------------------------------------------------------- Parte 3: com bola
