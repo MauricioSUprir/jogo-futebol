@@ -253,12 +253,14 @@ function apitar(m, f) {
       if (pr && !pr.rolou && m.partida.estado === 'parada') { if (inicio == null) inicio = pr.inicio; paradaMax = Math.max(paradaMax, (m.tick - inicio) * PASSO); }
       else inicio = null;
       if (!Number.isFinite(m.bola.p.x)) nan = true;
+      // as contagens dos acréscimos (gols, substituições, impedimentos, faltas, cartões) valem nos dois tempos
+      for (const k of ['gols', 'subs', 'imped', 'faltas', 'cartoes']) if (!Number.isFinite(m.partida.contagem[k])) nan = true;
       if (m.partida.estado === 'fim') break;
     }
   }
   const f2 = v => v.toFixed(2).replace('.', ',');
   reg('D. faltas por partida (12 partidas IA × IA)', f2(faltas / N), '1,5–5', faltas / N >= 1.5 && faltas / N <= 5);
   reg('D. amarelos (fração das faltas) e vermelhos por partida', `${f2(100 * amar / Math.max(1, faltas))}% · ${f2(verm / N)}`, '10–30% · ≤ 0,2', amar / Math.max(1, faltas) >= 0.1 && amar / Math.max(1, faltas) <= 0.3 && verm / N <= 0.2);
-  reg('D. nenhuma parada passa de 8 s; nada de NaN', `parada mais longa ${f2(paradaMax)} s · NaN ${nan ? 'sim' : 'não'}`, `≤ ${PARTIDA.paradaMax} s · não`, paradaMax <= PARTIDA.paradaMax + 0.05 && !nan);
+  reg('D. nenhuma parada passa de 8 s; nada de NaN (bola e contagens)', `parada mais longa ${f2(paradaMax)} s · NaN ${nan ? 'sim' : 'não'}`, `≤ ${PARTIDA.paradaMax} s · não`, paradaMax <= PARTIDA.paradaMax + 0.05 && !nan);
 }
 fim();

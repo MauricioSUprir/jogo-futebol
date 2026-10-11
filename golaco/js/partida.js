@@ -1021,7 +1021,7 @@ export function regrasPartida(m) {
     aplicarPendentes(m, 1, { intervalo: true });
     for (const j of m.jogadores) vestirVaga(m, j, j.vagaId);
     p.tempo = 2; p.tick0Tempo = m.tick;
-    p.acrescimo = null; p.contagem = { gols: 0, subs: 0, imped: 0 };
+    p.acrescimo = null; p.contagem = { gols: 0, subs: 0, imped: 0, faltas: 0, cartoes: 0 };
     bolaMorta(m, 'saida', 1 - p.saidaInicial, 0, 0);
     montarSaida(m, 1 - p.saidaInicial);
     return;
