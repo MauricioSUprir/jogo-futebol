@@ -11,7 +11,9 @@
 // toque do time). Recomeço (partida.js): tiro livre indireto do outro time no ponto em que ele tocou a bola.
 //
 // Estado em m.partida.imped = null | {time (quem ataca), ids: [quem estava impedido], tick (da jogada), linhaX
-// (x da linha no mundo: o maior entre o penúltimo adversário, a bola e o meio), por (id de quem jogou)}.
+// (x da linha no mundo: o maior entre o penúltimo adversário, a bola e o meio), por (id de quem jogou), defensor (id do
+// penúltimo adversário que fazia a linha, ou null se a linha era a bola ou o meio-campo)}. O `defensor` é só para o
+// desenho (a cena semiautomática do replay): o hash não o lê.
 
 import { IMPEDIMENTO } from './config.js';
 import { jogadorPorId } from './sim.js';
@@ -61,7 +63,7 @@ export function fotografar(m, t, idToque) {
     if (j.time !== t || j.id === idToque || j.papel === 'marcador') continue;
     if (emPosicaoDeImpedimento(m, j, _l.u)) ids.push(j.id);
   }
-  m.partida.imped = { time: t, ids, tick: m.tick, linhaX: _l.x, por: idToque };
+  m.partida.imped = { time: t, ids, tick: m.tick, linhaX: _l.x, por: idToque, defensor: _l.defensor };
   return m.partida.imped;
 }
 
@@ -69,7 +71,7 @@ const _toques = [];
 /**
  * Regra do impedimento no fim do passo (partida.js regrasPartida, com a bola rolando). Lê quem tocou a bola neste
  * passo (o dono — no pé ou na mão —, os eventos de passe/chute, bola no corpo e defesa do goleiro) e:
- *  1) se um impedido da foto tocou: devolve a infração {id, time, x, z, linhaX, tick} (não mexe em nada);
+ *  1) se um impedido da foto tocou: devolve a infração {id, time, x, z, linhaX, tick, por, defensor} (não mexe em nada);
  *  2) jogada deliberada do adversário (não a defesa nem a bola no corpo): zera a foto;
  *  3) recomeço sem impedimento (tiro de meta, lateral, escanteio) neste passo: zera e não fotografa;
  *  4) jogada/toque de alguém (deliberado): nova foto para o time dele.
@@ -94,7 +96,7 @@ export function regraImpedimento(m) {
       if (!im.ids.includes(id)) continue;
       const j = jogadorPorId(m, id);
       if (!j || j.time !== im.time) continue;
-      return { id, time: im.time, x: m.bola.p.x, z: m.bola.p.z, linhaX: im.linhaX, tick: im.tick, por: im.por };
+      return { id, time: im.time, x: m.bola.p.x, z: m.bola.p.z, linhaX: im.linhaX, tick: im.tick, por: im.por, defensor: im.defensor ?? null };
     }
     for (let k = 0; k < _toques.length; k += 2) {
       if (_toques[k + 1] !== 1) continue;
