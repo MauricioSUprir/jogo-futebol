@@ -15,6 +15,7 @@
 //   semDominioAte  tick até o qual não domina (acabou de ter a bola roubada)
 //   puxada  {tick0, rumo} | null — puxada de sola em andamento (ult.tipo === 'sola')
 //   esperaSalto  tick em que o toque marcado esperou o fim de um gesto do analógico (-1: não esperou)
+//   restoPassos  resto da difusão do erro dos passos por toque (passosDoToque)
 
 import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
@@ -32,7 +33,7 @@ const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [
 
 export function criarCond() {
   // bolaDesviada (sim.js) declarado já (undefined, como antes da 1ª escrita): todos os cond com a mesma forma
-  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined, esperaSalto: -1 };
+  return { toque: null, ult: null, ref: null, busca: false, longeDesde: -1, pedalada: null, nToques: 0, cortePendente: null, corteRumo: null, semDominioAte: -1, puxada: null, bolaDesviada: undefined, esperaSalto: -1, restoPassos: 0 };
 }
 
 /** Distância de toque à frente do corpo pela velocidade. */
@@ -589,6 +590,26 @@ function desvioDoArco(b, plano, pc) {
 }
 
 /**
+ * Passos até o próximo toque (condução curta, 12/10): pela velocidade do corpo (CONDUCAO.passosPorToque), 1 ou 2 —
+ * no meio da tabela os dois se alternam pela difusão do erro (o resto fica em c.restoPassos; sem sorteio, a mesma
+ * regra para o humano e para a IA). Um toque por passada (2), como antes, no domínio, na inversão do corpo, na
+ * freada (pede 1 m/s a menos do que corre), com o analógico além de angRitmo do sentido da corrida (o giro e o corte
+ * pedem o toque no tempo de antes: com toque a cada passo a deriva do giro de 180° ia a 1,9 m) e com passe ou chute
+ * carregando.
+ */
+function passosDoToque(j, c, s, dom) {
+  if (dom || j.inv || velPedida(j, true) < s - 1.0 || j.carga > 0 || j.pedido
+    || (s > 1 && j.imag > MAG_DIR && Math.abs(difAng(MD.atan2(j.vz, j.vx), MD.atan2(j.iz, j.ix))) > CONDUCAO.angRitmo)) {
+    c.restoPassos = 0;
+    return 2;
+  }
+  const acc = c.restoPassos + tabela(CONDUCAO.passosPorToque, s, 1);
+  const n = acc >= 1.5 ? 2 : 1;
+  c.restoPassos = acc - n;
+  return n;
+}
+
+/**
  * Executa o toque agora (tick atual, antes de integrar a bola). Planeja o próximo.
  * tipo: 'conducao' | 'dominio' | 'ajuste' | 'protecao' (a puxada de sola é executarPuxada)
  */
@@ -619,13 +640,15 @@ export function executarToque(m, j, pe, tipo, freio = false) {
       if (d > lim || d < -lim) ori = aV + clamp(d, -lim, lim);
     }
   }
-  let plano = planejarAlvo(m, j, pe, prot || curta ? 1 : 2, pc, prot, curta, 0, dom, ori);
-  // também toca a cada passo se a bola fosse abrir demais (saindo do parado): assim ela
+  // passos até o próximo toque: 1 na condução curta (MOD) e na proteção; senão pela velocidade (passosDoToque)
+  const passos = prot || curta ? 1 : passosDoToque(j, c, sAgora0, dom);
+  let plano = planejarAlvo(m, j, pe, passos, pc, prot, curta, 0, dom, ori);
+  // um toque por passada que deixaria a bola abrir demais (saindo do parado) vira toque a cada passo: assim ela
   // está sempre ao alcance de um corte pedido no meio do caminho; e numa curva fechada, se a
   // bola rolando reta se afastaria demais do arco do corpo até o próximo toque
   // (curva = o analógico girando de forma contínua; um gesto brusco não conta)
   const curvando = Math.abs(j.intW) > 0.3;
-  if (!prot && !curta && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
+  if (!prot && !curta && passos === 2 && (!semUltrapassar(b, plano, pc) || plano.folgaMax > CONDUCAO.folgaMax || (curvando && desvioDoArco(b, plano, pc) > CONDUCAO.arcoMax))) {
     plano = planejarAlvo(m, j, pe, 1, pc, prot, curta, 0, dom, ori);
   }
   if (!semUltrapassar(b, plano, pc)) {

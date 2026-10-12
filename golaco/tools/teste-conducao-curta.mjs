@@ -190,7 +190,10 @@ meta('A trote: ritmo', `${f2(A.trote.toquesS)} toques/s`, '2,3–3,1 (Zago 2016)
 meta('A trote: metros do corpo entre toques (mediana)', `${f2(A.trote.mMed)} m`, '≤ 1,2', ate(A.trote.mMed, 1.2));
 meta('A trote: bola–corpo (mediana / p90)', `${f2(A.trote.dC[0])} / ${f2(A.trote.dC[1])} m`, '≤ 0,45 / ≤ 0,48', ate(A.trote.dC[0], 0.45) && ate(A.trote.dC[1], 0.48));
 meta('A trote: folga (maior à frente entre toques, mediana)', `${f2(A.trote.folga[0])} m`, '≤ 0,45', ate(A.trote.folga[0], 0.45));
-meta('A trote: bola–pé na pose (mediana / p90)', `${f2(A.trote.dPe[0])} / ${f2(A.trote.dPe[1])} m`, '≤ 0,08 / ≤ 0,16', ate(A.trote.dPe[0], 0.08) && ate(A.trote.dPe[1], 0.16));
+// (a especificação pedia mediana ≤ 0,08 m, medida com a chuteira ENTRANDO na bola; com ela parando na superfície —
+// jogador.js passoPeDesenhado, commit 2/7 — o pé encostado fica a ~0,13 m do centro na horizontal: a mesma lógica de
+// antes com o desenho novo dá 0,14 / 0,23)
+meta('A trote: bola–pé na pose (mediana / p90)', `${f2(A.trote.dPe[0])} / ${f2(A.trote.dPe[1])} m`, '≤ 0,12 / ≤ 0,16 (o pé na superfície da bola)', ate(A.trote.dPe[0], 0.12) && ate(A.trote.dPe[1], 0.16));
 // corrida
 meta('A corrida: ritmo', `${f2(A.corrida.toquesS)} toques/s`, '2,2–2,9', ent(A.corrida.toquesS, 2.2, 2.9));
 meta('A corrida: metros do corpo por toque (média)', `${f2(A.corrida.mMedia)} m`, '1,8–2,6', ent(A.corrida.mMedia, 1.8, 2.6));

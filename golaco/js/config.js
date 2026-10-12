@@ -208,10 +208,19 @@ export const GESTO = {
 // Condução (o toque planejado). Ver CONTRATOS.md.
 export const CONDUCAO = {
   // Ponto de toque à frente do corpo (centro do quadril projetado), por modo.
-  ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.42 },
+  // (arrancada 0,42 → 0,38 com a condução curta de 12/10: a folga p90 da disparada passava do alcance do pé, 0,78)
+  ofsFrente: { curta: 0.34, trote: 0.36, corrida: 0.33, arrancada: 0.38 },
   ofsLado: 0.06,              // para o lado do pé que toca
-  // Passos entre toques, por modo (2 = um toque por passada).
-  passosEntreToques: { curta: 1, trote: 2, corrida: 2, arrancada: 2 },
+  // Passos entre toques pela velocidade do corpo (condução curta, pedido do dono de 12/10: "condução mais curtinha,
+  // com a bola mais no pé"): [m/s, passos por toque]. 1 = um toque a cada passo, 2 = um por passada; no meio, 1 e 2
+  // se alternam pela difusão do erro (passosDoToque, sem sorteio). Andando e no trote, um toque a cada passo: o
+  // drible fechado de Zago et al. 2016 (2,3–3,0 toques/s, os mais rápidos tocam mais); na corrida, 1,5 passo por toque
+  // (Preissler et al. 2023: arrancada reta com bola colada, 2,5–4 m e 1,4–2,3 toques/s); na disparada, um por
+  // passada (dados abertos DFL/TRACAB, Bassek et al. 2025: em velocidade alta a bola anda 4–7 m por toque). Ajuste
+  // fino para o dono: se o trote ficar "picotado", sobe o 3,5. A condução curta (MOD) e a proteção: 1 passo fixo; o
+  // domínio, a inversão, a freada, a curva fora do rumo e o passe/chute carregando: 2 (como antes)
+  passosPorToque: [[3.5, 1], [4.5, 1.25], [5.6, 1.5], [6.6, 1.75], [7.4, 2]],
+  angRitmo: 0.35,             // rad — analógico além disto do rumo da velocidade: um toque por passada (o giro)
   faseToque: 0.8,             // fração do apoio do pé de apoio em que o outro pé toca
   antecedencia: 0.1,          // s — um toque é sempre marcado com essa antecedência
   alcance: 0.78,              // m — distância máxima bola–corpo para tocar
