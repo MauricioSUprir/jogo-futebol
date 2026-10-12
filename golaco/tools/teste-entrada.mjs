@@ -104,6 +104,8 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
     // [botão, no ataque, na defesa]
     const casos = [
       ['KeyJ', BOTAO.PASSE, BOTAO.CONTER], ['KeyK', BOTAO.CHUTE, BOTAO.DIVIDIDA], ['KeyO', BOTAO.PEGAR, BOTAO.PRESSAO],
+      // G só na defesa, como o Y do controle (auditoria dos botões, 12/10: no ataque o goleiro saía até ~21 m da linha)
+      ['KeyG', 0, BOTAO.GOLEIRO],
       ['pad:A', BOTAO.PASSE, BOTAO.CONTER], ['pad:B', BOTAO.CHUTE, BOTAO.DIVIDIDA],
       ['pad:Y', BOTAO.ENFIADA, BOTAO.GOLEIRO], ['pad:RB', BOTAO.PEGAR, BOTAO.PRESSAO],
     ];
@@ -171,8 +173,9 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
       }
       reg('J segurado na defesa = CONTER: o controlado acompanha o condutor do lado do gol', `${fmt(100 * ok / n, 0)}% do tempo a 1–2,5 m`, '≥ 80%', ok / n >= 0.8);
     }
-    // toque: DIVIDIDA de dois sentidos (criarToqueOuSegura, pura): tocar = pulso de DIVIDIDA no soltar; segurar =
-    // CONTER desde o 1º quadro e nada de bote no soltar. Tempos do relógio do jogo (ms), a 60 qps.
+    // toque: DIVIDIDA de dois sentidos (criarToqueOuSegura, pura): tocar = pulso de DIVIDIDA no soltar, sem CONTER em
+    // nenhum quadro (auditoria dos botões, 12/10: o CONTER desde o 1º quadro afastava o defensor antes do bote); segurar =
+    // CONTER a partir do limiar e nada de bote no soltar. Tempos do relógio do jogo (ms), a 60 qps.
     {
       const { criarToqueOuSegura } = ENT;
       if (typeof criarToqueOuSegura !== 'function') {
@@ -191,10 +194,13 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
           const t = criarToqueOuSegura(BOTAO.DIVIDIDA, BOTAO.CONTER); t.apertar(); return t.soltar(); // tocou e soltou entre dois quadros
         })();
         const okC = curto.pulso === BOTAO.DIVIDIDA && meio.pulso === BOTAO.DIVIDIDA && relampago === BOTAO.DIVIDIDA;
-        const okL = longo.pulso === 0 && longo.mascaras.every(b => b === BOTAO.CONTER) && longo.depois === 0;
-        reg(`toque: DIVIDIDA tocada (< ${fmt(lim, 2)} s) = bote; segurada = CONTER desde o 1º quadro, sem bote no soltar`,
-          `90 ms: pulso ${curto.pulso}; ${Math.round(lim * 1000) - 40} ms: ${meio.pulso}; entre quadros: ${relampago}; 600 ms: pulso ${longo.pulso}, CONTER em ${longo.mascaras.filter(b => b === BOTAO.CONTER).length}/${longo.mascaras.length} quadros, solto ${longo.depois}`,
-          `${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}; 0, todos CONTER, 0`, okC && okL);
+        // tocado: nenhum quadro de CONTER; segurado: CONTER em todo quadro a partir do limiar (e em nenhum antes)
+        const semConterTocado = [...curto.mascaras, ...meio.mascaras].every(b => b === 0);
+        const qLim = Math.ceil(lim * 60 - 1e-9);
+        const okL = longo.pulso === 0 && longo.mascaras.every((b, q) => b === (q >= qLim ? BOTAO.CONTER : 0)) && longo.depois === 0;
+        reg(`toque: DIVIDIDA tocada (< ${fmt(lim, 2)} s) = bote, sem CONTER; segurada = CONTER a partir de ${fmt(lim, 2)} s, sem bote no soltar`,
+          `90 ms: pulso ${curto.pulso}; ${Math.round(lim * 1000) - 40} ms: ${meio.pulso}; entre quadros: ${relampago}; quadros de CONTER tocando: ${[...curto.mascaras, ...meio.mascaras].filter(b => b).length}; 600 ms: pulso ${longo.pulso}, CONTER em ${longo.mascaras.filter(b => b === BOTAO.CONTER).length}/${longo.mascaras.length} quadros (1º no ${longo.mascaras.findIndex(b => b) + 1}º), solto ${longo.depois}`,
+          `${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}; 0 quadros; 0, CONTER do ${qLim + 1}º quadro em diante, 0`, okC && semConterTocado && okL);
         // do toque ao jogo: um condutor adversário vindo; o toque curto (90 ms) começa o bote (estado j.defH.bote) e o
         // segurado (4 s) contém o condutor do lado do gol (a mesma conta do J segurado)
         const cena = () => {

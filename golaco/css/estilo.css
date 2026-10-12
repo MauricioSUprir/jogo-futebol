@@ -382,6 +382,9 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .toque:not(.goleiro-pe) .btn-pegar { display: none; }
 .btn-pegar svg { stroke: #c6ff3d; }
 .btn-pegar.ativo svg { stroke: var(--preto); }
+/* TROCAR com a bola nas mãos do goleiro do humano (partida): só com a classe goleiro-mao (main.js) — no toque o TROCAR é da
+   defesa e o goleiro com a bola é ataque; o Q do teclado e o LB do controle já trocavam */
+.toque:not(.goleiro-mao) .btn-trocar-mao { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */
