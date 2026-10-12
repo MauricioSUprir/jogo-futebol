@@ -572,13 +572,19 @@ function custoCamera(c, ip, cx, cz, dur) {
           ax = lerp(a.j.x, a.lado * S.cruzaX, f); az = lerp(a.j.z, MZ - 0.5, f);
         }
       }
-      if (Math.hypot(ax - cx, az - cz) < S.lenteMin + 0.5) return Infinity;
+      const da = Math.hypot(ax - cx, az - cz);
+      if (da < S.lenteMin + 0.5) return Infinity;
       const q = assuntoEm(c, ip, u, _q);
       const ex = q.x - cx, ez = q.z - cz, el2 = ex * ex + ez * ez || 1;
       const w = ((ax - cx) * ex + (az - cz) * ez) / el2;
       if (w > 0.05 && w < 0.97) {
         const lado = Math.hypot(ax - cx - ex * w, az - cz - ez * w);
         if (lado < 0.7) oclusao += 0.7 - lado;
+      }
+      // alguém grande no quadro (perto da lente e dentro do ângulo do plano): um corpo a 3 m enche a borda da tela
+      if (da < 8 && w > 0) {
+        const cosA = ((ax - cx) * ex + (az - cz) * ez) / (da * Math.sqrt(el2));
+        if (cosA > 0.83) oclusao += (8 - da) * 0.5;
       }
     }
   }
