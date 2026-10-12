@@ -221,6 +221,10 @@ export const CONDUCAO = {
   alcanceFrente: -0.15,       // m — a bola pode estar até 15 cm atrás do centro do corpo
   intervaloMin: 0.16,         // s entre dois toques
   angReplanejar: 0.35,        // rad — mudança de rumo pedido que antecipa o toque
+  // (condução curta, 12/10) o analógico pulou mais que isto num tick (gesto rápido do polegar pela borda): o toque
+  // marcado para esse tick espera 1 tick para ler o analógico já no fim do gesto; se ele ainda pula, sai um toque de
+  // FREIO (a bola para onde o corpo para, pela mesma conta da rolagem) — antes, no meio do gesto, a bola saía de lado
+  saltoGesto: 0.3,            // rad
   desvioReplanejar: 0.2,      // m — bola prevista longe do pé no próximo toque: antecipa o toque
   horizonte: 1.6,             // s — previsão máxima do caminho do corpo
   meiaVidaGiroPedido: 1.2,    // s — o giro do analógico é extrapolado com esta meia-vida

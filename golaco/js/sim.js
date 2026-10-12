@@ -116,6 +116,8 @@ export function aplicarEntrada(j, e, tick) {
       j.intW += (w - j.intW) * Math.min(1, PASSO / 0.12);
     } else {
       j.intW = 0; // salto (tecla, flick): não extrapola
+      // o analógico pulou neste tick (o toque marcado para agora espera o fim do gesto: conducao.js)
+      if (j.imag > 0 && Math.abs(d) > CONDUCAO.saltoGesto) j.saltoTick = tick;
     }
     j.intRumo = r;
     j.ix = x / mag; j.iz = z / mag;
