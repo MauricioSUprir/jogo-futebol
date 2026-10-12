@@ -134,13 +134,16 @@ function reposicionar(m, j, B) {
  */
 function vaiNaLivre(m, j) {
   if (j.posicao === 'GOL') return false;
+  // quem cobrou a bola parada não toca de novo antes de outro jogador (partida.js rolou): não vai nela
+  const cobrou = m.cobrou ? m.cobrou.id : -1;
+  if (j.id === cobrou) return false;
   const v = m.voo, b = m.bola.p, Lv = (m.iaLivre ??= {}), ant = Lv[j.time];
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
   const atual = ant && ant.tick >= m.tick - 1 ? ant.id : -1, H = IA_DEFESA.livre.histerese;
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.id === cobrou) continue;
     const to = tempo(o);
     if (to < tj || (to === tj && o.id < j.id)) return false;
   }

@@ -177,6 +177,7 @@ function bolaMorta(m, tipo, time, x, z) {
   m.voo = null;
   for (const j of m.jogadores) { j.recebe = null; j.corrida = null; j.intercepta = null; }
   limparRegraMao(m); // recuo e "soltou" (Regra 12.2) não passam da bola morta
+  m.cobrou = null;   // nem o "cobrador não toca de novo" da cobrança anterior
 }
 
 /** Desfaz a parada (cobrança feita, fim do tempo): o cobrador volta a se mexer. */
@@ -1010,6 +1011,9 @@ function soltarLateral(m, c) {
 function rolou(m) {
   const pr = m.parada;
   pr.rolou = true;
+  // quem cobrou não toca a bola de novo antes de outro jogador (Regras 13, 14, 15, 16, 17 — a saída também, Regra 8):
+  // sim.js tira ele da bola livre e da bola alta até outro tocar (antes o arremessador cabeceava o próprio lateral)
+  m.cobrou = { id: pr.cobrador, tick: m.tick };
   if (m.voo) m.voo.bolaParada = pr.tipo; // a bola que sai da cobrança (a disputa pelo alto vale nela: sim.js)
   m.eventos.push({ tipo: 'cobranca', parada: pr.tipo, id: pr.cobrador });
   if (pr.barreira) desfazerBarreira(m, pr);

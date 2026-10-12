@@ -508,6 +508,13 @@ export function passo(m, entradas) {
     if (dono) verificarPerda(m, dono);
   }
   if (m.voo && m.posse != null) m.voo = null;
+  // "o cobrador não toca de novo" acaba quando outro jogador toca a bola (posse, mão, chute/passe/bote/defesa, corpo)
+  if (m.cobrou) {
+    const c = m.cobrou, u = m.ultimoToque;
+    let outro = (m.posse != null && m.posse !== c.id) || (m.naMao != null && m.naMao !== c.id) || (!!u && u.id !== c.id && u.tick > c.tick);
+    if (!outro) for (const e of m.eventos) if (e.tipo === 'bateuCorpo' && e.id !== c.id) { outro = true; break; }
+    if (outro) m.cobrou = null;
+  }
   // passe que morreu (a bola rolando a menos de 1 m/s meio segundo depois da hora de chegar): vira bola livre.
   // Antes o passe continuava "do recebedor" para sempre: ele já tinha desistido (j.recebe vence em 4 s) e os
   // companheiros mais perto não iam na bola do passe de outro — os 22 ficavam parados em volta dela (medido
@@ -568,6 +575,8 @@ function candidatosBolaLivre(m, alvo) {
   for (let k = 0; k < js.length; k++) {
     const j = js[k];
     if (j.papel === 'marcador' || j.papel === 'parado') continue;
+    // partida: quem cobrou a bola parada não toca de novo antes de outro jogador (partida.js rolou: m.cobrou)
+    if (m.cobrou && m.cobrou.id === j.id) continue;
     // o goleiro só disputa a bola livre com o pé quando não pode pegá-la com a mão (partida: recuo, a bola que ele
     // soltou, fora da área — Regra 12)
     if (j.posicao === 'GOL' && !(m.partida && !maoPermitida(m, j, b.p.x, b.p.z))) continue;
