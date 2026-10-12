@@ -31,6 +31,7 @@ import { BOTAO, PASSO, CAMPO, JOGADOR, BOLA } from '../js/config.js';
 import { lerCorpo } from '../js/render/corpo-leitor.js';
 import { criarEsqueleto, NO, O } from '../js/render/esqueleto.js';
 import * as PT from './lib/partida-tatica.mjs';
+import { carregarNode, golRoteirizadoNode } from './lib/gol-node.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
@@ -304,6 +305,30 @@ for (const [sem, laterais] of [[3, false], [11, false], [5, true]]) {
   });
 }
 
+// ------------------------------------------------------------------ comemoração do gol (cena da página: js/comemoracao.js)
+// os 22 atores da cena em cada tick (corrida, joelhos, pulo, céu, braços, giro, abraço, reação): a fidelidade vale igual;
+// o pé apoiado não (nos golpes a cena desliza os pés de propósito: o teste-comemoracao mede a patinação dela)
+let cenasComemoracao = 0, ticksComemoracao = 0;
+{
+  const CM = await import('../js/comemoracao.js').catch(() => null);
+  if (CM) {
+    const LG = await carregarNode(path.join(AQUI, '..', 'js'));
+    for (const [sem, time] of RAPIDO ? [[5, 0]] : [[5, 0], [5, 1], [9, 0]]) {
+      const g = golRoteirizadoNode(LG, { semente: sem, time });
+      if (!g) continue;
+      const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
+      cenasComemoracao++;
+      const mF = { tick: 0 };
+      while (!c.acabou && ticksComemoracao < 20000) {
+        CM.passoCena(c);
+        ticksComemoracao++;
+        mF.tick = c.k;
+        for (const a of c.atores) medirQuadro(`comemoração (semente ${sem}, time ${time})`, a, mF, a.atu, [null, null], false, 'c:' + a.id, false);
+      }
+    }
+  }
+}
+
 // ------------------------------------------------------------------ resultado
 const mm = v => (v * 1000).toFixed(2);
 const res = [];
@@ -324,7 +349,7 @@ const info = [
   `ponta de pé que a pose encolheu abaixo de ${(PE_MIN * 100).toFixed(1)} cm (trava da ponta no chão): ${R.peCurto.n} quadros, maior erro ${mm(R.peCurto.max)} mm${R.peCurto.n ? ` (pé da pose ${(R.peCurto.pe * 100).toFixed(1)} cm, ${R.peCurto.qual})` : ''}`,
   `lateral: a POSE deixa a palma a até ${mm(R.lateral.bola)} mm da superfície da bola${R.lateral.qual ? ` (${R.lateral.qual})` : ''} — o braço da simulação (0,29 + 0,26) não alcança no fim do arco; o corpo segue a pose`,
 ];
-console.log(`teste-esqueleto${AJUSTE ? '' : ' (CONTROLE: sem o ajuste final de pés e mãos)'} — ${R.quadros} quadros medidos`);
+console.log(`teste-esqueleto${AJUSTE ? '' : ' (CONTROLE: sem o ajuste final de pés e mãos)'} — ${R.quadros} quadros medidos (com ${cenasComemoracao} comemorações de gol, ${ticksComemoracao} ticks)`);
 for (const r of res) console.log(`${r.ok ? 'PASSOU  ' : 'REPROVOU'}  ${r.nome.padEnd(larg)}  ${r.medido}   (alvo: ${r.alvo})`);
 console.log('');
 for (const t of info) console.log('INFO      ' + t);
