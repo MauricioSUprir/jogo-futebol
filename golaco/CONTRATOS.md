@@ -675,7 +675,7 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
   `goleiroComBola` (IA: `esperaIA`; treino e demo — `m.iaJoga[time]`, a entrada com `ia` —: `esperaHumano`; humano na
   partida: sem reposição automática, ENFIADA = `soltarNoChao` (evento `soltou`, `regraMao.soltou`), CHUTE vira
   LANÇAMENTO; tiro de meta: a IA cobra por ele em `PARTIDA.cobrancaHumanoMax`); `pegarDoHumano` (PEGAR na borda, bola a ≤
-  `GOLEIRO.pegaPe` m, na área: mão → "pegou"; sem mão → `m.infracaoMao` e evento `maoGoleiro {id, motivo}`);
+  `GOLEIRO.pegaPe` m, no pé dele ou solta a ≤ `GOLEIRO.pegaVMax` m/s — a bola rápida é da defesa automática —, na área: mão → "pegou"; sem mão → `m.infracaoMao` e evento `maoGoleiro {id, motivo}`);
   `trocarJogador`: TROCAR segurado `GOLEIRO.trocarGoleiro` s → o goleiro (evento `troca {id, goleiro: true}`;
   `m.trocarDesde[time]`). O goleiro da IA com o pé recebe `ia-tatica.js entradaGoleiroPe` (sem a bola: ao ponto de
   interceptação; com ela: espera `pe.espera` s e passa curto ao companheiro livre a `dMin–dMax` m, nunca para trás; com

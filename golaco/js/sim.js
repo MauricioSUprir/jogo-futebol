@@ -814,7 +814,8 @@ function andarComBolaNaMao(m, j) {
 }
 
 /**
- * PEGAR (partida; borda do botão, goleiro do humano com a bola no pé ou solta ao alcance — GOLEIRO.pegaPe m —, na área):
+ * PEGAR (partida; borda do botão, goleiro do humano com a bola no pé ou solta e devagar — até GOLEIRO.pegaVMax m/s —
+ * ao alcance — GOLEIRO.pegaPe m —, na área):
  * com a mão permitida, a bola vai para as mãos ("pegou"); com o recuo, o lateral de companheiro ou a bola que ele soltou,
  * é a infração da Regra 12.2 — tiro livre INDIRETO do adversário (partida.js, m.infracaoMao). Fora da área não faz nada
  * (a mão lá é a de qualquer jogador).
@@ -827,6 +828,8 @@ function pegarDoHumano(m) {
     if (m.posse != null && m.posse !== g.id) continue;
     const b = m.bola;
     if (b.p.y > 1.2 || MD.hypot(b.p.x - g.x, b.p.z - g.z) > GOLEIRO.pegaPe) continue;
+    // a bola rápida que passa (chute, passe) não: só a do pé ou a solta e devagar (a defesa é a automática)
+    if (m.posse !== g.id && MD.hypot(b.v.x, b.v.y, b.v.z) > GOLEIRO.pegaVMax) continue;
     if (!naPropriaArea(m, g, b.p.x, b.p.z)) continue;
     if (maoPermitida(m, g, b.p.x, b.p.z)) {
       m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };

@@ -464,6 +464,10 @@ export const GOLEIRO = {
   maoAnda: { v: 3.2, vCorrer: 4.5, margem: 0.6, freio: 3 },
   trocarGoleiro: 0.4,         // s com TROCAR segurado: o controle vai para o goleiro (o "Switch to Goalkeeper")
   pegaPe: 1.0,                // m — PEGAR alcança a bola no pé até isto do corpo
+  // PEGAR só na bola no pé ou solta e devagar (até pegaVMax m/s): a bola rápida (chute, passe) é da defesa automática
+  // (logística + mão desenhada). Contraprova: martelando PEGAR com o goleiro controlado, todo chute a ≤ 1 m dele virava
+  // "pegou" (48/48 chutes de 9 m a 28–36 m/s que eram gol sem o botão)
+  pegaVMax: 3,
   // goleiro da IA com a bola no pé (recuo, bola que ele não pode pegar): passa curto para um companheiro livre a dMin–dMax
   // m depois de `espera` s; com um adversário a menos de `pressao` m, chutão para a frente (nunca conduz sob pressão)
   // (e vai com o pé à bola livre que não pode pegar com a mão — o passe para ele, ou a até `busca` m sendo o 1º do time a

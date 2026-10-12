@@ -12,6 +12,8 @@
 //     estava dentro dela (100%); PEGAR sem recuo (bola que veio do adversário) → a bola vai para a mão (100%);
 //  G5b ENFIADA com a bola nas mãos solta a bola no chão; PEGAR antes de outro tocar → tiro livre indireto (100%);
 //  G5c cabeceio de passe de um companheiro para o goleiro: a mão vale (encaixe, 100%);
+//  G5d (contraprova) chute no ar a ~1 m do goleiro controlado: martelar PEGAR não muda o lance (a bola rápida é da
+//     defesa automática; antes da correção todo chute perto do corpo virava "pegou");
 //  G6 goleiro a 24 m (GOLEIRO segurado), chute de 36 m: nenhuma defesa com a mão com a bola fora da área;
 //  G7 TROCAR segurado (≥ 0,4 s) leva o controle ao goleiro (3/3); o goleiro controlado sem a bola anda pelo analógico
 //     (≥ 2 m de diferença em 2 s contra a mesma cena sem analógico);
@@ -230,6 +232,40 @@ function recuar(m, g, d) {
     }
   }
   reg('G5c cabeceio de passe de um companheiro para o goleiro: a mão vale (encaixe)', `${mao}/${n}`, `${n}/${n}`, mao === n);
+}
+// ---------------------------------------------------------------- G5d: PEGAR não pega chute no ar (contraprova)
+// O goleiro controlado pelo humano, chute de 9 m a 28–36 m/s passando a ~1 m dele (sem o botão: gol). Martelando PEGAR
+// (a cada 2 passos), o resultado tem que ser o MESMO de sem o botão: a bola rápida é da defesa automática (antes da
+// correção, 100% viravam "pegou" — o goleiro controlado ficava imbatível em chute perto do corpo).
+{
+  let n = 0, igual = 0, pegouBotao = 0;
+  const lance = (sem, zl, v, martela) => {
+    const m = partidaEmJogo(sem); limpar(m);
+    const lado0 = m.ataca[0], gx = -lado0 * MX, g = gkDe(m, 0);
+    P.teleportar(g, gx + lado0 * 2, 0, lado0 > 0 ? 0 : Math.PI);
+    const atk = m.jogadores.find(o => o.time === 1 && o.posicao !== 'GOL');
+    P.teleportar(atk, gx + lado0 * 9, 0, lado0 > 0 ? Math.PI : 0);
+    for (const o of m.jogadores) if (o !== g && o !== atk && o.posicao !== 'GOL') P.teleportar(o, lado0 * 20, o.z, o.rumo);
+    A.assumirControle(m, 0, g);
+    limpar(m);
+    const b = m.bola; b.p.x = atk.x - lado0 * 0.5; b.p.z = 0; b.p.y = 0.11;
+    const ux = gx - b.p.x, uz = zl - b.p.z, l = Math.hypot(ux, uz);
+    b.v.x = ux / l * v; b.v.z = uz / l * v; b.v.y = 0.3; b.w.x = b.w.y = b.w.z = 0; b.rolando = false;
+    m.voo = { tipo: 'chute', de: atk.id, time: 1, para: null, alvo: { x: gx, z: zl }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick, alto: false };
+    m.ultimoToque = { id: atk.id, time: 1, tick: m.tick };
+    for (let i = 0; i < 120; i++) {
+      const ev = P.passoPartida(m, { x: 0, z: 0, botoes: martela && i % 2 === 0 ? (BOTAO.PEGAR ?? 0) : 0 });
+      if (ev.some(e => e.tipo === 'gol')) return 'gol';
+      const d = ev.find(e => e.tipo === 'defesa' && e.id === g.id);
+      if (d) return d.modo;
+    }
+    return 'outro';
+  };
+  for (const sem of [71, 72]) for (const zl of [-1.0, 0.9]) for (const v of [28, 34]) {
+    const a = lance(sem, zl, v, false), b = lance(sem, zl, v, true);
+    n++; if (a === b) igual++; if (b === 'pegou' && a !== 'pegou') pegouBotao++;
+  }
+  reg('G5d chute no ar a ~1 m do goleiro controlado: martelar PEGAR não muda o lance', `${igual}/${n} iguais (${pegouBotao} "pegou" só pelo botão)`, `${n}/${n}`, igual === n);
 }
 // ---------------------------------------------------------------- G7: TROCAR segurado vai para o goleiro; o analógico o move
 {
