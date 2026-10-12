@@ -668,8 +668,12 @@ export function criarCampo(opc) {
       refl.matLamp.color.setHex(noite ? 0xf4f8ff : 0x3a4044);
       for (const b of refl.brilhos) b.visible = noite;
     },
-    /** t: s; camera (opcional): o lado de cá só vai para a GPU com a câmera fora dele e a caixa no quadro. */
-    atualizar(t, camera = null) {
+    /**
+     * t: s; camera (opcional): o lado de cá só vai para a GPU com a câmera fora dele e a caixa no quadro; desenha: este
+     * quadro vai mesmo ser desenhado (com o celular em pé a tela de girar cobre tudo e nada é desenhado — a pré-carga
+     * espera o 1º quadro desenhado de verdade).
+     */
+    atualizar(t, camera = null, desenha = true) {
       band.tempo.value = t;
       if (camera) {
         camera.updateMatrixWorld();
@@ -677,8 +681,8 @@ export function criarCampo(opc) {
         const cx = ladoDeCa.userData.caixas;
         const ver = !cameraNoLadoDeCa(camera.position) && cx.some(c => _frustum.intersectsBox(c));
         if (restaurar) { restaurar = false; ladoDeCa.geometry.setDrawRange(0, Infinity); }
-        if (precarga && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
-        precarga = false;
+        if (precarga && desenha && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
+        if (desenha) precarga = false;
       }
     },
     /** A arquibancada do lado de cá (testes: visível ou não neste quadro). */

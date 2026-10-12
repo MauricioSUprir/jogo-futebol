@@ -35,8 +35,11 @@ export const FESTA = {
   },
   // a batucada da organizada: forte com a casa cantando, baixinha no resto (uma organizada quase nunca para)
   batucada: { cantando: 1, resto: 0.3, tau: 1.2 },
-  // vaia da casa: o visitante segura a bola perto da área da casa por `segura` s; depois espera `pausa` s
-  vaia: { segura: 15, dist: 32, pausa: 30, esvazia: 2 },
+  // vaia da casa: o visitante fica com a bola sem a casa tocar nela — conta 1 s por s no campo todo e `perto` s por s a
+  // até `dist` m do gol da casa; vaia ao chegar a `segura` (35 s de posse, 17,5 s rondando a área) e espera `pausa` s.
+  // Contraprova de 12/10: só "perto da área por 15 s" nunca acontecia (0 vaias em 4 partidas inteiras: o acúmulo máximo
+  // foi 8,7 s); com esta regra, 0–4 vaias por partida de 2 × 4 min (média 2 em 6 partidas IA × IA)
+  vaia: { segura: 35, perto: 2, dist: 32, pausa: 45, esvazia: 6 },
   // sinalizadores: só em momento marcado (saída de cada tempo, gol, vitória no fim) — nunca com a bola rolando
   sinalizadores: {
     max: 8,                    // no máximo 8 acesos (uniform vec4[8] da luz falsa)
@@ -242,12 +245,16 @@ export function festaEvento(f, ev, ctx, disparar) {
       cortarCanto(f, C.golCorta);
       if (c.fase === 'pausa') c.ate = f.t;
       c.fase = 'cantando-fim';
+      // o gol de um lado cancela a festa que o outro ainda ia cantar (contraprova de 12/10: gol da casa e, 20 s depois,
+      // gol do visitante — a casa voltava a cantar a festa por cima do gol deles)
       if (k === casa) {
         c.festaAte = f.t + C.golVolta + C.festaDur;
+        c.visitanteDe = -1e9;
         acender(f, ORG.concat(QUINAS.slice(0, 2)), S.gol, 0, S.atrasoGol);
         abrirBandeirao(f, B.atrasoGol, B.gol);
       } else {
         c.visitanteDe = f.t + C.golVolta;
+        c.festaAte = -1e9;
         acender(f, VISIT, S.golVisitante, 1, S.atrasoGol);
       }
       c.proximaEm = f.t + C.golVolta;
@@ -333,12 +340,11 @@ export function festaPasso(f, emocao, ctx, dt, disparar) {
   const B = FESTA.batucada;
   const alvoBat = parado ? 0.1 : (c.fase === 'cantando' && c.lado === 0 ? Math.max(B.resto, B.cantando * nivelCanto(f, t)) : B.resto);
   f.batucada += (alvoBat - f.batucada) * (1 - Math.exp(-dt / B.tau));
-  // vaia: o visitante com a bola perto da área da casa
+  // vaia: o visitante com a bola (mais depressa rondando a área da casa)
   const V = FESTA.vaia, vis = 1 - casa;
   if (!parado && ctx.estado !== 'gol' && k === vis) {
     const gx = -(ctx.ataca?.[casa] ?? 1) * 52.5;   // o gol que a casa defende
-    if (Math.hypot(ctx.bola.x - gx, ctx.bola.z) <= V.dist) f.vaia.acum += dt;
-    else f.vaia.acum = Math.max(0, f.vaia.acum - V.esvazia * dt);
+    f.vaia.acum += dt * (Math.hypot(ctx.bola.x - gx, ctx.bola.z) <= V.dist ? V.perto : 1);
   } else f.vaia.acum = Math.max(0, f.vaia.acum - V.esvazia * dt);
   if (f.vaia.acum >= V.segura && t - f.vaia.ultima >= V.pausa) {
     f.vaia.ultima = t; f.vaia.acum = 0; f.vaia.n++;

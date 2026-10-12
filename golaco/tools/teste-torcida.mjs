@@ -395,21 +395,43 @@ if (EM) {
       const gc = golE(0), gv = golE(1);
       reg('Gol: o grito corta o canto; depois a casa canta a festa (ou o setor visitante canta o deles)', `casa: cortado ${fmt(gc.cortado, 2)}, depois "${gc.papel}" lado ${gc.lado} · visitante: cortado ${fmt(gv.cortado, 2)}, depois "${gv.papel}" lado ${gv.lado}`,
         'cortado 0; festa/0 e visitante/1', gc.cortado === 0 && gc.papel === 'festa' && gc.lado === 0 && gv.cortado === 0 && gv.papel === 'visitante' && gv.lado === 1);
+      // dois gols em seguida (contraprova de 12/10): gol da casa e, 20 s depois, gol do visitante — 10 s depois do 2º gol
+      // canta quem marcou por último (antes a casa voltava a cantar a festa por cima do gol deles); e o contrário
+      const doisGols = (a, b) => {
+        const e6 = EM.criarEmocao();
+        let t6 = 0;
+        const anda = (s, estado = 'jogo') => { for (let i = 0; i < Math.round(s * 60); i++) { t6 += 1 / 60; EM.emocaoPasso(e6, { t: t6, bola: { x: 0, z: 0 }, posseTime: null, ataca, estado }, 1 / 60); } };
+        anda(20);
+        EM.emocaoEvento(e6, { tipo: 'gol', time: a }, ctx(t6, { x: a ? -53 : 53, z: 0 }));
+        anda(20);
+        EM.emocaoEvento(e6, { tipo: 'gol', time: b }, ctx(t6, { x: b ? -53 : 53, z: 0 }));
+        anda(10);
+        const c = e6.festa.canto;
+        return `${c.fase === 'cantando' ? c.papel : c.fase}/${c.lado}`;
+      };
+      const cv = doisGols(0, 1), vc = doisGols(1, 0);
+      reg('Dois gols em 20 s: depois do 2º canta quem marcou por último', `casa e depois visitante → ${cv} · visitante e depois casa → ${vc}`, 'visitante/1 · festa/0', cv === 'visitante/1' && vc === 'festa/0');
     }
-    // vaia: o visitante segura a bola perto da área da casa por 15 s → uma vaia; não repete antes de 30 s
+    // vaia (contraprova de 12/10: a regra antiga — só perto da área por 15 s — dava 0 vaias em partidas inteiras): o
+    // visitante com a bola conta 1 s por s no campo todo e FESTA.vaia.perto s por s rondando a área da casa; vaia ao
+    // chegar a FESTA.vaia.segura e não repete antes de FESTA.vaia.pausa s; com a casa na bola, nada
     {
-      const e4 = EM.criarEmocao();
-      let t4 = 0;
-      const vaias = [];
-      for (let i = 0; i < 40 * 60; i++) {
-        t4 += 1 / 60;
-        EM.emocaoPasso(e4, { t: t4, bola: { x: -38, z: 6 }, posseTime: 1, ataca, estado: 'jogo' }, 1 / 60);
-        for (const d of EM.consumirDisparos(e4)) if (d.tipo === 'vaia') vaias.push(+t4.toFixed(1));
-      }
-      const e5 = EM.criarEmocao();
-      let t5 = 0, vaiaLonge = 0;
-      for (let i = 0; i < 40 * 60; i++) { t5 += 1 / 60; EM.emocaoPasso(e5, { t: t5, bola: { x: 10, z: 6 }, posseTime: 1, ataca, estado: 'jogo' }, 1 / 60); for (const d of EM.consumirDisparos(e5)) if (d.tipo === 'vaia') vaiaLonge++; }
-      reg('Vaia: o visitante segurando a bola perto da área da casa', `vaias aos [${vaias.join(', ')}] s (40 s perto da área); ${vaiaLonge} com a bola no meio`, '1 vaia entre 15 e 16 s; 0 longe', vaias.length === 1 && vaias[0] >= 15 && vaias[0] <= 16 && vaiaLonge === 0);
+      const V = FE.FESTA.vaia;
+      const vaiasCom = (bola, posseTime, s = 50) => {
+        const e4 = EM.criarEmocao();
+        let t4 = 0;
+        const out = [];
+        for (let i = 0; i < s * 60; i++) {
+          t4 += 1 / 60;
+          EM.emocaoPasso(e4, { t: t4, bola, posseTime, ataca, estado: 'jogo' }, 1 / 60);
+          for (const d of EM.consumirDisparos(e4)) if (d.tipo === 'vaia') out.push(+t4.toFixed(1));
+        }
+        return out;
+      };
+      const perto = vaiasCom({ x: -38, z: 6 }, 1), meio = vaiasCom({ x: 10, z: 6 }, 1), casa = vaiasCom({ x: -38, z: 6 }, 0, 120);
+      const tPerto = V.segura / (V.perto ?? 1), tMeio = V.segura;
+      reg('Vaia: o visitante fica com a bola (mais depressa rondando a área da casa)', `perto da área: vaias aos [${perto.join(', ')}] s · no meio: [${meio.join(', ')}] s (50 s) · a casa com a bola: ${casa.length} em 2 min`,
+        `1 aos ${fmt(tPerto, 1)} s · 1 aos ${fmt(tMeio, 0)} s · 0`, perto.length === 1 && Math.abs(perto[0] - tPerto) <= 0.6 && meio.length === 1 && Math.abs(meio[0] - tMeio) <= 0.6 && casa.length === 0 && tMeio > tPerto);
     }
   }
 }
@@ -495,6 +517,51 @@ if (EM) {
       const golCasa = FE.aberturaBandeirao(eb.festa);
       reg('Bandeirão: abre na saída e no gol da casa; enrolado com a bola rolando', `saída ${fmt(naSaida, 2)} · 35 s depois ${fmt(rolando, 2)} · gol do visitante ${fmt(golVisit, 2)} · gol da casa ${fmt(golCasa, 2)}`, '1 · 0 · 0 · 1',
         naSaida > 0.99 && rolando === 0 && golVisit === 0 && golCasa > 0.99);
+    }
+    // bandeirão aberto (contraprova de 12/10: no gol, 1134 torcedores pulando e 15 das 32 bandeiras de mastro furavam o
+    // pano): todos os torcedores (Alta) e todas as bandeiras com o pano dos dois bandeirões aberto, 4 s de gol (excitação
+    // máxima: braços para cima e pulando), o topo de cada um contra o pano com a onda — ninguém fica acima do pano
+    {
+      const ban = BD.bandeiroes();
+      const temRegra = typeof BD.sobBandeirao === 'function' && BD.BANDEIRAS.sob;
+      const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+      const fura = (P, b, tt) => {
+        const d = [P[0] - b.A[0], P[1] - b.A[1], P[2] - b.A[2]];
+        const lu = Math.hypot(...b.U), lv = Math.hypot(...b.V);
+        const u = dot(d, b.U) / (lu * lu), v = dot(d, b.V) / (lv * lv);
+        return u >= 0 && u <= 1 && v >= 0 && v <= 1 && dot(d, b.N) > BD.ondaBandeirao(u, v, b.larg, tt, 1);
+      };
+      const d = TD.gerarTorcidaNiveis(null);
+      const gol = { excita: 1, tensao: 0, lamento: 0, palmas: 0 };
+      let furaT = 0, debaixo = 0;
+      for (let i = 0; i < d.n; i++) {
+        const x = d.pos[4 * i], y = d.pos[4 * i + 1], z = d.pos[4 * i + 2], esc = d.pos[4 * i + 3];
+        const org = d.info[4 * i + 2] > 127, h = d.pele[4 * i + 3] / 255, h2 = d.info[4 * i + 3] / 255;
+        const sob = !!temRegra && ban.some(b => BD.sobBandeirao([x, y, z], b, 1, BD.BANDEIRAS.sob.torcedor));
+        if (sob) debaixo++;
+        let f = false;
+        for (let tt = 0; tt < 4 && !f; tt += 0.05) {
+          let { pose, pulo } = TD.poseDoTorcedor(gol, h, h2, org, tt, true);
+          if (sob) { pose = TD.POSE.BRACOS_V; pulo = 0; }
+          const topo = y + TD.CAIXA_POSE[pose][1] * TD.TORCIDA.altura * esc + pulo;
+          f = ban.some(b => fura([x, topo, z], b, tt));
+        }
+        if (f) furaT++;
+      }
+      let furaB = 0;
+      const lista = BD.bandeiras(), B = BD.BANDEIRAS;
+      for (const bd of lista) {
+        const k = temRegra && ban.some(b => BD.sobBandeirao([bd.x, bd.y, bd.z], b, 1, B.sob.bandeira)) ? 0 : 1;
+        let f = false;
+        for (let tt = 0; tt < 4 && !f; tt += 0.1) for (let a = 0; a <= B.largura && !f; a += 0.25) for (let bb = 0; bb <= B.altura && !f; bb += 0.35) {
+          const l = BD.pontoBandeira(a, bb, bd.fase, tt, 1);
+          const P = [bd.x + (bd.ex * l.la + bd.nx * l.ln) * k, bd.y + l.lb * k, bd.z + (bd.ez * l.la + bd.nz * l.ln) * k];
+          f = ban.some(b => fura(P, b, tt));
+        }
+        if (f) furaB++;
+      }
+      reg('Bandeirão aberto: ninguém fura o pano (torcedores pulando no gol e bandeiras de mastro)', `${furaT} de ${d.n} torcedores e ${furaB} de ${lista.length} bandeiras acima do pano (${debaixo} torcedores debaixo dele seguram o pano, sem pular)`,
+        '0 e 0', temRegra && furaT === 0 && furaB === 0 && debaixo > 500);
     }
     // ola: 40 s de torcida calma com o jogo rolando → começa; corre no sentido horário; no máximo 1 a cada 3 min
     {

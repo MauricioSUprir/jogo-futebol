@@ -25,7 +25,8 @@
 //      campo com a torcida e o túnel no meio; os bancos de reservas (na mesma malha) fora da TV com a bola perto da
 //      linha de cá (no celular a cobertura deles aparecia no canto de baixo);
 //  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
-//      GPU = JS; no gol da casa a organizada muda na câmera do gol (bandeirão e sinalizadores); overdraw ≤ 0,5 tela.
+//      GPU = JS; "debaixo do bandeirão" GPU = JS (12/10); no gol da casa a organizada muda na câmera do gol (bandeirão e
+//      sinalizadores); overdraw ≤ 0,5 tela.
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -454,7 +455,7 @@ void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
       return { dif, tot, max: Math.max(...dif) };
     });
     const s = [...cham.tot].sort((a, b) => a - b);
-    meta('Festa: faixas, bandeiras, bandeirões e sinalizadores custam ≤ 2 chamadas de desenho no jogo', `a mais: [${cham.dif.join(' ')}] (máx ${cham.max}); total no jogo: mediana ${s[10]}, máx ${s[19]} (base: mediana 29, máx 35)`,
+    meta('Festa: faixas, bandeiras, bandeirões e sinalizadores custam ≤ 2 chamadas de desenho no jogo', `a mais: [${cham.dif.join(' ')}] (máx ${cham.max}); total no jogo: mediana ${s[10]}, máx ${s[19]} (publicada sem a festa, mesma medida: 26–27)`,
       '≤ 2; mediana ≤ 33', cham.max <= 2 && s[10] <= 33);
     const gpuB = await pg.evaluate(async () => {
       const BD = await import('./js/render/bandeiras-dados.js');
@@ -498,6 +499,55 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
       return { N, dif, maxOnda };
     });
     meta('GPU = JS: onda e balanço da bandeira (4096 pontos do pano)', gpuB.erro ?? `difere até ${(gpuB.dif * 1000).toFixed(2)} mm (onda até ${f2(gpuB.maxOnda)} m)`, '≤ 2 mm (seno de t grande no float)', !gpuB.erro && gpuB.dif <= 0.002 && gpuB.maxOnda > 0.1);
+    // debaixo do bandeirão aberto (contraprova de 12/10: bandeiras e torcedores furavam o pano) — a conta da GPU
+    // (SOB_GLSL, em torcida.js e bandeiras.js) = a do JS (sobBandeirao) em 4096 pontos em volta dos dois bandeirões
+    const gpuS = await pg.evaluate(async () => {
+      const BD = await import('./js/render/bandeiras-dados.js');
+      if (!BD.SOB_GLSL) return { erro: 'não existe (bandeiras e torcedores furam o bandeirão aberto)' };
+      const cv = document.createElement('canvas');
+      const gl = cv.getContext('webgl2');
+      if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+      const N = 4096, ban = BD.bandeiroes(), mg = BD.BANDEIRAS.sob.bandeira;
+      cv.width = N; cv.height = 1;
+      const v3 = a => `vec3(${a.map(x => x.toFixed(6)).join(', ')})`;
+      const sh = (tipo, src) => { const o = gl.createShader(tipo); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${BD.SOB_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0);
+  vec2 mg = vec2(${mg[0].toFixed(3)}, ${mg[1].toFixed(3)});
+  float s = (i % 2 == 0) ? sobBandeirao(a.xyz, ${v3(ban[0].A)}, ${v3(ban[0].U)}, ${v3(ban[0].V)}, a.w, mg)
+                         : sobBandeirao(a.xyz, ${v3(ban[1].A)}, ${v3(ban[1].U)}, ${v3(ban[1].V)}, a.w, mg);
+  cor = vec4(s, 0.0, 0.0, 1.0); }`));
+      gl.linkProgram(p);
+      let semente = 4242;
+      const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+      const ent = new Float32Array(4 * N);
+      for (let i = 0; i < N; i++) {
+        const b = ban[i % 2], c = [b.A[0] + b.U[0] / 2 + b.V[0] / 2, b.A[1] + b.V[1] / 2, b.A[2] + b.U[2] / 2 + b.V[2] / 2];
+        ent.set([c[0] + (rnd() - 0.5) * 50, c[1] + (rnd() - 0.5) * 16, c[2] + (rnd() - 0.5) * 50, rnd() < 0.1 ? 0 : rnd()], 4 * i);
+      }
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, ent);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+      const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+      gl.useProgram(p); gl.viewport(0, 0, N, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(gl.getUniformLocation(p, 'uEntrada'), 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out);
+      let dif = 0, dentro = 0;
+      for (let i = 0; i < N; i++) {
+        const a = ent.subarray(4 * i, 4 * i + 4);
+        const js = BD.sobBandeirao([a[0], a[1], a[2]], ban[i % 2], a[3], mg) ? 1 : 0;
+        if (js) dentro++;
+        if (js !== Math.round(out[4 * i])) dif++;
+      }
+      return { N, dif, dentro };
+    });
+    meta('GPU = JS: debaixo do bandeirão aberto (4096 pontos em volta dos dois)', gpuS.erro ?? `${gpuS.dif} diferentes (${gpuS.dentro} debaixo do pano)`, '≤ 0,2% (beirada no float), ≥ 400 debaixo', !gpuS.erro && gpuS.dif <= 0.002 * gpuS.N && gpuS.dentro >= 400);
     // (c) e (d): gol da casa, 2,2 s depois (ainda na câmera do gol, antes da saída de bola)
     const golF = await golRoteirizado(pg, { semente: 5, time: 0 });
     const festaGol = await pg.evaluate(() => {

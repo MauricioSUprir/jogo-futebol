@@ -136,7 +136,7 @@ try {
   const ex = jogo.slice(0, 3).map(a => `canto ${a.niveis.canto} / murmúrio ${a.niveis.ambiente}`).join('; ');
   meta('M4 canto audível no jogo', `${(100 * fr).toFixed(0)}% das ${jogo.length} amostras (${ex})`, '≥ 50%', fr >= 0.5);
   const som1 = await pg.evaluate(() => window.__golaco.estadio.som);
-  const variados = [...som1.cantos, ...(som1.lacos.includes('batucada') ? ['batucada'] : [])];
+  const variados = [...(som1.cantos ?? []), ...((som1.lacos ?? []).includes('batucada') ? ['batucada'] : [])];
   meta('M5 cantos e batucada diferentes em 60 s', `${variados.length} (${variados.join(', ')})`, '≥ 3', variados.length >= 3);
   // consistência do estado durante o jogo (nunca "rodando" com o contexto parado)
   const incoerente = am.filter(a => (a.estado === 'rodando') !== (a.contexto === 'running')).length;

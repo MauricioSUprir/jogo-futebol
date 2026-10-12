@@ -150,7 +150,7 @@ export function criarSinalizadores(cena, opc = {}) {
   const api = {
     mesh, uniforms: uni,
     /** festa (festa.js) e t no relógio dela (emocao.t): posições, força do fogo; some quando nada queima nem fuma. */
-    atualizar(festa, t) {
+    atualizar(festa, t, desenha = true) {
       uni.uT.value = t;
       let vivo = false;
       const fl = festa ? festa.flares : [];
@@ -164,8 +164,8 @@ export function criarSinalizadores(cena, opc = {}) {
       }
       // pré-carga (como a torcida): no 1º quadro, apagado, vai para a GPU com 0 instâncias — geometria e programa
       // prontos sem chamada de desenho; o 1º sinalizador da partida não engasga nem sobe a memória da GPU
-      if (precarga && !vivo) { mesh.visible = true; geo.instanceCount = 0; } else { mesh.visible = vivo; geo.instanceCount = cheio; }
-      precarga = false;
+      if (precarga && desenha && !vivo) { mesh.visible = true; geo.instanceCount = 0; } else { mesh.visible = vivo; geo.instanceCount = cheio; }
+      if (desenha) precarga = false;
     },
     definirQualidade(q) {
       if (q === qualidade || FUMACA.porQualidade[q] == null) return;

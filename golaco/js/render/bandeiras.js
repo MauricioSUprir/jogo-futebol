@@ -3,11 +3,13 @@
 // pano e o balanço do mastro no VERTEX SHADER (a conta de bandeiras-dados.js, BANDEIRA_GLSL) e os dois bandeirões,
 // que abrem na saída de cada tempo e no gol da casa (festa.js aberturaBandeirao) com uma onda correndo na largura.
 // Opaco e desenhado ANTES da torcida (renderOrder −1): o bandeirão aberto esconde quem está embaixo e o teste de
-// profundidade descarta esses torcedores antes do fragment shader. Atlas desenhado por código (nomes FICTÍCIOS).
+// profundidade descarta esses torcedores antes do fragment shader. Debaixo do pano aberto ninguém fura: as bandeiras
+// de mastro abaixam (sobBandeirao) e os torcedores seguram o pano sem pular (torcida.js). Atlas desenhado por código
+// (nomes FICTÍCIOS).
 // Qualidade: o que desenhar é um prefixo da malha (Baixa ⊂ Média ⊂ Alta: 8/10/12 faixas, 6/16/32 bandeiras); na Baixa
 // nada mexe (sem onda nem balanço). Luz dos refletores à noite e a luz falsa dos sinalizadores (luz-falsa.js).
 import * as THREE from 'three';
-import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL } from './bandeiras-dados.js';
+import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL, SOB_GLSL } from './bandeiras-dados.js';
 import { aberturaBandeirao } from './festa.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas } from './util.js';
@@ -39,6 +41,7 @@ varying float vLuz;
 varying vec3 vFlare;
 ${BANDEIRA_GLSL}
 ${BANDEIRAO_GLSL}
+${SOB_GLSL}
 ${LUZ_FALSA_GLSL}
 void main() {
   float tipo = aMeta.x;
@@ -57,6 +60,10 @@ void main() {
       float c = cos(th), s = sin(th);
       l = vec3(c * aLocal.x - s * aLocal.y, s * aLocal.x + c * aLocal.y, 0.0);
     }
+    // debaixo do bandeirão aberto a bandeira abaixa (some na mão): nada de mastro furando o pano
+    vec2 mb = vec2(${BANDEIRAS.sob.bandeira.map(v => v.toFixed(2)).join(', ')});
+    float sob = max(sobBandeirao(position, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mb), sobBandeirao(position, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mb));
+    l *= 1.0 - sob;
     p = position + e * l.x + vec3(0.0, l.y, 0.0) + n * l.z;
   } else {
     bool k0 = tipo < 3.5;
@@ -143,11 +150,14 @@ function atlasFesta(lista) {
     g.translate(x0 + w / 2, y0 + h / 2 + 4); g.scale(Math.min(1.2, (w - 120) / larg), 1); g.fillText('GOLAÇO', 0, 0);
     g.restore();
   }
-  // bandeirão da organizada (24 × 14 m): metade preta e metade verde, o G no círculo e as 3 estrelas
+  // bandeirão da organizada (24 × 14 m): listras verdes e pretas (qualquer pedaço dele lê como a bandeira do time — a
+  // câmera do gol pega só um canto, e a metade preta inteira de antes virava uma mancha escura), o G no círculo e as 3
+  // estrelas
   {
     const [x0, y0, w, h] = BANDEIRAO_PX[1];
     g.save(); g.beginPath(); g.rect(x0, y0, w, h); g.clip();
-    g.fillStyle = PRETO; g.fillRect(x0, y0, w / 2, h); g.fillStyle = VERDE; g.fillRect(x0 + w / 2, y0, w / 2, h);
+    const NL = 8;
+    for (let k = 0; k < NL; k++) { g.fillStyle = k % 2 ? PRETO : VERDE; g.fillRect(x0 + Math.round(k * w / NL), y0, Math.ceil(w / NL) + 1, h); }
     g.fillStyle = BRANCO; g.beginPath(); g.arc(x0 + w / 2, y0 + h / 2, h * 0.34, 0, Math.PI * 2); g.fill();
     g.fillStyle = PRETO; g.beginPath(); g.arc(x0 + w / 2, y0 + h / 2, h * 0.3, 0, Math.PI * 2); g.fill();
     g.fillStyle = VERDE; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = fonte(900, 150); g.fillText('G', x0 + w / 2, y0 + h / 2 + 10);

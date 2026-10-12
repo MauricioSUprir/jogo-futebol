@@ -494,8 +494,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   linhaImped.atualizar(mundo, dt);
   marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
-  campo.atualizar(agoraMs / 1000, cam.camera);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null);
+  campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -1085,9 +1085,9 @@ const api = {
     mostrarFesta(v) { torcida?.mostrarFesta(v); },
     /** Overdraw da fumaça dos sinalizadores nesta câmera (telas cheias; sinalizadores.js medirOverdraw). */
     overdrawFumaca() { return torcida ? torcida.sinalizadores.medirOverdraw(cena3d.renderer, cam.camera) : null; },
-    /** Faixas, bandeiras e sinalizadores agora: quantos, visíveis. */
     /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
     get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
+    /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
     get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
     /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
     get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },

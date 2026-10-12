@@ -17,8 +17,14 @@ export const BANDEIRAS = {
   mastro: 3.0, largura: 2.0, altura: 1.4, mao: 1.45,      // m (o mastro sai da mão, 1,45 m acima do degrau)
   // onda do pano: d = amp·u·sin(k·u·L − ω·t + fase) + ruído; balanço do mastro θ = bal·sin(2π·balHz·t + fase)
   onda: { amp: 0.28, k: 3.4, w: 6.9, ruido: 0.06, bal: 0.55, balHz: 0.6 },
-  // bandeirões: abre na saída de cada tempo e no gol da casa (festa.js); a onda corre na largura (o povo empurra)
-  bandeirao: { altura: 2.1, onda: 0.45, ondaK: 0.7, ondaW: 2.2, divisoes: [24, 10] },
+  // bandeirões: abre na saída de cada tempo e no gol da casa (festa.js); a onda corre na largura (o povo empurra).
+  // altura (pela normal) e onda escolhidas para o pano nunca descer abaixo das mãos de quem está embaixo segurando
+  // (braços em V, sem pular: vão livre na vertical (2,3 − 0,25)/0,85 ≈ 2,4 m > 2,15 m do torcedor mais alto) —
+  // contraprova de 12/10: com 2,1 e 0,45, 1134 torcedores pulando e 15 das 32 bandeiras de mastro furavam o pano
+  bandeirao: { altura: 2.3, onda: 0.25, ondaK: 0.7, ondaW: 2.2, divisoes: [24, 10] },
+  // debaixo do bandeirão aberto (sobBandeirao): margem [na largura, na profundidade] em m — o torcedor (o quadro tem
+  // 1,1 m) segura o pano (braços em V, sem pular) e a bandeira de mastro (pano de 2 m ao lado do mastro) abaixa
+  sob: { torcedor: [0.6, 0], bandeira: [2.4, 0.6] },
 };
 
 // Faixas: [texto, fundo, letra, detalhe] — tudo FICTÍCIO (Golaço FC de preto e verde; Ventania FC de branco e cinza)
@@ -114,6 +120,19 @@ export function bandeiroes() {
   return out;
 }
 
+/**
+ * O ponto p (x, y, z) está debaixo do bandeirão b (bandeiroes()) aberto `abre` (0–1, festa.js aberturaBandeirao)? A
+ * projeção de p no plano do pano (U na largura, V na profundidade; o pano sobe pela normal N, perpendicular aos dois)
+ * cai no pedaço já aberto, com a margem [mu, mv] em m. A MESMA conta de SOB_GLSL (torcida.js e bandeiras.js).
+ */
+export function sobBandeirao(p, b, abre, [mu, mv] = [0, 0]) {
+  if (!(abre > 0)) return false;
+  const dx = p[0] - b.A[0], dy = p[1] - b.A[1], dz = p[2] - b.A[2];
+  const lu = Math.hypot(b.U[0], b.U[1], b.U[2]), lv = Math.hypot(b.V[0], b.V[1], b.V[2]);
+  const u = (dx * b.U[0] + dy * b.U[1] + dz * b.U[2]) / lu, v = (dx * b.V[0] + dy * b.V[1] + dz * b.V[2]) / lv;
+  return u > -mu && u < lu + mu && v > -mv && v < lv * abre + mv;
+}
+
 const TAU = Math.PI * 2;
 /**
  * Pano da bandeira no tempo t: o ponto (a, b) do pano (a = m ao longo do pano a partir do mastro, b = m abaixo do topo)
@@ -157,6 +176,16 @@ export function ondaBandeirao(u, v, larg, t, animada = 1) {
   if (!animada) return 0;
   return B.onda * Math.sin(B.ondaK * u * larg - B.ondaW * t) * (0.6 + 0.4 * Math.sin(3.1 * v + 0.7 * t));
 }
+/** float sobBandeirao(vec3 p, vec3 A, vec3 U, vec3 V, float abre, vec2 margem) → 1 debaixo do pano aberto: a MESMA conta. */
+export const SOB_GLSL = `
+float sobBandeirao(vec3 p, vec3 A, vec3 U, vec3 V, float abre, vec2 margem) {
+  if (!(abre > 0.0)) return 0.0;
+  vec3 d = p - A;
+  float lu = length(U), lv = length(V);
+  float u = dot(d, U) / lu, v = dot(d, V) / lv;
+  return (u > -margem.x && u < lu + margem.x && v > -margem.y && v < lv * abre + margem.y) ? 1.0 : 0.0;
+}
+`;
 export const BANDEIRAO_GLSL = (() => {
   const B = BANDEIRAS.bandeirao;
   return `

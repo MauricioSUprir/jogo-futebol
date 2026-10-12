@@ -13,13 +13,15 @@
 // só (64 × 128 por pose). Cada quadro encolhe para a caixa da pose (CAIXA_POSE) e os torcedores vêm da
 // fileira da frente para a de cima (menos trabalho por pixel; contraprova M3). Noite: a luz dos refletores
 // (mais escura e fria que o sol), como a arquibancada. Névoa da cena aplicada (fog).
-// Festa (pedido de 11/10): a OLA (festa.js estadoOla → uOla; quem está na crista levanta com os braços em V) e a
-// luz FALSA dos sinalizadores (luz-falsa.js: uniform, nunca PointLight). O LADO DE CÁ (z +) só vai para a GPU com a
+// Festa (pedido de 11/10): a OLA (festa.js estadoOla → uOla; quem está na crista levanta com os braços em V), a
+// luz FALSA dos sinalizadores (luz-falsa.js: uniform, nunca PointLight) e quem fica debaixo do BANDEIRÃO aberto segura
+// o pano (braços em V, sem pular: ninguém fura o pano; bandeiras-dados.js sobBandeirao). O LADO DE CÁ (z +) só vai para a GPU com a
 // câmera fora do volume dele: a câmera de TV fica DENTRO da arquibancada do lado de cá (12,3 m de altura a até 69 m
 // do meio no celular) e o teste da caixa daria verdadeiro — os torcedores de lá cobririam a tela.
 import * as THREE from 'three';
 import { gerarTorcidaNiveis, quantosNoSetor, atlasTorcida, TORCIDA, POSE_GLSL, CAIXA_POSE, POSE, cameraNoLadoDeCa } from './torcida-dados.js';
-import { OLA_GLSL, estadoOla } from './festa.js';
+import { OLA_GLSL, estadoOla, aberturaBandeirao } from './festa.js';
+import { BANDEIRAS, bandeiroes, SOB_GLSL } from './bandeiras-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
 import { criarBandeiras } from './bandeiras.js';
 import { criarSinalizadores } from './sinalizadores.js';
@@ -41,6 +43,10 @@ uniform vec2 uLamento;
 uniform vec2 uPalmas;
 uniform vec4 uLuz;
 uniform vec4 uOla;
+uniform vec3 uBandA[2];
+uniform vec3 uBandU[2];
+uniform vec3 uBandV[2];
+uniform vec2 uAbre;
 uniform vec3 uCamPos;
 uniform vec3 uAcento0;
 uniform vec3 uAcento1;
@@ -55,6 +61,7 @@ varying vec3 vFlare;
 vec3 lin(vec3 c) { return c * c * (0.3 + 0.7 * c); }
 ${POSE_GLSL}
 ${OLA_GLSL}
+${SOB_GLSL}
 ${LUZ_FALSA_GLSL}
 const vec2 CAIXA[${CAIXA_POSE.length}] = vec2[${CAIXA_POSE.length}](${CAIXA_POSE.map(([w, h]) => `vec2(${w.toFixed(3)}, ${h.toFixed(3)})`).join(', ')});
 void main() {
@@ -76,6 +83,13 @@ void main() {
   float ola = torcidaOla(aPos.xz, uOla);
   if (ola > 0.45) pose = ${POSE.BRACOS_V}.0;
   pulo += ola * 0.3 * uAnimada;
+  // debaixo do bandeirão aberto: segura o pano (braços em V, sem pular) — ninguém fura o pano (bandeiras-dados.js
+  // sobBandeirao, a mesma conta)
+  vec2 mt = vec2(${BANDEIRAS.sob.torcedor.map(v => v.toFixed(2)).join(', ')});
+  if (max(sobBandeirao(aPos.xyz, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mt), sobBandeirao(aPos.xyz, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mt)) > 0.5) {
+    pose = ${POSE.BRACOS_V}.0;
+    pulo = 0.0;
+  }
   float bal = uAnimada > 0.5 ? sin(uTempo * (0.8 + h2 * 0.9) + h * 40.0) * 0.035 : 0.0;
   // virado para a câmera, girando só em volta do eixo vertical
   vec3 paraCam = uCamPos - aPos.xyz;
@@ -145,6 +159,7 @@ function luzDoSol(sol) {
 }
 const SOL_DIA = (() => { const s = [-0.42, 0.74, 0.52], l = Math.hypot(...s); return s.map(v => v / l); })();
 const LUZ = { dia: luzDoSol(SOL_DIA), noite: [0.44, 0.41, 0.41, 0.42] };
+const BANDEIROES = bandeiroes();
 
 
 /**
@@ -160,6 +175,8 @@ export function criarTorcida(cena, opc) {
     uLamento: { value: new THREE.Vector2() }, uPalmas: { value: new THREE.Vector2() },
     uLuz: { value: new THREE.Vector4(...LUZ.dia) }, uCamPos: { value: new THREE.Vector3(0, 20, 60) },
     uOla: { value: new THREE.Vector4(0, 0.16, 0, 0) },
+    uBandA: { value: BANDEIROES.map(b => new THREE.Vector3(...b.A)) }, uBandU: { value: BANDEIROES.map(b => new THREE.Vector3(...b.U)) },
+    uBandV: { value: BANDEIROES.map(b => new THREE.Vector3(...b.V)) }, uAbre: { value: new THREE.Vector2(0, 0) },
     uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
     // acento (cachecol) na cor do time, linear: verde do Golaço FC, branco do Ventania FC
     uAcento0: { value: new THREE.Color(0x19e07a) }, uAcento1: { value: new THREE.Color(0xf2f4f5) },
@@ -255,9 +272,10 @@ export function criarTorcida(cena, opc) {
     uniforms: uni,
     /**
      * t: s (relógio do desenho); emocao: estado de emocao.js; camera: THREE.Camera; batida: relógio da batucada
-     * (som.js relogioBatida, s) ou null (sem som: a organizada pula no relógio do desenho).
+     * (som.js relogioBatida, s) ou null (sem som: a organizada pula no relógio do desenho); desenha: este quadro vai
+     * mesmo ser desenhado (a pré-carga espera o 1º desenhado de verdade: com o celular em pé nada é desenhado).
      */
-    atualizar(tempo, emocao, camera, batida = null) {
+    atualizar(tempo, emocao, camera, batida = null, desenha = true) {
       uni.uTempo.value = tempo % 3600;
       uni.uTempoOrg.value = batida != null ? batida : tempo % 3600;
       if (emocao) {
@@ -270,9 +288,11 @@ export function criarTorcida(cena, opc) {
         if (emocao.festa) {
           const o = estadoOla(emocao.festa, emocao.t);
           uni.uOla.value.set(o.theta, o.largura, o.forca, o.ativa ? 1 : 0);
+          const ab = aberturaBandeirao(emocao.festa, emocao.t);
+          uni.uAbre.value.set(ab, ab);
           atualizarLuzFalsa(emocao.festa, emocao.t);
           bandeiras.atualizar(emocao.festa, emocao.t);
-          sinalizadores.atualizar(emocao.festa, emocao.t);
+          sinalizadores.atualizar(emocao.festa, emocao.t, desenha);
           if (!festaVisivel) sinalizadores.mesh.visible = false;
         }
       }
@@ -286,9 +306,9 @@ export function criarTorcida(cena, opc) {
         if (mesh) {
           for (const m of mesh.children) {
             const ver = !(m.userData.ladoDeCa && dentro) && _frustum.intersectsBox(m.userData.caixa);
-            if (precarga && !ver) { m.visible = true; m.geometry.instanceCount = 0; } else { m.visible = ver; m.geometry.instanceCount = m.userData.k; }
+            if (precarga && desenha && !ver) { m.visible = true; m.geometry.instanceCount = 0; } else { m.visible = ver; m.geometry.instanceCount = m.userData.k; }
           }
-          precarga = false;
+          if (desenha) precarga = false;
         }
       }
     },
