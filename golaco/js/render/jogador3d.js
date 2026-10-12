@@ -24,6 +24,9 @@ export const KITS = {
   goleiro0: { camisa: '#b8f02e', calcao: '#101314', meiao: '#b8f02e', chuteira: '#101314', acento: '#101314', sola: '#0b0d0e', luva: '#101314' },
   linha1: { camisa: '#e9ecee', calcao: '#b9bfc4', meiao: '#e9ecee', chuteira: '#15191b', acento: '#15191b', sola: '#d5d9dc', luva: '#15191b' },
   goleiro1: { camisa: '#c4561c', calcao: '#4b5257', meiao: '#c4561c', chuteira: '#2a2e31', acento: '#8f979c', sola: '#1d2023', luva: '#8f979c' },
+  // árbitros (pré-jogo): azul-royal com calção preto — não confunde com o preto/verde do mandante, o branco do
+  // visitante, o lima do goleiro 0 nem o laranja do goleiro 1
+  arbitro: { camisa: '#2459d6', calcao: '#0e1112', meiao: '#0e1112', chuteira: '#0e1112', acento: '#e9ecee', sola: '#0b0d0e', luva: '#2459d6' },
 };
 // Pele e cabelo variam por jogador (sorteio fixo pelo id): elenco com cara de elenco.
 const PELES = ['#f0c8a4', '#e3b088', '#c99067', '#b9825c', '#a06a46', '#8d5d3f', '#6e452c', '#5a3824'];

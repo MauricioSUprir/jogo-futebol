@@ -35,7 +35,9 @@
 //
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
-// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1.
+// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?prejogo=0|1|curto|escalacao.
+// Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
+// saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
 
 import * as THREE from 'three';
@@ -66,6 +68,8 @@ import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimo
 import { montarFalta } from './faltas.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
+import { criarPrejogo } from './render/prejogo.js';
+import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
 
@@ -455,6 +459,7 @@ iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
 let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, marcasLat, torcida, som = null;
+let prejogo = null;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -717,6 +722,13 @@ function lerRelogio() {
 function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
+  // pré-jogo: o laço da partida fica parado (tick 0) e o diretor desenha; em pé no celular ou escondida, para
+  if (prejogo && prejogo.ativo) {
+    entrada.ler(cam.yaw);
+    laco.ultimo = agoraMs;
+    const emPe = retratoBloqueado();
+    if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
+  }
   const dt = Math.min(0.1, dtReal);
   const ent = entrada.ler(cam.yaw, agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
@@ -799,6 +811,8 @@ function redimensionar() {
 
 // ------------------------------------------------------------------ ações e menu
 function tratarAcao(a) {
+  // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
+  if (prejogo && prejogo.ativo) { prejogo.acao(a); return; }
   // com o editor aberto nada chega ao jogo: só a pausa (Start do controle), que aplica e fecha
   if (editor.aberto) { if (a === 'pausa') editor.voltar(); return; }
   // replay: qualquer ação (Esc, Start, R, C, H...) só pula o replay — não abre a pausa nem chega ao jogo
@@ -851,7 +865,42 @@ function trocarModo(v) {
     if (v === 'partida') u.searchParams.delete('modo'); else u.searchParams.set('modo', v);
     history.replaceState(null, '', u);
   } catch (_) { /* sem history (arquivo local): segue */ }
-  trocarMundo(novoMundo());
+  trocarMundo(novoMundo(), { prejogo: v === 'partida' ? 'preferencia' : null });
+}
+
+/**
+ * Modo do pré-jogo: ?prejogo= força (0/desligado, 1/completo, curto, escalacao); senão desligado nos testes automatizados
+ * (navigator.webdriver), nos prints e na demonstração; senão a preferência salva (padrão: completo — o dono pediu).
+ */
+function modoPrejogo() {
+  const p = params.get('prejogo');
+  if (p === '0' || p === 'desligado') return 'desligado';
+  if (p === '1') return 'completo';
+  if (PREJOGO.modos.includes(p)) return p;
+  if (navigator.webdriver || PRINTS || DEMO_ON) return 'desligado';
+  return PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
+}
+const NOME_PREJOGO = { completo: 'completo', curto: 'curto', escalacao: 'só escalação', desligado: 'desligado' };
+function marcarPrejogo() {
+  const v = PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
+  const e = document.getElementById('estado-prejogo');
+  if (e) e.textContent = NOME_PREJOGO[v];
+}
+/** Começa o pré-jogo (true) ou não (o apito toca já). */
+function comecarPrejogo(modo, abertura) {
+  if (!prejogo || modo === 'desligado' || mundo.modo !== 'partida' || !prejogo.iniciar(modo, { abertura })) return false;
+  entrada?.soltarTudo();
+  entrada?.bloquear?.(true);
+  return true;
+}
+/** Fim do pré-jogo (acabou ou foi pulado): a entrada volta, a câmera de TV corta para a saída e o apito toca. */
+function fimDoPrejogo() {
+  entrada?.bloquear?.(false);
+  corteCamera = true;
+  laco.ultimo = null; ultimoQuadro = null;
+  adapt.inicio = performance.now(); adapt.n = 0; adapt.soma = 0;
+  hud.ajustarTopo();
+  eventosIniciais();
 }
 
 function comando(c, v) {
@@ -883,8 +932,9 @@ function comando(c, v) {
     case 'reiniciar-partida':
       hud.fecharMenu();
       if (mundo.modo !== 'partida') break;
-      trocarMundo(novoMundo());
-      hud.evento('reinicio');
+      // "Jogar de novo" (fim de jogo): o pré-jogo da preferência; "Reiniciar partida" no meio: só a escalação
+      trocarMundo(novoMundo(), { prejogo: mundo.partida?.estado === 'fim' ? 'preferencia' : 'escalacao' });
+      if (!prejogo?.ativo) hud.evento('reinicio');
       break;
     case 'modos': hud.submenuModos(true); break;
     case 'modos-voltar': hud.submenuModos(false); break;
@@ -932,6 +982,17 @@ function comando(c, v) {
       prefs.volume = vol; salvarPrefs(prefs);
       som?.definir({ volume: vol });
       hud.definirEstado({ volume: vol });
+      break;
+    }
+    case 'prejogo':
+      if (!PREJOGO.modos.includes(v)) break;
+      prefs.prejogo = v; salvarPrefs(prefs);
+      marcarPrejogo();
+      break;
+    case 'prejogo-ciclo': {
+      // "Modo de jogo" → "Pré-jogo da partida": completo → curto → só escalação → desligado → completo
+      const atual = PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
+      comando('prejogo', PREJOGO.modos[(PREJOGO.modos.indexOf(atual) + 1) % PREJOGO.modos.length]);
       break;
     }
     case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
@@ -1013,12 +1074,21 @@ async function iniciar() {
     som.iniciar();
   }
   hud.definirEstado({ som: somLigado, volume: som ? som.volume : (volume ?? 0.8), somEstado: som ? som.estado : 'sem-contexto' });
-  // o 'saida' do começo da partida (o apito do início fica pendente até o primeiro gesto)
-  eventosIniciais();
+  // pré-jogo (antes do 1º passo; com a abertura "Toque para começar", que libera o som); sem ele, o 'saida' do começo
+  // da partida (o apito do início fica pendente até o primeiro gesto)
+  hud.progresso('Montando o estádio…');
+  await proximoQuadro();
+  prejogo = criarPrejogo({
+    cena3d, cam, jog3d, bola3d, campo, torcida, som: () => som, mundo: () => mundo, hora: () => hora, qualidade: () => qAtual,
+    comToque: () => document.documentElement.classList.contains('com-toque'), aoFim: fimDoPrejogo,
+  });
+  marcarPrejogo();
+  if (!comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
   hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
-  desenharQuadro(PASSO, performance.now());
+  if (prejogo.ativo) prejogo.quadro(0, performance.now(), true);
+  else desenharQuadro(PASSO, performance.now());
   adapt.inicio = performance.now();
   hud.pronto();
   api.pronto = true;
@@ -1035,7 +1105,9 @@ function timesDoMundo(m) {
   return [0, 1].map(t => { const e = ELENCOS[m.times[t].elenco]; return { sigla: e.sigla, nome: e.nome }; });
 }
 
-function trocarMundo(m) {
+function trocarMundo(m, opc = {}) {
+  // um pré-jogo tocando (mundo novo pela API, troca de modo): sai sem apitar
+  if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }
   mundo = m;
   contPassos = 0; alfa = 0;
   laco.acum = 0; laco.ultimo = null;
@@ -1059,8 +1131,10 @@ function trocarMundo(m) {
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
-  // apito do início (Reiniciar partida, troca de modo): o 'saida' que criarPartida deixou
-  eventosIniciais();
+  // pré-jogo (Jogar de novo, Reiniciar partida, troca para a partida) ou o apito do início já: o 'saida' que criarPartida deixou
+  let mp = 'desligado';
+  if (opc.prejogo && mundo.modo === 'partida') { mp = modoPrejogo(); if (mp !== 'desligado' && opc.prejogo === 'escalacao') mp = 'escalacao'; }
+  if (!comecarPrejogo(mp, false)) eventosIniciais();
   return hashMundo(mundo);
 }
 
@@ -1264,7 +1338,17 @@ const api = {
   /** Desenha um quadro sem avançar nada (prints). */
   desenhar() {
     const t = relogioManual ? tempoManual : performance.now();
-    if (diretor && diretor.ativo) desenharReplay(0, t); else desenharQuadro(0, t);
+    if (prejogo && prejogo.ativo) prejogo.quadro(0, t, true); else if (diretor && diretor.ativo) desenharReplay(0, t); else desenharQuadro(0, t);
+  },
+  /**
+   * Pré-jogo (testes e prints): {ativo, fase, bloco, plano, indice, tempo, total, planos, pular(), pularTudo(), irPara(t),
+   * comecar(), iniciar(modo, {abertura}), andantesNaTela(), escalacao: {visivel, time, cheia, cartas(t)}, ...}.
+   */
+  get prejogo() {
+    if (!prejogo) return null;
+    const a = prejogo.api;
+    if (!a.iniciar) a.iniciar = (modo, opc = {}) => comecarPrejogo(modo, !!opc.abertura);
+    return a;
   },
   /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */
   cameraLivre(l) { cam.definirLivre(l); },

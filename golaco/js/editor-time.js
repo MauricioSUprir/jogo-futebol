@@ -21,6 +21,7 @@ import * as ESC from './escalacao.js';
 import { ELENCOS, POSICOES, fichaDe, atributosDe, notaNaPosicao, encaixeNaVaga, numerosCarta, notaTime, estrelas } from './elenco.js';
 import { FORMACOES, ORDEM_FORMACOES } from './formacoes.js';
 import { posicaoTatica } from './tatica.js';
+import { svgCampinho } from './campinho.js';
 import { PARTIDA, TATICA, CAMPO } from './config.js';
 
 const ABAS = ['escalacao', 'formacao', 'taticas'];
@@ -485,22 +486,10 @@ export function criarEditorTime(opc) {
     raiz.classList.toggle('ed-empe', m === 'empe');
   }
   function linhasCampo(vertical) {
-    // campo de 105 × 68 (deitado: gol à esquerda; em pé: gol embaixo), traço fino que não escala
-    const L = CAMPO.meioX * 2, A = CAMPO.meioZ * 2;
-    const ar = 16.5, al = 40.32, pr = 5.5, pl = 18.32, rc = 9.15;
-    if (!vertical) {
-      el.linhas.setAttribute('viewBox', `0 0 ${L} ${A}`);
-      el.linhas.innerHTML = `<rect x="0.5" y="0.5" width="${L - 1}" height="${A - 1}"/><line x1="${L / 2}" y1="0.5" x2="${L / 2}" y2="${A - 0.5}"/>`
-        + `<ellipse cx="${L / 2}" cy="${A / 2}" rx="${rc}" ry="${rc}"/>`
-        + `<rect x="0.5" y="${(A - al) / 2}" width="${ar}" height="${al}"/><rect x="${L - ar - 0.5}" y="${(A - al) / 2}" width="${ar}" height="${al}"/>`
-        + `<rect x="0.5" y="${(A - pl) / 2}" width="${pr}" height="${pl}"/><rect x="${L - pr - 0.5}" y="${(A - pl) / 2}" width="${pr}" height="${pl}"/>`;
-    } else {
-      el.linhas.setAttribute('viewBox', `0 0 ${A} ${L}`);
-      el.linhas.innerHTML = `<rect x="0.5" y="0.5" width="${A - 1}" height="${L - 1}"/><line x1="0.5" y1="${L / 2}" x2="${A - 0.5}" y2="${L / 2}"/>`
-        + `<ellipse cx="${A / 2}" cy="${L / 2}" rx="${rc}" ry="${rc}"/>`
-        + `<rect x="${(A - al) / 2}" y="0.5" width="${al}" height="${ar}"/><rect x="${(A - al) / 2}" y="${L - ar - 0.5}" width="${al}" height="${ar}"/>`
-        + `<rect x="${(A - pl) / 2}" y="0.5" width="${pl}" height="${pr}"/><rect x="${(A - pl) / 2}" y="${L - pr - 0.5}" width="${pl}" height="${pr}"/>`;
-    }
+    // campo de 105 × 68 (deitado: gol à esquerda; em pé: gol embaixo) — o mesmo desenho da escalação do pré-jogo
+    const s = svgCampinho(vertical);
+    el.linhas.setAttribute('viewBox', s.viewBox);
+    el.linhas.innerHTML = s.html;
   }
   function layout() {
     if (!st.aberto) return;
