@@ -1,12 +1,13 @@
 // Prints (navegador), com o HUD: a PARTIDA 11×11 (a página abre nela) no PC 1280×720 Alta e no
 // celular 844×390 dpr 2 Média (toque, entalhe simulado), de dia e de noite — com a bola, em DEFESA
-// (TROCAR/GOLEIRO/CONTER/DIVIDIDA/PRESSÃO/CORRER e o "próximo da troca"), num escanteio e no
-// intervalo; o "Editar time" nas 3 abas no PC, no celular deitado e em pé, e com uma substituição
+// (TROCAR/GOLEIRO/PRESSÃO/DIVIDIDA/CORRER e o "próximo da troca"), num escanteio e no
+// intervalo; "como o jogador vê" (sem o ?prints=1: a dica de teclas do PC e os avisos ficam); o "Editar time" nas 3 abas no PC, no celular deitado e em pé, e com uma substituição
 // pendente; do treino de ataque (?modo=ataque): lançamento de verdade (marca de queda no gramado)
 // e a barra de força do chute; extras: câmera aproximada, qualidade baixa, celular em pé, menu e
 // ajuda, e conferências com a câmera livre (manequim de perto, uniformes dos goleiros e o gol); o goleiro
 // mergulhando (voo, contato, queda), o salto, a bola segura nas mãos e a recepção com o analógico já para o lado
-// (pedido de 10/10); o impedimento com a linha do lance parada, a linha viva e o relógio nos acréscimos (Etapa 4).
+// (pedido de 10/10); o impedimento com a linha do lance parada e o relógio nos acréscimos (Etapa 4). A linha VIVA
+// saiu do jogo (dono, 11/10) e as cenas dela também.
 // Roda a simulação com o relógio manual (?demo=1: a IA joga pelo humano) e salva em tools/saida/.
 // Confere também: erros no console e caixas do HUD/botões que se sobrepõem ou passam da área
 // segura (botões de toque conferidos como círculos).
@@ -35,6 +36,13 @@ const CENAS = [
   // sem a bola: os botões da defesa (e o "próximo da troca")
   { nome: 'celular-defesa', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'defesa' },
   { nome: 'pc-defesa-noite', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'defesa' },
+  // "como o jogador vê" (tela limpa, 11/10): sem o ?prints=1 — a página como ela abre, com a dica de teclas do PC
+  // (some sozinha em 8 s) e o que mais aparecer de verdade
+  { nome: 'pc-jogador-ve', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'ataque', semPrints: true },
+  { nome: 'celular-jogador-ve', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'ataque', semPrints: true },
+  { nome: 'celular-defesa-jogador-ve-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'defesa', semPrints: true },
+  // as opções da pausa ligadas (nomes nos botões e minimapa no celular): nada encosta
+  { nome: 'celular-nomes-minimapa', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'defesa', opcoes: { nomes: 'ligado', minimapa: 'ligado' } },
   // bola parada e intervalo
   { nome: 'pc-escanteio', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'escanteio' },
   { nome: 'celular-escanteio-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'escanteio' },
@@ -77,11 +85,9 @@ const CENAS = [
   { nome: 'pc-gol-rede-atras', ...PC, semente: 'gol', url: 'q=alta&hora=dia&demo=1', prep: 'golRede', livre: { de: [59.6, 2.3, 0.6], para: [53.2, 1.0, -2.6], fov: 52, doGol: true } },
   // o "GOL!" no menor celular deitado (568×320): entre o analógico e os botões
   // Etapa 4: o impedimento (semente: 'imped' = o 1º impedimento de verdade, achado em Node) com a linha DO LANCE
-  // parada no gramado, a linha viva com a bola no ataque e o relógio nos acréscimos ("45+1'", "1º T +N")
+  // parada no gramado e o relógio nos acréscimos ("45+1'", "1º T +N")
   { nome: 'pc-impedimento', ...PC, semente: 'imped', url: 'q=alta&hora=dia&demo=1', prep: 'impedimento' },
   { nome: 'celular-impedimento-noite', ...CEL, semente: 'imped', url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'impedimento' },
-  { nome: 'pc-linha-viva', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'linhaViva' },
-  { nome: 'celular-linha-viva', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'linhaViva' },
   { nome: 'celular-acrescimo', ...CEL, semente: 5, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   { nome: 'celular-568-acrescimo', largura: 568, altura: 320, dpr: 2, toque: true, semente: 2, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1&min=0.25', prep: 'acrescimo' },
   // Etapa 4, faltas: o pênalti montado (todos fora da área e da meia-lua, o goleiro na linha), o cartão amarelo em cima
@@ -355,26 +361,6 @@ async function preparar(pagina, prep, gol = null) {
       const ui = g.mundo.partida.ultimoImped;
       return ui ? `impedimento no tick ${ui.tick}: jogador ${ui.id} (time ${ui.time}), linha em x = ${ui.linhaX.toFixed(2)}, parada ${g.mundo.parada?.tipo}` : 'NENHUM impedimento';
     }
-    if (prep === 'linhaViva') {
-      // bola no campo de ataque de quem tem a bola (≥ 12 m além do meio) e a linha aparecendo (0,4 s)
-      const m = g.mundo;
-      const dono = () => { const id = m.naMao ?? m.posse; return id == null ? null : m.jogadores.find(j => j.id === id); };
-      // (o ataque tem que durar: com a bola de volta no campo de quem a tem, a linha some — de propósito)
-      let n = 0, l = null;
-      for (let tentativa = 0; tentativa < 12 && n < 14400; tentativa++) {
-        for (; n < 14400; n++) {
-          const d = dono();
-          if (d && m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.bola.p.x * m.ataca[d.time] > 12) break;
-          g.relogio.avancar(1000 / 60, { desenhar: false });
-        }
-        // (a linha anda no quadro mesmo sem desenhar a cena: sem 24 renders seguidos, que entupiam a GPU do print)
-        for (let i = 0; i < 24; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-        n += 24;
-        l = g.linhaImpedimento;
-        if (l?.visivel && l.opacidade > 0.3) break;
-      }
-      return `linha viva: ${l?.visivel ? `x = ${l.x.toFixed(2)}, opacidade ${l.opacidade.toFixed(2)}` : 'NÃO apareceu'} (tick ${m.tick})`;
-    }
     if (prep === 'acrescimo') {
       // 1º tempo de 0,25 min reais: anda até o acréscimo anunciado e 1,5 min de jogo dentro dele ("45+1'")
       const m = g.mundo, p = m.partida;
@@ -462,7 +448,7 @@ for (const c of CENAS) {
   const t0 = Date.now();
   const { navegador, pagina, erros } = await abrir({ largura: c.largura, altura: c.altura, dpr: c.dpr, toque: c.toque });
   try {
-    await pagina.goto(`${srv.url}?prints=1&semente=${c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : (c.semente ?? 3)}&${c.url}`, { waitUntil: 'load' });
+    await pagina.goto(`${srv.url}?${c.semPrints ? '' : 'prints=1&'}semente=${c.semente === 'gol' ? GOL.semente : c.semente === 'imped' ? IMPED.semente : (c.semente ?? 3)}&${c.url}`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     // N segundos de simulação a 60 Hz com relógio manual (sem render: mais rápido)
     await pagina.evaluate(seg => {
@@ -471,6 +457,8 @@ for (const c of CENAS) {
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
     }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' || /^(lateral|escanteioZonas|tiroDeMeta|barreira)/.test(c.prep ?? '') ? 2 : segundos);
+    // opções da pausa (como quem toca nos botões de liga/desliga): {minimapa|nomes: 'ligado'|'desligado'}
+    if (c.opcoes) await pagina.evaluate(o => { for (const [g, v] of Object.entries(o)) { const b = document.getElementById(`chip-${g}`); if (b && (b.getAttribute('aria-pressed') === 'true') !== (v === 'ligado')) b.click(); } }, c.opcoes);
     const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : GOL) : '';
     let notaEd = '';
     if (c.editor) {

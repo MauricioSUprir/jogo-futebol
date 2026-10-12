@@ -83,6 +83,16 @@ function salvarPrefs(p) {
   try { localStorage.setItem(CHAVE_PREFS, JSON.stringify(p)); } catch (_) { /* sem armazenamento */ }
 }
 const prefs = lerPrefs();
+// Tela limpa (dono, 11/10): o minimapa e os nomes nos botões de toque são opções da pausa. Minimapa sem escolha
+// salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque); nomes: desligados (só o ícone).
+function aplicarTelaLimpa() {
+  const r = document.documentElement;
+  r.classList.toggle('mapa-ligado', prefs.minimapa === 'ligado');
+  r.classList.toggle('mapa-desligado', prefs.minimapa === 'desligado');
+  r.classList.toggle('nomes-botoes', prefs.nomesBotoes === true);
+}
+const minimapaLigado = () => (prefs.minimapa ? prefs.minimapa === 'ligado' : !document.documentElement.classList.contains('com-toque'));
+aplicarTelaLimpa();
 
 // qualidade: ?q força; senão a escolha salva; senão automática (celular = média, PC = alta)
 const ehCelular = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || Math.min(screen.width, screen.height) < 600;
@@ -555,7 +565,7 @@ function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
   const dt = Math.min(0.1, dtReal);
-  const ent = entrada.ler(cam.yaw);
+  const ent = entrada.ler(cam.yaw, agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
   if (pausado() || pausaTeste) {
     laco.ultimo = agoraMs;     // ao voltar, não tenta recuperar o tempo parado
@@ -568,7 +578,7 @@ function quadro(agoraMs, desenhar = true) {
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
       rodarPasso(e, ac);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
-      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw).botoes; }
+      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
     }
     alfa = r.alfa;
   }
@@ -743,6 +753,18 @@ function comando(c, v) {
     }
     case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
     case 'toqueOpacidade': entrada.definirAjustes({ opacidade: v }); hud.definirEstado({ toqueOpacidade: entrada.ajustes.opacidade }); break;
+    // tela limpa (botões de liga/desliga da pausa): sem valor, alterna o que vale agora
+    case 'minimapa':
+      prefs.minimapa = v === 'ligado' || v === 'desligado' ? v : (minimapaLigado() ? 'desligado' : 'ligado'); salvarPrefs(prefs);
+      aplicarTelaLimpa();
+      hud.definirEstado({ minimapa: minimapaLigado() });
+      hud.ajustarTopo();
+      break;
+    case 'nomes':
+      prefs.nomesBotoes = v === 'ligado' ? true : v === 'desligado' ? false : prefs.nomesBotoes !== true; salvarPrefs(prefs);
+      aplicarTelaLimpa();
+      hud.definirEstado({ nomes: prefs.nomesBotoes });
+      break;
     default: break;
   }
 }
@@ -769,13 +791,14 @@ async function iniciar() {
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
-  marcas = criarMarcas(cena3d.cena);
+  marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => hud.ajustarTopo() });
+  // os controles de toque apareceram/sumiram: o topo se ajusta e o padrão do minimapa (celular × PC) muda junto
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
   atualizarFase();
   redimensionar();
   window.addEventListener('resize', redimensionar);
@@ -796,6 +819,7 @@ async function iniciar() {
   hud.definirEstado({
     qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false,
+    minimapa: minimapaLigado(), nomes: prefs.nomesBotoes === true,
   });
   hud.definirTimes(timesDoMundo(mundo));
   // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
