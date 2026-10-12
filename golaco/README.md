@@ -107,6 +107,16 @@ dos 11 e a formação) por ~10 s, o primeiro sai e o outro entra, com o mesmo fu
 parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pré-jogo da partida" (cada toque: completo, curto, só escalação, desligado).
 `?prejogo=0|1|curto|escalacao` força. Pesquisa: `PESQUISA-PREJOGO.md`.
 
+## Etapa 5.1 — corpo humano (link de teste `?corpo=novo`)
+
+Com `?corpo=novo` no link, os jogadores (e os árbitros do pré-jogo) viram corpos humanos de 1,78 m (MakeHuman, CC0:
+`assets/jogador/CREDITOS.md`) no lugar do manequim de cápsulas. **A jogabilidade não muda**: o corpo só veste a pose que
+a animação já calcula (pé no ponto plantado, mão do goleiro na bola; a simulação dá o mesmo hash). Uniforme ainda
+provisório (as cores de hoje pintadas por região) e o cabelo é a calota de hoje. No jogo, no replay e no pré-jogo. O
+link normal continua com o manequim até a aprovação. Pele na placa de vídeo com os ossos de todos numa textura (3
+níveis de detalhe; a sombra no mais leve); se o arquivo do corpo não chegar, volta o manequim sem erro. Pesquisa:
+`PESQUISA-ETAPA5.md`; contrato: `CONTRATOS.md` ("Etapa 5.1").
+
 ## Etapa 2 — passe, chute, goleiro
 
 - Treino de ataque: o seu time (goleiro + 5) contra uma defesa (goleiro + 3), com IA enxuta.
@@ -154,7 +164,7 @@ cd golaco && python3 -m http.server 8000   # http://localhost:8000
 
 Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?min=N` (minutos reais por tempo),
 `?semente=N`, `?demo=1` (a IA joga pelo humano), `?q=baixa|media|alta`, `?hora=dia|noite`, `?camera=tv|aproximada`,
-`?toque=1`, `?qps=1`, `?prejogo=0|1|curto|escalacao` (o pré-jogo fica desligado com `?prints=1`, `?demo=1` e nos testes automatizados).
+`?toque=1`, `?qps=1` (painel: qps, chamadas e triângulos, a sombra e o que os jogadores desenham), `?prejogo=0|1|curto|escalacao` (o pré-jogo fica desligado com `?prints=1`, `?demo=1` e nos testes automatizados), `?corpo=novo` (corpo humano no lugar do manequim, Etapa 5.1).
 
 ## Testes
 
@@ -170,10 +180,10 @@ node golaco/tools/hash-igual.mjs       # o treino bit a bit igual a uma base (pa
                                        #   o pedido de 10/10 muda o treino de propósito (recepção, domínio, goleiro): use --ref com o commit dele
 node golaco/tools/hash-partida.mjs     # otimização: a partida 11×11 bit a bit igual à de antes (repositório × HEAD)
 #   (metas que dependem só do desenho do pé no anim.js saem como "PENDENTE"; teste-conducao/teste-dribles --estrito reprovam com elas)
-node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, hash Node = Chromium, 144 Hz, câmera sem tremor
+node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB (por tipo), hash Node = Chromium, 144 Hz, câmera sem tremor; ?corpo=novo ≤ 3,5 MB, bloqueado/estragado → manequim
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
-node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
+node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms; manequim × ?corpo=novo (jogadores ≤ 30 mil tri, sombra ≤ 25 mil, ≤ 4 chamadas, CPU "jogadores" ≤ 1,1×)
 node golaco/tools/teste-rede-veu.mjs   # rede véu de noiva (Node): forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho
 node golaco/tools/teste-rede-tela.mjs  # navegador: a rede véu de noiva na tela (forma da malha, fio branco de dia e de noite, clareia o gol, mexe na batida)
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
@@ -185,11 +195,15 @@ node golaco/tools/teste-cortejo.mjs   # pré-jogo: o cortejo do túnel até a fi
 node golaco/tools/teste-prejogo-roteiro.mjs   # pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos do estádio
 node golaco/tools/teste-prejogo.mjs    # navegador: o pré-jogo inteiro (planos, fila, escalações em 5 telas, pular, som, apito no fim, hash, memória)
 node golaco/tools/prints-prejogo.mjs   # prints de cada plano e das escalações (PC Alta e celular Média, dia e noite) em tools/saida/prejogo/
+node golaco/tools/teste-corpo-arquivo.mjs     # corpo humano (Node): formato, 22 + 8 ossos, proporções da simulação ±2 mm, sola, dobra a 120° (volume ≥ 85%, 0 triângulo virado), ≤ 170 KB
+node golaco/tools/teste-esqueleto.mjs [--rapido] [--sem-ajuste]  # o corpo veste a pose: fidelidade ≤ 2/3/25 mm, pé plantado ≤ 5 mm e ≤ 0,05 m/s, sola, mãos do goleiro e do lateral, 25 corpos ≤ 0,25 ms sem alocar
+node golaco/tools/teste-creditos-jogador.mjs  # todo arquivo de assets/jogador com licença permitida no CREDITOS.md (--controle reprova)
+node golaco/tools/teste-pele.mjs [--controle] # navegador: o corpo instanciado igual ao SkinnedMesh do three.js, pixel a pixel (normal, cor, profundidade × TV, média, perto)
 node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os
-números: `PESQUISA.md` (Etapa 1), `PESQUISA-ETAPA2.md` (Etapa 2), `PESQUISA-ETAPA3.md` (Etapa 3) e
-`PESQUISA-RECEPCAO-GOLEIRO.md` (recepção, controle de bola e goleiro, 10/10).
+números: `PESQUISA.md` (Etapa 1), `PESQUISA-ETAPA2.md` (Etapa 2), `PESQUISA-ETAPA3.md` (Etapa 3),
+`PESQUISA-RECEPCAO-GOLEIRO.md` (recepção, controle de bola e goleiro, 10/10) e `PESQUISA-ETAPA5.md` (corpo humano).
 A lógica (`js/*.js` menos `main.js`, `hud.js`, `entrada.js`, `editor-time.js`, `escalacao-tela.js`, `prejogo-tela.js` e `js/render/`) não usa three.js nem
 DOM e roda nos testes em Node.

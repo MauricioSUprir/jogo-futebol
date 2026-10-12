@@ -21,10 +21,11 @@ const TIPOS = {
 
 /**
  * Sobe um servidor estático na pasta do jogo (ou em `raiz`, outra cópia do jogo: os testes medem o
- * "antes" servindo a base). Devolve {url, fechar, bytes()}.
+ * "antes" servindo a base). Devolve {url, fechar, bytes(), arquivos() (Map caminho → bytes), zerar()}.
  */
 export function servidor(porta = 0, raiz = RAIZ) {
   let bytes = 0;
+  const porCaminho = new Map();   // bytes servidos por caminho (o download separado por tipo)
   const base = path.resolve(raiz);
   const srv = http.createServer((req, res) => {
     let p = decodeURIComponent(new URL(req.url, 'http://x').pathname);
@@ -35,12 +36,16 @@ export function servidor(porta = 0, raiz = RAIZ) {
     }
     const dados = fs.readFileSync(arq);
     bytes += dados.length;
+    porCaminho.set(p, (porCaminho.get(p) ?? 0) + dados.length);
     res.writeHead(200, { 'Content-Type': TIPOS[path.extname(arq)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(dados);
   });
   return new Promise(ok => srv.listen(porta, '127.0.0.1', () => {
     const { port } = srv.address();
-    ok({ url: `http://127.0.0.1:${port}/`, fechar: () => new Promise(r => srv.close(r)), bytes: () => bytes, zerar: () => { bytes = 0; } });
+    ok({
+      url: `http://127.0.0.1:${port}/`, fechar: () => new Promise(r => srv.close(r)), bytes: () => bytes,
+      arquivos: () => new Map(porCaminho), zerar: () => { bytes = 0; porCaminho.clear(); },
+    });
   }));
 }
 
@@ -73,7 +78,7 @@ export function playwright() {
 
 /**
  * Abre o Chromium. opc: {largura, altura, dpr, toque, args}
- * Devolve {navegador, contexto, pagina, cdnBytes()}.
+ * Devolve {navegador, contexto, pagina, erros, cdnBytes(), cdnArquivos() (Map URL → bytes)}.
  */
 export async function abrir(opc = {}) {
   const { chromium } = playwright();
@@ -88,11 +93,13 @@ export async function abrir(opc = {}) {
     isMobile: !!opc.toque,
   });
   let cdnBytes = 0;
+  const cdnPor = new Map();
   await contexto.route(/^https:\/\/(cdn\.jsdelivr\.net|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)\//, async rota => {
     const u = rota.request().url();
     try {
       const corpo = cdnLocal(u);
       cdnBytes += corpo.length;
+      cdnPor.set(u, (cdnPor.get(u) ?? 0) + corpo.length);
       await rota.fulfill({ status: 200, body: corpo, headers: { 'Content-Type': tipoPorUrl(u), 'Access-Control-Allow-Origin': '*' } });
     } catch (e) {
       await rota.fulfill({ status: 502, body: String(e) });
@@ -102,5 +109,5 @@ export async function abrir(opc = {}) {
   const erros = [];
   pagina.on('pageerror', e => erros.push(String(e)));
   pagina.on('console', msg => { if (msg.type() === 'error') erros.push(msg.text()); });
-  return { navegador, contexto, pagina, erros, cdnBytes: () => cdnBytes };
+  return { navegador, contexto, pagina, erros, cdnBytes: () => cdnBytes, cdnArquivos: () => new Map(cdnPor) };
 }

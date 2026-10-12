@@ -12,7 +12,11 @@
 //   6) interpolação: a 144 Hz o jogador desenhado anda a passos regulares (sem o "anda, para,
 //      anda" de quem desenha só o último passo de simulação) — modo condução;
 //   7) câmera sem tremor a 144 Hz (posição lisa, sem vai-e-volta) conduzindo em curva — modo
-//      condução (sem adversário para roubar a bola no meio da medida).
+//      condução (sem adversário para roubar a bola no meio da medida);
+//   8) download separado por tipo (código, three.js, sons, modelos, imagens, outros) — a régua da Etapa 5;
+//   9) corpo humano (?corpo=novo, Etapa 5.1): o corpo desenha, o download fica ≤ 3,5 MB, corpo ≤ 170 KB e leitor
+//      ≤ 5 KB, sem GLTFLoader/Draco/KTX2; com o arquivo do corpo BLOQUEADO (rede) ou ESTRAGADO, o manequim entra e o
+//      jogo segue sem erro (no bloqueado, a única linha no console é a do próprio navegador sobre o pedido bloqueado).
 // Saída com PASSOU/REPROVOU e código de saída 1 se reprovar.
 //   node tools/teste-carga.mjs [--url http://...] [--raiz <pasta do jogo>] [--semente N]
 //   (sem --url sobe o servidor da pasta; --raiz mede outra cópia, ex.: a base, com a lógica dela)
@@ -21,6 +25,25 @@ import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const LIMITE_BYTES = 4 * 1024 * 1024;
+const LIMITE_CORPO_NOVO = 3.5 * 1024 * 1024;
+
+/** Tipo de cada arquivo baixado (a régua do download da Etapa 5). */
+function tipoDownload(caminho) {
+  if (/^https?:\/\//.test(caminho)) return /three/.test(caminho) ? 'three.js' : 'outros';
+  if (caminho.includes('/assets/sons/')) return 'sons';
+  if (caminho.includes('/assets/jogador/') || /\.(glb|gltf|bin)$/.test(caminho)) return 'modelos';
+  if (/\.(png|jpe?g|webp|svg|ico|ktx2)$/.test(caminho)) return 'imagens';
+  if (/\.(m?js|html|css|json|webmanifest)$/.test(caminho)) return 'código';
+  return 'outros';
+}
+function porTipo(arquivos, cdn) {
+  const t = { 'código': 0, 'three.js': 0, sons: 0, modelos: 0, imagens: 0, outros: 0 };
+  for (const [c, b] of arquivos) t[tipoDownload(c)] += b;
+  for (const [u, b] of cdn) t[tipoDownload(u)] += b;
+  return t;
+}
+const kb = b => `${(b / 1024).toFixed(0)} KB`;
+const textoTipos = t => Object.entries(t).filter(([, b]) => b > 0).map(([k, b]) => `${k} ${kb(b)}`).join(' · ');
 const N_PASSOS = 600;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
@@ -133,7 +156,7 @@ function meta(nome, medido, alvo, ok) { resultados.push({ nome, medido, alvo, ok
 
 const srv = urlExterna ? null : await servidor(0, raiz);
 const url = urlExterna ?? srv.url;
-const { navegador, contexto, pagina, erros, cdnBytes } = await abrir({ largura: 1280, altura: 720 });
+const { navegador, contexto, pagina, erros, cdnBytes, cdnArquivos } = await abrir({ largura: 1280, altura: 720 });
 try {
   const t0 = Date.now();
   await pagina.goto(url, { waitUntil: 'load' });
@@ -148,7 +171,7 @@ try {
 
   // 2) canvas não vazio (sem HUD)
   await pagina.evaluate(() => { document.documentElement.classList.add('sem-hud'); document.querySelector('.vinheta')?.remove(); window.__golaco.desenhar(); });
-  const png = await pagina.screenshot({ type: 'png' });
+  const png = await pagina.screenshot({ type: 'png', timeout: 120000 }); // máquina carregada: o print demora
   await pagina.evaluate(() => document.documentElement.classList.remove('sem-hud'));
   const aux = await contexto.newPage();
   await aux.setContent('<canvas id="c"></canvas>');
@@ -182,6 +205,11 @@ try {
   const bytesCdn = cdnBytes();
   const total = bytesSrv + bytesCdn;
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
+  if (srv) {
+    const tipos = porTipo(srv.arquivos(), cdnArquivos());
+    const soma = Object.values(tipos).reduce((a, b) => a + b, 0);
+    meta('Download por tipo (manequim)', textoTipos(tipos), 'soma = total', soma === total);
+  }
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
@@ -353,6 +381,61 @@ try {
   await pagina.waitForTimeout(500);
   const fim = await pagina.evaluate(() => window.__golaco.render.quadros);
   meta('Sem erro no fim', erros.length ? erros.slice(0, 2).join(' | ') : `0 (carregou em ${tCarga.toFixed(1)} s, ${fim} quadros)`, '0', erros.length === 0);
+
+  // 9) corpo humano (?corpo=novo, Etapa 5.1): normal, bloqueado e estragado — cada um numa página nova
+  await pagina.close();
+  const CORPO = /\/assets\/jogador\/corpo\.bin(\?|$)/;
+  async function abrirCorpo(rota) {
+    const pg = await contexto.newPage();
+    const errs = [], pedidos = [];
+    pg.on('pageerror', e => errs.push(String(e)));
+    pg.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+    pg.on('request', r => pedidos.push(r.url()));
+    if (rota) await pg.route(CORPO, rota);
+    if (srv) srv.zerar();
+    const cdn0 = cdnArquivos();
+    await pg.goto(url + '?corpo=novo', { waitUntil: 'load' });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    await pg.waitForTimeout(2000);
+    const q0 = await pg.evaluate(() => window.__golaco.render.quadros);
+    await pg.waitForTimeout(1000);
+    const est = await pg.evaluate(() => {
+      const e = window.__golaco.estado();
+      return { corpo: e.corpo, corpoFalhou: e.corpoFalhou, jogadores: e.jogadoresDesenho, quadros: window.__golaco.render.quadros };
+    });
+    const cdn = new Map([...cdnArquivos()].map(([u, b]) => [u, b - (cdn0.get(u) ?? 0)]).filter(([, b]) => b > 0));
+    const arquivos = srv ? srv.arquivos() : new Map();
+    await pg.close();
+    return { errs, pedidos, est, anda: est.quadros > q0, arquivos, cdn };
+  }
+  const novo = await abrirCorpo(null);
+  const proibidos = novo.pedidos.filter(u => /GLTFLoader|DRACOLoader|draco|KTX2|basis_transcoder|\.glb(\?|$)/i.test(u));
+  meta('Corpo novo (?corpo=novo): desenhou o corpo humano', `${novo.est.corpo}${novo.est.corpoFalhou ? ' — falhou: ' + novo.est.corpoFalhou : ''}; ${novo.est.jogadores?.chamadas ?? '?'} chamadas, ${((novo.est.jogadores?.tri ?? 0) / 1000).toFixed(1)} mil tri; quadros andando ${novo.anda}`,
+    'corpo, sem falha', novo.est.corpo === 'corpo' && !novo.est.corpoFalhou && novo.anda);
+  meta('Corpo novo: erros no console', novo.errs.length ? novo.errs.slice(0, 2).join(' | ') : '0', '0', novo.errs.length === 0);
+  meta('Corpo novo: sem GLTFLoader, Draco nem KTX2', proibidos.length ? proibidos.slice(0, 2).join(' | ') : '0 pedidos', '0 pedidos', proibidos.length === 0);
+  if (srv) {
+    const tipos = porTipo(novo.arquivos, novo.cdn);
+    const totalNovo = Object.values(tipos).reduce((a, b) => a + b, 0);
+    const corpoB = [...novo.arquivos].filter(([c]) => CORPO.test(c)).reduce((a, [, b]) => a + b, 0);
+    const leitorB = novo.arquivos.get('/js/render/corpo-leitor.js') ?? 0;
+    meta('Corpo novo: download para abrir o jogo', `${(totalNovo / 1048576).toFixed(2)} MB (${textoTipos(tipos)})`, '≤ 3,5 MB', totalNovo > 0 && totalNovo <= LIMITE_CORPO_NOVO);
+    meta('Corpo novo: arquivo do corpo e leitor', `corpo ${(corpoB / 1024).toFixed(1)} KB, leitor ${(leitorB / 1024).toFixed(1)} KB`, '≤ 170 KB e ≤ 5 KB', corpoB > 0 && corpoB <= 170 * 1024 && leitorB > 0 && leitorB <= 5 * 1024);
+  }
+  // arquivo bloqueado na rede: o manequim entra; a linha "Failed to load resource" do navegador para o pedido
+  // bloqueado é do próprio navegador (não do jogo) e é a única aceita
+  const bloq = await abrirCorpo(r => r.abort('blockedbyclient'));
+  const errsBloq = bloq.errs.filter(t => !/Failed to load resource: net::ERR_BLOCKED_BY_CLIENT/.test(t));
+  meta('Corpo bloqueado na rede: o manequim entra e o jogo segue', `${bloq.est.corpo} (motivo: ${bloq.est.corpoFalhou ?? '-'}); quadros andando ${bloq.anda}`, 'manequim', bloq.est.corpo === 'manequim' && !!bloq.est.corpoFalhou && bloq.anda);
+  meta('Corpo bloqueado: erros do jogo no console', errsBloq.length ? errsBloq.slice(0, 2).join(' | ') : `0 (${bloq.errs.length - errsBloq.length} linha do navegador sobre o pedido bloqueado)`, '0', errsBloq.length === 0);
+  // arquivo estragado (chega pela metade): o leitor recusa, o manequim entra, nenhum erro
+  const estr = await abrirCorpo(async r => {
+    const resp = await r.fetch();
+    const b = await resp.body();
+    await r.fulfill({ status: 200, body: b.subarray(0, Math.floor(b.length / 2)), headers: { 'Content-Type': 'application/octet-stream' } });
+  });
+  meta('Corpo estragado (metade do arquivo): o manequim entra, 0 erro', `${estr.est.corpo} (motivo: ${estr.est.corpoFalhou ?? '-'}); ${estr.errs.length} erros; quadros andando ${estr.anda}`, 'manequim, 0 erro',
+    estr.est.corpo === 'manequim' && !!estr.est.corpoFalhou && estr.errs.length === 0 && estr.anda);
 } catch (e) {
   meta('Execução', e.message, 'sem exceção', false);
 } finally {

@@ -326,6 +326,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+- **Etapa 5.1 (corpo humano atrás de `?corpo=novo`; padrão = manequim até o dono aprovar)** — `PESQUISA-ETAPA5.md`,
+  contrato "Etapa 5.1" no `CONTRATOS.md`. O corpo só VESTE a pose de 19 juntas (`hash-igual`/`hash-partida` IGUAIS).
+  `assets/jogador/corpo.bin` (DADOS CC0 do MakeHuman/MPFB2 por `tools/humano/gerar-corpo.mjs`; o código GPL do MPFB2
+  nunca; meshoptimizer só na ferramenta) lido por `render/corpo-leitor.js`; `render/esqueleto.js` (puro, sem alocar:
+  contas num vetor de rascunho — número solto entre funções vira objeto no V8) = 22 ossos + 8 auxiliares de
+  joelho/cotovelo, retarget por direção + IK final de pés e mãos; `render/corpo3d.js` = pele instanciada (ossos de todos
+  numa textura RGBA32F, 1 chamada por nível, 3 níveis dividindo os vértices, sombra no leve), uniforme provisório por
+  região, calota de cabelo. Falha do arquivo → manequim sem erro. Régua nova: sombra contada (`cena.infoSombra`,
+  `criarMedida`), `?qps=1` com sombra e jogadores, download por tipo no `teste-carga`. Testes: `teste-corpo-arquivo`,
+  `teste-esqueleto`, `teste-creditos-jogador` (Node), `teste-pele` (CI, pixel a pixel contra o SkinnedMesh),
+  `teste-desempenho-celular` (manequim × corpo novo). Pendente: palmas do lateral a ≤ 2 cm da BOLA (a pose não alcança;
+  5.6). Licenças: só CC0/CC BY/CMU; nada de Mixamo, LAFAN1, Bandai, Sketchfab, Lee Perry-Smith nem `futebol3d/`.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

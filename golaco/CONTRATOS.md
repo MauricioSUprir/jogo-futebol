@@ -988,3 +988,46 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
   verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
   cenas `*-jogador-ve*` sem o `?prints=1` (a página como ela abre).
+
+## Etapa 5.1 — corpo humano atrás de `?corpo=novo` (contrato)
+O corpo humano só VESTE a pose de 19 juntas de `anim.js`: nada na simulação muda (`hash-igual` e `hash-partida`
+IGUAIS). O padrão continua o manequim (`render/jogador3d.js`) até o dono aprovar. Pesquisa: `PESQUISA-ETAPA5.md`.
+- **Arquivo** `assets/jogador/corpo.bin` (gerado por `tools/humano/gerar-corpo.mjs` a partir dos DADOS CC0 do
+  MakeHuman/MPFB2; `assets/jogador/CREDITOS.md`): `'GCP1'` + u32 do tamanho do cabeçalho + cabeçalho JSON (`nv`, `lods`
+  [{ini, n, tri}], `bind` = 19 juntas da pose de repouso, `regioes` do uniforme, `cabelo` {centro, raios}, `olhos`,
+  faixas de quantização) + seções: posição i16×3 (min/max), normal i8×3, ossos u8×4, pesos u8×4 (somam 255), índice
+  u16. `render/corpo-leitor.js` (puro, ≤ 5 KB) `lerCorpo(ArrayBuffer)` → `{cab, nv, pos, nrm, ossos, pesos (0–1), idx}`
+  e recusa arquivo truncado/índice fora/osso fora (lança erro). Nada de GLTFLoader, Draco nem KTX2.
+- **Esqueleto** `render/esqueleto.js` (puro, sem three.js; testado em Node): `OSSOS` (22 do corpo + 8 auxiliares:
+  `joelhoE1/E2`, `joelhoD1/D2`, `cotoveloE1/E2`, `cotoveloD1/D2`), `PAI`, `NO` (30), `O` (nome → índice), `AUXILIARES`
+  ([auxiliar, osso de cima, osso de baixo, fração da dobra]), `FLOATS_POR_JOGADOR` (= 30 × 12 + 4).
+  `criarEsqueleto(bind)` → `{calcular(pose, out, off, opc?), quadros, quadrosRepouso, escalas, escalasLargura, juntas,
+  comprimentos}`: `calcular` escreve em `out[off…]` as 30 matrizes de pele (3 linhas × [m0, m1, m2, t]: M = Rp ·
+  diag(sl, s, sl) · Rbᵀ, t = hp − M · hb) e deixa os quadros (cabeça do osso + R por linhas, colunas = eixos X, Y, Z).
+  Retarget por direção + ajuste final (IK de duas juntas) de tornozelo, ponta do pé e mãos; `opc.ajuste = false` desliga
+  o ajuste (controle do `teste-esqueleto`). **Não aloca** (contas num vetor de rascunho do módulo).
+- **Desenho** `render/corpo3d.js` `criarCorpos3D(cena, qualidade, corpo)` — MESMA interface do manequim
+  (`atualizar(lista, camera)`, `definirSombras`, `definirTela(h px físicos)`, `definirQualidade(q)`, `medida`, `tipo`
+  = `'corpo'`; o manequim tem `tipo` = `'manequim'` e `definirTela`/`definirQualidade` vazios). Ossos de TODOS os
+  jogadores numa `DataTexture` RGBA32F (linha `p` = vaga `p` da lista: 30 × 3 texels + 1 texel com o tom de pele em
+  cor linear e `kit + 8·goleiro`); uma `Mesh` com `InstancedBufferGeometry` por nível de detalhe (os 3 dividem os
+  vértices e o índice; faixa por `setDrawRange`), atributo por instância `iJog` (a linha); `injetarPele(material, tex,
+  cor, uni)` troca `skinbase/skinnormal/skinning_vertex` pela leitura da textura (exportada para o `teste-pele`);
+  `DECL_F` = a pintura do uniforme por região a partir da posição de REPOUSO. Nível pela altura na tela (1,8 m × f /
+  distância), histerese 15%, teto de triângulos por qualidade (`LOD_QUALIDADE`: Baixa 25 mil, Média 50 mil, Alta 120
+  mil). Sombra: `customDepthMaterial` com a mesma pele e `onBeforeShadow`/`onAfterShadow` trocando para o nível leve.
+  Cabelo (calota presa no osso da cabeça, sem sombra), mancha de contato e indicadores (`criarIndicadores`, comum aos
+  dois) iguais aos do manequim. Chamadas: 1 por nível em uso + cabelo + mancha; sombra: 1 por nível em uso.
+- **Página** (`main.js`): `?corpo=novo` carrega `corpo-leitor.js` + `corpo3d.js` + o arquivo (import dinâmico; sem o
+  parâmetro nada disso é baixado). Qualquer falha (rede, HTTP, arquivo estragado, exceção) → o manequim, sem erro no
+  console (o motivo em `estado().corpoFalhou`). O replay e o pré-jogo usam o mesmo `jog3d.atualizar` (cortejo e
+  árbitros incluídos).
+- **Régua** (vale para os dois desenhos): `render/cena.js infoSombra()` = chamadas/triângulos da passada da sombra (o
+  `renderer.info` zera depois dela); `criarMedida()` (`render/jogador3d.js`) conta pelos ganchos `onBeforeRender` /
+  `onBeforeShadow` o que os jogadores desenham. `estado()` ganha `desenhoTriangulos`, `sombraChamadas`,
+  `sombraTriangulos`, `jogadoresDesenho {chamadas, tri, chamadasSombra, triSombra, tipo}`, `corpo` e `corpoFalhou`;
+  o painel `?qps=1` mostra a sombra e os jogadores.
+- **Testes**: `teste-corpo-arquivo` e `teste-esqueleto` e `teste-creditos-jogador` (Node, no `rodar-testes`),
+  `teste-pele` (navegador, CI e deploy), `teste-carga` (itens 8–9: download por tipo, corpo novo, bloqueado e
+  estragado → manequim), `teste-desempenho-celular` (manequim × corpo novo na mesma execução: triângulos, sombra,
+  chamadas e CPU "jogadores"; `--corpo manequim` = controle).
