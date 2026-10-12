@@ -45,7 +45,7 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
  * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
- * desligado), volume (0–1).
+ * desligado), volume (0–1), replay (o "Replay" da pausa), replay-pular, replayAuto (ligado | desligado).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -59,7 +59,7 @@ export function criarHud(opc) {
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
-    reiniciarPartida: $('btn-reiniciar-partida'),
+    reiniciarPartida: $('btn-reiniciar-partida'), replay: $('replay'), replayFaixa: $('replay-faixa'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1;
@@ -104,6 +104,8 @@ export function criarHud(opc) {
   }
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
+  // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
+  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('replay-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -486,6 +488,7 @@ export function criarHud(opc) {
         el.saidaTam.textContent = `${Math.round(e.toqueTamanho * 100)}%`;
       }
       if (typeof e.som === 'boolean') marcarGrupo('som', e.som ? 'ligado' : 'desligado');
+      if (typeof e.replayAuto === 'boolean') marcarGrupo('replayAuto', e.replayAuto ? 'ligado' : 'desligado');
       if (typeof e.volume === 'number' && el.somVol) {
         el.somVol.value = String(Math.round(e.volume * 100));
         el.saidaVol.textContent = `${Math.round(e.volume * 100)}%`;
@@ -514,6 +517,20 @@ export function criarHud(opc) {
       el.carregando.classList.add('erro');
       if (el.msg) el.msg.textContent = msg;
     },
+    /**
+     * Replay ligado/desligado: a marca "REPLAY" no canto (marca da transmissão — nenhum lance vira texto), o "Pular"
+     * (só com toque) e a camada que pega qualquer toque; o resto do HUD de jogo (minimapa, menu, avisos, botões de
+     * toque) some (html.em-replay). Entrando e saindo, a faixa verde cruza a tela (a "vinheta" de replay da TV).
+     */
+    replay(ativo) {
+      ativo = !!ativo;
+      if (raiz.classList.contains('em-replay') === ativo) return;
+      raiz.classList.toggle('em-replay', ativo);
+      if (el.replay) el.replay.hidden = !ativo;
+      const f = el.replayFaixa;
+      if (f) { f.classList.remove('passa'); void f.offsetWidth; f.classList.add('passa'); }
+    },
+    get replayVisivel() { return !!el.replay && !el.replay.hidden; },
     /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
     esconderGol() {
       clearTimeout(timerGol);

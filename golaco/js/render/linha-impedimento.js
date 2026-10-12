@@ -71,5 +71,20 @@ export function criarLinhaImpedimento(cena) {
       malha.scale.x = ehLance ? 1.8 : 1;
       malha.position.set(x, 0.021, 0);
     },
+    /**
+     * Desenho COMANDADO (o replay do impedimento, render/replay.js): l = null (some) ou {visivel, x, opacidade} — a
+     * linha do lance (amarela e grossa) em x, sem ler o mundo nem depender da linha do jogo ao vivo.
+     */
+    mostrar(l) {
+      const vis = !!(l && l.visivel && l.opacidade > 0.005);
+      malha.visible = vis;
+      lance = vis;
+      if (!vis) { mat.opacity = 0; return; }
+      x = l.x;
+      mat.color.copy(AMARELA);
+      mat.opacity = Math.min(1, l.opacidade);
+      malha.scale.x = 1.8;
+      malha.position.set(x, 0.021, 0);
+    },
   };
 }

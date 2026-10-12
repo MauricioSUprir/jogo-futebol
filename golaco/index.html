@@ -118,6 +118,15 @@
     </button>
   </div>
 
+  <!-- Replay (js/render/replay.js): a camada cobre a tela — qualquer toque, clique, tecla ou botão do controle pula.
+       "REPLAY" discreto no canto é a marca da transmissão (nenhum lance vira texto: sem narração na tela); "Pular" só
+       aparece com toque. A faixa verde cruza a tela na entrada e na saída do replay. -->
+  <div id="replay" class="replay" hidden>
+    <span class="replay-marca" id="replay-marca"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4.5v4h4"/><path d="M10.2 9.2v5.6l4.6-2.8z"/></svg>REPLAY</span>
+    <button id="replay-pular" class="btn-replay-pular" type="button" data-cmd="replay-pular" aria-label="Pular o replay">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+  </div>
+  <i id="replay-faixa" class="replay-faixa" aria-hidden="true"></i>
+
   <!-- Menu de pausa -->
   <div id="menu" class="sobreposicao" hidden>
     <div class="janela janela-menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo">
@@ -135,6 +144,7 @@
         <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos -->
         <div class="menu-acoes" id="menu-acoes">
           <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
+          <button class="btn" type="button" data-cmd="replay" data-so="partida">Replay <small>últimos 10 s</small></button>
           <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
           <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida" id="btn-reiniciar-partida">Reiniciar partida</button>
           <button class="btn" type="button" data-cmd="recomecar" data-so="treino">Recomeçar <small>bola no pé</small></button>
@@ -173,6 +183,14 @@
             <div class="segmentado" data-grupo="camera">
               <button type="button" data-valor="tv">TV</button>
               <button type="button" data-valor="aproximada">Aproximada</button>
+            </div>
+          </div>
+          <!-- replay depois do gol e no apito do impedimento (o "Replay" da pausa funciona sempre) -->
+          <div class="opcao">
+            <span class="opcao-rotulo">Replays automáticos</span>
+            <div class="segmentado" data-grupo="replayAuto">
+              <button type="button" data-valor="ligado">Ligado</button>
+              <button type="button" data-valor="desligado">Desligado</button>
             </div>
           </div>
           <div class="opcao opcao-som">
