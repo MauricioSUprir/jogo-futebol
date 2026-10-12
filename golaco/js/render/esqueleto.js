@@ -74,7 +74,7 @@ const V = new Float64Array(16);
 function quadroYZ(F, o) {
   let yx = V[0], yy = V[1], yz = V[2];
   let l = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1;
-  yx /= l; yy /= l; yz /= l;
+  { const i_ = 1 / l; yx *= i_; yy *= i_; yz *= i_; }
   let d = V[3] * yx + V[4] * yy + V[5] * yz;
   let ax = V[3] - d * yx, ay = V[4] - d * yy, az = V[5] - d * yz;
   l = Math.sqrt(ax * ax + ay * ay + az * az);
@@ -83,7 +83,7 @@ function quadroYZ(F, o) {
     ax = V[6] - d * yx; ay = V[7] - d * yy; az = V[8] - d * yz;
     l = Math.sqrt(ax * ax + ay * ay + az * az) || 1;
   }
-  ax /= l; ay /= l; az /= l;
+  { const i_ = 1 / l; ax *= i_; ay *= i_; az *= i_; }
   const r = o + 3;
   F[r] = yy * az - yz * ay; F[r + 1] = yx; F[r + 2] = ax;
   F[r + 3] = yz * ax - yx * az; F[r + 4] = yy; F[r + 5] = ay;
@@ -93,11 +93,11 @@ function quadroYZ(F, o) {
 function quadroYX(F, o) {
   let yx = V[0], yy = V[1], yz = V[2];
   let l = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1;
-  yx /= l; yy /= l; yz /= l;
+  { const i_ = 1 / l; yx *= i_; yy *= i_; yz *= i_; }
   const d = V[3] * yx + V[4] * yy + V[5] * yz;
   let xx = V[3] - d * yx, xy = V[4] - d * yy, xz = V[5] - d * yz;
   l = Math.sqrt(xx * xx + xy * xy + xz * xz) || 1;
-  xx /= l; xy /= l; xz /= l;
+  { const i_ = 1 / l; xx *= i_; xy *= i_; xz *= i_; }
   const r = o + 3;
   F[r] = xx; F[r + 1] = yx; F[r + 2] = xy * yz - xz * yy;
   F[r + 3] = xy; F[r + 4] = yy; F[r + 5] = xz * yx - xx * yz;
@@ -107,7 +107,7 @@ function quadroYX(F, o) {
 function transportar(F, oDst, oSrc) {
   let yx = V[0], yy = V[1], yz = V[2];
   const l = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1;
-  yx /= l; yy /= l; yz /= l;
+  { const i_ = 1 / l; yx *= i_; yy *= i_; yz *= i_; }
   const r = oSrc + 3, rd = oDst + 3;
   const ax = F[r + 1], ay = F[r + 4], az = F[r + 7];
   const c = ax * yx + ay * yy + az * yz;
@@ -124,6 +124,30 @@ function transportar(F, oDst, oSrc) {
   F[rd + 1] = yx; F[rd + 4] = yy; F[rd + 7] = yz;
 }
 function copiarR(F, oDst, oSrc) { for (let i = 3; i < 12; i++) F[oDst + i] = F[oSrc + i]; }
+/** Quadro de destino = o de origem girado em volta do eixo unitário V[0..2] pelo ângulo de cosseno V[3] e seno V[4]
+ * (Rodrigues, nas 3 colunas; a cabeça do osso é escrita por quem chama). */
+function girarR(F, oDst, oSrc) {
+  const kx = V[0], ky = V[1], kz = V[2], c = V[3], sn = V[4], t = 1 - c;
+  const r = oSrc + 3, rd = oDst + 3;
+  for (let col = 0; col < 3; col++) {
+    const vx = F[r + col], vy = F[r + 3 + col], vz = F[r + 6 + col];
+    const kv = (kx * vx + ky * vy + kz * vz) * t;
+    F[rd + col] = vx * c + (ky * vz - kz * vy) * sn + kx * kv;
+    F[rd + 3 + col] = vy * c + (kz * vx - kx * vz) * sn + ky * kv;
+    F[rd + 6 + col] = vz * c + (kx * vy - ky * vx) * sn + kz * kv;
+  }
+}
+// cos(θ/3) como polinômio de grau 7 em u = 2·cos(θ/2) − 1 (mínimos quadrados em nós de Chebyshev; erro ≤ 3e-8 em
+// todo θ de 0 a 180°): a direção a 1/3 e a 2/3 da dobra sem funções de ângulo
+const C3_0 = 0.766044462233, C3_1 = 0.247409041924, C3_2 = -0.0155097931465, C3_3 = 0.00246667399084;
+const C3_4 = -0.000501157785246, C3_5 = 0.000115293517134, C3_6 = -0.0000334913769418, C3_7 = 0.00000898772442;
+// auxiliares agrupados por junta: [osso de cima, osso de baixo, auxiliar a 1/3, auxiliar a 2/3] (a tabela vem em pares)
+const AUX_J = [];
+for (let k = 0; k < AUXILIARES.length; k += 2) {
+  const a = AUXILIARES[k], b = AUXILIARES[k + 1];
+  if (!b || a[1] !== b[1] || a[2] !== b[2] || a[3] !== 1 / 3 || b[3] !== 2 / 3) throw new Error('AUXILIARES: pares (1/3, 2/3) por junta');
+  AUX_J.push(a[1], a[2], a[0], b[0]);
+}
 /** out[oo..] = h + R · V[9..11] do quadro em F[o..]. */
 function pontoLocal(F, o, out, oo) {
   const r = o + 3, lx = V[9], ly = V[10], lz = V[11];
@@ -146,14 +170,14 @@ function ik2(A, ia, it, im, ie) {
   const L1 = V[12], L2 = V[13];
   let dx = A[it] - A[ia], dy = A[it + 1] - A[ia + 1], dz = A[it + 2] - A[ia + 2];
   const d0 = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-9;
-  dx /= d0; dy /= d0; dz /= d0;
+  { const i_ = 1 / d0; dx *= i_; dy *= i_; dz *= i_; }
   const d = Math.min(Math.max(d0, Math.abs(L1 - L2) + 1e-6), (L1 + L2) * 0.99999);
   const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
   const hh = Math.sqrt(Math.max(0, L1 * L1 - a * a));
   const pd = V[3] * dx + V[4] * dy + V[5] * dz;
   let qx = V[3] - pd * dx, qy = V[4] - pd * dy, qz = V[5] - pd * dz;
   const ql = Math.sqrt(qx * qx + qy * qy + qz * qz);
-  if (ql < 1e-12) { qx = 0; qy = 0; qz = 0; } else { qx /= ql; qy /= ql; qz /= ql; }
+  if (ql < 1e-12) { qx = 0; qy = 0; qz = 0; } else { { const i_ = 1 / ql; qx *= i_; qy *= i_; qz *= i_; } }
   A[im] = A[ia] + dx * a + qx * hh; A[im + 1] = A[ia + 1] + dy * a + qy * hh; A[im + 2] = A[ia + 2] + dz * a + qz * hh;
   A[ie] = A[ia] + dx * d; A[ie + 1] = A[ia + 1] + dy * d; A[ie + 2] = A[ia + 2] + dz * d;
 }
@@ -187,9 +211,9 @@ export function criarEsqueleto(bind) {
     // linhas dos quadris e dos ombros (E − D), normalizadas
     const iqe = J.quadrilE * 3, iqd = J.quadrilD * 3, ioe = J.ombroE * 3, iod = J.ombroD * 3;
     let hx = pp[iqe] - pp[iqd], hy = pp[iqe + 1] - pp[iqd + 1], hz = pp[iqe + 2] - pp[iqd + 2];
-    let l = Math.sqrt(hx * hx + hy * hy + hz * hz) || 1; hx /= l; hy /= l; hz /= l;
+    let l = Math.sqrt(hx * hx + hy * hy + hz * hz) || 1; { const i_ = 1 / l; hx *= i_; hy *= i_; hz *= i_; }
     let sx = pp[ioe] - pp[iod], sy = pp[ioe + 1] - pp[iod + 1], sz = pp[ioe + 2] - pp[iod + 2];
-    l = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1; sx /= l; sy /= l; sz /= l;
+    l = Math.sqrt(sx * sx + sy * sy + sz * sz) || 1; { const i_ = 1 / l; sx *= i_; sy *= i_; sz *= i_; }
     // ---- pelve: X = linha dos quadris, Y = da média dos quadris até a pelve (o quadril sai exato)
     const ip = J.pelve * 3;
     F[0] = pp[ip]; F[1] = pp[ip + 1]; F[2] = pp[ip + 2];
@@ -286,9 +310,9 @@ export function criarEsqueleto(bind) {
       // braço: Y = ombro → cotovelo; Z = para onde o cotovelo dobra (o antebraço sem a parte ao longo do braço), com
       // reserva pela frente do tronco e, com o braço apontando para a frente, pelo "cima" do tronco
       let yx = A[6] - A[0], yy = A[7] - A[1], yz = A[8] - A[2];
-      const ly = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1; yx /= ly; yy /= ly; yz /= ly;
+      const ly = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1; { const i_ = 1 / ly; yx *= i_; yy *= i_; yz *= i_; }
       let fx = A[9] - A[6], fy = A[10] - A[7], fz = A[11] - A[8];
-      const lf = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1; fx /= lf; fy /= lf; fz /= lf;
+      const lf = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1; { const i_ = 1 / lf; fx *= i_; fy *= i_; fz *= i_; }
       const d = fx * yx + fy * yy + fz * yz;
       F[ob] = A[0]; F[ob + 1] = A[1]; F[ob + 2] = A[2];
       V[0] = yx; V[1] = yy; V[2] = yz;
@@ -333,11 +357,11 @@ export function criarEsqueleto(bind) {
       }
       // frente do pé no chão (horizontal): reserva da torção da coxa
       let pfx = pp[ipp] - pp[it], pfz = pp[ipp + 2] - pp[it + 2];
-      const lpf = Math.sqrt(pfx * pfx + pfz * pfz) || 1; pfx /= lpf; pfz /= lpf;
+      const lpf = Math.sqrt(pfx * pfx + pfz * pfz) || 1; { const i_ = 1 / lpf; pfx *= i_; pfz *= i_; }
       let yx = A[6] - A[0], yy = A[7] - A[1], yz = A[8] - A[2];
-      const ly = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1; yx /= ly; yy /= ly; yz /= ly;
+      const ly = Math.sqrt(yx * yx + yy * yy + yz * yz) || 1; { const i_ = 1 / ly; yx *= i_; yy *= i_; yz *= i_; }
       let fx = A[9] - A[6], fy = A[10] - A[7], fz = A[11] - A[8];
-      const lf = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1; fx /= lf; fy /= lf; fz /= lf;
+      const lf = Math.sqrt(fx * fx + fy * fy + fz * fz) || 1; { const i_ = 1 / lf; fx *= i_; fy *= i_; fz *= i_; }
       const d = fx * yx + fy * yy + fz * yz;
       // coxa: o joelho aponta para o lado contrário de onde a canela dobra (reserva: a frente do pé e da pelve)
       F[oq] = A[0]; F[oq + 1] = A[1]; F[oq + 2] = A[2];
@@ -406,21 +430,33 @@ export function criarEsqueleto(bind) {
     // ---- auxiliares: na junta; o quadro de cima levado (rotação mínima) até a direção a 1/3 e a 2/3 do caminho entre
     // as direções dos dois ossos (interpolação esférica); engordam na largura conforme a junta dobra além do repouso
     // (a carne do lado de dentro da dobra é apertada contra a junta: os "volume helpers" dos jogos)
-    for (let k = 0; k < AUXILIARES.length; k++) {
-      const AX = AUXILIARES[k], oa = AX[0] * 12, ocm = AX[1] * 12, obx = AX[2] * 12, f = AX[3];
-      F[oa] = F[obx]; F[oa + 1] = F[obx + 1]; F[oa + 2] = F[obx + 2];
+    // A junta gira os Y dos dois ossos pelo eixo a × b e o ângulo θ entre eles: os auxiliares são o quadro de cima girado
+    // por θ/3 e 2θ/3 no mesmo eixo (o mesmo que a interpolação esférica das direções com o transporte de rotação mínima;
+    // uma conta de ângulo por junta e nenhuma normalização por auxiliar)
+    for (let j = 0, k = 0; j < AUX_J.length; j += 4, k += 2) {
+      const ocm = AUX_J[j] * 12, obx = AUX_J[j + 1] * 12, o1 = AUX_J[j + 2] * 12, o2 = AUX_J[j + 3] * 12;
+      F[o1] = F[obx]; F[o1 + 1] = F[obx + 1]; F[o1 + 2] = F[obx + 2];
+      F[o2] = F[obx]; F[o2 + 1] = F[obx + 1]; F[o2 + 2] = F[obx + 2];
       const ax = F[ocm + 4], ay = F[ocm + 7], az = F[ocm + 10], bx = F[obx + 4], by = F[obx + 7], bz = F[obx + 10];
       let c = ax * bx + ay * by + az * bz;
       c = c < -1 ? -1 : c > 1 ? 1 : c;
-      const om = Math.acos(c), so = Math.sin(om);
-      let ka = 1 - f, kb = f;
-      if (so > 1e-6) { ka = Math.sin((1 - f) * om) / so; kb = Math.sin(f * om) / so; }
-      V[0] = ax * ka + bx * kb; V[1] = ay * ka + by * kb; V[2] = az * ka + bz * kb;
-      transportar(F, oa, ocm);
-      S[AX[0]] = 1;
-      if (repouso) C.dobra[k] = c;
+      const kx = ay * bz - az * by, ky = az * bx - ax * bz, kz = ax * by - ay * bx;
+      const sk = Math.sqrt(kx * kx + ky * ky + kz * kz);
+      if (sk < 1e-9) { copiarR(F, o1, ocm); copiarR(F, o2, ocm); } else {
+        // cos(θ/3) pelo polinômio em cos(θ/2) (sem acos nem cos: as funções de ângulo eram metade do custo daqui)
+        const u = 2 * Math.sqrt((1 + c) * 0.5) - 1;
+        const c1 = ((((((C3_7 * u + C3_6) * u + C3_5) * u + C3_4) * u + C3_3) * u + C3_2) * u + C3_1) * u + C3_0;
+        const s1 = Math.sqrt(Math.max(0, 1 - c1 * c1));
+        V[0] = kx / sk; V[1] = ky / sk; V[2] = kz / sk;
+        V[3] = c1; V[4] = s1;
+        girarR(F, o1, ocm);
+        V[3] = 2 * c1 * c1 - 1; V[4] = 2 * s1 * c1;
+        girarR(F, o2, ocm);
+      }
+      S[AUX_J[j + 2]] = 1; S[AUX_J[j + 3]] = 1;
+      if (repouso) { C.dobra[k] = c; C.dobra[k + 1] = c; }
       const inc = C.dobra[k] - c;
-      SL[AX[0]] = inc > 0 ? 1 + INCHA * inc : 1;
+      SL[AUX_J[j + 2]] = SL[AUX_J[j + 3]] = inc > 0 ? 1 + INCHA * inc : 1;
     }
   }
 
@@ -454,6 +490,16 @@ export function criarEsqueleto(bind) {
       if (out) escreverPele(F, Fb, S, SL, out, off);
       return esq;
     },
+    /**
+     * Como calcular (com o ajuste), mas escreve os QUADROS com escala (3 linhas × [R·diag(sl, s, sl), h]) em vez da pele:
+     * a pele = quadro × inverso do repouso (inversoRepouso), multiplicada na placa de vídeo (render/corpo3d.js).
+     */
+    calcularQuadros(pose, out, off = 0) {
+      for (let i = 0; i < NJ * 3; i++) P[i] = pose[i];
+      montar(P, true);
+      escreverQuadros(F, S, SL, out, off);
+      return esq;
+    },
   };
   return esq;
 }
@@ -463,17 +509,41 @@ export function criarEsqueleto(bind) {
  * t = hp − M · hb, por linhas (3 linhas × [m0, m1, m2, t]).
  */
 export function escreverPele(F, Fb, S, SL, out, off) {
-  for (let b = 0; b < NO; b++) {
-    const o = b * 12, r = o + 3, s = S[b], sl = SL[b];
-    const q = off + b * 12;
-    for (let i = 0; i < 3; i++) {
-      const p0 = F[r + i * 3] * sl, p1 = F[r + i * 3 + 1] * s, p2 = F[r + i * 3 + 2] * sl;
-      const m0 = p0 * Fb[r] + p1 * Fb[r + 1] + p2 * Fb[r + 2];
-      const m1 = p0 * Fb[r + 3] + p1 * Fb[r + 4] + p2 * Fb[r + 5];
-      const m2 = p0 * Fb[r + 6] + p1 * Fb[r + 7] + p2 * Fb[r + 8];
-      const w = q + i * 4;
+  for (let b = 0, o = 0, q = off; b < NO; b++, o += 12, q += 12) {
+    const s = S[b], sl = SL[b];
+    // repouso (constante) e pose deste osso em variáveis locais: a conta é a mesma, sem reler os vetores
+    const hb0 = Fb[o], hb1 = Fb[o + 1], hb2 = Fb[o + 2];
+    const b00 = Fb[o + 3], b01 = Fb[o + 4], b02 = Fb[o + 5], b10 = Fb[o + 6], b11 = Fb[o + 7], b12 = Fb[o + 8];
+    const b20 = Fb[o + 9], b21 = Fb[o + 10], b22 = Fb[o + 11];
+    for (let i = 0, r = o + 3, w = q; i < 3; i++, r += 3, w += 4) {
+      const p0 = F[r] * sl, p1 = F[r + 1] * s, p2 = F[r + 2] * sl;
+      const m0 = p0 * b00 + p1 * b01 + p2 * b02;
+      const m1 = p0 * b10 + p1 * b11 + p2 * b12;
+      const m2 = p0 * b20 + p1 * b21 + p2 * b22;
       out[w] = m0; out[w + 1] = m1; out[w + 2] = m2;
-      out[w + 3] = F[o + i] - (m0 * Fb[o] + m1 * Fb[o + 1] + m2 * Fb[o + 2]);
+      out[w + 3] = F[o + i] - (m0 * hb0 + m1 * hb1 + m2 * hb2);
     }
   }
+}
+
+/** Quadro de cada osso com a escala: 3 linhas × [R·diag(sl, s, sl) (3 valores), h] (a pele sem o inverso do repouso). */
+export function escreverQuadros(F, S, SL, out, off) {
+  for (let b = 0, o = 0, q = off; b < NO; b++, o += 12, q += 12) {
+    const s = S[b], sl = SL[b];
+    out[q] = F[o + 3] * sl; out[q + 1] = F[o + 4] * s; out[q + 2] = F[o + 5] * sl; out[q + 3] = F[o];
+    out[q + 4] = F[o + 6] * sl; out[q + 5] = F[o + 7] * s; out[q + 6] = F[o + 8] * sl; out[q + 7] = F[o + 1];
+    out[q + 8] = F[o + 9] * sl; out[q + 9] = F[o + 10] * s; out[q + 10] = F[o + 11] * sl; out[q + 11] = F[o + 2];
+  }
+}
+
+/** Inverso de cada quadro de repouso (Rbᵀ, −Rbᵀ·hb) por linhas (3 × [m0, m1, m2, t]): pele = quadro × este. */
+export function inversoRepouso(Fb, out = new Float32Array(NO * 12)) {
+  for (let b = 0, o = 0; b < NO; b++, o += 12) {
+    for (let i = 0; i < 3; i++) {
+      const m0 = Fb[o + 3 + i], m1 = Fb[o + 6 + i], m2 = Fb[o + 9 + i];
+      out[o + i * 4] = m0; out[o + i * 4 + 1] = m1; out[o + i * 4 + 2] = m2;
+      out[o + i * 4 + 3] = -(m0 * Fb[o] + m1 * Fb[o + 1] + m2 * Fb[o + 2]);
+    }
+  }
+  return out;
 }

@@ -18,7 +18,7 @@
 // nível em uso, todos no leve. Nada é alocado por quadro.
 import * as THREE from 'three';
 import { J } from '../anim.js';
-import { criarEsqueleto, NO, FLOATS_POR_JOGADOR } from './esqueleto.js';
+import { criarEsqueleto, inversoRepouso, NO, O, FLOATS_POR_JOGADOR } from './esqueleto.js';
 import { KITS, PELES, CABELOS, sorteio, criarIndicadores, criarMedida, triInstancias } from './jogador3d.js';
 import { texMancha } from './texturas.js';
 
@@ -32,9 +32,13 @@ const LOD_QUALIDADE = {
   alta: { perto: 200, medio: 70, teto: 120000 },
 };
 const HIST = 0.15;                              // histerese da troca de nível
+// quem está fora da câmera (com folga para a sombra: sol a ≥ 48° de dia, o goleiro de braços para cima faz ~2,3 m de
+// sombra) não calcula o esqueleto nem entra no desenho: esfera de 3,5 m em volta da pelve contra o tronco de visão
+const FOLGA_VISTA = 3.5;
 
 const DECL_V = `
 uniform highp sampler2D uOssos;
+uniform vec4 uInv[${NO * 3}];
 attribute vec4 skinIndex;
 attribute vec4 skinWeight;
 attribute float iJog;
@@ -45,22 +49,35 @@ mat4 ossoCorpo(const in float i, const in int y) {
   vec4 c = texelFetch(uOssos, ivec2(x + 2, y), 0);
   return mat4(a.x, b.x, c.x, 0.0, a.y, b.y, c.y, 0.0, a.z, b.z, c.z, 0.0, a.w, b.w, c.w, 1.0);
 }
+mat4 invCorpo(const in float i) {
+  int x = int(i + 0.5) * 3;
+  vec4 a = uInv[x], b = uInv[x + 1], c = uInv[x + 2];
+  return mat4(a.x, b.x, c.x, 0.0, a.y, b.y, c.y, 0.0, a.z, b.z, c.z, 0.0, a.w, b.w, c.w, 1.0);
+}
 `;
+// a textura guarda o QUADRO de cada osso (com a escala); o inverso do repouso é constante (uniforme): pele = quadro ×
+// inverso, aplicada ao vértice em dois passos (o inverso primeiro)
 const BASE_V = `
   int yJog = int(iJog + 0.5);
   mat4 boneMatX = ossoCorpo(skinIndex.x, yJog);
   mat4 boneMatY = ossoCorpo(skinIndex.y, yJog);
   mat4 boneMatZ = ossoCorpo(skinIndex.z, yJog);
   mat4 boneMatW = ossoCorpo(skinIndex.w, yJog);
+  mat4 invX = invCorpo(skinIndex.x);
+  mat4 invY = invCorpo(skinIndex.y);
+  mat4 invZ = invCorpo(skinIndex.z);
+  mat4 invW = invCorpo(skinIndex.w);
 `;
 const NORMAL_V = `
-  mat4 skinMatrix = skinWeight.x * boneMatX + skinWeight.y * boneMatY + skinWeight.z * boneMatZ + skinWeight.w * boneMatW;
-  objectNormal = vec4(skinMatrix * vec4(objectNormal, 0.0)).xyz;
+  {
+    vec4 n0 = vec4(objectNormal, 0.0);
+    objectNormal = (skinWeight.x * (boneMatX * (invX * n0)) + skinWeight.y * (boneMatY * (invY * n0)) + skinWeight.z * (boneMatZ * (invZ * n0)) + skinWeight.w * (boneMatW * (invW * n0))).xyz;
+  }
 `;
 const PELE_V = `
   {
     vec4 v0 = vec4(transformed, 1.0);
-    transformed = (skinWeight.x * (boneMatX * v0) + skinWeight.y * (boneMatY * v0) + skinWeight.z * (boneMatZ * v0) + skinWeight.w * (boneMatW * v0)).xyz;
+    transformed = (skinWeight.x * (boneMatX * (invX * v0)) + skinWeight.y * (boneMatY * (invY * v0)) + skinWeight.z * (boneMatZ * (invZ * v0)) + skinWeight.w * (boneMatW * (invW * v0))).xyz;
   }
 `;
 
@@ -72,6 +89,7 @@ const PELE_V = `
 export function injetarPele(mat, tex, cor, uni) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uOssos = { value: tex.valor };
+    sh.uniforms.uInv = tex.inv;
     tex.uniformes.push(sh.uniforms.uOssos);
     if (cor) Object.assign(sh.uniforms, uni);
     let v = sh.vertexShader
@@ -86,7 +104,7 @@ export function injetarPele(mat, tex, cor, uni) {
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = corCorpo(vRest, vDados);');
     }
   };
-  mat.customProgramCacheKey = () => (cor ? 'corpo-pele-cor-v2' : 'corpo-pele-v2');
+  mat.customProgramCacheKey = () => (cor ? 'corpo-pele-cor-v3' : 'corpo-pele-v3');
 }
 
 // Regiões do uniforme pela posição de repouso (pose A do modelo, lado esquerdo em +x; o direito é o espelho):
@@ -143,8 +161,7 @@ vec3 corCorpo(vec3 p, vec4 d) {
 }
 `;
 
-const _m = new THREE.Matrix4(), _cap = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
-const CIMA = new THREE.Vector3(0, 1, 0);
+const _pv = new THREE.Matrix4(), _vista = new THREE.Frustum(), _esf = new THREE.Sphere(new THREE.Vector3(), FOLGA_VISTA);
 
 /**
  * corpo = o resultado de lerCorpo (render/corpo-leitor.js). Devolve a mesma interface de criarJogadores3D.
@@ -183,7 +200,9 @@ export function criarCorpos3D(cena, qualidade, corpo) {
     uManga: { value: new THREE.Vector4(R.manga, R.punho, 0, 0) },
     uOlho: { value: new THREE.Vector4(...cab.olhos[0].c, cab.olhos[0].r) },
   };
-  const tex = { valor: null, uniformes: [] };
+  // inverso dos quadros de repouso (constante; a placa multiplica pelo quadro de cada osso)
+  const INV = inversoRepouso(esq.quadrosRepouso);
+  const tex = { valor: null, uniformes: [], inv: { value: INV } };
   const matCorpo = new THREE.MeshStandardMaterial({ roughness: 0.74, metalness: 0 });
   injetarPele(matCorpo, tex, true, uni);
   const matSombra = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
@@ -198,8 +217,19 @@ export function criarCorpos3D(cena, qualidade, corpo) {
   gm.rotateX(-Math.PI / 2);
   // a calota no repouso: centro e raios do arquivo, inclinada para trás (a testa fica de fora)
   const C0 = cab.cabelo;
-  _q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.32);
+  const _q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.32);
   const capRepouso = new THREE.Matrix4().compose(new THREE.Vector3(...C0.centro), _q, new THREE.Vector3(...C0.raios));
+  // a mesma calota por linhas (3 × [m0, m1, m2, t]): a conta do quadro é escrita direto no buffer das instâncias
+  // (com o inverso do repouso da cabeça já multiplicado: na textura vai o quadro da cabeça, não a pele)
+  const CAP = new Float64Array(12);
+  {
+    const ih = O.cabeca * 12, e = capRepouso.elements;
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
+      let v = INV[ih + r * 4] * e[c * 4] + INV[ih + r * 4 + 1] * e[c * 4 + 1] + INV[ih + r * 4 + 2] * e[c * 4 + 2];
+      if (c === 3) v += INV[ih + r * 4 + 3];
+      CAP[r * 4 + c] = v;
+    }
+  }
   const medida = criarMedida();
   let sombras = true;
   let alturaTela = 720;
@@ -261,12 +291,12 @@ export function criarCorpos3D(cena, qualidade, corpo) {
   const kitIdx = jg => IDX_KIT[jg.kit] ?? PADRAO_KIT[jg.time === 1 ? 1 : 0][jg.goleiro ? 1 : 0];
   const pelesLin = PELES.map(h => new THREE.Color(h));
   const cabelosLin = CABELOS.map(h => new THREE.Color(h));
-  let vagaDe = new Float64Array(0), nivel = new Int8Array(0), alturaPx = new Float32Array(0), ordem = new Int32Array(0);
+  let vagaDe = new Float64Array(0), nivel = new Int8Array(0), alturaPx = new Float32Array(0), ordem = new Int32Array(0), vis = new Uint8Array(0);
   const contagem = new Int32Array(NL);
   function garantir(n) {
     if (n <= cap) return;
     const c = Math.max(n, Math.ceil(n * 1.25), 24);
-    vagaDe = new Float64Array(c); nivel = new Int8Array(c); alturaPx = new Float32Array(c); ordem = new Int32Array(c);
+    vagaDe = new Float64Array(c); nivel = new Int8Array(c); alturaPx = new Float32Array(c); ordem = new Int32Array(c); vis = new Uint8Array(c);
     montar(c);
   }
   garantir(24);
@@ -282,8 +312,9 @@ export function criarCorpos3D(cena, qualidade, corpo) {
   /** Nível de detalhe de cada jogador: pela altura na tela, com histerese, e o teto de triângulos da qualidade. */
   function escolherNiveis(lista, n, camera) {
     const f = camera ? alturaTela / (2 * Math.tan((camera.fov * Math.PI) / 360)) : 0;
-    let total = 0;
+    let total = 0, nv = 0;
     for (let p = 0; p < n; p++) {
+      if (!vis[p]) continue;
       let h = 0;
       if (camera) {
         const pose = lista[p].pose, ip = J.pelve * 3;
@@ -299,12 +330,12 @@ export function criarCorpos3D(cena, qualidade, corpo) {
       if (NL < 3) k = Math.min(k, NL - 1);
       nivel[p] = k;
       total += TRI[k];
-      ordem[p] = p;
+      ordem[nv++] = p;
     }
     // teto: os menores na tela perdem um nível de cada vez
     if (total > LQ.teto) {
       // ordem por altura na tela (inserção: ~25 itens, nada alocado)
-      for (let i = 1; i < n; i++) {
+      for (let i = 1; i < nv; i++) {
         const p = ordem[i], h = alturaPx[p];
         let k = i - 1;
         while (k >= 0 && alturaPx[ordem[k]] > h) { ordem[k + 1] = ordem[k]; k--; }
@@ -313,7 +344,7 @@ export function criarCorpos3D(cena, qualidade, corpo) {
       let mudou = true;
       while (total > LQ.teto && mudou) {
         mudou = false;
-        for (let i = 0; i < n && total > LQ.teto; i++) {
+        for (let i = 0; i < nv && total > LQ.teto; i++) {
           const p = ordem[i];
           if (nivel[p] < LEVE) { total += TRI[nivel[p] + 1] - TRI[nivel[p]]; nivel[p]++; mudou = true; }
         }
@@ -345,31 +376,56 @@ export function criarCorpos3D(cena, qualidade, corpo) {
       const n = lista.length;
       garantir(n);
       let controlado = null, proximo = null;
+      // quem aparece (ou faz sombra) nesta câmera
+      if (camera) {
+        camera.updateMatrixWorld();
+        _pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        _vista.setFromProjectionMatrix(_pv);
+      }
+      for (let p = 0; p < n; p++) {
+        if (!camera) { vis[p] = 1; continue; }
+        const pose = lista[p].pose, ip = J.pelve * 3;
+        _esf.center.set(pose[ip], pose[ip + 1], pose[ip + 2]);
+        vis[p] = _vista.intersectsSphere(_esf) ? 1 : 0;
+      }
       escolherNiveis(lista, n, camera);
       contagem.fill(0);
+      const mc = cabelos.instanceMatrix.array, mm = manchas.instanceMatrix.array, F = esq.quadros;
       for (let p = 0; p < n; p++) {
         const jg = lista[p];
         const chave = ((jg.id * 8 + kitIdx(jg)) * 2 + (jg.time === 1 ? 1 : 0)) * 2 + (jg.goleiro ? 1 : 0);
         if (vagaDe[p] !== chave) { vagaDe[p] = chave; escreverDados(p, jg); }
-        // os 22 ossos desta vaga na linha p da textura
-        const off = p * LARG * 4;
-        esq.calcular(jg.pose, dados, off);
-        const k = nivel[p];
-        iJogs[k].array[contagem[k]++] = p;
-        // calota do cabelo: a matriz de pele do osso da cabeça × a calota no repouso
-        const c = off + 5 * 12;
-        _m.set(dados[c], dados[c + 1], dados[c + 2], dados[c + 3], dados[c + 4], dados[c + 5], dados[c + 6], dados[c + 7],
-          dados[c + 8], dados[c + 9], dados[c + 10], dados[c + 11], 0, 0, 0, 1);
-        _cap.multiplyMatrices(_m, capRepouso);
-        cabelos.setMatrixAt(p, _cap);
-        // mancha de contato no meio dos pés, girada com os quadris (o goleiro deitado leva a mancha junto)
-        const F = esq.quadros;
-        const ang = Math.atan2(F[11], F[5]);
-        _q.setFromAxisAngle(CIMA, -ang);
-        _m.compose(_v.set(F[0], 0.016, F[2]), _q, _s.set(1.15, 1, 0.85));
-        manchas.setMatrixAt(p, _m);
         if (jg.controlado) controlado = jg;
         else if (jg.proximo) proximo = jg;
+        const o16 = p * 16;
+        if (!vis[p]) {
+          // fora da câmera: nada de esqueleto; calota e mancha somem (escala 0)
+          for (let i = 0; i < 16; i++) { mc[o16 + i] = 0; mm[o16 + i] = 0; }
+          continue;
+        }
+        // os ossos desta vaga na linha p da textura
+        const off = p * LARG * 4;
+        esq.calcularQuadros(jg.pose, dados, off);
+        const k = nivel[p];
+        iJogs[k].array[contagem[k]++] = p;
+        // calota do cabelo: o quadro da cabeça × (inverso do repouso × a calota no repouso), por colunas no buffer
+        const c = off + O.cabeca * 12;
+        for (let r = 0; r < 3; r++) {
+          const a0 = dados[c + r * 4], a1 = dados[c + r * 4 + 1], a2 = dados[c + r * 4 + 2], a3 = dados[c + r * 4 + 3];
+          mc[o16 + r] = a0 * CAP[0] + a1 * CAP[4] + a2 * CAP[8];
+          mc[o16 + 4 + r] = a0 * CAP[1] + a1 * CAP[5] + a2 * CAP[9];
+          mc[o16 + 8 + r] = a0 * CAP[2] + a1 * CAP[6] + a2 * CAP[10];
+          mc[o16 + 12 + r] = a0 * CAP[3] + a1 * CAP[7] + a2 * CAP[11] + a3;
+        }
+        mc[o16 + 3] = 0; mc[o16 + 7] = 0; mc[o16 + 11] = 0; mc[o16 + 15] = 1;
+        // mancha de contato no meio dos pés, girada com os quadris (o goleiro deitado leva a mancha junto): giro em y
+        // pelo X da pelve no chão, escala (1,15; 1; 0,85)
+        const lx = Math.sqrt(F[5] * F[5] + F[11] * F[11]);
+        const cs = lx > 1e-9 ? F[5] / lx : 1, sn = lx > 1e-9 ? -F[11] / lx : 0;
+        mm[o16] = cs * 1.15; mm[o16 + 1] = 0; mm[o16 + 2] = -sn * 1.15; mm[o16 + 3] = 0;
+        mm[o16 + 4] = 0; mm[o16 + 5] = 1; mm[o16 + 6] = 0; mm[o16 + 7] = 0;
+        mm[o16 + 8] = sn * 0.85; mm[o16 + 9] = 0; mm[o16 + 10] = cs * 0.85; mm[o16 + 11] = 0;
+        mm[o16 + 12] = F[0]; mm[o16 + 13] = 0.016; mm[o16 + 14] = F[2]; mm[o16 + 15] = 1;
       }
       for (let k = 0; k < NL; k++) {
         const g = malhas[k].geometry;

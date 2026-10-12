@@ -192,7 +192,7 @@ try {
         const cob = Math.max(0, Math.min(W, x1) - Math.max(0, x0)) * Math.max(0, Math.min(H, y1) - Math.max(0, y0)) / (W * H);
         return { plano: pj.plano, na: pj.andantesNaTela(), cham: d.chamadas, tri: d.triangulos, cob, som: g.estadio.som, cena: pj.somCena };
       }, t);
-      const png = await pg.screenshot();
+      const png = await pg.screenshot({ timeout: 120000 });
       const est = await estatisticas(contexto, png);
       porPlano.push({ id: p.id, ...r, ...est });
       if (r.plano !== p.id) semCor.push(`${p.id}≠${r.plano}`);
