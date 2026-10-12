@@ -125,7 +125,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   humano realista + mocap + rostos por IA (UV) → 6 estádio, torcida, câmera, replay, comemoração → 7 celular, menus,
   modos e desempenho.
 - Técnica: three.js **0.170.0** por importmap (jsdelivr), ES modules, sem build. Lógica (`js/*.js` exceto `entrada.js`,
-  `main.js`, `hud.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
+  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
   Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
   função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
   Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
@@ -301,6 +301,23 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
   replay abrem com `?replay=0`. Lição: o laço da página entrega a entrada da IA pelo humano SEM o `ia` da
   `entradaDemoPartida` — semente achada em Node só bate com a página com `acharGol({comoPagina: true})`.
+- **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
+  da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
+  chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
+  fila de cada time, 4 cortes de torcida/estádio e as escalações no campinho (cada time grande, ~10 s, o mesmo fundo; a 1ª
+  sai e a 2ª entra). Puros: `cortejo.js` (22 + 3 árbitros saem do túnel pela locomoção do jogo num mundo à parte; fotos e
+  fila montada), `prejogo-roteiro.js` (completo ~81 s, curto ~41 s, só escalação ~21 s; trilhos Catmull–Rom centrípetos),
+  `estadio-forma.js` (sólidos onde a câmera não entra + o lado de fora). Desenho: `render/prejogo.js` (diretor),
+  `render/estadio-fora.js` (fachada, cobertura, cantos, túnel por dentro, esplanada, bairro, prédios, carros, torcedores —
+  SÓ no pré-jogo: a TV do jogo fica dentro da arquibancada de cá), `prejogo-tela.js`, `escalacao-tela.js`, `campinho.js`
+  (o campinho do editor), `css/prejogo.css`. Pular: toque/Enter/A = próximo bloco; Pular/Esc/Start = jogo. Pausa → "Modo de jogo"
+  → "Pré-jogo da partida" (cada toque: completo → curto → só escalação → desligado; padrão completo; fora das opções
+  porque a pausa tem de caber sem rolar no celular deitado); Reiniciar no meio = só escalação. **Desligado** com
+  `navigator.webdriver`, `?prints=1` e `?demo=1`; `?prejogo=1|curto|escalacao|0` força. Testes: `teste-cortejo`,
+  `teste-prejogo-roteiro` (padrão), `teste-prejogo` (navegador, CI); prints `tools/prints-prejogo.mjs` (folhas de contato).
+  Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
+  desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
+  bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

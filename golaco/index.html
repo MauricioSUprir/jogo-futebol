@@ -10,6 +10,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090a'/%3E%3Cpath d='M14 46 26 18h24L38 46z' fill='%2319e07a'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/estilo.css">
   <link rel="stylesheet" href="css/editor.css">
+  <link rel="stylesheet" href="css/prejogo.css">
   <script type="importmap">
   {
     "imports": {
@@ -175,6 +176,10 @@
           <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false">Partida <small>Golaço FC × Ventania FC</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false">Treino de ataque <small>6 contra 4</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false">Treino de condução <small>bola no pé</small></button>
+          <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
+               completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
+               linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
+          <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-describedby="estado-prejogo">Pré-jogo da partida <small id="estado-prejogo">completo</small></button>
         </div>
         <div class="menu-opcoes">
           <div class="opcao">
