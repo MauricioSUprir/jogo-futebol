@@ -127,7 +127,10 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
 {
   const { navegador, pagina, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
-    await pagina.goto(`${srv.url}?q=media&hora=dia&toque=1&entalhe=1&demo=1&semente=11`, { waitUntil: 'load' });
+    // ?comemoracao=0: a comemoração do gol seguraria a simulação ~5–7,5 s por gol e mudaria a linha do tempo destes 2 min
+    // (o apito forçado no fim caía no meio de uma cena, o que não existe no jogo); a tela da cena é medida no
+    // teste-comemoracao-tela (A5, C1)
+    await pagina.goto(`${srv.url}?q=media&hora=dia&toque=1&entalhe=1&demo=1&semente=11&comemoracao=0`, { waitUntil: 'load' });
     await pronta(pagina);
     const r = await pagina.evaluate(([FS]) => {
       const formas = eval(FS);
