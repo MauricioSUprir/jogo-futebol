@@ -4,7 +4,9 @@
 // Reiniciar partida na partida; Recomeçar, Máquina e Marcador só nos treinos; "Modo de jogo" com a
 // partida e os treinos), ajuda, contador de qps e tela de carregamento. Só mexe no DOM; quem
 // decide é o main.js. Lê o mundo só para desenhar (placar, minimapa) e tolera campos que ainda não
-// existem.
+// existem. Tela limpa (dono, 11/10): na partida o "1º T" só aparece no intervalo, no fim e nos acréscimos
+// (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
+// e o minimapa é opção da pausa (escondido = não redesenha).
 
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
@@ -24,7 +26,7 @@ const TEXTO_EVENTO = {
   substituicao: { t: 'Substituição', ms: 2400, forte: true, prio: 3 },
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
 };
-// rótulo da barra de força por tipo de carga
+// rótulo da barra de força por tipo de carga (fica no DOM; na partida o CSS esconde: tela limpa, 11/10)
 const ROTULO_CARGA = {
   passe: 'PASSE', enfiada: 'ENFIADA', enfiadaAlta: 'ENFIADA ALTA', lancamento: 'LANÇAMENTO', cruzamento: 'CRUZAMENTO',
   chute: 'CHUTE', colocado: 'COLOCADO', cavadinha: 'CAVADINHA',
@@ -45,7 +47,8 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * opc = {aoComando(cmd, valor)}. Comandos: continuar, recomecar, maquina, marcador, ajuda,
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
  * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
- * desligado), volume (0–1), replay (o "Replay" da pausa), replay-pular, replayAuto (ligado | desligado).
+ * desligado), volume (0–1), minimapa e nomes (sem valor: alterna; tela limpa, 11/10), replay (o "Replay" da pausa),
+ * replay-pular, replayAuto (ligado | desligado).
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -59,7 +62,7 @@ export function criarHud(opc) {
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
-    reiniciarPartida: $('btn-reiniciar-partida'), replay: $('replay'), replayFaixa: $('replay-faixa'),
+    reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1;
@@ -70,7 +73,7 @@ export function criarHud(opc) {
   let prints = false;
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
-  const relogioVisto = { minuto: null, tempo: null, visivel: null };
+  const relogioVisto = { minuto: null, tempo: null, visivel: null, comTempo: null };
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
@@ -167,6 +170,13 @@ export function criarHud(opc) {
   window.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
   if (window.visualViewport) window.visualViewport.addEventListener('resize', () => requestAnimationFrame(ajustarTopo));
 
+  /** A dica de teclas do PC aparece de novo e some 8 s depois (CSS .dica: animação que começa ao ser reposta). */
+  function mostrarDica() {
+    if (!el.dica) return;
+    el.dica.style.animation = 'none';
+    void el.dica.offsetWidth;
+    el.dica.style.animation = '';
+  }
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
   function aplicarModoNoMenu() {
     const partida = modoAtual === 'partida';
@@ -336,9 +346,14 @@ export function criarHud(opc) {
         placarVisto[i] = v[i];
       }
     },
-    /** Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). */
+    /**
+     * Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). Escondido (opção da
+     * pausa; o padrão do celular) não redesenha nada.
+     */
     minimapa(agoraMs, mundo, idControlado, idProximo) {
-      const intervalo = raiz.classList.contains('com-toque') ? 50 : 33;
+      const toque = raiz.classList.contains('com-toque');
+      if (raiz.classList.contains('mapa-desligado') || (toque && !raiz.classList.contains('mapa-ligado'))) return;
+      const intervalo = toque ? 50 : 33;
       if (agoraMs - mapa.ultimo < intervalo && agoraMs >= mapa.ultimo) return;
       mapa.ultimo = agoraMs;
       desenharMapa(mundo, idControlado, idProximo);
@@ -431,6 +446,13 @@ export function criarHud(opc) {
       const ac = r.acrescimo;
       const min = ac && ac.decorrido > 0 ? `${r.minuto}+${ac.decorrido}'` : `${r.minuto}'`;
       const tempo = r.estado === 'intervalo' ? 'Intervalo' : r.estado === 'fim' ? 'Fim' : `${NOME_TEMPO[r.tempo] ?? ''}${ac ? ` +${ac.anunciado}` : ''}`;
+      // o tempo escrito ao lado do minuto só no intervalo, no fim e nos acréscimos ("1º T +4", como na TV): no resto
+      // da partida o placar fica só com o minuto (tela limpa; o texto continua no DOM)
+      const comTempo = r.estado === 'intervalo' || r.estado === 'fim' || !!ac;
+      if (comTempo !== relogioVisto.comTempo) {
+        el.relogio.classList.toggle('com-tempo', comTempo); relogioVisto.comTempo = comTempo;
+        ajustarTopo();
+      }
       if (min !== relogioVisto.minuto) {
         // 9' → 10': o placar alarga (a compactação do topo é refeita só quando muda o número de dígitos)
         const largura = (relogioVisto.minuto ?? '').length !== min.length;
@@ -467,6 +489,8 @@ export function criarHud(opc) {
     definirEstado(e) {
       // itens do menu por modo (partida × treinos) e pelo fim de jogo
       if (e.modoTreino !== undefined || e.fim !== undefined) {
+        // modo novo: a dica de teclas do PC aparece de novo por 8 s
+        if (e.modoTreino !== undefined && modoAtual !== null && e.modoTreino !== modoAtual) mostrarDica();
         if (e.modoTreino !== undefined) modoAtual = e.modoTreino;
         if (e.fim !== undefined) fimDeJogo = !!e.fim;
         aplicarModoNoMenu();
@@ -479,6 +503,10 @@ export function criarHud(opc) {
       }
       if (e.hora) marcarGrupo('hora', e.hora);
       if (e.camera) marcarGrupo('camera', e.camera);
+      // tela limpa: minimapa e nomes nos botões nos botões de liga/desliga da pausa (o estado que vale agora,
+      // escolhido ou o padrão do aparelho)
+      if (typeof e.minimapa === 'boolean') $('chip-minimapa')?.setAttribute('aria-pressed', String(e.minimapa));
+      if (typeof e.nomes === 'boolean') $('chip-nomes')?.setAttribute('aria-pressed', String(e.nomes));
       if (typeof e.marcador === 'boolean' && el.marcador) {
         el.marcador.textContent = e.marcador ? 'ligado' : 'desligado';
         el.marcador.closest('button')?.setAttribute('aria-pressed', String(e.marcador));
@@ -508,6 +536,7 @@ export function criarHud(opc) {
     qps(texto) { if (!el.qps.hidden) el.qps.textContent = texto; },
     progresso(msg) { if (el.msg) el.msg.textContent = msg; },
     pronto() {
+      mostrarDica(); // os 8 s da dica contam a partir de quando o jogo aparece
       el.carregando.classList.add('sumir');
       setTimeout(() => { el.carregando.hidden = true; }, 400);
     },

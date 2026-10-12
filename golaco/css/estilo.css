@@ -1,5 +1,8 @@
 /* GOLAÇO — identidade preto e verde, HUD discreto. Nada por baixo do entalhe do celular:
-   tudo o que é HUD/botão usa as margens seguras (env(safe-area-inset-*)). */
+   tudo o que é HUD/botão usa as margens seguras (env(safe-area-inset-*)).
+   Tela limpa (dono, 11/10: "quero menos informação na tela"): na partida o HUD fica com o placar compacto de TV,
+   o menu só com o ícone e os botões translúcidos só com o ícone; minimapa (desligado no celular) e nomes nos
+   botões são opções da pausa. Orçamento medido por tools/teste-hud-minimo.mjs (≤ 11% da tela no celular). */
 :root {
   --preto: #07090a;
   --preto-2: #0c1011;
@@ -19,8 +22,9 @@
   --sa-b: env(safe-area-inset-bottom, 0px);
   --sa-l: env(safe-area-inset-left, 0px);
   --m: 14px;
-  --toque-escala: 1;
-  --toque-opacidade: 0.8;
+  --toque-escala: 0.8;
+  --analogico-escala: 1;      /* entrada.js escalaAnalogico: no tamanho padrão (80%) o analógico é o de antes */
+  --toque-opacidade: 0.55;
   --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
@@ -115,6 +119,9 @@ html.em-partida .painel-jogo { display: none; }
 }
 .btn-menu svg { width: 22px; height: 22px; }
 .btn-menu:hover, .btn-menu:focus-visible { border-color: var(--verde); color: var(--verde); outline: none; }
+/* partida: só o ícone, com sombra, sem o painel (44 px: o mínimo da Apple para toque) */
+html.em-partida .btn-menu { width: 44px; height: 44px; background: transparent; border-color: transparent; }
+html.em-partida .btn-menu svg { filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)); }
 
 .aviso {
   position: absolute; top: calc(var(--sa-t) + var(--m) + 62px); left: 50%;
@@ -203,13 +210,16 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 .faixa-botao { pointer-events: auto; min-width: 200px; margin-top: 4px; }
 .faixa-botao[hidden] { display: none; }
 
-/* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola */
+/* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola. Opção da pausa ("Minimapa", como o
+   radar do EA FC): ligado no PC e DESLIGADO no celular por padrão (main.js liga html.mapa-ligado / mapa-desligado
+   quando a pessoa escolhe; sem escolha, html.com-toque decide) */
 .minimapa {
   position: absolute; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--sa-b) + var(--m)); width: 132px; height: 86px;
+  bottom: calc(var(--sa-b) + var(--m)); width: 112px; height: 73px;
   border-radius: 6px; border: 1px solid var(--linha); background: rgba(7, 9, 10, 0.72);
-  opacity: 0.92;
+  opacity: 0.8;
 }
+html.com-toque:not(.mapa-ligado) .minimapa, html.mapa-desligado .minimapa { display: none; }
 /* celular deitado: no topo, entre o placar e o painel (nada de dedo em cima) */
 html.com-toque .minimapa { bottom: auto; top: calc(var(--sa-t) + var(--m)); width: 92px; height: 60px; }
 /* celular: o painel mostra só o modo e a posição (o km/h fica para o PC) e abre espaço ao minimapa */
@@ -236,6 +246,25 @@ html.topo-c4 .placar-time { gap: 4px; font-size: 12px; letter-spacing: 0.04em; }
 html.topo-c4 .placar-gols { min-width: 22px; height: 26px; font-size: 16px; padding: 0 4px; }
 html.topo-c4 .placar-relogio { padding-left: 6px; }
 html.topo-c4 .placar-relogio b { font-size: 13px; min-width: 0; letter-spacing: -0.02em; }
+/* partida: placar compacto de TV (placar e relógio primeiro; sem a marca, sem bordas nem caixinhas nos gols; o
+   "1º T" só no intervalo, no fim e no anúncio dos acréscimos — hud.js liga .com-tempo). Nos treinos fica o de cima. */
+html.em-partida .marca-simbolo { display: none; }
+html.em-partida .placar { height: 30px; gap: 6px; padding: 0 8px; background: rgba(8, 11, 12, 0.62); border-color: transparent; border-radius: 7px; }
+html.em-partida .placar-linha { gap: 5px; }
+html.em-partida .placar-time { gap: 4px; font-size: 11px; letter-spacing: 0.05em; }
+html.em-partida .placar-time i { width: 3px; height: 11px; border-radius: 1.5px; }
+html.em-partida .placar-gols { min-width: 14px; height: 22px; padding: 0 2px; font-size: 15px; background: transparent; border: 0; border-radius: 4px; }
+html.em-partida .placar-x { width: 5px; }
+html.em-partida .placar-relogio { gap: 4px; padding-left: 6px; }
+html.em-partida .placar-relogio b { font-size: 12px; min-width: 0; }
+html.em-partida .placar-relogio small { font-size: 9px; }
+html.em-partida .placar-relogio:not(.com-tempo) small { display: none; }
+@media (min-width: 1001px) {
+  html.em-partida .placar { height: 34px; padding: 0 10px; }
+  html.em-partida .placar-time { font-size: 12px; }
+  html.em-partida .placar-gols { font-size: 17px; height: 26px; }
+  html.em-partida .placar-relogio b { font-size: 13px; }
+}
 
 /* força do passe/chute: perto do jogador controlado (posicionada pelo main.js) */
 /* cartão do árbitro (amarelo/vermelho) em cima de quem levou: só o cartão, sem texto */
@@ -266,6 +295,9 @@ html.topo-c4 .placar-relogio b { font-size: 13px; min-width: 0; letter-spacing: 
   display: block; height: 100%; width: 0; border-radius: 3px;
   background: linear-gradient(90deg, var(--verde-2), var(--verde) 60%, #b9ffd9);
 }
+/* partida: só a barra, menor e sem o rótulo ("PASSE", "CHUTE": o texto fica no DOM, escondido) */
+html.em-partida .carga-tipo { display: none; }
+html.em-partida .carga-barra { width: 44px; height: 6px; }
 .carga.cheia .carga-barra { border-color: #fff; box-shadow: 0 0 8px rgba(25, 224, 122, 0.9); }
 
 .qps {
@@ -280,6 +312,9 @@ html.com-toque .qps { bottom: auto; top: calc(var(--sa-t) + var(--m) + 58px); }
   background: rgba(7, 9, 10, 0.62); padding: 6px 10px; border-radius: 8px;
 }
 .dica .sep { width: 1px; height: 14px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; }
+/* some sozinha 8 s depois de aparecer (hud.js reinicia quando o jogo fica pronto e a cada troca de modo) */
+.dica { animation: dica-some 0.6s ease 8s forwards; }
+@keyframes dica-some { to { opacity: 0; visibility: hidden; } }
 html.com-toque .dica { display: none; }
 
 /* ------------------------------------------------------------------ toque */
@@ -289,51 +324,58 @@ html.com-toque .dica { display: none; }
   position: absolute; left: 0; top: calc(var(--sa-t) + 70px); bottom: 0; width: 50%;
   pointer-events: auto; touch-action: none;
 }
-.analogico { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: calc(var(--toque-opacidade) * 0.5); transition: opacity 0.12s; }
-.analogico.ativo { opacity: var(--toque-opacidade); transition: none; }
+/* em repouso, quase invisível (só o anel, sem o pino: a dica de onde encostar); com o dedo, bem visível */
+.analogico { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; opacity: calc(var(--toque-opacidade) * 0.3); transition: opacity 0.12s; }
+.analogico.ativo { opacity: max(var(--toque-opacidade), 0.6); transition: none; }
+.analogico:not(.ativo) .analogico-pino { opacity: 0; }
 .analogico-base {
-  position: absolute; left: calc(-58px * var(--toque-escala)); top: calc(-58px * var(--toque-escala));
-  width: calc(116px * var(--toque-escala)); height: calc(116px * var(--toque-escala)); border-radius: 50%;
+  position: absolute; left: calc(-58px * var(--analogico-escala)); top: calc(-58px * var(--analogico-escala));
+  width: calc(116px * var(--analogico-escala)); height: calc(116px * var(--analogico-escala)); border-radius: 50%;
   border: 2px solid rgba(25, 224, 122, 0.55);
   background: radial-gradient(circle, rgba(25, 224, 122, 0.1) 0%, rgba(7, 9, 10, 0.4) 72%);
 }
 .analogico-pino {
-  position: absolute; left: calc(-24px * var(--toque-escala)); top: calc(-24px * var(--toque-escala));
-  width: calc(48px * var(--toque-escala)); height: calc(48px * var(--toque-escala)); border-radius: 50%;
+  position: absolute; left: calc(-24px * var(--analogico-escala)); top: calc(-24px * var(--analogico-escala));
+  width: calc(48px * var(--analogico-escala)); height: calc(48px * var(--analogico-escala)); border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #5af0a3, var(--verde) 55%, var(--verde-2));
   box-shadow: 0 0 0 3px rgba(7, 9, 10, 0.55);
 }
-/* Botões do arco (posição, tamanho, --fs e --ic vêm de js/entrada.js: calcularLayoutToque).
-   Mínimo de 48 px; ataque e defesa trocam pelo estado do mundo (fase-ataque / fase-defesa). */
+/* Botões do arco (posição, tamanho, --fs, --ic e --ic-so vêm de js/entrada.js: calcularLayoutToque).
+   Mínimo de 48 px; ataque e defesa trocam pelo estado do mundo (fase-ataque / fase-defesa). Tela limpa (11/10):
+   translúcidos (fundo 0,32, borda fina, sem sombra) e SÓ COM O ÍCONE — o nome fica no aria-label, na Ajuda e na
+   opção "Nomes nos botões" da pausa (html.nomes-botoes). Apertado: cheio e verde, sem transparência. */
 .btn-toque {
   position: absolute; left: 0; top: 0; width: 72px; height: 72px;
   pointer-events: auto; touch-action: none; padding: 0; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; cursor: pointer;
   color: var(--texto); font-weight: 900; letter-spacing: 0.04em; line-height: 1;
-  background: radial-gradient(circle at 50% 35%, rgba(22, 30, 32, 0.78), rgba(6, 8, 9, 0.72));
-  border: 2px solid rgba(25, 224, 122, 0.6);
+  background: rgba(6, 8, 9, 0.32);
+  border: 1.5px solid rgba(25, 224, 122, 0.6);
   opacity: var(--toque-opacidade);
-  box-shadow: inset 0 0 0 3px rgba(7, 9, 10, 0.4), 0 2px 10px rgba(0, 0, 0, 0.35);
   animation: bt-aparece 0.16s ease-out;
 }
 .btn-toque svg {
-  width: var(--ic, 24px); height: var(--ic, 24px); flex: none;
+  width: var(--ic-so, 30px); height: var(--ic-so, 30px); flex: none;
   fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.7));
 }
-.btn-toque span { font-size: var(--fs, 11px); letter-spacing: var(--ls, 0.04em); white-space: nowrap; }
-.btn-toque.ativo { background: var(--verde); color: var(--preto); border-color: #b9ffd9; box-shadow: 0 0 18px rgba(25, 224, 122, 0.55); }
-.btn-toque.ativo svg { stroke: var(--preto); }
-/* CHUTE: o maior, com o verde mais forte */
-.btn-chute { border-width: 3px; border-color: var(--verde); }
+.btn-toque span { display: none; font-size: var(--fs, 11px); letter-spacing: var(--ls, 0.04em); white-space: nowrap; }
+html.nomes-botoes .btn-toque { background: radial-gradient(circle at 50% 35%, rgba(22, 30, 32, 0.7), rgba(6, 8, 9, 0.62)); }
+html.nomes-botoes .btn-toque svg { width: var(--ic, 24px); height: var(--ic, 24px); }
+html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.btn-toque.ativo { opacity: 1; background: var(--verde); color: var(--preto); border-color: #b9ffd9; box-shadow: 0 0 18px rgba(25, 224, 122, 0.55); }
+.btn-toque.ativo svg { stroke: var(--preto); filter: none; }
+/* CHUTE e TROCAR: os maiores, com a borda mais forte */
+.btn-chute { border-width: 2px; border-color: var(--verde); }
 .btn-chute span { letter-spacing: 0.08em; }
-.btn-trocar { border-width: 3px; }
+.btn-trocar { border-width: 2px; }
 .btn-goleiro svg { stroke: #c6ff3d; }
 .btn-goleiro.ativo svg { stroke: var(--preto); }
 /* defesa da Etapa 3: só aparecem depois que a entrada os posiciona no arco (style com a posição) */
 .btn-toque[data-etapa="3"]:not([style]) { display: none; }
-.btn-conter svg, .btn-pressao svg { stroke: #9ff5c6; }
+.btn-pressao svg { stroke: #9ff5c6; }
 .btn-dividida svg { stroke: var(--verde); }
-.btn-conter.ativo svg, .btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
+.btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
 .toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
@@ -369,6 +411,25 @@ html.com-toque .dica { display: none; }
 }
 .btn-fechar svg { width: 18px; height: 18px; }
 .btn-fechar:hover, .btn-fechar:focus-visible { color: var(--verde); border-color: var(--verde); outline: none; }
+/* tela limpa (11/10): liga/desliga do que aparece na tela, na barra de cima da pausa (Minimapa; Nomes nos botões só com
+   os controles de toque) — sem custo de altura: a pausa continua cabendo sem rolar no celular deitado */
+.chips-tela { display: flex; gap: 6px; margin: 0 10px; } /* margem à esquerda: nunca encostando no título */
+.chip {
+  height: 34px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap;
+  font-size: 13px; font-weight: 700; color: var(--texto-2); background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 17px;
+}
+.chip::before { content: ""; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--texto-2); box-sizing: border-box; }
+.chip[aria-pressed="true"] { color: var(--preto); background: var(--verde); border-color: var(--verde); }
+.chip[aria-pressed="true"]::before { background: var(--preto); border-color: var(--preto); }
+.chip:hover, .chip:focus-visible { border-color: var(--verde); outline: none; }
+html:not(.com-toque) .chip-nomes { display: none; }
+@media (max-width: 600px) {
+  .chips-tela { margin-right: 6px; }
+  /* sem a bolinha (o estado fica no fundo verde) e mais justos: em 568×320 com entalhe o "PAUSA" ficava a 1 px do
+     "Minimapa"; assim sobram ~30 px (tools/teste-hud-minimo.mjs, H7) */
+  .chip { font-size: 12px; padding: 0 10px; gap: 0; }
+  .chip::before { display: none; }
+}
 
 .menu-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 20px; }
 .menu-acoes { display: flex; flex-direction: column; gap: 8px; }

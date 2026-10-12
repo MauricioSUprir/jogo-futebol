@@ -59,6 +59,7 @@ import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
+import { forcarFesta } from './render/festa.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
@@ -91,6 +92,16 @@ function salvarPrefs(p) {
   try { localStorage.setItem(CHAVE_PREFS, JSON.stringify(p)); } catch (_) { /* sem armazenamento */ }
 }
 const prefs = lerPrefs();
+// Tela limpa (dono, 11/10): o minimapa e os nomes nos botões de toque são opções da pausa. Minimapa sem escolha
+// salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque); nomes: desligados (só o ícone).
+function aplicarTelaLimpa() {
+  const r = document.documentElement;
+  r.classList.toggle('mapa-ligado', prefs.minimapa === 'ligado');
+  r.classList.toggle('mapa-desligado', prefs.minimapa === 'desligado');
+  r.classList.toggle('nomes-botoes', prefs.nomesBotoes === true);
+}
+const minimapaLigado = () => (prefs.minimapa ? prefs.minimapa === 'ligado' : !document.documentElement.classList.contains('com-toque'));
+aplicarTelaLimpa();
 
 // qualidade: ?q força; senão a escolha salva; senão automática (celular = média, PC = alta)
 const ehCelular = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || Math.min(screen.width, screen.height) < 600;
@@ -553,8 +564,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   if (linhaNoReplay != null && ui && ui.tick === linhaNoReplay && mundo.partida.estado !== 'jogo') linhaImped.mostrar(null);
   else linhaImped.atualizar(mundo, dt);
   marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
-  campo.atualizar(agoraMs / 1000);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
+  campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -706,7 +717,7 @@ function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
   const dt = Math.min(0.1, dtReal);
-  const ent = entrada.ler(cam.yaw);
+  const ent = entrada.ler(cam.yaw, agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
   if (diretor && diretor.ativo) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
@@ -726,7 +737,7 @@ function quadro(agoraMs, desenhar = true) {
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
       rodarPasso(e, ac);
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
-      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw).botoes; }
+      if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
       // o replay começou neste passo (gol, impedimento): os passos que sobraram não rodam (a simulação espera)
       if (diretor && diretor.ativo) break;
     }
@@ -924,6 +935,18 @@ function comando(c, v) {
     }
     case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
     case 'toqueOpacidade': entrada.definirAjustes({ opacidade: v }); hud.definirEstado({ toqueOpacidade: entrada.ajustes.opacidade }); break;
+    // tela limpa (botões de liga/desliga da pausa): sem valor, alterna o que vale agora
+    case 'minimapa':
+      prefs.minimapa = v === 'ligado' || v === 'desligado' ? v : (minimapaLigado() ? 'desligado' : 'ligado'); salvarPrefs(prefs);
+      aplicarTelaLimpa();
+      hud.definirEstado({ minimapa: minimapaLigado() });
+      hud.ajustarTopo();
+      break;
+    case 'nomes':
+      prefs.nomesBotoes = v === 'ligado' ? true : v === 'desligado' ? false : prefs.nomesBotoes !== true; salvarPrefs(prefs);
+      aplicarTelaLimpa();
+      hud.definirEstado({ nomes: prefs.nomesBotoes });
+      break;
     default: break;
   }
 }
@@ -951,13 +974,14 @@ async function iniciar() {
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
-  marcas = criarMarcas(cena3d.cena);
+  marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => hud.ajustarTopo() });
+  // os controles de toque apareceram/sumiram: o topo se ajusta e o padrão do minimapa (celular × PC) muda junto
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
   atualizarFase();
   redimensionar();
   window.addEventListener('resize', redimensionar);
@@ -978,6 +1002,7 @@ async function iniciar() {
   hud.definirEstado({
     qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false, replayAuto,
+    minimapa: minimapaLigado(), nomes: prefs.nomesBotoes === true,
   });
   hud.definirTimes(timesDoMundo(mundo));
   // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
@@ -1290,7 +1315,15 @@ const api = {
     gol(golaco) { return iniciarReplay(diretor?.reverGol(golaco)); },
   },
   estadio: {
-    get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
+    get torcida() {
+      if (!torcida) return null;
+      return {
+        n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent,
+        // cada malha (grupo) neste quadro e a arquibancada do lado de cá (fora do desenho com a câmera dentro dela)
+        grupos: (torcida.mesh?.children ?? []).map(m => ({ nome: m.name, visivel: m.visible, n: m.userData.k ?? m.geometry.instanceCount })),
+        ladoDeCa: campo?.ladoDeCa ? campo.ladoDeCa.visible : null,
+      };
+    },
     get rede() {
       const t = tempoEstadio();
       return { batidas: ondas.total, ativa: redeAtiva(ondas, t), tempo: t, impactos: ondas.imp.filter(i => i.ativo).map(i => ({ ...i })) };
@@ -1299,6 +1332,18 @@ const api = {
     deslocamentoRede(plano, x, y, z) { return deslocamento(ondas, plano, x, y, z, tempoEstadio()) * fixoRede(plano, x, y, z); },
     get emocao() { return { agito: emocao.agito, torcida: emocao.torcida.map(g => ({ ...g })), contagem: { ...emocao.contagem } }; },
     get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
+    /** Testes e prints: acende sinalizadores / abre o bandeirão / começa a ola agora ({sinalizadores, cor, bandeirao, ola}). */
+    forcarFesta(o) { forcarFesta(emocao.festa, o); },
+    /** Mostra/esconde a festa (faixas, bandeiras, bandeirões, sinalizadores) — conferência de pixels. */
+    mostrarFesta(v) { torcida?.mostrarFesta(v); },
+    /** Overdraw da fumaça dos sinalizadores nesta câmera (telas cheias; sinalizadores.js medirOverdraw). */
+    overdrawFumaca() { return torcida ? torcida.sinalizadores.medirOverdraw(cena3d.renderer, cam.camera) : null; },
+    /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
+    get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
+    /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
+    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
+    /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
+    get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
     redeOnda(v) { redeLigada = !!v; },
     /** Só a troca de qualidade da torcida (ms): quantos desenhar e a animação, sem remontar nada. */
