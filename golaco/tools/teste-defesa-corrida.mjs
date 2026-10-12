@@ -18,7 +18,7 @@
 //  - roubada desfeita ≤ 5% (26%);
 //  - gols do roteiro sprint ≤ 1,5 por partida (2,5–3,1);
 //  - gols de arrancada de 40 m ou mais ≤ 0,5 por partida (1,9);
-//  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%);
+//  - gol por chute nas arrancadas do próprio campo ≤ 20% (36%; com menos de 10 chutes, ≤ 0,25 gol dessas arrancadas por partida);
 //  - defensor do corredor, com o condutor a 3 m: mediana ≥ 5 m/s para o próprio gol (3,0);
 //  - chegada à área nas arrancadas do próprio campo com o bloco armado ≤ 25% (30%; abaixo de 12% só mexendo na vantagem
 //    de velocidade da condução — decisão do dono);
@@ -203,7 +203,11 @@ const desf = soma(sp, r => r.desfeitas), roub = soma(sp, r => r.roubadas);
 reg('roubada da IA desfeita pelo mesmo condutor em 1 s', `${desf}/${roub} (${f(pc(desf, roub), 0)}%)`, '≤ 5%', roub >= 20 && pc(desf, roub) <= 5);
 reg('gols do roteiro sprint por partida', f(soma(sp, r => r.gols) / NS, 2), '≤ 1,5', soma(sp, r => r.gols) / NS <= 1.5);
 reg('gols de arrancada de 40 m ou mais por partida', f(longas.length / NS, 2), '≤ 0,5', longas.length / NS <= 0.5);
-reg('gol por chute nas arrancadas do próprio campo', `${chutes.filter(e => e.gol).length}/${chutes.length} (${f(pc(chutes.filter(e => e.gol).length, chutes.length), 0)}%)`, '≤ 20%', chutes.length >= 10 && pc(chutes.filter(e => e.gol).length, chutes.length) <= 20);
+// (com menos de 10 chutes a conversão não se mede: vale então o número de gols dessas arrancadas, ≤ 0,25 por partida — a
+// defesa que não deixa chutar não reprova por falta de amostra)
+const golsCh = chutes.filter(e => e.gol).length;
+reg('gol por chute nas arrancadas do próprio campo', `${golsCh}/${chutes.length} (${f(pc(golsCh, chutes.length), 0)}%)`, '≤ 20% (< 10 chutes: ≤ 0,25 gol/partida)',
+  chutes.length >= 10 ? pc(golsCh, chutes.length) <= 20 : golsCh / NS <= 0.25);
 reg('defensor do corredor ultrapassado: velocidade para o gol com o condutor a 3 m (mediana)', `${f(v3[v3.length >> 1], 2)} m/s (${v3.length} duelos)`, '≥ 5 m/s', v3.length >= 20 && v3[v3.length >> 1] >= 5);
 reg('arrancadas do próprio campo, bloco armado: chegam à área', `${armado.filter(e => e.area).length}/${armado.length} (${f(pc(armado.filter(e => e.area).length, armado.length), 0)}%)`, '≤ 25%', armado.length >= 40 && pc(armado.filter(e => e.area).length, armado.length) <= 25);
 reg('faltas da IA no humano por partida', f(soma(sp, r => r.faltasIA) / NS, 2), '≤ 5', soma(sp, r => r.faltasIA) / NS <= 5);

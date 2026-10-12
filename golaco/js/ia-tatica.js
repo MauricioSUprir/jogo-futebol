@@ -739,7 +739,12 @@ function semBola(m, j, f) {
     if (ep) return extra ? { ...ep, botoes: ep.botoes | extra } : ep;
   }
   // 2) contrapressão (janela depois da perda)
-  if (B.contraAte > m.tick && B.contra.includes(j.id) && !naMaoAdv) return apertar(m, j, s, B, meuGol, extra, 'contra');
+  // (condutor rápido: quem está na contrapressão também acompanha pela velocidade, sem subir no corredor — ia de frente na
+  // bola e o condutor passava por ele)
+  if (B.contraAte > m.tick && B.contra.includes(j.id) && !naMaoAdv) {
+    if (B.rapido) { const e = acompanhar(m, j, s, B, meuGol, extra, 'aperta'); if (e) return e; }
+    return apertar(m, j, s, B, meuGol, extra, 'contra');
+  }
   // 3) 1º homem
   // (com a bola além da linha de engajamento ele não sai do bloco: segue a zona, abaixo)
   // (o condutor lento — B.lento — tira o 1º do bloco também além dela)

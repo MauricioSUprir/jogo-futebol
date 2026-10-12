@@ -617,7 +617,9 @@ function bolaLivre(m) {
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     if (!b.rolando && b.p.y > 0.45) {
-      if (bolaAltaNoCorpo(m, j)) return;
+      // (só quem TOCOU na bola encerra a vez; quem marcou o toque ou ainda espera por ele, não — antes o 1º da fila
+      // esperando um toque marcado tirava a vez de quem cabeceava ANTES dele e a do goleiro, que pega a bola logo abaixo)
+      if (bolaAltaNoCorpo(m, j) === true) return;
       continue;
     }
     if (noArAgora(m, j)) continue; // no ar (pulo do cabeceio): não domina a bola baixa
@@ -690,12 +692,16 @@ function cabecaNaBola(m, j, extra = 0) {
   return MD.hypot(b.x - p[k], b.y - p[k + 1], b.z - p[k + 2]) - RAIO_CABECA - 0.11 <= CABECEIO.folga + extra;
 }
 
-/** Bola alta chegando ao corpo: cabeceio (planejado com o pulo desenhado) ou domínio no peito/coxa. */
+const ESPERA = 'espera';
+/**
+ * Bola alta chegando ao corpo: cabeceio (planejado com o pulo desenhado) ou domínio no peito/coxa. Devolve true quando
+ * tocou na bola, ESPERA quando marcou o toque ou ainda espera por ele, false quando não vai nela.
+ */
 function bolaAltaNoCorpo(m, j) {
   const c = j.cond;
   const b = m.bola;
   if (c.toque && c.toque.tipo === 'aereo') {
-    if (m.tick < c.toque.tick) return true;
+    if (m.tick < c.toque.tick) return ESPERA;
     c.toque = null;
     const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
     const bp = !!(m.voo && m.voo.bolaParada);
@@ -753,6 +759,8 @@ function bolaAltaNoCorpo(m, j) {
   }
   if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
   if (noArAgora(m, j)) return false; // no ar (pulo de outro cabeceio): não marca outro toque
+  // indo disputar o toque de um adversário (agendarDisputa): o pulo dele é o da disputa — não planeja outro por cima
+  if (j.disputaAlta && m.tick <= j.disputaAlta.tc) return ESPERA;
   const peito = ACOES.cabeceio.alturaPeito[1];
   // de cabeça? Acima do peito, sempre; com botão, acima de CABECEIO.alturaPedido; sem botão, na altura do peito só para o
   // gol ou para afastar (cabeceio.js intencaoCabeceio). O pulo (e o tronco indo à bola) fica planejado já: a pose o desenha
@@ -763,7 +771,7 @@ function bolaAltaNoCorpo(m, j) {
     // peito/coxa: a bola passa nele (como antes)
     if (j.cab && j.cab.tc > m.tick && !j.cab.saiu) j.cab = null;
     c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
-    return true;
+    return ESPERA;
   }
   // de cabeça: o 1º ponto da trajetória que ele alcança A TEMPO DE PULAR (correr até lá + contramovimento + subida) —
   // esperar a bola passar a 0,6 m dele (bolaAltaPassando) não deixava tempo para a subida. O controlado com o analógico
@@ -776,19 +784,20 @@ function bolaAltaNoCorpo(m, j) {
   // (na bola parada quem defende ataca a bola na zona dele: AEREO.zonaBolaParada)
   const zona = m.voo && m.voo.bolaParada && m.voo.time !== j.time ? AEREO.zonaBolaParada : Infinity;
   let pc = livre ? pontoDeCabeceio(m, j, vale, zona) : null;
-  // um companheiro já vai a esta bola de cabeça e chega antes (ou junto): não corro para ela também (os dois corriam, o
-  // que chegava depois voltava — o vai e volta do teste-movimento subia — e amontoavam debaixo do cruzamento)
-  if (pc && !ehControlado(m, j) && companheiroNoAlto(m, j, m.tick + pc.i + AEREO.juntoTicks)) pc = null;
+  // alguém já vai a esta bola de cabeça e chega antes (ou junto): não corro para ela também — o companheiro: os dois
+  // corriam, o que chegava depois voltava (o vai e volta do teste-movimento subia) e amontoavam debaixo do cruzamento; o
+  // adversário: a disputa com ele é a do agendarDisputa (quem chega primeiro a ela), não um 2º pulo por conta própria
+  if (pc && !ehControlado(m, j) && alguemNoAlto(m, j, m.tick + pc.i + AEREO.juntoTicks)) pc = null;
   const q = pc ?? r;
   if (!q || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
     // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
     if (!r || r.y > peito) return false;
     c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
-    return true;
+    return ESPERA;
   }
   c.toque = { tick: m.tick + q.i, pe: j.par.attr.pePreferido, bx: q.x, bz: q.z, tipo: 'aereo', y: q.y };
   if (m.partida && !(m.voo && m.voo.bolaParada)) agendarDisputa(m, j, j.cab);
-  return true;
+  return ESPERA;
 }
 
 const N_CAB = 72; // ticks da trajetória olhados para o ponto do cabeceio (1,2 s)
@@ -827,10 +836,10 @@ function pontoDeCabeceio(m, j, querCabeca, raioMax = Infinity) {
   return achou >= 0 ? _pc : null;
 }
 
-/** Algum companheiro de j com o cabeceio planejado (toque aéreo marcado e o pulo) para o tick t ou antes? */
-function companheiroNoAlto(m, j, t) {
+/** Algum outro jogador (dos dois times) com o cabeceio planejado (toque aéreo marcado e o pulo) para o tick t ou antes? */
+function alguemNoAlto(m, j, t) {
   for (const o of m.jogadores) {
-    if (o === j || o.time !== j.time || !o.cab || !o.cab.cabeceio || o.cab.tc > t || o.cab.tc < m.tick) continue;
+    if (o === j || !o.cab || !o.cab.cabeceio || o.cab.tc > t || o.cab.tc < m.tick) continue;
     if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') return true;
   }
   return false;

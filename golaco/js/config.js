@@ -465,7 +465,9 @@ export const GOLEIRO = {
   // recuo agarrado) saíram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%; painel de 144
   // partidas); −0,1 no logit → 59,0%, total 68,0%, de fora da área 86,8% (todas na meta)
   // cTempo/vRef (partida; entrega "cabeceio na bola rolando", 12/10): a bola mais lenta que dChute / vRef s até o goleiro dá
-  // cTempo por s a mais no logit — o cabeceio a gol (~12 m/s) de 8 m era defendido em 6% (o real: ~70% dos no alvo)
+  // cTempo por s a mais no logit — o cabeceio a gol (~12 m/s) de 8 m era defendido em 6% (o real: ~70% dos no alvo). Só no
+  // cabeceio a gol (m.voo.tipo 'cabeceio'): valendo em todo chute, as defesas de 6 a 16,5 m iam de 57,5% a 66,7% (64
+  // partidas do painel; meta 55–60%)
   logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
@@ -783,7 +785,8 @@ export const AEREO = {
   // Copa América 2021; meta do teste-bolas-paradas 35–62%). (Atrasar a leitura da defesa em 0,3–0,5 s não mudou nada:
   // 32,5% e 31,7% — ela já está no caminho da bola)
   zonaBolaParada: 1.0,
-  // um companheiro já vai à bola de cabeça chegando até juntoTicks depois de mim: eu não corro para ela também
+  // alguém (companheiro ou adversário) já vai à bola de cabeça chegando até juntoTicks depois de mim: eu não corro para ela
+  // também (o adversário disputa pelo agendarDisputa)
   juntoTicks: 6,
   // ...e na disputa da bola parada quem ataca vem na corrida, no tempo da cobrança: + ataqueBolaParada no logit (com a
   // defesa só na zona, o ataque ficava com 36,7% do 1º contato; com zona 0,8 m e +0,4: 42,5%; +0,8: 48,3% e 12,1% dos
@@ -1058,7 +1061,7 @@ export const IA_DEFESA = {
   //    arrancadas do próprio campo (base 4%)
   //  - v = 6,3 m/s (a definição de arrancada da contraprova de 11/10: o trote do humano, ~5,6 m/s, fica com a defesa de
   //    sempre, que já o parava: 4% chegavam à área).
-  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 2.5],
+  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
     batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia

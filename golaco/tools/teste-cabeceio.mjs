@@ -74,6 +74,14 @@ if (args.includes('--filho')) {
   process.exit(0);
 }
 
+/** P(X ≥ k) para X ~ Binomial(n, p) (termos em log). */
+function caudaBinomial(k, n, p) {
+  if (k <= 0) return 1;
+  let lt = n * Math.log(1 - p), abaixo = 0;
+  const r = Math.log(p / (1 - p));
+  for (let i = 0; i < k; i++) { abaixo += Math.exp(lt); lt += Math.log((n - i) / (i + 1)) + r; }
+  return Math.max(0, 1 - abaixo);
+}
 const linhas = [['parte', 'medida', 'medido', 'meta', 'resultado']];
 let falhas = 0;
 const reg = (parte, nome, medido, meta, ok) => { linhas.push([parte, nome, medido, meta, ok ? 'PASSOU' : 'REPROVOU']); if (!ok) falhas++; };
@@ -157,7 +165,10 @@ if (SO.includes('A') || SO.includes('B')) {
     reg('A', 'cenas com disputa pelo alto', `${R.disputa}/${R.cenas}`, '≥ 60%', R.cenas >= 30 && R.disputa >= 0.6 * R.cenas);
     reg('A', 'a defesa ganha a disputa', `${R.defGanhou}/${R.disputas} (${pc(R.defGanhou, R.disputas)})`, '30–50%', R.disputas > 0 && R.defGanhou >= 0.3 * R.disputas && R.defGanhou <= 0.5 * R.disputas);
     reg('A', '1º contato de cabeça', `${R.cabeca}/${R.cenas} (${pc(R.cabeca, R.cenas)})`, '≥ 85%', R.cabeca >= 0.85 * R.cenas);
-    reg('A', 'gol do cruzamento', `${R.gol}/${R.cenas} (${pc(R.gol, R.cenas)})`, '3–12%', R.gol >= 0.03 * R.cenas && R.gol <= 0.12 * R.cenas);
+    // (60 cenas: a taxa varia ±4 pontos só pelo sorteio — o teto reprova só quando a contagem PROVA mais de 12%, P(X ≥ gols |
+    // n, 0,12) < 5% (binomial), como o C3 do teste-bolas-paradas; o piso de 3% fica direto)
+    const pGolCruz = caudaBinomial(R.gol, R.cenas, 0.12);
+    reg('A', 'gol do cruzamento', `${R.gol}/${R.cenas} (${pc(R.gol, R.cenas)}; p = ${pGolCruz.toFixed(2)} contra 12%)`, '3–12% (p ≥ 0,05)', R.gol >= 0.03 * R.cenas && pGolCruz >= 0.05);
     console.log('A — 1º contato:', JSON.stringify(R.prim), `· disputas em que quem ia na bola não alcançou: ${R.semDono ?? 0} · em que quem ia na bola era da defesa: ${R.donoDef ?? 0}`);
     const nG = R.cabGolN ?? 0, gG = R.cabGolGol ?? 0, dG = R.cabGolDef ?? 0;
     console.log(`A — cabeceios a gol do ataque: ${nG} · no alvo ${pc(gG + dG, nG)} · gol ${pc(gG, nG)} · o goleiro defende ${pc(dG, gG + dG)} (Opta: ~40% no alvo, 10–13% gol)`);
