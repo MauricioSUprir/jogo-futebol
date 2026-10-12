@@ -26,6 +26,8 @@ import { criarEstadioFora } from './estadio-fora.js';
 const ASPECTO_TV = 16 / 9;
 const NEVOA = { dia: [320, 1700], noite: [160, 1000] };     // névoa nos planos de fora (perto, longe)
 const PREVIA_MS = 2;                                          // orçamento por quadro do cortejo "prévia"
+// juntas do tronco para cima (a respiração da fila mexe só nelas e na pelve; os pés ficam plantados)
+const SUPERIOR = [J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.ombroD, J.cotoveloE, J.cotoveloD, J.maoE, J.maoD];
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function aproxima(v, alvo, dt, tau) { return v + (alvo - v) * (1 - Math.exp(-dt / Math.max(1e-3, tau))); }
@@ -154,8 +156,7 @@ export function criarPrejogo(ctx) {
     const f = 0.22 + ((id * 0.618) % 1) * 0.08, fase = id * 1.7;
     const sobe = 0.01 * Math.sin(2 * Math.PI * f * t + fase);
     const lado = 0.012 * Math.sin(2 * Math.PI * 0.09 * t + fase * 0.37);
-    const sup = [J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.ombroD, J.cotoveloE, J.cotoveloD, J.maoE, J.maoD];
-    for (const k of sup) {
+    for (const k of SUPERIOR) {
       const w = k === J.lombar ? 0.4 : 1;
       P[k * 3] += lado * w;
       P[k * 3 + 1] += sobe * (k === J.lombar ? 0.3 : 1);
@@ -233,7 +234,7 @@ export function criarPrejogo(ctx) {
     torcida.atualizar(agoraMs / 1000, st.emocao, camera(), ctx.som() ? ctx.som().relogioBatida : null, renderizar);
     forcarLadoDeCa();
     if (st.fora) st.fora.atualizar(agoraMs / 1000, camera());
-    if (renderizar) cena3d.desenhar(camera());
+    if (renderizar) { const t0 = performance.now(); cena3d.desenhar(camera()); mq.des += performance.now() - t0; }
   }
 
   // ---------------------------------------------------------------- ciclo
@@ -322,9 +323,18 @@ export function criarPrejogo(ctx) {
     if (avisar && ctx.aoFim) ctx.aoFim();
   }
 
+  // CPU por quadro do pré-jogo SEM o desenho (a GPU por software do headless fica de fora), num anel fixo
+  const MQ = 2048, mq = { n: 0, i: 0, v: new Float64Array(MQ), des: 0 };
   /** Um quadro (dt s reais; 0 com a página parada). Devolve false quando o pré-jogo acabou neste quadro. */
   function quadro(dtReal, agoraMs, renderizar = true) {
     if (!st.ativo) return false;
+    const t0 = performance.now();
+    mq.des = 0;
+    const r = quadroInterno(dtReal, agoraMs, renderizar);
+    mq.v[mq.i] = performance.now() - t0 - mq.des; mq.i = (mq.i + 1) % MQ; mq.n = Math.min(MQ, mq.n + 1);
+    return r;
+  }
+  function quadroInterno(dtReal, agoraMs, renderizar) {
     tela.atualizar(performance.now());
     const dt = clamp(dtReal, 0, 0.1);
     const agoraS = agoraMs / 1000;
@@ -404,6 +414,16 @@ export function criarPrejogo(ctx) {
     get pularVisivel() { return tela.pularVisivel; },
     get camera() { const c = camera(); return { x: c.position.x, y: c.position.y, z: c.position.z, fov: c.fov, near: c.near, far: c.far }; },
     get somCena() { const s = ctx.som(); return s ? s.cenaPre : null; },
+    /** CPU por quadro do pré-jogo sem o desenho (ms): {quadros, media, p95, max}; opc.zerar recomeça. */
+    medirQuadro(opc = {}) {
+      const n = mq.n, v = new Float64Array(n);
+      for (let k = 0; k < n; k++) v[k] = mq.v[(mq.i - n + k + MQ) % MQ];
+      let soma = 0, max = 0;
+      for (let k = 0; k < n; k++) { soma += v[k]; if (v[k] > max) max = v[k]; }
+      v.sort();
+      if (opc.zerar) { mq.n = 0; mq.i = 0; }
+      return { quadros: n, media: n ? soma / n : 0, p95: n ? v[Math.min(n - 1, Math.floor(0.95 * n))] : 0, max };
+    },
     /** O último quadro desenhado: chamadas de desenho e triângulos. */
     get desenho() { const i = ctx.cena3d.info().render; return { chamadas: i.calls, triangulos: i.triangles }; },
     get cortejo() { return st.c ? { tick: st.c.tick, fila: st.filaPronta, fotos: [...st.fotos.keys()], previa: !!st.previa } : null; },

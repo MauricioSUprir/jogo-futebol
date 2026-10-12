@@ -861,6 +861,7 @@ async function iniciar() {
   // pré-jogo (antes do 1º passo; com a abertura "Toque para começar", que libera o som); sem ele, o 'saida' do começo
   // da partida (o apito do início fica pendente até o primeiro gesto)
   hud.progresso('Montando o estádio…');
+  await proximoQuadro();
   prejogo = criarPrejogo({
     cena3d, cam, jog3d, bola3d, campo, torcida, som: () => som, mundo: () => mundo, hora: () => hora, qualidade: () => qAtual,
     comToque: () => document.documentElement.classList.contains('com-toque'), aoFim: fimDoPrejogo,

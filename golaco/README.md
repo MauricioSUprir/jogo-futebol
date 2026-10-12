@@ -81,6 +81,16 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   início espera por ele). Menu → "Som da torcida": ligado/desligado e volume (salvos); desligado não liga o Web Audio nem
   baixa os sons. Pesquisa: `PESQUISA-ESTADIO.md`.
 
+## Pré-jogo (pedido de 11/10)
+
+Antes da saída de bola (a partida fica parada no tick 0): a abertura "Toque para começar" (libera o som), o estádio de
+fora (drone sobre o bairro, a fachada com a torcida chegando), o estádio cheio por dentro, o túnel, a entrada dos times
+com os árbitros, a fila se formando no meio-campo, a câmera passando pela fila de cada time, cortes da organizada, da
+arquibancada de lá, do setor visitante e do estádio, e as escalações: cada time grande no campinho (número, nome e posição
+dos 11 e a formação) por ~10 s, o primeiro sai e o outro entra, com o mesmo fundo. Toque/clique, Enter ou A: próxima
+parte; Pular, Esc ou Start: direto para o jogo. Menu → "Pré-jogo: Completo / Curto / Só escalação / Desligado".
+`?prejogo=0|1|curto|escalacao` força. Pesquisa: `PESQUISA-PREJOGO.md`.
+
 ## Etapa 2 — passe, chute, goleiro
 
 - Treino de ataque: o seu time (goleiro + 5) contra uma defesa (goleiro + 3), com IA enxuta.
@@ -127,7 +137,7 @@ cd golaco && python3 -m http.server 8000   # http://localhost:8000
 
 Parâmetros da página: `?modo=partida|ataque|conducao` (padrão: partida), `?min=N` (minutos reais por tempo),
 `?semente=N`, `?demo=1` (a IA joga pelo humano), `?q=baixa|media|alta`, `?hora=dia|noite`, `?camera=tv|aproximada`,
-`?toque=1`, `?qps=1`.
+`?toque=1`, `?qps=1`, `?prejogo=0|1|curto|escalacao` (o pré-jogo fica desligado com `?prints=1`, `?demo=1` e nos testes automatizados).
 
 ## Testes
 
@@ -149,11 +159,15 @@ node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
+node golaco/tools/teste-cortejo.mjs   # pré-jogo: o cortejo do túnel até a fila (pés plantados, ninguém atravessa ninguém, vaga, rumo, custo, hash da partida)
+node golaco/tools/teste-prejogo-roteiro.mjs   # pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos do estádio
+node golaco/tools/teste-prejogo.mjs    # navegador: o pré-jogo inteiro (planos, fila, escalações em 5 telas, pular, som, apito no fim, hash, memória)
+node golaco/tools/prints-prejogo.mjs   # prints de cada plano e das escalações (PC Alta e celular Média, dia e noite) em tools/saida/prejogo/
 node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)
 ```
 
 Contratos entre módulos: `CONTRATOS.md`. Constantes: `js/config.js`. Pesquisa que embasa os
 números: `PESQUISA.md` (Etapa 1), `PESQUISA-ETAPA2.md` (Etapa 2), `PESQUISA-ETAPA3.md` (Etapa 3) e
 `PESQUISA-RECEPCAO-GOLEIRO.md` (recepção, controle de bola e goleiro, 10/10).
-A lógica (`js/*.js` menos `main.js`, `hud.js`, `entrada.js`, `editor-time.js` e `js/render/`) não usa three.js nem
+A lógica (`js/*.js` menos `main.js`, `hud.js`, `entrada.js`, `editor-time.js`, `escalacao-tela.js`, `prejogo-tela.js` e `js/render/`) não usa three.js nem
 DOM e roda nos testes em Node.

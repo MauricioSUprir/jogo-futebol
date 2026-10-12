@@ -118,17 +118,17 @@ const P = {
   },
   alto: {
     id: 'alto', nome: 'Plano alto da fila se formando', bloco: 'cenas', dur: 5.5, transicao: 'corte',
-    cam: { de: [[-6, 21, -50], [6, 20, -50]], para: [[0, 0, 6], [0, 0, 5]], fov: [30, 30], suave: 0.5 },
+    cam: { de: [[-6, 21, -50], [6, 20, -50]], para: [[0, 0.5, 7], [0, 0.5, 5.5]], fov: [24, 23], suave: 0.5 },
     som: { filtro: null, ganho: 1, agito: 0.8 }, torcida: { tensao: [0.8, 0.7], palmas: [0.6, 0.4] }, cortejo: { tc: 31 },
   },
   filaMandante: {
     id: 'filaMandante', nome: 'Fila do mandante com a câmera passando', bloco: 'cenas', dur: 8, transicao: 'corte', time: 0,
-    cam: { de: [[-2.2, 1.62, 7.8], [-13.5, 1.62, 7.8]], para: [[-2.6, 1.45, 3.2], [-13.9, 1.45, 3.2]], fov: [34, 34], suave: 0.25 },
+    cam: { de: [[-2.2, 1.6, 7.8], [-13.5, 1.6, 7.8]], para: [[-2.6, 1.22, 3.2], [-13.9, 1.22, 3.2]], fov: [38, 38], suave: 0.25 },
     som: { filtro: null, ganho: 1, agito: 0.6 }, torcida: { tensao: [0.6, 0.5], palmas: [0.3, 0.2] }, cortejo: 'fila',
   },
   filaVisitante: {
     id: 'filaVisitante', nome: 'Fila do visitante com a câmera passando', bloco: 'cenas', dur: 8, transicao: 'corte', time: 1,
-    cam: { de: [[2.2, 1.62, 7.8], [13.5, 1.62, 7.8]], para: [[2.6, 1.45, 3.2], [13.9, 1.45, 3.2]], fov: [34, 34], suave: 0.25 },
+    cam: { de: [[2.2, 1.6, 7.8], [13.5, 1.6, 7.8]], para: [[2.6, 1.22, 3.2], [13.9, 1.22, 3.2]], fov: [38, 38], suave: 0.25 },
     som: { filtro: null, ganho: 1, agito: 0.6 }, torcida: { tensao: [0.55, 0.6], palmas: [0.2, 0.3] }, cortejo: 'fila',
     // o bandeirão e os sinalizadores da organizada já abertos/acesos quando o corte chega nela
     eventos: [{ em: 6.2, festa: { sinalizadores: true, bandeirao: 12 } }],

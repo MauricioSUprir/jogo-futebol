@@ -80,6 +80,8 @@ async function estatisticas(contexto, png) {
 async function conferirEscalacao(pg, t) {
   return pg.evaluate(t => {
     const g = window.__golaco, P = g.prejogo;
+    // o botão Pular aparece com qualquer movimento: confere o lugar dele junto com as cartas
+    document.getElementById('prejogo').dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
     const cs = P.escalacao.cartas(t);
     const W = innerWidth, H = innerHeight;
     const css = getComputedStyle(document.documentElement);
@@ -109,6 +111,7 @@ async function conferirEscalacao(pg, t) {
       const nome = document.querySelectorAll('.pj-esc')[t].querySelector('.pj-esc-nome').getBoundingClientRect();
       if (toca(pu, { x: nome.left, y: nome.top, w: nome.width, h: nome.height })) pularEncosta++;
     }
+    if (!pu.visivel) pularEncosta = -1;
     return { n: cs.length, folga, fora, cortados, fonte, ordemOk: ids.length === 11 && ids.every((id, i) => id === ordem[i]), nomes: cs.map(c => c.nome).join(', '), pularEncosta, info };
   }, t);
 }
@@ -217,7 +220,7 @@ try {
     for (const t of [0, 1]) {
       await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; const p = pj.planos.find(q => q.id === `escalacao${t}`); pj.irPara(p.t0 + 2); g.relogio.avancar(16); }, t);
       const c = await conferirEscalacao(pg, t);
-      meta(`${P.nome}: escalação ${t === 0 ? 'do mandante' : 'do visitante'} — 11 titulares na ordem, nada encosta`, `${c.n} cartas (${c.nomes}); folga ${f1(c.folga)} px; fora ${c.fora}; letra ${f1(c.fonte)} px; cortados ${c.cortados}; Pular encosta ${c.pularEncosta}`, '11 na ordem; ≥ 6 px; 0; ≥ 10 px; 0; 0', c.n === 11 && c.ordemOk && c.folga >= 6 && c.fora === 0 && c.fonte >= 10 && c.cortados === 0 && c.pularEncosta === 0);
+      meta(`${P.nome}: escalação ${t === 0 ? 'do mandante' : 'do visitante'} — 11 titulares na ordem, nada encosta`, `${c.n} cartas (${c.nomes}); folga ${f1(c.folga)} px; fora ${c.fora}; letra ${f1(c.fonte)} px; cortados ${c.cortados}; Pular encosta ${c.pularEncosta < 0 ? "(invisível)" : c.pularEncosta}`, '11 na ordem; ≥ 6 px; 0; ≥ 10 px; 0; 0', c.n === 11 && c.ordemOk && c.folga >= 6 && c.fora === 0 && c.fonte >= 10 && c.cortados === 0 && c.pularEncosta === 0);
     }
     if (P.pc) {
       for (const [w, h] of [[568, 320], [667, 375], [1920, 1080]]) {
@@ -226,7 +229,7 @@ try {
         for (const t of [0, 1]) {
           await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; const p = pj.planos.find(q => q.id === `escalacao${t}`); pj.irPara(p.t0 + 2); g.relogio.avancar(16); g.relogio.avancar(16); }, t);
           const c = await conferirEscalacao(pg, t);
-          pior = { folga: Math.min(pior.folga, c.folga), fora: pior.fora + c.fora, fonte: Math.min(pior.fonte, c.fonte), cortados: pior.cortados + c.cortados, ordem: pior.ordem && c.ordemOk, n: Math.min(pior.n, c.n), pular: pior.pular + c.pularEncosta };
+          pior = { folga: Math.min(pior.folga, c.folga), fora: pior.fora + c.fora, fonte: Math.min(pior.fonte, c.fonte), cortados: pior.cortados + c.cortados, ordem: pior.ordem && c.ordemOk, n: Math.min(pior.n, c.n), pular: pior.pular + Math.abs(c.pularEncosta) };
         }
         meta(`Escalação em ${w}×${h}: nada encosta`, `folga ${f1(pior.folga)} px; fora ${pior.fora}; letra ${f1(pior.fonte)} px; cortados ${pior.cortados}; Pular encosta ${pior.pular}`, '≥ 6 px; 0; ≥ 10 px; 0; 0', pior.n === 11 && pior.ordem && pior.folga >= 6 && pior.fora === 0 && pior.fonte >= 10 && pior.cortados === 0 && pior.pular === 0);
       }

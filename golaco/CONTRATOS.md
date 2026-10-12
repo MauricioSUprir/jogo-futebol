@@ -325,6 +325,63 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   `tools/teste-estadio.mjs` (itens 11 lado de cá e bancos fora da TV, 12 festa), `tools/teste-desempenho-celular.mjs` (os sinalizadores
   acesos contam à parte na comparação partida × treino).
 
+## Pré-jogo (pedido de 11/10; contrato)
+Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
+as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o
+pré-jogo acontece ANTES do 1º passo da partida (o mundo fica no tick 0; `hash-igual` IGUAL; `teste-prejogo` confere o hash
+de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída (`eventosIniciais`) só toca no fim.
+- **`js/cortejo.js`** (puro): `CORTEJO` (velocidade 1,45 m/s, espaçamentos no túnel/andando/na fila, colunas, árbitros
+  ids 200–202), `criarCortejo(times)` → `{tick, mini, andantes: [{j, id, time (0, 1 ou 2 = árbitro), arb, goleiro, kit,
+  k, caminho, s0, sFim, atraso, chegou}]}` (mini-mundo `{tick, posse, naMao, parada, voo, bola}`: só o que a pose e a
+  passada leem; lê `m.times` UMA vez, nunca o mundo depois), `passoCortejo(c)` (corpo, passada, pé desenhado, quadril — a
+  ordem do `sim.js`), `tempoCortejo`, `fotoCortejo(c)`/`restaurarCortejo(c, f)` (structuredClone), `filaFinal(c)` (a fila
+  montada parada, sem simular), `vagaFinal(c, i)`, `chegaram(c)`, `ordemDaColuna(tm)` (capitão, goleiro, vagas),
+  `pontoCaminho`, `cabeNoTunel()`. Sem rng. Campo novo que `anim.js`/`jogador.js` passarem a ler do mundo tem que entrar no
+  mini-mundo (o `teste-cortejo` pega NaN ou exceção na pose).
+- **`js/prejogo-roteiro.js`** (puro): `PREJOGO` (modos, tempos da escalação, preto, mergulho, faixas 2,39:1),
+  `criarRoteiro(modo)` → `{modo, planos: [{id, nome, bloco 'cenas'|'escalacao0'|'escalacao1', dur, t0, t1, cam: {de, para,
+  fov, suave} | orbita, som, torcida, eventos, cortejo: {tc} | 'fila' | null, fora, transicao, time}], total, blocos,
+  fimCenas, tEscalacao, durEscalacao}`, `planoEm`, `blocoEm`, `proximoBloco` (pular), `cameraEm(r, t, out)`,
+  `cameraAbertura(t)`, `escuroEm` (preto e mergulho), `escalacaoEm` ({time, entrando, saindo, saiTime, cheia}),
+  `sinaisEm` (som e torcida do plano), `pontosDoPlano` (testes), `criarCurva`/`pontoCurva` (Catmull–Rom centrípeta pelo
+  comprimento do arco — a conta da three.js, pura).
+- **`js/estadio-forma.js`** (puro): `FORA` (fachada, cobertura, cantos, esplanada, bairro, praça, estacionamentos, placa),
+  `sdRetArredondado`, `alturaCobertura`, `alturaCanto`, `predios()`, `arvores()`, `carros()`, `torcedoresFora()`
+  (posições com semente própria), `solidoEm(x, y, z, folga, fora)` (nome do sólido ou null; o corredor do túnel é livre),
+  `noCorredorDoTunel`.
+- **`js/render/prejogo.js`** (diretor): `criarPrejogo({cena3d, cam, jog3d, bola3d, campo, torcida, som(), mundo(), hora(),
+  qualidade(), comToque(), aoFim()})` → `{iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar) (false quando acabou),
+  acao(a) ('pausa' pula tudo), proximo, pularTudo, irPara(t), comecar, cancelar, ativo, naAbertura, api}`. Câmera: escreve
+  direto em `cam.camera` (fov do roteiro = vertical em 16:9; mais estreito, a mesma largura; near/far e a névoa por plano,
+  restaurados no fim). Desenha o cortejo por `jog3d.atualizar(lista)` (kit `arbitro`), força o lado de cá visível pelo
+  frustum (a regra `cameraNoLadoDeCa` é do jogo), um ânimo próprio (`criarEmocao`) para a torcida e o som, `som.cena({ganho,
+  filtro})` por plano. A fila parada "respira" só no desenho (peito ±1 cm, peso de um pé para o outro; os pés plantados
+  não mexem).
+- **`js/render/estadio-fora.js`**: `criarEstadioFora(cena, {qualidade, hora, aniso, materialTorcida})` → `{grupo,
+  modoFora(v) (o entorno só nos planos de fora), definirHora, atualizar, dispose(), info}`. Nada projeta sombra.
+- **`js/prejogo-tela.js`** (DOM): `criarPrejogoTela({aoProximo, aoPularTudo, aoComecar, comToque})` → `{raiz (#prejogo,
+  criado no body), escalacao, mostrar(v) (põe html.prejogo: o HUD, os controles de toque e a dica somem), abertura(times
+  | null), faixas(k, proporção), preto(a), fundoEscalacao(a), atualizar(agora) (A do controle; o Pular some parado),
+  pularVisivel, botaoPular}`. Toque/clique = próximo bloco (abertura: começa); Enter/Espaço também (na captura); Esc/P/Start
+  chegam pela entrada bloqueada (`main.js tratarAcao('pausa')`).
+- **`js/escalacao-tela.js`** (DOM): `criarEscalacaoTela(raiz)` → `{montar(times), mostrar(e) (escalacaoEm + tau),
+  esconder(), estado, cartas(t), folha(t)}`; `tamanhoEscalacao(W, H, vertical)` (cartas até 120 × 76; passo ≥ carta + 10
+  px). Usa `posicaoNaTela` (editor-time.js) e `svgCampinho` (campinho.js). O movimento sai do relógio do roteiro (nada de
+  transição do CSS: o relógio manual dos testes e prints vale).
+- **`js/campinho.js`** (puro): `svgCampinho(vertical)` → `{viewBox, html}` (o editor passou a usar; layout idêntico).
+- **`som.js`**: `cena({ganho, filtro})` / `cena(null)` (substitui o alvo do barramento e do passa-baixas da pausa);
+  `cenaPre`. **`jogador3d.js`**: `KITS.arbitro`.
+- **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
+  `prefs.prejogo`, padrão 'completo'), `comecarPrejogo(modo, abertura)` (bloqueia a entrada), `fimDoPrejogo()` (libera a
+  entrada, corta a câmera, `eventosIniciais()`), `quadro()` (no pré-jogo o laço fica parado: `laco.ultimo = agora`),
+  `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao'})`, comando `prejogo` (menu), API `__golaco.prejogo`
+  (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(), pularTudo(), irPara(t), comecar(),
+  iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel, time, cheia, cartas(t), folha(t),
+  pular, info(t)}, camera, desenho: {chamadas, triangulos}, somCena, cortejo, fora}`); `desenhar()` desenha o pré-jogo
+  quando ele está ativo.
+- **Testes**: `tools/teste-cortejo.mjs` e `tools/teste-prejogo-roteiro.mjs` (Node, padrão do CI), `tools/teste-prejogo.mjs`
+  (navegador, CI), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
+
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
   `m.controlado = { 0: id }`. Os demais jogadores são da IA (`js/ia.js`), que gera para cada um uma entrada
