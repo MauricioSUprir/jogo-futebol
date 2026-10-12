@@ -48,7 +48,8 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 - IA por formação e tática (bloco, linha, pressão, contrapressão; apoios, corredores, corridas nas costas,
   ataque à área) e troca automática para quem disputa a bola alta.
 - Defesa do humano: **CONTER** (segurar: acompanha o condutor entre a bola e o gol, de frente para ele),
-  **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor).
+  **DIVIDIDA** (bote em pé) e **PRESSÃO** (segurar: um companheiro aperta o condutor). No toque o CONTER é a
+  DIVIDIDA segurada (tocar = bote; segurar = conter, como o "Sprint & Tackle" do FC Mobile).
 - Pesquisa e números: `PESQUISA-ETAPA3.md`.
 - **IA mais intensa** (pedido do dono, 10/10: "o jogo tem que ser MAIS INTENSO, a IA não corre para trás"): na perda da
   bola, quem ficou à frente dela volta **em disparada** para trás da linha da bola, pelo lado do gol (recomposição), e os
@@ -56,8 +57,15 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   humano; o meio fica atrás da bola no próprio campo, a cobertura da linha de defesa cobre de lado, toda bola solta é
   disputada em disparada e quem volta contorna o condutor. Medido no `teste-transicao` (ver PESQUISA-ETAPA3.md §16).
 - Tela limpa (dono, 10/10): **sem narração** — os lances (passe, chute, defesa, lateral...) não viram texto;
-  na partida o topo é só placar, minimapa e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
+  na partida o topo é só placar e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
   de comando (menu, treino, edição do time) e o efeito do gol.
+- **Menos coisa na tela** (dono, 11/10: "tem muita coisa na tela"): placar compacto de TV (o "1º T" só no intervalo e
+  nos acréscimos), menu só com o ícone, botões de toque menores e translúcidos só com o ícone (opção "Nomes nos
+  botões" na barra da pausa), defesa com 5 botões no 1º anel, analógico quase invisível em repouso, minimapa desligado no
+  celular ("Minimapa" na barra da pausa; no PC fica, menor), barra de força sem texto, dica de teclas do PC some em 8 s,
+  sem a seta no chão do controlado e marca de queda só na bola alta do seu time. **Linha de impedimento só no
+  apito** (a do lance, parada): a linha viva durante o jogo saiu. Medido no `teste-hud-minimo` (celular: o HUD cobre
+  ≤ 11% da tela; era 18–24%).
 - **Celular só deitado**: em pé (com toque) a tela "Gire o celular para jogar" cobre tudo e o jogo para;
   onde dá (Android), o botão "Tela cheia deitada" trava a tela. Janela estreita no PC continua jogando.
 
@@ -83,6 +91,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   visitante a casa cala e só o setor deles comemora. Liga no primeiro toque/tecla (regra dos navegadores; o apito do
   início espera por ele). Menu → "Som da torcida": ligado/desligado e volume (salvos); desligado não liga o Web Audio nem
   baixa os sons. Pesquisa: `PESQUISA-ESTADIO.md`.
+- **Replay** (11/10): depois do gol, na saída de bola, a jogada de novo — na câmera de TV na velocidade real, de trás do
+  gol em câmera lenta e, no golaço de longe, rente ao gramado bem devagar. No apito do impedimento, a câmera alinhada com
+  a linha congela no quadro do passe com a linha desenhada (a linha só aparece no replay). "Replay" na pausa revê os
+  últimos 10 s. O jogo espera parado durante o replay (o resultado não muda); qualquer tecla, botão, clique ou toque pula
+  ("Pular" no celular). Pausa → "Replays automáticos": ligado/desligado (salvo).
 
 ## Etapa 2 — passe, chute, goleiro
 
@@ -104,8 +117,8 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 | Ação | Teclado | Controle | Toque |
 |---|---|---|---|
 | Mover | WASD / setas | analógico esquerdo | analógico à esquerda |
-| PASSE (atacando) / CONTER (defendendo, segurar) | J | A | PASSE / CONTER |
-| CHUTE (atacando) / DIVIDIDA (defendendo) | K | B | CHUTE / DIVIDIDA |
+| PASSE (atacando) / CONTER (defendendo, segurar) | J | A | PASSE / DIVIDIDA segurada |
+| CHUTE (atacando) / DIVIDIDA (defendendo) | K | B | CHUTE / DIVIDIDA (toque curto) |
 | PRESSÃO do companheiro (defendendo, segurar) | O | RB | PRESSÃO |
 | LANÇAMENTO / cruzamento | L | X | LANÇAMENTO |
 | ENFIADA (atacando) / GOLEIRO (defendendo) | I / G | Y | ENFIADA / GOLEIRO |
@@ -118,8 +131,9 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 | Ajuda / pausa | H / Esc | View / Start | menu |
 
 No celular os botões trocam sozinhos: com a bola (ou o passe vindo para o seu time) aparecem
-CHUTE, PASSE, ENFIADA e LANÇAMENTO; sem ela, TROCAR, GOLEIRO, CONTER, DIVIDIDA e PRESSÃO. Segurar o botão
-carrega a força. O botão físico guarda o sentido do momento em que foi apertado (segurar J enquanto a posse
+CHUTE, PASSE, ENFIADA e LANÇAMENTO; sem ela, TROCAR, GOLEIRO, PRESSÃO e DIVIDIDA (tocar = bote; segurar =
+conter), sempre com o CORRER. Os botões mostram só o ícone (o nome aparece com "Nomes nos botões" na pausa).
+Segurar o botão carrega a força. O botão físico guarda o sentido do momento em que foi apertado (segurar J enquanto a posse
 muda não troca o passe por CONTER no meio).
 
 ## Rodar
@@ -153,6 +167,9 @@ node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (84
 node golaco/tools/teste-rede-veu.mjs   # rede véu de noiva (Node): forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho
 node golaco/tools/teste-rede-tela.mjs  # navegador: a rede véu de noiva na tela (forma da malha, fio branco de dia e de noite, clareia o gol, mexe na batida)
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
+node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel do replay, roteiros do gol/impedimento/pausa e o replay de lances de verdade
+node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
+node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar, torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
 node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)
 ```

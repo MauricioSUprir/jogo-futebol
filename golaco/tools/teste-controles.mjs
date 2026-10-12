@@ -7,8 +7,9 @@
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
-//    CORRER; defesa = TROCAR, GOLEIRO, CONTER, DIVIDIDA, PRESSÃO e CORRER (os três da Etapa 3 só
-//    com a entrada da Parte 4); nenhum botão encosta em outro, no analógico em repouso nem no HUD
+//    CORRER; defesa = TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA e CORRER (tela limpa, 11/10: 5 botões — o CONTER
+//    virou a DIVIDIDA SEGURADA, conferida aqui com toque de verdade: tocar = bote, segurar = CONTER);
+//    nenhum botão encosta em outro, no analógico em repouso nem no HUD
 //    (e as caixas do HUD não encostam entre si, com o texto de modo mais longo e o placar com o
 //    relógio da partida), todos ≥ 48 px e dentro da área segura, em 844×390 e 812×375 (com
 //    entalhe) e 667×375, nos tamanhos 70–140%.
@@ -33,7 +34,9 @@ const srv = await servidor(0, path.resolve(argv.includes('--raiz') ? argv[argv.i
 const BIT = { CORRER: 1, MOD: 2, PASSE: 4, ENFIADA: 8, LANCAMENTO: 16, CHUTE: 32, CONTER: 64, DIVIDIDA: 128, PRESSAO: 512, TROCAR: 1024, GOLEIRO: 2048 };
 const AG4 = 'aguardando4';
 /** A entrada da Parte 4 posiciona os botões da defesa da Etapa 3 (CONTER, DIVIDIDA, PRESSÃO)? */
-const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-conter'); return !!window.__golaco.entradaEtapa3 || (!!b && b.hasAttribute('style')); });
+const temDefesaE3 = pagina => pagina.evaluate(() => { const b = document.getElementById('btn-dividida'); return !!window.__golaco.entradaEtapa3 || (!!b && b.hasAttribute('style')); });
+// defesa do toque (tela limpa, 11/10): 5 botões — o CONTER é a DIVIDIDA segurada e a PRESSÃO fica no 1º anel
+const DEFESA_TOQUE = ['correr', 'dividida', 'goleiro', 'pressao', 'trocar'];
 
 async function quadros(pagina, n) {
   return pagina.evaluate(n => { const g = window.__golaco; for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: i === n - 1 }); return g.estado(); }, n);
@@ -141,8 +144,9 @@ async function conferirTodosLayouts(pagina) {
   const textos = [];
   let ok = true;
   const defE3 = await temDefesaE3(pagina);
-  // o texto de modo mais longo no painel (o topo se ajusta a ele)
+  // o texto de modo mais longo no painel (o topo se ajusta a ele); o tamanho salvo volta no fim
   await pagina.evaluate(() => window.__golaco.hudModo('Condução curta', 'MEI'));
+  const tamSalvo = await pagina.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue('--toque-escala') || 0.8);
   for (const tam of [0.7, 1, 1.4]) {
     for (const f of ['ataque', 'defesa']) {
       await pagina.evaluate(([tam, f]) => {
@@ -151,14 +155,14 @@ async function conferirTodosLayouts(pagina) {
         t.classList.toggle('fase-ataque', f === 'ataque'); t.classList.toggle('fase-defesa', f === 'defesa');
       }, [tam, f]);
       const l = await layoutToque(pagina);
-      const esperado = f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? ['conter', 'correr', 'dividida', 'goleiro', 'pressao', 'trocar'] : ['correr', 'goleiro', 'trocar'];
+      const esperado = f === 'ataque' ? ['chute', 'correr', 'enfiada', 'lancamento', 'passe'] : defE3 ? DEFESA_TOQUE : ['correr', 'goleiro', 'trocar'];
       const okIds = JSON.stringify(l.ids) === JSON.stringify(esperado);
       if (!okIds || l.problemas.length) ok = false;
       textos.push(`${Math.round(tam * 100)}% ${f}: ${l.ids.length} botões, menor ${l.menor} px${l.problemas.length ? ' — ' + l.problemas.join('; ') : ''}${okIds ? '' : ' — botões ' + l.ids.join(',')}`);
     }
   }
-  // volta ao normal (a fase verdadeira é reposta pelo próximo passo)
-  await pagina.evaluate(() => { window.__golaco.toqueTamanho(1); window.__golaco.sincronizarFase(); });
+  // volta ao tamanho de antes (o padrão é 80% desde a tela limpa; a fase verdadeira é reposta pelo próximo passo)
+  await pagina.evaluate(t => { window.__golaco.toqueTamanho(t); window.__golaco.sincronizarFase(); }, tamSalvo);
   return [ok, textos.join(' | ')];
 }
 
@@ -471,8 +475,8 @@ async function conferirTodosLayouts(pagina) {
     const ld = await layoutToque(pagina);
     const defE3c = await temDefesaE3(pagina);
     meta('Sem a bola: TROCAR, GOLEIRO e CORRER (ataque some)', `fase ${d0.fase}, posse ${d0.posse}, botões ${ld.ids.join(', ')}`, d0.fase === 'defesa' && ['correr', 'goleiro', 'trocar'].every(b => ld.ids.includes(b)) && !ld.ids.some(b => ['chute', 'passe', 'enfiada', 'lancamento'].includes(b)));
-    meta('Sem a bola: CONTER, DIVIDIDA e PRESSÃO no arco da defesa (≥ 48 px, sem encostar)', `botões ${ld.ids.join(', ')}; menor ${ld.menor} px${ld.problemas.length ? ' — ' + ld.problemas.join('; ') : ''}`,
-      defE3c ? JSON.stringify(ld.ids) === JSON.stringify(['conter', 'correr', 'dividida', 'goleiro', 'pressao', 'trocar']) && ld.problemas.length === 0 : AG4);
+    meta('Sem a bola: 5 botões (TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA, CORRER) no arco da defesa (≥ 48 px, sem encostar)', `botões ${ld.ids.join(', ')}; menor ${ld.menor} px${ld.problemas.length ? ' — ' + ld.problemas.join('; ') : ''}`,
+      defE3c ? JSON.stringify(ld.ids) === JSON.stringify(DEFESA_TOQUE) && ld.problemas.length === 0 : AG4);
     const bt = await centro('btn-trocar');
     await toque('touchStart', [{ x: bt.x, y: bt.y, id: 14 }]);
     await toque('touchEnd', [{ x: bt.x, y: bt.y, id: 14 }]);
@@ -484,6 +488,40 @@ async function conferirTodosLayouts(pagina) {
     const gAceso = await pagina.evaluate(() => document.getElementById('btn-goleiro').classList.contains('ativo'));
     await toque('touchEnd', [{ x: bg.x, y: bg.y, id: 15 }]);
     meta('GOLEIRO segurado: aceso e o botão chega ao goleiro', `aceso ${gAceso}, máscara ${g1.mask}, goleiro ${g1.golBotoes}`, gAceso && (g1.mask & BIT.GOLEIRO) !== 0 && sem((g1.golBotoes & BIT.GOLEIRO) !== 0));
+    // DIVIDIDA de dois sentidos (tela limpa, 11/10): tocar (desce e sobe sem quadro no meio) = DIVIDIDA, sem CONTER;
+    // segurar (30 quadros = 0,5 s do relógio do jogo) = CONTER enquanto o dedo fica e nada de DIVIDIDA ao soltar.
+    // PRESSÃO segurada chega ao jogo.
+    const defesaToque = async () => { await novo(); await pagina.evaluate(() => window.__golaco.acao('maquina')); await quadros(pagina, 20); };
+    await defesaToque();
+    const bd = await centro('btn-dividida');
+    await toque('touchStart', [{ x: bd.x, y: bd.y, id: 17 }]);
+    await toque('touchEnd', [{ x: bd.x, y: bd.y, id: 17 }]);
+    const dv1 = await rodar(pagina, 4);
+    await defesaToque();
+    await toque('touchStart', [{ x: bd.x, y: bd.y, id: 18 }]);
+    const dv2 = await rodar(pagina, 30);
+    const dvAceso = await pagina.evaluate(() => document.getElementById('btn-dividida').classList.contains('ativo'));
+    await toque('touchEnd', [{ x: bd.x, y: bd.y, id: 18 }]);
+    const dv3 = await rodar(pagina, 4);
+    meta('DIVIDIDA: tocar = bote (DIVIDIDA); segurar = CONTER (aceso) e soltar não dá bote',
+      `tocada: máscara ${dv1.mask}; segurada 0,5 s: máscara ${dv2.mask}, aceso ${dvAceso}; depois de soltar: ${dv3.mask}`,
+      defE3c ? (dv1.mask & BIT.DIVIDIDA) !== 0 && !(dv1.mask & BIT.CONTER) && (dv2.mask & BIT.CONTER) !== 0 && !(dv2.mask & BIT.DIVIDIDA) && dvAceso && !(dv3.mask & (BIT.DIVIDIDA | BIT.CONTER)) : AG4);
+    // o sistema toma o toque (touchcancel → pointercancel: gesto da borda, chamada) logo depois de encostar: não é um
+    // toque curto — nada de bote (contraprova da tela limpa: o soltar por cancelamento dava DIVIDIDA)
+    await defesaToque();
+    await toque('touchStart', [{ x: bd.x, y: bd.y, id: 20 }]);
+    const dc1 = await rodar(pagina, 3);
+    await toque('touchCancel', []);
+    const dc2 = await rodar(pagina, 6);
+    const dcAceso = await pagina.evaluate(() => document.getElementById('btn-dividida').classList.contains('ativo'));
+    meta('DIVIDIDA: toque cancelado pelo sistema não dá bote (nem fica segurado)', `encostado: máscara ${dc1.mask}; depois do cancelamento: ${dc2.mask}, aceso ${dcAceso}`,
+      defE3c ? (dc1.mask & BIT.CONTER) !== 0 && !(dc2.mask & (BIT.DIVIDIDA | BIT.CONTER)) && !dcAceso : AG4);
+    await defesaToque();
+    const bpr = await centro('btn-pressao');
+    await toque('touchStart', [{ x: bpr.x, y: bpr.y, id: 19 }]);
+    const pr1 = await rodar(pagina, 10);
+    await toque('touchEnd', [{ x: bpr.x, y: bpr.y, id: 19 }]);
+    meta('PRESSÃO segurada (1º anel) chega ao jogo', `máscara ${pr1.mask}`, defE3c ? (pr1.mask & BIT.PRESSAO) !== 0 : AG4);
     // chute carregando não some debaixo do dedo quando a posse muda
     await novo();
     await quadros(pagina, 4);

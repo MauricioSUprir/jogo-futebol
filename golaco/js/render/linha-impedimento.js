@@ -1,10 +1,9 @@
 // Linha de impedimento desenhada no gramado (pedido do dono, seção 8: "impedimento com a linha desenhada").
-//  - com a bola rolando no campo de ataque de quem tem a bola: linha amarelo-clara discreta (branca se confundia com
-//    as linhas do campo) de lado a lado na linha de
-//    impedimento DESTE time (impedimento.js linhaImpedimento: o penúltimo adversário, a bola ou o meio) — vale para
-//    os dois times (o humano vê a linha da defesa adversária quando ataca e a da própria defesa quando defende);
 //  - no apito do impedimento: a linha DO LANCE (a do instante do passe) fica parada, amarela e mais grossa, por
-//    IMPEDIMENTO.linhaCongela s (o "replay" da marcação, sem texto na tela).
+//    IMPEDIMENTO.linhaCongela s (a marcação, sem texto na tela; o replay mostra a mesma linha);
+//  - a linha VIVA (com a bola rolando no campo de ataque de quem tem a bola: amarelo-clara, na linha de impedimento
+//    DESTE time — impedimento.js linhaImpedimento) só com IMPEDIMENTO.linhaViva: DESLIGADA desde 11/10 (dono: "não
+//    quero a linha de impedimento durante o jogo"); o código fica para o replay e para conferências.
 // Uma malha (1 draw call quando visível). Só lê o mundo: não muda o hash.
 import * as THREE from 'three';
 import { CAMPO, IMPEDIMENTO, PASSO } from '../config.js';
@@ -47,7 +46,7 @@ export function criarLinhaImpedimento(cena) {
         const ui = p.ultimoImped;
         if (ui && mundo.tick >= ui.tick && (mundo.tick - ui.tick) * PASSO < IMPEDIMENTO.linhaCongela) {
           alvo = OPACA_LANCE; xAlvo = ui.linhaX; ehLance = true;
-        } else if (p.estado === 'jogo' && !(mundo.parada && !mundo.parada.rolou)) {
+        } else if (IMPEDIMENTO.linhaViva && p.estado === 'jogo' && !(mundo.parada && !mundo.parada.rolou)) {
           t = timeComBola(mundo);
           if (t != null && mundo.bola.p.x * mundo.ataca[t] > 0) {
             linhaImpedimento(mundo, t, _l);
@@ -69,6 +68,21 @@ export function criarLinhaImpedimento(cena) {
       mat.color.copy(ehLance ? AMARELA : VIVA);
       mat.opacity = vis;
       malha.scale.x = ehLance ? 1.8 : 1;
+      malha.position.set(x, 0.021, 0);
+    },
+    /**
+     * Desenho COMANDADO (o replay do impedimento, render/replay.js): l = null (some) ou {visivel, x, opacidade} — a
+     * linha do lance (amarela e grossa) em x, sem ler o mundo nem depender da linha do jogo ao vivo.
+     */
+    mostrar(l) {
+      const vis = !!(l && l.visivel && l.opacidade > 0.005);
+      malha.visible = vis;
+      lance = vis;
+      if (!vis) { mat.opacity = 0; return; }
+      x = l.x;
+      mat.color.copy(AMARELA);
+      mat.opacity = Math.min(1, l.opacidade);
+      malha.scale.x = 1.8;
       malha.position.set(x, 0.021, 0);
     },
   };

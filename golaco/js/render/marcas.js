@@ -1,4 +1,5 @@
-// Marcas no gramado: ponto de queda da bola alta (lançamento, cruzamento, enfiada pelo alto).
+// Marcas no gramado: ponto de queda da bola alta (lançamento, cruzamento, enfiada pelo alto) DO TIME DO HUMANO
+// (tela limpa, 11/10: a bola alta do adversário não ganha marca — o humano lê a trajetória, como na TV).
 // Anel verde pulsando em m.voo.alvo enquanto a bola está no ar (m.voo.alto); some quando a bola
 // chega (voo encerrado, tick de chegada passado ou bola no chão perto do alvo). Dois anéis
 // (um fixo e um que abre e apaga) + ponto no meio, num grupo só — 3 draw calls quando visível.
@@ -7,7 +8,9 @@ import * as THREE from 'three';
 // chute pelo alto (cavadinha) não ganha marca: o alvo é o gol, não um ponto de recepção
 const SEM_MARCA = new Set(['chute', 'colocado', 'cavadinha']);
 
-export function criarMarcas(cena) {
+/** opc.timeHumano: o time do jogador (só a bola alta dele ganha marca; null = os dois times). */
+export function criarMarcas(cena, opc = {}) {
+  const timeHumano = opc.timeHumano === undefined ? 0 : opc.timeHumano;
   const verde = 0x19e07a;
   const comum = { transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 };
   const matFixo = new THREE.MeshBasicMaterial({ color: verde, opacity: 0.9, ...comum });
@@ -32,7 +35,8 @@ export function criarMarcas(cena) {
      */
     atualizar(mundo, bola, t, dt) {
       const v = mundo?.voo;
-      let ativo = !!(v && v.alto && !SEM_MARCA.has(v.tipo) && v.alvo && Number.isFinite(v.alvo.x) && Number.isFinite(v.alvo.z));
+      let ativo = !!(v && v.alto && !SEM_MARCA.has(v.tipo) && v.alvo && Number.isFinite(v.alvo.x) && Number.isFinite(v.alvo.z))
+        && (timeHumano == null || v.time === timeHumano);
       if (ativo && v.tickChegada != null && mundo.tick > v.tickChegada + 6) ativo = false;
       if (ativo && bola && bola.y < 0.3 && Math.hypot(bola.x - v.alvo.x, bola.z - v.alvo.z) < 1.2) ativo = false;
       if (ativo) { ultimo.x = v.alvo.x; ultimo.z = v.alvo.z; ultimo.ok = true; }
