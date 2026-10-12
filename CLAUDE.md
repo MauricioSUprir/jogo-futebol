@@ -224,8 +224,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ESTADIO`) e os bancos — fora do desenho com a câmera de TV dentro dela (`cameraNoLadoDeCa`) —, faixas FICTÍCIAS,
   bandeiras de mastro e bandeirões no vertex shader (GPU = JS), sinalizadores só em momento marcado (saída de cada tempo,
   gol, vitória) com luz falsa por uniform (nunca `PointLight`) e fumaça no shader (Baixa sem fumaça), ola com a torcida
-  calma. Custo: +1 chamada (faixas/bandeiras) e +1 só com sinalizadores acesos; pré-carga no 1º quadro (nada engasga no
-  1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
+  calma; debaixo do bandeirão aberto ninguém fura o pano (bandeiras abaixam, torcedores seguram sem pular:
+  `sobBandeirao`); vaia pela posse longa do visitante (~2 por partida). Custo: +1 chamada (faixas/bandeiras) e +1 só com
+  sinalizadores acesos; pré-carga no 1º quadro desenhado (nada engasga no 1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
   Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4

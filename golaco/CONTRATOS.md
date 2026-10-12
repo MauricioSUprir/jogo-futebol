@@ -260,11 +260,14 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   festa, os sinalizadores e o bandeirão; a `saida` do 1º e do 2º tempo acende sinalizadores e abre o bandeirão;
   `intervalo`; `fimDeJogo` com vitória da casa), `festaReacao(f, tipo)` (uma reação abaixa o canto), `festaPasso(f,
   emocao, ctx, dt, disparar)` (por passo, no fim de `emocaoPasso`: troca de canto — cantando ~2/3 do tempo calmo —, canto
-  de incentivo com a casa atacando, vaia com o visitante segurando a bola perto da área da casa, apaga sinalizadores,
+  de incentivo com a casa atacando, vaia com a posse longa do visitante — 1 s por s no campo todo, 2 s por s rondando a
+  área da casa, vaia em `FESTA.vaia.segura` = 35 (~2 por partida de 2 × 4 min; a regra antiga, só perto da área, dava 0
+  em partidas inteiras) —, apaga sinalizadores,
   dispara a ola com o agito baixo por 40 s), `nivelCanto(f, t)` → {nivel, fase 'cantando'|'cantando-fim'|'pausa',
   clipe, lado}, `fogoSinalizador(s, t)` (0–1), `aberturaBandeirao(f, t)`, `estadoOla(f, t)` → {theta, largura, forca,
   ativa}, `olaPeso(x, z, ola)` e `OLA_GLSL` (a mesma conta no shader), `forcarFesta(f, {sinalizadores, cor, bandeirao,
-  ola})` (testes e prints). Pirotecnia SÓ em momento marcado (saída do tempo, gol, vitória), nunca acesa no meio de um
+  ola})` (testes e prints). O gol de um lado cancela o canto de festa que o outro ainda ia cantar (gol da casa e, logo
+  depois, gol do visitante: canta o setor visitante, não a festa da casa). Pirotecnia SÓ em momento marcado (saída do tempo, gol, vitória), nunca acesa no meio de um
   lance qualquer; no máximo `FESTA.sinalizadores.max` (8) ao mesmo tempo.
 - **`mixagem.js`**: `MIXAGEM` (alvo −16 LUFS, leito, agito, canto, batucada, reação, apitos, vaia),
   `nivelamento(lufs)` (ganho que leva uma gravação medida ao alvo), `abaixamento(emocao, t)` (as reações abaixam o
@@ -287,7 +290,9 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
 - **`bandeiras-dados.js`**: `BANDEIRAS` (quantidades por qualidade, onda), `TEXTOS_FAIXAS` (nomes FICTÍCIOS),
   `faixas()`, `bandeiras()`, `bandeiroes()` (lado de lá 40 × 10 m; organizada 24 × 14 m), `pontoBandeira(a, b, fase,
   t, animada)` e `BANDEIRA_GLSL`, `ondaBandeirao(u, v, larg, t, animada)` e `BANDEIRAO_GLSL` (GPU = JS conferido no
-  `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
+  `teste-estadio`), `sobBandeirao(p, b, abre, margem)` e `SOB_GLSL` (debaixo do pano aberto: as bandeiras de mastro
+  abaixam e os torcedores seguram o pano — braços em V, sem pular; `BANDEIRAS.sob`; altura 2,3 m e onda 0,25 m para o pano
+  nunca descer abaixo das mãos: ninguém fura o pano, `teste-torcida`; GPU = JS no `teste-estadio`). **`bandeiras.js`**: `criarBandeiras(cena, {qualidade, hora})` → {mesh (1 chamada, opaca, desenhada
   antes da torcida), uniforms (uAbre), atualizar(festa, t), definirQualidade (prefixo por `drawRange`), definirHora,
   dispose}; atlas 1024² desenhado em canvas.
 - **`fumaca.js`**: `FUMACA` (vida, subida, vento para FORA do campo, tamanho, alfa, partículas por qualidade: Baixa 0),
@@ -299,22 +304,22 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
   cada), `cameraNoLadoDeCa(p)` (a câmera de TV fica DENTRO da arquibancada de cá: com ela lá, a arquibancada e a
   torcida de cá saem do desenho), `cadeiraNoTunel(x, y)`, `TORCIDA.ocupacaoFrente`/`ocupacaoCa`/`frente` (as 9
   fileiras da frente quase cheias), `gerarTorcidaNiveis` (lado de cá com sorteio próprio: os outros setores não mudam).
-- **`torcida.js`**: 5 malhas instanciadas (uma por grupo), `atualizar(t, emocao, camera, batida)` (ola, luz falsa,
-  bandeiras, sinalizadores e o corte por caixa; o lado de cá nunca com a câmera dentro dele), `bandeiras`,
-  `sinalizadores`, `mostrarFesta(v)`. Pré-carga: no 1º quadro os grupos fora do quadro e os sinalizadores vão para a
-  GPU com 0 instâncias (geometria e programa prontos, nenhuma chamada de desenho) — o 1º corte de câmera não engasga e a
+- **`torcida.js`**: 5 malhas instanciadas (uma por grupo), `atualizar(t, emocao, camera, batida, desenha)` (ola, luz
+  falsa, quem está debaixo do bandeirão, bandeiras, sinalizadores e o corte por caixa; o lado de cá nunca com a câmera
+  dentro dele), `bandeiras`, `sinalizadores`, `mostrarFesta(v)`. Pré-carga: no 1º quadro DESENHADO de verdade (`desenha`;
+  com o celular em pé nada é desenhado) os grupos fora do quadro e os sinalizadores vão para a GPU com 0 instâncias (geometria e programa prontos, nenhuma chamada de desenho) — o 1º corte de câmera não engasga e a
   memória da GPU não sobe no meio do jogo (`teste-desempenho-celular`, "sem vazamento").
 - **`campo.js`** (só arquibancada/entorno/placas): arquibancada do lado de cá espelhada com o TÚNEL (`ESTADIO.tunel`),
   teto curto, os bancos de reservas (`ESTADIO.bancos`) na MESMA malha (somem com ela: no celular a TV pegava a cobertura
   deles no canto de baixo) e três caixas de corte; verso das placas do lado de cá em painéis
-  verdes (sem a faixa preta); `atualizar(t, camera)` tira o lado de cá do desenho com a câmera dentro dele (pré-carga
+  verdes (sem a faixa preta); `atualizar(t, camera, desenha)` tira o lado de cá do desenho com a câmera dentro dele (pré-carga
   igual à da torcida, 1 chamada vazia só no 1º quadro); `ladoDeCa` (testes).
 - **`config.js`**: `ESTADIO = {tunel: {x, z, largura, altura, profundidade, laje}, bancos: {x, z, altura}}`.
-- **`main.js`** (ganchos mínimos): `campo.atualizar(t, camera)`, `torcida.atualizar(t, emocao, camera,
-  som.relogioBatida)`; API `estadio.{torcida.grupos, torcida.ladoDeCa, bancosVisiveis, festa, festaVisual, forcarFesta(o),
+- **`main.js`** (ganchos mínimos): `campo.atualizar(t, camera, renderizar)`, `torcida.atualizar(t, emocao, camera,
+  som.relogioBatida, renderizar)`; API `estadio.{torcida.grupos, torcida.ladoDeCa, bancosVisiveis, festa, festaVisual, forcarFesta(o),
   mostrarFesta(v), overdrawFumaca()}`.
 - **Orçamento** (medido): chamadas de desenho no jogo +1 (faixas/bandeiras/bandeirões) e +1 só com sinalizadores
-  acesos (`teste-estadio` item 12: ≤ 2); overdraw da fumaça ≤ 0,5 tela no pico do gol (medido 0,2); Baixa sem fumaça;
+  acesos (`teste-estadio` item 12: ≤ 2; câmera de TV no PC Alta, 20 instantes: publicada 26–27, nova 28–29); overdraw da fumaça ≤ 0,5 tela no pico do gol (medido 0,2); Baixa sem fumaça;
   sons novos ~0,5 MB (todos 1,37 MB, baixados depois da página pronta); memória do áudio ≤ 30 MiB.
 - **Testes**: `tools/teste-som-jogo.mjs` (navegador, CI: M1–M11), `tools/teste-torcida.mjs` (Node: seções E e F),
   `tools/teste-estadio.mjs` (itens 11 lado de cá e bancos fora da TV, 12 festa), `tools/teste-desempenho-celular.mjs` (os sinalizadores
