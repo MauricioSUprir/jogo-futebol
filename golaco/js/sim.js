@@ -775,7 +775,10 @@ function bolaAltaNoCorpo(m, j) {
     || (intencaoCabeceio(m, j, y)?.tipo ?? 'passe') !== 'passe');
   // (na bola parada quem defende ataca a bola na zona dele: AEREO.zonaBolaParada)
   const zona = m.voo && m.voo.bolaParada && m.voo.time !== j.time ? AEREO.zonaBolaParada : Infinity;
-  const pc = livre ? pontoDeCabeceio(m, j, vale, zona) : null;
+  let pc = livre ? pontoDeCabeceio(m, j, vale, zona) : null;
+  // um companheiro já vai a esta bola de cabeça e chega antes (ou junto): não corro para ela também (os dois corriam, o
+  // que chegava depois voltava — o vai e volta do teste-movimento subia — e amontoavam debaixo do cruzamento)
+  if (pc && !ehControlado(m, j) && companheiroNoAlto(m, j, m.tick + pc.i + AEREO.juntoTicks)) pc = null;
   const q = pc ?? r;
   if (!q || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
     // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
@@ -822,6 +825,15 @@ function pontoDeCabeceio(m, j, querCabeca, raioMax = Infinity) {
     if (y <= alc - CABECEIO.conforto || (i - achou) * PASSO >= CABECEIO.desce) return _pc;
   }
   return achou >= 0 ? _pc : null;
+}
+
+/** Algum companheiro de j com o cabeceio planejado (toque aéreo marcado e o pulo) para o tick t ou antes? */
+function companheiroNoAlto(m, j, t) {
+  for (const o of m.jogadores) {
+    if (o === j || o.time !== j.time || !o.cab || !o.cab.cabeceio || o.cab.tc > t || o.cab.tc < m.tick) continue;
+    if (o.cond && o.cond.toque && o.cond.toque.tipo === 'aereo') return true;
+  }
+  return false;
 }
 
 /** Algum adversário de linha a até d m de j? */

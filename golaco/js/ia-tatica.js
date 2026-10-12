@@ -842,7 +842,8 @@ function acompanhaCorredor(m, j, B, lado, out) {
  * condutor (a do corpo, agora) + corrida.ganho × (ponto − corpo), a conta do CONTER do humano (defesa.js entradaVelocidade, com o
  * CORRER pela velocidade pedida e histerese). Ponto: na linha condutor → meu gol a dist[0] + dist[1]·v m (contém), a
  * corrida.aperto m (aperta) ou na cobertura (atrás do 1º, do lado do gol e por dentro). Do lado do gol e perto, nunca
- * sobe: a velocidade para o meu gol é pelo menos a do condutor − recua[1]. Devolve a entrada, ou null.
+ * sobe: a velocidade para o meu gol é pelo menos a do condutor − recua[1] (longe do gol) a recua[2] (perto). Devolve a
+ * entrada, ou null.
  */
 function acompanhar(m, j, s, B, meuGol, extra, ramo) {
   const CR = IA_DEFESA.corrida;
@@ -858,6 +859,8 @@ function acompanhar(m, j, s, B, meuGol, extra, ramo) {
   const vc = MD.hypot(B.cvx, B.cvz);
   const gx = meuGol - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1, ux = gx / g, uz = gz / g;
   let px, pz;
+  // perto do meu gol (engaja: 0 → 1 de engaja[1] a engaja[0] m) o 1º homem fecha até o bote
+  const e = ataca || ramo === 'aperta' ? 1 : clamp((CR.engaja[1] - g) / (CR.engaja[1] - CR.engaja[0]), 0, 1);
   if (ataca) { px = b.x; pz = b.z; }
   else if (ramo === 'cobre') {
     let nx = -uz, nz = ux;
@@ -868,15 +871,15 @@ function acompanhar(m, j, s, B, meuGol, extra, ramo) {
   } else {
     // contém longe do gol; a menos de engaja[1] m dele a distância encolhe até o aperto (engaja[0] m): o bote
     const dc = Math.max(CR.dist[2], Math.min(CR.dist[3], CR.dist[0] + CR.dist[1] * vc));
-    const e = clamp((CR.engaja[1] - g) / (CR.engaja[1] - CR.engaja[0]), 0, 1);
     const d = ramo === 'aperta' ? CR.aperto : lerp(dc, CR.aperto, e);
     px = c.x + ux * d; pz = c.z + uz * d;
   }
   // (a velocidade dele AGORA: a filtrada atrasa ~0,5 s e, na arrancada, o defensor ficava para trás)
   let vx = c.vx + CR.ganho * (px - j.x), vz = c.vz + CR.ganho * (pz - j.z);
-  // do lado do gol e perto: nunca sobe no corredor
+  // do lado do gol e perto: nunca sobe no corredor — longe do gol recua quase na velocidade dele (atrasa a arrancada);
+  // perto, recua mais devagar (recua[2]) para fechar a distância do bote
   if ((j.x - c.x) * ux + (j.z - c.z) * uz > 0 && MD.hypot(j.x - c.x, j.z - c.z) < CR.recua[0]) {
-    const vg = vx * ux + vz * uz, min = Math.max(0, c.vx * ux + c.vz * uz - CR.recua[1]);
+    const vg = vx * ux + vz * uz, min = Math.max(0, c.vx * ux + c.vz * uz - lerp(CR.recua[1], CR.recua[2], e));
     if (vg < min) { vx += (min - vg) * ux; vz += (min - vg) * uz; }
   }
   const it = estadoT(j);

@@ -783,6 +783,8 @@ export const AEREO = {
   // Copa América 2021; meta do teste-bolas-paradas 35–62%). (Atrasar a leitura da defesa em 0,3–0,5 s não mudou nada:
   // 32,5% e 31,7% — ela já está no caminho da bola)
   zonaBolaParada: 1.0,
+  // um companheiro já vai à bola de cabeça chegando até juntoTicks depois de mim: eu não corro para ela também
+  juntoTicks: 6,
   // ...e na disputa da bola parada quem ataca vem na corrida, no tempo da cobrança: + ataqueBolaParada no logit (com a
   // defesa só na zona, o ataque ficava com 36,7% do 1º contato; com zona 0,8 m e +0,4: 42,5%; +0,8: 48,3% e 12,1% dos
   // escanteios em gol; o lado do gol, AEREO.ladoGol, continua valendo)
@@ -1041,7 +1043,9 @@ export const IA_DEFESA = {
   //    defesa.js entradaVelocidade, com o CORRER pela velocidade pedida): o 1º na linha condutor → gol a dist[0] + dist[1]·v m
   //    (entre dist[2] e dist[3]); apertando (gatilho, perigo), a `aperto` m; o 2º na cobertura a cobre[0] + cobre[1]·v m (no
   //    máximo IA_DEFESA.cobertura);
-  //  - do lado do gol e a menos de recua[0] m dele, nunca sobe: a velocidade para o meu gol é pelo menos a dele − recua[1];
+  //  - do lado do gol e a menos de recua[0] m dele, nunca sobe: a velocidade para o meu gol é pelo menos a dele − recua[1]
+  //    longe do gol, − recua[2] perto (engaja): recuando quase junto ele atrasa a arrancada (5,8 m/s para o gol com o
+  //    condutor a 3 m), mas sem frear perto do gol o condutor entrava na área em 40% das arrancadas contra o bloco armado;
   //  - quem ficou mais de `batido` m atrás do condutor paga `batidoPaga` m para ser o 1º homem (com alguém do lado do gol a
   //    até batidoFrente m dele): o 1º homem passa adiante (Andrienko 2017: o defensor batido pressiona pouco);
   //  - o bloco do lado do gol a até `raio` m do condutor e a até `corredor` m de lado da linha dele acompanha no ritmo de
@@ -1054,7 +1058,7 @@ export const IA_DEFESA = {
   //    arrancadas do próprio campo (base 4%)
   //  - v = 6,3 m/s (a definição de arrancada da contraprova de 11/10: o trote do humano, ~5,6 m/s, fica com a defesa de
   //    sempre, que já o parava: 4% chegavam à área).
-  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [8, 1],
+  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 2.5],
     batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia

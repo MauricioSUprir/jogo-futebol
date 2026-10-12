@@ -1067,3 +1067,79 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Cabeceio na bola rolando e IA intensa com responsabilidade (12/10, contrato)
+
+Pedidos do dono de 11/10: "os jogadores não cabeceiam a bola, de jeito nenhum" e "o jogo tem que ser mais intenso, ninguém
+do outro time corre, ninguém marca, mas tem que marcar com responsabilidade e consciência". Pesquisa em
+`PESQUISA-ETAPA4.md` §6. O treino muda só onde há bola alta (o pulo vale em todo modo); a IA intensa e a disputa no jogo
+corrido só na partida.
+
+### O pulo do cabeceio (`cabeceio.js`, puro)
+- Estado `j.cab = {tA, td, tc, tp, tf, h, bx, by, bz, cx, cz, vx, vz, saiu, x0, z0, lx, lz, cabeceio}` (criado em
+  `jogador.js` como `undefined`, junto com `disputaAlta`, `disputa`, `perdeuAlto`): contramovimento `tA..td` (pés no chão),
+  sai do chão em `td`, contato em `tc` (no alto do pulo), pousa em `tp`, amortece até `tf`; `h` = quanto o quadril sobe
+  (0 = cabeceia sem pular, só o tronco); `(bx, by, bz)` a bola no contato (a física do jogo, `conducao.js preverBola`);
+  `(cx, cz)` onde o corpo vai para a testa encontrar a bola; `cabeceio = false` no pulo de quem só disputa.
+- `alturaPulo(j)` (impulsão → `CABECEIO.salto`), `alcanceCabeceio(j)` (de pé + pulo + tronco + encosto),
+  `inclinacaoAte(px, py, pz, bx, by, bz, out)` (ângulo do tronco para a cabeça ir à bola), `subidaPara(y, L)`,
+  `preparoPulo(h)` (s do pedido ao contato), `planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx, nz, folgaAlc)` → `j.cab` ou
+  null (não alcança), `puloAtivo(j, t)`, `noAr(j, t)`, `quadroPulo(c, t, out)` → `{off, w, arco, braco}` (o que a pose lê),
+  `sairDoChao(m, j)` (em `td`: velocidade de saída para o ponto, no máximo `vSaida`; longe demais do ponto, cancela),
+  `passoCorpoNoAr(m, j)` (balístico), `pesNoAr(m, j)` (os pés saem de onde estavam e pousam parados em `lx/lz`),
+  `intencaoCabeceio(m, j, y)` → `{tipo: 'chute' | 'lancamento' | 'passe', forca, auto: true}` (a gol na área adversária a até
+  `CABECEIO.gol` m, afastar no meu terço, passe no resto; null para passe com a bola na altura do peito).
+- `anim.js`: a pose lê `j.cab` (função pura do estado): o quadril no pulo (`hyPulo`), o tronco inclinado para a bola com o
+  arco da subida e o chicote do contato, os braços subindo; `alturaQuadril` devolve o do pulo.
+
+### Simulação (`sim.js`)
+- Ordem no passo: no movimento, `sairDoChao` em `td` e, voando (`td < t ≤ tp`), `passoCorpoNoAr` no lugar da locomoção;
+  na passada, `pesNoAr` no lugar de `passoPassada`; `passoPeDesenhado` pulado no ar; na bola livre quem está no ar não
+  domina.
+- `bolaAltaNoCorpo`: o toque aéreo marcado (`c.toque.tipo = 'aereo'`) vira cabeceio só com o pulo planejado para o tick
+  (`j.cab.tc === m.tick`) e a cabeça DESENHADA na bola (`cabecaNaBola`: pose do tick, superfícies a até `CABECEIO.folga`);
+  senão o peito/coxa (bola até `alturaPeito[1] + 0,15`). Marcação: `pontoDeCabeceio(m, j, querCabeca, raioMax)` — o 1º
+  ponto da trajetória que ele alcança a tempo de pular (correr + `preparoPulo`), preferindo a bola `conforto` m abaixo do
+  alcance; só vai antes à bola com botão, adversário a até `disputaPerto` m ou intenção ≠ passe; o controlado com o
+  analógico mexido só cabeceia a bola que passa nele; na bola parada quem defende só na zona (`AEREO.zonaBolaParada`).
+- Disputa no jogo corrido (partida, fora da bola parada): `agendarDisputa(m, j, cab)` escolhe o adversário de linha mais
+  rápido que chega a até `AEREO.vai` m do ponto antes da saída e planeja o pulo dele ombro com ombro (`CABECEIO.ombro` de
+  lado, `recua` antes; `j.disputaAlta = {tc, x, z, contra}`; `movimentoAereo` o leva até lá). No contato, `rivalNoAlto`
+  (jogo corrido: quem pulou com a cabeça desenhada a até `AEREO.folgaRival` da bola; bola parada: a regra da Etapa 4) e
+  `ganhaDisputa` (nota no alto; jogo corrido: `iniciativa` + `kDist` × diferença de distância à bola + `ladoGolRolando`
+  perto do gol; bola parada: `ladoGol` + `ataqueBolaParada` para quem ataca). O rival ganha de raspão (`raspao`: desvia,
+  perde força) se a cabeça dele não estava na bola. Evento `disputaAerea {id (quem ganhou), perdeu, dono, bolaParada,
+  alcancou, p}`; o cabeceio sai como `passe` com `modo: 'cabeceio'` e `m.voo.cabeceio` = o tipo ('chute', 'lancamento',
+  'passe').
+- `acoes.js executarCabeceio`: a gol mira baixo na linha (`CABECEIO.yGol`, `elevacaoParaAltura`) a `zGol` m do meio, do lado
+  longe do goleiro (ou o analógico), com o erro `ACOES.cabeceio.erroGol` (bola parada e rolando; × `AEREO.erroDisputa` em
+  disputa); afastar sem botão (`p.auto`): para longe do meu gol e para o lado da bola (`vAfasta`, `elAfasta`, `ladoAfasta`).
+  `finalizarChute` só põe a bola rolando no chão com ela rolando ou na altura do pé (antes o cabeceio a gol era
+  teletransportado para o chão).
+- `goleiro.js`: `chanceDefesa(..., partida, tVoo)` soma `logit.cTempo` × (tVoo − dChute / vRef) na partida (bola lenta dá
+  tempo); `pontoDoCruzamento` — cruzamento/lançamento do adversário no ar: a bissetriz é a do ponto onde a bola desce a
+  `GOLEIRO.leCruzamento.y` m (a até `dist` m do gol, nos próximos `ticks`), não a da bola no ar.
+
+### IA intensa com responsabilidade (`ia-tatica.js`, `sim.js boteIA`; constantes `IA_DEFESA.corrida`, `saltoPressa`)
+- `blocoDoTime`: `B.rapido` — condutor adversário de linha a mais de `corrida.v` m/s (o corpo dele, agora) vindo para o meu
+  gol (≥ metade da velocidade nessa direção); desliga pela velocidade filtrada abaixo de `v − hist`. Com ele: quem ficou
+  mais de `batido` m atrás do condutor paga `batidoPaga` m para ser o 1º homem (havendo alguém do lado do gol a até
+  `batidoFrente` m).
+- `semBola`: com `B.rapido` o 1º homem sai do bloco também além da linha de engajamento e `acompanhar(..., 'contem' |
+  'aperta')`; o 2º `acompanhar(..., 'cobre')`; o resto do corredor (`acompanhaCorredor`: do lado do gol, a até `raio` m e
+  `corredor` m de lado) segue o ponto calmo no ritmo `fBloco` × v; a recomposição liga com `liga` m de atraso.
+- `acompanhar`: velocidade = a do condutor (a do corpo) + `ganho` × (ponto − corpo) → `defesa.js entradaVelocidade`
+  (exportada). Ponto: contém a `dist[0] + dist[1]·v` m (entre `dist[2]` e `dist[3]`) na linha condutor → gol, encolhendo
+  até `aperto` m entre `engaja[1]` e `engaja[0]` m do gol; `cobre` atrás e por dentro; com a bola mais perto dele que do pé
+  do condutor (`atacaBola`), a bola — sem parar de correr. Do lado do gol e a menos de `recua[0]` m, nunca sobe
+  (velocidade para o gol ≥ a do condutor − `recua[1]`). Estado `j.iaT.acomp = {corre}`.
+- `alvoPressa`: trocando de papel o filtro só recomeça com o ponto novo a mais de `IA_DEFESA.saltoPressa` m.
+- `sim.js boteIA` (partida): com o condutor a mais de `ACOES.boteIA.vLado` m/s a bola tirada sai para o lado do defensor e
+  `tras` para trás no caminho do condutor; o condutor fica sem dominar até `semDominioAte` (a regra da DIVIDIDA).
+
+### Testes
+`teste-cabeceio` (canhão de cruzamentos, pose, teleporte, partidas demo, humano) e `teste-defesa-corrida` (humano
+roteirizado em arrancada e em trote contra a IA) no padrão; os dois aceitam `--js <pasta>` (a base reprova).
+`painel-equilibrio` ganhou `--base-json` (a base gravada), `--set` (constantes só da versão medida) e as linhas de chutes
+por time, gols de cabeça (8–18%), cabeceios e duelos pelo alto. `prints-cabeceio.mjs`: cabeceio, disputa e o corredor (TV
+e de perto).

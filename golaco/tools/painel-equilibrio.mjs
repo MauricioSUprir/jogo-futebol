@@ -28,6 +28,8 @@
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
 //   node tools/painel-equilibrio.mjs --base-json saida.json (a base é a rodada gravada: não roda de novo)
 //   node tools/painel-equilibrio.mjs --set IA_ATAQUE.utilidade.chute=3 (repetível: constante trocada só na versão medida)
+//   node tools/painel-equilibrio.mjs --retomar parciais.jsonl (grava cada partida; de novo, continua de onde parou;
+//                                                          com --parcial, só mostra as que já estão lá)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
@@ -172,22 +174,41 @@ if (args.includes('--filho')) {
 
 // ------------------------------------------------------------------ processo principal
 const NS = +arg('--n', 144), S0 = +arg('--sem0', 1001);
-const SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
+let SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
 const nPar = Math.max(1, +arg('--par', os.availableParallelism?.() ?? os.cpus().length));
 const sem = a => { const n = a.length, mu = a.reduce((x, y) => x + y, 0) / n; return n > 1 ? Math.sqrt(a.reduce((x, y) => x + (y - mu) ** 2, 0) / (n - 1) / n) : 0; };
 
+// --retomar <arquivo>: cada partida terminada da versão medida vai para o arquivo (uma linha JSON); rodando de novo com o
+// mesmo arquivo (e as mesmas opções), as sementes já feitas não rodam outra vez — numa máquina dividida o processo pode cair
+// no meio das 144 partidas (limite de tempo) e a rodada continua de onde parou
+const RETOMAR = arg('--retomar', null);
+// --parcial (com --retomar): só as sementes que já estão no arquivo (uma olhada no meio da rodada, sem rodar nada)
+if (RETOMAR && args.includes('--parcial')) {
+  const tem = new Set(fs.existsSync(RETOMAR) ? fs.readFileSync(RETOMAR, 'utf8').split('\n').filter(l => l.trim()).map(l => JSON.parse(l).sem) : []);
+  SEMENTES = SEMENTES.filter(s => tem.has(s));
+}
 async function rodar(pastaJs) {
   if (!fs.existsSync(path.join(pastaJs, 'partida.js'))) throw new Error(`${pastaJs}: sem partida.js`);
   const res = [];
+  const ret = RETOMAR && pastaJs === JS ? RETOMAR : null;
+  const ja = new Set();
+  if (ret && fs.existsSync(ret)) {
+    for (const l of fs.readFileSync(ret, 'utf8').split('\n')) {
+      if (!l.trim()) continue;
+      const r = JSON.parse(l);
+      if (SEMENTES.includes(r.sem) && !ja.has(r.sem)) { ja.add(r.sem); res.push(r); }
+    }
+  }
+  const falta = SEMENTES.filter(s => !ja.has(s));
   let prox = 0, feitas = 0;
   const t0 = Date.now();
-  await Promise.all(Array.from({ length: Math.min(nPar, SEMENTES.length) }, async () => {
-    while (prox < SEMENTES.length) {
-      const s = SEMENTES[prox++];
+  await Promise.all(Array.from({ length: Math.min(nPar, falta.length) }, async () => {
+    while (prox < falta.length) {
+      const s = falta[prox++];
       res.push(await new Promise((ok, erro) => {
         const sets = pastaJs === JS ? args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])) : [];
         const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO), ...sets]);
-        c.on('message', ok); c.on('error', erro);
+        c.on('message', r => { if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); ok(r); }); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
       }));
       feitas++;
@@ -291,7 +312,7 @@ if (BASE_JSON) {
 versoes.push({ nome: BASE || BASE_JSON ? 'agora' : 'medido', pasta: JS });
 for (const v of versoes) { if (!v.gravada) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; } v.x = medidas(v.res); }
 
-console.log(`Painel de equilíbrio — ${NS} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}), ${nPar} processos`);
+console.log(`Painel de equilíbrio — ${SEMENTES.length} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}${SEMENTES.length < NS ? `: as ${SEMENTES.length} já feitas` : ""}), ${nPar} processos`);
 for (const v of versoes) console.log(`  ${v.nome}: ${v.pasta} (${f(v.s, 0)} s)`);
 const cab = ['medida', 'meta', ...versoes.map(v => v.nome)];
 const tab = [cab];

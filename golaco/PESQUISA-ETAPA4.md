@@ -144,3 +144,35 @@ adversário dentro da área (erro na saída de bola 35 → 32% dos gols). Duas c
 gatilho do condutor lento só contra o humano (63,5% — não era a causa; descartado) e `GOLEIRO.logit.c0Partida` −0,1 só na
 partida: 6–16,5 m 59,0%, total 68,0%, de fora da área 86,8%, gols 2,13, impedimentos 1,15, bola parada 29% — tudo o que
 estava na meta continua nela (a amostra de 144 varia ±4 pontos nessa faixa: ~420 chutes no alvo).
+
+## 6. Cabeceio na bola rolando e IA intensa com responsabilidade (pedidos do dono de 11/10)
+
+Pedidos: "os jogadores não cabeceiam a bola, de jeito nenhum" e "o jogo tem que ser mais intenso, ninguém do outro time
+corre, ninguém marca, mas tem que marcar com responsabilidade e consciência, a IA tem que ser mais inteligente".
+Diagnóstico e contraprova (scratch `diag11/cabeceio*`, `diag11/ia-intensa*`): o cabeceio a gol era teletransportado para
+o chão no mesmo tick (`finalizarChute` punha a bola rolando), ninguém pulava (o toque aéreo só marcava a bola que passava a
+0,6 m, sem tempo de subir), a disputa pelo alto só existia na bola parada e o painel tinha 0 gol de cabeça na bola rolando.
+Na defesa, contra quem arranca com a bola o 1º homem ficava parado ou subindo no corredor (3,0 m/s para o próprio gol com o
+condutor a 3 m), quem foi batido seguia como 1º homem, a bola roubada saía para a frente do condutor (26% das roubadas
+desfeitas pelo mesmo jogador em 1 s) e 30–41% das arrancadas do próprio campo chegavam à área contra o bloco armado.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| The Analyst (Opta), "fewer headed goals" (theanalyst.com/articles/premier-league-fewer-headed-goals-2024-25) | PL 2023/24: 203 de 1.246 gols de cabeça (16%); ~4,0 cabeceios a gol por jogo, ~1,6 no alvo (~40%); 34,7 cruzamentos por jogo, 8,4 certos (24%) | Linha "gols de cabeça" do painel (8–18%); `ACOES.cabeceio.erroGol` calibrado no canhão de cruzamentos pelo no alvo (~40%) e gol (10–13%) por cabeceio a gol |
+| The FA, "Heading guidance — professional football" (2021, dados Opta) | Cabeceios por jogo: zagueiros 7,02, meias 4,93, atacantes 3,65 | A intenção sem botão (`intencaoCabeceio`): no meu terço afasta, na área adversária a gol, no meio passe — quem defende cabeceia mais (o volume do painel é informativo) |
+| Premier League (premierleague.com/news/3854577) | Times de jogo aéreo passam de 600 duelos pelo alto por temporada (~17 por jogo) | Ordem de grandeza dos duelos pelo alto no jogo corrido (linha informativa do painel) |
+| Fílter et al. 2022 (MMU) | No cabeceio com corrida a cabeça passa ~0,56 m da estatura; último apoio ~0,24 s | `CABECEIO.salto` (o quadril sobe 0,40–0,65 m pela impulsão), `alcanceCabeceio` pela cabeça desenhada, `preparoPulo` |
+| Becker 2021 (RPTU) | Força própria do cabeceio com corrida ~8,3 m/s | `ACOES.cabeceio.potencia` (já da Etapa 2) + `redirecao` |
+| Mancini et al. 2022, Sports Medicine and Health Science (pmc.ncbi.nlm.nih.gov/articles/PMC9453686) | No pouso do cabeceio com salto o joelho toca o chão com 19–24° de flexão e chega a 69–90°; a altura do pulo de cabeceio fica ~2,5 cm abaixo do salto vertical máximo | `CABECEIO.amortece` (o quadril baixa depois do pouso), o pulo um pouco abaixo do máximo |
+| Fases do cabeceio com salto (Shewchenko 2005; Bauer 2001) | Preparação (agacha), impulsão com os braços, extensão do tronco para trás na subida, chicote para a frente no contato, no alto do pulo | `quadroPulo` (`agacha`, braços, `arco`, peso da inclinação) e o contato no alto do pulo (`tc`) |
+| Tese da Universidade de Atenas sobre os escanteios da Copa América 2021 (pergamos.lib.uoa.gr/uoa/dl/frontend/en/browse/3329322; 175 escanteios, Wyscout) | O ataque faz o 1º contato em 52,6% dos escanteios; 8 gols (4,6%) | `AEREO.zonaBolaParada` (quem defende ataca a bola só na zona dele) e `ataqueBolaParada` (quem ataca vem na corrida, no tempo da cobrança) — o canhão de escanteios do `teste-bolas-paradas` (meta 35–62%) |
+| FIFA Training Centre, "Goalkeeping fundamentals: defending the penalty area"; Keeperstop, "Dealing with crosses" | O goleiro lê se o cruzamento vai ao 1º pau, ao meio ou ao 2º pau e se ajusta antes; postura aberta para acompanhar a bola até o 2º pau | `GOLEIRO.leCruzamento`: a bissetriz do ponto onde a bola desce para a cabeça, não da bola no ar (no escanteio ele ficava no 1º pau e a cabeçada no 2º entrava) |
+| Wyscout, glossário PPDA (dataglossary.wyscout.com/ppda) | PPDA médio ~11 (6,7–18,2 nas ligas) | O `teste-pressao` (grupo `etapa3`) |
+| Forcher et al. 2024, "Is a compact organization important for defensive success in elite football?" (Universidade de Viena) | A compactação dos jogadores mais perto da bola pesa no sucesso defensivo | Só o 1º e o 2º homem vão à bola; o bloco do corredor acompanha no lugar dele na forma (`acompanhaCorredor`) |
+| Andrienko et al. 2017, "Visual analysis of pressure in football" (City, University of London) | A pressão cai com a distância e com o defensor atrás do atacante | O batido deixa de ser o 1º homem (`batido`, `batidoPaga`) |
+| Metrica Sports, dados de amostra (github.com/metrica-sports/sample-data) | Com o condutor rápido, ~51% dos defensores a mais de 4 m/s | Referência da contraprova para não exagerar o bloco inteiro correndo (`fBloco` < 1) |
+| EA SPORTS FC 27, Pitch Notes (ea.com) | Defesa por "contain"/"jockey" com corrida e o desarme na hora certa | `acompanhar`: conter pela velocidade (a conta do CONTER do humano) e fechar até o bote perto do gol; desarme sem parar de correr |
+| Sportsessionplanner, 1 × 1 (já citada na §17 da Etapa 3) | Fechar, conter e dar o bote quando o atacante dá a chance | `IA_DEFESA.corrida.engaja`: longe do gol atrasa a arrancada, perto ele tira a bola |
+| Contraprova de 11/10 (`diag11/ia-intensa-contraprova`) | Só correr não para a arrancada; falta o desarme lado a lado e não subir no corredor; o trote não pode virar "arrancada" | A ordem das mudanças (bote com `semDominioAte` e a bola para o lado do defensor; acompanhar sem subir; filtro da pressa; o batido; o 1º homem além da linha de engajamento) e `corrida.v` = 6,3 m/s |
+
+**Medido** — ver as tabelas do PR (preenchidas abaixo quando o painel fechar).
