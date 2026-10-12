@@ -656,7 +656,7 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
   try {
     const { navegador: nav, pagina, erros: errosCa } = await abrir(o);
     try {
-      await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia`, { waitUntil: 'load' });
+      await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia&replay=0`, { waitUntil: 'load' });
       await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;

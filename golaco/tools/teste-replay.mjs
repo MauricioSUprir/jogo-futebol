@@ -5,6 +5,7 @@
 //      simulação parada, em ≥ 2 planos (TV 1× e atrás do gol em câmera lenta), 3–12 s; só a marca "REPLAY" no canto
 //      (minimapa, menu e avisos somem; nenhum texto de lance); no fim a câmera de jogo volta e a partida segue; o apito
 //      da saída toca DEPOIS do replay;
+//      a arquibancada do lado de cá aparece/some pela câmera do replay (atrás do gol: aparece; TV: não);
 //   B) hash: o mesmo lance com replay automático × sem replay (?replay=0) [× a versão --base] → o mesmo hash no tick
 //      gol + 600 e a saída de bola no mesmo tick (o replay só lê o anel; a simulação só espera);
 //   C) impedimento de verdade (IA × IA, a semente achada em Node): no apito o replay é do impedimento; a linha aparece
@@ -69,7 +70,7 @@ async function rodadaGol(raizJogo, url, clicar = false) {
         const rp = temReplay ? g.replay.estado : null;
         if (saidaTick == null && m.partida.estado !== 'gol' && m.tick > golTick + 10) saidaTick = m.tick;
         if (rp?.ativo) {
-          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel });
+          amostras.push({ tick: m.tick, rt: rp.tick, cam: rp.cam, vel: rp.vel, plano: rp.plano, tipo: rp.tipo, bx: g.render.bola.x, linha: !!g.linhaImpedimento?.visivel, ca: g.estadio.torcida?.ladoDeCa ?? null, cz: g.render.camera.z, cy: g.render.camera.y });
           if (!hud && amostras.length === 30) {
             const textos = [...document.querySelectorAll('#hud *, #replay *')].filter(e => e.children.length === 0 && e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden' && e.textContent.trim()).map(e => e.textContent.trim());
             hud = { marca: vis('replay-marca'), minimapa: vis('minimapa'), menu: vis('btn-menu'), aviso: vis('aviso'), pular: vis('replay-pular'), placar: vis('#hud .placar'), textos };
@@ -106,6 +107,15 @@ const comR = await rodadaGol(raiz, '?q=baixa&hora=dia&semente=5', true);
     h && h.marca && h.placar && !h.minimapa && !h.menu && !h.aviso && !h.pular && h.textos.every(t => /^(REPLAY|[A-ZÇ]{2,4}|\d+|\d+'|\d+\+\d+'|[12]º T( \+\d+)?)$/.test(t)));
   meta('A7 depois do replay a câmera de jogo volta e a partida segue', comR.depois ? `câmera ${comR.depois.plano}, marca ${comR.depois.marca}; tick ${comR.depois.tick} → ${comR.tickFim}` : '-', 'jogo, sem marca, o tick anda',
     comR.depois && comR.depois.plano === 'jogo' && !comR.depois.marca && comR.tickFim > comR.depois.tick);
+  {
+    // a arquibancada do lado de cá segue a câmera do REPLAY (antes ficava como no último quadro do jogo: escondida pela
+    // câmera de TV, que fica dentro dela — e o plano de trás do gol mostrava o estádio sem o lado de cá)
+    const por = {};
+    for (const x of a) { const k = `${x.cam}@${x.vel}`; const o = (por[k] ??= { n: 0, ca: 0 }); o.n++; if (x.ca) o.ca++; }
+    const tv = por['tv@1'], atras = por['atras@0.5'];
+    meta('A9 arquibancada do lado de cá pela câmera do replay', Object.entries(por).map(([k, o]) => `${k}: ${o.ca}/${o.n} quadros com ela desenhada`).join(', ') || '-',
+      'TV (dentro dela): 0; atrás do gol: ≥ 1', !!tv && !!atras && tv.ca === 0 && atras.ca > 0);
+  }
   if (comR.somEstado === 'rodando') meta('A8 o apito da saída toca DEPOIS do replay', `no replay ${comR.apitoNoReplay}, depois ${comR.apitoDepois}`, '0 e ≥ 1', comR.apitoNoReplay === 0 && comR.apitoDepois >= 1);
   else meta('A8 o apito da saída toca DEPOIS do replay', `som ${comR.somEstado}: não medido`, '-', true, true);
 }

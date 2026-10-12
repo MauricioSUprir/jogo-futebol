@@ -149,8 +149,13 @@
       <div class="menu-corpo">
         <!-- ações por modo: data-so="partida" só na partida; data-so="treino" só nos treinos -->
         <div class="menu-acoes" id="menu-acoes">
-          <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
-          <button class="btn" type="button" data-cmd="replay" data-so="partida">Replay <small>últimos 10 s</small></button>
+          <!-- Continuar e o Replay (dos últimos 10 s) na mesma linha: a pausa continua cabendo sem rolar no celular deitado -->
+          <div class="linha-continuar">
+            <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Continuar</button>
+            <button class="btn btn-replay" type="button" data-cmd="replay" data-so="partida" title="Replay dos últimos 10 s" aria-label="Replay dos últimos 10 s">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3M4.5 4.5v4h4" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M10.5 9.2v5.6l4.6-2.8z" fill="currentColor"/></svg>Replay
+            </button>
+          </div>
           <button class="btn" type="button" data-cmd="editar-time" data-so="partida">Editar time <small>escalação e tática</small></button>
           <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida" id="btn-reiniciar-partida">Reiniciar partida</button>
           <button class="btn" type="button" data-cmd="recomecar" data-so="treino">Recomeçar <small>bola no pé</small></button>
@@ -177,6 +182,8 @@
             </div>
             <small class="opcao-info" id="info-qualidade"></small>
           </div>
+          <!-- Horário, Câmera e Replays: lado a lado no celular deitado (no PC, um embaixo do outro, como antes) -->
+          <div class="opcoes-linha">
           <div class="opcao">
             <span class="opcao-rotulo">Horário</span>
             <div class="segmentado" data-grupo="hora">
@@ -191,13 +198,14 @@
               <button type="button" data-valor="aproximada">Aproximada</button>
             </div>
           </div>
-          <!-- replay depois do gol e no apito do impedimento (o "Replay" da pausa funciona sempre) -->
+          <!-- replays automáticos: depois do gol e no apito do impedimento (o "Replay" da pausa funciona sempre) -->
           <div class="opcao">
-            <span class="opcao-rotulo">Replays automáticos</span>
-            <div class="segmentado" data-grupo="replayAuto">
+            <span class="opcao-rotulo" title="Replays automáticos (gol e impedimento)">Replays</span>
+            <div class="segmentado" data-grupo="replayAuto" aria-label="Replays automáticos">
               <button type="button" data-valor="ligado">Ligado</button>
               <button type="button" data-valor="desligado">Desligado</button>
             </div>
+          </div>
           </div>
           <div class="opcao opcao-som">
             <span class="opcao-rotulo">Som da torcida</span>

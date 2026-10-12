@@ -636,8 +636,9 @@ function desenharReplay(dt, agoraMs, renderizar = true) {
   marcas.grupo.visible = false;
   marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
   linhaImped.mostrar(diretor.linha(dt));
-  campo.atualizar(agoraMs / 1000);
-  torcida.atualizar(agoraMs / 1000, emocao, diretor.camera);
+  // a arquibancada do lado de cá (e a torcida dela) some/aparece pela câmera do replay, como no jogo pela da TV
+  campo.atualizar(agoraMs / 1000, diretor.camera, renderizar);
+  torcida.atualizar(agoraMs / 1000, emocao, diretor.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   hud.carga(null); hud.cartao(null);
   hud.placar(mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0);
