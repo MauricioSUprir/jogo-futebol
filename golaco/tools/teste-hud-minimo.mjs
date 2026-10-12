@@ -9,7 +9,8 @@
 //     carrega o passe). Os nomes dos botões voltaram por pedido do dono (12/10: "coloca o nome da função do botão
 //     de novo") e são medidos no H9
 //  H9 nomes dos botões de toque por padrão (dono, 12/10): todo botão visível mostra o nome da função, inteiro dentro
-//     do botão, nas duas fases das 3 telas (na versão anterior, só o ícone: reprova)
+//     do CÍRCULO do botão (a corda na altura do texto), nas duas fases das 3 telas (na versão anterior, só o ícone:
+//     reprova; com os botões a 80%, "LANÇAMENTO" passava da borda — em telas pequenas vira "LANÇAR")
 //  H3 torcida visível escondida pelo HUD no celular 844×390 (pixels de torcida do canvas — torcida ligada ×
 //     desligada, a conta do item 10 do teste-estadio — que caem dentro das formas do HUD), 8 instantes: ≤ 15%
 //  H4 linha de impedimento VIVA (com a bola rolando): 0 amostras em 2 min de jogo; a DO LANCE continua no apito
@@ -58,7 +59,12 @@ const FORMAS = () => {
     if (getComputedStyle(b).display === 'none' || b.offsetWidth === 0) continue;
     nomes.botoes++;
     const sp = b.querySelector('span'), rb = b.getBoundingClientRect(), rs = sp ? sp.getBoundingClientRect() : null;
-    const ok = sp && vis(sp) && sp.textContent.trim() && rs.width > 0 && rs.left >= rb.left - 1 && rs.right <= rb.right + 1 && rs.top >= rb.top - 1 && rs.bottom <= rb.bottom + 1;
+    // inteiro dentro do CÍRCULO (não só do quadrado): na altura do texto, a corda do círculo (pela borda mais longe do
+    // centro, a de cima ou a de baixo) tem de conter a largura do texto
+    const cx = rb.left + rb.width / 2, cy = rb.top + rb.height / 2, raio = rb.width / 2;
+    const dy = rs ? Math.max(Math.abs(rs.top - cy), Math.abs(rs.bottom - cy)) : raio;
+    const meia = dy < raio ? Math.sqrt(raio * raio - dy * dy) : 0;
+    const ok = sp && vis(sp) && sp.textContent.trim() && rs.width > 0 && rs.left >= cx - meia - 0.5 && rs.right <= cx + meia + 0.5;
     if (ok) nomes.comNome++; else nomes.sem.push(b.id);
   }
   return { f, fora, txt: [...new Set(txt)], nomes };
@@ -135,7 +141,7 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
   } finally { await navegador.close(); }
 }
-meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
+meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
 meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
