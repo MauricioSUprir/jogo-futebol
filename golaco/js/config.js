@@ -1146,7 +1146,7 @@ export const COMEMORACAO = {
   // câmera (fov vertical em graus para 16:9; o celular fecha `celular` e põe o autor no terço esquerdo)
   camera: {
     steadicam: { frente: 6.5, lado: 2.4, altura: 1.6, fov: 32, media: 0.3, rumo: 0.5 },
-    contraplano: { atras: 7.5, lado: 1.2, altura: 1.3, alem: 6, olharY: 2.4, fov: 36 },
+    contraplano: { atras: 7.5, lado: 2.5, altura: 1.3, alem: 6, olharY: 2.4, fov: 36 },
     reacao: { dist: 4.8, altura: 1.5, olharY: 0.95, fov: 30, ladoTV: 0.35 },
     celular: 0.88, terco: 1 / 3, limite: 5.5,
   },

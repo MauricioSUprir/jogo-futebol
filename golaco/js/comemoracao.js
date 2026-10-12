@@ -213,7 +213,7 @@ export function criarCena(plano, m) {
     kFinal: -1, kFimFinal: -1, kFimAbraco: -1,
     // fim provisório (a finalização ainda não começou): o pior caso
     kFim: s60(plano.curta ? Math.max(C.curta.duracao, C.chegadaMax + C.curta.final + C.curta.reacao) : C.chegadaMax + C.final + C.abracoMin + C.reacao),
-    kPulo: -1, rumoFinal: Math.atan2(plano.alvo.uz, plano.alvo.ux),
+    kPulo: -1, rumoFinal: Math.atan2(plano.alvo.uz, plano.alvo.ux), ladoContra: null,
     olhoY: 1.25,
     hx: new Float32Array(NHIST), hz: new Float32Array(NHIST),
     _d: { dx: 1, dz: 0, vel: 0, rumo: 0 },
@@ -434,6 +434,7 @@ export function passoCena(c) {
   const py = au.atu[J.peito * 3 + 1] - 0.1 - (au.noAr ? alturaGolpe(c, tk) : 0);
   c.olhoY += (py - c.olhoY) * (1 - Math.exp(-PASSO / 0.25));
   if (c.k < NHIST) { c.hx[c.k] = au.j.x; c.hz[c.k] = au.j.z; }
+  if (c.k === c.kFimFinal && !c.curta) c.ladoContra = escolherLadoContra(c);
   if (c.k >= c.kFim) c.acabou = true;
   return true;
 }
@@ -779,6 +780,31 @@ function poseColega(c, a, t) {
 
 // ------------------------------------------------------------------------------------------------ câmera
 const _p = { x: 0, z: 0 }, _q = { x: 0, z: 0 };
+/** Sinal (±1) da perpendicular (−uz, ux) que aponta para o lado da câmera de TV (z +). */
+function ladoTV(ux, uz) { return ux > 0 || (ux === 0 && -uz > 0) ? 1 : -1; }
+
+/**
+ * Lado do contraplano (±1 na perpendicular ao rumo da torcida), escolhido UMA vez no começo do abraço: o lado com menos
+ * gente perto da lente nos próximos ~0,8 s (posição + velocidade × 0,8; quem ainda corre para o abraço não passa na
+ * frente da câmera). Empate: o lado da TV.
+ */
+function escolherLadoContra(c) {
+  const T = C.camera.contraplano, ux = c.alvo.ux, uz = c.alvo.uz, au = c.autor.j;
+  const tv = ladoTV(ux, uz);
+  let melhor = tv, menor = Infinity;
+  for (const lado of [tv, -tv]) {
+    const cx = au.x - ux * T.atras - uz * lado * T.lado, cz = au.z - uz * T.atras + ux * lado * T.lado;
+    let custo = 0;
+    for (const a of c.atores) {
+      if (a === c.autor) continue;
+      const x = a.j.x + a.j.vx * 0.8, z = a.j.z + a.j.vz * 0.8;
+      const d = Math.hypot(x - cx, z - cz);
+      if (d < 4.5) custo += 4.5 - d;
+    }
+    if (custo < menor - 1e-9) { menor = custo; melhor = lado; }
+  }
+  return melhor;
+}
 function posAutor(c, tk, out) {
   const k = clamp(tk, 0, Math.min(c.k, NHIST - 1));
   const k0 = Math.floor(k), k1 = Math.min(k0 + 1, Math.min(c.k, NHIST - 1)), f = k - k0;
@@ -854,8 +880,9 @@ export function planoCamera(c, opc, out) {
     out.nome = 'contraplano';
     const P = mediaAutor(c, tk, 18, _p);
     const ux = c.alvo.ux, uz = c.alvo.uz;
-    let lx = -uz, lz = ux;
-    if (lz < 0 || (lz === 0 && lx < 0)) { lx = -lx; lz = -lz; }
+    // o lado escolhido no começo do abraço (passoCena: o que tem menos gente perto da lente)
+    const lado = c.ladoContra ?? ladoTV(ux, uz);
+    const lx = -uz * lado, lz = ux * lado;
     out.de[0] = P.x - ux * T.atras + lx * T.lado; out.de[1] = T.altura; out.de[2] = P.z - uz * T.atras + lz * T.lado;
     out.para[0] = P.x + ux * T.alem; out.para[1] = T.olharY; out.para[2] = P.z + uz * T.alem;
     out.fov = T.fov;
