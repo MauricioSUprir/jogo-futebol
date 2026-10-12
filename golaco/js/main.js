@@ -1022,7 +1022,8 @@ const api = {
     teleportar(g, gx + lado * 9, 3, lado > 0 ? 0 : Math.PI);
     for (const o of m.jogadores) if (o.time !== TIME_HUMANO && o.posicao !== 'GOL' && Math.abs(o.x - gx) < 30) teleportar(o, gx + lado * (32 + (o.vagaIdx % 4) * 3), o.z, o.rumo);
     if (nome === 'goleiroMao') {
-      m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
+      // a bola já nas mãos (sem a junção de goleiro.js bolaNaMao, que a traria voando do meio-campo)
+      m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick, off: { x: 0, y: 0, z: 0 } };
     } else {
       m.bola.p.x = g.x + lado * 0.34; m.bola.p.y = CFG.BOLA.raio; m.bola.p.z = g.z; m.bola.v.x = 0; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = true;
       m.posse = g.id;

@@ -91,6 +91,13 @@ const CENAS = [
   { nome: 'pc-cartao', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'cartao' },
   { nome: 'celular-cartao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'cartao' },
   { nome: 'pc-editor-expulso', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'expulso', editor: 'escalacao' },
+  // pedidos de 11/10 (regras e controles): o PRESSÃO segurado com a marca âmbar sobre quem foi chamado e o goleiro do
+  // humano andando com a bola nas mãos (analógico), com o anel dos 8 s esvaziando — sem demo (o humano joga pela entrada)
+  { nome: 'celular-pressao', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1', prep: 'pressao' },
+  { nome: 'pc-pressao-noite', ...PC, url: 'q=alta&hora=noite', prep: 'pressao' },
+  { nome: 'celular-goleiro-mao', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1', prep: 'goleiroMao' },
+  { nome: 'celular-goleiro-mao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1', prep: 'goleiroMao' },
+  { nome: 'pc-goleiro-mao', ...PC, url: 'q=alta&hora=dia', prep: 'goleiroMao' },
   { nome: 'celular-568-gol', largura: 568, altura: 320, dpr: 2, toque: true, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
   // torcida de perto (câmera livre): lado de lá com o mosaico, e o fundo da organizada
   { nome: 'pc-torcida', ...PC, url: 'q=alta&hora=dia&demo=1', livre: { de: [0, 14, 10], para: [0, 9, -55], fov: 42 } },
@@ -392,6 +399,38 @@ async function preparar(pagina, prep, gol = null) {
       for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
       return `vermelho para ${r?.def}: em campo ${g.mundo.jogadores.filter(j => j.time === 0).length}`;
     }
+    if (prep === 'pressao') {
+      // jogo de verdade (o humano parado, os companheiros pela IA) até o adversário ter a bola no pé há 0,3 s na
+      // frente do nosso bloco, sem ninguém nosso a menos de 5 m; aí PRESSÃO segurado: quem chega primeiro dispara e
+      // leva a marca — o print sai quando ele chega a ≤ 3 m do condutor (no máximo 2,5 s segurando)
+      const m = g.mundo, lado = m.ataca[0], gx = -lado * 52.5;
+      const dono = () => { const d = m.posse != null && m.naMao == null ? m.jogadores.find(o => o.id === m.posse) : null; return d && d.time !== 0 ? d : null; };
+      const nosso = () => { const d = dono(); if (!d) return Infinity; let b = Infinity; for (const o of m.jogadores) if (o.time === 0 && o.posicao !== 'GOL') b = Math.min(b, Math.hypot(o.x - d.x, o.z - d.z)); return b; };
+      const perto = () => {
+        const c = m.pressaoHumano?.[0], j = c ? m.jogadores.find(o => o.id === c.id) : null, d = dono();
+        return j && d ? Math.hypot(j.x - d.x, j.z - d.z) : Infinity;
+      };
+      let desde = -1, n = 0;
+      for (; n < 60 * 60 * 4; n++) {
+        const d = dono(), rolando = (!m.parada || m.parada.rolou) && m.partida?.estado === 'jogo';
+        desde = d && rolando && Math.abs(d.x - gx) > 30 ? (desde < 0 ? m.tick : desde) : -1;
+        if (desde >= 0 && m.tick - desde >= 18 && g.fase === 'defesa' && nosso() >= 5) break;
+        av(1, { x: 0, z: 0, botoes: 0 });
+      }
+      const dIni = nosso();
+      let k = 0;
+      for (; k < 150 && dono() && !(k >= 20 && perto() <= 3); k++) av(1, { x: 0, z: 0, botoes: 512 });
+      const c = m.pressaoHumano?.[0];
+      return `${(n / 60).toFixed(1)} s de jogo; condutor ${dono()?.id ?? '-'} (o nosso mais perto a ${dIni.toFixed(1)} m), chamado ${c?.id ?? '-'} a ${perto().toFixed(1)} m depois de ${(k / 60).toFixed(2)} s segurando`;
+    }
+    if (prep === 'goleiroMao') {
+      // o goleiro do humano com a bola nas mãos anda pelo analógico 4,2 s (o anel aparece nos últimos 5 s dos 8)
+      const r = g.cenaDeTeste('goleiroMao');
+      const m = g.mundo, lado = m.ataca[0];
+      av(252, { x: lado * 0.9, z: 0.35, botoes: 0 });
+      const gk = m.jogadores.find(o => o.id === r?.goleiro);
+      return `goleiro ${r?.goleiro} em ${gk?.x.toFixed(1)}, ${gk?.z.toFixed(1)}, bola na mão ${m.naMao === r?.goleiro}, anel ${g.indicadores?.oito ? `${g.indicadores.oito.segmentos}/${g.indicadores.oito.total}` : 'não'}`;
+    }
     if (prep === 'goleiros') {
       av(30);
       // câmera livre de frente para o goleiro do time 1 (laranja) com zagueiros brancos
@@ -431,7 +470,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' ? 2 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' || c.prep === 'pressao' || c.prep === 'goleiroMao' ? 2 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : GOL) : '';
     let notaEd = '';
     if (c.editor) {
