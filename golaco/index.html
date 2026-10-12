@@ -10,6 +10,7 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090a'/%3E%3Cpath d='M14 46 26 18h24L38 46z' fill='%2319e07a'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/estilo.css">
   <link rel="stylesheet" href="css/editor.css">
+  <link rel="stylesheet" href="css/prejogo.css">
   <script type="importmap">
   {
     "imports": {
@@ -173,6 +174,16 @@
             <div class="segmentado" data-grupo="camera">
               <button type="button" data-valor="tv">TV</button>
               <button type="button" data-valor="aproximada">Aproximada</button>
+            </div>
+          </div>
+          <!-- pré-jogo (partida): as cenas antes da saída de bola e as escalações; salvo (js/main.js modoPrejogo) -->
+          <div class="opcao" data-so="partida">
+            <span class="opcao-rotulo">Pré-jogo</span>
+            <div class="segmentado" data-grupo="prejogo">
+              <button type="button" data-valor="completo">Completo</button>
+              <button type="button" data-valor="curto">Curto</button>
+              <button type="button" data-valor="escalacao">Só escalação</button>
+              <button type="button" data-valor="desligado">Desligado</button>
             </div>
           </div>
           <div class="opcao opcao-som">

@@ -7,8 +7,8 @@
 // (ESTADIO.tunel). O lado de fora só existe no pré-jogo (o estádio do jogo continua o de sempre: a câmera de TV
 // fica dentro da arquibancada do lado de cá e a cobertura entraria no quadro dela).
 //
-// Lado de fora (PESQUISA-PREJOGO.md §3): a fachada é um retângulo de cantos arredondados em volta de tudo (|x| = 89,5,
-// |z| = 75,5, raio 24 m, 27 m de altura — passa um pouco das paredes de trás das arquibancadas, 25 m); a cobertura é um
+// Lado de fora (PESQUISA-PREJOGO.md §3): a fachada é um retângulo de cantos arredondados em volta de tudo (|x| = 93,
+// |z| = 79, raio 12 m, 27,6 m de altura — passa um pouco das paredes de trás das arquibancadas, 25 m); a cobertura é um
 // anel do topo da fachada (27,6 m) até a borda de dentro (|x| = 70,5, |z| = 57, raio 14 m, 30 m: sobe para o campo,
 // como as coberturas em balanço); os cantos do lado de cá (abertos no jogo) ganham um degrau de concreto e cadeiras
 // vazias; a esplanada (piso de concreto) vai da fachada a ±215 m, com dois estacionamentos; depois o bairro.
@@ -16,14 +16,15 @@ import { ESTADIO, CAMPO } from './config.js';
 import { ARQUIBANCADA as A } from './render/torcida-dados.js';
 
 export const FORA = {
-  fachada: { hx: 89.5, hz: 75.5, raio: 24, altura: 27, esp: 1.0 },
+  // cantos de 12 m: com 24 m as quinas dos fundos (±88,5, −74,5) e dos cantos de cá furavam a fachada
+  fachada: { hx: 93, hz: 79, raio: 12, altura: 27.6, esp: 1.0, beiral: 1.5 },
   cobertura: { hx: 70.5, hz: 57, raio: 14, yDentro: 30, yFora: 27.6, esp: 0.6 },
   // cantos do lado de cá (z +): degrau inclinado de (|x| 62,5, y 1,4, z 44,5) até (88,5, 21, 74,5)
   canto: { x: [A.fundoX0, A.fundoX0 + A.profFundo], z: [A.frenteZ, A.frenteZ + A.profLado], y: [A.yBase, A.yTopoFundo, A.yTopoLado, 21] },
   esplanada: { meia: 215, y: 0.06 },
   bairro: { meia: 1300, y: -0.3 },
   // praça da entrada principal (z +): nada de prédio, árvore ou carro (a câmera da grua passa aqui)
-  praca: { x: [-70, 70], z: [78, 175] },
+  praca: { x: [-70, 70], z: [82, 178] },
   estacionamentos: [{ x: [100, 190], z: [-160, -95] }, { x: [-190, -100], z: [-160, -95] }, { x: [110, 195], z: [70, 150] }, { x: [-195, -110], z: [70, 150] }],
   placa: { texto: 'ESTÁDIO GOLAÇO', y: [17.5, 23.5], largura: 46 },
   semente: 20261012,
@@ -81,8 +82,8 @@ export function predios() {
   for (let i = -18; i <= 18; i++) for (let k = -18; k <= 18; k++) {
     const cx = i * Q + 8, cz = k * Q - 6;
     const d = Math.hypot(cx, cz);
-    if (d < 250 || d > 1150) continue;
-    if (r() < 0.22) continue; // praças e terrenos
+    if (d < 250 || d > 900) continue;
+    if (r() < 0.3) continue; // praças e terrenos
     const n = 1 + (r() < 0.45 ? 1 : 0);
     for (let m = 0; m < n; m++) {
       const lx = 16 + r() * 22, lz = 16 + r() * 22;
@@ -127,7 +128,7 @@ export function carros() {
   for (const e of FORA.estacionamentos) {
     for (let z = e.z[0] + 4; z < e.z[1] - 3; z += 6.5) {
       for (let x = e.x[0] + 2; x < e.x[1] - 2; x += 2.7) {
-        if (r() < 0.25) continue;
+        if (r() < 0.62) continue;
         lista.push({ x, z: z + (r() - 0.5) * 0.3, rumo: Math.PI / 2 + (r() < 0.5 ? 0 : Math.PI) + (r() - 0.5) * 0.08, cor: Math.floor(r() * 8) });
       }
     }

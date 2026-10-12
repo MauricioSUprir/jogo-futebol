@@ -97,7 +97,7 @@ const P = {
   },
   fachada: {
     id: 'fachada', nome: 'Fachada e chegada', bloco: 'cenas', dur: 5, fora: true, transicao: 'corte',
-    cam: { de: [[-40, 2.2, 128], [-26, 7, 119], [-12, 13, 110]], para: [[0, 16, 78], [0, 19, 77], [0, 21.5, 76]], fov: [50, 44], suave: 0.7 },
+    cam: { de: [[-52, 1.8, 162], [-36, 4.5, 148], [-20, 8, 136]], para: [[0, 12, 82], [0, 14.5, 81], [0, 17, 80]], fov: [50, 42], suave: 0.7 },
     som: { filtro: 800, ganho: 0.7, agito: 0.25 }, torcida: { tensao: [0.2, 0.2], palmas: [0, 0] }, cortejo: null,
   },
   dentro: {
