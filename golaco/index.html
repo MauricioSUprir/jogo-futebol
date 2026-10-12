@@ -129,6 +129,11 @@
     <button id="replay-pular" class="btn-replay-pular" data-caixa="replay-pular" type="button" data-cmd="replay-pular" aria-label="Pular o replay">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
   </div>
   <i id="replay-faixa" class="replay-faixa" aria-hidden="true"></i>
+  <!-- Comemoração do gol (js/comemoracao.js): a camada cobre a tela — depois de 0,5 s qualquer toque, clique, tecla ou
+       botão do controle pula a comemoração (o replay vem depois e tem o pulo dele). "Pular" só aparece com toque. -->
+  <div id="comemoracao" class="replay comemoracao" hidden>
+    <button id="comemoracao-pular" class="btn-replay-pular" data-caixa="comemoracao-pular" type="button" aria-label="Pular a comemoração">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+  </div>
 
   <!-- Menu de pausa -->
   <div id="menu" class="sobreposicao" hidden>

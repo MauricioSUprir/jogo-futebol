@@ -246,6 +246,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   na base), `teste-rede` reescrito para o véu, `teste-rede-tela` (navegador, CI: forma, branca — fio de perto L* ≥ 85 de dia
   e ≥ 80 à noite —, clareia o gol na TV e na câmera do gol, mexe ≥ 4% na câmera do gol e ≥ 1% na TV; reprova 21 na base);
   prints do gol pelo gol roteirizado (`prints.mjs --so pc-gol-rede,...`: câmera do gol, perto, TV, atrás, perfil).
+- **Comemoração do gol** (pedido de 11/10: "não tem cena de comemoração!!!"; `PESQUISA-ESTADIO.md` §10, contrato em
+  `CONTRATOS.md`): `js/comemoracao.js` (PURO) copia os 22 no tick do gol e anda com a MESMA locomoção (passoCorpo/
+  passoPassada/passoPeDesenhado/alturaQuadril; o goleiro termina o mergulho) + gestos e golpes por IK (`anim.js` exporta
+  `ik`/`ikBraco`): corrida para o alvo (bandeirinha, fundo diante da torcida, lateral da TV), finalização por hash do lance
+  sem repetir (joelhos, pulo, céu, braços, giro), abraço de até 4 colegas, quem sofreu cabisbaixo, gol contra, cena curta
+  no gol da IA contra o humano. `main.js` SEGURA o laço no passo antes da saída (gol + 149) enquanto a cena roda — a saída
+  sai no mesmo tick, hash igual; a entrada do humano não vai para a simulação durante a cena. Ordem: gol → comemoração →
+  replay → saída; pular a comemoração não pula o replay (pulada antes da hora, os passos que faltam rodam a 40 por quadro
+  na cortina). Câmera por cortes (`camera.js definirCinema`: rede → steadicam → contraplano → reação). `?comemoracao=0`
+  desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
+  `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
