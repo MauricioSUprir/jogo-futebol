@@ -342,9 +342,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `assets/jogador/corpo.bin` (DADOS CC0 do MakeHuman/MPFB2 por `tools/humano/gerar-corpo.mjs`; o código GPL do MPFB2
   nunca; meshoptimizer só na ferramenta) lido por `render/corpo-leitor.js`; `render/esqueleto.js` (puro, sem alocar:
   contas num vetor de rascunho — número solto entre funções vira objeto no V8) = 22 ossos + 8 auxiliares de
-  joelho/cotovelo, retarget por direção + IK final de pés e mãos; `render/corpo3d.js` = pele instanciada (ossos de todos
-  numa textura RGBA32F, 1 chamada por nível, 3 níveis dividindo os vértices, sombra no leve), uniforme provisório por
-  região, calota de cabelo. Falha do arquivo → manequim sem erro. Régua nova: sombra contada (`cena.infoSombra`,
+  joelho/cotovelo, retarget por direção + IK final de pés e mãos; `render/corpo3d.js` = pele instanciada (quadros dos
+  ossos de todos numa textura RGBA32F × inverso do repouso num uniforme, na placa; 1 chamada por nível, 3 níveis
+  dividindo os vértices, sombra no leve; fora da câmera não calcula nem desenha), uniforme provisório por região,
+  calota de cabelo. Falha do arquivo → manequim sem erro. CPU "jogadores" medida em Node (`medir-cpu-jogadores`,
+  three.js do CDN por `tools/lib/three-node.mjs`): 1,06× o manequim (era 1,72×). Régua nova: sombra contada (`cena.infoSombra`,
   `criarMedida`), `?qps=1` com sombra e jogadores, download por tipo no `teste-carga`. Testes: `teste-corpo-arquivo`,
   `teste-esqueleto`, `teste-creditos-jogador` (Node), `teste-pele` (CI, pixel a pixel contra o SkinnedMesh),
   `teste-desempenho-celular` (manequim × corpo novo). Pendente: palmas do lateral a ≤ 2 cm da BOLA (a pose não alcança;

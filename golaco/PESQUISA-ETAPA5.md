@@ -35,6 +35,25 @@ cada uma. Plano completo (5.1 a 5.7): no histórico da sessão; o contrato fica 
 - **Nível de detalhe pela altura na tela** (px físicos) com histerese de 15% e um teto de triângulos por qualidade
   (Baixa 25 mil, Média 50 mil, Alta 120 mil; os menores na tela perdem detalhe primeiro). A sombra usa sempre o leve.
 
+### CPU da parte "jogadores" (medido, antes → depois)
+A primeira versão custava 1,72× o manequim na CPU por quadro (Node, `tools/medir-cpu-jogadores.mjs`, mesmo código de
+desenho, tempo de CPU em blocos alternados): 120 µs × 70 µs para 22 jogadores. O que mudou, com o número de cada passo
+(máquina dividida, carga 130–170 em 4 CPUs; a melhor de várias medidas):
+- pele por osso com o repouso em variáveis locais: esqueleto de 22 corpos 106 → 83 µs;
+- o inverso do repouso multiplicado na PLACA (o quadro de cada osso vai na textura; `uInv` constante): 22 corpos
+  80 → 66 µs; custo na placa: ~2× as multiplicações por vértice da pele (o corpo tem ~1–4 mil vértices em uso por
+  jogador; não dá para medir a GPU aqui);
+- quem está fora da câmera (com folga para a sombra) não calcula o esqueleto nem é desenhado;
+- calota e mancha escritas direto no buffer das instâncias.
+Resultado na câmera de TV do celular (CAMERA.celular, ~40 m de largura): corpo ÷ manequim **1,06× na média e 1,01× na
+mediana** (meta ≤ 1,1×; o p95 dos blocos, 1,23×, é a fila do sistema com a máquina dividida). Tentativas sem efeito
+medido (ficaram por serem mais simples ou exatas): auxiliares por Rodrigues no eixo da junta e cos(θ/3) por polinômio
+(as funções de ângulo não eram o custo), recíproco no lugar das divisões.
+Preço da pele na placa: a conta deixa de ser bit a bit a do `SkinnedMesh` (o three.js multiplica quadro × inverso na
+CPU em dupla precisão); o `teste-pele` continua com 0 pixel acima de 8, mas o maior desvio subiu de 0 para 8 em 2
+pixels de silhueta no plano de perto (a meta é > 8). Se algum navegador passar disso, a volta é a pele na CPU (exata;
+CPU "jogadores" ~1,2×).
+
 ### O que ficou de fora (honesto)
 - **Palmas do lateral a ≤ 2 cm da bola**: o corpo segue a pose (0,00 mm das mãos da simulação), mas a POSE deixa a
   palma até ~3–6 cm da superfície da bola no fim do arco (o braço da simulação, 0,29 + 0,26, não alcança). É conta da

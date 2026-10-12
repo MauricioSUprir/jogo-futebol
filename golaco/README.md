@@ -208,6 +208,7 @@ node golaco/tools/teste-corpo-arquivo.mjs     # corpo humano (Node): formato, 22
 node golaco/tools/teste-esqueleto.mjs [--rapido] [--sem-ajuste]  # o corpo veste a pose: fidelidade ≤ 2/3/25 mm, pé plantado ≤ 5 mm e ≤ 0,05 m/s, sola, mãos do goleiro e do lateral, 25 corpos ≤ 0,25 ms sem alocar
 node golaco/tools/teste-creditos-jogador.mjs  # todo arquivo de assets/jogador com licença permitida no CREDITOS.md (--controle reprova)
 node golaco/tools/teste-pele.mjs [--controle] # navegador: o corpo instanciado igual ao SkinnedMesh do three.js, pixel a pixel (normal, cor, profundidade × TV, média, perto)
+node golaco/tools/medir-cpu-jogadores.mjs    # (Node) CPU da parte "jogadores" do quadro: corpo novo ÷ manequim ≤ 1,1× (média e mediana), câmera de TV do celular
 node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)
 ```
 

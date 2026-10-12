@@ -1087,18 +1087,24 @@ IGUAIS). O padrão continua o manequim (`render/jogador3d.js`) até o dono aprov
 - **Esqueleto** `render/esqueleto.js` (puro, sem three.js; testado em Node): `OSSOS` (22 do corpo + 8 auxiliares:
   `joelhoE1/E2`, `joelhoD1/D2`, `cotoveloE1/E2`, `cotoveloD1/D2`), `PAI`, `NO` (30), `O` (nome → índice), `AUXILIARES`
   ([auxiliar, osso de cima, osso de baixo, fração da dobra]), `FLOATS_POR_JOGADOR` (= 30 × 12 + 4).
-  `criarEsqueleto(bind)` → `{calcular(pose, out, off, opc?), quadros, quadrosRepouso, escalas, escalasLargura, juntas,
-  comprimentos}`: `calcular` escreve em `out[off…]` as 30 matrizes de pele (3 linhas × [m0, m1, m2, t]: M = Rp ·
-  diag(sl, s, sl) · Rbᵀ, t = hp − M · hb) e deixa os quadros (cabeça do osso + R por linhas, colunas = eixos X, Y, Z).
-  Retarget por direção + ajuste final (IK de duas juntas) de tornozelo, ponta do pé e mãos; `opc.ajuste = false` desliga
-  o ajuste (controle do `teste-esqueleto`). **Não aloca** (contas num vetor de rascunho do módulo).
+  `criarEsqueleto(bind)` → `{calcular(pose, out, off, opc?), calcularQuadros(pose, out, off), quadros, quadrosRepouso,
+  escalas, escalasLargura, juntas, comprimentos}`: `calcular` escreve em `out[off…]` as 30 matrizes de pele (3 linhas ×
+  [m0, m1, m2, t]: M = Rp · diag(sl, s, sl) · Rbᵀ, t = hp − M · hb); `calcularQuadros` (o desenho) escreve só os
+  quadros com escala (3 linhas × [Rp · diag(sl, s, sl), hp]) e `inversoRepouso(Fb)` dá (Rbᵀ, −Rbᵀ · hb) — pele = quadro
+  × inverso, multiplicada na placa. Deixa os quadros (cabeça do osso + R por linhas, colunas = eixos X, Y, Z). Retarget
+  por direção + ajuste final (IK de duas juntas) de tornozelo, ponta do pé e mãos; `opc.ajuste = false` desliga o ajuste
+  (controle do `teste-esqueleto`). Auxiliares: o quadro de cima girado por θ/3 e 2θ/3 no eixo da junta (cos(θ/3) por
+  polinômio). **Não aloca** (contas num vetor de rascunho do módulo).
 - **Desenho** `render/corpo3d.js` `criarCorpos3D(cena, qualidade, corpo)` — MESMA interface do manequim
   (`atualizar(lista, camera)`, `definirSombras`, `definirTela(h px físicos)`, `definirQualidade(q)`, `medida`, `tipo`
   = `'corpo'`; o manequim tem `tipo` = `'manequim'` e `definirTela`/`definirQualidade` vazios). Ossos de TODOS os
-  jogadores numa `DataTexture` RGBA32F (linha `p` = vaga `p` da lista: 30 × 3 texels + 1 texel com o tom de pele em
-  cor linear e `kit + 8·goleiro`); uma `Mesh` com `InstancedBufferGeometry` por nível de detalhe (os 3 dividem os
-  vértices e o índice; faixa por `setDrawRange`), atributo por instância `iJog` (a linha); `injetarPele(material, tex,
-  cor, uni)` troca `skinbase/skinnormal/skinning_vertex` pela leitura da textura (exportada para o `teste-pele`);
+  jogadores numa `DataTexture` RGBA32F (linha `p` = vaga `p` da lista: 30 × 3 texels com o QUADRO de cada osso + 1
+  texel com o tom de pele em cor linear e `kit + 8·goleiro`) e o inverso do repouso num uniforme (`uInv`, 90 vec4,
+  constante); uma `Mesh` com `InstancedBufferGeometry` por nível de detalhe (os 3 dividem os vértices e o índice; faixa
+  por `setDrawRange`), atributo por instância `iJog` (a linha); `injetarPele(material, tex, cor, uni)` troca
+  `skinbase/skinnormal/skinning_vertex` pela leitura da textura (quadro × (inverso × vértice); exportada para o
+  `teste-pele`); quem está fora da câmera (esfera de 3,5 m na pelve contra o tronco de visão: o corpo e a sombra) não
+  calcula o esqueleto nem entra na lista de instâncias (calota e mancha com escala 0);
   `DECL_F` = a pintura do uniforme por região a partir da posição de REPOUSO. Nível pela altura na tela (1,8 m × f /
   distância), histerese 15%, teto de triângulos por qualidade (`LOD_QUALIDADE`: Baixa 25 mil, Média 50 mil, Alta 120
   mil). Sombra: `customDepthMaterial` com a mesma pele e `onBeforeShadow`/`onAfterShadow` trocando para o nível leve.
@@ -1116,4 +1122,5 @@ IGUAIS). O padrão continua o manequim (`render/jogador3d.js`) até o dono aprov
 - **Testes**: `teste-corpo-arquivo` e `teste-esqueleto` e `teste-creditos-jogador` (Node, no `rodar-testes`),
   `teste-pele` (navegador, CI e deploy), `teste-carga` (itens 8–9: download por tipo, corpo novo, bloqueado e
   estragado → manequim), `teste-desempenho-celular` (manequim × corpo novo na mesma execução: triângulos, sombra,
-  chamadas e CPU "jogadores"; `--corpo manequim` = controle).
+  chamadas e CPU "jogadores"; `--corpo manequim` = controle), `medir-cpu-jogadores` (Node, tempo de CPU do processo,
+  o mesmo código de desenho com o three.js do CDN por `tools/lib/three-node.mjs`).
