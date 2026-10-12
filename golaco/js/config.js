@@ -1058,3 +1058,12 @@ export const TROCA_AEREA = {
   manualRecente: 0.5,         // s — TROCAR apertado há menos que isto: a escolha manual manda
   analogicoSolto: 0.25,       // |e| ≤ isto: assistência leva o controlado ao ponto de queda
 };
+
+// Estádio (só desenho: nada da simulação usa). O TÚNEL por onde os times entram (o pré-jogo usa) fica no meio da
+// arquibancada do lado de cá (z +, a da câmera de TV): a boca na frente dela (z = 44,5), 7 m de largura e 3,2 m de
+// altura, e o corredor entra 12 m por baixo das cadeiras. Os BANCOS DE RESERVAS ficam na frente da arquibancada, atrás
+// das placas, um de cada lado do túnel (x de ±5 a ±17).
+export const ESTADIO = {
+  tunel: { x: 0, z: 44.5, largura: 7, altura: 3.2, profundidade: 12, laje: 0.5 },
+  bancos: { x: [5, 17], z: [41, 43.6], altura: 2.3 },
+};

@@ -493,7 +493,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   linhaImped.atualizar(mundo, dt);
   marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
-  campo.atualizar(agoraMs / 1000);
+  campo.atualizar(agoraMs / 1000, cam.camera);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
@@ -1061,7 +1061,15 @@ const api = {
   /** Marcadores das 3 opções do lateral (testes): {visivel, ids, mirada}. */
   get marcasLateral() { return marcasLat?.estado ?? null; },
   estadio: {
-    get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
+    get torcida() {
+      if (!torcida) return null;
+      return {
+        n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent,
+        // cada malha (grupo) neste quadro e a arquibancada do lado de cá (fora do desenho com a câmera dentro dela)
+        grupos: (torcida.mesh?.children ?? []).map(m => ({ nome: m.name, visivel: m.visible, n: m.geometry.instanceCount })),
+        ladoDeCa: campo?.ladoDeCa ? campo.ladoDeCa.visible : null,
+      };
+    },
     get rede() {
       const t = tempoEstadio();
       return { batidas: ondas.total, ativa: redeAtiva(ondas, t), tempo: t, impactos: ondas.imp.filter(i => i.ativo).map(i => ({ ...i })) };

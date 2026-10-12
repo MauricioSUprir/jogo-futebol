@@ -1,8 +1,9 @@
 // Torcida no estádio e ânimo dela (contas puras do desenho, em Node):
-//   A) torcida-dados.js: torcedores sentados nas cadeiras das arquibancadas (lado de lá e fundos), mais
+//   A) torcida-dados.js: torcedores sentados nas cadeiras das arquibancadas (lado de lá, fundos e lado de cá), mais
 //      gente na Alta que na Média e na Baixa, mandante maioria, setor visitante separado, organizada,
-//      mosaico de camisas verdes, mesmo resultado sempre; atlas das 8 poses (em pé mais alto que
-//      sentado, braços para cima, pesos de cor certos);
+//      mosaico de camisas verdes, mesmo resultado sempre; as fileiras da FRENTE cheias (as que a câmera de jogo
+//      mostra) e o LADO DE CÁ com gente e sem ninguém em cima do túnel, fora da câmera de TV (pedido de 11/10);
+//      atlas das 8 poses (em pé mais alto que sentado, braços para cima, pesos de cor certos);
 //   B) emocao.js: murmúrio sobe com a bola no terço final, explosão no gol (segura e cai), "uuuh" na
 //      chance perdida (defesa, trave, fora perto da trave), palmas da outra torcida, apitos;
 //   C) a regra da pose (a mesma do vertex shader): calma = sentada, ataque = em pé, gol = braços para
@@ -35,17 +36,17 @@ if (TD) {
   const Q = {};
   for (const q of ['baixa', 'media', 'alta']) Q[q] = gerarTorcida(q, mascara);
   const nCad = cadeiras().length;
-  reg('Torcedores por qualidade (Baixa < Média < Alta)', `baixa ${Q.baixa.n} · média ${Q.media.n} · alta ${Q.alta.n} (de ${nCad} cadeiras)`, 'alta ≥ 15 mil, média 9–14 mil, baixa ≤ 9 mil',
-    Q.alta.n >= 15000 && Q.media.n >= 9000 && Q.media.n <= 14000 && Q.baixa.n <= 9000 && Q.baixa.n < Q.media.n && Q.media.n < Q.alta.n);
+  reg('Torcedores por qualidade (Baixa < Média < Alta)', `baixa ${Q.baixa.n} · média ${Q.media.n} · alta ${Q.alta.n} (de ${nCad} cadeiras, com o lado de cá)`, 'alta ≥ 22 mil, média 16–22 mil, baixa ≤ 15 mil',
+    Q.alta.n >= 22000 && Q.media.n >= 16000 && Q.media.n <= 22000 && Q.baixa.n <= 15000 && Q.baixa.n < Q.media.n && Q.media.n < Q.alta.n);
   const R = Q.alta;
   // em cima do degrau de cada arquibancada
   let foraDoDegrau = 0, foraLimites = 0;
   const sLado = (y) => (y - A.yBase) / (A.yTopoLado - A.yBase);
   for (let i = 0; i < R.n; i++) {
     const x = R.pos[4 * i], y = R.pos[4 * i + 1], z = R.pos[4 * i + 2], setor = Math.round(R.info[4 * i + 1] / 85);
-    if (setor === 0) {
-      const s = sLado(y);
-      if (Math.abs(z - (-A.frenteZ - A.profLado * s)) > 0.01) foraDoDegrau++;
+    if (setor === 0 || setor === 3) {
+      const s = sLado(y), sz = setor === 0 ? -1 : 1;
+      if (Math.abs(z - sz * (A.frenteZ + A.profLado * s)) > 0.01) foraDoDegrau++;
       if (Math.abs(x) > A.meioComprimento || s < 0 || s > 1) foraLimites++;
     } else {
       const sg = setor === 1 ? 1 : -1;
@@ -87,7 +88,7 @@ if (TD) {
   // sem dois na mesma cadeira: na mesma fileira e setor, ≥ 0,35 m entre vizinhos
   let perto = 0;
   const porFila = new Map();
-  for (let i = 0; i < R.n; i++) { const k = `${R.info[4 * i + 1]}:${R.pos[4 * i + 1].toFixed(3)}`; if (!porFila.has(k)) porFila.set(k, []); porFila.get(k).push(Math.round(R.info[4 * i + 1] / 85) === 0 ? R.pos[4 * i] : R.pos[4 * i + 2]); }
+  for (let i = 0; i < R.n; i++) { const k = `${R.info[4 * i + 1]}:${R.pos[4 * i + 1].toFixed(3)}`; if (!porFila.has(k)) porFila.set(k, []); const st = Math.round(R.info[4 * i + 1] / 85); porFila.get(k).push(st === 0 || st === 3 ? R.pos[4 * i] : R.pos[4 * i + 2]); }
   for (const l of porFila.values()) { l.sort((a, b) => a - b); for (let k = 1; k < l.length; k++) if (l[k] - l[k - 1] < 0.35) perto++; }
   reg('Um torcedor por cadeira', `${perto} pares a < 0,35 m`, '0', perto === 0);
   const R2 = gerarTorcida('alta', mascara);
@@ -105,7 +106,7 @@ if (TD) {
       const conj = new Set();
       for (let i = 0; i < Q[q].n; i++) conj.add(chave(Q[q], i));
       let k = 0;
-      for (let setor = 0; setor < 3; setor++) {
+      for (let setor = 0; setor < NV.faixas.length; setor++) {
         const f = NV.faixas[setor], m = TD.quantosNoSetor(NV, setor, q);
         for (let i = f.inicio; i < f.inicio + m; i++) if (!conj.has(chave(NV, i))) prefixoOk = false;
         k += m;
@@ -114,7 +115,7 @@ if (TD) {
       totais.push(k);
     }
     let ordemOk = true;
-    for (let setor = 0; setor < 3; setor++) {
+    for (let setor = 0; setor < NV.faixas.length; setor++) {
       const f = NV.faixas[setor];
       let fim = f.inicio;
       for (let v = 0; v < 3; v++) {
@@ -125,6 +126,49 @@ if (TD) {
     }
     reg('Qualidades são prefixos (montar uma vez, trocar = quantos desenhar)', `${totais.join(' · ')} torcedores; ${prefixoOk ? 'os mesmos de cada qualidade' : 'DIFERENTES'}; ordem frente → cima ${ordemOk ? 'sim' : 'não'}; montar tudo ${fmt(ms, 0)} ms`, 'prefixos iguais e em ordem', prefixoOk && ordemOk);
   } else reg('Qualidades são prefixos (montar uma vez, trocar = quantos desenhar)', 'não (cada qualidade remonta a torcida)', 'prefixos', false);
+
+  // pedido de 11/10: as fileiras da FRENTE cheias (a câmera de jogo só mostra as fileiras 0–5 do lado de lá, no máximo
+  // até a 9: na Média só 62% delas tinham gente — os buracos apareciam)
+  {
+    const nFrente = cadeiras().filter(c => c.setor === 0 && A.fileiras - 1 - c.f < 9).length;
+    const oc = {};
+    for (const q of ['baixa', 'media', 'alta']) {
+      let t = 0;
+      for (let i = 0; i < Q[q].n; i++) {
+        if (Math.round(Q[q].info[4 * i + 1] / 85) !== 0) continue;
+        const f = Math.round((1 - (Q[q].pos[4 * i + 1] - A.yBase) / (A.yTopoLado - A.yBase)) * A.fileiras - 0.5);
+        if (A.fileiras - 1 - f < 9) t++;
+      }
+      oc[q] = t / nFrente;
+    }
+    reg('Fileiras 0–8 do lado de lá cheias (as que a câmera de jogo mostra)', `baixa ${fmt(100 * oc.baixa, 0)}% · média ${fmt(100 * oc.media, 0)}% · alta ${fmt(100 * oc.alta, 0)}% das ${nFrente} cadeiras`,
+      'baixa ≥ 80%, média ≥ 95%, alta ≥ 97%', oc.baixa >= 0.8 && oc.media >= 0.95 && oc.alta >= 0.97);
+  }
+  // o lado de cá (z +): gente na arquibancada nova, ninguém em cima da boca do túnel
+  {
+    const ca = q => { let n = 0; for (let i = 0; i < Q[q].n; i++) if (Math.round(Q[q].info[4 * i + 1] / 85) === 3) n++; return n; };
+    let noTunel = 0;
+    const T = TD.TORCIDA.tunel;
+    for (let i = 0; i < R.n; i++) if (Math.round(R.info[4 * i + 1] / 85) === 3 && Math.abs(R.pos[4 * i]) < T.meiaLargura - 0.1 && R.pos[4 * i + 1] < T.topo) noTunel++;
+    const cMedia = TD.gerarTorcida ? ca('media') : 0;
+    reg('Lado de cá (z +): arquibancada com torcida, o túnel livre', `baixa ${ca('baixa')} · média ${cMedia} · alta ${ca('alta')} torcedores; ${noTunel} em cima da boca do túnel`,
+      'média ≥ 4.000; 0 no túnel', cMedia >= 4000 && noTunel === 0);
+  }
+  // a câmera de TV fica DENTRO da arquibancada do lado de cá: com ela lá, nada do lado de cá vai para a GPU
+  if (TD.cameraNoLadoDeCa) {
+    const CAM = { pc: { d: 40, y: 18.3 }, cel: { d: 46, y: 12.3 } };
+    let erradas = 0, dentro = 0, total = 0;
+    for (const k of Object.keys(CAM)) {
+      for (let fz = -22; fz <= 23; fz += 0.5) {
+        const p = { x: 0, y: CAM[k].y, z: fz + CAM[k].d };
+        total++;
+        if (p.z > A.frenteZ - 1) { if (TD.cameraNoLadoDeCa(p)) dentro++; else erradas++; }
+      }
+    }
+    const geral = TD.cameraNoLadoDeCa({ x: 0, y: 34, z: 78 }), reversa = TD.cameraNoLadoDeCa({ x: 0, y: 9, z: -30 });
+    reg('Câmera de TV atrás da frente do lado de cá: o lado de cá sai do desenho', `${dentro} posições da TV (PC e celular) dentro do volume, ${erradas} fora; plano geral ${geral ? 'dentro' : 'fora'}, câmera do outro lado ${reversa ? 'dentro' : 'fora'}`,
+      '0 fora; plano geral e câmera do outro lado fora (desenham)', erradas === 0 && dentro > 0 && !geral && !reversa);
+  } else reg('Câmera de TV atrás da frente do lado de cá: o lado de cá sai do desenho', 'não existe (sem arquibancada do lado de cá)', 'existe', false);
 
   // atlas
   const at = atlasTorcida(64, 128);

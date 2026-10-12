@@ -20,7 +20,9 @@
 //      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9);
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
-//      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos).
+//      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
+//  11) o LADO DE CÁ (11/10): fora do desenho na câmera de TV (celular e PC, 20 instantes), visível do outro lado do
+//      campo com a torcida e o túnel no meio.
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -505,6 +507,58 @@ try {
   } finally { await nav.close(); }
 } catch (e) {
   meta('Execução (torcida no celular)', e.message, 'sem exceção', false);
+}
+// 11) LADO DE CÁ (pedido de 11/10): a câmera de TV fica DENTRO da arquibancada do lado de cá — em 20 instantes do jogo
+//     (celular Média e PC Alta) nem ela nem a torcida dela vão para a GPU (o teste da caixa daria verdadeiro e os
+//     torcedores cobririam a tela); de uma câmera do outro lado do campo, ela e a torcida dela aparecem (os pixels da
+//     arquibancada mudam com a torcida) e o túnel fica no meio, na posição de config.js ESTADIO.tunel.
+for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toque: true }, 'media&toque=1'], ['PC', { largura: 1280, altura: 720 }, 'alta']]) {
+  try {
+    const { navegador: nav, pagina, erros: errosCa } = await abrir(o);
+    try {
+      await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia`, { waitUntil: 'load' });
+      await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+      const r = await pagina.evaluate(() => {
+        const g = window.__golaco;
+        g.relogio.usarManual(true);
+        let viu = 0, n = 0;
+        for (let k = 0; k < 20; k++) {
+          for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          g.desenhar();
+          const t = g.estadio.torcida;
+          if (t.ladoDeCa || t.grupos.some(x => x.nome.startsWith('torcida-ca') && x.visivel)) viu++;
+          n++;
+        }
+        return { viu, n };
+      });
+      // do outro lado do campo, olhando para o lado de cá (o túnel no meio): o mesmo quadro com × sem a torcida, lido
+      // direto do canvas (a 1/4; a faixa de cima, 5–60% da altura)
+      const vis = await pagina.evaluate(async () => {
+        const g = window.__golaco;
+        g.cameraLivre({ de: [0, 9, -30], para: [0, 6, 55], fov: 40 });
+        g.estadio.mostrarTorcida(true); g.desenhar();
+        const t = g.estadio.torcida;
+        const { ESTADIO } = await import('./js/config.js');
+        const tun = g.naTela(ESTADIO.tunel.x, ESTADIO.tunel.altura / 2, ESTADIO.tunel.z);
+        const cv = document.querySelector('canvas');
+        const off = document.createElement('canvas'); off.width = 211; off.height = 98;
+        const cx = off.getContext('2d', { willReadFrequently: true });
+        const y0 = Math.round(off.height * 0.05), h = Math.round(off.height * 0.55);
+        const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, y0, off.width, h).data; };
+        const a = ler();
+        g.estadio.mostrarTorcida(false); g.desenhar(); const b = ler();
+        g.estadio.mostrarTorcida(true); g.cameraLivre(null); g.desenhar();
+        let n = 0;
+        for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 20) n++;
+        return { ladoDeCa: t.ladoDeCa, ca: t.grupos.filter(x => x.nome.startsWith('torcida-ca') && x.visivel).map(x => x.nome), tunelX: tun.x / window.innerWidth, d: n / (a.length / 4) };
+      });
+      const d = vis.d;
+      meta(`Lado de cá (${nome}): fora do desenho na câmera de TV, visível do outro lado`, `${r.viu}/${r.n} instantes do jogo com algo do lado de cá no desenho · do outro lado: arquibancada ${vis.ladoDeCa ? 'sim' : 'não'}, torcida [${vis.ca}], ${(100 * d).toFixed(0)}% da faixa de cima é torcida, túnel a ${(100 * vis.tunelX).toFixed(0)}% da largura`,
+        '0 no jogo; do outro lado: arquibancada, as 2 faixas da torcida, ≥ 20% e o túnel no meio (45–55%)', r.viu === 0 && vis.ladoDeCa && vis.ca.length === 2 && d >= 0.2 && Math.abs(vis.tunelX - 0.5) <= 0.05 && errosCa.length === 0);
+    } finally { await nav.close(); }
+  } catch (e) {
+    meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);
+  }
 }
 // ------------------------------------------------------------------------------------------------------------------
 // Etapa 4 (bolas paradas): no lateral do humano, a bola fica nas mãos acima da cabeça e as opções aparecem marcadas no
