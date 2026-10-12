@@ -71,9 +71,12 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
 
 ## Estádio — rede, gol, torcida e som (primeira versão; a Etapa 6 completa vem depois)
 
-- **Rede que balança**: a bola entra, a rede estufa no ponto da batida, passa do ponto, volta e a onda corre pelo pano
-  (~1,5 s), com a luz mudando na dobra; a bola desenhada vai junto no bojo e nunca fura a rede (nem nos cantos); batida
-  por fora (lateral, teto, fundo) afunda a rede para dentro.
+- **Rede véu de noiva, branca e que balança** (11/10): sem caixa nem teto — hastes curtas nos cantos de cima e a rede
+  caindo em curva até o chão a 2,8 m (`js/rede-forma.js`, a MESMA forma na física da bola, na regra do gol e no
+  desenho); a bola que entra encosta onde a rede está e "morre no fundo"; trama colmeia branca de dia e de noite. A
+  bola entra, a rede estufa pela normal do véu no ponto da batida, passa do ponto, volta e a onda corre pela rede
+  (~1,9 s), com a luz mudando na dobra; a bola desenhada vai junto no bojo e nunca fura a rede (nem nos cantos); batida
+  por fora (lateral, véu) afunda a rede para dentro.
 - **Efeito de gol**: na partida a transmissão CORTA para a câmera do gol (baixa, de lado: a rede estufando de perfil e a
   torcida atrás do gol explodindo) até a saída de bola; "GOL!" grande no alto com o número e o nome de quem tocou por
   último de verdade (desvio conta para quem chutou; "Gol contra" quando for) e o minuto, placar pulsando. No treino, zoom
@@ -178,6 +181,8 @@ node golaco/tools/teste-carga.mjs      # navegador: erros, download ≤ 4 MB, ha
 node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celular) de verdade, direção NA TELA
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
+node golaco/tools/teste-rede-veu.mjs   # rede véu de noiva (Node): forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho
+node golaco/tools/teste-rede-tela.mjs  # navegador: a rede véu de noiva na tela (forma da malha, fio branco de dia e de noite, clareia o gol, mexe na batida)
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
 node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel do replay, roteiros do gol/impedimento/pausa e o replay de lances de verdade
 node golaco/tools/teste-comemoracao.mjs      # (Node, também no rodar-testes) cena da comemoração: locomoção sem patinar, golpes, gestos, abraço, quem sofreu, câmera, mundo intacto [--js <pasta js>]
