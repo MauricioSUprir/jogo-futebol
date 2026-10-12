@@ -393,6 +393,11 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
+    /**
+     * Garante lugar para n jogadores desenhados já (sem remontar no meio de uma cena: a cena de substituição desenha os
+     * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
+     */
+    reservar(n) { if (n > cap) montar(n); },
     /** Marcas da partida (testes de navegador): a do PRESSÃO e o anel dos 8 s — posição e quanto do anel aparece. */
     get indicadores() {
       return {

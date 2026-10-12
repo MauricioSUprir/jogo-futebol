@@ -179,8 +179,12 @@ const custoGravar = { n: 0, ms: 0 }, custoReplay = { n: 0, ms: 0 };
 const listaR = [];
 const _bpR = { x: 0, y: 0, z: 0 }, _bqR = { x: 0, y: 0, z: 0, w: 1 }, _qR = new THREE.Quaternion();
 let replayBotoes = 0;     // botões já segurados quando o replay começou: só pulam depois de soltos e apertados de novo
-const somAdiado = [];     // sons do passo que abriu o replay do gol (o apito da saída): tocam quando ele acaba
-let depoisReplay = null;  // faixa do intervalo/fim que espera o replay do gol acabar
+const somAdiado = [];     // sons do passo que abriu o replay do gol ou uma cena: tocam quando a fila de cenas esvazia
+// fila única das cenas que esperam o replay (ou outra cena) acabar: as faixas do intervalo/fim (funções) e as cenas
+// ({tipo, ...}); proximaCena() tira a próxima. Ordem fixa: comemoração (nunca na fila) → replay → cartão → subst → fim
+// de tempo → faixas
+const filaCenas = [];
+let emRodarPassos = false;   // a API dos testes (rodarPassos) nunca abre cena
 let linhaNoReplay = null; // tick do apito cujo impedimento já passou no replay (a linha parada não se repete ao vivo)
 // Comemoração (js/comemoracao.js): ?comemoracao=0|1 força; senão COMEMORACAO.ligada. cenaGol = a cena em andamento;
 // cenaEstado: 'rodando' (o laço segura a simulação no passo antes da saída), 'solta' (acabou ou pulou: a simulação
@@ -395,7 +399,7 @@ function tratarEvento(ev) {
     const faixa = () => hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
-    if (diretor?.golPendente && posGol()) depoisReplay = faixa; else faixa();
+    if (diretor?.golPendente && posGol()) filaCenas.push(faixa); else faixa();
     return;
   }
   if (t === 'fimDeJogo') {
@@ -403,7 +407,7 @@ function tratarEvento(ev) {
     hud.definirEstado({ fim: true });
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
-    if (diretor?.golPendente && posGol()) depoisReplay = faixa; else faixa();
+    if (diretor?.golPendente && posGol()) filaCenas.push(faixa); else faixa();
     return;
   }
   if (t === 'timeEditado') {
@@ -452,7 +456,7 @@ function estadioPasso(eventos) {
   const ds = consumirDisparos(emocao);
   // o passo que abre o replay do gol (saída de bola, intervalo, fim): o apito dele toca DEPOIS do replay
   const adiar = replayAuto && !!diretor?.golPendente && !!mundo.partida && eventos.some(e => e.tipo === 'saida' || e.tipo === 'intervalo' || e.tipo === 'fimDeJogo');
-  if (som) for (const d of ds) { if (adiar) somAdiado.push(d); else som.tocar(d); }
+  for (const d of ds) { if (adiar) somAdiado.push(d); else tocarSom(d); }
 }
 
 /**
@@ -467,7 +471,7 @@ function eventosIniciais() {
   _ctxEmocao.t = passosTotais * PASSO; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
   for (const ev of evs) emocaoEvento(emocao, ev, _ctxEmocao);
   const ds = consumirDisparos(emocao);
-  if (som) for (const d of ds) som.tocar(d);
+  for (const d of ds) tocarSom(d);
 }
 
 // [texto, forte] — pares fixos (nada é alocado por quadro)
@@ -833,8 +837,14 @@ function posGol() {
   if (!ok) tocarAdiados();
   return ok;
 }
+/** Toca um disparo da torcida/apito (e conta o pedido: os testes conferem a ORDEM dos sons sem depender do áudio). */
+const sonsPedidos = {};
+function tocarSom(d) {
+  sonsPedidos[d.tipo] = (sonsPedidos[d.tipo] ?? 0) + 1;
+  if (som) som.tocar(d);
+}
 function tocarAdiados() {
-  if (som) for (const d of somAdiado) som.tocar(d);
+  for (const d of somAdiado) tocarSom(d);
   somAdiado.length = 0;
 }
 
@@ -853,8 +863,20 @@ function fimReplay(pulou) {
     if (pulou) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); }
     entrada.limparPulsos();
   }
+  // a fila: as cenas e as faixas que esperavam o replay; vazia, os sons adiados
+  proximaCena();
+}
+
+/**
+ * A próxima da fila de cenas (o replay acabou, ou uma cena): uma cena ({tipo}) ou a faixa do intervalo/fim (função).
+ * Com a fila vazia, os sons adiados (o apito da saída) tocam.
+ */
+function proximaCena() {
+  while (filaCenas.length) {
+    const it = filaCenas.shift();
+    if (typeof it === 'function') { it(); continue; }
+  }
   tocarAdiados();
-  if (depoisReplay) { const f = depoisReplay; depoisReplay = null; f(); }
 }
 
 /** Durante o replay: um botão APERTADO agora (não o que já estava segurado no começo) pula. */
@@ -1204,6 +1226,9 @@ async function iniciar() {
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
+  // as cenas (cartão, fim de tempo, substituição) desenham os 22 + o expulso + os 3 árbitros + o quarto árbitro + os 2
+  // treinadores + folga: o lugar já fica reservado (sem remontar os buffers no meio de uma cena)
+  jog3d.reservar(30);
   marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
@@ -1286,7 +1311,7 @@ function trocarMundo(m, opc = {}) {
   zerarEmocao(emocao);
   zerarAutorGol(autorGol);
   // replay: o anel e o gol pendente são do mundo velho (os sons adiados e a faixa esperando vão junto)
-  somAdiado.length = 0; depoisReplay = null; linhaNoReplay = null;
+  somAdiado.length = 0; filaCenas.length = 0; linhaNoReplay = null;
   if (diretor && diretor.ativo) fimReplay(false);
   encerrarComemoracao(); ultimaFinal = null;
   anel.limpar();
@@ -1337,16 +1362,20 @@ const api = {
    * {x, z, botoes} fixo, 'demo' ou nada (parado). Devolve o hash do mundo.
    */
   rodarPassos(n, roteiro) {
-    for (let i = 0; i < n; i++) {
-      let e, ac = null;
-      if (Array.isArray(roteiro)) { e = roteiro[Math.min(i, roteiro.length - 1)]; ac = e.acoes ?? null; }
-      else if (roteiro === 'demo') e = entradaDemoDoMundo(mundo);
-      else e = roteiro;
-      e = e ?? { x: 0, z: 0, botoes: 0 };
-      // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
-      if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
-      rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
-    }
+    // (as cenas de cartão e de fim de tempo nunca abrem por aqui: o item 14 do teste-editor-tela quer a faixa na hora)
+    emRodarPassos = true;
+    try {
+      for (let i = 0; i < n; i++) {
+        let e, ac = null;
+        if (Array.isArray(roteiro)) { e = roteiro[Math.min(i, roteiro.length - 1)]; ac = e.acoes ?? null; }
+        else if (roteiro === 'demo') e = entradaDemoDoMundo(mundo);
+        else e = roteiro;
+        e = e ?? { x: 0, z: 0, botoes: 0 };
+        // a edição na fila (Editar time / editarTime) entra no 1º passo, como no laço da página
+        if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
+        rodarPasso({ x: e.x ?? 0, z: e.z ?? 0, botoes: e.botoes ?? 0 }, ac);
+      }
+    } finally { emRodarPassos = false; }
     return hashMundo(mundo);
   },
   /**
@@ -1672,6 +1701,8 @@ const api = {
     deslocamentoRede(plano, x, y, z) { return deslocamento(ondas, plano, x, y, z, tempoEstadio()) * fixoRede(plano, x, y, z); },
     get emocao() { return { agito: emocao.agito, torcida: emocao.torcida.map(g => ({ ...g })), contagem: { ...emocao.contagem } }; },
     get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
+    /** Quantas vezes cada som foi pedido (tocado ou não: sem o 1º gesto o áudio não toca), na ordem do jogo. */
+    get sonsPedidos() { return { ...sonsPedidos }; },
     /** Testes e prints: acende sinalizadores / abre o bandeirão / começa a ola agora ({sinalizadores, cor, bandeirao, ola}). */
     forcarFesta(o) { forcarFesta(emocao.festa, o); },
     /** Mostra/esconde a festa (faixas, bandeiras, bandeirões, sinalizadores) — conferência de pixels. */
