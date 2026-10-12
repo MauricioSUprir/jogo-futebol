@@ -32,6 +32,8 @@
 //   node tools/painel-equilibrio.mjs --base <pasta js>     (roda as duas com as MESMAS sementes, lado a lado)
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
+//   --cache <pasta>   (guarda cada partida num arquivo por versão e semente e reaproveita: uma rodada longa que
+//                      parou — máquina carregada, limite de tempo — continua de onde estava)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -170,17 +172,32 @@ const SEMENTES = Array.from({ length: NS }, (_, k) => S0 + k);
 const nPar = Math.max(1, +arg('--par', os.availableParallelism?.() ?? os.cpus().length));
 const sem = a => { const n = a.length, mu = a.reduce((x, y) => x + y, 0) / n; return n > 1 ? Math.sqrt(a.reduce((x, y) => x + (y - mu) ** 2, 0) / (n - 1) / n) : 0; };
 
+const CACHE = arg('--cache', null) ? path.resolve(arg('--cache')) : null;
+/** Pasta do cache desta versão da lógica: o conteúdo dos .js (qualquer mudança na lógica = outra pasta). */
+async function pastaCache(pastaJs) {
+  const { createHash } = await import('node:crypto');
+  const h = createHash('sha1');
+  for (const f of fs.readdirSync(pastaJs).filter(f => f.endsWith('.js')).sort()) h.update(f).update(fs.readFileSync(path.join(pastaJs, f)));
+  h.update(fs.readFileSync(fileURLToPath(import.meta.url))).update(String(MIN_TEMPO));
+  const d = path.join(CACHE, h.digest('hex').slice(0, 16));
+  fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+
 async function rodar(pastaJs) {
   if (!fs.existsSync(path.join(pastaJs, 'partida.js'))) throw new Error(`${pastaJs}: sem partida.js`);
   const res = [];
   let prox = 0, feitas = 0;
   const t0 = Date.now();
+  const dc = CACHE ? await pastaCache(pastaJs) : null;
   await Promise.all(Array.from({ length: Math.min(nPar, SEMENTES.length) }, async () => {
     while (prox < SEMENTES.length) {
       const s = SEMENTES[prox++];
+      const arqC = dc ? path.join(dc, `${s}.json`) : null;
+      if (arqC && fs.existsSync(arqC)) { res.push(JSON.parse(fs.readFileSync(arqC, 'utf8'))); feitas++; continue; }
       res.push(await new Promise((ok, erro) => {
         const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO)]);
-        c.on('message', ok); c.on('error', erro);
+        c.on('message', r => { if (arqC) fs.writeFileSync(arqC, JSON.stringify(r)); ok(r); }); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
       }));
       feitas++;
