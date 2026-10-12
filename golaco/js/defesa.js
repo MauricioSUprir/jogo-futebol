@@ -181,7 +181,7 @@ export function chanceDividida(j, d0, bx, bz) {
   const a = j.par.attr, c = d0.par.attr;
   const dif = (a.desarme ?? 65) - ((c.drible ?? 75) + (c.controle ?? 75)) / 2;
   const dC = MD.hypot(bx - d0.x, bz - d0.z);
-  const solta = clamp((dC - 0.45) / 0.5, 0, 1);
+  const solta = clamp((dC - D.soltaIni) / D.soltaFaixa, 0, 1);
   return clamp(D.base + D.porAttr * dif + D.solta * solta, D.chance[0], D.chance[1]);
 }
 

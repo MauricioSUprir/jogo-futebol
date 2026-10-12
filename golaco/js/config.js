@@ -425,7 +425,10 @@ export const ACOES = {
     // (só na partida; pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola") com o condutor
     // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
     // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
-    vParado: 2.0, semToque: 0.1 },
+    vParado: 2.0, semToque: 0.1,
+    // bola a menos disto do condutor: "colada" no pé dele — o bote não alcança (condução curta de 12/10: calibrável
+    // aqui sem mexer no código; CONDUCAO.passosPorToque deixa a bola mais perto do pé)
+    colada: 0.35 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -1084,7 +1087,8 @@ export const DEFESA_HUMANO = {
     chance: [0.35, 0.65],     // limites da chance de ganhar (bote na hora certa)
     base: 0.55,               // chance com atributos iguais (meio da faixa de acerto real, 44–71%)
     porAttr: 0.01,            // por ponto de desarme acima da média de drible e controle do condutor
-    solta: 0.12,              // a mais com a bola solta do pé do condutor (0,45 → 0,95 m dele)
+    solta: 0.12,              // a mais com a bola solta do pé do condutor (soltaIni → soltaIni + soltaFaixa m dele)
+    soltaIni: 0.45, soltaFaixa: 0.5,
     vSai: 3.2,                // m/s — a bola tirada sai para longe do condutor (como o boteIA)
     semDominio: 0.5,          // s — quem perdeu a bola não a domina de novo logo em seguida
   },
