@@ -695,4 +695,12 @@ Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (
 ### Testes
 `teste-parado`, `teste-pressao-humano` (pareado, `tools/lib/pressao-pareada.mjs`) e `teste-goleiro-regras` no padrão;
 `teste-defesa-humano` (a meta antiga do PRESSÃO, que passava sem o botão, virou a pareada); `teste-controles` (celular:
-a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino.
+a marca do PRESSÃO, o PEGAR, o goleiro andando com a bola e o anel); `teste-goleiro-trava` segue medindo o treino;
+`teste-entrada` (O/RB no ataque = PEGAR); `teste-taticas` mede a forma com `IA_DEFESA.lento` desligado (a cena prende a
+bola parada no pé do condutor).
+
+### Equilíbrio (painel de 144 partidas, mesmas sementes da base)
+`GOLEIRO.logit.c0Partida` (−0,1): `goleiro.js chanceDefesa(..., partida)` soma no logit só na partida (o treino não
+muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
+com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
+· bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
