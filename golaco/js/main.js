@@ -852,11 +852,15 @@ function comando(c, v) {
       filaAcoes.push(c); if (c === 'recomecar') hud.evento('recomecar'); break;
     case 'editar-time': abrirEditor(); break;
     // "Replay" da pausa: os últimos 10 s (até o último corte), com a simulação parada; volta ao jogo no fim
-    case 'replay':
+    case 'replay': {
       if (mundo.modo !== 'partida' || !diretor) break;
+      // nada para rever (menos de 0,5 s gravados desde o mundo novo): a pausa fica aberta
+      const ro = diretor.menu();
+      if (!ro) break;
       hud.fecharMenu();
-      iniciarReplay(diretor.menu());
+      iniciarReplay(ro);
       break;
+    }
     case 'replay-pular': if (diretor?.ativo) fimReplay(true); break;
     case 'replayAuto':
       if (v !== 'ligado' && v !== 'desligado') break;

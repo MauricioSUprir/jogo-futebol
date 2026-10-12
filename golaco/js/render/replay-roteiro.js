@@ -46,15 +46,18 @@ export function roteiroGol(anel, g) {
   const { golTick, lado } = g;
   if (anel.slot(golTick) < 0) return null;
   const chute = g.chuteTick != null && anel.slot(g.chuteTick) >= 0 ? g.chuteTick : Math.max(anel.primeiro, golTick - 45);
-  const fimTV = Math.min(anel.ultimo, golTick + s60(G.depois));
+  // fim: nunca no corte depois do gol (montagem da saída ou do intervalo: o mundo desenhado já é outro)
+  const cDepois = anel.primeiroCorte(golTick + 1, Math.min(anel.ultimo, golTick + s60(Math.max(G.depois, G.lentoDepois))));
+  const fimMax = cDepois != null ? cDepois - 1 : anel.ultimo;
+  const fimTV = Math.min(fimMax, golTick + s60(G.depois));
   // começo: chute − antes, ou depois do último corte (a jogada desenhada antes dele era outra)
   let ini = Math.max(anel.primeiro, chute - s60(G.antes));
   const c = anel.ultimoCorte(ini, golTick);
   if (c != null) ini = c;
-  const fimA = Math.min(anel.ultimo, golTick + s60(G.lentoDepois));
+  const fimA = Math.min(fimMax, golTick + s60(G.lentoDepois));
   // golaço: o 3º plano (lateral baixa) em volta do chute
   const golaco = g.golaco ?? ehGolaco(anel, g.chuteTick, lado);
-  const lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(anel.ultimo, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
+  const lat = golaco ? { de: Math.max(ini, chute - s60(G.lateralAntes)), ate: Math.min(fimMax, chute + s60(G.lateralDepois)), vel: G.vel[2], cam: 'lateral' } : null;
   const orcamento = golaco ? G.maximoGolaco - Math.max(0, lat.ate - lat.de) / 60 / G.vel[2] : G.maximo;
   // TV + atrás ≤ orçamento: o começo do plano de TV encolhe (até antesMin antes do chute); se ainda passar, o começo do
   // plano de trás do gol (até 0,3 s antes do chute)
@@ -86,22 +89,42 @@ export function roteiroImpedimento(anel, i) {
   let ini = Math.max(anel.primeiro, fotoTick - s60(I.antes));
   const c = anel.ultimoCorte(ini, fotoTick);
   if (c != null) ini = c;
-  const fim = Math.max(fotoTick, Math.min(anel.ultimo, apitoTick, fotoTick + s60(I.depoisMax)));
+  // depois do congelamento: do passe até o apito (o toque do impedido) em no máximo `depoisMax` s REAIS — o trecho longo
+  // (passe longo, o impedido corre antes de tocar) anda mais depressa, até `velDepoisMax`; passou disso, para antes do
+  // toque. Nunca atravessa um corte.
+  let apito = Math.max(fotoTick, Math.min(anel.ultimo, apitoTick));
+  const cd = anel.primeiroCorte(fotoTick + 1, apito);
+  if (cd != null) apito = cd - 1;
+  const velDepois = Math.min(I.velDepoisMax, Math.max(I.velDepois, (apito - fotoTick) / 60 / I.depoisMax));
+  const fim = Math.min(apito, fotoTick + Math.floor(I.depoisMax * velDepois * 60 + 1e-9));
   return {
     tipo: 'impedimento',
-    planos: [{ de: ini, ate: fim, vel: I.vel, cam: 'linha', congela: { tick: fotoTick, s: I.congela, velDepois: I.velDepois } }],
+    planos: [{ de: ini, ate: fim, vel: I.vel, cam: 'linha', congela: { tick: fotoTick, s: I.congela, velDepois } }],
     linhaX: i.linhaX, fotoTick, apitoTick, idImpedido: i.idImpedido, time: i.time, lado: i.lado >= 0 ? 1 : -1,
   };
 }
 
-/** Roteiro do "Replay" da pausa: os últimos `s` segundos (sem atravessar o último corte), na câmera de TV. */
+/**
+ * Roteiro do "Replay" da pausa: os últimos `s` segundos (sem atravessar o último corte), na câmera de TV. Pausa logo
+ * depois de uma montagem (falta, lateral, escanteio: menos de `menu.minDepoisCorte` s desde o corte), o que vale rever é
+ * o lance ANTES dela — o que parou o jogo —, até o corte (sem atravessar o corte anterior).
+ */
 export function roteiroMenu(anel, s = REPLAY.segundos) {
   if (anel.ultimo < 0) return null;
-  let ini = Math.max(anel.primeiro, anel.ultimo - s60(s) + 1);
-  const c = anel.ultimoCorte(ini + 1, anel.ultimo);
-  if (c != null) ini = c;
-  if (anel.ultimo - ini < 30) return null; // menos de 0,5 s de jogada desde o corte: nada para rever
-  return { tipo: 'menu', planos: [{ de: ini, ate: anel.ultimo, vel: REPLAY.menu.vel, cam: 'tv' }], lado: 1 };
+  const N = s60(s);
+  let de = Math.max(anel.primeiro, anel.ultimo - N + 1), ate = anel.ultimo;
+  const c = anel.ultimoCorte(de + 1, anel.ultimo);
+  if (c != null) {
+    de = c;
+    if (ate - c < s60(REPLAY.menu.minDepoisCorte)) {
+      let de2 = Math.max(anel.primeiro, c - N);
+      const c2 = anel.ultimoCorte(de2 + 1, c - 1);
+      if (c2 != null) de2 = c2;
+      if (c - 1 - de2 >= 30) { de = de2; ate = c - 1; }
+    }
+  }
+  if (ate - de < 30) return null; // menos de 0,5 s de jogada: nada para rever
+  return { tipo: 'menu', planos: [{ de, ate, vel: REPLAY.menu.vel, cam: 'tv' }], lado: 1 };
 }
 
 // ------------------------------------------------------------------------------------------------ relógio

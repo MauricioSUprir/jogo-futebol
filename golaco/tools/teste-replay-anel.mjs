@@ -153,6 +153,28 @@ if (!RA || !RR) {
     reg('B13 "Replay" da pausa: os últimos 10 s na TV', `${rm.planos[0].cam} ${rm.planos[0].de}–${rm.planos[0].ate} @${rm.planos[0].vel} (${fmt(duracao(rm), 2)} s)`, 'tv 2001–2600 @1', rm.planos[0].cam === 'tv' && rm.planos[0].de === 2001 && rm.planos[0].ate === 2600);
     const rm2 = roteiroMenu(a2);
     reg('B14 "Replay" da pausa não atravessa o último corte', `de ${rm2.planos[0].de}`, '2200', rm2.planos[0].de === 2200);
+    // contraprova: corte logo DEPOIS do gol (montagem que chegasse antes do fim dos planos) — nenhum plano o atravessa
+    const a3 = criarAnel({ ticks: 600, vagas: 24, nj: NJ });
+    for (let t = 2001; t <= 2600; t++) gravar(a3, t, ordem, new Set([2420]));
+    const rd = roteiroGol(a3, { golTick: 2400, chuteTick: 2350, lado: 1, golaco: true });
+    const fimD = Math.max(...rd.planos.map(p => p.ate));
+    reg('B15 gol: nenhum plano atravessa um corte depois do gol (para antes dele)', `corte 2420; planos até ${fimD} (${rd.planos.map(p => `${p.cam} ${p.de}–${p.ate}`).join(' · ')})`, '≤ 2419', fimD <= 2419 && rd.planos.every(p => p.ate > p.de));
+    // contraprova: o apito longe do passe (passe longo, o impedido corre antes de tocar: 14% dos lances IA × IA) — o
+    // replay vai até o apito (o toque) em ≤ depoisMax s reais, mais depressa
+    const I = REPLAY.impedimento;
+    const rl4 = roteiroImpedimento(a, { fotoTick: 2300, apitoTick: 2540, linhaX: -25.48, idImpedido: 9, time: 0, lado: -1 });
+    const p4 = rl4.planos[0];
+    reg('B16 impedimento com o apito 4 s depois do passe: vai até o apito, mais depressa, ≤ ~6 s', `${p4.de}–${p4.ate}, depois do passe a ${fmt(p4.congela.velDepois, 2)}×; ${fmt(duracao(rl4), 2)} s`, `até 2540, ${fmt(4 / I.depoisMax, 2)}×, ≤ ${fmt(I.antes / I.vel + I.congela + I.depoisMax + 0.05, 2)} s`,
+      p4.ate === 2540 && Math.abs(p4.congela.velDepois - 4 / I.depoisMax) < 1e-9 && duracao(rl4) <= I.antes / I.vel + I.congela + I.depoisMax + 0.05);
+    const rl6 = roteiroImpedimento(a, { fotoTick: 2200, apitoTick: 2560, linhaX: -25.48, idImpedido: 9, time: 0, lado: -1 });
+    const p6 = rl6.planos[0];
+    reg('B17 impedimento com o apito 6 s depois: no máximo velDepoisMax, para antes', `${p6.de}–${p6.ate} a ${fmt(p6.congela.velDepois, 2)}×; ${fmt(duracao(rl6), 2)} s`, `até ${2200 + Math.round(I.depoisMax * I.velDepoisMax * 60)}, ${I.velDepoisMax}×`,
+      p6.congela.velDepois === I.velDepoisMax && p6.ate === 2200 + Math.round(I.depoisMax * I.velDepoisMax * 60) && duracao(rl6) <= I.antes / I.vel + I.congela + I.depoisMax + 0.05);
+    // contraprova: pausa logo depois de uma montagem (corte há 0,33 s) — o "Replay" mostra o lance que parou o jogo
+    const a4 = criarAnel({ ticks: 600, vagas: 24, nj: NJ });
+    for (let t = 2001; t <= 2600; t++) gravar(a4, t, ordem, new Set([2150, 2580]));
+    const rm4 = roteiroMenu(a4);
+    reg('B18 "Replay" da pausa logo depois de uma montagem: o lance antes dela (sem atravessar o corte anterior)', rm4 ? `${rm4.planos[0].de}–${rm4.planos[0].ate}` : 'nenhum', '2150–2579', !!rm4 && rm4.planos[0].de === 2150 && rm4.planos[0].ate === 2579);
   }
 
   // ---------------------------------------------------------------- C) partida de verdade (IA × IA)
@@ -246,9 +268,11 @@ if (!RA || !RR) {
       const def = defensorDaLinha(S.a, e.tickFoto, 1 - e.time, e.linhaX, 1.5);
       const alem = imp0 ? (imp0.x - e.linhaX) * im.lado : NaN;
       reg('C7 no quadro do passe o impedido está além da linha', `impedido ${e.id} a ${fmt(alem, 2)} m além; linha em x ${fmt(e.linhaX, 2)}${def ? `, defensor ${def.id} em x ${fmt(def.x, 2)}` : ' (linha da bola/meio)'}`, '> 0,1 m (tolerância)', imp0 && alem > C.IMPEDIMENTO.tolerancia);
-      const fimEsp = Math.min(apito, e.tickFoto + Math.round(REPLAY.impedimento.depoisMax * 60));
-      reg('C8 roteiro do impedimento: congela no passe e vai até o apito (≤ depoisMax depois do passe)', ri ? `${ri.planos[0].de}–${ri.planos[0].ate}, congela ${ri.planos[0].congela.tick}; ${fmt(duracao(ri), 2)} s` : 'sem roteiro', `congela na foto, termina em ${fimEsp}, ≤ 7 s`,
-        !!ri && ri.planos[0].congela.tick === e.tickFoto && ri.planos[0].ate === fimEsp && duracao(ri) <= 7);
+      // até o apito (o toque do impedido) se ele vier até depoisMax × velDepoisMax s depois do passe
+      const I = REPLAY.impedimento, cabe = (apito - e.tickFoto) / 60 <= I.depoisMax * I.velDepoisMax;
+      const fimEsp = cabe ? apito : e.tickFoto + Math.round(I.depoisMax * I.velDepoisMax * 60);
+      reg('C8 roteiro do impedimento: congela no passe e vai até o apito (o toque), ≤ ~6 s', ri ? `${ri.planos[0].de}–${ri.planos[0].ate}, congela ${ri.planos[0].congela.tick}, depois a ${fmt(ri.planos[0].congela.velDepois, 2)}×; ${fmt(duracao(ri), 2)} s` : 'sem roteiro', `congela na foto, termina em ${fimEsp}, ≤ 6,2 s`,
+        !!ri && ri.planos[0].congela.tick === e.tickFoto && ri.planos[0].ate === fimEsp && duracao(ri) <= 6.2);
     }
   }
 }

@@ -253,7 +253,7 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
 - **`render/replay-anel.js` (puro, Node)**: `criarAnel({ticks, vagas, nj})` → anel fixo (`ticks` × `vagas` × (NJ×3 + 3)
   Float32 + ids/time/goleiro, bola p+q, relógio do estádio e corte por passo; 600 × 24 = 3,36 MB, alocado uma vez) com
   `inicio(tick, tEstadio, cortou)`, `jogador(v, id, time, goleiro, x, z, rumo, pose)`, `fim(bolaP, bolaQ)`, `slot(tick)`,
-  `ultimoCorte(de, ate)`, `primeiro`/`ultimo` (sem buraco; tick que não segue o anterior = mundo novo, recomeça),
+  `ultimoCorte(de, ate)`, `primeiroCorte(de, ate)`, `primeiro`/`ultimo` (sem buraco; tick que não segue o anterior = mundo novo, recomeça),
   `limpar()`, `bytes`. `lerQuadro(anel, tFracionario, lista, bp, bq, kitDe)` → n (itens no formato do
   `jogador3d.atualizar`, sem controlado; interpola pose/x/z, rumo pelo caminho curto e a bola por nlerp; o passo marcado
   como corte não é interpolado; a substituição segue o id), `tempoEstadio(anel, t)`, `bolaNoTick`, `jogadorNoTick`,
@@ -262,9 +262,12 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   'tv'|'atras'|'lateral'|'linha', congela?: {tick, s, velDepois}}], lado, ...}`; nunca atravessa um corte do anel.
   `roteiroGol(anel, {golTick, chuteTick, lado, golaco?})` (TV 1× do chute − 4 s, ou do último corte, até o gol + 0,8 s;
   atrás do gol 0,5× do chute − 1 s até o gol + 1 s; golaço = chute de ≥ 20 m: + lateral 0,35×; ≤ 12 s, golaço ≤ 14 s —
-  o começo da TV encolhe), `roteiroImpedimento(anel, {fotoTick, apitoTick, linhaX, idImpedido, time, lado})` (câmera
-  'linha', 0,6× até o passe, congela 1,6 s nele, segue até o apito, no máximo 2,5 s depois do passe), `roteiroMenu(anel)`
-  (os últimos 10 s, TV 1×), `ehGolaco`, `duracao(roteiro)` e o relógio `criarRelogio`, `iniciarRelogio`,
+  o começo da TV encolhe; nenhum plano passa de um corte depois do gol), `roteiroImpedimento(anel, {fotoTick, apitoTick,
+  linhaX, idImpedido, time, lado})` (câmera 'linha', 0,6× até o passe, congela 1,6 s nele e segue até o apito — o toque
+  do impedido — em ≤ 2,5 s reais: `congela.velDepois` = 1× ou mais depressa com o apito longe do passe, até 2× (apito até
+  5 s depois do passe); além disso para antes do toque), `roteiroMenu(anel)` (os últimos 10 s, TV 1×; a menos de 3 s
+  de um corte — pausa logo depois de uma montagem de falta/lateral — o lance ANTES do corte, o que parou o jogo; null
+  com menos de 0,5 s: o botão da pausa não fecha a pausa), `ehGolaco`, `duracao(roteiro)` e o relógio `criarRelogio`, `iniciarRelogio`,
   `avancarRelogio(r, dt)` (false no fim), `velocidadeAgora`, `linhaDoReplay(r, dt, out)` (`{visivel, x, opacidade}`: só no
   impedimento, do tick do passe em diante, entrando em 0,25 s, até o fim).
 - **`render/replay.js` (three.js)**: `criarDiretor({anel, aspecto})` → `{camera, ativo, estado, tick, velocidade,

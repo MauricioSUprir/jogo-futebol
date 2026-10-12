@@ -70,6 +70,11 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
       for (let t = ate; t >= de; t--) { const s = a.slot(t); if (s >= 0 && corte[s]) return t; }
       return null;
     },
+    /** Primeiro corte (tick) em [de, ate], ou null (o fim de um plano para antes dele). */
+    primeiroCorte(de, ate) {
+      for (let t = de; t <= ate; t++) { const s = a.slot(t); if (s >= 0 && corte[s]) return t; }
+      return null;
+    },
   };
   return a;
 }

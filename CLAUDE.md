@@ -254,8 +254,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   os roteiros; `render/replay.js` é o diretor com as câmeras. Gol: o replay entra na SAÍDA DE BOLA (TV 1× do chute − 4 s
   até o gol, atrás do gol 0,5×, lateral baixa 0,35× no golaço de ≥ 20 m; ≤ 12 s, golaço ≤ 14 s); a comemoração (outra
   frente) entra ANTES pelo gancho `posGol()` → `diretor.depoisDoGol()`. Impedimento: no apito, câmera alinhada com a
-  linha, congela 1,6 s no quadro do passe (`tickFoto` no evento) com a linha, que só existe no replay (`linhaImped.mostrar`).
-  "Replay" na pausa (últimos 10 s) e "Replays automáticos" (`?replay=0|1`). A SIMULAÇÃO FICA PARADA no replay (como na
+  linha, congela 1,6 s no quadro do passe (`tickFoto` no evento) com a linha do lance (`linhaImped.mostrar`; depois do
+  replay ela não fica parada no jogo; a linha VIVA continua até a frente da tela limpa) e segue até o toque do impedido em
+  ≤ 2,5 s reais (até 2× quando o apito vem longe do passe: 14% dos lances). "Replay" na pausa (últimos 10 s; pausa logo
+  depois de uma montagem: o lance antes dela) e "Replays automáticos" (`?replay=0|1`). A SIMULAÇÃO FICA PARADA no replay (como na
   pausa): hash-igual e hash-partida IGUAIS. Qualquer tecla/botão/clique/toque pula (o aperto não vira jogada); só a marca
   "REPLAY" no canto (transmissão, não narração) e "Pular" no toque; o apito da saída toca depois. Testes:
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do

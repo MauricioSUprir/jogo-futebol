@@ -1083,11 +1083,14 @@ export const REPLAY = {
     golaco: 20,               // m do gol na hora do chute (fora da área)
   },
   // impedimento (no apito): câmera ALINHADA com a linha (como o VAR: a linha fica em pé no quadro), `vel` até o passe,
-  // CONGELA `congela` s no quadro do passe com a linha entrando em `linhaEntra` s e segue a `velDepois` até o apito (no
-  // máximo `depoisMax` s de jogo depois do passe; a linha fica até o fim). Começa `antes` s antes do passe (ou no último
+  // CONGELA `congela` s no quadro do passe com a linha entrando em `linhaEntra` s e segue até o apito (o toque do
+  // impedido) em no máximo `depoisMax` s REAIS: a `velDepois` ou, com o apito longe do passe (14% dos lances IA × IA:
+  // até 4,4 s), mais depressa, até `velDepoisMax` (a linha fica até o fim). Começa `antes` s antes do passe (ou no último
   // corte). Total ≤ ~6 s.
-  impedimento: { antes: 1.2, vel: 0.6, congela: 1.6, linhaEntra: 0.25, velDepois: 1, depoisMax: 2.5 },
-  menu: { vel: 1 },           // "Replay" na pausa: os últimos `segundos` (até o último corte), TV
+  impedimento: { antes: 1.2, vel: 0.6, congela: 1.6, linhaEntra: 0.25, velDepois: 1, velDepoisMax: 2, depoisMax: 2.5 },
+  // "Replay" na pausa: os últimos `segundos` (até o último corte), TV; pausa a menos de `minDepoisCorte` s de uma
+  // montagem (falta, lateral...): o lance antes dela (o que parou o jogo)
+  menu: { vel: 1, minDepoisCorte: 3 },
   transicao: 0.4,             // s — a faixa verde que cruza a tela na entrada e na saída do replay (CSS)
   // câmeras (m; fov vertical em graus para telas 16:9 ou mais largas: mais estreitas abrem para a mesma largura)
   // tv: a câmera de TV do jogo seguindo a BOLA gravada, antecipando pela velocidade dela `olhaFrente` s à frente no anel
