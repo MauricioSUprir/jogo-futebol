@@ -42,6 +42,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-pele.mjs
+      - name: Comemoração do gol no navegador (cena, câmera de cinema, pular, celular; simulação segura e hash igual)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-comemoracao-tela.mjs
   deploy:
     needs: testes-golaco
     environment:

@@ -72,8 +72,9 @@ export function pePrevisto(j, p, comBola) {
   return { x: pe.tx, y: pe.ty, z: pe.tz, apoio: false, rumo: pe.lrumo, u, meioApoio };
 }
 
-/** IK de dois ossos: quadril H, alvo T, polo (direção para onde o joelho aponta). */
-function ik(hx, hy, hz, tx, ty, tz, px, py, pz, out, iJoelho, iTorn) {
+/** IK de dois ossos da perna: quadril H, alvo T, polo (direção para onde o joelho aponta). Exportada para a cena de
+ * comemoração (comemoracao.js: joelhos, agachado, pulo); a pose do jogo usa a mesma. */
+export function ik(hx, hy, hz, tx, ty, tz, px, py, pz, out, iJoelho, iTorn) {
   let dx = tx - hx, dy = ty - hy, dz = tz - hz;
   let d = Math.sqrt(dx * dx + dy * dy + dz * dz);
   const ux = dx / d, uy = dy / d, uz = dz / d;
@@ -310,10 +311,11 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
 // ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé
 const _qa = {}, _qp = {}, _mp = {}, _ep = {};
 const BOLA_MAO = GOLEIRO.bolaMao;
-const BRACO = 0.29, ANTEBRACO = 0.26;
+export const BRACO = 0.29, ANTEBRACO = 0.26;
 
-/** IK de dois ossos do braço: ombro O, mão M, polo (para onde o cotovelo aponta); escreve o cotovelo. */
-function ikBraco(ox, oy, oz, mx, my, mz, px, py, pz, out, iCot, iMao) {
+/** IK de dois ossos do braço: ombro O, mão M, polo (para onde o cotovelo aponta); escreve o cotovelo. Exportada para
+ * os gestos da cena de comemoração (comemoracao.js). */
+export function ikBraco(ox, oy, oz, mx, my, mz, px, py, pz, out, iCot, iMao) {
   let dx = mx - ox, dy = my - oy, dz = mz - oz;
   const d0 = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1e-6;
   const ux = dx / d0, uy = dy / d0, uz = dz / d0;

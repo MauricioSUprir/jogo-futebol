@@ -33,9 +33,18 @@
 // mesmo tick é o mesmo com e sem replay. Qualquer tecla, botão, clique ou toque pula; "REPLAY" discreto no canto (marca
 // da transmissão, não narração); "Pular" no toque. "Replays automáticos" na pausa (?replay=0 desliga).
 //
+// Comemoração do gol (render; pedido do dono de 11/10: "não tem cena de comemoração!!!"): no gol da partida a cena pura
+// (js/comemoracao.js) copia os 22 e anda no relógio do DESENHO; a página desenha os atores dela no lugar dos da simulação,
+// com a câmera de cinema (camera.js definirCinema) depois do plano da rede. A SIMULAÇÃO NÃO MUDA: ela segue até o passo
+// antes da montagem da saída (gol + 149) e o laço espera ali enquanto a cena roda (a saída sai no mesmo tick, com o mesmo
+// hash); a entrada do humano não vai para a simulação durante a cena (ele assiste). Ordem: gol → comemoração → replay →
+// saída. Pular (um aperto NOVO, tecla, clique ou toque, depois de 0,5 s) acaba só a comemoração; o replay tem o pulo dele.
+// Pulada antes da hora, os passos que faltam até a saída rodam em poucos quadros com a cena parada e a faixa passando.
+//
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
-// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?prejogo=0|1|curto|escalacao.
+// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1
+// ?prejogo=0|1|curto|escalacao.
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
 // saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
@@ -72,6 +81,10 @@ import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
+import {
+  planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
+  tempoCena, duracaoCena, infoAtores,
+} from './comemoracao.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
@@ -169,6 +182,19 @@ let replayBotoes = 0;     // botões já segurados quando o replay começou: só
 const somAdiado = [];     // sons do passo que abriu o replay do gol (o apito da saída): tocam quando ele acaba
 let depoisReplay = null;  // faixa do intervalo/fim que espera o replay do gol acabar
 let linhaNoReplay = null; // tick do apito cujo impedimento já passou no replay (a linha parada não se repete ao vivo)
+// Comemoração (js/comemoracao.js): ?comemoracao=0|1 força; senão COMEMORACAO.ligada. cenaGol = a cena em andamento;
+// cenaEstado: 'rodando' (o laço segura a simulação no passo antes da saída), 'solta' (acabou ou pulou: a simulação
+// segue até a saída, que descarta a cena; pulada antes da hora, `cenaRapida` roda os passos que faltam em poucos quadros)
+const COMEM = CFG.COMEMORACAO;
+let comemoracaoLigada = params.get('comemoracao') === '0' ? false : params.get('comemoracao') === '1' ? true : COMEM.ligada;
+let cenaGol = null, cenaEstado = null, cenaRapida = false, cenaCortou = false;
+let cenaBotoes = 0;          // botões segurados no começo (ou apertados antes de poder pular): só valem soltos e de novo
+let ultimaFinal = null;      // a finalização do gol anterior (a próxima não repete)
+let forcarFinal = null;      // testes e prints: a finalização do próximo gol
+const planoCam = criarPlanoCamera();
+const custoCena = { n: 0, ms: 0 };
+const ENTRADA_NEUTRA = { x: 0, z: 0, botoes: 0 };
+const PASSOS_GOL = Math.round(CFG.PARTIDA.golPausa / PASSO);
 const bolaAnt = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 const bolaAtu = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 let contPassos = 0;
@@ -191,7 +217,7 @@ let edicaoNaFila = null;
 // medidas por quadro (medirQuadro): simulação, pose, atualização dos jogadores, desenho e o quadro
 // inteiro sem o desenho (CPU que não é da GPU). Anéis de tamanho fixo (nada alocado por quadro).
 const MQ = 4096;
-const mq = { n: 0, i: 0, sim: new Float64Array(MQ), pose: new Float64Array(MQ), jog: new Float64Array(MQ), des: new Float64Array(MQ), cpu: new Float64Array(MQ), passos: new Uint8Array(MQ), aSim: 0, aPose: 0, aPassos: 0 };
+const mq = { n: 0, i: 0, sim: new Float64Array(MQ), pose: new Float64Array(MQ), jog: new Float64Array(MQ), des: new Float64Array(MQ), cpu: new Float64Array(MQ), passos: new Uint8Array(MQ), aSim: 0, aPose: 0, aPassos: 0, aCena: 0 };
 const agoraMs = () => performance.now();
 
 /** Id do jogador que o humano controla agora (Etapa 2: m.controlado[0]; Etapa 1: id 0). */
@@ -340,8 +366,12 @@ function tratarEvento(ev) {
     if (cam) cam.efeitoGol((mundo.bola.p.x > 0 ? 1 : -1) * CFG.CAMPO.meioX, mundo.bola.p.z, { fechado: !!mundo.partida });
     // replay: o gol fica pendente até o pós-gol chegar na vez dele (o chute que vale o gol: autor-gol.js)
     if (diretor && mundo.partida) diretor.aoGol({ golTick: mundo.tick, chuteTick: autorGol.chute.ativo ? autorGol.chute.tick : null, lado: mundo.bola.p.x > 0 ? 1 : -1 });
+    // comemoração (só na partida): começa já, da cópia do mundo neste tick
+    if (mundo.partida && comemoracaoLigada) iniciarComemoracao(ev);
     return;
   }
+  // a saída (ou o intervalo, o fim, um recomeço) chegou: a cena da comemoração acaba (o replay entra a seguir)
+  if (cenaGol && (t === 'saida' || t === 'intervalo' || t === 'fimDeJogo' || t === 'recomeco')) encerrarComemoracao();
   if ((t === 'troca' && ev.auto) || t === 'trocaAerea' || t === 'cobranca') return;
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
@@ -540,7 +570,19 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
   let n = 0;
   let hx = 0, hz = 0, achou = false;
-  for (const j of mundo.jogadores) {
+  if (cenaGol) {
+    // comemoração: os atores da cena (cópias andando no relógio dela) no lugar dos da simulação; sem anel do controlado
+    const al = cenaGol.alfa;
+    for (const a of cenaGol.atores) {
+      const des = a.des ?? (a.des = new Float32Array(NJ * 3));
+      interpolarPose(a.ant, a.atu, al, des);
+      const it = lista[n] ?? (lista[n] = {});
+      it.id = a.id; it.time = a.time; it.pose = des; it.controlado = false; it.goleiro = a.goleiro; it.proximo = false;
+      it.kit = kitDoId(a.id, a.goleiro);
+      it.x = lerp(a.x0, a.x1, al); it.z = lerp(a.z0, a.z1, al); it.rumo = lerpAng(a.r0, a.r1, al);
+      n++;
+    }
+  } else for (const j of mundo.jogadores) {
     const e = estJ.get(j.id);
     if (!e) continue;
     interpolarPose(e.ant, e.atu, alfa, e.des);
@@ -562,6 +604,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   alvoCam.bx = _bp.x; alvoCam.bz = _bp.z;
   const vooAtivo = voo && voo.alvo && Number.isFinite(voo.alvo.x) && (voo.tickChegada == null || mundo.tick <= voo.tickChegada);
   alvoCam.ax = vooAtivo ? voo.alvo.x : NaN; alvoCam.az = vooAtivo ? voo.alvo.z : NaN;
+  if (cenaGol) cameraComemoracao();
   cam.atualizar(dt, alvoCam, corteCamera);
   corteCamera = false;
   const f = cam.foco();
@@ -569,12 +612,19 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tj0 = performance.now();
   jog3d.atualizar(lista, cam.camera);
   const tj1 = performance.now();
-  marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
-  // a linha do lance já passou (congelada) no replay do impedimento: não fica parada de novo no jogo
-  const ui = mundo.partida?.ultimoImped;
-  if (linhaNoReplay != null && ui && ui.tick === linhaNoReplay && mundo.partida.estado !== 'jogo') linhaImped.mostrar(null);
-  else linhaImped.atualizar(mundo, dt);
-  marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
+  if (cenaGol) {
+    // comemoração: nada do jogo ao vivo no gramado (queda da bola, opções do lateral, linha)
+    marcas.grupo.visible = false;
+    marcasLat.atualizar(mundo, semPosicao, agoraMs / 1000, dt);
+    linhaImped.mostrar(null);
+  } else {
+    marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
+    // a linha do lance já passou (congelada) no replay do impedimento: não fica parada de novo no jogo
+    const ui = mundo.partida?.ultimoImped;
+    if (linhaNoReplay != null && ui && ui.tick === linhaNoReplay && mundo.partida.estado !== 'jogo') linhaImped.mostrar(null);
+    else linhaImped.atualizar(mundo, dt);
+    marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
+  }
   campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -590,7 +640,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   else render.queda = null;
   render.quadros++;
   // HUD
-  if (h) {
+  if (h && !cenaGol) {
     // intervalo e fim: o mundo fica parado (o corpo guarda a velocidade de antes, o painel mostra 0)
     const parado = mundo.partida && (mundo.partida.estado === 'intervalo' || mundo.partida.estado === 'fim');
     const kmh = parado ? 0 : Math.hypot(h.vx, h.vz) * 3.6;
@@ -606,7 +656,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   } else hud.carga(null);
   // cartão do árbitro em cima de quem levou (por FALTAS.icone s; o expulso no lugar em que estava)
   const uc = mundo.partida?.ultimoCartao;
-  if (uc && mundo.tick >= uc.tick && (mundo.tick - uc.tick) * PASSO < FALTAS.icone) {
+  if (uc && !cenaGol && mundo.tick >= uc.tick && (mundo.tick - uc.tick) * PASSO < FALTAS.icone) {
     const jc = mundo.jogadores.find(q => q.id === uc.id);
     projetar(jc ? jc.x : uc.x, 2.25, jc ? jc.z : uc.z, _pt);
     if (_pt.atras) hud.cartao(null); else { _cartao.x = _pt.x; _cartao.y = _pt.y; _cartao.cor = uc.cor; hud.cartao(_cartao); }
@@ -620,10 +670,96 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   mq.sim[i] = mq.aSim; mq.pose[i] = mq.aPose; mq.passos[i] = Math.min(255, mq.aPassos);
   mq.jog[i] = (tl1 - tq0) + (tj1 - tj0); // interpolação das poses + matrizes de todas as cápsulas
   mq.des[i] = td1 - td0;
-  mq.cpu[i] = mq.aSim + mq.aPose + (fim - tq0) - (td1 - td0);
+  mq.cpu[i] = mq.aSim + mq.aPose + mq.aCena + (fim - tq0) - (td1 - td0);
   mq.i = (i + 1) % MQ; mq.n = Math.min(MQ, mq.n + 1);
-  mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0;
+  mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0; mq.aCena = 0;
 }
+// ------------------------------------------------------------------ comemoração
+/** Começa a cena no tick do gol: o plano (autor de verdade: autor-gol.js) e a cópia dos 22 (o mundo não é tocado). */
+function iniciarComemoracao(ev) {
+  const g = autorGol.gol, deAgora = g.ativo && g.tick === mundo.tick;
+  const gol = { tick: mundo.tick, time: deAgora ? g.time : ev.time, id: deAgora ? g.id : (ev.autor ?? null), contra: deAgora ? g.contra : false };
+  const plano = planejarComemoracao(mundo, gol, { timeHumano: TIME_HUMANO, ultima: ultimaFinal, variante: forcarFinal });
+  forcarFinal = null;
+  ultimaFinal = plano.variante;
+  cenaGol = criarCenaComemoracao(plano, mundo);
+  cenaEstado = 'rodando'; cenaRapida = false; cenaCortou = false;
+  // o que já está segurado (o chute do gol) não pula: só um aperto novo, depois de COMEM.pularDepois
+  cenaBotoes = entrada ? entrada.ler(cam.yaw).botoes : 0;
+  hud.comemoracao(true);
+}
+
+/** Um quadro da comemoração (fora da pausa): o pulo e o relógio da cena. */
+function quadroComemoracao(dt, ent) {
+  const c = cenaGol;
+  if (cenaEstado !== 'rodando') return;
+  if (tempoCena(c) < COMEM.pularDepois) cenaBotoes |= ent.botoes;
+  else {
+    const novos = ent.botoes & ~cenaBotoes;
+    cenaBotoes &= ent.botoes;
+    if (novos) { pularComemoracao(); return; }
+  }
+  const t0 = performance.now();
+  custoCena.n += avancarCena(c, dt);
+  const ms = performance.now() - t0;
+  custoCena.ms += ms; mq.aCena += ms;
+  if (c.acabou) fimComemoracao(false);
+}
+
+/** O plano de câmera do quadro: até o 1º corte, a câmera do gol do jogo; depois, a de cinema (sai o "GOL!"). */
+function cameraComemoracao() {
+  const c = cenaGol;
+  planoCamera(c, { pequena: Math.min(window.innerWidth, window.innerHeight) < 520, aspecto: window.innerWidth / window.innerHeight }, planoCam);
+  if (planoCam.nome === 'rede') return;
+  if (!cenaCortou) {
+    cenaCortou = true;
+    if (cam.efeitoAtivo) cam.encerrarGol();
+    hud.esconderGol();
+  }
+  if (planoCam.nome !== 'fim') cam.definirCinema(planoCam);
+}
+
+/** Pula a comemoração (só ela: o replay vem depois, com o pulo dele). Antes de COMEM.pularDepois, nada. */
+function pularComemoracao() {
+  if (!cenaGol || cenaEstado !== 'rodando' || tempoCena(cenaGol) < COMEM.pularDepois) return;
+  fimComemoracao(true);
+}
+
+/**
+ * Fim da comemoração (acabou ou pulou): o laço solta a simulação, que vai até a saída (a saída descarta a cena e o replay
+ * entra). Pulada antes da hora, os passos que faltam rodam em poucos quadros (cortina) com a cena parada. pulou: o aperto
+ * que pulou não vira jogada (a entrada é solta; o botão do controle segurado só vale de novo depois de solto).
+ */
+function fimComemoracao(pulou) {
+  if (!cenaGol || cenaEstado !== 'rodando') return;
+  cenaEstado = 'solta';
+  cenaGol.acabou = true;
+  const p = mundo.partida;
+  const falta = p && p.estado === 'gol' ? PASSOS_GOL - (mundo.tick - p.desde) : 0;
+  cenaRapida = falta > 1;
+  if (cenaRapida) hud.cortina();
+  if (entrada && pulou) { entrada.soltarTudo(); entrada.bloquear?.(true); entrada.bloquear?.(false); entrada.limparPulsos(); }
+}
+
+/** A cena sai de vez (saída de bola, intervalo, fim, mundo novo): a câmera de jogo (ou a do replay) volta cortando. */
+function encerrarComemoracao() {
+  if (!cenaGol) return;
+  cenaGol = null; cenaEstado = null; cenaRapida = false;
+  if (cam) cam.definirCinema(null);
+  hud.comemoracao(false);
+  // os botões de toque voltam: o analógico de descanso calculado com eles escondidos (o pulo solta tudo; a janela pode ter
+  // mudado de tamanho) volta ao canto de baixo
+  entrada?.reposicionar?.();
+  corteCamera = true;
+}
+
+/** Com a cena rodando, o passo que monta a saída (gol + 150) espera: a simulação fica no gol + 149. */
+function seguraSimulacao() {
+  if (!cenaGol || cenaEstado !== 'rodando') return false;
+  const p = mundo.partida;
+  return !!p && p.estado === 'gol' && mundo.tick + 1 - p.desde >= PASSOS_GOL;
+}
+
 // ------------------------------------------------------------------ replay
 /**
  * Um quadro do replay, todo a partir do anel (do mundo só o placar e o relógio do HUD, que não mudam durante ele):
@@ -748,9 +884,17 @@ function quadro(agoraMs, desenhar = true) {
   } else if (pausado() || pausaTeste) {
     laco.ultimo = agoraMs;     // ao voltar, não tenta recuperar o tempo parado
   } else {
+    // comemoração: anda no relógio do desenho (um aperto novo depois de 0,5 s pula)
+    if (cenaGol) quadroComemoracao(dt, ent);
     const r = avancarLaco(laco, agoraMs);
-    for (let i = 0; i < r.passos; i++) {
-      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : ent;
+    // cortina (a comemoração pulada antes da hora): os passos que faltam até a saída, COMEM.passosCortina por quadro
+    const nPassos = cenaGol && cenaRapida ? Math.max(r.passos, COMEM.passosCortina) : r.passos;
+    let segurou = false;
+    for (let i = 0; i < nPassos; i++) {
+      // a cena rodando segura a montagem da saída: a simulação espera no passo gol + 149
+      if (seguraSimulacao()) { segurou = true; break; }
+      // durante a cena o humano assiste: a entrada dele não vai para a simulação (a demo segue)
+      const e = DEMO_ON ? (entradaDemoDoMundo(mundo) ?? ent) : cenaGol ? ENTRADA_NEUTRA : ent;
       let ac = filaAcoes.length ? filaAcoes.splice(0) : null;
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
@@ -759,8 +903,11 @@ function quadro(agoraMs, desenhar = true) {
       if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
       // o replay começou neste passo (gol, impedimento): os passos que sobraram não rodam (a simulação espera)
       if (diretor && diretor.ativo) break;
+      // a cortina acabou na saída (a cena saiu): o resto do quadro é do laço normal
+      if (i >= r.passos - 1 && !cenaGol) break;
     }
-    alfa = r.alfa;
+    // segurando, o laço não acumula o tempo parado (e o desenho da simulação fica no passo mais novo)
+    if (segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); alfa = 1; } else alfa = r.alfa;
   }
   // em pé no celular a tela "Gire o celular" cobre tudo: não gasta bateria desenhando por baixo
   if (diretor && diretor.ativo) desenharReplay(dt, agoraMs, desenhar && !retratoBloqueado());
@@ -828,6 +975,9 @@ function tratarAcao(a) {
   if (editor.aberto) { if (a === 'pausa') editor.voltar(); return; }
   // replay: qualquer ação (Esc, Start, R, C, H...) só pula o replay — não abre a pausa nem chega ao jogo
   if (diretor && diretor.ativo && !pausado() && a !== 'qps') { fimReplay(true); return; }
+  // comemoração: qualquer ação (Esc, Enter, R, C, H...) só pula a cena (depois de 0,5 s) — não abre a pausa nem chega ao jogo
+  if (cenaGol && cenaEstado === 'rodando' && !pausado() && a !== 'qps') { pularComemoracao(); return; }
+  if (a === 'pular') return;
   if (a === 'pausa') {
     if (hud.ajudaAberta) { hud.fecharAjuda(); return; }
     if (hud.menuAberto) hud.fecharMenu(); else { entrada.soltarTudo(); hud.abrirMenu(); }
@@ -934,6 +1084,7 @@ function comando(c, v) {
       break;
     }
     case 'replay-pular': if (diretor?.ativo) fimReplay(true); break;
+    case 'comemoracao-pular': pularComemoracao(); break;
     case 'replayAuto':
       if (v !== 'ligado' && v !== 'desligado') break;
       replayAuto = v === 'ligado';
@@ -1150,6 +1301,7 @@ function trocarMundo(m, opc = {}) {
   // replay: o anel e o gol pendente são do mundo velho (os sons adiados e a faixa esperando vão junto)
   somAdiado.length = 0; depoisReplay = null; linhaNoReplay = null;
   if (diretor && diretor.ativo) fimReplay(false);
+  encerrarComemoracao(); ultimaFinal = null;
   anel.limpar();
   if (diretor) diretor.limpar();
   if (cam) { cam.encerrarGol(); cam.planoGeral(false); }
@@ -1246,7 +1398,7 @@ const api = {
       sim: resumo(mq.sim, n, ini), pose: resumo(mq.pose, n, ini), jogadores: resumo(mq.jog, n, ini),
       desenho: resumo(mq.des, n, ini), cpu: resumo(mq.cpu, n, ini),
     };
-    if (opc.zerar) { mq.n = 0; mq.i = 0; mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0; }
+    if (opc.zerar) { mq.n = 0; mq.i = 0; mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0; mq.aCena = 0; }
     return r;
   },
   /** Troca o mundo inteiro (testes e prints de conferência montam um mundo à parte). */
@@ -1435,6 +1587,47 @@ const api = {
     menu() { return iniciarReplay(diretor?.menu()); },
     gol(golaco) { return iniciarReplay(diretor?.reverGol(golaco)); },
   },
+  /**
+   * Comemoração do gol (testes e prints): estado da cena ({fase, t, duracao, autor, alvo, variante, corrida, curta, plano,
+   * golTick, estado, colegas, reacao}), os atores (comemoracao.js infoAtores), a caixa do ator na tela (px CSS: a pose
+   * desenhada), pular, ligar/desligar (sem salvar), a finalização do próximo gol e o custo (ms por tick).
+   */
+  comemoracao: {
+    get ativa() { return !!cenaGol; },
+    get estado() {
+      const c = cenaGol;
+      if (!c) return null;
+      return {
+        fase: faseCena(c), t: tempoCena(c), duracao: duracaoCena(c), k: c.k, estado: cenaEstado, rapida: cenaRapida,
+        autor: c.plano.autorId, alvo: { ...c.alvo }, variante: c.variante, corrida: c.corrida, curta: c.curta, time: c.time,
+        golTick: c.plano.golTick, colegas: [...c.plano.colegas], reacao: c.plano.reacaoId, contra: c.plano.contra,
+        plano: cam?.cinema ?? (cam?.planoGol === 'fechado' ? 'rede' : null),
+        kFinal: c.kFinal, kFimFinal: c.kFimFinal, kFimAbraco: c.kFimAbraco, kFim: c.kFim, kPulo: c.kPulo,
+      };
+    },
+    atores() { return cenaGol ? infoAtores(cenaGol) : null; },
+    /** Caixa (px CSS) da pose DESENHADA de um ator (o autor, por padrão): {x0, y0, x1, y1, altura, dentro, atras}. */
+    naTela(id) {
+      if (!cenaGol || !cam) return null;
+      const a = cenaGol.atores.find(q => q.id === (id ?? cenaGol.plano.autorId));
+      if (!a || !a.des) return null;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, atras = false;
+      for (let i = 0; i < NJ; i++) {
+        _proj.set(a.des[i * 3], a.des[i * 3 + 1], a.des[i * 3 + 2]).project(cam.camera);
+        if (_proj.z > 1) atras = true;
+        const x = (_proj.x + 1) / 2 * window.innerWidth, y = (1 - _proj.y) / 2 * window.innerHeight;
+        x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
+      }
+      const W = window.innerWidth, H = window.innerHeight, fw = 0.15 * (x1 - x0), fh = 0.15 * (y1 - y0);
+      const dentro = !atras && x0 >= -fw && x1 <= W + fw && y0 >= -fh && y1 <= H + fh;
+      return { x0, y0, x1, y1, altura: y1 - y0, dentro, atras };
+    },
+    pular() { pularComemoracao(); },
+    ligada(v) { if (v !== undefined) comemoracaoLigada = !!v; return comemoracaoLigada; },
+    forcarFinal(v) { forcarFinal = v ?? null; },
+    get custo() { return { msPorTick: custoCena.ms / Math.max(1, custoCena.n), ticks: custoCena.n }; },
+    zerarCusto() { custoCena.n = 0; custoCena.ms = 0; },
+  },
   estadio: {
     get torcida() {
       if (!torcida) return null;
@@ -1474,7 +1667,7 @@ const api = {
     get bolaDesenhada() { return { ..._bpDes }; },
     get efeitoCamera() { return cam ? cam.efeitoAtivo : false; },
     /** 'fechado' (câmera do gol da partida), 'leve' (treino) ou null; e o plano geral (intervalo/fim). */
-    get planoCamera() { return cam ? (cam.planoGol ?? (cam.geral ? 'geral' : 'jogo')) : null; },
+    get planoCamera() { return cam ? (cam.cinema ? 'comemoracao' : (cam.planoGol ?? (cam.geral ? 'geral' : 'jogo'))) : null; },
     /** O último autor de gol de verdade (autor-gol.js) e o que o "GOL!" mostrou. */
     get autorGol() { return autorGol.gol.ativo ? { ...autorGol.gol } : null; },
     /** O último toque de verdade (pelos eventos; o autor de um gol que saísse agora). */
