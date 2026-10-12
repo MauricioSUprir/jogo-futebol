@@ -809,3 +809,42 @@ agora voltam (4,4 × 1,6 m/s): a IA acha menos contra-ataque em superioridade.
 - **Ataque × defesa**: com a defesa mais organizada, o ataque da IA chuta um pouco menos (ver o relatório do PR);
   as metas de chutes (≥ 10) e de passe certo (≤ 90%) já reprovavam na publicada e seguem pendentes (Etapa 4: bolas
   paradas, escanteios — o jogo tem ~0,3 escanteio por partida, o real ~10).
+
+## 17. Jogador parado com a bola e a PRESSÃO do humano (pedidos do dono de 11/10)
+
+Pedidos: "se eu deixo o meu jogador parado, ninguém pega a bola, isso NÃO PODE ACONTECER" e "o botão de pressão não
+funciona". Diagnósticos no scratch (`diag11/parado`, `diag11/pressao`).
+
+### 17.1 Condutor parado ou lento
+
+Causa: (1) `sim.js boteIA` desistia com a bola a menos de 0,35 m do condutor — a bola parada no pé fica a ~0,345 m (e o
+defensor nunca fica mais perto dela que o condutor): contra quem para, o bote nunca chegava ao sorteio; (2) os gatilhos
+de pressão só disparam na BORDA (recepção, costas, toque pesado...) e o 1º homem contia a 2,75 m para sempre.
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| EA SPORTS, Pitch Notes "gameplay beyond FIFA 19" (contain e o bote) | A contenção segura o condutor, mas o bote sai quando o contexto favorece a defesa | Contra o condutor parado/lento (abaixo de 2 m/s, sem tocar há 0,1 s) o bote vale com a bola parada à frente do pé (`ACOES.boteIA.vParado`, `semToque`, só na partida) |
+| Sportsessionplanner — "Defending 1 vs 1" | Fechar rápido, frear a ~2 jardas e dar o bote quando o atacante dá a chance | Gatilho de ESTADO `IA_DEFESA.lento`: 0,8/0,5/0,3 s (Baixa/Média/Alta) com o condutor lento → o 1º homem aperta a 0,2 m da bola (ao alcance do bote) e o 2º cobre, também além da linha de engajamento (+0,5 s) |
+| Fussball Coach — "The 6 most important pressing triggers"; FootballGPT — gatilhos do 4-3-3 | Toque ruim, reação lenta, de costas, lateral, passe para trás são gatilhos | O condutor que não decide virou gatilho; os de borda continuam |
+| Interna: `defesa.js chanceDividida` (bote em pé: 44–71% de acerto nos titulares da Premier League 2022/23) | — | O bote da IA no condutor parado ganha pela MESMA chance da DIVIDIDA do humano (35–65%); errou, `boteErrado` e descanso. `FALTAS.bote.lento` (0,4): sem ele ~30% das tentativas viravam tiro livre |
+
+Medido (`tools/teste-parado.mjs`, 8 lugares × 3 sementes): bote em ≤ 3 s 0/21 → 21/21, em ≤ 5 s 0/24 → 24/24, cenas
+que terminam 10 s com a bola no pé 24/24 → 0/24, andando devagar 1/23 → 23/23 (mediana 2,05 s; 1 falta em 24).
+
+### 17.2 PRESSÃO perceptível
+
+Causa: o escolhido era o mais perto da BOLA (quase sempre quem a IA já mandava), ia a 1 m dela do lado do gol, sem
+disputar, e nada na tela mostrava quem ia; o teste antigo passava sem o botão (79% × meta 80%).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| Operation Sports — "How to press with multiple players in EA FC 26" | Segurar R1/RB faz o companheiro mais perto do condutor persegui-lo de forma agressiva; usar demais cansa | `defesa.js pressionadorDe` por TEMPO DE CHEGADA (aceleração e freada, o ponto adiantado pela corrida do condutor; histerese 0,3 s); aproximação em disparada até 2,5 m e disputa na bola pela velocidade, do lado do gol (sem carga por trás) |
+| TeamGullit/LiquidFC — "EA FC 26 defend tips" | "Second man press": pressão extra automática no condutor enquanto você segue com o seu jogador; uma seta verde aparece acima dele; não usar com os zagueiros (abre a linha) | Com o 1º homem da IA já apertando, o botão chama OUTRO (um a mais na pressão); a marca (setas âmbar — a verde já é a do controlado) acima de quem foi chamado (`pressionadorVisivel`, o desenho só lê). A escolha pode cair num zagueiro (é quem chega primeiro) — anotado como pendência |
+| EA Forums — "Second Man Press (R1) not working… green indicator missing" | Quem joga acha que o R1 "não funciona" justamente quando falta o indicador | A marca na tela é parte do "funcionar" (teste-controles: aparece no 2º quadro do toque) |
+
+Medido (`tools/teste-pressao-humano.mjs`, pareado: 8 partidas, ~620 posses do adversário, com × sem o botão do mesmo
+hash): base → agora — o mais perto em 1,5 s Δ 0,95 → 1,32 m; o 2º mais perto em 2 s Δ 1,43 → 2,42 m; faltas com o botão
+5 → 14 (×2,8) → 7 → 9; dobra a marcação — → 100%. **Limite físico** (as metas do diagnóstico que ficam informativas):
+do parado o corpo anda ~3,2 m no 1º segundo (perfil de aceleração do jogo, Alonso-Callejo 2022), então "o mais perto
+≥ 2 m mais perto em 1,0 s" não sai (Δ 1,03 m); e só ~1/5 das posses do adversário dura ≥ 1 s, então "bola ao alcance do
+bote em ≥ 15% de TODAS as posses" também não (5%; nas posses longas, 4% → 19%).

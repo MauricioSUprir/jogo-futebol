@@ -218,6 +218,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   como buraco, sem substituto; o técnico muda a vaga vazia, nunca o gol; goleiro expulso → o de linha mais perto vai
   para o gol). Calibrado: 2,6 faltas, 18% de amarelos, 0,08 vermelho por partida. Ícone do cartão sem texto
   (`#cartao-icone`). Teste: `teste-faltas` (padrão). `__golaco.faltaDeTeste()` para prints/testes de navegador.
+- **Regras e controles** (pedidos do dono de 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola", "o botão de
+  pressão não funciona", "não consigo mexer com o goleiro", "só pega com a mão dentro da área", "não pode recuo"; tudo só
+  na partida — o treino segue bit a bit igual): condutor parado/lento (< 2 m/s) → o bote da IA alcança a bola parada no
+  pé (ganha pela chance da DIVIDIDA; `boteErrado`) e o gatilho de ESTADO `IA_DEFESA.lento` põe o 1º homem a 0,2 m da bola
+  e o 2º na cobertura (`FALTAS.bote.lento` 0,4); PRESSÃO = quem CHEGA PRIMEIRO persegue em disparada e disputa a bola
+  pela velocidade, do lado do gol, com o 1º homem da IA já apertando chama outro, e setas âmbar acima dele
+  (`pressionadorVisivel`); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
+  goleiro domina com o pé; a IA dele passa curto ou dá chutão; a IA de linha só recua seguro), PEGAR (O/RB/botão que só
+  aparece com ele com a bola no pé) com recuo ou com a bola que soltou = tiro livre indireto, 8 s com a bola nas mãos =
+  escanteio (anel âmbar sem texto nos últimos 5 s; a reposição automática do humano saiu — a demo e a IA repõem),
+  TROCAR segurado 0,4 s = o goleiro, o analógico o move sem a bola e com ela nas mãos até a borda da área (PASSE rola,
+  LANÇAMENTO/CHUTE é o chutão, ENFIADA solta no chão); tiro de meta com os adversários fora da área na montagem.
+  Testes: `teste-parado`, `teste-pressao-humano` (pareado com × sem o botão, `tools/lib/pressao-pareada.mjs`),
+  `teste-goleiro-regras` (padrão); `teste-controles` (marca, PEGAR, anel). Limite físico anotado: do parado o corpo anda
+  ~3,2 m no 1º segundo (o "≥ 2 m mais perto em 1 s" do diagnóstico fica informativo).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
