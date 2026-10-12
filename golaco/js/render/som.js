@@ -9,7 +9,7 @@
 //   - sintetizados (sem arquivo): o "chuá" da bola na rede e a batida do chute (ruído filtrado com envelope).
 // Os níveis vêm de mixagem.js (conta pura do ânimo de emocao.js e da agenda de festa.js); cada gravação é nivelada
 // para MIXAGEM.alvoLufs pelo ganho de nivelamento (o LUFS medido de cada arquivo fica em SOM.arquivos). No fim da
-// cadeia, um LIMITADOR (limiar −5,5 dBFS, razão 20, ataque 2 ms; com a compensação automática do nó): nada passa de −1 dBFS. O setor visitante sai à esquerda
+// cadeia, um LIMITADOR (limiar −6,5 dBFS, razão 20, ataque 2 ms; com a compensação automática do nó): nada passa de −1 dBFS. O setor visitante sai à esquerda
 // e abafado; a organizada e a batucada à direita (StereoPannerNode, o lado da câmera de TV).
 //
 // Política de reprodução automática (MDN, "Autoplay guide for media and Web Audio APIs"; Chrome, "Autoplay
@@ -64,9 +64,10 @@ export const SOM = {
   apitoPendente: 6000,    // ms — o apito da saída que chegou antes do primeiro gesto ainda toca até isto
   desligaSuspende: 300,   // ms — som desligado: abaixa (τ 0,05 s) e depois suspende o contexto
   // limitador no fim da cadeia: o DynamicsCompressorNode aplica um ganho de compensação automático (makeup, spec do
-  // Web Audio: 0,6 × a redução em 0 dBFS = +3,1 dB aqui) — o limiar −5,5 com razão 20 segura o pico em ~−1,6 dBFS
-  // mesmo com a soma das camadas passando de 0 dBFS no grito do gol (medido no teste-som-jogo, M10)
-  limitador: { limiar: -5.5, razao: 20, joelho: 0, ataque: 0.002, solta: 0.25 },
+  // Web Audio: 0,6 × a redução em 0 dBFS = +3,7 dB aqui) — o limiar −6,5 com razão 20 segura o pico abaixo de −1 dBFS
+  // mesmo com a soma das camadas passando de 0 dBFS no grito do gol (medido no teste-som-jogo, M10). Contraprova de
+  // 12/10: com −5,5 o pico medido foi −1,1 a −1,4 dBFS — a 0,1 dB da meta, o CI reprovaria por sorteio; −6,5 dá ~1 dB de folga
+  limitador: { limiar: -6.5, razao: 20, joelho: 0, ataque: 0.002, solta: 0.25 },
   pan: { organizada: 0.35, visitante: -0.35 },
   visitanteFiltro: 1700,  // Hz — o setor visitante, longe e do outro lado do campo
   cantoSolta: 3,          // s com o canto em silêncio: a fonte para (CPU) e o buffer pode sair da memória
