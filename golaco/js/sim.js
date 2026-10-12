@@ -595,6 +595,9 @@ function bolaLivre(m) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
+    // toque aéreo vencido (a hora passou): não segura a bola livre para quem não vai mais nela
+    const ta = j.cond?.toque;
+    if (ta && ta.tipo === 'aereo' && aereoVencido(m, j, ta)) j.cond.toque = null;
     if (!b.rolando && b.p.y > 0.45) {
       if (bolaAltaNoCorpo(m, j)) return;
       continue;
@@ -634,10 +637,21 @@ function primeira(m, j, pe) {
   return ok;
 }
 
+/**
+ * Toque aéreo marcado que não vale mais: a hora dele passou (a bola foi para outro ou ficou baixa) ou a bola já é de
+ * outro jogador. Antes ele ficava marcado para sempre (só bolaAltaNoCorpo limpava, e só com a bola alta e livre): o
+ * corpo ia para o ponto velho e o analógico não mexia o jogador — o controlado do humano ficou preso 7 s (auditoria dos
+ * botões, 12/10).
+ */
+function aereoVencido(m, j, t) {
+  return m.tick > t.tick + 1 || (m.posse != null && m.posse !== j.id);
+}
+
 /** Com cabeceio/domínio aéreo marcado: vai para o ponto marcado e chega na hora, de frente para a bola. */
 function movimentoAereo(m, j, base) {
   const t = j.cond.toque;
   if (!t || t.tipo !== 'aereo' || m.posse === j.id) return base;
+  if (aereoVencido(m, j, t)) { j.cond.toque = null; return base; }
   const dx = t.bx - j.x, dz = t.bz - j.z, d = MD.hypot(dx, dz);
   const resta = Math.max(1, t.tick - m.tick) * PASSO;
   const b = m.bola;
