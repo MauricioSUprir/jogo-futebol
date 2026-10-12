@@ -79,6 +79,7 @@ export function criarHud(opc) {
   const relogioVisto = { minuto: null, tempo: null, visivel: null, comTempo: null };
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
+  let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
   times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
 
@@ -422,6 +423,40 @@ export function criarHud(opc) {
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
     /** Abre a pausa; foco: seletor do botão que recebe o foco (padrão: o primário visível). */
+    /**
+     * Controle na pausa ou na Ajuda (main.js, ações 'menu-*'): cima/esquerda e baixo/direita movem o foco entre os botões
+     * visíveis (no deslizante em foco, esquerda/direita mudam o valor), ok aperta o botão em foco e voltar fecha a
+     * Ajuda, sai do "Modo de jogo" ou fecha a pausa.
+     */
+    navegarPad(acao) {
+      const raizAberta = !el.ajuda.hidden ? el.ajuda : !el.menu.hidden ? el.menu : null;
+      if (!raizAberta) return;
+      if (acao === 'voltar') {
+        if (raizAberta === el.ajuda) cmd('fechar-ajuda');
+        else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
+        else cmd('continuar');
+        return;
+      }
+      const lista = [...raizAberta.querySelectorAll('button, input[type="range"]')]
+        .filter(b => !b.disabled && !b.hidden && b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden');
+      if (!lista.length) return;
+      const at = document.activeElement, i = lista.indexOf(at);
+      if (acao === 'ok') {
+        if (i >= 0 && at.tagName === 'BUTTON') at.click();
+        else if (i < 0) lista[0].focus({ preventScroll: false });
+        return;
+      }
+      if ((acao === 'esq' || acao === 'dir') && i >= 0 && at.type === 'range') {
+        const st = +at.step || 1;
+        at.value = String(+at.value + (acao === 'dir' ? st : -st));
+        at.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
+      }
+      const passo = acao === 'cima' || acao === 'esq' ? -1 : 1;
+      const k = i < 0 ? 0 : (i + passo + lista.length) % lista.length;
+      lista[k].focus({ preventScroll: false });
+      lista[k].scrollIntoView?.({ block: 'nearest' });
+    },
     abrirMenu(forcar = false, foco = null) {
       if (prints && !forcar) return;
       el.ajuda.hidden = true; el.menu.hidden = false;
@@ -488,8 +523,16 @@ export function criarHud(opc) {
       if (f.ms) timerFaixa = setTimeout(() => { el.faixa.hidden = true; }, f.ms);
     },
     get faixaVisivel() { return !!el.faixa && !el.faixa.hidden; },
-    abrirAjuda(forcar = false) { if (prints && !forcar) return; el.menu.hidden = true; el.ajuda.hidden = false; },
-    fecharAjuda() { el.ajuda.hidden = true; },
+    /** Abre a Ajuda; aberta pela pausa, fechar volta para a pausa (antes o jogo recomeçava sem aviso). */
+    abrirAjuda(forcar = false) {
+      if (prints && !forcar) return;
+      ajudaDaPausa = !el.menu.hidden;
+      el.menu.hidden = true; el.ajuda.hidden = false;
+    },
+    fecharAjuda() {
+      el.ajuda.hidden = true;
+      if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
+    },
     /** Recalcula o topo do HUD (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
     /** Estado das opções no menu. */

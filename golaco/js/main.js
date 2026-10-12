@@ -872,6 +872,7 @@ function lerRelogio() {
   return _rel;
 }
 
+let pausaAntes = false; // pausado() no quadro anterior (a volta da pausa solta a entrada)
 function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
@@ -885,6 +886,12 @@ function quadro(agoraMs, desenhar = true) {
   const dt = Math.min(0.1, dtReal);
   const ent = entrada.ler(cam.yaw, agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
+  // a pausa (menu, Ajuda, editor, celular em pé) acabou de fechar: nada apertado nela vira jogada ao voltar — a tecla ou o
+  // botão do controle ainda segurado só vale depois de solto e apertado de novo (antes Esc → K → Esc chutava ao voltar)
+  const pz = pausado();
+  if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(cam.yaw, agoraMs); }
+  pausaAntes = pz;
+  entrada.definirMenu?.(hud.menuAberto || hud.ajudaAberta);
   if (diretor && diretor.ativo) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
     laco.ultimo = agoraMs;
@@ -894,6 +901,8 @@ function quadro(agoraMs, desenhar = true) {
     }
   } else if (pausado() || pausaTeste) {
     laco.ultimo = agoraMs;     // ao voltar, não tenta recuperar o tempo parado
+    // o aperto feito com o jogo parado não fica guardado para o 1º passo depois da pausa
+    if (pz) entrada.limparPulsos();
   } else {
     // comemoração: anda no relógio do desenho (um aperto novo depois de 0,5 s pula)
     if (cenaGol) quadroComemoracao(dt, ent);
@@ -975,6 +984,8 @@ function redimensionar() {
 
 // ------------------------------------------------------------------ ações e menu
 function tratarAcao(a) {
+  // o controle na pausa e na Ajuda (entrada.js lerMenuPad): navega nos botões dela; fora delas não faz nada
+  if (a.startsWith('menu-')) { if (hud.menuAberto || hud.ajudaAberta) hud.navegarPad(a.slice(5)); return; }
   // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
   if (prejogo && prejogo.ativo) { prejogo.acao(a); return; }
   // com o editor aberto nada chega ao jogo: só a pausa (Start do controle), que aplica e fecha

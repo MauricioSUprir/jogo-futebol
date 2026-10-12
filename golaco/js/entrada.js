@@ -260,9 +260,12 @@ export function criarEntrada(opc = {}) {
   let usandoToque = !!opc.forcarToque || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
   let forcada = null;      // entrada injetada pelos testes
   let pulsos = 0;          // botões apertados desde o último passo (toque curto não se perde)
-  let fase = 'ataque';     // pedida pelo main.js (estado do mundo)
+  let fase = 'ataque';     // pedida pelo main.js (estado do mundo, com a histerese dos botões visíveis)
+  let faseAgora = 'ataque'; // a do mundo AGORA, sem a histerese: fixa o sentido de J/K/O e A/B/Y/RB no aperto
+  let posseRival = false;  // o adversário está com a bola no pé (a perda é certa)
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
+  let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
   const sentido = criarSentidoFixo(); // J/K/O e A/B/Y/RB: o sentido do aperto vale até soltar
   const ajustes = lerAjustes();
 
@@ -338,11 +341,27 @@ export function criarEntrada(opc = {}) {
     if (p && !antes[i] && (!bloqueada || PASSA_BLOQUEADA.has(acao))) emitir(acao);
     antes[i] = p;
   }
+  // Pausa e Ajuda abertas (main.js definirMenu): a cruz ou o analógico movem o foco entre os botões, A confirma e B volta
+  // (antes só o Start fechava; o resto do controle não fazia nada na pausa). As bordas são medidas sempre (um A segurado
+  // quando a pausa abre não vale como confirmação), mas só viram ação com a pausa aberta.
+  const antesMenu = [];
+  let eixoMenu = 0;
+  const ACAO_EIXO = ['', 'menu-cima', 'menu-baixo', 'menu-esq', 'menu-dir'];
+  function lerMenuPad() {
+    const bordaM = (i, acao) => { const p = apertado(i); if (p && !antesMenu[i] && menuAtivo) emitir(acao); antesMenu[i] = p; };
+    bordaM(12, 'menu-cima'); bordaM(13, 'menu-baixo'); bordaM(14, 'menu-esq'); bordaM(15, 'menu-dir');
+    bordaM(PAD.A, 'menu-ok'); bordaM(PAD.B, 'menu-voltar');
+    const ax = gp.axes[0] ?? 0, ay = gp.axes[1] ?? 0;
+    const e = ay < -0.6 ? 1 : ay > 0.6 ? 2 : ax < -0.6 ? 3 : ax > 0.6 ? 4 : 0;
+    if (e && e !== eixoMenu && menuAtivo) emitir(ACAO_EIXO[e]);
+    eixoMenu = e;
+  }
   function lerControle() {
     const lista = navigator.getGamepads ? navigator.getGamepads() : null;
     gp = null;
     if (lista) for (let i = 0; i < lista.length; i++) { const g = lista[i]; if (g && g.connected) { gp = g; break; } }
     if (!gp) return null;
+    lerMenuPad();
     let ax = gp.axes[0] ?? 0, ay = -(gp.axes[1] ?? 0);
     // cruz digital como alternativa ao analógico
     const dc = apertado(12), db = apertado(13), de = apertado(14), dd = apertado(15);
@@ -605,7 +624,7 @@ export function criarEntrada(opc = {}) {
     pulsos = 0;
     sentido.soltarTudo();
     toque.id = null; toque.vx = toque.vy = 0;
-    for (const b of bts) { b.dedo = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
+    for (const b of bts) { b.dedo = null; b.como = null; b.dois?.cancelar(); b.el.classList.remove('ativo'); }
     if (ignorarPad && gp) for (let i = 0; i < gp.buttons.length; i++) if (apertado(i)) ignorar[i] = true;
     trocarFaseSePuder();
     baseRepouso();
@@ -665,8 +684,11 @@ export function criarEntrada(opc = {}) {
       salvarAjustes(ajustes);
       aplicarAjustes();
     },
-    /** Solta tudo (pausa, troca de aba). */
-    soltarTudo() { soltarTudo(false); },
+    /**
+     * Solta tudo (pausa, troca de aba). ignorarPad: o botão do controle segurado agora só vale depois de solto e
+     * apertado de novo (a pausa que fecha: o A apertado nela não vira passe ao voltar).
+     */
+    soltarTudo(ignorarPad = false) { soltarTudo(!!ignorarPad); },
     /**
      * Refaz o layout dos botões e o analógico de descanso (o mesmo do resize). Para quando os botões de toque voltam a
      * aparecer depois de uma camada que os escondia (a comemoração do gol): com eles escondidos a zona do analógico mede
@@ -687,5 +709,7 @@ export function criarEntrada(opc = {}) {
       soltarTudo(true);
     },
     get bloqueada() { return bloqueada; },
+    /** Pausa ou Ajuda aberta (main.js): a cruz/analógico, o A e o B do controle navegam nela (ações 'menu-*'). */
+    definirMenu(v) { menuAtivo = !!v; },
   };
 }
