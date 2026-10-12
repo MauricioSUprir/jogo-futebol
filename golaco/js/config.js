@@ -194,6 +194,15 @@ export const GESTO = {
   saidaAntes: 0.25,           // s — com os dois pés no chão, o pé do toque sai do chão antes disto
   pedidoSaida: 0.5,           // s antes do toque em que a passada começa a tirar o pé do chão
   esperaSaida: 10,            // ticks que o toque espera o pé sair do chão (depois remarca)
+  // (só o desenho) no balanço, a chuteira (cápsula tornozelo–ponta) para na superfície da bola dele (jogador.js
+  // passoPeDesenhado: centro a ≥ raio + raio da chuteira + `superficie` m). Com o toque mais frequente da condução curta
+  // (12/10) o gesto fica ligado quase o tempo todo: sem isto a chuteira entrava na bola em ~61% dos quadros
+  superficie: 0.005,
+  velSuperficie: [2.82, 2.35], // m/s — o pé desenhado com esse ajuste anda no máximo [0] + [1] × v (94% do limite do
+                              // teste-patinacao, 3 + 2,5·v: Clark et al. 2023)
+  superficieV: [1.5, 2.5],    // m/s do corpo: abaixo de [0] sem o ajuste (girando no lugar o pé pousa embaixo da bola),
+                              // inteiro a partir de [1]
+  superficieVBola: 11,        // m/s — só com a bola dele (posse ou domínio) rolando abaixo disto (o pé acompanha)
 };
 
 // Condução (o toque planejado). Ver CONTRATOS.md.
