@@ -41,6 +41,8 @@ const SEM_ACOES = Object.freeze([]);
 export const ACOES_TECLA = {
   KeyR: 'recomecar', KeyM: 'maquina', KeyN: 'marcador', KeyC: 'camera',
   KeyH: 'ajuda', F1: 'ajuda', Escape: 'pausa', KeyP: 'pausa', F3: 'qps',
+  // Enter pula a comemoração do gol e o replay (fora deles não faz nada; nos menus o navegador aperta o botão em foco)
+  Enter: 'pular', NumpadEnter: 'pular',
 };
 // tecla → bit da máscara (segurar = bit ligado), o mesmo nas duas fases
 export const TECLA_BIT = {
