@@ -129,6 +129,12 @@ Antes → depois (mesmas ferramentas; `teste-rede-tela` = navegador, rede montad
 | Câmera do gol: ΔL* | −1,1 a +7,4 | +30,8 a +36,0 | ≥ +12 |
 | Mexe no pico da bolsa: pixels do gol que mudam > 20 (câmera do gol / TV / perfil) | 0,8–3,1% / 0,0% / 0,2–0,5% | 5,5–5,7% / 2,2–2,5% / 4,5–4,7% | ≥ 4% / ≥ 1% |
 | Custo (as duas redes) | 4.052 vértices, 7.348 triângulos, 2 chamadas, textura 128² | 4.160 (+2,7%), 7.724 (+5,1%), 2 chamadas, sem textura | ≤ +10%, mesmas chamadas |
+| Painel de equilíbrio, gols por partida (288 partidas IA × IA, sementes 1001–1144 e 2001–2144, `--base`) | 1,98 | 1,98 (diferença pareada +0,00 ± 0,20) | não cair |
+| Painel, chutes por partida (as mesmas 288) | 9,42 | 9,22 (−0,21 ± 0,53: dentro do ruído) | não cair |
+
+O gol continua sendo a bola passar a linha: o véu só muda o que acontece DEPOIS dela (e as previsões da bola que passam
+da linha), então a partida diverge no 1º chute ao gol e as duas amostras de 144 andam para lados opostos (1ª: gols 2,13
+→ 1,99, chutes 9,58 → 9,15; 2ª: gols 1,82 → 1,97, chutes 9,27 → 9,28) — ruído de amostra, não efeito da rede.
 
 Luz própria (`LUZ_GOL` em `campo.js`): rede 0xaaadab de dia e de noite (de dia 0xa0a3a1 deixava o fio a 86,2, só 1 ponto
 acima da meta; 0xaaadab dá 87,2 sem estourar: 0% em 255), armação 0x2a2c2b / 0x5a5c5b. Sai o escurecimento de 45% da
