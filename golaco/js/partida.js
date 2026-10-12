@@ -940,12 +940,20 @@ function cobrar(m, entrada) {
     c.carga = null;
     c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   } else {
-    const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
-    aplicarEntrada(c, e, m.tick);
+    // os botões valem já na montagem (o cobrador já é o controlado e os botões de ataque já aparecem): o aperto feito
+    // antes da hora forma o pedido e ele ESPERA a bola ficar pronta — antes os botões eram zerados até `pronta` e o
+    // toque se perdia (auditoria dos botões, 12/10: também na saída logo depois do replay do gol)
+    aplicarEntrada(c, entrada, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
-    // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto
-    if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) c.pedido = null;
+    // bola parada não é chutada a gol — menos o pênalti e o tiro livre direto: o CHUTE (o botão maior, que aparece na
+    // cobrança) vira a cobrança padrão do tipo — passe na saída, lançamento no resto (antes era jogado fora)
+    if (c.pedido && c.pedido.tipo === 'chute' && pr.tipo !== 'penalti' && !(pr.tipo === 'tiroLivre' && pr.direto)) {
+      c.pedido.tipo = pr.tipo === 'saida' ? 'passe' : 'lancamento';
+      c.pedido.mod = false;
+    }
+    // ainda montando: o pedido fica guardado (renovado) até `pronta`
+    if (c.pedido && m.tick < pr.pronta) { c.pedido.tick = m.tick; return false; }
     // tiro de meta (Regra 16): o humano só cobra com a área livre de adversários (o pedido espera)
     if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
@@ -969,7 +977,7 @@ function cobrar(m, entrada) {
 function comecarArremesso(m, c, ia) {
   const pr = m.parada, p = c.pedido;
   c.pedido = null; c.carga = null;
-  if (p.tipo === 'chute') return false; // lateral não é chutado
+  if (p.tipo === 'chute') p.tipo = 'lancamento'; // lateral não é chutado: o CHUTE é o arremesso longo
   let para = null, longo = null;
   if (ia) {
     const a = alvoCobranca(m, c, 'lateral');
