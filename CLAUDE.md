@@ -56,7 +56,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Total Match usa ele nas partidas 3D, até o dono decidir aposentá-lo. Não copiar nem ler código do `futebol3d/`
   para o projeto novo.
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
-- Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact, e **prints** a cada etapa.
+- Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
+  print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes
+  em paralelo, sem abrir sessões extras na nuvem (dono, 12/10: "pode ficar fazendo do jeito que tá").
 - Testar antes de avançar; corrigir todo bug encontrado.
 - Fluxo de entrega: branch → PR → merge na `main` (o link só atualiza depois do merge).
 - Times, jogadores, marcas e anúncios dos jogos são **fictícios** (nada licenciado).
