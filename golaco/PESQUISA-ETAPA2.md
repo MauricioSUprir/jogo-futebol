@@ -286,6 +286,26 @@ Este documento reúne as constantes, as regras e as metas da Etapa 2 do GOLAÇO 
 4. **Chute forte** (opcional): preparação mais longa e mira sem cone de assistência. A força alta sempre custa quadros de preparação. Fonte: EA FC 26, eFootball 2022.
 5. **Decisão da IA.** A IA decide entre chutar e passar pelo xG logístico, que também alimenta o placar de xG do HUD. Fonte: StatsBomb-1485.
 
+### 2.7a Cavadinha com dois toques no CHUTE (pedido do dono, 12/10)
+O dono pediu "cavadinha, clicando duas vezes em chutar" — a decisão de produto vale sobre a sugestão do item 2.11.2
+(2º toque = rasteiro, como no FC 26). Pesquisa rápida (12/10) e o que aproveitamos:
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| EA FC 25 (fifplay, keengamer: tabela de controles) | Cavadinha = LB + chute; **toque duplo no chute = finalização cronometrada**: o 2º toque vale durante o gesto do chute, até o contato; atrasado, não muda nada | O 2º toque converte o chute **enquanto ele não tocou na bola**; depois do contato, não muda nada (teste-cavadinha G) |
+| EA FC 26 (Insider Gaming, fut.gg, allthings.how) | A finalização cronometrada saiu; o toque duplo virou o chute rasteiro em todos os tipos **menos a cavadinha** | O toque duplo é um gesto que os jogos atuais usam no CHUTE; aqui ele vira a cavadinha (pedido do dono) |
+| EA FIFA/FC Mobile (guia de gestos da EA; fifamobileguide) | Cavadinha = tocar no gol (gestos) ou deslizar para cima no botão de chute; "use com o goleiro saindo" | Celular: o MESMO botão CHUTE, sem botão nem texto novo; a cavadinha vale em qualquer lugar, mas só compensa com o goleiro adiantado (StatsBomb abaixo) |
+| eFootball (pesmastery) | Cavadinha = L1/LB + chute | Teclado e controle: o mesmo botão de chute duas vezes (K, B), sem combinação |
+| FIFA 19 (EA, Pitch Notes; goal.com) | Na finalização cronometrada a força e a mira vêm do 1º aperto; o 2º só muda o tipo | A mira é a do analógico (guardada desde o 1º toque); a força da cavadinha vem do 2º toque (segurado = mais alta), porque o 1º de um toque duplo é sempre curto |
+| Patente de toque duplo (USPTO 7190356) e estudos de toque (arXiv 2408.02525; SeoulTech) | Intervalo entre os toques: ~80–90 ms com pressa, ~150–180 ms no ritmo normal, 250–480 ms devagar; os sistemas esperam 350–500 ms para decidir toque simples × duplo (é a latência do toque simples) | Janela de 0,15 s depois de soltar o 1º (`ACOES.cavadinha.janela`) só para o 1º toque RÁPIDO (< 0,18 s, `toqueRapido`): pega o toque duplo com pressa e no ritmo normal sem esperar 350 ms; o chute carregado não espera nada |
+| StatsBomb-1485 (item 2.7.3) | 20% de gols e 41,8% no alvo; por distância chutador–goleiro 0–6 m 31,9%, 6–10 m 29,0% | A precisão continua a da cavadinha de antes (`erroForca`, `erroDir`); meta do teste com o goleiro a ~8 m: 20–50% de gols |
+
+**Medido antes de decidir** (teste próprio, 12/10): o chute sai 3 ticks (50 ms) depois de soltar o botão em 100% dos
+chutes parado e na mediana correndo (máximo 12 ticks). Um 2º toque normal chega 80–180 ms depois do 1º: converter só
+"antes do contato" pegaria quase nenhum toque duplo. Por isso o 1º toque rápido espera a janela: parado, o contato sai
+117 ms mais tarde; correndo, no 1º apoio depois da janela (mediana 117 ms, até 267 ms). O chute carregado (a barra de
+força) sai no mesmo tick de antes. Detalhes no contrato (CONTRATOS.md, "Cavadinha por dois toques no CHUTE").
+
 ### 2.8 Jogada de primeira
 O comando apertado com a bola chegando fica guardado e sai no 1º contato, sem domínio. Também vale se chegar um pouco atrasado. O erro cresce com o ângulo entre a chegada e a saída (faixas 0–45°, 45–90°, 90–135° e 135–180°), e a enfiada alta de primeira tem penalidade extra. Fonte: EA FC 25 TU#8, EA FC 26.
 
@@ -321,7 +341,7 @@ O comando apertado com a bola chegando fica guardado e sai no 1º contato, sem d
    - **Defesa:** DIVIDIDA/PRESSÃO, CARRINHO, TROCAR e GOLEIRO, este só sem a bola.
 
    Nenhum botão de ataque aparece na defesa, e o conjunto não tem botão de condução. Fonte: EA FIFA Mobile (botões).
-2. **Variantes por deslize curto** no botão: PASSE para cima = por cima, PASSE para baixo = tabela, CHUTE para baixo = colocado, CHUTE para cima = cavadinha. O disparo é no pointerdown, com touch-action:none. Não usar duplo toque, exceto o 2º toque do CHUTE para o rasteiro, porque o chute já espera a barra encher. Fonte: EA FIFA Mobile (botões), eFootball 2022, PredicTaps 2024, EA FC 26.
+2. **Variantes por deslize curto** no botão: PASSE para cima = por cima, PASSE para baixo = tabela, CHUTE para baixo = colocado, CHUTE para cima = cavadinha. O disparo é no pointerdown, com touch-action:none. Não usar duplo toque, exceto o 2º toque do CHUTE para o rasteiro, porque o chute já espera a barra encher. Fonte: EA FIFA Mobile (botões), eFootball 2022, PredicTaps 2024, EA FC 26. (Decisão do dono, 12/10: o 2º toque do CHUTE é a **cavadinha** — seção 2.7a.)
 3. **Toque no campo** (modo alternativo): perto de um companheiro = passe no pé; à frente dele = enfiada. Fonte: EA FIFA Mobile (gestos).
 4. **Tamanhos e posições** como na seção 1.12, conferidos por getBoundingClientRect no celular 844×390 dpr2, sem sobreposição. Fonte: Apple HIG, Material 3, Parhi 2006, Hoober 2017.
 5. **Teclado.** Uma tecla por família (passe, lançar/cruzar, enfiada, chute) mais 2 modificadores:
@@ -397,6 +417,14 @@ O comando apertado com a bola chegando fica guardado e sai no 1º contato, sem d
 - **IFAB Regra 14**: posição do goleiro no pênalti e repetição por infração. https://theifab.com/laws/latest/the-penalty-kick
 - **IFAB Lei 11**: instante do julgamento do impedimento, partes do corpo que contam e exceções. https://www.theifab.com/laws/latest/offside/
 - **EA Help (chute)**: quando usar a cavadinha. https://help.ea.com/en/articles/ea-sports-fc/how-to-shoot/
+- **Cavadinha com dois toques (12/10)**: controles do EA FC 25 (https://www.fifplay.com/fc-25-controls/,
+  https://www.keengamer.com/articles/guides/ea-sports-fc-25-control-guides/), a troca do toque duplo no FC 26
+  (https://insider-gaming.com/is-timed-finishing-in-ea-fc-26/, https://fut.gg/news/top-10-gameplay-changes-coming-to-ea-sports-fc-26,
+  https://allthings.how/how-to-do-ea-fc-26-low-driven-shots-controls-variants-scoring-tips/), a finalização cronometrada do
+  FIFA 19 (https://www.ea.com/news/fifa-19-gameplay-timed-finishing), gestos do FIFA/FC Mobile
+  (https://www.ea.com/ea-studios/ea-sports/news/gameplay-controls-guide-gesture-controls, https://www.fifamobileguide.com/gameplay-controls),
+  eFootball (https://pesmastery.com/?p=8302) e o tempo do toque duplo (https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/7190356,
+  https://arxiv.org/abs/2408.02525). O que aproveitamos: seção 2.7a.
 
 **Controles nos jogos atuais**
 - **EA FIFA Mobile (botões)**: conjunto de botões por posse, variantes por deslize e saída do goleiro. https://www.ea.com/able/news/gameplay-guide

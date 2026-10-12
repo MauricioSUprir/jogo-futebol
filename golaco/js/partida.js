@@ -938,6 +938,7 @@ function cobrar(m, entrada) {
     c.pedido = { tipo: a.tipo, forca: a.forca, mod: a.tipo === 'chute' && !!pr.direto, tick: m.tick, dir: { x: a.dx, z: a.dz } };
   } else {
     const e = m.tick >= pr.pronta ? entrada : { x: entrada?.x ?? 0, z: entrada?.z ?? 0, botoes: 0 };
+    c.porHumano = !!entrada && !entrada.ia; // a pessoa (não a demo): dois toques no CHUTE = cavadinha (acoes.js)
     aplicarEntrada(c, e, m.tick);
     c.pedidoPedalada = false; // parado não pedala (o pedido ficaria para depois da cobrança)
     atualizarBotoesAcao(m, c);
@@ -947,6 +948,9 @@ function cobrar(m, entrada) {
     if (c.pedido && pr.tipo === 'tiroDeMeta' && !zonaLivre(m)) return false;
   }
   if (!c.pedido) return false;
+  // dois toques no CHUTE (pênalti, tiro livre direto: cavadinha, acoes.js): o toque rápido espera a janela do 2º toque
+  // e o 2º toque, ser solto
+  if (c.pedido.segura || (c.pedido.espera != null && m.tick < c.pedido.espera)) return false;
   if (pr.tipo === 'lateral') return comecarArremesso(m, c, iaAssume);
   if (pr.tipo === 'penalti') c.pedido.penalti = true; // a pressão da cobrança (acoes.js: erro do chute)
   // tiro livre com barreira: o chute (da IA e do humano) busca passar por cima dela (acoes.js chute)

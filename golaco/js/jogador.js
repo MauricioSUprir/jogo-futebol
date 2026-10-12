@@ -69,6 +69,7 @@ export function criarJogador(id, x, z, rumo, attr = {}, time = 0) {
     pedidoPedalada: undefined, ladoOlha: undefined, ritmo: undefined, ultLanc: undefined,
     ultMod: undefined, descansoBote: undefined, defH: undefined, conter: undefined, descanso: undefined,
     contorno: undefined, recep: undefined,
+    porHumano: undefined, // os botões deste passo vêm da pessoa (sim.js; cavadinha por dois toques, acoes.js)
   };
   return j;
 }

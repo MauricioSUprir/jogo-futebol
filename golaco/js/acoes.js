@@ -49,6 +49,25 @@ export function ataca(m, time) {
 // ------------------------------------------------------------------ botões → carga e pedido
 
 /**
+ * Os botões de j são os do humano? (o controlado do time, com a entrada vinda da pessoa — j.porHumano, marcado pelo
+ * sim.js/partida.js; a demo e a IA jogando pelo humano mandam a entrada com `ia: true` e contam como IA)
+ */
+function botoesDoHumano(m, j) {
+  return !!j.porHumano && !!m.humanos && m.humanos.includes(j.time) && !!m.controlado && m.controlado[j.time] === j.id;
+}
+
+/**
+ * Cavadinha por dois toques no CHUTE (pedido do dono, 12/10): o 2º aperto vale enquanto o chute do 1º ainda não
+ * tocou na bola (o pedido está de pé) e chega até ACOES.toqueDuplo s depois de soltar o 1º. Só o humano (a IA não
+ * aperta duas vezes; a cavadinha dela continua a automática, com o goleiro adiantado).
+ */
+function cavadinhaPorDoisToques(m, j) {
+  const p = j.pedido;
+  return !!p && p.tipo === 'chute' && !!p.humano && !p.cavadinha && m.naMao !== j.id
+    && (m.tick - p.tick) * DT <= ACOES.toqueDuplo;
+}
+
+/**
  * Atualiza carga/pedido pelas bordas dos botões de ação (chamar depois de aplicarEntrada).
  * Vale para o humano e para a IA (que aperta botões virtuais).
  */
@@ -58,8 +77,18 @@ export function atualizarBotoesAcao(m, j) {
     const apertou = (agora & b) && !(antes & b);
     const soltou = !(agora & b) && (antes & b);
     if (apertou) {
-      j.carga = { tipo, t0: m.tick, mod: (agora & BOTAO.MOD) !== 0 };
-      j.mira = null;
+      if (tipo === 'chute' && cavadinhaPorDoisToques(m, j)) {
+        // 2º toque: o chute vira cavadinha. A mira do 1º fica; o pedido espera este botão ser solto (a força da
+        // cavadinha é a do 2º toque) — o toque da ação já marcado é desfeito e volta a ser marcado no soltar
+        j.pedido.cavadinha = true;
+        j.pedido.segura = true;
+        if (j.cond && j.cond.toque && j.cond.toque.tipo === 'acao') j.cond.toque = null;
+        j.carga = { tipo, t0: m.tick, mod: false, cavadinha: true, humano: true };
+      } else {
+        j.carga = { tipo, t0: m.tick, mod: (agora & BOTAO.MOD) !== 0 };
+        if (botoesDoHumano(m, j)) j.carga.humano = true;
+        j.mira = null;
+      }
     } else if (soltou && j.carga && j.carga.tipo === tipo) {
       soltarCarga(m, j);
     }
@@ -67,7 +96,8 @@ export function atualizarBotoesAcao(m, j) {
   // guarda a mira enquanto carrega ou espera o toque
   if ((j.carga || j.pedido) && j.imag > 0.2) j.mira = { x: j.ix, z: j.iz, mag: j.imag };
   if (j.carga && (m.tick - j.carga.t0) * DT >= ACOES.cargaMax) soltarCarga(m, j);
-  if (j.pedido) {
+  // (a cavadinha com o 2º toque ainda segurado não expira: a idade conta de novo quando ele é solto)
+  if (j.pedido && !j.pedido.segura) {
     const idade = (m.tick - j.pedido.tick) * DT;
     const esperandoBola = j.cond && j.cond.toque && (j.cond.toque.tipo === 'dominio' || j.cond.toque.tipo === 'aereo');
     if (idade > (esperandoBola || bolaVindo(m, j) ? ACOES.pedidoPrimeira : ACOES.pedidoValidade) && m.posse !== j.id) j.pedido = null;
@@ -79,11 +109,27 @@ function soltarCarga(m, j) {
   const c = j.carga;
   const forca = clamp((m.tick - c.t0) * DT / ACOES.cargaCheia, 0.08, 1);
   const mod = c.mod || (j.botoes & BOTAO.MOD) !== 0;
+  if (c.cavadinha) {
+    // 2º toque da cavadinha solto: a força dele vale (mais tempo = mais alta) e o pedido volta a valer daqui. Se o
+    // chute já saiu enquanto ele segurava (de primeira, com a bola chegando), não sobra pedido nenhum
+    const p = j.pedido;
+    if (p && p.cavadinha && p.segura) { p.forca = forca; p.segura = false; p.espera = null; p.tick = m.tick; }
+    j.carga = null;
+    return;
+  }
   // dois toques no lançamento = cruzamento rasteiro
   if (c.tipo === 'lancamento' && j.ultLanc != null && (m.tick - j.ultLanc) * DT < ACOES.toqueDuplo && j.pedido && j.pedido.tipo === 'lancamento') {
     j.pedido.rasteiro = true;
   } else {
     j.pedido = { tipo: c.tipo, forca, mod, tick: m.tick };
+    if (c.humano) {
+      j.pedido.humano = true;
+      // chute de toque rápido do humano: pode ser o 1º de dois toques — o contato não sai antes de
+      // ACOES.cavadinha.janela s (o 2º toque chega a tempo). O chute carregado sai na hora, como antes
+      if (c.tipo === 'chute' && (m.tick - c.t0) * DT < ACOES.cavadinha.toqueRapido) {
+        j.pedido.espera = m.tick + Math.round(ACOES.cavadinha.janela / DT);
+      }
+    }
   }
   if (c.tipo === 'lancamento') j.ultLanc = m.tick;
   j.carga = null;
@@ -108,6 +154,13 @@ function bolaVindo(m, j) {
  */
 export function processarPedido(m, j) {
   if (!j.pedido || m.posse !== j.id) return;
+  if (j.pedido.segura) return; // cavadinha: o 2º toque ainda segurado (sai quando ele é solto)
+  // toque rápido do humano no CHUTE: o contato fica para depois da janela do 2º toque — até lá a condução segue, e o
+  // toque da ação é marcado 2 ticks antes do fim dela (a previsão curta, a mesma do chute de agora: marcado longe, o
+  // corpo previsto com o analógico do aperto errava o pé de apoio e a bola escapava). O cobrador da bola parada
+  // (papel 'parado') chuta pela cobrança (partida.js cobrar), nunca pelo toque da condução
+  const esp = j.pedido.espera;
+  if (esp != null && (m.tick < esp - 2 || j.papel === 'parado')) return;
   const c = j.cond;
   if (c.toque && c.toque.tipo === 'acao') return;
   let op = procurarOportunidade(m, j, 2, 24, true, null, true);
@@ -294,6 +347,11 @@ export function executarAcao(m, j, pe, primeira = false) {
   const p = j.pedido;
   j.pedido = null;
   if (!p) return false;
+  if (p.segura) {
+    // cavadinha de primeira com o 2º toque ainda segurado: a força é a carregada até aqui
+    if (j.carga && j.carga.cavadinha) { p.forca = clamp((m.tick - j.carga.t0) * DT / ACOES.cargaCheia, 0.08, 1); j.carga = null; }
+    p.segura = false;
+  }
   j.miraAuto = p.dir ?? null; // reposição automática do goleiro: direção fixa, sem o analógico
   const b = m.bola;
   if (b.p.y > 0.6 && p.tipo !== 'chute') return executarCabeceio(m, j, p);
@@ -586,6 +644,16 @@ function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
   return (lo + hi) / 2;
 }
 
+/**
+ * Ponto da mira na linha do gol (z) pelo analógico mr: o ângulo entre o analógico e a reta bola–gol escolhe o canto
+ * ("lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z), dentro da boca do gol.
+ */
+function zPeloAnalogico(b, gx, lado, meio, mr) {
+  const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
+  const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
+  return clamp(lat * lado * meio * 1.4, -meio + 0.5, meio - 0.5);
+}
+
 /** Goleiro adversário (o mais perto do gol atacado). */
 export function goleiroAdversario(m, time) {
   for (const o of m.jogadores) if (o.time !== time && o.posicao === 'GOL') return o;
@@ -600,20 +668,19 @@ function chute(m, j, pe, p, erroMult) {
   const gk = goleiroAdversario(m, j.time);
   const meio = CAMPO.gol.largura / 2;
   const dGol = MD.hypot(gx - b.p.x, b.p.z);
-  // cavadinha: goleiro adiantado entre a bola e o gol
-  if (gk && dGol < ACOES.cavadinha.distMax) {
+  // cavadinha pedida pelo humano (dois toques no CHUTE): de qualquer lugar
+  if (p.cavadinha) return cavadinha(m, j, pe, p, erroMult, gx);
+  // cavadinha da IA: goleiro adiantado entre a bola e o gol (o chute de um toque do humano nunca vira cavadinha)
+  if (gk && dGol < ACOES.cavadinha.distMax && !p.humano) {
     const fora = (gx - gk.x) * lado;
     const entre = (gk.x - b.p.x) * lado > 1 && MD.hypot(gk.x - b.p.x, gk.z - b.p.z) < 14;
     if (fora > ACOES.cavadinha.goleiroFora && entre) return cavadinha(m, j, pe, p, erroMult, gx);
   }
   // mira: o analógico escolhe o canto; sem analógico, o lado mais longe do goleiro
-  const dirGol = MD.atan2(-b.p.z, gx - b.p.x);
   let zMira;
   const mr = mira(j);
   if (mr && mr.mag > 0.3) {
-    const lat = MD.sin(difAng(dirGol, MD.atan2(mr.z, mr.x)));
-    zMira = clamp(lat * lado * meio * 1.4, -meio + 0.5, meio - 0.5);
-    // "lat" positivo = para a direita de quem chuta; no gol de +x a direita é +z
+    zMira = zPeloAnalogico(b, gx, lado, meio, mr);
   } else {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
@@ -681,16 +748,27 @@ function cavadinha(m, j, pe, p, erroMult, gx) {
   const lado = ataca(m, j.time);
   // cai logo depois da linha: passa nela abaixo do travessão, descendo
   let ux = gx + lado * cfg.alemDaLinha - b.p.x, uz = -b.p.z * 0.6;
+  let el = cfg.elev;
+  if (p.cavadinha) {
+    // pedida (dois toques no CHUTE): o canto pelo analógico, como o chute (sem analógico, por cima do goleiro, um
+    // pouco para o meio — a mesma da IA); a força do 2º toque deixa a bola mais alta (o ponto de queda continua logo
+    // depois da linha: de longe é um balão, de perto uma cavadinha curta)
+    const meio = CAMPO.gol.largura / 2;
+    const mr = mira(j);
+    const zM = mr && mr.mag > 0.3 ? zPeloAnalogico(b, gx, lado, meio, mr) : clamp(b.p.z * 0.4, -meio + 0.6, meio - 0.6);
+    uz = zM - b.p.z;
+    el = lerp(cfg.elevPedida[0], cfg.elevPedida[1], clamp((p.forca - 0.08) / 0.92, 0, 1));
+  }
   const D = MD.hypot(ux, uz) || 1;
   ux /= D; uz /= D;
   const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
   const w = { x: uz * 12, y: 0, z: -ux * 12 };
-  const s = velParaPousar(pp, ux, uz, D, cfg.elev, w);
+  const s = velParaPousar(pp, ux, uz, D, el, w);
   // a cavadinha é difícil de dosar (StatsBomb: 41,8% no alvo): erro grande na força e na direção
   const fin = j.par.attr.finalizacao / 100;
   const u = girar(ux, uz, normal(m.rng) * lerp(cfg.erroDir[0], cfg.erroDir[1], fin) * erroMult);
   const s2 = s * (1 + normal(m.rng) * lerp(cfg.erroForca[0], cfg.erroForca[1], fin) * erroMult);
-  const ce = MD.cos(cfg.elev), se = MD.sin(cfg.elev);
+  const ce = MD.cos(el), se = MD.sin(el);
   finalizarChute(m, j, pe, 'cavadinha', { x: u.x * s2 * ce, y: s2 * se, z: u.z * s2 * ce }, w, { x: b.p.x + ux * D, z: b.p.z + uz * D }, null, { voo: { alto: true } });
   return true;
 }

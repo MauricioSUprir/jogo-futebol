@@ -332,6 +332,9 @@ export function passo(m, entradas) {
     if (j.papel === 'marcador' || j.papel === 'parado') continue;
     const e = m.humanos.includes(j.time) ? entradas?.[j.time] : null;
     j.botoesTime = e ? (e.botoes | 0) : 0;
+    // os botões deste passo são da pessoa (não da demo/IA jogando pelo humano, `e.ia`): a cavadinha por dois toques
+    // e a espera do toque rápido no CHUTE são só do humano (acoes.js)
+    j.porHumano = !!e && !e.ia && ehControlado(m, j);
     if (ehControlado(m, j)) {
       // passe chegando com o analógico solto: a assistência de antes (a IA leva ao encontro / ao ponto da
       // enfiada) — vale quando a recepção assistida não acha encontro (bola alta longe de descer)

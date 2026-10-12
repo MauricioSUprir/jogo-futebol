@@ -6,6 +6,8 @@
 //    Q trocar, G goleiro (segurar), toque curto que não se perde, barra de força no HUD.
 //  - Controle: A passe, B chute, X lançamento, Y enfiada (ataque) / goleiro (defesa), LB trocar,
 //    RT correr.
+//  - Cavadinha (pedido do dono, 12/10): o MESMO botão de chute duas vezes (K, B do controle, CHUTE do celular) = cavadinha;
+//    uma vez = chute, nunca cavadinha.
 //  - Celular: CONDUÇÃO não existe mais; ataque = CHUTE (o maior), PASSE, ENFIADA, LANÇAMENTO e
 //    CORRER; defesa = TROCAR, GOLEIRO, PRESSÃO, DIVIDIDA e CORRER (tela limpa, 11/10: 5 botões — o CONTER
 //    virou a DIVIDIDA SEGURADA, conferida aqui com toque de verdade: tocar = bote, segurar = CONTER);
@@ -250,6 +252,17 @@ async function conferirTodosLayouts(pagina) {
     await pagina.keyboard.up('KeyK');
     const k2 = await rodar(pagina, 60);
     meta('K segurado/solto: bit CHUTE, barra "CHUTE" e o chute sai', `máscara ${k1.mask}, carga ${k1.cargaTipo}, barra "${k1.barraTipo}", chutes ${k2.chutes}, voos ${k2.voos.join(',') || '-'}`, (k1.mask & BIT.CHUTE) !== 0 && sem(k1.cargaTipo === 'chute' && k1.barraTipo === 'CHUTE' && k2.chutes >= 1));
+    // K duas vezes (dois toques no CHUTE, pedido do dono 12/10): cavadinha; K uma vez (toque rápido): chute, nunca cavadinha
+    await novo();
+    await quadros(pagina, 10);
+    await pagina.keyboard.down('KeyK'); await rodar(pagina, 4); await pagina.keyboard.up('KeyK'); await rodar(pagina, 4);
+    await pagina.keyboard.down('KeyK'); await rodar(pagina, 4); await pagina.keyboard.up('KeyK');
+    const kk = await rodar(pagina, 90);
+    await novo();
+    await quadros(pagina, 10);
+    await pagina.keyboard.press('KeyK');
+    const ku = await rodar(pagina, 90);
+    meta('K duas vezes: cavadinha (um chute só); K uma vez: chute, nunca cavadinha', `duas: chutes ${kk.chutes}, voos ${kk.voos.join(',') || '-'} · uma: chutes ${ku.chutes}, voos ${ku.voos.join(',') || '-'}`, sem(kk.chutes === 1 && kk.voos.includes('cavadinha') && ku.chutes === 1 && !ku.voos.includes('cavadinha')));
     // L: lançamento (bola alta → anel de queda no gramado)
     await novo();
     await pagina.evaluate(() => window.__golaco.forcarEntrada({ x: 0.7, z: -0.7, botoes: 0 }));
@@ -330,6 +343,19 @@ async function conferirTodosLayouts(pagina) {
       const testar = (i, n = 6) => { botoes = [i]; const m = av(n); botoes = []; av(2); return m; };
       res.faseAtaque = g.fase;
       res.Y_ataque = testar(3); res.B = testar(1); res.X = testar(2); res.LB = testar(4);
+      // B duas vezes (dois toques no CHUTE): cavadinha; B uma vez: chute
+      const voosDe = seq => {
+        g.reiniciar({ semente: 4, modo: 'ataque' });
+        const v = new Set();
+        const c0 = g.mundo.stats?.chutes ?? 0;
+        const passa = n => { for (let i = 0; i < n; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.mundo.voo) v.add(g.mundo.voo.tipo); } };
+        passa(10);
+        for (const [b, n] of seq) { botoes = b ? [1] : []; passa(n); }
+        botoes = []; passa(90);
+        return { voos: [...v], chutes: (g.mundo.stats?.chutes ?? 0) - c0 };
+      };
+      res.BB = voosDe([[1, 4], [0, 4], [1, 4]]);
+      res.B1 = voosDe([[1, 4]]);
       g.reiniciar({ semente: 4, modo: 'ataque' });
       const p0 = g.mundo.stats?.passes ?? 0;
       botoes = [0]; av(12); botoes = []; av(50);
@@ -346,6 +372,7 @@ async function conferirTodosLayouts(pagina) {
     meta('Controle: analógico + RT = arrancada', `x ${gp.x0.toFixed(2)} → ${gp.x1.toFixed(2)}, ${gp.kmh.toFixed(1)} km/h, ${gp.modo}`, gp.x1 > gp.x0 + 3 && gp.kmh > 24 && gp.modo === 'Arrancada');
     meta('Controle: B chute, X lançamento, LB trocar', `B ${gp.B}, X ${gp.X}, LB ${gp.LB}`, (gp.B & BIT.CHUTE) && (gp.X & BIT.LANCAMENTO) && (gp.LB & BIT.TROCAR) ? true : false);
     meta('Controle: A = passe', `passes ${gp.passesA}`, sem(gp.passesA >= 1));
+    meta('Controle: B duas vezes = cavadinha; B uma vez = chute', `duas: chutes ${gp.BB.chutes}, voos ${gp.BB.voos.join(',') || '-'} · uma: chutes ${gp.B1.chutes}, voos ${gp.B1.voos.join(',') || '-'}`, sem(gp.BB.chutes === 1 && gp.BB.voos.includes('cavadinha') && gp.B1.chutes === 1 && !gp.B1.voos.includes('cavadinha')));
     meta('Controle: Y = enfiada no ataque e goleiro na defesa', `fase ${gp.faseAtaque}: ${gp.Y_ataque}; fase ${gp.faseDefesa}: ${gp.Y_defesa}`, gp.faseAtaque === 'ataque' && (gp.Y_ataque & BIT.ENFIADA) !== 0 && !(gp.Y_ataque & BIT.GOLEIRO) && gp.faseDefesa === 'defesa' && (gp.Y_defesa & BIT.GOLEIRO) !== 0 && !(gp.Y_defesa & BIT.ENFIADA));
 
     // partida (Etapa 3): menu por modo, relógio, R/M/N desligados e as teclas da defesa
@@ -456,6 +483,20 @@ async function conferirTodosLayouts(pagina) {
     await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 11 }]);
     const c2 = await rodar(pagina, 60);
     meta('CHUTE segurado: aceso, barra de força "CHUTE"; solto: chuta', `aceso ${aceso}, máscara ${c1.mask}, barra "${c1.barraTipo}", chutes ${c2.chutes}`, aceso && (c1.mask & BIT.CHUTE) !== 0 && sem(c1.barraTipo === 'CHUTE' && c2.chutes >= 1));
+    // CHUTE tocado duas vezes (o mesmo botão; pedido do dono 12/10): cavadinha; um toque rápido: chute, nunca cavadinha
+    await novo();
+    await quadros(pagina, 10);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 14 }]); await rodar(pagina, 4);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 14 }]); await rodar(pagina, 4);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 15 }]); await rodar(pagina, 4);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 15 }]);
+    const cc = await rodar(pagina, 90);
+    await novo();
+    await quadros(pagina, 10);
+    await toque('touchStart', [{ x: bc.x, y: bc.y, id: 16 }]);
+    await toque('touchEnd', [{ x: bc.x, y: bc.y, id: 16 }]);
+    const cu = await rodar(pagina, 90);
+    meta('CHUTE tocado duas vezes: cavadinha (um chute só); um toque: chute, nunca cavadinha', `duas: chutes ${cc.chutes}, voos ${cc.voos.join(',') || '-'} · um: chutes ${cu.chutes}, voos ${cu.voos.join(',') || '-'}`, sem(cc.chutes === 1 && cc.voos.includes('cavadinha') && cu.chutes === 1 && !cu.voos.includes('cavadinha')));
     // ENFIADA e LANÇAMENTO chegam à máscara
     await novo();
     const be = await centro('btn-enfiada'), bl = await centro('btn-lancamento');

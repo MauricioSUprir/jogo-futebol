@@ -1,7 +1,7 @@
 // Chute (seção 5): velocidade (máximo de 30–34 m/s, nunca > 38), colocado a ~0,85 do forte com
 // curva de ~1,5 m em 20 m, dispersão a 20 m (erro médio ~0,68 m no colocado de um bom finalizador),
 // perna ruim (+40% de erro), força máxima (+15%), % no alvo caindo com a distância e cavadinha
-// só com o goleiro adiantado. Referências: pesquisa da Etapa 2 (PESQUISA-ETAPA2.md).
+// da IA só com o goleiro adiantado (a do humano, por dois toques no CHUTE: teste-cavadinha.mjs). Referências: pesquisa da Etapa 2 (PESQUISA-ETAPA2.md).
 //   node tools/teste-chutes.mjs
 import { criarMundo, passo, jogadorPorId } from '../js/sim.js';
 import { BOTAO, CAMPO } from '../js/config.js';
@@ -27,9 +27,12 @@ function chute(semente, x, z, opc = {}) {
   const ax = c ? Math.cos(rumo + c) : 0, az = c ? Math.sin(rumo + c) : 0;
   const n = Math.max(2, Math.round((opc.forca ?? 0.6) * 48) + (opc.varia ? semente % 5 : 0));
   const bot = BOTAO.CHUTE | (opc.mod ? BOTAO.MOD : 0);
-  for (let i = 0; i < n; i++) passo(m, { 0: { x: ax, z: az, botoes: bot } });
+  // ia: a entrada vem da IA jogando pelo humano (a demo): a cavadinha automática com o goleiro adiantado é da IA; a
+  // do humano sai com dois toques no CHUTE (teste-cavadinha.mjs)
+  const ia = !!opc.ia;
+  for (let i = 0; i < n; i++) passo(m, { 0: { x: ax, z: az, botoes: bot, ia } });
   let l = null;
-  for (let i = 0; i < 60 && !l; i++) { passo(m, { 0: { x: 0, z: 0, botoes: opc.mod ? BOTAO.MOD : 0 } }); l = m.log.find(e => e.acao); }
+  for (let i = 0; i < 60 && !l; i++) { passo(m, { 0: { x: 0, z: 0, botoes: opc.mod ? BOTAO.MOD : 0, ia } }); l = m.log.find(e => e.acao); }
   if (!l) return null;
   const mira = m.voo?.mira ?? null;
   const traj = [{ x: m.bola.p.x, z: m.bola.p.z }];
@@ -127,22 +130,23 @@ function erros(semBase, opc, N = 60) {
   reg('no alvo — finalizador médio (70), 11/18/25/32 m', pct.map(p => `${fmt(p * 100, 0)}%`).join(' / '), 'cai com a distância; 32 m < 11 m − 20 pts', caindo && pct[3] < pct[0] - 0.2);
 }
 
-// ------------------------------------------------ cavadinha: só com o goleiro adiantado
+// ------------------------------------------------ cavadinha da IA: só com o goleiro adiantado
+// (a do humano é pedida com dois toques no CHUTE e nunca sai de um toque só: teste-cavadinha.mjs)
 {
   let gols = 0, n = 0, naLinha = 0, noAlvo = 0;
   const desf = {};
   for (let s = 1; s <= 80; s++) {
     // goleiro a ~8 m da linha, chutador a ~6 m dele
     const gz = ((s % 5) - 2) * 0.8;
-    const r = chute(2000 + s, GX - 14, gz, { attr: { finalizacao: 80 }, forca: 0.35, goleiro: { x: GX - 8, z: gz } });
+    const r = chute(2000 + s, GX - 14, gz, { attr: { finalizacao: 80 }, forca: 0.35, goleiro: { x: GX - 8, z: gz }, ia: true });
     if (!r) continue;
     if (r.l.tipo === 'cavadinha') { n++; if (r.res === 'gol') gols++; desf[r.res] = (desf[r.res] ?? 0) + 1; if (r.noAlvo) noAlvo++; }
-    const q = chute(3000 + s, GX - 14, gz, { attr: { finalizacao: 80 }, forca: 0.35, goleiro: { x: GX - 1.2, z: 0 } });
+    const q = chute(3000 + s, GX - 14, gz, { attr: { finalizacao: 80 }, forca: 0.35, goleiro: { x: GX - 1.2, z: 0 }, ia: true });
     if (q && q.l.tipo === 'cavadinha') naLinha++;
   }
   const pg = gols / Math.max(1, n);
-  reg('cavadinha — goleiro a ~8 m, chutador a ~6 m dele', `${n}/80 cavadinhas, ${fmt(pg * 100, 0)}% de gols, ${fmt(noAlvo / Math.max(1, n) * 100, 0)}% no alvo (${Object.entries(desf).map(([k, v]) => k + ' ' + v).join(', ')})`, 'sai cavadinha; 20–50% de gols (dados: ~30%)', n >= 60 && pg >= 0.2 && pg <= 0.5);
-  reg('cavadinha — com o goleiro na linha não sai', `${naLinha}/80`, '0', naLinha === 0);
+  reg('cavadinha da IA — goleiro a ~8 m, chutador a ~6 m dele', `${n}/80 cavadinhas, ${fmt(pg * 100, 0)}% de gols, ${fmt(noAlvo / Math.max(1, n) * 100, 0)}% no alvo (${Object.entries(desf).map(([k, v]) => k + ' ' + v).join(', ')})`, 'sai cavadinha; 20–50% de gols (dados: ~30%)', n >= 60 && pg >= 0.2 && pg <= 0.5);
+  reg('cavadinha da IA — com o goleiro na linha não sai', `${naLinha}/80`, '0', naLinha === 0);
 }
 
 console.log(tabelaTexto(linhas));

@@ -337,6 +337,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+- **Cavadinha com dois toques no CHUTE** (dono, 12/10; `acoes.js`, `ACOES.cavadinha`, contrato no CONTRATOS.md): o 2º
+  aperto do CHUTE (K, B, CHUTE do celular — o mesmo botão, nada novo na tela) antes de o chute do 1º tocar na bola vira
+  cavadinha, de qualquer lugar (também pênalti/tiro livre direto), mirando pelo analógico; a força do 2º toque deixa mais
+  alta. Só do humano (`j.porHumano`: entrada sem `ia`); um toque do humano nunca é cavadinha; a IA (e a demo) seguem com
+  a automática do goleiro adiantado. Medido: o chute sai 50 ms depois de soltar, então o 1º toque RÁPIDO (< 0,18 s)
+  espera a janela de 0,15 s (contato +117 ms parado; correndo, no 1º apoio depois dela, até +267 ms); o chute carregado
+  sai no mesmo tick de antes. Teste: `teste-cavadinha` (padrão; `--js` mede a base) e `teste-controles` (K, B, CHUTE duas
+  vezes). Pesquisa: `PESQUISA-ETAPA2.md` §2.7a.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

@@ -396,7 +396,7 @@ export const ACOES = {
   cargaMax: 1.2,              // s — depois disso solta sozinho
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
-  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
+  toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro; no CHUTE = cavadinha (2º aperto até isso depois de soltar o 1º)
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
   lancamento: { cone: 0.5, dMin: 16, dMax: 62, elev: [0.5, 0.72], erroBom: 1.2, erroRuim: 6 }, // erro em m a 40 m
@@ -406,8 +406,14 @@ export const ACOES = {
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
   chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
-  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
-  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
+  // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado). A da IA sai sozinha com o
+  // goleiro adiantado (goleiroFora/distMax); a do humano, com DOIS TOQUES no CHUTE (pedido do dono, 12/10), de qualquer
+  // lugar: o 2º aperto antes de o chute do 1º tocar na bola. toqueRapido: 1º toque mais curto que isso pode ser o 1º de
+  // dois — o contato espera até `janela` s depois de soltar (um toque duplo normal leva ~0,08–0,18 s entre os toques; o
+  // chute carregado não espera). elevPedida: elevação da cavadinha pedida pela força do 2º toque (toque rápido → [0], a
+  // mesma da IA; segurado → [1], mais alta)
+  cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05],
+    toqueRapido: 0.18, janela: 0.15, elevPedida: [0.72, 1.0] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
