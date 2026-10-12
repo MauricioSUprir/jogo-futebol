@@ -119,8 +119,10 @@ export function lerChute(m, j) {
   const ehPenalti = !!pen && j.palpite != null && m.voo && m.voo.de === pen.id && j.time !== pen.time && m.tick - pen.tick < 90;
   let palpiteErrado = false;
   if (ehPenalti) {
+    // o lado escolhido é do GOL (o meio dele, z = 0), não de onde o goleiro está: com o analógico segurado antes do
+    // chute ele andava até |z| ~3,3 e a bola no lado certo (entre ele e o meio) contava como lado errado — gol certo
     const zg = j.palpite, P = GOLEIRO.penalti;
-    palpiteErrado = zg === 0 ? Math.abs(plano.z - j.z) > P.meio : Math.sign(plano.z - j.z) !== Math.sign(zg) && Math.abs(plano.z - j.z) > P.meio * 0.5;
+    palpiteErrado = zg === 0 ? Math.abs(plano.z) > P.meio : Math.sign(plano.z) !== Math.sign(zg) && Math.abs(plano.z) > P.meio * 0.5;
   }
   // partida (Regra 12): a mão só vale na própria área, sem recuo e sem a bola que ele soltou (regras-goleiro.js) — no
   // ponto do contato. Sem ela, não há defesa com a mão: ele bloqueia com o corpo (a colisão da bola com as pernas) e
@@ -677,7 +679,9 @@ export function iniciarMergulho(m, j, d) {
     { x: mAnt.m1.x - mAnt.o1.x, y: mAnt.m1.y - mAnt.o1.y, z: mAnt.m1.z - mAnt.o1.z }] : null;
   // a frente final: o campo; o lado: a linha do gol, para o lado da bola (nunca para dentro do gol)
   const fx = -sentido, fz = 0;
-  const relX = d.bx - j.x, relZ = d.bz - j.z;
+  // pênalti no lado errado (d.palpite): o mergulho desenhado vai para o lado que ele ESCOLHEU (d.z), não para o da bola —
+  // quem erra o lado vê o goleiro cair do outro lado (antes ele mergulhava certo e tomava o gol assim mesmo)
+  const relX = d.bx - j.x, relZ = (d.palpite ? d.z : d.bz) - j.z;
   const lz = Math.abs(relZ) > 0.05 ? (relZ > 0 ? 1 : -1) : ((d.lado || 1) > 0 ? 1 : -1), lx = 0;
   const ladoS = lz * fx; // (lx, lz) = ladoS·(−fz, fx)
   const r0 = ant ? ant.yaw : j.rumo;

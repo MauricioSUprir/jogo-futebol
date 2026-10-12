@@ -644,6 +644,10 @@ function chute(m, j, pe, p, erroMult) {
     const gz = gk ? gk.z : 0;
     zMira = gz > 0 ? -meio + 0.6 : meio - 0.6;
   }
+  // pênalti: a mira do humano vai no máximo a ±penaltiCanto m do meio — com o erro da cobrança (penaltiErro) a ±3,1 m
+  // mandava 1/3 dos pênaltis para fora com qualquer analógico; a ±2,75 (o canto da IA, que bate 36% mais no meio), 16%;
+  // a ±2,5, ~8% (teste-botoes B11; a meta do dono é ~6%)
+  if (p.penalti) zMira = clamp(zMira, -cfg.penaltiCanto, cfg.penaltiCanto);
   const yMira = lerp(cfg.yAlvo[0], cfg.yAlvo[1], p.forca * p.forca);
   const colocado = p.mod;
   let s = lerp(cfg.v[0], cfg.v[1], p.forca) * lerp(0.86, 1.08, j.par.attr.finalizacao / 100) * velPeFraco(j, pe);

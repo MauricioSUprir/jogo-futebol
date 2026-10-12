@@ -915,6 +915,8 @@ function defesaDoGoleiro(m, j) {
 function goleiroComoLinha(m, j) {
   if (ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id) return true;
   if (!m.partida || m.naMao === j.id || defesaDoGoleiro(m, j)) return false;
+  // pênalti montado (Regra 14): ele fica na linha; o analógico só escolhe o lado (partida.js rolou: j.palpite)
+  if (m.parada && !m.parada.rolou && m.parada.tipo === 'penalti') return false;
   if (ehControlado(m, j) && !m.iaJoga?.[j.time]) return m.posse === j.id || j.imag > 0 || goleiroNoPe(m, j);
   return goleiroNoPe(m, j);
 }
