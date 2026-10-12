@@ -230,7 +230,12 @@ export function avancarRelogio(r, dt) {
     r.t = p.congela.tick;
     if (p.congela.s > 0) {
       r.congelado += dt;
-      if (r.congelado >= p.congela.s - 1e-9) { r.congelou = true; r.congelado = 0; }
+      if (r.congelado >= p.congela.s - 1e-9) {
+        r.congelou = true; r.congelado = 0;
+        // nada para tocar depois do congelamento (a análise: de = ate = o tick do passe): o plano acaba neste quadro,
+        // sem um quadro a mais parado (a 30 qps o impedimento passava 1 quadro dos 7,5 s)
+        if (p.ate <= p.congela.tick) return fimDoPlano(r, p);
+      }
       return true;
     }
     // congela.s = 0 (P1 do impedimento): só a troca de velocidade no quadro do passe, sem parar
@@ -239,14 +244,20 @@ export function avancarRelogio(r, dt) {
   const vel = p.congela && r.congelou ? (p.congela.velDepois ?? p.vel) : p.vel;
   r.t += dt * 60 * vel;
   if (p.congela && !r.congelou && r.t > p.congela.tick) r.t = p.congela.tick;
-  if (r.t >= p.ate) {
-    if (r.i + 1 < r.roteiro.planos.length) comecarPlano(r, r.i + 1);
-    else { r.t = p.ate; pararRelogio(r); return false; }
-  }
+  if (r.t >= p.ate) return fimDoPlano(r, p);
   return true;
 }
 
-/** Tempo (s) desde o corte para a análise no plano 'saot' atual (no último quadro o relógio zera `congelado`: fica `s`). */
+/** Fim do plano p: começa o próximo (true) ou, no último, desliga (false). */
+function fimDoPlano(r, p) {
+  if (r.i + 1 < r.roteiro.planos.length) { comecarPlano(r, r.i + 1); return true; }
+  r.t = p.ate; pararRelogio(r); return false;
+}
+
+/**
+ * Tempo (s) desde o corte para a análise no plano 'saot' atual (congelamento acabado: `s`; a análise de = ate acaba no
+ * mesmo quadro em que o congelamento termina, então o último quadro desenhado é o de s − dt).
+ */
 export function tempoSaot(r) {
   const p = planoAtual(r);
   if (!p || p.cam !== 'saot') return 0;
