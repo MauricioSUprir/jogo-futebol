@@ -716,7 +716,8 @@ for (const c of CENAS) {
       });
     }
     const arq = path.join(SAIDA, `${c.nome}.png`);
-    await pagina.screenshot({ path: arq });
+    // (máquina carregada: o print do Chromium sem GPU passa dos 30 s do padrão)
+    await pagina.screenshot({ path: arq, timeout: 240000 });
     const lay = c.depois || c.editor ? { problemas: [], caixas: [] } : await conferirLayout(pagina);
     const est = await pagina.evaluate(() => {
       const g = window.__golaco;
