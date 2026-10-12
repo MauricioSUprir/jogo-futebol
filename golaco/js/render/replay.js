@@ -8,8 +8,11 @@
 //  - 'atras': atrás do gol, alta (por cima da rede), um pouco para o lado da bola — o chute vem na direção da câmera;
 //  - 'lateral': na beira do campo do lado da TV, na altura dos olhos, teleobjetiva (só no golaço);
 //  - 'linha': ALINHADA com a linha de impedimento (no x da linha, alta, do lado da TV): a linha fica em pé no quadro,
-//    como a imagem do VAR; o enquadramento fecha no impedido e no defensor da linha na hora do passe (fixo o replay
-//    inteiro, sem tremer).
+//    como a imagem do VAR; o enquadramento fecha no impedido e no defensor da linha (o do evento) na hora do passe (fixo
+//    o plano inteiro, sem tremer);
+//  - 'saot': a ANÁLISE semiautomática (replay-saot.js): o quadro do passe congelado, só os jogadores do lance, a câmera
+//    em órbita do alto até o quadro final oblíquo e fora do centro (calculado uma vez por roteiro), parede, plano, pulsos
+//    e a decisão (`cena(dt)` diz ao main.js o que desenhar; o selo vai para o terço de baixo do HUD).
 // Pós-gol: o gol fica PENDENTE (aoGol) e o replay só entra quando o pós-gol chega na vez dele (depoisDoGol). Hoje
 // quem chama é a saída de bola; a cena de comemoração (outra frente) entra ANTES e chama depoisDoGol quando acabar.
 import * as THREE from 'three';
@@ -18,8 +21,9 @@ import { criarCamera } from './camera.js';
 import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
 import {
   roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
-  planoAtual, velocidadeAgora, linhaDoReplay,
+  planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
 } from './replay-roteiro.js';
+import { enquadrarSaot, cameraSaot, faseSaot } from './replay-saot.js';
 
 const ASPECTO_TV = 16 / 9;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -41,6 +45,14 @@ export function criarDiretor({ anel, aspecto }) {
   const _foco = { x: 0, z: 0 };
   const _j = { x: 0, z: 0, time: 0, goleiro: false }, _d = { id: -1, x: 0, z: 0 };
   const _b0 = { x: 0, y: 0, z: 0 }, _b1 = { x: 0, y: 0, z: 0 };
+  // análise semiautomática: o quadro final (uma vez por roteiro), a câmera da órbita, a fase e o que desenhar
+  const enqS = {}, camS = {}, faseS = {};
+  let planoS = null, ultimoImped = null, reduzir = false, reduzirForcado = null;
+  const cenaS = {
+    ativa: false, tipo: null, ids: [], parede: 0, plano: 0, pulsoDef: 0, pulsoAtac: 0, batidaDef: 0, batidaAtac: 0, cor: 0,
+    selo: 0, decidido: false, mesmaLinha: false, fase: null, t: 0, cena: null,
+  };
+  const _cenaInativa = { ativa: false };
 
   /** fov vertical de um plano fixo: f em 16:9 ou mais largo; mais estreito abre para a mesma largura. */
   function fovFixo(f) {
@@ -52,14 +64,17 @@ export function criarDiretor({ anel, aspecto }) {
     if (Math.abs(camera.fov - f) > 1e-4 || camera.aspect !== aspectoAtual) { camera.fov = f; camera.aspect = aspectoAtual; camera.updateProjectionMatrix(); }
   }
 
-  /** Câmera 'linha': no x da linha, alta, do lado da TV; o fov cobre o impedido e o defensor da linha (com folga). */
+  /**
+   * Câmera 'linha': no x da linha, alta, do lado da TV; o fov cobre o impedido e o defensor da linha (com folga) — o do
+   * evento (o penúltimo da decisão); sem ele (eventos antigos), o mais perto da linha.
+   */
   function enquadrarLinha(ro) {
     const L = REPLAY.linha, zc = CAMPO.meioZ + L.fora, h = L.altura;
     enq.x = ro.linhaX; enq.z = zc;
     let z0 = Infinity, z1 = -Infinity;
     const imp = jogadorNoTick(anel, ro.fotoTick, ro.idImpedido, _j);
     if (imp) { z0 = Math.min(z0, imp.z); z1 = Math.max(z1, imp.z); }
-    const def = defensorDaLinha(anel, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d);
+    const def = ro.defensor != null && ro.defensor >= 0 ? jogadorNoTick(anel, ro.fotoTick, ro.defensor, _d) : ro.defensor === undefined ? defensorDaLinha(anel, ro.fotoTick, 1 - ro.time, ro.linhaX, 1.5, _d) : null;
     if (def) { z0 = Math.min(z0, def.z); z1 = Math.max(z1, def.z); }
     if (!(z1 >= z0)) { z0 = -6; z1 = 6; }
     z0 = clamp(z0 - L.folga, -CAMPO.meioZ - 1, CAMPO.meioZ); z1 = clamp(z1 + L.folga, -CAMPO.meioZ, CAMPO.meioZ + 1);
@@ -113,7 +128,17 @@ export function criarDiretor({ anel, aspecto }) {
       _foco.x = seg.lx; _foco.z = seg.lz;
       return _foco;
     }
-    // 'linha': fixa o replay inteiro (a linha em pé no meio do quadro)
+    if (p.cam === 'saot') {
+      // análise: órbita do alto até o quadro final (sem órbita com "reduzir movimento")
+      faseSaot(tempoSaot(rel), p.saot.tipo, faseS, p.saot.mesmaLinha, reduzir);
+      cameraSaot(enqS, faseS.u, camS, reduzir);
+      camera.position.set(camS.x, camS.y, camS.z);
+      camera.lookAt(camS.alvoX, camS.alvoY, camS.alvoZ);
+      ajustarFov(camS.fov);
+      _foco.x = camS.alvoX; _foco.z = camS.alvoZ;
+      return _foco;
+    }
+    // 'linha': fixa o plano inteiro (a linha em pé no meio do quadro)
     camera.position.set(enq.x, REPLAY.linha.altura, enq.z);
     camera.lookAt(enq.x, 0, enq.olharZ);
     ajustarFov(fovFixo(enq.fov));
@@ -128,14 +153,30 @@ export function criarDiretor({ anel, aspecto }) {
     /** Estado para testes e prints. */
     get estado() {
       const p = planoAtual(rel), ro = rel.roteiro;
+      let saot = null;
+      if (p && p.cam === 'saot') {
+        const sc = p.saot;
+        faseSaot(tempoSaot(rel), sc.tipo, faseS, sc.mesmaLinha, reduzir);
+        cameraSaot(enqS, faseS.u, camS, reduzir);
+        saot = {
+          tipo: sc.tipo, fase: faseS.fase, t: faseS.t, el: camS.el, az: camS.az, idDef: sc.idDef, idAtac: sc.idAtac, idPor: sc.idPor,
+          margem: sc.margem, linhaX: sc.linhaX, lado: sc.lado, fotoTick: sc.fotoTick, mesmaLinha: sc.mesmaLinha, selo: faseS.selo,
+          enquadrado: !!enqS.ok, desvio: enqS.desvio, elFim: enqS.el, dist: enqS.d, ladoCamera: enqS.lado,
+        };
+      }
       return {
         ativo: rel.ativo, tipo: ro?.tipo ?? null, plano: rel.i, planos: ro?.planos.length ?? 0, cam: p?.cam ?? null,
         tick: rel.t, vel: velocidadeAgora(rel), congelado: !!(p && p.congela && !rel.congelou && rel.t >= p.congela.tick),
         quadros: rel.quadros, duracao: duracao(ro), golaco: !!ro?.golaco, fotoTick: ro?.fotoTick ?? null, linhaX: ro?.linhaX ?? null,
         chuteTick: ro?.chuteTick ?? null, golTick: ro?.golTick ?? null, de: p?.de ?? null, ate: p?.ate ?? null,
+        checagem: !!ro?.checagem, cams: ro ? ro.planos.map(q => q.cam) : [], saot,
       };
     },
-    redimensionar(a, peq) { aspectoAtual = a; pequena = !!peq; tv.redimensionar(a, peq); camera.aspect = a; camera.updateProjectionMatrix(); },
+    redimensionar(a, peq) {
+      aspectoAtual = a; pequena = !!peq; tv.redimensionar(a, peq); camera.aspect = a; camera.updateProjectionMatrix();
+      // o quadro final da análise depende do aspecto da tela
+      if (planoS && rel.ativo) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+    },
     // ---------------------------------------------------------------- gatilhos
     /** Gol (evento 'gol'): fica pendente até o pós-gol chegar na vez do replay. g = {golTick, chuteTick, lado}. */
     aoGol(g) { gol = { ...g }; ultimoGol = gol; },
@@ -148,21 +189,30 @@ export function criarDiretor({ anel, aspecto }) {
     descartarGol() { gol = null; },
     /** Roteiro do último gol de novo (API e prints; golaco força o plano lateral). */
     reverGol(golaco) { return ultimoGol ? roteiroGol(anel, { ...ultimoGol, golaco: golaco ?? undefined }) : null; },
-    /** Roteiro do impedimento ({fotoTick, apitoTick, linhaX, idImpedido, time, lado}). */
-    impedimento(i) { return roteiroImpedimento(anel, i); },
-    /** Roteiro do "Replay" da pausa (últimos 10 s). */
+    /** Roteiro do impedimento ({fotoTick, apitoTick, linhaX, idImpedido, time, lado, defensor, por}); guarda o último. */
+    impedimento(i) { ultimoImped = { ...i }; return roteiroImpedimento(anel, i); },
+    /** Roteiro do "Replay" da pausa (últimos 10 s; com a checagem de posição legal no fim, se houver). */
     menu() { return roteiroMenu(anel); },
+    /**
+     * Testes e prints: 'impedimento' = o último impedimento de novo (se o passe ainda está no anel); 'legal' = a checagem
+     * de posição legal mais apertada do anel, sem exigir chute nem gol. Null se não há.
+     */
+    saotDeTeste(tipo) { return tipo === 'legal' ? roteiroLegalTeste(anel) : ultimoImped ? roteiroImpedimento(anel, ultimoImped) : null; },
     // ---------------------------------------------------------------- relógio
     /** Começa um roteiro (false se vazio). */
     iniciar(ro) {
       if (!iniciarRelogio(rel, ro)) return false;
       seg.corte = true;
       if (ro.tipo === 'impedimento') enquadrarLinha(ro);
+      // análise semiautomática: o quadro final uma vez por roteiro
+      planoS = ro.planos.find(q => q.cam === 'saot') ?? null;
+      if (planoS) enquadrarSaot(anel, planoS.saot, aspectoAtual, enqS);
+      reduzir = reduzirForcado ?? (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
       return true;
     },
-    pular() { pararRelogio(rel); },
+    pular() { pararRelogio(rel); planoS = null; },
     /** Mundo novo: esquece o gol pendente e para o replay. */
-    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; },
+    limpar() { pararRelogio(rel); gol = null; ultimoGol = null; ultimoImped = null; planoS = null; },
     /** Avança dt s reais (false: acabou). */
     avancar(dt) {
       const vivo = avancarRelogio(rel, dt);
@@ -173,8 +223,27 @@ export function criarDiretor({ anel, aspecto }) {
     get tick() { return rel.t; },
     /** Velocidade agora (0 = congelado). */
     get velocidade() { return velocidadeAgora(rel); },
-    /** Linha de impedimento do quadro: {visivel, x, opacidade} (só no replay do impedimento, do passe em diante). */
+    /** Linha de impedimento do quadro: {visivel, x, opacidade, cor} (P1 do impedimento do passe em diante; análise). */
     linha(dt) { return linhaDoReplay(rel, dt, _linha); },
+    /**
+     * O que a análise desenha neste quadro (no plano 'saot'; senão {ativa: false}): {ativa, tipo, ids (o impedido, o
+     * defensor, quem passou), parede, plano, pulsoDef, pulsoAtac (0–1), batidaDef, batidaAtac (0–1), cor (0 → 1:
+     * neutro → decisão), selo (0–1), decidido, mesmaLinha, fase, t, cena (posições: replay-saot.js)}.
+     */
+    cena() {
+      const p = planoAtual(rel);
+      if (!p || p.cam !== 'saot') { cenaS.ativa = false; return _cenaInativa; }
+      const sc = p.saot;
+      faseSaot(tempoSaot(rel), sc.tipo, faseS, sc.mesmaLinha, reduzir);
+      cenaS.ativa = true; cenaS.tipo = sc.tipo; cenaS.cena = sc; cenaS.mesmaLinha = sc.mesmaLinha;
+      cenaS.ids.length = 0; cenaS.ids.push(sc.idAtac); if (sc.idDef >= 0) cenaS.ids.push(sc.idDef); if (sc.idPor >= 0) cenaS.ids.push(sc.idPor);
+      cenaS.parede = faseS.parede; cenaS.plano = faseS.plano; cenaS.pulsoDef = sc.idDef >= 0 ? faseS.pulsoDef : 0; cenaS.pulsoAtac = faseS.pulsoAtac;
+      cenaS.batidaDef = faseS.batidaDef; cenaS.batidaAtac = faseS.batidaAtac; cenaS.cor = faseS.cor; cenaS.selo = faseS.selo;
+      cenaS.decidido = faseS.decidido; cenaS.fase = faseS.fase; cenaS.t = faseS.t;
+      return cenaS;
+    },
+    /** "Reduzir movimento" (testes: força; null volta a seguir o sistema no próximo roteiro). */
+    set reduzirMovimento(v) { reduzirForcado = v == null ? null : !!v; if (v != null) reduzir = !!v; },
     /** Posiciona a câmera do plano olhando a bola desenhada bp; dtR = dt do quadro × velocidade. Devolve o foco. */
     posicionar,
   };

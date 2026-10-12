@@ -1092,12 +1092,48 @@ export const REPLAY = {
     maximo: 12, maximoGolaco: 14,
     golaco: 20,               // m do gol na hora do chute (fora da área)
   },
-  // impedimento (no apito): câmera ALINHADA com a linha (como o VAR: a linha fica em pé no quadro), `vel` até o passe,
-  // CONGELA `congela` s no quadro do passe com a linha entrando em `linhaEntra` s e segue até o apito (o toque do
-  // impedido) em no máximo `depoisMax` s REAIS: a `velDepois` ou, com o apito longe do passe (14% dos lances IA × IA:
-  // até 4,4 s), mais depressa, até `velDepoisMax` (a linha fica até o fim). Começa `antes` s antes do passe (ou no último
-  // corte). Total ≤ ~6 s.
-  impedimento: { antes: 1.2, vel: 0.6, congela: 1.6, linhaEntra: 0.25, velDepois: 1, velDepoisMax: 2, depoisMax: 2.5 },
+  // impedimento (no apito; pedido do dono de 12/10: "tipo aquelas cenas de replay do impedimento semiautomático"):
+  // P1 'linha' — câmera ALINHADA com a linha (como o VAR: a linha fica em pé no quadro), `vel` de `antes` s antes do passe
+  // (ou do último corte) até o passe; a linha entra em `linhaEntra` s no quadro do passe (sem congelar: só troca a
+  // velocidade) e segue até o apito (o toque do impedido) em no máximo `depoisMax` s REAIS: a `velDepois` ou, com o apito
+  // longe do passe (14% dos lances IA × IA: até 4,4 s), mais depressa, até `velDepoisMax` (a linha fica até o fim).
+  // P2 'saot' — a ANÁLISE semiautomática congelada no passe (REPLAY.saot.impedimento.dura s). Total ≤ 7,5 s.
+  impedimento: { antes: 1.0, vel: 0.6, linhaEntra: 0.25, velDepois: 1, velDepoisMax: 2, depoisMax: 2.2 },
+  // Análise semiautomática (render/replay-saot.js; PESQUISA-ESTADIO.md §9.1): corte seco para o quadro do passe com só
+  // os jogadores do lance (o impedido, o defensor da linha, quem passou e a bola), a câmera desce do alto (`elIni`°,
+  // azimute final + `azIni`°, `distIni` × a distância final) em órbita até o quadro final oblíquo e fora do centro (PL:
+  // "on an angle, off-centre"), a PAREDE do defensor (branco-gelo, translúcida, no x do quadril dele = a linha), o PLANO
+  // do atacante (no x do quadril dele), pulsos no quadril (o ponto que vale na decisão do jogo: impedimento.js conta o
+  // centro) e a decisão: vermelho (impedimento) ou verde (posição legal: parede, plano e linha do chão), com o selo.
+  // Tempos em s desde o corte: [início, fim] de cada entrada; `decisao` = a cor e o selo; `dura` = o plano inteiro.
+  saot: {
+    impedimento: { dura: 3.6, orbita: [0.2, 2.0], parede: [0.2, 0.45], pulsoDef: [0.25, 2.0], plano: [0.85, 1.1], pulsoAtac: [0.85, 2.0], decisao: 2.0 },
+    legal: { dura: 3.4, orbita: [0.15, 1.75], parede: [0.15, 0.35], pulsoDef: [0.15, 1.75], plano: [0.55, 0.75], pulsoAtac: [0.55, 1.75], decisao: 1.75 },
+    cor: 0.15, selo: 0.2, batida: 0.6, // s — a cor da decisão entra em, o selo entra em, período do pulso
+    // câmera: começa no alto e termina oblíqua (`elFim`° de elevação, `desvios`° fora do eixo da linha, do lado da TV;
+    // tenta nessa ordem e fica na primeira que enquadra os dois — cilindros de `cilindro` m — com `folga` do quadro e
+    // sobreposição ≤ `sobreposicaoMax`), distância ao ponto médio dos quadris em [`dist`] m, fov `fov`° (o do 16:9; mais
+    // estreito abre), câmera ≥ `alturaMin` m e fora dos sólidos (placas, bancos: estadio-forma.js solidoEm)
+    elIni: 68, azIni: 35, distIni: 1.3, elFim: [16, 22], desvios: [12, -12, 20, -20], dist: [9, 30], fov: 30,
+    folga: 0.08, sobreposicaoMax: 0.30, alturaMin: 2, cilindro: { raio: 0.35, altura: 1.9 },
+    // os dois longe na LARGURA do campo (~30+ m em z, um de cada lado): olhando pela linha, um fica perto e o outro longe
+    // da câmera e o quadro de 12–24° não cabe os dois a ≤ 30 m (o perto sai por baixo). Então, nesta ordem: o mesmo
+    // quadro mais longe (`longe`, até onde a arquibancada deixa) e, só se ainda não couber, a câmera sobe e abre
+    // (`extra`, ainda oblíqua e fora do centro) — os dois sempre no quadro.
+    longe: { elFim: [16, 22, 24], desvios: [12, -12, 20, -20, 25, -25], dist: [9, 45] },
+    extra: { elFim: [30, 40, 52, 62], desvios: [12, -12, 25, -25, 40, -40], dist: [9, 75] },
+    // parede do defensor (a faixa em z dos jogadores do lance ± margemZ; alfa de baixo para cima), plano do atacante
+    // (± meiaLargura em z) e o anel do pulso (raio, largura e quanto cresce na batida)
+    parede: { altura: 2.3, margemZ: 3, alfaBaixo: 0.35, alfaCima: 0.10, borda: 0.035 },
+    plano: { meiaLargura: 1.2, alfaBaixo: 0.5, alfaCima: 0.16 },
+    pulso: { raio: 0.36, largura: 0.06, cresce: 0.5 },
+    cores: { gelo: 0xeef6ff, neutro: 0xd8dee2, impedimento: 0xff3b30, legal: 0x19e07a, pulso: 0x6fc3ff },
+    // critério da POSIÇÃO LEGAL (replay-saot.js checagemLegal), margem pelo centro em m: "mesma linha" até `mesmaLinha`
+    // (a tolerância do jogo, IMPEDIMENTO.tolerancia); apertado até `limite` (a faixa de alerta antiga da FIFA vai até
+    // `alerta`; de 0,5 a 1,0 m o olho erra: 132 ms de atraso × 5–8 m/s, Bath 2022). No gol com checagem o replay ganha
+    // até `extraGol` s (12 → 13 s; golaço 14 → 15 s).
+    mesmaLinha: 0.10, alerta: 0.50, limite: 1.00, extraGol: 1.0,
+  },
   // "Replay" na pausa: os últimos `segundos` (até o último corte), TV; pausa a menos de `minDepoisCorte` s de uma
   // montagem (falta, lateral...): o lance antes dela (o que parou o jogo)
   menu: { vel: 1, minDepoisCorte: 3 },
