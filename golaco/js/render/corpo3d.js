@@ -303,12 +303,18 @@ export function criarCorpos3D(cena, qualidade, corpo) {
     }
     // teto: os menores na tela perdem um nível de cada vez
     if (total > LQ.teto) {
-      const o = ordem.subarray(0, n).sort((a, b) => alturaPx[a] - alturaPx[b]);
+      // ordem por altura na tela (inserção: ~25 itens, nada alocado)
+      for (let i = 1; i < n; i++) {
+        const p = ordem[i], h = alturaPx[p];
+        let k = i - 1;
+        while (k >= 0 && alturaPx[ordem[k]] > h) { ordem[k + 1] = ordem[k]; k--; }
+        ordem[k + 1] = p;
+      }
       let mudou = true;
       while (total > LQ.teto && mudou) {
         mudou = false;
         for (let i = 0; i < n && total > LQ.teto; i++) {
-          const p = o[i];
+          const p = ordem[i];
           if (nivel[p] < LEVE) { total += TRI[nivel[p] + 1] - TRI[nivel[p]]; nivel[p]++; mudou = true; }
         }
       }

@@ -29,13 +29,15 @@
 //  13) a pausa cabe sem rolar no celular deitado (também com "Modo de jogo" aberto) e "Pré-jogo da partida" passa pelos
 //      4 modos e salva.
 // Na versão publicada não há pré-jogo (reprova no item 1).
-//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>]
+// --corpo: tudo com ?corpo=novo (Etapa 5.1: o corpo humano no cortejo, nos árbitros e na fila; mesmas metas).
+//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--corpo]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const CORPO = args.includes('--corpo') ? '&corpo=novo' : '';
 const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
 const { criarPartida, passoPartida } = await imp('partida.js');
 const { hashMundo } = await imp('sim.js');
@@ -135,7 +137,7 @@ try {
   // ---------------------------------------------------------------- 1b) sem ?prejogo, com webdriver: não liga
   {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
-    await pg.goto(`${srv.url}?semente=${SEMENTE}&q=media`, { waitUntil: 'load' });
+    await pg.goto(`${srv.url}?semente=${SEMENTE}&q=media${CORPO}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     const r = await pg.evaluate(() => ({ ativo: !!window.__golaco.prejogo?.ativo, wd: navigator.webdriver }));
     meta('Testes automatizados (webdriver) abrem direto no jogo', `pré-jogo ativo ${r.ativo} (webdriver ${r.wd})`, 'false', r.ativo === false && erros.length === 0);
@@ -147,7 +149,7 @@ try {
 
   for (const P of PERFIS) {
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: P.largura, altura: P.altura, dpr: P.dpr, toque: P.toque });
-    await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=${P.q}&hora=dia${P.toque ? '&toque=1' : ''}`, { waitUntil: 'load' });
+    await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=${P.q}&hora=dia${P.toque ? '&toque=1' : ''}${CORPO}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
     await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); });
     // ---------------------------------------------------------------- 1) abertura, tick 0
@@ -162,6 +164,10 @@ try {
       continue;
     }
     meta(`${P.nome}: abre no pré-jogo (abertura), partida no tick 0, HUD escondido`, `ativo ${e1.ativo}, ${e1.fase}, tick ${e1.tick}, ${e1.passos} passos, HUD ${e1.hud}, ${erros.length} erros`, 'true, abertura, 0, 0, none, 0', e1.ativo && e1.fase === 'abertura' && e1.tick === 0 && e1.passos === 0 && e1.hud === 'none' && erros.length === 0);
+    if (CORPO) {
+      const c = await pg.evaluate(() => { const e = window.__golaco.estado(); return { corpo: e.corpo, falhou: e.corpoFalhou }; });
+      meta(`${P.nome}: corpo humano no pré-jogo (?corpo=novo)`, `${c.corpo}${c.falhou ? ' — falhou: ' + c.falhou : ''}`, 'corpo', c.corpo === 'corpo');
+    }
     // o toque da abertura: começa as cenas e libera o som
     if (P.toque) await pg.touchscreen.tap(P.largura / 2, P.altura / 2); else await pg.mouse.click(P.largura / 2, P.altura / 2);
     await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(16); });
@@ -348,7 +354,7 @@ try {
   // Esc no PC (pular tudo) e a memória (item 8)
   {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
-    await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=alta&hora=dia`, { waitUntil: 'load' });
+    await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=alta&hora=dia${CORPO}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
     const ok = await pg.evaluate(() => !!window.__golaco.prejogo);
     if (ok) {
