@@ -40,6 +40,9 @@ for (const c of CONFIGS) {
   if (so && !so.has(c.nome)) continue;
   const { navegador, pagina: pg, erros } = await abrir({ largura: c.w, altura: c.h, dpr: c.dpr, toque: c.toque });
   pg.setDefaultTimeout(180000);
+  // 404: só o de js/rede-forma.js numa versão sem o módulo é do próprio teste (o import opcional); qualquer outro conta
+  const outros404 = [];
+  pg.on('response', r => { if (r.status() === 404 && !/\/js\/rede-forma\.js(\?|$)/.test(r.url())) outros404.push(r.url()); });
   try {
     await pg.goto(`${srv.url}?prints=1&semente=5&q=${c.q}&hora=${c.hora}${c.toque ? '&toque=1' : ''}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
@@ -189,7 +192,7 @@ for (const c of CONFIGS) {
     meta(`Branca na TV (${c.nome}): a rede clareia o gol`, `ΔL* ${f(tvc.dL, 1)} em ${f(tvc.frac8 * 100, 1)}% da caixa do gol`, 'ΔL* ≥ +5 em ≥ 15%', tvc.dL >= 5 && tvc.frac8 >= 0.15);
     meta(`Mexe (${c.nome}): pico da bolsa × parada`, `câmera do gol ${f(r.cams.gol.mov.frac20 * 100, 1)}% · TV ${f(r.cams.tv.mov.frac20 * 100, 1)}% · perfil ${f(r.cams.perfil.mov.frac20 * 100, 1)}% dos pixels do gol`, 'gol ≥ 4% · TV ≥ 1%', r.cams.gol.mov.frac20 >= 0.04 && r.cams.tv.mov.frac20 >= 0.01);
     // (o 404 de js/rede-forma.js numa versão sem o módulo é do próprio teste)
-    const errosR = erros.filter(e => !/status of 404/.test(e));
+    const errosR = erros.filter(e => !/status of 404/.test(e)).concat(outros404.map(u => `404: ${u}`));
     if (errosR.length) meta(`Sem erro no console (${c.nome})`, errosR.slice(0, 2).join(' | '), 'nenhum', false);
   } catch (e) {
     meta(`Rodou (${c.nome})`, e.message.split('\n')[0], 'sem erro', false);
