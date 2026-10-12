@@ -20,9 +20,14 @@ const N = +arg('--partidas', 144), THREADS = +arg('--threads', Math.max(1, Math.
 const { varrerSaot } = await import(pathToFileURL(path.join(AQUI, 'lib/varre-saot.mjs')).href);
 const sementes = Array.from({ length: N }, (_, i) => 1001 + i);
 const t0 = Date.now();
+const saida = arg('--json', null);
+// a cada partida terminada: o progresso e (com --json) as partidas até agora (máquina carregada: dá para ler a parcial)
 const res = await varrerSaot({
   pastaJs, sementes, maxTicks: 2 * 4 * 3600 + 8000, threads: THREADS, limites: [0.5, 1.0],
-  aoTerminar: (r, k, n) => process.stdout.write(`\r${k}/${n} partidas (${((Date.now() - t0) / 1000).toFixed(0)} s)   `),
+  aoTerminar: (r, k, n, todos) => {
+    process.stdout.write(`\r${k}/${n} partidas (${((Date.now() - t0) / 1000).toFixed(0)} s)   `);
+    if (saida && todos) fs.writeFileSync(saida, JSON.stringify({ sementes, parcial: true, res: todos }, null, 1));
+  },
 });
 console.log('');
 const gols = res.flatMap(r => r.gols), imped = res.flatMap(r => r.imped);
@@ -45,5 +50,4 @@ console.log(`  contradição centro × partes: impedidos pelo centro e legais pe
 console.log(`  cenas por partida: impedimento ${f2(imped.length / res.length)}, legal no replay ${f2(noReplay.length / res.length)}`);
 const fr = 100 * l10 / Math.max(1, gols.length);
 console.log(`  conclusão (meta 12): ${fr > 30 ? 'ACIMA de 30% — o limite cai para 0,5 m' : fr < 5 ? 'ABAIXO de 5% — informar; o limite fica em 1,0 m (não alargar)' : 'dentro de 5–30% — o limite fica em 1,0 m'}`);
-const saida = arg('--json', null);
 if (saida) fs.writeFileSync(saida, JSON.stringify({ sementes, res }, null, 1));

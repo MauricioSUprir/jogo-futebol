@@ -25,7 +25,7 @@ export async function varrerSaot({ pastaJs, sementes, maxTicks = 6000, threads =
         w.once('exit', c => { if (c) erro(new Error(`worker saiu com ${c}`)); });
       });
       res.push(r);
-      if (aoTerminar) aoTerminar(r, res.length, sementes.length);
+      if (aoTerminar) aoTerminar(r, res.length, sementes.length, res);
     }
   }
   await Promise.all(Array.from({ length: Math.min(threads, sementes.length) }, trabalhador));
