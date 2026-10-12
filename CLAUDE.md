@@ -216,6 +216,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
   por `tools/lib/gol-roteirizado.mjs`, sem depender de semente; item 10 = torcida durante o jogo no celular);
   `teste-controles`/`teste-editor-tela` conferem a tela de girar.
+- **Estádio cheio e som da torcida no jogo** (pedido de 11/10; `PESQUISA-ESTADIO.md` §6, contrato em `CONTRATOS.md`):
+  som nivelado por LUFS (`render/mixagem.js`, alvo −16) com limitador no fim (pico ≤ −1 dBFS), agenda de cantos/batucada/
+  vaia/incentivo/festa em `render/festa.js` (pura, relógio do estádio), cantos decodificados sob demanda (≤ 2 na memória),
+  iPhone com `audioSession.type = 'playback'` e volta depois de interrupção (gestos rearmados enquanto não 'running');
+  torcida 14/20/25,6 mil (fileiras da frente ~97% na Média), arquibancada do LADO DE CÁ com o túnel (`config.js
+  ESTADIO`) e os bancos — fora do desenho com a câmera de TV dentro dela (`cameraNoLadoDeCa`) —, faixas FICTÍCIAS,
+  bandeiras de mastro e bandeirões no vertex shader (GPU = JS), sinalizadores só em momento marcado (saída de cada tempo,
+  gol, vitória) com luz falsa por uniform (nunca `PointLight`) e fumaça no shader (Baixa sem fumaça), ola com a torcida
+  calma. Custo: +1 chamada (faixas/bandeiras) e +1 só com sinalizadores acesos; pré-carga no 1º quadro (nada engasga no
+  1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
+  Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa

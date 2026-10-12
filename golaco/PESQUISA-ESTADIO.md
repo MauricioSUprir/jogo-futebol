@@ -81,3 +81,50 @@ para cada correção:
 | M9 contas do shader e do JS escritas à mão duas vezes | WebGL2 + `EXT_color_buffer_float` (ler de volta, em float, o que o shader calculou) | A pose (`POSE_GLSL`) sai das mesmas constantes do JS (`POSE_REGRA`), e o `teste-estadio` avalia a pose e a rede NO SHADER de verdade (4096 casos cada) e compara com o JS |
 | B1 teste preso à semente 6 | — | Gol roteirizado no `teste-estadio` (`tools/lib/gol-roteirizado.mjs`: a física da bola com velocidade conhecida, defensores e goleiro fora do caminho) e gol de verdade achado em Node para os prints (`tools/lib/acha-gol.mjs`); conferido com a lógica do PR 1 e do PR 3 por cima desta branch |
 | M2 "GOL!" embaixo dos botões | Layout medido nos celulares (568×320, 667×375, 844×390) | No celular, o "GOL!" fica compacto logo abaixo da barra de cima e no meio, entre o analógico e o arco de botões; no PC, no terço de cima (na câmera do gol a boca do gol fica do meio para baixo) |
+
+## 6. Estádio cheio e som da torcida durante o jogo (pedido de 11/10)
+
+Pedido do dono: "Coloca mais torcida no estádio, bandeirões, sinalizadores, e bota som de torcida também, pra durante o
+jogo". Medido antes: o murmúrio do jogo saía a −26,9 dBFS (o apito 14,6 dB acima, e no celular a torcida "sumia"), o
+canto só se ouvia em 35% do tempo e havia 1 canto só (laço de 14 s); no iPhone com a chave de silencioso o jogo ficava
+mudo e, depois de bloquear a tela, o som não voltava. Na imagem, as fileiras da frente (as que a câmera de TV mostra)
+estavam 37/62/88% ocupadas (Baixa/Média/Alta), o lado de cá não existia (embaixo da câmera, só o verso preto das
+placas) e não havia faixa, bandeira nem sinalizador.
+
+### 6.1 Som (`js/render/som.js`, `mixagem.js`, `festa.js`, `assets/sons/`)
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| WebKit Bugzilla 237322 (Web Audio mudo com a chave de silencioso do iPhone) | O Web Audio sai pelo canal da campainha (sessão 'ambient') e a chave de silencioso cala; a saída da Apple é `navigator.audioSession.type = 'playback'` (iOS 16.4/17+), antes de criar ou retomar o contexto | Com o som ligado, `'playback'` antes de criar/retomar; desligado, volta a `'auto'` (`teste-som-jogo` M6) |
+| MDN, `AudioSession.type` | 'playback' é exclusivo (pausa a música de outro app); 'ambient' mistura | Escolhido 'playback': o jogo tem som mesmo no silencioso (o custo é pausar a música de outro app) |
+| WebKit Bugzilla 264473 | Os tipos 'transient'/'transient-solo' tocam sem som no iOS 17/18 | Nunca usar 'transient' |
+| WebKit Bugzilla 276016 e fórum PlayCanvas (iOS: áudio que não volta depois de minimizar) | Depois de minimizar/bloquear, o contexto fica 'interrupted' e não volta sozinho | `statechange` + `visibilitychange`/`pageshow` tentam retomar; se não voltar a 'running', os ouvintes de gesto ficam armados e o próximo toque retoma; `estado` sempre o do contexto (M7: suspensão vinda de fora + 1 toque → 'running') |
+| Chrome Developers, "Autoplay policy" / "Web Audio autoplay" | Retomar em click/touchend/pointerup; o pointerdown de toque não vale como gesto | Mantido (o som.js já ouvia touchend e pointerup; medido: 'running' no 1º toque, M1) |
+| Audiokinetic, "Mastering a Game with Wwise, Part 1" (metas da PlayStation); Designing Sound, entrevista com Garry Taylor (Sony) | −23 LUFS no console e −18 LUFS (±2 LU) no portátil, pico real ≤ −1 dBTP | Cada gravação medida em LUFS (EBU R128) e nivelada para um alvo único (`MIXAGEM.alvoLufs` −16: celular, alto-falante pequeno, estádio) e limitador no fim da cadeia com pico ≤ −1 dBFS (M10) |
+| Rob Bridgett, "Mobile loudness: an adaptive approach" | No celular (ambiente barulhento) vale compressão em tempo real puxando para o alvo | Limitador (`DynamicsCompressorNode` razão 20, ataque 2 ms) no master; as reações abaixam o leito e os cantos ~4 dB (`MIXAGEM.reacao`) em vez de somar por cima |
+| TV Technology sobre o FIFA 10 (torcida gravada com Holophone) | Base de torcida gravada no estádio + reações disparadas por lance ("ohhs", "ahhs") + cantos isolados numa camada própria | Três camadas: leito (murmúrio + agito), cantos numa agenda própria (`festa.js`: ~2/3 do tempo calmo cantando, 3 cantos da casa + 1 do visitante, troca sem repetir) e reações disparadas (gol, "uuuh" ×2, palmas, vaia) |
+| Sound Particles, Paul Boechler sobre a torcida do FIFA nas transmissões de 2020 | Operação "tipo DJ": um botão por tipo de lance e um fader de intensidade | O fader é o ânimo (`emocao.js`) e os botões são os eventos: incentivo com a casa atacando, festa depois do gol, vaia com o visitante segurando a bola perto da área da casa, canto do setor visitante depois do gol deles (abafado, à esquerda) |
+| Freesound (licenças conferidas uma a uma; créditos em `assets/sons/CREDITOS.md`) | — | Cantos: San Siro (neilraouf, CC0) e duas gravações de organizada brasileira (Bruna32U, CC0); batucada (reinsamba, CC BY 4.0; 153,6 batidas/min — o pulo da organizada vai no tempo dela por `relogioBatida`); 2º "uuuh" de 60 mil pessoas no Brasil (felix.blume, CC0); vaia (Julien_Matthey, CC0). Transcritas com faster-whisper: nenhuma narração nem fala inteligível. Descartados: BBC Sound Effects (licença RemArc só pessoal/educacional) e o pacote Sonniss (proíbe redistribuir o som solto) |
+
+### 6.2 Torcida cheia, lado de cá, festa (`torcida-dados.js`, `torcida.js`, `campo.js`, `bandeiras*.js`, `sinalizadores.js`, `fumaca.js`, `luz-falsa.js`)
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| Dobbyn et al. (2005), "Geopostors" (multidões por impostores + geometria) | Nível de detalhe pela distância: o gasto vai para quem aparece grande | As 9 fileiras da frente (as que a TV mostra) quase cheias em toda qualidade (85/97/98%) e as de cima mais vazias na Baixa; lado de cá com sorteio próprio (os outros setores não mudam) |
+| Gramática de TV (a câmera principal fica no lado das cabines, na arquibancada de cá) | A câmera de TV está DENTRO da arquibancada do lado de cá | A arquibancada de cá (espelho da de lá, com o túnel dos times e os bancos de reservas na frente) sai do desenho com a câmera dentro dela (`cameraNoLadoDeCa`, a mesma conta para a torcida e a arquibancada) e aparece nos planos do outro lado, no geral e na câmera do gol; o verso das placas do lado de cá virou painel verde (a faixa preta embaixo da imagem sumiu) |
+| godotshaders, "3D simple animated flag shader" e "Waving flag" | Bandeira no vertex shader: `sin(k·u − ω·t)·amp·u` (a borda do mastro parada) + ruído | `BANDEIRA_GLSL`/`pontoBandeira` (a MESMA conta, GPU = JS em 4096 pontos no `teste-estadio`), com balanço do mastro; bandeirões com onda própria (`BANDEIRAO_GLSL`) que abrem na saída de cada tempo e no gol da casa; faixas com nomes FICTÍCIOS; tudo numa chamada de desenho |
+| mein-mmo sobre a pirotecnia do FIFA 17; ESPN sobre as festas da torcida do Eintracht Frankfurt | Pirotecnia em jogo de futebol só em momento marcado (entrada, gol), não com a bola rolando; a referência visual de faixas, bandeirão e "muro" de sinalizadores | Sinalizadores só na saída do 1º e do 2º tempo, no gol (5 da casa na organizada e quinas, 2 no setor visitante) e na vitória; 22–28 s acesos, no máximo 8 |
+| Fórum three.js: "Smoke Effect - InstancedMesh2" e "Creating 3D smoke particles" | Fumaça em quadros instanciados, sem escrever profundidade, textura de ruído | Núcleo + halo + fumaça numa malha instanciada (1 chamada, só com fogo/fumaça), o caminho de cada partícula calculado no shader (`FUMACA_GLSL`, zero CPU por quadro), o vento leva a fumaça para FORA do campo (testado em Node) |
+| Arm, Mali Best Practices e fórum sobre translucidez | Translúcido não escreve profundidade nem tem descarte precoce: cada camada custa um pixel inteiro | Poucas partículas (Baixa 0, Média 10, Alta 14 por sinalizador), alfa ≤ 0,4, halo de 6 m; overdraw medido no pico do gol (passada de depuração aditiva): 0,2 tela (meta ≤ 0,5); bandeiras e bandeirões opacos, desenhados antes da torcida |
+| three.js r170, `WebGLPrograms` (a chave do programa inclui `numPointLights`) | Acender uma luz real muda a chave e recompila todos os materiais iluminados | A luz vermelha do sinalizador vai por uniform (`vec4[8]`, `LUZ_FALSA_GLSL`) no shader da torcida, das arquibancadas e das bandeiras — nunca `PointLight` |
+| Farkas, Helbing e Vicsek, "Mexican waves in an excitable medium", Nature 419:131 (2002) | A ola corre a ~12 m/s (≈ 20 cadeiras/s), 6–12 m de largura, quase sempre no sentido horário, e começa com a torcida calma | Ola na volta do estádio pelo shader da torcida (`OLA_GLSL`, a mesma conta de `olaPeso`), disparada com o agito baixo por 40 s, no máximo 1 a cada 3 min |
+| three.js `InstancedBufferGeometry.instanceCount` / `WebGLRenderer` (um desenho com 0 instâncias não vira chamada, mas a geometria e o programa sobem) | — | Pré-carga: no 1º quadro os grupos da torcida fora do quadro, o lado de cá e os sinalizadores vão para a GPU sem desenhar nada — o 1º corte de câmera e o 1º sinalizador não engasgam e a memória da GPU não cresce no meio do jogo |
+
+Medido depois (mesmas ferramentas): murmúrio −26,9 → −19,0 dBFS, apito − leito 14,6 → 6,0 dB, canto audível 35% →
+70% do tempo, 1 → 3 cantos em 60 s, pico ≤ −1 dBFS no grito do gol, memória do áudio ~26 MiB, 1,37 MB de som no
+total (nada baixa antes da página pronta); torcedores 7.939/12.704/18.067 → 13.989/19.971/25.571 (Baixa/Média/Alta),
+fileiras da frente 37/62/88% → 85/97/98%, lado de cá 0 → 5.274 torcedores na Média; chamadas de desenho no jogo
+(câmera de TV, 20 instantes logo depois da saída, com os sinalizadores acesos) mediana 29 como na publicada (máx 35 →
+29), já contando a festa (1 das faixas/bandeiras e 1 dos sinalizadores, só quando acesos); overdraw da fumaça no pico
+do gol 0,2 tela;
+`hash-igual` IGUAL (o som ligado, desligado ou sem Web Audio não muda o jogo).
