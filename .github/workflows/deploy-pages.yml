@@ -34,6 +34,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-editor-tela.mjs
+      - name: Tela limpa no navegador (HUD mínimo no celular e no PC, linha de impedimento só no apito)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-hud-minimo.mjs
   deploy:
     needs: testes-golaco
     environment:

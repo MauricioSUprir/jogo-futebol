@@ -4,8 +4,11 @@
 // Etapa 3 (Parte 4; plano 2.8): botões que mudam de sentido pela fase (J/K/O e A/B/Y/RB: passe/CONTER,
 // chute/DIVIDIDA, PEGAR/PRESSÃO — o PEGAR do goleiro com a bola no pé, pedido de 11/10; antes era nada —,
 // enfiada/goleiro) com o sentido FIXADO NO APERTO (a posse muda com o botão segurado e ele não troca de função
-// no meio); teclas novas sem conflito; CONTER, DIVIDIDA e
-// PRESSÃO no arco da defesa sem encostar (≥ 48 px) e o CONTER segurado chegando ao jogo.
+// no meio); teclas novas sem conflito; DIVIDIDA e PRESSÃO no arco da defesa sem encostar (≥ 48 px) e o CONTER
+// segurado chegando ao jogo.
+// Tela limpa (11/10): no toque a defesa tem 5 botões — o CONTER virou a DIVIDIDA SEGURADA (criarToqueOuSegura:
+// tocar = bote, segurar = conter, como o "Sprint & Tackle" do FC Mobile) e a PRESSÃO saiu do 2º anel (vaga d, em
+// cima da jogada) para a vaga b; do toque ao jogo: o toque curto faz o bote e o segurado contém o condutor.
 //   node tools/teste-entrada.mjs
 import { processarAnalogico, teclasParaAnalogico, paraMundo } from '../js/controle.js';
 import { criarMundo, passo } from '../js/sim.js';
@@ -125,12 +128,18 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
     const precisa = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
     reg('teclas da defesa (J, K, O) sem conflito com R/M/N/C/H/F1/Esc/P/F3 e L/I/Q/G/E/Shift', conflito.length ? conflito.join(', ') : 'nenhum', 'nenhum', conflito.length === 0);
     reg('CONTER, DIVIDIDA e PRESSÃO no teclado e no controle', `teclado ${nome(defesaTeclado & precisa)}; controle ${nome(defesaPad & precisa)}`, 'os três nos dois', (defesaTeclado & precisa) === precisa && (defesaPad & precisa) === precisa);
-    // arco do toque na defesa: CONTER (b), DIVIDIDA (c), PRESSÃO (d); nada encosta, nada < 48 px
+    // arco do toque na defesa (tela limpa, 11/10): 5 botões, todos no 1º anel — PRESSÃO (b) e DIVIDIDA (c, que
+    // segurada vira CONTER); nada no 2º anel (d e e), nada encosta, nada < 48 px
     const def = BOTOES_TOQUE.filter(b => b.fase === 'defesa' || b.fase === 'ambas');
     const vagaDe = bit => def.find(b => b.bit === bit)?.vaga;
     const vagasDef = def.map(b => b.vaga);
     const repetida = vagasDef.length !== new Set(vagasDef).size;
-    reg('toque: CONTER, DIVIDIDA e PRESSÃO nas vagas b, c e d da defesa', `${vagaDe('CONTER')}, ${vagaDe('DIVIDIDA')}, ${vagaDe('PRESSAO')}${repetida ? ' (vaga repetida!)' : ''}`, 'b, c, d', vagaDe('CONTER') === 'b' && vagaDe('DIVIDIDA') === 'c' && vagaDe('PRESSAO') === 'd' && !repetida);
+    const segurada = def.find(b => b.bit === 'DIVIDIDA')?.segura;
+    const anel2 = vagasDef.filter(v => v === 'd' || v === 'e');
+    reg('toque: defesa com 5 botões — PRESSÃO na vaga b, DIVIDIDA na c (segurada = CONTER), nada no 2º anel',
+      `${def.length} botões (${def.map(b => b.bit).join(', ')}); PRESSÃO ${vagaDe('PRESSAO')}, DIVIDIDA ${vagaDe('DIVIDIDA')} (segurada: ${segurada ?? '-'}); CONTER ${vagaDe('CONTER') ?? 'sem botão'}; 2º anel ${anel2.join(',') || 'vazio'}${repetida ? ' (vaga repetida!)' : ''}`,
+      '5; b; c (CONTER); sem botão; vazio',
+      def.length === 5 && vagaDe('PRESSAO') === 'b' && vagaDe('DIVIDIDA') === 'c' && segurada === 'CONTER' && !vagaDe('CONTER') && anel2.length === 0 && !repetida);
     let pior = Infinity, menor = Infinity, fora = 0;
     for (const [W, H] of [[844, 390], [390, 844], [1280, 720], [667, 375], [1920, 1080]]) {
       for (const tam of [0.7, 1, 1.4]) for (const sa of [{ l: 0, r: 0, t: 0, b: 0 }, { l: 44, r: 44, t: 0, b: 21 }, { l: 0, r: 0, t: 47, b: 34 }]) {
@@ -143,7 +152,7 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
         }
       }
     }
-    reg('toque: arco da defesa com 6 botões sem encostar (5 telas × 3 tamanhos × 3 áreas seguras)', `folga mínima ${fmt(pior, 1)} px, menor botão ${menor} px, fora da tela ${fora}`, 'folga ≥ 4 px, ≥ 48 px, 0 fora', pior >= 4 && menor >= 48 && fora === 0);
+    reg(`toque: arco da defesa com ${def.length} botões sem encostar (5 telas × 3 tamanhos × 3 áreas seguras)`, `folga mínima ${fmt(pior, 1)} px, menor botão ${menor} px, fora da tela ${fora}`, 'folga ≥ 4 px, ≥ 48 px, 0 fora', pior >= 4 && menor >= 48 && fora === 0);
     // do aperto ao jogo: J segurado na defesa vira CONTER e o controlado contém o condutor
     {
       const m = criarMundo({
@@ -161,6 +170,63 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
         n++; if (d >= 1 && d <= 2.5 && j.x < c.x) ok++;
       }
       reg('J segurado na defesa = CONTER: o controlado acompanha o condutor do lado do gol', `${fmt(100 * ok / n, 0)}% do tempo a 1–2,5 m`, '≥ 80%', ok / n >= 0.8);
+    }
+    // toque: DIVIDIDA de dois sentidos (criarToqueOuSegura, pura): tocar = pulso de DIVIDIDA no soltar; segurar =
+    // CONTER desde o 1º quadro e nada de bote no soltar. Tempos do relógio do jogo (ms), a 60 qps.
+    {
+      const { criarToqueOuSegura } = ENT;
+      if (typeof criarToqueOuSegura !== 'function') {
+        reg('toque: DIVIDIDA tocada = bote, segurada = CONTER (entrada.js criarToqueOuSegura)', 'não existe', 'existe', false);
+      } else {
+        const lim = ENTRADA.toqueCurto;
+        /** Aperta, segura `ms` (quadros de 1000/60) e solta: máscaras de cada quadro e o pulso do soltar. */
+        const rodarToque = ms => {
+          const t = criarToqueOuSegura(BOTAO.DIVIDIDA, BOTAO.CONTER);
+          t.apertar();
+          const mascaras = [];
+          for (let q = 0, agora = 1000; q * (1000 / 60) <= ms; q++, agora += 1000 / 60) mascaras.push(t.quadro(agora));
+          return { mascaras, pulso: t.soltar(), depois: t.quadro(99999) };
+        };
+        const curto = rodarToque(90), meio = rodarToque(Math.round(lim * 1000) - 40), longo = rodarToque(600), relampago = (() => {
+          const t = criarToqueOuSegura(BOTAO.DIVIDIDA, BOTAO.CONTER); t.apertar(); return t.soltar(); // tocou e soltou entre dois quadros
+        })();
+        const okC = curto.pulso === BOTAO.DIVIDIDA && meio.pulso === BOTAO.DIVIDIDA && relampago === BOTAO.DIVIDIDA;
+        const okL = longo.pulso === 0 && longo.mascaras.every(b => b === BOTAO.CONTER) && longo.depois === 0;
+        reg(`toque: DIVIDIDA tocada (< ${fmt(lim, 2)} s) = bote; segurada = CONTER desde o 1º quadro, sem bote no soltar`,
+          `90 ms: pulso ${curto.pulso}; ${Math.round(lim * 1000) - 40} ms: ${meio.pulso}; entre quadros: ${relampago}; 600 ms: pulso ${longo.pulso}, CONTER em ${longo.mascaras.filter(b => b === BOTAO.CONTER).length}/${longo.mascaras.length} quadros, solto ${longo.depois}`,
+          `${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}, ${BOTAO.DIVIDIDA}; 0, todos CONTER, 0`, okC && okL);
+        // do toque ao jogo: um condutor adversário vindo; o toque curto (90 ms) começa o bote (estado j.defH.bote) e o
+        // segurado (4 s) contém o condutor do lado do gol (a mesma conta do J segurado)
+        const cena = () => {
+          const m = criarMundo({
+            semente: 7, bola: { x: 9.6, z: 0 }, posse: 1,
+            jogadores: [{ id: 0, x: 8.2, z: 0.4, rumo: 0, time: 0, papel: 'humano' }, { id: 1, x: 10, z: 0, rumo: Math.PI, time: 1, papel: 'humano' }],
+          });
+          m.humanos = [0, 1]; m.controlado = { 0: 0, 1: 1 };
+          return m;
+        };
+        /** Roda o mundo com o botão de toque apertado nos quadros [0, ms) (1 passo por quadro a 60 qps). */
+        const jogar = (m, ms, total) => {
+          const t = criarToqueOuSegura(BOTAO.DIVIDIDA, BOTAO.CONTER);
+          let pulso = 0, bote = false, ok = 0, n = 0;
+          const j = m.jogadores[0], c = m.jogadores[1];
+          t.apertar();
+          for (let i = 0; i < total; i++) {
+            const agora = 1000 + i * (1000 / 60);
+            if (t.segurando && i * (1000 / 60) >= ms) pulso = t.soltar();
+            const bot = (t.segurando ? t.quadro(agora) : 0) | pulso;
+            pulso = 0;
+            passo(m, { 0: { x: 0, z: 0, botoes: bot }, 1: { x: -0.7, z: 0, botoes: 0 } });
+            if (j.defH?.bote) bote = true;
+            if (i >= 60 && t.segurando) { const d = Math.hypot(j.x - c.x, j.z - c.z); n++; if (d >= 1 && d <= 2.5 && j.x < c.x) ok++; }
+          }
+          return { bote, conter: n ? ok / n : 0 };
+        };
+        const tc = jogar(cena(), 90, 30), ts = jogar(cena(), 4000, 240);
+        reg('toque: DIVIDIDA tocada começa o bote; segurada contém o condutor do lado do gol (sem bote)',
+          `tocada: bote ${tc.bote}; segurada: bote ${ts.bote}, a 1–2,5 m do lado do gol em ${fmt(100 * ts.conter, 0)}% do tempo`,
+          'bote; sem bote e ≥ 80%', tc.bote && !ts.bote && ts.conter >= 0.8);
+      }
     }
   }
 }

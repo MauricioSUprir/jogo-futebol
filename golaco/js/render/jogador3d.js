@@ -271,7 +271,8 @@ export function criarJogadores3D(cena, qualidade) {
     vagaDe.clear();
   }
 
-  // indicador do jogador controlado: anel + seta no chão, seta acima da cabeça
+  // indicador do jogador controlado: anel no chão e o triângulo acima da cabeça. A seta no chão saiu (tela limpa,
+  // 11/10: o rumo se lê pelo corpo, como no EA FC; uma chamada de desenho a menos)
   const verde = 0x19e07a;
   const anelGeo = new THREE.RingGeometry(0.46, 0.56, 48);
   const anelTodo = new THREE.Group();
@@ -280,14 +281,9 @@ export function criarJogadores3D(cena, qualidade) {
     polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
   });
   const anel = new THREE.Mesh(anelGeo, matAnel);
-  // seta no chão apontando para +x local (o grupo gira pelo rumo do jogador)
-  const forma = new THREE.Shape();
-  forma.moveTo(0.62, -0.15); forma.lineTo(0.9, 0); forma.lineTo(0.62, 0.15); forma.closePath();
-  const setaMesh = new THREE.Mesh(new THREE.ShapeGeometry(forma), matAnel);
   anel.rotation.x = -Math.PI / 2;
-  setaMesh.rotation.x = -Math.PI / 2;
-  anelTodo.add(anel, setaMesh);
-  anel.renderOrder = 4; setaMesh.renderOrder = 4;
+  anelTodo.add(anel);
+  anel.renderOrder = 4;
   anelTodo.visible = false;
   anelTodo.name = 'indicador';
   cena.add(anelTodo);
@@ -493,9 +489,9 @@ export function criarJogadores3D(cena, qualidade) {
         marca.visible = true;
         marca.position.set(pose[ic2], pose[ic2 + 1] + 0.42, pose[ic2 + 2]);
         if (camera) {
-          // tamanho constante na tela (~2,6% do menor lado da tela)
+          // tamanho constante na tela (~2,2% do menor lado da tela; era 2,6% antes da tela limpa)
           const d = camera.position.distanceTo(marca.position);
-          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.026 * Math.min(1, camera.aspect);
+          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.022 * Math.min(1, camera.aspect);
           marca.scale.set(k, k, 1);
           marca.position.y += k * 0.3;
         }

@@ -2,7 +2,7 @@
 // O mundo é um objeto simples (copiável); a mesma semente e as mesmas entradas geram a
 // mesma partida bit a bit (ver hashMundo).
 
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, PARTIDA } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -29,6 +29,8 @@ import { planejarRecepcao } from './recepcao.js';
 import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
 // Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
 import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
+import { lateralSegurando, segurarLateral } from './lateral.js';
+import { notaAerea, colisaoBarreira } from './bolas-paradas.js';
 
 const BOTOES_DEFESA = BOTAO.CONTER | BOTAO.DIVIDIDA | BOTAO.PRESSAO;
 /** Parada da partida ainda não cobrada: só o cobrador toca a bola. */
@@ -451,6 +453,8 @@ export function passo(m, entradas) {
   if (m.naMao != null) {
     const g = jogadorPorId(m, m.naMao);
     if (g) goleiroComBola(m, g);
+  } else if (m.parada && lateralSegurando(m)) {
+    // lateral (Etapa 4): a bola está nas mãos do cobrador — nada de condução até o arremesso (partida.js cobrar)
   } else if (m.posse != null) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) {
@@ -484,13 +488,16 @@ export function passo(m, entradas) {
   if (m.naMao != null) {
     const g = jogadorPorId(m, m.naMao);
     if (g) bolaNaMao(m, g);
+  } else if (m.parada && segurarLateral(m)) {
+    // lateral (Etapa 4): a bola nas duas mãos (atrás da cabeça ou no arco do arremesso), sem física
   } else {
     passoBola(m.bola, m.eventos);
     colisaoBolaCorpo(m);
+    if (m.partida && m.partida.barreira) colisaoBarreira(m); // tiro livre: a bola na barreira que pula (Etapa 4)
   }
   verificarGol(m);
   // 6) posse
-  if (m.posse != null && m.naMao == null) {
+  if (m.posse != null && m.naMao == null && !(m.parada && lateralSegurando(m))) {
     const dono = jogadorPorId(m, m.posse);
     if (dono) verificarPerda(m, dono);
   }
@@ -643,6 +650,26 @@ function bolaAltaNoCorpo(m, j) {
     const d = MD.hypot(b.p.x - j.x, b.p.z - j.z);
     const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
     if (d > 0.75 || b.p.y > alcanceY) return false;
+    // disputa pelo alto (Etapa 4, só na partida e, por enquanto, só na bola que vem de uma bola parada — escanteio,
+    // falta, lateral; no jogo corrido entra com o equilíbrio): o adversário que alcança a bola no ponto disputa
+    if (m.partida && b.p.y >= AEREO.yMin && m.voo && m.voo.bolaParada) {
+      const o = rivalNoAlto(m, j);
+      if (o) {
+        const venceu = ganhaDisputa(m, j, o);
+        m.eventos.push({ tipo: 'disputaAerea', id: venceu ? j.id : o.id, perdeu: venceu ? o.id : j.id });
+        if (!venceu) {
+          // o rival ganhou: afasta de cabeça (para longe do gol dele); quem ia na bola não toca nela — nem logo depois,
+          // ainda no ar (AEREO.perdeuSalto s: antes ele cabeceava a bola recém-afastada, colada nele, para o gol)
+          j.pedido = null; j.perdeuAlto = m.tick;
+          const p0 = o.pedido && o.pedido.tipo !== 'chute' ? o.pedido : { tipo: 'lancamento', forca: 0.8 };
+          o.pedido = null; if (o.cond) o.cond.toque = null;
+          executarCabeceio(m, o, p0);
+          m.eventos.push({ tipo: 'cabeceio', id: o.id });
+          return true;
+        }
+        j.disputa = m.tick; // ganhou disputando: o cabeceio sai mais impreciso (acoes.js)
+      }
+    }
     if (b.p.y > ACOES.cabeceio.alturaPeito[1] || j.pedido) {
       // sem botão: a IA na área cabeceia para o gol; fora dela (e o humano), cabeceia de passe
       const lado = ataca(m, j.time);
@@ -664,12 +691,42 @@ function bolaAltaNoCorpo(m, j) {
     ganhouPosse(m, j);
     return true;
   }
+  if (j.perdeuAlto != null && (m.tick - j.perdeuAlto) * PASSO < AEREO.perdeuSalto) return false;
   const r = bolaAltaPassando(m, j, 60);
   if (!r) return false;
   const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * j.par.attr.impulsao / 100);
   if (r.y > alcanceY || r.y < 0.2) return false;
   c.toque = { tick: m.tick + r.i, pe: j.par.attr.pePreferido, bx: r.x, bz: r.z, tipo: 'aereo', y: r.y };
   return true;
+}
+
+/**
+ * Adversário de j que disputa a bola alta no toque dele: de linha, a ≤ AEREO.raio m da bola e alcançando a altura dela
+ * (o salto pela impulsão); o mais perto. Só na partida.
+ */
+function rivalNoAlto(m, j) {
+  const b = m.bola.p;
+  let mel = null, dm = Infinity;
+  for (const o of m.jogadores) {
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    const d = MD.hypot(b.x - o.x, b.z - o.z);
+    if (d > AEREO.raio) continue;
+    const alcanceY = ACOES.cabeceio.alcanceSalto * (0.92 + 0.12 * o.par.attr.impulsao / 100);
+    if (b.y > alcanceY) continue;
+    // o controlado do humano ao alcance disputa (quem joga vê o próprio jogador subir); senão, o mais perto
+    if (ehControlado(m, o)) return o;
+    if (d < dm) { dm = d; mel = o; }
+  }
+  return mel;
+}
+
+/** j (quem ia na bola) ganha a disputa pelo alto contra o? Logística da diferença de nota, o lado do gol (m.rng). */
+function ganhaDisputa(m, j, o) {
+  const gx = ataca(m, o.time) * -CAMPO.meioX; // gol que o rival defende
+  const oNoGol = MD.hypot(gx - o.x, o.z) < MD.hypot(gx - j.x, j.z);
+  const x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100 + (oNoGol ? -AEREO.ladoGol : AEREO.ladoGol);
+  const p = 1 / (1 + MD.exp(-x));
+  return uniforme(m.rng) < p;
 }
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
@@ -718,8 +775,7 @@ function desvioOlhaBola(v) {
  * jogando pelo humano), o goleiro do humano depois de GOLEIRO.esperaHumano. Na PARTIDA o humano repõe quando quiser
  * (pedido do dono, 11/10: "eu não consigo mexer com o goleiro") — anda com a bola até a borda da área, PASSE rola curto,
  * LANÇAMENTO (ou CHUTE) é o chutão, ENFIADA solta a bola no chão para sair jogando com o pé — e a Regra 12.3 (mais de
- * 8 s: escanteio, partida.js) é o limite; no tiro de meta (bola nas mãos até rolar), a IA cobra por ele no prazo das
- * outras paradas (PARTIDA.cobrancaHumanoMax).
+ * 8 s: escanteio, partida.js) é o limite (o tiro de meta é com o pé, no chão: partida.js montarTiroDeMeta).
  */
 function goleiroComBola(m, g) {
   // ainda no chão depois do encaixe no mergulho: levanta antes de repor
@@ -739,8 +795,6 @@ function goleiroComBola(m, g) {
       // gol o goleiro pegava a própria reposição de novo, em laço)
       g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick, dir: { x: ataca(m, g.time), z: 0 } };
     }
-  } else if (pr && pr.tipo === 'tiroDeMeta' && !g.pedido && !g.carga && m.tick - pr.inicio >= Math.round(PARTIDA.cobrancaHumanoMax / PASSO)) {
-    g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick, dir: { x: ataca(m, g.time), z: 0 } };
   }
   if (g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 20) {
     if (livre && !pr) {

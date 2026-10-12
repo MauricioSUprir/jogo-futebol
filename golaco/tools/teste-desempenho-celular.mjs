@@ -50,17 +50,19 @@ try {
   meta(`CPU por quadro sem a GPU (CPU ${CPU}×, ${SEG} s de partida)`, `${txt('cpu')} ms em ${med.quadros} quadros (${med.passos} passos)`, `méd ≤ ${META.media}, p95 ≤ ${META.p95} ms`, med.cpu.media <= META.media && med.cpu.p95 <= META.p95 && med.passos >= SEG * 60 - 2);
   console.log(`      simulação ${txt('sim')} | pose ${txt('pose')} | jogadores ${txt('jogadores')} ms (relógio ${med.relogio?.minuto}', placar ${med.placar.join('×')})`);
 
-  // chamadas de desenho: a mesma câmera no treino de ataque e na partida
+  // chamadas de desenho: a mesma câmera no treino de ataque e na partida. Os sinalizadores da torcida (1 chamada, só
+  // nos ~30 s depois de um gol ou de uma saída de bola do tempo; nunca no treino) contam à parte: o custo deles é
+  // medido no teste-estadio (item 12, festa ≤ 2 chamadas)
   const cham = await pg.evaluate(DS => {
     const g = window.__golaco;
-    const medir = () => { g.cameraLivre({ de: [0, 34, 46], para: [0, 0, 0], fov: 55 }); g.desenhar(); g.desenhar(); const c = g.estado().desenhoChamadas; g.cameraLivre(null); return c; };
-    const partida = medir();
+    const medir = () => { g.cameraLivre({ de: [0, 34, 46], para: [0, 0, 0], fov: 55 }); g.desenhar(); g.desenhar(); const c = g.estado().desenhoChamadas; const sin = g.estadio?.festaVisual?.sinalizadores ? 1 : 0; g.cameraLivre(null); return [c, sin]; };
+    const [partida, sinalizadores] = medir();
     g.reiniciar({ modo: 'ataque', semente: 4 + DS });
     g.relogio.avancar(1000 / 60, { desenhar: true });
-    const treino = medir();
-    return { partida, treino };
+    const [treino] = medir();
+    return { partida, sinalizadores, treino };
   }, DS);
-  meta('Chamadas de desenho: partida ≤ treino + 2 (mesma câmera)', `partida ${cham.partida} · treino ${cham.treino}`, `≤ ${cham.treino + META.chamadas}`, cham.partida <= cham.treino + META.chamadas);
+  meta('Chamadas de desenho: partida ≤ treino + 2 (mesma câmera)', `partida ${cham.partida}${cham.sinalizadores ? ` (${cham.sinalizadores} dos sinalizadores acesos neste instante, à parte)` : ''} · treino ${cham.treino}`, `≤ ${cham.treino + META.chamadas}`, cham.partida - cham.sinalizadores <= cham.treino + META.chamadas);
 
   // vazamento: 10 substituições (5 por time) e a memória da GPU igual
   const vaz = await pg.evaluate(DS => {

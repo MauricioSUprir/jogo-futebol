@@ -4,12 +4,14 @@
 // placas com marcas FICTÍCIAS e arquibancada (a torcida é de torcida.js). Poucos draw calls: tudo o que
 // é estático vira um mesh só por material.
 import * as THREE from 'three';
-import { CAMPO } from '../config.js';
+import { CAMPO, ESTADIO } from '../config.js';
 import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
   GRAMA, texGramado, texDetalheGrama, texRede, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho,
 } from './texturas.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
+import { cameraNoLadoDeCa } from './torcida-dados.js';
+import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
 const L = CAMPO.linha, h = L / 2;
@@ -365,44 +367,110 @@ function criarPlacas(aniso) {
   const frente = new THREE.Mesh(geo, mat);
   frente.name = 'placas';
   const E = 0.12;
+  const preto = new THREE.Color(0x0b0d0e);
   const caixas = [
     caixa(0, A / 2, -PZ - E / 2, PX * 2 + E * 2, A, E), caixa(0, A + 0.02, -PZ - E / 2, PX * 2 + E * 2, 0.04, E + 0.02),
-    caixa(0, A / 2, PZ + E / 2, PX * 2 + E * 2, A, E), caixa(0, A + 0.02, PZ + E / 2, PX * 2 + E * 2, 0.04, E + 0.02),
     caixa(PX + E / 2, A / 2, 0, E, A, PZ * 2), caixa(PX + E / 2, A + 0.02, 0, E + 0.02, 0.04, PZ * 2),
     caixa(-PX - E / 2, A / 2, 0, E, A, PZ * 2), caixa(-PX - E / 2, A + 0.02, 0, E + 0.02, 0.04, PZ * 2),
   ];
-  const corpo = new THREE.Mesh(juntarGeometrias(caixas), new THREE.MeshLambertMaterial({ color: 0x0b0d0e }));
+  const cores = caixas.map(() => preto);
+  // lado de cá: a câmera de TV vê as COSTAS destas placas embaixo da tela (lateral e escanteio do lado de cá) —
+  // antes uma faixa preta; agora o acolchoado verde da cor do gramado de fora (a face vertical recebe ~0,7 da luz do
+  // chão: o verde é ~1,4× mais claro que o 0x2c5a26 do chão) em painéis de 6 m alternados, com um friso verde —
+  // some no gramado atrás delas (pedido de 11/10)
+  const verdes = [new THREE.Color(0x3b7a35), new THREE.Color(0x36722f)], friso = new THREE.Color(0x4f9a47);
+  const painel = PLACA.periodo / 4, x0 = -PX - E, total = 2 * (PX + E);
+  for (let k = 0, x = x0; x < x0 + total - 1e-6; k++, x += painel) {
+    const w = Math.min(painel, x0 + total - x);
+    caixas.push(caixa(x + w / 2, A / 2, PZ + E / 2, w, A, E)); cores.push(verdes[k % 2]);
+  }
+  caixas.push(caixa(0, A + 0.02, PZ + E / 2, PX * 2 + E * 2, 0.04, E + 0.02)); cores.push(friso);
+  const corpo = new THREE.Mesh(juntarGeometrias(caixas, cores), new THREE.MeshLambertMaterial({ vertexColors: true }));
   corpo.name = 'placas-estrutura';
   return { frente, corpo, mat };
 }
 
+/**
+ * Bancos de reservas (config.js ESTADIO.bancos): um de cada lado do túnel, atrás das placas do lado de cá, abertos para
+ * o campo (parede do fundo, laterais, cobertura, assento e encosto verdes). Vão na MALHA do lado de cá (`L`, retalhos da
+ * textura das cadeiras × cor por vértice): com a câmera de TV dentro da arquibancada de cá eles saem do desenho junto
+ * com ela — no celular a TV fica mais alta e mais atrás, e a cobertura aparecia como uma placa lisa no canto de baixo.
+ */
+function bancosDeReservas(L, CU, CV, VERDE) {
+  const B = ESTADIO.bancos;
+  const [za, zb] = B.z, h = B.altura, prof = zb - za, zc = (za + zb) / 2;
+  const concreto = (cx, cy, cz, w, a, d, c) => caixaL(L, cx, cy, cz, w, a, d, CU, CV, c);
+  const verde = (cx, cy, cz, w, a, d, c) => caixaL(L, cx, cy, cz, w, a, d, [0.2, 0.21], VERDE, c);
+  for (const s of [-1, 1]) {
+    const xa = s * B.x[0], xb = s * B.x[1], xc = (xa + xb) / 2, larg = Math.abs(xb - xa);
+    concreto(xc, h / 2, zb - 0.1, larg, h, 0.2, 0.3);              // parede do fundo
+    concreto(xa, h / 2, zc, 0.15, h, prof, 0.3);                    // laterais
+    concreto(xb, h / 2, zc, 0.15, h, prof, 0.3);
+    concreto(xc, h + 0.06, zc - 0.25, larg + 0.4, 0.12, prof + 0.6, 0.42); // cobertura
+    verde(xc, 0.45, zb - 0.75, larg - 0.6, 0.1, 0.5, 0.9);           // assento
+    verde(xc, 0.82, zb - 0.45, larg - 0.6, 0.62, 0.08, 0.55);        // encosto
+    concreto(xc, 0.02, zc, larg, 0.04, prof, 0.5);                  // piso
+  }
+}
+
+/** Caixa de 6 faces na malha da arquibancada (`L.quad`), toda no mesmo retalho (u, v) da textura e cor c. */
+function caixaL(L, cx, cy, cz, w, a, d, [u0, u1], [v0, v1], c) {
+  const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - a / 2, y1 = cy + a / 2, z0 = cz - d / 2, z1 = cz + d / 2;
+  L.quad([x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], u0, u1, v0, v1, c);
+  L.quad([x1, y0, z1], [x0, y0, z1], [x0, y1, z1], [x1, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0], u0, u1, v0, v1, c);
+  L.quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0], u0, u1, v0, v1, c);
+}
+
 // ------------------------------------------------------------------ arquibancada e entorno
+
+/**
+ * Luz FALSA dos sinalizadores no concreto e nas cadeiras (luz-falsa.js: uniform vec4[8], nunca PointLight — uma luz de
+ * verdade recompilaria todos os materiais do three.js no meio do gol). Sem sinalizador aceso, a conta nem roda.
+ */
+function comLuzFalsa(mat, chave) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uFlare = UNIFORMS_LUZ.uFlare;
+    sh.uniforms.uFlareN = UNIFORMS_LUZ.uFlareN;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvMundoFlare = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMundoFlare;' + LUZ_FALSA_GLSL)
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += diffuseColor.rgb * luzFalsa(vMundoFlare);');
+  };
+  mat.customProgramCacheKey = () => 'arq-luz-falsa-' + chave;
+  return mat;
+}
 
 function criarArquibancada(aniso, qualidade) {
   const larg = qualidade === 'baixa' ? 1024 : 2048;
   const V_PAREDE = 0.975, vMax = 1 - 24 / 512;
-  function construtor() {
-    const pos = [], uv = [], nrm = [];
+  function construtor(comCor = false) {
+    const pos = [], uv = [], nrm = [], cor = [];
     const a = new THREE.Vector3(), b = new THREE.Vector3(), n = new THREE.Vector3();
-    function tri(p0, p1, p2, t0, t1, t2) {
+    function tri(p0, p1, p2, t0, t1, t2, c = 1) {
       a.set(p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]);
       b.set(p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]);
       n.crossVectors(a, b).normalize();
       pos.push(...p0, ...p1, ...p2);
       uv.push(...t0, ...t1, ...t2);
-      for (let k = 0; k < 3; k++) nrm.push(n.x, n.y, n.z);
+      for (let k = 0; k < 3; k++) { nrm.push(n.x, n.y, n.z); cor.push(c, c, c); }
     }
-    function quad(p0, p1, p2, p3, u0, u1, v0, v1) {
-      tri(p0, p1, p2, [u0, v0], [u1, v0], [u1, v1]);
-      tri(p0, p2, p3, [u0, v0], [u1, v1], [u0, v1]);
+    function quad(p0, p1, p2, p3, u0, u1, v0, v1, c = 1) {
+      tri(p0, p1, p2, [u0, v0], [u1, v0], [u1, v1], c);
+      tri(p0, p2, p3, [u0, v0], [u1, v1], [u0, v1], c);
     }
-    function mesh(tex) {
+    function mesh(tex, chave) {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
       geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+      if (comCor) geo.setAttribute('color', new THREE.Float32BufferAttribute(cor, 3));
       geo.computeBoundingSphere();
-      return new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+      return new THREE.Mesh(geo, comLuzFalsa(new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide, vertexColors: comCor }), chave));
     }
     return { tri, quad, mesh };
   }
@@ -425,7 +493,7 @@ function criarArquibancada(aniso, qualidade) {
     }
   }
   const g = new THREE.Group();
-  const lado = L1.mesh(texArquibancada(aniso, true, larg));
+  const lado = L1.mesh(texArquibancada(aniso, true, larg), 'lado');
   // atrás dos gols (x±): do canto de lá (z −74,5) até o lado de cá (z +44,5)
   const L2 = construtor();
   for (const s of [-1, 1]) {
@@ -437,12 +505,80 @@ function criarArquibancada(aniso, qualidade) {
     L2.quad([x0, yBase, za], [x0, yBase, zb], [x1, yT, zb], [x1, yT, za], 0, u1, 0, vMax * 0.82);
     L2.quad([x1, yT, za], [x1, yT, zb], [x1, yT + 5, zb], [x1, yT + 5, za], 0, u1, V_PAREDE, 1);
   }
-  const fundos = L2.mesh(texArquibancada(aniso, false, larg));
+  const texSemNome = texArquibancada(aniso, false, larg);
+  const fundos = L2.mesh(texSemNome, 'fundos');
   lado.name = 'arquibancada-lado';
-  g.userData.materiais = [lado.material, fundos.material];
   fundos.name = 'arquibancada-fundos';
-  g.add(lado, fundos);
+  const ca = criarLadoDeCa(construtor, texSemNome, { frenteZ, fundoZ, yBase, yTopo, xA, V_PAREDE, vMax });
+  g.userData.materiais = [lado.material, fundos.material, ca.material];
+  g.userData.ladoDeCa = ca;
+  g.add(lado, fundos, ca);
   return g;
+}
+
+/**
+ * Arquibancada do LADO DE CÁ (z +; pedido de 11/10): a de lá espelhada (36 fileiras, 125 m), com o TÚNEL dos times
+ * no meio (config.js ESTADIO.tunel: boca de 7 × 3,2 m na frente da arquibancada, o corredor escuro entrando 12 m por
+ * baixo das cadeiras e as cadeiras cortadas em cima da boca) e um teto curto (o plano geral do intervalo, de z = 78
+ * a 34 m de altura, passa por cima). A câmera de TV fica DENTRO desta arquibancada: atualizar() a tira do desenho
+ * com a câmera lá dentro (torcida-dados.js cameraNoLadoDeCa, a mesma conta da torcida).
+ */
+function criarLadoDeCa(construtor, tex, A) {
+  const { frenteZ: z0, fundoZ: z1, yBase, yTopo, xA, V_PAREDE, vMax } = A;
+  const T = ESTADIO.tunel;
+  const L = construtor(true);
+  const ti = T.largura / 2, mt = ti + 0.4, ya = T.altura, ytt = T.altura + T.laje;
+  const yS = z => yBase + (yTopo - yBase) * (z - z0) / (z1 - z0);
+  const vS = z => vMax * (z - z0) / (z1 - z0);
+  const zt = z0 + (ytt + 0.3 - yBase) * (z1 - z0) / (yTopo - yBase);   // o degrau passa do teto do túnel aqui
+  const uX = x => (x + xA) / (2 * xA);
+  // retalhos da textura das cadeiras: o concreto claro do corredor (célula da cadeira 0, no meio da fileira 17) e o
+  // friso verde do parapeito (o topo da faixa de parede)
+  const CU = [0.002, 0.006], CV = [0.484, 0.49], VERDE = [0.996, 0.999];
+  // mureta da frente dos dois lados da boca
+  L.quad([-xA, 0, z0], [-mt, 0, z0], [-mt, yBase, z0], [-xA, yBase, z0], uX(-xA), uX(-mt), V_PAREDE, 1);
+  L.quad([mt, 0, z0], [xA, 0, z0], [xA, yBase, z0], [mt, yBase, z0], uX(mt), uX(xA), V_PAREDE, 1);
+  // degraus: os dois lados inteiros; no meio, só de onde passam por cima do teto do túnel
+  L.quad([-xA, yBase, z0], [-mt, yBase, z0], [-mt, yTopo, z1], [-xA, yTopo, z1], uX(-xA), uX(-mt), 0, vMax);
+  L.quad([mt, yBase, z0], [xA, yBase, z0], [xA, yTopo, z1], [mt, yTopo, z1], uX(mt), uX(xA), 0, vMax);
+  L.quad([-mt, yS(zt), zt], [mt, yS(zt), zt], [mt, yTopo, z1], [-mt, yTopo, z1], uX(-mt), uX(mt), vS(zt), vMax);
+  // parede de trás e um teto curto
+  L.quad([-xA, yTopo, z1], [xA, yTopo, z1], [xA, yTopo + 5, z1], [-xA, yTopo + 5, z1], 0, 1, V_PAREDE, 1);
+  L.quad([-xA, yTopo + 5, z1], [xA, yTopo + 5, z1], [xA, yTopo + 5.6, z1 - 4.5], [-xA, yTopo + 5.6, z1 - 4.5], 0, 1, V_PAREDE, 1);
+  for (const s of [-1, 1]) {
+    const x = s * xA;
+    L.tri([x, 0, z0], [x, yBase, z0], [x, yTopo + 5, z1], [0.5, V_PAREDE], [0.5, 1], [0.6, 1]);
+    L.tri([x, 0, z0], [x, yTopo + 5, z1], [x, 0, z1], [0.5, V_PAREDE], [0.6, 1], [0.6, V_PAREDE]);
+  }
+  // a boca do túnel saliente entre os degraus: o teto (laje) e as paredes de fora em concreto, a moldura verde
+  L.quad([-mt, ytt, z0], [mt, ytt, z0], [mt, ytt, zt], [-mt, ytt, zt], CU[0], CU[1], CV[0], CV[1], 1);
+  for (const s of [-1, 1]) {
+    const x = s * mt;
+    L.quad([x, yBase, z0], [x, ytt, z0], [x, ytt, zt], [x, yS(zt), zt], CU[0], CU[1], CV[0], CV[1], 0.9);
+    L.quad([s * ti, 0, z0], [s * mt, 0, z0], [s * mt, ytt, z0], [s * ti, ytt, z0], 0.2, 0.21, VERDE[0], VERDE[1], 0.8);
+  }
+  L.quad([-ti, ya, z0], [ti, ya, z0], [ti, ytt, z0], [-ti, ytt, z0], 0.2, 0.21, VERDE[0], VERDE[1], 0.8);
+  // por dentro: o concreto cada vez mais escuro (cor por vértice), o fundo quase preto
+  const zf = z0 + T.profundidade;
+  for (const s of [-1, 1]) L.quad([s * ti, 0, z0], [s * ti, 0, zf], [s * ti, ya, zf], [s * ti, ya, z0], CU[0], CU[1], CV[0], CV[1], 0.45);
+  L.quad([-ti, ya, z0], [ti, ya, z0], [ti, ya, zf], [-ti, ya, zf], CU[0], CU[1], CV[0], CV[1], 0.32);
+  L.quad([-ti, 0.02, z0], [ti, 0.02, z0], [ti, 0.02, zf], [-ti, 0.02, zf], CU[0], CU[1], CV[0], CV[1], 0.55);
+  L.quad([-ti, 0, zf], [ti, 0, zf], [ti, ya, zf], [-ti, ya, zf], CU[0], CU[1], CV[0], CV[1], 0.1);
+  bancosDeReservas(L, CU, CV, VERDE);
+  const m = L.mesh(tex, 'ca');
+  m.name = 'arquibancada-ca';
+  // o corte é o de atualizar(): a câmera dentro dela ou as caixas fora do quadro. Duas caixas (a faixa da frente, baixa,
+  // e a de cima): uma caixa só, com a câmera de TV do PC na frente dela olhando para baixo, passava no teste plano a
+  // plano do Frustum (falso positivo) — 1 chamada de desenho à toa, medida em 20 instantes do jogo
+  m.frustumCulled = false;
+  const zm = z0 + 0.4 * (z1 - z0);
+  m.userData.caixas = [
+    new THREE.Box3(new THREE.Vector3(-xA - 0.5, -0.5, z0 - 0.6), new THREE.Vector3(xA + 0.5, yS(zm) + 0.5, zm + 0.5)),
+    new THREE.Box3(new THREE.Vector3(-xA - 0.5, yS(zm) - 0.5, zm - 0.5), new THREE.Vector3(xA + 0.5, yTopo + 6.2, z1 + 0.6)),
+    // os bancos de reservas, na frente da arquibancada
+    new THREE.Box3(new THREE.Vector3(-ESTADIO.bancos.x[1] - 0.5, -0.1, ESTADIO.bancos.z[0] - 0.8), new THREE.Vector3(ESTADIO.bancos.x[1] + 0.5, ESTADIO.bancos.altura + 0.3, z0)),
+  ];
+  return m;
 }
 
 /** Torres de refletores nos cantos (só aparecem em câmeras mais abertas) + brilho à noite. */
@@ -514,6 +650,11 @@ export function criarCampo(opc) {
   grupo.add(arq);
   const refl = criarRefletores();
   grupo.add(refl.grupo);
+  const ladoDeCa = arq.userData.ladoDeCa;
+  const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
+  // pré-carga (como a torcida): no 1º quadro, se a câmera não a vê, a arquibancada do lado de cá vai para a GPU com
+  // 0 triângulos (geometria e programa prontos) — o 1º corte de câmera que a mostra não engasga
+  let precarga = true, restaurar = false;
   return {
     grupo,
     /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
@@ -527,6 +668,24 @@ export function criarCampo(opc) {
       refl.matLamp.color.setHex(noite ? 0xf4f8ff : 0x3a4044);
       for (const b of refl.brilhos) b.visible = noite;
     },
-    atualizar(t) { band.tempo.value = t; },
+    /**
+     * t: s; camera (opcional): o lado de cá só vai para a GPU com a câmera fora dele e a caixa no quadro; desenha: este
+     * quadro vai mesmo ser desenhado (com o celular em pé a tela de girar cobre tudo e nada é desenhado — a pré-carga
+     * espera o 1º quadro desenhado de verdade).
+     */
+    atualizar(t, camera = null, desenha = true) {
+      band.tempo.value = t;
+      if (camera) {
+        camera.updateMatrixWorld();
+        _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+        const cx = ladoDeCa.userData.caixas;
+        const ver = !cameraNoLadoDeCa(camera.position) && cx.some(c => _frustum.intersectsBox(c));
+        if (restaurar) { restaurar = false; ladoDeCa.geometry.setDrawRange(0, Infinity); }
+        if (precarga && desenha && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
+        if (desenha) precarga = false;
+      }
+    },
+    /** A arquibancada do lado de cá (testes: visível ou não neste quadro). */
+    get ladoDeCa() { return ladoDeCa; },
   };
 }
