@@ -1134,7 +1134,7 @@ export const COMEMORACAO = {
   colegas: { max: 4, raioBusca: 45, atraso: [0.35, 0.15], vaga: 0.72, abertura: 0.85, vel: 0.92, abraco: 1.3 },
   separacao: 0.5,             // m entre os centros dos corpos na cena (o jogo usa 0,6; no abraço ficam mais perto)
   sofreu: { vel: 1.3, espera: 0.8, gesto: 0.6, gestoEntra: 0.5, meio: 6 }, // anda para a saída (x = lado·meio)
-  resto: { vel: 2.8, desde: 1.2, para: 7 },      // o resto do time que marcou trota até `para` m do grupo
+  resto: { vel: 2.8, desde: 1.2, para: 10 },     // o resto do time que marcou trota até `para` m do grupo (atrás da câmera do contraplano)
   agacha: { desce: 0.3, entra: 0.5, tronco: 0.35 }, // goleiro batido e autor do gol contra: agachados
   // de joelhos: o deslize começa a `inicio` m do alvo e desacelera até parar nele (entre decel[0] e decel[1] m/s²); o
   // joelho a `joelho` m do chão (centro da junta), tronco `tronco` rad para trás, entra em `entra` s
@@ -1146,7 +1146,7 @@ export const COMEMORACAO = {
   // câmera (fov vertical em graus para 16:9; o celular fecha `celular` e põe o autor no terço esquerdo)
   camera: {
     steadicam: { frente: 6.5, lado: 2.4, altura: 1.6, fov: 32, media: 0.3, rumo: 0.5 },
-    contraplano: { atras: 5.5, lado: 1.2, altura: 1.3, alem: 8, olharY: 3.0, fov: 42 },
+    contraplano: { atras: 7.5, lado: 1.2, altura: 1.3, alem: 6, olharY: 2.4, fov: 36 },
     reacao: { dist: 4.8, altura: 1.5, olharY: 0.95, fov: 30, ladoTV: 0.35 },
     celular: 0.88, terco: 1 / 3, limite: 5.5,
   },
