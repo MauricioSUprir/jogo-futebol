@@ -397,6 +397,7 @@ export const ACOES = {
   cargaMax: 1.2,              // s — depois disso solta sozinho
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
+  primeiraFolga: 0.3,         // s — o humano com o passe vindo (j.recebe): o pedido de primeira vale até a chegada + isto
   toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
