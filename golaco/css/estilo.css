@@ -342,8 +342,9 @@ html.com-toque .dica { display: none; }
 }
 /* Botões do arco (posição, tamanho, --fs, --ic e --ic-so vêm de js/entrada.js: calcularLayoutToque).
    Mínimo de 48 px; ataque e defesa trocam pelo estado do mundo (fase-ataque / fase-defesa). Tela limpa (11/10):
-   translúcidos (fundo 0,32, borda fina, sem sombra) e SÓ COM O ÍCONE — o nome fica no aria-label, na Ajuda e na
-   opção "Nomes nos botões" da pausa (html.nomes-botoes). Apertado: cheio e verde, sem transparência. */
+   translúcidos (fundo 0,32, borda fina, sem sombra); com o NOME da função embaixo do ícone por padrão (dono, 12/10:
+   "coloca o nome da função do botão de novo"; html.nomes-botoes) — "Nomes nos botões" desligado na pausa deixa só o
+   ícone (o nome fica no aria-label e na Ajuda). Apertado: cheio e verde, sem transparência. */
 .btn-toque {
   position: absolute; left: 0; top: 0; width: 72px; height: 72px;
   pointer-events: auto; touch-action: none; padding: 0; border-radius: 50%;
