@@ -21,6 +21,8 @@ import * as THREE from 'three';
 import { gerarTorcidaNiveis, quantosNoSetor, atlasTorcida, TORCIDA, POSE_GLSL, CAIXA_POSE, POSE, cameraNoLadoDeCa } from './torcida-dados.js';
 import { OLA_GLSL, estadoOla } from './festa.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
+import { criarBandeiras } from './bandeiras.js';
+import { criarSinalizadores } from './sinalizadores.js';
 
 const VERT = /* glsl */`
 #include <common>
@@ -237,6 +239,10 @@ export function criarTorcida(cena, opc) {
   }
   montar();
   aplicarQualidade(TORCIDA.ocupacao[opc.qualidade] ? opc.qualidade : 'media');
+  // a festa da torcida: faixas, bandeiras e bandeirões (1 chamada) e os sinalizadores (1 chamada, só no evento)
+  const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora });
+  const sinalizadores = criarSinalizadores(cena, { qualidade, hora: opc.hora });
+  let festaVisivel = true;
   const t = {
     get mesh() { return mesh; },
     get n() { return n; },
@@ -256,11 +262,14 @@ export function criarTorcida(cena, opc) {
         uni.uTensao.value.set(a.tensao, b.tensao);
         uni.uLamento.value.set(a.lamento, b.lamento);
         uni.uPalmas.value.set(a.palmas, b.palmas);
-        // festa: a ola e a luz dos sinalizadores (no relógio do estádio, o mesmo da agenda)
+        // festa: a ola, a luz dos sinalizadores, as bandeiras e os sinalizadores (no relógio do estádio, o da agenda)
         if (emocao.festa) {
           const o = estadoOla(emocao.festa, emocao.t);
           uni.uOla.value.set(o.theta, o.largura, o.forca, o.ativa ? 1 : 0);
           atualizarLuzFalsa(emocao.festa, emocao.t);
+          bandeiras.atualizar(emocao.festa, emocao.t);
+          sinalizadores.atualizar(emocao.festa, emocao.t);
+          if (!festaVisivel) sinalizadores.mesh.visible = false;
         }
       }
       if (camera) {
@@ -273,9 +282,13 @@ export function criarTorcida(cena, opc) {
         if (mesh) for (const m of mesh.children) m.visible = !(m.userData.ladoDeCa && dentro) && _frustum.intersectsBox(m.userData.caixa);
       }
     },
-    definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); },
-    definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) aplicarQualidade(q); },
-    dispose() { desmontar(); },
+    definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },
+    definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) { aplicarQualidade(q); bandeiras.definirQualidade(q); sinalizadores.definirQualidade(q); } },
+    /** Faixas/bandeiras/bandeirões e sinalizadores (testes e prints). */
+    bandeiras, sinalizadores,
+    /** Mostra/esconde a festa (faixas, bandeiras, bandeirões, sinalizadores) — conferência nos testes. */
+    mostrarFesta(v) { festaVisivel = !!v; bandeiras.mesh.visible = festaVisivel; if (!festaVisivel) sinalizadores.mesh.visible = false; },
+    dispose() { desmontar(); bandeiras.dispose(); sinalizadores.dispose(); },
   };
   t.definirHora(opc.hora ?? 'dia');
   return t;

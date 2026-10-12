@@ -22,7 +22,9 @@
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
 //  11) o LADO DE CÁ (11/10): fora do desenho na câmera de TV (celular e PC, 20 instantes), visível do outro lado do
-//      campo com a torcida e o túnel no meio.
+//      campo com a torcida e o túnel no meio;
+//  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
+//      GPU = JS; no gol da casa a organizada muda na câmera do gol (bandeirão e sinalizadores); overdraw ≤ 0,5 tela.
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -432,6 +434,91 @@ void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
   });
   meta('GPU = JS: pose da torcida (4096 torcedores sorteados)', gpu.erro ?? `${gpu.poseDif} poses diferentes; pulo difere até ${(gpu.puloDif * 1000).toFixed(2)} mm`, '≤ 0,2% (limiar no float) e ≤ 1 mm', !gpu.erro && gpu.poseDif <= 0.002 * gpu.N && gpu.puloDif <= 0.001);
   meta('GPU = JS: deslocamento da rede (4096 pontos dos 8 panos, 4 batidas)', gpu.erro ?? `difere até ${(gpu.redeDif * 1000).toFixed(3)} mm (bolsa até ${f2(gpu.maxD)} m); fixação até ${gpu.fixoDif.toExponential(1)}`, '≤ 0,1 mm (fixação ≤ 0,001)', !gpu.erro && gpu.redeDif <= 1e-4 && gpu.fixoDif <= 1e-3 && gpu.maxD > 0.1);
+  // 12) FESTA (pedido de 11/10: "bandeirões, sinalizadores"): (a) as faixas/bandeiras/bandeirões e os sinalizadores
+  //     custam no máximo 2 chamadas de desenho a mais no jogo (20 instantes, inclusive a saída com sinalizadores); (b) a
+  //     onda da bandeira na GPU = no JS (4096 pontos); (c) no gol da casa, a organizada atrás do gol muda na câmera do
+  //     gol (bandeirão abrindo e sinalizadores: o mesmo quadro com × sem a festa); (d) overdraw da fumaça ≤ 0,5 tela.
+  {
+    const cham = await pg.evaluate(() => {
+      const g = window.__golaco;
+      g.reiniciar({ modo: 'partida', semente: 4 });
+      const dif = [], tot = [];
+      for (let k = 0; k < 20; k++) {
+        for (let i = 0; i < (k < 4 ? 30 : 90); i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        g.estadio.mostrarFesta(true); g.desenhar(); const a = g.estado().desenhoChamadas;
+        g.estadio.mostrarFesta(false); g.desenhar(); const b = g.estado().desenhoChamadas;
+        g.estadio.mostrarFesta(true);
+        dif.push(a - b); tot.push(a);
+      }
+      return { dif, tot, max: Math.max(...dif) };
+    });
+    const s = [...cham.tot].sort((a, b) => a - b);
+    meta('Festa: faixas, bandeiras, bandeirões e sinalizadores custam ≤ 2 chamadas de desenho no jogo', `a mais: [${cham.dif.join(' ')}] (máx ${cham.max}); total no jogo: mediana ${s[10]}, máx ${s[19]} (base: mediana 29, máx 35)`,
+      '≤ 2; mediana ≤ 33', cham.max <= 2 && s[10] <= 33);
+    const gpuB = await pg.evaluate(async () => {
+      const BD = await import('./js/render/bandeiras-dados.js');
+      const cv = document.createElement('canvas');
+      const gl = cv.getContext('webgl2');
+      if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+      const N = 4096;
+      cv.width = N; cv.height = 1;
+      const sh = (tipo, src) => { const o = gl.createShader(tipo); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+      const p = gl.createProgram();
+      gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${BD.BANDEIRA_GLSL}
+void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i, 0), 0), b = texelFetch(uEntrada, ivec2(i, 1), 0);
+  cor = vec4(bandeiraPonto(a.x, a.y, a.z, a.w, b.x), 1.0); }`));
+      gl.linkProgram(p);
+      let semente = 777;
+      const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+      const ent = new Float32Array(4 * N * 2);
+      for (let i = 0; i < N; i++) {
+        ent.set([rnd() * BD.BANDEIRAS.largura, rnd() * BD.BANDEIRAS.altura, rnd() * 6.283, rnd() * 600], 4 * i);
+        ent.set([rnd() < 0.85 ? 1 : 0, 0, 0, 0], 4 * (N + i));
+      }
+      const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 2, 0, gl.RGBA, gl.FLOAT, ent);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      const alvo = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+      const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+      gl.useProgram(p); gl.viewport(0, 0, N, 1);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, t); gl.uniform1i(gl.getUniformLocation(p, 'uEntrada'), 0);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out);
+      let dif = 0, maxOnda = 0;
+      for (let i = 0; i < N; i++) {
+        const a = ent.subarray(4 * i, 4 * i + 4), an = ent[4 * (N + i)];
+        const r = BD.pontoBandeira(a[0], a[1], a[2], a[3], an);
+        maxOnda = Math.max(maxOnda, Math.abs(r.ln));
+        dif = Math.max(dif, Math.abs(r.la - out[4 * i]), Math.abs(r.lb - out[4 * i + 1]), Math.abs(r.ln - out[4 * i + 2]));
+      }
+      return { N, dif, maxOnda };
+    });
+    meta('GPU = JS: onda e balanço da bandeira (4096 pontos do pano)', gpuB.erro ?? `difere até ${(gpuB.dif * 1000).toFixed(2)} mm (onda até ${f2(gpuB.maxOnda)} m)`, '≤ 2 mm (seno de t grande no float)', !gpuB.erro && gpuB.dif <= 0.002 && gpuB.maxOnda > 0.1);
+    // (c) e (d): gol da casa, 2,2 s depois (ainda na câmera do gol, antes da saída de bola)
+    const golF = await golRoteirizado(pg, { semente: 5, time: 0 });
+    const festaGol = await pg.evaluate(() => {
+      const g = window.__golaco;
+      for (let i = 0; i < 132; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      const cv = document.querySelector('canvas');
+      const off = document.createElement('canvas'); off.width = 320; off.height = 180;
+      const cx = off.getContext('2d', { willReadFrequently: true });
+      const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
+      g.estadio.mostrarFesta(true); g.desenhar(); const a = ler();
+      const fv = g.estadio.festaVisual, plano = g.estadio.planoCamera, acesos = g.estadio.festa.flares.length;
+      const ov = g.estadio.overdrawFumaca();
+      g.estadio.mostrarFesta(false); g.desenhar(); const b = ler();
+      g.estadio.mostrarFesta(true); g.desenhar();
+      let n = 0;
+      for (let i = 0; i < a.length; i += 4) if ((Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2])) / 3 > 20) n++;
+      return { frac: n / (a.length / 4), fv, plano, acesos, ov };
+    });
+    meta('Gol da casa: a organizada muda na câmera do gol (bandeirão abrindo e sinalizadores)', golF.ok ? `câmera ${festaGol.plano}; bandeirão ${f2(festaGol.fv.abre)} aberto, ${festaGol.acesos} sinalizadores; ${f2(100 * festaGol.frac)}% dos pixels mudam com a festa` : 'o gol roteirizado não saiu',
+      'câmera do gol; ≥ 0,8 aberto, ≥ 3 acesos, ≥ 8% da tela', golF.ok && festaGol.plano === 'fechado' && festaGol.fv.abre >= 0.8 && festaGol.acesos >= 3 && festaGol.frac >= 0.08);
+    meta('Overdraw da fumaça e do brilho dos sinalizadores no pico do gol (câmera do gol, PC Alta)', `${f2(festaGol.ov)} tela(s) cheia(s)`, '≤ 0,5', festaGol.ov != null && festaGol.ov <= 0.5);
+  }
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
 } catch (e) {
   meta('Execução', e.message, 'sem exceção', false);

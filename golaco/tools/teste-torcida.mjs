@@ -414,6 +414,111 @@ if (EM) {
   }
 }
 
+// F) festa visual (pedido de 11/10: "bandeirões, sinalizadores"): a agenda dos SINALIZADORES (só nos eventos), a
+//    FUMAÇA nunca no campo, as BANDEIRAS fora do campo, o BANDEIRÃO na saída e no gol da casa e a OLA com a torcida calma.
+{
+  const FE = await imp('render/festa.js');
+  const FU = await imp('render/fumaca.js');
+  const BD = await imp('render/bandeiras-dados.js');
+  if (!FE || !FU || !BD || !EM) reg('Festa: sinalizadores, fumaça, bandeiras, bandeirão e ola (festa.js, fumaca.js, bandeiras-dados.js)', 'não existe (nenhum elemento de festa)', 'existe', false);
+  else {
+    const ataca = { 0: 1, 1: -1 };
+    const timeDe = id => (id >= 100 ? 1 : 0);
+    const ctx = (t, bola) => ({ t, timeDe, bola, ataca });
+    const roda = (e, t0, s, estado = 'jogo', bola = { x: 0, z: 0 }) => { let t = t0; for (let i = 0; i < Math.round(s * 60); i++) { t += 1 / 60; EM.emocaoPasso(e, { t, bola, posseTime: 0, ataca, estado }, 1 / 60); } return t; };
+    const acesos = e => e.festa.flares.filter(s => s.ativo).length;
+    // sinalizadores: 3 min sem evento → nenhum; saída do 1º tempo → acendem; a saída depois do gol não acende de novo
+    const e = EM.criarEmocao();
+    let t = roda(e, 0, 180);
+    const semEvento = e.festa.acesos;
+    EM.emocaoEvento(e, { tipo: 'saida', time: 0 }, ctx(t, { x: 0, z: 0 }));
+    const naSaida = e.festa.acesos - semEvento;
+    t = roda(e, t, 40);
+    EM.emocaoEvento(e, { tipo: 'gol', time: 0 }, ctx(t, { x: 53, z: 0 }));
+    const noGol = e.festa.acesos - semEvento - naSaida;
+    t = roda(e, t, 4, 'gol');
+    const antes = e.festa.acesos;
+    EM.emocaoEvento(e, { tipo: 'saida', time: 1 }, ctx(t, { x: 0, z: 0 }));
+    const saidaDepoisDoGol = e.festa.acesos - antes;
+    const e2 = EM.criarEmocao();
+    EM.emocaoEvento(e2, { tipo: 'gol', time: 1 }, ctx(30, { x: -53, z: 0 }));
+    const vis = e2.festa.flares.filter(s => s.ativo);
+    reg('Sinalizadores só em momento marcado (saída do tempo, gol, vitória)', `3 min sem evento ${semEvento} · saída do 1º tempo ${naSaida} · gol da casa ${noGol} · saída depois do gol ${saidaDepoisDoGol} · gol do visitante ${vis.length} (${vis.every(s => s.cor === 1 && s.x < -60) ? 'brancos no setor deles' : 'fora do setor'})`,
+      '0 · ≥ 4 · ≥ 3 · 0 · 2 brancos no setor visitante', semEvento === 0 && naSaida >= 4 && noGol >= 3 && saidaDepoisDoGol === 0 && vis.length === 2 && vis.every(s => s.cor === 1 && s.x < -60));
+    // fumaça: 60 s de todos os pontos acesos, o máximo de partículas — nenhuma entra no campo (|x| < 55, |z| < 37)
+    {
+      const P = FU.FUMACA.porQualidade.alta;
+      const f = FE.criarFesta();
+      const pontos = [...FE.PONTOS_SINALIZADOR.organizada, ...FE.PONTOS_SINALIZADOR.quinas, ...FE.PONTOS_SINALIZADOR.visitante];
+      let dentro = 0, n = 0, maxAlt = 0;
+      for (let i = 0; i < pontos.length; i += 8) {
+        const lote = pontos.slice(i, i + 8);
+        const sl = lote.map((p, k) => ({ ativo: true, t0: 0.4 * k, dur: 28, x: p[0], y: p[1], z: p[2], cor: 0, semente: (k + 1) / 9 }));
+        for (let tt = 0; tt <= 60; tt += 0.25) for (const s of sl) for (let p = 0; p < P; p++) {
+          const q = FU.fumacaParticula(s, p, P, tt);
+          if (!q) continue;
+          n++; maxAlt = Math.max(maxAlt, q.y);
+          if (Math.abs(q.x) - q.tam / 2 < 55 && Math.abs(q.z) - q.tam / 2 < 37) dentro++;
+        }
+      }
+      reg('Fumaça dos sinalizadores nunca entra no campo (60 s, todos os pontos)', `${dentro} de ${n} partículas no retângulo |x| < 55, |z| < 37 (com o tamanho); sobe até ${fmt(maxAlt, 1)} m`, '0', dentro === 0 && n > 1000);
+    }
+    // bandeiras: o pano e o mastro, balançando, nunca no campo + 3 m nem abaixo da mureta
+    {
+      const lista = BD.bandeiras();
+      let noCampo = 0, baixo = 0, n = 0;
+      const B = BD.BANDEIRAS;
+      for (const b of lista) for (let tt = 0; tt < 6; tt += 0.11) for (let a = 0; a <= B.largura; a += 0.5) for (let bb = 0; bb <= B.altura; bb += 0.35) {
+        const l = BD.pontoBandeira(a, bb, b.fase, tt);
+        const x = b.x + b.ex * l.la + (-b.ez) * l.ln, y = b.y + l.lb, z = b.z + b.ez * l.la + b.ex * l.ln;
+        n++;
+        if (Math.abs(x) < 52.5 + 3 && Math.abs(z) < 34 + 3) noCampo++;
+        if (y < 1.6) baixo++;
+      }
+      const qs = ['baixa', 'media', 'alta'].map(q => B.bandeiras[q]);
+      reg('Bandeiras de mastro fora do campo (o pano balançando)', `${lista.length} bandeiras (Baixa ${qs[0]}, Média ${qs[1]}, Alta ${qs[2]}); ${noCampo} pontos no campo + 3 m e ${baixo} abaixo da mureta (de ${n})`, '0 e 0', noCampo === 0 && baixo === 0 && lista.length >= qs[2]);
+    }
+    // bandeirão: abre na saída de cada tempo e no gol da casa; não no gol do visitante; enrolado com a bola rolando
+    {
+      const eb = EM.criarEmocao();
+      EM.emocaoEvento(eb, { tipo: 'saida', time: 0 }, ctx(0.1, { x: 0, z: 0 }));
+      let tb = roda(eb, 0.1, 5);
+      const naSaida = FE.aberturaBandeirao(eb.festa);
+      tb = roda(eb, tb, 30);
+      const rolando = FE.aberturaBandeirao(eb.festa);
+      EM.emocaoEvento(eb, { tipo: 'gol', time: 1 }, ctx(tb, { x: -53, z: 0 }));
+      tb = roda(eb, tb, 5, 'gol');
+      const golVisit = FE.aberturaBandeirao(eb.festa);
+      tb = roda(eb, tb, 20);
+      EM.emocaoEvento(eb, { tipo: 'gol', time: 0 }, ctx(tb, { x: 53, z: 0 }));
+      tb = roda(eb, tb, 5, 'gol');
+      const golCasa = FE.aberturaBandeirao(eb.festa);
+      reg('Bandeirão: abre na saída e no gol da casa; enrolado com a bola rolando', `saída ${fmt(naSaida, 2)} · 35 s depois ${fmt(rolando, 2)} · gol do visitante ${fmt(golVisit, 2)} · gol da casa ${fmt(golCasa, 2)}`, '1 · 0 · 0 · 1',
+        naSaida > 0.99 && rolando === 0 && golVisit === 0 && golCasa > 0.99);
+    }
+    // ola: 40 s de torcida calma com o jogo rolando → começa; corre no sentido horário; no máximo 1 a cada 3 min
+    {
+      const eo = EM.criarEmocao();
+      let to = roda(eo, 0, 39);
+      const cedo = eo.festa.ola.n;
+      to = roda(eo, to, 2);
+      const comecou = eo.festa.ola.n;
+      const th0 = FE.estadoOla(eo.festa, to).theta;
+      to = roda(eo, to, 5);
+      const th1 = FE.estadoOla(eo.festa, to).theta;
+      to = roda(eo, to, 170);
+      const em3min = eo.festa.ola.n;
+      const ea = EM.criarEmocao();
+      roda(ea, 0, 120, 'jogo', { x: 45, z: 2 });
+      // o peso na crista: 1 em cima dela, 0 a 30° dela
+      const o = { ativa: true, theta: -Math.PI / 2, largura: FE.FESTA.ola.largura, forca: 1 };
+      const naCrista = FE.olaPeso(0, -50, o), longe = FE.olaPeso(50 * Math.cos(-Math.PI / 2 + 0.52), 50 * Math.sin(-Math.PI / 2 + 0.52), o);
+      reg('Ola: começa com a torcida calma por 40 s, sentido horário, no máximo 1 a cada 3 min', `aos 39 s ${cedo}, aos 41 s ${comecou}; a crista andou ${fmt((th1 - th0) * 180 / Math.PI, 0)}° em 5 s; ${em3min} em 3,6 min; ${ea.festa.ola.n} com o ataque perto da área; peso ${fmt(naCrista, 2)} na crista e ${fmt(longe, 2)} a 30°`,
+        '0 → 1; > 0 (horário); 1; 0; 1 e 0', cedo === 0 && comecou === 1 && th1 > th0 && em3min === 1 && ea.festa.ola.n === 0 && naCrista > 0.99 && longe === 0);
+    }
+  }
+}
+
 // D) autor do gol (contraprova M5): o último toque DE VERDADE pelos eventos (condução e domínio contam); desvio
 // e defesa do adversário depois do chute de quem marcou contam para quem chutou
 {

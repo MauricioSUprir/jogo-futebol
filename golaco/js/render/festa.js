@@ -42,10 +42,11 @@ export const FESTA = {
     max: 8,                    // no máximo 8 acesos (uniform vec4[8] da luz falsa)
     dur: [22, 28],             // s acesos (o fogo); a fumaça ainda sobe uns segundos depois
     saida: 6, gol: 5, golVisitante: 2, vitoria: 6,
-    atrasoGol: 1.2,            // s depois do gol (o torcedor acende)
+    atrasoGol: 0.6,            // s depois do gol (o torcedor acende; a câmera do gol mostra até a saída, 2,5 s)
     escalona: 0.35,            // s entre um e outro (não acendem todos no mesmo quadro)
   },
-  bandeirao: { saida: 16, gol: 18, atrasoGol: 1.5, abre: 2.5, fecha: 2.5 },
+  // o bandeirão do gol abre logo (a câmera do gol fica até a saída de bola, 2,5 s depois do gol)
+  bandeirao: { saida: 16, gol: 18, atrasoGol: 0.5, abre: 1.8, fecha: 2.5 },
   // ola: torcida calma (agito < calmoAgito) por `calmo` s seguidos; no máximo 1 a cada `intervalo` s
   ola: { calmo: 40, intervalo: 180, calmoAgito: 0.3, vel: 0.2, largura: 0.16, voltas: 1.25, inicio: -2.2 },
 };
@@ -213,6 +214,14 @@ float torcidaOla(vec2 xz, vec4 ola) {
   return w * w * (3.0 - 2.0 * w) * ola.z;
 }
 `;
+
+/** Testes e prints: acende sinalizadores, abre o bandeirão e/ou começa a ola agora (só o desenho; nada do mundo). */
+export function forcarFesta(f, o = {}) {
+  const S = FESTA.sinalizadores;
+  if (o.sinalizadores) acender(f, (o.cor ? VISIT : ORG.concat(QUINAS)), o.sinalizadores === true ? S.gol : o.sinalizadores, o.cor ? 1 : 0, 0);
+  if (o.bandeirao) abrirBandeirao(f, 0, o.bandeirao === true ? FESTA.bandeirao.gol : o.bandeirao);
+  if (o.ola) { f.ola.t0 = f.t; f.ola.ultima = f.t; f.ola.ativa = true; f.ola.n++; }
+}
 
 // ------------------------------------------------------------------ eventos e passo
 
