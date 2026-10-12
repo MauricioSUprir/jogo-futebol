@@ -36,8 +36,10 @@ const ROTULO_CARGA = {
 const COR_MAPA = {
   t0: '#19e07a', t0gol: '#c6ff3d', t1: '#93a3ae', t1gol: '#d0631f', bola: '#ffffff',
 };
-// times fictícios: siglas do placar (treino; na partida vêm do elenco por definirTimes)
-const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço' }, { sigla: 'VIS', nome: 'Visitante' }];
+// times fictícios: siglas e escudos do placar (treino; na partida vêm do elenco por definirTimes). O escudo é o id de um
+// <symbol id="escudo-..."> do index.html (desenhados lá, fictícios); o visitante do treino veste o branco do Ventania
+const TIMES_TREINO = [{ sigla: 'GLÇ', nome: 'Golaço', escudo: 'golaco' }, { sigla: 'VIS', nome: 'Visitante', escudo: 'ventania' }];
+const ESCUDOS = new Set(['golaco', 'ventania']);
 const NOME_TEMPO = { 1: '1º T', 2: '2º T' };
 
 const NOMES_Q = { baixa: 'Baixa', media: 'Média', alta: 'Alta' };
@@ -57,6 +59,7 @@ export function criarHud(opc) {
     carregando: $('carregando'), msg: $('carregando-msg'), marcador: $('estado-marcador'), infoQ: $('info-qualidade'),
     tam: $('toque-tamanho'), opa: $('toque-opacidade'), saidaTam: $('saida-tamanho'), saidaOpa: $('saida-opacidade'),
     gols: [$('gols-0'), $('gols-1')], siglas: [$('sigla-0'), $('sigla-1')], golTela: $('gol-tela'),
+    escudos: [$('escudo-0'), $('escudo-1')], timesPlacar: [$('placar-time-0'), $('placar-time-1')],
     somVol: $('som-volume'), saidaVol: $('saida-volume'), infoSom: $('info-som'),
     mapa: $('minimapa'), cartao: $('cartao-icone'), carga: $('carga'), cargaTipo: $('carga-tipo'), cargaNivel: $('carga-nivel'),
     relogio: $('placar-relogio'), minuto: $('relogio'), tempo: $('relogio-tempo'),
@@ -78,7 +81,15 @@ export function criarHud(opc) {
   let timerFaixa = null;
   let modoAtual = null, fimDeJogo = false;
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
-  times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
+  /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
+  function escreverTimes() {
+    times.forEach((t, i) => {
+      if (el.siglas[i]) el.siglas[i].textContent = t.sigla;
+      if (el.escudos[i]) el.escudos[i].setAttribute('href', `#escudo-${ESCUDOS.has(t.escudo) ? t.escudo : TIMES_TREINO[i].escudo}`);
+      if (el.timesPlacar[i]) el.timesPlacar[i].setAttribute('aria-label', t.nome ?? t.sigla);
+    });
+  }
+  escreverTimes();
 
   // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
   document.querySelectorAll('[data-cmd]').forEach(b => {
@@ -429,10 +440,10 @@ export function criarHud(opc) {
     fecharMenu() { el.menu.hidden = true; },
     /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
     submenuModos: mostrarSubmenu,
-    /** Siglas e nomes dos dois times (partida: do elenco) ou null (treino). */
+    /** Siglas, nomes e escudos ({sigla, nome, escudo: id do elenco}) dos dois times (partida: do elenco) ou null (treino). */
     definirTimes(t) {
       times = t ?? TIMES_TREINO;
-      times.forEach((x, i) => { if (el.siglas[i]) el.siglas[i].textContent = x.sigla; });
+      escreverTimes();
       ajustarTopo();
     },
     get times() { return times; },

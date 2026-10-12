@@ -169,6 +169,33 @@ mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
 Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
 pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
+### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
+
+Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
+cara". A referência é uma barra de TV no canto de cima à esquerda: marca do jogo | escudo + sigla da casa | "1 - 0" |
+sigla + escudo do visitante | relógio num bloco verde; fundo escuro translúcido, cantos arredondados, caixa alta. Medida
+na própria imagem (2532×1170 = 844×390 com 3 px por px): **248×29 px = 7192 px² (2,2% da tela)**, números de ~14 px,
+siglas e relógio de ~11 px. O placar publicado antes: 30 px de altura no celular (34 no PC), sem marca e sem escudos.
+
+| Fonte | O que aproveitamos |
+|---|---|
+| Placares de TV (Premier League, Champions League, Brasileirão na TV aberta, EA SPORTS FC) — a forma comum das transmissões (nenhuma publica medidas: lacuna registrada, sem números inventados) | Uma barra só no canto de cima à esquerda; a marca da competição abre a barra; sigla de 3 letras com a cor do time numa faixa; o placar no meio; o relógio num bloco separado no fim. Daí: a ordem da referência, a faixa de cor de cima a baixo na borda de fora de cada time (casa verde logo depois da marca, visitante branca logo antes do relógio, como na referência) e o relógio no bloco verde da marca |
+| "Designing the Modern Scorebug" (SportsVideo.org, 2026, já citado no §7) | Logos dos times no lugar das siglas (a Fox trocou as letras por logos em 2025) e "um placar menor pode ser mais legível que um maior se a tipografia e o espaço forem precisos" (contraste, espaço, hierarquia). Daí: escudo + sigla, números MAIORES numa barra MENOR (16 px numa barra de 24 px; na referência ~14 px em 29 px) e o contraste do relógio conferido no teste |
+| Apple Human Interface Guidelines, Typography (https://developer.apple.com/design/human-interface-guidelines/typography) | Mínimo de 11 pt no iOS (padrão 17). Daí: siglas de 11 px no celular (12 no PC) — o placar antes também tinha 11 — e nada abaixo de 10 px (o "1º T +4"/"Intervalo" estava em 9 px e subiu para 10) |
+| Material Design 3, escala de tipos (https://m3.material.io/styles/typography/type-scale-tokens) | Label Small = 11, Title Small = 14, Title Medium = 16. Daí: números (placar e relógio) ≥ 14 px — o relógio subiu de 12 para 14 px (15 no PC) — e os gols com 16 px (17 no PC) |
+| WCAG 2.x, contraste mínimo 4,5:1 | Relógio preto (#07090a) no verde da marca (#19e07a): ~11:1; conferido no teste (≥ 4,5:1) |
+
+Identidade (a "nossa cara"): preto e verde da interface (`--preto`, `--verde`, `--texto`), a mesma fonte (`--fonte`), o
+símbolo do GOLAÇO (o paralelogramo verde do favicon e da placa do estádio) no lugar da marca da referência e escudos
+desenhados aqui, fictícios: Golaço FC = escudo preto com o G verde do bandeirão da organizada; Ventania FC = escudo branco
+com o vento. Nada licenciado e nenhum texto novo na tela (escudos e marca são só desenho; o nome do time fica só no
+`aria-label`).
+
+Resultado (`teste-hud-minimo` H10, mesma ferramenta na base com `--raiz`; altura × largura no jogo "34'" / acréscimos
+"45+2' 1º T +4" / intervalo):
+
+RESULTADO_PLACAR
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
