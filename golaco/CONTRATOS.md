@@ -324,6 +324,69 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
 - **Testes**: `tools/teste-som-jogo.mjs` (navegador, CI: M1–M11), `tools/teste-torcida.mjs` (Node: seções E e F),
   `tools/teste-estadio.mjs` (itens 11 lado de cá e bancos fora da TV, 12 festa), `tools/teste-desempenho-celular.mjs` (os sinalizadores
   acesos contam à parte na comparação partida × treino).
+## Replay — gol, impedimento com a linha e "Replay" da pausa (contrato)
+Pedidos do dono de 11/10 ("o replay não funciona"; "quando o jogo parar por impedimento, no replay vai mostrar a linha").
+Pesquisa: `PESQUISA-ESTADIO.md` §6. **Só desenho: o replay LÊ um anel do que foi desenhado e a simulação fica PARADA
+enquanto ele toca, como na pausa** — o hash no mesmo tick é o mesmo com e sem replay (`hash-igual` e `hash-partida`
+IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
+- **`render/replay-anel.js` (puro, Node)**: `criarAnel({ticks, vagas, nj})` → anel fixo (`ticks` × `vagas` × (NJ×3 + 3)
+  Float32 + ids/time/goleiro, bola p+q, relógio do estádio e corte por passo; 600 × 24 = 3,36 MB, alocado uma vez) com
+  `inicio(tick, tEstadio, cortou)`, `jogador(v, id, time, goleiro, x, z, rumo, pose)`, `fim(bolaP, bolaQ)`, `slot(tick)`,
+  `ultimoCorte(de, ate)`, `primeiroCorte(de, ate)`, `primeiro`/`ultimo` (sem buraco; tick que não segue o anterior = mundo novo, recomeça),
+  `limpar()`, `bytes`. `lerQuadro(anel, tFracionario, lista, bp, bq, kitDe)` → n (itens no formato do
+  `jogador3d.atualizar`, sem controlado; interpola pose/x/z, rumo pelo caminho curto e a bola por nlerp; o passo marcado
+  como corte não é interpolado; a substituição segue o id), `tempoEstadio(anel, t)`, `bolaNoTick`, `jogadorNoTick`,
+  `defensorDaLinha(anel, tick, time, linhaX, tol)`.
+- **`render/replay-roteiro.js` (puro, Node)**: roteiro = `{tipo: 'gol'|'impedimento'|'menu', planos: [{de, ate, vel, cam:
+  'tv'|'atras'|'lateral'|'linha', congela?: {tick, s, velDepois}}], lado, ...}`; nunca atravessa um corte do anel.
+  `roteiroGol(anel, {golTick, chuteTick, lado, golaco?})` (TV 1× do chute − 4 s, ou do último corte, até o gol + 0,8 s;
+  atrás do gol 0,5× do chute − 1 s até o gol + 1 s; golaço = chute de ≥ 20 m: + lateral 0,35×; ≤ 12 s, golaço ≤ 14 s —
+  o começo da TV encolhe; nenhum plano passa de um corte depois do gol), `roteiroImpedimento(anel, {fotoTick, apitoTick,
+  linhaX, idImpedido, time, lado})` (câmera 'linha', 0,6× até o passe, congela 1,6 s nele e segue até o apito — o toque
+  do impedido — em ≤ 2,5 s reais: `congela.velDepois` = 1× ou mais depressa com o apito longe do passe, até 2× (apito até
+  5 s depois do passe); além disso para antes do toque), `roteiroMenu(anel)` (os últimos 10 s, TV 1×; a menos de 3 s
+  de um corte — pausa logo depois de uma montagem de falta/lateral — o lance ANTES do corte, o que parou o jogo; null
+  com menos de 0,5 s: o botão da pausa não fecha a pausa), `ehGolaco`, `duracao(roteiro)` e o relógio `criarRelogio`, `iniciarRelogio`,
+  `avancarRelogio(r, dt)` (false no fim), `velocidadeAgora`, `linhaDoReplay(r, dt, out)` (`{visivel, x, opacidade}`: só no
+  impedimento, do tick do passe em diante, entrando em 0,25 s, até o fim).
+- **`render/replay.js` (three.js)**: `criarDiretor({anel, aspecto})` → `{camera, ativo, estado, tick, velocidade,
+  redimensionar, aoGol({golTick, chuteTick, lado}), golPendente, depoisDoGol(), descartarGol(), reverGol(golaco),
+  impedimento(i), menu(), iniciar(roteiro), pular(), limpar(), avancar(dt), linha(dt), posicionar(bolaDesenhada, dtR)}`.
+  Câmeras: 'tv' = outra instância de `camera.js` seguindo a bola gravada e antecipando pela velocidade dela 0,25 s à frente
+  no anel; 'atras' (atrás do gol, 6 m, por cima da rede); 'lateral' (beira do campo do lado da TV, 1,6 m, fov 18°);
+  'linha' (no x da linha, 15 m de altura, 8 m fora do campo do lado da TV: a linha em pé no quadro; o fov cobre o impedido e
+  o defensor da linha no passo do passe, fixo o replay inteiro).
+- **GANCHO DO PÓS-GOL**: o evento `gol` só guarda o gol (`diretor.aoGol`); o replay entra quando o pós-gol chega na vez
+  dele — hoje `main.js posGol()` na `saida` de bola (ou no `intervalo`/`fimDeJogo`, antes da faixa). A cena de
+  comemoração (outra frente) entra ANTES: quando acabar, chama `posGol()` (que chama `diretor.depoisDoGol()`).
+- **`main.js`**: `gravarNoAnel(cortou)` em `rodarPasso` logo depois da pose (só copia; ≤ 50 µs, medido ~11 µs); `cortou` =
+  jogador levado > 2 m ou bola > 2,5 m. Replay ativo: o laço não roda passos (`laco.ultimo = agora`, como na pausa), o
+  passo que abriu o replay interrompe os que sobravam no quadro, `desenharReplay` desenha do anel (rede re-balança com o
+  relógio gravado; sem marcas de queda nem do lateral; a linha pelo `linhaImped.mostrar(diretor.linha(dt))`). Pula:
+  qualquer ação (Esc/Start não abre a pausa), um botão APERTADO durante o replay (o já segurado não conta), clique ou
+  toque (camada `#replay`); no pulo, a entrada é solta e o botão do controle segurado só vale de novo depois de solto.
+  Sons do passo que abriu o replay do gol (o apito da saída) tocam no fim dele. Um passo rodado com o replay ativo (só pela
+  API `rodarPassos`) encerra o replay. Mundo novo: anel e diretor limpos. Depois do replay do impedimento, a linha parada
+  do apito não se repete ao vivo enquanto a bola não rola (`linhaNoReplay`).
+- **Evento `impedimento`** ganha `tickFoto` (o passo da jogada do companheiro: a foto da Regra 11 — o quadro congelado).
+- **`render/linha-impedimento.js`**: `mostrar(null | {visivel, x, opacidade})` — desenho comandado da linha do lance
+  (amarela, 1,8×), sem ler o mundo.
+- **HUD/página**: `hud.replay(ativo)` (classe `em-replay` no `html`: minimapa, menu, avisos, carga, cartão, painel e botões
+  de toque somem; marca "REPLAY" no canto de cima à direita — a marca da transmissão, nenhum lance vira texto; "Pular" só
+  com toque, ≥ 48 px; a faixa verde `#replay-faixa` cruza a tela na entrada e na saída, 0,4 s, sem bloquear nada; nada
+  disso no modo de prints, a não ser a marca). Pausa: botão "Replay" (`data-cmd="replay"`, só na partida) e o ajuste
+  "Replays automáticos" (`data-grupo="replayAuto"`, salvo em `golaco.prefs.v1.replay`; `?replay=0|1` força).
+- **API (`window.__golaco.replay`)**: `estado`, `anel {primeiro, ultimo, bytes}`, `custo {gravarMsPorPasso, passos,
+  quadroReplayMs, quadros}`, `zerarCusto()`, `medirGravacao(n, lotes)` (ms por gravação, mediana dos lotes),
+  `automatico(v?)` (sem salvar), `golPendente`, `pular()`, `menu()`, `gol(golaco?)` (o último gol de novo).
+- **Testes**: `tools/teste-replay-anel.mjs` (Node, padrão: anel, roteiros e relógio, e o replay de um gol e de um
+  impedimento de verdade em Node) e `tools/teste-replay.mjs` (navegador, CI): gol roteirizado (começa na saída, mostra o
+  chute e a bola entrando, simulação parada, 2 planos, só a marca na tela, apito depois), hash com × sem replay (`--base`
+  compara outra versão), gol natural, impedimento (linha só do passe em diante, no x do lance, câmera alinhada, congela ≥
+  1,2 s, não fica parada depois), pausa, Esc, tecla do jogo, toque no celular, "desligado" salvo, custos. Os testes de
+  navegador que não são do replay abrem com `?replay=0` (o replay seguraria a simulação ~10 s depois de um gol).
+  `tools/lib/acha-gol.mjs` ganhou `comoPagina` (a entrada da IA pelo humano como a página entrega: o lance do laço da
+  página).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
@@ -666,7 +729,8 @@ Sai em PRs menores; cada um acrescenta a sua parte aqui. Pesquisa e números em 
   goleiro): impedido da foto que toca → devolve a infração; jogada deliberada do adversário → zera; `cobranca` de tiro de
   meta, lateral ou escanteio → zera sem fotografar; senão a jogada deliberada do passo fotografa de novo.
 - Estado: `m.partida.imped = null | {time, ids, tick, linhaX, por}`; `m.partida.ultimoImped = {tick, linhaX, id, time, x,
-  z}` (para o desenho); `bolaMorta` zera a foto. Infração: evento `impedimento {id, time, x, z, linhaX, por}` e parada
+  z}` (para o desenho); `bolaMorta` zera a foto. Infração: evento `impedimento {id, time, x, z, linhaX, por, tickFoto}`
+  (`tickFoto`: o passo da foto — o quadro que o replay congela) e parada
   `tiroLivre` (novo em `TIPOS_PARADA`, no fim da lista) do outro time no ponto do toque; `PARTIDA.raio.tiroLivre` 9,15 m;
   a montagem é a do lateral (o de linha mais perto, virado para o ataque), evento `tiroLivre {time, x, z, id, levado,
   indireto: true}`; `alvoCobranca` não passa para quem está impedido; o humano não chuta a gol (indireto).

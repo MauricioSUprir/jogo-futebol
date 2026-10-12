@@ -434,6 +434,13 @@ html:not(.com-toque) .chip-nomes { display: none; }
 .menu-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 20px; }
 .menu-acoes { display: flex; flex-direction: column; gap: 8px; }
 .menu-acoes[hidden] { display: none; }
+/* Continuar + Replay na mesma linha (nos treinos o Replay some e o Continuar ocupa a linha toda) */
+.linha-continuar { display: flex; gap: 8px; }
+.linha-continuar .btn-primario { flex: 1 1 auto; }
+.btn-replay { flex: none; justify-content: center; gap: 7px; }
+.btn-replay svg { width: 18px; height: 18px; flex: none; }
+/* no PC as três opções ficam uma embaixo da outra, como as outras */
+.opcoes-linha { display: contents; }
 .btn {
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   min-height: 48px; padding: 0 14px; cursor: pointer; text-align: left;
@@ -501,16 +508,19 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
   /* celular deitado: Horário e Câmera lado a lado, para o menu inteiro caber sem rolar */
   .menu-opcoes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 6px; }
   .menu-opcoes .opcao { gap: 5px; }
-  .menu-opcoes .opcao:first-child, .menu-opcoes .opcao:last-child { grid-column: 1 / -1; }
+  .menu-opcoes > .opcao:first-child, .menu-opcoes > .opcao:last-child { grid-column: 1 / -1; }
   /* som: ligado/desligado e o volume na mesma linha (o menu continua cabendo sem rolar) */
   .menu-opcoes .opcao-som { grid-column: 1 / -1; }
+  /* Horário, Câmera e Replays na mesma linha: cada botão com a largura do texto (nada cortado) */
+  .opcoes-linha { grid-column: 1 / -1; display: grid; grid-template-columns: auto auto auto; column-gap: 10px; }
+  .opcoes-linha .segmentado button { flex: 1 1 auto; padding: 0 7px; }
   .opcao-som-linha { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; align-items: center; }
   .opcao-som .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
   .opcao-som .opcao-info { display: none; }
   /* controles de toque: Tamanho e Transparência lado a lado (a linha do som não faz o menu rolar) */
-  .menu-opcoes .opcao:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 5px; }
-  .menu-opcoes .opcao:last-child .opcao-rotulo { grid-column: 1 / -1; }
-  .menu-opcoes .opcao:last-child .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
+  .menu-opcoes > .opcao:last-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 12px; row-gap: 5px; }
+  .menu-opcoes > .opcao:last-child .opcao-rotulo { grid-column: 1 / -1; }
+  .menu-opcoes > .opcao:last-child .deslizante { grid-template-columns: auto minmax(0, 1fr) 40px; }
   .menu-opcoes .segmentado button { font-size: 12px; padding: 0 4px; }
   .ajuda-colunas { padding: 10px 16px 14px; gap: 16px; }
   .ajuda-colunas dd::after { height: 4px; }
@@ -569,7 +579,42 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 .carregando.erro p { color: #ffb4a8; }
 @keyframes carregar { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
 
+/* ------------------------------------------------------------------ replay (js/render/replay.js)
+   A camada cobre a tela (qualquer toque ou clique pula; acima do HUD e dos botões de toque, abaixo da pausa). Do HUD
+   de jogo fica só o placar; a marca "REPLAY" (da transmissão, não narração) entra no canto do botão de menu. */
+.replay { position: fixed; inset: 0; z-index: 30; pointer-events: auto; touch-action: none; cursor: pointer; }
+.replay[hidden] { display: none; }
+.replay-marca {
+  position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
+  display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 9px;
+  background: rgba(7, 9, 10, 0.8); border: 1px solid var(--linha); border-left: 4px solid var(--verde); border-radius: 8px;
+  font-size: 12px; font-weight: 900; letter-spacing: 0.22em; color: var(--texto);
+}
+.replay-marca svg { width: 15px; height: 15px; fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.replay-marca svg path + path { fill: var(--verde); stroke: none; }
+.btn-replay-pular {
+  display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + 6px); bottom: calc(var(--sa-b) + var(--m) + 6px);
+  align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 52px; padding: 0 18px; cursor: pointer;
+  font-size: 14px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto);
+  background: rgba(7, 9, 10, 0.78); border: 2px solid var(--verde); border-radius: 26px; opacity: 0.92;
+}
+.btn-replay-pular svg { width: 18px; height: 18px; fill: none; stroke: var(--verde); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+html.com-toque .btn-replay-pular { display: flex; }
+html.em-replay .minimapa, html.em-replay .btn-menu, html.em-replay .aviso, html.em-replay .carga, html.em-replay .cartao-icone,
+html.em-replay .dica, html.em-replay .painel-jogo, html.em-replay .gol-tela, html.em-replay .faixa, html.em-replay .toque,
+html.em-replay .qps { display: none; }
+/* a "vinheta" de replay da TV: uma faixa verde que cruza a tela (entrada e saída, REPLAY.transicao = 0,4 s); sem
+   bloquear nada. Com "reduzir movimento": não passa. */
+.replay-faixa {
+  position: fixed; top: -20%; bottom: -20%; left: 0; width: 34vw; z-index: 31; pointer-events: none; visibility: hidden;
+  background: linear-gradient(90deg, rgba(25, 224, 122, 0), var(--verde) 30%, #b9ffd9 50%, var(--verde) 70%, rgba(25, 224, 122, 0));
+  transform: translateX(-120%) skewX(-18deg);
+}
+.replay-faixa.passa { visibility: visible; animation: replay-faixa 0.4s cubic-bezier(0.45, 0, 0.55, 1) forwards; }
+@keyframes replay-faixa { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(400%) skewX(-18deg); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .replay-faixa.passa { animation: none; visibility: hidden; } }
+
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
-html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando { display: none; }
+html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa { display: none; }
 html.modo-prints .faixa:not(.forcada) { display: none; }
-html.sem-hud .hud, html.sem-hud .toque { display: none; }
+html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay { display: none; }
