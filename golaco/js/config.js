@@ -1090,6 +1090,9 @@ export const REPLAY = {
   menu: { vel: 1 },           // "Replay" na pausa: os últimos `segundos` (até o último corte), TV
   transicao: 0.4,             // s — a faixa verde que cruza a tela na entrada e na saída do replay (CSS)
   // câmeras (m; fov vertical em graus para telas 16:9 ou mais largas: mais estreitas abrem para a mesma largura)
+  // tv: a câmera de TV do jogo seguindo a BOLA gravada, antecipando pela velocidade dela `olhaFrente` s à frente no anel
+  // (até `velMax` m/s; ao vivo ela antecipa pela do controlado)
+  tv: { olhaFrente: 0.25, velMax: 10 },
   atras: { recuo: 13, altura: 6, lado: 0.35, ladoMax: 6, fov: 34, fovCelular: 30, mola: 5 },
   lateral: { recuo: 5, altura: 1.6, fora: 3.5, fov: 18 },
   // linha: na lateral do lado da TV, alta, no x da linha; o fov fecha no impedido e no defensor da linha (com folga)

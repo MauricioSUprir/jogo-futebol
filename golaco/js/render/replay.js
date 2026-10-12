@@ -15,7 +15,7 @@
 import * as THREE from 'three';
 import { CAMPO, REPLAY } from '../config.js';
 import { criarCamera } from './camera.js';
-import { jogadorNoTick, defensorDaLinha } from './replay-anel.js';
+import { jogadorNoTick, defensorDaLinha, bolaNoTick } from './replay-anel.js';
 import {
   roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay,
@@ -40,6 +40,7 @@ export function criarDiretor({ anel, aspecto }) {
   const _linha = { visivel: false, x: 0, opacidade: 0 };
   const _foco = { x: 0, z: 0 };
   const _j = { x: 0, z: 0, time: 0, goleiro: false }, _d = { id: -1, x: 0, z: 0 };
+  const _b0 = { x: 0, y: 0, z: 0 }, _b1 = { x: 0, y: 0, z: 0 };
 
   /** fov vertical de um plano fixo: f em 16:9 ou mais largo; mais estreito abre para a mesma largura. */
   function fovFixo(f) {
@@ -77,7 +78,17 @@ export function criarDiretor({ anel, aspecto }) {
     seg.lx += (bp.x - seg.lx) * k; seg.lz += (bp.z - seg.lz) * k; seg.ly += (Math.min(bp.y, 3) - seg.ly) * k;
     const s = ro.lado >= 0 ? 1 : -1, MX = CAMPO.meioX;
     if (p.cam === 'tv') {
-      _alvo.jx = bp.x; _alvo.jz = bp.z; _alvo.bx = bp.x; _alvo.bz = bp.z;
+      // o replay SABE para onde a bola vai: a câmera de TV antecipa pela velocidade da bola gravada à frente (o jogo ao
+      // vivo antecipa pela do controlado), limitada, sem atravessar o fim do plano
+      const T = REPLAY.tv, t0 = Math.floor(rel.t), t1 = Math.min(p.ate, t0 + Math.round(T.olhaFrente * 60));
+      const b0 = bolaNoTick(anel, t0, _b0), b1 = t1 > t0 ? bolaNoTick(anel, t1, _b1) : null;
+      let vx = 0, vz = 0;
+      if (b0 && b1) {
+        vx = (b1.x - b0.x) * 60 / (t1 - t0); vz = (b1.z - b0.z) * 60 / (t1 - t0);
+        const v = Math.hypot(vx, vz);
+        if (v > T.velMax) { vx *= T.velMax / v; vz *= T.velMax / v; }
+      }
+      _alvo.jx = bp.x; _alvo.jz = bp.z; _alvo.jvx = vx; _alvo.jvz = vz; _alvo.bx = bp.x; _alvo.bz = bp.z;
       tv.atualizar(dtR, _alvo, corte);
       camera.position.copy(tv.camera.position); camera.quaternion.copy(tv.camera.quaternion);
       ajustarFov(tv.camera.fov);
@@ -121,7 +132,7 @@ export function criarDiretor({ anel, aspecto }) {
         ativo: rel.ativo, tipo: ro?.tipo ?? null, plano: rel.i, planos: ro?.planos.length ?? 0, cam: p?.cam ?? null,
         tick: rel.t, vel: velocidadeAgora(rel), congelado: !!(p && p.congela && !rel.congelou && rel.t >= p.congela.tick),
         quadros: rel.quadros, duracao: duracao(ro), golaco: !!ro?.golaco, fotoTick: ro?.fotoTick ?? null, linhaX: ro?.linhaX ?? null,
-        de: p?.de ?? null, ate: p?.ate ?? null,
+        chuteTick: ro?.chuteTick ?? null, golTick: ro?.golTick ?? null, de: p?.de ?? null, ate: p?.ate ?? null,
       };
     },
     redimensionar(a, peq) { aspectoAtual = a; pequena = !!peq; tv.redimensionar(a, peq); camera.aspect = a; camera.updateProjectionMatrix(); },
