@@ -48,7 +48,7 @@ const CAMPO_MX = 52.5, CAMPO_MZ = 34;
  * fechar-ajuda, qualidade, hora, camera, toqueTamanho, toqueOpacidade, editar-time,
  * reiniciar-partida, modos, modos-voltar, modo (valor: partida | ataque | conducao), som (ligado |
  * desligado), volume (0–1), minimapa e nomes (sem valor: alterna; tela limpa, 11/10), replay (o "Replay" da pausa),
- * replay-pular, replayAuto (ligado | desligado).
+ * replay-pular, replayAuto (ligado | desligado), comemoracao-pular.
  */
 export function criarHud(opc) {
   const $ = id => document.getElementById(id);
@@ -63,6 +63,7 @@ export function criarHud(opc) {
     faixa: $('faixa'), faixaTitulo: $('faixa-titulo'), faixaPlacar: $('faixa-placar'), faixaBotao: $('faixa-botao'),
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
+    comemoracao: $('comemoracao'),
   };
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1;
@@ -109,6 +110,8 @@ export function criarHud(opc) {
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
   // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
   el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('replay-pular'); });
+  // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
+  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('comemoracao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
@@ -560,6 +563,23 @@ export function criarHud(opc) {
       if (f) { f.classList.remove('passa'); void f.offsetWidth; f.classList.add('passa'); }
     },
     get replayVisivel() { return !!el.replay && !el.replay.hidden; },
+    /**
+     * Comemoração do gol ligada/desligada (html.em-comemoracao): do HUD de jogo fica só o placar (e o "GOL!" até o 1º
+     * corte); minimapa, menu, avisos, barra de força, cartão e botões de toque somem (no celular os botões cobriam o
+     * autor); a camada pega qualquer toque (pular) e o "Pular" aparece só com toque. Nenhum texto de lance.
+     */
+    comemoracao(ativo) {
+      ativo = !!ativo;
+      if (raiz.classList.contains('em-comemoracao') === ativo) return;
+      raiz.classList.toggle('em-comemoracao', ativo);
+      if (el.comemoracao) el.comemoracao.hidden = !ativo;
+    },
+    get comemoracaoVisivel() { return !!el.comemoracao && !el.comemoracao.hidden; },
+    /** A faixa verde cruza a tela (a cortina da comemoração pulada antes da hora: os passos que faltam rodam por baixo). */
+    cortina() {
+      const f = el.replayFaixa;
+      if (f) { f.classList.remove('passa'); void f.offsetWidth; f.classList.add('passa'); }
+    },
     /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
     esconderGol() {
       clearTimeout(timerGol);

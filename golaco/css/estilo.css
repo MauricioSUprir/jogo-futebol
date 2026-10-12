@@ -604,6 +604,11 @@ html.com-toque .btn-replay-pular { display: flex; }
 html.em-replay .minimapa, html.em-replay .btn-menu, html.em-replay .aviso, html.em-replay .carga, html.em-replay .cartao-icone,
 html.em-replay .dica, html.em-replay .painel-jogo, html.em-replay .gol-tela, html.em-replay .faixa, html.em-replay .toque,
 html.em-replay .qps { display: none; }
+/* comemoração do gol (js/comemoracao.js): a mesma camada do replay (qualquer toque pula depois de 0,5 s); do HUD fica só o
+   placar e o "GOL!" até o 1º corte — no celular os botões de toque cobriam o autor */
+html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
+html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
+html.em-comemoracao .toque, html.em-comemoracao .qps { display: none; }
 /* a "vinheta" de replay da TV: uma faixa verde que cruza a tela (entrada e saída, REPLAY.transicao = 0,4 s); sem
    bloquear nada. Com "reduzir movimento": não passa. */
 .replay-faixa {
@@ -618,4 +623,4 @@ html.em-replay .qps { display: none; }
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa { display: none; }
 html.modo-prints .faixa:not(.forcada) { display: none; }
-html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay { display: none; }
+html.sem-hud .hud, html.sem-hud .toque, html.sem-hud .replay, html.sem-hud .comemoracao { display: none; }

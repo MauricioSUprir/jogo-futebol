@@ -430,6 +430,92 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   `tools/lib/acha-gol.mjs` ganhou `comoPagina` (a entrada da IA pelo humano como a página entrega: o lance do laço da
   página).
 
+## Comemoração do gol (pedido de 11/10: "não tem cena de comemoração!!!"; contrato)
+Pesquisa: `PESQUISA-ESTADIO.md` §10. **Só desenho: a cena anda num mundo à parte (cópias dos 22) e a simulação nunca é
+escrita** — a página só SEGURA o laço no passo antes da montagem da saída (gol + 149) enquanto a cena roda; a saída sai no
+mesmo tick (gol + 150), com o mesmo hash (`hash-igual` e `hash-partida` IGUAIS; `teste-comemoracao` 11 e
+`teste-comemoracao-tela` A4/B5). Ordem na partida: gol → comemoração (6–8,5 s; curta ~4,5 s) → replay → saída de bola.
+Constantes em `config.js COMEMORACAO`.
+- **`js/comemoracao.js` (puro, Node)**: `planejarComemoracao(m, gol {tick, time, id, contra}, {timeHumano, ultima,
+  variante?, corrida?})` → plano `{golTick, time, s, curta, autorId, contraId, contra, alvo {x, z, ux, uz, nome:
+  'bandeirinha'|'fundo'|'lateral', d0, perto}, variante, corrida, colegas [ids], colegasPerto, reacaoId, hash}` (só lê o
+  mundo). Quem comemora: o autor de verdade (`render/autor-gol.js`); gol contra ou sem autor do time que marcou → o de
+  linha do time que marcou mais perto da bola (o autor do gol contra vira 'contra': agachado com as mãos na cabeça). Alvo:
+  o mais perto a ≥ 8 m (curta: 6 m) entre a bandeirinha do lado dele, a linha de fundo diante da torcida (x = ±51, z =
+  ±12) e a lateral do lado da TV; além de 22 m (curta: 13 m) ele vem para perto na mesma reta. Finalização
+  `escolherFinal(tick, id, ultima, curta)` = `hashGol(tick, id)` (Math.imul; nunca o m.rng) entre `FINAIS` ('joelhos',
+  'pulo', 'ceu', 'bracos', 'giro'; curta: 'bracos', 'ceu') sem a última; corrida 'aviao' | 'punho' | 'peito' (curta:
+  'punho'). Colegas: até 4 de linha mais perto do alvo a ≤ 45 m, saindo com 0,35 + 0,15·i s de atraso.
+  `criarCena(plano, m)` → cena (cópia de cada jogador: estado cinemático, pés copiados, mergulho em andamento por
+  structuredClone; nada de bola, IA, condução, salto ou arremesso; mundo falso `{tick, posse: null, naMao: null, parada:
+  null, bola, jogadores}`). `passoCena(c)` = 1 tick: desejo do roteiro → `passoCorpo` → separação a 0,5 m (quem está num
+  golpe não cede; quem sofreu cede 0,25) → `passoPassada` → `passoPeDesenhado` → tick++ → `alturaQuadril` → `pose` +
+  golpes + gestos (o goleiro que voava termina com `passoMergulho/fixarMergulho/pesMergulho`). `avancarCena(c, dt)` roda
+  os ticks inteiros e guarda `c.alfa` (o desenho interpola `ant → atu`); `tempoCena`, `faseEm(c, tk)`, `faseCena(c)`
+  ('rede' | 'corrida' | 'final' | 'abraco' | 'reacao' | 'fim'), `duracaoCena`, `infoAtores`. Por ator: `ant`, `atu`
+  (Float32Array NJ×3), `x0/z0/r0 → x1/z1/r1`, `noAr` (os pés desenhados fora do chão por um golpe: deslize, pulo, giro,
+  pulo do grupo), `desliza`, `ajoelhado`, `agacha`. `planoCamera(c, {pequena, aspecto}, out)` → `{nome: 'rede' |
+  'steadicam' | 'contraplano' | 'reacao' | 'fim', fase, de: [x, y, z], para: [x, y, z], fov}`: função pura das posições
+  do autor guardadas por tick (média de 0,3 s + a velocidade média × meia janela: sem atraso andando reto) — steadicam
+  6,5 m à frente e 2,4 m do lado da TV, 1,6 m de altura, fov 32; contraplano 7,5 m atrás do grupo e 2,5 m de lado (o lado com
+  menos gente perto da lente nos próximos 0,8 s, escolhido uma vez no começo do abraço: `c.ladoContra`) olhando 6 m além
+  dele a 2,4 m de altura (a torcida atrás do alvo enche o fundo; o resto do time para a 10 m, atrás da câmera), fov 36; reação de frente para quem sofreu (puxada para o lado da
+  TV), 4,8 m, fov 30, girada em volta dele pelo giro escolhido UMA vez no começo da reação (`c.giroReacao`: entre 0, ±0,5 e
+  ±1 rad, o de menor custo — gente na frente da lente a < 2,2 m dentro do ângulo do quadro ou perto da linha de visão,
+  integrado no próximo segundo pela posição + velocidade; o 0 fica se o custo dele for ≤ 0,03 m·s — contraprova: um
+  defensor andando para a saída passava a < 1 m da lente em ~15% das cenas curtas; `teste-comemoracao` 13); câmera nunca além de 5,5 m das linhas nem dentro do gol; celular: fov × 0,88 e o assunto no terço
+  esquerdo. Exporta `ik`/`ikBraco`/`BRACO`/`ANTEBRACO` do `anim.js` (só exportar: o hash não muda).
+- **Golpes e gestos** (todos por IK: os ossos ficam com o comprimento certo): de joelhos (o corpo desliza desacelerando
+  até parar no alvo, entre 2,5 e 7 m/s²; pelve na altura de joelhos, joelho 6 cm à frente do quadril a 6,5 cm do chão,
+  canela deitada para trás; tronco 0,32 rad para trás; os pés deslizam presos ao corpo até ele parar, depois ficam
+  plantados onde a pose os desenha); pulo (agacha 0,2 s, estende 0,1 s, voo balístico de 0,5 m com as pernas encolhendo
+  0,16 m, aterrissa 0,35 s; o giro dá uma volta inteira no ar); agachado (pelve 0,3 m abaixo, tronco para a frente,
+  joelhos para a frente com os pés onde estão); pulo do grupo no abraço (0,13 m a 1,8 Hz, com o autor em pé). Gestos =
+  alvo da mão no referencial do rumo a partir do ombro + polo do cotovelo, com peso suave e mistura de um gesto para o
+  outro (a mão nunca salta). Quem sofreu: para 0,8 s, anda a ≤ 1,3 m/s para a saída cabisbaixo, mãos na cintura (id par)
+  ou na cabeça (ímpar).
+- **`main.js` (diretor)**: no evento `gol` da partida (e `comemoracaoLigada`), `iniciarComemoracao` monta o plano e a
+  cena. Laço: a cena anda no relógio do desenho (`avancarCena(c, dt)`, parada na pausa); `seguraSimulacao()` = cena
+  'rodando' e `estado === 'gol'` e `tick + 1 − desde ≥ golPausa` → o passo não roda (`laco.acum` não acumula); a
+  entrada do humano NÃO vai para a simulação durante a cena (`ENTRADA_NEUTRA`; a demo segue). `desenharQuadro` desenha os
+  atores da cena (interpolados por `c.alfa`) no lugar dos da simulação, sem anel nem seta do controlado, sem marcas do
+  gramado, barra de força nem cartão. Câmera: até o 1º corte (`rede`, 1,2 s) a câmera do gol do jogo; no 1º corte sai o
+  "GOL!" e `cam.encerrarGol()`; depois `cam.definirCinema(planoCam)`. Pular: um botão APERTADO depois de 0,5 s (o que
+  estava segurado ou foi apertado antes não conta), qualquer ação de tecla (Esc, Enter → ação `pular`, R, C, H...), clique
+  ou toque na camada `#comemoracao` (o "Pular" do toque é o alvo visível). `fimComemoracao(pulou)`: estado 'solta' (a
+  cena fica parada no último quadro até a saída); pulada antes da hora, os passos que faltam até a saída rodam a
+  `passosCortina` (40) por quadro com a faixa verde cruzando a tela (`hud.cortina()`); o aperto que pulou não vira jogada
+  (entrada solta e bloqueada/desbloqueada, como no replay) e NÃO pula o replay (outro aperto pula). Quando a camada sai
+  (`encerrarComemoracao`), `entrada.reposicionar()` refaz o analógico de descanso (calculado com os botões escondidos ele ia
+  para o alto da tela). Na `saida` (ou
+  `intervalo`, `fimDeJogo`, `recomeco`) a cena é descartada (`encerrarComemoracao`) antes do `posGol()` do replay. Treino:
+  sem cena (o efeito leve de sempre). `?comemoracao=0|1` força; sem opção na pausa (a pausa não cabe sem rolar em 844×390).
+- **`render/camera.js`**: `definirCinema(plano | null)` (o mesmo objeto do `planoCamera`, atualizado por quadro), `cinema`
+  (nome do plano ou null); corte quando o nome muda; dentro do plano, a câmera segue o plano como vem (já suave); "reduzir
+  movimento": a posição fica onde o plano começou e só o olhar segue. `foco()` = para onde a câmera de cinema olha.
+- **HUD (`hud.js`, `index.html`, `css/estilo.css`)**: `hud.comemoracao(ativo)` (classe `em-comemoracao`: minimapa, menu,
+  avisos, barra de força, cartão, dica, painel, faixa e botões de toque somem — só o placar e o "GOL!" até o 1º corte;
+  camada `#comemoracao` com o "Pular" só com toque, ≥ 48 px no canto de baixo à direita), `hud.cortina()` (a faixa verde).
+- **API (`window.__golaco.comemoracao`)**: `ativa`, `estado` ({fase, t, duracao, k, estado: 'rodando' | 'solta', rapida,
+  autor, alvo, variante, corrida, curta, time, golTick, colegas, reacao, contra, plano, kFinal, kFimFinal, kFimAbraco,
+  kFim, kPulo}), `atores()`, `naTela(id?)` (caixa px da pose desenhada), `pular()`, `ligada(v?)` (sem salvar),
+  `forcarFinal(v)` (a do próximo gol), `custo` ({msPorTick, ticks}), `zerarCusto()`. `estadio.planoCamera` = 'comemoracao'
+  com a câmera de cinema.
+- **Testes**: `tools/teste-comemoracao.mjs` (Node, padrão; `--js <pasta>` mede outra versão: sem o módulo, reprova) —
+  5 gols naturais (sementes conhecidas; se pararem de ter gol, as próximas) + 3 roteirizados (`tools/lib/gol-node.mjs`:
+  time 0, time 1 = curta, gol contra): NaN, ossos ±0,5 cm, pé plantado ≤ 0,05 m/s e pé no ar ≤ (2,5v + 3)·dt fora dos
+  golpes (a régua do `teste-patinacao`), autor ≤ 3 m do alvo em ≤ 4,5 s, ≥ 2 colegas a ≤ 1,2 m até 6,5 s (cena normal com
+  ≥ 2 a ≤ 45 m), pelves ≥ 0,40 m, joelhos 0,02–0,12 m, pés ≥ 0,2 m por ≥ 0,4 s no pulo e no giro, mãos ≥ 0,2 m acima da
+  cabeça ≥ 0,5 s no céu, mãos acima da cabeça ≥ 1 s em toda cena, quem sofreu com gesto ≥ 70% e ≤ 2,5 m/s depois de 1,2 s,
+  duração e fases, variedade (12 gols e 2000 sequências), pureza (hash antes = depois; tick a tick = quadros variados) e
+  custo ≤ 0,6 ms/tick. `tools/teste-comemoracao-tela.mjs` (navegador, CI e antes do deploy; `--raiz <pasta>`): fases e
+  duração, autor no quadro ≥ 85% com ≥ 100 px, simulação parada no gol + 149 com o relógio parado, ordem cena → replay →
+  saída no tick de sempre com o mesmo hash, só o placar na tela, torcida ≥ 30% no contraplano, pular (antes de 0,5 s não;
+  depois em ≤ 2 quadros; o mesmo aperto não pula o replay), celular ("Pular" sem encostar, botões escondidos, toque), gol
+  natural, treino sem cena, CPU do quadro ≤ p95 do jogo + 1 ms, console. Os testes de navegador que não são da comemoração
+  e atravessam um gol esperando a saída abrem com `?comemoracao=0` (`teste-estadio`, `teste-desempenho-celular` — que
+  mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
+
 ## Pré-jogo (pedido de 11/10; contrato)
 Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
 as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o
