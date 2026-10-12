@@ -413,7 +413,7 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .btn-fechar:hover, .btn-fechar:focus-visible { color: var(--verde); border-color: var(--verde); outline: none; }
 /* tela limpa (11/10): liga/desliga do que aparece na tela, na barra de cima da pausa (Minimapa; Nomes nos botões só com
    os controles de toque) — sem custo de altura: a pausa continua cabendo sem rolar no celular deitado */
-.chips-tela { display: flex; gap: 6px; margin-right: 10px; }
+.chips-tela { display: flex; gap: 6px; margin: 0 10px; } /* margem à esquerda: nunca encostando no título */
 .chip {
   height: 34px; padding: 0 12px 0 10px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap;
   font-size: 13px; font-weight: 700; color: var(--texto-2); background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 17px;
@@ -424,8 +424,11 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .chip:hover, .chip:focus-visible { border-color: var(--verde); outline: none; }
 html:not(.com-toque) .chip-nomes { display: none; }
 @media (max-width: 600px) {
-  .chips-tela { gap: 4px; margin-right: 6px; }
-  .chip { font-size: 12px; padding: 0 9px 0 8px; gap: 5px; }
+  .chips-tela { margin-right: 6px; }
+  /* sem a bolinha (o estado fica no fundo verde) e mais justos: em 568×320 com entalhe o "PAUSA" ficava a 1 px do
+     "Minimapa"; assim sobram ~30 px (tools/teste-hud-minimo.mjs, H7) */
+  .chip { font-size: 12px; padding: 0 10px; gap: 0; }
+  .chip::before { display: none; }
 }
 
 .menu-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 20px; }

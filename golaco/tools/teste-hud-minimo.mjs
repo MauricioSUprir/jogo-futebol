@@ -9,10 +9,12 @@
 //  H3 torcida visível escondida pelo HUD no celular 844×390 (pixels de torcida do canvas — torcida ligada ×
 //     desligada, a conta do item 10 do teste-estadio — que caem dentro das formas do HUD), 8 instantes: ≤ 15%
 //  H4 linha de impedimento VIVA (com a bola rolando): 0 amostras em 2 min de jogo; a DO LANCE continua no apito
-//  H5 PC 1280×720: área do HUD ≤ 2,5% depois de 9 s (a dica de teclas some sozinha em 8 s), e a dica aparece no começo
+//  H5 PC 1280×720: a dica de teclas aparece no começo e some sozinha (≤ 9 s pelo relógio das animações da página, que
+//     atrasa do real com a máquina carregada); depois dela, área do HUD ≤ 2,5%
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
 //     desligado) mudam a tela, ficam salvas e, ligadas, nada encosta
+//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
 import path from 'node:path';
@@ -74,6 +76,7 @@ const ENCOSTA = f => {
 
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
 let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
+let piorPausa = Infinity; const linhasPausa = [];
 for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   const { navegador, pagina } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
   try {
@@ -91,6 +94,22 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
         out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt };
       }
       g.sincronizarFase?.();
+      // a barra de cima da pausa (título, Minimapa, Nomes nos botões, tela cheia, X): nada encosta nem passa da janela
+      g.abrirMenu?.();
+      const topo = document.querySelector('.janela-menu .janela-topo');
+      if (topo) {
+        const pecas = [];
+        for (const e of topo.children) {
+          if (e.offsetParent === null) continue;
+          const filhos = e.classList.contains('chips-tela') ? [...e.children].filter(c => c.offsetParent !== null) : [e];
+          for (const c of filhos) { const q = c.getBoundingClientRect(); pecas.push({ nome: c.id || c.tagName, l: q.left, r: q.right }); }
+        }
+        pecas.sort((a, b) => a.l - b.l);
+        let folga = Infinity, par = '';
+        for (let i = 1; i < pecas.length; i++) { const d = pecas[i].l - pecas[i - 1].r; if (d < folga) { folga = d; par = `${pecas[i - 1].nome} × ${pecas[i].nome}`; } }
+        out.pausa = { folga, par, transborda: topo.scrollWidth - topo.clientWidth };
+      }
+      g.fecharMenu?.();
       return out;
     }, [FORMAS.toString(), AREA.toString()]);
     for (const fase of ['ataque', 'defesa']) {
@@ -98,9 +117,11 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
       r[fase].txt.forEach(t => txtVisto.add(t));
       linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(1)}% (${r[fase].pecas} peças)`);
     }
+    if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
   } finally { await navegador.close(); }
 }
 meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
+meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
 // H2 (jogo) + H3 + H4 + H6: jogo de verdade no celular 844×390
 {
@@ -181,10 +202,20 @@ meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(pio
     await pronta(pagina);
     await pagina.waitForTimeout(1000);
     const dica0 = await pagina.evaluate(() => { const d = document.getElementById('dica'); const s = d && getComputedStyle(d); return !!d && s.display !== 'none' && s.visibility !== 'hidden' && +s.opacity > 0.5; });
-    await pagina.waitForTimeout(8500);
+    // a dica some pelo relógio das animações da página (8 s + 0,6 s de esmaecer). Com a máquina carregada o Chromium sem
+    // GPU desenha poucos quadros e esse relógio atrasa ~1–2 s do real: esperar um tempo fixo media a dica ainda na tela
+    // (2,5% "passando" por arredondamento). Espera o fim da animação (até 40 s reais) e mede o tempo DELA.
+    const fimDica = await pagina.waitForFunction(() => {
+      const d = document.getElementById('dica'); if (!d) return { ms: -1 };
+      const s = getComputedStyle(d);
+      if (s.visibility !== 'hidden' && +s.opacity > 0.01) return false;
+      const a = d.getAnimations()[0];
+      return { ms: a ? Math.round(+(a.effect?.getComputedTiming().endTime ?? a.currentTime)) : -1 };
+    }, null, { timeout: 40000, polling: 250 }).then(h => h.jsonValue()).catch(() => null);
     const r = await pagina.evaluate(([FS, AS]) => { const x = eval(FS)(); return { area: eval(AS)(x.f, innerWidth, innerHeight), nomes: x.f.map(s => s.nome) }; }, [FORMAS.toString(), AREA.toString()]);
-    meta('H5 área do HUD no PC 1280×720 (9 s depois de abrir)', `${(r.area * 100).toFixed(1)}% (${r.nomes.join(', ')})`, '≤ 2,5%', r.area <= 0.025);
-    meta('H5 a dica de teclas do PC aparece no começo', dica0 ? 'visível 1 s depois de abrir' : 'não aparece', 'visível', dica0);
+    meta('H5 área do HUD no PC 1280×720 (depois que a dica some)', `${(r.area * 100).toFixed(1)}% (${r.nomes.join(', ')})`, '≤ 2,5%', r.area <= 0.025);
+    meta('H5 a dica de teclas do PC aparece no começo e some sozinha em ≤ 9 s', `${dica0 ? 'visível 1 s depois de abrir' : 'não aparece'}; ${fimDica ? `some aos ${(fimDica.ms / 1000).toFixed(1)} s de animação` : 'não some em 40 s'}`, 'visível; some ≤ 9 s',
+      dica0 && fimDica && fimDica.ms > 0 && fimDica.ms <= 9000);
     const mapa = await pagina.evaluate(() => { const m = document.getElementById('minimapa'); return !!m && getComputedStyle(m).display !== 'none' && m.offsetWidth > 0; });
     meta('H7 PC: o minimapa continua ligado por padrão', String(mapa), 'true', mapa);
   } finally { await navegador.close(); }
