@@ -742,9 +742,10 @@ export function executarCabeceio(m, j, p) {
     const gx = lado * CAMPO.meioX;
     const meio = CAMPO.gol.largura / 2;
     const mr = mira(j);
-    // sem o analógico, o canto longe do goleiro
+    // sem o analógico, o lado longe do goleiro — sem procurar o canto: a cabeçada não tem a precisão do chute (Opta: ~40%
+    // no alvo); a dispersão faz o resto
     const gk = goleiroAdversario(m, j.time);
-    const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : ((gk ? gk.z : b.p.z) > 0 ? -1.5 : 1.5);
+    const zM = mr && mr.mag > 0.3 ? clamp(mr.z * meio, -meio + 0.4, meio - 0.4) : ((gk ? gk.z : b.p.z) > 0 ? -1 : 1) * CABECEIO.zGol;
     ux = gx - b.p.x; uz = zM - b.p.z;
     const D = MD.hypot(ux, uz) || 1; ux /= D; uz /= D;
     // força própria do cabeceio com corrida (Becker 2021: ~8,3 m/s) + parte da bola que chega

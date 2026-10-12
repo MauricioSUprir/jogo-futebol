@@ -63,7 +63,7 @@ export function condutorAdversario(m, j) {
  * Entrada (velocidade pedida → analógico) que leva o corpo a andar com velocidade (vx, vz): a inversa de
  * jogador.js velocidadeDesejada (sem a bola). Acima da corrida, CORRER pela velocidade do corpo (st.corre).
  */
-function entradaVelocidade(j, vx, vz, st, botoes) {
+export function entradaVelocidade(j, vx, vz, st, botoes) {
   const s = MD.hypot(vx, vz);
   const par = j.par;
   // acima da corrida só o CORRER chega lá, e ele é tudo ou nada (vai à arrancada): liga enquanto o corpo

@@ -30,56 +30,61 @@ export function alturaPulo(j) {
   return lerp(C.salto[0], C.salto[1], clamp((j.par.attr.impulsao ?? 65) / 100, 0, 1));
 }
 
-/** Altura máxima (m) do centro da bola que a cabeça desenhada alcança no pulo (de pé + pulo + o encosto). */
+/** Distância (m) do quadril ao centro da bola com a cabeça encostando nela pelo eixo do tronco. */
+const ALCANCE_TRONCO = C.pescoco + C.contato;
+
+/** Altura máxima (m) do centro da bola que a cabeça desenhada alcança no pulo (de pé + pulo + tronco + o encosto). */
 export function alcanceCabeceio(j) {
-  return C.hyPe + C.pescoco + alturaPulo(j) + C.contato + 0.5 * C.folga;
+  return C.hyPe + alturaPulo(j) + ALCANCE_TRONCO + 0.5 * C.folga;
 }
 
 /**
- * Ponto (out.x, y, z) em que o CENTRO da cabeça encosta na bola (bx, by, bz), vindo do quadril (px, py, pz): a
- * C.contato m da bola, do lado do peito (a bola bate na testa; com a bola por cima, no alto da cabeça).
+ * Tronco indo à bola (bx, by, bz) com o quadril em (px, py, pz) — a cabeça vai pelo eixo do tronco, que aponta para o
+ * centro da bola. Escreve em out:
+ *  - a = inclinação do tronco a partir da vertical (rad): a da reta quadril → bola, limitada por C.inclina[0] (com a
+ *    bola abaixo da cabeça de pé, C.inclina[1]: o tronco desce até a bola baixa) — é a da pose;
+ *  - y = a altura do quadril que põe a cabeça encostando na bola (centro da bola a ALCANCE_TRONCO m do quadril), na
+ *    vertical de (px, pz), com o tronco o mais em pé possível (até C.inclina[0]) — é a do plano do pulo (quanto subir).
  */
-export function alvoCabeca(bx, by, bz, px, py, pz, out) {
-  const qx = px - bx, qy = py + 0.4 - by, qz = pz - bz;
-  const l = MD.hypot(qx, qy, qz) || 1;
-  out.x = bx + qx / l * C.contato; out.y = by + qy / l * C.contato; out.z = bz + qz / l * C.contato;
-  return out;
-}
-const _alvo = { x: 0, y: 0, z: 0 };
-
-/**
- * Tronco indo ao ponto T (o centro da cabeça no contato) com o quadril em (px, py, pz). Escreve em out:
- *  - a = inclinação do tronco a partir da vertical (rad): a da reta quadril → T, limitada por C.inclina[0] (com T
- *    abaixo da cabeça de pé, C.inclina[1]: o tronco desce até a bola baixa) — é a da pose;
- *  - y = a altura do quadril que põe a cabeça em T, na vertical de (px, pz), com o tronco o mais em pé possível (até
- *    C.inclina[0]) — é a do plano do pulo (quanto subir).
- */
-export function inclinacaoAte(px, py, pz, T, out) {
-  const L = MD.hypot(T.x - px, T.z - pz);
-  const lim = T.y < C.hyPe + C.pescoco ? C.inclina[1] : C.inclina[0];
-  out.a = clamp(MD.atan2(L, T.y - py), 0, lim);
-  const lim0 = C.pescoco * MD.sin(C.inclina[0]);
-  out.y = L <= lim0 ? T.y - Math.sqrt(C.pescoco * C.pescoco - L * L) : T.y - C.pescoco * MD.cos(C.inclina[0]);
+export function inclinacaoAte(px, py, pz, bx, by, bz, out) {
+  const L = MD.hypot(bx - px, bz - pz);
+  const lim = by < C.hyPe + ALCANCE_TRONCO ? C.inclina[1] : C.inclina[0];
+  out.a = clamp(MD.atan2(L, by - py), 0, lim);
+  const Lc = Math.min(L, ALCANCE_TRONCO * MD.sin(C.inclina[0]));
+  out.y = by - Math.sqrt(ALCANCE_TRONCO * ALCANCE_TRONCO - Lc * Lc);
   return out;
 }
 const _inc = { a: 0, y: 0 };
 
+/** Quanto o quadril sobe (m) para cabecear a bola na altura y com o corpo a L m dela (0 = sem pulo). */
+export function subidaPara(y, L) {
+  const Lc = Math.min(L, ALCANCE_TRONCO * MD.sin(C.inclina[0]));
+  // (+ margem: correndo, o quadril fica mais baixo que o de pé e a perna aberta o segura — a cabeça não chegava)
+  const h = y - Math.sqrt(ALCANCE_TRONCO * ALCANCE_TRONCO - Lc * Lc) - C.hyPe + C.margem;
+  return h < C.minPulo ? 0 : h;
+}
+
+/** Tempo (s) de preparo do cabeceio que sobe h m: o contramovimento e a subida (0,1 s sem pulo: o tronco vai à bola). */
+export function preparoPulo(h) {
+  if (h <= 0) return 0.1;
+  return C.agacha[0] + Math.max(Math.sqrt(2 * h / G), h * Math.PI / (2 * C.peVel));
+}
+
 /**
  * Planeja o cabeceio de j no tick tc com a bola em (bx, by, bz), vindo na direção (ux, uz) (horizontal, unitária):
  * escreve j.cab e devolve j.cab, ou null se a cabeça não alcança (bola alta demais, ou sem tempo de subir). Agora =
- * m.tick (o contato é no passo de m.tick = tc).
+ * m.tick (o contato é no passo de m.tick = tc). (nx, nz): deslocamento de lado do ponto do corpo (na disputa, os dois
+ * ombro com ombro).
  */
-export function planejarPulo(m, j, tc, bx, by, bz, ux, uz) {
+export function planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx = 0, nz = 0, folgaAlc = C.margem) {
   if (j.posicao === 'GOL') return null;
   const nTc = tc - m.tick;
   if (nTc < 1) return null;
   // o corpo vai ao ponto em que a bola chega C.chega m à frente dele (a bola vem na direção u)
-  const cx = bx + ux * C.chega, cz = bz + uz * C.chega;
-  alvoCabeca(bx, by, bz, cx, C.hyPe, cz, _alvo);
-  inclinacaoAte(cx, C.hyPe, cz, _alvo, _inc);
-  let h = _inc.y - C.hyPe;
+  const cx = bx + ux * C.chega + nx, cz = bz + uz * C.chega + nz;
+  let h = subidaPara(by, MD.hypot(cx - bx, cz - bz));
   const hMax = alturaPulo(j);
-  if (h > hMax + 0.02) return null;
+  if (h > hMax + folgaAlc) return null;
   h = Math.min(h, hMax);
   let tA, td, tp, tf;
   if (h < C.minPulo) {
@@ -149,7 +154,13 @@ export function quadroPulo(c, t, out) {
 export function sairDoChao(m, j) {
   const c = j.cab;
   if (MD.hypot(j.x - c.cx, j.z - c.cz) > C.longe) { j.cab = null; return false; }
-  let vx = j.vx, vz = j.vz;
+  // a impulsão escolhe a velocidade da saída: a que leva o corpo ao ponto (cx, cz) no contato, mudando a de agora em no
+  // máximo C.impulso m/s (o último apoio empurra para lá) e no máximo C.vSaida
+  const Tc = Math.max(1, c.tc - c.td) * DT;
+  let ex = (c.cx - j.x) / Tc - j.vx, ez = (c.cz - j.z) / Tc - j.vz;
+  const e = MD.hypot(ex, ez);
+  if (e > C.impulso) { ex *= C.impulso / e; ez *= C.impulso / e; }
+  let vx = j.vx + ex, vz = j.vz + ez;
   const v = MD.hypot(vx, vz);
   if (v > C.vSaida) { vx *= C.vSaida / v; vz *= C.vSaida / v; }
   c.vx = vx; c.vz = vz; c.saiu = true;

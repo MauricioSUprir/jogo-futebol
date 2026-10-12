@@ -419,7 +419,7 @@ export const ACOES = {
   // cabeceio a gol vale em toda bola (erroGol; antes só na bola parada: com o cabeceio a gol teletransportado para o
   // chão a conta não importava)
   cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.55], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
-    erroGolBolaParada: [0.3, 0.1], erroGol: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
+    erroGolBolaParada: [0.3, 0.1], erroGol: [0.55, 0.25] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -457,7 +457,9 @@ export const GOLEIRO = {
   // c0Partida: só na partida (o treino não muda). Com as regras de 11/10 (adversário fora da área no tiro de meta, sem
   // recuo agarrado) saíram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%; painel de 144
   // partidas); −0,1 no logit → 59,0%, total 68,0%, de fora da área 86,8% (todas na meta)
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1 },
+  // cTempo/vRef (partida; entrega "cabeceio na bola rolando", 12/10): a bola mais lenta que dChute / vRef s até o goleiro dá
+  // cTempo por s a mais no logit — o cabeceio a gol (~12 m/s) de 8 m era defendido em 6% (o real: ~70% dos no alvo)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1, cTempo: 6, vRef: 20 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto
@@ -761,7 +763,9 @@ export const AEREO = {
   // chão (com `folgaT` s de folga) vai disputar: corre para lá (do lado do gol dele) e pula junto. Quem ganha: a nota no
   // alto, quem está mais perto da bola no contato (`kDist` por m de diferença, no logit) e, só a até `ladoGolDist` m do gol
   // de quem defende, o lado do gol (`ladoGolRolando`). Meta: a defesa ganha 30–50% dos cruzamentos disputados
-  vai: 1.0, folgaT: 0.1, kDist: 2.0, ladoGolRolando: 0.35, ladoGolDist: 35,
+  vai: 1.0, folgaT: 0.1, kDist: 3.0, ladoGolRolando: 0.1, ladoGolDist: 35, iniciativa: 0.5,
+  folgaRival: 0.25,           // m — quem pulou para disputar entra na disputa com a cabeça desenhada a até isto a mais da bola
+  raspao: { fica: 0.55, desvio: 0.6, sobe: 1.0 }, // ...e, ganhando assim, desvia a bola de raspão (fração da velocidade, rad, m/s)
 };
 
 // Cabeceio na bola rolando (entrega "cabeceio + IA intensa", 12/10; pedido do dono, 11/10: "os jogadores não cabeceiam
@@ -772,11 +776,18 @@ export const AEREO = {
 // 2005; Bauer 2001).
 export const CABECEIO = {
   salto: [0.4, 0.65],         // m — o quadril sobe no máximo isto no pulo, pela impulsão (0 → 100)
-  minPulo: 0.08,              // m — precisando subir menos que isto, cabeceia sem pular (o tronco e o pescoço vão à bola)
+  minPulo: 0.04,              // m — precisando subir menos que isto, cabeceia sem pular (o tronco e o pescoço vão à bola)
+  margem: 0.06,               // m — o pulo sobe isto a mais que a conta de pé (correndo o quadril fica mais baixo)
+  ombro: 0.4,                 // m — na disputa, o rival fica isto de lado da linha da bola...
+  recua: 0.15,                // m — ...e isto antes dela (a ~0,6 m de quem ia na bola: ombro com ombro, 2 × raio do corpo)
+  conforto: 0.12,             // m — o ponto do cabeceio prefere a bola isto abaixo do alcance do pulo...
+  desce: 0.25,                // s — ...esperando no máximo isto depois do 1º ponto que ele alcança
+  antes: 0.1,                 // s — o corpo chega ao ponto do pulo isto antes de sair do chão
   agacha: [0.12, 0.08],       // s e m — antes de sair do chão o quadril baixa isto (contramovimento) nesse tempo
   amortece: [0.15, 0.07],     // s e m — depois de pousar o quadril baixa isto (amortece a queda) nesse tempo
   peVel: 2.8,                 // m/s — o pé subindo no pulo (teste de patinação: o pé de quem está parado anda até 3 m/s)
   vSaida: 3.5,                // m/s — velocidade horizontal máxima na saída do pulo (no ar o corpo segue com ela)
+  impulso: 2.5,               // m/s — o último apoio muda a velocidade horizontal em até isto (para o ponto do contato)
   hyPe: 0.943,                // m — quadril de pé, sem a passada (anim.js: 0,985 − 0,03 − 0,012)
   pescoco: 0.65,              // m — do quadril ao centro da cabeça pelo tronco (anim.js: 0,17 + 0,22 + 0,13 + 0,13)
   contato: 0.225,             // m — do centro da bola ao da cabeça encostando (raio da cabeça 0,115 + raio da bola 0,11)
@@ -792,8 +803,9 @@ export const CABECEIO = {
   gol: 15,
   // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
   vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
-  // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m
-  yGol: [0.3, 1.1],
+  // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m, a zGol m do meio,
+  // do lado longe do goleiro (sem o analógico)
+  yGol: [0.3, 1.1], zGol: 0.8,
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e

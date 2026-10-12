@@ -19,7 +19,7 @@ import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
-import { puloAtivo, quadroPulo, alvoCabeca, inclinacaoAte } from './cabeceio.js';
+import { puloAtivo, quadroPulo, inclinacaoAte } from './cabeceio.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -222,9 +222,8 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
     const cb = j.cab, q = quadroPulo(cb, m.tick, _qpulo);
     braco = q.braco;
     if (q.w > 0) {
-      alvoCabeca(cb.bx, cb.by, cb.bz, px, hy, pz, _tc);
-      inclinacaoAte(px, hy, pz, _tc, _ic);
-      let dx = _tc.x - px, dz = _tc.z - pz;
+      inclinacaoAte(px, hy, pz, cb.bx, cb.by, cb.bz, _ic);
+      let dx = cb.bx - px, dz = cb.bz - pz;
       const L = Math.hypot(dx, dz);
       if (L > 1e-3) { dx /= L; dz /= L; } else { dx = fx; dz = fz; }
       const a = _ic.a * q.w - CABECEIO.arco * q.arco;
@@ -349,7 +348,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
 
 // ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé
 const _qa = {}, _qp = {}, _mp = {}, _ep = {};
-const _tc = { x: 0, y: 0, z: 0 }, _ic = { a: 0, y: 0 }; // cabeceio: ponto da cabeça e inclinação do tronco
+const _ic = { a: 0, y: 0 }; // cabeceio: inclinação do tronco
 const BOLA_MAO = GOLEIRO.bolaMao;
 const BRACO = 0.29, ANTEBRACO = 0.26;
 
