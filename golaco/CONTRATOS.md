@@ -62,10 +62,12 @@ verticais do poste até o véu (X ≤ `profundidadeVeu(y)`). A MESMA forma vale 
   escorrega por trás até o chão. Evento `rede` (força = |vn|) só por dentro com |vn| > 1,5 m/s.
 - **Gol (`sim.js verificarGol`) e treino (`treino.js` dentroDoGol)**: a bola atrás do véu (X > `profundidadeVeu(y)`) não é
   gol; o gol continua sendo a bola passar inteira da linha entre as traves e por baixo do travessão.
-- **Hash**: muda a física atrás da linha. O treino de CONDUÇÃO fica bit a bit igual (`hash-igual`); o de ATAQUE diverge no
-  passo seguinte ao 1º chute (ou lançamento) cuja trajetória prevista passa da linha do gol (o goleiro e a IA simulam a
-  bola com `passoBola` até depois da linha) — sementes 1–4: passos 510–997 (demo) e 832–1929 (roteiro). A partida diverge
-  no 1º lance assim. Base nova do `hash-igual` depois do merge: `--ref <commit do merge>`.
+- **Hash**: muda a física atrás da linha. O treino de CONDUÇÃO fica bit a bit igual enquanto a bola não entra no gol
+  (`hash-igual`, 20 sementes × 3 min: `conducao-demo` IGUAL; `conducao-roteiro` igual em 19 de 20 — na semente 14 o
+  jogador leva a bola para dentro do gol no passo 3271 e a física do véu diverge no 3363); o de ATAQUE diverge no passo
+  seguinte ao 1º chute (ou lançamento) cuja trajetória prevista passa da linha do gol (o goleiro e a IA simulam a bola com
+  `passoBola` até depois da linha) — sementes 1–4: passos 510–997 (demo) e 832–1929 (roteiro). A partida diverge no 1º
+  lance assim. Base nova do `hash-igual` depois do merge: `--ref <commit do merge>`.
 
 ## Jogador (`js/jogador.js`)
 Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, ritmo, pes[2]{apoio, x, z, rumo, faseApoio,

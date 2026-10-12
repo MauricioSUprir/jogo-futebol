@@ -206,8 +206,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   entra), pela regra do gol (`sim.js verificarGol`, `treino.js`: atrás do véu não é gol) e pelo desenho (`rede-onda.js`:
   campo VETORIAL, a bolsa pela normal do véu; `campo.js`: trama colmeia procedural, fio ≥ 1 px e véu branco ao longe, luz
   própria `LUZ_GOL` de dia e de noite, armação branca com as hastes; sem textura). A bolsa começa no fim do passo da batida.
-  **Muda o hash**: condução IGUAL; o treino de ataque diverge no passo seguinte ao 1º chute/lançamento cuja trajetória
-  prevista passa da linha (base nova do `hash-igual`: `--ref <merge>`). Testes: `teste-rede-veu` (Node, padrão; reprova 5
+  **Muda o hash**: a condução fica IGUAL enquanto a bola não entra no gol (19/20 sementes do roteiro e 20/20 da demo); o
+  treino de ataque diverge no passo seguinte ao 1º chute/lançamento cuja trajetória prevista passa da linha (base nova do
+  `hash-igual`: `--ref <merge>`). Testes: `teste-rede-veu` (Node, padrão; reprova 5
   na base), `teste-rede` reescrito para o véu, `teste-rede-tela` (navegador, CI: forma, branca — fio de perto L* ≥ 85 de dia
   e ≥ 80 à noite —, clareia o gol na TV e na câmera do gol, mexe ≥ 4% na câmera do gol e ≥ 1% na TV; reprova 21 na base);
   prints do gol pelo gol roteirizado (`prints.mjs --so pc-gol-rede,...`: câmera do gol, perto, TV, atrás, perfil).
