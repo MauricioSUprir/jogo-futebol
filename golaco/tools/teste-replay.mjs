@@ -190,7 +190,8 @@ else try {
     const maxGol = 14.2;
     for (const gn of r.golsNat) meta('C0 replay de um gol NATURAL (IA × IA) no caminho', `tick ${gn.tick}: ${gn.s} s, ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}; linha ${gn.linha}; sim andou ${gn.andou}`, `6–${gn.golaco ? f2(maxGol) : 12} s, sim parada, sem linha`,
       gn.s >= 6 && gn.s <= (gn.golaco ? maxGol : 12) && !gn.andou && gn.linha === 0);
-    meta('C1 [informativo] linha de impedimento AO VIVO (bola rolando, fora do replay)', `${r.vivoLinha} de ${r.vivo} quadros (${f2(100 * r.vivoLinha / Math.max(1, r.vivo))}%)`, '0 quando a frente "tela limpa" entrar', true, true);
+    // a tela limpa (11/10) tirou a linha viva do jogo: a linha só aparece no replay do impedimento (e parada no apito)
+    meta('C1 linha de impedimento AO VIVO (bola rolando, fora do replay)', `${r.vivoLinha} de ${r.vivo} quadros (${f2(100 * r.vivoLinha / Math.max(1, r.vivo))}%)`, '0', r.vivoLinha === 0);
     meta('C2 no apito do impedimento o replay começa (tipo impedimento)', `${r.rp.tipo ?? 'nenhum'} no tick ${r.tick}${r.ev ? ` (foto ${r.ev.tickFoto}, linha x ${f2(r.ev.linhaX)})` : ''}`, 'impedimento', !!r.ev && r.rp.ativo && r.rp.tipo === 'impedimento');
     if (r.ev && r.rp.tipo === 'impedimento') {
       const qs = await pg.evaluate(() => {
