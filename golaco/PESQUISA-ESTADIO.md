@@ -167,6 +167,8 @@ depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no p
 celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
 mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
+Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
+pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
