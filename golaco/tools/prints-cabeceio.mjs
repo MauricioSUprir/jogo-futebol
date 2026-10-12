@@ -81,7 +81,9 @@ async function cenaCruzamento(pg, tipo) {
           return { ok: true, tick: m.tick, ids: noAr.map(j => `${j.id} (h ${j.cab.h.toFixed(2)} m)`), tent, foco: [at.x, at.z], lado };
         }
         passo();
-        if (m.posse != null || m.partida.estado !== 'jogo') break;
+        // a montagem acaba no 1º toque (cabeceio, domínio) sem o quadro pedido: sem gol nas tentativas (o gol põe a câmera
+        // do gol e a festa na tela da tentativa seguinte)
+        if (m.posse != null || m.partida.estado !== 'jogo' || !m.voo || m.voo.tipo !== 'cruzamento') break;
       }
     }
     return { ok: false };
@@ -140,6 +142,7 @@ let falhas = 0;
 try {
   for (const P of PERFIS) {
     const { navegador, pagina: pg, erros } = await abrir(P);
+    pg.setDefaultTimeout(300000); // (máquina carregada: o desenho por software demora)
     await pg.goto(`${srv.url}?prints=1&demo=1&replay=0&semente=5&${P.url}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
     // a partida em andamento (saída feita, a torcida e o estádio prontos)
@@ -149,15 +152,15 @@ try {
     for (const tipo of ['cabeceio', 'disputa']) {
       const r = await cenaCruzamento(pg, tipo);
       if (!r.ok) { console.log(`${P.nome}: cena ${tipo} não achada`); falhas++; continue; }
-      await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-${tipo}.png`) });
+      await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-${tipo}.png`), timeout: 300000 });
       const [fx, fz] = r.foco;
       await pg.evaluate(l => { const g = window.__golaco; g.cameraLivre(l); g.relogio.avancar(0); }, { de: [fx - r.lado * 3.5, 2.1, fz + 8], para: [fx, 1.7, fz], fov: 36 });
-      await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-${tipo}-perto.png`) });
+      await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-${tipo}-perto.png`), timeout: 300000 });
       await pg.evaluate(() => { const g = window.__golaco; g.cameraLivre(null); g.relogio.avancar(0, { desenhar: false }); });
       console.log(`${P.nome}: ${tipo} (tick ${r.tick}, montagem ${r.tent}, no ar ${r.ids.join(', ')})`);
     }
     const c = await cenaCorredor(pg);
-    await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-corredor.png`) });
+    await pg.screenshot({ path: path.join(SAIDA, `${P.nome}-corredor.png`), timeout: 300000 });
     console.log(`${P.nome}: corredor ${JSON.stringify(c)}`);
     if (!c.ok) falhas++;
     if (erros.length) { console.log(`${P.nome}: ${erros.length} erros: ${erros.slice(0, 2).join(' | ')}`); falhas++; }
