@@ -18,7 +18,9 @@
 //      duas vezes seguidas;
 //  11) pureza: hashMundo antes = depois da cena (o mundo não é tocado); a pose no tick k é a mesma andando a cena tick a
 //      tick ou em quadros de tamanhos variados (avancarCena); a mesma cena duas vezes = as mesmas poses;
-//  12) custo ≤ 0,6 ms por tick (a melhor de 3 medidas de cada cena: a máquina é dividida).
+//  12) custo ≤ 0,6 ms por tick (a melhor de 3 medidas de cada cena: a máquina é dividida);
+//  13) (contraprova) plano da reação: ninguém além de quem reage a < 2 m da lente dentro do quadro, no PC e no celular
+//      (nas 8 cenas e em 2 gols naturais em que um defensor andando para a saída passava colado na câmera).
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
 // da cabeça; colega mais perto a 16–24 m). Na versão sem js/comemoracao.js o teste REPROVA (o módulo não existe).
 //   node tools/teste-comemoracao.mjs [--js <pasta js>] [--detalhe]
@@ -317,6 +319,56 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
     ms.push(melhor);
   }
   reg('12 custo da cena por tick (22 atores; a melhor de 3)', `${ms.map(f3).join(' / ')} ms`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
+}
+// 13 (contraprova) a lente do plano da REAÇÃO livre: ninguém além de quem reage a < 2 m da câmera dentro do quadro (um corpo
+// a 2 m já enche a altura do quadro com fov 30), no PC (16:9) e no celular (844×390). Nas 8 cenas e em 2 gols naturais
+// achados na varredura da contraprova em que um jogador do time que sofreu, andando para a saída, passava colado na lente
+// (1º gol das sementes 2 e 15: antes 33 e 46 quadros do plano de 1 s).
+{
+  const extra = [];
+  for (const [s, max] of [[2, 10000], [15, 11000]]) { const g = golNaturalNode(L, s, max); if (g) extra.push({ ...g, nome: `natural (semente ${s})` }); }
+  const PTS = [J.pelve, J.peito, J.cabeca, J.joelhoE, J.joelhoD, J.ombroE, J.ombroD];
+  const colados = (c, pc, aspecto) => {
+    const f = [pc.para[0] - pc.de[0], pc.para[1] - pc.de[1], pc.para[2] - pc.de[2]];
+    const lf = Math.hypot(...f); f[0] /= lf; f[1] /= lf; f[2] /= lf;
+    const lr = Math.hypot(f[2], f[0]) || 1, r = [-f[2] / lr, 0, f[0] / lr];
+    const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+    const tv = Math.tan((pc.fov * Math.PI) / 360), th = tv * aspecto;
+    const sujeito = c.reacao ?? c.autor;
+    let n = 0;
+    for (const a of c.atores) {
+      if (a === sujeito) continue;
+      let zmin = Infinity, x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const i of PTS) {
+        const d = [a.atu[i * 3] - pc.de[0], a.atu[i * 3 + 1] - pc.de[1], a.atu[i * 3 + 2] - pc.de[2]];
+        const z = d[0] * f[0] + d[1] * f[1] + d[2] * f[2];
+        if (z <= 0.05) continue;
+        const nx = (d[0] * r[0] + d[1] * r[1] + d[2] * r[2]) / (z * th), ny = (d[0] * u[0] + d[1] * u[1] + d[2] * u[2]) / (z * tv);
+        zmin = Math.min(zmin, z); x0 = Math.min(x0, nx); x1 = Math.max(x1, nx); y0 = Math.min(y0, ny); y1 = Math.max(y1, ny);
+      }
+      if (zmin < 2 && x1 > -1.1 && x0 < 1.1 && y1 > -1.1 && y0 < 1.1) n++;
+    }
+    return n;
+  };
+  const linhas13 = [];
+  let pior = 0;
+  for (const g of [...gols, ...extra]) {
+    for (const [nomeT, pequena, aspecto] of [['PC', false, 16 / 9], ['celular', true, 844 / 390]]) {
+      const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
+      const pc = CM.criarPlanoCamera();
+      let ruins = 0, total = 0;
+      while (!c.acabou) {
+        CM.passoCena(c);
+        c.alfa = 1; CM.planoCamera(c, { pequena, aspecto }, pc); c.alfa = 0;
+        if (pc.nome !== 'reacao') continue;
+        total++;
+        if (colados(c, pc, aspecto) > 0) ruins++;
+      }
+      pior = Math.max(pior, ruins);
+      if (ruins) linhas13.push(`${g.nome} ${nomeT}: ${ruins}/${total}`);
+    }
+  }
+  reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length + extra.length} cenas; gols naturais extras: ${extra.length})`, '0 quadros', extra.length === 2 && pior === 0);
 }
 imprimir();
 process.exit(falhas ? 1 : 0);

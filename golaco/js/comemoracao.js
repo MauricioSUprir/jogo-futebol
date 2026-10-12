@@ -213,7 +213,7 @@ export function criarCena(plano, m) {
     kFinal: -1, kFimFinal: -1, kFimAbraco: -1,
     // fim provisório (a finalização ainda não começou): o pior caso
     kFim: s60(plano.curta ? Math.max(C.curta.duracao, C.chegadaMax + C.curta.final + C.curta.reacao) : C.chegadaMax + C.final + C.abracoMin + C.reacao),
-    kPulo: -1, rumoFinal: Math.atan2(plano.alvo.uz, plano.alvo.ux), ladoContra: null,
+    kPulo: -1, rumoFinal: Math.atan2(plano.alvo.uz, plano.alvo.ux), ladoContra: null, giroReacao: 0,
     olhoY: 1.25,
     hx: new Float32Array(NHIST), hz: new Float32Array(NHIST),
     _d: { dx: 1, dz: 0, vel: 0, rumo: 0 },
@@ -435,6 +435,7 @@ export function passoCena(c) {
   c.olhoY += (py - c.olhoY) * (1 - Math.exp(-PASSO / 0.25));
   if (c.k < NHIST) { c.hx[c.k] = au.j.x; c.hz[c.k] = au.j.z; }
   if (c.k === c.kFimFinal && !c.curta) c.ladoContra = escolherLadoContra(c);
+  if (c.k === c.kFimAbraco) c.giroReacao = escolherGiroReacao(c);
   if (c.k >= c.kFim) c.acabou = true;
   return true;
 }
@@ -805,6 +806,55 @@ function escolherLadoContra(c) {
   }
   return melhor;
 }
+/** Direção (unitária, em _dirR) da câmera da reação a partir de quem reage: de frente para ele, puxada para o lado da TV. */
+const _dirR = { x: 1, z: 0 };
+function direcaoReacao(rumo, giro) {
+  let vx = Math.cos(rumo), vz = Math.sin(rumo) + C.camera.reacao.ladoTV;
+  const vl = Math.hypot(vx, vz) || 1;
+  const a = Math.atan2(vz / vl, vx / vl) + giro;
+  _dirR.x = Math.cos(a); _dirR.z = Math.sin(a);
+  return _dirR;
+}
+const GIROS_REACAO = [0, 0.5, -0.5, 1.0, -1.0];
+const _cr = { de: [0, 0, 0] };
+/**
+ * Giro da câmera da reação (rad em volta de quem reage), escolhido UMA vez no começo da reação: o primeiro de GIROS_REACAO
+ * (0 = o plano de sempre, que só muda se tiver gente de verdade na frente) com menos gente na frente da lente (a < 2,2 m,
+ * dentro do ângulo do quadro) ou entre a lente e quem reage no próximo segundo (posição + velocidade × t). Contraprova: um
+ * jogador do time que sofreu, andando para a saída, passava colado na lente (um corpo a 2 m enche a altura do quadro) em
+ * ~15% das cenas curtas.
+ */
+function escolherGiroReacao(c) {
+  const r = c.reacao ?? c.autor, R = C.camera.reacao, rj = r.j;
+  let melhor = 0, menor = Infinity;
+  for (const giro of GIROS_REACAO) {
+    const d = direcaoReacao(rj.rumo, giro), dx = d.x, dz = d.z;
+    let custo = 0;
+    // custo = integral no tempo (m·s): amostras a cada 0,1 s
+    for (let t = 0, T = c.curta ? C.curta.reacao : C.reacao; t <= T + 1e-9; t += 0.1) {
+      const sx = rj.x + rj.vx * t, sz = rj.z + rj.vz * t;
+      _cr.de[0] = sx + dx * R.dist; _cr.de[1] = R.altura; _cr.de[2] = sz + dz * R.dist;
+      limitarCamera(_cr);
+      const cx = _cr.de[0], cz = _cr.de[2], ex = sx - cx, ez = sz - cz, el2 = ex * ex + ez * ez || 1, el = Math.sqrt(el2);
+      for (const a of c.atores) {
+        if (a === r) continue;
+        const px = a.j.x + a.j.vx * t, pz = a.j.z + a.j.vz * t;
+        // na frente da lente (distância ao longo do olhar) e de lado (perpendicular a ele)
+        const u = ((px - cx) * ex + (pz - cz) * ez) / el2, frente = u * el, lado = Math.hypot(px - cx - ex * u, pz - cz - ez * u);
+        // colado na lente, dentro do ângulo do quadro (meia largura ~0,6 da distância + o corpo)
+        const dc = Math.hypot(px - cx, pz - cz);
+        if (frente > 0 && dc < 2.2 && lado < frente * 0.6 + 0.4) custo += (2.2 - dc) * 0.1;
+        // entre a lente e quem reage (perto da linha de visão)
+        if (u > 0.05 && u < 0.95 && lado < 0.8) custo += (0.8 - lado) * 0.1;
+      }
+    }
+    // o plano de sempre (giro 0) só muda com gente de verdade na frente (um corpo cruzando a linha de visão por ~0,2 s já
+    // custa ~0,1 m·s; um colado na lente o plano inteiro, 1–3)
+    if (giro === 0 && custo <= 0.03) return 0;
+    if (custo < menor - 1e-9) { menor = custo; melhor = giro; }
+  }
+  return melhor;
+}
 function posAutor(c, tk, out) {
   const k = clamp(tk, 0, Math.min(c.k, NHIST - 1));
   const k0 = Math.floor(k), k1 = Math.min(k0 + 1, Math.min(c.k, NHIST - 1)), f = k - k0;
@@ -890,12 +940,12 @@ export function planoCamera(c, opc, out) {
     ajustarCelular(out, opc);
     return out;
   }
-  // reação de quem sofreu: plano médio, de frente para ele e puxado para o lado da TV (z +)
+  // reação de quem sofreu: plano médio, de frente para ele e puxado para o lado da TV (z +), girado em volta dele pelo giro
+  // escolhido no começo da reação (passoCena: ninguém colado na lente nem entre ela e quem reage)
   const R = K.reacao, r = c.reacao ?? c.autor;
   out.nome = 'reacao';
   const x = lerp(r.x0, r.x1, c.alfa), z = lerp(r.z0, r.z1, c.alfa);
-  let vx = Math.cos(r.r1), vz = Math.sin(r.r1) + R.ladoTV;
-  const vl = Math.hypot(vx, vz) || 1; vx /= vl; vz /= vl;
+  const dr = direcaoReacao(r.r1, c.giroReacao), vx = dr.x, vz = dr.z;
   out.de[0] = x + vx * R.dist; out.de[1] = R.altura; out.de[2] = z + vz * R.dist;
   out.para[0] = x; out.para[1] = R.olharY; out.para[2] = z;
   out.fov = R.fov;
