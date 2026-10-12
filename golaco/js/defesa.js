@@ -57,6 +57,35 @@ export function condutorAdversario(m, j) {
   return d0;
 }
 
+/**
+ * Passe do adversário em andamento (bola sem dono, o voo é um passe — não chute — do outro time, fora de parada): o
+ * PRESSÃO segue valendo e o chamado corre para onde a bola vai (auditoria dos botões, 12/10: o pedido caía a cada passe
+ * da IA e o chamado perdia o embalo). Devolve o voo ou null.
+ */
+export function passeAdversario(m, time) {
+  const v = m.voo;
+  if (!v || m.posse != null || m.naMao != null || v.time === time) return null;
+  if (m.parada && !m.parada.rolou) return null;
+  if (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha' || (v.tipo === 'cabeceio' && v.cabeceio === 'chute')) return null;
+  return v.alvo ? v : null;
+}
+
+/** Quem a PRESSÃO persegue: o condutor adversário ou, no passe dele, o recebedor (ou o ponto de chegada). */
+function alvoPressao(m, time, out) {
+  if (m.posse != null) {
+    const d0 = m.naMao == null && !(m.parada && !m.parada.rolou) && m.bola.p.y <= 0.5 ? porId(m, m.posse) : null;
+    if (!d0 || d0.time === time) return null;
+    out.x = d0.x; out.z = d0.z; out.vx = d0.vx; out.vz = d0.vz;
+    return out;
+  }
+  const v = passeAdversario(m, time);
+  if (!v) return null;
+  // o ponto de chegada do passe, parado (o recebedor vai até ele)
+  out.x = v.alvo.x; out.z = v.alvo.z; out.vx = 0; out.vz = 0;
+  return out;
+}
+const _alvoP = { x: 0, z: 0, vx: 0, vz: 0 };
+
 // ------------------------------------------------------------------------------------- CONTER
 
 /**
@@ -341,11 +370,14 @@ export function pressionadorDe(m, time, excluir = -1) {
   const cache = (m.pressaoHumano ??= {});
   const ant = cache[time];
   if (ant && ant.tick === m.tick) return ant.id;
-  const d0 = m.posse != null ? porId(m, m.posse) : null;
+  // o condutor adversário ou, no passe dele, o ponto de chegada (o chamado segue correndo no passe)
+  const d0 = alvoPressao(m, time, _alvoP);
   const ctrl = m.humanos.includes(time) ? m.controlado[time] : null;
-  const atual = ant && ant.tick === m.tick - 1 ? ant.id : -1;
+  // a vantagem (histerese) é do ÚLTIMO escolhido dentro da validade do pedido — não só do tick anterior: no passe do
+  // adversário ninguém era chamado e, com o recebedor, outro jogador partia do zero
+  const atual = ant && ant.ult >= 0 && m.tick - ant.ultTick <= seg(P.validade) ? ant.ult : -1;
   let id = -1;
-  if (d0 && d0.time !== time) {
+  if (d0) {
     let mt = Infinity;
     for (const o of m.jogadores) {
       if (o.time !== time || o.posicao === 'GOL' || o.id === ctrl || o.papel === 'parado' || o.papel === 'marcador') continue;
@@ -354,7 +386,10 @@ export function pressionadorDe(m, time, excluir = -1) {
       if (t < mt) { mt = t; id = o.id; }
     }
   }
-  cache[time] = { tick: m.tick, id };
+  const c = (cache[time] ??= { tick: m.tick, id, ult: -1, ultTick: -1 });
+  c.tick = m.tick; c.id = id;
+  if (id >= 0) { c.ult = id; c.ultTick = m.tick; }
+  else if (c.ult === undefined) { c.ult = -1; c.ultTick = -1; }
   return id;
 }
 
@@ -378,6 +413,14 @@ export function pressionadorVisivel(m, time) {
  */
 export function entradaPressao(m, j) {
   if (!pressaoPedida(m, j.time)) return null;
+  // passe do adversário: o chamado corre em disparada para onde a bola vai, pelo lado do meu gol (chega junto com ela)
+  const pv = m.posse == null ? passeAdversario(m, j.time) : null;
+  if (pv) {
+    if (pressionadorDe(m, j.time) !== j.id) return null;
+    estadoIA(m, j).ramo = 'pressaoHumano';
+    const gx = -ataca(m, j.time) * CAMPO.meioX - pv.alvo.x, gz = -pv.alvo.z, g = MD.hypot(gx, gz) || 1;
+    return direto(j, pv.alvo.x + (gx / g) * P.colado - j.x, pv.alvo.z + (gz / g) * P.colado - j.z, true);
+  }
   const d0 = condutorAdversario(m, j);
   if (!d0 || pressionadorDe(m, j.time) !== j.id) return null;
   const s = estadoIA(m, j);

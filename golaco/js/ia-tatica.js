@@ -41,7 +41,7 @@ import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
-import { entradaPressao, pressaoPedida, pressionadorDe } from './defesa.js';
+import { entradaPressao, pressaoPedida, pressionadorDe, passeAdversario } from './defesa.js';
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
@@ -390,7 +390,8 @@ export function blocoDoTime(m, t) {
   // entradaPressao. Com o 1º homem (≠ controlado) já apertando por conta própria, o botão chama OUTRO: dobra a
   // marcação (o "second man press" do EA FC). Calculado ANTES do aperto do 1º (antes ia com 1 tick de atraso)
   B.pedido = -1;
-  if (f.fase === 'sem' && pressaoPedida(m, t) && condutorAdversarioDe(m, t)) {
+  // (no passe do adversário o pedido segue valendo: o chamado corre para onde a bola vai — defesa.js passeAdversario)
+  if (f.fase === 'sem' && pressaoPedida(m, t) && (condutorAdversarioDe(m, t) || passeAdversario(m, t))) {
     B.pedido = pressionadorDe(m, t, B.apertaProprio && p1 && p1.id !== humano ? p1.id : -1);
   }
   B.pedidoTick = m.tick;
