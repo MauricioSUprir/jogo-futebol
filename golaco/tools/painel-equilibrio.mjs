@@ -68,7 +68,7 @@ async function partida(pastaJs, sem) {
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO });
   const R = {
-    sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0],
+    sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0], intercept: [0, 0],
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
     golsFora: 0, cobrancas: {}, impedimentos: 0, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: { total: 0, gol: 0, defesa: 0, fora: 0 },
     ticks: 0,
@@ -146,7 +146,8 @@ async function partida(pastaJs, sem) {
             aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen, cab };
             passe = null;
           } else if (e.tipo === 'passe' && j) {
-            passe = j.posicao !== 'GOL' ? { time: j.time } : null;
+            // (tickChegada: o passe chega ao destino; o adversário com a bola antes disso (+ 0,25 s) = interceptação)
+            passe = j.posicao !== 'GOL' ? { time: j.time, chega: (m.voo && m.voo.de === j.id ? m.voo.tickChegada : m.tick) + 15 } : null;
             if (j.posicao !== 'GOL') R.passes++;
           }
       }
@@ -156,7 +157,11 @@ async function partida(pastaJs, sem) {
     const rolando = m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
     if (!rolando) { passe = null; continue; }
     const dono = M.donoDaBola(m);
-    if (dono && passe) { if (dono.time === passe.time) R.passesOk++; passe = null; }
+    if (dono && passe) {
+      if (dono.time === passe.time) R.passesOk++;
+      else if (m.tick <= passe.chega && dono.posicao !== 'GOL') R.intercept[dono.time]++;
+      passe = null;
+    }
     const tc = M.timeComBola(m);
     if (tc != null) R.posse[tc]++;
     if (dono && (!pos || pos.time !== dono.time)) novaPosse(dono.time, 'recuperacao');
@@ -246,6 +251,9 @@ function medidas(res) {
     longe: pct(cnt(c => c.dist >= 25), nc),
     golsFora: pct(soma(r => r.golsFora), golsCh),
     passe: pct(soma(r => r.passesOk), soma(r => r.passes)), passes: soma(r => r.passes) / n,
+    // (partidas gravadas antes da contagem não têm r.intercept: NaN)
+    interc100: res.every(r => r.intercept) ? 100 * soma(r => r.intercept[0] + r.intercept[1]) / soma(r => r.passes) : NaN,
+    intercT: res.every(r => r.intercept) ? soma(r => r.intercept[0] + r.intercept[1]) / (2 * n) : NaN,
     terco: pct(soma(r => r.possesTerco), soma(r => r.posses)), posses: soma(r => r.posses) / n,
     impedimentos: soma(r => r.impedimentos) / n,
     faltas: soma(r => r.faltas) / n, amarelos: soma(r => r.amarelos) / n, vermelhos: soma(r => r.vermelhos) / n,
@@ -276,6 +284,9 @@ const LINHAS = [
   ['chutes de 25 m ou mais', '≤ 15%', x => Number.isFinite(x.longe) && x.longe <= 15, x => `${f(x.longe)}%`],
   ['gols de fora da área', '12–18%', x => dentro(x.golsFora, 12, 18), x => `${f(x.golsFora)}%`],
   ['passe certo', '75–88%', x => dentro(x.passe, 75, 88), x => `${f(x.passe)}% (${f(x.passes, 0)} por partida)`],
+  // interceptações (FBref/Opta, PL 2023/24: 8,5 por time por jogo, 6,1–10,0; ~941 passes por jogo → ~1,8 por 100 passes do
+  // adversário): o passe dominado por um adversário de linha antes de chegar ao destino
+  ['interceptações por 100 passes do adversário', '1,4–2,4 (PL 23/24: 1,8)', x => Number.isFinite(x.interc100) && dentro(x.interc100, 1.4, 2.4), x => `${f(x.interc100, 2)} (${f(x.intercT, 2)} por time por partida)`],
   ['posses que chegam ao último terço', '35–45%', x => dentro(x.terco, 35, 45), x => `${f(x.terco)}% (${f(x.posses, 0)} posses)`],
   ['impedimentos por partida', '≥ 1', x => x.impedimentos >= 1, x => x.impedimentos ? f(x.impedimentos, 2) : '0 (ainda não existe)'],
   ['pênaltis: gol / defesa / fora', '~76 / 18 / 6%', x => x.pen.total >= 10 && dentro(x.penGol, 70, 82), x => x.pen.total ? `${f(x.penGol, 0)} / ${f(x.penDef, 0)} / ${f(x.penFora, 0)}% (${x.pen.total})` : '0 (ainda não existe)'],

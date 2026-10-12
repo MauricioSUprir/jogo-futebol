@@ -436,7 +436,7 @@ export const ACOES = {
     vParado: 2.0, semToque: 0.1,
     // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
     // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
-    vLado: 3, tras: 0.4 },
+    vLado: 3, tras: 0.7 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -1010,7 +1010,7 @@ export const IA_DEFESA = {
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
   antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
   giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
-  livre: { histerese: 0.25, margem: 0.2, disputa: null }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, marcador: -0.1 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
@@ -1024,7 +1024,12 @@ export const IA_DEFESA = {
   // pressão Alta: a zona fecha a linha de passe do condutor para o adversário reivindicado (a até
   // alcance m do condutor), num ponto a `ponto` do caminho; e reivindica também quem está até
   // `frente` m à frente da referência (sobe para pressionar a construção)
-  linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6 },
+  // (pedido do dono de 12/10, "a defesa mal intercepta passe"; FBref/Opta, PL 2023/24: 8,5 interceptações por time por
+  // jogo, ~1,8 por 100 passes do adversário; passe certo ~83%, 780 de 941 por jogo) quem marca um adversário — individual
+  // ou na zona — fica puxado sombra[pressão] para a linha de passe do condutor para ele, a sombraDist m do homem (o lado da
+  // bola, "deny"; com o condutor a mais de sombraMin m dele), e no passe para o seu homem vai à bola chegando até
+  // livre.marcador s DEPOIS do recebedor (corpo a corpo; os outros precisam chegar livre.margem s antes)
+  linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6, sombra: [0.35, 0.55, 0.7], sombraDist: 1.2, sombraMin: 4 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola
   defesaPaga: 4,              // m a mais para quem é da linha de defesa, com a bola à frente da referência dele
@@ -1054,7 +1059,9 @@ export const IA_DEFESA = {
   //  - o bloco do lado do gol a até `raio` m do condutor e a até `corredor` m de lado da linha dele acompanha no ritmo de
   //    fBloco × a velocidade dele (sem o teto do trote; CORRER com mais de `correLonge` m de atraso), e a recomposição liga
   //    com `liga` m de atraso (no jogo organizado eram TATICA.recomp.ligaOrganizado);
-  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola);
+  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola); quem está
+  //    no caminho dele (a até `caminho` m da linha condutor → gol, do lado do gol, a menos de recua[0] m) recua junto para a
+  //    cobertura, pela velocidade — parado no lugar da forma era ultrapassado a ~0 m/s;
   //  - conter não é para sempre: com o condutor a menos de engaja[1] m do meu gol a distância do 1º homem encolhe até
   //    `aperto` (engaja[0] m), ao alcance do bote — longe do gol ele atrasa a arrancada, perto ele tira a bola (1 × 1:
   //    fechar, conter e dar o bote antes da área). Com o contém sem fim, o condutor TROTANDO entrava na área em 53% das
@@ -1062,7 +1069,7 @@ export const IA_DEFESA = {
   //  - v = 6,3 m/s (a definição de arrancada da contraprova de 11/10: o trote do humano, ~5,6 m/s, fica com a defesa de
   //    sempre, que já o parava: 4% chegavam à área).
   corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [10, 0.5, 1.5],
-    batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8 },
+    batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8, caminho: 2.5 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia
   // por 0,3–0,5 s: contraprova de 11/10)

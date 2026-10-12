@@ -147,7 +147,12 @@ function vaiNaLivre(m, j) {
   if (v && v.para != null && v.time !== j.time) {
     let r = null;
     for (const o of m.jogadores) if (o.id === v.para) { r = o; break; }
-    if (r && tempo(r) < tj + (j.id === atual ? 0 : IA_DEFESA.livre.margem)) return false;
+    // (quem marca o recebedor — individual ou na zona — lê o passe: vai à bola chegando até livre.marcador s depois dele,
+    // corpo a corpo, em vez de precisar chegar livre.margem s ANTES; pedido do dono de 12/10, "a defesa mal intercepta")
+    const Bj = m.iaBloco?.[j.time], kj = j.vagaIdx;
+    const marca = !!Bj && kj != null && (Bj.marcaAdv?.[kj] === v.para || Bj.zonaAdv?.[kj] === v.para);
+    const margem = j.id === atual ? 0 : marca ? IA_DEFESA.livre.marcador : IA_DEFESA.livre.margem;
+    if (r && tempo(r) < tj + margem) return false;
   }
   Lv[j.time] = { id: j.id, tick: m.tick };
   return true;
@@ -770,13 +775,14 @@ function semBola(m, j, f) {
     if (a) {
       // do lado do gol do atacante, mas sem sair da linha para a frente: com o atacante à frente da
       // linha, o marcador fica na altura da linha e só acompanha de lado (a linha não se desmancha)
-      const gx = meuGol - a.x, gz = -a.z, g = MD.hypot(gx, gz) || 1;
-      const d = IA_DEFESA.marcaDist;
-      let tx = a.x + (gx / g) * d;
+      // (pedido do dono de 12/10, "a defesa mal intercepta passe": e puxado para a linha de passe do condutor para ele —
+      // pontoMarcacao —, colado nele: lê o passe sem deixar o homem livre)
+      pontoMarcacao(m, B, a, meuGol, p, _pm);
+      let tx = _pm.x;
       const xl = B.ref[2 * k];
       if ((tx - xl) * lado > 0) tx = xl;
       s.ramo = 'marca';
-      return irPara(m, j, tx, a.z + (gz / g) * d, 1, true, extra, 'pressa');
+      return irPara(m, j, tx, _pm.z, 1, true, extra, 'pressa');
     }
   }
   const vaga = FORMACOES[m.times[j.time].formacao].vagas[k];
@@ -800,8 +806,8 @@ function semBola(m, j, f) {
         ax = c.x + (o.x - c.x) * L.ponto; az = c.z + (o.z - c.z) * L.ponto;
         s.ramo = 'fechaLinha';
       } else {
-        const gx = meuGol - o.x, gz = -o.z, g = MD.hypot(gx, gz) || 1;
-        ax = o.x + (gx / g) * IA_DEFESA.marcaDist; az = o.z + (gz / g) * IA_DEFESA.marcaDist;
+        pontoMarcacao(m, B, o, meuGol, p, _pm);
+        ax = _pm.x; az = _pm.z;
       }
       tx += (ax - tx) * IA_DEFESA.zona.peso; tz += (az - tz) * IA_DEFESA.zona.peso;
       break;
@@ -815,9 +821,50 @@ function semBola(m, j, f) {
     frenteSem ? TATICA.recuoFrente[1] : vaga.grupo === 'def' ? TATICA.sobeLinha : 0);
   // condutor rápido no meu corredor: quem está do lado do gol, perto da linha dele, acompanha no ritmo dele (sem o teto do
   // trote do ponto calmo) — vai para o lugar dele na forma, sem ir na bola (só o 1º e o 2º vão)
-  if (B.rapido && !frenteSem) acompanhaCorredor(m, j, B, lado, _t);
+  if (B.rapido && !frenteSem) {
+    // ...e quem está NO CAMINHO dele (do lado do gol, perto da linha condutor → gol) recua junto, pela velocidade, para a
+    // cobertura — parado no lugar da forma ele era ultrapassado a ~0 m/s
+    if (noCaminho(m, j, B, meuGol)) { const e = acompanhar(m, j, s, B, meuGol, extra, 'cobre'); if (e) return e; }
+    acompanhaCorredor(m, j, B, lado, _t);
+  }
   desviaCondutor(m, j, B, _t);
   return irPara(m, j, _t.x, _t.z, _t.mag, _t.correr, extra, _t.modo);
+}
+
+const _pm = { x: 0, z: 0 };
+/**
+ * Onde fica quem marca o adversário a (pedido do dono de 12/10: "a defesa mal intercepta passe"): marcaDist m do lado do
+ * meu gol dele e, com o condutor deles a até linhaDePasse.alcance m de a (e a mais de sombraMin), puxado sombra[pressão]
+ * para o ponto a sombraDist m de a NA LINHA DE PASSE do condutor para ele — o marcador lê o passe pelo lado da bola, colado
+ * no homem (nunca mais longe dele que ~marcaDist): corta ou intercepta sem deixá-lo livre. Escreve out {x, z}.
+ */
+function pontoMarcacao(m, B, a, meuGol, p, out) {
+  const L = IA_DEFESA.linhaDePasse, d = IA_DEFESA.marcaDist;
+  const gx = meuGol - a.x, gz = -a.z, g = MD.hypot(gx, gz) || 1;
+  let px = a.x + (gx / g) * d, pz = a.z + (gz / g) * d;
+  const k = L.sombra[p];
+  if (k > 0 && B.cond >= 0 && B.cond !== a.id) {
+    let c = null;
+    for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
+    const cx = c ? c.x - a.x : 0, cz = c ? c.z - a.z : 0, l = MD.hypot(cx, cz);
+    if (c && c.time === a.time && l <= L.alcance && l > L.sombraMin) {
+      const sx = a.x + (cx / l) * L.sombraDist, sz = a.z + (cz / l) * L.sombraDist;
+      px += (sx - px) * k; pz += (sz - pz) * k;
+    }
+  }
+  out.x = px; out.z = pz;
+}
+
+/** j está no caminho do condutor rápido: do lado do gol, a menos de corrida.recua[0] m e a até corrida.caminho m da linha
+ * condutor → meu gol? */
+function noCaminho(m, j, B, meuGol) {
+  const CR = IA_DEFESA.corrida;
+  let c = null;
+  for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
+  if (!c) return false;
+  const gx = meuGol - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1, ux = gx / g, uz = gz / g;
+  const rx = j.x - c.x, rz = j.z - c.z, ao = rx * ux + rz * uz;
+  return ao > 0 && ao < CR.recua[0] && Math.abs(-rx * uz + rz * ux) < CR.caminho;
 }
 
 /**
