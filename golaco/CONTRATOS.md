@@ -440,7 +440,9 @@ Constantes em `config.js COMEMORACAO`.
   ou toque na camada `#comemoracao` (o "Pular" do toque é o alvo visível). `fimComemoracao(pulou)`: estado 'solta' (a
   cena fica parada no último quadro até a saída); pulada antes da hora, os passos que faltam até a saída rodam a
   `passosCortina` (40) por quadro com a faixa verde cruzando a tela (`hud.cortina()`); o aperto que pulou não vira jogada
-  (entrada solta e bloqueada/desbloqueada, como no replay) e NÃO pula o replay (outro aperto pula). Na `saida` (ou
+  (entrada solta e bloqueada/desbloqueada, como no replay) e NÃO pula o replay (outro aperto pula). Quando a camada sai
+  (`encerrarComemoracao`), `entrada.reposicionar()` refaz o analógico de descanso (calculado com os botões escondidos ele ia
+  para o alto da tela). Na `saida` (ou
   `intervalo`, `fimDeJogo`, `recomeco`) a cena é descartada (`encerrarComemoracao`) antes do `posGol()` do replay. Treino:
   sem cena (o efeito leve de sempre). `?comemoracao=0|1` força; sem opção na pausa (a pausa não cabe sem rolar em 844×390).
 - **`render/camera.js`**: `definirCinema(plano | null)` (o mesmo objeto do `planoCamera`, atualizado por quadro), `cinema`

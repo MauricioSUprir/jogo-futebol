@@ -632,6 +632,13 @@ export function criarEntrada(opc = {}) {
     /** Solta tudo (pausa, troca de aba). */
     soltarTudo() { soltarTudo(false); },
     /**
+     * Refaz o layout dos botões e o analógico de descanso (o mesmo do resize). Para quando os botões de toque voltam a
+     * aparecer depois de uma camada que os escondia (a comemoração do gol): com eles escondidos a zona do analógico mede
+     * 0×0 e o descanso calculado ali (o "Pular" solta tudo; a barra do navegador muda o tamanho da janela) ia para o alto
+     * da tela.
+     */
+    reposicionar() { aoRedimensionar(); },
+    /**
      * Bloqueia (true) ou libera (false) a entrada do jogo — o "Editar time" aberto. Bloqueada: ler()
      * devolve tudo solto, nenhum aperto vira pulso e nenhuma ação sai, menos a pausa (Esc/P/Start, que
      * fecha o editor); o teclado não chama preventDefault (o editor usa as teclas). Ao mudar, solta tudo:

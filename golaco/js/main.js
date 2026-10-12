@@ -741,6 +741,9 @@ function encerrarComemoracao() {
   cenaGol = null; cenaEstado = null; cenaRapida = false;
   if (cam) cam.definirCinema(null);
   hud.comemoracao(false);
+  // os botões de toque voltam: o analógico de descanso calculado com eles escondidos (o pulo solta tudo; a janela pode ter
+  // mudado de tamanho) volta ao canto de baixo
+  entrada?.reposicionar?.();
   corteCamera = true;
 }
 

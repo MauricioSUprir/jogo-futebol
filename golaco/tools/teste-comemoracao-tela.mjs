@@ -15,7 +15,9 @@
 //      mesmo tick (os passos que faltavam rodam na cortina) com o mesmo hash; o K ainda segurado NÃO pula o replay, um
 //      2º aperto pula (dois apertos: comemoração e replay);
 //   C) celular 844×390 com toque: botões de toque e minimapa escondidos na cena; "Pular" (≥ 48 px, dentro da tela, sem
-//      encostar no placar nem no "GOL!"); toque antes de 0,5 s não pula, depois pula; os botões voltam no fim;
+//      encostar no placar nem no "GOL!"); toque antes de 0,5 s não pula, depois pula; os botões voltam no fim; C3/C4
+//      (contraprova) o analógico de descanso volta ao canto de baixo depois da cena — pulada pelo toque com o replay
+//      inteiro, e com a janela mudando de tamanho no meio dela (antes ia para o alto da tela, embaixo do placar);
 //   D) gol NATURAL (IA × IA, achado em Node com a entrada da página): a cena inteira (fases, autor no quadro);
 //   E) treino (condução): gol sem cena (o efeito do treino de sempre) e o mesmo hash com e sem ?comemoracao;
 //   F) CPU do quadro durante a cena (sem o desenho) ≤ p95 do quadro do jogo + 1 ms;
@@ -238,6 +240,32 @@ try {
     }
   } finally { await P.fechar(); }
 } catch (e) { meta('C execução', e.message.split('\n')[0], 'sem exceção', false); }
+// C3/C4 (contraprova): os botões de toque ficam escondidos na cena; o analógico de descanso calculado com eles escondidos
+// (o "Pular" solta tudo; a janela muda de tamanho — a barra do navegador do celular) ia para o alto da tela, embaixo do
+// placar. Depois da cena (e do replay inteiro, sem pular), ele tem de estar onde um layout novo o põe (o resize de verdade).
+for (const caso of ['C3 pular a cena pelo toque e o replay inteiro', 'C4 a janela muda de tamanho no meio da cena']) {
+  try {
+    const P = await pagina('?q=media&hora=dia&semente=5&toque=1&entalhe=1', { largura: 844, altura: 390, dpr: 1, toque: true });
+    try {
+      const pg = P.pagina;
+      const temC = await pg.evaluate(() => !!window.__golaco.comemoracao);
+      const pos = () => pg.evaluate(() => { const r = document.getElementById('analogico').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; });
+      await golRoteirizado(pg, { semente: 5, time: 0 });
+      if (!temC) meta(caso, 'sem cena', '-', false);
+      else {
+        await pg.evaluate(() => { const g = window.__golaco; while (g.comemoracao.estado.t < 1.0) g.relogio.avancar(1000 / 60, { desenhar: false }); });
+        if (caso.startsWith('C3')) await pg.touchscreen.tap(400, 200);
+        else await pg.setViewportSize({ width: 800, height: 370 });
+        await pg.evaluate(() => { const g = window.__golaco, m = g.mundo; let k = 0; while (k < 3000 && (g.comemoracao.ativa || g.replay.estado.ativo || m.partida.estado !== 'jogo')) { g.relogio.avancar(1000 / 60, { desenhar: false }); k++; } g.relogio.avancar(1000 / 60, { desenhar: true }); });
+        const depois = await pos();
+        await pg.evaluate(() => window.dispatchEvent(new Event('resize')));
+        const certo = await pos();
+        const d = Math.hypot(depois.x - certo.x, depois.y - certo.y);
+        meta(`${caso}: o analógico de descanso no lugar (canto de baixo)`, `depois da cena (${depois.x}, ${depois.y}); layout novo (${certo.x}, ${certo.y}); ${d.toFixed(0)} px`, '≤ 2 px', d <= 2);
+      }
+    } finally { await P.fechar(); }
+  } catch (e) { meta(`${caso}: execução`, e.message.split('\n')[0], 'sem exceção', false); }
+}
 
 // ------------------------------------------------------------------------------------------------ D (gol natural)
 try {
