@@ -228,6 +228,19 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `sobBandeirao`); vaia pela posse longa do visitante (~2 por partida). Custo: +1 chamada (faixas/bandeiras) e +1 só com
   sinalizadores acesos; pré-carga no 1º quadro desenhado (nada engasga no 1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
   Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
+- **Rede véu de noiva e branca** (pedido de 11/10: "as redes têm que ser brancas, ... movimentação na rede quando a bola
+  toca nela, ... em véu de noiva"; `PESQUISA-ESTADIO.md` §8): sai o caixote de 2 m com teto. Forma ÚNICA em `js/rede-forma.js`
+  (puro; `CAMPO.gol.veu`: hastes de 0,45 m nos cantos de cima e a parábola tangente ao chão até 2,8 m) usada pela física
+  (`bola.js colidirGol`: o véu segura por dentro e a bola escorrega até a cunha do fundo — "morre no fundo"; por fora não
+  entra), pela regra do gol (`sim.js verificarGol`, `treino.js`: atrás do véu não é gol) e pelo desenho (`rede-onda.js`:
+  campo VETORIAL, a bolsa pela normal do véu; `campo.js`: trama colmeia procedural, fio ≥ 1 px e véu branco ao longe, luz
+  própria `LUZ_GOL` de dia e de noite, armação branca com as hastes; sem textura). A bolsa começa no fim do passo da batida.
+  **Muda o hash**: a condução fica IGUAL enquanto a bola não entra no gol (19/20 sementes do roteiro e 20/20 da demo); o
+  treino de ataque diverge no passo seguinte ao 1º chute/lançamento cuja trajetória prevista passa da linha (base nova do
+  `hash-igual`: `--ref <merge>`). Testes: `teste-rede-veu` (Node, padrão; reprova 5
+  na base), `teste-rede` reescrito para o véu, `teste-rede-tela` (navegador, CI: forma, branca — fio de perto L* ≥ 85 de dia
+  e ≥ 80 à noite —, clareia o gol na TV e na câmera do gol, mexe ≥ 4% na câmera do gol e ≥ 1% na TV; reprova 21 na base);
+  prints do gol pelo gol roteirizado (`prints.mjs --so pc-gol-rede,...`: câmera do gol, perto, TV, atrás, perfil).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa

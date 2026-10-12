@@ -120,22 +120,7 @@ export function texDetalheGrama(tam, aniso) {
   return texturaCanvas(c, { repetir: true, aniso, cor: false });
 }
 
-/** Malha da rede (fios brancos com transparência), repetível. */
-export function texRede(aniso) {
-  const t = 128;
-  const c = criarCanvas(t, t);
-  const g = c.getContext('2d');
-  g.clearRect(0, 0, t, t);
-  g.strokeStyle = 'rgba(255,255,255,0.95)';
-  g.lineWidth = 7;
-  // losango: duas diagonais, emendando nas bordas
-  g.beginPath();
-  g.moveTo(0, t / 2); g.lineTo(t / 2, 0); g.lineTo(t, t / 2); g.lineTo(t / 2, t); g.closePath();
-  g.stroke();
-  const tx = texturaCanvas(c, { repetir: true, aniso });
-  tx.premultiplyAlpha = false;
-  return tx;
-}
+// (a malha da rede saiu daqui: a trama colmeia da rede véu de noiva é procedural, no shader de campo.js)
 
 // Marcas FICTÍCIAS das placas (nada licenciado).
 const PAINEIS = [
