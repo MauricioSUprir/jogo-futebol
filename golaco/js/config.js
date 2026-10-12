@@ -410,8 +410,12 @@ export const ACOES = {
   // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
   // dos cabeceios a gol no alvo). Na bola rolando fica como antes até a entrega do cabeceio (valendo em todo cabeceio
   // derrubou os gols de bola rolando: painel de 144, 1,78 → 1,67)
-  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
-    erroGolBolaParada: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
+  // (entrega "cabeceio na bola rolando", 12/10: o alcance sai da cabeça DESENHADA + o pulo desenhado — cabeceio.js
+  // alcanceCabeceio —, alturaPeito[1] 1,7 → 1,55 (a bola na altura do rosto é de cabeça, não de peito) e o erro do
+  // cabeceio a gol vale em toda bola (erroGol; antes só na bola parada: com o cabeceio a gol teletransportado para o
+  // chão a conta não importava)
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.55], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
+    erroGolBolaParada: [0.3, 0.1], erroGol: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -748,6 +752,44 @@ export const AEREO = {
   ladoGol: 0.35,              // vantagem (logit) de quem está do lado do próprio gol
   erroDisputa: 1.8,           // o cabeceio de quem ganhou a disputa espreme mais (pressão no salto)
   perdeuSalto: 0.6,           // s — quem perdeu a disputa não toca na bola alta por isto (ainda no ar, caindo)
+  // JOGO CORRIDO (entrega "cabeceio na bola rolando", 12/10): a disputa vale também fora da bola parada. No toque aéreo
+  // marcado (sim.js agendarDisputa), o adversário de linha que chega a até `vai` m do ponto do contato antes de sair do
+  // chão (com `folgaT` s de folga) vai disputar: corre para lá (do lado do gol dele) e pula junto. Quem ganha: a nota no
+  // alto, quem está mais perto da bola no contato (`kDist` por m de diferença, no logit) e, só a até `ladoGolDist` m do gol
+  // de quem defende, o lado do gol (`ladoGolRolando`). Meta: a defesa ganha 30–50% dos cruzamentos disputados
+  vai: 1.0, folgaT: 0.1, kDist: 2.0, ladoGolRolando: 0.35, ladoGolDist: 35,
+};
+
+// Cabeceio na bola rolando (entrega "cabeceio + IA intensa", 12/10; pedido do dono, 11/10: "os jogadores não cabeceiam
+// a bola, de jeito nenhum"; cabeceio.js). O pulo é DESENHADO e a física fica presa ao desenho: o contato só vale com a
+// cabeça desenhada (anim.js pose no tick do contato) a até `folga` m da bola, superfície com superfície. Biomecânica
+// (PESQUISA-ETAPA4.md §11): no pulo de cabeceio com corrida a cabeça passa ~0,56 m da estatura (Fílter 2022); o último
+// apoio dura ~0,2–0,25 s; o tronco arqueia na subida e chicoteia para a frente no contato, no alto do pulo (Shewchenko
+// 2005; Bauer 2001).
+export const CABECEIO = {
+  salto: [0.4, 0.65],         // m — o quadril sobe no máximo isto no pulo, pela impulsão (0 → 100)
+  minPulo: 0.08,              // m — precisando subir menos que isto, cabeceia sem pular (o tronco e o pescoço vão à bola)
+  agacha: [0.12, 0.08],       // s e m — antes de sair do chão o quadril baixa isto (contramovimento) nesse tempo
+  amortece: [0.15, 0.07],     // s e m — depois de pousar o quadril baixa isto (amortece a queda) nesse tempo
+  peVel: 2.8,                 // m/s — o pé subindo no pulo (teste de patinação: o pé de quem está parado anda até 3 m/s)
+  vSaida: 3.5,                // m/s — velocidade horizontal máxima na saída do pulo (no ar o corpo segue com ela)
+  hyPe: 0.943,                // m — quadril de pé, sem a passada (anim.js: 0,985 − 0,03 − 0,012)
+  pescoco: 0.65,              // m — do quadril ao centro da cabeça pelo tronco (anim.js: 0,17 + 0,22 + 0,13 + 0,13)
+  contato: 0.225,             // m — do centro da bola ao da cabeça encostando (raio da cabeça 0,115 + raio da bola 0,11)
+  folga: 0.08,                // m — o contato vale com as superfícies a até isto
+  inclina: [0.6, 0.85],       // rad — o tronco inclina até [0] para a cabeça ir à bola (até [1] com a bola abaixo da cabeça)
+  arco: 0.22,                 // rad — o tronco arqueia para trás na subida e chicoteia para a frente no contato
+  janela: [0.22, 0.25],       // s — sem pulo, o tronco vai à bola nestes tempos antes e depois do contato
+  chega: 0.3,                 // m — o corpo vai ao ponto em que a bola chega isto à frente dele (a testa vai nela)
+  longe: 1.4,                 // m — mais longe que isto do ponto na hora de sair do chão, não pula (o pulo não alcança)
+  alturaPedido: 1.25,         // m — com botão, abaixo disto não sai cabeceio (peito ou voleio)
+  // intenção sem botão (cabeceio.js intencaoCabeceio): na área adversária, a gol a até `gol` m do gol; no meu terço,
+  // afastar; no resto, passe de cabeça. Bola entre alturaPedido e alturaPeito[1]: de cabeça só para o gol ou para afastar
+  gol: 15,
+  // afastar: para longe do meu gol e para o lado da bola (nunca para o meio da minha área)
+  vAfasta: 16, elAfasta: 0.62, ladoAfasta: 0.55,
+  // a gol: mira a bola baixa na linha do gol (onde o goleiro alcança menos), entre yGol[0] e yGol[1] m
+  yGol: [0.3, 1.1],
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e

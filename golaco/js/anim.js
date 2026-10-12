@@ -14,11 +14,12 @@
 //    alturaQuadril) — o tornozelo preso pelo joelho não salta com o quadril.
 // Sem three.js nem DOM. Saída: posições das juntas no mundo (Float32Array).
 
-import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL } from './config.js';
+import { JOGADOR, PASSO, G, CONDUCAO, GOLEIRO, LATERAL, CABECEIO } from './config.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { progressoBalanco } from './jogador.js';
 import { mergulhoAtivo, quadroMergulho, maosMergulho, eixosMergulho, MAO_PRONTA_FRENTE, MAO_PRONTA_BAIXO } from './goleiro.js';
 import { alturaSalto } from './bolas-paradas.js';
+import { puloAtivo, quadroPulo, alvoCabeca, inclinacaoAte } from './cabeceio.js';
 
 export const JUNTAS = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -162,8 +163,21 @@ function pesEQuadril(j, m) {
     }
     if (hy > maxY) hy = maxY;
   }
-  return { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy };
+  // cabeceio (cabeceio.js): no pulo, o quadril é o do quadro do pulo (contramovimento, subida, queda), no máximo onde as
+  // pernas alcançam os pés (os pés no ar, que a simulação leva com o corpo, também sobem)
+  let hyPulo = null;
+  if (j.cab && puloAtivo(j, tick)) {
+    const q = quadroPulo(j.cab, tick, _qpulo);
+    let teto = Infinity;
+    for (let p = 0; p < 2; p++) {
+      const pe = pes[p], lado = p === 0 ? -1 : 1;
+      teto = Math.min(teto, alcance(pe.x, pe.y, pe.z, px + qrx * lado * MEIO_QUADRIL, pz + qrz * lado * MEIO_QUADRIL));
+    }
+    hyPulo = Math.min(teto, CABECEIO.hyPe + q.off);
+  }
+  return { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy, hyPulo };
 }
+const _qpulo = { off: 0, w: 0, arco: 0, braco: 0 };
 
 /**
  * Altura do quadril neste tick: o teto (alcance das pernas) e, para cima, no máximo
@@ -175,7 +189,9 @@ function pesEQuadril(j, m) {
 export function alturaQuadril(j, m) {
   // goleiro na defesa desenhada: a altura do quadro do mergulho (goleiro.js quadroMergulho)
   if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return quadroMergulho(j.mergulho, m.tick, _qa).h;
-  const { hy } = pesEQuadril(j, m);
+  const { hy, hyPulo } = pesEQuadril(j, m);
+  // no pulo do cabeceio, o quadril do quadro (sobe com a impulsão, não com o limite de quem anda)
+  if (hyPulo != null) return hyPulo;
   return j.quadril == null ? hy : Math.min(hy, j.quadril + QUADRIL_SOBE * PASSO);
 }
 
@@ -186,8 +202,8 @@ export function alturaQuadril(j, m) {
  */
 export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   if (j.posicao === 'GOL' && mergulhoAtivo(j, m.tick)) return poseMergulho(j, m, out, info);
-  const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto } = pesEQuadril(j, m);
-  const hy = j.quadril == null ? teto : Math.min(teto, j.quadril);
+  const { s, h, fx, fz, rx, rz, af, al, c, pes, px, pz, qrx, qrz, torcao, hy: teto, hyPulo } = pesEQuadril(j, m);
+  const hy = hyPulo != null ? hyPulo : j.quadril == null ? teto : Math.min(teto, j.quadril);
   por(out, J.pelve, px, hy, pz);
 
   // ---- tronco: inclinação para a frente (velocidade + aceleração) e para o lado (curva)
@@ -196,9 +212,28 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
   const roll = clamp(Math.atan2(al, G) * 0.7, -0.35, 0.35);
   // vetor "para cima" do tronco: gira em torno do eixo direito (pitch) e da frente (roll)
   const cp = Math.cos(pitch), sp = Math.sin(pitch), cr = Math.cos(roll), sr = Math.sin(roll);
-  const ux = fx * sp * cr + rx * sr * cp;
-  const uy = cp * cr;
-  const uz = fz * sp * cr + rz * sr * cp;
+  let ux = fx * sp * cr + rx * sr * cp;
+  let uy = cp * cr;
+  let uz = fz * sp * cr + rz * sr * cp;
+  // cabeceio (cabeceio.js): o tronco inclina para a cabeça ir ao ponto do contato (a bola no tick tc), arqueado para trás
+  // na subida e chicoteando para a frente no contato — a simulação confere o contato com ESTA cabeça (sim.js)
+  let braco = 0;
+  if (hyPulo != null) {
+    const cb = j.cab, q = quadroPulo(cb, m.tick, _qpulo);
+    braco = q.braco;
+    if (q.w > 0) {
+      alvoCabeca(cb.bx, cb.by, cb.bz, px, hy, pz, _tc);
+      inclinacaoAte(px, hy, pz, _tc, _ic);
+      let dx = _tc.x - px, dz = _tc.z - pz;
+      const L = Math.hypot(dx, dz);
+      if (L > 1e-3) { dx /= L; dz /= L; } else { dx = fx; dz = fz; }
+      const a = _ic.a * q.w - CABECEIO.arco * q.arco;
+      const lx = dx * Math.sin(a), ly = Math.cos(a), lz = dz * Math.sin(a);
+      ux += (lx - ux) * q.w; uy += (ly - uy) * q.w; uz += (lz - uz) * q.w;
+      const l = Math.hypot(ux, uy, uz) || 1;
+      ux /= l; uy /= l; uz /= l;
+    }
+  }
   const lomb = [px + ux * 0.17, hy + uy * 0.17, pz + uz * 0.17];
   por(out, J.lombar, lomb[0], lomb[1], lomb[2]);
   const pei = [lomb[0] + ux * 0.22, lomb[1] + uy * 0.22, lomb[2] + uz * 0.22];
@@ -273,6 +308,11 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
       const tx = j.x + afx * fr - afz * lado * BOLA_MAO.palma, tz = j.z + afz * fr + afx * lado * BOLA_MAO.palma;
       const mx = out[iM * 3] + (tx - out[iM * 3]) * w, my = out[iM * 3 + 1] + (yy - out[iM * 3 + 1]) * w, mz = out[iM * 3 + 2] + (tz - out[iM * 3 + 2]) * w;
       ikBraco(ox, oy, oz, mx, my, mz, orx * lado * 0.7 + fx * 0.3 - ux * 0.2, -uy * 0.2, orz * lado * 0.7 + fz * 0.3 - uz * 0.2, out, iC, iM);
+    } else if (braco > 0) {
+      // pulo do cabeceio: os braços abrem para cima e para os lados (equilíbrio e proteção do espaço no alto)
+      const ax = ox + orx * lado * 0.34 + fx * 0.12 + ux * 0.1, ay = oy + 0.12, az = oz + orz * lado * 0.34 + fz * 0.12 + uz * 0.1;
+      const mx = out[iM * 3] + (ax - out[iM * 3]) * braco, my = out[iM * 3 + 1] + (ay - out[iM * 3 + 1]) * braco, mz = out[iM * 3 + 2] + (az - out[iM * 3 + 2]) * braco;
+      ikBraco(ox, oy, oz, mx, my, mz, orx * lado * 0.3 - fx * 0.3 - ux * 0.5, -uy * 0.5, orz * lado * 0.3 - fz * 0.3 - uz * 0.5, out, iC, iM);
     }
   }
 
@@ -309,6 +349,7 @@ export function pose(j, m, out = new Float32Array(NJ * 3), info = null) {
 
 // ---------------------------------------------------------------- goleiro: mergulho, salto e defesa em pé
 const _qa = {}, _qp = {}, _mp = {}, _ep = {};
+const _tc = { x: 0, y: 0, z: 0 }, _ic = { a: 0, y: 0 }; // cabeceio: ponto da cabeça e inclinação do tronco
 const BOLA_MAO = GOLEIRO.bolaMao;
 const BRACO = 0.29, ANTEBRACO = 0.26;
 

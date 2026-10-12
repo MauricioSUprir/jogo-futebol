@@ -26,6 +26,7 @@
 //   node tools/painel-equilibrio.mjs --js <pasta js>       (outra cópia da lógica, ex.: a publicada)
 //   node tools/painel-equilibrio.mjs --base <pasta js>     (roda as duas com as MESMAS sementes, lado a lado)
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
+//   node tools/painel-equilibrio.mjs --base-json saida.json (a base é a rodada gravada: não roda de novo)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
@@ -54,6 +55,9 @@ async function partida(pastaJs, sem) {
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
     golsFora: 0, cobrancas: {}, impedimentos: 0, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: { total: 0, gol: 0, defesa: 0, fora: 0 },
     ticks: 0,
+    // jogo aéreo (entrega "cabeceio na bola rolando"): cabeceios, cabeceios a gol, duelos pelo alto (com a bola rolando =
+    // fora da bola parada), gols de cabeça (o chute que virou gol foi um cabeceio); chutes por time
+    cabeceios: 0, cabGol: 0, duelos: 0, duelosRolando: 0, golsCabeca: 0, chutesT: [0, 0],
   };
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   const jog = id => porId.get(id) ?? m.jogadores.find(j => j.id === id);
@@ -76,6 +80,7 @@ async function partida(pastaJs, sem) {
           R.gols[e.time]++;
           if (aberto && aberto.time === e.time) {
             if (!aberto.dentro) R.golsFora++;
+            if (aberto.cab) R.golsCabeca++;
             fecharChute('gol');
           } else fecharChute(aberto ? 'fora' : null);
           // origem pela posse que terminou no gol
@@ -102,6 +107,7 @@ async function partida(pastaJs, sem) {
           R.cobrancas[e.parada] = (R.cobrancas[e.parada] ?? 0) + 1;
           if (j) novaPosse(j.time, e.parada);
           break;
+        case 'disputaAerea': R.duelos++; if (e.bolaParada === false) R.duelosRolando++; break;
         case 'impedimento': R.impedimentos++; break;
         case 'falta': R.faltas++; break;
         case 'cartao': if (e.cor === 'vermelho') R.vermelhos++; else R.amarelos++; break;
@@ -110,13 +116,17 @@ async function partida(pastaJs, sem) {
           if (e.resultado && R.penaltis[e.resultado] != null) R.penaltis[e.resultado]++;
           break;
         default:
+          if (j && e.tipo === 'passe' && e.modo === 'cabeceio') R.cabeceios++;
           if (j && M.ehChute(m, e)) {
             fecharChute('fora');
             const u = M.uDe(m, j.time, m.bola.p.x), w = M.wDe(m, j.time, m.bola.p.z);
             const dist = Math.hypot(52.5 - u, w);
             // (a cobrança de pênalti é marcada: as defesas do goleiro contam sem ela — o pênalti tem a linha dele)
             const pen = ev.some(x => x.tipo === 'cobranca' && x.parada === 'penalti');
-            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen };
+            const cab = e.tipo === 'passe';
+            if (cab) R.cabGol++;
+            R.chutesT[j.time]++;
+            aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen, cab };
             passe = null;
           } else if (e.tipo === 'passe' && j) {
             passe = j.posicao !== 'GOL' ? { time: j.time } : null;
@@ -210,6 +220,10 @@ function medidas(res) {
     escanteios: soma(r => r.cobrancas.escanteio ?? 0) / n,
     laterais: soma(r => r.cobrancas.lateral ?? 0) / n,
     posse0: pct(p0, p0 + p1),
+    cabeceios: soma(r => r.cabeceios ?? 0) / n, cabGol: soma(r => r.cabGol ?? 0) / n,
+    duelos: soma(r => r.duelos ?? 0) / n, duelosRolando: soma(r => r.duelosRolando ?? 0) / n,
+    golsCabeca: pct(soma(r => r.golsCabeca ?? 0), golsCh),
+    chutes0: soma(r => r.chutesT?.[0] ?? 0) / n, chutes1: soma(r => r.chutesT?.[1] ?? 0) / n,
   };
 }
 
@@ -240,12 +254,26 @@ const LINHAS = [
   ['escanteios / laterais por partida', '—', null, x => `${f(x.escanteios)} / ${f(x.laterais)}`],
   ['gols contra por partida', '—', null, x => f(x.golsContra, 2)],
   ['posse do time 0 (soma)', '—', null, x => `${f(x.posse0)}%`],
+  ['chutes por partida: time 0 / time 1', '—', null, x => `${f(x.chutes0)} / ${f(x.chutes1)}`],
+  // jogo aéreo (Opta Analyst, PL 2023/24: 203 de 1.246 gols de cabeça, 16%; FA/Opta: zagueiros cabeceiam ~2× os atacantes)
+  ['gols de cabeça', '8–18% (PL 23/24: 16%)', x => dentro(x.golsCabeca, 8, 18), x => `${f(x.golsCabeca)}%`],
+  ['cabeceios por partida (a gol)', '—', null, x => `${f(x.cabeceios)} (${f(x.cabGol)})`],
+  ['duelos pelo alto por partida (com a bola rolando)', '—', null, x => `${f(x.duelos)} (${f(x.duelosRolando)})`],
 ];
 
 const versoes = [];
-if (BASE) versoes.push({ nome: 'base', pasta: BASE });
-versoes.push({ nome: BASE ? 'agora' : 'medido', pasta: JS });
-for (const v of versoes) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; v.x = medidas(r.res); }
+// --base-json <arquivo>: a base vem de uma rodada gravada com --json (as MESMAS sementes; a máquina dividida não roda a
+// base de novo a cada comparação)
+const BASE_JSON = arg('--base-json', null);
+if (BASE_JSON) {
+  const g = JSON.parse(fs.readFileSync(BASE_JSON, 'utf8'));
+  const e = g.find(x => x.nome === 'base') ?? g[g.length - 1];
+  const res = e.partidas.filter(r => SEMENTES.includes(r.sem)).sort((a, b) => a.sem - b.sem);
+  if (res.length !== SEMENTES.length) throw new Error(`${BASE_JSON}: ${res.length} de ${SEMENTES.length} sementes`);
+  versoes.push({ nome: 'base', pasta: `${e.pasta} (gravada em ${path.basename(BASE_JSON)})`, res, s: 0, gravada: true });
+} else if (BASE) versoes.push({ nome: 'base', pasta: BASE });
+versoes.push({ nome: BASE || BASE_JSON ? 'agora' : 'medido', pasta: JS });
+for (const v of versoes) { if (!v.gravada) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; } v.x = medidas(v.res); }
 
 console.log(`Painel de equilíbrio — ${NS} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}), ${nPar} processos`);
 for (const v of versoes) console.log(`  ${v.nome}: ${v.pasta} (${f(v.s, 0)} s)`);
