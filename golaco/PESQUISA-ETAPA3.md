@@ -843,8 +843,8 @@ disputar, e nada na tela mostrava quem ia; o teste antigo passava sem o botão (
 | EA Forums — "Second Man Press (R1) not working… green indicator missing" | Quem joga acha que o R1 "não funciona" justamente quando falta o indicador | A marca na tela é parte do "funcionar" (teste-controles: aparece no 2º quadro do toque) |
 
 Medido (`tools/teste-pressao-humano.mjs`, pareado: 8 partidas, ~620 posses do adversário, com × sem o botão do mesmo
-hash): base → agora — o mais perto em 1,5 s Δ 0,95 → 1,32 m; o 2º mais perto em 2 s Δ 1,43 → 2,42 m; faltas com o botão
-5 → 14 (×2,8) → 7 → 9; dobra a marcação — → 100%. **Limite físico** (as metas do diagnóstico que ficam informativas):
+hash): base → agora — o mais perto em 1,5 s Δ 0,95 → 1,67 m; o 2º mais perto em 2 s Δ 1,43 → 1,99 m; faltas com o botão
+5 → 14 (×2,8) → 7 → 10; dobra a marcação — → 100% (contraprova, mesma ferramenta e amostra, 625 casos). **Limite físico** (as metas do diagnóstico que ficam informativas):
 do parado o corpo anda ~3,2 m no 1º segundo (perfil de aceleração do jogo, Alonso-Callejo 2022), então "o mais perto
-≥ 2 m mais perto em 1,0 s" não sai (Δ 1,03 m); e só ~1/5 das posses do adversário dura ≥ 1 s, então "bola ao alcance do
-bote em ≥ 15% de TODAS as posses" também não (5%; nas posses longas, 4% → 19%).
+≥ 2 m mais perto em 1,0 s" não sai (Δ 1,09 m); e só ~1/5 das posses do adversário dura ≥ 1 s, então "bola ao alcance do
+bote em ≥ 15% de TODAS as posses" também não (7%; nas posses longas, 4% → 21%).

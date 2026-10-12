@@ -235,6 +235,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ~3,2 m no 1º segundo (o "≥ 2 m mais perto em 1 s" do diagnóstico fica informativo). Painel (144, base × agora): as
   regras tiraram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%) — `GOLEIRO.logit.c0Partida`
   −0,1 só na partida → 59,0% (total 68,0%, de fora 86,8%, gols 2,13 = base); nada que estava na meta saiu.
+  Contraprova: PEGAR só com a bola no pé ou solta a ≤ 3 m/s (`GOLEIRO.pegaVMax`; martelando o botão o goleiro controlado
+  pegava todo chute a ≤ 1 m do corpo), colado na linha do gol o goleiro com a bola nas mãos não vira para o gol nem a
+  solta além dela (`GOLEIRO.soltaLinha`; virar fazia gol contra), a câmera corta no `corteBolaParada` do tiro de meta
+  (testes: `teste-goleiro-regras` G3c/G5d, `teste-estadio` item 11).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
