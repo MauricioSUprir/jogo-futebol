@@ -59,8 +59,9 @@ verticais do poste até o véu (X ≤ `profundidadeVeu(y)`). A MESMA forma vale 
   INÍCIO do subpasso, como os planos finos; o filtro de altura vale pelo começo OU pelo fim do subpasso — a bola de dentro
   subindo a ≥ ~27 m/s não pula a faixa de cima). Por dentro devolve `amortecimentoRede` da velocidade normal e segura o que
   escorrega (×0,45 na batida forte, |vn| > 3; ×0,85 na média; ×0,995 encostada): a bola escorrega pelo véu até a cunha do
-  fundo e "morre" lá. Por fora (×0,3/×0,6) ela não entra nem sobe no véu como numa rampa; a bola por cima do travessão
-  escorrega por trás até o chão. Evento `rede` (força = |vn|) só por dentro com |vn| > 1,5 m/s.
+  fundo e "morre" lá. Por fora (×0,3/×0,6) ela não entra (o pé do véu é quase deitado: rolando rápido de trás ela sobe
+  um pouco por fora — a 20 m/s até ~1,6 m — e volta, sem passar por cima); a bola por cima do travessão escorrega por
+  trás até o chão. Evento `rede` (força = |vn|) só por dentro com |vn| > 1,5 m/s.
 - **Gol (`sim.js verificarGol`) e treino (`treino.js` dentroDoGol)**: a bola atrás do véu (X > `profundidadeVeu(y)`) não é
   gol; o gol continua sendo a bola passar inteira da linha entre as traves e por baixo do travessão.
 - **Hash**: muda a física atrás da linha. O treino de CONDUÇÃO fica bit a bit igual enquanto a bola não entra no gol

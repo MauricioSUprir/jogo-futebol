@@ -380,7 +380,8 @@ function colidirGol(b, lado, ev, ax, ay, az) {
       if (vn * ladoV < 0) {
         const k = (1 + (ladoV < 0 ? am : 2 * am)) * vn;
         let nvX = vX - k * e.nx, nvY = b.v.y - k * e.ny;
-        // a rede segura: batida forte perde boa parte do que escorrega (por fora, mais: não sobe no véu)
+        // a rede segura: batida forte perde boa parte do que escorrega (por fora, mais; mas o pé do véu é quase
+        // deitado: a bola que vem rolando rápido de trás sobe um pouco por fora — a 20 m/s até ~1,6 m — e volta)
         // (encostada, só escorregando: quase nada — a gravidade a leva pelo véu até o chão)
         const forte = Math.abs(vn) > 3, leve = Math.abs(vn) < 0.5;
         const atr = leve ? 0.995 : ladoV < 0 ? (forte ? 0.45 : 0.85) : (forte ? 0.3 : 0.6);
