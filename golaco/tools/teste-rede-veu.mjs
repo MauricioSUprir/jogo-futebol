@@ -215,7 +215,7 @@ for (const p of perfil) {
         Object.assign(p0, b.p); Object.assign(v0, b.v);
         passoBola(b, []);
         const n = detectarImpactos(p0, v0, b.p, b.v, out);
-        for (let k = 0; k < n; k++) if (registrarImpacto(est2, out[k], (t + 1) * PASSO - PASSO / 2)) bat++;
+        for (let k = 0; k < n; k++) if (registrarImpacto(est2, out[k], (t + 1) * PASSO)) bat++;
         for (const a of [0.25, 0.5, 0.75, 1]) {
           const tt = (t + a) * PASSO;
           const p = { x: p0.x + (b.p.x - p0.x) * a, y: p0.y + (b.p.y - p0.y) * a, z: p0.z + (b.p.z - p0.z) * a };
