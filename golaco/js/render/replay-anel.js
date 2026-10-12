@@ -99,9 +99,10 @@ export function lerQuadro(a, t, lista, bp, bq, kitDe = null) {
   for (let v = 0; v < a.nVagas[s0]; v++) {
     const i0 = s0 * vagas + v, id = a.ids[i0];
     if (id < 0) continue;
-    // o mesmo jogador no passo seguinte (a ordem pode mudar numa substituição ou expulsão)
+    // o mesmo jogador no passo seguinte (a ordem pode mudar numa substituição ou expulsão; vaga além de nVagas guarda o
+    // que foi gravado uma volta do anel antes e não vale)
     let i1 = s1 * vagas + v;
-    if (a.ids[i1] !== id) { i1 = i0; for (let w = 0; w < a.nVagas[s1]; w++) if (a.ids[s1 * vagas + w] === id) { i1 = s1 * vagas + w; break; } }
+    if (v >= a.nVagas[s1] || a.ids[i1] !== id) { i1 = i0; for (let w = 0; w < a.nVagas[s1]; w++) if (a.ids[s1 * vagas + w] === id) { i1 = s1 * vagas + w; break; } }
     const it = lista[n] ?? (lista[n] = { pose: new Float32Array(P) });
     if (!it.pose || it.pose.length !== P) it.pose = new Float32Array(P);
     const o0 = i0 * K, o1 = i1 * K, pose = it.pose;

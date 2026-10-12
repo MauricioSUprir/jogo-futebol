@@ -98,6 +98,15 @@ if (!RA || !RR) {
     reg('A12 mundo novo (o tick volta): o anel recomeça', `primeiro ${a.primeiro}, último ${a.ultimo}, 1600 ${a.slot(1600)}`, '1, 1, −1', a.primeiro === 1 && a.ultimo === 1 && a.slot(1600) === -1);
     const aCfg = criarAnel({ ticks: Math.round(REPLAY.segundos / PASSO), vagas: REPLAY.vagas, nj: NJ });
     reg('A13 memória do anel (REPLAY: 10 s, 24 vagas)', `${fmt(aCfg.bytes / 1048576, 2)} MB`, '≤ 4 MB', aCfg.bytes <= 4 * 1048576);
+    // contraprova: expulsão (um jogador a menos a partir de 1650) — a última vaga do passo seguinte guarda o que foi
+    // gravado 600 passos antes (o mesmo id na mesma vaga): a interpolação não pode ler esse resto
+    const aEx = criarAnel({ ticks: 600, vagas: 24, nj: NJ });
+    const sem5 = ordem.filter(id => id !== 5);
+    for (let t = 1001; t <= 1700; t++) gravar(aEx, t, t >= 1650 ? sem5 : ordem);
+    lerQuadro(aEx, 1649.5, lista, bp, bq, null);
+    const j21 = lista.find(it => it.id === 21);
+    const e21 = Math.fround(xDe(1649, 21)) + (Math.fround(xDe(1650, 21)) - Math.fround(xDe(1649, 21))) * 0.5;
+    reg('A14 expulsão (vaga vazia no passo seguinte): a interpolação segue o id, sem ler o resto velho do anel', `x do 21 ${fmt(j21.x, 4)} (esperado ${fmt(e21, 4)})`, '|Δ| ≤ 1e-5', Math.abs(j21.x - e21) <= 1e-5);
   }
 
   // ---------------------------------------------------------------- B) roteiros e relógio (anel sintético)
