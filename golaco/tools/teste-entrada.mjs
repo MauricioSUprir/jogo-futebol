@@ -2,8 +2,9 @@
 // contínuo na borda da zona morta, teclado normalizado e conversão tela → mundo da câmera de
 // TV. No fim, o jogador de verdade anda na diagonal sutil pedida.
 // Etapa 3 (Parte 4; plano 2.8): botões que mudam de sentido pela fase (J/K/O e A/B/Y/RB: passe/CONTER,
-// chute/DIVIDIDA, nada/PRESSÃO, enfiada/goleiro) com o sentido FIXADO NO APERTO (a posse muda com o
-// botão segurado e ele não troca de função no meio); teclas novas sem conflito; CONTER, DIVIDIDA e
+// chute/DIVIDIDA, PEGAR/PRESSÃO — o PEGAR do goleiro com a bola no pé, pedido de 11/10; antes era nada —,
+// enfiada/goleiro) com o sentido FIXADO NO APERTO (a posse muda com o botão segurado e ele não troca de função
+// no meio); teclas novas sem conflito; CONTER, DIVIDIDA e
 // PRESSÃO no arco da defesa sem encostar (≥ 48 px) e o CONTER segurado chegando ao jogo.
 //   node tools/teste-entrada.mjs
 import { processarAnalogico, teclasParaAnalogico, paraMundo } from '../js/controle.js';
@@ -99,9 +100,9 @@ reg('direção preservada (360 ângulos × 4 inclinações)', `${fmt(piorAng, 4)
     const nome = b => Object.keys(BOTAO).filter(k => BOTAO[k] & b).join('+') || 'nada';
     // [botão, no ataque, na defesa]
     const casos = [
-      ['KeyJ', BOTAO.PASSE, BOTAO.CONTER], ['KeyK', BOTAO.CHUTE, BOTAO.DIVIDIDA], ['KeyO', 0, BOTAO.PRESSAO],
+      ['KeyJ', BOTAO.PASSE, BOTAO.CONTER], ['KeyK', BOTAO.CHUTE, BOTAO.DIVIDIDA], ['KeyO', BOTAO.PEGAR, BOTAO.PRESSAO],
       ['pad:A', BOTAO.PASSE, BOTAO.CONTER], ['pad:B', BOTAO.CHUTE, BOTAO.DIVIDIDA],
-      ['pad:Y', BOTAO.ENFIADA, BOTAO.GOLEIRO], ['pad:RB', 0, BOTAO.PRESSAO],
+      ['pad:Y', BOTAO.ENFIADA, BOTAO.GOLEIRO], ['pad:RB', BOTAO.PEGAR, BOTAO.PRESSAO],
     ];
     for (const [id, atq, def] of casos) {
       const sf = criarSentidoFixo();
