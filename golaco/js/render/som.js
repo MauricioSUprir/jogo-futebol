@@ -41,9 +41,9 @@ export const SOM = {
     agito: { arq: 'torcida-agito.mp3', laco: [0.25, 13.25], lufs: -20.2 },
     // cantos (a ordem de SOM.cantos é a de festa.js FESTA.cantos.papeis)
     canto: { arq: 'torcida-canto.mp3', laco: [0.25, 14.25], lufs: -20.0, canto: true },
-    cantoA: { arq: 'torcida-canto-a.mp3', laco: [0.25, 22.25], lufs: -16.4, canto: true },
     cantoB: { arq: 'torcida-canto-b.mp3', laco: [0.25, 24.25], lufs: -21.0, canto: true },
     cantoC: { arq: 'torcida-canto-c.mp3', laco: [0.25, 26.25], lufs: -19.2, canto: true },
+    cantoD: { arq: 'torcida-canto-d.mp3', laco: [0.25, 24.25], lufs: -16.4, canto: true },
     // batucada: 153,6 batidas/min (o surdo a 76,8: o pulo da organizada), laço de 42 batidas; a 1ª a 0,341 s do laço
     batucada: { arq: 'torcida-batucada.mp3', laco: [0.25, 16.6561], lufs: -19.7, bpm: 76.8, batida0: 0.341 },
     gol: { arq: 'torcida-gol.mp3' },
@@ -55,7 +55,7 @@ export const SOM = {
     apitoIntervalo: { arq: 'apito-intervalo.mp3' },
     apitoFim: { arq: 'apito-fim.mp3' },
   },
-  cantos: ['canto', 'cantoA', 'cantoB', 'cantoC'],
+  cantos: ['canto', 'cantoB', 'cantoC', 'cantoD'],
   cantosNaMemoria: 2,     // cantos decodificados ao mesmo tempo (o que toca e o próximo)
   volumePadrao: 0.8,
   atrasoCarga: 4000,      // ms depois da página pronta (se ninguém tocar antes)

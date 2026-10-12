@@ -107,9 +107,10 @@ def bpm_e_fase(x, lo=60, hi=200):
 info = {}
 # cantos (laços de durações diferentes: a variedade não cansa) — [nome, som, início, período, cruzamento, papel]
 for nome, n, ini, P, X, papel in [
-    ('torcida-canto-a', 424354, 16.0, 22.0, 2.0, 'geral e setor visitante (clássico no San Siro, de longe)'),
+    # ('torcida-canto-a', 424354, ...) — clássico de Milão no San Siro: fora (a torcida podia cantar o nome de um clube de verdade)
     ('torcida-canto-b', 503091, 9.5, 24.0, 2.0, 'incentivo (organizada brasileira com bateria)'),
     ('torcida-canto-c', 503094, 99.0, 26.0, 2.0, 'festa (organizada brasileira: "já ganhou")'),
+    ('torcida-canto-d', 503094, 128.0, 24.0, 2.0, 'geral (organizada brasileira, outro trecho; transcrito: sem fala)'),
 ]:
     x = ler(fs(n), ini, ini + P + X + 0.05)
     ext, li, lf = laco(x, P, X)

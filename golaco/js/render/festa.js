@@ -19,8 +19,10 @@ export const FESTA = {
     // papel de cada clipe de canto (som.js SOM.cantos traz os arquivos NA MESMA ORDEM): 'geral' (qualquer hora),
     // 'incentivo' (a casa atacando) e 'festa' (depois do gol da casa e na vitória). O setor visitante canta o
     // clipe `visitante` (abafado e do lado esquerdo da TV) depois do gol deles.
-    papeis: ['geral', 'geral', 'incentivo', 'festa'],
-    visitante: 1,
+    // (sem a gravação do clássico de Milão: a torcida podia cantar o nome de um clube de verdade — os times daqui são
+    // fictícios; o canto do setor visitante é o canto geral, abafado e do lado esquerdo)
+    papeis: ['geral', 'incentivo', 'festa', 'geral'],
+    visitante: 0,
     dur: [16, 34],             // s cantando (sorteado)
     pausa: [7, 13],            // s de pausa entre dois cantos: canta ~2/3 do tempo calmo
     primeiro: [1.5, 3],        // s até o primeiro canto
