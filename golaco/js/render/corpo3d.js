@@ -24,7 +24,7 @@ import { texMancha } from './texturas.js';
 
 const NOMES_KIT = Object.keys(KITS);
 const CORES_KIT = ['camisa', 'calcao', 'meiao', 'chuteira', 'acento', 'sola', 'luva'];
-const LARG = FLOATS_POR_JOGADOR / 4;           // texels por linha (22 × 3 + 1 = 67)
+const LARG = FLOATS_POR_JOGADOR / 4;           // texels por linha (30 ossos × 3 + 1 = 91)
 // altura na tela (px físicos) para subir de nível e teto de triângulos por qualidade
 const LOD_QUALIDADE = {
   baixa: { perto: Infinity, medio: 150, teto: 25000 },
@@ -64,8 +64,12 @@ const PELE_V = `
   }
 `;
 
-/** Injeta a pele instanciada (textura de ossos) num material do three.js. cor = também pinta o uniforme. */
-function injetarPele(mat, tex, cor, uni) {
+/**
+ * Injeta a pele instanciada (textura de ossos) num material do three.js (posição e normal; a normal só conta nos
+ * materiais que a usam). cor = também pinta o uniforme por região (uni = os uniformes das cores). Exportada para o
+ * teste-pele, que veste outros materiais (normal, profundidade) com a mesma conta.
+ */
+export function injetarPele(mat, tex, cor, uni) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uOssos = { value: tex.valor };
     tex.uniformes.push(sh.uniforms.uOssos);
@@ -73,8 +77,8 @@ function injetarPele(mat, tex, cor, uni) {
     let v = sh.vertexShader
       .replace('#include <common>', '#include <common>\n' + DECL_V + (cor ? 'varying vec3 vRest;\nvarying vec4 vDados;\n' : ''))
       .replace('#include <skinbase_vertex>', BASE_V + (cor ? 'vRest = position;\nvDados = texelFetch(uOssos, ivec2(' + (LARG - 1) + ', yJog), 0);\n' : ''))
-      .replace('#include <skinning_vertex>', PELE_V);
-    if (cor) v = v.replace('#include <skinnormal_vertex>', NORMAL_V);
+      .replace('#include <skinning_vertex>', PELE_V)
+      .replace('#include <skinnormal_vertex>', NORMAL_V);
     sh.vertexShader = v;
     if (cor) {
       sh.fragmentShader = sh.fragmentShader
@@ -82,13 +86,13 @@ function injetarPele(mat, tex, cor, uni) {
         .replace('#include <color_fragment>', '#include <color_fragment>\n  diffuseColor.rgb = corCorpo(vRest, vDados);');
     }
   };
-  mat.customProgramCacheKey = () => (cor ? 'corpo-pele-cor-v2' : 'corpo-pele-sombra-v1');
+  mat.customProgramCacheKey = () => (cor ? 'corpo-pele-cor-v2' : 'corpo-pele-v2');
 }
 
 // Regiões do uniforme pela posição de repouso (pose A do modelo, lado esquerdo em +x; o direito é o espelho):
 // braço (pela distância ao eixo do braço/antebraço) → manga, punho, pele/luva; o resto pela altura: sola, chuteira,
 // meião (com a faixa), joelho, calção, camisa (gola mais baixa na frente) e pele (pescoço e cabeça); olhos.
-const DECL_F = `
+export const DECL_F = `
 varying vec3 vRest;
 varying vec4 vDados;
 uniform vec3 uKit[40];
@@ -318,6 +322,8 @@ export function criarCorpos3D(cena, qualidade, corpo) {
     get cabelos() { return cabelos; },
     get textura() { return textura; },
     get esqueleto() { return esq; },
+    /** Para o teste-pele: os uniformes das cores (mesmos objetos do material), a textura de ossos e a faixa de cada nível. */
+    get teste() { return { uni, tex, lods: cab.lods, LARG }; },
     /** Nível de detalhe (0 perto, 1 médio, 2 longe) de cada vaga no último quadro. */
     get niveis() { return nivel; },
     get medida() { return medida.ultimo; },

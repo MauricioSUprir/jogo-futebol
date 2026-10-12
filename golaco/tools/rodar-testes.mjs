@@ -71,6 +71,10 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  // Etapa 5.1: corpo humano (atrás de ?corpo=novo) — só desenho, a simulação não muda
+  ['corpo humano: arquivo, 22 ossos, proporções da simulação, sola e dobra a 120° (volume, triângulos)', 'teste-corpo-arquivo.mjs'],
+  ['esqueleto do corpo: fidelidade à pose, pé plantado, sola, mãos do goleiro e do lateral, custo sem alocar', 'teste-esqueleto.mjs'],
+  ['créditos de assets/jogador (só CC0, CC BY e CMU)', 'teste-creditos-jogador.mjs'],
 ];
 const argv = process.argv.slice(2);
 const iSo = argv.indexOf('--so');

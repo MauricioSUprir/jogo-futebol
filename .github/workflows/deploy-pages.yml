@@ -38,6 +38,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-hud-minimo.mjs
+      - name: Corpo humano no navegador (?corpo=novo igual ao SkinnedMesh do three.js, pixel a pixel)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-pele.mjs
   deploy:
     needs: testes-golaco
     environment:

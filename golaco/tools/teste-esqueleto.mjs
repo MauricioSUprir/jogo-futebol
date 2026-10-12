@@ -21,6 +21,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PerformanceObserver } from 'node:perf_hooks';
+import v8 from 'node:v8';
+import vm from 'node:vm';
 import { criarTreino, passoTreino, entradaDemo, DEMO } from '../js/sessao.js';
 import { criarMundo, passo } from '../js/sim.js';
 import { mergulhoAtivo } from '../js/goleiro.js';
@@ -179,13 +181,21 @@ const linha = new Float32Array(25 * NO * 12);
 // aquece até o V8 otimizar a conta (com a máquina carregada a compilação demora segundos; antes dela o código
 // intermediário ainda guarda números em caixas): ≥ 4000 quadros e ≥ 4 s
 for (let f = 0, t0 = Date.now(); f < 4000 || Date.now() - t0 < 4000; f++) for (let k = 0; k < 25; k++) esq.calcular(poses[k], linha, k * NO * 12);
+// medida da alocação: coleta antes (o lixo da montagem não conta), bytes usados no espaço novo do V8 antes e depois e
+// coletas durante a medida (uma alocação por corpo e por quadro daria ~8 MB e várias coletas)
+v8.setFlagsFromString('--expose-gc');
+const coletar = vm.runInNewContext('gc');
+const espacoNovo = () => v8.getHeapSpaceStatistics().find(e => e.space_name === 'new_space').space_used_size;
+coletar();
 let gcs = 0;
 const obs = new PerformanceObserver(l => { gcs += l.getEntries().length; });
 obs.observe({ entryTypes: ['gc'] });
 const QUADROS = 20000;
+const n0 = espacoNovo();
 const c0 = process.cpuUsage();
 for (let f = 0; f < QUADROS; f++) for (let k = 0; k < 25; k++) esq.calcular(poses[k], linha, k * NO * 12);
 const c1 = process.cpuUsage(c0);
+const alocado = espacoNovo() - n0;
 await new Promise(r => setTimeout(r, 50));
 obs.disconnect();
 const msQuadro = (c1.user + c1.system) / 1000 / QUADROS;
@@ -307,7 +317,7 @@ meta('Pé apoiado: velocidade do tornozelo (máx., quadros a 240 qps)', `${R.apo
 meta('Sola do pé apoiado (vértices do pé com a pele)', `${(R.sola.min * 100).toFixed(2)} a ${(R.sola.max * 100).toFixed(2)} cm em ${R.sola.n} quadros`, 'entre −1 e +2 cm', R.sola.n > 100 && R.sola.min >= -0.01 && R.sola.max <= 0.02);
 meta('Mãos do goleiro nas defesas (mergulho, salto, em pé, bola na mão)', `${mm(R.goleiro.max)} mm em ${R.goleiro.n} quadros (${R.goleiro.defesas} defesas na grade de ${nChutes} chutes)`, '≤ 20 mm', R.goleiro.n > 100 && R.goleiro.defesas > 5 && R.goleiro.max <= 0.02);
 meta('Lateral: palmas do cobrador às palmas da simulação', `${mm(R.lateral.max)} mm em ${R.lateral.n} quadros`, '≤ 20 mm', R.lateral.n > 20 && R.lateral.max <= 0.02);
-meta('Custo: esqueleto dos 25 corpos por quadro (CPU do processo, PC)', `${msQuadro.toFixed(3)} ms; ${gcs} coletas de lixo em ${QUADROS} quadros`, '≤ 0,25 ms e 0 coletas', msQuadro <= 0.25 && gcs === 0);
+meta('Custo: esqueleto dos 25 corpos por quadro (CPU do processo, PC)', `${msQuadro.toFixed(3)} ms; ${gcs} coletas e ${(alocado / 1024).toFixed(1)} KB alocados em ${QUADROS} quadros`, '≤ 0,25 ms, 0 coletas e ≤ 64 KB', msQuadro <= 0.25 && gcs === 0 && alocado <= 65536);
 const larg = Math.max(...res.map(r => r.nome.length));
 // informação (não é do corpo: é a pose da simulação)
 const info = [
