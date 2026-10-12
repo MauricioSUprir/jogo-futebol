@@ -20,6 +20,11 @@
 //    gol saiu em ≤ 15 s; jogada trabalhada = o resto (inclui saída de bola e tiro de meta).
 //  - impedimentos, faltas, cartões e pênaltis: contados pelos eventos 'impedimento', 'falta', 'cartao' e 'penalti'
 //    (Etapa 4; antes deles existirem a linha mostra 0 e "ainda não existe").
+//  - roubadas (condução curta, 12/10: a bola mais perto do pé não pode tirar a defesa do jogo): bote da IA (evento
+//    'roubada' com ia), DIVIDIDA do humano ('roubada' com dividida) e bola solta disputada = o outro time domina a
+//    bola que o condutor perdeu sem passe, chute nem bote (pressão em cima do toque longo, bola que bateu no corpo).
+//    Perdas por toque longo = o evento 'perda' da condução (bola longe do condutor por tempo demais), e quantas
+//    delas acabam com o adversário.
 //
 //   node tools/painel-equilibrio.mjs                       (144 partidas, sementes 1001…)
 //   node tools/painel-equilibrio.mjs --n 48 --sem0 101     (outra amostra)
@@ -53,11 +58,13 @@ async function partida(pastaJs, sem) {
     sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0],
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
     golsFora: 0, cobrancas: {}, impedimentos: 0, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: { total: 0, gol: 0, defesa: 0, fora: 0 },
-    ticks: 0,
+    ticks: 0, roubadas: { bote: 0, dividida: 0, solta: 0 }, perdas: 0, perdasAdv: 0,
   };
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   const jog = id => porId.get(id) ?? m.jogadores.find(j => j.id === id);
   let passe = null, aberto = null, pos = null;
+  // roubadas: o time do último dono da bola e o que tirou a bola dele (null = nada: ela ficou solta)
+  let ultTime = null, saiu = null, perdeu = false;
   const N = Math.round(2 * MIN_TEMPO * 3600 + 3600);
   const novaPosse = (time, tipo) => {
     pos = { time, tipo, tick: m.tick, u0: M.uDe(m, time, m.bola.p.x), terco: false };
@@ -86,7 +93,7 @@ async function partida(pastaJs, sem) {
             else o = 'trabalhada';
           }
           R.origem[o]++;
-          passe = null; pos = null;
+          passe = null; pos = null; ultTime = null;
           break;
         }
         case 'defesa':
@@ -96,12 +103,18 @@ async function partida(pastaJs, sem) {
           if (aberto && j && j.id !== aberto.id && j.posicao !== 'GOL') fecharChute('bloqueado');
           break;
         case 'fora':
-          fecharChute('fora'); passe = null; pos = null;
+          fecharChute('fora'); passe = null; pos = null; ultTime = null;
           break;
         case 'cobranca':
           R.cobrancas[e.parada] = (R.cobrancas[e.parada] ?? 0) + 1;
           if (j) novaPosse(j.time, e.parada);
+          ultTime = null;
           break;
+        case 'roubada':
+          if (e.ia) R.roubadas.bote++; else if (e.dividida) R.roubadas.dividida++;
+          saiu = 'roubada';
+          break;
+        case 'perda': R.perdas++; perdeu = true; break;
         case 'impedimento': R.impedimentos++; break;
         case 'falta': R.faltas++; break;
         case 'cartao': if (e.cor === 'vermelho') R.vermelhos++; else R.amarelos++; break;
@@ -117,8 +130,9 @@ async function partida(pastaJs, sem) {
             // (a cobrança de pênalti é marcada: as defesas do goleiro contam sem ela — o pênalti tem a linha dele)
             const pen = ev.some(x => x.tipo === 'cobranca' && x.parada === 'penalti');
             aberto = { time: j.time, id: j.id, tick: m.tick, dist, dentro: u > 52.5 - 16.5 && Math.abs(w) < 20.16, res: null, penalti: pen };
-            passe = null;
+            passe = null; saiu = 'acao';
           } else if (e.tipo === 'passe' && j) {
+            saiu = 'acao';
             passe = j.posicao !== 'GOL' ? { time: j.time } : null;
             if (j.posicao !== 'GOL') R.passes++;
           }
@@ -130,6 +144,11 @@ async function partida(pastaJs, sem) {
     if (!rolando) { passe = null; continue; }
     const dono = M.donoDaBola(m);
     if (dono && passe) { if (dono.time === passe.time) R.passesOk++; passe = null; }
+    if (dono) {
+      // o outro time ficou com a bola que o condutor perdeu sem passe, chute nem bote: bola solta disputada
+      if (ultTime != null && dono.time !== ultTime && saiu == null) { R.roubadas.solta++; if (perdeu) R.perdasAdv++; }
+      ultTime = dono.time; saiu = null; perdeu = false;
+    }
     const tc = M.timeComBola(m);
     if (tc != null) R.posse[tc]++;
     if (dono && (!pos || pos.time !== dono.time)) novaPosse(dono.time, 'recuperacao');
@@ -210,6 +229,9 @@ function medidas(res) {
     escanteios: soma(r => r.cobrancas.escanteio ?? 0) / n,
     laterais: soma(r => r.cobrancas.lateral ?? 0) / n,
     posse0: pct(p0, p0 + p1),
+    roubadas: soma(r => (r.roubadas ? r.roubadas.bote + r.roubadas.dividida + r.roubadas.solta : 0)) / n,
+    roubBote: soma(r => r.roubadas?.bote ?? 0) / n, roubDiv: soma(r => r.roubadas?.dividida ?? 0) / n, roubSolta: soma(r => r.roubadas?.solta ?? 0) / n,
+    perdas: soma(r => r.perdas ?? 0) / n, perdasAdv: soma(r => r.perdasAdv ?? 0) / n,
   };
 }
 
@@ -240,6 +262,8 @@ const LINHAS = [
   ['escanteios / laterais por partida', '—', null, x => `${f(x.escanteios)} / ${f(x.laterais)}`],
   ['gols contra por partida', '—', null, x => f(x.golsContra, 2)],
   ['posse do time 0 (soma)', '—', null, x => `${f(x.posse0)}%`],
+  ['roubadas por partida (bote da IA / DIVIDIDA / bola solta)', '—', null, x => `${f(x.roubadas, 2)} (${f(x.roubBote, 2)} / ${f(x.roubDiv, 2)} / ${f(x.roubSolta, 2)})`],
+  ['perdas por toque longo (com o adversário)', '—', null, x => `${f(x.perdas, 2)} (${f(x.perdasAdv, 2)})`],
 ];
 
 const versoes = [];
