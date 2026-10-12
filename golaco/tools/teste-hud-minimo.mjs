@@ -4,8 +4,13 @@
 //  H1 área do HUD no celular deitado (união geométrica: caixas visíveis do #hud + botões de toque como círculos +
 //     analógico em repouso quando a opacidade passa de 0,25), no ataque E na defesa, em 844×390, 667×375 e 568×320
 //     (entalhe simulado): ≤ 11% da tela no pior caso
-//  H2 texto na tela durante o jogo fora do placar (rótulos dos botões, barra de força, painel): 0 caracteres — nas
-//     duas fases das 3 telas e em 2 min de jogo de verdade (a barra de força aparece quando a IA carrega o passe)
+//  H2 texto na tela durante o jogo fora do placar e dos NOMES dos botões de toque (barra de força, painel, avisos):
+//     0 caracteres — nas duas fases das 3 telas e em 2 min de jogo de verdade (a barra de força aparece quando a IA
+//     carrega o passe). Os nomes dos botões voltaram por pedido do dono (12/10: "coloca o nome da função do botão
+//     de novo") e são medidos no H9
+//  H9 nomes dos botões de toque por padrão (dono, 12/10): todo botão visível mostra o nome da função, inteiro dentro
+//     do CÍRCULO do botão (a corda na altura do texto), nas duas fases das 3 telas (na versão anterior, só o ícone:
+//     reprova; com os botões a 80%, "LANÇAMENTO" passava da borda — em telas pequenas vira "LANÇAR")
 //  H3 torcida visível escondida pelo HUD no celular 844×390 (pixels de torcida do canvas — torcida ligada ×
 //     desligada, a conta do item 10 do teste-estadio — que caem dentro das formas do HUD), 8 instantes: ≤ 15%
 //  H4 linha de impedimento VIVA (com a bola rolando): 0 amostras em 2 min de jogo; a DO LANCE continua no apito
@@ -13,7 +18,7 @@
 //     atrasa do real com a máquina carregada); depois dela, área do HUD ≤ 2,5%
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
-//     desligado) mudam a tela, ficam salvas e, ligadas, nada encosta
+//     LIGADO desde 12/10) mudam a tela, ficam salvas e, com os dois ligados, nada encosta
 //     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
@@ -45,10 +50,24 @@ const FORMAS = () => {
   if (ab && op > 0.25) { const r = ab.getBoundingClientRect(); if (r.width > 0) f.push({ nome: 'analogico', circ: [r.left + r.width / 2, r.top + r.height / 2, r.width / 2] }); }
   let fora = 0; const txt = [];
   for (const e of document.querySelectorAll('#hud *, #toque *')) {
-    if (!vis(e) || e.closest('.placar')) continue;
+    if (!vis(e) || e.closest('.placar') || e.closest('.btn-toque')) continue;
     for (const n of e.childNodes) if (n.nodeType === 3 && n.textContent.trim()) { fora += n.textContent.trim().length; txt.push(n.textContent.trim()); }
   }
-  return { f, fora, txt: [...new Set(txt)] };
+  // nomes dos botões de toque (H9): visível, com texto e inteiro dentro do botão
+  const nomes = { botoes: 0, comNome: 0, sem: [] };
+  for (const b of document.querySelectorAll('#toque:not([hidden]) .btn-toque')) {
+    if (getComputedStyle(b).display === 'none' || b.offsetWidth === 0) continue;
+    nomes.botoes++;
+    const sp = b.querySelector('span'), rb = b.getBoundingClientRect(), rs = sp ? sp.getBoundingClientRect() : null;
+    // inteiro dentro do CÍRCULO (não só do quadrado): na altura do texto, a corda do círculo (pela borda mais longe do
+    // centro, a de cima ou a de baixo) tem de conter a largura do texto
+    const cx = rb.left + rb.width / 2, cy = rb.top + rb.height / 2, raio = rb.width / 2;
+    const dy = rs ? Math.max(Math.abs(rs.top - cy), Math.abs(rs.bottom - cy)) : raio;
+    const meia = dy < raio ? Math.sqrt(raio * raio - dy * dy) : 0;
+    const ok = sp && vis(sp) && sp.textContent.trim() && rs.width > 0 && rs.left >= cx - meia - 0.5 && rs.right <= cx + meia + 0.5;
+    if (ok) nomes.comNome++; else nomes.sem.push(b.id);
+  }
+  return { f, fora, txt: [...new Set(txt)], nomes };
 };
 const AREA = (f, W, H) => {
   let n = 0, t = 0;
@@ -76,6 +95,7 @@ const ENCOSTA = f => {
 
 // H1 + H2: layout nas duas fases e três telas de celular (determinístico, sem simular)
 let piorArea = 0, piorTexto = 0; const txtVisto = new Set(); const linhasH1 = [];
+const nomesBotoes = { botoes: 0, comNome: 0, sem: new Set() };
 let piorPausa = Infinity; const linhasPausa = [];
 for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
   const { navegador, pagina } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
@@ -91,7 +111,7 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
         const tq = document.getElementById('toque');
         tq.classList.toggle('fase-ataque', fase === 'ataque'); tq.classList.toggle('fase-defesa', fase === 'defesa');
         const x = formas();
-        out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt };
+        out[fase] = { area: area(x.f, innerWidth, innerHeight), pecas: x.f.length, fora: x.fora, txt: x.txt, nomes: x.nomes };
       }
       g.sincronizarFase?.();
       // a barra de cima da pausa (título, Minimapa, Nomes nos botões, tela cheia, X): nada encosta nem passa da janela
@@ -115,11 +135,13 @@ for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
     for (const fase of ['ataque', 'defesa']) {
       piorArea = Math.max(piorArea, r[fase].area); piorTexto = Math.max(piorTexto, r[fase].fora);
       r[fase].txt.forEach(t => txtVisto.add(t));
+      nomesBotoes.botoes += r[fase].nomes.botoes; nomesBotoes.comNome += r[fase].nomes.comNome; r[fase].nomes.sem.forEach(id => nomesBotoes.sem.add(`${w}×${h} ${fase} ${id}`));
       linhasH1.push(`${w}×${h} ${fase} ${(r[fase].area * 100).toFixed(1)}% (${r[fase].pecas} peças)`);
     }
     if (r.pausa) { linhasPausa.push(`${w}×${h} folga ${r.pausa.folga.toFixed(0)} px (${r.pausa.par})${r.pausa.transborda > 0 ? `, transborda ${r.pausa.transborda} px` : ''}`); piorPausa = Math.min(piorPausa, r.pausa.transborda > 0 ? -1 : r.pausa.folga); }
   } finally { await navegador.close(); }
 }
+meta('H9 nomes dos botões de toque por padrão (dono, 12/10), inteiros dentro do círculo do botão (3 telas, 2 fases)', `${nomesBotoes.comNome}/${nomesBotoes.botoes} botões com o nome${nomesBotoes.sem.size ? ' — sem: ' + [...nomesBotoes.sem].slice(0, 8).join(', ') : ''}`, 'todos', nomesBotoes.botoes > 0 && nomesBotoes.comNome === nomesBotoes.botoes);
 meta('H1 área do HUD no celular (pior caso, ataque e defesa, 3 telas)', `${(piorArea * 100).toFixed(1)}% — ${linhasH1.join('; ')}`, '≤ 11%', piorArea <= 0.11);
 meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (3 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === 3 && piorPausa >= 4);
 
@@ -187,7 +209,7 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
     }, [FORMAS.toString()]);
     piorTexto = Math.max(piorTexto, r.textoJogo + (r.cargaTexto ? 1 : 0));
     r.txt.forEach(t => txtVisto.add(t));
-    meta('H2 texto fora do placar durante o jogo (3 telas, 2 fases e 2 min de partida)', `${piorTexto} caracteres${txtVisto.size ? ': ' + [...txtVisto].join(' ') : ''}; barra de força com rótulo em ${r.cargaTexto}/${r.comCarga} amostras`, '0', piorTexto === 0 && r.cargaTexto === 0);
+    meta('H2 texto fora do placar e dos nomes dos botões durante o jogo (3 telas, 2 fases e 2 min de partida)', `${piorTexto} caracteres${txtVisto.size ? ': ' + [...txtVisto].join(' ') : ''}; barra de força com rótulo em ${r.cargaTexto}/${r.comCarga} amostras`, '0', piorTexto === 0 && r.cargaTexto === 0);
     const fr = r.torcEsc / Math.max(1, r.torc);
     meta('H3 torcida visível escondida pelo HUD (celular 844×390, 8 instantes)', `${(fr * 100).toFixed(1)}% de ${r.torc} pixels de torcida`, '≤ 15%', fr <= 0.15 && r.torc > 500 && erros.length === 0);
     meta('H4 linha de impedimento viva com a bola rolando (2 min de jogo)', `${r.viva}/${r.amostras} amostras (${(100 * r.viva / Math.max(1, r.amostras)).toFixed(1)}%); linha do lance ${r.lance}`, '0', r.viva === 0 && r.amostras > 500);
@@ -248,16 +270,16 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
       };
     });
     const e0 = await estado();
-    let e1 = { mapa: false, nomes: false }, e2 = e1, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN };
+    let e1 = { mapa: false, nomes: false }, e2 = e1, e3 = { nomes: true }, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN };
     if (e0.temOpcoes) {
       await pagina.evaluate(() => window.__golaco.abrirMenu());
       menu = await estado();
+      // liga o minimapa (os nomes já vêm ligados): os dois ligados
       await pagina.click('#chip-minimapa');
-      await pagina.click('#chip-nomes');
       await pagina.evaluate(() => window.__golaco.fecharMenu());
       await pagina.waitForTimeout(150);
       e1 = await estado();
-      // ligadas, nada encosta: placar, minimapa, menu e botões das duas fases (com os nomes)
+      // ligados, nada encosta: placar, minimapa, menu e botões das duas fases (com os nomes)
       enc = await pagina.evaluate(([FS, ES]) => {
         const formas = eval(FS), encosta = eval(ES), p = [];
         for (const fase of ['ataque', 'defesa']) {
@@ -271,10 +293,17 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
       await pagina.reload({ waitUntil: 'load' });
       await pronta(pagina);
       e2 = await estado();
+      // desligar os nomes na pausa: só o ícone, e fica salvo
+      await pagina.evaluate(() => window.__golaco.abrirMenu());
+      await pagina.click('#chip-nomes');
+      await pagina.evaluate(() => window.__golaco.fecharMenu());
+      await pagina.reload({ waitUntil: 'load' });
+      await pronta(pagina);
+      e3 = await estado();
     }
-    meta('H7 celular: minimapa e nomes dos botões desligados por padrão; opções na pausa (que cabe sem rolar)', `minimapa ${e0.mapa ? 'ligado' : 'desligado'}, nomes ${e0.nomes ? 'ligados' : 'desligados'}, opções ${e0.temOpcoes ? `na pausa (marcadas ${menu.pressionados}), pausa rola ${menu.rola} px` : 'NÃO existem'}`, 'desligados, opções na pausa (false/false), rola ≤ 0 px', !e0.mapa && !e0.nomes && e0.temOpcoes && menu.pressionados === 'false/false' && menu.rola <= 0);
-    meta('H7 celular: ligar as duas na pausa mostra o minimapa e os nomes, nada encosta e fica salvo', `ligadas: minimapa ${e1.mapa}, nomes ${e1.nomes}${enc.length ? ' — encosta: ' + enc.join('; ') : ''}; depois de abrir de novo: minimapa ${e2.mapa}, nomes ${e2.nomes}`, 'tudo true, nada encosta',
-      e1.mapa && e1.nomes && enc.length === 0 && e2.mapa && e2.nomes && erros.length === 0);
+    meta('H7 celular: minimapa desligado e nomes dos botões LIGADOS por padrão (dono, 12/10); opções na pausa (que cabe sem rolar)', `minimapa ${e0.mapa ? 'ligado' : 'desligado'}, nomes ${e0.nomes ? 'ligados' : 'desligados'}, opções ${e0.temOpcoes ? `na pausa (marcadas ${menu.pressionados}), pausa rola ${menu.rola} px` : 'NÃO existem'}`, 'minimapa não, nomes sim, opções na pausa (false/true), rola ≤ 0 px', !e0.mapa && e0.nomes && e0.temOpcoes && menu.pressionados === 'false/true' && menu.rola <= 0);
+    meta('H7 celular: com o minimapa ligado na pausa os dois aparecem, nada encosta e fica salvo; desligar os nomes deixa só o ícone (salvo)', `ligados: minimapa ${e1.mapa}, nomes ${e1.nomes}${enc.length ? ' — encosta: ' + enc.join('; ') : ''}; depois de abrir de novo: minimapa ${e2.mapa}, nomes ${e2.nomes}; nomes desligados e aberto de novo: ${e3.nomes ? 'ainda aparecem' : 'só o ícone'}`, 'tudo true, nada encosta; depois só o ícone',
+      e1.mapa && e1.nomes && enc.length === 0 && e2.mapa && e2.nomes && !e3.nomes && erros.length === 0);
   } finally { await navegador.close(); }
 }
 await srv.fechar();

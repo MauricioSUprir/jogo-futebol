@@ -1043,8 +1043,9 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   sem a marca, sem borda nem caixinha nos gols; barrinha de cor de 3 px por time) e o "1º T" só aparece com
   `.placar-relogio.com-tempo` (intervalo, fim e acréscimos; o texto fica no DOM); menu só com o ícone (44×44); barra de
   força 44×6 sem o rótulo (`#carga-tipo` continua com o texto, escondido); dica de teclas do PC (`#dica`) some 8 s depois
-  de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra), **só
-  com o ícone** (`--ic-so`); com `html.nomes-botoes` voltam os nomes (`--ic`, `--fs`). Analógico em repouso a 0,3 × a
+  de `hud.pronto()` e de cada troca de modo. Botões de toque translúcidos (fundo 0,32, borda 1,5–2 px, sem sombra) com
+  o ícone e o nome (`html.nomes-botoes`, `--ic`, `--fs`) — LIGADO sem escolha salva desde 12/10 (dono: "coloca o nome da
+  função do botão de novo"; `main.js nomesLigados`); "Nomes nos botões" desligado na pausa = só o ícone (`--ic-so`). Analógico em repouso a 0,3 × a
   opacidade e sem o pino; com o dedo, como antes. Minimapa 112×73 a 0,8; escondido com `html.mapa-desligado` ou, sem
   escolha salva, com `html.com-toque` sem `html.mapa-ligado` (escondido não redesenha: `hud.minimapa` sai antes).
 - **Pausa**: dois botões de liga/desliga na barra de cima (`#chip-minimapa`, `#chip-nomes`, `aria-pressed`; "Nomes nos

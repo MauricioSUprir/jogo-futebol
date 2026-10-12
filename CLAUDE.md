@@ -119,6 +119,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Prints sempre com torcida e HUD ligados (torcida só existe a partir da Etapa 6): PC 1280×720 Alta e celular
   844×390 Média, dia e noite. Vídeo só quando o dono pedir (quadro a quadro, relógio controlado, 30 qps).
 - Honestidade nos resultados (número, quanto faltou, proposta). Decisão de produto é do dono; o resto, decidir e seguir.
+- **Etapa 5 (corpo realista, mocap, rostos) NÃO pode atrapalhar a jogabilidade** (dono, 12/10: "que as partes físicas
+  não atrapalhem a jogabilidade do jogo"): o modelo humano e o mocap são DESENHO por cima da simulação (hash igual;
+  `hash-igual`/`hash-partida` IGUAIS em todo PR da Etapa 5), e resposta (≤ 0,1 s), condução, recepção, giro e
+  patinação medidos antes → depois com as mesmas ferramentas. O dono vai mandar um modelo de condução que quer no jogo
+  (referência em vídeo/descrição): analisar, medir e propor antes de mexer na condução que ele já aprovou.
 - Etapas: 1 base + controle de bola (seção 4 do pedido) → 2 passes (passe, enfiada ≥ 4 m à frente, lançamento,
   cruzamento, chute, domínio) → 3 11×11 e tática (formações, IA com/sem bola, troca, jogo aéreo ≥ 90% troca para
   quem disputa) → 4 goleiro, regras (IFAB), bolas paradas e equilíbrio (painel em Node, 144+ partidas) → 5 modelo
@@ -288,7 +293,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
   false; fica a do lance no apito — o replay mostra); na partida placar compacto de TV ("1º T" só no intervalo/fim/
   acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
-  (80%, 55%; chave `golaco.toque.v2`) **só com o ícone**, analógico quase invisível em repouso (com o dedo, igual:
+  (80%, 55%; chave `golaco.toque.v2`) com o ícone e o NOME da função (dono, 12/10: "coloca o nome da função do botão de
+  novo" — "Nomes nos botões" ligado por padrão; desligado na pausa = só o ícone), analógico quase invisível em repouso (com o dedo, igual:
   `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73); "Minimapa" e "Nomes nos botões" são botões
   de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
