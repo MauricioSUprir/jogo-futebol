@@ -97,12 +97,14 @@ function salvarPrefs(p) {
 }
 const prefs = lerPrefs();
 // Tela limpa (dono, 11/10): o minimapa e os nomes nos botões de toque são opções da pausa. Minimapa sem escolha
-// salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque); nomes: desligados (só o ícone).
+// salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque). Nomes: LIGADOS sem escolha salva
+// (dono, 12/10: "coloca o nome da função do botão de novo"); desligados na pausa = só o ícone.
+const nomesLigados = () => prefs.nomesBotoes !== false;
 function aplicarTelaLimpa() {
   const r = document.documentElement;
   r.classList.toggle('mapa-ligado', prefs.minimapa === 'ligado');
   r.classList.toggle('mapa-desligado', prefs.minimapa === 'desligado');
-  r.classList.toggle('nomes-botoes', prefs.nomesBotoes === true);
+  r.classList.toggle('nomes-botoes', nomesLigados());
 }
 const minimapaLigado = () => (prefs.minimapa ? prefs.minimapa === 'ligado' : !document.documentElement.classList.contains('com-toque'));
 aplicarTelaLimpa();
@@ -1006,9 +1008,9 @@ function comando(c, v) {
       hud.ajustarTopo();
       break;
     case 'nomes':
-      prefs.nomesBotoes = v === 'ligado' ? true : v === 'desligado' ? false : prefs.nomesBotoes !== true; salvarPrefs(prefs);
+      prefs.nomesBotoes = v === 'ligado' ? true : v === 'desligado' ? false : !nomesLigados(); salvarPrefs(prefs);
       aplicarTelaLimpa();
-      hud.definirEstado({ nomes: prefs.nomesBotoes });
+      hud.definirEstado({ nomes: nomesLigados() });
       break;
     default: break;
   }
@@ -1065,7 +1067,7 @@ async function iniciar() {
   hud.definirEstado({
     qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false, replayAuto,
-    minimapa: minimapaLigado(), nomes: prefs.nomesBotoes === true,
+    minimapa: minimapaLigado(), nomes: nomesLigados(),
   });
   hud.definirTimes(timesDoMundo(mundo));
   // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
