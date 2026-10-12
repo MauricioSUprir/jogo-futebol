@@ -439,7 +439,10 @@ export const GOLEIRO = {
   deslocMax: 1.5,             // m: deslocamento máximo do centro de massa
   folgaAlcance: 0.4,          // m: além do alcance a chance cai a zero nessa faixa
   // logit(defesa) = c0 + cLat·lateral + cDist·distância + cAlt·altura (+ atributos)
-  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0 },
+  // c0Partida: só na partida (o treino não muda). Com as regras de 11/10 (adversário fora da área no tiro de meta, sem
+  // recuo agarrado) saíram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%; painel de 144
+  // partidas); −0,1 no logit → 59,0%, total 68,0%, de fora da área 86,8% (todas na meta)
+  logit: { c0: -0.35, cLat: -1.15, cDist: 0.2186, cAlt: -0.219, attr: 2.0, c0Partida: -0.1 },
   // segurar × espalmar (StatsBomb): em pé, de longe ~60%; no mergulho ~25%; de perto ~23%
   segurar: { emPe: 0.6, mergulho: 0.25, perto: 0.23 },
   alturaMax: 2.45,            // m alcançados com a mão no alto

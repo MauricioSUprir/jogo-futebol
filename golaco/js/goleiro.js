@@ -78,12 +78,13 @@ export function alcanceGoleiro(tau, fator = 1) {
 
 /**
  * Chance de defesa de uma bola no alvo: logística dos dados (lateral, distância do chute, altura),
- * ajustada pelos atributos, e zero além do alcance físico (com folga).
+ * ajustada pelos atributos, e zero além do alcance físico (com folga). `partida`: soma GOLEIRO.logit.c0Partida
+ * (o equilíbrio da partida; o treino não muda).
  */
-export function chanceDefesa(lateral, dChute, altura, alcance, attr) {
+export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false) {
   const L = GOLEIRO.logit;
   const nivel = ((attr.reflexo + attr.mergulho + attr.posicionamento) / 3 - 72) / 100;
-  const lg = L.c0 + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  const lg = L.c0 + (partida ? L.c0Partida : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
   const p = 1 / (1 + MD.exp(-lg));
   const fis = clamp((alcance + GOLEIRO.folgaAlcance - lateral) / GOLEIRO.folgaAlcance, 0, 1);
   return p * fis;
@@ -134,7 +135,7 @@ export function lerChute(m, j) {
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
   const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
-  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a) : 0;
+  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida) : 0;
   // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
   const recuo = !alturaOk && Math.abs(j.x - gx) > 2 ? recuoBolaAlta(m, j, b, gx, reac) : null;
   if (recuo && m.partida && !maoPermitida(m, j, recuo.bx, recuo.bz)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + recuo.i, lido: m.tick }; return; }
