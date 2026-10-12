@@ -44,6 +44,7 @@ const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 // erro do Playwright: a 1ª linha e o fim do registro da espera (o motivo de um clique que não sai: fora da tela, coberto, instável)
 const erroCurto = e => { const l = String(e?.message ?? e).replace(/\x1b\[[0-9;]*m/g, '').split('\n').map(x => x.trim()).filter(Boolean); const log = [...new Set(l.slice(1).filter(x => x.startsWith('-')))].slice(-3); return [l[0], ...log].join(' | '); };
 const errosTodos = [];
+const CLIQUE_MS = 120000;   // espera de um clique de verdade (máquina carregada; no CI sai em milissegundos)
 
 async function pagina(raizJogo, url, opc = {}) {
   const srv = await servidor(0, raizJogo);
@@ -365,7 +366,9 @@ else try {
     await pg.evaluate(() => window.__golaco.abrirMenu());
     const temBotao = await pg.evaluate(() => { const b = document.querySelector('#menu [data-cmd="replay"]'); return !!b && !b.hidden && b.offsetParent !== null; });
     const tickAntes = await pg.evaluate(() => window.__golaco.mundo.tick);
-    if (temBotao) await pg.click('#menu [data-cmd="replay"]');
+    // CLIQUE (o botão tem de estar visível e por cima de tudo); a espera longa é da máquina carregada: a checagem de
+    // "estável" do Playwright pede 2 quadros do navegador, que chegaram a levar 24 s com a carga ~120 em 4 núcleos
+    if (temBotao) await pg.click('#menu [data-cmd="replay"]', { timeout: CLIQUE_MS });
     const em = await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); return { rp: g.replay.estado, anel: g.replay.anel, tick: g.mundo.tick, menu: g.estado().menuAberto }; });
     meta('D1 "Replay" na pausa toca os últimos ≤ 10 s com a simulação parada', `botão ${temBotao}; tipo ${em.rp.tipo}, plano ${em.rp.de}–${em.rp.ate} (anel ${em.anel.primeiro}–${em.anel.ultimo}), sim parada ${em.tick === tickAntes}, pausa fechada ${!em.menu}`,
       'botão, menu, ≤ 600 ticks, sim parada', temBotao && em.rp.tipo === 'menu' && em.rp.ate - em.rp.de <= 600 && em.tick === tickAntes && !em.menu);
@@ -381,7 +384,7 @@ else try {
     meta('D3 uma tecla do jogo (K) pula e não vira chute', `replay antes ${antesK}, depois ${posK.ativo}; quadros com carga depois do pulo ${posK.cargas}`, 'sim → não; 0', antesK && !posK.ativo && posK.cargas === 0);
     // desligar na pausa: salvo; o gol seguinte sem replay
     await pg.evaluate(() => window.__golaco.abrirMenu());
-    await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]');
+    await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { timeout: CLIQUE_MS });
     const salvo = await pg.evaluate(() => { const g = window.__golaco; g.fecharMenu(); let p = {}; try { p = JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}'); } catch (_) {} return { auto: g.replay.automatico(), salvo: p.replay, marcado: document.querySelector('#menu .segmentado[data-grupo="replayAuto"] [aria-pressed="true"]')?.dataset.valor }; });
     const gol2 = await golRoteirizado(pg, { semente: 5, time: 0 });
     const semAuto = await pg.evaluate(gt => { const g = window.__golaco; let q = 0; for (let i = 0; i < 260; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); if (g.replay.estado.ativo) q++; } return { q, passou: g.mundo.tick - gt }; }, gol2.golTick);
