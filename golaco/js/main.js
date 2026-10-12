@@ -69,7 +69,7 @@ import { criarMarcasLateral } from './render/marcas-lateral.js';
 import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
-import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
+import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos, criarRelogioEstadio, relogioEstadio } from './render/emocao.js';
 import { forcarFesta } from './render/festa.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
@@ -205,6 +205,9 @@ let contPassos = 0;
 let alfa = 0;
 // estádio: rede que balança e ânimo da torcida, no relógio do desenho (passosTotais nunca volta a zero)
 let passosTotais = 0;
+// relógio do estádio (render/emocao.js relogioEstadio): o da simulação + o dt do desenho somado enquanto o laço fica
+// segurado (cenas, replay, comemoração parada) — a festa da torcida anda durante as cenas
+const relEst = criarRelogioEstadio();
 const ondas = criarOndas();
 const emocao = criarEmocao();
 const autorGol = criarAutorGol();
@@ -213,7 +216,7 @@ const _impactos = [];
 const _ctxEmocao = { t: 0, timeDe: id => timeDe(id), bola: null, ataca: null };
 const _passoEmocao = { t: 0, bola: null, posseTime: null, ataca: null, estado: null };
 /** Tempo do estádio (s) do estado desenhado: o passo atual menos 1 mais alfa. */
-const tempoEstadio = () => Math.max(0, (passosTotais - 1 + alfa) * PASSO);
+const tempoEstadio = () => Math.max(0, (passosTotais - 1 + alfa) * PASSO) + relEst.tSegurado;
 const filaAcoes = [];
 // edição do time vinda do "Editar time": entra (uma por vez) no 1º passo depois da pausa
 let edicaoNaFila = null;
@@ -317,7 +320,7 @@ function rodarPasso(entrada, acoes) {
  */
 function gravarNoAnel(cortou) {
   const tg = agoraMs();
-  anel.inicio(mundo.tick, passosTotais * PASSO, cortou);
+  anel.inicio(mundo.tick, passosTotais * PASSO + relEst.tSegurado, cortou);
   let v = 0;
   for (const j of mundo.jogadores) {
     const e = estJ.get(j.id);
@@ -438,7 +441,8 @@ function tratarEvento(ev) {
  */
 function estadioPasso(eventos) {
   const b = mundo.bola;
-  const tFim = passosTotais * PASSO;
+  relEst.tSim = passosTotais * PASSO;
+  const tFim = relogioEstadio(relEst, 0, false);
   // autor de verdade do gol (último toque pelos eventos; tratarEvento usa no "GOL!")
   autorEventos(autorGol, eventos, mundo.tick, timeDe);
   const n = detectarImpactos(_p0, _v0, b.p, b.v, _impactos);
@@ -468,8 +472,24 @@ function eventosIniciais() {
   const evs = mundo.eventos ?? [];
   if (!evs.length) return;
   const b = mundo.bola;
-  _ctxEmocao.t = passosTotais * PASSO; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
+  _ctxEmocao.t = passosTotais * PASSO + relEst.tSegurado; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
   for (const ev of evs) emocaoEvento(emocao, ev, _ctxEmocao);
+  const ds = consumirDisparos(emocao);
+  for (const d of ds) tocarSom(d);
+}
+
+/**
+ * Um quadro com o laço SEGURADO (cena, replay, comemoração parada no gol + 149, substituição): o relógio do estádio anda
+ * pelo dt do desenho e o ânimo e a festa da torcida andam com ele (bandeiras, bandeirão, sinalizadores, ola, cantos) —
+ * do mundo só lê (parado). Os disparos de agora (a vaia da posse longa, um canto) tocam já.
+ */
+function estadioSegurado(dt) {
+  if (!(dt > 0)) return;
+  const t = relogioEstadio(relEst, dt, true);
+  const b = mundo.bola, p = _passoEmocao;
+  p.t = t; p.bola = b.p; p.ataca = mundo.ataca; p.estado = mundo.partida?.estado ?? null;
+  p.posseTime = mundo.posse != null ? timeDe(mundo.posse) : (mundo.voo ? (mundo.voo.time ?? timeDe(mundo.voo.de)) : (mundo.partida?.ultimoTime ?? null));
+  emocaoPasso(emocao, p, dt);
   const ds = consumirDisparos(emocao);
   for (const d of ds) tocarSom(d);
 }
@@ -911,6 +931,7 @@ function quadro(agoraMs, desenhar = true) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
     laco.ultimo = agoraMs;
     if (!pausado()) {
+      estadioSegurado(dt);
       if (botaoPula(ent.botoes)) fimReplay(true);
       else if (!diretor.avancar(dt)) fimReplay(false);
     }
@@ -922,7 +943,7 @@ function quadro(agoraMs, desenhar = true) {
     const r = avancarLaco(laco, agoraMs);
     // cortina (a comemoração pulada antes da hora): os passos que faltam até a saída, COMEM.passosCortina por quadro
     const nPassos = cenaGol && cenaRapida ? Math.max(r.passos, COMEM.passosCortina) : r.passos;
-    let segurou = false;
+    let segurou = false, rodados = 0;
     for (let i = 0; i < nPassos; i++) {
       // a cena rodando segura a montagem da saída: a simulação espera no passo gol + 149
       if (seguraSimulacao()) { segurou = true; break; }
@@ -932,6 +953,7 @@ function quadro(agoraMs, desenhar = true) {
       // a edição do time entra ANTES das outras ações, no 1º passo depois da pausa
       if (edicaoNaFila) { ac = ac ? [edicaoNaFila, ...ac] : [edicaoNaFila]; edicaoNaFila = null; }
       rodarPasso(e, ac);
+      rodados++;
       // o aperto curto (tocou e soltou entre dois passos) já foi visto por um passo
       if (i === 0) { entrada.limparPulsos(); ent.botoes = entrada.ler(cam.yaw, agoraMs).botoes; }
       // o replay começou neste passo (gol, impedimento): os passos que sobraram não rodam (a simulação espera)
@@ -940,7 +962,7 @@ function quadro(agoraMs, desenhar = true) {
       if (i >= r.passos - 1 && !cenaGol) break;
     }
     // segurando, o laço não acumula o tempo parado (e o desenho da simulação fica no passo mais novo)
-    if (segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); alfa = 1; } else alfa = r.alfa;
+    if (segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); alfa = 1; estadioSegurado(Math.max(0, dt - rodados * PASSO)); } else alfa = r.alfa;
   }
   // em pé no celular a tela "Gire o celular" cobre tudo: não gasta bateria desenhando por baixo
   if (diretor && diretor.ativo) desenharReplay(dt, agoraMs, desenhar && !retratoBloqueado());
@@ -1712,7 +1734,19 @@ const api = {
     /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
     get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
     /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
-    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
+    get festaVisual() {
+      if (!torcida) return null;
+      const sz = torcida.sinalizadores.uniforms;
+      let fogo = 0; for (const f of sz.uFogo.value) fogo += f;
+      return {
+        bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0,
+        instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x,
+        // o relógio do estádio no desenho (uTempo das bandeiras, uT dos sinalizadores/fumaça) e a soma do fogo aceso
+        tempoBandeiras: torcida.bandeiras.uniforms.uTempo.value, tempoSinalizadores: sz.uT.value, fogo,
+      };
+    },
+    /** Relógio do estádio (render/emocao.js relogioEstadio): {tSim, tSegurado, t} (s). */
+    get relogio() { return { ...relEst }; },
     /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
     get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */

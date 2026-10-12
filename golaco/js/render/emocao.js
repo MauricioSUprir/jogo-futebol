@@ -223,6 +223,21 @@ export function emocaoPasso(est, ctx, dt) {
   if (est.festa) festaPasso(est.festa, est, ctx, dt, est.disparar);
 }
 
+/**
+ * Relógio do ESTÁDIO (pedido de 12/10, cenas de cartão e de fim de tempo): t = tSim + tSegurado. tSim é o tempo da
+ * simulação (passos × 1/60 s, que a página põe a cada passo); tSegurado soma o dt do DESENHO enquanto o laço está
+ * segurado (cena de cartão ou de fim de tempo, replay, comemoração parada no gol + 149, substituição) — assim o ânimo,
+ * a agenda da festa, as bandeiras, o bandeirão, o fogo e a fumaça dos sinalizadores, a ola e a luz falsa andam durante
+ * as cenas (antes ficavam congelados no último passo). Sem espera (tSegurado = 0) é o relógio de antes, idêntico. Pura.
+ */
+export function criarRelogioEstadio() { return { tSim: 0, tSegurado: 0, t: 0 }; }
+/** Um quadro: soma dtDesenho (s) se o laço está segurado; devolve o t do estádio (s). */
+export function relogioEstadio(est, dtDesenho, segurado) {
+  if (segurado && dtDesenho > 0) est.tSegurado += dtDesenho;
+  est.t = est.tSim + est.tSegurado;
+  return est.t;
+}
+
 /** Esvazia a fila de disparos (o som toca cada um uma vez). Devolve a lista (reaproveitada). */
 const _saida = [];
 export function consumirDisparos(est) {
