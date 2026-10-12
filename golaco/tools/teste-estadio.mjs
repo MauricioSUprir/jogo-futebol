@@ -4,7 +4,8 @@
 //      com a CPU 4× mais lenta) e não vaza geometria nem textura;
 //   2) a torcida APARECE (os pixels da arquibancada mudam com ela) de dia e de noite;
 //   3) som: nada de AudioContext antes do primeiro gesto; o apito do início fica pendente e toca no gesto; um
-//      clique cria e retoma (running); 9 gravações e 3 laços; o grito do gol já sai alto (≤ 0,3 s até 6 dB do pico);
+//      clique cria e retoma (running); 11 gravações (os cantos são decodificados sob demanda) e os 3 laços do leito
+//      (murmúrio, agitado, batucada); o grito do gol já sai alto (≤ 0,3 s até 6 dB do pico);
 //   4) um GOL ROTEIRIZADO (tools/lib/gol-roteirizado.mjs: não depende da IA nem do goleiro — contraprova B1): a
 //      rede estufa ≥ 0,2 m, a bola desenhada vai junto, a câmera CORTA para a câmera do gol (a rede mexe na tela e
 //      a torcida enche o fundo do quadro), só "GOL!" (sem autor nem minuto: sem narração — dono, 10/10), placar pulsando, câmera sem tranco entre
@@ -139,13 +140,14 @@ try {
   await pg.evaluate(() => window.__golaco.reiniciar({ modo: 'partida', semente: 5 }));
   const pend = await pg.evaluate(() => window.__golaco.estadio.som?.pendente ?? null);
   await pg.mouse.click(640, 400);
-  await pg.waitForFunction(() => { const s = window.__golaco.estadio.som; return s && s.decodificados.length >= 9 && s.lacos.length >= 3; }, null, { timeout: 30000 }).catch(() => {});
+  await pg.waitForFunction(() => { const s = window.__golaco.estadio.som; return s && s.decodificados.filter(n => !n.startsWith('canto')).length >= 11 && s.lacos.length >= 3; }, null, { timeout: 30000 }).catch(() => {});
   await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
   await pg.waitForTimeout(1200);
   const som1 = await pg.evaluate(() => ({ ...window.__golaco.estadio.som, criados: window.__ctxCriados }));
   meta('Som: o clique cria e retoma o AudioContext', `${som1.estado} (${som1.criados} contexto)`, 'rodando, 1', som1.estado === 'rodando' && som1.criados === 1);
-  meta('Som: 9 gravações decodificadas e os 3 laços tocando', `decodificados [${som1.decodificados}] · laços [${som1.lacos}] · níveis ${JSON.stringify(som1.niveis)}`, '9 e 3, murmúrio > 0',
-    som1.decodificados.length === 9 && som1.lacos.length === 3 && som1.niveis.ambiente > 0.05);
+  const fixos = som1.decodificados.filter(n => !n.startsWith('canto'));
+  meta('Som: 11 gravações decodificadas (cantos sob demanda) e os 3 laços do leito tocando', `decodificados [${som1.decodificados}] · laços [${som1.lacos}] · níveis ${JSON.stringify(som1.niveis)}`, '11 e 3, murmúrio > 0',
+    fixos.length === 11 && som1.lacos.length === 3 && som1.niveis.ambiente > 0.05);
   meta('Apito do início da partida (pendente até o 1º gesto, toca no gesto)', `antes do gesto: pendente ${pend ?? 'nada'}; depois: apito tocou ${som1.tocados.apito ?? 0}×`, 'pendente apito; tocou ≥ 1', pend === 'apito' && (som1.tocados.apito ?? 0) >= 1);
   const apitoReinicio = await pg.evaluate(() => { const g = window.__golaco, a = g.estadio.som.tocados.apito ?? 0; g.reiniciar({ modo: 'partida', semente: 5 }); return (g.estadio.som.tocados.apito ?? 0) - a; });
   meta('Apito no "Reiniciar partida"', `${apitoReinicio} apito`, '1', apitoReinicio === 1);

@@ -160,11 +160,12 @@ if (TD) {
   } else reg('Quadro do torcedor na medida da pose (menos pixels descartados)', 'quadro cheio (1,1 × 2,2 m) em toda pose', 'caixa por pose', false);
 
   // C) regra da pose
-  const amostra = (niv, org = false, t = 0.37) => {
+  // janela de tempo das amostras: 0,5 s; a organizada pula em uníssono no surdo (1,28 Hz) — amostrada em 4 s (vários pulos)
+  const amostra = (niv, org = false, t = 0.37, janela = org ? 4 : 0.5) => {
     const c = { sent: 0, pe: 0, v: 0, cab: 0, pulo: 0 };
     const rnd = TD.geradorTorcida(7);
     for (let i = 0; i < 2000; i++) {
-      const r = poseDoTorcedor(niv, rnd(), rnd(), org, t + rnd() * 0.5);
+      const r = poseDoTorcedor(niv, rnd(), rnd(), org, t + rnd() * janela);
       if (r.pose === POSE.SENTADO || r.pose === POSE.SENTADO_PALMAS) c.sent++; else c.pe++;
       if (r.pose === POSE.BRACOS_V || r.pose === POSE.UM_BRACO || r.pose === POSE.CACHECOL) c.v++;
       if (r.pose === POSE.MAOS_CABECA) c.cab++;
@@ -278,6 +279,94 @@ if (EM) {
     const e = criarEmocao();
     for (let i = 0; i < 50; i++) emocaoEvento(e, { tipo: 'redeImpacto', vel: 20 }, ctx(i, { x: 54, z: 0 }));
     reg('Fila de sons limitada (nada acumula com o som desligado)', `${e.disparos.length} na fila`, `≤ ${EMOCAO.maxDisparos}`, e.disparos.length <= EMOCAO.maxDisparos);
+  }
+}
+
+// E) festa e mixagem do som (pedido de 11/10: "bota som de torcida também, pra durante o jogo"): a agenda dos cantos
+//    (festa.js), a vaia, a reação que interrompe o canto e os níveis da mixagem (mixagem.js) — contas puras.
+{
+  const FE = await imp('render/festa.js');
+  const MX = await imp('render/mixagem.js');
+  const SM = await imp('render/som.js').catch(() => null);
+  if (!FE || !MX || !EM) reg('Agenda dos cantos e mixagem do som (render/festa.js, render/mixagem.js)', 'não existe (um canto de 14 s ~20 dB abaixo do arquivo)', 'existe', false);
+  else {
+    const ataca = { 0: 1, 1: -1 };
+    const timeDe = id => (id >= 100 ? 1 : 0);
+    const ctx = (t, bola) => ({ t, timeDe, bola, ataca });
+    // 3 min de jogo calmo (bola no meio-campo, a posse trocando a cada 9 s): quantos cantos e quanto tempo cantando
+    const e = EM.criarEmocao();
+    EM.emocaoEvento(e, { tipo: 'saida', time: 0 }, ctx(0, { x: 0, z: 0 }));
+    const out = {};
+    let t = 0, calmo = 0, canta = 0;
+    for (let i = 0; i < 180 * 60; i++) {
+      t += 1 / 60;
+      EM.emocaoPasso(e, { t, bola: { x: 8 * Math.sin(t / 5), z: 0 }, posseTime: Math.floor(t / 9) % 2, ataca, estado: 'jogo' }, 1 / 60);
+      MX.alvosMixagem(e, out);
+      if (e.agito <= 0.3) { calmo++; if (out.canto >= 0.5 * out.ambiente) canta++; }
+    }
+    const clipes = new Set(e.festa.canto.cantados);
+    reg('Cantos: a torcida canta a maior parte do tempo calmo (3 min de jogo)', `${clipes.size} cantos diferentes (${e.festa.canto.cantados.length} entradas), cantando em ${fmt(100 * canta / Math.max(1, calmo), 0)}% do tempo calmo`,
+      '≥ 3 cantos; ≥ 55% (e ≤ 85%: tem pausa)', clipes.size >= 3 && canta / calmo >= 0.55 && canta / calmo <= 0.85);
+    reg('Mixagem: leito audível com a bola no meio-campo', `murmúrio ${fmt(out.ambiente, 2)} · canto cheio ${fmt(MX.MIXAGEM.canto, 2)} · batucada ${fmt(MX.MIXAGEM.batucada, 2)} (unidades de −16 LUFS)`,
+      'murmúrio ≥ 0,5; canto ≥ 0,55', out.ambiente >= 0.5 && MX.MIXAGEM.canto >= 0.55);
+    // cada gravação nivelada para −16 LUFS pelo LUFS medido
+    if (SM) {
+      const erros = Object.entries(SM.SOM.arquivos).filter(([, a]) => a.lufs != null && Math.abs(a.lufs + 20 * Math.log10(MX.nivelamento(a.lufs)) - MX.MIXAGEM.alvoLufs) > 0.01);
+      const papeis = FE.FESTA.cantos.papeis.length === SM.SOM.cantos.length && SM.SOM.cantos.every(n => SM.SOM.arquivos[n]?.canto);
+      reg('Gravações niveladas para −16 LUFS e um arquivo por canto da agenda', `${Object.values(SM.SOM.arquivos).filter(a => a.lufs != null).length} niveladas, ${erros.length} fora; ${SM.SOM.cantos.length} cantos para ${FE.FESTA.cantos.papeis.length} papéis`, '0 fora; iguais', erros.length === 0 && papeis);
+    }
+    // reação: o "uuuh" abaixa o leito ~4 dB e o canto recua; os dois voltam
+    {
+      const e2 = EM.criarEmocao();
+      let t2 = 0;
+      // até a torcida estar cantando no nível cheio
+      for (let i = 0; i < 90 * 60 && !(FE.nivelCanto(e2.festa) > 0.95 && e2.festa.canto.ate - t2 > 8); i++) { t2 += 1 / 60; EM.emocaoPasso(e2, { t: t2, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 1 / 60); }
+      const antes = FE.nivelCanto(e2.festa);
+      EM.emocaoEvento(e2, { tipo: 'chute', id: 9 }, ctx(t2, { x: 36, z: 2 }));
+      EM.emocaoEvento(e2, { tipo: 'defesa', id: 101 }, ctx(t2 + 0.5, { x: 51, z: 1 }));
+      t2 += 0.5;
+      const ab = MX.abaixamento(e2, t2 + 0.1);
+      EM.emocaoPasso(e2, { t: t2 + 0.1, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 0.1);
+      const logo = FE.nivelCanto(e2.festa);
+      let t3 = t2 + 0.1;
+      for (let i = 0; i < 6 * 60; i++) { t3 += 1 / 60; EM.emocaoPasso(e2, { t: t3, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 1 / 60); }
+      const volta = MX.abaixamento(e2, t3);
+      const cantoVolta = FE.nivelCanto(e2.festa);
+      reg('Reação ("uuuh") abaixa o leito ~4 dB e o canto recua; depois voltam', `canto ${fmt(antes, 2)} → ${fmt(logo, 2)} → ${fmt(cantoVolta, 2)}; leito ×${fmt(ab, 2)} (${fmt(20 * Math.log10(ab), 1)} dB) → ×${fmt(volta, 2)}`,
+        'canto recua para ≤ 0,5 do nível; leito −3 a −5 dB e volta a ×1', antes > 0.5 && logo <= 0.5 * antes + 0.01 && ab <= 0.71 && ab >= 0.56 && volta > 0.99);
+    }
+    // gol: corta o canto; gol da casa → canto de festa; gol do visitante → o setor deles canta (lado 1)
+    {
+      const golE = time => {
+        const e3 = EM.criarEmocao();
+        let t3 = 0;
+        for (let i = 0; i < 20 * 60; i++) { t3 += 1 / 60; EM.emocaoPasso(e3, { t: t3, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 1 / 60); }
+        EM.emocaoEvento(e3, { tipo: 'gol', time }, ctx(t3, { x: time ? -53 : 53, z: 0 }));
+        for (let i = 0; i < 30; i++) { t3 += 1 / 60; EM.emocaoPasso(e3, { t: t3, bola: { x: 0, z: 0 }, posseTime: null, ataca, estado: 'gol' }, 1 / 60); }
+        const cortado = FE.nivelCanto(e3.festa);
+        for (let i = 0; i < 6 * 60; i++) { t3 += 1 / 60; EM.emocaoPasso(e3, { t: t3, bola: { x: 0, z: 0 }, posseTime: null, ataca, estado: 'parada' }, 1 / 60); }
+        const c = e3.festa.canto;
+        return { cortado, papel: c.papel, lado: c.lado, nivel: FE.nivelCanto(e3.festa), acesos: e3.festa.acesos, band: e3.festa.bandeirao.n };
+      };
+      const gc = golE(0), gv = golE(1);
+      reg('Gol: o grito corta o canto; depois a casa canta a festa (ou o setor visitante canta o deles)', `casa: cortado ${fmt(gc.cortado, 2)}, depois "${gc.papel}" lado ${gc.lado} · visitante: cortado ${fmt(gv.cortado, 2)}, depois "${gv.papel}" lado ${gv.lado}`,
+        'cortado 0; festa/0 e visitante/1', gc.cortado === 0 && gc.papel === 'festa' && gc.lado === 0 && gv.cortado === 0 && gv.papel === 'visitante' && gv.lado === 1);
+    }
+    // vaia: o visitante segura a bola perto da área da casa por 15 s → uma vaia; não repete antes de 30 s
+    {
+      const e4 = EM.criarEmocao();
+      let t4 = 0;
+      const vaias = [];
+      for (let i = 0; i < 40 * 60; i++) {
+        t4 += 1 / 60;
+        EM.emocaoPasso(e4, { t: t4, bola: { x: -38, z: 6 }, posseTime: 1, ataca, estado: 'jogo' }, 1 / 60);
+        for (const d of EM.consumirDisparos(e4)) if (d.tipo === 'vaia') vaias.push(+t4.toFixed(1));
+      }
+      const e5 = EM.criarEmocao();
+      let t5 = 0, vaiaLonge = 0;
+      for (let i = 0; i < 40 * 60; i++) { t5 += 1 / 60; EM.emocaoPasso(e5, { t: t5, bola: { x: 10, z: 6 }, posseTime: 1, ataca, estado: 'jogo' }, 1 / 60); for (const d of EM.consumirDisparos(e5)) if (d.tipo === 'vaia') vaiaLonge++; }
+      reg('Vaia: o visitante segurando a bola perto da área da casa', `vaias aos [${vaias.join(', ')}] s (40 s perto da área); ${vaiaLonge} com a bola no meio`, '1 vaia entre 15 e 16 s; 0 longe', vaias.length === 1 && vaias[0] >= 15 && vaias[0] <= 16 && vaiaLonge === 0);
+    }
   }
 }
 

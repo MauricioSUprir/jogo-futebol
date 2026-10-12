@@ -12,8 +12,11 @@
 //   palmas  — incentivo (defesa do goleiro do time, boa jogada).
 // agito (0–1): o barulho geral (o murmúrio sobe quando a bola chega no terço final de qualquer lado; no
 // gol da casa vai ao máximo, no gol do visitante cai quase a zero — a casa é a maioria do estádio).
-// Disparos (sons de uma vez): {tipo: 'gol'|'uuuh'|'palmas'|'apito'|'apitoIntervalo'|'apitoFim'|'rede'|
+// Disparos (sons de uma vez): {tipo: 'gol'|'uuuh'|'palmas'|'vaia'|'apito'|'apitoIntervalo'|'apitoFim'|'rede'|
 // 'chute', grupo, forca} numa fila que o som consome.
+// A festa (festa.js: cantos, batucada, vaia, sinalizadores, bandeirão e ola) anda junto: est.festa recebe os mesmos
+// eventos e o mesmo passo; est.ultimaReacao (t do último "uuuh"/palmas/vaia/gol) abaixa o leito na mixagem.
+import { criarFesta, zerarFesta, festaEvento, festaPasso, festaReacao } from './festa.js';
 
 export const EMOCAO = {
   casa: 0,                // time da casa (maioria da torcida)
@@ -44,7 +47,7 @@ function aproxima(v, alvo, dt, tau) { return v + (alvo - v) * (1 - Math.exp(-dt 
 function grupoNovo() { return { excita: 0, tensao: 0, lamento: 0, palmas: 0, golAte: -1e9, tensaoAte: -1e9, alvoTensao: 0 }; }
 
 export function criarEmocao() {
-  return {
+  const est = {
     t: 0,
     agito: EMOCAO.agitoBase,
     torcida: [grupoNovo(), grupoNovo()],
@@ -52,19 +55,28 @@ export function criarEmocao() {
     chute: null,          // {t, grupo, d}: o último chute perigoso
     golT: -1e9,
     contagem: {},         // disparos por tipo (testes e API)
+    ultimaReacao: -1e9,   // t do último som de reação (a mixagem abaixa o leito)
+    festa: criarFesta(),
   };
+  est.disparar = (tipo, grupo, forca) => disparar(est, tipo, grupo, forca);
+  return est;
 }
 
 /** Volta ao estado calmo (mundo novo). */
 export function zerarEmocao(est) {
   const n = criarEmocao();
   est.agito = n.agito; est.torcida = n.torcida; est.disparos.length = 0; est.chute = null; est.golT = -1e9;
+  est.ultimaReacao = -1e9;
+  zerarFesta(est.festa);
 }
+
+const REACOES = { gol: 1, uuuh: 1, palmas: 1, vaia: 1 };
 
 function disparar(est, tipo, grupo, forca) {
   if (est.disparos.length >= EMOCAO.maxDisparos) est.disparos.shift();
   est.disparos.push({ tipo, grupo, forca: clamp(forca, 0, 1), t: est.t });
   est.contagem[tipo] = (est.contagem[tipo] ?? 0) + 1;
+  if (REACOES[tipo]) { est.ultimaReacao = est.t; if (est.festa) festaReacao(est.festa, tipo); }
 }
 
 /** Distância da bola ao gol que o grupo k ataca (ataca = {0: ±1, 1: ±1}). */
@@ -95,6 +107,7 @@ export function emocaoEvento(est, ev, ctx) {
   const t = ctx.t;
   est.t = t;
   const tipo = ev.tipo;
+  if (est.festa) festaEvento(est.festa, ev, ctx, est.disparar);
   const recente = est.chute && t - est.chute.t <= EMOCAO.chanceJanela;
   if (tipo === 'gol') {
     const k = ev.time === 1 ? 1 : 0;
@@ -207,6 +220,7 @@ export function emocaoPasso(est, ctx, dt) {
     g.lamento *= Math.exp(-dt / E.lamentoTau);
     g.palmas *= Math.exp(-dt / E.palmasTau);
   }
+  if (est.festa) festaPasso(est.festa, est, ctx, dt, est.disparar);
 }
 
 /** Esvazia a fila de disparos (o som toca cada um uma vez). Devolve a lista (reaproveitada). */

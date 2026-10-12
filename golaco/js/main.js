@@ -494,7 +494,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   linhaImped.atualizar(mundo, dt);
   marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   campo.atualizar(agoraMs / 1000);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -1070,6 +1070,8 @@ const api = {
     deslocamentoRede(plano, x, y, z) { return deslocamento(ondas, plano, x, y, z, tempoEstadio()) * fixoRede(plano, x, y, z); },
     get emocao() { return { agito: emocao.agito, torcida: emocao.torcida.map(g => ({ ...g })), contagem: { ...emocao.contagem } }; },
     get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
+    /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
+    get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
     redeOnda(v) { redeLigada = !!v; },
     /** Só a troca de qualidade da torcida (ms): quantos desenhar e a animação, sem remontar nada. */
