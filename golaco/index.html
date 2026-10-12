@@ -150,6 +150,10 @@
           <button class="btn" type="button" data-cmd="modo" data-valor="partida" aria-pressed="false">Partida <small>Golaço FC × Ventania FC</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false">Treino de ataque <small>6 contra 4</small></button>
           <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false">Treino de condução <small>bola no pé</small></button>
+          <!-- pré-jogo da partida (as cenas antes da saída de bola e as escalações): cada toque passa para o próximo —
+               completo, curto, só escalação, desligado; salvo (js/main.js modoPrejogo). Aqui e não nas opções: com uma
+               linha a mais a pausa rolava no celular deitado (ela tem de caber inteira) -->
+          <button class="btn" type="button" data-cmd="prejogo-ciclo" id="btn-prejogo" aria-describedby="estado-prejogo">Pré-jogo da partida <small id="estado-prejogo">completo</small></button>
         </div>
         <div class="menu-opcoes">
           <div class="opcao">
@@ -174,16 +178,6 @@
             <div class="segmentado" data-grupo="camera">
               <button type="button" data-valor="tv">TV</button>
               <button type="button" data-valor="aproximada">Aproximada</button>
-            </div>
-          </div>
-          <!-- pré-jogo (partida): as cenas antes da saída de bola e as escalações; salvo (js/main.js modoPrejogo) -->
-          <div class="opcao" data-so="partida">
-            <span class="opcao-rotulo">Pré-jogo</span>
-            <div class="segmentado" data-grupo="prejogo">
-              <button type="button" data-valor="completo">Completo</button>
-              <button type="button" data-valor="curto">Curto</button>
-              <button type="button" data-valor="escalacao">Só escalação</button>
-              <button type="button" data-valor="desligado">Desligado</button>
             </div>
           </div>
           <div class="opcao opcao-som">

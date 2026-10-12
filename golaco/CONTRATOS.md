@@ -383,7 +383,8 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
 - **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
   `prefs.prejogo`, padrão 'completo'), `comecarPrejogo(modo, abertura)` (bloqueia a entrada), `fimDoPrejogo()` (libera a
   entrada, corta a câmera, `eventosIniciais()`), `quadro()` (no pré-jogo o laço fica parado: `laco.ultimo = agora`),
-  `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao'})`, comando `prejogo` (menu), API `__golaco.prejogo`
+  `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao'})`, comandos `prejogo` (valor) e `prejogo-ciclo` (o botão "Pré-jogo da
+  partida" do submenu "Modo de jogo": o próximo modo; `#estado-prejogo` mostra o atual), API `__golaco.prejogo`
   (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(), pularTudo(), irPara(t), comecar(),
   iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel, time, cheia, cartas(t), folha(t),
   pular, info(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo, fora}`); `quadro()` passa

@@ -704,9 +704,11 @@ function modoPrejogo() {
   if (navigator.webdriver || PRINTS || DEMO_ON) return 'desligado';
   return PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
 }
+const NOME_PREJOGO = { completo: 'completo', curto: 'curto', escalacao: 'só escalação', desligado: 'desligado' };
 function marcarPrejogo() {
   const v = PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
-  document.querySelectorAll('.segmentado[data-grupo="prejogo"] button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.valor === v)));
+  const e = document.getElementById('estado-prejogo');
+  if (e) e.textContent = NOME_PREJOGO[v];
 }
 /** Começa o pré-jogo (true) ou não (o apito toca já). */
 function comecarPrejogo(modo, abertura) {
@@ -794,6 +796,12 @@ function comando(c, v) {
       prefs.prejogo = v; salvarPrefs(prefs);
       marcarPrejogo();
       break;
+    case 'prejogo-ciclo': {
+      // "Modo de jogo" → "Pré-jogo da partida": completo → curto → só escalação → desligado → completo
+      const atual = PREJOGO.modos.includes(prefs.prejogo) ? prefs.prejogo : 'completo';
+      comando('prejogo', PREJOGO.modos[(PREJOGO.modos.indexOf(atual) + 1) % PREJOGO.modos.length]);
+      break;
+    }
     case 'toqueTamanho': entrada.definirAjustes({ tamanho: v }); hud.definirEstado({ toqueTamanho: entrada.ajustes.tamanho }); hud.ajustarTopo(); break;
     case 'toqueOpacidade': entrada.definirAjustes({ opacidade: v }); hud.definirEstado({ toqueOpacidade: entrada.ajustes.opacidade }); break;
     default: break;

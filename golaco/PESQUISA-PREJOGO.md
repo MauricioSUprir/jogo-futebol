@@ -94,8 +94,10 @@ pré-jogo, 2/2 malhas recortadas) e o vão fechado no jogo (0/2, recorte local d
 ## 5. Pular e preferências
 
 Toque/clique, Enter, Espaço ou A: próximo BLOCO (cenas → escalação 1 → escalação 2 → jogo). Botão Pular (ícone + palavra,
-≥ 48 px; some parado e volta com qualquer toque), Esc/P ou Start: direto para o jogo. Menu → "Pré-jogo: Completo / Curto /
-Só escalação / Desligado" (salvo). "Reiniciar partida" no meio do jogo toca só a escalação; "Jogar de novo" e a volta de
+≥ 48 px; some parado e volta com qualquer toque), Esc/P ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pré-jogo da partida":
+cada toque passa para o próximo (completo → curto → só escalação → desligado; salvo). Na 1ª versão era uma linha a mais
+nas opções da pausa e a pausa passou a rolar 41 px no celular deitado (ela cabia inteira: "nada sobre nada"); no
+submenu "Modo de jogo" cabe sem rolar (`teste-prejogo` item 13). "Reiniciar partida" no meio do jogo toca só a escalação; "Jogar de novo" e a volta de
 um treino para a partida tocam a preferência. `?prejogo=0|1|curto|escalacao` força. DESLIGADO por padrão com
 `navigator.webdriver`, `?prints=1` e `?demo=1` (os testes e prints que já existem abrem direto no jogo, como antes).
 Celular em pé no meio do pré-jogo: a tela de girar cobre, o tempo não anda, o toque não avança e a torcida abaixa e abafa

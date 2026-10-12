@@ -269,8 +269,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `estadio-forma.js` (sólidos onde a câmera não entra + o lado de fora). Desenho: `render/prejogo.js` (diretor),
   `render/estadio-fora.js` (fachada, cobertura, cantos, túnel por dentro, esplanada, bairro, prédios, carros, torcedores —
   SÓ no pré-jogo: a TV do jogo fica dentro da arquibancada de cá), `prejogo-tela.js`, `escalacao-tela.js`, `campinho.js`
-  (o campinho do editor), `css/prejogo.css`. Pular: toque/Enter/A = próximo bloco; Pular/Esc/Start = jogo. Menu "Pré-jogo:
-  Completo/Curto/Só escalação/Desligado" (padrão Completo); Reiniciar no meio = só escalação. **Desligado** com
+  (o campinho do editor), `css/prejogo.css`. Pular: toque/Enter/A = próximo bloco; Pular/Esc/Start = jogo. Pausa → "Modo de jogo"
+  → "Pré-jogo da partida" (cada toque: completo → curto → só escalação → desligado; padrão completo; fora das opções
+  porque a pausa tem de caber sem rolar no celular deitado); Reiniciar no meio = só escalação. **Desligado** com
   `navigator.webdriver`, `?prints=1` e `?demo=1`; `?prejogo=1|curto|escalacao|0` força. Testes: `teste-cortejo`,
   `teste-prejogo-roteiro` (padrão), `teste-prejogo` (navegador, CI); prints `tools/prints-prejogo.mjs` (folhas de contato).
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por

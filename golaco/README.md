@@ -88,7 +88,7 @@ fora (drone sobre o bairro, a fachada com a torcida chegando), o estádio cheio 
 com os árbitros, a fila se formando no meio-campo, a câmera passando pela fila de cada time, cortes da organizada, da
 arquibancada de lá, do setor visitante e do estádio, e as escalações: cada time grande no campinho (número, nome e posição
 dos 11 e a formação) por ~10 s, o primeiro sai e o outro entra, com o mesmo fundo. Toque/clique, Enter ou A: próxima
-parte; Pular, Esc ou Start: direto para o jogo. Menu → "Pré-jogo: Completo / Curto / Só escalação / Desligado".
+parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pré-jogo da partida" (cada toque: completo, curto, só escalação, desligado).
 `?prejogo=0|1|curto|escalacao` força. Pesquisa: `PESQUISA-PREJOGO.md`.
 
 ## Etapa 2 — passe, chute, goleiro

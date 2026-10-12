@@ -23,7 +23,11 @@
 //      e as pontas) e fechado no jogo (as placas inteiras, a bola bate nelas);
 //  10) celular em pé no meio do pré-jogo: a tela de girar cobre, o tempo não anda, o toque não avança, o som fica como
 //      na pausa do jogo (sem o plano do pré-jogo por cima); deitado de novo, continua;
-//  11) "Reiniciar partida" (só a escalação): o lado de fora sem o entorno (nunca entra no quadro).
+//  11) "Reiniciar partida" (só a escalação): o lado de fora sem o entorno (nunca entra no quadro);
+//  12) pular de qualquer instante (3 modos, da abertura ao fim; botão Pular, Esc e pularTudo): jogo no tick 0 com o
+//      hash de criarPartida e o estádio do jogo de volta (near/far, placas inteiras, HUD);
+//  13) a pausa cabe sem rolar no celular deitado (também com "Modo de jogo" aberto) e "Pré-jogo da partida" passa pelos
+//      4 modos e salva.
 // Na versão publicada não há pré-jogo (reprova no item 1).
 //   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
@@ -308,6 +312,31 @@ try {
       meta(`${P.nome}: depois de pular o vão fecha (placas inteiras)`, vf ? `aberto ${vf.aberto}, ${vf.recortadas}/${vf.malhas} recortadas, recorte local ${vf.local}, ${vf.pontas} pontas` : 'sem vão', 'false, 0/2, false, 0', vf && !vf.aberto && vf.malhas === 2 && vf.recortadas === 0 && !vf.local && vf.pontas === 0);
       const h = await pg.evaluate(rot => window.__golaco.rodarPassos(rot.length, rot), roteiro(600));
       meta(`${P.nome}: 600 passos depois de pular (Node = Chromium)`, `Chromium ${hexa(h)} · Node ${hexa(NODE.h)}`, 'iguais', h === NODE.h);
+      // 13) (depois dos 600 passos: fechar a pausa deixa o jogo andar) a pausa cabe inteira sem rolar no celular deitado (como antes do pré-jogo: com a linha "Pré-jogo" nas opções
+      // ela rolava 41 px); a escolha fica em "Modo de jogo" → "Pré-jogo da partida" (cada toque passa para o próximo, salvo)
+      const mn = await pg.evaluate(() => {
+        const g = window.__golaco;
+        const esc = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }));
+        esc(); g.relogio.avancar(16);
+        const j = document.querySelector('.janela-menu');
+        const rola = () => (j ? j.scrollHeight - j.clientHeight : NaN);
+        const r = { aberto: !document.getElementById('menu').hidden, rola: rola() };
+        document.getElementById('btn-modos')?.click();
+        r.rolaModos = rola();
+        const b = document.getElementById('btn-prejogo');
+        r.botao = !!b && b.getBoundingClientRect().height >= 44;
+        r.ciclo = [];
+        if (b) for (let i = 0; i < 4; i++) { b.click(); r.ciclo.push(document.getElementById('estado-prejogo').textContent); }
+        try { r.salvo = JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}').prejogo; } catch (_) { r.salvo = null; }
+        document.querySelector('[data-cmd="modos-voltar"]')?.click();
+        esc(); g.relogio.avancar(16);
+        r.fechado = document.getElementById('menu').hidden;
+        return r;
+      });
+      meta(`${P.nome}: a pausa cabe sem rolar (também com "Modo de jogo" aberto); "Pré-jogo da partida" passa pelos 4 e salva`,
+        `menu ${mn.aberto ? 'aberto' : 'FECHADO'}, rola ${mn.rola} px (Modo de jogo: ${mn.rolaModos} px); botão ${mn.botao ? 'ok' : 'não existe'}; ${mn.ciclo.join(' → ') || '—'}; salvo ${mn.salvo}; fecha ${mn.fechado}`,
+        'rola ≤ 0 e ≤ 0; curto → só escalação → desligado → completo; completo',
+        mn.aberto && mn.rola <= 0 && mn.rolaModos <= 0 && mn.botao && mn.ciclo.join('|') === 'curto|só escalação|desligado|completo' && mn.salvo === 'completo' && mn.fechado);
     }
     // ---------------------------------------------------------------- 8) memória depois do pré-jogo
     await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 120; i++) g.relogio.avancar(16.7); });
@@ -332,6 +361,34 @@ try {
       // 11) o "Reiniciar partida" toca só a escalação: o lado de fora sem o entorno
       const re = await pg.evaluate(() => { const g = window.__golaco; const ok = g.prejogo.iniciar('escalacao', {}); g.relogio.avancar(16); const f = g.prejogo.fora; const r = { ok, modo: g.prejogo.modo, fora: f, total: g.prejogo.total }; g.prejogo.pularTudo(); g.relogio.avancar(16); r.depois = g.prejogo.ativo; return r; });
       meta('Só a escalação (Reiniciar partida): o lado de fora sem o entorno', `${re.modo}, ${f1(re.total)} s; entorno ${re.fora?.entorno}, ${re.fora?.pecas} peças, ${re.fora?.triangulos} triângulos; ativo depois de pular ${re.depois}`, 'escalacao; false; ≤ 8 peças', re.ok && re.modo === 'escalacao' && re.fora && re.fora.entorno === false && re.fora.pecas <= 8 && !re.depois);
+      // 12) pular de QUALQUER instante (os 3 modos, da abertura ao último décimo): jogo no tick 0 com o hash de
+      // criarPartida, o estádio do jogo de volta (névoa e near/far da câmera, placas inteiras, sem html.prejogo, HUD)
+      const pulos = await pg.evaluate(() => {
+        const g = window.__golaco, pj = g.prejogo;
+        const jogo = { near: pj.camera.near, far: pj.camera.far };
+        const ruins = [];
+        let n = 0;
+        for (const modo of ['completo', 'curto', 'escalacao']) {
+          const fim = { completo: 81.6, curto: 41.1, escalacao: 21.1 }[modo];
+          for (const t of [-1, 0, 0.25, 4, 9, 14, 19, 24, 29, 33, 38, 44, 50, 55, 59, 61, 64, 70, 72, 77, fim - 0.1].filter(t => t < fim)) {
+            if (!pj.iniciar(modo, { abertura: t < 0 })) { ruins.push(`${modo} ${t}: não iniciou`); continue; }
+            g.relogio.avancar(16);
+            if (t >= 0) { pj.irPara(t); g.relogio.avancar(16); }
+            const plano = pj.plano ?? pj.fase;
+            // na abertura o botão Pular não aparece (Esc ou Start pulam); depois, alterna os três jeitos
+            const jeito = t < 0 ? 2 : n % 3;
+            if (jeito === 0) pj.pularTudo(); else if (jeito === 1) document.querySelector('.pj-pular').click(); else window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }));
+            g.relogio.avancar(16);
+            n++;
+            const c = pj.camera, v = pj.vao;
+            const ok = !pj.ativo && g.estado().tick === 0 && c.near === jogo.near && c.far === jogo.far && v && !v.aberto && v.recortadas === 0 && !v.local
+              && !document.documentElement.classList.contains('prejogo') && getComputedStyle(document.getElementById('hud')).display !== 'none';
+            if (!ok) ruins.push(`${modo} ${t} (${plano}): ativo ${pj.ativo}, near ${c.near}, vão ${v ? v.aberto + '/' + v.recortadas : 'não existe'}`);
+          }
+        }
+        return { n, ruins, hash: g.hash() };
+      });
+      meta('Pular de qualquer instante (3 modos; Pular, Esc e pularTudo): jogo no tick 0, hash de criarPartida, estádio do jogo de volta', `${pulos.n} pulos; ${pulos.ruins.length ? pulos.ruins.slice(0, 3).join('; ') : 'todos limpos'}; hash ${hexa(pulos.hash)} × Node ${hexa(NODE.h0)}`, 'todos limpos; iguais', pulos.n >= 40 && pulos.ruins.length === 0 && pulos.hash === NODE.h0);
       meta('PC: Enter → próximo bloco; Esc → direto ao jogo (sem abrir o menu)', `Enter: ${b}; Esc: ativo ${fim.ativo}, tick ${fim.tick}, menu ${fim.menu}, hash ${hexa(fim.hash)}`, 'escalacao0; false, 0, false, o de criarPartida', b === 'escalacao0' && !fim.ativo && fim.tick === 0 && !fim.menu && fim.hash === NODE.h0);
       await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 120; i++) g.relogio.avancar(16.7); });
       const mem = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geometrias: e.geometrias, texturas: e.texturas }; });
