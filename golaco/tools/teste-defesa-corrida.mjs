@@ -145,14 +145,14 @@ async function partida(sem, rot) {
       const rx = o.x - cond.x, rz = o.z - cond.z;
       const dx = rx * ux + rz * uz, lat = -rx * uz + rz * ux;
       let h = hist.get(o.id); if (!h) hist.set(o.id, h = []);
-      h.push({ dx, lat, vg: -(o.vx * ladoIA), d: Math.hypot(rx, rz), vc });
+      h.push({ dx, lat, vg: -(o.vx * ladoIA), d: Math.hypot(rx, rz), vc, ramo: o.ia?.ramo || '—' });
       if (h.length > 120) h.shift();
       if (dx < -0.5 && h.length > 10) {
         let k0 = -1;
         for (let k = h.length - 2; k >= 0; k--) { if (h[k].dx < -0.5) break; if (h[k].dx > 0 && h[k].dx < 6 && Math.abs(h[k].lat) < 2) k0 = k; }
         if (k0 >= 0 && h[k0].vc > 6.3) {
           const a3 = h.slice(0, h.length - 1).reverse().find(x => x.dx > 0 && x.d <= 3);
-          if (a3) R.v3.push(a3.vg);
+          if (a3) { R.v3.push(a3.vg); (R.v3r ??= []).push([a3.ramo, a3.vg]); }
           h.length = 0;
         }
       }
@@ -189,6 +189,11 @@ const chutes = meuCampo.filter(e => e.fim === 'chute');
 const longas = eps.filter(e => e.dist >= 40 && e.gol);
 const trMeu = epsT.filter(e => e.u0 < 0);
 const v3 = sp.flatMap(r => r.v3).sort((a, b) => a - b);
+// (informativo) o papel da IA de quem foi ultrapassado, com a mediana da velocidade para o gol a 3 m
+const porRamo = {};
+for (const [ramo, vg] of sp.flatMap(r => r.v3r ?? [])) (porRamo[ramo] ??= []).push(vg);
+console.log('informativo: ultrapassados por papel (n, mediana m/s): ' + Object.entries(porRamo).sort((a, b) => b[1].length - a[1].length)
+  .map(([r, a]) => { a.sort((x, y) => x - y); return `${r} ${a.length} (${a[a.length >> 1].toFixed(1)})`; }).join(' · '));
 const pc = (a, b) => (b ? 100 * a / b : NaN);
 const f = (x, c = 1) => (Number.isFinite(x) ? x.toFixed(c) : '—');
 const linhas = [['medida', 'medido', 'meta', 'resultado']];

@@ -32,7 +32,7 @@
 
 import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA, GOLEIRO } from './config.js';
 import { MD } from './matdet.js';
-import { difAng } from './mat.js';
+import { difAng, clamp, lerp } from './mat.js';
 import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
 import { riscoLinha } from './acoes.js';
 import { goleiroNoPe } from './regras-goleiro.js';
@@ -257,9 +257,12 @@ export function blocoDoTime(m, t) {
   // o batido passa o 1º homem adiante e o bloco do corredor acompanha
   const CR = IA_DEFESA.corrida;
   {
+    // (liga pela velocidade do corpo dele, agora — a filtrada atrasa ~0,5 s e a arrancada já estava em cima do 1º homem
+    // —, e desliga pela filtrada)
     const vc = MD.hypot(B.cvx, B.cvz), vg = -B.cvx * lado;
+    const vr = B.cond >= 0 ? MD.hypot(adv.vx, adv.vz) : 0, vgr = B.cond >= 0 ? -adv.vx * lado : 0;
     B.rapido = B.cond >= 0 && adv.posicao !== 'GOL' && !naParada
-      && (B.rapido ? vc > CR.v - CR.hist && vg > 0.3 * vc : vc > CR.v && vg > 0.5 * vc);
+      && (B.rapido ? vc > CR.v - CR.hist && vg > 0.3 * vc : vr > CR.v && vgr > 0.5 * vr);
   }
   // velocidade (filtrada) de quem tem a bola no pé, de qualquer time: o bloco antecipa para onde a
   // bola vai (sem isso, no modo calma a referência que anda a ~3 m/s deixava o time ~6 m atrasado)
@@ -836,7 +839,7 @@ function acompanhaCorredor(m, j, B, lado, out) {
 
 /**
  * Condutor rápido (B.rapido): o 1º homem ('contem', 'aperta') e o 2º ('cobre') acompanham pela VELOCIDADE — a do
- * condutor (filtrada) + corrida.ganho × (ponto − corpo), a conta do CONTER do humano (defesa.js entradaVelocidade, com o
+ * condutor (a do corpo, agora) + corrida.ganho × (ponto − corpo), a conta do CONTER do humano (defesa.js entradaVelocidade, com o
  * CORRER pela velocidade pedida e histerese). Ponto: na linha condutor → meu gol a dist[0] + dist[1]·v m (contém), a
  * corrida.aperto m (aperta) ou na cobertura (atrás do 1º, do lado do gol e por dentro). Do lado do gol e perto, nunca
  * sobe: a velocidade para o meu gol é pelo menos a do condutor − recua[1]. Devolve a entrada, ou null.
@@ -847,25 +850,33 @@ function acompanhar(m, j, s, B, meuGol, extra, ramo) {
   for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
   if (!c) return null;
   const b = m.bola.p;
-  if (ramo !== 'cobre' && atacaBola(m, j, s)) { s.ramo = 'ataca'; return { ...irPara(m, j, b.x, b.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER }; }
-  s.ramo = ramo;
+  // a bola mais perto de mim que do pé dele: o desarme NA MESMA VELOCIDADE — vou à bola sem parar de correr para o meu gol
+  // (o "nunca sobe" abaixo vale também aqui); antes ele parava e ia de frente na bola, e o condutor passava (2,4 m/s para
+  // o gol com o condutor a 3 m)
+  const ataca = ramo !== 'cobre' && atacaBola(m, j, s);
+  s.ramo = ataca ? 'ataca' : ramo;
   const vc = MD.hypot(B.cvx, B.cvz);
   const gx = meuGol - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1, ux = gx / g, uz = gz / g;
   let px, pz;
-  if (ramo === 'cobre') {
+  if (ataca) { px = b.x; pz = b.z; }
+  else if (ramo === 'cobre') {
     let nx = -uz, nz = ux;
     const sz = c.z > 0 ? -1 : 1;
     if (nz * sz < 0) { nx = -nx; nz = -nz; }
     const d = Math.min(IA_DEFESA.cobertura, CR.cobre[0] + CR.cobre[1] * vc);
     px = c.x + ux * d + nx * IA_DEFESA.coberturaLado; pz = c.z + uz * d + nz * IA_DEFESA.coberturaLado;
   } else {
-    const d = ramo === 'aperta' ? CR.aperto : Math.max(CR.dist[2], Math.min(CR.dist[3], CR.dist[0] + CR.dist[1] * vc));
+    // contém longe do gol; a menos de engaja[1] m dele a distância encolhe até o aperto (engaja[0] m): o bote
+    const dc = Math.max(CR.dist[2], Math.min(CR.dist[3], CR.dist[0] + CR.dist[1] * vc));
+    const e = clamp((CR.engaja[1] - g) / (CR.engaja[1] - CR.engaja[0]), 0, 1);
+    const d = ramo === 'aperta' ? CR.aperto : lerp(dc, CR.aperto, e);
     px = c.x + ux * d; pz = c.z + uz * d;
   }
-  let vx = B.cvx + CR.ganho * (px - j.x), vz = B.cvz + CR.ganho * (pz - j.z);
+  // (a velocidade dele AGORA: a filtrada atrasa ~0,5 s e, na arrancada, o defensor ficava para trás)
+  let vx = c.vx + CR.ganho * (px - j.x), vz = c.vz + CR.ganho * (pz - j.z);
   // do lado do gol e perto: nunca sobe no corredor
   if ((j.x - c.x) * ux + (j.z - c.z) * uz > 0 && MD.hypot(j.x - c.x, j.z - c.z) < CR.recua[0]) {
-    const vg = vx * ux + vz * uz, min = Math.max(0, B.cvx * ux + B.cvz * uz - CR.recua[1]);
+    const vg = vx * ux + vz * uz, min = Math.max(0, c.vx * ux + c.vz * uz - CR.recua[1]);
     if (vg < min) { vx += (min - vg) * ux; vz += (min - vg) * uz; }
   }
   const it = estadoT(j);

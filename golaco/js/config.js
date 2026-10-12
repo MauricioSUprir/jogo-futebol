@@ -417,9 +417,13 @@ export const ACOES = {
   // (entrega "cabeceio na bola rolando", 12/10: o alcance sai da cabeça DESENHADA + o pulo desenhado — cabeceio.js
   // alcanceCabeceio —, alturaPeito[1] 1,7 → 1,55 (a bola na altura do rosto é de cabeça, não de peito) e o erro do
   // cabeceio a gol vale em toda bola (erroGol; antes só na bola parada: com o cabeceio a gol teletransportado para o
-  // chão a conta não importava)
+  // chão a conta não importava). O da bola parada ficou igual ao da bola rolando: com o cabeceio a gol de verdade, o
+  // erroGolBolaParada antigo ([0,3, 0,1] rad) fazia 32% de gols por cabeceio a gol no escanteio (o real: ~13%, Opta PL
+  // 23/24: 203 gols de cabeça em ~1.500 cabeceios a gol) e 12,6% dos escanteios virando gol. erroGol [0,55, 0,25] → [0,5,
+  // 0,22]: com o goleiro lendo o cruzamento (GOLEIRO.leCruzamento) o cabeceio a gol do canhão de cruzamentos ia 29% no
+  // alvo e 6% em gol; [0,45, 0,2] dava 45% e 19% (Opta: ~40% no alvo, 10–13% em gol)
   cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.55], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
-    erroGolBolaParada: [0.3, 0.1], erroGol: [0.55, 0.25] }, // rad (cabeceio 0 → 100)
+    erroGol: [0.5, 0.22] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -468,7 +472,11 @@ export const GOLEIRO = {
   alturaMax: 2.45,            // m alcançados com a mão no alto
   profundidade: [1.2, 2.1],   // m da linha: bola a 6 m → a 20 m ou mais
   profundidadeLonge: 3.5,     // m com a bola a 40 m ou mais
-  saida1x1Max: 4,             // m: contra quem domina a bola, fecha o ângulo sem passar disso
+  // cruzamento do adversário no ar (entrega "cabeceio na bola rolando", 12/10): a bissetriz é a do PONTO onde a bola desce
+  // para a cabeça (a y m, nos próximos ticks, a até dist m da linha), não a da bola no ar — no escanteio o goleiro ficava no
+  // 1º pau (a bissetriz da bandeira) e a cabeçada no 2º entrava em 56% (o real: ~13% dos cabeceios a gol, Opta)
+  leCruzamento: { y: 2.4, ticks: 90, dist: 22 },
+  saida1x1Max: 4,            // m: contra quem domina a bola, fecha o ângulo sem passar disso
   vRecuo: 4.2,                // m/s voltando para o gol (bola por cima: cavadinha)
   recuoDefesa: [0.3, 0.75],   // chance de tirar a bola por cima ao chegar (sem folga → com 0,3 s)
   saidaMax: 35,               // m da linha até onde sai com o botão
@@ -769,12 +777,22 @@ export const AEREO = {
   vai: 1.0, folgaT: 0.1, kDist: 3.0, ladoGolRolando: 0.1, ladoGolDist: 35, iniciativa: 0.5,
   folgaRival: 0.25,           // m — quem pulou para disputar entra na disputa com a cabeça desenhada a até isto a mais da bola
   raspao: { fica: 0.55, desvio: 0.6, sobe: 1.0 }, // ...e, ganhando assim, desvia a bola de raspão (fração da velocidade, rad, m/s)
+  // bola parada (escanteio, falta, lateral): quem defende ataca a bola só na SUA zona — o ponto do cabeceio (sim.js
+  // pontoDeCabeceio) a até zonaBolaParada m de onde ele está; quem ataca corre para a bola. Com todos indo a qualquer
+  // ponto da trajetória a defesa tocava primeiro em 68% dos escanteios (o real: o ataque ganha 52,6% do 1º contato,
+  // Copa América 2021; meta do teste-bolas-paradas 35–62%). (Atrasar a leitura da defesa em 0,3–0,5 s não mudou nada:
+  // 32,5% e 31,7% — ela já está no caminho da bola)
+  zonaBolaParada: 1.0,
+  // ...e na disputa da bola parada quem ataca vem na corrida, no tempo da cobrança: + ataqueBolaParada no logit (com a
+  // defesa só na zona, o ataque ficava com 36,7% do 1º contato; com zona 0,8 m e +0,4: 42,5%; +0,8: 48,3% e 12,1% dos
+  // escanteios em gol; o lado do gol, AEREO.ladoGol, continua valendo)
+  ataqueBolaParada: 0.6,
 };
 
 // Cabeceio na bola rolando (entrega "cabeceio + IA intensa", 12/10; pedido do dono, 11/10: "os jogadores não cabeceiam
 // a bola, de jeito nenhum"; cabeceio.js). O pulo é DESENHADO e a física fica presa ao desenho: o contato só vale com a
 // cabeça desenhada (anim.js pose no tick do contato) a até `folga` m da bola, superfície com superfície. Biomecânica
-// (PESQUISA-ETAPA4.md §11): no pulo de cabeceio com corrida a cabeça passa ~0,56 m da estatura (Fílter 2022); o último
+// (PESQUISA-ETAPA4.md §6): no pulo de cabeceio com corrida a cabeça passa ~0,56 m da estatura (Fílter 2022); o último
 // apoio dura ~0,2–0,25 s; o tronco arqueia na subida e chicoteia para a frente no contato, no alto do pulo (Shewchenko
 // 2005; Bauer 2001).
 export const CABECEIO = {
@@ -1029,8 +1047,14 @@ export const IA_DEFESA = {
   //  - o bloco do lado do gol a até `raio` m do condutor e a até `corredor` m de lado da linha dele acompanha no ritmo de
   //    fBloco × a velocidade dele (sem o teto do trote; CORRER com mais de `correLonge` m de atraso), e a recomposição liga
   //    com `liga` m de atraso (no jogo organizado eram TATICA.recomp.ligaOrganizado);
-  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola).
-  corrida: { v: 5.0, hist: 1.0, dist: [1.5, 0.35, 2, 5], aperto: 1.0, cobre: [4, 0.6], ganho: 3, recua: [8, 1],
+  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola);
+  //  - conter não é para sempre: com o condutor a menos de engaja[1] m do meu gol a distância do 1º homem encolhe até
+  //    `aperto` (engaja[0] m), ao alcance do bote — longe do gol ele atrasa a arrancada, perto ele tira a bola (1 × 1:
+  //    fechar, conter e dar o bote antes da área). Com o contém sem fim, o condutor TROTANDO entrava na área em 53% das
+  //    arrancadas do próprio campo (base 4%)
+  //  - v = 6,3 m/s (a definição de arrancada da contraprova de 11/10: o trote do humano, ~5,6 m/s, fica com a defesa de
+  //    sempre, que já o parava: 4% chegavam à área).
+  corrida: { v: 6.3, hist: 0.8, dist: [1.5, 0.35, 2, 5], aperto: 1.0, engaja: [30, 45], cobre: [4, 0.6], ganho: 3, recua: [8, 1],
     batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8 },
   // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
   // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia

@@ -734,7 +734,7 @@ export function executarCabeceio(m, j, p) {
   // (Etapa 4) espalha como o de verdade (Opta: ~1/3 no alvo)
   // (entrega "cabeceio na bola rolando", 12/10: o cabeceio a gol espalha como o de verdade em toda bola — Opta: ~40% no
   // alvo —, não só na bola parada; os outros cabeceios ficam com a dispersão de antes)
-  const e0 = p.tipo === 'chute' ? (m.voo?.bolaParada ? cfg.erroGolBolaParada : cfg.erroGol) : [0.12, 0.03];
+  const e0 = p.tipo === 'chute' ? cfg.erroGol : [0.12, 0.03];
   const sig = lerp(e0[0], e0[1], attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;

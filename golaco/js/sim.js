@@ -773,7 +773,9 @@ function bolaAltaNoCorpo(m, j) {
   // disputa; sozinho no meio-campo ele espera a bola cair no peito/pé, como antes)
   const vale = y => y > CABECEIO.alturaPedido && (!!j.pedido || adversarioPerto(m, j, CABECEIO.disputaPerto)
     || (intencaoCabeceio(m, j, y)?.tipo ?? 'passe') !== 'passe');
-  const pc = livre ? pontoDeCabeceio(m, j, vale) : null;
+  // (na bola parada quem defende ataca a bola na zona dele: AEREO.zonaBolaParada)
+  const zona = m.voo && m.voo.bolaParada && m.voo.time !== j.time ? AEREO.zonaBolaParada : Infinity;
+  const pc = livre ? pontoDeCabeceio(m, j, vale, zona) : null;
   const q = pc ?? r;
   if (!q || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
     // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
@@ -792,9 +794,9 @@ const _pc = { i: 0, x: 0, y: 0, z: 0, ux: 0, uz: 0 };
  * O 1º ponto da trajetória prevista da bola (conducao.js preverBola: a mesma física) em que j cabeceia a tempo: a bola
  * na altura da cabeça (querCabeca(y), até o alcance do pulo) e ele chega ao ponto do corpo (a bola CABECEIO.chega m à
  * frente) correndo e ainda pula (cabeceio.js preparoPulo) antes dela. Antes de a bola descer abaixo da cabeça. {i, x,
- * y, z, ux, uz} (reaproveitado) ou null.
+ * y, z, ux, uz} (reaproveitado) ou null. raioMax: só pontos a até isto do corpo (a zona do defensor na bola parada).
  */
-function pontoDeCabeceio(m, j, querCabeca) {
+function pontoDeCabeceio(m, j, querCabeca, raioMax = Infinity) {
   const b = m.bola;
   if (b.rolando || MD.hypot(b.p.x - j.x, b.p.z - j.z) > 30) return null;
   const pb = preverBola(b, N_CAB);
@@ -810,6 +812,7 @@ function pontoDeCabeceio(m, j, querCabeca) {
     if (l < 1e-6) continue;
     ux /= l; uz /= l;
     const cx = pb.xs[i] + ux * CABECEIO.chega, cz = pb.zs[i] + uz * CABECEIO.chega;
+    if (raioMax < Infinity && MD.hypot(cx - j.x, cz - j.z) > raioMax) continue;
     const t = tempoCorrida(j, cx, cz) + preparoPulo(subidaPara(y, CABECEIO.chega));
     if (t > i * PASSO) continue;
     // o 1º ponto que ele alcança a tempo; se a bola ainda está no limite do pulo, um pouco depois (até CABECEIO.desce s),
@@ -941,8 +944,12 @@ function ganhaDisputa(m, j, o, bp) {
   const gx = ataca(m, o.time) * -CAMPO.meioX; // gol que o rival defende
   const oNoGol = MD.hypot(gx - o.x, o.z) < MD.hypot(gx - j.x, j.z);
   let x = AEREO.k * (notaAerea(j) - notaAerea(o)) / 100;
-  if (bp) x += oNoGol ? -AEREO.ladoGol : AEREO.ladoGol;
-  else {
+  if (bp) {
+    x += oNoGol ? -AEREO.ladoGol : AEREO.ladoGol;
+    // quem ataca a bola parada vem na corrida, no tempo da cobrança (AEREO.ataqueBolaParada)
+    const tc = m.voo ? m.voo.time : -1;
+    if (j.time === tc) x += AEREO.ataqueBolaParada; else if (o.time === tc) x -= AEREO.ataqueBolaParada;
+  } else {
     const b = m.bola.p;
     // quem foi na bola escolheu o ponto e o tempo do pulo (a iniciativa); quem está mais perto dela chega antes
     x += AEREO.iniciativa + AEREO.kDist * (MD.hypot(b.x - o.x, b.z - o.z) - MD.hypot(b.x - j.x, b.z - j.z));

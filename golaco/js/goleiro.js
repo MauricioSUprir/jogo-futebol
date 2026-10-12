@@ -9,6 +9,7 @@ import { clamp, lerp, difAng } from './mat.js';
 import { uniforme } from './rng.js';
 import { criarBola, passoBola, chutar } from './bola.js';
 import { maoPermitida, registrarToque } from './regras-goleiro.js';
+import { preverBola } from './conducao.js';
 
 const DT = PASSO;
 const MEIO = CAMPO.gol.largura / 2;
@@ -407,12 +408,15 @@ export function movimentoGoleiro(m, j, humano) {
     return { dx: dx / dd, dz: dzz / dd, vel: j.par.vArrancada * 0.95, rumoAlvo: olhar };
   }
   j.saindo = false;
-  // posição: bissetriz, mais adiantado com a bola longe
-  const dBola = MD.hypot(b.p.x - gx, b.p.z);
+  // posição: bissetriz, mais adiantado com a bola longe (cruzamento do adversário no ar: a do ponto onde ela desce para a
+  // cabeça — GOLEIRO.leCruzamento)
+  const pc = pontoDoCruzamento(m, j, gx);
+  const bx = pc ? pc.x : b.p.x, bz = pc ? pc.z : b.p.z;
+  const dBola = MD.hypot(bx - gx, bz);
   const P = GOLEIRO.profundidade;
   const dLinha = dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
     : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
-  const p = pontoBissetriz(b.p.x, b.p.z, gx, dLinha);
+  const p = pontoBissetriz(bx, bz, gx, dLinha);
   // tiro livre com barreira (Etapa 4): ela tapa o lado do 1º pau; o goleiro fica para o lado do 2º
   const pr = m.parada;
   const pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
@@ -420,6 +424,24 @@ export function movimentoGoleiro(m, j, humano) {
   const dd = MD.hypot(dx, dz);
   const vel = Math.min(4.5, dd * 3);
   return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel, rumoAlvo: olhar };
+}
+
+const _pc = { x: 0, z: 0 };
+/**
+ * Cruzamento (ou lançamento) do adversário no ar: o ponto em que a bola desce para a altura da cabeça
+ * (GOLEIRO.leCruzamento.y) perto do meu gol, pela física do jogo (conducao.js preverBola) — {x, z} reaproveitado, ou null.
+ */
+function pontoDoCruzamento(m, j, gx) {
+  const v = m.voo, b = m.bola, L = GOLEIRO.leCruzamento;
+  if (!v || v.time === j.time || (v.tipo !== 'cruzamento' && v.tipo !== 'lancamento') || m.posse != null || m.naMao != null || b.p.y <= 1) return null;
+  const { xs, zs, ys } = preverBola(b, L.ticks);
+  for (let i = 1; i <= L.ticks; i++) {
+    if (ys[i] > L.y || ys[i] >= ys[i - 1]) continue;
+    if (Math.abs(xs[i] - gx) > L.dist || Math.abs(zs[i]) > L.dist) return null;
+    _pc.x = xs[i]; _pc.z = zs[i];
+    return _pc;
+  }
+  return null;
 }
 
 /**
