@@ -28,6 +28,7 @@
 
 import { processarAnalogico, teclasParaAnalogico, paraMundo } from './controle.js';
 import { BOTAO, ENTRADA } from './config.js';
+import { aoTocar } from './toque-botao.js';
 
 // v2 (tela limpa, 11/10): o padrão mudou (80%, 55%) e vale para todo mundo — a v1 salva é ignorada
 const CHAVE_AJUSTES = 'golaco.toque.v2', CHAVE_AJUSTES_V1 = 'golaco.toque.v1';
@@ -494,7 +495,8 @@ export function criarEntrada(opc = {}) {
   }
   for (const b of bts) ligarBotao(b);
   const btMenu = document.getElementById('btn-menu');
-  if (btMenu) btMenu.addEventListener('click', () => emitir('pausa'));
+  // ≡ pelo toque (aoTocar: age no pointerup do mesmo dedo — com o polegar no analógico o navegador não gera o click)
+  aoTocar(btMenu, () => emitir('pausa'));
   window.addEventListener('touchstart', () => { if (!usandoToque) { usandoToque = true; mostrarToque(true); } }, { passive: true });
 
   function lerToque(agora) {

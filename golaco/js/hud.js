@@ -8,6 +8,8 @@
 // (.com-tempo), a barra de força não escreve o tipo (o CSS esconde o rótulo), a dica de teclas do PC some em 8 s
 // e o minimapa é opção da pausa (escondido = não redesenha).
 
+import { aoTocar, engolirClique } from './toque-botao.js';
+
 // prio: um aviso não apaga outro de prioridade MAIOR que ainda está na tela (a substituição e o
 // resultado da edição do time saem no mesmo passo do recomeço e não podem sumir debaixo dele)
 // Sem narração na tela (dono, 10/10: "não quero narração em cima"): os lances (passe, chute,
@@ -80,21 +82,22 @@ export function criarHud(opc) {
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução' };
   times.forEach((t, i) => { if (el.siglas[i]) el.siglas[i].textContent = t.sigla; });
 
-  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo)
+  // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo). Pelo toque age no pointerup do mesmo
+  // dedo (aoTocar): com outro dedo na tela (o polegar no analógico, um dedo parado na janela) o click não vem
   document.querySelectorAll('[data-cmd]').forEach(b => {
-    b.addEventListener('click', () => cmd(b.dataset.cmd, b.dataset.valor));
+    aoTocar(b, () => cmd(b.dataset.cmd, b.dataset.valor));
   });
   // grupos segmentados
   document.querySelectorAll('.segmentado').forEach(g => {
-    g.addEventListener('click', e => {
+    aoTocar(g, e => {
       const b = e.target.closest('button[data-valor]');
       if (b) cmd(g.dataset.grupo, b.dataset.valor);
     });
   });
-  // fundo escuro fecha a janela
+  // fundo escuro fecha a janela (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa)
   for (const s of [el.menu, el.ajuda]) {
     s?.addEventListener('pointerdown', e => {
-      if (e.target === s) cmd(s === el.menu ? 'continuar' : 'fechar-ajuda');
+      if (e.target === s) { engolirClique(); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
     });
   }
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
@@ -109,9 +112,10 @@ export function criarHud(opc) {
   el.opa?.addEventListener('input', () => { cmd('toqueOpacidade', +el.opa.value / 100); });
   el.somVol?.addEventListener('input', () => { cmd('volume', +el.somVol.value / 100); });
   // replay: a camada cobre a tela inteira — qualquer toque ou clique pula (o "Pular" do toque é só o alvo visível)
-  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('replay-pular'); });
+  // (o click do mesmo toque é engolido: no canto de cima à direita ele caía no ≡ e abria a pausa)
+  el.replay?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(); cmd('replay-pular'); });
   // comemoração do gol: a mesma camada (qualquer toque ou clique pula, depois de 0,5 s — quem decide é o main.js)
-  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); cmd('comemoracao-pular'); });
+  el.comemoracao?.addEventListener('pointerdown', e => { e.preventDefault(); engolirClique(); cmd('comemoracao-pular'); });
 
   function marcarGrupo(grupo, valor) {
     document.querySelectorAll(`.segmentado[data-grupo="${grupo}"] button`).forEach(b => {
