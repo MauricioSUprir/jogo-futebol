@@ -374,6 +374,11 @@ export function criarJogadores3D(cena, qualidade) {
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
     /**
+     * Garante lugar para n jogadores desenhados já (sem remontar no meio de uma cena: a cena de substituição desenha os
+     * 22 + quem entra + o quarto árbitro; remontar ali subia um buffer novo para a GPU no meio dela).
+     */
+    reservar(n) { if (n > cap) montar(n); },
+    /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
      * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
      * camera: para o tamanho constante da seta acima da cabeça.

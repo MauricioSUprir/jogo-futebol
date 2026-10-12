@@ -180,6 +180,14 @@ export function emocaoEvento(est, ev, ctx) {
   }
   if (tipo === 'redeImpacto') {
     disparar(est, 'rede', -1, clamp(ev.vel / 25, 0.15, 1));
+    return;
+  }
+  // substituição: na CENA (js/substituicao.js), quem sai cruzou a linha e aplaude — a torcida do time dele aplaude de volta
+  // (o evento da simulação, no tick da troca, não traz `cruzou`: as palmas saem no relógio da cena, não antes)
+  if (tipo === 'substituicao' && ev.cruzou) {
+    const k = ev.time === 1 ? 1 : 0;
+    est.torcida[k].palmas = Math.max(est.torcida[k].palmas, 0.7);
+    disparar(est, 'palmas', k, 0.6);
   }
 }
 
