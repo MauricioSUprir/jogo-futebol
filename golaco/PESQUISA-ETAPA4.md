@@ -75,3 +75,39 @@ impedimentos de verdade, junto com o corredor que passa da linha enquanto o pass
 | Vermelhos por partida | ≤ 0,2 | 0,25 (DOGSO na carga de quem volta) | 0,08 (quem volta evita a carga na chance clara: × 0,2) |
 | Vantagem (fração das faltas) | — | 90% | ~6% (só a vantagem clara) |
 | Pênalti: gol / defesa / fora (canhão) | ~76 / 18 / 6% | 58 / 42 / 0,3% (o goleiro esperava a bola) | 77 / 18 / 5% (600 cobranças) |
+
+## 4. Bolas paradas: lateral, tiro de meta, escanteio e barreira (IFAB Regras 13, 15 e 16)
+
+| Fonte | O que diz | Onde entrou |
+|---|---|---|
+| IFAB, Leis do Jogo 2025/26, Regra 15 (texto da The FA) | De frente para o campo, parte de cada pé na linha lateral ou fora dela, as duas mãos levando a bola de trás e por cima da cabeça; adversários a ≥ 2 m | `lateral.js` e `partida.js montarLateral`: o cobrador com o pé da frente sobre a linha, de frente para o campo, a bola nas duas mãos atrás da cabeça (a bola do estado nas mãos; `anim.js` põe as palmas dos dois lados dela) e o arco por cima da cabeça até a soltura |
+| Linthorne & Everett 2006 (Sports Biomechanics), que citam Messier & Brody, Kollath & Schwirtz, Bray & Kerwin | Arremesso de 12–19 m/s entre homens, solto a ~2,3 m; ângulo ótimo ~30° (mais rápido em ângulos baixos) | `LATERAL.vMax` [12, 19] pela força e pelo passe longo; `elevLongo` 0,52 rad (30°); o esqueleto daqui é mais baixo, a soltura fica a ~1,9 m |
+| Pedido do dono, seção 8 | "Lateral: bola nas duas mãos acima da cabeça, três opções de passe e marcadores nelas" | `opcoesLateral` (3 melhores por risco da linha, distância e avanço), `opcaoMirada` (o analógico escolhe), `render/marcas-lateral.js` (anéis no gramado, a escolhida amarela e pulsando) |
+| IFAB, Regra 16 (desde 2019/20) | A bola em qualquer ponto da pequena área, em jogo quando chutada e se move claramente; adversários fora da área até lá; companheiros podem receber dentro | `montarTiroDeMeta`: a bola no chão na pequena área, o goleiro cobra com o pé como qualquer bola parada (antes: a bola nas mãos dele e a reposição) |
+| Pedido do dono, seção 8 | "Saída curta com os zagueiros abertos" | `TIRO_DE_META.aberto` (zagueiros nos cantos da área), volante na meia-lua, laterais altos; a IA sorteia curto (55%) e o goleiro espera os zagueiros abrirem (até 5 s) |
+| Kubayi & Larkin 2020 (600 escanteios da Copa de 2018) | Defesa por zona sofreu 6,0% de gols; a mista, 3,7%; os gols saem mais do meio e do 1º pau | Defesa mista: zona na pequena área + individual nos melhores no alto (`ESCANTEIO.zonasDefesa`, `papeisEscanteio`) |
+| Premier League, "Which clubs are best at defending corners and why" | A maioria mistura; 4 na zona da pequena área (2 no 1º pau, 1 no meio, 1 no 2º pau) | As zonas da defesa (meio, 1º pau, frente do 1º pau e, com gente sobrando, o 2º pau) |
+| Copa de 2022 (570 escanteios) e estudo de 1.139 escanteios (Copa 2010, Euro 2012, Champions 2010/11) | 2,2–2,6% dos escanteios viram gol; com 3–4 atacantes atacando a área, mais chutes | Ataque com 5 nas zonas (centro, 1º pau, 2º pau, marca do pênalti, entrada da área), 2 atrás, o resto na 2ª bola |
+| Copa América 2021 (175 escanteios); FIFA Training Centre (Copas femininas 2019/2023); Premier League (500 escanteios longos) | O ataque fez o 1º contato em 52,6%; na Premier League a defesa ganha mais | `AEREO`: disputa pelo alto (nota no alto: cabeceio, impulsão, altura; vantagem para quem está do lado do gol); o canhão dá 44% de 1º contato do ataque |
+| Opta (The Analyst): cabeceios | ~1/3 dos cabeceios a gol vão no alvo | Testado nesta parte (`erroGolPartida`, o cabeceio a gol espalhando como o real) e tirado: valia para todo cabeceio da partida e derrubou os gols de bola rolando (painel de 144: 1,78 → 1,67 e o goleiro saiu da meta, 72,7%). Fica para a entrega do cabeceio, junto com a elevação mirada (hoje a cabeçada sai sempre para baixo e bate nas pernas) |
+| IFAB, Regra 13 | Barreira a 9,15 m; com 3 ou mais na barreira, os atacantes a ≥ 1 m dela | `bolas-paradas.js barreiraDoTiroLivre`, `partida.js montarBarreira` e `foraDaBarreira` |
+| Plus Magazine (Universidade de Cambridge), "The wall" | A largura que tapa 2/3 do gol a partir do 1º pau ÷ ~0,45 m por defensor; no meio a 22 m dá ~4,5 (eles usam 4); perto e no meio, 5–6 | `BARREIRA`: 5 no meio a 18 m, 4 a 21–26 m, 3 a ~30 m, ≤ 2 de lado, nenhuma a 33 m ou mais |
+| Opta (The Analyst), "Free-kick specialists: celebrating an endangered species" | 2,4–4,4% dos chutes de falta viram gol nas grandes ligas; mediana de 27,6 m; ~20% das faltas no terço final são chutadas | O chute de falta por cima da barreira (efeito por cima, `ACOES.chute.faltaErro`): canhão de faltas perigosas (18–31 m) com ~5% de gol, ~29% no alvo e ~20% na barreira |
+
+**Calibração** (canhões com estados do meio do jogo, IA × IA; sementes e lances diferentes em cada cena):
+
+| Medida | Meta | Antes (publicada) | Depois |
+|---|---|---|---|
+| Escanteio: 1º contato do ataque | 35–62% (real 40–53%) | 88% (ninguém disputava: o recebedor sempre cabeceava) | 49% |
+| Escanteio: gol (≤ 8 s) | o mais perto de 2,6% | 22% (24 partidas) | 11,4% (canhão de 123) |
+| Tiro livre perigoso: gol / no alvo / barreira | 2–12% / 18–36% / 15–40% | sem barreira | 6,3% / 32,9% / 17,5% (143 chutes; 3 lotes antes: 4,9% / 28,7% / 19–22%) |
+| Lateral: o time fica com a bola | ≥ 55% | (com o pé) | 71–80% |
+
+**Defeitos achados no caminho e corrigidos:**
+- A barreira de quem ataca para −x ficava atrás da bola: a média de dois ângulos perto de +π e −π dava ~0. Agora os ângulos são medidos a partir da direção do gol.
+- O atacante que perdia a disputa cabeceava a bola recém-afastada, colada nele (`AEREO.perdeuSalto`).
+- O chute de falta sem efeito (o do humano sem MOD) saía por cima. Agora a falta tem efeito por cima: a bola desce.
+
+**Painel de 144 partidas (mesmas sementes, contra a publicada):** gols 2,13 → 1,68 por partida; o goleiro 66,1% → 72,5% (6–16,5 m: 58,7% → 64,6%). Os gols que sumiram são os de escanteio (as cabeçadas sem disputa, de perto) e os de saída de bola roubada perto da área: a mistura de chutes mudou (chutes a menos de 6 m: 0,89 → 0,42 por partida; gols de bola parada 0,61 → 0,42 e de saída roubada 0,75 → 0,50), não o goleiro. O dono decidiu publicar (11/10); a entrega do cabeceio + IA intensa tem de trazer os gols de volta. Testado e descartado nesta parte: o cabeceio a gol espalhando em todo lance (1,67 gols) e a disputa pelo alto desligada também na bola parada (1,90 gols, mas com o escanteio sem disputa — o defeito da publicada).
+
+**Pendente (próxima parte, o goleiro):** o goleiro ainda não sai no cruzamento. É o que falta para o gol por escanteio chegar perto dos 2,6% reais. Por partida, o escanteio já dá ~0,25 gol (2,6 escanteios × ~10%), o mesmo que no jogo real (~10 × 2,6%).

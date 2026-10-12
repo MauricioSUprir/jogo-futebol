@@ -21,8 +21,25 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   delegou as decisões ("vc escolhe tudo", 10/10): câmera de TV do celular mais baixa e mais longe, com a torcida
   durante o jogo (#459, ENTREGUE), e em seguida a **Etapa 4** em PRs menores (seção "Etapa 4" abaixo): (1) painel de
   equilíbrio + impedimento + acréscimos (#460, ENTREGUE); (2) faltas com vantagem, cartões e expulsão, tiro livre
-  direto e pênalti (`golaco/faltas`); (3) goleiro, barreira e bolas paradas (lateral com as mãos e 3 opções, escanteio por zonas, recuo, 8 s);
-  (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais), prorrogação e pênaltis, pendências da IA acima.
+  direto e pênalti (#461, ENTREGUE); (3a) bolas paradas: lateral com as mãos e 3 opções, escanteio por zonas com defesa
+  mista, barreira, tiro de meta com o pé e saída curta (`golaco/bolas-paradas`, ENTREGUE); (3b) goleiro: reposição com a
+  mão e com o pé, recuo (Regra 12.2), 8 s, saída no 1×1 e saída no cruzamento (traz os gols de escanteio para perto dos
+  2,6% reais); (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais; a disputa pelo alto na bola rolando
+  junto com o volume de chutes), prorrogação e pênaltis, pendências da IA acima.
+  **Pedidos do dono de 11/10 (depois da 4.3)** — FILA ATUAL, nesta ordem (cada item = PR + merge + link + prints):
+  (A) regras e controles: botão PRESSÃO "não funciona"; "não consigo mexer com o goleiro"; goleiro só pega com a mão
+  DENTRO da área; "não pode recuo" (Regra 12.2); tiro de meta só com gente do time que cobra na área; "os jogadores não
+  cabeceiam a bola, de jeito nenhum" (cabeceio na bola rolando); (B) "O JOGO TEM QUE SER MAIS INTENSO, ninguém do outro
+  time corre, ninguém marca, mas tem que marcar com responsabilidade e consciência, a IA tem que ser mais inteligente";
+  (C) "quero menos informação na tela / tem muita coisa na tela"; (D) mais torcida no estádio, bandeirões,
+  sinalizadores e som de torcida durante o jogo; (E) cenas de pré-jogo: fora do estádio, o estádio aparecendo,
+  jogadores entrando em campo, a fila, a câmera passando; no fim vários cortes de torcida e estádio; depois a escalação
+  de cada time num campinho, grande na tela, com o mesmo fundo, ~10 s, sai e entra a do outro time do mesmo jeito.
+  A parte 3b do goleiro (reposição, recuo, 8 s, 1×1, saída no cruzamento) entra em (A).
+  Mais do dono (11/10): "se eu deixo o meu jogador parado, ninguém pega a bola, isso NÃO PODE ACONTECER" (entra em
+  (A), urgente); "não quero a linha de impedimento durante o jogo; quando o jogo parar por impedimento, no replay mostra a
+  linha" (entra em (C)); (F) gol e replay: "as redes têm que ser brancas, com movimentação quando a bola toca, em véu de
+  noiva"; "o replay não funciona"; "não tem cena de comemoração!!!".
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
@@ -199,6 +216,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   (hash-igual IGUAL). Testes: `teste-rede`, `teste-torcida` (padrão), `teste-estadio` (navegador, CI; gol roteirizado
   por `tools/lib/gol-roteirizado.mjs`, sem depender de semente; item 10 = torcida durante o jogo no celular);
   `teste-controles`/`teste-editor-tela` conferem a tela de girar.
+- **Estádio cheio e som da torcida no jogo** (pedido de 11/10; `PESQUISA-ESTADIO.md` §6, contrato em `CONTRATOS.md`):
+  som nivelado por LUFS (`render/mixagem.js`, alvo −16) com limitador no fim (pico ≤ −1 dBFS), agenda de cantos/batucada/
+  vaia/incentivo/festa em `render/festa.js` (pura, relógio do estádio), cantos decodificados sob demanda (≤ 2 na memória),
+  iPhone com `audioSession.type = 'playback'` e volta depois de interrupção (gestos rearmados enquanto não 'running');
+  torcida 14/20/25,6 mil (fileiras da frente ~97% na Média), arquibancada do LADO DE CÁ com o túnel (`config.js
+  ESTADIO`) e os bancos — fora do desenho com a câmera de TV dentro dela (`cameraNoLadoDeCa`) —, faixas FICTÍCIAS,
+  bandeiras de mastro e bandeirões no vertex shader (GPU = JS), sinalizadores só em momento marcado (saída de cada tempo,
+  gol, vitória) com luz falsa por uniform (nunca `PointLight`) e fumaça no shader (Baixa sem fumaça), ola com a torcida
+  calma; debaixo do bandeirão aberto ninguém fura o pano (bandeiras abaixam, torcedores seguram sem pular:
+  `sobBandeirao`); vaia pela posse longa do visitante (~2 por partida). Custo: +1 chamada (faixas/bandeiras) e +1 só com
+  sinalizadores acesos; pré-carga no 1º quadro desenhado (nada engasga no 1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
+  Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
@@ -218,8 +247,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   como buraco, sem substituto; o técnico muda a vaga vazia, nunca o gol; goleiro expulso → o de linha mais perto vai
   para o gol). Calibrado: 2,6 faltas, 18% de amarelos, 0,08 vermelho por partida. Ícone do cartão sem texto
   (`#cartao-icone`). Teste: `teste-faltas` (padrão). `__golaco.faltaDeTeste()` para prints/testes de navegador.
+  **Bolas paradas** (PR 3a; `lateral.js`, `bolas-paradas.js`, contrato "Bolas paradas" no CONTRATOS.md): lateral com a
+  bola NAS duas mãos (o sim.js segura a bola, o arco por cima da cabeça, só PASSE/ENFIADA/LANÇAMENTO), 3 opções
+  marcadas no gramado (`render/marcas-lateral.js`, a do analógico em amarelo; a IA sorteia, perto da área arremessa
+  longo); escanteio com 5 nas zonas (centro, 1º pau, 2º pau, marca do pênalti, entrada da área) e defesa mista (zona na
+  pequena área + 4 marcados no alto + borda + frente); barreira pela conta do ângulo (Regra 13, 9,15 m, 1–5, pula no
+  chute, a bola bate nela) e a IA bate por cima dela; tiro de meta com a bola no chão e o goleiro com o pé, zagueiros
+  abertos e saída curta (Regra 16); disputa pelo alto SÓ na bola parada (na bola rolando derrubou os gols de 2,8 para
+  1,5 — fica para a 4.5). Canhões com estados do MEIO da partida (estados de saída são quase iguais e enganam).
+  Teste: `teste-bolas-paradas` (padrão); `teste-estadio` confere os marcadores. `__golaco.bolaParadaDeTeste(tipo)`.
+  Decisão do dono (11/10): publicar mesmo com os gols caindo 2,13 → 1,68 por partida e o goleiro 72,5%/64,6% (meta
+  66–72/55–60) — o que saiu foram as cabeçadas fáceis de escanteio (22% dos escanteios viravam gol; real 2,6%), a
+  mistura de chutes mudou. A entrega do cabeceio + IA intensa TEM de trazer os gols de volta (hoje 0 gol de cabeça:
+  a cabeçada sai sempre para baixo). O tiro de meta tira os adversários da área na montagem (Regra 16).
 - **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";
-  `PESQUISA-ESTADIO.md` §6, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
+  `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
   false; fica a do lance no apito — o replay mostra); na partida placar compacto de TV ("1º T" só no intervalo/fim/
   acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
   (80%, 55%; chave `golaco.toque.v2`) **só com o ícone**, analógico quase invisível em repouso (com o dedo, igual:
