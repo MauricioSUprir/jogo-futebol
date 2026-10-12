@@ -752,6 +752,7 @@ function goleiroComBola(m, g) {
     soltarDaMao(m, g);
     const b = m.bola;
     b.p.x = g.x + MD.cos(g.rumo) * 0.45; b.p.z = g.z + MD.sin(g.rumo) * 0.45;
+    if (m.partida) bolaAquemDaLinha(m, g, b);
     executarAcao(m, g, g.par.attr.pePreferido, false);
     g.miraAuto = null;
     // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola: o controle vai para o
@@ -774,6 +775,7 @@ function soltarNoChao(m, g) {
   soltarDaMao(m, g);
   const b = m.bola;
   b.p.x = g.x + MD.cos(g.rumo) * CONDUCAO.ofsFrente.curta; b.p.z = g.z + MD.sin(g.rumo) * CONDUCAO.ofsFrente.curta;
+  bolaAquemDaLinha(m, g, b);
   b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
   m.posse = g.id;
   g.pedido = null; g.carga = null; g.miraAuto = null;
@@ -781,6 +783,16 @@ function soltarNoChao(m, g) {
   if (c) { c.toque = null; c.ref = null; c.busca = false; c.longeDesde = -1; }
   estadoMao(m).soltou = g.id;
   m.eventos.push({ tipo: 'soltou', id: g.id });
+}
+
+/**
+ * Partida: a bola que sai das mãos do goleiro (reposição, ENFIADA) nunca fica além da linha do próprio gol — no máximo a
+ * GOLEIRO.soltaLinha m dela, do lado do campo. Com o humano andando com a bola nas mãos ele pode ficar de frente para o
+ * gol: colado na linha (encaixe em cima dela), a bola caía dentro do gol (gol contra na hora — contraprova).
+ */
+function bolaAquemDaLinha(m, g, b) {
+  const gx = linhaDoGol(m, g), s = gx > 0 ? 1 : -1;
+  if ((gx - b.p.x) * s < GOLEIRO.soltaLinha) b.p.x = gx - s * GOLEIRO.soltaLinha;
 }
 
 /** Defesa automática do goleiro em andamento (chute lido, mergulho/salto/defesa em pé desenhados). */
@@ -810,7 +822,17 @@ function andarComBolaNaMao(m, j) {
   const A = GOLEIRO.maoAnda;
   const mv = movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null);
   mv.vel = Math.min(mv.vel, (j.botoes & BOTAO.CORRER) ? A.vCorrer : A.v);
-  return paredeAreaMao(m, j, mv);
+  const out = paredeAreaMao(m, j, mv);
+  // colado na linha do gol (encaixe em cima dela) ele não vira para o gol com a bola nas mãos: a bola, GOLEIRO.bolaMao.frente
+  // m à frente do corpo, passaria a linha — gol contra só por virar (contraprova). O rumo pedido fica no arco em que a
+  // mão fica a ≥ GOLEIRO.soltaLinha m aquém da linha
+  const gx = linhaDoGol(m, j), s = gx > 0 ? 1 : -1, u = (gx - j.x) * s;
+  const k = (u - GOLEIRO.soltaLinha) / GOLEIRO.bolaMao.frente; // máximo de cos(rumo)·s (a componente para o gol)
+  if (k < 1 && MD.cos(out.rumoAlvo) * s > k) {
+    const kk = Math.max(-1, k), sz = MD.sin(out.rumoAlvo) >= 0 ? 1 : -1;
+    return { ...out, rumoAlvo: MD.atan2(sz * Math.sqrt(1 - kk * kk), s * kk) };
+  }
+  return out;
 }
 
 /**

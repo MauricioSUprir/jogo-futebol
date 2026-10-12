@@ -8,6 +8,8 @@
 //  G3 bola na mão + analógico com CORRER: o goleiro anda (≥ 3 m), nunca sai da área, ninguém repõe por ele antes de 7,9 s;
 //     o anel dos últimos 5 s aparece (só a partir de 3 s, esvaziando);
 //  G4 mais de 8 s com a bola nas mãos → escanteio do adversário, do lado do campo mais perto do goleiro (100%);
+//  G3c (contraprova) colado na linha do gol (encaixe em cima dela), virar para o gol e repor/soltar: nenhum gol contra
+//     (a bola nas mãos não passa a linha só porque ele virou);
 //  G5 PEGAR com a bola do recuo no pé (na área) → tiro livre INDIRETO do adversário, na linha da pequena área se ela
 //     estava dentro dela (100%); PEGAR sem recuo (bola que veio do adversário) → a bola vai para a mão (100%);
 //  G5b ENFIADA com a bola nas mãos solta a bola no chão; PEGAR antes de outro tocar → tiro livre indireto (100%);
@@ -145,6 +147,30 @@ function recuar(m, g, d) {
   reg('G3 ninguém repõe pelo humano antes de 7,9 s', `mín ${minS.toFixed(2)} s`, '≥ 7,9 s', minS >= 7.9);
   reg('G3 anel dos últimos 5 s (aparece aos 3 s, esvazia)', `${anelOk.filter(Boolean).length}/${n}`, `${n}/${n}`, anelOk.every(Boolean));
   reg('G4 mais de 8 s com a bola nas mãos → escanteio do adversário do lado do goleiro', `${cantoOk}/${n}`, `${n}/${n}`, cantoOk === n);
+}
+// ---------------------------------------------------------------- G3c: colado na linha do gol, virar e repor (contraprova)
+// O goleiro do humano com a bola nas mãos a 0,1–0,2 m da linha do gol (encaixe em cima dela), virado para o campo: o
+// analógico para dentro do gol por 0,5 s (ele vira), depois ENFIADA, PASSE ou LANÇAMENTO. Nenhum gol contra (antes da
+// correção a bola nas mãos passava a linha só por ele virar: 18/18 gols contra).
+{
+  let n = 0, gc = 0;
+  for (const sem of [81, 82]) for (const u0 of [0.1, 0.2]) for (const bot of ['ENFIADA', 'PASSE', 'LANCAMENTO']) for (const z0 of [-2, 1.5]) {
+    const m = partidaEmJogo(sem); limpar(m);
+    const lado0 = m.ataca[0], gx = -lado0 * MX, g = gkDe(m, 0);
+    P.teleportar(g, gx + lado0 * u0, z0, lado0 > 0 ? 0 : Math.PI);
+    afastarAdversarios(m);
+    limpar(m);
+    m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick - 60, off: { x: 0, y: 0, z: 0 } };
+    A.assumirControle(m, 0, g);
+    n++;
+    for (let i = 0; i < 180; i++) {
+      const e = i < 30 ? { x: -lado0, z: 0, botoes: 0 } : { x: 0, z: 0, botoes: i < 40 ? (BOTAO[bot] ?? 0) : 0 };
+      const ev = P.passoPartida(m, e);
+      if (ev.some(x => x.tipo === 'gol')) { gc++; break; }
+      if (m.parada) break;
+    }
+  }
+  reg('G3c colado na linha do gol, virar para o gol e repor/soltar: gol contra', `${gc}/${n}`, '0', gc === 0);
 }
 // ---------------------------------------------------------------- G5: PEGAR (recuo = tiro livre indireto; sem recuo = mão)
 {
