@@ -45,6 +45,32 @@ subpasso é varrido contra os cilindros e os planos, e o lado de cada plano vem 
 subpasso — a bola parada ou lenta do lado de fora (atrás do gol, por fora da rede, além da placa)
 fica onde está, e nada atravessa em velocidade nenhuma.
 
+### Rede véu de noiva (`js/rede-forma.js`; pedido do dono, 11/10)
+A rede do gol é o VÉU DE NOIVA (Maracanã): sem caixa nem teto. Medidas em `config.js` `CAMPO.gol.veu = {haste: 0.45,
+fundo: 2.8, segmentos: 40}` (`CAMPO.gol.profundidade` = o fundo, 2,8 m: a maior profundidade). Perfil no plano X × y
+(X = metros atrás da linha do gol, y = altura): faixa de cima y = 2,44 de X = 0 a `haste` (as hastes dos cantos) e o véu
+y = 2,44·((fundo − X)/(fundo − haste))² até o chão em X = `fundo` (parábola tangente ao chão); as laterais são panos
+verticais do poste até o véu (X ≤ `profundidadeVeu(y)`). A MESMA forma vale na física, na regra do gol e no desenho.
+- **`rede-forma.js` (puro: só + − × ÷ e `Math.sqrt`, igual em todo motor JS)**: `VEU`, `profundidadeVeu(y)`, `alturaVeu(X)`,
+  `dentroDoVeu(X, y, z)` (por baixo do véu e entre as laterais), `COMPRIMENTO_PERFIL`, `PERFIL {X, y, s}`,
+  `pertoPerfil(X, y, out)` → `{X, y, nx, ny, d, s}` (ponto da polilinha mais perto, normal para FORA, distância com sinal:
+  + = do lado de fora), `pontoPerfil(s, out)`, `fundoDaCunha(r)` (até onde vai o centro da bola parada no chão: 2,06 m).
+- **Física (`bola.js colidirGol`)**: as laterais seguram por dentro e por fora até o véu; o véu é a polilinha (o lado vem do
+  INÍCIO do subpasso, como os planos finos; o filtro de altura vale pelo começo OU pelo fim do subpasso — a bola de dentro
+  subindo a ≥ ~27 m/s não pula a faixa de cima). Por dentro devolve `amortecimentoRede` da velocidade normal e segura o que
+  escorrega (×0,45 na batida forte, |vn| > 3; ×0,85 na média; ×0,995 encostada): a bola escorrega pelo véu até a cunha do
+  fundo e "morre" lá. Por fora (×0,3/×0,6) ela não entra (o pé do véu é quase deitado: rolando rápido de trás ela sobe
+  um pouco por fora — a 20 m/s até ~1,6 m — e volta, sem passar por cima); a bola por cima do travessão escorrega por
+  trás até o chão. Evento `rede` (força = |vn|) só por dentro com |vn| > 1,5 m/s.
+- **Gol (`sim.js verificarGol`) e treino (`treino.js` dentroDoGol)**: a bola atrás do véu (X > `profundidadeVeu(y)`) não é
+  gol; o gol continua sendo a bola passar inteira da linha entre as traves e por baixo do travessão.
+- **Hash**: muda a física atrás da linha. O treino de CONDUÇÃO fica bit a bit igual enquanto a bola não entra no gol
+  (`hash-igual`, 20 sementes × 3 min: `conducao-demo` IGUAL; `conducao-roteiro` igual em 19 de 20 — na semente 14 o
+  jogador leva a bola para dentro do gol no passo 3271 e a física do véu diverge no 3363); o de ATAQUE diverge no passo
+  seguinte ao 1º chute (ou lançamento) cuja trajetória prevista passa da linha do gol (o goleiro e a IA simulam a bola com
+  `passoBola` até depois da linha) — sementes 1–4: passos 510–997 (demo) e 832–1929 (roteiro). A partida diverge no 1º
+  lance assim. Base nova do `hash-igual` depois do merge: `--ref <commit do merge>`.
+
 ## Jogador (`js/jogador.js`)
 Campos: `x, z, vx, vz, rumo, giro, ax, az, fase, ritmo, pes[2]{apoio, x, z, rumo, faseApoio,
 faseSaida, fasePouso, lx, lz, lrumo, puxa, gx, gz, tx, ty, tz, bx, bz, k, chegou, pendente},
@@ -173,20 +199,29 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
 
 ## Estádio — rede que balança, efeito de gol, torcida e som (contrato)
 Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo** (o hash não muda: `hash-igual` e
-`hash-partida` IGUAIS). Constantes nos próprios módulos (não em `config.js`).
+`hash-partida` IGUAIS). Constantes nos próprios módulos (não em `config.js`). A FORMA da rede (véu de noiva) é lógica
+(`js/rede-forma.js`, ver "Rede véu de noiva" em Bola): o desenho só a lê.
 - **Puros (sem three.js nem DOM; testados em Node):** `js/render/rede-onda.js`, `js/render/emocao.js`,
   `js/render/torcida-dados.js`. Aleatoriedade só por gerador próprio com semente fixa (`geradorTorcida`), nunca `m.rng`.
-- **`rede-onda.js`**: `REDE` (constantes), 8 panos (índice `(lado > 0 ? 4 : 0) + k`, k: 0 fundo, 1 teto, 2 lateral z−,
-  3 lateral z+; normal para FORA do gol: `normalPano(i)`), `fixo(i, x, y, z)` (0 na armação, 1 no meio — a malha grava
-  num atributo), `mola(τ)`, `perfil(r, τ)`, `amplitude(v)`, `criarOndas()` → `{imp[4], total}`, `limparOndas`,
-  `centroBolsa`, `registrarImpacto(est, {plano, x, y, z, vel, sinal}, t0)`, `deslocamento(est, plano, x, y, z, t)` (m ao
-  longo da normal, + = para fora; sem a fixação), `redeAtiva(est, t)`, `detectarImpactos(p0, v0, p1, v1, out)` → n (bola
-  antes/depois do passo), `empurraoBola(est, p, t, out)` (o deslocamento da bola DESENHADA no bojo), `uniformsRede(est, t,
-  a, b)` e `REDE_GLSL` (a mesma conta em GLSL, gerada das mesmas constantes: `redeDesloc`, `redeFixo`, `redeNormal`).
-  `detectarImpactos` só conta batida POR DENTRO no fundo e nas laterais com o centro da bola abaixo da barra (a bola em
-  cima do teto não estufa a rede). `empurraoBola` termina com a RESTRIÇÃO: na posição final, a superfície da bola
-  desenhada não passa de nenhum pano deformado em que a física encosta (3 passadas; sem furo nos cantos). O shader da
-  rede (`campo.js`) refaz a normal pela inclinação da bolsa (diferença finita a 10 cm).
+- **`rede-onda.js`** (rede VÉU DE NOIVA, forma de `rede-forma.js`): `REDE` (constantes: 1,6 Hz, ζ 0,24, bolsa até
+  0,85 m, raio 0,8 m, onda a 5,5 m/s, dura 1,9 s), `VEU_DESENHO`, panos para as batidas e a bola desenhada (índice
+  `(lado > 0 ? 4 : 0) + k`, k: 0 véu = faixa de cima + curva, 2 lateral z−, 3 lateral z+; o 1, teto, não existe mais).
+  A deformação é um CAMPO VETORIAL no espaço: cada batida empurra os pontos perto dela na direção da bolsa (a normal do véu
+  ou ±z da lateral NO PONTO DA BATIDA), então o véu e as laterais mexem juntos sem rasgar na emenda. `fixo(x, y, z)` (0 na
+  armação — postes, travessão, hastes, pé das laterais e fundo do véu no chão —, 1 longe; aceita também `(plano, x, y,
+  z)`; a malha grava num atributo), `mola(τ)`, `perfil(r, τ)`, `amplitude(v)`, `criarOndas()` → `{imp[4], total}`
+  (`imp`: `{ativo, t0, x, y, z, plano, amp, dx, dy, dz}`), `limparOndas`, `centroBolsa` (ponto da bolsa na parte solta e
+  a direção dela), `registrarImpacto(est, {plano, x, y, z, vel, sinal}, t0)` (t0 = o FIM do passo da batida: a bola
+  desenhada, interpolada do começo ao fim do passo, só encosta na rede no fim — com meio passo antes ela pulava ~9 cm para
+  a frente no quadro da batida), `deslocamentoVetor(est, x, y, z, t, out)` (o vetor, sem a fixação), `normalNoPonto(plano,
+  x, y, z, out)`, `normalPano(i)` (no meio do pano), `deslocamento(est, plano, x, y, z, t)` (m pela normal do pano no ponto,
+  + = para fora; sem a fixação), `redeAtiva(est, t)`, `detectarImpactos(p0, v0, p1, v1, out)` → n (bola antes/depois do
+  passo; véu pela distância ao perfil, laterais até o véu), `empurraoBola(est, p, t, out)` (o deslocamento da bola
+  DESENHADA no bojo), `uniformsRede(est, t, a, b)` (a = [x, y, z, amp]·4, b = [τ, dx, dy, dz]·4) e `REDE_GLSL` (a mesma
+  conta em GLSL, gerada das mesmas constantes: `vec3 redeDesloc(vec3 p)`; a fixação é o atributo `aFixo`).
+  `empurraoBola` termina com a RESTRIÇÃO: na posição final, a superfície da bola desenhada não passa de nenhum pano
+  deformado em que a física encosta (3 passadas; sem furo nos cantos). O shader da rede (`campo.js`) refaz a normal pela
+  inclinação da bolsa (diferença finita a 10 cm, produto vetorial das duas tangentes deslocadas).
 - **`emocao.js`**: `EMOCAO`, `criarEmocao()` → `{agito, torcida: [{excita, tensao, lamento, palmas}·2], disparos,
   contagem}`, `emocaoEvento(est, ev, {t, timeDe, bola, ataca})` (os eventos de `m.eventos` e `{tipo: 'redeImpacto', vel}`),
   `emocaoPasso(est, {t, bola, posseTime, ataca, estado}, dt)`, `consumirDisparos(est)` → `[{tipo: 'gol'|'uuuh'|'palmas'|
@@ -211,8 +246,12 @@ Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo
   camera), definirHora, definirQualidade, dispose}`: um `Group` com uma malha instanciada por grupo de arquibancada (5
   desde 11/10, com o lado de cá; ver "Estádio cheio" abaixo), mesmo material e atlas — com corte por CAIXA contra o frustum da câmera em `atualizar`; monta TODOS os torcedores
   uma vez e `definirQualidade` só muda `instanceCount` e o uniform `uAnimada` — nada remonta nem recompila), `campo.js` (a
-  rede é uma malha subdividida com `aPlano`/`aFixo` e `onBeforeCompile`; `campo.rede = {a, b, mesh}` = os uniforms das
-  batidas), `texturas.js mascaraGolaco()` (cadeiras do mosaico, a mesma para a textura e para a torcida), `camera.js`
+  rede véu de noiva é UMA malha para os dois gols — o véu a ~15 cm ao longo do perfil e as laterais em leque, X =
+  a·`profundidadeVeu(y)` — com os atributos `aFixo` e `aUvM` (metros sobre o tecido) e `onBeforeCompile`; trama COLMEIA
+  procedural no fragment shader (`REDE_TRAMA`: hexágono de 12 cm, fio de 6 mm que não afina abaixo de ~1 px — só fica até
+  15% mais transparente — e vira véu branco uniforme de opacidade 0,32 quando a célula fica < ~2 px; sem textura, sem
+  moiré); BRANCA com luz própria de dia e de noite (`LUZ_GOL`, `definirHora`); armação branca (postes, travessão, hastes
+  de 0,45 m e as cordas do chão), sem a armação cinza da caixa; `campo.rede = {a, b, mesh}` = os uniforms das batidas), `texturas.js mascaraGolaco()` (cadeiras do mosaico, a mesma para a textura e para a torcida), `camera.js`
   (`efeitoGol(x, z, {fechado})`: com `fechado` (partida) CORTA para a câmera do gol `CAMERA_GOL` até `encerrarGol()`; sem
   ele (treino) zoom/tremor leve `EFEITO_GOL`; `encerrarGol()`, `efeitoAtivo`, `planoGol` ('fechado' | 'leve' | null),
   `planoGeral(v)` / `geral` (intervalo e fim: `CAMERA_GERAL`); `foco()` acompanha a boca do gol na câmera do gol),
@@ -239,11 +278,14 @@ Pesquisa: `PESQUISA-ESTADIO.md`. **Só desenho e som: nada aqui escreve no mundo
   torcida), bolaDesenhada, efeitoCamera, planoCamera ('fechado' | 'leve' | 'geral' | 'jogo'), autorGol, ultimoToque,
   baixarSons(), analisarSom(nome)}`, `definirSom(v)`, `definirVolume(v)`, `mostrarEvento(ev, {fixo})` (o "GOL!";
   `fixo` segura na tela — prints). `autorGol` (o autor de verdade, `render/autor-gol.js`) não aparece na tela.
-- **Testes**: `tools/teste-rede.mjs` e `tools/teste-torcida.mjs` (Node, grupo padrão), `tools/teste-estadio.mjs`
-  (navegador, no CI). O gol do teste de navegador é ROTEIRIZADO (`tools/lib/gol-roteirizado.mjs`: um jogador do time com a
-  bola e o último toque, os adversários do corredor e o goleiro tirados do caminho e o chute com a física da bola — não
-  depende da IA nem do goleiro de nenhuma frente); os prints do gol usam um gol de VERDADE achado em Node
-  (`tools/lib/acha-gol.mjs acharGol`: a 1ª semente com gol e batida na rede).
+- **Testes**: `tools/teste-rede.mjs`, `tools/teste-rede-veu.mjs` e `tools/teste-torcida.mjs` (Node, grupo padrão),
+  `tools/teste-estadio.mjs` e `tools/teste-rede-tela.mjs` (navegador, no CI: a rede montada com `criarCena` +
+  `criarCampo` numa tela à parte — forma da malha, cor do fio de perto, a rede clareia o gol nas câmeras de TV, do gol e de
+  perfil, e mexe no pico da bolsa; PC Alta e celular Média, dia e noite). O gol do teste de navegador e dos prints da rede
+  é ROTEIRIZADO (`tools/lib/gol-roteirizado.mjs`: um jogador do time com a bola e o último toque, os adversários do
+  corredor e o goleiro tirados do caminho e o chute com a física da bola — não depende da IA nem do goleiro de nenhuma
+  frente; o gol achado em Node não se repetia na página); só os prints do ataque antes do gol usam a semente achada em
+  Node (`tools/lib/acha-gol.mjs acharGol`).
 
 ## Estádio cheio e som da torcida no jogo (pedido de 11/10; contrato)
 Pedido do dono: "Coloca mais torcida no estádio, bandeirões, sinalizadores, e bota som de torcida também, pra durante o
@@ -388,6 +430,74 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   `tools/lib/acha-gol.mjs` ganhou `comoPagina` (a entrada da IA pelo humano como a página entrega: o lance do laço da
   página).
 
+## Pré-jogo (pedido de 11/10; contrato)
+Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
+as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o
+pré-jogo acontece ANTES do 1º passo da partida (o mundo fica no tick 0; `hash-igual` IGUAL; `teste-prejogo` confere o hash
+de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída (`eventosIniciais`) só toca no fim.
+- **`js/cortejo.js`** (puro): `CORTEJO` (velocidade 1,45 m/s, espaçamentos no túnel/andando/na fila, colunas, árbitros
+  ids 200–202), `criarCortejo(times)` → `{tick, mini, andantes: [{j, id, time (0, 1 ou 2 = árbitro), arb, goleiro, kit,
+  k, caminho, s0, sFim, atraso, chegou}]}` (mini-mundo `{tick, posse, naMao, parada, voo, bola}`: só o que a pose e a
+  passada leem; lê `m.times` UMA vez, nunca o mundo depois), `passoCortejo(c)` (corpo, passada, pé desenhado, quadril — a
+  ordem do `sim.js`), `tempoCortejo`, `fotoCortejo(c)`/`restaurarCortejo(c, f)` (structuredClone), `filaFinal(c)` (a fila
+  montada parada, sem simular), `vagaFinal(c, i)`, `chegaram(c)`, `ordemDaColuna(tm)` (capitão, goleiro, vagas),
+  `pontoCaminho`, `cabeNoTunel()`. Sem rng. Campo novo que `anim.js`/`jogador.js` passarem a ler do mundo tem que entrar no
+  mini-mundo (o `teste-cortejo` pega NaN ou exceção na pose).
+- **`js/prejogo-roteiro.js`** (puro): `PREJOGO` (modos, tempos da escalação, preto, mergulho, faixas 2,39:1),
+  `criarRoteiro(modo)` → `{modo, planos: [{id, nome, bloco 'cenas'|'escalacao0'|'escalacao1', dur, t0, t1, cam: {de, para,
+  fov, suave} | orbita, som, torcida, eventos, cortejo: {tc} | 'fila' | null, fora, transicao, time}], total, blocos,
+  fimCenas, tEscalacao, durEscalacao}`, `planoEm`, `blocoEm`, `proximoBloco` (pular), `cameraEm(r, t, out)`,
+  `cameraAbertura(t)`, `escuroEm` (preto e mergulho), `escalacaoEm` ({time, entrando, saindo, saiTime, cheia}),
+  `sinaisEm` (som e torcida do plano), `pontosDoPlano` (testes), `criarCurva`/`pontoCurva` (Catmull–Rom centrípeta pelo
+  comprimento do arco — a conta da three.js, pura).
+- **`js/estadio-forma.js`** (puro): `FORA` (fachada, cobertura, cantos, esplanada, bairro, praça, estacionamentos, placa,
+  `vaoPlacas` — o vão de ±3 m nas placas de cá na frente do túnel, só no pré-jogo),
+  `sdRetArredondado`, `alturaCobertura`, `alturaCanto`, `predios()`, `arvores()`, `carros()`, `torcedoresFora()`
+  (posições com semente própria), `solidoEm(x, y, z, folga, fora)` (nome do sólido ou null; o corredor do túnel é livre;
+  com `fora` o vão das placas também — o `teste-cortejo` confere que nenhum andante entra em sólido),
+  `noCorredorDoTunel`.
+- **`js/render/prejogo.js`** (diretor): `criarPrejogo({cena3d, cam, jog3d, bola3d, campo, torcida, som(), mundo(), hora(),
+  qualidade(), comToque(), aoFim()})` → `{iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar, parado) (false quando
+  acabou; parado = celular em pé: o tempo não anda e o som fica como na pausa do jogo — `som.cena(null)` e
+  `som.atualizar(emo, true)`),
+  acao(a) ('pausa' pula tudo), proximo, pularTudo, irPara(t), comecar, cancelar, ativo, naAbertura, api}`. Câmera: escreve
+  direto em `cam.camera` (fov do roteiro = vertical em 16:9; mais estreito, a mesma largura; near/far e a névoa por plano,
+  restaurados no fim). Desenha o cortejo por `jog3d.atualizar(lista)` (kit `arbitro`), força o lado de cá visível pelo
+  frustum (a regra `cameraNoLadoDeCa` é do jogo), um ânimo próprio (`criarEmocao`) para a torcida e o som, `som.cena({ganho,
+  filtro})` por plano. A fila parada "respira" só no desenho (peito ±1 cm, peso de um pé para o outro; os pés plantados
+  não mexem). **Vão das placas**: no `iniciar` recorta as duas malhas das placas (`placas` e `placas-estrutura` do
+  `campo.grupo`) com `Material.clippingPlanes` + `clipIntersection` (|x| < `FORA.vaoPlacas.meia`, z além da linha das
+  placas) e `renderer.localClippingEnabled`, e põe 2 pontas escuras; no fim devolve tudo (o jogo tem as placas inteiras
+  porque a bola bate nelas em `bola.js`). API `vao` → `{aberto, meia, malhas, recortadas, local, pontas}` (lido da cena).
+- **`js/render/estadio-fora.js`**: `criarEstadioFora(cena, {qualidade, hora, aniso, materialTorcida, entorno})` → `{grupo,
+  modoFora(v) (o entorno só nos planos de fora), definirHora, atualizar, dispose(), info: {pecas, entorno, triangulos,
+  ...}}`. `entorno: false` (o diretor passa quando o roteiro não tem plano de fora nem abertura: curto e só escalação):
+  só a estrutura (6 peças, ~760 triângulos). Nada projeta sombra.
+- **`js/prejogo-tela.js`** (DOM): `criarPrejogoTela({aoProximo, aoPularTudo, aoComecar, comToque})` → `{raiz (#prejogo,
+  criado no body), escalacao, mostrar(v) (põe html.prejogo: o HUD, os controles de toque e a dica somem), abertura(times
+  | null), faixas(k, proporção), preto(a), fundoEscalacao(a), atualizar(agora) (A do controle; o Pular some parado),
+  pularVisivel, botaoPular}`. Toque/clique = próximo bloco (abertura: começa); Enter/Espaço também (na captura); Esc/P/Start
+  chegam pela entrada bloqueada (`main.js tratarAcao('pausa')`).
+- **`js/escalacao-tela.js`** (DOM): `criarEscalacaoTela(raiz)` → `{montar(times), mostrar(e) (escalacaoEm + tau),
+  esconder(), estado, cartas(t), folha(t)}`; `tamanhoEscalacao(W, H, vertical)` (cartas até 120 × 76; passo ≥ carta + 10
+  px). Usa `posicaoNaTela` (editor-time.js) e `svgCampinho` (campinho.js). O movimento sai do relógio do roteiro (nada de
+  transição do CSS: o relógio manual dos testes e prints vale).
+- **`js/campinho.js`** (puro): `svgCampinho(vertical)` → `{viewBox, html}` (o editor passou a usar; layout idêntico).
+- **`som.js`**: `cena({ganho, filtro})` / `cena(null)` (substitui o alvo do barramento e do passa-baixas da pausa);
+  `cenaPre`. **`jogador3d.js`**: `KITS.arbitro`.
+- **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
+  `prefs.prejogo`, padrão 'completo'), `comecarPrejogo(modo, abertura)` (bloqueia a entrada), `fimDoPrejogo()` (libera a
+  entrada, corta a câmera, `eventosIniciais()`), `quadro()` (no pré-jogo o laço fica parado: `laco.ultimo = agora`),
+  `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao'})`, comandos `prejogo` (valor) e `prejogo-ciclo` (o botão "Pré-jogo da
+  partida" do submenu "Modo de jogo": o próximo modo; `#estado-prejogo` mostra o atual), API `__golaco.prejogo`
+  (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(), pularTudo(), irPara(t), comecar(),
+  iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel, time, cheia, cartas(t), folha(t),
+  pular, info(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo, fora}`); `quadro()` passa
+  `parado` = `retratoBloqueado()`; `desenhar()` desenha o pré-jogo
+  quando ele está ativo.
+- **Testes**: `tools/teste-cortejo.mjs` e `tools/teste-prejogo-roteiro.mjs` (Node, padrão do CI), `tools/teste-prejogo.mjs`
+  (navegador, CI), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
+
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
   `m.controlado = { 0: id }`. Os demais jogadores são da IA (`js/ia.js`), que gera para cada um uma entrada
@@ -487,8 +597,13 @@ quadro() ─ rodarPasso ──▶ passoPartida(m, entrada, acoes)
     até 7 m/s com os pés plantados — `teste-patinacao`, cena "bolas paradas com gente no raio"). Dentro da restrição:
     sai pelo ponto de `restricaoParada` a √(2·`freioParede`·(fundo + `margemParede`)), entre `saiParede` e `empurrao`
     m/s. Fora: a componente do pedido para dentro fica ≤ √(2·`freioParede`·(distância à borda − `margemParede`)) —
-    freia antes da borda. Vale da bola morta (lateral, escanteio e tiro de meta; a saída é montada por teleporte) até a
-    bola rolar; o cobrador e quem está `'parado'` ficam de fora.
+    freia antes da borda. Com o CORPO indo para dentro (trombada perto da borda, ou embalado quando a bola morre) — fora,
+    mais depressa que √(2·`JOGADOR.freio`·distância à borda); dentro, ainda entrando —, o pedido é a velocidade do corpo
+    refletida na borda (a de lado fica; dentro, para fora pelo menos a velocidade de saída): a locomoção freia a entrada
+    pela aceleração lateral e pela freada, sem a inversão que freava tudo na linha (`teste-partida` F: 192 cenas com a
+    velocidade de uma trombada que a freada normal para antes do raio — ninguém entra). Vale da bola morta (lateral,
+    escanteio e tiro de meta; a saída é montada por teleporte) até a bola rolar; o cobrador e quem está `'parado'` ficam
+    de fora.
 - **`ia-tatica.js`**: `entradaIATatica(m, j)` → `{x, z, botoes}` (despacho: `iaClassica` ou goleiro com a bola nas mãos
   → `entradaIA`; recebe/corrida/bola livre; condutor → `condutorTatico`; fase `'com'` → `apoioTatico`; sem bola → a IA
   sem bola), `estadoIA(m, j)` (prepara `j.ia` para usar o `para()` de fora do ia.js).

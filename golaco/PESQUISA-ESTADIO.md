@@ -3,7 +3,8 @@
 Pedido do dono (10/10): "quero um efeito de rede, efeito de gol, quando a rede balança, quando sai gol, isso que eu
 quero, que tenha torcida no estádio, e com barulho de torcida". Esta é a primeira versão (a Etapa 6 completa traz
 torcida cantando alto, pré-jogo, replay e comemoração). Tudo aqui é DESENHO e SOM: a lógica do jogo e o hash não
-mudam (`tools/hash-igual.mjs` IGUAL, `tools/hash-partida.mjs` IGUAL à publicada).
+mudam (`tools/hash-igual.mjs` IGUAL, `tools/hash-partida.mjs` IGUAL à publicada) — menos a seção 6 (rede véu de noiva,
+11/10), que muda a FORMA da rede também na física da bola atrás da linha.
 
 ## 1. Rede que balança (`js/render/rede-onda.js`, `js/render/campo.js`)
 
@@ -166,6 +167,64 @@ depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no p
 celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
 mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
+## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
+
+Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
+em véu de noiva". Diagnóstico da versão publicada (medido): a rede era uma CAIXA de 2 m ("caixote", com teto plano e
+armação cinza atrás), cinza-esverdeada (fio de perto L* 79 de dia e 50 à noite, puxado para o azul), ESCURECIA o gol
+na câmera de TV (ΔL* −7 a −10) e quase não mexia na tela (0,8–3,1% dos pixels do gol na câmera do gol, 0% na TV):
+a textura de losango de 128 px cobre ~7% do pano e vira uma névoa escura com o mipmap, o material não tinha luz
+própria (a face que a câmera vê fica de costas para o sol) e o shader ainda escurecia a bolsa em até 45%.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| Super Rádio Tupi (08/03/2022), "Próximo da reabertura, Maracanã confirma retorno das redes véu de noiva" (https://www.tupi.fm/sentinelas/proximo-da-reabertura-maracana-confirma-retorno-das-redes-veu-de-noiva-confira/) + a foto da rede nova | A rede véu de noiva "estufa a costura e vai morrer no fundo do gol"; contraste com o "padrão Fifa, formato retangular" de 2013–2014. A foto mostra a trama colmeia branca, sem caixa nem suportes atrás, a lateral com a borda em curva do canto de cima até o chão bem atrás do gol | A forma (faixa de cima curta e a curva longa até o chão, sem teto), a trama COLMEIA branca e a física "morre no fundo": por dentro o véu segura a bola e ela escorrega até a cunha do fundo |
+| GloboEsporte (29/07/2013), "Concessionária do Maracanã estuda voltar com modelo tradicional da rede" (https://m.globoesporte.globo.com/futebol/noticia/2013/07/concessionaria-do-maracana-estuda-voltar-com-modelo-tradicional-da-rede.html; reproduzida pelo NETFLU: https://www.netflu.com.br/concessionaria-estuda-retornar-com-redes-antigas-do-maracana/) | "As antigas tinham uma haste nos cantos superiores, de aproximadamente 40 cm, que apoiava a rede e fazia com que ela caísse na diagonal e estufasse na hora do gol" | Hastes de 0,45 m nos cantos de cima (`CAMPO.gol.veu.haste`) e nada atrás do gol; a armação desenhada é só postes, travessão, as duas hastes e as cordas do chão |
+| Agência Brasil (03/2022), reabertura do Maracanã (https://agenciabrasil.ebc.com.br/esportes/noticia/2022-03/com-novo-gramado-maracana-reabre-sabado-com-flamengo-x-bangu) | "A volta da famosa rede véu da noiva, que estufa quando os jogadores acertam a bola no alvo" | O que importa é a bolsa no gol: o véu é mais solto que a caixa (1,6 Hz, ζ 0,24, bolsa até 0,85 m, dura 1,9 s) |
+| gov.br, Relatório da dispensa 19/2023 (especificação de redes de campo, item "Fio 4mm Tipo Véu"; https://www.gov.br/casacivil/pt-br/acesso-a-informacao/licitacoes-e-contratos/secretaria-de-administracao/contratacoes-diretas/2023/relatorio-da-dispensa-19-2023.pdf) | Rede 7,50 × 2,50 m, recuo superior 0,60 m e inferior 2,00 m, malha 15 × 15 cm, fio 4 mm, cor BRANCA | Confirma o recuo de cima curto e o de baixo longo; o véu do Maracanã é mais fundo embaixo (2,8 m: `fundo`); malha ~15 cm na malha do desenho |
+| Listagens do mercado brasileiro ("Rede Oficial de Futebol Modelo México (Caixote) Trama Colmeia", Bondfaro: https://www.bondfaro.com.br/rede-tenis) | "Caixote" = rede em caixa; "trama colmeia" = malha hexagonal | Vocabulário: o jogo tinha o caixote; o véu usa a trama colmeia |
+| nets4you, redes "continental" (https://www.nets4you.com/products/single-full-size-continental-football-goal-nets-3mm-diameter) | Estilo europeu: topo ~0,8 m, base ~2 m, malha 120 mm, fio 3–4 mm | Célula de 12 cm; o fio de 6 mm é exagerado de propósito para aparecer na TV |
+| Ben Golus, "The Best Darn Grid Shader (Yet)" (https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8; versão do LÖVR em https://lovr.org/docs/v0.19.0/Environment/Grid_(Smooth)) | Linha com largura mínima de ~1 px pela derivada de tela ("phone-wire AA") e, quando a célula fica menor que um pixel, troca pela média (sem moiré) | Fio que nunca afina abaixo de ~1 px (só fica até 15% mais transparente: `opacMin` 0,85) e, longe (célula < ~2 px), véu branco uniforme de opacidade 0,32 (`longe`) — ao longe a rede CLAREIA o gol em vez de escurecer |
+| Evan Wallace, "Anti-Aliased Grid Shader" (https://www.madebyevan.com/shaders/grid/) | fwidth = \|dFdx\| + \|dFdy\| para a largura e a borda da linha em pixels | Largura e borda do fio da colmeia em pixels (derivadas de tela no fragment shader) |
+| "Hexagon rendering" (https://gameutility.bearblog.dev/hexagon-rendering/) | Grade hexagonal no shader: a célula mais perto entre duas grades deslocadas e a distância até a borda | `redeHexBorda` no fragment shader: a trama colmeia sem textura (sai a `texRede` de 128² com mipmaps, ~87 KB na GPU) |
+| Patente EA US 8.000.947 e Müller et al. 2007 (Position Based Dynamics), seções 1 e 5 | Bolsa no ponto, onda pelo tecido, armação presa; restrição por projeção | Os mesmos sinais, agora contra o perfil do véu: a deformação vira um CAMPO VETORIAL (cada batida empurra pela normal do véu no ponto da batida), então o véu e as laterais mexem juntos sem rasgar na emenda; a bola desenhada continua presa ao véu deformado (furo ≤ 0,1 cm) |
+
+Forma escolhida (uma só, em `rede-forma.js`, para a física, a regra do gol e o desenho): faixa de cima de 0,45 m e a
+parábola tangente ao chão até 2,8 m — a profundidade cai com a altura (y 0,11 → 2,30 m · 0,5 → 1,74 · 1,0 → 1,30 · 1,5 →
+0,96 · 2,0 → 0,67 · 2,44 → 0,45); inclinação de 61° perto do topo, 47° a 0,64 m e 19° perto do chão; perfil de 3,99 m;
+a bola parada no chão para na cunha com o centro a 2,06 m. A parábola (corrente com carga uniforme na horizontal) é
+quase a catenária e só usa + − × ÷ e raiz: igual bit a bit em todo motor JS (`teste-determinismo`, Node = Chromium).
+
+Por que a física muda junto: com o véu desenhado e a física da caixa, um chute a 1 m de altura pararia 0,59 m ATRÁS da
+rede desenhada (e a bola por cima do travessão ficava no teto a 2,55 m para sempre). Agora a bola encosta onde a rede
+está (medido pela física: y 0,11 → 2,06 m · 0,84 → 1,28 · 1,40 → 0,89 · 1,97 → 0,56 · 2,28 → 0,41 m) e morre no fundo
+em ≤ 3 s; 0/600 bolas de dentro escapam e 0/600 de fora entram (Monte Carlo do `teste-rede-veu`). O gol continua sendo a
+bola passar a linha; a bola atrás do véu não conta.
+
+Antes → depois (mesmas ferramentas; `teste-rede-tela` = navegador, rede montada numa tela à parte, sem IA nem semente):
+
+| Medida | Antes (caixote) | Depois (véu) | Meta |
+|---|---|---|---|
+| Forma da malha (gol +x): fundo no chão / no alto / vértices de teto | 2,00 / 2,00 m / 466 | 2,80 / 0,45 m / 0 (2,80 → 1,45 → 0,86 → 0,52 m por faixa de altura) | ≥ 2,4 / ≤ 0,6 / 0 |
+| Física: onde a bola encosta (y 0,11 → 2,28 m) | 1,89 m em toda altura | 2,06 → 0,41 m | rasteiro ≥ 1,8, alto ≤ 0,9 |
+| Fio de perto (L*, percentil 90), PC dia / noite | 78,9 / 49,8 (sat 0,19 à noite) | 87,2 / 89,7 (sat ≤ 0,03) | ≥ 85 / ≥ 80, sat ≤ 0,08 |
+| Fio de perto, celular dia / noite | 78,5 / 50,1 | 86,9 / 89,7 | ≥ 85 / ≥ 80 |
+| TV: a rede clareia o gol (ΔL*), 4 configurações | −7,1 a −9,5 (escurece) | +17,0 a +19,1 | ≥ +5 |
+| Câmera do gol: ΔL* | −1,1 a +7,4 | +30,8 a +36,0 | ≥ +12 |
+| Mexe no pico da bolsa: pixels do gol que mudam > 20 (câmera do gol / TV / perfil) | 0,8–3,1% / 0,0% / 0,2–0,5% | 5,5–5,7% / 2,2–2,5% / 4,5–4,7% | ≥ 4% / ≥ 1% |
+| Custo (as duas redes) | 4.052 vértices, 7.348 triângulos, 2 chamadas, textura 128² | 4.160 (+2,7%), 7.724 (+5,1%), 2 chamadas, sem textura | ≤ +10%, mesmas chamadas |
+| Painel de equilíbrio, gols por partida (288 partidas IA × IA, sementes 1001–1144 e 2001–2144, `--base`) | 1,98 | 1,98 (diferença pareada +0,00 ± 0,20) | não cair |
+| Painel, chutes por partida (as mesmas 288) | 9,42 | 9,22 (−0,21 ± 0,53: dentro do ruído) | não cair |
+
+O gol continua sendo a bola passar a linha: o véu só muda o que acontece DEPOIS dela (e as previsões da bola que passam
+da linha), então a partida diverge no 1º chute ao gol e as duas amostras de 144 andam para lados opostos (1ª: gols 2,13
+→ 1,99, chutes 9,58 → 9,15; 2ª: gols 1,82 → 1,97, chutes 9,27 → 9,28) — ruído de amostra, não efeito da rede.
+
+Luz própria (`LUZ_GOL` em `campo.js`): rede 0xaaadab de dia e de noite (de dia 0xa0a3a1 deixava o fio a 86,2, só 1 ponto
+acima da meta; 0xaaadab dá 87,2 sem estourar: 0% em 255), armação 0x2a2c2b / 0x5a5c5b. Sai o escurecimento de 45% da
+bolsa: a dobra aparece pela normal refeita. A bolsa começa no FIM do passo da batida (a bola desenhada, interpolada do
+começo ao fim do passo, só encosta na rede no fim; com meio passo antes ela andava +40% no quadro da batida).
+
 ## 9. Replay (`js/render/replay-anel.js`, `replay-roteiro.js`, `replay.js`; pedidos do dono de 11/10)
 
 "O replay não funciona" e "quando o jogo parar por impedimento, aí no replay vai mostrar a linha". O diagnóstico mostrou

@@ -26,7 +26,11 @@ export const CAMPO = {
   marcaPenalti: 11,
   raioArco: 9.15,
   raioEscanteio: 1,
-  gol: { largura: 7.32, altura: 2.44, profundidade: 2.0, raioPoste: 0.06 },
+  // Rede VÉU DE NOIVA (pedido do dono, 11/10; forma em rede-forma.js, a MESMA na física da bola, na regra do gol e no
+  // desenho): hastes curtas nos cantos de cima seguram a faixa de cima (haste) e a rede cai em parábola tangente ao
+  // chão até as estacas (fundo); segmentos = a polilinha da curva. Sem caixa nem teto. `profundidade` = a maior
+  // profundidade da rede (o fundo, no chão) — a forma por altura é rede-forma.js profundidadeVeu(y).
+  gol: { largura: 7.32, altura: 2.44, profundidade: 2.8, raioPoste: 0.06, veu: { haste: 0.45, fundo: 2.8, segmentos: 40 } },
   entorno: 6,                 // faixa de grama fora das linhas
 };
 

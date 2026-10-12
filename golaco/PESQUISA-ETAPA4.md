@@ -112,6 +112,8 @@ impedimentos de verdade, junto com o corredor que passa da linha enquanto o pass
 
 **Pendente (próxima parte, o goleiro):** o goleiro ainda não sai no cruzamento. É o que falta para o gol por escanteio chegar perto dos 2,6% reais. Por partida, o escanteio já dá ~0,25 gol (2,6 escanteios × ~10%), o mesmo que no jogo real (~10 × 2,6%).
 
+**Medido de novo (12/10, na rede véu de noiva):** o 11,4% do canhão de 123 foi um sorteio favorável. O mesmo canhão com outras 8 sementes dá, na main, 16,7% (1009–1016) e 10,3% (1017–1024), e com 32 sementes (~500 escanteios) 13,5% — a taxa real fica em ~13%, um ponto acima da meta de 12% (na rede véu: 12,1%, 15,3%, 11,8% e 12,7%; a rede não muda o escanteio). O `teste-bolas-paradas` C3 passou a reprovar só quando a contagem prova mais de 12% (binomial, p < 5%), como os vermelhos do `teste-faltas`; descer de verdade é com o goleiro saindo no cruzamento.
+
 ## 5. Mãos do goleiro, recuo, 8 s e o goleiro na mão do humano (pedidos do dono de 11/10)
 
 Pedidos: "eu não consigo mexer com o goleiro, o goleiro só consegue pegar na mão dentro da área" e "não pode recuo".

@@ -102,6 +102,7 @@ export function criarSom(opc = {}) {
   const _mix = {};
   let estado = !Ctx ? 'sem-audio' : ligado ? 'sem-contexto' : 'desligado';
   let pendente = null;    // apito que chegou antes do som liberado: {tipo, quando (ms)}
+  let cenaPre = null;     // pré-jogo: {ganho, filtro} do plano (cena())
   let timerSuspende = null;
   let ouvindo = false;
   let ultimoT = null;
@@ -429,16 +430,25 @@ export function criarSom(opc = {}) {
         if (c.mudo > SOM.cantoSolta) pararCanto(nome);
       }
       liberarCantos([atual, prox].filter(Boolean));
-      const p = pausado ? 1 : 0;
+      // pausa (a torcida abaixa e abafa) ou o plano do pré-jogo (cena(): de fora e no túnel, abafada)
+      const gAlvo = cenaPre ? cenaPre.ganho : pausado ? SOM.pausaGanho : 1;
+      const fAlvo = cenaPre ? cenaPre.filtro : pausado ? SOM.pausaFiltro : 18000;
+      const p = Math.round(gAlvo * 100) * 100000 + Math.round(fAlvo);
       if (p !== ultimoAlvo.pausa) {
         const agora = ctx.currentTime;
         ultimoAlvo.pausa = p;
         bus.gain.cancelScheduledValues(agora);
-        bus.gain.setTargetAtTime(pausado ? SOM.pausaGanho : 1, agora, 0.12);
+        bus.gain.setTargetAtTime(gAlvo, agora, 0.12);
         filtro.frequency.cancelScheduledValues(agora);
-        filtro.frequency.setTargetAtTime(pausado ? SOM.pausaFiltro : 18000, agora, 0.12);
+        filtro.frequency.setTargetAtTime(fAlvo, agora, 0.12);
       }
     },
+    /**
+     * Pré-jogo (render/prejogo.js): o ganho e o passa-baixas do barramento da torcida no plano ({ganho, filtro: Hz |
+     * null}) — de fora do estádio e no túnel ela soa abafada e mais baixa. null: volta ao jogo (a pausa de sempre).
+     */
+    cena(o) { cenaPre = o ? { ganho: clamp(o.ganho ?? 1, 0, 1.2), filtro: o.filtro == null ? 18000 : clamp(o.filtro, 200, 18000) } : null; },
+    get cenaPre() { return cenaPre ? { ...cenaPre } : null; },
     /** Um disparo de emocao.js ({tipo, grupo, forca}). Devolve true se tocou. */
     tocar(d) {
       if (!ligado) return false;

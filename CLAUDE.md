@@ -125,7 +125,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   humano realista + mocap + rostos por IA (UV) → 6 estádio, torcida, câmera, replay, comemoração → 7 celular, menus,
   modos e desempenho.
 - Técnica: three.js **0.170.0** por importmap (jsdelivr), ES modules, sem build. Lógica (`js/*.js` exceto `entrada.js`,
-  `main.js`, `hud.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
+  `main.js`, `hud.js`, as telas `editor-time.js`/`escalacao-tela.js`/`prejogo-tela.js` e `js/render/`) **sem three.js nem DOM**. Passo fixo 1/60 s + desenho interpolado (`laco.js`).
   Aleatoriedade só por `rng.js` (sfc32 com semente no mundo); mesma semente = mesmo hash (`hashMundo`). Pose =
   função pura do estado (`anim.js`). Contratos em `golaco/CONTRATOS.md`, constantes em `golaco/js/config.js`.
   Coordenadas: x = comprimento (±52,5), z = largura (±34), y para cima, rumo h → (cos h, 0, sin h).
@@ -228,6 +228,19 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `sobBandeirao`); vaia pela posse longa do visitante (~2 por partida). Custo: +1 chamada (faixas/bandeiras) e +1 só com
   sinalizadores acesos; pré-carga no 1º quadro desenhado (nada engasga no 1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
   Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
+- **Rede véu de noiva e branca** (pedido de 11/10: "as redes têm que ser brancas, ... movimentação na rede quando a bola
+  toca nela, ... em véu de noiva"; `PESQUISA-ESTADIO.md` §8): sai o caixote de 2 m com teto. Forma ÚNICA em `js/rede-forma.js`
+  (puro; `CAMPO.gol.veu`: hastes de 0,45 m nos cantos de cima e a parábola tangente ao chão até 2,8 m) usada pela física
+  (`bola.js colidirGol`: o véu segura por dentro e a bola escorrega até a cunha do fundo — "morre no fundo"; por fora não
+  entra), pela regra do gol (`sim.js verificarGol`, `treino.js`: atrás do véu não é gol) e pelo desenho (`rede-onda.js`:
+  campo VETORIAL, a bolsa pela normal do véu; `campo.js`: trama colmeia procedural, fio ≥ 1 px e véu branco ao longe, luz
+  própria `LUZ_GOL` de dia e de noite, armação branca com as hastes; sem textura). A bolsa começa no fim do passo da batida.
+  **Muda o hash**: a condução fica IGUAL enquanto a bola não entra no gol (19/20 sementes do roteiro e 20/20 da demo); o
+  treino de ataque diverge no passo seguinte ao 1º chute/lançamento cuja trajetória prevista passa da linha (base nova do
+  `hash-igual`: `--ref <merge>`). Testes: `teste-rede-veu` (Node, padrão; reprova 5
+  na base), `teste-rede` reescrito para o véu, `teste-rede-tela` (navegador, CI: forma, branca — fio de perto L* ≥ 85 de dia
+  e ≥ 80 à noite —, clareia o gol na TV e na câmera do gol, mexe ≥ 4% na câmera do gol e ≥ 1% na TV; reprova 21 na base);
+  prints do gol pelo gol roteirizado (`prints.mjs --so pc-gol-rede,...`: câmera do gol, perto, TV, atrás, perfil).
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
   CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
@@ -290,6 +303,23 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
   replay abrem com `?replay=0`. Lição: o laço da página entrega a entrada da IA pelo humano SEM o `ia` da
   `entradaDemoPartida` — semente achada em Node só bate com a página com `acharGol({comoPagina: true})`.
+- **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
+  da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
+  chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
+  fila de cada time, 4 cortes de torcida/estádio e as escalações no campinho (cada time grande, ~10 s, o mesmo fundo; a 1ª
+  sai e a 2ª entra). Puros: `cortejo.js` (22 + 3 árbitros saem do túnel pela locomoção do jogo num mundo à parte; fotos e
+  fila montada), `prejogo-roteiro.js` (completo ~81 s, curto ~41 s, só escalação ~21 s; trilhos Catmull–Rom centrípetos),
+  `estadio-forma.js` (sólidos onde a câmera não entra + o lado de fora). Desenho: `render/prejogo.js` (diretor),
+  `render/estadio-fora.js` (fachada, cobertura, cantos, túnel por dentro, esplanada, bairro, prédios, carros, torcedores —
+  SÓ no pré-jogo: a TV do jogo fica dentro da arquibancada de cá), `prejogo-tela.js`, `escalacao-tela.js`, `campinho.js`
+  (o campinho do editor), `css/prejogo.css`. Pular: toque/Enter/A = próximo bloco; Pular/Esc/Start = jogo. Pausa → "Modo de jogo"
+  → "Pré-jogo da partida" (cada toque: completo → curto → só escalação → desligado; padrão completo; fora das opções
+  porque a pausa tem de caber sem rolar no celular deitado); Reiniciar no meio = só escalação. **Desligado** com
+  `navigator.webdriver`, `?prints=1` e `?demo=1`; `?prejogo=1|curto|escalacao|0` força. Testes: `teste-cortejo`,
+  `teste-prejogo-roteiro` (padrão), `teste-prejogo` (navegador, CI); prints `tools/prints-prejogo.mjs` (folhas de contato).
+  Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
+  desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
+  bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
 - **Regras e controles** (pedidos do dono de 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola", "o botão de
   pressão não funciona", "não consigo mexer com o goleiro", "só pega com a mão dentro da área", "não pode recuo"; tudo só
   na partida — o treino segue bit a bit igual): condutor parado/lento (< 2 m/s) → o bote da IA alcança a bola parada no

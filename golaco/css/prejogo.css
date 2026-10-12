@@ -1,0 +1,83 @@
+/* GOLAÇO — pré-jogo (js/prejogo-tela.js, js/escalacao-tela.js): abertura, faixas de cinema, preto das transições,
+   botão Pular e a escalação de cada time no campinho. Enquanto html.prejogo: nada do HUD nem dos controles de toque
+   (sem narração: o pré-jogo só tem o nome do jogo na abertura e os dados da escalação). Margens seguras em tudo. */
+html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinheta { display: none !important; }
+
+.prejogo { position: fixed; inset: 0; z-index: 30; overflow: hidden; touch-action: none; cursor: pointer; color: var(--texto); font-family: var(--fonte); }
+.prejogo[hidden] { display: none; }
+.pj-faixa { position: absolute; left: 0; right: 0; height: 0; background: #000; pointer-events: none; }
+.pj-faixa-cima { top: 0; }
+.pj-faixa-baixo { bottom: 0; }
+.pj-preto { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; }
+.pj-esc-fundo {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(90deg, rgba(4, 8, 6, 0.9) 0%, rgba(4, 8, 6, 0.7) 34%, rgba(4, 8, 6, 0.56) 100%);
+}
+
+/* ------------------------------------------------------------------ abertura */
+.pj-abertura {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 2.4vh, 18px);
+  padding: calc(var(--sa-t) + 16px) calc(var(--sa-r) + 16px) calc(var(--sa-b) + 16px) calc(var(--sa-l) + 16px);
+  background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(4, 8, 6, 0.45) 0%, rgba(4, 8, 6, 0.82) 100%);
+  text-align: center; pointer-events: none;
+}
+.pj-abertura[hidden] { display: none; }
+.pj-ab-marca { font-size: clamp(14px, 2.4vw, 20px); font-weight: 900; font-style: italic; letter-spacing: 0.14em; color: var(--verde); }
+.pj-ab-jogo { margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 0.35em; font-size: clamp(24px, 5.4vw, 58px); font-weight: 900; line-height: 1.05; letter-spacing: -0.01em; }
+.pj-ab-jogo i { font-style: normal; color: var(--verde); font-weight: 800; }
+.pj-ab-chama { margin: 0; font-size: clamp(13px, 1.8vw, 18px); font-weight: 700; color: var(--texto); padding: 10px 20px; border: 1px solid var(--linha); border-radius: 999px; background: rgba(8, 11, 12, 0.6); animation: pj-chama 1.8s ease-in-out infinite; }
+@keyframes pj-chama { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+/* ------------------------------------------------------------------ Pular */
+.pj-pular {
+  position: absolute; right: calc(var(--sa-r) + 16px); bottom: calc(var(--sa-b) + 14px); z-index: 3;
+  display: inline-flex; align-items: center; gap: 8px; min-width: 48px; min-height: 48px; padding: 0 18px 0 14px;
+  font: 800 15px/1 var(--fonte); color: var(--texto); background: rgba(8, 11, 12, 0.72); border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity 0.25s;
+}
+.pj-pular svg { width: 20px; height: 20px; color: var(--verde); }
+.pj-pular.visivel { opacity: 1; pointer-events: auto; }
+.pj-pular:focus-visible { outline: 2px solid var(--verde); outline-offset: 2px; }
+/* na escalação o Pular fica embaixo da coluna do time (os cantos da direita são das pontas do campinho) */
+.prejogo.na-escalacao .pj-pular { right: auto; left: calc(var(--sa-l) + clamp(12px, 3vw, 40px)); }
+.prejogo.na-abertura .pj-pular { display: none; }
+
+/* ------------------------------------------------------------------ escalação */
+.pj-esc {
+  position: absolute; inset: 0; display: grid; grid-template-columns: minmax(136px, 25%) 1fr; gap: clamp(10px, 2vw, 28px);
+  padding: calc(var(--sa-t) + clamp(10px, 3.4vh, 30px)) calc(var(--sa-r) + clamp(12px, 3vw, 40px)) calc(var(--sa-b) + clamp(10px, 3.4vh, 30px)) calc(var(--sa-l) + clamp(12px, 3vw, 40px));
+  pointer-events: none; will-change: transform;
+}
+.pj-esc[hidden] { display: none; }
+.pj-esc-info { display: flex; flex-direction: column; justify-content: center; gap: clamp(4px, 1.4vh, 10px); min-width: 0; padding-bottom: 56px; }
+.pj-esc-faixa { display: block; width: clamp(34px, 5vw, 56px); height: 6px; border-radius: 3px; background: var(--cor-time, var(--verde)); }
+.pj-esc-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto-2); }
+.pj-esc-nome { margin: 0; font-size: clamp(20px, 3.3vw, 46px); font-weight: 900; line-height: 1.02; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.pj-esc-forma { font-size: clamp(15px, 1.9vw, 24px); font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
+.pj-esc-area { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.pj-esc-campo {
+  position: relative; flex: none; border-radius: 12px; overflow: hidden;
+  background: rgba(11, 36, 22, 0.8); border: 1px solid rgba(25, 224, 122, 0.34); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+}
+.pj-esc-linhas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pj-esc-linhas * { fill: none; stroke: rgba(25, 224, 122, 0.4); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.pj-carta {
+  position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: rgba(10, 16, 17, 0.94); border: 1px solid rgba(255, 255, 255, 0.18); border-top: 3px solid var(--cor-time, var(--verde));
+  border-radius: 9px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45); line-height: 1; overflow: hidden;
+}
+.pj-num { font-weight: 900; font-size: calc(var(--ch, 60px) * 0.34); font-variant-numeric: tabular-nums; }
+.pj-nome { font-weight: 700; font-size: clamp(10px, calc(var(--ch, 60px) * 0.19), 15px); white-space: nowrap; max-width: 94%; overflow: hidden; text-overflow: clip; }
+.pj-pos { font-weight: 800; font-size: clamp(10px, calc(var(--ch, 60px) * 0.15), 12px); color: var(--verde); letter-spacing: 0.05em; }
+
+/* tela estreita (celular pequeno): a coluna do time fica mais magra */
+@media (max-width: 620px) {
+  .pj-esc { grid-template-columns: minmax(118px, 24%) 1fr; }
+  .pj-esc-nome { font-size: 19px; }
+}
+/* janela em pé (PC estreito): a coluna do time em cima, o campinho embaixo */
+@media (orientation: portrait) {
+  .pj-esc { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .pj-esc-info { padding-bottom: 0; }
+}
+@media (prefers-reduced-motion: reduce) { .pj-ab-chama { animation: none; } }
