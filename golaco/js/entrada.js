@@ -474,7 +474,9 @@ export function criarEntrada(opc = {}) {
     const solta = e => {
       if (e.pointerId !== b.dedo) return;
       b.dedo = null;
-      if (b.dois) pulsos |= b.dois.soltar();
+      // dois sentidos: só o dedo que SAI do botão (pointerup) vale como toque curto. O sistema tomando o toque
+      // (pointercancel: gesto da borda, chamada, notificação) ou a captura perdida sem soltar não dão o bote
+      if (b.dois) { if (e.type === 'pointerup') pulsos |= b.dois.soltar(); else b.dois.cancelar(); }
       el.classList.remove('ativo');
       trocarFaseSePuder();
     };

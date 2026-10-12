@@ -506,6 +506,16 @@ async function conferirTodosLayouts(pagina) {
     meta('DIVIDIDA: tocar = bote (DIVIDIDA); segurar = CONTER (aceso) e soltar não dá bote',
       `tocada: máscara ${dv1.mask}; segurada 0,5 s: máscara ${dv2.mask}, aceso ${dvAceso}; depois de soltar: ${dv3.mask}`,
       defE3c ? (dv1.mask & BIT.DIVIDIDA) !== 0 && !(dv1.mask & BIT.CONTER) && (dv2.mask & BIT.CONTER) !== 0 && !(dv2.mask & BIT.DIVIDIDA) && dvAceso && !(dv3.mask & (BIT.DIVIDIDA | BIT.CONTER)) : AG4);
+    // o sistema toma o toque (touchcancel → pointercancel: gesto da borda, chamada) logo depois de encostar: não é um
+    // toque curto — nada de bote (contraprova da tela limpa: o soltar por cancelamento dava DIVIDIDA)
+    await defesaToque();
+    await toque('touchStart', [{ x: bd.x, y: bd.y, id: 20 }]);
+    const dc1 = await rodar(pagina, 3);
+    await toque('touchCancel', []);
+    const dc2 = await rodar(pagina, 6);
+    const dcAceso = await pagina.evaluate(() => document.getElementById('btn-dividida').classList.contains('ativo'));
+    meta('DIVIDIDA: toque cancelado pelo sistema não dá bote (nem fica segurado)', `encostado: máscara ${dc1.mask}; depois do cancelamento: ${dc2.mask}, aceso ${dcAceso}`,
+      defE3c ? (dc1.mask & BIT.CONTER) !== 0 && !(dc2.mask & (BIT.DIVIDIDA | BIT.CONTER)) && !dcAceso : AG4);
     await defesaToque();
     const bpr = await centro('btn-pressao');
     await toque('touchStart', [{ x: bpr.x, y: bpr.y, id: 19 }]);
