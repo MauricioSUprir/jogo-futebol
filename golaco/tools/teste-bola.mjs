@@ -9,6 +9,7 @@ import {
 import { PASSO, CAMPO, BOLA } from '../js/config.js';
 import { criarTreino, passoTreino } from '../js/sessao.js';
 import { tabelaTexto, fmt } from './lib/medidas.mjs';
+import { dentroDoVeu, pertoPerfil, fundoDaCunha, VEU } from '../js/rede-forma.js';
 
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -22,7 +23,12 @@ function pend(nome, medido, meta, ok, porque) {
 }
 
 const R = BOLA.raio, X = CAMPO.meioX, G = CAMPO.gol;
-const ZL = G.largura / 2, ZP = ZL + G.raioPoste, YT = G.altura + G.raioPoste, FUNDO = X + G.profundidade;
+const ZL = G.largura / 2, ZP = ZL + G.raioPoste, YT = G.altura + G.raioPoste;
+// rede VÉU DE NOIVA (rede-forma.js): "dentro do gol" = por baixo do véu; atrás do gol = além do pé do véu (fundo + R)
+const ATRAS = X + VEU.fundo + R, CUNHA = fundoDaCunha(R);
+const _pp = { X: 0, y: 0, nx: 0, ny: 0, d: 0, s: 0 };
+const noGol = b => dentroDoVeu(b.p.x - X, b.p.y, b.p.z);
+const distVeu = b => pertoPerfil(b.p.x - X, b.p.y, _pp).d;   // + = do lado de fora do véu (atrás/por cima)
 const PZ = CAMPO.meioZ + CAMPO.entorno;
 const RAD = Math.PI / 180;
 const vel3 = b => Math.hypot(b.v.x, b.v.y, b.v.z);
@@ -251,18 +257,18 @@ const vel3 = b => Math.hypot(b.v.x, b.v.y, b.v.z);
   }
   reg('poste e travessão a 15–40 m/s — bola atravessa', `${passou}/${tot} atravessaram, ${semTrave} sem 'trave'`, '0 e 0', passou === 0 && semTrave === 0);
 }
-// 15) rede: chute forte no meio do gol fica dentro
+// 15) rede: chute forte no meio do gol fica dentro e "morre no fundo" (parada na cunha, por baixo do véu)
 {
   const b = criarBola(X - 11, 0); b.p.y = 0.8; b.rolando = false;
   chutar(b, { x: 28, y: 2, z: 1 }, { x: 0, y: 0, z: 0 });
   for (let i = 0; i < 240; i++) passoBola(b, []);
-  const dentro = b.p.x > X && b.p.x < FUNDO + 0.01 && Math.abs(b.p.z) < ZL;
-  reg('rede — chute forte fica dentro do gol', `x ${fmt(b.p.x)} z ${fmt(b.p.z)}`, 'dentro da rede', dentro);
+  const dentro = noGol(b) && b.p.x - X <= CUNHA + 1e-9 && vel3(b) < 0.3;
+  reg('rede — chute forte fica dentro do gol e morre no fundo', `X ${fmt(b.p.x - X)} m (cunha ${fmt(CUNHA)}), y ${fmt(b.p.y)}, z ${fmt(b.p.z)}, |v| ${fmt(vel3(b))}`, 'dentro, na cunha, parada', dentro);
 }
-// 16) rede lateral e teto não deixam a bola passar, por fora nem por dentro (10–30 m/s, 50 fases)
+// 16) rede lateral e véu não deixam a bola passar, por fora nem por dentro (10–30 m/s, 50 fases): rasteira de fora
+// e de dentro na lateral; caindo de cima no véu (por fora) e subindo de dentro contra o véu
 {
-  const dentroGol = b => b.p.x > X && b.p.x < FUNDO && Math.abs(b.p.z) < ZL && b.p.y < G.altura;
-  let entrou = 0, saiu = 0, entrouTeto = 0, saiuTeto = 0, n = 0;
+  let entrou = 0, saiu = 0, entrouVeu = 0, saiuVeu = 0, n = 0;
   for (const v of [10, 14, 16, 20, 25, 30]) {
     for (let k = 0; k < 50; k++) {
       n++;
@@ -276,43 +282,48 @@ const vel3 = b => Math.hypot(b.v.x, b.v.y, b.v.z);
       let fa = false, fc = false, ft = false, fu = false;
       for (let i = 0; i < 40; i++) {
         passoBola(a, []); passoBola(c, []); passoBola(t, []); passoBola(u, []);
-        if (dentroGol(a)) fa = true;
+        if (noGol(a)) fa = true;
         if (Math.abs(c.p.z) > ZL) fc = true;
-        if (dentroGol(t)) ft = true;
-        if (u.p.y > G.altura && Math.abs(u.p.z) < ZL) fu = true;
+        if (distVeu(t) < 0 && Math.abs(t.p.z) < ZL) ft = true;
+        if (distVeu(u) > 0 && Math.abs(u.p.z) < ZL) fu = true;
       }
-      entrou += fa; saiu += fc; entrouTeto += ft; saiuTeto += fu;
+      entrou += fa; saiu += fc; entrouVeu += ft; saiuVeu += fu;
     }
   }
-  reg('rede lateral e teto a 10–30 m/s — atravessou (fora→dentro / dentro→fora)',
-    `lateral ${entrou}/${saiu}, teto ${entrouTeto}/${saiuTeto} em ${n} cada`, '0', entrou + saiu + entrouTeto + saiuTeto === 0);
+  reg('rede lateral e véu a 10–30 m/s — atravessou (fora→dentro / dentro→fora)',
+    `lateral ${entrou}/${saiu}, véu ${entrouVeu}/${saiuVeu} em ${n} cada`, '0', entrou + saiu + entrouVeu + saiuVeu === 0);
 }
-// 17) bola atrás do gol fica atrás do gol: parada, rolando paralela à linha e vindo para o campo
+// 17) bola atrás do gol (além do pé do véu, X > fundo + R) fica atrás do gol: parada, rolando paralela à linha e
+// vindo para o campo (bate no pé do véu e não entra)
 {
   let desl = 0, eventos = 0;
-  for (const x of [54.7, 55.5, 57, 58.3]) {
+  for (const x of [ATRAS + 0.02, 55.5, 57, 58.3]) {
     const b = criarBola(x, 0.5), ev = [];
     for (let i = 0; i < 60; i++) passoBola(b, ev);
     desl = Math.max(desl, Math.hypot(b.p.x - x, b.p.z - 0.5));
     eventos += ev.length;
   }
-  reg('bola parada atrás do gol (x 54,7–58,3) — deslocamento em 1 s', `${fmt(desl * 1000, 3)} mm, ${eventos} evento(s)`, '0 mm, nenhum evento', desl < 1e-9 && eventos === 0);
+  reg(`bola parada atrás do gol (x ${fmt(ATRAS + 0.02, 2)}–58,3) — deslocamento em 1 s`, `${fmt(desl * 1000, 3)} mm, ${eventos} evento(s)`, '0 mm, nenhum evento', desl < 1e-9 && eventos === 0);
   let dev = 0;
-  for (const x of [54.7, 55.5, 57]) {
+  for (const x of [ATRAS + 0.02, 55.5, 57]) {
     const b = criarBola(x, -6); chutarRasteiro(b, 0, 8);
     for (let i = 0; i < 120; i++) { passoBola(b, []); dev = Math.max(dev, Math.abs(b.p.x - x)); }
   }
   reg('bola rolando atrás do gol, paralela à linha — desvio em x', `${fmt(dev * 1000, 3)} mm`, '0 mm', dev < 1e-9);
-  let atravessou = 0, tot = 0;
+  let atravessou = 0, tot = 0, pen = 0;
   for (const v of [3, 6, 15, 30]) {
     for (let k = 0; k < 20; k++) {
       const b = criarBola(57 + k * 0.013, 0.3); chutarRasteiro(b, -v, 0);
       let passou = false;
-      for (let i = 0; i < 120; i++) { passoBola(b, []); if (b.p.x < FUNDO + R - 1e-9) passou = true; }
+      for (let i = 0; i < 120; i++) {
+        passoBola(b, []);
+        const d = distVeu(b);
+        if (Math.abs(b.p.z) < ZL) { if (d < 0 || noGol(b)) passou = true; pen = Math.max(pen, R - d); }
+      }
       tot++; if (passou) atravessou++;
     }
   }
-  reg('bola de trás do gol rolando para o campo (3–30 m/s) — atravessa a rede de fundo', `${atravessou}/${tot}`, '0', atravessou === 0);
+  reg('bola de trás do gol rolando para o campo (3–30 m/s) — atravessa o véu', `${atravessou}/${tot}; a bola entra no véu no máximo ${fmt(pen * 1000, 2)} mm`, '0 e ≤ 1 mm', atravessou === 0 && pen <= 1e-3);
 }
 // 18) treino: jogador parado atrás do gol não gera "Gol!" (antes: um por segundo)
 {

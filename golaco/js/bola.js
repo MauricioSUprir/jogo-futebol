@@ -11,6 +11,7 @@
 
 import { BOLA, CAMPO, AR, G, PASSO, SUBPASSOS_BOLA } from './config.js';
 import { MD } from './matdet.js';
+import { profundidadeVeu, pertoPerfil, fundoDaCunha, VEU } from './rede-forma.js';
 
 const R = BOLA.raio;
 const M = BOLA.massa;
@@ -260,7 +261,6 @@ const ZP = GOL.largura / 2 + RP;      // centro do poste em z
 const YT = GOL.altura + RP;           // centro do travessão em y
 const ZLIM = GOL.largura / 2;         // plano das redes laterais (|z|)
 const HG = GOL.altura;                // plano do teto da rede
-const PROF = GOL.profundidade;        // plano da rede de fundo (atrás da linha)
 const PERTO_GOL = CAMPO.meioX - 1.5;  // |x| a partir do qual testa traves e rede
 
 /**
@@ -349,49 +349,51 @@ function colidirGol(b, lado, ev, ax, ay, az) {
     if (d < RC && d > 1e-9) colidirCilindro(b, dx / d, dy / d, 0, d, ev, 'trave');
   }
 
-  // 2) rede: caixa atrás da linha (profundidade X, de 0 na linha a PROF no fundo). Cada pano é um
-  // plano fino com bordas alargadas pelo raio (a bola não passa pela quina entre dois panos).
+  // 2) rede VÉU DE NOIVA (rede-forma.js): laterais verticais do poste até o véu e o véu (faixa de cima + a curva
+  // que cai até o chão). Por dentro a rede segura (devolve am da velocidade normal) e a bola escorrega pelo véu até a
+  // cunha do fundo ("morre no fundo"); por fora ela não entra (a bola por cima do travessão escorrega por trás).
   const X0 = lado * (ax - xg), X1 = lado * (p.x - xg);
   if (X0 < 0 && X1 < 0) return;
   const am = BOLA.amortecimentoRede;
-  // redes laterais (|z| = ZLIM): segura por dentro e por fora
+  // redes laterais (|z| = ZLIM): segura por dentro e por fora, só onde há pano (X até o véu)
   for (let s = -1; s <= 1; s += 2) {
     const c = cruzaPlano(az, p.z, s * ZLIM, b.v.z);
     if (!c) continue;
     const X = X0 + (X1 - X0) * c.t, Y = ay + (p.y - ay) * c.t;
-    if (X < 0 || X > PROF + R || Y > HG + R) continue;
+    if (X < 0 || Y > HG + R || X > profundidadeVeu(Y < 0 ? 0 : Y > HG ? HG : Y) + R) continue;
     p.z = s * ZLIM + c.lado * R;
     if (b.v.z * c.lado < 0) { b.v.z = -b.v.z * am; b.v.x *= c.lado === -s ? 0.6 : 0.7; }
   }
-  // teto (y = HG): por baixo segura a bola dentro; por cima ela quica de leve
-  {
-    const c = cruzaPlano(ay, p.y, HG, b.v.y);
-    if (c) {
-      const X = X0 + (X1 - X0) * c.t, Z = az + (p.z - az) * c.t;
-      if (X >= 0 && X <= PROF + R && Math.abs(Z) <= ZLIM + R) {
-        p.y = HG + c.lado * R;
-        if (b.v.y * c.lado < 0) b.v.y = -b.v.y * am * (c.lado > 0 ? 2 : 1);
+  // véu: o lado (dentro/fora) vem do INÍCIO do subpasso (como os planos finos)
+  if (X1 >= 0 && X1 <= VEU.fundo + R && p.y <= HG + R && Math.abs(p.z) <= ZLIM + R) {
+    const a = pertoPerfil(X0, ay, _pa);
+    const ladoV = a.d > 0 ? 1 : a.d < 0 ? -1 : (lado * b.v.x * a.nx + b.v.y * a.ny <= 0 ? 1 : -1);
+    const e = pertoPerfil(X1, p.y, _pe);
+    if (ladoV * e.d < R) {
+      // posição: do lado de onde veio, a R do perfil (por dentro, no máximo na cunha do fundo)
+      let Xn = e.X + ladoV * e.nx * R, yn = e.y + ladoV * e.ny * R;
+      if (ladoV < 0 && yn < R) { yn = R; if (Xn > CUNHA) Xn = CUNHA; }
+      p.x = xg + lado * Xn; p.y = yn;
+      const vX = lado * b.v.x, vn = vX * e.nx + b.v.y * e.ny; // + = para fora
+      if (vn * ladoV < 0) {
+        const k = (1 + (ladoV < 0 ? am : 2 * am)) * vn;
+        let nvX = vX - k * e.nx, nvY = b.v.y - k * e.ny;
+        // a rede segura: batida forte perde boa parte do que escorrega (por fora, mais: não sobe no véu)
+        // (encostada, só escorregando: quase nada — a gravidade a leva pelo véu até o chão)
+        const forte = Math.abs(vn) > 3, leve = Math.abs(vn) < 0.5;
+        const atr = leve ? 0.995 : ladoV < 0 ? (forte ? 0.45 : 0.85) : (forte ? 0.3 : 0.6);
+        nvX *= atr; nvY *= atr; b.v.z *= atr;
+        b.v.x = lado * nvX; b.v.y = nvY;
+        if (forte) { b.w.x *= 0.3; b.w.y *= 0.3; b.w.z *= 0.3; }
+        if (ev && ladoV < 0 && Math.abs(vn) > 1.5) ev.push({ tipo: 'rede', forca: Math.abs(vn) });
       }
-    }
-  }
-  // rede de fundo (X = PROF): por dentro ela cede e segura; por trás a bola volta para trás
-  {
-    const vX = lado * b.v.x;
-    const c = cruzaPlano(X0, X1, PROF, vX);
-    if (c) {
-      const Y = ay + (p.y - ay) * c.t, Z = az + (p.z - az) * c.t;
-      if (Y <= HG + R && Math.abs(Z) <= ZLIM + R) {
-        p.x = xg + lado * (PROF + c.lado * R);
-        if (vX * c.lado < 0) {
-          // quase toda a energia vai embora
-          if (ev) ev.push({ tipo: 'rede', forca: Math.abs(b.v.x) });
-          b.v.x = -b.v.x * am; b.v.z *= 0.3; b.v.y *= 0.3;
-          b.w.x *= 0.3; b.w.y *= 0.3; b.w.z *= 0.3;
-        }
-      }
+      if (p.y > R + 1e-3) b.rolando = false;
+      else if (p.y < R) p.y = R;
     }
   }
 }
+const _pa = { X: 0, y: 0, nx: 0, ny: 0, d: 0, s: 0 }, _pe = { X: 0, y: 0, nx: 0, ny: 0, d: 0, s: 0 };
+const CUNHA = fundoDaCunha(R);
 
 // Placas em volta do campo (barreira simples de 1 m de altura): planos finos com o lado de
 // onde a bola veio; a bola que passou por cima (ou que foi posta além da placa) fica lá fora.
