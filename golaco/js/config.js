@@ -429,7 +429,10 @@ export const ACOES = {
     // (só na partida; pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola") com o condutor
     // abaixo de vParado m/s e sem tocar na bola há semToque s, a bola parada à frente do pé não está "colada": quem
     // chega ao alcance dela tenta tirar — e ganha pela mesma chance da DIVIDIDA do humano (defesa.js chanceDividida)
-    vParado: 2.0, semToque: 0.1 },
+    vParado: 2.0, semToque: 0.1,
+    // (só na partida; entrega "IA intensa" de 12/10) com o condutor a mais de vLado m/s, a bola tirada sai para o lado do
+    // defensor e `tras` (fração) para trás no caminho do condutor — e ele fica DEFESA_HUMANO.dividida.semDominio s sem domínio
+    vLado: 3, tras: 0.4 },
   primeiraErro: 1.4,          // multiplica o erro de jogada de primeira
 };
 
@@ -782,10 +785,12 @@ export const CABECEIO = {
   recua: 0.15,                // m — ...e isto antes dela (a ~0,6 m de quem ia na bola: ombro com ombro, 2 × raio do corpo)
   conforto: 0.12,             // m — o ponto do cabeceio prefere a bola isto abaixo do alcance do pulo...
   desce: 0.25,                // s — ...esperando no máximo isto depois do 1º ponto que ele alcança
+  disputaPerto: 6,            // m — vai antes à bola de cabeça (sem botão, num passe de cabeça) só com um adversário a até isto
   antes: 0.1,                 // s — o corpo chega ao ponto do pulo isto antes de sair do chão
   agacha: [0.12, 0.08],       // s e m — antes de sair do chão o quadril baixa isto (contramovimento) nesse tempo
   amortece: [0.15, 0.07],     // s e m — depois de pousar o quadril baixa isto (amortece a queda) nesse tempo
   peVel: 2.8,                 // m/s — o pé subindo no pulo (teste de patinação: o pé de quem está parado anda até 3 m/s)
+  vooMin: 0.37,               // s — o voo dura pelo menos isto (os pés vão de onde saíram ao pouso sem passar do limite)
   vSaida: 3.5,                // m/s — velocidade horizontal máxima na saída do pulo (no ar o corpo segue com ela)
   impulso: 2.5,               // m/s — o último apoio muda a velocidade horizontal em até isto (para o ponto do contato)
   hyPe: 0.943,                // m — quadril de pé, sem a passada (anim.js: 0,985 − 0,03 − 0,012)
@@ -1009,6 +1014,28 @@ export const IA_DEFESA = {
   // fica parado: a contenção durava para sempre (Sportsessionplanner, 1 × 1: fechar, conter e dar o bote quando o
   // atacante dá a chance)
   lento: { v: 2.0, s: [0.8, 0.5, 0.3], longe: 0.5, aperto: 0.2 },
+  // CONDUTOR RÁPIDO (entrega "IA intensa", 12/10; pedido do dono, 11/10: "ninguém do outro time corre, ninguém marca, mas
+  // tem que marcar com responsabilidade"; contraprova de 11/10: contra quem arranca com a bola, o 1º homem ficava parado ou
+  // subindo no corredor — 3,0 m/s para o próprio gol com o condutor a 3 m —, quem foi batido seguia como 1º homem e o bloco
+  // trotava). Com o condutor adversário de linha a mais de `v` m/s (filtrada) vindo para o meu gol (≥ metade da velocidade
+  // nessa direção; desliga abaixo de v − hist):
+  //  - o 1º homem e o 2º acompanham pela VELOCIDADE (a do condutor + ganho × (ponto − corpo): a conta do CONTER do humano,
+  //    defesa.js entradaVelocidade, com o CORRER pela velocidade pedida): o 1º na linha condutor → gol a dist[0] + dist[1]·v m
+  //    (entre dist[2] e dist[3]); apertando (gatilho, perigo), a `aperto` m; o 2º na cobertura a cobre[0] + cobre[1]·v m (no
+  //    máximo IA_DEFESA.cobertura);
+  //  - do lado do gol e a menos de recua[0] m dele, nunca sobe: a velocidade para o meu gol é pelo menos a dele − recua[1];
+  //  - quem ficou mais de `batido` m atrás do condutor paga `batidoPaga` m para ser o 1º homem (com alguém do lado do gol a
+  //    até batidoFrente m dele): o 1º homem passa adiante (Andrienko 2017: o defensor batido pressiona pouco);
+  //  - o bloco do lado do gol a até `raio` m do condutor e a até `corredor` m de lado da linha dele acompanha no ritmo de
+  //    fBloco × a velocidade dele (sem o teto do trote; CORRER com mais de `correLonge` m de atraso), e a recomposição liga
+  //    com `liga` m de atraso (no jogo organizado eram TATICA.recomp.ligaOrganizado);
+  //  - ninguém além do 1º e do 2º vai na bola (a forma: Forcher 2024, a compactação dos 5 mais perto da bola).
+  corrida: { v: 5.0, hist: 1.0, dist: [1.5, 0.35, 2, 5], aperto: 1.0, cobre: [4, 0.6], ganho: 3, recua: [8, 1],
+    batido: 1, batidoPaga: 12, batidoFrente: 15, raio: 25, corredor: 14, fBloco: 0.85, correLonge: 8, liga: 8 },
+  // filtro do ponto de quem pressiona (ia-tatica.js alvoPressa): trocando de papel (contém ↔ aperta, 1º ↔ 2º homem) o
+  // filtro só recomeça com o ponto novo a mais de `saltoPressa` m (antes recomeçava a cada troca e o avanço de 0,9 s sumia
+  // por 0,3–0,5 s: contraprova de 11/10)
+  saltoPressa: 3,
 };
 
 // ----------------------------------------------------------------------------- Parte 3: com bola

@@ -41,7 +41,7 @@ import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
-import { entradaPressao, pressaoPedida, pressionadorDe } from './defesa.js';
+import { entradaPressao, pressaoPedida, pressionadorDe, entradaVelocidade } from './defesa.js';
 
 const DT = PASSO;
 const seg = s => Math.round(s / DT);
@@ -216,7 +216,7 @@ export function blocoDoTime(m, t) {
       contra: [], contraAte: -1,
       refTick: -99, ref: new Float64Array(22), zonaAdv: new Int32Array(11).fill(-1), marcaAdv: new Int32Array(11).fill(-1),
       foco: { x: 0, z: 0 }, cvx: 0, cvz: 0, cond: -1, dono: -1, dvx: 0, dvz: 0, bolaRef: { x: 0, z: 0 }, bolaRefDef: { x: 0, z: 0 },
-      bfx: 0, bfz: 0, bTick: -2, lentoId: -1, lentoDesde: -1, lento: false,
+      bfx: 0, bfz: 0, bTick: -2, lentoId: -1, lentoDesde: -1, lento: false, rapido: false,
     };
   }
   B.tick = m.tick;
@@ -253,6 +253,14 @@ export function blocoDoTime(m, t) {
     const a = DT / IA.filtroCondutor;
     B.cvx += (adv.vx - B.cvx) * a; B.cvz += (adv.vz - B.cvz) * a;
   } else { B.cond = -1; B.cvx = 0; B.cvz = 0; }
+  // condutor RÁPIDO vindo para o meu gol (IA_DEFESA.corrida; com histerese): o 1º e o 2º homem acompanham pela velocidade,
+  // o batido passa o 1º homem adiante e o bloco do corredor acompanha
+  const CR = IA_DEFESA.corrida;
+  {
+    const vc = MD.hypot(B.cvx, B.cvz), vg = -B.cvx * lado;
+    B.rapido = B.cond >= 0 && adv.posicao !== 'GOL' && !naParada
+      && (B.rapido ? vc > CR.v - CR.hist && vg > 0.3 * vc : vc > CR.v && vg > 0.5 * vc);
+  }
   // velocidade (filtrada) de quem tem a bola no pé, de qualquer time: o bloco antecipa para onde a
   // bola vai (sem isso, no modo calma a referência que anda a ~3 m/s deixava o time ~6 m atrasado)
   if (dono && m.naMao == null && dono.posicao !== 'GOL') {
@@ -271,8 +279,13 @@ export function blocoDoTime(m, t) {
   // bloco baixo) — o meio-campista chega antes.
   const ub = B.foco.x * lado, fp = IA_DEFESA.frentePaga, dp = IA_DEFESA.defesaPaga;
   const vagas = FORMACOES[m.times[t].formacao].vagas;
+  // condutor rápido: quem ficou mais de CR.batido m atrás dele (o condutor já passou) paga CR.batidoPaga m — havendo alguém
+  // do lado do gol a até CR.batidoFrente m do condutor, o 1º homem passa para ele (antes o batido seguia 1º homem, atrás)
+  let passaAdiante = false;
+  if (B.rapido) for (const o of js) if (o.time === t && ehLinha(o) && (o.x - adv.x) * lado < 0 && MD.hypot(o.x - adv.x, o.z - adv.z) <= CR.batidoFrente) { passaAdiante = true; break; }
   const efetiva = o => {
     let d = MD.hypot(o.x - B.foco.x, o.z - B.foco.z);
+    if (passaAdiante && (o.x - adv.x) * lado > CR.batido) d += CR.batidoPaga;
     if (B.refTick < 0) return d;
     const ur = B.ref[2 * o.vagaIdx] * lado;
     if (o.x * lado > ub + 1 || ur > ub + 1) d += fp;
@@ -727,12 +740,17 @@ function semBola(m, j, f) {
   // 3) 1º homem
   // (com a bola além da linha de engajamento ele não sai do bloco: segue a zona, abaixo)
   // (o condutor lento — B.lento — tira o 1º do bloco também além dela)
-  if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento)) {
+  // (condutor rápido vindo para o meu gol: o 1º homem sai do bloco também além da linha de engajamento — a arrancada que
+  // sai do fundo ficava ~30 m sem ninguém na frente — e acompanha pela velocidade)
+  if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento || B.rapido)) {
+    if (B.rapido) { const e = acompanhar(m, j, s, B, meuGol, extra, B.aperta1 ? 'aperta' : 'contem'); if (e) return e; }
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
     return conter(m, j, s, B, meuGol, IA_DEFESA.contencao[p], extra);
   }
-  // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento)
-  if (j.id === B.p2 && (p >= 1 || B.lento) && advComBola && !naMaoAdv) {
+  // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento; com o
+  // condutor rápido, também — cobrindo pela velocidade)
+  if (j.id === B.p2 && (p >= 1 || B.lento || B.rapido) && advComBola && !naMaoAdv) {
+    if (B.rapido && !B.aperta2) { const e = acompanhar(m, j, s, B, meuGol, extra, 'cobre'); if (e) return e; }
     if (B.aperta2) return apertar(m, j, s, B, meuGol, extra, 'aperta', 1);
     if (B.engajado || B.lento) return cobrir(m, j, s, B, meuGol, extra);
   }
@@ -787,8 +805,72 @@ function semBola(m, j, f) {
   const frenteSem = vaga.grupo !== 'def' && vaga.sem.x >= 0;
   alvoCalmo(m, j, tx, tz, _t, lado, frenteSem ? TATICA.recuoFrente[0] : 1,
     frenteSem ? TATICA.recuoFrente[1] : vaga.grupo === 'def' ? TATICA.sobeLinha : 0);
+  // condutor rápido no meu corredor: quem está do lado do gol, perto da linha dele, acompanha no ritmo dele (sem o teto do
+  // trote do ponto calmo) — vai para o lugar dele na forma, sem ir na bola (só o 1º e o 2º vão)
+  if (B.rapido && !frenteSem) acompanhaCorredor(m, j, B, lado, _t);
   desviaCondutor(m, j, B, _t);
   return irPara(m, j, _t.x, _t.z, _t.mag, _t.correr, extra, _t.modo);
+}
+
+/**
+ * Bloco do corredor com o condutor rápido (IA_DEFESA.corrida): quem está do lado do gol, a até corrida.raio m do condutor e
+ * a até corrida.corredor m de lado da linha dele até o meu gol, segue o ponto calmo no ritmo de corrida.fBloco × a
+ * velocidade dele (modo pressa; CORRER com mais de corrida.correLonge m de atraso). Muda out (o ponto calmo).
+ */
+function acompanhaCorredor(m, j, B, lado, out) {
+  const CR = IA_DEFESA.corrida;
+  let c = null;
+  for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
+  if (!c || (j.x - c.x) * lado >= 0) return;
+  const dc = MD.hypot(j.x - c.x, j.z - c.z);
+  if (dc > CR.raio) return;
+  // de lado da linha condutor → meu gol
+  const gx = -lado * CAMPO.meioX - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1;
+  if (Math.abs(-(j.x - c.x) * gz / g + (j.z - c.z) * gx / g) > CR.corredor) return;
+  const d = MD.hypot(out.x - j.x, out.z - j.z);
+  if (d < IA.chegou) return;
+  out.modo = 'pressa';
+  out.mag = Math.max(out.mag, magDaVel(j, Math.min(j.par.vCorrida, CR.fBloco * MD.hypot(B.cvx, B.cvz))));
+  out.correr = d > CR.correLonge;
+}
+
+/**
+ * Condutor rápido (B.rapido): o 1º homem ('contem', 'aperta') e o 2º ('cobre') acompanham pela VELOCIDADE — a do
+ * condutor (filtrada) + corrida.ganho × (ponto − corpo), a conta do CONTER do humano (defesa.js entradaVelocidade, com o
+ * CORRER pela velocidade pedida e histerese). Ponto: na linha condutor → meu gol a dist[0] + dist[1]·v m (contém), a
+ * corrida.aperto m (aperta) ou na cobertura (atrás do 1º, do lado do gol e por dentro). Do lado do gol e perto, nunca
+ * sobe: a velocidade para o meu gol é pelo menos a do condutor − recua[1]. Devolve a entrada, ou null.
+ */
+function acompanhar(m, j, s, B, meuGol, extra, ramo) {
+  const CR = IA_DEFESA.corrida;
+  let c = null;
+  for (const o of m.jogadores) if (o.id === B.cond) { c = o; break; }
+  if (!c) return null;
+  const b = m.bola.p;
+  if (ramo !== 'cobre' && atacaBola(m, j, s)) { s.ramo = 'ataca'; return { ...irPara(m, j, b.x, b.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER }; }
+  s.ramo = ramo;
+  const vc = MD.hypot(B.cvx, B.cvz);
+  const gx = meuGol - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1, ux = gx / g, uz = gz / g;
+  let px, pz;
+  if (ramo === 'cobre') {
+    let nx = -uz, nz = ux;
+    const sz = c.z > 0 ? -1 : 1;
+    if (nz * sz < 0) { nx = -nx; nz = -nz; }
+    const d = Math.min(IA_DEFESA.cobertura, CR.cobre[0] + CR.cobre[1] * vc);
+    px = c.x + ux * d + nx * IA_DEFESA.coberturaLado; pz = c.z + uz * d + nz * IA_DEFESA.coberturaLado;
+  } else {
+    const d = ramo === 'aperta' ? CR.aperto : Math.max(CR.dist[2], Math.min(CR.dist[3], CR.dist[0] + CR.dist[1] * vc));
+    px = c.x + ux * d; pz = c.z + uz * d;
+  }
+  let vx = B.cvx + CR.ganho * (px - j.x), vz = B.cvz + CR.ganho * (pz - j.z);
+  // do lado do gol e perto: nunca sobe no corredor
+  if ((j.x - c.x) * ux + (j.z - c.z) * uz > 0 && MD.hypot(j.x - c.x, j.z - c.z) < CR.recua[0]) {
+    const vg = vx * ux + vz * uz, min = Math.max(0, B.cvx * ux + B.cvz * uz - CR.recua[1]);
+    if (vg < min) { vx += (min - vg) * ux; vz += (min - vg) * uz; }
+  }
+  const it = estadoT(j);
+  it.pTick = -9; // (o filtro do ponto calmo de pressão recomeça quando ele voltar a ele)
+  return entradaVelocidade(j, vx, vz, it.acomp ??= { corre: false }, extra);
 }
 
 /**
@@ -867,7 +949,7 @@ function recompor(m, j, s, B, vaga, lado, extra) {
   if (it.recomp) {
     if (atraso < R.desliga) { it.recomp = false; it.recompFim = m.tick; }
     else if (m.tick - it.recompDesde > seg(R.max)) { it.recomp = false; it.recompBloq = m.tick + seg(R.pausa); }
-  } else if (m.tick >= it.recompBloq && (atraso > (naTransicao ? R.liga : R.ligaOrganizado)
+  } else if (m.tick >= it.recompBloq && (atraso > (naTransicao ? R.liga : B.rapido ? IA_DEFESA.corrida.liga : R.ligaOrganizado)
     || (naTransicao && !frente && u > ub + R.ligaBola && uRef < ub && m.tick - it.recompFim > seg(R.respiro)))) {
     it.recomp = true; it.recompDesde = m.tick;
   }
@@ -911,7 +993,9 @@ function recompor(m, j, s, B, vaga, lado, extra) {
  */
 function alvoPressa(m, j, out, lead = 0) {
   const it = estadoT(j), S = TATICA.suave;
-  if (it.pTick !== m.tick - 1 || it.pRamo !== j.ia.ramo) { it.px = out.x; it.pz = out.z; it.pvx = 0; it.pvz = 0; }
+  // (trocando de papel, o filtro só recomeça com o ponto novo longe — IA_DEFESA.saltoPressa m: a troca contém ↔ aperta
+  // apagava o avanço pela velocidade por 0,3–0,5 s)
+  if (it.pTick !== m.tick - 1 || (it.pRamo !== j.ia.ramo && MD.hypot(out.x - it.px, out.z - it.pz) > IA_DEFESA.saltoPressa)) { it.px = out.x; it.pz = out.z; it.pvx = 0; it.pvz = 0; }
   else {
     const a = Math.min(1, DT / S.tauPressa), c = Math.min(1, DT / S.tauVelPressa);
     const nx = it.px + (out.x - it.px) * a, nz = it.pz + (out.z - it.pz) * a;
@@ -986,7 +1070,7 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9 };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9, acomp: null };
 }
 
 /**

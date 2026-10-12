@@ -257,7 +257,7 @@ if (SO.includes('D') && NP > 0) {
       res.push(await new Promise((ok, erro) => {
         const c = fork(fileURLToPath(import.meta.url), ['--filho', '--s', String(s), '--js', JS]);
         c.on('message', ok); c.on('error', erro);
-        c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
+        c.on('exit', (cod, sinal) => { if (cod || sinal) erro(new Error(`semente ${s}: saiu com ${cod ?? sinal}`)); });
       }));
     }
   }));

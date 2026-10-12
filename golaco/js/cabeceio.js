@@ -92,7 +92,7 @@ export function planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx = 0, nz = 0, folga
     tA = Math.max(m.tick + 1, tc - seg(C.janela[0])); td = tc; tp = tc; tf = tc + seg(C.janela[1]);
   } else {
     // subida: o tempo da física (√(2h/g)), e o pé subindo no máximo C.peVel (pico do perfil sen²: h·π / (2·subida))
-    let nr = Math.max(Math.round(Math.sqrt(2 * h / G) / DT), Math.ceil(h * Math.PI / (2 * C.peVel * DT)));
+    let nr = Math.max(Math.round(Math.sqrt(2 * h / G) / DT), Math.ceil(h * Math.PI / (2 * C.peVel * DT)), Math.ceil(C.vooMin / (2 * DT)));
     let nc = seg(C.agacha[0]);
     if (nr + 1 > nTc) {
       // sem tempo de subir tudo: o pulo que cabe (mais baixo); se a cabeça não chega, não cabeceia
@@ -102,6 +102,8 @@ export function planejarPulo(m, j, tc, bx, by, bz, ux, uz, nx = 0, nz = 0, folga
       if (hCabe < h - 0.05) return null;
       h = Math.min(h, hCabe);
     }
+    // (voo curto demais para os pés irem ao pouso sem saltar: cabeceia sem pular — só o tronco vai à bola)
+    if (2 * nr * DT < C.vooMin - 1e-9) { h = 0; }
     nc = Math.max(0, Math.min(nc, nTc - 1 - nr));
     td = tc - nr; tA = td - nc; tp = tc + nr; tf = tp + seg(C.amortece[0]);
   }
@@ -217,12 +219,10 @@ export function pesNoAr(m, j) {
       continue;
     }
     pe.apoio = false;
-    const ox = j.x + rx * ld * PASSADA.afastamentoLateral, oz = j.z + rz * ld * PASSADA.afastamentoLateral;
-    let x, z;
-    if (u < 0.35) { const k = suave(u / 0.35); x = lerp(c.x0[p], ox, k); z = lerp(c.z0[p], oz, k); }
-    else if (u < 0.6) { x = ox; z = oz; }
-    else { const k = suave((u - 0.6) / 0.4); x = lerp(ox, c.lx[p], k); z = lerp(oz, c.lz[p], k); }
-    pe.tx = x; pe.tz = z; pe.ty = TORN + lift;
+    // um caminho só, suave, de onde saiu ao ponto de pouso no voo inteiro (velocidade zero na saída e no pouso; o pé nunca
+    // anda mais que o necessário — o teste de patinação limita o pé a 2,5·v + 3 m/s)
+    const k = suave(u);
+    pe.tx = lerp(c.x0[p], c.lx[p], k); pe.tz = lerp(c.z0[p], c.lz[p], k); pe.ty = TORN + lift;
     pe.lx = c.lx[p]; pe.lz = c.lz[p]; pe.lrumo = j.rumo; pe.puxa = 0;
   }
 }

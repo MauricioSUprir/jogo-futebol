@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, CABECEIO, TROCA_AEREA, DEFESA_HUMANO } from './config.js';
 import { criarRng, entre, uniforme, normal } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -323,8 +323,21 @@ function boteIA(m, j) {
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
   const l = MD.hypot(ux, uz) || 1; ux /= l; uz /= l;
+  // (só na partida; entrega "IA intensa" de 12/10) com o condutor embalado, a bola sai para o lado do defensor e um pouco
+  // para trás no caminho do condutor — "para longe dele" era ADIANTE no caminho dele, e o mesmo condutor, embalado,
+  // pegava de novo: 26% das roubadas da IA na arrancada do humano (contraprova de 11/10)
+  const vD = MD.hypot(dono.vx, dono.vz);
+  if (m.partida && vD > cfg.vLado) {
+    const cx = dono.vx / vD, cz = dono.vz / vD;
+    let px = -cz, pz = cx;
+    if ((j.x - dono.x) * px + (j.z - dono.z) * pz < 0) { px = -px; pz = -pz; }
+    ux = px - cfg.tras * cx; uz = pz - cfg.tras * cz;
+    const k = MD.hypot(ux, uz) || 1; ux /= k; uz /= k;
+  }
   chutarRasteiro(b, ux * cfg.vSai, uz * cfg.vSai);
   dono.cond.toque = null; dono.cond.busca = false;
+  // (só na partida) quem perdeu a bola não a domina de novo logo em seguida (a mesma regra da DIVIDIDA do humano)
+  if (m.partida) dono.cond.semDominioAte = m.tick + Math.round(DEFESA_HUMANO.dividida.semDominio / PASSO);
   m.posse = null;
   m.voo = null;
   m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
@@ -756,7 +769,11 @@ function bolaAltaNoCorpo(m, j) {
   // esperar a bola passar a 0,6 m dele (bolaAltaPassando) não deixava tempo para a subida. O controlado com o analógico
   // mexido só cabeceia a bola que passa nele (o humano decide para onde vai)
   const livre = !ehControlado(m, j) || !!m.iaJoga?.[j.time] || j.imag <= TROCA_AEREA.analogicoSolto;
-  const pc = livre ? pontoDeCabeceio(m, j, querCabeca) : null;
+  // (vai antes à bola de cabeça só quando vale: com botão, para o gol ou para afastar, ou com um adversário perto — a
+  // disputa; sozinho no meio-campo ele espera a bola cair no peito/pé, como antes)
+  const vale = y => y > CABECEIO.alturaPedido && (!!j.pedido || adversarioPerto(m, j, CABECEIO.disputaPerto)
+    || (intencaoCabeceio(m, j, y)?.tipo ?? 'passe') !== 'passe');
+  const pc = livre ? pontoDeCabeceio(m, j, vale) : null;
   const q = pc ?? r;
   if (!q || !planejarPulo(m, j, m.tick + q.i, q.x, q.y, q.z, q.ux ?? -MD.cos(j.rumo), q.uz ?? -MD.sin(j.rumo))) {
     // a cabeça não alcança: a bola na altura do peito ele ainda domina; mais alta, passa
@@ -802,6 +819,15 @@ function pontoDeCabeceio(m, j, querCabeca) {
     if (y <= alc - CABECEIO.conforto || (i - achou) * PASSO >= CABECEIO.desce) return _pc;
   }
   return achou >= 0 ? _pc : null;
+}
+
+/** Algum adversário de linha a até d m de j? */
+function adversarioPerto(m, j, d) {
+  for (const o of m.jogadores) {
+    if (o.time === j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (MD.hypot(o.x - j.x, o.z - j.z) <= d) return true;
+  }
+  return false;
 }
 
 /** Tempo (s) para j chegar correndo a (x, z): a velocidade que já leva na direção e a aceleração até a máxima (troca.js). */

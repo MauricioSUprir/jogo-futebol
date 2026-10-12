@@ -27,6 +27,7 @@
 //   node tools/painel-equilibrio.mjs --base <pasta js>     (roda as duas com as MESMAS sementes, lado a lado)
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
 //   node tools/painel-equilibrio.mjs --base-json saida.json (a base é a rodada gravada: não roda de novo)
+//   node tools/painel-equilibrio.mjs --set IA_ATAQUE.utilidade.chute=3 (repetível: constante trocada só na versão medida)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
@@ -47,6 +48,20 @@ const BOLA_PARADA = new Set(['escanteio', 'lateral', 'falta', 'tiroLivre', 'pena
 
 // ------------------------------------------------------------------ uma partida (processo filho)
 async function partida(pastaJs, sem) {
+  // --set CONST.caminho=valor (repetível; valor em JSON): troca uma constante do config.js antes da partida (triagem de
+  // calibração; as constantes são lidas na hora pelos módulos)
+  const sets = args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []));
+  if (sets.length) {
+    const CF = await import(pathToFileURL(path.join(pastaJs, 'config.js')).href);
+    for (const s of sets) {
+      const [chave, valor] = [s.slice(0, s.indexOf('=')), s.slice(s.indexOf('=') + 1)];
+      const partes = chave.split('.');
+      let o = CF[partes[0]];
+      for (const p of partes.slice(1, -1)) o = o[p];
+      if (!o || !(partes[partes.length - 1] in o)) throw new Error(`--set: ${chave} não existe`);
+      o[partes[partes.length - 1]] = JSON.parse(valor);
+    }
+  }
   const P = await import(pathToFileURL(path.join(pastaJs, 'partida.js')).href);
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO });
@@ -170,7 +185,8 @@ async function rodar(pastaJs) {
     while (prox < SEMENTES.length) {
       const s = SEMENTES[prox++];
       res.push(await new Promise((ok, erro) => {
-        const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO)]);
+        const sets = pastaJs === JS ? args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])) : [];
+        const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO), ...sets]);
         c.on('message', ok); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });
       }));
