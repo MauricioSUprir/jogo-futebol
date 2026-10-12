@@ -201,9 +201,16 @@ export function trocaAerea(m) {
         marcado = disputa === ctrl ? null : disputa;
       }
     }
-    // travas: o controlado já vai disputar (o toque aéreo dele vem primeiro), carrega uma ação, ou o humano
-    // acabou de escolher
-    const trava = (tqcVale && disputa === ctrl) || ctrl.carga || ctrl.pedido || (m.tick - st.manual) * PASSO < T.manualRecente;
+    // travas: o controlado já vai disputar (o toque aéreo dele vem primeiro), carrega uma ação, o humano acabou de
+    // escolher, a bola alta é um CHUTE do adversário (no tiro livre o controle saía do goleiro no chute e o escolhido
+    // corria para longe do gol) ou o humano está no goleiro que escolheu pelo TROCAR segurado (auditoria dos botões, 12/10)
+    const v = m.voo;
+    const chuteAdv = !!v && v.time !== t && (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha'
+      || (v.tipo === 'cabeceio' && v.cabeceio === 'chute'));
+    const tm = m.trocaManual?.[t];
+    const goleiroEscolhido = !!tm && tm.goleiro && tm.id === ctrl.id;
+    const trava = (tqcVale && disputa === ctrl) || ctrl.carga || ctrl.pedido || (m.tick - st.manual) * PASSO < T.manualRecente
+      || chuteAdv || goleiroEscolhido;
     if (!trava) {
       const podeCorrigir = st.correcoes < T.correcoesMax;
       if (marcado && marcado !== ctrl) {

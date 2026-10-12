@@ -3,7 +3,7 @@
 // mesma partida bit a bit (ver hashMundo).
 
 import { profundidadeVeu } from './rede-forma.js';
-import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO } from './config.js';
+import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO, TROCA_AEREA } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
 import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, faseLocal } from './jogador.js';
@@ -339,6 +339,11 @@ function boteIA(m, j) {
 export function passo(m, entradas) {
   m.eventos = [];
   const js = m.jogadores;
+  // time com a bola no pé no começo do passo (ganhouPosse: o time humano acabou de perder a bola?)
+  if (m.posse != null) {
+    const d = jogadorPorId(m, m.posse);
+    if (d) { const up = (m.ultPosse ??= { time: d.time, tick: m.tick }); up.time = d.time; up.tick = m.tick; }
+  }
   // botões de cada time humano (bordas de TROCAR e botões segurados na troca)
   for (const t of m.humanos) {
     m.botoesTimeAnt[t] = m.botoesTimeAgora[t] ?? 0;
@@ -730,6 +735,26 @@ function ganhaDisputa(m, j, o) {
   return uniforme(m.rng) < p;
 }
 
+/**
+ * O time humano t ACABOU de perder a bola (para quem ganhou a posse agora)? A última posse foi dele, ou o último chute,
+ * passe, bote ou defesa depois dela foi de alguém dele. O passe entre dois adversários não é perda: antes a troca
+ * automática rodava em todo ganho de posse do outro time e desfazia a escolha do TROCAR (e o goleiro escolhido pelo
+ * TROCAR segurado) a cada passe da IA (auditoria dos botões, 12/10).
+ */
+function timeAcabouDePerder(m, t) {
+  const up = m.ultPosse, u = m.ultimoToque;
+  if (!up) return true;
+  return up.time === t || (!!u && u.time === t && u.tick >= up.tick);
+}
+
+/** A escolha do humano do time t vale: TROCAR apertado há pouco ou o goleiro escolhido pelo TROCAR segurado. */
+function escolhaManual(m, t) {
+  const e = m.trocaManual?.[t];
+  if (!e) return false;
+  if ((m.tick - e.tick) * PASSO < TROCA_AEREA.manualRecente) return true;
+  return e.goleiro && m.controlado[t] === e.id;
+}
+
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
   registrarToque(m, j, 'posse');
@@ -741,7 +766,9 @@ function ganhouPosse(m, j) {
   m.voo = null;
   for (const t of m.humanos) {
     if (t === j.time) continue;
-    // o time humano perdeu a bola: passa para o jogador de linha mais perto dela
+    // o time humano perdeu a bola: passa para o jogador de linha mais perto dela (só na perda — o passe entre
+    // adversários não desfaz a escolha do humano — e nunca por cima da escolha manual)
+    if (!timeAcabouDePerder(m, t) || escolhaManual(m, t)) continue;
     let mel = null, dm = Infinity;
     for (const o of m.jogadores) {
       if (o.time !== t || o.posicao === 'GOL') continue;
@@ -961,6 +988,7 @@ function trocarJogador(m, entradas) {
         const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
         if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id)) {
           assumirControle(m, t, g);
+          (m.trocaManual ??= {})[t] = { tick: m.tick, id: g.id, goleiro: true };
           m.eventos.push({ tipo: 'troca', id: g.id, goleiro: true });
           continue;
         }
@@ -971,6 +999,7 @@ function trocarJogador(m, entradas) {
     const comBola = m.posse === j.id && m.naMao !== j.id;
     if (apertou && !comBola && melhor && melhor.id !== j.id) {
       assumirControle(m, t, melhor);
+      (m.trocaManual ??= {})[t] = { tick: m.tick, id: melhor.id, goleiro: false };
       m.eventos.push({ tipo: 'troca', id: melhor.id });
     }
   }
@@ -987,6 +1016,9 @@ export function candidatoTroca(m, t) {
   let mel = null, mt = Infinity;
   for (const o of m.jogadores) {
     if (o.time !== t || o.posicao === 'GOL' || o.id === m.controlado[t]) continue;
+    // quem está parado (na barreira, cobrador) ou é o marcador do treino não recebe o controle: a simulação não lê a
+    // entrada dele — o TROCAR na barreira dava um zagueiro que não andava com o analógico
+    if (o.papel === 'parado' || o.papel === 'marcador') continue;
     const d = MD.hypot(o.x - px, o.z - pz);
     // chega antes = distância / velocidade de arrancada, com bônus para quem já corre para lá
     const v = Math.max(1, (o.vx * (px - o.x) + o.vz * (pz - o.z)) / Math.max(d, 1e-6));
