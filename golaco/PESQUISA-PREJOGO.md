@@ -80,6 +80,17 @@ inclinação (−60…+20°: olhar para cima a fachada e a arquibancada é natur
 no drone). O teste pegou 3 erros na 1ª versão (a câmera do túnel a 0,4 m do fundo, a grua olhando 17° para cima, a
 panorâmica da arquibancada de lá a 11 m/s).
 
+## 4b. O vão das placas na frente do túnel (contraprova)
+
+A 1ª versão fazia as duas colunas e os árbitros atravessarem as placas de LED do lado de cá (z = 40, inteiras de ponta a
+ponta) nos planos do túnel e da entrada em campo — bem no meio do quadro da steadicam. Nos estádios as placas abrem na
+saída do túnel; aqui o vão (±3 m, `FORA.vaoPlacas`) só existe no pré-jogo: no jogo a bola bate nas placas (`bola.js`) e
+um vão de verdade mudaria a simulação (ou a bola quicaria no nada). O diretor recorta as duas malhas das placas com os
+planos de recorte da three.js (docs `Material.clippingPlanes`/`clipIntersection` e `WebGLRenderer.localClippingEnabled`:
+some só o que está dentro dos três planos) e fecha as pontas com dois arremates escuros; no fim do pré-jogo tudo volta.
+Medido: `teste-cortejo` "ninguém atravessa o estádio" 659 contatos com as placas → 0; `teste-prejogo` itens 9 (aberto no
+pré-jogo, 2/2 malhas recortadas) e o vão fechado no jogo (0/2, recorte local desligado).
+
 ## 5. Pular e preferências
 
 Toque/clique, Enter, Espaço ou A: próximo BLOCO (cenas → escalação 1 → escalação 2 → jogo). Botão Pular (ícone + palavra,
@@ -87,6 +98,11 @@ Toque/clique, Enter, Espaço ou A: próximo BLOCO (cenas → escalação 1 → e
 Só escalação / Desligado" (salvo). "Reiniciar partida" no meio do jogo toca só a escalação; "Jogar de novo" e a volta de
 um treino para a partida tocam a preferência. `?prejogo=0|1|curto|escalacao` força. DESLIGADO por padrão com
 `navigator.webdriver`, `?prints=1` e `?demo=1` (os testes e prints que já existem abrem direto no jogo, como antes).
+Celular em pé no meio do pré-jogo: a tela de girar cobre, o tempo não anda, o toque não avança e a torcida abaixa e abafa
+como na pausa do jogo (a 1ª versão mantinha o som do plano por cima da pausa); deitado de novo, continua de onde estava.
+Aba escondida: o tempo não anda e, de volta, o 1º quadro avança um passo só (nada de pular os segundos escondidos). No
+"Reiniciar partida" (só a escalação) e no curto o lado de fora vem sem o entorno (esplanada, bairro, prédios, carros,
+torcedores nunca entram no quadro): 6 peças em vez de 12.
 
 ## 6. Medidas (antes → depois)
 

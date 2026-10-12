@@ -18,7 +18,12 @@
 //   6) som: com o toque da abertura as camadas da torcida tocam no pré-jogo, o filtro de fora abafa; o apito da saída
 //      só toca no FIM (0 antes, 1 depois);
 //   7) desempenho no celular (Média): ≤ 40 chamadas de desenho e ≤ 130 mil triângulos em todo plano;
-//   8) memória: geometrias e texturas depois do pré-jogo = as do jogo aberto sem ele (o lado de fora descartado).
+//   8) memória: geometrias e texturas depois do pré-jogo = as do jogo aberto sem ele (o lado de fora descartado);
+//   9) o vão das placas na frente do túnel aberto no pré-jogo (por ali o cortejo passa; recorte nas 2 malhas das placas
+//      e as pontas) e fechado no jogo (as placas inteiras, a bola bate nelas);
+//  10) celular em pé no meio do pré-jogo: a tela de girar cobre, o tempo não anda, o toque não avança, o som fica como
+//      na pausa do jogo (sem o plano do pré-jogo por cima); deitado de novo, continua;
+//  11) "Reiniciar partida" (só a escalação): o lado de fora sem o entorno (nunca entra no quadro).
 // Na versão publicada não há pré-jogo (reprova no item 1).
 //   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
@@ -190,6 +195,12 @@ try {
     meta(`${P.nome}: túnel, entrada, plano alto e geral com ≥ 8 andantes na tela`, poucos.length ? poucos.join('; ') : porPlano.filter(x => ['tunel', 'entrada', 'alto', 'geral'].includes(x.id)).map(x => `${x.id} ${x.na}`).join(', '), '≥ 8', poucos.length === 0);
     meta(`${P.nome}: planos de fora com a fachada ≥ 25% da tela`, fachadaPouca.length ? fachadaPouca.join('; ') : porPlano.filter(x => R.planos.find(q => q.id === x.id)?.fora).map(x => `${x.id} ${f1(x.cob * 100)}%`).join(', '), '≥ 25%', fachadaPouca.length === 0);
     if (!P.pc) meta(`${P.nome}: ≤ 40 chamadas de desenho e ≤ 130 mil triângulos em todo plano`, `pior ${piorCham} chamadas, ${f1(piorTri / 1000)} mil tri (${porPlano.map(x => `${x.id} ${x.cham}/${Math.round(x.tri / 1000)}k`).join(' ')})`, '≤ 40; ≤ 130 mil', piorCham <= 40 && piorTri <= 130000);
+    // 9) o vão das placas na frente do túnel, aberto no pré-jogo (o plano da entrada em campo)
+    {
+      const ent = R.planos.find(q => q.id === 'entrada');
+      const v = await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; pj.irPara(t); g.relogio.avancar(16); return pj.vao ?? null; }, (ent.t0 + ent.t1) / 2);
+      meta(`${P.nome}: vão das placas na frente do túnel aberto no pré-jogo (o cortejo passa por ele)`, v ? `aberto ${v.aberto}, ${v.recortadas}/${v.malhas} malhas recortadas (±${v.meia} m), recorte local ${v.local}, ${v.pontas} pontas` : 'não existe (as colunas atravessam as placas inteiras)', 'true, 2/2, true, 2', v && v.aberto && v.malhas === 2 && v.recortadas === 2 && v.local && v.pontas === 2);
+    }
     // as filas: a câmera passando (30 qps) — cada um dos 11 do time pelo terço central do quadro
     for (const id of ['filaMandante', 'filaVisitante']) {
       const p = R.planos.find(q => q.id === id);
@@ -254,9 +265,31 @@ try {
       meta(`${P.nome}: escalação do mandante inteira 10 ± 0,2 s, depois a do visitante`, `${f1(tempos.cheia[0])} s e ${f1(tempos.cheia[1])} s`, '10 ± 0,2 s cada', Math.abs(tempos.cheia[0] - 10) <= 0.2 && Math.abs(tempos.cheia[1] - 10) <= 0.2);
       meta(`${P.nome}: fim natural → jogo no tick 0 com o hash de criarPartida (Node)`, `ativo ${tempos.ativo}, tick ${tempos.tick}, ${tempos.passos} passos, HUD ${tempos.hud}, relógio ${tempos.estado}; hash ${hexa(tempos.hash)} × Node ${hexa(NODE.h0)}`, 'false, 0, iguais', !tempos.ativo && tempos.tick === 0 && tempos.hud !== 'none' && tempos.hash === NODE.h0);
       meta(`${P.nome}: o apito da saída só no fim do pré-jogo`, `${tempos.apitoAntes} antes; ${tempos.apito} depois`, '0; 1', tempos.apitoAntes === 0 && tempos.apito === 1);
+      const vf = await pg.evaluate(() => window.__golaco.prejogo.vao ?? null);
+      meta(`${P.nome}: no jogo o vão fecha (placas inteiras: a bola bate nelas)`, vf ? `aberto ${vf.aberto}, ${vf.recortadas}/${vf.malhas} recortadas, recorte local ${vf.local}, ${vf.pontas} pontas` : 'sem vão', 'false, 0/2, false, 0', vf && !vf.aberto && vf.malhas === 2 && vf.recortadas === 0 && !vf.local && vf.pontas === 0);
       const h = await pg.evaluate(rot => window.__golaco.rodarPassos(rot.length, rot), roteiro(600));
       meta(`${P.nome}: 600 passos depois do pré-jogo (Node = Chromium)`, `Chromium ${hexa(h)} · Node ${hexa(NODE.h)}`, 'iguais', h === NODE.h);
     } else {
+      // ---------------------------------------------------------------- 10) celular em pé no meio do pré-jogo
+      await pg.evaluate(() => { const g = window.__golaco, pj = g.prejogo; pj.irPara(12); g.relogio.avancar(16); g.relogio.avancar(16); });
+      await pg.setViewportSize({ width: P.altura, height: P.largura });
+      const emPe = await pg.evaluate(() => {
+        const g = window.__golaco, pj = g.prejogo, t0 = pj.tempo;
+        for (let i = 0; i < 30; i++) g.relogio.avancar(16);
+        return { dt: pj.tempo - t0, parado: pj.parado, cena: pj.somCena, girar: getComputedStyle(document.getElementById('girar')).display, bloco: pj.bloco };
+      });
+      await pg.touchscreen.tap(P.altura / 2, P.largura / 2);
+      const aposToque = await pg.evaluate(() => { const g = window.__golaco, pj = g.prejogo; g.relogio.avancar(16); return { bloco: pj.bloco, ativo: pj.ativo }; });
+      await pg.setViewportSize({ width: P.largura, height: P.altura });
+      const deitado = await pg.evaluate(() => {
+        const g = window.__golaco, pj = g.prejogo, t0 = pj.tempo;
+        for (let i = 0; i < 30; i++) g.relogio.avancar(16);
+        return { dt: pj.tempo - t0, parado: pj.parado, cena: pj.somCena };
+      });
+      meta(`${P.nome}: celular em pé no pré-jogo — tela de girar, tempo parado, toque não avança, som como na pausa do jogo; deitado continua`,
+        `em pé: girar ${emPe.girar}, anda ${f1(emPe.dt)} s, parado ${emPe.parado}, som do plano ${emPe.cena ? 'POR CIMA da pausa' : 'solto (pausa do jogo)'}, toque: ${emPe.bloco} → ${aposToque.bloco}; deitado: anda ${f1(deitado.dt)} s, som do plano ${deitado.cena ? 'de volta' : 'faltando'}`,
+        'flex, 0 s, true, pausa, cenas → cenas; ~0,5 s, de volta',
+        emPe.girar !== 'none' && emPe.dt === 0 && emPe.parado === true && emPe.cena === null && aposToque.ativo && aposToque.bloco === emPe.bloco && deitado.dt > 0.3 && !deitado.parado && deitado.cena !== null);
       // ---------------------------------------------------------------- 5) pular: toque = próximo bloco; botão Pular = jogo
       const b = await pg.evaluate(() => { const g = window.__golaco, pj = g.prejogo; pj.irPara(20); g.relogio.avancar(16); return pj.bloco; });
       await pg.touchscreen.tap(P.largura * 0.6, P.altura * 0.4);
@@ -271,6 +304,8 @@ try {
       await pg.evaluate(() => window.__golaco.relogio.avancar(16));
       const fim = await pg.evaluate(() => { const g = window.__golaco, e = g.estado(); return { ativo: g.prejogo.ativo, tick: e.tick, hash: g.hash(), hud: getComputedStyle(document.getElementById('hud')).display, toque: getComputedStyle(document.getElementById('toque')).display, apito: g.estadio.som?.tocados?.apito ?? 0 }; });
       meta(`${P.nome}: botão Pular → direto ao jogo (HUD e toque de volta; tick 0 e o hash de criarPartida)`, `ativo ${fim.ativo}, tick ${fim.tick}, HUD ${fim.hud}, toque ${fim.toque}; hash ${hexa(fim.hash)} × Node ${hexa(NODE.h0)}; apito ${fim.apito}`, 'false, 0, visíveis, iguais, 1', !fim.ativo && fim.tick === 0 && fim.hud !== 'none' && fim.toque !== 'none' && fim.hash === NODE.h0 && fim.apito === 1);
+      const vf = await pg.evaluate(() => window.__golaco.prejogo.vao ?? null);
+      meta(`${P.nome}: depois de pular o vão fecha (placas inteiras)`, vf ? `aberto ${vf.aberto}, ${vf.recortadas}/${vf.malhas} recortadas, recorte local ${vf.local}, ${vf.pontas} pontas` : 'sem vão', 'false, 0/2, false, 0', vf && !vf.aberto && vf.malhas === 2 && vf.recortadas === 0 && !vf.local && vf.pontas === 0);
       const h = await pg.evaluate(rot => window.__golaco.rodarPassos(rot.length, rot), roteiro(600));
       meta(`${P.nome}: 600 passos depois de pular (Node = Chromium)`, `Chromium ${hexa(h)} · Node ${hexa(NODE.h)}`, 'iguais', h === NODE.h);
     }
@@ -294,6 +329,9 @@ try {
       await pg.keyboard.press('Escape');
       await pg.evaluate(() => window.__golaco.relogio.avancar(16));
       const fim = await pg.evaluate(() => { const g = window.__golaco; return { ativo: g.prejogo.ativo, tick: g.estado().tick, menu: g.estado().menuAberto, hash: g.hash() }; });
+      // 11) o "Reiniciar partida" toca só a escalação: o lado de fora sem o entorno
+      const re = await pg.evaluate(() => { const g = window.__golaco; const ok = g.prejogo.iniciar('escalacao', {}); g.relogio.avancar(16); const f = g.prejogo.fora; const r = { ok, modo: g.prejogo.modo, fora: f, total: g.prejogo.total }; g.prejogo.pularTudo(); g.relogio.avancar(16); r.depois = g.prejogo.ativo; return r; });
+      meta('Só a escalação (Reiniciar partida): o lado de fora sem o entorno', `${re.modo}, ${f1(re.total)} s; entorno ${re.fora?.entorno}, ${re.fora?.pecas} peças, ${re.fora?.triangulos} triângulos; ativo depois de pular ${re.depois}`, 'escalacao; false; ≤ 8 peças', re.ok && re.modo === 'escalacao' && re.fora && re.fora.entorno === false && re.fora.pecas <= 8 && !re.depois);
       meta('PC: Enter → próximo bloco; Esc → direto ao jogo (sem abrir o menu)', `Enter: ${b}; Esc: ativo ${fim.ativo}, tick ${fim.tick}, menu ${fim.menu}, hash ${hexa(fim.hash)}`, 'escalacao0; false, 0, false, o de criarPartida', b === 'escalacao0' && !fim.ativo && fim.tick === 0 && !fim.menu && fim.hash === NODE.h0);
       await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 120; i++) g.relogio.avancar(16.7); });
       const mem = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geometrias: e.geometrias, texturas: e.texturas }; });

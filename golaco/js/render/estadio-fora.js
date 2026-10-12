@@ -456,8 +456,9 @@ function criarTorcedores(material) {
 }
 
 /**
- * Monta o lado de fora na cena. opc = {qualidade, hora, aniso, materialTorcida}. Devolve {grupo, modoFora(v),
- * definirHora(h), atualizar(t, camera), dispose(), info}.
+ * Monta o lado de fora na cena. opc = {qualidade, hora, aniso, materialTorcida, entorno (padrão true; false: só a
+ * estrutura — o pré-jogo sem plano de fora)}. Devolve {grupo, modoFora(v), definirHora(h), atualizar(t, camera),
+ * dispose(), info}.
  */
 export function criarEstadioFora(cena, opc = {}) {
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
@@ -467,8 +468,9 @@ export function criarEstadioFora(cena, opc = {}) {
   // estrutura (vista também de dentro)
   const estrutura = [criarFachada(aniso), criarPlaca(), criarCobertura(), criarCantos(aniso, q), ...criarTunel()];
   // o entorno (só nos planos de fora)
-  const entorno = [criarEsplanada(aniso, q), criarBairro(aniso)];
-  if (q !== 'baixa') {
+  const comEntorno = opc.entorno !== false;
+  const entorno = comEntorno ? [criarEsplanada(aniso, q), criarBairro(aniso)] : [];
+  if (comEntorno && q !== 'baixa') {
     entorno.push(criarPredios(uNoite), criarArvores(), criarCarros());
     const t = criarTorcedores(opc.materialTorcida);
     if (t) entorno.push(t);
@@ -485,8 +487,8 @@ export function criarEstadioFora(cena, opc = {}) {
     placa.material.color.setHex(noite ? 0xffffff : 0xeaf6ee);
     // à noite o chão de fora só tem a luz que escapa do estádio e da rua (as luzes da cena são as dos refletores)
     cantos.material.color.setScalar(noite ? 0.42 : 1);
-    esplanada.material.color.setScalar(noite ? 0.3 : 1);
-    bairro.material.color.setScalar(noite ? 0.26 : 1);
+    if (esplanada) esplanada.material.color.setScalar(noite ? 0.3 : 1);
+    if (bairro) bairro.material.color.setScalar(noite ? 0.26 : 1);
   }
   definirHora(opc.hora ?? 'dia');
   let disposto = false;
@@ -519,7 +521,7 @@ export function criarEstadioFora(cena, opc = {}) {
         const g = o.geometry, base = g.index ? g.index.count / 3 : g.attributes.position.count / 3;
         tri += base * (o.isInstancedMesh ? o.count : (g.isInstancedBufferGeometry ? g.instanceCount : 1));
       });
-      return { pecas, triangulos: Math.round(tri), predios: predios().length, arvores: arvores().length, carros: carros().length, torcedores: torcedoresFora().length };
+      return { pecas, entorno: comEntorno, triangulos: Math.round(tri), predios: predios().length, arvores: arvores().length, carros: carros().length, torcedores: torcedoresFora().length };
     },
   };
 }

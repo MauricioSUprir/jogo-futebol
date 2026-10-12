@@ -9,15 +9,18 @@
 // planos de fora: cortejo "prévia"), e a fila já formada é montada direto (filaFinal). Cada passo do cortejo guarda a
 // pose anterior e a atual de cada andante e o desenho interpola (igual ao jogo, a 60/120/144 Hz).
 //
-// Contrato (main.js): criarPrejogo(ctx) → {iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar), acao(a),
+// Contrato (main.js): criarPrejogo(ctx) → {iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar, parado), acao(a),
 // proximo(), pularTudo(), irPara(t), ativo, api}. ctx = {cena3d, cam, jog3d, bola3d, campo, torcida, som(),
-// mundo(), hora(), qualidade(), comToque(), aoFim()}.
+// mundo(), hora(), qualidade(), comToque(), aoFim()}. Enquanto ativo, as placas de cá ficam com o vão na frente do
+// túnel (criarVaoPlacas) e o lado de fora existe; no fim tudo volta ao estádio do jogo.
 import * as THREE from 'three';
-import { PASSO, BOLA } from '../config.js';
+import { PASSO, BOLA, CAMPO } from '../config.js';
 import { pose, interpolarPose, NJ, J } from '../anim.js';
 import { criarCortejo, passoCortejo, fotoCortejo, restaurarCortejo, filaFinal } from '../cortejo.js';
 import { criarRoteiro, planoEm, proximoBloco, cameraEm, cameraAbertura, escuroEm, escalacaoEm, sinaisEm, PREJOGO } from '../prejogo-roteiro.js';
-import { noCorredorDoTunel } from '../estadio-forma.js';
+import { noCorredorDoTunel, FORA } from '../estadio-forma.js';
+import { PLACA } from './texturas.js';
+import { juntarGeometrias } from './util.js';
 import { criarEmocao, emocaoPasso, consumirDisparos } from './emocao.js';
 import { forcarFesta } from './festa.js';
 import { criarPrejogoTela } from '../prejogo-tela.js';
@@ -30,9 +33,64 @@ const PREVIA_MS = 2;                                          // orçamento por 
 const SUPERIOR = [J.lombar, J.peito, J.pescoco, J.cabeca, J.ombroE, J.ombroD, J.cotoveloE, J.cotoveloD, J.maoE, J.maoD];
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+/**
+ * O vão das placas de publicidade do lado de cá na frente do túnel (estadio-forma.js FORA.vaoPlacas): por ali passam
+ * os árbitros e as duas colunas do cortejo (antes, por dentro das placas inteiras). Só no pré-jogo — no jogo as placas
+ * são inteiras porque a bola bate nelas (bola.js). Recorte por planos da three.js (Material.clippingPlanes com
+ * clipIntersection: some só o que está dentro dos três — |x| < meia e z além da linha das placas) nas duas malhas das
+ * placas (a face de LED e a estrutura), com localClippingEnabled no renderizador, e dois arremates escuros nas pontas
+ * (a caixa recortada ficaria oca). abrir()/fechar() devolvem tudo como estava.
+ */
+function criarVaoPlacas(ctx) {
+  const g = FORA.vaoPlacas.meia, PZ = CAMPO.meioZ + CAMPO.entorno, A = PLACA.altura;
+  const planos = [
+    new THREE.Plane(new THREE.Vector3(-1, 0, 0), -g),  // x > −meia
+    new THREE.Plane(new THREE.Vector3(1, 0, 0), -g),   // x < meia
+    new THREE.Plane(new THREE.Vector3(0, 0, -1), PZ - 1), // z > linha das placas − 1 m (só o lado de cá)
+  ];
+  let aberto = false, localAntes = false, pontas = null, recortadas = [];
+  const malhas = () => ['placas', 'placas-estrutura'].map(n => ctx.campo.grupo?.getObjectByName(n)).filter(m => m && m.material);
+  return {
+    abrir() {
+      if (aberto) return;
+      aberto = true;
+      const r = ctx.cena3d.renderer;
+      localAntes = !!r.localClippingEnabled;
+      r.localClippingEnabled = true;
+      recortadas = malhas();
+      for (const m of recortadas) { m.material.clippingPlanes = planos; m.material.clipIntersection = true; m.material.needsUpdate = true; }
+      // as duas pontas numa malha só (1 chamada de desenho)
+      const caixas = [-1, 1].map(s => new THREE.BoxGeometry(0.05, A + 0.04, 0.16).translate(s * (g + 0.025), (A + 0.04) / 2, PZ + 0.06));
+      pontas = new THREE.Mesh(juntarGeometrias(caixas), new THREE.MeshLambertMaterial({ color: 0x0b0d0e }));
+      for (const c of caixas) c.dispose();
+      pontas.name = 'vao-placas';
+      ctx.cena3d.cena.add(pontas);
+    },
+    fechar() {
+      if (!aberto) return;
+      aberto = false;
+      for (const m of recortadas) { m.material.clippingPlanes = null; m.material.clipIntersection = false; m.material.needsUpdate = true; }
+      recortadas = [];
+      ctx.cena3d.renderer.localClippingEnabled = localAntes;
+      if (pontas) {
+        ctx.cena3d.cena.remove(pontas);
+        pontas.geometry.dispose();
+        pontas.material.dispose();
+        pontas = null;
+      }
+    },
+    /** Estado lido da cena (testes): as malhas das placas com o recorte agora, o renderizador e as pontas. */
+    get info() {
+      const ms = malhas();
+      return { aberto, meia: g, malhas: ms.length, recortadas: ms.filter(m => m.material.clippingPlanes?.length).length, local: !!ctx.cena3d.renderer.localClippingEnabled, pontas: ctx.cena3d.cena.getObjectByName('vao-placas') ? 2 : 0 };
+    },
+  };
+}
 function aproxima(v, alvo, dt, tau) { return v + (alvo - v) * (1 - Math.exp(-dt / Math.max(1e-3, tau))); }
 
 export function criarPrejogo(ctx) {
+  const vao = criarVaoPlacas(ctx);
   const tela = criarPrejogoTela({
     aoProximo: () => proximo(), aoPularTudo: () => pularTudo(), aoComecar: () => comecar(), comToque: () => ctx.comToque(),
   });
@@ -187,7 +245,7 @@ export function criarPrejogo(ctx) {
   }
 
   /** Ânimo da torcida e som do plano (só do pré-jogo; nada do mundo). */
-  function torcidaESom(dt, agoraS, s) {
+  function torcidaESom(dt, agoraS, s, parado) {
     const emo = st.emocao;
     const tEst = st.t + 2;  // o relógio do estádio do pré-jogo (a festa conta dele)
     ctxEmo.t = tEst;
@@ -214,8 +272,9 @@ export function criarPrejogo(ctx) {
     if (som) {
       for (const d of ds) if (d.tipo !== 'apito') som.tocar(d);
       st.cenaSom.ganho = s.ganho; st.cenaSom.filtro = s.filtro;
-      som.cena(st.cenaSom);
-      som.atualizar(emo, false, agoraS);
+      // parado (celular em pé: a tela de girar por cima): a torcida abaixa e abafa como na pausa do jogo
+      som.cena(parado ? null : st.cenaSom);
+      som.atualizar(emo, parado, agoraS);
     }
   }
 
@@ -254,13 +313,14 @@ export function criarPrejogo(ctx) {
     const cena = ctx.cena3d.cena, cam = camera();
     st.nevoa = { near: cena.fog.near, far: cena.fog.far };
     st.cameraNF = { near: cam.near, far: cam.far };
-    // a estrutura de fora (fachada, cobertura, cantos, túnel) aparece também de dentro: em todo pré-jogo
-    const precisaFora = true;
-    if (precisaFora) {
-      const t0 = performance.now();
-      st.fora = criarEstadioFora(cena, { qualidade: ctx.qualidade(), hora: ctx.hora(), aniso: ctx.cena3d.anisotropia(), materialTorcida: ctx.torcida.mesh?.children?.[0]?.material ?? null });
-      st.msFora = performance.now() - t0;
-    }
+    // a estrutura de fora (fachada, cobertura, cantos, túnel) aparece também de dentro: em todo pré-jogo; o entorno
+    // (esplanada, bairro, prédios, árvores, carros, torcedores) só com plano de fora ou a abertura — no "Reiniciar
+    // partida" (só a escalação) e no curto ele nunca entra no quadro e montá-lo travava ~0,1–0,2 s no celular
+    const t0 = performance.now();
+    const entorno = !!opc.abertura || st.r.planos.some(p => p.fora);
+    st.fora = criarEstadioFora(cena, { qualidade: ctx.qualidade(), hora: ctx.hora(), aniso: ctx.cena3d.anisotropia(), materialTorcida: ctx.torcida.mesh?.children?.[0]?.material ?? null, entorno });
+    st.msFora = performance.now() - t0;
+    vao.abrir();
     tela.escalacao.montar(m.times);
     tela.mostrar(true);
     st.ativo = true;
@@ -317,6 +377,7 @@ export function criarPrejogo(ctx) {
     if (st.nevoa) { cena.fog.near = st.nevoa.near; cena.fog.far = st.nevoa.far; }
     if (st.cameraNF) { cam.near = st.cameraNF.near; cam.far = st.cameraNF.far; cam.updateProjectionMatrix(); }
     if (st.fora) { st.fora.dispose(); st.fora = null; }
+    vao.fechar();
     const som = ctx.som();
     if (som) som.cena(null);
     st.c = null; st.previa = null; st.fotos = new Map(); st.emocao = null; lista.length = 0;
@@ -325,12 +386,16 @@ export function criarPrejogo(ctx) {
 
   // CPU por quadro do pré-jogo SEM o desenho (a GPU por software do headless fica de fora), num anel fixo
   const MQ = 2048, mq = { n: 0, i: 0, v: new Float64Array(MQ), des: 0 };
-  /** Um quadro (dt s reais; 0 com a página parada). Devolve false quando o pré-jogo acabou neste quadro. */
-  function quadro(dtReal, agoraMs, renderizar = true) {
+  /**
+   * Um quadro (dt s reais; 0 com a página parada). parado: o celular em pé (a tela de girar cobre tudo) — o tempo não
+   * anda e o som fica como na pausa do jogo. Devolve false quando o pré-jogo acabou neste quadro.
+   */
+  function quadro(dtReal, agoraMs, renderizar = true, parado = false) {
     if (!st.ativo) return false;
     const t0 = performance.now();
     mq.des = 0;
-    const r = quadroInterno(dtReal, agoraMs, renderizar);
+    st.parado = !!parado;
+    const r = quadroInterno(parado ? 0 : dtReal, agoraMs, renderizar);
     mq.v[mq.i] = performance.now() - t0 - mq.des; mq.i = (mq.i + 1) % MQ; mq.n = Math.min(MQ, mq.n + 1);
     return r;
   }
@@ -344,7 +409,7 @@ export function criarPrejogo(ctx) {
       cameraAbertura(st.tAb, _cam);
       tela.faixas(0, PREJOGO.letterbox); tela.preto(0); tela.fundoEscalacao(0);
       sinaisEm(st.r, 0, _sin); _sin.agito = 0.15; _sin.filtro = 600; _sin.ganho = 0.5;
-      torcidaESom(dt, agoraS, _sin);
+      torcidaESom(dt, agoraS, _sin, st.parado);
       desenharMundo(dt, agoraMs, renderizar, _cam, false, 1, false);
       return true;
     }
@@ -365,7 +430,7 @@ export function criarPrejogo(ctx) {
     } else if (p.cortejo === 'fila') { comCortejo = true; respira = true; }
     cameraEm(st.r, st.t, _cam);
     sinaisEm(st.r, st.t, _sin);
-    torcidaESom(dt, agoraS, _sin);
+    torcidaESom(dt, agoraS, _sin, st.parado);
     // tela: faixas de cinema nas cenas (entram no começo e saem antes da escalação), preto e escalação
     const cenas = p.bloco === 'cenas';
     const kf = cenas ? clamp(Math.min(st.t / 0.6, (st.r.fimCenas - st.t) / 0.5), 0, 1) : 0;
@@ -414,6 +479,10 @@ export function criarPrejogo(ctx) {
     get pularVisivel() { return tela.pularVisivel; },
     get camera() { const c = camera(); return { x: c.position.x, y: c.position.y, z: c.position.z, fov: c.fov, near: c.near, far: c.far }; },
     get somCena() { const s = ctx.som(); return s ? s.cenaPre : null; },
+    /** O último quadro foi parado (celular em pé)? */
+    get parado() { return !!st.parado; },
+    /** O vão das placas na frente do túnel: {aberto, meia, malhas, recortadas, local (localClippingEnabled), pontas}. */
+    get vao() { return vao.info; },
     /** CPU por quadro do pré-jogo sem o desenho (ms): {quadros, media, p95, max}; opc.zerar recomeça. */
     medirQuadro(opc = {}) {
       const n = mq.n, v = new Float64Array(n);

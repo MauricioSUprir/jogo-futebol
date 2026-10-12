@@ -5,6 +5,9 @@
 //   2) pé que salta: deslocamento do tornozelo ≤ (2,5·v + 3)·dt em todo quadro (Clark et al. 2023; razão ≤ 1);
 //   3) ninguém atravessa ninguém: distância entre os corpos ≥ 0,6 m em todo quadro (e os tornozelos de dois
 //      andantes nunca a < 0,15 m);
+//   3b) ninguém atravessa o estádio: o corpo (0,25 m) fora dos sólidos do pré-jogo (estadio-forma.js solidoEm: placas,
+//      bancos, arquibancada; o corredor do túnel e o vão das placas na frente dele são livres) — na 1ª versão as duas
+//      colunas e os árbitros passavam por dentro das placas do lado de cá (z = 40, inteiras de ponta a ponta);
 //   4) a fila: erro de vaga ≤ 0,10 m, de frente para a tribuna (rumo ≤ 5°), todos parados até 50 s de cortejo;
 //   5) cabe no túnel (o último da coluna antes do fundo, com folga ≥ 0,5 m);
 //   6) filaFinal() = o fim da simulação (≤ 0,10 m) e a foto/restauração refaz o mesmo cortejo (determinismo);
@@ -35,6 +38,7 @@ if (!CJ) {
   const { PASSO } = await imp('config.js');
   const { criarPartida, passoPartida } = await imp('partida.js');
   const { hashMundo } = await imp('sim.js');
+  const { solidoEm } = await imp('estadio-forma.js');
 
   // o mundo da partida antes de tudo (o cortejo lê os times dele, só na criação)
   const mA = criarPartida({ semente: 7 });
@@ -49,6 +53,9 @@ if (!CJ) {
   const out = new Float32Array(NJ * 3);
   const ant = new Map();
   let maxPlantado = 0, maxSalto = 0, nSalto = 0, minCorpo = Infinity, minTorn = Infinity, nan = 0, quemCorpo = '';
+  // ninguém atravessa o estádio: o corpo (raio 0,25 m, no joelho e no peito) fora dos sólidos do pré-jogo
+  // (estadio-forma.js solidoEm: placas, bancos, arquibancada, paredes; o corredor do túnel é livre)
+  const solidos = new Map();
   const T = 50;
   let msPasso = 0;
   const foto0 = fotoCortejo(c);
@@ -79,6 +86,10 @@ if (!CJ) {
         }
       }
       ant.set(a.id, { cur, pl });
+      for (const y of [0.5, 1.3]) {
+        const s = solidoEm(j.x, y, j.z, 0.25, true);
+        if (s) { const q = solidos.get(s) ?? { n: 0, ex: '' }; if (!q.n) q.ex = `${a.id} em (${fmt(j.x, 1)}, ${fmt(j.z, 1)}) aos ${fmt(tempoCortejo(c), 1)} s`; q.n++; solidos.set(s, q); }
+      }
     }
     // ninguém atravessa ninguém: corpos (centro) e tornozelos de andantes diferentes
     for (let a = 0; a < N; a++) {
@@ -98,6 +109,8 @@ if (!CJ) {
   reg('Pé que salta: deslocamento ≤ (2,5·v + 3)·dt', `razão máx ${fmt(maxSalto, 3)}; ${nSalto} quadros acima`, '≤ 1; 0', maxSalto <= 1 && nSalto === 0);
   reg('Ninguém atravessa ninguém (centro dos corpos)', `mín ${fmt(minCorpo, 2)} m (${quemCorpo}); tornozelos de dois andantes ≥ ${fmt(minTorn, 2)} m`, '≥ 0,6 m; ≥ 0,15 m', minCorpo >= 0.6 && minTorn >= 0.15);
   reg('Pose sem NaN', `${nan} poses com NaN`, '0', nan === 0);
+  reg('Ninguém atravessa o estádio (placas, bancos, arquibancada; o corredor do túnel é livre)',
+    solidos.size ? [...solidos].map(([s, q]) => `${s}: ${q.n} (1º: ${q.ex})`).join('; ') : '0 contatos (corpo com 0,25 m de folga, no joelho e no peito)', '0', solidos.size === 0);
 
   // ---------------------------------------------------------------- a fila
   let errPos = 0, errRumo = 0, vMax = 0, ultimo = 0;

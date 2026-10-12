@@ -27,6 +27,10 @@ export const FORA = {
   praca: { x: [-70, 70], z: [82, 178] },
   estacionamentos: [{ x: [100, 190], z: [-160, -95] }, { x: [-190, -100], z: [-160, -95] }, { x: [110, 195], z: [70, 150] }, { x: [-195, -110], z: [70, 150] }],
   placa: { texto: 'ESTÁDIO GOLAÇO', y: [17.5, 23.5], largura: 46 },
+  // vão das placas de publicidade na frente do túnel (|x| < meia, lado de cá): por ali passam os árbitros e as duas
+  // colunas do cortejo. Só no pré-jogo (render/prejogo.js recorta as placas): no jogo elas são inteiras, porque a bola
+  // bate nelas (bola.js) e o vão mudaria a simulação.
+  vaoPlacas: { meia: 3.0 },
   semente: 20261012,
 };
 
@@ -169,7 +173,8 @@ const T = ESTADIO.tunel;
 const BANCOS = ESTADIO.bancos;
 /**
  * O ponto (x, y, z) está dentro (ou a menos de `folga` m) de algo sólido? Devolve o nome ou null. `fora`: conta
- * também o lado de fora (fachada, cobertura, cantos, prédios, árvores) — o pré-jogo.
+ * também o lado de fora (fachada, cobertura, cantos, prédios, árvores) e abre o vão das placas na frente do túnel
+ * (FORA.vaoPlacas) — o estádio do pré-jogo.
  */
 export function solidoEm(x, y, z, folga = 0.3, fora = true) {
   const f = folga;
@@ -198,9 +203,10 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
     if (y <= seatFundo(ax) + f) return x > 0 ? 'fundo +x' : 'fundo −x';
     if (ax >= A.fundoX0 + A.profFundo - f && y <= A.yTopoFundo + 5 + f) return 'parede do fundo';
   }
-  // placas de publicidade (0,9 m) em volta do campo
+  // placas de publicidade (0,9 m) em volta do campo; no pré-jogo (fora) com o vão na frente do túnel (FORA.vaoPlacas)
   const PX = CAMPO.meioX + CAMPO.entorno, PZ = CAMPO.meioZ + CAMPO.entorno;
-  if (y <= 0.96 + f && ((ax >= PX - f && ax <= PX + 0.14 + f && az <= PZ + 0.14) || (az >= PZ - f && az <= PZ + 0.14 + f && ax <= PX + 0.14))) return 'placas';
+  const noVao = fora && z > 0 && ax < FORA.vaoPlacas.meia;
+  if (!noVao && y <= 0.96 + f && ((ax >= PX - f && ax <= PX + 0.14 + f && az <= PZ + 0.14) || (az >= PZ - f && az <= PZ + 0.14 + f && ax <= PX + 0.14))) return 'placas';
   // gols (a estrutura de 2 m de fundo)
   if (ax >= CAMPO.meioX - 0.15 - f && ax <= CAMPO.meioX + CAMPO.gol.profundidade + f && az <= CAMPO.gol.largura / 2 + 0.2 + f && y <= CAMPO.gol.altura + 0.2 + f) return 'gol';
   // bancos de reservas (lado de cá)

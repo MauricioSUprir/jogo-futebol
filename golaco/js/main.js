@@ -563,8 +563,8 @@ function quadro(agoraMs, desenhar = true) {
   if (prejogo && prejogo.ativo) {
     entrada.ler(cam.yaw);
     laco.ultimo = agoraMs;
-    const parado = retratoBloqueado() || document.hidden;
-    if (prejogo.quadro(parado ? 0 : dtReal, agoraMs, desenhar && !retratoBloqueado())) return;
+    const emPe = retratoBloqueado();
+    if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
   const dt = Math.min(0.1, dtReal);
   const ent = entrada.ler(cam.yaw);
