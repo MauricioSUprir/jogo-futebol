@@ -141,6 +141,14 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   nunca passa por cima da bola) e de folga máxima (≤ 0,8 m); corte = a bola sai na linha do analógico (±20°) com o
   corpo segurando o rumo até o toque; domínio pela linha do analógico com erro por atributo/velocidade/pressão;
   proteção = o corpo gira em volta da bola, de costas para o marcador.
+  **Condução curta** (dono, 12/10: "em tese é uma condução mais curtinha, com a bola mais no pé"; `golaco/conducao-curta`):
+  só o RITMO muda — passos entre toques pela velocidade (`CONDUCAO.passosPorToque`: 1 até 3,5 m/s, 1,5 a 5,6, 2 na
+  disparada; 1 e 2 alternados sem rng; guardas: domínio, inversão, freada, analógico > `angRitmo`, passe/chute
+  carregando); gesto do analógico no tick do toque espera 1 tick ou sai toque de FREIO (`saltoTick`); o toque não
+  manda a bola na placa; a chuteira para na superfície da bola (só o desenho: `pe.ox/oz`, hash igual). Trote 1,49 →
+  2,88 toques/s e 1,98 → 0,99 m; corrida 3,0 → 2,2 m por toque; bola–corpo trote 0,48 → 0,42 m (IA 0,67 → 0,58);
+  chuteira dentro da bola 61 → 46%. Teste `teste-conducao-curta` (CI; `--js`, `--ia 12`), casos novos no
+  `teste-cortes` e `teste-perda --cauda 120` (antes do merge). Ajuste fino do dono: o 3,5 da tabela (trote "picotado").
 - Etapa 2 (`js/acoes.js`, `goleiro.js`, `ia.js`, `sessao.js` modo 'ataque'): botões carregam força e soltam pedido
   (`j.carga`/`j.pedido`, mira guardada em `j.mira`); toque de ação no pé livre; troca de controle SEMPRE por
   `assumirControle` (carga/pedido vão junto; TROCAR pela borda do time e nunca com a bola no pé). Números da

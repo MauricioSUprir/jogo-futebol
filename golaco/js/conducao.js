@@ -17,7 +17,7 @@
 //   esperaSalto  tick em que o toque marcado esperou o fim de um gesto do analógico (-1: não esperou)
 //   restoPassos  resto da difusão do erro dos passos por toque (passosDoToque)
 
-import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO } from './config.js';
+import { CONDUCAO, PASSO, BOTAO, SUBPASSOS_BOLA, ENTRADA, GESTO, RECEPCAO, CAMPO, BOLA } from './config.js';
 import { clamp, difAng, lerp, tabela } from './mat.js';
 import { passoCorpo, freqPassada, cargaPassada, faseLocal, velocidadeDesejada } from './jogador.js';
 import { velParaDistancia, velParaParar, chutarRasteiro, copiarBola, passoBola, proxVelRolando, DT_BOLA, distAteParar } from './bola.js';
@@ -30,6 +30,8 @@ const PROT_INTERVALO = Math.round(0.3 / PASSO); // ticks — toque de proteção
 const MAG_DIR = ENTRADA.magDirecao; // pedido de direção (sim.js zera o analógico abaixo disso)
 const BUSCA_PEDIDO_MAX = 1.75;       // rad (~100°) — indo buscar a bola, pedido até aqui curva o corpo
 const TAB_OFS = [[0, CONDUCAO.ofsFrente.curta], [3, CONDUCAO.ofsFrente.trote], [5.5, CONDUCAO.ofsFrente.corrida], [7.6, CONDUCAO.ofsFrente.arrancada]];
+// placas em volta do campo (bola.js colidirPlacas): onde o centro da bola encosta nelas, menos uma folga
+const PLACA_X = CAMPO.meioX + CAMPO.entorno - BOLA.raio - 0.05, PLACA_Z = CAMPO.meioZ + CAMPO.entorno - BOLA.raio - 0.05;
 
 export function criarCond() {
   // bolaDesviada (sim.js) declarado já (undefined, como antes da 1ª escrita): todos os cond com a mesma forma
@@ -672,6 +674,13 @@ export function executarToque(m, j, pe, tipo, freio = false) {
     const pr = Math.max(0.05, (j.x + ux * dPara - b.p.x) * ux + (j.z + uz * dPara - b.p.z) * uz);
     parar = true; dx = ux * pr; dz = uz * pr; dist = pr; tx = b.p.x + dx; tz = b.p.z + dz;
   }
+  // o toque não manda a bola na placa (o roteiro do teste-perda leva o condutor para fora do campo a 6–7 m/s): com o
+  // alvo além dela, a bola sai para parar antes dela (a mesma conta da rolagem) — antes ela batia e voltava de lado
+  // e o corpo, invertendo, ficava até 1,7 s longe dela
+  if (!prot && dist > 0.05) {
+    const lim = ateAPlaca(b.p.x, b.p.z, dx / dist, dz / dist);
+    if (lim < dist) { const k = Math.max(0.02, lim) / dist; dx *= k; dz *= k; dist *= k; tx = b.p.x + dx; tz = b.p.z + dz; parar = true; }
+  }
   const apoio = 1 - pe;
   const hx = MD.cos(pc.rs[iN]), hz = MD.sin(pc.rs[iN]);
   // erro do toque: cresce com a velocidade e cai com o atributo
@@ -881,6 +890,15 @@ export function controlarComBola(m, j) {
     c.toque = null;
     c.busca = true;
   }
+}
+
+/** Distância da bola (bx, bz) até a placa andando na direção (ux, uz) (Infinity se não chega a uma; 0 se já passou). */
+function ateAPlaca(bx, bz, ux, uz) {
+  if (Math.abs(bx) > PLACA_X || Math.abs(bz) > PLACA_Z) return Infinity; // fora delas (posta lá): não muda o toque
+  let d = Infinity;
+  if (ux > 1e-6) d = Math.min(d, (PLACA_X - bx) / ux); else if (ux < -1e-6) d = Math.min(d, (-PLACA_X - bx) / ux);
+  if (uz > 1e-6) d = Math.min(d, (PLACA_Z - bz) / uz); else if (uz < -1e-6) d = Math.min(d, (-PLACA_Z - bz) / uz);
+  return Math.max(0, d);
 }
 
 /** A bola continua ao alcance do pé no próximo tick (corpo e bola seguindo como estão)? */

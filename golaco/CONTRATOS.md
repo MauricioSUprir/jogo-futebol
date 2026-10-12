@@ -95,6 +95,13 @@ travaApoio, quadril`.
   do ponto de pouso (`velPeAterrissa`); senão fica `pendente` (no ar) até chegar.
 - `puxa` (0–1) e `gx, gz`: gesto do toque (só visual, integrado pela simulação — `conducao.js`
   `atualizarGesto`): peso e ponto aonde o pé desenhado vai até a bola, com velocidade limitada.
+- `ox, oz` (condução curta, 12/10; **só o desenho**): deslocamento que a pose soma ao pé desenhado no ar para a
+  chuteira (cápsula tornozelo–ponta) parar na SUPERFÍCIE da bola dele (posse ou domínio, bola abaixo de
+  `GESTO.superficieVBola`, corpo acima de `GESTO.superficieV`): a direção é do centro da bola para o tornozelo e a
+  distância é a saída do centro da bola da cápsula. Anda só com o que sobra de `GESTO.velSuperficie` depois do passo
+  de `tx, tz`, e fica abaixo de `GESTO.velDesvio × livre` (zero na saída do chão e no pouso). A física NUNCA lê
+  `ox, oz` (pouso, goleiro e hash usam `tx, tz`). Medido: chuteira dentro da bola 61,3% → 32% dos quadros (o resto é o
+  pé que POUSA embaixo da bola — ponto de pouso da física).
 - `quadril`: altura do quadril da última pose (`anim.js alturaQuadril`, guardada pela simulação no
   fim do passo).
 - Pé plantado e tronco: mais torto que 1,0 rad o pé dá um passo para se alinhar (a passada fica
@@ -118,13 +125,28 @@ travaApoio, quadril`.
 ## Condução (`js/conducao.js`)
 `j.cond = { toque{tick, pe, bx, bz, tipo, tol?, modo?, desde?, qx?, qz?}, ult{tick, pe, bx, bz,
 dx, dz, v, tipo}, busca, longeDesde, pedalada{tick0, lado}, cortePendente, corteRumo,
-semDominioAte, puxada{tick0, rumo} }`. O toque é marcado com antecedência e o impulso é calculado
+semDominioAte, puxada{tick0, rumo}, esperaSalto, restoPassos }`. O toque é marcado com antecedência e o impulso é calculado
 no próprio tick. **O toque sai sempre do pé livre** (`peLivre`: no ar desde antes deste tick, com o outro
 no chão; no domínio vale também com os dois no ar). Com os dois pés no chão, `saidaParaToque`
 pede à passada que tire o pé do toque do chão a tempo, e o toque espera por ele
 (`GESTO.esperaSaida`). `atualizarGesto` (no fim do passo) integra o gesto de cada pé.
 - Tick do próximo toque forçado (antes de o corpo alcançar a bola, ou freando) cai num tick com um
   pé livre na passada prevista (nunca na fase de voo da corrida).
+- **Passos entre toques pela velocidade** (condução curta, pedido de 12/10; `passosDoToque`): `CONDUCAO.passosPorToque`
+  dá os passos por toque pela velocidade do corpo (1 até 3,5 m/s, 1,5 a 5,6 m/s, 2 a partir de 7,4 m/s); no meio da
+  tabela 1 e 2 se alternam pela difusão do erro (`restoPassos`; sem rng, a mesma regra para o humano e a IA). Ficam em
+  2 (um toque por passada, como antes): domínio, `j.inv`, freada (pede 1 m/s a menos do que corre), analógico além de
+  `CONDUCAO.angRitmo` do sentido da corrida e passe/chute carregando (`j.carga`, `j.pedido`). A condução curta (MOD) e
+  a proteção: 1 passo fixo. O primeiro replanejamento (folga/arco/ultrapassagem → 1 passo) só roda quando o ritmo deu
+  2; o da violação de `semUltrapassar` roda sempre. A física do toque, a previsão do corpo, `folgaMax`, `alcance`,
+  `intervaloMin` e `faseToque` não mudam.
+- **Gesto do analógico no tick do toque** (`j.saltoTick`, marcado por `sim.js aplicarEntrada` quando o analógico pula
+  mais que `CONDUCAO.saltoGesto` num tick; `cond.esperaSalto`): o toque marcado para esse tick espera 1 tick (se a
+  bola continua ao alcance) e lê o analógico de novo; se ele ainda pula, ou a bola sairia do alcance, sai um **toque de
+  freio** (`executarToque(…, freio = true)`): no sentido da velocidade do corpo, até s²/(2·freioGiro) + ofsFrente(s)
+  à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). Não vale em `j.inv` nem abaixo de 2,5 m/s.
+- **Placas:** o toque não manda a bola além das placas (`ateAPlaca`; `CAMPO.meioX/meioZ + entorno`): com o alvo além
+  delas, a bola sai para parar antes (`velParaParar`). Só acontece fora do campo (treino e testes).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —
   `cortePendente`/`corteRumo`, no máximo 0,25 s). Corte "para trás" do corpo embalado (> ~95° do
   sentido da corrida, > 5 m/s) em que o corpo não alcançaria a bola na linha pedida em até 0,5 s:

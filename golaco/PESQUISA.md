@@ -75,8 +75,8 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 | Toques no drible fechado ou lento | 2,3–3,0 toques/s, com cadência alta e pouco balanço lateral do corpo | Zago et al. 2016 |
 | Regra de contagem de toque | mínimo local da distância bola–ponta do pé abaixo de 0,15 m, com pelo menos 0,25 s entre toques (no máximo 4 toques/s) | Schepers et al. 2025 |
 | Posse típica em jogo | 1–2 toques, ~1,1 s, ~4,2 m | Carling 2010 |
-| Toque por passada no trote | **falta** (EA FC 24 só diz que a marcha controlada mantém a bola mais perto) | EA FC 24 |
-| Distância bola–pé na condução rápida | **falta** (a pesquisa não achou estudo; usar o avanço por toque como referência e medir) | — |
+| Toque por passada no trote | um toque a cada passo (~2,9 toques/s) no drible fechado; em jogo, 1,4–1,8 passo por toque (condução curta, 12/10: seção 5) | Zago et al. 2016; medição própria DFL/TRACAB |
+| Distância bola–pé na condução rápida | nenhum estudo publica; medido nos dados abertos da DFL: bola–centro do corpo p50 0,62/0,73/0,80/0,87/1,05 m andando/trote/corrida/rápida/disparada, ~30% menos com marcador a ≤ 3 m (seção 5) | medição própria DFL/TRACAB (Bassek et al. 2025) |
 
 ### 1.4 Alvos de teste (valores de referência)
 
@@ -326,3 +326,29 @@ Polinômios de Goff et al. 2017 (v em m/s, A = 0,0333 m²):
 - **Câmera:** nenhum número de altura, distância, FOV ou suavização foi pesquisado.
 - **Jogador:** faltam altura, massa, raio de colisão, alcance do pé e tempo de reação.
 - **Chute:** não há tabela de velocidade de saída por tipo de chute; só referências soltas (passe a 16,2 m/s, chutes medidos entre 19 e 31 m/s, faltas a 25–36 m/s).
+
+## 5. Condução curta (pedido do dono de 12/10)
+
+Pedido: "em tese é uma condução mais curtinha, com a bola mais no pé" e "que as partes físicas não atrapalhem a
+jogabilidade". A lacuna da seção 1.3 (distância bola–pé: **falta**) foi medida; o resto vem de artigos e das notas dos
+jogos. O que virou constante está em `config.js CONDUCAO.passosPorToque` e no contrato da condução (CONTRATOS.md).
+
+| Fonte | Dado | O que aproveitamos |
+|---|---|---|
+| Medição própria nos dados abertos da DFL (Bassek et al. 2025, TRACAB Gen5, 25 Hz; huggingface `pysport/idsse-data`): 4 partidas, 759 conduções, 1.743 s | Bola–centro do corpo p50 (p10–p90): andando 0,62 (0,17–1,31) m, trote 0,73 (0,34–1,47), corrida 0,80 (0,39–1,52), rápida 0,87 (0,46–1,60), disparada 1,05 (0,56–2,00); no toque 0,37–0,52 m; com marcador a ≤ 3 m ~30% mais perto (0,45/0,59/0,70/0,80/0,95); avanço por toque ~0,5 m andando, 1,5–1,8 m trotando, 2,4–3,6 m correndo, 4–7 m rápido | Fecha a lacuna da distância bola–pé. O ponto do toque (`ofsFrente` 0,33–0,42 m) já batia com o real no toque; a condução em velocidade fica um toque por passada (o jogo real é até mais solto); a bola mais colada que o dono pede é a do drible e dos testes de controle (abaixo). Ressalvas: o ponto rastreado do jogador não é publicado; a bola–pé é estimada (centro − ~0,3 m); 4 partidas |
+| Zago et al. 2016, J Sports Sci 34(5) (captura de movimento, slalom) | Os mais rápidos tocam 3,0 ± 0,1 vezes/s, os lentos 2,3 ± 0,2 | Andando e no trote, um toque a cada passo: 2,3–2,9 toques/s (meta do `teste-conducao-curta`: 2,3–3,1 no trote) |
+| Preissler et al. 2023 (20 m em reta com bola) | 5 a 8 toques em 20 m: 2,5–4 m e 1,4–2,3 toques/s (cálculo da pesquisa) a ~5,7 m/s; −9% de velocidade média | Corrida: 1,5 passo por toque (1 e 2 alternados), ~2,2 m e ~2,5 toques/s; disparada: um por passada (≥ 2,9 m por toque) |
+| Carling 2010, J Sports Sci 28(3) | Posse típica 1,1 s, 4,2 m, 2 toques; pico com bola 6,9 m/s | Quase toda condução real é curta e lenta: o caso mais comum é o que tem de parecer colado |
+| Benhassen et al. 2026, J Hum Kinet | Com bola: V0 −6%, F0 −24% | A condução curta não mexe na velocidade nem na aceleração com bola (`JOGADOR.fatorComBola`, `acelComBola`): perde-se arranque, não resposta (≤ 0,1 s) |
+| Wilson et al. 2019, J Sports Sci 37(9) | 5,19 m/s no circuito reto, 2,13 m/s com raio de ~0,73 m | Referência da curva com bola (informação; o giro e o corte continuam com um toque por passada: `angRitmo`) |
+| Schepers et al. 2025 (Hawk-Eye, Champions 22/23); Oonk et al. 2025 | Definem a distância bola–pé (bola–ponta do pé mais perto) e a usam para separar drible certo de errado, sem publicar valores | A medida do teste é a mesma ideia (centro da bola ao segmento tornozelo–ponta na pose); por isso a medição própria |
+| Gioldasis et al. 2022, Res Sports Med (só o resumo) | Com bola, a cadência cai | Cadência com bola continua a de hoje (`PASSADA.fatorComBola`); fica para o desenho |
+| EA SPORTS FC 24 Pitch Notes (Controlled Sprint) e FC 26 Pitch Notes (Dynamic Dribbling; Agile Dribbling removido) | Marcha intermediária com mais toques e a bola mais perto; o intervalo entre toques muda por estilo; o controle fechado por botão saiu por pouco uso | Escada de marchas pela velocidade, sem botão novo: o ritmo é a tabela `passosPorToque` |
+| FIFA 21 Pitch Notes (Agile Dribbling); eFootball (guias, R2 = controle fechado) | Controle fechado como modo à parte | Não copiado: a indústria ficou com o contextual |
+| England Football (The FA), "running with the ball" | Toque grande demais perde a bola, pequeno demais não ganha campo | A mesma regra da tabela: o toque cresce com a velocidade |
+| Hong et al. 2019, ACM TOG | O plano do toque manda e a física confirma | O mesmo princípio do GOLAÇO (toque pela conta da rolagem, corpo previsto) |
+| Metrica (amostra aberta) | A bola fica colada ao portador (0,11–0,21 m, sem oscilar) | Descartada |
+
+Medido no jogo (`tools/teste-conducao-curta.mjs`, humano sozinho e 6 partidas IA × IA; base → agora): trote 1,49 →
+2,88 toques/s e 1,98 → 0,99 m; corrida 1,85 → 2,53 toques/s, 3,0 → 2,2 m por toque; disparada 3,5 m por toque e
+~1,1 toque por passada (igual); bola–corpo no trote 0,48 → 0,42 m (IA 0,67 → 0,58 m).
