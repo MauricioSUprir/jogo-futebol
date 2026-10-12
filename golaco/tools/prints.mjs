@@ -715,6 +715,9 @@ for (const c of CENAS) {
         for (const el of [document.getElementById('gol-tela'), document.querySelector('.placar')]) for (const an of el.getAnimations({ subtree: true })) { an.currentTime = 900; an.pause(); }
       });
     }
+    // o selo da análise (terço de baixo) entra em 0,2 s; o relógio das animações CSS do headless anda devagar e o print
+    // pegava o selo ainda transparente (celular-legal): a entrada é levada ao fim
+    await pagina.evaluate(() => { for (const e of document.querySelectorAll('#terco .terco-selo')) for (const an of e.getAnimations()) an.finish(); });
     const arq = path.join(SAIDA, `${c.nome}.png`);
     // (máquina carregada: o print do Chromium sem GPU passa dos 30 s do padrão)
     await pagina.screenshot({ path: arq, timeout: 240000 });

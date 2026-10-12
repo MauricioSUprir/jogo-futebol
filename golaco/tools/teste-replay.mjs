@@ -41,6 +41,8 @@ const base = args.includes('--base') ? path.resolve(args[args.indexOf('--base') 
 const res = [];
 const meta = (nome, medido, alvo, ok, info = false) => { res.push({ nome, medido, alvo, ok: !!ok, info }); };
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
+// erro do Playwright: a 1ª linha e o fim do registro da espera (o motivo de um clique que não sai: fora da tela, coberto, instável)
+const erroCurto = e => { const l = String(e?.message ?? e).replace(/\x1b\[[0-9;]*m/g, '').split('\n').map(x => x.trim()).filter(Boolean); const log = [...new Set(l.slice(1).filter(x => x.startsWith('-')))].slice(-3); return [l[0], ...log].join(' | '); };
 const errosTodos = [];
 
 async function pagina(raizJogo, url, opc = {}) {
@@ -395,7 +397,7 @@ else try {
     const anelB = await pg.evaluate(() => window.__golaco.replay.anel.bytes);
     meta('E3 memória do anel (10 s, 24 vagas)', `${f2(anelB / 1048576)} MB`, '≤ 4 MB', anelB > 0 && anelB <= 4 * 1048576);
   } finally { await P.fechar(); }
-} catch (e) { meta('C–E execução (impedimento, pausa, custos)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('C–E execução (impedimento, pausa, custos)', erroCurto(e), 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ D (celular, toque)
 try {
@@ -428,7 +430,7 @@ try {
     const tocou = await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: false }); return { ativo: g.replay.estado.ativo, toque: getComputedStyle(document.getElementById('toque')).display !== 'none', menu: g.estado().menuAberto }; });
     meta('D6 celular: um toque em qualquer lugar pula (e os botões de toque voltam)', JSON.stringify(tocou), 'ativo false, toque true, menu false', !tocou.ativo && tocou.toque && !tocou.menu);
   } finally { await P.fechar(); }
-} catch (e) { meta('D5–D6 execução (celular)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('D5–D6 execução (celular)', erroCurto(e), 'sem exceção', false); }
 // ------------------------------------------------------------------------------------------------ F (sem replay)
 // a mesma partida com o replay desligado: os 120 quadros ao vivo antes do apito (chamadas, triângulos, CPU), o apito sem
 // replay nem selo (a linha parada 2,2 s, como antes) e o hash no tick apito + 600
@@ -464,7 +466,7 @@ if (IMP && apitoP1 != null) try {
       meta('F9 CPU do quadro da análise (sem o desenho) ≤ o quadro ao vivo', `${ana.cpu.toFixed(3)} ms (${ana.quadros} quadros) × ${sem.cpu.toFixed(3)} ms`, 'análise ≤ ao vivo', ana.quadros > 0 && ana.cpu <= sem.cpu);
     } else meta('F8/F9 a análise de novo (saotDeTeste)', 'sem roteiro', 'roteiro', false);
   } finally { await P.fechar(); }
-} catch (e) { meta('F6–F11 execução (sem replay)', e.message.split('\n')[0], 'sem exceção', false); }
+} catch (e) { meta('F6–F11 execução (sem replay)', erroCurto(e), 'sem exceção', false); }
 {
   // F2: as caixas não se tocam (2 px de folga)
   const toca = (a, b) => !!a && !!b && a.x0 < b.x1 + 2 && b.x0 < a.x1 + 2 && a.y0 < b.y1 + 2 && b.y0 < a.y1 + 2;
