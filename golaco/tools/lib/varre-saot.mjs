@@ -13,7 +13,7 @@ import { Worker, isMainThread, workerData, parentPort } from 'node:worker_thread
 
 const AQUI = fileURLToPath(import.meta.url);
 
-export async function varrerSaot({ pastaJs, sementes, maxTicks = 6000, threads = Math.max(1, Math.min(os.cpus().length, 4)), limites = [0.5, 1.0], comoPagina = false }) {
+export async function varrerSaot({ pastaJs, sementes, maxTicks = 6000, threads = Math.max(1, Math.min(os.cpus().length, 4)), limites = [0.5, 1.0], comoPagina = false, aoTerminar = null }) {
   const fila = sementes.slice();
   const res = [];
   async function trabalhador() {
@@ -25,6 +25,7 @@ export async function varrerSaot({ pastaJs, sementes, maxTicks = 6000, threads =
         w.once('exit', c => { if (c) erro(new Error(`worker saiu com ${c}`)); });
       });
       res.push(r);
+      if (aoTerminar) aoTerminar(r, res.length, sementes.length);
     }
   }
   await Promise.all(Array.from({ length: Math.min(threads, sementes.length) }, trabalhador));
@@ -168,11 +169,21 @@ if (!isMainThread && workerData?.varreSaot) {
         it.partes = ps.saot.partes ? { uAtac: ps.saot.partes.uAtac, uDef: ps.saot.partes.uDef } : null;
         it.mesmaLinha = ps.saot.mesmaLinha;
       }
-      // frequência (medir-saot): a cena legal com cada limite, sem pensar no orçamento do replay
-      it.legais = {};
-      for (const lim of limites) { const cl = SA.checagemLegal(S.a, { golTick: g.golTick, time: g.time, lado: g.lado, limite: lim }); it.legais[lim] = cl ? cl.margem : null; }
+      // frequência (medir-saot): a cena legal com cada limite, sem pensar no orçamento do replay; a mesma sem o critério
+      // das partes do corpo (a contradição centro × partes); as margens de todas as cadeias do time no lance
+      it.legais = {}; it.legaisCentro = {};
+      for (const lim of limites) {
+        const cl = SA.checagemLegal(S.a, { golTick: g.golTick, time: g.time, lado: g.lado, limite: lim }); it.legais[lim] = cl ? cl.margem : null;
+        const cc = SA.checagemLegal(S.a, { golTick: g.golTick, time: g.time, lado: g.lado, limite: lim, semPartes: true }); it.legaisCentro[lim] = cc ? cc.margem : null;
+      }
+      const corte = S.a.ultimoCorte(S.a.primeiro, g.golTick);
+      const cad = [];
+      const nC = RA.cadeiasNoIntervalo(S.a, Math.max(S.a.primeiro, corte ?? S.a.primeiro), g.golTick, g.time, cad);
+      it.margens = [];
+      for (let k = 0; k < nC; k++) { const md = SA.medirCadeia(S.a, cad[k]); if (md) it.margens.push(+md.margem.toFixed(3)); }
       gols.push(it);
     }
+    if (S.m.partida?.estado === 'fim') break;
   }
   parentPort.postMessage({ semente, ticks: S.m.tick, imped, gols, gravarUs: 1000 * S.ms / Math.max(1, S.n) });
 }
