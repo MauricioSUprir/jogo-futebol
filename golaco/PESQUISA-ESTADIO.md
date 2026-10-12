@@ -284,6 +284,12 @@ Escolhas (e por quê):
   linha um fica perto e o outro longe da câmera: o quadro de 16/22° a ≤ 30 m não cabe os dois. A câmera recua até 45 m no
   mesmo ângulo (ainda 12–24°) e, só com ~60 m (canto a canto), sobe e abre (até 62°); o `teste-saot` S4 prova por busca que
   nenhum quadro de 12–24° cabe os dois nesses casos antes de aceitar o nível "extra".
+- **Frequência medida** (`medir-saot`, PARCIAL: 40 das 144 partidas, sementes 1001–1040 — com a máquina a carga ~120 em 4
+  núcleos a varredura passou do limite de tempo): 67 gols; a cena de POSIÇÃO LEGAL em 6 (9,0%; com 0,5 m seriam 4 = 6,0%),
+  dentro da faixa 5–30% — o limite fica em 1,0 m; margens dos 6: −0,05 (mesma linha), 0,05, 0,43, 0,48, 0,59, 0,91 m; a
+  espera extra nesses gols é a análise (3,4 s); por partida, 1,30 impedimento e 0,15 cena legal. Das 132 cadeias de passe
+  dos gols, 61% passam de 5 m e só 6% ficam até 1,0 m. Contradição centro × partes: 2 dos 52 impedimentos marcados pelo
+  centro seriam legais pelas partes do corpo (3,8%; a cena mostra o quadril, coerente com a decisão) e 0 dos 6 legais.
 
 Correções sobre a pesquisa inicial: os "skeletons flying above the ground" da MIT Technology Review (23/06/2026) são erro
 de dado num TESTE de laboratório, não algo que o torcedor viu (mesmo assim o `teste-saot` S8 confere a pose da análise: a
