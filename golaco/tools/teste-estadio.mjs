@@ -17,7 +17,7 @@
 //   8) "GOL!" no celular (568×320, 667×375, 844×390) não encosta no analógico, nos botões, no placar nem no
 //      minimapa (contraprova M2);
 //   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
-//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9);
+//      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9; a rede véu de noiva: o vetor redeDesloc(vec3));
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
@@ -222,9 +222,9 @@ try {
     for (const x of [52.5, 55.2]) for (const y of [0, 3]) for (const z of [-4.4, 4.4]) { const p = g.naTela(s * x, y, z); x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
     const cl = (v, a, b) => Math.max(a, Math.min(b, Math.round(v)));
     const caixa = { x: cl(x0, 0, 1279), y: cl(y0, 0, 719), w: cl(x1, 1, 1280) - cl(x0, 0, 1279), h: cl(y1, 1, 720) - cl(y0, 0, 719) };
-    // ponto da bolsa: parado × estufado (pela normal do pano)
+    // ponto da bolsa: parado × estufado (pela direção da bolsa: a normal do véu ou da lateral no ponto da batida)
     const d = g.estadio.deslocamentoRede(im.plano, im.x, im.y, im.z);
-    const n = im.plano % 4 === 0 ? [s, 0, 0] : im.plano % 4 === 1 ? [0, 1, 0] : [0, 0, im.plano % 4 === 2 ? -1 : 1];
+    const n = im.dx !== undefined ? [im.dx, im.dy, im.dz] : im.plano % 4 === 0 ? [s, 0, 0] : im.plano % 4 === 1 ? [0, 1, 0] : [0, 0, im.plano % 4 === 2 ? -1 : 1];
     const a = g.naTela(im.x, im.y, im.z), b = g.naTela(im.x + n[0] * d, im.y + n[1] * d, im.z + n[2] * d);
     return { caixa, px: Math.hypot(b.x - a.x, b.y - a.y), d, plano: g.estadio.planoCamera };
   }, golGeo.golTick + ((lance.tick ?? gol.golTick) - gol.golTick));
@@ -430,45 +430,47 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
       if (r.pose !== Math.round(oPose[4 * i])) poseDif++;
       puloDif = Math.max(puloDif, Math.abs(r.pulo - oPose[4 * i + 1]));
     }
-    // rede: 4 batidas de verdade, pontos dos 8 panos em τ variados
+    // rede (véu de noiva, campo vetorial): 4 batidas de verdade (véu por dentro, lateral, véu por fora, o outro gol) e
+    // pontos sorteados no véu e nas laterais dos dois gols, em τ variados; a fixação é atributo do vértice (fixo() do JS)
+    const RF = await import('./js/rede-forma.js');
     const est = RO.criarOndas();
-    const bat = [{ plano: 4, x: 54.5, y: 0.9, z: -1.2, vel: 24, sinal: 1 }, { plano: 7, x: 53.6, y: 1.2, z: 3.66, vel: 12, sinal: 1 }, { plano: 5, x: 53.4, y: 2.44, z: 0.8, vel: 9, sinal: -1 }, { plano: 0, x: -54.5, y: 0.5, z: 2.0, vel: 18, sinal: 1 }];
+    const bat = [{ plano: 4, x: 54.0, y: 0.9, z: -1.2, vel: 24, sinal: 1 }, { plano: 7, x: 53.6, y: 1.2, z: 3.66, vel: 12, sinal: 1 }, { plano: 4, x: 53.4, y: 2.0, z: 0.8, vel: 9, sinal: -1 }, { plano: 0, x: -54.5, y: 0.5, z: 2.0, vel: 18, sinal: 1 }];
     bat.forEach((b, k) => RO.registrarImpacto(est, b, 1 + 0.05 * k));
     const t = 1.32;
     const ua = new Float32Array(16), ub = new Float32Array(16);
     RO.uniformsRede(est, t, ua, ub);
     const entR = new Float32Array(4 * N);
-    const MX = 52.5, ZL = 3.66, HG = 2.44, PR = 2.0;
+    const MX = 52.5, ZL = 3.66, HG = 2.44, o = {};
     for (let i = 0; i < N; i++) {
-      const plano = Math.floor(rnd() * 8), s = plano >= 4 ? 1 : -1, k = plano & 3, u = rnd(), v = rnd();
+      const s = rnd() < 0.5 ? -1 : 1, u = rnd(), v = rnd();
       let x, y, z;
-      if (k === 0) { x = s * (MX + PR); y = v * HG; z = -ZL + 2 * ZL * u; }
-      else if (k === 1) { x = s * (MX + PR * v); y = HG; z = -ZL + 2 * ZL * u; }
-      else { x = s * (MX + PR * u); y = v * HG; z = k === 2 ? -ZL : ZL; }
-      entR.set([x, y, z, plano], 4 * i);
+      if (rnd() < 0.6) { RF.pontoPerfil(v * RF.COMPRIMENTO_PERFIL, o); x = s * (MX + o.X); y = o.y; z = -ZL + 2 * ZL * u; }
+      else { y = v * HG; x = s * (MX + u * RF.profundidadeVeu(y)); z = rnd() < 0.5 ? -ZL : ZL; }
+      entR.set([x, y, z, 0], 4 * i);
     }
     const pRede = prog(`#version 300 es
 precision highp float; precision highp sampler2D;
 uniform sampler2D uEntrada; out vec4 cor;
 ${RO.REDE_GLSL}
 void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
-  float d = redeDesloc(a.xyz, a.w); float f = redeFixo(a.xyz, a.w); cor = vec4(d, f, d * f, 1.0); }`);
+  cor = vec4(redeDesloc(a.xyz), 1.0); }`);
     gl.useProgram(pRede);
     gl.uniform4fv(gl.getUniformLocation(pRede, 'uRedeA'), ua);
     gl.uniform4fv(gl.getUniformLocation(pRede, 'uRedeB'), ub);
     const oRede = rodar(pRede, entR, 1);
-    let redeDif = 0, fixoDif = 0, maxD = 0;
+    let redeDif = 0, maxD = 0;
+    const dv = { x: 0, y: 0, z: 0 };
     for (let i = 0; i < N; i++) {
-      const [x, y, z, plano] = entR.subarray(4 * i, 4 * i + 4);
-      const d = RO.deslocamento(est, plano, x, y, z, t), f = RO.fixo(plano, x, y, z);
-      maxD = Math.max(maxD, Math.abs(d * f));
-      redeDif = Math.max(redeDif, Math.abs(d * f - oRede[4 * i + 2]));
-      fixoDif = Math.max(fixoDif, Math.abs(f - oRede[4 * i + 1]));
+      const [x, y, z] = entR.subarray(4 * i, 4 * i + 3);
+      RO.deslocamentoVetor(est, x, y, z, t, dv);
+      const f = RO.fixo(x, y, z);
+      maxD = Math.max(maxD, Math.hypot(dv.x, dv.y, dv.z) * f);
+      redeDif = Math.max(redeDif, f * Math.hypot(dv.x - oRede[4 * i], dv.y - oRede[4 * i + 1], dv.z - oRede[4 * i + 2]));
     }
-    return { N, poseDif, puloDif, redeDif, fixoDif, maxD };
+    return { N, poseDif, puloDif, redeDif, maxD };
   });
   meta('GPU = JS: pose da torcida (4096 torcedores sorteados)', gpu.erro ?? `${gpu.poseDif} poses diferentes; pulo difere até ${(gpu.puloDif * 1000).toFixed(2)} mm`, '≤ 0,2% (limiar no float) e ≤ 1 mm', !gpu.erro && gpu.poseDif <= 0.002 * gpu.N && gpu.puloDif <= 0.001);
-  meta('GPU = JS: deslocamento da rede (4096 pontos dos 8 panos, 4 batidas)', gpu.erro ?? `difere até ${(gpu.redeDif * 1000).toFixed(3)} mm (bolsa até ${f2(gpu.maxD)} m); fixação até ${gpu.fixoDif.toExponential(1)}`, '≤ 0,1 mm (fixação ≤ 0,001)', !gpu.erro && gpu.redeDif <= 1e-4 && gpu.fixoDif <= 1e-3 && gpu.maxD > 0.1);
+  meta('GPU = JS: deslocamento da rede (4096 pontos do véu e das laterais, 4 batidas; vetor × fixação)', gpu.erro ?? `difere até ${(gpu.redeDif * 1000).toFixed(3)} mm (bolsa até ${f2(gpu.maxD)} m)`, '≤ 0,1 mm', !gpu.erro && gpu.redeDif <= 1e-4 && gpu.maxD > 0.1);
   // 12) FESTA (pedido de 11/10: "bandeirões, sinalizadores"): (a) as faixas/bandeiras/bandeirões e os sinalizadores
   //     custam no máximo 2 chamadas de desenho a mais no jogo (20 instantes, inclusive a saída com sinalizadores); (b) a
   //     onda da bandeira na GPU = no JS (4096 pontos); (c) no gol da casa, a organizada atrás do gol muda na câmera do

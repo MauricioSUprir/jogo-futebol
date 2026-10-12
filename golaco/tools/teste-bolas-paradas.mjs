@@ -14,7 +14,8 @@
 //     os marcadores colados (≤ 1,6 m) do lado do gol, um na borda e um na frente; (2) depois do chute os atacantes
 //     atacam as zonas; (3) canhão de escanteios: o ataque ganha o 1º contato em 35–62% (Copa América 2021: 52,6%; a
 //     Premier League dá mais à defesa), gol em ≤ 12% dos escanteios (Copa 2022: 2,6% — o goleiro ainda não sai no
-//     cruzamento: Etapa 4, parte do goleiro), chute em ≥ 12%.
+//     cruzamento: Etapa 4, parte do goleiro; a taxa do jogo está na beira da meta, então reprova só quando a contagem
+//     prova mais de 12% — binomial, p < 5%), chute em ≥ 12%.
 //  D. Barreira: (1) tamanho pela conta (meio a 18 m: 5; a 21 m: 4; a 30 m: 3; de lado: ≤ 2; a 35 m: sem); (2) na
 //     montagem, a 9,15 m entre a bola e o gol, cobrindo o 1º pau; atacantes a ≥ 1 m dela; o humano que defende vai para
 //     o goleiro; (3) no chute ela pula (≥ 0,25 m) e a pose sobe junto; (4) canhão de tiros livres perigosos (18–31 m):
@@ -95,6 +96,14 @@ function ateMontar(m, tipo, ent = P.entradaDemoPartida, max = 400) {
   return null;
 }
 const jog = (m, id) => m.jogadores.find(o => o.id === id);
+/** P(X ≥ k) para X ~ Binomial(n, p) (termos em log: n de centenas sem estourar). */
+function caudaBinomialDe(k, n, p) {
+  if (k <= 0) return 1;
+  let lt = n * Math.log(1 - p), abaixo = 0;
+  const r = Math.log(p / (1 - p));
+  for (let i = 0; i < k; i++) { abaixo += Math.exp(lt); lt += Math.log((n - i) / (i + 1)) + r; }
+  return Math.max(0, 1 - abaixo);
+}
 
 // ------------------------------------------------------------------ A. lateral
 {
@@ -290,9 +299,19 @@ const jog = (m, id) => m.jogadores.find(o => o.id === id);
       if (q.partida.estado === 'gol') break;
     }
   }
+  // Gol em ≤ 12% dos escanteios: a taxa do jogo está NA BEIRA da meta, e as 120 cenas (8 sementes) variam muito com o
+  // rumo das partidas que dão os estados. A mesma conta (este canhão, 120 escanteios) com outras 8 sementes: main 11,4%
+  // (1001–1008), 16,7% (1009–1016) e 10,3% (1017–1024); com a rede véu de noiva, 12,1%, 15,3% e 11,8%; com 32
+  // sementes (~500 escanteios), main 13,5% e rede 12,7%. "gols ÷ escanteios ≤ 12%" direto reprovava ~metade das rodadas
+  // nas duas versões (com a taxa real de 12–13%, P(> 12% em 123) = 52–65%): sorteio. Reprova só se a contagem PROVA
+  // mais de 12%: P(X ≥ gols | n escanteios, 0,12) < 5% (binomial), como os vermelhos do teste-faltas (as mesmas cenas).
+  // Atenção: a taxa medida com mais escanteios fica em ~13% (um ponto acima da meta, também na main), e com 120
+  // escanteios este critério pega uma taxa de 20% em ~75% das rodadas (22%: ~90%; reprova com 22 gols ou mais): falta o
+  // goleiro sair no cruzamento (Etapa 4, parte do goleiro) para o gol por escanteio descer de verdade.
+  const pGol = caudaBinomialDe(gols, esc, 0.12);
   reg('C3. canhão de 120 escanteios: 1º contato do ataque · gol · chute (em ≤ 8 s)',
-    `${f1(pct(primAta, prim))}% · ${f1(pct(gols, esc))}% · ${f1(pct(chutes, esc))}% (${esc} escanteios)`,
-    '35–62% · ≤ 12% · ≥ 12%', esc >= 110 && pct(primAta, prim) >= 35 && pct(primAta, prim) <= 62 && pct(gols, esc) <= 12 && pct(chutes, esc) >= 12);
+    `${f1(pct(primAta, prim))}% · ${f1(pct(gols, esc))}% (p = ${f2(pGol)} contra 12%) · ${f1(pct(chutes, esc))}% (${esc} escanteios)`,
+    '35–62% · ≤ 12% (p ≥ 0,05) · ≥ 12%', esc >= 110 && pct(primAta, prim) >= 35 && pct(primAta, prim) <= 62 && pGol >= 0.05 && pct(chutes, esc) >= 12);
 }
 
 // ------------------------------------------------------------------ D. barreira

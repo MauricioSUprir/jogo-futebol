@@ -19,6 +19,12 @@
 //     para quem não tocou por último, no ponto em que ela cruzou; escanteio quando o último toque é de
 //     quem defende; senão tiro de meta — da Etapa 4 em diante, com a bola no chão dentro da pequena área (Regra 16) e o
 //     lateral na linha (Regra 15)) e cobrado em ≤ 8 s.
+//  F. Corpo embalado na borda da parada (a parede pela locomoção com a física do corpo): logo depois da montagem de um
+//     lateral, escanteio, tiro livre e pênalti do adversário, o jogador do humano a δ m da borda (raio + folga),
+//     correndo de lado (CORRER na tangente) com a velocidade para dentro de uma trombada — v ≤ √(2·JOGADOR.freio·
+//     (δ + folga)), o que a freada normal do corpo para antes do raio: ninguém entra no raio em nenhuma das 192 cenas.
+//     (Antes a parede só limitava o pedido e o corpo levava a velocidade da trombada para dentro: 1 entrada a cada
+//     ~30 tempos de 4 min IA × IA, e o C reprovava conforme o sorteio das sementes.)
 //
 //   node tools/teste-partida.mjs                  (lógica do repositório, sementes 1..8)
 //   node tools/teste-partida.mjs --base 11        (sementes 11..18; as 5 rodadas usam 1, 11, 21, 31, 41)
@@ -41,6 +47,9 @@ const existe = f => fs.existsSync(path.join(JS, f));
 // Etapa 4 (lateral.js): o lateral na linha (Regra 15) e o tiro de meta com a bola no chão (Regra 16)
 const BOLAS_E4 = existe('lateral.js');
 const PASSO = 1 / 60;
+// "dentro" do raio com 1 µm de tolerância numérica: a barreira fica a 9,15 m EXATOS da bola (Regra 13; bolas-paradas.js
+// barreiraDoTiroLivre) e o hypot do do meio dá 9,1499999999999932 — 7e-15 m "dentro" contava como entrada no C
+const TOL = 1e-6;
 const fmtS = v => v.toFixed(2).replace('.', ',');
 
 /**
@@ -74,8 +83,8 @@ async function medirTempo(sem, min, parado) {
   // adversário do cobrador dentro do raio (sem a folga) ou da área
   const dentro = (pr, j) => {
     if (j.id === pr.cobrador || j.time === pr.time) return false;
-    if (pr.raio === 'area') { const gx = -m.ataca[pr.time] * 52.5; return Math.abs(j.x - gx) < 16.5 && Math.abs(j.z) < 20.16; }
-    return Math.hypot(j.x - pr.x, j.z - pr.z) < pr.raio;
+    if (pr.raio === 'area') { const gx = -m.ataca[pr.time] * 52.5; return Math.abs(j.x - gx) < 16.5 - TOL && Math.abs(j.z) < 20.16 - TOL; }
+    return Math.hypot(j.x - pr.x, j.z - pr.z) < pr.raio - TOL;
   };
   for (let i = 0; i < N; i++) {
     const pr0 = m.parada;
@@ -348,7 +357,7 @@ const [resC, resD] = await Promise.all([
         const agora = new Set();
         for (const j of m.jogadores) {
           if (j.id === pr.cobrador || j.time === pr.time || j === defl) continue;
-          const den = pr.raio === 'area' ? Math.abs(j.x + m.ataca[pr.time] * meioX) < 16.5 && Math.abs(j.z) < 20.16 : Math.hypot(j.x - pr.x, j.z - pr.z) < pr.raio;
+          const den = pr.raio === 'area' ? Math.abs(j.x + m.ataca[pr.time] * meioX) < 16.5 - TOL && Math.abs(j.z) < 20.16 - TOL : Math.hypot(j.x - pr.x, j.z - pr.z) < pr.raio - TOL;
           if (den) agora.add(j.id);
         }
         if (dentroAntes) for (const id of agora) if (!dentroAntes.has(id)) entrou++;
@@ -395,5 +404,85 @@ const [resC, resD] = await Promise.all([
   reg('E. desvio no corpo antes de sair: lateral para o outro time', `${desvCertos}/${desvValidos} válidos (de 8)`, 'todos certos, ≥ 4 válidos', desvValidos >= 4 && desvCertos === desvValidos);
   reg('E. canhão: cobrado em ≤ 8 s', `a mais longa ${fmt(maxParada, 2)} s`, '≤ 8 s', maxParada <= 8);
   reg('E. canhão: ninguém entra no raio; ninguém dentro na cobrança', `${entrou} entradas; ${dentroCobranca} cobranças com alguém dentro`, '0; 0', entrou === 0 && dentroCobranca === 0);
+}
+
+// ------------------------------------------- F. corpo embalado na borda da parada (trombada, embalo)
+{
+  const CFG = await imp('config.js');
+  const AC = await imp('acoes.js');
+  const { PARTIDA, JOGADOR, BOTAO, CAMPO } = CFG;
+  const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
+  // partida rolando (sem parada) para clonar
+  const m0 = S.criar({ semente: BASE + 400, iaClassica: ANTES });
+  for (let i = 0; i < 3000 && !(i > 240 && m0.partida.estado === 'jogo' && !m0.parada); i++) S.passo(m0, S.demo(m0));
+  const parado = { x: 0, z: 0, botoes: 0 };
+  /** Clona a partida e monta a parada `tipo` do time 1 (o humano, time 0, defende); null se não montou. */
+  function montar(tipo) {
+    const m = structuredClone(m0);
+    const t = 1, lado = m.ataca[t];
+    const ult = m.jogadores.find(o => o.time === 0 && o.posicao !== 'GOL');
+    m.posse = null; m.naMao = null; m.voo = null;
+    if (tipo === 'lateral' || tipo === 'escanteio') {
+      // bola fora com o último toque do time 0
+      const x = tipo === 'lateral' ? -10 : lado * (MX + 0.6), z = tipo === 'lateral' ? MZ + 0.5 : 12;
+      Object.assign(m.bola.p, { x, y: 0.11, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
+      m.partida.ultimoTime = 0; m.partida.ultimoId = ult.id; m.partida.ultimoTick = m.tick;
+      m.ultimoToque = { id: ult.id, time: 0, tick: m.tick };
+    } else {
+      // falta de um zagueiro do time 0 no atacante do time 1: tiro livre a 26 m ou pênalti (Etapa 4, faltas.js)
+      const area = tipo === 'penalti', x = lado * (MX - (area ? 8 : 26)), z = area ? 2 : 3;
+      const At = m.jogadores.find(o => o.time === t && o.posicao === 'ATA') ?? m.jogadores.find(o => o.time === t && o.posicao !== 'GOL');
+      const D = m.jogadores.find(o => o.time === 0 && o.posicao === 'ZAG') ?? ult;
+      P.teleportar(At, x, z, 0); P.teleportar(D, x - lado, z, 0); At.vx = 0;
+      m.posse = At.id; m.eventos = [];
+      m.faltaPendente = { def: D.id, cond: At.id, time: t, x, z, area, chegada: 'tras', v: 3, grau: 'imprudente', cartao: null, motivo: 'imprudente', origem: 'bote', tick: m.tick };
+      if (P.regrasPartida) P.regrasPartida(m);
+    }
+    for (let i = 0; i < 500; i++) {
+      const pr = m.parada;
+      if (pr && pr.tipo === tipo && pr.cobrador != null && !pr.rolou) return m;
+      S.passo(m, parado);
+    }
+    return null;
+  }
+  const TIPOS = ['lateral', 'escanteio', 'tiroLivre', 'penalti'];
+  const F = PARTIDA.folgaRaio ?? 0;
+  let n = 0, entraram = 0, pior = Infinity;
+  const naoMontou = [], porTipo = {}, exemplos = [];
+  for (const tipo of TIPOS) {
+    const mb = montar(tipo);
+    if (!mb) { naoMontou.push(tipo); continue; }
+    const pr0 = mb.parada, R = pr0.raio, lado = mb.ataca[pr0.time];
+    // de que lado o jogador do humano chega: de dentro do campo (lateral, escanteio) ou do meio-campo (tiro livre e
+    // pênalti: a meia-lua fora da área)
+    const th0 = tipo === 'lateral' ? Math.atan2(-Math.sign(pr0.z), 0) : tipo === 'escanteio' ? Math.atan2(-Math.sign(pr0.z), -lado) : Math.atan2(0, -lado);
+    porTipo[tipo] = 0;
+    for (const dth of [-30, 0, 30]) for (const delta of [0.05, 0.3]) for (const f of [0.9, 1]) for (const u of [3.5, 6]) for (const sg of [-1, 1]) {
+      const m = structuredClone(mb), pr = m.parada;
+      const th = th0 + dth * Math.PI / 180, nx = Math.cos(th), nz = Math.sin(th); // do ponto para fora
+      const tx = -nz * sg, tz = nx * sg;                                            // tangente (para onde ele corre)
+      const vin = f * Math.sqrt(2 * JOGADOR.freio * (delta + F));                   // a freada normal para antes do raio
+      const j = m.jogadores.find(o => o.time !== pr.time && o.posicao !== 'GOL' && o.id !== pr.cobrador && o.papel !== 'parado' && !(pr.barreira && pr.barreira.ids.includes(o.id)));
+      P.teleportar(j, pr.x + nx * (R + F + delta), pr.z + nz * (R + F + delta), Math.atan2(tz, tx));
+      j.vx = tx * u - nx * vin; j.vz = tz * u - nz * vin;
+      AC.assumirControle(m, 0, j);
+      let dmin = Infinity;
+      for (let i = 0; i < 180; i++) {
+        const ev = S.passo(m, { x: tx, z: tz, botoes: BOTAO.CORRER });
+        if (m.parada !== pr || ev.some(e => e.tipo === 'cobranca')) break;
+        dmin = Math.min(dmin, Math.hypot(j.x - pr.x, j.z - pr.z));
+      }
+      n++;
+      pior = Math.min(pior, dmin - R);
+      if (dmin < R - TOL) {
+        entraram++; porTipo[tipo]++;
+        if (exemplos.length < 6) exemplos.push(`${tipo} θ ${dth}° δ ${fmt(delta, 2)} m, para dentro ${fmt(vin, 2)} m/s, de lado ${fmt(u, 1)} m/s: chegou a ${fmt(dmin, 3)} m (raio ${R})`);
+      }
+    }
+  }
+  if (exemplos.length) console.log('F. entraram:\n  ' + exemplos.join('\n  '));
+  reg('F. corpo embalado na borda (trombada correndo de lado): ninguém entra no raio (lateral, escanteio, tiro livre, pênalti)',
+    `${entraram} de ${n} cenas entraram (${TIPOS.map(t => `${t} ${porTipo[t] ?? '—'}`).join(' · ')}); menor folga ${fmt(pior, 3)} m${naoMontou.length ? `; não montou: ${naoMontou.join(', ')}` : ''}`,
+    '0 de 192', n === 192 && entraram === 0);
 }
 fim();

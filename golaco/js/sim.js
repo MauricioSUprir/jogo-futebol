@@ -2,6 +2,7 @@
 // O mundo é um objeto simples (copiável); a mesma semente e as mesmas entradas geram a
 // mesma partida bit a bit (ver hashMundo).
 
+import { profundidadeVeu } from './rede-forma.js';
 import { PASSO, ENTRADA, BOTAO, CONDUCAO, JOGADOR, TREINO, CAMPO, GOLEIRO, IA, AEREO } from './config.js';
 import { criarRng, entre, uniforme } from './rng.js';
 import { criarBola, passoBola, chutarRasteiro, copiarBola } from './bola.js';
@@ -927,8 +928,8 @@ function verificarGol(m) {
   if (m.golTick != null) return;
   const R = 0.11;
   if (Math.abs(b.p.x) < CAMPO.meioX + R) return;
-  // atrás da rede de fundo não é gol (a bola que roda por trás do gol fica lá)
-  if (Math.abs(b.p.x) > CAMPO.meioX + CAMPO.gol.profundidade) return;
+  // atrás do véu não é gol (a bola que escorrega por trás da rede fica lá)
+  if (Math.abs(b.p.x) - CAMPO.meioX > profundidadeVeu(b.p.y < 0 ? 0 : b.p.y)) return;
   if (Math.abs(b.p.z) >= CAMPO.gol.largura / 2 || b.p.y >= CAMPO.gol.altura) return;
   const ladoGol = b.p.x > 0 ? 1 : -1;
   // marca quem ataca esse lado

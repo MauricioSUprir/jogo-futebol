@@ -677,7 +677,17 @@ function bordaArea(s, x, z) {
  *  - dentro da zona: sai andando pelo caminho mais curto (o ponto de restricaoParada), mais depressa
  *    quanto mais fundo (até PARTIDA.empurrao m/s);
  *  - fora: a componente do pedido para dentro fica limitada pela distância até a borda (dá para frear
- *    antes dela com PARTIDA.freioParede m/s²): ninguém entra, e quem corre para a borda freia.
+ *    antes dela com PARTIDA.freioParede m/s²): ninguém entra, e quem corre para a borda freia;
+ *  - o CORPO indo para dentro (trombada perto da borda, ou chegando embalado quando a bola morre) — fora,
+ *    mais depressa do que nem a freada normal (JOGADOR.freio) para antes da borda; dentro, ainda entrando:
+ *    o pedido vira a velocidade do CORPO refletida na borda (a componente para dentro vira para fora, a de
+ *    lado fica; dentro, para fora pelo menos a velocidade de saída). A locomoção então freia a entrada pela
+ *    aceleração lateral (até JOGADOR.latCorte) e pela freada. Antes a parede só limitava o PEDIDO: o corpo
+ *    correndo de lado com a velocidade para dentro da trombada a perdia só pela aceleração lateral (e a
+ *    aceleração ao longo do pedido de lado ainda a aumentava); já dentro, o "sai pelo caminho mais curto"
+ *    virava inversão (freia tudo na linha, a componente para dentro quase inteira) — passava a folga e o
+ *    raio (teste-partida C e F: o lateral empurrado por um companheiro a 0,4 m da meia-lua do pênalti; o
+ *    ponta embalado no ponto do lateral).
  * Devolve `mv` (sem mudança) ou um pedido novo. Pura.
  */
 export function paredeParada(m, j, mv) {
@@ -689,12 +699,24 @@ export function paredeParada(m, j, mv) {
   const ox = _r.x - j.x, oz = _r.z - j.z, od = MD.hypot(ox, oz);
   if (od > PARTIDA.dentroParede) {
     const vel = clamp(Math.sqrt(2 * PARTIDA.freioParede * (od + PARTIDA.margemParede)), PARTIDA.saiParede, PARTIDA.empurrao);
-    return { dx: ox / od, dz: oz / od, vel, rumoAlvo: mv.rumoAlvo };
+    const nx = ox / od, nz = oz / od, vN = j.vx * nx + j.vz * nz; // vN < 0: o corpo ainda está entrando
+    if (vN >= 0) return { dx: nx, dz: nz, vel, rumoAlvo: mv.rumoAlvo };
+    // ainda entrando: a velocidade do corpo refletida (a de lado fica; para fora, pelo menos `vel`)
+    const sai = Math.max(vel, -vN) - vN;
+    const wx = j.vx + sai * nx, wz = j.vz + sai * nz, w = MD.hypot(wx, wz);
+    return { dx: wx / w, dz: wz / w, vel: w, rumoAlvo: mv.rumoAlvo };
   }
   // fora: tira do pedido a velocidade para dentro que não daria para frear antes da borda
   let wx = mv.dx * mv.vel, wz = mv.dz * mv.vel, mudou = false;
   for (let k = 0; k < 3; k++) {
     if (!bordaParada(m, p, j, j.x, j.z, k)) continue;
+    // o CORPO (não o pedido) vem para dentro mais depressa do que a freada normal para antes da borda:
+    // o pedido é a velocidade dele refletida na borda (freada de emergência pela locomoção)
+    const vCorpo = -(j.vx * _b.nx + j.vz * _b.nz);
+    if (vCorpo > Math.sqrt(2 * JOGADOR.freio * Math.max(0, _b.d))) {
+      wx = j.vx + 2 * vCorpo * _b.nx; wz = j.vz + 2 * vCorpo * _b.nz; mudou = true;
+      continue;
+    }
     const vMax = Math.sqrt(2 * PARTIDA.freioParede * Math.max(0, _b.d - PARTIDA.margemParede));
     const vIn = -(wx * _b.nx + wz * _b.nz);
     if (vIn > vMax) { const c = vIn - vMax; wx += c * _b.nx; wz += c * _b.nz; mudou = true; }

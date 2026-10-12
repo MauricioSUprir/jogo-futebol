@@ -32,7 +32,8 @@
 //  E11 sem recuo: hashes do treino iguais aos gravados (as mesmas cenas do tools/hash-igual.mjs) e o
 //      treino sem m.times. (A prova completa é o hash-igual.) Gravados de novo no pedido de 10/10 (recepção
 //      assistida, erro do domínio por atributo e goleiro que mergulha mudam o treino de propósito; antes: os
-//      da base 980b0b0 — a condução sem passe, conducao-7 até o passo 1200, continua igual).
+//      da base 980b0b0 — a condução sem passe, conducao-7 até o passo 1200, continua igual) e com a rede véu de
+//      noiva (11/10: o ataque muda depois do 1º chute ao gol; a condução continua igual).
 //
 //   node tools/teste-editor.mjs [--antes] [--js <pasta>] [--base N]
 import fs from 'node:fs';
@@ -425,12 +426,15 @@ bloco('E10', () => {
 
 // ------------------------------------------------------------------------------------ E11
 {
-  // hashes gravados (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600) — pedido de
-  // 10/10 com as correções da contraprova (base 980b0b0 era: ataque-1 [3298389666, 255764296, 4082737914],
-  // ataque-2 [3929265932, 3750097417, 646006693], conducao-7 [1415330591, 986885701, 4093573822])
+  // hashes gravados (as cenas de tools/hash-igual.mjs, encurtadas: 1800 passos, hash a cada 600) — gravados de novo
+  // com a rede véu de noiva (11/10: a física da bola atrás da linha mudou de propósito; o ataque diverge depois do 1º
+  // chute ao gol — antes: ataque-1 [3678653782, 2725485303, 3876666268], ataque-2 [1851623551, 2700834158,
+  // 2698006015]; a condução continua igual). Pedido de 10/10 com as correções da contraprova (base 980b0b0 era:
+  // ataque-1 [3298389666, 255764296, 4082737914], ataque-2 [3929265932, 3750097417, 646006693], conducao-7
+  // [1415330591, 986885701, 4093573822])
   const GRAVADO = {
-    'ataque-1': [3678653782, 2725485303, 3876666268],
-    'ataque-2': [1851623551, 2700834158, 2698006015],
+    'ataque-1': [3678653782, 2725485303, 812240589],
+    'ataque-2': [1851623551, 3793062605, 903192207],
     'conducao-7': [1415330591, 986885701, 2262414902],
   };
   const R = await import(pathToFileURL(path.join(AQUI, 'lib/roteiros.mjs')).href);

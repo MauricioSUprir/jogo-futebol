@@ -1,5 +1,5 @@
 // Campo oficial (IFAB Lei 1, medidas em CAMPO): gramado com faixas de corte, linhas finas
-// com antisserrilhado analítico (um único mesh), gols com rede que BALANÇA (malha subdividida, a
+// com antisserrilhado analítico (um único mesh), gols com a rede VÉU DE NOIVA branca que BALANÇA (malha subdividida, a
 // deformação no vertex shader pela conta de rede-onda.js — uniforms de até 4 batidas), bandeirinhas,
 // placas com marcas FICTÍCIAS e arquibancada (a torcida é de torcida.js). Poucos draw calls: tudo o que
 // é estático vira um mesh só por material.
@@ -7,9 +7,16 @@ import * as THREE from 'three';
 import { CAMPO, ESTADIO } from '../config.js';
 import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
-  GRAMA, texGramado, texDetalheGrama, texRede, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho,
+  GRAMA, texGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho,
 } from './texturas.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
+import { VEU, COMPRIMENTO_PERFIL, pontoPerfil, profundidadeVeu } from '../rede-forma.js';
+// trama da rede (m): colmeia de 12 cm com fio de 6 mm; o fio não afina abaixo de ~1 px, só fica até uRedeMin mais
+// transparente; longe (célula < ~2 px) vira um véu branco de opacidade `longe`
+export const REDE_TRAMA = { celula: 0.12, fio: 0.006, opacMin: 0.85, longe: 0.32 };
+// luz própria (emissive) da rede e da armação, de dia e de noite: a face que a câmera vê fica de costas para o sol e,
+// à noite, só pega a luz fraca dos refletores — sem isto o fio saía cinza (L* 79 de dia, 50 à noite, de perto)
+export const LUZ_GOL = { redeDia: 0xaaadab, redeNoite: 0xaaadab, armDia: 0x2a2c2b, armNoite: 0x5a5c5b };
 import { cameraNoLadoDeCa } from './torcida-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 
@@ -170,123 +177,148 @@ function criarLinhas(detalhe) {
 
 // ------------------------------------------------------------------ gols
 
-function criarGols(aniso) {
+function criarGols() {
   const g = CAMPO.gol;
   const R = g.raioPoste;
   const zp = g.largura / 2 + R;          // centro do poste (igual a bola.js)
   const yt = g.altura + R;               // centro do travessão
   const geos = [], cores = [];
-  const branco = new THREE.Color(0xf7f9f8), cinza = new THREE.Color(0x8b9396), preto = new THREE.Color(0x1a1d1e);
+  const branco = new THREE.Color(0xf7f9f8), preto = new THREE.Color(0x1a1d1e);
+  const zl = g.largura / 2, H = VEU.haste, F = VEU.fundo;
   for (const s of [-1, 1]) {
     const x = s * MX;
-    const xf = s * (MX + g.profundidade);
     for (const t of [-1, 1]) {
       geos.push(cilindroEntre([x, 0, t * zp], [x, yt + R, t * zp], R, 16)); cores.push(branco);
-      // estrutura de trás (fina, cinza)
-      geos.push(cilindroEntre([xf, 0, t * g.largura / 2], [xf, g.altura, t * g.largura / 2], 0.03, 8)); cores.push(cinza);
-      geos.push(cilindroEntre([x + s * R, g.altura, t * g.largura / 2], [xf, g.altura, t * g.largura / 2], 0.025, 8)); cores.push(cinza);
-      geos.push(cilindroEntre([x + s * R, 0.02, t * g.largura / 2], [xf, 0.02, t * g.largura / 2], 0.022, 6)); cores.push(cinza);
+      // haste do canto de cima (véu de noiva): do alto do poste para trás, segura a faixa de cima da rede
+      geos.push(cilindroEntre([x, yt, t * zp], [x + s * H, g.altura + 0.02, t * zl], 0.028, 8)); cores.push(branco);
+      // pé da lateral no chão (corda presa por estacas), do poste até o fundo do véu
+      geos.push(cilindroEntre([x + s * R, 0.012, t * zl], [x + s * F, 0.012, t * zl], 0.012, 5)); cores.push(branco);
       // mastro da bandeirinha
       geos.push(cilindroEntre([x, 0, t * MZ], [x, 1.55, t * MZ], 0.018, 8)); cores.push(branco);
       geos.push(cilindroEntre([x, 1.55, t * MZ], [x, 1.57, t * MZ], 0.022, 8)); cores.push(preto);
     }
     geos.push(cilindroEntre([x, yt, -zp - R], [x, yt, zp + R], R, 16)); cores.push(branco);
-    geos.push(cilindroEntre([xf, g.altura, -g.largura / 2], [xf, g.altura, g.largura / 2], 0.03, 8)); cores.push(cinza);
-    geos.push(cilindroEntre([xf, 0.02, -g.largura / 2], [xf, 0.02, g.largura / 2], 0.022, 6)); cores.push(cinza);
+    // fundo do véu preso no chão (corda e estacas)
+    geos.push(cilindroEntre([x + s * F, 0.012, -zl], [x + s * F, 0.012, zl], 0.014, 5)); cores.push(branco);
   }
-  const estrutura = new THREE.Mesh(juntarGeometrias(geos, cores), new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const matArm = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: LUZ_GOL.armDia });
+  const estrutura = new THREE.Mesh(juntarGeometrias(geos, cores), matArm);
   estrutura.name = 'gols';
-  const rede = criarRede(aniso);
-  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms };
+  const rede = criarRede();
+  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms, matArm, matRede: rede.mesh.material };
 }
 
 /**
- * Rede dos dois gols: os 8 panos (fundo, teto e laterais de cada gol; a caixa igual à da física da bola)
- * numa malha subdividida a ~15 cm com dois atributos por vértice — o pano (0–7, a numeração de
- * rede-onda.js) e a fixação (0 na armação, 1 no meio: rede-onda.js fixo). O vertex shader empurra o
- * vértice pela normal do pano (para fora do gol) com redeDesloc (REDE_GLSL). A textura é a mesma de antes
- * (losango de 14 cm na mesma escala de UV).
+ * Rede VÉU DE NOIVA dos dois gols (forma de ../rede-forma.js, a mesma da física da bola): o véu (faixa de cima +
+ * a curva até o chão, na largura toda) e as duas laterais (do poste até o véu), numa malha a ~15 cm com dois
+ * atributos por vértice — aFixo (0 na armação: rede-onda.js fixo) e aUvM (coordenadas em METROS sobre o tecido,
+ * para a trama colmeia do fragment shader). O vertex shader empurra o vértice com o campo vetorial redeDesloc
+ * (REDE_GLSL) e refaz a normal pela inclinação da bolsa. A trama é procedural (sem textura): hexágonos com fio
+ * que nunca fica mais fino que ~1 px (só mais transparente) e, longe, um véu branco uniforme (sem moiré).
  */
-function criarRede(aniso) {
+function criarRede() {
   const g = CAMPO.gol;
-  const CEL = 0.14;   // tamanho do losango da rede (m)
   const PASSO_MALHA = 0.15;
-  const pos = [], nrm = [], uv = [], plano = [], fixa = [], idx = [];
-  // pano: canto p0 e eixos (ea ao longo de u, eb ao longo de v), tamanhos ul × vl; n = normal do desenho
-  // (a de antes, virada para dentro do gol: a luz fica igual)
-  function pano(i, p0, ea, eb, ul, vl, n) {
-    const na = Math.max(1, Math.round(ul / PASSO_MALHA)), nb = Math.max(1, Math.round(vl / PASSO_MALHA));
-    const base = pos.length / 3;
-    for (let b = 0; b <= nb; b++) {
-      for (let a = 0; a <= na; a++) {
-        const fu = a / na * ul, fv = b / nb * vl;
-        const x = p0[0] + ea[0] * fu + eb[0] * fv, y = p0[1] + ea[1] * fu + eb[1] * fv, z = p0[2] + ea[2] * fu + eb[2] * fv;
-        pos.push(x, y, z); nrm.push(...n); uv.push(fu / CEL, fv / CEL);
-        plano.push(i); fixa.push(fixoRede(i, x, y, z));
-      }
-    }
-    for (let b = 0; b < nb; b++) {
-      for (let a = 0; a < na; a++) {
-        const k = base + b * (na + 1) + a;
-        idx.push(k, k + 1, k + na + 2, k, k + na + 2, k + na + 1);
-      }
-    }
-  }
   const zl = g.largura / 2, ya = g.altura;
+  const pos = [], nrm = [], uvm = [], fixa = [], idx = [];
+  const _o = { X: 0, y: 0, nx: 0, ny: 0, s: 0 };
   for (const s of [-1, 1]) {
-    const x = s * MX, xf = s * (MX + g.profundidade), base = s > 0 ? 4 : 0;
-    pano(base + 0, [xf, 0, -zl], [0, 0, 1], [0, 1, 0], g.largura, ya, [-s, 0, 0]);
-    pano(base + 1, [x, ya, -zl], [0, 0, 1], [s, 0, 0], g.largura, g.profundidade, [0, -1, 0]);
-    for (const t of [-1, 1]) pano(base + (t < 0 ? 2 : 3), [x, 0, t * zl], [s, 0, 0], [0, 1, 0], g.profundidade, ya, [0, 0, -t]);
+    // véu: u na largura (z), v ao longo do perfil (s)
+    const na = Math.round(g.largura / PASSO_MALHA), nb = Math.round(COMPRIMENTO_PERFIL / PASSO_MALHA);
+    let base = pos.length / 3;
+    for (let b = 0; b <= nb; b++) {
+      pontoPerfil(b / nb * COMPRIMENTO_PERFIL, _o);
+      for (let a = 0; a <= na; a++) {
+        const z = -zl + a / na * g.largura, x = s * (MX + _o.X), y = _o.y;
+        pos.push(x, y, z); nrm.push(-s * _o.nx, -_o.ny, 0); uvm.push(z + zl, _o.s);
+        fixa.push(fixoRede(x, y, z));
+      }
+    }
+    for (let b = 0; b < nb; b++) for (let a = 0; a < na; a++) {
+      const k = base + b * (na + 1) + a;
+      idx.push(k, k + 1, k + na + 2, k, k + na + 2, k + na + 1);
+    }
+    // laterais: X = a · profundidade(y) (colunas em leque), y de 0 a HG
+    for (const t of [-1, 1]) {
+      const nx = Math.round(VEU.fundo / PASSO_MALHA), ny = Math.round(ya / PASSO_MALHA);
+      base = pos.length / 3;
+      for (let b = 0; b <= ny; b++) {
+        const y = b / ny * ya, prof = profundidadeVeu(y);
+        for (let a = 0; a <= nx; a++) {
+          const X = a / nx * prof, x = s * (MX + X), z = t * zl;
+          pos.push(x, y, z); nrm.push(0, 0, -t); uvm.push(X, y);
+          fixa.push(fixoRede(x, y, z));
+        }
+      }
+      for (let b = 0; b < ny; b++) for (let a = 0; a < nx; a++) {
+        const k = base + b * (nx + 1) + a;
+        idx.push(k, k + 1, k + nx + 2, k, k + nx + 2, k + nx + 1);
+      }
+    }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  geo.setAttribute('aPlano', new THREE.Float32BufferAttribute(plano, 1));
+  geo.setAttribute('aUvM', new THREE.Float32BufferAttribute(uvm, 2));
   geo.setAttribute('aFixo', new THREE.Float32BufferAttribute(fixa, 1));
   geo.setIndex(idx);
   geo.computeBoundingSphere();
-  // a bolsa sai até ~0,6 m da caixa: a esfera de corte cresce junto
   geo.boundingSphere.radius += REDE.ampMax + 0.2;
   const mat = new THREE.MeshLambertMaterial({
-    map: texRede(aniso), transparent: true, side: THREE.DoubleSide, depthWrite: false, alphaTest: 0.02, color: 0xeef2f0,
+    color: 0xf2f4f3, emissive: LUZ_GOL.redeDia, transparent: true, side: THREE.DoubleSide, depthWrite: false,
   });
-  const uniforms = { uRedeA: { value: new Float32Array(4 * REDE.maxImpactos) }, uRedeB: { value: new Float32Array(4 * REDE.maxImpactos).fill(-1) } };
+  const uniforms = {
+    uRedeA: { value: new Float32Array(4 * REDE.maxImpactos) }, uRedeB: { value: new Float32Array(4 * REDE.maxImpactos).fill(-1) },
+    uRedeCel: { value: REDE_TRAMA.celula }, uRedeFio: { value: REDE_TRAMA.fio }, uRedeMin: { value: REDE_TRAMA.opacMin }, uRedeLonge: { value: REDE_TRAMA.longe },
+  };
   mat.onBeforeCompile = sh => {
-    sh.uniforms.uRedeA = uniforms.uRedeA;
-    sh.uniforms.uRedeB = uniforms.uRedeB;
-    // deslocamento pela normal do pano E a normal refeita pela inclinação da bolsa (diferença finita a 10 cm
-    // nos dois eixos do pano): a luz muda na dobra e o balanço aparece de qualquer ângulo — antes só o
-    // escurecimento mostrava a bolsa e, na câmera de TV, ela mexia 2,5% dos pixels do gol (contraprova I2).
-    // Superfície p + n·d(p): normal ∝ n − ∇d; o atributo normal aponta para DENTRO (−n), então fica normal + ∇d.
+    Object.assign(sh.uniforms, uniforms);
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aPlano;\nattribute float aFixo;\nvarying float vRedeD;' + REDE_GLSL)
+      .replace('#include <common>', '#include <common>\nattribute float aFixo;\nattribute vec2 aUvM;\nvarying vec2 vUvM;' + REDE_GLSL)
       .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
-        float redeD = 0.0;
+        vec3 redeD = vec3(0.0);
         if (aFixo > 0.0) {
-          redeD = redeDesloc(position, aPlano) * redeFixo(position, aPlano);
-          if (redeD != 0.0) {
-            vec3 nP = redeNormal(aPlano);
-            vec3 ta = abs(nP.x) > 0.5 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+          redeD = redeDesloc(position) * aFixo;
+          if (dot(redeD, redeD) > 0.0) {
+            vec3 nP = -objectNormal;
+            vec3 ta = normalize(abs(nP.y) < 0.9 ? cross(nP, vec3(0.0, 1.0, 0.0)) : cross(nP, vec3(1.0, 0.0, 0.0)));
             vec3 tb = cross(nP, ta);
-            vec3 pa = position + ta * 0.1;
-            vec3 pb = position + tb * 0.1;
-            float da = redeDesloc(pa, aPlano) * redeFixo(pa, aPlano);
-            float db = redeDesloc(pb, aPlano) * redeFixo(pb, aPlano);
-            objectNormal = normalize(objectNormal + (ta * (da - redeD) + tb * (db - redeD)) * 10.0);
+            vec3 da = redeDesloc(position + ta * 0.1) * aFixo - redeD;
+            vec3 db = redeDesloc(position + tb * 0.1) * aFixo - redeD;
+            vec3 n2 = normalize(cross(ta * 0.1 + da, tb * 0.1 + db));
+            objectNormal = dot(n2, objectNormal) < 0.0 ? -n2 : n2;
           }
         }
-        vRedeD = redeD;`)
+        vUvM = aUvM;`)
       .replace('#include <begin_vertex>', `#include <begin_vertex>
-        transformed += redeNormal(aPlano) * redeD;`);
-    // a bolsa escurece um pouco (a malha esticada e a sombra da dobra)
+        transformed += redeD;`);
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nvarying float vRedeD;')
+      .replace('#include <common>', `#include <common>
+        varying vec2 vUvM;
+        uniform float uRedeCel, uRedeFio, uRedeMin, uRedeLonge;
+        // trama colmeia (hexágonos de ponta para cima, distância entre lados = 1 célula)
+        float redeHexBorda(vec2 p) {
+          vec2 r = vec2(1.0, 1.7320508), h = r * 0.5;
+          vec2 a = mod(p, r) - h, b = mod(p - h, r) - h;
+          vec2 g = dot(a, a) < dot(b, b) ? a : b;
+          g = abs(g);
+          return 0.5 - max(dot(g, vec2(0.5, 0.8660254)), g.x);
+        }`)
       .replace('#include <map_fragment>', `#include <map_fragment>
-        diffuseColor.rgb *= 1.0 - 0.45 * clamp(abs(vRedeD) * 2.2, 0.0, 1.0);`);
+        {
+          vec2 pc = vUvM / uRedeCel;
+          float e = redeHexBorda(pc);
+          float fw = max(length(vec2(dFdx(pc.x), dFdy(pc.x))), length(vec2(dFdx(pc.y), dFdy(pc.y))));
+          float w = 0.5 * uRedeFio / uRedeCel;
+          float wd = max(w, 0.6 * fw);
+          float a = 1.0 - smoothstep(wd - 0.5 * fw, wd + 0.5 * fw, e);
+          a *= clamp(w / wd, uRedeMin, 1.0);
+          a = mix(a, uRedeLonge, smoothstep(0.3, 0.75, fw));
+          diffuseColor.a *= a;
+          if (diffuseColor.a < 0.01) discard;
+        }`);
   };
-  mat.customProgramCacheKey = () => 'rede-onda';
+  mat.customProgramCacheKey = () => 'rede-veu';
   const mesh = new THREE.Mesh(geo, mat);
   mesh.name = 'rede';
   mesh.renderOrder = 2;
@@ -638,7 +670,7 @@ export function criarCampo(opc) {
   fora.name = 'chao-fora';
   grupo.add(fora);
   grupo.add(criarLinhas(detalhe));
-  const gols = criarGols(aniso);
+  const gols = criarGols();
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
@@ -665,6 +697,9 @@ export function criarCampo(opc) {
       // arquibancada à noite: só a luz que escapa dos refletores
       for (const m of arq.userData.materiais) m.color.setScalar(noite ? 0.42 : 1);
       placas.mat.color.setHex(noite ? 0xffffff : 0xd4d4d4);
+      // rede e traves brancas também à noite (só a luz dos refletores deixava a rede cinza-escura)
+      gols.matRede.emissive.setHex(noite ? LUZ_GOL.redeNoite : LUZ_GOL.redeDia);
+      gols.matArm.emissive.setHex(noite ? LUZ_GOL.armNoite : LUZ_GOL.armDia);
       refl.matLamp.color.setHex(noite ? 0xf4f8ff : 0x3a4044);
       for (const b of refl.brilhos) b.visible = noite;
     },
