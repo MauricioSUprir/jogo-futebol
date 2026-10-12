@@ -239,6 +239,12 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   na cortina). Câmera por cortes (`camera.js definirCinema`: rede → steadicam → contraplano → reação). `?comemoracao=0`
   desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
+- **Cena de substituição + faixa ENTRA/SAI** (pedido de 12/10; `PESQUISA-ESTADIO.md` §11, contrato em `CONTRATOS.md`):
+  `js/substituicao.js` (PURO; cópias, a mesma locomoção; Regra 3.3 — sai pelo ponto mais perto, entra pelo meio-campo depois)
+  + `render/placa-subst.js` (quarto árbitro id 203); fila única `filaCenas` em main.js (gol → comemoração → replay → substituição
+  → recomeço; som adiado até a fila esvaziar); só desenho (hash igual); faixa ≥ 4 s; opção no "Modo de jogo" (desligada com
+  webdriver/prints/demo; `?substituicao=1` nos testes dela). Testes: `teste-substituicao` (Node, padrão) e
+  `teste-substituicao-tela` (navegador, CI e deploy).
 - **Rede véu de noiva e branca** (pedido de 11/10: "as redes têm que ser brancas, ... movimentação na rede quando a bola
   toca nela, ... em véu de noiva"; `PESQUISA-ESTADIO.md` §8): sai o caixote de 2 m com teto. Forma ÚNICA em `js/rede-forma.js`
   (puro; `CAMPO.gol.veu`: hastes de 0,45 m nos cantos de cima e a parábola tangente ao chão até 2,8 m) usada pela física
