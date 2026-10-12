@@ -430,8 +430,9 @@ function estadioPasso(eventos) {
   const n = detectarImpactos(_p0, _v0, b.p, b.v, _impactos);
   _ctxEmocao.t = tFim; _ctxEmocao.bola = b.p; _ctxEmocao.ataca = mundo.ataca;
   for (let k = 0; k < n; k++) {
-    // a batida foi dentro do passo: meio passo antes do fim
-    if (registrarImpacto(ondas, _impactos[k], tFim - PASSO / 2)) emocaoEvento(emocao, { tipo: 'redeImpacto', vel: _impactos[k].vel }, _ctxEmocao);
+    // a bolsa começa no FIM do passo, quando a bola DESENHADA (interpolada de p0 a p1) encosta na rede (com meio passo
+    // antes, a bola desenhada dava um pulo para a frente no quadro da batida: a bolsa somava ~9 cm ao passo dela)
+    if (registrarImpacto(ondas, _impactos[k], tFim)) emocaoEvento(emocao, { tipo: 'redeImpacto', vel: _impactos[k].vel }, _ctxEmocao);
   }
   for (const ev of eventos) emocaoEvento(emocao, ev, _ctxEmocao);
   const p = _passoEmocao;

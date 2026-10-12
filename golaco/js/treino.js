@@ -1,6 +1,7 @@
 // Modo treino da Etapa 1 (puro): máquina de passes (para treinar o domínio), marcador de
 // treino (para a proteção) e bola que volta ao pé quando sai do campo.
 
+import { dentroDoVeu } from './rede-forma.js';
 import { TREINO, CAMPO, BOLA } from './config.js';
 import { entre } from './rng.js';
 import { chutarRasteiro, criarBola, velParaChegarCom } from './bola.js';
@@ -55,8 +56,7 @@ export function cuidarBolaFora(m, idAlvo) {
   const b = m.bola;
   const fora = Math.abs(b.p.x) > CAMPO.meioX + BOLA.raio || Math.abs(b.p.z) > CAMPO.meioZ + BOLA.raio;
   // dentro da caixa do gol (atrás da rede de fundo não é gol)
-  const dentroDoGol = Math.abs(b.p.x) > CAMPO.meioX && Math.abs(b.p.x) < CAMPO.meioX + CAMPO.gol.profundidade &&
-    Math.abs(b.p.z) < CAMPO.gol.largura / 2 && b.p.y < CAMPO.gol.altura;
+  const dentroDoGol = dentroDoVeu(Math.abs(b.p.x) - CAMPO.meioX, b.p.y, b.p.z);
   if (!fora) { m.foraDesde = null; return; }
   if (m.foraDesde == null) {
     m.foraDesde = m.tick;
