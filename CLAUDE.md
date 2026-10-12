@@ -320,6 +320,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
   replay abrem com `?replay=0`. Lição: o laço da página entrega a entrada da IA pelo humano SEM o `ia` da
   `entradaDemoPartida` — semente achada em Node só bate com a página com `acharGol({comoPagina: true})`.
+- **Análise semiautomática do impedimento** (12/10; contrato "Replay: análise semiautomática", `PESQUISA-ESTADIO.md` §9.1):
+  replay do impedimento = P1 'linha' + P2 'saot' (só os do lance, parede/plano no QUADRIL, pulsos, quadro final oblíquo,
+  ≤ 7,5 s); posição legal (passe ≤ 1,0 m, legal também pelas partes) no fim do replay do gol (≤ 13 s) e do da pausa. O
+  selo "IMPEDIMENTO"/"POSIÇÃO LEGAL" (`hud.terco`, `#terco`) é a ÚNICA exceção à "sem narração": só no quadro final.
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
