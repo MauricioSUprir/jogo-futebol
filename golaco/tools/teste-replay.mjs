@@ -13,7 +13,8 @@
 //      [informativo: quadros com a linha viva no jogo ao vivo — a frente "tela limpa" tira a linha viva];
 //   D) "Replay" na pausa: toca os últimos ≤ 10 s com a simulação parada e volta ao jogo; Esc pula sem abrir a pausa;
 //      uma tecla do jogo (K) pula e não vira chute; no celular (toque), "Pular" aparece e um toque em qualquer lugar
-//      pula; "Replays automáticos: desligado" na pausa é salvo e o gol seguinte não tem replay;
+//      pula; "Replays automáticos: desligado" na pausa é salvo e o gol seguinte não tem replay; sem nada gravado, o
+//      "Replay" da pausa não fecha a pausa;
 //   E) custos: gravar ≤ 50 µs por passo; quadro do replay (CPU, sem o desenho) ≤ quadro ao vivo; anel ≤ 4 MB; console
 //      sem erros.
 // Na versão sem replay reprova (A1, C2, D1: não existe replay).
@@ -146,7 +147,8 @@ try {
         return { tipo, tick: simTick, s: +(q / 60).toFixed(2), de: Math.min(...ticks), ate: Math.max(...ticks), cams: [...cams], linha, andou, golaco, cruzou: xs.some(x => Math.abs(x) > 52.61) };
       });
       const maxGol = 14.2; // REPLAY.gol.maximoGolaco (+ 0,2 s dos quadros de borda)
-      if (gn.semGol) meta('C0 [informativo] replay de um gol NATURAL (IA × IA)', `semente ${GOL.semente}: nenhum gol em ${gn.n} quadros na página (o Node cobre: teste-replay-anel C1–C3)`, '-', true, true);
+      // o lance foi achado em Node com a entrada da página (comoPagina): sem ele aqui, a página divergiu do Node
+      if (gn.semGol) meta('C0 replay de um gol NATURAL (IA × IA)', `semente ${GOL.semente}: nenhum replay de gol em ${gn.n} quadros na página (o Node achou o gol no tick ${GOL.golTick})`, 'o gol do Node também na página', false);
       else meta('C0 replay de um gol NATURAL (IA × IA)', `semente ${GOL.semente}, saída no tick ${gn.tick}: ${gn.s} s, ticks ${gn.de.toFixed(0)}–${gn.ate.toFixed(0)}, ${gn.cams.join(' ')}${gn.golaco ? ', golaço' : ''}; bola entra ${gn.cruzou}; linha ${gn.linha}; sim andou ${gn.andou}`,
         `6–${gn.golaco ? f2(maxGol) : 12} s, bola entra, sim parada, sem linha`, gn.s >= 6 && gn.s <= (gn.golaco ? maxGol : 12) && gn.cruzou && !gn.andou && gn.linha === 0);
     } finally { await P.fechar(); }
@@ -258,6 +260,9 @@ try {
   const P = await pagina(raiz, '?q=baixa&hora=dia&semente=4&toque=1&entalhe=1', { largura: 844, altura: 390, dpr: 1, toque: true });
   try {
     const pg = P.pagina;
+    // logo no começo (nada gravado ainda): "Replay" na pausa não fecha a pausa nem começa nada
+    const vazio = await pg.evaluate(() => { const g = window.__golaco; g.abrirMenu(); document.querySelector('#menu [data-cmd="replay"]').click(); const r = { ativo: g.replay.estado.ativo, menu: g.estado().menuAberto, anel: g.replay.anel.ultimo - g.replay.anel.primeiro + 1 }; g.fecharMenu(); return r; });
+    meta('D7 "Replay" na pausa sem nada gravado: a pausa fica aberta, nenhum replay', JSON.stringify(vazio), 'ativo false, menu true', !vazio.ativo && vazio.menu);
     await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 400; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); g.replay.menu(); g.relogio.avancar(1000 / 60, { desenhar: true }); });
     const tela = await pg.evaluate(() => {
       const vis = id => { const e = document.getElementById(id); return !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none'; };
