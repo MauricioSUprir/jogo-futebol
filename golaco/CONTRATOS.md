@@ -651,7 +651,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   escolha salva, com `html.com-toque` sem `html.mapa-ligado` (escondido não redesenha: `hud.minimapa` sai antes).
 - **Pausa**: dois botões de liga/desliga na barra de cima (`#chip-minimapa`, `#chip-nomes`, `aria-pressed`; "Nomes nos
   botões" só com `html.com-toque`) — na barra para a pausa continuar cabendo sem rolar em 844×390 (a lista de opções não
-  tinha altura sobrando). `data-cmd="minimapa" | "nomes"` → `comando(cmd, valor?)` (sem valor alterna; 'ligado' |
+  tinha altura sobrando). Até 600 px de largura ficam sem a bolinha (o estado fica no fundo verde), para não encostar no
+  título em 568×320 com entalhe (folga ≥ 4 px conferida no `teste-hud-minimo`, H7). `data-cmd="minimapa" | "nomes"` → `comando(cmd, valor?)` (sem valor alterna; 'ligado' |
   'desligado' fixam); salvos em `golaco.prefs.v1` como `prefs.minimapa` ('ligado' | 'desligado' | ausente = padrão do
   aparelho) e `prefs.nomesBotoes` (boolean). `main.js aplicarTelaLimpa()` liga as classes; `hud.definirEstado({minimapa,
   nomes})` marca o estado que vale (o padrão muda quando os controles de toque aparecem: `aoMudarLayout`).
@@ -662,12 +663,15 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   CARRINHO). O `btn-conter` saiu da página: a DIVIDIDA tem `segura: 'CONTER'` e usa `criarToqueOuSegura(toque, segura,
   limiar = ENTRADA.toqueCurto)` (pura) → `{apertar(), quadro(agora) → bit segurado, soltar() → pulso, cancelar(),
   segurando}`: segurar = CONTER desde o 1º quadro; soltar antes de `ENTRADA.toqueCurto` (0,25 s do relógio do jogo) = um
-  pulso de DIVIDIDA (o bote começa no soltar). `ler(yaw, agora)` recebe o tempo do laço (o relógio manual nos testes).
+  pulso de DIVIDIDA (o bote começa no soltar). Só o `pointerup` vale como soltar: `pointercancel` (o sistema tomou o toque)
+  e a captura perdida chamam `cancelar()` — nada de bote (contraprova). `ler(yaw, agora)` recebe o tempo do laço (o relógio manual nos testes).
   Teclado e controle não mudam (J/A = CONTER, K/B = DIVIDIDA, O/RB = PRESSÃO).
 - **Desenho** (só lê o mundo): `render/linha-impedimento.js` com `IMPEDIMENTO.linhaViva` (false); `render/jogador3d.js`
   sem a seta no chão do controlado (anel + triângulo de 2,2% do menor lado da tela); `render/marcas.js criarMarcas(cena,
   {timeHumano})`: a marca de queda só para a bola alta do time do humano (`m.voo.time`; null = os dois times).
-- **Testes**: `teste-hud-minimo` (H1–H8; `--raiz <pasta>` mede outra cópia), `teste-entrada` (5 botões, nada no 2º anel,
-  `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada = conter), `teste-controles` (lista da defesa com 5 e a
-  DIVIDIDA tocada/segurada com toque de verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
+- **Testes**: `teste-hud-minimo` (H1–H8; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
+  relógio das animações do Chromium sem GPU atrasa do real com a máquina carregada — e o H7 confere a barra da pausa nas 3
+  telas), `teste-entrada` (5 botões, nada no 2º anel, `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada =
+  conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
+  verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
   cenas `*-jogador-ve*` sem o `?prints=1` (a página como ela abre).

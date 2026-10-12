@@ -86,8 +86,8 @@ para cada correção:
 
 Pedido do dono (11/10): "quero menos informação na tela", "tem muita coisa na tela", "não quero a linha de impedimento
 durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a linha". Medido na versão publicada
-(`tools/teste-hud-minimo.mjs`): no celular deitado o HUD cobria 18–26% da tela (9–10 peças, 46 caracteres de texto,
-CHUTE de 104 px a 80% de opacidade, analógico visível em repouso), escondia 31% da torcida que a câmera do celular (#459)
+(`tools/teste-hud-minimo.mjs`): no celular deitado o HUD cobria 18–24% da tela (9–10 peças, 46 caracteres de texto,
+CHUTE de 104 px a 80% de opacidade, analógico visível em repouso), escondia 31–34% da torcida que a câmera do celular (#459)
 passou a mostrar, e a linha de impedimento viva ficava na tela em ~30% do tempo com a bola rolando (42–47% da partida).
 Nenhum teste media isso: os de antes só conferiam que nada encosta e que os botões têm ≥ 48 px.
 
@@ -103,9 +103,10 @@ Nenhum teste media isso: os de antes só conferiam que nada encosta e que os bot
 | "Toward Minimalist HUDs?" (Universidade de Bonn, 2026: https://bonndoc.ulb.uni-bonn.de/xmlui/handle/20.500.11811/14207) | 59 jogadores: HUD mais minimalista teve mais imersão e mais preferência; a clareza dependeu da familiaridade. Daí: botões só com o ícone e a opção "Nomes nos botões" (e a Ajuda, com o desenho de cada ícone) para quem está aprendendo |
 | "Removing the HUD" (CHI PLAY 2015, Open University: https://oro.open.ac.uk/46759) | Tirar o que está fora do mundo do jogo aumentou a imersão de quem já joga. Daí: a linha viva sai (fica a do lance, no apito), o rótulo da barra de força sai e a marca de queda fica só para a bola alta do próprio time |
 
-Resultado (`teste-hud-minimo`, mesma amostra na base e agora): HUD no celular 26,2% → 10,1% no pior caso (844×390:
-18,2/19,3% → 7,3/7,3%), texto fora do placar 46 → 0 caracteres, torcida atrás do HUD 31,4% → 13,4%, linha viva 29,7% → 0
-(a do lance continua no apito), PC 3,8% → 1,8% com a dica de teclas que some em 8 s; chamadas de desenho no print do
+Resultado (`teste-hud-minimo` na versão final, mesma amostra na base e agora; conferido na contraprova): HUD no celular
+23,5% → 10,1% no pior caso (844×390: 18,2/19,3% → 7,3/7,3%), texto fora do placar 46 → 0 caracteres, torcida atrás do HUD
+31–34% → 13–14% (varia ±1,5 ponto entre rodadas), linha viva 29,7% → 0 (a do lance continua no apito), PC 3,8% → 1,8%
+depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no print do
 celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
 mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.

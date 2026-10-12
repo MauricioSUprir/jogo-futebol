@@ -227,10 +227,12 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
-  CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile) e a PRESSÃO foi para a vaga b; teclado e controle
-  não mudam. O mundo recebe as mesmas máscaras (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy;
-  celular ≤ 11% de HUD em 3 telas, 0 texto fora do placar, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%).
-  Peça nova de HUD na partida tem de caber nesse orçamento (ou ir para a pausa).
+  CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
+  sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
+  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 3 telas, 0 texto fora
+  do placar, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
+  partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
+  atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

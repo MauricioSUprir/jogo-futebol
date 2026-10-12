@@ -65,7 +65,7 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   celular ("Minimapa" na barra da pausa; no PC fica, menor), barra de força sem texto, dica de teclas do PC some em 8 s,
   sem a seta no chão do controlado e marca de queda só na bola alta do seu time. **Linha de impedimento só no
   apito** (a do lance, parada): a linha viva durante o jogo saiu. Medido no `teste-hud-minimo` (celular: o HUD cobre
-  ≤ 11% da tela; era 18–26%).
+  ≤ 11% da tela; era 18–24%).
 - **Celular só deitado**: em pé (com toque) a tela "Gire o celular para jogar" cobre tudo e o jogo para;
   onde dá (Android), o botão "Tela cheia deitada" trava a tela. Janela estreita no PC continua jogando.
 
