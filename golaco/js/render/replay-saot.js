@@ -113,7 +113,8 @@ export function medirCadeia(anel, c) {
 /**
  * A POSIÇÃO LEGAL mais apertada para mostrar (a "checagem" do VAR, PESQUISA-ESTADIO.md §9.1). opc = {golTick (o replay
  * do gol) | fimTick (o "Replay" da pausa: fim da janela), time (do gol; sem ele, os dois times), lado (do gol), de (o
- * primeiro passe que vale: o começo do plano de TV + 0,5 s), teste (sem o critério i), limite (m; padrão S.limite)}.
+ * primeiro passe que vale: o começo do plano de TV + 0,5 s), teste (sem o critério i), limite (m; padrão S.limite),
+ * semPartes (sem o critério v: só para medir a contradição centro × partes — tools/medir-saot.mjs)}.
  * Critério: (i) o lance termina em gol do time (ou, na pausa, em chute/gol) sem a foto zerar no caminho; (ii) cadeia A→B
  * do time no anel, depois do último corte; (iii) a linha era um defensor; (iv) margem pelo centro em [−mesmaLinha,
  * limite]; (v) legal também pelas partes do corpo, sem tolerância. A de menor margem; null se nenhuma.
@@ -131,7 +132,7 @@ export function checagemLegal(anel, opc = {}) {
       const c = _cad[k];
       if (opc.lado != null && c.lado !== (opc.lado >= 0 ? 1 : -1)) continue;
       const md = medirCadeia(anel, c);
-      if (!md || md.margem < -S.mesmaLinha || md.margem > limite || !md.legalPartes) continue;
+      if (!md || md.margem < -S.mesmaLinha || md.margem > limite || (!md.legalPartes && !opc.semPartes)) continue;
       if (md.margem >= mMargem) continue;
       if (!opc.teste && !terminaEmChuteOuGol(anel, c, time, opc, ate)) continue;
       mMargem = md.margem;

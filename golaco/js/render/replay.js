@@ -23,7 +23,7 @@ import {
   roteiroGol, roteiroImpedimento, roteiroMenu, duracao, criarRelogio, iniciarRelogio, pararRelogio, avancarRelogio,
   planoAtual, velocidadeAgora, linhaDoReplay, tempoSaot, roteiroLegalTeste,
 } from './replay-roteiro.js';
-import { enquadrarSaot, cameraSaot, faseSaot } from './replay-saot.js';
+import { enquadrarSaot, cameraSaot, faseSaot, checagemLegal } from './replay-saot.js';
 
 const ASPECTO_TV = 16 / 9;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -197,7 +197,9 @@ export function criarDiretor({ anel, aspecto }) {
      * Testes e prints: 'impedimento' = o último impedimento de novo (se o passe ainda está no anel); 'legal' = a checagem
      * de posição legal mais apertada do anel, sem exigir chute nem gol. Null se não há.
      */
-    saotDeTeste(tipo) { return tipo === 'legal' ? roteiroLegalTeste(anel) : ultimoImped ? roteiroImpedimento(anel, ultimoImped) : null; },
+    saotDeTeste(tipo, opc = {}) { return tipo === 'legal' ? roteiroLegalTeste(anel, opc.limite) : ultimoImped ? roteiroImpedimento(anel, ultimoImped) : null; },
+    /** A margem (m) da posição legal mais apertada no anel agora (sem exigir chute nem gol; até `limite` m), ou null. */
+    legalMaisApertada(limite = 60) { const c = checagemLegal(anel, { teste: true, limite }); return c ? c.margem : null; },
     // ---------------------------------------------------------------- relógio
     /** Começa um roteiro (false se vazio). */
     iniciar(ro) {

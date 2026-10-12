@@ -172,10 +172,11 @@ export function roteiroMenu(anel, s = REPLAY.segundos, checar = true) {
 
 /**
  * Roteiro só da checagem de posição legal mais apertada do anel (testes e prints: `__golaco.replay.saotDeTeste`): sem
- * exigir chute nem gol (critério i), até 1,5 s de TV até o passe e a análise. Null sem nenhuma.
+ * exigir chute nem gol (critério i), até 1,5 s de TV até o passe e a análise. `limite` (m): outro teto para a margem
+ * (testes do desenho quando o anel não tem passe apertado). Null sem nenhuma.
  */
-export function roteiroLegalTeste(anel) {
-  const cena = checagemLegal(anel, { teste: true });
+export function roteiroLegalTeste(anel, limite) {
+  const cena = checagemLegal(anel, { teste: true, limite });
   if (!cena) return null;
   const c = anel.ultimoCorte(anel.primeiro, cena.fotoTick);
   const de = Math.max(anel.primeiro, c ?? anel.primeiro, cena.fotoTick - 90);
@@ -270,7 +271,8 @@ export function linhaDoReplay(r, dt, out) {
   if (p && p.cam === 'saot') {
     const sc = p.saot, C = REPLAY.saot.cores;
     faseSaot(tempoSaot(r), sc.tipo, _fs, sc.mesmaLinha);
-    out.visivel = true; out.x = sc.linhaX; out.opacidade = 0.95;
+    // (mais suave que no P1: na análise a parede é a linha e a do chão não pode se confundir com as linhas do campo)
+    out.visivel = true; out.x = sc.linhaX; out.opacidade = 0.75;
     out.cor = sc.tipo === 'legal' ? misturarCor(C.gelo, C.legal, _fs.cor) : C.gelo;
     return out;
   }

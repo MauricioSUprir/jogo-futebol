@@ -1578,9 +1578,11 @@ const api = {
     gol(golaco) { return iniciarReplay(diretor?.reverGol(golaco)); },
     /**
      * Análise semiautomática (testes e prints): 'impedimento' = o último impedimento de novo (P1 + análise); 'legal' = a
-     * checagem de posição legal mais apertada do anel, sem exigir chute nem gol. false se não há.
+     * checagem de posição legal mais apertada do anel, sem exigir chute nem gol (opc.limite: outro teto, m). false se não há.
      */
-    saotDeTeste(tipo) { return iniciarReplay(diretor?.saotDeTeste(tipo)); },
+    saotDeTeste(tipo, opc) { return iniciarReplay(diretor?.saotDeTeste(tipo, opc)); },
+    /** A margem (m) da posição legal mais apertada no anel agora (até `limite` m; testes e prints), ou null. */
+    legalMaisApertada(limite) { return diretor ? diretor.legalMaisApertada(limite) : null; },
     /** Jogadores desenhados no último quadro do replay (a análise mostra só os do lance). */
     get desenhados() { return desenhadosReplay; },
     /** Os planos da análise desenhados agora (linha-impedimento.js estadoSaot) e o selo do terço de baixo. */
