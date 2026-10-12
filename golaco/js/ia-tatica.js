@@ -37,6 +37,7 @@ import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
 import { faseDoTime, posicaoTatica } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada } from './partida.js';
+import { alvoBolaParada } from './bolas-paradas.js';
 import { entradaPressao, pressaoPedida, pressionadorDe } from './defesa.js';
 
 const DT = PASSO;
@@ -71,11 +72,21 @@ export function entradaIATatica(m, j) {
   // trocou de vaga (Editar time: troca entre titulares ou formação nova): vai correndo para a vaga
   // nova antes de voltar ao papel (E7 do teste-editor; tela §8: "a IA leva o jogador à vaga nova")
   if (reposicionando(m, j, B) && m.posse !== j.id && !j.recebe) return reposicionar(m, j, B);
+  // bola parada por cobrar (Etapa 4, bolas-paradas.js): o lugar de cada um no tiro de meta, no escanteio e na barreira
+  if (m.parada && !m.parada.rolou && m.posse !== j.id) {
+    const bp = alvoBolaParada(m, j, _bpar);
+    if (bp) { estadoIA(m, j).ramo = 'bolaParada'; return irPara(m, j, bp.x, bp.z, 1, bp.correr, extraAcao(m, j), 'pressa'); }
+  }
   // recebendo um passe, numa corrida marcada ou indo na bola livre: o código do ia.js (recebendo na área, a
   // finalização de primeira da Parte 3 aperta o CHUTE antes: ia-ataque.js primeiraIA)
   if (j.recebe && m.posse !== j.id) primeiraIA(m, j);
   if ((j.recebe && m.posse !== j.id) || j.corrida) return entradaIA(m, j);
   if (m.posse == null && m.naMao == null && vaiNaLivre(m, j)) return bolaLivre(m, j);
+  // depois do chute do escanteio: cada um segue o papel dele enquanto o cruzamento está no ar (bolas-paradas.js)
+  if (m.posse !== j.id && m.partida?.bp) {
+    const bp = alvoBolaParada(m, j, _bpar);
+    if (bp) { estadoIA(m, j).ramo = 'bolaParada'; return irPara(m, j, bp.x, bp.z, 1, bp.correr, extraAcao(m, j), 'pressa'); }
+  }
   const f = faseDoTime(m, j.time);
   if (m.posse === j.id) return condutorTatico(m, j) ?? entradaIA(m, j);
   if (f.fase === 'com') return apoioTatico(m, j) ?? referenciaComBola(m, j, f);
@@ -535,6 +546,7 @@ function donoEhGoleiro(m) {
 // ------------------------------------------------------------------------------- jogador sem bola
 
 const _t = { x: 0, z: 0, mag: 1, modo: 'calma', correr: false };
+const _bpar = { x: 0, z: 0, correr: false };
 
 function extraAcao(m, j) {
   if (!j.iaAcao) return 0;

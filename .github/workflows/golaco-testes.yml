@@ -41,6 +41,10 @@ jobs:
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
         run: node golaco/tools/teste-estadio.mjs
+      - name: Som da torcida durante o jogo (leito, apito, cantos, iPhone, interrupção, limitador, hash)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node golaco/tools/teste-som-jogo.mjs
       - name: Rede véu de noiva na tela (forma, branca de dia e de noite, mexe na batida; PC e celular)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

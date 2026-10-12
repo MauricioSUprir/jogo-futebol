@@ -402,12 +402,16 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
   // 2022) — com 1,80 m, centro da bola a ~2,45 m; força própria de 6,4–8,3 m/s (Becker 2021)
-  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35 },
+  // erroGolBolaParada: o cabeceio PARA O GOL na bola parada (escanteio, falta, lateral) espalha como o real (Opta: ~1/3
+  // dos cabeceios a gol no alvo). Na bola rolando fica como antes até a entrega do cabeceio (valendo em todo cabeceio
+  // derrubou os gols de bola rolando: painel de 144, 1,78 → 1,67)
+  cabeceio: { alcanceSalto: 2.45, alturaPeito: [0.45, 1.7], v: [6, 17], potencia: [6, 8.5], redirecao: 0.35,
+    erroGolBolaParada: [0.3, 0.1] }, // rad (cabeceio 0 → 100)
   // domínio no peito/coxa: a bola morre com ~5–10% da velocidade (Iga & Nunome 2016: 9,73 → 0,52 m/s)
   dominioAereo: { sobra: [0.12, 0.05] },
   pressaoDist: 2.2,           // m — adversário mais perto que isso pressiona o batedor
@@ -558,9 +562,8 @@ export const PARTIDA = {
   foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
   montagem: 1.2,              // s de montagem do recomeço (corte de câmera na saída)
   // s de montagem por recomeço, depois da bola morta (o cobrador já no ponto; os outros se ajeitam):
-  // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; o tiro de meta é do
-  // goleiro com a bola nas mãos (a reposição que já existe: GOLEIRO.esperaIA / esperaHumano)
-  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 0, tiroLivre: 1.0, penalti: 1.5 },
+  // a saída e o escanteio esperam o time se posicionar; o lateral é rápido; no tiro de meta os zagueiros abrem
+  montagemPor: { saida: 1.2, lateral: 0.3, escanteio: 1.2, tiroDeMeta: 1.0, tiroLivre: 1.0, penalti: 1.5 },
   cobrancaIA: [0.6, 1.4],     // s que a IA espera para cobrar (sorteio pelo m.rng)
   cobrancaHumanoMax: 6,       // s desde a bola morta — depois disso a IA cobra pelo humano
   paradaMax: 8,               // s — nenhuma parada dura mais que isto (trava proibida)
@@ -577,7 +580,7 @@ export const PARTIDA = {
   margemParede: 0.3,          // m
   saiParede: 1.0,             // m/s
   dentroParede: 0.02,         // m
-  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65 }, // força do botão da IA
+  forcaCobranca: { saida: 0.35, lateral: 0.45, lateralLonga: 0.6, escanteio: 0.65, tiroLivre: 0.45, tiroLivreLongo: 0.65, tiroDeMetaLongo: 0.85 }, // força do botão da IA
   // pênalti da IA (Regra 14): canto sorteado pelo m.rng — z da mira (m do meio do gol) com o peso de cada um; força
   // sorteada na faixa (a dispersão do chute do acoes.js faz o resto: fora e na trave)
   penaltiIA: { mira: [[-2.75, 0.32], [-1.6, 0.12], [0, 0.12], [1.6, 0.12], [2.75, 0.32]], forca: [0.62, 0.9] },
@@ -598,6 +601,123 @@ export const PARTIDA = {
     porImpedimento: 0,                // a parada do impedimento é rápida (tiro livre na hora)
     max: { 1: 5, 2: 10 },
   },
+};
+
+// Bolas paradas da Etapa 4 (lateral.js; partida.js). Lateral (IFAB Regra 15): de frente para o campo, parte de cada pé
+// na linha ou fora dela, as duas mãos levando a bola de trás e por cima da cabeça; adversários a 2 m. Arremesso de
+// 12–19 m/s entre jogadores homens, solto a ~2,3 m de altura, alcance máximo com ~30° (Linthorne & Everett 2006, que
+// citam Messier & Brody 1986, Kollath & Schwirtz 1988 e Bray & Kerwin 2004). O esqueleto daqui é mais baixo (ombro a
+// ~1,42 m, braço de 0,55 m: a mão alcança ~1,96 m): a bola fica e sai onde as mãos desenhadas alcançam.
+export const LATERAL = {
+  tras: 0.1,                  // m — segurando: a bola atrás do meio da cabeça...
+  altura: 1.84,               // ...nesta altura (as palmas dos dois lados dela)
+  topo: 1.94,                 // m — o arco passa por cima da cabeça nesta altura...
+  soltaFrente: 0.24,          // ...e solta à frente do corpo...
+  soltaAltura: 1.85,          // ...nesta altura
+  tempo: 0.22,                // s do arco (de trás da cabeça até a soltura)
+  seguimento: 0.35,           // s — os braços seguem o arremesso depois da soltura (só desenho)
+  linha: 0.12,                // m — o centro do cobrador fora da linha (o pé da frente sobre ela)
+  vMax: [12, 19],             // m/s — arremesso mais forte, pela força e pelo passe longo (12–19 m/s medidos)
+  elevCurto: 0.3,             // rad — arremesso curto: chega ao recebedor na altura yRecebe
+  elevLongo: 0.52,            // rad (~30°: o alcance máximo medido)
+  yRecebe: 0.9,               // m — o curto chega na coxa/peito de quem recebe
+  adiante: 1.5,               // m — no máximo isto à frente de quem recebe (o arremesso no pé)
+  erroBom: 0.025,             // rad — dispersão do arremesso (passe 100)...
+  erroRuim: 0.07,             // ...e (passe 0)
+  dMin: 4, dMax: 28, dIdeal: 11, // m — as opções: companheiros a dMin–dMax m, de preferência a ~dIdeal m
+  risco: 20,                  // peso do risco da linha (acoes.js riscoLinha) na nota de cada opção
+  frente: 0.1,                // ganho por metro à frente da bola (até 15 m)
+  pesos: [0.6, 0.27, 0.13],   // IA: chance de arremessar para a 1ª, 2ª e 3ª opção
+  longaNaArea: 0.3,           // IA a ≤ longaDist m da linha de fundo atacada: chance do arremesso longo na área
+  longaDist: 25,
+  preferirLateral: 8,         // m de vantagem para o lateral/ala do time cobrar (é quem cobra no jogo de verdade)
+};
+
+// Tiro de meta (IFAB Regra 16, desde 2019/20): a bola parada em qualquer ponto da pequena área, chutada pelo goleiro; está
+// em jogo quando é chutada e se move claramente; adversários fora da área até então, companheiros podem receber dentro
+// dela. A saída curta com os zagueiros abertos nos cantos da área virou o padrão (pedido do dono, seção 8).
+export const TIRO_DE_META = {
+  dentro: 0.3,                // m para dentro da linha da pequena área
+  z: 6,                       // m — no máximo isto do meio (do lado em que a bola saiu)
+  curta: 0.55,                // IA: chance de sair curto (sorteada na montagem; só com um zagueiro livre)
+  curtoLivre: 7,              // m — o zagueiro está livre se nenhum adversário está a menos disto
+  esperaMax: 5,               // s da bola morta — na saída curta o goleiro espera os zagueiros abrirem até isto...
+  chegou: 3,                  // ...(a esta distância do lugar deles)
+  // zagueiros abertos: a ~aberto.u m da própria linha de fundo, a aberto.z m do meio (dentro da área, nos cantos);
+  // o volante encosta na meia-lua; os laterais sobem pelos lados
+  aberto: { u: 12.5, z: 17 }, volante: { u: 21, z: 0 }, laterais: { u: 30, z: 29 },
+};
+
+// Escanteio (pedido do dono, seção 8: "atacantes em zonas — 1º pau, 2º pau, marca do pênalti, entrada da área — e defesa
+// mista, zona + individual"; bolas-paradas.js). Kubayi & Larkin 2020 (600 escanteios da Copa de 2018): a defesa mista
+// sofreu menos gols (3,7%) que a só por zona (6,0%); os gols saem mais do meio e do 1º pau. Premier League ("which clubs
+// are best at defending corners"): a maioria mistura zona e individual, com 4 na zona da pequena área (2 no 1º pau, 1 no
+// meio, 1 no 2º pau). Copa de 2022 (570 escanteios): 2,6% viram gol. Montagem com corte de câmera (como a TV): cada um
+// no seu lugar; na cobrança os atacantes atacam as zonas (escanteio.corrida s depois do chute, no máximo).
+// Pontos em m: u = da linha de fundo atacada para dentro do campo; w = para o lado do escanteio (+) ou o outro (−).
+export const ESCANTEIO = {
+  // zonas do ataque (as 3 primeiras são as do cruzamento: acoes.js zonasCruzamento) e de onde cada um sai
+  zonas: [
+    { nome: 'centro', u: 7.5, w: 0, sai: { u: 11.5, w: -1.5 } },
+    { nome: 'primeiroPau', u: 5.5, w: 2.2, sai: { u: 10, w: 3 } },
+    { nome: 'segundoPau', u: 6.5, w: -3.2, sai: { u: 11, w: -5 } },
+    { nome: 'marcaPenalti', u: 11, w: 0, sai: { u: 14, w: 1 } },
+    { nome: 'entradaArea', u: 18.5, w: -2, sai: { u: 20.5, w: -3 } },
+  ],
+  segundaBola: [{ u: 24, w: 10 }, { u: 24, w: -12 }],   // quem sobra do ataque, na frente da área
+  ficam: { u: 48, w: 11 },                               // os 2 que ficam atrás (contra o contra-ataque)
+  // defesa: zona na pequena área (as 3 primeiras sempre; a 4ª com gente sobrando) e a sobra
+  zonasDefesa: [
+    { nome: 'meio', u: 4.5, w: -0.5 },
+    { nome: 'primeiroPau', u: 2.2, w: 3.0 },
+    { nome: 'frentePrimeiroPau', u: 5.5, w: 4.5 },
+    { nome: 'segundoPau', u: 4.2, w: -4.2 },
+  ],
+  marca: 0.9,                 // m — o marcador individual fica do lado do gol do atacante, a esta distância
+  borda: { u: 17, w: -1 },    // o da entrada da área (rebote; marca quem está lá)
+  frente: { u: 38, w: 4 },    // quem fica lá na frente para o contra-ataque (1, ou 2 com gente sobrando)
+  janela: 3,                  // s depois do chute em que os lugares do escanteio ainda valem (até alguém tocar)
+  zonaIA: [0.35, 0.35, 0.3],  // IA: chance de cruzar no 1º pau, no 2º pau e na marca do pênalti
+};
+
+// Barreira no tiro livre direto (IFAB Regra 13: a 9,15 m da bola; com 3 ou mais na barreira, os atacantes a ≥ 1 m dela;
+// bolas-paradas.js). Tamanho pela conta da Plus Magazine (Universidade de Cambridge, "The wall"): a largura que tapa o
+// gol visto da bola (2/3 dele, a partir do 1º pau) ÷ ~0,45 m por defensor — no meio a 22 m dá ~4,5 (eles usam 4); perto
+// e no meio, 5 ou 6 são comuns; de lado, menos. Opta (The Analyst): faltas no terço final chutadas a gol a ~27,6 m de
+// mediana; ~2,4–4,4% dos chutes de falta viram gol nas grandes ligas.
+export const BARREIRA = {
+  distancia: 9.15,            // m da bola
+  espaco: 0.5,                // m entre os centros de dois da barreira (ombro com ombro)
+  cobre: 2 / 3,               // fração do gol que a barreira tapa, a partir do 1º pau...
+  foraPau: 0.3,               // ...começando um pouco por fora dele (m)
+  max: 5, min: 1,             // tamanho
+  longe: 33,                  // m do gol — mais longe, sem barreira (ninguém chuta dali)
+  deLado: 0.9,                // rad (~52°) — a bola mais longe que isto do eixo do gol (falta de lado, de cruzamento): no máximo 2
+  ataque: 1.0,                // m — atacantes longe disto da barreira (Regra 13)
+  corpo: 0.3,                 // m — raio do corpo na barreira (o atacante a ataque + corpo do centro de cada um)
+  topo: 1.86,                 // m — topo da cabeça em pé
+  salto: { altura: 0.4, tempo: 0.6 }, // pulo no chute: sobe até ~altura m (pela impulsão) em tempo/2 s
+  restituicao: 0.35,          // a bola que bate na barreira volta com isso da velocidade normal...
+  amortece: 0.55,             // ...e perde isso do resto
+  alturaPassar: 2.32,         // m — o chute de falta mira para passar com o centro da bola acima disto na barreira
+                              // (o topo do pulo fica a ~2,2 m + o raio da bola: o erro para baixo bate nela)
+  goleiro: 0.6,               // m — o goleiro fica isto para o lado do 2º pau (a barreira cobre o 1º; mais longe, o chute
+                              // por cima dela no canto do 1º pau entrava demais)
+};
+
+// Disputa pelo alto (Etapa 4, só na partida; sim.js bolaAltaNoCorpo): no toque aéreo de quem ia na bola (o recebedor
+// do cruzamento, do lançamento...), um adversário a ≤ raio m do ponto que também alcança a altura dela disputa: ganha
+// pela nota no alto (bolas-paradas.js notaAerea: cabeceio, impulsão, altura), com vantagem para quem está do lado do
+// gol. O atacante ganha o 1º contato em ~40–53% dos escanteios (Copa América 2021: 52,6%; Premier League: a defesa
+// ganha mais; FIFA Training Centre, Copas femininas 2019/2023). Quem perde não toca; quem ganha cabeceia — o atacante
+// pressionado, com erroDisputa × a dispersão.
+export const AEREO = {
+  raio: 1.3,                  // m do ponto do toque até o adversário que disputa
+  yMin: 0.9,                  // m — abaixo disto não é disputa no alto (peito/coxa: o domínio de sempre)
+  k: 3.0,                     // ganho da diferença de nota (por 100 pontos) no logit
+  ladoGol: 0.35,              // vantagem (logit) de quem está do lado do próprio gol
+  erroDisputa: 1.8,           // o cabeceio de quem ganhou a disputa espreme mais (pressão no salto)
+  perdeuSalto: 0.6,           // s — quem perdeu a disputa não toca na bola alta por isto (ainda no ar, caindo)
 };
 
 // Impedimento (IFAB Regra 11; impedimento.js). Posição de impedimento: no campo adversário (sem a linha do meio) e
@@ -941,4 +1061,13 @@ export const TROCA_AEREA = {
   correcoesMax: 1,            // trocas depois da primeira, por bola
   manualRecente: 0.5,         // s — TROCAR apertado há menos que isto: a escolha manual manda
   analogicoSolto: 0.25,       // |e| ≤ isto: assistência leva o controlado ao ponto de queda
+};
+
+// Estádio (só desenho: nada da simulação usa). O TÚNEL por onde os times entram (o pré-jogo usa) fica no meio da
+// arquibancada do lado de cá (z +, a da câmera de TV): a boca na frente dela (z = 44,5), 7 m de largura e 3,2 m de
+// altura, e o corredor entra 12 m por baixo das cadeiras. Os BANCOS DE RESERVAS ficam na frente da arquibancada, atrás
+// das placas, um de cada lado do túnel (x de ±5 a ±17).
+export const ESTADIO = {
+  tunel: { x: 0, z: 44.5, largura: 7, altura: 3.2, profundidade: 12, laje: 0.5 },
+  bancos: { x: [5, 17], z: [41, 43.6], altura: 2.3 },
 };

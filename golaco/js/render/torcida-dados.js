@@ -3,8 +3,10 @@
 // isto; tools/teste-torcida.mjs confere em Node.
 //
 // Arquibancadas (as mesmas de campo.js, constantes em ARQUIBANCADA): o lado de lá (z −, de frente para
-// a câmera de TV) e os dois fundos (atrás dos gols). Cada cadeira da textura (ARQ: 36 fileiras, 0,5 m
-// por cadeira, corredor a cada 26) pode ter um torcedor, pela ocupação da qualidade. Setores (dono:
+// a câmera de TV), os dois fundos (atrás dos gols) e o LADO DE CÁ (z +, espelhado, com o túnel dos times no meio;
+// pedido de 11/10). Cada cadeira da textura (ARQ: 36 fileiras, 0,5 m por cadeira, corredor a cada 26) pode ter
+// um torcedor, pela ocupação da qualidade — CHEIA nas fileiras da frente (TORCIDA.ocupacaoFrente: as que a câmera
+// de jogo mostra; diagnóstico de 11/10: na Média só 62% delas tinham gente e os buracos apareciam). Setores (dono:
 // mandante maioria): o Golaço FC (time 0) em quase tudo, a ORGANIZADA dele no fundo +x (sempre em pé,
 // pulando no ritmo), o setor VISITANTE (Ventania FC, time 1) no fundo −x, separado por cadeiras vazias,
 // e o mosaico "GOLAÇO" das cadeiras do lado de lá vira um mosaico de camisas verdes.
@@ -13,6 +15,7 @@
 // camisa, G = peso da pele, B = peso do cabelo/calça, A = cobertura; o que sobra (A − R − G − B) é o
 // acento (cachecol, na cor do time). Os pesos já vêm multiplicados pela cobertura: os mipmaps (média)
 // continuam certos e o shader troca as cores por torcedor sem textura nova.
+import { ESTADIO } from '../config.js';
 
 export const ARQUIBANCADA = {
   frenteZ: 44.5,          // z da frente do lado de lá (CAMPO.meioZ + entorno + 4,5)
@@ -27,6 +30,14 @@ export const ARQUIBANCADA = {
 
 export const TORCIDA = {
   ocupacao: { baixa: 0.38, media: 0.62, alta: 0.9 },
+  // as fileiras da frente (as `frente` de baixo de cada arquibancada) cheias: é o que a câmera de jogo vê
+  ocupacaoFrente: { baixa: 0.85, media: 0.97, alta: 0.98 }, frente: 9,
+  // lado de cá (z +): fora do quadro da câmera de TV (aparece nos planos do outro lado, no pré-jogo e no replay)
+  ocupacaoCa: { baixa: 0.3, media: 0.6, alta: 0.9 },
+  caFaixa: 12,            // o lado de cá em 2 faixas (corte pela câmera): as 12 fileiras da frente e as de cima
+  // túnel dos times no meio do lado de cá (config.js ESTADIO.tunel): sem cadeira em cima da boca dele (a largura mais
+  // as paredes; o teto com a laje e 0,3 m de folga)
+  tunel: { meiaLargura: ESTADIO.tunel.largura / 2 + 0.4, topo: ESTADIO.tunel.altura + ESTADIO.tunel.laje + 0.3 },
   animada: { baixa: false, media: true, alta: true },
   atlas: [64, 128],         // px de cada célula do atlas (um atlas só para as 3 qualidades: o mipmap faz a Baixa)
   largura: 1.1, altura: 2.2,  // m do quadro de cada torcedor (cabe os braços para cima)
@@ -66,8 +77,25 @@ export function geradorTorcida(semente) {
 }
 
 /**
- * Cadeiras de cada arquibancada: lista de {setor: 0 lado | 1 fundo +x | 2 fundo −x, f (fileira, 0 = a
- * de cima), a (cadeira), x, y, z (base, sobre o degrau)}.
+ * A câmera está dentro do volume da arquibancada do lado de cá (em cima das cadeiras, abaixo do teto)? Aí nada
+ * dela vai para a GPU — é onde a câmera de TV fica (12,3 m de altura a até 69 m do meio no celular): o teste da caixa
+ * daria verdadeiro e os torcedores de lá cobririam a tela (torcida.js e campo.js usam a mesma conta).
+ */
+export function cameraNoLadoDeCa(p) {
+  const A = ARQUIBANCADA;
+  return p.z > A.frenteZ - 1 && p.z < A.frenteZ + A.profLado + 4 && Math.abs(p.x) < A.meioComprimento + 2 && p.y < A.yTopoLado + 7;
+}
+
+/** O túnel do lado de cá passa por baixo desta cadeira (a boca e o teto dele: sem ninguém sentado)? */
+export function cadeiraNoTunel(x, y) {
+  const T = TORCIDA.tunel;
+  return Math.abs(x) < T.meiaLargura && y < T.topo;
+}
+
+/**
+ * Cadeiras de cada arquibancada: lista de {setor: 0 lado de lá | 1 fundo +x | 2 fundo −x | 3 lado de cá, f
+ * (fileira, 0 = a de cima), a (cadeira), x, y, z (base, sobre o degrau)}. O lado de cá é o de lá espelhado em z,
+ * sem as cadeiras da boca do túnel.
  */
 export function cadeiras() {
   const A = ARQUIBANCADA, lista = [];
@@ -78,15 +106,18 @@ export function cadeiras() {
     for (let a = 0; a < nA; a++) {
       if (a % A.corredor < 2) continue;
       const u = (a + 0.5) / nA;
-      lista.push({ setor: 0, f, a, x: -A.meioComprimento + A.comprimento * u, y: A.yBase + (A.yTopoLado - A.yBase) * sLado, z: -A.frenteZ - A.profLado * sLado });
+      const x = -A.meioComprimento + A.comprimento * u, y = A.yBase + (A.yTopoLado - A.yBase) * sLado, z = A.frenteZ + A.profLado * sLado;
+      lista.push({ setor: 0, f, a, x, y, z: -z });
       if (sFundo <= 1) {
         const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento; // 119/125
-        if (u > u1) continue;
-        for (const s of [1, -1]) {
-          const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
-          lista.push({ setor: s > 0 ? 1 : 2, f, a, x: s * (A.fundoX0 + A.profFundo * sFundo), y: A.yBase + (A.yTopoFundo - A.yBase) * sFundo, z: za + (zb - za) * (u / u1) });
+        if (u <= u1) {
+          for (const s of [1, -1]) {
+            const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
+            lista.push({ setor: s > 0 ? 1 : 2, f, a, x: s * (A.fundoX0 + A.profFundo * sFundo), y: A.yBase + (A.yTopoFundo - A.yBase) * sFundo, z: za + (zb - za) * (u / u1) });
+          }
         }
       }
+      if (!cadeiraNoTunel(x, y)) lista.push({ setor: 3, f, a, x, y, z });
     }
   }
   return lista;
@@ -102,46 +133,61 @@ function sorteiaPre(P, r) {
 }
 const RGB_MOSAICO = hex(VERDE_MOSAICO);
 export const NIVEIS = ['baixa', 'media', 'alta'];
+/** Grupos de desenho (uma malha instanciada cada): os 3 setores de antes e o lado de cá em 2 faixas de fileiras. */
+export const GRUPOS = [
+  { setor: 0, nome: 'lado' }, { setor: 1, nome: 'fundo+x' }, { setor: 2, nome: 'fundo-x' },
+  { setor: 3, nome: 'ca-frente' }, { setor: 3, nome: 'ca-cima' },
+];
 
 /**
  * Torcedores de TODAS as qualidades de uma vez (contraprova M4: trocar a qualidade no meio do jogo — a
  * Automática faz isso sozinha no aparelho que está sofrendo — montava a torcida de novo e travava o quadro
  * 300 ms). O sorteio é o mesmo por cadeira e a ocupação cresce com a qualidade, então Baixa ⊂ Média ⊂ Alta:
  * cada torcedor guarda o NÍVEL em que entra (0 já na Baixa, 1 a partir da Média, 2 só na Alta) e a troca de
- * qualidade é só quantos desenhar (instanceCount). Ordem: por arquibancada (setor 0 lado, 1 fundo +x, 2 fundo
- * −x), no setor por nível e, no nível, da fileira da FRENTE para a de cima — desenhados da frente para trás, os
- * de trás que ficam escondidos são descartados pelo teste de profundidade antes do fragment shader (menos
- * trabalho por pixel; contraprova M3). Tudo em vetores tipados, sem objetos por torcedor (menos lixo ao abrir).
+ * qualidade é só quantos desenhar (instanceCount). Ordem: por GRUPO de desenho (GRUPOS: lado de lá, fundo +x,
+ * fundo −x, lado de cá frente, lado de cá cima), no grupo por nível e, no nível, da fileira da FRENTE para a de cima
+ * — desenhados da frente para trás, os de trás que ficam escondidos são descartados pelo teste de profundidade antes
+ * do fragment shader (menos trabalho por pixel; contraprova M3). Tudo em vetores tipados, sem objetos por torcedor.
+ * As fileiras da frente (TORCIDA.frente) ficam cheias (ocupacaoFrente); o lado de cá sorteia com o seu próprio
+ * gerador (o resto da torcida não muda por causa dele).
  * mascara: Uint8Array(nA × fileiras) com 1 nas cadeiras do mosaico "GOLAÇO" do lado de lá (ou null).
  * Devolve {n, pos: Float32Array(4n) [x, y, z, escala], camisa, pele, cabelo, info: Uint8Array(4n), nivel:
- * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2]}] por setor} — info = [time·255, setor·85,
+ * Uint8Array(n), faixas: [{inicio, porNivel: [n0, n1, n2], setor, nome}] por GRUPO} — info = [time·255, setor·85,
  * organizada·255, semente2]; pele[3] = semente.
  */
 export function gerarTorcidaNiveis(mascara = null) {
   const T = TORCIDA, A = ARQUIBANCADA;
   const ocs = NIVEIS.map(q => T.ocupacao[q]);
+  const ocF = NIVEIS.map(q => T.ocupacaoFrente[q]);
+  const ocCa = NIVEIS.map(q => T.ocupacaoCa[q]);
   const rnd = geradorTorcida(20261010);
+  const rndCa = geradorTorcida(20261011);
   const nA = Math.round(A.comprimento / A.assento);
-  const cap = A.fileiras * nA * 3;
+  const cap = A.fileiras * nA * 4;
   const tPos = new Float32Array(4 * cap), tCam = new Uint8Array(4 * cap), tPel = new Uint8Array(4 * cap), tCab = new Uint8Array(4 * cap), tInf = new Uint8Array(4 * cap);
-  const tNiv = new Uint8Array(cap), tF = new Uint8Array(cap);
+  const tNiv = new Uint8Array(cap), tF = new Uint8Array(cap), tG = new Uint8Array(cap);
   let n = 0;
   const [vz0, vz1] = T.visitante.z;
   const pq = [0, 0, 0];
   // uma cadeira: os MESMOS 7 sorteios por cadeira e na mesma ordem de cadeiras() (o resultado não muda)
   function cadeira(setor, f, a, x, y, z) {
-    const r = rnd(), r2 = rnd(), r3 = rnd(), r4 = rnd(), r5 = rnd(), r6 = rnd(), r7 = rnd();
+    const g = setor === 3 ? rndCa : rnd;
+    const r = g(), r2 = g(), r3 = g(), r4 = g(), r5 = g(), r6 = g(), r7 = g();
     let time = 0, org = 0, mosaico = false;
-    const topo = 1 - 0.18 * (1 - (f + 0.5) / A.fileiras) * (setor === 0 ? 1 : 0);
-    for (let q = 0; q < 3; q++) pq[q] = ocs[q] * (setor === 0 ? 1 : 0.95) * topo;
+    const frente = A.fileiras - 1 - f < T.frente;
+    const lado = setor === 0 || setor === 3;
+    const topo = 1 - 0.18 * (1 - (f + 0.5) / A.fileiras) * (lado ? 1 : 0);
+    for (let q = 0; q < 3; q++) pq[q] = (setor === 3 ? ocCa[q] : ocs[q]) * (lado ? 1 : 0.95) * topo;
+    // as fileiras da frente cheias (a câmera de jogo mostra estas)
+    if (frente) for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], ocF[q]);
     if (setor === 0 && mascara && mascara[a + f * nA]) { mosaico = true; pq[0] = 0.8; pq[1] = 1; pq[2] = 1; }
     if (setor === 2) {
-      if (z >= vz0 && z <= vz1) { time = 1; for (let q = 0; q < 3; q++) pq[q] = Math.min(1, ocs[q] * 1.05); }
+      if (z >= vz0 && z <= vz1) { time = 1; for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], Math.min(1, ocs[q] * 1.05)); }
       else if (z >= vz0 - T.visitante.vazio && z <= vz1 + T.visitante.vazio) { pq[0] = 0; pq[1] = 0; pq[2] = 0; }
     }
-    if (setor === 1 && z >= T.organizada.z[0] && z <= T.organizada.z[1]) { org = 1; for (let q = 0; q < 3; q++) pq[q] = Math.min(1, ocs[q] * 1.15 + 0.08); }
-    // alguns visitantes espalhados pelo lado de lá
-    if (setor === 0 && !mosaico && r7 < 0.03) time = 1;
+    if (setor === 1 && z >= T.organizada.z[0] && z <= T.organizada.z[1]) { org = 1; for (let q = 0; q < 3; q++) pq[q] = Math.max(pq[q], Math.min(1, ocs[q] * 1.15 + 0.08)); }
+    // alguns visitantes espalhados pelos lados
+    if (lado && !mosaico && r7 < 0.03) time = 1;
     let nivel = 3;
     for (let q = 2; q >= 0; q--) if (r < pq[q]) nivel = q;
     if (nivel > 2) return;
@@ -155,6 +201,7 @@ export function gerarTorcidaNiveis(mascara = null) {
     tCab[k] = cabelo[0]; tCab[k + 1] = cabelo[1]; tCab[k + 2] = cabelo[2]; tCab[k + 3] = 255;
     tInf[k] = time * 255; tInf[k + 1] = setor * 85; tInf[k + 2] = org * 255; tInf[k + 3] = Math.floor(r2 * 255.99);
     tNiv[n] = nivel; tF[n] = f;
+    tG[n] = setor < 3 ? setor : (A.fileiras - 1 - f < T.caFaixa ? 3 : 4);
     n++;
   }
   const u1 = (A.frenteZ + A.frenteZ + A.profLado) / A.comprimento; // 119/125
@@ -164,40 +211,41 @@ export function gerarTorcidaNiveis(mascara = null) {
     for (let a = 0; a < nA; a++) {
       if (a % A.corredor < 2) continue;
       const u = (a + 0.5) / nA;
-      cadeira(0, f, a, -A.meioComprimento + A.comprimento * u, A.yBase + (A.yTopoLado - A.yBase) * sLado, -A.frenteZ - A.profLado * sLado);
+      const x = -A.meioComprimento + A.comprimento * u, y = A.yBase + (A.yTopoLado - A.yBase) * sLado, zl = A.frenteZ + A.profLado * sLado;
+      cadeira(0, f, a, x, y, -zl);
       if (sFundo <= 1 && u <= u1) {
         for (let s = 1; s >= -1; s -= 2) {
           const za = s > 0 ? A.frenteZ : -(A.frenteZ + A.profLado), zb = s > 0 ? -(A.frenteZ + A.profLado) : A.frenteZ;
           cadeira(s > 0 ? 1 : 2, f, a, s * (A.fundoX0 + A.profFundo * sFundo), A.yBase + (A.yTopoFundo - A.yBase) * sFundo, za + (zb - za) * (u / u1));
         }
       }
+      if (!cadeiraNoTunel(x, y)) cadeira(3, f, a, x, y, zl);
     }
   }
-  // ordem por (setor, nível, fileira da frente para cima): contagem por balde (estável)
-  const F = A.fileiras, NB = 3 * 3 * F;
+  // ordem por (grupo, nível, fileira da frente para cima): contagem por balde (estável)
+  const F = A.fileiras, NG = GRUPOS.length, NB = NG * 3 * F;
   const conta = new Int32Array(NB + 1);
-  const balde = i => (Math.round(tInf[4 * i + 1] / 85) * 3 + tNiv[i]) * F + (F - 1 - tF[i]);
+  const balde = i => (tG[i] * 3 + tNiv[i]) * F + (F - 1 - tF[i]);
   for (let i = 0; i < n; i++) conta[balde(i) + 1]++;
   for (let b = 0; b < NB; b++) conta[b + 1] += conta[b];
   const pos = new Float32Array(4 * n), camisa = new Uint8Array(4 * n), pele = new Uint8Array(4 * n), cabelo = new Uint8Array(4 * n), info = new Uint8Array(4 * n), nivel = new Uint8Array(n);
-  const faixas = [0, 1, 2].map(() => ({ inicio: 0, porNivel: [0, 0, 0] }));
+  const faixas = GRUPOS.map(g => ({ inicio: 0, porNivel: [0, 0, 0], setor: g.setor, nome: g.nome }));
   for (let i = 0; i < n; i++) {
     const b = balde(i), j = conta[b]++;
     pos.set(tPos.subarray(4 * i, 4 * i + 4), 4 * j); camisa.set(tCam.subarray(4 * i, 4 * i + 4), 4 * j);
     pele.set(tPel.subarray(4 * i, 4 * i + 4), 4 * j); cabelo.set(tCab.subarray(4 * i, 4 * i + 4), 4 * j);
     info.set(tInf.subarray(4 * i, 4 * i + 4), 4 * j); nivel[j] = tNiv[i];
-    faixas[Math.round(tInf[4 * i + 1] / 85)].porNivel[tNiv[i]]++;
+    faixas[tG[i]].porNivel[tNiv[i]]++;
   }
-  faixas[1].inicio = faixas[0].porNivel[0] + faixas[0].porNivel[1] + faixas[0].porNivel[2];
-  faixas[2].inicio = faixas[1].inicio + faixas[1].porNivel[0] + faixas[1].porNivel[1] + faixas[1].porNivel[2];
+  for (let g = 1; g < NG; g++) faixas[g].inicio = faixas[g - 1].inicio + faixas[g - 1].porNivel[0] + faixas[g - 1].porNivel[1] + faixas[g - 1].porNivel[2];
   return { n, pos, camisa, pele, cabelo, info, nivel, faixas };
 }
 
-/** Quantos torcedores de um setor a qualidade desenha (os primeiros da faixa do setor). */
-export function quantosNoSetor(d, setor, qualidade) {
+/** Quantos torcedores de um grupo de desenho (GRUPOS) a qualidade desenha (os primeiros da faixa dele). */
+export function quantosNoSetor(d, grupo, qualidade) {
   const q = Math.max(0, NIVEIS.indexOf(qualidade));
   let k = 0;
-  for (let v = 0; v <= q; v++) k += d.faixas[setor].porNivel[v];
+  for (let v = 0; v <= q; v++) k += d.faixas[grupo].porNivel[v];
   return k;
 }
 
@@ -325,7 +373,9 @@ export const POSE_REGRA = {
   bateHz: 2.3,                                       // palmas
   bracoV: 0.45, umBraco: 0.75,                       // gol: h2 < 0,45 braços em V, < 0,75 um braço, senão cachecol
   orgCachecol: 0.15, orgUmBraco: 0.3, orgPalmas: 0.6,
-  puloHz: 1.9, puloAlt: 0.32, puloGanho: 1.4, orgPuloHz: 1.6, orgPuloAlt: 0.11, orgPuloFase: 0.6,
+  // a organizada pula no surdo da batucada (som.js SOM.arquivos.batucada.bpm = 76,8 → 1,28 Hz; com o som rodando o
+  // relógio dela vem da própria gravação: torcida.js uTempoOrg)
+  puloHz: 1.9, puloAlt: 0.32, puloGanho: 1.4, orgPuloHz: 1.28, orgPuloAlt: 0.11, orgPuloFase: 0.6,
 };
 const TAU = Math.PI * 2;
 

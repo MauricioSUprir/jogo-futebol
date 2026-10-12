@@ -185,7 +185,7 @@ function penultimo(m, t) {
 for (const sem of SEMS) {
   const m = P.criarPartida({ semente: sem });
   let foto = null; // {time, ids: Set}
-  let anunciado = null, t0Tempo = 0, tempoAtual = 1;
+  let anunciado = null, t0Tempo = 0, tempoAtual = 1, golTick = null;
   for (let i = 0; i < 2 * 4 * 3600 + 4000; i++) {
     const tempoAntes = m.partida.tempo, t0Antes = m.partida.tick0Tempo;
     const estAntes = m.partida.estado;
@@ -233,8 +233,12 @@ for (const sem of SEMS) {
     }
     const a = P.acrescimoDeJogo ? P.acrescimoDeJogo(m) : null;
     if (a && (P.minutoDeJogo(m) !== 45 * m.partida.tempo || a.decorrido > a.anunciado || a.anunciado !== anunciado)) placarOk = false;
+    for (const e of ev) if (e.tipo === 'gol') golTick = m.tick;
     if (ev.some(e => e.tipo === 'intervalo' || e.tipo === 'fimDeJogo')) {
-      const dur = m.tick - t0Antes, esperado = m.partida.ticksPorTempo + Math.round((anunciado ?? 0) * m.partida.ticksPorTempo / 45);
+      const dur = m.tick - t0Antes;
+      let esperado = m.partida.ticksPorTempo + Math.round((anunciado ?? 0) * m.partida.ticksPorTempo / 45);
+      // gol nos últimos PARTIDA.golPausa s: o tempo acaba depois da pausa do gol (a comemoração não é cortada)
+      if (golTick != null && golTick - t0Antes + Math.round(PARTIDA.golPausa * 60) > esperado) esperado = golTick - t0Antes + Math.round(PARTIDA.golPausa * 60);
       if (Math.abs(dur - esperado) > 1) { fimOk = false; detalhe.push(`${sem} t${tempoAntes}: ${dur} × ${esperado}`); }
       anunciado = null;
     }
