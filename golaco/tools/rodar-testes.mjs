@@ -62,6 +62,7 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['torcida: lugares, setores, atlas das poses e ânimo (murmúrio, gol, "uuuh", apitos)', 'teste-torcida.mjs'],
+  ['replay: anel dos últimos 10 s, roteiros do gol/impedimento/pausa e o replay de lances de verdade', 'teste-replay-anel.mjs'],
   // Etapa 4: regras (IFAB)
   ['impedimento (Regra 11: cenas, tiro livre indireto, árbitro independente) e acréscimos (Regra 7.3)', 'teste-impedimento.mjs'],
   ['faltas, vantagem, cartões e expulsão (Regra 12), tiro livre direto e pênalti (Regra 14)', 'teste-faltas.mjs'],

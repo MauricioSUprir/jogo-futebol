@@ -24,7 +24,7 @@ const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 const srv = await servidor(0, raiz);
 const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
 try {
-  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&semente=${4 + DS}`, { waitUntil: 'load' });
+  await pg.goto(`${srv.url}?q=media&demo=1&toque=1&entalhe=1&replay=0&semente=${4 + DS}`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
   const info = await pg.evaluate(() => {
     const g = window.__golaco;

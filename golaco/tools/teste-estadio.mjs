@@ -28,6 +28,8 @@
 //      GPU = JS; "debaixo do bandeirão" GPU = JS (12/10); no gol da casa a organizada muda na câmera do gol (bandeirão e
 //      sinalizadores); overdraw ≤ 0,5 tela;
 //  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada).
+// As páginas abrem com ?replay=0: o replay automático (testado em tools/teste-replay.mjs) seguraria a simulação ~10 s
+// na saída de bola depois do gol, e os itens 4 e 10 andam o relógio atravessando a saída.
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -75,7 +77,7 @@ await contexto.addInitScript(() => {
 const mp3 = [];
 contexto.on('request', r => { if (/\.mp3(\?|$)/.test(r.url())) mp3.push(r.url().split('/').pop()); });
 try {
-  await pg.goto(`${srv.url}?q=alta&hora=dia&semente=5`, { waitUntil: 'load' });
+  await pg.goto(`${srv.url}?q=alta&hora=dia&semente=5&replay=0`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
   const tem = await pg.evaluate(() => !!window.__golaco.estadio);
   meta('A página tem o estádio (torcida, rede, som)', String(tem), 'true', tem);
@@ -613,7 +615,7 @@ try {
   for (const [w, h] of [[568, 320], [667, 375], [844, 390]]) {
     const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: w, altura: h, dpr: 2, toque: true });
     try {
-      await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&semente=5&prints=1`, { waitUntil: 'load' });
+      await pagina.goto(`${srv.url}?q=baixa&toque=1&entalhe=1&semente=5&prints=1&replay=0`, { waitUntil: 'load' });
       await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
       const r = await pagina.evaluate(async () => {
         const g = window.__golaco;
@@ -646,7 +648,7 @@ try {
 try {
   const { navegador: nav, pagina, erros: errosCel } = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
   try {
-    await pagina.goto(`${srv.url}?q=media&demo=1&semente=4&toque=1&hora=dia`, { waitUntil: 'load' });
+    await pagina.goto(`${srv.url}?q=media&demo=1&semente=4&toque=1&hora=dia&replay=0`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     const r = await pagina.evaluate(() => {
       const g = window.__golaco;
@@ -685,7 +687,7 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
   try {
     const { navegador: nav, pagina, erros: errosCa } = await abrir(o);
     try {
-      await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia`, { waitUntil: 'load' });
+      await pagina.goto(`${srv.url}?q=${q}&demo=1&semente=4&hora=dia&replay=0`, { waitUntil: 'load' });
       await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
       const r = await pagina.evaluate(() => {
         const g = window.__golaco;
@@ -759,7 +761,7 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
 try {
   const { navegador: nav, pagina, erros: errosLat } = await abrir({ largura: 1280, altura: 720 });
   try {
-    await pagina.goto(`${srv.url}?q=media&semente=3&hora=dia`, { waitUntil: 'load' });
+    await pagina.goto(`${srv.url}?q=media&semente=3&hora=dia&replay=0`, { waitUntil: 'load' });
     await pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
     const r = await pagina.evaluate(() => {
       const g = window.__golaco;

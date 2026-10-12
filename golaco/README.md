@@ -88,6 +88,11 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   visitante a casa cala e só o setor deles comemora. Liga no primeiro toque/tecla (regra dos navegadores; o apito do
   início espera por ele). Menu → "Som da torcida": ligado/desligado e volume (salvos); desligado não liga o Web Audio nem
   baixa os sons. Pesquisa: `PESQUISA-ESTADIO.md`.
+- **Replay** (11/10): depois do gol, na saída de bola, a jogada de novo — na câmera de TV na velocidade real, de trás do
+  gol em câmera lenta e, no golaço de longe, rente ao gramado bem devagar. No apito do impedimento, a câmera alinhada com
+  a linha congela no quadro do passe com a linha desenhada (a linha só aparece no replay). "Replay" na pausa revê os
+  últimos 10 s. O jogo espera parado durante o replay (o resultado não muda); qualquer tecla, botão, clique ou toque pula
+  ("Pular" no celular). Pausa → "Replays automáticos": ligado/desligado (salvo).
 
 ## Etapa 2 — passe, chute, goleiro
 
@@ -157,6 +162,8 @@ node golaco/tools/teste-controles.mjs  # navegador: teclado (PC) e toque (celula
 node golaco/tools/teste-editor-tela.mjs        # navegador: a tela Editar time (abas, campinho, reservas, teclado e toque)
 node golaco/tools/teste-desempenho-celular.mjs # navegador: celular simulado (844×390, Média, CPU 4×): CPU por quadro p95 ≤ 6 ms
 node golaco/tools/teste-estadio.mjs    # navegador: torcida (qualidades, chamadas, troca sem remontar, pixels dia/noite), gol ROTEIRIZADO (rede estufa, câmera do gol, "GOL!", saída no tempo), gol do visitante, treino, som (1º gesto, apito do início, grito na hora, desligado, volume), "GOL!" em 3 celulares, GPU = JS
+node golaco/tools/teste-replay-anel.mjs  # (Node, também no rodar-testes) anel do replay, roteiros do gol/impedimento/pausa e o replay de lances de verdade
+node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
 node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar, torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
 node golaco/tools/prints.mjs           # prints PC/celular deitado (e a tela de girar em pé), dia/noite, menu, ajuda, manequim e o gol de verdade (tools/lib/acha-gol.mjs acha a semente) na câmera do gol (tools/saida/)

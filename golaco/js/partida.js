@@ -1101,7 +1101,9 @@ function bolaFora(m) {
  */
 function marcarImpedimento(m, off) {
   const p = m.partida;
-  m.eventos.push({ tipo: 'impedimento', id: off.id, time: off.time, x: off.x, z: off.z, linhaX: off.linhaX, por: off.por });
+  // tickFoto: o passo da jogada do companheiro (a foto da Regra 11) — o quadro que o replay congela com a linha (o
+  // hash não lê os eventos)
+  m.eventos.push({ tipo: 'impedimento', id: off.id, time: off.time, x: off.x, z: off.z, linhaX: off.linhaX, por: off.por, tickFoto: off.tick });
   p.ultimoImped = { tick: m.tick, linhaX: off.linhaX, id: off.id, time: off.time, x: off.x, z: off.z };
   p.contagem.imped++;
   const x = clamp(off.x, -CAMPO.meioX + 1, CAMPO.meioX - 1), z = clamp(off.z, -CAMPO.meioZ + 1, CAMPO.meioZ - 1);

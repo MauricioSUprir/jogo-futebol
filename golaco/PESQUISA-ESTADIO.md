@@ -166,3 +166,24 @@ depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no p
 celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
 mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
+## 9. Replay (`js/render/replay-anel.js`, `replay-roteiro.js`, `replay.js`; pedidos do dono de 11/10)
+
+"O replay não funciona" e "quando o jogo parar por impedimento, aí no replay vai mostrar a linha". O diagnóstico mostrou
+que não havia replay nenhum: depois do gol a câmera do gol ficava 2,5 s parada na rede (sem jogadores) até a saída de
+bola — o dono via isso como um replay que não funciona. A linha de impedimento aparecia em ~87% do jogo ao vivo e, no
+apito, a linha do passe ficava parada sobre os jogadores do instante do apito (1,45 s depois do passe). Agora: um anel com
+os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espera parada, como na pausa (hash igual).
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| EA SPORTS FC 25 — "Visuals & Audio Deep Dive" (ea.com/ea-studios/ea-sports/news/visuals-audio-deep-dive) | Replays de gol durante e depois da partida, com câmeras próprias de replay; no pós-jogo, "uma sequência de 3 ângulos" | No jogo, 2 planos (TV 1× e atrás do gol 0,5×); o 3º (lateral baixa 0,35×) só no golaço (chute de ≥ 20 m) |
+| EA SPORTS FC 25 — Highlighter (ea.com/games/ea-sports-fc/fc-25/news/fc-25-highlighter) | Instant Replay aberto pela pausa | "Replay" no menu de pausa com os últimos 10 s (TV 1×, sem atravessar o último corte) |
+| fifauteam — FC 27 Highlighter Replay (guia) | No Instant Replay o jogador controla a linha do tempo, a câmera e a velocidade | Fica para uma 2ª fase (pausar, voltar 2 s, 1×/0,5×/0,25×, trocar de câmera); a base (anel + relógio fracionário) já permite |
+| GGRecon — "EA FC 24: how to skip celebrations"; fórum EA FC 26 ("pular a comemoração sem pular o replay") | Replay e comemoração saem com um aperto; há ajuste para não mostrar; jogadores reclamam que pular a comemoração pula o replay | Qualquer tecla, botão, clique ou toque pula, sem combinação; ajuste "Replays automáticos" na pausa; o gancho `posGol()` deixa a comemoração (outra frente) ANTES do replay — cada um com o seu pulo |
+| Premier League — "How offsides are determined by VAR" (premierleague.com/en/news/1488423) | Câmeras calibradas; a linha sai na imagem CONGELADA do lance; o público vê só a imagem final | Replay do impedimento com a câmera ALINHADA com a linha (no x dela, alta, do lado da TV: a linha fica em pé no quadro), congelado 1,6 s no quadro do passe com a linha entrando em 0,25 s; nenhum texto |
+| Unreal Engine — Replay System (dev.epicgames.com, "Using the Replay System"): Memory Streamer, checkpoints | Replay instantâneo da memória; checkpoints + mudanças para andar no tempo | Anel na memória para o replay instantâneo (10 s); checkpoint de mundo + entradas fica para melhores momentos da partida inteira, se um dia vier |
+| Glenn Fiedler — "Snapshot Interpolation" (gafferongames.com) | Desenhar estados gravados interpolando dois vizinhos, sem re-simular | `lerQuadro` interpola dois passos do anel como o desenho ao vivo (pose por junta, rumo pelo caminho curto, bola por nlerp); passo de corte não interpola |
+| Philip Orwig, GDC 2017 — "Replay Technology in Overwatch: Kill Cam, Gameplay, and Highlights" | Kill cam interrompível, feita ao lado do modelo do jogo | O replay só lê o anel e pode ser interrompido em qualquer quadro sem tocar no mundo (o pulo só desliga o diretor) |
+| bugnet — "How to build a replay system" | Gravar entradas e re-simular (exige determinismo, custa CPU no replay) × gravar estado (custa memória, não diverge) | Estado desenhado: 3,36 MB fixos; o quadro do replay custa ~0,13 ms de CPU contra ~1,1 ms do quadro ao vivo (re-simular custaria a simulação inteira por passo) |
+| Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
+| O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |
