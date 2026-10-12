@@ -52,6 +52,7 @@ import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
 import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos } from './render/emocao.js';
+import { forcarFesta } from './render/festa.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
@@ -493,8 +494,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   linhaImped.atualizar(mundo, dt);
   marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
-  campo.atualizar(agoraMs / 1000);
-  torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
+  campo.atualizar(agoraMs / 1000, cam.camera, renderizar);
+  torcida.atualizar(agoraMs / 1000, emocao, cam.camera, som ? som.relogioBatida : null, renderizar);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
   const td0 = performance.now();
   if (renderizar) cena3d.desenhar(cam.camera);
@@ -1061,7 +1062,15 @@ const api = {
   /** Marcadores das 3 opções do lateral (testes): {visivel, ids, mirada}. */
   get marcasLateral() { return marcasLat?.estado ?? null; },
   estadio: {
-    get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
+    get torcida() {
+      if (!torcida) return null;
+      return {
+        n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent,
+        // cada malha (grupo) neste quadro e a arquibancada do lado de cá (fora do desenho com a câmera dentro dela)
+        grupos: (torcida.mesh?.children ?? []).map(m => ({ nome: m.name, visivel: m.visible, n: m.userData.k ?? m.geometry.instanceCount })),
+        ladoDeCa: campo?.ladoDeCa ? campo.ladoDeCa.visible : null,
+      };
+    },
     get rede() {
       const t = tempoEstadio();
       return { batidas: ondas.total, ativa: redeAtiva(ondas, t), tempo: t, impactos: ondas.imp.filter(i => i.ativo).map(i => ({ ...i })) };
@@ -1070,6 +1079,18 @@ const api = {
     deslocamentoRede(plano, x, y, z) { return deslocamento(ondas, plano, x, y, z, tempoEstadio()) * fixoRede(plano, x, y, z); },
     get emocao() { return { agito: emocao.agito, torcida: emocao.torcida.map(g => ({ ...g })), contagem: { ...emocao.contagem } }; },
     get som() { return som ? { ...som.info, tocados: som.tocados } : null; },
+    /** Testes e prints: acende sinalizadores / abre o bandeirão / começa a ola agora ({sinalizadores, cor, bandeirao, ola}). */
+    forcarFesta(o) { forcarFesta(emocao.festa, o); },
+    /** Mostra/esconde a festa (faixas, bandeiras, bandeirões, sinalizadores) — conferência de pixels. */
+    mostrarFesta(v) { torcida?.mostrarFesta(v); },
+    /** Overdraw da fumaça dos sinalizadores nesta câmera (telas cheias; sinalizadores.js medirOverdraw). */
+    overdrawFumaca() { return torcida ? torcida.sinalizadores.medirOverdraw(cena3d.renderer, cam.camera) : null; },
+    /** Os bancos de reservas neste quadro (vão na malha do lado de cá: fora do desenho com a câmera de TV dentro dela). */
+    get bancosVisiveis() { return campo?.ladoDeCa ? campo.ladoDeCa.visible : null; },
+    /** Faixas, bandeiras e sinalizadores agora: visíveis, vértices desenhados, instâncias, abertura do bandeirão. */
+    get festaVisual() { return torcida ? { bandeiras: torcida.bandeiras.mesh.visible, vertices: torcida.bandeiras.mesh.geometry.drawRange.count, sinalizadores: torcida.sinalizadores.mesh.visible && torcida.sinalizadores.quantas > 0, instancias: torcida.sinalizadores.quantas, abre: torcida.bandeiras.uniforms.uAbre.value.x } : null; },
+    /** A agenda da festa (festa.js): canto, batucada, vaia, sinalizadores, bandeirão e ola. */
+    get festa() { const f = emocao.festa; return { canto: { ...f.canto, cantados: [...f.canto.cantados] }, batucada: f.batucada, vaia: { ...f.vaia }, acesos: f.acesos, flares: f.flares.filter(s => s.ativo).map(s => ({ ...s })), bandeirao: { ...f.bandeirao }, ola: { ...f.ola }, t: f.t }; },
     /** Liga/desliga a onda da rede SÓ no desenho (testes: o mesmo instante com e sem a deformação). */
     redeOnda(v) { redeLigada = !!v; },
     /** Só a troca de qualidade da torcida (ms): quantos desenhar e a animação, sem remontar nada. */
