@@ -261,7 +261,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
-  CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
+  CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI
+  roda o painel sozinho em todo PR que mexe na lógica (`golaco/js/*.js`): `.github/workflows/golaco-painel.yml`, 8 máquinas ×
+  18 sementes contra a base do PR, tabela no resumo do job "junta" — usar esse em vez do local quando a máquina estiver cheia. Linha de base da publicada antes da Etapa
   4: 2,11 gols, 9,8 chutes (63% no alvo, 21% de conversão), passe 88,9%, último terço 48%, goleiro 67/58/89% (meta ok),
   40% dos gols de bola roubada perto da área. **Impedimento** (`impedimento.js`, Regra 11): foto em cada jogada do
   companheiro, infração no toque (também rebote de defesa e desvio), jogada deliberada do adversário zera, nada direto de
