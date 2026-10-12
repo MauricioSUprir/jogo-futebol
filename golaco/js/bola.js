@@ -364,8 +364,10 @@ function colidirGol(b, lado, ev, ax, ay, az) {
     p.z = s * ZLIM + c.lado * R;
     if (b.v.z * c.lado < 0) { b.v.z = -b.v.z * am; b.v.x *= c.lado === -s ? 0.6 : 0.7; }
   }
-  // véu: o lado (dentro/fora) vem do INÍCIO do subpasso (como os planos finos)
-  if (X1 >= 0 && X1 <= VEU.fundo + R && p.y <= HG + R && Math.abs(p.z) <= ZLIM + R) {
+  // véu: o lado (dentro/fora) vem do INÍCIO do subpasso (como os planos finos). A altura vale pelo começo OU pelo fim
+  // do subpasso: a bola de dentro subindo forte (≥ ~27 m/s) ia de y < HG − R a y > HG + R num subpasso e, filtrada
+  // só pelo fim, passava pela faixa de cima sem teste (a varredura da caixa antiga pegava; contraprova da rede véu)
+  if (X1 >= 0 && X1 <= VEU.fundo + R && (ay < p.y ? ay : p.y) <= HG + R && Math.abs(p.z) <= ZLIM + R) {
     const a = pertoPerfil(X0, ay, _pa);
     const ladoV = a.d > 0 ? 1 : a.d < 0 ? -1 : (lado * b.v.x * a.nx + b.v.y * a.ny <= 0 ? 1 : -1);
     const e = pertoPerfil(X1, p.y, _pe);

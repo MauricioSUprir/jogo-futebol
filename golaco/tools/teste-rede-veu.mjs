@@ -142,6 +142,18 @@ for (const p of perfil) {
   }
   reg('Nada atravessa a rede (Monte Carlo: 600 de dentro, 600 de fora)', `${escapou} escaparam (pior ${fmt(pior * 100, 1)} cm) · ${entrou} entraram`, '0 · 0', escapou === 0 && entrou === 0);
 }
+// bola de dentro subindo forte contra a faixa de cima (contraprova: a 30–40 m/s ela ia de y < HG − R a y > HG + R num
+// subpasso de 1/120 s e o filtro pela altura do FIM pulava o teste do véu — 22 de 224 saíam por cima)
+{
+  let escapou = 0, tot = 0;
+  for (const vy of [15, 20, 25, 27, 30, 35, 40]) for (const y0 of [1.6, 1.8, 2.0, 2.1, 2.2, 2.25, 2.3, 2.32]) for (const X0 of [0.12, 0.2, 0.3, 0.4]) {
+    const b = criarBola(MX + X0, 0); b.p.y = y0; b.v.y = vy; b.v.x = 2; b.rolando = false; tot++;
+    let sai = false;
+    for (let t = 0; t < 120; t++) { passoBola(b, []); if (b.p.y > HG + 0.02 && Math.abs(b.p.z) < ZL && b.p.x - MX > 0.05) sai = true; }
+    if (sai) escapou++;
+  }
+  reg('Bola de dentro subindo forte (15–40 m/s) não sai pela faixa de cima', `${escapou}/${tot} saíram`, '0', escapou === 0);
+}
 
 // ---------------------------------------------------------------- G) a regra do gol segue o véu
 {

@@ -56,7 +56,8 @@ verticais do poste até o véu (X ≤ `profundidadeVeu(y)`). A MESMA forma vale 
   `pertoPerfil(X, y, out)` → `{X, y, nx, ny, d, s}` (ponto da polilinha mais perto, normal para FORA, distância com sinal:
   + = do lado de fora), `pontoPerfil(s, out)`, `fundoDaCunha(r)` (até onde vai o centro da bola parada no chão: 2,06 m).
 - **Física (`bola.js colidirGol`)**: as laterais seguram por dentro e por fora até o véu; o véu é a polilinha (o lado vem do
-  INÍCIO do subpasso, como os planos finos). Por dentro devolve `amortecimentoRede` da velocidade normal e segura o que
+  INÍCIO do subpasso, como os planos finos; o filtro de altura vale pelo começo OU pelo fim do subpasso — a bola de dentro
+  subindo a ≥ ~27 m/s não pula a faixa de cima). Por dentro devolve `amortecimentoRede` da velocidade normal e segura o que
   escorrega (×0,45 na batida forte, |vn| > 3; ×0,85 na média; ×0,995 encostada): a bola escorrega pelo véu até a cunha do
   fundo e "morre" lá. Por fora (×0,3/×0,6) ela não entra nem sobe no véu como numa rampa; a bola por cima do travessão
   escorrega por trás até o chão. Evento `rede` (força = |vn|) só por dentro com |vn| > 1,5 m/s.
