@@ -108,10 +108,12 @@ try {
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
   const am = await pg.evaluate(async SEG => {
     const g = window.__golaco, out = [];
+    // SEG segundos de JOGO no ritmo do relógio de verdade; com a máquina carregada o jogo atrasa e o laço continua até
+    // completar os SEG s de jogo (no máximo 4× o tempo), para a agenda dos cantos ter o mesmo tempo de jogo sempre
     const t0 = performance.now(); let sim = 0, prox = 0, q = 0, ultTocados = '', ultReacao = -1e9;
-    while (performance.now() - t0 < SEG * 1000) {
+    while ((performance.now() - t0 < SEG * 1000 || sim < SEG * 1000) && performance.now() - t0 < 4 * SEG * 1000) {
       const real = performance.now() - t0;
-      if (sim < real) { const d = Math.min(100, real - sim); g.relogio.avancar(d, { desenhar: (q++ % 8) === 0 }); sim += d; }
+      if (sim < real && sim < SEG * 1000) { const d = Math.min(100, real - sim, SEG * 1000 - sim); g.relogio.avancar(d, { desenhar: (q++ % 8) === 0 }); sim += d; }
       await new Promise(r => setTimeout(r, 1));
       const s = g.estadio.som, tt = JSON.stringify(s.tocados);
       if (tt !== ultTocados) { ultTocados = tt; ultReacao = real; }

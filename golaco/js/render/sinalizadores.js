@@ -146,7 +146,7 @@ export function criarSinalizadores(cena, opc = {}) {
   mesh.renderOrder = 3;        // depois da torcida e da rede (translúcido)
   mesh.visible = false;
   cena.add(mesh);
-  let P = 0, qualidade = null;
+  let P = 0, qualidade = null, cheio = 0, precarga = true;
   const api = {
     mesh, uniforms: uni,
     /** festa (festa.js) e t no relógio dela (emocao.t): posições, força do fogo; some quando nada queima nem fuma. */
@@ -162,14 +162,18 @@ export function criarSinalizadores(cena, opc = {}) {
         uni.uFogo.value[k] = fogoSinalizador(s, t);
         if (t >= s.t0 - 0.1 && t <= s.t0 + s.dur + (P > 0 ? FUMACA.vida : 0)) vivo = true;
       }
-      mesh.visible = vivo;
+      // pré-carga (como a torcida): no 1º quadro, apagado, vai para a GPU com 0 instâncias — geometria e programa
+      // prontos sem chamada de desenho; o 1º sinalizador da partida não engasga nem sobe a memória da GPU
+      if (precarga && !vivo) { mesh.visible = true; geo.instanceCount = 0; } else { mesh.visible = vivo; geo.instanceCount = cheio; }
+      precarga = false;
     },
     definirQualidade(q) {
       if (q === qualidade || FUMACA.porQualidade[q] == null) return;
       qualidade = q;
       P = FUMACA.porQualidade[q];
       uni.uP.value = P;
-      geo.instanceCount = MAX * (2 + P);
+      cheio = MAX * (2 + P);
+      geo.instanceCount = cheio;
     },
     definirHora(h) { uni.uNoite.value = h === 'noite' ? 1 : 0; },
     get quantas() { return geo.instanceCount; },

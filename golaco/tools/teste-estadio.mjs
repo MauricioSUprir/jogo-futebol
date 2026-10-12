@@ -22,7 +22,8 @@
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
 //  11) o LADO DE CÁ (11/10): fora do desenho na câmera de TV (celular e PC, 20 instantes), visível do outro lado do
-//      campo com a torcida e o túnel no meio;
+//      campo com a torcida e o túnel no meio; os bancos de reservas (na mesma malha) fora da TV com a bola perto da
+//      linha de cá (no celular a cobertura deles aparecia no canto de baixo);
 //  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
 //      GPU = JS; no gol da casa a organizada muda na câmera do gol (bandeirão e sinalizadores); overdraw ≤ 0,5 tela.
 //   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
@@ -640,8 +641,32 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         return { ladoDeCa: t.ladoDeCa, ca: t.grupos.filter(x => x.nome.startsWith('torcida-ca') && x.visivel).map(x => x.nome), tunelX: tun.x / window.innerWidth, d: n / (a.length / 4) };
       });
       const d = vis.d;
+      const bancos = await pagina.evaluate(() => {
+        const g = window.__golaco;
+        // os bancos de reservas (atrás das placas de cá): com a bola perto da linha de cá, a TV do celular (mais alta e
+        // mais atrás) pegava a cobertura deles no canto de baixo — uma placa lisa. Instantes com a cobertura na tela E
+        // desenhada (versões sem `bancosVisiveis`: os bancos iam com as placas, sempre desenhados)
+        const B = { x: [5, 17], z: [41, 43.6], altura: 2.3 };
+        let bancoNaTela = 0, perto = 0;
+        for (let k = 0; k < 12000 && perto < 6; k++) {
+          g.relogio.avancar(1000 / 60, { desenhar: false });
+          const b = g.estado().bola;
+          if (!(b.z > 22 && g.estado().parada == null)) continue;
+          perto++;
+          g.desenhar();
+          let naTela = false;
+          for (const s of [-1, 1]) for (const x of B.x) for (const z of B.z) {
+            const p = g.naTela(s * x, B.altura, z);
+            if (p.x >= 0 && p.x <= window.innerWidth && p.y >= 0 && p.y <= window.innerHeight) naTela = true;
+          }
+          if (naTela && (g.estadio.bancosVisiveis ?? true)) bancoNaTela++;
+          for (let i = 0; i < 60; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        }
+        return { bancoNaTela, perto };
+      });
       meta(`Lado de cá (${nome}): fora do desenho na câmera de TV, visível do outro lado`, `${r.viu}/${r.n} instantes do jogo com algo do lado de cá no desenho · do outro lado: arquibancada ${vis.ladoDeCa ? 'sim' : 'não'}, torcida [${vis.ca}], ${(100 * d).toFixed(0)}% da faixa de cima é torcida, túnel a ${(100 * vis.tunelX).toFixed(0)}% da largura`,
         '0 no jogo; do outro lado: arquibancada, as 2 faixas da torcida, ≥ 20% e o túnel no meio (45–55%)', r.viu === 0 && vis.ladoDeCa && vis.ca.length === 2 && d >= 0.2 && Math.abs(vis.tunelX - 0.5) <= 0.05 && errosCa.length === 0);
+      meta(`Bancos de reservas fora da TV (${nome}): bola perto da linha de cá`, `${bancos.bancoNaTela}/${bancos.perto} instantes com a cobertura dos bancos na tela e desenhada`, '0 (e ≥ 3 instantes medidos)', bancos.bancoNaTela === 0 && bancos.perto >= 3);
     } finally { await nav.close(); }
   } catch (e) {
     meta(`Execução (lado de cá, ${nome})`, e.message, 'sem exceção', false);

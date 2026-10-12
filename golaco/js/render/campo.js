@@ -385,33 +385,43 @@ function criarPlacas(aniso) {
     caixas.push(caixa(x + w / 2, A / 2, PZ + E / 2, w, A, E)); cores.push(verdes[k % 2]);
   }
   caixas.push(caixa(0, A + 0.02, PZ + E / 2, PX * 2 + E * 2, 0.04, E + 0.02)); cores.push(friso);
-  bancosDeReservas(caixas, cores);
   const corpo = new THREE.Mesh(juntarGeometrias(caixas, cores), new THREE.MeshLambertMaterial({ vertexColors: true }));
   corpo.name = 'placas-estrutura';
   return { frente, corpo, mat };
 }
 
 /**
- * Bancos de reservas (config.js ESTADIO.bancos): um de cada lado do túnel, atrás das placas do lado de cá, abertos
- * para o campo — parede de trás, laterais, teto fumê, banco verde com encosto e piso. Vão junto com a estrutura das
- * placas (cor por vértice): nenhuma chamada de desenho a mais.
+ * Bancos de reservas (config.js ESTADIO.bancos): um de cada lado do túnel, atrás das placas do lado de cá, abertos para
+ * o campo (parede do fundo, laterais, cobertura, assento e encosto verdes). Vão na MALHA do lado de cá (`L`, retalhos da
+ * textura das cadeiras × cor por vértice): com a câmera de TV dentro da arquibancada de cá eles saem do desenho junto
+ * com ela — no celular a TV fica mais alta e mais atrás, e a cobertura aparecia como uma placa lisa no canto de baixo.
  */
-function bancosDeReservas(caixas, cores) {
+function bancosDeReservas(L, CU, CV, VERDE) {
   const B = ESTADIO.bancos;
-  const parede = new THREE.Color(0x232a2e), teto = new THREE.Color(0x3c5560), banco = new THREE.Color(0x12a95c),
-    encosto = new THREE.Color(0x0d6e3e), piso = new THREE.Color(0x3b4043);
   const [za, zb] = B.z, h = B.altura, prof = zb - za, zc = (za + zb) / 2;
+  const concreto = (cx, cy, cz, w, a, d, c) => caixaL(L, cx, cy, cz, w, a, d, CU, CV, c);
+  const verde = (cx, cy, cz, w, a, d, c) => caixaL(L, cx, cy, cz, w, a, d, [0.2, 0.21], VERDE, c);
   for (const s of [-1, 1]) {
     const xa = s * B.x[0], xb = s * B.x[1], xc = (xa + xb) / 2, larg = Math.abs(xb - xa);
-    const add = (g, c) => { caixas.push(g); cores.push(c); };
-    add(caixa(xc, h / 2, zb - 0.1, larg, h, 0.2), parede);
-    add(caixa(xa, h / 2, zc, 0.15, h, prof), parede);
-    add(caixa(xb, h / 2, zc, 0.15, h, prof), parede);
-    add(caixa(xc, h + 0.06, zc - 0.25, larg + 0.4, 0.12, prof + 0.6), teto);
-    add(caixa(xc, 0.45, zb - 0.75, larg - 0.6, 0.1, 0.5), banco);
-    add(caixa(xc, 0.82, zb - 0.45, larg - 0.6, 0.62, 0.08), encosto);
-    add(caixa(xc, 0.02, zc, larg, 0.04, prof), piso);
+    concreto(xc, h / 2, zb - 0.1, larg, h, 0.2, 0.3);              // parede do fundo
+    concreto(xa, h / 2, zc, 0.15, h, prof, 0.3);                    // laterais
+    concreto(xb, h / 2, zc, 0.15, h, prof, 0.3);
+    concreto(xc, h + 0.06, zc - 0.25, larg + 0.4, 0.12, prof + 0.6, 0.42); // cobertura
+    verde(xc, 0.45, zb - 0.75, larg - 0.6, 0.1, 0.5, 0.9);           // assento
+    verde(xc, 0.82, zb - 0.45, larg - 0.6, 0.62, 0.08, 0.55);        // encosto
+    concreto(xc, 0.02, zc, larg, 0.04, prof, 0.5);                  // piso
   }
+}
+
+/** Caixa de 6 faces na malha da arquibancada (`L.quad`), toda no mesmo retalho (u, v) da textura e cor c. */
+function caixaL(L, cx, cy, cz, w, a, d, [u0, u1], [v0, v1], c) {
+  const x0 = cx - w / 2, x1 = cx + w / 2, y0 = cy - a / 2, y1 = cy + a / 2, z0 = cz - d / 2, z1 = cz + d / 2;
+  L.quad([x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0], u0, u1, v0, v1, c);
+  L.quad([x1, y0, z1], [x0, y0, z1], [x0, y1, z1], [x1, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x0, y0, z1], [x0, y0, z0], [x0, y1, z0], [x0, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0], u0, u1, v0, v1, c);
+  L.quad([x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], u0, u1, v0, v1, c);
+  L.quad([x0, y0, z1], [x1, y0, z1], [x1, y0, z0], [x0, y0, z0], u0, u1, v0, v1, c);
 }
 
 // ------------------------------------------------------------------ arquibancada e entorno
@@ -554,6 +564,7 @@ function criarLadoDeCa(construtor, tex, A) {
   L.quad([-ti, ya, z0], [ti, ya, z0], [ti, ya, zf], [-ti, ya, zf], CU[0], CU[1], CV[0], CV[1], 0.32);
   L.quad([-ti, 0.02, z0], [ti, 0.02, z0], [ti, 0.02, zf], [-ti, 0.02, zf], CU[0], CU[1], CV[0], CV[1], 0.55);
   L.quad([-ti, 0, zf], [ti, 0, zf], [ti, ya, zf], [-ti, ya, zf], CU[0], CU[1], CV[0], CV[1], 0.1);
+  bancosDeReservas(L, CU, CV, VERDE);
   const m = L.mesh(tex, 'ca');
   m.name = 'arquibancada-ca';
   // o corte é o de atualizar(): a câmera dentro dela ou as caixas fora do quadro. Duas caixas (a faixa da frente, baixa,
@@ -564,6 +575,8 @@ function criarLadoDeCa(construtor, tex, A) {
   m.userData.caixas = [
     new THREE.Box3(new THREE.Vector3(-xA - 0.5, -0.5, z0 - 0.6), new THREE.Vector3(xA + 0.5, yS(zm) + 0.5, zm + 0.5)),
     new THREE.Box3(new THREE.Vector3(-xA - 0.5, yS(zm) - 0.5, zm - 0.5), new THREE.Vector3(xA + 0.5, yTopo + 6.2, z1 + 0.6)),
+    // os bancos de reservas, na frente da arquibancada
+    new THREE.Box3(new THREE.Vector3(-ESTADIO.bancos.x[1] - 0.5, -0.1, ESTADIO.bancos.z[0] - 0.8), new THREE.Vector3(ESTADIO.bancos.x[1] + 0.5, ESTADIO.bancos.altura + 0.3, z0)),
   ];
   return m;
 }
@@ -639,6 +652,9 @@ export function criarCampo(opc) {
   grupo.add(refl.grupo);
   const ladoDeCa = arq.userData.ladoDeCa;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
+  // pré-carga (como a torcida): no 1º quadro, se a câmera não a vê, a arquibancada do lado de cá vai para a GPU com
+  // 0 triângulos (geometria e programa prontos) — o 1º corte de câmera que a mostra não engasga
+  let precarga = true, restaurar = false;
   return {
     grupo,
     /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
@@ -659,7 +675,10 @@ export function criarCampo(opc) {
         camera.updateMatrixWorld();
         _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
         const cx = ladoDeCa.userData.caixas;
-        ladoDeCa.visible = !cameraNoLadoDeCa(camera.position) && (_frustum.intersectsBox(cx[0]) || _frustum.intersectsBox(cx[1]));
+        const ver = !cameraNoLadoDeCa(camera.position) && cx.some(c => _frustum.intersectsBox(c));
+        if (restaurar) { restaurar = false; ladoDeCa.geometry.setDrawRange(0, Infinity); }
+        if (precarga && !ver) { ladoDeCa.visible = true; ladoDeCa.geometry.setDrawRange(0, 0); restaurar = true; } else ladoDeCa.visible = ver;
+        precarga = false;
       }
     },
     /** A arquibancada do lado de cá (testes: visível ou não neste quadro). */

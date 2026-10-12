@@ -234,7 +234,7 @@ export function criarTorcida(cena, opc) {
   function aplicarQualidade(q) {
     qualidade = q;
     n = 0;
-    for (const m of mesh.children) { const k = quantosNoSetor(dados, m.userData.grupo, q); m.geometry.instanceCount = k; n += k; }
+    for (const m of mesh.children) { const k = quantosNoSetor(dados, m.userData.grupo, q); m.userData.k = k; m.geometry.instanceCount = k; n += k; }
     uni.uAnimada.value = TORCIDA.animada[q] ? 1 : 0;
   }
   montar();
@@ -243,6 +243,10 @@ export function criarTorcida(cena, opc) {
   const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora });
   const sinalizadores = criarSinalizadores(cena, { qualidade, hora: opc.hora });
   let festaVisivel = true;
+  // pré-carga: no 1º quadro desenhado os grupos fora do quadro (o lado de cá, os fundos) vão para a GPU com 0
+  // instâncias — geometria enviada e programa pronto, nenhuma chamada de desenho —, para a 1ª vez que aparecem (um
+  // corte de câmera) não engasgar nem subir a memória da GPU no meio do jogo
+  let precarga = true;
   const t = {
     get mesh() { return mesh; },
     get n() { return n; },
@@ -279,7 +283,13 @@ export function criarTorcida(cena, opc) {
         camera.updateMatrixWorld();
         _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
         const dentro = cameraNoLadoDeCa(camera.position);
-        if (mesh) for (const m of mesh.children) m.visible = !(m.userData.ladoDeCa && dentro) && _frustum.intersectsBox(m.userData.caixa);
+        if (mesh) {
+          for (const m of mesh.children) {
+            const ver = !(m.userData.ladoDeCa && dentro) && _frustum.intersectsBox(m.userData.caixa);
+            if (precarga && !ver) { m.visible = true; m.geometry.instanceCount = 0; } else { m.visible = ver; m.geometry.instanceCount = m.userData.k; }
+          }
+          precarga = false;
+        }
       }
     },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },
