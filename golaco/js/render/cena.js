@@ -71,6 +71,21 @@ function criarCeu() {
   return { mesh, uni };
 }
 
+/**
+ * Régua da Etapa 5: o renderer.info do three.js 0.170 zera DEPOIS do mapa de sombras (WebGLRenderer.render), então as
+ * chamadas e os triângulos da sombra nunca aparecem nele. Envolve o shadowMap.render e guarda o que a passada da sombra
+ * desenhou neste render (a diferença do info durante ela).
+ */
+function medirSombra(r, sombra) {
+  const orig = r.shadowMap.render;
+  r.shadowMap.render = function (...a) {
+    const c0 = r.info.render.calls, t0 = r.info.render.triangles;
+    orig.apply(this, a);
+    sombra.chamadas = r.info.render.calls - c0;
+    sombra.tri = r.info.render.triangles - t0;
+  };
+}
+
 function criarRenderer(canvas, q) {
   const r = new THREE.WebGLRenderer({
     canvas, antialias: q.antialias, alpha: false, stencil: false, powerPreference: 'high-performance',
@@ -89,6 +104,8 @@ export function criarCena(opc) {
   let nomeQ = opc.qualidade;
   let q = QUALIDADE[nomeQ];
   let renderer = criarRenderer(opc.canvas, q);
+  const sombra = { chamadas: 0, tri: 0 };
+  medirSombra(renderer, sombra);
   const cena = new THREE.Scene();
   const ceu = criarCeu();
   cena.add(ceu.mesh);
@@ -176,6 +193,7 @@ export function criarCena(opc) {
         velho.dispose();
         velho.forceContextLoss();
         renderer = criarRenderer(novo, nova);
+        medirSombra(renderer, sombra);
         recriou = true;
       }
       nomeQ = nome; q = nova;
@@ -203,9 +221,13 @@ export function criarCena(opc) {
     },
     desenhar(camera) {
       ceu.mesh.position.copy(camera.position);
+      // sem sombra neste render (desligada ou sem nada que projete): zera a régua da sombra
+      sombra.chamadas = 0; sombra.tri = 0;
       renderer.render(cena, camera);
     },
     info() { return renderer.info; },
+    /** Chamadas e triângulos da passada da sombra no último render (o renderer.info não mostra a sombra). */
+    infoSombra() { return sombra; },
     /** Raio (m) da sombra em volta do foco (21; 28 na Alta). */
     get raioSombra() { return q.sombras ? raioSombra() : 0; },
   };

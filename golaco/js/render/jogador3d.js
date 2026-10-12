@@ -29,9 +29,9 @@ export const KITS = {
   arbitro: { camisa: '#2459d6', calcao: '#0e1112', meiao: '#0e1112', chuteira: '#0e1112', acento: '#e9ecee', sola: '#0b0d0e', luva: '#2459d6' },
 };
 // Pele e cabelo variam por jogador (sorteio fixo pelo id): elenco com cara de elenco.
-const PELES = ['#f0c8a4', '#e3b088', '#c99067', '#b9825c', '#a06a46', '#8d5d3f', '#6e452c', '#5a3824'];
-const CABELOS = ['#16100c', '#1c1410', '#2a1e16', '#3b2a1c', '#5a3f26', '#7a5532', '#a07a48', '#0e0d0c'];
-function sorteio(id, s) {
+export const PELES = ['#f0c8a4', '#e3b088', '#c99067', '#b9825c', '#a06a46', '#8d5d3f', '#6e452c', '#5a3824'];
+export const CABELOS = ['#16100c', '#1c1410', '#2a1e16', '#3b2a1c', '#5a3f26', '#7a5532', '#a07a48', '#0e0d0c'];
+export function sorteio(id, s) {
   let h = Math.imul((id | 0) + 0x9e37, 0x85ebca6b) ^ Math.imul(s, 0xc2b2ae35);
   h = Math.imul(h ^ (h >>> 15), 0x27d4eb2f);
   return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
@@ -204,6 +204,106 @@ const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _s = new THREE.Vector3();
 
+/**
+ * Indicadores do jogador controlado (anel no chão + triângulo acima da cabeça) e do "próximo da troca" (anel menor e
+ * discreto). Os mesmos no manequim e no corpo novo (render/corpo3d.js).
+ */
+export function criarIndicadores(cena) {
+  // indicador do jogador controlado: anel no chão e o triângulo acima da cabeça. A seta no chão saiu (tela limpa,
+  // 11/10: o rumo se lê pelo corpo, como no EA FC; uma chamada de desenho a menos)
+  const verde = 0x19e07a;
+  const anelGeo = new THREE.RingGeometry(0.46, 0.56, 48);
+  const anelTodo = new THREE.Group();
+  const matAnel = new THREE.MeshBasicMaterial({
+    color: verde, transparent: true, opacity: 0.92, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+  });
+  const anel = new THREE.Mesh(anelGeo, matAnel);
+  anel.rotation.x = -Math.PI / 2;
+  anelTodo.add(anel);
+  anel.renderOrder = 4;
+  anelTodo.visible = false;
+  anelTodo.name = 'indicador';
+  cena.add(anelTodo);
+  const marca = new THREE.Sprite(new THREE.SpriteMaterial({ map: texIndicador(), depthWrite: false, transparent: true }));
+  marca.visible = false;
+  marca.renderOrder = 5;
+  cena.add(marca);
+  // "próximo da troca": anel fino, menor e translúcido (discreto)
+  const matProx = new THREE.MeshBasicMaterial({
+    color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
+  });
+  // largura de 9 cm: fina o bastante para ser discreta e grossa o bastante para não serrilhar
+  // (sem antisserrilhado, um anel de 5 cm vira tracejado na câmera de TV)
+  const anelProx = new THREE.Mesh(new THREE.RingGeometry(0.37, 0.46, 40), matProx);
+  anelProx.rotation.x = -Math.PI / 2;
+  anelProx.renderOrder = 4;
+  anelProx.visible = false;
+  anelProx.name = 'indicador-proximo';
+  cena.add(anelProx);
+  return {
+    /** controlado/proximo: itens da lista do desenho (ou null); camera: para o tamanho constante da seta. */
+    atualizar(controlado, proximo, camera) {
+      if (controlado) {
+        anelTodo.visible = true;
+        anelTodo.position.set(controlado.x, 0.02, controlado.z);
+        anelTodo.rotation.y = -controlado.rumo;
+        const ic2 = J.cabeca * 3;
+        const pose = controlado.pose;
+        marca.visible = true;
+        marca.position.set(pose[ic2], pose[ic2 + 1] + 0.42, pose[ic2 + 2]);
+        if (camera) {
+          // tamanho constante na tela (~2,2% do menor lado da tela; era 2,6% antes da tela limpa)
+          const d = camera.position.distanceTo(marca.position);
+          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.022 * Math.min(1, camera.aspect);
+          marca.scale.set(k, k, 1);
+          marca.position.y += k * 0.3;
+        }
+      } else {
+        anelTodo.visible = false;
+        marca.visible = false;
+      }
+      if (proximo) {
+        anelProx.visible = true;
+        anelProx.position.set(proximo.x, 0.019, proximo.z);
+      } else anelProx.visible = false;
+    },
+  };
+}
+
+/**
+ * Medida do desenho dos jogadores (régua da Etapa 5): chamadas e triângulos no passe principal e na sombra, contados
+ * pelos ganchos de cada malha (onBeforeRender / onBeforeShadow) no MESMO render — o renderer.info do three.js 0.170
+ * zera depois da sombra e não mostra a sombra. tri(malha, geometria) = triângulos de uma chamada.
+ */
+export function criarMedida() {
+  const m = { quadro: -1, chamadas: 0, tri: 0, chamadasSombra: 0, triSombra: 0 };
+  const zerar = r => { if (r.info.render.frame !== m.quadro) { m.quadro = r.info.render.frame; m.chamadas = 0; m.tri = 0; m.chamadasSombra = 0; m.triSombra = 0; } };
+  return {
+    /** Contadores do último render (ou do que está em andamento): {chamadas, tri, chamadasSombra, triSombra}. */
+    get ultimo() { return m; },
+    /** Liga os ganchos numa malha; tri(objeto, geometria) dá os triângulos de UMA chamada dela (0 = não desenha). */
+    ligar(obj, tri) {
+      obj.onBeforeRender = (r, ce, cam, geo) => { zerar(r); const t = tri(obj, geo); if (t > 0) { m.chamadas++; m.tri += t; } };
+      const antesS = obj.onBeforeShadow;
+      obj.onBeforeShadow = function (r, o, cam, sc, geo, dm, grp) {
+        antesS.call(this, r, o, cam, sc, geo, dm, grp);
+        zerar(r);
+        const t = tri(obj, geo);
+        if (t > 0) { m.chamadasSombra++; m.triSombra += t; }
+      };
+    },
+  };
+}
+/** Triângulos de uma chamada de um InstancedMesh (índice ou faixa) × instâncias. */
+export function triInstancias(obj, geo) {
+  const n = geo.index ? geo.index.count : geo.attributes.position.count;
+  const faixa = Math.min(n - geo.drawRange.start, geo.drawRange.count);
+  const inst = obj.isInstancedMesh ? obj.count : geo.isInstancedBufferGeometry ? geo.instanceCount : 1;
+  return Math.floor(faixa / 3) * inst;
+}
+
 export function criarJogadores3D(cena, qualidade) {
   const alta = qualidade === 'alta';
   const geo = geoCapsula(alta ? 14 : 9, alta ? 4 : 2);
@@ -220,6 +320,7 @@ export function criarJogadores3D(cena, qualidade) {
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,
   });
   let sombras = true;
+  const medida = criarMedida();
 
   // Instâncias para `cap` jogadores (recriadas maiores se entrar mais gente).
   let cap = 0, segs, cabecas, cabelos, manchas, aDim, aC1, aC2, aC3, aPad;
@@ -271,42 +372,11 @@ export function criarJogadores3D(cena, qualidade) {
     manchas.name = 'jogadores-manchas';
     cena.add(manchas);
     segs.castShadow = cabecas.castShadow = cabelos.castShadow = sombras;
+    for (const im of [segs, cabecas, cabelos, manchas]) medida.ligar(im, triInstancias);
     vagaDe.clear();
   }
 
-  // indicador do jogador controlado: anel no chão e o triângulo acima da cabeça. A seta no chão saiu (tela limpa,
-  // 11/10: o rumo se lê pelo corpo, como no EA FC; uma chamada de desenho a menos)
-  const verde = 0x19e07a;
-  const anelGeo = new THREE.RingGeometry(0.46, 0.56, 48);
-  const anelTodo = new THREE.Group();
-  const matAnel = new THREE.MeshBasicMaterial({
-    color: verde, transparent: true, opacity: 0.92, depthWrite: false, side: THREE.DoubleSide,
-    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
-  });
-  const anel = new THREE.Mesh(anelGeo, matAnel);
-  anel.rotation.x = -Math.PI / 2;
-  anelTodo.add(anel);
-  anel.renderOrder = 4;
-  anelTodo.visible = false;
-  anelTodo.name = 'indicador';
-  cena.add(anelTodo);
-  const marca = new THREE.Sprite(new THREE.SpriteMaterial({ map: texIndicador(), depthWrite: false, transparent: true }));
-  marca.visible = false;
-  marca.renderOrder = 5;
-  cena.add(marca);
-  // "próximo da troca": anel fino, menor e translúcido (discreto)
-  const matProx = new THREE.MeshBasicMaterial({
-    color: 0xd8ffe9, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide,
-    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8,
-  });
-  // largura de 9 cm: fina o bastante para ser discreta e grossa o bastante para não serrilhar
-  // (sem antisserrilhado, um anel de 5 cm vira tracejado na câmera de TV)
-  const anelProx = new THREE.Mesh(new THREE.RingGeometry(0.37, 0.46, 40), matProx);
-  anelProx.rotation.x = -Math.PI / 2;
-  anelProx.renderOrder = 4;
-  anelProx.visible = false;
-  anelProx.name = 'indicador-proximo';
-  cena.add(anelProx);
+  const indicadores = criarIndicadores(cena);
 
   const kitsLin = Object.fromEntries(Object.entries(KITS).map(([k, kit]) => [k, Object.fromEntries(Object.entries(kit).map(([nome, hex]) => [nome, new THREE.Color(hex)]))]));
   // índice do uniforme (sem alocar no quadro): o do elenco, se vier; senão o do time e da função
@@ -373,6 +443,14 @@ export function criarJogadores3D(cena, qualidade) {
     get cabecas() { return cabecas; },
     get cabelos() { return cabelos; },
     get capacidade() { return cap; },
+    /** Qual desenho é este: 'manequim' (cápsulas) ou 'corpo' (render/corpo3d.js). */
+    tipo: 'manequim',
+    /** Chamadas e triângulos dos jogadores no último render: passe principal e sombra (régua da Etapa 5). */
+    get medida() { return medida.ultimo; },
+    /** Altura da tela em pixels físicos (o corpo novo escolhe o nível de detalhe por ela; aqui não muda nada). */
+    definirTela() {},
+    /** Qualidade nova (troca automática): o manequim não muda nada. */
+    definirQualidade() {},
     /**
      * lista: [{id, time, goleiro, kit?, pose (Float32Array já interpolada), controlado, proximo, x, z, rumo}]
      * (kit: chave dos KITS pelo uniforme do elenco; sem ele, o do time)
@@ -451,30 +529,7 @@ export function criarJogadores3D(cena, qualidade) {
       cabecas.instanceMatrix.needsUpdate = true;
       cabelos.instanceMatrix.needsUpdate = true;
       manchas.instanceMatrix.needsUpdate = true;
-      // indicador
-      if (controlado) {
-        anelTodo.visible = true;
-        anelTodo.position.set(controlado.x, 0.02, controlado.z);
-        anelTodo.rotation.y = -controlado.rumo;
-        const ic2 = J.cabeca * 3;
-        const pose = controlado.pose;
-        marca.visible = true;
-        marca.position.set(pose[ic2], pose[ic2 + 1] + 0.42, pose[ic2 + 2]);
-        if (camera) {
-          // tamanho constante na tela (~2,2% do menor lado da tela; era 2,6% antes da tela limpa)
-          const d = camera.position.distanceTo(marca.position);
-          const k = 2 * Math.tan((camera.fov * Math.PI) / 360) * d * 0.022 * Math.min(1, camera.aspect);
-          marca.scale.set(k, k, 1);
-          marca.position.y += k * 0.3;
-        }
-      } else {
-        anelTodo.visible = false;
-        marca.visible = false;
-      }
-      if (proximo) {
-        anelProx.visible = true;
-        anelProx.position.set(proximo.x, 0.019, proximo.z);
-      } else anelProx.visible = false;
+      indicadores.atualizar(controlado, proximo, camera);
     },
     definirSombras(ligadas) {
       sombras = ligadas;

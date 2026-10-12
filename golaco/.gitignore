@@ -1,2 +1,6 @@
 tools/.cache-cdn/
 tools/saida/
+tools/humano/.dados/
+tools/humano/node_modules/
+tools/humano/package.json
+tools/humano/package-lock.json

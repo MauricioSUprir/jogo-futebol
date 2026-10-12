@@ -85,6 +85,9 @@ let modoPagina = MODOS.includes(params.get('modo')) ? params.get('modo') : 'part
 const MIN_PARAM = +params.get('min') > 0 ? +params.get('min') : undefined;
 const DEMO_ON = params.get('demo') === '1';
 const SEMENTE = Math.max(1, Math.floor(+params.get('semente') || 1));
+// ?corpo=novo: o corpo humano da Etapa 5.1 no lugar do manequim (link de teste; o padrão continua o manequim)
+const CORPO_NOVO = params.get('corpo') === 'novo';
+let corpoFalhou = null;
 const CHAVE_PREFS = 'golaco.prefs.v1';
 
 if (params.get('entalhe') === '1') document.documentElement.classList.add('entalhe-simulado');
@@ -772,7 +775,9 @@ function medirQps(dt, agora) {
   if (agora - qpsMed.t0 > 500) {
     const qps = qpsMed.soma > 0 ? qpsMed.n / qpsMed.soma : 0;
     const info = cena3d.info();
-    hud.qps(`${qps.toFixed(0)} qps · ${(1000 * qpsMed.soma / Math.max(1, qpsMed.n)).toFixed(1)} ms\n${info.render.calls} chamadas · ${(info.render.triangles / 1000).toFixed(0)} mil tri\nqualidade ${qAtual}`);
+    // a sombra entra na conta (régua da Etapa 5: o renderer.info do three.js não mostra a passada da sombra)
+    const so = cena3d.infoSombra(), jm = jog3d.medida;
+    hud.qps(`${qps.toFixed(0)} qps · ${(1000 * qpsMed.soma / Math.max(1, qpsMed.n)).toFixed(1)} ms\n${info.render.calls} chamadas · ${(info.render.triangles / 1000).toFixed(0)} mil tri\nsombra ${so.chamadas} chamadas · ${(so.tri / 1000).toFixed(0)} mil tri\njogadores (${jog3d.tipo}) ${jm.chamadas} + ${jm.chamadasSombra} · ${(jm.tri / 1000).toFixed(1)} + ${(jm.triSombra / 1000).toFixed(1)} mil tri\nqualidade ${qAtual}`);
     qpsMed.t0 = agora; qpsMed.n = 0; qpsMed.soma = 0;
   }
 }
@@ -800,6 +805,7 @@ function aplicarQualidade(recriar) {
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
+  jog3d.definirQualidade(qAtual);
   redimensionar();
   hud.definirEstado({ qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual });
 }
@@ -807,6 +813,8 @@ function aplicarQualidade(recriar) {
 function redimensionar() {
   const w = window.innerWidth, h = window.innerHeight;
   cena3d.redimensionar(w, h);
+  // o corpo novo escolhe o nível de detalhe pela altura do jogador na tela (pixels físicos)
+  if (jog3d) jog3d.definirTela(h * cena3d.renderer.getPixelRatio());
   // celular (menor lado < 520 px CSS): a câmera fecha mais o plano (jogadores maiores)
   cam.redimensionar(w / h, Math.min(w, h) < 520);
   if (diretor) diretor.redimensionar(w / h, Math.min(w, h) < 520);
@@ -1038,7 +1046,7 @@ async function iniciar() {
   hud.progresso('Montando os jogadores…');
   await proximoQuadro();
   bola3d = criarBola3D(cena3d.cena, qAtual);
-  jog3d = criarJogadores3D(cena3d.cena, qAtual);
+  jog3d = await criarDesenhoJogadores();
   marcas = criarMarcas(cena3d.cena, { timeHumano: TIME_HUMANO }); // só a bola alta do meu time ganha marca
   linhaImped = criarLinhaImpedimento(cena3d.cena);
   marcasLat = criarMarcasLateral(cena3d.cena);
@@ -1100,6 +1108,25 @@ async function iniciar() {
     if (!relogioManual) quadro(t);
   };
   requestAnimationFrame(aoQuadro);
+}
+
+/**
+ * Desenho dos jogadores: o manequim (padrão) ou, com ?corpo=novo, o corpo humano (Etapa 5.1, render/corpo3d.js; os
+ * módulos e o arquivo do corpo só baixam com o parâmetro). Se o arquivo falhar (rede, bloqueado, com defeito), volta o
+ * manequim sem erro no console (o motivo fica em __golaco.estado().corpoFalhou).
+ */
+async function criarDesenhoJogadores() {
+  if (CORPO_NOVO) {
+    try {
+      const [{ lerCorpo }, { criarCorpos3D }] = await Promise.all([import('./render/corpo-leitor.js'), import('./render/corpo3d.js')]);
+      const r = await fetch('assets/jogador/corpo.bin');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return criarCorpos3D(cena3d.cena, qAtual, lerCorpo(await r.arrayBuffer()));
+    } catch (e) {
+      corpoFalhou = String(e?.message ?? e);
+    }
+  }
+  return criarJogadores3D(cena3d.cena, qAtual);
 }
 
 /** Siglas e nomes do placar: os do elenco na partida; null nos treinos (o HUD usa os dele). */
@@ -1329,6 +1356,12 @@ const api = {
       edicaoNaFila: !!edicaoNaFila, editorAberto: editor.aberto, menuAberto: hud.menuAberto,
       marcador: marcadorLigado(mundo), qualidade: qAtual, escolhaQualidade: escolhaQ, hora, camera: cam ? cam.modo : camInicial,
       desenhoChamadas: cena3d ? cena3d.info().render.calls : 0,
+      desenhoTriangulos: cena3d ? cena3d.info().render.triangles : 0,
+      // régua da Etapa 5: a passada da sombra (o renderer.info não mostra) e o que os jogadores desenharam
+      sombraChamadas: cena3d ? cena3d.infoSombra().chamadas : 0,
+      sombraTriangulos: cena3d ? cena3d.infoSombra().tri : 0,
+      jogadoresDesenho: jog3d ? { ...jog3d.medida, tipo: jog3d.tipo } : null,
+      corpo: jog3d ? jog3d.tipo : null, corpoFalhou,
       // memória na GPU (vazamento = número que cresce com o tempo)
       geometrias: cena3d ? cena3d.info().memory.geometries : 0,
       texturas: cena3d ? cena3d.info().memory.textures : 0,
