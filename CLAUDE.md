@@ -119,6 +119,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Prints sempre com torcida e HUD ligados (torcida só existe a partir da Etapa 6): PC 1280×720 Alta e celular
   844×390 Média, dia e noite. Vídeo só quando o dono pedir (quadro a quadro, relógio controlado, 30 qps).
 - Honestidade nos resultados (número, quanto faltou, proposta). Decisão de produto é do dono; o resto, decidir e seguir.
+- **Etapa 5 (corpo realista, mocap, rostos) NÃO pode atrapalhar a jogabilidade** (dono, 12/10: "que as partes físicas
+  não atrapalhem a jogabilidade do jogo"): o modelo humano e o mocap são DESENHO por cima da simulação (hash igual;
+  `hash-igual`/`hash-partida` IGUAIS em todo PR da Etapa 5), e resposta (≤ 0,1 s), condução, recepção, giro e
+  patinação medidos antes → depois com as mesmas ferramentas. O dono vai mandar um modelo de condução que quer no jogo
+  (referência em vídeo/descrição): analisar, medir e propor antes de mexer na condução que ele já aprovou.
 - Etapas: 1 base + controle de bola (seção 4 do pedido) → 2 passes (passe, enfiada ≥ 4 m à frente, lançamento,
   cruzamento, chute, domínio) → 3 11×11 e tática (formações, IA com/sem bola, troca, jogo aéreo ≥ 90% troca para
   quem disputa) → 4 goleiro, regras (IFAB), bolas paradas e equilíbrio (painel em Node, 144+ partidas) → 5 modelo
