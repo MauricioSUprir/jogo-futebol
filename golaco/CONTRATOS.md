@@ -1154,3 +1154,43 @@ bola parada no pé do condutor).
 muda). Sem ele as defesas de 6 a 16,5 m iam a 60,8% (meta 55–60%): as regras tiraram gols fáceis nessa faixa (177 → 164
 com as mesmas defesas). Com ele: 59,0% · total 68,0% · de fora da área 86,8% · gols 2,13 (base 2,13) · impedimentos 1,15
 · bola parada 29% dos gols — nenhuma medida que estava na meta saiu dela.
+
+## Auditoria dos botões (dono, 12/10: "ainda tem botões que não funcionam")
+- **Botões de tela pelo toque** (`js/toque-botao.js`, DOM): `aoTocar(el, fn)` age no `pointerup` do MESMO dedo que desceu no
+  elemento (dentro dele, com folga de 10 px) e engole o `click` desse toque; mouse, teclado e `element.click()` seguem pelo
+  `click`. Vale no ≡ (`entrada.js`), em `[data-cmd]` e `.segmentado` (`hud.js`), na raiz do editor (`editor-time.js`) e no
+  "Pular" do pré-jogo. O navegador não gera o `click` com outro dedo na tela (o polegar no analógico). `engolirClique()`:
+  as camadas que somem no `pointerdown` (pular o replay, a comemoração, avançar o pré-jogo, o fundo da pausa) engolem o
+  click do mesmo toque (senão ele caía no ≡ e reabria a pausa).
+- **Entrada**: `definirFase(visivel, agora, posseRival)` — `agora` (a do mundo no passo, sem a histerese de 0,25 s dos
+  botões visíveis) fixa o sentido de J/K/O/G e A/B/Y/RB no aperto; com `posseRival` (o adversário com a bola no pé), o toque
+  num botão de ataque ainda visível vale pelo da defesa da mesma vaga (`botaoQueVale`: grande CHUTE → TROCAR, a → GOLEIRO,
+  b → PRESSÃO, c → DIVIDIDA). `KeyG` está em `SENTIDO_FASE` como `[0, GOLEIRO]` (só na defesa). A DIVIDIDA segurada só vira
+  CONTER depois de `ENTRADA.toqueCurto` (o toque curto não afasta o defensor antes do bote). `definirGoleiroMao(v)` mostra o
+  `btn-trocar-mao` (TROCAR, vaga 'e' do ataque) com a bola nas mãos do goleiro do humano; `definirGoleiroPe` (PEGAR) só
+  com a bola em jogo e na área. `definirMenu(v)`: com a pausa/Ajuda abertas o controle emite `menu-cima/baixo/esq/dir/ok/
+  voltar` (`hud.navegarPad`). `soltarTudo(ignorarPad)`; `main.js` limpa os pulsos a cada quadro pausado e solta tudo
+  (ignorando o controle segurado) quando a pausa fecha. `main.js faseDoMundo`: a bola solta sem dono que o controlado
+  alcança antes de qualquer adversário (rebote, sobra) é ataque. A Ajuda aberta pela pausa volta para ela ao fechar.
+- **Simulação** (`sim.js`): `m.ultPosse = {time, tick}` (time com a bola no pé no começo do passo) e `m.trocaManual[time] =
+  {tick, id, goleiro}` (TROCAR tocado ou segurado). `ganhouPosse` só passa o humano para o mais perto da bola quando o
+  time dele ACABOU de perder a bola (última posse ou último toque dele) e nunca por cima da escolha manual (TROCAR há <
+  `TROCA_AEREA.manualRecente` s ou o goleiro escolhido). Toque aéreo vencido (a hora passou ou a bola é de outro) é limpo em
+  `movimentoAereo` e no laço do `bolaLivre`. `candidatoTroca` pula `papel` 'parado'/'marcador' (a barreira).
+  `goleiroComoLinha` é falso com o pênalti montado. `m.cobrou = {id, tick}` (`partida.js rolou`; zerado em `bolaMorta`):
+  quem cobrou fica fora da bola livre e da bola alta (`candidatosBolaLivre`, `ia-tatica.js vaiNaLivre`) até outro jogador
+  tocar (posse, mão, `ultimoToque`, `bateuCorpo`).
+- **PRESSÃO** (`defesa.js`): `passeAdversario(m, time)` — no passe do adversário o pedido segue valendo e o chamado corre
+  para `m.voo.alvo` (pelo lado do meu gol); `m.pressaoHumano[time] = {tick, id, ult, ultTick}`: a histerese vale para o
+  último escolhido dentro de `DEFESA_HUMANO.pressao.validade`.
+- **Bola parada** (`partida.js cobrar`): os botões do cobrador humano valem na montagem; o pedido feito antes de `pronta`
+  espera (renovado) e sai em `pronta`; o CHUTE fora do pênalti e do tiro livre direto vira `passe` (saída) ou
+  `lancamento` (o resto; no lateral, o arremesso longo).
+- **Pênalti**: contra — `lerChute` compara o palpite com o meio do gol (z = 0), `iniciarMergulho` usa o lado escolhido
+  (`d.z`) com `d.palpite`; a favor — a mira do humano fica em ±`ACOES.chute.penaltiCanto` m (2,5: ~8% para fora, `teste-botoes` B11).
+- **Ações** (`acoes.js`): o LANÇAMENTO do humano na zona do cruzamento espera `ACOES.toqueDuplo` s (do soltar) antes de
+  marcar o toque (dois toques = rasteiro); o pedido de primeira do humano com `j.recebe` vale até `recebe.chega +
+  ACOES.primeiraFolga` s. `troca.js trocaAerea` não troca no chute do adversário nem tira o goleiro escolhido.
+- Testes: `teste-botoes` (Node, padrão; `--js` mede outra cópia), `teste-controles` (toque de verdade: ≡ com o polegar no
+  analógico, Continuar com outro dedo na janela, camadas que não atravessam, Ajuda → pausa, CHUTE/TROCAR na perda, rebote,
+  PEGAR, TROCAR com a bola nas mãos, Esc/H → K → Esc/H, O na perda, controle na pausa) e `teste-entrada` (G, DIVIDIDA).
