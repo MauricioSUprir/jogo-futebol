@@ -138,3 +138,52 @@ fileiras da frente 37/62/88% → 85/97/98%, lado de cá 0 → 5.274 torcedores n
 | (medida própria: `festa.js` em partidas inteiras) | Gol da casa e, 20 s depois, gol do visitante: a casa voltava a cantar a FESTA por cima do gol deles (o `festaAte` do 1º gol continuava valendo) | O gol de um lado cancela a festa agendada do outro; teste "dois gols em 20 s" no `teste-torcida` |
 | (medida própria: `teste-som-jogo` M10) | Com o limiar do limitador em −5,5 dBFS o pico no grito do gol saiu a −1,1/−1,3/−1,4 dBFS: a 0,1–0,4 dB da meta (≤ −1), o CI reprovaria por sorteio | Limiar −6,5 (a compensação automática do nó sobe de +3,1 para +3,7 dB): pico −1,7 dBFS em 2 rodadas, leito −18,1/−18,5 dBFS e apito − leito 6,2/6,4 dB (as outras metas seguem passando) |
 | (medida própria: `main.js`) | Com o celular em pé a tela "Gire o celular" cobre tudo e nenhum quadro é desenhado — a pré-carga do 1º quadro era gasta num quadro que não ia para a GPU | A pré-carga espera o 1º quadro desenhado de verdade (`desenha`/`renderizar`) |
+## 7. Tela limpa (11/10): HUD mínimo e linha de impedimento só no apito (`css/estilo.css`, `js/hud.js`, `js/entrada.js`, `js/render/*`)
+
+Pedido do dono (11/10): "quero menos informação na tela", "tem muita coisa na tela", "não quero a linha de impedimento
+durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a linha". Medido na versão publicada
+(`tools/teste-hud-minimo.mjs`): no celular deitado o HUD cobria 18–24% da tela (9–10 peças, 46 caracteres de texto,
+CHUTE de 104 px a 80% de opacidade, analógico visível em repouso), escondia 31–34% da torcida que a câmera do celular (#459)
+passou a mostrar, e a linha de impedimento viva ficava na tela em ~30% do tempo com a bola rolando (42–47% da partida).
+Nenhum teste media isso: os de antes só conferiam que nada encosta e que os botões têm ≥ 48 px.
+
+| Fonte | O que aproveitamos |
+|---|---|
+| EA SPORTS FC 26, recursos de acessibilidade (EA, oficial: https://www.ea.com/able/resources/ea-sports-fc/fc-26) | O FC deixa desligar cada camada ("Score Clock", indicador do próximo da troca, tamanho do indicador do jogador, radar 2D/3D). Daí: minimapa como OPÇÃO da pausa, indicador do controlado menor (triângulo 2,6% → 2,2% e sem a seta no chão) e o anel do próximo da troca mantido (no FC é ligado por padrão) |
+| FC 25, configurações do jogo (FIFPlay: https://www.fifplay.com/fc-25-game-settings/) | "Time/Score Display" e "Radar Off/2D/3D": o padrão da TV é só placar e relógio, o resto é opcional. Daí: na partida o topo é só o placar compacto e o menu; minimapa desligado no celular por padrão |
+| FC Mobile 24, guia de controles (FIFAMobileGuide: https://www.fifamobileguide.com/gameplay-controls; FIFAuteam: https://fifauteam.com/fc-mobile-24-controls/) | O FC Mobile tem tamanho dos botões, analógico flutuante e "Gestures Only"; na defesa, "Sprint & Tackle": SEGURAR perto do condutor = marca/acompanha, TOCAR = bote em pé (nenhum dos dois guias dá o tempo do toque × segurar). Daí: botões menores por padrão (80%), analógico discreto e a DIVIDIDA de dois sentidos (tocar = bote, segurar = CONTER) — a defesa cai para 5 botões, todos no 1º anel. Limiar escolhido: 0,25 s (um toque curto dura ~0,07–0,15 s; o "long press" do Android/iOS é 0,4–0,5 s, longo demais para a defesa) e o CONTER começa no 1º quadro do aperto, sem esperar o limiar |
+| eFootball, manual de controles (Konami: https://www.konami.com/efootball/en/page/mobile_controller) | A página só tem uma imagem: sem número oficial de tamanho ou transparência dos botões. Lacuna registrada, sem números inventados |
+| "Designing the Modern Scorebug" (SportsVideo.org, 2026: https://www.sportsvideo.org/2026/06/09/designing-the-modern-scorebug-how-broadcast-graphics-teams-are-rethinking-the-most-important-element-on-screen/) | Placar e relógio primeiro, o resto em camadas que só aparecem quando precisa; placares mais limpos, sem enfeite; "não deixe grande demais". Daí: placar de 30 px (34 no PC), sem a marca e sem caixinhas nos gols, e o "1º T" só no intervalo, no fim e nos acréscimos ("1º T +4", como na TV) |
+| Score bug (Wikipédia: https://en.wikipedia.org/wiki/Score_bug) | O placar fica num canto de cima, fora da ação. Mantido no canto de cima à esquerda |
+| Finger-Friendly Design (Smashing Magazine: https://www.smashingmagazine.com/2012/02/finger-friendly-design-ideal-mobile-touchscreen-target-sizes/) | 44×44 pt (Apple) e 48 dp (Material), polegar de 9–11 mm. O piso de 48 px dos botões do jogo continua (no menor celular, 568×320, o menor botão fica com 48 px) e o menu passa a 44 px |
+| "Toward Minimalist HUDs?" (Universidade de Bonn, 2026: https://bonndoc.ulb.uni-bonn.de/xmlui/handle/20.500.11811/14207) | 59 jogadores: HUD mais minimalista teve mais imersão e mais preferência; a clareza dependeu da familiaridade. Daí: botões só com o ícone e a opção "Nomes nos botões" (e a Ajuda, com o desenho de cada ícone) para quem está aprendendo |
+| "Removing the HUD" (CHI PLAY 2015, Open University: https://oro.open.ac.uk/46759) | Tirar o que está fora do mundo do jogo aumentou a imersão de quem já joga. Daí: a linha viva sai (fica a do lance, no apito), o rótulo da barra de força sai e a marca de queda fica só para a bola alta do próprio time |
+
+Resultado (`teste-hud-minimo` na versão final, mesma amostra na base e agora; conferido na contraprova): HUD no celular
+23,5% → 10,1% no pior caso (844×390: 18,2/19,3% → 7,3/7,3%), texto fora do placar 46 → 0 caracteres, torcida atrás do HUD
+31–34% → 13–14% (varia ±1,5 ponto entre rodadas), linha viva 29,7% → 0 (a do lance continua no apito), PC 3,8% → 1,8%
+depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no print do
+celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
+mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
+liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
+## 9. Replay (`js/render/replay-anel.js`, `replay-roteiro.js`, `replay.js`; pedidos do dono de 11/10)
+
+"O replay não funciona" e "quando o jogo parar por impedimento, aí no replay vai mostrar a linha". O diagnóstico mostrou
+que não havia replay nenhum: depois do gol a câmera do gol ficava 2,5 s parada na rede (sem jogadores) até a saída de
+bola — o dono via isso como um replay que não funciona. A linha de impedimento aparecia em ~87% do jogo ao vivo e, no
+apito, a linha do passe ficava parada sobre os jogadores do instante do apito (1,45 s depois do passe). Agora: um anel com
+os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espera parada, como na pausa (hash igual).
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| EA SPORTS FC 25 — "Visuals & Audio Deep Dive" (ea.com/ea-studios/ea-sports/news/visuals-audio-deep-dive) | Replays de gol durante e depois da partida, com câmeras próprias de replay; no pós-jogo, "uma sequência de 3 ângulos" | No jogo, 2 planos (TV 1× e atrás do gol 0,5×); o 3º (lateral baixa 0,35×) só no golaço (chute de ≥ 20 m) |
+| EA SPORTS FC 25 — Highlighter (ea.com/games/ea-sports-fc/fc-25/news/fc-25-highlighter) | Instant Replay aberto pela pausa | "Replay" no menu de pausa com os últimos 10 s (TV 1×, sem atravessar o último corte) |
+| fifauteam — FC 27 Highlighter Replay (guia) | No Instant Replay o jogador controla a linha do tempo, a câmera e a velocidade | Fica para uma 2ª fase (pausar, voltar 2 s, 1×/0,5×/0,25×, trocar de câmera); a base (anel + relógio fracionário) já permite |
+| GGRecon — "EA FC 24: how to skip celebrations"; fórum EA FC 26 ("pular a comemoração sem pular o replay") | Replay e comemoração saem com um aperto; há ajuste para não mostrar; jogadores reclamam que pular a comemoração pula o replay | Qualquer tecla, botão, clique ou toque pula, sem combinação; ajuste "Replays automáticos" na pausa; o gancho `posGol()` deixa a comemoração (outra frente) ANTES do replay — cada um com o seu pulo |
+| Premier League — "How offsides are determined by VAR" (premierleague.com/en/news/1488423) | Câmeras calibradas; a linha sai na imagem CONGELADA do lance; o público vê só a imagem final | Replay do impedimento com a câmera ALINHADA com a linha (no x dela, alta, do lado da TV: a linha fica em pé no quadro), congelado 1,6 s no quadro do passe com a linha entrando em 0,25 s; nenhum texto |
+| Unreal Engine — Replay System (dev.epicgames.com, "Using the Replay System"): Memory Streamer, checkpoints | Replay instantâneo da memória; checkpoints + mudanças para andar no tempo | Anel na memória para o replay instantâneo (10 s); checkpoint de mundo + entradas fica para melhores momentos da partida inteira, se um dia vier |
+| Glenn Fiedler — "Snapshot Interpolation" (gafferongames.com) | Desenhar estados gravados interpolando dois vizinhos, sem re-simular | `lerQuadro` interpola dois passos do anel como o desenho ao vivo (pose por junta, rumo pelo caminho curto, bola por nlerp); passo de corte não interpola |
+| Philip Orwig, GDC 2017 — "Replay Technology in Overwatch: Kill Cam, Gameplay, and Highlights" | Kill cam interrompível, feita ao lado do modelo do jogo | O replay só lê o anel e pode ser interrompido em qualquer quadro sem tocar no mundo (o pulo só desliga o diretor) |
+| bugnet — "How to build a replay system" | Gravar entradas e re-simular (exige determinismo, custa CPU no replay) × gravar estado (custa memória, não diverge) | Estado desenhado: 3,36 MB fixos; o quadro do replay custa ~0,13 ms de CPU contra ~1,1 ms do quadro ao vivo (re-simular custaria a simulação inteira por passo) |
+| Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
+| O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |

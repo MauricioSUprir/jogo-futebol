@@ -299,6 +299,9 @@ export const ENTRADA = {
   // nem anda no rumo antigo nem anda sem virar o tronco (analógico leve no celular).
   magDirecao: 0.1,
   quant: 1024,                // a entrada é quantizada (replay compacto e determinístico)
+  // toque (DOM, entrada.js criarToqueOuSegura): DIVIDIDA solta antes disto = bote; segurada = CONTER (como o
+  // "Sprint & Tackle" do FC Mobile: segurar perto = marca; tocar = bote em pé). Medido no relógio do jogo.
+  toqueCurto: 0.25,           // s
 };
 
 // Botões (máscara de bits). Os da Etapa 2+ já têm número reservado.
@@ -758,6 +761,9 @@ export const IMPEDIMENTO = {
   tolerancia: 0.1,            // m — "na mesma linha": até isto além da linha ainda vale (o benefício da dúvida)
   linhaMostra: 0.3,           // s — a linha desenhada aparece/some em
   linhaCongela: 2.2,          // s — no apito, a linha do lance fica parada (destacada) por este tempo
+  // linha VIVA (a da defesa com a bola rolando, desenho): desligada — dono, 11/10: "não quero a linha de impedimento
+  // durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a linha". Fica só a do lance no apito.
+  linhaViva: false,
 };
 
 // ------------------------------------------------------------------------ Parte 2: tática e defesa
@@ -1057,6 +1063,49 @@ export const TROCA_AEREA = {
   correcoesMax: 1,            // trocas depois da primeira, por bola
   manualRecente: 0.5,         // s — TROCAR apertado há menos que isto: a escolha manual manda
   analogicoSolto: 0.25,       // |e| ≤ isto: assistência leva o controlado ao ponto de queda
+};
+
+// ------------------------------------------------------------------------ Replay (render: nunca muda o hash)
+// Replay da transmissão (pedidos do dono de 11/10: "o replay não funciona"; "quando o jogo parar por impedimento, no
+// replay vai mostrar a linha"). render/replay-anel.js grava os últimos `segundos` do que foi DESENHADO; os roteiros
+// (render/replay-roteiro.js) escolhem o trecho, a velocidade e a câmera; render/replay.js posiciona as câmeras. A
+// simulação fica parada durante o replay (como na pausa): o hash no mesmo tick é o mesmo com e sem replay. Tempos em s
+// do jogo (60 passos = 1 s); vel = fração da velocidade real. Pesquisa: PESQUISA-ESTADIO.md §Replay.
+export const REPLAY = {
+  automatico: true,           // padrão do ajuste "Replays automáticos" da pausa (?replay=0 desliga)
+  segundos: 10,               // s guardados no anel (600 passos; ~3,3 MB)
+  vagas: 24,                  // jogadores por passo no anel (22 em campo + folga)
+  // gol (na saída de bola; a comemoração entra antes): 1) TV na velocidade real, do chute − `antes` (ou do último corte)
+  // até o gol + `depois`; 2) atrás do gol, alto, em câmera lenta, do chute − lentoAntes até o gol + lentoDepois;
+  // 3) só no golaço (chute de ≥ `golaco` m do gol): lateral baixa bem lenta em volta do chute (FC 25: "3 ângulos").
+  // TV + atrás ≤ `maximo` s; no golaço, os 3 planos ≤ `maximoGolaco` s (o começo do plano de TV encolhe, até `antesMin`
+  // s antes do chute; depois o de trás do gol).
+  gol: {
+    antes: 4.0, antesMin: 1.5, depois: 0.8,
+    lentoAntes: 1.0, lentoDepois: 1.0,
+    lateralAntes: 0.6, lateralDepois: 0.5,
+    vel: [1, 0.5, 0.35],      // TV, atrás do gol, lateral baixa
+    maximo: 12, maximoGolaco: 14,
+    golaco: 20,               // m do gol na hora do chute (fora da área)
+  },
+  // impedimento (no apito): câmera ALINHADA com a linha (como o VAR: a linha fica em pé no quadro), `vel` até o passe,
+  // CONGELA `congela` s no quadro do passe com a linha entrando em `linhaEntra` s e segue até o apito (o toque do
+  // impedido) em no máximo `depoisMax` s REAIS: a `velDepois` ou, com o apito longe do passe (14% dos lances IA × IA:
+  // até 4,4 s), mais depressa, até `velDepoisMax` (a linha fica até o fim). Começa `antes` s antes do passe (ou no último
+  // corte). Total ≤ ~6 s.
+  impedimento: { antes: 1.2, vel: 0.6, congela: 1.6, linhaEntra: 0.25, velDepois: 1, velDepoisMax: 2, depoisMax: 2.5 },
+  // "Replay" na pausa: os últimos `segundos` (até o último corte), TV; pausa a menos de `minDepoisCorte` s de uma
+  // montagem (falta, lateral...): o lance antes dela (o que parou o jogo)
+  menu: { vel: 1, minDepoisCorte: 3 },
+  transicao: 0.4,             // s — a faixa verde que cruza a tela na entrada e na saída do replay (CSS)
+  // câmeras (m; fov vertical em graus para telas 16:9 ou mais largas: mais estreitas abrem para a mesma largura)
+  // tv: a câmera de TV do jogo seguindo a BOLA gravada, antecipando pela velocidade dela `olhaFrente` s à frente no anel
+  // (até `velMax` m/s; ao vivo ela antecipa pela do controlado)
+  tv: { olhaFrente: 0.25, velMax: 10 },
+  atras: { recuo: 13, altura: 6, lado: 0.35, ladoMax: 6, fov: 34, fovCelular: 30, mola: 5 },
+  lateral: { recuo: 5, altura: 1.6, fora: 3.5, fov: 18 },
+  // linha: na lateral do lado da TV, alta, no x da linha; o fov fecha no impedido e no defensor da linha (com folga)
+  linha: { altura: 15, fora: 8, folga: 7, fovMin: 22, fovMax: 40 },
 };
 
 // Estádio (só desenho: nada da simulação usa). O TÚNEL por onde os times entram (o pré-jogo usa) fica no meio da

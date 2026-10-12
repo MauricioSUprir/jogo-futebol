@@ -260,6 +260,36 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   66–72/55–60) — o que saiu foram as cabeçadas fáceis de escanteio (22% dos escanteios viravam gol; real 2,6%), a
   mistura de chutes mudou. A entrega do cabeceio + IA intensa TEM de trazer os gols de volta (hoje 0 gol de cabeça:
   a cabeçada sai sempre para baixo). O tiro de meta tira os adversários da área na montagem (Regra 16).
+- **Tela limpa** (pedidos de 11/10: "quero menos informação na tela", "não quero a linha de impedimento durante o jogo";
+  `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
+  false; fica a do lance no apito — o replay mostra); na partida placar compacto de TV ("1º T" só no intervalo/fim/
+  acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
+  (80%, 55%; chave `golaco.toque.v2`) **só com o ícone**, analógico quase invisível em repouso (com o dedo, igual:
+  `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73); "Minimapa" e "Nomes nos botões" são botões
+  de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
+  controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
+  virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
+  CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
+  sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
+  (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 3 telas, 0 texto fora
+  do placar, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
+  partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
+  atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.
+- **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
+  §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
+  foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta
+  os roteiros; `render/replay.js` é o diretor com as câmeras. Gol: o replay entra na SAÍDA DE BOLA (TV 1× do chute − 4 s
+  até o gol, atrás do gol 0,5×, lateral baixa 0,35× no golaço de ≥ 20 m; ≤ 12 s, golaço ≤ 14 s); a comemoração (outra
+  frente) entra ANTES pelo gancho `posGol()` → `diretor.depoisDoGol()`. Impedimento: no apito, câmera alinhada com a
+  linha, congela 1,6 s no quadro do passe (`tickFoto` no evento) com a linha do lance (`linhaImped.mostrar`; depois do
+  replay ela não fica parada no jogo; a linha VIVA continua até a frente da tela limpa) e segue até o toque do impedido em
+  ≤ 2,5 s reais (até 2× quando o apito vem longe do passe: 14% dos lances). "Replay" na pausa (últimos 10 s; pausa logo
+  depois de uma montagem: o lance antes dela) e "Replays automáticos" (`?replay=0|1`). A SIMULAÇÃO FICA PARADA no replay (como na
+  pausa): hash-igual e hash-partida IGUAIS. Qualquer tecla/botão/clique/toque pula (o aperto não vira jogada); só a marca
+  "REPLAY" no canto (transmissão, não narração) e "Pular" no toque; o apito da saída toca depois. Testes:
+  `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
+  replay abrem com `?replay=0`. Lição: o laço da página entrega a entrada da IA pelo humano SEM o `ia` da
+  `entradaDemoPartida` — semente achada em Node só bate com a página com `acharGol({comoPagina: true})`.
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
   da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
