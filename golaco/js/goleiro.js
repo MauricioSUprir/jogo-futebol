@@ -3,7 +3,7 @@
 // alcance real, encaixe ou espalmada, bola nas mãos e reposição, e saída (botão GOLEIRO
 // segurado ou 1×1). Puro: sem three.js nem DOM; sorteios pelo gerador do mundo.
 
-import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G } from './config.js';
+import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { uniforme } from './rng.js';
@@ -397,7 +397,10 @@ export function movimentoGoleiro(m, j, humano) {
   const dLinha = dBola <= 20 ? lerp(P[0], P[1], clamp((dBola - 6) / 14, 0, 1))
     : lerp(P[1], GOLEIRO.profundidadeLonge, clamp((dBola - 20) / 20, 0, 1));
   const p = pontoBissetriz(b.p.x, b.p.z, gx, dLinha);
-  const dx = p.x - j.x, dz = p.z - j.z;
+  // tiro livre com barreira (Etapa 4): ela tapa o lado do 1º pau; o goleiro fica para o lado do 2º
+  const pr = m.parada;
+  const pz = pr && !pr.rolou && pr.barreira && pr.barreira.n > 0 && pr.time !== j.time ? p.z + pr.barreira.ladoLongo * BARREIRA.goleiro : p.z;
+  const dx = p.x - j.x, dz = pz - j.z;
   const dd = MD.hypot(dx, dz);
   const vel = Math.min(4.5, dd * 3);
   return { dx: dd > 1e-6 ? dx / dd : 0, dz: dd > 1e-6 ? dz / dd : 0, vel, rumoAlvo: olhar };

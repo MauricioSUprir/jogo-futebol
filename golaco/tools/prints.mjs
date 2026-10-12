@@ -89,6 +89,17 @@ const CENAS = [
   { nome: 'pc-penalti', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'penalti' },
   { nome: 'celular-penalti', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'penalti' },
   { nome: 'pc-cartao', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'cartao' },
+  // Etapa 4, bolas paradas: lateral com as mãos e as 3 opções marcadas; escanteio (zonas e defesa mista); barreira (e o
+  // pulo no chute); tiro de meta com os zagueiros abertos
+  { nome: 'pc-lateral', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'lateral' },
+  { nome: 'celular-lateral-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'lateral' },
+  { nome: 'pc-escanteio-zonas', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'escanteioZonas' },
+  { nome: 'celular-escanteio-zonas', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'escanteioZonas' },
+  { nome: 'pc-barreira', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'barreira' },
+  { nome: 'pc-barreira-pulo', ...PC, url: 'q=alta&hora=noite&demo=1', prep: 'barreiraPulo' },
+  { nome: 'celular-barreira-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'barreira' },
+  { nome: 'pc-tiro-de-meta', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'tiroDeMeta', semente: 9 },
+  { nome: 'celular-tiro-de-meta', ...CEL, url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'tiroDeMeta', semente: 11 },
   { nome: 'celular-cartao-noite', ...CEL, url: 'q=media&hora=noite&toque=1&entalhe=1&demo=1', prep: 'cartao' },
   { nome: 'pc-editor-expulso', ...PC, url: 'q=alta&hora=dia&demo=1', prep: 'expulso', editor: 'escalacao' },
   { nome: 'celular-568-gol', largura: 568, altura: 320, dpr: 2, toque: true, semente: 'gol', url: 'q=media&hora=dia&toque=1&entalhe=1&demo=1', prep: 'golRede' },
@@ -380,6 +391,34 @@ async function preparar(pagina, prep, gol = null) {
       const pr = g.mundo.parada;
       return `pênalti: ${r?.parada}, cobrador ${pr?.cobrador}, canto ${pr?.miraZ}, palpite do goleiro ${pr?.palpite}`;
     }
+    if (prep === 'lateral' || prep === 'escanteioZonas' || prep === 'tiroDeMeta') {
+      // a bola sai e a partida monta o recomeço; o time 0 cobra (a demo joga por ele): a foto antes da cobrança — no tiro
+      // de meta, quando os zagueiros já abriram nos cantos da área
+      const tipo = prep === 'escanteioZonas' ? 'escanteio' : prep;
+      g.bolaParadaDeTeste(tipo);
+      const espera = prep === 'escanteioZonas' ? 20 : 6;
+      let n = 0;
+      const gx = -g.mundo.ataca[0] * 52.5;
+      const abertos = () => g.mundo.jogadores.filter(j => j.time === 0 && j.posDetalhe === 'ZAG').every(j => Math.abs(j.z) >= 15 && Math.abs(j.x - gx) <= 15);
+      const ok = () => { const pr = g.mundo.parada; return pr && pr.tipo === tipo && pr.cobrador != null && !pr.rolou && g.mundo.tick >= pr.pronta + espera && (tipo !== 'tiroDeMeta' || abertos() || g.mundo.tick >= pr.pronta + 240); };
+      while (n < 900 && !ok()) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      const pr = g.mundo.parada;
+      const lat = g.marcasLateral;
+      return `${tipo}: cobrador ${pr?.cobrador}, tick ${g.mundo.tick}${pr?.curta != null ? `, saída ${pr.curta ? 'curta' : 'longa'}` : ''}${prep === 'lateral' ? `, opções ${lat?.ids?.join('/')} (mirada ${lat?.mirada}), bola a ${g.mundo.bola.p.y.toFixed(2)} m` : ''}${pr?.papeis ? `, ${pr.papeis.length} papéis` : ''}`;
+    }
+    if (prep === 'barreira' || prep === 'barreiraPulo') {
+      // falta a 21 m do gol, quase no meio: a barreira montada; no "pulo", 0,3 s depois do chute (a IA cobra pelo humano)
+      g.faltaDeTeste({ cartao: null, u: 21, w: 1.5 });
+      let n = 0;
+      const pronta = () => { const pr = g.mundo.parada; return pr && pr.tipo === 'tiroLivre' && pr.cobrador != null && g.mundo.tick >= pr.pronta + 6; };
+      while (n < 900 && !pronta()) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+      const br = g.mundo.parada?.barreira;
+      if (prep === 'barreiraPulo') {
+        while (n < 1500 && g.mundo.parada && !g.mundo.parada.rolou) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; }
+        for (let i = 0; i < 18; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      }
+      return `barreira de ${br?.n ?? 0} (tick ${g.mundo.tick})`;
+    }
     if (prep === 'cartao') {
       // falta com amarelo: o cartão em cima de quem fez (0,3 s depois do apito)
       const r = g.faltaDeTeste({ cartao: 'amarelo' });
@@ -431,7 +470,7 @@ for (const c of CENAS) {
       g.relogio.usarManual(true);
       const n = Math.round(seg * 60);
       for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' ? 2 : segundos);
+    }, c.prep === 'lancamento' || c.prep === 'carga' || c.prep === 'goleiros' || c.prep === 'golRede' || c.prep === 'antesDoGol' || c.prep === 'impedimento' || c.prep === 'acrescimo' ? 0 : /^(mergulho|recepcao)/.test(c.prep ?? '') ? 0.5 : c.prep === 'penalti' || c.prep === 'cartao' || c.prep === 'expulso' || /^(lateral|escanteioZonas|tiroDeMeta|barreira)/.test(c.prep ?? '') ? 2 : segundos);
     const nota = c.prep ? await preparar(pagina, c.prep, c.semente === 'imped' ? IMPED : GOL) : '';
     let notaEd = '';
     if (c.editor) {

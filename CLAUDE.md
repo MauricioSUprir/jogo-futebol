@@ -21,8 +21,25 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   delegou as decisões ("vc escolhe tudo", 10/10): câmera de TV do celular mais baixa e mais longe, com a torcida
   durante o jogo (#459, ENTREGUE), e em seguida a **Etapa 4** em PRs menores (seção "Etapa 4" abaixo): (1) painel de
   equilíbrio + impedimento + acréscimos (#460, ENTREGUE); (2) faltas com vantagem, cartões e expulsão, tiro livre
-  direto e pênalti (`golaco/faltas`); (3) goleiro, barreira e bolas paradas (lateral com as mãos e 3 opções, escanteio por zonas, recuo, 8 s);
-  (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais), prorrogação e pênaltis, pendências da IA acima.
+  direto e pênalti (#461, ENTREGUE); (3a) bolas paradas: lateral com as mãos e 3 opções, escanteio por zonas com defesa
+  mista, barreira, tiro de meta com o pé e saída curta (`golaco/bolas-paradas`, ENTREGUE); (3b) goleiro: reposição com a
+  mão e com o pé, recuo (Regra 12.2), 8 s, saída no 1×1 e saída no cruzamento (traz os gols de escanteio para perto dos
+  2,6% reais); (4) equilíbrio com 144+ partidas (poucos chutes e precisos demais; a disputa pelo alto na bola rolando
+  junto com o volume de chutes), prorrogação e pênaltis, pendências da IA acima.
+  **Pedidos do dono de 11/10 (depois da 4.3)** — FILA ATUAL, nesta ordem (cada item = PR + merge + link + prints):
+  (A) regras e controles: botão PRESSÃO "não funciona"; "não consigo mexer com o goleiro"; goleiro só pega com a mão
+  DENTRO da área; "não pode recuo" (Regra 12.2); tiro de meta só com gente do time que cobra na área; "os jogadores não
+  cabeceiam a bola, de jeito nenhum" (cabeceio na bola rolando); (B) "O JOGO TEM QUE SER MAIS INTENSO, ninguém do outro
+  time corre, ninguém marca, mas tem que marcar com responsabilidade e consciência, a IA tem que ser mais inteligente";
+  (C) "quero menos informação na tela / tem muita coisa na tela"; (D) mais torcida no estádio, bandeirões,
+  sinalizadores e som de torcida durante o jogo; (E) cenas de pré-jogo: fora do estádio, o estádio aparecendo,
+  jogadores entrando em campo, a fila, a câmera passando; no fim vários cortes de torcida e estádio; depois a escalação
+  de cada time num campinho, grande na tela, com o mesmo fundo, ~10 s, sai e entra a do outro time do mesmo jeito.
+  A parte 3b do goleiro (reposição, recuo, 8 s, 1×1, saída no cruzamento) entra em (A).
+  Mais do dono (11/10): "se eu deixo o meu jogador parado, ninguém pega a bola, isso NÃO PODE ACONTECER" (entra em
+  (A), urgente); "não quero a linha de impedimento durante o jogo; quando o jogo parar por impedimento, no replay mostra a
+  linha" (entra em (C)); (F) gol e replay: "as redes têm que ser brancas, com movimentação quando a bola toca, em véu de
+  noiva"; "o replay não funciona"; "não tem cena de comemoração!!!".
   **Pedido do dono depois da Etapa 2:** "o movimento dos jogadores tá meio estranho, ajeite; quando a bola pega no
   goleiro, trava; quero que tenha como editar o time quando pausa; quero uma movimentação melhor e um jogo mais
   intenso". Plano: (1) PR de correções — trava no goleiro + movimento estranho — ENTREGUE (seção "Correções depois
@@ -218,6 +235,19 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   como buraco, sem substituto; o técnico muda a vaga vazia, nunca o gol; goleiro expulso → o de linha mais perto vai
   para o gol). Calibrado: 2,6 faltas, 18% de amarelos, 0,08 vermelho por partida. Ícone do cartão sem texto
   (`#cartao-icone`). Teste: `teste-faltas` (padrão). `__golaco.faltaDeTeste()` para prints/testes de navegador.
+  **Bolas paradas** (PR 3a; `lateral.js`, `bolas-paradas.js`, contrato "Bolas paradas" no CONTRATOS.md): lateral com a
+  bola NAS duas mãos (o sim.js segura a bola, o arco por cima da cabeça, só PASSE/ENFIADA/LANÇAMENTO), 3 opções
+  marcadas no gramado (`render/marcas-lateral.js`, a do analógico em amarelo; a IA sorteia, perto da área arremessa
+  longo); escanteio com 5 nas zonas (centro, 1º pau, 2º pau, marca do pênalti, entrada da área) e defesa mista (zona na
+  pequena área + 4 marcados no alto + borda + frente); barreira pela conta do ângulo (Regra 13, 9,15 m, 1–5, pula no
+  chute, a bola bate nela) e a IA bate por cima dela; tiro de meta com a bola no chão e o goleiro com o pé, zagueiros
+  abertos e saída curta (Regra 16); disputa pelo alto SÓ na bola parada (na bola rolando derrubou os gols de 2,8 para
+  1,5 — fica para a 4.5). Canhões com estados do MEIO da partida (estados de saída são quase iguais e enganam).
+  Teste: `teste-bolas-paradas` (padrão); `teste-estadio` confere os marcadores. `__golaco.bolaParadaDeTeste(tipo)`.
+  Decisão do dono (11/10): publicar mesmo com os gols caindo 2,13 → 1,68 por partida e o goleiro 72,5%/64,6% (meta
+  66–72/55–60) — o que saiu foram as cabeçadas fáceis de escanteio (22% dos escanteios viravam gol; real 2,6%), a
+  mistura de chutes mudou. A entrega do cabeceio + IA intensa TEM de trazer os gols de volta (hoje 0 gol de cabeça:
+  a cabeçada sai sempre para baixo). O tiro de meta tira os adversários da área na montagem (Regra 16).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

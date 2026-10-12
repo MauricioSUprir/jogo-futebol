@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, LATERAL, AEREO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -303,7 +303,8 @@ export function executarAcao(m, j, pe, primeira = false) {
     const lado = ataca(m, j.time);
     const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
     const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
-      * (p.penalti ? ACOES.chute.penaltiErro : 1); // a pressão da cobrança do pênalti
+      * (p.penalti ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
+      * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
     return chute(m, j, pe, p, em);
   }
   const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
@@ -529,6 +530,52 @@ function cruzamento(m, j, pe, p, erroMult) {
   return true;
 }
 
+/**
+ * Arremesso do lateral (Regra 15; lateral.js): a bola sai das mãos (já no ponto da soltura) para o recebedor `r` ou,
+ * sem ele, para o ponto `alvo` {x, z} (o arremesso longo na área) ou na direção a.dir. Curto (PASSE/ENFIADA): chega a r
+ * na altura LATERAL.yRecebe (coxa/peito), no máximo LATERAL.adiante m à frente dele. Longo (LANÇAMENTO): ~30°, pousa no
+ * ponto. A velocidade nunca passa da do braço dele (lateral.js vMaxArremesso): longe demais, a bola fica curta.
+ * a = {tipo, forca, dir?}; vMax em m/s. Evento 'passe' com modo 'lateral'.
+ */
+export function arremessoLateral(m, j, a, r, alvo, vMax) {
+  const b = m.bola;
+  const L = LATERAL;
+  const longo = a.tipo === 'lancamento';
+  let tx, tz;
+  if (r) {
+    const L0 = MD.hypot(r.x - b.p.x, r.z - b.p.z);
+    const tVoo = 0.3 + L0 / 13;
+    let lx = r.vx * tVoo, lz = r.vz * tVoo;
+    const ll = MD.hypot(lx, lz), lim = a.tipo === 'enfiada' ? 4 : L.adiante;
+    if (ll > lim) { lx *= lim / ll; lz *= lim / ll; }
+    if (a.tipo === 'enfiada' && ll < 1e-6) { const lado = ataca(m, j.time); lx = lado * lim; }
+    tx = r.x + lx; tz = r.z + lz;
+  } else if (alvo) { tx = alvo.x; tz = alvo.z; }
+  else {
+    const d = a.dir ?? { x: MD.cos(j.rumo), z: MD.sin(j.rumo) };
+    const D = 8 + 17 * clamp(a.forca, 0, 1);
+    tx = b.p.x + d.x * D; tz = b.p.z + d.z * D;
+  }
+  ({ x: tx, z: tz } = dentroDoCampo(tx, tz, 0.5));
+  let ux = tx - b.p.x, uz = tz - b.p.z;
+  const D = MD.hypot(ux, uz) || 1;
+  ux /= D; uz /= D;
+  const pp = { x: b.p.x, y: b.p.y, z: b.p.z };
+  const w = { x: uz * 5, y: 0, z: -ux * 5 }; // um pouco de giro para trás (a bola sai das pontas dos dedos)
+  const el = longo || !r ? L.elevLongo : L.elevCurto;
+  let s = longo || !r ? velParaPousar(pp, ux, uz, D, el, w) : velParaAlturaEm(pp, ux, uz, D, el, w, L.yRecebe);
+  s = Math.min(s, vMax);
+  const sig = lerp(L.erroRuim, L.erroBom, j.par.attr.passe / 100);
+  const u = girar(ux, uz, normal(m.rng) * sig);
+  s *= 1 + normal(m.rng) * sig * 0.6;
+  const ce = MD.cos(el), se = MD.sin(el);
+  const v = { x: u.x * s * ce, y: s * se, z: u.z * s * ce };
+  const voo = simularVoo(pp, v, w);
+  finalizarChute(m, j, j.par.attr.pePreferido ?? 1, 'lateral', v, w, { x: tx, z: tz }, r, { voo: { alto: true, lateral: true }, ticks: voo.ticks });
+  if (r) marcarRecebedor(m, r, tx, tz, 'lancamento', m.tick + voo.ticks);
+  return true;
+}
+
 /** Velocidade para a bola (elevação el) passar a D metros na altura y. Busca binária. */
 function velParaAlturaEm(pp, ux, uz, D, el, w, y) {
   let lo = 3, hi = 42;
@@ -601,10 +648,24 @@ function chute(m, j, pe, p, erroMult) {
     const g = girar(ux0, uz0, a);
     ux = g.x; uz = g.z;
   }
-  const el = elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
+  // tiro livre com barreira (Regra 13; partida.js): com efeito por cima (giro para a frente: a bola desce), a elevação que
+  // passa por cima dela (o centro da bola a p.barreira.altura m a p.barreira.dist m); chegando no gol acima de
+  // yBarreiraMax, tira força até descer abaixo do travessão
+  let elFalta = null;
+  if (p.barreira && D > p.barreira.dist + 1) {
+    w = { x: w.x + uz * cfg.giroFalta, y: w.y, z: w.z - ux * cfg.giroFalta };
+    for (let k = 0; k < 18; k++) {
+      const elW = elevacaoParaAltura(pp, ux, uz, p.barreira.dist, s, p.barreira.altura, w);
+      const yG = alturaNaDistancia(pp, ux, uz, D, s, elW, w).y;
+      if (yG <= cfg.yBarreiraMax) { elFalta = elW; break; }
+      s *= 0.95;
+    }
+  }
+  const el = elFalta ?? elevacaoParaAltura(pp, ux, uz, D, s, yMira, w);
   // erro: distância, pressão, pé fraco, força no máximo, de primeira
   const base = lerp(cfg.erroRuim, cfg.erroBom, j.par.attr.finalizacao / 100);
-  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * (colocado ? cfg.colocadoErro : 1);
+  // (no tiro livre com barreira o erro é o da falta, com ou sem efeito: ACOES.chute.faltaErro já está em erroMult)
+  const sig = base * (1 + dGol / 25) * erroMult * (p.forca > 0.9 ? cfg.forcaMaxErro : 1) * (colocado && !p.barreira ? cfg.colocadoErro : 1);
   const ea = normal(m.rng) * sig, ee = normal(m.rng) * sig * 0.6;
   const u = girar(ux, uz, ea);
   const ce = MD.cos(el + ee), se = MD.sin(el + ee);
@@ -640,7 +701,10 @@ export function executarCabeceio(m, j, p) {
   const lado = ataca(m, j.time);
   const cfg = ACOES.cabeceio;
   const attr = j.par.attr.cabeceio;
-  const sig = lerp(0.12, 0.03, attr / 100);
+  // quem ganhou a disputa pelo alto agora (sim.js) cabeceia pressionado: mais dispersão. O cabeceio a gol na bola parada
+  // (Etapa 4) espalha como o de verdade (Opta: ~1/3 no alvo)
+  const e0 = m.partida && p.tipo === 'chute' && m.voo?.bolaParada ? cfg.erroGolBolaParada : [0.12, 0.03];
+  const sig = lerp(e0[0], e0[1], attr / 100) * (j.disputa === m.tick ? AEREO.erroDisputa : 1);
   let ux, uz, s, el;
   let para = null;
   if (p.tipo === 'chute') {

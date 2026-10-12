@@ -47,6 +47,7 @@ import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
 import { criarMarcas } from './render/marcas.js';
 import { criarLinhaImpedimento } from './render/linha-impedimento.js';
+import { criarMarcasLateral } from './render/marcas-lateral.js';
 import { mascaraGolaco } from './render/texturas.js';
 import { criarTorcida } from './render/torcida.js';
 import { criarOndas, limparOndas, detectarImpactos, registrarImpacto, uniformsRede, empurraoBola, redeAtiva, deslocamento, fixo as fixoRede } from './render/rede-onda.js';
@@ -281,7 +282,7 @@ function tratarEvento(ev) {
   // recomeço (gol, bola fora, R) e saída de bola (gol, início do tempo): todos voltam às posições
   // — a câmera CORTA para a jogada nova (sem atravessar o campo) e o km/h não fica descendo
   // (o "GOL!" e a câmera do gol acabam aqui: no treino a bola volta em 1 s — contraprova M8)
-  if (t === 'recomeco' || t === 'saida' || t === 'cobrancaPenalti') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
+  if (t === 'recomeco' || t === 'saida' || t === 'cobrancaPenalti' || t === 'corteBolaParada') { corteCamera = true; kmhVisto = 0; encerrarEfeitosGol(); if (cam) cam.planoGeral(false); }
   // partida: intervalo, fim, edição do time e substituição (intervalo e fim: plano geral do estádio)
   if (t === 'intervalo') {
     hud.faixa({ titulo: 'Intervalo', placar: textoPlacar(), ms: Math.round((CFG.PARTIDA?.intervalo ?? 3) * 1000) });
@@ -386,7 +387,7 @@ function forcaDaCarga(cg) {
 iniciarEstados();
 
 // ------------------------------------------------------------------ 3D
-let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, torcida, som = null;
+let cena3d, campo, bola3d, jog3d, cam, entrada, marcas, linhaImped, marcasLat, torcida, som = null;
 const laco = criarLaco();
 // ?prints=1: relógio manual desde o início — a simulação só anda quando o script mandar
 let relogioManual = PRINTS, tempoManual = 0;
@@ -395,6 +396,12 @@ let ultimoQuadro = null;
 let corteCamera = true;
 let kmhVisto = 0;
 const lista = [];
+// posição DESENHADA (interpolada no quadro) do jogador `id` — os marcadores do gramado andam com o corpo desenhado
+const _posDes = { x: 0, z: 0 };
+function posDesenhada(id) {
+  for (const it of lista) if (it.id === id) { _posDes.x = it.x; _posDes.z = it.z; return _posDes; }
+  return null;
+}
 const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
 const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
@@ -485,6 +492,7 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   const tj1 = performance.now();
   marcas.atualizar(mundo, _bp, agoraMs / 1000, dt);
   linhaImped.atualizar(mundo, dt);
+  marcasLat.atualizar(mundo, posDesenhada, agoraMs / 1000, dt);
   campo.atualizar(agoraMs / 1000);
   torcida.atualizar(agoraMs / 1000, emocao, cam.camera);
   if (som) som.atualizar(emocao, pausado(), agoraMs / 1000);
@@ -762,6 +770,7 @@ async function iniciar() {
   jog3d = criarJogadores3D(cena3d.cena, qAtual);
   marcas = criarMarcas(cena3d.cena);
   linhaImped = criarLinhaImpedimento(cena3d.cena);
+  marcasLat = criarMarcasLateral(cena3d.cena);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
@@ -964,6 +973,8 @@ const api = {
     const c = opc.doMeu ? outro : meu, d = opc.doMeu ? meu : outro;
     const lado = m.ataca[c.time];
     if (opc.area) teleportar(c, lado * (CFG.CAMPO.meioX - 9), 3, lado > 0 ? 0 : Math.PI);
+    // u, w: a falta a u m da linha de fundo atacada, w m do meio (o tiro livre direto com barreira dos prints)
+    if (opc.u != null) teleportar(c, lado * (CFG.CAMPO.meioX - opc.u), opc.w ?? 0, lado > 0 ? 0 : Math.PI);
     teleportar(d, c.x - lado * 1.1, c.z + 0.3, lado > 0 ? 0 : Math.PI);
     c.vx = 0; c.vz = 0;
     m.bola.p.x = c.x + lado * 0.4; m.bola.p.z = c.z; m.bola.p.y = CFG.BOLA.raio;
@@ -975,6 +986,25 @@ const api = {
     estadioPasso(m.eventos);
     for (const ev of m.eventos) tratarEvento(ev);
     return { parada: m.parada?.tipo ?? null, def: d.id, cond: c.id, cartao: f.cartao };
+  },
+  /**
+   * Bola parada de teste (prints): a bola sai com o último toque certo e a partida monta o recomeço como no jogo.
+   * tipo: 'lateral' | 'escanteio' (do time do humano, que cobra) | 'tiroDeMeta' (do time do humano: o goleiro dele).
+   */
+  bolaParadaDeTeste(tipo) {
+    const m = mundo;
+    if (!m.partida) return null;
+    const t = TIME_HUMANO, lado = m.ataca[t], C = CFG.CAMPO;
+    let x, z, ult;
+    if (tipo === 'lateral') { x = lado * 14; z = C.meioZ + 0.5; ult = 1 - t; }
+    else if (tipo === 'escanteio') { x = lado * (C.meioX + 0.6); z = 10; ult = 1 - t; }
+    else { x = -lado * (C.meioX + 0.6); z = -9; ult = 1 - t; }
+    const j = m.jogadores.find(o => o.time === ult && o.posicao !== 'GOL');
+    m.posse = null; m.naMao = null; m.voo = null; m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null;
+    Object.assign(m.bola.p, { x, y: CFG.BOLA.raio, z }); Object.assign(m.bola.v, { x: 0, y: 0, z: 0 });
+    m.partida.ultimoTime = ult; m.partida.ultimoId = j.id; m.partida.ultimoTick = m.tick;
+    m.ultimoToque = { id: j.id, time: ult, tick: m.tick };
+    return { tipo, x, z };
   },
   acao(a) { tratarAcao(a); },
   definirQualidade(nome) { comando('qualidade', nome); },
@@ -1028,6 +1058,8 @@ const api = {
    */
   /** Linha de impedimento desenhada (testes): {visivel, x, lance, opacidade}. */
   get linhaImpedimento() { return linhaImped?.estado ?? null; },
+  /** Marcadores das 3 opções do lateral (testes): {visivel, ids, mirada}. */
+  get marcasLateral() { return marcasLat?.estado ?? null; },
   estadio: {
     get torcida() { return torcida ? { n: torcida.n, qualidade: torcida.qualidade, animada: torcida.animada, visivel: !!torcida.mesh?.visible && !!torcida.mesh?.parent } : null; },
     get rede() {
