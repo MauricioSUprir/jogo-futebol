@@ -26,9 +26,7 @@ const ANTES = args.includes('--antes');
 const NS = +arg('--sementes', 6);       // partidas com o canhão
 const MIN = +arg('--min', 2);           // minutos de cada uma
 const NS_NAT = +arg('--naturais', 6);   // partidas sem o canhão, no mínimo (natural; os dois times com um humano)
-const NAT_MAX = +arg('--naturais-max', 80); // (Etapa 4: o tiro de meta curto e o lateral com as mãos tiraram bolas altas; ~2–4 disputas por partida)
-// (12/10: com as regras do goleiro de 11/10 a própria base 074cfd18 juntava só 107 disputas em 64 partidas — 1,7 por
-// partida, reprovando pela amostra com 93%; o cabeceio na bola rolando, 114 em 64. Até 80 partidas: a amostra de 120 chega)
+const NAT_MAX = +arg('--naturais-max', 96); // (Etapa 4: o tiro de meta curto e o lateral com as mãos tiraram bolas altas; com as regras e controles ~1,7 disputa por partida: 64 partidas davam 107 — a amostra, não a meta, pede mais partidas)
 const NAT_DISP = +arg('--disputas', 120); // disputas do natural (a amostra: ver o critério no fim do arquivo)
 const MIN_NAT = +arg('--min-natural', 4);
 const NS_SOLTO = +arg('--soltos', 2);   // partidas com o canhão e o analógico largado (assistência)

@@ -31,6 +31,9 @@
 //   node tools/painel-equilibrio.mjs --retomar parciais.jsonl (grava cada partida; de novo, continua de onde parou;
 //                                                          com --parcial, só mostra as que já estão lá)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
+//   node tools/painel-equilibrio.mjs --partes a.json,b.json,... [--base <pasta js>]
+//        junta partes gravadas com --json (as mesmas versões, sementes diferentes) e monta a tabela de todas, sem
+//        rodar nada — é como o CI roda as 144 partidas em pedaços (.github/workflows/golaco-painel.yml)
 import { fork } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -326,9 +329,17 @@ if (BASE_JSON) {
   versoes.push({ nome: 'base', pasta: `${e.pasta} (gravada em ${path.basename(BASE_JSON)})`, res, s: 0, gravada: true });
 } else if (BASE) versoes.push({ nome: 'base', pasta: BASE });
 versoes.push({ nome: BASE || BASE_JSON ? 'agora' : 'medido', pasta: JS });
-for (const v of versoes) { if (!v.gravada) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; } v.x = medidas(v.res); }
+if (arg('--partes', null)) {
+  // junta as partes (cada uma gravada com --json, as versões na mesma ordem: base, agora)
+  const lidas = arg('--partes').split(',').filter(Boolean).map(f => JSON.parse(fs.readFileSync(f, 'utf8')));
+  if (lidas.some(l => l.length !== versoes.length)) throw new Error(`--partes: cada parte tem de ter ${versoes.length} versão(ões) (use o mesmo --base de quando gravou)`);
+  versoes.forEach((v, i) => { v.res = lidas.flatMap(l => l[i].partidas).sort((a, b) => a.sem - b.sem); v.s = 0; v.x = medidas(v.res); });
+} else for (const v of versoes) { if (!v.gravada) { const r = await rodar(v.pasta); v.res = r.res; v.s = r.s; } v.x = medidas(v.res); }
 
-console.log(`Painel de equilíbrio — ${SEMENTES.length} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}${SEMENTES.length < NS ? `: as ${SEMENTES.length} já feitas` : ""}), ${nPar} processos`);
+if (arg('--partes', null)) {
+  const ss = versoes[versoes.length - 1].res.map(r => r.sem);
+  console.log(`Painel de equilíbrio — ${ss.length} partidas IA × IA (sementes ${Math.min(...ss)}–${Math.max(...ss)}), juntadas de ${arg('--partes').split(',').filter(Boolean).length} partes`);
+} else console.log(`Painel de equilíbrio — ${SEMENTES.length} partidas IA × IA de 2 × ${MIN_TEMPO} min (sementes ${S0}–${S0 + NS - 1}${SEMENTES.length < NS ? `: as ${SEMENTES.length} já feitas` : ''}), ${nPar} processos`);
 for (const v of versoes) console.log(`  ${v.nome}: ${v.pasta} (${f(v.s, 0)} s)`);
 const cab = ['medida', 'meta', ...versoes.map(v => v.nome)];
 const tab = [cab];

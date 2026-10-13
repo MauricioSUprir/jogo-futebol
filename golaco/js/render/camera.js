@@ -26,6 +26,7 @@ function mola(est, kx, kv, alvo, w, dt) {
   est[kv] = (est[kv] - j1 * w * dt) * e;
 }
 
+
 export const MODOS_CAMERA = ['tv', 'aproximada'];
 
 const PERFIS = {
@@ -71,6 +72,11 @@ export const CAMERA_GOL = {
   tremor: 0.035, tremorTau: 0.22,
   maxDuracao: 4,                              // s — sem saída de bola (treino), volta sozinha
 };
+// Câmera de CINEMA da comemoração do gol (js/comemoracao.js planoCamera: steadicam no autor, contraplano com a torcida,
+// reação de quem sofreu): CORTE seco quando o plano muda (o nome) — travelling rápido enjoa, corte não (Eiserloh, GDC
+// 2016). Dentro do plano a câmera segue o plano como ele vem: a suavidade já está nele (a média do autor em 0,3 s, sem
+// atraso: comemoracao.js); uma mola aqui atrasava a steadicam ~2,7 m a 8 m/s (o autor corria para dentro da lente).
+// "Reduzir movimento" do sistema: a câmera não anda dentro do plano (fica onde o plano começou e só gira para o assunto).
 // Plano geral do estádio no intervalo e no fim (a torcida inteira no quadro, também no celular).
 export const CAMERA_GERAL = { de: [0, 34, 78], para: [0, 3, -16], fov: 31 };
 const reduzMovimento = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -91,7 +97,10 @@ export function criarCamera(aspecto) {
     gol: { ativo: false, t: 0, x: 0, z: 0, reduz: false, fechado: false }, // efeito do gol
     geral: false,             // plano geral (intervalo, fim)
     corte: false,             // próximo atualizar corta (sem mola): fim da câmera do gol sem saída
+    cinema: null,             // plano de cinema da comemoração ({nome, de, para, fov}) ou null
   };
+  // câmera de cinema: o nome do plano (mudou = corte), onde o plano começou e para onde olha
+  const cin = { nome: null, de0: [0, 0, 0], para: [0, 0, 0], reduz: false };
   const yaw = -Math.PI / 2;
   const _p = {};
   const _foco = { x: 0, z: 0 };
@@ -161,7 +170,21 @@ export function criarCamera(aspecto) {
     camera.position.set(px + tx, C.altura + ty, pz);
     camera.lookAt(lx, C.olharY, lz);
   }
+  /** Câmera de cinema (comemoração): corte quando o plano muda; dentro dele, o plano como vem (já suave). */
+  function posicionarCinema() {
+    const p = est.cinema;
+    if (cin.nome !== p.nome) {
+      for (let i = 0; i < 3; i++) cin.de0[i] = p.de[i];
+      cin.nome = p.nome; cin.reduz = reduzMovimento();
+    }
+    for (let i = 0; i < 3; i++) cin.para[i] = p.para[i];
+    const de = cin.reduz ? cin.de0 : p.de;
+    ajustarFov(fovFixo(p.fov));
+    camera.position.set(de[0], de[1], de[2]);
+    camera.lookAt(cin.para[0], cin.para[1], cin.para[2]);
+  }
   function posicionar(p) {
+    if (!est.livre && est.cinema) { posicionarCinema(); return; }
     if (!est.livre && est.gol.ativo && est.gol.fechado) { posicionarGol(); return; }
     if (!est.livre && est.geral) {
       const G = CAMERA_GERAL;
@@ -257,7 +280,8 @@ export function criarCamera(aspecto) {
     /** Foco atual da câmera (para a sombra acompanhar a jogada; na câmera do gol, a boca do gol). */
     foco() {
       const g = est.gol;
-      if (g.ativo && g.fechado) { _foco.x = g.x - Math.sign(g.x || 1) * 6; _foco.z = clamp(g.z, -3.66, 3.66) * 0.5; }
+      if (est.cinema && cin.nome) { _foco.x = cin.para[0]; _foco.z = cin.para[2]; }
+      else if (g.ativo && g.fechado) { _foco.x = g.x - Math.sign(g.x || 1) * 6; _foco.z = clamp(g.z, -3.66, 3.66) * 0.5; }
       else if (est.geral) { _foco.x = 0; _foco.z = 0; }
       else { _foco.x = est.x; _foco.z = est.z; }
       return _foco;
@@ -275,6 +299,13 @@ export function criarCamera(aspecto) {
     /** Plano geral do estádio (intervalo e fim) ligado/desligado. */
     planoGeral(v) { est.geral = !!v; },
     get geral() { return est.geral; },
+    /**
+     * Câmera de cinema da comemoração: o plano {nome, de:[x,y,z], para:[x,y,z], fov} (o mesmo objeto, atualizado a cada
+     * quadro: comemoracao.js planoCamera) ou null (a câmera de jogo volta; quem chama corta).
+     */
+    definirCinema(p) { est.cinema = p || null; if (!p) cin.nome = null; },
+    /** Nome do plano de cinema agora ('steadicam', 'contraplano', 'reacao') ou null. */
+    get cinema() { return est.cinema && cin.nome ? cin.nome : null; },
     /** Câmera livre para prints de conferência: {de:[x,y,z], para:[x,y,z], fov?} ou null. */
     definirLivre(l) { est.livre = l ? { de: [...l.de], para: [...l.para], fov: l.fov } : null; },
   };

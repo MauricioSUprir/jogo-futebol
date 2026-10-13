@@ -78,8 +78,8 @@
   </div>
 
   <!-- Controles de toque (celular): analógico flutuante à esquerda; à direita o arco de botões
-       ao alcance do polegar (posições calculadas em js/entrada.js, calcularLayoutToque), só com o ícone
-       (o nome aparece com a opção "Nomes nos botões" da pausa).
+       ao alcance do polegar (posições calculadas em js/entrada.js, calcularLayoutToque), com o ícone e o nome da
+       função (o nome sai com "Nomes nos botões" desligado na pausa).
        Ataque: CHUTE, PASSE, ENFIADA, LANÇAMENTO, CORRER. Defesa (5 botões): TROCAR, GOLEIRO, PRESSÃO,
        DIVIDIDA (tocar = bote; segurar = conter) e CORRER. Os botões da defesa da Etapa 3 (data-etapa="3")
        só aparecem depois que a entrada os posiciona no arco (sem posição, ficam escondidos pelo CSS). -->
@@ -129,6 +129,11 @@
     <button id="replay-pular" class="btn-replay-pular" data-caixa="replay-pular" type="button" data-cmd="replay-pular" aria-label="Pular o replay">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
   </div>
   <i id="replay-faixa" class="replay-faixa" aria-hidden="true"></i>
+  <!-- Comemoração do gol (js/comemoracao.js): a camada cobre a tela — depois de 0,5 s qualquer toque, clique, tecla ou
+       botão do controle pula a comemoração (o replay vem depois e tem o pulo dele). "Pular" só aparece com toque. -->
+  <div id="comemoracao" class="replay comemoracao" hidden>
+    <button id="comemoracao-pular" class="btn-replay-pular" data-caixa="comemoracao-pular" type="button" aria-label="Pular a comemoração">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+  </div>
 
   <!-- Menu de pausa -->
   <div id="menu" class="sobreposicao" hidden>

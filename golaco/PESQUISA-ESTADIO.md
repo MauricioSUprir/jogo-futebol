@@ -167,6 +167,8 @@ depois que a dica de teclas some (8,6 s de animação); chamadas de desenho no p
 celular 28 → 24. O analógico, com o dedo na tela, ficou igual ao de antes (mesmo raio: `entrada.js escalaAnalogico`), e o
 mundo recebe as mesmas máscaras (hash do treino e da partida iguais). "Minimapa" e "Nomes nos botões" ficaram como botões de
 liga/desliga na barra da pausa: na lista de opções sobravam 3 px em 844×390 e uma linha a mais fazia a pausa rolar 62 px.
+Retorno do dono (12/10): "coloca o nome da função do botão de novo" — os nomes voltaram por padrão (a opção continua na
+pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`teste-hud-minimo` H9).
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
@@ -246,3 +248,33 @@ os últimos 10 s do que foi DESENHADO e um diretor de replay; a simulação espe
 | bugnet — "How to build a replay system" | Gravar entradas e re-simular (exige determinismo, custa CPU no replay) × gravar estado (custa memória, não diverge) | Estado desenhado: 3,36 MB fixos; o quadro do replay custa ~0,13 ms de CPU contra ~1,1 ms do quadro ao vivo (re-simular custaria a simulação inteira por passo) |
 | Transmissões de TV (Wikipedia "Instant replay"; Creative COW, transições de replay das emissoras; Fiveable, "instant replays") | A emissora "anuncia" o replay com uma vinheta que cruza a tela (o logo voa e puxa o replay), e o replay mistura ângulos e câmera lenta | A faixa verde (a da identidade, como a do "GOL!") cruza a tela em 0,4 s na entrada e na saída do replay — o espectador sabe que é replay sem texto; com "reduzir movimento", não passa |
 | O próprio jogo (relógio do estádio gravado) | A rede balança pelo relógio do estádio (`rede-onda.js`, impactos com `t0`) | O anel grava o relógio do estádio por passo: no replay a rede re-balança com o tempo gravado, sem mudar `rede-onda.js` |
+
+## 10. Comemoração do gol (`js/comemoracao.js`, `main.js`, `render/camera.js`; pedido do dono de 11/10)
+
+"Não tem cena de comemoração!!!". O diagnóstico (versão publicada antes desta entrega) mostrou: depois do gol, 2,48 s de
+câmera do gol PARADA na rede (o autor fora do quadro em 75 de 75 quadros) e corte para a saída de bola; nesses 2,48 s a IA
+levava o autor de volta 15,7 m a 6,9 m/s, nenhum colega chegava perto (o mais perto a 16–24 m), nenhuma mão acima da
+cabeça, nenhum joelho no chão — não havia pose de comemoração nenhuma. Agora: uma cena de 6–8,5 s (curta, ~4,5 s, no gol da
+IA contra o humano), pulável depois de 0,5 s, que anda num mundo À PARTE (cópias dos 22, com a MESMA locomoção do jogo e
+gestos/golpes por IK por cima); a simulação só espera no passo antes da saída (hash igual) e o replay vem depois.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| EA Help — "How to celebrate in EA SPORTS FC" (help.ea.com/en/articles/ea-sports-fc/how-to-celebrate/) | Comemoração assinada ou aleatória pela combinação de botões; cancelar "ends the celebration sequence early so the match can move toward the restart" | A finalização sai sozinha (hash do lance, nunca a mesma duas vezes seguidas) e a cena sempre pode ser pulada; escolher a finalização pelos botões fica para depois (a interface papel/fase/gesto já permite) |
+| EA Forums FC 26 — "Skip goal celebrations without skipping replays"; FIFPlay — "FC 25: How to skip your goal celebration & replay" (L1 + R1 pula os dois) | No FC um aperto pula a comemoração E o replay; os jogadores pedem para separar | Dois apertos separados: o 1º acaba a comemoração, o 2º o replay — o mesmo botão ainda segurado não pula o replay (a entrada é solta no pulo, como no replay) |
+| GGRecon — "How to skip goal celebrations & replays in EA FC 24" | A comemoração do adversário não se pula direto; há "Celebration Camera Focus: User Controlled Team" | Gol da IA contra o humano: cena CURTA (alvo a ≤ 13 m, finalização de 0,9 s, sem abraço) e o último plano é a reação do time do humano |
+| Red Bull — "FIFA 21 celebrations guide"; FIFPlay — "FIFA 17 Celebrations" | A comemoração tem duas partes: "running celebrations" (Arms Out, Aeroplane) e "finishing moves" (Knee Slide...) | Fase CORRIDA com o gesto dela (braços abertos, punho cerrado, mão no peito) + fase FINALIZAÇÃO (de joelhos, pulo com soco, céu, braços em V, giro no ar) |
+| Xsens — "FIFA 22 motion capture"; T3 — FIFA 14 (comemorações capturadas de atletas) | No EA as comemorações são clipes de captura (milhares de animações) | Com o manequim de 19 juntas (Etapa 4), gestos por IK sobre a locomoção: o protótipo e o teste mostram 0 NaN, ossos a ≤ 1,4 mm, pé plantado parado. A interface (papel, fase, gesto, tempo) fica pronta para trocar por clipes na Etapa 5 (mocap) |
+| Mirror / Reddit r/soccer (maio de 2025) — "Premier League: cinegrafistas com Steadicam no gramado para as comemorações em 2025/26"; Insider Sport | A transmissão passa a ter Steadicam no gramado depois do gol para pegar a comemoração de perto | O plano principal: STEADICAM à frente e de lado do autor (6,5 m e 2,4 m do lado da câmera de TV, 1,6 m de altura, fov 32) — o autor dentro do quadro em 100% dos quadros da corrida e da finalização (antes 0/75) |
+| TVBEurope (LaLiga: câmera de cinema na beira do campo, estabilizador) | O visual "cinema" da comemoração: plano próximo e estável, fundo cheio | CONTRAPLANO no gramado atrás do grupo (7,5 m) olhando a arquibancada atrás do alvo: a torcida enche 43% do quadro; desfoque de verdade fica de fora (caro no celular) |
+| Squirrel Eiserloh, GDC 2016 — "Juicing Your Cameras With Math" (já em §2) | Corte não enjoa; travelling rápido sim; suavizar sem atraso | Câmera por CORTES entre os planos; dentro do plano, sem mola (uma mola crítica atrasava a steadicam ~2,7 m a 8 m/s): a suavidade é a média do autor em 0,3 s mais a velocidade média × meia janela (sem atraso andando reto); "reduzir movimento": a câmera fica onde o plano começou |
+| CMU Graphics Lab Motion Capture Database | Captura livre com saltos e gestos | Para a Etapa 5; aqui os números vêm da física: pulo balístico de 0,5 m (voo de 0,64 s, pés ≥ 0,2 m do chão por 0,53 s), deslize de joelhos desacelerando até parar no alvo (2,5–7 m/s²) |
+| three.js — `AnimationAction.crossFadeTo` / `SkinnedMesh` | Misturar clipes com ossos | Etapa 5: os gestos viram clipes misturados por crossFade; hoje o manequim é por juntas e a mistura é a do alvo da mão (um gesto para o outro em 0,3 s, a mão nunca salta) |
+| O próprio jogo | `jogador.js` passoCorpo/passoPassada/passoPeDesenhado, `anim.js` pose/alturaQuadril/ik/ikBraco, `goleiro.js` passoMergulho, `teste-patinacao` | A cena usa a MESMA locomoção e a MESMA régua de pé plantado/pé no ar; o goleiro que voava termina a defesa desenhada; separação de corpos como o colisaoCorpos (0,5 m; quem sofreu cede pouco — quem corre para o abraço desvia) |
+
+Medidas (Node, `tools/teste-comemoracao.mjs`, 5 gols naturais + 3 roteirizados; navegador, `teste-comemoracao-tela.mjs`):
+autor a ≤ 3 m do alvo em 1,5–3,5 s; 2 colegas no abraço em 3,6–5,1 s (antes: o mais perto a 16,3 m); mãos acima da cabeça
+≥ 3,6 s (antes: 0); joelhos a 6,7 cm do chão parado e ≥ 5,6 cm no deslize; pés ≥ 0,2 m do chão por 0,53 s no pulo e no giro;
+pelves a ≥ 0,47 m; pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; quem sofreu: 100% com gesto, ≤ 1,4 m/s; 0,09–0,23 ms
+por tick (22 atores; a simulação custa ~0,6 ms por passo); hash do mundo igual antes e depois; a saída no mesmo tick (gol +
+150) com o mesmo hash que sem a cena.
