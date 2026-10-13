@@ -148,10 +148,15 @@ pede à passada que tire o pé do toque do chão a tempo, e o toque espera por e
   bola continua ao alcance) e lê o analógico de novo; se ele ainda pula, ou a bola sairia do alcance, sai um **toque de
   freio** (`executarToque(…, freio = true)`): no sentido da velocidade do corpo, até s²/(2·freioGiro) + ofsFrente(s)
   à frente dele, com v0 = `velParaParar` (a mesma conta da rolagem). O freio não põe o corpo em inversão (`j.inv`);
-  abaixo de 2,5 m/s o toque sai normal. Com a entrada marcada `repete` (a mesma leitura do quadro anterior) depois de um
-  pulo, o analógico continua "pulando" (`saltoTick` = este tick): sem leitura nova o gesto pode estar no meio do caminho,
-  e o toque espera a leitura do próximo quadro ou sai de freio (contraprova de 13/10: a 30 qps o toque que esperou saía
-  na direção do meio do gesto, 4,2 m de deriva no giro de 180°; `teste-cortes`, entrada a 30 qps, ≤ 0,25 m).
+  abaixo de 2,5 m/s o toque sai normal. A espera é pela próxima leitura NOVA do analógico (`j.leituraTick`, o passo da
+  última entrada sem `repete`; `cond.esperaInicio/esperaLeitura`): com a entrada marcada `repete` (a mesma leitura do
+  quadro anterior) o toque segue esperando, até 3 ticks e com a bola ao alcance; chegou a leitura nova, decide como
+  acima (pulou de novo → freio; não pulou → toque normal). Se o pé do toque sai do chão antes, o toque fica para o passo
+  seguinte. A 60 qps (toda entrada nova) é exatamente a regra de 1 tick. (Contraprova de 13/10: a 30 qps o toque que
+  esperou via a leitura do meio do gesto repetida e saía para o lado — 2,5 m no giro de 180° comum e 4,2 m com o gesto
+  no tick do toque; `teste-cortes`, entrada a 30 qps, ≤ 0,35 m = 0,25 + o passo a mais da leitura a 6 m/s. O freio
+  quando a janela da passada fecha sem leitura nova foi medido e descartado: mandava a bola reto nos cortes de uma vez
+  — 22 trechos de > 0,6 s com a bola longe em 480 sementes do roteiro duro a 30 qps, contra 7 sem ele.)
 - **Placas:** o toque não manda a bola além das placas (`ateAPlaca`; `CAMPO.meioX/meioZ + entorno`): com o alvo além
   delas, a bola sai para parar antes (`velParaParar`). Só acontece fora do campo (treino e testes).
 - **Corte** (a bola sai na linha do analógico ±20°, o corpo segura o rumo até o toque —

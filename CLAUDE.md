@@ -157,8 +157,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   distâncias da bola "colada/solta" × 0,87 e a bola ENCOSTADA no marcador com os dois andando juntos é disputada
   (`ACOES.boteIA.encostada/encostadaVrel`) — antes o condutor que empurrava a bola no marcador nunca a perdia.
   Contraprova (13/10): o main.js lê o analógico uma vez por quadro — a 30 qps o 2º passo do quadro vai marcado `repete`
-  (a mesma leitura) e o gesto que pulou no passo anterior continua "pulando"; sem isso, no celular a 30 qps o toque que
-  esperou saía na direção do meio do gesto (4,2 m de deriva; `teste-cortes`, entrada a 30 qps, ≤ 0,25 m).
+  (a mesma leitura) e o toque que espera o gesto espera a próxima leitura NOVA (`j.leituraTick`); sem isso, no celular a
+  30 qps o toque saía com a leitura do meio do gesto (giro de 180°: 2,5 m comum, 4,2 m no tick do toque; `teste-cortes`,
+  entrada a 30 qps, ≤ 0,35 m). A 60 qps nada muda (hash-igual e hash-partida IGUAIS).
 - Etapa 2 (`js/acoes.js`, `goleiro.js`, `ia.js`, `sessao.js` modo 'ataque'): botões carregam força e soltam pedido
   (`j.carga`/`j.pedido`, mira guardada em `j.mira`); toque de ação no pé livre; troca de controle SEMPRE por
   `assumirControle` (carga/pedido vão junto; TROCAR pela borda do time e nunca com a bola no pé). Números da

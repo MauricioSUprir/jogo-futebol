@@ -124,11 +124,9 @@ export function aplicarEntrada(j, e, tick) {
   } else {
     j.intW *= MD.exp(-PASSO / 0.1);
   }
-  // `repete`: a MESMA leitura do analógico do passo anterior (main.js: a 30 qps os 2 passos do quadro usam a leitura do
-  // 1º). Um gesto que pulou no passo anterior pode estar no meio do caminho: sem leitura nova, ele continua "pulando"
-  // — o toque marcado para agora espera a leitura do próximo quadro (ou sai de freio), em vez de sair na direção do
-  // meio do gesto (contraprova da condução curta: 4,2 m de deriva no giro de 180° a 30 qps)
-  if (e?.repete && mag > 0 && j.saltoTick === tick - 1) j.saltoTick = tick;
+  // leitura nova do analógico neste passo? (`repete`: a MESMA leitura do passo anterior — main.js: a 30 qps os 2 passos
+  // do quadro usam a leitura do 1º). O toque que espera o fim de um gesto espera a próxima leitura NOVA (conducao.js)
+  if (!e?.repete) j.leituraTick = tick;
   j.imag = mag;
   // pedalada: dois toques no modificador
   const sub = (j.botoes & BOTAO.MOD) && !(j.botoesAnt & BOTAO.MOD);
