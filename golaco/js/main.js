@@ -75,6 +75,9 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
 import { montarFalta } from './faltas.js';
+import { pressionadorVisivel } from './defesa.js';
+import { relogioMao } from './regras-goleiro.js';
+import { assumirControle } from './acoes.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 import { criarPrejogo } from './render/prejogo.js';
@@ -342,6 +345,11 @@ function atualizarFase() {
     if (mundo.tick - fase.defesaDesde >= 15) { fase.atual = 'defesa'; fase.defesaDesde = null; }
   }
   if (entrada) entrada.definirFase(fase.atual);
+  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida)
+  if (entrada && entrada.definirGoleiroPe) {
+    const c = jogadorPorId(mundo, idControlado());
+    entrada.definirGoleiroPe(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.posse === c.id && mundo.naMao !== c.id));
+  }
 }
 
 const camisaDe = id => fichaDe(id)?.camisa ?? String(id);
@@ -565,6 +573,10 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
   // jogadores interpolados (quantos houver, dos dois times)
   const idC = idControlado();
   const idProx = fase.atual === 'defesa' ? (mundo.proximaTroca?.[TIME_HUMANO] ?? null) : null;
+  // companheiro chamado pelo PRESSÃO no último passo (só lê o mundo: o desenho nunca muda a simulação)
+  const idPress = mundo.partida ? pressionadorVisivel(mundo, TIME_HUMANO) : -1;
+  // Regra 12.3: o anel dos últimos 5 s sob o goleiro do humano com a bola nas mãos (só lê o mundo)
+  const rel = mundo.partida ? relogioMao(mundo, TIME_HUMANO) : null;
   let n = 0;
   let hx = 0, hz = 0, achou = false;
   if (cenaGol) {
@@ -586,6 +598,8 @@ function desenharQuadro(dt, agoraMs, renderizar = true) {
     const it = lista[n] ?? (lista[n] = {});
     it.id = j.id; it.time = j.time; it.pose = e.des; it.controlado = j.id === idC;
     it.goleiro = j.posicao === 'GOL'; it.proximo = idProx != null && j.id === idProx && !it.controlado;
+    it.pressiona = j.id === idPress && !it.controlado;
+    it.relogio = rel && rel.id === j.id ? rel.frac : -1;
     it.kit = kitDe(j);
     it.x = lerp(e.x0, e.x1, alfa); it.z = lerp(e.z0, e.z1, alfa); it.rumo = lerpAng(e.r0, e.r1, alfa);
     if (it.controlado) { hx = it.x; hz = it.z; achou = true; }
@@ -1431,6 +1445,51 @@ const api = {
     for (const ev of m.eventos) tratarEvento(ev);
     return { parada: m.parada?.tipo ?? null, def: d.id, cond: c.id, cartao: f.cartao };
   },
+  /**
+   * Cenas de teste e de prints da partida (pedidos do dono de 11/10): monta o lance e devolve os ids. Mexe no mundo —
+   * só para testes de navegador e prints (o jogo nunca chama).
+   *  'pressao': um adversário de linha com a bola no meu campo, parado, o meu time em volta (para segurar o PRESSÃO);
+   *  'goleiroMao': o meu goleiro com a bola nas mãos, controlado, perto da marca do pênalti;
+   *  'goleiroPe': o meu goleiro com a bola no pé, controlado, com o recuo valendo (Regra 12.2).
+   */
+  cenaDeTeste(nome) {
+    const m = mundo;
+    if (!m.partida) return null;
+    const lado = m.ataca[TIME_HUMANO], gx = -lado * CFG.CAMPO.meioX;
+    // a parada em andamento acaba (o cobrador, parado nela, volta a se mexer — como partida.js encerrarParada)
+    const pr = m.parada;
+    if (pr && pr.cobrador != null && pr.papel != null) { const c0 = jogadorPorId(m, pr.cobrador); if (c0 && c0.papel === 'parado') c0.papel = pr.papel; }
+    m.parada = null; m.partida.estado = 'jogo'; m.golTick = null; m.foraDesde = null; m.voo = null; m.naMao = null; m.posse = null;
+    if (m.regraMao) { m.regraMao.semMao = -1; m.regraMao.soltou = -1; }
+    for (const j of m.jogadores) { j.pedido = null; j.carga = null; j.recebe = null; j.segura = null; j.defesa = null; j.mergulho = null; }
+    const g = m.jogadores.find(o => o.time === TIME_HUMANO && o.posicao === 'GOL');
+    if (nome === 'pressao') {
+      let c = null;
+      for (const o of m.jogadores) if (o.time !== TIME_HUMANO && o.posicao !== 'GOL' && (!c || o.vagaIdx > c.vagaIdx)) c = o;
+      const cx = gx + lado * 32, cz = 4;
+      teleportar(c, cx, cz, lado > 0 ? Math.PI : 0);
+      m.bola.p.x = cx - lado * 0.34; m.bola.p.y = CFG.BOLA.raio; m.bola.p.z = cz; m.bola.v.x = 0; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = true;
+      m.posse = c.id;
+      corteCamera = true;
+      return { condutor: c.id };
+    }
+    if (!g) return null;
+    teleportar(g, gx + lado * 9, 3, lado > 0 ? 0 : Math.PI);
+    for (const o of m.jogadores) if (o.time !== TIME_HUMANO && o.posicao !== 'GOL' && Math.abs(o.x - gx) < 30) teleportar(o, gx + lado * (32 + (o.vagaIdx % 4) * 3), o.z, o.rumo);
+    if (nome === 'goleiroMao') {
+      // a bola já nas mãos (sem a junção de goleiro.js bolaNaMao, que a traria voando do meio-campo)
+      m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick, off: { x: 0, y: 0, z: 0 } };
+    } else {
+      m.bola.p.x = g.x + lado * 0.34; m.bola.p.y = CFG.BOLA.raio; m.bola.p.z = g.z; m.bola.v.x = 0; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = true;
+      m.posse = g.id;
+      (m.regraMao ??= { semMao: -1, soltou: -1 }).semMao = g.time;
+    }
+    if (m.controlado[TIME_HUMANO] !== g.id) assumirControle(m, TIME_HUMANO, g);
+    corteCamera = true;
+    return { goleiro: g.id };
+  },
+  /** Marcas da partida desenhadas (PRESSÃO e o anel dos 8 s): render/jogador3d.js indicadores. */
+  get indicadores() { return jog3d ? jog3d.indicadores : null; },
   /**
    * Bola parada de teste (prints): a bola sai com o último toque certo e a partida monta o recomeço como no jogo.
    * tipo: 'lateral' | 'escanteio' (do time do humano, que cobra) | 'tiroDeMeta' (do time do humano: o goleiro dele).

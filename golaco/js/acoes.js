@@ -6,7 +6,7 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, LATERAL, AEREO } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -16,6 +16,7 @@ import {
 } from './bola.js';
 import { procurarOportunidade, preverBola } from './conducao.js';
 import { passoCorpo, copiaCinematica, infoPassada } from './jogador.js';
+import { registrarChute } from './regras-goleiro.js';
 
 const DT = PASSO;
 const BOTOES_ACAO = [
@@ -179,6 +180,9 @@ export function escolherAlvo(m, j, tipo) {
     for (const o of m.jogadores) {
       if (o.time !== j.time || o.id === j.id) continue;
       if (o.posicao === 'GOL' && tipo !== 'passe') continue;
+      // partida: a IA só recua para o goleiro rasteiro e seguro (ele não pode usar a mão: Regra 12.2) — livre e com a
+      // bola que erra o goleiro passando longe do gol
+      if (o.posicao === 'GOL' && m.partida && !(m.humanos.includes(j.time) && m.controlado[j.time] === j.id) && !recuoSeguro(m, j, o)) continue;
       const ox = o.x - j.x, oz = o.z - j.z;
       const L = MD.hypot(ox, oz);
       if (L < cfg.dMin || L > cfg.dMax) continue;
@@ -196,6 +200,27 @@ export function escolherAlvo(m, j, tipo) {
     }
   }
   return melhor;
+}
+
+/**
+ * Recuo da IA para o goleiro g é seguro? Nenhum adversário a menos de GOLEIRO.recuoIA.livre m do goleiro nem da linha do
+ * passe, e a reta do passe, passando do goleiro, cruza a linha do gol a ≥ recuoIA.foraGol m do meio (o passe que erra o
+ * goleiro não vai para dentro do gol).
+ */
+function recuoSeguro(m, j, g) {
+  const R = GOLEIRO.recuoIA;
+  const dx = g.x - j.x, dz = g.z - j.z, L = MD.hypot(dx, dz) || 1;
+  for (const o of m.jogadores) {
+    if (o.time === j.time) continue;
+    if (MD.hypot(o.x - g.x, o.z - g.z) < R.livre) return false;
+    const ox = o.x - j.x, oz = o.z - j.z, s = clamp((ox * dx + oz * dz) / L, 0, L);
+    if (Math.abs(-ox * dz + oz * dx) / L < R.livre * 0.5 && s > 0 && s < L) return false;
+  }
+  const gx = -ataca(m, g.time) * CAMPO.meioX;
+  if (Math.abs(dx) < 1e-6) return true;
+  const t = (gx - j.x) / dx;
+  if (t <= 0) return true;
+  return Math.abs(j.z + dz * t) >= R.foraGol;
 }
 
 // ------------------------------------------------------------------ utilidades
@@ -261,6 +286,7 @@ function finalizarChute(m, j, pe, tipo, v, w, alvo, para, extra = {}) {
   c.toque = null; c.busca = false; c.longeDesde = -1;
   m.posse = null;
   m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
+  registrarChute(m, j, tipo); // regra da mão do goleiro (partida): chute/passe de um companheiro = recuo
   m.voo = { tipo, de: j.id, time: j.time, para: para ? para.id : null, alvo: { x: alvo.x, z: alvo.z }, tick0: m.tick, tickChave: m.tick, tickChegada: m.tick + (extra.ticks ?? 0), alto: v.y > 1.5, ...extra.voo };
   const ev = tipo === 'chute' || tipo === 'colocado' || tipo === 'cavadinha' ? 'chute' : 'passe';
   m.eventos.push({ tipo: ev, id: j.id, modo: tipo, v: MD.hypot(v.x, v.y, v.z), para: para ? para.id : null });

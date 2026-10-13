@@ -21,13 +21,15 @@ import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
-import { entradaIATatica, olhaBolaPartida } from './ia-tatica.js';
+import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
-import { entradaConter, dividida, pedidoPressao, rumoConter } from './defesa.js';
+import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
 import { misturarPartida, paredeParada } from './partida.js';
 import { planejarRecepcao } from './recepcao.js';
 import { faltaNoBote, faltaTatica, faltaNaCarga, registrarFalta } from './faltas.js';
+// Regras da mão do goleiro e o goleiro jogando com o pé (pedido do dono, 11/10; só na partida)
+import { maoPermitida, motivoSemMao, registrarToque, estadoMao, paredeAreaMao, naPropriaArea, goleiroNoPe } from './regras-goleiro.js';
 import { lateralSegurando, segurarLateral } from './lateral.js';
 import { notaAerea, colisaoBarreira } from './bolas-paradas.js';
 
@@ -213,6 +215,7 @@ function colisaoBolaCorpo(m) {
       b.v.x -= 1.35 * vn * nx; b.v.z -= 1.35 * vn * nz;
       if (b.rolando) { b.w.x = b.v.z / 0.11; b.w.z = -b.v.x / 0.11; }
       m.eventos.push({ tipo: 'bateuCorpo', id: j.id });
+      registrarToque(m, j, 'corpo');
       m.desvio = m.tick; // o goleiro relê o chute desviado (goleiro.js lerChute)
       // a bola desviada não passa mais onde o domínio aéreo / cabeceio marcado esperava: o plano cai (o jogador ia
       // para o ponto antigo enquanto a bola fugia — contraprova M4: até 3 m em lançamento que bate no corpo)
@@ -294,13 +297,26 @@ function boteIA(m, j) {
   const dB = MD.hypot(b.p.x - j.x, b.p.z - j.z);
   if (dB > cfg.alcance) return;
   const dD = MD.hypot(b.p.x - dono.x, b.p.z - dono.z);
-  if (dD < 0.35 || dB > dD) return; // colada no pé de quem conduz: não alcança
+  // (só na partida) condutor parado ou lento (abaixo de vParado m/s) e sem tocar na bola há semToque s: a bola parada à
+  // frente do pé dele (a condução a deixa a ~0,345 m do corpo) não está "colada" — quem chega ao alcance dela tenta
+  // tirar. Antes o bote nunca chegava ao sorteio contra quem ficava parado (o defensor não fica mais perto da bola que
+  // o condutor: corpos de 0,3 m de raio) — pedido do dono, 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola"
+  const ultT = dono.cond?.ult;
+  const lento = !!m.partida && MD.hypot(dono.vx, dono.vz) < cfg.vParado && !(ultT && (m.tick - ultT.tick) * PASSO < cfg.semToque);
+  if (!lento && (dD < 0.35 || dB > dD)) return; // colada no pé de quem conduz: não alcança
   if (uniforme(m.rng) >= cfg.chancePorPasso) return;
   // Etapa 4 (só na partida): o bote que chega pode ser falta (faltas.js: chegada, velocidade, desarme) — a bola fica
   // com o condutor (desequilibrado) e o árbitro decide nas regras (vantagem, tiro livre, pênalti, cartão)
   if (m.partida && !m.faltaPendente) {
     const f = faltaNoBote(m, j, dono);
     if (f) { registrarFalta(m, f); dono.vx *= 0.5; dono.vz *= 0.5; j.descansoBote = cfg.descanso; return; }
+  }
+  // contra o condutor parado/lento o bote em pé ganha pela mesma chance da DIVIDIDA do humano (desarme × drible/controle,
+  // 35–65%: simetria — o humano já tirava a bola do condutor parado da IA); errou, descansa (o condutor que reage escapa)
+  if (lento && uniforme(m.rng) >= chanceDividida(j, dono, b.p.x, b.p.z)) {
+    j.descansoBote = cfg.descanso;
+    m.eventos.push({ tipo: 'boteErrado', id: j.id });
+    return;
   }
   // tira: para longe de quem conduzia
   let ux = b.p.x - dono.x, uz = b.p.z - dono.z;
@@ -312,6 +328,7 @@ function boteIA(m, j) {
   m.ultimoToque = { id: j.id, time: j.time, tick: m.tick };
   m.stats.roubadas++;
   m.eventos.push({ tipo: 'roubada', id: j.id, ia: true });
+  registrarToque(m, j, 'roubada');
   j.descansoBote = cfg.descanso;
 }
 
@@ -326,6 +343,8 @@ export function passo(m, entradas) {
   for (const t of m.humanos) {
     m.botoesTimeAnt[t] = m.botoesTimeAgora[t] ?? 0;
     m.botoesTimeAgora[t] = (entradas?.[t]?.botoes ?? 0) | 0;
+    // a IA jogando pelo humano (demo, e.ia): o goleiro dele repõe sozinho, como antes (sim.js goleiroComBola)
+    if (m.partida) (m.iaJoga ??= {})[t] = !!entradas?.[t]?.ia;
   }
   // 1) entradas: humano (o controlado de cada time humano) e IA (entrada virtual)
   for (const j of js) {
@@ -353,13 +372,15 @@ export function passo(m, entradas) {
       }
       if (e && (e.botoes & BOTAO.PRESSAO)) pedidoPressao(m, j);
     } else if (j.posicao === 'GOL') {
-      aplicarEntrada(j, null, m.tick);
+      // partida: o goleiro da IA com a bola no pé (ou indo à bola que não pode pegar com a mão) joga com o pé
+      aplicarEntrada(j, m.partida && goleiroNoPe(m, j) ? entradaGoleiroPe(m, j) : null, m.tick);
     } else {
       aplicarEntrada(j, m.times ? entradaIATatica(m, j) : entradaIA(m, j), m.tick);
     }
     atualizarBotoesAcao(m, j);
   }
   trocarJogador(m, entradas);
+  if (m.partida) pegarDoHumano(m); // PEGAR (goleiro do humano com a bola no pé, na área)
   if (m.times) trocaAerea(m); // Etapa 3: troca automática para quem disputa a bola alta
   // 2) movimento de cada corpo
   for (const j of js) {
@@ -369,10 +390,12 @@ export function passo(m, entradas) {
       else mv = moverMarcador(m, j);
     } else if (j.papel === 'parado') {
       mv = { dx: 1, dz: 0, vel: 0, rumoAlvo: j.rumo };
-    } else if (j.posicao === 'GOL' && !(ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id)) {
+    } else if (j.posicao === 'GOL' && !goleiroComoLinha(m, j)) {
       mv = movimentoGoleiro(m, j, m.humanos.includes(j.time));
       // defesa desenhada (mergulho, salto, em pé): o corpo anda pela conta do mergulho, não pela locomoção
       if (mergulhoAtivo(j, m.tick + 1)) { passoMergulho(m, j); continue; }
+      // partida: o goleiro do humano com a bola nas mãos anda pelo analógico até a borda da área (nunca sai dela)
+      if (m.partida && m.naMao === j.id && ehControlado(m, j) && !m.iaJoga?.[j.time] && !(m.parada && !m.parada.rolou)) mv = andarComBolaNaMao(m, j);
     } else if (m.posse === j.id) {
       if (j.pedidoPedalada) {
         j.pedidoPedalada = false;
@@ -539,7 +562,10 @@ function candidatosBolaLivre(m, alvo) {
   let n = 0;
   for (let k = 0; k < js.length; k++) {
     const j = js[k];
-    if (j.papel === 'marcador' || j.papel === 'parado' || j.posicao === 'GOL') continue;
+    if (j.papel === 'marcador' || j.papel === 'parado') continue;
+    // o goleiro só disputa a bola livre com o pé quando não pode pegá-la com a mão (partida: recuo, a bola que ele
+    // soltou, fora da área — Regra 12)
+    if (j.posicao === 'GOL' && !(m.partida && !maoPermitida(m, j, b.p.x, b.p.z))) continue;
     const d = MD.hypot(j.x - b.p.x, j.z - b.p.z);
     const pri = j.id === alvo;
     let i = n - 1;
@@ -579,7 +605,9 @@ function bolaLivre(m) {
     if (g.posicao !== 'GOL') continue;
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
-    const naArea = Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
+    // (partida: só onde a mão vale — na área, com qualquer parte da bola sobre a linha, sem recuo nem a bola que ele
+    // soltou: regras-goleiro.js)
+    const naArea = m.partida ? maoPermitida(m, g, b.p.x, b.p.z) : Math.abs(b.p.x - gx) < 16.5 && Math.abs(b.p.z) < 20.16;
     // no meio da defesa desenhada (o corpo já está no quadro do próximo tick), só com a mão desenhada na bola
     // a própria espalmada não volta para as mãos logo depois (GOLEIRO.reagarra)
     const espalmou = m.ultimoToque && m.ultimoToque.id === g.id && (m.tick - m.ultimoToque.tick) * PASSO < GOLEIRO.reagarra;
@@ -660,6 +688,7 @@ function bolaAltaNoCorpo(m, j) {
     const peD = peLivre(j, j.par.attr.pePreferido, true);
     executarToque(m, j, peD >= 0 ? peD : j.par.attr.pePreferido, 'dominio');
     m.eventos.push({ tipo: 'dominioAereo', id: j.id, altura: b.p.y, vChegada: vRel, sobra: vRel * sobra });
+    registrarToque(m, j, 'peito');
     ganhouPosse(m, j);
     return true;
   }
@@ -703,6 +732,7 @@ function ganhaDisputa(m, j, o) {
 
 /** O jogador ganhou a posse: o controle humano vai para ele (time humano). */
 function ganhouPosse(m, j) {
+  registrarToque(m, j, 'posse');
   if (m.humanos.includes(j.time) && m.controlado[j.time] !== j.id) {
     assumirControle(m, j.time, j);
     m.eventos.push({ tipo: 'troca', id: j.id, auto: true });
@@ -741,29 +771,47 @@ function desvioOlhaBola(v) {
   return lat(v) * clamp((vSome - v) / 1.0, 0, 1);
 }
 
-/** Goleiro com a bola nas mãos: segura e repõe (humano: PASSE/LANÇAMENTO; IA: depois de 1,5 s). */
+/**
+ * Goleiro com a bola nas mãos: segura e repõe. Quem repõe sozinho: a IA (GOLEIRO.esperaIA); no treino e na demo (a IA
+ * jogando pelo humano), o goleiro do humano depois de GOLEIRO.esperaHumano. Na PARTIDA o humano repõe quando quiser
+ * (pedido do dono, 11/10: "eu não consigo mexer com o goleiro") — anda com a bola até a borda da área, PASSE rola curto,
+ * LANÇAMENTO (ou CHUTE) é o chutão, ENFIADA solta a bola no chão para sair jogando com o pé — e a Regra 12.3 (mais de
+ * 8 s: escanteio, partida.js) é o limite (o tiro de meta é com o pé, no chão: partida.js montarTiroDeMeta).
+ */
 function goleiroComBola(m, g) {
   // ainda no chão depois do encaixe no mergulho: levanta antes de repor
   if (mergulhoAtivo(g, m.tick + 1)) return;
+  // de pé com a bola nas mãos: começa o relógio da Regra 12.3 (partida.js; só conta com a bola em jogo)
+  if (g.segura && g.segura.dePe == null) g.segura.dePe = m.tick;
   const humano = ehControlado(m, g);
-  // IA: repõe depois de 1,5 s. Humano: se não apertar botão de ação (nem estiver carregando um),
-  // a IA repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para
-  // sempre (o analógico não o move, TROCAR é bloqueado com a bola na mão): "trava"
-  const espera = Math.round((humano ? GOLEIRO.esperaHumano : GOLEIRO.esperaIA) / PASSO);
-  if (!g.pedido && !g.carga && m.tick - (g.segura?.desde ?? m.tick) > espera) {
-    // lança para o companheiro mais adiantado ou na direção do analógico/do corpo
-    // para a frente, sem o analógico: quem não sabe repor mexe justamente o analógico (para o próprio
-    // gol o goleiro pegava a própria reposição de novo, em laço)
-    g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick, dir: { x: ataca(m, g.time), z: 0 } };
+  const pr = m.parada && !m.parada.rolou ? m.parada : null;
+  const livre = humano && m.partida && !m.iaJoga?.[g.time];
+  if (!livre) {
+    // IA: repõe depois de 1,5 s. Treino e demo: se o humano não apertar botão de ação (nem estiver carregando um), a IA
+    // repõe por ele depois de GOLEIRO.esperaHumano — antes o goleiro ficava com a bola para sempre: "trava"
+    const espera = Math.round((humano ? GOLEIRO.esperaHumano : GOLEIRO.esperaIA) / PASSO);
+    if (!g.pedido && !g.carga && m.tick - (g.segura?.desde ?? m.tick) > espera) {
+      // lança para o companheiro mais adiantado ou na direção do analógico/do corpo
+      // para a frente, sem o analógico: quem não sabe repor mexe justamente o analógico (para o próprio
+      // gol o goleiro pegava a própria reposição de novo, em laço)
+      g.pedido = { tipo: 'lancamento', forca: 0.7, mod: false, tick: m.tick, dir: { x: ataca(m, g.time), z: 0 } };
+    }
   }
   if (g.pedido && m.tick - (g.segura?.desde ?? m.tick) > 20) {
+    if (livre && !pr) {
+      // ENFIADA: solta a bola no chão e sai jogando com o pé (Regra 12.2: não pega de novo com a mão antes de outro tocar)
+      if (g.pedido.tipo === 'enfiada') { soltarNoChao(m, g); return; }
+      // CHUTE com a bola nas mãos: o chutão (bate-pronto), o mesmo do LANÇAMENTO
+      if (g.pedido.tipo === 'chute') g.pedido.tipo = 'lancamento';
+    }
     soltarDaMao(m, g);
     const b = m.bola;
     b.p.x = g.x + MD.cos(g.rumo) * 0.45; b.p.z = g.z + MD.sin(g.rumo) * 0.45;
+    if (m.partida) bolaAquemDaLinha(m, g, b);
     executarAcao(m, g, g.par.attr.pePreferido, false);
     g.miraAuto = null;
-    // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola (o
-    // analógico não o move): o controle vai para o jogador de linha mais perto de onde ela cai
+    // sem recebedor (bola no espaço), o humano não fica controlando o goleiro sem a bola: o controle vai para o
+    // jogador de linha mais perto de onde ela cai
     if (ehControlado(m, g)) {
       const a = m.voo?.alvo ?? b.p;
       let mel = null, dm = Infinity;
@@ -774,6 +822,103 @@ function goleiroComBola(m, g) {
       }
       if (mel) { assumirControle(m, g.time, mel); m.eventos.push({ tipo: 'troca', id: mel.id, auto: true }); }
     }
+  }
+}
+
+/** ENFIADA com a bola nas mãos (partida): a bola no chão, no pé dele, e ele sai jogando (o "Drop Ball" do EA FC). */
+function soltarNoChao(m, g) {
+  soltarDaMao(m, g);
+  const b = m.bola;
+  b.p.x = g.x + MD.cos(g.rumo) * CONDUCAO.ofsFrente.curta; b.p.z = g.z + MD.sin(g.rumo) * CONDUCAO.ofsFrente.curta;
+  bolaAquemDaLinha(m, g, b);
+  b.v.x = 0; b.v.y = 0; b.v.z = 0; b.w.x = 0; b.w.y = 0; b.w.z = 0; b.rolando = true;
+  m.posse = g.id;
+  g.pedido = null; g.carga = null; g.miraAuto = null;
+  const c = g.cond;
+  if (c) { c.toque = null; c.ref = null; c.busca = false; c.longeDesde = -1; }
+  estadoMao(m).soltou = g.id;
+  m.eventos.push({ tipo: 'soltou', id: g.id });
+}
+
+/**
+ * Partida: a bola que sai das mãos do goleiro (reposição, ENFIADA) nunca fica além da linha do próprio gol — no máximo a
+ * GOLEIRO.soltaLinha m dela, do lado do campo. Com o humano andando com a bola nas mãos ele pode ficar de frente para o
+ * gol: colado na linha (encaixe em cima dela), a bola caía dentro do gol (gol contra na hora — contraprova).
+ */
+function bolaAquemDaLinha(m, g, b) {
+  const gx = linhaDoGol(m, g), s = gx > 0 ? 1 : -1;
+  if ((gx - b.p.x) * s < GOLEIRO.soltaLinha) b.p.x = gx - s * GOLEIRO.soltaLinha;
+}
+
+/** Defesa automática do goleiro em andamento (chute lido, mergulho/salto/defesa em pé desenhados). */
+function defesaDoGoleiro(m, j) {
+  const d = j.defesa;
+  return (d && !d.fora && d.sucesso !== undefined && m.tick < d.tick + 6) || mergulhoAtivo(j, m.tick + 1);
+}
+
+/**
+ * O goleiro anda pela locomoção de jogador de linha neste tick (e não pela IA do goleiro, movimentoGoleiro)?
+ * Treino: só o controlado com a bola no pé (como antes). Partida (a defesa automática — chute lido, mergulho — vem antes):
+ * com a bola no pé; indo com o pé à bola que não pode pegar (goleiroNoPe); e o do humano sem a bola, com o analógico
+ * mexido (pedido do dono, 11/10: "eu não consigo mexer com o goleiro"; o analógico solto devolve a posição à IA).
+ */
+function goleiroComoLinha(m, j) {
+  if (ehControlado(m, j) && m.naMao !== j.id && m.posse === j.id) return true;
+  if (!m.partida || m.naMao === j.id || defesaDoGoleiro(m, j)) return false;
+  if (ehControlado(m, j) && !m.iaJoga?.[j.time]) return m.posse === j.id || j.imag > 0 || goleiroNoPe(m, j);
+  return goleiroNoPe(m, j);
+}
+
+/**
+ * Goleiro do humano com a bola nas mãos (partida): anda pelo analógico (até GOLEIRO.maoAnda.v m/s; com CORRER, vCorrer)
+ * e a parede da área (regras-goleiro.js paredeAreaMao) o segura antes da linha — ele nunca sai da área com a bola na mão.
+ */
+function andarComBolaNaMao(m, j) {
+  const A = GOLEIRO.maoAnda;
+  const mv = movimentoBase(j, j.ix, j.iz, j.imag, j.botoes, false, j.rumo, null);
+  mv.vel = Math.min(mv.vel, (j.botoes & BOTAO.CORRER) ? A.vCorrer : A.v);
+  const out = paredeAreaMao(m, j, mv);
+  // colado na linha do gol (encaixe em cima dela) ele não vira para o gol com a bola nas mãos: a bola, GOLEIRO.bolaMao.frente
+  // m à frente do corpo, passaria a linha — gol contra só por virar (contraprova). O rumo pedido fica no arco em que a
+  // mão fica a ≥ GOLEIRO.soltaLinha m aquém da linha
+  const gx = linhaDoGol(m, j), s = gx > 0 ? 1 : -1, u = (gx - j.x) * s;
+  const k = (u - GOLEIRO.soltaLinha) / GOLEIRO.bolaMao.frente; // máximo de cos(rumo)·s (a componente para o gol)
+  if (k < 1 && MD.cos(out.rumoAlvo) * s > k) {
+    const kk = Math.max(-1, k), sz = MD.sin(out.rumoAlvo) >= 0 ? 1 : -1;
+    return { ...out, rumoAlvo: MD.atan2(sz * Math.sqrt(1 - kk * kk), s * kk) };
+  }
+  return out;
+}
+
+/**
+ * PEGAR (partida; borda do botão, goleiro do humano com a bola no pé ou solta e devagar — até GOLEIRO.pegaVMax m/s —
+ * ao alcance — GOLEIRO.pegaPe m —, na área):
+ * com a mão permitida, a bola vai para as mãos ("pegou"); com o recuo, o lateral de companheiro ou a bola que ele soltou,
+ * é a infração da Regra 12.2 — tiro livre INDIRETO do adversário (partida.js, m.infracaoMao). Fora da área não faz nada
+ * (a mão lá é a de qualquer jogador).
+ */
+function pegarDoHumano(m) {
+  for (const t of m.humanos) {
+    const g = jogadorPorId(m, m.controlado[t]);
+    if (!g || g.posicao !== 'GOL' || m.naMao != null || (m.parada && !m.parada.rolou)) continue;
+    if (!((g.botoes & BOTAO.PEGAR) && !(g.botoesAnt & BOTAO.PEGAR))) continue;
+    if (m.posse != null && m.posse !== g.id) continue;
+    const b = m.bola;
+    if (b.p.y > 1.2 || MD.hypot(b.p.x - g.x, b.p.z - g.z) > GOLEIRO.pegaPe) continue;
+    // a bola rápida que passa (chute, passe) não: só a do pé ou a solta e devagar (a defesa é a automática)
+    if (m.posse !== g.id && MD.hypot(b.v.x, b.v.y, b.v.z) > GOLEIRO.pegaVMax) continue;
+    if (!naPropriaArea(m, g, b.p.x, b.p.z)) continue;
+    if (maoPermitida(m, g, b.p.x, b.p.z)) {
+      m.naMao = g.id; m.posse = g.id; g.segura = { desde: m.tick };
+      b.v.x = 0; b.v.y = 0; b.v.z = 0; m.voo = null;
+      if (g.cond) { g.cond.toque = null; g.cond.busca = false; }
+      m.eventos.push({ tipo: 'defesa', id: g.id, modo: 'pegou' });
+      registrarToque(m, g, 'defesa');
+      continue;
+    }
+    // mão onde não podia: o árbitro apita na hora (a bola no ponto do toque)
+    m.infracaoMao = { id: g.id, x: b.p.x, z: b.p.z, motivo: motivoSemMao(m, g, b.p.x, b.p.z) ?? 'recuo' };
+    m.eventos.push({ tipo: 'maoGoleiro', id: g.id, motivo: m.infracaoMao.motivo });
   }
 }
 
@@ -806,6 +951,21 @@ function trocarJogador(m, entradas) {
     // a borda do botão é do TIME (não do jogador): segurar TROCAR troca uma vez só
     const agora = m.botoesTimeAgora[t] ?? 0, antes = m.botoesTimeAnt[t] ?? 0;
     const apertou = (agora & BOTAO.TROCAR) && !(antes & BOTAO.TROCAR);
+    // partida: TROCAR segurado GOLEIRO.trocarGoleiro s leva o controle ao goleiro (o "Switch to Goalkeeper" do EA FC;
+    // pedido do dono, 11/10: "eu não consigo mexer com o goleiro") — o toque curto continua trocando como antes
+    if (m.partida) {
+      const st = (m.trocarDesde ??= {});
+      if (apertou) st[t] = m.tick;
+      else if (!(agora & BOTAO.TROCAR)) st[t] = -1;
+      if (st[t] >= 0 && m.tick - st[t] === Math.round(GOLEIRO.trocarGoleiro / PASSO)) {
+        const g = m.jogadores.find(o => o.time === t && o.posicao === 'GOL');
+        if (g && m.controlado[t] !== g.id && !(m.posse === j.id && m.naMao !== j.id)) {
+          assumirControle(m, t, g);
+          m.eventos.push({ tipo: 'troca', id: g.id, goleiro: true });
+          continue;
+        }
+      }
+    }
     // com a bola no pé o TROCAR não tira o controle de quem conduz; com a bola nas mãos do
     // goleiro, TROCAR passa o controle para um jogador de linha e a IA repõe
     const comBola = m.posse === j.id && m.naMao !== j.id;

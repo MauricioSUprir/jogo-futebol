@@ -385,6 +385,10 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .btn-dividida svg { stroke: var(--verde); }
 .btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
 .toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
+/* PEGAR: só com o goleiro do humano com a bola no pé (recuo, a bola que ele soltou) — classe goleiro-pe, main.js */
+.toque:not(.goleiro-pe) .btn-pegar { display: none; }
+.btn-pegar svg { stroke: #c6ff3d; }
+.btn-pegar.ativo svg { stroke: var(--preto); }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */

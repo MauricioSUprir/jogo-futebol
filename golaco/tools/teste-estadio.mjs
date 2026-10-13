@@ -26,7 +26,8 @@
 //      linha de cá (no celular a cobertura deles aparecia no canto de baixo);
 //  12) a FESTA (11/10): faixas/bandeiras/bandeirões e sinalizadores ≤ 2 chamadas de desenho no jogo; onda da bandeira
 //      GPU = JS; "debaixo do bandeirão" GPU = JS (12/10); no gol da casa a organizada muda na câmera do gol (bandeirão e
-//      sinalizadores); overdraw ≤ 0,5 tela.
+//      sinalizadores); overdraw ≤ 0,5 tela;
+//  13) tiro de meta (Regra 16) com adversários na área: saem na montagem e a câmera CORTA (evento corteBolaParada).
 // As páginas abrem com ?replay=0&comemoracao=0: o replay automático (testado em tools/teste-replay.mjs) e a comemoração
 // do gol (tools/teste-comemoracao-tela.mjs) segurariam a simulação ~10 s e ~7,5 s depois do gol, e os itens 4 e 10 andam
 // o relógio atravessando a saída — o que eles medem é a câmera do gol do jogo (com a comemoração ligada ela é o plano da
@@ -348,6 +349,36 @@ try {
   await pg.waitForTimeout(800);
   const volta2 = await pg.evaluate(() => ({ ganho: window.__golaco.estadio.som.ganhoMestre, contexto: window.__golaco.estadio.som.contexto, vol: JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}').volume }));
   meta('Religado em 50% (salvo)', `ganho ${f2(volta2.ganho)}, contexto ${volta2.contexto}, salvo ${volta2.vol}`, '≈ 0,5, running e 0.5', Math.abs(volta2.ganho - 0.5) < 0.03 && volta2.contexto === 'running' && volta2.vol === 0.5);
+
+  // 13) tiro de meta (Regra 16): os adversários que estavam na área vão para fora na montagem — a câmera CORTA (evento
+  // corteBolaParada; contraprova da frente "regras e controles": o evento saía e ninguém o lia, os jogadores pulavam
+  // para fora da área com a câmera andando)
+  const tm = await pg.evaluate(() => {
+    const g = window.__golaco;
+    g.reiniciar({ modo: 'partida', semente: 3 }); g.relogio.usarManual(true);
+    for (let i = 0; i < 400 && !(g.mundo.partida.estado === 'jogo' && !g.mundo.parada); i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    const m = g.mundo, lado1 = m.ataca[1], gx1 = -lado1 * 52.5, ctrl = m.controlado[0];
+    // 4 do time do humano (não o controlado) dentro da área do adversário; a bola sai pela linha de fundo tocada por eles
+    const meus = m.jogadores.filter(o => o.time === 0 && o.posicao !== 'GOL' && o.id !== ctrl).slice(0, 4);
+    meus.forEach((o, k) => { o.x = gx1 + lado1 * (6 + 2.5 * k); o.z = -6 + 4 * k; });
+    m.posse = null; m.voo = null; m.naMao = null;
+    const b = m.bola; b.p.x = gx1 + lado1 * 1.5; b.p.z = 12; b.p.y = 0.11; b.v.x = -lado1 * 4; b.v.y = 0; b.v.z = 0; b.rolando = true;
+    m.partida.ultimoTime = 0; m.partida.ultimoId = meus[0].id; m.partida.ultimoTick = m.tick;
+    m.ultimoToque = { id: meus[0].id, time: 0, tick: m.tick };
+    let ant = { ...g.render.camera }, tmTick = null, salto = 0, dentro = -1;
+    for (let i = 0; i < 400 && (tmTick == null || m.tick <= tmTick + 5); i++) {
+      g.relogio.avancar(1000 / 60, { desenhar: true });
+      const c = { ...g.render.camera };
+      if (tmTick == null && m.parada?.tipo === 'tiroDeMeta' && m.parada.cobrador != null) {
+        tmTick = m.tick;
+        salto = Math.hypot(c.x - ant.x, c.y - ant.y, c.z - ant.z);
+        dentro = m.jogadores.filter(o => o.time === 0 && Math.abs(o.x - gx1) < 16.5 && Math.abs(o.z) < 20.16).length;
+      }
+      ant = c;
+    }
+    return { tmTick, salto, dentro };
+  });
+  meta('Tiro de meta com adversários na área: saem na montagem e a câmera corta', tm.tmTick == null ? 'sem tiro de meta' : `${tm.dentro} na área depois da montagem; a câmera pula ${f2(tm.salto)} m no quadro da montagem`, '0 na área; corte (> 1 m)', tm.tmTick != null && tm.dentro === 0 && tm.salto > 1);
 
   // 9) as contas da GPU = as do JS (o shader de verdade, em float)
   const gpu = await pg.evaluate(async () => {
