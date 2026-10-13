@@ -12,6 +12,9 @@
 //  C. Partidas inteiras IA × IA (6 sementes): um ÁRBITRO INDEPENDENTE, escrito aqui sem usar impedimento.js
 //     (foto em cada passe/chute e enquanto alguém tem a bola; infração no toque), marca exatamente os mesmos
 //     impedimentos que o jogo (mesmo tick e mesmo jogador); ≥ 1 impedimento na amostra.
+//  E1. O DEFENSOR da linha que vai no evento do impedimento (o desenho da cena semiautomática do replay) é o penúltimo
+//     adversário do árbitro independente na foto em 100% dos impedimentos dessas partidas (sem foto de linha na bola
+//     ou no meio: null nos dois). Na versão sem o campo (antes de 12/10) reprova.
 //  D. Acréscimos: anunciados no fim do tempo regulamentar (1º tempo 1–5 min, 2º tempo 3–10 min), o tempo acaba
 //     exatamente depois deles, o placar fica em 45/90 com "+N" (acrescimoDeJogo) e a mesma semente dá os mesmos
 //     acréscimos.
@@ -175,6 +178,7 @@ reg('A. cenas montadas da Regra 11', `${okA}/${casos.length}${casos.filter(c => 
 // ------------------------------------------------------------------ C e D. partidas inteiras com o árbitro independente
 const SEMS = [1001, 1002, 1003, 1004, 1005, 1006];
 let jogoMarcou = [], arbitroMarcou = [], acrOk = true, fimOk = true, placarOk = true;
+const defensores = []; // E1: {jogo (o defensor do evento), arb (o penúltimo do árbitro na foto)}
 const acrs = { 1: [], 2: [] }, detalhe = [];
 const SEM_IMPED = new Set(['lateral', 'escanteio', 'tiroDeMeta']);
 function penultimo(m, t) {
@@ -204,7 +208,7 @@ for (const sem of SEMS) {
       if (e.tipo === 'fora' || e.tipo === 'gol' || e.tipo === 'intervalo' || e.tipo === 'fimDeJogo') morta = true;
       // o jogo marca no MESMO passo do toque e a bola morta já tirou a posse dele: o toque vem do evento (quem
       // tocou); se ele estava impedido quem decide é a foto do árbitro, não a do jogo
-      if (e.tipo === 'impedimento') { jogoMarcou.push(`${sem}:${m.tick}:${e.id}`); toques.push([e.id, 'd']); }
+      if (e.tipo === 'impedimento') { jogoMarcou.push(`${sem}:${m.tick}:${e.id}`); toques.push([e.id, 'd']); defensores.push({ jogo: e.defensor, arb: foto ? foto.def : undefined, onde: `${sem}:${m.tick}` }); }
     }
     const parado = estAntes === 'intervalo' || estAntes === 'fim' || m.partida.estado === 'intervalo' || m.partida.estado === 'fim';
     if (foto && !parado) {
@@ -222,7 +226,10 @@ for (const sem of SEMS) {
         const j = m.jogadores.find(o => o.id === ult[0]);
         const lado = m.ataca[j.time];
         const lim = Math.max(penultimo(m, j.time), m.bola.p.x * lado, 0);
-        foto = { time: j.time, ids: new Set(m.jogadores.filter(o => o.time === j.time && o.id !== j.id && o.x * lado > lim + 0.1).map(o => o.id)) };
+        // E1: o penúltimo adversário (id), se é ele que faz a linha (não a bola nem o meio)
+        const ops = m.jogadores.filter(o => o.time !== j.time).map(o => ({ id: o.id, u: o.x * lado })).sort((a, b) => b.u - a.u);
+        const def = ops[1] && lim === ops[1].u ? ops[1].id : null;
+        foto = { time: j.time, def, ids: new Set(m.jogadores.filter(o => o.time === j.time && o.id !== j.id && o.x * lado > lim + 0.1).map(o => o.id)) };
       }
     }
     if (m.partida.estado === 'parada' && m.parada && !m.parada.rolou) foto = null;
@@ -249,6 +256,12 @@ const so = (a, b) => a.filter(x => !b.includes(x));
 const faltouArb = so(jogoMarcou, arbitroMarcou), faltouJogo = so(arbitroMarcou, jogoMarcou);
 reg('C. árbitro independente × jogo (6 partidas IA × IA)', `jogo ${jogoMarcou.length} · árbitro ${arbitroMarcou.length} · só o jogo ${faltouArb.length} · só o árbitro ${faltouJogo.length}${faltouArb.length + faltouJogo.length ? ` (${[...faltouArb, ...faltouJogo].slice(0, 4).join(', ')})` : ''}`,
   'iguais, ≥ 1', jogoMarcou.length >= 1 && faltouArb.length === 0 && faltouJogo.length === 0);
+{
+  const certos = defensores.filter(d => d.jogo !== undefined && d.arb !== undefined && d.jogo === d.arb).length;
+  const errados = defensores.filter(d => !(d.jogo !== undefined && d.arb !== undefined && d.jogo === d.arb));
+  reg('E1 o defensor no evento do impedimento = o penúltimo do árbitro independente', `${certos} de ${defensores.length}${errados.length ? ` (${errados.slice(0, 3).map(d => `${d.onde}: jogo ${d.jogo} × árbitro ${d.arb}`).join('; ')})` : ''}`, '100%, ≥ 1',
+    defensores.length >= 1 && certos === defensores.length);
+}
 const fx = v => v.join('/');
 reg('D. acréscimos anunciados no fim do tempo regulamentar', `1º T ${fx(acrs[1])} · 2º T ${fx(acrs[2])} min`, '1º 1–5, 2º 3–10, no tick do fim',
   acrOk && acrs[1].length === SEMS.length && acrs[2].length === SEMS.length && acrs[1].every(v => v >= 1 && v <= 5) && acrs[2].every(v => v >= 3 && v <= 10));

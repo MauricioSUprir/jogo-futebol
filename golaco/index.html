@@ -150,6 +150,10 @@
   <div id="substituicao" class="replay substituicao" hidden>
     <button id="substituicao-pular" class="btn-replay-pular" data-caixa="substituicao-pular" type="button" aria-label="Pular a cena da substituição">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
   </div>
+  <!-- Terço de baixo (js/hud.js terco): o selo da decisão no quadro final da análise semiautomática do replay
+       ("IMPEDIMENTO" / "POSIÇÃO LEGAL" — a única exceção à "sem narração"; nada de nome nem minuto). A faixa
+       ENTRA/SAI da substituição é outra peça (#faixa-subst). Não pega toque (o toque na camada do replay continua pulando). -->
+  <div id="terco" class="terco" data-caixa="terco" aria-live="polite" hidden></div>
 
   <!-- Menu de pausa -->
   <div id="menu" class="sobreposicao" hidden>
