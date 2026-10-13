@@ -14,7 +14,8 @@
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
 //     desligado) mudam a tela, ficam salvas e, ligadas, nada encosta
-//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1
+//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 3 telas do H1;
+//     o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no celular deitado
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //   node tools/teste-hud-minimo.mjs [--raiz <pasta do jogo>]   (--raiz: mede outra cópia, ex.: a base)
 import path from 'node:path';
@@ -248,10 +249,22 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
       };
     });
     const e0 = await estado();
-    let e1 = { mapa: false, nomes: false }, e2 = e1, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN };
+    let e1 = { mapa: false, nomes: false }, e2 = e1, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN }, sub = null;
     if (e0.temOpcoes) {
       await pagina.evaluate(() => window.__golaco.abrirMenu());
       menu = await estado();
+      // o submenu "Modo de jogo" (12/10: a opção da cena de substituição entrou nele, ao lado do pré-jogo) também cabe
+      // sem rolar, e os dois botões da linha de cenas não encostam
+      sub = await pagina.evaluate(() => {
+        document.getElementById('btn-modos')?.click();
+        const j = document.querySelector('.janela-menu'), b = document.getElementById('btn-subst'), p = document.getElementById('btn-prejogo');
+        const vis = e => !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
+        const rb = b?.getBoundingClientRect(), rp = p?.getBoundingClientRect();
+        const folga = rb && rp ? Math.max(rb.left - rp.right, rp.left - rb.right, rb.top - rp.bottom, rp.top - rb.bottom) : NaN;
+        const r = { rola: j ? j.scrollHeight - j.clientHeight : 0, subst: vis(b), prejogo: vis(p), folga, texto: b?.textContent.replace(/\s+/g, ' ').trim() ?? '' };
+        document.querySelector('#menu-modos [data-cmd="modos-voltar"]')?.click();
+        return r;
+      });
       await pagina.click('#chip-minimapa');
       await pagina.click('#chip-nomes');
       await pagina.evaluate(() => window.__golaco.fecharMenu());
@@ -273,6 +286,9 @@ meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada enco
       e2 = await estado();
     }
     meta('H7 celular: minimapa e nomes dos botões desligados por padrão; opções na pausa (que cabe sem rolar)', `minimapa ${e0.mapa ? 'ligado' : 'desligado'}, nomes ${e0.nomes ? 'ligados' : 'desligados'}, opções ${e0.temOpcoes ? `na pausa (marcadas ${menu.pressionados}), pausa rola ${menu.rola} px` : 'NÃO existem'}`, 'desligados, opções na pausa (false/false), rola ≤ 0 px', !e0.mapa && !e0.nomes && e0.temOpcoes && menu.pressionados === 'false/false' && menu.rola <= 0);
+    meta('H7 celular: o submenu "Modo de jogo" (com Pré-jogo e Substituição lado a lado) cabe sem rolar e nada encosta',
+      sub ? `rola ${sub.rola} px; Substituição ${sub.subst ? `visível ("${sub.texto}")` : 'NÃO aparece'}, Pré-jogo ${sub.prejogo ? 'visível' : 'NÃO aparece'}, folga entre eles ${Number.isFinite(sub.folga) ? sub.folga.toFixed(0) : '-'} px` : 'sem a pausa',
+      'rola ≤ 0 px; os dois visíveis; folga ≥ 4 px', !!sub && sub.rola <= 0 && sub.subst && sub.prejogo && sub.folga >= 4);
     meta('H7 celular: ligar as duas na pausa mostra o minimapa e os nomes, nada encosta e fica salvo', `ligadas: minimapa ${e1.mapa}, nomes ${e1.nomes}${enc.length ? ' — encosta: ' + enc.join('; ') : ''}; depois de abrir de novo: minimapa ${e2.mapa}, nomes ${e2.nomes}`, 'tudo true, nada encosta',
       e1.mapa && e1.nomes && enc.length === 0 && e2.mapa && e2.nomes && erros.length === 0);
   } finally { await navegador.close(); }

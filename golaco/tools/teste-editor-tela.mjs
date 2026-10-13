@@ -7,7 +7,9 @@
 //   4  PC, nada vaza: com o editor aberto, J K R M H C não mexem no jogo (câmera, ajuda, recomeço,
 //      hash de 60 passos igual ao de uma execução sem as teclas).
 //   5  Celular 844×390, toque: 9 depois 22 → selos ↑/↓ e "1/5" → PRONTO → Continuar → pendente →
-//      a bola sai (até 20 s) → evento substituicao, o 22 em campo, o 9 fora e o aviso no HUD.
+//      a bola sai (até 20 s) → evento substituicao, o 22 em campo, o 9 fora e a faixa ENTRA/SAI no HUD em ≤ 3
+//      quadros (12/10: data-texto "Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque"; na tela, a linha
+//      compacta "ENTRA 22 Wallace" e "SAI 9 Diego"; a página abre com a cena desligada, como em todo teste automatizado).
 //   6  Celular: arrastar 60 px na lista de reservas não escolhe ninguém.
 //   7  Formação: 4-2-3-1 → 11 cartas nas vagas novas e ninguém fora; 3-5-2 → 2 com o selo "!";
 //      PRONTO/Continuar → formação no mundo.
@@ -417,7 +419,15 @@ async function conferirEditor(pg) {
     // a bola tem de parar (fora, gol ou intervalo): o controlado chuta sempre que pode (até 20 s)
     const sub = await pg.evaluate(BIT => {
       const g = window.__golaco;
-      let carga = 0, aviso = '', ev = null;
+      // a faixa ENTRA/SAI (12/10): a frase do leitor de tela (data-texto) e o texto que SE VÊ (linha compacta no
+      // celular: palavra, número e o nome da camisa; os elementos escondidos pelo CSS não contam)
+      const faixa = () => {
+        const el = document.getElementById('faixa-subst');
+        if (!el || el.hidden || getComputedStyle(el).display === 'none') return null;
+        const visto = [...el.querySelectorAll('.fs-linha')].map(l => [...l.children].filter(c => c.offsetParent !== null && getComputedStyle(c).display !== 'none' && c.textContent.trim()).map(c => c.textContent.trim()).join(' ')).join(' / ');
+        return { texto: el.dataset.texto ?? '', visto };
+      };
+      let carga = 0, aviso = null, ev = null;
       for (let i = 0; i < 1200; i++) {
         const e = g.estado();
         if (e.times[0].saiu.includes(9)) { ev = i; break; }
@@ -430,21 +440,23 @@ async function conferirEditor(pg) {
         }
         g.forcarEntrada({ x, z, botoes: b });
         g.relogio.avancar(1000 / 60, { desenhar: false });
-        const a = document.getElementById('aviso').textContent;
-        if (/sai .+, entra /.test(a)) aviso = a; // o aviso da substituição feita (não o da edição)
       }
       g.forcarEntrada(null);
-      for (let i = 0; i < 3; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const a = document.getElementById('aviso').textContent; if (/sai .+, entra /.test(a)) aviso = a; }
+      // a faixa em ≤ 3 quadros depois da troca feita (o mesmo prazo do aviso de antes)
+      let fx = faixa(), k = 0;
+      while ((!fx || !fx.texto) && k < 3) { g.relogio.avancar(1000 / 60, { desenhar: false }); k++; fx = faixa(); }
       const m = g.mundo;
-      return { quadro: ev, aviso, em22: m.jogadores.some(j => j.id === 22), em9: m.jogadores.some(j => j.id === 9), saiu: [...m.times[0].saiu], subs: { ...m.times[0].subs } };
+      return { quadro: ev, fx, k, aviso, em22: m.jogadores.some(j => j.id === 22), em9: m.jogadores.some(j => j.id === 9), saiu: [...m.times[0].saiu], subs: { ...m.times[0].subs } };
     }, BIT);
     meta('5  Celular, toque: 9 depois 22 → selos ↑ (22 no campo) e ↓ (9 nas reservas), contagem 1/5',
       `entra ${selos.entra}, sai ${selos.sai}, "${selos.cont}"`, selos.entra && selos.sai && /1\/5/.test(selos.cont));
     meta('5  Celular: PRONTO → Continuar → pendente {sai 9, entra 22} no mundo',
       JSON.stringify(pend), pend.length === 1 && pend[0].sai === 9 && pend[0].entra === 22);
-    meta('5  Celular: na parada → substituição feita: 22 em campo, 9 fora, aviso no HUD',
-      `em ${sub.quadro ?? '-'} quadros; 22 em campo ${sub.em22}, 9 em campo ${sub.em9}, saiu [${sub.saiu}], subs ${JSON.stringify(sub.subs)}, aviso "${sub.aviso}"`,
-      sub.quadro != null && sub.em22 && !sub.em9 && sub.saiu.includes(9) && /sai Diego, entra Wallace/.test(sub.aviso));
+    meta('5  Celular: na parada → substituição feita: 22 em campo, 9 fora, a faixa ENTRA/SAI no HUD (≤ 3 quadros)',
+      `em ${sub.quadro ?? '-'} quadros; 22 em campo ${sub.em22}, 9 em campo ${sub.em9}, saiu [${sub.saiu}], subs ${JSON.stringify(sub.subs)}; faixa ${sub.fx ? `"${sub.fx.texto}" / visível "${sub.fx.visto}"` : 'nenhuma'} (+${sub.k} quadros)`,
+      sub.quadro != null && sub.em22 && !sub.em9 && sub.saiu.includes(9) && !!sub.fx && sub.k <= 3
+        && sub.fx.texto === 'Golaço FC: entra 22 Wallace Pimenta, sai 9 Diego Albuquerque'
+        && sub.fx.visto.includes('ENTRA 22 Wallace') && sub.fx.visto.includes('SAI 9 Diego'));
 
     // ---- 6) rolar a lista não escolhe
     await novaPartida(pg, 3);

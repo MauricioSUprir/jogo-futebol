@@ -25,8 +25,10 @@ function digito(g, d, x, y, w, h, e, cor) {
     f: [x, y + e * 0.6, e, h / 2 - e * 0.9], b: [x + w - e, y + e * 0.6, e, h / 2 - e * 0.9],
     e: [x, meio + e * 0.3, e, h / 2 - e * 0.9], c: [x + w - e, meio + e * 0.3, e, h / 2 - e * 0.9],
   };
+  // os segmentos apagados bem fracos, e nenhum no dígito vazio da esquerda (no print da noite, com 0,06 o '7' virava '87')
+  if (d == null) return;
   for (const [s, r] of Object.entries(segs)) {
-    g.fillStyle = ligados.includes(s) ? cor : 'rgba(255, 255, 255, 0.06)';
+    g.fillStyle = ligados.includes(s) ? cor : 'rgba(255, 255, 255, 0.03)';
     g.fillRect(r[0] + f, r[1] + f, r[2] - 2 * f, r[3] - 2 * f);
   }
 }
