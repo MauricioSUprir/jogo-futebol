@@ -145,6 +145,21 @@ function trocar(m, t, st, novo) {
   st.trocas++;
 }
 
+/**
+ * A escolha do humano do time t vale (a troca automática não passa por cima dela): o controlado é o que ele escolheu pelo
+ * TROCAR (tocado, ou segurado = o goleiro: m.trocaManual, sim.js trocarJogador) e o time dele não teve a bola desde então
+ * (m.possePorTime, sim.js passo) — a escolha vale a jogada de defesa inteira e só ela. Usada no ganho de posse do adversário
+ * (sim.js ganhouPosse: antes a troca automática desfazia o TROCAR a cada passe da IA) e na trava do goleiro escolhido da
+ * troca aérea (abaixo: antes a trava valia a partida inteira — depois de usar o TROCAR segurado uma vez, o cruzamento
+ * com o controle de volta no goleiro nunca mais ia para quem disputa; contraprova, teste-botoes B14).
+ */
+export function escolhaManual(m, t) {
+  const e = m.trocaManual?.[t];
+  if (!e || m.controlado[t] !== e.id) return false;
+  const pt = m.possePorTime?.[t];
+  return !(pt != null && pt >= e.tick);
+}
+
 /** Reavalia quem do time humano disputa a bola alta e troca o controle se for o caso. */
 export function trocaAerea(m) {
   const alta = bolaAltaLivre(m);
@@ -201,9 +216,15 @@ export function trocaAerea(m) {
         marcado = disputa === ctrl ? null : disputa;
       }
     }
-    // travas: o controlado já vai disputar (o toque aéreo dele vem primeiro), carrega uma ação, ou o humano
-    // acabou de escolher
-    const trava = (tqcVale && disputa === ctrl) || ctrl.carga || ctrl.pedido || (m.tick - st.manual) * PASSO < T.manualRecente;
+    // travas: o controlado já vai disputar (o toque aéreo dele vem primeiro), carrega uma ação, o humano acabou de
+    // escolher, a bola alta é um CHUTE do adversário (no tiro livre o controle saía do goleiro no chute e o escolhido
+    // corria para longe do gol) ou o humano está no goleiro que escolheu pelo TROCAR segurado (auditoria dos botões, 12/10)
+    const v = m.voo;
+    const chuteAdv = !!v && v.time !== t && (v.tipo === 'chute' || v.tipo === 'colocado' || v.tipo === 'cavadinha'
+      || (v.tipo === 'cabeceio' && v.cabeceio === 'chute'));
+    const goleiroEscolhido = escolhaManual(m, t) && !!m.trocaManual[t].goleiro;
+    const trava = (tqcVale && disputa === ctrl) || ctrl.carga || ctrl.pedido || (m.tick - st.manual) * PASSO < T.manualRecente
+      || chuteAdv || goleiroEscolhido;
     if (!trava) {
       const podeCorrigir = st.correcoes < T.correcoesMax;
       if (marcado && marcado !== ctrl) {

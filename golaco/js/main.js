@@ -76,7 +76,7 @@ import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
 import { montarFalta } from './faltas.js';
 import { pressionadorVisivel } from './defesa.js';
-import { relogioMao } from './regras-goleiro.js';
+import { relogioMao, maoPermitida } from './regras-goleiro.js';
 import { assumirControle } from './acoes.js';
 import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
@@ -262,7 +262,7 @@ function iniciarEstados() {
   for (const j of mundo.jogadores) estadoDe(j);
   copiarBolaDoMundo(bolaAtu);
   copiarBolaDoMundo(bolaAnt);
-  fase.atual = faseDoMundo(); fase.defesaDesde = null;
+  fase.atual = faseDoMundo(); fase.defesaDesde = null; fase.agora = fase.atual; fase.posseRival = false;
 }
 
 function rodarPasso(entrada, acoes) {
@@ -330,16 +330,46 @@ function gravarNoAnel(cortou, eventos) {
 
 // Ataque × defesa (botões de toque e Y do controle): ataque quando a bola é de um jogador do
 // meu time (m.posse) ou viaja de um passe do meu time (m.voo.de) ou vem para o controlado
-// (j.recebe); defesa caso contrário. Vira ataque na hora; defesa só depois de 0,25 s (uma bola
-// solta por um instante entre o passe e o domínio não pisca os botões).
-const fase = { atual: 'ataque', defesaDesde: null };
+// (j.recebe) ou, solta e sem dono (rebote, sobra, desvio), o controlado chega nela antes de qualquer adversário;
+// defesa caso contrário. Vira ataque na hora; defesa só depois de 0,25 s (uma bola solta por um instante entre o
+// passe e o domínio não pisca os botões). A histerese é só dos botões VISÍVEIS: o sentido das teclas e do controle
+// (J/K/O, A/B/Y/RB) é fixado pela fase de AGORA (faseDoMundo) — apertar O logo depois de perder a bola é PRESSÃO,
+// não PEGAR.
+const fase = { atual: 'ataque', defesaDesde: null, agora: 'ataque', posseRival: false };
 function timeDe(id) { return id == null ? null : (jogadorPorId(mundo, id)?.time ?? null); }
+/**
+ * Tempo (s) até j alcançar a bola solta pelo caminho dela (bola em linha reta, freando como a rolagem; corpo em
+ * arrancada): o 1º instante de 0 a 2 s em que a distância cabe no que ele corre. Só para a fase dos botões.
+ */
+function tempoAteBola(j, b) {
+  const v = j.par?.vArrancada ?? 8;
+  for (let k = 0; k <= 20; k++) {
+    const t = k * 0.1, s = (1 - Math.exp(-0.6 * t)) / 0.6; // distância percorrida pela bola ÷ velocidade
+    const bx = b.p.x + b.v.x * s, bz = b.p.z + b.v.z * s;
+    if (Math.hypot(bx - j.x, bz - j.z) - 0.6 <= v * t) return t;
+  }
+  return Infinity;
+}
 function faseDoMundo() {
   const m = mundo;
   if (m.posse != null) return timeDe(m.posse) === TIME_HUMANO ? 'ataque' : 'defesa';
   if (m.voo && timeDe(m.voo.de) === TIME_HUMANO) return 'ataque';
   const c = jogadorPorId(m, idControlado());
   if (c && c.recebe) return 'ataque';
+  // bola solta sem dono (rebote do goleiro, sobra, desvio) vindo para o meu controlado: ataque se ele chega nela antes
+  // de qualquer adversário — o botão grande é o CHUTE (de primeira), não o TROCAR (que tirava o controle dele)
+  if (c && !m.voo && !(m.parada && !m.parada.rolou)) {
+    const tc = tempoAteBola(c, m.bola);
+    if (Number.isFinite(tc)) {
+      let tr = Infinity;
+      for (const o of m.jogadores) {
+        if (o.time === TIME_HUMANO || o.papel === 'parado' || o.papel === 'marcador') continue;
+        tr = Math.min(tr, tempoAteBola(o, m.bola));
+        if (tr <= tc) break;
+      }
+      if (tc < tr) return 'ataque';
+    }
+  }
   return 'defesa';
 }
 function atualizarFase() {
@@ -349,11 +379,24 @@ function atualizarFase() {
     if (fase.defesaDesde == null) fase.defesaDesde = mundo.tick;
     if (mundo.tick - fase.defesaDesde >= 15) { fase.atual = 'defesa'; fase.defesaDesde = null; }
   }
-  if (entrada) entrada.definirFase(fase.atual);
-  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida)
+  fase.agora = f;
+  // o adversário com a bola no pé: a perda é certa (o toque no botão de ataque ainda visível vale pelo da defesa)
+  fase.posseRival = mundo.posse != null && timeDe(mundo.posse) !== TIME_HUMANO;
+  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival);
+  // o PEGAR aparece com o goleiro do humano com a bola no pé (partida), com a bola em jogo e a MÃO VALENDO ali
+  // (regras-goleiro.js maoPermitida: na própria área, sem recuo e sem a bola que ele mesmo soltou) — onde o toque pega a
+  // bola (sim.js pegarDoHumano). Depois do recuo ele não aparece: pegar seria tiro livre indireto (Regra 12.2; a tecla
+  // O/RB ainda marca a infração, como no jogo de verdade)
   if (entrada && entrada.definirGoleiroPe) {
     const c = jogadorPorId(mundo, idControlado());
-    entrada.definirGoleiroPe(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.posse === c.id && mundo.naMao !== c.id));
+    const b = mundo.bola.p;
+    entrada.definirGoleiroPe(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.posse === c.id && mundo.naMao !== c.id
+      && !(mundo.parada && !mundo.parada.rolou) && maoPermitida(mundo, c, b.x, b.z)));
+  }
+  // com a bola nas mãos do goleiro do humano (partida), o TROCAR aparece no ataque (vaga 'e'): o Q do teclado já trocava
+  if (entrada && entrada.definirGoleiroMao) {
+    const c = jogadorPorId(mundo, idControlado());
+    entrada.definirGoleiroMao(!!(mundo.partida && c && c.posicao === 'GOL' && mundo.naMao === c.id));
   }
 }
 
@@ -895,6 +938,7 @@ function lerRelogio() {
   return _rel;
 }
 
+let pausaAntes = false; // pausado() no quadro anterior (a volta da pausa solta a entrada)
 function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
@@ -908,6 +952,12 @@ function quadro(agoraMs, desenhar = true) {
   const dt = Math.min(0.1, dtReal);
   const ent = entrada.ler(cam.yaw, agoraMs);
   for (const a of entrada.consumirAcoes()) tratarAcao(a);
+  // a pausa (menu, Ajuda, editor, celular em pé) acabou de fechar: nada apertado nela vira jogada ao voltar — a tecla ou o
+  // botão do controle ainda segurado só vale depois de solto e apertado de novo (antes Esc → K → Esc chutava ao voltar)
+  const pz = pausado();
+  if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(cam.yaw, agoraMs); }
+  pausaAntes = pz;
+  entrada.definirMenu?.(hud.menuAberto || hud.ajudaAberta);
   if (diretor && diretor.ativo) {
     // replay: a simulação fica parada (como na pausa; o laço não recupera o tempo); um aperto novo pula
     laco.ultimo = agoraMs;
@@ -917,6 +967,8 @@ function quadro(agoraMs, desenhar = true) {
     }
   } else if (pausado() || pausaTeste) {
     laco.ultimo = agoraMs;     // ao voltar, não tenta recuperar o tempo parado
+    // o aperto feito com o jogo parado não fica guardado para o 1º passo depois da pausa
+    if (pz) entrada.limparPulsos();
   } else {
     // comemoração: anda no relógio do desenho (um aperto novo depois de 0,5 s pula)
     if (cenaGol) quadroComemoracao(dt, ent);
@@ -998,6 +1050,8 @@ function redimensionar() {
 
 // ------------------------------------------------------------------ ações e menu
 function tratarAcao(a) {
+  // o controle na pausa e na Ajuda (entrada.js lerMenuPad): navega nos botões dela; fora delas não faz nada
+  if (a.startsWith('menu-')) { if (hud.menuAberto || hud.ajudaAberta) hud.navegarPad(a.slice(5)); return; }
   // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
   if (prejogo && prejogo.ativo) { prejogo.acao(a); return; }
   // com o editor aberto nada chega ao jogo: só a pausa (Start do controle), que aplica e fecha
@@ -1320,7 +1374,7 @@ function trocarMundo(m, opc = {}) {
   if (editor.aberto) editor.fechar();
   iniciarEstados();
   corteCamera = true;
-  if (entrada) entrada.definirFase(fase.atual);
+  if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival);
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
   hud.faixa(null);
@@ -1417,7 +1471,7 @@ const api = {
   /** Ataque × defesa (estado do mundo, com a espera de 0,25 s para a defesa). */
   get fase() { return fase.atual; },
   /** Botões de toque: reaplica a fase visível e muda o tamanho (testes de layout). */
-  sincronizarFase() { entrada.definirFase(fase.atual); entrada.sincronizarFase(); },
+  sincronizarFase() { entrada.definirFase(fase.atual, fase.agora, fase.posseRival); entrada.sincronizarFase(); },
   toqueTamanho(v) { comando('toqueTamanho', v); },
   relogio: {
     /** Relógio manual: o laço usa um tempo controlado (testes a 60/120/144 Hz). */
@@ -1473,7 +1527,8 @@ const api = {
    * só para testes de navegador e prints (o jogo nunca chama).
    *  'pressao': um adversário de linha com a bola no meu campo, parado, o meu time em volta (para segurar o PRESSÃO);
    *  'goleiroMao': o meu goleiro com a bola nas mãos, controlado, perto da marca do pênalti;
-   *  'goleiroPe': o meu goleiro com a bola no pé, controlado, com o recuo valendo (Regra 12.2).
+   *  'goleiroPe': o meu goleiro com a bola no pé, controlado, na área, com a mão valendo (o PEGAR aparece e pega);
+   *  'goleiroPeRecuo': o mesmo, com o recuo valendo (Regra 12.2: o PEGAR não aparece; a tecla O marca a infração).
    */
   cenaDeTeste(nome) {
     const m = mundo;
@@ -1505,11 +1560,33 @@ const api = {
     } else {
       m.bola.p.x = g.x + lado * 0.34; m.bola.p.y = CFG.BOLA.raio; m.bola.p.z = g.z; m.bola.v.x = 0; m.bola.v.y = 0; m.bola.v.z = 0; m.bola.rolando = true;
       m.posse = g.id;
-      (m.regraMao ??= { semMao: -1, soltou: -1 }).semMao = g.time;
+      if (nome === 'goleiroPeRecuo') (m.regraMao ??= { semMao: -1, soltou: -1 }).semMao = g.time;
     }
     if (m.controlado[TIME_HUMANO] !== g.id) assumirControle(m, TIME_HUMANO, g);
     corteCamera = true;
     return { goleiro: g.id };
+  },
+  /**
+   * Testes: a bola no pé do adversário de linha mais perto do controlado (a defesa de verdade). Devolve o id dele ou null.
+   * (A máquina de passes manda a bola PARA o meu jogador — desde a auditoria dos botões isso é ataque: ele chega antes.)
+   */
+  bolaComAdversario() {
+    const m = mundo, c = controlado();
+    if (!c) return null;
+    let o = null, dm = Infinity;
+    for (const j of m.jogadores) {
+      if (j.time === TIME_HUMANO || j.posicao === 'GOL' || j.papel === 'marcador' || j.papel === 'parado') continue;
+      const d = Math.hypot(j.x - c.x, j.z - c.z);
+      if (d < dm) { dm = d; o = j; }
+    }
+    if (!o) return null;
+    const dono = m.posse != null ? jogadorPorId(m, m.posse) : null;
+    if (dono && dono.cond) { dono.cond.toque = null; dono.cond.busca = false; }
+    const b = m.bola;
+    b.p.x = o.x + Math.cos(o.rumo) * 0.4; b.p.y = CFG.BOLA.raio; b.p.z = o.z + Math.sin(o.rumo) * 0.4;
+    b.v.x = 0; b.v.y = 0; b.v.z = 0; b.rolando = true;
+    m.posse = o.id; m.voo = null; m.naMao = null;
+    return o.id;
   },
   /** Marcas da partida desenhadas (PRESSÃO e o anel dos 8 s): render/jogador3d.js indicadores. */
   get indicadores() { return jog3d ? jog3d.indicadores : null; },

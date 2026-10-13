@@ -397,6 +397,7 @@ export const ACOES = {
   cargaMax: 1.2,              // s — depois disso solta sozinho
   pedidoValidade: 0.6,        // s — pedido sem toque possível expira
   pedidoPrimeira: 1.6,        // s — esperando a bola chegar para bater de primeira
+  primeiraFolga: 0.3,         // s — o humano com o passe vindo (j.recebe): o pedido de primeira vale até a chegada + isto
   toqueDuplo: 0.35,           // s — dois toques no LANÇAMENTO = cruzamento rasteiro
   passe: { cone: 0.55, dMin: 3, dMax: 42, vChegada: [4.5, 8.0], adiante: 0.9, erroBom: 0.012, erroRuim: 0.07 },
   enfiada: { cone: 0.7, dMin: 5, dMax: 48, lead: [4.5, 12], vNoPonto: [3.5, 7], vMax: 26, erroBom: 0.015, erroRuim: 0.08 },
@@ -406,7 +407,7 @@ export const ACOES = {
   // a ~0,85 do forte e com 30–40 rad/s de efeito (Whiteside 2010); força máxima ×1,15 no erro
   // (Carlsson 2018); pressão só de perto e pouca; de primeira ×1,15 (StatsBomb)
   // penaltiErro: o erro do chute no pênalti (a pressão da cobrança; ~6% para fora — a meta do dono, seção 11)
-  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
+  chute: { v: [14, 31], yAlvo: [0.35, 1.7], erroBom: 0.016, erroRuim: 0.075, colocadoV: 0.85, colocadoErro: 0.6, giroColocado: 35, forcaMaxErro: 1.15, pressaoErro: 0.2, primeiraErro: 1.15, penaltiErro: 1.8, penaltiCanto: 2.5, yBarreiraMax: 2.1, faltaErro: 2.0, giroFalta: 18 },
   // cavadinha (StatsBomb: 20% de gols, 41,8% no alvo; só funciona com o goleiro adiantado)
   cavadinha: { goleiroFora: 5, distMax: 26, elev: 0.72, alemDaLinha: 0.5, erroForca: [0.3, 0.15], erroDir: [0.14, 0.05] },
   // cabeceio (pesquisa da Etapa 2): a cabeça chega ~0,56 m acima da estatura com corrida (Fílter
@@ -437,8 +438,11 @@ export const ACOES = {
 export const GOLEIRO = {
   // pênalti (Regra 14; goleiro.js lerChute): o goleiro escolhe o lado ANTES do chute (z do mergulho, m, e o peso de
   // cada escolha; o humano escolhe com o analógico na hora da cobrança). Lado certo: ganha `antecipa` s; lado errado
-  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora
-  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72 },
+  // (ou ficou no meio e a bola foi no canto, a > `meio` m): não defende; lado certo: chance × `fator`. Meta do dono: ~76% gol, 18% defesa, 6% fora.
+  // `ladoMin`: o humano só escolhe o canto com a componente do analógico AO LONGO da linha do gol (|iz|) ≥ ladoMin × o
+  // módulo (0,38 ≈ sen 22,5°: o setor de 45° em volta do horizontal da tela de TV — para o batedor ou para o gol — não
+  // escolhe; a diagonal do teclado, 45°, escolhe); abaixo disso, ou solto, fica no meio (partida.js ladoPenaltiHumano)
+  penalti: { palpite: [[-2.2, 0.44], [0, 0.12], [2.2, 0.44]], meio: 1.0, antecipa: 0.08, fator: 0.72, passo: 0.5, ladoMin: 0.38 },
   reacao: [0.25, 0.19],       // s depois do toque (ruim → bom)
   alcanceEmPe: 0.9,           // m: mão de lado sem mergulhar
   bracoReflexo: 1.6,          // m: perna/braço esticados no reflexo, sem tirar o corpo do lugar
@@ -1169,6 +1173,9 @@ export const REPLAY = {
     // (`extra`, ainda oblíqua e fora do centro) — os dois sempre no quadro.
     longe: { elFim: [16, 22, 24], desvios: [12, -12, 20, -20, 25, -25], dist: [9, 45] },
     extra: { elFim: [30, 40, 52, 62], desvios: [12, -12, 25, -25, 40, -40], dist: [9, 75] },
+    // ângulo de VERDADE do quadro final (câmera → ponto mirado, que sai do meio quando um está perto e o outro longe da
+    // câmera): nos níveis da TV e `longe` o quadro só serve com a elevação em [el] e o desvio da linha em [desvio] graus
+    meta: { el: [12, 24], desvio: [8, 25] },
     // parede do defensor (a faixa em z dos jogadores do lance ± margemZ; alfa de baixo para cima), plano do atacante
     // (± meiaLargura em z) e o anel do pulso (raio, largura e quanto cresce na batida)
     parede: { altura: 2.3, margemZ: 3, alfaBaixo: 0.35, alfaCima: 0.10, borda: 0.035 },

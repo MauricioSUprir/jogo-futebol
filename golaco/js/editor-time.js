@@ -23,6 +23,7 @@ import { FORMACOES, ORDEM_FORMACOES } from './formacoes.js';
 import { posicaoTatica } from './tatica.js';
 import { svgCampinho } from './campinho.js';
 import { PARTIDA, TATICA, CAMPO } from './config.js';
+import { aoTocar } from './toque-botao.js';
 
 const ABAS = ['escalacao', 'formacao', 'taticas'];
 const NOME_ABA = { escalacao: 'Escalação', formacao: 'Formação', taticas: 'Táticas' };
@@ -193,7 +194,7 @@ export function criarEditorTime(opc) {
     el.forms = raiz.querySelector('.ed-forms');
     el.canvas = raiz.querySelector('.ed-canvas');
     el.abas = [...raiz.querySelectorAll('[data-aba]')];
-    raiz.addEventListener('click', aoClicar);
+    aoTocar(raiz, aoClicar); // toque: no pointerup do mesmo dedo (com outro dedo na tela o click não vem)
     raiz.addEventListener('pointerover', aoPassar);
     raiz.addEventListener('pointerout', aoSair);
     raiz.addEventListener('focusin', aoFocar);
