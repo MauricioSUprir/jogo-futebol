@@ -56,7 +56,9 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Total Match usa ele nas partidas 3D, até o dono decidir aposentá-lo. Não copiar nem ler código do `futebol3d/`
   para o projeto novo.
 - Tudo em **português do Brasil**: textos da interface, comentários e mensagens de commit.
-- Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact, e **prints** a cada etapa.
+- Sempre mandar o **link do jogo/app** (GitHub Pages) fora do artifact. **Prints: NÃO mandar mais ao dono** (12/10: "esquece os
+  print"); os testes de navegador continuam conferindo a tela, só não se enviam as imagens. Ritmo: uma máquina com várias frentes
+  em paralelo, sem abrir sessões extras na nuvem (dono, 12/10: "pode ficar fazendo do jeito que tá").
 - Testar antes de avançar; corrigir todo bug encontrado.
 - Fluxo de entrega: branch → PR → merge na `main` (o link só atualiza depois do merge).
 - Times, jogadores, marcas e anúncios dos jogos são **fictícios** (nada licenciado).
@@ -119,6 +121,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - Prints sempre com torcida e HUD ligados (torcida só existe a partir da Etapa 6): PC 1280×720 Alta e celular
   844×390 Média, dia e noite. Vídeo só quando o dono pedir (quadro a quadro, relógio controlado, 30 qps).
 - Honestidade nos resultados (número, quanto faltou, proposta). Decisão de produto é do dono; o resto, decidir e seguir.
+- **Etapa 5 (corpo realista, mocap, rostos) NÃO pode atrapalhar a jogabilidade** (dono, 12/10: "que as partes físicas
+  não atrapalhem a jogabilidade do jogo"): o modelo humano e o mocap são DESENHO por cima da simulação (hash igual;
+  `hash-igual`/`hash-partida` IGUAIS em todo PR da Etapa 5), e resposta (≤ 0,1 s), condução, recepção, giro e
+  patinação medidos antes → depois com as mesmas ferramentas. O dono vai mandar um modelo de condução que quer no jogo
+  (referência em vídeo/descrição): analisar, medir e propor antes de mexer na condução que ele já aprovou.
 - Etapas: 1 base + controle de bola (seção 4 do pedido) → 2 passes (passe, enfiada ≥ 4 m à frente, lançamento,
   cruzamento, chute, domínio) → 3 11×11 e tática (formações, IA com/sem bola, troca, jogo aéreo ≥ 90% troca para
   quem disputa) → 4 goleiro, regras (IFAB), bolas paradas e equilíbrio (painel em Node, 144+ partidas) → 5 modelo
@@ -258,9 +265,22 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   na base), `teste-rede` reescrito para o véu, `teste-rede-tela` (navegador, CI: forma, branca — fio de perto L* ≥ 85 de dia
   e ≥ 80 à noite —, clareia o gol na TV e na câmera do gol, mexe ≥ 4% na câmera do gol e ≥ 1% na TV; reprova 21 na base);
   prints do gol pelo gol roteirizado (`prints.mjs --so pc-gol-rede,...`: câmera do gol, perto, TV, atrás, perfil).
+- **Comemoração do gol** (pedido de 11/10: "não tem cena de comemoração!!!"; `PESQUISA-ESTADIO.md` §10, contrato em
+  `CONTRATOS.md`): `js/comemoracao.js` (PURO) copia os 22 no tick do gol e anda com a MESMA locomoção (passoCorpo/
+  passoPassada/passoPeDesenhado/alturaQuadril; o goleiro termina o mergulho) + gestos e golpes por IK (`anim.js` exporta
+  `ik`/`ikBraco`): corrida para o alvo (bandeirinha, fundo diante da torcida, lateral da TV), finalização por hash do lance
+  sem repetir (joelhos, pulo, céu, braços, giro), abraço de até 4 colegas, quem sofreu cabisbaixo, gol contra, cena curta
+  no gol da IA contra o humano. `main.js` SEGURA o laço no passo antes da saída (gol + 149) enquanto a cena roda — a saída
+  sai no mesmo tick, hash igual; a entrada do humano não vai para a simulação durante a cena. Ordem: gol → comemoração →
+  replay → saída; pular a comemoração não pula o replay (pulada antes da hora, os passos que faltam rodam a 40 por quadro
+  na cortina). Câmera por cortes (`camera.js definirCinema`: rede → steadicam → contraplano → reação). `?comemoracao=0`
+  desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
+  `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
 - **Etapa 4 (regras IFAB, goleiro, bolas paradas, equilíbrio)** — em PRs; pesquisa em `golaco/PESQUISA-ETAPA4.md`,
   contrato em `CONTRATOS.md`. **Painel** `tools/painel-equilibrio.mjs` (seção 11 inteira, 144 partidas em ~9 min com 4
-  CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`). Linha de base da publicada antes da Etapa
+  CPUs; `--base <pasta js>` compara versões com as mesmas sementes; `--json`; `--partes a.json,b.json` junta pedaços). O CI
+  roda o painel sozinho em todo PR que mexe na lógica (`golaco/js/*.js`): `.github/workflows/golaco-painel.yml`, 8 máquinas ×
+  18 sementes contra a base do PR, tabela no resumo do job "junta" — usar esse em vez do local quando a máquina estiver cheia. Linha de base da publicada antes da Etapa
   4: 2,11 gols, 9,8 chutes (63% no alvo, 21% de conversão), passe 88,9%, último terço 48%, goleiro 67/58/89% (meta ok),
   40% dos gols de bola roubada perto da área. **Impedimento** (`impedimento.js`, Regra 11): foto em cada jogada do
   companheiro, infração no toque (também rebote de defesa e desvio), jogada deliberada do adversário zera, nada direto de
@@ -294,7 +314,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `PESQUISA-ESTADIO.md` §7, contrato "Tela limpa" no `CONTRATOS.md`): a **linha viva saiu** (`IMPEDIMENTO.linhaViva`
   false; fica a do lance no apito — o replay mostra); na partida placar compacto de TV ("1º T" só no intervalo/fim/
   acréscimos), menu só com o ícone, barra de força sem texto, dica do PC some em 8 s; botões de toque translúcidos
-  (80%, 55%; chave `golaco.toque.v2`) **só com o ícone**, analógico quase invisível em repouso (com o dedo, igual:
+  (80%, 55%; chave `golaco.toque.v2`) com o ícone e o NOME da função (dono, 12/10: "coloca o nome da função do botão de
+  novo" — "Nomes nos botões" ligado por padrão; desligado na pausa = só o ícone), analógico quase invisível em repouso (com o dedo, igual:
   `escalaAnalogico`); minimapa desligado no celular (no PC fica, 112×73); "Minimapa" e "Nomes nos botões" são botões
   de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
@@ -337,6 +358,27 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+- **Regras e controles** (pedidos do dono de 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola", "o botão de
+  pressão não funciona", "não consigo mexer com o goleiro", "só pega com a mão dentro da área", "não pode recuo"; tudo só
+  na partida — o treino segue bit a bit igual): condutor parado/lento (< 2 m/s) → o bote da IA alcança a bola parada no
+  pé (ganha pela chance da DIVIDIDA; `boteErrado`) e o gatilho de ESTADO `IA_DEFESA.lento` põe o 1º homem a 0,2 m da bola
+  e o 2º na cobertura (`FALTAS.bote.lento` 0,4); PRESSÃO = quem CHEGA PRIMEIRO persegue em disparada e disputa a bola
+  pela velocidade, do lado do gol, com o 1º homem da IA já apertando chama outro, e setas âmbar acima dele
+  (`pressionadorVisivel`); goleiro (`regras-goleiro.js`, IFAB 12.2/12.3/16): mão só na própria área, sem recuo (o
+  goleiro domina com o pé; a IA dele passa curto ou dá chutão; a IA de linha só recua seguro), PEGAR (O/RB/botão que só
+  aparece com ele com a bola no pé) com recuo ou com a bola que soltou = tiro livre indireto, 8 s com a bola nas mãos =
+  escanteio (anel âmbar sem texto nos últimos 5 s; a reposição automática do humano saiu — a demo e a IA repõem),
+  TROCAR segurado 0,4 s = o goleiro, o analógico o move sem a bola e com ela nas mãos até a borda da área (PASSE rola,
+  LANÇAMENTO/CHUTE é o chutão, ENFIADA solta no chão); tiro de meta com os adversários fora da área na montagem.
+  Testes: `teste-parado`, `teste-pressao-humano` (pareado com × sem o botão, `tools/lib/pressao-pareada.mjs`),
+  `teste-goleiro-regras` (padrão); `teste-controles` (marca, PEGAR, anel). Limite físico anotado: do parado o corpo anda
+  ~3,2 m no 1º segundo (o "≥ 2 m mais perto em 1 s" do diagnóstico fica informativo). Painel (144, base × agora): as
+  regras tiraram gols fáceis de 6 a 16,5 m e as defesas nessa faixa foram a 60,8% (meta 55–60%) — `GOLEIRO.logit.c0Partida`
+  −0,1 só na partida → 59,0% (total 68,0%, de fora 86,8%, gols 2,13 = base); nada que estava na meta saiu.
+  Contraprova: PEGAR só com a bola no pé ou solta a ≤ 3 m/s (`GOLEIRO.pegaVMax`; martelando o botão o goleiro controlado
+  pegava todo chute a ≤ 1 m do corpo), colado na linha do gol o goleiro com a bola nas mãos não vira para o gol nem a
+  solta além dela (`GOLEIRO.soltaLinha`; virar fazia gol contra), a câmera corta no `corteBolaParada` do tiro de meta
+  (testes: `teste-goleiro-regras` G3c/G5d, `teste-estadio` item 13).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

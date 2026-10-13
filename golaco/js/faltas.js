@@ -13,7 +13,7 @@
 // conduta (Regra 12.3): amarelo por parar um ataque promissor (SPA); vermelho por tirar uma chance clara de gol (DOGSO)
 // — dentro da própria área, tentando jogar a bola, é amarelo (e o pênalti).
 
-import { FALTAS, CAMPO } from './config.js';
+import { FALTAS, CAMPO, ACOES } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp } from './mat.js';
 import { uniforme } from './rng.js';
@@ -124,7 +124,9 @@ export function chanceFaltaBote(d, c) {
   const v = MD.hypot(d.vx, d.vz);
   const base = ch === 'tras' ? B.tras : ch === 'lado' ? B.lado : B.frente;
   const des = lerp(B.desarme[0], B.desarme[1], clamp((d.par.attr.desarme - 40) / 50, 0, 1));
-  return clamp(base * (1 + B.porVel * Math.max(0, v - B.vLivre)) * des, 0, 0.95);
+  // no condutor parado/lento o bote vem devagar e de perto: menos falta (B.lento)
+  const lento = MD.hypot(c.vx, c.vz) < ACOES.boteIA.vParado ? B.lento : 1;
+  return clamp(base * (1 + B.porVel * Math.max(0, v - B.vLivre)) * des * lento, 0, 0.95);
 }
 
 /**

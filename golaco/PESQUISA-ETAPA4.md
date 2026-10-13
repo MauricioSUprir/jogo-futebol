@@ -113,3 +113,34 @@ impedimentos de verdade, junto com o corredor que passa da linha enquanto o pass
 **Pendente (próxima parte, o goleiro):** o goleiro ainda não sai no cruzamento. É o que falta para o gol por escanteio chegar perto dos 2,6% reais. Por partida, o escanteio já dá ~0,25 gol (2,6 escanteios × ~10%), o mesmo que no jogo real (~10 × 2,6%).
 
 **Medido de novo (12/10, na rede véu de noiva):** o 11,4% do canhão de 123 foi um sorteio favorável. O mesmo canhão com outras 8 sementes dá, na main, 16,7% (1009–1016) e 10,3% (1017–1024), e com 32 sementes (~500 escanteios) 13,5% — a taxa real fica em ~13%, um ponto acima da meta de 12% (na rede véu: 12,1%, 15,3%, 11,8% e 12,7%; a rede não muda o escanteio). O `teste-bolas-paradas` C3 passou a reprovar só quando a contagem prova mais de 12% (binomial, p < 5%), como os vermelhos do `teste-faltas`; descer de verdade é com o goleiro saindo no cruzamento.
+
+## 5. Mãos do goleiro, recuo, 8 s e o goleiro na mão do humano (pedidos do dono de 11/10)
+
+Pedidos: "eu não consigo mexer com o goleiro, o goleiro só consegue pegar na mão dentro da área" e "não pode recuo".
+Diagnóstico (scratch `diag11/goleiro-regras`): o analógico não movia o goleiro (com a bola na mão a velocidade era 0; a
+IA repunha pelo humano aos 3 s), TROCAR nunca escolhia o goleiro, a mão não conhecia a regra (só o "pegou" conferia a
+área, pelo centro da bola; com GOLEIRO ele espalmava a 24 m da linha) e todo recuo ia para a mão (o goleiro nem entrava
+na disputa da bola livre com o pé).
+
+| Fonte | O que diz | O que foi aproveitado |
+|---|---|---|
+| IFAB, Leis do Jogo 2025/26, Regra 12 (theifab.com/laws/latest/fouls-and-misconduct) | Tiro livre indireto se o goleiro, na própria área, toca a bola com a mão depois de soltá-la e antes de outro jogador tocá-la, ou depois de um chute deliberado de companheiro para ele (salvo se ele chutou para repor), ou direto de um lateral de companheiro. Fora da área ele tem as restrições de qualquer jogador. Com a bola sob controle nas mãos ele não pode ser disputado; soltou (ou largou no chão), pode | `regras-goleiro.js`: `maoPermitida` (na área — qualquer parte da bola sobre a linha —, sem `semMao` do time e sem `soltou` dele); `registrarChute`/`registrarToque` (o chute/passe de companheiro liga o recuo; cabeça/peito, adversário ou bola morta desligam); PEGAR com recuo/soltou = `tiroLivre` indireto; a IA pressiona o goleiro com a bola no pé (`ia-tatica.js pressionavel`), nunca com ela nas mãos |
+| IFAB, Regra 12.3 (mesma página; mudança de 2025/26) | Mais de 8 s com a bola nas mãos dentro da área = escanteio do adversário, do lado do campo mais perto do goleiro; o árbitro conta os últimos 5 s com a mão levantada | `GOLEIRO.oitoSegundos` (8) e `contagem` (5): `partida.js oitoSegundos` → `escanteio`; o relógio começa com ele de pé (`g.segura.dePe`) e a bola em jogo; o anel âmbar sem texto (`relogioMao`) no lugar da mão do árbitro |
+| IFAB, Regra 13 (tiros livres) | Tiro livre indireto do ataque dentro da pequena área: na linha dela, no ponto mais perto | `pontoTiroLivreMao` (a barreira na linha do gol ainda não existe — pendência) |
+| IFAB, Regra 16 (tiro de meta) | Os adversários ficam fora da área até a bola estar em jogo | Na montagem os adversários na área vão para fora (corte de câmera) — o mesmo do branch `golaco/bolas-paradas` (e1d409e5) |
+| FIFPlay — controles do EA FC 25 (fifplay.com/fc-25-controls) | Goleiro com a bola: Throw/Pass, Drop Kick, Drop Ball (Y/△: soltar no chão e sair jogando), Pick Up Ball (R1/RB); mover o goleiro | PASSE = rola curto; LANÇAMENTO (e CHUTE) = chutão; ENFIADA (Y) = soltar no chão; PEGAR no RB/O e num botão de toque que só aparece com o goleiro com a bola no pé |
+| GINX — "How to control the goalkeeper in FIFA 22"; manual do FIFA 20 | "Switch to Goalkeeper": o goleiro controlado anda pelo analógico | TROCAR segurado 0,4 s (`GOLEIRO.trocarGoleiro`) leva ao goleiro; sem a bola o analógico o move (a defesa automática continua: chute lido e mergulho vêm antes); com a bola na mão ele anda até a borda da área (`maoAnda`: 3,2 m/s, 4,5 com CORRER; parede pela locomoção a 0,6 m da linha) |
+
+**Medido** (`tools/teste-goleiro-regras.mjs`, base = a publicada antes desta entrega): recuo do humano agarrado 18/18 →
+0/18 (domina com o pé 0 → 18/18); com a bola na mão o goleiro anda 0,00 → 14,4 m sem sair da área; reposição pelo humano
+aos 3,03 s → nunca antes de 8 s (8 s → escanteio 0/9 → 9/9); TROCAR segurado 0/3 → 3/3; mão com a bola fora da área (24 m,
+GOLEIRO segurado) 12/18 → 0/18; IA × IA (8 partidas): recuo agarrado 2 → 0, adversário na área no tiro de meta 3,5 s → 0.
+
+**Painel** (`tools/painel-equilibrio.mjs`, 144 partidas, sementes 1001–1144, base × agora): com as regras (e o jogador
+parado e a PRESSÃO), gols 2,13 → 2,09, chutes 9,6 → 10,0, defesas 66,1 → 69,1% (6–16,5 m 58,7 → **60,8%**, fora da meta
+55–60%; de fora da área 86,7 → 87,1%), erro na saída de bola 35 → 32% dos gols, faltas 2,8 → 2,3 por partida. Os gols de
+6 a 16,5 m caíram (177 → 164) com as mesmas defesas (252 → 254) — coerente com o fim do tiro de meta roubado com o
+adversário dentro da área (erro na saída de bola 35 → 32% dos gols). Duas correções medidas com as mesmas 144 sementes: o
+gatilho do condutor lento só contra o humano (63,5% — não era a causa; descartado) e `GOLEIRO.logit.c0Partida` −0,1 só na
+partida: 6–16,5 m 59,0%, total 68,0%, de fora da área 86,8%, gols 2,13, impedimentos 1,15, bola parada 29% — tudo o que
+estava na meta continua nela (a amostra de 144 varia ±4 pontos nessa faixa: ~420 chutes no alvo).

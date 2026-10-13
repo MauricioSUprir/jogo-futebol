@@ -60,8 +60,8 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   na partida o topo é só placar e menu (o painel "Conduzindo"/km/h fica nos treinos). Avisos só
   de comando (menu, treino, edição do time) e o efeito do gol.
 - **Menos coisa na tela** (dono, 11/10: "tem muita coisa na tela"): placar compacto de TV (o "1º T" só no intervalo e
-  nos acréscimos), menu só com o ícone, botões de toque menores e translúcidos só com o ícone (opção "Nomes nos
-  botões" na barra da pausa), defesa com 5 botões no 1º anel, analógico quase invisível em repouso, minimapa desligado no
+  nos acréscimos), menu só com o ícone, botões de toque menores e translúcidos com o ícone e o nome da função (a opção
+  "Nomes nos botões" na barra da pausa deixa só o ícone), defesa com 5 botões no 1º anel, analógico quase invisível em repouso, minimapa desligado no
   celular ("Minimapa" na barra da pausa; no PC fica, menor), barra de força sem texto, dica de teclas do PC some em 8 s,
   sem a seta no chão do controlado e marca de queda só na bola alta do seu time. **Linha de impedimento só no
   apito** (a do lance, parada): a linha viva durante o jogo saiu. Medido no `teste-hud-minimo` (celular: o HUD cobre
@@ -157,7 +157,7 @@ parte; Pular, Esc ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pr
 
 No celular os botões trocam sozinhos: com a bola (ou o passe vindo para o seu time) aparecem
 CHUTE, PASSE, ENFIADA e LANÇAMENTO; sem ela, TROCAR, GOLEIRO, PRESSÃO e DIVIDIDA (tocar = bote; segurar =
-conter), sempre com o CORRER. Os botões mostram só o ícone (o nome aparece com "Nomes nos botões" na pausa).
+conter), sempre com o CORRER. Os botões mostram o ícone e o nome da função (com "Nomes nos botões" desligado na pausa, só o ícone).
 Segurar o botão carrega a força. O botão físico guarda o sentido do momento em que foi apertado (segurar J enquanto a posse
 muda não troca o passe por CONTER no meio).
 
@@ -198,7 +198,7 @@ node golaco/tools/teste-comemoracao-tela.mjs # navegador: comemoração na pági
 node golaco/tools/teste-substituicao.mjs      # (Node, também no rodar-testes) cena de substituição: canhão de 49 paradas (Regra 3.3, pés, corpos, câmera, placa, mundo intacto) [--js <pasta js>]
 node golaco/tools/teste-substituicao-tela.mjs # navegador: cena na página (hash com e sem ela e em Node, faixa ENTRA/SAI, pular, fila depois do replay, intervalo, pausa, nada encosta em 4 telas, celular) [--raiz <pasta do jogo>]
 node golaco/tools/teste-replay.mjs     # navegador: replay do gol (na saída, simulação parada, hash igual), do impedimento (linha só no passe), pausa, pular, custos [--base <pasta do jogo>]
-node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar, torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
+node golaco/tools/teste-hud-minimo.mjs # navegador: tela limpa — área do HUD no celular (≤ 11%, 3 telas, ataque e defesa), nenhum texto fora do placar e dos nomes dos botões, nomes dos botões por padrão (H9), torcida atrás do HUD (≤ 15%), linha de impedimento só no apito, PC ≤ 2,5% com a dica que some, opções Minimapa e Nomes nos botões, ajustes de toque v2
 python3 -I golaco/tools/sons/fazer_sons.py <gravações> <saída>  # refaz os sons a partir das gravações originais (CREDITOS.md)
 node golaco/tools/teste-cortejo.mjs   # pré-jogo: o cortejo do túnel até a fila (pés plantados, ninguém atravessa ninguém, vaga, rumo, custo, hash da partida)
 node golaco/tools/teste-prejogo-roteiro.mjs   # pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos do estádio

@@ -8,6 +8,7 @@ import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { uniforme } from './rng.js';
 import { criarBola, passoBola, chutar } from './bola.js';
+import { maoPermitida, registrarToque } from './regras-goleiro.js';
 
 const DT = PASSO;
 const MEIO = CAMPO.gol.largura / 2;
@@ -77,12 +78,13 @@ export function alcanceGoleiro(tau, fator = 1) {
 
 /**
  * Chance de defesa de uma bola no alvo: logística dos dados (lateral, distância do chute, altura),
- * ajustada pelos atributos, e zero além do alcance físico (com folga).
+ * ajustada pelos atributos, e zero além do alcance físico (com folga). `partida`: soma GOLEIRO.logit.c0Partida
+ * (o equilíbrio da partida; o treino não muda).
  */
-export function chanceDefesa(lateral, dChute, altura, alcance, attr) {
+export function chanceDefesa(lateral, dChute, altura, alcance, attr, partida = false) {
   const L = GOLEIRO.logit;
   const nivel = ((attr.reflexo + attr.mergulho + attr.posicionamento) / 3 - 72) / 100;
-  const lg = L.c0 + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
+  const lg = L.c0 + (partida ? L.c0Partida : 0) + L.cLat * lateral + L.cDist * dChute + L.cAlt * altura + L.attr * nivel;
   const p = 1 / (1 + MD.exp(-lg));
   const fis = clamp((alcance + GOLEIRO.folgaAlcance - lateral) / GOLEIRO.folgaAlcance, 0, 1);
   return p * fis;
@@ -120,19 +122,29 @@ export function lerChute(m, j) {
     const zg = j.palpite, P = GOLEIRO.penalti;
     palpiteErrado = zg === 0 ? Math.abs(plano.z - j.z) > P.meio : Math.sign(plano.z - j.z) !== Math.sign(zg) && Math.abs(plano.z - j.z) > P.meio * 0.5;
   }
+  // partida (Regra 12): a mão só vale na própria área, sem recuo e sem a bola que ele soltou (regras-goleiro.js) — no
+  // ponto do contato. Sem ela, não há defesa com a mão: ele bloqueia com o corpo (a colisão da bola com as pernas) e
+  // joga com o pé (sim.js: entra na disputa da bola livre)
+  if (m.partida) {
+    const c0 = bolaDepois(b, Math.max(0, plano.ticks - 1));
+    if (!maoPermitida(m, j, c0.x, c0.z)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + plano.ticks, lido: m.tick }; return; }
+  }
   const tau = (plano.ticks - reac) * DT + (ehPenalti && !palpiteErrado ? GOLEIRO.penalti.antecipa : 0); // tempo para se mexer depois de reagir
   const lat = plano.z - j.z;
   const dist = Math.abs(lat);
   const alcance = alcanceGoleiro(tau, lerp(0.9, 1.08, a.mergulho / 100));
   const alturaOk = plano.y < GOLEIRO.alturaMax + (dist < 1 ? 0.2 : 0);
   const dChute = MD.hypot(b.p.x - j.x, b.p.z - j.z);
-  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a) : 0;
+  let pDefesa = alturaOk ? chanceDefesa(dist, dChute, plano.y, alcance, a, !!m.partida) : 0;
   // bola por cima do goleiro adiantado (cavadinha): ele volta e tenta tirar antes da linha
   const recuo = !alturaOk && Math.abs(j.x - gx) > 2 ? recuoBolaAlta(m, j, b, gx, reac) : null;
+  if (recuo && m.partida && !maoPermitida(m, j, recuo.bx, recuo.bz)) { j.defesa = { chave: m.voo?.tickChave, fora: true, semMao: true, tick: m.tick + recuo.i, lido: m.tick }; return; }
   if (recuo) pDefesa = lerp(GOLEIRO.recuoDefesa[0], GOLEIRO.recuoDefesa[1], clamp(recuo.folga / 0.3, 0, 1));
   // passe do próprio time (recuo) não é chute: o goleiro recebe sempre que alcança, sem o sorteio
   // da defesa (antes ~3% dos recuos viravam gol contra quando a "defesa" sorteada falhava)
-  const proprio = m.voo && m.voo.time === j.time && m.voo.tipo !== 'chute' && m.voo.tipo !== 'cabeceio';
+  // (partida: o cabeceio de passe de um companheiro para ele também — a mão vale depois de cabeça ou peito, Regra 12.2)
+  const proprio = m.voo && m.voo.time === j.time && m.voo.tipo !== 'chute'
+    && (m.voo.tipo !== 'cabeceio' || (!!m.partida && m.voo.cabeceio === 'passe'));
   if (proprio) pDefesa = alturaOk && dist <= alcance + GOLEIRO.folgaAlcance / 2 ? 1 : 0;
   if (palpiteErrado) pDefesa = 0;
   else if (ehPenalti) pDefesa *= GOLEIRO.penalti.fator; // lado certo: o pênalti no canto ainda é difícil de pegar
@@ -244,6 +256,7 @@ export function aplicarDefesa(m, j) {
     m.eventos.push({ tipo: 'defesa', id: j.id, modo: 'espalmada' });
   }
   if (m.stats) m.stats.defesas = (m.stats.defesas ?? 0) + 1;
+  registrarToque(m, j, 'defesa');
 }
 
 const _be = criarBola(0, 0), _ve = { x: 0, y: 0, z: 0 }, _w0 = { x: 0, y: 0, z: 0 };

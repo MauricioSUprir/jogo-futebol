@@ -360,6 +360,24 @@ export function texIndicador() {
   return texturaCanvas(c, {});
 }
 
+/**
+ * Marca acima do companheiro chamado pelo botão PRESSÃO (defesa.js pressionadorVisivel): duas setas âmbar para baixo,
+ * empilhadas — outra cor e outra forma que a seta verde do controlado (o EA FC marca quem foi chamado com uma seta).
+ */
+export function texIndicadorPressao() {
+  const c = criarCanvas(64, 64);
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffc23a';
+  g.strokeStyle = '#07090a';
+  g.lineWidth = 4;
+  g.lineJoin = 'round';
+  for (const y0 of [6, 28]) {
+    g.beginPath(); g.moveTo(10, y0); g.lineTo(54, y0); g.lineTo(32, y0 + 28); g.closePath();
+    g.stroke(); g.fill();
+  }
+  return texturaCanvas(c, {});
+}
+
 /** Brilho do refletor (sprite aditivo à noite). */
 export function texBrilho() {
   const t = 64;

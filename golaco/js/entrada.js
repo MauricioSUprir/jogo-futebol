@@ -6,13 +6,14 @@
 // marcador, câmera, ajuda, pausa) vão para uma fila.
 //
 // Teclado: WASD/setas = analógico; J passe (ataque) / CONTER (defesa, segurar); K chute (ataque) /
-// DIVIDIDA (defesa); O PRESSÃO (defesa, segurar: um companheiro aperta); L lançamento; I enfiada;
-// Shift correr; E modificador (colocado / enfiada alta / cruzamento tenso; condução curta e proteção;
-// dois toques = pedalada); Q trocar; G goleiro (segurar = sai do gol); R recomeçar; M máquina de
-// passes; N marcador; C câmera; H ou F1 ajuda; Esc pausa.
+// DIVIDIDA (defesa); O PEGAR (ataque: goleiro com a bola no pé) / PRESSÃO (defesa, segurar: um companheiro aperta);
+// L lançamento; I enfiada (goleiro com a bola nas mãos: solta no chão); Shift correr; E modificador (colocado /
+// enfiada alta / cruzamento tenso; condução curta e proteção; dois toques = pedalada); Q trocar (segurar 0,4 s: o
+// goleiro, na partida); G goleiro (segurar = sai do gol); R recomeçar; M máquina de passes; N marcador; C câmera;
+// H ou F1 ajuda; Esc pausa.
 // Controle: analógico esquerdo; A passe / CONTER; B chute / DIVIDIDA; X lançamento; Y enfiada /
-// goleiro (segurar); RB PRESSÃO (defesa, segurar); LB trocar; RT correr; LT modificador; Start pausa;
-// View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
+// goleiro (segurar); RB PEGAR / PRESSÃO (defesa, segurar); LB trocar (segurar: o goleiro); RT correr; LT modificador;
+// Start pausa; View ajuda; R3 câmera. (O mapa da defesa é o do EA FC: segurar A = conter, B = bote em pé, segurar
 // RB = companheiro pressiona.)
 // Os botões que mudam de sentido pela fase (J, K, O, A, B, Y, RB) têm o sentido FIXADO NO APERTO:
 // segurar J enquanto a posse muda não troca o passe por CONTER no meio (criarSentidoFixo, pura).
@@ -55,11 +56,11 @@ export const TECLA_BIT = {
 export const SENTIDO_FASE = {
   KeyJ: [BOTAO.PASSE, BOTAO.CONTER],
   KeyK: [BOTAO.CHUTE, BOTAO.DIVIDIDA],
-  KeyO: [0, BOTAO.PRESSAO],
+  KeyO: [BOTAO.PEGAR, BOTAO.PRESSAO],
   'pad:A': [BOTAO.PASSE, BOTAO.CONTER],
   'pad:B': [BOTAO.CHUTE, BOTAO.DIVIDIDA],
   'pad:Y': [BOTAO.ENFIADA, BOTAO.GOLEIRO],
-  'pad:RB': [0, BOTAO.PRESSAO],
+  'pad:RB': [BOTAO.PEGAR, BOTAO.PRESSAO],
 };
 // ações de um toque que passam com a entrada bloqueada (o editor aberto fecha pela pausa)
 const PASSA_BLOQUEADA = new Set(['pausa']);
@@ -103,11 +104,15 @@ export const BOTOES_TOQUE = [
   { id: 'btn-chute', bit: 'CHUTE', fase: 'ataque', vaga: 'grande', rotulo: 'CHUTE' },
   { id: 'btn-passe', bit: 'PASSE', fase: 'ataque', vaga: 'a', rotulo: 'PASSE' },
   { id: 'btn-enfiada', bit: 'ENFIADA', fase: 'ataque', vaga: 'b', rotulo: 'ENFIADA' },
-  { id: 'btn-lancamento', bit: 'LANCAMENTO', fase: 'ataque', vaga: 'c', rotulo: 'LANÇAMENTO' },
+  // `curto`: o nome quando o inteiro não cabe no círculo nem com a letra mínima (botões de 80% em telas pequenas)
+  { id: 'btn-lancamento', bit: 'LANCAMENTO', fase: 'ataque', vaga: 'c', rotulo: 'LANÇAMENTO', curto: 'LANÇAR' },
   { id: 'btn-trocar', bit: 'TROCAR', fase: 'defesa', vaga: 'grande', rotulo: 'TROCAR' },
   { id: 'btn-goleiro', bit: 'GOLEIRO', fase: 'defesa', vaga: 'a', rotulo: 'GOLEIRO' },
   { id: 'btn-pressao', bit: 'PRESSAO', fase: 'defesa', vaga: 'b', rotulo: 'PRESSÃO' },
   { id: 'btn-dividida', bit: 'DIVIDIDA', segura: 'CONTER', fase: 'defesa', vaga: 'c', rotulo: 'DIVIDIDA' },
+  // goleiro do humano com a bola no pé, na área (recuo, a bola que ele soltou): pega com a mão — só aparece nessa hora
+  // (main.js definirGoleiroPe; com recuo é tiro livre indireto: Regra 12.2)
+  { id: 'btn-pegar', bit: 'PEGAR', fase: 'ataque', vaga: 'd', rotulo: 'PEGAR' },
   { id: 'btn-correr', bit: 'CORRER', fase: 'ambas', vaga: 'correr', rotulo: 'CORRER' },
 ];
 // diâmetro de cada vaga (px CSS com tamanho 100%); nada fica abaixo de 48 px
@@ -365,7 +370,7 @@ export function criarEntrada(opc = {}) {
   const toque = { id: null, ox: 0, oy: 0, vx: 0, vy: 0 };
   // botões: elemento, bit e quem está segurando (pointerId)
   // `dois`: botão de dois sentidos (DIVIDIDA: tocar = bote, segurar = CONTER)
-  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), mask: BOTAO[d.bit] ?? 0, dedo: null, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
+  const bts = BOTOES_TOQUE.map(d => ({ ...d, el: document.getElementById(d.id), span: document.getElementById(d.id)?.querySelector('span') ?? null, mask: BOTAO[d.bit] ?? 0, dedo: null, dois: d.segura ? criarToqueOuSegura(BOTAO[d.bit] ?? 0, BOTAO[d.segura] ?? 0) : null }))
     .filter(b => b.el);
 
   function raioBase() { return 58 * escalaAnalogico(ajustes.tamanho); }
@@ -514,6 +519,34 @@ export function criarEntrada(opc = {}) {
     }
   }
 
+  // largura do texto na fonte dos botões (900, a do CSS), pela medida do canvas — a fonte é a do sistema (sem
+  // carregamento); o espaçamento entre letras entra pelo maior que o CSS usa (0,08em no CHUTE)
+  const medidor = document.createElement('canvas').getContext('2d');
+  const familia = getComputedStyle(document.documentElement).getPropertyValue('--fonte').trim() || 'system-ui, sans-serif';
+  const larguraTexto = (txt, fs, lsEm) => { medidor.font = `900 ${fs}px ${familia}`; return medidor.measureText(txt).width + lsEm * fs * txt.length; };
+  const FS_MIN = 8;
+  function rotuloQueCabe(b, d) {
+    const icPadrao = txt => (b.vaga === 'grande' ? 0.36 : txt.length > 8 ? 0.27 : 0.32);
+    for (const txt of b.curto ? [b.rotulo, b.curto] : [b.rotulo]) {
+      const longo = txt.length > 8;
+      const lsEm = b.vaga === 'grande' ? 0.08 : longo ? 0 : 0.04;
+      // letra maior primeiro; para cada tamanho, o ícone vai diminuindo (o texto sobe para onde o círculo é mais largo)
+      for (let fs = Math.min(d * 0.15, 13); fs >= FS_MIN - 1e-6; fs -= 0.25) {
+        for (const esc of [icPadrao(txt), 0.27, 0.24, 0.21]) {
+          if (esc > icPadrao(txt)) continue;
+          const ic = Math.round(d * esc);
+          // ícone + 1 px + o texto (altura ~1,15 fs) centrados: a borda de baixo do texto fica a (ic + 1 + 1,15 fs)/2 do
+          // centro; a corda do círculo por dentro da borda (1,5 px) nessa altura tem de conter o texto
+          const yb = (ic + 1 + 1.15 * fs) / 2, rin = d / 2 - 1.5;
+          const corda = yb < rin ? 2 * Math.sqrt(rin * rin - yb * yb) : 0;
+          if (larguraTexto(txt, fs, lsEm) <= corda - 1) return { txt, fs, longo, ic };
+        }
+      }
+    }
+    const txt = b.curto || b.rotulo;
+    return { txt, fs: FS_MIN, longo: txt.length > 8, ic: Math.round(d * 0.21) };
+  }
+
   function layout() {
     if (!raizToque || raizToque.hidden) return;
     const W = window.innerWidth, H = window.innerHeight;
@@ -528,16 +561,15 @@ export function criarEntrada(opc = {}) {
       s.left = `${(p.x - p.d / 2).toFixed(1)}px`;
       s.top = `${(p.y - p.d / 2).toFixed(1)}px`;
       s.width = s.height = `${p.d}px`;
-      // com os nomes (opção da pausa, html.nomes-botoes): texto cabendo no círculo — palavra longa
-      // (LANÇAMENTO) com letra menor
-      const n = b.rotulo.length;
-      const longo = n > 8;
-      const fs = Math.max(8.5, Math.min(p.d * 0.15, (p.d * 0.74) / (n * 0.66)));
-      s.setProperty('--fs', `${fs.toFixed(1)}px`);
-      s.setProperty('--ls', longo ? '0' : '0.04em');
+      // com os nomes (html.nomes-botoes, o padrão): o nome cabe INTEIRO no círculo, na altura em que ele fica (abaixo do
+      // ícone, onde o círculo é mais estreito) — a letra diminui até FS_MIN; se nem assim couber, o nome curto
+      const r = rotuloQueCabe(b, p.d);
+      s.setProperty('--fs', `${r.fs.toFixed(1)}px`);
+      s.setProperty('--ls', r.longo ? '0' : '0.04em');
+      if (b.span && b.span.textContent !== r.txt) b.span.textContent = r.txt;
       // palavra longa: ícone menor, para o rótulo subir para perto do centro (onde o círculo é
       // mais largo) e não encostar na borda
-      s.setProperty('--ic', `${Math.round(p.d * (b.vaga === 'grande' ? 0.36 : longo ? 0.27 : 0.32))}px`);
+      s.setProperty('--ic', `${r.ic}px`);
       // só o ícone (o padrão): maior, no meio do círculo
       s.setProperty('--ic-so', `${Math.round(p.d * (b.vaga === 'grande' ? 0.44 : 0.42))}px`);
     }
@@ -614,6 +646,8 @@ export function criarEntrada(opc = {}) {
       trocarFaseSePuder();
     },
     get fase() { return faseVisivel; },
+    /** Goleiro do humano com a bola no pé (o botão PEGAR aparece na vaga 'd' do ataque). */
+    definirGoleiroPe(v) { if (raizToque) raizToque.classList.toggle('goleiro-pe', !!v); },
     /** Reaplica no DOM a fase visível (testes que mexem nas classes à mão). */
     sincronizarFase() { trocarFaseSePuder(true); },
     /** Ações pendentes (recomecar, maquina, marcador, camera, ajuda, pausa, qps). */

@@ -342,8 +342,9 @@ html.com-toque .dica { display: none; }
 }
 /* Botões do arco (posição, tamanho, --fs, --ic e --ic-so vêm de js/entrada.js: calcularLayoutToque).
    Mínimo de 48 px; ataque e defesa trocam pelo estado do mundo (fase-ataque / fase-defesa). Tela limpa (11/10):
-   translúcidos (fundo 0,32, borda fina, sem sombra) e SÓ COM O ÍCONE — o nome fica no aria-label, na Ajuda e na
-   opção "Nomes nos botões" da pausa (html.nomes-botoes). Apertado: cheio e verde, sem transparência. */
+   translúcidos (fundo 0,32, borda fina, sem sombra); com o NOME da função embaixo do ícone por padrão (dono, 12/10:
+   "coloca o nome da função do botão de novo"; html.nomes-botoes) — "Nomes nos botões" desligado na pausa deixa só o
+   ícone (o nome fica no aria-label e na Ajuda). Apertado: cheio e verde, sem transparência. */
 .btn-toque {
   position: absolute; left: 0; top: 0; width: 72px; height: 72px;
   pointer-events: auto; touch-action: none; padding: 0; border-radius: 50%;
@@ -377,6 +378,10 @@ html.nomes-botoes .btn-toque span { display: block; text-shadow: 0 1px 2px rgba(
 .btn-dividida svg { stroke: var(--verde); }
 .btn-pressao.ativo svg, .btn-dividida.ativo svg { stroke: var(--preto); }
 .toque.fase-ataque .btn-toque[data-fase="defesa"], .toque.fase-defesa .btn-toque[data-fase="ataque"] { display: none; }
+/* PEGAR: só com o goleiro do humano com a bola no pé (recuo, a bola que ele soltou) — classe goleiro-pe, main.js */
+.toque:not(.goleiro-pe) .btn-pegar { display: none; }
+.btn-pegar svg { stroke: #c6ff3d; }
+.btn-pegar.ativo svg { stroke: var(--preto); }
 @keyframes bt-aparece { from { transform: scale(0.82); opacity: 0; } to { transform: none; } }
 
 /* ------------------------------------------------------------------ janelas (menu e ajuda) */

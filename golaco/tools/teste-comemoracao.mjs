@@ -321,12 +321,13 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
   reg('12 custo da cena por tick (22 atores; a melhor de 3)', `${ms.map(f3).join(' / ')} ms`, '≤ 0,6 ms', Math.max(...ms) <= 0.6);
 }
 // 13 (contraprova) a lente do plano da REAÇÃO livre: ninguém além de quem reage a < 2 m da câmera dentro do quadro (um corpo
-// a 2 m já enche a altura do quadro com fov 30), no PC (16:9) e no celular (844×390). Nas 8 cenas e em 2 gols naturais
-// achados na varredura da contraprova em que um jogador do time que sofreu, andando para a saída, passava colado na lente
-// (1º gol das sementes 2 e 15: antes 33 e 46 quadros do plano de 1 s).
+// a 2 m já enche a altura do quadro com fov 30), no PC (16:9) e no celular (844×390). Nas 8 cenas e nelas mesmas com um
+// BLOQUEIO de propósito: no tick antes da reação, o jogador em pé mais devagar (quem não é o autor nem quem reage) parado
+// 1,2 m na frente da lente do plano de sempre — o defeito da contraprova (um jogador do time que sofreu, andando para a
+// saída, passava colado na lente em ~15% das cenas curtas). Antes, com 2 gols naturais de sementes fixas (1º gol das
+// sementes 2 e 15); a rede véu mudou a física do gol e esses lances deixaram de existir, então o bloqueio não depende
+// de semente. A versão sem a escolha do giro (51c1bbb7) reprova no bloqueio: 5–10 quadros por cena no PC, 2–7 no celular.
 {
-  const extra = [];
-  for (const [s, max] of [[2, 10000], [15, 11000]]) { const g = golNaturalNode(L, s, max); if (g) extra.push({ ...g, nome: `natural (semente ${s})` }); }
   const PTS = [J.pelve, J.peito, J.cabeca, J.joelhoE, J.joelhoD, J.ombroE, J.ombroD];
   const colados = (c, pc, aspecto) => {
     const f = [pc.para[0] - pc.de[0], pc.para[1] - pc.de[1], pc.para[2] - pc.de[2]];
@@ -350,25 +351,42 @@ function min(arr, f) { return Math.min(...arr.map(f)); }
     }
     return n;
   };
+  const R = C.COMEMORACAO.camera.reacao;
+  // bloqueio: põe um jogador em pé parado 1,2 m na frente da lente do plano de sempre (giro 0), no tick antes da reação
+  const bloquear = c => {
+    while (!c.acabou && !(c.kFimAbraco > 0 && c.k === c.kFimAbraco - 1)) CM.passoCena(c);
+    const r = c.reacao ?? c.autor, rj = r.j, P = J.peito * 3 + 1;
+    let vx = Math.cos(rj.rumo), vz = Math.sin(rj.rumo) + R.ladoTV;
+    const vl = Math.hypot(vx, vz) || 1; vx /= vl; vz /= vl;
+    const bl = c.atores.filter(a => a !== r && a !== c.autor && a.atu[P] > 1.2).sort((a, b) => Math.hypot(a.j.vx, a.j.vz) - Math.hypot(b.j.vx, b.j.vz))[0];
+    if (!bl) return false;
+    bl.j.x = rj.x + vx * (R.dist - 1.2); bl.j.z = rj.z + vz * (R.dist - 1.2); bl.j.vx = 0; bl.j.vz = 0;
+    return true;
+  };
   const linhas13 = [];
-  let pior = 0;
-  for (const g of [...gols, ...extra]) {
-    for (const [nomeT, pequena, aspecto] of [['PC', false, 16 / 9], ['celular', true, 844 / 390]]) {
-      const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
-      const pc = CM.criarPlanoCamera();
-      let ruins = 0, total = 0;
-      while (!c.acabou) {
-        CM.passoCena(c);
-        c.alfa = 1; CM.planoCamera(c, { pequena, aspecto }, pc); c.alfa = 0;
-        if (pc.nome !== 'reacao') continue;
-        total++;
-        if (colados(c, pc, aspecto) > 0) ruins++;
+  let pior = 0, bloqueios = 0;
+  for (const g of gols) {
+    for (const bloqueio of [false, true]) {
+      for (const [nomeT, pequena, aspecto] of [['PC', false, 16 / 9], ['celular', true, 844 / 390]]) {
+        const c = CM.criarCena(CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 }), g.m);
+        if (bloqueio && bloquear(c)) bloqueios++;
+        const pc = CM.criarPlanoCamera();
+        let ruins = 0, total = 0;
+        while (!c.acabou) {
+          CM.passoCena(c);
+          c.alfa = 1; CM.planoCamera(c, { pequena, aspecto }, pc); c.alfa = 0;
+          if (pc.nome !== 'reacao') continue;
+          total++;
+          if (colados(c, pc, aspecto) > 0) ruins++;
+        }
+        pior = Math.max(pior, ruins);
+        if (ruins) linhas13.push(`${g.nome}${bloqueio ? ' com bloqueio' : ''} ${nomeT}: ${ruins}/${total}`);
       }
-      pior = Math.max(pior, ruins);
-      if (ruins) linhas13.push(`${g.nome} ${nomeT}: ${ruins}/${total}`);
     }
   }
-  reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length + extra.length} cenas; gols naturais extras: ${extra.length})`, '0 quadros', extra.length === 2 && pior === 0);
+  const nb = gols.length * 2;
+  reg('13 plano da reação: ninguém a < 2 m da lente dentro do quadro (PC e celular; também com um jogador parado na frente da lente)', `${linhas13.join('; ') || 'nenhum quadro'} (${gols.length} cenas; bloqueios ${bloqueios}/${nb})`, '0 quadros', bloqueios === nb && pior === 0);
 }
+
 imprimir();
 process.exit(falhas ? 1 : 0);
