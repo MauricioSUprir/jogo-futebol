@@ -1010,7 +1010,11 @@ export const IA_DEFESA = {
   apertoLado: 2,              // m — na Alta com gatilho o 2º aperta junto, fechando o lado de dentro
   antecipaContem: 0,          // s — a contenção e a contrapressão miram este tanto à frente pela velocidade do condutor (o aperto, IA.antecipaPressao)
   giroPressa: [3, 1.75],      // rad/s do rumo de quem pressiona (bola livre, aperto, contenção); virada além de [1] rad vai de uma vez
-  livre: { histerese: 0.25, margem: 0.2, disputa: null, marcador: -0.1 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
+  // (partida, pedido do dono de 12/10: "a defesa mal intercepta passe") no passe do adversário no ar vai à bola quem alcança
+  // a trajetória dela antes do recebedor: `le` s para ler o passe e `antes` s de folga (ia-tatica.js cortaPasse; o corpo
+  // acelera a `acel` m/s² até a arrancada; a bola rasteira ou até `alturaMax` m, nos próximos `horizonte` ticks; decidido,
+  // segue até `segue` ticks depois do ponto)
+  livre: { histerese: 0.25, margem: 0.2, disputa: null, le: 0.2, antes: 0.1, acel: 7, alturaMax: 1.0, horizonte: 120, segue: 12 }, // s — bola livre: vantagem de quem já ia; no passe deles, chegar isto antes do recebedor; disputa: só arranca (CORRER) com um adversário chegando até isto depois dele — null: arranca em toda bola solta (com 0,6 s o trote na bola solta custava ~0,5 chute por partida e o pedido do dono é jogo MAIS intenso; medido com 32 partidas)
   contemLead: 0.9,            // s — quem contém mira à frente pela velocidade do ponto (tira o atraso do filtro, 0,2 s, e do modo pressa, ~0,7 s: sem isso ele corria ao lado do condutor, a 0,6 m)
   // contrapressão: janela (s), quantos, a ≤ raio m da bola, e só com a perda fora do meu terço (u >
   // campo; ou perto da lateral) e sem estar em inferioridade a ≤ raio m (no máximo `inferioridade` a
@@ -1027,8 +1031,8 @@ export const IA_DEFESA = {
   // (pedido do dono de 12/10, "a defesa mal intercepta passe"; FBref/Opta, PL 2023/24: 8,5 interceptações por time por
   // jogo, ~1,8 por 100 passes do adversário; passe certo ~83%, 780 de 941 por jogo) quem marca um adversário — individual
   // ou na zona — fica puxado sombra[pressão] para a linha de passe do condutor para ele, a sombraDist m do homem (o lado da
-  // bola, "deny"; com o condutor a mais de sombraMin m dele), e no passe para o seu homem vai à bola chegando até
-  // livre.marcador s DEPOIS do recebedor (corpo a corpo; os outros precisam chegar livre.margem s antes)
+  // bola, "deny"; com o condutor a mais de sombraMin m dele); no passe, quem alcança a trajetória antes do recebedor corta
+  // (livre.le, livre.antes)
   linhaDePasse: { pressao: [false, false, true], alcance: 25, ponto: 0.65, frente: 6, sombra: [0.35, 0.55, 0.7], sombraDist: 1.2, sombraMin: 4 },
   individualArea: 20,         // m do meu gol: dentro disso, marcação individual dos atacantes na área
   frentePaga: 7,              // m a mais na distância ao condutor para ser o 1º homem vindo da frente da bola

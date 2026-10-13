@@ -34,6 +34,7 @@ import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, TATICA, ACOES, ENTRADA, 
 import { MD } from './matdet.js';
 import { difAng, clamp, lerp } from './mat.js';
 import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
+import { preverBola } from './conducao.js';
 import { riscoLinha } from './acoes.js';
 import { goleiroNoPe } from './regras-goleiro.js';
 import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
@@ -137,6 +138,8 @@ function vaiNaLivre(m, j) {
   const v = m.voo, b = m.bola.p, Lv = (m.iaLivre ??= {}), ant = Lv[j.time];
   if (v && v.para != null && v.time === j.time && v.para !== j.id) return false;
   const atual = ant && ant.tick >= m.tick - 1 ? ant.id : -1, H = IA_DEFESA.livre.histerese;
+  // passe do adversário no ar com destino: lê a LINHA do passe (pedido do dono de 12/10, "a defesa mal intercepta passe")
+  if (v && v.para != null && v.time !== j.time && m.partida) return cortaPasse(m, j, v, Lv, atual);
   const tempo = o => MD.hypot(o.x - b.x, o.z - b.z) / o.par.vArrancada - (o.id === atual ? H : 0);
   const tj = tempo(j);
   for (const o of m.jogadores) {
@@ -147,15 +150,79 @@ function vaiNaLivre(m, j) {
   if (v && v.para != null && v.time !== j.time) {
     let r = null;
     for (const o of m.jogadores) if (o.id === v.para) { r = o; break; }
-    // (quem marca o recebedor — individual ou na zona — lê o passe: vai à bola chegando até livre.marcador s depois dele,
-    // corpo a corpo, em vez de precisar chegar livre.margem s ANTES; pedido do dono de 12/10, "a defesa mal intercepta")
-    const Bj = m.iaBloco?.[j.time], kj = j.vagaIdx;
-    const marca = !!Bj && kj != null && (Bj.marcaAdv?.[kj] === v.para || Bj.zonaAdv?.[kj] === v.para);
-    const margem = j.id === atual ? 0 : marca ? IA_DEFESA.livre.marcador : IA_DEFESA.livre.margem;
-    if (r && tempo(r) < tj + margem) return false;
+    if (r && tempo(r) < tj + (j.id === atual ? 0 : IA_DEFESA.livre.margem)) return false;
   }
   Lv[j.time] = { id: j.id, tick: m.tick };
   return true;
+}
+
+/**
+ * Tempo (s) para o corpo de o chegar a (x, z) — a 0,5 m (o pé alcança): a velocidade que ele já leva na direção do ponto e a
+ * aceleração IA_DEFESA.livre.acel até a arrancada (cinemática: t = (−s0 + √(s0² + 2ad)) / a; a conta média de
+ * ia.js pontoInterceptacao subestima o tempo de quem sai parado em ~20%).
+ */
+function tempoCorte(o, x, z) {
+  const dx = x - o.x, dz = z - o.z, dist = MD.hypot(dx, dz);
+  const d = Math.max(0, dist - 0.5);
+  if (d <= 0) return 0;
+  const vmax = o.par.vArrancada, a = IA_DEFESA.livre.acel;
+  const s0 = Math.max(0, Math.min(vmax, (o.vx * dx + o.vz * dz) / dist));
+  const tA = (vmax - s0) / a, dA = (s0 + vmax) / 2 * tA;
+  return d <= dA ? (Math.sqrt(s0 * s0 + 2 * a * d) - s0) / a : tA + (d - dA) / vmax;
+}
+
+const _corte = { i: 0, x: 0, z: 0, t: 0 };
+/**
+ * O 1º ponto da trajetória da bola (conducao.js preverBola: a física do jogo; rasteira ou até `alturaMax` m) a que o
+ * chega a tempo, com `le` s de leitura. {i (ticks), x, z, t} reaproveitado, ou null.
+ */
+function pontoDeCorte(m, o, le) {
+  const L = IA_DEFESA.livre, n = L.horizonte;
+  const pb = preverBola(m.bola, n);
+  for (let i = 2; i <= n; i += 2) {
+    if (pb.ys[i] > L.alturaMax) continue;
+    const t = tempoCorte(o, pb.xs[i], pb.zs[i]) + le;
+    if (t <= i * PASSO) { _corte.i = i; _corte.x = pb.xs[i]; _corte.z = pb.zs[i]; _corte.t = t; return _corte; }
+  }
+  return null;
+}
+
+/**
+ * Passe do adversário no ar (só na partida; pedido do dono de 12/10, "a defesa mal intercepta passe"): vai à bola quem do
+ * meu time chega a um ponto da TRAJETÓRIA dela (pontoDeCorte, com IA_DEFESA.livre.le s para ler o passe) livre.antes s
+ * antes de o recebedor chegar a ela (a mesma conta para ele, sem a leitura) — e só o primeiro do time. Decidido, segue o
+ * corte até a bola passar (j.iaT.corte). Antes a regra comparava a distância até a bola AGORA com a do recebedor: o
+ * defensor no meio da linha do passe nunca ia, e a interceptação só saía quando a bola batia nele (canhão do passe
+ * arriscado, teste-intercepta: 2 de 76 passes alcançáveis cortados).
+ */
+function cortaPasse(m, j, v, Lv, atual) {
+  const L = IA_DEFESA.livre;
+  const it = estadoT(j);
+  // compromisso: o corte já decidido para este passe segue até o tick do ponto (+ folga)
+  if (it.corte && it.corte.chave === v.tickChave && m.tick <= it.corte.ate) { Lv[j.time] = { id: j.id, tick: m.tick }; return true; }
+  it.corte = null;
+  let r = null;
+  for (const o of m.jogadores) if (o.id === v.para) { r = o; break; }
+  const pr = r ? pontoDeCorte(m, r, 0) : null;
+  const tr = pr ? pr.i * PASSO : Infinity;
+  const pj = pontoDeCorte(m, j, L.le);
+  if (!pj || !(pj.i * PASSO + L.antes <= tr)) return false;
+  const tj = pj.i - (j.id === atual ? 6 : 0), cj = { i: pj.i, x: pj.x, z: pj.z };
+  for (const o of m.jogadores) {
+    if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador') continue;
+    if (o.iaT?.corte && o.iaT.corte.chave === v.tickChave && m.tick <= o.iaT.corte.ate) return false; // um companheiro já vai
+    const po = pontoDeCorte(m, o, L.le);
+    if (po && (po.i < tj || (po.i === tj && o.id < j.id))) return false;
+  }
+  it.corte = { chave: v.tickChave, x: cj.x, z: cj.z, ate: m.tick + cj.i + L.segue };
+  Lv[j.time] = { id: j.id, tick: m.tick };
+  return true;
+}
+
+/** j decidiu cortar o passe no ar (cortaPasse) e segue nele? (o sim.js dá a ele a vez de tocar antes do recebedor) */
+export function cortandoPasse(m, j) {
+  const c = j.iaT?.corte, v = m.voo;
+  return !!(c && v && c.chave === v.tickChave && m.tick <= c.ate);
 }
 
 /**
@@ -166,6 +233,13 @@ function vaiNaLivre(m, j) {
 function bolaLivre(m, j) {
   const s = estadoIA(m, j);
   const extra = extraAcao(m, j);
+  // corte do passe (cortaPasse): direto ao ponto da trajetória, em disparada — sem o filtro da pressa nem o giro limitado
+  // (com eles o defensor levava ~0,3 s para sair e chegava depois da bola)
+  const ct = estadoT(j).corte;
+  if (ct && m.voo && ct.chave === m.voo.tickChave && m.tick <= ct.ate) {
+    s.ramo = 'corta';
+    return { ...irPara(m, j, ct.x, ct.z, 1, true, extra, 'pressa'), botoes: extra | BOTAO.CORRER };
+  }
   s.ramo = 'livre';
   const p = pontoInterceptacao(m, j);
   _t.x = p.x; _t.z = p.z;
@@ -1136,7 +1210,7 @@ export function olhaBolaPartida(m, j, mv, desvio) {
 
 /** Estado da IA tática do jogador (criado uma vez e reaproveitado). */
 function estadoT(j) {
-  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9, acomp: null };
+  return j.iaT ??= { vagaAnt: j.vagaId, reposAte: -1, seguraAte: -1, rap: false, calmoAte: -1, oTick: -9, ov: 0, oAng: 0, sTick: -9, sRamo: '', fx: 0, fz: 0, vx: 0, vz: 0, vf: 0, quieto: false, lento: false, tParado: 0, dir: 0, dTick: -9, qdir: 0, qTick: -9, pTick: -9, pRamo: '', px: 0, pz: 0, pvx: 0, pvz: 0, recomp: false, recompDesde: -99999, recompBloq: -1, recompFim: -99999, recompTick: -9, acomp: null, corte: null };
 }
 
 /**

@@ -23,7 +23,7 @@ import { ACOES } from './config.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
-import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe } from './ia-tatica.js';
+import { entradaIATatica, olhaBolaPartida, entradaGoleiroPe, cortandoPasse } from './ia-tatica.js';
 import { trocaAerea, alvoAereo } from './troca.js';
 import { entradaConter, dividida, pedidoPressao, rumoConter, chanceDividida } from './defesa.js';
 import { misturarTimes } from './escalacao.js';
@@ -612,9 +612,17 @@ function bolaLivre(m) {
   const alvo = m.voo && m.voo.para != null ? m.voo.para : null;
   const nc = candidatosBolaLivre(m, alvo);
   const passou = m.voo && m.voo.de != null && m.tick - (m.voo.tick0 ?? 0) < 6 ? m.voo.de : null;
+  // passe do adversário rasteiro no ar (só na partida; pedido do dono de 12/10, "a defesa mal intercepta passe"): quem só
+  // MARCOU o domínio (o recebedor esperando a bola chegar) não tira a vez do adversário que foi cortar o passe (a IA em
+  // ia-tatica.js cortaPasse, ou o controlado pelo humano) — ele toca na bola antes se chegar à linha antes (antes o
+  // recebedor com o toque marcado encerrava a vez de todo mundo e o defensor no caminho só cortava com a bola batendo no
+  // corpo). Os outros seguem como antes (com todos os adversários: 12 interceptações por time por partida, acima do real)
+  const vooCorte = m.partida && m.voo && m.voo.para != null && m.voo.time != null ? m.voo : null;
+  let soMarcou = false;
   for (let k = 0; k < nc; k++) {
     const j = _cands[k];
     if (j.id === passou) continue; // quem acabou de bater não domina a própria bola
+    if (soMarcou && (j.time === vooCorte.time || !(cortandoPasse(m, j) || (ehControlado(m, j) && !m.iaJoga?.[j.time])))) continue;
     if (naParada(m) && j.id !== m.parada.cobrador) continue; // partida: só o cobrador
     if (!b.rolando && b.p.y > 0.45) {
       // (só quem TOCOU na bola encerra a vez; quem marcou o toque ou ainda espera por ele, não — antes o 1º da fila
@@ -623,15 +631,17 @@ function bolaLivre(m) {
       continue;
     }
     if (noArAgora(m, j)) continue; // no ar (pulo do cabeceio): não domina a bola baixa
-    const antes = m.posse;
+    const antes = m.posse, chave = vooCorte ? vooCorte.tickChave : -1;
     if (tentarDominio(m, j, primeira)) {
       if (m.posse === j.id && antes !== j.id) ganhouPosse(m, j);
+      if (vooCorte && m.posse == null && m.voo === vooCorte && vooCorte.tickChave === chave) { soMarcou = true; continue; }
       return;
     }
   }
   // o goleiro pega a bola solta perto dele (dentro da área)
   for (const g of m.jogadores) {
     if (g.posicao !== 'GOL') continue;
+    if (soMarcou && g.time === vooCorte.time) continue;
     if (naParada(m) && g.id !== m.parada.cobrador) continue; // partida: só o cobrador
     const gx = linhaDoGol(m, g);
     // (partida: só onde a mão vale — na área, com qualquer parte da bola sobre a linha, sem recuo nem a bola que ele
