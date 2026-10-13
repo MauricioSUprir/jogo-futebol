@@ -11,6 +11,7 @@
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
+import { acharImpedimento } from './lib/acha-impedimento.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -117,16 +118,19 @@ try {
   // INFORMATIVO: a análise semiautomática do impedimento no replay (12/10), CPU 4×: o quadro da análise (só os jogadores
   // do lance, a parede e o plano; sem o desenho da GPU) — cada avanço do relógio cronometrado
   if (await pg.evaluate(() => typeof window.__golaco.replay?.saotDeTeste === 'function')) {
-    const achou = await pg.evaluate(() => {
+    // a semente de um impedimento de verdade, achada em Node como a página entrega a entrada (comoPagina): uma semente fixa
+    // deixa de ter o lance quando a IA muda (com a semente 3 da versão de 12/10, nenhum impedimento em 20 mil quadros)
+    const imp = await acharImpedimento({ pastaJs: path.join(raiz, 'js'), comoPagina: true });
+    const achou = await pg.evaluate(sem => {
       const g = window.__golaco;
-      g.reiniciar({ modo: 'partida', semente: 3 });
+      g.reiniciar({ modo: 'partida', semente: sem });
       g.replay.automatico(true);
       let n = 0;
       for (; n < 20000; n++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const e = g.replay.estado; if (e.ativo && e.tipo === 'impedimento') break; if (e.ativo) g.replay.pular(); }
       let q = 0;
       while (q < 900 && g.replay.estado.ativo && g.replay.estado.cam !== 'saot') { g.relogio.avancar(1000 / 60, { desenhar: false }); q++; }
-      return { ok: g.replay.estado.ativo && g.replay.estado.cam === 'saot', n };
-    });
+      return { ok: g.replay.estado.ativo && g.replay.estado.cam === 'saot', n, sem };
+    }, imp?.semente ?? 3);
     if (achou.ok) {
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
       const an = await pg.evaluate(() => {
@@ -137,7 +141,7 @@ try {
       });
       await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
       meta(`INFO análise do impedimento no replay (CPU ${CPU}×): CPU por quadro`, `méd ${f2(an.media)} · p95 ${f2(an.p95)} ms em ${an.n} quadros (${an.des} jogadores desenhados)`, `méd ≤ ${META.media}, p95 ≤ ${META.p95} ms (informativo)`, true);
-    } else meta('INFO análise do impedimento no replay', `nenhum impedimento em ${achou.n} quadros`, 'informativo', true);
+    } else meta('INFO análise do impedimento no replay', `nenhum impedimento em ${achou.n} quadros (semente ${achou.sem}${imp ? `, lance de Node no tick ${imp.tick}` : ', nenhum em Node'})`, 'informativo', true);
     await pg.evaluate(() => window.__golaco.replay.automatico(false));
   }
   meta('Sem erro no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
