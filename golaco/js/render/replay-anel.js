@@ -16,7 +16,8 @@
 //
 // Lance (cena semiautomática do impedimento, render/replay-saot.js): por passo, a FOTO da Regra 11 em vigor no fim dele
 // (m.partida.imped, só lida: tick da jogada, time, quem jogou, o defensor da linha, x da linha e o lado que esse time
-// ataca; −1 = nenhuma) e as marcas do passo (bit0 = chute/cabeceio, bit1 = gol). +~9 KB fixos.
+// ataca; −1 = nenhuma) e as marcas do passo (bit0 = chute ou cabeceio para o gol, bit1 = gol: marcasDoPasso). +~9 KB
+// fixos.
 
 import { J, SEGMENTOS, RAIO_CABECA } from '../anim.js';
 
@@ -35,7 +36,7 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
   const fotoTime = new Int8Array(ticks), fotoLado = new Int8Array(ticks);
   const fotoPor = new Int16Array(ticks), fotoDef = new Int16Array(ticks);
   const fotoLinhaX = new Float32Array(ticks);
-  const marcas = new Uint8Array(ticks);                 // bit0 = chute/cabeceio, bit1 = gol
+  const marcas = new Uint8Array(ticks);                 // bit0 = chute ou cabeceio para o gol, bit1 = gol
   let ultimo = -1, primeiro = -1, slotAtual = -1;
   const a = {
     ticks, vagas, K, P, nj, dados, ids, info, nVagas, bola, tickDe, tEst, corte,
@@ -79,7 +80,7 @@ export function criarAnel({ ticks = 600, vagas = 24, nj = 19 } = {}) {
       const s = slotAtual;
       fotoTick[s] = tick; fotoTime[s] = time; fotoPor[s] = por; fotoDef[s] = def == null ? -1 : def; fotoLinhaX[s] = linhaX; fotoLado[s] = lado >= 0 ? 1 : -1;
     },
-    /** Marcas do passo atual (bit0 = chute/cabeceio, bit1 = gol). */
+    /** Marcas do passo atual (bit0 = chute ou cabeceio para o gol, bit1 = gol: marcasDoPasso). */
     marcar(bits) { if (slotAtual >= 0) marcas[slotAtual] |= bits; },
     /** Fecha o passo com a bola (p {x,y,z}, q {x,y,z,w}). */
     fim(p, q) {
@@ -214,7 +215,22 @@ export function fotoNoTick(a, tick, out = { tick: -1, time: 0, por: -1, def: -1,
   return out;
 }
 
-/** Marcas do passo `tick` (bit0 = chute/cabeceio, bit1 = gol; 0 fora do anel). */
+/**
+ * Marcas de um passo pelos EVENTOS dele (main.js gravarNoAnel; tools/lib/anel-node.mjs): bit1 = gol; bit0 = finalização
+ * — o evento 'chute' (chute, colocado, cavadinha) ou o cabeceio PARA O GOL. Todo cabeceio emite 'cabeceio' (o de passe,
+ * o de lançamento e o corte do rival também): só conta com `voo.cabeceio === 'chute'` (voo = m.voo no fim do passo, só
+ * lido; acoes.js executarCabeceio). O "Replay" da pausa mostra a posição legal só da cadeia que acaba em chute ou gol.
+ */
+export function marcasDoPasso(eventos, voo) {
+  let b = 0;
+  for (const e of eventos) {
+    if (e.tipo === 'gol') b |= 2;
+    else if (e.tipo === 'chute' || (e.tipo === 'cabeceio' && voo?.cabeceio === 'chute')) b |= 1;
+  }
+  return b;
+}
+
+/** Marcas do passo `tick` (bit0 = chute ou cabeceio para o gol, bit1 = gol; 0 fora do anel). */
 export function marcasNoTick(a, tick) { const s = a.slot(tick); return s < 0 ? 0 : a.marcas[s]; }
 
 /**

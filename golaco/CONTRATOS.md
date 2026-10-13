@@ -441,7 +441,8 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   `partida.js marcarImpedimento` o põe no evento `impedimento` (ao lado de `por` e `tickFoto`). O hash não lê o campo.
 - **Anel (`render/replay-anel.js`)**: por passo, a foto da Regra 11 em vigor no fim dele — `foto(tick, time, por, def,
   linhaX, lado)` (Int32/Int8/Int16/Int16/Float32/Int8; −1 = nenhuma) — e as marcas do passo — `marcar(bits)` (bit0 =
-  chute/cabeceio, bit1 = gol); +~9 KB fixos (3,37 MB no total). `main.js gravarNoAnel(cortou, eventos)` só lê
+  chute ou cabeceio PARA O GOL, bit1 = gol: `marcasDoPasso(eventos, voo)` — o cabeceio de passe e o corte do rival não
+  são chute); +~9 KB fixos (3,37 MB no total). `main.js gravarNoAnel(cortou, eventos)` só lê
   `m.partida.imped` e os eventos. Funções puras: `fotoNoTick`, `marcasNoTick`, `poseNoTick(anel, tick, id, out, xz)`,
   `parteMaisAvancada(pose, lado)` (cabeça, tronco e pés + o raio da cápsula: `JUNTAS_VALEM`, `RAIO_PARTE`; braços não
   contam, Regra 11) e `cadeiasNoIntervalo(anel, de, ate, time, out)` (A → B do time: a última foto de A seguida da 1ª de B,

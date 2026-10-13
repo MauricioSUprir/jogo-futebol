@@ -178,6 +178,25 @@ if (!SA) {
       reg('S3 "Replay" da pausa: com chute no fim mostra a análise; sem chute nem gol, não', `${rm ? rm.planos.map(p => p.cam).join(' → ') : '-'} × ${rm2 ? rm2.planos.map(p => p.cam).join(' → ') : '-'}`, 'tv → saot × tv',
         !!rm && rm.checagem && rm.planos.at(-1).cam === 'saot' && !!rm2 && !rm2.checagem && rm2.planos.length === 1);
     }
+    // contraprova (13/10): as marcas do passo vêm dos EVENTOS (replay-anel.js marcasDoPasso, a mesma função do main.js
+    // gravarNoAnel). Todo cabeceio emite 'cabeceio' — o de passe, o de lançamento e o corte do rival também —; antes todos
+    // viravam "chute" (bit0) e a cadeia que acabava num cabeceio de PASSE ganhava a análise no "Replay" da pausa (o
+    // critério i pede chute ou gol). Só o cabeceio PARA O GOL (m.voo.cabeceio = 'chute') é finalização.
+    {
+      const md = RA.marcasDoPasso;
+      if (!md) reg('S3 "Replay" da pausa: cabeceio de passe ou corte não é chute; cabeceio para o gol é', 'sem marcasDoPasso (todo cabeceio virava chute)', 'passe/corte 0, gol 1; tv × tv → saot', false);
+      else {
+        const cab = [{ tipo: 'passe', id: 9, modo: 'cabeceio' }, { tipo: 'cabeceio', id: 9 }];
+        const bPasse = md(cab, { tipo: 'cabeceio', cabeceio: 'passe' }), bChute = md(cab, { tipo: 'cabeceio', cabeceio: 'chute' });
+        const bCorte = md([{ tipo: 'passe', id: 104, modo: 'cabeceio' }, { tipo: 'cabeceio', id: 104 }], { tipo: 'cabeceio', cabeceio: 'lancamento' });
+        const bBase = [md([{ tipo: 'chute', id: 9 }], null), md([{ tipo: 'gol', time: 0 }], null), md([{ tipo: 'passe', id: 9 }], null)];
+        const menu = bits => { const L = lancePasse({ margem: 0.3 }); L.marcas = bits ? { [L.chute]: bits } : {}; return RR.roteiroMenu(montarAnel(RA, NJ, J, L)); };
+        const rp = menu(bPasse), rc = menu(bChute);
+        const cams = r => (r ? r.planos.map(p => p.cam).join(' → ') : '-');
+        reg('S3 "Replay" da pausa: cabeceio de passe ou corte não é chute; cabeceio para o gol é', `marcas: passe ${bPasse}, corte ${bCorte}, para o gol ${bChute}, chute/gol/passe ${bBase.join('/')}; pausa: ${cams(rp)} × ${cams(rc)}`,
+          'passe/corte 0, gol 1, 1/2/0; tv × tv → saot', bPasse === 0 && bCorte === 0 && bChute === 1 && bBase.join() === '1,2,0' && !!rp && !rp.checagem && !!rc && rc.checagem);
+      }
+    }
   }
 
   // ---------------------------------------------------------------- S5 selo (só no quadro final; nunca volta a 0)

@@ -82,7 +82,7 @@ import { ELENCOS, elencoDoJogador, fichaDe } from './elenco.js';
 import { criarEditorTime } from './editor-time.js';
 import { criarPrejogo } from './render/prejogo.js';
 import { PREJOGO } from './prejogo-roteiro.js';
-import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick } from './render/replay-anel.js';
+import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, marcasDoPasso } from './render/replay-anel.js';
 import { criarDiretor } from './render/replay.js';
 import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
@@ -309,7 +309,8 @@ function rodarPasso(entrada, acoes) {
 
 /**
  * Grava o passo no anel do replay: só COPIA o que o desenho já calculou (a pose deste passo, x/z/rumo, a bola), o
- * relógio do estádio, a foto da Regra 11 em vigor (m.partida.imped, só lida) e as marcas do passo (chute, gol) — a cena
+ * relógio do estádio, a foto da Regra 11 em vigor (m.partida.imped, só lida) e as marcas do passo (chute ou cabeceio para
+ * o gol, gol: marcasDoPasso, com m.voo só lido) — a cena
  * semiautomática. Nada é escrito no mundo (o hash não muda); nada é alocado.
  */
 function gravarNoAnel(cortou, eventos) {
@@ -322,7 +323,7 @@ function gravarNoAnel(cortou, eventos) {
   }
   const im = mundo.partida?.imped;
   if (im) anel.foto(im.tick, im.time, im.por, im.defensor, im.linhaX, mundo.ataca[im.time]);
-  for (const ev of eventos) anel.marcar(ev.tipo === 'gol' ? 2 : ev.tipo === 'chute' || ev.tipo === 'cabeceio' ? 1 : 0);
+  anel.marcar(marcasDoPasso(eventos, mundo.voo));
   anel.fim(bolaAtu.p, bolaAtu.q);
   custoGravar.n++; custoGravar.ms += agoraMs() - tg;
 }
